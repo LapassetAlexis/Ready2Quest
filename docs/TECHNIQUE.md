@@ -46,6 +46,12 @@ Comme avant, un agent par module, puis fusion. Le contrat entre les deux tient e
 - **Objectifs** (`JournalTracker.lua`) : `ns:JournalObjectives()` assemble les déblocages du compagnon, les villages de la zone, les capitales, les donjons du niveau et le prochain palier, triés par proximité. Onglet « Objectifs » dans le carnet (fenêtre 520 px) et bloc « Carnet » à l'écran, ancré sous `QuestWatchFrame` / `ObjectiveTrackerFrame` / `QuestObjectiveTracker`, sinon en haut à droite ; repliable, déplaçable, masqué en combat (réglable). Un test d'intégration branche le vrai compagnon sur le vrai suivi.
 - **Résumé de stuff** : bouton « Simuler un changement » (`ns:SimulateGearToast`), qui alterne gain et perte sur la stat principale ; l'aperçu passe en strate `FULLSCREEN_DIALOG` pour rester au-dessus des réglages.
 
+**Suivi « Carnet » refait** (après essai)
+- **Mise en page** : 4 objectifs au lieu de 5. Le premier est une « carte » (fond, filet ambre, libellé court `goal.short`, barre de 5 px, progression avec unité `goal.unit`), les trois suivants une ligne avec une mini-barre. Hauteur 18 + 40 + 4 + n × 16.
+- **Survol** : chaque objectif porte `goal.hint` (liste de lignes), affiché dans `GameTooltip` par `ns:ShowJournalGoalTooltip`. Les pistes viennent des mêmes données que le calcul : villages manquants de la zone, capitales manquantes, donjons de la tranche avec leur plage, XP restante (`UnitXPMax - UnitXP`). Listes coupées à 6 noms. Les objectifs du compagnon reprennent la piste de leur stat.
+- **Donjons** : le libellé redevient court (« Donjons de ton niveau ») ; les noms passent au survol.
+- **Clics** : clic sur un objectif → carnet sur l'onglet Objectifs ; clic droit → masquer (inchangé). Clic droit sur la créature → `ns:CompanionOpenJournal()` (même onglet ; déjà ouvert → fermé).
+
 **À vérifier en jeu**
 - Le modèle s'affiche dans un `PlayerModel` d'addon. Un modèle invisible sans erreur ne se détecte pas hors jeu.
 - Cadrage, échelle et animations des créatures.

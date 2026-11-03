@@ -120,7 +120,7 @@ do
 	local list = NS:JournalObjectives()
 	Check("[TRK] tri : le plus proche du but d'abord", K.Labels(list) ==
 		"Lanterne — villages 18/25 | Palier 30 : niveau 27/30 | Feu follet — donjons 1/2 | Villages de Les Tarides 1/3"
-		.. " | Capitales 1/6 | Donjons de ton niveau : Shadowfang Keep, Blackfathom Deeps, Excavation Site: Wetlands, Stormwind Stockade 0/4",
+		.. " | Capitales 1/6 | Donjons de ton niveau 0/4",
 		K.Labels(list))
 	Check("[TRK] compagnon : objectif atteint exclu, entrée sans nom ignorée",
 		not K.Labels(list):find("Déjà là", 1, true) and #list == 6, #list)
@@ -150,13 +150,17 @@ do
 	-- donjons : la plage de ton niveau (client Forever du harnais)
 	K.Reset(20)
 	local dungeons = K.Find(NS:JournalObjectives(), "dungeons:")
-	Check("[TRK] donjons : ceux de ta tranche, par niveau d'entrée", dungeons and dungeons.label ==
-		"Donjons de ton niveau : Ruins of Lordaeron, Wailing Caverns, Deadmines, Shadowfang Keep" and dungeons.progress == "0/4",
-		dungeons and dungeons.label)
+	local hint = dungeons and table.concat(dungeons.hint, " | ") or ""
+	Check("[TRK] donjons : libellé court, les noms au survol", dungeons and dungeons.label == "Donjons de ton niveau"
+		and dungeons.progress == "0/4", dungeons and dungeons.label)
+	local a, b, c, d = hint:find("Ruins of Lordaeron (", 1, true), hint:find("Wailing Caverns (", 1, true),
+		hint:find("Deadmines (", 1, true), hint:find("Shadowfang Keep (", 1, true)
+	Check("[TRK] donjons : ceux de ta tranche, par niveau d'entrée, avec leur plage", a and b and c and d
+		and a < b and b < c and c < d and hint:find("%(%d+%-%d+%)") ~= nil, hint)
 	K.Stamp("dungeon", "wc", "Wailing Caverns")
 	dungeons = K.Find(NS:JournalObjectives(), "dungeons:")
 	Check("[TRK] donjons : un tamponné sort de la liste, compté", dungeons and dungeons.progress == "1/4"
-		and not dungeons.label:find("Wailing", 1, true), dungeons and dungeons.label)
+		and not table.concat(dungeons.hint, " "):find("Wailing", 1, true), dungeons and table.concat(dungeons.hint, " | "))
 	Check("[TRK] donjons : identifiant stable malgré le tampon", dungeons and dungeons.id == "dungeons:dm,lordaeron,sfk,wc", dungeons and dungeons.id)
 	K.Reset(5)
 	Check("[TRK] niveau 5 : aucun donjon", K.Find(NS:JournalObjectives(), "dungeons:") == nil)
@@ -185,13 +189,43 @@ do
 	Check("[TRK] cadre affiché à l'entrée dans le monde", tracker and tracker:IsShown())
 	Check("[TRK] titre ambre « Carnet »", tracker.title.text.text == "Carnet"
 		and tracker.title.text.textColor[1] == NS.Theme.GOLD[1], tracker.title.text.text)
-	Check("[TRK] cinq lignes au plus, les plus proches", K.Lines() ==
-		"Lanterne — villages 18/25 | Palier 30 : niveau 27/30 | Feu follet — donjons 1/2 | Villages de Les Tarides 1/3 | Capitales 1/6",
+	Check("[TRK] quatre lignes au plus, les plus proches ; la première en vedette (libellé court + unité)", K.Lines() ==
+		"Lanterne 18/25 villages | Palier 30 : niveau 27/30 | Feu follet — donjons 1/2 | Villages de Les Tarides 1/3",
 		K.Lines())
-	local line = tracker.lines[1]
-	Check("[TRK] progression grisée, losange par objectif", line.progress.textColor[1] == NS.Theme.MUTED[1]
-		and line.diamond and line.diamond.texture == NS.Theme.DIAMOND_LINE)
-	Check("[TRK] hauteur : titre + lignes", tracker.height == 18 + 5 * 15, tracker.height)
+	local line, second = tracker.lines[1], tracker.lines[2]
+	Check("[TRK] vedette : fond, filet ambre, losange plein, grande barre", line.featured and line.bg and line.accent
+		and line.diamond.texture == NS.Theme.DIAMOND and line.bar.height == 5
+		and math.abs(line.bar.ratio - 18 / 25) < 1e-6, line.bar and line.bar.ratio)
+	Check("[TRK] secondaires : losange en trait, mini-barre, progression grisée", not second.featured
+		and second.diamond.texture == NS.Theme.DIAMOND_LINE and second.bar.height == 3
+		and math.abs(second.bar.ratio - 27 / 30) < 1e-6 and second.progress.textColor[1] == NS.Theme.MUTED[1])
+	Check("[TRK] hauteur : titre + vedette + secondaires", tracker.height == 18 + 40 + 4 + 3 * 16, tracker.height)
+
+	-- survol : quoi faire, avec des noms
+	local tip = _G.GameTooltip
+	tracker.lines[4]:GetScript("OnEnter")(tracker.lines[4])
+	local text = table.concat(tip.lines or {}, " | ")
+	Check("[TRK] survol villages : villages restants nommés", tip.shown and text:find("Villages à visiter dans Les Tarides", 1, true)
+		and text:find("Camp Taurajo", 1, true) and not text:find("The Crossroads", 1, true), text)
+	Check("[TRK] survol : rappel des clics", text:find("clic droit : masquer", 1, true) ~= nil, text)
+	tracker.lines[4]:GetScript("OnLeave")(tracker.lines[4])
+	Check("[TRK] fin du survol : bulle fermée", not tip.shown)
+	tracker.lines[1]:GetScript("OnEnter")(tracker.lines[1])
+	text = table.concat(tip.lines or {}, " | ")
+	Check("[TRK] survol compagnon : ce que ça débloque et comment", text:find("ornement", 1, true)
+		and text:find("Villages à visiter", 1, true), text)
+	tracker.lines[2]:GetScript("OnEnter")(tracker.lines[2])
+	text = table.concat(tip.lines or {}, " | ")
+	Check("[TRK] survol palier : niveaux restants", text:find("Encore 3 niveau", 1, true) ~= nil, text)
+	tracker.lines[2]:GetScript("OnLeave")(tracker.lines[2])
+
+	-- clic gauche : le carnet, onglet Objectifs ; à nouveau : refermé
+	NS.journalFrame = nil
+	tracker.lines[1]:Click("LeftButton")
+	Check("[TRK] clic : carnet ouvert sur les objectifs", NS.journalFrame and NS.journalFrame:IsShown()
+		and NS.journalFrame.kind == "goals")
+	tracker.lines[1]:Click("LeftButton")
+	Check("[TRK] second clic : carnet refermé", not NS.journalFrame:IsShown())
 
 	-- rafraîchi sur STAMP
 	NS:JournalEarn("subzone", 378, "Camp Taurajo")
@@ -200,7 +234,7 @@ do
 	Mock.world.mapID = 1429
 	Mock:Fire("ZONE_CHANGED_NEW_AREA")
 	Check("[TRK] changement de zone : villages de la nouvelle zone", not K.Lines():find("Villages", 1, true)
-		and K.Lines():find("Donjons de ton niveau", 1, true), K.Lines())
+		and K.Lines():find("Capitales", 1, true), K.Lines())
 	Mock.world.mapID = 1413
 	Mock:Fire("ZONE_CHANGED_NEW_AREA")
 	-- rafraîchi à la montée de niveau, même si UnitLevel est en retard
@@ -217,25 +251,29 @@ do
 	tracker.lines[1]:Click("RightButton")
 	Check("[TRK] clic droit : objectif masqué", tracker.lines[1].goal.id ~= first and not K.Lines():find("Lanterne", 1, true), K.Lines())
 	Check("[TRK] masquage retenu par personnage", NS:JournalData().dismissed[first] == true)
-	Check("[TRK] une place libérée : le suivant monte", K.Lines():find("Donjons de ton niveau", 1, true), K.Lines())
+	Check("[TRK] une place libérée : le suivant monte", K.Lines():find("Capitales", 1, true), K.Lines())
 	Mock:Fire("ZONE_CHANGED")
 	Check("[TRK] masqué : le reste après un rafraîchissement", not K.Lines():find("Lanterne", 1, true))
-	-- deux masqués sur six : quatre lignes, jamais un masqué pour boucher le trou
+	-- trois masqués sur six : trois lignes, jamais un masqué pour boucher le trou
 	local second = tracker.lines[1].goal.id
 	tracker.lines[1]:Click("RightButton")
-	Check("[TRK] deux masqués : quatre lignes, sans eux", not tracker.lines[5]:IsShown() and tracker.lines[4]:IsShown()
+	local third = tracker.lines[1].goal.id
+	tracker.lines[1]:Click("RightButton")
+	Check("[TRK] trois masqués : trois lignes, sans eux", not tracker.lines[4]:IsShown() and tracker.lines[3]:IsShown()
 		and not K.Lines():find("Lanterne", 1, true), K.Lines())
+	Check("[TRK] hauteur suit le nombre de lignes", tracker.height == 18 + 40 + 4 + 2 * 16, tracker.height)
 	NS:JournalDismiss(second, false)
-	Check("[TRK] remis : de retour dans le suivi", tracker.lines[5]:IsShown() and not NS:JournalData().dismissed[second])
+	NS:JournalDismiss(third, false)
+	Check("[TRK] remis : de retour dans le suivi", tracker.lines[4]:IsShown() and not NS:JournalData().dismissed[second])
 
 	-- repli
 	tracker.title:Click()
 	Check("[TRK] clic sur le titre : replié", NS:DB().journalTrackerCollapsed == true and K.Lines() == ""
-		and tracker.title.text.text == "Carnet (5)" and tracker.height == 18, tracker.title.text.text)
+		and tracker.title.text.text == "Carnet (4)" and tracker.height == 18, tracker.title.text.text)
 	Mock:Fire("ZONE_CHANGED")
 	Check("[TRK] replié : le reste au rafraîchissement", K.Lines() == "" and tracker:IsShown())
 	tracker.title:Click()
-	Check("[TRK] second clic : déplié", NS:DB().journalTrackerCollapsed == false and tracker.lines[5]:IsShown())
+	Check("[TRK] second clic : déplié", NS:DB().journalTrackerCollapsed == false and tracker.lines[4]:IsShown())
 
 	-- combat
 	Mock:Fire("PLAYER_REGEN_DISABLED")

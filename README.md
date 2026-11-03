@@ -112,7 +112,7 @@ Elle dit aussi **ce dont elle a besoin** : « J'ai faim… », « On explore ? �
 
 ### Comment s'en occuper
 
-Elle a quatre envies : **faim**, **énergie**, **moral** et **curiosité**. Elles se remplissent quand tu manges, te reposes, rends une quête ou explores. Clique dessus pour lui faire une caresse. Au premier lancement, un **tutoriel** en quelques bulles explique tout ça (à revoir avec `/r2q compagnon tuto`).
+Elle a quatre envies : **faim**, **énergie**, **moral** et **curiosité**. Elles se remplissent quand tu manges, te reposes, rends une quête ou explores. Clique dessus pour lui faire une caresse, **clic droit** pour ouvrir son carnet sur les objectifs. Au premier lancement, un **tutoriel** en quelques bulles explique tout ça (à revoir avec `/r2q compagnon tuto`).
 
 - **Elle grandit avec toi** : Nouveau-né, Jeune (niveau 10), Aguerri (20), Vaillant (40) et Légendaire (60), avec une petite fête à chaque étape.
 - **Elle ne t'en veut jamais** : elle ne meurt pas, ne régresse pas et ne tombe pas malade. Après une longue absence, elle est juste un peu ensommeillée : « Tu m'as manqué ! »
@@ -137,7 +137,11 @@ Chaque nouveau tampon est annoncé par un petit bandeau, jamais en combat. Le ca
 
 ### Objectifs
 
-Le carnet fixe des **objectifs** : prochaine étape de la créature, prochaine apparence ou ornement, villages de la zone, capitales, donjons de ton niveau, prochain palier. Ils sont rangés dans l'onglet **Objectifs** du carnet, avec une barre de progression, et les plus proches s'affichent à l'écran sous le suivi des quêtes, dans un bloc **Carnet** repliable et déplaçable (masqué en combat). Il se règle dans les options du compagnon, page Carnet.
+Le carnet fixe des **objectifs** : prochaine étape de la créature, prochaine apparence ou ornement, villages de la zone, capitales, donjons de ton niveau, prochain palier. Ils sont rangés dans l'onglet **Objectifs** du carnet, avec une barre de progression, et les plus proches s'affichent à l'écran sous le suivi des quêtes, dans un bloc **Carnet** : l'objectif le plus proche mis en avant avec sa barre, puis trois autres plus discrets.
+
+- **Survole un objectif** pour savoir quoi faire : les villages de la zone qu'il te reste à visiter, les capitales manquantes, les donjons de ton niveau avec leur tranche, l'XP avant le prochain niveau.
+- **Clic** : ouvre le carnet. **Clic droit** : masque l'objectif.
+- Le bloc se replie d'un clic sur son titre, se déplace en le glissant et se cache en combat (réglable dans les options du compagnon, page Carnet).
 
 ## Kit de camp *(Forever)*
 

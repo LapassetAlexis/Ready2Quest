@@ -461,6 +461,21 @@ do
 	NS.companionFrame.scripts.OnMouseUp(NS.companionFrame, "LeftButton")
 	Check("[COMP] glisser le cadre : pas de caresse", C.Needs().mood == 66)
 	Mock.world.cursorX = nil
+	-- clic droit : son carnet, sur les objectifs (pas une caresse)
+	Mock.now = Mock.now + 60
+	if NS.journalFrame then NS.journalFrame:Hide() end
+	NS.JournalCounts = C.savedJournal
+	NS.companionFrame.scripts.OnMouseDown(NS.companionFrame)
+	NS.companionFrame.scripts.OnMouseUp(NS.companionFrame, "RightButton")
+	Check("[COMP] clic droit : carnet ouvert sur les objectifs, sans caresse", NS.journalFrame and NS.journalFrame:IsShown()
+		and NS.journalFrame.kind == "goals" and C.Needs().mood == 66)
+	NS.companionFrame.scripts.OnMouseDown(NS.companionFrame)
+	NS.companionFrame.scripts.OnMouseUp(NS.companionFrame, "RightButton")
+	Check("[COMP] second clic droit : carnet refermé", not NS.journalFrame:IsShown())
+	NS.companionFrame.scripts.OnMouseUp(NS.companionFrame, "MiddleButton")
+	Check("[COMP] autre bouton : rien", not NS.journalFrame:IsShown() and C.Needs().mood == 66)
+	NS.JournalCounts = nil
+	Check("[COMP] survol : le clic droit est annoncé", NS.L.COMP_HOVER_HINT:find("clic droit : carnet", 1, true) ~= nil)
 	-- une caresse réveille
 	local data = NS:CompanionData()
 	data.sleepy, data.sleepyLeft = true, 300

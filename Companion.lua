@@ -141,7 +141,7 @@ local FR = {
 	COMP_REQ_rare          = "%d rares",
 	COMP_REQ_level         = "%d tampons de niveau",
 	COMP_REQ_total         = "%d tampons",
-	COMP_HOVER_HINT        = "Clic : un câlin · glisser : déplacer",
+	COMP_HOVER_HINT        = "Clic : un câlin · clic droit : carnet · glisser : déplacer",
 	OPT_COMP_TIPS          = "Astuces",
 	OPT_COMP_TUTO          = "Rejouer le tutoriel",
 	COMP_TUTO_NEXT         = "Suivant",
@@ -224,7 +224,7 @@ local EN = {
 	COMP_REQ_rare          = "%d rares",
 	COMP_REQ_level         = "%d level stamps",
 	COMP_REQ_total         = "%d stamps",
-	COMP_HOVER_HINT        = "Click: a cuddle · drag: move",
+	COMP_HOVER_HINT        = "Click: a cuddle · right-click: journal · drag: move",
 	OPT_COMP_TIPS          = "Tips",
 	OPT_COMP_TUTO          = "Replay the tutorial",
 	COMP_TUTO_NEXT         = "Next",
@@ -906,9 +906,11 @@ function ns:EnsureCompanionFrame()
 		f.downX, f.downY = Call(rawget(_G, "GetCursorPosition"))
 	end)
 	frame:SetScript("OnMouseUp", function(f, button)
-		if button and button ~= "LeftButton" then return end
+		if button and button ~= "LeftButton" and button ~= "RightButton" then return end
 		local x, y = Call(rawget(_G, "GetCursorPosition"))
 		if f.downX and x and (math.abs(x - f.downX) > 4 or math.abs((y or 0) - (f.downY or 0)) > 4) then return end
+		-- clic droit : son carnet de voyage, ouvert sur les objectifs
+		if button == "RightButton" then return ns:CompanionOpenJournal() end
 		ns:CompanionPet()
 	end)
 	frame:SetScript("OnEnter", function() ns:CompanionShowHover() end)
@@ -917,6 +919,17 @@ function ns:EnsureCompanionFrame()
 	self.companionFrame = frame
 	self:CompanionApplyModel()
 	self:CompanionApplyOrnaments()
+	return frame
+end
+
+-- Clic droit sur la créature : le carnet, sur l'onglet Objectifs (ce qu'il
+-- reste à faire pour la faire évoluer). Déjà ouvert : on le ferme.
+function ns:CompanionOpenJournal()
+	if type(self.ToggleJournal) ~= "function" then return nil end
+	local current = self.journalFrame
+	if current and current:IsShown() then current:Hide(); return current end
+	local frame = self:ToggleJournal(true)
+	if frame and self.SelectJournalKind then self:SelectJournalKind("goals") end
 	return frame
 end
 
