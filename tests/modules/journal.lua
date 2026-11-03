@@ -378,48 +378,14 @@ do
 	local f = NS.journalFrame
 	Check("[JRN] /r2q carnet ouvre le carnet", f and f:IsShown())
 	Check("[JRN] fenêtre Theme (titre)", f and f.title and f.title.text == "Carnet de voyage")
-	Check("[JRN] six onglets", f and f.tabs.zone and f.tabs.subzone and f.tabs.capital and f.tabs.dungeon and f.tabs.rare and f.tabs.level)
+	Check("[JRN] deux sections : Complétion et Évolution", f.sections and f.sections.completion and f.sections.evolution)
 	Check("[JRN] total en sous-titre", f.subtitle.text:find("6 tampon", 1, true), f.subtitle.text)
-	Check("[JRN] premier onglet : Objectifs", f.kind == "goals" and NS.JOURNAL_TABS[1] == "goals")
-	f.tabs.zone:Click()
-	Check("[JRN] zones : compte seul (pas de total)", f.counter.text == "Zones : 2", f.counter.text)
-	f.tabs.capital:Click()
-	Check("[JRN] capitales : 1 / 6", f.counter.text == "Capitales : 1 / 6", f.counter.text)
-	Check("[JRN] capitales : gagnée d'abord, losange plein", f.lines[1].item.earned and f.lines[1].name.text == "Stormwind City"
-		and f.lines[1].stamp.texture == NS.Theme.DIAMOND)
-	Check("[JRN] capitales : à découvrir en trait", f.lines[2].item and not f.lines[2].item.earned
-		and f.lines[2].stamp.texture == NS.Theme.DIAMOND_LINE and f.lines[2].detail.text:find("à découvrir", 1, true))
-	Check("[JRN] date et niveau sur la ligne", f.lines[1].detail.text:find("03/11/2026", 1, true) and f.lines[1].detail.text:find("niv. 20", 1, true), f.lines[1].detail.text)
-	f.tabs.dungeon:Click()
-	local dungeons = 0
-	for _ in pairs(NS.DUNGEONS) do dungeons = dungeons + 1 end
-	Check("[JRN] donjons : total de la base (Forever : 28)", f.counter.text == "Donjons : 0 / " .. dungeons, f.counter.text)
-	f.tabs.level:Click()
-	Check("[JRN] paliers : 2 / 6, dans l'ordre", f.counter.text == "Paliers : 2 / 6" and f.lines[1].name.text == "Niveau 10"
-		and f.lines[3].name.text == "Niveau 30", f.counter.text)
-	f.tabs.rare:Click()
-	Check("[JRN] page vide : invitation à explorer", f.empty.text == NS.L.JRN_EMPTY and not f.lines[1]:IsShown())
-
-	-- défilement
-	f.tabs.subzone:Click()
-	local items = #f.items
-	Check("[JRN] villages : de quoi défiler", items > 10, items)
-	Check("[JRN] en haut : pas de ^, un v", not f.up:IsShown() and f.down:IsShown())
-	f.scripts.OnMouseWheel(f, -1)
-	Check("[JRN] molette : une ligne plus bas", f.offset == 1 and f.lines[1].item == f.items[2])
-	f.down:Click()
-	Check("[JRN] bouton v", f.offset == 2 and f.up:IsShown())
-	f.up:Click()
-	Check("[JRN] bouton ^", f.offset == 1)
-	for _ = 1, 200 do NS:ScrollJournal(-1) end
-	Check("[JRN] butée en bas", f.offset == items - 10 and not f.down:IsShown(), f.offset)
-	Check("[JRN] position affichée", f.position.text == string.format("%d-%d / %d", items - 9, items, items), f.position.text)
-	f.tabs.zone:Click()
-	Check("[JRN] changer d'onglet remonte en haut", f.offset == 0)
-
-	-- un nouveau tampon rafraîchit la fenêtre ouverte
+	Check("[JRN] ouvre sur la Complétion", f.kind == "completion")
+	-- un nouveau tampon rafraîchit la fenêtre ouverte (section Évolution : parcours)
+	f.sections.evolution:Click()
+	local before = f.evo.road.text
 	J.Map(1436)
-	Check("[JRN] fenêtre ouverte : rafraîchie au gain", f.counter.text == "Zones : 3", f.counter.text)
+	Check("[JRN] fenêtre ouverte : rafraîchie au gain", f.evo.road.text ~= before and f.evo.road.text:find("3 zones", 1, true), f.evo.road.text)
 	NS:HandleCommand("journal")
 	Check("[JRN] /r2q journal : referme", not f:IsShown())
 	NS:HandleCommand("carnet")

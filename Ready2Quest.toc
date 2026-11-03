@@ -44,3 +44,4 @@ Bestiary.lua
 GatheringData.lua
 Gathering.lua
 CompanionChest.lua
+JournalWindow.lua

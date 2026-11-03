@@ -199,7 +199,7 @@ local function Changed()
 	-- jamais bloquant : un rafraîchissement raté ne doit pas casser le combat
 	if ns.RefreshJournalTracker then pcall(ns.RefreshJournalTracker, ns) end
 	local frame = ns.journalFrame
-	if frame and frame.IsShown and frame:IsShown() and frame.kind == "goals" and ns.RefreshJournal then
+	if frame and frame.IsShown and frame:IsShown() and ns.RefreshJournal then
 		pcall(ns.RefreshJournal, ns)
 	end
 end

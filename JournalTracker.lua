@@ -91,6 +91,8 @@ local FR = {
 	JRN_ZONE_PART_LINE     = "  %s : %d/%d",
 	JRN_ZONE_NEXT          = "Le plus simple pour avancer — %s :",
 	JRN_PART_villages      = "Villages",
+	JRN_ITEM_TO_VISIT      = "à visiter",
+	JRN_ITEM_VISITED       = "visité",
 }
 local EN = {
 	OPT_JRN_TRACKER        = "On-screen tracker",
@@ -141,6 +143,8 @@ local EN = {
 	JRN_ZONE_PART_LINE     = "  %s: %d/%d",
 	JRN_ZONE_NEXT          = "Easiest way forward — %s:",
 	JRN_PART_villages      = "Villages",
+	JRN_ITEM_TO_VISIT      = "to visit",
+	JRN_ITEM_VISITED       = "visited",
 }
 ns.RegisterStrings(FR, EN)
 ns.JOURNAL_TRACKER_STRINGS = { fr = FR, en = EN }
@@ -265,15 +269,21 @@ local function ZoneVillages(self, zoneID, zoneName)
 		zoneName = info and info.name
 	end
 	local faction, stamps = self:PlayerFaction(), self:JournalData().stamps
-	local have, need, missing = 0, 0, {}
+	local have, need, missing, visited = 0, 0, {}, {}
 	for name, group in pairs(self:JournalHubGroups()) do
 		if group.exists and self:JournalIsVillage(group, faction) and self:JournalHubZone(group.areaID) == zoneID then
 			need = need + 1
-			if stamps["subzone:" .. group.areaID] then have = have + 1 else missing[#missing + 1] = name end
+			if stamps["subzone:" .. group.areaID] then
+				have = have + 1
+				visited[#visited + 1] = name
+			else
+				missing[#missing + 1] = name
+			end
 		end
 	end
 	table.sort(missing)
-	return { zoneID = zoneID, zoneName = tostring(zoneName or "?"), have = have, need = need, missing = missing }
+	table.sort(visited)
+	return { zoneID = zoneID, zoneName = tostring(zoneName or "?"), have = have, need = need, missing = missing, visited = visited }
 end
 
 -- Donjons dont la plage (Era ou Forever) contient ton niveau
@@ -458,12 +468,22 @@ function ns.RegisterZonePart(def)
 end
 
 -- Villages : la première part, livrée ici
-ns.RegisterZonePart({ id = "villages", label = "JRN_PART_villages", Compute = function(self, zoneID)
-	local villages = ZoneVillages(self, zoneID)
-	if not villages or villages.need == 0 then return nil end
-	return { have = villages.have, need = villages.need,
-		hint = NameLines({}, villages.missing) }
-end })
+ns.RegisterZonePart({ id = "villages", label = "JRN_PART_villages", tab = "explore",
+	Compute = function(self, zoneID)
+		local villages = ZoneVillages(self, zoneID)
+		if not villages or villages.need == 0 then return nil end
+		return { have = villages.have, need = villages.need,
+			hint = NameLines({}, villages.missing) }
+	end,
+	-- détail pour la fenêtre du carnet : à visiter d'abord, puis visités
+	Items = function(self, zoneID)
+		local villages = ZoneVillages(self, zoneID)
+		if not villages then return {} end
+		local items = {}
+		for _, name in ipairs(villages.missing) do items[#items + 1] = { name = name, done = false, detail = L.JRN_ITEM_TO_VISIT } end
+		for _, name in ipairs(villages.visited) do items[#items + 1] = { name = name, done = true, detail = L.JRN_ITEM_VISITED } end
+		return items
+	end })
 
 -- Où tu en es dans une zone : chaque part qui s'applique pèse autant que les
 -- autres (5 villages sur 5 et 2 espèces sur 10 = 60 %, pas 7/15). Renvoie
@@ -716,6 +736,18 @@ local function StopDrag()
 	ns:SaveJournalTrackerPoint()
 end
 
+-- Clic sur un objectif : le compagnon (stade, bonheur) ouvre l'Évolution ;
+-- le reste ouvre la Complétion de la zone où tu es. Déjà ouvert : fermé.
+function ns:OpenJournalFor(goal)
+	if type(self.ToggleJournal) ~= "function" then return nil end
+	local current = self.journalFrame
+	if current and current:IsShown() then current:Hide(); return current end
+	local frame = self:ToggleJournal(true)
+	local evolution = goal and (goal.kind == "stage" or goal.source == "companion")
+	if frame and self.SelectJournalKind then self:SelectJournalKind(evolution and "evolution" or "completion") end
+	return frame
+end
+
 -- Survol d'un objectif : ce qu'il faut faire, avec des noms concrets
 function ns:ShowJournalGoalTooltip(owner, goal)
 	local tip = rawget(_G, "GameTooltip")
@@ -763,7 +795,7 @@ local function BuildLine(frame, index)
 			return ns:JournalDismiss(self.goal.id, true)
 		end
 		if type(self.goal.onClick) == "function" then return self.goal.onClick() end
-		if ns.CompanionOpenJournal then ns:CompanionOpenJournal() end
+		ns:OpenJournalFor(self.goal)
 	end)
 	line:SetScript("OnDragStart", StartDrag)
 	line:SetScript("OnDragStop", StopDrag)
@@ -943,7 +975,7 @@ ns:RegisterCallback("STAMP", function(self) self:RefreshJournalTracker() end)
 local function Moved()
 	ns:LearnHubZone()
 	ns:RefreshJournalTracker()
-	if ns.journalFrame and ns.journalFrame:IsShown() and ns.journalFrame.kind == "goals" then ns:RefreshJournal() end
+	if ns.journalFrame and ns.journalFrame:IsShown() then ns:RefreshJournal() end
 end
 
 local HANDLERS = {
