@@ -580,8 +580,12 @@ do
 	Check("[WATCH] décochée : retenue", NS:JournalData().watch[1413] == false and comp.watch.checked == false)
 	Check("[WATCH] décochée : la zone et ses parts quittent le suivi", not K.Lines():find("Les Tarides", 1, true), K.Lines())
 	Check("[WATCH] décochée : les objectifs restent calculés", K.Find(NS:JournalObjectives(), "zone:1413") ~= nil)
+	NS:JournalDismiss("zone:1413", true)
+	NS:JournalDismiss("villages:1413", true)
 	comp.watch:Click()
 	Check("[WATCH] recochée : de retour", K.Lines():find("Complétion de Les Tarides", 1, true), K.Lines())
+	Check("[WATCH] recochée : les objectifs masqués avant sont réactivés", not NS:JournalData().dismissed["zone:1413"]
+		and not NS:JournalData().dismissed["villages:1413"])
 	-- une autre zone : cochée à la main
 	NS:JournalData().bestiary[1429] = { [9] = { name = "Loup", type = "Bête", seen = true, killed = 0 } }
 	NS:SelectJournalZone(1429)
