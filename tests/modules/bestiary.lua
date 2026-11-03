@@ -363,10 +363,17 @@ do
 	Mock:Fire("PLAYER_ENTERING_WORLD", true, false)
 	B.Target(3600, "Nouvelle bête")
 	local tracker, found = NS.journalTracker, false
+	-- le bestiaire s'affiche lui-même, ou à travers la complétion de la zone
+	-- (qui l'absorbe dès qu'une autre part, ici les villages, s'applique)
+	local shownText = {}
 	for _, line in ipairs(tracker and tracker.lines or {}) do
-		if line:IsShown() and line.goal and line.goal.id == "bestiary:1413" then found = true end
+		if line:IsShown() and line.goal then
+			shownText[#shownText + 1] = line.goal.id
+			if line.goal.id == "bestiary:1413" then found = true end
+			if line.goal.id == "zone:1413" and table.concat(line.goal.hint, " "):find("Bestiaire : 3/4", 1, true) then found = true end
+		end
 	end
-	Check("[BST] nouvelle espèce : objectif dans le suivi", found)
+	Check("[BST] nouvelle espèce : dans le suivi (seule ou dans la complétion de zone)", found, table.concat(shownText, ","))
 end
 
 -- 7. Persistance par personnage, interrupteur du module, robustesse -------------------
