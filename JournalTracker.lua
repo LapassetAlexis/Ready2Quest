@@ -391,6 +391,28 @@ end
 
 local SOURCES = { CompanionGoals, VillageGoals, CapitalGoals, DungeonGoals, LevelGoals }
 
+-- Extension : d'autres fichiers ajoutent leurs objectifs.
+--   ns.RegisterGoalSource(function(self, list) ... end)
+-- La fonction ajoute à `list` des objectifs construits avec ns.JournalGoal
+-- (id, label, have, need, ratio, source) ; elle peut poser goal.hint (lignes
+-- du survol), goal.short et goal.unit (carte mise en avant). Une source en
+-- panne est isolée (pcall) et n'empêche pas les autres.
+function ns.RegisterGoalSource(fn)
+	if type(fn) == "function" then SOURCES[#SOURCES + 1] = fn end
+end
+
+-- Complétion de zone : chaque part (villages, bestiaire, récolte…) dit où tu
+-- en es dans une zone.
+--   ns.RegisterZonePart({ id = "bestiary", label = "JRN_PART_bestiary",
+--     Compute = function(self, zoneID) return { have =, need =, hint = { … } } end })
+-- Compute renvoie nil quand la part ne s'applique pas (pas de métier, rien vu).
+ns.ZONE_PARTS = ns.ZONE_PARTS or {}
+function ns.RegisterZonePart(def)
+	if type(def) == "table" and def.id and type(def.Compute) == "function" then
+		ns.ZONE_PARTS[#ns.ZONE_PARTS + 1] = def
+	end
+end
+
 -- Le plus proche du but d'abord ; à égalité, le moins de pas restants, puis
 -- le nom (ordre stable d'un rafraîchissement à l'autre). Masqués à la fin.
 local function Closer(a, b)
