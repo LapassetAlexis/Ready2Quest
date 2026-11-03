@@ -100,14 +100,13 @@ ns.RegisterStrings(FR, EN)
 ns.JOURNAL_STRINGS = { fr = FR, en = EN }
 
 ns.RegisterDefaults({
-	journalEnabled = true,
 	journalToast   = true,
 	journalChat    = false,   -- le bandeau suffit ; le chat est pour qui veut une trace
 })
 
 if ns.AddOptionPage then
 	ns.AddOptionPage({
-		id = "journal", title = "OPT_PAGE_JOURNAL", group = "OPT_GROUP_MODULES", power = "journalEnabled",
+		id = "journal", title = "OPT_PAGE_JOURNAL", parent = "companion", group = "OPT_GROUP_MODULES",
 		rows = {
 			{ key = "journalToast", label = "OPT_JRN_TOAST", kind = "bool" },
 			{ key = "journalChat",  label = "OPT_JRN_CHAT",  kind = "bool" },
@@ -118,11 +117,8 @@ if ns.AddOptionPage then
 	})
 end
 
-if ns.RegisterModule then
-	-- ni « bags », ni un autre identifiant de contrôle : voir zz_integration
-	ns.RegisterModule({ id = "journal", key = "journalEnabled", label = "OPT_PAGE_JOURNAL",
-		aliases = { "carnet", "journal" } })
-end
+-- plus de module à part : « /r2q module carnet » vise le Compagnon de route
+-- (alias déclarés dans Companion.lua)
 
 if type(ns.HELP) == "table" then
 	for _, section in ipairs(ns.HELP) do
@@ -156,7 +152,8 @@ end
 
 local function ModuleOn()
 	local db = ns:DB()
-	return db.enabled ~= false and db.journalEnabled ~= false
+	-- même interrupteur que le compagnon : c'est un seul module (v1.25.0)
+	return db.enabled ~= false and db.companionEnabled ~= false
 end
 
 -- Les tampons vivent dans les données du personnage (ns:CharData, Merchant.lua) :
@@ -718,6 +715,7 @@ function ns:ToggleJournal(forceShow)
 	if frame:IsShown() and not forceShow then frame:Hide(); return frame end
 	if not ModuleOn() then self:Print(L.JRN_OFF_HINT) end
 	self:RefreshJournal()
+	if self.CloseOtherWindows then self:CloseOtherWindows(frame) end
 	frame:Show()
 	if Theme.FadeIn then Theme.FadeIn(frame, 0.15) end
 	return frame

@@ -847,6 +847,10 @@ end
 function ns:SelectOptionsPage(id)
 	local frame = self.optionsFrame
 	if not frame then return end
+	-- entrée de navigation sans page propre (module parent) : sa première sous-page
+	for _, def in ipairs(PAGES) do
+		if def.id == id and def.target then id = def.target; break end
+	end
 	if not frame.pages[id] then id = "general" end
 	frame.currentPage = id
 	local parent
@@ -860,16 +864,26 @@ function ns:SelectOptionsPage(id)
 	self:RefreshOptions()
 end
 
+-- « Une seule fenêtre à la fois » : les grandes fenêtres de l'addon ne
+-- s'empilent pas. Le carnet de voyage n'y était pas soumis et recouvrait les
+-- réglages (signalé en jeu). Les cadres discrets (résumé, compagnon, suivi)
+-- ne sont pas concernés.
+ns.EXCLUSIVE_WINDOWS = { "window", "optionsFrame", "journalFrame", "expeditionFrame", "dungeonFrame" }
+function ns:CloseOtherWindows(keep)
+	for _, field in ipairs(self.EXCLUSIVE_WINDOWS) do
+		local other = self[field]
+		if other and other ~= keep and other.IsShown and other:IsShown() then other:Hide() end
+	end
+end
+
 function ns:ToggleOptions()
 	local frame = self:EnsureOptions()
 	if not frame then return end
 	if frame:IsShown() then
 		frame:Hide()
 	else
-		-- Une seule fenêtre à la fois : le diagnostic se ferme
-		if self.window and self.window:IsShown() then
-			self.window:Hide()
-		end
+		-- Une seule fenêtre à la fois : les autres se ferment
+		self:CloseOtherWindows(frame)
 		if self.StopEditMode then self:StopEditMode() end
 		self:RefreshOptions()
 		frame:Show()

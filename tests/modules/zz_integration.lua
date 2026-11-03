@@ -45,7 +45,8 @@ for _, module in ipairs(NS.MODULES) do
 end
 Check("[INT] identifiants de module uniques", #dup == 0, table.concat(dup, ","))
 Check("[INT] les modules sont déclarés", seen.depart and seen.stuff and seen.portrait and seen.camp and seen.expedition and seen.dungeon
-	and seen.reward and seen.pace and seen.bagspace and seen.death and seen.companion and seen.journal,
+	and seen.reward and seen.pace and seen.bagspace and seen.death and seen.companion
+	and not seen.journal,     -- le carnet fait partie du Compagnon de route (v1.25.0)
 	(function() local t = {} for id in pairs(seen) do t[#t + 1] = id end table.sort(t) return table.concat(t, ",") end)())
 
 -- un alias de module ne doit jamais masquer l'identifiant d'un contrôle :
