@@ -8,10 +8,14 @@
 --     une fois, sur le total de la tranche. On compte des ressources
 --     DIFFÉRENTES, pas des quantités ;
 --   * part « Récolte » de la complétion de zone : ressources de ta tranche
---     déjà récoltées DANS cette zone.
--- Données : GatheringData.lua (itemID, métier, requise, grise, noms de repli).
--- Les zones ne sont pas dans la table : on retient en jouant où chaque
--- ressource a été récoltée (par personnage, dans les données du carnet).
+--     PRÉSENTES dans la zone (ZoneGathering_<client>.lua, herbes et minerais tirés de
+--     la base de Questie) déjà récoltées DANS cette zone. Zone absente de la
+--     table, ou dépeçage (Questie n'a pas le type des bêtes) : toute la
+--     tranche, comme avant.
+-- Données : GatheringData.lua (itemID, métier, requise, grise, noms de repli),
+-- ZoneGathering_<client>.lua (ns.ZONE_GATHERING[zoneID][itemID] = true, celle
+-- de ton client seulement). On retient en
+-- jouant où chaque ressource a été récoltée (par personnage, dans le carnet).
 -- Pas de module à part : même interrupteur que le carnet (Compagnon de route).
 local ADDON, ns = ...
 local L = ns.L
@@ -300,20 +304,47 @@ if ns.RegisterGoalSource then ns.RegisterGoalSource(GatheringGoals) end
 -- ---------------------------------------------------------------------------
 -- Part « Récolte » de la complétion de zone
 -- ---------------------------------------------------------------------------
--- Toutes tes tranches réunies (herboriste et mineur : herbes + minerais).
--- nil sans métier de récolte (ou module coupé) : la part ne s'applique pas.
-function ns:GatheringZonePart(zoneID)
-	if not ModuleOn() or not zoneID then return nil end
-	local professions, data = self:GatheringProfessions(), self:GatheringData()
+-- Ressources présentes dans une zone (table livrée), nil si la zone n'y est pas
+function ns:GatheringZoneSet(zoneID)
+	local all = rawget(ns, "ZONE_GATHERING")
+	local set = type(all) == "table" and zoneID and all[zoneID]
+	if type(set) ~= "table" then return nil end
+	return set
+end
+
+-- Le dépeçage ne dépend pas des nœuds de la zone : jamais filtré
+local ZONE_FILTERED = { herbalism = true, mining = true }
+
+-- Tes tranches réunies (herboriste et mineur : herbes + minerais), réduites
+-- à ce que la zone contient quand elle est dans la table. Renvoie la liste
+-- triée et les métiers concernés.
+function ns:GatheringZoneBand(zoneID)
+	local professions = self:GatheringProfessions()
+	local set = self:GatheringZoneSet(zoneID)
 	local band, profs = {}, {}
 	for _, prof in ipairs(ns.GATHERING_PROFESSION_ORDER or {}) do
 		if professions[prof] then
-			profs[#profs + 1] = prof
-			for _, entry in ipairs((self:GatheringBand(prof, professions[prof]))) do band[#band + 1] = entry end
+			local kept = 0
+			for _, entry in ipairs((self:GatheringBand(prof, professions[prof]))) do
+				if not (set and ZONE_FILTERED[prof]) or set[entry.itemID] then
+					band[#band + 1] = entry
+					kept = kept + 1
+				end
+			end
+			if kept > 0 then profs[#profs + 1] = prof end
 		end
 	end
-	if #band == 0 then return nil end
 	table.sort(band, ByReq)
+	return band, profs
+end
+
+-- nil sans métier de récolte (ou module coupé), ou si rien de ta tranche ne
+-- pousse dans la zone : la part ne s'applique pas.
+function ns:GatheringZonePart(zoneID)
+	if not ModuleOn() or not zoneID then return nil end
+	local data = self:GatheringData()
+	local band, profs = self:GatheringZoneBand(zoneID)
+	if #band == 0 then return nil end
 	local have, missing = 0, {}
 	for _, entry in ipairs(band) do
 		local record = data[entry.itemID]

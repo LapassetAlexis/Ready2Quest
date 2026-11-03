@@ -32,15 +32,14 @@ local FR = {
 	JRN_ACT_combat         = "Combat",
 	JRN_ACT_craft          = "Métiers",
 	JRN_ACT_quests         = "Quêtes",
-	JRN_ACT_quests_off     = "Quêtes (Questie)",
-	JRN_QUESTS_TIP         = "Onglet actif seulement si l'addon Questie est installé : il fournit la liste des quêtes de chaque zone. Les quêtes comptent alors dans les 100 %.",
+	JRN_QUESTS_TIP         = "Les quêtes de la zone que ton personnage peut faire (race, classe), livrées avec l'addon. Elles comptent dans les 100 %.",
 	JRN_WATCH              = "Suivre à l'écran",
 	JRN_WATCH_TIP          = "Cochée : les objectifs de cette zone s'affichent dans le bloc « Carnet » en jeu. La zone où tu es est suivie d'office ; décoche-la pour la masquer.",
 	JRN_ACT_EMPTY_explore  = "Aucun village connu dans cette zone.",
 	JRN_ACT_EMPTY_combat   = "Aucune créature croisée ici : cible-les ou survole-les pour les noter.",
-	JRN_ACT_EMPTY_craft    = "Pas de métier de récolte (herboristerie, minage ou dépeçage).",
+	JRN_ACT_EMPTY_craft    = "Pas de métier de récolte (herboristerie, minage ou dépeçage), ou rien de ta compétence ici.",
 	JRN_ACT_EMPTY_quests   = "Aucune quête connue pour toi dans cette zone.",
-	JRN_ACT_NO_QUESTIE     = "Installe Questie pour suivre les quêtes de chaque zone.",
+	JRN_ACT_NO_QUESTS      = "Pas de liste de quêtes pour ce client.",
 	JRN_ZONE_PERCENT       = "%d %%",
 	JRN_ZONE_NOPCT         = "Pourcentage dès que deux activités sont suivies ici.",
 	JRN_CHEST_TODO         = "À 100 %% : un coffre, un objet au choix (palier %d)",
@@ -51,6 +50,8 @@ local FR = {
 	JRN_PART_HEAD          = "%s : %d/%d",
 	JRN_ITEM_KILLED        = "abattu (%d)",
 	JRN_ITEM_TO_KILL       = "à abattre",
+	JRN_ITEM_TO_FIND       = "à trouver",
+	JRN_ITEM_LEVEL         = "%s (niv. %s)",
 	JRN_ITEM_GATHERED      = "récolté",
 	JRN_ITEM_TO_GATHER     = "à récolter (%d)",
 	JRN_ITEM_NAMED         = "%s, %s",
@@ -77,15 +78,14 @@ local EN = {
 	JRN_ACT_combat         = "Combat",
 	JRN_ACT_craft          = "Professions",
 	JRN_ACT_quests         = "Quests",
-	JRN_ACT_quests_off     = "Quests (Questie)",
-	JRN_QUESTS_TIP         = "Only active when the Questie addon is installed: it provides each zone's quest list. Quests then count toward 100%.",
+	JRN_QUESTS_TIP         = "The zone's quests your character can do (race, class), shipped with the addon. They count toward 100%.",
 	JRN_WATCH              = "Track on screen",
 	JRN_WATCH_TIP          = "Checked: this zone's goals show in the in-game \"Journal\" tracker. The zone you are in is tracked by default; uncheck it to hide it.",
 	JRN_ACT_EMPTY_explore  = "No known village in this zone.",
 	JRN_ACT_EMPTY_combat   = "No creature met here yet: target or hover them to log them.",
-	JRN_ACT_EMPTY_craft    = "No gathering profession (herbalism, mining or skinning).",
+	JRN_ACT_EMPTY_craft    = "No gathering profession (herbalism, mining or skinning), or nothing of your skill here.",
 	JRN_ACT_EMPTY_quests   = "No known quest for you in this zone.",
-	JRN_ACT_NO_QUESTIE     = "Install Questie to track each zone's quests.",
+	JRN_ACT_NO_QUESTS      = "No quest list for this client.",
 	JRN_ZONE_PERCENT       = "%d %%",
 	JRN_ZONE_NOPCT         = "Percentage as soon as two activities are tracked here.",
 	JRN_CHEST_TODO         = "At 100 %%: a chest, one item of your choice (tier %d)",
@@ -96,6 +96,8 @@ local EN = {
 	JRN_PART_HEAD          = "%s: %d/%d",
 	JRN_ITEM_KILLED        = "defeated (%d)",
 	JRN_ITEM_TO_KILL       = "to defeat",
+	JRN_ITEM_TO_FIND       = "to find",
+	JRN_ITEM_LEVEL         = "%s (lvl %s)",
 	JRN_ITEM_GATHERED      = "gathered",
 	JRN_ITEM_TO_GATHER     = "to gather (%d)",
 	JRN_ITEM_NAMED         = "%s, %s",
@@ -141,20 +143,28 @@ ns.RegisterStrings({ BST_CLASS_elite = FR.BST_CLASS_elite, BST_CLASS_rare = FR.B
 	{ BST_CLASS_elite = EN.BST_CLASS_elite, BST_CLASS_rare = EN.BST_CLASS_rare,
 	BST_CLASS_rareelite = EN.BST_CLASS_rareelite, BST_CLASS_worldboss = EN.BST_CLASS_worldboss })
 
+-- Zone préremplie (ZoneCreatures_<client>.lua) : aussi les espèces jamais croisées,
+-- « à trouver », avec leur niveau ; vues : « à abattre » ; puis « abattu (n) ».
 local function BestiaryItems(self, zoneID)
 	local items = {}
-	if not self.BestiaryZone then return items end
-	for _, species in pairs(self:BestiaryZone(zoneID) or {}) do
+	if not self.BestiarySpecies then return items end
+	for _, species in pairs(self:BestiarySpecies(zoneID)) do
 		local name = tostring(species.name or "?")
 		local tag = CLASS_LABEL[species.class or ""]
 		if tag then name = self:F("JRN_ITEM_NAMED", name, L[tag]) elseif species.type then name = self:F("JRN_ITEM_NAMED", name, species.type) end
+		local level = self.BestiaryLevelText and self:BestiaryLevelText(species)
+		if level then name = self:F("JRN_ITEM_LEVEL", name, level) end
 		local killed = tonumber(species.killed) or 0
-		items[#items + 1] = { name = name, done = killed > 0, named = tag ~= nil,
-			detail = killed > 0 and self:F("JRN_ITEM_KILLED", killed) or L.JRN_ITEM_TO_KILL }
+		local detail = L.JRN_ITEM_TO_FIND
+		if killed > 0 then detail = self:F("JRN_ITEM_KILLED", killed) elseif species.seen then detail = L.JRN_ITEM_TO_KILL end
+		local lvl = type(species.lvl) == "table" and tonumber(species.lvl[1]) or tonumber(species.level) or 0
+		items[#items + 1] = { name = name, done = killed > 0, named = tag ~= nil, seen = species.seen == true,
+			level = lvl, detail = detail }
 	end
 	table.sort(items, function(a, b)
 		if a.done ~= b.done then return not a.done end
 		if a.named ~= b.named then return a.named end
+		if a.level ~= b.level then return a.level < b.level end
 		return a.name < b.name
 	end)
 	return items
@@ -163,17 +173,14 @@ end
 -- Récolte : les ressources de ta tranche, récoltées ou non dans cette zone
 local function GatheringItems(self, zoneID)
 	local items = {}
-	if not (self.GatheringProfessions and self.GatheringBand and self.GatheringData) then return items end
-	local professions, data = self:GatheringProfessions(), self:GatheringData()
-	for _, prof in ipairs(ns.GATHERING_PROFESSION_ORDER or {}) do
-		if professions[prof] then
-			for _, entry in ipairs((self:GatheringBand(prof, professions[prof]))) do
-				local record = data[entry.itemID]
-				local done = record and type(record.zones) == "table" and (tonumber(record.zones[zoneID]) or 0) > 0
-				items[#items + 1] = { name = entry.name, done = done == true, req = entry.req,
-					detail = done and L.JRN_ITEM_GATHERED or self:F("JRN_ITEM_TO_GATHER", entry.req) }
-			end
-		end
+	if not (self.GatheringZoneBand and self.GatheringData) then return items end
+	local data = self:GatheringData()
+	-- zone préremplie (ZoneGathering_<client>.lua) : seulement ce qui y pousse
+	for _, entry in ipairs((self:GatheringZoneBand(zoneID))) do
+		local record = data[entry.itemID]
+		local done = record and type(record.zones) == "table" and (tonumber(record.zones[zoneID]) or 0) > 0
+		items[#items + 1] = { name = entry.name, done = done == true, req = entry.req,
+			detail = done and L.JRN_ITEM_GATHERED or self:F("JRN_ITEM_TO_GATHER", entry.req) }
 	end
 	table.sort(items, function(a, b)
 		if a.done ~= b.done then return not a.done end
@@ -309,14 +316,15 @@ local function BuildCompletion(self, frame, top)
 		tab.activity = activity
 		pane.tabs[activity] = tab
 		if activity == "quests" and tab.HookScript then
-			-- l'onglet dit lui-même qu'il dépend de Questie
+			-- l'onglet dit ce qu'il compte, ou qu'il n'a pas de liste pour ce client
 			tab:HookScript("OnEnter", function(owner)
 				local tip = rawget(_G, "GameTooltip")
 				if type(tip) ~= "table" then return end
 				pcall(tip.SetOwner, tip, owner, "ANCHOR_BOTTOM")
 				if tip.ClearLines then tip:ClearLines() end
 				tip:AddLine(L.JRN_ACT_quests, Theme.GOLD[1], Theme.GOLD[2], Theme.GOLD[3])
-				tip:AddLine(L.JRN_QUESTS_TIP, 1, 1, 1, true)
+				local available = ns.ZoneQuestsAvailable and ns:ZoneQuestsAvailable()
+				tip:AddLine(available and L.JRN_QUESTS_TIP or L.JRN_ACT_NO_QUESTS, 1, 1, 1, true)
 				tip:Show()
 			end)
 			tab:HookScript("OnLeave", function() local tip = rawget(_G, "GameTooltip"); if tip then tip:Hide() end end)
@@ -576,11 +584,11 @@ local function RefreshCompletion(self, frame)
 	pane.watch:Show(); pane.watchLabel:Show()
 	local activity = frame.activity or "explore"
 	for key, tab in pairs(pane.tabs) do TabColor(tab, key == activity) end
-	-- Quêtes : grisé et « (Questie) » tant que Questie n'est pas là
-	local questie = self.QuestieAvailable and self:QuestieAvailable()
+	-- Quêtes : grisé si ce client n'a pas de liste de quêtes
+	local quests = self.ZoneQuestsAvailable and self:ZoneQuestsAvailable()
 	local questsTab = pane.tabs.quests
-	questsTab:SetText(questie and L.JRN_ACT_quests or L.JRN_ACT_quests_off)
-	if not questie and activity ~= "quests" and questsTab.text.SetTextColor then
+	questsTab:SetText(L.JRN_ACT_quests)
+	if not quests and activity ~= "quests" and questsTab.text.SetTextColor then
 		questsTab.text:SetTextColor(Theme.MUTED[1], Theme.MUTED[2], Theme.MUTED[3])
 	end
 	local rows = self:JournalActivityRows(zoneID, activity)
@@ -612,8 +620,8 @@ local function RefreshCompletion(self, frame)
 	end
 	local empty = ""
 	if #rows == 0 then
-		if activity == "quests" and not (self.QuestieAvailable and self:QuestieAvailable()) then
-			empty = L.JRN_ACT_NO_QUESTIE
+		if activity == "quests" and not (self.ZoneQuestsAvailable and self:ZoneQuestsAvailable()) then
+			empty = L.JRN_ACT_NO_QUESTS
 		else
 			empty = L["JRN_ACT_EMPTY_" .. activity] or ""
 		end

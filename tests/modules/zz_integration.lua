@@ -181,7 +181,7 @@ do
 	for _, def in ipairs(NS.ZONE_PARTS) do
 		if def.id == "quests" then quests = def end
 	end
-	Check("[INT] part Quêtes (Questie) : onglet et détail", quests and quests.tab == "quests" and type(quests.Items) == "function")
+	Check("[INT] part Quêtes : onglet et détail", quests and quests.tab == "quests" and type(quests.Items) == "function")
 	-- une part factice de l'onglet Quêtes s'affiche dans la fenêtre
 	local fake = { id = "fakeq", label = "JRN_PART_quests", tab = "quests",
 		Compute = function() return { have = 1, need = 2 } end,

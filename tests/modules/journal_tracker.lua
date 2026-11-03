@@ -10,6 +10,12 @@ local saved, MOCKED = {}, { "IsInInstance", "GetInstanceInfo", "GetRealZoneText"
 for _, name in ipairs(MOCKED) do saved[name] = rawget(_G, name) end
 saved.GetAreaInfo = C_Map.GetAreaInfo
 saved.NextUnlocks = rawget(NS, "CompanionNextUnlocks")
+-- Ces tests couvrent le comportement 100 % dynamique (zone absente des tables
+-- livrées, carte inconnue du client) : tables mises de côté, remises à la fin.
+-- Les zones préremplies sont testées dans zone_data.lua et zone_quests.lua.
+saved.ZONE_CREATURES, saved.ZONE_GATHERING = rawget(NS, "ZONE_CREATURES"), rawget(NS, "ZONE_GATHERING")
+saved.ZONE_QUESTS = rawget(NS, "ZONE_QUESTS")
+NS.ZONE_CREATURES, NS.ZONE_GATHERING, NS.ZONE_QUESTS = nil, nil, nil
 
 local K = { W = {} }
 _G.IsInInstance = function() return K.W.instance == true, K.W.instance and "party" or "none" end
@@ -495,11 +501,13 @@ do
 	Check("[WIN] liste déroulante : la zone, marquée « ici »", comp.zoneButton.text.text:find("Zone : Les Tarides (ici)", 1, true), comp.zoneButton.text.text)
 	Check("[WIN] quatre activités", comp.tabs.explore and comp.tabs.combat and comp.tabs.craft and comp.tabs.quests
 		and comp.tabs.explore.text.text == "Exploration")
-	local questie = NS.QuestieAvailable and NS:QuestieAvailable()
-	Check("[WIN] Quêtes sans Questie : « (Questie) », grisé", questie or (comp.tabs.quests.text.text == "Quêtes (Questie)"
-		and comp.tabs.quests.text.textColor[1] == NS.Theme.MUTED[1]), comp.tabs.quests.text.text)
+	Check("[WIN] client sans liste de quêtes : onglet « Quêtes », grisé", NS:ZoneQuestsAvailable() == false
+		and comp.tabs.quests.text.text == "Quêtes" and comp.tabs.quests.text.textColor[1] == NS.Theme.MUTED[1],
+		comp.tabs.quests.text.text)
 	comp.tabs.quests.hooks.OnEnter(comp.tabs.quests)
-	Check("[WIN] Quêtes : le survol explique qu'il faut Questie", table.concat(_G.GameTooltip.lines or {}, " "):find("Questie", 1, true) ~= nil)
+	local tipText = table.concat(_G.GameTooltip.lines or {}, " ")
+	Check("[WIN] Quêtes : le survol dit qu'il n'y a pas de liste pour ce client, sans Questie",
+		tipText:find(NS.L.JRN_ACT_NO_QUESTS, 1, true) ~= nil and not tipText:find("Questie", 1, true), tipText)
 	comp.tabs.quests.hooks.OnLeave(comp.tabs.quests)
 	Check("[WIN] onglet actif : Exploration", comp.tabs.explore.selected and not comp.tabs.combat.selected)
 	Check("[WIN] exploration : titre de part « Villages : 1/3 »", comp.lines[1].item and comp.lines[1].item.header
@@ -515,7 +523,7 @@ do
 	comp.tabs.craft:Click()
 	Check("[WIN] métiers sans métier : message", comp.empty.text == NS.L.JRN_ACT_EMPTY_craft)
 	comp.tabs.quests:Click()
-	Check("[WIN] quêtes sans Questie : l'installer", questie or comp.empty.text == NS.L.JRN_ACT_NO_QUESTIE, comp.empty.text)
+	Check("[WIN] quêtes sans liste : message clair", comp.empty.text == "Pas de liste de quêtes pour ce client.", comp.empty.text)
 
 	-- bestiaire : une deuxième activité -> pourcentage, coffre annoncé, défilement
 	local zone = {}
@@ -580,8 +588,12 @@ do
 	Check("[WATCH] décochée : retenue", NS:JournalData().watch[1413] == false and comp.watch.checked == false)
 	Check("[WATCH] décochée : la zone et ses parts quittent le suivi", not K.Lines():find("Les Tarides", 1, true), K.Lines())
 	Check("[WATCH] décochée : les objectifs restent calculés", K.Find(NS:JournalObjectives(), "zone:1413") ~= nil)
+	NS:JournalDismiss("zone:1413", true)
+	NS:JournalDismiss("villages:1413", true)
 	comp.watch:Click()
 	Check("[WATCH] recochée : de retour", K.Lines():find("Complétion de Les Tarides", 1, true), K.Lines())
+	Check("[WATCH] recochée : les objectifs masqués avant sont réactivés", not NS:JournalData().dismissed["zone:1413"]
+		and not NS:JournalData().dismissed["villages:1413"])
 	-- une autre zone : cochée à la main
 	NS:JournalData().bestiary[1429] = { [9] = { name = "Loup", type = "Bête", seen = true, killed = 0 } }
 	NS:SelectJournalZone(1429)
@@ -630,4 +642,6 @@ end
 for _, name in ipairs(MOCKED) do _G[name] = saved[name] end
 C_Map.GetAreaInfo = saved.GetAreaInfo
 NS.CompanionNextUnlocks = saved.NextUnlocks
+NS.ZONE_CREATURES, NS.ZONE_GATHERING = saved.ZONE_CREATURES, saved.ZONE_GATHERING
+NS.ZONE_QUESTS = saved.ZONE_QUESTS
 if NS.journalTracker then NS.journalTracker:Hide() end

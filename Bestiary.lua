@@ -1,7 +1,13 @@
 -- Bestiary.lua -- bestiaire de zone et nommés du « Carnet de voyage » (v1.25.0)
 --
--- La complétion d'une zone, côté créatures, SANS base livrée : tout s'apprend
--- en jouant, par personnage.
+-- La complétion d'une zone, côté créatures : les espèces de la zone livrées
+-- avec l'addon (ZoneCreatures_Era.lua ou ZoneCreatures_Forever.lua selon le
+-- client, tirées de la base de Questie, voir tools/gen_zone_data.py) UNION celles apprises en jouant, par personnage.
+--   * Zone préremplie : toutes ses espèces comptent dès l'arrivée, quel que
+--              soit leur niveau (100 % strict), sauf celles amicales envers
+--              ta faction (champ f de la table).
+--   * Zone absente des tables (carte inconnue de ton client) : tout s'apprend en
+--              jouant, comme avant.
 --   * Vu     : une créature hostile ou neutre (pas un joueur, pas un familier,
 --              pas une bestiole) ciblée, survolée ou dont la plaque de nom
 --              apparaît. On retient son ESPÈCE (numéro de PNJ tiré du GUID),
@@ -9,8 +15,9 @@
 --   * Abattu : même règle que les rares du carnet (Journal.lua) — engagée par
 --              toi, ton familier ou ton groupe (coup porté, raté, ou coup
 --              reçu), puis morte (UNIT_DIED / PARTY_KILL). Un mob tué par un
---              inconnu ne compte pas.
---   * Nommé  : élite, rare, rare élite ou boss.
+--              inconnu ne compte pas. Une espèce de la table compte même si
+--              elle n'a jamais été « vue » : le journal de combat suffit.
+--   * Nommé  : élite, rare, rare élite ou boss (rang Questie 1, 4, 2, 3).
 -- On compte des ESPÈCES différentes, jamais un nombre de victimes : pas de
 -- « tue 5 sangliers », juste « as-tu déjà abattu un sanglier d'ici ? ».
 --
@@ -45,6 +52,7 @@ local FR = {
 	BST_HINT_NAME_TYPE  = "%s (%s)",
 	BST_COUNT           = "Bestiaire : %d / %d espèces abattues",
 	BST_COUNT_NAMED     = "Nommés : %d / %d abattus",
+	BST_LEVEL           = "niv. %s",
 }
 local EN = {
 	JRN_PART_bestiary   = "Bestiary",
@@ -57,6 +65,7 @@ local EN = {
 	BST_HINT_NAME_TYPE  = "%s (%s)",
 	BST_COUNT           = "Bestiary: %d / %d species defeated",
 	BST_COUNT_NAMED     = "Named foes: %d / %d defeated",
+	BST_LEVEL           = "lvl %s",
 }
 ns.RegisterStrings(FR, EN)
 ns.BESTIARY_STRINGS = { fr = FR, en = EN }
@@ -118,21 +127,113 @@ function ns:BestiaryData()
 	return data.bestiary
 end
 
--- Espèces d'une zone (table npcID -> espèce), nil si rien vu
+-- Espèces APPRISES d'une zone (table npcID -> espèce), nil si rien vu
 function ns:BestiaryZone(zoneID)
 	local zone = zoneID and self:BestiaryData()[zoneID]
 	if type(zone) ~= "table" or next(zone) == nil then return nil end
 	return zone
 end
 
+-- ---------------------------------------------------------------------------
+-- Table livrée (ZoneCreatures_<client>.lua, seule celle de ton client se
+-- charge) : ns.ZONE_CREATURES[zoneID][npcID] =
+-- { lvl = { min, max }, rank, fr, en, f }. Lue à chaque appel (pas de copie
+-- locale) : une zone absente reste 100 % dynamique.
+-- ---------------------------------------------------------------------------
+-- Rang Questie (cmangos) -> classification du client (UnitClassification)
+local RANK_CLASS = { [1] = "elite", [2] = "rareelite", [3] = "worldboss", [4] = "rare" }
+ns.BESTIARY_RANK_CLASS = RANK_CLASS
+
+function ns:BestiaryStaticZone(zoneID)
+	local all = rawget(ns, "ZONE_CREATURES")
+	local zone = type(all) == "table" and zoneID and all[zoneID]
+	if type(zone) ~= "table" then return nil end
+	return zone
+end
+
+-- « A » (Alliance), « H » (Horde), nil si le client ne le dit pas
+function ns:BestiaryFaction()
+	local group = Call("UnitFactionGroup", "player")
+	if group == "Alliance" then return "A" end
+	if group == "Horde" then return "H" end
+	return nil
+end
+
+-- Une espèce de la table compte pour toi : pas amicale envers ta faction
+-- (faction inconnue : seules les espèces hostiles ou neutres envers les deux)
+local function ForYou(entry, faction)
+	local f = entry.f
+	if f == nil then return true end
+	return faction ~= nil and not tostring(f):find(faction, 1, true)
+end
+
+local function IsFrenchClient()
+	return Call("GetLocale") == "frFR"
+end
+
+function ns:BestiaryStaticName(entry)
+	if type(entry) ~= "table" then return nil end
+	if IsFrenchClient() then return entry.fr or entry.en end
+	return entry.en or entry.fr
+end
+
+-- « 5 » ou « 5-7 » (niveaux de la table), nil sans niveau
+function ns:BestiaryLevelText(species)
+	local lvl = type(species) == "table" and species.lvl
+	if type(lvl) == "table" and tonumber(lvl[1]) then
+		local lo, hi = tonumber(lvl[1]), tonumber(lvl[2]) or tonumber(lvl[1])
+		return lo == hi and tostring(lo) or (lo .. "-" .. hi)
+	end
+	local level = type(species) == "table" and tonumber(species.level)
+	return level and tostring(level) or nil
+end
+
+-- Toutes les espèces d'une zone : la table (filtrée par ta faction) UNION ce
+-- que tu as appris. npcID -> { name, class, type, lvl, level, seen, killed,
+-- static }. Une espèce apprise garde son nom du client et son type.
+function ns:BestiarySpecies(zoneID)
+	local list = {}
+	if not zoneID then return list end
+	local static = self:BestiaryStaticZone(zoneID)
+	if static then
+		local faction = self:BestiaryFaction()
+		for npcID, entry in pairs(static) do
+			if type(entry) == "table" and ForYou(entry, faction) then
+				list[npcID] = { name = self:BestiaryStaticName(entry) or tostring(npcID),
+					class = RANK_CLASS[tonumber(entry.rank) or 0], lvl = entry.lvl,
+					seen = false, killed = 0, static = true }
+			end
+		end
+	end
+	for npcID, learned in pairs(self:BestiaryZone(zoneID) or {}) do
+		if type(learned) == "table" then
+			local merged = list[npcID] or {}
+			local entry = static and static[npcID]
+			merged.name = learned.name or merged.name or tostring(npcID)
+			merged.type, merged.family, merged.level = learned.type, learned.family, learned.level
+			merged.class = learned.class or merged.class
+			if type(entry) == "table" then
+				merged.lvl, merged.static = entry.lvl, true
+				-- le rang de la table l'emporte sur « normal » (mob vu de loin)
+				merged.class = RANK_CLASS[tonumber(entry.rank) or 0] or merged.class
+			end
+			merged.seen = learned.seen == true
+			merged.killed = tonumber(learned.killed) or 0
+			list[npcID] = merged
+		end
+	end
+	return list
+end
+
 function ns:BestiaryIsNamed(species)
 	return type(species) == "table" and NAMED[species.class or ""] == true
 end
 
--- { seen, killed, namedSeen, namedKilled } (zéros si rien vu)
+-- { seen, killed, namedSeen, namedKilled } (zéros si rien vu) ; « seen » =
+-- espèces à abattre dans la zone (table + apprises), vues ou non
 function ns:BestiaryCounts(zoneID)
 	local counts = { seen = 0, killed = 0, namedSeen = 0, namedKilled = 0 }
-	for _, species in pairs(self:BestiaryZone(zoneID) or {}) do
+	for _, species in pairs(self:BestiarySpecies(zoneID)) do
 		local killed = (tonumber(species.killed) or 0) > 0
 		counts.seen = counts.seen + 1
 		if killed then counts.killed = counts.killed + 1 end
@@ -156,11 +257,14 @@ end
 -- Survol : les espèces vues et pas encore abattues, triées, coupées à HINT_NAMES
 local function MissingHint(self, zoneID, namedOnly, title)
 	local names = {}
-	for _, species in pairs(self:BestiaryZone(zoneID) or {}) do
+	for _, species in pairs(self:BestiarySpecies(zoneID)) do
 		if (tonumber(species.killed) or 0) == 0 and (not namedOnly or self:BestiaryIsNamed(species)) then
 			local name = tostring(species.name or "?")
+			local level = species.lvl and self:BestiaryLevelText(species)
 			if type(species.type) == "string" and species.type ~= "" then
 				name = self:F("BST_HINT_NAME_TYPE", name, species.type)
+			elseif level then
+				name = self:F("BST_HINT_NAME_TYPE", name, self:F("BST_LEVEL", level))
 			end
 			names[#names + 1] = name
 		end
@@ -207,6 +311,7 @@ end
 local function Prune(now)
 	if ns.bestiaryPrunedAt and now - ns.bestiaryPrunedAt < PRUNE_EVERY then return end
 	ns.bestiaryPrunedAt = now
+	ns.bestiaryRejected = {}
 	for guid, entry in pairs(ns.bestiaryUnits) do
 		local age = now - (entry.seen or now)
 		if age > (entry.engaged and ENGAGED_MEMORY or SEEN_MEMORY) then ns.bestiaryUnits[guid] = nil end
@@ -270,12 +375,42 @@ local function FromGroup(guid, flags)
 	return flags ~= nil and flags % 8 > 0
 end
 
+-- Un mob jamais repéré (ni cible, ni survol, ni plaque) mais engagé : retenu
+-- si son espèce est dans la table de la zone où tu es. Les refus sont mis en
+-- mémoire (par GUID, vidée avec Prune) : un seul calcul par mob, pas par coup.
+ns.bestiaryRejected = {}
+local function Adopt(self, guid)
+	if not guid or self.bestiaryRejected[guid] or not ModuleOn() then return nil end
+	local npcID = NpcID(guid)
+	local zoneID = npcID and self:JournalZone()
+	local static = zoneID and self:BestiaryStaticZone(zoneID)
+	local now = ns.Now()
+	Prune(now)
+	if not (static and static[npcID]) then
+		self.bestiaryRejected[guid] = true
+		return nil
+	end
+	local entry = { zoneID = zoneID, npcID = npcID, seen = now }
+	self.bestiaryUnits[guid] = entry
+	return entry
+end
+
 local function Kill(self, guid, entry)
 	self.bestiaryUnits[guid] = nil
 	if not ModuleOn() then return end
-	local zone = self:BestiaryData()[entry.zoneID]
+	local book = self:BestiaryData()
+	local zone = book[entry.zoneID]
 	local species = zone and zone[entry.npcID]
-	if not species then return end
+	if not species then
+		-- espèce de la table abattue sans avoir été « vue » : on la crée ici
+		local static = self:BestiaryStaticZone(entry.zoneID)
+		local known = static and static[entry.npcID]
+		if type(known) ~= "table" then return end
+		species = { name = self:BestiaryStaticName(known) or tostring(entry.npcID), seen = true, killed = 0,
+			class = RANK_CLASS[tonumber(known.rank) or 0] or "normal" }
+		book[entry.zoneID] = zone or {}
+		book[entry.zoneID][entry.npcID] = species
+	end
 	local before = tonumber(species.killed) or 0
 	species.killed = before + 1
 	if before == 0 then Changed() end
@@ -292,6 +427,10 @@ function ns:BestiaryCombat(subevent, sourceGUID, sourceFlags, destGUID, destFlag
 		return
 	end
 	local hit = subevent:find("_DAMAGE$") or subevent:find("_MISSED$")
+	if not hit and subevent ~= "PARTY_KILL" then return end
+	if not target and destGUID and FromGroup(sourceGUID, sourceFlags) then
+		target = Adopt(self, destGUID)
+	end
 	if target and FromGroup(sourceGUID, sourceFlags) then
 		if subevent == "PARTY_KILL" then
 			Kill(self, destGUID, target)
@@ -301,8 +440,10 @@ function ns:BestiaryCombat(subevent, sourceGUID, sourceFlags, destGUID, destFlag
 		return
 	end
 	-- frappé (ou raté) par un mob repéré : c'est aussi un combat engagé
+	if not hit then return end
 	local attacker = sourceGUID and units[sourceGUID]
-	if attacker and hit and FromGroup(destGUID, destFlags) then attacker.engaged = true end
+	if not attacker and sourceGUID and FromGroup(destGUID, destFlags) then attacker = Adopt(self, sourceGUID) end
+	if attacker and FromGroup(destGUID, destFlags) then attacker.engaged = true end
 end
 
 -- ---------------------------------------------------------------------------
@@ -359,7 +500,8 @@ local HANDLERS = {
 	UPDATE_MOUSEOVER_UNIT = function() ns:BestiarySeeUnit("mouseover") end,
 	NAME_PLATE_UNIT_ADDED = function(unit) ns:BestiarySeeUnit(unit) end,
 	COMBAT_LOG_EVENT_UNFILTERED = function(...)
-		if not next(ns.bestiaryUnits) then return end      -- coût nul sans mob repéré
+		-- coût nul sans mob repéré ni table livrée (Forever : tout reste appris)
+		if not next(ns.bestiaryUnits) and rawget(ns, "ZONE_CREATURES") == nil then return end
 		ns:BestiaryCombat(CombatArgs(...))
 	end,
 }

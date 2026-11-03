@@ -524,9 +524,18 @@ function ns:JournalIsWatched(zoneID)
 	return value == true
 end
 
+-- Cocher une zone la réactive en entier : ses objectifs masqués d'un clic
+-- droit (complétion, villages, bestiaire, nommés) reviennent dans le suivi.
+local WATCH_PREFIXES = { "zone:", "villages:", "bestiary:", "named:" }
 function ns:JournalSetWatched(zoneID, on)
 	if not zoneID then return nil end
 	self:JournalWatchData()[zoneID] = on and true or false
+	if on then
+		local dismissed = self:JournalData().dismissed
+		if type(dismissed) == "table" then
+			for _, prefix in ipairs(WATCH_PREFIXES) do dismissed[prefix .. zoneID] = nil end
+		end
+	end
 	if self.RefreshJournalTracker then pcall(self.RefreshJournalTracker, self) end
 	if self.journalFrame and self.journalFrame:IsShown() and self.RefreshJournal then self:RefreshJournal() end
 	return on and true or false

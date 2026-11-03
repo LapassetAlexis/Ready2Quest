@@ -7,9 +7,9 @@
 ## Notes: Checklist QoL avant de quitter une zone sûre : sacs, gris à vendre, vivres, buffs, repos, durabilité, quêtes à rendre.
 ## Notes-frFR: Checklist QoL avant de quitter une zone sûre : sacs, gris à vendre, vivres, buffs, repos, durabilité, quêtes à rendre.
 ## Version: 1.25.0
+## X-License: GPL-3.0
 ## Author: Tristabeau
 ## SavedVariables: Ready2QuestDB
-## OptionalDeps: Questie
 ## X-Category: Utility
 ## IconTexture: Interface\AddOns\Ready2Quest\Textures\logo_petit
 
@@ -41,9 +41,15 @@ CompanionLines.lua
 Companion.lua
 Journal.lua
 JournalTracker.lua
+ZoneCreatures_Era.lua
+ZoneCreatures_Forever.lua
+ZoneGathering_Era.lua
+ZoneGathering_Forever.lua
 Bestiary.lua
 GatheringData.lua
 Gathering.lua
 CompanionChest.lua
-QuestieZone.lua
+ZoneQuests_Era.lua
+ZoneQuests_Forever.lua
+ZoneQuests.lua
 JournalWindow.lua
