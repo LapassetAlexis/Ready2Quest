@@ -38,3 +38,4 @@ Death.lua
 CompanionData.lua
 Companion.lua
 Journal.lua
+JournalTracker.lua

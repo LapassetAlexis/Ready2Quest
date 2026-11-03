@@ -31,7 +31,13 @@ local Theme = ns.Theme
 
 local KINDS = { "zone", "subzone", "capital", "dungeon", "rare", "level" }
 ns.JOURNAL_KINDS = KINDS
+-- onglets de la fenêtre : les objectifs d'abord (ce qui reste à faire se lit
+-- avant ce qui est fait), puis une page par sorte de tampon
+local TABS = { "goals", "zone", "subzone", "capital", "dungeon", "rare", "level" }
+ns.JOURNAL_TABS = TABS
 local MILESTONES = { 10, 20, 30, 40, 50, 60 }
+-- partagés avec JournalTracker.lua (objectif « prochain palier »)
+ns.JOURNAL_MILESTONES = MILESTONES
 local TOAST_SECONDS = 4
 local TOAST_COLLAPSE = 3      -- à partir de 3 tampons en attente : un seul bandeau groupé
 local RARE_MEMORY = 900       -- un rare vu et jamais engagé est oublié après 15 min
@@ -53,6 +59,11 @@ local FR = {
 	JRN_TAB_dungeon       = "Donjons",
 	JRN_TAB_rare          = "Rares",
 	JRN_TAB_level         = "Paliers",
+	JRN_TAB_goals         = "Objectifs",
+	JRN_GOALS_COUNT       = "Objectifs : %d",
+	JRN_GOALS_EMPTY       = "Rien en vue pour l'instant : ton carnet est à jour.",
+	JRN_GOALS_HINT        = "Clic droit : masquer ou remettre un objectif.",
+	JRN_GOAL_HIDDEN       = "masqué",
 	JRN_COUNT             = "%s : %d",
 	JRN_COUNT_OF          = "%s : %d / %d",
 	JRN_TO_DISCOVER       = "à découvrir",
@@ -81,6 +92,11 @@ local EN = {
 	JRN_TAB_dungeon       = "Dungeons",
 	JRN_TAB_rare          = "Rares",
 	JRN_TAB_level         = "Milestones",
+	JRN_TAB_goals         = "Goals",
+	JRN_GOALS_COUNT       = "Goals: %d",
+	JRN_GOALS_EMPTY       = "Nothing in sight for now: your journal is up to date.",
+	JRN_GOALS_HINT        = "Right-click: hide or restore a goal.",
+	JRN_GOAL_HIDDEN       = "hidden",
 	JRN_COUNT             = "%s: %d",
 	JRN_COUNT_OF          = "%s: %d / %d",
 	JRN_TO_DISCOVER       = "to discover",
@@ -110,6 +126,10 @@ if ns.AddOptionPage then
 		rows = {
 			{ key = "journalToast", label = "OPT_JRN_TOAST", kind = "bool" },
 			{ key = "journalChat",  label = "OPT_JRN_CHAT",  kind = "bool" },
+			-- suivi à l'écran (JournalTracker.lua : chaînes, défauts, action)
+			{ key = "journalTracker",       label = "OPT_JRN_TRACKER",        kind = "bool" },
+			{ key = "journalTrackerCombat", label = "OPT_JRN_TRACKER_COMBAT", kind = "bool" },
+			{ key = "journalTrackerReset",  label = "OPT_JRN_TRACKER_RESET",  kind = "action" },
 		},
 		-- bouton construit par Options.lua (L.OPT_ACTION_JOURNAL), action
 		-- traitée par le relais de RunOptionAction plus bas
@@ -270,6 +290,8 @@ end
 local function IsVillage(group, faction)
 	return (group.kind == "town" or group.kind == "hub") and Friendly(group, faction)
 end
+-- même règle pour les objectifs du suivi : un village ennemi n'est pas un but
+function ns:JournalIsVillage(group, faction) return IsVillage(group, faction) end
 
 -- Une passe complète : appelée à l'entrée dans le monde et à chaque
 -- changement de zone ou de sous-zone. Chaque tampon ne se gagne qu'une fois.
@@ -491,7 +513,8 @@ end
 -- ---------------------------------------------------------------------------
 -- Fenêtre du carnet
 -- ---------------------------------------------------------------------------
-local WIDTH, HEIGHT = 460, 404
+-- 520 de large : sept onglets (Objectifs + six sortes) restent lisibles
+local WIDTH, HEIGHT = 520, 404
 local LINES, LINE_H = 10, 22
 local KIND_COLOR = {
 	zone = Theme.GOLD, subzone = Theme.BLUE, capital = Theme.PARCHMENT,
@@ -574,13 +597,13 @@ function ns:EnsureJournalWindow()
 	local frame = Theme.CreatePanel(UIParent, WIDTH, HEIGHT, L.JRN_TITLE, { name = "Ready2QuestJournalFrame" })
 	if not frame then return nil end
 	if self.RestorePoint then self:RestorePoint(frame, "journalPoint", { point = "CENTER", x = 0, y = 40 }) end
-	frame.kind, frame.offset = "zone", 0
+	frame.kind, frame.offset = "goals", 0
 	local top = frame.contentTop - 10
 
-	-- onglets, un par sorte de tampon
+	-- onglets : les objectifs, puis un par sorte de tampon
 	frame.tabs = {}
-	local tabW = math.floor((WIDTH - 28 - (#KINDS - 1) * 4) / #KINDS)
-	for index, kind in ipairs(KINDS) do
+	local tabW = math.floor((WIDTH - 28 - (#TABS - 1) * 4) / #TABS)
+	for index, kind in ipairs(TABS) do
 		local tab = Theme.CreateButton(frame, tabW, 20, self:JournalKindLabel(kind), function() ns:SelectJournalKind(kind) end)
 		tab:SetPoint("TOPLEFT", frame, "TOPLEFT", 14 + (index - 1) * (tabW + 4), top)
 		tab.kind = kind
@@ -613,6 +636,16 @@ function ns:EnsureJournalWindow()
 		row.detail:SetWidth(150)
 		row.detail:SetJustifyH("RIGHT")
 		row.detail:SetWordWrap(false)
+		-- page Objectifs : une barre de progression par ligne, et le clic
+		-- droit qui masque / remet l'objectif (même geste que dans le suivi)
+		row.bar = Theme.CreateBar(row, 120, 3)
+		row.bar:SetPoint("LEFT", row, "LEFT", 290, 0)
+		row.bar:Hide()
+		row:SetScript("OnMouseUp", function(self, button)
+			if button == "RightButton" and self.item and self.item.goal and ns.JournalDismiss then
+				ns:JournalDismiss(self.item.goal.id)
+			end
+		end)
 		row:Hide()
 		frame.lines[index] = row
 	end
@@ -657,8 +690,15 @@ end
 function ns:RefreshJournal()
 	local frame = self.journalFrame
 	if not frame then return end
-	local kind = frame.kind or "zone"
-	local items = self:JournalItems(kind)
+	local kind = frame.kind or "goals"
+	local goals = kind == "goals"
+	local items
+	if goals then
+		-- objectifs calculés par JournalTracker.lua (absent : page vide, pas d'erreur)
+		items = self.JournalGoalItems and self:JournalGoalItems() or {}
+	else
+		items = self:JournalItems(kind)
+	end
 	frame.items = items
 	local maxOffset = math.max(0, #items - LINES)
 	frame.offset = math.max(0, math.min(frame.offset or 0, maxOffset))
@@ -666,7 +706,12 @@ function ns:RefreshJournal()
 	local counts = self:JournalCounts()
 	frame.subtitle:SetText(self:F("JRN_TOTAL", counts.total)
 		.. (ModuleOn() and "" or ("  " .. Theme.T_GREY .. L.MODULE_OFF .. "|r")))
-	local text, count, total = self:JournalCounterText(kind)
+	local text, count, total
+	if goals then
+		text = self:F("JRN_GOALS_COUNT", #items)
+	else
+		text, count, total = self:JournalCounterText(kind)
+	end
 	frame.counter:SetText(text)
 	if total and total > 0 then
 		frame.bar:SetValue(math.min(1, count / total)); frame.bar:Show()
@@ -686,7 +731,27 @@ function ns:RefreshJournal()
 	for index, row in ipairs(frame.lines) do
 		local item = items[index + frame.offset]
 		row.item = item
-		if item then
+		-- souris seulement sur la page Objectifs : ailleurs, les lignes
+		-- laissent passer le glisser de la fenêtre
+		if row.EnableMouse then row:EnableMouse(goals) end
+		row.detail:SetWidth(goals and 70 or 150)
+		if item and item.goal then
+			-- objectif : losange en trait (pas encore gagné), barre ambre,
+			-- grisé s'il est masqué du suivi
+			local dim = item.goal.dismissed
+			local c = dim and Theme.MUTED or Theme.GOLD
+			local t = dim and Theme.MUTED or Theme.TEXT
+			row.stamp:SetTexture(Theme.DIAMOND_LINE)
+			row.stamp:SetVertexColor(c[1], c[2], c[3], 1)
+			row.name:SetTextColor(t[1], t[2], t[3])
+			row.name:SetText(item.name)
+			row.detail:SetText(Theme.T_GREY .. (item.detail or "") .. "|r")
+			row.bar:SetValue(item.goal.ratio or 0)
+			row.bar:SetColor(c[1], c[2], c[3], 1)
+			row.bar:Show()
+			row:Show()
+		elseif item then
+			row.bar:Hide()
 			row.stamp:SetTexture(item.earned and Theme.DIAMOND or Theme.DIAMOND_LINE)
 			if item.earned then
 				row.stamp:SetVertexColor(color[1], color[2], color[3], 1)
@@ -699,12 +764,14 @@ function ns:RefreshJournal()
 			row.detail:SetText(Theme.T_GREY .. (item.detail or "") .. "|r")
 			row:Show()
 		else
+			row.bar:Hide()
 			row:Hide()
 		end
 	end
-	frame.empty:SetText(#items == 0 and L.JRN_EMPTY or "")
+	frame.empty:SetText(#items == 0 and (goals and L.JRN_GOALS_EMPTY or L.JRN_EMPTY) or "")
 	frame.position:SetText(#items > LINES
-		and string.format("%d-%d / %d", frame.offset + 1, math.min(#items, frame.offset + LINES), #items) or "")
+		and string.format("%d-%d / %d", frame.offset + 1, math.min(#items, frame.offset + LINES), #items)
+		or ((goals and #items > 0) and L.JRN_GOALS_HINT or ""))
 	if frame.offset > 0 then frame.up:Show() else frame.up:Hide() end
 	if frame.offset < maxOffset then frame.down:Show() else frame.down:Hide() end
 end
