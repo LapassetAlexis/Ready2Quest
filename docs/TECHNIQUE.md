@@ -75,6 +75,13 @@ Comme avant, un agent par module, puis fusion. Le contrat entre les deux tient e
 - **Suivre à l'écran** : `JournalData().watch[zoneID]` (par personnage). Zone d'ici suivie sauf `false` ; autre zone seulement si `true` (`ns:JournalIsWatched` / `ns:JournalSetWatched`). Le suivi filtre `zone:`, `villages:`, `bestiary:`, `named:` d'une zone décochée ; une zone cochée exprès a son objectif « Complétion » même avec une seule part, classé avant les objectifs automatiques (ratio 1,2 : après un coffre ou une évolution).
 - **Onglet Quêtes** : libellé « Quêtes (Questie) » grisé sans Questie, survol explicatif.
 
+**Zones préremplies** (demande : « fait en amont, pas de façon dynamique »)
+- **Source** : base de Questie (dépôt Questie/QuestieDB, commit `c5de61a`), PAS Wowhead (CGU). Licence : voir `NOTICE.md`.
+- **Générateur** : `tools/gen_zone_data.py <QuestieDB> --commit <sha> --date AAAA-MM-JJ`, sortie déterministe. Produit `ZoneCreatures.lua` (166 Ko, 40 zones, 2 769 espèces : niveaux, rang, noms fr/en, faction amicale) et `ZoneGathering.lua` (5 Ko, 38 zones, herbes et filons → itemID de `GatheringData.lua`).
+- **Filtres** : bestioles (gabarits 31/188/190), PNJ techniques et d'événement, PNJ de service amicaux (gardes) ; `friendlyToFaction = "AH"` gardé seulement pour les gabarits neutres combattables. Rangs cmangos : 1 élite, 2 rare élite, 3 boss, 4 rare.
+- **Bestiaire** : espèces de la zone (moins celles amicales envers ta faction) ∪ apprises en jeu ; un kill d'une espèce de la table compte sans l'avoir vue (engagement requis). **Récolte** : ta tranche ∩ ce qui pousse dans la zone. Dépeçage et zones hors tables : dynamiques comme avant.
+- **Limites connues** : quelques PNJ de quête/d'événement comptés (100 % strict) ; factions telles que Questie les note.
+
 **À vérifier en jeu**
 - Le modèle s'affiche dans un `PlayerModel` d'addon. Un modèle invisible sans erreur ne se détecte pas hors jeu.
 - Cadrage, échelle et animations des créatures.

@@ -155,7 +155,7 @@ Le carnet fixe des **objectifs** : prochaine étape de la créature, prochaine a
   - les **nommés** (élites, rares, boss) croisés et abattus ;
   - la **récolte**, si tu es herboriste, mineur ou dépeceur : les herbes, minerais et cuirs de ta compétence que tu as déjà récoltés dans la zone.
 
-  Tout s'apprend en jouant : une créature compte dès que tu l'as ciblée ou survolée.
+  Chaque zone classique arrive **préremplie** : toutes ses créatures (nom, niveau, rang) et les herbes et minerais qui y poussent sont connus dès ta première visite. Les zones absentes de ces données (ajouts de Forever) se remplissent en jouant.
 - **Survole un objectif** pour savoir quoi faire : les villages de la zone qu'il te reste à visiter, les capitales manquantes, les donjons de ton niveau avec leur tranche, l'XP avant le prochain niveau.
 - **Clic** : ouvre le carnet. **Clic droit** : masque l'objectif.
 - Le bloc se replie d'un clic sur son titre, se déplace en le glissant et se cache en combat (réglable dans les options du compagnon, page Carnet).
