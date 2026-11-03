@@ -44,7 +44,8 @@ for _, module in ipairs(NS.MODULES) do
 	seen[module.id] = true
 end
 Check("[INT] identifiants de module uniques", #dup == 0, table.concat(dup, ","))
-Check("[INT] les 6 modules sont déclarés", seen.depart and seen.stuff and seen.portrait and seen.camp and seen.expedition and seen.dungeon,
+Check("[INT] les modules sont déclarés", seen.depart and seen.stuff and seen.portrait and seen.camp and seen.expedition and seen.dungeon
+	and seen.reward and seen.pace and seen.bagspace and seen.death and seen.companion and seen.journal,
 	(function() local t = {} for id in pairs(seen) do t[#t + 1] = id end table.sort(t) return table.concat(t, ",") end)())
 
 -- un alias de module ne doit jamais masquer l'identifiant d'un contrôle :
@@ -60,4 +61,32 @@ do
 	Check("[INT] /r2q module bags off coupe le contrôle Sacs", NS:IsModuleEnabled("bags") == false
 		and NS:DB().bagspaceEnabled ~= false)
 	NS:SetModuleEnabled("bags", true)
+end
+
+-- un module ne doit jamais parler pendant qu'un autre agit : le premier relevé
+-- du compagnon est silencieux, même s'il naît d'un tampon et pas d'une connexion
+do
+	ResetWorld()
+	T.Mock.world.level = 45
+	T.Mock:Reset()
+	if NS.FireCallback then NS:FireCallback("STAMP", { id = "zone:1", kind = "zone", name = "Test", new = true }) end
+	Check("[INT] compagnon : premier relevé silencieux (pas de rafale de déblocages)",
+		not T.Mock:Output():find("débloqué", 1, true), T.Mock:Output())
+end
+
+-- réglages du compagnon : un ornement verrouillé n'affiche pas un interrupteur allumé
+do
+	ResetWorld()
+	NS.optionsFrame = nil
+	NS:ToggleOptions()
+	NS:SelectOptionsPage("companion")
+	local wrong = {}
+	for _, def in ipairs(NS.COMPANION_ORNAMENTS or {}) do
+		for _, row in ipairs(NS.optionsFrame.rows) do
+			if row.def and row.def.key == def.key and not NS:CompanionIsUnlocked("orn", def) and row.toggle and row.toggle.checked then
+				wrong[#wrong + 1] = def.key
+			end
+		end
+	end
+	Check("[INT] ornements verrouillés : interrupteur éteint", #wrong == 0, table.concat(wrong, ","))
 end

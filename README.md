@@ -8,13 +8,15 @@ Pour **World of Warcraft Forever** et **Classic Era**. Interface en français et
 
 ## Ce que fait l'addon
 
-Ready2Quest réunit **six modules** et un peu de **confort** (QoL). Chacun s'active ou se coupe d'un clic.
+Ready2Quest réunit **huit modules** et un peu de **confort** (QoL). Chacun s'active ou se coupe d'un clic.
 
 | | Module | En une phrase |
 |---|---|---|
 | ◆ | **Check avant le départ** | Quand tu quittes un village, une capitale ou un camp, une note de préparation sur 100 et des conseils |
 | ◆ | **Retour d'expédition** | Quand tu rentres, le bilan de ta sortie : XP, or, butin, morts, usure, quêtes à rendre |
 | ◆ | **Avant le donjon** | À l'entrée d'un donjon, sa fiche : niveau conseillé, tes quêtes pour ce donjon, ta préparation |
+| ◆ | **Compagnon de route** | Une petite créature qui voyage avec toi, réagit à ton aventure et grandit avec toi |
+| ◆ | **Carnet de voyage** | Un tampon par zone, village, capitale, donjon, ennemi rare et palier : ta collection de voyage |
 | ◆ | **Kit de camp** *(Forever)* | Ton kit de feu de camp et ton objet de camp prêts, le compte à rebours des buffs au camp |
 | ◆ | **Résumé de stuff** | Quand tu changes d'objet, un petit résumé éphémère des stats gagnées ou perdues |
 | ◆ | **Stats du portrait** | Au survol de ton portrait, tes stats principales, choisies selon ta classe et ta spécialisation |
@@ -35,7 +37,7 @@ Tout seul, **au moment où tu quittes une zone sûre** : ville, village, hub ou 
 - **Note de 85 ou plus** : une simple ligne dans le chat, du genre « Sac bouclé, 92/100. Parti de Long-guet. »
 - **Note plus basse** : la fenêtre **Avant le départ** s'ouvre, avec la note, le verdict (*Prêt*, *Prêt avec réserves*, *Pas prêt*) et les conseils pour y remédier.
 
-Tu peux aussi le lancer quand tu veux : `/r2q`, ou un clic gauche sur le bouton de la minicarte.
+Tu peux aussi le lancer quand tu veux : `/r2q`, ou un clic gauche sur le bouton de la minicarte. Dans la fenêtre, la petite flèche du bandeau relance le check, et **Partir à l'aventure** la referme. Les réglages, eux, sont au clic droit sur le bouton de la minicarte.
 
 ### Ce qu'il contrôle
 
@@ -94,6 +96,37 @@ En arrivant à l'entrée d'un donjon, ou en y entrant, une fiche pour **ce** don
 - une préparation courte : durabilité, réparation, vivres, potions, pierre de foyer.
 
 Elle couvre les 19 donjons classiques et les 9 nouveaux donjons de Forever : City of Dalaran, Ruins of Lordaeron, Hall of Thanes, Excavation Site, Krol'dok… Sur Forever, elle listera aussi les plans de métier qui tombent dans le donjon, dès que ces données seront connues.
+
+## Compagnon de route
+
+Une petite créature du jeu (un dragonnet pour commencer) t'accompagne dans un coin de l'écran. Elle **réagit à ton aventure** par de courtes bulles :
+- « On repart ? J'ai faim… » si tu quittes la ville sans vivres ;
+- « Aïe… » à ta mort ;
+- « Quelle vue ! » quand tu découvres une zone ;
+- « On se réchauffe ? » au feu de camp.
+
+Elle a quatre envies : **faim**, **énergie**, **moral** et **curiosité**. Elles se remplissent quand tu manges, te reposes, rends une quête ou explores. Clique dessus pour lui faire une caresse.
+
+- **Elle grandit avec toi** : Nouveau-né, Jeune (niveau 10), Aguerri (20), Vaillant (40) et Légendaire (60), avec une petite fête à chaque étape.
+- **Elle ne t'en veut jamais** : elle ne meurt pas, ne régresse pas et ne tombe pas malade. Après une longue absence, elle est juste un peu ensommeillée : « Tu m'as manqué ! »
+- **Elle se personnalise** : de nouvelles **apparences** (dragonnets de couleur, chouette, feu follet, dragon féerique…) et des **ornements** (ruban, lanterne, médaille, cadre doré) se débloquent avec ton carnet de voyage et ton niveau.
+
+Tu peux la renommer avec `/r2q compagnon nom Pépite`.
+
+## Carnet de voyage
+
+Ta collection de voyage : un **tampon** pour chaque première fois.
+
+| Tampon | Quand |
+|---|---|
+| Zone | tu découvres une zone |
+| Village | tu entres dans un village ou un hub, de ta faction ou neutre |
+| Capitale | tu visites une capitale, même celle de l'autre faction |
+| Donjon | tu entres dans un donjon |
+| Rare | tu abats un ennemi rare que tu as toi-même engagé, avec ton familier ou ton groupe |
+| Palier | tu passes les niveaux 10, 20, 30, 40, 50 et 60 |
+
+Chaque nouveau tampon est annoncé par un petit bandeau, jamais en combat. Le carnet (`/r2q carnet`) range tes tampons par onglet, avec la date et ton niveau, et montre ce qu'il te reste à découvrir : villages, capitales, donjons. Tout se gagne en jouant, sans paquet aléatoire.
 
 ## Kit de camp *(Forever)*
 
@@ -163,7 +196,7 @@ Les deux sont actifs par défaut et se coupent dans les réglages. Ils fonctionn
 `/r2q options`, ou un clic droit sur le bouton de la minicarte.
 
 - **Général** : activer l'addon, et tout ce qui touche à l'affichage (bouton de minicarte, fenêtre ou chat, note sous laquelle la fenêtre s'ouvre, placement des cadres).
-- **Modules** : chaque module a son interrupteur directement dans la liste de gauche. Le Check avant le départ a ses sous-pages : Déclenchement, Zones sûres, Sacs & vivres, Équipement & perso, Buffs & métier. Le Retour d'expédition, Avant le donjon et le Kit de camp ont chacun leur page.
+- **Modules** : chaque module a son interrupteur directement dans la liste de gauche, et sa page qui explique ce qu'il fait. Le Check avant le départ a ses sous-pages : Déclenchement, Zones sûres, Sacs & vivres, Équipement & perso, Buffs & métier. Résumé de stuff et Stats du portrait n'ont pas de réglage, mais leur page propose « Placer le cadre » (et « Afficher maintenant » pour le portrait).
 - **QoL** : Confort de jeu, avec ses sous-pages Marchand, La bonne récompense, Rythme de leveling, Sac plein et Après la mort. Les sous-pages d'un module ne s'affichent que quand il est ouvert.
 
 ## Commandes
@@ -179,8 +212,10 @@ Les deux sont actifs par défaut et se coupent dans les réglages. Ils fonctionn
 | `/r2q safe` · `unsafe` | ajoute ou retire le village actuel |
 | `/r2q safe list` | liste les lieux appris |
 | `/r2q modules` | état des modules |
-| `/r2q module depart off` | coupe un module (`depart`, `expedition`, `dungeon`, `camp`, `stuff`, `portrait`) |
+| `/r2q module depart off` | coupe un module (`depart`, `expedition`, `dungeon`, `camp`, `companion`, `journal`, `stuff`, `portrait`…) |
 | `/r2q checks` · `check vivres off` | les contrôles du check avant le départ |
+| `/r2q carnet` | ouvre ton carnet de voyage |
+| `/r2q compagnon` | l'humeur de ton compagnon (`nom <nom>` pour le renommer) |
 | `/r2q xp` | ton rythme de leveling |
 | `/r2q jeter` | quoi jeter quand le sac est plein |
 | `/r2q diag` | diagnostic, à joindre si tu signales un problème |

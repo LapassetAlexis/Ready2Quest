@@ -52,7 +52,7 @@ function ns:EnsureWindow()
 	-- c'est le contexte de l'alerte (et l'endroit où repérer un village appris
 	-- à tort). Le sous-titre du bandeau sert à ça.
 	frame.subtitle:SetText("")
-	frame.subtitle:SetWidth(WIDTH - 190)
+	frame.subtitle:SetWidth(WIDTH - 214)   -- titre à gauche, flèche + croix à droite
 	frame.subtitle:SetJustifyH("RIGHT")
 	frame.subtitle:SetWordWrap(false)
 	frame.departed = frame.subtitle
@@ -135,58 +135,92 @@ function ns:EnsureWindow()
 	frame:SetScript("OnUpdate", function(f) ns:AnimateScore(f) end)
 	self:LayoutWindow(frame, rowCount, false)
 
-	-- Boutons ----------------------------------------------------------------
-	-- Les largeurs etaient codees en dur (128/100/90) sans rapport avec le
-	-- texte : "Lancer le check maintenant" debordait de son bouton et passait
-	-- par-dessus le suivant. On mesure chaque libelle, avec un plancher pour
-	-- garder des boutons d'apparence homogene.
-	local BUTTON_HEIGHT = 20
-	local PADDING       = 22
+	-- Pied (v1.25.0) : un seul appel, « Partir à l'aventure », en bleu de nuit.
+	-- Les réglages sont déjà au clic droit sur l'icône de la minicarte, et le
+	-- check se relance d'une flèche discrète dans le bandeau.
+	local BUTTON_HEIGHT = 22
+	local PADDING       = 28
 	local function LabelWidth(label)
 		local probe = frame:CreateFontString(nil, "OVERLAY", Theme.F_SMALL)
 		probe:SetText(label or "")
 		local w = probe:GetStringWidth()
 		probe:SetText("")
 		if not w or w <= 0 then
-			-- repli sans mesure : on estime, mieux vaut trop large que deborde
 			local len = utf8 and utf8.len(label or "") or #(label or "")
 			w = len * 7
 		end
 		return w + PADDING
 	end
 
-	local runWidth     = math.max(128, LabelWidth(L.OPT_RUNCHECK))
-	local optionsWidth = math.max(100, LabelWidth(L.OPT_TITLE))
-	local closeWidth   = math.max(90,  LabelWidth(L.OPT_CLOSE))
+	local adventureWidth = math.max(200, LabelWidth(L.DIAG_ADVENTURE))
+	frame.adventureButton = Theme.CreateButton(frame, adventureWidth, BUTTON_HEIGHT, L.DIAG_ADVENTURE, function()
+		frame:Hide()
+	end, "adventure")
+	frame.adventureButton:SetPoint("BOTTOM", frame, "BOTTOM", 0, 10)
 
-	frame.runButton = Theme.CreateButton(frame, runWidth, BUTTON_HEIGHT, L.OPT_RUNCHECK, function()
+	-- Flèche de rafraîchissement : à gauche de la croix du bandeau. Elle relance
+	-- le check et fait un tour sur elle-même (si le client sait animer une rotation).
+	frame.refreshButton = CreateFrame("Button", nil, frame)
+	frame.refreshButton:SetSize(16, 16)
+	frame.refreshButton:SetPoint("TOPRIGHT", frame, "TOPRIGHT", -34, -10)
+	frame.refreshButton.icon = frame.refreshButton:CreateTexture(nil, "OVERLAY")
+	frame.refreshButton.icon:SetTexture(Theme.REFRESH)
+	frame.refreshButton.icon:SetAllPoints()
+	-- au repos : désaturée et estompée (discrète) ; au survol : ses couleurs
+	local function RefreshRest(icon)
+		if icon.SetDesaturated then icon:SetDesaturated(true) end
+		icon:SetAlpha(0.6)
+	end
+	RefreshRest(frame.refreshButton.icon)
+	frame.refreshButton:SetScript("OnEnter", function(btn)
+		if btn.icon.SetDesaturated then btn.icon:SetDesaturated(false) end
+		btn.icon:SetAlpha(1)
+		if type(GameTooltip) == "table" and GameTooltip.SetOwner then
+			GameTooltip:SetOwner(btn, "ANCHOR_BOTTOM")
+			GameTooltip:AddLine(L.DIAG_REFRESH_TIP, 1, 1, 1)
+			GameTooltip:Show()
+		end
+	end)
+	frame.refreshButton:SetScript("OnLeave", function(btn)
+		RefreshRest(btn.icon)
+		if type(GameTooltip) == "table" and GameTooltip.Hide then GameTooltip:Hide() end
+	end)
+	frame.refreshButton:SetScript("OnClick", function(btn)
+		ns:SpinRefresh(btn)
 		ns:RunChecklist("manual")
 	end)
-	frame.runButton:SetPoint("BOTTOMLEFT", frame, "BOTTOMLEFT", 14, 10)
-
-	frame.optionsButton = Theme.CreateButton(frame, optionsWidth, BUTTON_HEIGHT, L.OPT_TITLE, function()
-		ns:ToggleOptions()
-	end)
-	frame.optionsButton:SetPoint("BOTTOMLEFT", frame, "BOTTOMLEFT", 14 + runWidth + 8, 10)
-
-	frame.closeButton = Theme.CreateButton(frame, closeWidth, BUTTON_HEIGHT, L.OPT_CLOSE, function()
-		frame:Hide()
-	end, "primary")
-	frame.closeButton:SetPoint("BOTTOMRIGHT", frame, "BOTTOMRIGHT", -14, 10)
+	-- le texte « Parti de … » se décale pour laisser la place à la flèche
+	if frame.subtitle then
+		frame.subtitle:ClearAllPoints()
+		frame.subtitle:SetPoint("RIGHT", frame, "TOPRIGHT", -58, -18)
+	end
 
 	ns.DIAG_LAYOUT = {
 		width = WIDTH,
-		runWidth = runWidth,
-		optionsWidth = optionsWidth,
-		closeWidth = closeWidth,
+		adventureWidth = adventureWidth,
 		padding = PADDING,
 		height = BUTTON_HEIGHT,
-		left = 14,
-		gap = 8,
 	}
 
 	self.window = frame
 	return frame
+end
+
+-- Un tour complet de la flèche (AnimationGroup Rotation), si le client le permet
+function ns:SpinRefresh(button)
+	if not button or not button.icon or not button.CreateAnimationGroup then return false end
+	if not button.spin then
+		local ok, group = pcall(button.CreateAnimationGroup, button)
+		if not ok or not group then return false end
+		local rot = group:CreateAnimation("Rotation")
+		if rot.SetDegrees then rot:SetDegrees(-360) end
+		if rot.SetDuration then rot:SetDuration(0.5) end
+		if rot.SetTarget then pcall(rot.SetTarget, rot, button.icon) end
+		button.spin = group
+	end
+	button.spin:Stop()
+	button.spin:Play()
+	return true
 end
 
 -- ---------------------------------------------------------------------------

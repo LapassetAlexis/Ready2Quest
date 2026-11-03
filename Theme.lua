@@ -38,8 +38,10 @@ Theme.RED       = { 0.89, 0.38, 0.31 }   -- statut échec #e2604f
 Theme.ORANGE    = { 0.91, 0.65, 0.29 }   -- statut alerte = l'ambre
 Theme.GREY      = { 0.55, 0.55, 0.55 }
 -- Deuxième couleur (v1.21.0) : bleu de nuit, l'aiguille de la boussole.
--- Rôle unique : information et navigation (groupes, statut « info », source
--- d'une zone apprise). Jamais un statut, jamais l'action principale.
+-- Rôle : information et navigation (groupes, statut « info », source d'une
+-- zone apprise), et depuis la v1.25.0 l'appel au départ « Partir à
+-- l'aventure » (choix de l'utilisateur : c'est la couleur de l'aiguille, celle
+-- du voyage). Jamais un statut.
 Theme.BLUE      = { 0.357, 0.561, 0.839 } -- #5b8fd6
 
 Theme.T_GOLD      = "|cffe8a54b"
@@ -58,6 +60,10 @@ Theme.LOGO          = MEDIA .. "Textures\\logo"         -- complet : boîtier, a
 Theme.LOGO_SMALL    = MEDIA .. "Textures\\logo_petit"   -- sans lettres : bandeaux, minicarte
 Theme.DIAMOND       = MEDIA .. "Textures\\losange"
 Theme.DIAMOND_LINE  = MEDIA .. "Textures\\losange_trait"
+-- Flèche de rafraîchissement : l'icône du jeu (fichier 851904), présente dans
+-- les clients Era 1.15.9 et Forever 1.60.1 (listes de fichiers wago.tools).
+-- Elle est jaune : on la désature au repos plutôt que de la teinter.
+Theme.REFRESH       = "Interface\\Buttons\\UI-RefreshButton"
 Theme.FONT_TITLE    = MEDIA .. "Fonts\\Alegreya-Bold.ttf"
 
 Theme.F_TITLE  = "GameFontNormalLarge"
@@ -334,10 +340,12 @@ function Theme.CreateButton(parent, width, height, label, onClick, style)
 	button:SetSize(width, height)
 	button.style = style or "normal"
 
-	local primary = button.style == "primary"
-	button.bg = Solid(button, "BACKGROUND", primary and Theme.GOLD or { 0.085, 0.10, 0.12 }, 1)
+	-- "primary" = plein ambre ; "adventure" = plein bleu de nuit (départ)
+	local fill = (button.style == "primary" and Theme.GOLD) or (button.style == "adventure" and Theme.BLUE) or nil
+	local primary = fill ~= nil
+	button.bg = Solid(button, "BACKGROUND", fill or { 0.085, 0.10, 0.12 }, 1)
 	button.bg:SetAllPoints()
-	button.border = Border(button, primary and Theme.GOLD or { 0.23, 0.26, 0.29 }, 1)
+	button.border = Border(button, fill or { 0.23, 0.26, 0.29 }, 1)
 
 	button.text = button:CreateFontString(nil, "OVERLAY", Theme.F_SMALL)
 	button.text:SetPoint("CENTER", 0, 0)

@@ -1302,72 +1302,39 @@ NS:Evaluate("zone")
 Mock:Advance(6)
 Check("une seconde sortie relance l'alerte", NS.lastResults ~= nil)
 
--- Pied de la fenêtre de diagnostic : les largeurs étaient codées en dur et
--- « Lancer le check maintenant » débordait de son bouton par-dessus le suivant.
--- On mesure le libellé rendu contre la largeur du bouton qui le porte.
-local diag = NS.DIAG_LAYOUT
-Check("géométrie du pied exposée", diag ~= nil)
-if diag then
-	local function Fits(button, label, name)
-		if not button then
-			Check(name .. " : bouton présent", false)
-			return
-		end
-		local needed = 0
-		if button.GetText and button.text ~= nil then
-			-- bouton template : on relit la police réellement posée
-			local probe = NS.window:CreateFontString(nil, "OVERLAY", nil)
-			probe:SetText(label)
-			needed = probe:GetStringWidth()
-		end
-		local width = button:GetWidth() or 0
-		Check(name .. " : le texte tient dans le bouton", width >= needed,
-			width .. " >= " .. needed)
-	end
-
-	local win = NS.window
-	if win and win.runButton then
-		local probe = win:CreateFontString(nil, "OVERLAY")
-		probe:SetText(NS.L.OPT_RUNCHECK)
-		local needed = probe:GetStringWidth()
-		Check("« Lancer le check » ne déborde pas",
-			(win.runButton:GetWidth() or 0) >= needed,
-			(win.runButton:GetWidth() or 0) .. " >= " .. needed)
-
-		local optProbe = win:CreateFontString(nil, "OVERLAY")
-		optProbe:SetText(NS.L.OPT_TITLE)
-		Check("« Réglages » ne déborde pas",
-			(win.optionsButton:GetWidth() or 0) >= optProbe:GetStringWidth(),
-			(win.optionsButton:GetWidth() or 0) .. " >= " .. optProbe:GetStringWidth())
-
-		local closeProbe = win:CreateFontString(nil, "OVERLAY")
-		closeProbe:SetText(NS.L.OPT_CLOSE)
-		Check("« Fermer » ne déborde pas",
-			(win.closeButton:GetWidth() or 0) >= closeProbe:GetStringWidth(),
-			(win.closeButton:GetWidth() or 0) .. " >= " .. closeProbe:GetStringWidth())
-
-		-- et les boutons ne se chevauchent pas
-		local function Left(button, depth)
-			depth = depth or 0
-			if depth > 6 then return 0 end
-			local point, relTo, _, x = button:GetPoint()
-			x = x or 0
-			if relTo and relTo ~= win and (point == "LEFT" or point == "BOTTOMLEFT") then
-				return Left(relTo, depth + 1) + (relTo.GetWidth and relTo:GetWidth() or 0) + x
-			end
-			return x
-		end
-		local runEnd = Left(win.runButton) + (win.runButton:GetWidth() or 0)
-		local optStart = Left(win.optionsButton)
-		Check("« Réglages » ne recouvre pas « Lancer »", optStart >= runEnd,
-			optStart .. " >= " .. runEnd)
-
-		-- et l'ensemble du pied tient dans la fenêtre, sans mordre sur Fermer
-		local closeLeft = diag.width - diag.left - (win.closeButton:GetWidth() or 0)
-		local optEnd = optStart + (win.optionsButton:GetWidth() or 0)
-		Check("le pied tient dans la fenêtre", optEnd <= closeLeft,
-			optEnd .. " <= " .. closeLeft)
-	end
+-- Pied de la fenêtre de diagnostic (v1.25.0) : un seul appel « Partir à
+-- l'aventure » en bleu, plus de « Lancer le check » ni de « Réglages » (déjà
+-- sur l'icône de la minicarte) ; une flèche discrète relance le check.
+do
+	local win, diag = NS.window, NS.DIAG_LAYOUT
+	Check("pied : géométrie exposée", diag ~= nil and diag.adventureWidth ~= nil)
+	Check("pied : plus de bouton « Lancer » ni « Réglages »", win.runButton == nil and win.optionsButton == nil)
+	local adv = win.adventureButton
+	Check("pied : « Partir à l'aventure » présent", adv ~= nil and adv:GetText() == NS.L.DIAG_ADVENTURE, adv and adv:GetText())
+	Check("pied : bouton en bleu de nuit", adv.style == "adventure" and adv.bg.vertex[3] > 0.8 and adv.bg.vertex[1] < 0.4)
+	local probe = win:CreateFontString(nil, "OVERLAY")
+	probe:SetText(NS.L.DIAG_ADVENTURE)
+	Check("pied : le texte tient dans le bouton", (adv:GetWidth() or 0) >= probe:GetStringWidth(),
+		(adv:GetWidth() or 0) .. " >= " .. probe:GetStringWidth())
+	local point = adv:GetPoint()
+	Check("pied : bouton centré", point == "BOTTOM", point)
+	Check("pied : tient dans la fenêtre", (adv:GetWidth() or 0) <= diag.width - 28, adv:GetWidth())
+	win:Show()
+	adv:Click()
+	Check("pied : « Partir à l'aventure » ferme la fenêtre", win:IsShown() == false)
+	-- flèche de rafraîchissement
+	local refresh = win.refreshButton
+	Check("flèche : icône du jeu (UI-RefreshButton)", refresh and tostring(refresh.icon.texture):find("UI%-RefreshButton") ~= nil,
+		refresh and refresh.icon.texture)
+	Check("flèche : discrète au repos", (refresh.icon.alpha or 1) < 1)
+	refresh:GetScript("OnEnter")(refresh)
+	Check("flèche : pleine au survol", refresh.icon.alpha == 1)
+	refresh:GetScript("OnLeave")(refresh)
+	NS.lastResults, NS.score = nil, nil
+	refresh:Click()
+	Check("flèche : relance le check", NS.lastResults ~= nil and win:IsShown() == true)
+	Check("flèche : un tour sur elle-même", refresh.spin ~= nil and refresh.spin.plays >= 1)
+	Check("flèche : ne touche pas le « Parti de »", select(4, win.subtitle:GetPoint()) <= -58)
 end
 
 -- 4.31 Bouton sans template Blizzard
@@ -1511,7 +1478,7 @@ ResetWorld()
 Say("\n== bootstrap et diagnostic ==")
 ResetWorld()
 Check("commande enregistrée par le bootstrap", type(SlashCmdList["SACETDEPART"]) == "function")
-Check("version exposée", NS.version == "1.24.0", NS.version)
+Check("version exposée", NS.version == "1.25.0", NS.version)
 
 local missingMods = {}
 for _, name in ipairs({ "Bootstrap", "Locales", "Compat", "Theme", "Core", "Buffs", "Reagents",
@@ -1532,7 +1499,7 @@ NS.HandleCommand = savedHandle
 Mock:Reset()
 NS:HandleCommand("diag")
 Check("/sd diag liste les modules", Mock:Output():find("modules :") ~= nil, Mock:Output())
-Check("/sd diag affiche la version", Mock:Output():find("1%.24%.0") ~= nil, Mock:Output())
+Check("/sd diag affiche la version", Mock:Output():find("1%.25%.0") ~= nil, Mock:Output())
 
 -- une erreur est enregistrée et affichée
 Mock:Reset()
@@ -3569,12 +3536,28 @@ Check("[ID] interrupteurs dessinés pour les booléens et contrôles", toggles =
 Check("[ID] pistes pour les seuils", tracks == 10, tracks)
 local pageCount = 0
 for _ in pairs(o.pages) do pageCount = pageCount + 1 end
-Check("[ID] chaque page a sa phrase d'explication", subs == pageCount and pageCount == 7, subs .. "/" .. pageCount)
+Check("[ID] chaque page a sa phrase d'explication", subs == pageCount and pageCount == 9, subs .. "/" .. pageCount)
 local displayRows = {}
 for _, row in ipairs(o.pages.general.rows) do if row.def then displayRows[row.def.key] = true end end
 Check("[AFF] Général réunit l'affichage", displayRows.showMinimap and displayRows.minimapPos and displayRows.showWindow
 	and displayRows.popupScore and o.pages.general.sectionHeaders and #o.pages.general.sectionHeaders == 1)
-Check("[AFF] plus de page propre pour le résumé et le portrait", o.pages.toast == nil and o.pages.portrait == nil)
+-- bug signalé en jeu : cliquer sur « Stats du portrait » ou « Résumé de stuff »
+-- ouvrait Général. Chaque module a maintenant sa page, qui explique ce qu'il fait.
+for _, id in ipairs({ "toast", "portrait" }) do
+	local nav
+	for _, n in ipairs(o.navButtons) do if n.pageId == id then nav = n end end
+	nav:Click()
+	Check("[AFF] clic sur " .. id .. " : sa propre page", o.currentPage == id and o.pages[id] and o.pages[id]:IsShown(), o.currentPage)
+	Check("[AFF] " .. id .. " : texte d'explication", o.pages[id].infoLines and #o.pages[id].infoLines == 3
+		and o.pages[id].infoLines[1].text ~= "" and o.pages[id].infoLines[1].text ~= "OPT_" .. id:upper() .. "_INFO_1")
+	Check("[AFF] " .. id .. " : bouton Placer le cadre", o.pages[id].actionButtons and o.pages[id].actionButtons.editMode ~= nil)
+end
+Check("[AFF] portrait : bouton Afficher maintenant", o.pages.portrait.actionButtons.portraitShow ~= nil)
+NS:DB().showPortraitStats = false
+NS.portraitFrame = nil
+o.pages.portrait.actionButtons.portraitShow:Click()
+Check("[AFF] Afficher maintenant : visible même module coupé", NS.portraitFrame and NS.portraitFrame:IsShown() == true)
+NS:DB().showPortraitStats = true
 local delayRow
 for _, row in ipairs(o.rows) do if row.def and row.def.key == "exitDelay" then delayRow = row end end
 NS:DB().exitDelay = 15
