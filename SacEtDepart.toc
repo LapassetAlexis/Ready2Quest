@@ -1,0 +1,27 @@
+## Interface: 16001, 11509, 20506, 50504
+## Interface-Camelot: 16001
+## Interface-Vanilla: 11509
+## Interface-TBC: 20506
+## Interface-Mists: 50504
+## Title: Sac & Départ
+## Notes: Checklist QoL avant de quitter une zone sûre : sacs, gris à vendre, vivres, buffs, repos, durabilité, quêtes à rendre.
+## Notes-frFR: Checklist QoL avant de quitter une zone sûre : sacs, gris à vendre, vivres, buffs, repos, durabilité, quêtes à rendre.
+## Version: 1.16.1
+## Author: Tristabeau
+## SavedVariables: SacEtDepartDB
+## X-Category: Utility
+## IconTexture: Interface\Icons\INV_Misc_Bag_10
+
+Bootstrap.lua
+Locales.lua
+Compat.lua
+Theme.lua
+Core.lua
+Buffs.lua
+Reagents.lua
+Equip.lua
+Stats.lua
+Minimap.lua
+Checks.lua
+Options.lua
+UI.lua

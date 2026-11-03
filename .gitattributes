@@ -1,0 +1,7 @@
+# Fins de ligne normalisées : le dépôt stocke en LF, le client récupère LF
+* text=auto eol=lf
+
+# Les textures sont binaires
+*.tga binary
+*.blp binary
+*.png binary
