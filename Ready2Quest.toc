@@ -34,3 +34,4 @@ Dungeon.lua
 QuestReward.lua
 LevelPace.lua
 BagSpace.lua
+Death.lua
