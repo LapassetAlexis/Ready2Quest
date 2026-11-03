@@ -1302,72 +1302,39 @@ NS:Evaluate("zone")
 Mock:Advance(6)
 Check("une seconde sortie relance l'alerte", NS.lastResults ~= nil)
 
--- Pied de la fenêtre de diagnostic : les largeurs étaient codées en dur et
--- « Lancer le check maintenant » débordait de son bouton par-dessus le suivant.
--- On mesure le libellé rendu contre la largeur du bouton qui le porte.
-local diag = NS.DIAG_LAYOUT
-Check("géométrie du pied exposée", diag ~= nil)
-if diag then
-	local function Fits(button, label, name)
-		if not button then
-			Check(name .. " : bouton présent", false)
-			return
-		end
-		local needed = 0
-		if button.GetText and button.text ~= nil then
-			-- bouton template : on relit la police réellement posée
-			local probe = NS.window:CreateFontString(nil, "OVERLAY", nil)
-			probe:SetText(label)
-			needed = probe:GetStringWidth()
-		end
-		local width = button:GetWidth() or 0
-		Check(name .. " : le texte tient dans le bouton", width >= needed,
-			width .. " >= " .. needed)
-	end
-
-	local win = NS.window
-	if win and win.runButton then
-		local probe = win:CreateFontString(nil, "OVERLAY")
-		probe:SetText(NS.L.OPT_RUNCHECK)
-		local needed = probe:GetStringWidth()
-		Check("« Lancer le check » ne déborde pas",
-			(win.runButton:GetWidth() or 0) >= needed,
-			(win.runButton:GetWidth() or 0) .. " >= " .. needed)
-
-		local optProbe = win:CreateFontString(nil, "OVERLAY")
-		optProbe:SetText(NS.L.OPT_TITLE)
-		Check("« Réglages » ne déborde pas",
-			(win.optionsButton:GetWidth() or 0) >= optProbe:GetStringWidth(),
-			(win.optionsButton:GetWidth() or 0) .. " >= " .. optProbe:GetStringWidth())
-
-		local closeProbe = win:CreateFontString(nil, "OVERLAY")
-		closeProbe:SetText(NS.L.OPT_CLOSE)
-		Check("« Fermer » ne déborde pas",
-			(win.closeButton:GetWidth() or 0) >= closeProbe:GetStringWidth(),
-			(win.closeButton:GetWidth() or 0) .. " >= " .. closeProbe:GetStringWidth())
-
-		-- et les boutons ne se chevauchent pas
-		local function Left(button, depth)
-			depth = depth or 0
-			if depth > 6 then return 0 end
-			local point, relTo, _, x = button:GetPoint()
-			x = x or 0
-			if relTo and relTo ~= win and (point == "LEFT" or point == "BOTTOMLEFT") then
-				return Left(relTo, depth + 1) + (relTo.GetWidth and relTo:GetWidth() or 0) + x
-			end
-			return x
-		end
-		local runEnd = Left(win.runButton) + (win.runButton:GetWidth() or 0)
-		local optStart = Left(win.optionsButton)
-		Check("« Réglages » ne recouvre pas « Lancer »", optStart >= runEnd,
-			optStart .. " >= " .. runEnd)
-
-		-- et l'ensemble du pied tient dans la fenêtre, sans mordre sur Fermer
-		local closeLeft = diag.width - diag.left - (win.closeButton:GetWidth() or 0)
-		local optEnd = optStart + (win.optionsButton:GetWidth() or 0)
-		Check("le pied tient dans la fenêtre", optEnd <= closeLeft,
-			optEnd .. " <= " .. closeLeft)
-	end
+-- Pied de la fenêtre de diagnostic (v1.25.0) : un seul appel « Partir à
+-- l'aventure » en bleu, plus de « Lancer le check » ni de « Réglages » (déjà
+-- sur l'icône de la minicarte) ; une flèche discrète relance le check.
+do
+	local win, diag = NS.window, NS.DIAG_LAYOUT
+	Check("pied : géométrie exposée", diag ~= nil and diag.adventureWidth ~= nil)
+	Check("pied : plus de bouton « Lancer » ni « Réglages »", win.runButton == nil and win.optionsButton == nil)
+	local adv = win.adventureButton
+	Check("pied : « Partir à l'aventure » présent", adv ~= nil and adv:GetText() == NS.L.DIAG_ADVENTURE, adv and adv:GetText())
+	Check("pied : bouton en bleu de nuit", adv.style == "adventure" and adv.bg.vertex[3] > 0.8 and adv.bg.vertex[1] < 0.4)
+	local probe = win:CreateFontString(nil, "OVERLAY")
+	probe:SetText(NS.L.DIAG_ADVENTURE)
+	Check("pied : le texte tient dans le bouton", (adv:GetWidth() or 0) >= probe:GetStringWidth(),
+		(adv:GetWidth() or 0) .. " >= " .. probe:GetStringWidth())
+	local point = adv:GetPoint()
+	Check("pied : bouton centré", point == "BOTTOM", point)
+	Check("pied : tient dans la fenêtre", (adv:GetWidth() or 0) <= diag.width - 28, adv:GetWidth())
+	win:Show()
+	adv:Click()
+	Check("pied : « Partir à l'aventure » ferme la fenêtre", win:IsShown() == false)
+	-- flèche de rafraîchissement
+	local refresh = win.refreshButton
+	Check("flèche : icône du jeu (UI-RefreshButton)", refresh and tostring(refresh.icon.texture):find("UI%-RefreshButton") ~= nil,
+		refresh and refresh.icon.texture)
+	Check("flèche : discrète au repos", (refresh.icon.alpha or 1) < 1)
+	refresh:GetScript("OnEnter")(refresh)
+	Check("flèche : pleine au survol", refresh.icon.alpha == 1)
+	refresh:GetScript("OnLeave")(refresh)
+	NS.lastResults, NS.score = nil, nil
+	refresh:Click()
+	Check("flèche : relance le check", NS.lastResults ~= nil and win:IsShown() == true)
+	Check("flèche : un tour sur elle-même", refresh.spin ~= nil and refresh.spin.plays >= 1)
+	Check("flèche : ne touche pas le « Parti de »", select(4, win.subtitle:GetPoint()) <= -58)
 end
 
 -- 4.31 Bouton sans template Blizzard
