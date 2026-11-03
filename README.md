@@ -295,3 +295,8 @@ Réglages, **QoL** › **Marchand** › « Vendre les gris ».
 - Tests hors jeu, sur un client WoW simulé : `python3 tests/run_tests.py` (nécessite le paquet `lupa`).
 - Base des zones sûres : `tools/gen_hubs.py` régénère `Hubs.lua` à partir des données du client publiées sur [wago.tools](https://wago.tools).
 - Police des titres : Alegreya (licence OFL, voir `Fonts/Alegreya-OFL.txt`).
+- Données des zones (créatures, récolte, quêtes) : générées depuis la base de [Questie](https://github.com/Questie/QuestieDB) par `tools/gen_zone_data.py`, voir `NOTICE.md`.
+
+## Licence
+
+Ready2Quest est un logiciel libre sous licence **GPL-3.0** (voir `LICENSE`) : tu peux l'utiliser, le modifier et le partager, à condition de garder la même licence. Les données de zones viennent de Questie, lui-même sous GPL-3.0.
