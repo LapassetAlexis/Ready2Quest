@@ -493,8 +493,21 @@ do
 	end
 	handle:close()
 end
-for _, file in ipairs(tocFiles) do
-	LoadAddonFile(file)
+-- Les scénarios historiques comptent les contrôles et pages du cœur (13
+-- contrôles, 10 entrées de navigation…) : les fichiers de module du .toc ne
+-- sont chargés qu'avant leurs propres tests (4.99), pour ne pas fausser ces
+-- comptes à chaque nouveau module.
+-- (dans un bloc : le corps principal frôle la limite de 200 locales)
+Mock.moduleFiles = {}
+do
+	local core = {}
+	for _, file in ipairs({ "Bootstrap.lua", "Locales.lua", "Compat.lua", "Hubs.lua", "Theme.lua", "Core.lua", "Buffs.lua",
+		"Reagents.lua", "Merchant.lua", "Equip.lua", "Stats.lua", "Minimap.lua", "Checks.lua", "Options.lua", "UI.lua" }) do
+		core[file] = true
+	end
+	for _, file in ipairs(tocFiles) do
+		if core[file] then LoadAddonFile(file) else table.insert(Mock.moduleFiles, file) end
+	end
 end
 _G.TOC_FILES = tocFiles
 
@@ -3756,6 +3769,10 @@ end
 -- Chaque fichier reçoit la boîte à outils du harnais dans la table T.
 do
 	_G.T = { Check = Check, Say = Say, ResetWorld = ResetWorld, Result = Result, NS = NS, Mock = Mock }
+	-- build Forever par défaut au chargement des modules, comme en jeu
+	Mock.world.build = nil
+	NS:DetectCapabilities()
+	for _, file in ipairs(Mock.moduleFiles) do LoadAddonFile(file) end
 	for _, path in ipairs(MODULE_TEST_FILES or {}) do
 		Say("\n== module : " .. path .. " ==")
 		local handle = assert(io.open(ROOT .. "/" .. path, "r"))
