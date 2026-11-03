@@ -79,8 +79,12 @@ local PAGES = {
 	},
 	-- pas de page propre : leur réglage est l'interrupteur, et leur placement
 	-- est dans Général > Affichage
-	{ id = "toast", title = "OPT_PAGE_TOAST", group = "OPT_GROUP_MODULES", power = "showGearToast", target = "general" },
-	{ id = "portrait", title = "OPT_PAGE_PORTRAIT", group = "OPT_GROUP_MODULES", power = "showPortraitStats", target = "general" },
+	-- sans réglage propre, mais avec une vraie page : cliquer sur un module doit
+	-- montrer ce qu'il fait (il renvoyait sur Général, c'était déroutant)
+	{ id = "toast", title = "OPT_PAGE_TOAST", group = "OPT_GROUP_MODULES", power = "showGearToast",
+		info = { "OPT_TOAST_INFO_1", "OPT_TOAST_INFO_2", "OPT_TOAST_INFO_3" }, actions = { "editMode" } },
+	{ id = "portrait", title = "OPT_PAGE_PORTRAIT", group = "OPT_GROUP_MODULES", power = "showPortraitStats",
+		info = { "OPT_PORTRAIT_INFO_1", "OPT_PORTRAIT_INFO_2", "OPT_PORTRAIT_INFO_3" }, actions = { "portraitShow", "editMode" } },
 	-- QOL -------------------------------------------------------------------
 	-- QOL : une entrée parente, comme le Check avant le départ ; chaque confort
 	-- est une sous-page (Marchand, puis ceux qu'ajoutent les modules QoL)
@@ -612,6 +616,31 @@ function ns:EnsureOptions()
 		page.sub:SetTextColor(Theme.MUTED[1], Theme.MUTED[2], Theme.MUTED[3])
 		local y = -48
 
+		-- texte d'explication (paragraphes), pour les modules sans réglage
+		if def.info then
+			page.infoLines = {}
+			for _, key in ipairs(def.info) do
+				local text = L[key] or key
+				local para = page:CreateFontString(nil, "OVERLAY", Theme.F_BODY)
+				para:SetPoint("TOPLEFT", page, "TOPLEFT", 0, y)
+				para:SetWidth(PANE_WIDTH - 8)
+				para:SetJustifyH("LEFT")
+				if para.SetWordWrap then para:SetWordWrap(true) end
+				para:SetText(text)
+				para:SetTextColor(Theme.TEXT[1], Theme.TEXT[2], Theme.TEXT[3])
+				-- hauteur estimée (le client la donne, pas le harnais) : ~5,6 px
+				-- par caractère, 14 px par ligne
+				local chars = select(2, tostring(text):gsub("[^\128-\191]", ""))
+				local lines = math.max(1, math.ceil(chars * 5.6 / (PANE_WIDTH - 8)))
+				local height = (para.GetStringHeight and tonumber(para:GetStringHeight()) or 0)
+				if height <= 0 or not para.SetWordWrap then height = lines * 14 end
+				para.estimatedHeight = height
+				page.infoLines[#page.infoLines + 1] = para
+				y = y - height - 8
+			end
+			y = y - 4
+		end
+
 		if def.modules then
 			-- dans une sous-page du Check avant le départ, ce sont ses contrôles
 			page.modulesHeader = Header(page, y, def.parent and "OPT_CHECKS" or "OPT_MODULES")
@@ -916,6 +945,11 @@ function ns:RunOptionAction(key)
 		self:RefreshOptions()
 	elseif key == "minimapPos" and self.CycleMinimapAngle then
 		self:CycleMinimapAngle()
+	elseif key == "portraitShow" and self.ShowPortraitStats then
+		-- aperçu immédiat, même si le module est coupé (forceStats)
+		self.forceStats = true
+		self:ShowPortraitStats()
+		self.forceStats = nil
 	end
 end
 

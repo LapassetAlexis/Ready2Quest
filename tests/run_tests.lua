@@ -3569,12 +3569,28 @@ Check("[ID] interrupteurs dessinés pour les booléens et contrôles", toggles =
 Check("[ID] pistes pour les seuils", tracks == 10, tracks)
 local pageCount = 0
 for _ in pairs(o.pages) do pageCount = pageCount + 1 end
-Check("[ID] chaque page a sa phrase d'explication", subs == pageCount and pageCount == 7, subs .. "/" .. pageCount)
+Check("[ID] chaque page a sa phrase d'explication", subs == pageCount and pageCount == 9, subs .. "/" .. pageCount)
 local displayRows = {}
 for _, row in ipairs(o.pages.general.rows) do if row.def then displayRows[row.def.key] = true end end
 Check("[AFF] Général réunit l'affichage", displayRows.showMinimap and displayRows.minimapPos and displayRows.showWindow
 	and displayRows.popupScore and o.pages.general.sectionHeaders and #o.pages.general.sectionHeaders == 1)
-Check("[AFF] plus de page propre pour le résumé et le portrait", o.pages.toast == nil and o.pages.portrait == nil)
+-- bug signalé en jeu : cliquer sur « Stats du portrait » ou « Résumé de stuff »
+-- ouvrait Général. Chaque module a maintenant sa page, qui explique ce qu'il fait.
+for _, id in ipairs({ "toast", "portrait" }) do
+	local nav
+	for _, n in ipairs(o.navButtons) do if n.pageId == id then nav = n end end
+	nav:Click()
+	Check("[AFF] clic sur " .. id .. " : sa propre page", o.currentPage == id and o.pages[id] and o.pages[id]:IsShown(), o.currentPage)
+	Check("[AFF] " .. id .. " : texte d'explication", o.pages[id].infoLines and #o.pages[id].infoLines == 3
+		and o.pages[id].infoLines[1].text ~= "" and o.pages[id].infoLines[1].text ~= "OPT_" .. id:upper() .. "_INFO_1")
+	Check("[AFF] " .. id .. " : bouton Placer le cadre", o.pages[id].actionButtons and o.pages[id].actionButtons.editMode ~= nil)
+end
+Check("[AFF] portrait : bouton Afficher maintenant", o.pages.portrait.actionButtons.portraitShow ~= nil)
+NS:DB().showPortraitStats = false
+NS.portraitFrame = nil
+o.pages.portrait.actionButtons.portraitShow:Click()
+Check("[AFF] Afficher maintenant : visible même module coupé", NS.portraitFrame and NS.portraitFrame:IsShown() == true)
+NS:DB().showPortraitStats = true
 local delayRow
 for _, row in ipairs(o.rows) do if row.def and row.def.key == "exitDelay" then delayRow = row end end
 NS:DB().exitDelay = 15

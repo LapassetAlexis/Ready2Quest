@@ -196,7 +196,7 @@ Les deux sont actifs par défaut et se coupent dans les réglages. Ils fonctionn
 `/r2q options`, ou un clic droit sur le bouton de la minicarte.
 
 - **Général** : activer l'addon, et tout ce qui touche à l'affichage (bouton de minicarte, fenêtre ou chat, note sous laquelle la fenêtre s'ouvre, placement des cadres).
-- **Modules** : chaque module a son interrupteur directement dans la liste de gauche. Le Check avant le départ a ses sous-pages : Déclenchement, Zones sûres, Sacs & vivres, Équipement & perso, Buffs & métier. Le Retour d'expédition, Avant le donjon et le Kit de camp ont chacun leur page.
+- **Modules** : chaque module a son interrupteur directement dans la liste de gauche, et sa page qui explique ce qu'il fait. Le Check avant le départ a ses sous-pages : Déclenchement, Zones sûres, Sacs & vivres, Équipement & perso, Buffs & métier. Résumé de stuff et Stats du portrait n'ont pas de réglage, mais leur page propose « Placer le cadre » (et « Afficher maintenant » pour le portrait).
 - **QoL** : Confort de jeu, avec ses sous-pages Marchand, La bonne récompense, Rythme de leveling, Sac plein et Après la mort. Les sous-pages d'un module ne s'affichent que quand il est ouvert.
 
 ## Commandes
