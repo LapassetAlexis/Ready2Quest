@@ -10,7 +10,8 @@
 -- Écrire dedans casserait au premier changement ; se poser JUSTE EN DESSOUS
 -- donne le même confort sans dépendre de leur fonctionnement interne.
 --
--- Sources d'objectifs (3 à 5 affichés, le plus proche du but d'abord) :
+-- Sources d'objectifs (4 affichés : un mis en avant + 3, le plus proche d'abord ;
+-- le survol dit quoi faire, noms à l'appui) :
 --   * Compagnon de route : ns:CompanionNextUnlocks() (contrat avec
 --     Companion.lua) -> liste de { label, kind = "app"|"orn"|"stage",
 --     stat = "zone"|"subzone"|"dungeon"|"rare"|"level"|"total", have, need } ;
@@ -26,8 +27,12 @@ local ADDON, ns = ...
 local L = ns.L
 local Theme = ns.Theme
 
-local TRACKER_MAX = 5
-local TRACKER_WIDTH, TITLE_H, LINE_H = 240, 18, 15
+-- un objectif mis en avant (carte avec sa barre) + trois secondaires
+local TRACKER_MAX = 4
+local TRACKER_WIDTH, TITLE_H, LINE_H = 240, 18, 16
+local FEATURED_H, FEATURED_GAP = 40, 4
+local MINI_BAR_W = 44
+local HINT_NAMES = 6        -- noms listés au survol, au-delà « … et N autres »
 -- Ordre d'essai : Era d'abord (QuestWatchFrame), puis le client moderne de
 -- Forever (le cadre global, puis le seul bloc des quêtes)
 local BLIZZARD_TRACKERS = { "QuestWatchFrame", "ObjectiveTrackerFrame", "QuestObjectiveTracker" }
@@ -47,7 +52,7 @@ local FR = {
 	JRN_GOAL_UNLOCK        = "%s — %s",
 	JRN_GOAL_VILLAGES      = "Villages de %s",
 	JRN_GOAL_CAPITALS      = "Capitales",
-	JRN_GOAL_DUNGEONS      = "Donjons de ton niveau : %s",
+	JRN_GOAL_DUNGEONS      = "Donjons de ton niveau",
 	JRN_GOAL_LEVEL         = "Palier %d : niveau",
 	JRN_STAT_zone          = "zones",
 	JRN_STAT_subzone       = "villages",
@@ -56,6 +61,30 @@ local FR = {
 	JRN_STAT_rare          = "rares",
 	JRN_STAT_level         = "niveau",
 	JRN_STAT_total         = "tampons",
+	JRN_HINT_TODO          = "Pour avancer :",
+	JRN_HINT_CLICK         = "Clic : ouvrir le carnet · clic droit : masquer",
+	JRN_HINT_MORE          = "… et %d autres",
+	JRN_HINT_app           = "Débloque une nouvelle apparence pour ton compagnon.",
+	JRN_HINT_orn           = "Débloque un nouvel ornement pour le cadre du compagnon.",
+	JRN_HINT_stage         = "Ton compagnon passe au stade suivant.",
+	JRN_HINT_STAT_zone     = "Découvre des zones où tu n'es jamais allé : chaque nouvelle zone compte.",
+	JRN_HINT_STAT_subzone  = "Entre dans des villages amis ou neutres pas encore tamponnés.",
+	JRN_HINT_STAT_capital  = "Visite les capitales, même celles de l'autre faction.",
+	JRN_HINT_STAT_dungeon  = "Entre dans des donjons : passer l'entrée suffit pour le tampon.",
+	JRN_HINT_STAT_rare     = "Engage et abats des ennemis rares (portrait au dragon argenté).",
+	JRN_HINT_STAT_level    = "Gagne des niveaux : quêtes et monstres de ton niveau.",
+	JRN_HINT_STAT_total    = "Chaque première fois compte : zone, village, capitale, donjon, rare, palier.",
+	JRN_HINT_VILLAGES      = "Villages à visiter dans %s :",
+	JRN_HINT_CAPITALS      = "Capitales pas encore visitées (même celles de l'autre faction) :",
+	JRN_HINT_DUNGEONS      = "Entre dans l'un de ces donjons (l'entrée suffit) :",
+	JRN_HINT_LEVEL         = "Encore %d niveau(x). Quêtes et monstres de ton niveau.",
+	JRN_HINT_XP            = "XP avant le prochain niveau : %d",
+	JRN_GOAL_ZONE          = "Complétion de %s",
+	JRN_ZONE_PCT           = "%d %%",
+	JRN_ZONE_PARTS         = "Où tu en es :",
+	JRN_ZONE_PART_LINE     = "  %s : %d/%d",
+	JRN_ZONE_NEXT          = "Le plus simple pour avancer — %s :",
+	JRN_PART_villages      = "Villages",
 }
 local EN = {
 	OPT_JRN_TRACKER        = "On-screen tracker",
@@ -67,7 +96,7 @@ local EN = {
 	JRN_GOAL_UNLOCK        = "%s — %s",
 	JRN_GOAL_VILLAGES      = "Villages of %s",
 	JRN_GOAL_CAPITALS      = "Capitals",
-	JRN_GOAL_DUNGEONS      = "Dungeons for your level: %s",
+	JRN_GOAL_DUNGEONS      = "Dungeons for your level",
 	JRN_GOAL_LEVEL         = "Milestone %d: level",
 	JRN_STAT_zone          = "zones",
 	JRN_STAT_subzone       = "villages",
@@ -76,6 +105,30 @@ local EN = {
 	JRN_STAT_rare          = "rares",
 	JRN_STAT_level         = "level",
 	JRN_STAT_total         = "stamps",
+	JRN_HINT_TODO          = "To make progress:",
+	JRN_HINT_CLICK         = "Click: open the journal · right-click: hide",
+	JRN_HINT_MORE          = "… and %d more",
+	JRN_HINT_app           = "Unlocks a new look for your companion.",
+	JRN_HINT_orn           = "Unlocks a new ornament for your companion's frame.",
+	JRN_HINT_stage         = "Your companion reaches its next stage.",
+	JRN_HINT_STAT_zone     = "Discover zones you've never been to: every new zone counts.",
+	JRN_HINT_STAT_subzone  = "Enter friendly or neutral villages you haven't stamped yet.",
+	JRN_HINT_STAT_capital  = "Visit capitals, even the other faction's.",
+	JRN_HINT_STAT_dungeon  = "Enter dungeons: stepping through the entrance earns the stamp.",
+	JRN_HINT_STAT_rare     = "Engage and defeat rare enemies (silver dragon portrait).",
+	JRN_HINT_STAT_level    = "Gain levels: quests and monsters of your level.",
+	JRN_HINT_STAT_total    = "Every first time counts: zone, village, capital, dungeon, rare, milestone.",
+	JRN_HINT_VILLAGES      = "Villages to visit in %s:",
+	JRN_HINT_CAPITALS      = "Capitals not visited yet (the other faction's count too):",
+	JRN_HINT_DUNGEONS      = "Enter one of these dungeons (the entrance is enough):",
+	JRN_HINT_LEVEL         = "%d level(s) to go. Quests and monsters of your level.",
+	JRN_HINT_XP            = "XP to next level: %d",
+	JRN_GOAL_ZONE          = "%s completion",
+	JRN_ZONE_PCT           = "%d %%",
+	JRN_ZONE_PARTS         = "Where you stand:",
+	JRN_ZONE_PART_LINE     = "  %s: %d/%d",
+	JRN_ZONE_NEXT          = "Easiest way forward — %s:",
+	JRN_PART_villages      = "Villages",
 }
 ns.RegisterStrings(FR, EN)
 ns.JOURNAL_TRACKER_STRINGS = { fr = FR, en = EN }
@@ -179,6 +232,101 @@ local function Goal(id, label, have, need, ratio, source)
 end
 ns.JournalGoal = Goal
 
+-- Survol : « que faire ? ». Une liste de noms est coupée à HINT_NAMES.
+local function NameLines(lines, names)
+	for index, name in ipairs(names) do
+		if index > HINT_NAMES then
+			lines[#lines + 1] = ns:F("JRN_HINT_MORE", #names - HINT_NAMES)
+			break
+		end
+		lines[#lines + 1] = "  · " .. tostring(name)
+	end
+	return lines
+end
+
+-- Villages de la zone où tu es, amis ou neutres, connus de ce client
+local function ZoneVillages(self, zoneID, zoneName)
+	if not zoneID then zoneID, zoneName = self:JournalZone() end
+	if not zoneID then return nil end
+	if not zoneName then
+		local info = self.MapInfo and self:MapInfo(zoneID)
+		zoneName = info and info.name
+	end
+	local faction, stamps = self:PlayerFaction(), self:JournalData().stamps
+	local have, need, missing = 0, 0, {}
+	for name, group in pairs(self:JournalHubGroups()) do
+		if group.exists and self:JournalIsVillage(group, faction) and self:JournalHubZone(group.areaID) == zoneID then
+			need = need + 1
+			if stamps["subzone:" .. group.areaID] then have = have + 1 else missing[#missing + 1] = name end
+		end
+	end
+	table.sort(missing)
+	return { zoneID = zoneID, zoneName = tostring(zoneName or "?"), have = have, need = need, missing = missing }
+end
+
+-- Donjons dont la plage (Era ou Forever) contient ton niveau
+local function LevelDungeons(self)
+	local level = Level()
+	if level <= 0 or not self.DungeonRange then return nil end
+	local forever = self.IsForeverClient and self:IsForeverClient()
+	local stamps, inRange, missing, have = self:JournalData().stamps, {}, {}, 0
+	for key, entry in pairs(self.DUNGEONS or {}) do
+		if not entry.forever or forever then
+			local low, high = self:DungeonRange(entry)
+			if low and high and level >= low and level <= high then
+				inRange[#inRange + 1] = key
+				if stamps["dungeon:" .. key] then
+					have = have + 1
+				else
+					missing[#missing + 1] = { low = low, high = high,
+						name = self.DungeonName and self:DungeonName(entry) or entry.name or key }
+				end
+			end
+		end
+	end
+	if #inRange == 0 then return nil end
+	table.sort(inRange)
+	table.sort(missing, function(a, b)
+		if a.low ~= b.low then return a.low < b.low end
+		return a.name < b.name
+	end)
+	local names = {}
+	for _, entry in ipairs(missing) do names[#names + 1] = string.format("%s (%d-%d)", entry.name, entry.low, entry.high) end
+	return { inRange = inRange, have = have, names = names }
+end
+
+local function CapitalNames(self)
+	local names = {}
+	for _, entry in ipairs(self:JournalMissing("capital") or {}) do names[#names + 1] = entry.name end
+	table.sort(names)
+	return names
+end
+
+-- Pistes concrètes pour une stat du compagnon, tirées des mêmes données
+local function StatHint(self, stat, lines)
+	lines[#lines + 1] = L["JRN_HINT_STAT_" .. tostring(stat)] or nil
+	if stat == "subzone" then
+		local villages = ZoneVillages(self)
+		if villages and #villages.missing > 0 then
+			lines[#lines + 1] = self:F("JRN_HINT_VILLAGES", villages.zoneName)
+			NameLines(lines, villages.missing)
+		end
+	elseif stat == "dungeon" then
+		local dungeons = LevelDungeons(self)
+		if dungeons and #dungeons.names > 0 then
+			lines[#lines + 1] = L.JRN_HINT_DUNGEONS
+			NameLines(lines, dungeons.names)
+		end
+	elseif stat == "capital" then
+		local names = CapitalNames(self)
+		if #names > 0 then
+			lines[#lines + 1] = L.JRN_HINT_CAPITALS
+			NameLines(lines, names)
+		end
+	end
+	return lines
+end
+
 -- Compagnon : le contrat seul, rien de recalculé ici (les seuils vivent dans
 -- CompanionData.lua et peuvent changer sans que ce fichier le sache)
 local function CompanionGoals(self, list)
@@ -191,66 +339,48 @@ local function CompanionGoals(self, list)
 			local stat = L["JRN_STAT_" .. tostring(unlock.stat)] or tostring(unlock.stat or "")
 			local goal = Goal("comp:" .. tostring(unlock.kind) .. ":" .. unlock.label,
 				self:F("JRN_GOAL_UNLOCK", unlock.label, stat), unlock.have, unlock.need, nil, "companion")
-			if goal then goal.kind = unlock.kind; list[#list + 1] = goal end
-		end
-	end
-end
-
--- Villages de la zone où tu es, amis ou neutres, connus de ce client
-local function VillageGoals(self, list)
-	local zoneID, zoneName = self:JournalZone()
-	if not zoneID then return end
-	local faction, stamps = self:PlayerFaction(), self:JournalData().stamps
-	local have, need = 0, 0
-	for _, group in pairs(self:JournalHubGroups()) do
-		if group.exists and self:JournalIsVillage(group, faction) and self:JournalHubZone(group.areaID) == zoneID then
-			need = need + 1
-			if stamps["subzone:" .. group.areaID] then have = have + 1 end
-		end
-	end
-	local goal = Goal("villages:" .. zoneID, self:F("JRN_GOAL_VILLAGES", tostring(zoneName or "?")), have, need, nil, "journal")
-	if goal then list[#list + 1] = goal end
-end
-
-local function CapitalGoals(self, list)
-	local missing = self:JournalMissing("capital") or {}
-	local have = self:JournalCounts().capital or 0
-	local goal = Goal("capitals", L.JRN_GOAL_CAPITALS, have, have + #missing, nil, "journal")
-	if goal then list[#list + 1] = goal end
-end
-
--- Donjons dont la plage (Era ou Forever) contient ton niveau. L'identifiant
--- suit la plage, pas les tampons : un objectif masqué reste masqué quand tu
--- en finis un, et revient quand de nouveaux donjons entrent dans ta tranche.
-local function DungeonGoals(self, list)
-	local level = Level()
-	if level <= 0 or not self.DungeonRange then return end
-	local forever = self.IsForeverClient and self:IsForeverClient()
-	local stamps, inRange, missing, have = self:JournalData().stamps, {}, {}, 0
-	for key, entry in pairs(self.DUNGEONS or {}) do
-		if not entry.forever or forever then
-			local low, high = self:DungeonRange(entry)
-			if low and high and level >= low and level <= high then
-				inRange[#inRange + 1] = key
-				if stamps["dungeon:" .. key] then
-					have = have + 1
-				else
-					missing[#missing + 1] = { low = low, name = self.DungeonName and self:DungeonName(entry) or entry.name or key }
-				end
+			if goal then
+				goal.kind, goal.short, goal.unit = unlock.kind, unlock.label, stat
+				goal.hint = StatHint(self, unlock.stat, { L["JRN_HINT_" .. tostring(unlock.kind)] })
+				list[#list + 1] = goal
 			end
 		end
 	end
-	if #inRange == 0 then return end
-	table.sort(inRange)
-	table.sort(missing, function(a, b)
-		if a.low ~= b.low then return a.low < b.low end
-		return a.name < b.name
-	end)
-	local names = {}
-	for _, entry in ipairs(missing) do names[#names + 1] = entry.name end
-	local goal = Goal("dungeons:" .. table.concat(inRange, ","),
-		self:F("JRN_GOAL_DUNGEONS", table.concat(names, ", ")), have, #inRange, nil, "journal")
-	if goal then list[#list + 1] = goal end
+end
+
+local function VillageGoals(self, list)
+	local villages = ZoneVillages(self)
+	if not villages then return end
+	local goal = Goal("villages:" .. villages.zoneID, self:F("JRN_GOAL_VILLAGES", villages.zoneName),
+		villages.have, villages.need, nil, "journal")
+	if goal then
+		goal.hint = NameLines({ self:F("JRN_HINT_VILLAGES", villages.zoneName) }, villages.missing)
+		list[#list + 1] = goal
+	end
+end
+
+local function CapitalGoals(self, list)
+	local names = CapitalNames(self)
+	local have = self:JournalCounts().capital or 0
+	local goal = Goal("capitals", L.JRN_GOAL_CAPITALS, have, have + #names, nil, "journal")
+	if goal then
+		goal.hint = NameLines({ L.JRN_HINT_CAPITALS }, names)
+		list[#list + 1] = goal
+	end
+end
+
+-- L'identifiant suit la plage, pas les tampons : un objectif masqué reste
+-- masqué quand tu en finis un, et revient quand de nouveaux donjons entrent
+-- dans ta tranche. Les noms passent au survol, la ligne reste courte.
+local function DungeonGoals(self, list)
+	local dungeons = LevelDungeons(self)
+	if not dungeons then return end
+	local goal = Goal("dungeons:" .. table.concat(dungeons.inRange, ","), L.JRN_GOAL_DUNGEONS,
+		dungeons.have, #dungeons.inRange, nil, "journal")
+	if goal then
+		goal.hint = NameLines({ L.JRN_HINT_DUNGEONS }, dungeons.names)
+		list[#list + 1] = goal
+	end
 end
 
 -- Prochain palier : affiché « niveau 27/30 », mais trié sur l'avancée dans la
@@ -264,13 +394,118 @@ local function LevelGoals(self, list)
 			local previous = milestones[index - 1] or 1
 			local goal = Goal("level:" .. milestone, self:F("JRN_GOAL_LEVEL", milestone), level, milestone,
 				(level - previous) / (milestone - previous), "journal")
-			if goal then list[#list + 1] = goal end
+			if goal then
+				goal.hint = { self:F("JRN_HINT_LEVEL", milestone - level) }
+				local xp, xpMax = tonumber(Call("UnitXP", "player")), tonumber(Call("UnitXPMax", "player"))
+				if xp and xpMax and xpMax > xp then goal.hint[2] = self:F("JRN_HINT_XP", xpMax - xp) end
+				list[#list + 1] = goal
+			end
 			return
 		end
 	end
 end
 
 local SOURCES = { CompanionGoals, VillageGoals, CapitalGoals, DungeonGoals, LevelGoals }
+
+-- Extension : d'autres fichiers ajoutent leurs objectifs.
+--   ns.RegisterGoalSource(function(self, list) ... end)
+-- La fonction ajoute à `list` des objectifs construits avec ns.JournalGoal
+-- (id, label, have, need, ratio, source) ; elle peut poser goal.hint (lignes
+-- du survol), goal.short et goal.unit (carte mise en avant). Une source en
+-- panne est isolée (pcall) et n'empêche pas les autres.
+function ns.RegisterGoalSource(fn)
+	if type(fn) == "function" then SOURCES[#SOURCES + 1] = fn end
+end
+
+-- Complétion de zone : chaque part (villages, bestiaire, récolte…) dit où tu
+-- en es dans une zone.
+--   ns.RegisterZonePart({ id = "bestiary", label = "JRN_PART_bestiary",
+--     Compute = function(self, zoneID) return { have =, need =, hint = { … } } end })
+-- Compute renvoie nil quand la part ne s'applique pas (pas de métier, rien vu).
+ns.ZONE_PARTS = ns.ZONE_PARTS or {}
+function ns.RegisterZonePart(def)
+	if type(def) == "table" and def.id and type(def.Compute) == "function" then
+		ns.ZONE_PARTS[#ns.ZONE_PARTS + 1] = def
+	end
+end
+
+-- Villages : la première part, livrée ici
+ns.RegisterZonePart({ id = "villages", label = "JRN_PART_villages", Compute = function(self, zoneID)
+	local villages = ZoneVillages(self, zoneID)
+	if not villages or villages.need == 0 then return nil end
+	return { have = villages.have, need = villages.need,
+		hint = NameLines({}, villages.missing) }
+end })
+
+-- Où tu en es dans une zone : chaque part qui s'applique pèse autant que les
+-- autres (5 villages sur 5 et 2 espèces sur 10 = 60 %, pas 7/15). Renvoie
+-- nil si aucune part ne s'applique.
+function ns:ZoneCompletion(zoneID)
+	if not zoneID then return nil end
+	local parts, sum = {}, 0
+	for _, def in ipairs(ns.ZONE_PARTS) do
+		local ok, part = pcall(def.Compute, self, zoneID)
+		if ok and type(part) == "table" and tonumber(part.need) and part.need > 0 then
+			local have = math.min(math.max(tonumber(part.have) or 0, 0), part.need)
+			parts[#parts + 1] = { id = def.id, label = L[def.label] or def.label or def.id,
+				have = have, need = part.need, ratio = have / part.need, hint = part.hint }
+			sum = sum + have / part.need
+		elseif not ok and self.RecordError then
+			self:RecordError("journal:zonepart:" .. tostring(def.id), part)
+		end
+	end
+	if #parts == 0 then return nil end
+	local ratio = sum / #parts
+	return { zoneID = zoneID, parts = parts, ratio = ratio, percent = math.floor(ratio * 100 + 1e-9) }
+end
+
+-- Objectif « Complétion de <zone> » : seulement si au moins deux parts
+-- s'appliquent (une seule, c'est déjà son propre objectif)
+local function ZoneGoals(self, list)
+	local zoneID, zoneName = self:JournalZone()
+	local done = zoneID and self:ZoneCompletion(zoneID)
+	if not done or #done.parts < 2 or done.percent >= 100 then return end
+	local goal = Goal("zone:" .. zoneID, self:F("JRN_GOAL_ZONE", tostring(zoneName or "?")), done.percent, 100,
+		done.ratio, "journal")
+	if not goal then return end
+	goal.progress = self:F("JRN_ZONE_PCT", done.percent)
+	goal.zoneCompletion = true
+	local hint = { L.JRN_ZONE_PARTS }
+	local easiest
+	for _, part in ipairs(done.parts) do
+		hint[#hint + 1] = self:F("JRN_ZONE_PART_LINE", part.label, part.have, part.need)
+		if part.have < part.need and (not easiest or part.need - part.have < easiest.need - easiest.have) then easiest = part end
+	end
+	if easiest and type(easiest.hint) == "table" and #easiest.hint > 0 then
+		hint[#hint + 1] = self:F("JRN_ZONE_NEXT", easiest.label)
+		for _, text in ipairs(easiest.hint) do hint[#hint + 1] = text end
+	end
+	goal.hint = hint
+	list[#list + 1] = goal
+end
+SOURCES[#SOURCES + 1] = ZoneGoals
+
+-- Onglet Zones du carnet : le pourcentage à côté de chaque zone tamponnée
+do
+	local previous = ns.JournalItems
+	if previous then
+		function ns:JournalItems(kind)
+			local items = previous(self, kind)
+			if kind == "zone" then
+				for _, item in ipairs(items) do
+					local zoneID = item.id and tonumber(item.id:match("^zone:(%d+)$"))
+					local done = zoneID and self:ZoneCompletion(zoneID)
+					if done then
+						local pct = self:F("JRN_ZONE_PCT", done.percent)
+						item.detail = (item.detail and item.detail ~= "") and (item.detail .. "  " .. pct) or pct
+						item.completion = done
+					end
+				end
+			end
+			return items
+		end
+	end
+end
 
 -- Le plus proche du but d'abord ; à égalité, le moins de pas restants, puis
 -- le nom (ordre stable d'un rafraîchissement à l'autre). Masqués à la fin.
@@ -297,10 +532,23 @@ function ns:JournalObjectives()
 end
 
 -- Ceux du suivi : non masqués, les TRACKER_MAX premiers
+-- La complétion de la zone affichée remplace ses parts (villages, bestiaire,
+-- nommés de cette zone) : elles restent dans l'onglet Objectifs.
+local ZONE_PART_PREFIX = { "villages:", "bestiary:", "named:" }
 function ns:JournalTrackerObjectives()
+	local all, zoneShown = self:JournalObjectives(), nil
+	for _, goal in ipairs(all) do
+		if goal.zoneCompletion and not goal.dismissed then zoneShown = goal.id:match("^zone:(%d+)$") end
+	end
 	local shown = {}
-	for _, goal in ipairs(self:JournalObjectives()) do
-		if not goal.dismissed and #shown < TRACKER_MAX then shown[#shown + 1] = goal end
+	for _, goal in ipairs(all) do
+		local absorbed = false
+		if zoneShown then
+			for _, prefix in ipairs(ZONE_PART_PREFIX) do
+				if goal.id == prefix .. zoneShown then absorbed = true end
+			end
+		end
+		if not goal.dismissed and not absorbed and #shown < TRACKER_MAX then shown[#shown + 1] = goal end
 	end
 	return shown
 end
@@ -424,6 +672,99 @@ local function StopDrag()
 	ns:SaveJournalTrackerPoint()
 end
 
+-- Survol d'un objectif : ce qu'il faut faire, avec des noms concrets
+function ns:ShowJournalGoalTooltip(owner, goal)
+	local tip = rawget(_G, "GameTooltip")
+	if type(tip) ~= "table" or not goal then return end
+	pcall(tip.SetOwner, tip, owner, "ANCHOR_LEFT")
+	if tip.ClearLines then tip:ClearLines() end
+	tip:AddLine(goal.label, Theme.GOLD[1], Theme.GOLD[2], Theme.GOLD[3])
+	tip:AddLine(goal.progress .. (goal.unit and (" " .. goal.unit) or ""), 1, 1, 1)
+	if type(goal.hint) == "table" and #goal.hint > 0 then
+		tip:AddLine(" ")
+		tip:AddLine(L.JRN_HINT_TODO, Theme.PARCHMENT[1], Theme.PARCHMENT[2], Theme.PARCHMENT[3])
+		for _, text in ipairs(goal.hint) do
+			tip:AddLine(text, Theme.TEXT[1], Theme.TEXT[2], Theme.TEXT[3], true)
+		end
+	end
+	tip:AddLine(" ")
+	tip:AddLine(L.JRN_HINT_CLICK, Theme.MUTED[1], Theme.MUTED[2], Theme.MUTED[3])
+	tip:Show()
+	return tip
+end
+
+local function HideTooltip()
+	local tip = rawget(_G, "GameTooltip")
+	if type(tip) == "table" and tip.Hide then tip:Hide() end
+end
+
+-- Une ligne d'objectif : losange, libellé, barre, progression. La première
+-- est la « carte » mise en avant : fond, libellé court, grande barre.
+local function BuildLine(frame, index)
+	local featured = index == 1
+	local line = CreateFrame("Button", nil, frame)
+	line:SetSize(TRACKER_WIDTH, featured and FEATURED_H or LINE_H)
+	local top = featured and -TITLE_H or -(TITLE_H + FEATURED_H + FEATURED_GAP + (index - 2) * LINE_H)
+	line:SetPoint("TOPRIGHT", frame, "TOPRIGHT", 0, top)
+	if line.RegisterForClicks then line:RegisterForClicks("LeftButtonUp", "RightButtonUp") end
+	if line.RegisterForDrag then line:RegisterForDrag("LeftButton") end
+	line:SetScript("OnClick", function(self, button)
+		if not self.goal then return end
+		if button == "RightButton" then
+			HideTooltip()
+			return ns:JournalDismiss(self.goal.id, true)
+		end
+		if ns.CompanionOpenJournal then ns:CompanionOpenJournal() end
+	end)
+	line:SetScript("OnDragStart", StartDrag)
+	line:SetScript("OnDragStop", StopDrag)
+	line:SetScript("OnEnter", function(self) ns:ShowJournalGoalTooltip(self, self.goal) end)
+	line:SetScript("OnLeave", HideTooltip)
+
+	if featured then
+		line.bg = line:CreateTexture(nil, "BACKGROUND")
+		line.bg:SetTexture(Theme.SOLID)
+		line.bg:SetVertexColor(0, 0, 0, 0.55)
+		line.bg:SetAllPoints()
+		line.accent = line:CreateTexture(nil, "BORDER")
+		line.accent:SetTexture(Theme.SOLID)
+		line.accent:SetVertexColor(Theme.GOLD[1], Theme.GOLD[2], Theme.GOLD[3], 1)
+		line.accent:SetPoint("TOPLEFT"); line.accent:SetPoint("BOTTOMLEFT")
+		line.accent:SetWidth(2)
+	end
+
+	line.diamond = Theme.CreateDiamond(line, featured and 9 or 7, not featured)
+	line.diamond:SetVertexColor(Theme.GOLD[1], Theme.GOLD[2], Theme.GOLD[3], 1)
+	line.text = line:CreateFontString(nil, "OVERLAY", Theme.F_BODY)
+	line.text:SetJustifyH("LEFT")
+	line.text:SetWordWrap(false)
+	line.progress = line:CreateFontString(nil, "OVERLAY", Theme.F_BODY)
+	line.progress:SetJustifyH("RIGHT")
+	line.progress:SetTextColor(Theme.MUTED[1], Theme.MUTED[2], Theme.MUTED[3])
+	if featured then
+		line.diamond:SetPoint("TOPLEFT", line, "TOPLEFT", 9, -7)
+		line.text:SetPoint("TOPLEFT", line, "TOPLEFT", 24, -5)
+		line.text:SetWidth(TRACKER_WIDTH - 32)
+		line.text:SetTextColor(Theme.PARCHMENT[1], Theme.PARCHMENT[2], Theme.PARCHMENT[3])
+		line.bar = Theme.CreateBar(line, TRACKER_WIDTH - 24 - 78, 5)
+		line.bar:SetPoint("BOTTOMLEFT", line, "BOTTOMLEFT", 24, 9)
+		line.progress:SetPoint("BOTTOMRIGHT", line, "BOTTOMRIGHT", -8, 6)
+		line.progress:SetWidth(72)
+	else
+		line.diamond:SetPoint("LEFT", line, "LEFT", 12, 0)
+		line.text:SetPoint("LEFT", line, "LEFT", 24, 0)
+		line.text:SetWidth(TRACKER_WIDTH - 24 - MINI_BAR_W - 52)
+		line.text:SetTextColor(Theme.TEXT[1], Theme.TEXT[2], Theme.TEXT[3])
+		line.bar = Theme.CreateBar(line, MINI_BAR_W, 3)
+		line.bar:SetPoint("RIGHT", line, "RIGHT", -46, 0)
+		line.progress:SetPoint("RIGHT", line, "RIGHT", -8, 0)
+		line.progress:SetWidth(38)
+	end
+	line.featured = featured
+	line:Hide()
+	return line
+end
+
 function ns:EnsureJournalTracker()
 	if self.journalTracker then return self.journalTracker end
 	if not Theme then return nil end
@@ -458,34 +799,7 @@ function ns:EnsureJournalTracker()
 	frame.title = title
 
 	frame.lines = {}
-	for index = 1, TRACKER_MAX do
-		local line = CreateFrame("Button", nil, frame)
-		line:SetSize(TRACKER_WIDTH, LINE_H)
-		line:SetPoint("TOPRIGHT", frame, "TOPRIGHT", 0, -TITLE_H - (index - 1) * LINE_H)
-		if line.RegisterForClicks then line:RegisterForClicks("RightButtonUp") end
-		if line.RegisterForDrag then line:RegisterForDrag("LeftButton") end
-		line:SetScript("OnClick", function(self, button)
-			if button == "RightButton" and self.goal then ns:JournalDismiss(self.goal.id, true) end
-		end)
-		line:SetScript("OnDragStart", StartDrag)
-		line:SetScript("OnDragStop", StopDrag)
-		line.diamond = Theme.CreateDiamond(line, 7, true)
-		line.diamond:SetPoint("LEFT", line, "LEFT", 4, 0)
-		line.diamond:SetVertexColor(Theme.GOLD[1], Theme.GOLD[2], Theme.GOLD[3], 1)
-		line.text = line:CreateFontString(nil, "OVERLAY", Theme.F_BODY)
-		line.text:SetPoint("LEFT", line, "LEFT", 16, 0)
-		line.text:SetWidth(TRACKER_WIDTH - 70)
-		line.text:SetJustifyH("LEFT")
-		line.text:SetWordWrap(false)
-		line.text:SetTextColor(Theme.TEXT[1], Theme.TEXT[2], Theme.TEXT[3])
-		line.progress = line:CreateFontString(nil, "OVERLAY", Theme.F_BODY)
-		line.progress:SetPoint("RIGHT", line, "RIGHT", -2, 0)
-		line.progress:SetWidth(50)
-		line.progress:SetJustifyH("RIGHT")
-		line.progress:SetTextColor(Theme.MUTED[1], Theme.MUTED[2], Theme.MUTED[3])
-		line:Hide()
-		frame.lines[index] = line
-	end
+	for index = 1, TRACKER_MAX do frame.lines[index] = BuildLine(frame, index) end
 	frame:Hide()
 	self.journalTracker = frame
 	self:PlaceJournalTracker()
@@ -517,15 +831,23 @@ function ns:RefreshJournalTracker()
 		local goal = not collapsed and goals[index] or nil
 		line.goal = goal
 		if goal then
-			line.text:SetText(goal.label)
-			line.progress:SetText(goal.progress)
+			if line.featured then
+				line.text:SetText(goal.short or goal.label)
+				line.progress:SetText(goal.progress .. (goal.unit and (" " .. goal.unit) or ""))
+			else
+				line.text:SetText(goal.label)
+				line.progress:SetText(goal.progress)
+			end
+			line.bar:SetValue(goal.have / goal.need)
 			line:Show()
 			shown = shown + 1
 		else
 			line:Hide()
 		end
 	end
-	frame:SetHeight(TITLE_H + shown * LINE_H)
+	local height = TITLE_H
+	if shown > 0 then height = height + FEATURED_H + (shown - 1) * LINE_H + (shown > 1 and FEATURED_GAP or 0) end
+	frame:SetHeight(height)
 	frame:Show()
 	return frame
 end
