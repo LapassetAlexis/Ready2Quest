@@ -380,6 +380,8 @@ do
 	Check("[JRN] fenêtre Theme (titre)", f and f.title and f.title.text == "Carnet de voyage")
 	Check("[JRN] six onglets", f and f.tabs.zone and f.tabs.subzone and f.tabs.capital and f.tabs.dungeon and f.tabs.rare and f.tabs.level)
 	Check("[JRN] total en sous-titre", f.subtitle.text:find("6 tampon", 1, true), f.subtitle.text)
+	Check("[JRN] premier onglet : Objectifs", f.kind == "goals" and NS.JOURNAL_TABS[1] == "goals")
+	f.tabs.zone:Click()
 	Check("[JRN] zones : compte seul (pas de total)", f.counter.text == "Zones : 2", f.counter.text)
 	f.tabs.capital:Click()
 	Check("[JRN] capitales : 1 / 6", f.counter.text == "Capitales : 1 / 6", f.counter.text)
@@ -454,7 +456,7 @@ do
 		end
 	end)())
 	Check("[JRN] phrase d'explication", page and page.sub.text == NS.L.OPT_PAGE_JOURNAL_SUB)
-	Check("[JRN] bandeau et chat réglables", page and #page.rows == 2)
+	Check("[JRN] bandeau, chat et suivi réglables", page and #page.rows == 5, page and #page.rows)
 	local button = page and page.actionButtons and page.actionButtons.journal
 	Check("[JRN] bouton « Ouvrir le carnet »", button and button.text.text == "Ouvrir le carnet")
 	if button then button:Click() end

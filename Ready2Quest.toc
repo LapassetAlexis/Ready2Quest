@@ -39,3 +39,4 @@ CompanionData.lua
 CompanionLines.lua
 Companion.lua
 Journal.lua
+JournalTracker.lua
