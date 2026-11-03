@@ -45,6 +45,10 @@ if duplicates:
 lua = LuaRuntime(unpack_returned_tuples=True)
 globals_ = lua.globals()
 globals_.ADDON_ROOT = ROOT
+# Tests des modules : tests/modules/*.lua, dans l'ordre alphabétique
+import glob
+module_tests = sorted(os.path.relpath(p, ROOT) for p in glob.glob(os.path.join(ROOT, "tests", "modules", "*.lua")))
+globals_.MODULE_TEST_FILES = lua.table_from(module_tests)
 
 try:
     lua.execute(source)
