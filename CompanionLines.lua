@@ -106,6 +106,16 @@ P.LEVEL = {   -- %d = niveau
 	{ "Niveau %d, et toujours aussi modeste.", "Level %d, and still so humble." },
 	{ "Niveau %d ! Je le note dans mon cœur.", "Level %d! Writing that down in my heart." },
 }
+P.READY = {   -- %s = nom du prochain stade
+	{ "Je me sens prêt à devenir %s… il me faut juste être bien.", "I feel ready to become %s… I just need to feel good." },
+	{ "Ça me chatouille partout : bientôt %s ! Prends soin de moi ?", "Everything tingles: soon %s! Take care of me?" },
+	{ "Je peux devenir %s ! Un bon repas, du repos, un peu d'aventure…", "I can become %s! A good meal, some rest, a bit of adventure…" },
+}
+P.CHEST = {   -- %s = nom de la zone
+	{ "On a tout vu de %s ! Un coffre pour toi… pour nous !", "We've seen all of %s! A chest for you… for us!" },
+	{ "%s, terminé ! Ouvre le coffre, je veux voir !", "%s, done! Open the chest, I want to see!" },
+	{ "Tout %s dans le carnet. On a bien mérité un coffre.", "All of %s in the journal. We've earned a chest." },
+}
 P.EVOLVE = {  -- %s = nom du stade
 	{ "Je grandis ! Me voilà %s !", "I'm growing! Now I'm %s!" },
 	{ "Regarde-moi ! Je deviens %s !", "Look at me! I'm becoming %s!" },

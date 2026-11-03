@@ -139,6 +139,6 @@ do
 	end
 	Check("[INT] suivi : objectifs du compagnon affichés", fromCompanion > 0, table.concat(text, " | "))
 	local joined = table.concat(text, " | ")
-	Check("[INT] suivi : un stade ou une apparence au niveau, avec sa progression", joined:find("niveau 15/", 1, true) ~= nil, joined)
+	Check("[INT] suivi : un stade ou une apparence au niveau, avec sa progression", joined:find("niveau 20 15/20", 1, true) ~= nil, joined)
 	Check("[INT] suivi : aucune clé de traduction brute", not joined:find("JRN_", 1, true) and not joined:find("COMP_", 1, true), joined)
 end

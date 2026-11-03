@@ -59,7 +59,7 @@ local NAME_MAX = 24
 -- Priorités des bulles : une bulle n'efface jamais une bulle plus importante
 local PRIORITY = { chatter = 0, tip = 1, need = 2, reaction = 3, tuto = 4, event = 5 }
 local POOL_CATEGORY = {
-	EVOLVE = "event", UNLOCK = "event", TUTO = "tuto", TIP = "tip", GOAL = "tip", GOAL_STAGE = "tip",
+	EVOLVE = "event", UNLOCK = "event", READY = "event", CHEST = "event", TUTO = "tuto", TIP = "tip", GOAL = "tip", GOAL_STAGE = "tip",
 	IDLE = "chatter", NIGHT = "chatter",
 	NEED_hunger = "need", NEED_energy = "need", NEED_mood = "need", NEED_curiosity = "need",
 }
@@ -74,6 +74,7 @@ local COOLDOWNS = {
 local TIP_GAP, TIP_JITTER = 600, 300   -- astuces : toutes les 10 à 15 min de jeu
 local GOAL_FIRST = 900                 -- premier rappel d'objectif après 15 min
 local NEED_LOW   = 35                  -- en dessous, il peut exprimer une envie
+local HAPPY_MIN  = 70                  -- évolution : les 4 envies au moins à ce niveau
 local NEED_GRACE = 120                 -- pas d'envie dans les 2 min après la connexion
 local NIGHT_GRACE = 600
 local IDLE_REST  = 300                 -- 5 min au repos sans rien dire : un mot
@@ -112,6 +113,13 @@ local FR = {
 	COMP_NEED_energy       = "Énergie",
 	COMP_NEED_mood         = "Moral",
 	COMP_NEED_curiosity    = "Curiosité",
+	COMP_MSG_READY         = "Compagnon : %s est prêt à devenir %s. Comble ses envies (toutes à %d %%) pour qu'il évolue.",
+	COMP_HAPPY_LINE        = "  %s : %d %% — %s",
+	COMP_HAPPY_OK          = "  %s : %d %% (comblée)",
+	COMP_HOW_hunger        = "mange ou bois (ou pars avec des vivres)",
+	COMP_HOW_energy        = "repose-toi à l'auberge ou au feu de camp",
+	COMP_HOW_mood          = "caresse-le, rends des quêtes",
+	COMP_HOW_curiosity     = "explore : nouvelles zones, villages, tampons",
 	COMP_MOOD_radiant      = "radieux",
 	COMP_MOOD_happy        = "content",
 	COMP_MOOD_dreamy       = "rêveur",
@@ -195,6 +203,13 @@ local EN = {
 	COMP_NEED_energy       = "Energy",
 	COMP_NEED_mood         = "Mood",
 	COMP_NEED_curiosity    = "Curiosity",
+	COMP_MSG_READY         = "Companion: %s is ready to become %s. Fill its needs (all at %d %%) so it can grow.",
+	COMP_HAPPY_LINE        = "  %s: %d %% — %s",
+	COMP_HAPPY_OK          = "  %s: %d %% (filled)",
+	COMP_HOW_hunger        = "eat or drink (or set out with food)",
+	COMP_HOW_energy        = "rest at an inn or a campfire",
+	COMP_HOW_mood          = "pet it, turn in quests",
+	COMP_HOW_curiosity     = "explore: new zones, villages, stamps",
 	COMP_MOOD_radiant      = "radiant",
 	COMP_MOOD_happy        = "happy",
 	COMP_MOOD_dreamy       = "dreamy",
@@ -373,6 +388,11 @@ function ns:CompanionAdd(key, amount)
 	if needs[key] == nil then return end
 	needs[key] = Clamp(needs[key] + (tonumber(amount) or 0), NEED_FLOOR, NEED_MAX)
 	self:CompanionRefreshHover()
+	-- prêt à évoluer : une envie comblée peut être la dernière qui manquait
+	local data = self:CompanionData()
+	if data.stageReady and (tonumber(amount) or 0) > 0 and self:CompanionIsHappy() then
+		self:CompanionCheckStage(PlayerLevel(), true)
+	end
 end
 
 function ns:CompanionMood()
@@ -409,6 +429,40 @@ function ns:CompanionStageLabel(stage)
 	return L[def.label]
 end
 
+-- Heureux = les quatre envies au moins à HAPPY_MIN, et réveillé
+function ns:CompanionHappyCount()
+	local data, count = self:CompanionData(), 0
+	for _, key in ipairs(NEED_KEYS) do
+		if (data.needs[key] or 0) >= HAPPY_MIN then count = count + 1 end
+	end
+	return count, #NEED_KEYS
+end
+
+function ns:CompanionIsHappy()
+	local count, total = self:CompanionHappyCount()
+	return count == total and not self:CompanionData().sleepy
+end
+
+-- Survol de l'objectif « heureux » : chaque envie, et comment la remplir
+function ns:CompanionHappyHints()
+	local data, lines = self:CompanionData(), {}
+	for _, key in ipairs(NEED_KEYS) do
+		local value = math.floor(data.needs[key] or 0)
+		local label = L["COMP_NEED_" .. key]
+		if value >= HAPPY_MIN then
+			lines[#lines + 1] = self:F("COMP_HAPPY_OK", label, value)
+		else
+			lines[#lines + 1] = self:F("COMP_HAPPY_LINE", label, value, L["COMP_HOW_" .. key])
+		end
+	end
+	return lines
+end
+ns.COMPANION_HAPPY_MIN = HAPPY_MIN
+
+-- Le niveau ouvre l'étape, le bonheur la franchit : palier atteint, la
+-- créature est « prête » (data.stageReady) et évolue dès que ses quatre
+-- envies sont comblées. Jamais de retour en arrière, jamais de punition :
+-- elle attend, c'est tout.
 -- `celebrate` = false au tout premier relevé : un joueur qui installe
 -- l'addon au niveau 45 ne voit pas trois évolutions d'affilée
 function ns:CompanionCheckStage(level, celebrate)
@@ -419,10 +473,23 @@ function ns:CompanionCheckStage(level, celebrate)
 		self:CompanionApplyModel()
 		return false
 	end
-	if target <= data.stage then return false end   -- jamais de retour en arrière
-	data.stage = target
+	if target <= data.stage then data.stageReady = nil; return false end   -- jamais de retour en arrière
+	if not self:CompanionIsHappy() then
+		if data.stageReady ~= target then
+			data.stageReady = target
+			if celebrate ~= false then
+				local label = L[(ns.COMPANION_STAGES[target] or {}).label] or ""
+				self:Print(self:F("COMP_MSG_READY", self:CompanionName(), label, HAPPY_MIN))
+				self:CompanionSay("READY", { force = true, args = { label } })
+			end
+			if self.RefreshJournalTracker then pcall(self.RefreshJournalTracker, self) end
+		end
+		return false
+	end
+	data.stage, data.stageReady = target, nil
 	self:CompanionApplyModel()
 	if celebrate ~= false then self:CompanionCelebrate() end
+	if self.RefreshJournalTracker then pcall(self.RefreshJournalTracker, self) end
 	return true
 end
 
@@ -1619,6 +1686,8 @@ function ns:CompanionNextUnlocks()
 	local list = {}
 	local function Add(kind, def)
 		local unlock = def.unlock
+		-- un cosmétique à palier se gagne au coffre d'une zone finie, pas au compteur
+		if (tonumber(def.tier) or 0) >= 1 then return end
 		if not unlock or data.unlocked[CosmeticKey(kind, def.id)] then return end
 		local item = { label = L[def.label], kind = kind, id = def.id }
 		if unlock.level then
@@ -1632,7 +1701,11 @@ function ns:CompanionNextUnlocks()
 	for _, def in ipairs(ns.COMPANION_ORNAMENTS) do Add("orn", def) end
 	local stage = data.stage or self:CompanionStageFor(level)
 	local nextStage = ns.COMPANION_STAGES[stage + 1]
-	if nextStage and level < nextStage.level then
+	if data.stageReady and ns.COMPANION_STAGES[data.stageReady] then
+		local happy, total = self:CompanionHappyCount()
+		list[#list + 1] = { label = L[ns.COMPANION_STAGES[data.stageReady].label], kind = "stage", id = data.stageReady,
+			stat = "happy", have = math.min(happy, total - 1), need = total, source = "player", ready = true }
+	elseif nextStage and level < nextStage.level then
 		list[#list + 1] = { label = L[nextStage.label], kind = "stage", id = stage + 1, stat = "level",
 			have = level, need = nextStage.level, source = "player" }
 	end
