@@ -56,8 +56,6 @@ Au passage :
 
 ## v1.21.0 — Ready to Quest devient Ready2Quest
 
-## v1.21.0 — Ready to Quest devient Ready2Quest
-
 Un nom plus court, une vraie marque, et le sigle **R2Q**.
 
 **Le logo** est une boussole de poche : anneau de suspension, lunette pointillée, repères cardinaux, **aiguille bleu de nuit** à 38°, pivot ambre et monogramme « R2Q » (le « 2 » en ambre) en Alegreya.
