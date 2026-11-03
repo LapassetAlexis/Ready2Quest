@@ -615,9 +615,12 @@ end
 
 local function CosmeticKey(kind, id) return kind .. ":" .. id end
 
+-- v1.25.0 : un cosmétique à palier (tier >= 1) ne se gagne qu'au coffre
+-- d'une zone finie (CompanionChest.lua) ; ce qui a déjà été gagné reste acquis.
+local function Tiered(def) return (tonumber(def.tier) or 0) >= 1 end
 function ns:CompanionIsUnlocked(kind, def)
 	if not def then return false end
-	if not def.unlock then return true end
+	if not def.unlock and not Tiered(def) then return true end
 	return self:CompanionData().unlocked[CosmeticKey(kind, def.id)] == true
 end
 
@@ -646,7 +649,7 @@ function ns:CompanionCheckUnlocks(level, silent, noBubble)
 	local function Scan(kind, list)
 		for _, def in ipairs(list) do
 			local key = CosmeticKey(kind, def.id)
-			if def.unlock and not data.unlocked[key] and self:CompanionMeets(def.unlock, counts, level) then
+			if def.unlock and not Tiered(def) and not data.unlocked[key] and self:CompanionMeets(def.unlock, counts, level) then
 				data.unlocked[key] = true
 				fresh[#fresh + 1] = { kind = kind, def = def }
 			end
@@ -2189,8 +2192,8 @@ function ns:CompanionRefreshPage()
 						row.label:SetTextColor(0.86, 0.84, 0.78)
 						if row.toggle then row.toggle:SetAlpha(1) end
 					else
-						-- sans condition lisible (coffre) : le palier
-						if def.unlock then
+						-- gagné au coffre : le palier ; sinon la condition
+						if def.unlock and not Tiered(def) then
 							row.label:SetText(self:F("OPT_COMP_LOCKED", L[def.label], self:CompanionRequirement(def.unlock)))
 						else
 							row.label:SetText(self:F("OPT_COMP_LOCKED_TIER", L[def.label], tostring(def.tier or "?")))

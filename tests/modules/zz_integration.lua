@@ -134,11 +134,43 @@ do
 	local objectives = NS:JournalObjectives()
 	local fromCompanion, text = 0, {}
 	for _, goal in ipairs(objectives) do
-		if goal.source == "companion" then fromCompanion = fromCompanion + 1 end
+		-- un stade du compagnon : sa propre ligne, ou fusionné dans le palier de même niveau
+		if goal.source == "companion" or table.concat(goal.rewards or {}, " "):find("devient", 1, true) then
+			fromCompanion = fromCompanion + 1
+		end
 		text[#text + 1] = tostring(goal.label) .. " " .. tostring(goal.progress)
 	end
 	Check("[INT] suivi : objectifs du compagnon affichés", fromCompanion > 0, table.concat(text, " | "))
 	local joined = table.concat(text, " | ")
 	Check("[INT] suivi : un stade ou une apparence au niveau, avec sa progression", joined:find("niveau 20 15/20", 1, true) ~= nil, joined)
 	Check("[INT] suivi : aucune clé de traduction brute", not joined:find("JRN_", 1, true) and not joined:find("COMP_", 1, true), joined)
+end
+
+-- Coffre de zone avec le vrai catalogue (CompanionData.lua) : chaque palier
+-- propose de quoi choisir, et un objet choisi s'applique au cadre
+do
+	ResetWorld()
+	local counts = {}
+	for tier = 1, 3 do counts[tier] = #NS:ChestOptions(tier) end
+	Check("[INT] coffre : au moins 7 objets par palier", counts[1] >= 7 and counts[2] >= 7 and counts[3] >= 7,
+		counts[1] .. "/" .. counts[2] .. "/" .. counts[3])
+	local labels, raw = {}, false
+	for _, reward in ipairs(NS:ChestOptions(2)) do
+		local text = NS:ChestRewardLabel(reward)
+		labels[#labels + 1] = text
+		if text:find("COMP_", 1, true) or text:find("OPT_", 1, true) then raw = true end
+	end
+	Check("[INT] coffre : libellés traduits", not raw and #labels > 0, table.concat(labels, ", "))
+	local data = NS:CompanionData()
+	NS:ChestData()[4242] = { tier = 1, name = "Zone test", at = 0 }
+	local frame
+	for _, reward in ipairs(NS:ChestOptions(1)) do
+		if reward.kind == "frame" then frame = reward; break end
+	end
+	Check("[INT] coffre : un cadre au palier 1", frame ~= nil)
+	if frame then
+		Check("[INT] coffre : cadre choisi, débloqué", NS:ChestPick(4242, frame) == true and data.unlocked["frame:" .. frame.id] == true)
+		Check("[INT] coffre : le cadre gagné se sélectionne", NS:CompanionIsUnlocked("frame", NS:CompanionStyleDef("frame", frame.id)) == true)
+	end
+	NS:ChestData()[4242] = nil
 end

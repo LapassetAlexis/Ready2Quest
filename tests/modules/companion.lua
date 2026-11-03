@@ -77,17 +77,6 @@ function C.Play(minutes)
 end
 function C.Model() return NS.companionFrame and NS.companionFrame.model end
 
--- Cosmétiques du coffre (v1.25.0 : un palier, pas d'`unlock`) : verrouillés
--- tant que le coffre ne les a pas donnés. Cette règle appartient au coffre ;
--- en attendant, elle est simulée ici pour que les tests des déblocages par
--- tampons ne voient que l'ancien catalogue. Retirée en fin de fichier.
-C.savedIsUnlocked = NS.CompanionIsUnlocked
-function NS:CompanionIsUnlocked(kind, def)
-	if type(def) == "table" and not def.unlock and (tonumber(def.tier) or 0) >= 1 then
-		return self:CompanionData().unlocked[kind .. ":" .. tostring(def.id)] == true
-	end
-	return C.savedIsUnlocked(self, kind, def)
-end
 
 do
 	Say("-- chargement, réglages, chaînes")
@@ -347,46 +336,40 @@ do
 end
 
 do
-	Say("-- cosmétiques : faux Carnet de voyage")
+	Say("-- cosmétiques : gagnés au coffre, jamais au compteur")
 	C.Reset(11)
 	C.Login()
 	Check("[COMP] sans Carnet : compteurs à zéro", NS:CompanionCounts().total == 0 and NS:CompanionCounts().zone == 0)
-	Check("[COMP] sans Carnet : seule l'apparence de départ", #NS:CompanionUnlockedAppearances() == 1)
-	local fake = { zone = 5, subzone = 10, dungeon = 0, rare = 0, level = 0, total = 15 }
+	Check("[COMP] au départ : seule l'apparence de départ", #NS:CompanionUnlockedAppearances() == 1)
+	local fake = { zone = 50, subzone = 100, dungeon = 20, rare = 10, level = 6, total = 186 }
 	NS.JournalCounts = function() return fake end
 	Mock:Reset()
 	C.Quiet()
 	NS:FireCallback("STAMP", { id = "subzone:42", kind = "subzone", name = "Vieux moulin", new = true })
 	local data = NS:CompanionData()
-	Check("[COMP] 5 zones : dragonnet cramoisi débloqué", data.unlocked["app:whelp_red"] == true)
-	Check("[COMP] 10 lieux : rainette débloquée", data.unlocked["app:frog"] == true)
-	Check("[COMP] 4 zones de trop peu : pas de ruban", not data.unlocked["orn:ribbon"])
-	Check("[COMP] déblocage annoncé dans le chat", Mock:Output():find("nouvelle apparence", 1, true) ~= nil, Mock:Output())
-	Check("[COMP] déblocage annoncé en bulle (prioritaire sur le tampon)", C.Key() == "UNLOCK", C.Key())
-	fake.zone = 10
-	Mock:Reset()
-	NS:FireCallback("STAMP", { id = "zone:12", kind = "zone", name = "Elwynn", new = true })
-	Check("[COMP] 10 zones : ruban débloqué", data.unlocked["orn:ribbon"] == true and Mock:Output():find("ornement", 1, true))
-	Check("[COMP] ruban affiché sur le cadre", NS.companionFrame.ornaments.ribbon:IsShown())
+	Check("[COMP] gros compteurs : rien de débloqué (seul le coffre donne)", not data.unlocked["app:whelp_red"]
+		and not data.unlocked["orn:ribbon"] and #NS:CompanionUnlockedAppearances() == 1)
+	Check("[COMP] tampon : sa bulle à lui", C.Key() == "STAMP", C.Key())
+	Mock.world.level = 60
+	Mock:Fire("PLAYER_LEVEL_UP", 60)
+	Check("[COMP] niveau 60 : rien de débloqué non plus", not data.unlocked["orn:gold"] and not data.unlocked["app:whelp_black"])
+	NS.JournalCounts = function() error("boom") end
+	Check("[COMP] Carnet en erreur : compteurs à zéro", NS:CompanionCounts().zone == 0)
+	NS.JournalCounts = nil
+	-- ce que le coffre a donné s'affiche, et reste
+	data.unlocked["orn:ribbon"] = true
+	NS:CompanionApplyOrnaments()
+	Check("[COMP] ruban gagné : affiché sur le cadre", NS.companionFrame.ornaments.ribbon:IsShown())
 	NS:DB().companionOrnRibbon = false
 	NS:CompanionApplyOrnaments()
 	Check("[COMP] ruban coupé dans les réglages : masqué", not NS.companionFrame.ornaments.ribbon:IsShown())
 	NS:DB().companionOrnRibbon = true
 	Check("[COMP] lanterne encore verrouillée : masquée", not NS.companionFrame.ornaments.lantern:IsShown())
-	-- le Carnet disparaît (module coupé) : rien n'est repris
-	NS.JournalCounts = nil
+	data.unlocked["orn:gold"] = true
 	NS:CompanionCheckUnlocks()
-	Check("[COMP] déblocages définitifs", data.unlocked["app:whelp_red"] and data.unlocked["orn:ribbon"])
-	-- un Carnet qui plante ne casse rien
-	NS.JournalCounts = function() error("boom") end
-	Check("[COMP] Carnet en erreur : compteurs à zéro", NS:CompanionCounts().zone == 0)
-	NS.JournalCounts = nil
-	-- conditions de niveau
-	Mock.world.level = 60
-	Mock:Fire("PLAYER_LEVEL_UP", 60)
-	Check("[COMP] niveau 60 : cadre doré et dragonnet sombre", data.unlocked["orn:gold"] and data.unlocked["app:whelp_black"]
-		and data.unlocked["app:owl"] and data.unlocked["app:whelp_blue"])
-	Check("[COMP] cadre doré affiché", NS.companionFrame.ornaments.gold:IsShown())
+	NS:CompanionApplyOrnaments()
+	Check("[COMP] gains définitifs", data.unlocked["orn:ribbon"] and data.unlocked["orn:gold"]
+		and NS.companionFrame.ornaments.gold:IsShown())
 	Check("[COMP] condition lisible", NS:CompanionRequirement({ stamp = "dungeon", count = 5 }) == "5 donjons"
 		and NS:CompanionRequirement({ level = 20 }) == "niveau 20")
 end
@@ -398,9 +381,8 @@ do
 	local data = NS:CompanionData()
 	Check("[COMP] modèle 3D : apparence de départ affichée", C.Model() and C.Model().display == 6291, C.Model() and C.Model().display)
 	Check("[COMP] une seule apparence : le cycle y reste", NS:CompanionCycleAppearance().id == "whelp_green")
-	NS.JournalCounts = function() return { zone = 5, subzone = 10 } end
-	NS:CompanionCheckUnlocks(nil, true)
-	NS.JournalCounts = nil
+	-- deux apparences gagnées au coffre
+	data.unlocked["app:frog"], data.unlocked["app:whelp_red"] = true, true
 	local seen = {}
 	for _ = 1, 3 do seen[#seen + 1] = NS:CompanionCycleAppearance().id end
 	Check("[COMP] le cycle ne passe que par les apparences débloquées", table.concat(seen, ",") == "frog,whelp_red,whelp_green",
@@ -420,7 +402,7 @@ do
 		if row.def and row.def.key == "companionOrnLantern" then lanternRow = row end
 	end
 	Check("[COMP] réglages : nom de l'apparence affiché", appRow and appRow.value.text:find("Dragonnet émeraude", 1, true), appRow and appRow.value.text)
-	Check("[COMP] réglages : ornement verrouillé avec sa condition", lanternRow and lanternRow.label.text:find("25 lieux", 1, true),
+	Check("[COMP] réglages : ornement verrouillé avec son palier", lanternRow and lanternRow.label.text:find("palier", 1, true),
 		lanternRow and lanternRow.label.text)
 	Check("[COMP] page sans débordement", NS.optionsFrame.pages.companionMain.contentBottom >= NS.OPT_LAYOUT.contentLimit,
 		NS.optionsFrame.pages.companionMain.contentBottom)
@@ -1079,55 +1061,23 @@ do
 	C.Login()
 	local list = NS:CompanionNextUnlocks()
 	local fields, kinds = true, { app = true, orn = true, stage = true }
-	local stats = { zone = true, subzone = true, dungeon = true, rare = true, level = true, total = true }
+	local stats = { zone = true, subzone = true, dungeon = true, rare = true, level = true, total = true, happy = true }
 	for _, item in ipairs(list) do
 		fields = fields and type(item.label) == "string" and kinds[item.kind] and stats[item.stat]
 			and type(item.have) == "number" and type(item.need) == "number" and item.have < item.need
 	end
 	Check("[COMP] objectifs : champs du contrat", #list > 0 and fields)
-	-- 9 apparences - 1 de départ, 4 ornements, 1 stade
-	Check("[COMP] objectifs : tout ce qui reste (8 + 4 + 1)", #list == 13, #list)
+	Check("[COMP] objectifs : plus de cosmétique au compteur, le prochain stade seul", #list == 1, #list)
 	Check("[COMP] objectif de stade : Aguerri au niveau 20", list[1].kind == "stage" and list[1].label == "Aguerri"
 		and list[1].stat == "level" and list[1].have == 11 and list[1].need == 20, list[1].label)
-	Check("[COMP] libellés traduits", list[2].label == "Chouette grise", list[2].label)
-	local sorted = true
-	for i = 2, #list do
-		local a, b = list[i - 1], list[i]
-		sorted = sorted and (a.need - a.have) / a.need <= (b.need - b.have) / b.need
-	end
-	Check("[COMP] objectifs : le plus proche d'abord", sorted)
-	local fake = { zone = 4, subzone = 9, dungeon = 0, rare = 0, level = 1, total = 14 }
-	NS.JournalCounts = function() return fake end
-	list = NS:CompanionNextUnlocks()
-	Check("[COMP] avec le Carnet : Rainette (9/10) en tête", list[1].label == "Rainette" and list[1].stat == "subzone"
-		and list[1].have == 9 and list[1].need == 10, list[1].label)
-	Check("[COMP] puis le dragonnet cramoisi (4/5)", list[2].label == "Dragonnet cramoisi" and list[2].have == 4, list[2].label)
-	fake.zone = 5
-	NS:CompanionCheckUnlocks()
-	local still = false
-	for _, item in ipairs(NS:CompanionNextUnlocks()) do if item.label == "Dragonnet cramoisi" then still = true end end
-	Check("[COMP] débloqué : retiré des objectifs", not still and NS:CompanionData().unlocked["app:whelp_red"])
-	-- rappel : « Encore un lieu et j'aurai : Rainette ! »
-	C.Quiet()
-	NS.companionRT.goalAt = 0
-	Check("[COMP] rappel d'objectif", NS:CompanionTryGoal() == true and C.Key() == "GOAL", C.Key())
-	Check("[COMP] rappel : reste et récompense", NS.companionBubbleText:find("un lieu", 1, true) and NS.companionBubbleText:find("Rainette", 1, true),
-		NS.companionBubbleText)
-	C.Quiet()
-	NS.companionRT.goalAt = 0
-	NS.companionRT.cool.goal = Mock.now + 10
-	Check("[COMP] rappel : rare (pause)", NS:CompanionTryGoal() == false)
 	Mock:Reset()
 	NS:HandleCommand("compagnon")
-	Check("[COMP] statut : prochain déblocage", Mock:Output():find("Prochain : Rainette (9/10)", 1, true) ~= nil, Mock:Output())
-	NS.JournalCounts = nil
+	Check("[COMP] statut : prochain stade", Mock:Output():find("Prochain : Aguerri (11/20)", 1, true) ~= nil, Mock:Output())
 	-- rien de proche : pas de rappel
 	D.Reset(5)
 	C.Login()
 	C.Quiet()
 	NS.companionRT.goalAt = 0
-	-- le rare (0/1) et le feu follet (0/2 donjons) sont les seuls objectifs « proches »
-	NS:CompanionData().unlocked["app:sprite"], NS:CompanionData().unlocked["app:wisp"] = true, true
 	Check("[COMP] objectif lointain : pas de rappel", NS:CompanionTryGoal() == false)
 	-- stade : « Encore 2 niveaux et je deviendrai Jeune ! »
 	Mock.world.level = 8
@@ -1135,9 +1085,12 @@ do
 	NS.companionRT.goalAt = 0
 	Check("[COMP] rappel de stade", NS:CompanionTryGoal() == true and C.Key() == "GOAL_STAGE"
 		and NS.companionBubbleText:find("2 niveaux", 1, true) and NS.companionBubbleText:find("Jeune", 1, true), NS.companionBubbleText)
+	C.Quiet()
+	NS.companionRT.goalAt = 0
+	NS.companionRT.cool.goal = Mock.now + 10
+	Check("[COMP] rappel : rare (pause)", NS:CompanionTryGoal() == false)
 	Mock.world.level = 60
 	NS:CompanionCheckStage(60, false)
-	NS:CompanionCheckUnlocks(60, true)
 	local stage = false
 	for _, item in ipairs(NS:CompanionNextUnlocks()) do if item.kind == "stage" then stage = true end end
 	Check("[COMP] niveau 60 : plus de stade à venir", not stage)
@@ -1283,4 +1236,3 @@ NS.hubIndex = nil
 C.RemoveModelAPI()
 NS.JournalCounts = C.savedJournal
 if NS.companionFrame then NS.companionFrame:Hide() end
-NS.CompanionIsUnlocked = C.savedIsUnlocked
