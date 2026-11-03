@@ -35,3 +35,4 @@ QuestReward.lua
 LevelPace.lua
 BagSpace.lua
 Death.lua
+Journal.lua
