@@ -11,7 +11,7 @@ local Theme = ns.Theme
 
 local FRAME_WIDTH  = 600
 local FRAME_HEIGHT = 440
-local NAV_WIDTH    = 150
+local NAV_WIDTH    = 178   -- place pour « Check avant le départ » + son interrupteur (mesuré en jeu)
 local PANE_LEFT    = NAV_WIDTH + 16
 local PANE_WIDTH   = FRAME_WIDTH - PANE_LEFT - 14
 local ROW_HEIGHT   = 22
@@ -21,65 +21,73 @@ local LIST_LINES   = 9
 -- Pages. `modules` = interrupteurs de checks (ns.checks), `rows` = réglages,
 -- `list` = liste défilante (zones sûres, buffs suivis), `buttons` = actions.
 -- ---------------------------------------------------------------------------
+-- v1.22.0 : l'addon a TROIS modules (Check avant le départ, Résumé de stuff,
+-- Stats du portrait) et une section QoL. Les 13 « checks » ne sont pas des
+-- modules : ce sont les contrôles du Check avant le départ, réglés dans ses
+-- sous-pages. Un module a son interrupteur dans la navigation (`power` = clé
+-- de réglage) ; une sous-page porte `parent`.
 local PAGES = {
 	{
 		id = "general", title = "OPT_PAGE_GENERAL",
+		-- tout ce qui touche à l'affichage est réuni ici (section AFFICHAGE)
 		rows = {
-			{ key = "enabled",         label = "OPT_ENABLED",    kind = "bool" },
-			{ key = "showWindow",      label = "OPT_SHOWWINDOW", kind = "bool" },
-			{ key = "popupScore",      label = "OPT_POPUPSCORE", kind = "number", min = 0, max = 100, step = 5 },
+			{ key = "enabled",     label = "OPT_ENABLED",     kind = "bool" },
+			{ header = "OPT_SECTION_DISPLAY" },
+			{ key = "showMinimap", label = "OPT_MINIMAP",     kind = "bool" },
+			{ key = "minimapPos",  label = "OPT_MINIMAP_POS", kind = "action" },
+			{ key = "showWindow",  label = "OPT_SHOWWINDOW",  kind = "bool" },
+			{ key = "popupScore",  label = "OPT_POPUPSCORE",  kind = "number", min = 0, max = 100, step = 5 },
+		},
+		frameButtons = true,
+	},
+	-- MODULES ---------------------------------------------------------------
+	{ id = "departure", title = "OPT_PAGE_DEPARTURE", group = "OPT_GROUP_MODULES", power = "departureEnabled", target = "trigger" },
+	{
+		id = "trigger", title = "OPT_PAGE_TRIGGER", parent = "departure", group = "OPT_GROUP_MODULES",
+		rows = {
 			{ key = "exitDelay",       label = "OPT_EXITDELAY",  kind = "number", min = 0, max = 15,  step = 1, suffix = "OPT_SEC_UNIT" },
 			{ key = "quietAfterLogin", label = "OPT_QUIETLOGIN", kind = "number", min = 0, max = 60,  step = 5, suffix = "OPT_SEC_UNIT" },
 			{ key = "alertCooldown",   label = "OPT_COOLDOWN",   kind = "number", min = 0, max = 120, step = 5, suffix = "OPT_SEC_UNIT" },
 		},
 	},
-	{ id = "safe", title = "OPT_PAGE_SAFE", list = "safe" },
-	-- groupe « Préparation » : un module par page
+	{ id = "safe", title = "OPT_PAGE_SAFE", parent = "departure", group = "OPT_GROUP_MODULES", list = "safe" },
 	{
-		id = "bags", title = "OPT_PAGE_BAGS", modules = { "bags", "gray" }, group = "OPT_GROUP_PREP",
+		id = "bags", title = "OPT_PAGE_BAGS", parent = "departure", group = "OPT_GROUP_MODULES",
+		modules = { "bags", "gray", "vivres", "potions" },
 		rows = {
-			{ key = "bagFreeThreshold",   label = "OPT_BAGTHRESHOLD",  kind = "number", min = 0, max = 40, step = 1 },
-			{ key = "continuousBagAlert", label = "OPT_BAGALERT",      kind = "bool" },
-			{ key = "grayItemThreshold",  label = "OPT_GRAYTHRESHOLD", kind = "number", min = 0, max = 50, step = 1 },
-			{ key = "autoSellGray",       label = "OPT_AUTOSELL",      kind = "bool" },
+			{ key = "bagFreeThreshold",   label = "OPT_BAGTHRESHOLD",     kind = "number", min = 0, max = 40,  step = 1 },
+			{ key = "continuousBagAlert", label = "OPT_BAGALERT",         kind = "bool" },
+			{ key = "grayItemThreshold",  label = "OPT_GRAYTHRESHOLD",    kind = "number", min = 0, max = 50,  step = 1 },
+			{ key = "vivresThreshold",    label = "OPT_VIVRESTHRESHOLD",  kind = "number", min = 0, max = 200, step = 5 },
+			{ key = "potionsThreshold",   label = "OPT_POTIONSTHRESHOLD", kind = "number", min = 0, max = 50,  step = 1 },
 		},
 	},
 	{
-		id = "food", title = "OPT_PAGE_FOOD", modules = { "vivres", "potions" }, group = "OPT_GROUP_PREP",
+		id = "gear", title = "OPT_PAGE_GEAR", parent = "departure", group = "OPT_GROUP_MODULES",
+		modules = { "durability", "repair", "classreagents", "spells", "hearth", "rest" },
 		rows = {
-			{ key = "vivresThreshold",  label = "OPT_VIVRESTHRESHOLD",  kind = "number", min = 0, max = 200, step = 5 },
-			{ key = "potionsThreshold", label = "OPT_POTIONSTHRESHOLD", kind = "number", min = 0, max = 50,  step = 1 },
+			{ key = "durabilityMinPct", label = "OPT_DURAMIN", kind = "number", min = 0, max = 100, step = 5, suffix = "OPT_PCT_UNIT" },
+			{ key = "restMinPercent",   label = "OPT_RESTMIN", kind = "number", min = 0, max = 150, step = 5, suffix = "OPT_REST_UNIT" },
 		},
 	},
 	{
-		id = "buffs", title = "OPT_PAGE_BUFFS", modules = { "buffs" }, list = "buffs", group = "OPT_GROUP_PREP",
+		id = "buffs", title = "OPT_PAGE_BUFFS", parent = "departure", group = "OPT_GROUP_MODULES",
+		modules = { "buffs", "reagents", "quests" }, list = "buffs",
 		rows = {
 			{ key = "learnBuffs", label = "OPT_LEARNBUFFS", kind = "bool" },
 		},
 	},
+	-- pas de page propre : leur réglage est l'interrupteur, et leur placement
+	-- est dans Général > Affichage
+	{ id = "toast", title = "OPT_PAGE_TOAST", group = "OPT_GROUP_MODULES", power = "showGearToast", target = "general" },
+	{ id = "portrait", title = "OPT_PAGE_PORTRAIT", group = "OPT_GROUP_MODULES", power = "showPortraitStats", target = "general" },
+	-- QOL -------------------------------------------------------------------
 	{
-		id = "gear", title = "OPT_PAGE_GEAR", modules = { "durability", "repair" }, group = "OPT_GROUP_PREP",
+		id = "merchant", title = "OPT_PAGE_MERCHANT", group = "OPT_GROUP_QOL",
 		rows = {
-			{ key = "durabilityMinPct", label = "OPT_DURAMIN",    kind = "number", min = 0, max = 100, step = 5, suffix = "OPT_PCT_UNIT" },
-			{ key = "autoRepair",       label = "OPT_AUTOREPAIR", kind = "bool" },
+			{ key = "autoSellGray", label = "OPT_AUTOSELL",   kind = "bool" },
+			{ key = "autoRepair",   label = "OPT_AUTOREPAIR", kind = "bool" },
 		},
-	},
-	{
-		id = "char", title = "OPT_PAGE_CHAR", modules = { "classreagents", "spells", "hearth", "rest" }, group = "OPT_GROUP_PREP",
-		rows = {
-			{ key = "restMinPercent", label = "OPT_RESTMIN", kind = "number", min = 0, max = 150, step = 5, suffix = "OPT_REST_UNIT" },
-		},
-	},
-	{ id = "craft", title = "OPT_PAGE_CRAFT", modules = { "reagents", "quests" }, group = "OPT_GROUP_PREP" },
-	{
-		id = "display", title = "OPT_PAGE_DISPLAY", group = "OPT_GROUP_UI",
-		rows = {
-			{ key = "showMinimap",       label = "OPT_MINIMAP",     kind = "bool" },
-			{ key = "minimapPos",        label = "OPT_MINIMAP_POS", kind = "action" },
-			{ key = "showGearToast",     label = "OPT_TOAST",       kind = "bool" },
-			{ key = "showPortraitStats", label = "OPT_PORTRAIT",    kind = "bool" },
-		},
-		frameButtons = true,
 	},
 }
 ns.OPTION_PAGES = PAGES
@@ -187,14 +195,27 @@ function ns:RefreshOptions()
 	end
 
 	for _, nav in ipairs(frame.navButtons or {}) do
-		local selected = nav.pageId == frame.currentPage
+		-- le module « Check avant le départ » reste actif quand une de ses
+		-- sous-pages est ouverte
+		local selected = nav.pageId == frame.currentPage or (nav.pageId == frame.currentParent)
+		local state
+		if nav.powerKey then
+			state = (db[nav.powerKey] ~= false) and "on" or "off"
+			nav.power:SetChecked(state == "on")
+		end
+		nav.state = state
 		if selected then
 			nav.label:SetTextColor(Theme.PARCHMENT[1], Theme.PARCHMENT[2], Theme.PARCHMENT[3])
 			nav.marker:Show(); nav.tint:Show()
 			nav.diamond:SetTexture(Theme.DIAMOND)
 			nav.diamond:SetVertexColor(Theme.GOLD[1], Theme.GOLD[2], Theme.GOLD[3], 1)
 		else
-			nav.label:SetTextColor(0.68, 0.70, 0.71)
+			-- page dont tous les modules sont coupés : libellé éteint
+			if state == "off" then
+				nav.label:SetTextColor(0.40, 0.42, 0.44)
+			else
+				nav.label:SetTextColor(0.68, 0.70, 0.71)
+			end
 			nav.marker:Hide(); nav.tint:Hide()
 			nav.diamond:SetTexture(Theme.DIAMOND_LINE)
 			nav.diamond:SetVertexColor(0.35, 0.38, 0.42, 1)
@@ -297,7 +318,7 @@ end
 local function BuildList(page, source, top)
 	local list = { source = source, lines = {}, offset = 0,
 		emptyText = source == "safe" and "OPT_SAFE_EMPTY" or "OPT_BUFFS_EMPTY" }
-	local count = (source == "safe") and LIST_LINES or (LIST_LINES - 3)
+	local count = (source == "safe") and LIST_LINES or (LIST_LINES - 4)
 
 	for index = 1, count do
 		local line = CreateFrame("Button", nil, page)
@@ -497,26 +518,54 @@ function ns:EnsureOptions()
 		end
 		lastGroup = def.group
 
-		-- bouton de navigation : losange, libellé, liseré ambre + teinte si actif
+		-- bouton de navigation : losange, libellé, liseré ambre + teinte si actif.
+		-- Une sous-page est en retrait, plus basse et sans interrupteur.
+		local sub = def.parent ~= nil
+		local rowH = sub and (ROW_HEIGHT - 2) or ROW_HEIGHT
 		local nav = CreateFrame("Button", nil, frame)
-		nav:SetSize(NAV_WIDTH - 4, ROW_HEIGHT)
+		nav:SetSize(NAV_WIDTH - 4, rowH)
 		nav:SetPoint("TOPLEFT", frame, "TOPLEFT", 6, navY)
 		nav.pageId = def.id
+		nav.parentId = def.parent
 		nav.tint = Theme.Solid(nav, "BACKGROUND", Theme.GOLD, 0.12)
 		nav.tint:SetAllPoints()
 		nav.marker = Theme.Solid(nav, "ARTWORK", Theme.GOLD, 1)
 		nav.marker:SetPoint("LEFT", nav, "LEFT", 0, 0)
-		nav.marker:SetSize(2, ROW_HEIGHT)
-		nav.diamond = Theme.CreateDiamond(nav, 7, true)
-		nav.diamond:SetPoint("LEFT", nav, "LEFT", 12, 0)
+		nav.marker:SetSize(2, rowH)
+		nav.diamond = Theme.CreateDiamond(nav, sub and 5 or 7, true)
+		nav.diamond:SetPoint("LEFT", nav, "LEFT", sub and 26 or 12, 0)
 		nav.label = nav:CreateFontString(nil, "OVERLAY", Theme.F_BODY)
-		nav.label:SetPoint("LEFT", nav, "LEFT", 26, 0)
+		nav.label:SetPoint("LEFT", nav, "LEFT", sub and 38 or 26, 0)
 		nav.label:SetJustifyH("LEFT")
 		nav.label:SetText(L[def.title] or def.title)
-		nav:SetScript("OnClick", function() ns:SelectOptionsPage(def.id) end)
+		nav:SetScript("OnClick", function() ns:SelectOptionsPage(def.target or def.id) end)
 		frame.navButtons[index] = nav
-		navY = navY - ROW_HEIGHT
 
+		-- Interrupteur du module, comme le bouton d'alimentation de la barre
+		-- latérale d'EllesmereUI : active ou coupe le module sans y naviguer.
+		if def.power then
+			nav.powerKey = def.power
+			nav.power = Theme.CreateToggle(nav, 22, 10, "Button")
+			nav.power:SetPoint("RIGHT", nav, "RIGHT", -8, 0)
+			nav.power:SetScript("OnClick", function() ns:ToggleModuleKey(def.power) end)
+			nav.power:SetScript("OnEnter", function(self)
+				if type(GameTooltip) ~= "table" or not GameTooltip.SetOwner then return end
+				GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
+				GameTooltip:AddLine(L[def.title] or def.title, Theme.PARCHMENT[1], Theme.PARCHMENT[2], Theme.PARCHMENT[3])
+				GameTooltip:AddLine(L.OPT_NAV_POWER_TIP, 0.8, 0.8, 0.8)
+				GameTooltip:Show()
+			end)
+			nav.power:SetScript("OnLeave", function()
+				if type(GameTooltip) == "table" and GameTooltip.Hide then GameTooltip:Hide() end
+			end)
+		end
+		navY = navY - rowH
+
+		-- entrée de navigation seule (le module « Check avant le départ » ouvre
+		-- sa première sous-page) : pas de page propre
+		if def.target then
+			-- rien à construire
+		else
 		-- page
 		local page = CreateFrame("Frame", nil, frame)
 		page:SetSize(PANE_WIDTH, FRAME_HEIGHT + top - 50)
@@ -539,7 +588,8 @@ function ns:EnsureOptions()
 		local y = -48
 
 		if def.modules then
-			page.modulesHeader = Header(page, y, "OPT_MODULES")
+			-- dans une sous-page du Check avant le départ, ce sont ses contrôles
+			page.modulesHeader = Header(page, y, def.parent and "OPT_CHECKS" or "OPT_MODULES")
 			y = y - 16
 			for _, id in ipairs(def.modules) do
 				local check = CheckDef(id)
@@ -561,11 +611,18 @@ function ns:EnsureOptions()
 				y = y - 16
 			end
 			for _, rowDef in ipairs(def.rows) do
+				if rowDef.header then
+					y = y - 4
+					page.sectionHeaders = page.sectionHeaders or {}
+					page.sectionHeaders[#page.sectionHeaders + 1] = Header(page, y, rowDef.header)
+					y = y - 16
+				else
 				local row = MakeRow(page, rowDef)
 				row:SetPoint("TOPLEFT", page, "TOPLEFT", 0, y)
 				frame.rows[#frame.rows + 1] = row
 				page.rows[#page.rows + 1] = row
 				y = y - ROW_HEIGHT
+				end
 			end
 			y = y - 8
 		end
@@ -604,8 +661,21 @@ function ns:EnsureOptions()
 			y = y - 34
 		end
 
+		if def.actions then
+			for _, action in ipairs(def.actions) do
+				local button = Theme.CreateButton(page, 200, 22, L["OPT_ACTION_" .. action:upper()] or action, function()
+					ns:RunOptionAction(action)
+				end)
+				button:SetPoint("TOPLEFT", page, "TOPLEFT", 0, y - 6)
+				page.actionButtons = page.actionButtons or {}
+				page.actionButtons[action] = button
+				y = y - 34
+			end
+		end
+
 		page.contentBottom = y
 		page:Hide()
+		end
 	end
 
 	-- tout check sans page tombe dans « Général » : un module ajouté plus tard
@@ -655,11 +725,50 @@ function ns:EnsureOptions()
 	return frame
 end
 
+-- Interrupteur d'un des trois modules (clé de réglage)
+function ns:ToggleModuleKey(key)
+	local db = self:DB()
+	db[key] = not (db[key] ~= false)
+	if key == "showPortraitStats" and db[key] == false and self.HidePortraitStats then self:HidePortraitStats() end
+	if key == "departureEnabled" and db[key] == false then self.pendingExit = nil end
+	if self.ApplyDisplayOptions then self:ApplyDisplayOptions() end
+	self:RefreshOptions()
+end
+
+-- "on" (tous actifs), "off" (tous coupés) ou "partial"
+function ns:PageModuleState(modules)
+	local on, total = 0, 0
+	for _, id in ipairs(modules or {}) do
+		if CheckDef(id) then
+			total = total + 1
+			if self:IsModuleEnabled(id) then on = on + 1 end
+		end
+	end
+	if total == 0 or on == total then return "on" end
+	if on == 0 then return "off" end
+	return "partial"
+end
+
+-- Tout actif -> tout coupé ; coupé ou partiel -> tout rallumé
+function ns:TogglePageModules(pageId)
+	local page
+	for _, def in ipairs(PAGES) do if def.id == pageId then page = def end end
+	if not page or not page.modules then return end
+	local enable = self:PageModuleState(page.modules) ~= "on"
+	for _, id in ipairs(page.modules) do
+		if CheckDef(id) then self:SetModuleEnabled(id, enable) end
+	end
+	self:RefreshOptions()
+end
+
 function ns:SelectOptionsPage(id)
 	local frame = self.optionsFrame
 	if not frame then return end
 	if not frame.pages[id] then id = "general" end
 	frame.currentPage = id
+	local parent
+	for _, def in ipairs(PAGES) do if def.id == id then parent = def.parent end end
+	frame.currentParent = parent
 	self:DB().optionsPage = id
 	for pageId, page in pairs(frame.pages) do
 		if pageId == id then page:Show() else page:Hide() end
@@ -702,7 +811,10 @@ function ns:EnsureEditBanner()
 	if self.editBanner then return self.editBanner end
 	if not Theme or not Theme.CreatePanel then return nil end
 
-	local banner = Theme.CreatePanel(UIParent, 320, 74, L.OPT_EDIT_MODE, { strata = "TOOLTIP" })
+	-- 96 px : le bandeau du haut (36) + l'aide (2 lignes possibles) + le bouton.
+	-- À 74 px (avant la v1.20.0 et son bandeau plus haut), l'aide passait
+	-- sous le bouton et devenait illisible (vu en jeu).
+	local banner = Theme.CreatePanel(UIParent, 320, 96, L.OPT_EDIT_MODE, { strata = "TOOLTIP" })
 	if not banner then return nil end
 	banner:SetClampedToScreen(true)
 	banner:EnableMouse(true)
@@ -711,12 +823,13 @@ function ns:EnsureEditBanner()
 	banner.hint:SetPoint("TOPLEFT", banner, "TOPLEFT", 12, banner.contentTop - 4)
 	banner.hint:SetPoint("TOPRIGHT", banner, "TOPRIGHT", -12, banner.contentTop - 4)
 	banner.hint:SetJustifyH("LEFT")
+	if banner.hint.SetWordWrap then banner.hint:SetWordWrap(true) end
 	banner.hint:SetText(L.OPT_EDIT_HINT)
 	banner.hint:SetTextColor(0.70, 0.70, 0.70)
 
 	banner.stopButton = Theme.CreateButton(banner, 296, 20, L.OPT_EDIT_STOP, function()
 		ns:StopEditMode()
-	end)
+	end, "primary")
 	banner.stopButton:SetPoint("BOTTOM", banner, "BOTTOM", 0, 10)
 
 	self.editBanner = banner

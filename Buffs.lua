@@ -64,6 +64,17 @@ local IGNORED_FAMILIES = {
 	["nourriture"] = true, ["boisson"] = true, ["food"] = true, ["drink"] = true,
 }
 
+-- Forever : auras du campement. Elles tiennent tant qu'on est au camp, puis
+-- disparaissent : les apprendre ferait réclamer « Chaleur » à chaque départ.
+-- Par numéro de sort, valable dans toutes les langues.
+local IGNORED_SPELLS = {
+	[1283391] = true,   -- Campfire Nearby
+	[1289378] = true,   -- Warmth
+	[1229741] = true,   -- Camp Benefits
+	[1225478] = true,   -- Well Rested (talent de camp)
+}
+ns.IGNORED_BUFF_SPELLS = IGNORED_SPELLS
+
 local function BuffFamily(name)
 	if type(name) ~= "string" then return nil end
 	local key = ns.AsciiLower(name)
@@ -153,6 +164,7 @@ function ns:ScanBuffs()
 		elseif type(spellId) == "number" and spellId > 0
 			and type(duration) == "number" and duration >= MIN_DURATION
 			and not (family and IGNORED_FAMILIES[family])
+			and not IGNORED_SPELLS[spellId]
 			and not db.buffs[spellId] and count < MAX_TRACKED then
 			db.buffs[spellId] = {
 				name     = tostring(aura.name or ("spell:" .. spellId)),

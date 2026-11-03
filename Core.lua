@@ -30,6 +30,7 @@ local DEFAULTS = {
 	quietAfterLogin     = 15,     -- pas d'alerte dans les N s après connexion
 	exitDelay           = 6,      -- secondes hors zone sûre avant l'alerte (0..15)
 	popupScore          = 85,     -- fenêtre seulement sous cette note (100 = toujours)
+	departureEnabled    = true,   -- module « Check avant le départ »
 	autoSellGray        = true,   -- vend les objets gris à l'ouverture d'un marchand
 	autoRepair          = true,   -- répare tout chez un marchand qui répare
 	-- Zones sûres (schéma 2, v1.18.0) :
@@ -176,10 +177,107 @@ local function CityKey(mapID) return "c:" .. tostring(mapID) end
 ns.VillageKey, ns.CityKey = VillageKey, CityKey
 
 -- Renvoie : sûr ?, mapID, raison ("resting"/"sanctuary"/"city"/"village"), entrée apprise
+-- ---------------------------------------------------------------------------
+-- Base livrée (Hubs.lua) : capitales, villages, hubs, auberges-sous-zones.
+-- Les noms sont traduits par le jeu (C_Map.GetAreaInfo), la base vaut donc
+-- dans toutes les langues ; repli sur le nom anglais si l'API manque.
+-- ---------------------------------------------------------------------------
+function ns:HubIndex()
+	if self.hubIndex then return self.hubIndex end
+	local index = {}
+	local getInfo = C_Map and C_Map.GetAreaInfo
+	for areaID, entry in pairs(self.HUBS or {}) do
+		local name
+		if type(getInfo) == "function" then
+			local ok, localized = pcall(getInfo, areaID)
+			if ok and type(localized) == "string" and localized ~= "" then name = localized end
+		end
+		name = name or entry.name
+		if name then
+			index[name] = index[name] or {}
+			table.insert(index[name], entry)
+		end
+	end
+	self.hubIndex = index
+	return index
+end
+
+function ns:PlayerFaction()
+	local fn = rawget(_G, "UnitFactionGroup")
+	if type(fn) ~= "function" then return nil end
+	local ok, faction = pcall(fn, "player")
+	if not ok then return nil end
+	if faction == "Alliance" then return "A" end
+	if faction == "Horde" then return "H" end
+	return nil
+end
+
+local function HubFriendly(entry, faction)
+	return entry.faction == "N" or faction == nil or entry.faction == faction
+end
+
+-- Lieu connu sous le joueur : capitale (nom de la zone) ou village / hub /
+-- auberge (nom de la sous-zone). Renvoie l'entrée et son nom, ou nil.
+-- Un lieu de l'autre faction n'est jamais sûr (Southshore pour un Horde).
+function ns:KnownHub()
+	local index, faction = self:HubIndex(), self:PlayerFaction()
+	local subzone = self:CurrentSubZone()
+	local zoneFn = rawget(_G, "GetRealZoneText") or rawget(_G, "GetZoneText")
+	local zone
+	if type(zoneFn) == "function" then
+		local ok, text = pcall(zoneFn)
+		if ok and type(text) == "string" and text ~= "" then zone = text end
+	end
+	for _, name in ipairs({ subzone or false, zone or false }) do
+		if name and index[name] then
+			for _, entry in ipairs(index[name]) do
+				-- la zone ne compte que pour une capitale (« Hurlevent »), pas pour
+				-- un village homonyme de sa région
+				if (name == subzone or entry.kind == "capital") then
+					if HubFriendly(entry, faction) then return entry, name end
+					return nil, name, true      -- connu, mais hostile
+				end
+			end
+		end
+	end
+	return nil
+end
+
+-- Donjon, raid, champ de bataille : jamais une zone de départ
+function ns:InInstance()
+	local fn = rawget(_G, "IsInInstance")
+	if type(fn) ~= "function" then return false end
+	local ok, inInstance = pcall(fn)
+	return ok and (inInstance == true or inInstance == 1)
+end
+
+-- Forever : le campement (feu de camp) pose l'aura « Campfire Nearby ». On la
+-- lit par numéro de sort, valable dans toutes les langues. Un camp est une
+-- zone de départ temporaire : on n'en apprend jamais l'emplacement.
+ns.CAMP_AURAS = { 1283391 }    -- Campfire Nearby (Forever 1.60.1)
+function ns:AtCamp()
+	if not (C_UnitAuras and type(C_UnitAuras.GetPlayerAuraBySpellID) == "function") then return false end
+	for _, spellID in ipairs(self.CAMP_AURAS) do
+		local ok, aura = pcall(C_UnitAuras.GetPlayerAuraBySpellID, spellID)
+		if ok and aura then return true end
+	end
+	return false
+end
+
 function ns:IsCurrentZoneSafe()
 	local db = self:DB()
 	local mapID = self:CurrentMap()
 	local subzone = self:CurrentSubZone()
+
+	if self:InInstance() then return false, mapID, nil, nil end
+	if self:AtCamp() then
+		return true, mapID, "camp", { name = L.CAMP_PLACE, source = "camp" }
+	end
+	local hub, hubName, hostile = self:KnownHub()
+	if hub then
+		return true, mapID, "known", { name = hubName, source = "known", kind = hub.kind }
+	end
+	if hostile then return false, mapID, "hostile", nil end
 
 	if mapID then
 		for _, id in ipairs(self:MapChain(mapID)) do
@@ -203,9 +301,11 @@ end
 --   moyen / faible : il en faut deux de types différents dans la même sous-zone
 --   capitale : repos vu dans au moins deux sous-zones d'une même carte
 -- ---------------------------------------------------------------------------
+-- Le repos n'est plus un indice fort : sur Forever, on est « au repos » à un
+-- feu de camp en pleine nature. Il compte comme un indice parmi d'autres.
 ns.CLUE_STRENGTH = {
-	resting = "strong", binder = "strong", taxi = "strong", mail = "strong", bank = "strong",
-	trainer = "medium",
+	binder = "strong", taxi = "strong", mail = "strong", bank = "strong",
+	resting = "medium", trainer = "medium",
 	merchant = "weak", quest = "weak",
 }
 ns.CLUES_NEEDED = 2
@@ -243,6 +343,10 @@ function ns:AddClue(clue)
 	local db = self:DB()
 	local mapID, subzone = self:CurrentMap(), self:CurrentSubZone()
 	if not mapID then return false end
+	-- rien à apprendre : instance, camp, lieu déjà connu de la base (ou hostile)
+	if self:InInstance() or self:AtCamp() then return false end
+	local _, knownName = self:KnownHub()
+	if knownName then return false end
 	local learned = false
 
 	-- Capitale : le repos couvre toute la ville, quartier après quartier
@@ -312,7 +416,7 @@ end
 
 function ns:Evaluate(trigger)
 	local db = self:DB()
-	if not db.enabled then return end
+	if not db.enabled or db.departureEnabled == false then self.pendingExit = nil; return end
 
 	local safe, _, reason, entry = self:IsCurrentZoneSafe()
 	local previous = self.inSafe
@@ -544,6 +648,7 @@ function ns:CheckBagPressure()
 	local db = self:DB()
 	if db.enabled == false then return end
 	if db.continuousBagAlert == false then return end
+	if db.departureEnabled == false then return end
 	if type(self.FreeBagSlots) ~= "function" then return end
 
 	local free = self.FreeBagSlots()
@@ -630,6 +735,12 @@ ns.handlers = {
 
 	UNIT_AURA = function(self, unit)
 		if unit ~= "player" then return end
+		-- arrivée au camp / départ du camp (Forever) : l'aura change, pas la zone
+		local atCamp = self:AtCamp()
+		if atCamp ~= self.wasAtCamp then
+			self.wasAtCamp = atCamp
+			self:Evaluate("camp")
+		end
 		if self.ScanBuffs then self:ScanBuffs() end
 	end,
 
@@ -697,6 +808,56 @@ function ns:ListSafeZones()
 	self:Print(self:F("MSG_LIST_HEADER", #rows))
 	for _, row in ipairs(rows) do
 		self:Print(self:F("MSG_LIST_ROW", row.name, row.kind .. ", " .. row.source))
+	end
+end
+
+-- Les trois modules de l'addon. `id` et `aliases` servent à /r2q module <id>.
+ns.MODULES = {
+	{ id = "depart",   key = "departureEnabled",  label = "OPT_PAGE_DEPARTURE", aliases = { "departure", "check", "depart" } },
+	{ id = "stuff",    key = "showGearToast",     label = "OPT_PAGE_TOAST",     aliases = { "toast", "resume", "stuff" } },
+	{ id = "portrait", key = "showPortraitStats", label = "OPT_PAGE_PORTRAIT",  aliases = { "stats", "portrait" } },
+}
+
+function ns:FindModule(id)
+	for _, module in ipairs(self.MODULES) do
+		if module.id == id then return module end
+		for _, alias in ipairs(module.aliases) do if alias == id then return module end end
+	end
+	return nil
+end
+
+function ns:FindCheck(id)
+	for _, def in ipairs(self.checks or {}) do if def.id == id then return def end end
+	return nil
+end
+
+function ns:SetCheckFromCommand(id, value)
+	local found = self:FindCheck(id)
+	local enabled
+	if value == "on" then enabled = true elseif value == "off" then enabled = false
+	else enabled = not self:IsModuleEnabled(id) end
+	self:SetModuleEnabled(id, enabled)
+	local label = found.label
+	if type(label) == "function" then label = label() end
+	self:Print(self:F("MSG_CHECK_SET", tostring(label or id), enabled and L.MODULE_ON or L.MODULE_OFF))
+	if self.RefreshOptions then self:RefreshOptions() end
+end
+
+-- Aide classée par rubrique (titre en ambre, puis les commandes)
+ns.HELP = {
+	{ "HELP_H_OPEN",   { "HELP_RUN", "HELP_OPTIONS", "HELP_STATS", "HELP_STUFF", "HELP_MOVE" } },
+	{ "HELP_H_SAFE",   { "HELP_SAFE", "HELP_UNSAFE", "HELP_SAFELIST", "HELP_SAFERESET" } },
+	{ "HELP_H_MODULE", { "HELP_ON", "HELP_MODULES", "HELP_MODULE", "HELP_CHECKS", "HELP_CHECK" } },
+	{ "HELP_H_QUICK",  { "HELP_POPUP", "HELP_TOAST", "HELP_PORTRAIT", "HELP_MINIMAP", "HELP_SEUIL", "HELP_BUFFS" } },
+	{ "HELP_H_MISC",   { "HELP_COMPO", "HELP_RESETPOS", "HELP_RESET", "HELP_DIAG" } },
+}
+
+function ns:PrintHelp()
+	-- le préfixe [Ready2Quest] seulement en tête : répété sur 30 lignes, il noie l'aide
+	self:Print(L.HELP_TITLE)
+	for _, section in ipairs(self.HELP) do
+		print(ns.Theme.T_GOLD .. tostring(L[section[1]]) .. "|r")
+		for _, key in ipairs(section[2]) do print("   " .. tostring(L[key])) end
 	end
 end
 
@@ -865,44 +1026,55 @@ local COMMANDS = {
 		db.showPortraitStats = not (db.showPortraitStats ~= false)
 		self:Print(db.showPortraitStats and L.MSG_PORTRAIT_ON or L.MSG_PORTRAIT_OFF)
 	end,
+	-- v1.22.0 : les 3 vrais modules (et leurs alias), puis les 13 contrôles
 	["modules"] = function(self)
+		local db = self:DB()
+		self:Print(L.MSG_MODULES_HEADER)
+		for _, module in ipairs(self.MODULES) do
+			local on = db[module.key] ~= false
+			local state = on and (ns.Theme.T_GREEN .. L.MODULE_ON .. "|r") or ("|cffff2020" .. L.MODULE_OFF .. "|r")
+			self:Print(self:F("MSG_MODULE_ROW", module.id, state .. "  " .. tostring(L[module.label] or module.id)))
+		end
+		self:Print(L.MSG_MODULES_HINT)
+	end,
+	["module"] = function(self, rest)
+		local id, value = tostring(rest or ""):match("^(%S*)%s*(%S*)$")
+		id = (id or ""):lower()
+		local module = self:FindModule(id)
+		if not module then
+			-- compatibilité : « module vivres off » visait un contrôle avant la v1.22.0
+			if self:FindCheck(id) then return self:SetCheckFromCommand(id, value) end
+			return self:Print(L.MSG_MODULE_UNKNOWN)
+		end
+		local db = self:DB()
+		local enabled
+		if value == "on" then enabled = true elseif value == "off" then enabled = false
+		else enabled = not (db[module.key] ~= false) end
+		db[module.key] = enabled
+		if module.key == "showPortraitStats" and not enabled and self.HidePortraitStats then self:HidePortraitStats() end
+		if module.key == "departureEnabled" and not enabled then self.pendingExit = nil end
+		self:Print(self:F("MSG_MODULE_SET", tostring(L[module.label] or module.id), enabled and L.MODULE_ON or L.MODULE_OFF))
+		if self.RefreshOptions then self:RefreshOptions() end
+	end,
+	["checks"] = function(self)
 		local active, total = self:EnabledModuleCount()
-		self:Print(self:F("MSG_MODULE_LIST", active, total))
+		self:Print(self:F("MSG_CHECK_LIST", active, total))
 		for _, def in ipairs(self.checks or {}) do
 			local label = def.label
 			if type(label) == "function" then label = label() end
 			local on = self:IsModuleEnabled(def.id)
-			local state = on and (ns.Theme.T_GREEN .. L.MODULE_ON .. "|r")
-				or ("|cffff2020" .. L.MODULE_OFF .. "|r")
+			local state = on and (ns.Theme.T_GREEN .. L.MODULE_ON .. "|r") or ("|cffff2020" .. L.MODULE_OFF .. "|r")
 			self:Print(self:F("MSG_MODULE_ROW", tostring(def.id), state .. "  " .. tostring(label)))
 		end
 	end,
-	["module"] = function(self, rest)
+	["check"] = function(self, rest)
 		local id, value = tostring(rest or ""):match("^(%S*)%s*(%S*)$")
-		if not id or id == "" then return self:Print(L.MSG_MODULE_UNKNOWN) end
-
-		local found = nil
-		for _, def in ipairs(self.checks or {}) do
-			if def.id == id then found = def end
-		end
-		if not found then return self:Print(L.MSG_MODULE_UNKNOWN) end
-
-		local enabled
-		if value == "on" then
-			enabled = true
-		elseif value == "off" then
-			enabled = false
-		else
-			enabled = not self:IsModuleEnabled(id)
-		end
-		self:SetModuleEnabled(id, enabled)
-
-		local label = found.label
-		if type(label) == "function" then label = label() end
-		self:Print(self:F("MSG_MODULE_SET", tostring(label or id),
-			enabled and L.MODULE_ON or L.MODULE_OFF))
-		if self.RefreshOptions then self:RefreshOptions() end
+		if not id or id == "" or not self:FindCheck(id) then return self:Print(L.MSG_CHECK_UNKNOWN) end
+		self:SetCheckFromCommand(id, value)
 	end,
+	["help"] = function(self) self:PrintHelp() end,
+	["aide"] = function(self) self:PrintHelp() end,
+	["?"] = function(self) self:PrintHelp() end,
 	["minimap"] = function(self, value)
 		if not self.ToggleMinimapButton then return self:Print(L.MSG_UNKNOWN_CMD) end
 		local db = self:DB()
@@ -935,7 +1107,7 @@ local COMMANDS = {
 
 		-- État du chargement des fichiers
 		local loaded, missing = {}, {}
-		for _, name in ipairs({ "Bootstrap", "Locales", "Compat", "Theme", "Core", "Buffs",
+		for _, name in ipairs({ "Bootstrap", "Locales", "Compat", "Hubs", "Theme", "Core", "Buffs",
 			"Reagents", "Merchant", "Equip", "Stats", "Minimap", "Checks", "Options", "UI" }) do
 			if ns.Loaded and ns.Loaded[name] then loaded[#loaded + 1] = name else missing[#missing + 1] = name end
 		end
@@ -978,11 +1150,8 @@ function ns:HandleCommand(input)
 		return
 	end
 
+	-- une ligne qui renvoie vers l'aide, plutôt que 25 lignes déversées
 	self:Print(L.MSG_UNKNOWN_CMD)
-	for i = 1, 20 do
-		local line = L["CMD_HELP_" .. i]
-		if line then self:Print(line) end
-	end
 end
 
 -- ---------------------------------------------------------------------------
