@@ -18,7 +18,11 @@ Ready2Quest réunit **six modules** et un peu de **confort** (QoL). Chacun s'act
 | ◆ | **Kit de camp** *(Forever)* | Ton kit de feu de camp et ton objet de camp prêts, le compte à rebours des buffs au camp |
 | ◆ | **Résumé de stuff** | Quand tu changes d'objet, un petit résumé éphémère des stats gagnées ou perdues |
 | ◆ | **Stats du portrait** | Au survol de ton portrait, tes stats principales, choisies selon ta classe et ta spécialisation |
-| ✦ | **QoL : marchand** | Vente automatique des objets gris et réparation automatique chez les marchands |
+| ✦ | **La bonne récompense** | Au rendu d'une quête, la récompense qui te sert le plus est mise en avant |
+| ✦ | **Rythme de leveling** | XP par heure, temps avant le prochain niveau, repos à gagner en te déconnectant |
+| ✦ | **Sac plein** | Sac plein en pleine nature : l'objet que tu perds le moins à jeter, en un clic |
+| ✦ | **Après la mort** | Courir jusqu'au corps ou le guérisseur des esprits ? Les deux options chiffrées |
+| ✦ | **Marchand** | Vente automatique des objets gris et réparation automatique chez les marchands |
 
 ---
 
@@ -109,7 +113,42 @@ Quand tu équipes une nouvelle pièce, un petit cadre apparaît quelques seconde
 
 Survole ton portrait : un cadre affiche tes stats principales, **seulement celles qui comptent pour ta classe et ta spécialisation** (pas d'Esprit pour un guerrier). Un druide farouche voit d'autres stats en forme d'ours.
 
-## QoL : marchand
+## Confort de jeu (QoL)
+
+### La bonne récompense
+
+À la fin d'une quête, quand tu dois choisir entre plusieurs objets :
+- un liseré ambre et l'étiquette **« Pour toi »** désignent celui qui améliore le plus ton équipement. Le calcul suit les stats qui comptent pour ta classe et ta spé, et compare avec ce que tu portes ;
+- un objet que ta classe porte mal (plaques pour un mage, bouclier pour un voleur…) n'est jamais conseillé ;
+- si rien n'est une amélioration, l'étiquette **« À vendre »** va à la récompense qui se vend le plus cher ;
+- l'infobulle de chaque choix indique l'écart avec ta pièce actuelle.
+
+### Rythme de leveling
+
+Survole ta barre d'expérience, ou tape `/r2q xp` :
+- ton **XP par heure**, sur la session et sur la dernière demi-heure ;
+- le **temps estimé** avant le niveau suivant, en ennemis tués ou en quêtes rendues ;
+- ton **repos d'avance**, et combien tu en gagnerais en te déconnectant ici : « Déconnecte-toi à l'auberge : +15 % d'un niveau d'ici demain ».
+
+Il se tait au niveau maximum.
+
+### Sac plein
+
+Ton sac est plein en pleine nature et un butin ne rentre pas ? Un petit cadre te propose **l'objet que tu perds le moins à jeter**, c'est-à-dire celui qui vaut le moins cher par case.
+- Il ne propose jamais un objet de quête, ta pierre de foyer, tes réactifs de classe ou tes derniers vivres.
+- **[Jeter]** le détruit **après confirmation**, toujours, puisque c'est irréversible. **[Autre]** passe au suivant. **[Garder toujours]** l'écarte pour de bon.
+- `/r2q jeter` donne la proposition dans le chat. `/r2q garder` et `/r2q jeter-toujours` gèrent tes listes.
+
+### Après la mort
+
+À ta mort, puis une fois ton esprit libéré :
+- **Courir** : la distance jusqu'à ton corps et le temps estimé à la vitesse du fantôme ;
+- **Guérisseur des esprits** : les 25 % de durabilité perdus en plus, convertis en or, et la durée du mal de résurrection selon ton niveau ;
+- et un conseil : « Cours : 180 m, ~21 s » ou « Guérisseur : moins long que la faiblesse ».
+
+Il ne s'affiche pas en donjon ni en champ de bataille, où les règles sont différentes.
+
+### Marchand
 
 À l'ouverture d'un marchand :
 - **vente des gris** : uniquement les objets de qualité grise qui ont une valeur, avec un récapitulatif (« 7 objet(s) gris vendu(s) : 1 po 23 pa ») ;
@@ -125,7 +164,7 @@ Les deux sont actifs par défaut et se coupent dans les réglages. Ils fonctionn
 
 - **Général** : activer l'addon, et tout ce qui touche à l'affichage (bouton de minicarte, fenêtre ou chat, note sous laquelle la fenêtre s'ouvre, placement des cadres).
 - **Modules** : chaque module a son interrupteur directement dans la liste de gauche. Le Check avant le départ a ses sous-pages : Déclenchement, Zones sûres, Sacs & vivres, Équipement & perso, Buffs & métier. Le Retour d'expédition, Avant le donjon et le Kit de camp ont chacun leur page.
-- **QoL** : Marchand.
+- **QoL** : Confort de jeu, avec ses sous-pages Marchand, La bonne récompense, Rythme de leveling, Sac plein et Après la mort. Les sous-pages d'un module ne s'affichent que quand il est ouvert.
 
 ## Commandes
 
@@ -142,6 +181,8 @@ Les deux sont actifs par défaut et se coupent dans les réglages. Ils fonctionn
 | `/r2q modules` | état des modules |
 | `/r2q module depart off` | coupe un module (`depart`, `expedition`, `dungeon`, `camp`, `stuff`, `portrait`) |
 | `/r2q checks` · `check vivres off` | les contrôles du check avant le départ |
+| `/r2q xp` | ton rythme de leveling |
+| `/r2q jeter` | quoi jeter quand le sac est plein |
 | `/r2q diag` | diagnostic, à joindre si tu signales un problème |
 
 ---

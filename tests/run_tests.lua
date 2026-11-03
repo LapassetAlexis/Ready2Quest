@@ -1511,7 +1511,7 @@ ResetWorld()
 Say("\n== bootstrap et diagnostic ==")
 ResetWorld()
 Check("commande enregistrée par le bootstrap", type(SlashCmdList["SACETDEPART"]) == "function")
-Check("version exposée", NS.version == "1.23.0", NS.version)
+Check("version exposée", NS.version == "1.24.0", NS.version)
 
 local missingMods = {}
 for _, name in ipairs({ "Bootstrap", "Locales", "Compat", "Theme", "Core", "Buffs", "Reagents",
@@ -1532,7 +1532,7 @@ NS.HandleCommand = savedHandle
 Mock:Reset()
 NS:HandleCommand("diag")
 Check("/sd diag liste les modules", Mock:Output():find("modules :") ~= nil, Mock:Output())
-Check("/sd diag affiche la version", Mock:Output():find("1%.23%.0") ~= nil, Mock:Output())
+Check("/sd diag affiche la version", Mock:Output():find("1%.24%.0") ~= nil, Mock:Output())
 
 -- une erreur est enregistrée et affichée
 Mock:Reset()
@@ -2348,7 +2348,7 @@ Check("panneau de réglages construit", frame ~= nil)
 if frame then
 	Check("panneau d'options : hauteur fixe qui tient à l'écran", frame.height == lay.height
 		and frame.height <= lay.maxHeight, frame.height)
-	Check("10 entrées de navigation (3 modules, 5 sous-pages, Général, Marchand)", #frame.navButtons == 10, #frame.navButtons)
+	Check("11 entrées de navigation (3 modules, 5 sous-pages, Général, QoL, Marchand)", #frame.navButtons == 11, #frame.navButtons)
 
 	-- chaque page tient dans le cadre, au-dessus du pied
 	local overflow = {}
@@ -3607,7 +3607,13 @@ for _, nav in ipairs(NS.optionsFrame.navButtons) do if nav.power then powered[#p
 table.sort(powered)
 Check("[NAV] interrupteur sur les 3 modules seulement", table.concat(powered, ",") == "departure,portrait,toast", table.concat(powered, ","))
 Check("[NAV] sous-pages en retrait, sans interrupteur", NavOf("trigger").parentId == "departure" and NavOf("trigger").power == nil)
-Check("[NAV] QoL : Marchand, hors modules", NavOf("merchant").power == nil and NavOf("merchant").parentId == nil)
+Check("[NAV] QoL : Marchand, sous-page du QoL", NavOf("merchant").power == nil and NavOf("merchant").parentId == "qol")
+NS:SelectOptionsPage("general")
+Check("[NAV] sous-pages repliées hors de leur module", not NavOf("trigger"):IsShown() and not NavOf("merchant"):IsShown())
+NS:SelectOptionsPage("bags")
+Check("[NAV] sous-pages du départ dépliées", NavOf("trigger"):IsShown() and not NavOf("merchant"):IsShown())
+NS:SelectOptionsPage("merchant")
+Check("[NAV] sous-pages du QoL dépliées", NavOf("merchant"):IsShown() and not NavOf("trigger"):IsShown())
 NS:SelectOptionsPage("general")
 local dep = NavOf("departure")
 Check("[NAV] check avant le départ : allumé", dep.power.checked == true)
