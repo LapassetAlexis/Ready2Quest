@@ -35,3 +35,5 @@ QuestReward.lua
 LevelPace.lua
 BagSpace.lua
 Death.lua
+CompanionData.lua
+Companion.lua
