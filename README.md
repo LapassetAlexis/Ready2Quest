@@ -1,4 +1,59 @@
-# Ready to Quest — v1.17.0
+# Ready to Quest — v1.18.0
+
+## v1.18.0 — l'alerte part enfin à la sortie du village
+
+**Le bug.** La fenêtre ne s'ouvrait pas toute seule en quittant une zone sûre, seulement au clic sur l'icône. Deux causes :
+
+1. **Les zones sûres étaient apprises par `mapID`.** Sur Era, un `mapID` est une zone entière : un repos ou un vendeur à Comté-de-l'Or rendait **toute la forêt d'Elwynn** sûre, pour toujours. Sortir du village ne changeait rien, donc pas de transition, donc pas d'alerte. Chaque marchand croisé sur la route ajoutait une zone de plus.
+2. **`GetRestState()` était lu comme « dans une auberge ».** Il indique en fait un bonus d'XP de repos en réserve : avec du repos d'avance, tu étais « en zone sûre » partout.
+
+**La refonte.**
+
+| | Avant | v1.18.0 |
+|---|---|---|
+| Clé d'un village | `mapID` (zone entière) | `mapID` + sous-zone (`GetSubZoneText`) |
+| Capitale | idem | carte entière, déduite d'un repos vu dans **≥ 2 quartiers** |
+| Apprentissage | repos, vendeur ou courrier : un seul suffit | **indices** (voir ci-dessous) |
+| Sortie | immédiate | confirmée après **6 s** hors zone sûre (réglable 0–15 s) |
+| En vol | alerte en plein ciel | reportée à l'atterrissage, annulée si tu te poses en zone sûre |
+| Mort / fantôme | alerte | ignorée |
+
+Indices, par sous-zone :
+
+| Force | Signal | Événement |
+|---|---|---|
+| **fort** : un seul suffit | repos, aubergiste, maître de vol, boîte aux lettres, banque | `PLAYER_UPDATE_RESTING`, `CONFIRM_BINDER`, `TAXIMAP_OPENED`, `MAIL_SHOW`, `BANKFRAME_OPENED` |
+| moyen | entraîneur | `TRAINER_SHOW` |
+| faible | marchand, donneur de quêtes | `MERCHANT_SHOW`, `QUEST_DETAIL`, `QUEST_GREETING`, `QUEST_COMPLETE` |
+
+Un village est appris avec **un indice fort, ou deux indices moyens/faibles de types différents** (marchand + quête). Deux quêtes prises au même PNJ isolé ne suffisent pas. Les indices partiels sont gardés d'une session à l'autre.
+
+**Migration.** Les anciennes zones (par `mapID`) ne peuvent pas être converties : elles sont **purgées une fois**, avec un message dans le chat. Les villages se réapprennent en quelques minutes de jeu.
+
+**Commandes.** `/sd safe` (village courant), `/sd unsafe` (village ou capitale courants), `/sd safe list`, `/sd safe reset`. La fenêtre de diagnostic affiche « Parti de : Comté-de-l'Or (appris : boîte aux lettres) » pour repérer d'un coup d'œil un village appris à tort.
+
+**Limite connue.** Dans un village où l'auberge porte son propre nom de sous-zone, sortir de l'auberge vers la rue ressemble à une sortie si la rue n'est pas encore apprise. Le délai de 6 s absorbe les allers-retours, et la rue s'apprend vite (marchand + quête, boîte aux lettres).
+
+### Nouveaux checks
+
+| Check | Poids | Actif quand | Échec si |
+|---|---|---|---|
+| **Composants de classe** | 15 (fort) | la classe en consomme, au niveau du sort | munitions < 200, fragments d'âme < 3, poudre éclipsante < 5, runes de téléportation < 2, poudre des arcanes < 5, chandelles < 5, graine de Renaissance < 1, ankh < 1, symbole de divinité < 1 |
+| **Pierre de foyer** | 10 (moyen) | toujours | absente, ou recharge > 10 min. Affiche le lieu lié (`GetBindLocation`) |
+| **Réparation** | 10 (moyen) | un coût a été mesuré chez un marchand | l'or ne couvre pas le coût estimé |
+| **Sorts à apprendre** | 5 (faible) | un niveau pair est passé depuis la dernière visite chez l'entraîneur de classe | toujours un conseil |
+
+La réparation n'invente rien : chez un marchand qui répare, l'addon relève `GetRepairAllCost()` et le ramène à un prix par point de durabilité manquant. Le check est muet tant qu'aucune mesure n'existe. Le niveau d'entraîneur et le prix de réparation sont gardés **par personnage**.
+
+### Chez le marchand (activé par défaut)
+
+- **Vente des gris** : uniquement qualité grise avec un prix de vente, par tranches de 12 (limite du serveur), récapitulatif « 7 objet(s) gris vendu(s) : 1 po 23 pa ».
+- **Réparation** : si le marchand répare et que l'or suffit, sinon un message.
+
+Les deux se coupent dans `/sd options` → **Chez le marchand**.
+
+---
+
 
 ## v1.17.0 — le projet s'appelle Ready to Quest
 
@@ -17,7 +72,7 @@ Addon QoL pour **WoW Forever**, habillé aux couleurs de **World of Warcraft** :
 | Module | Ce qu'il fait |
 |---|---|
 | **Diagnostic de départ** | Note de préparation sur 100, détail par module, conseils — déclenché à la sortie d'une zone sûre |
-| **Équipement** | Panneau flottant : 17 emplacements, rareté, ilvl, pièces faibles signalées |
+| **Marchand** | Vente des gris et réparation automatiques |
 | **Améliorations flottantes** | Carte ancrée à l'infobulle : verdict, écart d'ilvl et écarts de stats |
 
 > Client : Forever — `## Interface: 16001` (flavour interne `Camelot`).
@@ -34,7 +89,18 @@ Erreur Lua invisible ? `/console scriptErrors 1`.
 
 ---
 
-## Tester sur Classic MoP
+## Tester sur Classic Era
+
+**C'est le terrain d'essai principal tant que Forever n'est pas sorti.** Era (interface `11509`) est le client le plus pauvre en API : tout ce qui marche sur Era devrait marcher sur Forever. L'inverse n'est pas vrai : les chemins propres à Forever (recettes suivies, `GetItemStatDelta`) ne tournent jamais sur Era. La suite de tests rejoue les scénarios v1.18.0 en mode Era (API récentes retirées).
+
+| Point | Era |
+|---|---|
+| Zones sûres : sous-zones (`GetSubZoneText`, `ZONE_CHANGED`) | ✅ |
+| Repos dans les villages | seulement dans l'auberge : d'où l'apprentissage par indices |
+| Composants de métier | recette sélectionnée dans la fenêtre de métier |
+| Comparaison au survol | ilvl, stats si `GetItemStats` est exposé |
+
+## Tester aussi sur Classic MoP
 
 **Oui — et c'est même le meilleur terrain d'essai avant Forever.** Le client MoP Classic (interface `50504`, snapshot `5.5.4.69934`) est plus proche de Forever que Classic Era sur un point : il a aussi `C_Container`, `C_Map` et `C_UnitAuras`.
 
@@ -78,7 +144,7 @@ Deux API retail n'existent dans aucun client Classic. Plutôt que de laisser deu
 
 Conséquence : sur Classic, le module composants fonctionne avec **la recette sélectionnée dans la fenêtre de métier** (au lieu des « recettes suivies »), et la carte de comparaison affiche les écarts de stats si la sonde trouve une source.
 
-`/sd stuff diag` indique laquelle des trois sources est utilisée : `native`, `computed`, ou `aucune source`.
+`/sd diag` liste les capacités détectées ; la carte de comparaison indique d'elle-même « Stats indisponibles sur ce client » quand aucune source n'existe.
 
 ### Marche à suivre
 
@@ -107,7 +173,7 @@ Depuis la v0.5.2, l'addon **parle** au lieu d'être muet.
 Au `/reload`, tu dois voir dans le chat :
 
 ```
-ReadyToQuest 1.15.0 — fichiers chargés
+ReadyToQuest 1.18.0 — fichiers chargés
 ```
 
 | Ce que tu vois | Diagnostic |
@@ -182,19 +248,19 @@ Aperçu : `ReadyToQuest-apercu.png`, généré par `tests/mockup.py`.
 
 ## 1. Diagnostic de départ
 
-### Zones sûres — quatre signaux cumulés
+### Zones sûres — villages, capitales, signaux du moment
 
-Forever n'a pas d'enum `City` dans `UIMapType`. L'addon combine :
+Forever n'a pas d'enum `City` dans `UIMapType`. Depuis la v1.18.0, une zone est sûre si :
 
-| Signal | Source | Couvre |
+| Cas | Clé | Comment |
 |---|---|---|
-| Repos | `IsResting()`, `GetRestState()` | Auberges, capitales |
-| Sanctuaire | `UnitIsPVPSanctuary("player")` | Hubs neutres |
-| **Vendeur ouvert** | `MERCHANT_SHOW` | **Villages sans repos** |
-| **Boîte aux lettres ouverte** | `MAIL_SHOW` | **Villages sans repos** |
-| Manuel | `/sd safe` | N'importe quel camp |
+| Capitale apprise | `c:<mapID>` (et ses sous-cartes) | repos vu dans ≥ 2 quartiers de la carte |
+| Village appris | `v:<mapID>:<sous-zone>` | 1 indice fort, ou 2 indices faibles de types différents |
+| Repos en cours | `IsResting()` | auberges, capitales |
+| Sanctuaire | `UnitIsPVPSanctuary("player")` | hubs neutres |
+| Manuel | `/sd safe` | le village (sous-zone) courant |
 
-Résolution **en remontant la chaîne des cartes parentes**. La première fois que tu ouvres un vendeur dans un village, il est enregistré.
+Détail des indices et du délai de sortie : section v1.18.0 en tête de ce document.
 
 ### Note pondérée
 
@@ -209,6 +275,12 @@ Résolution **en remontant la chaîne des cartes parentes**. La première fois q
 | Durabilité | 15 | % d'usure |
 | Composants | 5 | bloqué = 40 |
 | Quêtes | 5 | prêtes = 70 |
+| Composants de classe | 15 | quantités / minimum |
+| Pierre de foyer | 10 | absente = 0, recharge > 10 min = 50 |
+| Réparation | 10 | or / coût estimé |
+| Sorts à apprendre | 5 | à apprendre = 50 |
+
+Un module inactif (composants pour un guerrier, réparation jamais mesurée, aucun sort en attente) a un poids nul et n'influence pas la note.
 
 Bilan : **≥ 85 PRÊT** · **≥ 60 PRÊT, AVEC RÉSERVES** · **< 60 INSUFFISANT**. Il s'affiche à droite du bandeau de titre.
 
@@ -225,17 +297,6 @@ Source : **les recettes marquées comme suivies** dans ta fenêtre de métier (l
 ### Alerte sac plein
 
 Sur `BAG_UPDATE_DELAYED`, une fois, réarmée au-dessus de `seuil + 2`.
-
----
-
-## 2. Panneau d'équipement (`/sd stuff`)
-
-Flottant, déplaçable, position mémorisée. 17 emplacements (chemise et tabard écartés).
-
-- icône avec liseré à la couleur de rareté
-- nom coloré, niveau d'objet
-- sous-titre : `ilvl 38 · 3 à améliorer`
-- **les pièces sous `moyenne − 3` ont leur ilvl en orange** → tu vois d'un coup d'œil quoi remplacer
 
 ---
 
@@ -268,7 +329,7 @@ Un glissement n'ouvre pas les réglages : le clic qui suit un déplacement est i
 
 ## 5. Activer / désactiver les modules
 
-Chacun des 9 modules a son interrupteur, dans `/sd options` → section **Modules**.
+Chacun des 13 modules a son interrupteur, dans `/sd options` → section **Modules**.
 
 **Un module désactivé est exclu du calcul de la note** : son poids devient 0, il n'entre ni au numérateur ni au dénominateur. Désactiver « Sacs » ne fait donc pas monter artificiellement le score par un 100/100 offert — le module disparaît simplement de l'équation.
 
@@ -283,13 +344,13 @@ Chacun des 9 modules a son interrupteur, dans `/sd options` → section **Module
 En ligne de commande :
 
 ```
-/sd modules              liste les 9 modules et leur état
+/sd modules              liste les 13 modules et leur état
 /sd module vivres off    désactive un module
 /sd module vivres on     le réactive
 /sd module vivres        bascule
 ```
 
-Cas limite traité : si **tous** les modules sont désactivés, le score vaut 0 au lieu de provoquer une division par zéro, et les 9 lignes restent affichées.
+Cas limite traité : si **tous** les modules sont désactivés, le score vaut 0 au lieu de provoquer une division par zéro, et les 13 lignes restent affichées.
 
 ---
 
@@ -1174,12 +1235,9 @@ Nouvelle ligne dans les réglages : **« Position du bouton de minicarte »** �
 
 ```
 /sd                 lance le check
-/sd options         panneau de réglages (13 réglages + 3 actions + 9 modules)
-/sd stuff           affiche/masque le panneau d'équipement
-/sd stuff on|off    explicite
-/sd stuff diag      diagnostic des stats d'objet
+/sd options         panneau de réglages (15 réglages + 1 action + 13 modules)
 /sd minimap         bouton de minicarte on/off
-/sd modules         état des 9 modules
+/sd modules         état des 13 modules
 /sd module <id> on|off  active/désactive un module
 /sd toast on|off    résumé éphémère au changement de stuff
 /sd portrait on|off stats au survol du portrait
@@ -1187,8 +1245,9 @@ Nouvelle ligne dans les réglages : **« Position du bouton de minicarte »** �
 /sd move <cadre>    déplace le résumé de stuff ou les stats du portrait
 /sd resetpos        réinitialise les positions
 /sd compo           recettes suivies et composants manquants
-/sd safe | unsafe   marque/retire la zone actuelle
-/sd list            zones sûres connues
+/sd safe | unsafe   marque/retire le village (ou la capitale) actuel
+/sd safe list       villages et capitales appris, avec leur source
+/sd safe reset      efface toutes les zones apprises
 /sd buffs | buff n  buffs suivis / bascule
 /sd seuil <n>       emplacements libres minimum
 /sd popup on|off    fenêtre ou résumé chat
@@ -1225,10 +1284,10 @@ Alias : `/sacdepart`.
 ## Tests
 
 ```
-python3 tests/run_tests.py     →  344 réussis, 0 échoués
+python3 tests/run_tests.py     →  552 réussis, 0 échoués
 ```
 
-Lua 5.1 (version du client), client WoW simulé. Couvre notamment : apprentissage par repos/vendeur/courrier, chaîne de cartes parentes, anti-spam, filtrage des procs, **valeurs secrètes**, comptages sacs/vivres/potions/durabilité/quêtes, score pondéré et bilans, fenêtre de diagnostic (icônes, barres, bandeau), panneau d'équipement (17 lignes, moyenne, rareté, pièces faibles), comparaison au survol (amélioration, régressif, vide, anneaux), **les deux voies de hook tooltip**, bouton sans template Blizzard, et toutes les commandes.
+Lua 5.1 (version du client), client WoW simulé. Couvre notamment : apprentissage par indices (sous-zone, capitale par deux quartiers, purge de l'ancien schéma), délai de sortie / vol / mort, nouveaux checks et automatismes du marchand en mode Era, chaîne de cartes parentes, anti-spam, filtrage des procs, **valeurs secrètes**, comptages sacs/vivres/potions/durabilité/quêtes, score pondéré et bilans, fenêtre de diagnostic (icônes, barres, bandeau), panneau d'équipement (17 lignes, moyenne, rareté, pièces faibles), comparaison au survol (amélioration, régressif, vide, anneaux), **les deux voies de hook tooltip**, bouton sans template Blizzard, et toutes les commandes.
 
 ---
 
@@ -1236,7 +1295,7 @@ Lua 5.1 (version du client), client WoW simulé. Couvre notamment : apprentissag
 
 | Point | Risque | Mitigation |
 |---|---|---|
-| Forme de retour de `C_Item.GetItemStatDelta` | **moyen** | `pcall` + test de type, repli « Pas de comparaison possible », `/sd stuff diag` |
+| Forme de retour de `C_Item.GetItemStatDelta` | **moyen** | `pcall` + test de type, repli « Pas de comparaison possible », `/sd diag` |
 | `itemEquipLoc` → emplacement | moyen | table de correspondance, emplacement vide si inconnu |
 | Voie de hook tooltip | moyen | deux voies + repli, testées |
 | Chemins d'icônes de module | faible (cosmétique) | icône « ? » si absente, aucune erreur |
@@ -1244,7 +1303,7 @@ Lua 5.1 (version du client), client WoW simulé. Couvre notamment : apprentissag
 | `GetCraftableCount` hors fenêtre de métier | moyen | dégrade en « aucune recette suivie » |
 | Granularité des `mapID` | moyen | `/sd diag` l'affiche |
 
-**Au lancement :** `/sd diag` puis `/sd stuff diag`.
+**Au lancement :** `/sd diag`, puis `/sd safe list` après quelques minutes de jeu pour voir les villages appris.
 
 ---
 

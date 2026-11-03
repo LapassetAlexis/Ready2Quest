@@ -31,7 +31,7 @@ function ns:EnsureWindow()
 	if not Theme or not Theme.CreatePanel then return nil end
 
 	local rowCount = #(self.checks or {})
-	local height = 40 + 52 + 12 + (rowCount * ROW_HEIGHT) + 12 + 16 + (MAX_ADVICE * 13) + 34
+	local height = 40 + 52 + 12 + (rowCount * ROW_HEIGHT) + 12 + 16 + (MAX_ADVICE * 13) + 16 + 34
 
 	local frame = Theme.CreatePanel(UIParent, WIDTH, height, L.ADDON_NAME, { name = "ReadyToQuestDiagFrame" })
 	if not frame then return nil end
@@ -109,6 +109,14 @@ function ns:EnsureWindow()
 		line:SetText("")
 		frame.adviceLines[index] = line
 	end
+
+	-- Origine du départ : « Parti de : Comté-de-l'Or (appris : boîte aux
+	-- lettres) ». Sert à repérer d'un coup d'œil un village appris à tort.
+	frame.departed = frame:CreateFontString(nil, "OVERLAY", Theme.F_BODY)
+	frame.departed:SetPoint("TOPLEFT", frame, "TOPLEFT", 14, adviceTop - 30 - (MAX_ADVICE * 13))
+	frame.departed:SetWidth(WIDTH - 28)
+	frame.departed:SetJustifyH("LEFT")
+	frame.departed:SetText("")
 
 	-- Boutons ----------------------------------------------------------------
 	-- Les largeurs etaient codees en dur (128/100/90) sans rapport avec le
@@ -196,7 +204,7 @@ function ns:ShowWindow(results)
 			row.name:SetTextColor(0.42, 0.42, 0.42)
 			row.bar:SetColor(0.30, 0.30, 0.30)
 			row.bar:SetValue(0)
-			row.detail:SetText(Theme.T_GREY .. L.MODULE_OFF .. "|r")
+			row.detail:SetText(Theme.T_GREY .. tostring(result.detail or L.MODULE_OFF) .. "|r")
 		elseif result then
 			row.name:SetText(result.label)
 			row.name:SetTextColor(Theme.PARCHMENT[1], Theme.PARCHMENT[2], Theme.PARCHMENT[3])
@@ -233,6 +241,8 @@ function ns:ShowWindow(results)
 		end
 	end
 
+	if frame.departed then frame.departed:SetText(self:DepartedText() or "") end
+
 	-- Une seule fenêtre à la fois : les réglages se ferment
 	if self.optionsFrame and self.optionsFrame:IsShown() then
 		self.optionsFrame:Hide()
@@ -265,6 +275,15 @@ function ns:PrintSummary(results)
 	for _, entry in ipairs(self.lastAdvice or {}) do
 		self:Print("  " .. Theme.T_GOLD .. "•|r " .. entry.text)
 	end
+	local departed = self:DepartedText()
+	if departed then self:Print("  " .. departed) end
+end
+
+-- « Parti de : X (appris : source) », ou nil pour un check manuel
+function ns:DepartedText()
+	local from = self.lastDeparture
+	if not from then return nil end
+	return self:F("PANEL_DEPARTED", tostring(from.name or "?"), self:SourceLabel(from.source))
 end
 
 if ns.Mark then ns.Mark("UI") end

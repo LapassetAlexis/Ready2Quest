@@ -28,7 +28,16 @@ local DEFAULTS = {
 	durabilityMinPct    = 25,     -- alerte si < N%
 	alertCooldown       = 20,     -- secondes anti-spam
 	quietAfterLogin     = 15,     -- pas d'alerte dans les N s après connexion
-	safe                = {},     -- [mapID] = { name, source, at }
+	exitDelay           = 6,      -- secondes hors zone sûre avant l'alerte (0..15)
+	autoSellGray        = true,   -- vend les objets gris à l'ouverture d'un marchand
+	autoRepair          = true,   -- répare tout chez un marchand qui répare
+	-- Zones sûres (schéma 2, v1.18.0) :
+	--   ["v:<mapID>:<sous-zone>"] = { kind = "village", name, mapID, subzone, source, at }
+	--   ["c:<mapID>"]             = { kind = "city",    name, mapID, source, at }
+	safe                = {},
+	safeClues           = {},     -- [clé village] = { types = { merchant = true, … } }
+	cityRest            = {},     -- [mapID] = { [sous-zone] = true } : repos vu dans ces quartiers
+	chars               = {},     -- [Nom-Royaume] = { trainerLevel, repairRate }
 	buffs               = {},     -- [spellId] = { name, duration, enabled }
 	seen                = {},     -- [mapID] = true (zones déjà visitées)
 }
@@ -57,9 +66,25 @@ function ns:DB()
 	end
 	if not self._dbReady then
 		ApplyDefaults(DEFAULTS, ReadyToQuestDB)
+		self:MigrateSafeZones(ReadyToQuestDB)
 		self._dbReady = true
 	end
 	return ReadyToQuestDB
+end
+
+-- Schéma 1 (jusqu'à v1.17) : db.safe[mapID]. Sur Era, un mapID est une zone
+-- entière : un repos à Comté-de-l'Or rendait toute la forêt d'Elwynn « sûre »,
+-- et la sortie du village n'était plus jamais détectée. Ces entrées ne peuvent
+-- pas être converties (on ne sait pas dans quelle sous-zone elles ont été
+-- apprises) : on purge une fois, et on prévient.
+local SAFE_SCHEMA = 2
+function ns:MigrateSafeZones(db)
+	if (tonumber(db.safeSchema) or 1) >= SAFE_SCHEMA then return end
+	local had = 0
+	for _ in pairs(db.safe or {}) do had = had + 1 end
+	db.safe, db.safeClues, db.cityRest = {}, {}, {}
+	db.safeSchema = SAFE_SCHEMA
+	if had > 0 then self.safePurgeNotice = had end
 end
 
 local function Now()
@@ -108,94 +133,224 @@ function ns:MapChain(mapID)
 	return chain
 end
 
--- Signaux "vivants" (pas de la base de données)
+-- Signaux "vivants" (pas de la base de données).
+-- GetRestState() n'en fait plus partie : il indique un bonus d'XP de repos en
+-- réserve, pas la présence dans une auberge. Avec du repos d'avance, le joueur
+-- était « en zone sûre » partout, et l'alerte de sortie ne partait jamais.
 function ns:LiveSafeSignals()
 	local signals = {}
 
 	local fn = rawget(_G, "IsResting")
 	if type(fn) == "function" then
 		local ok, res = pcall(fn)
-		if ok and res == true then signals[#signals + 1] = "resting" end
-	end
-
-	if GetRestState and Enum and Enum.RestState then
-		local ok, res = pcall(GetRestState)
-		if ok and res == Enum.RestState.RESTED then signals[#signals + 1] = "reststate" end
+		if ok and (res == true or res == 1) then signals[#signals + 1] = "resting" end
 	end
 
 	if type(UnitIsPVPSanctuary) == "function" then
 		local ok, res = pcall(UnitIsPVPSanctuary, "player")
-		if ok and res == true then signals[#signals + 1] = "sanctuary" end
+		if ok and (res == true or res == 1) then signals[#signals + 1] = "sanctuary" end
 	end
 
 	return signals
 end
 
+-- Sous-zone courante : sur Era, un village (Comté-de-l'Or, Long-guet…) n'a pas
+-- de mapID propre, c'est une sous-zone de la carte de zone.
+function ns:CurrentSubZone()
+	local fn = rawget(_G, "GetSubZoneText")
+	if type(fn) ~= "function" then return nil end
+	local ok, text = pcall(fn)
+	if ok and type(text) == "string" and text ~= "" then return text end
+	return nil
+end
+
+local function VillageKey(mapID, subzone) return "v:" .. tostring(mapID) .. ":" .. tostring(subzone) end
+local function CityKey(mapID) return "c:" .. tostring(mapID) end
+ns.VillageKey, ns.CityKey = VillageKey, CityKey
+
+-- Renvoie : sûr ?, mapID, raison ("resting"/"sanctuary"/"city"/"village"), entrée apprise
 function ns:IsCurrentZoneSafe()
 	local db = self:DB()
 	local mapID = self:CurrentMap()
+	local subzone = self:CurrentSubZone()
 
 	if mapID then
 		for _, id in ipairs(self:MapChain(mapID)) do
-			if db.safe[id] then return true, mapID, "saved" end
+			local city = db.safe[CityKey(id)]
+			if city then return true, mapID, "city", city end
+		end
+		if subzone then
+			local village = db.safe[VillageKey(mapID, subzone)]
+			if village then return true, mapID, "village", village end
 		end
 	end
 
-	if #self:LiveSafeSignals() > 0 then return true, mapID, "signal" end
-	return false, mapID, nil
+	local signals = self:LiveSafeSignals()
+	if #signals > 0 then return true, mapID, signals[1], nil end
+	return false, mapID, nil, nil
 end
 
 -- ---------------------------------------------------------------------------
--- Apprentissage des zones sûres
---   * repos / sanctuaire  -> zone apprise automatiquement
---   * ouverture d'un vendeur ou d'une boîte aux lettres -> village appris
---   * /sd safe -> apprentissage manuel
+-- Apprentissage des zones sûres, par indices
+--   fort  : un seul suffit (repos, aubergiste, maître de vol, courrier, banque)
+--   moyen / faible : il en faut deux de types différents dans la même sous-zone
+--   capitale : repos vu dans au moins deux sous-zones d'une même carte
 -- ---------------------------------------------------------------------------
-function ns:LearnZone(source)
-	local db = self:DB()
-	local mapID = self:CurrentMap()
-	if not mapID or db.safe[mapID] then return false end
+ns.CLUE_STRENGTH = {
+	resting = "strong", binder = "strong", taxi = "strong", mail = "strong", bank = "strong",
+	trainer = "medium",
+	merchant = "weak", quest = "weak",
+}
+ns.CLUES_NEEDED = 2
 
-	local info = self:MapInfo(mapID)
-	db.safe[mapID] = {
-		name   = (info and info.name) or tostring(mapID),
-		source = source or "auto",
-		at     = Now(),
-	}
-	local verbose = db.verboseLearn
-	if verbose then
-		self:Print(self:F("MSG_LEARNED", db.safe[mapID].name, tostring(source)))
+local function Learn(self, key, entry)
+	local db = self:DB()
+	if db.safe[key] then return false end
+	entry.at = Now()
+	db.safe[key] = entry
+	db.safeClues[key] = nil
+	if db.verboseLearn then
+		self:Print(self:F("MSG_LEARNED", entry.name, self:SourceLabel(entry.source)))
 	end
 	return true
 end
 
+function ns:LearnVillage(source)
+	local mapID, subzone = self:CurrentMap(), self:CurrentSubZone()
+	if not mapID or not subzone then return false end
+	return Learn(self, VillageKey(mapID, subzone), {
+		kind = "village", name = subzone, mapID = mapID, subzone = subzone, source = source or "manual",
+	})
+end
+
+function ns:LearnCity(mapID, source)
+	if not mapID then return false end
+	local info = self:MapInfo(mapID)
+	return Learn(self, CityKey(mapID), {
+		kind = "city", name = (info and info.name) or tostring(mapID), mapID = mapID, source = source or "resting",
+	})
+end
+
+-- Un indice observé dans la sous-zone courante. Renvoie true si une zone a été apprise.
+function ns:AddClue(clue)
+	local db = self:DB()
+	local mapID, subzone = self:CurrentMap(), self:CurrentSubZone()
+	if not mapID then return false end
+	local learned = false
+
+	-- Capitale : le repos couvre toute la ville, quartier après quartier
+	if clue == "resting" and subzone then
+		db.cityRest[mapID] = db.cityRest[mapID] or {}
+		db.cityRest[mapID][subzone] = true
+		local count = 0
+		for _ in pairs(db.cityRest[mapID]) do count = count + 1 end
+		if count >= 2 then learned = self:LearnCity(mapID, "resting") or learned end
+	end
+
+	if not subzone then return learned end
+	local key = VillageKey(mapID, subzone)
+	if db.safe[key] then return learned end
+
+	local strength = self.CLUE_STRENGTH[clue]
+	if strength == "strong" then
+		return self:LearnVillage(clue) or learned
+	end
+	if not strength then return learned end
+
+	local entry = db.safeClues[key] or { types = {} }
+	db.safeClues[key] = entry
+	entry.types[clue] = true
+	local types = {}
+	for name in pairs(entry.types) do types[#types + 1] = name end
+	if #types >= self.CLUES_NEEDED then
+		table.sort(types)
+		return self:LearnVillage(table.concat(types, "+")) or learned
+	end
+	return learned
+end
+
 function ns:LearnFromSignals()
-	local signals = self:LiveSafeSignals()
-	if #signals > 0 then
-		self:LearnZone(signals[1])
+	for _, signal in ipairs(self:LiveSafeSignals()) do
+		if signal == "resting" then self:AddClue("resting") end
 	end
 end
 
+-- Libellé lisible d'une source ("merchant+quest" -> "marchand + quête")
+function ns:SourceLabel(source)
+	local parts = {}
+	for name in tostring(source or "?"):gmatch("[^+]+") do
+		parts[#parts + 1] = L["SRC_" .. name:upper()] or name
+	end
+	return table.concat(parts, " + ")
+end
+
 -- ---------------------------------------------------------------------------
--- Machine à états : on alerte uniquement sur la transition sûre -> non sûre
+-- Machine à états : sûre -> non sûre, confirmée après un délai
+--   * retour en zone sûre avant la fin du délai : annulé
+--   * en vol (taxi) : reporté à l'atterrissage
+--   * mort ou fantôme : ignoré
 -- ---------------------------------------------------------------------------
+local function UnitFlag(fnName)
+	local fn = rawget(_G, fnName)
+	if type(fn) ~= "function" then return false end
+	local ok, res = pcall(fn, "player")
+	return ok and (res == true or res == 1)
+end
+
+function ns:ExitDelay()
+	local value = tonumber(self:DB().exitDelay) or 6
+	if value < 0 then value = 0 elseif value > 15 then value = 15 end
+	return value
+end
+
 function ns:Evaluate(trigger)
 	local db = self:DB()
 	if not db.enabled then return end
 
-	local safe = self:IsCurrentZoneSafe()
+	local safe, _, reason, entry = self:IsCurrentZoneSafe()
 	local previous = self.inSafe
 	self.inSafe = safe
 
-	if previous == nil then return end          -- première évaluation : on pose la référence
-	if not previous or safe then return end     -- on n'alerte que sûre -> non sûre
+	if safe then
+		self.pendingExit = nil
+		self.lastSafePlace = {
+			name = (entry and entry.name) or self:CurrentSubZone()
+				or ((self:MapInfo(self:CurrentMap()) or {}).name) or "?",
+			source = (entry and entry.source) or reason,
+		}
+		return
+	end
 
-	local now = Now()
+	if previous == nil then return end          -- première évaluation : on pose la référence
+	if not previous then return end             -- déjà dehors : rien de neuf
+
+	self.pendingExit = { at = Now(), from = self.lastSafePlace, trigger = trigger or "zone" }
+	if self:ExitDelay() <= 0 then self:UpdatePendingExit(Now()) end
+end
+
+-- Appelé à chaque image (OnUpdate) : confirme la sortie une fois le délai écoulé
+function ns:UpdatePendingExit(now)
+	local pending = self.pendingExit
+	if not pending then return end
+	now = now or Now()
+
+	if UnitFlag("UnitIsDeadOrGhost") then self.pendingExit = nil; return end
+	if UnitFlag("UnitOnTaxi") then
+		pending.taxi = true
+		pending.at = now                            -- le délai repart à l'atterrissage
+		return
+	end
+	if now - pending.at < self:ExitDelay() then return end
+
+	self.pendingExit = nil
+	if self:IsCurrentZoneSafe() then self.inSafe = true; return end
+
+	local db = self:DB()
 	if self.quietUntil and now < self.quietUntil then return end
 	if self.lastAlert and (now - self.lastAlert) < (db.alertCooldown or 20) then return end
 	self.lastAlert = now
-
-	self:RunChecklist(trigger or "zone")
+	self.lastDeparture = pending.from
+	self:RunChecklist(pending.trigger)
 end
 
 -- ---------------------------------------------------------------------------
@@ -224,7 +379,7 @@ function ns:RunChecklist(trigger)
 				label    = labelText,
 				ok       = true,
 				disabled = true,
-				detail   = self:IsModuleEnabled(def.id) and L.MODULE_OFF_ZERO or L.MODULE_OFF,
+				detail   = self:IsModuleEnabled(def.id) and (def.inactiveText and L[def.inactiveText] or L.MODULE_OFF_ZERO) or L.MODULE_OFF,
 				score    = 0,
 				weight   = 0,
 				advice   = def.advice,
@@ -271,6 +426,8 @@ function ns:RunChecklist(trigger)
 	end
 	table.sort(advice, function(a, b) return a.weight > b.weight end)
 	self.lastAdvice = advice
+	self.lastTrigger = trigger
+	if trigger == "manual" then self.lastDeparture = nil end
 
 	if db.showWindow and self.ShowWindow then
 		self:ShowWindow(results)
@@ -371,10 +528,16 @@ end
 ns.handlers = {
 	PLAYER_ENTERING_WORLD = function(self, isInitialLogin, isReloadingUi)
 		local db = self:DB()
+		if self.safePurgeNotice then
+			self:Print(self:F("MSG_SAFE_PURGED", self.safePurgeNotice))
+			self.safePurgeNotice = nil
+		end
 		self:LearnFromSignals()
-		self.inSafe = self:IsCurrentZoneSafe()
+		self.inSafe = nil
+		self:Evaluate("login")
 		self.quietUntil = Now() + (db.quietAfterLogin or 15)
 		if db.showMinimap ~= false and self.ShowMinimapButton then self:ShowMinimapButton() end
+		if self.InitCharacterTracking then pcall(function() self:InitCharacterTracking() end) end
 
 		-- Relevé de référence pour le résumé de changement de stuff
 		if self.CaptureStatBaseline then pcall(function() self:CaptureStatBaseline() end) end
@@ -386,7 +549,14 @@ ns.handlers = {
 		self:Evaluate("zone")
 	end,
 
+	-- Changement de sous-zone : c'est l'événement qui marque la sortie d'un village
 	ZONE_CHANGED = function(self)
+		self:LearnFromSignals()
+		self:Evaluate("zone")
+	end,
+
+	ZONE_CHANGED_INDOORS = function(self)
+		self:LearnFromSignals()
 		self:Evaluate("zone")
 	end,
 
@@ -395,16 +565,30 @@ ns.handlers = {
 		self:Evaluate("rest")
 	end,
 
-	-- Un vendeur ou une boîte aux lettres = village. On apprend, et on considère
-	-- qu'on est dans une zone sûre même si elle ne donne pas de repos.
+	-- Indices de village : chaque PNJ de service apporte un indice dans la
+	-- sous-zone courante (voir ns.CLUE_STRENGTH).
 	MERCHANT_SHOW = function(self)
-		self:LearnZone("merchant")
-		self.inSafe = self:IsCurrentZoneSafe()
+		self:AddClue("merchant")
+		self:Evaluate("learn")
+		if self.OnMerchantShow then self:OnMerchantShow() end
 	end,
 
-	MAIL_SHOW = function(self)
-		self:LearnZone("mail")
-		self.inSafe = self:IsCurrentZoneSafe()
+	MERCHANT_CLOSED = function(self)
+		if self.OnMerchantClosed then self:OnMerchantClosed() end
+	end,
+
+	MAIL_SHOW = function(self) self:AddClue("mail"); self:Evaluate("learn") end,
+	CONFIRM_BINDER = function(self) self:AddClue("binder"); self:Evaluate("learn") end,
+	TAXIMAP_OPENED = function(self) self:AddClue("taxi"); self:Evaluate("learn") end,
+	BANKFRAME_OPENED = function(self) self:AddClue("bank"); self:Evaluate("learn") end,
+	QUEST_DETAIL = function(self) self:AddClue("quest"); self:Evaluate("learn") end,
+	QUEST_GREETING = function(self) self:AddClue("quest"); self:Evaluate("learn") end,
+	QUEST_COMPLETE = function(self) self:AddClue("quest"); self:Evaluate("learn") end,
+
+	TRAINER_SHOW = function(self)
+		self:AddClue("trainer")
+		self:Evaluate("learn")
+		if self.OnTrainerShow then self:OnTrainerShow() end
 	end,
 
 	UNIT_AURA = function(self, unit)
@@ -450,40 +634,65 @@ end
 -- ---------------------------------------------------------------------------
 -- Commandes
 -- ---------------------------------------------------------------------------
+function ns:ListSafeZones()
+	local db = self:DB()
+	local rows = {}
+	for _, entry in pairs(db.safe) do
+		local kind = entry.kind == "city" and L.SAFE_KIND_CITY or L.SAFE_KIND_VILLAGE
+		rows[#rows + 1] = { name = tostring(entry.name or "?"), kind = kind, source = self:SourceLabel(entry.source) }
+	end
+	table.sort(rows, function(a, b) return a.name < b.name end)
+	self:Print(self:F("MSG_LIST_HEADER", #rows))
+	for _, row in ipairs(rows) do
+		self:Print(self:F("MSG_LIST_ROW", row.name, row.kind .. ", " .. row.source))
+	end
+end
+
 local COMMANDS = {
 	["on"] = function(self) self:DB().enabled = true; self:Print(L.MSG_ON) end,
 	["off"] = function(self) self:DB().enabled = false; self:Print(L.MSG_OFF) end,
-	["safe"] = function(self)
-		local mapID = self:CurrentMap()
-		if not mapID then return self:Print(L.MSG_NO_ZONE) end
-		if self:DB().safe[mapID] then
-			return self:Print(self:F("MSG_SAFE_EXISTS", self:DB().safe[mapID].name))
+	["safe"] = function(self, rest)
+		local sub = tostring(rest or ""):lower()
+		if sub == "list" then return self:ListSafeZones() end
+		if sub == "reset" then
+			local db = self:DB()
+			db.safe, db.safeClues, db.cityRest = {}, {}, {}
+			self.inSafe, self.pendingExit = nil, nil
+			return self:Print(L.MSG_SAFE_RESET)
 		end
-		self:LearnZone("manual")
-		self.inSafe = true
-		self:Print(self:F("MSG_SAFE_ADDED", self:DB().safe[mapID].name))
+		local mapID, subzone = self:CurrentMap(), self:CurrentSubZone()
+		if not mapID then return self:Print(L.MSG_NO_ZONE) end
+		if not subzone then return self:Print(L.MSG_NO_SUBZONE) end
+		local key = VillageKey(mapID, subzone)
+		if self:DB().safe[key] then
+			return self:Print(self:F("MSG_SAFE_EXISTS", subzone))
+		end
+		self:LearnVillage("manual")
+		self:Evaluate("learn")
+		self:Print(self:F("MSG_SAFE_ADDED", subzone))
 	end,
 	["unsafe"] = function(self)
 		local db = self:DB()
-		local mapID = self:CurrentMap()
-		if not mapID or not db.safe[mapID] then return self:Print(L.MSG_SAFE_UNKNOWN) end
-		local name = db.safe[mapID].name
-		db.safe[mapID] = nil
-		self.inSafe = false
+		local mapID, subzone = self:CurrentMap(), self:CurrentSubZone()
+		local removed
+		if mapID and subzone and db.safe[VillageKey(mapID, subzone)] then
+			removed = VillageKey(mapID, subzone)
+		elseif mapID then
+			for _, id in ipairs(self:MapChain(mapID)) do
+				if db.safe[CityKey(id)] then removed = CityKey(id); break end
+			end
+		end
+		if not removed then return self:Print(L.MSG_SAFE_UNKNOWN) end
+		local entry = db.safe[removed]
+		db.safe[removed] = nil
+		db.safeClues[removed] = nil
+		if entry.kind == "city" and entry.mapID then db.cityRest[entry.mapID] = nil end
+		local name = entry.name
+		self.inSafe, self.pendingExit = nil, nil
+		self:Evaluate("learn")
 		self:Print(self:F("MSG_SAFE_REMOVED", name))
 	end,
-	["list"] = function(self)
-		local db = self:DB()
-		local rows = {}
-		for mapID, entry in pairs(db.safe) do
-			rows[#rows + 1] = { mapID = mapID, name = entry.name or tostring(mapID), source = entry.source or "?" }
-		end
-		table.sort(rows, function(a, b) return tostring(a.name) < tostring(b.name) end)
-		self:Print(self:F("MSG_LIST_HEADER", #rows))
-		for _, row in ipairs(rows) do
-			self:Print(self:F("MSG_LIST_ROW", row.name, row.source))
-		end
-	end,
+	["list"] = function(self) self:ListSafeZones() end,
 	["buffs"] = function(self)
 		local db = self:DB()
 		local list = TrackedList(self)
@@ -675,7 +884,7 @@ local COMMANDS = {
 		-- État du chargement des fichiers
 		local loaded, missing = {}, {}
 		for _, name in ipairs({ "Bootstrap", "Locales", "Compat", "Theme", "Core", "Buffs",
-			"Reagents", "Equip", "Stats", "Minimap", "Checks", "Options", "UI" }) do
+			"Reagents", "Merchant", "Equip", "Stats", "Minimap", "Checks", "Options", "UI" }) do
 			if ns.Loaded and ns.Loaded[name] then loaded[#loaded + 1] = name else missing[#missing + 1] = name end
 		end
 		self:Print(string.format("  modules : |cff1eff00%d/%d|r chargés",
@@ -694,8 +903,9 @@ local COMMANDS = {
 		local mapID = self:CurrentMap()
 		local info = self:MapInfo(mapID)
 		self:Print(self:F("MSG_DIAG_MAP", tostring(mapID), tostring(info and info.parentMapID), tostring(info and info.name)))
-		local safe, why = self:IsCurrentZoneSafe()
-		self:Print(self:F("MSG_DIAG_SAFE", tostring(safe) .. " (" .. tostring(why) .. ")"))
+		local safe, _, why = self:IsCurrentZoneSafe()
+		self:Print(self:F("MSG_DIAG_SAFE", tostring(safe) .. " (" .. tostring(why) .. ", "
+			.. tostring(self:CurrentSubZone()) .. ")"))
 		if self.DiagAuras then self:DiagAuras() else self:Print(L.MSG_DIAG_NOAURA) end
 	end,
 }
@@ -771,6 +981,8 @@ frame:SetScript("OnUpdate", function()
 	if ns.toastHideAt and ns.UpdateToast then
 		ns:UpdateToast(ns:Now())
 	end
+	-- sortie de zone sûre en attente de confirmation
+	if ns.pendingExit then ns:UpdatePendingExit(ns:Now()) end
 end)
 ns:RegisterEvents(frame)
 

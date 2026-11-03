@@ -34,6 +34,14 @@ local SECTIONS = {
 			{ key = "potionsThreshold",   label = "OPT_POTIONSTHRESHOLD", kind = "number", min = 0,  max = 50,  step = 1 },
 			{ key = "restMinPercent",     label = "OPT_RESTMIN",          kind = "number", min = 0,  max = 150, step = 5, suffix = "OPT_REST_UNIT" },
 			{ key = "durabilityMinPct",   label = "OPT_DURAMIN",          kind = "number", min = 0,  max = 100, step = 5, suffix = "OPT_PCT_UNIT" },
+			{ key = "exitDelay",          label = "OPT_EXITDELAY",        kind = "number", min = 0,  max = 15,  step = 1, suffix = "OPT_SEC_UNIT" },
+		},
+	},
+	{
+		title = "OPT_SECTION_MERCHANT",
+		rows = {
+			{ key = "autoSellGray", label = "OPT_AUTOSELL",   kind = "bool" },
+			{ key = "autoRepair",   label = "OPT_AUTOREPAIR", kind = "bool" },
 		},
 	},
 	{

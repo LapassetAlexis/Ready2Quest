@@ -4,7 +4,8 @@
 --   { id, label = function|string, advice = clé de locale, weight = nombre,
 --     run = function(db) -> ok, detail, score (0..100) }
 -- `run` est appelé sous pcall par Core : il ne doit jamais lever d'erreur.
--- Les poids des neuf modules totalisent 100.
+-- Échelle des poids : fort = 15–20 (vivres, sacs, durabilité, composants de
+-- classe), moyen = 10 (potions, repos, foyer, réparation), faible = 5.
 local ADDON, ns = ...
 local L = ns.L
 
@@ -300,6 +301,195 @@ Add{
 			return false, ns:F("CHK_QUESTS_DETAIL", ready), 70
 		end
 		return true, L.CHK_QUESTS_GOOD, 100
+	end,
+}
+
+-- ---------------------------------------------------------------------------
+-- v1.18.0 : composants de classe, pierre de foyer, réparation, sorts
+-- ---------------------------------------------------------------------------
+local function ItemCount(itemID)
+	local fn = (C_Item and C_Item.GetItemCount) or rawget(_G, "GetItemCount")
+	if type(fn) == "function" then
+		local ok, count = pcall(fn, itemID)
+		if ok and type(count) == "number" then return count end
+	end
+	local count = 0
+	EachBagItem(function(_, _, info)
+		if info.itemID == itemID then count = count + (info.stackCount or 1) end
+	end)
+	return count
+end
+ns.ItemCount = ItemCount
+
+local function PlayerLevel()
+	if type(UnitLevel) ~= "function" then return 1 end
+	local ok, level = pcall(UnitLevel, "player")
+	return (ok and tonumber(level)) or 1
+end
+
+local function PlayerClass()
+	if type(UnitClass) ~= "function" then return nil end
+	local ok, _, token = pcall(UnitClass, "player")
+	if ok then return token end
+	return nil
+end
+
+-- Composants consommés par les sorts de classe (Classic Era / Forever).
+-- `level` = niveau à partir duquel le sort qui les consomme est appris.
+-- `items` = plusieurs objets interchangeables (rangs de Renaissance…).
+-- `slot`  = munitions : le client compte l'emplacement 0 (projectiles équipés).
+ns.CLASS_REAGENTS = {
+	HUNTER  = { { label = "REAGENT_AMMO", ammo = true, min = 200, level = 1 } },
+	WARLOCK = { { label = "REAGENT_SHARD", items = { 6265 }, min = 3, level = 10 } },
+	ROGUE   = { { label = "REAGENT_FLASH", items = { 5140 }, min = 5, level = 22 } },
+	MAGE    = {
+		{ label = "REAGENT_TELEPORT", items = { 17031 }, min = 2, level = 20 },
+		{ label = "REAGENT_ARCANE", items = { 17020 }, min = 5, level = 56 },
+	},
+	PRIEST  = { { label = "REAGENT_CANDLE", items = { 17028, 17029 }, min = 5, level = 48 } },
+	DRUID   = { { label = "REAGENT_SEED", items = { 17034, 17035, 17036, 17037, 17038 }, min = 1, level = 20 } },
+	SHAMAN  = { { label = "REAGENT_ANKH", items = { 17030 }, min = 1, level = 30 } },
+	PALADIN = { { label = "REAGENT_SYMBOL", items = { 17033 }, min = 1, level = 30 } },
+}
+
+local function AmmoCount()
+	if type(GetInventoryItemCount) ~= "function" then return nil end
+	local ok, count = pcall(GetInventoryItemCount, "player", 0)
+	if ok and type(count) == "number" then return count end
+	return nil
+end
+
+function ns:ClassReagentNeeds()
+	local list = self.CLASS_REAGENTS[PlayerClass() or ""] or {}
+	local level, needs = PlayerLevel(), {}
+	for _, req in ipairs(list) do
+		if level >= (req.level or 1) then
+			local have
+			if req.ammo then
+				have = AmmoCount()
+			else
+				have = 0
+				for _, itemID in ipairs(req.items or {}) do have = have + ItemCount(itemID) end
+			end
+			if have ~= nil then
+				needs[#needs + 1] = { label = L[req.label] or req.label, have = have, min = req.min }
+			end
+		end
+	end
+	return needs
+end
+
+Add{
+	id = "classreagents",
+	inactiveText = "MODULE_INACTIVE",
+	-- inactif pour les classes sans composant (guerrier) ou avant le niveau requis
+	active = function() return #ns:ClassReagentNeeds() > 0 end,
+	icon = "Interface\\Icons\\INV_Misc_Gem_Amethyst_02",
+	weight = 15,
+	advice = "ADV_CLASSREAGENTS",
+	label = function() return L.CHK_CLASSREAGENTS end,
+	run = function()
+		local needs = ns:ClassReagentNeeds()
+		local total, short = 0, nil
+		for _, need in ipairs(needs) do
+			local ratio = Ratio(need.have, need.min)
+			total = total + ratio
+			if need.have < need.min and not short then short = need end
+		end
+		local score = (#needs > 0) and (total / #needs) or 100
+		if short then
+			return false, ns:F("CHK_CLASSREAGENTS_LOW", short.label, short.have, short.min), score
+		end
+		return true, ns:F("CHK_CLASSREAGENTS_GOOD", needs[1].label, needs[1].have), score
+	end,
+}
+
+local HEARTHSTONE = 6948
+local HEARTH_MAX_CD = 600   -- au-delà de 10 min de recharge, le foyer n'est pas une issue
+
+local function HearthCooldown()
+	local fn = (C_Container and C_Container.GetItemCooldown) or rawget(_G, "GetItemCooldown")
+	if type(fn) ~= "function" then return 0 end
+	local ok, start, duration = pcall(fn, HEARTHSTONE)
+	if not ok or type(start) ~= "number" or type(duration) ~= "number" or start <= 0 then return 0 end
+	local remaining = start + duration - ((ns.Now and ns.Now()) or 0)
+	return remaining > 0 and remaining or 0
+end
+ns.HearthCooldown = HearthCooldown
+
+Add{
+	id = "hearth",
+	icon = "Interface\\Icons\\INV_Misc_Rune_01",
+	weight = 10,
+	advice = "ADV_HEARTH",
+	label = function() return L.CHK_HEARTH end,
+	run = function()
+		local where = "?"
+		if type(GetBindLocation) == "function" then
+			local ok, text = pcall(GetBindLocation)
+			if ok and type(text) == "string" and text ~= "" then where = text end
+		end
+		if ItemCount(HEARTHSTONE) <= 0 then return false, L.CHK_HEARTH_MISSING, 0 end
+		local cd = HearthCooldown()
+		if cd > HEARTH_MAX_CD then
+			return false, ns:F("CHK_HEARTH_CD", where, math.ceil(cd / 60)), 50
+		end
+		if cd > 0 then
+			return true, ns:F("CHK_HEARTH_CD", where, math.ceil(cd / 60)), 80
+		end
+		return true, ns:F("CHK_HEARTH_READY", where), 100
+	end,
+}
+
+Add{
+	id = "repair",
+	inactiveText = "MODULE_INACTIVE",
+	-- muet tant qu'aucun coût n'a été mesuré chez un marchand
+	active = function() return ns.EstimatedRepairCost ~= nil and ns:EstimatedRepairCost() ~= nil end,
+	icon = "Interface\\Icons\\INV_Hammer_20",
+	weight = 10,
+	advice = "ADV_REPAIR",
+	label = function() return L.CHK_REPAIR end,
+	run = function()
+		local cost = ns:EstimatedRepairCost() or 0
+		local money = 0
+		if type(GetMoney) == "function" then
+			local ok, value = pcall(GetMoney)
+			if ok then money = tonumber(value) or 0 end
+		end
+		if cost <= 0 then return true, L.CHK_REPAIR_NONE, 100 end
+		if money < cost then
+			return false, ns:F("CHK_REPAIR_POOR", ns:FormatMoney(cost)), Ratio(money, cost)
+		end
+		return true, ns:F("CHK_REPAIR_OK", ns:FormatMoney(cost)), 100
+	end,
+}
+
+-- Nouveaux sorts tous les niveaux pairs (Era) : on compare au niveau de la
+-- dernière visite chez l'entraîneur de classe.
+function ns:PendingSpellLevels()
+	local data = self.CharData and self:CharData() or {}
+	local trained = tonumber(data.trainerLevel)
+	if not trained then return 0 end
+	local level = PlayerLevel()
+	local count = 0
+	for l = trained + 1, level do
+		if l % 2 == 0 then count = count + 1 end
+	end
+	return count
+end
+
+Add{
+	id = "spells",
+	inactiveText = "MODULE_INACTIVE",
+	active = function() return ns:PendingSpellLevels() > 0 end,
+	icon = "Interface\\Icons\\INV_Misc_Book_09",
+	weight = 5,
+	advice = "ADV_SPELLS",
+	label = function() return L.CHK_SPELLS end,
+	run = function()
+		local trained = tonumber(ns:CharData().trainerLevel) or 0
+		return false, ns:F("CHK_SPELLS_DETAIL", trained), 50
 	end,
 }
 

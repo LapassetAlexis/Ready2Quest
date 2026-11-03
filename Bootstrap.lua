@@ -4,7 +4,7 @@
 -- chargement. C'est ce qui permet de diagnostiquer à distance un addon muet.
 local ADDON, ns = ...
 
-ns.version = "1.17.0"
+ns.version = "1.18.0"
 ns.Loaded = {}
 ns.loadOrder = {}
 ns.errors = {}
@@ -40,7 +40,7 @@ local function Dispatch(input)
 	print("|cffffd100Ready to Quest|r " .. tostring(ns.version) .. " — modules non chargés.")
 	local missing = {}
 	for _, name in ipairs({ "Locales", "Compat", "Theme", "Core", "Buffs", "Reagents",
-		"Equip", "Stats", "Minimap", "Checks", "Options", "UI" }) do
+		"Merchant", "Equip", "Stats", "Minimap", "Checks", "Options", "UI" }) do
 		if not ns.Loaded[name] then missing[#missing + 1] = name end
 	end
 	if #missing > 0 then
