@@ -2326,7 +2326,10 @@ if frame then
 	Check("libellés d'options : aucun débordement", #tooLong == 0, table.concat(tooLong, ", "))
 	local navTooLong = {}
 	for _, nav in ipairs(frame.navButtons) do
-		if #(nav.label.text or "") * 6.4 > lay.navWidth - 16 then navTooLong[#navTooLong + 1] = nav.label.text end
+		-- libellé à 26 px, interrupteur de 22 px à 8 px du bord droit
+		local room = (nav.width or lay.navWidth) - 26 - (nav.power and (22 + 8 + 4) or 4)
+		-- 5.3 px par caractère : mesuré sur une capture en jeu (« Vivres & potions » = 84 px)
+		if #(nav.label.text or "") * 5.3 > room then navTooLong[#navTooLong + 1] = nav.label.text end
 	end
 	Check("libellés de navigation : aucun débordement", #navTooLong == 0, table.concat(navTooLong, ", "))
 
@@ -3505,6 +3508,36 @@ Check("[R2Q] navigation : nom avec le « 2 » bleu", o.brandName.text:find("|cff
 Check("[R2Q] bandeau : logo simplifié", tostring(o.logo.texture):find("logo_petit") ~= nil, o.logo.texture)
 Check("[R2Q] groupes de navigation en bleu", o.navGroups[1].textColor[3] > 0.8 and o.navGroups[1].textColor[1] < 0.4)
 Check("[R2Q] commande /r2q", SLASH_SACETDEPART3 == "/r2q")
+
+-- interrupteurs de page dans la navigation
+NS.optionsFrame = nil
+for _, def in ipairs(NS.checks) do NS:SetModuleEnabled(def.id, true) end
+NS:ToggleOptions()
+local nav3 = NS.optionsFrame.navButtons[3]           -- Sacs & butin
+local navGeneral = NS.optionsFrame.navButtons[1]
+Check("[NAV] interrupteur sur les pages à modules", nav3.power ~= nil and navGeneral.power == nil)
+local powered = 0
+for _, nav in ipairs(NS.optionsFrame.navButtons) do if nav.power then powered = powered + 1 end end
+Check("[NAV] 6 pages ont un interrupteur", powered == 6, powered)
+Check("[NAV] tout actif : allumé", nav3.power.checked == true)
+NS:SelectOptionsPage("general")
+nav3.power:Click()
+Check("[NAV] clic : modules de la page coupés", not NS:IsModuleEnabled("bags") and not NS:IsModuleEnabled("gray"))
+Check("[NAV] clic : on reste sur la page courante", NS.optionsFrame.currentPage == "general")
+Check("[NAV] tout coupé : éteint, libellé grisé", nav3.power.checked == false and nav3.label.textColor[1] < 0.45)
+NS:SetModuleEnabled("bags", true)
+NS:RefreshOptions()
+Check("[NAV] un seul module actif : état partiel", nav3.power.partial == true and nav3.state == "partial")
+nav3.power:Click()
+Check("[NAV] partiel + clic : tout rallumé", NS:IsModuleEnabled("bags") and NS:IsModuleEnabled("gray") and nav3.power.checked == true)
+Check("[NAV] le reste n'a pas bougé", NS:IsModuleEnabled("vivres") and NS:IsModuleEnabled("buffs"))
+-- la page se synchronise : l'interrupteur du module dans la page suit
+NS:SelectOptionsPage("bags")
+nav3.power:Click()
+local bagsModuleRow
+for _, row in ipairs(NS.optionsFrame.pages.bags.rows) do if row.isModule and row.moduleId == "bags" then bagsModuleRow = row end end
+Check("[NAV] la page suit l'interrupteur de navigation", bagsModuleRow.toggle.checked == false)
+nav3.power:Click()
 
 -- retours de la première session en jeu (Era, Vallée des épreuves)
 NS.editBanner = nil

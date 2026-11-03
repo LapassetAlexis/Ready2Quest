@@ -11,7 +11,7 @@ local Theme = ns.Theme
 
 local FRAME_WIDTH  = 600
 local FRAME_HEIGHT = 440
-local NAV_WIDTH    = 150
+local NAV_WIDTH    = 164   -- 150 + 14 : place pour l'interrupteur de page (mesuré en jeu)
 local PANE_LEFT    = NAV_WIDTH + 16
 local PANE_WIDTH   = FRAME_WIDTH - PANE_LEFT - 14
 local ROW_HEIGHT   = 22
@@ -188,13 +188,25 @@ function ns:RefreshOptions()
 
 	for _, nav in ipairs(frame.navButtons or {}) do
 		local selected = nav.pageId == frame.currentPage
+		local state = nav.modules and self:PageModuleState(nav.modules) or nil
+		if nav.power then
+			if state == "on" then nav.power:SetChecked(true)
+			elseif state == "off" then nav.power:SetChecked(false)
+			else nav.power:SetPartial() end
+		end
+		nav.state = state
 		if selected then
 			nav.label:SetTextColor(Theme.PARCHMENT[1], Theme.PARCHMENT[2], Theme.PARCHMENT[3])
 			nav.marker:Show(); nav.tint:Show()
 			nav.diamond:SetTexture(Theme.DIAMOND)
 			nav.diamond:SetVertexColor(Theme.GOLD[1], Theme.GOLD[2], Theme.GOLD[3], 1)
 		else
-			nav.label:SetTextColor(0.68, 0.70, 0.71)
+			-- page dont tous les modules sont coupés : libellé éteint
+			if state == "off" then
+				nav.label:SetTextColor(0.40, 0.42, 0.44)
+			else
+				nav.label:SetTextColor(0.68, 0.70, 0.71)
+			end
 			nav.marker:Hide(); nav.tint:Hide()
 			nav.diamond:SetTexture(Theme.DIAMOND_LINE)
 			nav.diamond:SetVertexColor(0.35, 0.38, 0.42, 1)
@@ -515,6 +527,26 @@ function ns:EnsureOptions()
 		nav.label:SetText(L[def.title] or def.title)
 		nav:SetScript("OnClick", function() ns:SelectOptionsPage(def.id) end)
 		frame.navButtons[index] = nav
+
+		-- Interrupteur de page, comme le bouton d'alimentation des modules
+		-- dans la barre latérale d'EllesmereUI : coupe ou rallume tous les
+		-- modules de la page sans y naviguer. Le détail reste dans la page.
+		if def.modules then
+			nav.modules = def.modules
+			nav.power = Theme.CreateToggle(nav, 22, 10, "Button")
+			nav.power:SetPoint("RIGHT", nav, "RIGHT", -8, 0)
+			nav.power:SetScript("OnClick", function() ns:TogglePageModules(def.id) end)
+			nav.power:SetScript("OnEnter", function(self)
+				if type(GameTooltip) ~= "table" or not GameTooltip.SetOwner then return end
+				GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
+				GameTooltip:AddLine(L[def.title] or def.title, Theme.PARCHMENT[1], Theme.PARCHMENT[2], Theme.PARCHMENT[3])
+				GameTooltip:AddLine(L.OPT_NAV_POWER_TIP, 0.8, 0.8, 0.8)
+				GameTooltip:Show()
+			end)
+			nav.power:SetScript("OnLeave", function()
+				if type(GameTooltip) == "table" and GameTooltip.Hide then GameTooltip:Hide() end
+			end)
+		end
 		navY = navY - ROW_HEIGHT
 
 		-- page
@@ -653,6 +685,32 @@ function ns:EnsureOptions()
 	self.optionsFrame = frame
 	self:SelectOptionsPage(self:DB().optionsPage or "general")
 	return frame
+end
+
+-- "on" (tous actifs), "off" (tous coupés) ou "partial"
+function ns:PageModuleState(modules)
+	local on, total = 0, 0
+	for _, id in ipairs(modules or {}) do
+		if CheckDef(id) then
+			total = total + 1
+			if self:IsModuleEnabled(id) then on = on + 1 end
+		end
+	end
+	if total == 0 or on == total then return "on" end
+	if on == 0 then return "off" end
+	return "partial"
+end
+
+-- Tout actif -> tout coupé ; coupé ou partiel -> tout rallumé
+function ns:TogglePageModules(pageId)
+	local page
+	for _, def in ipairs(PAGES) do if def.id == pageId then page = def end end
+	if not page or not page.modules then return end
+	local enable = self:PageModuleState(page.modules) ~= "on"
+	for _, id in ipairs(page.modules) do
+		if CheckDef(id) then self:SetModuleEnabled(id, enable) end
+	end
+	self:RefreshOptions()
 end
 
 function ns:SelectOptionsPage(id)

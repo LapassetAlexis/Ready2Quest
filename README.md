@@ -18,6 +18,15 @@ Un nom plus court, une vraie marque, et le sigle **R2Q**.
 - Commandes : nouvelle commande `/r2q`. `/sd` et `/sacdepart` marchent toujours.
 - Les chemins de textures sont maintenant construits depuis le nom réel du dossier. Les flèches de `Stats.lua` l'avaient encore en dur.
 
+### Interrupteurs de page dans la navigation
+
+Comme le bouton d'alimentation des modules dans la barre latérale d'EllesmereUI : chaque page qui contient des modules a son mini-interrupteur à droite de son nom.
+
+- Un clic coupe ou rallume **tous les modules de la page**, sans quitter la page courante.
+- Trois états : allumé (ambre), éteint (gris, nom de page grisé), **partiel** (contour ambre, curseur au centre) quand une partie seulement des modules est active.
+- Un clic sur une page partielle rallume tout. Le réglage module par module reste dans la page, et les deux restent synchronisés.
+- La navigation passe de 150 à 164 px pour faire la place, d'après la largeur des libellés mesurée sur une capture en jeu.
+
 ### Migration : ce qu'il faut faire
 
 1. Supprimer l'ancien dossier `Interface/AddOns/ReadyToQuest`. Sinon les deux versions se chargent.
@@ -1394,7 +1403,7 @@ Alias : `/sacdepart`.
 ## Tests
 
 ```
-python3 tests/run_tests.py     →  667 réussis, 0 échoués
+python3 tests/run_tests.py     →  681 réussis, 0 échoués
 ```
 
 Lua 5.1 (version du client), client WoW simulé. Couvre notamment : apprentissage par indices (sous-zone, capitale par deux quartiers, purge de l'ancien schéma), délai de sortie / vol / mort, nouveaux checks et automatismes du marchand en mode Era, chaîne de cartes parentes, anti-spam, filtrage des procs, **valeurs secrètes**, comptages sacs/vivres/potions/durabilité/quêtes, score pondéré et bilans, fenêtre de diagnostic (icônes, barres, bandeau), panneau d'équipement (17 lignes, moyenne, rareté, pièces faibles), comparaison au survol (amélioration, régressif, vide, anneaux), **les deux voies de hook tooltip**, bouton sans template Blizzard, et toutes les commandes.

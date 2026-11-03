@@ -364,17 +364,32 @@ end
 -- ---------------------------------------------------------------------------
 -- Interrupteur : piste 30 x 14, curseur carré ; ambre quand il est actif
 -- ---------------------------------------------------------------------------
-function Theme.CreateToggle(parent)
-	local toggle = CreateFrame("Frame", nil, parent)
-	toggle:SetSize(30, 14)
+-- `kind` = "Button" pour un interrupteur cliquable à lui seul (navigation) ;
+-- `width`/`height` : 30 x 14 par défaut, 22 x 10 en version compacte.
+function Theme.CreateToggle(parent, width, height, kind)
+	local toggle = CreateFrame(kind or "Frame", nil, parent)
+	width, height = width or 30, height or 14
+	toggle:SetSize(width, height)
 	toggle.track = Solid(toggle, "BACKGROUND", Theme.CONTROL, 1)
 	toggle.track:SetAllPoints()
 	toggle.edge = Border(toggle, Theme.GOLD, 0)
 	toggle.knob = Solid(toggle, "ARTWORK", { 0.48, 0.51, 0.53 }, 1)
-	toggle.knob:SetSize(10, 10)
+	toggle.knob:SetSize(height - 4, height - 4)
+
+	-- partiel : une partie seulement des modules est active (contour ambre,
+	-- curseur gris au centre)
+	function toggle:SetPartial()
+		self.checked, self.partial = nil, true
+		self.knob:ClearAllPoints()
+		self.knob:SetPoint("CENTER", self, "CENTER", 0, 0)
+		self.knob:SetVertexColor(0.62, 0.64, 0.66, 1)
+		self.track:SetVertexColor(Theme.CONTROL[1], Theme.CONTROL[2], Theme.CONTROL[3], 1)
+		self.edge:SetColor(Theme.GOLD[1], Theme.GOLD[2], Theme.GOLD[3], 1)
+	end
 
 	function toggle:SetChecked(on)
 		self.checked = on and true or false
+		self.partial = nil
 		self.knob:ClearAllPoints()
 		if self.checked then
 			self.knob:SetPoint("RIGHT", self, "RIGHT", -2, 0)

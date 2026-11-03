@@ -229,6 +229,7 @@ local frFR = {
 	OPT_SECTION_AUTO = "AUTOMATISMES",
 	-- v1.19.0 : réglages par pages
 	OPT_GROUP_PREP = "PRÉPARATION",
+	OPT_NAV_POWER_TIP = "Active ou coupe tous les modules de cette page.",
 	OPT_GROUP_UI = "INTERFACE",
 	OPT_PAGE_GENERAL_SUB = "Quand et comment l'addon te prévient avant le départ.",
 	OPT_PAGE_SAFE_SUB = "Les villages et capitales d'où une sortie déclenche l'alerte.",
@@ -531,6 +532,7 @@ local enUS = {
 	OPT_SECTION_AUTO = "AUTOMATION",
 	-- v1.19.0: paged settings
 	OPT_GROUP_PREP = "PREPARATION",
+	OPT_NAV_POWER_TIP = "Turns every module of this page on or off.",
 	OPT_GROUP_UI = "INTERFACE",
 	OPT_PAGE_GENERAL_SUB = "When and how the addon warns you before you leave.",
 	OPT_PAGE_SAFE_SUB = "Villages and capitals whose exit triggers the alert.",
