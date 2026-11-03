@@ -1,50 +1,58 @@
--- Theme.lua -- direction artistique World of Warcraft
+-- Theme.lua -- identité visuelle « carnet de route » (v1.20.0)
 --
--- Principe : uniquement des textures dont la présence est confirmée dans le
--- client (référencées par le code de Blizzard lui-même) :
---   Interface\DialogFrame\UI-DialogBox-Background
---   Interface\DialogFrame\UI-DialogBox-Background-Dark
---   Interface\Buttons\UI-Panel-Button-Up / Down / Disabled / Highlight
---   Interface\Buttons\WHITE8X8
--- Plus les polices natives GameFont* / NumberFont* et ITEM_QUALITY_COLORS.
---
--- Le cadre doré est dessiné (bordures 1 px teintées) plutôt que délégué à un
--- template NineSlice : Forever utilise une déclinaison d'art « Camelot »
--- propre, et un layout NineSlice nommé pourrait ne pas exister.
+-- L'addon ressemblait à un morceau de l'interface Blizzard (liseré or,
+-- fond d'infobulle, boutons UIPanelButtonTemplate). Il a désormais sa propre
+-- identité, appliquée partout avec les mêmes règles :
+--   * surfaces plates ardoise, filets fins, coin d'accent ambre ;
+--   * une seule couleur d'accent, l'ambre, réservée à ce qui compte (page
+--     active, valeur, action principale, marque) ; vert/ambre/rouge = statut ;
+--   * une police de titre embarquée (Alegreya Bold, OFL, Fonts/) pour les
+--     titres et la note ; le texte courant reste en GameFont, lisible partout ;
+--   * des contrôles dessinés par l'addon (boutons, interrupteurs, losanges),
+--     sans dépendre d'aucun template : rien ne casse si Forever change son art.
+-- Textures propres : Textures/logo.tga (boussole), losange.tga, losange_trait.tga.
+-- Tout le reste n'utilise que Interface\Buttons\WHITE8X8, teinté.
 local ADDON, ns = ...
 
 local Theme = {}
 ns.Theme = Theme
 
--- ---------------------------------------------------------------------------
--- Palette
--- ---------------------------------------------------------------------------
-Theme.GOLD      = { 1.00, 0.82, 0.00 }
-Theme.GOLD_SOFT = { 0.85, 0.68, 0.25 }
-Theme.GOLD_DIM  = { 0.45, 0.36, 0.10 }
-Theme.PARCHMENT = { 0.97, 0.90, 0.75 }
-Theme.INK       = { 0.06, 0.05, 0.04 }
--- vert de statut adouci : le vert vif 1eff00 est celui de la rareté
--- « Inhabituel », et un statut ne doit pas se lire comme un objet
-Theme.GREEN     = { 0.40, 0.84, 0.36 }
-Theme.RED       = { 0.90, 0.20, 0.15 }
-Theme.ORANGE    = { 1.00, 0.55, 0.10 }
+local MEDIA = "Interface\\AddOns\\" .. tostring(ADDON or "ReadyToQuest") .. "\\"
+Theme.MEDIA = MEDIA
+
+-- Palette ---------------------------------------------------------------------
+-- GOLD reste le nom historique de la couleur d'accent : c'est l'ambre.
+Theme.GOLD      = { 0.91, 0.65, 0.29 }   -- ambre #e8a54b
+Theme.GOLD_SOFT = { 0.73, 0.47, 0.17 }   -- ambre sombre #b9782c (sections)
+Theme.GOLD_DIM  = { 0.17, 0.19, 0.22 }   -- filets #2a3138
+Theme.PARCHMENT = { 0.95, 0.91, 0.83 }   -- titres #f1e8d4
+Theme.TEXT      = { 0.85, 0.83, 0.78 }   -- texte courant #d9d4c7
+Theme.MUTED     = { 0.49, 0.51, 0.54 }   -- texte secondaire #7d8389
+Theme.INK       = { 0.06, 0.07, 0.09 }
+Theme.SURFACE   = { 0.075, 0.09, 0.105 } -- fond des fenêtres #13171b
+Theme.SURFACE_2 = { 0.06, 0.07, 0.085 }  -- colonne de navigation #0f1215
+Theme.CONTROL   = { 0.16, 0.19, 0.21 }   -- piste, bouton au repos #2a3036
+Theme.GREEN     = { 0.44, 0.81, 0.48 }   -- statut OK #6fcf7a (pas le vert de rareté)
+Theme.RED       = { 0.89, 0.38, 0.31 }   -- statut échec #e2604f
+Theme.ORANGE    = { 0.91, 0.65, 0.29 }   -- statut alerte = l'ambre
 Theme.GREY      = { 0.55, 0.55, 0.55 }
 
-Theme.T_GOLD      = "|cffffd100"
-Theme.T_PARCHMENT = "|cfff8e6c0"
-Theme.T_GREY      = "|cff8c8c8c"
-Theme.T_GREEN     = "|cff66d65c"
-Theme.T_RED       = "|cffff2020"
-Theme.T_ORANGE    = "|cffff8c1a"
+Theme.T_GOLD      = "|cffe8a54b"
+Theme.T_PARCHMENT = "|cfff1e8d4"
+Theme.T_GREY      = "|cff7d8389"
+Theme.T_GREEN     = "|cff6fcf7a"
+Theme.T_RED       = "|cffe2604f"
+Theme.T_ORANGE    = "|cffe8a54b"
 Theme.T_WHITE     = "|cffffffff"
 
--- Textures natives
 Theme.BG_DARK  = "Interface\\DialogFrame\\UI-DialogBox-Background-Dark"
 Theme.BG_LIGHT = "Interface\\DialogFrame\\UI-DialogBox-Background"
 Theme.SOLID    = "Interface\\Buttons\\WHITE8X8"
+Theme.LOGO          = MEDIA .. "Textures\\logo"
+Theme.DIAMOND       = MEDIA .. "Textures\\losange"
+Theme.DIAMOND_LINE  = MEDIA .. "Textures\\losange_trait"
+Theme.FONT_TITLE    = MEDIA .. "Fonts\\Alegreya-Bold.ttf"
 
--- Polices natives
 Theme.F_TITLE  = "GameFontNormalLarge"
 Theme.F_NORMAL = "GameFontHighlight"
 Theme.F_BODY   = "GameFontHighlightSmall"
@@ -58,46 +66,58 @@ local function Clamp(value, minimum, maximum)
 end
 Theme.Clamp = Clamp
 
--- ---------------------------------------------------------------------------
--- Cadre doré dessiné : fond tiled + liseré or + bandeau de titre
--- ---------------------------------------------------------------------------
-local function BuildChrome(frame, background)
-	if frame.SetBackdrop then
-		frame:SetBackdrop({
-			bgFile   = background,
-			edgeFile = Theme.SOLID,
-			tile = true, tileSize = 32, edgeSize = 2,
-			insets = { left = 2, right = 2, top = 2, bottom = 2 },
-		})
-		if frame.SetBackdropColor then
-			frame:SetBackdropColor(1, 1, 1, 1)
-		end
-		if frame.SetBackdropBorderColor then
-			frame:SetBackdropBorderColor(Theme.GOLD_DIM[1], Theme.GOLD_DIM[2], Theme.GOLD_DIM[3], 1)
-		end
-	end
+local function Solid(parent, layer, color, alpha)
+	local tex = parent:CreateTexture(nil, layer or "ARTWORK")
+	tex:SetTexture(Theme.SOLID)
+	tex:SetVertexColor(color[1], color[2], color[3], alpha or 1)
+	return tex
+end
+Theme.Solid = Solid
 
-	-- Filet intérieur clair : donne l'effet « double liseré » des cadres WoW
-	frame.innerLine = frame:CreateTexture(nil, "BORDER")
-	frame.innerLine:SetTexture(Theme.SOLID)
-	frame.innerLine:SetVertexColor(Theme.GOLD_SOFT[1], Theme.GOLD_SOFT[2], Theme.GOLD_SOFT[3], 0.35)
-	frame.innerLine:SetPoint("TOPLEFT", 3, -3)
-	frame.innerLine:SetPoint("TOPRIGHT", -3, -3)
-	frame.innerLine:SetHeight(1)
+-- Police de titre : appliquée sur une FontString existante. Si le client
+-- refuse le fichier (chemin, format), on garde la police GameFont d'origine.
+function Theme.TitleFont(fontString, size)
+	if not fontString or not fontString.SetFont then return false end
+	local ok, applied = pcall(fontString.SetFont, fontString, Theme.FONT_TITLE, size or 14, "")
+	fontString.titleFont = ok and applied ~= false
+	return fontString.titleFont
 end
 
--- ---------------------------------------------------------------------------
--- Fond d'infobulle + bord d'infobulle : c'est ce qu'utilise AtlasLootClassic
--- pour ses fenêtres. Plus sobre qu'une fenêtre natale à fond de pierre.
--- ---------------------------------------------------------------------------
-Theme.BACKDROP_TOOLTIP = {
-	bgFile   = "Interface\\Tooltips\\UI-Tooltip-Background",
-	edgeFile = "Interface\\Tooltips\\UI-Tooltip-Border",
-	tile = true,
-	tileSize = 16,
-	edgeSize = 16,
-	insets = { left = 4, right = 4, top = 4, bottom = 4 },
-}
+function Theme.CreateTitle(parent, size, layer)
+	local fs = parent:CreateFontString(nil, layer or "OVERLAY", Theme.F_TITLE)
+	Theme.TitleFont(fs, size)
+	fs:SetTextColor(Theme.PARCHMENT[1], Theme.PARCHMENT[2], Theme.PARCHMENT[3])
+	return fs
+end
+
+-- Bordure 1 px sur les quatre côtés
+local function Border(frame, color, alpha, layer)
+	local edges = {}
+	for _, side in ipairs({ "top", "bottom", "left", "right" }) do
+		edges[side] = Solid(frame, layer or "BORDER", color, alpha)
+	end
+	edges.top:SetPoint("TOPLEFT"); edges.top:SetPoint("TOPRIGHT"); edges.top:SetHeight(1)
+	edges.bottom:SetPoint("BOTTOMLEFT"); edges.bottom:SetPoint("BOTTOMRIGHT"); edges.bottom:SetHeight(1)
+	edges.left:SetPoint("TOPLEFT"); edges.left:SetPoint("BOTTOMLEFT"); edges.left:SetWidth(1)
+	edges.right:SetPoint("TOPRIGHT"); edges.right:SetPoint("BOTTOMRIGHT"); edges.right:SetWidth(1)
+	function edges:SetColor(r, g, b, a)
+		for _, side in ipairs({ "top", "bottom", "left", "right" }) do self[side]:SetVertexColor(r, g, b, a or 1) end
+	end
+	return edges
+end
+Theme.Border = Border
+
+-- Signature : coin supérieur gauche en équerre ambre, 12 px
+local function CornerAccent(frame)
+	local h = Solid(frame, "OVERLAY", Theme.GOLD, 1)
+	h:SetPoint("TOPLEFT", frame, "TOPLEFT", 0, 0)
+	h:SetSize(12, 2)
+	local v = Solid(frame, "OVERLAY", Theme.GOLD, 1)
+	v:SetPoint("TOPLEFT", frame, "TOPLEFT", 0, 0)
+	v:SetSize(2, 12)
+	return h, v
+end
+Theme.CornerAccent = CornerAccent
 
 -- Échap ferme la fenêtre, comme pour toutes les fenêtres Blizzard
 function Theme.RegisterEscapeClose(frame)
@@ -110,75 +130,57 @@ function Theme.RegisterEscapeClose(frame)
 	UISpecialFrames[#UISpecialFrames + 1] = name
 end
 
--- Bandeau de titre : bande sombre + filet doré + titre + sous-titre + croix
-local function BuildHeader(frame, width, titleText)
-	frame.header = frame:CreateTexture(nil, "BORDER")
-	frame.header:SetTexture(Theme.SOLID)
-	frame.header:SetVertexColor(0, 0, 0, 0.72)
-	frame.header:SetPoint("TOPLEFT", frame, "TOPLEFT", 6, -6)
-	frame.header:SetPoint("TOPRIGHT", frame, "TOPRIGHT", -6, -6)
-	frame.header:SetHeight(22)
+-- ---------------------------------------------------------------------------
+-- Fenêtre : surface plate, filet 1 px, coin ambre, bandeau avec la marque
+-- ---------------------------------------------------------------------------
+local function BuildHeader(frame, titleText, options)
+	frame.logo = frame:CreateTexture(nil, "OVERLAY")
+	frame.logo:SetTexture(Theme.LOGO)
+	frame.logo:SetSize(18, 18)
+	frame.logo:SetPoint("TOPLEFT", frame, "TOPLEFT", 12, -9)
 
-	frame.headerGloss = frame:CreateTexture(nil, "BORDER")
-	frame.headerGloss:SetTexture(Theme.SOLID)
-	frame.headerGloss:SetVertexColor(Theme.GOLD_DIM[1], Theme.GOLD_DIM[2], Theme.GOLD_DIM[3], 0.28)
-	frame.headerGloss:SetPoint("TOPLEFT", frame.header, "TOPLEFT", 0, 0)
-	frame.headerGloss:SetPoint("TOPRIGHT", frame.header, "TOPRIGHT", 0, 0)
-	frame.headerGloss:SetHeight(9)
-
-	frame.headerLine = frame:CreateTexture(nil, "ARTWORK")
-	frame.headerLine:SetTexture(Theme.SOLID)
-	frame.headerLine:SetVertexColor(Theme.GOLD[1], Theme.GOLD[2], Theme.GOLD[3], 0.70)
-	frame.headerLine:SetPoint("TOPLEFT", frame.header, "BOTTOMLEFT", 0, 0)
-	frame.headerLine:SetPoint("TOPRIGHT", frame.header, "BOTTOMRIGHT", 0, 0)
-	frame.headerLine:SetHeight(1)
-
-	frame.title = frame:CreateFontString(nil, "OVERLAY", Theme.F_TITLE)
-	frame.title:SetPoint("LEFT", frame.header, "LEFT", 6, 0)
+	frame.title = Theme.CreateTitle(frame, options.titleSize or 15)
+	frame.title:SetPoint("LEFT", frame.logo, "RIGHT", 7, 0)
 	frame.title:SetText(titleText or "")
-	frame.title:SetTextColor(Theme.GOLD[1], Theme.GOLD[2], Theme.GOLD[3])
 
 	frame.subtitle = frame:CreateFontString(nil, "OVERLAY", Theme.F_BODY)
-	frame.subtitle:SetPoint("RIGHT", frame.header, "RIGHT", -26, 0)
+	frame.subtitle:SetPoint("RIGHT", frame, "TOPRIGHT", -34, -18)
 	frame.subtitle:SetText("")
-	frame.subtitle:SetTextColor(Theme.PARCHMENT[1], Theme.PARCHMENT[2], Theme.PARCHMENT[3])
+	frame.subtitle:SetTextColor(Theme.MUTED[1], Theme.MUTED[2], Theme.MUTED[3])
 
-	local ok, close = pcall(CreateFrame, "Button", nil, frame, "UIPanelCloseButton")
-	if ok and close then
-		close:SetPoint("TOPRIGHT", frame, "TOPRIGHT", -3, -3)
-		if close.SetFrameLevel and frame.GetFrameLevel then
-			close:SetFrameLevel(frame:GetFrameLevel() + 5)
-		end
-		close:SetScript("OnClick", function() frame:Hide() end)
-		frame.close = close
-	end
+	frame.headerLine = Solid(frame, "ARTWORK", Theme.GOLD_DIM, 1)
+	frame.headerLine:SetPoint("TOPLEFT", frame, "TOPLEFT", 1, -34)
+	frame.headerLine:SetPoint("TOPRIGHT", frame, "TOPRIGHT", -1, -34)
+	frame.headerLine:SetHeight(1)
+
+	-- bouton de fermeture dessiné : un « x » dans un carré, pas UIPanelCloseButton
+	local close = CreateFrame("Button", nil, frame)
+	close:SetSize(20, 20)
+	close:SetPoint("TOPRIGHT", frame, "TOPRIGHT", -8, -8)
+	close.border = Border(close, Theme.CONTROL, 1)
+	close.label = close:CreateFontString(nil, "OVERLAY", Theme.F_NORMAL)
+	close.label:SetPoint("CENTER", 0, 1)
+	close.label:SetText("x")
+	close.label:SetTextColor(Theme.MUTED[1], Theme.MUTED[2], Theme.MUTED[3])
+	close:SetScript("OnEnter", function() close.border:SetColor(Theme.GOLD[1], Theme.GOLD[2], Theme.GOLD[3], 1) end)
+	close:SetScript("OnLeave", function() close.border:SetColor(Theme.CONTROL[1], Theme.CONTROL[2], Theme.CONTROL[3], 1) end)
+	close:SetScript("OnClick", function() frame:Hide() end)
+	frame.close = close
 end
 
 function Theme.CreatePanel(parent, width, height, titleText, options)
 	options = options or {}
-	local frame
+	local ok, frame = pcall(CreateFrame, "Frame", options.name, parent or UIParent)
+	if not ok or not frame then frame = CreateFrame("Frame", options.name, parent or UIParent) end
+	if not frame then return nil end
 
-	-- 1) fond et bord d'infobulle (BackdropTemplate)
-	local okBackdrop, backdropFrame = pcall(CreateFrame, "Frame", options.name, parent or UIParent,
-		"BackdropTemplate")
-	if okBackdrop and backdropFrame and backdropFrame.SetBackdrop then
-		frame = backdropFrame
-		frame:SetBackdrop(Theme.BACKDROP_TOOLTIP)
-		if frame.SetBackdropColor then
-			frame:SetBackdropColor(0.015, 0.015, 0.015, 0.92)
-		end
-		if frame.SetBackdropBorderColor then
-			frame:SetBackdropBorderColor(1, 1, 1, 1)
-		end
-		frame.chrome = "backdrop"
-	else
-		-- 2) repli : chrome dessiné, ne dépend d'aucun template
-		local okPlain, plain = pcall(CreateFrame, "Frame", options.name, parent or UIParent)
-		frame = (okPlain and plain) or CreateFrame("Frame", options.name, parent or UIParent)
-		if not frame then return nil end
-		BuildChrome(frame, options.light and Theme.BG_LIGHT or Theme.BG_DARK)
-		frame.chrome = "drawn"
-	end
+	frame.bg = Solid(frame, "BACKGROUND", Theme.SURFACE, options.alpha or 0.97)
+	frame.bg:SetAllPoints()
+	-- (pas de reflet : sans dégradé, un aplat plus clair laisse une marche
+	-- visible au tiers de la fenêtre)
+	frame.border = Border(frame, { 0.17, 0.20, 0.235 }, 1)
+	frame.accentH, frame.accentV = CornerAccent(frame)
+	frame.chrome = "flat"
 
 	frame:SetSize(width, height)
 	frame:SetFrameStrata(options.strata or "DIALOG")
@@ -190,7 +192,7 @@ function Theme.CreatePanel(parent, width, height, titleText, options)
 	frame:SetScript("OnDragStop", frame.StopMovingOrSizing)
 
 	if options.title ~= false then
-		BuildHeader(frame, width, titleText)
+		BuildHeader(frame, titleText, options)
 		frame.contentTop = -36
 	else
 		frame.contentTop = -10
@@ -198,6 +200,22 @@ function Theme.CreatePanel(parent, width, height, titleText, options)
 
 	Theme.RegisterEscapeClose(frame)
 	return frame
+end
+
+-- Apparition : fondu de 0,15 s (AnimationGroup), si le client le propose
+function Theme.FadeIn(frame, duration)
+	if not frame or not frame.CreateAnimationGroup then return false end
+	if not frame.fadeIn then
+		local ok, group = pcall(frame.CreateAnimationGroup, frame)
+		if not ok or not group then return false end
+		local alpha = group:CreateAnimation("Alpha")
+		if alpha.SetFromAlpha then alpha:SetFromAlpha(0); alpha:SetToAlpha(1) end
+		alpha:SetDuration(duration or 0.15)
+		frame.fadeIn = group
+	end
+	frame.fadeIn:Stop()
+	frame.fadeIn:Play()
+	return true
 end
 
 -- ---------------------------------------------------------------------------
@@ -229,7 +247,7 @@ function Theme.CreateDiscreet(parent, width, height)
 	local function Edge()
 		local edge = frame:CreateTexture(nil, "BORDER")
 		edge:SetTexture(Theme.SOLID)
-		edge:SetVertexColor(Theme.GOLD_SOFT[1], Theme.GOLD_SOFT[2], Theme.GOLD_SOFT[3], 0.55)
+		edge:SetVertexColor(Theme.GOLD_SOFT[1], Theme.GOLD_SOFT[2], Theme.GOLD_SOFT[3], 0.45)
 		return edge
 	end
 
@@ -258,53 +276,33 @@ function Theme.CreateDiscreet(parent, width, height)
 end
 
 
+
+-- ---------------------------------------------------------------------------
+-- Barre : piste ardoise, remplissage plat
+-- ---------------------------------------------------------------------------
 function Theme.CreateBar(parent, width, height)
 	local bar = CreateFrame("Frame", nil, parent)
 	bar:SetSize(width, height)
 
-	bar.bg = bar:CreateTexture(nil, "BACKGROUND")
-	bar.bg:SetTexture(Theme.SOLID)
-	bar.bg:SetVertexColor(0, 0, 0, 0.75)
+	bar.bg = Solid(bar, "BACKGROUND", { 0.15, 0.17, 0.20 }, 1)
 	bar.bg:SetAllPoints()
 
-	bar.fill = bar:CreateTexture(nil, "ARTWORK")
-	bar.fill:SetTexture(Theme.SOLID)
-	bar.fill:SetVertexColor(Theme.GOLD[1], Theme.GOLD[2], Theme.GOLD[3], 0.95)
+	bar.fill = Solid(bar, "ARTWORK", Theme.GOLD, 1)
 	bar.fill:SetPoint("TOPLEFT")
 	bar.fill:SetPoint("BOTTOMLEFT")
 	bar.fill:SetWidth(0)
 
-	bar.gloss = bar:CreateTexture(nil, "ARTWORK")
-	bar.gloss:SetTexture(Theme.SOLID)
-	bar.gloss:SetVertexColor(1, 1, 1, 0.16)
-	bar.gloss:SetPoint("TOPLEFT", 0, 0)
-	bar.gloss:SetPoint("TOPRIGHT", 0, 0)
-	bar.gloss:SetHeight(math.max(1, height / 2))
-
-	bar.topLine = bar:CreateTexture(nil, "OVERLAY")
-	bar.topLine:SetTexture(Theme.SOLID)
-	bar.topLine:SetVertexColor(Theme.GOLD_DIM[1], Theme.GOLD_DIM[2], Theme.GOLD_DIM[3], 0.9)
-	bar.topLine:SetPoint("TOPLEFT", 0, 1)
-	bar.topLine:SetPoint("TOPRIGHT", 0, 1)
-	bar.topLine:SetHeight(1)
-
 	function bar:SetValue(ratio)
 		ratio = Clamp(tonumber(ratio) or 0, 0, 1)
-		local width = self:GetWidth() * ratio
-		self.fill:SetWidth(math.max(0, width))
-		self.gloss:SetWidth(math.max(0, width))
-		self.gloss:ClearAllPoints()
-		self.gloss:SetPoint("TOPLEFT", self, "TOPLEFT", 0, 0)
-		if width > 0 then
-			self.gloss:SetPoint("TOPRIGHT", self, "TOPLEFT", width, 0)
-		else
-			self.gloss:SetPoint("TOPRIGHT", self, "TOPLEFT", 0, 0)
-		end
-		self.gloss:SetHeight(math.max(1, self:GetHeight() / 2))
+		self.ratio = ratio
+		local w = self:GetWidth() * ratio
+		-- une texture de largeur 0 peut s'afficher sur 1 px : on la masque
+		if w <= 0 then self.fill:Hide() else self.fill:Show() end
+		self.fill:SetWidth(math.max(0, w))
 	end
 
 	function bar:SetColor(r, g, b, a)
-		self.fill:SetVertexColor(r, g, b, a or 0.95)
+		self.fill:SetVertexColor(r, g, b, a or 1)
 	end
 
 	return bar
@@ -314,51 +312,85 @@ end
 -- Filet de séparation
 -- ---------------------------------------------------------------------------
 function Theme.CreateDivider(parent, width, y)
-	local line = parent:CreateTexture(nil, "ARTWORK")
-	line:SetTexture(Theme.SOLID)
-	line:SetVertexColor(Theme.GOLD_DIM[1], Theme.GOLD_DIM[2], Theme.GOLD_DIM[3], 0.7)
+	local line = Solid(parent, "ARTWORK", Theme.GOLD_DIM, 1)
 	line:SetPoint("TOPLEFT", parent, "TOPLEFT", 12, y or 0)
 	line:SetSize(width or 100, 1)
 	return line
 end
 
 -- ---------------------------------------------------------------------------
--- Bouton natif
+-- Bouton dessiné : fond ardoise, filet, libellé ; `primary` = plein ambre.
+-- Plus de UIPanelButtonTemplate : l'apparence ne dépend plus du client.
 -- ---------------------------------------------------------------------------
-function Theme.CreateButton(parent, width, height, label, onClick)
-	local ok, button = pcall(CreateFrame, "Button", nil, parent, "UIPanelButtonTemplate")
-	if not ok or not button then
-		button = CreateFrame("Button", nil, parent)
-		if button.SetBackdrop then
-			button:SetBackdrop({
-				bgFile = Theme.BG_LIGHT, edgeFile = Theme.SOLID,
-				tile = true, tileSize = 16, edgeSize = 1,
-				insets = { left = 1, right = 1, top = 1, bottom = 1 },
-			})
-			if button.SetBackdropBorderColor then
-				button:SetBackdropBorderColor(Theme.GOLD_DIM[1], Theme.GOLD_DIM[2], Theme.GOLD_DIM[3], 1)
-			end
+function Theme.CreateButton(parent, width, height, label, onClick, style)
+	local button = CreateFrame("Button", nil, parent)
+	button:SetSize(width, height)
+	button.style = style or "normal"
+
+	local primary = button.style == "primary"
+	button.bg = Solid(button, "BACKGROUND", primary and Theme.GOLD or { 0.085, 0.10, 0.12 }, 1)
+	button.bg:SetAllPoints()
+	button.border = Border(button, primary and Theme.GOLD or { 0.23, 0.26, 0.29 }, 1)
+
+	button.text = button:CreateFontString(nil, "OVERLAY", Theme.F_SMALL)
+	button.text:SetPoint("CENTER", 0, 0)
+	button.text:SetText(label)
+	if primary then
+		button.text:SetTextColor(0.08, 0.09, 0.11)
+	else
+		button.text:SetTextColor(0.81, 0.78, 0.72)
+	end
+	button.SetText = function(self, text) self.text:SetText(text) end
+	button.GetText = function(self) return self.text:GetText() end
+
+	-- survol : le filet passe à l'ambre
+	button:SetScript("OnEnter", function(self)
+		if not primary then self.border:SetColor(Theme.GOLD[1], Theme.GOLD[2], Theme.GOLD[3], 1) end
+	end)
+	button:SetScript("OnLeave", function(self)
+		if not primary then self.border:SetColor(0.23, 0.26, 0.29, 1) end
+	end)
+	if onClick then button:SetScript("OnClick", onClick) end
+	return button
+end
+
+-- ---------------------------------------------------------------------------
+-- Interrupteur : piste 30 x 14, curseur carré ; ambre quand il est actif
+-- ---------------------------------------------------------------------------
+function Theme.CreateToggle(parent)
+	local toggle = CreateFrame("Frame", nil, parent)
+	toggle:SetSize(30, 14)
+	toggle.track = Solid(toggle, "BACKGROUND", Theme.CONTROL, 1)
+	toggle.track:SetAllPoints()
+	toggle.edge = Border(toggle, Theme.GOLD, 0)
+	toggle.knob = Solid(toggle, "ARTWORK", { 0.48, 0.51, 0.53 }, 1)
+	toggle.knob:SetSize(10, 10)
+
+	function toggle:SetChecked(on)
+		self.checked = on and true or false
+		self.knob:ClearAllPoints()
+		if self.checked then
+			self.knob:SetPoint("RIGHT", self, "RIGHT", -2, 0)
+			self.knob:SetVertexColor(Theme.GOLD[1], Theme.GOLD[2], Theme.GOLD[3], 1)
+			self.track:SetVertexColor(Theme.GOLD[1] * 0.25, Theme.GOLD[2] * 0.25, Theme.GOLD[3] * 0.25, 1)
+			self.edge:SetColor(Theme.GOLD[1], Theme.GOLD[2], Theme.GOLD[3], 1)
+		else
+			self.knob:SetPoint("LEFT", self, "LEFT", 2, 0)
+			self.knob:SetVertexColor(0.48, 0.51, 0.53, 1)
+			self.track:SetVertexColor(Theme.CONTROL[1], Theme.CONTROL[2], Theme.CONTROL[3], 1)
+			self.edge:SetColor(0, 0, 0, 0)
 		end
 	end
-	button:SetSize(width, height)
+	toggle:SetChecked(false)
+	return toggle
+end
 
-	if button.SetText then
-		button:SetText(label)
-	else
-		button.text = button:CreateFontString(nil, "OVERLAY", Theme.F_SMALL)
-		button.text:SetPoint("CENTER")
-		button.text:SetText(label)
-		button.text:SetTextColor(Theme.GOLD[1], Theme.GOLD[2], Theme.GOLD[3])
-		-- même interface que UIPanelButtonTemplate, pour pouvoir relibeller
-		button.SetText = function(self, text) self.text:SetText(text) end
-	end
-
-	if button.SetNormalFontObject and GameFontNormalSmall then
-		button:SetNormalFontObject(GameFontNormalSmall)
-	end
-	if onClick then button:SetScript("OnClick", onClick) end
-
-	return button
+-- Losange de statut / puce : plein (échec, alerte, puce) ou au trait (OK)
+function Theme.CreateDiamond(parent, size, outline)
+	local tex = parent:CreateTexture(nil, "OVERLAY")
+	tex:SetTexture(outline and Theme.DIAMOND_LINE or Theme.DIAMOND)
+	tex:SetSize(size or 10, size or 10)
+	return tex
 end
 
 -- ---------------------------------------------------------------------------

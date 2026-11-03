@@ -459,11 +459,12 @@ function ns:IsDiscreetAlert(trigger)
 end
 
 function ns:PrintBrief()
-	local label = self:ScoreLabel()
 	local from = self.lastDeparture
 	local suffix = ""
 	if from and from.name then suffix = self:F("MSG_BRIEF_FROM", tostring(from.name)) end
-	self:Print(self:F("MSG_BRIEF", tostring(label), self.score or 0, suffix))
+	local _, color = self:ScoreLabel()
+	local key = (color == "green" and "MSG_BRIEF_READY") or (color == "orange" and "MSG_BRIEF_RESERVES") or "MSG_BRIEF_NOT"
+	self:Print(self:F(key, self.score or 0, suffix))
 end
 
 -- ---------------------------------------------------------------------------

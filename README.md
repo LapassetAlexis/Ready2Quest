@@ -1,4 +1,17 @@
-# Ready to Quest — v1.19.0
+# Ready to Quest — v1.20.0
+
+## v1.20.0 — une identité à soi
+
+L'addon ressemblait à un morceau de l'interface Blizzard. Il a maintenant sa personnalité, sur un principe repris de suites comme EllesmereUI : **un seul système visuel, appliqué partout**. L'apparence, elle, reste propre à Ready to Quest : un « carnet de route », ambre et ardoise, avec une boussole pour marque (détail dans *Direction artistique*).
+
+- **Diagnostic** : titre « Avant le départ », note en grand dans la police maison, qui compte jusqu'à sa valeur, et verdict en tampon bordé à la couleur du statut. « Parti de Comté-de-l'Or · boîte aux lettres » est dans le bandeau. Chaque ligne a un losange de statut, et les conseils ont des puces en losange.
+- **Réglages** : navigation en deux groupes (Préparation, Interface), page active teintée et soulignée d'ambre, titre de page dans la police maison avec une phrase d'explication. Les booléens ont des interrupteurs, les seuils une piste de valeur. « Fermer » est en ambre plein.
+- **Minicarte** : la boussole remplace l'icône de sac.
+- **Chat** : préfixe ambre `[Ready to Quest]`, alerte discrète en « Sac bouclé / Presque prêt / Pas prêt ».
+- **Plus aucun template Blizzard** pour les fenêtres et contrôles : l'apparence ne dépend plus de l'art du client (« Camelot » sur Forever, encore inconnu).
+
+---
+
 
 ## v1.19.0 — réglages par pages
 
@@ -134,7 +147,7 @@ Inchangé : la commande reste `/sd` (`/sacdepart` fonctionne encore). Le titre a
 
 ---
 
-Addon QoL pour **WoW Forever**, habillé aux couleurs de **World of Warcraft** : fond de dialogue sombre, liseré or, polices `GameFont`, boutons `UIPanelButtonTemplate`, couleurs de rareté officielles. Aucune texture importée.
+Addon QoL pour **WoW Forever**, avec sa propre identité « carnet de route » : surfaces ardoise, accent ambre, titres en Alegreya, boussole en guise de marque (voir *Direction artistique*).
 
 | Module | Ce qu'il fait |
 |---|---|
@@ -293,23 +306,24 @@ Un seul niveau `ReadyToQuest`, et le `.toc` directement dedans.
 
 ---
 
-## Direction artistique
+## Direction artistique : « carnet de route »
 
-Tout est centralisé dans `Theme.lua`, et **uniquement avec des textures dont la présence est confirmée** (elles sont référencées par le code de Blizzard lui-même) :
+Depuis la v1.20.0, l'addon a sa propre identité. Il ne cherche plus à ressembler à l'interface Blizzard. Tout est centralisé dans `Theme.lua`.
 
-| Élément | Source |
+| Élément | Choix |
 |---|---|
-| Fond des panneaux | `Interface\DialogFrame\UI-DialogBox-Background-Dark` |
-| Fond de la carte de comparaison | `Interface\DialogFrame\UI-DialogBox-Background` |
-| Liseré, filets, barres | `Interface\Buttons\WHITE8X8` teinté or |
-| Boutons | `UIPanelButtonTemplate` (repli sur bouton nu si absent) |
-| Polices | `GameFontNormalLarge`, `GameFontHighlight(Small)`, `NumberFontNormal` |
-| Couleurs de rareté | `ITEM_QUALITY_COLORS` (table de Blizzard) |
-| Icônes de module | `Interface\Icons\INV_Misc_Bag_10`, `INV_Misc_Food_15`, … |
+| Accent | **ambre** `#e8a54b`, réservé à ce qui compte : page active, valeur, action principale, marque |
+| Statut | vert `#6fcf7a` (distinct du vert de rareté), ambre, rouge `#e2604f` |
+| Surfaces | ardoise plate `#13171b`, navigation `#0f1215`, filets `#2a3138` |
+| Signature | équerre ambre dans le coin supérieur gauche de chaque fenêtre |
+| Police des titres | **Alegreya Bold**, embarquée (`Fonts/`, licence OFL, sans nom réservé), pour les titres et la note ; texte courant en `GameFont` |
+| Marque | boussole ambre (`Textures/logo.tga`) : bandeau des fenêtres, bouton de minicarte |
+| Statut des lignes | losange plein = à voir ou en échec, losange au trait = OK : la forme dit l'état autant que la couleur |
+| Contrôles | boutons, interrupteurs, pistes, croix de fermeture **dessinés par l'addon** : aucun `UIPanelButtonTemplate`, `BackdropTemplate` ni `UIPanelCloseButton` |
+| Mouvement | fondu de 0,15 s à l'ouverture (`AnimationGroup`), note qui compte jusqu'à sa valeur en 0,45 s |
+| Voix | « Sac bouclé, 92/100. Parti de Long-guet. », « Presque prêt », « Pas prêt » |
 
-Choix assumé : le cadre doré est **dessiné** (bordures 1 px teintées + filet intérieur) plutôt que délégué à un template `NineSlice`. Forever utilise une déclinaison d'art « Camelot » propre, et un layout NineSlice nommé pourrait ne pas exister — mieux vaut un cadre qui s'affiche toujours.
-
-Aperçu : `ReadyToQuest-apercu.png`, généré par `tests/mockup.py`.
+Textures propres : `logo.tga` (boussole 64×64), `losange.tga` et `losange_trait.tga` (16×16, blancs, teintés en jeu). Elles sont générées en code, et tout le reste est `Interface\Buttons\WHITE8X8` teinté. Si le client refuse la police, l'addon garde `GameFont` sans erreur.
 
 ---
 
@@ -1351,7 +1365,7 @@ Alias : `/sacdepart`.
 ## Tests
 
 ```
-python3 tests/run_tests.py     →  631 réussis, 0 échoués
+python3 tests/run_tests.py     →  656 réussis, 0 échoués
 ```
 
 Lua 5.1 (version du client), client WoW simulé. Couvre notamment : apprentissage par indices (sous-zone, capitale par deux quartiers, purge de l'ancien schéma), délai de sortie / vol / mort, nouveaux checks et automatismes du marchand en mode Era, chaîne de cartes parentes, anti-spam, filtrage des procs, **valeurs secrètes**, comptages sacs/vivres/potions/durabilité/quêtes, score pondéré et bilans, fenêtre de diagnostic (icônes, barres, bandeau), panneau d'équipement (17 lignes, moyenne, rareté, pièces faibles), comparaison au survol (amélioration, régressif, vide, anneaux), **les deux voies de hook tooltip**, bouton sans template Blizzard, et toutes les commandes.

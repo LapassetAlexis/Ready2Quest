@@ -124,6 +124,26 @@ local function NewRegion(kind, name)
 	function region:Show() self.shown = true end
 	function region:Hide() self.shown = false end
 	function region:IsShown() return self.shown end
+	function region:CreateAnimationGroup()
+		local group = { plays = 0, animations = {} }
+		function group:CreateAnimation(kind)
+			local anim = { kind = kind }
+			function anim:SetFromAlpha(v) self.from = v end
+			function anim:SetToAlpha(v) self.to = v end
+			function anim:SetDuration(v) self.duration = v end
+			self.animations[#self.animations + 1] = anim
+			return anim
+		end
+		function group:Play() self.plays = self.plays + 1 end
+		function group:Stop() end
+		self.animGroups = (self.animGroups or 0) + 1
+		return group
+	end
+	function region:SetFont(path, size, flags)
+		if Mock.world.fontRefused then return false end
+		self.font = { path = path, size = size, flags = flags }
+		return true
+	end
 	function region:SetText(value) self.text = value end
 	function region:GetText() return self.text end
 	function region:SetShadowColor(r, g, b, a) self.shadow = { r, g, b, a } end
@@ -1137,8 +1157,8 @@ Check("score affiché", NS.window and NS.window.scoreValue.text:find(tostring(NS
 Check("barre de score remplie", NS.window and NS.window.scoreBar.fill.width > 0,
 	NS.window and NS.window.scoreBar.fill.width)
 Check("détail du premier module", NS.window.rows[1].detail.text ~= "", NS.window.rows[1].detail.text)
-Check("icône de module posée", NS.window.rows[1].icon.tex.texture ~= nil,
-	NS.window.rows[1].icon.tex.texture)
+Check("losange de statut posé", NS.window.rows[1].status and tostring(NS.window.rows[1].status.texture):find("losange") ~= nil,
+	NS.window.rows[1].status and NS.window.rows[1].status.texture)
 Check("verdict affiché à côté de la note", NS.window.verdict and NS.window.verdict.text ~= "",
 	NS.window.verdict and NS.window.verdict.text)
 
@@ -1445,7 +1465,7 @@ ResetWorld()
 Say("\n== bootstrap et diagnostic ==")
 ResetWorld()
 Check("commande enregistrée par le bootstrap", type(SlashCmdList["SACETDEPART"]) == "function")
-Check("version exposée", NS.version == "1.19.0", NS.version)
+Check("version exposée", NS.version == "1.20.0", NS.version)
 
 local missingMods = {}
 for _, name in ipairs({ "Bootstrap", "Locales", "Compat", "Theme", "Core", "Buffs", "Reagents",
@@ -1466,7 +1486,7 @@ NS.HandleCommand = savedHandle
 Mock:Reset()
 NS:HandleCommand("diag")
 Check("/sd diag liste les modules", Mock:Output():find("modules :") ~= nil, Mock:Output())
-Check("/sd diag affiche la version", Mock:Output():find("1%.19%.0") ~= nil, Mock:Output())
+Check("/sd diag affiche la version", Mock:Output():find("1%.20%.0") ~= nil, Mock:Output())
 
 -- une erreur est enregistrée et affichée
 Mock:Reset()
@@ -1788,7 +1808,7 @@ Check("liseré 50x50", lancer.bg.width == 50, lancer.bg.width)
 Check("pastille = fileID 136467", lancer.plate.texture == 136467, lancer.plate.texture)
 Check("pastille 24x24", lancer.plate.width == 24, lancer.plate.width)
 Check("icône 18x18", lancer.icon.width == 18 and lancer.icon.height == 18, lancer.icon.width)
-Check("icône = sac", tostring(lancer.icon.texture):find("INV_Misc_Bag_10") ~= nil, lancer.icon.texture)
+Check("icône = boussole de la marque", tostring(lancer.icon.texture):find("Textures\\logo") ~= nil, lancer.icon.texture)
 
 -- Classic : chrome historique
 ResetWorld()
@@ -1952,9 +1972,9 @@ Check("DPS listé", blob:find("DPS") ~= nil)
 -- affiche une valeur plus élevée. La mise en avant suit la classe et la spé,
 -- pas le maximum (l'ancienne règle soulignait l'Endurance).
 Check("Force mise en avant pour Guerrier/Armes",
-	blob:find("|cffffd100Force") ~= nil, blob)
+	blob:find("|cffe8a54bForce") ~= nil, blob)
 Check("Endurance non mise en avant malgré sa valeur supérieure",
-	blob:find("|cffffd100Endurance") == nil, blob)
+	blob:find("|cffe8a54bEndurance") == nil, blob)
 
 NS:HidePortraitStats()
 
@@ -2019,13 +2039,13 @@ local function highlightFor(classFile, specIndex)
 end
 
 local rogue = highlightFor("ROGUE", 1)
-Check("Voleur : Agilité mise en avant", rogue:find("|cffffd100Agilité") ~= nil, rogue)
+Check("Voleur : Agilité mise en avant", rogue:find("|cffe8a54bAgilité") ~= nil, rogue)
 local priest = highlightFor("PRIEST", 1)
 Check("Prêtre : Intelligence mise en avant",
-	priest:find("|cffffd100Intelligence") ~= nil, priest)
+	priest:find("|cffe8a54bIntelligence") ~= nil, priest)
 local druid = highlightFor("DRUID", 3)
 Check("Druide Restauration : Endurance non mise en avant",
-	druid:find("|cffffd100Endurance") == nil, druid)
+	druid:find("|cffe8a54bEndurance") == nil, druid)
 -- le panneau ne liste que le strict nécessaire : un Voleur n'a pas d'Esprit,
 -- un Druide Restauration n'a pas de Force à lire en premier
 Check("Voleur : pas d'Esprit", rogue:find("Esprit") == nil, rogue)
@@ -2173,19 +2193,19 @@ ResetWorld()
 NS:ToggleOptions()
 local editButton = NS.optionsFrame.editButton
 Check("bouton de déplacement présent", editButton ~= nil)
-Check("libellé du bouton", tostring(editButton.text):find("Déplacer") ~= nil,
-	editButton and editButton.text)
+Check("libellé du bouton", tostring(editButton:GetText()):find("Déplacer") ~= nil,
+	editButton and editButton:GetText())
 
 editButton:Click()
 Check("clic active le mode édition", NS.editMode == true)
 Check("réglages refermés", NS.optionsFrame:IsShown() == false)
-Check("bouton renommé pendant l'édition", tostring(editButton.text):find("Terminer") ~= nil,
-	editButton.text)
+Check("bouton renommé pendant l'édition", tostring(editButton:GetText()):find("Terminer") ~= nil,
+	editButton:GetText())
 
 Mock:Reset()
 NS:HandleCommand("move stop")
 Check("/sd move stop termine", NS.editMode == nil)
-Check("bouton redevenu normal", tostring(editButton.text):find("Déplacer") ~= nil, editButton.text)
+Check("bouton redevenu normal", tostring(editButton:GetText()):find("Déplacer") ~= nil, editButton:GetText())
 
 Mock:Reset()
 NS:HandleCommand("move")
@@ -2281,7 +2301,11 @@ if frame then
 	for _, row in ipairs(frame.rows) do
 		local point, _, _, x = row.value:GetPoint()
 		if point == "RIGHT" and x ~= lay.valueRight then misaligned = misaligned + 1 end
-		local room = lay.rowWidth - 2 + lay.valueRight - lay.valueWidth
+		-- place du libellé : jusqu'à la piste (seuils), la valeur (actions) ou l'interrupteur
+		local room
+		if row.track then room = lay.rowWidth - 2 + lay.trackRight - lay.trackWidth - 6
+		elseif row.toggle then room = lay.rowWidth - 2 + lay.toggleRight - 30 - 6
+		else room = lay.rowWidth - 2 + lay.valueRight - lay.valueWidth end
 		if #(row.label.text or "") * 6.4 > room then tooLong[#tooLong + 1] = tostring(row.label.text) end
 	end
 	Check("les modules partagent la colonne de valeurs", misaligned == 0, misaligned)
@@ -2693,15 +2717,17 @@ Say("\n== chrome des fenêtres ==")
 ResetWorld()
 NS:ToggleOptions()
 local win = NS.optionsFrame
-Check("fond d'infobulle appliqué", win.chrome == "backdrop", win.chrome)
-Check("backdrop renseigné", win.backdrop ~= nil and win.backdrop.edgeFile ~= nil,
-	win.backdrop and win.backdrop.edgeFile)
-Check("bord d'infobulle", tostring(win.backdrop.edgeFile):find("UI%-Tooltip%-Border") ~= nil,
-	win.backdrop and win.backdrop.edgeFile)
-Check("fond d'infobulle", tostring(win.backdrop.bgFile):find("UI%-Tooltip%-Background") ~= nil,
-	win.backdrop and win.backdrop.bgFile)
-Check("fond presque opaque", win.backdropColor and win.backdropColor[4] > 0.8,
-	win.backdropColor and win.backdropColor[4])
+-- v1.20.0 : surface plate maison, plus de fond ni de bord d'infobulle
+Check("surface plate appliquée", win.chrome == "flat", win.chrome)
+Check("aucun backdrop Blizzard", win.backdrop == nil)
+Check("fond presque opaque", win.bg and win.bg.vertex and win.bg.vertex[4] > 0.9, win.bg and win.bg.vertex and win.bg.vertex[4])
+Check("filet 1 px sur les quatre côtés", win.border and win.border.top and win.border.left and win.border.bottom and win.border.right)
+Check("coin d'accent ambre", win.accentH and win.accentH.vertex[1] > 0.9 and win.accentH.vertex[3] < 0.35,
+	win.accentH and table.concat(win.accentH.vertex, ","))
+Check("marque : logo boussole dans le bandeau", win.logo and tostring(win.logo.texture):find("logo") ~= nil,
+	win.logo and win.logo.texture)
+Check("titre en police maison", win.title and win.title.font and tostring(win.title.font.path):find("Alegreya") ~= nil,
+	win.title and win.title.font and win.title.font.path)
 Check("pas de portrait", win.portrait == nil)
 Check("titre présent", win.title ~= nil and tostring(win.title.text):find("Réglages") ~= nil,
 	win.title and win.title.text)
@@ -2712,14 +2738,20 @@ Check("contenu sous le bandeau", win.contentTop == -36, win.contentTop)
 -- le diagnostic aussi
 NS:ToggleOptions()
 NS:RunChecklist("manual")
-Check("diagnostic en fond d'infobulle", NS.window.chrome == "backdrop", NS.window.chrome)
+Check("diagnostic : même surface plate", NS.window.chrome == "flat", NS.window.chrome)
 
--- repli si BackdropTemplate manque
+-- aucun template Blizzard requis : sans BackdropTemplate ni UIPanelButtonTemplate,
+-- le panneau est identique (c'est tout l'intérêt des contrôles dessinés)
 ResetWorld()
 Mock.world.noBackdropTemplate = true
+Mock.world.noButtonTemplate = true
+Mock.world.fontRefused = true
 NS:ToggleOptions()
 local fallback = NS.optionsFrame
-Check("repli sans BackdropTemplate", fallback.chrome == "drawn", fallback.chrome)
+Check("sans templates : même chrome", fallback.chrome == "flat", fallback.chrome)
+Check("police refusée : repli GameFont sans erreur", fallback.title.titleFont == false)
+Mock.world.noButtonTemplate = false
+Mock.world.fontRefused = false
 Check("repli toujours titré", fallback.title ~= nil and tostring(fallback.title.text) ~= "")
 Check("repli toujours complet", fallback.rows ~= nil and #fallback.rows == 33,
 	fallback.rows and #fallback.rows)
@@ -2995,7 +3027,7 @@ Mock:Fire("ZONE_CHANGED")
 Mock:Advance(6)
 Check("Era : sortie de village détectée", NS.lastResults ~= nil)
 Check("fenêtre : ligne « Parti de » affichée", NS.window and NS.window.departed
-	and NS.window.departed.text:find("Parti de : Comté%-de%-l'Or") ~= nil
+	and NS.window.departed.text:find("Parti de Comté%-de%-l'Or") ~= nil
 	and NS.window.departed.text:find("boîte aux lettres") ~= nil,
 	NS.window and NS.window.departed and NS.window.departed.text)
 NS:RunChecklist("manual")
@@ -3022,6 +3054,7 @@ end
 Check("nouvelles chaînes présentes en frFR", #missingFr == 0, table.concat(missingFr, ", "))
 Check("nouvelles chaînes présentes en enUS", #missingEn == 0, table.concat(missingEn, ", "))
 
+do
 -- ---------------------------------------------------------------------------
 -- Correctifs de l'audit Era (v1.18.0)
 -- ---------------------------------------------------------------------------
@@ -3279,6 +3312,8 @@ Mock:Reset()
 NS:HandleCommand("diag")
 Check("[16] diag : raison de la zone sûre", Mock:Output():find("true %(resting") ~= nil, Mock:Output())
 
+end
+do
 -- ---------------------------------------------------------------------------
 -- Critique UX (v1.18.0)
 -- ---------------------------------------------------------------------------
@@ -3303,7 +3338,7 @@ Mock:Fire("ZONE_CHANGED")
 Mock:Advance(6)
 Check("[UX2] note >= 85 : check lancé", NS.lastResults ~= nil and (NS.score or 0) >= 85, NS.score)
 Check("[UX2] note >= 85 : pas de fenêtre", NS.window == nil or NS.window.shown ~= true)
-Check("[UX2] note >= 85 : une ligne dans le chat", Mock:Output():find("/100 %(parti de Village%)") ~= nil, Mock:Output())
+Check("[UX2] note >= 85 : une ligne dans le chat", Mock:Output():find("Sac bouclé, %d+/100%. Parti de Village%.") ~= nil, Mock:Output())
 NS:RunChecklist("manual")
 Check("[UX2] check manuel : fenêtre toujours ouverte", NS.window and NS.window.shown == true)
 ReadyWorld()
@@ -3351,7 +3386,16 @@ Check("[UX5] modules sans objet masqués", not shownText:find("Réparation") and
 Check("[UX5] échec le plus lourd en tête (vivres, 20)", shown[1] == "Vivres", shownText)
 Check("[UX5] module coupé par le joueur : en bas, grisé", shown[#shown] == "Quêtes", shownText)
 Check("[UX5] fenêtre plus courte que 13 lignes", NS.window.height < NS:WindowHeight(13, false), NS.window.height)
-Check("[UX10] « ! » devant un échec", NS.window.rows[1].detail.text:sub(1, 2) == "! ", NS.window.rows[1].detail.text)
+-- v1.20.0 : la forme porte le statut (losange plein = à voir, au trait = OK)
+local firstStatus = NS.window.rows[1].status
+Check("[UX10] échec : losange plein", firstStatus.state == "bad" or firstStatus.state == "warn", firstStatus.state)
+Check("[UX10] échec : texture pleine, pas au trait", tostring(firstStatus.texture):find("losange_trait") == nil,
+	firstStatus.texture)
+local okStatus
+for i = 1, NS.window.visibleRows do
+	if NS.window.rows[i].status.state == "ok" then okStatus = NS.window.rows[i].status end
+end
+Check("[UX10] OK : losange au trait", okStatus and tostring(okStatus.texture):find("losange_trait") ~= nil)
 NS:SetModuleEnabled("quests", true)
 
 -- [6] repos : information, sans poids ni conseil
@@ -3385,6 +3429,64 @@ Check("[UX9] message de vente auto : une seule fois", notices == 1, notices)
 -- [10] vert de statut distinct du vert de rareté
 Check("[UX10] vert de statut ≠ vert « Inhabituel »", NS.Theme.T_GREEN ~= "|cff1eff00")
 
+end
+do
+-- ---------------------------------------------------------------------------
+-- Identité visuelle (v1.20.0)
+-- ---------------------------------------------------------------------------
+Say("\n== identité visuelle ==")
+EnterEra()
+NS.window = nil
+Mock.world.durability = { [5] = { 5, 100 } }
+NS:RunChecklist("manual")
+local w = NS.window
+Check("[ID] note en police maison, grand corps", w.scoreValue.font and w.scoreValue.font.size >= 30
+	and tostring(w.scoreValue.font.path):find("Alegreya") ~= nil, w.scoreValue.font and w.scoreValue.font.size)
+Check("[ID] verdict dans un tampon bordé", w.stamp and w.stamp.border and w.verdict.text ~= "", w.verdict.text)
+Check("[ID] tampon à la couleur du verdict", w.stamp.border.top.vertex[1] == w.verdict.textColor[1])
+Check("[ID] fenêtre : fondu à l'ouverture", w.fadeIn and w.fadeIn.plays >= 1)
+Check("[ID] titre de la fenêtre : « Avant le départ »", w.title.text == "Avant le départ", w.title.text)
+local target = NS.score
+Check("[ID] animation : départ de 0", w.animStart ~= nil and w.animFrom == 0)
+Mock:Advance(0.1)
+local mid = tonumber(w.scoreValue.text)
+Check("[ID] animation : la note monte", mid ~= nil and mid > 0 and mid < target, tostring(mid) .. " / " .. target)
+Mock:Advance(1)
+Check("[ID] animation : termine sur la valeur exacte", tonumber(w.scoreValue.text) == target and w.animStart == nil,
+	w.scoreValue.text)
+Check("[ID] puces de conseil : losanges ambre", w.adviceBullets[1] and tostring(w.adviceBullets[1].texture):find("losange") ~= nil)
+Check("[ID] préfixe du chat ambre", NS.L.TAG:find("|cffe8a54b", 1, true) ~= nil, NS.L.TAG)
+
+NS.optionsFrame = nil
+NS:ToggleOptions()
+local o = NS.optionsFrame
+Check("[ID] options : deux groupes dans la navigation", #o.navGroups == 2, #o.navGroups)
+Check("[ID] options : bouton Fermer en ambre (principal)", o.closeButton.style == "primary")
+local toggles, tracks, subs = 0, 0, 0
+for _, row in ipairs(o.rows) do
+	if row.toggle then toggles = toggles + 1 end
+	if row.track then tracks = tracks + 1 end
+end
+for _, page in pairs(o.pages) do if page.sub.text ~= "" then subs = subs + 1 end end
+Check("[ID] interrupteurs dessinés pour les booléens et modules", toggles == 13 + 9, toggles)
+Check("[ID] pistes pour les seuils", tracks == 10, tracks)
+Check("[ID] chaque page a sa phrase d'explication", subs == 9, subs)
+local delayRow
+for _, row in ipairs(o.rows) do if row.def and row.def.key == "exitDelay" then delayRow = row end end
+NS:DB().exitDelay = 15
+NS:RefreshOptions()
+Check("[ID] piste pleine au maximum", delayRow.track.ratio == 1, delayRow.track.ratio)
+local addonRow
+for _, row in ipairs(o.rows) do if row.def and row.def.key == "enabled" then addonRow = row end end
+Check("[ID] interrupteur actif = ambre", addonRow.toggle.checked == true and addonRow.toggle.knob.vertex[1] > 0.9)
+addonRow:Click()
+Check("[ID] clic : interrupteur coupé", addonRow.toggle.checked == false and NS:DB().enabled == false)
+addonRow:Click()
+NS:SelectOptionsPage("bags")
+Check("[ID] navigation : page active teintée", o.navButtons[3].tint:IsShown() and not o.navButtons[1].tint:IsShown())
+Check("[ID] titre de page en police maison", o.pages.bags.title.font ~= nil)
+
+end
 LeaveEra()
 Mock.world.classToken = nil
 end

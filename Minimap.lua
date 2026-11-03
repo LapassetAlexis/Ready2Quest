@@ -171,8 +171,9 @@ function ns:EnsureMinimapButton()
 	end
 
 	button.icon = button:CreateTexture(nil, "ARTWORK")
-	button.icon:SetTexture("Interface\\Icons\\INV_Misc_Bag_10")
-	button.icon:SetTexCoord(0.08, 0.92, 0.08, 0.92)
+	-- la marque de l'addon (boussole) plutôt qu'une icône d'objet générique
+	button.icon:SetTexture(ns.Theme and ns.Theme.LOGO or "Interface\\Icons\\INV_Misc_Bag_10")
+	button.icon:SetTexCoord(0, 1, 0, 1)
 	if mainline then
 		button.icon:SetSize(18, 18)
 		button.icon:SetPoint("CENTER", button, "CENTER", 0, 1)

@@ -27,15 +27,16 @@ local PAGES = {
 		rows = {
 			{ key = "enabled",         label = "OPT_ENABLED",    kind = "bool" },
 			{ key = "showWindow",      label = "OPT_SHOWWINDOW", kind = "bool" },
-			{ key = "popupScore",      label = "OPT_POPUPSCORE", kind = "number", min = 0, max = 100, step = 5, suffix = "OPT_SCORE_UNIT" },
+			{ key = "popupScore",      label = "OPT_POPUPSCORE", kind = "number", min = 0, max = 100, step = 5 },
 			{ key = "exitDelay",       label = "OPT_EXITDELAY",  kind = "number", min = 0, max = 15,  step = 1, suffix = "OPT_SEC_UNIT" },
 			{ key = "quietAfterLogin", label = "OPT_QUIETLOGIN", kind = "number", min = 0, max = 60,  step = 5, suffix = "OPT_SEC_UNIT" },
 			{ key = "alertCooldown",   label = "OPT_COOLDOWN",   kind = "number", min = 0, max = 120, step = 5, suffix = "OPT_SEC_UNIT" },
 		},
 	},
 	{ id = "safe", title = "OPT_PAGE_SAFE", list = "safe" },
+	-- groupe « Préparation » : un module par page
 	{
-		id = "bags", title = "OPT_PAGE_BAGS", modules = { "bags", "gray" },
+		id = "bags", title = "OPT_PAGE_BAGS", modules = { "bags", "gray" }, group = "OPT_GROUP_PREP",
 		rows = {
 			{ key = "bagFreeThreshold",   label = "OPT_BAGTHRESHOLD",  kind = "number", min = 0, max = 40, step = 1 },
 			{ key = "continuousBagAlert", label = "OPT_BAGALERT",      kind = "bool" },
@@ -44,34 +45,34 @@ local PAGES = {
 		},
 	},
 	{
-		id = "food", title = "OPT_PAGE_FOOD", modules = { "vivres", "potions" },
+		id = "food", title = "OPT_PAGE_FOOD", modules = { "vivres", "potions" }, group = "OPT_GROUP_PREP",
 		rows = {
 			{ key = "vivresThreshold",  label = "OPT_VIVRESTHRESHOLD",  kind = "number", min = 0, max = 200, step = 5 },
 			{ key = "potionsThreshold", label = "OPT_POTIONSTHRESHOLD", kind = "number", min = 0, max = 50,  step = 1 },
 		},
 	},
 	{
-		id = "buffs", title = "OPT_PAGE_BUFFS", modules = { "buffs" }, list = "buffs",
+		id = "buffs", title = "OPT_PAGE_BUFFS", modules = { "buffs" }, list = "buffs", group = "OPT_GROUP_PREP",
 		rows = {
 			{ key = "learnBuffs", label = "OPT_LEARNBUFFS", kind = "bool" },
 		},
 	},
 	{
-		id = "gear", title = "OPT_PAGE_GEAR", modules = { "durability", "repair" },
+		id = "gear", title = "OPT_PAGE_GEAR", modules = { "durability", "repair" }, group = "OPT_GROUP_PREP",
 		rows = {
 			{ key = "durabilityMinPct", label = "OPT_DURAMIN",    kind = "number", min = 0, max = 100, step = 5, suffix = "OPT_PCT_UNIT" },
 			{ key = "autoRepair",       label = "OPT_AUTOREPAIR", kind = "bool" },
 		},
 	},
 	{
-		id = "char", title = "OPT_PAGE_CHAR", modules = { "classreagents", "spells", "hearth", "rest" },
+		id = "char", title = "OPT_PAGE_CHAR", modules = { "classreagents", "spells", "hearth", "rest" }, group = "OPT_GROUP_PREP",
 		rows = {
 			{ key = "restMinPercent", label = "OPT_RESTMIN", kind = "number", min = 0, max = 150, step = 5, suffix = "OPT_REST_UNIT" },
 		},
 	},
-	{ id = "craft", title = "OPT_PAGE_CRAFT", modules = { "reagents", "quests" } },
+	{ id = "craft", title = "OPT_PAGE_CRAFT", modules = { "reagents", "quests" }, group = "OPT_GROUP_PREP" },
 	{
-		id = "display", title = "OPT_PAGE_DISPLAY",
+		id = "display", title = "OPT_PAGE_DISPLAY", group = "OPT_GROUP_UI",
 		rows = {
 			{ key = "showMinimap",       label = "OPT_MINIMAP",     kind = "bool" },
 			{ key = "minimapPos",        label = "OPT_MINIMAP_POS", kind = "action" },
@@ -93,8 +94,12 @@ ns.OPT_LAYOUT = {
 	rowWidth = PANE_WIDTH,
 	rowHeight = ROW_HEIGHT,
 	listLines = LIST_LINES,
-	valueRight = -96,
-	valueWidth = 86,
+	-- [libellé] ... [piste 80] [valeur 44] [-][+]  ou  [libellé] ... [interrupteur]
+	valueRight = -78,
+	valueWidth = 44,
+	trackRight = -128,
+	trackWidth = 80,
+	toggleRight = -18,
 	plusRight = -18,
 	minusRight = -50,
 	buttonWidth = 22,
@@ -148,6 +153,7 @@ function ns:RefreshOptions()
 		if row.isModule then
 			local on = ns:IsModuleEnabled(row.moduleId)
 			row.value:SetText(OnOff(on))
+			if row.toggle then row.toggle:SetChecked(on) end
 			if on then
 				row.label:SetTextColor(0.85, 0.85, 0.85)
 			else
@@ -166,7 +172,12 @@ function ns:RefreshOptions()
 			local value = db[def.key]
 			if def.kind == "bool" then
 				row.value:SetText(OnOff(value ~= false))
+				if row.toggle then row.toggle:SetChecked(value ~= false) end
 			else
+				if row.track then
+					local span = (def.max or 1) - (def.min or 0)
+					row.track:SetValue(span > 0 and (((value or 0) - (def.min or 0)) / span) or 0)
+				end
 				-- l'unité est portée par la valeur, pas par le libellé : la
 				-- colonne de gauche reste courte et scannable
 				row.value:SetText(Theme.T_GOLD .. tostring(value or 0) .. "|r"
@@ -177,10 +188,16 @@ function ns:RefreshOptions()
 
 	for _, nav in ipairs(frame.navButtons or {}) do
 		local selected = nav.pageId == frame.currentPage
-		nav.label:SetTextColor(selected and Theme.GOLD[1] or 0.80, selected and Theme.GOLD[2] or 0.78,
-			selected and Theme.GOLD[3] or 0.72)
-		if nav.marker then
-			if selected then nav.marker:Show() else nav.marker:Hide() end
+		if selected then
+			nav.label:SetTextColor(Theme.PARCHMENT[1], Theme.PARCHMENT[2], Theme.PARCHMENT[3])
+			nav.marker:Show(); nav.tint:Show()
+			nav.diamond:SetTexture(Theme.DIAMOND)
+			nav.diamond:SetVertexColor(Theme.GOLD[1], Theme.GOLD[2], Theme.GOLD[3], 1)
+		else
+			nav.label:SetTextColor(0.68, 0.70, 0.71)
+			nav.marker:Hide(); nav.tint:Hide()
+			nav.diamond:SetTexture(Theme.DIAMOND_LINE)
+			nav.diamond:SetVertexColor(0.35, 0.38, 0.42, 1)
 		end
 	end
 
@@ -359,9 +376,15 @@ function ns:EnsureOptions()
 	-- fond de la colonne de navigation + filet de séparation
 	frame.navBackground = frame:CreateTexture(nil, "BORDER")
 	frame.navBackground:SetTexture(Theme.SOLID)
-	frame.navBackground:SetVertexColor(0, 0, 0, 0.35)
-	frame.navBackground:SetPoint("TOPLEFT", frame, "TOPLEFT", 6, top + 4)
-	frame.navBackground:SetSize(NAV_WIDTH, FRAME_HEIGHT + top - 48)
+	frame.navBackground:SetVertexColor(Theme.SURFACE_2[1], Theme.SURFACE_2[2], Theme.SURFACE_2[3], 1)
+	frame.navBackground:SetPoint("TOPLEFT", frame, "TOPLEFT", 1, -35)
+	frame.navBackground:SetSize(NAV_WIDTH + 5, FRAME_HEIGHT - 35 - 44)
+	frame.navLine = Theme.Solid(frame, "ARTWORK", Theme.GOLD_DIM, 1)
+	frame.navLine:SetPoint("TOPLEFT", frame, "TOPLEFT", NAV_WIDTH + 6, -35)
+	frame.navLine:SetSize(1, FRAME_HEIGHT - 35 - 44)
+	frame.footerLine = Theme.Solid(frame, "ARTWORK", Theme.GOLD_DIM, 1)
+	frame.footerLine:SetPoint("BOTTOMLEFT", frame, "BOTTOMLEFT", 1, 44)
+	frame.footerLine:SetSize(FRAME_WIDTH - 2, 1)
 
 	-- Fabrique d'une ligne de réglage
 	local function MakeRow(parent, def)
@@ -383,6 +406,11 @@ function ns:EnsureOptions()
 		if def.kind == "action" then
 			row:SetScript("OnClick", function() ns:RunOptionAction(def.key) end)
 		elseif def.kind == "bool" then
+			-- interrupteur dessiné ; le texte OUI/non reste porté (lecteurs, tests)
+			-- mais masqué : l'interrupteur dit déjà l'état
+			row.toggle = Theme.CreateToggle(row)
+			row.toggle:SetPoint("RIGHT", row, "RIGHT", ns.OPT_LAYOUT.toggleRight, 0)
+			row.value:Hide()
 			row:SetScript("OnClick", function()
 				local db = ns:DB()
 				db[def.key] = not (db[def.key] ~= false)
@@ -395,10 +423,17 @@ function ns:EnsureOptions()
 				db[def.key] = Clamp((db[def.key] or 0) + (delta * (def.step or 1)), def.min or 0, def.max or 999)
 				ns:RefreshOptions()
 			end
+			-- piste : la valeur dans sa plage, d'un coup d'œil
+			row.track = Theme.CreateBar(row, ns.OPT_LAYOUT.trackWidth, 3)
+			row.track:SetPoint("RIGHT", row, "RIGHT", ns.OPT_LAYOUT.trackRight, 0)
 			row.minus = Theme.CreateButton(row, 22, 17, "-", function() Step(-1) end)
 			row.minus:SetPoint("RIGHT", row, "RIGHT", MINUS_RIGHT, 0)
 			row.plus = Theme.CreateButton(row, 22, 17, "+", function() Step(1) end)
 			row.plus:SetPoint("RIGHT", row, "RIGHT", PLUS_RIGHT, 0)
+			if row.EnableMouseWheel then
+				row:EnableMouseWheel(true)
+				row:SetScript("OnMouseWheel", function(_, delta) Step(delta > 0 and 1 or -1) end)
+			end
 		end
 		return row
 	end
@@ -416,6 +451,9 @@ function ns:EnsureOptions()
 		row.value:SetPoint("RIGHT", row, "RIGHT", VALUE_RIGHT, 0)
 		row.value:SetWidth(VALUE_WIDTH)
 		row.value:SetJustifyH("RIGHT")
+		row.toggle = Theme.CreateToggle(row)
+		row.toggle:SetPoint("RIGHT", row, "RIGHT", ns.OPT_LAYOUT.toggleRight, 0)
+		row.value:Hide()
 		row:SetScript("OnClick", function()
 			ns:SetModuleEnabled(def.id, not ns:IsModuleEnabled(def.id))
 			ns:RefreshOptions()
@@ -427,28 +465,45 @@ function ns:EnsureOptions()
 		local header = page:CreateFontString(nil, "OVERLAY", Theme.F_SMALL)
 		header:SetPoint("TOPLEFT", page, "TOPLEFT", 0, y)
 		header:SetText(L[key] or key)
-		header:SetTextColor(Theme.GOLD[1], Theme.GOLD[2], Theme.GOLD[3])
+		header:SetTextColor(Theme.GOLD_SOFT[1], Theme.GOLD_SOFT[2], Theme.GOLD_SOFT[3])
 		return header
 	end
 
 	local placed = {}
+	local navY, lastGroup = top, nil
+	frame.navGroups = {}
 	for index, def in ipairs(PAGES) do
-		-- bouton de navigation
+		-- titre de groupe dans la navigation (« PRÉPARATION », « INTERFACE »)
+		if def.group and def.group ~= lastGroup then
+			navY = navY - 6
+			local groupLabel = frame:CreateFontString(nil, "OVERLAY", Theme.F_SMALL)
+			groupLabel:SetPoint("TOPLEFT", frame, "TOPLEFT", 16, navY - 2)
+			groupLabel:SetText(L[def.group] or def.group)
+			groupLabel:SetTextColor(Theme.GOLD_SOFT[1], Theme.GOLD_SOFT[2], Theme.GOLD_SOFT[3])
+			frame.navGroups[#frame.navGroups + 1] = groupLabel
+			navY = navY - 16
+		end
+		lastGroup = def.group
+
+		-- bouton de navigation : losange, libellé, liseré ambre + teinte si actif
 		local nav = CreateFrame("Button", nil, frame)
-		nav:SetSize(NAV_WIDTH - 8, ROW_HEIGHT)
-		nav:SetPoint("TOPLEFT", frame, "TOPLEFT", 10, top - ((index - 1) * (ROW_HEIGHT + 2)))
+		nav:SetSize(NAV_WIDTH - 4, ROW_HEIGHT)
+		nav:SetPoint("TOPLEFT", frame, "TOPLEFT", 6, navY)
 		nav.pageId = def.id
-		nav.marker = nav:CreateTexture(nil, "ARTWORK")
-		nav.marker:SetTexture(Theme.SOLID)
-		nav.marker:SetVertexColor(Theme.GOLD[1], Theme.GOLD[2], Theme.GOLD[3], 0.85)
+		nav.tint = Theme.Solid(nav, "BACKGROUND", Theme.GOLD, 0.12)
+		nav.tint:SetAllPoints()
+		nav.marker = Theme.Solid(nav, "ARTWORK", Theme.GOLD, 1)
 		nav.marker:SetPoint("LEFT", nav, "LEFT", 0, 0)
-		nav.marker:SetSize(2, ROW_HEIGHT - 6)
-		nav.label = nav:CreateFontString(nil, "OVERLAY", Theme.F_NORMAL)
-		nav.label:SetPoint("LEFT", nav, "LEFT", 8, 0)
+		nav.marker:SetSize(2, ROW_HEIGHT)
+		nav.diamond = Theme.CreateDiamond(nav, 7, true)
+		nav.diamond:SetPoint("LEFT", nav, "LEFT", 12, 0)
+		nav.label = nav:CreateFontString(nil, "OVERLAY", Theme.F_BODY)
+		nav.label:SetPoint("LEFT", nav, "LEFT", 26, 0)
 		nav.label:SetJustifyH("LEFT")
 		nav.label:SetText(L[def.title] or def.title)
 		nav:SetScript("OnClick", function() ns:SelectOptionsPage(def.id) end)
 		frame.navButtons[index] = nav
+		navY = navY - ROW_HEIGHT
 
 		-- page
 		local page = CreateFrame("Frame", nil, frame)
@@ -458,11 +513,18 @@ function ns:EnsureOptions()
 		page.rows = {}
 		frame.pages[def.id] = page
 
-		page.title = page:CreateFontString(nil, "OVERLAY", Theme.F_TITLE)
+		-- titre de page dans la police maison, et une phrase qui dit à quoi
+		-- sert la page
+		page.title = Theme.CreateTitle(page, 19)
 		page.title:SetPoint("TOPLEFT", page, "TOPLEFT", 0, 0)
 		page.title:SetText(L[def.title] or def.title)
-		page.title:SetTextColor(Theme.GOLD[1], Theme.GOLD[2], Theme.GOLD[3])
-		local y = -28
+		page.sub = page:CreateFontString(nil, "OVERLAY", Theme.F_BODY)
+		page.sub:SetPoint("TOPLEFT", page, "TOPLEFT", 0, -24)
+		page.sub:SetWidth(PANE_WIDTH)
+		page.sub:SetJustifyH("LEFT")
+		page.sub:SetText(L[def.title .. "_SUB"] or "")
+		page.sub:SetTextColor(Theme.MUTED[1], Theme.MUTED[2], Theme.MUTED[3])
+		local y = -48
 
 		if def.modules then
 			page.modulesHeader = Header(page, y, "OPT_MODULES")
@@ -570,7 +632,7 @@ function ns:EnsureOptions()
 	frame.resetButton:SetPoint("LEFT", frame.runButton, "RIGHT", GAP, 0)
 	frame.closeButton = Theme.CreateButton(frame, widths[3], 20, L.OPT_CLOSE, function()
 		frame:Hide()
-	end)
+	end, "primary")
 	frame.closeButton:SetPoint("LEFT", frame.resetButton, "RIGHT", GAP, 0)
 
 	ns.OPT_LAYOUT.footer = { margin = MARGIN, gap = GAP, inner = inner, widths = widths }
