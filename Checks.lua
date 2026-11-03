@@ -20,10 +20,11 @@ local function ItemIdentity(itemID)
 	if not itemID then return nil end
 	local cached = instantCache[itemID]
 	if cached then return cached end
-	if not (C_Item and type(C_Item.GetItemInfoInstant) == "function") then return nil end
+	-- Era : la fonction globale existe toujours, la version C_Item pas forcément
+	local fn = (C_Item and C_Item.GetItemInfoInstant) or rawget(_G, "GetItemInfoInstant")
+	if type(fn) ~= "function" then return nil end
 
-	local ok, _, itemType, itemSubType, _, _, classID, subClassID =
-		pcall(C_Item.GetItemInfoInstant, itemID)
+	local ok, _, itemType, itemSubType, _, _, classID, subClassID = pcall(fn, itemID)
 	if not ok or not classID then return nil end
 
 	local data = { classID = classID, subClassID = subClassID, itemType = itemType, itemSubType = itemSubType }
@@ -68,6 +69,25 @@ end
 
 ns.FreeBagSlots = FreeBagSlots
 
+-- GetQuestLogTitle n'a pas la même forme partout :
+--   Era 1.13+ / Classic modernes : title, level, suggestedGroup, isHeader, isCollapsed, isComplete, …
+--   clients historiques (5.x)     : title, level, questTag, suggestedGroup, isHeader, isCollapsed, isComplete, …
+-- isHeader est un booléen dans les deux cas : sa position désigne la forme.
+-- isComplete vaut 1 (terminée), -1 (échouée) ou nil sur Era, true ailleurs.
+function ns.QuestLogReady(index)
+	if type(GetQuestLogTitle) ~= "function" then return false end
+	local r = { pcall(GetQuestLogTitle, index) }
+	if not r[1] or r[2] == nil then return false end
+	local isHeader, isComplete
+	if type(r[5]) == "boolean" then
+		isHeader, isComplete = r[5], r[7]
+	else
+		isHeader, isComplete = r[6], r[8]
+	end
+	if isHeader == true or isHeader == 1 then return false end
+	return isComplete == true or isComplete == 1
+end
+
 local function CountQuality(quality)
 	local count = 0
 	EachBagItem(function(_, _, info)
@@ -80,11 +100,57 @@ local CONSUMABLE = 0
 local SUBCLASS_FOODDRINK = 5
 local SUBCLASS_COMBAT = { [1] = true, [2] = true, [3] = true, [4] = true }
 
-local function CountConsumables(isWanted)
+-- Sur Classic Era, les consommables gardent la sous-classe générique 0 de
+-- vanilla : nourriture, boissons et potions n'ont pas de sous-classe propre.
+-- On les reconnaît alors au sort qu'ils lancent (« Nourriture », « Boisson »)
+-- ou, pour les potions, au mot « Potion » dans leur nom.
+local FOOD_SPELLS = {
+	["nourriture"] = true, ["boisson"] = true, ["food"] = true, ["drink"] = true,
+	["refreshment"] = true, ["rafraîchissement"] = true,
+	["food & drink"] = true, ["nourriture et boisson"] = true,
+}
+local kindCache = {}
+
+local function ItemSpellName(itemID)
+	local fn = (C_Item and C_Item.GetItemSpell) or rawget(_G, "GetItemSpell")
+	if type(fn) ~= "function" then return nil end
+	local ok, name = pcall(fn, itemID)
+	if ok and type(name) == "string" then return name end
+	return nil
+end
+
+local function ItemName(itemID)
+	local fn = (C_Item and C_Item.GetItemInfo) or rawget(_G, "GetItemInfo")
+	if type(fn) ~= "function" then return nil end
+	local ok, name = pcall(fn, itemID)
+	if ok and type(name) == "string" then return name end
+	return nil
+end
+
+-- "food", "combat" ou nil. Le résultat n'est mis en cache que s'il est sûr :
+-- un objet pas encore en cache client sera réexaminé au prochain check.
+local function ConsumableKind(itemID)
+	if kindCache[itemID] ~= nil then return kindCache[itemID] or nil end
+	local data = ItemIdentity(itemID)
+	if not data or data.classID ~= CONSUMABLE then return nil end
+	local sub = data.subClassID
+	if sub == SUBCLASS_FOODDRINK then kindCache[itemID] = "food"; return "food" end
+	if SUBCLASS_COMBAT[sub] then kindCache[itemID] = "combat"; return "combat" end
+	if sub ~= 0 and sub ~= nil then kindCache[itemID] = false; return nil end
+
+	local spell = ItemSpellName(itemID)
+	if spell and FOOD_SPELLS[ns.AsciiLower(spell)] then kindCache[itemID] = "food"; return "food" end
+	local name = ItemName(itemID)
+	if name and ns.AsciiLower(name):find("potion", 1, true) then kindCache[itemID] = "combat"; return "combat" end
+	if spell or name then kindCache[itemID] = false end
+	return nil
+end
+ns.ConsumableKind = ConsumableKind
+
+local function CountConsumables(kind)
 	local count = 0
 	EachBagItem(function(_, _, info)
-		local data = ItemIdentity(info.itemID)
-		if data and data.classID == CONSUMABLE and isWanted(data.subClassID) then
+		if ConsumableKind(info.itemID) == kind then
 			count = count + (info.stackCount or 1)
 		end
 	end)
@@ -148,7 +214,7 @@ Add{
 	advice = "ADV_VIVRES",
 	label = function() return L.CHK_VIVRES end,
 	run = function(db)
-		local count = CountConsumables(function(sub) return sub == SUBCLASS_FOODDRINK end)
+		local count = CountConsumables("food")
 		local threshold = db.vivresThreshold or 1
 		local score = Ratio(count, threshold)
 		return count >= threshold, ns:F("CHK_VIVRES_DETAIL", count), score
@@ -164,7 +230,7 @@ Add{
 	label = function() return L.CHK_POTIONS end,
 	run = function(db)
 		local minimum = db.potionsThreshold or 0
-		local count = CountConsumables(function(sub) return SUBCLASS_COMBAT[sub] == true end)
+		local count = CountConsumables("combat")
 		if minimum <= 0 then
 			return true, ns:F("CHK_POTIONS_DETAIL", count), 100
 		end
@@ -291,8 +357,7 @@ Add{
 			local ok, total = pcall(GetNumQuestLogEntries)
 			if not ok or type(total) ~= "number" then return true, L.CHK_QUESTS_GOOD, 100 end
 			for i = 1, total do
-				local okTitle, _, _, _, _, isHeader, _, isComplete = pcall(GetQuestLogTitle, i)
-				if okTitle and not isHeader and isComplete == true then ready = ready + 1 end
+				if ns.QuestLogReady(i) then ready = ready + 1 end
 			end
 		else
 			return true, L.CHK_QUESTS_GOOD, 100

@@ -52,6 +52,33 @@ La réparation n'invente rien : chez un marchand qui répare, l'addon relève `G
 
 Les deux se coupent dans `/sd options` → **Chez le marchand**.
 
+### Audit Era : ce qui était faux sans rien dire
+
+Aucun de ces bugs ne levait d'erreur : la note mentait, simplement.
+
+| Module | Sur Era | Correctif |
+|---|---|---|
+| Vivres, potions | les consommables gardent la sous-classe générique 0 de vanilla : **compteur toujours à 0** | reconnus au sort lancé (« Nourriture », « Boisson ») ou au mot « Potion » |
+| Quêtes | `isComplete` vaut `1`, pas `true`, et la forme des retours de `GetQuestLogTitle` varie : **« rien à rendre » en permanence** | forme détectée par la position du booléen `isHeader`, `1` accepté |
+| Consommables | seul `C_Item.GetItemInfoInstant` était appelé | repli sur la fonction globale |
+| Buffs | repli `UnitAura` : le spellId est le 10e retour, pas le 8e | corrigé |
+| Buffs | un rang ou la version de groupe (Prière de robustesse, Don du fauve, Bénédiction supérieure) était signalé « manquant » | comparaison **par famille de nom** |
+| Buffs | sans `GetPlayerAuraBySpellID`, tout devenait « illisible » | lecture des auras par index |
+| Buffs | « Bien nourri » et les buffs mondiaux ponctuels étaient appris puis réclamés | consommables ignorés, buff non revu depuis 7 jours oublié |
+| Composants | sacs recomptés par nom via `GetItemInfo` (nil hors cache) | itemID du composant + `GetItemCount` |
+| Composants | changer de recette ne rafraîchissait pas toujours | accroche de `TradeSkillFrame_SetSelection` |
+| Composants | Enchantement et dressage (fenêtre Craft) non couverts | chemin `GetCraft*`, `CRAFT_SHOW` / `CRAFT_UPDATE` |
+| Stats | `UnitAttackPower` a 3 retours : la PA de l'équipement était ignorée | base + bonus + malus |
+| Stats | pas de `GetSpecialization` : toujours la 1re spé | onglet de talents le plus fourni |
+| Stats (tous clients) | paladin : Protection et Vindicte inversées | ordre Sacré / Protection / Vindicte |
+| Stats | « 12.3 %% », Esprit absent du résumé, ilvl 0 sans `GetAverageItemLevel` | corrigés |
+| Affichage | troncature au milieu d'un caractère accentué ; « … », « • », « — » peut-être absents de la police des cadres | coupe UTF-8 propre, glyphes ASCII |
+| Textes | préfixe du chat, titre et message d'erreur encore en « Sac & Départ » | « Ready to Quest » |
+
+Au passage : `string.lower` dépend de la locale C, et en Latin-1 il casse l'UTF-8 (`0xC3` → `0xE3`). Les comparaisons de noms passent par `ns.AsciiLower`, qui ne touche qu'à A-Z.
+
+Restent à confirmer en jeu : la sous-classe 0 des consommables Era, et la présence des glyphes dans la police.
+
 ---
 
 
@@ -1284,7 +1311,7 @@ Alias : `/sacdepart`.
 ## Tests
 
 ```
-python3 tests/run_tests.py     →  552 réussis, 0 échoués
+python3 tests/run_tests.py     →  588 réussis, 0 échoués
 ```
 
 Lua 5.1 (version du client), client WoW simulé. Couvre notamment : apprentissage par indices (sous-zone, capitale par deux quartiers, purge de l'ancien schéma), délai de sortie / vol / mort, nouveaux checks et automatismes du marchand en mode Era, chaîne de cartes parentes, anti-spam, filtrage des procs, **valeurs secrètes**, comptages sacs/vivres/potions/durabilité/quêtes, score pondéré et bilans, fenêtre de diagnostic (icônes, barres, bandeau), panneau d'équipement (17 lignes, moyenne, rareté, pièces faibles), comparaison au survol (amélioration, régressif, vide, anneaux), **les deux voies de hook tooltip**, bouton sans template Blizzard, et toutes les commandes.

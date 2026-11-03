@@ -618,6 +618,21 @@ ns.handlers = {
 		if self.ScanLegacyTradeSkill then self:ScanLegacyTradeSkill() end
 		if self.InvalidateReagents then self:InvalidateReagents() end
 	end,
+
+	TRADE_SKILL_SHOW = function(self)
+		if self.ScanLegacyTradeSkill then self:ScanLegacyTradeSkill() end
+		if self.InvalidateReagents then self:InvalidateReagents() end
+	end,
+
+	CRAFT_SHOW = function(self)
+		if self.ScanLegacyCraft then self:ScanLegacyCraft() end
+		if self.InvalidateReagents then self:InvalidateReagents() end
+	end,
+
+	CRAFT_UPDATE = function(self)
+		if self.ScanLegacyCraft then self:ScanLegacyCraft() end
+		if self.InvalidateReagents then self:InvalidateReagents() end
+	end,
 }
 
 function ns:OnEvent(event, ...)
@@ -944,6 +959,9 @@ end
 local OPTIONAL_EVENTS = {
 	TRACKED_RECIPE_UPDATE = "crafting",
 	TRADE_SKILL_UPDATE = "tradeskillLegacy",
+	TRADE_SKILL_SHOW = "tradeskillLegacy",
+	CRAFT_SHOW = "craftLegacy",
+	CRAFT_UPDATE = "craftLegacy",
 }
 
 function ns:RegisterEvents(target)

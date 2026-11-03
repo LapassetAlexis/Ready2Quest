@@ -23,7 +23,7 @@ function ns:RecordError(where, message)
 	end
 	self.errors[#self.errors + 1] = { where = where, message = message }
 	if type(print) == "function" then
-		print("|cffff2020Sac & Départ — erreur|r (" .. tostring(where) .. ") " .. message)
+		print("|cffff2020Ready to Quest — erreur|r (" .. tostring(where) .. ") " .. message)
 	end
 end
 

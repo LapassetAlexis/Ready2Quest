@@ -2044,10 +2044,11 @@ local function firstStat(classFile, specIndex)
 	return text
 end
 
-Check("Vindicte : l'Intelligence passe avant la Force",
-	firstStat("PALADIN", 2):find("Intelligence") ~= nil, firstStat("PALADIN", 2))
-Check("Protection paladin : l'Endurance d'abord",
-	firstStat("PALADIN", 3):find("Endurance") ~= nil, firstStat("PALADIN", 3))
+-- ordre des spés (et des onglets de talents) : Sacré 1, Protection 2, Vindicte 3
+Check("Vindicte (spé 3) : l'Intelligence passe avant la Force",
+	firstStat("PALADIN", 3):find("Intelligence") ~= nil, firstStat("PALADIN", 3))
+Check("Protection paladin (spé 2) : l'Endurance d'abord",
+	firstStat("PALADIN", 2):find("Endurance") ~= nil, firstStat("PALADIN", 2))
 Check("Démoniste : ni Force ni Agilité",
 	firstStat("WARLOCK", 1):find("Intelligence") ~= nil, firstStat("WARLOCK", 1))
 
@@ -2970,6 +2971,263 @@ for _, key in ipairs(newKeys) do
 end
 Check("nouvelles chaînes présentes en frFR", #missingFr == 0, table.concat(missingFr, ", "))
 Check("nouvelles chaînes présentes en enUS", #missingEn == 0, table.concat(missingEn, ", "))
+
+-- ---------------------------------------------------------------------------
+-- Correctifs de l'audit Era (v1.18.0)
+-- ---------------------------------------------------------------------------
+Say("\n== audit Era : correctifs ==")
+
+-- [2] vivres et potions en sous-classe générique 0 (vanilla)
+EnterEra()
+local savedItemSpell = _G.GetItemSpell
+_G.GetItemSpell = function(itemID)
+	return ({ [117] = "Nourriture", [159] = "Boisson", [9999] = "Invocation" })[itemID]
+end
+Mock.world.itemInfo[117] = { name = "Viande coriace", classID = 0, subClassID = 0 }
+Mock.world.itemInfo[159] = { name = "Eau fraîche", classID = 0, subClassID = 0 }
+Mock.world.itemInfo[118] = { name = "Potion de soins mineure", classID = 0, subClassID = 0 }
+Mock.world.itemInfo[9999] = { name = "Babiole", classID = 0, subClassID = 0 }
+Mock.world.bags[0].items[1] = { itemID = 117, stackCount = 4, quality = 1 }
+Mock.world.bags[0].items[2] = { itemID = 159, stackCount = 6, quality = 1 }
+Mock.world.bags[0].items[3] = { itemID = 118, stackCount = 3, quality = 1 }
+Mock.world.bags[0].items[4] = { itemID = 9999, stackCount = 1, quality = 1 }
+NS:DB().potionsThreshold = 3
+NS:RunChecklist("manual")
+Check("[2] Era : nourriture + boisson de sous-classe 0 comptées (10)", Result("vivres").detail:find("10") ~= nil,
+	Result("vivres").detail)
+Check("[2] Era : potion de sous-classe 0 comptée (3)", Result("potions").ok == true, Result("potions").detail)
+_G.GetItemSpell = savedItemSpell
+
+-- [3] journal de quêtes Era : forme moderne, isComplete = 1
+EnterEra()
+local savedTitle = _G.GetQuestLogTitle
+_G.GetQuestLogTitle = function(index)
+	local rows = {
+		{ "Elwynn", 0, 0, true, false, nil },          -- en-tête
+		{ "Les loups", 5, 0, false, false, 1 },       -- terminée
+		{ "Le kobold", 6, 0, false, false, nil },      -- en cours
+		{ "Échouée", 6, 0, false, false, -1 },         -- échouée
+	}
+	local r = rows[index]
+	if not r then return nil end
+	return r[1], r[2], r[3], r[4], r[5], r[6], 0, 100 + index
+end
+Mock.world.quests = { {}, {}, {}, {} }
+NS:RunChecklist("manual")
+Check("[3] Era : quête terminée (isComplete = 1) détectée", Result("quests").ok == false
+	and Result("quests").detail:find("1") ~= nil, Result("quests").detail)
+Check("[3] en-tête et quête échouée ignorés", NS.QuestLogReady(1) == false and NS.QuestLogReady(4) == false)
+_G.GetQuestLogTitle = savedTitle
+
+-- [4] GetItemInfoInstant global quand C_Item n'en a pas
+EnterEra()
+local savedInstant = C_Item.GetItemInfoInstant
+_G.GetItemInfoInstant = savedInstant
+C_Item.GetItemInfoInstant = nil
+Mock.world.itemInfo[4101] = { name = "Pain", classID = 0, subClassID = 5 }
+Mock.world.bags[0].items[1] = { itemID = 4101, stackCount = 7, quality = 1 }
+NS:RunChecklist("manual")
+Check("[4] repli GetItemInfoInstant global", Result("vivres").detail:find("7") ~= nil, Result("vivres").detail)
+C_Item.GetItemInfoInstant = savedInstant
+_G.GetItemInfoInstant = nil
+
+-- [5] repli UnitAura : le spellId est le 10e retour
+EnterEra()
+local savedByIndex = C_UnitAuras.GetAuraDataByIndex
+C_UnitAuras.GetAuraDataByIndex = nil
+_G.UnitAura = function(_, index)
+	if index ~= 1 then return nil end
+	return "Marque du fauve", 136078, 1, nil, 1800, 2800, "player", false, false, 1126
+end
+NS.lastBuffScan = nil
+NS:ScanBuffs()
+Check("[5] UnitAura : buff appris avec le bon spellId (10e retour)", NS:DB().buffs[1126] ~= nil
+	and NS:DB().buffs[false] == nil)
+_G.UnitAura = nil
+C_UnitAuras.GetAuraDataByIndex = savedByIndex
+
+-- [6] comparaison par famille : autre rang, version de groupe
+EnterEra()
+NS:DB().buffs[1243] = { name = "Mot de pouvoir : Robustesse", duration = 1800, enabled = true, learned = true }
+Mock.world.auras = { [21562] = { name = "Prière de robustesse", duration = 3600 } }
+Mock.world.auraOrder = { 21562 }
+NS:RunChecklist("manual")
+Check("[6] Prière de robustesse couvre Robustesse", Result("buffs").ok == true, Result("buffs").detail)
+Mock.world.auras = { [10938] = { name = "Mot de pouvoir : Robustesse", duration = 1800 } }
+Mock.world.auraOrder = { 10938 }
+NS:RunChecklist("manual")
+Check("[6] autre rang du même buff : pas manquant", Result("buffs").ok == true, Result("buffs").detail)
+NS.lastBuffScan = nil
+NS:ScanBuffs()
+Check("[6] autre rang : pas appris une seconde fois", NS:DB().buffs[10938] == nil)
+Check("[6] Bénédiction supérieure = Bénédiction", NS.BuffFamily("Bénédiction supérieure de puissance")
+	== NS.BuffFamily("Bénédiction de puissance"))
+Check("[6] Don du fauve = Marque du fauve", NS.BuffFamily("Don du fauve") == NS.BuffFamily("Marque du fauve"))
+
+-- [7] sans GetPlayerAuraBySpellID : lecture par index, pas « illisible »
+EnterEra()
+local savedByID = C_UnitAuras.GetPlayerAuraBySpellID
+C_UnitAuras.GetPlayerAuraBySpellID = nil
+NS:DB().buffs[1459] = { name = "Intelligence des arcanes", duration = 1800, enabled = true }
+NS:RunChecklist("manual")
+Check("[7] sans API par spellID : buff absent = manquant", Result("buffs").ok == false
+	and Result("buffs").detail:find("Intelligence") ~= nil, Result("buffs").detail)
+Mock.world.auras = { [10157] = { name = "Intelligence des arcanes", duration = 1800 } }
+Mock.world.auraOrder = { 10157 }
+NS:RunChecklist("manual")
+Check("[7] sans API par spellID : buff présent = OK", Result("buffs").ok == true, Result("buffs").detail)
+C_UnitAuras.GetPlayerAuraBySpellID = savedByID
+
+-- [23] buffs de consommables non appris, buffs oubliés après 7 jours
+EnterEra()
+Mock.world.auras = { [19705] = { name = "Bien nourri", duration = 900 } }
+Mock.world.auraOrder = { 19705 }
+NS.lastBuffScan = nil
+NS:ScanBuffs()
+Check("[23] « Bien nourri » n'est pas appris", NS:DB().buffs[19705] == nil)
+Mock.world.auras, Mock.world.auraOrder = {}, {}
+NS:DB().buffs[2000] = { name = "Buff mondial", duration = 7200, enabled = true, learned = true,
+	lastSeen = time() - 8 * 24 * 3600 }
+NS:RunChecklist("manual")
+Check("[23] buff jamais revu depuis 8 jours : plus réclamé", Result("buffs").ok == true, Result("buffs").detail)
+
+-- [8] [9] composants de métier : nombre possédé à jour, accroche de la sélection
+EnterEra()
+NS:ResetLegacyReagents()
+local hooks = {}
+_G.hooksecurefunc = function(name, fn) hooks[name] = fn end
+_G.TradeSkillFrame_SetSelection = function() end
+_G.GetTradeSkillReagentItemLink = function(index, slot)
+	local recipe = (Mock.world.tradeSkillRecipes or {})[index]
+	local reagent = recipe and (recipe.reagents or {})[slot]
+	return reagent and ("|Hitem:" .. reagent.itemID .. "::|h[x]|h") or nil
+end
+Mock.world.tradeSkillRecipes = {
+	{ name = "Bandage en lin", reagents = { { name = "Étoffe de lin", need = 2, have = 0, itemID = 2589 } } },
+	{ name = "Bandage épais", reagents = { { name = "Étoffe de laine", need = 2, have = 0, itemID = 2592 } } },
+}
+Mock.world.tradeSkillSelection = 1
+Mock:Fire("TRADE_SKILL_SHOW")
+Check("[9] sélection de recette accrochée", type(hooks.TradeSkillFrame_SetSelection) == "function")
+NS:InvalidateReagents()
+NS:RunChecklist("manual")
+Check("[8] composant manquant au départ", Result("reagents").ok == false, Result("reagents").detail)
+Mock.world.bags[0].items[5] = { itemID = 2589, stackCount = 4, quality = 1 }
+NS:InvalidateReagents()
+NS:RunChecklist("manual")
+Check("[8] sacs remplis ensuite : composant compté sans rescan", Result("reagents").ok == true, Result("reagents").detail)
+Mock.world.tradeSkillSelection = 2
+hooks.TradeSkillFrame_SetSelection(2)
+NS:RunChecklist("manual")
+Check("[9] changement de recette pris en compte", Result("reagents").detail:find("laine") ~= nil
+	or Result("reagents").detail:find("épais") ~= nil, Result("reagents").detail)
+
+-- [10] fenêtre Craft (Enchantement) sur Era
+EnterEra()
+NS:ResetLegacyReagents()
+_G.GetCraftSelectionIndex = function() return 1 end
+_G.GetCraftInfo = function() return "Enchantement de bracelets", nil, "optimal" end
+_G.GetCraftNumReagents = function() return 1 end
+_G.GetCraftReagentInfo = function() return "Poussière étrange", nil, 3, 1 end
+_G.GetCraftReagentItemLink = function() return "|Hitem:10940::|h[Poussière étrange]|h" end
+NS:DetectCapabilities()
+Check("[10] capacité craftLegacy détectée", NS.Caps.craftLegacy == true)
+-- le cadre d'événements a été enregistré au chargement, sans capacité Craft
+-- dans le mock : on rejoue l'enregistrement comme le ferait le client Era
+NS:RegisterEvents(NS.eventFrame)
+Check("[10] CRAFT_SHOW écouté quand la capacité existe", NS.eventFrame.events.CRAFT_SHOW == true)
+Mock:Fire("CRAFT_SHOW")
+NS:InvalidateReagents()
+NS:RunChecklist("manual")
+Check("[10] composant d'enchantement manquant signalé", Result("reagents").ok == false
+	and Result("reagents").detail:find("Poussière") ~= nil, Result("reagents").detail)
+_G.GetCraftSelectionIndex, _G.GetCraftInfo, _G.GetCraftNumReagents = nil, nil, nil
+_G.GetCraftReagentInfo, _G.GetCraftReagentItemLink = nil, nil
+_G.hooksecurefunc, _G.TradeSkillFrame_SetSelection, _G.GetTradeSkillReagentItemLink = nil, nil, nil
+NS:ResetLegacyReagents()
+
+-- [11] puissance d'attaque = base + bonus (3 retours)
+EnterEra()
+local savedAP = _G.UnitAttackPower
+_G.UnitAttackPower = function() return 100, 30, -5 end
+Check("[11] PA = base + posBuff + negBuff", NS:StatSnapshot().ap == 125, NS:StatSnapshot().ap)
+_G.UnitAttackPower = savedAP
+
+-- [12] spé sur Era : onglet de talents le plus fourni
+EnterEra()
+local savedSpec, savedSpecInfo = _G.GetSpecialization, _G.GetSpecializationInfo
+_G.GetSpecialization, _G.GetSpecializationInfo = nil, nil
+_G.GetNumTalentTabs = function() return 3 end
+_G.GetTalentTabInfo = function(tab)
+	local tabs = { { "Sacré", 5 }, { "Protection", 0 }, { "Vindicte", 31 } }
+	return tabs[tab][1], 135920, tabs[tab][2], "PaladinHoly"
+end
+Check("[12] Era : spé = onglet le plus fourni", NS.SpecIndex() == 3, NS.SpecIndex())
+Check("[12] Era : paladin Vindicte affiche l'Intelligence d'abord",
+	firstStat("PALADIN", nil):find("Intelligence") ~= nil, firstStat("PALADIN", nil))
+_G.GetTalentTabInfo = function(tab)
+	local tabs = { { "Sacré", 0 }, { "Protection", 31 }, { "Vindicte", 5 } }
+	return tabs[tab][1], 135920, tabs[tab][2], "PaladinHoly"
+end
+Check("[12] Era : paladin Protection affiche l'Endurance d'abord",
+	firstStat("PALADIN", nil):find("Endurance") ~= nil, firstStat("PALADIN", nil))
+_G.GetSpecialization, _G.GetSpecializationInfo = savedSpec, savedSpecInfo
+_G.GetNumTalentTabs, _G.GetTalentTabInfo = nil, nil
+
+-- [17] [18] [19] pourcentage, Esprit, ilvl de repli
+EnterEra()
+local before = NS:StatSnapshot()
+Mock.world.stats = { 25, 14, 30, 12, 40 }
+local after = NS:StatSnapshot()
+local spiRow = false
+for _, row in ipairs(NS:DiffSnapshots(before, after)) do
+	if row.key == "spi" or row.label == "SPI" or tostring(row.label):find("Esprit") then spiRow = true end
+end
+Check("[18] un changement d'Esprit apparaît dans le résumé", spiRow)
+local savedAvg = _G.GetAverageItemLevel
+_G.GetAverageItemLevel = nil
+Mock.world.equipped = { [1] = "casque" }
+Mock.world.links = { casque = { name = "Casque", quality = 2, itemLevel = 33, equipLoc = "INVTYPE_HEAD" } }
+Check("[19] sans GetAverageItemLevel : ilvl calculé", NS:StatSnapshot().ilvl == 33, NS:StatSnapshot().ilvl)
+-- [20] Equip sans C_Item.GetItemInfo : repli global
+local savedCInfo = C_Item.GetItemInfo
+_G.GetItemInfo = function(link) return savedCInfo(link) end
+C_Item.GetItemInfo = nil
+Check("[20] Equip : repli GetItemInfo global", NS.ItemData("casque") ~= nil and NS.ItemData("casque").itemLevel == 33)
+C_Item.GetItemInfo = savedCInfo
+_G.GetItemInfo = function(link) return _G.C_Item.GetItemInfo(link) end
+_G.GetAverageItemLevel = savedAvg
+NS:ShowPortraitStats()
+local percentOK = true
+for _, line in ipairs(NS.portraitFrame and NS.portraitFrame.lines or {}) do
+	if tostring(line.right and line.right.text):find("%%%%") then percentOK = false end
+end
+Check("[17] armure : « % » affiché une seule fois", percentOK)
+NS:HidePortraitStats()
+
+-- [21] [22] troncature UTF-8 et glyphes ASCII
+local cutText = NS.Truncate(string.rep("é", 30), 38)
+local lastByte = cutText:byte(#cutText - 3)
+Check("[21] troncature : aucun caractère coupé en deux", cutText:sub(-3) == "..."
+	and #cutText - 3 <= 38 and (#cutText - 3) % 2 == 0, cutText)
+EnterEra()
+NS:RunChecklist("manual")
+local firstAdvice = NS.window and NS.window.adviceLines[1].text or ""
+Check("[22] puce de conseil en ASCII", not firstAdvice:find("•", 1, true), firstAdvice)
+
+-- [14] [15] plus de « Sac & Départ » à l'écran
+Check("[14] préfixe du chat : Ready to Quest", NS.L.TAG:find("Ready to Quest") ~= nil, NS.L.TAG)
+Check("[14] titre de fenêtre : Ready to Quest", NS.L.WIN_TITLE == "Ready to Quest", NS.L.WIN_TITLE)
+Mock:Reset()
+NS:RecordError("audit-15", "message unique de l'audit")
+Check("[15] message d'erreur : Ready to Quest", Mock:Output():find("Ready to Quest — erreur") ~= nil, Mock:Output())
+
+-- [16] /sd diag donne la raison, pas le mapID
+EnterEra()
+Mock.world.resting = true
+Mock:Reset()
+NS:HandleCommand("diag")
+Check("[16] diag : raison de la zone sûre", Mock:Output():find("true %(resting") ~= nil, Mock:Output())
 
 LeaveEra()
 Mock.world.classToken = nil

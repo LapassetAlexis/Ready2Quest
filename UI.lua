@@ -10,11 +10,22 @@ local ROW_HEIGHT = 19
 local MAX_ADVICE = 3
 local DETAIL_TITLE = 38   -- longueur max du texte de détail (évite le débordement)
 
+-- Coupe à `limit` octets sans jamais couper un caractère UTF-8 en deux (é, â…
+-- font deux octets) : un octet de continuation (0x80-0xBF) ne peut pas
+-- commencer la partie retirée. « ... » en ASCII : « … » n'est pas garanti
+-- dans la police des cadres sur Era.
 local function Truncate(text, limit)
 	text = tostring(text or "")
 	if #text <= limit then return text end
-	return text:sub(1, limit - 1) .. "…"
+	local cut = limit - 3
+	while cut > 0 do
+		local nextByte = text:byte(cut + 1)
+		if not nextByte or nextByte < 0x80 or nextByte > 0xBF then break end
+		cut = cut - 1
+	end
+	return text:sub(1, cut) .. "..."
 end
+ns.Truncate = Truncate
 
 local function VerdictText(self)
 	local label, color = self:ScoreLabel()
@@ -234,7 +245,7 @@ function ns:ShowWindow(results)
 		for index = 1, MAX_ADVICE do
 			local entry = advice[index]
 			if entry then
-				frame.adviceLines[index]:SetText(Theme.T_GOLD .. "•|r " .. entry.text)
+				frame.adviceLines[index]:SetText(Theme.T_GOLD .. "-|r " .. entry.text)
 			else
 				frame.adviceLines[index]:SetText("")
 			end

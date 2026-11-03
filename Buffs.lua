@@ -19,7 +19,9 @@ local function AuraByIndex(index)
 		-- repli : l'API namespacée existe mais a refusé l'appel
 	end
 	if type(UnitAura) == "function" then
-		local ok, name, _, _, _, duration, _, _, spellId = pcall(UnitAura, "player", index, "HELPFUL")
+		-- name, icon, count, dispelType, duration, expirationTime, source,
+		-- isStealable, nameplateShowPersonal, spellId : le spellId est le 10e
+		local ok, name, _, _, _, duration, _, _, _, _, spellId = pcall(UnitAura, "player", index, "HELPFUL")
 		if ok and name then
 			return { name = name, duration = duration, spellId = spellId }
 		end
@@ -27,6 +29,75 @@ local function AuraByIndex(index)
 	return nil
 end
 ns.AuraByIndex = AuraByIndex
+
+-- ---------------------------------------------------------------------------
+-- Familles de buffs. Sur Era, chaque rang a son propre spellID (Robustesse R5,
+-- R6…) et la version de groupe porte un autre nom (Prière de robustesse, Don
+-- du fauve, Bénédiction supérieure). On compare donc par famille : le nom,
+-- normalisé, avec la version de groupe ramenée à la version simple.
+-- ---------------------------------------------------------------------------
+local FAMILY_ALIASES = {
+	-- frFR
+	["prière de robustesse"] = "mot de pouvoir : robustesse",
+	["prière d'esprit"] = "esprit divin",
+	["prière de protection contre l'ombre"] = "protection contre l'ombre",
+	["don du fauve"] = "marque du fauve",
+	["illumination des arcanes"] = "intelligence des arcanes",
+	-- enUS
+	["prayer of fortitude"] = "power word: fortitude",
+	["prayer of spirit"] = "divine spirit",
+	["prayer of shadow protection"] = "shadow protection",
+	["gift of the wild"] = "mark of the wild",
+	["arcane brilliance"] = "arcane intellect",
+}
+local GROUP_PREFIXES = {
+	{ "bénédiction supérieure de ", "bénédiction de " },
+	{ "bénédiction supérieure du ", "bénédiction du " },
+	{ "bénédiction supérieure des ", "bénédiction des " },
+	{ "greater blessing of ", "blessing of " },
+}
+
+-- Buffs de consommables : appris à tort (durée longue), puis signalés
+-- « manquants » à chaque sortie. On ne les apprend pas.
+local IGNORED_FAMILIES = {
+	["bien nourri"] = true, ["well fed"] = true,
+	["nourriture"] = true, ["boisson"] = true, ["food"] = true, ["drink"] = true,
+}
+
+local function BuffFamily(name)
+	if type(name) ~= "string" then return nil end
+	local key = ns.AsciiLower(name)
+	key = FAMILY_ALIASES[key] or key
+	for _, pair in ipairs(GROUP_PREFIXES) do
+		if key:sub(1, #pair[1]) == pair[1] then key = pair[2] .. key:sub(#pair[1] + 1) end
+	end
+	return key
+end
+ns.BuffFamily = BuffFamily
+
+-- Un buff suivi qui n'a pas été vu depuis 7 jours n'est plus réclamé : buff
+-- mondial ponctuel, ancien groupe, talent abandonné…
+local FORGET_AFTER = 7 * 24 * 3600
+local function WallClock()
+	if type(time) == "function" then
+		local ok, value = pcall(time)
+		if ok and type(value) == "number" then return value end
+	end
+	return nil
+end
+
+-- Familles des auras actuellement sur le joueur
+local function CurrentFamilies()
+	local families, any = {}, false
+	for i = 1, MAX_SCAN do
+		local aura = AuraByIndex(i)
+		if not aura then break end
+		any = true
+		local family = BuffFamily(aura.name)
+		if family then families[family] = true end
+	end
+	return families, any
+end
 
 local function SortTracked(a, b)
 	local an, bn = tostring(a.name or ""), tostring(b.name or "")
@@ -60,27 +131,38 @@ function ns:ScanBuffs()
 	if self.lastBuffScan and (now - self.lastBuffScan) < 2 then return end
 	self.lastBuffScan = now
 
-	local count = 0
-	for spellId in pairs(db.buffs) do count = count + 1 end
-	if count >= MAX_TRACKED then return end
+	local count, known = 0, {}
+	for _, entry in pairs(db.buffs) do
+		count = count + 1
+		local family = BuffFamily(entry.name)
+		if family then known[family] = entry end
+	end
 
+	local stamp = WallClock()
 	for i = 1, MAX_SCAN do
 		local aura = AuraByIndex(i)
 		if not aura then break end
 
 		local spellId = aura.spellId
 		local duration = aura.duration
-		if type(spellId) == "number" and spellId > 0
+		local family = BuffFamily(aura.name)
+		if family and known[family] then
+			-- déjà suivi sous un autre rang ou en version de groupe : on note
+			-- juste qu'il a été vu
+			known[family].lastSeen = stamp
+		elseif type(spellId) == "number" and spellId > 0
 			and type(duration) == "number" and duration >= MIN_DURATION
-			and not db.buffs[spellId] then
+			and not (family and IGNORED_FAMILIES[family])
+			and not db.buffs[spellId] and count < MAX_TRACKED then
 			db.buffs[spellId] = {
 				name     = tostring(aura.name or ("spell:" .. spellId)),
 				duration = duration,
 				enabled  = true,
 				learned  = true,
+				lastSeen = stamp,
 			}
+			if family then known[family] = db.buffs[spellId] end
 			count = count + 1
-			if count >= MAX_TRACKED then break end
 		end
 	end
 end
@@ -89,22 +171,34 @@ end
 function ns:EvaluateBuffs()
 	local db = self:DB()
 	local missing, unknown, watched = {}, 0, 0
+	local now = WallClock()
+	local hasByID = C_UnitAuras and type(C_UnitAuras.GetPlayerAuraBySpellID) == "function"
+	local families = CurrentFamilies()
+	local seen = {}
 
 	for spellId, entry in pairs(db.buffs) do
-		if entry.enabled ~= false then
+		local family = BuffFamily(entry.name) or tostring(spellId)
+		local stale = now and entry.learned and type(entry.lastSeen) == "number"
+			and (now - entry.lastSeen) > FORGET_AFTER
+		if entry.enabled ~= false and not stale and not seen[family] then
+			seen[family] = true
 			watched = watched + 1
-			local active = false
-			local readable = false
+			local active = families[family] == true
+			local readable = true
 
-			if C_UnitAuras and type(C_UnitAuras.GetPlayerAuraBySpellID) == "function" then
+			if hasByID then
+				-- une valeur secrète fait échouer l'appel : dans ce cas on ne
+				-- sait pas, et on ne crie pas « manquant »
 				local ok, res = pcall(function()
 					return C_UnitAuras.GetPlayerAuraBySpellID(spellId) ~= nil
 				end)
 				if ok then
-					readable = true
-					active = res == true
+					active = active or res == true
+				else
+					readable = false
 				end
 			end
+			if active and now then entry.lastSeen = now end
 
 			if not readable then
 				unknown = unknown + 1

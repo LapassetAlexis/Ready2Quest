@@ -3,8 +3,8 @@ local ADDON, ns = ...
 
 local frFR = {
 	ADDON_NAME = "Ready to Quest",
-	TAG = "|cff33ff99Sac & Départ|r",
-	WIN_TITLE = "Sac & Départ",
+	TAG = "|cff33ff99Ready to Quest|r",
+	WIN_TITLE = "Ready to Quest",
 	WIN_SUBTITLE = "Checklist avant de quitter une zone sûre",
 	WIN_FOOTER = "Clique pour fermer",
 	OK = "OK",
@@ -263,8 +263,8 @@ local frFR = {
 
 local enUS = {
 	ADDON_NAME = "Ready to Quest",
-	TAG = "|cff33ff99Bag & Go|r",
-	WIN_TITLE = "Bag & Go",
+	TAG = "|cff33ff99Ready to Quest|r",
+	WIN_TITLE = "Ready to Quest",
 	WIN_SUBTITLE = "Checklist before leaving a safe area",
 	WIN_FOOTER = "Click to close",
 	OK = "OK",
@@ -540,6 +540,18 @@ setmetatable(L, { __index = function(_, key)
 	return key
 end })
 ns.L = L
+
+-- Minuscules ASCII seulement. string.lower et %s dépendent de la locale C :
+-- en Latin-1, lower transforme l'octet 0xC3 (début de é, è, à…) en 0xE3 et
+-- casse l'UTF-8 ; %s y reconnaît 0xA0 (fin de « à »). On ne touche donc
+-- qu'aux lettres A-Z et aux espaces ASCII, et l'espace insécable devient une
+-- espace normale.
+function ns.AsciiLower(text)
+	if type(text) ~= "string" then return text end
+	text = text:gsub("[A-Z]", function(c) return string.char(c:byte() + 32) end)
+	text = text:gsub("\194\160", " "):gsub("[ \t\r\n]+", " "):gsub("^ ", ""):gsub(" $", "")
+	return text
+end
 
 -- Formatage défensif : jamais d'erreur si un placeholder manque.
 function ns:F(key, ...)
