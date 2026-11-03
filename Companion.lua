@@ -21,6 +21,19 @@
 -- Modèle 3D : CreateFrame("PlayerModel") + SetDisplayInfo (numéros vérifiés
 -- dans les deux clients, voir CompanionData.lua). Si l'API manque, la
 -- boussole de l'addon prend la place : le compagnon reste là, sans modèle.
+--
+-- Bulles (répliques dans CompanionLines.lua) : beaucoup de sources (combat,
+-- PNJ, repas, besoins, astuces, objectifs, bavardage), donc des règles pour
+-- qu'il reste agréable et pas bavard :
+--   * priorité : évolution/déblocage > tutoriel > réaction > besoin >
+--     astuce/objectif > bavardage. Une bulle n'en remplace jamais une plus
+--     importante encore affichée (ni une séquence en cours) ;
+--   * écart minimal global entre deux bulles non prioritaires ;
+--   * pause par catégorie (combat, PNJ, repas, besoins, astuces…) ;
+--   * la sourdine coupe tout, tutoriel compris.
+--
+-- Contrat avec le suivi d'objectifs du Carnet : ns:CompanionNextUnlocks()
+-- (voir sa définition).
 local ADDON, ns = ...
 local L = ns.L
 local Theme = ns.Theme
@@ -43,15 +56,50 @@ local SLEEPY_MIN, SLEEPY_MAX = 60, 600   -- s de jeu pour se réveiller (plafond
 local SLEEPY_PER_HOUR = 20   -- s de somnolence par heure d'absence
 local NAME_MAX = 24
 
+-- Priorités des bulles : une bulle n'efface jamais une bulle plus importante
+local PRIORITY = { chatter = 0, tip = 1, need = 2, reaction = 3, tuto = 4, event = 5 }
+local POOL_CATEGORY = {
+	EVOLVE = "event", UNLOCK = "event", TUTO = "tuto", TIP = "tip", GOAL = "tip", GOAL_STAGE = "tip",
+	IDLE = "chatter", NIGHT = "chatter",
+	NEED_hunger = "need", NEED_energy = "need", NEED_mood = "need", NEED_curiosity = "need",
+}
+-- Pause (s) par famille : les sources fréquentes (combat, PNJ) ne doivent pas
+-- transformer le compagnon en commentateur sportif
+local COOLDOWNS = {
+	kill = 150, eat = 60, npc = 45, loot = 45, place = 120,
+	need = 300,          -- toutes envies confondues
+	need_each = 900,     -- la même envie (faim, énergie…)
+	goal = 1800, idle = 900, night = 3600,
+}
+local TIP_GAP, TIP_JITTER = 600, 300   -- astuces : toutes les 10 à 15 min de jeu
+local GOAL_FIRST = 900                 -- premier rappel d'objectif après 15 min
+local NEED_LOW   = 35                  -- en dessous, il peut exprimer une envie
+local NEED_GRACE = 120                 -- pas d'envie dans les 2 min après la connexion
+local NIGHT_GRACE = 600
+local IDLE_REST  = 300                 -- 5 min au repos sans rien dire : un mot
+local CONVO_STEP = 3.5                 -- s entre deux bulles d'une conversation
+local TUTO_STEP  = 9                   -- s par bulle du tutoriel (« Suivant » accélère)
+local HISTORY    = 2                   -- lignes récentes évitées par réservoir
+local SAME_NPC   = 120                 -- même PNJ (bavardage puis vendeur) : un avis
+local SAME_HUB   = 600                 -- même village ré-entré : pas de nouveau mot
+
 ns.COMPANION_RULES = {
 	floor = NEED_FLOOR, max = NEED_MAX, decay = DECAY, restGain = REST_GAIN, bubbleGap = BUBBLE_GAP,
 	petCooldown = PET_COOLDOWN, sleepyAfter = SLEEPY_AFTER, sleepyMin = SLEEPY_MIN, sleepyMax = SLEEPY_MAX,
+	priority = PRIORITY, cooldowns = COOLDOWNS, tipGap = TIP_GAP, tipJitter = TIP_JITTER, needLow = NEED_LOW,
+	needGrace = NEED_GRACE, idleRest = IDLE_REST, convoStep = CONVO_STEP, tutoStep = TUTO_STEP,
+	goalFirst = GOAL_FIRST, bubbleTime = BUBBLE_TIME,
+	-- part des PNJ non humanoïdes jugés sur leur nature plutôt que leur rôle
+	-- (lu à chaque fois : les tests le fixent à 0 ou 1)
+	npcCreatureChance = 0.5,
 }
 
 -- ---------------------------------------------------------------------------
 -- Textes (tutoiement, chaleureux, courts)
 -- ---------------------------------------------------------------------------
 local FR = {
+	OPT_PAGE_COMPANION_MAIN = "Compagnon",
+	OPT_PAGE_COMPANION_MAIN_SUB = "Sa créature, ses bulles, son apparence et ses ornements.",
 	OPT_PAGE_COMPANION     = "Compagnon de route",
 	OPT_PAGE_COMPANION_SUB = "Une petite créature qui voyage avec toi et réagit à ton aventure.",
 	OPT_COMP_SHOW          = "Afficher le compagnon",
@@ -94,29 +142,30 @@ local FR = {
 	COMP_REQ_level         = "%d tampons de niveau",
 	COMP_REQ_total         = "%d tampons",
 	COMP_HOVER_HINT        = "Clic : un câlin · glisser : déplacer",
-	-- bulles
-	COMP_SAY_HELLO         = "Salut ! Moi c'est %s. On part à l'aventure ?",
-	COMP_SAY_MISSED        = "Tu m'as manqué ! Zzz… je me réveille doucement.",
-	COMP_SAY_AWAKE         = "Me revoilà en pleine forme !",
-	COMP_SAY_NOFOOD        = "On part sans rien à grignoter ? Pense à moi au prochain marchand !",
-	COMP_SAY_DEPART        = "En route ! J'ai vu le goûter dans ton sac.",
-	COMP_SAY_RETURN        = "Ouf, on est rentrés ! Bien joué.",
-	COMP_SAY_DEAD          = "Aïe… Je t'attends, prends ton temps.",
-	COMP_SAY_LEVEL         = "Niveau %d ! Bravo, toi !",
-	COMP_SAY_EVOLVE        = "Je grandis ! Me voilà %s !",
-	COMP_SAY_VIEW          = "Quelle vue !",
-	COMP_SAY_QUEST         = "Mission accomplie !",
-	COMP_SAY_CAMP          = "On se réchauffe ?",
-	COMP_SAY_INN           = "Une auberge… petite sieste ?",
-	COMP_SAY_EAT           = "Miam ! Merci pour le partage.",
-	COMP_SAY_LOOT          = "Oh, ça brille !",
-	COMP_SAY_STAMP         = "Un tampon de plus : %s !",
-	COMP_SAY_UNLOCK        = "Regarde : %s !",
-	COMP_SAY_PET_radiant   = "Youpi ! Encore !",
-	COMP_SAY_PET_happy     = "Hihi, ça chatouille !",
-	COMP_SAY_PET_dreamy    = "Mmh… merci, ça fait du bien.",
-	COMP_SAY_PET_sleepy    = "Hein ? Oh, c'est toi ! Bonjour !",
+	OPT_COMP_TIPS          = "Astuces",
+	OPT_COMP_TUTO          = "Rejouer le tutoriel",
+	COMP_TUTO_NEXT         = "Suivant",
+	COMP_TUTO_SKIP         = "Passer",
+	-- reste avant un déblocage (rappel d'objectif) : pluriel, puis singulier
+	COMP_LEFT_zone         = "%d zones",
+	COMP_LEFT_zone_1       = "une zone",
+	COMP_LEFT_subzone      = "%d lieux",
+	COMP_LEFT_subzone_1    = "un lieu",
+	COMP_LEFT_dungeon      = "%d donjons",
+	COMP_LEFT_dungeon_1    = "un donjon",
+	COMP_LEFT_rare         = "%d rares",
+	COMP_LEFT_rare_1       = "un rare",
+	COMP_LEFT_total        = "%d tampons",
+	COMP_LEFT_total_1      = "un tampon",
+	COMP_LEFT_level        = "%d tampons de niveau",
+	COMP_LEFT_level_1      = "un tampon de niveau",
+	COMP_LEFT_plevel       = "%d niveaux",
+	COMP_LEFT_plevel_1     = "un niveau",
 	-- chat et commandes
+	COMP_MSG_NEXT          = "Prochain : %s (%d/%d)",
+	COMP_MSG_TUTO_MUTED    = "Bulles du compagnon coupées : rallume-les pour voir le tutoriel (/r2q compagnon muet).",
+	COMP_MSG_TUTO_COMBAT   = "Le tutoriel du compagnon commencera après le combat.",
+	COMP_MSG_TUTO_SKIPPED  = "Tutoriel du compagnon passé (/r2q compagnon tuto pour le revoir).",
 	COMP_MSG_UNLOCK_APP    = "Compagnon : nouvelle apparence débloquée, %s. Choisis-la dans les réglages.",
 	COMP_MSG_UNLOCK_ORN    = "Compagnon : nouvel ornement débloqué, %s.",
 	COMP_MSG_EVOLVE        = "Compagnon : %s devient %s !",
@@ -129,9 +178,11 @@ local FR = {
 	COMP_MSG_APPEARANCE    = "Apparence : %s.",
 	COMP_MSG_MUTE          = "Bulles du compagnon : %s.",
 	COMP_MSG_FALLBACK      = "Modèle 3D indisponible sur ce client : la boussole le remplace.",
-	HELP_COMPANION         = "/r2q compagnon [nom <nom> | caresse | apparence | muet] — ton compagnon de route",
+	HELP_COMPANION         = "/r2q compagnon [nom <nom> | caresse | apparence | muet | tuto] — ton compagnon de route",
 }
 local EN = {
+	OPT_PAGE_COMPANION_MAIN = "Companion",
+	OPT_PAGE_COMPANION_MAIN_SUB = "Its creature, bubbles, appearance and ornaments.",
 	OPT_PAGE_COMPANION     = "Road companion",
 	OPT_PAGE_COMPANION_SUB = "A little creature that travels with you and reacts to your adventure.",
 	OPT_COMP_SHOW          = "Show the companion",
@@ -174,27 +225,28 @@ local EN = {
 	COMP_REQ_level         = "%d level stamps",
 	COMP_REQ_total         = "%d stamps",
 	COMP_HOVER_HINT        = "Click: a cuddle · drag: move",
-	COMP_SAY_HELLO         = "Hi! I'm %s. Off on an adventure?",
-	COMP_SAY_MISSED        = "I missed you! Zzz… waking up slowly.",
-	COMP_SAY_AWAKE         = "Wide awake again!",
-	COMP_SAY_NOFOOD        = "Leaving without a snack? Think of me at the next vendor!",
-	COMP_SAY_DEPART        = "Off we go! I saw the snacks in your bag.",
-	COMP_SAY_RETURN        = "Phew, we're back! Well done.",
-	COMP_SAY_DEAD          = "Ouch… I'll wait for you, take your time.",
-	COMP_SAY_LEVEL         = "Level %d! Go you!",
-	COMP_SAY_EVOLVE        = "I'm growing! Now I'm %s!",
-	COMP_SAY_VIEW          = "What a view!",
-	COMP_SAY_QUEST         = "Mission complete!",
-	COMP_SAY_CAMP          = "Shall we warm up?",
-	COMP_SAY_INN           = "An inn… little nap?",
-	COMP_SAY_EAT           = "Yum! Thanks for sharing.",
-	COMP_SAY_LOOT          = "Ooh, shiny!",
-	COMP_SAY_STAMP         = "One more stamp: %s!",
-	COMP_SAY_UNLOCK        = "Look: %s!",
-	COMP_SAY_PET_radiant   = "Yay! Again!",
-	COMP_SAY_PET_happy     = "Hehe, that tickles!",
-	COMP_SAY_PET_dreamy    = "Mmh… thanks, that's nice.",
-	COMP_SAY_PET_sleepy    = "Huh? Oh, it's you! Hello!",
+	OPT_COMP_TIPS          = "Tips",
+	OPT_COMP_TUTO          = "Replay the tutorial",
+	COMP_TUTO_NEXT         = "Next",
+	COMP_TUTO_SKIP         = "Skip",
+	COMP_LEFT_zone         = "%d zones",
+	COMP_LEFT_zone_1       = "one zone",
+	COMP_LEFT_subzone      = "%d places",
+	COMP_LEFT_subzone_1    = "one place",
+	COMP_LEFT_dungeon      = "%d dungeons",
+	COMP_LEFT_dungeon_1    = "one dungeon",
+	COMP_LEFT_rare         = "%d rares",
+	COMP_LEFT_rare_1       = "one rare",
+	COMP_LEFT_total        = "%d stamps",
+	COMP_LEFT_total_1      = "one stamp",
+	COMP_LEFT_level        = "%d level stamps",
+	COMP_LEFT_level_1      = "one level stamp",
+	COMP_LEFT_plevel       = "%d levels",
+	COMP_LEFT_plevel_1     = "one level",
+	COMP_MSG_NEXT          = "Next: %s (%d/%d)",
+	COMP_MSG_TUTO_MUTED    = "Companion bubbles are off: turn them on to see the tutorial (/r2q compagnon muet).",
+	COMP_MSG_TUTO_COMBAT   = "The companion tutorial will start after combat.",
+	COMP_MSG_TUTO_SKIPPED  = "Companion tutorial skipped (/r2q compagnon tuto to see it again).",
 	COMP_MSG_UNLOCK_APP    = "Companion: new appearance unlocked, %s. Pick it in the settings.",
 	COMP_MSG_UNLOCK_ORN    = "Companion: new ornament unlocked, %s.",
 	COMP_MSG_EVOLVE        = "Companion: %s becomes %s!",
@@ -207,7 +259,7 @@ local EN = {
 	COMP_MSG_APPEARANCE    = "Appearance: %s.",
 	COMP_MSG_MUTE          = "Companion bubbles: %s.",
 	COMP_MSG_FALLBACK      = "3D model unavailable on this client: the compass stands in.",
-	HELP_COMPANION         = "/r2q compagnon [nom <name> | caresse | apparence | muet] — your road companion",
+	HELP_COMPANION         = "/r2q compagnon [nom <name> | caresse | apparence | muet | tuto] — your road companion",
 }
 ns.RegisterStrings(FR, EN)
 ns.COMPANION_STRINGS = { fr = FR, en = EN }   -- exposé aux tests (parité fr/en)
@@ -216,6 +268,7 @@ ns.RegisterDefaults({
 	companionEnabled    = true,
 	companionShow       = true,
 	companionBubbles    = true,
+	companionTips       = true,
 	companionPoint      = { point = "CENTER", x = 330, y = -170 },
 	companionOrnRibbon  = true,
 	companionOrnLantern = true,
@@ -223,12 +276,18 @@ ns.RegisterDefaults({
 	companionOrnGold    = true,
 })
 
+-- Un seul module « Compagnon de route » : le carnet de voyage le fait évoluer.
+-- Entrée parente (un interrupteur) et deux sous-pages : Compagnon, Carnet.
+ns.AddOptionPage({ id = "companion", title = "OPT_PAGE_COMPANION", group = "OPT_GROUP_MODULES",
+	power = "companionEnabled", target = "companionMain" })
 ns.AddOptionPage({
-	id = "companion", title = "OPT_PAGE_COMPANION", group = "OPT_GROUP_MODULES", power = "companionEnabled",
+	id = "companionMain", title = "OPT_PAGE_COMPANION_MAIN", parent = "companion", group = "OPT_GROUP_MODULES",
 	rows = {
 		{ key = "companionShow",       label = "OPT_COMP_SHOW",       kind = "bool" },
 		{ key = "companionBubbles",    label = "OPT_COMP_BUBBLES",    kind = "bool" },
+		{ key = "companionTips",       label = "OPT_COMP_TIPS",       kind = "bool" },
 		{ key = "companionAppearance", label = "OPT_COMP_APPEARANCE", kind = "action" },
+		{ key = "companionTutorial",   label = "OPT_COMP_TUTO",       kind = "action" },
 		{ header = "OPT_COMP_ORNAMENTS" },
 		{ key = "companionOrnRibbon",  label = "COMP_ORN_RIBBON",     kind = "bool" },
 		{ key = "companionOrnLantern", label = "COMP_ORN_LANTERN",    kind = "bool" },
@@ -237,7 +296,8 @@ ns.AddOptionPage({
 	},
 })
 -- « pet » et « compagnon » : ni un contrôle du check, ni un autre module
-ns.RegisterModule({ id = "companion", key = "companionEnabled", label = "OPT_PAGE_COMPANION", aliases = { "compagnon", "pet" } })
+ns.RegisterModule({ id = "companion", key = "companionEnabled", label = "OPT_PAGE_COMPANION",
+	aliases = { "compagnon", "pet", "carnet", "journal" } })
 
 if type(ns.HELP) == "table" then
 	for _, section in ipairs(ns.HELP) do
@@ -266,6 +326,12 @@ local function Clock() return (ns.Now and ns.Now()) or 0 end                 -- 
 local function Wall() return tonumber(Call(rawget(_G, "time"))) or 0 end      -- heure réelle (absence)
 local function PlayerLevel() return tonumber((Call(rawget(_G, "UnitLevel"), "player"))) or 1 end
 local function Clamp(v, lo, hi) if v < lo then return lo end if v > hi then return hi end return v end
+-- Combat : verrou de l'interface OU drapeau de l'unité (les deux existent
+-- sur les deux clients, l'un peut manquer sur un client modifié)
+local function InCombat()
+	if Call(rawget(_G, "InCombatLockdown")) then return true end
+	return Call(rawget(_G, "UnitAffectingCombat"), "player") and true or false
+end
 
 local function ModuleOn()
 	local db = ns:DB()
@@ -486,29 +552,128 @@ function ns:CompanionOrnamentShown(def)
 end
 
 -- ---------------------------------------------------------------------------
--- Bulles : limitées dans le temps, coupables dans les réglages
+-- Bulles : priorités, écart minimal, pauses par catégorie, sourdine
 -- ---------------------------------------------------------------------------
--- opts.force : passe outre l'écart minimal (évolution, déblocage, retour,
--- caresse demandée par le joueur). Jamais outre la sourdine.
-function ns:CompanionSay(key, opts)
-	opts = opts or {}
-	if not ModuleOn() then return false end
-	local db = self:DB()
-	if db.companionBubbles == false or db.companionShow == false then return false end
-	local now = Clock()
-	if not opts.force and self.companionLastBubble and now - self.companionLastBubble < BUBBLE_GAP then
-		return false
+-- État de session (jamais sauvegardé : une pause n'a pas à survivre à un
+-- /reload, et un historique perdu ne fait que permettre une répétition)
+local function RT()
+	local rt = ns.companionRT
+	if not rt then
+		rt = { cool = {}, recent = {}, hubSeen = {} }
+		ns.companionRT = rt
 	end
-	local text = self:F("COMP_SAY_" .. key, unpack(opts.args or {}))
+	return rt
+end
+
+local function CategoryOf(pool)
+	return POOL_CATEGORY[pool] or "reaction"
+end
+
+local function Families(cd)
+	if cd == nil then return {} end
+	if type(cd) == "table" then return cd end
+	return { cd }
+end
+
+-- Une ligne au hasard dans un réservoir, sans répéter les dernières.
+-- `args` absent : les lignes à « %s » / « %d » sont écartées (un PNJ sans nom).
+-- `list` : liste de noms à la place d'un réservoir (choix d'une conversation).
+function ns:CompanionPick(pool, args, list)
+	local keys = list or (ns.COMPANION_POOLS and ns.COMPANION_POOLS[pool])
+	if type(keys) ~= "table" or #keys == 0 then return nil end
+	local hasArg = type(args) == "table" and args[1] ~= nil
+	local usable = {}
+	for _, key in ipairs(keys) do
+		local text = (not list) and L[key] or ""
+		if hasArg or not text:find("%%[sd]") then usable[#usable + 1] = key end
+	end
+	if #usable == 0 then return nil end
+	local rt = RT()
+	local recent = rt.recent[pool] or {}
+	rt.recent[pool] = recent
+	local candidates = {}
+	for _, key in ipairs(usable) do
+		local seen = false
+		for _, old in ipairs(recent) do if old == key then seen = true end end
+		if not seen then candidates[#candidates + 1] = key end
+	end
+	-- tout est récent (petit réservoir filtré) : on évite au moins la dernière
+	if #candidates == 0 then
+		for _, key in ipairs(usable) do if key ~= recent[#recent] then candidates[#candidates + 1] = key end end
+	end
+	if #candidates == 0 then candidates = usable end
+	local pick = candidates[math.random(#candidates)]
+	recent[#recent + 1] = pick
+	local keep = math.max(1, math.min(HISTORY, #usable - 1))
+	while #recent > keep do table.remove(recent, 1) end
+	return pick
+end
+
+-- `pool` : nom du réservoir (CompanionLines.lua). Options :
+--   force    : passe outre l'écart minimal (évolution, retour, caresse…)
+--   category : catégorie de priorité (sinon déduite du réservoir)
+--   cd       : famille(s) de pause (COOLDOWNS), vérifiées puis armées
+--   line     : clé imposée (astuce choisie, étape de séquence)
+--   args     : arguments du texte
+--   seq      : étape d'une séquence (conversation, tutoriel)
+--   duration : durée d'affichage
+-- Jamais outre la sourdine ni une bulle plus importante encore affichée.
+-- Renvoie true, ou false + raison ("off" : coupé/muet/masqué, "busy").
+function ns:CompanionSay(pool, opts)
+	opts = opts or {}
+	if not ModuleOn() then return false, "off" end
+	local db = self:DB()
+	if db.companionBubbles == false or db.companionShow == false then return false, "off" end
+	local rt, now = RT(), Clock()
+	local category = opts.category or CategoryOf(pool)
+	local prio = PRIORITY[category] or PRIORITY.reaction
+	local seq = rt.seq
+	-- ce qui occupe déjà la place : la bulle affichée, la séquence en cours
+	if self.companionBubbleUntil and now < self.companionBubbleUntil and prio < (self.companionBubblePrio or 0) then
+		return false, "busy"
+	end
+	if seq and not opts.seq and prio <= seq.prio then return false, "busy" end
+	if not opts.force and not opts.seq and prio < PRIORITY.tuto and self.companionLastBubble
+		and now - self.companionLastBubble < BUBBLE_GAP then
+		return false, "busy"
+	end
+	local families = Families(opts.cd)
+	for _, family in ipairs(families) do
+		if rt.cool[family] and now < rt.cool[family] then return false, "busy" end
+	end
+	local lineKey = opts.line or self:CompanionPick(pool, opts.args)
+	if not lineKey then return false, "busy" end
 	-- la bulle part du cadre : il doit être affiché
-	if not self:CompanionUpdateVisibility() then return false end
+	if not self:CompanionUpdateVisibility() then return false, "off" end
 	local bubble = self:EnsureCompanionBubble()
-	if not bubble then return false end
+	if not bubble then return false, "off" end
+	local text = self:F(lineKey, unpack(opts.args or {}))
+	-- plus importante qu'une séquence : la conversation s'arrête, le
+	-- tutoriel reprendra son étape après la bulle
+	if seq and not opts.seq then
+		if seq.kind == "tuto" then
+			seq.index = math.max(0, seq.index - 1)
+			seq.nextAt = now + BUBBLE_TIME
+		else
+			rt.seq = nil
+		end
+	end
+	for _, family in ipairs(families) do
+		local wait = COOLDOWNS[family]
+		if not wait and family:find("^need_") then wait = COOLDOWNS.need_each end
+		rt.cool[family] = now + (wait or 0)
+	end
 	self.companionLastBubble = now
-	self.companionBubbleKey, self.companionBubbleText = key, text
-	self.companionBubbleUntil = now + BUBBLE_TIME
+	self.companionBubbleKey, self.companionBubbleText, self.companionBubbleLine = pool, text, lineKey
+	self.companionBubblePrio = prio
+	self.companionBubbleUntil = now + (opts.duration or BUBBLE_TIME)
+	local tuto = category == "tuto"
 	bubble.text:SetText(text)
-	bubble:SetHeight(math.max(26, math.ceil(#text / 30) * 13 + 14))
+	bubble:SetHeight(math.max(26, math.ceil(#text / 30) * 13 + 14) + (tuto and 22 or 0))
+	if bubble.nextButton then
+		if tuto then bubble.nextButton:Show(); bubble.skipButton:Show()
+		else bubble.nextButton:Hide(); bubble.skipButton:Hide() end
+	end
 	bubble:Show()
 	if Theme.FadeIn then pcall(Theme.FadeIn, bubble) end
 	return true
@@ -516,7 +681,122 @@ end
 
 function ns:CompanionHideBubble()
 	self.companionBubbleUntil = nil
+	self.companionBubblePrio = nil
 	if self.companionBubble then self.companionBubble:Hide() end
+end
+
+-- ---------------------------------------------------------------------------
+-- Séquences : petite conversation (clic) et tutoriel
+-- ---------------------------------------------------------------------------
+function ns:CompanionStartSequence(kind, pool, steps, stepTime, args)
+	local rt = RT()
+	rt.seq = {
+		kind = kind, pool = pool, steps = steps, index = 0, step = stepTime, args = args,
+		prio = kind == "tuto" and PRIORITY.tuto or PRIORITY.reaction, nextAt = Clock(),
+	}
+	return self:CompanionSequenceStep()
+end
+
+function ns:CompanionSequenceStep()
+	local rt = RT()
+	local seq = rt.seq
+	if not seq then return false end
+	local now = Clock()
+	-- jamais de tutoriel en combat : il attend, la même étape reviendra
+	if seq.kind == "tuto" and InCombat() then
+		self:CompanionPauseTutorial()
+		return false
+	end
+	seq.index = seq.index + 1
+	local key = seq.steps[seq.index]
+	if not key then
+		rt.seq = nil
+		if seq.kind == "tuto" then self:CompanionFinishTutorial() end
+		return false
+	end
+	local ok, why = self:CompanionSay(seq.pool, {
+		seq = true, line = key, args = seq.args, category = seq.kind == "tuto" and "tuto" or "reaction",
+		duration = math.max(BUBBLE_TIME, seq.step),
+	})
+	if ok then
+		seq.nextAt = now + seq.step
+		return true
+	end
+	if why == "busy" then
+		-- une bulle plus importante occupe la place : on réessaie bientôt
+		seq.index = seq.index - 1
+		seq.nextAt = now + 1
+		return false
+	end
+	-- coupé, muet ou masqué : la séquence s'arrête (le tutoriel n'est pas
+	-- marqué comme vu, il reviendra à la prochaine connexion)
+	rt.seq = nil
+	return false
+end
+
+-- Conversation : une au hasard, jamais la même que les dernières
+function ns:CompanionStartConvo()
+	local name = self:CompanionPick("CONVOS", nil, ns.COMPANION_CONVOS or {})
+	if not name then return false end
+	return self:CompanionStartSequence("convo", name, ns.COMPANION_POOLS[name], CONVO_STEP)
+end
+
+-- Tutoriel : à la première apparition (par personnage), et à la demande
+function ns:CompanionStartTutorial(manual)
+	if not ModuleOn() then return false end
+	local db = self:DB()
+	local rt = RT()
+	if db.companionBubbles == false or db.companionShow == false then
+		if manual then self:Print(L.COMP_MSG_TUTO_MUTED) end
+		return false
+	end
+	if InCombat() then
+		rt.tutoPending = true
+		if manual then self:Print(L.COMP_MSG_TUTO_COMBAT) end
+		return false
+	end
+	rt.tutoPending = nil
+	return self:CompanionStartSequence("tuto", "TUTO", ns.COMPANION_POOLS.TUTO, TUTO_STEP, { self:CompanionName() })
+end
+
+-- Combat qui commence : la bulle du tutoriel s'efface, son étape reviendra.
+-- Appelée dès PLAYER_REGEN_DISABLED, où InCombatLockdown() vaut encore faux.
+function ns:CompanionPauseTutorial()
+	local seq = self.companionRT and self.companionRT.seq
+	if not (seq and seq.kind == "tuto") then return false end
+	if self.companionBubblePrio == PRIORITY.tuto and self.companionBubbleUntil then
+		self:CompanionHideBubble()
+		seq.index = math.max(0, seq.index - 1)
+	end
+	seq.nextAt = Clock() + 1
+	return true
+end
+
+function ns:CompanionTutorialActive()
+	local seq = self.companionRT and self.companionRT.seq
+	return seq ~= nil and seq.kind == "tuto"
+end
+
+function ns:CompanionTutorialNext()
+	if not self:CompanionTutorialActive() then return false end
+	self:CompanionHideBubble()
+	self:CompanionSequenceStep()
+	return true
+end
+
+function ns:CompanionFinishTutorial()
+	self:CompanionData().tutoDone = true
+	local rt = RT()
+	rt.tutoPending = nil
+	if rt.seq and rt.seq.kind == "tuto" then rt.seq = nil end
+	if self.companionBubblePrio == PRIORITY.tuto then self:CompanionHideBubble() end
+end
+
+function ns:CompanionSkipTutorial()
+	local active = self:CompanionTutorialActive() or RT().tutoPending
+	self:CompanionFinishTutorial()
+	if active then self:Print(L.COMP_MSG_TUTO_SKIPPED) end
+	return active and true or false
 end
 
 -- ---------------------------------------------------------------------------
@@ -657,6 +937,15 @@ function ns:EnsureCompanionBubble()
 	bubble.text:SetWidth(174)
 	bubble.text:SetJustifyH("CENTER")
 	bubble.text:SetWordWrap(true)
+	-- tutoriel : « Suivant » et « Passer », visibles seulement pendant ses bulles
+	if Theme.CreateButton then
+		bubble.nextButton = Theme.CreateButton(bubble, 70, 16, L.COMP_TUTO_NEXT, function() ns:CompanionTutorialNext() end, "primary")
+		bubble.nextButton:SetPoint("BOTTOMRIGHT", bubble, "BOTTOMRIGHT", -8, 6)
+		bubble.skipButton = Theme.CreateButton(bubble, 70, 16, L.COMP_TUTO_SKIP, function() ns:CompanionSkipTutorial() end)
+		bubble.skipButton:SetPoint("BOTTOMLEFT", bubble, "BOTTOMLEFT", 8, 6)
+		bubble.nextButton:Hide()
+		bubble.skipButton:Hide()
+	end
 	bubble:Hide()
 	self.companionBubble = bubble
 	return bubble
@@ -818,31 +1107,35 @@ end
 -- Besoins : baisse douce en jeu, gains sur les bons moments
 -- ---------------------------------------------------------------------------
 local EAT_AURAS = {
-	["food"] = true, ["drink"] = true, ["food & drink"] = true, ["refreshment"] = true,
-	["nourriture"] = true, ["boisson"] = true, ["nourriture et boisson"] = true, ["rafraîchissement"] = true,
+	["food"] = true, ["food & drink"] = true, ["refreshment"] = true,
+	["nourriture"] = true, ["nourriture et boisson"] = true, ["rafraîchissement"] = true,
 }
+-- boire seul : une autre réplique (« Glou glou ! »), le même gain
+local DRINK_AURAS = { ["drink"] = true, ["boisson"] = true }
 local FED_AURAS = { ["well fed"] = true, ["bien nourri"] = true, ["repu"] = true }
 
+-- Renvoie mange-ou-boit ?, bien nourri ?, boit seulement ?
 function ns:CompanionAuraState()
-	local eating, fed = false, false
+	local eating, fed, drinking = false, false, false
 	local read = self.AuraByIndex
-	if type(read) ~= "function" then return false, false end
+	if type(read) ~= "function" then return false, false, false end
 	for index = 1, 40 do
 		local aura = read(index)
 		if not aura then break end
 		local name = type(aura.name) == "string" and self.AsciiLower(aura.name) or nil
 		if name and EAT_AURAS[name] then eating = true end
+		if name and DRINK_AURAS[name] then drinking = true end
 		if name and FED_AURAS[name] then fed = true end
 	end
-	return eating, fed
+	return eating or drinking, fed, drinking and not eating
 end
 
 -- Repas : un gros coup de faim comblé au début, puis un peu chaque minute
 function ns:CompanionCheckAuras()
-	local eating, fed = self:CompanionAuraState()
+	local eating, fed, drinkOnly = self:CompanionAuraState()
 	if eating and not self.companionEating then
 		self:CompanionAdd("hunger", 35)
-		self:CompanionSay("EAT")
+		self:CompanionSay(drinkOnly and "DRINK" or "EAT", { cd = "eat" })
 	end
 	if fed and not self.companionFed then self:CompanionAdd("hunger", 15) end
 	self.companionEating, self.companionFed = eating, fed
@@ -881,6 +1174,119 @@ function ns:CompanionTick(seconds)
 	data.lastSeen = Wall()
 	self:CompanionRefreshLabels()
 	self:CompanionRefreshHover()
+	self:CompanionChatter(seconds)
+end
+
+-- Ce qu'il dit de lui-même, du plus important au moins important. Chaque
+-- source a sa pause ; l'écart global fait qu'une seule parle par relevé.
+function ns:CompanionChatter(seconds)
+	local rt = RT()
+	if rt.tutoPending and not InCombat() then self:CompanionStartTutorial(false) end
+	if InCombat() then return end
+	if self:CompanionTryNeed() then return end
+	if self:CompanionTryGoal() then return end
+	if self:CompanionTryTip() then return end
+	if self:CompanionTryIdle(seconds) then return end
+	self:CompanionTryNight()
+end
+
+-- Envie : le besoin le plus bas sous le seuil, jamais en somnolant
+function ns:CompanionTryNeed()
+	local data = self:CompanionData()
+	if data.sleepy or InCombat() then return false end
+	local rt, now = RT(), Clock()
+	local lowKey, lowValue
+	for _, key in ipairs(NEED_KEYS) do
+		local value = data.needs[key]
+		local cooling = rt.cool["need_" .. key] and now < rt.cool["need_" .. key]
+		if value < NEED_LOW and not cooling and (not lowValue or value < lowValue) then lowKey, lowValue = key, value end
+	end
+	if not lowKey then return false end
+	return (self:CompanionSay("NEED_" .. lowKey, { cd = { "need", "need_" .. lowKey } }))
+end
+
+-- Astuces : rien avant TIP_GAP (+ un peu de hasard) depuis la précédente
+local function TipDelay() return TIP_GAP + math.random(0, TIP_JITTER) end
+
+-- Astuce suivante : au hasard parmi celles pas encore vues (par personnage) ;
+-- toutes vues, on recommence un tour, sans redire la dernière
+function ns:CompanionNextTip()
+	local data = self:CompanionData()
+	if type(data.tipsSeen) ~= "table" then data.tipsSeen = {} end
+	local all = ns.COMPANION_POOLS.TIP or {}
+	local unseen = {}
+	for _, key in ipairs(all) do if not data.tipsSeen[key] then unseen[#unseen + 1] = key end end
+	if #unseen == 0 then
+		data.tipsSeen = {}
+		for _, key in ipairs(all) do if key ~= data.lastTip then unseen[#unseen + 1] = key end end
+	end
+	if #unseen == 0 then return nil end
+	return unseen[math.random(#unseen)]
+end
+
+function ns:CompanionTryTip(force)
+	if self:DB().companionTips == false or InCombat() then return false end
+	local rt, now = RT(), Clock()
+	if not rt.tipAt then rt.tipAt = now + TipDelay() end
+	if not force and now < rt.tipAt then return false end
+	local key = self:CompanionNextTip()
+	if not key then return false end
+	if not self:CompanionSay("TIP", { line = key }) then return false end
+	local data = self:CompanionData()
+	data.tipsSeen[key] = true
+	data.lastTip = key
+	rt.tipAt = now + TipDelay()
+	return true
+end
+
+-- Reste avant un déblocage, en toutes lettres (« 2 zones », « un niveau »)
+function ns:CompanionLeftText(item)
+	local left = math.max(1, (item.need or 0) - (item.have or 0))
+	local stat = item.source == "player" and "plevel" or tostring(item.stat)
+	if left == 1 then return L["COMP_LEFT_" .. stat .. "_1"] end
+	return self:F("COMP_LEFT_" .. stat, left)
+end
+
+-- Objectif : un rappel quand le prochain déblocage est tout proche
+local GOAL_NEAR = { player = 2, journal = 3 }
+function ns:CompanionTryGoal()
+	if InCombat() then return false end
+	local rt, now = RT(), Clock()
+	if not rt.goalAt then rt.goalAt = now + GOAL_FIRST end
+	if now < rt.goalAt then return false end
+	local target
+	for _, item in ipairs(self:CompanionNextUnlocks()) do
+		if item.need - item.have <= (GOAL_NEAR[item.source] or 3) then target = item; break end
+	end
+	if not target then
+		rt.goalAt = now + 300      -- rien de proche : on regardera plus tard
+		return false
+	end
+	local pool = target.kind == "stage" and "GOAL_STAGE" or "GOAL"
+	if not self:CompanionSay(pool, { args = { self:CompanionLeftText(target), target.label }, cd = "goal" }) then
+		return false
+	end
+	rt.goalAt = now + COOLDOWNS.goal
+	return true
+end
+
+-- Bavardage au repos : après IDLE_REST s de repos ininterrompu
+function ns:CompanionTryIdle(seconds)
+	local rt = RT()
+	if not Call(rawget(_G, "IsResting")) then rt.restIdle = 0; return false end
+	rt.restIdle = (rt.restIdle or 0) + (tonumber(seconds) or 0)
+	if rt.restIdle < IDLE_REST then return false end
+	if not self:CompanionSay("IDLE", { cd = "idle" }) then return false end
+	rt.restIdle = 0
+	return true
+end
+
+-- Nuit : l'heure du serveur (GetGameTime, présent sur les deux clients).
+-- Pas de pluie : aucune API fiable ne dit la météo.
+function ns:CompanionTryNight()
+	local hour = tonumber((Call(rawget(_G, "GetGameTime"))))
+	if not hour or (hour < 22 and hour >= 5) then return false end
+	return (self:CompanionSay("NIGHT", { cd = "night" }))
 end
 
 function ns:CompanionWake(say)
@@ -896,6 +1302,7 @@ end
 -- Connexion : une absence le rend somnolent, sans rien retirer à ses besoins
 function ns:CompanionLogin()
 	local data = self:CompanionData()
+	local rt, clock = RT(), Clock()
 	local now = Wall()
 	local first = data.lastSeen == nil
 	local away = first and 0 or math.max(0, now - (tonumber(data.lastSeen) or now))
@@ -903,32 +1310,52 @@ function ns:CompanionLogin()
 	-- zone de connexion : connue d'emblée, pas de « Quelle vue ! » au chargement
 	local mapID = self.CurrentMap and self:CurrentMap()
 	if mapID then data.seenZones[mapID] = true end
+	self:CompanionCheckPlace(true)
 	self:CompanionCheckStage(PlayerLevel(), not first)
 	self:CompanionCheckUnlocks(nil, first)
 	self.companionLastBubble = nil
-	if first then
-		self:CompanionSay("HELLO", { force = true, args = { self:CompanionName() } })
-	elseif away >= SLEEPY_AFTER then
+	-- un temps de répit après la connexion : pas d'envie ni de « bonne
+	-- nuit » dès l'écran de chargement
+	rt.cool.need = math.max(rt.cool.need or 0, clock + NEED_GRACE)
+	rt.cool.night = math.max(rt.cool.night or 0, clock + NIGHT_GRACE)
+	if away >= SLEEPY_AFTER then
 		data.sleepy = true
 		data.sleepyLeft = Clamp(math.floor(away / 3600 * SLEEPY_PER_HOUR), SLEEPY_MIN, SLEEPY_MAX)
 		self:CompanionAnimate()
+	end
+	-- première apparition : le tutoriel tient lieu de bonjour
+	if not data.tutoDone then
+		self:CompanionStartTutorial(false)
+	elseif first then
+		self:CompanionSay("HELLO", { force = true, args = { self:CompanionName() } })
+	elseif data.sleepy then
 		self:CompanionSay("MISSED", { force = true })
 	end
 	self:CompanionRefreshLabels()
 	return away
 end
 
--- Caresse : un peu de moral, une bulle mignonne, puis une petite pause
+-- Caresse : un peu de moral, puis une petite conversation (2 ou 3 bulles).
+-- Pendant le tutoriel, le clic passe à l'étape suivante.
 function ns:CompanionPet()
 	if not ModuleOn() then return false end
+	if self:CompanionTutorialActive() then return self:CompanionTutorialNext() end
 	local now = Clock()
 	if self.companionLastPet and now - self.companionLastPet < PET_COOLDOWN then return false end
 	self.companionLastPet = now
-	local mood = self:CompanionMood()
+	-- le joueur reprend la main : la conversation précédente s'arrête
+	local rt = RT()
+	if rt.seq and rt.seq.kind == "convo" then rt.seq = nil end
+	local wasSleepy = self:CompanionData().sleepy
 	self:CompanionWake(false)
 	self:CompanionAdd("mood", 8)
-	self:CompanionSay("PET_" .. mood, { force = true })
 	self:CompanionAnimate("cheer", 2)
+	-- réveillé en sursaut : une seule bulle, pas de bavardage
+	if wasSleepy then
+		self:CompanionSay("PET_sleepy", { force = true })
+	else
+		self:CompanionStartConvo()
+	end
 	return true
 end
 
@@ -966,8 +1393,26 @@ function ns:CompanionOnLoot(message)
 	local link = self:ParseSelfLoot(message)
 	if link and LinkQuality(link) >= 3 then   -- rare ou mieux : un vrai moment
 		self:CompanionAdd("mood", 10)
-		self:CompanionSay("LOOT")
+		self:CompanionSay("LOOT", { cd = "loot" })
 	end
+end
+
+-- Capitale ou village connu (Hubs.lua via ns:KnownHub) : un mot en entrant,
+-- pas à chaque sous-zone, ni deux fois de suite pour le même lieu
+function ns:CompanionCheckPlace(silent)
+	if type(self.KnownHub) ~= "function" then return false end
+	local ok, entry, name = pcall(self.KnownHub, self)
+	local rt = RT()
+	if not ok or not entry or not name then rt.lastHub = nil; return false end
+	local now = Clock()
+	-- toujours sur place : on retient l'heure, pour ne pas le refêter s'il
+	-- ressort une minute (une sous-zone voisine) puis revient
+	if rt.lastHub == name then rt.hubSeen[name] = now; return false end
+	rt.lastHub = name
+	local seen = rt.hubSeen[name]
+	rt.hubSeen[name] = now
+	if silent or (seen and now - seen < SAME_HUB) then return false end
+	return (self:CompanionSay(entry.kind == "capital" and "CITY" or "VILLAGE", { args = { name }, cd = "place" }))
 end
 
 function ns:CompanionOnZone(newArea)
@@ -979,6 +1424,7 @@ function ns:CompanionOnZone(newArea)
 			self:CompanionAdd("curiosity", 15)
 			self:CompanionSay("VIEW")
 		end
+		self:CompanionCheckPlace()
 		return
 	end
 	local sub = self.CurrentSubZone and self:CurrentSubZone()
@@ -989,6 +1435,7 @@ function ns:CompanionOnZone(newArea)
 			self:CompanionAdd("curiosity", 4)   -- sans bulle : il y en aurait trop
 		end
 	end
+	self:CompanionCheckPlace()
 end
 
 function ns:CompanionOnLevel(level)
@@ -1007,6 +1454,183 @@ function ns:CompanionOnStamp(stamp)
 	local fresh = self:CompanionCheckUnlocks()
 	-- la bulle du déblocage a priorité sur celle du tampon
 	if #fresh == 0 then self:CompanionSay("STAMP", { args = { tostring(stamp.name or "?") } }) end
+end
+
+-- Monstre tué par le joueur : PARTY_KILL du journal de combat, ou message
+-- d'XP d'un monstre. Les deux arrivent pour la même mort : un seul compte.
+function ns:CompanionOnKill()
+	local rt, now = RT(), Clock()
+	if rt.lastKill and now - rt.lastKill < 2 then return false end
+	rt.lastKill = now
+	self:CompanionAdd("mood", 1)
+	return (self:CompanionSay("KILL", { cd = "kill" }))
+end
+
+function ns:CompanionOnCombatLog(...)
+	local subevent, sourceGUID
+	local fn = rawget(_G, "CombatLogGetCurrentEventInfo")
+	if type(fn) == "function" then
+		local ok, _, sub, _, source = pcall(fn)
+		if not ok then return end
+		subevent, sourceGUID = sub, source
+	else
+		local _, sub, _, source = ...      -- très anciens clients : charge utile passée à l'événement
+		subevent, sourceGUID = sub, source
+	end
+	-- filtre bon marché d'abord : cet événement tombe des dizaines de fois par seconde
+	if subevent ~= "PARTY_KILL" or not sourceGUID then return end
+	if sourceGUID ~= Call(rawget(_G, "UnitGUID"), "player") then return end
+	self:CompanionOnKill()
+end
+
+function ns:CompanionOnCombatXP(message)
+	if type(message) ~= "string" then return end
+	local named
+	if type(self.ParseCombatXP) == "function" then
+		local ok, xp, isNamed = pcall(self.ParseCombatXP, self, message)
+		named = ok and xp ~= nil and isNamed == true
+	else
+		named = message:find(" dies", 1, true) ~= nil or message:find(" meurt", 1, true) ~= nil
+	end
+	if named then self:CompanionOnKill() end
+end
+
+-- Mort, puis retour : PLAYER_ALIVE tombe aussi en libérant l'esprit (fantôme) ;
+-- seul compte le vrai retour à la vie
+function ns:CompanionOnDead()
+	RT().dead = true
+	return (self:CompanionSay("DEAD"))
+end
+
+function ns:CompanionOnAlive()
+	local rt = RT()
+	if not rt.dead then return false end
+	if Call(rawget(_G, "UnitIsDeadOrGhost"), "player") then return false end
+	rt.dead = nil
+	return (self:CompanionSay("REZ"))
+end
+
+-- ---------------------------------------------------------------------------
+-- Avis sur les PNJ
+-- ---------------------------------------------------------------------------
+-- UnitCreatureType est traduit par le client : on reconnaît les deux langues
+local CREATURE_TYPES = {
+	["humanoid"] = "humanoid", ["humanoïde"] = "humanoid",
+	["undead"] = "undead", ["mort-vivant"] = "undead",
+	["beast"] = "beast", ["bête"] = "beast",
+	["demon"] = "demon", ["démon"] = "demon",
+	["dragonkin"] = "dragonkin", ["draconien"] = "dragonkin", ["dragon"] = "dragonkin",
+	["elemental"] = "elemental", ["élémentaire"] = "elemental", ["Élémentaire"] = "elemental",
+	["mechanical"] = "mechanical", ["machine"] = "mechanical", ["mécanique"] = "mechanical",
+	["giant"] = "giant", ["géant"] = "giant",
+	["critter"] = "critter", ["bestiole"] = "critter",
+}
+ns.COMPANION_CREATURE_TYPES = CREATURE_TYPES
+
+function ns:CompanionCreatureType(unit)
+	local text = Call(rawget(_G, "UnitCreatureType"), unit or "npc")
+	if type(text) ~= "string" or text == "" then return nil end
+	return CREATURE_TYPES[self.AsciiLower(text)] or CREATURE_TYPES[text]
+end
+
+-- Le bavardage d'un aubergiste propose « faire de cette auberge votre
+-- foyer » : l'option porte le type « binder » (anciennes et nouvelles API)
+local function GossipKind()
+	local info = rawget(_G, "C_GossipInfo")
+	if type(info) == "table" then
+		local options = Call(info.GetOptions)
+		if type(options) == "table" then
+			for _, option in ipairs(options) do
+				if type(option) == "table" and option.type == "binder" then return "innkeeper" end
+			end
+		end
+		local quests = (tonumber((Call(info.GetNumAvailableQuests))) or 0) + (tonumber((Call(info.GetNumActiveQuests))) or 0)
+		if quests > 0 then return "quest" end
+	end
+	local legacy = rawget(_G, "GetGossipOptions")
+	if type(legacy) == "function" then
+		local list = { pcall(legacy) }
+		if list[1] then
+			for i = 3, #list, 2 do if list[i] == "binder" then return "innkeeper" end end
+		end
+	end
+	local avail = tonumber((Call(rawget(_G, "GetNumGossipAvailableQuests")))) or 0
+	local active = tonumber((Call(rawget(_G, "GetNumGossipActiveQuests")))) or 0
+	if avail + active > 0 then return "quest" end
+	return "talk"
+end
+ns.CompanionGossipKind = GossipKind
+
+-- `kind` : merchant, innkeeper, trainer, flight, banker, quest, talk.
+-- Un PNJ non humanoïde est parfois jugé sur sa nature (« sent le caveau »).
+function ns:CompanionOnNpc(kind)
+	local rt, now = RT(), Clock()
+	-- bavardage puis fenêtre du vendeur : le même PNJ n'a qu'un avis
+	local guid = Call(rawget(_G, "UnitGUID"), "npc")
+	if guid and rt.npcGUID == guid and rt.npcAt and now - rt.npcAt < SAME_NPC then return false end
+	local name = Call(rawget(_G, "UnitName"), "npc")
+	if type(name) ~= "string" or name == "" then name = nil end
+	local pool = "NPC_" .. tostring(kind)
+	local creature = self:CompanionCreatureType("npc")
+	local chance = tonumber(ns.COMPANION_RULES.npcCreatureChance) or 0
+	if creature and creature ~= "humanoid" and ns.COMPANION_POOLS["NPC_CT_" .. creature] and math.random() < chance then
+		pool = "NPC_CT_" .. creature
+	end
+	if not ns.COMPANION_POOLS[pool] then pool = "NPC_talk" end
+	local ok = self:CompanionSay(pool, { args = name and { name } or nil, cd = "npc" })
+	if ok then rt.npcGUID, rt.npcAt = guid, now end
+	return ok
+end
+
+-- ---------------------------------------------------------------------------
+-- Prochains déblocages (contrat avec le suivi d'objectifs du Carnet)
+-- ---------------------------------------------------------------------------
+-- Renvoie la liste des cosmétiques encore verrouillés et du prochain stade,
+-- le plus proche d'abord :
+--   { label = "<nom traduit>", kind = "app" | "orn" | "stage",
+--     stat = "zone" | "subzone" | "dungeon" | "rare" | "level" | "total",
+--     have = n, need = n,
+--     -- en plus du contrat : d'où vient le compteur, et l'identifiant
+--     source = "journal" (tampons du carnet) | "player" (niveau du joueur),
+--     id = <id du cosmétique, ou numéro du stade> }
+-- stat = "level" avec source = "player" : niveau du JOUEUR (stades, chouette,
+-- cadre doré…) ; avec source = "journal" : tampons de palier du carnet.
+-- Ordre : part restante (1 - have/need) croissante, puis reste absolu, puis
+-- stade avant apparence avant ornement, puis libellé. Un objectif déjà
+-- atteint (débloqué au prochain relevé) n'y figure pas. Lecture seule.
+local KIND_ORDER = { stage = 1, app = 2, orn = 3 }
+function ns:CompanionNextUnlocks()
+	local data = self:CompanionData()
+	local counts = self:CompanionCounts()
+	local level = PlayerLevel()
+	local list = {}
+	local function Add(kind, def)
+		local unlock = def.unlock
+		if not unlock or data.unlocked[CosmeticKey(kind, def.id)] then return end
+		local item = { label = L[def.label], kind = kind, id = def.id }
+		if unlock.level then
+			item.stat, item.have, item.need, item.source = "level", level, unlock.level, "player"
+		else
+			item.stat, item.have, item.need, item.source = tostring(unlock.stamp), counts[unlock.stamp] or 0, unlock.count or 1, "journal"
+		end
+		if item.have < item.need then list[#list + 1] = item end
+	end
+	for _, def in ipairs(ns.COMPANION_APPEARANCES) do Add("app", def) end
+	for _, def in ipairs(ns.COMPANION_ORNAMENTS) do Add("orn", def) end
+	local stage = data.stage or self:CompanionStageFor(level)
+	local nextStage = ns.COMPANION_STAGES[stage + 1]
+	if nextStage and level < nextStage.level then
+		list[#list + 1] = { label = L[nextStage.label], kind = "stage", id = stage + 1, stat = "level",
+			have = level, need = nextStage.level, source = "player" }
+	end
+	table.sort(list, function(a, b)
+		local ra, rb = (a.need - a.have) / a.need, (b.need - b.have) / b.need
+		if ra ~= rb then return ra < rb end
+		if a.need - a.have ~= b.need - b.have then return a.need - a.have < b.need - b.have end
+		if a.kind ~= b.kind then return KIND_ORDER[a.kind] < KIND_ORDER[b.kind] end
+		return tostring(a.label) < tostring(b.label)
+	end)
+	return list
 end
 
 ns:RegisterCallback("DEPARTURE", function(self)
@@ -1035,6 +1659,7 @@ if type(ns.RunOptionAction) == "function" then
 	local baseAction = ns.RunOptionAction
 	function ns:RunOptionAction(key, ...)
 		if key == "companionAppearance" then return self:CompanionCycleAppearance() end
+		if key == "companionTutorial" then return self:CompanionStartTutorial(true) end
 		return baseAction(self, key, ...)
 	end
 end
@@ -1091,7 +1716,7 @@ if type(ns.RefreshOptions) == "function" then
 end
 
 -- ---------------------------------------------------------------------------
--- Commande : /r2q compagnon [nom <nom> | caresse | apparence | muet]
+-- Commande : /r2q compagnon [nom <nom> | caresse | apparence | muet | tuto [passer]]
 -- ---------------------------------------------------------------------------
 function ns:CompanionStatusLine()
 	local data = self:CompanionData()
@@ -1103,6 +1728,13 @@ function ns:CompanionStatusLine()
 			self:CompanionStageLabel(), L["COMP_MOOD_" .. self:CompanionMood()]),
 		self:F("COMP_MSG_NEEDS", math.floor(n.hunger + 0.5), math.floor(n.energy + 0.5), math.floor(n.mood + 0.5), math.floor(n.curiosity + 0.5)),
 		self:F("COMP_MSG_COLLECTION", apps, #ns.COMPANION_APPEARANCES, orns, #ns.COMPANION_ORNAMENTS)
+end
+
+-- Ligne « Prochain : Lanterne (12/25) » du statut, nil si tout est gagné
+function ns:CompanionNextLine()
+	local item = self:CompanionNextUnlocks()[1]
+	if not item then return nil end
+	return self:F("COMP_MSG_NEXT", item.label, item.have, item.need)
 end
 
 -- Nom : pas de code de couleur ni de lien (« | »), espaces repliés, 24 car.
@@ -1142,12 +1774,19 @@ function ns:CompanionCommand(rest)
 		db.companionBubbles = not (db.companionBubbles ~= false)
 		if db.companionBubbles == false then self:CompanionHideBubble() end
 		return self:Print(self:F("COMP_MSG_MUTE", db.companionBubbles and L.MODULE_ON or L.MODULE_OFF))
+	elseif sub == "tuto" or sub == "tutorial" or sub == "tutoriel" then
+		local what = (arg or ""):lower()
+		if what == "passer" or what == "skip" or what == "stop" then return self:CompanionSkipTutorial() end
+		self:CompanionUpdateVisibility()
+		return self:CompanionStartTutorial(true)
 	end
 	self:CompanionCheckUnlocks()
 	local line1, line2, line3 = self:CompanionStatusLine()
 	self:Print(line1)
 	print("   " .. line2)
 	print("   " .. line3)
+	local nextLine = self:CompanionNextLine()
+	if nextLine then print("   " .. nextLine) end
 	if self.companionFrame and self.companionFrame.usesFallback then print("   " .. L.COMP_MSG_FALLBACK) end
 end
 
@@ -1172,7 +1811,26 @@ local HANDLERS = {
 	end,
 	PLAYER_LOGOUT          = function() ns:CompanionData().lastSeen = Wall() end,
 	PLAYER_LEVEL_UP        = function(level) ns:CompanionOnLevel(level) end,
-	PLAYER_DEAD            = function() ns:CompanionSay("DEAD") end,
+	PLAYER_DEAD            = function() ns:CompanionOnDead() end,
+	PLAYER_ALIVE           = function() ns:CompanionOnAlive() end,
+	PLAYER_UNGHOST         = function() ns:CompanionOnAlive() end,
+	COMBAT_LOG_EVENT_UNFILTERED = function(...) ns:CompanionOnCombatLog(...) end,
+	CHAT_MSG_COMBAT_XP_GAIN = function(message) ns:CompanionOnCombatXP(message) end,
+	-- avis sur la personne à qui l'on parle
+	GOSSIP_SHOW            = function() ns:CompanionOnNpc(ns.CompanionGossipKind()) end,
+	MERCHANT_SHOW          = function() ns:CompanionOnNpc("merchant") end,
+	TRAINER_SHOW           = function() ns:CompanionOnNpc("trainer") end,
+	TAXIMAP_OPENED         = function() ns:CompanionOnNpc("flight") end,
+	BANKFRAME_OPENED       = function() ns:CompanionOnNpc("banker") end,
+	QUEST_GREETING         = function() ns:CompanionOnNpc("quest") end,
+	QUEST_DETAIL           = function() ns:CompanionOnNpc("quest") end,
+	CONFIRM_BINDER         = function() ns:CompanionOnNpc("innkeeper") end,
+	-- tutoriel : suspendu en combat, (re)lancé à la sortie
+	PLAYER_REGEN_DISABLED  = function() ns:CompanionPauseTutorial() end,
+	PLAYER_REGEN_ENABLED   = function()
+		local rt = ns.companionRT
+		if rt and rt.tutoPending then ns:CompanionStartTutorial(false) end
+	end,
 	QUEST_TURNED_IN        = function()
 		ns:CompanionAdd("mood", 12)
 		ns:CompanionWake(false)
@@ -1212,6 +1870,12 @@ events:SetScript("OnUpdate", function(_, delta)
 	local now = Clock()
 	if ns.companionBubbleUntil and now >= ns.companionBubbleUntil then ns:CompanionHideBubble() end
 	if ns.companionAnimUntil and now >= ns.companionAnimUntil then ns:CompanionAnimate() end
+	-- séquence (conversation, tutoriel) : bulle suivante à l'heure dite
+	local rt = ns.companionRT
+	if rt and rt.seq and now >= (rt.seq.nextAt or 0) then
+		local ok, err = pcall(ns.CompanionSequenceStep, ns)
+		if not ok and ns.RecordError then ns:RecordError("companion:sequence", err) end
+	end
 	local frame = ns.companionFrame
 	if frame and frame.model and not frame.usesFallback and frame:IsShown() then
 		Method(frame.model, "SetRotation", 0.35 * math.sin(sway * 0.5))

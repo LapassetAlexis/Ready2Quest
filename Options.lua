@@ -82,7 +82,7 @@ local PAGES = {
 	-- sans réglage propre, mais avec une vraie page : cliquer sur un module doit
 	-- montrer ce qu'il fait (il renvoyait sur Général, c'était déroutant)
 	{ id = "toast", title = "OPT_PAGE_TOAST", group = "OPT_GROUP_MODULES", power = "showGearToast",
-		info = { "OPT_TOAST_INFO_1", "OPT_TOAST_INFO_2", "OPT_TOAST_INFO_3" }, actions = { "editMode" } },
+		info = { "OPT_TOAST_INFO_1", "OPT_TOAST_INFO_2", "OPT_TOAST_INFO_3" }, actions = { "toastPreview", "editMode" } },
 	{ id = "portrait", title = "OPT_PAGE_PORTRAIT", group = "OPT_GROUP_MODULES", power = "showPortraitStats",
 		info = { "OPT_PORTRAIT_INFO_1", "OPT_PORTRAIT_INFO_2", "OPT_PORTRAIT_INFO_3" }, actions = { "portraitShow", "editMode" } },
 	-- QOL -------------------------------------------------------------------
@@ -847,6 +847,10 @@ end
 function ns:SelectOptionsPage(id)
 	local frame = self.optionsFrame
 	if not frame then return end
+	-- entrée de navigation sans page propre (module parent) : sa première sous-page
+	for _, def in ipairs(PAGES) do
+		if def.id == id and def.target then id = def.target; break end
+	end
 	if not frame.pages[id] then id = "general" end
 	frame.currentPage = id
 	local parent
@@ -860,16 +864,26 @@ function ns:SelectOptionsPage(id)
 	self:RefreshOptions()
 end
 
+-- « Une seule fenêtre à la fois » : les grandes fenêtres de l'addon ne
+-- s'empilent pas. Le carnet de voyage n'y était pas soumis et recouvrait les
+-- réglages (signalé en jeu). Les cadres discrets (résumé, compagnon, suivi)
+-- ne sont pas concernés.
+ns.EXCLUSIVE_WINDOWS = { "window", "optionsFrame", "journalFrame", "expeditionFrame", "dungeonFrame" }
+function ns:CloseOtherWindows(keep)
+	for _, field in ipairs(self.EXCLUSIVE_WINDOWS) do
+		local other = self[field]
+		if other and other ~= keep and other.IsShown and other:IsShown() then other:Hide() end
+	end
+end
+
 function ns:ToggleOptions()
 	local frame = self:EnsureOptions()
 	if not frame then return end
 	if frame:IsShown() then
 		frame:Hide()
 	else
-		-- Une seule fenêtre à la fois : le diagnostic se ferme
-		if self.window and self.window:IsShown() then
-			self.window:Hide()
-		end
+		-- Une seule fenêtre à la fois : les autres se ferment
+		self:CloseOtherWindows(frame)
 		if self.StopEditMode then self:StopEditMode() end
 		self:RefreshOptions()
 		frame:Show()
@@ -945,6 +959,8 @@ function ns:RunOptionAction(key)
 		self:RefreshOptions()
 	elseif key == "minimapPos" and self.CycleMinimapAngle then
 		self:CycleMinimapAngle()
+	elseif key == "toastPreview" and self.SimulateGearToast then
+		self:SimulateGearToast()
 	elseif key == "portraitShow" and self.ShowPortraitStats then
 		-- aperçu immédiat, même si le module est coupé (forceStats)
 		self.forceStats = true

@@ -380,6 +380,8 @@ do
 	Check("[JRN] fenêtre Theme (titre)", f and f.title and f.title.text == "Carnet de voyage")
 	Check("[JRN] six onglets", f and f.tabs.zone and f.tabs.subzone and f.tabs.capital and f.tabs.dungeon and f.tabs.rare and f.tabs.level)
 	Check("[JRN] total en sous-titre", f.subtitle.text:find("6 tampon", 1, true), f.subtitle.text)
+	Check("[JRN] premier onglet : Objectifs", f.kind == "goals" and NS.JOURNAL_TABS[1] == "goals")
+	f.tabs.zone:Click()
 	Check("[JRN] zones : compte seul (pas de total)", f.counter.text == "Zones : 2", f.counter.text)
 	f.tabs.capital:Click()
 	Check("[JRN] capitales : 1 / 6", f.counter.text == "Capitales : 1 / 6", f.counter.text)
@@ -437,10 +439,15 @@ do
 	NS.optionsFrame = nil
 	NS:ToggleOptions()
 	local o = NS.optionsFrame
-	local nav
-	for _, button in ipairs(o.navButtons) do if button.pageId == "journal" then nav = button end end
+	-- v1.25.0 : un seul module « Compagnon de route », le carnet en est une sous-page
+	local nav, parentNav
+	for _, button in ipairs(o.navButtons) do
+		if button.pageId == "journal" then nav = button end
+		if button.pageId == "companion" then parentNav = button end
+	end
 	local page = o.pages.journal
-	Check("[JRN] page de réglages avec interrupteur", nav and nav.power and page)
+	Check("[JRN] sous-page du Compagnon de route", nav and nav.parentId == "companion" and nav.power == nil and page)
+	Check("[JRN] interrupteur unique sur le module parent", parentNav and parentNav.power ~= nil)
 	Check("[JRN] page rangée dans MODULES", (function()
 		local seen
 		for _, def in ipairs(NS.OPTION_PAGES) do
@@ -449,22 +456,27 @@ do
 		end
 	end)())
 	Check("[JRN] phrase d'explication", page and page.sub.text == NS.L.OPT_PAGE_JOURNAL_SUB)
-	Check("[JRN] bandeau et chat réglables", page and #page.rows == 2)
+	Check("[JRN] bandeau, chat et suivi réglables", page and #page.rows == 5, page and #page.rows)
 	local button = page and page.actionButtons and page.actionButtons.journal
 	Check("[JRN] bouton « Ouvrir le carnet »", button and button.text.text == "Ouvrir le carnet")
 	if button then button:Click() end
 	Check("[JRN] le bouton ouvre le carnet", NS.journalFrame and NS.journalFrame:IsShown())
+	-- bug signalé en jeu : le carnet recouvrait les réglages
+	Check("[JRN] une seule fenêtre : les réglages se ferment", o:IsShown() == false)
+	NS:ToggleOptions()
+	Check("[JRN] une seule fenêtre : rouvrir les réglages ferme le carnet", NS.journalFrame:IsShown() == false)
+	NS:ToggleJournal(true)
 	if button then button:Click() end
 	Check("[JRN] le bouton n'est pas une bascule (reste ouvert)", NS.journalFrame:IsShown())
 	NS.journalFrame:Hide()
 	local minimapAngle = NS:DB().minimapAngle
 	NS:RunOptionAction("minimapPos")
 	Check("[JRN] relais : les autres actions passent toujours", NS:DB().minimapAngle ~= minimapAngle)
-	if nav then
-		nav.power:Click()
-		Check("[JRN] interrupteur : module coupé", NS:DB().journalEnabled == false)
-		nav.power:Click()
-		Check("[JRN] interrupteur : rallumé", NS:DB().journalEnabled == true)
+	if parentNav then
+		parentNav.power:Click()
+		Check("[JRN] interrupteur : module coupé", NS:DB().companionEnabled == false)
+		parentNav.power:Click()
+		Check("[JRN] interrupteur : rallumé", NS:DB().companionEnabled == true)
 	end
 	o:Hide()
 	NS.optionsFrame = nil
@@ -472,7 +484,7 @@ do
 	-- module coupé : rien ne se gagne
 	J.Reset(20)
 	NS:HandleCommand("module carnet off")
-	Check("[JRN] /r2q module carnet off", NS:DB().journalEnabled == false)
+	Check("[JRN] /r2q module carnet off", NS:DB().companionEnabled == false)
 	J.Enter(); J.Sub("Goldshire")
 	J.W.instance, J.W.instType, J.W.instName, J.W.instID = true, "party", "Les Mortemines", 36
 	J.Enter()
@@ -488,12 +500,12 @@ do
 		and Mock:Output():find("Carnet coupé", 1, true))
 	NS.journalFrame:Hide()
 	NS:HandleCommand("module journal on")
-	Check("[JRN] /r2q module journal on", NS:DB().journalEnabled == true)
+	Check("[JRN] /r2q module journal on", NS:DB().companionEnabled == true)
 	J.W.instance = false
 	Mock:Fire("PLAYER_ENTERING_WORLD", false, false)
 	Check("[JRN] rallumé : les paliers manqués sont rattrapés en silence", NS:HasStamp("level:20")
 		and NS:JournalData().stamps["level:20"].retro == true)
-	Check("[JRN] alias sans conflit avec les contrôles", NS:FindModule("carnet").id == "journal" and not NS:FindCheck("carnet"))
+	Check("[JRN] « carnet » vise le Compagnon de route, sans conflit", NS:FindModule("carnet").id == "companion" and not NS:FindCheck("carnet"))
 
 	-- interrupteur général de l'addon
 	J.Reset(20)

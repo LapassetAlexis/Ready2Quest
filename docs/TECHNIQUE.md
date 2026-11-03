@@ -37,6 +37,15 @@ Comme avant, un agent par module, puis fusion. Le contrat entre les deux tient e
 - **Premier relevé du compagnon** : il est maintenant toujours silencieux. Avant, quand les données naissaient hors connexion (module activé en cours de partie, ou premier tampon), il annonçait d'un coup tous les déblocages dus au niveau. Les tests d'autres modules l'ont révélé, et un test d'intégration le couvre.
 - **Ornements verrouillés** : leur interrupteur s'affichait allumé. Il est maintenant éteint et estompé (vu sur un rendu, test ajouté).
 
+**Retours après essai** (même version)
+- **Un seul module** : le carnet fait évoluer le compagnon, il devient donc sa sous-page. Interrupteur unique `companionEnabled` (`journalEnabled` disparaît), entrée de navigation parente `companion` qui pointe vers `companionMain` ; `ns:SelectOptionsPage` suit le `target` des entrées sans contenu. Alias `/r2q carnet` et `/r2q journal` conservés.
+- **Fenêtres exclusives** : le carnet se superposait aux réglages. `ns.EXCLUSIVE_WINDOWS` liste les grandes fenêtres (récap, réglages, carnet, expédition, donjon) et `ns:CloseOtherWindows(keep)` ferme les autres à l'ouverture.
+- **Dialogues** (`CompanionLines.lua`) : réserves de phrases fr/en par situation (monstre abattu, manger, boire, PNJ par type — marchand, aubergiste, maître, maître de vol, banquier, donneur de quêtes —, type de créature ciblée, nuit, inactivité…), 26 astuces (toutes les 10 à 15 min de jeu), 10 conversations de quelques bulles (une toutes les 3,5 s). Priorités `chatter < tip < need < reaction < tuto < event` et délais par catégorie pour ne jamais bavarder en boucle ; jamais en combat. Les lignes à `%s` sont écartées si le nom manque.
+- **Besoins exprimés** : envies basses → phrase `NEED_*`, pas dans les 2 min après la connexion. `ns:CompanionNextUnlocks()` liste les prochains déblocages (`label`, `kind` app/orn/stage, `stat`, `have`, `need`, `source` player/journal) ; la créature en annonce un de temps en temps (`GOAL`, `GOAL_STAGE`).
+- **Tutoriel** : 6 bulles au premier lancement, « Suivant » accélère, `/r2q compagnon tuto` pour le revoir.
+- **Objectifs** (`JournalTracker.lua`) : `ns:JournalObjectives()` assemble les déblocages du compagnon, les villages de la zone, les capitales, les donjons du niveau et le prochain palier, triés par proximité. Onglet « Objectifs » dans le carnet (fenêtre 520 px) et bloc « Carnet » à l'écran, ancré sous `QuestWatchFrame` / `ObjectiveTrackerFrame` / `QuestObjectiveTracker`, sinon en haut à droite ; repliable, déplaçable, masqué en combat (réglable). Un test d'intégration branche le vrai compagnon sur le vrai suivi.
+- **Résumé de stuff** : bouton « Simuler un changement » (`ns:SimulateGearToast`), qui alterne gain et perte sur la stat principale ; l'aperçu passe en strate `FULLSCREEN_DIALOG` pour rester au-dessus des réglages.
+
 **À vérifier en jeu**
 - Le modèle s'affiche dans un `PlayerModel` d'addon. Un modèle invisible sans erreur ne se détecte pas hors jeu.
 - Cadrage, échelle et animations des créatures.

@@ -45,7 +45,8 @@ for _, module in ipairs(NS.MODULES) do
 end
 Check("[INT] identifiants de module uniques", #dup == 0, table.concat(dup, ","))
 Check("[INT] les modules sont déclarés", seen.depart and seen.stuff and seen.portrait and seen.camp and seen.expedition and seen.dungeon
-	and seen.reward and seen.pace and seen.bagspace and seen.death and seen.companion and seen.journal,
+	and seen.reward and seen.pace and seen.bagspace and seen.death and seen.companion
+	and not seen.journal,     -- le carnet fait partie du Compagnon de route (v1.25.0)
 	(function() local t = {} for id in pairs(seen) do t[#t + 1] = id end table.sort(t) return table.concat(t, ",") end)())
 
 -- un alias de module ne doit jamais masquer l'identifiant d'un contrôle :
@@ -89,4 +90,55 @@ do
 		end
 	end
 	Check("[INT] ornements verrouillés : interrupteur éteint", #wrong == 0, table.concat(wrong, ","))
+end
+
+-- Résumé de stuff : « Simuler un changement » montre un vrai cadre, au-dessus
+-- du panneau de réglages, avec les stats de la classe et un gain + une perte
+do
+	ResetWorld()
+	NS.optionsFrame = nil
+	NS.toastFrame = nil
+	NS:ToggleOptions()
+	NS:SelectOptionsPage("toast")
+	local page = NS.optionsFrame.pages.toast
+	Check("[INT] résumé : bouton « Simuler un changement »", page.actionButtons and page.actionButtons.toastPreview ~= nil)
+	NS:DB().showGearToast = false            -- même module coupé, l'aperçu s'affiche
+	page.actionButtons.toastPreview:Click()
+	local toast = NS.toastFrame
+	Check("[INT] simulation : le cadre s'affiche", toast and toast:IsShown() == true)
+	Check("[INT] simulation : au-dessus des réglages", toast and toast.strata == "FULLSCREEN_DIALOG", toast and toast.strata)
+	Check("[INT] simulation : le panneau reste ouvert", NS.optionsFrame:IsShown() == true)
+	-- une seule ligne s'affiche : la stat principale de la classe, qui alterne
+	-- gain (1er clic) et perte (2e clic) pour voir les deux flèches
+	local first = NS:SimulateGearToast()
+	local second = NS:SimulateGearToast()
+	Check("[INT] simulation : stat principale de la classe", first[1].label == "STR" and second[1].label == "STR", first[1].label)   -- guerrier du harnais
+	Check("[INT] simulation : un clic gain, le suivant perte", (first[1].delta > 0) ~= (second[1].delta > 0),
+		first[1].delta .. " / " .. second[1].delta)
+	-- l'aperçu s'efface tout seul et rend sa couche normale au cadre
+	T.Mock:Advance(30)
+	Check("[INT] simulation : s'efface toute seule", toast:IsShown() == false)
+	Check("[INT] fin de l'aperçu : couche normale", toast.strata == "HIGH", toast.strata)
+	NS:DB().showGearToast = true
+	NS:ShowGearToast({ { label = "STR", kind = "integer", polarity = true, delta = 2 } })
+	Check("[INT] vrai changement : couche normale", toast.strata == "HIGH", toast.strata)
+end
+
+-- Compagnon ↔ suivi du carnet : chaque agent a testé contre une doublure de
+-- l'autre. Ici, les deux vraies fonctions ensemble.
+do
+	ResetWorld()
+	T.Mock.world.level = 15
+	local unlocks = NS:CompanionNextUnlocks()
+	Check("[INT] compagnon : prochains déblocages fournis", type(unlocks) == "table" and #unlocks > 0, unlocks and #unlocks)
+	local objectives = NS:JournalObjectives()
+	local fromCompanion, text = 0, {}
+	for _, goal in ipairs(objectives) do
+		if goal.source == "companion" then fromCompanion = fromCompanion + 1 end
+		text[#text + 1] = tostring(goal.label) .. " " .. tostring(goal.progress)
+	end
+	Check("[INT] suivi : objectifs du compagnon affichés", fromCompanion > 0, table.concat(text, " | "))
+	local joined = table.concat(text, " | ")
+	Check("[INT] suivi : un stade ou une apparence au niveau, avec sa progression", joined:find("niveau 15/", 1, true) ~= nil, joined)
+	Check("[INT] suivi : aucune clé de traduction brute", not joined:find("JRN_", 1, true) and not joined:find("COMP_", 1, true), joined)
 end

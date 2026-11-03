@@ -110,7 +110,7 @@ local function NewRegion(kind, name)
 		self.lastPoint = entry
 		return entry
 	end
-	function region:SetFrameStrata() end
+	function region:SetFrameStrata(value) self.strata = value end
 	function region:SetMovable(value) self.movable = value end
 	function region:StartMoving() self.isMoving = true end
 	function region:StopMovingOrSizing() self.isMoving = false end

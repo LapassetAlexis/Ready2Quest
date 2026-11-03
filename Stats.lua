@@ -555,9 +555,9 @@ function ns:ShowGearSummary()
 	end
 end
 
-function ns:ShowGearToast(rows, texture)
+function ns:ShowGearToast(rows, texture, preview)
 	local db = self:DB()
-	if db.showGearToast == false then return end
+	if db.showGearToast == false and not preview then return end
 
 	-- Un équipement peut changer sans modifier aucune statistique (même objet
 	-- d'une autre apparence, bijou sans stat, etc.). Sans écart, il n'y a
@@ -573,10 +573,35 @@ function ns:ShowGearToast(rows, texture)
 	if not frame then return end
 
 	self:ToastText(built)
+	-- aperçu lancé depuis les réglages : au-dessus du panneau (couche DIALOG),
+	-- sinon il apparaîtrait dessous ; un vrai changement reprend la couche HIGH
+	frame:SetFrameStrata(preview and "FULLSCREEN_DIALOG" or "HIGH")
+	self.toastPreview = preview and true or nil
 	frame:Show()
 	frame:SetAlpha(1)
 
 	self.toastHideAt = (ns.Now and ns:Now() or 0) + TOAST_SECONDS
+end
+
+-- Aperçu du résumé (bouton « Simuler un changement » des réglages) : un faux
+-- changement d'équipement, sur la stat qui compte le plus pour TA classe et ta
+-- spé, pour voir où le cadre apparaît et à quoi il ressemble. Le résumé
+-- n'affiche qu'une ligne (TOAST_ROWS) : chaque clic alterne un gain et une
+-- perte, pour voir les deux couleurs et les deux flèches.
+function ns:SimulateGearToast()
+	-- ns.StatsForPlayer : la fonction locale est définie plus bas dans ce fichier
+	local order = (type(ns.StatsForPlayer) == "function" and ns.StatsForPlayer()) or { "STR", "AGI", "STA" }
+	local first = order[1] or "STR"
+	self.toastPreviewLoss = not self.toastPreviewLoss and self.toastPreviewShown or false
+	self.toastPreviewShown = true
+	local delta = self.toastPreviewLoss and -3 or 8
+	local rows = {
+		{ label = first, kind = "integer", polarity = true, delta = delta },
+		{ label = "STA", kind = "integer", polarity = true, delta = 5 },
+		{ label = "ARMOR", kind = "integer", polarity = true, delta = 32 },
+	}
+	self:ShowGearToast(rows, "Interface\\Icons\\INV_Chest_Chain_05", true)
+	return rows
 end
 
 function ns:UpdateToast(now)
@@ -594,6 +619,11 @@ function ns:UpdateToast(now)
 		frame:Hide()
 		frame:SetAlpha(1)
 		self.toastHideAt = nil
+		-- fin d'un aperçu : le cadre reprend sa couche normale
+		if self.toastPreview then
+			frame:SetFrameStrata("HIGH")
+			self.toastPreview = nil
+		end
 		return
 	end
 	frame:SetAlpha(alpha)
@@ -831,6 +861,7 @@ local function StatsForPlayer()
 	end
 	return bySpec[index] or bySpec[1]
 end
+ns.StatsForPlayer = StatsForPlayer
 
 function ns:ShowPortraitStats()
 	local db = self:DB()
