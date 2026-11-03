@@ -44,7 +44,7 @@ function ns:EnsureWindow()
 	local rowCount = #(self.checks or {})
 	local height = self:WindowHeight(rowCount, false)
 
-	local frame = Theme.CreatePanel(UIParent, WIDTH, height, L.WIN_TITLE_DIAG, { name = "ReadyToQuestDiagFrame", titleSize = 14 })
+	local frame = Theme.CreatePanel(UIParent, WIDTH, height, L.WIN_TITLE_DIAG, { name = "Ready2QuestDiagFrame", titleSize = 14 })
 	if not frame then return nil end
 	ns:RestorePoint(frame, "diagPoint", { point = "CENTER", x = 0, y = 120 })
 
@@ -300,7 +300,7 @@ function ns:ShowWindow(results)
 			row.detail:SetText(Truncate(result.detail, DETAIL_TITLE))
 
 			if result.ok or result.info then
-				local c = result.info and Theme.MUTED or Theme.GREEN
+				local c = result.info and Theme.BLUE or Theme.GREEN
 				row.status:SetTexture(Theme.DIAMOND_LINE)
 				row.status:SetVertexColor(c[1], c[2], c[3], 1)
 				row.status.state = result.info and "info" or "ok"
@@ -399,7 +399,8 @@ end
 function ns:DepartedShort()
 	local from = self.lastDeparture
 	if not from then return nil end
-	return self:F("PANEL_DEPARTED_SHORT", tostring(from.name or "?"), self:SourceLabel(from.source))
+	return self:F("PANEL_DEPARTED_SHORT", tostring(from.name or "?"),
+		Theme.T_BLUE .. self:SourceLabel(from.source) .. "|r")
 end
 
 -- « Parti de : X (appris : source) », ou nil pour un check manuel

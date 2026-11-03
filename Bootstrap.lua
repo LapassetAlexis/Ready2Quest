@@ -4,7 +4,7 @@
 -- chargement. C'est ce qui permet de diagnostiquer à distance un addon muet.
 local ADDON, ns = ...
 
-ns.version = "1.20.0"
+ns.version = "1.21.0"
 ns.Loaded = {}
 ns.loadOrder = {}
 ns.errors = {}
@@ -23,7 +23,7 @@ function ns:RecordError(where, message)
 	end
 	self.errors[#self.errors + 1] = { where = where, message = message }
 	if type(print) == "function" then
-		print("|cffff2020Ready to Quest — erreur|r (" .. tostring(where) .. ") " .. message)
+		print("|cffff2020Ready2Quest — erreur|r (" .. tostring(where) .. ") " .. message)
 	end
 end
 
@@ -37,7 +37,7 @@ local function Dispatch(input)
 	end
 
 	-- Core.lua n'a pas été jusqu'au bout : on explique et on liste l'état
-	print("|cffffd100Ready to Quest|r " .. tostring(ns.version) .. " — modules non chargés.")
+	print("|cffe8a54bReady2Quest|r " .. tostring(ns.version) .. " — modules non chargés.")
 	local missing = {}
 	for _, name in ipairs({ "Locales", "Compat", "Theme", "Core", "Buffs", "Reagents",
 		"Merchant", "Equip", "Stats", "Minimap", "Checks", "Options", "UI" }) do
@@ -56,10 +56,11 @@ end
 
 SLASH_SACETDEPART1 = "/sd"
 SLASH_SACETDEPART2 = "/sacdepart"
+SLASH_SACETDEPART3 = "/r2q"
 SlashCmdList["SACETDEPART"] = Dispatch
 
 Mark("Bootstrap")
 
 -- Témoin de chargement : une ligne au /reload. Si tu ne la vois pas, le TOC
 -- n'a pas exécuté les fichiers (mauvais dossier, ou TOC refusé par le client).
-print("|cffffd100Ready to Quest|r " .. ns.version .. " — fichiers chargés")
+print("|cffe8a54bReady2Quest|r " .. ns.version .. " — fichiers chargés")

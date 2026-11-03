@@ -55,22 +55,28 @@ local function ApplyDefaults(src, dst)
 end
 
 function ns:DB()
-	-- Migration : l'addon s'appelait Sac & Départ (SavedVariable SacEtDepartDB).
-	-- On reprend la sauvegarde existante une seule fois, sinon chaque joueur
-	-- perdrait ses zones sûres apprises et ses réglages au renommage.
-	if type(ReadyToQuestDB) ~= "table" then
-		ReadyToQuestDB = {}
-		if type(SacEtDepartDB) == "table" then
-			for k, v in pairs(SacEtDepartDB) do ReadyToQuestDB[k] = v end
-			SacEtDepartDB = nil
+	-- Migrations de nom : Sac & Départ (SacEtDepartDB) -> Ready to Quest
+	-- (ReadyToQuestDB) -> Ready2Quest (Ready2QuestDB). On reprend la plus
+	-- récente des anciennes sauvegardes, une seule fois.
+	-- Attention : WoW charge WTF/.../SavedVariables/<NomDuDossier>.lua. Après
+	-- un renommage de dossier, l'ancienne variable n'est chargée que si le
+	-- fichier a été renommé lui aussi (voir README, « Migration »).
+	if type(Ready2QuestDB) ~= "table" then
+		Ready2QuestDB = {}
+		local old = (type(ReadyToQuestDB) == "table" and ReadyToQuestDB)
+			or (type(SacEtDepartDB) == "table" and SacEtDepartDB) or nil
+		if old then
+			for k, v in pairs(old) do Ready2QuestDB[k] = v end
+			self.migratedFrom = (old == ReadyToQuestDB) and "ReadyToQuestDB" or "SacEtDepartDB"
 		end
+		ReadyToQuestDB, SacEtDepartDB = nil, nil
 	end
 	if not self._dbReady then
-		ApplyDefaults(DEFAULTS, ReadyToQuestDB)
-		self:MigrateSafeZones(ReadyToQuestDB)
+		ApplyDefaults(DEFAULTS, Ready2QuestDB)
+		self:MigrateSafeZones(Ready2QuestDB)
 		self._dbReady = true
 	end
-	return ReadyToQuestDB
+	return Ready2QuestDB
 end
 
 -- Schéma 1 (jusqu'à v1.17) : db.safe[mapID]. Sur Era, un mapID est une zone
@@ -775,7 +781,7 @@ local COMMANDS = {
 		end
 	end,
 	["reset"] = function(self)
-		for k in pairs(ReadyToQuestDB or {}) do ReadyToQuestDB[k] = nil end
+		for k in pairs(Ready2QuestDB or {}) do Ready2QuestDB[k] = nil end
 		self._dbReady = false
 		self:DB()
 		self.inSafe = nil
@@ -1039,6 +1045,7 @@ ns.eventFrame = frame
 
 
 -- API publique minimale, pour un futur addon compagnon
-_G.ReadyToQuest = ns
+_G.Ready2Quest = ns
+_G.ReadyToQuest = ns   -- ancien nom de l'API publique, gardé en alias
 
 if ns.Mark then ns.Mark("Core") end

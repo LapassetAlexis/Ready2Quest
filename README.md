@@ -1,4 +1,33 @@
-# Ready to Quest — v1.20.0
+# Ready2Quest — v1.21.0
+
+## v1.21.0 — Ready to Quest devient Ready2Quest
+
+Un nom plus court, une vraie marque, et le sigle **R2Q**.
+
+**Le logo** est une boussole de poche : anneau de suspension, lunette pointillée, repères cardinaux, **aiguille bleu de nuit** à 38°, pivot ambre et monogramme « R2Q » (le « 2 » en ambre) en Alegreya.
+- `Textures/logo.tga` (128 px) : version complète, en tête de la navigation des réglages, à côté du nom « Ready**2**Quest ».
+- `Textures/logo_petit.tga` (64 px) : la même boussole sans les lettres, illisibles sous 24 px. Elle sert pour les bandeaux, le bouton de minicarte et l'icône de la liste des addons.
+
+**Une deuxième couleur, le bleu de nuit `#5b8fd6`.** Elle reprend l'aiguille du logo et n'a qu'un rôle : **information et navigation**. Ça couvre les groupes de la navigation, le losange des modules « info » (le repos) et la source d'une zone apprise (« boîte aux lettres »). Elle ne sert jamais pour un statut ni pour l'action principale : l'ambre garde l'action et la valeur, et vert, ambre et rouge restent les statuts.
+
+**Le renommage est complet.**
+- Dossier et `.toc` : `Ready2Quest/Ready2Quest.toc`.
+- Sauvegarde : `Ready2QuestDB`.
+- Fenêtres : `Ready2QuestDiagFrame`, `Ready2QuestOptionsFrame`, `Ready2QuestMinimapButton`.
+- API publique : `_G.Ready2Quest` (`_G.ReadyToQuest` reste en alias).
+- Commandes : nouvelle commande `/r2q`. `/sd` et `/sacdepart` marchent toujours.
+- Les chemins de textures sont maintenant construits depuis le nom réel du dossier. Les flèches de `Stats.lua` l'avaient encore en dur.
+
+### Migration : ce qu'il faut faire
+
+1. Supprimer l'ancien dossier `Interface/AddOns/ReadyToQuest`. Sinon les deux versions se chargent.
+2. Copier `Ready2Quest` à sa place.
+3. **Pour garder ses réglages et ses villages appris** : dans `WTF/Account/<compte>/SavedVariables/`, renommer `ReadyToQuest.lua` en `Ready2Quest.lua` (et `ReadyToQuest.lua.bak` s'il existe). C'est nécessaire parce que WoW charge la sauvegarde d'un addon depuis un fichier **qui porte le nom du dossier** : après un renommage, l'ancienne n'est plus lue. Une fois le fichier renommé, l'addon reprend `ReadyToQuestDB` dans `Ready2QuestDB` au premier chargement. Sans cette étape, l'addon repart des réglages par défaut, sans erreur.
+
+Remarque honnête : la migration de la v1.17.0 (`SacEtDepartDB` → `ReadyToQuestDB`) avait la même limite. Elle ne servait que si le fichier de sauvegarde avait été renommé à la main. Elle est conservée dans la chaîne (`SacEtDepartDB` → `ReadyToQuestDB` → `Ready2QuestDB`) : c'est la sauvegarde la plus récente qui l'emporte.
+
+---
+
 
 ## v1.20.0 — une identité à soi
 
@@ -161,8 +190,8 @@ Addon QoL pour **WoW Forever**, avec sa propre identité « carnet de route » :
 
 ## Installation
 
-1. Copier le dossier `ReadyToQuest` dans `.../Interface/AddOns/`
-2. Vérifier le chemin final : `.../Interface/AddOns/ReadyToQuest/ReadyToQuest.toc`
+1. Copier le dossier `Ready2Quest` dans `.../Interface/AddOns/`
+2. Vérifier le chemin final : `.../Interface/AddOns/Ready2Quest/Ready2Quest.toc`
 3. `/reload`, puis `/sd`
 
 Erreur Lua invisible ? `/console scriptErrors 1`.
@@ -228,7 +257,7 @@ Conséquence : sur Classic, le module composants fonctionne avec **la recette s�
 
 ### Marche à suivre
 
-1. Copier `ReadyToQuest` dans `.../Interface/AddOns/` du client MoP.
+1. Copier `Ready2Quest` dans `.../Interface/AddOns/` du client MoP.
 2. Si le client le signale comme obsolète : cocher **« Charger les addons obsolètes »** dans la liste des addons.
 3. `/reload`, puis **`/sd diag`**.
 
@@ -253,12 +282,12 @@ Depuis la v0.5.2, l'addon **parle** au lieu d'être muet.
 Au `/reload`, tu dois voir dans le chat :
 
 ```
-ReadyToQuest 1.18.0 — fichiers chargés
+Ready2Quest 1.21.0 — fichiers chargés
 ```
 
 | Ce que tu vois | Diagnostic |
 |---|---|
-| **Rien du tout** | Les fichiers ne s'exécutent pas : mauvais dossier (`AddOns/ReadyToQuest/ReadyToQuest/`), TOC refusé, ou addon décoché |
+| **Rien du tout** | Les fichiers ne s'exécutent pas : mauvais dossier (`AddOns/Ready2Quest/Ready2Quest/`), TOC refusé, ou addon décoché |
 | **Le témoin, mais pas de panneau** | Un fichier a planté après le bootstrap → `/sd` te dira lequel |
 | **Le témoin + le panneau** | Tout va bien |
 
@@ -299,10 +328,10 @@ Double correction depuis la v0.5.3 :
 Puis vérifier l'arborescence exacte :
 
 ```
-World of Warcraft/_classic_/Interface/AddOns/ReadyToQuest/ReadyToQuest.toc
+World of Warcraft/_classic_era_/Interface/AddOns/Ready2Quest/Ready2Quest.toc
 ```
 
-Un seul niveau `ReadyToQuest`, et le `.toc` directement dedans.
+Un seul niveau `Ready2Quest`, et le `.toc` directement dedans.
 
 ---
 
@@ -1118,7 +1147,7 @@ Les deux fenêtres utilisent le chrome d'AtlasLootClassic :
 
 Pas de template Blizzard : c'est ce que fait AtlasLoot, et c'est plus sobre qu'une fenêtre à fond de pierre.
 
-Les deux fenêtres sont nommées (`ReadyToQuestDiagFrame`, `ReadyToQuestOptionsFrame`) — nécessaire pour que Échap fonctionne.
+Les deux fenêtres sont nommées (`Ready2QuestDiagFrame`, `Ready2QuestOptionsFrame`) — nécessaire pour que Échap fonctionne.
 
 Si `BackdropTemplate` manque, le panneau retombe sur un chrome dessiné à la main (filets `WHITE8X8`) : il reste complet, simplement moins joli.
 
@@ -1365,7 +1394,7 @@ Alias : `/sacdepart`.
 ## Tests
 
 ```
-python3 tests/run_tests.py     →  656 réussis, 0 échoués
+python3 tests/run_tests.py     →  667 réussis, 0 échoués
 ```
 
 Lua 5.1 (version du client), client WoW simulé. Couvre notamment : apprentissage par indices (sous-zone, capitale par deux quartiers, purge de l'ancien schéma), délai de sortie / vol / mort, nouveaux checks et automatismes du marchand en mode Era, chaîne de cartes parentes, anti-spam, filtrage des procs, **valeurs secrètes**, comptages sacs/vivres/potions/durabilité/quêtes, score pondéré et bilans, fenêtre de diagnostic (icônes, barres, bandeau), panneau d'équipement (17 lignes, moyenne, rareté, pièces faibles), comparaison au survol (amélioration, régressif, vide, anneaux), **les deux voies de hook tooltip**, bouton sans template Blizzard, et toutes les commandes.

@@ -2,9 +2,9 @@
 local ADDON, ns = ...
 
 local frFR = {
-	ADDON_NAME = "Ready to Quest",
-	TAG = "|cffe8a54b[Ready to Quest]|r",
-	WIN_TITLE = "Ready to Quest",
+	ADDON_NAME = "Ready2Quest",
+	TAG = "|cffe8a54b[Ready|r|cff5b8fd62|r|cffe8a54bQuest]|r",
+	WIN_TITLE = "Ready2Quest",
 	WIN_TITLE_DIAG = "Avant le départ",
 	PANEL_DEPARTED_SHORT = "Parti de %s · %s",
 	MSG_BRIEF_READY = "Sac bouclé, %d/100.%s",
@@ -263,7 +263,7 @@ local frFR = {
 	OPT_SCORE_UNIT = "/100",
 	MSG_BRIEF = "%s, %d/100%s",
 	MSG_BRIEF_FROM = " Parti de %s.",
-	MSG_AUTOSELL_NOTICE = "Ready to Quest vend tes objets gris chez les marchands. Pour couper : /sd options > Automatismes.",
+	MSG_AUTOSELL_NOTICE = "Ready2Quest vend tes objets gris chez les marchands. Pour couper : /sd options > Automatismes.",
 	OPT_AUTOSELL = "Vendre les gris",
 	OPT_AUTOREPAIR = "Réparer tout",
 	-- v1.18.0 : marchand
@@ -304,9 +304,9 @@ local frFR = {
 }
 
 local enUS = {
-	ADDON_NAME = "Ready to Quest",
-	TAG = "|cffe8a54b[Ready to Quest]|r",
-	WIN_TITLE = "Ready to Quest",
+	ADDON_NAME = "Ready2Quest",
+	TAG = "|cffe8a54b[Ready|r|cff5b8fd62|r|cffe8a54bQuest]|r",
+	WIN_TITLE = "Ready2Quest",
 	WIN_TITLE_DIAG = "Before you leave",
 	PANEL_DEPARTED_SHORT = "Left %s · %s",
 	MSG_BRIEF_READY = "Bag packed, %d/100.%s",
@@ -565,7 +565,7 @@ local enUS = {
 	OPT_SCORE_UNIT = "/100",
 	MSG_BRIEF = "%s, %d/100%s",
 	MSG_BRIEF_FROM = " Left %s.",
-	MSG_AUTOSELL_NOTICE = "Ready to Quest sells your gray items at merchants. To turn it off: /sd options > Automation.",
+	MSG_AUTOSELL_NOTICE = "Ready2Quest sells your gray items at merchants. To turn it off: /sd options > Automation.",
 	OPT_AUTOSELL = "Sell gray items",
 	OPT_AUTOREPAIR = "Repair all",
 	-- v1.18.0: merchant

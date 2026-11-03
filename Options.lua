@@ -220,7 +220,7 @@ function LIST_SOURCES.safe()
 		items[#items + 1] = {
 			key = key,
 			text = tostring(entry.name or "?"),
-			detail = kind .. ", " .. ns:SourceLabel(entry.source),
+			detail = kind .. ", " .. Theme.T_BLUE .. ns:SourceLabel(entry.source) .. "|r",
 			action = L.OPT_REMOVE,
 			onAction = function() ns:ForgetSafeZone(key) end,
 		}
@@ -364,7 +364,7 @@ function ns:EnsureOptions()
 	if self.optionsFrame then return self.optionsFrame end
 	if not Theme or not Theme.CreatePanel then return nil end
 
-	local frame = Theme.CreatePanel(UIParent, FRAME_WIDTH, FRAME_HEIGHT, L.OPT_TITLE, { name = "ReadyToQuestOptionsFrame" })
+	local frame = Theme.CreatePanel(UIParent, FRAME_WIDTH, FRAME_HEIGHT, L.OPT_TITLE, { name = "Ready2QuestOptionsFrame" })
 	if not frame then return nil end
 
 	ns:RestorePoint(frame, "optionsPoint", { point = "CENTER", x = 0, y = 20 })
@@ -469,8 +469,20 @@ function ns:EnsureOptions()
 		return header
 	end
 
+	-- Marque en tête de navigation : logo complet et nom, le « 2 » en bleu
+	frame.brandLogo = frame:CreateTexture(nil, "OVERLAY")
+	frame.brandLogo:SetTexture(Theme.LOGO)
+	frame.brandLogo:SetSize(34, 34)
+	frame.brandLogo:SetPoint("TOPLEFT", frame, "TOPLEFT", 12, top - 2)
+	frame.brandName = Theme.CreateTitle(frame, 15)
+	frame.brandName:SetPoint("LEFT", frame.brandLogo, "RIGHT", 7, 0)
+	frame.brandName:SetText("Ready" .. Theme.T_BLUE .. "2|r" .. "Quest")
+	frame.brandLine = Theme.Solid(frame, "ARTWORK", Theme.GOLD_DIM, 1)
+	frame.brandLine:SetPoint("TOPLEFT", frame, "TOPLEFT", 1, top - 42)
+	frame.brandLine:SetSize(NAV_WIDTH + 5, 1)
+
 	local placed = {}
-	local navY, lastGroup = top, nil
+	local navY, lastGroup = top - 48, nil
 	frame.navGroups = {}
 	for index, def in ipairs(PAGES) do
 		-- titre de groupe dans la navigation (« PRÉPARATION », « INTERFACE »)
@@ -479,7 +491,7 @@ function ns:EnsureOptions()
 			local groupLabel = frame:CreateFontString(nil, "OVERLAY", Theme.F_SMALL)
 			groupLabel:SetPoint("TOPLEFT", frame, "TOPLEFT", 16, navY - 2)
 			groupLabel:SetText(L[def.group] or def.group)
-			groupLabel:SetTextColor(Theme.GOLD_SOFT[1], Theme.GOLD_SOFT[2], Theme.GOLD_SOFT[3])
+			groupLabel:SetTextColor(Theme.BLUE[1], Theme.BLUE[2], Theme.BLUE[3])
 			frame.navGroups[#frame.navGroups + 1] = groupLabel
 			navY = navY - 16
 		end
@@ -739,6 +751,6 @@ function ns:RunOptionAction(key)
 	end
 end
 
-_G.ReadyToQuestOptions = function() ns:ToggleOptions() end
+_G.Ready2QuestOptions = function() ns:ToggleOptions() end
 
 ns.Mark("Options")

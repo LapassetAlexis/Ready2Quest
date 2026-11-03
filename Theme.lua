@@ -10,14 +10,15 @@
 --     titres et la note ; le texte courant reste en GameFont, lisible partout ;
 --   * des contrôles dessinés par l'addon (boutons, interrupteurs, losanges),
 --     sans dépendre d'aucun template : rien ne casse si Forever change son art.
--- Textures propres : Textures/logo.tga (boussole), losange.tga, losange_trait.tga.
+-- Textures propres : Textures/logo.tga (boussole R2Q), logo_petit.tga (sans
+-- lettres, pour les petites tailles), losange.tga, losange_trait.tga.
 -- Tout le reste n'utilise que Interface\Buttons\WHITE8X8, teinté.
 local ADDON, ns = ...
 
 local Theme = {}
 ns.Theme = Theme
 
-local MEDIA = "Interface\\AddOns\\" .. tostring(ADDON or "ReadyToQuest") .. "\\"
+local MEDIA = "Interface\\AddOns\\" .. tostring(ADDON or "Ready2Quest") .. "\\"
 Theme.MEDIA = MEDIA
 
 -- Palette ---------------------------------------------------------------------
@@ -36,6 +37,10 @@ Theme.GREEN     = { 0.44, 0.81, 0.48 }   -- statut OK #6fcf7a (pas le vert de ra
 Theme.RED       = { 0.89, 0.38, 0.31 }   -- statut échec #e2604f
 Theme.ORANGE    = { 0.91, 0.65, 0.29 }   -- statut alerte = l'ambre
 Theme.GREY      = { 0.55, 0.55, 0.55 }
+-- Deuxième couleur (v1.21.0) : bleu de nuit, l'aiguille de la boussole.
+-- Rôle unique : information et navigation (groupes, statut « info », source
+-- d'une zone apprise). Jamais un statut, jamais l'action principale.
+Theme.BLUE      = { 0.357, 0.561, 0.839 } -- #5b8fd6
 
 Theme.T_GOLD      = "|cffe8a54b"
 Theme.T_PARCHMENT = "|cfff1e8d4"
@@ -44,11 +49,13 @@ Theme.T_GREEN     = "|cff6fcf7a"
 Theme.T_RED       = "|cffe2604f"
 Theme.T_ORANGE    = "|cffe8a54b"
 Theme.T_WHITE     = "|cffffffff"
+Theme.T_BLUE      = "|cff5b8fd6"
 
 Theme.BG_DARK  = "Interface\\DialogFrame\\UI-DialogBox-Background-Dark"
 Theme.BG_LIGHT = "Interface\\DialogFrame\\UI-DialogBox-Background"
 Theme.SOLID    = "Interface\\Buttons\\WHITE8X8"
-Theme.LOGO          = MEDIA .. "Textures\\logo"
+Theme.LOGO          = MEDIA .. "Textures\\logo"         -- complet : boîtier, aiguille, R2Q
+Theme.LOGO_SMALL    = MEDIA .. "Textures\\logo_petit"   -- sans lettres : bandeaux, minicarte
 Theme.DIAMOND       = MEDIA .. "Textures\\losange"
 Theme.DIAMOND_LINE  = MEDIA .. "Textures\\losange_trait"
 Theme.FONT_TITLE    = MEDIA .. "Fonts\\Alegreya-Bold.ttf"
@@ -135,7 +142,7 @@ end
 -- ---------------------------------------------------------------------------
 local function BuildHeader(frame, titleText, options)
 	frame.logo = frame:CreateTexture(nil, "OVERLAY")
-	frame.logo:SetTexture(Theme.LOGO)
+	frame.logo:SetTexture(Theme.LOGO_SMALL)
 	frame.logo:SetSize(18, 18)
 	frame.logo:SetPoint("TOPLEFT", frame, "TOPLEFT", 12, -9)
 

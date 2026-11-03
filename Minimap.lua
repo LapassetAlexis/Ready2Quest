@@ -127,7 +127,7 @@ function ns:EnsureMinimapButton()
 	if type(Minimap) ~= "table" and type(Minimap) ~= "userdata" then return nil end
 	if type(CreateFrame) ~= "function" then return nil end
 
-	local button = CreateFrame("Button", "ReadyToQuestMinimapButton", Minimap)
+	local button = CreateFrame("Button", "Ready2QuestMinimapButton", Minimap)
 	if not button then return nil end
 
 	button:SetSize(BUTTON_SIZE, BUTTON_SIZE)
@@ -172,7 +172,7 @@ function ns:EnsureMinimapButton()
 
 	button.icon = button:CreateTexture(nil, "ARTWORK")
 	-- la marque de l'addon (boussole) plutôt qu'une icône d'objet générique
-	button.icon:SetTexture(ns.Theme and ns.Theme.LOGO or "Interface\\Icons\\INV_Misc_Bag_10")
+	button.icon:SetTexture(ns.Theme and ns.Theme.LOGO_SMALL or "Interface\\Icons\\INV_Misc_Bag_10")
 	button.icon:SetTexCoord(0, 1, 0, 1)
 	if mainline then
 		button.icon:SetSize(18, 18)

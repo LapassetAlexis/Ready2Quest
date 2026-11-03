@@ -479,7 +479,7 @@ local function LoadAddonFile(name)
 	handle:close()
 	local chunk, compileError = loadstring(source, "@" .. path)
 	assert(chunk, "erreur de compilation dans " .. path .. ":\n" .. tostring(compileError))
-	chunk("ReadyToQuest", NS)
+	chunk("Ready2Quest", NS)
 end
 
 for _, file in ipairs({ "Bootstrap.lua", "Locales.lua", "Compat.lua", "Theme.lua", "Core.lua", "Buffs.lua", "Reagents.lua", "Merchant.lua", "Equip.lua", "Stats.lua", "Minimap.lua", "Checks.lua", "Options.lua", "UI.lua" }) do
@@ -559,6 +559,7 @@ local function ResetWorld()
 	Mock.now = 1000
 	Mock:Reset()
 	-- les deux : la nouvelle variable, et l ancienne que Core migre
+	_G.Ready2QuestDB = nil
 	_G.ReadyToQuestDB = nil
 	_G.SacEtDepartDB = nil
 	NS._dbReady = false
@@ -608,9 +609,22 @@ Check("migration : purge annoncée une fois", NS.safePurgeNotice == 1, tostring(
 Check("migration : le réglage personnalisé est conservé", migrated.showWindow == false,
 	tostring(migrated.showWindow))
 Check("migration : la variable porte le nouveau nom",
-	_G.ReadyToQuestDB == migrated)
+	_G.Ready2QuestDB == migrated)
 Check("migration : l'ancienne variable est libérée",
 	_G.SacEtDepartDB == nil)
+
+-- v1.21.0 : Ready to Quest -> Ready2Quest (ReadyToQuestDB -> Ready2QuestDB)
+ResetWorld()
+_G.ReadyToQuestDB = { safeSchema = 2, safe = { ["v:30:Village"] = { kind = "village", name = "Village" } },
+	popupScore = 70, optionsPage = "bags" }
+_G.SacEtDepartDB = { popupScore = 10 }
+NS._dbReady = false
+local migrated2 = NS:DB()
+Check("migration R2Q : réglages repris de ReadyToQuestDB", migrated2.popupScore == 70, migrated2.popupScore)
+Check("migration R2Q : villages appris conservés", migrated2.safe["v:30:Village"] ~= nil)
+Check("migration R2Q : la sauvegarde la plus récente gagne", NS.migratedFrom == "ReadyToQuestDB", NS.migratedFrom)
+Check("migration R2Q : anciennes variables libérées", _G.ReadyToQuestDB == nil and _G.SacEtDepartDB == nil)
+Check("migration R2Q : nouvelle variable", _G.Ready2QuestDB == migrated2)
 
 -- sans ancienne sauvegarde, une table neuve avec les défauts
 ResetWorld()
@@ -777,9 +791,9 @@ ResetWorld()
 Mock.world.mapID = 30
 Mock.world.subzone = "Long-guet"
 Mock:Fire("TRAINER_SHOW")
-local saved = _G.ReadyToQuestDB
+local saved = _G.Ready2QuestDB
 NS._dbReady = false
-_G.ReadyToQuestDB = saved
+_G.Ready2QuestDB = saved
 Mock:Fire("MERCHANT_SHOW")
 Check("indices persistés : entraîneur + marchand", NS:DB().safe["v:30:Long-guet"] ~= nil)
 
@@ -1465,7 +1479,7 @@ ResetWorld()
 Say("\n== bootstrap et diagnostic ==")
 ResetWorld()
 Check("commande enregistrée par le bootstrap", type(SlashCmdList["SACETDEPART"]) == "function")
-Check("version exposée", NS.version == "1.20.0", NS.version)
+Check("version exposée", NS.version == "1.21.0", NS.version)
 
 local missingMods = {}
 for _, name in ipairs({ "Bootstrap", "Locales", "Compat", "Theme", "Core", "Buffs", "Reagents",
@@ -1486,7 +1500,7 @@ NS.HandleCommand = savedHandle
 Mock:Reset()
 NS:HandleCommand("diag")
 Check("/sd diag liste les modules", Mock:Output():find("modules :") ~= nil, Mock:Output())
-Check("/sd diag affiche la version", Mock:Output():find("1%.20%.0") ~= nil, Mock:Output())
+Check("/sd diag affiche la version", Mock:Output():find("1%.21%.0") ~= nil, Mock:Output())
 
 -- une erreur est enregistrée et affichée
 Mock:Reset()
@@ -2363,7 +2377,7 @@ local safeList = NS.optionsFrame.lists.safe
 Check("liste des zones : 13 entrées", #safeList.items == 13, #safeList.items)
 Check("liste des zones : 9 lignes visibles", safeList.lines[9]:IsShown() and safeList.lines[9].item ~= nil)
 Check("liste des zones : défilement possible", safeList.down:IsShown() and not safeList.up:IsShown())
-Check("liste des zones : source lisible", tostring(safeList.lines[1].detail.text):find("capitale, repos") ~= nil,
+Check("liste des zones : source lisible", tostring(safeList.lines[1].detail.text):gsub("|c%x%x%x%x%x%x%x%x", ""):gsub("|r", ""):find("capitale, repos") ~= nil,
 	safeList.lines[1].detail.text)
 safeList.down:Click()
 Check("défilement : une ligne plus bas", safeList.offset == 1 and safeList.up:IsShown())
@@ -2771,14 +2785,14 @@ _G.UISpecialFrames = {}
 NS:ToggleOptions()
 local inEscape, countAfterOptions = false, #UISpecialFrames
 for _, name in ipairs(UISpecialFrames) do
-	if name == "ReadyToQuestOptionsFrame" then inEscape = true end
+	if name == "Ready2QuestOptionsFrame" then inEscape = true end
 end
 Check("réglages déclarés pour Échap", inEscape, countAfterOptions)
 NS:ToggleOptions()
 NS:RunChecklist("manual")
 local diagInEscape = false
 for _, name in ipairs(UISpecialFrames) do
-	if name == "ReadyToQuestDiagFrame" then diagInEscape = true end
+	if name == "Ready2QuestDiagFrame" then diagInEscape = true end
 end
 Check("diagnostic déclaré pour Échap", diagInEscape)
 Check("aucun doublon dans UISpecialFrames", #UISpecialFrames == 2, #UISpecialFrames)
@@ -3299,11 +3313,11 @@ local firstAdvice = NS.window and NS.window.adviceLines[1].text or ""
 Check("[22] puce de conseil en ASCII", not firstAdvice:find("•", 1, true), firstAdvice)
 
 -- [14] [15] plus de « Sac & Départ » à l'écran
-Check("[14] préfixe du chat : Ready to Quest", NS.L.TAG:find("Ready to Quest") ~= nil, NS.L.TAG)
-Check("[14] titre de fenêtre : Ready to Quest", NS.L.WIN_TITLE == "Ready to Quest", NS.L.WIN_TITLE)
+Check("[14] préfixe du chat : Ready2Quest", NS.L.TAG:gsub("|c%x%x%x%x%x%x%x%x", ""):gsub("|r", ""):find("[Ready2Quest]", 1, true) ~= nil, NS.L.TAG)
+Check("[14] titre de fenêtre : Ready2Quest", NS.L.WIN_TITLE == "Ready2Quest", NS.L.WIN_TITLE)
 Mock:Reset()
 NS:RecordError("audit-15", "message unique de l'audit")
-Check("[15] message d'erreur : Ready to Quest", Mock:Output():find("Ready to Quest — erreur") ~= nil, Mock:Output())
+Check("[15] message d'erreur : Ready to Quest", Mock:Output():find("Ready2Quest — erreur") ~= nil, Mock:Output())
 
 -- [16] /sd diag donne la raison, pas le mapID
 EnterEra()
@@ -3455,7 +3469,7 @@ Mock:Advance(1)
 Check("[ID] animation : termine sur la valeur exacte", tonumber(w.scoreValue.text) == target and w.animStart == nil,
 	w.scoreValue.text)
 Check("[ID] puces de conseil : losanges ambre", w.adviceBullets[1] and tostring(w.adviceBullets[1].texture):find("losange") ~= nil)
-Check("[ID] préfixe du chat ambre", NS.L.TAG:find("|cffe8a54b", 1, true) ~= nil, NS.L.TAG)
+Check("[ID] préfixe du chat ambre, « 2 » bleu", NS.L.TAG:find("|cffe8a54b", 1, true) ~= nil and NS.L.TAG:find("|cff5b8fd62", 1, true) ~= nil, NS.L.TAG)
 
 NS.optionsFrame = nil
 NS:ToggleOptions()
@@ -3485,6 +3499,13 @@ addonRow:Click()
 NS:SelectOptionsPage("bags")
 Check("[ID] navigation : page active teintée", o.navButtons[3].tint:IsShown() and not o.navButtons[1].tint:IsShown())
 Check("[ID] titre de page en police maison", o.pages.bags.title.font ~= nil)
+-- v1.21.0 : marque Ready2Quest, deuxième couleur
+Check("[R2Q] navigation : logo complet en tête", tostring(o.brandLogo.texture):find("Textures\\logo$") ~= nil, o.brandLogo.texture)
+Check("[R2Q] navigation : nom avec le « 2 » bleu", o.brandName.text:find("|cff5b8fd62|r", 1, true) ~= nil, o.brandName.text)
+Check("[R2Q] bandeau : logo simplifié", tostring(o.logo.texture):find("logo_petit") ~= nil, o.logo.texture)
+Check("[R2Q] groupes de navigation en bleu", o.navGroups[1].textColor[3] > 0.8 and o.navGroups[1].textColor[1] < 0.4)
+Check("[R2Q] commande /r2q", SLASH_SACETDEPART3 == "/r2q")
+Check("[R2Q] API publique sous les deux noms", _G.Ready2Quest == NS and _G.ReadyToQuest == NS)
 
 end
 LeaveEra()
