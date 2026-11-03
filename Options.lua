@@ -92,6 +92,17 @@ local PAGES = {
 }
 ns.OPTION_PAGES = PAGES
 
+-- API d'extension : un module ajoute sa page (ou sa sous-page) aux réglages,
+-- avant `beforeId` (par défaut avant la section QoL). À appeler au chargement,
+-- avant la première ouverture des réglages.
+function ns.AddOptionPage(def, beforeId)
+	beforeId = beforeId or "merchant"
+	for index, existing in ipairs(PAGES) do
+		if existing.id == beforeId then table.insert(PAGES, index, def); return end
+	end
+	table.insert(PAGES, def)
+end
+
 -- Géométrie exposée aux tests : c'est elle qui se casse silencieusement
 ns.OPT_LAYOUT = {
 	width = FRAME_WIDTH,
