@@ -52,6 +52,8 @@ ns.COMPANION_RULES = {
 -- Textes (tutoiement, chaleureux, courts)
 -- ---------------------------------------------------------------------------
 local FR = {
+	OPT_PAGE_COMPANION_MAIN = "Compagnon",
+	OPT_PAGE_COMPANION_MAIN_SUB = "Sa créature, ses bulles, son apparence et ses ornements.",
 	OPT_PAGE_COMPANION     = "Compagnon de route",
 	OPT_PAGE_COMPANION_SUB = "Une petite créature qui voyage avec toi et réagit à ton aventure.",
 	OPT_COMP_SHOW          = "Afficher le compagnon",
@@ -132,6 +134,8 @@ local FR = {
 	HELP_COMPANION         = "/r2q compagnon [nom <nom> | caresse | apparence | muet] — ton compagnon de route",
 }
 local EN = {
+	OPT_PAGE_COMPANION_MAIN = "Companion",
+	OPT_PAGE_COMPANION_MAIN_SUB = "Its creature, bubbles, appearance and ornaments.",
 	OPT_PAGE_COMPANION     = "Road companion",
 	OPT_PAGE_COMPANION_SUB = "A little creature that travels with you and reacts to your adventure.",
 	OPT_COMP_SHOW          = "Show the companion",
@@ -223,8 +227,12 @@ ns.RegisterDefaults({
 	companionOrnGold    = true,
 })
 
+-- Un seul module « Compagnon de route » : le carnet de voyage le fait évoluer.
+-- Entrée parente (un interrupteur) et deux sous-pages : Compagnon, Carnet.
+ns.AddOptionPage({ id = "companion", title = "OPT_PAGE_COMPANION", group = "OPT_GROUP_MODULES",
+	power = "companionEnabled", target = "companionMain" })
 ns.AddOptionPage({
-	id = "companion", title = "OPT_PAGE_COMPANION", group = "OPT_GROUP_MODULES", power = "companionEnabled",
+	id = "companionMain", title = "OPT_PAGE_COMPANION_MAIN", parent = "companion", group = "OPT_GROUP_MODULES",
 	rows = {
 		{ key = "companionShow",       label = "OPT_COMP_SHOW",       kind = "bool" },
 		{ key = "companionBubbles",    label = "OPT_COMP_BUBBLES",    kind = "bool" },
@@ -237,7 +245,8 @@ ns.AddOptionPage({
 	},
 })
 -- « pet » et « compagnon » : ni un contrôle du check, ni un autre module
-ns.RegisterModule({ id = "companion", key = "companionEnabled", label = "OPT_PAGE_COMPANION", aliases = { "compagnon", "pet" } })
+ns.RegisterModule({ id = "companion", key = "companionEnabled", label = "OPT_PAGE_COMPANION",
+	aliases = { "compagnon", "pet", "carnet", "journal" } })
 
 if type(ns.HELP) == "table" then
 	for _, section in ipairs(ns.HELP) do
