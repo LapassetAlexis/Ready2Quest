@@ -139,6 +139,13 @@ Chaque nouveau tampon est annoncé par un petit bandeau, jamais en combat. Le ca
 
 Le carnet fixe des **objectifs** : prochaine étape de la créature, prochaine apparence ou ornement, villages de la zone, capitales, donjons de ton niveau, prochain palier. Ils sont rangés dans l'onglet **Objectifs** du carnet, avec une barre de progression, et les plus proches s'affichent à l'écran sous le suivi des quêtes, dans un bloc **Carnet** : l'objectif le plus proche mis en avant avec sa barre, puis trois autres plus discrets.
 
+- **Complétion de zone** : chaque zone a son pourcentage, affiché dans l'onglet Zones du carnet et, pour la zone où tu es, dans le bloc à l'écran. Il mélange à parts égales :
+  - les **villages** visités ;
+  - le **bestiaire** : les espèces que tu as croisées et abattues (on compte des espèces différentes, pas un nombre de victimes) ;
+  - les **nommés** (élites, rares, boss) croisés et abattus ;
+  - la **récolte**, si tu es herboriste, mineur ou dépeceur : les herbes, minerais et cuirs de ta compétence que tu as déjà récoltés dans la zone.
+
+  Tout s'apprend en jouant : une créature compte dès que tu l'as ciblée ou survolée.
 - **Survole un objectif** pour savoir quoi faire : les villages de la zone qu'il te reste à visiter, les capitales manquantes, les donjons de ton niveau avec leur tranche, l'XP avant le prochain niveau.
 - **Clic** : ouvre le carnet. **Clic droit** : masque l'objectif.
 - Le bloc se replie d'un clic sur son titre, se déplace en le glissant et se cache en combat (réglable dans les options du compagnon, page Carnet).
