@@ -1,6 +1,7 @@
 -- Carnet : créatures et récolte de chaque zone, préremplies (v1.25.0).
--- ZoneCreatures.lua / ZoneGathering.lua (générés par tools/gen_zone_data.py
--- depuis la base de Questie) : intégrité des tables, filtres (bestioles,
+-- ZoneCreatures_<Era|Forever>.lua / ZoneGathering_<Era|Forever>.lua (générés par
+-- tools/gen_zone_data.py depuis la base de Questie) : garde de client (chaque
+-- fichier rechargé avec un faux ns), intégrité des deux clients, filtres (bestioles,
 -- faction, PNJ de service), parts « bestiary » / « named » / « gathering »
 -- calculées avec la table (préremplie + apprise), faction, espèce jamais vue
 -- listée, kill d'une espèce prérenseignée, zone hors tables (dynamique).
@@ -100,88 +101,173 @@ function Z.Rows(zoneID, activity)
 	return rows, byName
 end
 
--- 1. Chargement et ordre du .toc ------------------------------------------------------
+-- 1. Chargement, ordre du .toc, garde de client -----------------------------------------
+-- Les fichiers de données se gardent eux-mêmes (ns:IsForeverClient(), Dungeon.lua) :
+-- on les recharge avec un faux ns pour voir chaque client.
+local ROOT = rawget(_G, "ADDON_ROOT") or "."
+local FOREVER_ZONES = { [2482] = true, [2521] = true, [2524] = true, [2548] = true, [2652] = true }
+function Z.LoadData(file, forever)
+	local fake = { marks = {} }
+	if forever ~= "none" then fake.IsForeverClient = function() return forever end end
+	fake.Mark = function(name) fake.marks[#fake.marks + 1] = name end
+	local chunk = assert(loadfile(ROOT .. "/" .. file))
+	chunk("Ready2Quest", fake)
+	return fake
+end
+Z.DATA = {
+	Era = { creatures = Z.LoadData("ZoneCreatures_Era.lua", false).ZONE_CREATURES,
+		gathering = Z.LoadData("ZoneGathering_Era.lua", false).ZONE_GATHERING },
+	Forever = { creatures = Z.LoadData("ZoneCreatures_Forever.lua", true).ZONE_CREATURES,
+		gathering = Z.LoadData("ZoneGathering_Forever.lua", true).ZONE_GATHERING },
+}
 do
 	Say("-- données de zone : chargement")
-	Check("[ZDATA] ZoneCreatures.lua et ZoneGathering.lua chargés", NS.Loaded and NS.Loaded.ZoneCreatures
-		and NS.Loaded.ZoneGathering)
+	Check("[ZDATA] tables de zone chargées", NS.Loaded and NS.Loaded.ZoneCreatures and NS.Loaded.ZoneGathering)
 	local order = {}
 	for index, file in ipairs(_G.TOC_FILES or {}) do order[file] = index end
-	Check("[ZDATA] .toc : tables avant Bestiary.lua", order["ZoneCreatures.lua"] and order["ZoneGathering.lua"]
-		and order["Bestiary.lua"] and order["ZoneCreatures.lua"] < order["Bestiary.lua"]
-		and order["ZoneGathering.lua"] < order["Bestiary.lua"] and order["ZoneGathering.lua"] < order["Gathering.lua"])
+	local before = true
+	for _, file in ipairs({ "ZoneCreatures_Era.lua", "ZoneCreatures_Forever.lua", "ZoneGathering_Era.lua",
+		"ZoneGathering_Forever.lua" }) do
+		before = before and order[file] and order[file] < order["Bestiary.lua"] and order[file] < order["Gathering.lua"]
+			and order[file] > order["Dungeon.lua"]
+	end
+	Check("[ZDATA] .toc : 4 tables après Dungeon.lua (IsForeverClient), avant Bestiary.lua et Gathering.lua", before)
+	Check("[ZDATA] .toc : plus de ZoneCreatures.lua / ZoneGathering.lua", order["ZoneCreatures.lua"] == nil
+		and order["ZoneGathering.lua"] == nil)
 	Check("[ZDATA] tables présentes", type(NS.ZONE_CREATURES) == "table" and type(NS.ZONE_GATHERING) == "table")
+	-- le harnais charge l'addon en build Forever : la table de Forever, pas celle d'Era
+	Check("[ZDATA] client Forever : tables de Forever (Île de Zephras 2521)", NS.ZONE_CREATURES[2521] ~= nil
+		and NS.ZONE_GATHERING[2521] ~= nil and NS:IsForeverClient() == true)
+	Check("[ZDATA] tables Era et Forever distinctes", Z.DATA.Era.creatures[2521] == nil
+		and Z.DATA.Forever.creatures[2521] ~= nil)
+
+	-- garde : chaque fichier ne se construit que sur son client
+	local guard = true
+	for _, file in ipairs({ "ZoneCreatures", "ZoneGathering", "ZoneQuests" }) do
+		local key = "ZONE_" .. (file == "ZoneCreatures" and "CREATURES" or file == "ZoneGathering" and "GATHERING" or "QUESTS")
+		guard = guard and Z.LoadData(file .. "_Era.lua", true)[key] == nil and Z.LoadData(file .. "_Forever.lua", false)[key] == nil
+			and type(Z.LoadData(file .. "_Era.lua", false)[key]) == "table"
+			and type(Z.LoadData(file .. "_Forever.lua", true)[key]) == "table"
+	end
+	Check("[ZDATA] garde de client : Era sur Era seulement, Forever sur Forever seulement (6 fichiers)", guard)
+	local era = Z.LoadData("ZoneCreatures_Era.lua", false)
+	local skipped = Z.LoadData("ZoneCreatures_Era.lua", true)
+	Check("[ZDATA] fichier gardé : ni table ni marque de chargement", #skipped.marks == 0 and era.marks[1] == "ZoneCreatures")
+	Check("[ZDATA] sans IsForeverClient (harnais minimal) : la table se charge", type(Z.LoadData("ZoneCreatures_Era.lua",
+		"none").ZONE_CREATURES) == "table")
+	-- en-tête : source, couches, licence, « généré »
+	local handle = assert(io.open(ROOT .. "/ZoneCreatures_Forever.lua", "r"))
+	local head = handle:read(2000)
+	handle:close()
+	Check("[ZDATA] en-tête Forever : généré, source, couches, GPL-3.0", head:find("FICHIER GÉNÉRÉ", 1, true)
+		and head:find("Questie/QuestieDB", 1, true) and head:find("delta-base", 1, true) and head:find("GPL-3.0", 1, true)
+		and head:find("ne pas éditer", 1, true))
 end
 
--- 2. Intégrité des tables ---------------------------------------------------------------
+-- 2. Intégrité des tables (Era et Forever) ---------------------------------------------
 do
 	Say("-- données de zone : intégrité")
-	-- zones connues : celles du coffre (ZONE_LEVELS) + Reflet-de-Lune (1450)
-	local known = { [1450] = true }
-	for zoneID in pairs(NS.ZONE_LEVELS or {}) do known[zoneID] = true end
-	local zones, lines, bad, badZones = 0, 0, {}, {}
-	for zoneID, list in pairs(NS.ZONE_CREATURES) do
-		zones = zones + 1
-		if not known[zoneID] then badZones[#badZones + 1] = tostring(zoneID) end
-		for npcID, e in pairs(list) do
-			lines = lines + 1
-			local ok = type(npcID) == "number" and npcID > 0 and npcID == math.floor(npcID)
-				and type(e.lvl) == "table" and type(e.lvl[1]) == "number" and type(e.lvl[2]) == "number"
-				and e.lvl[1] >= 1 and e.lvl[1] <= e.lvl[2]
-				and type(e.rank) == "number" and e.rank >= 0 and e.rank <= 4
-				and type(e.fr) == "string" and e.fr ~= "" and type(e.en) == "string" and e.en ~= ""
-				and (e.f == nil or e.f == "A" or e.f == "H")
-			if not ok and #bad < 5 then bad[#bad + 1] = zoneID .. ":" .. tostring(npcID) end
+	for _, client in ipairs({ "Era", "Forever" }) do
+		local data = Z.DATA[client]
+		-- zones connues : celles du coffre (ZONE_LEVELS) + Reflet-de-Lune (1450), + zones propres à Forever
+		local known = { [1450] = true }
+		for zoneID in pairs(NS.ZONE_LEVELS or {}) do known[zoneID] = true end
+		if client == "Forever" then for zoneID in pairs(FOREVER_ZONES) do known[zoneID] = true end end
+		local zones, lines, bad, badZones, missing = 0, 0, {}, {}, {}
+		for zoneID, list in pairs(data.creatures) do
+			zones = zones + 1
+			if not known[zoneID] then badZones[#badZones + 1] = tostring(zoneID) end
+			for npcID, e in pairs(list) do
+				lines = lines + 1
+				local ok = type(npcID) == "number" and npcID > 0 and npcID == math.floor(npcID)
+					and type(e.lvl) == "table" and type(e.lvl[1]) == "number" and type(e.lvl[2]) == "number"
+					and e.lvl[1] >= 1 and e.lvl[1] <= e.lvl[2]
+					and type(e.rank) == "number" and e.rank >= 0 and e.rank <= 4
+					and type(e.fr) == "string" and e.fr ~= "" and type(e.en) == "string" and e.en ~= ""
+					and (e.f == nil or e.f == "A" or e.f == "H")
+				if not ok and #bad < 5 then bad[#bad + 1] = zoneID .. ":" .. tostring(npcID) end
+			end
 		end
-	end
-	Check("[ZDATA] créatures : 40 zones, des milliers de lignes", zones == 40 and lines > 2000, zones .. "/" .. lines)
-	Check("[ZDATA] créatures : aucune zone inconnue", #badZones == 0, table.concat(badZones, ","))
-	Check("[ZDATA] créatures : ids numériques, niveaux min <= max, rang 0-4, noms fr+en, faction A/H/nil",
-		#bad == 0, table.concat(bad, ","))
-	for zoneID in pairs(NS.ZONE_LEVELS or {}) do
-		-- (d'autres tests ajoutent des zones fictives 9000+ à ZONE_LEVELS)
-		if zoneID < 9000 and not NS.ZONE_CREATURES[zoneID] then badZones[#badZones + 1] = "absente:" .. zoneID end
-	end
-	Check("[ZDATA] créatures : chaque zone du coffre a sa table", #badZones == 0, table.concat(badZones, ","))
+		local tag = "[ZDATA] " .. client .. " "
+		if client == "Era" then
+			Check(tag .. "créatures : 40 zones, des milliers de lignes", zones == 40 and lines > 2000, zones .. "/" .. lines)
+		else
+			Check(tag .. "créatures : 40 zones classiques + zones de Forever, des milliers de lignes", zones >= 43
+				and lines > 3000, zones .. "/" .. lines)
+		end
+		Check(tag .. "créatures : aucune zone inconnue", #badZones == 0, table.concat(badZones, ","))
+		Check(tag .. "créatures : ids numériques, niveaux min <= max, rang 0-4, noms fr+en, faction A/H/nil",
+			#bad == 0, table.concat(bad, ","))
+		for zoneID in pairs(NS.ZONE_LEVELS or {}) do
+			-- (d'autres tests ajoutent des zones fictives 9000+ à ZONE_LEVELS)
+			if zoneID < 9000 and not data.creatures[zoneID] then missing[#missing + 1] = tostring(zoneID) end
+		end
+		Check(tag .. "créatures : chaque zone du coffre a sa table", #missing == 0, table.concat(missing, ","))
 
-	local gZones, pairsCount, unknown = 0, 0, {}
-	for zoneID, set in pairs(NS.ZONE_GATHERING) do
-		gZones = gZones + 1
-		if not known[zoneID] then unknown[#unknown + 1] = "zone:" .. zoneID end
-		for itemID, flag in pairs(set) do
-			pairsCount = pairsCount + 1
-			local item = NS.GATHERING_ITEMS[itemID]
-			if flag ~= true or not item or item.prof == "skinning" then unknown[#unknown + 1] = tostring(itemID) end
+		local gZones, pairsCount, unknown = 0, 0, {}
+		for zoneID, set in pairs(data.gathering) do
+			gZones = gZones + 1
+			if not known[zoneID] then unknown[#unknown + 1] = "zone:" .. zoneID end
+			for itemID, flag in pairs(set) do
+				pairsCount = pairsCount + 1
+				local item = NS.GATHERING_ITEMS[itemID]
+				if flag ~= true or not item or item.prof == "skinning" then unknown[#unknown + 1] = tostring(itemID) end
+			end
 		end
+		Check(tag .. "récolte : zones et ressources", gZones >= 35 and pairsCount > 300, gZones .. "/" .. pairsCount)
+		Check(tag .. "récolte : itemID tous connus de GatheringData (herbes, minerais), zones connues",
+			#unknown == 0, table.concat(unknown, ","))
 	end
-	Check("[ZDATA] récolte : zones et ressources", gZones >= 35 and pairsCount > 300, gZones .. "/" .. pairsCount)
-	Check("[ZDATA] récolte : itemID tous connus de GatheringData (herbes, minerais), zones connues",
-		#unknown == 0, table.concat(unknown, ","))
 end
 
--- 3. Contenu : quelques espèces et nœuds réels ------------------------------------------
+-- 3. Contenu : quelques espèces et nœuds réels (Era et Forever) -------------------------
 do
 	Say("-- données de zone : contenu")
-	local durotar, elwynn = NS.ZONE_CREATURES[1411], NS.ZONE_CREATURES[1429]
-	local boar = durotar and durotar[3098]
-	Check("[ZDATA] Durotar : Sanglier tacheté (3098), niveaux 1-2", boar and boar.en == "Mottled Boar"
-		and boar.fr == "Sanglier tacheté" and boar.lvl[1] == 1 and boar.lvl[2] == 2 and boar.rank == 0 and boar.f == nil)
-	Check("[ZDATA] Elwynn : Vermine kobold (6)", elwynn and elwynn[6] and elwynn[6].en == "Kobold Vermin")
-	Check("[ZDATA] Elwynn : Lardeur élite (448), rares (rang 4)", elwynn[448] and elwynn[448].rank == 1
-		and elwynn[61] and elwynn[61].rank == 4)
-	-- bestioles et PNJ de service exclus
-	Check("[ZDATA] bestioles exclues (vipère 3300, lièvre 5951, lapin 721)", durotar[3300] == nil and durotar[5951] == nil
-		and elwynn[721] == nil)
-	Check("[ZDATA] PNJ de service exclus (grunt d'Orgrimmar 3296, garde de Hurlevent 68)", durotar[3296] == nil
-		and elwynn[68] == nil)
-	Check("[ZDATA] faction : marine de Kul Tiras (A), grunt Kor'ja (H)", durotar[3129] and durotar[3129].f == "A"
-		and durotar[12430] and durotar[12430].f == "H")
-	local herbs = NS.ZONE_GATHERING[1411]
-	Check("[ZDATA] Durotar : Pacifique, Terrestrine, Feuillargent, filon de cuivre", herbs and herbs[2447] and herbs[2449]
-		and herbs[765] and herbs[2770] and herbs[2835])
-	Check("[ZDATA] Durotar : pas de minerai de fer ni de lotus noir", herbs[2772] == nil and herbs[13468] == nil)
-	Check("[ZDATA] Berceau-de-l'Hiver : thorium, calot de glace", NS.ZONE_GATHERING[1452][10620]
-		and NS.ZONE_GATHERING[1452][13467])
+	for _, client in ipairs({ "Era", "Forever" }) do
+		local data, tag = Z.DATA[client], "[ZDATA] " .. client .. " "
+		local durotar, elwynn = data.creatures[1411], data.creatures[1429]
+		local boar = durotar and durotar[3098]
+		Check(tag .. "Durotar : Sanglier tacheté (3098), niveaux 1-2", boar and boar.en == "Mottled Boar"
+			and boar.fr == "Sanglier tacheté" and boar.lvl[1] == 1 and boar.lvl[2] == 2 and boar.rank == 0 and boar.f == nil)
+		Check(tag .. "Elwynn : Vermine kobold (6)", elwynn and elwynn[6] and elwynn[6].en == "Kobold Vermin")
+		Check(tag .. "Elwynn : Lardeur élite (448), rares (rang 4)", elwynn[448] and elwynn[448].rank == 1
+			and elwynn[61] and elwynn[61].rank == 4)
+		-- bestioles et PNJ de service exclus
+		Check(tag .. "bestioles exclues (vipère 3300, lièvre 5951, lapin 721)", durotar[3300] == nil and durotar[5951] == nil
+			and elwynn[721] == nil)
+		Check(tag .. "PNJ de service exclus (grunt d'Orgrimmar 3296, garde de Hurlevent 68)", durotar[3296] == nil
+			and elwynn[68] == nil)
+		Check(tag .. "faction : marine de Kul Tiras (A), grunt Kor'ja (H)", durotar[3129] and durotar[3129].f == "A"
+			and durotar[12430] and durotar[12430].f == "H")
+		local herbs = data.gathering[1411]
+		Check(tag .. "Durotar : Pacifique, Terrestrine, Feuillargent, filon de cuivre", herbs and herbs[2447] and herbs[2449]
+			and herbs[765] and herbs[2770] and herbs[2835])
+		Check(tag .. "Durotar : pas de minerai de fer ni de lotus noir", herbs[2772] == nil and herbs[13468] == nil)
+		Check(tag .. "Berceau-de-l'Hiver : thorium, calot de glace", data.gathering[1452][10620]
+			and data.gathering[1452][13467])
+	end
+	-- Forever : ses zones propres sont préremplies (delta-base de QuestieDB)
+	local zephras = Z.DATA.Forever.creatures[2521]
+	local count = 0
+	for _ in pairs(zephras or {}) do count = count + 1 end
+	Check("[ZDATA] Forever : Île de Zephras préremplie (Vuldren 250868, dizaines d'espèces)", zephras
+		and zephras[250868] and zephras[250868].en == "Vuldren" and count >= 30, count)
+	Check("[ZDATA] Forever : Île de Zephras, récolte (Pacifique)", Z.DATA.Forever.gathering[2521]
+		and Z.DATA.Forever.gathering[2521][2447])
+	Check("[ZDATA] Era : aucune zone propre à Forever", Z.DATA.Era.creatures[2521] == nil and Z.DATA.Era.creatures[2548] == nil
+		and Z.DATA.Era.gathering[2521] == nil)
+end
+
+-- 3 bis. Client Era : les parts lisent la table d'Era -----------------------------------
+do
+	Say("-- données de zone : tables d'Era")
+	local keep = { NS.ZONE_CREATURES, NS.ZONE_GATHERING }
+	NS.ZONE_CREATURES, NS.ZONE_GATHERING = Z.DATA.Era.creatures, Z.DATA.Era.gathering
+	Z.Reset("Horde")
+	local part = Z.Part("bestiary")
+	Check("[ZDATA] Era : Durotar (Horde), toutes les espèces de la table d'Era", part and part.have == 0
+		and part.need == Z.Expected(1411, "H") and part.need > 30, part and part.need)
+	NS.ZONE_CREATURES, NS.ZONE_GATHERING = keep[1], keep[2]
 end
 
 -- 4. Parts calculées avec la table, filtrées par la faction -----------------------------
