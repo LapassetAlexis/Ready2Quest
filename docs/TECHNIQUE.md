@@ -57,7 +57,7 @@ Comme avant, un agent par module, puis fusion. Le contrat entre les deux tient e
 - **`ns:ZoneCompletion(zoneID)`** : les parts qui s'appliquent pèsent autant les unes que les autres (moyenne des ratios). L'objectif « Complétion de <zone> » n'apparaît qu'à partir de deux parts et disparaît à 100 %. Au survol : chaque part, puis la liste de la part la plus proche d'être finie. Dans le suivi, il absorbe les objectifs `villages:`, `bestiary:` et `named:` de la même zone ; s'il est masqué, ils reviennent. Les zones tamponnées affichent leur pourcentage dans l'onglet Zones.
 - **Bestiaire** (`Bestiary.lua`) : une espèce est « vue » quand on la cible, la survole ou voit sa barre de nom (hostile ou neutre ; ni joueur, ni familier, ni bestiole). Elle est « abattue » selon la même règle d'engagement que les rares. Données par personnage dans `JournalData().bestiary[zoneID][npcID]`, rattachées à la zone où l'espèce a été vue la première fois ; les instances sont ignorées. Nommés = elite, rare, rareelite, worldboss. Les bestioles sont reconnues par le type traduit (liste multilingue).
 - **Récolte** (`GatheringData.lua`, `Gathering.lua`) : table faite à la main de 28 herbes, 9 minerais, 5 pierres, 11 cuirs et peaux (itemID de Classic), avec compétence requise et compétence grise (requise + 100 pour herbes et gisements, approximation pour le dépeçage). Seul le butin (`LOOT_ITEM_SELF*`) compte, et seulement avec le métier. La zone de récolte est retenue. Objectif « ressources de ta tranche » par métier ; si la catégorie des métiers est repliée dans la fenêtre de compétences, on reprend le dernier rang lu.
-- Pas de liste de quêtes par zone : le client ne la fournit pas (il faudrait la base de Questie).
+- Pas de liste de quêtes par zone : le client ne la fournit pas (voir plus bas : tables générées depuis la base de Questie).
 
 **Objectifs et récompenses séparés** (retour du joueur : le carnet mélangeait les deux)
 - **Évolution** : le niveau ouvre le stade, le bonheur le franchit. Palier atteint et envies insuffisantes → `data.stageReady`, annonce, objectif « Rends <nom> heureux pour évoluer » (survol : chaque envie et comment la remplir). Évolution dès que les 4 envies sont ≥ 70 % (`CompanionAdd` revérifie) ; somnolent = pas heureux ; jamais de régression.
@@ -81,6 +81,13 @@ Comme avant, un agent par module, puis fusion. Le contrat entre les deux tient e
 - **Filtres** : bestioles (gabarits 31/188/190), PNJ techniques et d'événement, PNJ de service amicaux (gardes) ; `friendlyToFaction = "AH"` gardé seulement pour les gabarits neutres combattables. Rangs cmangos : 1 élite, 2 rare élite, 3 boss, 4 rare.
 - **Bestiaire** : espèces de la zone (moins celles amicales envers ta faction) ∪ apprises en jeu ; un kill d'une espèce de la table compte sans l'avoir vue (engagement requis). **Récolte** : ta tranche ∩ ce qui pousse dans la zone. Dépeçage et zones hors tables : dynamiques comme avant.
 - **Limites connues** : quelques PNJ de quête/d'événement comptés (100 % strict) ; factions telles que Questie les note.
+
+**Quêtes et zones Forever générées** (Questie n'est plus requis en jeu ; `QuestieZone.lua` supprimé)
+- `tools/gen_zone_data.py` produit, par client, `ZoneCreatures_*`, `ZoneGathering_*`, `ZoneQuests_*` (Era / Forever). Chaque fichier se garde (`ns:IsForeverClient()`) : un client ne construit que ses tables. Forever : couches raw → corrections héritées → delta-base → traces → corrections Forever ; zones de `support/Forever/Zones`.
+- Quêtes gardées : Era 2 188 (39 zones), Forever 2 741 (43 zones, dont Zephras Isle, Riverglades, Shen'dralas, Darkspear Islands, Mount Hyjal). Exclues : répétables, cachées, métier, JcJ, événements ; catégories rattachées seulement si tous les donneurs sont dans une seule zone. Exclusives (`ex`) : exclusiveTo + chaînes d'approche.
+- `ZoneQuests.lua` : filtre race/classe (masques jusqu'aux bits 32-33 des races Skyborne, en arithmétique), faites via `C_QuestLog.IsQuestFlaggedCompleted`, cache invalidé à QUEST_TURNED_IN / QUEST_LOG_UPDATE (après le combat). Tailles : quêtes 156 / 197 Ko, créatures 167 / 215 Ko.
+- Limites : PNJ Forever de la delta-base sans niveau exclus ; quêtes Forever sans masque de race proposées à tous ; noms Forever sans traduction en anglais ; corrections dynamiques (faction) non appliquées.
+- **Licence** : l'addon passe en GPL-3.0 (`LICENSE`), la base de Questie l'étant.
 
 **À vérifier en jeu**
 - Le modèle s'affiche dans un `PlayerModel` d'addon. Un modèle invisible sans erreur ne se détecte pas hors jeu.

@@ -141,7 +141,7 @@ Le carnet (`/r2q carnet`, ou clic droit sur la créature) a deux parties :
   - **Exploration** : les villages de la zone ;
   - **Combat** : le bestiaire et les nommés ;
   - **Métiers** : les ressources de ta compétence à récolter ;
-  - **Quêtes** *(seulement avec l'addon [Questie](https://github.com/Questie/Questie))* : les quêtes de la zone faites et à faire. Le jeu ne donne pas la liste des quêtes d'une zone : sans Questie, l'onglet reste grisé et les quêtes ne comptent pas dans le pourcentage ; avec Questie, elles comptent dans les 100 %.
+  - **Quêtes** : les quêtes de la zone que ton personnage peut faire (faction, race, classe), faites et à faire. Elles comptent dans les 100 %. Aucun addon requis, sur Era comme sur Forever.
 - **Suivre à l'écran** : une case par zone. Cochée, les objectifs de la zone s'affichent dans le bloc « Carnet » en jeu. La zone où tu es est suivie d'office (décoche-la pour la masquer) ; coche d'autres zones pour garder un œil sur elles.
 - **Évolution** : l'étape de ta créature, la prochaine, ses envies, comment elle évolue, tes coffres à ouvrir, ta collection et ton parcours (zones, capitales, donjons, rares, paliers).
 
@@ -155,7 +155,7 @@ Le carnet fixe des **objectifs** : prochaine étape de la créature, prochaine a
   - les **nommés** (élites, rares, boss) croisés et abattus ;
   - la **récolte**, si tu es herboriste, mineur ou dépeceur : les herbes, minerais et cuirs de ta compétence que tu as déjà récoltés dans la zone.
 
-  Chaque zone classique arrive **préremplie** : toutes ses créatures (nom, niveau, rang) et les herbes et minerais qui y poussent sont connus dès ta première visite. Les zones absentes de ces données (ajouts de Forever) se remplissent en jouant.
+  Chaque zone arrive **préremplie**, sur Era comme sur Forever (îles et zones propres à Forever comprises) : ses créatures (nom, niveau, rang), les herbes et minerais qui y poussent et ses quêtes sont connus dès ta première visite. Ce qui manque à ces données (nouveautés récentes de Forever) se remplit en jouant.
 - **Survole un objectif** pour savoir quoi faire : les villages de la zone qu'il te reste à visiter, les capitales manquantes, les donjons de ton niveau avec leur tranche, l'XP avant le prochain niveau.
 - **Clic** : ouvre le carnet. **Clic droit** : masque l'objectif.
 - Le bloc se replie d'un clic sur son titre, se déplace en le glissant et se cache en combat (réglable dans les options du compagnon, page Carnet).
