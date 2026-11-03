@@ -1,4 +1,60 @@
-# Ready2Quest — v1.21.0
+# Ready2Quest — v1.22.0
+
+## v1.22.0 — zones sûres connues dès l'installation, 3 modules, camps de Forever
+
+### Ce qu'est une zone sûre
+
+Un endroit où l'on se **prépare** (manger, réparer, vendre, se lier) **sans risque**. Dans l'ordre :
+
+1. **jamais en instance** (donjon, raid, champ de bataille) : `IsInInstance()` ;
+2. **un camp de Forever** : aura « Campfire Nearby » (sort 1283391), lue par numéro. C'est une zone de départ **temporaire** : quitter le feu déclenche le check, mais le camp n'est jamais appris ;
+3. **un lieu de la base livrée** (`Hubs.lua`, 80 lieux), **de ta faction ou neutre**. Un village de l'autre faction n'est jamais sûr, ni appris ;
+4. **un lieu appris** (indices) ou ajouté à la main ;
+5. **le repos ou un sanctuaire en cours**.
+
+### La base livrée (`Hubs.lua`)
+
+Elle est générée par `tools/gen_hubs.py` à partir des données du client publiées par wago.tools : `AreaTable` d'Era 1.15.9.70576 et de Forever 1.60.1.70753. Elle regroupe :
+- les **6 capitales**, repérées par le drapeau `CAPITAL` du client et reconnues dans tous leurs quartiers ;
+- les **villages et hubs** avec auberge ou maître de vol ;
+- les **auberges qui sont leur propre sous-zone** (Gallows' End Tavern, Deepwater Tavern, Stoutlager Inn, Thunderbrew Distillery) ;
+- les hubs neutres sans auberge (Thorium Point, Marshal's Refuge, Nighthaven…) ;
+- et, pour Forever, Zephras Isle (Valanaar et ses villages), Powderfuse Port et The Eventide.
+
+Le jeu traduit lui-même chaque nom (`C_Map.GetAreaInfo`) : la base vaut dans toutes les langues.
+
+Pourquoi une liste éditée à la main : **aucun client Classic n'a de drapeau « village »**. Le `0x00200000` des émulateurs n'apparaît ni sur Era, ni sur Forever, ni sur TBC Anniversary. Le `0x00100000` de TBC est `AREA_FLAG_LOWLEVEL` (zones de départ). Seules les capitales sont marquées.
+
+### Le repos ne suffit plus à apprendre un lieu
+
+Sur Forever, on est « au repos » à un feu de camp en pleine nature. Le repos devient donc un indice moyen : il ne fait apprendre un lieu qu'avec un autre indice (marchand, quête…). Les indices forts restent l'aubergiste, le maître de vol, le courrier et la banque.
+
+### Buffs du camp ignorés
+
+« Campfire Nearby », « Warmth », « Camp Benefits » et « Well Rested » disparaissent en quittant le camp. Ils ne sont plus appris, sinon ils seraient réclamés à chaque départ.
+
+### Réglages : 3 modules et une section QoL
+
+| Navigation | Contenu |
+|---|---|
+| **Général** | addon actif, bouton de minicarte, position des cadres |
+| **MODULES** | |
+| Check avant le départ `[on/off]` | sous-pages **Déclenchement** · **Zones sûres** · **Sacs & vivres** · **Équipement & perso** · **Buffs & métier**. Les 13 contrôles sont la configuration du module |
+| Résumé de stuff `[on/off]` | résumé éphémère au changement d'objet |
+| Stats du portrait `[on/off]` | stats au survol du portrait |
+| **QOL** | |
+| Marchand | vente des gris, réparation : indépendants du module de départ |
+
+Au passage :
+- les unités « pourcent » deviennent « % », qui chevauchaient la jauge ;
+- l'aide de `/sd safe list` écrasait celle de `/sd resetpos` (deux clés `CMD_HELP_20`) ;
+- `/r2q` est ajoutée à l'aide.
+
+À vérifier en jeu sur Forever : le numéro de la pierre de foyer (6948 sur Era) et la présence de l'aura de camp.
+
+---
+
+## v1.21.0 — Ready to Quest devient Ready2Quest
 
 ## v1.21.0 — Ready to Quest devient Ready2Quest
 
@@ -1403,7 +1459,7 @@ Alias : `/sacdepart`.
 ## Tests
 
 ```
-python3 tests/run_tests.py     →  681 réussis, 0 échoués
+python3 tests/run_tests.py     →  708 réussis, 0 échoués
 ```
 
 Lua 5.1 (version du client), client WoW simulé. Couvre notamment : apprentissage par indices (sous-zone, capitale par deux quartiers, purge de l'ancien schéma), délai de sortie / vol / mort, nouveaux checks et automatismes du marchand en mode Era, chaîne de cartes parentes, anti-spam, filtrage des procs, **valeurs secrètes**, comptages sacs/vivres/potions/durabilité/quêtes, score pondéré et bilans, fenêtre de diagnostic (icônes, barres, bandeau), panneau d'équipement (17 lignes, moyenne, rareté, pièces faibles), comparaison au survol (amélioration, régressif, vide, anneaux), **les deux voies de hook tooltip**, bouton sans template Blizzard, et toutes les commandes.

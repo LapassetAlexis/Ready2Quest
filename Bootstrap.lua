@@ -4,7 +4,7 @@
 -- chargement. C'est ce qui permet de diagnostiquer à distance un addon muet.
 local ADDON, ns = ...
 
-ns.version = "1.21.0"
+ns.version = "1.22.0"
 ns.Loaded = {}
 ns.loadOrder = {}
 ns.errors = {}
@@ -39,7 +39,7 @@ local function Dispatch(input)
 	-- Core.lua n'a pas été jusqu'au bout : on explique et on liste l'état
 	print("|cffe8a54bReady2Quest|r " .. tostring(ns.version) .. " — modules non chargés.")
 	local missing = {}
-	for _, name in ipairs({ "Locales", "Compat", "Theme", "Core", "Buffs", "Reagents",
+	for _, name in ipairs({ "Locales", "Compat", "Hubs", "Theme", "Core", "Buffs", "Reagents",
 		"Merchant", "Equip", "Stats", "Minimap", "Checks", "Options", "UI" }) do
 		if not ns.Loaded[name] then missing[#missing + 1] = name end
 	end

@@ -482,7 +482,7 @@ local function LoadAddonFile(name)
 	chunk("Ready2Quest", NS)
 end
 
-for _, file in ipairs({ "Bootstrap.lua", "Locales.lua", "Compat.lua", "Theme.lua", "Core.lua", "Buffs.lua", "Reagents.lua", "Merchant.lua", "Equip.lua", "Stats.lua", "Minimap.lua", "Checks.lua", "Options.lua", "UI.lua" }) do
+for _, file in ipairs({ "Bootstrap.lua", "Locales.lua", "Compat.lua", "Hubs.lua", "Theme.lua", "Core.lua", "Buffs.lua", "Reagents.lua", "Merchant.lua", "Equip.lua", "Stats.lua", "Minimap.lua", "Checks.lua", "Options.lua", "UI.lua" }) do
 	LoadAddonFile(file)
 end
 
@@ -584,6 +584,8 @@ local function ResetWorld()
 	NS.merchantOpen = nil
 	NS.sellRun = nil
 	NS.safePurgeNotice = nil
+	NS.hubIndex = nil
+	NS.wasAtCamp = nil
 	if NS.InvalidateReagents then NS:InvalidateReagents() end
 end
 
@@ -818,7 +820,11 @@ Mock.world.mapID = 30
 Mock.world.subzone = "Village"
 Mock.world.resting = true
 Mock:Fire("PLAYER_UPDATE_RESTING")
-Check("repos : village appris", NS:DB().safe["v:30:Village"] ~= nil)
+-- v1.22.0 : le repos seul n'apprend plus (feux de camp de Forever)
+Check("repos seul : rien n'est appris", NS:DB().safe["v:30:Village"] == nil)
+Mock:Fire("MERCHANT_SHOW"); Mock:Fire("MERCHANT_CLOSED")
+Check("repos + marchand : village appris", NS:DB().safe["v:30:Village"] ~= nil
+	and NS:DB().safe["v:30:Village"].source == "merchant+resting", NS:DB().safe["v:30:Village"] and NS:DB().safe["v:30:Village"].source)
 ResetWorld()
 Mock.world.mapID = 30
 Mock.world.subzone = nil
@@ -1085,7 +1091,7 @@ Check("RefreshOptions sans panneau ne plante pas", true)
 NS:HandleCommand("options")
 Check("panneau créé", NS.optionsFrame ~= nil)
 Check("panneau affiché", NS.optionsFrame and NS.optionsFrame.shown == true)
-Check("33 lignes (19 réglages + 1 action + 13 modules)", NS.optionsFrame and #NS.optionsFrame.rows == 33, NS.optionsFrame and #NS.optionsFrame.rows)
+Check("31 lignes (17 réglages + 1 action + 13 contrôles)", NS.optionsFrame and #NS.optionsFrame.rows == 31, NS.optionsFrame and #NS.optionsFrame.rows)
 
 local boolRow
 for _, row in ipairs(NS.optionsFrame.rows) do
@@ -1479,7 +1485,7 @@ ResetWorld()
 Say("\n== bootstrap et diagnostic ==")
 ResetWorld()
 Check("commande enregistrée par le bootstrap", type(SlashCmdList["SACETDEPART"]) == "function")
-Check("version exposée", NS.version == "1.21.0", NS.version)
+Check("version exposée", NS.version == "1.22.0", NS.version)
 
 local missingMods = {}
 for _, name in ipairs({ "Bootstrap", "Locales", "Compat", "Theme", "Core", "Buffs", "Reagents",
@@ -1500,7 +1506,7 @@ NS.HandleCommand = savedHandle
 Mock:Reset()
 NS:HandleCommand("diag")
 Check("/sd diag liste les modules", Mock:Output():find("modules :") ~= nil, Mock:Output())
-Check("/sd diag affiche la version", Mock:Output():find("1%.21%.0") ~= nil, Mock:Output())
+Check("/sd diag affiche la version", Mock:Output():find("1%.22%.0") ~= nil, Mock:Output())
 
 -- une erreur est enregistrée et affichée
 Mock:Reset()
@@ -1633,7 +1639,7 @@ for _, row in ipairs(NS.optionsFrame.rows) do
 	if row.def and row.def.key == "showMinimap" then minimapRow = row end
 end
 Check("ligne dédiée dans les réglages", minimapRow ~= nil)
-Check("33 lignes au total", NS.optionsFrame and #NS.optionsFrame.rows == 33, #NS.optionsFrame.rows)
+Check("31 lignes au total", NS.optionsFrame and #NS.optionsFrame.rows == 31, #NS.optionsFrame.rows)
 if minimapRow then minimapRow:Click() end
 Check("décocher masque le bouton", lancer.shown == false)
 if minimapRow then minimapRow:Click() end
@@ -2286,7 +2292,7 @@ Check("panneau de réglages construit", frame ~= nil)
 if frame then
 	Check("panneau d'options : hauteur fixe qui tient à l'écran", frame.height == lay.height
 		and frame.height <= lay.maxHeight, frame.height)
-	Check("9 pages, 9 boutons de navigation", #frame.navButtons == 9, #frame.navButtons)
+	Check("10 entrées de navigation (3 modules, 5 sous-pages, Général, Marchand)", #frame.navButtons == 10, #frame.navButtons)
 
 	-- chaque page tient dans le cadre, au-dessus du pied
 	local overflow = {}
@@ -2324,12 +2330,25 @@ if frame then
 	end
 	Check("les modules partagent la colonne de valeurs", misaligned == 0, misaligned)
 	Check("libellés d'options : aucun débordement", #tooLong == 0, table.concat(tooLong, ", "))
+	-- valeur maximale + unité : tient dans la colonne de valeur (sinon elle
+	-- mord la piste, vu sur un rendu avec « 25 pourcent »)
+	local valueOverflow = {}
+	for _, row in ipairs(frame.rows) do
+		local def = row.def
+		if def and def.kind == "number" then
+			local text = tostring(def.max or 0) .. (def.suffix and (" " .. (NS.L[def.suffix] or "")) or "")
+			if #text * 6.2 > lay.valueWidth then valueOverflow[#valueOverflow + 1] = def.key .. "=" .. text end
+		end
+	end
+	Check("valeurs + unités : tiennent dans leur colonne", #valueOverflow == 0, table.concat(valueOverflow, ", "))
 	local navTooLong = {}
 	for _, nav in ipairs(frame.navButtons) do
 		-- libellé à 26 px, interrupteur de 22 px à 8 px du bord droit
 		local room = (nav.width or lay.navWidth) - 26 - (nav.power and (22 + 8 + 4) or 4)
 		-- 5.3 px par caractère : mesuré sur une capture en jeu (« Vivres & potions » = 84 px)
-		if #(nav.label.text or "") * 5.3 > room then navTooLong[#navTooLong + 1] = nav.label.text end
+		-- en caractères, pas en octets (« é » = 2 octets, 1 glyphe)
+		local chars = select(2, tostring(nav.label.text or ""):gsub("[^\128-\191]", ""))
+		if chars * 5.3 > room then navTooLong[#navTooLong + 1] = nav.label.text end
 	end
 	Check("libellés de navigation : aucun débordement", #navTooLong == 0, table.concat(navTooLong, ", "))
 
@@ -2353,8 +2372,13 @@ local visiblePages = 0
 for _, page in pairs(frame.pages) do if page:IsShown() then visiblePages = visiblePages + 1 end end
 Check("navigation : une seule page visible", visiblePages == 1 and frame.pages.bags:IsShown())
 Check("navigation : page mémorisée", NS:DB().optionsPage == "bags")
-frame.navButtons[2]:Click()
+local function NavFor(id)
+	for _, nav in ipairs(frame.navButtons) do if nav.pageId == id then return nav end end
+end
+NavFor("safe"):Click()
 Check("navigation : clic sur « Zones sûres »", frame.currentPage == "safe" and frame.pages.safe:IsShown())
+NavFor("departure"):Click()
+Check("navigation : le module ouvre sa première sous-page", frame.currentPage == "trigger" and frame.currentParent == "departure")
 Check("navigation : page inconnue -> Général", (function() NS:SelectOptionsPage("nope"); return frame.currentPage == "general" end)())
 Check("page Sacs : interrupteur + seuil réunis", (function()
 	local hasModule, hasThreshold = false, false
@@ -2770,7 +2794,7 @@ Check("police refusée : repli GameFont sans erreur", fallback.title.titleFont =
 Mock.world.noButtonTemplate = false
 Mock.world.fontRefused = false
 Check("repli toujours titré", fallback.title ~= nil and tostring(fallback.title.text) ~= "")
-Check("repli toujours complet", fallback.rows ~= nil and #fallback.rows == 33,
+Check("repli toujours complet", fallback.rows ~= nil and #fallback.rows == 31,
 	fallback.rows and #fallback.rows)
 Mock.world.noBackdropTemplate = false
 
@@ -3053,7 +3077,7 @@ Check("check manuel : pas de ligne « Parti de »", NS.window.departed.text == "
 -- Chaînes : chaque nouvelle clé existe en frFR ET en enUS
 local newKeys = { "MSG_SAFE_PURGED", "MSG_SAFE_RESET", "SAFE_KIND_CITY", "SAFE_KIND_VILLAGE", "SRC_RESTING",
 	"SRC_SANCTUARY", "SRC_BINDER", "SRC_TAXI", "SRC_MAIL", "SRC_BANK", "SRC_TRAINER", "SRC_MERCHANT", "SRC_QUEST",
-	"SRC_MANUAL", "PANEL_DEPARTED", "CMD_HELP_20", "OPT_EXITDELAY", "OPT_SEC_UNIT", "OPT_SECTION_AUTO", "OPT_POPUPSCORE", "OPT_SCORE_UNIT", "MSG_BRIEF", "MSG_BRIEF_FROM", "MSG_AUTOSELL_NOTICE",
+	"SRC_MANUAL", "PANEL_DEPARTED", "CMD_HELP_21", "CMD_HELP_22", "OPT_EXITDELAY", "OPT_SEC_UNIT", "OPT_SECTION_AUTO", "OPT_POPUPSCORE", "OPT_SCORE_UNIT", "MSG_BRIEF", "MSG_BRIEF_FROM", "MSG_AUTOSELL_NOTICE",
 	"OPT_AUTOSELL", "OPT_AUTOREPAIR", "MONEY_GOLD", "MONEY_SILVER", "MONEY_COPPER", "MSG_SOLD", "MSG_REPAIRED",
 	"MSG_REPAIR_POOR", "CHK_CLASSREAGENTS", "CHK_CLASSREAGENTS_LOW", "CHK_CLASSREAGENTS_GOOD", "ADV_CLASSREAGENTS",
 	"REAGENT_AMMO", "REAGENT_SHARD", "REAGENT_FLASH", "REAGENT_TELEPORT", "REAGENT_ARCANE", "REAGENT_CANDLE",
@@ -3485,7 +3509,7 @@ for _, row in ipairs(o.rows) do
 	if row.track then tracks = tracks + 1 end
 end
 for _, page in pairs(o.pages) do if page.sub.text ~= "" then subs = subs + 1 end end
-Check("[ID] interrupteurs dessinés pour les booléens et modules", toggles == 13 + 9, toggles)
+Check("[ID] interrupteurs dessinés pour les booléens et contrôles", toggles == 13 + 7, toggles)
 Check("[ID] pistes pour les seuils", tracks == 10, tracks)
 Check("[ID] chaque page a sa phrase d'explication", subs == 9, subs)
 local delayRow
@@ -3500,7 +3524,9 @@ addonRow:Click()
 Check("[ID] clic : interrupteur coupé", addonRow.toggle.checked == false and NS:DB().enabled == false)
 addonRow:Click()
 NS:SelectOptionsPage("bags")
-Check("[ID] navigation : page active teintée", o.navButtons[3].tint:IsShown() and not o.navButtons[1].tint:IsShown())
+local function OptNav(id) for _, nav in ipairs(o.navButtons) do if nav.pageId == id then return nav end end end
+Check("[ID] navigation : page active teintée", OptNav("bags").tint:IsShown() and not OptNav("general").tint:IsShown())
+Check("[ID] navigation : le module parent reste actif", OptNav("departure").tint:IsShown())
 Check("[ID] titre de page en police maison", o.pages.bags.title.font ~= nil)
 -- v1.21.0 : marque Ready2Quest, deuxième couleur
 Check("[R2Q] navigation : logo complet en tête", tostring(o.brandLogo.texture):find("Textures\\logo$") ~= nil, o.brandLogo.texture)
@@ -3509,35 +3535,141 @@ Check("[R2Q] bandeau : logo simplifié", tostring(o.logo.texture):find("logo_pet
 Check("[R2Q] groupes de navigation en bleu", o.navGroups[1].textColor[3] > 0.8 and o.navGroups[1].textColor[1] < 0.4)
 Check("[R2Q] commande /r2q", SLASH_SACETDEPART3 == "/r2q")
 
--- interrupteurs de page dans la navigation
+-- v1.22.0 : trois modules, chacun avec son interrupteur dans la navigation
 NS.optionsFrame = nil
-for _, def in ipairs(NS.checks) do NS:SetModuleEnabled(def.id, true) end
 NS:ToggleOptions()
-local nav3 = NS.optionsFrame.navButtons[3]           -- Sacs & butin
-local navGeneral = NS.optionsFrame.navButtons[1]
-Check("[NAV] interrupteur sur les pages à modules", nav3.power ~= nil and navGeneral.power == nil)
-local powered = 0
-for _, nav in ipairs(NS.optionsFrame.navButtons) do if nav.power then powered = powered + 1 end end
-Check("[NAV] 6 pages ont un interrupteur", powered == 6, powered)
-Check("[NAV] tout actif : allumé", nav3.power.checked == true)
+local function NavOf(id) for _, nav in ipairs(NS.optionsFrame.navButtons) do if nav.pageId == id then return nav end end end
+local powered = {}
+for _, nav in ipairs(NS.optionsFrame.navButtons) do if nav.power then powered[#powered + 1] = nav.pageId end end
+table.sort(powered)
+Check("[NAV] interrupteur sur les 3 modules seulement", table.concat(powered, ",") == "departure,portrait,toast", table.concat(powered, ","))
+Check("[NAV] sous-pages en retrait, sans interrupteur", NavOf("trigger").parentId == "departure" and NavOf("trigger").power == nil)
+Check("[NAV] QoL : Marchand, hors modules", NavOf("merchant").power == nil and NavOf("merchant").parentId == nil)
 NS:SelectOptionsPage("general")
-nav3.power:Click()
-Check("[NAV] clic : modules de la page coupés", not NS:IsModuleEnabled("bags") and not NS:IsModuleEnabled("gray"))
+local dep = NavOf("departure")
+Check("[NAV] check avant le départ : allumé", dep.power.checked == true)
+dep.power:Click()
+Check("[NAV] clic : module coupé", NS:DB().departureEnabled == false and dep.power.checked == false)
 Check("[NAV] clic : on reste sur la page courante", NS.optionsFrame.currentPage == "general")
-Check("[NAV] tout coupé : éteint, libellé grisé", nav3.power.checked == false and nav3.label.textColor[1] < 0.45)
-NS:SetModuleEnabled("bags", true)
-NS:RefreshOptions()
-Check("[NAV] un seul module actif : état partiel", nav3.power.partial == true and nav3.state == "partial")
-nav3.power:Click()
-Check("[NAV] partiel + clic : tout rallumé", NS:IsModuleEnabled("bags") and NS:IsModuleEnabled("gray") and nav3.power.checked == true)
-Check("[NAV] le reste n'a pas bougé", NS:IsModuleEnabled("vivres") and NS:IsModuleEnabled("buffs"))
--- la page se synchronise : l'interrupteur du module dans la page suit
-NS:SelectOptionsPage("bags")
-nav3.power:Click()
-local bagsModuleRow
-for _, row in ipairs(NS.optionsFrame.pages.bags.rows) do if row.isModule and row.moduleId == "bags" then bagsModuleRow = row end end
-Check("[NAV] la page suit l'interrupteur de navigation", bagsModuleRow.toggle.checked == false)
-nav3.power:Click()
+dep.power:Click()
+Check("[NAV] second clic : rallumé", NS:DB().departureEnabled == true)
+NavOf("portrait").power:Click()
+Check("[NAV] stats du portrait coupées", NS:DB().showPortraitStats == false)
+NavOf("portrait").power:Click()
+NavOf("toast").power:Click()
+Check("[NAV] résumé de stuff coupé", NS:DB().showGearToast == false)
+NavOf("toast").power:Click()
+-- le QoL ne dépend pas du module de départ
+NS:DB().departureEnabled = false
+Check("[NAV] QoL indépendant : vente auto toujours active", NS:DB().autoSellGray ~= false)
+NS:DB().departureEnabled = true
+
+-- v1.22.0 : base livrée des zones sûres, faction, instances, camp de Forever
+do
+	ResetWorld()
+	Check("[HUB] base livrée chargée", NS.HUBS and NS.HUBS[87] and NS.HUBS[87].name == "Goldshire" and NS.HUBS[1519].kind == "capital")
+	local count = 0
+	for _ in pairs(NS.HUBS) do count = count + 1 end
+	Check("[HUB] au moins 75 lieux", count >= 75, count)
+	-- village connu, sans aucun apprentissage
+	_G.UnitFactionGroup = function() return Mock.world.faction or "Alliance" end
+	Mock.world.mapID, Mock.world.subzone = 30, "Goldshire"
+	Mock:Fire("PLAYER_ENTERING_WORLD", true, false)
+	local safe, _, why, entry = NS:IsCurrentZoneSafe()
+	Check("[HUB] Goldshire sûr dès l'installation", safe == true and why == "known", tostring(why))
+	Check("[HUB] rien n'a été appris pour ça", next(NS:DB().safe) == nil)
+	Mock.now = Mock.now + 60
+	Mock.world.subzone = "Fargodeep Mine"
+	Mock:Fire("ZONE_CHANGED"); Mock:Advance(6)
+	Check("[HUB] sortie de Goldshire : alerte", NS.lastResults ~= nil)
+	Check("[HUB] parti de : lieu connu", NS:DepartedText() and NS:DepartedText():find("Goldshire") and NS:DepartedText():find("lieu connu"),
+		NS:DepartedText())
+	Check("[HUB] une mine n'est pas sûre", NS:IsCurrentZoneSafe() == false)
+
+	-- noms traduits par le jeu
+	ResetWorld()
+	-- le client traduit chaque identifiant (Goldshire a aussi l'ID 16524 sur Forever)
+	_G.C_Map.GetAreaInfo = function(areaID)
+		return ({ [87] = "Comté-de-l'Or", [16524] = "Comté-de-l'Or", [1637] = "Orgrimmar" })[areaID] or ("Zone " .. areaID)
+	end
+	Mock.world.mapID, Mock.world.subzone = 30, "Comté-de-l'Or"
+	Check("[HUB] nom traduit par le client (frFR)", NS:IsCurrentZoneSafe() == true)
+	Mock.world.subzone = "Goldshire"
+	NS.hubIndex = nil
+	Check("[HUB] le nom anglais ne compte plus une fois traduit", NS:IsCurrentZoneSafe() == false)
+	_G.C_Map.GetAreaInfo = nil
+
+	-- faction : le village de l'autre faction n'est pas sûr, et n'est pas appris
+	ResetWorld()
+	Mock.world.faction = "Horde"
+	Mock.world.mapID, Mock.world.subzone = 30, "Southshore"
+	local hostileSafe, _, hostileWhy = NS:IsCurrentZoneSafe()
+	Check("[HUB] Southshore pour un Horde : pas sûr", hostileSafe == false and hostileWhy == "hostile", tostring(hostileWhy))
+	Mock:Fire("MAIL_SHOW")
+	Check("[HUB] ville hostile : jamais apprise", next(NS:DB().safe) == nil)
+	Mock.world.subzone = "Booty Bay"
+	Check("[HUB] ville neutre : sûre pour tous", NS:IsCurrentZoneSafe() == true)
+	Mock.world.subzone = "Tarren Mill"
+	Check("[HUB] Tarren Mill pour un Horde : sûr", NS:IsCurrentZoneSafe() == true)
+
+	-- capitale reconnue par le nom de la zone, dans n'importe quel quartier
+	_G.GetRealZoneText = function() return Mock.world.zone or "" end
+	Mock.world.zone, Mock.world.subzone = "Orgrimmar", "Valley of Strength"
+	Check("[HUB] capitale : sûre dans n'importe quel quartier", NS:IsCurrentZoneSafe() == true)
+	Mock.world.faction = "Alliance"
+	Check("[HUB] capitale ennemie : pas sûre", NS:IsCurrentZoneSafe() == false)
+	Mock.world.zone = nil
+
+	-- instance : jamais une zone de départ
+	Mock.world.faction = "Alliance"
+	Mock.world.subzone = "Goldshire"
+	_G.IsInInstance = function() return Mock.world.instance == true end
+	Mock.world.instance = true
+	Check("[HUB] en instance : jamais sûr", NS:IsCurrentZoneSafe() == false)
+	Mock.world.instance = false
+
+	-- camp de Forever : aura « Campfire Nearby » (1283391)
+	ResetWorld()
+	Mock.world.mapID, Mock.world.subzone = 20, "Plaine"
+	Mock:Fire("PLAYER_ENTERING_WORLD", true, false)
+	Mock.now = Mock.now + 60
+	Mock.world.auras = { [1283391] = { name = "Campfire Nearby", duration = 0 } }
+	Mock.world.auraOrder = { 1283391 }
+	Mock:Fire("UNIT_AURA", "player")
+	local campSafe, _, campWhy = NS:IsCurrentZoneSafe()
+	Check("[CAMP] près du feu : zone de départ", campSafe == true and campWhy == "camp", tostring(campWhy))
+	Mock.world.resting = true
+	Mock:Fire("PLAYER_UPDATE_RESTING"); Mock:Fire("MAIL_SHOW"); Mock:Fire("MERCHANT_SHOW"); Mock:Fire("MERCHANT_CLOSED")
+	Check("[CAMP] le camp n'est jamais appris", next(NS:DB().safe) == nil and next(NS:DB().safeClues) == nil)
+	Mock.world.resting = false
+	Mock.world.auras, Mock.world.auraOrder = {}, {}
+	Mock:Fire("UNIT_AURA", "player")
+	Mock:Advance(6)
+	Check("[CAMP] quitter le camp : alerte", NS.lastResults ~= nil)
+	Check("[CAMP] parti du campement", NS:DepartedText() and NS:DepartedText():find("campement") and NS:DepartedText():find("feu de camp"),
+		NS:DepartedText())
+
+	-- buffs du camp : jamais appris
+	ResetWorld()
+	Mock.world.auras = { [1289378] = { name = "Warmth", duration = 3600 }, [1229741] = { name = "Camp Benefits", duration = 1800 },
+		[1459] = { name = "Intelligence des arcanes", duration = 1800 } }
+	Mock.world.auraOrder = { 1289378, 1229741, 1459 }
+	NS.lastBuffScan = nil
+	NS:ScanBuffs()
+	Check("[CAMP] Warmth et Camp Benefits ignorés", NS:DB().buffs[1289378] == nil and NS:DB().buffs[1229741] == nil)
+	Check("[CAMP] les vrais buffs restent appris", NS:DB().buffs[1459] ~= nil)
+
+	-- module coupé : aucune alerte
+	ResetWorld()
+	NS:DB().departureEnabled = false
+	Mock.world.mapID, Mock.world.subzone = 30, "Goldshire"
+	Mock:Fire("PLAYER_ENTERING_WORLD", true, false)
+	Mock.now = Mock.now + 60
+	Mock.world.subzone = "Bois"
+	Mock:Fire("ZONE_CHANGED"); Mock:Advance(6)
+	Check("[MOD] check avant le départ coupé : pas d'alerte", NS.lastResults == nil)
+	_G.UnitFactionGroup, _G.GetRealZoneText, _G.IsInInstance = nil, nil, nil
+end
 
 -- retours de la première session en jeu (Era, Vallée des épreuves)
 NS.editBanner = nil
