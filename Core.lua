@@ -44,6 +44,42 @@ local DEFAULTS = {
 	seen                = {},     -- [mapID] = true (zones déjà visitées)
 }
 
+-- API d'extension : réglages par défaut d'un module (fusionnés avant la
+-- première lecture de la sauvegarde, ou appliqués aussitôt si elle est lue)
+function ns.RegisterDefaults(defaults)
+	for k, v in pairs(defaults or {}) do
+		if DEFAULTS[k] == nil then DEFAULTS[k] = v end
+	end
+	if ns._dbReady and type(Ready2QuestDB) == "table" then
+		for k, v in pairs(defaults or {}) do
+			if Ready2QuestDB[k] == nil then
+				if type(v) == "table" then
+					Ready2QuestDB[k] = {}
+					for kk, vv in pairs(v) do Ready2QuestDB[k][kk] = vv end
+				else
+					Ready2QuestDB[k] = v
+				end
+			end
+		end
+	end
+end
+
+-- API d'extension : événements internes de l'addon.
+--   "DEPARTURE" (from)        sortie de zone sûre confirmée (après le délai)
+--   "RETURN"    (place)       retour en zone sûre après un départ confirmé
+--   "CHECKLIST" (results)     un check vient d'être calculé
+ns.callbacks = {}
+function ns:RegisterCallback(event, fn)
+	self.callbacks[event] = self.callbacks[event] or {}
+	table.insert(self.callbacks[event], fn)
+end
+function ns:FireCallback(event, ...)
+	for _, fn in ipairs(self.callbacks[event] or {}) do
+		local ok, err = pcall(fn, self, ...)
+		if not ok and self.RecordError then self:RecordError("callback:" .. event, err) end
+	end
+end
+
 local function ApplyDefaults(src, dst)
 	for k, v in pairs(src) do
 		if type(v) == "table" then
@@ -416,7 +452,7 @@ end
 
 function ns:Evaluate(trigger)
 	local db = self:DB()
-	if not db.enabled or db.departureEnabled == false then self.pendingExit = nil; return end
+	if not db.enabled then self.pendingExit = nil; return end
 
 	local safe, _, reason, entry = self:IsCurrentZoneSafe()
 	local previous = self.inSafe
@@ -429,6 +465,11 @@ function ns:Evaluate(trigger)
 				or ((self:MapInfo(self:CurrentMap()) or {}).name) or "?",
 			source = (entry and entry.source) or reason,
 		}
+		-- retour en zone sûre après un départ confirmé (Retour d'expédition)
+		if self.departed then
+			self.departed = nil
+			self:FireCallback("RETURN", self.lastSafePlace)
+		end
 		return
 	end
 
@@ -460,6 +501,11 @@ function ns:UpdatePendingExit(now)
 	if self:IsCurrentZoneSafe() then self.inSafe = true; return end
 
 	local db = self:DB()
+	-- le départ est réel dès ici : les filtres qui suivent ne coupent que
+	-- l'alerte (les autres modules, eux, suivent toujours le départ)
+	self.departed = true
+	self:FireCallback("DEPARTURE", pending.from)
+	if db.departureEnabled == false then return end
 	if self.quietUntil and now < self.quietUntil then return end
 	if self.lastAlert and (now - self.lastAlert) < (db.alertCooldown or 20) then return end
 	self.lastAlert = now
@@ -546,6 +592,7 @@ function ns:RunChecklist(trigger)
 	table.sort(advice, function(a, b) return a.weight > b.weight end)
 	self.lastAdvice = advice
 	self.lastTrigger = trigger
+	self:FireCallback("CHECKLIST", results)
 	if trigger == "manual" then self.lastDeparture = nil end
 
 	if db.showWindow and self.ShowWindow and not self:IsDiscreetAlert(trigger) then
@@ -817,6 +864,11 @@ ns.MODULES = {
 	{ id = "stuff",    key = "showGearToast",     label = "OPT_PAGE_TOAST",     aliases = { "toast", "resume", "stuff" } },
 	{ id = "portrait", key = "showPortraitStats", label = "OPT_PAGE_PORTRAIT",  aliases = { "stats", "portrait" } },
 }
+
+-- API d'extension : un module s'ajoute à /r2q modules et module <id>
+function ns.RegisterModule(module)
+	table.insert(ns.MODULES, module)
+end
 
 function ns:FindModule(id)
 	for _, module in ipairs(self.MODULES) do

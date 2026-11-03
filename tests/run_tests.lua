@@ -482,9 +482,21 @@ local function LoadAddonFile(name)
 	chunk("Ready2Quest", NS)
 end
 
-for _, file in ipairs({ "Bootstrap.lua", "Locales.lua", "Compat.lua", "Hubs.lua", "Theme.lua", "Core.lua", "Buffs.lua", "Reagents.lua", "Merchant.lua", "Equip.lua", "Stats.lua", "Minimap.lua", "Checks.lua", "Options.lua", "UI.lua" }) do
+-- La liste des fichiers vient du .toc, comme pour le client : un module
+-- ajouté au .toc est chargé ici sans autre modification.
+local tocFiles = {}
+do
+	local handle = assert(io.open(ROOT .. "/Ready2Quest.toc", "r"), "Ready2Quest.toc introuvable")
+	for line in handle:lines() do
+		line = line:gsub("\r", ""):gsub("^%s+", ""):gsub("%s+$", "")
+		if line ~= "" and not line:find("^#") and line:find("%.lua$") then tocFiles[#tocFiles + 1] = line end
+	end
+	handle:close()
+end
+for _, file in ipairs(tocFiles) do
 	LoadAddonFile(file)
 end
+_G.TOC_FILES = tocFiles
 
 ----------------------------------------------------------------------------
 -- 3. Assertions
@@ -586,6 +598,7 @@ local function ResetWorld()
 	NS.safePurgeNotice = nil
 	NS.hubIndex = nil
 	NS.wasAtCamp = nil
+	NS.departed = nil
 	if NS.InvalidateReagents then NS:InvalidateReagents() end
 end
 
@@ -3737,6 +3750,21 @@ Check("[R2Q] API publique sous les deux noms", _G.Ready2Quest == NS and _G.Ready
 end
 LeaveEra()
 Mock.world.classToken = nil
+end
+
+-- 4.99 Tests des modules (tests/modules/*.lua, listés par run_tests.py).
+-- Chaque fichier reçoit la boîte à outils du harnais dans la table T.
+do
+	_G.T = { Check = Check, Say = Say, ResetWorld = ResetWorld, Result = Result, NS = NS, Mock = Mock }
+	for _, path in ipairs(MODULE_TEST_FILES or {}) do
+		Say("\n== module : " .. path .. " ==")
+		local handle = assert(io.open(ROOT .. "/" .. path, "r"))
+		local source = handle:read("*a")
+		handle:close()
+		local chunk, compileError = loadstring(source, "@" .. path)
+		assert(chunk, "erreur de compilation dans " .. path .. ":\n" .. tostring(compileError))
+		chunk()
+	end
 end
 
 -- 5. Bilan
