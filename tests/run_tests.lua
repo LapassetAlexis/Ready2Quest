@@ -493,10 +493,31 @@ do
 	end
 	handle:close()
 end
+-- Les scénarios du cœur comptent les pages et lignes des réglages de base :
+-- les pages ajoutées par les modules (fichiers après UI.lua) sont mises de
+-- côté pendant ces scénarios, puis remises avant tests/modules/*.lua.
+do
+local basePages
 for _, file in ipairs(tocFiles) do
 	LoadAddonFile(file)
+	if file == "UI.lua" and NS.OPTION_PAGES then
+		basePages = {}
+		for _, page in ipairs(NS.OPTION_PAGES) do basePages[page] = true end
+	end
 end
 _G.TOC_FILES = tocFiles
+local fullPages = {}
+for index, page in ipairs(NS.OPTION_PAGES or {}) do fullPages[index] = page end
+function Mock.SetOptionPages(onlyBase)
+	local pages = NS.OPTION_PAGES
+	if not pages or not basePages then return end
+	for index = #pages, 1, -1 do pages[index] = nil end
+	for _, page in ipairs(fullPages) do
+		if not onlyBase or basePages[page] then pages[#pages + 1] = page end
+	end
+end
+Mock.SetOptionPages(true)
+end
 
 ----------------------------------------------------------------------------
 -- 3. Assertions
@@ -3755,6 +3776,7 @@ end
 -- 4.99 Tests des modules (tests/modules/*.lua, listés par run_tests.py).
 -- Chaque fichier reçoit la boîte à outils du harnais dans la table T.
 do
+	Mock.SetOptionPages(false)
 	_G.T = { Check = Check, Say = Say, ResetWorld = ResetWorld, Result = Result, NS = NS, Mock = Mock }
 	for _, path in ipairs(MODULE_TEST_FILES or {}) do
 		Say("\n== module : " .. path .. " ==")

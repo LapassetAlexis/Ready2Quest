@@ -27,3 +27,5 @@ Minimap.lua
 Checks.lua
 Options.lua
 UI.lua
+DungeonData.lua
+Dungeon.lua
