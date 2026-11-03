@@ -36,5 +36,6 @@ LevelPace.lua
 BagSpace.lua
 Death.lua
 CompanionData.lua
+CompanionLines.lua
 Companion.lua
 Journal.lua
