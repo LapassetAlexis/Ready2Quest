@@ -114,9 +114,10 @@ Elle dit aussi **ce dont elle a besoin** : « J'ai faim… », « On explore ? �
 
 Elle a quatre envies : **faim**, **énergie**, **moral** et **curiosité**. Elles se remplissent quand tu manges, te reposes, rends une quête ou explores. Clique dessus pour lui faire une caresse, **clic droit** pour ouvrir son carnet sur les objectifs. Au premier lancement, un **tutoriel** en quelques bulles explique tout ça (à revoir avec `/r2q compagnon tuto`).
 
-- **Elle grandit avec toi** : Nouveau-né, Jeune (niveau 10), Aguerri (20), Vaillant (40) et Légendaire (60), avec une petite fête à chaque étape.
+- **Elle grandit avec toi** : Nouveau-né, Jeune (niveau 10), Aguerri (20), Vaillant (40) et Légendaire (60). Ton niveau ouvre l'étape, mais elle n'évolue que si elle est **heureuse** : ses quatre envies au moins à 70 %. Sinon elle te dit qu'elle est prête et ce qui lui manque, et elle attend. Petite fête à chaque étape.
 - **Elle ne t'en veut jamais** : elle ne meurt pas, ne régresse pas et ne tombe pas malade. Après une longue absence, elle est juste un peu ensommeillée : « Tu m'as manqué ! »
-- **Elle se personnalise** : de nouvelles **apparences** (dragonnets de couleur, chouette, feu follet, dragon féerique…) et des **ornements** (ruban, lanterne, médaille, cadre doré) se débloquent avec ton carnet de voyage et ton niveau.
+- **Elle se personnalise** avec des **apparences** (dragonnets, rainette, chatons, lapin, tortue, ara, serpent, chouette, feu follet, dragon féerique), des **ornements**, des **cadres** (cuivre, chêne, argent, givre, runique, gangrené, or ciselé) et des **fonds** (parchemin, sous-bois, crépuscule, givre, marbre, braise, voûte étoilée, velours doré).
+- **Ils se gagnent dans les coffres de zone** : une zone terminée à 100 % ouvre un coffre, et tu **choisis** un objet de son palier (zones 1-19, 20-39 ou 40-60). Plus la zone est haute, plus l'objet est beau. Quand tu possèdes tout un palier, la zone devient dorée. `/r2q coffre` ouvre un coffre en attente.
 
 Tu peux la renommer avec `/r2q compagnon nom Pépite`.
 

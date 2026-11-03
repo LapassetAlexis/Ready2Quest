@@ -43,3 +43,4 @@ JournalTracker.lua
 Bestiary.lua
 GatheringData.lua
 Gathering.lua
+CompanionChest.lua

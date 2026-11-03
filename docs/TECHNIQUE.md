@@ -59,6 +59,12 @@ Comme avant, un agent par module, puis fusion. Le contrat entre les deux tient e
 - **Récolte** (`GatheringData.lua`, `Gathering.lua`) : table faite à la main de 28 herbes, 9 minerais, 5 pierres, 11 cuirs et peaux (itemID de Classic), avec compétence requise et compétence grise (requise + 100 pour herbes et gisements, approximation pour le dépeçage). Seul le butin (`LOOT_ITEM_SELF*`) compte, et seulement avec le métier. La zone de récolte est retenue. Objectif « ressources de ta tranche » par métier ; si la catégorie des métiers est repliée dans la fenêtre de compétences, on reprend le dernier rang lu.
 - Pas de liste de quêtes par zone : le client ne la fournit pas (il faudrait la base de Questie).
 
+**Objectifs et récompenses séparés** (retour du joueur : le carnet mélangeait les deux)
+- **Évolution** : le niveau ouvre le stade, le bonheur le franchit. Palier atteint et envies insuffisantes → `data.stageReady`, annonce, objectif « Rends <nom> heureux pour évoluer » (survol : chaque envie et comment la remplir). Évolution dès que les 4 envies sont ≥ 70 % (`CompanionAdd` revérifie) ; somnolent = pas heureux ; jamais de régression.
+- **Coffres** (`CompanionChest.lua`) : zone à 100 % (au moins deux parts) → coffre, une seule fois par zone, par personnage. Palier selon le niveau d'entrée de la zone (`ns.ZONE_LEVELS`, 39 zones classiques), sinon le niveau du joueur. Le joueur choisit parmi les objets du palier qu'il n'a pas ; palier épuisé → zone dorée. Objectif « Ouvre le coffre de … » en tête du suivi (clic = coffre), `/r2q coffre`, fenêtre exclusive.
+- **Cosmétiques** : champ `tier` (0 = possédé d'office). Un objet à palier ne se gagne plus au compteur (`CompanionCheckUnlocks` l'ignore, `CompanionIsUnlocked` exige le coffre) ; ce qui a déjà été gagné reste acquis. Nouveaux : 6 créatures (display IDs vérifiés dans les CSV wago.tools des builds 1.15.9 et 1.60.1, même modèle et même texture), 4 ornements, 8 cadres, 9 fonds (textures présentes dans les deux manifestes). 37 objets à palier : 13 / 13 / 11.
+- **Objectifs = actions** : « Atteins le niveau 20 » au lieu de « Aguerri — niveau » ; les récompenses passent en `goal.rewards` (survol « Récompense : … »). Une même action n'a qu'une ligne : le stade est fusionné dans le palier du même niveau (`goal.merge`). La complétion de zone annonce son coffre.
+
 **À vérifier en jeu**
 - Le modèle s'affiche dans un `PlayerModel` d'addon. Un modèle invisible sans erreur ne se détecte pas hors jeu.
 - Cadrage, échelle et animations des créatures.

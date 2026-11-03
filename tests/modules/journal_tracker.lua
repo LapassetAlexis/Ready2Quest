@@ -119,7 +119,7 @@ do
 	K.Stamp("capital", 1637, "Orgrimmar")          -- 1 capitale sur 6
 	local list = NS:JournalObjectives()
 	Check("[TRK] tri : le plus proche du but d'abord", K.Labels(list) ==
-		"Lanterne — villages 18/25 | Palier 30 : niveau 27/30 | Feu follet — donjons 1/2 | Villages de Les Tarides 1/3"
+		"Lanterne — villages 18/25 | Atteins le niveau 30 27/30 | Feu follet — donjons 1/2 | Villages de Les Tarides 1/3"
 		.. " | Capitales 1/6 | Donjons de ton niveau 0/4",
 		K.Labels(list))
 	Check("[TRK] compagnon : objectif atteint exclu, entrée sans nom ignorée",
@@ -190,7 +190,7 @@ do
 	Check("[TRK] titre ambre « Carnet »", tracker.title.text.text == "Carnet"
 		and tracker.title.text.textColor[1] == NS.Theme.GOLD[1], tracker.title.text.text)
 	Check("[TRK] quatre lignes au plus, les plus proches ; la première en vedette (libellé court + unité)", K.Lines() ==
-		"Lanterne 18/25 villages | Palier 30 : niveau 27/30 | Feu follet — donjons 1/2 | Villages de Les Tarides 1/3",
+		"Lanterne 18/25 villages | Atteins le niveau 30 27/30 | Feu follet — donjons 1/2 | Villages de Les Tarides 1/3",
 		K.Lines())
 	local line, second = tracker.lines[1], tracker.lines[2]
 	Check("[TRK] vedette : fond, filet ambre, losange plein, grande barre", line.featured and line.bg and line.accent
@@ -239,9 +239,9 @@ do
 	Mock:Fire("ZONE_CHANGED_NEW_AREA")
 	-- rafraîchi à la montée de niveau, même si UnitLevel est en retard
 	Mock:Fire("PLAYER_LEVEL_UP", 28)
-	Check("[TRK] montée de niveau : palier à jour (niveau de l'événement)", K.Lines():find("niveau 28/30", 1, true), K.Lines())
+	Check("[TRK] montée de niveau : palier à jour (niveau de l'événement)", K.Lines():find("niveau 30 28/30", 1, true), K.Lines())
 	Mock:Fire("ZONE_CHANGED")
-	Check("[TRK] niveau de l'événement : oublié après", K.Lines():find("niveau 27/30", 1, true), K.Lines())
+	Check("[TRK] niveau de l'événement : oublié après", K.Lines():find("niveau 30 27/30", 1, true), K.Lines())
 	Mock.world.level = 28
 
 	-- masquer d'un clic droit
@@ -511,7 +511,7 @@ do
 	-- montée de niveau fenêtre ouverte : l'onglet suit
 	Mock.world.level = 29
 	Mock:Fire("PLAYER_LEVEL_UP", 29)
-	Check("[TRK] fenêtre ouverte : objectifs rafraîchis", f.lines[1].name.text == "Palier 30 : niveau"
+	Check("[TRK] fenêtre ouverte : objectifs rafraîchis", f.lines[1].name.text == "Atteins le niveau 30"
 		and f.lines[1].detail.text:find("29/30", 1, true), f.lines[1].name.text)
 	-- une seule fenêtre à la fois
 	NS:ToggleOptions()

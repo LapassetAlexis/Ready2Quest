@@ -80,6 +80,12 @@ local FR = {
 	JRN_HINT_LEVEL         = "Encore %d niveau(x). Quêtes et monstres de ton niveau.",
 	JRN_HINT_XP            = "XP avant le prochain niveau : %d",
 	JRN_GOAL_ZONE          = "Complétion de %s",
+	JRN_GOAL_REACH_LEVEL   = "Atteins le niveau %d",
+	JRN_GOAL_HAPPY         = "Rends %s heureux pour évoluer",
+	JRN_REWARD             = "Récompense : %s",
+	JRN_REWARD_STAGE       = "%s devient %s",
+	JRN_STAT_happy         = "envies comblées",
+	JRN_REWARD_MILESTONE   = "tampon « Palier %d »",
 	JRN_ZONE_PCT           = "%d %%",
 	JRN_ZONE_PARTS         = "Où tu en es :",
 	JRN_ZONE_PART_LINE     = "  %s : %d/%d",
@@ -124,6 +130,12 @@ local EN = {
 	JRN_HINT_LEVEL         = "%d level(s) to go. Quests and monsters of your level.",
 	JRN_HINT_XP            = "XP to next level: %d",
 	JRN_GOAL_ZONE          = "%s completion",
+	JRN_GOAL_REACH_LEVEL   = "Reach level %d",
+	JRN_GOAL_HAPPY         = "Make %s happy so it can grow",
+	JRN_REWARD             = "Reward: %s",
+	JRN_REWARD_STAGE       = "%s becomes %s",
+	JRN_STAT_happy         = "needs filled",
+	JRN_REWARD_MILESTONE   = "\"Milestone %d\" stamp",
 	JRN_ZONE_PCT           = "%d %%",
 	JRN_ZONE_PARTS         = "Where you stand:",
 	JRN_ZONE_PART_LINE     = "  %s: %d/%d",
@@ -342,6 +354,21 @@ local function CompanionGoals(self, list)
 			if goal then
 				goal.kind, goal.short, goal.unit = unlock.kind, unlock.label, stat
 				goal.hint = StatHint(self, unlock.stat, { L["JRN_HINT_" .. tostring(unlock.kind)] })
+				if unlock.kind == "stage" then
+					-- un stade : l'objectif est l'action, le stade la récompense
+					local name = self.CompanionName and self:CompanionName() or "?"
+					goal.reward = self:F("JRN_REWARD_STAGE", name, unlock.label)
+					if unlock.stat == "happy" then
+						goal.label = self:F("JRN_GOAL_HAPPY", name)
+						goal.short = goal.label
+						goal.hint = self.CompanionHappyHints and self:CompanionHappyHints() or {}
+						goal.ratio = 1.5   -- prêt à évoluer : en tête, juste après un coffre
+					else
+						goal.label = self:F("JRN_GOAL_REACH_LEVEL", unlock.need)
+						goal.short, goal.unit = goal.label, nil
+						goal.merge = "level:" .. unlock.need
+					end
+				end
 				list[#list + 1] = goal
 			end
 		end
@@ -392,10 +419,11 @@ local function LevelGoals(self, list)
 	for index, milestone in ipairs(milestones) do
 		if level < milestone then
 			local previous = milestones[index - 1] or 1
-			local goal = Goal("level:" .. milestone, self:F("JRN_GOAL_LEVEL", milestone), level, milestone,
+			local goal = Goal("level:" .. milestone, self:F("JRN_GOAL_REACH_LEVEL", milestone), level, milestone,
 				(level - previous) / (milestone - previous), "journal")
 			if goal then
 				goal.hint = { self:F("JRN_HINT_LEVEL", milestone - level) }
+				goal.reward = self:F("JRN_REWARD_MILESTONE", milestone)
 				local xp, xpMax = tonumber(Call("UnitXP", "player")), tonumber(Call("UnitXPMax", "player"))
 				if xp and xpMax and xpMax > xp then goal.hint[2] = self:F("JRN_HINT_XP", xpMax - xp) end
 				list[#list + 1] = goal
@@ -524,6 +552,22 @@ function ns:JournalObjectives()
 		-- une source en panne ne prive pas des autres
 		local ok, err = pcall(source, self, list)
 		if not ok and self.RecordError then self:RecordError("journal:objectives", err) end
+	end
+	-- même action, plusieurs récompenses : une seule ligne (le palier de
+	-- niveau 20 et le stade qui l'attend ne font qu'un)
+	local byId = {}
+	for _, goal in ipairs(list) do byId[goal.id] = goal end
+	for index = #list, 1, -1 do
+		local goal = list[index]
+		local host = goal.merge and byId[goal.merge]
+		if host and host ~= goal then
+			host.rewards = host.rewards or { host.reward }
+			table.insert(host.rewards, 1, goal.reward)
+			table.remove(list, index)
+		end
+	end
+	for _, goal in ipairs(list) do
+		if goal.reward and not goal.rewards then goal.rewards = { goal.reward } end
 	end
 	local dismissed = self:JournalData().dismissed or {}
 	for _, goal in ipairs(list) do goal.dismissed = dismissed[goal.id] == true end
@@ -680,6 +724,10 @@ function ns:ShowJournalGoalTooltip(owner, goal)
 	if tip.ClearLines then tip:ClearLines() end
 	tip:AddLine(goal.label, Theme.GOLD[1], Theme.GOLD[2], Theme.GOLD[3])
 	tip:AddLine(goal.progress .. (goal.unit and (" " .. goal.unit) or ""), 1, 1, 1)
+	local rewards = goal.rewards or (goal.reward and { goal.reward })
+	if rewards and #rewards > 0 then
+		tip:AddLine(self:F("JRN_REWARD", table.concat(rewards, " · ")), Theme.GOLD[1], Theme.GOLD[2], Theme.GOLD[3], true)
+	end
 	if type(goal.hint) == "table" and #goal.hint > 0 then
 		tip:AddLine(" ")
 		tip:AddLine(L.JRN_HINT_TODO, Theme.PARCHMENT[1], Theme.PARCHMENT[2], Theme.PARCHMENT[3])
@@ -714,6 +762,7 @@ local function BuildLine(frame, index)
 			HideTooltip()
 			return ns:JournalDismiss(self.goal.id, true)
 		end
+		if type(self.goal.onClick) == "function" then return self.goal.onClick() end
 		if ns.CompanionOpenJournal then ns:CompanionOpenJournal() end
 	end)
 	line:SetScript("OnDragStart", StartDrag)
