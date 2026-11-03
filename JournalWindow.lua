@@ -32,6 +32,10 @@ local FR = {
 	JRN_ACT_combat         = "Combat",
 	JRN_ACT_craft          = "Métiers",
 	JRN_ACT_quests         = "Quêtes",
+	JRN_ACT_quests_off     = "Quêtes (Questie)",
+	JRN_QUESTS_TIP         = "Onglet actif seulement si l'addon Questie est installé : il fournit la liste des quêtes de chaque zone. Les quêtes comptent alors dans les 100 %.",
+	JRN_WATCH              = "Suivre à l'écran",
+	JRN_WATCH_TIP          = "Cochée : les objectifs de cette zone s'affichent dans le bloc « Carnet » en jeu. La zone où tu es est suivie d'office ; décoche-la pour la masquer.",
 	JRN_ACT_EMPTY_explore  = "Aucun village connu dans cette zone.",
 	JRN_ACT_EMPTY_combat   = "Aucune créature croisée ici : cible-les ou survole-les pour les noter.",
 	JRN_ACT_EMPTY_craft    = "Pas de métier de récolte (herboristerie, minage ou dépeçage).",
@@ -73,6 +77,10 @@ local EN = {
 	JRN_ACT_combat         = "Combat",
 	JRN_ACT_craft          = "Professions",
 	JRN_ACT_quests         = "Quests",
+	JRN_ACT_quests_off     = "Quests (Questie)",
+	JRN_QUESTS_TIP         = "Only active when the Questie addon is installed: it provides each zone's quest list. Quests then count toward 100%.",
+	JRN_WATCH              = "Track on screen",
+	JRN_WATCH_TIP          = "Checked: this zone's goals show in the in-game \"Journal\" tracker. The zone you are in is tracked by default; uncheck it to hide it.",
 	JRN_ACT_EMPTY_explore  = "No known village in this zone.",
 	JRN_ACT_EMPTY_combat   = "No creature met here yet: target or hover them to log them.",
 	JRN_ACT_EMPTY_craft    = "No gathering profession (herbalism, mining or skinning).",
@@ -263,6 +271,25 @@ local function BuildCompletion(self, frame, top)
 	-- liste déroulante : un bouton, et la liste qui s'ouvre dessous
 	pane.zoneButton = Theme.CreateButton(pane, 300, 22, "", function() ns:ToggleJournalZoneList() end)
 	pane.zoneButton:SetPoint("TOPLEFT", frame, "TOPLEFT", 14, top - 34)
+	-- suivre la zone dans le bloc « Carnet » en jeu
+	pane.watch = Theme.CreateToggle(pane, 30, 14, "Button")
+	pane.watch:SetPoint("TOPLEFT", frame, "TOPLEFT", 326, top - 38)
+	pane.watch:SetScript("OnClick", function()
+		if frame.zoneID then ns:JournalSetWatched(frame.zoneID, not ns:JournalIsWatched(frame.zoneID)) end
+	end)
+	pane.watchLabel = Text(pane, Theme.F_BODY, 362, top - 38)
+	pane.watchLabel:SetText(L.JRN_WATCH)
+	local function WatchTip(owner)
+		local tip = rawget(_G, "GameTooltip")
+		if type(tip) ~= "table" then return end
+		pcall(tip.SetOwner, tip, owner, "ANCHOR_BOTTOM")
+		if tip.ClearLines then tip:ClearLines() end
+		tip:AddLine(L.JRN_WATCH, Theme.GOLD[1], Theme.GOLD[2], Theme.GOLD[3])
+		tip:AddLine(L.JRN_WATCH_TIP, 1, 1, 1, true)
+		tip:Show()
+	end
+	pane.watch:SetScript("OnEnter", WatchTip)
+	pane.watch:SetScript("OnLeave", function() local tip = rawget(_G, "GameTooltip"); if tip then tip:Hide() end end)
 	pane.percent = Theme.CreateTitle(pane, 17)
 	pane.percent:SetPoint("TOPRIGHT", frame, "TOPRIGHT", -16, top - 34)
 	pane.percent:SetJustifyH("RIGHT")
@@ -281,6 +308,19 @@ local function BuildCompletion(self, frame, top)
 		tab:SetPoint("TOPLEFT", frame, "TOPLEFT", 14 + (index - 1) * (tabW + 4), top - 96)
 		tab.activity = activity
 		pane.tabs[activity] = tab
+		if activity == "quests" and tab.HookScript then
+			-- l'onglet dit lui-même qu'il dépend de Questie
+			tab:HookScript("OnEnter", function(owner)
+				local tip = rawget(_G, "GameTooltip")
+				if type(tip) ~= "table" then return end
+				pcall(tip.SetOwner, tip, owner, "ANCHOR_BOTTOM")
+				if tip.ClearLines then tip:ClearLines() end
+				tip:AddLine(L.JRN_ACT_quests, Theme.GOLD[1], Theme.GOLD[2], Theme.GOLD[3])
+				tip:AddLine(L.JRN_QUESTS_TIP, 1, 1, 1, true)
+				tip:Show()
+			end)
+			tab:HookScript("OnLeave", function() local tip = rawget(_G, "GameTooltip"); if tip then tip:Hide() end end)
+		end
 	end
 	pane.divider = Theme.CreateDivider(pane, WIDTH - 28, top - 122)
 
@@ -488,6 +528,7 @@ local function RefreshCompletion(self, frame)
 	local here = self.JournalZone and self:JournalZone()
 	if not zoneID then
 		pane.zoneButton:SetText(self:F("JRN_ZONE_PICK", "-"))
+		pane.watch:Hide(); pane.watchLabel:Hide()
 		pane.percent:SetText("")
 		pane.bar:Hide()
 		pane.chest:SetText("")
@@ -531,8 +572,17 @@ local function RefreshCompletion(self, frame)
 		pane.chest:SetText(L.JRN_ZONE_NOPCT)
 	end
 
+	pane.watch:SetChecked(self:JournalIsWatched(zoneID))
+	pane.watch:Show(); pane.watchLabel:Show()
 	local activity = frame.activity or "explore"
 	for key, tab in pairs(pane.tabs) do TabColor(tab, key == activity) end
+	-- Quêtes : grisé et « (Questie) » tant que Questie n'est pas là
+	local questie = self.QuestieAvailable and self:QuestieAvailable()
+	local questsTab = pane.tabs.quests
+	questsTab:SetText(questie and L.JRN_ACT_quests or L.JRN_ACT_quests_off)
+	if not questie and activity ~= "quests" and questsTab.text.SetTextColor then
+		questsTab.text:SetTextColor(Theme.MUTED[1], Theme.MUTED[2], Theme.MUTED[3])
+	end
 	local rows = self:JournalActivityRows(zoneID, activity)
 	frame.rows = rows
 	local maxOffset = math.max(0, #rows - LINES)

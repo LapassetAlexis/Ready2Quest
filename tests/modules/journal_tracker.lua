@@ -494,7 +494,13 @@ do
 		and comp:IsShown() and not f.evo:IsShown())
 	Check("[WIN] liste déroulante : la zone, marquée « ici »", comp.zoneButton.text.text:find("Zone : Les Tarides (ici)", 1, true), comp.zoneButton.text.text)
 	Check("[WIN] quatre activités", comp.tabs.explore and comp.tabs.combat and comp.tabs.craft and comp.tabs.quests
-		and comp.tabs.explore.text.text == "Exploration" and comp.tabs.quests.text.text == "Quêtes")
+		and comp.tabs.explore.text.text == "Exploration")
+	local questie = NS.QuestieAvailable and NS:QuestieAvailable()
+	Check("[WIN] Quêtes sans Questie : « (Questie) », grisé", questie or (comp.tabs.quests.text.text == "Quêtes (Questie)"
+		and comp.tabs.quests.text.textColor[1] == NS.Theme.MUTED[1]), comp.tabs.quests.text.text)
+	comp.tabs.quests.hooks.OnEnter(comp.tabs.quests)
+	Check("[WIN] Quêtes : le survol explique qu'il faut Questie", table.concat(_G.GameTooltip.lines or {}, " "):find("Questie", 1, true) ~= nil)
+	comp.tabs.quests.hooks.OnLeave(comp.tabs.quests)
 	Check("[WIN] onglet actif : Exploration", comp.tabs.explore.selected and not comp.tabs.combat.selected)
 	Check("[WIN] exploration : titre de part « Villages : 1/3 »", comp.lines[1].item and comp.lines[1].item.header
 		and comp.lines[1].name.text == "Villages : 1/3", comp.lines[1].name.text)
@@ -509,7 +515,6 @@ do
 	comp.tabs.craft:Click()
 	Check("[WIN] métiers sans métier : message", comp.empty.text == NS.L.JRN_ACT_EMPTY_craft)
 	comp.tabs.quests:Click()
-	local questie = NS.QuestieAvailable and NS:QuestieAvailable()
 	Check("[WIN] quêtes sans Questie : l'installer", questie or comp.empty.text == NS.L.JRN_ACT_NO_QUESTIE, comp.empty.text)
 
 	-- bestiaire : une deuxième activité -> pourcentage, coffre annoncé, défilement
@@ -563,6 +568,34 @@ do
 	f:Hide()
 	NS:ToggleJournal(true)
 	Check("[WIN] rouverte : de retour sur la zone d'ici", f.zoneID == 1413)
+
+	-- suivre à l'écran : la zone d'ici d'office, une autre si cochée
+	NS:DB().journalTracker = true
+	f.zonePicked, f.zoneID = nil, nil
+	NS:RefreshJournal()
+	Check("[WATCH] zone d'ici : cochée d'office", comp.watch.checked == true and comp.watchLabel.text == "Suivre à l'écran")
+	NS:RefreshJournalTracker()
+	Check("[WATCH] suivi : la complétion d'ici affichée", K.Lines():find("Complétion de Les Tarides", 1, true), K.Lines())
+	comp.watch:Click()
+	Check("[WATCH] décochée : retenue", NS:JournalData().watch[1413] == false and comp.watch.checked == false)
+	Check("[WATCH] décochée : la zone et ses parts quittent le suivi", not K.Lines():find("Les Tarides", 1, true), K.Lines())
+	Check("[WATCH] décochée : les objectifs restent calculés", K.Find(NS:JournalObjectives(), "zone:1413") ~= nil)
+	comp.watch:Click()
+	Check("[WATCH] recochée : de retour", K.Lines():find("Complétion de Les Tarides", 1, true), K.Lines())
+	-- une autre zone : cochée à la main
+	NS:JournalData().bestiary[1429] = { [9] = { name = "Loup", type = "Bête", seen = true, killed = 0 } }
+	NS:SelectJournalZone(1429)
+	Check("[WATCH] autre zone : décochée d'office", comp.watch.checked == false)
+	Check("[WATCH] autre zone non cochée : absente du suivi", not K.Lines():find("Elwynn", 1, true), K.Lines())
+	comp.watch:Click()
+	Check("[WATCH] autre zone cochée : dans le suivi, même avec une seule activité", NS:JournalIsWatched(1429)
+		and K.Lines():find("Complétion de Forêt d'Elwynn", 1, true), K.Lines())
+	comp.watch.scripts.OnEnter(comp.watch)
+	Check("[WATCH] survol : explication", table.concat(_G.GameTooltip.lines or {}, " "):find("bloc", 1, true) ~= nil)
+	comp.watch.scripts.OnLeave(comp.watch)
+	NS:JournalSetWatched(1429, false)
+	NS:SelectJournalZone(1413)
+	NS:DB().journalTracker = false
 
 	-- Évolution
 	f.sections.evolution:Click()

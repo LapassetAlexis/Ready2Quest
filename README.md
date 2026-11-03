@@ -141,7 +141,8 @@ Le carnet (`/r2q carnet`, ou clic droit sur la créature) a deux parties :
   - **Exploration** : les villages de la zone ;
   - **Combat** : le bestiaire et les nommés ;
   - **Métiers** : les ressources de ta compétence à récolter ;
-  - **Quêtes** : les quêtes de la zone faites et à faire, si l'addon **Questie** est installé (elles comptent alors dans les 100 %).
+  - **Quêtes** *(seulement avec l'addon [Questie](https://github.com/Questie/Questie))* : les quêtes de la zone faites et à faire. Le jeu ne donne pas la liste des quêtes d'une zone : sans Questie, l'onglet reste grisé et les quêtes ne comptent pas dans le pourcentage ; avec Questie, elles comptent dans les 100 %.
+- **Suivre à l'écran** : une case par zone. Cochée, les objectifs de la zone s'affichent dans le bloc « Carnet » en jeu. La zone où tu es est suivie d'office (décoche-la pour la masquer) ; coche d'autres zones pour garder un œil sur elles.
 - **Évolution** : l'étape de ta créature, la prochaine, ses envies, comment elle évolue, tes coffres à ouvrir, ta collection et ton parcours (zones, capitales, donjons, rares, paliers).
 
 ### Objectifs

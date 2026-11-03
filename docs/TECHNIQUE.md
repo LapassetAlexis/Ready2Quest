@@ -72,6 +72,9 @@ Comme avant, un agent par module, puis fusion. Le contrat entre les deux tient e
 - **Clic sur un objectif du suivi** : objectif du compagnon → Évolution, le reste → Complétion (`ns:OpenJournalFor`).
 - **Questie** (`QuestieZone.lua`, agent) : part `quests` lue dans la base de Questie 12.x (`QuestieDB.QuestPointers`, `QueryQuestSingle`, `QuestiePlayer.HasRequiredRace/Class`, `ZoneDB:GetUiMapIdByAreaId`), quêtes faites via `C_QuestLog.IsQuestFlaggedCompleted`. Index zone → quêtes construit une fois par session, jamais en combat. Exclues : cachées, événements, répétables, journalières, hebdomadaires, métier. Questie absent ou pas initialisé : pas de part. `## OptionalDeps: Questie`.
 
+- **Suivre à l'écran** : `JournalData().watch[zoneID]` (par personnage). Zone d'ici suivie sauf `false` ; autre zone seulement si `true` (`ns:JournalIsWatched` / `ns:JournalSetWatched`). Le suivi filtre `zone:`, `villages:`, `bestiary:`, `named:` d'une zone décochée ; une zone cochée exprès a son objectif « Complétion » même avec une seule part, classé avant les objectifs automatiques (ratio 1,2 : après un coffre ou une évolution).
+- **Onglet Quêtes** : libellé « Quêtes (Questie) » grisé sans Questie, survol explicatif.
+
 **À vérifier en jeu**
 - Le modèle s'affiche dans un `PlayerModel` d'addon. Un modèle invisible sans erreur ne se détecte pas hors jeu.
 - Cadrage, échelle et animations des créatures.

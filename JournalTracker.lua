@@ -509,15 +509,41 @@ end
 
 -- Objectif « Complétion de <zone> » : seulement si au moins deux parts
 -- s'appliquent (une seule, c'est déjà son propre objectif)
-local function ZoneGoals(self, list)
-	local zoneID, zoneName = self:JournalZone()
-	local done = zoneID and self:ZoneCompletion(zoneID)
-	if not done or #done.parts < 2 or done.percent >= 100 then return end
-	local goal = Goal("zone:" .. zoneID, self:F("JRN_GOAL_ZONE", tostring(zoneName or "?")), done.percent, 100,
+-- Zones suivies à l'écran (par personnage) : la zone où tu es l'est d'office,
+-- sauf si tu la décoches ; une autre zone, seulement si tu la coches.
+function ns:JournalWatchData()
+	local data = self:JournalData()
+	if type(data.watch) ~= "table" then data.watch = {} end
+	return data.watch
+end
+
+function ns:JournalIsWatched(zoneID)
+	if not zoneID then return false end
+	local value = self:JournalWatchData()[zoneID]
+	if zoneID == self:JournalZone() then return value ~= false end
+	return value == true
+end
+
+function ns:JournalSetWatched(zoneID, on)
+	if not zoneID then return nil end
+	self:JournalWatchData()[zoneID] = on and true or false
+	if self.RefreshJournalTracker then pcall(self.RefreshJournalTracker, self) end
+	if self.journalFrame and self.journalFrame:IsShown() and self.RefreshJournal then self:RefreshJournal() end
+	return on and true or false
+end
+
+local function ZoneGoal(self, zoneID, zoneName, minParts)
+	local done = self:ZoneCompletion(zoneID)
+	if not done or #done.parts < minParts or done.percent >= 100 then return nil end
+	if not zoneName then
+		local info = self.MapInfo and self:MapInfo(zoneID)
+		zoneName = info and info.name
+	end
+	local goal = Goal("zone:" .. zoneID, self:F("JRN_GOAL_ZONE", tostring(zoneName or zoneID)), done.percent, 100,
 		done.ratio, "journal")
-	if not goal then return end
+	if not goal then return nil end
 	goal.progress = self:F("JRN_ZONE_PCT", done.percent)
-	goal.zoneCompletion = true
+	goal.zoneCompletion, goal.zoneID = true, zoneID
 	local hint = { L.JRN_ZONE_PARTS }
 	local easiest
 	for _, part in ipairs(done.parts) do
@@ -529,7 +555,25 @@ local function ZoneGoals(self, list)
 		for _, text in ipairs(easiest.hint) do hint[#hint + 1] = text end
 	end
 	goal.hint = hint
-	list[#list + 1] = goal
+	return goal
+end
+
+-- « Complétion de <zone> » : la zone d'ici (à partir de deux parts : une
+-- seule, c'est déjà son propre objectif), plus chaque zone cochée
+local function ZoneGoals(self, list)
+	local here, hereName = self:JournalZone()
+	if here then
+		local goal = ZoneGoal(self, here, hereName, 2)
+		if goal then list[#list + 1] = goal end
+	end
+	for zoneID, on in pairs(self:JournalWatchData()) do
+		if on == true and zoneID ~= here then
+			local goal = ZoneGoal(self, zoneID, nil, 1)
+			-- cochée exprès : avant les objectifs automatiques (après un coffre
+			-- ou une évolution qui attend)
+			if goal then goal.ratio, goal.pinned = 1.2, true; list[#list + 1] = goal end
+		end
+	end
 end
 SOURCES[#SOURCES + 1] = ZoneGoals
 
@@ -598,21 +642,28 @@ end
 -- Ceux du suivi : non masqués, les TRACKER_MAX premiers
 -- La complétion de la zone affichée remplace ses parts (villages, bestiaire,
 -- nommés de cette zone) : elles restent dans l'onglet Objectifs.
+-- Une zone décochée sort du suivi avec toutes ses parts.
 local ZONE_PART_PREFIX = { "villages:", "bestiary:", "named:" }
 function ns:JournalTrackerObjectives()
-	local all, zoneShown = self:JournalObjectives(), nil
+	local all, zonesShown = self:JournalObjectives(), {}
 	for _, goal in ipairs(all) do
-		if goal.zoneCompletion and not goal.dismissed then zoneShown = goal.id:match("^zone:(%d+)$") end
+		if goal.zoneCompletion and not goal.dismissed then zonesShown[goal.id:match("^zone:(%d+)$")] = true end
+	end
+	local function ZoneOf(goal)
+		for _, prefix in ipairs(ZONE_PART_PREFIX) do
+			local id = goal.id:match("^" .. prefix .. "(%d+)$")
+			if id then return id end
+		end
+		return nil
 	end
 	local shown = {}
 	for _, goal in ipairs(all) do
-		local absorbed = false
-		if zoneShown then
-			for _, prefix in ipairs(ZONE_PART_PREFIX) do
-				if goal.id == prefix .. zoneShown then absorbed = true end
-			end
-		end
-		if not goal.dismissed and not absorbed and #shown < TRACKER_MAX then shown[#shown + 1] = goal end
+		local partZone = ZoneOf(goal)
+		local zoneID = goal.zoneCompletion and goal.id:match("^zone:(%d+)$") or partZone
+		local hidden = goal.dismissed
+			or (zoneID and not self:JournalIsWatched(tonumber(zoneID)))
+			or (partZone and zonesShown[partZone])
+		if not hidden and #shown < TRACKER_MAX then shown[#shown + 1] = goal end
 	end
 	return shown
 end
