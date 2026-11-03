@@ -174,3 +174,22 @@ do
 	end
 	NS:ChestData()[4242] = nil
 end
+
+-- Fenêtre du carnet : chaque part de complétion a son onglet d'activité
+do
+	local tabs, quests = {}, nil
+	for _, def in ipairs(NS.ZONE_PARTS) do
+		if def.id == "quests" then quests = def end
+	end
+	Check("[INT] part Quêtes (Questie) : onglet et détail", quests and quests.tab == "quests" and type(quests.Items) == "function")
+	-- une part factice de l'onglet Quêtes s'affiche dans la fenêtre
+	local fake = { id = "fakeq", label = "JRN_PART_quests", tab = "quests",
+		Compute = function() return { have = 1, need = 2 } end,
+		Items = function() return { { name = "Quête A", done = false, detail = "niveau 12" }, { name = "Quête B", done = true } } end }
+	NS.RegisterZonePart(fake)
+	local rows = NS:JournalActivityRows(1413, "quests")
+	local found = false
+	for _, row in ipairs(rows) do if row.name == "Quête A" and row.detail == "niveau 12" then found = true end end
+	Check("[INT] fenêtre : une part de l'onglet Quêtes y est listée", found and rows[1].header)
+	for index = #NS.ZONE_PARTS, 1, -1 do if NS.ZONE_PARTS[index] == fake then table.remove(NS.ZONE_PARTS, index) end end
+end

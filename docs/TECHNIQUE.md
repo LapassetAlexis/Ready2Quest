@@ -65,6 +65,16 @@ Comme avant, un agent par module, puis fusion. Le contrat entre les deux tient e
 - **Cosmétiques** : champ `tier` (0 = possédé d'office). Un objet à palier ne se gagne plus au compteur (`CompanionCheckUnlocks` l'ignore, `CompanionIsUnlocked` exige le coffre) ; ce qui a déjà été gagné reste acquis. Nouveaux : 6 créatures (display IDs vérifiés dans les CSV wago.tools des builds 1.15.9 et 1.60.1, même modèle et même texture), 4 ornements, 8 cadres, 9 fonds (textures présentes dans les deux manifestes). 37 objets à palier : 13 / 13 / 11.
 - **Objectifs = actions** : « Atteins le niveau 20 » au lieu de « Aguerri — niveau » ; les récompenses passent en `goal.rewards` (survol « Récompense : … »). Une même action n'a qu'une ligne : le stade est fusionné dans le palier du même niveau (`goal.merge`). La complétion de zone annonce son coffre.
 
+**Fenêtre du carnet refaite** (retour : « pas clair du tout »)
+- **`JournalWindow.lua`** remplace l'ancienne fenêtre à 7 onglets (Objectifs + un par sorte de tampon). Deux sections : `completion` et `evolution` (`ns:SelectJournalKind` ; « goals » mène à l'Évolution).
+- **Complétion** : liste déroulante maison (pas d'`UIDropDownMenu`, source de taint) des zones connues (`ns:JournalKnownZones` : ici, tampons de zone, bestiaire, récolte, coffres), la zone d'ici par défaut ; un choix tient tant que la fenêtre reste ouverte. Pourcentage, barre, état du coffre (à gagner, à ouvrir avec bouton, ouvert, doré). Quatre onglets d'activité : chaque part de `ns.ZONE_PARTS` porte un `tab` (ou `PART_TAB` par défaut) et, au besoin, `Items(self, zoneID)` ; `ns:JournalActivityRows` empile un titre par part puis ses éléments (à faire d'abord).
+- **Évolution** : étape, prochain objectif (niveau ou bonheur), 4 barres d'envies, « Comment ça marche », coffres, collection par palier, parcours.
+- **Clic sur un objectif du suivi** : objectif du compagnon → Évolution, le reste → Complétion (`ns:OpenJournalFor`).
+- **Questie** (`QuestieZone.lua`, agent) : part `quests` lue dans la base de Questie 12.x (`QuestieDB.QuestPointers`, `QueryQuestSingle`, `QuestiePlayer.HasRequiredRace/Class`, `ZoneDB:GetUiMapIdByAreaId`), quêtes faites via `C_QuestLog.IsQuestFlaggedCompleted`. Index zone → quêtes construit une fois par session, jamais en combat. Exclues : cachées, événements, répétables, journalières, hebdomadaires, métier. Questie absent ou pas initialisé : pas de part. `## OptionalDeps: Questie`.
+
+- **Suivre à l'écran** : `JournalData().watch[zoneID]` (par personnage). Zone d'ici suivie sauf `false` ; autre zone seulement si `true` (`ns:JournalIsWatched` / `ns:JournalSetWatched`). Le suivi filtre `zone:`, `villages:`, `bestiary:`, `named:` d'une zone décochée ; une zone cochée exprès a son objectif « Complétion » même avec une seule part, classé avant les objectifs automatiques (ratio 1,2 : après un coffre ou une évolution).
+- **Onglet Quêtes** : libellé « Quêtes (Questie) » grisé sans Questie, survol explicatif.
+
 **À vérifier en jeu**
 - Le modèle s'affiche dans un `PlayerModel` d'addon. Un modèle invisible sans erreur ne se détecte pas hors jeu.
 - Cadrage, échelle et animations des créatures.

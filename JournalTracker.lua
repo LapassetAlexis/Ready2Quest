@@ -91,6 +91,8 @@ local FR = {
 	JRN_ZONE_PART_LINE     = "  %s : %d/%d",
 	JRN_ZONE_NEXT          = "Le plus simple pour avancer — %s :",
 	JRN_PART_villages      = "Villages",
+	JRN_ITEM_TO_VISIT      = "à visiter",
+	JRN_ITEM_VISITED       = "visité",
 }
 local EN = {
 	OPT_JRN_TRACKER        = "On-screen tracker",
@@ -141,6 +143,8 @@ local EN = {
 	JRN_ZONE_PART_LINE     = "  %s: %d/%d",
 	JRN_ZONE_NEXT          = "Easiest way forward — %s:",
 	JRN_PART_villages      = "Villages",
+	JRN_ITEM_TO_VISIT      = "to visit",
+	JRN_ITEM_VISITED       = "visited",
 }
 ns.RegisterStrings(FR, EN)
 ns.JOURNAL_TRACKER_STRINGS = { fr = FR, en = EN }
@@ -265,15 +269,21 @@ local function ZoneVillages(self, zoneID, zoneName)
 		zoneName = info and info.name
 	end
 	local faction, stamps = self:PlayerFaction(), self:JournalData().stamps
-	local have, need, missing = 0, 0, {}
+	local have, need, missing, visited = 0, 0, {}, {}
 	for name, group in pairs(self:JournalHubGroups()) do
 		if group.exists and self:JournalIsVillage(group, faction) and self:JournalHubZone(group.areaID) == zoneID then
 			need = need + 1
-			if stamps["subzone:" .. group.areaID] then have = have + 1 else missing[#missing + 1] = name end
+			if stamps["subzone:" .. group.areaID] then
+				have = have + 1
+				visited[#visited + 1] = name
+			else
+				missing[#missing + 1] = name
+			end
 		end
 	end
 	table.sort(missing)
-	return { zoneID = zoneID, zoneName = tostring(zoneName or "?"), have = have, need = need, missing = missing }
+	table.sort(visited)
+	return { zoneID = zoneID, zoneName = tostring(zoneName or "?"), have = have, need = need, missing = missing, visited = visited }
 end
 
 -- Donjons dont la plage (Era ou Forever) contient ton niveau
@@ -458,12 +468,22 @@ function ns.RegisterZonePart(def)
 end
 
 -- Villages : la première part, livrée ici
-ns.RegisterZonePart({ id = "villages", label = "JRN_PART_villages", Compute = function(self, zoneID)
-	local villages = ZoneVillages(self, zoneID)
-	if not villages or villages.need == 0 then return nil end
-	return { have = villages.have, need = villages.need,
-		hint = NameLines({}, villages.missing) }
-end })
+ns.RegisterZonePart({ id = "villages", label = "JRN_PART_villages", tab = "explore",
+	Compute = function(self, zoneID)
+		local villages = ZoneVillages(self, zoneID)
+		if not villages or villages.need == 0 then return nil end
+		return { have = villages.have, need = villages.need,
+			hint = NameLines({}, villages.missing) }
+	end,
+	-- détail pour la fenêtre du carnet : à visiter d'abord, puis visités
+	Items = function(self, zoneID)
+		local villages = ZoneVillages(self, zoneID)
+		if not villages then return {} end
+		local items = {}
+		for _, name in ipairs(villages.missing) do items[#items + 1] = { name = name, done = false, detail = L.JRN_ITEM_TO_VISIT } end
+		for _, name in ipairs(villages.visited) do items[#items + 1] = { name = name, done = true, detail = L.JRN_ITEM_VISITED } end
+		return items
+	end })
 
 -- Où tu en es dans une zone : chaque part qui s'applique pèse autant que les
 -- autres (5 villages sur 5 et 2 espèces sur 10 = 60 %, pas 7/15). Renvoie
@@ -489,15 +509,41 @@ end
 
 -- Objectif « Complétion de <zone> » : seulement si au moins deux parts
 -- s'appliquent (une seule, c'est déjà son propre objectif)
-local function ZoneGoals(self, list)
-	local zoneID, zoneName = self:JournalZone()
-	local done = zoneID and self:ZoneCompletion(zoneID)
-	if not done or #done.parts < 2 or done.percent >= 100 then return end
-	local goal = Goal("zone:" .. zoneID, self:F("JRN_GOAL_ZONE", tostring(zoneName or "?")), done.percent, 100,
+-- Zones suivies à l'écran (par personnage) : la zone où tu es l'est d'office,
+-- sauf si tu la décoches ; une autre zone, seulement si tu la coches.
+function ns:JournalWatchData()
+	local data = self:JournalData()
+	if type(data.watch) ~= "table" then data.watch = {} end
+	return data.watch
+end
+
+function ns:JournalIsWatched(zoneID)
+	if not zoneID then return false end
+	local value = self:JournalWatchData()[zoneID]
+	if zoneID == self:JournalZone() then return value ~= false end
+	return value == true
+end
+
+function ns:JournalSetWatched(zoneID, on)
+	if not zoneID then return nil end
+	self:JournalWatchData()[zoneID] = on and true or false
+	if self.RefreshJournalTracker then pcall(self.RefreshJournalTracker, self) end
+	if self.journalFrame and self.journalFrame:IsShown() and self.RefreshJournal then self:RefreshJournal() end
+	return on and true or false
+end
+
+local function ZoneGoal(self, zoneID, zoneName, minParts)
+	local done = self:ZoneCompletion(zoneID)
+	if not done or #done.parts < minParts or done.percent >= 100 then return nil end
+	if not zoneName then
+		local info = self.MapInfo and self:MapInfo(zoneID)
+		zoneName = info and info.name
+	end
+	local goal = Goal("zone:" .. zoneID, self:F("JRN_GOAL_ZONE", tostring(zoneName or zoneID)), done.percent, 100,
 		done.ratio, "journal")
-	if not goal then return end
+	if not goal then return nil end
 	goal.progress = self:F("JRN_ZONE_PCT", done.percent)
-	goal.zoneCompletion = true
+	goal.zoneCompletion, goal.zoneID = true, zoneID
 	local hint = { L.JRN_ZONE_PARTS }
 	local easiest
 	for _, part in ipairs(done.parts) do
@@ -509,7 +555,25 @@ local function ZoneGoals(self, list)
 		for _, text in ipairs(easiest.hint) do hint[#hint + 1] = text end
 	end
 	goal.hint = hint
-	list[#list + 1] = goal
+	return goal
+end
+
+-- « Complétion de <zone> » : la zone d'ici (à partir de deux parts : une
+-- seule, c'est déjà son propre objectif), plus chaque zone cochée
+local function ZoneGoals(self, list)
+	local here, hereName = self:JournalZone()
+	if here then
+		local goal = ZoneGoal(self, here, hereName, 2)
+		if goal then list[#list + 1] = goal end
+	end
+	for zoneID, on in pairs(self:JournalWatchData()) do
+		if on == true and zoneID ~= here then
+			local goal = ZoneGoal(self, zoneID, nil, 1)
+			-- cochée exprès : avant les objectifs automatiques (après un coffre
+			-- ou une évolution qui attend)
+			if goal then goal.ratio, goal.pinned = 1.2, true; list[#list + 1] = goal end
+		end
+	end
 end
 SOURCES[#SOURCES + 1] = ZoneGoals
 
@@ -578,21 +642,28 @@ end
 -- Ceux du suivi : non masqués, les TRACKER_MAX premiers
 -- La complétion de la zone affichée remplace ses parts (villages, bestiaire,
 -- nommés de cette zone) : elles restent dans l'onglet Objectifs.
+-- Une zone décochée sort du suivi avec toutes ses parts.
 local ZONE_PART_PREFIX = { "villages:", "bestiary:", "named:" }
 function ns:JournalTrackerObjectives()
-	local all, zoneShown = self:JournalObjectives(), nil
+	local all, zonesShown = self:JournalObjectives(), {}
 	for _, goal in ipairs(all) do
-		if goal.zoneCompletion and not goal.dismissed then zoneShown = goal.id:match("^zone:(%d+)$") end
+		if goal.zoneCompletion and not goal.dismissed then zonesShown[goal.id:match("^zone:(%d+)$")] = true end
+	end
+	local function ZoneOf(goal)
+		for _, prefix in ipairs(ZONE_PART_PREFIX) do
+			local id = goal.id:match("^" .. prefix .. "(%d+)$")
+			if id then return id end
+		end
+		return nil
 	end
 	local shown = {}
 	for _, goal in ipairs(all) do
-		local absorbed = false
-		if zoneShown then
-			for _, prefix in ipairs(ZONE_PART_PREFIX) do
-				if goal.id == prefix .. zoneShown then absorbed = true end
-			end
-		end
-		if not goal.dismissed and not absorbed and #shown < TRACKER_MAX then shown[#shown + 1] = goal end
+		local partZone = ZoneOf(goal)
+		local zoneID = goal.zoneCompletion and goal.id:match("^zone:(%d+)$") or partZone
+		local hidden = goal.dismissed
+			or (zoneID and not self:JournalIsWatched(tonumber(zoneID)))
+			or (partZone and zonesShown[partZone])
+		if not hidden and #shown < TRACKER_MAX then shown[#shown + 1] = goal end
 	end
 	return shown
 end
@@ -716,6 +787,18 @@ local function StopDrag()
 	ns:SaveJournalTrackerPoint()
 end
 
+-- Clic sur un objectif : le compagnon (stade, bonheur) ouvre l'Évolution ;
+-- le reste ouvre la Complétion de la zone où tu es. Déjà ouvert : fermé.
+function ns:OpenJournalFor(goal)
+	if type(self.ToggleJournal) ~= "function" then return nil end
+	local current = self.journalFrame
+	if current and current:IsShown() then current:Hide(); return current end
+	local frame = self:ToggleJournal(true)
+	local evolution = goal and (goal.kind == "stage" or goal.source == "companion")
+	if frame and self.SelectJournalKind then self:SelectJournalKind(evolution and "evolution" or "completion") end
+	return frame
+end
+
 -- Survol d'un objectif : ce qu'il faut faire, avec des noms concrets
 function ns:ShowJournalGoalTooltip(owner, goal)
 	local tip = rawget(_G, "GameTooltip")
@@ -763,7 +846,7 @@ local function BuildLine(frame, index)
 			return ns:JournalDismiss(self.goal.id, true)
 		end
 		if type(self.goal.onClick) == "function" then return self.goal.onClick() end
-		if ns.CompanionOpenJournal then ns:CompanionOpenJournal() end
+		ns:OpenJournalFor(self.goal)
 	end)
 	line:SetScript("OnDragStart", StartDrag)
 	line:SetScript("OnDragStop", StopDrag)
@@ -943,7 +1026,7 @@ ns:RegisterCallback("STAMP", function(self) self:RefreshJournalTracker() end)
 local function Moved()
 	ns:LearnHubZone()
 	ns:RefreshJournalTracker()
-	if ns.journalFrame and ns.journalFrame:IsShown() and ns.journalFrame.kind == "goals" then ns:RefreshJournal() end
+	if ns.journalFrame and ns.journalFrame:IsShown() then ns:RefreshJournal() end
 end
 
 local HANDLERS = {

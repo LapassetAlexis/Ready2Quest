@@ -462,7 +462,7 @@ do
 	NS.companionFrame.scripts.OnMouseDown(NS.companionFrame)
 	NS.companionFrame.scripts.OnMouseUp(NS.companionFrame, "RightButton")
 	Check("[COMP] clic droit : carnet ouvert sur les objectifs, sans caresse", NS.journalFrame and NS.journalFrame:IsShown()
-		and NS.journalFrame.kind == "goals" and C.Needs().mood == 66)
+		and NS.journalFrame.kind == "evolution" and C.Needs().mood == 66)
 	NS.companionFrame.scripts.OnMouseDown(NS.companionFrame)
 	NS.companionFrame.scripts.OnMouseUp(NS.companionFrame, "RightButton")
 	Check("[COMP] second clic droit : carnet refermé", not NS.journalFrame:IsShown())

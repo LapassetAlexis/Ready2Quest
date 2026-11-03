@@ -134,7 +134,16 @@ Ta collection de voyage : un **tampon** pour chaque première fois.
 | Rare | tu abats un ennemi rare que tu as toi-même engagé, avec ton familier ou ton groupe |
 | Palier | tu passes les niveaux 10, 20, 30, 40, 50 et 60 |
 
-Chaque nouveau tampon est annoncé par un petit bandeau, jamais en combat. Le carnet (`/r2q carnet`) range tes tampons par onglet, avec la date et ton niveau, et montre ce qu'il te reste à découvrir : villages, capitales, donjons. Tout se gagne en jouant, sans paquet aléatoire.
+Chaque nouveau tampon est annoncé par un petit bandeau, jamais en combat. Tout se gagne en jouant, sans paquet aléatoire.
+
+Le carnet (`/r2q carnet`, ou clic droit sur la créature) a deux parties :
+- **Complétion** : choisis une zone dans la liste (celle où tu es, par défaut) et vois son pourcentage, son coffre et, par onglet, ce qui est fait et ce qui reste :
+  - **Exploration** : les villages de la zone ;
+  - **Combat** : le bestiaire et les nommés ;
+  - **Métiers** : les ressources de ta compétence à récolter ;
+  - **Quêtes** *(seulement avec l'addon [Questie](https://github.com/Questie/Questie))* : les quêtes de la zone faites et à faire. Le jeu ne donne pas la liste des quêtes d'une zone : sans Questie, l'onglet reste grisé et les quêtes ne comptent pas dans le pourcentage ; avec Questie, elles comptent dans les 100 %.
+- **Suivre à l'écran** : une case par zone. Cochée, les objectifs de la zone s'affichent dans le bloc « Carnet » en jeu. La zone où tu es est suivie d'office (décoche-la pour la masquer) ; coche d'autres zones pour garder un œil sur elles.
+- **Évolution** : l'étape de ta créature, la prochaine, ses envies, comment elle évolue, tes coffres à ouvrir, ta collection et ton parcours (zones, capitales, donjons, rares, paliers).
 
 ### Objectifs
 

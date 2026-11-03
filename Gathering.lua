@@ -262,7 +262,7 @@ function ns:GatheringLoot(message)
 	local zoneID = self.JournalZone and self:JournalZone() or nil
 	self:GatheringRecord(itemID, count, zoneID)
 	pcall(self.RefreshJournalTracker, self)
-	if self.journalFrame and self.journalFrame:IsShown() and self.journalFrame.kind == "goals" and self.RefreshJournal then
+	if self.journalFrame and self.journalFrame:IsShown() and self.RefreshJournal then
 		pcall(self.RefreshJournal, self)
 	end
 	return itemID
