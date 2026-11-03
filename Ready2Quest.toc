@@ -28,3 +28,4 @@ Checks.lua
 Options.lua
 UI.lua
 Camp.lua
+Expedition.lua
