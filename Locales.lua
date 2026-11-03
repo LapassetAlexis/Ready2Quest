@@ -653,6 +653,13 @@ local enUS = {
 	MODULE_INACTIVE = "n/a",
 }
 
+-- API d'extension : un module déclare ses chaînes dans son propre fichier,
+-- sans toucher à celui-ci. ns.RegisterStrings({ CLE = "fr" }, { CLE = "en" })
+function ns.RegisterStrings(fr, en)
+	for k, v in pairs(fr or {}) do frFR[k] = v end
+	for k, v in pairs(en or {}) do enUS[k] = v end
+end
+
 local base = frFR
 local locale = (GetLocale and GetLocale()) or "frFR"
 if locale ~= "frFR" and locale ~= "fr" then

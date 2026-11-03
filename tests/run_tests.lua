@@ -482,9 +482,34 @@ local function LoadAddonFile(name)
 	chunk("Ready2Quest", NS)
 end
 
-for _, file in ipairs({ "Bootstrap.lua", "Locales.lua", "Compat.lua", "Hubs.lua", "Theme.lua", "Core.lua", "Buffs.lua", "Reagents.lua", "Merchant.lua", "Equip.lua", "Stats.lua", "Minimap.lua", "Checks.lua", "Options.lua", "UI.lua" }) do
-	LoadAddonFile(file)
+-- La liste des fichiers vient du .toc, comme pour le client : un module
+-- ajouté au .toc est chargé ici sans autre modification.
+local tocFiles = {}
+do
+	local handle = assert(io.open(ROOT .. "/Ready2Quest.toc", "r"), "Ready2Quest.toc introuvable")
+	for line in handle:lines() do
+		line = line:gsub("\r", ""):gsub("^%s+", ""):gsub("%s+$", "")
+		if line ~= "" and not line:find("^#") and line:find("%.lua$") then tocFiles[#tocFiles + 1] = line end
+	end
+	handle:close()
 end
+-- Les scénarios historiques comptent les contrôles et pages du cœur (13
+-- contrôles, 10 entrées de navigation…) : les fichiers de module du .toc ne
+-- sont chargés qu'avant leurs propres tests (4.99), pour ne pas fausser ces
+-- comptes à chaque nouveau module.
+-- (dans un bloc : le corps principal frôle la limite de 200 locales)
+Mock.moduleFiles = {}
+do
+	local core = {}
+	for _, file in ipairs({ "Bootstrap.lua", "Locales.lua", "Compat.lua", "Hubs.lua", "Theme.lua", "Core.lua", "Buffs.lua",
+		"Reagents.lua", "Merchant.lua", "Equip.lua", "Stats.lua", "Minimap.lua", "Checks.lua", "Options.lua", "UI.lua" }) do
+		core[file] = true
+	end
+	for _, file in ipairs(tocFiles) do
+		if core[file] then LoadAddonFile(file) else table.insert(Mock.moduleFiles, file) end
+	end
+end
+_G.TOC_FILES = tocFiles
 
 ----------------------------------------------------------------------------
 -- 3. Assertions
@@ -586,6 +611,7 @@ local function ResetWorld()
 	NS.safePurgeNotice = nil
 	NS.hubIndex = nil
 	NS.wasAtCamp = nil
+	NS.departed = nil
 	if NS.InvalidateReagents then NS:InvalidateReagents() end
 end
 
@@ -1485,7 +1511,7 @@ ResetWorld()
 Say("\n== bootstrap et diagnostic ==")
 ResetWorld()
 Check("commande enregistrée par le bootstrap", type(SlashCmdList["SACETDEPART"]) == "function")
-Check("version exposée", NS.version == "1.22.0", NS.version)
+Check("version exposée", NS.version == "1.23.0", NS.version)
 
 local missingMods = {}
 for _, name in ipairs({ "Bootstrap", "Locales", "Compat", "Theme", "Core", "Buffs", "Reagents",
@@ -1506,7 +1532,7 @@ NS.HandleCommand = savedHandle
 Mock:Reset()
 NS:HandleCommand("diag")
 Check("/sd diag liste les modules", Mock:Output():find("modules :") ~= nil, Mock:Output())
-Check("/sd diag affiche la version", Mock:Output():find("1%.22%.0") ~= nil, Mock:Output())
+Check("/sd diag affiche la version", Mock:Output():find("1%.23%.0") ~= nil, Mock:Output())
 
 -- une erreur est enregistrée et affichée
 Mock:Reset()
@@ -3737,6 +3763,25 @@ Check("[R2Q] API publique sous les deux noms", _G.Ready2Quest == NS and _G.Ready
 end
 LeaveEra()
 Mock.world.classToken = nil
+end
+
+-- 4.99 Tests des modules (tests/modules/*.lua, listés par run_tests.py).
+-- Chaque fichier reçoit la boîte à outils du harnais dans la table T.
+do
+	_G.T = { Check = Check, Say = Say, ResetWorld = ResetWorld, Result = Result, NS = NS, Mock = Mock }
+	-- build Forever par défaut au chargement des modules, comme en jeu
+	Mock.world.build = nil
+	NS:DetectCapabilities()
+	for _, file in ipairs(Mock.moduleFiles) do LoadAddonFile(file) end
+	for _, path in ipairs(MODULE_TEST_FILES or {}) do
+		Say("\n== module : " .. path .. " ==")
+		local handle = assert(io.open(ROOT .. "/" .. path, "r"))
+		local source = handle:read("*a")
+		handle:close()
+		local chunk, compileError = loadstring(source, "@" .. path)
+		assert(chunk, "erreur de compilation dans " .. path .. ":\n" .. tostring(compileError))
+		chunk()
+	end
 end
 
 -- 5. Bilan

@@ -172,6 +172,9 @@ end
 ns.checks = {}
 
 local function Add(def) ns.checks[#ns.checks + 1] = def end
+-- API d'extension : un module ajoute ses contrôles au Check avant le départ
+-- (fichier chargé après Checks.lua dans le .toc)
+ns.AddCheck = Add
 
 Add{
 	id = "bags",
