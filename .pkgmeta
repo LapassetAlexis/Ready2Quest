@@ -1,0 +1,27 @@
+package-as: Ready2Quest
+
+# Le paquet livre uniquement l'addon : code Lua, medias, licence et notice.
+# Developpement (tests/, tools/, docs/) et fichiers de depot exclus.
+ignore:
+  - .git
+  - .gitattributes
+  - .gitignore
+  - .pkgmeta
+  - tests
+  - tools
+  - docs
+  - "*.py"
+  - "*.bak"
+  - "*.orig"
+  - "*.log"
+  - "*~"
+  - "__pycache__"
+  - "_*.py"
+  - "_block.lua"
+
+# Fichiers qui doivent figurer dans l'archive livree (en plus de ceux du .toc).
+enable-nolib-creation: no
+
+manual-changelog: CHANGELOG.md
+
+license-output: LICENSE
