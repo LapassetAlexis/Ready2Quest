@@ -40,3 +40,5 @@ CompanionLines.lua
 Companion.lua
 Journal.lua
 JournalTracker.lua
+GatheringData.lua
+Gathering.lua
