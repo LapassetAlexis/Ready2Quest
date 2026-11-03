@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Exécute la suite de tests de l'addon Sac & Départ en Lua 5.1 (version du client WoW).
+"""Exécute la suite de tests de l'addon Ready2Quest en Lua 5.1 (version du client WoW).
 
 Usage : python3 tests/run_tests.py
 Nécessite le paquet `lupa` (pip install lupa).

@@ -124,6 +124,26 @@ local function NewRegion(kind, name)
 	function region:Show() self.shown = true end
 	function region:Hide() self.shown = false end
 	function region:IsShown() return self.shown end
+	function region:CreateAnimationGroup()
+		local group = { plays = 0, animations = {} }
+		function group:CreateAnimation(kind)
+			local anim = { kind = kind }
+			function anim:SetFromAlpha(v) self.from = v end
+			function anim:SetToAlpha(v) self.to = v end
+			function anim:SetDuration(v) self.duration = v end
+			self.animations[#self.animations + 1] = anim
+			return anim
+		end
+		function group:Play() self.plays = self.plays + 1 end
+		function group:Stop() end
+		self.animGroups = (self.animGroups or 0) + 1
+		return group
+	end
+	function region:SetFont(path, size, flags)
+		if Mock.world.fontRefused then return false end
+		self.font = { path = path, size = size, flags = flags }
+		return true
+	end
 	function region:SetText(value) self.text = value end
 	function region:GetText() return self.text end
 	function region:SetShadowColor(r, g, b, a) self.shadow = { r, g, b, a } end
@@ -185,7 +205,7 @@ _G.C_Map = {
 }
 
 _G.IsResting = function() return Mock.world.resting == true end
-_G.GetRestState = function() return Mock.world.resting and 1 or 2 end
+_G.GetRestState = function() return (Mock.world.resting or Mock.world.restStateRested) and 1 or 2 end
 _G.UnitIsPVPSanctuary = function() return Mock.world.sanctuary == true end
 
 _G.C_Container = {
@@ -322,7 +342,7 @@ end
 _G.GetCritChance = function() return Mock.world.crit or 0 end
 _G.GetHaste = function() return Mock.world.haste or 0 end
 _G.GetAverageItemLevel = function() return Mock.world.ilvl or 0, Mock.world.ilvl or 0 end
-_G.UnitClass = function() return "Guerrier", "WARRIOR", 1 end
+_G.UnitClass = function() return "Guerrier", Mock.world.classToken or "WARRIOR", 1 end
 _G.GetSpecialization = function() return Mock.world.specIndex or 1 end
 _G.GetSpecializationInfo = function() return 71, Mock.world.specName or "Armes" end
 
@@ -382,6 +402,71 @@ _G.C_QuestLog = {
 	end,
 }
 
+-- v1.18.0 : sous-zones, vol, mort, marchand, entraîneur, foyer
+_G.GetSubZoneText = function() return Mock.world.subzone or "" end
+_G.UnitOnTaxi = function() return Mock.world.onTaxi == true end
+_G.UnitIsDeadOrGhost = function() return Mock.world.dead == true end
+_G.UnitName = function() return "Testeur" end
+_G.GetRealmName = function() return "Royaume" end
+_G.GetItemCount = function(itemID)
+	local count = 0
+	for _, bag in pairs(Mock.world.bags or {}) do
+		for _, item in pairs(bag.items or {}) do
+			if item.itemID == itemID then count = count + (item.stackCount or 1) end
+		end
+	end
+	return count
+end
+_G.GetInventoryItemCount = function(_, slot)
+	if slot == 0 then return Mock.world.ammo or 0 end
+	return 0
+end
+_G.GetBindLocation = function() return Mock.world.bind or "Comté-de-l'Or" end
+_G.GetItemCooldown = function(itemID)
+	local cd = (Mock.world.cooldowns or {})[itemID]
+	if not cd then return 0, 0, 1 end
+	return cd[1], cd[2], 1
+end
+_G.GetMoney = function() return Mock.world.money or 0 end
+_G.CanMerchantRepair = function() return Mock.world.canRepair == true end
+_G.GetRepairAllCost = function()
+	local cost = Mock.world.repairCost or 0
+	return cost, cost > 0
+end
+_G.RepairAllItems = function()
+	Mock.world.money = (Mock.world.money or 0) - (Mock.world.repairCost or 0)
+	Mock.world.repaired = (Mock.world.repaired or 0) + 1
+	Mock.world.repairCost = 0
+	for _, d in pairs(Mock.world.durability or {}) do d[1] = d[2] end
+end
+_G.IsTradeskillTrainer = function() return Mock.world.tradeskillTrainer == true end
+_G.C_Container.UseContainerItem = function(bag, slot)
+	local b = Mock.world.bags[bag]
+	local item = b and b.items and b.items[slot]
+	if not item then return end
+	Mock.world.sold = Mock.world.sold or {}
+	Mock.world.sold[#Mock.world.sold + 1] = item.itemID
+	b.items[slot] = nil
+end
+
+-- Fait avancer l'horloge et la machine à états (l'OnUpdate du client)
+function Mock:Advance(seconds)
+	Mock.now = Mock.now + (seconds or 0)
+	for _, frame in ipairs(Mock.frames) do
+		if frame.scripts and frame.scripts.OnUpdate then frame.scripts.OnUpdate(frame, seconds or 0) end
+	end
+end
+-- Joue les C_Timer.After en attente (vente par tranches)
+function Mock:RunTimers()
+	local guard = 0
+	while Mock.world.timers and #Mock.world.timers > 0 and guard < 50 do
+		local list = Mock.world.timers
+		Mock.world.timers = {}
+		for _, fn in ipairs(list) do fn() end
+		guard = guard + 1
+	end
+end
+
 ----------------------------------------------------------------------------
 -- 2. Chargement de l'addon (comme le client : chunk(nom, tablePrivée))
 ----------------------------------------------------------------------------
@@ -394,10 +479,10 @@ local function LoadAddonFile(name)
 	handle:close()
 	local chunk, compileError = loadstring(source, "@" .. path)
 	assert(chunk, "erreur de compilation dans " .. path .. ":\n" .. tostring(compileError))
-	chunk("ReadyToQuest", NS)
+	chunk("Ready2Quest", NS)
 end
 
-for _, file in ipairs({ "Bootstrap.lua", "Locales.lua", "Compat.lua", "Theme.lua", "Core.lua", "Buffs.lua", "Reagents.lua", "Equip.lua", "Stats.lua", "Minimap.lua", "Checks.lua", "Options.lua", "UI.lua" }) do
+for _, file in ipairs({ "Bootstrap.lua", "Locales.lua", "Compat.lua", "Theme.lua", "Core.lua", "Buffs.lua", "Reagents.lua", "Merchant.lua", "Equip.lua", "Stats.lua", "Minimap.lua", "Checks.lua", "Options.lua", "UI.lua" }) do
 	LoadAddonFile(file)
 end
 
@@ -474,6 +559,7 @@ local function ResetWorld()
 	Mock.now = 1000
 	Mock:Reset()
 	-- les deux : la nouvelle variable, et l ancienne que Core migre
+	_G.Ready2QuestDB = nil
 	_G.ReadyToQuestDB = nil
 	_G.SacEtDepartDB = nil
 	NS._dbReady = false
@@ -492,6 +578,12 @@ local function ResetWorld()
 	NS.toastHideAt = nil
 	NS.score = nil
 	NS.lastAdvice = nil
+	NS.pendingExit = nil
+	NS.lastSafePlace = nil
+	NS.lastDeparture = nil
+	NS.merchantOpen = nil
+	NS.sellRun = nil
+	NS.safePurgeNotice = nil
 	if NS.InvalidateReagents then NS:InvalidateReagents() end
 end
 
@@ -509,15 +601,30 @@ ResetWorld()
 _G.SacEtDepartDB = { safe = { [1234] = true }, alertCooldown = 99, showWindow = false }
 NS._dbReady = false
 local migrated = NS:DB()
-Check("migration : l'ancienne sauvegarde est reprise",
-	migrated.safe ~= nil and migrated.safe[1234] == true,
+-- v1.18.0 : les zones par mapID (schéma 1) sont purgées, pas reprises
+Check("migration : anciennes zones par mapID purgées",
+	migrated.safe ~= nil and migrated.safe[1234] == nil and migrated.safeSchema == 2,
 	migrated.safe and tostring(migrated.safe[1234]))
+Check("migration : purge annoncée une fois", NS.safePurgeNotice == 1, tostring(NS.safePurgeNotice))
 Check("migration : le réglage personnalisé est conservé", migrated.showWindow == false,
 	tostring(migrated.showWindow))
 Check("migration : la variable porte le nouveau nom",
-	_G.ReadyToQuestDB == migrated)
+	_G.Ready2QuestDB == migrated)
 Check("migration : l'ancienne variable est libérée",
 	_G.SacEtDepartDB == nil)
+
+-- v1.21.0 : Ready to Quest -> Ready2Quest (ReadyToQuestDB -> Ready2QuestDB)
+ResetWorld()
+_G.ReadyToQuestDB = { safeSchema = 2, safe = { ["v:30:Village"] = { kind = "village", name = "Village" } },
+	popupScore = 70, optionsPage = "bags" }
+_G.SacEtDepartDB = { popupScore = 10 }
+NS._dbReady = false
+local migrated2 = NS:DB()
+Check("migration R2Q : réglages repris de ReadyToQuestDB", migrated2.popupScore == 70, migrated2.popupScore)
+Check("migration R2Q : villages appris conservés", migrated2.safe["v:30:Village"] ~= nil)
+Check("migration R2Q : la sauvegarde la plus récente gagne", NS.migratedFrom == "ReadyToQuestDB", NS.migratedFrom)
+Check("migration R2Q : anciennes variables libérées", _G.ReadyToQuestDB == nil and _G.SacEtDepartDB == nil)
+Check("migration R2Q : nouvelle variable", _G.Ready2QuestDB == migrated2)
 
 -- sans ancienne sauvegarde, une table neuve avec les défauts
 ResetWorld()
@@ -525,30 +632,46 @@ NS._dbReady = false
 local fresh = NS:DB()
 Check("sans migration : les défauts sont posés", fresh.showWindow == true,
 	tostring(fresh.showWindow))
-Check("9 checks enregistrés", #(NS.checks or {}) == 9, NS.checks and #NS.checks)
+Check("13 checks enregistrés", #(NS.checks or {}) == 13, NS.checks and #NS.checks)
+Check("installation neuve : pas d'annonce de purge", NS.safePurgeNotice == nil)
 Check("commande /sd enregistrée", type(SlashCmdList["SACETDEPART"]) == "function")
 Check("événement PLAYER_UPDATE_RESTING écouté", NS.eventFrame and NS.eventFrame.events.PLAYER_UPDATE_RESTING == true)
 
--- 4.2 Entrée en capitale : apprentissage automatique par le repos
+-- 4.2 Entrée en capitale : repos dans deux quartiers -> carte entière apprise
 Say("\n== capitale et repos ==")
 ResetWorld()
 Mock.world.resting = true
+Mock.world.subzone = "Quartier commerçant"
 Mock:Fire("PLAYER_ENTERING_WORLD", true, false)
 Check("entrée en capitale -> zone sûre", NS.inSafe == true, tostring(NS.inSafe))
-Check("capitale apprise automatiquement", NS:DB().safe[1] ~= nil)
-local citySource = NS:DB().safe[1] and NS:DB().safe[1].source
-Check("source de l'apprentissage = signal de repos",
-	citySource == "resting" or citySource == "reststate", citySource)
+Check("un seul quartier : capitale pas encore apprise", NS:DB().safe["c:1"] == nil)
+Mock.world.subzone = "Vieille ville"
+Mock:Fire("ZONE_CHANGED")
+Check("capitale apprise après deux quartiers en repos", NS:DB().safe["c:1"] ~= nil)
+local citySource = NS:DB().safe["c:1"] and NS:DB().safe["c:1"].source
+Check("source de l'apprentissage = repos", citySource == "resting", citySource)
+Check("capitale : kind = city", NS:DB().safe["c:1"] and NS:DB().safe["c:1"].kind == "city")
+-- hors de la zone de repos mais dans un quartier jamais visité : toujours sûr
+Mock.world.resting = false
+Mock.world.subzone = "Port"
+Check("capitale apprise : sûre même sans repos", NS:IsCurrentZoneSafe() == true)
 
--- 4.3 Sortie vers une zone sauvage : alerte
+-- 4.3 Sortie vers une zone sauvage : alerte après le délai de confirmation
 Say("\n== sortie de zone sûre ==")
 Mock.now = Mock.now + 60
-Mock.world.resting = false
 Mock.world.mapID = 20
+Mock.world.subzone = nil
 Mock.world.quests = { { questID = 11, ready = true }, { questID = 12, ready = false } }
 Mock:Fire("ZONE_CHANGED_NEW_AREA")
-Check("alerte déclenchée à la sortie", NS.lastResults ~= nil)
+Check("sortie : pas d'alerte immédiate", NS.lastResults == nil)
+Check("sortie : en attente de confirmation", NS.pendingExit ~= nil)
+Mock:Advance(3)
+Check("sortie : toujours rien à 3 s", NS.lastResults == nil)
+Mock:Advance(3)
+Check("alerte déclenchée à la sortie (6 s)", NS.lastResults ~= nil)
 Check("état basculé à non-sûr", NS.inSafe == false)
+Check("départ mémorisé : capitale", NS.lastDeparture and NS.lastDeparture.name == "Capitale",
+	NS.lastDeparture and NS.lastDeparture.name)
 local restResult = Result("rest")
 Check("check repos en échec (0 repos)", restResult and restResult.ok == false, restResult and restResult.detail)
 local questResult = Result("quests")
@@ -629,76 +752,216 @@ local secretResult = Result("buffs")
 Check("aura secrète -> pas d'alerte", secretResult and secretResult.ok == true, secretResult and secretResult.detail)
 Mock.secretAuras = false
 
--- 4.10 Apprentissage d'un village sans repos via le vendeur
-Say("\n== village sans repos ==")
+-- 4.10 Village sans repos : deux indices faibles de types différents
+Say("\n== village sans repos (indices) ==")
 ResetWorld()
 Mock.world.mapID = 30
+Mock.world.subzone = "Comté-de-l'Or"
 Mock.world.resting = false
 Mock:Fire("MERCHANT_SHOW")
-Check("village appris via le vendeur", NS:DB().safe[30] ~= nil)
-Check("source de l'apprentissage = merchant", NS:DB().safe[30] and NS:DB().safe[30].source == "merchant")
+Check("un marchand seul ne suffit pas", NS:DB().safe["v:30:Comté-de-l'Or"] == nil)
+Check("indice marchand mémorisé", NS:DB().safeClues["v:30:Comté-de-l'Or"]
+	and NS:DB().safeClues["v:30:Comté-de-l'Or"].types.merchant == true)
+Mock:Fire("MERCHANT_SHOW")
+Check("deux fois le même type ne suffit pas", NS:DB().safe["v:30:Comté-de-l'Or"] == nil)
+Mock:Fire("QUEST_DETAIL")
+Check("village appris : marchand + quête", NS:DB().safe["v:30:Comté-de-l'Or"] ~= nil)
+Check("source = merchant+quest", NS:DB().safe["v:30:Comté-de-l'Or"]
+	and NS:DB().safe["v:30:Comté-de-l'Or"].source == "merchant+quest")
+Check("indices effacés après apprentissage", NS:DB().safeClues["v:30:Comté-de-l'Or"] == nil)
 Check("village considéré comme sûr", NS.inSafe == true)
+Check("le reste de la zone n'est PAS sûr", (function()
+	Mock.world.subzone = "Ferme des Brookshire"
+	local safe = NS:IsCurrentZoneSafe()
+	Mock.world.subzone = "Comté-de-l'Or"
+	return safe == false
+end)())
+-- sortir du village sans changer de carte : c'est le bug corrigé en v1.18.0
 Mock.now = Mock.now + 60
-Mock.world.mapID = 20
-Mock:Fire("ZONE_CHANGED_NEW_AREA")
-Check("alerte à la sortie du village", NS.lastResults ~= nil)
+Mock.world.subzone = "Ferme des Brookshire"
+Mock:Fire("ZONE_CHANGED")
+Mock:Advance(6)
+Check("alerte à la sortie du village (même carte)", NS.lastResults ~= nil)
+Check("parti de : Comté-de-l'Or", NS:DepartedText() ~= nil and NS:DepartedText():find("Comté") ~= nil,
+	NS:DepartedText())
+Check("parti de : source lisible", NS:DepartedText():find("marchand %+ quête") ~= nil, NS:DepartedText())
 
--- 4.11 Boîte aux lettres
-Say("\n== boîte aux lettres ==")
+-- les indices persistent d'une session à l'autre (dans la SavedVariable)
 ResetWorld()
 Mock.world.mapID = 30
-Mock:Fire("MAIL_SHOW")
-Check("village appris via la boîte aux lettres", NS:DB().safe[30] ~= nil)
+Mock.world.subzone = "Long-guet"
+Mock:Fire("TRAINER_SHOW")
+local saved = _G.Ready2QuestDB
+NS._dbReady = false
+_G.Ready2QuestDB = saved
+Mock:Fire("MERCHANT_SHOW")
+Check("indices persistés : entraîneur + marchand", NS:DB().safe["v:30:Long-guet"] ~= nil)
 
--- 4.12 Anti-spam
-Say("\n== anti-spam ==")
+-- 4.11 Indices forts : un seul suffit
+Say("\n== indices forts ==")
+for _, case in ipairs({
+	{ event = "MAIL_SHOW", source = "mail" },
+	{ event = "CONFIRM_BINDER", source = "binder" },
+	{ event = "TAXIMAP_OPENED", source = "taxi" },
+	{ event = "BANKFRAME_OPENED", source = "bank" },
+}) do
+	ResetWorld()
+	Mock.world.mapID = 30
+	Mock.world.subzone = "Village"
+	Mock:Fire(case.event)
+	local entry = NS:DB().safe["v:30:Village"]
+	Check(case.event .. " : village appris", entry ~= nil and entry.source == case.source,
+		entry and entry.source)
+end
 ResetWorld()
+Mock.world.mapID = 30
+Mock.world.subzone = "Village"
 Mock.world.resting = true
-Mock:Fire("PLAYER_ENTERING_WORLD", true, false)
-Mock.now = Mock.now + 20
-Mock.world.resting = false
-Mock.world.mapID = 20
-Mock:Fire("ZONE_CHANGED_NEW_AREA")
-Check("première alerte passée", NS.lastAlert ~= nil)
-Mock.world.resting = true
-Mock.world.mapID = 1
 Mock:Fire("PLAYER_UPDATE_RESTING")
-Mock.now = Mock.now + 1
-Mock.world.resting = false
+Check("repos : village appris", NS:DB().safe["v:30:Village"] ~= nil)
+ResetWorld()
+Mock.world.mapID = 30
+Mock.world.subzone = nil
+Mock:Fire("MAIL_SHOW")
+local anyLearned = next(NS:DB().safe) ~= nil
+Check("sans sous-zone : rien n'est appris", anyLearned == false)
+
+-- GetRestState = XP de repos en réserve, PAS une zone de repos
+ResetWorld()
 Mock.world.mapID = 20
+Mock.world.restStateRested = true
+Check("bonus de repos en réserve : pas une zone sûre", NS:IsCurrentZoneSafe() == false)
+
+-- 4.12 Anti-spam, retour avant le délai, vol, mort, délai réglable
+Say("\n== sortie : anti-spam, retour, vol, mort ==")
+local function EnterVillage()
+	ResetWorld()
+	NS:DB().safe["v:30:Village"] = { kind = "village", name = "Village", mapID = 30, subzone = "Village", source = "manual" }
+	Mock.world.mapID = 30
+	Mock.world.subzone = "Village"
+	Mock:Fire("PLAYER_ENTERING_WORLD", true, false)
+	Mock.now = Mock.now + 60
+end
+local function LeaveVillage()
+	Mock.world.subzone = "Bois"
+	Mock:Fire("ZONE_CHANGED")
+end
+
+EnterVillage()
+LeaveVillage()
+Mock:Advance(6)
+Check("première alerte passée", NS.lastAlert ~= nil)
+Mock.world.subzone = "Village"
+Mock:Fire("ZONE_CHANGED")
+Mock.now = Mock.now + 1
 NS.lastResults = nil
-Mock:Fire("ZONE_CHANGED_NEW_AREA")
+LeaveVillage()
+Mock:Advance(6)
 Check("pas de seconde alerte dans la fenêtre de cooldown", NS.lastResults == nil)
+
+EnterVillage()
+LeaveVillage()
+Mock:Advance(3)
+Mock.world.subzone = "Village"
+Mock:Fire("ZONE_CHANGED")
+Mock:Advance(10)
+Check("retour au village avant 6 s : alerte annulée", NS.lastResults == nil and NS.pendingExit == nil)
+
+EnterVillage()
+Mock.world.onTaxi = true
+LeaveVillage()
+Mock:Advance(30)
+Check("en vol : pas d'alerte", NS.lastResults == nil and NS.pendingExit ~= nil)
+Mock.world.onTaxi = false
+Mock:Advance(1)
+Check("atterrissage : le délai repart", NS.lastResults == nil)
+Mock:Advance(6)
+Check("atterrissage hors zone sûre : alerte", NS.lastResults ~= nil)
+
+EnterVillage()
+Mock.world.onTaxi = true
+LeaveVillage()
+Mock:Advance(30)
+Mock.world.subzone = "Village"
+Mock:Fire("ZONE_CHANGED")
+Mock.world.onTaxi = false
+Mock:Advance(10)
+Check("atterrissage en zone sûre : rien", NS.lastResults == nil)
+
+EnterVillage()
+Mock.world.dead = true
+LeaveVillage()
+Mock:Advance(10)
+Check("mort ou fantôme : pas d'alerte", NS.lastResults == nil and NS.pendingExit == nil)
+
+EnterVillage()
+NS:DB().exitDelay = 0
+LeaveVillage()
+Check("délai 0 : alerte immédiate", NS.lastResults ~= nil)
+EnterVillage()
+NS:DB().exitDelay = 99
+Check("délai borné à 15 s", NS:ExitDelay() == 15)
+
+ResetWorld()
+NS:DB().safe["v:30:Village"] = { kind = "village", name = "Village", mapID = 30, subzone = "Village", source = "manual" }
+Mock.world.mapID = 30
+Mock.world.subzone = "Village"
+Mock:Fire("PLAYER_ENTERING_WORLD", true, false)
+Mock.now = Mock.now + 5
+LeaveVillage()
+Mock:Advance(6)
+Check("silence après connexion conservé", NS.lastResults == nil)
 
 -- 4.13 Pas d'alerte entre deux zones sûres
 Say("\n== deux zones sûres ==")
 ResetWorld()
-NS:DB().safe[1] = { name = "Capitale", source = "manual" }
-NS:DB().safe[30] = { name = "Village", source = "manual" }
+NS:DB().safe["c:1"] = { kind = "city", name = "Capitale", mapID = 1, source = "manual" }
+NS:DB().safe["v:30:Village"] = { kind = "village", name = "Village", mapID = 30, subzone = "Village", source = "manual" }
 Mock.world.mapID = 1
 Mock:Fire("PLAYER_ENTERING_WORLD", true, false)
 Mock.now = Mock.now + 20
 Mock.world.mapID = 30
+Mock.world.subzone = "Village"
 Mock:Fire("ZONE_CHANGED_NEW_AREA")
+Mock:Advance(10)
 Check("aucune alerte entre deux zones sûres", NS.lastResults == nil)
 
 -- 4.14 Chaîne de cartes parentes
 Say("\n== cartes parentes ==")
 ResetWorld()
 Mock.world.maps[5] = { mapID = 5, name = "Quartier", parentMapID = 1 }
-NS:DB().safe[1] = { name = "Capitale", source = "manual" }
+NS:DB().safe["c:1"] = { kind = "city", name = "Capitale", mapID = 1, source = "manual" }
 Mock.world.mapID = 5
 local safeInSubmap = NS:IsCurrentZoneSafe()
-Check("sous-carte d'une zone sûre = sûre", safeInSubmap == true)
+Check("sous-carte d'une capitale = sûre", safeInSubmap == true)
 
 -- 4.15 Commandes
 Say("\n== commandes ==")
 ResetWorld()
 Mock.world.mapID = 30
+Mock.world.subzone = "Village"
 NS:HandleCommand("safe")
-Check("/sd safe marque la zone", NS:DB().safe[30] ~= nil)
+Check("/sd safe marque le village", NS:DB().safe["v:30:Village"] ~= nil
+	and NS:DB().safe["v:30:Village"].source == "manual")
 NS:HandleCommand("unsafe")
-Check("/sd unsafe retire la zone", NS:DB().safe[30] == nil)
+Check("/sd unsafe retire le village", NS:DB().safe["v:30:Village"] == nil)
+Mock.world.subzone = nil
+Mock:Reset()
+NS:HandleCommand("safe")
+Check("/sd safe sans sous-zone : refus expliqué", Mock:Output():find("Pas de village") ~= nil, Mock:Output())
+NS:DB().safe["c:30"] = { kind = "city", name = "Ville", mapID = 30, source = "resting" }
+NS:DB().cityRest[30] = { A = true, B = true }
+NS:HandleCommand("unsafe")
+Check("/sd unsafe retire la capitale", NS:DB().safe["c:30"] == nil and NS:DB().cityRest[30] == nil)
+Mock.world.subzone = "Village"
+NS:HandleCommand("safe")
+Mock:Reset()
+NS:HandleCommand("safe list")
+Check("/sd safe list affiche le village", Mock:Output():find("Village") ~= nil
+	and Mock:Output():find("manuel") ~= nil, Mock:Output())
+NS:DB().safeClues["v:30:X"] = { types = { merchant = true } }
+NS:HandleCommand("safe reset")
+Check("/sd safe reset efface tout", next(NS:DB().safe) == nil and next(NS:DB().safeClues) == nil)
 NS:HandleCommand("seuil 8")
 Check("/sd seuil change le seuil", NS:DB().bagFreeThreshold == 8)
 NS:HandleCommand("off")
@@ -822,9 +1085,12 @@ Check("RefreshOptions sans panneau ne plante pas", true)
 NS:HandleCommand("options")
 Check("panneau créé", NS.optionsFrame ~= nil)
 Check("panneau affiché", NS.optionsFrame and NS.optionsFrame.shown == true)
-Check("22 lignes (12 réglages + 1 action + 9 modules)", NS.optionsFrame and #NS.optionsFrame.rows == 22, NS.optionsFrame and #NS.optionsFrame.rows)
+Check("33 lignes (19 réglages + 1 action + 13 modules)", NS.optionsFrame and #NS.optionsFrame.rows == 33, NS.optionsFrame and #NS.optionsFrame.rows)
 
-local boolRow = NS.optionsFrame.rows[1]
+local boolRow
+for _, row in ipairs(NS.optionsFrame.rows) do
+	if row.def and row.def.key == "showWindow" then boolRow = row end
+end
 local boolBefore = NS:DB().showWindow
 boolRow:Click()
 Check("clic bascule un booléen", NS:DB().showWindow ~= boolBefore)
@@ -899,15 +1165,16 @@ ResetWorld()
 NS:RunChecklist("manual")
 Check("fenêtre créée", NS.window ~= nil)
 Check("fenêtre affichée", NS.window and NS.window.shown == true)
-Check("9 lignes de modules", NS.window and #NS.window.rows == 9)
+Check("13 lignes de modules", NS.window and #NS.window.rows == 13)
 Check("score affiché", NS.window and NS.window.scoreValue.text:find(tostring(NS.score)) ~= nil,
 	NS.window and NS.window.scoreValue.text)
 Check("barre de score remplie", NS.window and NS.window.scoreBar.fill.width > 0,
 	NS.window and NS.window.scoreBar.fill.width)
 Check("détail du premier module", NS.window.rows[1].detail.text ~= "", NS.window.rows[1].detail.text)
-Check("icône de module posée", NS.window.rows[1].icon.tex.texture ~= nil,
-	NS.window.rows[1].icon.tex.texture)
-Check("bilan affiché dans le bandeau", NS.window.subtitle.text ~= "", NS.window.subtitle.text)
+Check("losange de statut posé", NS.window.rows[1].status and tostring(NS.window.rows[1].status.texture):find("losange") ~= nil,
+	NS.window.rows[1].status and NS.window.rows[1].status.texture)
+Check("verdict affiché à côté de la note", NS.window.verdict and NS.window.verdict.text ~= "",
+	NS.window.verdict and NS.window.verdict.text)
 
 -- pièces faibles : le sous-titre du panneau doit les compter
 ResetWorld()
@@ -964,7 +1231,7 @@ Check("le réglage d'affichage du panneau a disparu",
 -- 4.30 Sortie de zone sûre : la fenêtre doit s'ouvrir toute seule
 Say("\n== ouverture automatique en quittant une zone sûre ==")
 ResetWorld()
-NS:DB().safe = { [1] = true }          -- map 1 = capitale, apprise comme sûre
+NS:DB().safe = { ["c:1"] = { kind = "city", name = "Capitale", mapID = 1, source = "manual" } }
 NS:DB().alertCooldown = 0
 NS:DB().showWindow = true
 NS.inSafe = true                        -- on part d'une zone sûre
@@ -973,9 +1240,10 @@ NS.lastAlert = nil
 NS.lastResults = nil
 if NS.window then NS.window:Hide() end
 
--- on passe sur une map inconnue : sortie de zone sûre
+-- on passe sur une map inconnue : sortie de zone sûre, confirmée après le délai
 Mock.world.mapID = 20
 NS:Evaluate("zone")
+Mock:Advance(6)
 
 Check("quitter la zone sûre lance le check", NS.lastResults ~= nil,
 	NS.lastResults and #NS.lastResults)
@@ -985,18 +1253,21 @@ Check("et ouvre la fenêtre", NS.window ~= nil and NS.window.shown == true,
 -- on reste en zone non sûre : pas de nouvelle alerte
 NS.lastResults = nil
 NS:Evaluate("zone")
+Mock:Advance(6)
 Check("rester dehors ne relance pas le check", NS.lastResults == nil)
 
 -- et en zone sûre, rien ne s'ouvre
 if NS.window then NS.window:Hide() end
 Mock.world.mapID = 1
 NS:Evaluate("zone")
+Mock:Advance(6)
 Check("en zone sûre la fenêtre reste fermée",
 	NS.window ~= nil and NS.window.shown ~= true, NS.window and tostring(NS.window.shown))
 
 -- à nouveau dehors : ça repart
 Mock.world.mapID = 20
 NS:Evaluate("zone")
+Mock:Advance(6)
 Check("une seconde sortie relance l'alerte", NS.lastResults ~= nil)
 
 -- Pied de la fenêtre de diagnostic : les largeurs étaient codées en dur et
@@ -1110,7 +1381,7 @@ Mock.world.bags[0].items[1] = { itemID = 4001, stackCount = 5, quality = 1 }
 Mock.world.itemInfo[4001] = { name = "Pain", classID = 0, subClassID = 5 }
 
 NS:RunChecklist("manual")
-Check("checklist tourne sans les API récentes", NS.lastResults ~= nil and #NS.lastResults == 9, NS.lastResults and #NS.lastResults)
+Check("checklist tourne sans les API récentes", NS.lastResults ~= nil and #NS.lastResults == 13, NS.lastResults and #NS.lastResults)
 local qClassic = Result("quests")
 Check("quêtes via GetNumQuestLogEntries", qClassic and qClassic.ok == false and qClassic.detail:find("1") ~= nil,
 	qClassic and qClassic.detail)
@@ -1208,7 +1479,7 @@ ResetWorld()
 Say("\n== bootstrap et diagnostic ==")
 ResetWorld()
 Check("commande enregistrée par le bootstrap", type(SlashCmdList["SACETDEPART"]) == "function")
-Check("version exposée", NS.version == "1.17.0", NS.version)
+Check("version exposée", NS.version == "1.21.0", NS.version)
 
 local missingMods = {}
 for _, name in ipairs({ "Bootstrap", "Locales", "Compat", "Theme", "Core", "Buffs", "Reagents",
@@ -1229,7 +1500,7 @@ NS.HandleCommand = savedHandle
 Mock:Reset()
 NS:HandleCommand("diag")
 Check("/sd diag liste les modules", Mock:Output():find("modules :") ~= nil, Mock:Output())
-Check("/sd diag affiche la version", Mock:Output():find("1%.17%.0") ~= nil, Mock:Output())
+Check("/sd diag affiche la version", Mock:Output():find("1%.21%.0") ~= nil, Mock:Output())
 
 -- une erreur est enregistrée et affichée
 Mock:Reset()
@@ -1267,7 +1538,7 @@ Check("liste exposée pour /sd diag", NS.unsupportedEvents and NS.unsupportedEve
 
 -- la checklist fonctionne toujours sans cet événement
 NS:RunChecklist("manual")
-Check("checklist OK malgré l'événement manquant", NS.lastResults ~= nil and #NS.lastResults == 9)
+Check("checklist OK malgré l'événement manquant", NS.lastResults ~= nil and #NS.lastResults == 13)
 Mock.world.unknownEvents = nil
 
 -- 4.40 Composants de métier en mode Classic (API legacy)
@@ -1321,13 +1592,13 @@ Check("bouton créé", lancer ~= nil)
 Check("bouton affiché", lancer and lancer.shown == true)
 Check("positionné sur l'anneau", lancer and #lancer.points > 0)
 
-lancer:Click("LeftButton")
-Check("clic gauche ouvre les réglages", NS.optionsFrame and NS.optionsFrame.shown == true)
-
-NS.optionsFrame:Hide()
+-- v1.18.0 : clic gauche = action principale (le check), clic droit = réglages
 NS.lastResults = nil
+lancer:Click("LeftButton")
+Check("clic gauche lance le check", NS.lastResults ~= nil)
+
 lancer:Click("RightButton")
-Check("clic droit lance le check", NS.lastResults ~= nil)
+Check("clic droit ouvre les réglages", NS.optionsFrame and NS.optionsFrame.shown == true)
 
 -- glissement autour de la minicarte
 Mock.world.cursorX, Mock.world.cursorY = 580, 500
@@ -1337,7 +1608,7 @@ Check("glissement met à jour l'angle", math.abs(NS:DB().minimapAngle or 999) < 
 Check("drapeau de glissement posé", NS.minimapDragMoved == true)
 
 NS.optionsFrame:Hide()
-lancer:Click("LeftButton")
+lancer:Click("RightButton")
 Check("clic ignoré juste après un glissement", NS.optionsFrame.shown == false)
 
 -- infobulle
@@ -1362,7 +1633,7 @@ for _, row in ipairs(NS.optionsFrame.rows) do
 	if row.def and row.def.key == "showMinimap" then minimapRow = row end
 end
 Check("ligne dédiée dans les réglages", minimapRow ~= nil)
-Check("22 lignes au total", NS.optionsFrame and #NS.optionsFrame.rows == 22, #NS.optionsFrame.rows)
+Check("33 lignes au total", NS.optionsFrame and #NS.optionsFrame.rows == 33, #NS.optionsFrame.rows)
 if minimapRow then minimapRow:Click() end
 Check("décocher masque le bouton", lancer.shown == false)
 if minimapRow then minimapRow:Click() end
@@ -1373,7 +1644,7 @@ Say("\n== modules activables ==")
 ResetWorld()
 Check("tous les modules actifs par défaut", NS:IsModuleEnabled("bags") == true)
 local activeCount, totalCount = NS:EnabledModuleCount()
-Check("9 modules actifs au départ", activeCount == 9 and totalCount == 9, activeCount .. "/" .. totalCount)
+Check("13 modules actifs au départ", activeCount == 13 and totalCount == 13, activeCount .. "/" .. totalCount)
 
 -- score de référence, tous modules actifs
 Mock.world.rested = 0
@@ -1390,13 +1661,13 @@ Check("poids nul pour un module désactivé", Result("bags") and Result("bags").
 Check("note recalculée sans le module", NS.score ~= scoreAll, scoreAll .. " -> " .. tostring(NS.score))
 Check("détail = désactivé", Result("bags") and Result("bags").detail == "désactivé",
 	Result("bags") and Result("bags").detail)
-Check("compteur mis à jour", select(1, NS:EnabledModuleCount()) == 8, select(1, NS:EnabledModuleCount()))
+Check("compteur mis à jour", select(1, NS:EnabledModuleCount()) == 12, select(1, NS:EnabledModuleCount()))
 
 -- tous désactivés : plus aucun poids -> score 0, pas de division par zéro
 for _, def in ipairs(NS.checks) do NS:SetModuleEnabled(def.id, false) end
 NS:RunChecklist("manual")
 Check("aucun module actif -> score 0", NS.score == 0, NS.score)
-Check("toujours 9 lignes affichées", #NS.lastResults == 9, #NS.lastResults)
+Check("toujours 13 lignes affichées", #NS.lastResults == 13, #NS.lastResults)
 
 -- réactivation
 for _, def in ipairs(NS.checks) do NS:SetModuleEnabled(def.id, true) end
@@ -1409,7 +1680,7 @@ local moduleRows = 0
 for _, row in ipairs(NS.optionsFrame.rows) do
 	if row.isModule then moduleRows = moduleRows + 1 end
 end
-Check("9 interrupteurs de module dans le panneau", moduleRows == 9, moduleRows)
+Check("13 interrupteurs de module dans le panneau", moduleRows == 13, moduleRows)
 
 local bagsRow
 for _, row in ipairs(NS.optionsFrame.rows) do
@@ -1551,7 +1822,7 @@ Check("liseré 50x50", lancer.bg.width == 50, lancer.bg.width)
 Check("pastille = fileID 136467", lancer.plate.texture == 136467, lancer.plate.texture)
 Check("pastille 24x24", lancer.plate.width == 24, lancer.plate.width)
 Check("icône 18x18", lancer.icon.width == 18 and lancer.icon.height == 18, lancer.icon.width)
-Check("icône = sac", tostring(lancer.icon.texture):find("INV_Misc_Bag_10") ~= nil, lancer.icon.texture)
+Check("icône = boussole de la marque", tostring(lancer.icon.texture):find("Textures\\logo") ~= nil, lancer.icon.texture)
 
 -- Classic : chrome historique
 ResetWorld()
@@ -1715,9 +1986,9 @@ Check("DPS listé", blob:find("DPS") ~= nil)
 -- affiche une valeur plus élevée. La mise en avant suit la classe et la spé,
 -- pas le maximum (l'ancienne règle soulignait l'Endurance).
 Check("Force mise en avant pour Guerrier/Armes",
-	blob:find("|cffffd100Force") ~= nil, blob)
+	blob:find("|cffe8a54bForce") ~= nil, blob)
 Check("Endurance non mise en avant malgré sa valeur supérieure",
-	blob:find("|cffffd100Endurance") == nil, blob)
+	blob:find("|cffe8a54bEndurance") == nil, blob)
 
 NS:HidePortraitStats()
 
@@ -1782,13 +2053,13 @@ local function highlightFor(classFile, specIndex)
 end
 
 local rogue = highlightFor("ROGUE", 1)
-Check("Voleur : Agilité mise en avant", rogue:find("|cffffd100Agilité") ~= nil, rogue)
+Check("Voleur : Agilité mise en avant", rogue:find("|cffe8a54bAgilité") ~= nil, rogue)
 local priest = highlightFor("PRIEST", 1)
 Check("Prêtre : Intelligence mise en avant",
-	priest:find("|cffffd100Intelligence") ~= nil, priest)
+	priest:find("|cffe8a54bIntelligence") ~= nil, priest)
 local druid = highlightFor("DRUID", 3)
 Check("Druide Restauration : Endurance non mise en avant",
-	druid:find("|cffffd100Endurance") == nil, druid)
+	druid:find("|cffe8a54bEndurance") == nil, druid)
 -- le panneau ne liste que le strict nécessaire : un Voleur n'a pas d'Esprit,
 -- un Druide Restauration n'a pas de Force à lire en premier
 Check("Voleur : pas d'Esprit", rogue:find("Esprit") == nil, rogue)
@@ -1811,10 +2082,11 @@ local function firstStat(classFile, specIndex)
 	return text
 end
 
-Check("Vindicte : l'Intelligence passe avant la Force",
-	firstStat("PALADIN", 2):find("Intelligence") ~= nil, firstStat("PALADIN", 2))
-Check("Protection paladin : l'Endurance d'abord",
-	firstStat("PALADIN", 3):find("Endurance") ~= nil, firstStat("PALADIN", 3))
+-- ordre des spés (et des onglets de talents) : Sacré 1, Protection 2, Vindicte 3
+Check("Vindicte (spé 3) : l'Intelligence passe avant la Force",
+	firstStat("PALADIN", 3):find("Intelligence") ~= nil, firstStat("PALADIN", 3))
+Check("Protection paladin (spé 2) : l'Endurance d'abord",
+	firstStat("PALADIN", 2):find("Endurance") ~= nil, firstStat("PALADIN", 2))
 Check("Démoniste : ni Force ni Agilité",
 	firstStat("WARLOCK", 1):find("Intelligence") ~= nil, firstStat("WARLOCK", 1))
 
@@ -1935,19 +2207,19 @@ ResetWorld()
 NS:ToggleOptions()
 local editButton = NS.optionsFrame.editButton
 Check("bouton de déplacement présent", editButton ~= nil)
-Check("libellé du bouton", tostring(editButton.text):find("Déplacer") ~= nil,
-	editButton and editButton.text)
+Check("libellé du bouton", tostring(editButton:GetText()):find("Déplacer") ~= nil,
+	editButton and editButton:GetText())
 
 editButton:Click()
 Check("clic active le mode édition", NS.editMode == true)
 Check("réglages refermés", NS.optionsFrame:IsShown() == false)
-Check("bouton renommé pendant l'édition", tostring(editButton.text):find("Terminer") ~= nil,
-	editButton.text)
+Check("bouton renommé pendant l'édition", tostring(editButton:GetText()):find("Terminer") ~= nil,
+	editButton:GetText())
 
 Mock:Reset()
 NS:HandleCommand("move stop")
 Check("/sd move stop termine", NS.editMode == nil)
-Check("bouton redevenu normal", tostring(editButton.text):find("Déplacer") ~= nil, editButton.text)
+Check("bouton redevenu normal", tostring(editButton:GetText()):find("Déplacer") ~= nil, editButton:GetText())
 
 Mock:Reset()
 NS:HandleCommand("move")
@@ -1980,115 +2252,164 @@ Check("bandeau masqué en sortie d'édition",
 Check("les cadres ne sont plus déplaçables en sortie",
 	NS.toastFrame == nil or NS.toastFrame:IsShown() == false)
 
--- Géométrie de la colonne de droite du panneau de réglages : la valeur, puis
--- les boutons -/+ doivent tenir dans la ligne sans se chevaucher ni déborder.
+do -- portée locale (limite de 200 locales en Lua 5.1)
+-- Géométrie du panneau par pages (v1.19.0) : colonne de droite d'une ligne,
+-- pied en trois tiers, pages qui tiennent dans le cadre.
 local lay = NS.OPT_LAYOUT
 Check("colonne de valeurs exposée", lay ~= nil)
 if lay then
-	local rowRight = lay.width - 28
-	local valueEnd = rowRight + lay.valueRight          -- bord droit de la valeur
+	local rowRight = lay.rowWidth
+	local valueEnd = rowRight + lay.valueRight
 	local plusStart = rowRight + lay.plusRight - lay.buttonWidth
 	local minusStart = rowRight + lay.minusRight - lay.buttonWidth
-	Check("les boutons tiennent dans la ligne", -plusStart <= lay.width - 28, plusStart)
+	Check("les boutons tiennent dans la ligne", -plusStart <= lay.rowWidth, plusStart)
 	Check("la valeur ne touche pas le bouton -", valueEnd < minusStart, valueEnd .. " < " .. minusStart)
 	Check("les boutons - et + ne se chevauchent pas", minusStart + lay.buttonWidth <= plusStart,
 		(minusStart + lay.buttonWidth) .. " <= " .. plusStart)
+	Check("la page tient à droite de la navigation", lay.paneLeft + lay.paneWidth <= lay.width - 8,
+		lay.paneLeft + lay.paneWidth)
 end
 
--- Pied du panneau : « Réinitialiser » doit être centré entre « Lancer » et
--- « Fermer », et les trois tiers doivent remplir exactement la largeur utile.
 local foot = NS.OPT_LAYOUT and NS.OPT_LAYOUT.footer
 Check("grille du pied exposée", foot ~= nil)
 if foot then
-	local w1, w2, w3 = foot.widths[1], foot.widths[2], foot.widths[3]
-	local total = w1 + w2 + w3 + (foot.gap * 2)
+	local total = foot.widths[1] + foot.widths[2] + foot.widths[3] + (foot.gap * 2)
 	Check("les trois boutons remplissent la largeur utile", total == foot.inner, total .. " vs " .. foot.inner)
-
-	-- marges gauche/droite égales : 16 de chaque côté
-	local frameWidth = NS.OPT_LAYOUT.width
-	local usedRight = foot.margin + total
-	Check("marge droite égale à la marge gauche", (frameWidth - usedRight) == foot.margin,
-		(frameWidth - usedRight) .. " vs " .. foot.margin)
-
-	-- les deux boutons de la rangée du haut ne doivent pas déborder
-	local secondStart = foot.half + foot.gap
-	Check("le bouton des cadres tient dans la rangée du haut",
-		secondStart + foot.half <= foot.inner, secondStart + foot.half)
+	Check("marge droite égale à la marge gauche", (lay.width - (foot.margin + total)) == foot.margin,
+		(lay.width - (foot.margin + total)) .. " vs " .. foot.margin)
 end
-
 Check("bouton de réinitialisation des cadres présent",
 	NS.optionsFrame ~= nil and NS.optionsFrame.resetFramesButton ~= nil)
 
--- Placement réel des trois boutons du bas, lu sur leurs ancres et non sur les
--- constantes de la grille : c'est le seul moyen de voir un bouton collé à
--- gauche alors que la grille, elle, est correcte.
-if NS.optionsFrame and NS.optionsFrame.runButton then
-	-- X absolu du bord gauche de chaque bouton, mesuré depuis le bord gauche
-	-- du panneau : une ancre relative se résout en marchant la chaîne.
-	local frame = NS.optionsFrame
-	local function LeftOf(button, depth)
-		depth = depth or 0
-		if depth > 6 then return 0 end
-		local point, relTo, relPoint, x = button:GetPoint()
-		x = x or 0
-		if point == "LEFT" and relTo and relTo ~= frame then
-			-- ancré au bord droit d'un autre bouton : on avance son X + largeur
-			return LeftOf(relTo, depth + 1) + (relTo.GetWidth and relTo:GetWidth() or 0) + x
-		end
-		return x
-	end
-
-	local runX   = LeftOf(frame.runButton)
-	local runW   = frame.runButton:GetWidth() or 0
-	local resetX = LeftOf(frame.resetButton)
-	local resetW = frame.resetButton:GetWidth() or 0
-	local closeX = LeftOf(frame.closeButton)
-
-	Check("Réinitialiser n'est pas collé au bouton de gauche", resetX >= (runX + runW),
-		resetX .. " vs " .. (runX + runW))
-
-	local gapLeft  = resetX - (runX + runW)
-	local gapRight = closeX - (resetX + resetW)
-	Check("Réinitialiser est centré entre les deux boutons", math.abs(gapLeft - gapRight) <= 1,
-		gapLeft .. " vs " .. gapRight)
-end
-
--- l'entrée « Réinitialiser les positions » ne doit plus figurer dans la liste
-if NS.optionsFrame and NS.optionsFrame.rows then
-	local stale = false
-	for _, row in ipairs(NS.optionsFrame.rows) do
-		if row.def and row.def.key == "resetPos" then stale = true end
-	end
-	Check("l'ancienne ligne de réinitialisation a disparu", stale == false)
-end
-
--- Le panneau ne doit plus laisser de trou avant les boutons : la hauteur
--- était devinée en amont et comptait une section de trop.
 local frame = NS:EnsureOptions()
 Check("panneau de réglages construit", frame ~= nil)
-if frame and NS.OPT_LAYOUT.realHeight then
-	local realHeight = NS.OPT_LAYOUT.realHeight
-	local contentBottom = NS.OPT_LAYOUT.contentBottom
-	local gap = NS.OPT_LAYOUT.gapBeforeButtons
-	local footerTop = NS.OPT_LAYOUT.footerTopOffset
-	local spaceBetween = contentBottom - (-realHeight + footerTop)
-	Check("espace entre modules et boutons borné", spaceBetween >= 10 and spaceBetween <= 30, spaceBetween)
-end
+if frame then
+	Check("panneau d'options : hauteur fixe qui tient à l'écran", frame.height == lay.height
+		and frame.height <= lay.maxHeight, frame.height)
+	Check("9 pages, 9 boutons de navigation", #frame.navButtons == 9, #frame.navButtons)
 
--- Les OUI de la section Modules doivent partager la colonne de valeurs des
--- autres sections. Ils utilisaient encore -6 au lieu de VALUE_RIGHT et
--- apparaissaient 70 px plus à droite sur la capture.
-if frame and frame.rows then
-	local misaligned = 0
+	-- chaque page tient dans le cadre, au-dessus du pied
+	local overflow = {}
+	for id, page in pairs(frame.pages) do
+		if page.contentBottom < lay.contentLimit then overflow[#overflow + 1] = id .. "=" .. page.contentBottom end
+	end
+	Check("aucune page ne déborde sur le pied", #overflow == 0, table.concat(overflow, ", ") .. " limite " .. lay.contentLimit)
+
+	-- tous les checks ont leur interrupteur, une seule fois
+	local seen, missingModule, twice = {}, {}, 0
 	for _, row in ipairs(frame.rows) do
-		if row.value and row.value.GetPoint and row.def == nil then
-			local point, _, _, x = row.value:GetPoint()
-			if point == "RIGHT" and x ~= NS.OPT_LAYOUT.valueRight then
-				misaligned = misaligned + 1
-			end
+		if row.isModule then
+			if seen[row.moduleId] then twice = twice + 1 end
+			seen[row.moduleId] = true
 		end
 	end
+	for _, def in ipairs(NS.checks) do
+		if not seen[def.id] then missingModule[#missingModule + 1] = def.id end
+	end
+	Check("chaque module a son interrupteur", #missingModule == 0, table.concat(missingModule, ", "))
+	Check("aucun interrupteur en double", twice == 0, twice)
+	Check("aucun module rangé par défaut dans Général", #frame.unplaced == 0, table.concat(frame.unplaced, ", "))
+
+	-- colonne de valeurs commune, libellés qui tiennent
+	local misaligned, tooLong = 0, {}
+	for _, row in ipairs(frame.rows) do
+		local point, _, _, x = row.value:GetPoint()
+		if point == "RIGHT" and x ~= lay.valueRight then misaligned = misaligned + 1 end
+		-- place du libellé : jusqu'à la piste (seuils), la valeur (actions) ou l'interrupteur
+		local room
+		if row.track then room = lay.rowWidth - 2 + lay.trackRight - lay.trackWidth - 6
+		elseif row.toggle then room = lay.rowWidth - 2 + lay.toggleRight - 30 - 6
+		else room = lay.rowWidth - 2 + lay.valueRight - lay.valueWidth end
+		if #(row.label.text or "") * 6.4 > room then tooLong[#tooLong + 1] = tostring(row.label.text) end
+	end
 	Check("les modules partagent la colonne de valeurs", misaligned == 0, misaligned)
+	Check("libellés d'options : aucun débordement", #tooLong == 0, table.concat(tooLong, ", "))
+	local navTooLong = {}
+	for _, nav in ipairs(frame.navButtons) do
+		if #(nav.label.text or "") * 6.4 > lay.navWidth - 16 then navTooLong[#navTooLong + 1] = nav.label.text end
+	end
+	Check("libellés de navigation : aucun débordement", #navTooLong == 0, table.concat(navTooLong, ", "))
+
+	-- aucune ligne superposée dans une même page
+	local overlap = 0
+	for _, page in pairs(frame.pages) do
+		local spots = {}
+		for _, row in ipairs(page.rows) do
+			local _, _, _, x, y = row:GetPoint()
+			local key = tostring(x) .. ":" .. tostring(y)
+			if spots[key] then overlap = overlap + 1 end
+			spots[key] = true
+		end
+	end
+	Check("options : aucune ligne superposée", overlap == 0, overlap)
+end
+
+-- Navigation : une seule page visible, choix mémorisé
+NS:SelectOptionsPage("bags")
+local visiblePages = 0
+for _, page in pairs(frame.pages) do if page:IsShown() then visiblePages = visiblePages + 1 end end
+Check("navigation : une seule page visible", visiblePages == 1 and frame.pages.bags:IsShown())
+Check("navigation : page mémorisée", NS:DB().optionsPage == "bags")
+frame.navButtons[2]:Click()
+Check("navigation : clic sur « Zones sûres »", frame.currentPage == "safe" and frame.pages.safe:IsShown())
+Check("navigation : page inconnue -> Général", (function() NS:SelectOptionsPage("nope"); return frame.currentPage == "general" end)())
+Check("page Sacs : interrupteur + seuil réunis", (function()
+	local hasModule, hasThreshold = false, false
+	for _, row in ipairs(frame.pages.bags.rows) do
+		if row.isModule and row.moduleId == "bags" then hasModule = true end
+		if row.def and row.def.key == "bagFreeThreshold" then hasThreshold = true end
+	end
+	return hasModule and hasThreshold
+end)())
+
+-- Liste des zones sûres : retrait à la souris, défilement
+ResetWorld()
+for i = 1, 12 do
+	NS:DB().safe["v:30:Village " .. string.format("%02d", i)] = { kind = "village", name = "Village " .. string.format("%02d", i),
+		mapID = 30, subzone = "Village " .. i, source = "mail" }
+end
+NS:DB().safe["c:1"] = { kind = "city", name = "Capitale", mapID = 1, source = "resting" }
+NS:DB().cityRest[1] = { A = true, B = true }
+NS.optionsFrame = nil
+NS:ToggleOptions()
+NS:SelectOptionsPage("safe")
+local safeList = NS.optionsFrame.lists.safe
+Check("liste des zones : 13 entrées", #safeList.items == 13, #safeList.items)
+Check("liste des zones : 9 lignes visibles", safeList.lines[9]:IsShown() and safeList.lines[9].item ~= nil)
+Check("liste des zones : défilement possible", safeList.down:IsShown() and not safeList.up:IsShown())
+Check("liste des zones : source lisible", tostring(safeList.lines[1].detail.text):gsub("|c%x%x%x%x%x%x%x%x", ""):gsub("|r", ""):find("capitale, repos") ~= nil,
+	safeList.lines[1].detail.text)
+safeList.down:Click()
+Check("défilement : une ligne plus bas", safeList.offset == 1 and safeList.up:IsShown())
+for _ = 1, 10 do safeList.down:Click() end
+Check("défilement borné en bas", safeList.offset == 4, safeList.offset)
+safeList.offset = 0
+NS:RefreshOptions()
+safeList.lines[1].action:Click()          -- « Capitale » : première par ordre alphabétique
+Check("bouton Retirer : capitale oubliée", NS:DB().safe["c:1"] == nil and NS:DB().cityRest[1] == nil)
+Check("liste rafraîchie après retrait", #safeList.items == 12, #safeList.items)
+NS.optionsFrame.pages.safe.clearButton:Click()
+Check("Tout effacer : liste vide", next(NS:DB().safe) == nil and #safeList.items == 0)
+Check("liste vide : message affiché", safeList.empty.text ~= "", safeList.empty.text)
+
+-- Liste des buffs suivis : bascule et retrait
+ResetWorld()
+NS:DB().buffs[1459] = { name = "Intelligence des arcanes", duration = 1800, enabled = true }
+NS:DB().buffs[1126] = { name = "Marque du fauve", duration = 1800, enabled = true }
+NS.optionsFrame = nil
+NS:ToggleOptions()
+NS:SelectOptionsPage("buffs")
+local buffList = NS.optionsFrame.lists.buffs
+Check("liste des buffs : 2 entrées", #buffList.items == 2, #buffList.items)
+buffList.lines[1]:Click()
+Check("clic sur un buff : coupé", NS:DB().buffs[1459].enabled == false)
+Check("buff coupé affiché « non »", tostring(buffList.lines[1].detail.text):find(NS.L.OPT_OFF) ~= nil,
+	buffList.lines[1].detail.text)
+buffList.lines[1]:Click()
+Check("second clic : réactivé", NS:DB().buffs[1459].enabled == true)
+buffList.lines[2].action:Click()
+Check("bouton Retirer : buff oublié", NS:DB().buffs[1126] == nil and #buffList.items == 1)
+
 end
 
 -- Aucun caractère hors du répertoire de la police du client : "▶" (U+25B6)
@@ -2410,15 +2731,17 @@ Say("\n== chrome des fenêtres ==")
 ResetWorld()
 NS:ToggleOptions()
 local win = NS.optionsFrame
-Check("fond d'infobulle appliqué", win.chrome == "backdrop", win.chrome)
-Check("backdrop renseigné", win.backdrop ~= nil and win.backdrop.edgeFile ~= nil,
-	win.backdrop and win.backdrop.edgeFile)
-Check("bord d'infobulle", tostring(win.backdrop.edgeFile):find("UI%-Tooltip%-Border") ~= nil,
-	win.backdrop and win.backdrop.edgeFile)
-Check("fond d'infobulle", tostring(win.backdrop.bgFile):find("UI%-Tooltip%-Background") ~= nil,
-	win.backdrop and win.backdrop.bgFile)
-Check("fond presque opaque", win.backdropColor and win.backdropColor[4] > 0.8,
-	win.backdropColor and win.backdropColor[4])
+-- v1.20.0 : surface plate maison, plus de fond ni de bord d'infobulle
+Check("surface plate appliquée", win.chrome == "flat", win.chrome)
+Check("aucun backdrop Blizzard", win.backdrop == nil)
+Check("fond presque opaque", win.bg and win.bg.vertex and win.bg.vertex[4] > 0.9, win.bg and win.bg.vertex and win.bg.vertex[4])
+Check("filet 1 px sur les quatre côtés", win.border and win.border.top and win.border.left and win.border.bottom and win.border.right)
+Check("coin d'accent ambre", win.accentH and win.accentH.vertex[1] > 0.9 and win.accentH.vertex[3] < 0.35,
+	win.accentH and table.concat(win.accentH.vertex, ","))
+Check("marque : logo boussole dans le bandeau", win.logo and tostring(win.logo.texture):find("logo") ~= nil,
+	win.logo and win.logo.texture)
+Check("titre en police maison", win.title and win.title.font and tostring(win.title.font.path):find("Alegreya") ~= nil,
+	win.title and win.title.font and win.title.font.path)
 Check("pas de portrait", win.portrait == nil)
 Check("titre présent", win.title ~= nil and tostring(win.title.text):find("Réglages") ~= nil,
 	win.title and win.title.text)
@@ -2429,16 +2752,22 @@ Check("contenu sous le bandeau", win.contentTop == -36, win.contentTop)
 -- le diagnostic aussi
 NS:ToggleOptions()
 NS:RunChecklist("manual")
-Check("diagnostic en fond d'infobulle", NS.window.chrome == "backdrop", NS.window.chrome)
+Check("diagnostic : même surface plate", NS.window.chrome == "flat", NS.window.chrome)
 
--- repli si BackdropTemplate manque
+-- aucun template Blizzard requis : sans BackdropTemplate ni UIPanelButtonTemplate,
+-- le panneau est identique (c'est tout l'intérêt des contrôles dessinés)
 ResetWorld()
 Mock.world.noBackdropTemplate = true
+Mock.world.noButtonTemplate = true
+Mock.world.fontRefused = true
 NS:ToggleOptions()
 local fallback = NS.optionsFrame
-Check("repli sans BackdropTemplate", fallback.chrome == "drawn", fallback.chrome)
+Check("sans templates : même chrome", fallback.chrome == "flat", fallback.chrome)
+Check("police refusée : repli GameFont sans erreur", fallback.title.titleFont == false)
+Mock.world.noButtonTemplate = false
+Mock.world.fontRefused = false
 Check("repli toujours titré", fallback.title ~= nil and tostring(fallback.title.text) ~= "")
-Check("repli toujours complet", fallback.rows ~= nil and #fallback.rows == 22,
+Check("repli toujours complet", fallback.rows ~= nil and #fallback.rows == 33,
 	fallback.rows and #fallback.rows)
 Mock.world.noBackdropTemplate = false
 
@@ -2456,14 +2785,14 @@ _G.UISpecialFrames = {}
 NS:ToggleOptions()
 local inEscape, countAfterOptions = false, #UISpecialFrames
 for _, name in ipairs(UISpecialFrames) do
-	if name == "ReadyToQuestOptionsFrame" then inEscape = true end
+	if name == "Ready2QuestOptionsFrame" then inEscape = true end
 end
 Check("réglages déclarés pour Échap", inEscape, countAfterOptions)
 NS:ToggleOptions()
 NS:RunChecklist("manual")
 local diagInEscape = false
 for _, name in ipairs(UISpecialFrames) do
-	if name == "ReadyToQuestDiagFrame" then diagInEscape = true end
+	if name == "Ready2QuestDiagFrame" then diagInEscape = true end
 end
 Check("diagnostic déclaré pour Échap", diagInEscape)
 Check("aucun doublon dans UISpecialFrames", #UISpecialFrames == 2, #UISpecialFrames)
@@ -2494,6 +2823,694 @@ for _, pair in ipairs({ { "résumé", NS.toastFrame }, { "stats portrait", NS.po
 	Check(label .. " : déplacement terminé", frame.isMoving == false)
 end
 NS:StopEditMode()
+
+do -- portée locale : Lua 5.1 limite le bloc principal à 200 locales
+-- 4.40 v1.18.0 en mode Classic Era : nouveaux checks et marchand
+Say("\n== v1.18.0 : mode Era ==")
+local EraSaved = {}
+local function EnterEra()
+	ResetWorld()
+	EraSaved.delta, EraSaved.stats = C_Item.GetItemStatDelta, C_Item.GetItemStats
+	EraSaved.trade, EraSaved.numQuest = _G.C_TradeSkillUI, C_QuestLog.GetNumQuestLogEntries
+	C_Item.GetItemStatDelta, C_Item.GetItemStats = nil, nil
+	_G.C_TradeSkillUI = nil
+	C_QuestLog.GetNumQuestLogEntries = nil
+	Mock.world.build = { version = "1.15.9", build = "69722", date = "Oct 2026", toc = 11509 }
+	NS:DetectCapabilities()
+end
+local function LeaveEra()
+	C_Item.GetItemStatDelta, C_Item.GetItemStats = EraSaved.delta, EraSaved.stats
+	_G.C_TradeSkillUI, C_QuestLog.GetNumQuestLogEntries = EraSaved.trade, EraSaved.numQuest
+	Mock.world.build = nil
+	NS:DetectCapabilities()
+end
+
+-- Composants de classe
+EnterEra()
+Check("Era : client identifié", NS:ClientFlavour() == "Classic Era", NS:ClientFlavour())
+Mock.world.classToken = "WARRIOR"
+NS:RunChecklist("manual")
+Check("guerrier : composants inactifs", Result("classreagents") and Result("classreagents").disabled == true
+	and Result("classreagents").weight == 0)
+Check("module inactif : libellé « sans objet »", Result("classreagents").detail == "sans objet",
+	Result("classreagents").detail)
+
+Mock.world.classToken = "WARLOCK"
+Mock.world.level = 9
+NS:RunChecklist("manual")
+Check("démoniste niv. 9 : composants inactifs", Result("classreagents").disabled == true)
+Mock.world.level = 20
+Mock.world.bags[0].items[1] = { itemID = 6265, stackCount = 1, quality = 1 }
+NS:RunChecklist("manual")
+local cr = Result("classreagents")
+Check("démoniste : 1 fragment sur 3 = échec", cr and cr.ok == false and cr.detail:find("1 / 3") ~= nil, cr and cr.detail)
+Check("composants : poids fort (15)", cr and cr.weight == 15, cr and cr.weight)
+Mock.world.bags[0].items[1] = { itemID = 6265, stackCount = 5, quality = 1 }
+NS:RunChecklist("manual")
+Check("démoniste : 5 fragments = OK", Result("classreagents").ok == true, Result("classreagents").detail)
+
+Mock.world.classToken = "HUNTER"
+Mock.world.ammo = 50
+NS:RunChecklist("manual")
+Check("chasseur : 50 munitions = échec", Result("classreagents").ok == false, Result("classreagents").detail)
+Mock.world.ammo = 800
+NS:RunChecklist("manual")
+Check("chasseur : 800 munitions = OK", Result("classreagents").ok == true)
+
+Mock.world.classToken = "DRUID"
+Mock.world.level = 40
+Mock.world.bags[0].items[1] = { itemID = 17036, stackCount = 1, quality = 1 }
+NS:RunChecklist("manual")
+Check("druide : une graine d'un autre rang compte", Result("classreagents").ok == true, Result("classreagents").detail)
+
+-- Pierre de foyer
+EnterEra()
+NS:RunChecklist("manual")
+local hs = Result("hearth")
+Check("pas de pierre de foyer : échec", hs and hs.ok == false and hs.score == 0, hs and hs.detail)
+Check("foyer : poids moyen (10)", hs and hs.weight == 10)
+Mock.world.bags[0].items[1] = { itemID = 6948, stackCount = 1, quality = 1 }
+Mock.world.bind = "Long-guet"
+NS:RunChecklist("manual")
+hs = Result("hearth")
+Check("foyer prêt : OK + lieu lié", hs.ok == true and hs.detail:find("Long%-guet") ~= nil, hs.detail)
+Mock.world.cooldowns = { [6948] = { Mock.now - 60, 3600 } }
+NS:RunChecklist("manual")
+hs = Result("hearth")
+Check("foyer en recharge 59 min : échec", hs.ok == false and hs.detail:find("59 min") ~= nil, hs.detail)
+Mock.world.cooldowns = { [6948] = { Mock.now - 3300, 3600 } }
+NS:RunChecklist("manual")
+Check("foyer en recharge 5 min : toléré", Result("hearth").ok == true, Result("hearth").detail)
+
+-- Réparation : muet sans mesure, puis estimation depuis le coût mesuré
+EnterEra()
+Mock.world.durability = { [5] = { 50, 100 } }
+Mock.world.money = 100
+NS:RunChecklist("manual")
+Check("réparation : muette sans mesure", Result("repair").disabled == true)
+NS:DB().autoRepair = false
+NS:DB().autoSellGray = false
+Mock.world.canRepair = true
+Mock.world.repairCost = 5000          -- 50 points manquants -> 100 pc par point
+Mock:Fire("MERCHANT_SHOW")
+Mock:Fire("MERCHANT_CLOSED")
+Check("coût mesuré par point de durabilité", NS:CharData().repairRate == 100, NS:CharData().repairRate)
+Mock.world.durability = { [5] = { 20, 100 } }   -- 80 points -> ~8000 pc
+NS:RunChecklist("manual")
+local rp = Result("repair")
+Check("réparation estimée : or insuffisant", rp and rp.ok == false and rp.detail:find("80 pa") ~= nil, rp and rp.detail)
+Check("réparation : poids moyen (10)", rp and rp.weight == 10)
+Mock.world.money = 10000
+NS:RunChecklist("manual")
+Check("réparation estimée : or suffisant", Result("repair").ok == true, Result("repair").detail)
+
+-- Sorts à apprendre
+EnterEra()
+Mock.world.level = 10
+Mock:Fire("PLAYER_ENTERING_WORLD", true, false)
+Check("premier login : niveau d'entraîneur initialisé", NS:CharData().trainerLevel == 10)
+NS:RunChecklist("manual")
+Check("sorts : inactif tant qu'aucun niveau pair n'est passé", Result("spells").disabled == true)
+Mock.world.level = 11
+Check("niveau impair : rien à apprendre", NS:PendingSpellLevels() == 0)
+Mock.world.level = 12
+NS:RunChecklist("manual")
+local sp = Result("spells")
+Check("niveau 12 : sorts à apprendre", sp and sp.ok == false and sp.disabled ~= true, sp and sp.detail)
+Check("sorts : poids faible (5)", sp and sp.weight == 5)
+Mock.world.tradeskillTrainer = true
+Mock:Fire("TRAINER_SHOW")
+Check("entraîneur de métier : ne compte pas", NS:CharData().trainerLevel == 10)
+Mock.world.tradeskillTrainer = false
+Mock:Fire("TRAINER_SHOW")
+Check("entraîneur de classe : niveau mémorisé", NS:CharData().trainerLevel == 12)
+NS:RunChecklist("manual")
+Check("après l'entraîneur : sorts inactifs", Result("spells").disabled == true)
+
+-- Vente automatique des gris, par tranches de 12
+EnterEra()
+Mock.world.bags[0] = { size = 16, items = {} }
+Mock.world.bags[1] = { size = 16, items = {} }
+for i = 1, 15 do
+	Mock.world.bags[0].items[i] = { itemID = 5000 + i, stackCount = 2, quality = 0, hyperlink = "gris" .. i }
+	Mock.world.itemInfo["gris" .. i] = { name = "Gris " .. i, quality = 0 }
+end
+Mock.world.bags[1].items[1] = { itemID = 5100, stackCount = 1, quality = 0, hyperlink = "sansprix" }
+Mock.world.bags[1].items[2] = { itemID = 5101, stackCount = 1, quality = 1, hyperlink = "blanc" }
+Mock.world.bags[1].items[3] = { itemID = 5102, stackCount = 1, quality = 0, hyperlink = "gris16", hasNoValue = true }
+local savedGetItemInfo = C_Item.GetItemInfo
+C_Item.GetItemInfo = function(link)
+	local price = ({ sansprix = 0, blanc = 500 })[link] or 25
+	if link == "gris16" then price = 99 end
+	return "Objet", link, (link == "blanc") and 1 or 0, 1, 1, "Divers", "", 1, "", nil, price
+end
+Mock:Fire("MERCHANT_SHOW")
+Check("première passe : 12 objets vendus", #(Mock.world.sold or {}) == 12, #(Mock.world.sold or {}))
+Check("une passe suivante est programmée", Mock.world.timers and #Mock.world.timers == 1)
+Mock:Reset()
+Mock:RunTimers()
+Check("seconde passe : les 15 gris vendus", #(Mock.world.sold or {}) == 15, #(Mock.world.sold or {}))
+Check("gris sans prix gardé", Mock.world.bags[1].items[1] ~= nil)
+Check("objet blanc gardé", Mock.world.bags[1].items[2] ~= nil)
+Check("gris « sans valeur » gardé", Mock.world.bags[1].items[3] ~= nil)
+Check("récap chat : 15 objets, 7 pa 50 pc", Mock:Output():find("15 objet%(s%) gris vendu%(s%) : 7 pa 50 pc") ~= nil, Mock:Output())
+Mock:Fire("MERCHANT_CLOSED")
+
+Mock.world.sold = nil
+Mock.world.bags[0].items[1] = { itemID = 5001, stackCount = 1, quality = 0, hyperlink = "gris1" }
+NS:DB().autoSellGray = false
+Mock:Fire("MERCHANT_SHOW")
+Check("vente auto désactivée : rien vendu", Mock.world.sold == nil)
+Mock:Fire("MERCHANT_CLOSED")
+C_Item.GetItemInfo = savedGetItemInfo
+
+-- Réparation automatique
+EnterEra()
+Check("vente auto activée par défaut", NS:DB().autoSellGray == true)
+Check("réparation auto activée par défaut", NS:DB().autoRepair == true)
+Mock.world.canRepair = true
+Mock.world.repairCost = 12345
+Mock.world.money = 100000
+Mock.world.durability = { [5] = { 10, 100 } }
+Mock:Reset()
+Mock:Fire("MERCHANT_SHOW")
+Check("réparation auto effectuée", Mock.world.repaired == 1)
+Check("récap chat : 1 po 23 pa 45 pc", Mock:Output():find("réparé : 1 po 23 pa 45 pc") ~= nil, Mock:Output())
+Mock:Fire("MERCHANT_CLOSED")
+Mock.world.repaired = nil
+Mock.world.repairCost = 50000
+Mock.world.money = 100
+Mock:Reset()
+Mock:Fire("MERCHANT_SHOW")
+Check("or insuffisant : pas de réparation", Mock.world.repaired == nil)
+Check("or insuffisant : message", Mock:Output():find("Pas assez d'or") ~= nil, Mock:Output())
+Mock:Fire("MERCHANT_CLOSED")
+Mock.world.canRepair = false
+Mock.world.money = 100000
+Mock:Fire("MERCHANT_SHOW")
+Check("marchand qui ne répare pas : rien", Mock.world.repaired == nil)
+Mock:Fire("MERCHANT_CLOSED")
+Mock.world.canRepair = true
+NS:DB().autoRepair = false
+Mock:Fire("MERCHANT_SHOW")
+Check("réparation auto désactivée : rien", Mock.world.repaired == nil)
+Mock:Fire("MERCHANT_CLOSED")
+
+-- Réglages exposés dans le panneau d'options
+EnterEra()
+NS.optionsFrame = nil
+NS:EnsureOptions()
+local optKeys = {}
+for _, row in ipairs(NS.optionsFrame and NS.optionsFrame.rows or {}) do
+	if row.def and row.def.key then optKeys[row.def.key] = row.def end
+end
+Check("option : délai avant l'alerte (0–15 s)", optKeys.exitDelay and optKeys.exitDelay.min == 0 and optKeys.exitDelay.max == 15)
+Check("option : vente auto des gris", optKeys.autoSellGray ~= nil)
+Check("option : réparation auto", optKeys.autoRepair ~= nil)
+
+-- Ligne « Parti de » dans la fenêtre de diagnostic
+EnterEra()
+NS:DB().safe["v:30:Comté-de-l'Or"] = { kind = "village", name = "Comté-de-l'Or", mapID = 30,
+	subzone = "Comté-de-l'Or", source = "mail" }
+Mock.world.mapID = 30
+Mock.world.subzone = "Comté-de-l'Or"
+Mock:Fire("PLAYER_ENTERING_WORLD", true, false)
+Mock.now = Mock.now + 60
+Mock.world.subzone = "Bois de l'Est"
+Mock:Fire("ZONE_CHANGED")
+Mock:Advance(6)
+Check("Era : sortie de village détectée", NS.lastResults ~= nil)
+Check("fenêtre : ligne « Parti de » affichée", NS.window and NS.window.departed
+	and NS.window.departed.text:find("Parti de Comté%-de%-l'Or") ~= nil
+	and NS.window.departed.text:find("boîte aux lettres") ~= nil,
+	NS.window and NS.window.departed and NS.window.departed.text)
+NS:RunChecklist("manual")
+Check("check manuel : pas de ligne « Parti de »", NS.window.departed.text == "", NS.window.departed.text)
+
+-- Chaînes : chaque nouvelle clé existe en frFR ET en enUS
+local newKeys = { "MSG_SAFE_PURGED", "MSG_SAFE_RESET", "SAFE_KIND_CITY", "SAFE_KIND_VILLAGE", "SRC_RESTING",
+	"SRC_SANCTUARY", "SRC_BINDER", "SRC_TAXI", "SRC_MAIL", "SRC_BANK", "SRC_TRAINER", "SRC_MERCHANT", "SRC_QUEST",
+	"SRC_MANUAL", "PANEL_DEPARTED", "CMD_HELP_20", "OPT_EXITDELAY", "OPT_SEC_UNIT", "OPT_SECTION_AUTO", "OPT_POPUPSCORE", "OPT_SCORE_UNIT", "MSG_BRIEF", "MSG_BRIEF_FROM", "MSG_AUTOSELL_NOTICE",
+	"OPT_AUTOSELL", "OPT_AUTOREPAIR", "MONEY_GOLD", "MONEY_SILVER", "MONEY_COPPER", "MSG_SOLD", "MSG_REPAIRED",
+	"MSG_REPAIR_POOR", "CHK_CLASSREAGENTS", "CHK_CLASSREAGENTS_LOW", "CHK_CLASSREAGENTS_GOOD", "ADV_CLASSREAGENTS",
+	"REAGENT_AMMO", "REAGENT_SHARD", "REAGENT_FLASH", "REAGENT_TELEPORT", "REAGENT_ARCANE", "REAGENT_CANDLE",
+	"REAGENT_SEED", "REAGENT_ANKH", "REAGENT_SYMBOL", "CHK_HEARTH", "CHK_HEARTH_MISSING", "CHK_HEARTH_READY",
+	"CHK_HEARTH_CD", "ADV_HEARTH", "CHK_REPAIR", "CHK_REPAIR_NONE", "CHK_REPAIR_OK", "CHK_REPAIR_POOR",
+	"ADV_REPAIR", "CHK_SPELLS", "CHK_SPELLS_DETAIL", "ADV_SPELLS", "MODULE_INACTIVE", "MSG_NO_SUBZONE" }
+local localeSource = io.open(ROOT .. "/Locales.lua", "r"):read("*a")
+local enStart = localeSource:find("local enUS = {", 1, true)
+local frPart, enPart = localeSource:sub(1, enStart), localeSource:sub(enStart)
+local missingFr, missingEn = {}, {}
+for _, key in ipairs(newKeys) do
+	if not frPart:find("\n\t" .. key .. " = ", 1, true) then missingFr[#missingFr + 1] = key end
+	if not enPart:find("\n\t" .. key .. " = ", 1, true) then missingEn[#missingEn + 1] = key end
+end
+Check("nouvelles chaînes présentes en frFR", #missingFr == 0, table.concat(missingFr, ", "))
+Check("nouvelles chaînes présentes en enUS", #missingEn == 0, table.concat(missingEn, ", "))
+
+do
+-- ---------------------------------------------------------------------------
+-- Correctifs de l'audit Era (v1.18.0)
+-- ---------------------------------------------------------------------------
+Say("\n== audit Era : correctifs ==")
+
+-- [2] vivres et potions en sous-classe générique 0 (vanilla)
+EnterEra()
+local savedItemSpell = _G.GetItemSpell
+_G.GetItemSpell = function(itemID)
+	return ({ [117] = "Nourriture", [159] = "Boisson", [9999] = "Invocation" })[itemID]
+end
+Mock.world.itemInfo[117] = { name = "Viande coriace", classID = 0, subClassID = 0 }
+Mock.world.itemInfo[159] = { name = "Eau fraîche", classID = 0, subClassID = 0 }
+Mock.world.itemInfo[118] = { name = "Potion de soins mineure", classID = 0, subClassID = 0 }
+Mock.world.itemInfo[9999] = { name = "Babiole", classID = 0, subClassID = 0 }
+Mock.world.bags[0].items[1] = { itemID = 117, stackCount = 4, quality = 1 }
+Mock.world.bags[0].items[2] = { itemID = 159, stackCount = 6, quality = 1 }
+Mock.world.bags[0].items[3] = { itemID = 118, stackCount = 3, quality = 1 }
+Mock.world.bags[0].items[4] = { itemID = 9999, stackCount = 1, quality = 1 }
+NS:DB().potionsThreshold = 3
+NS:RunChecklist("manual")
+Check("[2] Era : nourriture + boisson de sous-classe 0 comptées (10)", Result("vivres").detail:find("10") ~= nil,
+	Result("vivres").detail)
+Check("[2] Era : potion de sous-classe 0 comptée (3)", Result("potions").ok == true, Result("potions").detail)
+_G.GetItemSpell = savedItemSpell
+
+-- [3] journal de quêtes Era : forme moderne, isComplete = 1
+EnterEra()
+local savedTitle = _G.GetQuestLogTitle
+_G.GetQuestLogTitle = function(index)
+	local rows = {
+		{ "Elwynn", 0, 0, true, false, nil },          -- en-tête
+		{ "Les loups", 5, 0, false, false, 1 },       -- terminée
+		{ "Le kobold", 6, 0, false, false, nil },      -- en cours
+		{ "Échouée", 6, 0, false, false, -1 },         -- échouée
+	}
+	local r = rows[index]
+	if not r then return nil end
+	return r[1], r[2], r[3], r[4], r[5], r[6], 0, 100 + index
+end
+Mock.world.quests = { {}, {}, {}, {} }
+NS:RunChecklist("manual")
+Check("[3] Era : quête terminée (isComplete = 1) détectée", Result("quests").ok == false
+	and Result("quests").detail:find("1") ~= nil, Result("quests").detail)
+Check("[3] en-tête et quête échouée ignorés", NS.QuestLogReady(1) == false and NS.QuestLogReady(4) == false)
+_G.GetQuestLogTitle = savedTitle
+
+-- [4] GetItemInfoInstant global quand C_Item n'en a pas
+EnterEra()
+local savedInstant = C_Item.GetItemInfoInstant
+_G.GetItemInfoInstant = savedInstant
+C_Item.GetItemInfoInstant = nil
+Mock.world.itemInfo[4101] = { name = "Pain", classID = 0, subClassID = 5 }
+Mock.world.bags[0].items[1] = { itemID = 4101, stackCount = 7, quality = 1 }
+NS:RunChecklist("manual")
+Check("[4] repli GetItemInfoInstant global", Result("vivres").detail:find("7") ~= nil, Result("vivres").detail)
+C_Item.GetItemInfoInstant = savedInstant
+_G.GetItemInfoInstant = nil
+
+-- [5] repli UnitAura : le spellId est le 10e retour
+EnterEra()
+local savedByIndex = C_UnitAuras.GetAuraDataByIndex
+C_UnitAuras.GetAuraDataByIndex = nil
+_G.UnitAura = function(_, index)
+	if index ~= 1 then return nil end
+	return "Marque du fauve", 136078, 1, nil, 1800, 2800, "player", false, false, 1126
+end
+NS.lastBuffScan = nil
+NS:ScanBuffs()
+Check("[5] UnitAura : buff appris avec le bon spellId (10e retour)", NS:DB().buffs[1126] ~= nil
+	and NS:DB().buffs[false] == nil)
+_G.UnitAura = nil
+C_UnitAuras.GetAuraDataByIndex = savedByIndex
+
+-- [6] comparaison par famille : autre rang, version de groupe
+EnterEra()
+NS:DB().buffs[1243] = { name = "Mot de pouvoir : Robustesse", duration = 1800, enabled = true, learned = true }
+Mock.world.auras = { [21562] = { name = "Prière de robustesse", duration = 3600 } }
+Mock.world.auraOrder = { 21562 }
+NS:RunChecklist("manual")
+Check("[6] Prière de robustesse couvre Robustesse", Result("buffs").ok == true, Result("buffs").detail)
+Mock.world.auras = { [10938] = { name = "Mot de pouvoir : Robustesse", duration = 1800 } }
+Mock.world.auraOrder = { 10938 }
+NS:RunChecklist("manual")
+Check("[6] autre rang du même buff : pas manquant", Result("buffs").ok == true, Result("buffs").detail)
+NS.lastBuffScan = nil
+NS:ScanBuffs()
+Check("[6] autre rang : pas appris une seconde fois", NS:DB().buffs[10938] == nil)
+Check("[6] Bénédiction supérieure = Bénédiction", NS.BuffFamily("Bénédiction supérieure de puissance")
+	== NS.BuffFamily("Bénédiction de puissance"))
+Check("[6] Don du fauve = Marque du fauve", NS.BuffFamily("Don du fauve") == NS.BuffFamily("Marque du fauve"))
+
+-- [7] sans GetPlayerAuraBySpellID : lecture par index, pas « illisible »
+EnterEra()
+local savedByID = C_UnitAuras.GetPlayerAuraBySpellID
+C_UnitAuras.GetPlayerAuraBySpellID = nil
+NS:DB().buffs[1459] = { name = "Intelligence des arcanes", duration = 1800, enabled = true }
+NS:RunChecklist("manual")
+Check("[7] sans API par spellID : buff absent = manquant", Result("buffs").ok == false
+	and Result("buffs").detail:find("Intelligence") ~= nil, Result("buffs").detail)
+Mock.world.auras = { [10157] = { name = "Intelligence des arcanes", duration = 1800 } }
+Mock.world.auraOrder = { 10157 }
+NS:RunChecklist("manual")
+Check("[7] sans API par spellID : buff présent = OK", Result("buffs").ok == true, Result("buffs").detail)
+C_UnitAuras.GetPlayerAuraBySpellID = savedByID
+
+-- [23] buffs de consommables non appris, buffs oubliés après 7 jours
+EnterEra()
+Mock.world.auras = { [19705] = { name = "Bien nourri", duration = 900 } }
+Mock.world.auraOrder = { 19705 }
+NS.lastBuffScan = nil
+NS:ScanBuffs()
+Check("[23] « Bien nourri » n'est pas appris", NS:DB().buffs[19705] == nil)
+Mock.world.auras, Mock.world.auraOrder = {}, {}
+NS:DB().buffs[2000] = { name = "Buff mondial", duration = 7200, enabled = true, learned = true,
+	lastSeen = time() - 8 * 24 * 3600 }
+NS:RunChecklist("manual")
+Check("[23] buff jamais revu depuis 8 jours : plus réclamé", Result("buffs").ok == true, Result("buffs").detail)
+
+-- [8] [9] composants de métier : nombre possédé à jour, accroche de la sélection
+EnterEra()
+NS:ResetLegacyReagents()
+local hooks = {}
+_G.hooksecurefunc = function(name, fn) hooks[name] = fn end
+_G.TradeSkillFrame_SetSelection = function() end
+_G.GetTradeSkillReagentItemLink = function(index, slot)
+	local recipe = (Mock.world.tradeSkillRecipes or {})[index]
+	local reagent = recipe and (recipe.reagents or {})[slot]
+	return reagent and ("|Hitem:" .. reagent.itemID .. "::|h[x]|h") or nil
+end
+Mock.world.tradeSkillRecipes = {
+	{ name = "Bandage en lin", reagents = { { name = "Étoffe de lin", need = 2, have = 0, itemID = 2589 } } },
+	{ name = "Bandage épais", reagents = { { name = "Étoffe de laine", need = 2, have = 0, itemID = 2592 } } },
+}
+Mock.world.tradeSkillSelection = 1
+Mock:Fire("TRADE_SKILL_SHOW")
+Check("[9] sélection de recette accrochée", type(hooks.TradeSkillFrame_SetSelection) == "function")
+NS:InvalidateReagents()
+NS:RunChecklist("manual")
+Check("[8] composant manquant au départ", Result("reagents").ok == false, Result("reagents").detail)
+Mock.world.bags[0].items[5] = { itemID = 2589, stackCount = 4, quality = 1 }
+NS:InvalidateReagents()
+NS:RunChecklist("manual")
+Check("[8] sacs remplis ensuite : composant compté sans rescan", Result("reagents").ok == true, Result("reagents").detail)
+Mock.world.tradeSkillSelection = 2
+hooks.TradeSkillFrame_SetSelection(2)
+NS:RunChecklist("manual")
+Check("[9] changement de recette pris en compte", Result("reagents").detail:find("laine") ~= nil
+	or Result("reagents").detail:find("épais") ~= nil, Result("reagents").detail)
+
+-- [10] fenêtre Craft (Enchantement) sur Era
+EnterEra()
+NS:ResetLegacyReagents()
+_G.GetCraftSelectionIndex = function() return 1 end
+_G.GetCraftInfo = function() return "Enchantement de bracelets", nil, "optimal" end
+_G.GetCraftNumReagents = function() return 1 end
+_G.GetCraftReagentInfo = function() return "Poussière étrange", nil, 3, 1 end
+_G.GetCraftReagentItemLink = function() return "|Hitem:10940::|h[Poussière étrange]|h" end
+NS:DetectCapabilities()
+Check("[10] capacité craftLegacy détectée", NS.Caps.craftLegacy == true)
+-- le cadre d'événements a été enregistré au chargement, sans capacité Craft
+-- dans le mock : on rejoue l'enregistrement comme le ferait le client Era
+NS:RegisterEvents(NS.eventFrame)
+Check("[10] CRAFT_SHOW écouté quand la capacité existe", NS.eventFrame.events.CRAFT_SHOW == true)
+Mock:Fire("CRAFT_SHOW")
+NS:InvalidateReagents()
+NS:RunChecklist("manual")
+Check("[10] composant d'enchantement manquant signalé", Result("reagents").ok == false
+	and Result("reagents").detail:find("Poussière") ~= nil, Result("reagents").detail)
+_G.GetCraftSelectionIndex, _G.GetCraftInfo, _G.GetCraftNumReagents = nil, nil, nil
+_G.GetCraftReagentInfo, _G.GetCraftReagentItemLink = nil, nil
+_G.hooksecurefunc, _G.TradeSkillFrame_SetSelection, _G.GetTradeSkillReagentItemLink = nil, nil, nil
+NS:ResetLegacyReagents()
+
+-- [11] puissance d'attaque = base + bonus (3 retours)
+EnterEra()
+local savedAP = _G.UnitAttackPower
+_G.UnitAttackPower = function() return 100, 30, -5 end
+Check("[11] PA = base + posBuff + negBuff", NS:StatSnapshot().ap == 125, NS:StatSnapshot().ap)
+_G.UnitAttackPower = savedAP
+
+-- [12] spé sur Era : onglet de talents le plus fourni
+EnterEra()
+local savedSpec, savedSpecInfo = _G.GetSpecialization, _G.GetSpecializationInfo
+_G.GetSpecialization, _G.GetSpecializationInfo = nil, nil
+_G.GetNumTalentTabs = function() return 3 end
+_G.GetTalentTabInfo = function(tab)
+	local tabs = { { "Sacré", 5 }, { "Protection", 0 }, { "Vindicte", 31 } }
+	return tabs[tab][1], 135920, tabs[tab][2], "PaladinHoly"
+end
+Check("[12] Era : spé = onglet le plus fourni", NS.SpecIndex() == 3, NS.SpecIndex())
+Check("[12] Era : paladin Vindicte affiche l'Intelligence d'abord",
+	firstStat("PALADIN", nil):find("Intelligence") ~= nil, firstStat("PALADIN", nil))
+_G.GetTalentTabInfo = function(tab)
+	local tabs = { { "Sacré", 0 }, { "Protection", 31 }, { "Vindicte", 5 } }
+	return tabs[tab][1], 135920, tabs[tab][2], "PaladinHoly"
+end
+Check("[12] Era : paladin Protection affiche l'Endurance d'abord",
+	firstStat("PALADIN", nil):find("Endurance") ~= nil, firstStat("PALADIN", nil))
+_G.GetSpecialization, _G.GetSpecializationInfo = savedSpec, savedSpecInfo
+_G.GetNumTalentTabs, _G.GetTalentTabInfo = nil, nil
+
+-- [17] [18] [19] pourcentage, Esprit, ilvl de repli
+EnterEra()
+local before = NS:StatSnapshot()
+Mock.world.stats = { 25, 14, 30, 12, 40 }
+local after = NS:StatSnapshot()
+local spiRow = false
+for _, row in ipairs(NS:DiffSnapshots(before, after)) do
+	if row.key == "spi" or row.label == "SPI" or tostring(row.label):find("Esprit") then spiRow = true end
+end
+Check("[18] un changement d'Esprit apparaît dans le résumé", spiRow)
+local savedAvg = _G.GetAverageItemLevel
+_G.GetAverageItemLevel = nil
+Mock.world.equipped = { [1] = "casque" }
+Mock.world.links = { casque = { name = "Casque", quality = 2, itemLevel = 33, equipLoc = "INVTYPE_HEAD" } }
+Check("[19] sans GetAverageItemLevel : ilvl calculé", NS:StatSnapshot().ilvl == 33, NS:StatSnapshot().ilvl)
+-- [20] Equip sans C_Item.GetItemInfo : repli global
+local savedCInfo = C_Item.GetItemInfo
+_G.GetItemInfo = function(link) return savedCInfo(link) end
+C_Item.GetItemInfo = nil
+Check("[20] Equip : repli GetItemInfo global", NS.ItemData("casque") ~= nil and NS.ItemData("casque").itemLevel == 33)
+C_Item.GetItemInfo = savedCInfo
+_G.GetItemInfo = function(link) return _G.C_Item.GetItemInfo(link) end
+_G.GetAverageItemLevel = savedAvg
+NS:ShowPortraitStats()
+local percentOK = true
+for _, line in ipairs(NS.portraitFrame and NS.portraitFrame.lines or {}) do
+	if tostring(line.right and line.right.text):find("%%%%") then percentOK = false end
+end
+Check("[17] armure : « % » affiché une seule fois", percentOK)
+NS:HidePortraitStats()
+
+-- [21] [22] troncature UTF-8 et glyphes ASCII
+local cutText = NS.Truncate(string.rep("é", 30), 38)
+local lastByte = cutText:byte(#cutText - 3)
+Check("[21] troncature : aucun caractère coupé en deux", cutText:sub(-3) == "..."
+	and #cutText - 3 <= 38 and (#cutText - 3) % 2 == 0, cutText)
+EnterEra()
+NS:RunChecklist("manual")
+local firstAdvice = NS.window and NS.window.adviceLines[1].text or ""
+Check("[22] puce de conseil en ASCII", not firstAdvice:find("•", 1, true), firstAdvice)
+
+-- [14] [15] plus de « Sac & Départ » à l'écran
+Check("[14] préfixe du chat : Ready2Quest", NS.L.TAG:gsub("|c%x%x%x%x%x%x%x%x", ""):gsub("|r", ""):find("[Ready2Quest]", 1, true) ~= nil, NS.L.TAG)
+Check("[14] titre de fenêtre : Ready2Quest", NS.L.WIN_TITLE == "Ready2Quest", NS.L.WIN_TITLE)
+Mock:Reset()
+NS:RecordError("audit-15", "message unique de l'audit")
+Check("[15] message d'erreur : Ready to Quest", Mock:Output():find("Ready2Quest — erreur") ~= nil, Mock:Output())
+
+-- [16] /sd diag donne la raison, pas le mapID
+EnterEra()
+Mock.world.resting = true
+Mock:Reset()
+NS:HandleCommand("diag")
+Check("[16] diag : raison de la zone sûre", Mock:Output():find("true %(resting") ~= nil, Mock:Output())
+
+end
+do
+-- ---------------------------------------------------------------------------
+-- Critique UX (v1.18.0)
+-- ---------------------------------------------------------------------------
+Say("\n== UX : alerte, combat, lignes, libellés ==")
+local function ReadyWorld()
+	EnterEra()
+	Mock.world.itemInfo[4001] = { name = "Pain", classID = 0, subClassID = 5 }
+	Mock.world.bags[0].items[1] = { itemID = 4001, stackCount = 10, quality = 1 }
+	Mock.world.bags[0].items[2] = { itemID = 6948, stackCount = 1, quality = 1 }
+	NS:DB().safe["v:30:Village"] = { kind = "village", name = "Village", mapID = 30, subzone = "Village", source = "mail" }
+	Mock.world.mapID, Mock.world.subzone = 30, "Village"
+	Mock:Fire("PLAYER_ENTERING_WORLD", true, false)
+	Mock.now = Mock.now + 60
+	NS.window = nil
+end
+
+-- [2] bonne note : une ligne dans le chat, pas de fenêtre
+ReadyWorld()
+Mock:Reset()
+Mock.world.subzone = "Bois"
+Mock:Fire("ZONE_CHANGED")
+Mock:Advance(6)
+Check("[UX2] note >= 85 : check lancé", NS.lastResults ~= nil and (NS.score or 0) >= 85, NS.score)
+Check("[UX2] note >= 85 : pas de fenêtre", NS.window == nil or NS.window.shown ~= true)
+Check("[UX2] note >= 85 : une ligne dans le chat", Mock:Output():find("Sac bouclé, %d+/100%. Parti de Village%.") ~= nil, Mock:Output())
+NS:RunChecklist("manual")
+Check("[UX2] check manuel : fenêtre toujours ouverte", NS.window and NS.window.shown == true)
+ReadyWorld()
+NS:DB().popupScore = 100
+Mock.world.subzone = "Bois"
+Mock:Fire("ZONE_CHANGED")
+Mock:Advance(6)
+Check("[UX2] seuil 100 : toujours la fenêtre", NS.window and NS.window.shown == true)
+
+-- [3] combat : la fenêtre attend la fin du combat
+ReadyWorld()
+NS:DB().popupScore = 100
+_G.UnitAffectingCombat = function() return Mock.world.combat == true end
+Mock.world.combat = true
+Mock.world.subzone = "Bois"
+Mock:Fire("ZONE_CHANGED")
+Mock:Advance(30)
+Check("[UX3] en combat : rien ne s'ouvre", NS.lastResults == nil and NS.pendingExit ~= nil)
+Mock.world.combat = false
+Mock:Advance(0.1)
+Check("[UX3] fin du combat : l'alerte part", NS.lastResults ~= nil)
+_G.UnitAffectingCombat = nil
+
+-- [4] plus de doublon « Composants »
+local labels = {}
+for _, def in ipairs(NS.checks) do
+	local label = type(def.label) == "function" and def.label() or def.label
+	labels[label] = (labels[label] or 0) + 1
+end
+local dup = {}
+for label, count in pairs(labels) do if count > 1 then dup[#dup + 1] = label end end
+Check("[UX4] aucun libellé de module en double", #dup == 0, table.concat(dup, ", "))
+
+-- [5] lignes sans objet masquées, échecs en tête, modules coupés en bas
+EnterEra()
+NS:SetModuleEnabled("quests", false)
+Mock.world.durability = { [5] = { 5, 100 } }
+NS.window = nil
+NS:RunChecklist("manual")
+local shown = {}
+for i = 1, NS.window.visibleRows do shown[#shown + 1] = NS.window.rows[i].name.text end
+local shownText = table.concat(shown, ", ")
+Check("[UX5] modules sans objet masqués", not shownText:find("Réparation") and not shownText:find("Sorts")
+	and not shownText:find("Réactifs"), shownText)
+Check("[UX5] échec le plus lourd en tête (vivres, 20)", shown[1] == "Vivres", shownText)
+Check("[UX5] module coupé par le joueur : en bas, grisé", shown[#shown] == "Quêtes", shownText)
+Check("[UX5] fenêtre plus courte que 13 lignes", NS.window.height < NS:WindowHeight(13, false), NS.window.height)
+-- v1.20.0 : la forme porte le statut (losange plein = à voir, au trait = OK)
+local firstStatus = NS.window.rows[1].status
+Check("[UX10] échec : losange plein", firstStatus.state == "bad" or firstStatus.state == "warn", firstStatus.state)
+Check("[UX10] échec : texture pleine, pas au trait", tostring(firstStatus.texture):find("losange_trait") == nil,
+	firstStatus.texture)
+local okStatus
+for i = 1, NS.window.visibleRows do
+	if NS.window.rows[i].status.state == "ok" then okStatus = NS.window.rows[i].status end
+end
+Check("[UX10] OK : losange au trait", okStatus and tostring(okStatus.texture):find("losange_trait") ~= nil)
+NS:SetModuleEnabled("quests", true)
+
+-- [6] repos : information, sans poids ni conseil
+EnterEra()
+Mock.world.rested = 0
+NS:RunChecklist("manual")
+Check("[UX6] repos : poids nul", Result("rest").weight == 0)
+local restAdvice = false
+for _, a in ipairs(NS.lastAdvice or {}) do if a.text == NS.L.ADV_REST then restAdvice = true end end
+Check("[UX6] repos : pas de conseil", restAdvice == false)
+
+-- [7] détail des sorts : tient dans la colonne
+EnterEra()
+Mock.world.level = 10
+Mock:Fire("PLAYER_ENTERING_WORLD", true, false)
+Mock.world.level = 12
+NS:RunChecklist("manual")
+Check("[UX7] sorts : détail court (<= 38)", #Result("spells").detail <= 38 and Result("spells").detail:find("10 %-> 12") ~= nil,
+	Result("spells").detail)
+
+-- [9] vente auto : prévenu une seule fois
+EnterEra()
+Mock:Reset()
+Mock:Fire("MERCHANT_SHOW")
+Mock:Fire("MERCHANT_CLOSED")
+Mock:Fire("MERCHANT_SHOW")
+Mock:Fire("MERCHANT_CLOSED")
+local _, notices = Mock:Output():gsub("vend tes objets gris", "")
+Check("[UX9] message de vente auto : une seule fois", notices == 1, notices)
+
+-- [10] vert de statut distinct du vert de rareté
+Check("[UX10] vert de statut ≠ vert « Inhabituel »", NS.Theme.T_GREEN ~= "|cff1eff00")
+
+end
+do
+-- ---------------------------------------------------------------------------
+-- Identité visuelle (v1.20.0)
+-- ---------------------------------------------------------------------------
+Say("\n== identité visuelle ==")
+EnterEra()
+NS.window = nil
+Mock.world.durability = { [5] = { 5, 100 } }
+NS:RunChecklist("manual")
+local w = NS.window
+Check("[ID] note en police maison, grand corps", w.scoreValue.font and w.scoreValue.font.size >= 30
+	and tostring(w.scoreValue.font.path):find("Alegreya") ~= nil, w.scoreValue.font and w.scoreValue.font.size)
+Check("[ID] verdict dans un tampon bordé", w.stamp and w.stamp.border and w.verdict.text ~= "", w.verdict.text)
+Check("[ID] tampon à la couleur du verdict", w.stamp.border.top.vertex[1] == w.verdict.textColor[1])
+Check("[ID] fenêtre : fondu à l'ouverture", w.fadeIn and w.fadeIn.plays >= 1)
+Check("[ID] titre de la fenêtre : « Avant le départ »", w.title.text == "Avant le départ", w.title.text)
+local target = NS.score
+Check("[ID] animation : départ de 0", w.animStart ~= nil and w.animFrom == 0)
+Mock:Advance(0.1)
+local mid = tonumber(w.scoreValue.text)
+Check("[ID] animation : la note monte", mid ~= nil and mid > 0 and mid < target, tostring(mid) .. " / " .. target)
+Mock:Advance(1)
+Check("[ID] animation : termine sur la valeur exacte", tonumber(w.scoreValue.text) == target and w.animStart == nil,
+	w.scoreValue.text)
+Check("[ID] puces de conseil : losanges ambre", w.adviceBullets[1] and tostring(w.adviceBullets[1].texture):find("losange") ~= nil)
+Check("[ID] préfixe du chat ambre, « 2 » bleu", NS.L.TAG:find("|cffe8a54b", 1, true) ~= nil and NS.L.TAG:find("|cff5b8fd62", 1, true) ~= nil, NS.L.TAG)
+
+NS.optionsFrame = nil
+NS:ToggleOptions()
+local o = NS.optionsFrame
+Check("[ID] options : deux groupes dans la navigation", #o.navGroups == 2, #o.navGroups)
+Check("[ID] options : bouton Fermer en ambre (principal)", o.closeButton.style == "primary")
+local toggles, tracks, subs = 0, 0, 0
+for _, row in ipairs(o.rows) do
+	if row.toggle then toggles = toggles + 1 end
+	if row.track then tracks = tracks + 1 end
+end
+for _, page in pairs(o.pages) do if page.sub.text ~= "" then subs = subs + 1 end end
+Check("[ID] interrupteurs dessinés pour les booléens et modules", toggles == 13 + 9, toggles)
+Check("[ID] pistes pour les seuils", tracks == 10, tracks)
+Check("[ID] chaque page a sa phrase d'explication", subs == 9, subs)
+local delayRow
+for _, row in ipairs(o.rows) do if row.def and row.def.key == "exitDelay" then delayRow = row end end
+NS:DB().exitDelay = 15
+NS:RefreshOptions()
+Check("[ID] piste pleine au maximum", delayRow.track.ratio == 1, delayRow.track.ratio)
+local addonRow
+for _, row in ipairs(o.rows) do if row.def and row.def.key == "enabled" then addonRow = row end end
+Check("[ID] interrupteur actif = ambre", addonRow.toggle.checked == true and addonRow.toggle.knob.vertex[1] > 0.9)
+addonRow:Click()
+Check("[ID] clic : interrupteur coupé", addonRow.toggle.checked == false and NS:DB().enabled == false)
+addonRow:Click()
+NS:SelectOptionsPage("bags")
+Check("[ID] navigation : page active teintée", o.navButtons[3].tint:IsShown() and not o.navButtons[1].tint:IsShown())
+Check("[ID] titre de page en police maison", o.pages.bags.title.font ~= nil)
+-- v1.21.0 : marque Ready2Quest, deuxième couleur
+Check("[R2Q] navigation : logo complet en tête", tostring(o.brandLogo.texture):find("Textures\\logo$") ~= nil, o.brandLogo.texture)
+Check("[R2Q] navigation : nom avec le « 2 » bleu", o.brandName.text:find("|cff5b8fd62|r", 1, true) ~= nil, o.brandName.text)
+Check("[R2Q] bandeau : logo simplifié", tostring(o.logo.texture):find("logo_petit") ~= nil, o.logo.texture)
+Check("[R2Q] groupes de navigation en bleu", o.navGroups[1].textColor[3] > 0.8 and o.navGroups[1].textColor[1] < 0.4)
+Check("[R2Q] commande /r2q", SLASH_SACETDEPART3 == "/r2q")
+Check("[R2Q] API publique sous les deux noms", _G.Ready2Quest == NS and _G.ReadyToQuest == NS)
+
+end
+LeaveEra()
+Mock.world.classToken = nil
+end
 
 -- 5. Bilan
 ----------------------------------------------------------------------------

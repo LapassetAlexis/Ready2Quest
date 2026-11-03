@@ -22,6 +22,12 @@ function ns:DetectCapabilities()
 		and type(GetTradeSkillNumReagents) == "function"
 		and type(GetTradeSkillReagentInfo) == "function") and true or false
 
+	-- Era : Enchantement et dressage du chasseur passent par la fenêtre Craft
+	caps.craftLegacy = (type(GetCraftSelectionIndex) == "function"
+		and type(GetCraftInfo) == "function"
+		and type(GetCraftNumReagents) == "function"
+		and type(GetCraftReagentInfo) == "function") and true or false
+
 	caps.questlogNamespaced = (C_QuestLog and type(C_QuestLog.GetNumQuestLogEntries) == "function") and true or false
 	caps.questlogLegacy = (type(GetNumQuestLogEntries) == "function" and type(GetQuestLogTitle) == "function") and true or false
 	caps.quests = caps.questlogNamespaced or caps.questlogLegacy

@@ -37,83 +37,126 @@ local function BagCounts()
 end
 ns.BagCounts = BagCounts
 
--- Compte les objets des sacs par NOM (le chemin legacy ne fournit pas d'itemID)
-local function BagCountsByName()
-	local counts = {}
-	if not (C_Container and type(C_Container.GetContainerNumSlots) == "function") then
-		return counts
-	end
-	for bag = 0, NUM_BAG_SLOTS do
-		local okSlots, slots = pcall(C_Container.GetContainerNumSlots, bag)
-		if okSlots and type(slots) == "number" then
-			for slot = 1, slots do
-				local ok, info = pcall(C_Container.GetContainerItemInfo, bag, slot)
-				if ok and type(info) == "table" and type(info.itemID) == "number" then
-					local okName, name = pcall(C_Item.GetItemInfo, info.itemID)
-					if okName and type(name) == "string" then
-						counts[name] = (counts[name] or 0) + (info.stackCount or 1)
-					end
-				end
-			end
-		end
-	end
-	return counts
+-- ---------------------------------------------------------------------------
+-- Chemins Classic : la recette sélectionnée dans la fenêtre de métier
+--   * TradeSkill : la plupart des métiers
+--   * Craft      : Enchantement et dressage du chasseur, sur Era
+-- Le client donne le nombre possédé (playerCount) au moment du scan ; pour
+-- qu'il reste juste quand les sacs changent, on retient l'itemID du composant
+-- et on recompte avec GetItemCount au moment du check.
+-- ---------------------------------------------------------------------------
+local LEGACY_APIS = {
+	trade = {
+		selection = "GetTradeSkillSelectionIndex", info = "GetTradeSkillInfo",
+		num = "GetTradeSkillNumReagents", reagent = "GetTradeSkillReagentInfo",
+		link = "GetTradeSkillReagentItemLink", setSelection = "TradeSkillFrame_SetSelection",
+	},
+	craft = {
+		selection = "GetCraftSelectionIndex", info = "GetCraftInfo",
+		num = "GetCraftNumReagents", reagent = "GetCraftReagentInfo",
+		link = "GetCraftReagentItemLink", setSelection = "CraftFrame_SetSelection",
+	},
+}
+local legacyCaches = { trade = {}, craft = {} }
+local hooked = {}
+
+local function Global(name)
+	local fn = rawget(_G, name)
+	if type(fn) == "function" then return fn end
+	return nil
 end
 
--- Cache de la recette sélectionnée (chemin Classic)
-local legacyCache = { name = nil, reagents = nil, at = 0 }
+local function ItemIDFromLink(link)
+	if type(link) ~= "string" then return nil end
+	return tonumber(link:match("item:(%d+)"))
+end
 
-function ns:ScanLegacyTradeSkill()
-	if type(GetTradeSkillSelectionIndex) ~= "function" or type(GetTradeSkillInfo) ~= "function"
-		or type(GetTradeSkillNumReagents) ~= "function" or type(GetTradeSkillReagentInfo) ~= "function" then
-		return
-	end
+local function ScanLegacy(kind)
+	local api = LEGACY_APIS[kind]
+	local getSel, getInfo = Global(api.selection), Global(api.info)
+	local getNum, getReagent = Global(api.num), Global(api.reagent)
+	if not (getSel and getInfo and getNum and getReagent) then return end
 
-	local okSel, selection = pcall(GetTradeSkillSelectionIndex)
+	local okSel, selection = pcall(getSel)
 	if not okSel or type(selection) ~= "number" or selection < 1 then return end
 
-	local okInfo, recipeName, skillType = pcall(GetTradeSkillInfo, selection)
-	if not okInfo or type(recipeName) ~= "string" or skillType == "header" then return end
+	-- GetTradeSkillInfo : name, skillType ; GetCraftInfo : name, subSpellName, craftType
+	local okInfo, recipeName, second, third = pcall(getInfo, selection)
+	local recipeType = (kind == "craft") and third or second
+	if not okInfo or type(recipeName) ~= "string" or recipeType == "header" then return end
 
 	local reagents = {}
-	local okCount, count = pcall(GetTradeSkillNumReagents, selection)
+	local getLink = Global(api.link)
+	local okCount, count = pcall(getNum, selection)
 	if okCount and type(count) == "number" then
 		for i = 1, count do
-			local ok, reagentName, _, required, owned = pcall(GetTradeSkillReagentInfo, selection, i)
+			local ok, reagentName, _, required, owned = pcall(getReagent, selection, i)
 			if ok and type(reagentName) == "string" and type(required) == "number" then
-				reagents[#reagents + 1] = { name = reagentName, need = required, have = owned or 0 }
+				local itemID
+				if getLink then
+					local okLink, link = pcall(getLink, selection, i)
+					if okLink then itemID = ItemIDFromLink(link) end
+				end
+				reagents[#reagents + 1] = { name = reagentName, need = required, have = owned or 0, itemID = itemID }
 			end
 		end
 	end
 
-	legacyCache.name = recipeName
-	legacyCache.reagents = reagents
-	legacyCache.at = ns.Now()
+	local cache = legacyCaches[kind]
+	cache.name, cache.reagents, cache.at = recipeName, reagents, ns.Now()
+end
+
+-- Sur Era, changer de recette dans la fenêtre ne déclenche pas toujours
+-- TRADE_SKILL_UPDATE : on s'accroche à la sélection elle-même. La fonction
+-- n'existe qu'une fois l'interface du métier chargée, d'où l'appel répété.
+function ns:HookLegacySelection()
+	if type(hooksecurefunc) ~= "function" then return end
+	for kind, api in pairs(LEGACY_APIS) do
+		if not hooked[kind] and Global(api.setSelection) then
+			hooked[kind] = true
+			hooksecurefunc(api.setSelection, function()
+				ScanLegacy(kind)
+				ns:InvalidateReagents()
+			end)
+		end
+	end
+end
+
+function ns:ScanLegacyTradeSkill()
+	self:HookLegacySelection()
+	ScanLegacy("trade")
+end
+
+function ns:ScanLegacyCraft()
+	self:HookLegacySelection()
+	ScanLegacy("craft")
 end
 
 local function LegacyReagentEntries()
-	if not legacyCache.reagents then return {} end
-
-	local counts = BagCountsByName()
-	local entry = {
-		recipeID = -1,
-		name = legacyCache.name or "?",
-		craftable = 0,
-		missing = {},
-	}
-	for _, reagent in ipairs(legacyCache.reagents) do
-		local have = counts[reagent.name] or 0
-		if have < reagent.need then
-			entry.missing[#entry.missing + 1] = {
-				name = reagent.name,
-				need = reagent.need,
-				have = have,
-				deficit = reagent.need - have,
-			}
+	local entries = {}
+	for _, kind in ipairs({ "trade", "craft" }) do
+		local cache = legacyCaches[kind]
+		if cache.reagents then
+			local entry = { recipeID = -1, name = cache.name or "?", craftable = 0, missing = {} }
+			for _, reagent in ipairs(cache.reagents) do
+				local have = reagent.have or 0
+				if reagent.itemID and ns.ItemCount then have = ns.ItemCount(reagent.itemID) end
+				if have < reagent.need then
+					entry.missing[#entry.missing + 1] = {
+						name = reagent.name, need = reagent.need, have = have, deficit = reagent.need - have,
+					}
+				end
+			end
+			entry.craftable = (#entry.missing == 0) and 1 or 0
+			entries[#entries + 1] = entry
 		end
 	end
-	entry.craftable = (#entry.missing == 0) and 1 or 0
-	return { entry }
+	return entries
+end
+
+-- Réservé aux tests : vide les recettes mémorisées
+function ns:ResetLegacyReagents()
+	legacyCaches.trade, legacyCaches.craft = {}, {}
 end
 
 local function ItemName(itemID)
@@ -143,7 +186,7 @@ function ns:ReagentStatus()
 	if not caps.crafting then
 		-- Client Classic : pas de « recettes suivies », on utilise la recette
 		-- sélectionnée dans la fenêtre de métier.
-		if caps.tradeskillLegacy then
+		if caps.tradeskillLegacy or caps.craftLegacy then
 			local legacy = LegacyReagentEntries()
 			cache.entries, cache.at = legacy, now
 			return legacy
@@ -252,7 +295,7 @@ function ns:PrintReagents()
 	local entries = self:ReagentStatus()
 	if #entries == 0 then
 		self:Print(L.CHK_REAGENTS_NONE)
-		if ns.Caps and ns.Caps.tradeskillLegacy and not ns.Caps.crafting then
+		if ns.Caps and (ns.Caps.tradeskillLegacy or ns.Caps.craftLegacy) and not ns.Caps.crafting then
 			self:Print("  Ouvre ta fenêtre de métier et sélectionne une recette.")
 		else
 			self:Print("  Coche l'étoile d'une recette dans ta fenêtre de métier.")

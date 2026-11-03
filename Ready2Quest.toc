@@ -3,14 +3,14 @@
 ## Interface-Vanilla: 11509
 ## Interface-TBC: 20506
 ## Interface-Mists: 50504
-## Title: Ready to Quest
+## Title: |cffe8a54bReady|r|cff5b8fd62|r|cffe8a54bQuest|r
 ## Notes: Checklist QoL avant de quitter une zone sûre : sacs, gris à vendre, vivres, buffs, repos, durabilité, quêtes à rendre.
 ## Notes-frFR: Checklist QoL avant de quitter une zone sûre : sacs, gris à vendre, vivres, buffs, repos, durabilité, quêtes à rendre.
-## Version: 1.17.0
+## Version: 1.21.0
 ## Author: Tristabeau
-## SavedVariables: ReadyToQuestDB
+## SavedVariables: Ready2QuestDB
 ## X-Category: Utility
-## IconTexture: Interface\Icons\INV_Misc_Bag_10
+## IconTexture: Interface\AddOns\Ready2Quest\Textures\logo_petit
 
 Bootstrap.lua
 Locales.lua
@@ -19,6 +19,7 @@ Theme.lua
 Core.lua
 Buffs.lua
 Reagents.lua
+Merchant.lua
 Equip.lua
 Stats.lua
 Minimap.lua

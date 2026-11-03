@@ -1,4 +1,168 @@
-# Ready to Quest — v1.17.0
+# Ready2Quest — v1.21.0
+
+## v1.21.0 — Ready to Quest devient Ready2Quest
+
+Un nom plus court, une vraie marque, et le sigle **R2Q**.
+
+**Le logo** est une boussole de poche : anneau de suspension, lunette pointillée, repères cardinaux, **aiguille bleu de nuit** à 38°, pivot ambre et monogramme « R2Q » (le « 2 » en ambre) en Alegreya.
+- `Textures/logo.tga` (128 px) : version complète, en tête de la navigation des réglages, à côté du nom « Ready**2**Quest ».
+- `Textures/logo_petit.tga` (64 px) : la même boussole sans les lettres, illisibles sous 24 px. Elle sert pour les bandeaux, le bouton de minicarte et l'icône de la liste des addons.
+
+**Une deuxième couleur, le bleu de nuit `#5b8fd6`.** Elle reprend l'aiguille du logo et n'a qu'un rôle : **information et navigation**. Ça couvre les groupes de la navigation, le losange des modules « info » (le repos) et la source d'une zone apprise (« boîte aux lettres »). Elle ne sert jamais pour un statut ni pour l'action principale : l'ambre garde l'action et la valeur, et vert, ambre et rouge restent les statuts.
+
+**Le renommage est complet.**
+- Dossier et `.toc` : `Ready2Quest/Ready2Quest.toc`.
+- Sauvegarde : `Ready2QuestDB`.
+- Fenêtres : `Ready2QuestDiagFrame`, `Ready2QuestOptionsFrame`, `Ready2QuestMinimapButton`.
+- API publique : `_G.Ready2Quest` (`_G.ReadyToQuest` reste en alias).
+- Commandes : nouvelle commande `/r2q`. `/sd` et `/sacdepart` marchent toujours.
+- Les chemins de textures sont maintenant construits depuis le nom réel du dossier. Les flèches de `Stats.lua` l'avaient encore en dur.
+
+### Migration : ce qu'il faut faire
+
+1. Supprimer l'ancien dossier `Interface/AddOns/ReadyToQuest`. Sinon les deux versions se chargent.
+2. Copier `Ready2Quest` à sa place.
+3. **Pour garder ses réglages et ses villages appris** : dans `WTF/Account/<compte>/SavedVariables/`, renommer `ReadyToQuest.lua` en `Ready2Quest.lua` (et `ReadyToQuest.lua.bak` s'il existe). C'est nécessaire parce que WoW charge la sauvegarde d'un addon depuis un fichier **qui porte le nom du dossier** : après un renommage, l'ancienne n'est plus lue. Une fois le fichier renommé, l'addon reprend `ReadyToQuestDB` dans `Ready2QuestDB` au premier chargement. Sans cette étape, l'addon repart des réglages par défaut, sans erreur.
+
+Remarque honnête : la migration de la v1.17.0 (`SacEtDepartDB` → `ReadyToQuestDB`) avait la même limite. Elle ne servait que si le fichier de sauvegarde avait été renommé à la main. Elle est conservée dans la chaîne (`SacEtDepartDB` → `ReadyToQuestDB` → `Ready2QuestDB`) : c'est la sauvegarde la plus récente qui l'emporte.
+
+---
+
+
+## v1.20.0 — une identité à soi
+
+L'addon ressemblait à un morceau de l'interface Blizzard. Il a maintenant sa personnalité, sur un principe repris de suites comme EllesmereUI : **un seul système visuel, appliqué partout**. L'apparence, elle, reste propre à Ready to Quest : un « carnet de route », ambre et ardoise, avec une boussole pour marque (détail dans *Direction artistique*).
+
+- **Diagnostic** : titre « Avant le départ », note en grand dans la police maison, qui compte jusqu'à sa valeur, et verdict en tampon bordé à la couleur du statut. « Parti de Comté-de-l'Or · boîte aux lettres » est dans le bandeau. Chaque ligne a un losange de statut, et les conseils ont des puces en losange.
+- **Réglages** : navigation en deux groupes (Préparation, Interface), page active teintée et soulignée d'ambre, titre de page dans la police maison avec une phrase d'explication. Les booléens ont des interrupteurs, les seuils une piste de valeur. « Fermer » est en ambre plein.
+- **Minicarte** : la boussole remplace l'icône de sac.
+- **Chat** : préfixe ambre `[Ready to Quest]`, alerte discrète en « Sac bouclé / Presque prêt / Pas prêt ».
+- **Plus aucun template Blizzard** pour les fenêtres et contrôles : l'apparence ne dépend plus de l'art du client (« Camelot » sur Forever, encore inconnu).
+
+---
+
+
+## v1.19.0 — réglages par pages
+
+Le panneau de réglages était une longue colonne : 910 px en 1.18.0 avant refonte (hors de l'écran), et les réglages d'un même module y étaient éparpillés. L'interrupteur des vivres était dans « Modules », leur seuil dans « Alertes ». Il devient une fenêtre de **600 × 440** avec une navigation à gauche, à la manière d'ElvUI, sous l'habillage de l'addon (fond sombre, liseré or, `GameFont`).
+
+| Page | Contenu |
+|---|---|
+| **Général** | addon actif, fenêtre ou chat, fenêtre sous la note, délai avant l'alerte, silence après connexion, écart entre deux alertes |
+| **Zones sûres** | villages et capitales appris, avec leur source et un bouton **Retirer** par ligne ; **Tout effacer** |
+| **Sacs & butin** | modules Sacs et Butin à vendre ; emplacements libres min., alerte continue, gris avant l'alerte, vente auto |
+| **Vivres & potions** | les deux modules et leurs minimums |
+| **Buffs** | module, apprentissage auto, **liste des buffs suivis** : clic pour activer ou couper, bouton Retirer |
+| **Équipement** | Durabilité et Réparation ; durabilité min., réparation auto |
+| **Personnage** | Réactifs, Sorts, Foyer, Repos ; repos min. |
+| **Métier & quêtes** | composants de métier, quêtes à rendre |
+| **Affichage** | minicarte (bouton, position), résumé de stuff, stats du portrait, déplacer / réinitialiser les cadres |
+
+- La page ouverte est mémorisée.
+- Les listes défilent à la molette ou avec `^` / `v`. C'est fait sans `FauxScrollFrame`, dont la présence n'est pas assurée sur Forever.
+- Un module ajouté plus tard sans page tombe dans « Général » : il reste toujours possible de le couper.
+- Les tests vérifient que chaque module a un seul interrupteur, qu'aucune page ne déborde sur le pied, que les libellés tiennent, et que les listes se mettent à jour après un retrait.
+
+---
+
+## v1.18.0 — l'alerte part enfin à la sortie du village
+
+**Le bug.** La fenêtre ne s'ouvrait pas toute seule en quittant une zone sûre, seulement au clic sur l'icône. Deux causes :
+
+1. **Les zones sûres étaient apprises par `mapID`.** Sur Era, un `mapID` est une zone entière : un repos ou un vendeur à Comté-de-l'Or rendait **toute la forêt d'Elwynn** sûre, pour toujours. Sortir du village ne changeait rien, donc pas de transition, donc pas d'alerte. Chaque marchand croisé sur la route ajoutait une zone de plus.
+2. **`GetRestState()` était lu comme « dans une auberge ».** Il indique en fait un bonus d'XP de repos en réserve : avec du repos d'avance, tu étais « en zone sûre » partout.
+
+**La refonte.**
+
+| | Avant | v1.18.0 |
+|---|---|---|
+| Clé d'un village | `mapID` (zone entière) | `mapID` + sous-zone (`GetSubZoneText`) |
+| Capitale | idem | carte entière, déduite d'un repos vu dans **≥ 2 quartiers** |
+| Apprentissage | repos, vendeur ou courrier : un seul suffit | **indices** (voir ci-dessous) |
+| Sortie | immédiate | confirmée après **6 s** hors zone sûre (réglable 0–15 s) |
+| En vol | alerte en plein ciel | reportée à l'atterrissage, annulée si tu te poses en zone sûre |
+| Mort / fantôme | alerte | ignorée |
+
+Indices, par sous-zone :
+
+| Force | Signal | Événement |
+|---|---|---|
+| **fort** : un seul suffit | repos, aubergiste, maître de vol, boîte aux lettres, banque | `PLAYER_UPDATE_RESTING`, `CONFIRM_BINDER`, `TAXIMAP_OPENED`, `MAIL_SHOW`, `BANKFRAME_OPENED` |
+| moyen | entraîneur | `TRAINER_SHOW` |
+| faible | marchand, donneur de quêtes | `MERCHANT_SHOW`, `QUEST_DETAIL`, `QUEST_GREETING`, `QUEST_COMPLETE` |
+
+Un village est appris avec **un indice fort, ou deux indices moyens/faibles de types différents** (marchand + quête). Deux quêtes prises au même PNJ isolé ne suffisent pas. Les indices partiels sont gardés d'une session à l'autre.
+
+**Migration.** Les anciennes zones (par `mapID`) ne peuvent pas être converties : elles sont **purgées une fois**, avec un message dans le chat. Les villages se réapprennent en quelques minutes de jeu.
+
+**Commandes.** `/sd safe` (village courant), `/sd unsafe` (village ou capitale courants), `/sd safe list`, `/sd safe reset`. La fenêtre de diagnostic affiche « Parti de : Comté-de-l'Or (appris : boîte aux lettres) » pour repérer d'un coup d'œil un village appris à tort.
+
+**Limite connue.** Dans un village où l'auberge porte son propre nom de sous-zone, sortir de l'auberge vers la rue ressemble à une sortie si la rue n'est pas encore apprise. Le délai de 6 s absorbe les allers-retours, et la rue s'apprend vite (marchand + quête, boîte aux lettres).
+
+### Nouveaux checks
+
+| Check | Poids | Actif quand | Échec si |
+|---|---|---|---|
+| **Réactifs** (de classe) | 15 (fort) | la classe en consomme, au niveau du sort | munitions < 200, fragments d'âme < 3, poudre éclipsante < 5, runes de téléportation < 2, poudre des arcanes < 5, chandelles < 5, graine de Renaissance < 1, ankh < 1, symbole de divinité < 1 |
+| **Pierre de foyer** | 10 (moyen) | toujours | absente, ou recharge > 10 min. Affiche le lieu lié (`GetBindLocation`) |
+| **Réparation** | 10 (moyen) | un coût a été mesuré chez un marchand | l'or ne couvre pas le coût estimé |
+| **Sorts à apprendre** | 5 (faible) | un niveau pair est passé depuis la dernière visite chez l'entraîneur de classe | toujours un conseil |
+
+La réparation n'invente rien : chez un marchand qui répare, l'addon relève `GetRepairAllCost()` et le ramène à un prix par point de durabilité manquant. Le check est muet tant qu'aucune mesure n'existe. Le niveau d'entraîneur et le prix de réparation sont gardés **par personnage**.
+
+### Chez le marchand (activé par défaut)
+
+- **Vente des gris** : uniquement qualité grise avec un prix de vente, par tranches de 12 (limite du serveur), récapitulatif « 7 objet(s) gris vendu(s) : 1 po 23 pa ».
+- **Réparation** : si le marchand répare et que l'or suffit, sinon un message.
+
+Les deux se coupent dans `/sd options` → **Chez le marchand**.
+
+### Audit Era : ce qui était faux sans rien dire
+
+Aucun de ces bugs ne levait d'erreur : la note mentait, simplement.
+
+| Module | Sur Era | Correctif |
+|---|---|---|
+| Vivres, potions | les consommables gardent la sous-classe générique 0 de vanilla : **compteur toujours à 0** | reconnus au sort lancé (« Nourriture », « Boisson ») ou au mot « Potion » |
+| Quêtes | `isComplete` vaut `1`, pas `true`, et la forme des retours de `GetQuestLogTitle` varie : **« rien à rendre » en permanence** | forme détectée par la position du booléen `isHeader`, `1` accepté |
+| Consommables | seul `C_Item.GetItemInfoInstant` était appelé | repli sur la fonction globale |
+| Buffs | repli `UnitAura` : le spellId est le 10e retour, pas le 8e | corrigé |
+| Buffs | un rang ou la version de groupe (Prière de robustesse, Don du fauve, Bénédiction supérieure) était signalé « manquant » | comparaison **par famille de nom** |
+| Buffs | sans `GetPlayerAuraBySpellID`, tout devenait « illisible » | lecture des auras par index |
+| Buffs | « Bien nourri » et les buffs mondiaux ponctuels étaient appris puis réclamés | consommables ignorés, buff non revu depuis 7 jours oublié |
+| Composants | sacs recomptés par nom via `GetItemInfo` (nil hors cache) | itemID du composant + `GetItemCount` |
+| Composants | changer de recette ne rafraîchissait pas toujours | accroche de `TradeSkillFrame_SetSelection` |
+| Composants | Enchantement et dressage (fenêtre Craft) non couverts | chemin `GetCraft*`, `CRAFT_SHOW` / `CRAFT_UPDATE` |
+| Stats | `UnitAttackPower` a 3 retours : la PA de l'équipement était ignorée | base + bonus + malus |
+| Stats | pas de `GetSpecialization` : toujours la 1re spé | onglet de talents le plus fourni |
+| Stats (tous clients) | paladin : Protection et Vindicte inversées | ordre Sacré / Protection / Vindicte |
+| Stats | « 12.3 %% », Esprit absent du résumé, ilvl 0 sans `GetAverageItemLevel` | corrigés |
+| Affichage | troncature au milieu d'un caractère accentué ; « … », « • », « — » peut-être absents de la police des cadres | coupe UTF-8 propre, glyphes ASCII |
+| Textes | préfixe du chat, titre et message d'erreur encore en « Sac & Départ » | « Ready to Quest » |
+
+Au passage : `string.lower` dépend de la locale C, et en Latin-1 il casse l'UTF-8 (`0xC3` → `0xE3`). Les comparaisons de noms passent par `ns.AsciiLower`, qui ne touche qu'à A-Z.
+
+Restent à confirmer en jeu : la sous-classe 0 des consommables Era, et la présence des glyphes dans la police.
+
+### UX : moins de bruit, rien hors de l'écran
+
+| Problème | Correctif |
+|---|---|
+| Panneau d'options de **910 px**, boutons du bas hors de l'écran (768 unités à l'échelle 1) | interrupteurs (affichage, automatismes, modules) sur **deux colonnes** : 702 px ; un test borne la hauteur à 740 px |
+| Fenêtre ouverte à chaque sortie, même à 95/100 | note ≥ 85 : **une ligne dans le chat** (« PRÊT, 92/100 (parti de Comté-de-l'Or) ») ; réglage « Fenêtre sous la note », 100 = toujours la fenêtre ; un check manuel l'ouvre toujours |
+| Fenêtre en plein combat | l'alerte attend la fin du combat |
+| Deux lignes « Composants » | « Métier » (recettes) et « Réactifs » (de classe) |
+| 13 lignes dont des « sans objet » | modules sans objet **masqués**, échecs en tête (les plus lourds d'abord), modules coupés en bas ; la fenêtre se redimensionne |
+| Repos : 10 points perdus sur un critère qu'on ne corrige pas en partant | information seulement : poids nul, pas de conseil |
+| « à apprendre (dernier entraîneur : niv. 10) » tronqué | « niv. 10 -> 12 : à apprendre » |
+| Minicarte : clic gauche = réglages | clic gauche = **check** (l'action principale), clic droit = réglages |
+| Vente auto silencieuse la première fois | message unique au premier marchand |
+| Vert de statut = vert de rareté « Inhabituel » | vert adouci ; « ! » devant chaque échec (la couleur seule ne suffit pas aux daltoniens) |
+| Verdict en petit dans le bandeau, « Parti de » en bas | verdict en grand à côté de la note, « Parti de » juste dessous |
+| Seuils « Vivres : 5 » ambigus | « Vivres min. », « Gris avant l'alerte »… ; libellés raccourcis pour tenir en demi-colonne (testé) |
+
+---
+
 
 ## v1.17.0 — le projet s'appelle Ready to Quest
 
@@ -12,12 +176,12 @@ Inchangé : la commande reste `/sd` (`/sacdepart` fonctionne encore). Le titre a
 
 ---
 
-Addon QoL pour **WoW Forever**, habillé aux couleurs de **World of Warcraft** : fond de dialogue sombre, liseré or, polices `GameFont`, boutons `UIPanelButtonTemplate`, couleurs de rareté officielles. Aucune texture importée.
+Addon QoL pour **WoW Forever**, avec sa propre identité « carnet de route » : surfaces ardoise, accent ambre, titres en Alegreya, boussole en guise de marque (voir *Direction artistique*).
 
 | Module | Ce qu'il fait |
 |---|---|
 | **Diagnostic de départ** | Note de préparation sur 100, détail par module, conseils — déclenché à la sortie d'une zone sûre |
-| **Équipement** | Panneau flottant : 17 emplacements, rareté, ilvl, pièces faibles signalées |
+| **Marchand** | Vente des gris et réparation automatiques |
 | **Améliorations flottantes** | Carte ancrée à l'infobulle : verdict, écart d'ilvl et écarts de stats |
 
 > Client : Forever — `## Interface: 16001` (flavour interne `Camelot`).
@@ -26,15 +190,26 @@ Addon QoL pour **WoW Forever**, habillé aux couleurs de **World of Warcraft** :
 
 ## Installation
 
-1. Copier le dossier `ReadyToQuest` dans `.../Interface/AddOns/`
-2. Vérifier le chemin final : `.../Interface/AddOns/ReadyToQuest/ReadyToQuest.toc`
+1. Copier le dossier `Ready2Quest` dans `.../Interface/AddOns/`
+2. Vérifier le chemin final : `.../Interface/AddOns/Ready2Quest/Ready2Quest.toc`
 3. `/reload`, puis `/sd`
 
 Erreur Lua invisible ? `/console scriptErrors 1`.
 
 ---
 
-## Tester sur Classic MoP
+## Tester sur Classic Era
+
+**C'est le terrain d'essai principal tant que Forever n'est pas sorti.** Era (interface `11509`) est le client le plus pauvre en API : tout ce qui marche sur Era devrait marcher sur Forever. L'inverse n'est pas vrai : les chemins propres à Forever (recettes suivies, `GetItemStatDelta`) ne tournent jamais sur Era. La suite de tests rejoue les scénarios v1.18.0 en mode Era (API récentes retirées).
+
+| Point | Era |
+|---|---|
+| Zones sûres : sous-zones (`GetSubZoneText`, `ZONE_CHANGED`) | ✅ |
+| Repos dans les villages | seulement dans l'auberge : d'où l'apprentissage par indices |
+| Composants de métier | recette sélectionnée dans la fenêtre de métier |
+| Comparaison au survol | ilvl, stats si `GetItemStats` est exposé |
+
+## Tester aussi sur Classic MoP
 
 **Oui — et c'est même le meilleur terrain d'essai avant Forever.** Le client MoP Classic (interface `50504`, snapshot `5.5.4.69934`) est plus proche de Forever que Classic Era sur un point : il a aussi `C_Container`, `C_Map` et `C_UnitAuras`.
 
@@ -78,11 +253,11 @@ Deux API retail n'existent dans aucun client Classic. Plutôt que de laisser deu
 
 Conséquence : sur Classic, le module composants fonctionne avec **la recette sélectionnée dans la fenêtre de métier** (au lieu des « recettes suivies »), et la carte de comparaison affiche les écarts de stats si la sonde trouve une source.
 
-`/sd stuff diag` indique laquelle des trois sources est utilisée : `native`, `computed`, ou `aucune source`.
+`/sd diag` liste les capacités détectées ; la carte de comparaison indique d'elle-même « Stats indisponibles sur ce client » quand aucune source n'existe.
 
 ### Marche à suivre
 
-1. Copier `ReadyToQuest` dans `.../Interface/AddOns/` du client MoP.
+1. Copier `Ready2Quest` dans `.../Interface/AddOns/` du client MoP.
 2. Si le client le signale comme obsolète : cocher **« Charger les addons obsolètes »** dans la liste des addons.
 3. `/reload`, puis **`/sd diag`**.
 
@@ -107,12 +282,12 @@ Depuis la v0.5.2, l'addon **parle** au lieu d'être muet.
 Au `/reload`, tu dois voir dans le chat :
 
 ```
-ReadyToQuest 1.15.0 — fichiers chargés
+Ready2Quest 1.21.0 — fichiers chargés
 ```
 
 | Ce que tu vois | Diagnostic |
 |---|---|
-| **Rien du tout** | Les fichiers ne s'exécutent pas : mauvais dossier (`AddOns/ReadyToQuest/ReadyToQuest/`), TOC refusé, ou addon décoché |
+| **Rien du tout** | Les fichiers ne s'exécutent pas : mauvais dossier (`AddOns/Ready2Quest/Ready2Quest/`), TOC refusé, ou addon décoché |
 | **Le témoin, mais pas de panneau** | Un fichier a planté après le bootstrap → `/sd` te dira lequel |
 | **Le témoin + le panneau** | Tout va bien |
 
@@ -153,48 +328,49 @@ Double correction depuis la v0.5.3 :
 Puis vérifier l'arborescence exacte :
 
 ```
-World of Warcraft/_classic_/Interface/AddOns/ReadyToQuest/ReadyToQuest.toc
+World of Warcraft/_classic_era_/Interface/AddOns/Ready2Quest/Ready2Quest.toc
 ```
 
-Un seul niveau `ReadyToQuest`, et le `.toc` directement dedans.
+Un seul niveau `Ready2Quest`, et le `.toc` directement dedans.
 
 ---
 
-## Direction artistique
+## Direction artistique : « carnet de route »
 
-Tout est centralisé dans `Theme.lua`, et **uniquement avec des textures dont la présence est confirmée** (elles sont référencées par le code de Blizzard lui-même) :
+Depuis la v1.20.0, l'addon a sa propre identité. Il ne cherche plus à ressembler à l'interface Blizzard. Tout est centralisé dans `Theme.lua`.
 
-| Élément | Source |
+| Élément | Choix |
 |---|---|
-| Fond des panneaux | `Interface\DialogFrame\UI-DialogBox-Background-Dark` |
-| Fond de la carte de comparaison | `Interface\DialogFrame\UI-DialogBox-Background` |
-| Liseré, filets, barres | `Interface\Buttons\WHITE8X8` teinté or |
-| Boutons | `UIPanelButtonTemplate` (repli sur bouton nu si absent) |
-| Polices | `GameFontNormalLarge`, `GameFontHighlight(Small)`, `NumberFontNormal` |
-| Couleurs de rareté | `ITEM_QUALITY_COLORS` (table de Blizzard) |
-| Icônes de module | `Interface\Icons\INV_Misc_Bag_10`, `INV_Misc_Food_15`, … |
+| Accent | **ambre** `#e8a54b`, réservé à ce qui compte : page active, valeur, action principale, marque |
+| Statut | vert `#6fcf7a` (distinct du vert de rareté), ambre, rouge `#e2604f` |
+| Surfaces | ardoise plate `#13171b`, navigation `#0f1215`, filets `#2a3138` |
+| Signature | équerre ambre dans le coin supérieur gauche de chaque fenêtre |
+| Police des titres | **Alegreya Bold**, embarquée (`Fonts/`, licence OFL, sans nom réservé), pour les titres et la note ; texte courant en `GameFont` |
+| Marque | boussole ambre (`Textures/logo.tga`) : bandeau des fenêtres, bouton de minicarte |
+| Statut des lignes | losange plein = à voir ou en échec, losange au trait = OK : la forme dit l'état autant que la couleur |
+| Contrôles | boutons, interrupteurs, pistes, croix de fermeture **dessinés par l'addon** : aucun `UIPanelButtonTemplate`, `BackdropTemplate` ni `UIPanelCloseButton` |
+| Mouvement | fondu de 0,15 s à l'ouverture (`AnimationGroup`), note qui compte jusqu'à sa valeur en 0,45 s |
+| Voix | « Sac bouclé, 92/100. Parti de Long-guet. », « Presque prêt », « Pas prêt » |
 
-Choix assumé : le cadre doré est **dessiné** (bordures 1 px teintées + filet intérieur) plutôt que délégué à un template `NineSlice`. Forever utilise une déclinaison d'art « Camelot » propre, et un layout NineSlice nommé pourrait ne pas exister — mieux vaut un cadre qui s'affiche toujours.
-
-Aperçu : `ReadyToQuest-apercu.png`, généré par `tests/mockup.py`.
+Textures propres : `logo.tga` (boussole 64×64), `losange.tga` et `losange_trait.tga` (16×16, blancs, teintés en jeu). Elles sont générées en code, et tout le reste est `Interface\Buttons\WHITE8X8` teinté. Si le client refuse la police, l'addon garde `GameFont` sans erreur.
 
 ---
 
 ## 1. Diagnostic de départ
 
-### Zones sûres — quatre signaux cumulés
+### Zones sûres — villages, capitales, signaux du moment
 
-Forever n'a pas d'enum `City` dans `UIMapType`. L'addon combine :
+Forever n'a pas d'enum `City` dans `UIMapType`. Depuis la v1.18.0, une zone est sûre si :
 
-| Signal | Source | Couvre |
+| Cas | Clé | Comment |
 |---|---|---|
-| Repos | `IsResting()`, `GetRestState()` | Auberges, capitales |
-| Sanctuaire | `UnitIsPVPSanctuary("player")` | Hubs neutres |
-| **Vendeur ouvert** | `MERCHANT_SHOW` | **Villages sans repos** |
-| **Boîte aux lettres ouverte** | `MAIL_SHOW` | **Villages sans repos** |
-| Manuel | `/sd safe` | N'importe quel camp |
+| Capitale apprise | `c:<mapID>` (et ses sous-cartes) | repos vu dans ≥ 2 quartiers de la carte |
+| Village appris | `v:<mapID>:<sous-zone>` | 1 indice fort, ou 2 indices faibles de types différents |
+| Repos en cours | `IsResting()` | auberges, capitales |
+| Sanctuaire | `UnitIsPVPSanctuary("player")` | hubs neutres |
+| Manuel | `/sd safe` | le village (sous-zone) courant |
 
-Résolution **en remontant la chaîne des cartes parentes**. La première fois que tu ouvres un vendeur dans un village, il est enregistré.
+Détail des indices et du délai de sortie : section v1.18.0 en tête de ce document.
 
 ### Note pondérée
 
@@ -205,10 +381,16 @@ Résolution **en remontant la chaîne des cartes parentes**. La première fois q
 | Vivres | 20 | quantités / seuil |
 | Potions & flacons | 10 | quantités / seuil |
 | Buffs | 15 | −25 par buff manquant |
-| Repos | 10 | % d'un niveau × 2 |
+| Repos | 0 (information) | % d'un niveau × 2 |
 | Durabilité | 15 | % d'usure |
 | Composants | 5 | bloqué = 40 |
 | Quêtes | 5 | prêtes = 70 |
+| Composants de classe | 15 | quantités / minimum |
+| Pierre de foyer | 10 | absente = 0, recharge > 10 min = 50 |
+| Réparation | 10 | or / coût estimé |
+| Sorts à apprendre | 5 | à apprendre = 50 |
+
+Un module inactif (composants pour un guerrier, réparation jamais mesurée, aucun sort en attente) a un poids nul et n'influence pas la note.
 
 Bilan : **≥ 85 PRÊT** · **≥ 60 PRÊT, AVEC RÉSERVES** · **< 60 INSUFFISANT**. Il s'affiche à droite du bandeau de titre.
 
@@ -228,17 +410,6 @@ Sur `BAG_UPDATE_DELAYED`, une fois, réarmée au-dessus de `seuil + 2`.
 
 ---
 
-## 2. Panneau d'équipement (`/sd stuff`)
-
-Flottant, déplaçable, position mémorisée. 17 emplacements (chemise et tabard écartés).
-
-- icône avec liseré à la couleur de rareté
-- nom coloré, niveau d'objet
-- sous-titre : `ilvl 38 · 3 à améliorer`
-- **les pièces sous `moyenne − 3` ont leur ilvl en orange** → tu vois d'un coup d'œil quoi remplacer
-
----
-
 ## 4. Bouton de minicarte
 
 Un bouton **rond et discret**, calqué sur le bouton de courrier de Blizzard : cadre cliquable 33×33, icône 18×18, liseré circulaire.
@@ -254,12 +425,12 @@ Le choix se fait sur `GetBuildInfo()` (interface `16xxx` = Forever, sinon Classi
 
 | Action | Effet |
 |---|---|
-| **Clic gauche** | ouvre les réglages |
-| **Clic droit** | lance le check immédiatement |
+| **Clic gauche** | lance le check immédiatement |
+| **Clic droit** | ouvre les réglages |
 | **Glisser** | déplace autour de la minicarte (angle mémorisé) |
 | **Survol** | infobulle : nom, dernier score, rappel des actions |
 
-Réglages : `/sd minimap on|off`, ou la ligne **« Bouton sur la minicarte »** dans `/sd options`.
+Réglages : `/sd minimap on|off`, ou la page **Affichage** de `/sd options`.
 
 Un glissement n'ouvre pas les réglages : le clic qui suit un déplacement est ignoré.
 
@@ -268,13 +439,13 @@ Un glissement n'ouvre pas les réglages : le clic qui suit un déplacement est i
 
 ## 5. Activer / désactiver les modules
 
-Chacun des 9 modules a son interrupteur, dans `/sd options` → section **Modules**.
+Chacun des 13 modules a son interrupteur, en tête de sa page dans `/sd options` (ex. Sacs & butin pour les sacs).
 
 **Un module désactivé est exclu du calcul de la note** : son poids devient 0, il n'entre ni au numérateur ni au dénominateur. Désactiver « Sacs » ne fait donc pas monter artificiellement le score par un 100/100 offert — le module disparaît simplement de l'équation.
 
 | Élément | Comportement |
 |---|---|
-| Ligne du panneau de diagnostic | grisée, barre vide, mention « désactivé » |
+| Ligne du panneau de diagnostic | grisée, en bas de la liste, mention « désactivé » |
 | Score global | recalculé sur les seuls modules actifs |
 | Conseils | aucun conseil généré pour un module désactivé |
 | Panneau de réglages | libellé grisé + valeur `non` |
@@ -283,13 +454,13 @@ Chacun des 9 modules a son interrupteur, dans `/sd options` → section **Module
 En ligne de commande :
 
 ```
-/sd modules              liste les 9 modules et leur état
+/sd modules              liste les 13 modules et leur état
 /sd module vivres off    désactive un module
 /sd module vivres on     le réactive
 /sd module vivres        bascule
 ```
 
-Cas limite traité : si **tous** les modules sont désactivés, le score vaut 0 au lieu de provoquer une division par zéro, et les 9 lignes restent affichées.
+Cas limite traité : si **tous** les modules sont désactivés, le score vaut 0 au lieu de provoquer une division par zéro, et les 13 lignes restent affichées.
 
 ---
 
@@ -976,7 +1147,7 @@ Les deux fenêtres utilisent le chrome d'AtlasLootClassic :
 
 Pas de template Blizzard : c'est ce que fait AtlasLoot, et c'est plus sobre qu'une fenêtre à fond de pierre.
 
-Les deux fenêtres sont nommées (`ReadyToQuestDiagFrame`, `ReadyToQuestOptionsFrame`) — nécessaire pour que Échap fonctionne.
+Les deux fenêtres sont nommées (`Ready2QuestDiagFrame`, `Ready2QuestOptionsFrame`) — nécessaire pour que Échap fonctionne.
 
 Si `BackdropTemplate` manque, le panneau retombe sur un chrome dessiné à la main (filets `WHITE8X8`) : il reste complet, simplement moins joli.
 
@@ -1174,12 +1345,9 @@ Nouvelle ligne dans les réglages : **« Position du bouton de minicarte »** �
 
 ```
 /sd                 lance le check
-/sd options         panneau de réglages (13 réglages + 3 actions + 9 modules)
-/sd stuff           affiche/masque le panneau d'équipement
-/sd stuff on|off    explicite
-/sd stuff diag      diagnostic des stats d'objet
+/sd options         réglages par pages (9 pages, 13 modules)
 /sd minimap         bouton de minicarte on/off
-/sd modules         état des 9 modules
+/sd modules         état des 13 modules
 /sd module <id> on|off  active/désactive un module
 /sd toast on|off    résumé éphémère au changement de stuff
 /sd portrait on|off stats au survol du portrait
@@ -1187,8 +1355,9 @@ Nouvelle ligne dans les réglages : **« Position du bouton de minicarte »** �
 /sd move <cadre>    déplace le résumé de stuff ou les stats du portrait
 /sd resetpos        réinitialise les positions
 /sd compo           recettes suivies et composants manquants
-/sd safe | unsafe   marque/retire la zone actuelle
-/sd list            zones sûres connues
+/sd safe | unsafe   marque/retire le village (ou la capitale) actuel
+/sd safe list       villages et capitales appris, avec leur source
+/sd safe reset      efface toutes les zones apprises
 /sd buffs | buff n  buffs suivis / bascule
 /sd seuil <n>       emplacements libres minimum
 /sd popup on|off    fenêtre ou résumé chat
@@ -1225,10 +1394,10 @@ Alias : `/sacdepart`.
 ## Tests
 
 ```
-python3 tests/run_tests.py     →  344 réussis, 0 échoués
+python3 tests/run_tests.py     →  667 réussis, 0 échoués
 ```
 
-Lua 5.1 (version du client), client WoW simulé. Couvre notamment : apprentissage par repos/vendeur/courrier, chaîne de cartes parentes, anti-spam, filtrage des procs, **valeurs secrètes**, comptages sacs/vivres/potions/durabilité/quêtes, score pondéré et bilans, fenêtre de diagnostic (icônes, barres, bandeau), panneau d'équipement (17 lignes, moyenne, rareté, pièces faibles), comparaison au survol (amélioration, régressif, vide, anneaux), **les deux voies de hook tooltip**, bouton sans template Blizzard, et toutes les commandes.
+Lua 5.1 (version du client), client WoW simulé. Couvre notamment : apprentissage par indices (sous-zone, capitale par deux quartiers, purge de l'ancien schéma), délai de sortie / vol / mort, nouveaux checks et automatismes du marchand en mode Era, chaîne de cartes parentes, anti-spam, filtrage des procs, **valeurs secrètes**, comptages sacs/vivres/potions/durabilité/quêtes, score pondéré et bilans, fenêtre de diagnostic (icônes, barres, bandeau), panneau d'équipement (17 lignes, moyenne, rareté, pièces faibles), comparaison au survol (amélioration, régressif, vide, anneaux), **les deux voies de hook tooltip**, bouton sans template Blizzard, et toutes les commandes.
 
 ---
 
@@ -1236,7 +1405,7 @@ Lua 5.1 (version du client), client WoW simulé. Couvre notamment : apprentissag
 
 | Point | Risque | Mitigation |
 |---|---|---|
-| Forme de retour de `C_Item.GetItemStatDelta` | **moyen** | `pcall` + test de type, repli « Pas de comparaison possible », `/sd stuff diag` |
+| Forme de retour de `C_Item.GetItemStatDelta` | **moyen** | `pcall` + test de type, repli « Pas de comparaison possible », `/sd diag` |
 | `itemEquipLoc` → emplacement | moyen | table de correspondance, emplacement vide si inconnu |
 | Voie de hook tooltip | moyen | deux voies + repli, testées |
 | Chemins d'icônes de module | faible (cosmétique) | icône « ? » si absente, aucune erreur |
@@ -1244,7 +1413,7 @@ Lua 5.1 (version du client), client WoW simulé. Couvre notamment : apprentissag
 | `GetCraftableCount` hors fenêtre de métier | moyen | dégrade en « aucune recette suivie » |
 | Granularité des `mapID` | moyen | `/sd diag` l'affiche |
 
-**Au lancement :** `/sd diag` puis `/sd stuff diag`.
+**Au lancement :** `/sd diag`, puis `/sd safe list` après quelques minutes de jeu pour voir les villages appris.
 
 ---
 

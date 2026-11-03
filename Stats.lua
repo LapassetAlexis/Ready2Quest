@@ -75,9 +75,10 @@ function ns:StatSnapshot()
 		snapshot.dps = 0
 	end
 
-	-- UnitAttackPower(unit) -> base, posBuff, negBuff, effective
-	local apBase, _, _, apEffective = Call(UnitAttackPower, "player")
-	snapshot.ap = tonumber(apEffective) or tonumber(apBase) or 0
+	-- UnitAttackPower(unit) -> base, posBuff, negBuff (trois retours seulement).
+	-- La PA venue de l'équipement est dans posBuff : la PA réelle est la somme.
+	local apBase, apPos, apNeg = Call(UnitAttackPower, "player")
+	snapshot.ap = (tonumber(apBase) or 0) + (tonumber(apPos) or 0) + (tonumber(apNeg) or 0)
 
 	local crit = Call(GetCritChance)
 	snapshot.crit = tonumber(crit) or 0
@@ -86,6 +87,10 @@ function ns:StatSnapshot()
 
 	local avg, equipped = Call(GetAverageItemLevel)
 	snapshot.ilvl = tonumber(equipped) or tonumber(avg) or 0
+	-- Era : GetAverageItemLevel peut manquer, on calcule depuis l'équipement
+	if snapshot.ilvl <= 0 and self.AverageItemLevel then
+		snapshot.ilvl = tonumber(self:AverageItemLevel()) or 0
+	end
 
 	-- Liens équipés, pour repérer l'emplacement modifié
 	snapshot.slots = {}
@@ -111,6 +116,7 @@ local COMPARED = {
 	{ key = "agi", label = "AGI", kind = "integer", polarity = true },
 	{ key = "int", label = "INT", kind = "integer", polarity = true },
 	{ key = "sta", label = "STA", kind = "integer", polarity = true },
+	{ key = "spi", label = "SPI", kind = "integer", polarity = true },
 	{ key = "crit", label = "CRIT", kind = "decimal", polarity = true },
 	{ key = "haste", label = "HASTE", kind = "decimal", polarity = true },
 }
@@ -215,8 +221,9 @@ local TOAST_LINE_MIDDLE = -TOAST_TEXT_HEIGHT / 2
 -- Les fleches sont des textures livrees avec l'addon, pas des caracteres :
 -- la police du client s'arrete au latin et aucun glyphe de fleche ne s'affiche
 -- (constate trois fois : triangle, lettre grecque, tous en carre vide).
-local ARROW_DOWN = "Interface\\AddOns\\ReadyToQuest\\Textures\\fleche_baisse"
-local ARROW_UP   = "Interface\\AddOns\\ReadyToQuest\\Textures\\fleche_hausse"
+-- chemin construit depuis le nom réel du dossier : un renommage ne casse plus les flèches
+local ARROW_DOWN = ns.Theme.MEDIA .. "Textures\\fleche_baisse"
+local ARROW_UP   = ns.Theme.MEDIA .. "Textures\\fleche_hausse"
 local ARROW_SIZE = 10           -- cote de la fleche, en unites 1920
 
 -- Exposées pour les tests : la géométrie du bloc est vérifiable sans client.
@@ -456,7 +463,7 @@ function ns:ToastPlaceholderRows()
 	for index = 1, TOAST_ROWS do
 		rows[index] = {
 			label = index == 1 and string.upper(L.STATS_NOCHANGE or "") or "",
-			value = index == 1 and "—" or "",
+			value = index == 1 and "-" or "",
 			improved = true,
 			placeholder = true,
 		}
@@ -473,7 +480,14 @@ function ns:ToastText(rows)
 
 	if rows == "placeholder" then rows = self:ToastPlaceholderRows() end
 
-	frame.title:SetText(SpacedTitle(string.upper(L.STATS_TITLE_SHORT or L.STATS_TITLE or "")))
+	-- espaces entre les lettres seulement si l'interlettrage natif manque :
+	-- sinon l'espacement serait doublé
+	local titleText = string.upper(L.STATS_TITLE_SHORT or L.STATS_TITLE or "")
+	if frame.title.SetNonSpaceGlyphSpacing then
+		frame.title:SetText(titleText)
+	else
+		frame.title:SetText(SpacedTitle(titleText))
+	end
 
 	local lines = {}
 	for index = 1, TOAST_ROWS do
@@ -483,7 +497,7 @@ function ns:ToastText(rows)
 			if entry.placeholder then
 				if row.arrow then row.arrow:Hide() end
 				row.icon:Hide()
-				row.value:SetText(entry.value or "—")
+				row.value:SetText(entry.value or "-")
 				row.value:SetTextColor(Theme.GREY[1], Theme.GREY[2], Theme.GREY[3])
 				row.label:SetText(entry.label or "")
 				row.label:SetTextColor(Theme.GREY[1], Theme.GREY[2], Theme.GREY[3])
@@ -507,7 +521,7 @@ function ns:ToastText(rows)
 					row.icon:Hide()
 				end
 			end
-			lines[#lines + 1] = tostring(row.value.text) .. " " .. tostring(row.label.text)
+			lines[#lines + 1] = tostring(row.value:GetText()) .. " " .. tostring(row.label:GetText())
 		else
 			row.icon:Hide()
 			if row.arrow then row.arrow:Hide() end
@@ -655,11 +669,43 @@ local function ClassColor()
 	return 1, 0.82, 0
 end
 
+-- Spécialisation : GetSpecialization sur Forever ; sur Era (pas de spés),
+-- l'onglet de talents qui a reçu le plus de points. L'ordre des onglets est
+-- celui des spés (Sacré, Protection, Vindicte pour le paladin).
+-- GetTalentTabInfo : Era -> name, icon, pointsSpent, fileName ;
+-- clients plus récents -> id, name, description, icon, pointsSpent, …
+local function TalentTab(index)
+	local fn = rawget(_G, "GetTalentTabInfo")
+	if type(fn) ~= "function" then return nil end
+	local r = { pcall(fn, index) }
+	if not r[1] then return nil end
+	if type(r[2]) == "number" and type(r[3]) == "string" then
+		return r[3], tonumber(r[6]) or 0
+	end
+	return r[2], tonumber(r[4]) or 0
+end
+
+local function SpecIndex()
+	local index = tonumber((Call(rawget(_G, "GetSpecialization"))))
+	if index and index >= 1 then return index end
+	local count = tonumber((Call(rawget(_G, "GetNumTalentTabs")))) or 0
+	local best, bestPoints = nil, 0
+	for tab = 1, count do
+		local _, points = TalentTab(tab)
+		if points and points > bestPoints then best, bestPoints = tab, points end
+	end
+	return best
+end
+ns.SpecIndex = SpecIndex
+
 local function SpecName()
-	local index = Call(GetSpecialization)
+	local index = SpecIndex()
 	if type(index) ~= "number" or index < 1 then return nil end
-	local _, name = Call(GetSpecializationInfo, index)
-	return name
+	if type(rawget(_G, "GetSpecializationInfo")) == "function" then
+		local _, name = Call(GetSpecializationInfo, index)
+		if name then return name end
+	end
+	return (TalentTab(index))
 end
 
 -- ---------------------------------------------------------------------------
@@ -696,8 +742,8 @@ local SPEC_STATS = {
 	-- listée en Sacré.
 	PALADIN = {
 		{ "INT", "SPI" },                       -- Sacré
-		{ "INT", "STR", "AGI", "STA" },         -- Vindicte
-		{ "STA", "AGI", "STR" },                -- Protection
+		{ "STA", "AGI", "STR" },                -- Protection (spé / onglet 2)
+		{ "INT", "STR", "AGI", "STA" },         -- Vindicte (spé / onglet 3)
 	},
 	-- Chasseur : l'Intellect nourrit le mana, donc Flèche mortelle et les
 	-- tirs ; l'Esprit reste listé par les guides, en fin de liste.
@@ -779,7 +825,7 @@ local function StatsForPlayer()
 	local bySpec = classFile and SPEC_STATS[classFile]
 	if not bySpec then return STAT_KEY_ORDER end
 
-	local index = tonumber(Call(GetSpecialization) or 0) or 0
+	local index = SpecIndex() or 0
 	if classFile == "DRUID" and index == 2 and IsBearForm() then
 		return FERAL_TANK_ORDER
 	end
@@ -831,7 +877,7 @@ function ns:ShowPortraitStats()
 
 	entries[#entries + 1] = {
 		left = L["STAT_ARMOR"] or "ARMOR",
-		right = string.format("%d  %s%.1f %%%%|r", math.floor(snapshot.armor + 0.5), Theme.T_PARCHMENT,
+		right = string.format("%d  %s%.1f %%|r", math.floor(snapshot.armor + 0.5), Theme.T_PARCHMENT,
 			snapshot.reduction),
 	}
 	entries[#entries + 1] = {

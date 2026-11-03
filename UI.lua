@@ -8,13 +8,24 @@ local unpack = unpack or table.unpack   -- Lua 5.1 (client) / 5.4+
 local WIDTH      = 440
 local ROW_HEIGHT = 19
 local MAX_ADVICE = 3
-local DETAIL_TITLE = 38   -- longueur max du texte de détail (évite le débordement)
+local DETAIL_TITLE = 46   -- longueur max du texte de détail (évite le débordement)
 
+-- Coupe à `limit` octets sans jamais couper un caractère UTF-8 en deux (é, â…
+-- font deux octets) : un octet de continuation (0x80-0xBF) ne peut pas
+-- commencer la partie retirée. « ... » en ASCII : « … » n'est pas garanti
+-- dans la police des cadres sur Era.
 local function Truncate(text, limit)
 	text = tostring(text or "")
 	if #text <= limit then return text end
-	return text:sub(1, limit - 1) .. "…"
+	local cut = limit - 3
+	while cut > 0 do
+		local nextByte = text:byte(cut + 1)
+		if not nextByte or nextByte < 0x80 or nextByte > 0xBF then break end
+		cut = cut - 1
+	end
+	return text:sub(1, cut) .. "..."
 end
+ns.Truncate = Truncate
 
 local function VerdictText(self)
 	local label, color = self:ScoreLabel()
@@ -31,60 +42,68 @@ function ns:EnsureWindow()
 	if not Theme or not Theme.CreatePanel then return nil end
 
 	local rowCount = #(self.checks or {})
-	local height = 40 + 52 + 12 + (rowCount * ROW_HEIGHT) + 12 + 16 + (MAX_ADVICE * 13) + 34
+	local height = self:WindowHeight(rowCount, false)
 
-	local frame = Theme.CreatePanel(UIParent, WIDTH, height, L.ADDON_NAME, { name = "ReadyToQuestDiagFrame" })
+	local frame = Theme.CreatePanel(UIParent, WIDTH, height, L.WIN_TITLE_DIAG, { name = "Ready2QuestDiagFrame", titleSize = 14 })
 	if not frame then return nil end
 	ns:RestorePoint(frame, "diagPoint", { point = "CENTER", x = 0, y = 120 })
 
-	-- Le sous-titre du bandeau porte le bilan : lisible sans lire le détail
+	-- « Parti de Comté-de-l'Or · boîte aux lettres » : à droite du bandeau,
+	-- c'est le contexte de l'alerte (et l'endroit où repérer un village appris
+	-- à tort). Le sous-titre du bandeau sert à ça.
 	frame.subtitle:SetText("")
+	frame.subtitle:SetWidth(WIDTH - 190)
+	frame.subtitle:SetJustifyH("RIGHT")
+	frame.subtitle:SetWordWrap(false)
+	frame.departed = frame.subtitle
 
 	local top = frame.contentTop
 
-	-- Bloc préparation -------------------------------------------------------
-	frame.scoreLabel = frame:CreateFontString(nil, "OVERLAY", Theme.F_BODY)
-	frame.scoreLabel:SetPoint("TOPLEFT", frame, "TOPLEFT", 14, top)
-	frame.scoreLabel:SetText(L.PANEL_PREPARATION)
-	frame.scoreLabel:SetTextColor(Theme.PARCHMENT[1], Theme.PARCHMENT[2], Theme.PARCHMENT[3])
-
-	frame.scoreValue = frame:CreateFontString(nil, "OVERLAY", Theme.F_TITLE)
-	frame.scoreValue:SetPoint("LEFT", frame.scoreLabel, "RIGHT", 10, 0)
+	-- Bloc note : le chiffre en grand, dans la police maison, et le verdict en
+	-- tampon à droite. C'est ce qu'on lit en premier.
+	frame.scoreValue = Theme.CreateTitle(frame, 34)
+	frame.scoreValue:SetPoint("TOPLEFT", frame, "TOPLEFT", 14, top - 6)
 
 	frame.scoreSuffix = frame:CreateFontString(nil, "OVERLAY", Theme.F_BODY)
-	frame.scoreSuffix:SetPoint("LEFT", frame.scoreValue, "RIGHT", 3, 0)
+	frame.scoreSuffix:SetPoint("BOTTOMLEFT", frame.scoreValue, "BOTTOMRIGHT", 6, 4)
 	frame.scoreSuffix:SetText(Theme.T_GREY .. "/ 100|r")
 
-	frame.scoreBar = Theme.CreateBar(frame, WIDTH - 28, 11)
-	frame.scoreBar:SetPoint("TOPLEFT", frame, "TOPLEFT", 14, top - 30)
+	frame.stamp = CreateFrame("Frame", nil, frame)
+	frame.stamp:SetSize(150, 24)
+	frame.stamp:SetPoint("TOPRIGHT", frame, "TOPRIGHT", -14, top - 12)
+	frame.stamp.border = Theme.Border(frame.stamp, Theme.GOLD, 1)
+	frame.verdict = Theme.CreateTitle(frame.stamp, 12)
+	frame.verdict:SetPoint("CENTER", frame.stamp, "CENTER", 0, 0)
+	frame.verdict:SetText("")
 
-	Theme.CreateDivider(frame, WIDTH - 28, top - 52)
+	frame.scoreBar = Theme.CreateBar(frame, WIDTH - 28, 5)
+	frame.scoreBar:SetPoint("TOPLEFT", frame, "TOPLEFT", 14, top - 46)
+
+	Theme.CreateDivider(frame, WIDTH - 28, top - 58)
 
 	-- Lignes de modules ------------------------------------------------------
+	-- Placées à chaque affichage (LayoutWindow) : les modules sans objet sont
+	-- masqués et les lignes en échec remontent en tête. Un losange porte le
+	-- statut : plein = à voir (ambre) ou en échec (rouge), au trait = OK. La
+	-- forme dit l'état autant que la couleur (lisible par un daltonien).
 	frame.rows = {}
-	local rowsTop = top - 66
 
 	for index = 1, rowCount do
-		local def = self.checks[index]
 		local row = CreateFrame("Frame", nil, frame)
 		row:SetSize(WIDTH - 28, ROW_HEIGHT - 3)
-		row:SetPoint("TOPLEFT", frame, "TOPLEFT", 14, rowsTop - ((index - 1) * ROW_HEIGHT))
 
-		row.icon = Theme.CreateIcon(row, 15, def and def.icon or nil, 1)
-		row.icon:SetPoint("LEFT", row, "LEFT", 0, 0)
+		row.status = Theme.CreateDiamond(row, 9, true)
+		row.status:SetPoint("LEFT", row, "LEFT", 2, 0)
 
 		row.name = row:CreateFontString(nil, "OVERLAY", Theme.F_BODY)
-		row.name:SetPoint("LEFT", row, "LEFT", 23, 0)
-		row.name:SetWidth(92)
+		row.name:SetPoint("LEFT", row, "LEFT", 20, 0)
+		row.name:SetWidth(100)
 		row.name:SetJustifyH("LEFT")
 		row.name:SetWordWrap(false)
 
-		row.bar = Theme.CreateBar(row, 76, 7)
-		row.bar:SetPoint("LEFT", row, "LEFT", 120, 0)
-
 		row.detail = row:CreateFontString(nil, "OVERLAY", Theme.F_BODY)
-		row.detail:SetPoint("LEFT", row, "LEFT", 206, 0)
-		row.detail:SetWidth(WIDTH - 28 - 206 - 4)
+		row.detail:SetPoint("LEFT", row, "LEFT", 128, 0)
+		row.detail:SetWidth(WIDTH - 28 - 128 - 4)
 		row.detail:SetJustifyH("LEFT")
 		row.detail:SetWordWrap(false)
 
@@ -92,23 +111,29 @@ function ns:EnsureWindow()
 	end
 
 	-- Conseils ---------------------------------------------------------------
-	local adviceTop = rowsTop - (rowCount * ROW_HEIGHT) - 10
-	Theme.CreateDivider(frame, WIDTH - 28, adviceTop)
+	frame.adviceDivider = Theme.CreateDivider(frame, WIDTH - 28, 0)
 
-	frame.adviceHeader = frame:CreateFontString(nil, "OVERLAY", Theme.F_BODY)
-	frame.adviceHeader:SetPoint("TOPLEFT", frame, "TOPLEFT", 14, adviceTop - 12)
+	frame.adviceHeader = frame:CreateFontString(nil, "OVERLAY", Theme.F_SMALL)
 	frame.adviceHeader:SetText(L.PANEL_ADVICE)
-	frame.adviceHeader:SetTextColor(Theme.GOLD[1], Theme.GOLD[2], Theme.GOLD[3])
+	frame.adviceHeader:SetTextColor(Theme.GOLD_SOFT[1], Theme.GOLD_SOFT[2], Theme.GOLD_SOFT[3])
 
-	frame.adviceLines = {}
+	frame.adviceLines, frame.adviceBullets = {}, {}
 	for index = 1, MAX_ADVICE do
 		local line = frame:CreateFontString(nil, "OVERLAY", Theme.F_BODY)
-		line:SetPoint("TOPLEFT", frame, "TOPLEFT", 20, adviceTop - 26 - ((index - 1) * 13))
-		line:SetWidth(WIDTH - 34)
+		line:SetWidth(WIDTH - 40)
 		line:SetJustifyH("LEFT")
 		line:SetText("")
+		line:SetTextColor(0.81, 0.78, 0.72)
 		frame.adviceLines[index] = line
+		local bullet = Theme.CreateDiamond(frame, 6, false)
+		bullet:SetTexture(Theme.DIAMOND)
+		bullet:SetVertexColor(Theme.GOLD[1], Theme.GOLD[2], Theme.GOLD[3], 1)
+		frame.adviceBullets[index] = bullet
 	end
+
+	-- Animation : la note compte jusqu'à sa valeur, la barre suit (0,45 s)
+	frame:SetScript("OnUpdate", function(f) ns:AnimateScore(f) end)
+	self:LayoutWindow(frame, rowCount, false)
 
 	-- Boutons ----------------------------------------------------------------
 	-- Les largeurs etaient codees en dur (128/100/90) sans rapport avec le
@@ -146,7 +171,7 @@ function ns:EnsureWindow()
 
 	frame.closeButton = Theme.CreateButton(frame, closeWidth, BUTTON_HEIGHT, L.OPT_CLOSE, function()
 		frame:Hide()
-	end)
+	end, "primary")
 	frame.closeButton:SetPoint("BOTTOMRIGHT", frame, "BOTTOMRIGHT", -14, 10)
 
 	ns.DIAG_LAYOUT = {
@@ -165,6 +190,70 @@ function ns:EnsureWindow()
 end
 
 -- ---------------------------------------------------------------------------
+-- Mise en page variable : nombre de lignes visibles, ligne « Parti de »
+-- ---------------------------------------------------------------------------
+local DEPARTED_HEIGHT = 14
+
+function ns:WindowHeight(visible, hasDeparted)
+	return 40 + 52 + 12 + (hasDeparted and DEPARTED_HEIGHT or 0) + (visible * ROW_HEIGHT)
+		+ 12 + 16 + (MAX_ADVICE * 13) + 34
+end
+
+function ns:LayoutWindow(frame, visible, hasDeparted)
+	local top = frame.contentTop or -36
+	local rowsTop = top - 66 - (hasDeparted and DEPARTED_HEIGHT or 0)
+	for index, row in ipairs(frame.rows or {}) do
+		row:ClearAllPoints()
+		row:SetPoint("TOPLEFT", frame, "TOPLEFT", 14, rowsTop - ((index - 1) * ROW_HEIGHT))
+		if index <= visible then row:Show() else row:Hide() end
+	end
+
+	local adviceTop = rowsTop - (visible * ROW_HEIGHT) - 10
+	frame.adviceDivider:ClearAllPoints()
+	frame.adviceDivider:SetPoint("TOPLEFT", frame, "TOPLEFT", 12, adviceTop)
+	frame.adviceHeader:ClearAllPoints()
+	frame.adviceHeader:SetPoint("TOPLEFT", frame, "TOPLEFT", 14, adviceTop - 12)
+	for index, line in ipairs(frame.adviceLines or {}) do
+		line:ClearAllPoints()
+		line:SetPoint("TOPLEFT", frame, "TOPLEFT", 26, adviceTop - 26 - ((index - 1) * 13))
+		local bullet = frame.adviceBullets and frame.adviceBullets[index]
+		if bullet then
+			bullet:ClearAllPoints()
+			bullet:SetPoint("TOPLEFT", frame, "TOPLEFT", 16, adviceTop - 29 - ((index - 1) * 13))
+		end
+	end
+	frame:SetHeight(self:WindowHeight(visible, hasDeparted))
+	frame.visibleRows = visible
+end
+
+-- Ordre d'affichage : échecs d'abord (les plus lourds en tête), puis les
+-- modules en ordre, puis ceux que le joueur a coupés. Les modules sans objet
+-- (inactifs : pas de composant pour un guerrier, réparation jamais mesurée…)
+-- sont masqués : une ligne grise « sans objet » ne dit rien.
+function ns:DisplayOrder(results)
+	local failed, ok, off = {}, {}, {}
+	for index, result in ipairs(results or {}) do
+		result._order = index
+		if result.disabled then
+			if not result.inactive then off[#off + 1] = result end
+		elseif result.ok or result.info then
+			ok[#ok + 1] = result
+		else
+			failed[#failed + 1] = result
+		end
+	end
+	table.sort(failed, function(a, b)
+		if a.weight ~= b.weight then return a.weight > b.weight end
+		return a._order < b._order
+	end)
+	local list = {}
+	for _, group in ipairs({ failed, ok, off }) do
+		for _, result in ipairs(group) do list[#list + 1] = result end
+	end
+	return list
+end
+
+-- ---------------------------------------------------------------------------
 -- Affichage
 -- ---------------------------------------------------------------------------
 function ns:ShowWindow(results)
@@ -177,44 +266,60 @@ function ns:ShowWindow(results)
 
 	local score = self.score or 0
 	local ratio = score / 100
-
-	frame.scoreValue:SetText(Theme.T_GOLD .. tostring(score) .. "|r")
-
 	local sr, sg, sb = unpack(Theme.ScoreColor(ratio))
-	frame.scoreBar:SetColor(sr, sg, sb)
-	frame.scoreBar:SetValue(ratio)
 
-	if frame.subtitle then
-		frame.subtitle:SetText(VerdictText(self))
+	frame.scoreValue:SetText(tostring(score))
+	frame.scoreBar:SetColor(Theme.GOLD[1], Theme.GOLD[2], Theme.GOLD[3])
+	frame.scoreBar:SetValue(ratio)
+	-- départ de l'animation : la note compte de 0 à sa valeur
+	frame.animFrom, frame.animTo, frame.animStart = 0, score, ns.Now()
+
+	if frame.verdict then
+		frame.verdict:SetText(self:ScoreLabel())
+		frame.verdict:SetTextColor(sr, sg, sb)
+		frame.stamp.border:SetColor(sr, sg, sb, 1)
 	end
 
+	frame.departed:SetText(self:DepartedShort() or "")
+	local ordered = self:DisplayOrder(results)
+	self:LayoutWindow(frame, #ordered, false)
+
 	for index, row in ipairs(frame.rows or {}) do
-		local result = results[index]
+		local result = ordered[index]
 		if result and result.disabled then
-			-- Module désactivé : grisé, hors calcul de la note
+			-- Module coupé par le joueur : grisé, en bas, hors calcul de la note
 			row.name:SetText(result.label)
 			row.name:SetTextColor(0.42, 0.42, 0.42)
-			row.bar:SetColor(0.30, 0.30, 0.30)
-			row.bar:SetValue(0)
-			row.detail:SetText(Theme.T_GREY .. L.MODULE_OFF .. "|r")
+			row.status:SetTexture(Theme.DIAMOND_LINE)
+			row.status:SetVertexColor(0.35, 0.37, 0.40, 1)
+			row.status.state = "off"
+			row.detail:SetText(Theme.T_GREY .. tostring(result.detail or L.MODULE_OFF) .. "|r")
 		elseif result then
 			row.name:SetText(result.label)
-			row.name:SetTextColor(Theme.PARCHMENT[1], Theme.PARCHMENT[2], Theme.PARCHMENT[3])
-
-			local r, g, b = unpack(Theme.ScoreColor((result.score or 0) / 100))
-			row.bar:SetColor(r, g, b)
-			row.bar:SetValue((result.score or 0) / 100)
-
+			row.name:SetTextColor(Theme.TEXT[1], Theme.TEXT[2], Theme.TEXT[3])
 			row.detail:SetText(Truncate(result.detail, DETAIL_TITLE))
-			if result.ok then
-				row.detail:SetTextColor(0.78, 0.78, 0.78)
+
+			if result.ok or result.info then
+				local c = result.info and Theme.BLUE or Theme.GREEN
+				row.status:SetTexture(Theme.DIAMOND_LINE)
+				row.status:SetVertexColor(c[1], c[2], c[3], 1)
+				row.status.state = result.info and "info" or "ok"
+				row.detail:SetTextColor(0.55, 0.57, 0.59)
 			else
-				row.detail:SetTextColor(Theme.ORANGE[1], Theme.ORANGE[2], Theme.ORANGE[3])
+				local severe = (result.score or 0) < 55
+				local c = severe and Theme.RED or Theme.ORANGE
+				row.status:SetTexture(Theme.DIAMOND)
+				row.status:SetVertexColor(c[1], c[2], c[3], 1)
+				row.status.state = severe and "bad" or "warn"
+				if severe then
+					row.detail:SetTextColor(0.94, 0.64, 0.59)
+				else
+					row.detail:SetTextColor(0.94, 0.78, 0.55)
+				end
 			end
 		else
 			row.name:SetText("")
 			row.detail:SetText("")
-			row.bar:SetValue(0)
 		end
 	end
 
@@ -222,13 +327,19 @@ function ns:ShowWindow(results)
 	if #advice == 0 then
 		frame.adviceLines[1]:SetText(Theme.T_GREEN .. L.PANEL_NOADVICE .. "|r")
 		for index = 2, MAX_ADVICE do frame.adviceLines[index]:SetText("") end
+		for index, bullet in ipairs(frame.adviceBullets or {}) do
+			if index == 1 then bullet:Show() else bullet:Hide() end
+		end
 	else
 		for index = 1, MAX_ADVICE do
 			local entry = advice[index]
+			local bullet = frame.adviceBullets and frame.adviceBullets[index]
 			if entry then
-				frame.adviceLines[index]:SetText(Theme.T_GOLD .. "•|r " .. entry.text)
+				frame.adviceLines[index]:SetText(entry.text)
+				if bullet then bullet:Show() end
 			else
 				frame.adviceLines[index]:SetText("")
+				if bullet then bullet:Hide() end
 			end
 		end
 	end
@@ -239,7 +350,22 @@ function ns:ShowWindow(results)
 	end
 
 	frame:Show()
+	Theme.FadeIn(frame, 0.15)
 	return frame
+end
+
+-- Note qui compte jusqu'à sa valeur ; la barre suit. Termine toujours sur la
+-- valeur exacte, quel que soit le nombre d'images.
+local ANIM_DURATION = 0.45
+function ns:AnimateScore(frame)
+	if not frame.animStart then return end
+	local t = (ns.Now() - frame.animStart) / ANIM_DURATION
+	if t >= 1 then t = 1 end
+	local eased = 1 - (1 - t) * (1 - t)
+	local value = math.floor(frame.animFrom + (frame.animTo - frame.animFrom) * eased + 0.5)
+	frame.scoreValue:SetText(tostring(value))
+	frame.scoreBar:SetValue(value / 100)
+	if t >= 1 then frame.animStart = nil end
 end
 
 -- ---------------------------------------------------------------------------
@@ -265,6 +391,23 @@ function ns:PrintSummary(results)
 	for _, entry in ipairs(self.lastAdvice or {}) do
 		self:Print("  " .. Theme.T_GOLD .. "•|r " .. entry.text)
 	end
+	local departed = self:DepartedText()
+	if departed then self:Print("  " .. departed) end
+end
+
+-- Version courte, pour le bandeau : « Parti de Comté-de-l'Or · boîte aux lettres »
+function ns:DepartedShort()
+	local from = self.lastDeparture
+	if not from then return nil end
+	return self:F("PANEL_DEPARTED_SHORT", tostring(from.name or "?"),
+		Theme.T_BLUE .. self:SourceLabel(from.source) .. "|r")
+end
+
+-- « Parti de : X (appris : source) », ou nil pour un check manuel
+function ns:DepartedText()
+	local from = self.lastDeparture
+	if not from then return nil end
+	return self:F("PANEL_DEPARTED", tostring(from.name or "?"), self:SourceLabel(from.source))
 end
 
 if ns.Mark then ns.Mark("UI") end
