@@ -4,7 +4,7 @@
 -- chargement. C'est ce qui permet de diagnostiquer à distance un addon muet.
 local ADDON, ns = ...
 
-ns.version = "1.23.0"
+ns.version = "1.24.0"
 ns.Loaded = {}
 ns.loadOrder = {}
 ns.errors = {}

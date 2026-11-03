@@ -3,6 +3,52 @@
 > Document destiné au développement : historique version par version, choix d'API, compatibilité des clients, tests. Pour la présentation de l'addon, voir le [README](../README.md).
 
 
+## v1.24.0 — confort de jeu : quatre modules QoL
+
+Les modules ont été faits comme en v1.23.0 : un agent par module dans son worktree, sur l'API d'extension, puis fusionnés.
+
+**Préparation (`a6b9fe2`).**
+- **Navigation repliable** (`ns:LayoutNav`) : les sous-pages ne s'affichent que sous leur module ouvert. Sans ça, la navigation aurait débordé.
+- **QoL** devient une entrée parente. `ns.AddOptionPage` range un module à la fin des MODULES et une page QoL à la fin du QoL. Les modules de la v1.23.0 étaient rangés par erreur sous le titre QOL.
+
+**Point d'entrée des commandes.** `ns.EXTRA_COMMANDS`, consulté par `HandleCommand` : la table `COMMANDS` est locale. Les commandes du cœur restent prioritaires. Deux agents ont ajouté la même ligne, une seule a été gardée.
+
+**La bonne récompense** (`QuestReward.lua`)
+- **Pondération** : les stats prioritaires de la spé (`ns.SPEC_STATS`) pèsent 1 / 0,6 / 0,4 / 0,25 / 0,15. Pour une spé physique, le DPS d'arme et la puissance d'attaque comptent ; sinon, la puissance des sorts.
+- **Maîtrises** (`PROFICIENCY`) : types d'armure, maille et plaques à partir du niveau 40, boucliers, reliques, armes, ambidextrie.
+- **Comparaison** : avec la pièce portée. Pour un emplacement double (anneaux, bijoux), avec la plus faible des deux.
+- **Sans `GetItemStats`** (Era) : le niveau d'objet, filtré par les maîtrises.
+- **Repli** : le prix de vente.
+- **Boutons** : `QuestInfoRewardsFrame.RewardButtons`, puis `QuestInfoRewardsFrameQuestInfoItem<i>`, `QuestInfoItem<i>` et `QuestRewardItem<i>`. Sinon, une ligne de chat.
+
+**Rythme de leveling** (`LevelPace.lua`)
+- **XP par heure** : sur la session et sur une fenêtre glissante (15 à 60 min). Le passage de niveau est pris en compte.
+- **Estimations** : par ennemi, d'après les messages `CHAT_MSG_COMBAT_XP_GAIN` lus avec les chaînes du client ; par quête, d'après `QUEST_TURNED_IN`.
+- **Repos** (warcraft.wiki.gg « Rest ») : 5 % d'un niveau par 8 h en auberge ou en ville, un quart de ce rythme ailleurs, plafonné à 150 %.
+- **Barre d'XP** : `MainMenuExpBar` sur Era ; sur Forever, `MainStatusTrackingBarContainer` et les barres qui s'en rapprochent.
+- **Pour l'Expédition** : `ns:PaceXPPerHour()` est exposé.
+
+**Sac plein** (`BagSpace.lua`)
+- **Déclenchement** : l'erreur « inventaire plein », sous les deux signatures de `UI_ERROR_MESSAGE`, ou un butin qui ne rentre pas.
+- **Classement** : prix de vente × pile, du moins cher au plus cher. Un prix inconnu n'est jamais proposé.
+- **Exclusions** : objets de quête, clés, pierre de foyer, réactifs de classe, composants des recettes suivies, derniers vivres, liste « garder ».
+- **Destruction** : uniquement dans le `OnAccept` d'une StaticPopup dédiée. La case est revérifiée (même objet, même pile, pas de combat) et le curseur aussi, avant `DeleteCursorItem`. La confirmation n'est pas réglable.
+- **Alias** : `bags` retiré à l'intégration. C'est l'identifiant du contrôle Sacs, et `/r2q module bags off` doit toujours viser ce contrôle (testé).
+
+**Après la mort** (`Death.lua`)
+- **Distance** : `C_DeathInfo.GetCorpseMapPosition` et `C_Map.GetPlayerMapPosition`, converties en coordonnées monde par `C_Map.GetWorldPosFromMapPos`. Repli sur `C_Map.GetMapWorldSize`, sinon « distance inconnue ».
+- **Fantôme** : 125 % de la vitesse de course, soit 8,75 yd/s (warcraft.wiki.gg « Death (gameplay) »).
+- **Guérisseur** : il coûte 25 % de durabilité en plus des 10 % de la mort, converti en or avec le coût de réparation mesuré.
+- **Mal de résurrection** : aucun jusqu'au niveau 10, puis (niveau − 10) minutes, plafonné à 10 min. `GetResSicknessDuration` est prioritaire s'il est lisible.
+- **Verdict** : courir si le temps de course est inférieur à la faiblesse.
+- **Rien en instance ni en champ de bataille.**
+
+**À vérifier en jeu**
+- **Récompense** : les noms des boutons de récompense, et `GameTooltip:SetQuestItem`.
+- **Rythme** : la barre d'XP de Forever, et l'ordre des événements quand on rend une quête.
+- **Sac plein** : `DeleteCursorItem` depuis le bouton d'une StaticPopup d'addon (point principal), et `ERR_INV_FULL` en français.
+- **Mort** : les positions renvoyées par `GetCorpseMapPosition`, et le format de `GetResSicknessDuration`.
+
 ## v1.23.0 — trois nouveaux modules et une API d'extension
 
 ### API d'extension (`32daa4d`)

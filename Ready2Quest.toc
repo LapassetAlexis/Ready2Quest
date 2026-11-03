@@ -6,7 +6,7 @@
 ## Title: |cffe8a54bReady|r|cff5b8fd62|r|cffe8a54bQuest|r
 ## Notes: Checklist QoL avant de quitter une zone sûre : sacs, gris à vendre, vivres, buffs, repos, durabilité, quêtes à rendre.
 ## Notes-frFR: Checklist QoL avant de quitter une zone sûre : sacs, gris à vendre, vivres, buffs, repos, durabilité, quêtes à rendre.
-## Version: 1.23.0
+## Version: 1.24.0
 ## Author: Tristabeau
 ## SavedVariables: Ready2QuestDB
 ## X-Category: Utility

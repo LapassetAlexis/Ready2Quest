@@ -131,7 +131,8 @@ end
 
 if ns.RegisterModule then
 	ns.RegisterModule({ id = "bagspace", key = "bagspaceEnabled", label = "OPT_PAGE_BAGSPACE",
-		aliases = { "sac", "bags", "sacplein" } })
+		-- pas « bags » : c'est l'identifiant du contrôle Sacs (/r2q module bags off)
+		aliases = { "sac", "sacplein" } })
 end
 
 -- l'aide liste la commande, dans la rubrique « Divers »
