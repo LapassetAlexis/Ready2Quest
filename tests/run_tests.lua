@@ -602,6 +602,27 @@ local function ResetWorld()
 	if NS.InvalidateReagents then NS:InvalidateReagents() end
 end
 
+-- Pages ajoutées par des modules (ns.AddOptionPage) : les comptes du panneau
+-- ci-dessous portent sur les pages de base, on y ajoute la part des modules
+-- pour qu'un nouveau module n'oblige pas à retoucher ces chiffres.
+-- (une seule locale : le fichier frôle la limite de 200 de Lua 5.1)
+local EXT = { rows = 0, bools = 0, numbers = 0, nav = 0, pages = 0, core = { general = true, departure = true,
+	trigger = true, safe = true, bags = true, gear = true, buffs = true, toast = true, portrait = true, merchant = true } }
+for _, def in ipairs(NS.OPTION_PAGES or {}) do
+	if not EXT.core[def.id] then
+		EXT.nav = EXT.nav + 1
+		if not def.target then EXT.pages = EXT.pages + 1 end
+		for _ in ipairs(def.modules or {}) do EXT.rows = EXT.rows + 1; EXT.bools = EXT.bools + 1 end
+		for _, row in ipairs(def.rows or {}) do
+			if not row.header then
+				EXT.rows = EXT.rows + 1
+				if row.kind == "bool" then EXT.bools = EXT.bools + 1 end
+				if row.kind == "number" then EXT.numbers = EXT.numbers + 1 end
+			end
+		end
+	end
+end
+
 ----------------------------------------------------------------------------
 -- 4. Scénarios
 ----------------------------------------------------------------------------
@@ -1104,7 +1125,7 @@ Check("RefreshOptions sans panneau ne plante pas", true)
 NS:HandleCommand("options")
 Check("panneau créé", NS.optionsFrame ~= nil)
 Check("panneau affiché", NS.optionsFrame and NS.optionsFrame.shown == true)
-Check("31 lignes (17 réglages + 1 action + 13 contrôles)", NS.optionsFrame and #NS.optionsFrame.rows == 31, NS.optionsFrame and #NS.optionsFrame.rows)
+Check("31 lignes (17 réglages + 1 action + 13 contrôles)", NS.optionsFrame and #NS.optionsFrame.rows == 31 + EXT.rows, NS.optionsFrame and #NS.optionsFrame.rows)
 
 local boolRow
 for _, row in ipairs(NS.optionsFrame.rows) do
@@ -1652,7 +1673,7 @@ for _, row in ipairs(NS.optionsFrame.rows) do
 	if row.def and row.def.key == "showMinimap" then minimapRow = row end
 end
 Check("ligne dédiée dans les réglages", minimapRow ~= nil)
-Check("31 lignes au total", NS.optionsFrame and #NS.optionsFrame.rows == 31, #NS.optionsFrame.rows)
+Check("31 lignes au total", NS.optionsFrame and #NS.optionsFrame.rows == 31 + EXT.rows, #NS.optionsFrame.rows)
 if minimapRow then minimapRow:Click() end
 Check("décocher masque le bouton", lancer.shown == false)
 if minimapRow then minimapRow:Click() end
@@ -2335,7 +2356,7 @@ Check("panneau de réglages construit", frame ~= nil)
 if frame then
 	Check("panneau d'options : hauteur fixe qui tient à l'écran", frame.height == lay.height
 		and frame.height <= lay.maxHeight, frame.height)
-	Check("10 entrées de navigation (3 modules, 5 sous-pages, Général, Marchand)", #frame.navButtons == 10, #frame.navButtons)
+	Check("10 entrées de navigation (3 modules, 5 sous-pages, Général, Marchand)", #frame.navButtons == 10 + EXT.nav, #frame.navButtons)
 
 	-- chaque page tient dans le cadre, au-dessus du pied
 	local overflow = {}
@@ -2837,7 +2858,7 @@ Check("police refusée : repli GameFont sans erreur", fallback.title.titleFont =
 Mock.world.noButtonTemplate = false
 Mock.world.fontRefused = false
 Check("repli toujours titré", fallback.title ~= nil and tostring(fallback.title.text) ~= "")
-Check("repli toujours complet", fallback.rows ~= nil and #fallback.rows == 31,
+Check("repli toujours complet", fallback.rows ~= nil and #fallback.rows == 31 + EXT.rows,
 	fallback.rows and #fallback.rows)
 Mock.world.noBackdropTemplate = false
 
@@ -3552,11 +3573,11 @@ for _, row in ipairs(o.rows) do
 	if row.track then tracks = tracks + 1 end
 end
 for _, page in pairs(o.pages) do if page.sub.text ~= "" then subs = subs + 1 end end
-Check("[ID] interrupteurs dessinés pour les booléens et contrôles", toggles == 13 + 7, toggles)
-Check("[ID] pistes pour les seuils", tracks == 10, tracks)
+Check("[ID] interrupteurs dessinés pour les booléens et contrôles", toggles == 13 + 7 + EXT.bools, toggles)
+Check("[ID] pistes pour les seuils", tracks == 10 + EXT.numbers, tracks)
 local pageCount = 0
 for _ in pairs(o.pages) do pageCount = pageCount + 1 end
-Check("[ID] chaque page a sa phrase d'explication", subs == pageCount and pageCount == 7, subs .. "/" .. pageCount)
+Check("[ID] chaque page a sa phrase d'explication", subs == pageCount and pageCount == 7 + EXT.pages, subs .. "/" .. pageCount)
 local displayRows = {}
 for _, row in ipairs(o.pages.general.rows) do if row.def then displayRows[row.def.key] = true end end
 Check("[AFF] Général réunit l'affichage", displayRows.showMinimap and displayRows.minimapPos and displayRows.showWindow
@@ -3590,7 +3611,7 @@ NS.optionsFrame = nil
 NS:ToggleOptions()
 local function NavOf(id) for _, nav in ipairs(NS.optionsFrame.navButtons) do if nav.pageId == id then return nav end end end
 local powered = {}
-for _, nav in ipairs(NS.optionsFrame.navButtons) do if nav.power then powered[#powered + 1] = nav.pageId end end
+for _, nav in ipairs(NS.optionsFrame.navButtons) do if nav.power and EXT.core[nav.pageId] then powered[#powered + 1] = nav.pageId end end
 table.sort(powered)
 Check("[NAV] interrupteur sur les 3 modules seulement", table.concat(powered, ",") == "departure,portrait,toast", table.concat(powered, ","))
 Check("[NAV] sous-pages en retrait, sans interrupteur", NavOf("trigger").parentId == "departure" and NavOf("trigger").power == nil)

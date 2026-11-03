@@ -27,3 +27,4 @@ Minimap.lua
 Checks.lua
 Options.lua
 UI.lua
+Expedition.lua
