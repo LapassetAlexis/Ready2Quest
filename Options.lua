@@ -10,7 +10,7 @@ local L = ns.L
 local Theme = ns.Theme
 
 local FRAME_WIDTH  = 600
-local FRAME_HEIGHT = 440
+local FRAME_HEIGHT = 480   -- 440 -> 480 en v1.23.0 : 3 modules de plus dans la navigation
 local NAV_WIDTH    = 178   -- place pour « Check avant le départ » + son interrupteur (mesuré en jeu)
 local PANE_LEFT    = NAV_WIDTH + 16
 local PANE_WIDTH   = FRAME_WIDTH - PANE_LEFT - 14

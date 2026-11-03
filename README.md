@@ -8,11 +8,14 @@ Pour **World of Warcraft Forever** et **Classic Era**. Interface en français et
 
 ## Ce que fait l'addon
 
-Ready2Quest réunit **trois modules** et un peu de **confort** (QoL). Chacun s'active ou se coupe d'un clic.
+Ready2Quest réunit **six modules** et un peu de **confort** (QoL). Chacun s'active ou se coupe d'un clic.
 
 | | Module | En une phrase |
 |---|---|---|
 | ◆ | **Check avant le départ** | Quand tu quittes un village, une capitale ou un camp, une note de préparation sur 100 et des conseils |
+| ◆ | **Retour d'expédition** | Quand tu rentres, le bilan de ta sortie : XP, or, butin, morts, usure, quêtes à rendre |
+| ◆ | **Avant le donjon** | À l'entrée d'un donjon, sa fiche : niveau conseillé, tes quêtes pour ce donjon, ta préparation |
+| ◆ | **Kit de camp** *(Forever)* | Ton kit de feu de camp et ton objet de camp prêts, le compte à rebours des buffs au camp |
 | ◆ | **Résumé de stuff** | Quand tu changes d'objet, un petit résumé éphémère des stats gagnées ou perdues |
 | ◆ | **Stats du portrait** | Au survol de ton portrait, tes stats principales, choisies selon ta classe et ta spécialisation |
 | ✦ | **QoL : marchand** | Vente automatique des objets gris et réparation automatique chez les marchands |
@@ -65,6 +68,39 @@ La fenêtre indique toujours **d'où tu es parti** (« Parti de Comté-de-l'Or �
 
 ---
 
+## Retour d'expédition
+
+La suite naturelle du check avant le départ : **départ → expédition → retour**. Quand tu reviens dans une zone sûre (village, capitale ou camp), une carte au même style résume ta sortie :
+
+- la durée, l'XP gagnée et les niveaux pris ;
+- l'or gagné et dépensé, et le net ;
+- les objets notables ramassés (verts et mieux) ;
+- les morts et l'usure de ton équipement ;
+- les quêtes prêtes à rendre ;
+- ce qu'il faut racheter avant de repartir.
+
+Pas de bilan pour un aller-retour sans intérêt : moins d'une minute, sans rien gagné ni perdu (réglable). Tu peux préférer une ligne dans le chat à la fenêtre.
+
+## Avant le donjon
+
+En arrivant à l'entrée d'un donjon, ou en y entrant, une fiche pour **ce** donjon. Elle ne s'affiche qu'une fois par visite :
+
+- le niveau conseillé, comparé au tien ;
+- les quêtes de ce donjon que tu as dans ton journal ;
+- une préparation courte : durabilité, réparation, vivres, potions, pierre de foyer.
+
+Elle couvre les 19 donjons classiques et les 9 nouveaux donjons de Forever : City of Dalaran, Ruins of Lordaeron, Hall of Thanes, Excavation Site, Krol'dok… Sur Forever, elle listera aussi les plans de métier qui tombent dans le donjon, dès que ces données seront connues.
+
+## Kit de camp *(Forever)*
+
+Le camping de Forever en fait un vrai lieu de préparation. Ready2Quest t'aide à en profiter :
+
+- **avant de partir**, deux contrôles s'ajoutent au check : as-tu un **kit de feu de camp** ? ton **objet de camp** (meule, tente, chaise…) est-il prêt, ou encore en recharge (une heure, partagée) ?
+- **au camp**, un petit compte à rebours jusqu'à la minute qui donne les buffs, puis « Buffs du camp actifs » ;
+- **en quittant le camp**, un rappel du temps restant : « Buffs du camp : encore 42 min ».
+
+Sur Classic Era, le module reste invisible : il n'y a pas de camping.
+
 ## Résumé de stuff
 
 Quand tu équipes une nouvelle pièce, un petit cadre apparaît quelques secondes et montre ce qui change : Force, Agilité, Endurance, Intelligence, Esprit, armure, dégâts, DPS, vitesse, puissance d'attaque, critique. Une flèche indique le sens, la couleur dit si c'est mieux ou moins bien. Puis il s'efface tout seul.
@@ -88,7 +124,7 @@ Les deux sont actifs par défaut et se coupent dans les réglages. Ils fonctionn
 `/r2q options`, ou un clic droit sur le bouton de la minicarte.
 
 - **Général** : activer l'addon, et tout ce qui touche à l'affichage (bouton de minicarte, fenêtre ou chat, note sous laquelle la fenêtre s'ouvre, placement des cadres).
-- **Modules** : les trois modules, chacun avec son interrupteur directement dans la liste de gauche. Le Check avant le départ a ses sous-pages : Déclenchement, Zones sûres, Sacs & vivres, Équipement & perso, Buffs & métier.
+- **Modules** : chaque module a son interrupteur directement dans la liste de gauche. Le Check avant le départ a ses sous-pages : Déclenchement, Zones sûres, Sacs & vivres, Équipement & perso, Buffs & métier. Le Retour d'expédition, Avant le donjon et le Kit de camp ont chacun leur page.
 - **QoL** : Marchand.
 
 ## Commandes
@@ -103,8 +139,8 @@ Les deux sont actifs par défaut et se coupent dans les réglages. Ils fonctionn
 | `/r2q move` | place les cadres à la souris |
 | `/r2q safe` · `unsafe` | ajoute ou retire le village actuel |
 | `/r2q safe list` | liste les lieux appris |
-| `/r2q modules` | état des trois modules |
-| `/r2q module depart off` | coupe un module (`depart`, `stuff`, `portrait`) |
+| `/r2q modules` | état des modules |
+| `/r2q module depart off` | coupe un module (`depart`, `expedition`, `dungeon`, `camp`, `stuff`, `portrait`) |
 | `/r2q checks` · `check vivres off` | les contrôles du check avant le départ |
 | `/r2q diag` | diagnostic, à joindre si tu signales un problème |
 

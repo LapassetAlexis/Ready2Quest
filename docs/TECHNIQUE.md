@@ -3,6 +3,71 @@
 > Document destiné au développement : historique version par version, choix d'API, compatibilité des clients, tests. Pour la présentation de l'addon, voir le [README](../README.md).
 
 
+## v1.23.0 — trois nouveaux modules et une API d'extension
+
+### API d'extension (`32daa4d`)
+
+Un module vit dans son propre fichier, chargé après `UI.lua` dans le `.toc`, sans toucher aux fichiers communs.
+
+| Fonction | Rôle |
+|---|---|
+| `ns.RegisterStrings(fr, en)` | ses chaînes, en français et en anglais |
+| `ns.RegisterDefaults(t)` | ses réglages par défaut, appliqués même si la sauvegarde est déjà lue |
+| `ns.AddCheck(def)` | ajoute un contrôle au Check avant le départ |
+| `ns.AddOptionPage(def, beforeId)` | ajoute une page de réglages, par défaut avant la section QoL |
+| `ns.RegisterModule(m)` | inscrit le module dans `/r2q modules` et `module <id>` |
+| `ns:RegisterCallback(ev, fn)` | s'abonne à `DEPARTURE` (sortie confirmée), `RETURN` (retour après un départ) ou `CHECKLIST` (résultats d'un check) |
+
+Le suivi des départs et retours tourne **même si le Check avant le départ est coupé**. Le silence après connexion et l'écart entre alertes ne filtrent plus que l'alerte, plus le départ lui-même.
+
+**Tests.**
+- Le harnais lit la liste des fichiers dans le `.toc`.
+- Les fichiers de module ne sont chargés qu'**après** les scénarios du cœur. Ceux-ci comptent les contrôles et les pages de base, et ne bougent donc plus quand un module s'ajoute.
+- Chaque `tests/modules/*.lua` reçoit ensuite la boîte à outils `T`.
+- `tests/modules/zz_integration.lua` passe en dernier, avec **tous** les modules chargés.
+
+### Les trois modules
+
+Ils ont été développés en parallèle par trois agents, chacun dans son worktree, puis fusionnés.
+
+**Retour d'expédition** (`Expedition.lua`)
+- **Argent** : les écarts de `PLAYER_MONEY`, gains et dépenses cumulés à part. Le net seul cacherait « gagné puis dépensé en réparation ».
+- **Butin** : `CHAT_MSG_LOOT`, reconnu grâce aux chaînes du client (`LOOT_ITEM_SELF`…, dans la langue du joueur), avec un repli fr/en. Ce n'est pas une comparaison des sacs, qui se tromperait sur les ventes, la nourriture mangée ou les piles fusionnées.
+- **XP** : `UnitXP` relevé à chaque `PLAYER_XP_UPDATE` et `PLAYER_LEVEL_UP`, pour gérer le passage de niveau.
+- **Morts** : un compteur sur `PLAYER_DEAD`. **Usure** : durabilité totale de l'équipement, au départ et au retour.
+- **Limite** : un `/reload` en cours de sortie efface le suivi, qui n'est gardé qu'en mémoire.
+
+**Avant le donjon** (`Dungeon.lua`, `DungeonData.lua` généré par `tools/gen_dungeons.py`)
+- **Sources** : 28 donjons. `Map`, `AreaTable` et `LFGDungeons` pour Era 1.15.9 et Forever 1.60.1 (wago.tools) ; niveaux Forever d'après warcraft.wiki.gg (Patch 1.60) et method.gg.
+- **Cartes d'instance Forever** : 4 des 9 nouveaux donjons en ont une dans le client 1.60.1 (Dalaran 2959, Ruins of Lordaeron 2999, Excavation Site 2998, Hall of Thanes 3065). Les 5 autres sont reconnus par leur nom anglais en attendant le client de lancement.
+- **Bandarion Keep n'est pas un donjon** : c'est une sous-zone de Tirisfal, donc exclue.
+- **Quêtes** : celles qui sont rangées sous l'en-tête du donjon dans le journal. Les plans de métier par boss ne sont pas encore publiés : la table est vide, mais le filtrage par métier est prêt.
+- **Affichage** : une fiche par visite, et une nouvelle visite après 15 minutes loin du donjon. À l'entrée, la fiche n'apparaît que si le joueur est à 3 niveaux ou moins sous le minimum. Les entrées partagées ou situées dans une capitale ne déclenchent la fiche qu'à l'intérieur de l'instance.
+
+**Kit de camp** (`Camp.lua`, Forever seulement)
+- **Kits de feu de camp** : objets 279981 (Basique), 279961 (Compagnon) et 279974 (Expert).
+- **Objets de camp** : 36 objets sur 12 métiers, avec une recharge partagée d'une heure (catégorie de sort 97).
+- **Seuil de la minute** : l'aura « Welcoming Campfire » (1229739/1289723) dure 60 s et déclenche « Camp Benefits » (1229741).
+- **Buffs du camp** : les « Boosted … » d'une heure sont ajoutés à `ns.IGNORED_BUFF_SPELLS`, pour qu'ils ne soient jamais réclamés.
+- Toutes ces données viennent des tables ItemSparse, ItemXItemEffect, ItemEffect, SpellEffect, SpellMisc et SpellDuration de Forever 1.60.1. Elles sont commentées en tête de `Camp.lua`.
+
+### À vérifier en jeu
+
+- **Retour d'expédition** : la forme exacte des messages de butin.
+- **Avant le donjon** :
+  - les informations d'instance renvoyées par `GetInstanceInfo` ;
+  - les noms français des en-têtes de quêtes de donjon ;
+  - les noms des 5 nouveaux donjons dans le client de lancement.
+- **Kit de camp** :
+  - l'API de compétences ;
+  - la recharge des objets de camp ;
+  - l'aura d'accueil ;
+  - la correspondance entre chaque objet et son buff.
+
+### Intégration
+
+Chaque module tenait seul dans le panneau de réglages, mais leur somme faisait déborder la navigation sur le pied : « Marchand » passait sous les boutons. Le panneau passe de 440 à 480 px, et le test d'intégration vérifie maintenant ce cas.
+
 ## v1.22.0 — zones sûres connues dès l'installation, 3 modules, camps de Forever
 
 ### Ce qu'est une zone sûre
