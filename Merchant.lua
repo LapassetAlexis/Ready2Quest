@@ -185,6 +185,12 @@ function ns:OnMerchantShow()
 	self:MeasureRepairCost()
 	if db.enabled == false then return end
 	if db.autoRepair ~= false then self:AutoRepair() end
+	-- la première fois, on dit ce qu'on fait : un gris qu'on voulait garder
+	-- ne doit pas disparaître sans explication
+	if db.autoSellGray ~= false and not db.autoSellNoticed then
+		db.autoSellNoticed = true
+		self:Print(L.MSG_AUTOSELL_NOTICE)
+	end
 	if db.autoSellGray ~= false and not self.sellRun then
 		self.sellRun = { count = 0, value = 0 }
 		self:RunAutoSell()

@@ -38,7 +38,7 @@ Un village est appris avec **un indice fort, ou deux indices moyens/faibles de t
 
 | Check | Poids | Actif quand | Échec si |
 |---|---|---|---|
-| **Composants de classe** | 15 (fort) | la classe en consomme, au niveau du sort | munitions < 200, fragments d'âme < 3, poudre éclipsante < 5, runes de téléportation < 2, poudre des arcanes < 5, chandelles < 5, graine de Renaissance < 1, ankh < 1, symbole de divinité < 1 |
+| **Réactifs** (de classe) | 15 (fort) | la classe en consomme, au niveau du sort | munitions < 200, fragments d'âme < 3, poudre éclipsante < 5, runes de téléportation < 2, poudre des arcanes < 5, chandelles < 5, graine de Renaissance < 1, ankh < 1, symbole de divinité < 1 |
 | **Pierre de foyer** | 10 (moyen) | toujours | absente, ou recharge > 10 min. Affiche le lieu lié (`GetBindLocation`) |
 | **Réparation** | 10 (moyen) | un coût a été mesuré chez un marchand | l'or ne couvre pas le coût estimé |
 | **Sorts à apprendre** | 5 (faible) | un niveau pair est passé depuis la dernière visite chez l'entraîneur de classe | toujours un conseil |
@@ -78,6 +78,23 @@ Aucun de ces bugs ne levait d'erreur : la note mentait, simplement.
 Au passage : `string.lower` dépend de la locale C, et en Latin-1 il casse l'UTF-8 (`0xC3` → `0xE3`). Les comparaisons de noms passent par `ns.AsciiLower`, qui ne touche qu'à A-Z.
 
 Restent à confirmer en jeu : la sous-classe 0 des consommables Era, et la présence des glyphes dans la police.
+
+### UX : moins de bruit, rien hors de l'écran
+
+| Problème | Correctif |
+|---|---|
+| Panneau d'options de **910 px**, boutons du bas hors de l'écran (768 unités à l'échelle 1) | interrupteurs (affichage, automatismes, modules) sur **deux colonnes** : 702 px ; un test borne la hauteur à 740 px |
+| Fenêtre ouverte à chaque sortie, même à 95/100 | note ≥ 85 : **une ligne dans le chat** (« PRÊT, 92/100 (parti de Comté-de-l'Or) ») ; réglage « Fenêtre sous la note », 100 = toujours la fenêtre ; un check manuel l'ouvre toujours |
+| Fenêtre en plein combat | l'alerte attend la fin du combat |
+| Deux lignes « Composants » | « Métier » (recettes) et « Réactifs » (de classe) |
+| 13 lignes dont des « sans objet » | modules sans objet **masqués**, échecs en tête (les plus lourds d'abord), modules coupés en bas ; la fenêtre se redimensionne |
+| Repos : 10 points perdus sur un critère qu'on ne corrige pas en partant | information seulement : poids nul, pas de conseil |
+| « à apprendre (dernier entraîneur : niv. 10) » tronqué | « niv. 10 -> 12 : à apprendre » |
+| Minicarte : clic gauche = réglages | clic gauche = **check** (l'action principale), clic droit = réglages |
+| Vente auto silencieuse la première fois | message unique au premier marchand |
+| Vert de statut = vert de rareté « Inhabituel » | vert adouci ; « ! » devant chaque échec (la couleur seule ne suffit pas aux daltoniens) |
+| Verdict en petit dans le bandeau, « Parti de » en bas | verdict en grand à côté de la note, « Parti de » juste dessous |
+| Seuils « Vivres : 5 » ambigus | « Vivres min. », « Gris avant l'alerte »… ; libellés raccourcis pour tenir en demi-colonne (testé) |
 
 ---
 
@@ -298,7 +315,7 @@ Détail des indices et du délai de sortie : section v1.18.0 en tête de ce docu
 | Vivres | 20 | quantités / seuil |
 | Potions & flacons | 10 | quantités / seuil |
 | Buffs | 15 | −25 par buff manquant |
-| Repos | 10 | % d'un niveau × 2 |
+| Repos | 0 (information) | % d'un niveau × 2 |
 | Durabilité | 15 | % d'usure |
 | Composants | 5 | bloqué = 40 |
 | Quêtes | 5 | prêtes = 70 |
@@ -342,8 +359,8 @@ Le choix se fait sur `GetBuildInfo()` (interface `16xxx` = Forever, sinon Classi
 
 | Action | Effet |
 |---|---|
-| **Clic gauche** | ouvre les réglages |
-| **Clic droit** | lance le check immédiatement |
+| **Clic gauche** | lance le check immédiatement |
+| **Clic droit** | ouvre les réglages |
 | **Glisser** | déplace autour de la minicarte (angle mémorisé) |
 | **Survol** | infobulle : nom, dernier score, rappel des actions |
 
@@ -362,7 +379,7 @@ Chacun des 13 modules a son interrupteur, dans `/sd options` → section **Modul
 
 | Élément | Comportement |
 |---|---|
-| Ligne du panneau de diagnostic | grisée, barre vide, mention « désactivé » |
+| Ligne du panneau de diagnostic | grisée, en bas de la liste, mention « désactivé » |
 | Score global | recalculé sur les seuls modules actifs |
 | Conseils | aucun conseil généré pour un module désactivé |
 | Panneau de réglages | libellé grisé + valeur `non` |
@@ -1311,7 +1328,7 @@ Alias : `/sacdepart`.
 ## Tests
 
 ```
-python3 tests/run_tests.py     →  588 réussis, 0 échoués
+python3 tests/run_tests.py     →  611 réussis, 0 échoués
 ```
 
 Lua 5.1 (version du client), client WoW simulé. Couvre notamment : apprentissage par indices (sous-zone, capitale par deux quartiers, purge de l'ancien schéma), délai de sortie / vol / mort, nouveaux checks et automatismes du marchand en mode Era, chaîne de cartes parentes, anti-spam, filtrage des procs, **valeurs secrètes**, comptages sacs/vivres/potions/durabilité/quêtes, score pondéré et bilans, fenêtre de diagnostic (icônes, barres, bandeau), panneau d'équipement (17 lignes, moyenne, rareté, pièces faibles), comparaison au survol (amélioration, régressif, vide, anneaux), **les deux voies de hook tooltip**, bouton sans template Blizzard, et toutes les commandes.

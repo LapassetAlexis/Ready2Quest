@@ -186,10 +186,11 @@ function ns:EnsureMinimapButton()
 			ns.minimapDragMoved = nil
 			return
 		end
+		-- clic gauche = l'action principale de l'addon : le check
 		if mouseButton == "RightButton" then
-			ns:RunChecklist("manual")
-		else
 			ns:ToggleOptions()
+		else
+			ns:RunChecklist("manual")
 		end
 	end)
 

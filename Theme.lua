@@ -24,7 +24,9 @@ Theme.GOLD_SOFT = { 0.85, 0.68, 0.25 }
 Theme.GOLD_DIM  = { 0.45, 0.36, 0.10 }
 Theme.PARCHMENT = { 0.97, 0.90, 0.75 }
 Theme.INK       = { 0.06, 0.05, 0.04 }
-Theme.GREEN     = { 0.12, 1.00, 0.00 }
+-- vert de statut adouci : le vert vif 1eff00 est celui de la rareté
+-- « Inhabituel », et un statut ne doit pas se lire comme un objet
+Theme.GREEN     = { 0.40, 0.84, 0.36 }
 Theme.RED       = { 0.90, 0.20, 0.15 }
 Theme.ORANGE    = { 1.00, 0.55, 0.10 }
 Theme.GREY      = { 0.55, 0.55, 0.55 }
@@ -32,7 +34,7 @@ Theme.GREY      = { 0.55, 0.55, 0.55 }
 Theme.T_GOLD      = "|cffffd100"
 Theme.T_PARCHMENT = "|cfff8e6c0"
 Theme.T_GREY      = "|cff8c8c8c"
-Theme.T_GREEN     = "|cff1eff00"
+Theme.T_GREEN     = "|cff66d65c"
 Theme.T_RED       = "|cffff2020"
 Theme.T_ORANGE    = "|cffff8c1a"
 Theme.T_WHITE     = "|cffffffff"

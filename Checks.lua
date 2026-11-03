@@ -267,7 +267,10 @@ Add{
 Add{
 	id = "rest",
 	icon = "Interface\\Icons\\Spell_Nature_Sleep",
-	weight = 10,
+	-- information seulement : le repos ne se corrige pas au moment du départ,
+	-- il ne doit donc pas coûter de points
+	weight = 0,
+	info = true,
 	advice = "ADV_REST",
 	label = function() return L.CHK_REST end,
 	run = function(db)
@@ -554,7 +557,7 @@ Add{
 	label = function() return L.CHK_SPELLS end,
 	run = function()
 		local trained = tonumber(ns:CharData().trainerLevel) or 0
-		return false, ns:F("CHK_SPELLS_DETAIL", trained), 50
+		return false, ns:F("CHK_SPELLS_DETAIL", trained, PlayerLevel()), 50
 	end,
 }
 

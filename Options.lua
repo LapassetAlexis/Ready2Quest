@@ -15,6 +15,7 @@ local HEAD_HEIGHT = 26
 local SECTIONS = {
 	{
 		title = "OPT_SECTION_DISPLAY",
+		columns = 2,
 		rows = {
 			{ key = "showWindow",        label = "OPT_SHOWWINDOW", kind = "bool" },
 			{ key = "showMinimap",       label = "OPT_MINIMAP",    kind = "bool" },
@@ -35,19 +36,17 @@ local SECTIONS = {
 			{ key = "restMinPercent",     label = "OPT_RESTMIN",          kind = "number", min = 0,  max = 150, step = 5, suffix = "OPT_REST_UNIT" },
 			{ key = "durabilityMinPct",   label = "OPT_DURAMIN",          kind = "number", min = 0,  max = 100, step = 5, suffix = "OPT_PCT_UNIT" },
 			{ key = "exitDelay",          label = "OPT_EXITDELAY",        kind = "number", min = 0,  max = 15,  step = 1, suffix = "OPT_SEC_UNIT" },
+			{ key = "popupScore",         label = "OPT_POPUPSCORE",       kind = "number", min = 0,  max = 100, step = 5, suffix = "OPT_SCORE_UNIT" },
 		},
 	},
+	-- Automatismes : marchand et apprentissage des buffs, sur deux colonnes
 	{
-		title = "OPT_SECTION_MERCHANT",
+		title = "OPT_SECTION_AUTO",
+		columns = 2,
 		rows = {
 			{ key = "autoSellGray", label = "OPT_AUTOSELL",   kind = "bool" },
 			{ key = "autoRepair",   label = "OPT_AUTOREPAIR", kind = "bool" },
-		},
-	},
-	{
-		title = "OPT_SECTION_MISC",
-		rows = {
-			{ key = "learnBuffs", label = "OPT_LEARNBUFFS", kind = "bool" },
+			{ key = "learnBuffs",   label = "OPT_LEARNBUFFS", kind = "bool" },
 		},
 	},
 }
@@ -65,7 +64,15 @@ ns.OPT_LAYOUT = {
 	plusRight = -18,
 	minusRight = -50,
 	buttonWidth = 22,
+	-- sections à deux colonnes (interrupteurs) : demi-largeur, valeur collée à droite
+	columnGap = 12,
+	halfValueRight = -4,
+	halfValueWidth = 40,
+	-- plafond de hauteur : l'écran de WoW fait 768 unités à l'échelle 1, et
+	-- le panneau (910 px en 1.18.0 avant refonte) poussait ses boutons hors champ
+	maxHeight = 740,
 }
+ns.OPT_LAYOUT.halfWidth = math.floor((WIDTH - 28 - ns.OPT_LAYOUT.columnGap) / 2)
 local VALUE_RIGHT = ns.OPT_LAYOUT.valueRight
 local VALUE_WIDTH = ns.OPT_LAYOUT.valueWidth
 local PLUS_RIGHT  = ns.OPT_LAYOUT.plusRight
@@ -142,10 +149,11 @@ function ns:EnsureOptions()
 
 	-- Fabrique d'une ligne : le placement (colonne de droite, boutons) est
 	-- défini ici une fois pour toutes, pas recopié à chaque endroit.
-	local function MakeRow(parent, def)
+	local function MakeRow(parent, def, half)
 		local row = CreateFrame("Button", nil, parent)
-		row:SetSize(WIDTH - 28, ROW_HEIGHT - 6)
+		row:SetSize(half and ns.OPT_LAYOUT.halfWidth or (WIDTH - 28), ROW_HEIGHT - 6)
 		row.def = def
+		row.half = half
 
 		row.label = row:CreateFontString(nil, "OVERLAY", Theme.F_BODY)
 		row.label:SetPoint("LEFT", row, "LEFT", 2, 0)
@@ -154,8 +162,8 @@ function ns:EnsureOptions()
 		row.label:SetTextColor(0.86, 0.84, 0.78)
 
 		row.value = row:CreateFontString(nil, "OVERLAY", Theme.F_NUMBER)
-		row.value:SetPoint("RIGHT", row, "RIGHT", VALUE_RIGHT, 0)
-		row.value:SetWidth(VALUE_WIDTH)
+		row.value:SetPoint("RIGHT", row, "RIGHT", half and ns.OPT_LAYOUT.halfValueRight or VALUE_RIGHT, 0)
+		row.value:SetWidth(half and ns.OPT_LAYOUT.halfValueWidth or VALUE_WIDTH)
 		row.value:SetJustifyH("RIGHT")
 
 		if def.kind == "action" then
@@ -208,11 +216,14 @@ function ns:EnsureOptions()
 
 		y = y - 16
 
-		for _, def in ipairs(section.rows) do
-			local row = MakeRow(frame, def)
-			row:SetPoint("TOPLEFT", frame, "TOPLEFT", 14, y)
+		local columns = section.columns or 1
+		for index, def in ipairs(section.rows) do
+			local column = (index - 1) % columns
+			local row = MakeRow(frame, def, columns > 1)
+			row:SetPoint("TOPLEFT", frame, "TOPLEFT",
+				14 + column * (ns.OPT_LAYOUT.halfWidth + ns.OPT_LAYOUT.columnGap), y)
 			frame.rows[#frame.rows + 1] = row
-			y = y - ROW_HEIGHT
+			if column == columns - 1 or index == #section.rows then y = y - ROW_HEIGHT end
 		end
 
 		y = y - 6
@@ -239,11 +250,15 @@ function ns:EnsureOptions()
 
 	local moduleY = sectionY - 16
 
-	for _, def in ipairs(checks) do
+	-- 13 interrupteurs : deux colonnes, sinon le panneau dépasse de l'écran
+	for index, def in ipairs(checks) do
+		local column = (index - 1) % 2
 		local row = CreateFrame("Button", nil, frame)
-		row:SetSize(WIDTH - 28, ROW_HEIGHT - 6)
-		row:SetPoint("TOPLEFT", frame, "TOPLEFT", 14, moduleY)
+		row:SetSize(ns.OPT_LAYOUT.halfWidth, ROW_HEIGHT - 6)
+		row:SetPoint("TOPLEFT", frame, "TOPLEFT",
+			14 + column * (ns.OPT_LAYOUT.halfWidth + ns.OPT_LAYOUT.columnGap), moduleY)
 		row.isModule = true
+		row.half = true
 		row.moduleId = def.id
 
 		row.label = row:CreateFontString(nil, "OVERLAY", Theme.F_BODY)
@@ -255,8 +270,8 @@ function ns:EnsureOptions()
 		-- même colonne de valeurs que les autres sections : sinon les OUI
 		-- des modules tombaient 70 px plus a droite que ceux du dessus
 		row.value = row:CreateFontString(nil, "OVERLAY", Theme.F_NUMBER)
-		row.value:SetPoint("RIGHT", row, "RIGHT", VALUE_RIGHT, 0)
-		row.value:SetWidth(VALUE_WIDTH)
+		row.value:SetPoint("RIGHT", row, "RIGHT", ns.OPT_LAYOUT.halfValueRight, 0)
+		row.value:SetWidth(ns.OPT_LAYOUT.halfValueWidth)
 		row.value:SetJustifyH("RIGHT")
 
 		row:SetScript("OnClick", function()
@@ -265,7 +280,7 @@ function ns:EnsureOptions()
 		end)
 
 		frame.rows[#frame.rows + 1] = row
-		moduleY = moduleY - ROW_HEIGHT
+		if column == 1 or index == #checks then moduleY = moduleY - ROW_HEIGHT end
 	end
 
 	-- moduleY est maintenant la coordonnee du haut de la derniere ligne de

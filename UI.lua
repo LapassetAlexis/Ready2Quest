@@ -42,7 +42,7 @@ function ns:EnsureWindow()
 	if not Theme or not Theme.CreatePanel then return nil end
 
 	local rowCount = #(self.checks or {})
-	local height = 40 + 52 + 12 + (rowCount * ROW_HEIGHT) + 12 + 16 + (MAX_ADVICE * 13) + 16 + 34
+	local height = self:WindowHeight(rowCount, false)
 
 	local frame = Theme.CreatePanel(UIParent, WIDTH, height, L.ADDON_NAME, { name = "ReadyToQuestDiagFrame" })
 	if not frame then return nil end
@@ -66,20 +66,35 @@ function ns:EnsureWindow()
 	frame.scoreSuffix:SetPoint("LEFT", frame.scoreValue, "RIGHT", 3, 0)
 	frame.scoreSuffix:SetText(Theme.T_GREY .. "/ 100|r")
 
+	-- Le verdict à côté de la note, en grand : c'est l'information qu'on lit
+	-- en premier. Il était dans le sous-titre du bandeau, en petit.
+	frame.verdict = frame:CreateFontString(nil, "OVERLAY", Theme.F_NORMAL)
+	frame.verdict:SetPoint("LEFT", frame.scoreSuffix, "RIGHT", 12, 0)
+	frame.verdict:SetText("")
+
 	frame.scoreBar = Theme.CreateBar(frame, WIDTH - 28, 11)
 	frame.scoreBar:SetPoint("TOPLEFT", frame, "TOPLEFT", 14, top - 30)
 
 	Theme.CreateDivider(frame, WIDTH - 28, top - 52)
 
+	-- Origine du départ, juste sous la note : c'est le contexte de l'alerte.
+	-- « Parti de : Comté-de-l'Or (appris : boîte aux lettres) » permet de
+	-- repérer d'un coup d'œil un village appris à tort.
+	frame.departed = frame:CreateFontString(nil, "OVERLAY", Theme.F_BODY)
+	frame.departed:SetPoint("TOPLEFT", frame, "TOPLEFT", 14, top - 60)
+	frame.departed:SetWidth(WIDTH - 28)
+	frame.departed:SetJustifyH("LEFT")
+	frame.departed:SetText("")
+
 	-- Lignes de modules ------------------------------------------------------
+	-- Placées à chaque affichage (LayoutWindow) : les modules sans objet sont
+	-- masqués et les lignes en échec remontent en tête.
 	frame.rows = {}
-	local rowsTop = top - 66
 
 	for index = 1, rowCount do
 		local def = self.checks[index]
 		local row = CreateFrame("Frame", nil, frame)
 		row:SetSize(WIDTH - 28, ROW_HEIGHT - 3)
-		row:SetPoint("TOPLEFT", frame, "TOPLEFT", 14, rowsTop - ((index - 1) * ROW_HEIGHT))
 
 		row.icon = Theme.CreateIcon(row, 15, def and def.icon or nil, 1)
 		row.icon:SetPoint("LEFT", row, "LEFT", 0, 0)
@@ -103,31 +118,21 @@ function ns:EnsureWindow()
 	end
 
 	-- Conseils ---------------------------------------------------------------
-	local adviceTop = rowsTop - (rowCount * ROW_HEIGHT) - 10
-	Theme.CreateDivider(frame, WIDTH - 28, adviceTop)
+	frame.adviceDivider = Theme.CreateDivider(frame, WIDTH - 28, 0)
 
 	frame.adviceHeader = frame:CreateFontString(nil, "OVERLAY", Theme.F_BODY)
-	frame.adviceHeader:SetPoint("TOPLEFT", frame, "TOPLEFT", 14, adviceTop - 12)
 	frame.adviceHeader:SetText(L.PANEL_ADVICE)
 	frame.adviceHeader:SetTextColor(Theme.GOLD[1], Theme.GOLD[2], Theme.GOLD[3])
 
 	frame.adviceLines = {}
 	for index = 1, MAX_ADVICE do
 		local line = frame:CreateFontString(nil, "OVERLAY", Theme.F_BODY)
-		line:SetPoint("TOPLEFT", frame, "TOPLEFT", 20, adviceTop - 26 - ((index - 1) * 13))
 		line:SetWidth(WIDTH - 34)
 		line:SetJustifyH("LEFT")
 		line:SetText("")
 		frame.adviceLines[index] = line
 	end
-
-	-- Origine du départ : « Parti de : Comté-de-l'Or (appris : boîte aux
-	-- lettres) ». Sert à repérer d'un coup d'œil un village appris à tort.
-	frame.departed = frame:CreateFontString(nil, "OVERLAY", Theme.F_BODY)
-	frame.departed:SetPoint("TOPLEFT", frame, "TOPLEFT", 14, adviceTop - 30 - (MAX_ADVICE * 13))
-	frame.departed:SetWidth(WIDTH - 28)
-	frame.departed:SetJustifyH("LEFT")
-	frame.departed:SetText("")
+	self:LayoutWindow(frame, rowCount, false)
 
 	-- Boutons ----------------------------------------------------------------
 	-- Les largeurs etaient codees en dur (128/100/90) sans rapport avec le
@@ -184,6 +189,65 @@ function ns:EnsureWindow()
 end
 
 -- ---------------------------------------------------------------------------
+-- Mise en page variable : nombre de lignes visibles, ligne « Parti de »
+-- ---------------------------------------------------------------------------
+local DEPARTED_HEIGHT = 14
+
+function ns:WindowHeight(visible, hasDeparted)
+	return 40 + 52 + 12 + (hasDeparted and DEPARTED_HEIGHT or 0) + (visible * ROW_HEIGHT)
+		+ 12 + 16 + (MAX_ADVICE * 13) + 34
+end
+
+function ns:LayoutWindow(frame, visible, hasDeparted)
+	local top = frame.contentTop or -36
+	local rowsTop = top - 66 - (hasDeparted and DEPARTED_HEIGHT or 0)
+	for index, row in ipairs(frame.rows or {}) do
+		row:ClearAllPoints()
+		row:SetPoint("TOPLEFT", frame, "TOPLEFT", 14, rowsTop - ((index - 1) * ROW_HEIGHT))
+		if index <= visible then row:Show() else row:Hide() end
+	end
+
+	local adviceTop = rowsTop - (visible * ROW_HEIGHT) - 10
+	frame.adviceDivider:ClearAllPoints()
+	frame.adviceDivider:SetPoint("TOPLEFT", frame, "TOPLEFT", 12, adviceTop)
+	frame.adviceHeader:ClearAllPoints()
+	frame.adviceHeader:SetPoint("TOPLEFT", frame, "TOPLEFT", 14, adviceTop - 12)
+	for index, line in ipairs(frame.adviceLines or {}) do
+		line:ClearAllPoints()
+		line:SetPoint("TOPLEFT", frame, "TOPLEFT", 20, adviceTop - 26 - ((index - 1) * 13))
+	end
+	frame:SetHeight(self:WindowHeight(visible, hasDeparted))
+	frame.visibleRows = visible
+end
+
+-- Ordre d'affichage : échecs d'abord (les plus lourds en tête), puis les
+-- modules en ordre, puis ceux que le joueur a coupés. Les modules sans objet
+-- (inactifs : pas de composant pour un guerrier, réparation jamais mesurée…)
+-- sont masqués : une ligne grise « sans objet » ne dit rien.
+function ns:DisplayOrder(results)
+	local failed, ok, off = {}, {}, {}
+	for index, result in ipairs(results or {}) do
+		result._order = index
+		if result.disabled then
+			if not result.inactive then off[#off + 1] = result end
+		elseif result.ok or result.info then
+			ok[#ok + 1] = result
+		else
+			failed[#failed + 1] = result
+		end
+	end
+	table.sort(failed, function(a, b)
+		if a.weight ~= b.weight then return a.weight > b.weight end
+		return a._order < b._order
+	end)
+	local list = {}
+	for _, group in ipairs({ failed, ok, off }) do
+		for _, result in ipairs(group) do list[#list + 1] = result end
+	end
+	return list
+end
+
+-- ---------------------------------------------------------------------------
 -- Affichage
 -- ---------------------------------------------------------------------------
 function ns:ShowWindow(results)
@@ -203,12 +267,19 @@ function ns:ShowWindow(results)
 	frame.scoreBar:SetColor(sr, sg, sb)
 	frame.scoreBar:SetValue(ratio)
 
-	if frame.subtitle then
-		frame.subtitle:SetText(VerdictText(self))
-	end
+	if frame.verdict then frame.verdict:SetText(VerdictText(self)) end
+	if frame.subtitle then frame.subtitle:SetText("") end
+
+	local departed = self:DepartedText()
+	frame.departed:SetText(departed or "")
+	local ordered = self:DisplayOrder(results)
+	self:LayoutWindow(frame, #ordered, departed ~= nil)
 
 	for index, row in ipairs(frame.rows or {}) do
-		local result = results[index]
+		local result = ordered[index]
+		if result and frame.rows[index] and row.icon and row.icon.tex and result.icon then
+			row.icon.tex:SetTexture(result.icon)
+		end
 		if result and result.disabled then
 			-- Module désactivé : grisé, hors calcul de la note
 			row.name:SetText(result.label)
@@ -224,11 +295,17 @@ function ns:ShowWindow(results)
 			row.bar:SetColor(r, g, b)
 			row.bar:SetValue((result.score or 0) / 100)
 
-			row.detail:SetText(Truncate(result.detail, DETAIL_TITLE))
-			if result.ok then
+			-- « ! » devant un échec : l'alerte ne repose pas que sur la couleur
+			-- (rouge, orange et vert se confondent pour un daltonien)
+			if result.ok or result.info then
+				row.detail:SetText(Truncate(result.detail, DETAIL_TITLE))
 				row.detail:SetTextColor(0.78, 0.78, 0.78)
 			else
+				row.detail:SetText("! " .. Truncate(result.detail, DETAIL_TITLE - 2))
 				row.detail:SetTextColor(Theme.ORANGE[1], Theme.ORANGE[2], Theme.ORANGE[3])
+			end
+			if result.info then
+				row.bar:SetColor(0.45, 0.45, 0.45)
 			end
 		else
 			row.name:SetText("")
@@ -251,8 +328,6 @@ function ns:ShowWindow(results)
 			end
 		end
 	end
-
-	if frame.departed then frame.departed:SetText(self:DepartedText() or "") end
 
 	-- Une seule fenêtre à la fois : les réglages se ferment
 	if self.optionsFrame and self.optionsFrame:IsShown() then

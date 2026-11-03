@@ -29,6 +29,7 @@ local DEFAULTS = {
 	alertCooldown       = 20,     -- secondes anti-spam
 	quietAfterLogin     = 15,     -- pas d'alerte dans les N s après connexion
 	exitDelay           = 6,      -- secondes hors zone sûre avant l'alerte (0..15)
+	popupScore          = 85,     -- fenêtre seulement sous cette note (100 = toujours)
 	autoSellGray        = true,   -- vend les objets gris à l'ouverture d'un marchand
 	autoRepair          = true,   -- répare tout chez un marchand qui répare
 	-- Zones sûres (schéma 2, v1.18.0) :
@@ -341,6 +342,9 @@ function ns:UpdatePendingExit(now)
 		return
 	end
 	if now - pending.at < self:ExitDelay() then return end
+	-- en combat : la fenêtre attendra la fin du combat (elle partirait au
+	-- pire moment, et la note serait faussée par le combat lui-même)
+	if UnitFlag("UnitAffectingCombat") then pending.combat = true; return end
 
 	self.pendingExit = nil
 	if self:IsCurrentZoneSafe() then self.inSafe = true; return end
@@ -377,8 +381,11 @@ function ns:RunChecklist(trigger)
 			results[#results + 1] = {
 				id       = def.id,
 				label    = labelText,
+				icon     = def.icon,
 				ok       = true,
 				disabled = true,
+				-- inactif = sans objet (pas un choix du joueur) : masqué à l'écran
+				inactive = self:IsModuleEnabled(def.id) or nil,
 				detail   = self:IsModuleEnabled(def.id) and (def.inactiveText and L[def.inactiveText] or L.MODULE_OFF_ZERO) or L.MODULE_OFF,
 				score    = 0,
 				weight   = 0,
@@ -397,6 +404,8 @@ function ns:RunChecklist(trigger)
 				results[#results + 1] = {
 					id     = def.id,
 					label  = labelText,
+					icon   = def.icon,
+					info   = def.info or nil,
 					ok     = okState == true,
 					detail = tostring(detail or ""),
 					score  = points,
@@ -419,7 +428,7 @@ function ns:RunChecklist(trigger)
 	-- Conseils : un par module en échec, les plus lourds d'abord
 	local advice = {}
 	for _, result in ipairs(results) do
-		if not result.ok and result.advice then
+		if not result.ok and result.advice and not result.info then
 			local text = L[result.advice]
 			if text then advice[#advice + 1] = { text = text, weight = result.weight } end
 		end
@@ -429,11 +438,32 @@ function ns:RunChecklist(trigger)
 	self.lastTrigger = trigger
 	if trigger == "manual" then self.lastDeparture = nil end
 
-	if db.showWindow and self.ShowWindow then
+	if db.showWindow and self.ShowWindow and not self:IsDiscreetAlert(trigger) then
 		self:ShowWindow(results)
+	elseif db.showWindow and self.ShowWindow then
+		self:PrintBrief()
 	else
 		self:PrintSummary(results)
 	end
+end
+
+-- Alerte de sortie avec une bonne note : une ligne dans le chat plutôt
+-- qu'une fenêtre au milieu de l'écran. Au bout de dix sorties « tout va
+-- bien », une fenêtre systématique se ferme sans être lue.
+-- popupScore = 100 : toujours la fenêtre. Un check manuel l'ouvre toujours.
+function ns:IsDiscreetAlert(trigger)
+	if trigger == "manual" then return false end
+	local threshold = tonumber(self:DB().popupScore) or 85
+	if threshold >= 100 then return false end
+	return (self.score or 0) >= threshold
+end
+
+function ns:PrintBrief()
+	local label = self:ScoreLabel()
+	local from = self.lastDeparture
+	local suffix = ""
+	if from and from.name then suffix = self:F("MSG_BRIEF_FROM", tostring(from.name)) end
+	self:Print(self:F("MSG_BRIEF", tostring(label), self.score or 0, suffix))
 end
 
 -- ---------------------------------------------------------------------------
@@ -835,7 +865,7 @@ local COMMANDS = {
 			local label = def.label
 			if type(label) == "function" then label = label() end
 			local on = self:IsModuleEnabled(def.id)
-			local state = on and ("|cff1eff00" .. L.MODULE_ON .. "|r")
+			local state = on and (ns.Theme.T_GREEN .. L.MODULE_ON .. "|r")
 				or ("|cffff2020" .. L.MODULE_OFF .. "|r")
 			self:Print(self:F("MSG_MODULE_ROW", tostring(def.id), state .. "  " .. tostring(label)))
 		end
@@ -902,7 +932,7 @@ local COMMANDS = {
 			"Reagents", "Merchant", "Equip", "Stats", "Minimap", "Checks", "Options", "UI" }) do
 			if ns.Loaded and ns.Loaded[name] then loaded[#loaded + 1] = name else missing[#missing + 1] = name end
 		end
-		self:Print(string.format("  modules : |cff1eff00%d/%d|r chargés",
+		self:Print(string.format("  modules : " .. ns.Theme.T_GREEN .. "%d/%d|r chargés",
 			#loaded, #loaded + #missing))
 		if #missing > 0 then
 			self:Print("  |cffff2020non chargés :|r " .. table.concat(missing, ", "))

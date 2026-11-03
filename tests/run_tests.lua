@@ -1051,7 +1051,7 @@ Check("RefreshOptions sans panneau ne plante pas", true)
 NS:HandleCommand("options")
 Check("panneau créé", NS.optionsFrame ~= nil)
 Check("panneau affiché", NS.optionsFrame and NS.optionsFrame.shown == true)
-Check("29 lignes (15 réglages + 1 action + 13 modules)", NS.optionsFrame and #NS.optionsFrame.rows == 29, NS.optionsFrame and #NS.optionsFrame.rows)
+Check("30 lignes (16 réglages + 1 action + 13 modules)", NS.optionsFrame and #NS.optionsFrame.rows == 30, NS.optionsFrame and #NS.optionsFrame.rows)
 
 local boolRow = NS.optionsFrame.rows[1]
 local boolBefore = NS:DB().showWindow
@@ -1136,7 +1136,8 @@ Check("barre de score remplie", NS.window and NS.window.scoreBar.fill.width > 0,
 Check("détail du premier module", NS.window.rows[1].detail.text ~= "", NS.window.rows[1].detail.text)
 Check("icône de module posée", NS.window.rows[1].icon.tex.texture ~= nil,
 	NS.window.rows[1].icon.tex.texture)
-Check("bilan affiché dans le bandeau", NS.window.subtitle.text ~= "", NS.window.subtitle.text)
+Check("verdict affiché à côté de la note", NS.window.verdict and NS.window.verdict.text ~= "",
+	NS.window.verdict and NS.window.verdict.text)
 
 -- pièces faibles : le sous-titre du panneau doit les compter
 ResetWorld()
@@ -1554,13 +1555,13 @@ Check("bouton créé", lancer ~= nil)
 Check("bouton affiché", lancer and lancer.shown == true)
 Check("positionné sur l'anneau", lancer and #lancer.points > 0)
 
-lancer:Click("LeftButton")
-Check("clic gauche ouvre les réglages", NS.optionsFrame and NS.optionsFrame.shown == true)
-
-NS.optionsFrame:Hide()
+-- v1.18.0 : clic gauche = action principale (le check), clic droit = réglages
 NS.lastResults = nil
+lancer:Click("LeftButton")
+Check("clic gauche lance le check", NS.lastResults ~= nil)
+
 lancer:Click("RightButton")
-Check("clic droit lance le check", NS.lastResults ~= nil)
+Check("clic droit ouvre les réglages", NS.optionsFrame and NS.optionsFrame.shown == true)
 
 -- glissement autour de la minicarte
 Mock.world.cursorX, Mock.world.cursorY = 580, 500
@@ -1570,7 +1571,7 @@ Check("glissement met à jour l'angle", math.abs(NS:DB().minimapAngle or 999) < 
 Check("drapeau de glissement posé", NS.minimapDragMoved == true)
 
 NS.optionsFrame:Hide()
-lancer:Click("LeftButton")
+lancer:Click("RightButton")
 Check("clic ignoré juste après un glissement", NS.optionsFrame.shown == false)
 
 -- infobulle
@@ -1595,7 +1596,7 @@ for _, row in ipairs(NS.optionsFrame.rows) do
 	if row.def and row.def.key == "showMinimap" then minimapRow = row end
 end
 Check("ligne dédiée dans les réglages", minimapRow ~= nil)
-Check("29 lignes au total", NS.optionsFrame and #NS.optionsFrame.rows == 29, #NS.optionsFrame.rows)
+Check("30 lignes au total", NS.optionsFrame and #NS.optionsFrame.rows == 30, #NS.optionsFrame.rows)
 if minimapRow then minimapRow:Click() end
 Check("décocher masque le bouton", lancer.shown == false)
 if minimapRow then minimapRow:Click() end
@@ -2313,16 +2314,44 @@ end
 -- autres sections. Ils utilisaient encore -6 au lieu de VALUE_RIGHT et
 -- apparaissaient 70 px plus à droite sur la capture.
 if frame and frame.rows then
+	-- v1.18.0 : les interrupteurs (modules, affichage, automatismes) sont sur
+	-- deux colonnes ; chaque demi-ligne garde la même colonne de valeurs, et
+	-- les lignes pleines (seuils) gardent la leur.
 	local misaligned = 0
 	for _, row in ipairs(frame.rows) do
-		if row.value and row.value.GetPoint and row.def == nil then
+		if row.value and row.value.GetPoint then
 			local point, _, _, x = row.value:GetPoint()
-			if point == "RIGHT" and x ~= NS.OPT_LAYOUT.valueRight then
-				misaligned = misaligned + 1
-			end
+			local expected = row.half and NS.OPT_LAYOUT.halfValueRight or NS.OPT_LAYOUT.valueRight
+			if point == "RIGHT" and x ~= expected then misaligned = misaligned + 1 end
 		end
 	end
 	Check("les modules partagent la colonne de valeurs", misaligned == 0, misaligned)
+	Check("panneau d'options : tient à l'écran (<= 740 px)", (frame.height or 9999) <= NS.OPT_LAYOUT.maxHeight,
+		frame.height)
+	local modulesHalf = 0
+	for _, row in ipairs(frame.rows) do if row.isModule and row.half then modulesHalf = modulesHalf + 1 end end
+	Check("modules sur deux colonnes", modulesHalf == #NS.checks, modulesHalf)
+	-- aucune ligne posée sur une autre, et les modules occupent bien deux colonnes
+	local spots, overlap, xs = {}, 0, {}
+	for _, row in ipairs(frame.rows) do
+		local _, _, _, x, y = row:GetPoint()
+		local key = tostring(x) .. ":" .. tostring(y)
+		if spots[key] then overlap = overlap + 1 end
+		spots[key] = true
+		if row.isModule then xs[tostring(x)] = true end
+	end
+	local columnsUsed = 0
+	for _ in pairs(xs) do columnsUsed = columnsUsed + 1 end
+	Check("options : aucune ligne superposée", overlap == 0, overlap)
+	Check("modules : deux colonnes réellement utilisées", columnsUsed == 2, columnsUsed)
+	-- les libellés tiennent dans leur colonne (6.4 px par octet : majorant)
+	local tooLong = {}
+	for _, row in ipairs(frame.rows) do
+		local room = row.half and (NS.OPT_LAYOUT.halfWidth - 6 - NS.OPT_LAYOUT.halfValueWidth)
+			or (NS.OPT_LAYOUT.width - 28 - 2 + NS.OPT_LAYOUT.valueRight - NS.OPT_LAYOUT.valueWidth)
+		if #(row.label.text or "") * 6.4 > room then tooLong[#tooLong + 1] = tostring(row.label.text) end
+	end
+	Check("libellés d'options : aucun débordement", #tooLong == 0, table.concat(tooLong, ", "))
 end
 
 -- Aucun caractère hors du répertoire de la police du client : "▶" (U+25B6)
@@ -2672,7 +2701,7 @@ NS:ToggleOptions()
 local fallback = NS.optionsFrame
 Check("repli sans BackdropTemplate", fallback.chrome == "drawn", fallback.chrome)
 Check("repli toujours titré", fallback.title ~= nil and tostring(fallback.title.text) ~= "")
-Check("repli toujours complet", fallback.rows ~= nil and #fallback.rows == 29,
+Check("repli toujours complet", fallback.rows ~= nil and #fallback.rows == 30,
 	fallback.rows and #fallback.rows)
 Mock.world.noBackdropTemplate = false
 
@@ -2954,7 +2983,7 @@ Check("check manuel : pas de ligne « Parti de »", NS.window.departed.text == "
 -- Chaînes : chaque nouvelle clé existe en frFR ET en enUS
 local newKeys = { "MSG_SAFE_PURGED", "MSG_SAFE_RESET", "SAFE_KIND_CITY", "SAFE_KIND_VILLAGE", "SRC_RESTING",
 	"SRC_SANCTUARY", "SRC_BINDER", "SRC_TAXI", "SRC_MAIL", "SRC_BANK", "SRC_TRAINER", "SRC_MERCHANT", "SRC_QUEST",
-	"SRC_MANUAL", "PANEL_DEPARTED", "CMD_HELP_20", "OPT_EXITDELAY", "OPT_SEC_UNIT", "OPT_SECTION_MERCHANT",
+	"SRC_MANUAL", "PANEL_DEPARTED", "CMD_HELP_20", "OPT_EXITDELAY", "OPT_SEC_UNIT", "OPT_SECTION_AUTO", "OPT_POPUPSCORE", "OPT_SCORE_UNIT", "MSG_BRIEF", "MSG_BRIEF_FROM", "MSG_AUTOSELL_NOTICE",
 	"OPT_AUTOSELL", "OPT_AUTOREPAIR", "MONEY_GOLD", "MONEY_SILVER", "MONEY_COPPER", "MSG_SOLD", "MSG_REPAIRED",
 	"MSG_REPAIR_POOR", "CHK_CLASSREAGENTS", "CHK_CLASSREAGENTS_LOW", "CHK_CLASSREAGENTS_GOOD", "ADV_CLASSREAGENTS",
 	"REAGENT_AMMO", "REAGENT_SHARD", "REAGENT_FLASH", "REAGENT_TELEPORT", "REAGENT_ARCANE", "REAGENT_CANDLE",
@@ -3228,6 +3257,112 @@ Mock.world.resting = true
 Mock:Reset()
 NS:HandleCommand("diag")
 Check("[16] diag : raison de la zone sûre", Mock:Output():find("true %(resting") ~= nil, Mock:Output())
+
+-- ---------------------------------------------------------------------------
+-- Critique UX (v1.18.0)
+-- ---------------------------------------------------------------------------
+Say("\n== UX : alerte, combat, lignes, libellés ==")
+local function ReadyWorld()
+	EnterEra()
+	Mock.world.itemInfo[4001] = { name = "Pain", classID = 0, subClassID = 5 }
+	Mock.world.bags[0].items[1] = { itemID = 4001, stackCount = 10, quality = 1 }
+	Mock.world.bags[0].items[2] = { itemID = 6948, stackCount = 1, quality = 1 }
+	NS:DB().safe["v:30:Village"] = { kind = "village", name = "Village", mapID = 30, subzone = "Village", source = "mail" }
+	Mock.world.mapID, Mock.world.subzone = 30, "Village"
+	Mock:Fire("PLAYER_ENTERING_WORLD", true, false)
+	Mock.now = Mock.now + 60
+	NS.window = nil
+end
+
+-- [2] bonne note : une ligne dans le chat, pas de fenêtre
+ReadyWorld()
+Mock:Reset()
+Mock.world.subzone = "Bois"
+Mock:Fire("ZONE_CHANGED")
+Mock:Advance(6)
+Check("[UX2] note >= 85 : check lancé", NS.lastResults ~= nil and (NS.score or 0) >= 85, NS.score)
+Check("[UX2] note >= 85 : pas de fenêtre", NS.window == nil or NS.window.shown ~= true)
+Check("[UX2] note >= 85 : une ligne dans le chat", Mock:Output():find("/100 %(parti de Village%)") ~= nil, Mock:Output())
+NS:RunChecklist("manual")
+Check("[UX2] check manuel : fenêtre toujours ouverte", NS.window and NS.window.shown == true)
+ReadyWorld()
+NS:DB().popupScore = 100
+Mock.world.subzone = "Bois"
+Mock:Fire("ZONE_CHANGED")
+Mock:Advance(6)
+Check("[UX2] seuil 100 : toujours la fenêtre", NS.window and NS.window.shown == true)
+
+-- [3] combat : la fenêtre attend la fin du combat
+ReadyWorld()
+NS:DB().popupScore = 100
+_G.UnitAffectingCombat = function() return Mock.world.combat == true end
+Mock.world.combat = true
+Mock.world.subzone = "Bois"
+Mock:Fire("ZONE_CHANGED")
+Mock:Advance(30)
+Check("[UX3] en combat : rien ne s'ouvre", NS.lastResults == nil and NS.pendingExit ~= nil)
+Mock.world.combat = false
+Mock:Advance(0.1)
+Check("[UX3] fin du combat : l'alerte part", NS.lastResults ~= nil)
+_G.UnitAffectingCombat = nil
+
+-- [4] plus de doublon « Composants »
+local labels = {}
+for _, def in ipairs(NS.checks) do
+	local label = type(def.label) == "function" and def.label() or def.label
+	labels[label] = (labels[label] or 0) + 1
+end
+local dup = {}
+for label, count in pairs(labels) do if count > 1 then dup[#dup + 1] = label end end
+Check("[UX4] aucun libellé de module en double", #dup == 0, table.concat(dup, ", "))
+
+-- [5] lignes sans objet masquées, échecs en tête, modules coupés en bas
+EnterEra()
+NS:SetModuleEnabled("quests", false)
+Mock.world.durability = { [5] = { 5, 100 } }
+NS.window = nil
+NS:RunChecklist("manual")
+local shown = {}
+for i = 1, NS.window.visibleRows do shown[#shown + 1] = NS.window.rows[i].name.text end
+local shownText = table.concat(shown, ", ")
+Check("[UX5] modules sans objet masqués", not shownText:find("Réparation") and not shownText:find("Sorts")
+	and not shownText:find("Réactifs"), shownText)
+Check("[UX5] échec le plus lourd en tête (vivres, 20)", shown[1] == "Vivres", shownText)
+Check("[UX5] module coupé par le joueur : en bas, grisé", shown[#shown] == "Quêtes", shownText)
+Check("[UX5] fenêtre plus courte que 13 lignes", NS.window.height < NS:WindowHeight(13, false), NS.window.height)
+Check("[UX10] « ! » devant un échec", NS.window.rows[1].detail.text:sub(1, 2) == "! ", NS.window.rows[1].detail.text)
+NS:SetModuleEnabled("quests", true)
+
+-- [6] repos : information, sans poids ni conseil
+EnterEra()
+Mock.world.rested = 0
+NS:RunChecklist("manual")
+Check("[UX6] repos : poids nul", Result("rest").weight == 0)
+local restAdvice = false
+for _, a in ipairs(NS.lastAdvice or {}) do if a.text == NS.L.ADV_REST then restAdvice = true end end
+Check("[UX6] repos : pas de conseil", restAdvice == false)
+
+-- [7] détail des sorts : tient dans la colonne
+EnterEra()
+Mock.world.level = 10
+Mock:Fire("PLAYER_ENTERING_WORLD", true, false)
+Mock.world.level = 12
+NS:RunChecklist("manual")
+Check("[UX7] sorts : détail court (<= 38)", #Result("spells").detail <= 38 and Result("spells").detail:find("10 %-> 12") ~= nil,
+	Result("spells").detail)
+
+-- [9] vente auto : prévenu une seule fois
+EnterEra()
+Mock:Reset()
+Mock:Fire("MERCHANT_SHOW")
+Mock:Fire("MERCHANT_CLOSED")
+Mock:Fire("MERCHANT_SHOW")
+Mock:Fire("MERCHANT_CLOSED")
+local _, notices = Mock:Output():gsub("vend tes objets gris", "")
+Check("[UX9] message de vente auto : une seule fois", notices == 1, notices)
+
+-- [10] vert de statut distinct du vert de rareté
+Check("[UX10] vert de statut ≠ vert « Inhabituel »", NS.Theme.T_GREEN ~= "|cff1eff00")
 
 LeaveEra()
 Mock.world.classToken = nil
