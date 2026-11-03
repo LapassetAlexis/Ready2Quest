@@ -415,6 +415,13 @@ end
 -- quand une bulle plus importante occupe déjà la place (évolution)
 function ns:CompanionCheckUnlocks(level, silent, noBubble)
 	local data = self:CompanionData()
+	-- premier relevé de ce personnage, d'où qu'il vienne (connexion, module
+	-- activé en cours de partie, tampon) : silencieux. Sinon un joueur qui
+	-- installe l'addon au niveau 45 reçoit une rafale de « débloqué ! ».
+	if not data.unlockBaseline then
+		silent = true
+		data.unlockBaseline = true
+	end
 	local counts = self:CompanionCounts()
 	local fresh = {}
 	local function Scan(kind, list)
@@ -1054,9 +1061,16 @@ function ns:CompanionRefreshPage()
 					if self:CompanionIsUnlocked("orn", def) then
 						row.label:SetText(L[def.label])
 						row.label:SetTextColor(0.86, 0.84, 0.78)
+						if row.toggle then row.toggle:SetAlpha(1) end
 					else
 						row.label:SetText(self:F("OPT_COMP_LOCKED", L[def.label], self:CompanionRequirement(def.unlock)))
 						row.label:SetTextColor(0.45, 0.45, 0.45)
+						-- verrouillé : l'interrupteur n'a pas à paraître allumé (il ne
+						-- montre rien tant que l'ornement n'est pas gagné) — vu sur un rendu
+						if row.toggle then
+							row.toggle:SetChecked(false)
+							row.toggle:SetAlpha(0.35)
+						end
 					end
 				end
 			end

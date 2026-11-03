@@ -3,6 +3,45 @@
 > Document destiné au développement : historique version par version, choix d'API, compatibilité des clients, tests. Pour la présentation de l'addon, voir le [README](../README.md).
 
 
+## v1.25.0 — compagnon de route et carnet de voyage
+
+Deux modules qui rendent le leveling plus ludique. Choix de l'utilisateur :
+- **Aspect** : une créature 3D du jeu.
+- **Ton** : bienveillant, jamais punitif.
+- **Périmètre** : tout dans cette version, y compris la collection.
+
+Comme avant, un agent par module, puis fusion. Le contrat entre les deux tient en trois points :
+- le Carnet émet `STAMP` (une copie du tampon) et expose `ns:JournalCounts()` ;
+- le Compagnon écoute ces tampons ;
+- le Carnet ne dépend pas du Compagnon.
+
+**Compagnon de route** (`Companion.lua`, `CompanionData.lua`)
+- **Modèle** : `PlayerModel` + `SetDisplayInfo`. Les numéros sont vérifiés dans `CreatureDisplayInfo` et `CreatureModelData` d'Era 1.15.9 et de Forever 1.60.1 : même modèle et même texture dans les deux clients.
+  - Dragonnets : émeraude 6291, cramoisi 6290, azur 6293, bronze 6292, sombre 6288.
+  - Autres : rainette 6295, chouette 6300, feu follet 6197, dragon féerique 6294.
+  - Animations 0, 68, 69 et 100, vérifiées dans `AnimationData`.
+  - Pas de renard : aucun modèle de renard n'existe dans Era.
+  - Si l'API de modèle manque, la boussole le remplace.
+- **Besoins** : de 0 à 100, avec un plancher à 15. Ils ne baissent qu'en jeu. Une absence de plus de 2 h donne seulement un état « somnolent ».
+- **Stades** : à 10, 20, 40 et 60, sans jamais revenir en arrière. Le premier relevé est posé sans fête.
+- **Accessoires** : ils deviennent des **apparences** et des **ornements de cadre**, parce que Classic n'a pas d'API pour accrocher un objet sur un modèle de créature.
+
+**Carnet de voyage** (`Journal.lua`)
+- **Tampons** : zone (première carte de type Zone en remontant les parents), village (lieux de `Hubs.lua`, de sa faction ou neutres, hors auberges), capitale (toutes factions), donjon (`ns:DetectDungeon`, sinon `GetInstanceInfo` de type party), palier (tous les 10 niveaux).
+- **Rare** : il doit avoir été **vu** (classification rare ou rareelite) puis **engagé** par toi, ton familier ou ton groupe (bits d'affiliation du journal de combat). Le tampon tombe à sa mort (`UNIT_DIED` ou `PARTY_KILL`). Un rare tué par un inconnu ne compte pas.
+- **Paliers rattrapés** : ceux déjà atteints à l'installation sont ajoutés en silence, sans bandeau ni `STAMP`.
+- **Bandeau** : jamais en combat. Il est mis en file et regroupé à partir de 3 tampons.
+
+**Ce que la fusion a corrigé**
+- **Panneau** : 480 → 520 px, la navigation débordait avec les deux nouvelles entrées.
+- **Premier relevé du compagnon** : il est maintenant toujours silencieux. Avant, quand les données naissaient hors connexion (module activé en cours de partie, ou premier tampon), il annonçait d'un coup tous les déblocages dus au niveau. Les tests d'autres modules l'ont révélé, et un test d'intégration le couvre.
+- **Ornements verrouillés** : leur interrupteur s'affichait allumé. Il est maintenant éteint et estompé (vu sur un rendu, test ajouté).
+
+**À vérifier en jeu**
+- Le modèle s'affiche dans un `PlayerModel` d'addon. Un modèle invisible sans erreur ne se détecte pas hors jeu.
+- Cadrage, échelle et animations des créatures.
+- `mapType` des cartes, format des GUID, et bits d'affiliation du familier dans le journal de combat.
+
 ## v1.24.0 — confort de jeu : quatre modules QoL
 
 Les modules ont été faits comme en v1.23.0 : un agent par module dans son worktree, sur l'API d'extension, puis fusionnés.
