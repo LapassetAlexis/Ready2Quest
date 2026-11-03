@@ -9,6 +9,11 @@ local Check, ResetWorld, NS, Mock = T.Check, T.ResetWorld, T.NS, T.Mock
 local saved, MOCKED = {}, { "GetNumSkillLines", "GetSkillLineInfo", "IsInInstance", "UnitName",
 	"LOOT_ITEM_SELF", "LOOT_ITEM_SELF_MULTIPLE", "LOOT_ITEM_PUSHED_SELF", "LOOT_ITEM_PUSHED_SELF_MULTIPLE" }
 for _, name in ipairs(MOCKED) do saved[name] = rawget(_G, name) end
+-- Ces tests couvrent le comportement 100 % dynamique (zone absente des tables
+-- livrées, comme sur Forever) : tables mises de côté, remises à la fin.
+-- Les zones préremplies sont testées dans zone_data.lua.
+saved.ZONE_CREATURES, saved.ZONE_GATHERING = rawget(NS, "ZONE_CREATURES"), rawget(NS, "ZONE_GATHERING")
+NS.ZONE_CREATURES, NS.ZONE_GATHERING = nil, nil
 
 local G = { skills = {}, instance = false, char = "Testeur" }
 _G.GetNumSkillLines = function() return #G.skills end
@@ -285,5 +290,6 @@ end
 
 -- ipairs sur la liste : une globale absente avant (nil) doit le redevenir
 for _, name in ipairs(MOCKED) do _G[name] = saved[name] end
+NS.ZONE_CREATURES, NS.ZONE_GATHERING = saved.ZONE_CREATURES, saved.ZONE_GATHERING
 if NS.journalTracker then NS.journalTracker:Hide() end
 NS.journalTracker = nil

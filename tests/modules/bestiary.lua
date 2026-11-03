@@ -12,6 +12,11 @@ local saved, MOCKED = {}, { "IsInInstance", "GetInstanceInfo", "GetRealZoneText"
 for _, name in ipairs(MOCKED) do saved[name] = rawget(_G, name) end
 saved.GetAreaInfo = C_Map.GetAreaInfo
 saved.NextUnlocks = rawget(NS, "CompanionNextUnlocks")
+-- Ces tests couvrent le comportement 100 % dynamique (zone absente des tables
+-- livrées, comme sur Forever) : tables mises de côté, remises à la fin.
+-- Les zones préremplies sont testées dans zone_data.lua.
+saved.ZONE_CREATURES, saved.ZONE_GATHERING = rawget(NS, "ZONE_CREATURES"), rawget(NS, "ZONE_GATHERING")
+NS.ZONE_CREATURES, NS.ZONE_GATHERING = nil, nil
 
 local B = { W = { units = {} } }
 local PLAYER_GUID = "Player-1-00000001"
@@ -428,6 +433,7 @@ end
 for _, name in ipairs(MOCKED) do _G[name] = saved[name] end
 C_Map.GetAreaInfo = saved.GetAreaInfo
 NS.CompanionNextUnlocks = saved.NextUnlocks
+NS.ZONE_CREATURES, NS.ZONE_GATHERING = saved.ZONE_CREATURES, saved.ZONE_GATHERING
 NS.bestiaryUnits, NS.bestiaryPrunedAt = {}, nil
 NS.journalRares = {}
 if NS.journalTracker then NS.journalTracker:Hide() end

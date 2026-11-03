@@ -41,6 +41,8 @@ CompanionLines.lua
 Companion.lua
 Journal.lua
 JournalTracker.lua
+ZoneCreatures.lua
+ZoneGathering.lua
 Bestiary.lua
 GatheringData.lua
 Gathering.lua
