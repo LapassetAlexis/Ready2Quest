@@ -33,3 +33,4 @@ DungeonData.lua
 Dungeon.lua
 QuestReward.lua
 LevelPace.lua
+BagSpace.lua
