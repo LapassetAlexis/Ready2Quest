@@ -77,6 +77,18 @@ function C.Play(minutes)
 end
 function C.Model() return NS.companionFrame and NS.companionFrame.model end
 
+-- Cosmétiques du coffre (v1.25.0 : un palier, pas d'`unlock`) : verrouillés
+-- tant que le coffre ne les a pas donnés. Cette règle appartient au coffre ;
+-- en attendant, elle est simulée ici pour que les tests des déblocages par
+-- tampons ne voient que l'ancien catalogue. Retirée en fin de fichier.
+C.savedIsUnlocked = NS.CompanionIsUnlocked
+function NS:CompanionIsUnlocked(kind, def)
+	if type(def) == "table" and not def.unlock and (tonumber(def.tier) or 0) >= 1 then
+		return self:CompanionData().unlocked[kind .. ":" .. tostring(def.id)] == true
+	end
+	return C.savedIsUnlocked(self, kind, def)
+end
+
 do
 	Say("-- chargement, réglages, chaînes")
 	C.Reset()
@@ -511,7 +523,7 @@ do
 	NS:HandleCommand("compagnon")
 	local out = Mock:Output()
 	Check("[COMP] statut : nom, stade, besoins, collection", out:find(NS:CompanionName(), 1, true) and out:find("Jeune", 1, true)
-		and out:find("Faim", 1, true) and out:find("Apparences 1/9", 1, true), out)
+		and out:find("Faim", 1, true) and out:find("Apparences 1/" .. #NS.COMPANION_APPEARANCES, 1, true), out)
 	NS:HandleCommand("compagnon apparence")
 	Check("[COMP] « apparence » : cycle et confirmation", Mock:Output():find("Apparence :", 1, true) ~= nil)
 	Check("[COMP] aide : commande listée", (function()
@@ -1271,3 +1283,4 @@ NS.hubIndex = nil
 C.RemoveModelAPI()
 NS.JournalCounts = C.savedJournal
 if NS.companionFrame then NS.companionFrame:Hide() end
+NS.CompanionIsUnlocked = C.savedIsUnlocked

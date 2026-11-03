@@ -138,10 +138,48 @@ local FR = {
 	COMP_APP_WHELP_BLUE    = "Dragonnet azur",
 	COMP_APP_WHELP_BRONZE  = "Dragonnet de bronze",
 	COMP_APP_WHELP_BLACK   = "Dragonnet sombre",
+	COMP_APP_CAT_ORANGE    = "Chaton roux",
+	COMP_APP_RABBIT        = "Lapin des prés",
+	COMP_APP_TURTLE        = "Tortue",
+	COMP_APP_PARROT        = "Ara bleu",
+	COMP_APP_SNAKE         = "Serpent cramoisi",
+	COMP_APP_CAT_WHITE     = "Chaton blanc",
 	COMP_ORN_RIBBON        = "Ruban de voyage",
 	COMP_ORN_LANTERN       = "Lanterne",
 	COMP_ORN_MEDAL         = "Médaille",
 	COMP_ORN_GOLD          = "Cadre doré",
+	COMP_ORN_FLOWER        = "Fleur des champs",
+	COMP_ORN_PENNANT       = "Fanion",
+	COMP_ORN_CRYSTAL       = "Cristal de lune",
+	COMP_ORN_CROWN         = "Couronne",
+	-- cadres (bordure) et fonds du cadre du compagnon
+	COMP_FRAME_SLATE       = "Ardoise",
+	COMP_FRAME_COPPER      = "Cuivre",
+	COMP_FRAME_OAK         = "Chêne",
+	COMP_FRAME_SILVER      = "Argent",
+	COMP_FRAME_FROST       = "Givre",
+	COMP_FRAME_RUNE        = "Runique",
+	COMP_FRAME_FEL         = "Gangrené",
+	COMP_FRAME_GILDED      = "Or ciselé",
+	COMP_BG_NIGHT          = "Nuit",
+	COMP_BG_PARCHMENT      = "Parchemin",
+	COMP_BG_FOREST         = "Sous-bois",
+	COMP_BG_DUSK           = "Crépuscule",
+	COMP_BG_FROST          = "Givre",
+	COMP_BG_MARBLE         = "Marbre",
+	COMP_BG_EMBER          = "Braise",
+	COMP_BG_STARS          = "Voûte étoilée",
+	COMP_BG_VELVET         = "Velours doré",
+	COMP_KIND_app          = "Apparence",
+	COMP_KIND_orn          = "Ornement",
+	COMP_KIND_frame        = "Cadre",
+	COMP_KIND_bg           = "Fond",
+	COMP_TIER              = "Palier %s",
+	COMP_TIER_OWNED        = "Possédé",
+	COMP_REWARD_LABEL      = "%s : %s",
+	OPT_COMP_FRAME         = "Cadre : %s",
+	OPT_COMP_BG            = "Fond : %s",
+	OPT_COMP_LOCKED_TIER   = "%s (palier %s)",
 	COMP_REQ_LEVEL         = "niveau %d",
 	COMP_REQ_zone          = "%d zones",
 	COMP_REQ_subzone       = "%d lieux",
@@ -228,10 +266,47 @@ local EN = {
 	COMP_APP_WHELP_BLUE    = "Azure whelpling",
 	COMP_APP_WHELP_BRONZE  = "Bronze whelpling",
 	COMP_APP_WHELP_BLACK   = "Dark whelpling",
+	COMP_APP_CAT_ORANGE    = "Ginger kitten",
+	COMP_APP_RABBIT        = "Meadow rabbit",
+	COMP_APP_TURTLE        = "Turtle",
+	COMP_APP_PARROT        = "Blue macaw",
+	COMP_APP_SNAKE         = "Crimson snake",
+	COMP_APP_CAT_WHITE     = "White kitten",
 	COMP_ORN_RIBBON        = "Travel ribbon",
 	COMP_ORN_LANTERN       = "Lantern",
 	COMP_ORN_MEDAL         = "Medal",
 	COMP_ORN_GOLD          = "Golden frame",
+	COMP_ORN_FLOWER        = "Wildflower",
+	COMP_ORN_PENNANT       = "Pennant",
+	COMP_ORN_CRYSTAL       = "Moon crystal",
+	COMP_ORN_CROWN         = "Crown",
+	COMP_FRAME_SLATE       = "Slate",
+	COMP_FRAME_COPPER      = "Copper",
+	COMP_FRAME_OAK         = "Oak",
+	COMP_FRAME_SILVER      = "Silver",
+	COMP_FRAME_FROST       = "Frost",
+	COMP_FRAME_RUNE        = "Runic",
+	COMP_FRAME_FEL         = "Fel-touched",
+	COMP_FRAME_GILDED      = "Chased gold",
+	COMP_BG_NIGHT          = "Night",
+	COMP_BG_PARCHMENT      = "Parchment",
+	COMP_BG_FOREST         = "Undergrowth",
+	COMP_BG_DUSK           = "Dusk",
+	COMP_BG_FROST          = "Frost",
+	COMP_BG_MARBLE         = "Marble",
+	COMP_BG_EMBER          = "Embers",
+	COMP_BG_STARS          = "Starry vault",
+	COMP_BG_VELVET         = "Golden velvet",
+	COMP_KIND_app          = "Appearance",
+	COMP_KIND_orn          = "Ornament",
+	COMP_KIND_frame        = "Frame",
+	COMP_KIND_bg           = "Background",
+	COMP_TIER              = "Tier %s",
+	COMP_TIER_OWNED        = "Owned",
+	COMP_REWARD_LABEL      = "%s: %s",
+	OPT_COMP_FRAME         = "Frame: %s",
+	OPT_COMP_BG            = "Background: %s",
+	OPT_COMP_LOCKED_TIER   = "%s (tier %s)",
 	COMP_REQ_LEVEL         = "level %d",
 	COMP_REQ_zone          = "%d zones",
 	COMP_REQ_subzone       = "%d places",
@@ -289,6 +364,10 @@ ns.RegisterDefaults({
 	companionOrnLantern = true,
 	companionOrnMedal   = true,
 	companionOrnGold    = true,
+	companionOrnFlower  = true,
+	companionOrnPennant = true,
+	companionOrnCrystal = true,
+	companionOrnCrown   = true,
 })
 
 -- Un seul module « Compagnon de route » : le carnet de voyage le fait évoluer.
@@ -302,12 +381,19 @@ ns.AddOptionPage({
 		{ key = "companionBubbles",    label = "OPT_COMP_BUBBLES",    kind = "bool" },
 		{ key = "companionTips",       label = "OPT_COMP_TIPS",       kind = "bool" },
 		{ key = "companionAppearance", label = "OPT_COMP_APPEARANCE", kind = "action" },
+		-- clic sur la ligne : style suivant ; pastilles : choix direct (voir CompanionRefreshPage)
+		{ key = "companionFrameStyle", label = "COMP_KIND_frame",     kind = "action" },
+		{ key = "companionBackground", label = "COMP_KIND_bg",        kind = "action" },
 		{ key = "companionTutorial",   label = "OPT_COMP_TUTO",       kind = "action" },
 		{ header = "OPT_COMP_ORNAMENTS" },
 		{ key = "companionOrnRibbon",  label = "COMP_ORN_RIBBON",     kind = "bool" },
 		{ key = "companionOrnLantern", label = "COMP_ORN_LANTERN",    kind = "bool" },
 		{ key = "companionOrnMedal",   label = "COMP_ORN_MEDAL",      kind = "bool" },
 		{ key = "companionOrnGold",    label = "COMP_ORN_GOLD",       kind = "bool" },
+		{ key = "companionOrnFlower",  label = "COMP_ORN_FLOWER",     kind = "bool" },
+		{ key = "companionOrnPennant", label = "COMP_ORN_PENNANT",    kind = "bool" },
+		{ key = "companionOrnCrystal", label = "COMP_ORN_CRYSTAL",    kind = "bool" },
+		{ key = "companionOrnCrown",   label = "COMP_ORN_CROWN",      kind = "bool" },
 	},
 })
 -- « pet » et « compagnon » : ni un contrôle du check, ni un autre module
@@ -616,6 +702,71 @@ end
 function ns:CompanionOrnamentShown(def)
 	local db = self:DB()
 	return self:CompanionIsUnlocked("orn", def) and db[def.key] ~= false
+end
+
+-- Cadres et fonds : même convention que l'apparence (choix par personnage,
+-- dans CompanionData ; un choix verrouillé retombe sur le premier, tier 0)
+local STYLES = {
+	frame = { field = "frameStyle", list = function() return ns.COMPANION_FRAMES end },
+	bg    = { field = "background", list = function() return ns.COMPANION_BACKGROUNDS end },
+}
+
+function ns:CompanionStyleDef(kind, id)
+	local style = STYLES[kind]
+	if not style then return nil end
+	for _, def in ipairs(style.list()) do
+		if def.id == id then return def end
+	end
+	return nil
+end
+
+function ns:CompanionCurrentStyle(kind)
+	local style = STYLES[kind]
+	if not style then return nil end
+	local data = self:CompanionData()
+	local def = self:CompanionStyleDef(kind, data[style.field])
+	if not (def and self:CompanionIsUnlocked(kind, def)) then
+		def = style.list()[1]
+		data[style.field] = def.id
+	end
+	return def
+end
+
+-- Choisit un style ; refusé (nil) s'il est inconnu ou verrouillé
+function ns:CompanionSetStyle(kind, id)
+	local def = self:CompanionStyleDef(kind, id)
+	if not (def and self:CompanionIsUnlocked(kind, def)) then return nil end
+	self:CompanionData()[STYLES[kind].field] = def.id
+	if kind == "frame" then self:CompanionApplyFrame() else self:CompanionApplyBackground() end
+	if self.RefreshOptions then self:RefreshOptions() end
+	return def
+end
+
+-- Style suivant parmi ceux débloqués (clic sur la ligne des réglages)
+function ns:CompanionCycleStyle(kind)
+	local style = STYLES[kind]
+	if not style then return nil end
+	local current = self:CompanionCurrentStyle(kind)
+	local list = {}
+	for _, def in ipairs(style.list()) do
+		if self:CompanionIsUnlocked(kind, def) then list[#list + 1] = def end
+	end
+	local nextDef = list[1] or current
+	for index, def in ipairs(list) do
+		if def.id == current.id then nextDef = list[(index % #list) + 1] end
+	end
+	return self:CompanionSetStyle(kind, nextDef.id)
+end
+
+-- Nom lisible d'une récompense (entrée de ns.COMPANION_REWARDS) ;
+-- `withKind` : préfixé du type (« Cadre : Givre »)
+function ns:CompanionRewardLabel(reward, withKind)
+	if type(reward) ~= "table" then return "" end
+	local name = L[reward.label] or tostring(reward.label or reward.id or "")
+	if withKind and reward.kind then
+		return self:F("COMP_REWARD_LABEL", L["COMP_KIND_" .. reward.kind] or reward.kind, name)
+	end
+	return name
 end
 
 -- ---------------------------------------------------------------------------
@@ -927,6 +1078,65 @@ local function BuildOrnaments(frame)
 	orn.gold:SetPoint("BOTTOMRIGHT", frame, "BOTTOMRIGHT", 3, -3)
 	orn.gold.outer = Theme.Border(orn.gold, Theme.GOLD, 1, "OVERLAY")
 	orn.gold.corner = { Theme.CornerAccent(frame) }
+	-- fleur des champs : une tige verte et un losange rose, en bas à droite
+	orn.flower = CreateFrame("Frame", nil, frame)
+	orn.flower:SetSize(12, 20)
+	orn.flower:SetPoint("BOTTOMRIGHT", frame, "BOTTOMRIGHT", -5, 18)
+	orn.flower.stem = Theme.Solid(orn.flower, "ARTWORK", Theme.GREEN, 0.9)
+	orn.flower.stem:SetPoint("BOTTOM", orn.flower, "BOTTOM", 0, 0)
+	orn.flower.stem:SetSize(1, 11)
+	orn.flower.leaf = Theme.Solid(orn.flower, "ARTWORK", Theme.GREEN, 0.7)
+	orn.flower.leaf:SetPoint("BOTTOM", orn.flower, "BOTTOM", 2, 4)
+	orn.flower.leaf:SetSize(3, 2)
+	orn.flower.petals = Theme.CreateDiamond(orn.flower, 10)
+	orn.flower.petals:SetPoint("TOP", orn.flower, "TOP", 0, 0)
+	orn.flower.petals:SetVertexColor(0.95, 0.55, 0.70, 1)
+	orn.flower.heart = Theme.Solid(orn.flower, "OVERLAY", Theme.GOLD, 1)
+	orn.flower.heart:SetPoint("TOP", orn.flower, "TOP", 0, -4)
+	orn.flower.heart:SetSize(2, 2)
+	-- fanion : une hampe et un petit drapeau rouge à liseré ambre, flanc gauche
+	orn.pennant = CreateFrame("Frame", nil, frame)
+	orn.pennant:SetSize(14, 22)
+	orn.pennant:SetPoint("LEFT", frame, "LEFT", -6, 14)
+	orn.pennant.pole = Theme.Solid(orn.pennant, "ARTWORK", Theme.GOLD_SOFT, 1)
+	orn.pennant.pole:SetPoint("TOPLEFT", orn.pennant, "TOPLEFT", 0, 0)
+	orn.pennant.pole:SetSize(1, 22)
+	orn.pennant.flag = Theme.Solid(orn.pennant, "OVERLAY", Theme.RED, 0.95)
+	orn.pennant.flag:SetPoint("TOPLEFT", orn.pennant, "TOPLEFT", 1, -1)
+	orn.pennant.flag:SetSize(11, 7)
+	orn.pennant.hem = Theme.Solid(orn.pennant, "OVERLAY", Theme.GOLD, 1)
+	orn.pennant.hem:SetPoint("TOPLEFT", orn.pennant, "TOPLEFT", 1, -8)
+	orn.pennant.hem:SetSize(11, 1)
+	-- cristal de lune : losange bleu pâle et son halo, flanc droit
+	orn.crystal = CreateFrame("Frame", nil, frame)
+	orn.crystal:SetSize(18, 18)
+	orn.crystal:SetPoint("RIGHT", frame, "RIGHT", 7, 10)
+	orn.crystal.glow = Theme.Solid(orn.crystal, "ARTWORK", { 0.60, 0.85, 1 }, 0.18)
+	orn.crystal.glow:SetPoint("CENTER", orn.crystal, "CENTER", 0, 0)
+	orn.crystal.glow:SetSize(16, 16)
+	orn.crystal.gem = Theme.CreateDiamond(orn.crystal, 12)
+	orn.crystal.gem:SetPoint("CENTER", orn.crystal, "CENTER", 0, 0)
+	orn.crystal.gem:SetVertexColor(0.70, 0.90, 1, 1)
+	orn.crystal.shine = Theme.Solid(orn.crystal, "OVERLAY", { 1, 1, 1 }, 0.9)
+	orn.crystal.shine:SetPoint("CENTER", orn.crystal, "CENTER", -1, 2)
+	orn.crystal.shine:SetSize(2, 2)
+	-- couronne : un bandeau d'or et trois pointes en losange, en haut au centre
+	orn.crown = CreateFrame("Frame", nil, frame)
+	orn.crown:SetSize(26, 12)
+	orn.crown:SetPoint("BOTTOM", frame, "TOP", 0, -4)
+	orn.crown.band = Theme.Solid(orn.crown, "OVERLAY", Theme.GOLD, 1)
+	orn.crown.band:SetPoint("BOTTOM", orn.crown, "BOTTOM", 0, 0)
+	orn.crown.band:SetSize(22, 4)
+	orn.crown.points = {}
+	for index, x in ipairs({ -8, 0, 8 }) do
+		local point = Theme.CreateDiamond(orn.crown, index == 2 and 9 or 7)
+		point:SetPoint("BOTTOM", orn.crown, "BOTTOM", x, 2)
+		point:SetVertexColor(Theme.GOLD[1], Theme.GOLD[2], Theme.GOLD[3], 1)
+		orn.crown.points[index] = point
+	end
+	orn.crown.jewel = Theme.Solid(orn.crown, "OVERLAY", Theme.RED, 1)
+	orn.crown.jewel:SetPoint("BOTTOM", orn.crown, "BOTTOM", 0, 1)
+	orn.crown.jewel:SetSize(2, 2)
 	for _, o in pairs(orn) do o:Hide() end
 	return orn
 end
@@ -1164,6 +1374,139 @@ function ns:CompanionApplyOrnaments()
 			end
 		end
 	end
+	-- cadre et fond suivent les ornements partout où ils sont rafraîchis
+	-- (déblocage, affichage, création du cadre)
+	self:CompanionApplyFrame()
+	self:CompanionApplyBackground()
+end
+
+-- ---------------------------------------------------------------------------
+-- Cadre (bordure) et fond
+-- ---------------------------------------------------------------------------
+local function SetColor(tex, color, alpha)
+	if tex and color then tex:SetVertexColor(color[1], color[2], color[3], alpha or color[4] or 1) end
+end
+
+-- Cadre BackdropTemplate (Era 1.15 et Forever l'ont) ; repli : cadre simple,
+-- qui n'a de bordure que si le client y garde SetBackdrop
+local function CreateBackdropFrame(parent)
+	local ok, frame = pcall(CreateFrame, "Frame", nil, parent, "BackdropTemplate")
+	if ok and frame then return frame end
+	ok, frame = pcall(CreateFrame, "Frame", nil, parent)
+	if ok then return frame end
+	return nil
+end
+
+function ns:CompanionApplyFrame()
+	local frame = self.companionFrame
+	if not frame then return nil end
+	local def = self:CompanionCurrentStyle("frame")
+	-- filet 1 px : toujours là, c'est aussi le repli d'une bordure absente
+	for _, edge in ipairs({ frame.top, frame.bottom, frame.leftEdge, frame.rightEdge }) do
+		SetColor(edge, def.edge or ns.COMPANION_FRAMES[1].edge)
+	end
+	-- second filet, intérieur
+	if def.inner then
+		if not frame.styleInner then
+			frame.styleInnerHolder = CreateFrame("Frame", nil, frame)
+			frame.styleInnerHolder:SetPoint("TOPLEFT", frame, "TOPLEFT", 3, -3)
+			frame.styleInnerHolder:SetPoint("BOTTOMRIGHT", frame, "BOTTOMRIGHT", -3, 3)
+			frame.styleInner = Theme.Border(frame.styleInnerHolder, def.inner, def.inner[4], "BORDER")
+		end
+		frame.styleInner:SetColor(def.inner[1], def.inner[2], def.inner[3], def.inner[4])
+		frame.styleInnerHolder:Show()
+	elseif frame.styleInnerHolder then
+		frame.styleInnerHolder:Hide()
+	end
+	-- bordure du client
+	local applied = false
+	if def.backdrop then
+		if not frame.styleBorder then
+			frame.styleBorder = CreateBackdropFrame(frame)
+			if frame.styleBorder then
+				frame.styleBorder:SetPoint("TOPLEFT", frame, "TOPLEFT", -4, 4)
+				frame.styleBorder:SetPoint("BOTTOMRIGHT", frame, "BOTTOMRIGHT", 4, -4)
+				-- au niveau du cadre : les ornements (enfants, niveau + 1) restent dessus
+				Method(frame.styleBorder, "EnableMouse", false)
+				local okLevel, level = Method(frame, "GetFrameLevel")
+				if okLevel and tonumber(level) then Method(frame.styleBorder, "SetFrameLevel", level) end
+			end
+		end
+		local border = frame.styleBorder
+		if border and type(border.SetBackdrop) == "function" then
+			local b = def.backdrop
+			applied = pcall(border.SetBackdrop, border, {
+				edgeFile = b.file, edgeSize = b.size or 16,
+				insets = { left = 0, right = 0, top = 0, bottom = 0 },
+			}) and true or false
+			if applied and b.color then
+				Method(border, "SetBackdropBorderColor", b.color[1], b.color[2], b.color[3], b.color[4] or 1)
+			end
+		end
+	end
+	if frame.styleBorder then
+		if applied then frame.styleBorder:Show() else frame.styleBorder:Hide() end
+	end
+	frame.frameStyle = def.id
+	frame.frameBackdrop = applied
+	return def
+end
+
+-- Petits points de lumière de la voûte étoilée (positions fixes : pas de
+-- hasard, le fond ne « bouge » pas à chaque rechargement)
+local STARS = { { 12, -10, 2 }, { 30, -22, 1 }, { 52, -8, 2 }, { 74, -18, 1 }, { 90, -6, 2 },
+	{ 20, -40, 1 }, { 84, -36, 1 }, { 60, -30, 1 }, { 8, -62, 1 }, { 94, -58, 2 } }
+
+-- Dégradé vertical : API récente (couleurs CreateColor), sinon l'ancienne
+-- (SetGradientAlpha), sinon rien (l'aplat teinté reste)
+local function ApplyGradient(tex, top, bottom)
+	local createColor = rawget(_G, "CreateColor")
+	if type(tex.SetGradient) == "function" and type(createColor) == "function" then
+		local okMin, minColor = pcall(createColor, bottom[1], bottom[2], bottom[3], bottom[4] or 1)
+		local okMax, maxColor = pcall(createColor, top[1], top[2], top[3], top[4] or 1)
+		if okMin and okMax and pcall(tex.SetGradient, tex, "VERTICAL", minColor, maxColor) then return "color" end
+	end
+	if type(tex.SetGradientAlpha) == "function" then
+		if pcall(tex.SetGradientAlpha, tex, "VERTICAL", bottom[1], bottom[2], bottom[3], bottom[4] or 1,
+			top[1], top[2], top[3], top[4] or 1) then return "alpha" end
+	end
+	return nil
+end
+
+function ns:CompanionApplyBackground()
+	local frame = self.companionFrame
+	if not (frame and frame.bg) then return nil end
+	local def = self:CompanionCurrentStyle("bg")
+	local bg = frame.bg
+	-- texture : refusée (erreur, ou false sur les clients qui le disent) -> aplat
+	local path, fallback = def.texture or Theme.SOLID, false
+	local ok, result = pcall(bg.SetTexture, bg, path)
+	if not ok or result == false then
+		fallback = def.texture ~= nil
+		path = Theme.SOLID
+		pcall(bg.SetTexture, bg, path)
+	end
+	SetColor(bg, def.color or { 0, 0, 0, 0.66 })
+	local gradient = nil
+	if def.gradient then gradient = ApplyGradient(bg, def.gradient.top, def.gradient.bottom) end
+	-- étoiles
+	if def.stars and not frame.stars then
+		frame.stars = {}
+		for index, s in ipairs(STARS) do
+			local star = Theme.Solid(frame, "BORDER", Theme.PARCHMENT, 0.8)
+			star:SetPoint("TOPLEFT", frame, "TOPLEFT", s[1], s[2])
+			star:SetSize(s[3], s[3])
+			frame.stars[index] = star
+		end
+	end
+	for _, star in ipairs(frame.stars or {}) do
+		if def.stars then star:Show() else star:Hide() end
+	end
+	frame.bgStyle = def.id
+	frame.bgTexture = path
+	frame.bgFallback = fallback
+	frame.bgGradient = gradient
+	return def
 end
 
 -- Affiche ou cache selon le module et le réglage « Afficher »
@@ -1745,6 +2088,8 @@ if type(ns.RunOptionAction) == "function" then
 	local baseAction = ns.RunOptionAction
 	function ns:RunOptionAction(key, ...)
 		if key == "companionAppearance" then return self:CompanionCycleAppearance() end
+		if key == "companionFrameStyle" then return self:CompanionCycleStyle("frame") end
+		if key == "companionBackground" then return self:CompanionCycleStyle("bg") end
 		if key == "companionTutorial" then return self:CompanionStartTutorial(true) end
 		return baseAction(self, key, ...)
 	end
@@ -1758,6 +2103,74 @@ if type(ns.ApplyDisplayOptions) == "function" then
 	end
 end
 
+-- Pastilles de choix (cadre, fond) : une par style, à droite de la ligne.
+-- Débloqué : couleurs du style, clic = choix. Verrouillé : estompé, le
+-- numéro de palier dessus, l'infobulle dit « Palier 2 ».
+local SWATCH, SWATCH_GAP = 15, 4
+local STYLE_ROWS = { companionFrameStyle = "frame", companionBackground = "bg" }
+
+local function SwatchTooltip(swatch)
+	local tip = rawget(_G, "GameTooltip")
+	if not tip then return end
+	Method(tip, "SetOwner", swatch, "ANCHOR_RIGHT")
+	Method(tip, "ClearLines")
+	Method(tip, "AddLine", L[swatch.def.label])
+	local status = swatch.locked and ns:F("COMP_TIER", swatch.def.tier) or L.COMP_TIER_OWNED
+	Method(tip, "AddLine", status, 0.6, 0.6, 0.6)
+	Method(tip, "Show")
+end
+
+local function BuildSwatches(row, kind)
+	local list = kind == "frame" and ns.COMPANION_FRAMES or ns.COMPANION_BACKGROUNDS
+	row.swatches = {}
+	for index, def in ipairs(list) do
+		local swatch = CreateFrame("Button", nil, row)
+		swatch:SetSize(SWATCH, SWATCH)
+		swatch:SetPoint("RIGHT", row, "RIGHT", -4 - (#list - index) * (SWATCH + SWATCH_GAP), 0)
+		swatch.def, swatch.kind = def, kind
+		swatch.fill = Theme.Solid(swatch, "BACKGROUND", Theme.SURFACE, 1)
+		swatch.fill:SetAllPoints()
+		swatch.edge = Theme.Border(swatch, Theme.GOLD_DIM, 1, "BORDER")
+		swatch.selected = Theme.Border(swatch, Theme.GOLD, 1, "OVERLAY")
+		swatch.tier = swatch:CreateFontString(nil, "OVERLAY", Theme.F_SMALL)
+		swatch.tier:SetPoint("CENTER", swatch, "CENTER", 0, 0)
+		swatch.tier:SetText(tostring(def.tier or ""))
+		if kind == "frame" then
+			local c = def.backdrop and def.backdrop.color or def.edge
+			swatch.edge:SetColor(c[1], c[2], c[3], 1)
+		else
+			local c = def.gradient and def.gradient.bottom or def.color
+			swatch.fill:SetVertexColor(c[1], c[2], c[3], 1)
+		end
+		swatch:SetScript("OnClick", function(s)
+			if s.locked then return end
+			ns:CompanionSetStyle(s.kind, s.def.id)
+		end)
+		swatch:SetScript("OnEnter", SwatchTooltip)
+		swatch:SetScript("OnLeave", function()
+			local tip = rawget(_G, "GameTooltip")
+			if tip then Method(tip, "Hide") end
+		end)
+		row.swatches[index] = swatch
+	end
+end
+
+function ns:CompanionRefreshStyleRow(row, kind)
+	if not row.swatches then BuildSwatches(row, kind) end
+	local current = self:CompanionCurrentStyle(kind)
+	row.label:SetText(self:F(kind == "frame" and "OPT_COMP_FRAME" or "OPT_COMP_BG", Theme.T_GOLD .. tostring(L[current.label]) .. "|r"))
+	row.value:SetText("")
+	for _, swatch in ipairs(row.swatches) do
+		swatch.locked = not self:CompanionIsUnlocked(kind, swatch.def)
+		swatch:SetAlpha(swatch.locked and 0.35 or 1)
+		if swatch.locked then swatch.tier:Show() else swatch.tier:Hide() end
+		for _, side in ipairs({ "top", "bottom", "left", "right" }) do
+			if swatch.def.id == current.id then swatch.selected[side]:Show() else swatch.selected[side]:Hide() end
+		end
+		swatch:Show()
+	end
+end
+
 function ns:CompanionRefreshPage()
 	local frame = self.optionsFrame
 	if not (frame and frame.rows) then return end
@@ -1766,6 +2179,8 @@ function ns:CompanionRefreshPage()
 		if key == "companionAppearance" then
 			row.value:SetWidth(170)
 			row.value:SetText(Theme.T_GOLD .. tostring(L[self:CompanionCurrentAppearance().label]) .. "|r")
+		elseif key and STYLE_ROWS[key] then
+			self:CompanionRefreshStyleRow(row, STYLE_ROWS[key])
 		elseif key then
 			for _, def in ipairs(ns.COMPANION_ORNAMENTS) do
 				if def.key == key then
@@ -1774,7 +2189,12 @@ function ns:CompanionRefreshPage()
 						row.label:SetTextColor(0.86, 0.84, 0.78)
 						if row.toggle then row.toggle:SetAlpha(1) end
 					else
-						row.label:SetText(self:F("OPT_COMP_LOCKED", L[def.label], self:CompanionRequirement(def.unlock)))
+						-- sans condition lisible (coffre) : le palier
+						if def.unlock then
+							row.label:SetText(self:F("OPT_COMP_LOCKED", L[def.label], self:CompanionRequirement(def.unlock)))
+						else
+							row.label:SetText(self:F("OPT_COMP_LOCKED_TIER", L[def.label], tostring(def.tier or "?")))
+						end
 						row.label:SetTextColor(0.45, 0.45, 0.45)
 						-- verrouillé : l'interrupteur n'a pas à paraître allumé (il ne
 						-- montre rien tant que l'ornement n'est pas gagné) — vu sur un rendu
