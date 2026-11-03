@@ -1,12 +1,12 @@
 -- Bestiary.lua -- bestiaire de zone et nommés du « Carnet de voyage » (v1.25.0)
 --
 -- La complétion d'une zone, côté créatures : les espèces de la zone livrées
--- avec l'addon (ZoneCreatures.lua, tirées de la base de Questie, voir
--- tools/gen_zone_data.py) UNION celles apprises en jouant, par personnage.
+-- avec l'addon (ZoneCreatures_Era.lua ou ZoneCreatures_Forever.lua selon le
+-- client, tirées de la base de Questie, voir tools/gen_zone_data.py) UNION celles apprises en jouant, par personnage.
 --   * Zone préremplie : toutes ses espèces comptent dès l'arrivée, quel que
 --              soit leur niveau (100 % strict), sauf celles amicales envers
 --              ta faction (champ f de la table).
---   * Zone absente des tables (Forever, carte inconnue) : tout s'apprend en
+--   * Zone absente des tables (carte inconnue de ton client) : tout s'apprend en
 --              jouant, comme avant.
 --   * Vu     : une créature hostile ou neutre (pas un joueur, pas un familier,
 --              pas une bestiole) ciblée, survolée ou dont la plaque de nom
@@ -135,7 +135,8 @@ function ns:BestiaryZone(zoneID)
 end
 
 -- ---------------------------------------------------------------------------
--- Table livrée (ZoneCreatures.lua) : ns.ZONE_CREATURES[zoneID][npcID] =
+-- Table livrée (ZoneCreatures_<client>.lua, seule celle de ton client se
+-- charge) : ns.ZONE_CREATURES[zoneID][npcID] =
 -- { lvl = { min, max }, rank, fr, en, f }. Lue à chaque appel (pas de copie
 -- locale) : une zone absente reste 100 % dynamique.
 -- ---------------------------------------------------------------------------

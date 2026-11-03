@@ -8,12 +8,13 @@
 --     une fois, sur le total de la tranche. On compte des ressources
 --     DIFFÉRENTES, pas des quantités ;
 --   * part « Récolte » de la complétion de zone : ressources de ta tranche
---     PRÉSENTES dans la zone (ZoneGathering.lua, herbes et minerais tirés de
+--     PRÉSENTES dans la zone (ZoneGathering_<client>.lua, herbes et minerais tirés de
 --     la base de Questie) déjà récoltées DANS cette zone. Zone absente de la
 --     table, ou dépeçage (Questie n'a pas le type des bêtes) : toute la
 --     tranche, comme avant.
 -- Données : GatheringData.lua (itemID, métier, requise, grise, noms de repli),
--- ZoneGathering.lua (ns.ZONE_GATHERING[zoneID][itemID] = true). On retient en
+-- ZoneGathering_<client>.lua (ns.ZONE_GATHERING[zoneID][itemID] = true, celle
+-- de ton client seulement). On retient en
 -- jouant où chaque ressource a été récoltée (par personnage, dans le carnet).
 -- Pas de module à part : même interrupteur que le carnet (Compagnon de route).
 local ADDON, ns = ...
