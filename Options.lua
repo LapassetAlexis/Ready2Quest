@@ -702,7 +702,10 @@ function ns:EnsureEditBanner()
 	if self.editBanner then return self.editBanner end
 	if not Theme or not Theme.CreatePanel then return nil end
 
-	local banner = Theme.CreatePanel(UIParent, 320, 74, L.OPT_EDIT_MODE, { strata = "TOOLTIP" })
+	-- 96 px : le bandeau du haut (36) + l'aide (2 lignes possibles) + le bouton.
+	-- À 74 px (avant la v1.20.0 et son bandeau plus haut), l'aide passait
+	-- sous le bouton et devenait illisible (vu en jeu).
+	local banner = Theme.CreatePanel(UIParent, 320, 96, L.OPT_EDIT_MODE, { strata = "TOOLTIP" })
 	if not banner then return nil end
 	banner:SetClampedToScreen(true)
 	banner:EnableMouse(true)
@@ -711,12 +714,13 @@ function ns:EnsureEditBanner()
 	banner.hint:SetPoint("TOPLEFT", banner, "TOPLEFT", 12, banner.contentTop - 4)
 	banner.hint:SetPoint("TOPRIGHT", banner, "TOPRIGHT", -12, banner.contentTop - 4)
 	banner.hint:SetJustifyH("LEFT")
+	if banner.hint.SetWordWrap then banner.hint:SetWordWrap(true) end
 	banner.hint:SetText(L.OPT_EDIT_HINT)
 	banner.hint:SetTextColor(0.70, 0.70, 0.70)
 
 	banner.stopButton = Theme.CreateButton(banner, 296, 20, L.OPT_EDIT_STOP, function()
 		ns:StopEditMode()
-	end)
+	end, "primary")
 	banner.stopButton:SetPoint("BOTTOM", banner, "BOTTOM", 0, 10)
 
 	self.editBanner = banner

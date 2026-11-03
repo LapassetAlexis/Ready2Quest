@@ -306,7 +306,10 @@ function ns:ShowWindow(results)
 				row.status.state = result.info and "info" or "ok"
 				row.detail:SetTextColor(0.55, 0.57, 0.59)
 			else
-				local severe = (result.score or 0) < 55
+				-- rouge = échec qui pèse (poids >= 10 : vivres, sacs, durabilité,
+				-- réactifs…). Un petit module (gris, quêtes) reste ambre : 2 objets
+				-- gris en rouge sous un « PRÊT » vert se contredisaient (vu en jeu).
+				local severe = (result.score or 0) < 55 and (result.weight or 0) >= 10
 				local c = severe and Theme.RED or Theme.ORANGE
 				row.status:SetTexture(Theme.DIAMOND)
 				row.status:SetVertexColor(c[1], c[2], c[3], 1)

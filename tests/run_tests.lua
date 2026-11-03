@@ -3505,6 +3505,31 @@ Check("[R2Q] navigation : nom avec le « 2 » bleu", o.brandName.text:find("|cff
 Check("[R2Q] bandeau : logo simplifié", tostring(o.logo.texture):find("logo_petit") ~= nil, o.logo.texture)
 Check("[R2Q] groupes de navigation en bleu", o.navGroups[1].textColor[3] > 0.8 and o.navGroups[1].textColor[1] < 0.4)
 Check("[R2Q] commande /r2q", SLASH_SACETDEPART3 == "/r2q")
+
+-- retours de la première session en jeu (Era, Vallée des épreuves)
+NS.editBanner = nil
+NS:StartEditMode()
+local banner = NS.editBanner
+local hintTop = banner.contentTop - 4
+local buttonTop = -(banner.height - 10 - 20)
+Check("[JEU] bandeau d'édition : l'aide ne passe plus sous le bouton", hintTop - 26 >= buttonTop,
+	(hintTop - 26) .. " >= " .. buttonTop)
+Check("[JEU] bandeau d'édition : bouton Terminer en ambre", banner.stopButton.style == "primary")
+NS:StopEditMode()
+EnterEra()
+Mock.world.bags[0].items[1] = { itemID = 3001, stackCount = 1, quality = 0 }
+Mock.world.bags[0].items[2] = { itemID = 3002, stackCount = 1, quality = 0 }
+Mock.world.durability = { [5] = { 5, 100 } }
+NS.window = nil
+NS:RunChecklist("manual")
+local grayRow, duraRow
+for i = 1, NS.window.visibleRows do
+	local row = NS.window.rows[i]
+	if row.name.text == "Butin à vendre" then grayRow = row end
+	if row.name.text == "Durabilité" then duraRow = row end
+end
+Check("[JEU] 2 gris : ambre, pas rouge (module léger)", grayRow and grayRow.status.state == "warn", grayRow and grayRow.status.state)
+Check("[JEU] durabilité à 5 % : rouge (module lourd)", duraRow and duraRow.status.state == "bad", duraRow and duraRow.status.state)
 Check("[R2Q] API publique sous les deux noms", _G.Ready2Quest == NS and _G.ReadyToQuest == NS)
 
 end
