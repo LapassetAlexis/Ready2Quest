@@ -397,8 +397,8 @@ do
 	Check("[COMP] réglages : nom de l'apparence affiché", appRow and appRow.value.text:find("Dragonnet émeraude", 1, true), appRow and appRow.value.text)
 	Check("[COMP] réglages : ornement verrouillé avec sa condition", lanternRow and lanternRow.label.text:find("25 lieux", 1, true),
 		lanternRow and lanternRow.label.text)
-	Check("[COMP] page sans débordement", NS.optionsFrame.pages.companion.contentBottom >= NS.OPT_LAYOUT.contentLimit,
-		NS.optionsFrame.pages.companion.contentBottom)
+	Check("[COMP] page sans débordement", NS.optionsFrame.pages.companionMain.contentBottom >= NS.OPT_LAYOUT.contentLimit,
+		NS.optionsFrame.pages.companionMain.contentBottom)
 	NS.optionsFrame:Hide()
 end
 
