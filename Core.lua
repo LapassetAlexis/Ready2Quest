@@ -1196,7 +1196,8 @@ function ns:HandleCommand(input)
 		return
 	end
 
-	local fn = COMMANDS[command]
+	-- ns.EXTRA_COMMANDS : point d'entrée des modules (COMMANDS est local)
+	local fn = COMMANDS[command] or (type(ns.EXTRA_COMMANDS) == "table" and ns.EXTRA_COMMANDS[command]) or nil
 	if fn then
 		fn(self, rest)
 		return

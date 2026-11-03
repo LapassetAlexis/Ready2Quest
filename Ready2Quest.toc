@@ -32,3 +32,4 @@ Expedition.lua
 DungeonData.lua
 Dungeon.lua
 QuestReward.lua
+LevelPace.lua
