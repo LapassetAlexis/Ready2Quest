@@ -811,6 +811,56 @@ function ns:ListSafeZones()
 	end
 end
 
+-- Les trois modules de l'addon. `id` et `aliases` servent à /r2q module <id>.
+ns.MODULES = {
+	{ id = "depart",   key = "departureEnabled",  label = "OPT_PAGE_DEPARTURE", aliases = { "departure", "check", "depart" } },
+	{ id = "stuff",    key = "showGearToast",     label = "OPT_PAGE_TOAST",     aliases = { "toast", "resume", "stuff" } },
+	{ id = "portrait", key = "showPortraitStats", label = "OPT_PAGE_PORTRAIT",  aliases = { "stats", "portrait" } },
+}
+
+function ns:FindModule(id)
+	for _, module in ipairs(self.MODULES) do
+		if module.id == id then return module end
+		for _, alias in ipairs(module.aliases) do if alias == id then return module end end
+	end
+	return nil
+end
+
+function ns:FindCheck(id)
+	for _, def in ipairs(self.checks or {}) do if def.id == id then return def end end
+	return nil
+end
+
+function ns:SetCheckFromCommand(id, value)
+	local found = self:FindCheck(id)
+	local enabled
+	if value == "on" then enabled = true elseif value == "off" then enabled = false
+	else enabled = not self:IsModuleEnabled(id) end
+	self:SetModuleEnabled(id, enabled)
+	local label = found.label
+	if type(label) == "function" then label = label() end
+	self:Print(self:F("MSG_CHECK_SET", tostring(label or id), enabled and L.MODULE_ON or L.MODULE_OFF))
+	if self.RefreshOptions then self:RefreshOptions() end
+end
+
+-- Aide classée par rubrique (titre en ambre, puis les commandes)
+ns.HELP = {
+	{ "HELP_H_OPEN",   { "HELP_RUN", "HELP_OPTIONS", "HELP_STATS", "HELP_STUFF", "HELP_MOVE" } },
+	{ "HELP_H_SAFE",   { "HELP_SAFE", "HELP_UNSAFE", "HELP_SAFELIST", "HELP_SAFERESET" } },
+	{ "HELP_H_MODULE", { "HELP_ON", "HELP_MODULES", "HELP_MODULE", "HELP_CHECKS", "HELP_CHECK" } },
+	{ "HELP_H_QUICK",  { "HELP_POPUP", "HELP_TOAST", "HELP_PORTRAIT", "HELP_MINIMAP", "HELP_SEUIL", "HELP_BUFFS" } },
+	{ "HELP_H_MISC",   { "HELP_COMPO", "HELP_RESETPOS", "HELP_RESET", "HELP_DIAG" } },
+}
+
+function ns:PrintHelp()
+	-- le préfixe [Ready2Quest] seulement en tête : répété sur 30 lignes, il noie l'aide
+	self:Print(L.HELP_TITLE)
+	for _, section in ipairs(self.HELP) do
+		print(ns.Theme.T_GOLD .. tostring(L[section[1]]) .. "|r")
+		for _, key in ipairs(section[2]) do print("   " .. tostring(L[key])) end
+	end
+end
+
 local COMMANDS = {
 	["on"] = function(self) self:DB().enabled = true; self:Print(L.MSG_ON) end,
 	["off"] = function(self) self:DB().enabled = false; self:Print(L.MSG_OFF) end,
@@ -976,44 +1026,55 @@ local COMMANDS = {
 		db.showPortraitStats = not (db.showPortraitStats ~= false)
 		self:Print(db.showPortraitStats and L.MSG_PORTRAIT_ON or L.MSG_PORTRAIT_OFF)
 	end,
+	-- v1.22.0 : les 3 vrais modules (et leurs alias), puis les 13 contrôles
 	["modules"] = function(self)
+		local db = self:DB()
+		self:Print(L.MSG_MODULES_HEADER)
+		for _, module in ipairs(self.MODULES) do
+			local on = db[module.key] ~= false
+			local state = on and (ns.Theme.T_GREEN .. L.MODULE_ON .. "|r") or ("|cffff2020" .. L.MODULE_OFF .. "|r")
+			self:Print(self:F("MSG_MODULE_ROW", module.id, state .. "  " .. tostring(L[module.label] or module.id)))
+		end
+		self:Print(L.MSG_MODULES_HINT)
+	end,
+	["module"] = function(self, rest)
+		local id, value = tostring(rest or ""):match("^(%S*)%s*(%S*)$")
+		id = (id or ""):lower()
+		local module = self:FindModule(id)
+		if not module then
+			-- compatibilité : « module vivres off » visait un contrôle avant la v1.22.0
+			if self:FindCheck(id) then return self:SetCheckFromCommand(id, value) end
+			return self:Print(L.MSG_MODULE_UNKNOWN)
+		end
+		local db = self:DB()
+		local enabled
+		if value == "on" then enabled = true elseif value == "off" then enabled = false
+		else enabled = not (db[module.key] ~= false) end
+		db[module.key] = enabled
+		if module.key == "showPortraitStats" and not enabled and self.HidePortraitStats then self:HidePortraitStats() end
+		if module.key == "departureEnabled" and not enabled then self.pendingExit = nil end
+		self:Print(self:F("MSG_MODULE_SET", tostring(L[module.label] or module.id), enabled and L.MODULE_ON or L.MODULE_OFF))
+		if self.RefreshOptions then self:RefreshOptions() end
+	end,
+	["checks"] = function(self)
 		local active, total = self:EnabledModuleCount()
-		self:Print(self:F("MSG_MODULE_LIST", active, total))
+		self:Print(self:F("MSG_CHECK_LIST", active, total))
 		for _, def in ipairs(self.checks or {}) do
 			local label = def.label
 			if type(label) == "function" then label = label() end
 			local on = self:IsModuleEnabled(def.id)
-			local state = on and (ns.Theme.T_GREEN .. L.MODULE_ON .. "|r")
-				or ("|cffff2020" .. L.MODULE_OFF .. "|r")
+			local state = on and (ns.Theme.T_GREEN .. L.MODULE_ON .. "|r") or ("|cffff2020" .. L.MODULE_OFF .. "|r")
 			self:Print(self:F("MSG_MODULE_ROW", tostring(def.id), state .. "  " .. tostring(label)))
 		end
 	end,
-	["module"] = function(self, rest)
+	["check"] = function(self, rest)
 		local id, value = tostring(rest or ""):match("^(%S*)%s*(%S*)$")
-		if not id or id == "" then return self:Print(L.MSG_MODULE_UNKNOWN) end
-
-		local found = nil
-		for _, def in ipairs(self.checks or {}) do
-			if def.id == id then found = def end
-		end
-		if not found then return self:Print(L.MSG_MODULE_UNKNOWN) end
-
-		local enabled
-		if value == "on" then
-			enabled = true
-		elseif value == "off" then
-			enabled = false
-		else
-			enabled = not self:IsModuleEnabled(id)
-		end
-		self:SetModuleEnabled(id, enabled)
-
-		local label = found.label
-		if type(label) == "function" then label = label() end
-		self:Print(self:F("MSG_MODULE_SET", tostring(label or id),
-			enabled and L.MODULE_ON or L.MODULE_OFF))
-		if self.RefreshOptions then self:RefreshOptions() end
+		if not id or id == "" or not self:FindCheck(id) then return self:Print(L.MSG_CHECK_UNKNOWN) end
+		self:SetCheckFromCommand(id, value)
 	end,
+	["help"] = function(self) self:PrintHelp() end,
+	["aide"] = function(self) self:PrintHelp() end,
+	["?"] = function(self) self:PrintHelp() end,
 	["minimap"] = function(self, value)
 		if not self.ToggleMinimapButton then return self:Print(L.MSG_UNKNOWN_CMD) end
 		local db = self:DB()
@@ -1089,11 +1150,8 @@ function ns:HandleCommand(input)
 		return
 	end
 
+	-- une ligne qui renvoie vers l'aide, plutôt que 25 lignes déversées
 	self:Print(L.MSG_UNKNOWN_CMD)
-	for i = 1, 30 do
-		local line = L["CMD_HELP_" .. i]
-		if line then self:Print(line) end
-	end
 end
 
 -- ---------------------------------------------------------------------------

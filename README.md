@@ -1406,30 +1406,43 @@ Nouvelle ligne dans les réglages : **« Position du bouton de minicarte »** �
 
 ## Commandes
 
+Trois préfixes équivalents : **`/r2q`**, `/sd`, `/sacdepart`. `/r2q help` (ou `aide`, `?`) affiche l'aide classée ; une commande inconnue renvoie vers elle en une ligne.
+
 ```
-/sd                 lance le check
-/sd options         réglages par pages (9 pages, 13 modules)
-/sd minimap         bouton de minicarte on/off
-/sd modules         état des 13 modules
-/sd module <id> on|off  active/désactive un module
-/sd toast on|off    résumé éphémère au changement de stuff
-/sd portrait on|off stats au survol du portrait
-/sd stats           affiche les stats principales tout de suite
-/sd move <cadre>    déplace le résumé de stuff ou les stats du portrait
-/sd resetpos        réinitialise les positions
-/sd compo           recettes suivies et composants manquants
-/sd safe | unsafe   marque/retire le village (ou la capitale) actuel
-/sd safe list       villages et capitales appris, avec leur source
-/sd safe reset      efface toutes les zones apprises
-/sd buffs | buff n  buffs suivis / bascule
-/sd seuil <n>       emplacements libres minimum
-/sd popup on|off    fenêtre ou résumé chat
-/sd on | off        active/désactive
-/sd reset           réinitialise
-/sd diag            diagnostic API
+Ouvrir
+   /r2q                 lance le check maintenant
+   /r2q options         les réglages (aussi : config)
+   /r2q stats           tes stats principales
+   /r2q stuff           écarts de stats dans le chat
+   /r2q move [stop]     placer les cadres
+Zones sûres
+   /r2q safe            marque le village actuel comme sûr
+   /r2q unsafe          retire le village ou la capitale actuels
+   /r2q safe list       lieux appris
+   /r2q safe reset      efface les lieux appris
+Modules et contrôles
+   /r2q on|off          active ou coupe l'addon
+   /r2q modules         état des 3 modules
+   /r2q module <depart|stuff|portrait> on|off
+   /r2q checks          les 13 contrôles du check avant le départ
+   /r2q check <id> on|off
+Réglages rapides
+   /r2q popup on|off    fenêtre ou résumé dans le chat
+   /r2q toast on|off    résumé de stuff
+   /r2q portrait on|off stats du portrait
+   /r2q minimap on|off  bouton de minicarte
+   /r2q seuil <n>       emplacements libres minimum
+   /r2q buffs · buff <n> buffs suivis
+Divers
+   /r2q compo           composants de métier manquants
+   /r2q resetpos        positions des cadres par défaut
+   /r2q reset           remet tous les réglages à zéro
+   /r2q diag            diagnostic (à joindre à un rapport de bug)
 ```
 
-Alias : `/sacdepart`.
+Compatibilité : `/r2q module vivres off` (ancienne forme, qui visait un contrôle) fonctionne toujours.
+
+
 
 ---
 
@@ -1457,7 +1470,7 @@ Alias : `/sacdepart`.
 ## Tests
 
 ```
-python3 tests/run_tests.py     →  710 réussis, 0 échoués
+python3 tests/run_tests.py     →  720 réussis, 0 échoués
 ```
 
 Lua 5.1 (version du client), client WoW simulé. Couvre notamment : apprentissage par indices (sous-zone, capitale par deux quartiers, purge de l'ancien schéma), délai de sortie / vol / mort, nouveaux checks et automatismes du marchand en mode Era, chaîne de cartes parentes, anti-spam, filtrage des procs, **valeurs secrètes**, comptages sacs/vivres/potions/durabilité/quêtes, score pondéré et bilans, fenêtre de diagnostic (icônes, barres, bandeau), panneau d'équipement (17 lignes, moyenne, rareté, pièces faibles), comparaison au survol (amélioration, régressif, vide, anneaux), **les deux voies de hook tooltip**, bouton sans template Blizzard, et toutes les commandes.

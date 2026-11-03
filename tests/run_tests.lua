@@ -1710,7 +1710,37 @@ NS:HandleCommand("module inexistant off")
 Check("module inconnu signalé", Mock:Output():find("inconnu") ~= nil, Mock:Output())
 Mock:Reset()
 NS:HandleCommand("modules")
-Check("/sd modules liste", Mock:Output():find("Modules") ~= nil, Mock:Output())
+Check("/r2q modules : les 3 modules", Mock:Output():find("Check avant le départ") and Mock:Output():find("Résumé de stuff")
+	and Mock:Output():find("Stats du portrait") and not Mock:Output():find("Vivres"), Mock:Output())
+Mock:Reset()
+NS:HandleCommand("checks")
+Check("/r2q checks : les 13 contrôles", Mock:Output():find("13") and Mock:Output():find("Vivres"), Mock:Output())
+NS:HandleCommand("check vivres off")
+Check("/r2q check vivres off", NS:IsModuleEnabled("vivres") == false)
+NS:HandleCommand("check vivres on")
+Mock:Reset()
+NS:HandleCommand("check inexistant off")
+Check("contrôle inconnu signalé", Mock:Output():find("Contrôle inconnu") ~= nil, Mock:Output())
+NS:HandleCommand("module depart off")
+Check("/r2q module depart off", NS:DB().departureEnabled == false)
+NS:HandleCommand("module check on")
+Check("alias : module check on", NS:DB().departureEnabled == true)
+NS:HandleCommand("module stuff off")
+Check("/r2q module stuff off", NS:DB().showGearToast == false)
+NS:HandleCommand("module portrait off")
+Check("/r2q module portrait off", NS:DB().showPortraitStats == false)
+NS:HandleCommand("module stuff on"); NS:HandleCommand("module portrait on")
+Mock:Reset()
+NS:HandleCommand("help")
+local helpOut = Mock:Output()
+Check("/r2q help : aide classée", helpOut:find("Zones sûres") and helpOut:find("/r2q module <depart") and helpOut:find("/r2q diag"), helpOut)
+Mock:Reset()
+NS:HandleCommand("aide")
+Check("/r2q aide = help", Mock:Output() == helpOut)
+Mock:Reset()
+NS:HandleCommand("nimportequoi")
+local _, unknownLines = Mock:Output():gsub("\n", "\n")
+Check("commande inconnue : une seule ligne vers l'aide", unknownLines == 0 and Mock:Output():find("/r2q help") ~= nil, Mock:Output())
 
 -- un module désactivé ne génère pas de conseil
 ResetWorld()
@@ -3077,7 +3107,7 @@ Check("check manuel : pas de ligne « Parti de »", NS.window.departed.text == "
 -- Chaînes : chaque nouvelle clé existe en frFR ET en enUS
 local newKeys = { "MSG_SAFE_PURGED", "MSG_SAFE_RESET", "SAFE_KIND_CITY", "SAFE_KIND_VILLAGE", "SRC_RESTING",
 	"SRC_SANCTUARY", "SRC_BINDER", "SRC_TAXI", "SRC_MAIL", "SRC_BANK", "SRC_TRAINER", "SRC_MERCHANT", "SRC_QUEST",
-	"SRC_MANUAL", "PANEL_DEPARTED", "CMD_HELP_21", "CMD_HELP_22", "OPT_EXITDELAY", "OPT_SEC_UNIT", "OPT_SECTION_AUTO", "OPT_POPUPSCORE", "OPT_SCORE_UNIT", "MSG_BRIEF", "MSG_BRIEF_FROM", "MSG_AUTOSELL_NOTICE",
+	"SRC_MANUAL", "PANEL_DEPARTED", "HELP_TITLE", "HELP_RUN", "HELP_MODULE", "HELP_CHECK", "MSG_CHECK_LIST", "MSG_CHECK_SET", "MSG_CHECK_UNKNOWN", "MSG_MODULES_HEADER", "OPT_EXITDELAY", "OPT_SEC_UNIT", "OPT_SECTION_AUTO", "OPT_POPUPSCORE", "OPT_SCORE_UNIT", "MSG_BRIEF", "MSG_BRIEF_FROM", "MSG_AUTOSELL_NOTICE",
 	"OPT_AUTOSELL", "OPT_AUTOREPAIR", "MONEY_GOLD", "MONEY_SILVER", "MONEY_COPPER", "MSG_SOLD", "MSG_REPAIRED",
 	"MSG_REPAIR_POOR", "CHK_CLASSREAGENTS", "CHK_CLASSREAGENTS_LOW", "CHK_CLASSREAGENTS_GOOD", "ADV_CLASSREAGENTS",
 	"REAGENT_AMMO", "REAGENT_SHARD", "REAGENT_FLASH", "REAGENT_TELEPORT", "REAGENT_ARCANE", "REAGENT_CANDLE",
