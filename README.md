@@ -142,6 +142,8 @@ Sur Classic Era, le module reste invisible : il n'y a pas de camping.
 
 Quand tu équipes une nouvelle pièce, un petit cadre apparaît quelques secondes et montre ce qui change : Force, Agilité, Endurance, Intelligence, Esprit, armure, dégâts, DPS, vitesse, puissance d'attaque, critique. Une flèche indique le sens, la couleur dit si c'est mieux ou moins bien. Puis il s'efface tout seul.
 
+Pour voir à quoi il ressemble et où il apparaît sans changer d'équipement : réglages, page **Résumé de stuff**, bouton **Simuler un changement**. Chaque clic alterne un gain et une perte sur la stat principale de ta classe.
+
 ## Stats du portrait
 
 Survole ton portrait : un cadre affiche tes stats principales, **seulement celles qui comptent pour ta classe et ta spécialisation** (pas d'Esprit pour un guerrier). Un druide farouche voit d'autres stats en forme d'ours.

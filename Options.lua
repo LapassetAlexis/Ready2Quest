@@ -82,7 +82,7 @@ local PAGES = {
 	-- sans réglage propre, mais avec une vraie page : cliquer sur un module doit
 	-- montrer ce qu'il fait (il renvoyait sur Général, c'était déroutant)
 	{ id = "toast", title = "OPT_PAGE_TOAST", group = "OPT_GROUP_MODULES", power = "showGearToast",
-		info = { "OPT_TOAST_INFO_1", "OPT_TOAST_INFO_2", "OPT_TOAST_INFO_3" }, actions = { "editMode" } },
+		info = { "OPT_TOAST_INFO_1", "OPT_TOAST_INFO_2", "OPT_TOAST_INFO_3" }, actions = { "toastPreview", "editMode" } },
 	{ id = "portrait", title = "OPT_PAGE_PORTRAIT", group = "OPT_GROUP_MODULES", power = "showPortraitStats",
 		info = { "OPT_PORTRAIT_INFO_1", "OPT_PORTRAIT_INFO_2", "OPT_PORTRAIT_INFO_3" }, actions = { "portraitShow", "editMode" } },
 	-- QOL -------------------------------------------------------------------
@@ -945,6 +945,8 @@ function ns:RunOptionAction(key)
 		self:RefreshOptions()
 	elseif key == "minimapPos" and self.CycleMinimapAngle then
 		self:CycleMinimapAngle()
+	elseif key == "toastPreview" and self.SimulateGearToast then
+		self:SimulateGearToast()
 	elseif key == "portraitShow" and self.ShowPortraitStats then
 		-- aperçu immédiat, même si le module est coupé (forceStats)
 		self.forceStats = true
