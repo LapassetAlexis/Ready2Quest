@@ -1,4 +1,27 @@
-# Ready to Quest — v1.18.0
+# Ready to Quest — v1.19.0
+
+## v1.19.0 — réglages par pages
+
+Le panneau de réglages était une longue colonne : 910 px en 1.18.0 avant refonte (hors de l'écran), et les réglages d'un même module y étaient éparpillés. L'interrupteur des vivres était dans « Modules », leur seuil dans « Alertes ». Il devient une fenêtre de **600 × 440** avec une navigation à gauche, à la manière d'ElvUI, sous l'habillage de l'addon (fond sombre, liseré or, `GameFont`).
+
+| Page | Contenu |
+|---|---|
+| **Général** | addon actif, fenêtre ou chat, fenêtre sous la note, délai avant l'alerte, silence après connexion, écart entre deux alertes |
+| **Zones sûres** | villages et capitales appris, avec leur source et un bouton **Retirer** par ligne ; **Tout effacer** |
+| **Sacs & butin** | modules Sacs et Butin à vendre ; emplacements libres min., alerte continue, gris avant l'alerte, vente auto |
+| **Vivres & potions** | les deux modules et leurs minimums |
+| **Buffs** | module, apprentissage auto, **liste des buffs suivis** : clic pour activer ou couper, bouton Retirer |
+| **Équipement** | Durabilité et Réparation ; durabilité min., réparation auto |
+| **Personnage** | Réactifs, Sorts, Foyer, Repos ; repos min. |
+| **Métier & quêtes** | composants de métier, quêtes à rendre |
+| **Affichage** | minicarte (bouton, position), résumé de stuff, stats du portrait, déplacer / réinitialiser les cadres |
+
+- La page ouverte est mémorisée.
+- Les listes défilent à la molette ou avec `^` / `v`. C'est fait sans `FauxScrollFrame`, dont la présence n'est pas assurée sur Forever.
+- Un module ajouté plus tard sans page tombe dans « Général » : il reste toujours possible de le couper.
+- Les tests vérifient que chaque module a un seul interrupteur, qu'aucune page ne déborde sur le pied, que les libellés tiennent, et que les listes se mettent à jour après un retrait.
+
+---
 
 ## v1.18.0 — l'alerte part enfin à la sortie du village
 
@@ -364,7 +387,7 @@ Le choix se fait sur `GetBuildInfo()` (interface `16xxx` = Forever, sinon Classi
 | **Glisser** | déplace autour de la minicarte (angle mémorisé) |
 | **Survol** | infobulle : nom, dernier score, rappel des actions |
 
-Réglages : `/sd minimap on|off`, ou la ligne **« Bouton sur la minicarte »** dans `/sd options`.
+Réglages : `/sd minimap on|off`, ou la page **Affichage** de `/sd options`.
 
 Un glissement n'ouvre pas les réglages : le clic qui suit un déplacement est ignoré.
 
@@ -373,7 +396,7 @@ Un glissement n'ouvre pas les réglages : le clic qui suit un déplacement est i
 
 ## 5. Activer / désactiver les modules
 
-Chacun des 13 modules a son interrupteur, dans `/sd options` → section **Modules**.
+Chacun des 13 modules a son interrupteur, en tête de sa page dans `/sd options` (ex. Sacs & butin pour les sacs).
 
 **Un module désactivé est exclu du calcul de la note** : son poids devient 0, il n'entre ni au numérateur ni au dénominateur. Désactiver « Sacs » ne fait donc pas monter artificiellement le score par un 100/100 offert — le module disparaît simplement de l'équation.
 
@@ -1279,7 +1302,7 @@ Nouvelle ligne dans les réglages : **« Position du bouton de minicarte »** �
 
 ```
 /sd                 lance le check
-/sd options         panneau de réglages (15 réglages + 1 action + 13 modules)
+/sd options         réglages par pages (9 pages, 13 modules)
 /sd minimap         bouton de minicarte on/off
 /sd modules         état des 13 modules
 /sd module <id> on|off  active/désactive un module
@@ -1328,7 +1351,7 @@ Alias : `/sacdepart`.
 ## Tests
 
 ```
-python3 tests/run_tests.py     →  611 réussis, 0 échoués
+python3 tests/run_tests.py     →  631 réussis, 0 échoués
 ```
 
 Lua 5.1 (version du client), client WoW simulé. Couvre notamment : apprentissage par indices (sous-zone, capitale par deux quartiers, purge de l'ancien schéma), délai de sortie / vol / mort, nouveaux checks et automatismes du marchand en mode Era, chaîne de cartes parentes, anti-spam, filtrage des procs, **valeurs secrètes**, comptages sacs/vivres/potions/durabilité/quêtes, score pondéré et bilans, fenêtre de diagnostic (icônes, barres, bandeau), panneau d'équipement (17 lignes, moyenne, rareté, pièces faibles), comparaison au survol (amélioration, régressif, vide, anneaux), **les deux voies de hook tooltip**, bouton sans template Blizzard, et toutes les commandes.

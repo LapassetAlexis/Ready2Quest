@@ -1051,9 +1051,12 @@ Check("RefreshOptions sans panneau ne plante pas", true)
 NS:HandleCommand("options")
 Check("panneau créé", NS.optionsFrame ~= nil)
 Check("panneau affiché", NS.optionsFrame and NS.optionsFrame.shown == true)
-Check("30 lignes (16 réglages + 1 action + 13 modules)", NS.optionsFrame and #NS.optionsFrame.rows == 30, NS.optionsFrame and #NS.optionsFrame.rows)
+Check("33 lignes (19 réglages + 1 action + 13 modules)", NS.optionsFrame and #NS.optionsFrame.rows == 33, NS.optionsFrame and #NS.optionsFrame.rows)
 
-local boolRow = NS.optionsFrame.rows[1]
+local boolRow
+for _, row in ipairs(NS.optionsFrame.rows) do
+	if row.def and row.def.key == "showWindow" then boolRow = row end
+end
 local boolBefore = NS:DB().showWindow
 boolRow:Click()
 Check("clic bascule un booléen", NS:DB().showWindow ~= boolBefore)
@@ -1442,7 +1445,7 @@ ResetWorld()
 Say("\n== bootstrap et diagnostic ==")
 ResetWorld()
 Check("commande enregistrée par le bootstrap", type(SlashCmdList["SACETDEPART"]) == "function")
-Check("version exposée", NS.version == "1.18.0", NS.version)
+Check("version exposée", NS.version == "1.19.0", NS.version)
 
 local missingMods = {}
 for _, name in ipairs({ "Bootstrap", "Locales", "Compat", "Theme", "Core", "Buffs", "Reagents",
@@ -1463,7 +1466,7 @@ NS.HandleCommand = savedHandle
 Mock:Reset()
 NS:HandleCommand("diag")
 Check("/sd diag liste les modules", Mock:Output():find("modules :") ~= nil, Mock:Output())
-Check("/sd diag affiche la version", Mock:Output():find("1%.18%.0") ~= nil, Mock:Output())
+Check("/sd diag affiche la version", Mock:Output():find("1%.19%.0") ~= nil, Mock:Output())
 
 -- une erreur est enregistrée et affichée
 Mock:Reset()
@@ -1596,7 +1599,7 @@ for _, row in ipairs(NS.optionsFrame.rows) do
 	if row.def and row.def.key == "showMinimap" then minimapRow = row end
 end
 Check("ligne dédiée dans les réglages", minimapRow ~= nil)
-Check("30 lignes au total", NS.optionsFrame and #NS.optionsFrame.rows == 30, #NS.optionsFrame.rows)
+Check("33 lignes au total", NS.optionsFrame and #NS.optionsFrame.rows == 33, #NS.optionsFrame.rows)
 if minimapRow then minimapRow:Click() end
 Check("décocher masque le bouton", lancer.shown == false)
 if minimapRow then minimapRow:Click() end
@@ -2215,143 +2218,160 @@ Check("bandeau masqué en sortie d'édition",
 Check("les cadres ne sont plus déplaçables en sortie",
 	NS.toastFrame == nil or NS.toastFrame:IsShown() == false)
 
--- Géométrie de la colonne de droite du panneau de réglages : la valeur, puis
--- les boutons -/+ doivent tenir dans la ligne sans se chevaucher ni déborder.
+do -- portée locale (limite de 200 locales en Lua 5.1)
+-- Géométrie du panneau par pages (v1.19.0) : colonne de droite d'une ligne,
+-- pied en trois tiers, pages qui tiennent dans le cadre.
 local lay = NS.OPT_LAYOUT
 Check("colonne de valeurs exposée", lay ~= nil)
 if lay then
-	local rowRight = lay.width - 28
-	local valueEnd = rowRight + lay.valueRight          -- bord droit de la valeur
+	local rowRight = lay.rowWidth
+	local valueEnd = rowRight + lay.valueRight
 	local plusStart = rowRight + lay.plusRight - lay.buttonWidth
 	local minusStart = rowRight + lay.minusRight - lay.buttonWidth
-	Check("les boutons tiennent dans la ligne", -plusStart <= lay.width - 28, plusStart)
+	Check("les boutons tiennent dans la ligne", -plusStart <= lay.rowWidth, plusStart)
 	Check("la valeur ne touche pas le bouton -", valueEnd < minusStart, valueEnd .. " < " .. minusStart)
 	Check("les boutons - et + ne se chevauchent pas", minusStart + lay.buttonWidth <= plusStart,
 		(minusStart + lay.buttonWidth) .. " <= " .. plusStart)
+	Check("la page tient à droite de la navigation", lay.paneLeft + lay.paneWidth <= lay.width - 8,
+		lay.paneLeft + lay.paneWidth)
 end
 
--- Pied du panneau : « Réinitialiser » doit être centré entre « Lancer » et
--- « Fermer », et les trois tiers doivent remplir exactement la largeur utile.
 local foot = NS.OPT_LAYOUT and NS.OPT_LAYOUT.footer
 Check("grille du pied exposée", foot ~= nil)
 if foot then
-	local w1, w2, w3 = foot.widths[1], foot.widths[2], foot.widths[3]
-	local total = w1 + w2 + w3 + (foot.gap * 2)
+	local total = foot.widths[1] + foot.widths[2] + foot.widths[3] + (foot.gap * 2)
 	Check("les trois boutons remplissent la largeur utile", total == foot.inner, total .. " vs " .. foot.inner)
-
-	-- marges gauche/droite égales : 16 de chaque côté
-	local frameWidth = NS.OPT_LAYOUT.width
-	local usedRight = foot.margin + total
-	Check("marge droite égale à la marge gauche", (frameWidth - usedRight) == foot.margin,
-		(frameWidth - usedRight) .. " vs " .. foot.margin)
-
-	-- les deux boutons de la rangée du haut ne doivent pas déborder
-	local secondStart = foot.half + foot.gap
-	Check("le bouton des cadres tient dans la rangée du haut",
-		secondStart + foot.half <= foot.inner, secondStart + foot.half)
+	Check("marge droite égale à la marge gauche", (lay.width - (foot.margin + total)) == foot.margin,
+		(lay.width - (foot.margin + total)) .. " vs " .. foot.margin)
 end
-
 Check("bouton de réinitialisation des cadres présent",
 	NS.optionsFrame ~= nil and NS.optionsFrame.resetFramesButton ~= nil)
 
--- Placement réel des trois boutons du bas, lu sur leurs ancres et non sur les
--- constantes de la grille : c'est le seul moyen de voir un bouton collé à
--- gauche alors que la grille, elle, est correcte.
-if NS.optionsFrame and NS.optionsFrame.runButton then
-	-- X absolu du bord gauche de chaque bouton, mesuré depuis le bord gauche
-	-- du panneau : une ancre relative se résout en marchant la chaîne.
-	local frame = NS.optionsFrame
-	local function LeftOf(button, depth)
-		depth = depth or 0
-		if depth > 6 then return 0 end
-		local point, relTo, relPoint, x = button:GetPoint()
-		x = x or 0
-		if point == "LEFT" and relTo and relTo ~= frame then
-			-- ancré au bord droit d'un autre bouton : on avance son X + largeur
-			return LeftOf(relTo, depth + 1) + (relTo.GetWidth and relTo:GetWidth() or 0) + x
-		end
-		return x
-	end
-
-	local runX   = LeftOf(frame.runButton)
-	local runW   = frame.runButton:GetWidth() or 0
-	local resetX = LeftOf(frame.resetButton)
-	local resetW = frame.resetButton:GetWidth() or 0
-	local closeX = LeftOf(frame.closeButton)
-
-	Check("Réinitialiser n'est pas collé au bouton de gauche", resetX >= (runX + runW),
-		resetX .. " vs " .. (runX + runW))
-
-	local gapLeft  = resetX - (runX + runW)
-	local gapRight = closeX - (resetX + resetW)
-	Check("Réinitialiser est centré entre les deux boutons", math.abs(gapLeft - gapRight) <= 1,
-		gapLeft .. " vs " .. gapRight)
-end
-
--- l'entrée « Réinitialiser les positions » ne doit plus figurer dans la liste
-if NS.optionsFrame and NS.optionsFrame.rows then
-	local stale = false
-	for _, row in ipairs(NS.optionsFrame.rows) do
-		if row.def and row.def.key == "resetPos" then stale = true end
-	end
-	Check("l'ancienne ligne de réinitialisation a disparu", stale == false)
-end
-
--- Le panneau ne doit plus laisser de trou avant les boutons : la hauteur
--- était devinée en amont et comptait une section de trop.
 local frame = NS:EnsureOptions()
 Check("panneau de réglages construit", frame ~= nil)
-if frame and NS.OPT_LAYOUT.realHeight then
-	local realHeight = NS.OPT_LAYOUT.realHeight
-	local contentBottom = NS.OPT_LAYOUT.contentBottom
-	local gap = NS.OPT_LAYOUT.gapBeforeButtons
-	local footerTop = NS.OPT_LAYOUT.footerTopOffset
-	local spaceBetween = contentBottom - (-realHeight + footerTop)
-	Check("espace entre modules et boutons borné", spaceBetween >= 10 and spaceBetween <= 30, spaceBetween)
-end
+if frame then
+	Check("panneau d'options : hauteur fixe qui tient à l'écran", frame.height == lay.height
+		and frame.height <= lay.maxHeight, frame.height)
+	Check("9 pages, 9 boutons de navigation", #frame.navButtons == 9, #frame.navButtons)
 
--- Les OUI de la section Modules doivent partager la colonne de valeurs des
--- autres sections. Ils utilisaient encore -6 au lieu de VALUE_RIGHT et
--- apparaissaient 70 px plus à droite sur la capture.
-if frame and frame.rows then
-	-- v1.18.0 : les interrupteurs (modules, affichage, automatismes) sont sur
-	-- deux colonnes ; chaque demi-ligne garde la même colonne de valeurs, et
-	-- les lignes pleines (seuils) gardent la leur.
-	local misaligned = 0
+	-- chaque page tient dans le cadre, au-dessus du pied
+	local overflow = {}
+	for id, page in pairs(frame.pages) do
+		if page.contentBottom < lay.contentLimit then overflow[#overflow + 1] = id .. "=" .. page.contentBottom end
+	end
+	Check("aucune page ne déborde sur le pied", #overflow == 0, table.concat(overflow, ", ") .. " limite " .. lay.contentLimit)
+
+	-- tous les checks ont leur interrupteur, une seule fois
+	local seen, missingModule, twice = {}, {}, 0
 	for _, row in ipairs(frame.rows) do
-		if row.value and row.value.GetPoint then
-			local point, _, _, x = row.value:GetPoint()
-			local expected = row.half and NS.OPT_LAYOUT.halfValueRight or NS.OPT_LAYOUT.valueRight
-			if point == "RIGHT" and x ~= expected then misaligned = misaligned + 1 end
+		if row.isModule then
+			if seen[row.moduleId] then twice = twice + 1 end
+			seen[row.moduleId] = true
 		end
 	end
-	Check("les modules partagent la colonne de valeurs", misaligned == 0, misaligned)
-	Check("panneau d'options : tient à l'écran (<= 740 px)", (frame.height or 9999) <= NS.OPT_LAYOUT.maxHeight,
-		frame.height)
-	local modulesHalf = 0
-	for _, row in ipairs(frame.rows) do if row.isModule and row.half then modulesHalf = modulesHalf + 1 end end
-	Check("modules sur deux colonnes", modulesHalf == #NS.checks, modulesHalf)
-	-- aucune ligne posée sur une autre, et les modules occupent bien deux colonnes
-	local spots, overlap, xs = {}, 0, {}
-	for _, row in ipairs(frame.rows) do
-		local _, _, _, x, y = row:GetPoint()
-		local key = tostring(x) .. ":" .. tostring(y)
-		if spots[key] then overlap = overlap + 1 end
-		spots[key] = true
-		if row.isModule then xs[tostring(x)] = true end
+	for _, def in ipairs(NS.checks) do
+		if not seen[def.id] then missingModule[#missingModule + 1] = def.id end
 	end
-	local columnsUsed = 0
-	for _ in pairs(xs) do columnsUsed = columnsUsed + 1 end
-	Check("options : aucune ligne superposée", overlap == 0, overlap)
-	Check("modules : deux colonnes réellement utilisées", columnsUsed == 2, columnsUsed)
-	-- les libellés tiennent dans leur colonne (6.4 px par octet : majorant)
-	local tooLong = {}
+	Check("chaque module a son interrupteur", #missingModule == 0, table.concat(missingModule, ", "))
+	Check("aucun interrupteur en double", twice == 0, twice)
+	Check("aucun module rangé par défaut dans Général", #frame.unplaced == 0, table.concat(frame.unplaced, ", "))
+
+	-- colonne de valeurs commune, libellés qui tiennent
+	local misaligned, tooLong = 0, {}
 	for _, row in ipairs(frame.rows) do
-		local room = row.half and (NS.OPT_LAYOUT.halfWidth - 6 - NS.OPT_LAYOUT.halfValueWidth)
-			or (NS.OPT_LAYOUT.width - 28 - 2 + NS.OPT_LAYOUT.valueRight - NS.OPT_LAYOUT.valueWidth)
+		local point, _, _, x = row.value:GetPoint()
+		if point == "RIGHT" and x ~= lay.valueRight then misaligned = misaligned + 1 end
+		local room = lay.rowWidth - 2 + lay.valueRight - lay.valueWidth
 		if #(row.label.text or "") * 6.4 > room then tooLong[#tooLong + 1] = tostring(row.label.text) end
 	end
+	Check("les modules partagent la colonne de valeurs", misaligned == 0, misaligned)
 	Check("libellés d'options : aucun débordement", #tooLong == 0, table.concat(tooLong, ", "))
+	local navTooLong = {}
+	for _, nav in ipairs(frame.navButtons) do
+		if #(nav.label.text or "") * 6.4 > lay.navWidth - 16 then navTooLong[#navTooLong + 1] = nav.label.text end
+	end
+	Check("libellés de navigation : aucun débordement", #navTooLong == 0, table.concat(navTooLong, ", "))
+
+	-- aucune ligne superposée dans une même page
+	local overlap = 0
+	for _, page in pairs(frame.pages) do
+		local spots = {}
+		for _, row in ipairs(page.rows) do
+			local _, _, _, x, y = row:GetPoint()
+			local key = tostring(x) .. ":" .. tostring(y)
+			if spots[key] then overlap = overlap + 1 end
+			spots[key] = true
+		end
+	end
+	Check("options : aucune ligne superposée", overlap == 0, overlap)
+end
+
+-- Navigation : une seule page visible, choix mémorisé
+NS:SelectOptionsPage("bags")
+local visiblePages = 0
+for _, page in pairs(frame.pages) do if page:IsShown() then visiblePages = visiblePages + 1 end end
+Check("navigation : une seule page visible", visiblePages == 1 and frame.pages.bags:IsShown())
+Check("navigation : page mémorisée", NS:DB().optionsPage == "bags")
+frame.navButtons[2]:Click()
+Check("navigation : clic sur « Zones sûres »", frame.currentPage == "safe" and frame.pages.safe:IsShown())
+Check("navigation : page inconnue -> Général", (function() NS:SelectOptionsPage("nope"); return frame.currentPage == "general" end)())
+Check("page Sacs : interrupteur + seuil réunis", (function()
+	local hasModule, hasThreshold = false, false
+	for _, row in ipairs(frame.pages.bags.rows) do
+		if row.isModule and row.moduleId == "bags" then hasModule = true end
+		if row.def and row.def.key == "bagFreeThreshold" then hasThreshold = true end
+	end
+	return hasModule and hasThreshold
+end)())
+
+-- Liste des zones sûres : retrait à la souris, défilement
+ResetWorld()
+for i = 1, 12 do
+	NS:DB().safe["v:30:Village " .. string.format("%02d", i)] = { kind = "village", name = "Village " .. string.format("%02d", i),
+		mapID = 30, subzone = "Village " .. i, source = "mail" }
+end
+NS:DB().safe["c:1"] = { kind = "city", name = "Capitale", mapID = 1, source = "resting" }
+NS:DB().cityRest[1] = { A = true, B = true }
+NS.optionsFrame = nil
+NS:ToggleOptions()
+NS:SelectOptionsPage("safe")
+local safeList = NS.optionsFrame.lists.safe
+Check("liste des zones : 13 entrées", #safeList.items == 13, #safeList.items)
+Check("liste des zones : 9 lignes visibles", safeList.lines[9]:IsShown() and safeList.lines[9].item ~= nil)
+Check("liste des zones : défilement possible", safeList.down:IsShown() and not safeList.up:IsShown())
+Check("liste des zones : source lisible", tostring(safeList.lines[1].detail.text):find("capitale, repos") ~= nil,
+	safeList.lines[1].detail.text)
+safeList.down:Click()
+Check("défilement : une ligne plus bas", safeList.offset == 1 and safeList.up:IsShown())
+for _ = 1, 10 do safeList.down:Click() end
+Check("défilement borné en bas", safeList.offset == 4, safeList.offset)
+safeList.offset = 0
+NS:RefreshOptions()
+safeList.lines[1].action:Click()          -- « Capitale » : première par ordre alphabétique
+Check("bouton Retirer : capitale oubliée", NS:DB().safe["c:1"] == nil and NS:DB().cityRest[1] == nil)
+Check("liste rafraîchie après retrait", #safeList.items == 12, #safeList.items)
+NS.optionsFrame.pages.safe.clearButton:Click()
+Check("Tout effacer : liste vide", next(NS:DB().safe) == nil and #safeList.items == 0)
+Check("liste vide : message affiché", safeList.empty.text ~= "", safeList.empty.text)
+
+-- Liste des buffs suivis : bascule et retrait
+ResetWorld()
+NS:DB().buffs[1459] = { name = "Intelligence des arcanes", duration = 1800, enabled = true }
+NS:DB().buffs[1126] = { name = "Marque du fauve", duration = 1800, enabled = true }
+NS.optionsFrame = nil
+NS:ToggleOptions()
+NS:SelectOptionsPage("buffs")
+local buffList = NS.optionsFrame.lists.buffs
+Check("liste des buffs : 2 entrées", #buffList.items == 2, #buffList.items)
+buffList.lines[1]:Click()
+Check("clic sur un buff : coupé", NS:DB().buffs[1459].enabled == false)
+Check("buff coupé affiché « non »", tostring(buffList.lines[1].detail.text):find(NS.L.OPT_OFF) ~= nil,
+	buffList.lines[1].detail.text)
+buffList.lines[1]:Click()
+Check("second clic : réactivé", NS:DB().buffs[1459].enabled == true)
+buffList.lines[2].action:Click()
+Check("bouton Retirer : buff oublié", NS:DB().buffs[1126] == nil and #buffList.items == 1)
+
 end
 
 -- Aucun caractère hors du répertoire de la police du client : "▶" (U+25B6)
@@ -2701,7 +2721,7 @@ NS:ToggleOptions()
 local fallback = NS.optionsFrame
 Check("repli sans BackdropTemplate", fallback.chrome == "drawn", fallback.chrome)
 Check("repli toujours titré", fallback.title ~= nil and tostring(fallback.title.text) ~= "")
-Check("repli toujours complet", fallback.rows ~= nil and #fallback.rows == 30,
+Check("repli toujours complet", fallback.rows ~= nil and #fallback.rows == 33,
 	fallback.rows and #fallback.rows)
 Mock.world.noBackdropTemplate = false
 
@@ -2758,6 +2778,7 @@ for _, pair in ipairs({ { "résumé", NS.toastFrame }, { "stats portrait", NS.po
 end
 NS:StopEditMode()
 
+do -- portée locale : Lua 5.1 limite le bloc principal à 200 locales
 -- 4.40 v1.18.0 en mode Classic Era : nouveaux checks et marchand
 Say("\n== v1.18.0 : mode Era ==")
 local EraSaved = {}
@@ -3366,6 +3387,7 @@ Check("[UX10] vert de statut ≠ vert « Inhabituel »", NS.Theme.T_GREEN ~= "|c
 
 LeaveEra()
 Mock.world.classToken = nil
+end
 
 -- 5. Bilan
 ----------------------------------------------------------------------------

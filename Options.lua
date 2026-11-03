@@ -1,78 +1,105 @@
 -- Options.lua -- panneau de réglages, même habillage que le reste (Theme)
+--
+-- v1.19.0 : navigation par pages, à la manière d'ElvUI. Une liste à gauche,
+-- le contenu de la page à droite. Chaque page regroupe l'interrupteur d'un
+-- module ET ses réglages : avant, l'interrupteur des vivres était dans
+-- « Modules » et leur seuil dans « Alertes ». La hauteur du panneau ne dépend
+-- plus du nombre de réglages (910 px en 1.18.0 avant refonte, hors écran).
 local ADDON, ns = ...
 local L = ns.L
 local Theme = ns.Theme
 
-local WIDTH      = 460
-local ROW_HEIGHT = 22
-local HEAD_HEIGHT = 26
+local FRAME_WIDTH  = 600
+local FRAME_HEIGHT = 440
+local NAV_WIDTH    = 150
+local PANE_LEFT    = NAV_WIDTH + 16
+local PANE_WIDTH   = FRAME_WIDTH - PANE_LEFT - 14
+local ROW_HEIGHT   = 22
+local LIST_LINES   = 9
 
--- Le panneau était une liste de quinze lignes de même poids : on ne voyait
--- ni où commençaient les réglages d'alerte, ni où finissaient les options
--- d'affichage. Les lignes sont désormais groupées par section, et chaque
--- section a son titre. Les libellés ont été raccourcis : la phrase entière
--- en colonne de gauche obligeait à lire chaque ligne pour en trouver une.
-local SECTIONS = {
+-- ---------------------------------------------------------------------------
+-- Pages. `modules` = interrupteurs de checks (ns.checks), `rows` = réglages,
+-- `list` = liste défilante (zones sûres, buffs suivis), `buttons` = actions.
+-- ---------------------------------------------------------------------------
+local PAGES = {
 	{
-		title = "OPT_SECTION_DISPLAY",
-		columns = 2,
+		id = "general", title = "OPT_PAGE_GENERAL",
 		rows = {
-			{ key = "showWindow",        label = "OPT_SHOWWINDOW", kind = "bool" },
-			{ key = "showMinimap",       label = "OPT_MINIMAP",    kind = "bool" },
-			{ key = "showGearToast",     label = "OPT_TOAST",      kind = "bool" },
-			{ key = "showPortraitStats", label = "OPT_PORTRAIT",   kind = "bool" },
+			{ key = "enabled",         label = "OPT_ENABLED",    kind = "bool" },
+			{ key = "showWindow",      label = "OPT_SHOWWINDOW", kind = "bool" },
+			{ key = "popupScore",      label = "OPT_POPUPSCORE", kind = "number", min = 0, max = 100, step = 5, suffix = "OPT_SCORE_UNIT" },
+			{ key = "exitDelay",       label = "OPT_EXITDELAY",  kind = "number", min = 0, max = 15,  step = 1, suffix = "OPT_SEC_UNIT" },
+			{ key = "quietAfterLogin", label = "OPT_QUIETLOGIN", kind = "number", min = 0, max = 60,  step = 5, suffix = "OPT_SEC_UNIT" },
+			{ key = "alertCooldown",   label = "OPT_COOLDOWN",   kind = "number", min = 0, max = 120, step = 5, suffix = "OPT_SEC_UNIT" },
+		},
+	},
+	{ id = "safe", title = "OPT_PAGE_SAFE", list = "safe" },
+	{
+		id = "bags", title = "OPT_PAGE_BAGS", modules = { "bags", "gray" },
+		rows = {
+			{ key = "bagFreeThreshold",   label = "OPT_BAGTHRESHOLD",  kind = "number", min = 0, max = 40, step = 1 },
+			{ key = "continuousBagAlert", label = "OPT_BAGALERT",      kind = "bool" },
+			{ key = "grayItemThreshold",  label = "OPT_GRAYTHRESHOLD", kind = "number", min = 0, max = 50, step = 1 },
+			{ key = "autoSellGray",       label = "OPT_AUTOSELL",      kind = "bool" },
+		},
+	},
+	{
+		id = "food", title = "OPT_PAGE_FOOD", modules = { "vivres", "potions" },
+		rows = {
+			{ key = "vivresThreshold",  label = "OPT_VIVRESTHRESHOLD",  kind = "number", min = 0, max = 200, step = 5 },
+			{ key = "potionsThreshold", label = "OPT_POTIONSTHRESHOLD", kind = "number", min = 0, max = 50,  step = 1 },
+		},
+	},
+	{
+		id = "buffs", title = "OPT_PAGE_BUFFS", modules = { "buffs" }, list = "buffs",
+		rows = {
+			{ key = "learnBuffs", label = "OPT_LEARNBUFFS", kind = "bool" },
+		},
+	},
+	{
+		id = "gear", title = "OPT_PAGE_GEAR", modules = { "durability", "repair" },
+		rows = {
+			{ key = "durabilityMinPct", label = "OPT_DURAMIN",    kind = "number", min = 0, max = 100, step = 5, suffix = "OPT_PCT_UNIT" },
+			{ key = "autoRepair",       label = "OPT_AUTOREPAIR", kind = "bool" },
+		},
+	},
+	{
+		id = "char", title = "OPT_PAGE_CHAR", modules = { "classreagents", "spells", "hearth", "rest" },
+		rows = {
+			{ key = "restMinPercent", label = "OPT_RESTMIN", kind = "number", min = 0, max = 150, step = 5, suffix = "OPT_REST_UNIT" },
+		},
+	},
+	{ id = "craft", title = "OPT_PAGE_CRAFT", modules = { "reagents", "quests" } },
+	{
+		id = "display", title = "OPT_PAGE_DISPLAY",
+		rows = {
+			{ key = "showMinimap",       label = "OPT_MINIMAP",     kind = "bool" },
 			{ key = "minimapPos",        label = "OPT_MINIMAP_POS", kind = "action" },
+			{ key = "showGearToast",     label = "OPT_TOAST",       kind = "bool" },
+			{ key = "showPortraitStats", label = "OPT_PORTRAIT",    kind = "bool" },
 		},
-	},
-	{
-		title = "OPT_SECTION_ALERTS",
-		hint = "OPT_SECTION_ALERTS_HINT",
-		rows = {
-			{ key = "continuousBagAlert", label = "OPT_BAGALERT",         kind = "bool" },
-			{ key = "bagFreeThreshold",   label = "OPT_BAGTHRESHOLD",     kind = "number", min = 0,  max = 40,  step = 1 },
-			{ key = "grayItemThreshold",  label = "OPT_GRAYTHRESHOLD",    kind = "number", min = 0,  max = 50,  step = 1 },
-			{ key = "vivresThreshold",    label = "OPT_VIVRESTHRESHOLD",  kind = "number", min = 0,  max = 200, step = 5 },
-			{ key = "potionsThreshold",   label = "OPT_POTIONSTHRESHOLD", kind = "number", min = 0,  max = 50,  step = 1 },
-			{ key = "restMinPercent",     label = "OPT_RESTMIN",          kind = "number", min = 0,  max = 150, step = 5, suffix = "OPT_REST_UNIT" },
-			{ key = "durabilityMinPct",   label = "OPT_DURAMIN",          kind = "number", min = 0,  max = 100, step = 5, suffix = "OPT_PCT_UNIT" },
-			{ key = "exitDelay",          label = "OPT_EXITDELAY",        kind = "number", min = 0,  max = 15,  step = 1, suffix = "OPT_SEC_UNIT" },
-			{ key = "popupScore",         label = "OPT_POPUPSCORE",       kind = "number", min = 0,  max = 100, step = 5, suffix = "OPT_SCORE_UNIT" },
-		},
-	},
-	-- Automatismes : marchand et apprentissage des buffs, sur deux colonnes
-	{
-		title = "OPT_SECTION_AUTO",
-		columns = 2,
-		rows = {
-			{ key = "autoSellGray", label = "OPT_AUTOSELL",   kind = "bool" },
-			{ key = "autoRepair",   label = "OPT_AUTOREPAIR", kind = "bool" },
-			{ key = "learnBuffs",   label = "OPT_LEARNBUFFS", kind = "bool" },
-		},
+		frameButtons = true,
 	},
 }
+ns.OPTION_PAGES = PAGES
 
--- Colonne de droite commune à toutes les lignes : les valeurs s'alignent
--- quelle que soit leur nature (OUI/non, nombre, flèche), et les boutons +/-
--- se placent dans une marge réservée.
--- Exposées aux tests : la géométrie de la colonne de droite doit rester
--- vérifiable, c'est elle qui se casse silencieusement quand on retouche.
+-- Géométrie exposée aux tests : c'est elle qui se casse silencieusement
 ns.OPT_LAYOUT = {
-	width = WIDTH,
+	width = FRAME_WIDTH,
+	height = FRAME_HEIGHT,
+	navWidth = NAV_WIDTH,
+	paneLeft = PANE_LEFT,
+	paneWidth = PANE_WIDTH,
+	rowWidth = PANE_WIDTH,
 	rowHeight = ROW_HEIGHT,
+	listLines = LIST_LINES,
 	valueRight = -96,
 	valueWidth = 86,
 	plusRight = -18,
 	minusRight = -50,
 	buttonWidth = 22,
-	-- sections à deux colonnes (interrupteurs) : demi-largeur, valeur collée à droite
-	columnGap = 12,
-	halfValueRight = -4,
-	halfValueWidth = 40,
-	-- plafond de hauteur : l'écran de WoW fait 768 unités à l'échelle 1, et
-	-- le panneau (910 px en 1.18.0 avant refonte) poussait ses boutons hors champ
 	maxHeight = 740,
 }
-ns.OPT_LAYOUT.halfWidth = math.floor((WIDTH - 28 - ns.OPT_LAYOUT.columnGap) / 2)
 local VALUE_RIGHT = ns.OPT_LAYOUT.valueRight
 local VALUE_WIDTH = ns.OPT_LAYOUT.valueWidth
 local PLUS_RIGHT  = ns.OPT_LAYOUT.plusRight
@@ -84,6 +111,26 @@ local function Clamp(value, minimum, maximum)
 	return value
 end
 
+local function CheckDef(id)
+	for _, def in ipairs(ns.checks or {}) do
+		if def.id == id then return def end
+	end
+	return nil
+end
+
+local function CheckLabel(def)
+	local label = def and def.label
+	if type(label) == "function" then label = label() end
+	return tostring(label or (def and def.id) or "?")
+end
+
+local function OnOff(on)
+	return on and (Theme.T_GREEN .. L.OPT_ON .. "|r") or (Theme.T_GREY .. L.OPT_OFF .. "|r")
+end
+
+-- ---------------------------------------------------------------------------
+-- Rafraîchissement
+-- ---------------------------------------------------------------------------
 function ns:RefreshOptions()
 	local frame = self.optionsFrame
 	if not frame then return end
@@ -100,8 +147,7 @@ function ns:RefreshOptions()
 		end
 		if row.isModule then
 			local on = ns:IsModuleEnabled(row.moduleId)
-			row.value:SetText(on and (Theme.T_GREEN .. L.OPT_ON .. "|r")
-				or (Theme.T_GREY .. L.OPT_OFF .. "|r"))
+			row.value:SetText(OnOff(on))
 			if on then
 				row.label:SetTextColor(0.85, 0.85, 0.85)
 			else
@@ -115,13 +161,11 @@ function ns:RefreshOptions()
 				-- GameFontNormal et s'affiche en losange (cf. 1.12.0)
 				row.value:SetText(Theme.T_GOLD .. ">|r")
 			end
-		else
+		elseif row.def then
 			local def = row.def
 			local value = db[def.key]
 			if def.kind == "bool" then
-				local on = value ~= false
-				row.value:SetText(on and (Theme.T_GREEN .. L.OPT_ON .. "|r")
-					or (Theme.T_GREY .. L.OPT_OFF .. "|r"))
+				row.value:SetText(OnOff(value ~= false))
 			else
 				-- l'unité est portée par la valeur, pas par le libellé : la
 				-- colonne de gauche reste courte et scannable
@@ -130,30 +174,200 @@ function ns:RefreshOptions()
 			end
 		end
 	end
+
+	for _, nav in ipairs(frame.navButtons or {}) do
+		local selected = nav.pageId == frame.currentPage
+		nav.label:SetTextColor(selected and Theme.GOLD[1] or 0.80, selected and Theme.GOLD[2] or 0.78,
+			selected and Theme.GOLD[3] or 0.72)
+		if nav.marker then
+			if selected then nav.marker:Show() else nav.marker:Hide() end
+		end
+	end
+
+	for _, list in pairs(frame.lists or {}) do self:RefreshOptionList(list) end
 end
 
+-- ---------------------------------------------------------------------------
+-- Listes défilantes : zones sûres apprises, buffs suivis.
+-- Défilement à la molette et par deux boutons « ^ » / « v » (ASCII : les
+-- flèches Unicode ne sont pas garanties dans la police), sans dépendre de
+-- FauxScrollFrame, dont la présence n'est pas assurée sur Forever.
+-- ---------------------------------------------------------------------------
+local LIST_SOURCES = {}
+
+function LIST_SOURCES.safe()
+	local db = ns:DB()
+	local items = {}
+	for key, entry in pairs(db.safe or {}) do
+		local kind = entry.kind == "city" and L.SAFE_KIND_CITY or L.SAFE_KIND_VILLAGE
+		items[#items + 1] = {
+			key = key,
+			text = tostring(entry.name or "?"),
+			detail = kind .. ", " .. ns:SourceLabel(entry.source),
+			action = L.OPT_REMOVE,
+			onAction = function() ns:ForgetSafeZone(key) end,
+		}
+	end
+	table.sort(items, function(a, b) return a.text < b.text end)
+	return items
+end
+
+function LIST_SOURCES.buffs()
+	local items = {}
+	for _, entry in ipairs(ns:TrackedBuffs()) do
+		local spellId = entry.spellId
+		items[#items + 1] = {
+			key = spellId,
+			text = tostring(entry.name or spellId),
+			value = OnOff(entry.enabled),
+			onToggle = function()
+				local stored = ns:DB().buffs[spellId]
+				if stored then stored.enabled = (stored.enabled == false) end
+			end,
+			action = L.OPT_REMOVE,
+			onAction = function() ns:DB().buffs[spellId] = nil end,
+		}
+	end
+	return items
+end
+
+function ns:ForgetSafeZone(key)
+	local db = self:DB()
+	local entry = db.safe and db.safe[key]
+	if not entry then return end
+	db.safe[key] = nil
+	if db.safeClues then db.safeClues[key] = nil end
+	if entry.kind == "city" and entry.mapID and db.cityRest then db.cityRest[entry.mapID] = nil end
+	self.inSafe, self.pendingExit = nil, nil
+	self:Print(self:F("MSG_SAFE_REMOVED", tostring(entry.name or "?")))
+end
+
+function ns:RefreshOptionList(list)
+	local items = LIST_SOURCES[list.source]()
+	list.items = items
+	local maxOffset = math.max(0, #items - #list.lines)
+	list.offset = Clamp(list.offset or 0, 0, maxOffset)
+
+	for index, line in ipairs(list.lines) do
+		local item = items[index + list.offset]
+		line.item = item
+		if item then
+			line.text:SetText(item.text)
+			line.detail:SetText(item.detail and (Theme.T_GREY .. item.detail .. "|r") or (item.value or ""))
+			if line.action then
+				if item.action then line.action:Show() else line.action:Hide() end
+			end
+			line:Show()
+		else
+			line:Hide()
+		end
+	end
+
+	list.empty:SetText(#items == 0 and (L[list.emptyText] or "") or "")
+	list.position:SetText(#items > #list.lines
+		and string.format("%d-%d / %d", list.offset + 1, math.min(#items, list.offset + #list.lines), #items) or "")
+	if list.up then
+		if list.offset > 0 then list.up:Show() else list.up:Hide() end
+		if list.offset < maxOffset then list.down:Show() else list.down:Hide() end
+	end
+end
+
+function ns:ScrollOptionList(list, delta)
+	list.offset = (list.offset or 0) - delta
+	self:RefreshOptionList(list)
+end
+
+local function BuildList(page, source, top)
+	local list = { source = source, lines = {}, offset = 0,
+		emptyText = source == "safe" and "OPT_SAFE_EMPTY" or "OPT_BUFFS_EMPTY" }
+	local count = (source == "safe") and LIST_LINES or (LIST_LINES - 3)
+
+	for index = 1, count do
+		local line = CreateFrame("Button", nil, page)
+		line:SetSize(PANE_WIDTH, ROW_HEIGHT - 4)
+		line:SetPoint("TOPLEFT", page, "TOPLEFT", 0, top - ((index - 1) * ROW_HEIGHT))
+
+		line.text = line:CreateFontString(nil, "OVERLAY", Theme.F_BODY)
+		line.text:SetPoint("LEFT", line, "LEFT", 2, 0)
+		line.text:SetWidth(170)
+		line.text:SetJustifyH("LEFT")
+		line.text:SetWordWrap(false)
+		line.text:SetTextColor(0.86, 0.84, 0.78)
+
+		line.detail = line:CreateFontString(nil, "OVERLAY", Theme.F_BODY)
+		line.detail:SetPoint("LEFT", line, "LEFT", 178, 0)
+		line.detail:SetWidth(150)
+		line.detail:SetJustifyH("LEFT")
+		line.detail:SetWordWrap(false)
+
+		line.action = Theme.CreateButton(line, 70, 17, L.OPT_REMOVE, function()
+			if line.item and line.item.onAction then
+				line.item.onAction()
+				ns:RefreshOptions()
+			end
+		end)
+		line.action:SetPoint("RIGHT", line, "RIGHT", -2, 0)
+
+		-- clic sur la ligne : bascule (buffs suivis)
+		line:SetScript("OnClick", function()
+			if line.item and line.item.onToggle then
+				line.item.onToggle()
+				ns:RefreshOptions()
+			end
+		end)
+		list.lines[index] = line
+	end
+
+	local bottom = top - (count * ROW_HEIGHT)
+	list.empty = page:CreateFontString(nil, "OVERLAY", Theme.F_BODY)
+	list.empty:SetPoint("TOPLEFT", page, "TOPLEFT", 2, top - 4)
+	list.empty:SetTextColor(0.55, 0.55, 0.55)
+
+	list.position = page:CreateFontString(nil, "OVERLAY", Theme.F_SMALL)
+	list.position:SetPoint("TOPLEFT", page, "TOPLEFT", 2, bottom - 4)
+	list.position:SetTextColor(0.55, 0.55, 0.55)
+
+	list.up = Theme.CreateButton(page, 22, 17, "^", function() ns:ScrollOptionList(list, 1) end)
+	list.up:SetPoint("TOPRIGHT", page, "TOPRIGHT", -26, bottom - 2)
+	list.down = Theme.CreateButton(page, 22, 17, "v", function() ns:ScrollOptionList(list, -1) end)
+	list.down:SetPoint("TOPRIGHT", page, "TOPRIGHT", -2, bottom - 2)
+
+	if page.EnableMouseWheel then
+		page:EnableMouseWheel(true)
+		page:SetScript("OnMouseWheel", function(_, delta) ns:ScrollOptionList(list, delta) end)
+	end
+	list.bottom = bottom - 22
+	return list
+end
+
+-- ---------------------------------------------------------------------------
+-- Construction
+-- ---------------------------------------------------------------------------
 function ns:EnsureOptions()
 	if self.optionsFrame then return self.optionsFrame end
 	if not Theme or not Theme.CreatePanel then return nil end
 
-	-- hauteur provisoire : la vraie est fixée en fin de construction, une
-	-- fois la dernière ligne réellement posée (voir plus bas)
-	local height = 600
-	local frame = Theme.CreatePanel(UIParent, WIDTH, height, L.OPT_TITLE, { name = "ReadyToQuestOptionsFrame" })
+	local frame = Theme.CreatePanel(UIParent, FRAME_WIDTH, FRAME_HEIGHT, L.OPT_TITLE, { name = "ReadyToQuestOptionsFrame" })
 	if not frame then return nil end
 
 	ns:RestorePoint(frame, "optionsPoint", { point = "CENTER", x = 0, y = 20 })
 	if frame.subtitle then frame.subtitle:SetText(L.OPT_HINT) end
 
-	frame.rows = {}
+	frame.rows, frame.pages, frame.navButtons, frame.lists = {}, {}, {}, {}
+	local top = frame.contentTop - 8
 
-	-- Fabrique d'une ligne : le placement (colonne de droite, boutons) est
-	-- défini ici une fois pour toutes, pas recopié à chaque endroit.
-	local function MakeRow(parent, def, half)
+	-- fond de la colonne de navigation + filet de séparation
+	frame.navBackground = frame:CreateTexture(nil, "BORDER")
+	frame.navBackground:SetTexture(Theme.SOLID)
+	frame.navBackground:SetVertexColor(0, 0, 0, 0.35)
+	frame.navBackground:SetPoint("TOPLEFT", frame, "TOPLEFT", 6, top + 4)
+	frame.navBackground:SetSize(NAV_WIDTH, FRAME_HEIGHT + top - 48)
+
+	-- Fabrique d'une ligne de réglage
+	local function MakeRow(parent, def)
 		local row = CreateFrame("Button", nil, parent)
-		row:SetSize(half and ns.OPT_LAYOUT.halfWidth or (WIDTH - 28), ROW_HEIGHT - 6)
+		row:SetSize(PANE_WIDTH, ROW_HEIGHT - 6)
 		row.def = def
-		row.half = half
 
 		row.label = row:CreateFontString(nil, "OVERLAY", Theme.F_BODY)
 		row.label:SetPoint("LEFT", row, "LEFT", 2, 0)
@@ -162,14 +376,12 @@ function ns:EnsureOptions()
 		row.label:SetTextColor(0.86, 0.84, 0.78)
 
 		row.value = row:CreateFontString(nil, "OVERLAY", Theme.F_NUMBER)
-		row.value:SetPoint("RIGHT", row, "RIGHT", half and ns.OPT_LAYOUT.halfValueRight or VALUE_RIGHT, 0)
-		row.value:SetWidth(half and ns.OPT_LAYOUT.halfValueWidth or VALUE_WIDTH)
+		row.value:SetPoint("RIGHT", row, "RIGHT", VALUE_RIGHT, 0)
+		row.value:SetWidth(VALUE_WIDTH)
 		row.value:SetJustifyH("RIGHT")
 
 		if def.kind == "action" then
-			row:SetScript("OnClick", function()
-				ns:RunOptionAction(def.key)
-			end)
+			row:SetScript("OnClick", function() ns:RunOptionAction(def.key) end)
 		elseif def.kind == "bool" then
 			row:SetScript("OnClick", function()
 				local db = ns:DB()
@@ -180,180 +392,205 @@ function ns:EnsureOptions()
 		else
 			local function Step(delta)
 				local db = ns:DB()
-				db[def.key] = Clamp((db[def.key] or 0) + (delta * (def.step or 1)),
-					def.min or 0, def.max or 999)
+				db[def.key] = Clamp((db[def.key] or 0) + (delta * (def.step or 1)), def.min or 0, def.max or 999)
 				ns:RefreshOptions()
 			end
-
 			row.minus = Theme.CreateButton(row, 22, 17, "-", function() Step(-1) end)
 			row.minus:SetPoint("RIGHT", row, "RIGHT", MINUS_RIGHT, 0)
-
 			row.plus = Theme.CreateButton(row, 22, 17, "+", function() Step(1) end)
 			row.plus:SetPoint("RIGHT", row, "RIGHT", PLUS_RIGHT, 0)
 		end
-
 		return row
 	end
 
-	local y = frame.contentTop - 12
-
-	for _, section in ipairs(SECTIONS) do
-		-- titre de section : petit, en capitales dorées, précédé d'un filet
-		frame.sections = frame.sections or {}
-		local header = frame:CreateFontString(nil, "OVERLAY", Theme.F_SMALL)
-		header:SetPoint("TOPLEFT", frame, "TOPLEFT", 14, y)
-		header:SetText(L[section.title] or section.title)
-		header:SetTextColor(Theme.GOLD[1], Theme.GOLD[2], Theme.GOLD[3])
-		frame.sections[#frame.sections + 1] = header
-
-		if section.hint then
-			local hint = frame:CreateFontString(nil, "OVERLAY", Theme.F_SMALL)
-			hint:SetPoint("LEFT", header, "RIGHT", 8, 0)
-			hint:SetText(L[section.hint] or section.hint)
-			hint:SetTextColor(0.48, 0.48, 0.48)
-			frame.sections[#frame.sections + 1] = hint
-		end
-
-		y = y - 16
-
-		local columns = section.columns or 1
-		for index, def in ipairs(section.rows) do
-			local column = (index - 1) % columns
-			local row = MakeRow(frame, def, columns > 1)
-			row:SetPoint("TOPLEFT", frame, "TOPLEFT",
-				14 + column * (ns.OPT_LAYOUT.halfWidth + ns.OPT_LAYOUT.columnGap), y)
-			frame.rows[#frame.rows + 1] = row
-			if column == columns - 1 or index == #section.rows then y = y - ROW_HEIGHT end
-		end
-
-		y = y - 6
-		frame.sections[#frame.sections + 1] = Theme.CreateDivider(frame, WIDTH - 28, y + 10)
-		y = y - 10
-	end
-
-	-- Section « Modules » : même gabarit que les autres sections, pour que la
-	-- colonne d'interrupteurs ne se casse pas en deux styles d'alignement.
-	local checks = ns.checks or {}
-	local sectionY = y
-
-	frame.modulesDivider = Theme.CreateDivider(frame, WIDTH - 28, sectionY + 12)
-
-	frame.modulesHeader = frame:CreateFontString(nil, "OVERLAY", Theme.F_SMALL)
-	frame.modulesHeader:SetPoint("TOPLEFT", frame, "TOPLEFT", 14, sectionY)
-	frame.modulesHeader:SetText(L.OPT_MODULES)
-	frame.modulesHeader:SetTextColor(Theme.GOLD[1], Theme.GOLD[2], Theme.GOLD[3])
-
-	frame.modulesHint = frame:CreateFontString(nil, "OVERLAY", Theme.F_SMALL)
-	frame.modulesHint:SetPoint("LEFT", frame.modulesHeader, "RIGHT", 8, 0)
-	frame.modulesHint:SetText(L.OPT_MODULES_HINT)
-	frame.modulesHint:SetTextColor(0.48, 0.48, 0.48)
-
-	local moduleY = sectionY - 16
-
-	-- 13 interrupteurs : deux colonnes, sinon le panneau dépasse de l'écran
-	for index, def in ipairs(checks) do
-		local column = (index - 1) % 2
-		local row = CreateFrame("Button", nil, frame)
-		row:SetSize(ns.OPT_LAYOUT.halfWidth, ROW_HEIGHT - 6)
-		row:SetPoint("TOPLEFT", frame, "TOPLEFT",
-			14 + column * (ns.OPT_LAYOUT.halfWidth + ns.OPT_LAYOUT.columnGap), moduleY)
+	local function MakeModuleRow(parent, def)
+		local row = CreateFrame("Button", nil, parent)
+		row:SetSize(PANE_WIDTH, ROW_HEIGHT - 6)
 		row.isModule = true
-		row.half = true
 		row.moduleId = def.id
-
 		row.label = row:CreateFontString(nil, "OVERLAY", Theme.F_BODY)
 		row.label:SetPoint("LEFT", row, "LEFT", 2, 0)
-		local labelText = def.label
-		if type(labelText) == "function" then labelText = labelText() end
-		row.label:SetText(tostring(labelText or def.id))
-
-		-- même colonne de valeurs que les autres sections : sinon les OUI
-		-- des modules tombaient 70 px plus a droite que ceux du dessus
+		row.label:SetJustifyH("LEFT")
+		row.label:SetText(CheckLabel(def))
 		row.value = row:CreateFontString(nil, "OVERLAY", Theme.F_NUMBER)
-		row.value:SetPoint("RIGHT", row, "RIGHT", ns.OPT_LAYOUT.halfValueRight, 0)
-		row.value:SetWidth(ns.OPT_LAYOUT.halfValueWidth)
+		row.value:SetPoint("RIGHT", row, "RIGHT", VALUE_RIGHT, 0)
+		row.value:SetWidth(VALUE_WIDTH)
 		row.value:SetJustifyH("RIGHT")
-
 		row:SetScript("OnClick", function()
 			ns:SetModuleEnabled(def.id, not ns:IsModuleEnabled(def.id))
 			ns:RefreshOptions()
 		end)
-
-		frame.rows[#frame.rows + 1] = row
-		if column == 1 or index == #checks then moduleY = moduleY - ROW_HEIGHT end
+		return row
 	end
 
-	-- moduleY est maintenant la coordonnee du haut de la derniere ligne de
-	-- module. La hauteur reelle du panneau n'est connue qu'ici : on la fixe
-	-- d'apres le contenu effectivement place, au lieu de l'additionner a
-	-- l'avance (c'est cette addition qui laissait un trou avant les boutons).
-	-- moduleY est deja descendu sous la derniere ligne : c'est son bas.
-	local gapBeforeButtons = 18
-	local footerTopOffset = 62              -- bouton edit : 40 de bas + 22 de haut
-	local realHeight = -(moduleY - gapBeforeButtons) + footerTopOffset
-	ns.OPT_LAYOUT.gapBeforeButtons = gapBeforeButtons
-	ns.OPT_LAYOUT.footerTopOffset = footerTopOffset
-	frame:SetHeight(realHeight)
-	ns.OPT_LAYOUT.contentBottom = moduleY
-	ns.OPT_LAYOUT.realHeight = realHeight
+	local function Header(page, y, key)
+		local header = page:CreateFontString(nil, "OVERLAY", Theme.F_SMALL)
+		header:SetPoint("TOPLEFT", page, "TOPLEFT", 0, y)
+		header:SetText(L[key] or key)
+		header:SetTextColor(Theme.GOLD[1], Theme.GOLD[2], Theme.GOLD[3])
+		return header
+	end
 
-	-- Pied : deux rangées, mais une seule grille. La rangée du bas est
-	-- découpée en trois tiers égaux, si bien que « Réinitialiser » est
-	-- centré entre « Lancer le check » et « Fermer » — il flottait avant,
-	-- collé au bouton de gauche, avec un grand vide jusqu'à « Fermer ».
-	local MARGIN = 16
-	local GAP    = 8
-	local inner  = WIDTH - (MARGIN * 2)
-	-- le reste de la division est distribue aux deux premiers boutons : sinon
-	-- floor laissait 1 px de vide a droite et les marges n'etaient pas egales
+	local placed = {}
+	for index, def in ipairs(PAGES) do
+		-- bouton de navigation
+		local nav = CreateFrame("Button", nil, frame)
+		nav:SetSize(NAV_WIDTH - 8, ROW_HEIGHT)
+		nav:SetPoint("TOPLEFT", frame, "TOPLEFT", 10, top - ((index - 1) * (ROW_HEIGHT + 2)))
+		nav.pageId = def.id
+		nav.marker = nav:CreateTexture(nil, "ARTWORK")
+		nav.marker:SetTexture(Theme.SOLID)
+		nav.marker:SetVertexColor(Theme.GOLD[1], Theme.GOLD[2], Theme.GOLD[3], 0.85)
+		nav.marker:SetPoint("LEFT", nav, "LEFT", 0, 0)
+		nav.marker:SetSize(2, ROW_HEIGHT - 6)
+		nav.label = nav:CreateFontString(nil, "OVERLAY", Theme.F_NORMAL)
+		nav.label:SetPoint("LEFT", nav, "LEFT", 8, 0)
+		nav.label:SetJustifyH("LEFT")
+		nav.label:SetText(L[def.title] or def.title)
+		nav:SetScript("OnClick", function() ns:SelectOptionsPage(def.id) end)
+		frame.navButtons[index] = nav
+
+		-- page
+		local page = CreateFrame("Frame", nil, frame)
+		page:SetSize(PANE_WIDTH, FRAME_HEIGHT + top - 50)
+		page:SetPoint("TOPLEFT", frame, "TOPLEFT", PANE_LEFT, top)
+		page.id = def.id
+		page.rows = {}
+		frame.pages[def.id] = page
+
+		page.title = page:CreateFontString(nil, "OVERLAY", Theme.F_TITLE)
+		page.title:SetPoint("TOPLEFT", page, "TOPLEFT", 0, 0)
+		page.title:SetText(L[def.title] or def.title)
+		page.title:SetTextColor(Theme.GOLD[1], Theme.GOLD[2], Theme.GOLD[3])
+		local y = -28
+
+		if def.modules then
+			page.modulesHeader = Header(page, y, "OPT_MODULES")
+			y = y - 16
+			for _, id in ipairs(def.modules) do
+				local check = CheckDef(id)
+				if check then
+					local row = MakeModuleRow(page, check)
+					row:SetPoint("TOPLEFT", page, "TOPLEFT", 0, y)
+					frame.rows[#frame.rows + 1] = row
+					page.rows[#page.rows + 1] = row
+					placed[id] = true
+					y = y - ROW_HEIGHT
+				end
+			end
+			y = y - 8
+		end
+
+		if def.rows then
+			if def.modules then
+				page.settingsHeader = Header(page, y, "OPT_SETTINGS")
+				y = y - 16
+			end
+			for _, rowDef in ipairs(def.rows) do
+				local row = MakeRow(page, rowDef)
+				row:SetPoint("TOPLEFT", page, "TOPLEFT", 0, y)
+				frame.rows[#frame.rows + 1] = row
+				page.rows[#page.rows + 1] = row
+				y = y - ROW_HEIGHT
+			end
+			y = y - 8
+		end
+
+		if def.list then
+			page.listHeader = Header(page, y, def.list == "safe" and "OPT_SAFE_LIST" or "OPT_BUFFS_LIST")
+			y = y - 18
+			local list = BuildList(page, def.list, y)
+			frame.lists[def.list] = list
+			y = list.bottom
+			if def.list == "safe" then
+				page.clearButton = Theme.CreateButton(page, 150, 20, L.OPT_SAFE_CLEAR, function()
+					ns:HandleCommand("safe reset")
+					ns:RefreshOptions()
+				end)
+				page.clearButton:SetPoint("TOPLEFT", page, "TOPLEFT", 0, y - 6)
+				page.hint = page:CreateFontString(nil, "OVERLAY", Theme.F_SMALL)
+				page.hint:SetPoint("TOPLEFT", page, "TOPLEFT", 0, y - 34)
+				page.hint:SetWidth(PANE_WIDTH)
+				page.hint:SetJustifyH("LEFT")
+				page.hint:SetText(L.OPT_SAFE_HINT)
+				page.hint:SetTextColor(0.55, 0.55, 0.55)
+			end
+		end
+
+		if def.frameButtons then
+			local half = math.floor((PANE_WIDTH - 8) / 2)
+			frame.editButton = Theme.CreateButton(page, half, 22, L.OPT_EDIT_BUTTON, function()
+				ns:RunOptionAction("editMode")
+			end)
+			frame.editButton:SetPoint("TOPLEFT", page, "TOPLEFT", 0, y - 6)
+			frame.resetFramesButton = Theme.CreateButton(page, half, 22, L.OPT_RESET_FRAMES, function()
+				ns:HandleCommand("resetpos")
+			end)
+			frame.resetFramesButton:SetPoint("TOPLEFT", page, "TOPLEFT", half + 8, y - 6)
+			y = y - 34
+		end
+
+		page.contentBottom = y
+		page:Hide()
+	end
+
+	-- tout check sans page tombe dans « Général » : un module ajouté plus tard
+	-- ne doit pas devenir impossible à couper
+	frame.unplaced = {}
+	local general = frame.pages.general
+	local y = general.contentBottom
+	for _, check in ipairs(ns.checks or {}) do
+		if not placed[check.id] then
+			frame.unplaced[#frame.unplaced + 1] = check.id
+			local row = MakeModuleRow(general, check)
+			row:SetPoint("TOPLEFT", general, "TOPLEFT", 0, y)
+			frame.rows[#frame.rows + 1] = row
+			general.rows[#general.rows + 1] = row
+			y = y - ROW_HEIGHT
+		end
+	end
+	general.contentBottom = y
+
+	-- Pied : trois boutons sur toute la largeur, en tiers égaux
+	local MARGIN, GAP = 16, 8
+	local inner = FRAME_WIDTH - (MARGIN * 2)
 	local available = inner - (GAP * 2)
-	local base  = math.floor(available / 3)
+	local base = math.floor(available / 3)
 	local extra = available - (base * 3)
-	local widths = { base + (extra > 0 and 1 or 0),
-	                 base + (extra > 1 and 1 or 0),
-	                 base }
-	local third = base
-
-	local half = math.floor((inner - GAP) / 2)
-	frame.editButton = Theme.CreateButton(frame, half, 22, L.OPT_EDIT_BUTTON, function()
-		ns:RunOptionAction("editMode")
-	end)
-	frame.editButton:SetPoint("BOTTOMLEFT", frame, "BOTTOMLEFT", MARGIN, 40)
-	if frame.editButton.SetText then
-		frame.editButton:SetText(L.OPT_EDIT_BUTTON)
-	end
-
-	-- le bouton des cadres est jumeau de celui du déplacement : mêmes
-	-- dimensions, même rangée, séparés par le même espacement
-	frame.resetFramesButton = Theme.CreateButton(frame, (inner - GAP) - half, 22, L.OPT_RESET_FRAMES, function()
-		ns:HandleCommand("resetpos")
-	end)
-	frame.resetFramesButton:SetPoint("TOPLEFT", frame.editButton, "TOPLEFT", half + GAP, 0)
+	local widths = { base + (extra > 0 and 1 or 0), base + (extra > 1 and 1 or 0), base }
 
 	frame.runButton = Theme.CreateButton(frame, widths[1], 20, L.OPT_RUNCHECK, function()
 		ns:RunChecklist("manual")
 	end)
 	frame.runButton:SetPoint("BOTTOMLEFT", frame, "BOTTOMLEFT", MARGIN, 12)
-
 	frame.resetButton = Theme.CreateButton(frame, widths[2], 20, L.OPT_RESET, function()
 		ns:HandleCommand("reset")
 		ns:RefreshOptions()
 	end)
 	frame.resetButton:SetPoint("LEFT", frame.runButton, "RIGHT", GAP, 0)
-
 	frame.closeButton = Theme.CreateButton(frame, widths[3], 20, L.OPT_CLOSE, function()
 		frame:Hide()
 	end)
 	frame.closeButton:SetPoint("LEFT", frame.resetButton, "RIGHT", GAP, 0)
 
-	ns.OPT_LAYOUT.footer = {
-		margin = MARGIN, gap = GAP, third = third, inner = inner, widths = widths,
-		half = half,
-	}
+	ns.OPT_LAYOUT.footer = { margin = MARGIN, gap = GAP, inner = inner, widths = widths }
+	ns.OPT_LAYOUT.contentLimit = -(FRAME_HEIGHT - 48) - top   -- bas utile d'une page (sous le titre du cadre)
 
 	self.optionsFrame = frame
-	self:RefreshOptions()
+	self:SelectOptionsPage(self:DB().optionsPage or "general")
 	return frame
+end
+
+function ns:SelectOptionsPage(id)
+	local frame = self.optionsFrame
+	if not frame then return end
+	if not frame.pages[id] then id = "general" end
+	frame.currentPage = id
+	self:DB().optionsPage = id
+	for pageId, page in pairs(frame.pages) do
+		if pageId == id then page:Show() else page:Hide() end
+	end
+	self:RefreshOptions()
 end
 
 function ns:ToggleOptions()
