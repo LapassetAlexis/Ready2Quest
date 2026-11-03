@@ -79,6 +79,12 @@ local FR = {
 	JRN_HINT_DUNGEONS      = "Entre dans l'un de ces donjons (l'entrée suffit) :",
 	JRN_HINT_LEVEL         = "Encore %d niveau(x). Quêtes et monstres de ton niveau.",
 	JRN_HINT_XP            = "XP avant le prochain niveau : %d",
+	JRN_GOAL_ZONE          = "Complétion de %s",
+	JRN_ZONE_PCT           = "%d %%",
+	JRN_ZONE_PARTS         = "Où tu en es :",
+	JRN_ZONE_PART_LINE     = "  %s : %d/%d",
+	JRN_ZONE_NEXT          = "Le plus simple pour avancer — %s :",
+	JRN_PART_villages      = "Villages",
 }
 local EN = {
 	OPT_JRN_TRACKER        = "On-screen tracker",
@@ -117,6 +123,12 @@ local EN = {
 	JRN_HINT_DUNGEONS      = "Enter one of these dungeons (the entrance is enough):",
 	JRN_HINT_LEVEL         = "%d level(s) to go. Quests and monsters of your level.",
 	JRN_HINT_XP            = "XP to next level: %d",
+	JRN_GOAL_ZONE          = "%s completion",
+	JRN_ZONE_PCT           = "%d %%",
+	JRN_ZONE_PARTS         = "Where you stand:",
+	JRN_ZONE_PART_LINE     = "  %s: %d/%d",
+	JRN_ZONE_NEXT          = "Easiest way forward — %s:",
+	JRN_PART_villages      = "Villages",
 }
 ns.RegisterStrings(FR, EN)
 ns.JOURNAL_TRACKER_STRINGS = { fr = FR, en = EN }
@@ -233,9 +245,13 @@ local function NameLines(lines, names)
 end
 
 -- Villages de la zone où tu es, amis ou neutres, connus de ce client
-local function ZoneVillages(self)
-	local zoneID, zoneName = self:JournalZone()
+local function ZoneVillages(self, zoneID, zoneName)
+	if not zoneID then zoneID, zoneName = self:JournalZone() end
 	if not zoneID then return nil end
+	if not zoneName then
+		local info = self.MapInfo and self:MapInfo(zoneID)
+		zoneName = info and info.name
+	end
 	local faction, stamps = self:PlayerFaction(), self:JournalData().stamps
 	local have, need, missing = 0, 0, {}
 	for name, group in pairs(self:JournalHubGroups()) do
@@ -413,6 +429,84 @@ function ns.RegisterZonePart(def)
 	end
 end
 
+-- Villages : la première part, livrée ici
+ns.RegisterZonePart({ id = "villages", label = "JRN_PART_villages", Compute = function(self, zoneID)
+	local villages = ZoneVillages(self, zoneID)
+	if not villages or villages.need == 0 then return nil end
+	return { have = villages.have, need = villages.need,
+		hint = NameLines({}, villages.missing) }
+end })
+
+-- Où tu en es dans une zone : chaque part qui s'applique pèse autant que les
+-- autres (5 villages sur 5 et 2 espèces sur 10 = 60 %, pas 7/15). Renvoie
+-- nil si aucune part ne s'applique.
+function ns:ZoneCompletion(zoneID)
+	if not zoneID then return nil end
+	local parts, sum = {}, 0
+	for _, def in ipairs(ns.ZONE_PARTS) do
+		local ok, part = pcall(def.Compute, self, zoneID)
+		if ok and type(part) == "table" and tonumber(part.need) and part.need > 0 then
+			local have = math.min(math.max(tonumber(part.have) or 0, 0), part.need)
+			parts[#parts + 1] = { id = def.id, label = L[def.label] or def.label or def.id,
+				have = have, need = part.need, ratio = have / part.need, hint = part.hint }
+			sum = sum + have / part.need
+		elseif not ok and self.RecordError then
+			self:RecordError("journal:zonepart:" .. tostring(def.id), part)
+		end
+	end
+	if #parts == 0 then return nil end
+	local ratio = sum / #parts
+	return { zoneID = zoneID, parts = parts, ratio = ratio, percent = math.floor(ratio * 100 + 1e-9) }
+end
+
+-- Objectif « Complétion de <zone> » : seulement si au moins deux parts
+-- s'appliquent (une seule, c'est déjà son propre objectif)
+local function ZoneGoals(self, list)
+	local zoneID, zoneName = self:JournalZone()
+	local done = zoneID and self:ZoneCompletion(zoneID)
+	if not done or #done.parts < 2 or done.percent >= 100 then return end
+	local goal = Goal("zone:" .. zoneID, self:F("JRN_GOAL_ZONE", tostring(zoneName or "?")), done.percent, 100,
+		done.ratio, "journal")
+	if not goal then return end
+	goal.progress = self:F("JRN_ZONE_PCT", done.percent)
+	goal.zoneCompletion = true
+	local hint = { L.JRN_ZONE_PARTS }
+	local easiest
+	for _, part in ipairs(done.parts) do
+		hint[#hint + 1] = self:F("JRN_ZONE_PART_LINE", part.label, part.have, part.need)
+		if part.have < part.need and (not easiest or part.need - part.have < easiest.need - easiest.have) then easiest = part end
+	end
+	if easiest and type(easiest.hint) == "table" and #easiest.hint > 0 then
+		hint[#hint + 1] = self:F("JRN_ZONE_NEXT", easiest.label)
+		for _, text in ipairs(easiest.hint) do hint[#hint + 1] = text end
+	end
+	goal.hint = hint
+	list[#list + 1] = goal
+end
+SOURCES[#SOURCES + 1] = ZoneGoals
+
+-- Onglet Zones du carnet : le pourcentage à côté de chaque zone tamponnée
+do
+	local previous = ns.JournalItems
+	if previous then
+		function ns:JournalItems(kind)
+			local items = previous(self, kind)
+			if kind == "zone" then
+				for _, item in ipairs(items) do
+					local zoneID = item.id and tonumber(item.id:match("^zone:(%d+)$"))
+					local done = zoneID and self:ZoneCompletion(zoneID)
+					if done then
+						local pct = self:F("JRN_ZONE_PCT", done.percent)
+						item.detail = (item.detail and item.detail ~= "") and (item.detail .. "  " .. pct) or pct
+						item.completion = done
+					end
+				end
+			end
+			return items
+		end
+	end
+end
+
 -- Le plus proche du but d'abord ; à égalité, le moins de pas restants, puis
 -- le nom (ordre stable d'un rafraîchissement à l'autre). Masqués à la fin.
 local function Closer(a, b)
@@ -438,10 +532,23 @@ function ns:JournalObjectives()
 end
 
 -- Ceux du suivi : non masqués, les TRACKER_MAX premiers
+-- La complétion de la zone affichée remplace ses parts (villages, bestiaire,
+-- nommés de cette zone) : elles restent dans l'onglet Objectifs.
+local ZONE_PART_PREFIX = { "villages:", "bestiary:", "named:" }
 function ns:JournalTrackerObjectives()
+	local all, zoneShown = self:JournalObjectives(), nil
+	for _, goal in ipairs(all) do
+		if goal.zoneCompletion and not goal.dismissed then zoneShown = goal.id:match("^zone:(%d+)$") end
+	end
 	local shown = {}
-	for _, goal in ipairs(self:JournalObjectives()) do
-		if not goal.dismissed and #shown < TRACKER_MAX then shown[#shown + 1] = goal end
+	for _, goal in ipairs(all) do
+		local absorbed = false
+		if zoneShown then
+			for _, prefix in ipairs(ZONE_PART_PREFIX) do
+				if goal.id == prefix .. zoneShown then absorbed = true end
+			end
+		end
+		if not goal.dismissed and not absorbed and #shown < TRACKER_MAX then shown[#shown + 1] = goal end
 	end
 	return shown
 end
