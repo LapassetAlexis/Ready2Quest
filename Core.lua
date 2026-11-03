@@ -1196,7 +1196,9 @@ function ns:HandleCommand(input)
 		return
 	end
 
-	local fn = COMMANDS[command]
+	-- v1.24.0 : ns.EXTRA_COMMANDS, rempli par les modules (table COMMANDS locale,
+	-- inaccessible depuis leur fichier). Les commandes du cœur restent prioritaires.
+	local fn = COMMANDS[command] or (type(ns.EXTRA_COMMANDS) == "table" and ns.EXTRA_COMMANDS[command]) or nil
 	if fn then
 		fn(self, rest)
 		return
