@@ -9,6 +9,7 @@
 ## Version: 1.25.0
 ## Author: Tristabeau
 ## SavedVariables: Ready2QuestDB
+## OptionalDeps: Questie
 ## X-Category: Utility
 ## IconTexture: Interface\AddOns\Ready2Quest\Textures\logo_petit
 
@@ -44,4 +45,5 @@ Bestiary.lua
 GatheringData.lua
 Gathering.lua
 CompanionChest.lua
+QuestieZone.lua
 JournalWindow.lua
