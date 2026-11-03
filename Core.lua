@@ -45,12 +45,21 @@ local function ApplyDefaults(src, dst)
 end
 
 function ns:DB()
-	if type(SacEtDepartDB) ~= "table" then SacEtDepartDB = {} end
+	-- Migration : l'addon s'appelait Sac & Départ (SavedVariable SacEtDepartDB).
+	-- On reprend la sauvegarde existante une seule fois, sinon chaque joueur
+	-- perdrait ses zones sûres apprises et ses réglages au renommage.
+	if type(ReadyToQuestDB) ~= "table" then
+		ReadyToQuestDB = {}
+		if type(SacEtDepartDB) == "table" then
+			for k, v in pairs(SacEtDepartDB) do ReadyToQuestDB[k] = v end
+			SacEtDepartDB = nil
+		end
+	end
 	if not self._dbReady then
-		ApplyDefaults(DEFAULTS, SacEtDepartDB)
+		ApplyDefaults(DEFAULTS, ReadyToQuestDB)
 		self._dbReady = true
 	end
-	return SacEtDepartDB
+	return ReadyToQuestDB
 end
 
 local function Now()
@@ -511,7 +520,7 @@ local COMMANDS = {
 		end
 	end,
 	["reset"] = function(self)
-		for k in pairs(SacEtDepartDB or {}) do SacEtDepartDB[k] = nil end
+		for k in pairs(ReadyToQuestDB or {}) do ReadyToQuestDB[k] = nil end
 		self._dbReady = false
 		self:DB()
 		self.inSafe = nil
@@ -769,6 +778,6 @@ ns.eventFrame = frame
 
 
 -- API publique minimale, pour un futur addon compagnon
-_G.SacEtDepart = ns
+_G.ReadyToQuest = ns
 
 if ns.Mark then ns.Mark("Core") end

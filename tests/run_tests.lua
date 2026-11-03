@@ -394,7 +394,7 @@ local function LoadAddonFile(name)
 	handle:close()
 	local chunk, compileError = loadstring(source, "@" .. path)
 	assert(chunk, "erreur de compilation dans " .. path .. ":\n" .. tostring(compileError))
-	chunk("SacEtDepart", NS)
+	chunk("ReadyToQuest", NS)
 end
 
 for _, file in ipairs({ "Bootstrap.lua", "Locales.lua", "Compat.lua", "Theme.lua", "Core.lua", "Buffs.lua", "Reagents.lua", "Equip.lua", "Stats.lua", "Minimap.lua", "Checks.lua", "Options.lua", "UI.lua" }) do
@@ -473,6 +473,8 @@ local function ResetWorld()
 	Mock.secretAuras = false
 	Mock.now = 1000
 	Mock:Reset()
+	-- les deux : la nouvelle variable, et l ancienne que Core migre
+	_G.ReadyToQuestDB = nil
 	_G.SacEtDepartDB = nil
 	NS._dbReady = false
 	NS.inSafe = nil
@@ -499,6 +501,30 @@ end
 -- 4.1 Chargement
 Say("== chargement ==")
 Check("table de locale chargée", type(NS.L) == "table")
+
+-- Migration du renommage Sac & Départ -> Ready to Quest : une sauvegarde
+-- existante sous l'ancien nom doit être reprise, sinon chaque joueur perdrait
+-- ses zones sûres apprises et ses réglages au passage.
+ResetWorld()
+_G.SacEtDepartDB = { safe = { [1234] = true }, alertCooldown = 99, showWindow = false }
+NS._dbReady = false
+local migrated = NS:DB()
+Check("migration : l'ancienne sauvegarde est reprise",
+	migrated.safe ~= nil and migrated.safe[1234] == true,
+	migrated.safe and tostring(migrated.safe[1234]))
+Check("migration : le réglage personnalisé est conservé", migrated.showWindow == false,
+	tostring(migrated.showWindow))
+Check("migration : la variable porte le nouveau nom",
+	_G.ReadyToQuestDB == migrated)
+Check("migration : l'ancienne variable est libérée",
+	_G.SacEtDepartDB == nil)
+
+-- sans ancienne sauvegarde, une table neuve avec les défauts
+ResetWorld()
+NS._dbReady = false
+local fresh = NS:DB()
+Check("sans migration : les défauts sont posés", fresh.showWindow == true,
+	tostring(fresh.showWindow))
 Check("9 checks enregistrés", #(NS.checks or {}) == 9, NS.checks and #NS.checks)
 Check("commande /sd enregistrée", type(SlashCmdList["SACETDEPART"]) == "function")
 Check("événement PLAYER_UPDATE_RESTING écouté", NS.eventFrame and NS.eventFrame.events.PLAYER_UPDATE_RESTING == true)
@@ -1182,7 +1208,7 @@ ResetWorld()
 Say("\n== bootstrap et diagnostic ==")
 ResetWorld()
 Check("commande enregistrée par le bootstrap", type(SlashCmdList["SACETDEPART"]) == "function")
-Check("version exposée", NS.version == "1.16.1", NS.version)
+Check("version exposée", NS.version == "1.17.0", NS.version)
 
 local missingMods = {}
 for _, name in ipairs({ "Bootstrap", "Locales", "Compat", "Theme", "Core", "Buffs", "Reagents",
@@ -1203,7 +1229,7 @@ NS.HandleCommand = savedHandle
 Mock:Reset()
 NS:HandleCommand("diag")
 Check("/sd diag liste les modules", Mock:Output():find("modules :") ~= nil, Mock:Output())
-Check("/sd diag affiche la version", Mock:Output():find("1%.16%.1") ~= nil, Mock:Output())
+Check("/sd diag affiche la version", Mock:Output():find("1%.17%.0") ~= nil, Mock:Output())
 
 -- une erreur est enregistrée et affichée
 Mock:Reset()
@@ -2430,14 +2456,14 @@ _G.UISpecialFrames = {}
 NS:ToggleOptions()
 local inEscape, countAfterOptions = false, #UISpecialFrames
 for _, name in ipairs(UISpecialFrames) do
-	if name == "SacEtDepartOptionsFrame" then inEscape = true end
+	if name == "ReadyToQuestOptionsFrame" then inEscape = true end
 end
 Check("réglages déclarés pour Échap", inEscape, countAfterOptions)
 NS:ToggleOptions()
 NS:RunChecklist("manual")
 local diagInEscape = false
 for _, name in ipairs(UISpecialFrames) do
-	if name == "SacEtDepartDiagFrame" then diagInEscape = true end
+	if name == "ReadyToQuestDiagFrame" then diagInEscape = true end
 end
 Check("diagnostic déclaré pour Échap", diagInEscape)
 Check("aucun doublon dans UISpecialFrames", #UISpecialFrames == 2, #UISpecialFrames)

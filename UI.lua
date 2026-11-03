@@ -33,7 +33,7 @@ function ns:EnsureWindow()
 	local rowCount = #(self.checks or {})
 	local height = 40 + 52 + 12 + (rowCount * ROW_HEIGHT) + 12 + 16 + (MAX_ADVICE * 13) + 34
 
-	local frame = Theme.CreatePanel(UIParent, WIDTH, height, L.ADDON_NAME, { name = "SacEtDepartDiagFrame" })
+	local frame = Theme.CreatePanel(UIParent, WIDTH, height, L.ADDON_NAME, { name = "ReadyToQuestDiagFrame" })
 	if not frame then return nil end
 	ns:RestorePoint(frame, "diagPoint", { point = "CENTER", x = 0, y = 120 })
 

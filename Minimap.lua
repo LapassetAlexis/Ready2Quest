@@ -127,7 +127,7 @@ function ns:EnsureMinimapButton()
 	if type(Minimap) ~= "table" and type(Minimap) ~= "userdata" then return nil end
 	if type(CreateFrame) ~= "function" then return nil end
 
-	local button = CreateFrame("Button", "SacEtDepartMinimapButton", Minimap)
+	local button = CreateFrame("Button", "ReadyToQuestMinimapButton", Minimap)
 	if not button then return nil end
 
 	button:SetSize(BUTTON_SIZE, BUTTON_SIZE)

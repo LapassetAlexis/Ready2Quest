@@ -3,12 +3,12 @@
 ## Interface-Vanilla: 11509
 ## Interface-TBC: 20506
 ## Interface-Mists: 50504
-## Title: Sac & Départ
+## Title: Ready to Quest
 ## Notes: Checklist QoL avant de quitter une zone sûre : sacs, gris à vendre, vivres, buffs, repos, durabilité, quêtes à rendre.
 ## Notes-frFR: Checklist QoL avant de quitter une zone sûre : sacs, gris à vendre, vivres, buffs, repos, durabilité, quêtes à rendre.
-## Version: 1.16.1
+## Version: 1.17.0
 ## Author: Tristabeau
-## SavedVariables: SacEtDepartDB
+## SavedVariables: ReadyToQuestDB
 ## X-Category: Utility
 ## IconTexture: Interface\Icons\INV_Misc_Bag_10
 

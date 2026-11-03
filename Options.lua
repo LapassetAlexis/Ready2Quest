@@ -124,7 +124,7 @@ function ns:EnsureOptions()
 	-- hauteur provisoire : la vraie est fixée en fin de construction, une
 	-- fois la dernière ligne réellement posée (voir plus bas)
 	local height = 600
-	local frame = Theme.CreatePanel(UIParent, WIDTH, height, L.OPT_TITLE, { name = "SacEtDepartOptionsFrame" })
+	local frame = Theme.CreatePanel(UIParent, WIDTH, height, L.OPT_TITLE, { name = "ReadyToQuestOptionsFrame" })
 	if not frame then return nil end
 
 	ns:RestorePoint(frame, "optionsPoint", { point = "CENTER", x = 0, y = 20 })
@@ -417,6 +417,6 @@ function ns:RunOptionAction(key)
 	end
 end
 
-_G.SacEtDepartOptions = function() ns:ToggleOptions() end
+_G.ReadyToQuestOptions = function() ns:ToggleOptions() end
 
 ns.Mark("Options")

@@ -1,4 +1,16 @@
-# Sac & Départ — v1.16.1
+# Ready to Quest — v1.17.0
+
+## v1.17.0 — le projet s'appelle Ready to Quest
+
+Le dépôt GitHub s'appelle **ReadyToQuest** ; le dossier WoW s'y aligne. Ce n'est pas cosmétique : WoW exige que le nom du dossier corresponde exactement au nom du `.toc`, sinon l'addon ne se charge pas.
+
+Renommé : dossier, `ReadyToQuest.toc`, SavedVariable `ReadyToQuestDB`, noms des frames (`ReadyToQuestDiagFrame`, `ReadyToQuestOptionsFrame`, `ReadyToQuestMinimapButton`), table publique `_G.ReadyToQuest`, et le chemin des textures TGA — qui référence le nom du dossier.
+
+**La sauvegarde est migrée.** `SacEtDepartDB` → `ReadyToQuestDB`, au premier appel de `:DB()` : zones sûres apprises et réglages personnalisés survivent au renommage. Sans ça, chaque joueur repartait de zéro sans s'en apercevoir. Quatre assertions verrouillent la migration ; la neutraliser en fait échouer trois.
+
+Inchangé : la commande reste `/sd` (`/sacdepart` fonctionne encore). Le titre affiché devient « Ready to Quest ».
+
+---
 
 Addon QoL pour **WoW Forever**, habillé aux couleurs de **World of Warcraft** : fond de dialogue sombre, liseré or, polices `GameFont`, boutons `UIPanelButtonTemplate`, couleurs de rareté officielles. Aucune texture importée.
 
@@ -14,8 +26,8 @@ Addon QoL pour **WoW Forever**, habillé aux couleurs de **World of Warcraft** :
 
 ## Installation
 
-1. Copier le dossier `SacEtDepart` dans `.../Interface/AddOns/`
-2. Vérifier le chemin final : `.../Interface/AddOns/SacEtDepart/SacEtDepart.toc`
+1. Copier le dossier `ReadyToQuest` dans `.../Interface/AddOns/`
+2. Vérifier le chemin final : `.../Interface/AddOns/ReadyToQuest/ReadyToQuest.toc`
 3. `/reload`, puis `/sd`
 
 Erreur Lua invisible ? `/console scriptErrors 1`.
@@ -70,7 +82,7 @@ Conséquence : sur Classic, le module composants fonctionne avec **la recette s�
 
 ### Marche à suivre
 
-1. Copier `SacEtDepart` dans `.../Interface/AddOns/` du client MoP.
+1. Copier `ReadyToQuest` dans `.../Interface/AddOns/` du client MoP.
 2. Si le client le signale comme obsolète : cocher **« Charger les addons obsolètes »** dans la liste des addons.
 3. `/reload`, puis **`/sd diag`**.
 
@@ -95,12 +107,12 @@ Depuis la v0.5.2, l'addon **parle** au lieu d'être muet.
 Au `/reload`, tu dois voir dans le chat :
 
 ```
-Sac & Départ 1.15.0 — fichiers chargés
+ReadyToQuest 1.15.0 — fichiers chargés
 ```
 
 | Ce que tu vois | Diagnostic |
 |---|---|
-| **Rien du tout** | Les fichiers ne s'exécutent pas : mauvais dossier (`AddOns/SacEtDepart/SacEtDepart/`), TOC refusé, ou addon décoché |
+| **Rien du tout** | Les fichiers ne s'exécutent pas : mauvais dossier (`AddOns/ReadyToQuest/ReadyToQuest/`), TOC refusé, ou addon décoché |
 | **Le témoin, mais pas de panneau** | Un fichier a planté après le bootstrap → `/sd` te dira lequel |
 | **Le témoin + le panneau** | Tout va bien |
 
@@ -141,10 +153,10 @@ Double correction depuis la v0.5.3 :
 Puis vérifier l'arborescence exacte :
 
 ```
-World of Warcraft/_classic_/Interface/AddOns/SacEtDepart/SacEtDepart.toc
+World of Warcraft/_classic_/Interface/AddOns/ReadyToQuest/ReadyToQuest.toc
 ```
 
-Un seul niveau `SacEtDepart`, et le `.toc` directement dedans.
+Un seul niveau `ReadyToQuest`, et le `.toc` directement dedans.
 
 ---
 
@@ -164,7 +176,7 @@ Tout est centralisé dans `Theme.lua`, et **uniquement avec des textures dont la
 
 Choix assumé : le cadre doré est **dessiné** (bordures 1 px teintées + filet intérieur) plutôt que délégué à un template `NineSlice`. Forever utilise une déclinaison d'art « Camelot » propre, et un layout NineSlice nommé pourrait ne pas exister — mieux vaut un cadre qui s'affiche toujours.
 
-Aperçu : `SacEtDepart-apercu.png`, généré par `tests/mockup.py`.
+Aperçu : `ReadyToQuest-apercu.png`, généré par `tests/mockup.py`.
 
 ---
 
@@ -964,7 +976,7 @@ Les deux fenêtres utilisent le chrome d'AtlasLootClassic :
 
 Pas de template Blizzard : c'est ce que fait AtlasLoot, et c'est plus sobre qu'une fenêtre à fond de pierre.
 
-Les deux fenêtres sont nommées (`SacEtDepartDiagFrame`, `SacEtDepartOptionsFrame`) — nécessaire pour que Échap fonctionne.
+Les deux fenêtres sont nommées (`ReadyToQuestDiagFrame`, `ReadyToQuestOptionsFrame`) — nécessaire pour que Échap fonctionne.
 
 Si `BackdropTemplate` manque, le panneau retombe sur un chrome dessiné à la main (filets `WHITE8X8`) : il reste complet, simplement moins joli.
 
@@ -1026,7 +1038,7 @@ Donc : fond d'infobulle + bord d'infobulle, bouton `UIPanelCloseButton`, et **É
 ### Ce que j'ai repris d'eux
 
 - **`UISpecialFrames`** : Échap ferme le diagnostic et les réglages (comme toutes les fenêtres du jeu)
-- les deux fenêtres sont désormais **nommées** (`SacEtDepartDiagFrame`, `SacEtDepartOptionsFrame`), condition nécessaire pour Échap
+- les deux fenêtres sont désormais **nommées** (`ReadyToQuestDiagFrame`, `ReadyToQuestOptionsFrame`), condition nécessaire pour Échap
 - `UIPanelCloseButton` était déjà utilisé (le template natif le fournit)
 
 ### Ce que je n'ai pas repris

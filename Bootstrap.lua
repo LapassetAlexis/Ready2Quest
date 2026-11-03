@@ -4,7 +4,7 @@
 -- chargement. C'est ce qui permet de diagnostiquer à distance un addon muet.
 local ADDON, ns = ...
 
-ns.version = "1.16.1"
+ns.version = "1.17.0"
 ns.Loaded = {}
 ns.loadOrder = {}
 ns.errors = {}
@@ -37,7 +37,7 @@ local function Dispatch(input)
 	end
 
 	-- Core.lua n'a pas été jusqu'au bout : on explique et on liste l'état
-	print("|cffffd100Sac & Départ|r " .. tostring(ns.version) .. " — modules non chargés.")
+	print("|cffffd100Ready to Quest|r " .. tostring(ns.version) .. " — modules non chargés.")
 	local missing = {}
 	for _, name in ipairs({ "Locales", "Compat", "Theme", "Core", "Buffs", "Reagents",
 		"Equip", "Stats", "Minimap", "Checks", "Options", "UI" }) do
@@ -62,4 +62,4 @@ Mark("Bootstrap")
 
 -- Témoin de chargement : une ligne au /reload. Si tu ne la vois pas, le TOC
 -- n'a pas exécuté les fichiers (mauvais dossier, ou TOC refusé par le client).
-print("|cffffd100Sac & Départ|r " .. ns.version .. " — fichiers chargés")
+print("|cffffd100Ready to Quest|r " .. ns.version .. " — fichiers chargés")

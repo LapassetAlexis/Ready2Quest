@@ -361,6 +361,6 @@ draw.text((30, CANVAS_H - 20),
           "Chrome : fond et bord d'infobulle (UI-Tooltip-Background/-Border), GameFont, UIPanelCloseButton. Maquette hors-jeu.",
           font=F_SMALL, fill=GREY)
 
-out = "/workspace/SacEtDepart-apercu.png"
+out = "/workspace/ReadyToQuest-apercu.png"
 img.save(out)
 print("écrit:", out, img.size)

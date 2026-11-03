@@ -2,7 +2,7 @@
 local ADDON, ns = ...
 
 local frFR = {
-	ADDON_NAME = "Sac & Départ",
+	ADDON_NAME = "Ready to Quest",
 	TAG = "|cff33ff99Sac & Départ|r",
 	WIN_TITLE = "Sac & Départ",
 	WIN_SUBTITLE = "Checklist avant de quitter une zone sûre",
@@ -202,7 +202,7 @@ local frFR = {
 }
 
 local enUS = {
-	ADDON_NAME = "Bag & Go",
+	ADDON_NAME = "Ready to Quest",
 	TAG = "|cff33ff99Bag & Go|r",
 	WIN_TITLE = "Bag & Go",
 	WIN_SUBTITLE = "Checklist before leaving a safe area",

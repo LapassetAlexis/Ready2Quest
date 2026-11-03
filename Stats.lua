@@ -215,8 +215,8 @@ local TOAST_LINE_MIDDLE = -TOAST_TEXT_HEIGHT / 2
 -- Les fleches sont des textures livrees avec l'addon, pas des caracteres :
 -- la police du client s'arrete au latin et aucun glyphe de fleche ne s'affiche
 -- (constate trois fois : triangle, lettre grecque, tous en carre vide).
-local ARROW_DOWN = "Interface\\AddOns\\SacEtDepart\\Textures\\fleche_baisse"
-local ARROW_UP   = "Interface\\AddOns\\SacEtDepart\\Textures\\fleche_hausse"
+local ARROW_DOWN = "Interface\\AddOns\\ReadyToQuest\\Textures\\fleche_baisse"
+local ARROW_UP   = "Interface\\AddOns\\ReadyToQuest\\Textures\\fleche_hausse"
 local ARROW_SIZE = 10           -- cote de la fleche, en unites 1920
 
 -- Exposées pour les tests : la géométrie du bloc est vérifiable sans client.
