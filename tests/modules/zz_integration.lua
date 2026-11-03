@@ -123,3 +123,22 @@ do
 	NS:ShowGearToast({ { label = "STR", kind = "integer", polarity = true, delta = 2 } })
 	Check("[INT] vrai changement : couche normale", toast.strata == "HIGH", toast.strata)
 end
+
+-- Compagnon ↔ suivi du carnet : chaque agent a testé contre une doublure de
+-- l'autre. Ici, les deux vraies fonctions ensemble.
+do
+	ResetWorld()
+	T.Mock.world.level = 15
+	local unlocks = NS:CompanionNextUnlocks()
+	Check("[INT] compagnon : prochains déblocages fournis", type(unlocks) == "table" and #unlocks > 0, unlocks and #unlocks)
+	local objectives = NS:JournalObjectives()
+	local fromCompanion, text = 0, {}
+	for _, goal in ipairs(objectives) do
+		if goal.source == "companion" then fromCompanion = fromCompanion + 1 end
+		text[#text + 1] = tostring(goal.label) .. " " .. tostring(goal.progress)
+	end
+	Check("[INT] suivi : objectifs du compagnon affichés", fromCompanion > 0, table.concat(text, " | "))
+	local joined = table.concat(text, " | ")
+	Check("[INT] suivi : un stade ou une apparence au niveau, avec sa progression", joined:find("niveau 15/", 1, true) ~= nil, joined)
+	Check("[INT] suivi : aucune clé de traduction brute", not joined:find("JRN_", 1, true) and not joined:find("COMP_", 1, true), joined)
+end

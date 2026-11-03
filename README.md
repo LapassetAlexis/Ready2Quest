@@ -8,15 +8,14 @@ Pour **World of Warcraft Forever** et **Classic Era**. Interface en français et
 
 ## Ce que fait l'addon
 
-Ready2Quest réunit **huit modules** et un peu de **confort** (QoL). Chacun s'active ou se coupe d'un clic.
+Ready2Quest réunit **sept modules** et un peu de **confort** (QoL). Chacun s'active ou se coupe d'un clic.
 
 | | Module | En une phrase |
 |---|---|---|
 | ◆ | **Check avant le départ** | Quand tu quittes un village, une capitale ou un camp, une note de préparation sur 100 et des conseils |
 | ◆ | **Retour d'expédition** | Quand tu rentres, le bilan de ta sortie : XP, or, butin, morts, usure, quêtes à rendre |
 | ◆ | **Avant le donjon** | À l'entrée d'un donjon, sa fiche : niveau conseillé, tes quêtes pour ce donjon, ta préparation |
-| ◆ | **Compagnon de route** | Une petite créature qui voyage avec toi, réagit à ton aventure et grandit avec toi |
-| ◆ | **Carnet de voyage** | Un tampon par zone, village, capitale, donjon, ennemi rare et palier : ta collection de voyage |
+| ◆ | **Compagnon de route** | Une petite créature qui voyage avec toi, te parle, grandit avec toi, et son carnet de voyage qui la fait évoluer |
 | ◆ | **Kit de camp** *(Forever)* | Ton kit de feu de camp et ton objet de camp prêts, le compte à rebours des buffs au camp |
 | ◆ | **Résumé de stuff** | Quand tu changes d'objet, un petit résumé éphémère des stats gagnées ou perdues |
 | ◆ | **Stats du portrait** | Au survol de ton portrait, tes stats principales, choisies selon ta classe et ta spécialisation |
@@ -99,13 +98,21 @@ Elle couvre les 19 donjons classiques et les 9 nouveaux donjons de Forever : Cit
 
 ## Compagnon de route
 
-Une petite créature du jeu (un dragonnet pour commencer) t'accompagne dans un coin de l'écran. Elle **réagit à ton aventure** par de courtes bulles :
-- « On repart ? J'ai faim… » si tu quittes la ville sans vivres ;
-- « Aïe… » à ta mort ;
-- « Quelle vue ! » quand tu découvres une zone ;
-- « On se réchauffe ? » au feu de camp.
+Une petite créature du jeu (un dragonnet pour commencer) t'accompagne dans un coin de l'écran. Le compagnon et le **carnet de voyage** forment un seul module : le carnet fait évoluer la créature.
 
-Elle a quatre envies : **faim**, **énergie**, **moral** et **curiosité**. Elles se remplissent quand tu manges, te reposes, rends une quête ou explores. Clique dessus pour lui faire une caresse.
+### Elle te parle
+
+De courtes bulles, jamais en combat, avec plusieurs phrases pour chaque situation :
+- quand tu **abats un monstre**, **manges**, **bois** ou te **reposes** ;
+- quand tu **parles à quelqu'un** : elle donne son avis sur le marchand, l'aubergiste, le maître de vol, le banquier, l'entraîneur ou le donneur de quêtes, et commente les créatures que tu cibles ;
+- quand tu quittes la ville sans vivres, meurs, découvres une zone ou t'assois au feu de camp ;
+- de temps en temps, une **astuce** de jeu, ou une petite **conversation** de quelques bulles, comme si elle te parlait.
+
+Elle dit aussi **ce dont elle a besoin** : « J'ai faim… », « On explore ? », « Encore 2 zones et j'aurai : Dragonnet cramoisi ! ».
+
+### Comment s'en occuper
+
+Elle a quatre envies : **faim**, **énergie**, **moral** et **curiosité**. Elles se remplissent quand tu manges, te reposes, rends une quête ou explores. Clique dessus pour lui faire une caresse. Au premier lancement, un **tutoriel** en quelques bulles explique tout ça (à revoir avec `/r2q compagnon tuto`).
 
 - **Elle grandit avec toi** : Nouveau-né, Jeune (niveau 10), Aguerri (20), Vaillant (40) et Légendaire (60), avec une petite fête à chaque étape.
 - **Elle ne t'en veut jamais** : elle ne meurt pas, ne régresse pas et ne tombe pas malade. Après une longue absence, elle est juste un peu ensommeillée : « Tu m'as manqué ! »
@@ -113,7 +120,7 @@ Elle a quatre envies : **faim**, **énergie**, **moral** et **curiosité**. Elle
 
 Tu peux la renommer avec `/r2q compagnon nom Pépite`.
 
-## Carnet de voyage
+### Carnet de voyage
 
 Ta collection de voyage : un **tampon** pour chaque première fois.
 
@@ -127,6 +134,10 @@ Ta collection de voyage : un **tampon** pour chaque première fois.
 | Palier | tu passes les niveaux 10, 20, 30, 40, 50 et 60 |
 
 Chaque nouveau tampon est annoncé par un petit bandeau, jamais en combat. Le carnet (`/r2q carnet`) range tes tampons par onglet, avec la date et ton niveau, et montre ce qu'il te reste à découvrir : villages, capitales, donjons. Tout se gagne en jouant, sans paquet aléatoire.
+
+### Objectifs
+
+Le carnet fixe des **objectifs** : prochaine étape de la créature, prochaine apparence ou ornement, villages de la zone, capitales, donjons de ton niveau, prochain palier. Ils sont rangés dans l'onglet **Objectifs** du carnet, avec une barre de progression, et les plus proches s'affichent à l'écran sous le suivi des quêtes, dans un bloc **Carnet** repliable et déplaçable (masqué en combat). Il se règle dans les options du compagnon, page Carnet.
 
 ## Kit de camp *(Forever)*
 
