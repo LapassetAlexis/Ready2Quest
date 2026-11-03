@@ -82,8 +82,11 @@ local PAGES = {
 	{ id = "toast", title = "OPT_PAGE_TOAST", group = "OPT_GROUP_MODULES", power = "showGearToast", target = "general" },
 	{ id = "portrait", title = "OPT_PAGE_PORTRAIT", group = "OPT_GROUP_MODULES", power = "showPortraitStats", target = "general" },
 	-- QOL -------------------------------------------------------------------
+	-- QOL : une entrée parente, comme le Check avant le départ ; chaque confort
+	-- est une sous-page (Marchand, puis ceux qu'ajoutent les modules QoL)
+	{ id = "qol", title = "OPT_PAGE_QOL", group = "OPT_GROUP_QOL", target = "merchant" },
 	{
-		id = "merchant", title = "OPT_PAGE_MERCHANT", group = "OPT_GROUP_QOL",
+		id = "merchant", title = "OPT_PAGE_MERCHANT", parent = "qol", group = "OPT_GROUP_QOL",
 		rows = {
 			{ key = "autoSellGray", label = "OPT_AUTOSELL",   kind = "bool" },
 			{ key = "autoRepair",   label = "OPT_AUTOREPAIR", kind = "bool" },
@@ -92,13 +95,20 @@ local PAGES = {
 }
 ns.OPTION_PAGES = PAGES
 
--- API d'extension : un module ajoute sa page (ou sa sous-page) aux réglages,
--- avant `beforeId` (par défaut avant la section QoL). À appeler au chargement,
--- avant la première ouverture des réglages.
+-- API d'extension : un module ajoute sa page (ou sa sous-page) aux réglages.
+-- Sans `beforeId` : une page du groupe QoL va à la fin du QoL, toute autre
+-- page à la fin des MODULES, juste avant la section QoL. À appeler au
+-- chargement, avant la première ouverture des réglages.
 function ns.AddOptionPage(def, beforeId)
-	beforeId = beforeId or "merchant"
-	for index, existing in ipairs(PAGES) do
-		if existing.id == beforeId then table.insert(PAGES, index, def); return end
+	if not beforeId and def.group ~= "OPT_GROUP_QOL" then
+		for index, existing in ipairs(PAGES) do
+			if existing.group == "OPT_GROUP_QOL" then table.insert(PAGES, index, def); return end
+		end
+	end
+	if beforeId then
+		for index, existing in ipairs(PAGES) do
+			if existing.id == beforeId then table.insert(PAGES, index, def); return end
+		end
 	end
 	table.insert(PAGES, def)
 end
@@ -515,6 +525,7 @@ function ns:EnsureOptions()
 
 	local placed = {}
 	local navY, lastGroup = top - 48, nil
+	frame.navOrder, frame.navTop = {}, top - 48
 	frame.navGroups = {}
 	for index, def in ipairs(PAGES) do
 		-- titre de groupe dans la navigation (« PRÉPARATION », « INTERFACE »)
@@ -522,6 +533,7 @@ function ns:EnsureOptions()
 			navY = navY - 6
 			local groupLabel = frame:CreateFontString(nil, "OVERLAY", Theme.F_SMALL)
 			groupLabel:SetPoint("TOPLEFT", frame, "TOPLEFT", 16, navY - 2)
+			frame.navOrder[#frame.navOrder + 1] = { group = groupLabel }
 			groupLabel:SetText(L[def.group] or def.group)
 			groupLabel:SetTextColor(Theme.BLUE[1], Theme.BLUE[2], Theme.BLUE[3])
 			frame.navGroups[#frame.navGroups + 1] = groupLabel
@@ -536,6 +548,8 @@ function ns:EnsureOptions()
 		local nav = CreateFrame("Button", nil, frame)
 		nav:SetSize(NAV_WIDTH - 4, rowH)
 		nav:SetPoint("TOPLEFT", frame, "TOPLEFT", 6, navY)
+		nav.rowH = rowH
+		frame.navOrder[#frame.navOrder + 1] = { nav = nav }
 		nav.pageId = def.id
 		nav.parentId = def.parent
 		nav.tint = Theme.Solid(nav, "BACKGROUND", Theme.GOLD, 0.12)
@@ -772,6 +786,35 @@ function ns:TogglePageModules(pageId)
 	self:RefreshOptions()
 end
 
+-- Navigation repliable : les sous-pages d'un module ne s'affichent que quand
+-- ce module (ou l'une de ses sous-pages) est ouvert. Sans ça, chaque module
+-- ajouté allongeait la liste jusqu'à passer sous le pied du panneau.
+function ns:LayoutNav()
+	local frame = self.optionsFrame
+	if not frame or not frame.navOrder then return end
+	local y = frame.navTop
+	for _, item in ipairs(frame.navOrder) do
+		if item.group then
+			y = y - 6
+			item.group:ClearAllPoints()
+			item.group:SetPoint("TOPLEFT", frame, "TOPLEFT", 16, y - 2)
+			y = y - 16
+		else
+			local nav = item.nav
+			local visible = not nav.parentId or nav.parentId == frame.currentParent
+			if visible then
+				nav:ClearAllPoints()
+				nav:SetPoint("TOPLEFT", frame, "TOPLEFT", 6, y)
+				nav:Show()
+				y = y - (nav.rowH or ROW_HEIGHT)
+			else
+				nav:Hide()
+			end
+		end
+	end
+	frame.navBottom = y
+end
+
 function ns:SelectOptionsPage(id)
 	local frame = self.optionsFrame
 	if not frame then return end
@@ -780,6 +823,7 @@ function ns:SelectOptionsPage(id)
 	local parent
 	for _, def in ipairs(PAGES) do if def.id == id then parent = def.parent end end
 	frame.currentParent = parent
+	self:LayoutNav()
 	self:DB().optionsPage = id
 	for pageId, page in pairs(frame.pages) do
 		if pageId == id then page:Show() else page:Hide() end
