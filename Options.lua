@@ -29,10 +29,14 @@ local LIST_LINES   = 9
 local PAGES = {
 	{
 		id = "general", title = "OPT_PAGE_GENERAL",
+		-- tout ce qui touche à l'affichage est réuni ici (section AFFICHAGE)
 		rows = {
 			{ key = "enabled",     label = "OPT_ENABLED",     kind = "bool" },
+			{ header = "OPT_SECTION_DISPLAY" },
 			{ key = "showMinimap", label = "OPT_MINIMAP",     kind = "bool" },
 			{ key = "minimapPos",  label = "OPT_MINIMAP_POS", kind = "action" },
+			{ key = "showWindow",  label = "OPT_SHOWWINDOW",  kind = "bool" },
+			{ key = "popupScore",  label = "OPT_POPUPSCORE",  kind = "number", min = 0, max = 100, step = 5 },
 		},
 		frameButtons = true,
 	},
@@ -41,8 +45,6 @@ local PAGES = {
 	{
 		id = "trigger", title = "OPT_PAGE_TRIGGER", parent = "departure", group = "OPT_GROUP_MODULES",
 		rows = {
-			{ key = "showWindow",      label = "OPT_SHOWWINDOW", kind = "bool" },
-			{ key = "popupScore",      label = "OPT_POPUPSCORE", kind = "number", min = 0, max = 100, step = 5 },
 			{ key = "exitDelay",       label = "OPT_EXITDELAY",  kind = "number", min = 0, max = 15,  step = 1, suffix = "OPT_SEC_UNIT" },
 			{ key = "quietAfterLogin", label = "OPT_QUIETLOGIN", kind = "number", min = 0, max = 60,  step = 5, suffix = "OPT_SEC_UNIT" },
 			{ key = "alertCooldown",   label = "OPT_COOLDOWN",   kind = "number", min = 0, max = 120, step = 5, suffix = "OPT_SEC_UNIT" },
@@ -75,8 +77,10 @@ local PAGES = {
 			{ key = "learnBuffs", label = "OPT_LEARNBUFFS", kind = "bool" },
 		},
 	},
-	{ id = "toast", title = "OPT_PAGE_TOAST", group = "OPT_GROUP_MODULES", power = "showGearToast", actions = { "editMode" } },
-	{ id = "portrait", title = "OPT_PAGE_PORTRAIT", group = "OPT_GROUP_MODULES", power = "showPortraitStats", actions = { "editMode" } },
+	-- pas de page propre : leur réglage est l'interrupteur, et leur placement
+	-- est dans Général > Affichage
+	{ id = "toast", title = "OPT_PAGE_TOAST", group = "OPT_GROUP_MODULES", power = "showGearToast", target = "general" },
+	{ id = "portrait", title = "OPT_PAGE_PORTRAIT", group = "OPT_GROUP_MODULES", power = "showPortraitStats", target = "general" },
 	-- QOL -------------------------------------------------------------------
 	{
 		id = "merchant", title = "OPT_PAGE_MERCHANT", group = "OPT_GROUP_QOL",
@@ -607,11 +611,18 @@ function ns:EnsureOptions()
 				y = y - 16
 			end
 			for _, rowDef in ipairs(def.rows) do
+				if rowDef.header then
+					y = y - 4
+					page.sectionHeaders = page.sectionHeaders or {}
+					page.sectionHeaders[#page.sectionHeaders + 1] = Header(page, y, rowDef.header)
+					y = y - 16
+				else
 				local row = MakeRow(page, rowDef)
 				row:SetPoint("TOPLEFT", page, "TOPLEFT", 0, y)
 				frame.rows[#frame.rows + 1] = row
 				page.rows[#page.rows + 1] = row
 				y = y - ROW_HEIGHT
+				end
 			end
 			y = y - 8
 		end

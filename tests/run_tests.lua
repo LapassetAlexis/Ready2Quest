@@ -3511,7 +3511,14 @@ end
 for _, page in pairs(o.pages) do if page.sub.text ~= "" then subs = subs + 1 end end
 Check("[ID] interrupteurs dessinés pour les booléens et contrôles", toggles == 13 + 7, toggles)
 Check("[ID] pistes pour les seuils", tracks == 10, tracks)
-Check("[ID] chaque page a sa phrase d'explication", subs == 9, subs)
+local pageCount = 0
+for _ in pairs(o.pages) do pageCount = pageCount + 1 end
+Check("[ID] chaque page a sa phrase d'explication", subs == pageCount and pageCount == 7, subs .. "/" .. pageCount)
+local displayRows = {}
+for _, row in ipairs(o.pages.general.rows) do if row.def then displayRows[row.def.key] = true end end
+Check("[AFF] Général réunit l'affichage", displayRows.showMinimap and displayRows.minimapPos and displayRows.showWindow
+	and displayRows.popupScore and o.pages.general.sectionHeaders and #o.pages.general.sectionHeaders == 1)
+Check("[AFF] plus de page propre pour le résumé et le portrait", o.pages.toast == nil and o.pages.portrait == nil)
 local delayRow
 for _, row in ipairs(o.rows) do if row.def and row.def.key == "exitDelay" then delayRow = row end end
 NS:DB().exitDelay = 15

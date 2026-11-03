@@ -37,11 +37,11 @@ Sur Forever, on est « au repos » à un feu de camp en pleine nature. Le repos 
 
 | Navigation | Contenu |
 |---|---|
-| **Général** | addon actif, bouton de minicarte, position des cadres |
+| **Général** | addon actif, puis une section **AFFICHAGE** : bouton de minicarte et sa position, fenêtre ou chat, note sous laquelle la fenêtre s'ouvre, placement des cadres |
 | **MODULES** | |
 | Check avant le départ `[on/off]` | sous-pages **Déclenchement** · **Zones sûres** · **Sacs & vivres** · **Équipement & perso** · **Buffs & métier**. Les 13 contrôles sont la configuration du module |
-| Résumé de stuff `[on/off]` | résumé éphémère au changement d'objet |
-| Stats du portrait `[on/off]` | stats au survol du portrait |
+| Résumé de stuff `[on/off]` | résumé éphémère au changement d'objet : un interrupteur, pas de page (son placement est dans Général) |
+| Stats du portrait `[on/off]` | stats au survol du portrait : un interrupteur, pas de page |
 | **QOL** | |
 | Marchand | vente des gris, réparation : indépendants du module de départ |
 
@@ -1457,7 +1457,7 @@ Alias : `/sacdepart`.
 ## Tests
 
 ```
-python3 tests/run_tests.py     →  708 réussis, 0 échoués
+python3 tests/run_tests.py     →  710 réussis, 0 échoués
 ```
 
 Lua 5.1 (version du client), client WoW simulé. Couvre notamment : apprentissage par indices (sous-zone, capitale par deux quartiers, purge de l'ancien schéma), délai de sortie / vol / mort, nouveaux checks et automatismes du marchand en mode Era, chaîne de cartes parentes, anti-spam, filtrage des procs, **valeurs secrètes**, comptages sacs/vivres/potions/durabilité/quêtes, score pondéré et bilans, fenêtre de diagnostic (icônes, barres, bandeau), panneau d'équipement (17 lignes, moyenne, rareté, pièces faibles), comparaison au survol (amélioration, régressif, vide, anneaux), **les deux voies de hook tooltip**, bouton sans template Blizzard, et toutes les commandes.
