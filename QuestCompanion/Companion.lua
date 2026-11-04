@@ -58,7 +58,22 @@ local SLEEPY_PER_HOUR = 20   -- s de somnolence par heure d'absence
 local NAME_MAX = 24
 
 -- Priorités des bulles : une bulle n'efface jamais une bulle plus importante
-local PRIORITY = { chatter = 0, tip = 1, need = 2, reaction = 3, tuto = 4, event = 5 }
+local PRIORITY = { chatter = 0, tip = 1, need = 2, reaction = 3, advice = 4, tuto = 5, event = 6 }
+
+-- Réglette « Bavardage » (db.companionChatter, 0 à 4) : ce qu'il dit, et à
+-- quel rythme. `allow` = catégories permises (nil = toutes) ; `important` =
+-- seuls les conseils marqués importants ; `advice` = écart entre deux
+-- conseils de route, `bubble` = entre deux bulles ordinaires (s) ;
+-- `cooldown` = facteur des pauses par famille.
+local CHATTER = {
+	[0] = { allow = {} },
+	[1] = { allow = { advice = true, tuto = true }, important = true, advice = 180, bubble = 60, cooldown = 1 },
+	[2] = { allow = { advice = true, event = true, tuto = true }, advice = 120, bubble = 60, cooldown = 1 },
+	[3] = { advice = 120, bubble = 20, cooldown = 1 },
+	[4] = { advice = 60, bubble = 10, cooldown = 0.5 },
+}
+ns.COMPANION_CHATTER = CHATTER
+ns.COMPANION_CHATTER_DEFAULT = 3
 local POOL_CATEGORY = {
 	EVOLVE = "event", UNLOCK = "event", READY = "event", CHEST = "event", TUTO = "tuto", TIP = "tip", GOAL = "tip", GOAL_STAGE = "tip",
 	IDLE = "chatter", NIGHT = "chatter",
@@ -105,7 +120,19 @@ local FR = {
 	OPT_PAGE_COMPANION     = "Compagnon de route",
 	OPT_PAGE_COMPANION_SUB = "Une petite créature qui voyage avec toi et réagit à ton aventure.",
 	OPT_COMP_SHOW          = "Afficher le compagnon",
-	OPT_COMP_BUBBLES       = "Bulles de dialogue",
+	OPT_COMP_CHATTER       = "Bavardage",
+	COMP_CHATTER_0         = "Muet",
+	COMP_CHATTER_1         = "Discret",
+	COMP_CHATTER_2         = "Calme",
+	COMP_CHATTER_3         = "Normal",
+	COMP_CHATTER_4         = "Bavard",
+	COMP_CHATTER_DESC_0    = "Muet : il t'accompagne sans un mot.",
+	COMP_CHATTER_DESC_1    = "Discret : il ne parle que pour un vrai souci (élite repéré, vie basse, munitions, vivres).",
+	COMP_CHATTER_DESC_2    = "Calme : tous ses conseils de route et les grands moments (niveau, évolution, coffre), sans bavarder.",
+	COMP_CHATTER_DESC_3    = "Normal : conseils, réactions, envies, astuces et petites conversations.",
+	COMP_CHATTER_DESC_4    = "Bavard : tout, et plus souvent.",
+	COMP_CHATTER_TIP       = "Bavardage : ce que ton compagnon te dit",
+	COMP_CHATTER_TIP_HINT  = "Molette ou boutons - / + pour changer. /qc compagnon muet le fait taire d'un coup.",
 	OPT_COMP_APPEARANCE    = "Apparence (clic pour changer)",
 	OPT_COMP_ORNAMENTS     = "ORNEMENTS",
 	OPT_COMP_LOCKED        = "%s (à débloquer : %s)",
@@ -189,7 +216,6 @@ local FR = {
 	COMP_REQ_level         = "%d tampons de niveau",
 	COMP_REQ_total         = "%d tampons",
 	COMP_HOVER_HINT        = "Clic : un câlin · clic droit : carnet · glisser : déplacer",
-	OPT_COMP_TIPS          = "Astuces",
 	OPT_COMP_TUTO          = "Rejouer le tutoriel",
 	COMP_TUTO_NEXT         = "Suivant",
 	COMP_TUTO_SKIP         = "Passer",
@@ -210,7 +236,7 @@ local FR = {
 	COMP_LEFT_plevel_1     = "un niveau",
 	-- chat et commandes
 	COMP_MSG_NEXT          = "Prochain : %s (%d/%d)",
-	COMP_MSG_TUTO_MUTED    = "Bulles du compagnon coupées : rallume-les pour voir le tutoriel (/qc compagnon muet).",
+	COMP_MSG_TUTO_MUTED    = "Bulles du compagnon coupées (Bavardage : Muet) : remonte la réglette, ou /qc compagnon muet, pour voir le tutoriel.",
 	COMP_MSG_TUTO_COMBAT   = "Le tutoriel du compagnon commencera après le combat.",
 	COMP_MSG_TUTO_SKIPPED  = "Tutoriel du compagnon passé (/qc compagnon tuto pour le revoir).",
 	COMP_MSG_UNLOCK_APP    = "Compagnon : nouvelle apparence débloquée, %s. Choisis-la dans les réglages.",
@@ -233,7 +259,19 @@ local EN = {
 	OPT_PAGE_COMPANION     = "Road companion",
 	OPT_PAGE_COMPANION_SUB = "A little creature that travels with you and reacts to your adventure.",
 	OPT_COMP_SHOW          = "Show the companion",
-	OPT_COMP_BUBBLES       = "Speech bubbles",
+	OPT_COMP_CHATTER       = "Chattiness",
+	COMP_CHATTER_0         = "Silent",
+	COMP_CHATTER_1         = "Discreet",
+	COMP_CHATTER_2         = "Calm",
+	COMP_CHATTER_3         = "Normal",
+	COMP_CHATTER_4         = "Chatty",
+	COMP_CHATTER_DESC_0    = "Silent: it travels with you without a word.",
+	COMP_CHATTER_DESC_1    = "Discreet: it only speaks up for a real problem (elite nearby, low health, ammo, food).",
+	COMP_CHATTER_DESC_2    = "Calm: all its road advice and the big moments (level, evolution, chest), no small talk.",
+	COMP_CHATTER_DESC_3    = "Normal: advice, reactions, needs, tips and little conversations.",
+	COMP_CHATTER_DESC_4    = "Chatty: everything, and more often.",
+	COMP_CHATTER_TIP       = "Chattiness: what your companion tells you",
+	COMP_CHATTER_TIP_HINT  = "Mouse wheel or - / + buttons to change. /qc compagnon muet silences it at once.",
 	OPT_COMP_APPEARANCE    = "Appearance (click to change)",
 	OPT_COMP_ORNAMENTS     = "ORNAMENTS",
 	OPT_COMP_LOCKED        = "%s (unlock: %s)",
@@ -316,7 +354,6 @@ local EN = {
 	COMP_REQ_level         = "%d level stamps",
 	COMP_REQ_total         = "%d stamps",
 	COMP_HOVER_HINT        = "Click: a cuddle · right-click: journal · drag: move",
-	OPT_COMP_TIPS          = "Tips",
 	OPT_COMP_TUTO          = "Replay the tutorial",
 	COMP_TUTO_NEXT         = "Next",
 	COMP_TUTO_SKIP         = "Skip",
@@ -335,7 +372,7 @@ local EN = {
 	COMP_LEFT_plevel       = "%d levels",
 	COMP_LEFT_plevel_1     = "one level",
 	COMP_MSG_NEXT          = "Next: %s (%d/%d)",
-	COMP_MSG_TUTO_MUTED    = "Companion bubbles are off: turn them on to see the tutorial (/qc compagnon muet).",
+	COMP_MSG_TUTO_MUTED    = "Companion bubbles are off (Chattiness: Silent): raise the slider, or /qc compagnon muet, to see the tutorial.",
 	COMP_MSG_TUTO_COMBAT   = "The companion tutorial will start after combat.",
 	COMP_MSG_TUTO_SKIPPED  = "Companion tutorial skipped (/qc compagnon tuto to see it again).",
 	COMP_MSG_UNLOCK_APP    = "Companion: new appearance unlocked, %s. Pick it in the settings.",
@@ -358,8 +395,6 @@ ns.COMPANION_STRINGS = { fr = FR, en = EN }   -- exposé aux tests (parité fr/e
 ns.RegisterDefaults({
 	companionEnabled    = true,
 	companionShow       = true,
-	companionBubbles    = true,
-	companionTips       = true,
 	companionPoint      = { point = "CENTER", x = 330, y = -170 },
 	companionOrnRibbon  = true,
 	companionOrnLantern = true,
@@ -379,8 +414,13 @@ ns.AddOptionPage({
 	id = "companionMain", title = "OPT_PAGE_COMPANION_MAIN", parent = "companion", group = "OPT_GROUP_MODULES",
 	rows = {
 		{ key = "companionShow",       label = "OPT_COMP_SHOW",       kind = "bool" },
-		{ key = "companionBubbles",    label = "OPT_COMP_BUBBLES",    kind = "bool" },
-		{ key = "companionTips",       label = "OPT_COMP_TIPS",       kind = "bool" },
+		-- réglette « Bavardage » : le nom du cran, une phrase dessous, le détail
+		-- au survol, et le compagnon qui confirme
+		{ key = "companionChatter",    label = "OPT_COMP_CHATTER",    kind = "number", min = 0, max = 4, step = 1,
+			display = function(value) return L["COMP_CHATTER_" .. value] end,
+			describe = function(value) return L["COMP_CHATTER_DESC_" .. value] end,
+			tooltip = function() return ns:CompanionChatterTooltip() end,
+			onChange = function(value) ns:CompanionOnChatterChanged(value) end },
 		{ key = "companionAppearance", label = "OPT_COMP_APPEARANCE", kind = "action" },
 		-- clic sur la ligne : style suivant ; pastilles : choix direct (voir CompanionRefreshPage)
 		{ key = "companionFrameStyle", label = "COMP_KIND_frame",     kind = "action" },
@@ -831,6 +871,21 @@ function ns:CompanionPick(pool, args, list)
 	return pick
 end
 
+-- Cran de bavardage (0 muet … 4 bavard). Première lecture : déduit des
+-- anciens interrupteurs (bulles coupées -> 0, astuces coupées -> 2), puis
+-- enregistré.
+function ns:CompanionChatterLevel()
+	local db = self:DB()
+	local level = tonumber(db.companionChatter)
+	if level == nil then
+		level = (db.companionBubbles == false and 0) or (db.companionTips == false and 2) or ns.COMPANION_CHATTER_DEFAULT
+		db.companionChatter = level
+	end
+	level = math.floor(level)
+	if level < 0 then level = 0 elseif level > 4 then level = 4 end
+	return level
+end
+
 -- `pool` : nom du réservoir (CompanionLines.lua). Options :
 --   force    : passe outre l'écart minimal (évolution, retour, caresse…)
 --   category : catégorie de priorité (sinon déduite du réservoir)
@@ -839,24 +894,33 @@ end
 --   args     : arguments du texte
 --   seq      : étape d'une séquence (conversation, tutoriel)
 --   duration : durée d'affichage
+--   important: conseil de route important (élite, vie, munitions, vivres) :
+--              seul ce qui passe au cran « Discret »
 -- Jamais outre la sourdine ni une bulle plus importante encore affichée.
 -- Renvoie true, ou false + raison ("off" : coupé/muet/masqué, "busy").
 function ns:CompanionSay(pool, opts)
 	opts = opts or {}
 	if not ModuleOn() then return false, "off" end
 	local db = self:DB()
-	if db.companionBubbles == false or db.companionShow == false then return false, "off" end
+	if db.companionShow == false then return false, "off" end
+	local level = CHATTER[self:CompanionChatterLevel()]
 	local rt, now = RT(), Clock()
 	local category = opts.category or CategoryOf(pool)
 	local prio = PRIORITY[category] or PRIORITY.reaction
+	-- réglette « Bavardage » : ce que ce cran laisse dire
+	if level.allow and not level.allow[category] then return false, "off" end
+	if level.important and category == "advice" and not opts.important then return false, "off" end
+	if category == "advice" and not opts.force and rt.lastAdvice and now - rt.lastAdvice < (level.advice or 120) then
+		return false, "busy"
+	end
 	local seq = rt.seq
 	-- ce qui occupe déjà la place : la bulle affichée, la séquence en cours
 	if self.companionBubbleUntil and now < self.companionBubbleUntil and prio < (self.companionBubblePrio or 0) then
 		return false, "busy"
 	end
 	if seq and not opts.seq and prio <= seq.prio then return false, "busy" end
-	if not opts.force and not opts.seq and prio < PRIORITY.tuto and self.companionLastBubble
-		and now - self.companionLastBubble < BUBBLE_GAP then
+	if not opts.force and not opts.seq and category ~= "advice" and prio < PRIORITY.tuto and self.companionLastBubble
+		and now - self.companionLastBubble < (level.bubble or BUBBLE_GAP) then
 		return false, "busy"
 	end
 	local families = Families(opts.cd)
@@ -883,8 +947,9 @@ function ns:CompanionSay(pool, opts)
 	for _, family in ipairs(families) do
 		local wait = COOLDOWNS[family]
 		if not wait and family:find("^need_") then wait = COOLDOWNS.need_each end
-		rt.cool[family] = now + (wait or 0)
+		rt.cool[family] = now + (wait or 0) * (level.cooldown or 1)
 	end
+	if category == "advice" then rt.lastAdvice = now end
 	self.companionLastBubble = now
 	self.companionBubbleKey, self.companionBubbleText, self.companionBubbleLine = pool, text, lineKey
 	self.companionBubblePrio = prio
@@ -968,7 +1033,7 @@ function ns:CompanionStartTutorial(manual)
 	if not ModuleOn() then return false end
 	local db = self:DB()
 	local rt = RT()
-	if db.companionBubbles == false or db.companionShow == false then
+	if self:CompanionChatterLevel() == 0 or db.companionShow == false then
 		if manual then self:Print(L.COMP_MSG_TUTO_MUTED) end
 		return false
 	end
@@ -1652,7 +1717,7 @@ function ns:CompanionNextTip()
 end
 
 function ns:CompanionTryTip(force)
-	if self:DB().companionTips == false or InCombat() then return false end
+	if self:CompanionChatterLevel() < 3 or InCombat() then return false end
 	local rt, now = RT(), Clock()
 	if not rt.tipAt then rt.tipAt = now + TipDelay() end
 	if not force and now < rt.tipAt then return false end
@@ -2177,9 +2242,32 @@ function ns:CompanionRefreshStyleRow(row, kind)
 	end
 end
 
+-- Infobulle de la réglette : le cran choisi en tête, puis les cinq
+function ns:CompanionChatterTooltip()
+	local current = self:CompanionChatterLevel()
+	local lines = { L.COMP_CHATTER_TIP }
+	for level = 0, 4 do
+		local text = L["COMP_CHATTER_DESC_" .. level]
+		lines[#lines + 1] = (level == current) and (Theme.T_GOLD .. "> " .. text .. "|r") or ("   " .. text)
+	end
+	lines[#lines + 1] = Theme.T_GREY .. L.COMP_CHATTER_TIP_HINT .. "|r"
+	return lines
+end
+
+-- Nouveau cran : il le confirme lui-même (sauf muet : la bulle s'en va)
+function ns:CompanionOnChatterChanged(level)
+	level = self:CompanionChatterLevel()
+	if level == 0 then
+		self:CompanionHideBubble()
+		return false
+	end
+	return (self:CompanionSay("CHATTER_" .. level, { force = true, category = "tuto" }))
+end
+
 function ns:CompanionRefreshPage()
 	local frame = self.optionsFrame
 	if not (frame and frame.rows) then return end
+	self:CompanionChatterLevel()   -- cran déduit des anciens réglages avant le premier affichage
 	for _, row in ipairs(frame.rows) do
 		local key = row.def and row.def.key
 		if key == "companionAppearance" then
@@ -2282,10 +2370,18 @@ function ns:CompanionCommand(rest)
 		local def = self:CompanionCycleAppearance()
 		return self:Print(self:F("COMP_MSG_APPEARANCE", L[def.label]))
 	elseif sub == "muet" or sub == "mute" then
+		-- sourdine : réglette à 0, en retenant le cran d'avant pour y revenir
 		local db = self:DB()
-		db.companionBubbles = not (db.companionBubbles ~= false)
-		if db.companionBubbles == false then self:CompanionHideBubble() end
-		return self:Print(self:F("COMP_MSG_MUTE", db.companionBubbles and L.MODULE_ON or L.MODULE_OFF))
+		local level = self:CompanionChatterLevel()
+		if level > 0 then
+			db.companionChatterBefore = level
+			db.companionChatter = 0
+			self:CompanionHideBubble()
+		else
+			db.companionChatter = tonumber(db.companionChatterBefore) or ns.COMPANION_CHATTER_DEFAULT
+		end
+		if self.RefreshOptions then self:RefreshOptions() end
+		return self:Print(self:F("COMP_MSG_MUTE", db.companionChatter > 0 and L.MODULE_ON or L.MODULE_OFF))
 	elseif sub == "tuto" or sub == "tutorial" or sub == "tutoriel" then
 		local what = (arg or ""):lower()
 		if what == "passer" or what == "skip" or what == "stop" then return self:CompanionSkipTutorial() end

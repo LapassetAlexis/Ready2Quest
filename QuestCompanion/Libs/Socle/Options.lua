@@ -146,9 +146,15 @@ function ns:RefreshOptions()
 					row.track:SetValue(span > 0 and (((value or 0) - (def.min or 0)) / span) or 0)
 				end
 				-- l'unité est portée par la valeur, pas par le libellé : la
-				-- colonne de gauche reste courte et scannable
-				row.value:SetText(Theme.T_GOLD .. tostring(value or 0) .. "|r"
-					.. Theme.T_GREY .. suffix .. "|r")
+				-- colonne de gauche reste courte et scannable ; def.display
+				-- donne un nom au cran (« Calme ») à la place du nombre
+				if def.display then
+					row.value:SetText(Theme.T_GOLD .. tostring(def.display(value or 0)) .. "|r")
+				else
+					row.value:SetText(Theme.T_GOLD .. tostring(value or 0) .. "|r"
+						.. Theme.T_GREY .. suffix .. "|r")
+				end
+				if row.note and def.describe then row.note:SetText(def.describe(value or 0)) end
 			end
 		end
 	end
@@ -358,8 +364,11 @@ function ns:EnsureOptions()
 		else
 			local function Step(delta)
 				local db = ns:DB()
+				local before = db[def.key]
 				db[def.key] = Clamp((db[def.key] or 0) + (delta * (def.step or 1)), def.min or 0, def.max or 999)
 				ns:RefreshOptions()
+				-- l'addon réagit au nouveau cran (bulle de confirmation…)
+				if def.onChange and db[def.key] ~= before then def.onChange(db[def.key], before) end
 			end
 			-- piste : la valeur dans sa plage, d'un coup d'œil
 			row.track = Theme.CreateBar(row, ns.OPT_LAYOUT.trackWidth, 3)
@@ -372,6 +381,24 @@ function ns:EnsureOptions()
 				row:EnableMouseWheel(true)
 				row:SetScript("OnMouseWheel", function(_, delta) Step(delta > 0 and 1 or -1) end)
 			end
+		end
+		-- infobulle de la ligne : def.tooltip(valeur) -> { lignes }
+		if def.tooltip then
+			row:SetScript("OnEnter", function(self)
+				if type(GameTooltip) ~= "table" or not GameTooltip.SetOwner then return end
+				GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
+				for index, line in ipairs(def.tooltip(ns:DB()[def.key]) or {}) do
+					if index == 1 then
+						GameTooltip:AddLine(line, Theme.PARCHMENT[1], Theme.PARCHMENT[2], Theme.PARCHMENT[3])
+					else
+						GameTooltip:AddLine(line, 0.85, 0.85, 0.85, true)
+					end
+				end
+				GameTooltip:Show()
+			end)
+			row:SetScript("OnLeave", function()
+				if type(GameTooltip) == "table" and GameTooltip.Hide then GameTooltip:Hide() end
+			end)
 		end
 		return row
 	end
@@ -568,6 +595,16 @@ function ns:EnsureOptions()
 				frame.rows[#frame.rows + 1] = row
 				page.rows[#page.rows + 1] = row
 				y = y - ROW_HEIGHT
+				-- phrase sous la ligne, qui suit sa valeur : def.describe(valeur)
+				if rowDef.describe then
+					row.note = page:CreateFontString(nil, "OVERLAY", Theme.F_SMALL)
+					row.note:SetPoint("TOPLEFT", page, "TOPLEFT", 10, y + 4)
+					row.note:SetWidth(PANE_WIDTH - 14)
+					row.note:SetJustifyH("LEFT")
+					if row.note.SetWordWrap then row.note:SetWordWrap(true) end
+					row.note:SetTextColor(Theme.MUTED[1], Theme.MUTED[2], Theme.MUTED[3])
+					y = y - 26
+				end
 				end
 			end
 			y = y - 8

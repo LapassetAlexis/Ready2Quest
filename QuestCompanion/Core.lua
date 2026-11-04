@@ -107,6 +107,8 @@ end
 
 function ns:OnAddonLoaded()
 	self:MigrateFromReady2Quest()
+	-- réglette « Bavardage » : cran déduit des anciens réglages, une fois
+	if self.CompanionChatterLevel then self:CompanionChatterLevel() end
 end
 
 -- ---------------------------------------------------------------------------

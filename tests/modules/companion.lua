@@ -83,7 +83,8 @@ do
 	C.Reset()
 	Check("[COMP] fichiers chargés", NS.Loaded.Companion == true and NS.Loaded.CompanionData == true)
 	local db = NS:DB()
-	Check("[COMP] réglages par défaut", db.companionEnabled == true and db.companionShow == true and db.companionBubbles == true)
+	Check("[COMP] réglages par défaut", db.companionEnabled == true and db.companionShow == true
+		and NS:CompanionChatterLevel() == 3 and db.companionChatter == 3)
 	local page
 	for _, def in ipairs(NS.OPTION_PAGES) do if def.id == "companion" then page = def end end
 	Check("[COMP] page MODULES avec interrupteur", page and page.group == "OPT_GROUP_MODULES" and page.power == "companionEnabled")
@@ -318,16 +319,17 @@ do
 	Check("[COMP] après l'écart : de nouveau permise", NS:CompanionSay("DEAD") == true and C.Key() == "DEAD")
 	Check("[COMP] une bulle prioritaire passe l'écart", NS:CompanionSay("EVOLVE", { force = true, args = { "X" } }) == true)
 	C.Quiet()
-	NS:DB().companionBubbles = false
+	NS:DB().companionChatter = 0
 	NS.companionBubbleKey = nil
 	Check("[COMP] sourdine : aucune bulle", NS:CompanionSay("QUEST") == false and NS:CompanionSay("UNLOCK", { force = true }) == false
 		and C.Key() == nil)
 	Mock:Reset()
 	NS:HandleCommand("compagnon muet")
-	Check("[COMP] « muet » rallume les bulles", NS:DB().companionBubbles == true and Mock:Output():find("Bulles", 1, true))
+	Check("[COMP] « muet » rallume les bulles (cran Normal)", NS:DB().companionChatter == 3 and Mock:Output():find("Bulles", 1, true))
 	NS:HandleCommand("compagnon muet")
-	Check("[COMP] « muet » les recoupe", NS:DB().companionBubbles == false)
-	NS:DB().companionBubbles = true
+	Check("[COMP] « muet » les recoupe (cran 0, l'ancien retenu)", NS:DB().companionChatter == 0
+		and NS:DB().companionChatterBefore == 3)
+	NS:DB().companionChatter = 3
 	NS:DB().companionShow = false
 	NS:CompanionUpdateVisibility()
 	C.Quiet()
@@ -636,7 +638,7 @@ do
 	end
 	table.sort(short)
 	Check("[COMP] plusieurs lignes par situation (20+ astuces)", #short == 0, table.concat(short, ","))
-	Check("[COMP] tutoriel : 4 à 6 bulles", #NS.COMPANION_POOLS.TUTO >= 4 and #NS.COMPANION_POOLS.TUTO <= 6)
+	Check("[COMP] tutoriel : 4 à 8 bulles", #NS.COMPANION_POOLS.TUTO >= 4 and #NS.COMPANION_POOLS.TUTO <= 8)
 	local convos = true
 	for _, name in ipairs(NS.COMPANION_CONVOS) do
 		local n = #(NS.COMPANION_POOLS[name] or {})
@@ -912,10 +914,11 @@ do
 	Check("[COMP] hors combat : de nouveau", NS:CompanionTryTip() == true and C.Key() == "TIP")
 	-- réglage « Astuces » coupé
 	C.Quiet()
-	NS:DB().companionTips = false
+	-- réglette « Bavardage » sous Normal : plus d'astuces
+	NS:DB().companionChatter = 2
 	NS.companionRT.tipAt = 0
-	Check("[COMP] astuces coupées : aucune", NS:CompanionTryTip(true) == false and D.Count("TIP", 30) == 0)
-	NS:DB().companionTips = true
+	Check("[COMP] astuces coupées (cran Calme) : aucune", NS:CompanionTryTip(true) == false and D.Count("TIP", 30) == 0)
+	NS:DB().companionChatter = 3
 	-- pas de redite avant d'avoir tout vu
 	D.Reset(11)
 	C.Login()
@@ -1155,12 +1158,14 @@ do
 	NS.optionsFrame = nil
 	NS:ToggleOptions()
 	NS:SelectOptionsPage("companion")
-	local tutoRow, tipsRow
+	local tutoRow, chatterRow
 	for _, row in ipairs(NS.optionsFrame.rows) do
 		if row.def and row.def.key == "companionTutorial" then tutoRow = row end
-		if row.def and row.def.key == "companionTips" then tipsRow = row end
+		if row.def and (row.def.key == "companionTips" or row.def.key == "companionBubbles") then chatterRow = false end
+		if row.def and row.def.key == "companionChatter" and chatterRow == nil then chatterRow = row end
 	end
-	Check("[COMP] réglages : ligne « Astuces »", tipsRow and tipsRow.def.kind == "bool" and tipsRow.label.text == "Astuces")
+	Check("[COMP] réglages : la réglette « Bavardage » remplace bulles et astuces", chatterRow
+		and chatterRow.def.kind == "number" and chatterRow.label.text == "Bavardage")
 	Check("[COMP] réglages : bouton « Rejouer le tutoriel »", tutoRow and tutoRow.label.text == "Rejouer le tutoriel")
 	C.Quiet()
 	if tutoRow then tutoRow:Click() end
@@ -1183,28 +1188,28 @@ do
 	NS:CompanionSkipTutorial()
 	-- sourdine : pas de tutoriel, pas marqué vu (il reviendra)
 	D.Reset(11, true)
-	NS:DB().companionBubbles = false
+	NS:DB().companionChatter = 0
 	C.Login()
 	Check("[COMP] sourdine : pas de tutoriel, il reste à voir", not NS:CompanionTutorialActive() and not NS:CompanionData().tutoDone
 		and not C.Shown())
 	Mock:Reset()
 	NS:HandleCommand("compagnon tuto")
 	Check("[COMP] sourdine : la commande explique", Mock:Output():find("coupées", 1, true) ~= nil)
-	NS:DB().companionBubbles = true
+	NS:DB().companionChatter = 3
 	-- sourdine en plein tutoriel : il s'arrête sans être marqué vu
 	C.Quiet()
 	NS:CompanionStartTutorial(true)
-	NS:DB().companionBubbles = false
+	NS:DB().companionChatter = 0
 	Mock:Advance(NS.COMPANION_RULES.tutoStep)
 	Check("[COMP] sourdine en route : arrêté, pas vu", not NS:CompanionTutorialActive() and not NS:CompanionData().tutoDone)
-	NS:DB().companionBubbles = true
+	NS:DB().companionChatter = 3
 end
 
 do
 	Say("-- sourdine : plus rien du tout")
 	D.Reset(11)
 	C.Login()
-	NS:DB().companionBubbles = false
+	NS:DB().companionChatter = 0
 	NS:CompanionHideBubble()
 	NS.companionBubbleKey = nil
 	C.Quiet()
@@ -1226,7 +1231,7 @@ do
 	NS:CompanionStartTutorial(true)
 	Check("[COMP] sourdine : aucune bulle (combat, PNJ, repas, astuce, envie, câlin, tutoriel)",
 		NS.companionBubbleKey == nil and not C.Shown(), NS.companionBubbleKey)
-	NS:DB().companionBubbles = true
+	NS:DB().companionChatter = 3
 end
 
 for _, name in ipairs(D.MOCKED) do _G[name] = D.saved[name] end

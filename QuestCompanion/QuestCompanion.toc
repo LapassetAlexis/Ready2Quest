@@ -26,6 +26,7 @@ Libs\Socle\Places.lua
 Libs\Socle\Theme.lua
 Libs\Socle\Store.lua
 Libs\Socle\World.lua
+Libs\Socle\Gear.lua
 Libs\Socle\Commands.lua
 Libs\Socle\Options.lua
 Libs\Socle\Minimap.lua
@@ -33,6 +34,8 @@ Core.lua
 CompanionData.lua
 CompanionLines.lua
 Companion.lua
+Advice.lua
+Group.lua
 Journal.lua
 JournalTracker.lua
 ZoneCreatures_Era.lua

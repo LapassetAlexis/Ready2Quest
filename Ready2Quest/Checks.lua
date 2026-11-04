@@ -9,67 +9,9 @@
 local ADDON, ns = ...
 local L = ns.L
 
-local NUM_BAG_SLOTS = 4   -- sacs 0 (sac de dos) à 4
-
--- ---------------------------------------------------------------------------
--- Helpers
--- ---------------------------------------------------------------------------
-
-local function EachBagItem(fn)
-	if not (C_Container and type(C_Container.GetContainerNumSlots) == "function") then return end
-	for bag = 0, NUM_BAG_SLOTS do
-		local slots = C_Container.GetContainerNumSlots(bag)
-		if type(slots) == "number" then
-			for slot = 1, slots do
-				local ok, info = pcall(C_Container.GetContainerItemInfo, bag, slot)
-				if ok and type(info) == "table" and info.itemID then
-					fn(bag, slot, info)
-				end
-			end
-		end
-	end
-end
-
-local function FreeBagSlots()
-	local free = 0
-	if C_Container and type(C_Container.GetContainerNumFreeSlots) == "function" then
-		for bag = 0, NUM_BAG_SLOTS do
-			local ok, count = pcall(C_Container.GetContainerNumFreeSlots, bag)
-			if ok and type(count) == "number" then free = free + count end
-		end
-		return free
-	end
-	local total, used = 0, 0
-	EachBagItem(function() used = used + 1 end)
-	if C_Container and type(C_Container.GetContainerNumSlots) == "function" then
-		for bag = 0, NUM_BAG_SLOTS do
-			local slots = C_Container.GetContainerNumSlots(bag)
-			if type(slots) == "number" then total = total + slots end
-		end
-	end
-	return math.max(0, total - used)
-end
-
-ns.FreeBagSlots = FreeBagSlots
-
--- GetQuestLogTitle n'a pas la même forme partout :
---   Era 1.13+ / Classic modernes : title, level, suggestedGroup, isHeader, isCollapsed, isComplete, …
---   clients historiques (5.x)     : title, level, questTag, suggestedGroup, isHeader, isCollapsed, isComplete, …
--- isHeader est un booléen dans les deux cas : sa position désigne la forme.
--- isComplete vaut 1 (terminée), -1 (échouée) ou nil sur Era, true ailleurs.
-function ns.QuestLogReady(index)
-	if type(GetQuestLogTitle) ~= "function" then return false end
-	local r = { pcall(GetQuestLogTitle, index) }
-	if not r[1] or r[2] == nil then return false end
-	local isHeader, isComplete
-	if type(r[5]) == "boolean" then
-		isHeader, isComplete = r[5], r[7]
-	else
-		isHeader, isComplete = r[6], r[8]
-	end
-	if isHeader == true or isHeader == 1 then return false end
-	return isComplete == true or isComplete == 1
-end
+-- Lecture de l'inventaire (sacs, places libres, quêtes, durabilité, foyer,
+-- munitions) : socle commun, Libs/Socle/Gear.lua.
+local EachBagItem, FreeBagSlots = ns.EachBagItem, ns.FreeBagSlots
 
 local function CountQuality(quality)
 	local count = 0
@@ -83,15 +25,7 @@ end
 -- Libs/Socle/World.lua.
 local ConsumableKind = ns.ConsumableKind
 
-local function CountConsumables(kind)
-	local count = 0
-	EachBagItem(function(_, _, info)
-		if ConsumableKind(info.itemID) == kind then
-			count = count + (info.stackCount or 1)
-		end
-	end)
-	return count
-end
+local CountConsumables = ns.CountConsumables
 
 local function Ratio(value, target)
 	target = tonumber(target) or 0
@@ -241,16 +175,8 @@ Add{
 	advice = "ADV_DURA",
 	label = function() return L.CHK_DURA end,
 	run = function(db)
-		if type(GetInventoryItemDurability) ~= "function" then return true, L.CHK_DURA_NA, 100 end
-
-		local worst = nil
-		for slot = 1, 19 do
-			local ok, current, max = pcall(GetInventoryItemDurability, slot)
-			if ok and type(current) == "number" and type(max) == "number" and max > 0 then
-				local percent = (current / max) * 100
-				if not worst or percent < worst then worst = percent end
-			end
-		end
+		-- pièce la plus usée (socle commun, Libs/Socle/Gear.lua)
+		local worst = ns:LowestDurability()
 		if not worst then return true, L.CHK_DURA_NA, 100 end
 
 		local percent = math.floor(worst)
@@ -328,18 +254,7 @@ local function ItemCount(itemID)
 end
 ns.ItemCount = ItemCount
 
-local function PlayerLevel()
-	if type(UnitLevel) ~= "function" then return 1 end
-	local ok, level = pcall(UnitLevel, "player")
-	return (ok and tonumber(level)) or 1
-end
-
-local function PlayerClass()
-	if type(UnitClass) ~= "function" then return nil end
-	local ok, _, token = pcall(UnitClass, "player")
-	if ok then return token end
-	return nil
-end
+local PlayerLevel, PlayerClass = ns.PlayerLevelNow, ns.PlayerClassToken
 
 -- Composants consommés par les sorts de classe (Classic Era / Forever).
 -- `level` = niveau à partir duquel le sort qui les consomme est appris.
@@ -348,7 +263,7 @@ end
 -- `min`   = nombre, ou paliers { { niveau, minimum }, … } : un chasseur tire
 --           bien plus au niveau 40 qu'au niveau 1.
 ns.CLASS_REAGENTS = {
-	HUNTER  = { { label = "REAGENT_AMMO", ammo = true, min = { { 1, 200 }, { 10, 600 }, { 30, 1000 } }, level = 1 } },
+	HUNTER  = { { label = "REAGENT_AMMO", ammo = true, min = ns.AMMO_MINIMUM, level = 1 } },
 	WARLOCK = { { label = "REAGENT_SHARD", items = { 6265 }, min = 3, level = 10 } },
 	ROGUE   = { { label = "REAGENT_FLASH", items = { 5140 }, min = 5, level = 22 } },
 	MAGE    = {
@@ -361,36 +276,7 @@ ns.CLASS_REAGENTS = {
 	PALADIN = { { label = "REAGENT_SYMBOL", items = { 17033 }, min = 1, level = 30 } },
 }
 
-local function AmmoCount()
-	if type(GetInventoryItemCount) ~= "function" then return nil end
-	local ok, count = pcall(GetInventoryItemCount, "player", 0)
-	if ok and type(count) == "number" then return count end
-	return nil
-end
-
--- Projectiles rangés dans les sacs (classe d'objet 6), équipés ou non
-local PROJECTILE = 6
-local function AmmoInBags()
-	local fn = (C_Item and C_Item.GetItemInfoInstant) or rawget(_G, "GetItemInfoInstant")
-	if type(fn) ~= "function" then return 0 end
-	local count = 0
-	EachBagItem(function(_, _, info)
-		local ok, _, _, _, _, _, classID = pcall(fn, info.itemID)
-		if ok and classID == PROJECTILE then count = count + (info.stackCount or 1) end
-	end)
-	return count
-end
-
--- Minimum du palier atteint (min = nombre, ou { { niveau, minimum }, … })
-local function MinimumFor(min, level)
-	if type(min) ~= "table" then return min end
-	local value = 0
-	for _, step in ipairs(min) do
-		if level >= step[1] then value = step[2] end
-	end
-	return value
-end
-ns.ReagentMinimum = MinimumFor
+local AmmoCount, AmmoInBags, MinimumFor = ns.AmmoCount, ns.AmmoInBags, ns.ReagentMinimum
 
 function ns:ClassReagentNeeds()
 	local list = self.CLASS_REAGENTS[PlayerClass() or ""] or {}
@@ -465,15 +351,7 @@ Add{
 local HEARTHSTONE = 6948
 local HEARTH_MAX_CD = 600   -- au-delà de 10 min de recharge, le foyer n'est pas une issue
 
-local function HearthCooldown()
-	local fn = (C_Container and C_Container.GetItemCooldown) or rawget(_G, "GetItemCooldown")
-	if type(fn) ~= "function" then return 0 end
-	local ok, start, duration = pcall(fn, HEARTHSTONE)
-	if not ok or type(start) ~= "number" or type(duration) ~= "number" or start <= 0 then return 0 end
-	local remaining = start + duration - ((ns.Now and ns.Now()) or 0)
-	return remaining > 0 and remaining or 0
-end
-ns.HearthCooldown = HearthCooldown
+local HearthCooldown = ns.HearthCooldown
 
 Add{
 	id = "hearth",

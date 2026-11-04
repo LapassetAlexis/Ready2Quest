@@ -22,6 +22,30 @@ De courtes bulles, jamais en combat, avec plusieurs phrases pour chaque situatio
 
 Elle dit aussi **ce dont elle a besoin** : « J'ai faim… », « On explore ? », « Encore 2 zones et j'aurai : Dragonnet cramoisi ! ».
 
+## Elle veille sur toi en route
+
+Hors d'un lieu sûr, elle te prévient de ce qui compte, une fois par sortie (et de nouveau si ça empire), jamais en combat :
+- un **élite ou un rare** hostile, au moins 2 niveaux au-dessus de toi (ta cible, ce que tu survoles, les barres de vie), hors donjon ;
+- ta **vie basse** à la fin d'un combat ;
+- tes **munitions** basses, presque à sec, ou rangées dans le sac sans être équipées (chasseur) ;
+- tes **vivres** bas ;
+- ton **équipement** qui s'abîme (sous 25 %, puis sous 10 %) ;
+- tes **sacs** presque pleins ;
+- toutes tes **quêtes** prêtes à rendre ;
+- ta **pierre de foyer** de nouveau prête alors que tu es chargé.
+
+Avec Ready2Quest, elle suit les mêmes seuils que son check (place dans les sacs, vivres, durabilité) et la même idée de « lieu sûr ». Elle parle plus ou moins selon la réglette **Bavardage** : au cran Discret, seuls l'élite, la vie, les munitions et les vivres passent.
+
+## Elle t'aide en groupe
+
+Avec ce que ton jeu sait déjà de tes compagnons d'armes (niveau, classe, position, état) :
+- quand le groupe est formé : **pas de soigneur** (prêtre, druide, chaman, paladin), ou un bel équipage au complet ;
+- devant ou dans un **donjon** : le membre le plus bas par rapport au donjon, ou « tout le monde a le niveau » ;
+- un membre **resté en arrière** (hors de vue plus d'1 min 30, hors combat et hors lieu sûr) ou **encore ailleurs** quand tu es au donjon (« Il manque Thrall, encore à Orgrimmar ») ;
+- les **morts** (et celle du soigneur : prudence !) et les **déconnexions**.
+
+Rien en raid, rien pendant un vol. Composition, donjon et retards sont des conseils (dès le cran Calme) ; morts et déconnexions, des réactions (cran Normal).
+
 ## Comment s'en occuper
 
 Elle a quatre envies : **faim**, **énergie**, **moral** et **curiosité**. Elles se remplissent quand tu manges, te reposes, rends une quête ou explores. Clique dessus pour lui faire une caresse, **clic droit** pour ouvrir son carnet sur les objectifs. Au premier lancement, un **tutoriel** en quelques bulles explique tout ça (à revoir avec `/qc compagnon tuto`).
@@ -85,7 +109,7 @@ Le carnet fixe des **objectifs** : prochaine étape de la créature, prochaine a
 
 `/qc options`, ou un clic droit sur le bouton de minicarte au dragonnet.
 - **Général** : activer l'addon, le bouton de minicarte et sa position.
-- **Compagnon de route** : bulles, astuces, apparence, cadre, fond, ornements, et la sous-page **Carnet** (bandeau, chat, suivi à l'écran).
+- **Compagnon de route** : la réglette **Bavardage** (Muet, Discret, Calme, Normal, Bavard : la phrase sous la réglette dit ce que fait chaque cran, et il te le confirme lui-même), apparence, cadre, fond, ornements, et la sous-page **Carnet** (bandeau, chat, suivi à l'écran).
 
 ## Commandes
 
