@@ -677,60 +677,8 @@ local enUS = {
 	MODULE_INACTIVE = "n/a",
 }
 
--- API d'extension : un module déclare ses chaînes dans son propre fichier,
--- sans toucher à celui-ci. ns.RegisterStrings({ CLE = "fr" }, { CLE = "en" })
-function ns.RegisterStrings(fr, en)
-	for k, v in pairs(fr or {}) do frFR[k] = v end
-	for k, v in pairs(en or {}) do enUS[k] = v end
-end
-
-local base = frFR
-local locale = (GetLocale and GetLocale()) or "frFR"
-if locale ~= "frFR" and locale ~= "fr" then
-	base = enUS
-end
-
--- Repli : toute clé absente de la langue active retombe sur le français.
--- IMPORTANT : la métatable est posée sur une table PROXY, jamais sur `base`.
--- Sinon, sur un client français, `base` vaut `frFR` et la lecture de `frFR[key]`
--- dans `__index` se rappelle elle-même -> « C stack overflow ».
-local L = {}
-setmetatable(L, { __index = function(_, key)
-	local value = base[key]
-	if value ~= nil then return value end
-	value = frFR[key]
-	if value ~= nil then return value end
-	return key
-end })
-ns.L = L
-
--- Minuscules ASCII seulement. string.lower et %s dépendent de la locale C :
--- en Latin-1, lower transforme l'octet 0xC3 (début de é, è, à…) en 0xE3 et
--- casse l'UTF-8 ; %s y reconnaît 0xA0 (fin de « à »). On ne touche donc
--- qu'aux lettres A-Z et aux espaces ASCII, et l'espace insécable devient une
--- espace normale.
-function ns.AsciiLower(text)
-	if type(text) ~= "string" then return text end
-	text = text:gsub("[A-Z]", function(c) return string.char(c:byte() + 32) end)
-	text = text:gsub("\194\160", " "):gsub("[ \t\r\n]+", " "):gsub("^ ", ""):gsub(" $", "")
-	return text
-end
-
--- Formatage défensif : jamais d'erreur si un placeholder manque.
-function ns:F(key, ...)
-	local fmt = ns.L[key]
-	if type(fmt) ~= "string" then return tostring(key) end
-	local ok, out = pcall(string.format, fmt, ...)
-	if ok then return out end
-	return fmt
-end
-
-function ns:Print(...)
-	local parts = {}
-	for i = 1, select("#", ...) do
-		parts[#parts + 1] = tostring((select(i, ...)))
-	end
-	print(ns.L.TAG .. " " .. table.concat(parts, " "))
-end
+-- Mécanique des chaînes (ns.L, RegisterStrings, F, Print) : socle commun,
+-- Libs/Socle/Strings.lua. Ces chaînes s'y ajoutent et priment sur celles du socle.
+ns.RegisterStrings(frFR, enUS)
 
 if ns.Mark then ns.Mark("Locales") end

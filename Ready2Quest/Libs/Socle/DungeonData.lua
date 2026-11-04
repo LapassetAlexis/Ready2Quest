@@ -4,6 +4,9 @@
 --           area = areaID du nom du donjon (C_Map.GetAreaInfo : nom traduit),
 --           name = nom anglais (repli), era / fo = { min, max } (Era / Forever),
 --           entrances = { areaID des sous-zones d'entrée }, forever = seulement Forever }
+-- Fichier du socle commun (Libs/Socle), identique dans Ready2Quest et
+-- QuestCompanion : ne le modifier que dans Ready2Quest/Libs/Socle, puis
+-- python3 tools/sync_socle.py.
 local ADDON, ns = ...
 
 ns.DUNGEONS = {

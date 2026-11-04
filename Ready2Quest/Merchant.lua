@@ -18,22 +18,8 @@ local function Call(fn, ...)
 	return nil
 end
 
--- ---------------------------------------------------------------------------
--- Données par personnage (la SavedVariable est partagée par tout le compte)
--- ---------------------------------------------------------------------------
-function ns:CharKey()
-	local name = Call(rawget(_G, "UnitName"), "player") or "?"
-	local realm = Call(rawget(_G, "GetRealmName")) or "?"
-	return tostring(name) .. "-" .. tostring(realm)
-end
-
-function ns:CharData()
-	local db = self:DB()
-	if type(db.chars) ~= "table" then db.chars = {} end
-	local key = self:CharKey()
-	db.chars[key] = db.chars[key] or {}
-	return db.chars[key]
-end
+-- Données par personnage : ns:CharKey / ns:CharData, socle commun
+-- (Libs/Socle/Store.lua).
 
 -- Première connexion d'un personnage : on suppose ses sorts à jour, sinon le
 -- check « sorts à apprendre » crierait dès l'installation.

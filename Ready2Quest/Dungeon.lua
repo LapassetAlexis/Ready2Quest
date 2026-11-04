@@ -96,61 +96,10 @@ ns.AddOptionPage({
 -- Les noms sont ceux du jeu (C_Map.GetAreaInfo), donc valables dans toutes
 -- les langues ; le nom anglais de DungeonData sert de repli.
 -- ---------------------------------------------------------------------------
--- Comparaison tolérante : casse ASCII, article de tête (« The Deadmines » /
--- « Les Mortemines » face à un en-tête de journal « Mortemines »).
-local function Normalize(text)
-	if type(text) ~= "string" or text == "" then return nil end
-	local s = ns.AsciiLower and ns.AsciiLower(text) or text:lower()
-	s = s:gsub("^the ", ""):gsub("^les ", ""):gsub("^le ", ""):gsub("^la ", ""):gsub("^l'", "")
-	if s == "" then return nil end
-	return s
-end
-ns.DungeonNormalize = Normalize
-
-local function AreaName(areaID)
-	if not areaID or not (C_Map and type(C_Map.GetAreaInfo) == "function") then return nil end
-	local ok, name = pcall(C_Map.GetAreaInfo, areaID)
-	if ok and type(name) == "string" and name ~= "" then return name end
-	return nil
-end
-
-function ns:IsForeverClient()
-	return self.ClientFlavour ~= nil and self:ClientFlavour() == "Forever"
-end
-
-function ns:DungeonIndex()
-	if self.dungeonIndex then return self.dungeonIndex end
-	local index = { byMap = {}, byName = {}, byEntrance = {} }
-	local forever = self:IsForeverClient()
-	for key, entry in pairs(self.DUNGEONS or {}) do
-		-- un donjon de Forever n'existe pas sur Era : pas de faux positif de nom
-		if not entry.forever or forever then
-			entry.key = key
-			if entry.map then index.byMap[entry.map] = entry end
-			for _, name in ipairs({ AreaName(entry.area) or false, entry.name or false }) do
-				local n = name and Normalize(name)
-				if n then index.byName[n] = entry end
-			end
-			for _, areaID in ipairs(entry.entrances or {}) do
-				local n = Normalize(AreaName(areaID))
-				if n then index.byEntrance[n] = entry end
-			end
-		end
-	end
-	self.dungeonIndex = index
-	return index
-end
-
--- Nom affiché : celui du jeu (instance en cours, sinon AreaTable), puis l'anglais
-function ns:DungeonName(entry, instanceName)
-	return instanceName or AreaName(entry.area) or entry.name or "?"
-end
-
-function ns:DungeonRange(entry)
-	local range = (self:IsForeverClient() and entry.fo) or entry.era or entry.fo
-	if type(range) ~= "table" then return nil end
-	return range[1], range[2]
-end
+-- Index des donjons, détection (ns:DetectDungeon), nom, fourchette et
+-- ns:IsForeverClient : socle commun, Libs/Socle/World.lua.
+local Normalize = ns.DungeonNormalize
+local AreaName = ns.AreaName
 
 local function PlayerLevel()
 	if type(UnitLevel) ~= "function" then return nil end
@@ -168,22 +117,6 @@ function ns:DungeonVerdict(entry, level)
 	return "ok", minLevel, maxLevel, level
 end
 
--- Donjon sous le joueur : renvoie entrée, "instance"|"entrance", nom d'instance
-function ns:DetectDungeon()
-	local index = self:DungeonIndex()
-	if self:InInstance() then
-		if type(GetInstanceInfo) ~= "function" then return nil end
-		local ok, name, instanceType, _, _, _, _, _, instanceID = pcall(GetInstanceInfo)
-		if not ok or instanceType ~= "party" then return nil end
-		local entry = index.byMap[tonumber(instanceID) or -1] or index.byName[Normalize(name) or ""]
-		if entry then return entry, "instance", (type(name) == "string" and name ~= "") and name or nil end
-		return nil
-	end
-	local subzone = Normalize(self:CurrentSubZone())
-	local entry = subzone and index.byEntrance[subzone]
-	if entry then return entry, "entrance" end
-	return nil
-end
 
 -- ---------------------------------------------------------------------------
 -- Quêtes du journal rangées sous l'en-tête du donjon. Le journal Classic

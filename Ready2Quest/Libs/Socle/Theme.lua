@@ -10,9 +10,13 @@
 --     titres et la note ; le texte courant reste en GameFont, lisible partout ;
 --   * des contrôles dessinés par l'addon (boutons, interrupteurs, losanges),
 --     sans dépendre d'aucun template : rien ne casse si Forever change son art.
--- Textures propres : Textures/logo.tga (boussole R2Q), logo_petit.tga (sans
--- lettres, pour les petites tailles), losange.tga, losange_trait.tga.
+-- Textures : celles du socle (Libs/Socle/Media : losange.tga, losange_trait.tga,
+-- police Alegreya) et le logo de chaque addon (Textures/logo.tga, logo_petit.tga).
 -- Tout le reste n'utilise que Interface\Buttons\WHITE8X8, teinté.
+--
+-- Fichier du socle commun (Libs/Socle), identique dans Ready2Quest et
+-- QuestCompanion : ne le modifier que dans Ready2Quest/Libs/Socle, puis
+-- python3 tools/sync_socle.py.
 local ADDON, ns = ...
 
 local Theme = {}
@@ -20,6 +24,8 @@ ns.Theme = Theme
 
 local MEDIA = "Interface\\AddOns\\" .. tostring(ADDON or "Ready2Quest") .. "\\"
 Theme.MEDIA = MEDIA
+local SOCLE_MEDIA = MEDIA .. "Libs\\Socle\\Media\\"
+Theme.SOCLE_MEDIA = SOCLE_MEDIA
 
 -- Palette ---------------------------------------------------------------------
 -- GOLD reste le nom historique de la couleur d'accent : c'est l'ambre.
@@ -56,15 +62,15 @@ Theme.T_BLUE      = "|cff5b8fd6"
 Theme.BG_DARK  = "Interface\\DialogFrame\\UI-DialogBox-Background-Dark"
 Theme.BG_LIGHT = "Interface\\DialogFrame\\UI-DialogBox-Background"
 Theme.SOLID    = "Interface\\Buttons\\WHITE8X8"
-Theme.LOGO          = MEDIA .. "Textures\\logo"         -- complet : boîtier, aiguille, R2Q
-Theme.LOGO_SMALL    = MEDIA .. "Textures\\logo_petit"   -- sans lettres : bandeaux, minicarte
-Theme.DIAMOND       = MEDIA .. "Textures\\losange"
-Theme.DIAMOND_LINE  = MEDIA .. "Textures\\losange_trait"
+Theme.LOGO          = MEDIA .. "Textures\\logo"         -- logo de l'addon (boussole R2Q, dragonnet QC)
+Theme.LOGO_SMALL    = MEDIA .. "Textures\\logo_petit"   -- petites tailles : bandeaux, minicarte
+Theme.DIAMOND       = SOCLE_MEDIA .. "losange"
+Theme.DIAMOND_LINE  = SOCLE_MEDIA .. "losange_trait"
 -- Flèche de rafraîchissement : l'icône du jeu (fichier 851904), présente dans
 -- les clients Era 1.15.9 et Forever 1.60.1 (listes de fichiers wago.tools).
 -- Elle est jaune : on la désature au repos plutôt que de la teinter.
 Theme.REFRESH       = "Interface\\Buttons\\UI-RefreshButton"
-Theme.FONT_TITLE    = MEDIA .. "Fonts\\Alegreya-Bold.ttf"
+Theme.FONT_TITLE    = SOCLE_MEDIA .. "Alegreya-Bold.ttf"
 
 Theme.F_TITLE  = "GameFontNormalLarge"
 Theme.F_NORMAL = "GameFontHighlight"

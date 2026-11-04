@@ -503,6 +503,8 @@ do
 		local handle = assert(io.open(ROOT .. "/" .. toc, "r"), toc .. " introuvable")
 		for line in handle:lines() do
 			line = line:gsub("\r", ""):gsub("^%s+", ""):gsub("%s+$", "")
+			-- le client accepte « Libs\Socle\Base.lua » : chemin à barres obliques ici
+			line = line:gsub("\\", "/")
 			if line ~= "" and not line:find("^#") and line:find("%.lua$") then tocFiles[#tocFiles + 1] = prefix .. line end
 		end
 		handle:close()
@@ -517,13 +519,20 @@ end
 -- (dans un bloc : le corps principal frôle la limite de 200 locales)
 Mock.moduleFiles = {}
 do
+	-- le cœur de Ready2Quest : sa configuration, le socle commun (Libs/Socle),
+	-- ses textes, Core, ses pages de réglages et les contrôles du check
 	local core = {}
-	for _, file in ipairs({ "Bootstrap.lua", "Locales.lua", "Compat.lua", "Hubs.lua", "Theme.lua", "Core.lua", "Buffs.lua",
-		"Reagents.lua", "Merchant.lua", "Equip.lua", "Stats.lua", "Minimap.lua", "Checks.lua", "Options.lua", "UI.lua" }) do
+	for _, file in ipairs({ "Config.lua", "Locales.lua", "Core.lua", "OptionPages.lua", "Buffs.lua",
+		"Reagents.lua", "Merchant.lua", "Equip.lua", "Stats.lua", "Checks.lua", "UI.lua" }) do
 		core[file] = true
 	end
 	for _, file in ipairs(tocFiles) do
-		if core[file:gsub("^Ready2Quest/", "")] then LoadAddonFile(file) else table.insert(Mock.moduleFiles, file) end
+		local name = file:gsub("^Ready2Quest/", "")
+		if file:find("^Ready2Quest/") and (core[name] or name:find("^Libs/Socle/")) then
+			LoadAddonFile(file)
+		else
+			table.insert(Mock.moduleFiles, file)
+		end
 	end
 end
 _G.TOC_FILES = tocFiles

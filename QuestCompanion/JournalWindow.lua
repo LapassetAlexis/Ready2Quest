@@ -732,4 +732,7 @@ do
 	end
 end
 
+-- une seule grande fenêtre à la fois (socle commun, ns:CloseOtherWindows)
+if type(ns.EXCLUSIVE_WINDOWS) == "table" then table.insert(ns.EXCLUSIVE_WINDOWS, "journalFrame") end
+
 if ns.Mark then ns.Mark("JournalWindow") end

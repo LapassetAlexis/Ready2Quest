@@ -1,10 +1,18 @@
--- Bootstrap.lua -- chargé EN PREMIER, ne dépend de rien
+-- Base.lua -- socle commun, chargé juste après Config.lua, ne dépend de rien
 --
--- Objectif : que /sd réponde TOUJOURS, même si un fichier suivant plante au
--- chargement. C'est ce qui permet de diagnostiquer à distance un addon muet.
+-- Objectif : que la commande de l'addon réponde TOUJOURS, même si un fichier
+-- suivant plante au chargement. C'est ce qui permet de diagnostiquer à
+-- distance un addon muet.
+--
+-- Fichier du socle commun (Libs/Socle), identique dans Ready2Quest et
+-- QuestCompanion : ne le modifier que dans Ready2Quest/Libs/Socle, puis
+-- python3 tools/sync_socle.py. Ce qui change d'un addon à l'autre est dans
+-- son Config.lua (ns.APP).
 local ADDON, ns = ...
 
-ns.version = "1.26.0"
+local APP = ns.APP or { id = ADDON or "?", version = "?", slash = {}, coreFiles = {} }
+ns.APP = APP
+ns.version = APP.version
 ns.Loaded = {}
 ns.loadOrder = {}
 ns.errors = {}
@@ -23,7 +31,7 @@ function ns:RecordError(where, message)
 	end
 	self.errors[#self.errors + 1] = { where = where, message = message }
 	if type(print) == "function" then
-		print("|cffff2020Ready2Quest — erreur|r (" .. tostring(where) .. ") " .. message)
+		print("|cffff2020" .. tostring(APP.id) .. " — erreur|r (" .. tostring(where) .. ") " .. message)
 	end
 end
 
@@ -36,11 +44,10 @@ local function Dispatch(input)
 		return
 	end
 
-	-- Core.lua n'a pas été jusqu'au bout : on explique et on liste l'état
-	print("|cffe8a54bReady2Quest|r " .. tostring(ns.version) .. " — modules non chargés.")
+	-- le socle n'a pas été jusqu'au bout : on explique et on liste l'état
+	print("|cffe8a54b" .. tostring(APP.id) .. "|r " .. tostring(ns.version) .. " — modules non chargés.")
 	local missing = {}
-	for _, name in ipairs({ "Locales", "Compat", "Hubs", "Theme", "Core", "Buffs", "Reagents",
-		"Merchant", "Equip", "Stats", "Minimap", "Checks", "Options", "UI" }) do
+	for _, name in ipairs(APP.coreFiles or {}) do
 		if not ns.Loaded[name] then missing[#missing + 1] = name end
 	end
 	if #missing > 0 then
@@ -54,13 +61,15 @@ local function Dispatch(input)
 	print("  active les erreurs Lua : /console scriptErrors 1 puis /reload")
 end
 
-SLASH_SACETDEPART1 = "/sd"
-SLASH_SACETDEPART2 = "/sacdepart"
-SLASH_SACETDEPART3 = "/r2q"
-SlashCmdList["SACETDEPART"] = Dispatch
+if APP.slashKey then
+	for index, command in ipairs(APP.slash or {}) do
+		_G["SLASH_" .. APP.slashKey .. index] = command
+	end
+	SlashCmdList[APP.slashKey] = Dispatch
+end
 
 Mark("Bootstrap")
 
 -- Témoin de chargement : une ligne au /reload. Si tu ne la vois pas, le TOC
 -- n'a pas exécuté les fichiers (mauvais dossier, ou TOC refusé par le client).
-print("|cffe8a54bReady2Quest|r " .. ns.version .. " — fichiers chargés")
+print("|cffe8a54b" .. tostring(APP.id) .. "|r " .. tostring(ns.version) .. " — fichiers chargés")

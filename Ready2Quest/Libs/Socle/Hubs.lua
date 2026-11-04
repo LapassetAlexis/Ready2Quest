@@ -2,6 +2,9 @@
 -- Zones sûres connues dès l'installation : capitales (drapeau CAPITAL du
 -- client), villages, hubs et auberges-sous-zones, Era 1.15.9 et Forever 1.60.1.
 -- [areaID] = { faction = "A"|"H"|"N", kind = "capital"|"town"|"inn"|"hub", name = nom anglais (repli) }
+-- Fichier du socle commun (Libs/Socle), identique dans Ready2Quest et
+-- QuestCompanion : ne le modifier que dans Ready2Quest/Libs/Socle, puis
+-- python3 tools/sync_socle.py.
 local ADDON, ns = ...
 
 ns.HUBS = {

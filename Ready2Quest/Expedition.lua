@@ -201,41 +201,6 @@ end
 -- Les chaînes du client (traduites) d'abord : c'est la seule façon fiable de
 -- distinguer « tu reçois » de « Machin reçoit » dans toutes les langues. Les
 -- formes « multiple » passent avant : « %s. » avalerait aussi « [X]x5. ».
-local LOOT_GLOBALS = {
-	"LOOT_ITEM_SELF_MULTIPLE", "LOOT_ITEM_PUSHED_SELF_MULTIPLE",
-	"LOOT_ITEM_SELF", "LOOT_ITEM_PUSHED_SELF",
-}
--- Repli si le client n'expose pas ces globales (anglais et français)
-local LOOT_FALLBACK = {
-	"You receive loot: %sx%d.", "You receive item: %sx%d.",
-	"You receive loot: %s.", "You receive item: %s.",
-	"Vous recevez le butin : %sx%d.", "Vous recevez l'objet : %sx%d.",
-	"Vous recevez le butin : %s.", "Vous recevez l'objet : %s.",
-}
-
-local function FormatToPattern(format)
-	local pattern = format:gsub("([%^%$%(%)%.%[%]%*%+%-%?])", "%%%1")
-	-- formes positionnelles (%1$s, devenu %1%$s ci-dessus) de certaines
-	-- langues, puis %s / %d. Marqueurs \1 / \2 d'abord : remplacer %d par
-	-- (%d+) puis rechercher %d recapturerait le motif déjà posé.
-	pattern = pattern:gsub("%%%d%%%$s", "\1"):gsub("%%%d%%%$d", "\2")
-	pattern = pattern:gsub("%%s", "\1"):gsub("%%d", "\2")
-	pattern = pattern:gsub("\1", "(.+)"):gsub("\2", "(%%d+)")
-	return "^" .. pattern .. "$"
-end
-
-local function LootPatterns()
-	local patterns = {}
-	for _, name in ipairs(LOOT_GLOBALS) do
-		local format = rawget(_G, name)
-		if type(format) == "string" and format ~= "" then patterns[#patterns + 1] = FormatToPattern(format) end
-	end
-	if #patterns == 0 then
-		for _, format in ipairs(LOOT_FALLBACK) do patterns[#patterns + 1] = FormatToPattern(format) end
-	end
-	return patterns
-end
-ns.ExpeditionLootPatterns = LootPatterns
 
 -- Couleur du lien -> qualité, si GetItemInfo n'a pas encore l'objet en cache
 local LINK_COLORS = { ["1eff00"] = 2, ["0070dd"] = 3, ["a335ee"] = 4, ["ff8000"] = 5, ["e6cc80"] = 6,
@@ -251,18 +216,7 @@ local function LinkQuality(link)
 	return hex and LINK_COLORS[hex:lower()] or nil
 end
 
--- Renvoie lien, quantité si le message est un butin du joueur, sinon nil
-function ns:ParseSelfLoot(message)
-	if type(message) ~= "string" then return nil end
-	for _, pattern in ipairs(LootPatterns()) do
-		local item, count = message:match(pattern)
-		if item then
-			local link = item:match("(|c.-|H.-|h.-|h|r)") or item:match("(|H.-|h.-|h)")
-			if link then return link, tonumber(count) or 1 end
-		end
-	end
-	return nil
-end
+-- Butin du joueur (ns:ParseSelfLoot) : socle commun, Libs/Socle/World.lua.
 
 -- ---------------------------------------------------------------------------
 -- Suivi du voyage

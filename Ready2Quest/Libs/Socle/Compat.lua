@@ -3,6 +3,9 @@
 -- L'addon utilise une dizaine d'API namespacées récentes. Certaines n'existent
 -- pas dans les clients Classic. Plutôt que de tester au cas par cas dans chaque
 -- module, on sonde une fois au chargement et on expose ns.Caps.
+-- Fichier du socle commun (Libs/Socle), identique dans Ready2Quest et
+-- QuestCompanion : ne le modifier que dans Ready2Quest/Libs/Socle, puis
+-- python3 tools/sync_socle.py.
 local ADDON, ns = ...
 
 ns.Caps = {}

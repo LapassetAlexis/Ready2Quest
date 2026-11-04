@@ -25,7 +25,7 @@ résolues en areaID. Les entrées partagées (Mont Rochenoire : BRD + BRS) ou
 situées dans une capitale (Prison de Hurlevent, Gouffre de Ragefeu, Salle des
 Thanes) sont volontairement absentes : on y passe sans aller au donjon.
 
-Usage : python3 -I tools/gen_dungeons.py <dossier des CSV> > DungeonData.lua
+Usage : python3 -I tools/gen_dungeons.py <dossier des CSV> > Ready2Quest/Libs/Socle/DungeonData.lua
   (fichiers attendus : Map_<build>.csv, AreaTable_<build>.csv, LFGDungeons_<build>.csv)
 """
 import csv, os, sys
@@ -94,6 +94,9 @@ def main(directory):
     out.append("--           area = areaID du nom du donjon (C_Map.GetAreaInfo : nom traduit),")
     out.append("--           name = nom anglais (repli), era / fo = { min, max } (Era / Forever),")
     out.append("--           entrances = { areaID des sous-zones d'entrée }, forever = seulement Forever }")
+    out.append("-- Fichier du socle commun (Libs/Socle), identique dans Ready2Quest et")
+    out.append("-- QuestCompanion : ne le modifier que dans Ready2Quest/Libs/Socle, puis")
+    out.append("-- python3 tools/sync_socle.py.")
     out.append("local ADDON, ns = ...")
     out.append("")
     out.append("ns.DUNGEONS = {")

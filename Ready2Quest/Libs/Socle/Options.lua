@@ -5,6 +5,12 @@
 -- module ET ses réglages : avant, l'interrupteur des vivres était dans
 -- « Modules » et leur seuil dans « Alertes ». La hauteur du panneau ne dépend
 -- plus du nombre de réglages (910 px en 1.18.0 avant refonte, hors écran).
+--
+-- Fichier du socle commun (Libs/Socle), identique dans Ready2Quest et
+-- QuestCompanion : ne le modifier que dans Ready2Quest/Libs/Socle, puis
+-- python3 tools/sync_socle.py. Chaque addon déclare ses pages
+-- (ns.AddOptionPage), ses listes (ns.OPTION_LISTS), ses actions
+-- (ns.OPTION_ACTIONS) et le bouton principal du pied (ns.OPTIONS_MAIN).
 local ADDON, ns = ...
 local L = ns.L
 local Theme = ns.Theme
@@ -19,84 +25,12 @@ local LIST_LINES   = 9
 
 -- ---------------------------------------------------------------------------
 -- Pages. `modules` = interrupteurs de checks (ns.checks), `rows` = réglages,
--- `list` = liste défilante (zones sûres, buffs suivis), `buttons` = actions.
+-- `list` = liste défilante (ns.OPTION_LISTS), `buttons` = actions, `info` =
+-- paragraphes d'explication. Un module a son interrupteur dans la navigation
+-- (`power` = clé de réglage) ; une sous-page porte `parent`. Chaque addon
+-- déclare ses pages avec ns.AddOptionPage ; il en faut une d'id « general ».
 -- ---------------------------------------------------------------------------
--- v1.22.0 : l'addon a TROIS modules (Check avant le départ, Résumé de stuff,
--- Stats du portrait) et une section QoL. Les 13 « checks » ne sont pas des
--- modules : ce sont les contrôles du Check avant le départ, réglés dans ses
--- sous-pages. Un module a son interrupteur dans la navigation (`power` = clé
--- de réglage) ; une sous-page porte `parent`.
-local PAGES = {
-	{
-		id = "general", title = "OPT_PAGE_GENERAL",
-		-- tout ce qui touche à l'affichage est réuni ici (section AFFICHAGE)
-		rows = {
-			{ key = "enabled",     label = "OPT_ENABLED",     kind = "bool" },
-			{ header = "OPT_SECTION_DISPLAY" },
-			{ key = "showMinimap", label = "OPT_MINIMAP",     kind = "bool" },
-			{ key = "minimapPos",  label = "OPT_MINIMAP_POS", kind = "action" },
-			{ key = "showWindow",  label = "OPT_SHOWWINDOW",  kind = "bool" },
-			{ key = "popupScore",  label = "OPT_POPUPSCORE",  kind = "number", min = 0, max = 100, step = 5 },
-		},
-		frameButtons = true,
-	},
-	-- MODULES ---------------------------------------------------------------
-	{ id = "departure", title = "OPT_PAGE_DEPARTURE", group = "OPT_GROUP_MODULES", power = "departureEnabled", target = "trigger" },
-	{
-		id = "trigger", title = "OPT_PAGE_TRIGGER", parent = "departure", group = "OPT_GROUP_MODULES",
-		rows = {
-			{ key = "exitDelay",       label = "OPT_EXITDELAY",  kind = "number", min = 0, max = 15,  step = 1, suffix = "OPT_SEC_UNIT" },
-			{ key = "quietAfterLogin", label = "OPT_QUIETLOGIN", kind = "number", min = 0, max = 60,  step = 5, suffix = "OPT_SEC_UNIT" },
-			{ key = "alertCooldown",   label = "OPT_COOLDOWN",   kind = "number", min = 0, max = 120, step = 5, suffix = "OPT_SEC_UNIT" },
-		},
-	},
-	{ id = "safe", title = "OPT_PAGE_SAFE", parent = "departure", group = "OPT_GROUP_MODULES", list = "safe" },
-	{
-		id = "bags", title = "OPT_PAGE_BAGS", parent = "departure", group = "OPT_GROUP_MODULES",
-		modules = { "bags", "gray", "vivres", "potions" },
-		rows = {
-			{ key = "bagFreeThreshold",   label = "OPT_BAGTHRESHOLD",     kind = "number", min = 0, max = 40,  step = 1 },
-			{ key = "continuousBagAlert", label = "OPT_BAGALERT",         kind = "bool" },
-			{ key = "grayItemThreshold",  label = "OPT_GRAYTHRESHOLD",    kind = "number", min = 0, max = 50,  step = 1 },
-			{ key = "vivresThreshold",    label = "OPT_VIVRESTHRESHOLD",  kind = "number", min = 0, max = 200, step = 5 },
-			{ key = "potionsThreshold",   label = "OPT_POTIONSTHRESHOLD", kind = "number", min = 0, max = 50,  step = 1 },
-		},
-	},
-	{
-		id = "gear", title = "OPT_PAGE_GEAR", parent = "departure", group = "OPT_GROUP_MODULES",
-		modules = { "durability", "repair", "classreagents", "spells", "hearth", "rest" },
-		rows = {
-			{ key = "durabilityMinPct", label = "OPT_DURAMIN", kind = "number", min = 0, max = 100, step = 5, suffix = "OPT_PCT_UNIT" },
-			{ key = "restMinPercent",   label = "OPT_RESTMIN", kind = "number", min = 0, max = 150, step = 5, suffix = "OPT_REST_UNIT" },
-		},
-	},
-	{
-		id = "buffs", title = "OPT_PAGE_BUFFS", parent = "departure", group = "OPT_GROUP_MODULES",
-		modules = { "buffs", "reagents", "quests" }, list = "buffs",
-		rows = {
-			{ key = "learnBuffs", label = "OPT_LEARNBUFFS", kind = "bool" },
-		},
-	},
-	-- pas de page propre : leur réglage est l'interrupteur, et leur placement
-	-- est dans Général > Affichage
-	-- sans réglage propre, mais avec une vraie page : cliquer sur un module doit
-	-- montrer ce qu'il fait (il renvoyait sur Général, c'était déroutant)
-	{ id = "toast", title = "OPT_PAGE_TOAST", group = "OPT_GROUP_MODULES", power = "showGearToast",
-		info = { "OPT_TOAST_INFO_1", "OPT_TOAST_INFO_2", "OPT_TOAST_INFO_3" }, actions = { "toastPreview", "editMode" } },
-	{ id = "portrait", title = "OPT_PAGE_PORTRAIT", group = "OPT_GROUP_MODULES", power = "showPortraitStats",
-		info = { "OPT_PORTRAIT_INFO_1", "OPT_PORTRAIT_INFO_2", "OPT_PORTRAIT_INFO_3" }, actions = { "portraitShow", "editMode" } },
-	-- QOL -------------------------------------------------------------------
-	-- QOL : une entrée parente, comme le Check avant le départ ; chaque confort
-	-- est une sous-page (Marchand, puis ceux qu'ajoutent les modules QoL)
-	{ id = "qol", title = "OPT_PAGE_QOL", group = "OPT_GROUP_QOL", target = "merchant" },
-	{
-		id = "merchant", title = "OPT_PAGE_MERCHANT", parent = "qol", group = "OPT_GROUP_QOL",
-		rows = {
-			{ key = "autoSellGray", label = "OPT_AUTOSELL",   kind = "bool" },
-			{ key = "autoRepair",   label = "OPT_AUTOREPAIR", kind = "bool" },
-		},
-	},
-}
+local PAGES = ns.OPTION_PAGES or {}
 ns.OPTION_PAGES = PAGES
 
 -- API d'extension : un module ajoute sa page (ou sa sous-page) aux réglages.
@@ -256,57 +190,15 @@ end
 -- flèches Unicode ne sont pas garanties dans la police), sans dépendre de
 -- FauxScrollFrame, dont la présence n'est pas assurée sur Forever.
 -- ---------------------------------------------------------------------------
-local LIST_SOURCES = {}
-
-function LIST_SOURCES.safe()
-	local db = ns:DB()
-	local items = {}
-	for key, entry in pairs(db.safe or {}) do
-		local kind = entry.kind == "city" and L.SAFE_KIND_CITY or L.SAFE_KIND_VILLAGE
-		items[#items + 1] = {
-			key = key,
-			text = tostring(entry.name or "?"),
-			detail = kind .. ", " .. Theme.T_BLUE .. ns:SourceLabel(entry.source) .. "|r",
-			action = L.OPT_REMOVE,
-			onAction = function() ns:ForgetSafeZone(key) end,
-		}
-	end
-	table.sort(items, function(a, b) return a.text < b.text end)
-	return items
-end
-
-function LIST_SOURCES.buffs()
-	local items = {}
-	for _, entry in ipairs(ns:TrackedBuffs()) do
-		local spellId = entry.spellId
-		items[#items + 1] = {
-			key = spellId,
-			text = tostring(entry.name or spellId),
-			value = OnOff(entry.enabled),
-			onToggle = function()
-				local stored = ns:DB().buffs[spellId]
-				if stored then stored.enabled = (stored.enabled == false) end
-			end,
-			action = L.OPT_REMOVE,
-			onAction = function() ns:DB().buffs[spellId] = nil end,
-		}
-	end
-	return items
-end
-
-function ns:ForgetSafeZone(key)
-	local db = self:DB()
-	local entry = db.safe and db.safe[key]
-	if not entry then return end
-	db.safe[key] = nil
-	if db.safeClues then db.safeClues[key] = nil end
-	if entry.kind == "city" and entry.mapID and db.cityRest then db.cityRest[entry.mapID] = nil end
-	self.inSafe, self.pendingExit = nil, nil
-	self:Print(self:F("MSG_SAFE_REMOVED", tostring(entry.name or "?")))
-end
+-- ns.OPTION_LISTS[id] = { items = function() -> { { key, text, detail|value,
+--   action, onAction, onToggle } }, empty = clé du texte « liste vide »,
+--   header = clé du titre, lines = nombre de lignes, extra = function(page, y)
+--   -> y (boutons sous la liste) }
+ns.OPTION_LISTS = ns.OPTION_LISTS or {}
+local LIST_SOURCES = ns.OPTION_LISTS
 
 function ns:RefreshOptionList(list)
-	local items = LIST_SOURCES[list.source]()
+	local items = LIST_SOURCES[list.source].items()
 	list.items = items
 	local maxOffset = math.max(0, #items - #list.lines)
 	list.offset = Clamp(list.offset or 0, 0, maxOffset)
@@ -341,9 +233,9 @@ function ns:ScrollOptionList(list, delta)
 end
 
 local function BuildList(page, source, top)
-	local list = { source = source, lines = {}, offset = 0,
-		emptyText = source == "safe" and "OPT_SAFE_EMPTY" or "OPT_BUFFS_EMPTY" }
-	local count = (source == "safe") and LIST_LINES or (LIST_LINES - 4)
+	local def = LIST_SOURCES[source] or {}
+	local list = { source = source, lines = {}, offset = 0, emptyText = def.empty }
+	local count = def.lines or LIST_LINES
 
 	for index = 1, count do
 		local line = CreateFrame("Button", nil, page)
@@ -410,7 +302,7 @@ function ns:EnsureOptions()
 	if self.optionsFrame then return self.optionsFrame end
 	if not Theme or not Theme.CreatePanel then return nil end
 
-	local frame = Theme.CreatePanel(UIParent, FRAME_WIDTH, FRAME_HEIGHT, L.OPT_TITLE, { name = "Ready2QuestOptionsFrame" })
+	local frame = Theme.CreatePanel(UIParent, FRAME_WIDTH, FRAME_HEIGHT, L.OPT_TITLE, { name = ns.APP.id .. "OptionsFrame" })
 	if not frame then return nil end
 
 	ns:RestorePoint(frame, "optionsPoint", { point = "CENTER", x = 0, y = 20 })
@@ -515,14 +407,14 @@ function ns:EnsureOptions()
 		return header
 	end
 
-	-- Marque en tête de navigation : logo complet et nom, le « 2 » en bleu
+	-- Marque en tête de navigation : logo complet et nom de l'addon (ns.APP.brand)
 	frame.brandLogo = frame:CreateTexture(nil, "OVERLAY")
 	frame.brandLogo:SetTexture(Theme.LOGO)
 	frame.brandLogo:SetSize(34, 34)
 	frame.brandLogo:SetPoint("TOPLEFT", frame, "TOPLEFT", 12, top - 2)
 	frame.brandName = Theme.CreateTitle(frame, 15)
 	frame.brandName:SetPoint("LEFT", frame.brandLogo, "RIGHT", 7, 0)
-	frame.brandName:SetText("Ready" .. Theme.T_BLUE .. "2|r" .. "Quest")
+	frame.brandName:SetText(ns.APP.brand or ns.APP.id)
 	frame.brandLine = Theme.Solid(frame, "ARTWORK", Theme.GOLD_DIM, 1)
 	frame.brandLine:SetPoint("TOPLEFT", frame, "TOPLEFT", 1, top - 42)
 	frame.brandLine:SetSize(NAV_WIDTH + 5, 1)
@@ -682,24 +574,13 @@ function ns:EnsureOptions()
 		end
 
 		if def.list then
-			page.listHeader = Header(page, y, def.list == "safe" and "OPT_SAFE_LIST" or "OPT_BUFFS_LIST")
+			local source = LIST_SOURCES[def.list] or {}
+			page.listHeader = Header(page, y, source.header or def.list)
 			y = y - 18
 			local list = BuildList(page, def.list, y)
 			frame.lists[def.list] = list
 			y = list.bottom
-			if def.list == "safe" then
-				page.clearButton = Theme.CreateButton(page, 150, 20, L.OPT_SAFE_CLEAR, function()
-					ns:HandleCommand("safe reset")
-					ns:RefreshOptions()
-				end)
-				page.clearButton:SetPoint("TOPLEFT", page, "TOPLEFT", 0, y - 6)
-				page.hint = page:CreateFontString(nil, "OVERLAY", Theme.F_SMALL)
-				page.hint:SetPoint("TOPLEFT", page, "TOPLEFT", 0, y - 34)
-				page.hint:SetWidth(PANE_WIDTH)
-				page.hint:SetJustifyH("LEFT")
-				page.hint:SetText(L.OPT_SAFE_HINT)
-				page.hint:SetTextColor(0.55, 0.55, 0.55)
-			end
+			if source.extra then y = source.extra(page, y) or y end
 		end
 
 		if def.frameButtons then
@@ -757,8 +638,10 @@ function ns:EnsureOptions()
 	local extra = available - (base * 3)
 	local widths = { base + (extra > 0 and 1 or 0), base + (extra > 1 and 1 or 0), base }
 
-	frame.runButton = Theme.CreateButton(frame, widths[1], 20, L.OPT_RUNCHECK, function()
-		ns:RunChecklist("manual")
+	-- bouton principal de l'addon (ns.OPTIONS_MAIN : le check, le carnet…)
+	local main = ns.OPTIONS_MAIN or {}
+	frame.runButton = Theme.CreateButton(frame, widths[1], 20, L[main.label or ""] or tostring(main.label or ""), function()
+		if main.run then main.run(ns) end
 	end)
 	frame.runButton:SetPoint("BOTTOMLEFT", frame, "BOTTOMLEFT", MARGIN, 12)
 	frame.resetButton = Theme.CreateButton(frame, widths[2], 20, L.OPT_RESET, function()
@@ -779,12 +662,12 @@ function ns:EnsureOptions()
 	return frame
 end
 
--- Interrupteur d'un des trois modules (clé de réglage)
+-- Interrupteur d'un module (clé de réglage) ; l'addon réagit dans
+-- ns:OnModuleToggled(key, enabled)
 function ns:ToggleModuleKey(key)
 	local db = self:DB()
 	db[key] = not (db[key] ~= false)
-	if key == "showPortraitStats" and db[key] == false and self.HidePortraitStats then self:HidePortraitStats() end
-	if key == "departureEnabled" and db[key] == false then self.pendingExit = nil end
+	if self.OnModuleToggled then self:OnModuleToggled(key, db[key]) end
 	if self.ApplyDisplayOptions then self:ApplyDisplayOptions() end
 	self:RefreshOptions()
 end
@@ -868,7 +751,8 @@ end
 -- s'empilent pas. Le carnet de voyage n'y était pas soumis et recouvrait les
 -- réglages (signalé en jeu). Les cadres discrets (résumé, compagnon, suivi)
 -- ne sont pas concernés.
-ns.EXCLUSIVE_WINDOWS = { "window", "optionsFrame", "journalFrame", "expeditionFrame", "dungeonFrame" }
+-- Chaque addon y ajoute ses grandes fenêtres (champ de ns).
+ns.EXCLUSIVE_WINDOWS = ns.EXCLUSIVE_WINDOWS or { "optionsFrame" }
 function ns:CloseOtherWindows(keep)
 	for _, field in ipairs(self.EXCLUSIVE_WINDOWS) do
 		local other = self[field]
@@ -946,29 +830,23 @@ function ns:HideEditBanner()
 	if self.editBanner then self.editBanner:Hide() end
 end
 
--- Actions du panneau de réglages
+-- Actions du panneau de réglages : communes (mode édition, position du bouton
+-- de minicarte), puis celles de l'addon (ns.OPTION_ACTIONS[clé] = function(self))
+ns.OPTION_ACTIONS = ns.OPTION_ACTIONS or {}
 function ns:RunOptionAction(key)
-	if key == "editMode" and self.ToggleEditMode then
+	if self.OPTION_ACTIONS[key] then
+		self.OPTION_ACTIONS[key](self)
+	elseif key == "editMode" and self.ToggleEditMode then
 		-- on ferme les réglages pour laisser voir les deux cadres ; le bandeau
 		-- d'édition prend le relais pour en sortir
 		if not self.editMode and self.optionsFrame then self.optionsFrame:Hide() end
 		self:ToggleEditMode()
 		if self.RefreshOptions then self:RefreshOptions() end
-	elseif key == "resetPos" then
-		self:HandleCommand("resetpos")
-		self:RefreshOptions()
 	elseif key == "minimapPos" and self.CycleMinimapAngle then
 		self:CycleMinimapAngle()
-	elseif key == "toastPreview" and self.SimulateGearToast then
-		self:SimulateGearToast()
-	elseif key == "portraitShow" and self.ShowPortraitStats then
-		-- aperçu immédiat, même si le module est coupé (forceStats)
-		self.forceStats = true
-		self:ShowPortraitStats()
-		self.forceStats = nil
 	end
 end
 
-_G.Ready2QuestOptions = function() ns:ToggleOptions() end
+_G[ns.APP.id .. "Options"] = function() ns:ToggleOptions() end
 
 ns.Mark("Options")

@@ -10,25 +10,8 @@ local MIN_DURATION = 120   -- secondes : en dessous, c'est un proc, on ignore
 local MAX_TRACKED  = 40
 local MAX_SCAN      = 120
 
--- Lit une aura du joueur par index. Retourne nil si l'API manque ou si la
--- valeur est secrète (restriction de type SecretWhenUnitAuraRestricted).
-local function AuraByIndex(index)
-	if C_UnitAuras and type(C_UnitAuras.GetAuraDataByIndex) == "function" then
-		local ok, aura = pcall(C_UnitAuras.GetAuraDataByIndex, "player", index, "HELPFUL")
-		if ok then return aura end
-		-- repli : l'API namespacée existe mais a refusé l'appel
-	end
-	if type(UnitAura) == "function" then
-		-- name, icon, count, dispelType, duration, expirationTime, source,
-		-- isStealable, nameplateShowPersonal, spellId : le spellId est le 10e
-		local ok, name, _, _, _, duration, _, _, _, _, spellId = pcall(UnitAura, "player", index, "HELPFUL")
-		if ok and name then
-			return { name = name, duration = duration, spellId = spellId }
-		end
-	end
-	return nil
-end
-ns.AuraByIndex = AuraByIndex
+-- Lecture d'une aura par index : socle commun (Libs/Socle/World.lua).
+local AuraByIndex = ns.AuraByIndex
 
 -- ---------------------------------------------------------------------------
 -- Familles de buffs. Sur Era, chaque rang a son propre spellID (Robustesse R5,

@@ -3,6 +3,12 @@
 -- Aucune texture « minimap » n'est utilisée : ces chemins ne sont pas
 -- vérifiables (Blizzard passe par des atlases). On réutilise les assets
 -- confirmés du thème : WHITE8X8 teinté or + une icône d'objet.
+--
+-- Fichier du socle commun (Libs/Socle), identique dans Ready2Quest et
+-- QuestCompanion : ne le modifier que dans Ready2Quest/Libs/Socle, puis
+-- python3 tools/sync_socle.py. Clic gauche : ns:DefaultCommand() de l'addon ;
+-- clic droit : ses réglages ; lignes propres à l'addon dans l'infobulle :
+-- ns:MinimapTooltip(GameTooltip).
 local ADDON, ns = ...
 local L = ns.L
 local Theme = ns.Theme
@@ -127,7 +133,7 @@ function ns:EnsureMinimapButton()
 	if type(Minimap) ~= "table" and type(Minimap) ~= "userdata" then return nil end
 	if type(CreateFrame) ~= "function" then return nil end
 
-	local button = CreateFrame("Button", "Ready2QuestMinimapButton", Minimap)
+	local button = CreateFrame("Button", ns.APP.id .. "MinimapButton", Minimap)
 	if not button then return nil end
 
 	button:SetSize(BUTTON_SIZE, BUTTON_SIZE)
@@ -187,11 +193,11 @@ function ns:EnsureMinimapButton()
 			ns.minimapDragMoved = nil
 			return
 		end
-		-- clic gauche = l'action principale de l'addon : le check
+		-- clic gauche = l'action principale de l'addon (le check, le carnet…)
 		if mouseButton == "RightButton" then
 			ns:ToggleOptions()
-		else
-			ns:RunChecklist("manual")
+		elseif ns.DefaultCommand then
+			ns:DefaultCommand()
 		end
 	end)
 
@@ -199,10 +205,7 @@ function ns:EnsureMinimapButton()
 		if type(GameTooltip) ~= "table" then return end
 		GameTooltip:SetOwner(self, "ANCHOR_LEFT")
 		GameTooltip:AddLine(L.ADDON_NAME, Theme.GOLD[1], Theme.GOLD[2], Theme.GOLD[3])
-		if ns.score then
-			local label = ns:ScoreLabel()
-			GameTooltip:AddLine(string.format(L.MINIMAP_SCORE, ns.score, label), 1, 1, 1)
-		end
+		if ns.MinimapTooltip then ns:MinimapTooltip(GameTooltip) end
 		GameTooltip:AddLine(L.MINIMAP_LEFT, 0.8, 0.8, 0.8)
 		GameTooltip:AddLine(L.MINIMAP_RIGHT, 0.8, 0.8, 0.8)
 		GameTooltip:AddLine(L.MINIMAP_DRAG, 0.6, 0.6, 0.6)
