@@ -59,6 +59,20 @@ HUBS = [
     ("The Eventide", "A", "hub"),
 ]
 
+# Vallées de départ (niveaux 1-5) et leurs sous-zones internes : une seule
+# zone sûre de type « start ». Les sous-zones (la Tanière, Anvilmar…) ne sont
+# pas rattachées à leur vallée dans AreaTable (elles dépendent de la zone) :
+# elles sont donc listées ici. Les passages de sortie (Coldridge Pass) n'y
+# sont pas : les franchir, c'est quitter la vallée.
+START = [
+    ("H", ["Valley of Trials", "The Den", "Burning Blade Coven"]),
+    ("H", ["Camp Narache", "Brambleblade Ravine"]),
+    ("H", ["Deathknell", "Night Web's Hollow"]),
+    ("A", ["Northshire Valley", "Northshire Abbey", "Northshire Vineyards", "Northshire River", "Echo Ridge Mine"]),
+    ("A", ["Coldridge Valley", "Anvilmar", "Frostmane Hold"]),
+    ("A", ["Shadowglen", "Aldrassil", "Shadowthread Cave"]),
+]
+
 def load(client):
     """AreaTable de notre base, sous la forme qu'avait le CSV de wago.tools."""
     rows = {}
@@ -87,12 +101,20 @@ def main():
         for i in ids:
             clients = "+".join(t for t, rr in (("era", era), ("forever", fo)) if i in rr)
             add(i, name, faction, kind, clients)
+    for faction, names in START:
+        for name in names:
+            ids = sorted({i for rows in (era, fo) for i, r in rows.items() if r["AreaName_lang"] == name})
+            if not ids: missing.append(name)
+            for i in ids:
+                clients = "+".join(t for t, rr in (("era", era), ("forever", fo)) if i in rr)
+                add(i, name, faction, "start", clients)
     entries.sort(key=lambda e: (e[3] != "capital", e[2], e[1], e[0]))
     out = []
     out.append("-- Hubs.lua -- GÉNÉRÉ par tools/gen_hubs.py, ne pas éditer à la main")
     out.append("-- Zones sûres connues dès l'installation : capitales (drapeau CAPITAL du")
     out.append("-- client), villages, hubs et auberges-sous-zones, Era 1.15.9 et Forever 1.60.1.")
-    out.append("-- [areaID] = { faction = \"A\"|\"H\"|\"N\", kind = \"capital\"|\"town\"|\"inn\"|\"hub\", name = nom anglais (repli) }")
+    out.append("-- [areaID] = { faction = \"A\"|\"H\"|\"N\", kind = \"capital\"|\"town\"|\"inn\"|\"hub\"|\"start\", name = nom anglais (repli) }")
+    out.append("--   start : vallée de départ (niveaux 1-5) ; en partir ne déclenche aucune alerte.")
     out.append("-- Fichier du socle commun (Libs/Socle), identique dans Ready2Quest et")
     out.append("-- QuestCompanion : ne le modifier que dans Ready2Quest/Libs/Socle, puis")
     out.append("-- python3 tools/sync_socle.py.")

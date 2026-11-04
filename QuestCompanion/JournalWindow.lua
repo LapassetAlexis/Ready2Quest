@@ -61,6 +61,22 @@ local FR = {
 	JRN_EVO_NEXT_READY     = "Prêt à devenir %s : rends-le heureux, il évoluera aussitôt.",
 	JRN_EVO_MAX            = "Dernière étape atteinte. Bravo !",
 	JRN_EVO_NEEDS          = "Ses envies (heureux = toutes à %d %%)",
+	-- infobulle d'une envie : quoi faire pour la remplir
+	JRN_NEED_TIP_TITLE     = "%s : %d %%",
+	JRN_NEED_TIP_HAPPY     = "Comblée : à partir de %d %%, elle compte pour son bonheur.",
+	JRN_NEED_TIP_LOW       = "Encore %d %% pour qu'elle compte (heureux à %d %%).",
+	JRN_NEED_TIP_HOW       = "Pour la remplir :",
+	JRN_NEED_TIP_DECAY     = "Elle baisse doucement pendant que tu joues, jamais hors connexion.",
+	JRN_NEED_hunger_1      = "mange ou bois : un repas la remplit vite",
+	JRN_NEED_hunger_2      = "garde des vivres dans ton sac quand tu pars",
+	JRN_NEED_energy_1      = "repose-toi dans une auberge ou une capitale",
+	JRN_NEED_energy_2      = "installe-toi près d'un feu de camp",
+	JRN_NEED_energy_3      = "rentre en ville après une sortie (avec Ready2Quest)",
+	JRN_NEED_mood_1        = "caresse-le : un clic sur lui",
+	JRN_NEED_mood_2        = "rends des quêtes, prends des niveaux",
+	JRN_NEED_mood_3        = "un butin rare lui plaît, chaque ennemi vaincu un peu",
+	JRN_NEED_curiosity_1   = "découvre de nouvelles zones et sous-zones",
+	JRN_NEED_curiosity_2   = "gagne des tampons : villages, capitales, donjons, rares",
 	JRN_EVO_HOW            = "Comment ça marche",
 	JRN_EVO_HOW_1          = "Ton niveau ouvre chaque étape : 10, 20, 40 et 60.",
 	JRN_EVO_HOW_2          = "Pour la franchir, il doit être heureux : ses quatre envies à %d %% ou plus. Mange, repose-toi, rends des quêtes, explore.",
@@ -107,6 +123,21 @@ local EN = {
 	JRN_EVO_NEXT_READY     = "Ready to become %s: make it happy and it grows at once.",
 	JRN_EVO_MAX            = "Final stage reached. Well done!",
 	JRN_EVO_NEEDS          = "Its needs (happy = all at %d %%)",
+	JRN_NEED_TIP_TITLE     = "%s: %d %%",
+	JRN_NEED_TIP_HAPPY     = "Met: from %d %%, it counts towards its happiness.",
+	JRN_NEED_TIP_LOW       = "%d %% more until it counts (happy at %d %%).",
+	JRN_NEED_TIP_HOW       = "To fill it:",
+	JRN_NEED_TIP_DECAY     = "It slowly goes down while you play, never while offline.",
+	JRN_NEED_hunger_1      = "eat or drink: a meal fills it fast",
+	JRN_NEED_hunger_2      = "keep food in your bags when you set out",
+	JRN_NEED_energy_1      = "rest in an inn or a capital",
+	JRN_NEED_energy_2      = "settle by a campfire",
+	JRN_NEED_energy_3      = "come back to town after a trip (with Ready2Quest)",
+	JRN_NEED_mood_1        = "pet it: click on it",
+	JRN_NEED_mood_2        = "turn in quests, gain levels",
+	JRN_NEED_mood_3        = "rare loot pleases it, every foe defeated a little",
+	JRN_NEED_curiosity_1   = "discover new zones and subzones",
+	JRN_NEED_curiosity_2   = "earn stamps: villages, capitals, dungeons, rares",
 	JRN_EVO_HOW            = "How it works",
 	JRN_EVO_HOW_1          = "Your level opens each stage: 10, 20, 40 and 60.",
 	JRN_EVO_HOW_2          = "To go through, it must be happy: all four needs at %d %% or more. Eat, rest, turn in quests, explore.",
@@ -271,6 +302,41 @@ local function Text(parent, font, x, y, width)
 	return text
 end
 
+-- Infobulle d'une envie du compagnon : valeur, seuil du bonheur, et ce qui la
+-- remplit (les gains réels de Companion.lua : repas, repos, caresse, quêtes,
+-- niveaux, butin rare, exploration, tampons)
+ns.NEED_TIP_LINES = { hunger = 2, energy = 3, mood = 3, curiosity = 2 }
+function ns:NeedTooltipLines(key)
+	local data = self.CompanionData and self:CompanionData() or { needs = {} }
+	local value = math.floor(tonumber(data.needs and data.needs[key]) or 0)
+	local happyMin = ns.COMPANION_HAPPY_MIN or 70
+	local lines = { self:F("JRN_NEED_TIP_TITLE", L["COMP_NEED_" .. key] or key, value) }
+	if value >= happyMin then
+		lines[#lines + 1] = self:F("JRN_NEED_TIP_HAPPY", happyMin)
+	else
+		lines[#lines + 1] = self:F("JRN_NEED_TIP_LOW", happyMin - value, happyMin)
+	end
+	lines[#lines + 1] = L.JRN_NEED_TIP_HOW
+	for index = 1, ns.NEED_TIP_LINES[key] or 0 do
+		lines[#lines + 1] = "- " .. tostring(L["JRN_NEED_" .. key .. "_" .. index])
+	end
+	lines[#lines + 1] = L.JRN_NEED_TIP_DECAY
+	return lines, value >= happyMin
+end
+
+function ns:ShowNeedTooltip(owner, key)
+	if type(GameTooltip) ~= "table" or not GameTooltip.SetOwner then return end
+	local lines, happy = self:NeedTooltipLines(key)
+	GameTooltip:SetOwner(owner, "ANCHOR_RIGHT")
+	local title = happy and Theme.GOLD or Theme.PARCHMENT
+	GameTooltip:AddLine(lines[1], title[1], title[2], title[3])
+	for index = 2, #lines do
+		local shade = (index == #lines) and 0.6 or 0.85
+		GameTooltip:AddLine(lines[index], shade, shade, shade, true)
+	end
+	GameTooltip:Show()
+end
+
 local function BuildCompletion(self, frame, top)
 	local pane = CreateFrame("Frame", nil, frame)
 	pane:SetAllPoints()
@@ -408,6 +474,14 @@ local function BuildEvolution(self, frame, top)
 		row.bar = Theme.CreateBar(pane, 300, 5)
 		row.bar:SetPoint("TOPLEFT", frame, "TOPLEFT", 130, y - 5)
 		row.value = Text(pane, Theme.F_BODY, 440, y, 80)
+		-- zone de survol sur toute la ligne : quoi faire pour la remplir
+		row.hover = CreateFrame("Button", nil, pane)
+		row.hover:SetPoint("TOPLEFT", frame, "TOPLEFT", 10, y + 2)
+		row.hover:SetSize(500, 16)
+		row.hover:SetScript("OnEnter", function(region) ns:ShowNeedTooltip(region, key) end)
+		row.hover:SetScript("OnLeave", function()
+			if type(GameTooltip) == "table" and GameTooltip.Hide then GameTooltip:Hide() end
+		end)
 		pane.needs[index] = row
 	end
 	pane.howTitle = Text(pane, Theme.F_SMALL, 14, top - 186, width)

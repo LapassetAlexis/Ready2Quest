@@ -587,7 +587,11 @@ end
 -- Événements
 -- ---------------------------------------------------------------------------
 if ns.RegisterCallback then
-	ns:RegisterCallback("DEPARTURE", function(self, from) self:ExpeditionStart(from) end)
+	-- départ d'une zone de départ : pas de bilan au retour (rien d'automatique)
+	ns:RegisterCallback("DEPARTURE", function(self, from)
+		if from and from.quiet then self.expedition = nil; return end
+		self:ExpeditionStart(from)
+	end)
 	ns:RegisterCallback("RETURN", function(self, place) self:ExpeditionFinish(place) end)
 end
 

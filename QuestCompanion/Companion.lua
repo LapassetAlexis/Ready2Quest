@@ -1831,6 +1831,8 @@ function ns:CompanionCheckPlace(silent)
 	local ok, entry, name = pcall(self.KnownHub, self)
 	local rt = RT()
 	if not ok or not entry or not name then rt.lastHub = nil; return false end
+	-- vallée de départ : on y passe d'une sous-zone à l'autre sans cesse
+	if entry.kind == "start" then return false end
 	local now = Clock()
 	-- toujours sur place : on retient l'heure, pour ne pas le refêter s'il
 	-- ressort une minute (une sous-zone voisine) puis revient

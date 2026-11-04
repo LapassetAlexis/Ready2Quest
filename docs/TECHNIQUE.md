@@ -50,6 +50,14 @@ Comportement inchangé, sans le compagnon : ses réglages, ses commandes et ses 
 - **Barème unique** (`Theme.ScoreColor`, `Theme.ScoreTextColor`, socle) : 0-24 rouge, 25-59 orange (`ORANGE_DEEP`, nouveau), 60-84 ambre, 85+ vert. Avant, la couleur de la note basculait à 55 et le verdict à 60.
 - Tests `[NTC]` (`tests/modules/notice.lua`) ; les tests qui visent les fenêtres (expédition, donjon) coupent l'icône. Vérifiés par mutation.
 
+### Zones de départ et munitions
+
+- **Vallées de départ** : `gen_hubs.py` ajoute à `Hubs.lua` six vallées et leurs sous-zones internes, de type `start` (22 entrées sur les deux clients). Les sous-zones (la Tanière, Anvilmar…) dépendent de la zone dans AreaTable, pas de leur vallée : elles sont listées à la main ; les passages de sortie (col de Coldridge) n'en font pas partie.
+- **Départ silencieux** (`ns:IsQuietDeparture`) : départ d'un lieu `start`, ou personnage sous `QUIET_LEVEL` (6). `UpdatePendingExit` signale quand même le départ (`DEPARTURE`, avec `from.quiet`), mais ne lance ni check, ni icône, ni chat ; l'Expédition ne démarre pas de voyage, donc pas de bilan au retour. `lastSafePlace` garde le type du lieu (`kind`). Le compagnon de QuestCompanion ne salue pas en passant d'une sous-zone de vallée à l'autre.
+- **Poids et plafond** : `weight` et `advice` d'un contrôle peuvent être des fonctions. Celui des réactifs de classe pèse `AMMO_WEIGHT` (40) pour un chasseur, `REAGENT_WEIGHT` (15) sinon, avec le conseil `ADV_AMMO`. Un `run` peut renvoyer un 4e résultat, « bloquant » : en échec, il plafonne la note à `SCORE_CAP_BLOCKING` (59, « Pas prêt »). Les munitions sous la moitié du minimum (non équipées comprises, elles valent 0) sont bloquantes.
+- **Munitions** : minimum par paliers de niveau (`CLASS_REAGENTS.HUNTER.min = { { 1, 200 }, { 10, 600 }, { 30, 1000 } }`, `ns.ReagentMinimum`). Emplacement de munitions vide mais projectiles (classe d'objet 6) dans les sacs : « aucune équipée (N dans tes sacs) ». Les munitions existent bien sur Forever (carquois, gibecières).
+- Tests `[START]` et `[AMMO]` (`tests/modules/start_ammo.lua`), vérifiés par mutation.
+
 ### Notre base de données (`data/`) et les lieux sûrs
 
 - **Base** : `data/era/`, `data/forever/`. PNJ, objets et quêtes importés une fois de QuestieDB par `tools/import_questie.py` (corrections statiques, liste noire et événements de Questie appliqués) ; zones, sous-zones et dimensions des cartes importées des tables du client (wago.tools) par `tools/import_client.py`. Nos corrections : `data/<client>/fixes.json`, jamais écrasées. Voir `docs/DONNEES.md`.

@@ -344,9 +344,11 @@ end
 -- Composants consommés par les sorts de classe (Classic Era / Forever).
 -- `level` = niveau à partir duquel le sort qui les consomme est appris.
 -- `items` = plusieurs objets interchangeables (rangs de Renaissance…).
--- `slot`  = munitions : le client compte l'emplacement 0 (projectiles équipés).
+-- `ammo`  = munitions : le client compte l'emplacement 0 (projectiles équipés).
+-- `min`   = nombre, ou paliers { { niveau, minimum }, … } : un chasseur tire
+--           bien plus au niveau 40 qu'au niveau 1.
 ns.CLASS_REAGENTS = {
-	HUNTER  = { { label = "REAGENT_AMMO", ammo = true, min = 200, level = 1 } },
+	HUNTER  = { { label = "REAGENT_AMMO", ammo = true, min = { { 1, 200 }, { 10, 600 }, { 30, 1000 } }, level = 1 } },
 	WARLOCK = { { label = "REAGENT_SHARD", items = { 6265 }, min = 3, level = 10 } },
 	ROGUE   = { { label = "REAGENT_FLASH", items = { 5140 }, min = 5, level = 22 } },
 	MAGE    = {
@@ -366,24 +368,67 @@ local function AmmoCount()
 	return nil
 end
 
+-- Projectiles rangés dans les sacs (classe d'objet 6), équipés ou non
+local PROJECTILE = 6
+local function AmmoInBags()
+	local fn = (C_Item and C_Item.GetItemInfoInstant) or rawget(_G, "GetItemInfoInstant")
+	if type(fn) ~= "function" then return 0 end
+	local count = 0
+	EachBagItem(function(_, _, info)
+		local ok, _, _, _, _, _, classID = pcall(fn, info.itemID)
+		if ok and classID == PROJECTILE then count = count + (info.stackCount or 1) end
+	end)
+	return count
+end
+
+-- Minimum du palier atteint (min = nombre, ou { { niveau, minimum }, … })
+local function MinimumFor(min, level)
+	if type(min) ~= "table" then return min end
+	local value = 0
+	for _, step in ipairs(min) do
+		if level >= step[1] then value = step[2] end
+	end
+	return value
+end
+ns.ReagentMinimum = MinimumFor
+
 function ns:ClassReagentNeeds()
 	local list = self.CLASS_REAGENTS[PlayerClass() or ""] or {}
 	local level, needs = PlayerLevel(), {}
 	for _, req in ipairs(list) do
 		if level >= (req.level or 1) then
-			local have
+			local have, unequipped
 			if req.ammo then
 				have = AmmoCount()
+				-- rien d'équipé, mais des projectiles dans les sacs : il faut
+				-- les équiper, pas en racheter
+				if have == 0 then
+					local stored = AmmoInBags()
+					if stored > 0 then unequipped = stored end
+				end
 			else
 				have = 0
 				for _, itemID in ipairs(req.items or {}) do have = have + ItemCount(itemID) end
 			end
 			if have ~= nil then
-				needs[#needs + 1] = { label = L[req.label] or req.label, have = have, min = req.min }
+				needs[#needs + 1] = { label = L[req.label] or req.label, have = have, min = MinimumFor(req.min, level),
+					unequipped = unequipped, ammo = req.ammo }
 			end
 		end
 	end
 	return needs
+end
+
+-- Munitions : sans elles, un chasseur n'a plus de tir automatique, donc
+-- presque plus de dégâts. Elles pèsent plus que les vivres, et en manquer
+-- (moins de la moitié du minimum) empêche la note d'être « Prêt ».
+ns.AMMO_WEIGHT = 40
+ns.REAGENT_WEIGHT = 15
+local function HasAmmoNeed()
+	for _, req in ipairs(ns.CLASS_REAGENTS[PlayerClass() or ""] or {}) do
+		if req.ammo and PlayerLevel() >= (req.level or 1) then return true end
+	end
+	return false
 end
 
 Add{
@@ -392,8 +437,8 @@ Add{
 	-- inactif pour les classes sans composant (guerrier) ou avant le niveau requis
 	active = function() return #ns:ClassReagentNeeds() > 0 end,
 	icon = "Interface\\Icons\\INV_Misc_Gem_Amethyst_02",
-	weight = 15,
-	advice = "ADV_CLASSREAGENTS",
+	weight = function() return HasAmmoNeed() and ns.AMMO_WEIGHT or ns.REAGENT_WEIGHT end,
+	advice = function() return HasAmmoNeed() and "ADV_AMMO" or "ADV_CLASSREAGENTS" end,
 	label = function() return L.CHK_CLASSREAGENTS end,
 	run = function()
 		local needs = ns:ClassReagentNeeds()
@@ -404,8 +449,14 @@ Add{
 			if need.have < need.min and not short then short = need end
 		end
 		local score = (#needs > 0) and (total / #needs) or 100
+		-- munitions sous la moitié du minimum : bloquant (non équipées, elles
+		-- comptent pour 0, donc aussi)
+		local blocking = short and short.ammo and short.have < short.min / 2 or false
+		if short and short.unequipped then
+			return false, ns:F("CHK_AMMO_UNEQUIPPED", short.label, short.unequipped), score, blocking
+		end
 		if short then
-			return false, ns:F("CHK_CLASSREAGENTS_LOW", short.label, short.have, short.min), score
+			return false, ns:F("CHK_CLASSREAGENTS_LOW", short.label, short.have, short.min), score, blocking
 		end
 		return true, ns:F("CHK_CLASSREAGENTS_GOOD", needs[1].label, needs[1].have), score
 	end,

@@ -51,7 +51,7 @@ Tu peux aussi le lancer quand tu veux : `/r2q`, ou un clic gauche sur le bouton 
 | Buffs | les buffs que tu portes d'habitude (Robustesse, Marque du fauve…) |
 | Durabilité | une pièce d'équipement trop usée |
 | Réparation | assez d'or pour tout réparer |
-| Réactifs | les réactifs de ta classe : munitions, fragments d'âme, poudres, chandelles, graines, ankh… |
+| Réactifs | les réactifs de ta classe : munitions (au moins 200, 600 dès le niveau 10, 1000 dès le niveau 30 ; il te prévient si tes flèches sont dans ton sac mais pas équipées ; sans munitions, un chasseur n'a plus de tir automatique : elles pèsent plus que les vivres, et sous la moitié du minimum ta note ne peut pas dépasser « Pas prêt »), fragments d'âme, poudres, chandelles, graines, ankh… |
 | Sorts | de nouveaux sorts à apprendre chez ton entraîneur |
 | Foyer | ta pierre de foyer, disponible ou en recharge, et l'endroit où elle te ramène |
 | Métier | les composants qui manquent pour la recette choisie |
@@ -68,6 +68,7 @@ Une zone sûre est un endroit où l'on peut **se préparer sans risque** : mange
 
 - **Connues dès l'installation** : les capitales, les villages et les hubs de ta faction, ainsi que les villes neutres (Booty Bay, Gadgetzan, Everlook…). Sur Forever, c'est aussi le cas des nouvelles zones comme Zephras Isle. Cela fait 80 lieux, en français comme en anglais.
 - **Les camps aussi** : environ 140 lieux sur Era et 160 sur Forever sont repérés par leurs PNJ de service : un aubergiste, un maître de vol ou un banquier, ou un groupe d'au moins trois PNJ avec un marchand et un réparateur ou un entraîneur. Ça compte aussi pour un camp sans sous-zone à lui : on regarde ta position. Une ferme ou un marchand isolé sur une route ne comptent pas.
+- **Les vallées de départ** (Vallée des épreuves, Northshire, Coldridge, Sombrevallon, Camp Narache, Deathknell, avec leurs grottes et bâtiments) forment une seule zone sûre. Tant que tu n'en es pas sorti, et jusqu'au niveau 6, rien ne s'affiche tout seul : le check reste disponible avec `/r2q`. Le premier vrai départ, c'est quand tu quittes le premier village hors de la vallée.
 - **Ce qui ne compte pas** : un village de l'autre faction, un donjon, un champ de bataille, une mine ou une ferme.
 - **Les camps de Forever** : près d'un feu de camp, tu es au campement. Quand tu t'en éloignes, le check part, comme en quittant un village.
 - **Le reste s'apprend** en jouant : un petit camp absent de la liste devient sûr dès que tu y trouves un aubergiste, un maître de vol, une boîte aux lettres ou une banque, ou à la fois un marchand et un donneur de quêtes. Tu peux aussi en ajouter un toi-même avec `/r2q safe`.

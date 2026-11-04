@@ -617,7 +617,40 @@ do
 	Check("[WIN] Évolution : prochain objectif", evo.next.text:find("niveau", 1, true), evo.next.text)
 	Check("[WIN] Évolution : 4 envies avec barres", #evo.needs == 4 and evo.needs[1].label.text == "Faim"
 		and evo.needs[1].value.text:find("%", 1, true))
-	Check("[WIN] Évolution : comment ça marche (3 lignes)", evo.howTitle.text == "Comment ça marche"
+	-- survol d'une envie : quoi faire pour la remplir
+	do
+		local data = NS:CompanionData()
+		data.needs.hunger, data.needs.mood = 40, 85
+		for index, key in ipairs({ "hunger", "energy", "mood", "curiosity" }) do
+			_G.GameTooltip.lines = {}
+			local row = evo.needs[index]
+			row.hover.scripts.OnEnter(row.hover)
+			local text = table.concat(_G.GameTooltip.lines or {}, " | ")
+			Check("[WIN] envie " .. key .. " au survol : nom, valeur, quoi faire", row.key == key
+				and text:find(NS.L["COMP_NEED_" .. key], 1, true) and text:find(NS.L.JRN_NEED_TIP_HOW, 1, true)
+				and text:find(NS.L["JRN_NEED_" .. key .. "_1"], 1, true) and #_G.GameTooltip.lines >= 5, text)
+			row.hover.scripts.OnLeave(row.hover)
+		end
+		_G.GameTooltip.lines = {}
+		evo.needs[1].hover.scripts.OnEnter(evo.needs[1].hover)
+		local hunger = table.concat(_G.GameTooltip.lines, " | ")
+		Check("[WIN] envie basse : ce qu'il manque pour qu'elle compte", hunger:find("Faim : 40 %", 1, true)
+			and hunger:find("Encore 30 %", 1, true) and hunger:find("mange ou bois", 1, true), hunger)
+		_G.GameTooltip.lines = {}
+		evo.needs[3].hover.scripts.OnEnter(evo.needs[3].hover)
+		local mood = table.concat(_G.GameTooltip.lines, " | ")
+		Check("[WIN] envie comblée : dite comblée", mood:find("Moral : 85 %", 1, true) and mood:find("Comblée", 1, true)
+			and mood:find("caresse-le", 1, true), mood)
+		local missing = {}
+		for key, count in pairs(NS.NEED_TIP_LINES) do
+			for index = 1, count do
+				local name = "JRN_NEED_" .. key .. "_" .. index
+				if NS.L[name] == name or NS.JOURNAL_WINDOW_STRINGS.en[name] == nil then missing[#missing + 1] = name end
+			end
+		end
+		Check("[WIN] conseils des envies en français et en anglais", #missing == 0, table.concat(missing, ", "))
+	end
+		Check("[WIN] Évolution : comment ça marche (3 lignes)", evo.howTitle.text == "Comment ça marche"
 		and evo.how[2].text:find("70", 1, true) and evo.how[3].text:find("100 %", 1, true) and not evo.how[3].text:find("%%", 1, true), evo.how[3].text)
 	Check("[WIN] Évolution : collection", evo.collection.text:find("Collection : ", 1, true), evo.collection.text)
 	Check("[WIN] Évolution : parcours (capitales 1/6)", evo.road.text:find("1/6 capitales", 1, true), evo.road.text)

@@ -269,6 +269,24 @@ function ns:ExitDelay()
 	return value
 end
 
+-- Note plafonnée quand un contrôle bloquant échoue : sous le seuil de « Prêt
+-- avec réserves » (60), donc « Pas prêt ».
+ns.SCORE_CAP_BLOCKING = 59
+
+-- Zone de départ : tant qu'on n'en est pas sorti, aucune alerte automatique.
+-- Un départ est « silencieux » s'il part d'une vallée de départ (Hubs.lua,
+-- kind = "start") ou si le personnage est sous QUIET_LEVEL (on quitte sa
+-- vallée vers le niveau 5-6). Le check reste disponible à la main.
+ns.QUIET_LEVEL = 6
+function ns:IsQuietDeparture(from)
+	if from and from.kind == "start" then return true end
+	local fn = rawget(_G, "UnitLevel")
+	if type(fn) ~= "function" then return false end
+	local ok, level = pcall(fn, "player")
+	level = ok and tonumber(level) or nil
+	return level ~= nil and level > 0 and level < self.QUIET_LEVEL
+end
+
 -- Vérification périodique (toutes les PLACE_CHECK secondes) sur une carte qui
 -- a des lieux repérés : seulement après la première évaluation (connexion).
 ns.PLACE_CHECK = 1.5
@@ -293,6 +311,7 @@ function ns:Evaluate(trigger)
 			name = (entry and entry.name) or self:CurrentSubZone()
 				or ((self:MapInfo(self:CurrentMap()) or {}).name) or "?",
 			source = (entry and entry.source) or reason,
+			kind = entry and entry.kind or nil,
 		}
 		-- retour en zone sûre après un départ confirmé (Retour d'expédition)
 		if self.departed then
@@ -333,7 +352,11 @@ function ns:UpdatePendingExit(now)
 	-- le départ est réel dès ici : les filtres qui suivent ne coupent que
 	-- l'alerte (les autres modules, eux, suivent toujours le départ)
 	self.departed = true
-	self:FireCallback("DEPARTURE", pending.from)
+	local from = pending.from or {}
+	from.quiet = self:IsQuietDeparture(from)
+	self:FireCallback("DEPARTURE", from)
+	-- zone de départ : rien d'automatique (le check reste à la main, /r2q)
+	if from.quiet then return end
 	if db.departureEnabled == false then return end
 	if self.quietUntil and now < self.quietUntil then return end
 	if self.lastAlert and (now - self.lastAlert) < (db.alertCooldown or 20) then return end
@@ -348,7 +371,7 @@ end
 function ns:RunChecklist(trigger)
 	local db = self:DB()
 	local results = {}
-	local totalWeight, weighted = 0, 0
+	local totalWeight, weighted, capped = 0, 0, false
 
 	for _, def in ipairs(self.checks or {}) do
 		local labelText = def.label
@@ -377,14 +400,21 @@ function ns:RunChecklist(trigger)
 				advice   = def.advice,
 			}
 		else
-			local okRun, okState, detail, score = pcall(def.run, db)
+			-- run -> ok, détail, points (0-100), bloquant : un échec bloquant
+			-- plafonne la note à SCORE_CAP_BLOCKING (« Pas prêt »)
+			local okRun, okState, detail, score, blocking = pcall(def.run, db)
 			if not okRun then
 				self:RecordError("check:" .. tostring(def.id), okState)
 			end
 			if okRun then
 				local points = tonumber(score) or (okState and 100 or 40)
 				if points < 0 then points = 0 elseif points > 100 then points = 100 end
+				-- poids et conseil peuvent dépendre de la situation (munitions du chasseur)
 				local weight = def.weight or 1
+				if type(weight) == "function" then weight = tonumber(weight(db)) or 1 end
+				local adviceKey = def.advice
+				if type(adviceKey) == "function" then adviceKey = adviceKey(db) end
+				if okState ~= true and blocking then capped = true end
 
 				results[#results + 1] = {
 					id     = def.id,
@@ -395,7 +425,8 @@ function ns:RunChecklist(trigger)
 					detail = tostring(detail or ""),
 					score  = points,
 					weight = weight,
-					advice = def.advice,
+					advice = adviceKey,
+					blocking = (okState ~= true and blocking) and true or nil,
 				}
 
 				totalWeight = totalWeight + weight
@@ -408,6 +439,8 @@ function ns:RunChecklist(trigger)
 	if totalWeight > 0 then
 		self.score = math.floor((weighted / totalWeight) + 0.5)
 	end
+	-- un manque bloquant (chasseur presque sans munitions…) : jamais « Prêt »
+	if capped then self.score = math.min(self.score, self.SCORE_CAP_BLOCKING) end
 	self.lastResults = results
 
 	-- Conseils : un par module en échec, les plus lourds d'abord
