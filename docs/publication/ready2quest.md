@@ -35,7 +35,7 @@ Each one can be switched on or off in one click (`/r2q options`).
 
 ## Companion
 
-The **travel companion** and its **journal** are a separate addon: **QuestCompanion**. It requires Ready2Quest and installs next to it.
+The **travel companion** and its **journal** are a separate, standalone addon: **QuestCompanion** (`/qc`). Installed together, the companion also reacts to your departures and returns.
 
 ## Commands
 
@@ -60,6 +60,6 @@ Pour **WoW Forever** (1.60) et **Classic Era** (1.15). En français et en anglai
 - **Kit de camp** *(Forever)*, **Résumé de stuff**, **Stats du portrait**.
 - **QoL** : la bonne récompense de quête, le rythme de leveling, le sac plein, l'après-mort, le marchand (vente des gris et réparation).
 
-Le **compagnon de route** et son **carnet de voyage** sont dans un addon à part, **QuestCompanion**, qui s'installe à côté de Ready2Quest.
+Le **compagnon de route** et son **carnet de voyage** sont un addon à part et autonome, **QuestCompanion** (`/qc`). Installés ensemble, le compagnon réagit en plus à tes départs et retours en ville.
 
 Logiciel libre, **GPL-3.0**. Code source : https://github.com/LapassetAlexis/Ready2Quest

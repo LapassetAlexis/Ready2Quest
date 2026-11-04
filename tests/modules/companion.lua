@@ -2,7 +2,7 @@
 -- somnolence après absence, évolution 10/20/40/60, réactions, bulles
 -- (écart minimal, sourdine), cosmétiques débloqués par un FAUX Carnet de
 -- voyage, choix d'apparence, repli sans modèle 3D, renommage, module coupé.
-local Check, Say, ResetWorld, NS, Mock = T.Check, T.Say, T.ResetWorld, T.NS, T.Mock
+local Check, Say, ResetWorld, NS, Mock = T.Check, T.Say, T.ResetWorld, T.QNS, T.Mock
 
 local C = {
 	savedCreateFrame = _G.CreateFrame,
@@ -623,7 +623,7 @@ do
 	end
 	Check("[COMP] chaque ligne a son français et son anglais", #bad == 0, table.concat(bad, ","))
 	Check("[COMP] mêmes « %s » / « %d » en fr et en en", #placeholders == 0, table.concat(placeholders, ","))
-	Check("[COMP] chaîne d'une ligne active (fr)", NS.L.COMP_SAY_KILL == fr.COMP_SAY_KILL and NS.L.COMP_SAY_TIP_2:find("gris", 1, true))
+	Check("[COMP] chaîne d'une ligne active (fr)", NS.L.COMP_SAY_KILL == fr.COMP_SAY_KILL and NS.L.COMP_SAY_TIP_2:find("/qc options", 1, true))
 	local minimum = {
 		KILL = 6, EAT = 5, DRINK = 3, LOOT = 5, LEVEL = 5, QUEST = 5, DEAD = 4, REZ = 4, CITY = 4, VILLAGE = 4,
 		CAMP = 4, INN = 4, VIEW = 5, IDLE = 5, NIGHT = 3, STAMP = 4, EVOLVE = 3, UNLOCK = 3,

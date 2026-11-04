@@ -3,49 +3,61 @@
 > Document destiné au développement : historique version par version, choix d'API, compatibilité des clients, tests. Pour la présentation de l'addon, voir le [README](../README.md).
 
 
-## v1.26.0 — le compagnon devient un addon à part : QuestCompanion 1.0.0
+## v1.26.0 — deux addons autonomes : Ready2Quest 1.26.0 et QuestCompanion 1.0.0
 
-Ready2Quest faisait deux métiers : préparer la sortie (check, retour, donjon, camp, stuff, QoL) et accompagner la progression (compagnon, carnet, complétion de zone, coffres). Le second pesait deux tiers du code, dont ~12 000 lignes de données de zones. Il part dans un addon séparé, **QuestCompanion**, rangé dans `QuestCompanion/` du même dépôt.
+Ready2Quest faisait deux métiers : préparer la sortie (check, retour, donjon, camp, stuff, QoL) et accompagner la progression (compagnon, carnet, complétion de zone, coffres). Le second pesait deux tiers du code, dont ~12 000 lignes de données de zones. Il devient un addon à part, **QuestCompanion**, qui fonctionne seul. Une première version le faisait dépendre de Ready2Quest (namespace partagé, réglages dans le panneau de Ready2Quest) ; testée en jeu, elle ne séparait pas assez : tout restait dans le même panneau.
 
-### Découpage
+### Dépôt
 
-- **Ready2Quest** garde le socle et la préparation : `Bootstrap`, `Locales`, `Compat`, `Hubs`, `Theme`, `Core`, les modules de check, `Options`, `UI`, `Camp`, `Expedition`, `Dungeon`, `QuestReward`, `LevelPace`, `BagSpace`, `Death`.
-- **QuestCompanion** prend `CompanionData`, `CompanionLines`, `Companion`, `Journal`, `JournalTracker`, `JournalWindow`, `Bestiary`, `Gathering(Data)`, `CompanionChest`, `ZoneQuests` et les six tables générées `Zone*_<Era|Forever>.lua`, avec `NOTICE.md` (données Questie).
-- Le cœur de Ready2Quest n'appelait aucune fonction du compagnon ni du carnet : la coupure ne demande aucun crochet côté Ready2Quest.
+Rangé comme `Interface/AddOns` : `Ready2Quest/` et `QuestCompanion/` côte à côte, chacun avec son `.toc`, son `LICENSE`, son `CHANGELOG.md` et son `README.md`. `docs/`, `tests/` et `tools/` restent à la racine.
 
-### Namespace partagé, pas de lib
+### Socle commun (`Libs/Socle`)
 
-`QuestCompanion.toc` déclare `## Dependencies: Ready2Quest`. Le client charge donc Ready2Quest d'abord, et `Core.lua` publie déjà son namespace dans `_G.Ready2Quest` (prévu « pour un futur addon compagnon »). Chaque fichier de QuestCompanion commence par :
+Ce dont les deux addons ont besoin est sorti du cœur de Ready2Quest vers `Libs/Socle`, embarqué dans chaque addon comme une lib WoW :
 
-```lua
-local ns = rawget(_G, "Ready2Quest")
-if type(ns) ~= "table" or not ns.QC then return end
-```
+| Fichier | Contenu |
+|---|---|
+| `Base.lua` | commande toujours disponible (même si un fichier plante), `ns.Mark`, `ns:RecordError` (ex-`Bootstrap.lua`) |
+| `Strings.lua` | `ns.L`, `ns.RegisterStrings`, `ns:F`, `ns:Print`, `ns.AsciiLower`, textes communs (réglages, commandes) |
+| `Compat.lua`, `Hubs.lua`, `DungeonData.lua`, `Theme.lua` | inchangés ; le thème prend ses médias dans `Libs/Socle/Media` (losanges, police Alegreya) et le logo dans `Textures/` de l'addon |
+| `Store.lua` | `ns:DB()` (nom de la sauvegarde et anciens noms dans `ns.APP`), `ns:ResetDB()`, `RegisterDefaults`, callbacks, modules, `CharKey` / `CharData`, `RestorePoint`, `Now` ; à `ADDON_LOADED`, repart de la sauvegarde posée par le client puis appelle `ns:OnAddonLoaded()` |
+| `World.lua` | carte et lieux (`CurrentMap`, `MapChain`, `CurrentSubZone`, `KnownHub`, `InInstance`, `AtCamp`), donjons (`DetectDungeon`, `DungeonName`, `DungeonRange`, `IsForeverClient`), `AuraByIndex`, `ConsumableKind`, `ParseCombatXP`, `ParseSelfLoot` (sortis de `Core`, `Buffs`, `Checks`, `LevelPace`, `Expedition`, `Dungeon`) |
+| `Commands.lua` | registre `ns.COMMANDS` (`EXTRA_COMMANDS` = même table), aide, commandes communes (`help`, `options`, `minimap`, `modules`, `module`, `reset`, `diag`), crochets `DefaultCommand`, `OnModuleToggled`, `DiagExtra` |
+| `Options.lua` | panneau de réglages générique : pages (`ns.AddOptionPage`), listes (`ns.OPTION_LISTS`), actions (`ns.OPTION_ACTIONS`), bouton principal du pied (`ns.OPTIONS_MAIN`), fenêtres exclusives (`ns.EXCLUSIVE_WINDOWS`) |
+| `Minimap.lua` | bouton de minicarte : clic gauche `ns:DefaultCommand()`, clic droit les réglages, infobulle complétée par `ns:MinimapTooltip()` |
 
-au lieu de `local ADDON, ns = ...`. Le reste du code est inchangé : `ns:DB()`, `ns.Theme`, `ns.RegisterModule`, `ns.AddOptionPage`… Le `Bootstrap.lua` de QuestCompanion pose `ns.QC` (version, nom, table privée) et `_G.QuestCompanion = ns.QC`. Sans Ready2Quest, il affiche « Ready2Quest est requis » et les autres fichiers sortent par la garde, sans erreur. Extraire le socle en lib embarquée reste possible plus tard, si QuestCompanion doit vivre seul.
+Chaque addon décrit son identité dans `Config.lua`, chargé en premier (`ns.APP` : nom, version, nom en tête du panneau, sauvegarde, anciens noms, commandes, fichiers attendus). Le socle ne nomme aucun des deux (test `[QC]`). Source unique : `Ready2Quest/Libs/Socle` ; `tools/sync_socle.py` la recopie dans `QuestCompanion/Libs/Socle`, et `tests/run_tests.py` refuse de tourner si les copies diffèrent. Ready2Quest garde ses pages de réglages dans `OptionPages.lua`.
 
-Les cadres nommés changent de nom : `QuestCompanionChestFrame`, `QuestCompanionJournalTracker`. Leur position est dans la sauvegarde (`journalTrackerPoint`), pas dans `layout-local.txt` : rien à migrer.
+### QuestCompanion autonome
 
-### Sauvegarde : QuestCompanionDB
+- Namespace propre (`local ADDON, ns = ...`), sauvegarde `QuestCompanionDB` (réglages et progression : `chars[clé].companion`, `.journal`), commande `/qc` (`/questcompanion`), panneau de réglages (Général, Compagnon de route et sa sous-page Carnet), bouton de minicarte au dragonnet. `/qc` seul et le clic gauche ouvrent le carnet. `/qc reset` garde la progression.
+- `## OptionalDeps: Ready2Quest` : s'il est là, Ready2Quest charge d'abord, avec sa sauvegarde. Deux liens facultatifs :
+  - **reprise** : à `ADDON_LOADED("QuestCompanion")`, ce que Ready2Quest 1.25 rangeait dans `Ready2QuestDB` passe dans `QuestCompanionDB` : réglages `companion*` et `journal*` (positions des cadres comprises), compagnon et carnet de **tous** les personnages. Une fois (`migratedFromR2Q`) ; une progression déjà commencée dans QuestCompanion l'emporte ; sans `Ready2QuestDB`, rien n'est marqué et on réessaiera ;
+  - **départs et retours** : les callbacks `DEPARTURE` / `RETURN` de Ready2Quest (`_G.Ready2Quest`) sont relayés au compagnon.
+- Face à un **Ready2Quest 1.25**, qui embarque encore le compagnon (`_G.Ready2Quest.Loaded.Companion`), `Config.lua` pose `ns.blocked` : chaque fichier de QuestCompanion sort dès sa première ligne, avec un message qui demande de mettre Ready2Quest à jour. Sinon, deux compagnons à l'écran.
+- Les textes qui citaient `/r2q compagnon`, `/r2q carnet`, `/r2q coffre` disent `/qc …` ; les astuces du compagnon ne parlent plus des fonctions de Ready2Quest.
 
-- La **progression par personnage** (`companion` et `journal` de `CharData`, donc aussi bestiaire, récolte, coffres et zones suivies) va dans `QuestCompanionDB.chars[Nom-Royaume]`, lue par `ns:QCCharData()`. `CompanionData` et `JournalData` passent par là.
-- Les **réglages** (`companion*`, `journal*`) restent dans `Ready2QuestDB` : leurs pages d'options sont celles de Ready2Quest et `RegisterDefaults` y écrit.
-- **Migration** : à la première lecture de `QCCharData` pour un personnage, ses tables `companion` et `journal` sont déplacées de `Ready2QuestDB.chars[clé]`, puis `migrated = true`. Les autres personnages attendent leur connexion. Sans QuestCompanion, rien ne bouge : la progression reste dans `Ready2QuestDB`.
-- **Avant `ADDON_LOADED("QuestCompanion")`**, le client n'a pas encore posé `QuestCompanionDB` : y écrire serait écrire dans une table qu'il va remplacer, et déplacer depuis `Ready2QuestDB` perdrait la progression. `QCDB()` sert alors un brouillon jamais sauvegardé et ne migre rien.
-- Effet de bord voulu : `/r2q reset` ne touche plus à la créature ni au carnet.
+### Ready2Quest
 
-### Versions et outils
+Comportement inchangé, sans le compagnon : ses réglages, ses commandes et ses modules ne le montrent plus. `/r2q reset` ne touche plus à la progression du compagnon, qui n'est plus chez lui.
 
-- Ready2Quest 1.26.0, QuestCompanion 1.0.0 (`ns.QC.version`).
-- `tools/gen_zone_data.py` écrit par défaut dans `QuestCompanion/`, avec le nouvel en-tête.
-- Harnais : il lit les deux `.toc` ; les fichiers de QuestCompanion y sont listés `QuestCompanion/<fichier>` et reçoivent `("QuestCompanion", tablePrivée)`. Après leur chargement, il envoie `ADDON_LOADED` pour les deux addons. `ResetWorld` vide aussi `QuestCompanionDB`. Le mock gagne `UnregisterEvent`.
-- Tests `[QC]` (`tests/modules/quest_companion.lua`) : les deux `.toc`, la garde dans chaque fichier, le chargement sans Ready2Quest, la migration (une fois, par personnage, rien avant `ADDON_LOADED`), `/r2q reset`. Vérifiés par mutation : sans la suppression dans `Ready2QuestDB`, sans la garde d'`ADDON_LOADED`, sans le drapeau `migrated` ou sans la copie, la suite échoue.
+### Publication
+
+`.pkgmeta` et `.pkgmeta-questcompanion` sont symétriques : chacun ignore tout ce qui n'est pas le dossier de son addon, que `move-folders` remonte d'un niveau ; le zip ne contient qu'un dossier. Le garde-fou de `tests/run_tests.py` vérifie que chaque entrée de la racine est ignorée par les deux. Voir `docs/PUBLIER.md`.
+
+### Tests
+
+- Harnais : il lit les deux `.toc` (chemins `Libs\Socle\…` convertis), charge Ready2Quest dans `NS` et QuestCompanion dans sa propre table, `T.QNS`, que reçoivent les tests de ses modules. `ResetWorld` remet aussi `QuestCompanionDB` à zéro. Le mock gagne `UnregisterEvent`.
+- Tests `[QC]` : `.toc` (pas de dépendance obligatoire), socle identique et neutre, namespaces, sauvegardes, commandes et modules séparés, panneau et bouton de minicarte propres, reprise depuis Ready2Quest 1.25 (une fois, tous les personnages, rien perdu), `ADDON_LOADED` qui reprend la vraie sauvegarde, `/qc reset` et `/r2q reset`, relais des départs et retours, QuestCompanion chargé **seul** (sans Ready2Quest), et face à un Ready2Quest 1.25.
+- Vérifiés par mutation : sans retrait des données de Ready2QuestDB, sans drapeau de reprise, sans reprise au chargement, sans garde de l'ancien Ready2Quest, sans relais, avec un `/qc reset` qui efface la progression, ou sans relecture de la sauvegarde à `ADDON_LOADED`, la suite échoue.
+- 2204 assertions.
 
 ### À vérifier en jeu
 
-- Avec les deux addons : la créature, le carnet et les coffres d'un personnage existant sont là après `/reload`, puis `WTF/.../SavedVariables/QuestCompanion.lua` existe et `Ready2Quest.lua` n'a plus de `companion` pour ce personnage.
-- Ready2Quest seul : aucune erreur, pas de compagnon, `/r2q carnet` répond que la commande est inconnue.
-- QuestCompanion seul (Ready2Quest désactivé) : le client le marque « dépendance manquante » et ne le charge pas.
+- QuestCompanion **seul** : compagnon, carnet, `/qc`, réglages, bouton de minicarte, pas d'erreur.
+- Ready2Quest **seul** : check, réglages sans compagnon, `/r2q carnet` répond « commande inconnue ».
+- Les **deux**, sur un personnage qui avait le compagnon avec Ready2Quest 1.25 : créature, carnet et coffres repris après `/reload` ; deux boutons de minicarte, deux panneaux ; le compagnon réagit en quittant la ville.
+- QuestCompanion avec un **Ready2Quest 1.25** : message, un seul compagnon.
 
 ## v1.25.0 — compagnon de route et carnet de voyage
 

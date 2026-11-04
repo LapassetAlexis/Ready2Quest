@@ -1,0 +1,204 @@
+-- OptionPages.lua -- pages de réglages de Ready2Quest
+--
+-- Le panneau lui-même (navigation, lignes, listes, pied) est dans le socle
+-- commun (Libs/Socle/Options.lua). Ici : les pages du cœur, les listes
+-- (zones sûres, buffs suivis), les actions et le bouton principal du pied.
+-- Les modules ajoutent leurs pages ensuite (ns.AddOptionPage).
+local ADDON, ns = ...
+local L = ns.L
+local Theme = ns.Theme
+
+local function OnOff(on)
+	return on and (Theme.T_GREEN .. L.OPT_ON .. "|r") or (Theme.T_GREY .. L.OPT_OFF .. "|r")
+end
+
+-- ---------------------------------------------------------------------------
+-- Pages. `modules` = interrupteurs de checks (ns.checks), `rows` = réglages,
+-- `list` = liste défilante (zones sûres, buffs suivis), `buttons` = actions.
+-- ---------------------------------------------------------------------------
+-- v1.22.0 : l'addon a TROIS modules (Check avant le départ, Résumé de stuff,
+-- Stats du portrait) et une section QoL. Les 13 « checks » ne sont pas des
+-- modules : ce sont les contrôles du Check avant le départ, réglés dans ses
+-- sous-pages. Un module a son interrupteur dans la navigation (`power` = clé
+-- de réglage) ; une sous-page porte `parent`.
+local R2Q_PAGES = {
+	{
+		id = "general", title = "OPT_PAGE_GENERAL",
+		-- tout ce qui touche à l'affichage est réuni ici (section AFFICHAGE)
+		rows = {
+			{ key = "enabled",     label = "OPT_ENABLED",     kind = "bool" },
+			{ header = "OPT_SECTION_DISPLAY" },
+			{ key = "showMinimap", label = "OPT_MINIMAP",     kind = "bool" },
+			{ key = "minimapPos",  label = "OPT_MINIMAP_POS", kind = "action" },
+			{ key = "showWindow",  label = "OPT_SHOWWINDOW",  kind = "bool" },
+			{ key = "popupScore",  label = "OPT_POPUPSCORE",  kind = "number", min = 0, max = 100, step = 5 },
+		},
+		frameButtons = true,
+	},
+	-- MODULES ---------------------------------------------------------------
+	{ id = "departure", title = "OPT_PAGE_DEPARTURE", group = "OPT_GROUP_MODULES", power = "departureEnabled", target = "trigger" },
+	{
+		id = "trigger", title = "OPT_PAGE_TRIGGER", parent = "departure", group = "OPT_GROUP_MODULES",
+		rows = {
+			{ key = "exitDelay",       label = "OPT_EXITDELAY",  kind = "number", min = 0, max = 15,  step = 1, suffix = "OPT_SEC_UNIT" },
+			{ key = "quietAfterLogin", label = "OPT_QUIETLOGIN", kind = "number", min = 0, max = 60,  step = 5, suffix = "OPT_SEC_UNIT" },
+			{ key = "alertCooldown",   label = "OPT_COOLDOWN",   kind = "number", min = 0, max = 120, step = 5, suffix = "OPT_SEC_UNIT" },
+		},
+	},
+	{ id = "safe", title = "OPT_PAGE_SAFE", parent = "departure", group = "OPT_GROUP_MODULES", list = "safe" },
+	{
+		id = "bags", title = "OPT_PAGE_BAGS", parent = "departure", group = "OPT_GROUP_MODULES",
+		modules = { "bags", "gray", "vivres", "potions" },
+		rows = {
+			{ key = "bagFreeThreshold",   label = "OPT_BAGTHRESHOLD",     kind = "number", min = 0, max = 40,  step = 1 },
+			{ key = "continuousBagAlert", label = "OPT_BAGALERT",         kind = "bool" },
+			{ key = "grayItemThreshold",  label = "OPT_GRAYTHRESHOLD",    kind = "number", min = 0, max = 50,  step = 1 },
+			{ key = "vivresThreshold",    label = "OPT_VIVRESTHRESHOLD",  kind = "number", min = 0, max = 200, step = 5 },
+			{ key = "potionsThreshold",   label = "OPT_POTIONSTHRESHOLD", kind = "number", min = 0, max = 50,  step = 1 },
+		},
+	},
+	{
+		id = "gear", title = "OPT_PAGE_GEAR", parent = "departure", group = "OPT_GROUP_MODULES",
+		modules = { "durability", "repair", "classreagents", "spells", "hearth", "rest" },
+		rows = {
+			{ key = "durabilityMinPct", label = "OPT_DURAMIN", kind = "number", min = 0, max = 100, step = 5, suffix = "OPT_PCT_UNIT" },
+			{ key = "restMinPercent",   label = "OPT_RESTMIN", kind = "number", min = 0, max = 150, step = 5, suffix = "OPT_REST_UNIT" },
+		},
+	},
+	{
+		id = "buffs", title = "OPT_PAGE_BUFFS", parent = "departure", group = "OPT_GROUP_MODULES",
+		modules = { "buffs", "reagents", "quests" }, list = "buffs",
+		rows = {
+			{ key = "learnBuffs", label = "OPT_LEARNBUFFS", kind = "bool" },
+		},
+	},
+	-- pas de page propre : leur réglage est l'interrupteur, et leur placement
+	-- est dans Général > Affichage
+	-- sans réglage propre, mais avec une vraie page : cliquer sur un module doit
+	-- montrer ce qu'il fait (il renvoyait sur Général, c'était déroutant)
+	{ id = "toast", title = "OPT_PAGE_TOAST", group = "OPT_GROUP_MODULES", power = "showGearToast",
+		info = { "OPT_TOAST_INFO_1", "OPT_TOAST_INFO_2", "OPT_TOAST_INFO_3" }, actions = { "toastPreview", "editMode" } },
+	{ id = "portrait", title = "OPT_PAGE_PORTRAIT", group = "OPT_GROUP_MODULES", power = "showPortraitStats",
+		info = { "OPT_PORTRAIT_INFO_1", "OPT_PORTRAIT_INFO_2", "OPT_PORTRAIT_INFO_3" }, actions = { "portraitShow", "editMode" } },
+	-- QOL -------------------------------------------------------------------
+	-- QOL : une entrée parente, comme le Check avant le départ ; chaque confort
+	-- est une sous-page (Marchand, puis ceux qu'ajoutent les modules QoL)
+	{ id = "qol", title = "OPT_PAGE_QOL", group = "OPT_GROUP_QOL", target = "merchant" },
+	{
+		id = "merchant", title = "OPT_PAGE_MERCHANT", parent = "qol", group = "OPT_GROUP_QOL",
+		rows = {
+			{ key = "autoSellGray", label = "OPT_AUTOSELL",   kind = "bool" },
+			{ key = "autoRepair",   label = "OPT_AUTOREPAIR", kind = "bool" },
+		},
+	},
+}
+for _, def in ipairs(R2Q_PAGES) do table.insert(ns.OPTION_PAGES, def) end
+
+-- ---------------------------------------------------------------------------
+-- Listes défilantes : zones sûres apprises, buffs suivis
+-- ---------------------------------------------------------------------------
+local function SafeItems()
+	local db = ns:DB()
+	local items = {}
+	for key, entry in pairs(db.safe or {}) do
+		local kind = entry.kind == "city" and L.SAFE_KIND_CITY or L.SAFE_KIND_VILLAGE
+		items[#items + 1] = {
+			key = key,
+			text = tostring(entry.name or "?"),
+			detail = kind .. ", " .. Theme.T_BLUE .. ns:SourceLabel(entry.source) .. "|r",
+			action = L.OPT_REMOVE,
+			onAction = function() ns:ForgetSafeZone(key) end,
+		}
+	end
+	table.sort(items, function(a, b) return a.text < b.text end)
+	return items
+end
+
+local function BuffItems()
+	local items = {}
+	for _, entry in ipairs(ns:TrackedBuffs()) do
+		local spellId = entry.spellId
+		items[#items + 1] = {
+			key = spellId,
+			text = tostring(entry.name or spellId),
+			value = OnOff(entry.enabled),
+			onToggle = function()
+				local stored = ns:DB().buffs[spellId]
+				if stored then stored.enabled = (stored.enabled == false) end
+			end,
+			action = L.OPT_REMOVE,
+			onAction = function() ns:DB().buffs[spellId] = nil end,
+		}
+	end
+	return items
+end
+
+function ns:ForgetSafeZone(key)
+	local db = self:DB()
+	local entry = db.safe and db.safe[key]
+	if not entry then return end
+	db.safe[key] = nil
+	if db.safeClues then db.safeClues[key] = nil end
+	if entry.kind == "city" and entry.mapID and db.cityRest then db.cityRest[entry.mapID] = nil end
+	self.inSafe, self.pendingExit = nil, nil
+	self:Print(self:F("MSG_SAFE_REMOVED", tostring(entry.name or "?")))
+end
+
+ns.OPTION_LISTS.safe = {
+	items = SafeItems, header = "OPT_SAFE_LIST", empty = "OPT_SAFE_EMPTY", lines = ns.OPT_LAYOUT.listLines,
+	-- sous la liste : tout oublier, et une ligne d'aide
+	extra = function(page, y)
+		page.clearButton = Theme.CreateButton(page, 150, 20, L.OPT_SAFE_CLEAR, function()
+			ns:HandleCommand("safe reset")
+			ns:RefreshOptions()
+		end)
+		page.clearButton:SetPoint("TOPLEFT", page, "TOPLEFT", 0, y - 6)
+		page.hint = page:CreateFontString(nil, "OVERLAY", Theme.F_SMALL)
+		page.hint:SetPoint("TOPLEFT", page, "TOPLEFT", 0, y - 34)
+		page.hint:SetWidth(ns.OPT_LAYOUT.paneWidth)
+		page.hint:SetJustifyH("LEFT")
+		page.hint:SetText(L.OPT_SAFE_HINT)
+		page.hint:SetTextColor(0.55, 0.55, 0.55)
+		return y
+	end,
+}
+ns.OPTION_LISTS.buffs = { items = BuffItems, header = "OPT_BUFFS_LIST", empty = "OPT_BUFFS_EMPTY",
+	lines = ns.OPT_LAYOUT.listLines - 4 }
+
+-- ---------------------------------------------------------------------------
+-- Actions, bouton principal, fenêtres exclusives, interrupteurs
+-- ---------------------------------------------------------------------------
+ns.OPTION_ACTIONS.resetPos = function(self)
+	self:HandleCommand("resetpos")
+	self:RefreshOptions()
+end
+ns.OPTION_ACTIONS.toastPreview = function(self)
+	if self.SimulateGearToast then self:SimulateGearToast() end
+end
+ns.OPTION_ACTIONS.portraitShow = function(self)
+	if not self.ShowPortraitStats then return end
+	-- aperçu immédiat, même si le module est coupé (forceStats)
+	self.forceStats = true
+	self:ShowPortraitStats()
+	self.forceStats = nil
+end
+
+ns.OPTIONS_MAIN = { label = "OPT_RUNCHECK", run = function(self) self:RunChecklist("manual") end }
+
+for _, field in ipairs({ "window", "expeditionFrame", "dungeonFrame" }) do
+	table.insert(ns.EXCLUSIVE_WINDOWS, field)
+end
+
+-- Module coupé : on range ce qui est à l'écran ou en attente
+function ns:OnModuleToggled(key, enabled)
+	if key == "showPortraitStats" and enabled == false and self.HidePortraitStats then self:HidePortraitStats() end
+	if key == "departureEnabled" and enabled == false then self.pendingExit = nil end
+end
+
+-- Infobulle du bouton de minicarte (socle commun) : la dernière note
+function ns:MinimapTooltip(tooltip)
+	if not self.score then return end
+	tooltip:AddLine(string.format(L.MINIMAP_SCORE, self.score, self:ScoreLabel()), 1, 1, 1)
+end
+
+if ns.Mark then ns.Mark("OptionPages") end

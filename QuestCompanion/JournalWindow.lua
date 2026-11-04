@@ -10,8 +10,8 @@
 --     (zones, capitales, donjons, rares, paliers).
 -- Les anciens onglets par sorte de tampon disparaissent : leurs données sont
 -- rangées dans la zone (villages, rares) ou dans le parcours (le reste).
-local ns = rawget(_G, "Ready2Quest")
-if type(ns) ~= "table" or not ns.QC then return end
+local ADDON, ns = ...
+if ns.blocked then return end
 local L = ns.L
 local Theme = ns.Theme
 
@@ -731,5 +731,8 @@ do
 		return previous(self, forceShow)
 	end
 end
+
+-- une seule grande fenêtre à la fois (socle commun, ns:CloseOtherWindows)
+if type(ns.EXCLUSIVE_WINDOWS) == "table" then table.insert(ns.EXCLUSIVE_WINDOWS, "journalFrame") end
 
 if ns.Mark then ns.Mark("JournalWindow") end

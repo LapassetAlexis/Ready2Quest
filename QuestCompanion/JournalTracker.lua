@@ -23,8 +23,8 @@
 --   * prochain palier de niveau.
 -- Chaque objectif se masque d'un clic droit (par personnage) ; la liste se
 -- recalcule à chaque tampon, changement de zone et montée de niveau.
-local ns = rawget(_G, "Ready2Quest")
-if type(ns) ~= "table" or not ns.QC then return end
+local ADDON, ns = ...
+if ns.blocked then return end
 local L = ns.L
 local Theme = ns.Theme
 
@@ -1006,7 +1006,7 @@ do
 end
 
 -- Un interrupteur basculé dans les réglages passe par ApplyDisplayOptions ;
--- « /r2q module carnet off » et l'interrupteur de la navigation par
+-- « /qc module carnet off » et l'interrupteur de la navigation par
 -- RefreshOptions. Les deux relais suffisent à suivre l'état du module.
 do
 	local previousApply = ns.ApplyDisplayOptions

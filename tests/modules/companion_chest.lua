@@ -1,5 +1,5 @@
 -- Tests : évolution par le bonheur, coffres de zone, objectifs « action + récompense »
-local Check, Say, ResetWorld, NS, Mock = T.Check, T.Say, T.ResetWorld, T.NS, T.Mock
+local Check, Say, ResetWorld, NS, Mock = T.Check, T.Say, T.ResetWorld, T.QNS, T.Mock
 
 local H = { savedRewards = rawget(NS, "COMPANION_REWARDS"), savedCounts = rawget(NS, "JournalCounts") }
 

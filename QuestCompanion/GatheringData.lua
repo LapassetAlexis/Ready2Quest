@@ -13,8 +13,8 @@
 -- fr / en : noms de repli quand le client n'a pas encore l'objet en cache
 -- (le nom affiché vient de GetItemInfo dès qu'il le connaît).
 -- Pas de zones ici : aucune donnée fiable, on retient en jouant (Gathering.lua).
-local ns = rawget(_G, "Ready2Quest")
-if type(ns) ~= "table" or not ns.QC then return end
+local ADDON, ns = ...
+if ns.blocked then return end
 
 local function R(prof, req, fr, en, gray)
 	return { prof = prof, req = req, gray = gray or (req + 100), fr = fr, en = en }

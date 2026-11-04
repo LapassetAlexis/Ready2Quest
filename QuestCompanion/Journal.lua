@@ -25,8 +25,8 @@
 -- Contrats avec le module parallèle « Compagnon » :
 --   ns:FireCallback("STAMP", { id, kind, name, new = true, level, date })
 --   ns:JournalCounts() -> { zone, subzone, dungeon, rare, level, capital, total }
-local ns = rawget(_G, "Ready2Quest")
-if type(ns) ~= "table" or not ns.QC then return end
+local ADDON, ns = ...
+if ns.blocked then return end
 local L = ns.L
 local Theme = ns.Theme
 
@@ -75,9 +75,9 @@ local FR = {
 	JRN_TOAST             = "Nouveau tampon : %s",
 	JRN_TOAST_MANY        = "%d nouveaux tampons",
 	JRN_CHAT              = "Nouveau tampon (%s) : %s.",
-	JRN_OFF_HINT          = "Carnet coupé : plus aucun tampon ne se gagne (/r2q module carnet on).",
+	JRN_OFF_HINT          = "Carnet coupé : plus aucun tampon ne se gagne (/qc module carnet on).",
 	JRN_DATE_FORMAT       = "%d/%m/%Y",
-	HELP_JOURNAL          = "/r2q carnet -- ton carnet de voyage : les tampons gagnés en jouant",
+	HELP_JOURNAL          = "/qc carnet -- ton carnet de voyage : les tampons gagnés en jouant",
 }
 local EN = {
 	OPT_PAGE_JOURNAL      = "Travel journal",
@@ -108,9 +108,9 @@ local EN = {
 	JRN_TOAST             = "New stamp: %s",
 	JRN_TOAST_MANY        = "%d new stamps",
 	JRN_CHAT              = "New stamp (%s): %s.",
-	JRN_OFF_HINT          = "Journal off: no stamp can be earned (/r2q module carnet on).",
+	JRN_OFF_HINT          = "Journal off: no stamp can be earned (/qc module carnet on).",
 	JRN_DATE_FORMAT       = "%Y-%m-%d",
-	HELP_JOURNAL          = "/r2q carnet -- your travel journal: stamps earned by playing",
+	HELP_JOURNAL          = "/qc carnet -- your travel journal: stamps earned by playing",
 }
 ns.RegisterStrings(FR, EN)
 -- exposées aux tests : chaque clé doit exister dans les deux langues
@@ -138,7 +138,7 @@ if ns.AddOptionPage then
 	})
 end
 
--- plus de module à part : « /r2q module carnet » vise le Compagnon de route
+-- plus de module à part : « /qc module carnet » vise le Compagnon de route
 -- (alias déclarés dans Companion.lua)
 
 if type(ns.HELP) == "table" then
@@ -177,10 +177,10 @@ local function ModuleOn()
 	return db.enabled ~= false and db.companionEnabled ~= false
 end
 
--- Les tampons vivent dans les données du personnage (ns:QCCharData, Bootstrap.lua) :
+-- Les tampons vivent dans les données du personnage (ns:CharData, socle commun Libs/Socle/Store.lua) :
 -- la sauvegarde est partagée par le compte, le carnet ne l'est pas.
 function ns:JournalData()
-	local char = self:QCCharData()
+	local char = self:CharData()
 	if type(char.journal) ~= "table" then char.journal = {} end
 	if type(char.journal.stamps) ~= "table" then char.journal.stamps = {} end
 	return char.journal

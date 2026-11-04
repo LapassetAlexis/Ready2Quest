@@ -1,7 +1,7 @@
 -- Intégration : TOUS les modules chargés en même temps. Chaque module, testé
 -- seul, tient dans le panneau ; c'est leur somme qui a fait déborder la
 -- navigation sur le pied en v1.23.0 (« Marchand » sous les boutons).
-local Check, ResetWorld, NS = T.Check, T.ResetWorld, T.NS
+local Check, ResetWorld, NS, QNS = T.Check, T.ResetWorld, T.NS, T.QNS
 
 ResetWorld()
 NS.optionsFrame = nil
@@ -38,6 +38,27 @@ for id, page in pairs(frame.pages) do
 end
 Check("[INT] aucune page de module ne déborde", #overflow == 0, table.concat(overflow, ", "))
 
+-- QuestCompanion : son propre panneau (même socle), mêmes règles
+do
+	QNS.optionsFrame = nil
+	QNS:ToggleOptions()
+	local qframe = QNS.optionsFrame
+	local qoverflow, below = {}, {}
+	for id, page in pairs(qframe.pages) do
+		if page.contentBottom < lay.contentLimit then qoverflow[#qoverflow + 1] = id .. "=" .. page.contentBottom end
+	end
+	QNS:SelectOptionsPage("companion")
+	for _, nav in ipairs(qframe.navButtons) do
+		if nav:IsShown() then
+			local _, _, _, _, y = nav:GetPoint()
+			if (y or 0) - (nav.rowH or 22) < footerTop then below[#below + 1] = nav.pageId end
+		end
+	end
+	Check("[INT] QC : aucune page ne déborde", #qoverflow == 0, table.concat(qoverflow, ", "))
+	Check("[INT] QC : navigation au-dessus du pied", #below == 0, table.concat(below, ", "))
+	qframe:Hide()
+end
+
 local seen, dup = {}, {}
 for _, module in ipairs(NS.MODULES) do
 	if seen[module.id] then dup[#dup + 1] = module.id end
@@ -45,8 +66,8 @@ for _, module in ipairs(NS.MODULES) do
 end
 Check("[INT] identifiants de module uniques", #dup == 0, table.concat(dup, ","))
 Check("[INT] les modules sont déclarés", seen.depart and seen.stuff and seen.portrait and seen.camp and seen.expedition and seen.dungeon
-	and seen.reward and seen.pace and seen.bagspace and seen.death and seen.companion
-	and not seen.journal,     -- le carnet fait partie du Compagnon de route (v1.25.0)
+	and seen.reward and seen.pace and seen.bagspace and seen.death
+	and not seen.companion and not seen.journal,     -- compagnon et carnet : QuestCompanion (v1.26.0)
 	(function() local t = {} for id in pairs(seen) do t[#t + 1] = id end table.sort(t) return table.concat(t, ",") end)())
 
 -- un alias de module ne doit jamais masquer l'identifiant d'un contrôle :
@@ -70,7 +91,7 @@ do
 	ResetWorld()
 	T.Mock.world.level = 45
 	T.Mock:Reset()
-	if NS.FireCallback then NS:FireCallback("STAMP", { id = "zone:1", kind = "zone", name = "Test", new = true }) end
+	if QNS.FireCallback then QNS:FireCallback("STAMP", { id = "zone:1", kind = "zone", name = "Test", new = true }) end
 	Check("[INT] compagnon : premier relevé silencieux (pas de rafale de déblocages)",
 		not T.Mock:Output():find("débloqué", 1, true), T.Mock:Output())
 end
@@ -78,13 +99,13 @@ end
 -- réglages du compagnon : un ornement verrouillé n'affiche pas un interrupteur allumé
 do
 	ResetWorld()
-	NS.optionsFrame = nil
-	NS:ToggleOptions()
-	NS:SelectOptionsPage("companion")
+	QNS.optionsFrame = nil
+	QNS:ToggleOptions()
+	QNS:SelectOptionsPage("companion")
 	local wrong = {}
-	for _, def in ipairs(NS.COMPANION_ORNAMENTS or {}) do
-		for _, row in ipairs(NS.optionsFrame.rows) do
-			if row.def and row.def.key == def.key and not NS:CompanionIsUnlocked("orn", def) and row.toggle and row.toggle.checked then
+	for _, def in ipairs(QNS.COMPANION_ORNAMENTS or {}) do
+		for _, row in ipairs(QNS.optionsFrame.rows) do
+			if row.def and row.def.key == def.key and not QNS:CompanionIsUnlocked("orn", def) and row.toggle and row.toggle.checked then
 				wrong[#wrong + 1] = def.key
 			end
 		end
@@ -129,9 +150,9 @@ end
 do
 	ResetWorld()
 	T.Mock.world.level = 15
-	local unlocks = NS:CompanionNextUnlocks()
+	local unlocks = QNS:CompanionNextUnlocks()
 	Check("[INT] compagnon : prochains déblocages fournis", type(unlocks) == "table" and #unlocks > 0, unlocks and #unlocks)
-	local objectives = NS:JournalObjectives()
+	local objectives = QNS:JournalObjectives()
 	local fromCompanion, text = 0, {}
 	for _, goal in ipairs(objectives) do
 		-- un stade du compagnon : sa propre ligne, ou fusionné dans le palier de même niveau
@@ -151,34 +172,34 @@ end
 do
 	ResetWorld()
 	local counts = {}
-	for tier = 1, 3 do counts[tier] = #NS:ChestOptions(tier) end
+	for tier = 1, 3 do counts[tier] = #QNS:ChestOptions(tier) end
 	Check("[INT] coffre : au moins 7 objets par palier", counts[1] >= 7 and counts[2] >= 7 and counts[3] >= 7,
 		counts[1] .. "/" .. counts[2] .. "/" .. counts[3])
 	local labels, raw = {}, false
-	for _, reward in ipairs(NS:ChestOptions(2)) do
-		local text = NS:ChestRewardLabel(reward)
+	for _, reward in ipairs(QNS:ChestOptions(2)) do
+		local text = QNS:ChestRewardLabel(reward)
 		labels[#labels + 1] = text
 		if text:find("COMP_", 1, true) or text:find("OPT_", 1, true) then raw = true end
 	end
 	Check("[INT] coffre : libellés traduits", not raw and #labels > 0, table.concat(labels, ", "))
-	local data = NS:CompanionData()
-	NS:ChestData()[4242] = { tier = 1, name = "Zone test", at = 0 }
+	local data = QNS:CompanionData()
+	QNS:ChestData()[4242] = { tier = 1, name = "Zone test", at = 0 }
 	local frame
-	for _, reward in ipairs(NS:ChestOptions(1)) do
+	for _, reward in ipairs(QNS:ChestOptions(1)) do
 		if reward.kind == "frame" then frame = reward; break end
 	end
 	Check("[INT] coffre : un cadre au palier 1", frame ~= nil)
 	if frame then
-		Check("[INT] coffre : cadre choisi, débloqué", NS:ChestPick(4242, frame) == true and data.unlocked["frame:" .. frame.id] == true)
-		Check("[INT] coffre : le cadre gagné se sélectionne", NS:CompanionIsUnlocked("frame", NS:CompanionStyleDef("frame", frame.id)) == true)
+		Check("[INT] coffre : cadre choisi, débloqué", QNS:ChestPick(4242, frame) == true and data.unlocked["frame:" .. frame.id] == true)
+		Check("[INT] coffre : le cadre gagné se sélectionne", QNS:CompanionIsUnlocked("frame", QNS:CompanionStyleDef("frame", frame.id)) == true)
 	end
-	NS:ChestData()[4242] = nil
+	QNS:ChestData()[4242] = nil
 end
 
 -- Fenêtre du carnet : chaque part de complétion a son onglet d'activité
 do
 	local tabs, quests = {}, nil
-	for _, def in ipairs(NS.ZONE_PARTS) do
+	for _, def in ipairs(QNS.ZONE_PARTS) do
 		if def.id == "quests" then quests = def end
 	end
 	Check("[INT] part Quêtes : onglet et détail", quests and quests.tab == "quests" and type(quests.Items) == "function")
@@ -186,10 +207,10 @@ do
 	local fake = { id = "fakeq", label = "JRN_PART_quests", tab = "quests",
 		Compute = function() return { have = 1, need = 2 } end,
 		Items = function() return { { name = "Quête A", done = false, detail = "niveau 12" }, { name = "Quête B", done = true } } end }
-	NS.RegisterZonePart(fake)
-	local rows = NS:JournalActivityRows(1413, "quests")
+	QNS.RegisterZonePart(fake)
+	local rows = QNS:JournalActivityRows(1413, "quests")
 	local found = false
 	for _, row in ipairs(rows) do if row.name == "Quête A" and row.detail == "niveau 12" then found = true end end
 	Check("[INT] fenêtre : une part de l'onglet Quêtes y est listée", found and rows[1].header)
-	for index = #NS.ZONE_PARTS, 1, -1 do if NS.ZONE_PARTS[index] == fake then table.remove(NS.ZONE_PARTS, index) end end
+	for index = #QNS.ZONE_PARTS, 1, -1 do if QNS.ZONE_PARTS[index] == fake then table.remove(QNS.ZONE_PARTS, index) end end
 end

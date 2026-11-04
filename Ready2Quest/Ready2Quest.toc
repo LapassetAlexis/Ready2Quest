@@ -1,0 +1,45 @@
+## Interface: 16001, 11509, 20506, 50504
+## Interface-Camelot: 16001
+## Interface-Vanilla: 11509
+## Interface-TBC: 20506
+## Interface-Mists: 50504
+## Title: |cffe8a54bReady|r|cff5b8fd62|r|cffe8a54bQuest|r
+## Notes: Get ready before you leave town: bags, greys to sell, food, buffs, rest, durability, quests to turn in. Expedition report, dungeon sheet, QoL.
+## Notes-frFR: Prépare ta sortie avant de quitter la ville : sacs, gris à vendre, vivres, buffs, repos, durabilité, quêtes à rendre. Bilan d'expédition, fiche de donjon, QoL.
+## Version: 1.26.0
+## X-License: GPL-3.0
+## Author: Tristabeau
+## X-Website: https://github.com/LapassetAlexis/Ready2Quest
+## SavedVariables: Ready2QuestDB
+## X-Category: Utility
+## IconTexture: Interface\AddOns\Ready2Quest\Textures\logo_petit
+
+Config.lua
+Libs\Socle\Base.lua
+Libs\Socle\Strings.lua
+Locales.lua
+Libs\Socle\Compat.lua
+Libs\Socle\Hubs.lua
+Libs\Socle\DungeonData.lua
+Libs\Socle\Theme.lua
+Libs\Socle\Store.lua
+Libs\Socle\World.lua
+Libs\Socle\Commands.lua
+Libs\Socle\Options.lua
+Libs\Socle\Minimap.lua
+Core.lua
+OptionPages.lua
+Buffs.lua
+Reagents.lua
+Merchant.lua
+Equip.lua
+Stats.lua
+Checks.lua
+UI.lua
+Camp.lua
+Expedition.lua
+Dungeon.lua
+QuestReward.lua
+LevelPace.lua
+BagSpace.lua
+Death.lua

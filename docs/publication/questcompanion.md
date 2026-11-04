@@ -1,10 +1,10 @@
 <!--
 Fiche de la page QuestCompanion sur CurseForge et Wago (à copier à la main, voir docs/PUBLIER.md).
 Summary (résumé court, une ligne) :
-  A little travel companion that grows with you, and a journal to complete every zone and earn cosmetic chests. Requires Ready2Quest.
+  A little travel companion that grows with you, and a journal to complete every zone and earn cosmetic chests. Forever & Classic Era.
 Catégories suggérées : Quests & Leveling (principale), Companions, Achievements.
 Licence : GPLv3. Logo : docs/publication/logo_questcompanion.png.
-Relation : Required Dependency -> Ready2Quest.
+Relation : Optional Dependency -> Ready2Quest (facultatif).
 Captures à prendre en jeu : le compagnon et une bulle, le bloc « Carnet » à l'écran, le carnet partie Complétion (onglet Combat ou Quêtes), le carnet partie Évolution, le coffre de zone ouvert.
 La description commence sous cette ligne.
 -->
@@ -14,7 +14,7 @@ La description commence sous cette ligne.
 
 For **WoW Forever** (1.60) and **Classic Era** (1.15). English and French.
 
-**Requires [Ready2Quest](https://github.com/LapassetAlexis/Ready2Quest).** Install both.
+**Standalone.** Its own `/qc` command, settings and minimap button. It also pairs well with [Ready2Quest](https://github.com/LapassetAlexis/Ready2Quest): installed together, the companion reacts to your departures and returns.
 
 ## The companion
 
@@ -38,11 +38,11 @@ For **WoW Forever** (1.60) and **Classic Era** (1.15). English and French.
 
 ## Commands
 
-`/r2q carnet` opens the journal, `/r2q compagnon` shows your companion's mood (`/r2q compagnon nom <name>` renames it), `/r2q coffre` opens a pending chest. The settings are in Ready2Quest's options, **Road companion** page.
+`/qc` opens the journal (so does the minimap button, or a right-click on the companion), `/qc options` opens the settings, `/qc compagnon` shows your companion's mood (`/qc compagnon nom <name>` renames it), `/qc coffre` opens a pending chest, `/qc help` lists everything.
 
 ## Coming from Ready2Quest 1.25 or earlier?
 
-Nothing to do: your companion, journal and chests are moved over automatically, character by character, on first login.
+Update Ready2Quest to 1.26.0 and keep it enabled on first login: your companion, journal, chests and their settings are taken over automatically, for all your characters.
 
 ## License and data
 
@@ -54,7 +54,7 @@ Free software, **GPL-3.0**. Zone data (creatures, gathering, quests) is generate
 
 **Un compagnon de route et son carnet pour compléter chaque zone.** Une petite créature voyage avec toi, te parle et grandit avec toi. Son carnet suit la complétion de chaque zone et récompense une zone à 100 % par un coffre d'objets cosmétiques.
 
-Pour **WoW Forever** (1.60) et **Classic Era** (1.15). En français et en anglais. **Nécessite Ready2Quest.**
+Pour **WoW Forever** (1.60) et **Classic Era** (1.15). En français et en anglais. **Autonome** : `/qc`, ses réglages et son bouton de minicarte. Avec Ready2Quest, le compagnon réagit en plus à tes départs et retours en ville.
 
 - **Elle te parle** : de courtes bulles, jamais en combat, avec des astuces et de petites conversations.
 - **Quatre envies** : faim, énergie, moral et curiosité. Clic pour une caresse, clic droit pour le carnet.
@@ -63,6 +63,6 @@ Pour **WoW Forever** (1.60) et **Classic Era** (1.15). En français et en anglai
 - **Coffres de zone** : une zone à 100 % ouvre un coffre, et tu **choisis** un objet de son palier : apparence, ornement, cadre ou fond.
 - **Suivi à l'écran** : tes objectifs les plus proches. Survole-les pour savoir quoi faire.
 
-Tu avais le compagnon avec Ready2Quest 1.25 ? Rien à faire : il est repris automatiquement.
+Tu avais le compagnon avec Ready2Quest 1.25 ? Mets Ready2Quest à jour (1.26.0) et garde-le activé à la première connexion : tout est repris, pour tous tes personnages.
 
 Logiciel libre, **GPL-3.0**. Données de zones issues de la base de Questie (GPL-3.0).

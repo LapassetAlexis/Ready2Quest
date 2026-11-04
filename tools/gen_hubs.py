@@ -13,7 +13,7 @@ AREA_FLAG_LOWLEVEL). La liste des villages est donc éditée ici, à la main,
 et résolue en identifiants de zone ; le jeu traduit les noms à l'exécution
 (C_Map.GetAreaInfo), ce qui rend la base valable dans toutes les langues.
 
-Usage : python3 tools/gen_hubs.py AreaTable_era.csv AreaTable_forever.csv > Hubs.lua
+Usage : python3 tools/gen_hubs.py AreaTable_era.csv AreaTable_forever.csv > Ready2Quest/Libs/Socle/Hubs.lua
 """
 import csv, sys
 
@@ -82,6 +82,9 @@ def main(era_path, forever_path):
     out.append("-- Zones sûres connues dès l'installation : capitales (drapeau CAPITAL du")
     out.append("-- client), villages, hubs et auberges-sous-zones, Era 1.15.9 et Forever 1.60.1.")
     out.append("-- [areaID] = { faction = \"A\"|\"H\"|\"N\", kind = \"capital\"|\"town\"|\"inn\"|\"hub\", name = nom anglais (repli) }")
+    out.append("-- Fichier du socle commun (Libs/Socle), identique dans Ready2Quest et")
+    out.append("-- QuestCompanion : ne le modifier que dans Ready2Quest/Libs/Socle, puis")
+    out.append("-- python3 tools/sync_socle.py.")
     out.append("local ADDON, ns = ...")
     out.append("")
     out.append("ns.HUBS = {")

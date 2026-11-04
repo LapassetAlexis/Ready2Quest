@@ -474,9 +474,9 @@ end
 -- 2. Chargement de l'addon (comme le client : chunk(nom, tablePrivée))
 ----------------------------------------------------------------------------
 local NS = {}
--- QuestCompanion (sous-dossier) : addon séparé, qui dépend de Ready2Quest et
--- reprend son namespace via _G.Ready2Quest ; sa table privée reste à part.
-local QC_PRIVATE = {}
+-- QuestCompanion : addon autonome, avec sa propre table privée (son namespace)
+-- et sa copie du socle commun. Les tests de ses modules la reçoivent en T.QNS.
+local QNS = {}
 local function LoadAddonFile(name)
 	local path = ROOT .. "/" .. name
 	local handle, err = io.open(path, "r")
@@ -487,7 +487,7 @@ local function LoadAddonFile(name)
 	assert(chunk, "erreur de compilation dans " .. path .. ":\n" .. tostring(compileError))
 	-- comme le client : chaque addon reçoit son nom et sa propre table privée
 	if name:find("^QuestCompanion/") then
-		chunk("QuestCompanion", QC_PRIVATE)
+		chunk("QuestCompanion", QNS)
 	else
 		chunk("Ready2Quest", NS)
 	end
@@ -495,19 +495,21 @@ end
 
 -- La liste des fichiers vient du .toc, comme pour le client : un module
 -- ajouté au .toc est chargé ici sans autre modification.
--- Ready2Quest d'abord, puis QuestCompanion (## Dependencies: Ready2Quest) :
--- ses fichiers sont listés avec leur dossier, « QuestCompanion/Companion.lua ».
+-- Ready2Quest d'abord, puis QuestCompanion. Chaque fichier est listé avec le
+-- dossier de son addon : « Ready2Quest/Core.lua », « QuestCompanion/Companion.lua ».
 local tocFiles = {}
 do
 	local function ReadToc(toc, prefix)
 		local handle = assert(io.open(ROOT .. "/" .. toc, "r"), toc .. " introuvable")
 		for line in handle:lines() do
 			line = line:gsub("\r", ""):gsub("^%s+", ""):gsub("%s+$", "")
+			-- le client accepte « Libs\Socle\Base.lua » : chemin à barres obliques ici
+			line = line:gsub("\\", "/")
 			if line ~= "" and not line:find("^#") and line:find("%.lua$") then tocFiles[#tocFiles + 1] = prefix .. line end
 		end
 		handle:close()
 	end
-	ReadToc("Ready2Quest.toc", "")
+	ReadToc("Ready2Quest/Ready2Quest.toc", "Ready2Quest/")
 	ReadToc("QuestCompanion/QuestCompanion.toc", "QuestCompanion/")
 end
 -- Les scénarios historiques comptent les contrôles et pages du cœur (13
@@ -517,13 +519,20 @@ end
 -- (dans un bloc : le corps principal frôle la limite de 200 locales)
 Mock.moduleFiles = {}
 do
+	-- le cœur de Ready2Quest : sa configuration, le socle commun (Libs/Socle),
+	-- ses textes, Core, ses pages de réglages et les contrôles du check
 	local core = {}
-	for _, file in ipairs({ "Bootstrap.lua", "Locales.lua", "Compat.lua", "Hubs.lua", "Theme.lua", "Core.lua", "Buffs.lua",
-		"Reagents.lua", "Merchant.lua", "Equip.lua", "Stats.lua", "Minimap.lua", "Checks.lua", "Options.lua", "UI.lua" }) do
+	for _, file in ipairs({ "Config.lua", "Locales.lua", "Core.lua", "OptionPages.lua", "Buffs.lua",
+		"Reagents.lua", "Merchant.lua", "Equip.lua", "Stats.lua", "Checks.lua", "UI.lua" }) do
 		core[file] = true
 	end
 	for _, file in ipairs(tocFiles) do
-		if core[file] then LoadAddonFile(file) else table.insert(Mock.moduleFiles, file) end
+		local name = file:gsub("^Ready2Quest/", "")
+		if file:find("^Ready2Quest/") and (core[name] or name:find("^Libs/Socle/")) then
+			LoadAddonFile(file)
+		else
+			table.insert(Mock.moduleFiles, file)
+		end
 	end
 end
 _G.TOC_FILES = tocFiles
@@ -603,6 +612,7 @@ local function ResetWorld()
 	-- les deux : la nouvelle variable, et l ancienne que Core migre
 	_G.Ready2QuestDB = nil
 	_G.QuestCompanionDB = nil
+	QNS._dbReady = false
 	_G.ReadyToQuestDB = nil
 	_G.SacEtDepartDB = nil
 	NS._dbReady = false
@@ -1257,7 +1267,7 @@ Check("le libellé OPT_STUFF_SHORT n'est plus traduit",
 -- garde-fou général : toute clé utilisée par le code doit être traduite
 local missing = {}
 local function ScanFile(file)
-	local f = io.open(file, "rb")
+	local f = io.open(ROOT .. "/" .. file, "rb")
 	if not f then return end
 	local data = f:read("*a")
 	f:close()
@@ -2483,7 +2493,7 @@ end
 -- Aucun caractère hors du répertoire de la police du client : "▶" (U+25B6)
 -- s'affichait en losange de remplacement.
 local function HasHighGlyph(file)
-	local f = io.open(file, "rb")
+	local f = io.open(ROOT .. "/" .. file, "rb")
 	if not f then return false end
 	local data = f:read("*a")
 	f:close()
@@ -2493,8 +2503,8 @@ local function HasHighGlyph(file)
 	end
 	return false
 end
-Check("pas de glyphe triangle dans Options.lua", not HasHighGlyph("Options.lua"))
-Check("pas de glyphe triangle dans Locales.lua", not HasHighGlyph("Locales.lua"))
+Check("pas de glyphe triangle dans Options.lua", not HasHighGlyph("Ready2Quest/Options.lua"))
+Check("pas de glyphe triangle dans Locales.lua", not HasHighGlyph("Ready2Quest/Locales.lua"))
 
 -- la ligne « position du bouton » affiche l'angle courant
 local posRow
@@ -3125,7 +3135,7 @@ local newKeys = { "MSG_SAFE_PURGED", "MSG_SAFE_RESET", "SAFE_KIND_CITY", "SAFE_K
 	"REAGENT_SEED", "REAGENT_ANKH", "REAGENT_SYMBOL", "CHK_HEARTH", "CHK_HEARTH_MISSING", "CHK_HEARTH_READY",
 	"CHK_HEARTH_CD", "ADV_HEARTH", "CHK_REPAIR", "CHK_REPAIR_NONE", "CHK_REPAIR_OK", "CHK_REPAIR_POOR",
 	"ADV_REPAIR", "CHK_SPELLS", "CHK_SPELLS_DETAIL", "ADV_SPELLS", "MODULE_INACTIVE", "MSG_NO_SUBZONE" }
-local localeSource = io.open(ROOT .. "/Locales.lua", "r"):read("*a")
+local localeSource = io.open(ROOT .. "/Ready2Quest/Locales.lua", "r"):read("*a")
 local enStart = localeSource:find("local enUS = {", 1, true)
 local frPart, enPart = localeSource:sub(1, enStart), localeSource:sub(enStart)
 local missingFr, missingEn = {}, {}
@@ -3775,7 +3785,7 @@ end
 -- 4.99 Tests des modules (tests/modules/*.lua, listés par run_tests.py).
 -- Chaque fichier reçoit la boîte à outils du harnais dans la table T.
 do
-	_G.T = { Check = Check, Say = Say, ResetWorld = ResetWorld, Result = Result, NS = NS, Mock = Mock }
+	_G.T = { Check = Check, Say = Say, ResetWorld = ResetWorld, Result = Result, NS = NS, QNS = QNS, Mock = Mock }
 	-- build Forever par défaut au chargement des modules, comme en jeu
 	Mock.world.build = nil
 	NS:DetectCapabilities()

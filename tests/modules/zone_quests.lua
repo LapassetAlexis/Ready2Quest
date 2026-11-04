@@ -3,7 +3,7 @@
 -- Intégrité des deux tables, contenu réel connu, filtres race / classe,
 -- exclusives et quêtes fermées, faites / à faire, liste triée, cache et
 -- invalidation, combat, client sans table, fenêtre.
-local Check, Say, ResetWorld, NS, Mock = T.Check, T.Say, T.ResetWorld, T.NS, T.Mock
+local Check, Say, ResetWorld, NS, Mock = T.Check, T.Say, T.ResetWorld, T.QNS, T.Mock
 
 local ROOT = rawget(_G, "ADDON_ROOT") or "."
 local MOCKED = { "UnitRace", "UnitClass", "GetLocale", "InCombatLockdown", "IsQuestFlaggedCompleted",
@@ -32,14 +32,8 @@ C_Map.GetAreaInfo = nil
 
 -- tables d'Era et de Forever, rechargées avec un faux ns (garde de client)
 function Q.Load(file, forever)
-	local fake = { Mark = function() end, IsForeverClient = function() return forever end, QC = {} }
-	-- les fichiers de QuestCompanion lisent le namespace dans _G.Ready2Quest
-	local chunk = assert(loadfile(ROOT .. "/QuestCompanion/" .. file))
-	local saved = rawget(_G, "Ready2Quest")
-	_G.Ready2Quest = fake
-	local ok, err = pcall(chunk, "QuestCompanion", {})
-	_G.Ready2Quest = saved
-	assert(ok, err)
+	local fake = { Mark = function() end, IsForeverClient = function() return forever end }
+	assert(loadfile(ROOT .. "/QuestCompanion/" .. file))("QuestCompanion", fake)
 	return fake.ZONE_QUESTS
 end
 Q.ERA, Q.FOREVER = Q.Load("ZoneQuests_Era.lua", false), Q.Load("ZoneQuests_Forever.lua", true)
@@ -107,14 +101,14 @@ do
 		and NS.Loaded.ZoneQuests_Forever and not NS.Loaded.ZoneQuests_Era and saved.ZONE_QUESTS ~= nil
 		and saved.ZONE_QUESTS[2521] ~= nil)
 	local order = {}
-	for index, file in ipairs(_G.TOC_FILES or {}) do order[(file:gsub("^QuestCompanion/", ""))] = index end
+	for index, file in ipairs(_G.TOC_FILES or {}) do order[(file:gsub("^[^/]+/", ""))] = index end
 	Check("[ZQ] .toc : tables avant ZoneQuests.lua, après JournalTracker.lua, avant JournalWindow.lua",
 		order["ZoneQuests_Era.lua"] and order["ZoneQuests_Forever.lua"] and order["ZoneQuests.lua"]
 		and order["Dungeon.lua"] < order["ZoneQuests_Era.lua"]
 		and order["ZoneQuests_Era.lua"] < order["ZoneQuests.lua"] and order["ZoneQuests_Forever.lua"] < order["ZoneQuests.lua"]
 		and order["JournalTracker.lua"] < order["ZoneQuests.lua"] and order["ZoneQuests.lua"] < order["JournalWindow.lua"])
 	local toc = ""
-	for _, file in ipairs({ "/Ready2Quest.toc", "/QuestCompanion/QuestCompanion.toc" }) do
+	for _, file in ipairs({ "/Ready2Quest/Ready2Quest.toc", "/QuestCompanion/QuestCompanion.toc" }) do
 		local handle = assert(io.open(ROOT .. file, "r"))
 		toc = toc .. handle:read("*a")
 		handle:close()
