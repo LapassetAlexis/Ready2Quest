@@ -1,36 +1,24 @@
 # Paquet Ready2Quest (CurseForge, Wago) : BigWigsMods/packager, voir docs/PUBLIER.md.
-# Le paquet livre uniquement l'addon : code Lua, médias, licence.
-# Le dépôt contient aussi QuestCompanion (sous-dossier), publié à part avec
-# .pkgmeta-questcompanion : il est exclu d'ici, comme le développement
-# (tests/, tools/, docs/) et les fichiers de dépôt.
-# Garde-fou : tests/run_tests.py vérifie ces listes à chaque lancement.
+# Le dépôt range chaque addon dans son dossier (Ready2Quest/, QuestCompanion/), comme dans
+# Interface/AddOns. Le packager part de la racine : on ignore tout ce qui n'est
+# pas Ready2Quest/, puis move-folders le remonte d'un niveau. Le zip ne contient
+# qu'un dossier, Ready2Quest/.
+# Une entrée ajoutée à la racine doit être ajoutée ici et dans l'autre .pkgmeta :
+# tests/run_tests.py le vérifie à chaque lancement.
 package-as: Ready2Quest
 
-ignore:
-  - .git
-  - .gitattributes
-  - .gitignore
-  - .pkgmeta
-  - .pkgmeta-questcompanion
-  - .github
-  - QuestCompanion
-  - tests
-  - tools
-  - docs
-  - README.md
-  - "*.py"
-  - "*.bak"
-  - "*.orig"
-  - "*.log"
-  - "*~"
-  - "__pycache__"
-  - "_*.py"
-  - "_block.lua"
-
-enable-nolib-creation: no
-
 manual-changelog:
-  filename: CHANGELOG.md
+  filename: Ready2Quest/CHANGELOG.md
   markup-type: markdown
 
-license-output: LICENSE
+move-folders:
+  Ready2Quest/Ready2Quest: Ready2Quest
+
+ignore:
+  - LICENSE
+  - QuestCompanion
+  - README.md
+  - docs
+  - tests
+  - tools
+  - Ready2Quest/CHANGELOG.md

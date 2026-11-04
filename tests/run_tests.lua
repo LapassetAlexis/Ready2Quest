@@ -495,8 +495,8 @@ end
 
 -- La liste des fichiers vient du .toc, comme pour le client : un module
 -- ajouté au .toc est chargé ici sans autre modification.
--- Ready2Quest d'abord, puis QuestCompanion (## Dependencies: Ready2Quest) :
--- ses fichiers sont listés avec leur dossier, « QuestCompanion/Companion.lua ».
+-- Ready2Quest d'abord, puis QuestCompanion. Chaque fichier est listé avec le
+-- dossier de son addon : « Ready2Quest/Core.lua », « QuestCompanion/Companion.lua ».
 local tocFiles = {}
 do
 	local function ReadToc(toc, prefix)
@@ -507,7 +507,7 @@ do
 		end
 		handle:close()
 	end
-	ReadToc("Ready2Quest.toc", "")
+	ReadToc("Ready2Quest/Ready2Quest.toc", "Ready2Quest/")
 	ReadToc("QuestCompanion/QuestCompanion.toc", "QuestCompanion/")
 end
 -- Les scénarios historiques comptent les contrôles et pages du cœur (13
@@ -523,7 +523,7 @@ do
 		core[file] = true
 	end
 	for _, file in ipairs(tocFiles) do
-		if core[file] then LoadAddonFile(file) else table.insert(Mock.moduleFiles, file) end
+		if core[file:gsub("^Ready2Quest/", "")] then LoadAddonFile(file) else table.insert(Mock.moduleFiles, file) end
 	end
 end
 _G.TOC_FILES = tocFiles
@@ -1257,7 +1257,7 @@ Check("le libellé OPT_STUFF_SHORT n'est plus traduit",
 -- garde-fou général : toute clé utilisée par le code doit être traduite
 local missing = {}
 local function ScanFile(file)
-	local f = io.open(file, "rb")
+	local f = io.open(ROOT .. "/" .. file, "rb")
 	if not f then return end
 	local data = f:read("*a")
 	f:close()
@@ -2483,7 +2483,7 @@ end
 -- Aucun caractère hors du répertoire de la police du client : "▶" (U+25B6)
 -- s'affichait en losange de remplacement.
 local function HasHighGlyph(file)
-	local f = io.open(file, "rb")
+	local f = io.open(ROOT .. "/" .. file, "rb")
 	if not f then return false end
 	local data = f:read("*a")
 	f:close()
@@ -2493,8 +2493,8 @@ local function HasHighGlyph(file)
 	end
 	return false
 end
-Check("pas de glyphe triangle dans Options.lua", not HasHighGlyph("Options.lua"))
-Check("pas de glyphe triangle dans Locales.lua", not HasHighGlyph("Locales.lua"))
+Check("pas de glyphe triangle dans Options.lua", not HasHighGlyph("Ready2Quest/Options.lua"))
+Check("pas de glyphe triangle dans Locales.lua", not HasHighGlyph("Ready2Quest/Locales.lua"))
 
 -- la ligne « position du bouton » affiche l'angle courant
 local posRow
@@ -3125,7 +3125,7 @@ local newKeys = { "MSG_SAFE_PURGED", "MSG_SAFE_RESET", "SAFE_KIND_CITY", "SAFE_K
 	"REAGENT_SEED", "REAGENT_ANKH", "REAGENT_SYMBOL", "CHK_HEARTH", "CHK_HEARTH_MISSING", "CHK_HEARTH_READY",
 	"CHK_HEARTH_CD", "ADV_HEARTH", "CHK_REPAIR", "CHK_REPAIR_NONE", "CHK_REPAIR_OK", "CHK_REPAIR_POOR",
 	"ADV_REPAIR", "CHK_SPELLS", "CHK_SPELLS_DETAIL", "ADV_SPELLS", "MODULE_INACTIVE", "MSG_NO_SUBZONE" }
-local localeSource = io.open(ROOT .. "/Locales.lua", "r"):read("*a")
+local localeSource = io.open(ROOT .. "/Ready2Quest/Locales.lua", "r"):read("*a")
 local enStart = localeSource:find("local enUS = {", 1, true)
 local frPart, enPart = localeSource:sub(1, enStart), localeSource:sub(enStart)
 local missingFr, missingEn = {}, {}

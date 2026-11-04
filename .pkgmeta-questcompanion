@@ -1,9 +1,10 @@
 # Paquet QuestCompanion (CurseForge, Wago) : BigWigsMods/packager, voir docs/PUBLIER.md.
-# Le packager part de la racine du dépôt git, qui est Ready2Quest : on ignore
-# tout ce qui est à la racine, puis move-folders remonte QuestCompanion/ d'un
-# niveau. Résultat : un zip avec un seul dossier QuestCompanion/.
-# Un fichier ajouté à la racine DOIT être ajouté ici (sinon il part dans le zip
-# de QuestCompanion) : tests/run_tests.py le vérifie à chaque lancement.
+# Le dépôt range chaque addon dans son dossier (QuestCompanion/, Ready2Quest/), comme dans
+# Interface/AddOns. Le packager part de la racine : on ignore tout ce qui n'est
+# pas QuestCompanion/, puis move-folders le remonte d'un niveau. Le zip ne contient
+# qu'un dossier, QuestCompanion/.
+# Une entrée ajoutée à la racine doit être ajoutée ici et dans l'autre .pkgmeta :
+# tests/run_tests.py le vérifie à chaque lancement.
 package-as: QuestCompanion
 
 manual-changelog:
@@ -14,37 +15,10 @@ move-folders:
   QuestCompanion/QuestCompanion: QuestCompanion
 
 ignore:
-  - BagSpace.lua
-  - Bootstrap.lua
-  - Buffs.lua
-  - CHANGELOG.md
-  - Camp.lua
-  - Checks.lua
-  - Compat.lua
-  - Core.lua
-  - Death.lua
-  - Dungeon.lua
-  - DungeonData.lua
-  - Equip.lua
-  - Expedition.lua
-  - Fonts
-  - Hubs.lua
   - LICENSE
-  - LevelPace.lua
-  - Locales.lua
-  - Merchant.lua
-  - Minimap.lua
-  - Options.lua
-  - QuestReward.lua
   - README.md
-  - Ready2Quest.toc
-  - Reagents.lua
-  - Stats.lua
-  - Textures
-  - Theme.lua
-  - UI.lua
+  - Ready2Quest
   - docs
   - tests
   - tools
-  - QuestCompanion/README.md
   - QuestCompanion/CHANGELOG.md

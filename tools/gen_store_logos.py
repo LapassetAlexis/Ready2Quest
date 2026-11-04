@@ -16,7 +16,7 @@ import os
 from PIL import Image, ImageDraw, ImageFilter, ImageFont
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-fontpath = os.path.join(ROOT, "Fonts", "Alegreya-Bold.ttf")
+fontpath = os.path.join(ROOT, "Ready2Quest", "Fonts", "Alegreya-Bold.ttf")
 OUT = os.path.join(ROOT, "docs", "publication")
 
 AMB=(232,165,75,255); AMB_D=(185,120,44,255); CREAM=(241,232,212,255)

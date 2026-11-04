@@ -46,7 +46,7 @@ local function FrameShown() return NS.campFrame ~= nil and NS.campFrame:IsShown(
 -- ---------------------------------------------------------------------------
 do
 	Check("[CAMP] Camp.lua listé dans le .toc", (function()
-		for _, file in ipairs(TOC_FILES) do if file == "Camp.lua" then return true end end
+		for _, file in ipairs(TOC_FILES) do if file == "Ready2Quest/Camp.lua" then return true end end
 		return false
 	end)())
 	Check("[CAMP] contrôle kit déclaré", NS:FindCheck("campkit") ~= nil)

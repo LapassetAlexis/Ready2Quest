@@ -118,7 +118,7 @@ do
 	Say("-- bestiaire : chargement et chaînes")
 	Check("[BST] Bestiary.lua chargé", NS.Loaded and NS.Loaded.Bestiary)
 	local order = {}
-	for index, file in ipairs(_G.TOC_FILES or {}) do order[(file:gsub("^QuestCompanion/", ""))] = index end
+	for index, file in ipairs(_G.TOC_FILES or {}) do order[(file:gsub("^[^/]+/", ""))] = index end
 	Check("[BST] .toc : Bestiary.lua après JournalTracker.lua", order["Bestiary.lua"] and order["JournalTracker.lua"]
 		and order["Bestiary.lua"] > order["JournalTracker.lua"])
 	local strings, missing, mismatch = NS.BESTIARY_STRINGS, {}, {}

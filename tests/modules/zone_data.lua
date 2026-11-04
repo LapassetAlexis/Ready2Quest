@@ -131,7 +131,7 @@ do
 	Say("-- données de zone : chargement")
 	Check("[ZDATA] tables de zone chargées", NS.Loaded and NS.Loaded.ZoneCreatures and NS.Loaded.ZoneGathering)
 	local order = {}
-	for index, file in ipairs(_G.TOC_FILES or {}) do order[(file:gsub("^QuestCompanion/", ""))] = index end
+	for index, file in ipairs(_G.TOC_FILES or {}) do order[(file:gsub("^[^/]+/", ""))] = index end
 	local before = true
 	for _, file in ipairs({ "ZoneCreatures_Era.lua", "ZoneCreatures_Forever.lua", "ZoneGathering_Era.lua",
 		"ZoneGathering_Forever.lua" }) do

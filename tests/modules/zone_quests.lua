@@ -107,14 +107,14 @@ do
 		and NS.Loaded.ZoneQuests_Forever and not NS.Loaded.ZoneQuests_Era and saved.ZONE_QUESTS ~= nil
 		and saved.ZONE_QUESTS[2521] ~= nil)
 	local order = {}
-	for index, file in ipairs(_G.TOC_FILES or {}) do order[(file:gsub("^QuestCompanion/", ""))] = index end
+	for index, file in ipairs(_G.TOC_FILES or {}) do order[(file:gsub("^[^/]+/", ""))] = index end
 	Check("[ZQ] .toc : tables avant ZoneQuests.lua, après JournalTracker.lua, avant JournalWindow.lua",
 		order["ZoneQuests_Era.lua"] and order["ZoneQuests_Forever.lua"] and order["ZoneQuests.lua"]
 		and order["Dungeon.lua"] < order["ZoneQuests_Era.lua"]
 		and order["ZoneQuests_Era.lua"] < order["ZoneQuests.lua"] and order["ZoneQuests_Forever.lua"] < order["ZoneQuests.lua"]
 		and order["JournalTracker.lua"] < order["ZoneQuests.lua"] and order["ZoneQuests.lua"] < order["JournalWindow.lua"])
 	local toc = ""
-	for _, file in ipairs({ "/Ready2Quest.toc", "/QuestCompanion/QuestCompanion.toc" }) do
+	for _, file in ipairs({ "/Ready2Quest/Ready2Quest.toc", "/QuestCompanion/QuestCompanion.toc" }) do
 		local handle = assert(io.open(ROOT .. file, "r"))
 		toc = toc .. handle:read("*a")
 		handle:close()

@@ -58,23 +58,23 @@ def pkgmeta_ignores(path):
 
 
 def check_packages():
-    """Garde-fou de publication : chaque entrée suivie à la racine du dépôt
-    (fichiers de Ready2Quest) doit être exclue du zip de QuestCompanion, sinon
-    elle y part ; Ready2Quest, lui, doit exclure QuestCompanion et les outils."""
+    """Garde-fou de publication : chaque addon a son dossier à la racine
+    (Ready2Quest/, QuestCompanion/). Son .pkgmeta doit ignorer TOUT le reste de
+    la racine (l'autre addon, docs, tests, outils), sinon ça part dans son zip."""
     import subprocess
     problems = []
     try:
-        tracked = subprocess.check_output(["git", "-C", ROOT, "ls-files"], text=True).split("\n")
+        tracked = subprocess.check_output(["git", "-C", ROOT, "ls-files", "--cached", "--others", "--exclude-standard"],
+                                          text=True).split("\n")
     except (OSError, subprocess.CalledProcessError):
         return problems  # pas de git (archive) : rien à vérifier
     root = {f.split("/")[0] for f in tracked if f and not f.startswith(".")}
-    qc = set(pkgmeta_ignores(os.path.join(ROOT, ".pkgmeta-questcompanion")))
-    for entry in sorted(root - {"QuestCompanion"} - qc):
-        problems.append(".pkgmeta-questcompanion : « %s » n'est pas ignoré, il partirait dans le zip de QuestCompanion" % entry)
-    r2q = set(pkgmeta_ignores(os.path.join(ROOT, ".pkgmeta")))
-    for entry in ("QuestCompanion", "docs", "tests", "tools"):
-        if entry not in r2q:
-            problems.append(".pkgmeta : « %s » n'est pas ignoré, il partirait dans le zip de Ready2Quest" % entry)
+    for pkgmeta, addon in ((".pkgmeta", "Ready2Quest"), (".pkgmeta-questcompanion", "QuestCompanion")):
+        ignored = set(pkgmeta_ignores(os.path.join(ROOT, pkgmeta)))
+        for entry in sorted(root - {addon} - ignored):
+            problems.append("%s : « %s » n'est pas ignoré, il partirait dans le zip de %s" % (pkgmeta, entry, addon))
+        if addon in ignored:
+            problems.append("%s : le dossier %s lui-même est ignoré" % (pkgmeta, addon))
     return problems
 
 

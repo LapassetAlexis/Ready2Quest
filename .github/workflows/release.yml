@@ -56,7 +56,7 @@ jobs:
             if [ "${{ inputs.addon }}" = "QuestCompanion" ]; then
               tag="qc-v$(sed -n 's/^## Version:[[:space:]]*//p' QuestCompanion/QuestCompanion.toc | tr -d '\r')"
             else
-              tag="v$(sed -n 's/^## Version:[[:space:]]*//p' Ready2Quest.toc | tr -d '\r')"
+              tag="v$(sed -n 's/^## Version:[[:space:]]*//p' Ready2Quest/Ready2Quest.toc | tr -d '\r')"
             fi
           fi
           case "$tag" in
@@ -64,7 +64,7 @@ jobs:
               name="QuestCompanion"; toc="QuestCompanion/QuestCompanion.toc"
               pkgmeta=".pkgmeta-questcompanion"; version="${tag#qc-v}" ;;
             v*)
-              name="Ready2Quest"; toc="Ready2Quest.toc"
+              name="Ready2Quest"; toc="Ready2Quest/Ready2Quest.toc"
               pkgmeta=".pkgmeta"; version="${tag#v}" ;;
             *)
               echo "::error::Tag inattendu : $tag"; exit 1 ;;

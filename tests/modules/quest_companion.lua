@@ -26,7 +26,7 @@ end
 do
 	Say("-- QuestCompanion : .toc")
 	local qcText, qcFiles = QCT.ReadToc("QuestCompanion/QuestCompanion.toc")
-	local r2qText, r2qFiles = QCT.ReadToc("Ready2Quest.toc")
+	local r2qText, r2qFiles = QCT.ReadToc("Ready2Quest/Ready2Quest.toc")
 	Check("[QC] .toc : dépend de Ready2Quest", qcText:find("\n## Dependencies: Ready2Quest\n", 1, true) ~= nil)
 	Check("[QC] .toc : sa propre sauvegarde QuestCompanionDB", qcText:find("\n## SavedVariables: QuestCompanionDB\n", 1, true) ~= nil)
 	Check("[QC] .toc : version 1.0.0, comme NS.QC.version", qcText:find("\n## Version: 1.0.0\n", 1, true) ~= nil
@@ -51,9 +51,9 @@ do
 	Check("[QC] Ready2Quest.toc ne charge aucun fichier de QuestCompanion", #leftovers == 0, table.concat(leftovers, ", "))
 	for _, file in ipairs({ "Companion.lua", "Journal.lua", "JournalTracker.lua", "JournalWindow.lua", "Bestiary.lua",
 		"Gathering.lua", "CompanionChest.lua", "ZoneQuests.lua", "ZoneCreatures_Era.lua" }) do
-		local handle = io.open(ROOT .. "/" .. file, "r")
+		local handle = io.open(ROOT .. "/Ready2Quest/" .. file, "r")
 		if handle then handle:close() end
-		Check("[QC] " .. file .. " n'est plus à la racine de Ready2Quest", handle == nil and listed[file] == true)
+		Check("[QC] " .. file .. " n'est pas dans Ready2Quest/", handle == nil and listed[file] == true)
 	end
 
 	local bad = {}
