@@ -74,6 +74,10 @@ local function NewRegion(kind, name)
 	function region:SetAtlas(path) self.atlas = path end
 	function region:SetVertexColor(r, g, b, a) self.vertex = { r, g, b, a } end
 	function region:SetAlpha(value) self.alpha = value end
+	-- échelle du cadre (SetScale) : rangée à part, « scale » est un champ libre
+	-- des addons (le compagnon y garde la taille de son modèle)
+	function region:SetScale(value) self.frameScale = value end
+	function region:GetScale() return self.frameScale or 1 end
 	function region:GetName() return self.name end
 	function region:SetHighlightTexture(texture) self.highlightTexture = texture end
 	-- BackdropTemplate

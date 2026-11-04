@@ -134,10 +134,18 @@ ns.COMPANION_RULES = {
 -- ---------------------------------------------------------------------------
 local FR = {
 	OPT_PAGE_COMPANION_MAIN = "Compagnon",
-	OPT_PAGE_COMPANION_MAIN_SUB = "Sa créature, ses bulles, son apparence et ses ornements.",
+	OPT_PAGE_COMPANION_MAIN_SUB = "Sa créature, sa taille, son bavardage et son apparence.",
+	OPT_PAGE_COMPANION_ORN = "Ornements",
+	OPT_PAGE_COMPANION_ORN_SUB = "Les ornements de son cadre, gagnés en jouant : affiche ceux que tu aimes.",
 	OPT_PAGE_COMPANION     = "Compagnon de route",
 	OPT_PAGE_COMPANION_SUB = "Une petite créature qui voyage avec toi et réagit à ton aventure.",
 	OPT_COMP_SHOW          = "Afficher le compagnon",
+	OPT_COMP_SIZE          = "Taille",
+	COMP_SIZE_1            = "Petit",
+	COMP_SIZE_2            = "Moyen",
+	COMP_SIZE_3            = "Grand",
+	COMP_SIZE_4            = "Très grand",
+	COMP_SIZE_DESC         = "La taille de son cadre ; sa bulle reste lisible et le suit.",
 	OPT_COMP_CHATTER       = "Bavardage",
 	COMP_CHATTER_0         = "Muet",
 	COMP_CHATTER_1         = "Discret",
@@ -273,10 +281,18 @@ local FR = {
 }
 local EN = {
 	OPT_PAGE_COMPANION_MAIN = "Companion",
-	OPT_PAGE_COMPANION_MAIN_SUB = "Its creature, bubbles, appearance and ornaments.",
+	OPT_PAGE_COMPANION_MAIN_SUB = "Its creature, size, chattiness and appearance.",
+	OPT_PAGE_COMPANION_ORN = "Ornaments",
+	OPT_PAGE_COMPANION_ORN_SUB = "The ornaments of its frame, earned by playing: show the ones you like.",
 	OPT_PAGE_COMPANION     = "Road companion",
 	OPT_PAGE_COMPANION_SUB = "A little creature that travels with you and reacts to your adventure.",
 	OPT_COMP_SHOW          = "Show the companion",
+	OPT_COMP_SIZE          = "Size",
+	COMP_SIZE_1            = "Small",
+	COMP_SIZE_2            = "Medium",
+	COMP_SIZE_3            = "Large",
+	COMP_SIZE_4            = "Huge",
+	COMP_SIZE_DESC         = "The size of its frame; its bubble stays readable and follows it.",
 	OPT_COMP_CHATTER       = "Chattiness",
 	COMP_CHATTER_0         = "Silent",
 	COMP_CHATTER_1         = "Discreet",
@@ -414,6 +430,7 @@ ns.RegisterDefaults({
 	companionEnabled    = true,
 	companionShow       = true,
 	companionPoint      = { point = "CENTER", x = 330, y = -170 },
+	companionSize       = 2,      -- réglette « Taille » : 1 petit, 2 moyen, 3 grand, 4 très grand
 	companionOrnRibbon  = true,
 	companionOrnLantern = true,
 	companionOrnMedal   = true,
@@ -434,6 +451,10 @@ ns.AddOptionPage({
 		{ key = "companionShow",       label = "OPT_COMP_SHOW",       kind = "bool" },
 		-- réglette « Bavardage » : le nom du cran, une phrase dessous, le détail
 		-- au survol, et le compagnon qui confirme
+		{ key = "companionSize",       label = "OPT_COMP_SIZE",       kind = "number", min = 1, max = 4, step = 1,
+			display = function(value) return L["COMP_SIZE_" .. value] end,
+			describe = function() return L.COMP_SIZE_DESC end,
+			onChange = function() ns:CompanionApplySize() end },
 		{ key = "companionChatter",    label = "OPT_COMP_CHATTER",    kind = "number", min = 0, max = 4, step = 1,
 			display = function(value) return L["COMP_CHATTER_" .. value] end,
 			describe = function(value) return L["COMP_CHATTER_DESC_" .. value] end,
@@ -444,7 +465,12 @@ ns.AddOptionPage({
 		{ key = "companionFrameStyle", label = "COMP_KIND_frame",     kind = "action" },
 		{ key = "companionBackground", label = "COMP_KIND_bg",        kind = "action" },
 		{ key = "companionTutorial",   label = "OPT_COMP_TUTO",       kind = "action" },
-		{ header = "OPT_COMP_ORNAMENTS" },
+	},
+})
+-- Ornements : sous-page à part (la page principale déborderait du panneau)
+ns.AddOptionPage({
+	id = "companionOrnaments", title = "OPT_PAGE_COMPANION_ORN", parent = "companion", group = "OPT_GROUP_MODULES",
+	rows = {
 		{ key = "companionOrnRibbon",  label = "COMP_ORN_RIBBON",     kind = "bool" },
 		{ key = "companionOrnLantern", label = "COMP_ORN_LANTERN",    kind = "bool" },
 		{ key = "companionOrnMedal",   label = "COMP_ORN_MEDAL",      kind = "bool" },
@@ -1109,6 +1135,37 @@ end
 -- ---------------------------------------------------------------------------
 local FRAME_W, FRAME_H = 104, 118
 local MODEL_H = 82
+-- Taille du cadre (réglette « Taille », db.companionSize 1 à 4) : échelle du
+-- cadre ; la bulle et l'infobulle gardent leur taille (lisibles) et le suivent.
+ns.COMPANION_SIZES = { 0.8, 1.0, 1.3, 1.6 }
+ns.COMPANION_SIZE_DEFAULT = 2
+
+function ns:CompanionSizeLevel()
+	local level = math.floor(tonumber(self:DB().companionSize) or ns.COMPANION_SIZE_DEFAULT)
+	if level < 1 then level = 1 elseif level > #ns.COMPANION_SIZES then level = #ns.COMPANION_SIZES end
+	return level
+end
+
+-- Applique la taille ; la position mémorisée (en unités du cadre) est recalée
+-- pour que le compagnon ne saute pas à l'écran quand on change de taille.
+function ns:CompanionApplySize()
+	local frame = self.companionFrame
+	if not frame or not frame.SetScale then return nil end
+	local scale = ns.COMPANION_SIZES[self:CompanionSizeLevel()]
+	local before = (frame.GetScale and frame:GetScale()) or 1
+	if before ~= scale then
+		local db = self:DB()
+		local point = db.companionPoint
+		if type(point) == "table" and before > 0 then
+			point.x = (tonumber(point.x) or 0) * before / scale
+			point.y = (tonumber(point.y) or 0) * before / scale
+			frame:ClearAllPoints()
+			frame:SetPoint(point.point or "CENTER", UIParent, point.point or "CENTER", point.x, point.y)
+		end
+		frame:SetScale(scale)
+	end
+	return scale
+end
 
 -- Un PlayerModel (ou Model) n'est gardé que s'il sait afficher une créature
 local function CreateModel(parent)
@@ -1235,6 +1292,9 @@ function ns:EnsureCompanionFrame()
 	if not frame then return nil end
 	frame:EnableMouse(true)
 	if self.RestorePoint then self:RestorePoint(frame, "companionPoint", { point = "CENTER", x = 330, y = -170 }) end
+	-- la position mémorisée est en unités du cadre à sa taille : on pose
+	-- l'échelle avant tout recalage
+	if frame.SetScale then frame:SetScale(ns.COMPANION_SIZES[self:CompanionSizeLevel()]) end
 
 	frame.model = CreateModel(frame)
 	if frame.model then

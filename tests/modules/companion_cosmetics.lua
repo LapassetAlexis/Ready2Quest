@@ -69,7 +69,8 @@ do
 	Check("[COSM] au moins 13 apparences, 8 ornements", #NS.COMPANION_APPEARANCES >= 13 and #NS.COMPANION_ORNAMENTS >= 8)
 	-- les nouveaux ornements ont leur interrupteur (réglage par défaut + ligne)
 	local page
-	for _, p in ipairs(NS.OPTION_PAGES) do if p.id == "companionMain" then page = p end end
+	-- sous-page « Ornements » (la page principale déborderait sinon)
+	for _, p in ipairs(NS.OPTION_PAGES) do if p.id == "companionOrnaments" then page = p end end
 	local rowKeys = {}
 	for _, row in ipairs(page.rows) do if row.key then rowKeys[row.key] = true end end
 	local orphans = {}
@@ -77,7 +78,11 @@ do
 		if not rowKeys[def.key] or NS:DB()[def.key] == nil then orphans[#orphans + 1] = def.id end
 	end
 	Check("[COSM] chaque ornement a sa ligne de réglage", #orphans == 0, table.concat(orphans, ","))
-	Check("[COSM] lignes Cadre et Fond dans la page", rowKeys.companionFrameStyle and rowKeys.companionBackground)
+	local mainKeys = {}
+	for _, p in ipairs(NS.OPTION_PAGES) do
+		if p.id == "companionMain" then for _, row in ipairs(p.rows) do if row.key then mainKeys[row.key] = true end end end
+	end
+	Check("[COSM] lignes Cadre et Fond dans la page principale", mainKeys.companionFrameStyle and mainKeys.companionBackground)
 end
 
 do
