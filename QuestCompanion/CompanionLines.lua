@@ -450,6 +450,65 @@ P.TUTO = {
 	{ "Pour me personnaliser : réglages, page Compagnon. Et je ne me fâche jamais !", "To customise me: settings, Companion page. And I never get cross!" },
 }
 
+-- ---------------------------------------------------------------------------
+-- Conseils de route (Advice.lua) : %s = nom, %d = nombre ou pourcentage
+-- ---------------------------------------------------------------------------
+P.ADVICE_ELITE = {
+	{ "Attention, %s par là ! C'est un élite, ça pique.", "Careful, %s over there! It's an elite, it bites." },
+	{ "%s… celui-là est costaud, on le contourne ?", "%s… that one's tough, shall we go around?" },
+}
+P.ADVICE_RARE = {
+	{ "Oh, %s ! Un rare, mais il a l'air coriace.", "Oh, %s! A rare, but it looks tough." },
+	{ "%s rôde par ici : rare, et plus fort que toi.", "%s is prowling around: rare, and stronger than you." },
+}
+P.ADVICE_HEALTH = {
+	{ "Ouf… tu es bien amoché. On se pose un peu ?", "Phew… you're badly hurt. Shall we rest a bit?" },
+	{ "Mange un morceau avant de repartir, tu en as besoin.", "Have a bite before moving on, you need it." },
+}
+P.ADVICE_AMMO = {
+	{ "Plus que %d munitions, pense à en racheter.", "Only %d ammo left, think about buying more." },
+	{ "%d munitions… ça va partir vite.", "%d ammo… that won't last long." },
+}
+P.ADVICE_AMMO_EMPTY = {
+	{ "On est presque à sec de munitions (%d) : sans elles, pas de tir !", "We're nearly out of ammo (%d): no ammo, no shooting!" },
+	{ "Plus que %d munitions, il faut vraiment rentrer.", "Only %d ammo left, we really need to head back." },
+}
+P.ADVICE_AMMO_UNEQUIPPED = {
+	{ "Tes munitions sont dans le sac (%d), pas dans ton emplacement de munitions !", "Your ammo is in your bag (%d), not in your ammo slot!" },
+}
+P.ADVICE_FOOD = {
+	{ "Il ne reste que %d de quoi manger, et on est loin du village.", "Only %d bites of food left, and we're far from town." },
+	{ "Plus que %d vivres… on en garde pour plus tard ?", "Just %d food left… shall we save some?" },
+}
+P.ADVICE_FOOD_EMPTY = {
+	{ "Plus rien à manger… on rentre faire des provisions ?", "Nothing left to eat… head back for supplies?" },
+}
+P.ADVICE_DURA = {
+	{ "Ton équipement souffre (%d %%), pense à réparer.", "Your gear is suffering (%d %%), think about repairs." },
+	{ "Ton armure s'use : %d %%, un forgeron serait le bienvenu.", "Your armor is wearing out: %d %%, a blacksmith would be welcome." },
+}
+P.ADVICE_DURA_CRIT = {
+	{ "Ton équipement va casser (%d %%) ! Il faut réparer.", "Your gear is about to break (%d %%)! Time to repair." },
+}
+P.ADVICE_BAGS = {
+	{ "Plus que %d places dans les sacs… on garde quoi ?", "Only %d bag slots left… what do we keep?" },
+	{ "Les sacs se remplissent : %d places libres.", "Bags are filling up: %d free slots." },
+}
+P.ADVICE_BAGS_LAST = {
+	{ "Dernière place dans les sacs !", "Last free bag slot!" },
+}
+P.ADVICE_BAGS_FULL = {
+	{ "Les sacs sont pleins, le prochain butin restera par terre !", "Bags are full, the next loot stays on the ground!" },
+}
+P.ADVICE_QUESTS = {
+	{ "Tout est fini ici : on rentre rendre les quêtes ?", "All done here: shall we go turn in the quests?" },
+	{ "Toutes tes quêtes sont prêtes à rendre !", "All your quests are ready to turn in!" },
+}
+P.ADVICE_HEARTH = {
+	{ "Ta pierre de foyer est prête. On rentre ?", "Your hearthstone is ready. Going home?" },
+	{ "Le foyer est rechargé, et on est bien chargés : retour à l'auberge ?", "The hearthstone is back, and we're loaded: back to the inn?" },
+}
+
 -- Confirmation d'un nouveau cran de la réglette « Bavardage »
 P.CHATTER_1 = { { "D'accord, je me fais discret : je ne parle que si ça compte.", "Alright, I'll keep quiet: I only speak up when it matters." } }
 P.CHATTER_2 = { { "Je reste calme : mes conseils et les grands moments, c'est tout.", "I'll stay calm: my advice and the big moments, that's all." } }

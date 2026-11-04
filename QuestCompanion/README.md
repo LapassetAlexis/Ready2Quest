@@ -22,6 +22,20 @@ De courtes bulles, jamais en combat, avec plusieurs phrases pour chaque situatio
 
 Elle dit aussi **ce dont elle a besoin** : « J'ai faim… », « On explore ? », « Encore 2 zones et j'aurai : Dragonnet cramoisi ! ».
 
+## Elle veille sur toi en route
+
+Hors d'un lieu sûr, elle te prévient de ce qui compte, une fois par sortie (et de nouveau si ça empire), jamais en combat :
+- un **élite ou un rare** hostile, au moins 2 niveaux au-dessus de toi (ta cible, ce que tu survoles, les barres de vie), hors donjon ;
+- ta **vie basse** à la fin d'un combat ;
+- tes **munitions** basses, presque à sec, ou rangées dans le sac sans être équipées (chasseur) ;
+- tes **vivres** bas ;
+- ton **équipement** qui s'abîme (sous 25 %, puis sous 10 %) ;
+- tes **sacs** presque pleins ;
+- toutes tes **quêtes** prêtes à rendre ;
+- ta **pierre de foyer** de nouveau prête alors que tu es chargé.
+
+Avec Ready2Quest, elle suit les mêmes seuils que son check (place dans les sacs, vivres, durabilité) et la même idée de « lieu sûr ». Elle parle plus ou moins selon la réglette **Bavardage** : au cran Discret, seuls l'élite, la vie, les munitions et les vivres passent.
+
 ## Comment s'en occuper
 
 Elle a quatre envies : **faim**, **énergie**, **moral** et **curiosité**. Elles se remplissent quand tu manges, te reposes, rends une quête ou explores. Clique dessus pour lui faire une caresse, **clic droit** pour ouvrir son carnet sur les objectifs. Au premier lancement, un **tutoriel** en quelques bulles explique tout ça (à revoir avec `/qc compagnon tuto`).

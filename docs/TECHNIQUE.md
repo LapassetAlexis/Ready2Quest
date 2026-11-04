@@ -50,6 +50,13 @@ Comportement inchangé, sans le compagnon : ses réglages, ses commandes et ses 
 - **Barème unique** (`Theme.ScoreColor`, `Theme.ScoreTextColor`, socle) : 0-24 rouge, 25-59 orange (`ORANGE_DEEP`, nouveau), 60-84 ambre, 85+ vert. Avant, la couleur de la note basculait à 55 et le verdict à 60.
 - Tests `[NTC]` (`tests/modules/notice.lua`) ; les tests qui visent les fenêtres (expédition, donjon) coupent l'icône. Vérifiés par mutation.
 
+### Compagnon utile : réglette « Bavardage » et conseils de route
+
+- **Réglette** (`companionChatter`, 0 à 4, `COMPANION_CHATTER`) : catégories permises, écart entre bulles et entre conseils, facteur des pauses. Nouvelle catégorie de bulle `advice` (priorité entre réaction et tutoriel) ; `opts.important` pour ce qui passe au cran Discret. Reprise des anciens interrupteurs. Socle (Options) : une ligne numérique peut afficher un nom (`display`), une phrase dessous (`describe`), une infobulle (`tooltip`) et prévenir l'addon (`onChange`).
+- **Socle `Gear.lua`** : lecture de l'inventaire, sortie de `Checks.lua` de Ready2Quest : `EachBagItem`, `FreeBagSlots`, `CountConsumables`, `QuestLogReady`, `QuestCounts` (nouveau), `LowestDurability` (nouveau, utilisé aussi par le contrôle de durabilité), `HearthCooldown`, `AmmoCount`, `AmmoInBags`, `ReagentMinimum`, `AMMO_MINIMUM`, `PlayerLevelNow`, `PlayerClassToken`.
+- **Conseils de route** (`QuestCompanion/Advice.lua`) : règles dans l'ordre `ADVICE_ORDER` (élite, vie, munitions, vivres, durabilité, sacs, quêtes, foyer), chacune avec un palier (1, puis 2 si ça empire) ; `state.said` par sortie, remis à zéro dans un lieu sûr. Lieu sûr et seuils : ceux de Ready2Quest via le lien `r2qBridge` (`IsCurrentZoneSafe`, `bagFreeThreshold`, `vivresThreshold`, `durabilityMinPct`), sinon repos, `KnownHub`, `KnownPlace`, sanctuaire, camp, et 3 places / 4 vivres / 25 %. Élites : `PLAYER_TARGET_CHANGED`, `UPDATE_MOUSEOVER_UNIT`, `NAME_PLATE_UNIT_ADDED`, une fois par GUID, hors instance. Vie : à `PLAYER_REGEN_ENABLED`, sous 35 %. Examen toutes les 3 s et sur les événements d'inventaire, de quêtes et de zone.
+- Tests `[CHAT]` et `[ADV]`, vérifiés par mutation.
+
 ### Zones de départ et munitions
 
 - **Vallées de départ** : `gen_hubs.py` ajoute à `Hubs.lua` six vallées et leurs sous-zones internes, de type `start` (22 entrées sur les deux clients). Les sous-zones (la Tanière, Anvilmar…) dépendent de la zone dans AreaTable, pas de leur vallée : elles sont listées à la main ; les passages de sortie (col de Coldridge) n'en font pas partie.
