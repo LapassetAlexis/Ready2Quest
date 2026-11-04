@@ -99,4 +99,4 @@ Le packager déduit les versions du jeu de la ligne `## Interface:` : `16001` po
 
 - `tests/run_tests.py` refuse de lancer les tests si un fichier ajouté à la racine n'est pas exclu de `.pkgmeta-questcompanion`, car il partirait dans le zip de QuestCompanion. Même chose si `.pkgmeta` n'exclut plus `QuestCompanion`, `docs`, `tests` ou `tools`.
 - Le workflow `Tests` tourne à chaque push et pull request.
-- Logos : `python3 -I tools/gen_store_logos.py` les régénère, mêmes dessin et police que le logo en jeu.
+- Logos : `python3 -I tools/gen_store_logos.py` les régénère : la boussole de Ready2Quest (même dessin et même police que le logo en jeu) et le dragonnet de QuestCompanion, ainsi que son icône en jeu `QuestCompanion/Textures/logo_petit.tga`.

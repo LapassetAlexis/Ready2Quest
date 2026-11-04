@@ -13,7 +13,7 @@
 ## Dependencies: Ready2Quest
 ## SavedVariables: QuestCompanionDB
 ## X-Category: Utility
-## IconTexture: Interface\AddOns\Ready2Quest\Textures\logo_petit
+## IconTexture: Interface\AddOns\QuestCompanion\Textures\logo_petit
 
 Bootstrap.lua
 CompanionData.lua
