@@ -35,6 +35,7 @@ CompanionData.lua
 CompanionLines.lua
 Companion.lua
 Advice.lua
+Group.lua
 Journal.lua
 JournalTracker.lua
 ZoneCreatures_Era.lua

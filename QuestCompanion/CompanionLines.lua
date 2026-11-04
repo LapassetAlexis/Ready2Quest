@@ -509,6 +509,40 @@ P.ADVICE_HEARTH = {
 	{ "Le foyer est rechargé, et on est bien chargés : retour à l'auberge ?", "The hearthstone is back, and we're loaded: back to the inn?" },
 }
 
+-- ---------------------------------------------------------------------------
+-- En groupe (Group.lua) : %s = nom (ou carte), %d = niveaux d'écart
+-- ---------------------------------------------------------------------------
+P.GROUP_NO_HEALER = {
+	{ "Pas de soigneur dans le groupe… prévoyez des potions !", "No healer in the group… bring potions!" },
+	{ "Personne pour soigner : on y va doucement ?", "Nobody to heal: shall we take it slow?" },
+}
+P.GROUP_BALANCED = {
+	{ "Bel équipage ! Un soigneur, du monde : on est prêts.", "Nice crew! A healer, enough people: we're ready." },
+}
+P.GROUP_LOW_LEVEL = {
+	{ "%s est %d niveau(x) sous ce donjon, gardez un œil sur lui.", "%s is %d level(s) below this dungeon, keep an eye on them." },
+}
+P.GROUP_IN_RANGE = {
+	{ "Tout le groupe a le niveau de ce donjon, en route !", "The whole group fits this dungeon, let's go!" },
+}
+P.GROUP_BEHIND = {
+	{ "%s est resté en arrière, on l'attend ?", "%s fell behind, shall we wait?" },
+	{ "On a perdu %s de vue…", "We've lost sight of %s…" },
+}
+P.GROUP_ELSEWHERE = {
+	{ "Il manque %s, encore à %s.", "%s is missing, still in %s." },
+}
+P.GROUP_DEAD = {
+	{ "Paix à %s… on l'attend ?", "Rest in peace, %s… shall we wait?" },
+	{ "Oh non, %s est tombé !", "Oh no, %s went down!" },
+}
+P.GROUP_HEALER_DEAD = {
+	{ "%s est tombé : plus de soins, prudence !", "%s went down: no more heals, careful!" },
+}
+P.GROUP_OFFLINE = {
+	{ "%s s'est déconnecté.", "%s disconnected." },
+}
+
 -- Confirmation d'un nouveau cran de la réglette « Bavardage »
 P.CHATTER_1 = { { "D'accord, je me fais discret : je ne parle que si ça compte.", "Alright, I'll keep quiet: I only speak up when it matters." } }
 P.CHATTER_2 = { { "Je reste calme : mes conseils et les grands moments, c'est tout.", "I'll stay calm: my advice and the big moments, that's all." } }
