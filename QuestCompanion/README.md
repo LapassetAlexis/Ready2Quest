@@ -1,10 +1,153 @@
 # QuestCompanion
 
+**English** · [Français](#francais)
+
+**A road companion and its travel journal.** A little creature travels with you, talks to you and grows with you. Its journal tracks the completion of every zone, opens chests of cosmetic items and makes it evolve.
+
+For **World of Warcraft Forever** and **Classic Era**. Interface in English and French.
+
+> **Standalone.** QuestCompanion works on its own: its `/qc` command, its settings panel, its minimap button. It pairs nicely with [Ready2Quest](../Ready2Quest/README.md) but doesn't need it: if Ready2Quest is there, the companion also reacts when you leave town and come back.
+
+---
+
+## Road companion
+
+A little in-game creature (a whelp to start with) keeps you company in a corner of the screen. The companion and the **travel journal** are a single module: the journal makes the creature evolve.
+
+## It talks to you
+
+Short bubbles, never in combat, with several lines for each situation:
+- when you **kill a monster**, **eat**, **drink** or **rest**;
+- when you **talk to someone**: it gives its opinion on the vendor, the innkeeper, the flight master, the banker, the trainer or the quest giver, and comments on the creatures you target;
+- when you leave town without food, die, discover a zone or sit by a campfire;
+- now and then, a gameplay **tip**, or a little **conversation** of a few bubbles, as if it were chatting with you.
+
+It also tells you **what it needs**: "I'm a bit peckish…", "Explore?", "2 more zones and I'll get: Crimson whelpling!".
+
+## It looks out for you on the road
+
+Outside a safe spot, it warns you about what matters, once per outing (and again if things get worse), never in combat:
+- a hostile **elite or rare**, at least 2 levels above you (your target, what you hover, nameplates), outside dungeons;
+- your **low health** at the end of a fight;
+- your **ammo** running low, almost out, or sitting in your bags without being equipped (hunter);
+- your **food** running low;
+- your **gear** wearing out (below 25%, then below 10%);
+- your **bags** almost full;
+- all your **quests** ready to turn in;
+- your **hearthstone** ready again while your bags are loaded.
+
+With Ready2Quest, it uses the same thresholds as its check (bag space, food, durability) and the same idea of a "safe spot". How much it says depends on the **Chattiness** slider: on Discreet, only elites, health, ammo and food get through.
+
+## It helps you in a group
+
+Using what your game already knows about your party members (level, class, position, status):
+- when the group forms: **no healer** (priest, druid, shaman, paladin), or a fine full crew;
+- at or inside a **dungeon**: the member with the lowest level for the dungeon, or "the whole group fits this dungeon";
+- a member **left behind** (out of sight for more than 1 min 30, out of combat and outside a safe spot) or **still elsewhere** when you're at the dungeon ("Thrall is missing, still in Orgrimmar");
+- **deaths** (including the healer's: careful!) and **disconnects**.
+
+Nothing in raids, nothing during a flight. Group makeup, dungeon and stragglers are advice (from Calm up); deaths and disconnects are reactions (Normal).
+
+## How to look after it
+
+It has four needs: **hunger**, **energy**, **mood** and **curiosity**. They fill up when you eat, rest, turn in a quest or explore. Click it to give it a cuddle, **right-click** to open its journal on the goals. On first launch, a short **tutorial** in a few bubbles explains all this (replay it with `/qc compagnon tuto`). Even once everything is explored, each need stays easy to fill: curiosity also grows from a zone you haven't seen in 2 hours, every dungeon, every elite or rare you defeat, every gryphon flight, every chest and every gathering node, and even from simply coming and going. Once it has gone through all its evolutions, its needs never drop below 50%.
+
+- **It grows with you**: Hatchling, Youngling (level 10), Seasoned (20), Valiant (40) and Legendary (60). Your level unlocks the stage, but it only evolves if it is **happy**: all four needs at 70% or more. Otherwise it tells you it's ready and what it's missing, and it waits. A little celebration at each stage.
+- **It never holds a grudge**: it doesn't die, doesn't regress and doesn't get sick. After a long absence, it's just a bit sleepy: "I missed you!"
+- **You can customize it** with **appearances** (whelplings, tree frog, kittens, rabbit, turtle, macaw, snake, owlet, wisp, sprite darter), **ornaments**, **frames** (Copper, Oak, Silver, Frost, Runic, Fel-touched, Chased gold) and **backgrounds** (Parchment, Undergrowth, Dusk, Frost, Marble, Embers, Starry vault, Golden velvet).
+- **You earn them from zone chests**: a zone at 100% opens a chest, and you **pick** one item from its tier (zones 1-19, 20-39 or 40-60). The higher the zone, the nicer the item. Once you own a whole tier, the zone turns golden. `/qc coffre` opens a pending chest.
+- **It moves**: a bounce when you level up, a shiver in front of an elite, a "!" when it gives you advice, hearts when you pet it, crumbs at mealtime, "Zzz" when it sleeps, and it floats gently when it's happy. `/qc compagnon anim` plays through its animations; if one doesn't work with your appearance, `/qc compagnon anim non <name>` turns it off (the effects stay).
+- **It has a character**: after three hours of watching you play, it becomes **Curious**, **Glutton**, **Daring**, **Lazy**, **Teasing** or **Cuddly**, depending on what you do most. The owlet, the macaw, the wisp, the turtle, the snake and the sprite darter each have their own (Wise, Parrot, Mystic, Zen, Sly, Mischievous). Its character changes its lines, its favourite need, what it notices and the way it moves. Settings: **Character** page.
+- **It keeps memories**: the big moments of the road (levels, evolutions, dungeons, capitals, rares, completed zones, first flight, first mount, first full group, and even your silliest death) go into an album, in the **Memories** part of the journal. If you agree (it asks once), it takes a **photo** of some of them: an in-game screenshot, saved in the Screenshots folder, never in combat, three a day at most. It celebrates your anniversaries and sometimes reminisces out loud. Settings: **Memories** page.
+
+You can rename it with `/qc compagnon nom Nugget`.
+
+## Travel journal
+
+Your travel collection: a **stamp** for every first time.
+
+| Stamp | When |
+|---|---|
+| Zone | you discover a zone |
+| Village | you enter a village or a hub, of your faction or neutral |
+| Capital | you visit a capital city, even the other faction's |
+| Dungeon | you enter a dungeon |
+| Rare | you kill a rare enemy that you engaged yourself, with your pet or your group |
+| Milestone | you reach levels 10, 20, 30, 40, 50 and 60 |
+
+Each new stamp is announced by a small banner, never in combat. Everything is earned by playing, no random packs.
+
+The journal (`/qc`, the minimap button, or right-click on the creature) has two parts:
+- **Completion**: pick a zone from the list (the one you're in, by default) and see its percentage, its chest and, tab by tab, what's done and what's left:
+  - **Exploration**: the zone's villages;
+  - **Combat**: the bestiary and the named mobs;
+  - **Professions**: the resources of your skill to gather;
+  - **Quests**: the zone's quests your character can do (faction, race, class), done and to do. They count toward the 100%. No addon required, on Era as on Forever.
+- **Track on screen**: one checkbox per zone. When checked, the zone's goals show in the in-game "Journal" tracker. The zone you're in is tracked by default (uncheck it to hide it); check other zones to keep an eye on them.
+- **Evolution**: your creature's stage, the next one, its needs, how it evolves, your chests to open, your collection and your journey (zones, capitals, dungeons, rares, milestones). Hover a need (hunger, energy, mood, curiosity) to see what fills it.
+
+## Goals
+
+The journal sets **goals**: the creature's next stage, the next appearance or ornament, the zone's villages, capitals, dungeons for your level, the next milestone. The closest ones show on screen under the quest tracker, in a **Journal** block: the closest goal highlighted with its bar, then three more in a lighter style.
+
+- **Zone completion**: each zone has its percentage, shown in the **Completion** part of the journal and, for the zone you're in, in the on-screen block. It weighs these equally:
+  - the **villages** you've visited;
+  - the **bestiary**: the species you've met and killed (it counts different species, not a number of kills);
+  - the **named mobs** (elites, rares, bosses) met and killed;
+  - **gathering**, if you're an herbalist, miner or skinner: the herbs, ores and leathers of your skill that you've already gathered in the zone.
+
+  Every zone comes **pre-filled**, on Era as on Forever (Forever's own islands and zones included): its creatures (name, level, rank), the herbs and ores that grow there and its quests are known from your first visit. Whatever is missing from this data (recent Forever additions) fills in as you play.
+- **Hover a goal** to know what to do: the zone's villages you still have to visit, the missing capitals, the dungeons for your level with their level range, the XP to the next level.
+- **Click**: opens the journal. **Right-click**: hides the goal.
+- The block collapses with a click on its title, moves by dragging it and hides in combat (configurable in the companion options, Travel journal page).
+
+---
+
+## Installation
+
+1. Copy the `QuestCompanion` folder into `World of Warcraft/<client>/Interface/AddOns/`: `…/Interface/AddOns/QuestCompanion/QuestCompanion.toc`.
+2. Start the game, or type `/reload`. The line "QuestCompanion — fichiers chargés" ("files loaded") shows up in the chat.
+
+**Did you have the companion with Ready2Quest 1.25 or earlier**? Update Ready2Quest too (1.26.0 or later) and keep it enabled on your first login: your creature, your journal, your chests and their settings are taken over from its saved data, for all your characters, then stored in QuestCompanion's own (`QuestCompanion.lua` in `SavedVariables`). With a Ready2Quest 1.25, which still contains the companion, QuestCompanion stays in the background and asks you to update it.
+
+## Settings
+
+`/qc options`, or right-click the whelp minimap button.
+- **General**: enable the addon, the minimap button and its position.
+- **Road companion**: the **Size** slider (Small, Medium, Large, Huge: its frame grows, its bubble stays readable), the **Chattiness** slider (Silent, Discreet, Calm, Normal, Chatty: the line under the slider says what each step does, and it confirms it itself), appearance, frame and background; the **Ornaments** and **Travel journal** sub-pages (banner, chat, on-screen tracking).
+
+## Commands
+
+`/qc` or `/questcompanion`, your pick. `/qc help` shows the full help.
+
+| Command | Effect |
+|---|---|
+| `/qc` | opens your travel journal (same as `/qc carnet`) |
+| `/qc options` | opens the settings |
+| `/qc compagnon` | your companion's mood (`nom <name>` to rename it, `tuto` to replay the tutorial, `anim` to see its animations) |
+| `/qc coffre` | opens a pending zone chest |
+| `/qc module compagnon off` | turns off the companion and its journal |
+| `/qc minimap [on\|off]` | the minimap button |
+| `/qc reset` | resets the settings, without touching your creature or your journal |
+| `/qc diag` | diagnostics, to attach if you report a problem |
+
+## Data and license
+
+QuestCompanion is free software under the **GPL-3.0** license (see `LICENSE`). The zone data (creatures, gathering, quests) is generated from the [Questie](https://github.com/Questie/QuestieDB) database, also under GPL-3.0, by `tools/gen_zone_data.py`: see `NOTICE.md`.
+
+---
+
+<a id="francais"></a>
+
+# QuestCompanion (français)
+
+[English](#questcompanion) · **Français**
+
 **Un compagnon de route et son carnet de voyage.** Une petite créature voyage avec toi, te parle et grandit avec toi. Son carnet suit la complétion de chaque zone, ouvre des coffres d'objets cosmétiques et la fait évoluer.
 
 Pour **World of Warcraft Forever** et **Classic Era**. Interface en français et en anglais.
 
-> **Autonome.** QuestCompanion fonctionne seul : sa commande `/qc`, son panneau de réglages, son bouton de minicarte. Il va très bien avec [Ready2Quest](../Ready2Quest/README.md), sans en avoir besoin : si Ready2Quest est là, le compagnon réagit en plus à tes départs et retours en ville.
+> **Autonome.** QuestCompanion fonctionne seul : sa commande `/qc`, son panneau de réglages, son bouton de minicarte. Il va très bien avec [Ready2Quest](../Ready2Quest/README.md#francais), sans en avoir besoin : si Ready2Quest est là, le compagnon réagit en plus à tes départs et retours en ville.
 
 ---
 
