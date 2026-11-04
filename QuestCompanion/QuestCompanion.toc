@@ -4,11 +4,12 @@
 ## Interface-TBC: 20506
 ## Interface-Mists: 50504
 ## Title: |cffe8a54bQuest|r|cff5b8fd6Companion|r
-## Notes: Compagnon de route et carnet de voyage : complétion de zone, coffres, évolution. Nécessite Ready2Quest.
+## Notes: A little travel companion and its journal: zone completion, reward chests, evolution. Requires Ready2Quest.
 ## Notes-frFR: Compagnon de route et carnet de voyage : complétion de zone, coffres, évolution. Nécessite Ready2Quest.
 ## Version: 1.0.0
 ## X-License: GPL-3.0
 ## Author: Tristabeau
+## X-Website: https://github.com/LapassetAlexis/Ready2Quest
 ## Dependencies: Ready2Quest
 ## SavedVariables: QuestCompanionDB
 ## X-Category: Utility

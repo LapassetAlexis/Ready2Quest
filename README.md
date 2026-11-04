@@ -238,6 +238,7 @@ Réglages, **QoL** › **Marchand** › « Vendre les gris ».
 
 - [Notes techniques et historique des versions](docs/TECHNIQUE.md) : choix d'API, compatibilité Era et Forever, détail de chaque version.
 - Tests hors jeu, sur un client WoW simulé : `python3 tests/run_tests.py` (nécessite le paquet `lupa`).
+- Publication sur CurseForge et Wago (tags `v*` pour Ready2Quest, `qc-v*` pour QuestCompanion) : [docs/PUBLIER.md](docs/PUBLIER.md).
 - Base des zones sûres : `tools/gen_hubs.py` régénère `Hubs.lua` à partir des données du client publiées sur [wago.tools](https://wago.tools).
 - Police des titres : Alegreya (licence OFL, voir `Fonts/Alegreya-OFL.txt`).
 - Données des zones de QuestCompanion (créatures, récolte, quêtes) : générées depuis la base de [Questie](https://github.com/Questie/QuestieDB) par `tools/gen_zone_data.py` dans `QuestCompanion/`, voir `QuestCompanion/NOTICE.md`.

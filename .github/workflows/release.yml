@@ -1,0 +1,102 @@
+# Publication sur CurseForge, Wago et GitHub (BigWigsMods/packager).
+#
+# Un tag par addon, qui doit correspondre au « ## Version: » de son .toc :
+#   v1.26.0     -> Ready2Quest     (Ready2Quest.toc, .pkgmeta)
+#   qc-v1.0.0   -> QuestCompanion  (QuestCompanion/QuestCompanion.toc, .pkgmeta-questcompanion)
+# Un tag contenant « beta » ou « alpha » part comme fichier bêta ou alpha.
+#
+# Envoi : vers chaque site dont l'identifiant est dans le .toc
+# (## X-Curse-Project-ID, ## X-Wago-ID) et dont le jeton est en secret
+# (CF_API_KEY, WAGO_API_TOKEN). Sans identifiant ni jeton, le site est sauté.
+#
+# Essai à blanc : onglet Actions > Release > Run workflow, choisis l'addon.
+# Le zip est construit SANS rien envoyer, et mis en téléchargement (artefact)
+# pour vérifier son contenu avant la vraie publication.
+# Voir docs/PUBLIER.md.
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+      - 'qc-v*'
+  workflow_dispatch:
+    inputs:
+      addon:
+        description: Addon à construire (essai à blanc, rien n'est envoyé)
+        type: choice
+        options:
+          - Ready2Quest
+          - QuestCompanion
+
+permissions:
+  contents: write
+
+jobs:
+  tests:
+    uses: ./.github/workflows/tests.yml
+
+  release:
+    needs: tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          # le packager lit l'historique (tags, dates)
+          fetch-depth: 0
+
+      - name: Addon du tag et version du .toc
+        id: addon
+        run: |
+          set -euo pipefail
+          tag="${GITHUB_REF_NAME}"
+          dry=""
+          if [ "${GITHUB_EVENT_NAME}" = "workflow_dispatch" ]; then
+            dry="-d"
+            if [ "${{ inputs.addon }}" = "QuestCompanion" ]; then
+              tag="qc-v$(sed -n 's/^## Version:[[:space:]]*//p' QuestCompanion/QuestCompanion.toc | tr -d '\r')"
+            else
+              tag="v$(sed -n 's/^## Version:[[:space:]]*//p' Ready2Quest.toc | tr -d '\r')"
+            fi
+          fi
+          case "$tag" in
+            qc-v*)
+              name="QuestCompanion"; toc="QuestCompanion/QuestCompanion.toc"
+              pkgmeta=".pkgmeta-questcompanion"; version="${tag#qc-v}" ;;
+            v*)
+              name="Ready2Quest"; toc="Ready2Quest.toc"
+              pkgmeta=".pkgmeta"; version="${tag#v}" ;;
+            *)
+              echo "::error::Tag inattendu : $tag"; exit 1 ;;
+          esac
+          toc_version="$(sed -n 's/^## Version:[[:space:]]*//p' "$toc" | tr -d '\r')"
+          # un tag de pré-version (1.0.0-beta1) se compare sur sa base
+          if [ "${version%%-*}" != "$toc_version" ]; then
+            echo "::error file=$toc::Le tag $tag ne correspond pas à la version du .toc ($toc_version)"
+            exit 1
+          fi
+          echo "name=$name" >> "$GITHUB_OUTPUT"
+          echo "pkgmeta=$pkgmeta" >> "$GITHUB_OUTPUT"
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+          echo "dry=$dry" >> "$GITHUB_OUTPUT"
+
+      - name: Paquet et envoi
+        uses: BigWigsMods/packager@v2
+        env:
+          CF_API_KEY: ${{ secrets.CF_API_KEY }}
+          WAGO_API_TOKEN: ${{ secrets.WAGO_API_TOKEN }}
+          GITHUB_OAUTH: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          # -n fichier:libellé, sans le préfixe « qc- » du tag (et sans espace :
+          # la ligne est découpée par le shell de l'action)
+          args: >-
+            ${{ steps.addon.outputs.dry }}
+            -m ${{ steps.addon.outputs.pkgmeta }}
+            -n ${{ steps.addon.outputs.name }}-${{ steps.addon.outputs.version }}:${{ steps.addon.outputs.name }}-${{ steps.addon.outputs.version }}
+
+      - name: Zip de l'essai à blanc
+        if: github.event_name == 'workflow_dispatch'
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ steps.addon.outputs.name }}-${{ steps.addon.outputs.version }}
+          path: .release/*.zip

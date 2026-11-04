@@ -42,6 +42,49 @@ if duplicates:
         print("  region:%s" % name)
     raise SystemExit(2)
 
+def pkgmeta_ignores(path):
+    """Liste `ignore:` d'un .pkgmeta (YAML minimal, comme le lit le packager)."""
+    items, phase = [], None
+    with open(path, "r", encoding="utf-8") as handle:
+        for line in handle:
+            line = line.rstrip("\r\n")
+            if not line.strip() or line.lstrip().startswith("#"):
+                continue
+            if not line.startswith(" "):
+                phase = line.split(":", 1)[0]
+            elif phase == "ignore" and line.strip().startswith("- "):
+                items.append(line.strip()[2:].strip().strip('"'))
+    return items
+
+
+def check_packages():
+    """Garde-fou de publication : chaque entrée suivie à la racine du dépôt
+    (fichiers de Ready2Quest) doit être exclue du zip de QuestCompanion, sinon
+    elle y part ; Ready2Quest, lui, doit exclure QuestCompanion et les outils."""
+    import subprocess
+    problems = []
+    try:
+        tracked = subprocess.check_output(["git", "-C", ROOT, "ls-files"], text=True).split("\n")
+    except (OSError, subprocess.CalledProcessError):
+        return problems  # pas de git (archive) : rien à vérifier
+    root = {f.split("/")[0] for f in tracked if f and not f.startswith(".")}
+    qc = set(pkgmeta_ignores(os.path.join(ROOT, ".pkgmeta-questcompanion")))
+    for entry in sorted(root - {"QuestCompanion"} - qc):
+        problems.append(".pkgmeta-questcompanion : « %s » n'est pas ignoré, il partirait dans le zip de QuestCompanion" % entry)
+    r2q = set(pkgmeta_ignores(os.path.join(ROOT, ".pkgmeta")))
+    for entry in ("QuestCompanion", "docs", "tests", "tools"):
+        if entry not in r2q:
+            problems.append(".pkgmeta : « %s » n'est pas ignoré, il partirait dans le zip de Ready2Quest" % entry)
+    return problems
+
+
+package_problems = check_packages()
+if package_problems:
+    print("ERREUR: paquets de publication incomplets :")
+    for problem in package_problems:
+        print("  " + problem)
+    raise SystemExit(2)
+
 lua = LuaRuntime(unpack_returned_tuples=True)
 globals_ = lua.globals()
 globals_.ADDON_ROOT = ROOT

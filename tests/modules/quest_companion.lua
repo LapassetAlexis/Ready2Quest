@@ -92,6 +92,25 @@ do
 	Check("[QC] le namespace de Ready2Quest n'a pas été touché", rawget(_G, "Ready2Quest") == NS and NS.QC.version == "1.0.0")
 end
 
+do
+	Say("-- QuestCompanion : avec un Ready2Quest 1.25 qui embarque le compagnon")
+	local old = { version = "1.25.0", Loaded = { Companion = true }, Mark = function() end }
+	local saved = rawget(_G, "Ready2Quest")
+	_G.Ready2Quest = old
+	Mock:Reset()
+	local results = {}
+	for _, file in ipairs({ "Bootstrap.lua", "Companion.lua", "Journal.lua" }) do
+		local chunk = assert(loadfile(ROOT .. "/QuestCompanion/" .. file))
+		results[#results + 1] = pcall(chunk, "QuestCompanion", {})
+	end
+	_G.Ready2Quest = saved
+	Check("[QC] ancien Ready2Quest : rien ne plante", results[1] and results[2] and results[3])
+	Check("[QC] ancien Ready2Quest : QuestCompanion s'efface (pas de ns.QC, rien de redéfini)", old.QC == nil
+		and old.CompanionData == nil and old.JournalData == nil)
+	Check("[QC] ancien Ready2Quest : message pour mettre Ready2Quest à jour",
+		Mock:Output():find("mets Ready2Quest à jour", 1, true) ~= nil, Mock:Output())
+end
+
 -- 3. Sauvegarde propre et reprise de Ready2QuestDB --------------------------------------
 do
 	Say("-- QuestCompanion : sauvegarde")

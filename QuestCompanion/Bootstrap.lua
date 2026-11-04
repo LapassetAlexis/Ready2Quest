@@ -23,6 +23,16 @@ if type(ns) ~= "table" then
 	return
 end
 
+-- Ready2Quest 1.25 ou avant embarque encore le compagnon : le charger une
+-- seconde fois doublerait modules, événements et cadres. On s'efface.
+if ns.Loaded and ns.Loaded.Companion then
+	if type(print) == "function" then
+		print("|cffe8a54bQuestCompanion|r — ce Ready2Quest (" .. tostring(ns.version)
+			.. ") contient déjà le compagnon : mets Ready2Quest à jour (1.26.0 ou plus), puis /reload.")
+	end
+	return
+end
+
 ns.QC = { version = "1.0.0", addon = ADDON or "QuestCompanion", private = qc, loaded = false }
 _G.QuestCompanion = ns.QC
 

@@ -1,15 +1,23 @@
+# Paquet Ready2Quest (CurseForge, Wago) : BigWigsMods/packager, voir docs/PUBLIER.md.
+# Le paquet livre uniquement l'addon : code Lua, médias, licence.
+# Le dépôt contient aussi QuestCompanion (sous-dossier), publié à part avec
+# .pkgmeta-questcompanion : il est exclu d'ici, comme le développement
+# (tests/, tools/, docs/) et les fichiers de dépôt.
+# Garde-fou : tests/run_tests.py vérifie ces listes à chaque lancement.
 package-as: Ready2Quest
 
-# Le paquet livre uniquement l'addon : code Lua, medias, licence et notice.
-# Developpement (tests/, tools/, docs/) et fichiers de depot exclus.
 ignore:
   - .git
   - .gitattributes
   - .gitignore
   - .pkgmeta
+  - .pkgmeta-questcompanion
+  - .github
+  - QuestCompanion
   - tests
   - tools
   - docs
+  - README.md
   - "*.py"
   - "*.bak"
   - "*.orig"
@@ -19,9 +27,10 @@ ignore:
   - "_*.py"
   - "_block.lua"
 
-# Fichiers qui doivent figurer dans l'archive livree (en plus de ceux du .toc).
 enable-nolib-creation: no
 
-manual-changelog: CHANGELOG.md
+manual-changelog:
+  filename: CHANGELOG.md
+  markup-type: markdown
 
 license-output: LICENSE
