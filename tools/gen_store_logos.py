@@ -4,7 +4,7 @@ QuestCompanion.
 
 - Ready2Quest : comme le logo en jeu (Textures/logo.tga), boussole de poche,
   monogramme R2Q en Alegreya Bold.
-- QuestCompanion : un dragonnet dans le même boîtier à anneau, mêmes couleurs.
+- QuestCompanion : monogramme QC devant l'ombre d'un dragonnet, mêmes couleurs.
 
 Usage : python3 -I tools/gen_store_logos.py
 Écrit docs/publication/logo_ready2quest.png, logo_questcompanion.png et
@@ -63,70 +63,59 @@ def draw_logo(size, full, parts=None):
         d.text((32*u,22.3*u),"N",font=fN,fill=BLUE,anchor="mm")
     return im.resize((size,size),Image.LANCZOS)
 
-BLUE_L = (140, 182, 235, 255)
+SHADOW = (52, 84, 132, 255)
 
 
-def draw_whelp(size):
-    """Dragonnet de QuestCompanion, dans le boîtier à anneau de Ready2Quest."""
-    k=8; S=size*k; u=S/64.0
-    im=Image.new("RGBA",(S,S),(0,0,0,0)); d=ImageDraw.Draw(im)
-    P=lambda x,y:(x*u,y*u)
-    SC=0.86
-    T=lambda x,y:((32+(x-32)*SC)*u,(38.5+(y-32)*SC)*u)
-    def poly(pts,fill,outline=None,w=0): d.polygon([T(*p) for p in pts],fill=fill)
-    def ell(x0,y0,x1,y1,fill,outline=None,w=0): d.ellipse([T(x0,y0),T(x1,y1)],fill=fill)
-    # boîtier à anneau, comme le logo de Ready2Quest
-    d.ellipse([P(27.8,4.3),P(36.2,12.7)],outline=AMB,width=int(2.2*u))
-    d.rectangle([P(28.5,11),P(35.5,15.5)],fill=AMB)
-    d.ellipse([P(7,12),P(57,62)],fill=DIAL,outline=AMB,width=int(3*u))
-    for i in range(36):
-        a=i/36*2*math.pi; x=32+20.5*math.sin(a); y=37-20.5*math.cos(a)
-        d.ellipse([P(x-.55,y-.55),P(x+.55,y+.55)],fill=AMB_D)
-    # queue enroulée (derrière le corps), pointe en fer de lance
-    d.line([T(38,48),T(44.5,51.8),T(49.5,50.2),T(52,46.5),T(51.6,42.6)],fill=BLUE_D,width=int(3*u*SC),joint="curve")
-    poly([(51.4,35.6),(54.4,40.2),(51.6,43.4),(48.8,40.2)],AMB)
-    # ailes
-    poly([(25,33),(10,18),(13,27),(9,30),(14,34),(12,38),(24,39)],BLUE_D)
-    poly([(24,34),(13,22),(14.5,28),(11.5,30.5),(15.5,33.5),(14.5,37),(23,37.5)],AMB_D)
-    poly([(39,33),(54,18),(51,27),(55,30),(50,34),(52,38),(40,39)],BLUE_D)
-    poly([(40,34),(51,22),(49.5,28),(52.5,30.5),(48.5,33.5),(49.5,37),(41,37.5)],AMB_D)
-    # corps
-    ell(23,31,41,52,BLUE)
-    ell(27,35,37,51,CREAM)
-    for yy in (39,42.5,46):
-        d.line([T(28.3,yy),T(35.7,yy)],fill=(214,200,170,255),width=int(.6*u))
-    # pattes
-    ell(22.5,47,29,53,BLUE_D); ell(35,47,41.5,53,BLUE_D)
-    for x in (23.5,25.8,28):
-        ell(x-.8,51.6,x+.8,53.4,CREAM)
-    for x in (36,38.3,40.6):
-        ell(x-.8,51.6,x+.8,53.4,CREAM)
+def whelp_shadow(d, T, u, color):
+    """Silhouette d'un dragonnet assis, de profil (tête à gauche, aile levée,
+    queue en fer de lance), d'une seule couleur : l'« ombre » derrière QC."""
+    def poly(pts): d.polygon([T(*p) for p in pts], fill=color)
+    def ell(x0, y0, x1, y1): d.ellipse([T(x0, y0), T(x1, y1)], fill=color)
+    # queue
+    d.line([T(44, 50), T(52, 54), T(58, 50), T(59.5, 43), T(57, 37.5)], fill=color,
+           width=int(3.2 * u), joint="curve")
+    poly([(56.2, 31.5), (60.2, 36.5), (57.2, 40.5), (53.6, 36.2)])
+    # aile levée, bord festonné
+    poly([(30, 31), (36, 9), (40, 5.5), (44, 11), (54, 18.5), (49, 21), (55, 27.5), (47, 28.5), (50, 34), (40, 34)])
+    # corps assis, pattes
+    ell(25, 29, 47, 53)
+    ell(35, 40, 49, 55)
+    ell(25, 44, 32, 55.5)
+    # cou et tête
+    poly([(18, 25), (26, 18), (34, 31), (27, 37)])
+    ell(10, 12, 29, 29)
+    poly([(5, 21.5), (12, 16.5), (16, 27), (7.5, 26.5)])
     # cornes
-    poly([(25.5,19),(21,9.5),(28.5,16.5)],AMB)
-    poly([(38.5,19),(43,9.5),(35.5,16.5)],AMB)
-    # tête
-    ell(19.5,14,44.5,36,BLUE)
-    ell(24.5,26,39.5,36.5,BLUE_L)   # museau
-    ell(28.3,29.5,29.9,31.1,BLUE_D); ell(34.1,29.5,35.7,31.1,BLUE_D)  # narines
-    # crête
-    poly([(30,14.5),(32,10.5),(34,14.5)],AMB)
-    # yeux
-    for cx in (26,38):
-        ell(cx-3.6,19.5,cx+3.6,27.2,CREAM)
-        ell(cx-2.4,20.6,cx+2.2,26.6,DIAL)
-        ell(cx-1.6,21.2,cx-0.1,22.8,(255,255,255,255))
-    # sourire
-    d.arc([T(29.2,30.4),T(34.8,34.6)],start=20,end=160,fill=BLUE_D,width=int(.8*u))
-    # joues
-    ell(20.8,27.5,24.2,30,(230,140,120,150)); ell(39.8,27.5,43.2,30,(230,140,120,150))
-    return im.resize((size,size),Image.LANCZOS)
+    poly([(23, 15.5), (31, 4.5), (27, 17.5)])
+    poly([(19, 13.5), (22, 4), (23.5, 14.5)])
+    # crête dorsale
+    for (x, y) in [(29, 20), (32.5, 25), (35.5, 30)]:
+        poly([(x - 1.8, y + 1.2), (x + 1.6, y - 2.8), (x + 1.8, y + 2.2)])
+
+
+def draw_qc(size):
+    """Logo de QuestCompanion : monogramme QC (Alegreya Bold, Q crème, C ambre,
+    comme R2Q) devant l'ombre d'un dragonnet. Fond transparent."""
+    k = 8; S = size * k; u = S / 64.0
+    im = Image.new("RGBA", (S, S), (0, 0, 0, 0)); d = ImageDraw.Draw(im)
+    SC = 1.0
+    T = lambda x, y: ((32 + (x - 32) * SC) * u, (31 + (y - 32) * SC) * u)
+    whelp_shadow(d, T, u * SC, SHADOW)
+    f = ImageFont.truetype(fontpath, int(21 * u))
+    parts = [("Q", CREAM), ("C", AMB)]
+    total = sum(d.textlength(t, font=f) for t, _ in parts)
+    x = 33 * u - total / 2; y = 41 * u
+    for t, c in parts:
+        d.text((x, y), t, font=f, fill=c, anchor="lm", stroke_width=int(1.5 * u), stroke_fill=DIAL)
+        x += d.textlength(t, font=f)
+    return im.resize((size, size), Image.LANCZOS)
 
 
 if __name__ == "__main__":
     os.makedirs(OUT, exist_ok=True)
     draw_logo(400, True).save(os.path.join(OUT, "logo_ready2quest.png"))
-    draw_whelp(400).save(os.path.join(OUT, "logo_questcompanion.png"))
+    draw_qc(400).save(os.path.join(OUT, "logo_questcompanion.png"))
     textures = os.path.join(ROOT, "QuestCompanion", "Textures")
     os.makedirs(textures, exist_ok=True)
-    draw_whelp(64).save(os.path.join(textures, "logo_petit.tga"), compression=None)
+    draw_qc(64).save(os.path.join(textures, "logo_petit.tga"), compression=None)
     print("ok")
