@@ -22,3 +22,4 @@ ignore:
   - tests
   - tools
   - Ready2Quest/CHANGELOG.md
+  - Ready2Quest/README.md

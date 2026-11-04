@@ -4,7 +4,7 @@
 
 Pour **World of Warcraft Forever** et **Classic Era**. Interface en français et en anglais.
 
-> **Nécessite [Ready2Quest](../README.md).** QuestCompanion réutilise son socle : réglages, thème, textes, lieux sûrs, commandes `/r2q`. Ses réglages sont dans les options de Ready2Quest, page **Compagnon de route**.
+> **Autonome.** QuestCompanion fonctionne seul : sa commande `/qc`, son panneau de réglages, son bouton de minicarte. Il va très bien avec [Ready2Quest](../Ready2Quest/README.md), sans en avoir besoin : si Ready2Quest est là, le compagnon réagit en plus à tes départs et retours en ville.
 
 ---
 
@@ -24,14 +24,14 @@ Elle dit aussi **ce dont elle a besoin** : « J'ai faim… », « On explore ? �
 
 ## Comment s'en occuper
 
-Elle a quatre envies : **faim**, **énergie**, **moral** et **curiosité**. Elles se remplissent quand tu manges, te reposes, rends une quête ou explores. Clique dessus pour lui faire une caresse, **clic droit** pour ouvrir son carnet sur les objectifs. Au premier lancement, un **tutoriel** en quelques bulles explique tout ça (à revoir avec `/r2q compagnon tuto`).
+Elle a quatre envies : **faim**, **énergie**, **moral** et **curiosité**. Elles se remplissent quand tu manges, te reposes, rends une quête ou explores. Clique dessus pour lui faire une caresse, **clic droit** pour ouvrir son carnet sur les objectifs. Au premier lancement, un **tutoriel** en quelques bulles explique tout ça (à revoir avec `/qc compagnon tuto`).
 
 - **Elle grandit avec toi** : Nouveau-né, Jeune (niveau 10), Aguerri (20), Vaillant (40) et Légendaire (60). Ton niveau ouvre l'étape, mais elle n'évolue que si elle est **heureuse** : ses quatre envies au moins à 70 %. Sinon elle te dit qu'elle est prête et ce qui lui manque, et elle attend. Petite fête à chaque étape.
 - **Elle ne t'en veut jamais** : elle ne meurt pas, ne régresse pas et ne tombe pas malade. Après une longue absence, elle est juste un peu ensommeillée : « Tu m'as manqué ! »
 - **Elle se personnalise** avec des **apparences** (dragonnets, rainette, chatons, lapin, tortue, ara, serpent, chouette, feu follet, dragon féerique), des **ornements**, des **cadres** (cuivre, chêne, argent, givre, runique, gangrené, or ciselé) et des **fonds** (parchemin, sous-bois, crépuscule, givre, marbre, braise, voûte étoilée, velours doré).
-- **Ils se gagnent dans les coffres de zone** : une zone terminée à 100 % ouvre un coffre, et tu **choisis** un objet de son palier (zones 1-19, 20-39 ou 40-60). Plus la zone est haute, plus l'objet est beau. Quand tu possèdes tout un palier, la zone devient dorée. `/r2q coffre` ouvre un coffre en attente.
+- **Ils se gagnent dans les coffres de zone** : une zone terminée à 100 % ouvre un coffre, et tu **choisis** un objet de son palier (zones 1-19, 20-39 ou 40-60). Plus la zone est haute, plus l'objet est beau. Quand tu possèdes tout un palier, la zone devient dorée. `/qc coffre` ouvre un coffre en attente.
 
-Tu peux la renommer avec `/r2q compagnon nom Pépite`.
+Tu peux la renommer avec `/qc compagnon nom Pépite`.
 
 ## Carnet de voyage
 
@@ -48,7 +48,7 @@ Ta collection de voyage : un **tampon** pour chaque première fois.
 
 Chaque nouveau tampon est annoncé par un petit bandeau, jamais en combat. Tout se gagne en jouant, sans paquet aléatoire.
 
-Le carnet (`/r2q carnet`, ou clic droit sur la créature) a deux parties :
+Le carnet (`/qc`, le bouton de minicarte, ou clic droit sur la créature) a deux parties :
 - **Complétion** : choisis une zone dans la liste (celle où tu es, par défaut) et vois son pourcentage, son coffre et, par onglet, ce qui est fait et ce qui reste :
   - **Exploration** : les villages de la zone ;
   - **Combat** : le bestiaire et les nommés ;
@@ -76,22 +76,31 @@ Le carnet fixe des **objectifs** : prochaine étape de la créature, prochaine a
 
 ## Installation
 
-1. Installe [Ready2Quest](../README.md#installation).
-2. Copie le dossier `QuestCompanion` dans `World of Warcraft/<client>/Interface/AddOns/`, à côté de `Ready2Quest` : `…/Interface/AddOns/QuestCompanion/QuestCompanion.toc`.
-3. Lance le jeu, ou tape `/reload`.
+1. Copie le dossier `QuestCompanion` dans `World of Warcraft/<client>/Interface/AddOns/` : `…/Interface/AddOns/QuestCompanion/QuestCompanion.toc`.
+2. Lance le jeu, ou tape `/reload`. La ligne « QuestCompanion — fichiers chargés » apparaît dans le chat.
 
-**Tu avais le compagnon avec Ready2Quest 1.25 ou avant** ? Rien à faire : ta créature, ton carnet et tes coffres sont repris de la sauvegarde de Ready2Quest à la première connexion de chaque personnage, puis rangés dans celle de QuestCompanion (`QuestCompanion.lua` dans `SavedVariables`).
+**Tu avais le compagnon avec Ready2Quest 1.25 ou avant** ? Mets aussi Ready2Quest à jour (1.26.0 ou plus) et garde-le activé à la première connexion : ta créature, ton carnet, tes coffres et leurs réglages sont repris de sa sauvegarde, pour tous tes personnages, puis rangés dans celle de QuestCompanion (`QuestCompanion.lua` dans `SavedVariables`). Avec un Ready2Quest 1.25, qui contient encore le compagnon, QuestCompanion reste en retrait et te demande de le mettre à jour.
 
-`/r2q reset` remet Ready2Quest à zéro sans toucher à ta créature ni à ton carnet.
+## Réglages
+
+`/qc options`, ou un clic droit sur le bouton de minicarte au dragonnet.
+- **Général** : activer l'addon, le bouton de minicarte et sa position.
+- **Compagnon de route** : bulles, astuces, apparence, cadre, fond, ornements, et la sous-page **Carnet** (bandeau, chat, suivi à l'écran).
 
 ## Commandes
 
+`/qc` ou `/questcompanion`, au choix. `/qc help` affiche l'aide complète.
+
 | Commande | Effet |
 |---|---|
-| `/r2q carnet` | ouvre ton carnet de voyage |
-| `/r2q compagnon` | l'humeur de ton compagnon (`nom <nom>` pour le renommer, `tuto` pour revoir le tutoriel) |
-| `/r2q coffre` | ouvre un coffre de zone en attente |
-| `/r2q module companion off` | coupe le compagnon et son carnet |
+| `/qc` | ouvre ton carnet de voyage (comme `/qc carnet`) |
+| `/qc options` | ouvre les réglages |
+| `/qc compagnon` | l'humeur de ton compagnon (`nom <nom>` pour le renommer, `tuto` pour revoir le tutoriel) |
+| `/qc coffre` | ouvre un coffre de zone en attente |
+| `/qc module compagnon off` | coupe le compagnon et son carnet |
+| `/qc minimap [on\|off]` | le bouton de minicarte |
+| `/qc reset` | remet les réglages à zéro, sans toucher à ta créature ni à ton carnet |
+| `/qc diag` | diagnostic, à joindre si tu signales un problème |
 
 ## Données et licence
 

@@ -4,8 +4,10 @@ Deux addons, deux projets sur chaque site :
 
 | Addon | Dossier | `.toc` | Paquet | Tag |
 |---|---|---|---|---|
-| Ready2Quest | racine du dépôt | `Ready2Quest.toc` | `.pkgmeta` | `v1.26.0` |
+| Ready2Quest | `Ready2Quest/` | `Ready2Quest/Ready2Quest.toc` | `.pkgmeta` | `v1.26.0` |
 | QuestCompanion | `QuestCompanion/` | `QuestCompanion/QuestCompanion.toc` | `.pkgmeta-questcompanion` | `qc-v1.0.0` |
+
+Les deux addons sont autonomes : aucun ne dépend de l'autre. Chacun embarque sa copie du socle commun (`Libs/Socle`).
 
 La publication est automatique : pousser un tag lance `.github/workflows/release.yml`. Les tests passent d'abord. Le workflow vérifie ensuite que le tag correspond au `## Version:` du `.toc`, construit le zip avec [BigWigsMods/packager](https://github.com/BigWigsMods/packager) et l'envoie sur CurseForge, Wago et dans une release GitHub.
 
@@ -24,7 +26,7 @@ La publication est automatique : pousser un tag lance `.github/workflows/release
    - **Licence** : GNU General Public License version 3 (GPLv3).
    - **Catégories** : voir le fichier de description.
 3. Le projet passe en modération. Une fois accepté, note son **Project ID** (nombre, colonne de droite de la page du projet).
-4. Pour QuestCompanion, ajoute la relation **Required Dependency** vers Ready2Quest (onglet *Relations*), ou passe par `.pkgmeta-questcompanion`, voir plus bas.
+4. Pour QuestCompanion, tu peux ajouter la relation **Optional Dependency** vers Ready2Quest (onglet *Relations*), ou passer par `.pkgmeta-questcompanion`, voir plus bas.
 5. Crée un **jeton d'API** dans les réglages de ton compte d'auteur (*API Tokens*). Il sert pour les deux projets.
 
 ### 2. Wago Addons (deux projets)
@@ -55,12 +57,12 @@ Dans le dépôt GitHub : *Settings › Secrets and variables › Actions › New
 
 La release GitHub utilise le jeton fourni par Actions : rien à créer.
 
-### 5. Dépendance de QuestCompanion sur CurseForge (facultatif)
+### 5. Lien entre les deux projets sur CurseForge (facultatif)
 
-Une fois le projet Ready2Quest accepté, son *slug* est le dernier morceau de son adresse (`curseforge.com/wow/addons/<slug>`). Ajoute-le dans `.pkgmeta-questcompanion` : chaque envoi déclarera alors la dépendance tout seul.
+QuestCompanion n'a pas besoin de Ready2Quest, mais il en reprend les données de la 1.25 et réagit à ses départs. Une fois le projet Ready2Quest accepté, son *slug* est le dernier morceau de son adresse (`curseforge.com/wow/addons/<slug>`). Ajoute-le dans `.pkgmeta-questcompanion` : chaque envoi le déclarera comme dépendance facultative.
 
 ```yaml
-required-dependencies:
+optional-dependencies:
   - <slug-de-ready2quest>
 ```
 
@@ -70,16 +72,17 @@ Un slug faux fait échouer l'envoi : ne l'ajoute qu'une fois le projet visible.
 
 Onglet **Actions › Release › Run workflow**, puis choisis l'addon. Le workflow construit le zip **sans rien envoyer** et le met en téléchargement (artefact en bas de la page du run). Ouvre-le et vérifie :
 
-- **Ready2Quest** : un seul dossier `Ready2Quest/`, avec les `.lua`, `Fonts/`, `Textures/`, `LICENSE`, `Ready2Quest.toc`. Il ne doit contenir ni `QuestCompanion/`, ni `tests/`, ni `tools/`, ni `docs/`.
-- **QuestCompanion** : un seul dossier `QuestCompanion/`, avec ses `.lua`, `QuestCompanion.toc`, `LICENSE` et `NOTICE.md`. Aucun fichier de Ready2Quest.
+- **Ready2Quest** : un seul dossier `Ready2Quest/`, avec ses `.lua`, `Libs/Socle/`, `Textures/`, `LICENSE`, `Ready2Quest.toc`. Rien de `QuestCompanion/`, `tests/`, `tools/` ni `docs/`.
+- **QuestCompanion** : un seul dossier `QuestCompanion/`, avec ses `.lua`, `Libs/Socle/`, `Textures/`, `QuestCompanion.toc`, `LICENSE` et `NOTICE.md`. Rien de Ready2Quest.
 
-Puis copie les deux dossiers dans `Interface/AddOns/` et lance le jeu.
+Puis copie les dossiers dans `Interface/AddOns/` et lance le jeu : chacun seul, puis les deux ensemble.
 
 ## Publier une version
 
-1. Monte `## Version:` dans le `.toc` de l'addon. Pour Ready2Quest, mets aussi à jour `ns.version` dans `Bootstrap.lua` et le test « version exposée ».
-2. Ajoute une section en haut de son `CHANGELOG.md` : `CHANGELOG.md` pour Ready2Quest, `QuestCompanion/CHANGELOG.md` pour QuestCompanion. C'est le texte affiché sur les sites.
-3. Commite sur `main`, puis tague et pousse :
+1. Monte `## Version:` dans le `.toc` de l'addon et `version` dans son `Config.lua` (et, pour Ready2Quest, le test « version exposée »).
+2. Ajoute une section en haut de son `CHANGELOG.md` : `Ready2Quest/CHANGELOG.md` ou `QuestCompanion/CHANGELOG.md`. C'est le texte affiché sur les sites.
+3. Si tu as touché au socle (`Ready2Quest/Libs/Socle`), recopie-le : `python3 -I tools/sync_socle.py`. Les tests le vérifient.
+4. Commite sur `main`, puis tague et pousse :
 
 ```sh
 git tag v1.26.0      # Ready2Quest
@@ -89,7 +92,7 @@ git push origin v1.26.0 qc-v1.0.0
 
 Un tag qui contient `beta` ou `alpha` (`v1.27.0-beta1`) part comme fichier bêta ou alpha.
 
-**Ordre la première fois** : publie Ready2Quest 1.26.0 **avant** QuestCompanion 1.0.0. QuestCompanion en dépend, et un QuestCompanion installé avec un Ready2Quest 1.25 s'efface avec un message.
+**Ordre la première fois** : publie Ready2Quest 1.26.0 **avant** QuestCompanion 1.0.0. Un QuestCompanion installé avec un Ready2Quest 1.25, qui contient encore le compagnon, s'efface avec un message pour éviter deux compagnons ; il faut donc que la 1.26.0 soit disponible.
 
 ## Versions du jeu
 
@@ -97,6 +100,6 @@ Le packager déduit les versions du jeu de la ligne `## Interface:` : `16001` po
 
 ## Garde-fous
 
-- `tests/run_tests.py` refuse de lancer les tests si un fichier ajouté à la racine n'est pas exclu de `.pkgmeta-questcompanion`, car il partirait dans le zip de QuestCompanion. Même chose si `.pkgmeta` n'exclut plus `QuestCompanion`, `docs`, `tests` ou `tools`.
+- `tests/run_tests.py` refuse de lancer les tests si une entrée de la racine du dépôt n'est pas exclue des deux `.pkgmeta` (elle partirait dans un zip), ou si les deux copies du socle diffèrent.
 - Le workflow `Tests` tourne à chaque push et pull request.
 - Logos : `python3 -I tools/gen_store_logos.py` les régénère : la boussole de Ready2Quest (même dessin et même police que le logo en jeu) et le monogramme QC devant l'ombre d'un dragonnet pour QuestCompanion, ainsi que son icône en jeu `QuestCompanion/Textures/logo_petit.tga`.

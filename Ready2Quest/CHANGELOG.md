@@ -2,11 +2,11 @@
 
 ## 1.26.0
 
-- **Le compagnon devient un addon à part : QuestCompanion.** Le compagnon de route, le carnet de voyage, la complétion de zone et les coffres partent dans QuestCompanion, qui nécessite Ready2Quest. Installe-le à côté de Ready2Quest pour garder ton compagnon : sa progression est reprise automatiquement, personnage par personnage.
-- `/r2q reset` ne remet plus le compagnon à zéro.
-- Ready2Quest garde la préparation : check avant le départ, retour d'expédition, avant le donjon, kit de camp *(Forever)*, résumé de stuff, stats du portrait, et le confort de jeu (bonne récompense, rythme de leveling, sac plein, après la mort, marchand).
+- **Le compagnon devient un addon à part, autonome : QuestCompanion.** Le compagnon de route, le carnet de voyage, la complétion de zone et les coffres partent dans QuestCompanion, avec sa commande `/qc`, ses réglages et son bouton de minicarte. Il fonctionne seul ; installé à côté de Ready2Quest, il reprend ta progression (tous tes personnages) et réagit à tes départs et retours en ville.
+- Ready2Quest garde la préparation : check avant le départ, retour d'expédition, avant le donjon, kit de camp *(Forever)*, résumé de stuff, stats du portrait, et le confort de jeu (bonne récompense, rythme de leveling, sac plein, après la mort, marchand). Ses réglages ne montrent plus le compagnon.
+- `/r2q reset` ne touche plus au compagnon.
 
-*English:* the travel companion and its journal are now a separate addon, **QuestCompanion**, which requires Ready2Quest. Install it next to Ready2Quest to keep your companion: its progress is moved over automatically. `/r2q reset` no longer resets the companion.
+*English:* the travel companion and its journal are now a separate, standalone addon, **QuestCompanion** (`/qc`, its own settings and minimap button). Installed next to Ready2Quest, it takes over your progress for all your characters and reacts to your departures and returns. `/r2q reset` no longer resets the companion.
 
 ## 1.25.0
 

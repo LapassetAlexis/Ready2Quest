@@ -1003,7 +1003,8 @@ ns:RegisterEvents(frame)
 ns.eventFrame = frame
 
 
--- API publique minimale, pour un futur addon compagnon
+-- API publique : QuestCompanion s'y abonne aux départs et retours de zone
+-- sûre (ns:RegisterCallback("DEPARTURE" | "RETURN"), Libs/Socle/Store.lua)
 _G.Ready2Quest = ns
 _G.ReadyToQuest = ns   -- ancien nom de l'API publique, gardé en alias
 
