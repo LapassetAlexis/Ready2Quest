@@ -1,0 +1,21 @@
+{
+  "source": "Questie/QuestieDB (GPL-3.0)",
+  "branch": "master",
+  "commit": "c5de61ab7c629132a772cccddf7f604ac48cecf9",
+  "data": "data/Classic",
+  "questie": "12.4.0",
+  "imported": "2026-11-04",
+  "layers": {
+    "quest": [
+      "corrections Era (classicQuestFixes)",
+      "liste noire et événements de Questie 12.4.0"
+    ],
+    "npc": [],
+    "object": []
+  },
+  "counts": {
+    "npc": 10119,
+    "object": 6645,
+    "quest": 4257
+  }
+}

@@ -92,7 +92,38 @@ def check_socle():
 
 
 package_problems = check_packages()
+def check_generated():
+    """Les tables de zone de QuestCompanion doivent venir de data/ tel qu'il
+    est : on les régénère à part et on compare (en-tête daté exclu)."""
+    import io
+    import contextlib
+    import shutil
+    import tempfile
+    sys.path.insert(0, os.path.join(ROOT, "tools"))
+    import gen_zone_data
+    problems = []
+    out = tempfile.mkdtemp()
+    try:
+        shutil.copy(os.path.join(ROOT, "QuestCompanion", "GatheringData.lua"), out)
+        with contextlib.redirect_stdout(io.StringIO()):
+            gen_zone_data.main(["--out", out])
+
+        def body(path):
+            text = open(path, encoding="utf-8").read()
+            return text[text.find("-- garde de client"):]
+        for name in sorted(os.listdir(out)):
+            if not name.startswith("Zone"):
+                continue
+            current = os.path.join(ROOT, "QuestCompanion", name)
+            if not os.path.exists(current) or body(current) != body(os.path.join(out, name)):
+                problems.append("QuestCompanion/%s ne correspond plus à data/ (python3 -I tools/gen_zone_data.py)" % name)
+    finally:
+        shutil.rmtree(out, ignore_errors=True)
+    return problems
+
+
 package_problems += check_socle()
+package_problems += check_generated()
 if package_problems:
     print("ERREUR: paquets de publication incomplets :")
     for problem in package_problems:

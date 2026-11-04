@@ -1,0 +1,34 @@
+{
+  "source": "Questie/QuestieDB (GPL-3.0)",
+  "branch": "master",
+  "commit": "c5de61ab7c629132a772cccddf7f604ac48cecf9",
+  "data": "data/Forever",
+  "questie": "12.4.0",
+  "imported": "2026-11-04",
+  "layers": {
+    "quest": [
+      "legacy (corrections Era héritées)",
+      "delta-base générée",
+      "traces",
+      "corrections Forever",
+      "liste noire et événements de Questie 12.4.0"
+    ],
+    "npc": [
+      "legacy (corrections Era héritées)",
+      "delta-base générée",
+      "traces",
+      "corrections Forever"
+    ],
+    "object": [
+      "legacy (corrections Era héritées)",
+      "delta-base générée",
+      "traces",
+      "corrections Forever"
+    ]
+  },
+  "counts": {
+    "npc": 13396,
+    "object": 7035,
+    "quest": 5232
+  }
+}
