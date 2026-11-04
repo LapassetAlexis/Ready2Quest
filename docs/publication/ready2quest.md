@@ -1,8 +1,8 @@
 <!--
 Fiche de la page Ready2Quest sur CurseForge et Wago (à copier à la main, voir docs/PUBLIER.md).
-Summary (résumé court, une ligne) :
-  Get ready before you leave town: a pre-departure check, an expedition report, a dungeon sheet and a few QoL helpers. Forever & Classic Era.
-Catégories suggérées : Quests & Leveling (principale), Bags & Inventory, Miscellaneous.
+Summary (anglais, 256 caractères max, ici 234) :
+  Leave town ready: a readiness score before each outing (food, bag space, durability, buffs, hearthstone), trip reports when you return, dungeon briefs, campfire kit tracking and gear stat diffs. For WoW Forever and Classic Era. EN/FR.
+Catégories : Quests & Leveling (principale), Bags & Inventory (additionnelle).
 Licence : GPLv3. Logo : docs/publication/logo_ready2quest.png.
 Captures à prendre en jeu : la fenêtre « Avant le départ », le bilan de retour, la fiche de donjon, l'étiquette « Pour toi » d'une récompense de quête, le cadre « Sac plein ».
 La description commence sous cette ligne.

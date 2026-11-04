@@ -1,8 +1,8 @@
 <!--
 Fiche de la page QuestCompanion sur CurseForge et Wago (à copier à la main, voir docs/PUBLIER.md).
-Summary (résumé court, une ligne) :
-  A little travel companion that grows with you, and a journal to complete every zone and earn cosmetic chests. Forever & Classic Era.
-Catégories suggérées : Quests & Leveling (principale), Companions, Achievements.
+Summary (anglais, 256 caractères max, ici 248) :
+  A little creature travels with you: it talks, eats, sleeps, grows and develops a personality from how you play. Its travel journal tracks zone completion, opens cosmetic chests and evolves it. Keeps memories and photos. WoW Forever and Classic Era.
+Catégories : Companions (principale), Quests & Leveling (additionnelle). Si Companions n'existe pas : Miscellaneous (principale).
 Licence : GPLv3. Logo : docs/publication/logo_questcompanion.png.
 Relation : Optional Dependency -> Ready2Quest (facultatif).
 Captures à prendre en jeu : le compagnon et une bulle, le bloc « Carnet » à l'écran, le carnet partie Complétion (onglet Combat ou Quêtes), le carnet partie Évolution, le coffre de zone ouvert.
