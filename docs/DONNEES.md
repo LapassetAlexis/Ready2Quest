@@ -1,12 +1,12 @@
 # Notre base de données (`data/`)
 
-Les créatures, la récolte et les quêtes de chaque zone (QuestCompanion), et bientôt les lieux sûrs, sont générés depuis **notre** base, rangée dans `data/`. Elle est versionnée dans ce dépôt : on la lit, on la corrige et on la complète ici.
+Les créatures, la récolte et les quêtes de chaque zone (QuestCompanion) et les lieux sûrs (le socle commun : `Hubs.lua`, `Places.lua`) sont générés depuis **notre** base, rangée dans `data/`. Elle est versionnée dans ce dépôt : on la lit, on la corrige et on la complète ici.
 
 Personne ne dépend de Questie :
 - **en jeu** : rien n'est lu pendant la partie, tout est déjà dans les fichiers de l'addon ;
 - **pour générer** : les générateurs ne lisent que `data/`.
 
-Questie n'a servi qu'à **remplir** la base au départ, avec `tools/import_questie.py`.
+Questie n'a servi qu'à **remplir** la base au départ, avec `tools/import_questie.py`. Les tables du client (zones, cartes) viennent de wago.tools, avec `tools/import_client.py`.
 
 ## Contenu
 
@@ -19,6 +19,9 @@ Un dossier par client, `data/era/` et `data/forever/` :
 | `quests.jsonl` | quêtes : noms, niveaux, races, classes, donneurs (`startedBy`), suites (`nextQuestInChain`, `exclusiveTo`…), drapeaux `hidden` (cachée) et `event` (événement saisonnier) |
 | `zones.json` | `areaToUiMap` : zone de jeu → carte ; `subZoneParent` : sous-zone → zone |
 | `source.json` | provenance : commit de QuestieDB, version de Questie, date d'import, corrections appliquées |
+| `areas.jsonl` | zones et sous-zones du jeu : nom anglais, zone parente, continent, drapeaux (`0x100` = capitale) — table `AreaTable` du client |
+| `maps.json` | étendue de chaque carte de zone en mètres (`width`, `height`) — table `UiMapAssignment` du client |
+| `client.json` | provenance des tables du client (build, date) |
 | `fixes.json` | **nos corrections**, faites à la main |
 
 Une entité par ligne, triées par identifiant : un `git diff` montre exactement ce qui a changé. Les tables du jeu sont gardées telles quelles (une liste JSON est une table Lua indexée 1, 2, 3…). Les coordonnées des apparitions sont en pourcentage de la carte de la zone : `spawns: { "<areaID>": [[x, y], …] }`.
@@ -48,9 +51,14 @@ On n'édite pas `npcs.jsonl`, `objects.jsonl` ni `quests.jsonl` à la main : un 
 Puis on régénère et on vérifie :
 
 ```sh
-python3 -I tools/gen_zone_data.py      # tables de zone de QuestCompanion
-python3 tests/run_tests.py             # refuse de tourner si les tables ne suivent plus data/
+python3 -I tools/gen_zone_data.py                                  # tables de zone de QuestCompanion
+python3 -I tools/gen_places.py                                     # lieux repérés (Libs/Socle/Places.lua)
+python3 -I tools/gen_hubs.py > Ready2Quest/Libs/Socle/Hubs.lua     # lieux connus par leur sous-zone
+python3 -I tools/sync_socle.py                                     # recopie le socle dans QuestCompanion
+python3 tests/run_tests.py             # refuse de tourner si un fichier généré ne suit plus data/
 ```
+
+Un PNJ de service corrigé ou ajouté dans `fixes.json` (par exemple un camp de Forever que Questie ne connaît pas encore) devient un lieu sûr à la prochaine génération de `Places.lua`.
 
 ## Reprendre des nouveautés de Questie (facultatif)
 
@@ -62,6 +70,17 @@ git diff --stat data/                  # relire ce qui change avant de garder
 ```
 
 L'import réécrit `npcs.jsonl`, `objects.jsonl`, `quests.jsonl`, `zones.json` et `source.json`, jamais `fixes.json`. Import actuel : QuestieDB `c5de61ab`, Questie 12.4.0, le 2026-11-04.
+
+## Reprendre les tables du client (facultatif)
+
+À un nouveau patch, les zones et les cartes peuvent changer :
+
+```sh
+python3 -I tools/import_client.py      # télécharge AreaTable et UiMapAssignment sur wago.tools
+python3 -I tools/import_client.py --from DOSSIER   # ou depuis des CSV déjà téléchargés
+```
+
+Les builds sont dans `tools/import_client.py` (`BUILDS`).
 
 ## Licence
 

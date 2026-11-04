@@ -126,6 +126,14 @@ function ns:IsCurrentZoneSafe()
 	end
 	if hostile then return false, mapID, "hostile", nil end
 
+	-- camp sans sous-zone à lui, repéré par ses PNJ de service (Places.lua)
+	local place, _, hostilePlace = self:KnownPlace()
+	if place then
+		local zone = (self:MapInfo(mapID) or {}).name
+		return true, mapID, "place", { name = subzone or zone or "?", source = "known", kind = "place" }
+	end
+	if hostilePlace then return false, mapID, "hostile", nil end
+
 	if mapID then
 		for _, id in ipairs(self:MapChain(mapID)) do
 			local city = db.safe[CityKey(id)]
@@ -261,6 +269,15 @@ function ns:ExitDelay()
 	return value
 end
 
+-- Vérification périodique (toutes les PLACE_CHECK secondes) sur une carte qui
+-- a des lieux repérés : seulement après la première évaluation (connexion).
+ns.PLACE_CHECK = 1.5
+function ns:CheckPlaceMove(now)
+	if self.inSafe == nil or (self.nextPlaceCheck or 0) > now then return end
+	self.nextPlaceCheck = now + self.PLACE_CHECK
+	if self.MapHasPlaces and self:MapHasPlaces() then self:Evaluate("move") end
+end
+
 function ns:Evaluate(trigger)
 	local db = self:DB()
 	if not db.enabled then self.pendingExit = nil; return end
@@ -268,6 +285,7 @@ function ns:Evaluate(trigger)
 	local safe, _, reason, entry = self:IsCurrentZoneSafe()
 	local previous = self.inSafe
 	self.inSafe = safe
+	self.safeReason = safe and reason or nil
 
 	if safe then
 		self.pendingExit = nil
@@ -997,6 +1015,9 @@ frame:SetScript("OnUpdate", function()
 	end
 	-- sortie de zone sûre en attente de confirmation
 	if ns.pendingExit then ns:UpdatePendingExit(ns:Now()) end
+	-- lieux repérés par leurs PNJ (Places.lua) : y entrer ou en sortir ne
+	-- change pas forcément de sous-zone, aucun événement ne le dit. On regarde.
+	ns:CheckPlaceMove(ns:Now())
 end)
 ns:RegisterEvents(frame)
 

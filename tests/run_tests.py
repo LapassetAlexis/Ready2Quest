@@ -117,6 +117,21 @@ def check_generated():
             current = os.path.join(ROOT, "QuestCompanion", name)
             if not os.path.exists(current) or body(current) != body(os.path.join(out, name)):
                 problems.append("QuestCompanion/%s ne correspond plus à data/ (python3 -I tools/gen_zone_data.py)" % name)
+        # lieux sûrs du socle : Places.lua (PNJ de service) et Hubs.lua (sous-zones)
+        import gen_places
+        import gen_hubs
+        places = os.path.join(out, "Places.lua")
+        with contextlib.redirect_stdout(io.StringIO()):
+            gen_places.main(places)
+        hubs = io.StringIO()
+        with contextlib.redirect_stdout(hubs), contextlib.redirect_stderr(io.StringIO()):
+            gen_hubs.main()
+        socle = os.path.join(ROOT, "Ready2Quest", "Libs", "Socle")
+        if open(places, encoding="utf-8").read() != open(os.path.join(socle, "Places.lua"), encoding="utf-8").read():
+            problems.append("Ready2Quest/Libs/Socle/Places.lua ne correspond plus à data/ (python3 -I tools/gen_places.py)")
+        if hubs.getvalue() != open(os.path.join(socle, "Hubs.lua"), encoding="utf-8").read():
+            problems.append("Ready2Quest/Libs/Socle/Hubs.lua ne correspond plus à data/ "
+                            "(python3 -I tools/gen_hubs.py > Ready2Quest/Libs/Socle/Hubs.lua)")
     finally:
         shutil.rmtree(out, ignore_errors=True)
     return problems

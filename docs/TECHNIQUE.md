@@ -41,6 +41,15 @@ Chaque addon décrit son identité dans `Config.lua`, chargé en premier (`ns.AP
 
 Comportement inchangé, sans le compagnon : ses réglages, ses commandes et ses modules ne le montrent plus. `/r2q reset` ne touche plus à la progression du compagnon, qui n'est plus chez lui.
 
+### Notre base de données (`data/`) et les lieux sûrs
+
+- **Base** : `data/era/`, `data/forever/`. PNJ, objets et quêtes importés une fois de QuestieDB par `tools/import_questie.py` (corrections statiques, liste noire et événements de Questie appliqués) ; zones, sous-zones et dimensions des cartes importées des tables du client (wago.tools) par `tools/import_client.py`. Nos corrections : `data/<client>/fixes.json`, jamais écrasées. Voir `docs/DONNEES.md`.
+- **Générateurs** : `gen_zone_data.py` (tables de zone de QuestCompanion), `gen_hubs.py` (`Hubs.lua`) et `gen_places.py` (`Places.lua`) ne lisent que `data/`, via `tools/zonedb.py`. Les tables de zone régénérées depuis `data/` sont identiques à celles produites depuis Questie ; `Hubs.lua` aussi.
+- **Lieux repérés** (`Libs/Socle/Places.lua`) : groupes de PNJ de service amicaux à moins de 60 m l'un de l'autre. Un aubergiste, un maître de vol ou un banquier suffit ; sinon au moins 3 PNJ avec un marchand et un réparateur ou un entraîneur. PNJ techniques et saisonniers écartés. Chaque lieu : centre (x, y en % de la carte de zone), rayon en mètres (PNJ le plus éloigné + 25 m, entre 35 et 160), faction, services. L'échelle de chaque carte (mètres pour 1 %) vient de `UiMapAssignment`. 142 lieux sur Era, 160 sur Forever.
+- **Pourquoi des coordonnées** : `UiMapAssignment` ne découpe pas les sous-zones sur ces clients, et la base de Questie range les PNJ par zone (l'aubergiste de Comté-de-l'Or est « Forêt d'Elwynn »). Un camp ne peut donc pas être rattaché à un nom de sous-zone hors du jeu.
+- **En jeu** : `ns:KnownPlace()` (socle, `World.lua`) compare la position du joueur (`C_Map.GetPlayerMapPosition`) aux lieux de la carte ; un lieu de l'autre faction est « hostile ». `IsCurrentZoneSafe` le consulte après les lieux connus par leur sous-zone. Entrer dans un camp ou en sortir ne déclenche aucun événement : `ns:CheckPlaceMove` réévalue toutes les 1,5 s, seulement sur une carte qui a des lieux repérés.
+- **Garde-fou** : `tests/run_tests.py` régénère les tables de zone, `Places.lua` et `Hubs.lua` à part et refuse de tourner si l'un d'eux ne suit plus `data/`. Tests `[PLC]` : données, position, faction, instance, API absente, départ et retour sans événement de zone ; vérifiés par mutation.
+
 ### Publication
 
 `.pkgmeta` et `.pkgmeta-questcompanion` sont symétriques : chacun ignore tout ce qui n'est pas le dossier de son addon, que `move-folders` remonte d'un niveau ; le zip ne contient qu'un dossier. Le garde-fou de `tests/run_tests.py` vérifie que chaque entrée de la racine est ignorée par les deux. Voir `docs/PUBLIER.md`.

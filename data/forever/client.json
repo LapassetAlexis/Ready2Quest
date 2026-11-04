@@ -1,0 +1,11 @@
+{
+  "source": "wago.tools (tables du client)",
+  "build": "1.60.1.70753",
+  "imported": "2026-11-04",
+  "tables": [
+    "AreaTable",
+    "UiMapAssignment"
+  ],
+  "areas": 1375,
+  "maps": 59
+}

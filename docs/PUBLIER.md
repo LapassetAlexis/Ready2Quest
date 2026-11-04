@@ -72,7 +72,7 @@ Un slug faux fait échouer l'envoi : ne l'ajoute qu'une fois le projet visible.
 
 Onglet **Actions › Release › Run workflow**, puis choisis l'addon. Le workflow construit le zip **sans rien envoyer** et le met en téléchargement (artefact en bas de la page du run). Ouvre-le et vérifie :
 
-- **Ready2Quest** : un seul dossier `Ready2Quest/`, avec ses `.lua`, `Libs/Socle/`, `Textures/`, `LICENSE`, `Ready2Quest.toc`. Rien de `QuestCompanion/`, `tests/`, `tools/` ni `docs/`.
+- **Ready2Quest** : un seul dossier `Ready2Quest/`, avec ses `.lua`, `Libs/Socle/`, `Textures/`, `LICENSE`, `NOTICE.md`, `Ready2Quest.toc`. Rien de `QuestCompanion/`, `tests/`, `tools/` ni `docs/`.
 - **QuestCompanion** : un seul dossier `QuestCompanion/`, avec ses `.lua`, `Libs/Socle/`, `Textures/`, `QuestCompanion.toc`, `LICENSE` et `NOTICE.md`. Rien de Ready2Quest.
 
 Puis copie les dossiers dans `Interface/AddOns/` et lance le jeu : chacun seul, puis les deux ensemble.

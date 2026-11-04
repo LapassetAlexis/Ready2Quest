@@ -21,6 +21,7 @@ Locales.lua
 Libs\Socle\Compat.lua
 Libs\Socle\Hubs.lua
 Libs\Socle\DungeonData.lua
+Libs\Socle\Places.lua
 Libs\Socle\Theme.lua
 Libs\Socle\Store.lua
 Libs\Socle\World.lua

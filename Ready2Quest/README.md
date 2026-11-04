@@ -66,6 +66,7 @@ Les buffs n'ont rien à configurer : l'addon retient ceux qui durent plusieurs m
 Une zone sûre est un endroit où l'on peut **se préparer sans risque** : manger, réparer, vendre, se lier à l'auberge.
 
 - **Connues dès l'installation** : les capitales, les villages et les hubs de ta faction, ainsi que les villes neutres (Booty Bay, Gadgetzan, Everlook…). Sur Forever, c'est aussi le cas des nouvelles zones comme Zephras Isle. Cela fait 80 lieux, en français comme en anglais.
+- **Les camps aussi** : environ 140 lieux sur Era et 160 sur Forever sont repérés par leurs PNJ de service : un aubergiste, un maître de vol ou un banquier, ou un groupe d'au moins trois PNJ avec un marchand et un réparateur ou un entraîneur. Ça compte aussi pour un camp sans sous-zone à lui : on regarde ta position. Une ferme ou un marchand isolé sur une route ne comptent pas.
 - **Ce qui ne compte pas** : un village de l'autre faction, un donjon, un champ de bataille, une mine ou une ferme.
 - **Les camps de Forever** : près d'un feu de camp, tu es au campement. Quand tu t'en éloignes, le check part, comme en quittant un village.
 - **Le reste s'apprend** en jouant : un petit camp absent de la liste devient sûr dès que tu y trouves un aubergiste, un maître de vol, une boîte aux lettres ou une banque, ou à la fois un marchand et un donneur de quêtes. Tu peux aussi en ajouter un toi-même avec `/r2q safe`.

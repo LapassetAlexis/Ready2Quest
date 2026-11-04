@@ -1,0 +1,1212 @@
+{"id":1,"name":"Dun Morogh","zone":"DunMorogh","parent":0,"continent":0,"flags":65}
+{"id":2,"name":"Longshore","zone":"Longshore","parent":40,"continent":0,"flags":1073741888}
+{"id":3,"name":"Badlands","zone":"Badlands","parent":0,"continent":0,"flags":64}
+{"id":4,"name":"Blasted Lands","zone":"BlastedLands","parent":0,"continent":0,"flags":64}
+{"id":7,"name":"Blackwater Cove","zone":"DarkwaterCove","parent":33,"continent":0,"flags":1073741888}
+{"id":8,"name":"Swamp of Sorrows","zone":"SwampofSorrows","parent":0,"continent":0,"flags":64}
+{"id":9,"name":"Northshire Valley","zone":"NorthshireValley","parent":12,"continent":0,"flags":1073741888}
+{"id":10,"name":"Duskwood","zone":"Duskwood","parent":0,"continent":0,"flags":64}
+{"id":11,"name":"Wetlands","zone":"Wetlands","parent":0,"continent":0,"flags":64}
+{"id":12,"name":"Elwynn Forest","zone":"ElwynnForest","parent":0,"continent":0,"flags":64}
+{"id":13,"name":"The World Tree","zone":"TheWorldTree","parent":10,"continent":0,"flags":1073741888}
+{"id":14,"name":"Durotar","zone":"Durotar","parent":0,"continent":1,"flags":64}
+{"id":15,"name":"Dustwallow Marsh","zone":"DustwallowMarsh","parent":0,"continent":1,"flags":64}
+{"id":16,"name":"Azshara","zone":"Azshara","parent":0,"continent":1,"flags":64}
+{"id":17,"name":"The Barrens","zone":"TheBarrens","parent":0,"continent":1,"flags":64}
+{"id":18,"name":"Crystal Lake","zone":"CrystalLake","parent":12,"continent":0,"flags":1073741888}
+{"id":19,"name":"Zul'Gurub","zone":"ZulGurub","parent":33,"continent":0,"flags":1073741888}
+{"id":20,"name":"Moonbrook","zone":"Moonbrook","parent":40,"continent":0,"flags":1073741888}
+{"id":21,"name":"Kul Tiras","zone":"KulTiras","parent":0,"continent":0,"flags":64}
+{"id":22,"name":"Programmer Isle","zone":"ProgrammerIsle","parent":0,"continent":451,"flags":64}
+{"id":23,"name":"Northshire River","zone":"NorthshireRiver","parent":12,"continent":0,"flags":1073741888}
+{"id":24,"name":"Northshire Abbey","zone":"Northshireabbey","parent":12,"continent":0,"flags":1073741888}
+{"id":25,"name":"Blackrock Mountain","zone":"BlackrockMountain","parent":0,"continent":0,"flags":64}
+{"id":26,"name":"Lighthouse","zone":"Lighthouse","parent":40,"continent":0,"flags":1073741888}
+{"id":28,"name":"Western Plaguelands","zone":"WesternPlaguelands","parent":0,"continent":0,"flags":64}
+{"id":30,"name":"Nine","zone":"Nine","parent":0,"continent":0,"flags":64}
+{"id":32,"name":"The Cemetary","zone":"TheCemetary","parent":10,"continent":0,"flags":1073741888}
+{"id":33,"name":"Stranglethorn Vale","zone":"StranglethornJungle","parent":0,"continent":0,"flags":64}
+{"id":34,"name":"Echo Ridge Mine","zone":"EchoRidgeMine","parent":12,"continent":0,"flags":1073741888}
+{"id":35,"name":"Booty Bay","zone":"BootyBay","parent":33,"continent":0,"flags":1073741888}
+{"id":36,"name":"Alterac Mountains","zone":"AlteracMountains","parent":0,"continent":0,"flags":64}
+{"id":37,"name":"Lake Nazferiti","zone":"LakeNazferiti","parent":33,"continent":0,"flags":1073741888}
+{"id":38,"name":"Loch Modan","zone":"LochModan","parent":0,"continent":0,"flags":64}
+{"id":40,"name":"Westfall","zone":"Westfall","parent":0,"continent":0,"flags":64}
+{"id":41,"name":"Deadwind Pass","zone":"DeadwindPass","parent":0,"continent":0,"flags":64}
+{"id":42,"name":"Darkshire","zone":"Darkshire","parent":10,"continent":0,"flags":1073741888}
+{"id":43,"name":"Wild Shore","zone":"WildShore","parent":33,"continent":0,"flags":1073741888}
+{"id":44,"name":"Redridge Mountains","zone":"RedridgeMountains","parent":0,"continent":0,"flags":64}
+{"id":45,"name":"Arathi Highlands","zone":"ArathiHighlands","parent":0,"continent":0,"flags":64}
+{"id":46,"name":"Burning Steppes","zone":"BurningSteppes","parent":0,"continent":0,"flags":64}
+{"id":47,"name":"The Hinterlands","zone":"TheHinterlands","parent":0,"continent":0,"flags":64}
+{"id":49,"name":"Dead Man's Hole","zone":"DeadMansHole","parent":22,"continent":451,"flags":1073741888}
+{"id":51,"name":"Searing Gorge","zone":"SearingGorge","parent":0,"continent":0,"flags":64}
+{"id":53,"name":"Thieves Camp","zone":"ThievesCamp","parent":12,"continent":0,"flags":1073741888}
+{"id":54,"name":"Jasperlode Mine","zone":"JasperlodeMine","parent":12,"continent":0,"flags":1073741888}
+{"id":55,"name":"Valley of Heroes UNUSED","zone":"ValleyofHeroesUNUSED","parent":12,"continent":0,"flags":1073741888}
+{"id":56,"name":"Heroes' Vigil","zone":"Heroes'Vigil","parent":12,"continent":0,"flags":1073741888}
+{"id":57,"name":"Fargodeep Mine","zone":"FargodeepMine","parent":12,"continent":0,"flags":1073741888}
+{"id":59,"name":"Northshire Vineyards","zone":"NorthshireVineyards","parent":12,"continent":0,"flags":1073741888}
+{"id":60,"name":"Forest's Edge","zone":"Forest'sEdge","parent":12,"continent":0,"flags":1073741888}
+{"id":61,"name":"Thunder Falls","zone":"ThunderFalls","parent":12,"continent":0,"flags":1073741888}
+{"id":62,"name":"Brackwell Pumpkin Patch","zone":"PumpkinPatch","parent":12,"continent":0,"flags":1073741888}
+{"id":63,"name":"The Stonefield Farm","zone":"TheStonefieldFarm","parent":12,"continent":0,"flags":1073741888}
+{"id":64,"name":"The Maclure Vineyards","zone":"TheMaclureVineyards","parent":12,"continent":0,"flags":1073741888}
+{"id":65,"name":"***On Map Dungeon***","zone":"***On Map Dungeon***","parent":0,"continent":0,"flags":68}
+{"id":66,"name":"***On Map Dungeon***","zone":"***On Map Dungeon***","parent":0,"continent":1,"flags":68}
+{"id":67,"name":"***On Map Dungeon***","zone":"***On Map Dungeon***","parent":0,"continent":17,"flags":68}
+{"id":68,"name":"Lake Everstill","zone":"LakeEverstill","parent":44,"continent":0,"flags":1073741888}
+{"id":69,"name":"Lakeshire","zone":"Lakeshire","parent":44,"continent":0,"flags":1073741888}
+{"id":70,"name":"Stonewatch","zone":"Stonewatch","parent":44,"continent":0,"flags":1073741888}
+{"id":71,"name":"Stonewatch Falls","zone":"StonewatchFalls","parent":44,"continent":0,"flags":1073741888}
+{"id":72,"name":"The Dark Portal","zone":"TheDarkPortal","parent":4,"continent":0,"flags":1073741888}
+{"id":73,"name":"The Tainted Scar","zone":"TheTaintedScar","parent":4,"continent":0,"flags":1073741888}
+{"id":74,"name":"Pool of Tears","zone":"PoolofTears","parent":8,"continent":0,"flags":1073741888}
+{"id":75,"name":"Stonard","zone":"Stonard","parent":8,"continent":0,"flags":1073741888}
+{"id":76,"name":"Fallow Sanctuary","zone":"FallowSanctuary","parent":8,"continent":0,"flags":1073741888}
+{"id":77,"name":"Anvilmar","zone":"Anvilmar","parent":1,"continent":0,"flags":1073741888}
+{"id":80,"name":"Stormwind Mountains","zone":"StormwindMountains","parent":12,"continent":0,"flags":1073741888}
+{"id":81,"name":"Jeff NE Quadrant Changed","zone":"JeffNEQuadrantChanged","parent":22,"continent":451,"flags":1073741888}
+{"id":82,"name":"Jeff NW Quadrant","zone":"JeffNWQuadrant","parent":22,"continent":451,"flags":1073741888}
+{"id":83,"name":"Jeff SE Quadrant","zone":"JeffSEQuadrant","parent":22,"continent":451,"flags":1073741888}
+{"id":84,"name":"Jeff SW Quadrant","zone":"JeffSWQuadrant","parent":22,"continent":451,"flags":1073741888}
+{"id":85,"name":"Tirisfal Glades","zone":"TirisfalGlades","parent":0,"continent":0,"flags":64}
+{"id":86,"name":"Stone Cairn Lake","zone":"StoneCircleLake","parent":12,"continent":0,"flags":1073741888}
+{"id":87,"name":"Goldshire","zone":"Goldshire","parent":12,"continent":0,"flags":1073741888}
+{"id":88,"name":"Eastvale Logging Camp","zone":"EastvaleLoggingCamp","parent":12,"continent":0,"flags":1073741888}
+{"id":89,"name":"Mirror Lake Orchard","zone":"ThunderFallsOrchard","parent":12,"continent":0,"flags":1073741888}
+{"id":91,"name":"Tower of Azora","zone":"TowerofAzora","parent":12,"continent":0,"flags":1073741888}
+{"id":92,"name":"Mirror Lake","zone":"MirrorLake","parent":12,"continent":0,"flags":1073741888}
+{"id":93,"name":"Vul'Gol Ogre Mound","zone":"Vul'GolOgreMound","parent":10,"continent":0,"flags":1073741888}
+{"id":94,"name":"Raven Hill","zone":"RavenHill","parent":10,"continent":0,"flags":1073741888}
+{"id":95,"name":"Redridge Canyons","zone":"RedridgeCanyon","parent":44,"continent":0,"flags":1073741888}
+{"id":96,"name":"Tower of Ilgalar","zone":"TowerofIlgalar","parent":44,"continent":0,"flags":1073741888}
+{"id":97,"name":"Alther's Mill","zone":"Alther'sMill","parent":44,"continent":0,"flags":1073741888}
+{"id":98,"name":"Rethban Caverns","zone":"RethbanCaverns","parent":44,"continent":0,"flags":1073741888}
+{"id":99,"name":"Rebel Camp","zone":"RebelCamp","parent":33,"continent":0,"flags":1073741888}
+{"id":100,"name":"Nesingwary's Expedition","zone":"Nesingwary'sExpedition","parent":33,"continent":0,"flags":1073741888}
+{"id":101,"name":"Kurzen's Compound","zone":"Kurzen'sCompound","parent":33,"continent":0,"flags":1073741888}
+{"id":102,"name":"Ruins of Zul'Kunda","zone":"RuinsofZul'Kunda","parent":33,"continent":0,"flags":1073741888}
+{"id":103,"name":"Ruins of Zul'Mamwe","zone":"RuinsofZul'Mamwe","parent":33,"continent":0,"flags":1073741888}
+{"id":104,"name":"The Vile Reef","zone":"TheVileReef","parent":33,"continent":0,"flags":1073741888}
+{"id":105,"name":"Mosh'Ogg Ogre Mound","zone":"Mosh'OggOgreMound","parent":33,"continent":0,"flags":1073741888}
+{"id":106,"name":"The Stockpile","zone":"TheStockpile","parent":33,"continent":0,"flags":1073741888}
+{"id":107,"name":"Saldean's Farm","zone":"Saldean'sFarm","parent":40,"continent":0,"flags":1073741888}
+{"id":108,"name":"Sentinel Hill","zone":"SentinelHill","parent":40,"continent":0,"flags":1073741888}
+{"id":109,"name":"Furlbrow's Pumpkin Farm","zone":"Furlbrow'sPumpkinFarm","parent":40,"continent":0,"flags":1073741888}
+{"id":111,"name":"Jangolode Mine","zone":"JangolodeMine","parent":40,"continent":0,"flags":1073741888}
+{"id":113,"name":"Gold Coast Quarry","zone":"GoldCoastQuarry","parent":40,"continent":0,"flags":1073741888}
+{"id":115,"name":"Westfall Lighthouse","zone":"WestfallLighthouse","parent":40,"continent":0,"flags":1073741888}
+{"id":116,"name":"Misty Valley","zone":"MistyValley","parent":8,"continent":0,"flags":1073741888}
+{"id":117,"name":"Grom'gol Base Camp","zone":"Grom'golBaseCamp","parent":33,"continent":0,"flags":1073741888}
+{"id":118,"name":"Whelgar's Excavation Site","zone":"Whelgar'sExcavationSite","parent":11,"continent":0,"flags":1073741888}
+{"id":120,"name":"Westbrook Garrison","zone":"WestbrookGarrison","parent":12,"continent":0,"flags":1073741888}
+{"id":121,"name":"Tranquil Gardens Cemetery","zone":"TranquilGardensCemetery","parent":10,"continent":0,"flags":1073741888}
+{"id":122,"name":"Zuuldaia Ruins","zone":"ZuuldaiaRuins","parent":33,"continent":0,"flags":1073741888}
+{"id":123,"name":"Bal'lal Ruins","zone":"Bal'lalRuins","parent":33,"continent":0,"flags":1073741888}
+{"id":125,"name":"Kal'ai Ruins","zone":"Kal'aiRuins","parent":33,"continent":0,"flags":1073741888}
+{"id":126,"name":"Tkashi Ruins","zone":"TkashiRuins","parent":33,"continent":0,"flags":1073741888}
+{"id":127,"name":"Balia'mah Ruins","zone":"Balia'mahRuins","parent":33,"continent":0,"flags":1073741888}
+{"id":128,"name":"Ziata'jai Ruins","zone":"Ziata'jaiRuins","parent":33,"continent":0,"flags":1073741888}
+{"id":129,"name":"Mizjah Ruins","zone":"MizjahRuins","parent":33,"continent":0,"flags":1073741888}
+{"id":130,"name":"Silverpine Forest","zone":"SilverpineForest","parent":0,"continent":0,"flags":64}
+{"id":131,"name":"Kharanos","zone":"Kharanos","parent":1,"continent":0,"flags":1073741888}
+{"id":132,"name":"Coldridge Valley","zone":"ColdridgeValley","parent":1,"continent":0,"flags":1073741888}
+{"id":133,"name":"Gnomeregan","zone":"Gnomeregan","parent":1,"continent":0,"flags":1073741888}
+{"id":134,"name":"Gol'Bolar Quarry","zone":"Gol'BolarQuarry","parent":1,"continent":0,"flags":1073741888}
+{"id":135,"name":"Frostmane Hold","zone":"FrostmaneHold","parent":1,"continent":0,"flags":1073741888}
+{"id":136,"name":"The Grizzled Den","zone":"TheGrizzledDen","parent":1,"continent":0,"flags":1073741888}
+{"id":137,"name":"Brewnall Village","zone":"BrewnallVillage","parent":1,"continent":0,"flags":1073741888}
+{"id":138,"name":"Misty Pine Refuge","zone":"MistyPineRefuge","parent":1,"continent":0,"flags":1073741888}
+{"id":139,"name":"Eastern Plaguelands","zone":"EasternPlaguelands","parent":0,"continent":0,"flags":64}
+{"id":141,"name":"Teldrassil","zone":"Teldrassil","parent":0,"continent":1,"flags":64}
+{"id":142,"name":"Ironband's Excavation Site","zone":"Ironband'sExcavationSite","parent":38,"continent":0,"flags":1073741888}
+{"id":143,"name":"Mo'grosh Stronghold","zone":"Mo'groshStronghold","parent":38,"continent":0,"flags":1073741888}
+{"id":144,"name":"Thelsamar","zone":"Thelsamar","parent":38,"continent":0,"flags":1073741888}
+{"id":145,"name":"Algaz Gate","zone":"AlgazGate","parent":38,"continent":0,"flags":1073741888}
+{"id":146,"name":"Stonewrought Dam","zone":"StonewroughtDam","parent":38,"continent":0,"flags":1073741888}
+{"id":147,"name":"The Farstrider Lodge","zone":"TheFarstriderLodge","parent":38,"continent":0,"flags":1073741888}
+{"id":148,"name":"Darkshore","zone":"Darkshore","parent":0,"continent":1,"flags":64}
+{"id":149,"name":"Silver Stream Mine","zone":"SilverStreamMine","parent":38,"continent":0,"flags":1073741888}
+{"id":150,"name":"Menethil Harbor","zone":"MenethilHarbor","parent":11,"continent":0,"flags":1073741888}
+{"id":151,"name":"Designer Island","zone":"DesignerIsland","parent":0,"continent":451,"flags":64}
+{"id":152,"name":"The Bulwark","zone":"TheBulwark","parent":85,"continent":0,"flags":1073741888}
+{"id":153,"name":"Ruins of Lordaeron","zone":"RuinsofLordaeron","parent":85,"continent":0,"flags":1073741888}
+{"id":154,"name":"Deathknell","zone":"Deathknell","parent":85,"continent":0,"flags":1073741888}
+{"id":155,"name":"Night Web's Hollow","zone":"NightWeb'sHollow","parent":85,"continent":0,"flags":1073741888}
+{"id":156,"name":"Solliden Farmstead","zone":"SollidenFarmstead","parent":85,"continent":0,"flags":1073741888}
+{"id":157,"name":"Agamand Mills","zone":"AgamandMills","parent":85,"continent":0,"flags":1073741888}
+{"id":158,"name":"Agamand Family Crypt","zone":"AgamandFamilyCrypt","parent":85,"continent":0,"flags":1073741888}
+{"id":159,"name":"Brill","zone":"Brill","parent":85,"continent":0,"flags":1073741888}
+{"id":160,"name":"Whispering Gardens","zone":"WhisperingGardens","parent":85,"continent":0,"flags":1073741888}
+{"id":161,"name":"Terrace of Repose","zone":"TerraceofRepose","parent":85,"continent":0,"flags":1073741888}
+{"id":162,"name":"Brightwater Lake","zone":"BrightwaterLake","parent":85,"continent":0,"flags":1073741888}
+{"id":163,"name":"Gunther's Retreat","zone":"Gunther'sRetreat","parent":85,"continent":0,"flags":1073741888}
+{"id":164,"name":"Garren's Haunt","zone":"Garren'sHaunt","parent":85,"continent":0,"flags":1073741888}
+{"id":165,"name":"Balnir Farmstead","zone":"BalnirFarmstead","parent":85,"continent":0,"flags":1073741888}
+{"id":166,"name":"Cold Hearth Manor","zone":"ColdHearthManor","parent":85,"continent":0,"flags":1073741888}
+{"id":167,"name":"Crusader Outpost","zone":"CrusaderOutpost","parent":85,"continent":0,"flags":1073741888}
+{"id":168,"name":"The North Coast","zone":"TheNorthCoast","parent":85,"continent":0,"flags":1073741888}
+{"id":169,"name":"Whispering Shore","zone":"Whispering Shore","parent":85,"continent":0,"flags":1073741888}
+{"id":170,"name":"Lordamere Lake","zone":"LordamereLake","parent":0,"continent":0,"flags":64}
+{"id":172,"name":"Fenris Isle","zone":"FenrisIsle","parent":130,"continent":0,"flags":1073741888}
+{"id":173,"name":"Faol's Rest","zone":"Faol'sRest","parent":85,"continent":0,"flags":1073741888}
+{"id":186,"name":"Dolanaar","zone":"Dolanaar","parent":141,"continent":1,"flags":1073741888}
+{"id":187,"name":"Darnassus UNUSED","zone":"DarnassusUNUSED","parent":141,"continent":1,"flags":1073741888}
+{"id":188,"name":"Shadowglen","zone":"Shadowglen","parent":141,"continent":1,"flags":1073741888}
+{"id":189,"name":"Steelgrill's Depot","zone":"Steelgrill'sDepot","parent":1,"continent":0,"flags":1073741888}
+{"id":190,"name":"Hearthglen","zone":"Hearthglen","parent":28,"continent":0,"flags":1073741888}
+{"id":192,"name":"Northridge Lumber Camp","zone":"NorthridgeLumberCamp","parent":28,"continent":0,"flags":1073741888}
+{"id":193,"name":"Ruins of Andorhal","zone":"RuinsofAndorhal","parent":28,"continent":0,"flags":1073741888}
+{"id":195,"name":"School of Necromancy","zone":"SchoolofNecromancy","parent":28,"continent":0,"flags":1073741888}
+{"id":196,"name":"Uther's Tomb","zone":"Uther'sTomb","parent":28,"continent":0,"flags":1073741888}
+{"id":197,"name":"Sorrow Hill","zone":"SorrowHill","parent":28,"continent":0,"flags":1073741888}
+{"id":198,"name":"The Weeping Cave","zone":"TheWeepingCave","parent":28,"continent":0,"flags":1073741888}
+{"id":199,"name":"Felstone Field","zone":"FelstoneField","parent":28,"continent":0,"flags":1073741888}
+{"id":200,"name":"Dalson's Tears","zone":"Dalson'sTears","parent":28,"continent":0,"flags":1073741888}
+{"id":201,"name":"Gahrron's Withering","zone":"Gahrron'sWithering","parent":28,"continent":0,"flags":1073741888}
+{"id":202,"name":"The Writhing Haunt","zone":"TheWrithingHaunt","parent":28,"continent":0,"flags":1073741888}
+{"id":203,"name":"Mardenholde Keep","zone":"MardenholdeKeep","parent":28,"continent":0,"flags":1073741888}
+{"id":204,"name":"Pyrewood Village","zone":"PyrewoodVillage","parent":130,"continent":0,"flags":1073741888}
+{"id":205,"name":"Dun Modr","zone":"DunModr","parent":11,"continent":0,"flags":1073741888}
+{"id":206,"name":"Westfall","zone":"Westfall","parent":0,"continent":36,"flags":65600}
+{"id":207,"name":"The Great Sea","zone":"TheGreatSea","parent":0,"continent":36,"flags":64}
+{"id":208,"name":"Unused Ironcladcove","zone":"UnusedIroncladcove","parent":0,"continent":36,"flags":64}
+{"id":209,"name":"Shadowfang Keep","zone":"ShadowfangKeep","parent":0,"continent":33,"flags":0}
+{"id":210,"name":"***On Map Dungeon***","zone":"***On Map Dungeon***","parent":0,"continent":36,"flags":68}
+{"id":211,"name":"Iceflow Lake","zone":"IceflowLake","parent":1,"continent":0,"flags":1073741888}
+{"id":212,"name":"Helm's Bed Lake","zone":"Helm'sBedLake","parent":1,"continent":0,"flags":1073741888}
+{"id":213,"name":"Deep Elem Mine","zone":"DeepElemMine","parent":130,"continent":0,"flags":1073741888}
+{"id":214,"name":"The Great Sea","zone":"TheGreatSea","parent":0,"continent":0,"flags":64}
+{"id":215,"name":"Mulgore","zone":"Mulgore","parent":0,"continent":1,"flags":64}
+{"id":219,"name":"Alexston Farmstead","zone":"AlexstonFarmstead","parent":40,"continent":0,"flags":1073741888}
+{"id":220,"name":"Red Cloud Mesa","zone":"RedCloudMesa","parent":215,"continent":1,"flags":1073741888}
+{"id":221,"name":"Camp Narache","zone":"CampNarache","parent":215,"continent":1,"flags":1073741888}
+{"id":222,"name":"Bloodhoof Village","zone":"BloodhoofVillage","parent":215,"continent":1,"flags":1073741888}
+{"id":223,"name":"Stonebull Lake","zone":"StonebullLake","parent":215,"continent":1,"flags":1073741888}
+{"id":224,"name":"Ravaged Caravan","zone":"RavagedCaravan","parent":215,"continent":1,"flags":1073741888}
+{"id":225,"name":"Red Rocks","zone":"RedRocks","parent":215,"continent":1,"flags":1073741888}
+{"id":226,"name":"The Skittering Dark","zone":"TheSkitteringDark","parent":130,"continent":0,"flags":1073741888}
+{"id":227,"name":"Valgan's Field","zone":"Valgan'sField","parent":130,"continent":0,"flags":1073741888}
+{"id":228,"name":"The Sepulcher","zone":"TheSepulcher","parent":130,"continent":0,"flags":1073741888}
+{"id":229,"name":"Olsen's Farthing","zone":"Olsen'sFarthing","parent":130,"continent":0,"flags":1073741888}
+{"id":230,"name":"The Greymane Wall","zone":"TheGreymaneWall","parent":130,"continent":0,"flags":1073741888}
+{"id":231,"name":"Beren's Peril","zone":"Beren'sPeril","parent":130,"continent":0,"flags":1073741888}
+{"id":232,"name":"The Dawning Isles","zone":"TheDawningIsles","parent":130,"continent":0,"flags":1073741888}
+{"id":233,"name":"Ambermill","zone":"Ambermill","parent":130,"continent":0,"flags":1073741888}
+{"id":235,"name":"Fenris Keep","zone":"FenrisKeep","parent":130,"continent":0,"flags":1073741888}
+{"id":236,"name":"Shadowfang Keep","zone":"Shadowfang Keep","parent":130,"continent":0,"flags":1073741888}
+{"id":237,"name":"The Decrepit Ferry","zone":"TheDecrepitFerry","parent":130,"continent":0,"flags":1073741888}
+{"id":238,"name":"Malden's Orchard","zone":"Malden'sOrchard","parent":130,"continent":0,"flags":1073741888}
+{"id":239,"name":"The Ivar Patch","zone":"TheIvarPatch","parent":130,"continent":0,"flags":1073741888}
+{"id":240,"name":"The Dead Field","zone":"TheDeadField","parent":130,"continent":0,"flags":1073741888}
+{"id":241,"name":"The Rotting Orchard","zone":"TheRottingOrchard","parent":10,"continent":0,"flags":1073741888}
+{"id":242,"name":"Brightwood Grove","zone":"BrightwoodGrove","parent":10,"continent":0,"flags":1073741888}
+{"id":243,"name":"Forlorn Rowe","zone":"ForlornRowe","parent":10,"continent":0,"flags":1073741888}
+{"id":244,"name":"The Whipple Estate","zone":"TheWhippleEstate","parent":10,"continent":0,"flags":1073741888}
+{"id":245,"name":"The Yorgen Farmstead","zone":"TheYorgenFarmstead","parent":10,"continent":0,"flags":1073741888}
+{"id":246,"name":"The Cauldron","zone":"TheCauldron","parent":51,"continent":0,"flags":1073741888}
+{"id":247,"name":"Grimesilt Dig Site","zone":"GrimesiltDigSite","parent":51,"continent":0,"flags":1073741888}
+{"id":249,"name":"Dreadmaul Rock","zone":"DreadmaulRock","parent":46,"continent":0,"flags":1073741888}
+{"id":250,"name":"Ruins of Thaurissan","zone":"RuinsofThaurisan","parent":46,"continent":0,"flags":1073741888}
+{"id":251,"name":"Flame Crest","zone":"FlameCrest","parent":46,"continent":0,"flags":1073741888}
+{"id":252,"name":"Blackrock Stronghold","zone":"BlackrockStronghold","parent":46,"continent":0,"flags":1073741888}
+{"id":253,"name":"The Pillar of Ash","zone":"ThePillarofAsh","parent":46,"continent":0,"flags":1073741888}
+{"id":254,"name":"Blackrock Mountain","zone":"BlackrockMountain","parent":46,"continent":0,"flags":1073741888}
+{"id":255,"name":"Altar of Storms","zone":"AltarofStorms","parent":46,"continent":0,"flags":1073741888}
+{"id":256,"name":"Aldrassil","zone":"Aldrassil","parent":141,"continent":1,"flags":1073741888}
+{"id":257,"name":"Shadowthread Cave","zone":"ShadowthreadCave","parent":141,"continent":1,"flags":1073741888}
+{"id":258,"name":"Fel Rock","zone":"FelRock","parent":141,"continent":1,"flags":1073741888}
+{"id":259,"name":"Lake Al'Ameth","zone":"LakeIl'Ameth","parent":141,"continent":1,"flags":1073741888}
+{"id":260,"name":"Starbreeze Village","zone":"StarbreezeVillage","parent":141,"continent":1,"flags":1073741888}
+{"id":261,"name":"Gnarlpine Hold","zone":"GnarlpineHold","parent":141,"continent":1,"flags":1073741888}
+{"id":262,"name":"Ban'ethil Barrow Den","zone":"Ban'ethilBarrowDen","parent":141,"continent":1,"flags":1073741888}
+{"id":263,"name":"The Cleft","zone":"TheCleft","parent":141,"continent":1,"flags":1073741888}
+{"id":264,"name":"The Oracle Glade","zone":"TheOracleGlade","parent":141,"continent":1,"flags":1073741888}
+{"id":265,"name":"Wellspring River","zone":"WellspringRiver","parent":141,"continent":1,"flags":1073741888}
+{"id":266,"name":"Wellspring Lake","zone":"WellspringLake","parent":141,"continent":1,"flags":1073741888}
+{"id":267,"name":"Hillsbrad Foothills","zone":"HillsbradFoothills","parent":0,"continent":0,"flags":64}
+{"id":268,"name":"Azshara Crater","zone":"AzsharaCrater","parent":0,"continent":37,"flags":64}
+{"id":269,"name":"Dun Algaz","zone":"DunAlgaz","parent":0,"continent":0,"flags":64}
+{"id":271,"name":"Southshore","zone":"Southshore","parent":267,"continent":0,"flags":1073741888}
+{"id":272,"name":"Tarren Mill","zone":"TarrenMill","parent":267,"continent":0,"flags":1073741888}
+{"id":275,"name":"Durnholde Keep","zone":"DurnholdeKeep","parent":267,"continent":0,"flags":1073741888}
+{"id":276,"name":"UNUSED Stonewrought Pass","zone":"StonewroughtPass","parent":0,"continent":0,"flags":64}
+{"id":277,"name":"The Foothill Caverns","zone":"TheFoothillCaverns","parent":36,"continent":0,"flags":1073741888}
+{"id":278,"name":"Lordamere Internment Camp","zone":"LordamereInternmentCamp","parent":36,"continent":0,"flags":1073741888}
+{"id":279,"name":"Dalaran","zone":"Dalaran","parent":36,"continent":0,"flags":1073741888}
+{"id":280,"name":"Strahnbrad","zone":"Strahnbrad","parent":36,"continent":0,"flags":1073741888}
+{"id":281,"name":"Ruins of Alterac","zone":"RuinsofAlterac","parent":36,"continent":0,"flags":1073741888}
+{"id":282,"name":"Crushridge Hold","zone":"CrushridgeHold","parent":36,"continent":0,"flags":1073741888}
+{"id":283,"name":"Slaughter Hollow","zone":"SlaughterHollow","parent":36,"continent":0,"flags":1073741888}
+{"id":284,"name":"The Uplands","zone":"TheUplands","parent":36,"continent":0,"flags":1073741888}
+{"id":285,"name":"Southpoint Tower","zone":"SouthpointTower","parent":267,"continent":0,"flags":1073741888}
+{"id":286,"name":"Hillsbrad Fields","zone":"HillsbradFields","parent":267,"continent":0,"flags":1073741888}
+{"id":287,"name":"Hillsbrad","zone":"Hillsbrad","parent":267,"continent":0,"flags":1073741888}
+{"id":288,"name":"Azurelode Mine","zone":"AzurelodeMine","parent":267,"continent":0,"flags":1073741888}
+{"id":289,"name":"Nethander Stead","zone":"NethanderStead","parent":267,"continent":0,"flags":1073741888}
+{"id":290,"name":"Dun Garok","zone":"DunGarok","parent":267,"continent":0,"flags":1073741888}
+{"id":293,"name":"Thoradin's Wall","zone":"Thoradin'sWall","parent":0,"continent":0,"flags":64}
+{"id":294,"name":"Eastern Strand","zone":"EasternStrand","parent":267,"continent":0,"flags":1073741888}
+{"id":295,"name":"Western Strand","zone":"WesternStrand","parent":267,"continent":0,"flags":1073741888}
+{"id":296,"name":"South Seas UNUSED","zone":"SouthSeasUNUSED","parent":0,"continent":0,"flags":64}
+{"id":297,"name":"Jaguero Isle","zone":"JagueroIsle","parent":33,"continent":0,"flags":1073741888}
+{"id":298,"name":"Baradin Bay","zone":"BaradinBay","parent":11,"continent":0,"flags":1073741888}
+{"id":299,"name":"Menethil Bay","zone":"MenethilBay","parent":11,"continent":0,"flags":1073741888}
+{"id":300,"name":"Misty Reed Strand","zone":"MistyReedStrand","parent":8,"continent":0,"flags":1073741888}
+{"id":301,"name":"The Savage Coast","zone":"TheSavageCoast","parent":33,"continent":0,"flags":1073741888}
+{"id":302,"name":"The Crystal Shore","zone":"TheCrystalShore","parent":33,"continent":0,"flags":1073741888}
+{"id":303,"name":"Shell Beach","zone":"ShellBeach","parent":33,"continent":0,"flags":1073741888}
+{"id":305,"name":"North Tide's Run","zone":"NorthTide'sRun","parent":130,"continent":0,"flags":1073741888}
+{"id":306,"name":"South Tide's Run","zone":"SouthTide'sRun","parent":130,"continent":0,"flags":1073741888}
+{"id":307,"name":"The Overlook Cliffs","zone":"TheOverlookCliffs","parent":47,"continent":0,"flags":1073741888}
+{"id":308,"name":"The Forbidding Sea","zone":"TheForbiddingSea","parent":0,"continent":0,"flags":64}
+{"id":309,"name":"Ironbeard's Tomb","zone":"Ironbeard'sTomb","parent":11,"continent":0,"flags":1073741888}
+{"id":310,"name":"Crystalvein Mine","zone":"CrystalveinMine","parent":33,"continent":0,"flags":1073741888}
+{"id":311,"name":"Ruins of Aboraz","zone":"RuinsofAboraz","parent":33,"continent":0,"flags":1073741888}
+{"id":312,"name":"Janeiro's Point","zone":"Janeiro'sPoint","parent":33,"continent":0,"flags":1073741888}
+{"id":313,"name":"Northfold Manor","zone":"NorthfoldManor","parent":45,"continent":0,"flags":1073741888}
+{"id":314,"name":"Go'Shek Farm","zone":"Go'ShekFarm","parent":45,"continent":0,"flags":1073741888}
+{"id":315,"name":"Dabyrie's Farmstead","zone":"Dabyrie'sFarmstead","parent":45,"continent":0,"flags":1073741888}
+{"id":316,"name":"Boulderfist Hall","zone":"BoulderfistHall","parent":45,"continent":0,"flags":1073741888}
+{"id":317,"name":"Witherbark Village","zone":"WitherbarkVillage","parent":45,"continent":0,"flags":1073741888}
+{"id":318,"name":"Drywhisker Gorge","zone":"DrywhiskerGorge","parent":45,"continent":0,"flags":1073741888}
+{"id":320,"name":"Refuge Pointe","zone":"RefugePointe","parent":45,"continent":0,"flags":1073741888}
+{"id":321,"name":"Hammerfall","zone":"Hammerfall","parent":45,"continent":0,"flags":1073741888}
+{"id":322,"name":"Blackwater Shipwrecks","zone":"BlackwaterShipwrecks","parent":45,"continent":0,"flags":1073741888}
+{"id":323,"name":"O'Breen's Camp","zone":"O'Breen'sCamp","parent":45,"continent":0,"flags":1073741888}
+{"id":324,"name":"Stromgarde Keep","zone":"StromgardeKeep","parent":45,"continent":0,"flags":1073741888}
+{"id":325,"name":"The Tower of Arathor","zone":"TheTowerofArathor","parent":45,"continent":0,"flags":1073741888}
+{"id":326,"name":"The Sanctum","zone":"TheSanctum","parent":45,"continent":0,"flags":1073741888}
+{"id":327,"name":"Faldir's Cove","zone":"Faldir'sCove","parent":45,"continent":0,"flags":1073741888}
+{"id":328,"name":"The Drowned Reef","zone":"TheDrownedReef","parent":45,"continent":0,"flags":1073741888}
+{"id":330,"name":"Thandol Span","zone":"ThandolSpan","parent":0,"continent":0,"flags":64}
+{"id":331,"name":"Ashenvale","zone":"Ashenvale","parent":0,"continent":1,"flags":64}
+{"id":332,"name":"The Great Sea","zone":"TheGreatSea","parent":0,"continent":1,"flags":64}
+{"id":333,"name":"Circle of East Binding","zone":"CircleofEastBinding","parent":45,"continent":0,"flags":1073741888}
+{"id":334,"name":"Circle of West Binding","zone":"CircleofWestBinding","parent":45,"continent":0,"flags":1073741888}
+{"id":335,"name":"Circle of Inner Binding","zone":"CircleofInnerBinding","parent":45,"continent":0,"flags":1073741888}
+{"id":336,"name":"Circle of Outer Binding","zone":"CircleofOuterBinding","parent":45,"continent":0,"flags":1073741888}
+{"id":337,"name":"Apocryphan's Rest","zone":"Apocryphan'sRest","parent":3,"continent":0,"flags":1073741888}
+{"id":338,"name":"Angor Fortress","zone":"AngorFortress","parent":3,"continent":0,"flags":1073741888}
+{"id":339,"name":"Lethlor Ravine","zone":"LethlorRavine","parent":3,"continent":0,"flags":1073741888}
+{"id":340,"name":"Kargath","zone":"Kargath","parent":3,"continent":0,"flags":1073741888}
+{"id":341,"name":"Camp Kosh","zone":"CampKosh","parent":3,"continent":0,"flags":1073741888}
+{"id":342,"name":"Camp Boff","zone":"CampBoff","parent":3,"continent":0,"flags":1073741888}
+{"id":343,"name":"Camp Wurg","zone":"CampWurg","parent":3,"continent":0,"flags":1073741888}
+{"id":344,"name":"Camp Cagg","zone":"CampCagg","parent":3,"continent":0,"flags":1073741888}
+{"id":345,"name":"Agmond's End","zone":"Agmond'sEnd","parent":3,"continent":0,"flags":1073741888}
+{"id":346,"name":"Hammertoe's Digsite","zone":"Hammertoe'sDigsite","parent":3,"continent":0,"flags":1073741888}
+{"id":347,"name":"Dustbelch Grotto","zone":"DustbelchGrotto","parent":3,"continent":0,"flags":1073741888}
+{"id":348,"name":"Aerie Peak","zone":"AeriePeak","parent":47,"continent":0,"flags":1073741888}
+{"id":349,"name":"Wildhammer Keep","zone":"WildhammerKeep","parent":47,"continent":0,"flags":1073741888}
+{"id":350,"name":"Quel'Danil Lodge","zone":"Quel'DanilLodge","parent":47,"continent":0,"flags":1073741888}
+{"id":351,"name":"Skulk Rock","zone":"SkulkRock","parent":47,"continent":0,"flags":1073741888}
+{"id":352,"name":"Zun'watha","zone":"Zun'watha","parent":47,"continent":0,"flags":1073741888}
+{"id":353,"name":"Shadra'Alor","zone":"Shadra'Alor","parent":47,"continent":0,"flags":1073741888}
+{"id":354,"name":"Jintha'Alor","zone":"Jintha'Alor","parent":47,"continent":0,"flags":1073741888}
+{"id":355,"name":"The Altar of Zul","zone":"TheAltarofZul","parent":47,"continent":0,"flags":1073741888}
+{"id":356,"name":"Seradane","zone":"Seradane","parent":47,"continent":0,"flags":1073741888}
+{"id":357,"name":"Feralas","zone":"Feralas","parent":0,"continent":1,"flags":64}
+{"id":358,"name":"Brambleblade Ravine","zone":"BramblebladeRavine","parent":215,"continent":1,"flags":1073741888}
+{"id":359,"name":"Bael Modan","zone":"BaelModan","parent":17,"continent":1,"flags":1073741888}
+{"id":360,"name":"The Venture Co. Mine","zone":"TheVentureCo.Mine","parent":215,"continent":1,"flags":1073741888}
+{"id":361,"name":"Felwood","zone":"Felwood","parent":0,"continent":1,"flags":64}
+{"id":362,"name":"Razor Hill","zone":"RazorHill","parent":14,"continent":1,"flags":1073741888}
+{"id":363,"name":"Valley of Trials","zone":"ValleyofTrials","parent":14,"continent":1,"flags":1073741888}
+{"id":364,"name":"The Den","zone":"TheDen","parent":14,"continent":1,"flags":1073741888}
+{"id":365,"name":"Burning Blade Coven","zone":"BurningBladeCoven","parent":14,"continent":1,"flags":1073741888}
+{"id":366,"name":"Kolkar Crag","zone":"KolkarCrag","parent":14,"continent":1,"flags":1073741888}
+{"id":367,"name":"Sen'jin Village","zone":"Sen'jinVillage","parent":14,"continent":1,"flags":1073741888}
+{"id":368,"name":"Echo Isles","zone":"EchoIsles","parent":14,"continent":1,"flags":1073741888}
+{"id":369,"name":"Thunder Ridge","zone":"ThunderRidge","parent":14,"continent":1,"flags":1073741888}
+{"id":370,"name":"Drygulch Ravine","zone":"DrygulchRavine","parent":14,"continent":1,"flags":1073741888}
+{"id":371,"name":"Dustwind Cave","zone":"DustwindCave","parent":14,"continent":1,"flags":1073741888}
+{"id":372,"name":"Tiragarde Keep","zone":"TiragardeKeep","parent":14,"continent":1,"flags":1073741888}
+{"id":373,"name":"Scuttle Coast","zone":"ScuttleCoast","parent":14,"continent":1,"flags":1073741888}
+{"id":374,"name":"Bladefist Bay","zone":"BladefistBay","parent":14,"continent":1,"flags":1073741888}
+{"id":375,"name":"Deadeye Shore","zone":"DeadeyeShore","parent":14,"continent":1,"flags":1073741888}
+{"id":377,"name":"Southfury River","zone":"SouthfuryRiver","parent":0,"continent":1,"flags":64}
+{"id":378,"name":"Camp Taurajo","zone":"CampTaurajo","parent":17,"continent":1,"flags":1073741888}
+{"id":379,"name":"Far Watch Post","zone":"FarWatchPost","parent":17,"continent":1,"flags":1073741888}
+{"id":380,"name":"The Crossroads","zone":"TheCrossroads","parent":17,"continent":1,"flags":1073741888}
+{"id":381,"name":"Boulder Lode Mine","zone":"BoulderLodeMine","parent":17,"continent":1,"flags":1073741888}
+{"id":382,"name":"The Sludge Fen","zone":"TheSludgeFen","parent":17,"continent":1,"flags":1073741888}
+{"id":383,"name":"The Dry Hills","zone":"TheDryHills","parent":17,"continent":1,"flags":1073741888}
+{"id":384,"name":"Dreadmist Peak","zone":"DreadmistPeak","parent":17,"continent":1,"flags":1073741888}
+{"id":385,"name":"Northwatch Hold","zone":"NorthwatchHold","parent":17,"continent":1,"flags":1073741888}
+{"id":386,"name":"The Forgotten Pools","zone":"TheForgottenPools","parent":17,"continent":1,"flags":1073741888}
+{"id":387,"name":"Lushwater Oasis","zone":"LushwaterOasis","parent":17,"continent":1,"flags":1073741888}
+{"id":388,"name":"The Stagnant Oasis","zone":"TheStagnantOasis","parent":17,"continent":1,"flags":1073741888}
+{"id":390,"name":"Field of Giants","zone":"FieldofGiants","parent":17,"continent":1,"flags":1073741888}
+{"id":391,"name":"The Merchant Coast","zone":"TheMerchantCoast","parent":17,"continent":1,"flags":1073741888}
+{"id":392,"name":"Ratchet","zone":"Ratchet","parent":17,"continent":1,"flags":1073741888}
+{"id":393,"name":"Darkspear Strand","zone":"DarkspearStrand","parent":14,"continent":1,"flags":1073741888}
+{"id":394,"name":"Darrowmere Lake UNUSED","zone":"DarrowmereLakeUNUSED","parent":0,"continent":0,"flags":64}
+{"id":395,"name":"Caer Darrow UNUSED","zone":"CaerDarrowUNUSED","parent":394,"continent":0,"flags":1073741888}
+{"id":396,"name":"Winterhoof Water Well","zone":"WinterhoofWaterWell","parent":215,"continent":1,"flags":1073741888}
+{"id":397,"name":"Thunderhorn Water Well","zone":"ThunderhornWaterWell","parent":215,"continent":1,"flags":1073741888}
+{"id":398,"name":"Wildmane Water Well","zone":"WildmaneWaterWell","parent":215,"continent":1,"flags":1073741888}
+{"id":399,"name":"Skyline Ridge","zone":"SkylineRidge","parent":215,"continent":1,"flags":1073741888}
+{"id":400,"name":"Thousand Needles","zone":"ThousandNeedles","parent":0,"continent":1,"flags":64}
+{"id":401,"name":"The Tidus Stair","zone":"TheTidusStair","parent":17,"continent":1,"flags":1073741888}
+{"id":403,"name":"Shady Rest Inn","zone":"ShadyRestInn","parent":15,"continent":1,"flags":1073741888}
+{"id":404,"name":"Bael'dun Digsite","zone":"Bael'dunDigsite","parent":215,"continent":1,"flags":1073741888}
+{"id":405,"name":"Desolace","zone":"Desolace","parent":0,"continent":1,"flags":64}
+{"id":406,"name":"Stonetalon Mountains","zone":"StonetalonMountains","parent":0,"continent":1,"flags":64}
+{"id":407,"name":"Orgrimmar UNUSED","zone":"OrgrimmarUNUSED","parent":14,"continent":1,"flags":1073741888}
+{"id":408,"name":"Gillijim's Isle","zone":"Gillijim'sIsle","parent":0,"continent":0,"flags":64}
+{"id":409,"name":"Island of Doctor Lapidis","zone":"IslandofDoctorLapidis","parent":0,"continent":0,"flags":64}
+{"id":410,"name":"Razorwind Canyon","zone":"RazorwindCanyon","parent":14,"continent":1,"flags":1073741888}
+{"id":411,"name":"Bathran's Haunt","zone":"Bathran'sHaunt","parent":331,"continent":1,"flags":1073741888}
+{"id":412,"name":"The Ruins of Ordil'Aran","zone":"TheRuinsofOrdil'Aran","parent":331,"continent":1,"flags":1073741888}
+{"id":413,"name":"Maestra's Post","zone":"Maestra'sPost","parent":331,"continent":1,"flags":1073741888}
+{"id":414,"name":"The Zoram Strand","zone":"TheZoramStrand","parent":331,"continent":1,"flags":1073741888}
+{"id":415,"name":"Astranaar","zone":"Astranaar","parent":331,"continent":1,"flags":1073741888}
+{"id":416,"name":"The Shrine of Aessina","zone":"TheShrineofAessina","parent":331,"continent":1,"flags":1073741888}
+{"id":417,"name":"Fire Scar Shrine","zone":"FireScarShrine","parent":331,"continent":1,"flags":1073741888}
+{"id":418,"name":"The Ruins of Stardust","zone":"TheRuinsofStardust","parent":331,"continent":1,"flags":1073741888}
+{"id":419,"name":"The Howling Vale","zone":"TheHowlingVale","parent":331,"continent":1,"flags":1073741888}
+{"id":420,"name":"Silverwind Refuge","zone":"SilverwindRefuge","parent":331,"continent":1,"flags":1073741888}
+{"id":421,"name":"Mystral Lake","zone":"MystralLake","parent":331,"continent":1,"flags":1073741888}
+{"id":422,"name":"Fallen Sky Lake","zone":"FallenSkyLake","parent":331,"continent":1,"flags":1073741888}
+{"id":424,"name":"Iris Lake","zone":"IrisLake","parent":331,"continent":1,"flags":1073741888}
+{"id":425,"name":"Moonwell","zone":"Moonwell","parent":331,"continent":1,"flags":1073741888}
+{"id":426,"name":"Raynewood Retreat","zone":"RaynewoodRetreat","parent":331,"continent":1,"flags":1073741888}
+{"id":427,"name":"The Shady Nook","zone":"TheShadyNook","parent":331,"continent":1,"flags":1073741888}
+{"id":428,"name":"Night Run","zone":"Night Run","parent":331,"continent":1,"flags":1073741888}
+{"id":429,"name":"Xavian","zone":"Xavian","parent":331,"continent":1,"flags":1073741888}
+{"id":430,"name":"Satyrnaar","zone":"Satyrnaar","parent":331,"continent":1,"flags":1073741888}
+{"id":431,"name":"Splintertree Post","zone":"Splintertree Post","parent":331,"continent":1,"flags":1073741888}
+{"id":432,"name":"The Dor'Danil Barrow Den","zone":"TheDor'DanilBarrowDen","parent":331,"continent":1,"flags":1073741888}
+{"id":433,"name":"Falfarren River","zone":"FalfarrenRiver","parent":331,"continent":1,"flags":1073741888}
+{"id":434,"name":"Felfire Hill","zone":"FelfireHill","parent":331,"continent":1,"flags":1073741888}
+{"id":435,"name":"Demon Fall Canyon","zone":"DemonFallCanyon","parent":331,"continent":1,"flags":1073741888}
+{"id":436,"name":"Demon Fall Ridge","zone":"DemonFallRidge","parent":331,"continent":1,"flags":1073741888}
+{"id":437,"name":"Warsong Lumber Camp","zone":"Warsong Lumber Camp","parent":331,"continent":1,"flags":1073741888}
+{"id":438,"name":"Bough Shadow","zone":"BoughShadow","parent":331,"continent":1,"flags":1073741888}
+{"id":439,"name":"The Shimmering Flats","zone":"TheShimmeringFlats","parent":400,"continent":1,"flags":1073741888}
+{"id":440,"name":"Tanaris","zone":"Tanaris","parent":0,"continent":1,"flags":64}
+{"id":441,"name":"Lake Falathim","zone":"LakeFalathim","parent":331,"continent":1,"flags":1073741888}
+{"id":442,"name":"Auberdine","zone":"Auberdine","parent":148,"continent":1,"flags":1073741888}
+{"id":443,"name":"Ruins of Mathystra","zone":"RuinsofMathystra","parent":148,"continent":1,"flags":1073741888}
+{"id":444,"name":"Tower of Althalaxx","zone":"TowerofAlthalaxx","parent":148,"continent":1,"flags":1073741888}
+{"id":445,"name":"Cliffspring Falls","zone":"CliffspringFalls","parent":148,"continent":1,"flags":1073741888}
+{"id":446,"name":"Bashal'Aran","zone":"Bashal'Aran","parent":148,"continent":1,"flags":1073741888}
+{"id":447,"name":"Ameth'Aran","zone":"Ameth'Aran","parent":148,"continent":1,"flags":1073741888}
+{"id":448,"name":"Grove of the Ancients","zone":"GroveoftheAncients","parent":148,"continent":1,"flags":1073741888}
+{"id":449,"name":"The Master's Glaive","zone":"TheMaster'sGlaive","parent":148,"continent":1,"flags":1073741888}
+{"id":450,"name":"Remtravel's Excavation","zone":"Remtravel'sExcavation","parent":148,"continent":1,"flags":1073741888}
+{"id":452,"name":"Mist's Edge","zone":"Mist'sEdge","parent":148,"continent":1,"flags":1073741888}
+{"id":453,"name":"The Long Wash","zone":"TheLongWash","parent":148,"continent":1,"flags":1073741888}
+{"id":454,"name":"Wildbend River","zone":"WildbendRiver","parent":148,"continent":1,"flags":1073741888}
+{"id":455,"name":"Blackwood Den","zone":"BlackwoodDen","parent":148,"continent":1,"flags":1073741888}
+{"id":456,"name":"Cliffspring River","zone":"CliffspringRiver","parent":148,"continent":1,"flags":1073741888}
+{"id":457,"name":"The Veiled Sea","zone":"TheVeiledSea","parent":0,"continent":1,"flags":64}
+{"id":458,"name":"Gold Road","zone":"GoldRoad","parent":17,"continent":1,"flags":1073741888}
+{"id":459,"name":"Scarlet Watch Post","zone":"ScarletWatchPost","parent":85,"continent":0,"flags":1073741888}
+{"id":460,"name":"Sun Rock Retreat","zone":"SunRockRetreat","parent":406,"continent":1,"flags":1073741888}
+{"id":461,"name":"Windshear Crag","zone":"Windshear Crag","parent":406,"continent":1,"flags":1073741888}
+{"id":463,"name":"Cragpool Lake","zone":"CragpoolLake","parent":406,"continent":1,"flags":1073741888}
+{"id":464,"name":"Mirkfallon Lake","zone":"MirkfallonLake","parent":406,"continent":1,"flags":1073741888}
+{"id":465,"name":"The Charred Vale","zone":"TheCharredVale","parent":406,"continent":1,"flags":1073741888}
+{"id":466,"name":"Valley of the Bloodfuries","zone":"ValleyoftheBloodfuries","parent":406,"continent":1,"flags":1073741888}
+{"id":467,"name":"Stonetalon Peak","zone":"StonetalonPeak","parent":406,"continent":1,"flags":1073741888}
+{"id":468,"name":"The Talon Den","zone":"TheTalonDen","parent":406,"continent":1,"flags":1073741888}
+{"id":469,"name":"Greatwood Vale","zone":"GreatwoodVale","parent":406,"continent":1,"flags":1073741888}
+{"id":470,"name":"Thunder Bluff UNUSED","zone":"ThunderBluffUNUSED","parent":215,"continent":1,"flags":1073741888}
+{"id":471,"name":"Brave Wind Mesa","zone":"BraveWindMesa","parent":215,"continent":1,"flags":1073741888}
+{"id":472,"name":"Fire Stone Mesa","zone":"FireStoneMesa","parent":215,"continent":1,"flags":1073741888}
+{"id":473,"name":"Mantle Rock","zone":"MantleRock","parent":215,"continent":1,"flags":1073741888}
+{"id":474,"name":"Hunter Rise UNUSED","zone":"HunterRiseUNUSED","parent":215,"continent":1,"flags":1073741888}
+{"id":475,"name":"Spirit RiseUNUSED","zone":"SpiritRiseUNUSED","parent":215,"continent":1,"flags":1073741888}
+{"id":476,"name":"Elder RiseUNUSED","zone":"ElderRiseUNUSED","parent":215,"continent":1,"flags":1073741888}
+{"id":477,"name":"Ruins of Jubuwal","zone":"RuinsofJubuwal","parent":33,"continent":0,"flags":1073741888}
+{"id":478,"name":"Pools of Arlithrien","zone":"PoolsofArlithrien","parent":141,"continent":1,"flags":1073741888}
+{"id":479,"name":"The Rustmaul Dig Site","zone":"TheRustmaulDigSite","parent":400,"continent":1,"flags":1073741888}
+{"id":480,"name":"Camp E'thok","zone":"CampE'thok","parent":400,"continent":1,"flags":1073741888}
+{"id":481,"name":"Splithoof Crag","zone":"SplithoofCrag","parent":400,"continent":1,"flags":1073741888}
+{"id":482,"name":"Highperch","zone":"Highperch","parent":400,"continent":1,"flags":1073741888}
+{"id":483,"name":"The Screeching Canyon","zone":"TheScreechingCanyon","parent":400,"continent":1,"flags":1073741888}
+{"id":484,"name":"Freewind Post","zone":"FreewindPost","parent":400,"continent":1,"flags":1073741888}
+{"id":485,"name":"The Great Lift","zone":"TheGreatLift","parent":400,"continent":1,"flags":1073741888}
+{"id":486,"name":"Galak Hold","zone":"GalakHold","parent":400,"continent":1,"flags":1073741888}
+{"id":487,"name":"Roguefeather Den","zone":"RoguefeatherDen","parent":400,"continent":1,"flags":1073741888}
+{"id":488,"name":"The Weathered Nook","zone":"TheWeatheredNook","parent":400,"continent":1,"flags":1073741888}
+{"id":489,"name":"Thalanaar","zone":"Thalanaar","parent":357,"continent":1,"flags":1073741888}
+{"id":490,"name":"Un'Goro Crater","zone":"Un'GoroCrater","parent":0,"continent":1,"flags":64}
+{"id":491,"name":"Razorfen Kraul","zone":"RazorfenKraul","parent":0,"continent":47,"flags":0}
+{"id":492,"name":"Raven Hill Cemetery","zone":"RavenHillCemetery","parent":10,"continent":0,"flags":1073741888}
+{"id":493,"name":"Moonglade","zone":"Moonglade","parent":0,"continent":1,"flags":64}
+{"id":495,"name":"DELETE ME","zone":"DELETEME","parent":0,"continent":0,"flags":64}
+{"id":496,"name":"Brackenwall Village","zone":"BrackenwallVillage","parent":15,"continent":1,"flags":1073741888}
+{"id":497,"name":"Swamplight Manor","zone":"SwamplightManor","parent":15,"continent":1,"flags":1073741888}
+{"id":498,"name":"Bloodfen Burrow","zone":"BloodfenBurrow","parent":15,"continent":1,"flags":1073741888}
+{"id":499,"name":"Darkmist Cavern","zone":"DarkmistCavern","parent":15,"continent":1,"flags":1073741888}
+{"id":500,"name":"Moggle Point","zone":"MogglePoint","parent":15,"continent":1,"flags":1073741888}
+{"id":501,"name":"Beezil's Wreck","zone":"Beezil'sWreck","parent":15,"continent":1,"flags":1073741888}
+{"id":502,"name":"Witch Hill","zone":"WitchHill","parent":15,"continent":1,"flags":1073741888}
+{"id":503,"name":"Sentry Point","zone":"SentryPoint","parent":15,"continent":1,"flags":1073741888}
+{"id":504,"name":"North Point Tower","zone":"NorthPointTower","parent":15,"continent":1,"flags":1073741888}
+{"id":505,"name":"West Point Tower","zone":"WestPointTower","parent":15,"continent":1,"flags":1073741888}
+{"id":506,"name":"Lost Point","zone":"LostPoint","parent":15,"continent":1,"flags":1073741888}
+{"id":507,"name":"Bluefen","zone":"Bluefen","parent":15,"continent":1,"flags":1073741888}
+{"id":508,"name":"Stonemaul Ruins","zone":"StonemaulRuins","parent":15,"continent":1,"flags":1073741888}
+{"id":509,"name":"The Den of Flame","zone":"TheDenofFlame","parent":15,"continent":1,"flags":1073741888}
+{"id":510,"name":"The Dragonmurk","zone":"TheDragonmurk","parent":15,"continent":1,"flags":1073741888}
+{"id":511,"name":"Wyrmbog","zone":"Wyrmbog","parent":15,"continent":1,"flags":1073741888}
+{"id":512,"name":"Onyxia's Lair UNUSED","zone":"Onyxia'sLairUNUSED","parent":15,"continent":1,"flags":1073741888}
+{"id":513,"name":"Theramore Isle","zone":"TheramoreIsle","parent":15,"continent":1,"flags":1073741888}
+{"id":514,"name":"Foothold Citadel","zone":"FootholdCitadel","parent":15,"continent":1,"flags":1073741888}
+{"id":515,"name":"Ironclad Prison","zone":"IroncladPrison","parent":15,"continent":1,"flags":1073741888}
+{"id":516,"name":"Dustwallow Bay","zone":"DustwallowBay","parent":15,"continent":1,"flags":1073741888}
+{"id":517,"name":"Tidefury Cove","zone":"TidefuryCove","parent":15,"continent":1,"flags":1073741888}
+{"id":518,"name":"Dreadmurk Shore","zone":"DreadmurkShore","parent":15,"continent":1,"flags":1073741888}
+{"id":536,"name":"Addle's Stead","zone":"Addle'sStead","parent":10,"continent":0,"flags":1073741888}
+{"id":537,"name":"Fire Plume Ridge","zone":"FirePlumeRidge","parent":490,"continent":1,"flags":1073741888}
+{"id":538,"name":"Lakkari Tar Pits","zone":"LakkariTarPits","parent":490,"continent":1,"flags":1073741888}
+{"id":539,"name":"Terror Run","zone":"TerrorRun","parent":490,"continent":1,"flags":1073741888}
+{"id":540,"name":"The Slithering Scar","zone":"TheSlitheringScar","parent":490,"continent":1,"flags":1073741888}
+{"id":541,"name":"Marshal's Refuge","zone":"Marshal'sRefuge","parent":490,"continent":1,"flags":1073741888}
+{"id":542,"name":"Fungal Rock","zone":"FungalRock","parent":490,"continent":1,"flags":1073741888}
+{"id":543,"name":"Golakka Hot Springs","zone":"GolakkaHotSprings","parent":490,"continent":1,"flags":1073741888}
+{"id":556,"name":"The Loch","zone":"TheLoch","parent":38,"continent":0,"flags":1073741888}
+{"id":576,"name":"Beggar's Haunt","zone":"Beggar'sHaunt","parent":10,"continent":0,"flags":1073741888}
+{"id":596,"name":"Kodo Graveyard","zone":"KodoGraveyard","parent":405,"continent":1,"flags":1073741888}
+{"id":597,"name":"Ghost Walker Post","zone":"GhostWalkerPost","parent":405,"continent":1,"flags":1073741888}
+{"id":598,"name":"Sar'theris Strand","zone":"Sar'therisStrand","parent":405,"continent":1,"flags":1073741888}
+{"id":599,"name":"Thunder Axe Fortress","zone":"ThunderAxeFortress","parent":405,"continent":1,"flags":1073741888}
+{"id":600,"name":"Bolgan's Hole","zone":"Bolgan'sHole","parent":405,"continent":1,"flags":1073741888}
+{"id":602,"name":"Mannoroc Coven","zone":"MannorocCoven","parent":405,"continent":1,"flags":1073741888}
+{"id":603,"name":"Sargeron","zone":"Sargeron","parent":405,"continent":1,"flags":1073741888}
+{"id":604,"name":"Magram Village","zone":"MagramVillage","parent":405,"continent":1,"flags":1073741888}
+{"id":606,"name":"Gelkis Village","zone":"GelkisVillage","parent":405,"continent":1,"flags":1073741888}
+{"id":607,"name":"Valley of Spears","zone":"ValleyofSpears","parent":405,"continent":1,"flags":1073741888}
+{"id":608,"name":"Nijel's Point","zone":"Nijel'sPoint","parent":405,"continent":1,"flags":1073741888}
+{"id":609,"name":"Kolkar Village","zone":"KolkarVillage","parent":405,"continent":1,"flags":1073741888}
+{"id":616,"name":"Hyjal","zone":"Hyjal","parent":0,"continent":1,"flags":64}
+{"id":618,"name":"Winterspring","zone":"Winterspring","parent":0,"continent":1,"flags":65}
+{"id":636,"name":"Blackwolf River","zone":"BlackwolfRiver","parent":406,"continent":1,"flags":1073741888}
+{"id":637,"name":"Kodo Rock","zone":"KodoRock","parent":215,"continent":1,"flags":1073741888}
+{"id":638,"name":"Hidden Path","zone":"HiddenPath","parent":14,"continent":1,"flags":1073741888}
+{"id":639,"name":"Spirit Rock","zone":"SpiritRock","parent":14,"continent":1,"flags":1073741888}
+{"id":640,"name":"Shrine of the Dormant Flame","zone":"ShrineoftheDormantFlame","parent":14,"continent":1,"flags":1073741888}
+{"id":656,"name":"Lake Elune'ara","zone":"LakeElune'ara","parent":493,"continent":1,"flags":1073741888}
+{"id":657,"name":"The Harborage","zone":"TheHarborage","parent":8,"continent":0,"flags":1073741888}
+{"id":676,"name":"Outland","zone":"Outland","parent":0,"continent":150,"flags":64}
+{"id":696,"name":"Craftsmen's Terrace UNUSED","zone":"Craftsmen'sTerraceUNUSED","parent":141,"continent":1,"flags":1073741888}
+{"id":697,"name":"Tradesmen's Terrace UNUSED","zone":"Tradesmen'sTerraceUNUSED","parent":141,"continent":1,"flags":1073741888}
+{"id":698,"name":"The Temple Gardens UNUSED","zone":"TheTempleGardensUNUSED","parent":141,"continent":1,"flags":1073741888}
+{"id":699,"name":"Temple of Elune UNUSED","zone":"TempleofEluneUNUSED","parent":141,"continent":1,"flags":1073741888}
+{"id":700,"name":"Cenarion Enclave UNUSED","zone":"CenarionEnclaveUNUSED","parent":141,"continent":1,"flags":1073741888}
+{"id":701,"name":"Warrior's Terrace UNUSED","zone":"Warrior'sTerraceUNUSED","parent":141,"continent":1,"flags":1073741888}
+{"id":702,"name":"Rut'theran Village","zone":"Rut'theranVillage","parent":141,"continent":1,"flags":1073741888}
+{"id":716,"name":"Ironband's Compound","zone":"Ironband'sCompound","parent":1,"continent":0,"flags":1073741888}
+{"id":717,"name":"The Stockade","zone":"TheStockade","parent":0,"continent":34,"flags":0}
+{"id":718,"name":"Wailing Caverns","zone":"WailingCaverns","parent":0,"continent":43,"flags":0}
+{"id":719,"name":"Blackfathom Deeps","zone":"BlackfathomDeeps","parent":0,"continent":48,"flags":0}
+{"id":720,"name":"Fray Island","zone":"FrayIsland","parent":17,"continent":1,"flags":1073741888}
+{"id":721,"name":"Gnomeregan","zone":"Gnomeregan","parent":0,"continent":90,"flags":0}
+{"id":722,"name":"Razorfen Downs","zone":"RazorfenDowns","parent":0,"continent":129,"flags":3}
+{"id":736,"name":"Ban'ethil Hollow","zone":"Ban'ethilHollow","parent":141,"continent":1,"flags":1073741888}
+{"id":796,"name":"Scarlet Monastery","zone":"ScarletMonastery","parent":0,"continent":189,"flags":0}
+{"id":797,"name":"Jerod's Landing","zone":"Jerod'sLanding","parent":12,"continent":0,"flags":1073741888}
+{"id":798,"name":"Ridgepoint Tower","zone":"RidgepointTower","parent":12,"continent":0,"flags":1073741888}
+{"id":799,"name":"The Darkened Bank","zone":"TheDarkenedBank","parent":10,"continent":0,"flags":1073741888}
+{"id":800,"name":"Coldridge Pass","zone":"ColdridgePass","parent":1,"continent":0,"flags":1073741888}
+{"id":801,"name":"Chill Breeze Valley","zone":"ChillBreezeValley","parent":1,"continent":0,"flags":1073741888}
+{"id":802,"name":"Shimmer Ridge","zone":"ShimmerRidge","parent":1,"continent":0,"flags":1073741888}
+{"id":803,"name":"Amberstill Ranch","zone":"AmberstillRanch","parent":1,"continent":0,"flags":1073741888}
+{"id":804,"name":"The Tundrid Hills","zone":"TheTundridHills","parent":1,"continent":0,"flags":1073741888}
+{"id":805,"name":"South Gate Pass","zone":"SouthGatePass","parent":1,"continent":0,"flags":1073741888}
+{"id":806,"name":"South Gate Outpost","zone":"SouthGateOutpost","parent":1,"continent":0,"flags":1073741888}
+{"id":807,"name":"North Gate Pass","zone":"NorthGatePass","parent":1,"continent":0,"flags":1073741888}
+{"id":808,"name":"North Gate Outpost","zone":"NorthGateOutpost","parent":1,"continent":0,"flags":1073741888}
+{"id":809,"name":"Gates of Ironforge","zone":"GatesofIronforge","parent":1,"continent":0,"flags":1073741888}
+{"id":810,"name":"Stillwater Pond","zone":"StillwaterPond","parent":85,"continent":0,"flags":1073741888}
+{"id":811,"name":"Nightmare Vale","zone":"NightmareVale","parent":85,"continent":0,"flags":1073741888}
+{"id":812,"name":"Venomweb Vale","zone":"VenomwebVale","parent":85,"continent":0,"flags":1073741888}
+{"id":813,"name":"The Bulwark","zone":"TheBulwark","parent":28,"continent":0,"flags":1073741888}
+{"id":814,"name":"Southfury River","zone":"SouthfuryRiver","parent":14,"continent":1,"flags":1073741888}
+{"id":815,"name":"Southfury River","zone":"SouthfuryRiver","parent":17,"continent":1,"flags":1073741888}
+{"id":816,"name":"Razormane Grounds","zone":"RazormaneGrounds","parent":14,"continent":1,"flags":1073741888}
+{"id":817,"name":"Skull Rock","zone":"SkullRock","parent":14,"continent":1,"flags":1073741888}
+{"id":818,"name":"Palemane Rock","zone":"PalemaneRock","parent":215,"continent":1,"flags":1073741888}
+{"id":819,"name":"Windfury Ridge","zone":"WindfuryRidge","parent":215,"continent":1,"flags":1073741888}
+{"id":820,"name":"The Golden Plains","zone":"TheGoldenPlains","parent":215,"continent":1,"flags":1073741888}
+{"id":821,"name":"The Rolling Plains","zone":"TheRollingPlains","parent":215,"continent":1,"flags":1073741888}
+{"id":836,"name":"Dun Algaz","zone":"DunAlgaz","parent":11,"continent":0,"flags":1073741888}
+{"id":837,"name":"Dun Algaz","zone":"DunAlgaz","parent":38,"continent":0,"flags":1073741888}
+{"id":838,"name":"North Gate Pass","zone":"NorthGatePass","parent":38,"continent":0,"flags":1073741888}
+{"id":839,"name":"South Gate Pass","zone":"SouthGatePass","parent":38,"continent":0,"flags":1073741888}
+{"id":856,"name":"Twilight Grove","zone":"TwilightGrove","parent":10,"continent":0,"flags":1073741888}
+{"id":876,"name":"GM Island","zone":"GMIsland","parent":0,"continent":1,"flags":64}
+{"id":877,"name":"Delete ME","zone":"Delete ME","parent":17,"continent":1,"flags":1073741888}
+{"id":878,"name":"Southfury River","zone":"SouthfuryRiver","parent":16,"continent":1,"flags":1073741888}
+{"id":879,"name":"Southfury River","zone":"SouthfuryRiver","parent":331,"continent":1,"flags":1073741888}
+{"id":880,"name":"Thandol Span","zone":"ThandolSpan","parent":45,"continent":0,"flags":1073741888}
+{"id":881,"name":"Thandol Span","zone":"ThandolSpan","parent":11,"continent":0,"flags":1073741888}
+{"id":896,"name":"Purgation Isle","zone":"PurgationIsle","parent":267,"continent":0,"flags":1073741888}
+{"id":916,"name":"The Jansen Stead","zone":"TheJansenStead","parent":40,"continent":0,"flags":1073741888}
+{"id":917,"name":"The Dead Acre","zone":"TheDeadAcre","parent":40,"continent":0,"flags":1073741888}
+{"id":918,"name":"The Molsen Farm","zone":"TheMolsenFarm","parent":40,"continent":0,"flags":1073741888}
+{"id":919,"name":"Stendel's Pond","zone":"Stendel'sPond","parent":40,"continent":0,"flags":1073741888}
+{"id":920,"name":"The Dagger Hills","zone":"TheDaggerHills","parent":40,"continent":0,"flags":1073741888}
+{"id":921,"name":"Demont's Place","zone":"Demont'sPlace","parent":40,"continent":0,"flags":1073741888}
+{"id":922,"name":"The Dust Plains","zone":"TheDustPlains","parent":40,"continent":0,"flags":1073741888}
+{"id":923,"name":"Stonesplinter Valley","zone":"StonesplinterValley","parent":38,"continent":0,"flags":1073741888}
+{"id":924,"name":"Valley of Kings","zone":"ValleyofKings","parent":38,"continent":0,"flags":1073741888}
+{"id":925,"name":"Algaz Station","zone":"AlgazStation","parent":38,"continent":0,"flags":1073741888}
+{"id":926,"name":"Bucklebree Farm","zone":"BucklebreeFarm","parent":130,"continent":0,"flags":1073741888}
+{"id":927,"name":"The Shining Strand","zone":"TheShiningStrand","parent":130,"continent":0,"flags":1073741888}
+{"id":928,"name":"North Tide's Hollow","zone":"NorthTide'sHollow","parent":130,"continent":0,"flags":1073741888}
+{"id":936,"name":"Grizzlepaw Ridge","zone":"GrizzlepawRidge","parent":38,"continent":0,"flags":1073741888}
+{"id":956,"name":"The Verdant Fields","zone":"TheVerdantFields","parent":0,"continent":169,"flags":64}
+{"id":976,"name":"Gadgetzan","zone":"Gadgetzan","parent":440,"continent":1,"flags":1073741888}
+{"id":977,"name":"Steamwheedle Port","zone":"SteamwheedlePort","parent":440,"continent":1,"flags":1073741888}
+{"id":978,"name":"Zul'Farrak","zone":"Zul'Farrak","parent":440,"continent":1,"flags":1073741888}
+{"id":979,"name":"Sandsorrow Watch","zone":"SandsorrowWatch","parent":440,"continent":1,"flags":1073741888}
+{"id":980,"name":"Thistleshrub Valley","zone":"ThistleshrubValley","parent":440,"continent":1,"flags":1073741888}
+{"id":981,"name":"The Gaping Chasm","zone":"TheGapingChasm","parent":440,"continent":1,"flags":1073741888}
+{"id":982,"name":"The Noxious Lair","zone":"TheNoxiousLair","parent":440,"continent":1,"flags":1073741888}
+{"id":983,"name":"Dunemaul Compound","zone":"DunemaulCompound","parent":440,"continent":1,"flags":1073741888}
+{"id":984,"name":"Eastmoon Ruins","zone":"EastmoonRuins","parent":440,"continent":1,"flags":1073741888}
+{"id":985,"name":"Waterspring Field","zone":"WaterspringField","parent":440,"continent":1,"flags":1073741888}
+{"id":986,"name":"Zalashji's Den","zone":"Zalashji'sDen","parent":440,"continent":1,"flags":1073741888}
+{"id":987,"name":"Land's End Beach","zone":"Land'sEndBeach","parent":440,"continent":1,"flags":1073741888}
+{"id":988,"name":"Wavestrider Beach","zone":"WavestriderBeach","parent":440,"continent":1,"flags":1073741888}
+{"id":989,"name":"Uldum","zone":"Uldum","parent":440,"continent":1,"flags":1073741888}
+{"id":990,"name":"Valley of the Watchers","zone":"ValleyoftheWatchers","parent":440,"continent":1,"flags":1073741888}
+{"id":991,"name":"Gunstan's Post","zone":"Gunstan'sPost","parent":440,"continent":1,"flags":1073741888}
+{"id":992,"name":"Southmoon Ruins","zone":"SouthmoonRuins","parent":440,"continent":1,"flags":1073741888}
+{"id":996,"name":"Render's Camp","zone":"Render'sCamp","parent":44,"continent":0,"flags":1073741888}
+{"id":997,"name":"Render's Valley","zone":"Render'sValley","parent":44,"continent":0,"flags":1073741888}
+{"id":998,"name":"Render's Rock","zone":"Render'sRock","parent":44,"continent":0,"flags":1073741888}
+{"id":999,"name":"Stonewatch Tower","zone":"StonewatchTower","parent":44,"continent":0,"flags":1073741888}
+{"id":1000,"name":"Galardell Valley","zone":"GalardellValley","parent":44,"continent":0,"flags":1073741888}
+{"id":1001,"name":"Lakeridge Highway","zone":"LakeridgeHighway","parent":44,"continent":0,"flags":1073741888}
+{"id":1002,"name":"Three Corners","zone":"ThreeCorners","parent":44,"continent":0,"flags":1073741888}
+{"id":1016,"name":"Direforge Hill","zone":"DireforgeHill","parent":11,"continent":0,"flags":1073741888}
+{"id":1017,"name":"Raptor Ridge","zone":"RaptorRidge","parent":11,"continent":0,"flags":1073741888}
+{"id":1018,"name":"Black Channel Marsh","zone":"BlackChannelMarsh","parent":11,"continent":0,"flags":1073741888}
+{"id":1019,"name":"The Green Belt","zone":"TheGreenBelt","parent":139,"continent":0,"flags":1073741888}
+{"id":1020,"name":"Mosshide Fen","zone":"MosshideFen","parent":11,"continent":0,"flags":1073741888}
+{"id":1021,"name":"Thelgen Rock","zone":"ThelgenRock","parent":11,"continent":0,"flags":1073741888}
+{"id":1022,"name":"Bluegill Marsh","zone":"BluegillMarsh","parent":11,"continent":0,"flags":1073741888}
+{"id":1023,"name":"Saltspray Glen","zone":"SaltsprayGlen","parent":11,"continent":0,"flags":1073741888}
+{"id":1024,"name":"Sundown Marsh","zone":"SundownMarsh","parent":11,"continent":0,"flags":1073741888}
+{"id":1025,"name":"The Green Belt","zone":"TheGreenBelt","parent":11,"continent":0,"flags":1073741888}
+{"id":1036,"name":"Angerfang Encampment","zone":"AngerfangEncampment","parent":11,"continent":0,"flags":1073741888}
+{"id":1037,"name":"Grim Batol","zone":"GrimBatol","parent":11,"continent":0,"flags":1073741888}
+{"id":1038,"name":"Dragonmaw Gates","zone":"DragonmawGates","parent":11,"continent":0,"flags":1073741888}
+{"id":1039,"name":"The Lost Fleet","zone":"TheLostFleet","parent":11,"continent":0,"flags":1073741888}
+{"id":1056,"name":"Darrow Hill","zone":"DarrowHill","parent":267,"continent":0,"flags":1073741888}
+{"id":1057,"name":"Thoradin's Wall","zone":"Thoradin'sWall","parent":267,"continent":0,"flags":1073741888}
+{"id":1076,"name":"Webwinder Path","zone":"WebwinderPath","parent":406,"continent":1,"flags":1073741888}
+{"id":1097,"name":"The Hushed Bank","zone":"TheHushedBank","parent":10,"continent":0,"flags":1073741888}
+{"id":1098,"name":"Manor Mistmantle","zone":"ManorMistmantle","parent":10,"continent":0,"flags":1073741888}
+{"id":1099,"name":"Camp Mojache","zone":"CampMojache","parent":357,"continent":1,"flags":1073741888}
+{"id":1100,"name":"Grimtotem Compound","zone":"GrimtotemCompound","parent":357,"continent":1,"flags":1073741888}
+{"id":1101,"name":"The Writhing Deep","zone":"TheWrithingDeep","parent":357,"continent":1,"flags":1073741888}
+{"id":1102,"name":"Wildwind Lake","zone":"WildwindLake","parent":357,"continent":1,"flags":1073741888}
+{"id":1103,"name":"Gordunni Outpost","zone":"GordunniOutpost","parent":357,"continent":1,"flags":1073741888}
+{"id":1104,"name":"Mok'Gordun","zone":"Mok'Gordun","parent":357,"continent":1,"flags":1073741888}
+{"id":1105,"name":"Feral Scar Vale","zone":"FeralScarVale","parent":357,"continent":1,"flags":1073741888}
+{"id":1106,"name":"Frayfeather Highlands","zone":"FrayfeatherHighlands","parent":357,"continent":1,"flags":1073741888}
+{"id":1107,"name":"Idlewind Lake","zone":"IdlewindLake","parent":357,"continent":1,"flags":1073741888}
+{"id":1108,"name":"The Forgotten Coast","zone":"TheForgottenCoast","parent":357,"continent":1,"flags":1073741888}
+{"id":1109,"name":"East Pillar","zone":"EastPillar","parent":357,"continent":1,"flags":1073741888}
+{"id":1110,"name":"West Pillar","zone":"WestPillar","parent":357,"continent":1,"flags":1073741888}
+{"id":1111,"name":"Dream Bough","zone":"DreamBough","parent":357,"continent":1,"flags":1073741888}
+{"id":1112,"name":"Jademir Lake","zone":"JademirLake","parent":357,"continent":1,"flags":1073741888}
+{"id":1113,"name":"Oneiros","zone":"Oneiros","parent":357,"continent":1,"flags":1073741888}
+{"id":1114,"name":"Ruins of Ravenwind","zone":"RuinsofRavenwind","parent":357,"continent":1,"flags":1073741888}
+{"id":1115,"name":"Rage Scar Hold","zone":"RageScarHold","parent":357,"continent":1,"flags":1073741888}
+{"id":1116,"name":"Feathermoon Stronghold","zone":"FeathermoonStronghold","parent":357,"continent":1,"flags":1073741888}
+{"id":1117,"name":"Ruins of Solarsal","zone":"RuinsofSolarsal","parent":357,"continent":1,"flags":1073741888}
+{"id":1118,"name":"Lower Wilds UNUSED","zone":"LowerWilds UNUSED","parent":357,"continent":1,"flags":1073741888}
+{"id":1119,"name":"The Twin Colossals","zone":"TheTwinColossals","parent":357,"continent":1,"flags":1073741888}
+{"id":1120,"name":"Sardor Isle","zone":"SardorIsle","parent":357,"continent":1,"flags":1073741888}
+{"id":1121,"name":"Isle of Dread","zone":"IsleofDread","parent":357,"continent":1,"flags":1073741888}
+{"id":1136,"name":"High Wilderness","zone":"HighWilderness","parent":357,"continent":1,"flags":1073741888}
+{"id":1137,"name":"Lower Wilds","zone":"LowerWilds","parent":357,"continent":1,"flags":1073741888}
+{"id":1156,"name":"Southern Barrens","zone":"SouthernBarrens","parent":17,"continent":1,"flags":1073741888}
+{"id":1157,"name":"Southern Gold Road","zone":"SouthernGoldRoad","parent":17,"continent":1,"flags":1073741888}
+{"id":1176,"name":"Zul'Farrak","zone":"ZulFarrak","parent":0,"continent":209,"flags":0}
+{"id":1196,"name":"UNUSEDAlcaz Island","zone":"UNUSEDAlcazIsland","parent":0,"continent":1,"flags":64}
+{"id":1216,"name":"Timbermaw Hold","zone":"TimbermawHold","parent":16,"continent":1,"flags":1073741888}
+{"id":1217,"name":"Vanndir Encampment","zone":"VanndirEncampment","parent":16,"continent":1,"flags":1073741888}
+{"id":1218,"name":"TESTAzshara","zone":"TESTAzshara","parent":16,"continent":1,"flags":1073741888}
+{"id":1219,"name":"Legash Encampment","zone":"LegashEncampment","parent":16,"continent":1,"flags":1073741888}
+{"id":1220,"name":"Thalassian Base Camp","zone":"ThalassianBaseCamp","parent":16,"continent":1,"flags":1073741888}
+{"id":1221,"name":"Ruins of Eldarath ","zone":"RuinsofEldarath","parent":16,"continent":1,"flags":1073741888}
+{"id":1222,"name":"Hetaera's Clutch","zone":"Hetaera'sClutch","parent":16,"continent":1,"flags":1073741888}
+{"id":1223,"name":"Temple of Zin-Malor","zone":"TempleofZin-Malor","parent":16,"continent":1,"flags":1073741888}
+{"id":1224,"name":"Bear's Head","zone":"Bear'sHead","parent":16,"continent":1,"flags":1073741888}
+{"id":1225,"name":"Ursolan","zone":"Ursolan","parent":16,"continent":1,"flags":1073741888}
+{"id":1226,"name":"Temple of Arkkoran","zone":"TempleofArkkoran","parent":16,"continent":1,"flags":1073741888}
+{"id":1227,"name":"Bay of Storms","zone":"BayofStorms","parent":16,"continent":1,"flags":1073741888}
+{"id":1228,"name":"The Shattered Strand","zone":"TheShatteredStrand","parent":16,"continent":1,"flags":1073741888}
+{"id":1229,"name":"Tower of Eldara","zone":"TowerofEldara","parent":16,"continent":1,"flags":1073741888}
+{"id":1230,"name":"Jagged Reef","zone":"JaggedReef","parent":16,"continent":1,"flags":1073741888}
+{"id":1231,"name":"Southridge Beach","zone":"SouthridgeBeach","parent":16,"continent":1,"flags":1073741888}
+{"id":1232,"name":"Ravencrest Monument","zone":"RavencrestMonument","parent":16,"continent":1,"flags":1073741888}
+{"id":1233,"name":"Forlorn Ridge","zone":"ForlornRidge","parent":16,"continent":1,"flags":1073741888}
+{"id":1234,"name":"Lake Mennar","zone":"LakeMennar","parent":16,"continent":1,"flags":1073741888}
+{"id":1235,"name":"Shadowsong Shrine","zone":"ShadowsongShrine","parent":16,"continent":1,"flags":1073741888}
+{"id":1236,"name":"Haldarr Encampment","zone":"HaldarrEncampment","parent":16,"continent":1,"flags":1073741888}
+{"id":1237,"name":"Valormok","zone":"Valormok","parent":16,"continent":1,"flags":1073741888}
+{"id":1256,"name":"The Ruined Reaches","zone":"TheRuinedReaches","parent":16,"continent":1,"flags":1073741888}
+{"id":1276,"name":"The Talondeep Path","zone":"TheTalondeepPath","parent":331,"continent":1,"flags":1073741888}
+{"id":1277,"name":"The Talondeep Path","zone":"TheTalondeepPath","parent":406,"continent":1,"flags":1073741888}
+{"id":1296,"name":"Rocktusk Farm","zone":"RocktuskFarm","parent":14,"continent":1,"flags":1073741888}
+{"id":1297,"name":"Jaggedswine Farm","zone":"JaggedswineFarm","parent":14,"continent":1,"flags":1073741888}
+{"id":1316,"name":"Razorfen Downs","zone":"RazorfenDowns","parent":17,"continent":1,"flags":1073741888}
+{"id":1336,"name":"Lost Rigger Cove","zone":"LostRiggerCove","parent":440,"continent":1,"flags":1073741888}
+{"id":1337,"name":"Uldaman","zone":"Uldaman","parent":0,"continent":70,"flags":0}
+{"id":1338,"name":"Lordamere Lake","zone":"LordamereLake","parent":130,"continent":0,"flags":1073741888}
+{"id":1339,"name":"Lordamere Lake","zone":"LordamereLake","parent":36,"continent":0,"flags":1073741888}
+{"id":1357,"name":"Gallows' Corner","zone":"Gallows'Corner","parent":36,"continent":0,"flags":1073741888}
+{"id":1377,"name":"Silithus","zone":"Silithus","parent":0,"continent":1,"flags":64}
+{"id":1397,"name":"Emerald Forest","zone":"EmeraldForest","parent":0,"continent":169,"flags":64}
+{"id":1417,"name":"Sunken Temple","zone":"SunkenTemple","parent":0,"continent":109,"flags":0}
+{"id":1437,"name":"Dreadmaul Hold","zone":"DreadmaulHold","parent":4,"continent":0,"flags":1073741888}
+{"id":1438,"name":"Nethergarde Keep","zone":"NethergardeKeep","parent":4,"continent":0,"flags":1073741888}
+{"id":1439,"name":"Dreadmaul Post","zone":"DreadmaulPost","parent":4,"continent":0,"flags":1073741888}
+{"id":1440,"name":"Serpent's Coil","zone":"Serpent'sCoil","parent":4,"continent":0,"flags":1073741888}
+{"id":1441,"name":"Altar of Storms","zone":"AltarofStorms","parent":4,"continent":0,"flags":1073741888}
+{"id":1442,"name":"Firewatch Ridge","zone":"FirewatchRidge","parent":51,"continent":0,"flags":1073741888}
+{"id":1443,"name":"The Slag Pit","zone":"TheSlagPit","parent":51,"continent":0,"flags":1073741888}
+{"id":1444,"name":"The Sea of Cinders","zone":"TheSeaofCinders","parent":51,"continent":0,"flags":1073741888}
+{"id":1445,"name":"Blackrock Mountain","zone":"BlackrockMountain","parent":51,"continent":0,"flags":1073741888}
+{"id":1446,"name":"Thorium Point","zone":"ThoriumPoint","parent":51,"continent":0,"flags":1073741888}
+{"id":1457,"name":"Garrison Armory","zone":"GarrisonArmory","parent":4,"continent":0,"flags":1073741888}
+{"id":1477,"name":"The Temple of Atal'Hakkar","zone":"TheTempleOfAtalHakkar","parent":0,"continent":0,"flags":0}
+{"id":1497,"name":"Undercity","zone":"Undercity","parent":0,"continent":0,"flags":312}
+{"id":1517,"name":"Uldaman","zone":"Uldaman","parent":3,"continent":0,"flags":1073741888}
+{"id":1518,"name":"Not Used Deadmines","zone":"NotIUsedDeadmines","parent":40,"continent":0,"flags":1073741888}
+{"id":1519,"name":"Stormwind City","zone":"StormwindCity","parent":0,"continent":0,"flags":312}
+{"id":1537,"name":"Ironforge","zone":"Ironforge","parent":0,"continent":0,"flags":312}
+{"id":1557,"name":"Splithoof Hold","zone":"SplithoofHold","parent":400,"continent":1,"flags":1073741888}
+{"id":1577,"name":"The Cape of Stranglethorn","zone":"TheCapeofStranglethorn","parent":33,"continent":0,"flags":1073741888}
+{"id":1578,"name":"Southern Savage Coast","zone":"SouthernSavageCoast","parent":33,"continent":0,"flags":1073741888}
+{"id":1579,"name":"Unused The Deadmines 002","zone":"UnusedTheDeadmines002","parent":0,"continent":0,"flags":64}
+{"id":1580,"name":"Unused Ironclad Cove 003","zone":"UnusedIroncladCove003","parent":1579,"continent":0,"flags":1073741888}
+{"id":1581,"name":"The Deadmines","zone":"TheDeadmines","parent":0,"continent":36,"flags":0}
+{"id":1582,"name":"Ironclad Cove","zone":"IroncladCove","parent":1581,"continent":36,"flags":1073741824}
+{"id":1583,"name":"Blackrock Spire","zone":"BlackrockSpire","parent":0,"continent":0,"flags":0}
+{"id":1584,"name":"Blackrock Depths","zone":"BlackrockDepths","parent":0,"continent":0,"flags":0}
+{"id":1597,"name":"Raptor Grounds UNUSED","zone":"RaptorGroundsUNUSED","parent":17,"continent":1,"flags":1073741888}
+{"id":1598,"name":"Grol'dom Farm UNUSED","zone":"Grol'domFarmUNUSED","parent":17,"continent":1,"flags":1073741888}
+{"id":1599,"name":"Mor'shan Base Camp","zone":"Mor'shanBaseCamp","parent":17,"continent":1,"flags":1073741888}
+{"id":1600,"name":"Honor's Stand UNUSED","zone":"Honor'sStandUNUSED","parent":17,"continent":1,"flags":1073741888}
+{"id":1601,"name":"Blackthorn Ridge UNUSED","zone":"BlackthornRidgeUNUSED","parent":17,"continent":1,"flags":1073741888}
+{"id":1602,"name":"Bramblescar UNUSED","zone":"BramblescarUNUSED","parent":17,"continent":1,"flags":1073741888}
+{"id":1603,"name":"Agama'gor UNUSED","zone":"Agama'gorUNUSED","parent":17,"continent":1,"flags":1073741888}
+{"id":1617,"name":"Valley of Heroes","zone":"ValleyofHeroes","parent":1519,"continent":0,"flags":1073741888}
+{"id":1637,"name":"Orgrimmar","zone":"Orgrimmar","parent":0,"continent":1,"flags":312}
+{"id":1638,"name":"Thunder Bluff","zone":"ThunderBluff","parent":0,"continent":1,"flags":312}
+{"id":1639,"name":"Elder Rise","zone":"ElderRise","parent":1638,"continent":1,"flags":1073741888}
+{"id":1640,"name":"Spirit Rise","zone":"SpiritRise","parent":1638,"continent":1,"flags":1073741888}
+{"id":1641,"name":"Hunter Rise","zone":"HunterRise","parent":1638,"continent":1,"flags":1073741888}
+{"id":1657,"name":"Darnassus","zone":"Darnassus","parent":0,"continent":1,"flags":312}
+{"id":1658,"name":"Cenarion Enclave","zone":"CenarionEnclave","parent":1657,"continent":1,"flags":1073741888}
+{"id":1659,"name":"Craftsmen's Terrace","zone":"Craftsmen'sTerrace","parent":1657,"continent":1,"flags":1073741888}
+{"id":1660,"name":"Warrior's Terrace","zone":"Warrior'sTerrace","parent":1657,"continent":1,"flags":1073741888}
+{"id":1661,"name":"The Temple Gardens","zone":"TheTempleGardens","parent":1657,"continent":1,"flags":1073741888}
+{"id":1662,"name":"Tradesmen's Terrace","zone":"Tradesmen'sTerrace","parent":1657,"continent":1,"flags":1073741888}
+{"id":1677,"name":"Gavin's Naze","zone":"Gavin'sNaze","parent":36,"continent":0,"flags":1073741888}
+{"id":1678,"name":"Sofera's Naze","zone":"Sofera'sNaze","parent":36,"continent":0,"flags":1073741888}
+{"id":1679,"name":"Corrahn's Dagger","zone":"Corrahn'sDagger","parent":36,"continent":0,"flags":1073741888}
+{"id":1680,"name":"The Headland","zone":"TheHeadland","parent":36,"continent":0,"flags":1073741888}
+{"id":1681,"name":"Misty Shore","zone":"MistyShore","parent":36,"continent":0,"flags":1073741888}
+{"id":1682,"name":"Dandred's Fold","zone":"Dandred'sFold","parent":36,"continent":0,"flags":1073741888}
+{"id":1683,"name":"Growless Cave","zone":"GrowlessCave","parent":36,"continent":0,"flags":1073741888}
+{"id":1684,"name":"Chillwind Point","zone":"ChillwindPoint","parent":36,"continent":0,"flags":1073741888}
+{"id":1697,"name":"Raptor Grounds","zone":"RaptorGrounds","parent":17,"continent":1,"flags":1073741888}
+{"id":1698,"name":"Bramblescar","zone":"Bramblescar","parent":17,"continent":1,"flags":1073741888}
+{"id":1699,"name":"Thorn Hill","zone":"ThornHill","parent":17,"continent":1,"flags":1073741888}
+{"id":1700,"name":"Agama'gor","zone":"Agama'gor","parent":17,"continent":1,"flags":1073741888}
+{"id":1701,"name":"Blackthorn Ridge","zone":"BlackthornRidge","parent":17,"continent":1,"flags":1073741888}
+{"id":1702,"name":"Honor's Stand","zone":"Honor'sStand","parent":17,"continent":1,"flags":1073741888}
+{"id":1703,"name":"The Mor'shan Rampart","zone":"TheMor'shanRampart","parent":17,"continent":1,"flags":1073741888}
+{"id":1704,"name":"Grol'dom Farm","zone":"Grol'domFarm","parent":17,"continent":1,"flags":1073741888}
+{"id":1717,"name":"Razorfen Kraul","zone":"RazorfenKraul","parent":17,"continent":1,"flags":1073741888}
+{"id":1718,"name":"The Great Lift","zone":"TheGreatLift","parent":17,"continent":1,"flags":1073741888}
+{"id":1737,"name":"Mistvale Valley","zone":"MistvaleValley","parent":33,"continent":0,"flags":1073741888}
+{"id":1738,"name":"Nek'mani Wellspring","zone":"Nek'maniWellspring","parent":33,"continent":0,"flags":1073741888}
+{"id":1739,"name":"Bloodsail Compound","zone":"BloodsailCompound","parent":33,"continent":0,"flags":1073741888}
+{"id":1740,"name":"Venture Co. Base Camp","zone":"VentureCo.BaseCamp","parent":33,"continent":0,"flags":1073741888}
+{"id":1741,"name":"Gurubashi Arena","zone":"GurubashiArena","parent":33,"continent":0,"flags":1073741888}
+{"id":1742,"name":"Spirit Den","zone":"SpiritDen","parent":33,"continent":0,"flags":1073741888}
+{"id":1757,"name":"The Crimson Veil","zone":"TheCrimsonVeil","parent":33,"continent":0,"flags":1073741888}
+{"id":1758,"name":"The Riptide","zone":"TheRiptide","parent":33,"continent":0,"flags":1073741888}
+{"id":1759,"name":"The Damsel's Luck","zone":"TheDamsel'sLuck","parent":33,"continent":0,"flags":1073741888}
+{"id":1760,"name":"Venture Co. Operations Center","zone":"VentureCo.OperationsCenter","parent":33,"continent":0,"flags":1073741888}
+{"id":1761,"name":"Deadwood Village","zone":"DeadwoodVillage","parent":361,"continent":1,"flags":1073741888}
+{"id":1762,"name":"Felpaw Village","zone":"FelpawVillage","parent":361,"continent":1,"flags":1073741888}
+{"id":1763,"name":"Jaedenar","zone":"Jaedenar","parent":361,"continent":1,"flags":1073741888}
+{"id":1764,"name":"Bloodvenom River","zone":"BloodvenomRiver","parent":361,"continent":1,"flags":1073741888}
+{"id":1765,"name":"Bloodvenom Falls","zone":"BloodvenomFalls","parent":361,"continent":1,"flags":1073741888}
+{"id":1766,"name":"Shatter Scar Vale","zone":"ShatterScarVale","parent":361,"continent":1,"flags":1073741888}
+{"id":1767,"name":"Irontree Woods","zone":"IrontreeWoods","parent":361,"continent":1,"flags":1073741888}
+{"id":1768,"name":"Irontree Cavern","zone":"IrontreeCavern","parent":361,"continent":1,"flags":1073741888}
+{"id":1769,"name":"Timbermaw Hold","zone":"TimbermawHold","parent":361,"continent":1,"flags":1073741888}
+{"id":1770,"name":"Shadow Hold","zone":"ShadowHold","parent":361,"continent":1,"flags":1073741888}
+{"id":1771,"name":"Shrine of the Deceiver","zone":"ShrineoftheDeceiver","parent":361,"continent":1,"flags":1073741888}
+{"id":1777,"name":"Itharius's Cave","zone":"Itharius'sCave","parent":8,"continent":0,"flags":1073741888}
+{"id":1778,"name":"Sorrowmurk","zone":"Sorrowmurk","parent":8,"continent":0,"flags":1073741888}
+{"id":1779,"name":"Draenil'dur Village","zone":"Draenil'durVillage","parent":8,"continent":0,"flags":1073741888}
+{"id":1780,"name":"Splinterspear Junction","zone":"SplinterspearJunction","parent":8,"continent":0,"flags":1073741888}
+{"id":1797,"name":"Stagalbog","zone":"Stagalbog","parent":8,"continent":0,"flags":1073741888}
+{"id":1798,"name":"The Shifting Mire","zone":"TheShiftingMire","parent":8,"continent":0,"flags":1073741888}
+{"id":1817,"name":"Stagalbog Cave","zone":"StagalbogCave","parent":8,"continent":0,"flags":1073741888}
+{"id":1837,"name":"Witherbark Caverns","zone":"WitherbarkCaverns","parent":45,"continent":0,"flags":1073741888}
+{"id":1857,"name":"Thoradin's Wall","zone":"Thoradin'sWall","parent":45,"continent":0,"flags":1073741888}
+{"id":1858,"name":"Boulder'gor","zone":"Boulder'gor","parent":45,"continent":0,"flags":1073741888}
+{"id":1877,"name":"Valley of Fangs","zone":"ValleyofFangs","parent":3,"continent":0,"flags":1073741888}
+{"id":1878,"name":"The Dustbowl","zone":"TehDustbowl","parent":3,"continent":0,"flags":1073741888}
+{"id":1879,"name":"Mirage Flats","zone":"MirageFlats","parent":3,"continent":0,"flags":1073741888}
+{"id":1880,"name":"Featherbeard's Hovel","zone":"Featherbeard'sHovel","parent":47,"continent":0,"flags":1073741888}
+{"id":1881,"name":"Shindigger's Camp","zone":"Shindigger'sCamp","parent":47,"continent":0,"flags":1073741888}
+{"id":1882,"name":"Plaguemist Ravine","zone":"PlaguemistRavine","parent":47,"continent":0,"flags":1073741888}
+{"id":1883,"name":"Valorwind Lake","zone":"ValorwindLake","parent":47,"continent":0,"flags":1073741888}
+{"id":1884,"name":"Agol'watha","zone":"Agol'watha","parent":47,"continent":0,"flags":1073741888}
+{"id":1885,"name":"Hiri'watha","zone":"Hiri'watha","parent":47,"continent":0,"flags":1073741888}
+{"id":1886,"name":"The Creeping Ruin","zone":"TheCreepingRuin","parent":47,"continent":0,"flags":1073741888}
+{"id":1887,"name":"Bogen's Ledge","zone":"Bogen'sLedge","parent":47,"continent":0,"flags":1073741888}
+{"id":1897,"name":"The Maker's Terrace","zone":"TheMaker'sTerrace","parent":3,"continent":0,"flags":1073741888}
+{"id":1898,"name":"Dustwind Gulch","zone":"DustwindGulch","parent":3,"continent":0,"flags":1073741888}
+{"id":1917,"name":"Shaol'watha","zone":"Shaol'watha","parent":47,"continent":0,"flags":1073741888}
+{"id":1937,"name":"Noonshade Ruins","zone":"NoonshadeRuins","parent":440,"continent":1,"flags":1073741888}
+{"id":1938,"name":"Broken Pillar","zone":"BrokenPillar","parent":440,"continent":1,"flags":1073741888}
+{"id":1939,"name":"Abyssal Sands","zone":"AbyssalSands","parent":440,"continent":1,"flags":1073741888}
+{"id":1940,"name":"Southbreak Shore","zone":"SouthbreakShore","parent":440,"continent":1,"flags":1073741888}
+{"id":1941,"name":"Caverns of Time","zone":"CavernsofTime","parent":0,"continent":1,"flags":64}
+{"id":1942,"name":"The Marshlands","zone":"TheMarshlands","parent":490,"continent":1,"flags":1073741888}
+{"id":1943,"name":"Ironstone Plateau","zone":"IronstonePlateau","parent":490,"continent":1,"flags":1073741888}
+{"id":1957,"name":"Blackchar Cave","zone":"BlackcharCave","parent":51,"continent":0,"flags":1073741888}
+{"id":1958,"name":"Tanner Camp","zone":"TannerCamp","parent":51,"continent":0,"flags":1073741888}
+{"id":1959,"name":"Dustfire Valley","zone":"DustfireValley","parent":51,"continent":0,"flags":1073741888}
+{"id":1977,"name":"Zul'Gurub","zone":"ZulGurub","parent":0,"continent":309,"flags":0}
+{"id":1978,"name":"Misty Reed Post","zone":"MistyReedPost","parent":8,"continent":0,"flags":1073741888}
+{"id":1997,"name":"Bloodvenom Post ","zone":"BloodvenomPost","parent":361,"continent":1,"flags":1073741888}
+{"id":1998,"name":"Talonbranch Glade ","zone":"TalonbranchGlade","parent":361,"continent":1,"flags":1073741888}
+{"id":2017,"name":"Stratholme","zone":"Stratholme","parent":0,"continent":329,"flags":0}
+{"id":2037,"name":"UNUSEDShadowfang Keep 003","zone":"UNUSEDShadowfangKeep003","parent":0,"continent":0,"flags":64}
+{"id":2057,"name":"Scholomance","zone":"Scholomance","parent":0,"continent":289,"flags":0}
+{"id":2077,"name":"Twilight Vale","zone":"TwilightVale","parent":148,"continent":1,"flags":1073741888}
+{"id":2078,"name":"Twilight Shore","zone":"TwilightShore","parent":148,"continent":1,"flags":1073741888}
+{"id":2079,"name":"Alcaz Island","zone":"AlcazIsland","parent":15,"continent":1,"flags":1073741888}
+{"id":2097,"name":"Darkcloud Pinnacle","zone":"DarkcloudPinnacle","parent":400,"continent":1,"flags":1073741888}
+{"id":2098,"name":"Dawning Wood Catacombs","zone":"DawningWoodCatacombs","parent":10,"continent":0,"flags":1073741888}
+{"id":2099,"name":"Stonewatch Keep","zone":"StonewatchKeep","parent":44,"continent":0,"flags":1073741888}
+{"id":2100,"name":"Maraudon","zone":"Maraudon","parent":0,"continent":349,"flags":0}
+{"id":2101,"name":"Stoutlager Inn","zone":"StoutlagerInn","parent":38,"continent":0,"flags":1073741888}
+{"id":2102,"name":"Thunderbrew Distillery","zone":"ThunderbrewDistillery","parent":1,"continent":0,"flags":1073741888}
+{"id":2103,"name":"Menethil Keep","zone":"MenethilKeep","parent":11,"continent":0,"flags":1073741888}
+{"id":2104,"name":"Deepwater Tavern","zone":"DeepwaterTavern","parent":11,"continent":0,"flags":1073741888}
+{"id":2117,"name":"Shadow Grave","zone":"ShadowGrave","parent":85,"continent":0,"flags":1073741888}
+{"id":2118,"name":"Brill Town Hall","zone":"BrillTownHall","parent":85,"continent":0,"flags":1073741888}
+{"id":2119,"name":"Gallows' End Tavern","zone":"Gallows'EndTavern","parent":85,"continent":0,"flags":1073741888}
+{"id":2137,"name":"The Pools of VisionUNUSED","zone":"ThePoolsofVisionUNUSED","parent":215,"continent":1,"flags":1073741888}
+{"id":2138,"name":"Dreadmist Den","zone":"DreadmistDen","parent":17,"continent":1,"flags":1073741888}
+{"id":2157,"name":"Bael'dun Keep","zone":"Bael'dunKeep","parent":17,"continent":1,"flags":1073741888}
+{"id":2158,"name":"Emberstrife's Den","zone":"Emberstrife'sDen","parent":15,"continent":1,"flags":1073741888}
+{"id":2159,"name":"Onyxia's Lair","zone":"OnyxiasLair","parent":0,"continent":1,"flags":0}
+{"id":2160,"name":"Windshear Mine","zone":"WindshearMine","parent":406,"continent":1,"flags":1073741888}
+{"id":2161,"name":"Roland's Doom","zone":"Roland'sDoom","parent":10,"continent":0,"flags":1073741888}
+{"id":2177,"name":"Battle Ring","zone":"BattleRing","parent":33,"continent":0,"flags":1073742032}
+{"id":2197,"name":"The Pools of Vision","zone":"ThePoolsofVision","parent":1638,"continent":1,"flags":1073741888}
+{"id":2198,"name":"Shadowbreak Ravine","zone":"ShadowbreakRavine","parent":405,"continent":1,"flags":1073741888}
+{"id":2217,"name":"Broken Spear Village","zone":"BrokenSpearVillage","parent":405,"continent":1,"flags":1073741888}
+{"id":2237,"name":"Whitereach Post","zone":"WhitereachPost","parent":400,"continent":1,"flags":1073741888}
+{"id":2238,"name":"Gornia","zone":"Gornia","parent":400,"continent":1,"flags":1073741888}
+{"id":2239,"name":"Zane's Eye Crater","zone":"Zane'sEyeCrater","parent":400,"continent":1,"flags":1073741888}
+{"id":2240,"name":"Mirage Raceway","zone":"MirageRaceway","parent":400,"continent":1,"flags":1073741888}
+{"id":2241,"name":"Frostsaber Rock","zone":"FrostsaberRock","parent":618,"continent":1,"flags":1073741888}
+{"id":2242,"name":"The Hidden Grove","zone":"TheHiddenGrove","parent":618,"continent":1,"flags":1073741888}
+{"id":2243,"name":"Timbermaw Post","zone":"TimbermawPost","parent":618,"continent":1,"flags":1073741888}
+{"id":2244,"name":"Winterfall Village","zone":"WinterfallVillage","parent":618,"continent":1,"flags":1073741888}
+{"id":2245,"name":"Mazthoril","zone":"Mazthoril","parent":618,"continent":1,"flags":1073741888}
+{"id":2246,"name":"Frostfire Hot Springs","zone":"FrostfireHotSprings","parent":618,"continent":1,"flags":1073741888}
+{"id":2247,"name":"Ice Thistle Hills","zone":"IceThistleHills","parent":618,"continent":1,"flags":1073741888}
+{"id":2248,"name":"Dun Mandarr","zone":"DunMandarr","parent":618,"continent":1,"flags":1073741888}
+{"id":2249,"name":"Frostwhisper Gorge","zone":"FrostwhisperGorge","parent":618,"continent":1,"flags":1073741888}
+{"id":2250,"name":"Owl Wing Thicket","zone":"OwlWingThicket","parent":618,"continent":1,"flags":1073741888}
+{"id":2251,"name":"Lake Kel'Theril","zone":"LakeKel'Theril","parent":618,"continent":1,"flags":1073741888}
+{"id":2252,"name":"The Ruins of Kel'Theril","zone":"TheRuinsofKel'Theril","parent":618,"continent":1,"flags":1073741888}
+{"id":2253,"name":"Starfall Village","zone":"StarfallVillage","parent":618,"continent":1,"flags":1073741888}
+{"id":2254,"name":"Ban'Thallow Barrow Den","zone":"Ban'ThallowBarrowDen","parent":618,"continent":1,"flags":1073741888}
+{"id":2255,"name":"Everlook","zone":"Everlook","parent":618,"continent":1,"flags":1073741888}
+{"id":2256,"name":"Darkwhisper Gorge","zone":"DarkwhisperGorge","parent":618,"continent":1,"flags":1073741888}
+{"id":2257,"name":"Deeprun Tram","zone":"DeeprunTram","parent":0,"continent":369,"flags":0}
+{"id":2258,"name":"The Fungal Vale","zone":"TheFungalVale","parent":139,"continent":0,"flags":1073741888}
+{"id":2259,"name":"UNUSEDThe Marris Stead","zone":"UNUSEDTheMarrisStead","parent":139,"continent":0,"flags":1073741888}
+{"id":2260,"name":"The Marris Stead","zone":"TheMarrisStead","parent":139,"continent":0,"flags":1073741888}
+{"id":2261,"name":"The Undercroft","zone":"TheUndercroft","parent":139,"continent":0,"flags":1073741888}
+{"id":2262,"name":"Darrowshire","zone":"Darrowshire","parent":139,"continent":0,"flags":1073741888}
+{"id":2263,"name":"Crown Guard Tower","zone":"CrownGuardTower","parent":139,"continent":0,"flags":1073741888}
+{"id":2264,"name":"Corin's Crossing","zone":"Corin'sCrossing","parent":139,"continent":0,"flags":1073741888}
+{"id":2265,"name":"Scarlet Base Camp","zone":"ScarletBaseCamp","parent":139,"continent":0,"flags":1073741888}
+{"id":2266,"name":"Tyr's Hand","zone":"TyrsHand","parent":139,"continent":0,"flags":1073741888}
+{"id":2267,"name":"The Scarlet Basilica","zone":"TheScarletBasilica","parent":139,"continent":0,"flags":1073741888}
+{"id":2268,"name":"Light's Hope Chapel","zone":"Light'sHopeChapel","parent":139,"continent":0,"flags":1073741888}
+{"id":2269,"name":"Browman Mill","zone":"BrowmanMill","parent":139,"continent":0,"flags":1073741888}
+{"id":2270,"name":"The Noxious Glade","zone":"TheNoxiousGlade","parent":139,"continent":0,"flags":1073741888}
+{"id":2271,"name":"Eastwall Tower","zone":"EastwallTower","parent":139,"continent":0,"flags":1073741888}
+{"id":2272,"name":"Northdale","zone":"Northdale","parent":139,"continent":0,"flags":1073741888}
+{"id":2273,"name":"Zul'Mashar","zone":"Zul'Mashar","parent":139,"continent":0,"flags":1073741888}
+{"id":2274,"name":"Mazra'Alor","zone":"Mazra'Alor","parent":139,"continent":0,"flags":1073741888}
+{"id":2275,"name":"Northpass Tower","zone":"NorthpassTower","parent":139,"continent":0,"flags":1073741888}
+{"id":2276,"name":"Quel'Lithien Lodge","zone":"Quel'LithienLodge","parent":139,"continent":0,"flags":1073741888}
+{"id":2277,"name":"Plaguewood","zone":"Plaguewood","parent":139,"continent":0,"flags":1073741888}
+{"id":2278,"name":"Scourgehold","zone":"Scourgehold","parent":139,"continent":0,"flags":1073741888}
+{"id":2279,"name":"Stratholme","zone":"Stratholme","parent":139,"continent":0,"flags":1073741888}
+{"id":2280,"name":"UNUSED Stratholme","zone":"UNUSEDStratholme","parent":0,"continent":0,"flags":64}
+{"id":2297,"name":"Darrowmere Lake","zone":"DarrowmereLake","parent":28,"continent":0,"flags":1073741888}
+{"id":2298,"name":"Caer Darrow","zone":"CaerDarrow","parent":28,"continent":0,"flags":1073741888}
+{"id":2299,"name":"Darrowmere Lake","zone":"DarrowmereLake","parent":139,"continent":0,"flags":1073741888}
+{"id":2300,"name":"Caverns of Time","zone":"CavernsofTime","parent":440,"continent":1,"flags":1073741888}
+{"id":2301,"name":"Thistlefur Village","zone":"ThistlefurVillage","parent":331,"continent":1,"flags":1073741888}
+{"id":2302,"name":"The Quagmire","zone":"TheQuagmire","parent":15,"continent":1,"flags":1073741888}
+{"id":2303,"name":"Windbreak Canyon","zone":"WindbreakCanyon","parent":400,"continent":1,"flags":1073741888}
+{"id":2317,"name":"South Seas","zone":"SouthSeas","parent":440,"continent":1,"flags":1073741888}
+{"id":2318,"name":"The Great Sea","zone":"TheGreatSea","parent":15,"continent":1,"flags":1073741888}
+{"id":2319,"name":"The Great Sea","zone":"TheGreatSea","parent":17,"continent":1,"flags":1073741888}
+{"id":2320,"name":"The Great Sea","zone":"TheGreatSea","parent":14,"continent":1,"flags":1073741888}
+{"id":2321,"name":"The Great Sea","zone":"TheGreatSea","parent":16,"continent":1,"flags":1073741888}
+{"id":2322,"name":"The Veiled Sea","zone":"TheVeiledSea","parent":141,"continent":1,"flags":1073741888}
+{"id":2323,"name":"The Veiled Sea","zone":"TheVeiledSea","parent":357,"continent":1,"flags":1073741888}
+{"id":2324,"name":"The Veiled Sea","zone":"TheVeiledSea","parent":405,"continent":1,"flags":1073741888}
+{"id":2325,"name":"The Veiled Sea","zone":"TheVeiledSea","parent":331,"continent":1,"flags":1073741888}
+{"id":2326,"name":"The Veiled Sea","zone":"TheVeiledSea","parent":148,"continent":1,"flags":1073741888}
+{"id":2337,"name":"Razor Hill Barracks","zone":"RazorHillBarracks","parent":14,"continent":1,"flags":1073741888}
+{"id":2338,"name":"South Seas","zone":"SouthSeas","parent":33,"continent":0,"flags":1073741888}
+{"id":2339,"name":"The Great Sea","zone":"TheGreatSea","parent":33,"continent":0,"flags":1073741888}
+{"id":2357,"name":"Bloodtooth Camp","zone":"BloodtoothCamp","parent":331,"continent":1,"flags":1073741888}
+{"id":2358,"name":"Forest Song","zone":"ForestSong","parent":331,"continent":1,"flags":1073741888}
+{"id":2359,"name":"Greenpaw Village","zone":"Greenpaw Village","parent":331,"continent":1,"flags":1073741888}
+{"id":2360,"name":"Silverwing Outpost","zone":"SilverwingOutpost","parent":331,"continent":1,"flags":1073741888}
+{"id":2361,"name":"Nighthaven","zone":"Nighthaven","parent":493,"continent":1,"flags":1073741888}
+{"id":2362,"name":"Shrine of Remulos","zone":"ShrineofRemulos","parent":493,"continent":1,"flags":1073741888}
+{"id":2363,"name":"Stormrage Barrow Dens","zone":"StormrageBarrowDens","parent":493,"continent":1,"flags":1073741888}
+{"id":2364,"name":"The Great Sea","zone":"TheGreatSea","parent":40,"continent":0,"flags":1073741888}
+{"id":2365,"name":"The Great Sea","zone":"TheGreatSea","parent":11,"continent":0,"flags":1073741888}
+{"id":2366,"name":"The Black Morass","zone":"TheBlackMorass","parent":0,"continent":269,"flags":0}
+{"id":2367,"name":"Old Hillsbrad Foothills","zone":"OldHillsbrad Foothills","parent":0,"continent":269,"flags":0}
+{"id":2368,"name":"Tarren Mill","zone":"TarrenMill","parent":2367,"continent":269,"flags":1073741824}
+{"id":2369,"name":"Southshore","zone":"Southshore","parent":2367,"continent":269,"flags":1073741824}
+{"id":2370,"name":"Durnholde Keep","zone":"DurnholdeKeep","parent":2367,"continent":269,"flags":1073741824}
+{"id":2371,"name":"Dun Garok","zone":"DunGarok","parent":2367,"continent":269,"flags":1073741824}
+{"id":2372,"name":"Hillsbrad Fields","zone":"Hillsbrad Fields","parent":2367,"continent":269,"flags":1073741824}
+{"id":2373,"name":"Eastern Strand","zone":"EasternStrand","parent":2367,"continent":269,"flags":1073741824}
+{"id":2374,"name":"Nethander Stead","zone":"NethanderStead","parent":2367,"continent":269,"flags":1073741824}
+{"id":2375,"name":"Darrow Hill","zone":"DarrowHill","parent":2367,"continent":269,"flags":1073741824}
+{"id":2376,"name":"Southpoint Tower","zone":"SouthpointTower","parent":2367,"continent":269,"flags":1073741824}
+{"id":2377,"name":"Thoradin's Wall","zone":"Thoradin'sWall","parent":2367,"continent":269,"flags":1073741824}
+{"id":2378,"name":"Western Strand","zone":"WesternStrand","parent":2367,"continent":269,"flags":1073741824}
+{"id":2379,"name":"Azurelode Mine","zone":"AzurelodeMine","parent":2367,"continent":269,"flags":1073741824}
+{"id":2397,"name":"The Great Sea","zone":"TheGreatSea","parent":267,"continent":0,"flags":1073741888}
+{"id":2398,"name":"The Great Sea","zone":"TheGreatSea","parent":130,"continent":0,"flags":1073741888}
+{"id":2399,"name":"The Great Sea","zone":"TheGreatSea","parent":85,"continent":0,"flags":1073741888}
+{"id":2400,"name":"The Forbidding Sea","zone":"TheForbiddingSea","parent":47,"continent":0,"flags":1073741888}
+{"id":2401,"name":"The Forbidding Sea","zone":"TheForbiddingSea","parent":45,"continent":0,"flags":1073741888}
+{"id":2402,"name":"The Forbidding Sea","zone":"TheForbiddingSea","parent":11,"continent":0,"flags":1073741888}
+{"id":2403,"name":"The Forbidding Sea","zone":"TheForbiddingSea","parent":8,"continent":0,"flags":1073741888}
+{"id":2404,"name":"Tethris Aran","zone":"TethrisAran","parent":405,"continent":1,"flags":1073741888}
+{"id":2405,"name":"Ethel Rethor","zone":"EthelRethor","parent":405,"continent":1,"flags":1073741888}
+{"id":2406,"name":"Ranazjar Isle","zone":"RanazjarIsle","parent":405,"continent":1,"flags":1073741888}
+{"id":2407,"name":"Kormek's Hut","zone":"Kormek'sHut","parent":405,"continent":1,"flags":1073741888}
+{"id":2408,"name":"Shadowprey Village","zone":"ShadowpreyVillage","parent":405,"continent":1,"flags":1073741888}
+{"id":2417,"name":"Blackrock Pass","zone":"BlackrockPass","parent":46,"continent":0,"flags":1073741888}
+{"id":2418,"name":"Morgan's Vigil","zone":"Morgan'sVigil","parent":46,"continent":0,"flags":1073741888}
+{"id":2419,"name":"Slither Rock","zone":"SlitherRock","parent":46,"continent":0,"flags":1073741888}
+{"id":2420,"name":"Terror Wing Path","zone":"TerrorWingPath","parent":46,"continent":0,"flags":1073741888}
+{"id":2421,"name":"Draco'dar","zone":"Draco'dar","parent":46,"continent":0,"flags":1073741888}
+{"id":2437,"name":"Ragefire Chasm","zone":"Ragefire","parent":0,"continent":389,"flags":0}
+{"id":2457,"name":"Nightsong Woods","zone":"NightsongWoods","parent":331,"continent":1,"flags":1073741888}
+{"id":2477,"name":"The Veiled Sea","zone":"TheVeiledSea","parent":1377,"continent":1,"flags":1073741888}
+{"id":2478,"name":"Morlos'Aran","zone":"Morlos'Aran","parent":361,"continent":1,"flags":1073741888}
+{"id":2479,"name":"Emerald Sanctuary","zone":"EmeraldSanctuary","parent":361,"continent":1,"flags":1073741888}
+{"id":2480,"name":"Jadefire Glen","zone":"JadefireGlen","parent":361,"continent":1,"flags":1073741888}
+{"id":2481,"name":"Ruins of Constellas","zone":"RuinsofConstellas","parent":361,"continent":1,"flags":1073741888}
+{"id":2497,"name":"Bitter Reaches","zone":"BitterReaches","parent":16,"continent":1,"flags":1073741888}
+{"id":2517,"name":"Rise of the Defiler","zone":"RiseoftheDefiler","parent":4,"continent":0,"flags":1073741888}
+{"id":2518,"name":"Lariss Pavilion","zone":"LarissPavilion","parent":357,"continent":1,"flags":1073741888}
+{"id":2519,"name":"Woodpaw Hills","zone":"WoodpawHills","parent":357,"continent":1,"flags":1073741888}
+{"id":2520,"name":"Woodpaw Den","zone":"WoodpawDen","parent":357,"continent":1,"flags":1073741888}
+{"id":2521,"name":"Verdantis River","zone":"VerdantisRiver","parent":357,"continent":1,"flags":1073741888}
+{"id":2522,"name":"Ruins of Isildien","zone":"RuinsofIsildien","parent":357,"continent":1,"flags":1073741888}
+{"id":2537,"name":"Grimtotem Post","zone":"GrimtotemPost","parent":406,"continent":1,"flags":1073741888}
+{"id":2538,"name":"Camp Aparaje","zone":"CampAparaje","parent":406,"continent":1,"flags":1073741888}
+{"id":2539,"name":"Malaka'jin","zone":"Malaka'jin","parent":406,"continent":1,"flags":1073741888}
+{"id":2540,"name":"Boulderslide Ravine","zone":"BoulderslideRavine","parent":406,"continent":1,"flags":1073741888}
+{"id":2541,"name":"Sishir Canyon","zone":"SishirCanyon","parent":406,"continent":1,"flags":1073741888}
+{"id":2557,"name":"Dire Maul","zone":"DireMaul","parent":0,"continent":429,"flags":0}
+{"id":2558,"name":"Deadwind Ravine","zone":"DeadwindRavine","parent":41,"continent":0,"flags":1073741888}
+{"id":2559,"name":"Diamondhead River","zone":"DiamondheadRiver","parent":41,"continent":0,"flags":1073741888}
+{"id":2560,"name":"Ariden's Camp","zone":"Ariden'sCamp","parent":41,"continent":0,"flags":1073741888}
+{"id":2561,"name":"The Vice","zone":"TheVice","parent":41,"continent":0,"flags":1073741888}
+{"id":2562,"name":"Karazhan","zone":"Karazhan","parent":41,"continent":0,"flags":1073741888}
+{"id":2563,"name":"Morgan's Plot","zone":"Morgan'sPlot","parent":41,"continent":0,"flags":1073741888}
+{"id":2577,"name":"Dire Maul","zone":"DireMaul","parent":357,"continent":1,"flags":1073741888}
+{"id":2597,"name":"Alterac Valley","zone":"AlteracValley","parent":0,"continent":30,"flags":0}
+{"id":2617,"name":"Scrabblescrew's Camp","zone":"Scrabblescrew'sCamp","parent":405,"continent":1,"flags":1073741888}
+{"id":2618,"name":"Jadefire Run","zone":"JadefireRun","parent":361,"continent":1,"flags":1073741888}
+{"id":2619,"name":"Thondroril River","zone":"ThondrorilRiver","parent":139,"continent":0,"flags":1073741888}
+{"id":2620,"name":"Thondroril River","zone":"ThondrorilRiver","parent":28,"continent":0,"flags":1073741888}
+{"id":2621,"name":"Lake Mereldar","zone":"LakeMereldar","parent":139,"continent":0,"flags":1073741888}
+{"id":2622,"name":"Pestilent Scar","zone":"PestilentScar","parent":139,"continent":0,"flags":1073741888}
+{"id":2623,"name":"The Infectis Scar","zone":"TheInfectisScar","parent":139,"continent":0,"flags":1073741888}
+{"id":2624,"name":"Blackwood Lake","zone":"BlackwoodLake","parent":139,"continent":0,"flags":1073741888}
+{"id":2625,"name":"Eastwall Gate","zone":"EastwallGate","parent":139,"continent":0,"flags":1073741888}
+{"id":2626,"name":"Terrorweb Tunnel","zone":"TerrorwebTunnel","parent":139,"continent":0,"flags":1073741888}
+{"id":2627,"name":"Terrordale","zone":"Terrordale","parent":139,"continent":0,"flags":1073741888}
+{"id":2637,"name":"Kargathia Keep","zone":"KargathiaKeep","parent":331,"continent":1,"flags":1073741888}
+{"id":2657,"name":"Valley of Bones","zone":"ValleyofBones","parent":405,"continent":1,"flags":1073741888}
+{"id":2677,"name":"Blackwing Lair","zone":"BlackwingLair","parent":0,"continent":469,"flags":0}
+{"id":2697,"name":"Deadman's Crossing","zone":"Deadman'sCrossing","parent":41,"continent":0,"flags":1073741888}
+{"id":2717,"name":"Molten Core","zone":"MoltenCore","parent":0,"continent":409,"flags":0}
+{"id":2737,"name":"The Scarab Wall","zone":"TheScarabWall","parent":1377,"continent":1,"flags":1073741888}
+{"id":2738,"name":"Southwind Village","zone":"Southwind Village","parent":1377,"continent":1,"flags":1073741888}
+{"id":2739,"name":"Twilight Base Camp","zone":"TwilightBaseCamp","parent":1377,"continent":1,"flags":1073741888}
+{"id":2740,"name":"The Crystal Vale","zone":"TheCrystalVale","parent":1377,"continent":1,"flags":1073741888}
+{"id":2741,"name":"The Scarab Dais","zone":"TheScarabDais","parent":1377,"continent":1,"flags":1073741888}
+{"id":2742,"name":"Hive'Ashi","zone":"Hive'Ashi","parent":1377,"continent":1,"flags":1073741888}
+{"id":2743,"name":"Hive'Zora","zone":"Hive'Zora","parent":1377,"continent":1,"flags":1073741888}
+{"id":2744,"name":"Hive'Regal","zone":"Hive'Regal","parent":1377,"continent":1,"flags":1073741888}
+{"id":2757,"name":"Shrine of the Fallen Warrior","zone":"Shrineofthefallenwarrior","parent":17,"continent":1,"flags":1073741888}
+{"id":2777,"name":"UNUSED Alterac Valley","zone":"AlteracValley","parent":267,"continent":0,"flags":1073741888}
+{"id":2797,"name":"Blackfathom Deeps","zone":"BlackfathomDeeps","parent":331,"continent":1,"flags":1073741888}
+{"id":2817,"name":"***On Map Dungeon***","zone":"***On Map Dungeon***","parent":0,"continent":30,"flags":68}
+{"id":2837,"name":"The Master's Cellar","zone":"TheMaster'sCellar","parent":41,"continent":0,"flags":1073741888}
+{"id":2838,"name":"Stonewrought Pass","zone":"StonewroughtPass","parent":51,"continent":0,"flags":1073741888}
+{"id":2839,"name":"Alterac Valley","zone":"AlteracValley","parent":36,"continent":0,"flags":1073741888}
+{"id":2857,"name":"The Rumble Cage","zone":"TheRumbleCage","parent":440,"continent":1,"flags":1073741952}
+{"id":2877,"name":"Chunk Test","zone":"ChunkTest","parent":22,"continent":451,"flags":1073741824}
+{"id":2897,"name":"Zoram'gar Outpost","zone":"Zoram'garOutpost","parent":331,"continent":1,"flags":1073741888}
+{"id":2917,"name":"Hall of Legends","zone":"HallofLegends","parent":0,"continent":450,"flags":32}
+{"id":2918,"name":"Champions' Hall","zone":"Champions'Hall","parent":0,"continent":449,"flags":32}
+{"id":2937,"name":"Grosh'gok Compound","zone":"Grosh'gokCompound","parent":41,"continent":0,"flags":1073741888}
+{"id":2938,"name":"Sleeping Gorge","zone":"SleepingGorge","parent":41,"continent":0,"flags":1073741888}
+{"id":2957,"name":"Irondeep Mine","zone":"IrondeepMine","parent":2597,"continent":30,"flags":1073741824}
+{"id":2958,"name":"Stonehearth Outpost","zone":"StonehearthOutpost","parent":2597,"continent":30,"flags":1073741824}
+{"id":2959,"name":"Dun Baldar","zone":"DunBaldar","parent":2597,"continent":30,"flags":1073741824}
+{"id":2960,"name":"Icewing Pass","zone":"IcewingPass","parent":2597,"continent":30,"flags":1073741824}
+{"id":2961,"name":"Frostwolf Village","zone":"FrostwolfVillage","parent":2597,"continent":30,"flags":1073741824}
+{"id":2962,"name":"Tower Point","zone":"TowerPoint","parent":2597,"continent":30,"flags":1073741824}
+{"id":2963,"name":"Coldtooth Mine","zone":"ColdtoothMine","parent":2597,"continent":30,"flags":1073741824}
+{"id":2964,"name":"Winterax Hold","zone":"WinteraxHold","parent":2597,"continent":30,"flags":1073741824}
+{"id":2977,"name":"Iceblood Garrison","zone":"IcebloodGarrison","parent":2597,"continent":30,"flags":1073741824}
+{"id":2978,"name":"Frostwolf Keep","zone":"FrostwolfKeep","parent":2597,"continent":30,"flags":1073741824}
+{"id":2979,"name":"Tor'kren Farm","zone":"Tor'krenFarm","parent":14,"continent":1,"flags":1073741888}
+{"id":3017,"name":"Frost Dagger Pass","zone":"FrostDaggerPass","parent":2597,"continent":30,"flags":1073741824}
+{"id":3037,"name":"Ironstone Camp","zone":"IronstoneCamp","parent":400,"continent":1,"flags":1073741888}
+{"id":3038,"name":"Weazel's Crater","zone":"Weazel'sCrater","parent":400,"continent":1,"flags":1073741888}
+{"id":3039,"name":"Tahonda Ruins","zone":"TahondaRuins","parent":400,"continent":1,"flags":1073741888}
+{"id":3057,"name":"Field of Strife","zone":"FieldofStrife","parent":2597,"continent":30,"flags":1073741824}
+{"id":3058,"name":"Icewing Cavern","zone":"IcewingCavern","parent":2597,"continent":30,"flags":1073741824}
+{"id":3077,"name":"Valor's Rest","zone":"Valor'sRest","parent":1377,"continent":1,"flags":1073741888}
+{"id":3097,"name":"The Swarming Pillar","zone":"TheSwarmingPillar","parent":1377,"continent":1,"flags":1073741888}
+{"id":3098,"name":"Twilight Post","zone":"TwilightPost","parent":1377,"continent":1,"flags":1073741888}
+{"id":3099,"name":"Twilight Outpost","zone":"TwilightOutpost","parent":1377,"continent":1,"flags":1073741888}
+{"id":3100,"name":"Ravaged Twilight Camp","zone":"RavagedTwilightCamp","parent":1377,"continent":1,"flags":1073741888}
+{"id":3117,"name":"Shalzaru's Lair","zone":"Shalzaru'sLair","parent":357,"continent":1,"flags":1073741888}
+{"id":3137,"name":"Talrendis Point","zone":"TalrendisPoint","parent":16,"continent":1,"flags":1073741888}
+{"id":3138,"name":"Rethress Sanctum","zone":"RethressSanctum","parent":16,"continent":1,"flags":1073741888}
+{"id":3139,"name":"Moon Horror Den","zone":"MoonHorrorDen","parent":618,"continent":1,"flags":1073741888}
+{"id":3140,"name":"Scalebeard's Cave","zone":"Scalebeard'sCave","parent":16,"continent":1,"flags":1073741888}
+{"id":3157,"name":"Boulderslide Cavern","zone":"BoulderslideCavern","parent":406,"continent":1,"flags":1073741888}
+{"id":3177,"name":"Warsong Labor Camp","zone":"WarsongLaborCamp","parent":331,"continent":1,"flags":1073741888}
+{"id":3197,"name":"Chillwind Camp","zone":"ChillwindCamp","parent":28,"continent":0,"flags":1073741888}
+{"id":3217,"name":"The Maul","zone":"TheMaul","parent":357,"continent":1,"flags":1073741952}
+{"id":3237,"name":"The Maul UNUSED","zone":"TheMaulUNUSED","parent":2557,"continent":429,"flags":1073741952}
+{"id":3257,"name":"Bones of Grakkarond","zone":"BonesofGrakkarond","parent":1377,"continent":1,"flags":1073741888}
+{"id":3277,"name":"Warsong Gulch","zone":"WarsongGulch","parent":0,"continent":489,"flags":0}
+{"id":3297,"name":"Frostwolf Graveyard","zone":"FrostwolfGraveyard","parent":2597,"continent":30,"flags":1073741824}
+{"id":3298,"name":"Frostwolf Pass","zone":"FrostwolfPass","parent":2597,"continent":30,"flags":1073741824}
+{"id":3299,"name":"Dun Baldar Pass","zone":"DunBaldarPass","parent":2597,"continent":30,"flags":1073741824}
+{"id":3300,"name":"Iceblood Graveyard","zone":"IcebloodGraveyard","parent":2597,"continent":30,"flags":1073741824}
+{"id":3301,"name":"Snowfall Graveyard","zone":"SnowfallGraveyard","parent":2597,"continent":30,"flags":1073741824}
+{"id":3302,"name":"Stonehearth Graveyard","zone":"StonehearthGraveyard","parent":2597,"continent":30,"flags":1073741824}
+{"id":3303,"name":"Stormpike Graveyard","zone":"StormpikeGraveyard","parent":2597,"continent":30,"flags":1073741824}
+{"id":3304,"name":"Icewing Bunker","zone":"IcewingBunker","parent":2597,"continent":30,"flags":1073741824}
+{"id":3305,"name":"Stonehearth Bunker","zone":"StonehearthBunker","parent":2597,"continent":30,"flags":1073741824}
+{"id":3306,"name":"Wildpaw Ridge","zone":"WildpawRidge","parent":2597,"continent":30,"flags":1073741824}
+{"id":3317,"name":"Revantusk Village","zone":"RevantuskVillage","parent":47,"continent":0,"flags":1073741888}
+{"id":3318,"name":"Rock of Durotan","zone":"RockofDurotan","parent":2597,"continent":30,"flags":1073741824}
+{"id":3319,"name":"Silverwing Grove","zone":"SilverwingGrove","parent":331,"continent":1,"flags":1073741888}
+{"id":3320,"name":"Warsong Lumber Mill","zone":"WarsongLumberMill","parent":3277,"continent":489,"flags":1073741824}
+{"id":3321,"name":"Silverwing Hold","zone":"SilverwingHold","parent":3277,"continent":489,"flags":1073741824}
+{"id":3337,"name":"Wildpaw Cavern","zone":"WildpawCavern","parent":2597,"continent":30,"flags":1073741824}
+{"id":3338,"name":"The Veiled Cleft","zone":"TheVeiledCleft","parent":2597,"continent":30,"flags":1073741824}
+{"id":3357,"name":"Yojamba Isle","zone":"YojambaIsle","parent":33,"continent":0,"flags":1073741888}
+{"id":3358,"name":"Arathi Basin","zone":"ArathiBasin","parent":0,"continent":529,"flags":0}
+{"id":3377,"name":"The Coil","zone":"TheCoil","parent":1977,"continent":309,"flags":1073741824}
+{"id":3378,"name":"Altar of Hir'eek","zone":"AltarofHir'eek","parent":1977,"continent":309,"flags":1073741824}
+{"id":3379,"name":"Shadra'zaar","zone":"Shadra'zaar","parent":1977,"continent":309,"flags":1073741824}
+{"id":3380,"name":"Hakkari Grounds","zone":"HakkariGrounds","parent":1977,"continent":309,"flags":1073741824}
+{"id":3381,"name":"Naze of Shirvallah","zone":"NazeofShirvallah","parent":1977,"continent":309,"flags":1073741824}
+{"id":3382,"name":"Temple of Bethekk","zone":"TempleofBethekk","parent":1977,"continent":309,"flags":1073741824}
+{"id":3383,"name":"The Bloodfire Pit","zone":"TheBloodfirePit","parent":1977,"continent":309,"flags":1073741824}
+{"id":3384,"name":"Altar of the Blood God","zone":"AltaroftheBloodGod","parent":1977,"continent":309,"flags":1073741824}
+{"id":3397,"name":"Zanza's Rise","zone":"Zanza'sRise","parent":1977,"continent":309,"flags":1073741824}
+{"id":3398,"name":"Edge of Madness","zone":"EdgeofMadness","parent":1977,"continent":309,"flags":1073741824}
+{"id":3417,"name":"Trollbane Hall","zone":"TrollbaneHall","parent":3358,"continent":529,"flags":1073741824}
+{"id":3418,"name":"Defiler's Den","zone":"Defiler'sDen","parent":3358,"continent":529,"flags":1073741824}
+{"id":3419,"name":"Pagle's Pointe","zone":"Pagle'sPointe","parent":1977,"continent":309,"flags":1073741824}
+{"id":3420,"name":"Farm","zone":"Farm","parent":3358,"continent":529,"flags":1073741824}
+{"id":3421,"name":"Blacksmith","zone":"Blacksmith","parent":3358,"continent":529,"flags":1073741824}
+{"id":3422,"name":"Lumber Mill","zone":"LumberMill","parent":3358,"continent":529,"flags":1073741824}
+{"id":3423,"name":"Gold Mine","zone":"GoldMine","parent":3358,"continent":529,"flags":1073741824}
+{"id":3424,"name":"Stables","zone":"Stables","parent":3358,"continent":529,"flags":1073741824}
+{"id":3425,"name":"Cenarion Hold","zone":"CenarionHold","parent":1377,"continent":1,"flags":1073741888}
+{"id":3426,"name":"Staghelm Point","zone":"StaghelmPoint","parent":1377,"continent":1,"flags":1073741888}
+{"id":3427,"name":"Bronzebeard Encampment","zone":"BronzebeardEncampment","parent":1377,"continent":1,"flags":1073741888}
+{"id":3428,"name":"Ahn'Qiraj","zone":"AhnQiraj","parent":0,"continent":531,"flags":0}
+{"id":3429,"name":"Ruins of Ahn'Qiraj","zone":"RuinsofAhnQiraj","parent":0,"continent":509,"flags":0}
+{"id":3446,"name":"Twilight's Run","zone":"TwilightsRun","parent":1377,"continent":1,"flags":1073741888}
+{"id":3447,"name":"Ortell's Hideout","zone":"Ortell'sHideout","parent":1377,"continent":1,"flags":1073741888}
+{"id":3448,"name":"Scarab Terrace","zone":"ScarabTerrace","parent":3429,"continent":509,"flags":1073741824}
+{"id":3449,"name":"General's Terrace","zone":"General'sTerrace","parent":3429,"continent":509,"flags":1073741824}
+{"id":3450,"name":"The Reservoir","zone":"TheReservoir","parent":3429,"continent":509,"flags":1073741824}
+{"id":3451,"name":"The Hatchery","zone":"TheHatchery","parent":3429,"continent":509,"flags":1073741824}
+{"id":3452,"name":"The Comb","zone":"TheComb","parent":3429,"continent":509,"flags":1073741824}
+{"id":3453,"name":"Watchers' Terrace","zone":"Watchers'Terrace","parent":3429,"continent":509,"flags":1073741824}
+{"id":3454,"name":"Ruins of Ahn'Qiraj","zone":"RuinsofAhn'Qiraj","parent":1377,"continent":1,"flags":1073741888}
+{"id":3456,"name":"Naxxramas","zone":"Naxxrammas","parent":0,"continent":533,"flags":3}
+{"id":3459,"name":"City","zone":"CityChannel","parent":0,"continent":0,"flags":512}
+{"id":3478,"name":"Gates of Ahn'Qiraj","zone":"GatesofAhnQiraj","parent":0,"continent":1,"flags":0}
+{"id":3486,"name":"Ravenholdt Manor","zone":"RavenholdtManor","parent":36,"continent":0,"flags":1073741888}
+{"id":13649,"name":"Test Dungeon","zone":"TestDungeon","parent":0,"continent":13,"flags":64}
+{"id":15159,"name":"The Searing Basin","zone":"SearingBasin","parent":51,"continent":0,"flags":1073741888}
+{"id":15475,"name":"Demon Fall Canyon","zone":"DemonFallCanyon","parent":0,"continent":2784,"flags":0}
+{"id":15531,"name":"The Tainted Scar","zone":"TheTaintedScar","parent":0,"continent":2789,"flags":0}
+{"id":15532,"name":"Storm Cliffs","zone":"StormCliffs","parent":0,"continent":2791,"flags":0}
+{"id":15540,"name":"Demon Fall Barrow","zone":"DemonFallBarrow","parent":15475,"continent":2784,"flags":1073741824}
+{"id":15793,"name":"Elsewhen","zone":"Elsewhen","parent":0,"continent":269,"flags":0}
+{"id":15809,"name":"Felwood","zone":"FelwoodShadowHold","parent":0,"continent":2806,"flags":64}
+{"id":15810,"name":"Bloodvenom Post ","zone":"BloodvenomPostShadowHold","parent":15809,"continent":2806,"flags":1073741888}
+{"id":15811,"name":"Bloodvenom Falls","zone":"BloodvenomFallsShadowHold","parent":15809,"continent":2806,"flags":1073741888}
+{"id":15812,"name":"Bloodvenom River","zone":"BloodvenomRiverShadowHold","parent":15809,"continent":2806,"flags":1073741888}
+{"id":15813,"name":"Jaedenar","zone":"JaedenarShadowHold","parent":15809,"continent":2806,"flags":1073741888}
+{"id":15814,"name":"Shatter Scar Vale","zone":"ShatterScarValeShadowHold","parent":15809,"continent":2806,"flags":1073741888}
+{"id":15815,"name":"Ruins of Constellas","zone":"RuinsofConstellasShadowHold","parent":15809,"continent":2806,"flags":1073741888}
+{"id":15816,"name":"Grove of the Ancients","zone":"GroveoftheAncientsShadowHold","parent":16362,"continent":2806,"flags":1073741888}
+{"id":15817,"name":"Wildbend River","zone":"WildbendRiverShadowHold","parent":16362,"continent":2806,"flags":1073741888}
+{"id":15818,"name":"Twilight Shore","zone":"TwilightShoreShadowHold","parent":16362,"continent":2806,"flags":1073741888}
+{"id":15819,"name":"Twilight Vale","zone":"TwilightValeShadowHold","parent":16362,"continent":2806,"flags":1073741888}
+{"id":15820,"name":"The Master's Glaive","zone":"TheMaster'sGlaiveShadowHold","parent":16362,"continent":2806,"flags":1073741888}
+{"id":15821,"name":"Ameth'Aran","zone":"Ameth'AranShadowHold","parent":16362,"continent":2806,"flags":1073741888}
+{"id":15822,"name":"Blackwood Den","zone":"BlackwoodDenShadowHold","parent":16362,"continent":2806,"flags":1073741888}
+{"id":15825,"name":"The Crystal Vale","zone":"TheCrystalVale","parent":0,"continent":2804,"flags":0}
+{"id":15828,"name":"The Burning of Andorhal","zone":"TheBurningofAndorhal","parent":0,"continent":2807,"flags":0}
+{"id":15938,"name":"Starfall Village","zone":"StarfallVillageInstance","parent":0,"continent":2817,"flags":64}
+{"id":16003,"name":"Azshara","zone":"AzsharaInstance","parent":0,"continent":2832,"flags":64}
+{"id":16004,"name":"Hyjal","zone":"HyjalInstance","parent":0,"continent":2832,"flags":64}
+{"id":16005,"name":"Darkwhisper Gorge","zone":"DarkwhisperGorgeInstance","parent":618,"continent":1,"flags":1073741888}
+{"id":16006,"name":"Xavian","zone":"XavianInstance","parent":16169,"continent":2832,"flags":1073741888}
+{"id":16007,"name":"Satyrnaar","zone":"SatyrnaarInstance","parent":16169,"continent":2832,"flags":1073741888}
+{"id":16008,"name":"Bough Shadow","zone":"BoughShadowInstance","parent":16169,"continent":2832,"flags":1073741888}
+{"id":16009,"name":"Forest Song","zone":"ForestSongInstance","parent":16169,"continent":2832,"flags":1073741888}
+{"id":16010,"name":"Warsong Lumber Camp","zone":"WarsongLumberCampInstance","parent":16169,"continent":2832,"flags":1073741888}
+{"id":16011,"name":"Southfury River","zone":"SouthfuryRiverInstance","parent":16169,"continent":2832,"flags":1073741888}
+{"id":16012,"name":"Nightsong Woods","zone":"NightsongWoodsInstance","parent":16169,"continent":2832,"flags":1073741888}
+{"id":16013,"name":"Shadowsong Shrine","zone":"ShadowsongShrineInstance","parent":16169,"continent":2832,"flags":1073741888}
+{"id":16014,"name":"Southfury River","zone":"SouthfuryRiverInstance","parent":16003,"continent":2832,"flags":1073741888}
+{"id":16015,"name":"Haldarr Encampment","zone":"HaldarrEncampmentInstance","parent":16169,"continent":2832,"flags":1073741888}
+{"id":16016,"name":"Talrendis Point","zone":"TalrendisPointInstance","parent":16169,"continent":2832,"flags":1073741888}
+{"id":16017,"name":"Desolace","zone":"DesolaceInstance","parent":0,"continent":2832,"flags":64}
+{"id":16018,"name":"Feralas","zone":"FeralasInstance","parent":0,"continent":2832,"flags":64}
+{"id":16019,"name":"The Maul","zone":"TheMaulInstance","parent":16018,"continent":2832,"flags":1073741952}
+{"id":16020,"name":"Valley of Bones","zone":"ValleyofBonesInstance","parent":16018,"continent":2832,"flags":1073741888}
+{"id":16021,"name":"Gelkis Village","zone":"GelkisVillageInstance","parent":16018,"continent":2832,"flags":1073741888}
+{"id":16022,"name":"Mannoroc Coven","zone":"MannorocCovenInstance","parent":16018,"continent":2832,"flags":1073741888}
+{"id":16023,"name":"Dream Bough","zone":"DreamBoughInstance","parent":16018,"continent":2832,"flags":1073741888}
+{"id":16024,"name":"Jademir Lake","zone":"JademirLakeInstance","parent":16018,"continent":2832,"flags":1073741888}
+{"id":16025,"name":"Ruins of Ravenwind","zone":"RuinsofRavenwindInstance","parent":16018,"continent":2832,"flags":1073741888}
+{"id":16026,"name":"The Twin Colossals","zone":"TheTwinColossalsInstance","parent":16018,"continent":2832,"flags":1073741888}
+{"id":16027,"name":"Oneiros","zone":"OneirosInstance","parent":16018,"continent":2832,"flags":1073741888}
+{"id":16028,"name":"Eastern Plaguelands","zone":"EasternPlaguelandsInstance","parent":0,"continent":2832,"flags":64}
+{"id":16029,"name":"The Hinterlands","zone":"TheHinterlandsInstance","parent":0,"continent":2832,"flags":64}
+{"id":16030,"name":"Lake Mereldar","zone":"LakeMereldarInstance","parent":16029,"continent":2832,"flags":1073741888}
+{"id":16031,"name":"The Undercroft","zone":"TheUndercroftInstance","parent":16029,"continent":2832,"flags":1073741888}
+{"id":16032,"name":"Scarlet Base Camp","zone":"ScarletBaseCampInstance","parent":16029,"continent":2832,"flags":1073741888}
+{"id":16033,"name":"Darrowshire","zone":"DarrowshireInstance","parent":16029,"continent":2832,"flags":1073741888}
+{"id":16034,"name":"The Creeping Ruin","zone":"TheCreepingRuinInstance","parent":16029,"continent":2832,"flags":1073741888}
+{"id":16035,"name":"The Forbidding Sea","zone":"TheForbiddingSeaInstance","parent":16029,"continent":2832,"flags":1073741888}
+{"id":16036,"name":"Skulk Rock","zone":"SkulkRockInstance","parent":16029,"continent":2832,"flags":1073741888}
+{"id":16037,"name":"Seradane","zone":"SeradaneInstance","parent":16029,"continent":2832,"flags":1073741888}
+{"id":16038,"name":"The Overlook Cliffs","zone":"TheOverlookCliffsInstance","parent":16029,"continent":2832,"flags":1073741888}
+{"id":16039,"name":"Agol'watha","zone":"AgolwathaInstance","parent":16029,"continent":2832,"flags":1073741888}
+{"id":16040,"name":"Shaol'watha","zone":"ShaolwathaInstance","parent":16029,"continent":2832,"flags":1073741888}
+{"id":16041,"name":"Valorwind Lake","zone":"ValorwindLakeInstance","parent":16029,"continent":2832,"flags":1073741888}
+{"id":16074,"name":"Karazhan Crypts","zone":"KarazhanCrypts","parent":0,"continent":2875,"flags":0}
+{"id":16076,"name":"Temple of Ahn'Qiraj","zone":"TempleofAhnQiraj","parent":0,"continent":531,"flags":0}
+{"id":16113,"name":"Redridge Mountains","zone":"RedridgeMountainsDeadwindPass","parent":0,"continent":2853,"flags":64}
+{"id":16114,"name":"Deadwind Pass","zone":"DeadwindPassDeadwindPass","parent":0,"continent":2853,"flags":0}
+{"id":16115,"name":"Blasted Lands","zone":"BlastedLandsDeadwindPass","parent":0,"continent":2853,"flags":64}
+{"id":16116,"name":"Swamp of Sorrows","zone":"SwampofSorrowsDeadwindPass","parent":0,"continent":2853,"flags":64}
+{"id":16117,"name":"Stranglethorn Vale","zone":"StranglethornJungleDeadwindPass","parent":0,"continent":2853,"flags":64}
+{"id":16118,"name":"Elwynn Forest","zone":"ElwynnForestDeadwindPass","parent":0,"continent":2853,"flags":64}
+{"id":16119,"name":"Duskwood","zone":"DuskwoodDeadwindPass","parent":0,"continent":2853,"flags":64}
+{"id":16120,"name":"Lakeridge Highway","zone":"LakeridgeHighwayDeadwindPass","parent":16113,"continent":2853,"flags":1073741888}
+{"id":16121,"name":"Three Corners","zone":"ThreeCornersDeadwindPass","parent":16113,"continent":2853,"flags":1073741888}
+{"id":16122,"name":"Deadman's Crossing","zone":"DeadmansCrossingDeadwindPass","parent":16114,"continent":2853,"flags":1073741888}
+{"id":16123,"name":"Sleeping Gorge","zone":"SleepingGorgeDeadwindPass","parent":16114,"continent":2853,"flags":1073741888}
+{"id":16124,"name":"The Vice","zone":"TheViceDeadwindPass","parent":16114,"continent":2853,"flags":1073741888}
+{"id":16125,"name":"Morgan's Plot","zone":"MorgansPlotDeadwindPass","parent":16114,"continent":2853,"flags":1073741888}
+{"id":16126,"name":"Karazhan","zone":"KarazhanDeadwindPass","parent":16114,"continent":2853,"flags":1073741888}
+{"id":16127,"name":"Ariden's Camp","zone":"AridensCampDeadwindPass","parent":16114,"continent":2853,"flags":1073741888}
+{"id":16128,"name":"Deadwind Ravine","zone":"DeadwindRavineDeadwindPass","parent":16114,"continent":2853,"flags":1073741888}
+{"id":16129,"name":"Zul'Gurub","zone":"ZulGurubDeadwindPass","parent":16117,"continent":2853,"flags":1073741888}
+{"id":16130,"name":"Ridgepoint Tower","zone":"RidgepointTowerDeadwindPass","parent":16118,"continent":2853,"flags":1073741888}
+{"id":16131,"name":"Eastvale Logging Camp","zone":"EastvaleLoggingCampDeadwindPass","parent":16118,"continent":2853,"flags":1073741888}
+{"id":16132,"name":"Beggar's Haunt","zone":"Beggar'sHauntDeadwindPass","parent":16119,"continent":2853,"flags":1073741888}
+{"id":16133,"name":"Tranquil Gardens Cemetery","zone":"TranquilGardensCemeteryDeadwindPass","parent":16119,"continent":2853,"flags":1073741888}
+{"id":16134,"name":"Darkshire","zone":"DarkshireDeadwindPass","parent":16119,"continent":2853,"flags":1073741888}
+{"id":16135,"name":"Brightwood Grove","zone":"BrightwoodGroveDeadwindPass","parent":16119,"continent":2853,"flags":1073741888}
+{"id":16136,"name":"Manor Mistmantle","zone":"ManorMistmantleDeadwindPass","parent":16119,"continent":2853,"flags":1073741888}
+{"id":16137,"name":"The Darkened Bank","zone":"TheDarkenedBankDeadwindPass","parent":16119,"continent":2853,"flags":1073741888}
+{"id":16138,"name":"Misty Valley","zone":"MistyValleyDeadwindPass","parent":16116,"continent":2853,"flags":1073741888}
+{"id":16139,"name":"Itharius's Cave","zone":"Itharius'sCaveDeadwindPass","parent":16116,"continent":2853,"flags":1073741888}
+{"id":16140,"name":"Splinterspear Junction","zone":"SplinterspearJunctionDeadwindPass","parent":16116,"continent":2853,"flags":1073741888}
+{"id":16141,"name":"Altar of Storms","zone":"AltarofStormsDeadwindPass","parent":16115,"continent":2853,"flags":1073741888}
+{"id":16142,"name":"The Tainted Scar","zone":"TheTaintedScarDeadwindPass","parent":16115,"continent":2853,"flags":1073741888}
+{"id":16143,"name":"Dreadmaul Hold","zone":"DreadmaulHoldDeadwindPass","parent":16115,"continent":2853,"flags":1073741888}
+{"id":16147,"name":"Elwynn Forest","zone":"ElwynnForestNightmareGrove","parent":0,"continent":2832,"flags":64}
+{"id":16148,"name":"Duskwood","zone":"DuskwoodNightmareGrove","parent":0,"continent":2832,"flags":64}
+{"id":16149,"name":"Westfall","zone":"WestfallNightmareGrove","parent":0,"continent":2832,"flags":64}
+{"id":16150,"name":"Jerod's Landing","zone":"JerodsLandingNightmareGrove","parent":16148,"continent":2832,"flags":1073741888}
+{"id":16151,"name":"Forest's Edge","zone":"ForestsEdgeNightmareGrove","parent":16148,"continent":2832,"flags":1073741888}
+{"id":16152,"name":"The Stonefield Farm","zone":"TheStonefieldFarmNightmareGrove","parent":16148,"continent":2832,"flags":1073741888}
+{"id":16153,"name":"The Maclure Vineyards","zone":"TheMaclureVineyardsNightmareGrove","parent":16148,"continent":2832,"flags":1073741888}
+{"id":16154,"name":"Tower of Azora","zone":"TowerofAzoraNightmareGrove","parent":16148,"continent":2832,"flags":1073741888}
+{"id":16155,"name":"Fargodeep Mine","zone":"FargodeepMineNightmareGrove","parent":16148,"continent":2832,"flags":1073741888}
+{"id":16156,"name":"Brackwell Pumpkin Patch","zone":"PumpkinPatchNightmareGrove","parent":16148,"continent":2832,"flags":1073741888}
+{"id":16157,"name":"The Hushed Bank","zone":"TheHushedBankNightmareGrove","parent":16148,"continent":2832,"flags":1073741888}
+{"id":16158,"name":"The Darkened Bank","zone":"TheDarkenedBankNightmareGrove","parent":16148,"continent":2832,"flags":1073741888}
+{"id":16159,"name":"Addle's Stead","zone":"AddlesSteadNightmareGrove","parent":16148,"continent":2832,"flags":1073741888}
+{"id":16160,"name":"Twilight Grove","zone":"TwilightGroveNightmareGrove","parent":16148,"continent":2832,"flags":1073741888}
+{"id":16161,"name":"Darkshire","zone":"DarkshireNightmareGrove","parent":16148,"continent":2832,"flags":1073741888}
+{"id":16162,"name":"Raven Hill Cemetery","zone":"RavenHillCemeteryNightmareGrove","parent":16148,"continent":2832,"flags":1073741888}
+{"id":16163,"name":"The Yorgen Farmstead","zone":"TheYorgenFarmsteadNightmareGrove","parent":16148,"continent":2832,"flags":1073741888}
+{"id":16164,"name":"Vul'Gol Ogre Mound","zone":"VulGolOgreMoundNightmareGrove","parent":16148,"continent":2832,"flags":1073741888}
+{"id":16165,"name":"Forlorn Rowe","zone":"ForlornRoweNightmareGrove","parent":16148,"continent":2832,"flags":1073741888}
+{"id":16166,"name":"Brightwood Grove","zone":"BrightwoodGroveNightmareGrove","parent":16148,"continent":2832,"flags":1073741888}
+{"id":16167,"name":"The Rotting Orchard","zone":"TheRottingOrchardNightmareGrove","parent":16148,"continent":2832,"flags":1073741888}
+{"id":16168,"name":"Raven Hill","zone":"RavenHillNightmareGrove","parent":16148,"continent":2832,"flags":1073741888}
+{"id":16169,"name":"Ashenvale","zone":"AshenvaleInstance","parent":0,"continent":2832,"flags":64}
+{"id":16236,"name":"Scarlet Enclave","zone":"ScarletEnclave","parent":0,"continent":2856,"flags":0}
+{"id":16295,"name":"The Scarab Dais","zone":"TheScarabDais","parent":0,"continent":2902,"flags":64}
+{"id":16335,"name":"New Avalon","zone":"NewAvalon","parent":139,"continent":0,"flags":1074006016}
+{"id":16361,"name":"The Forbidding Sea","zone":"TheForbiddingSea","parent":139,"continent":0,"flags":1073741888}
+{"id":16362,"name":"Shadow Hold","zone":"ShadowHoldDungeon","parent":0,"continent":2806,"flags":0}
+{"id":16369,"name":"Prison","zone":"ScarletEnclavePrison","parent":16236,"continent":2856,"flags":1073741824}
+{"id":16370,"name":"Tyr's Hand","zone":"ScarletEnclaveTyrsHand","parent":16236,"continent":2856,"flags":1073741824}
+{"id":16371,"name":"New Avalon","zone":"ScarletEnclaveNewAvalon","parent":16236,"continent":2856,"flags":1073741824}
+{"id":16372,"name":"The Forbidding Expanse","zone":"ScarletEnclaveTheForbiddingExpanse","parent":16236,"continent":2856,"flags":1073741824}
+{"id":16373,"name":"Mine","zone":"ScarletEnclaveMines","parent":16236,"continent":2856,"flags":1073741824}
+{"id":16374,"name":"Arcane Sanctum","zone":"ScarletEnclaveArcaneSanctum","parent":16236,"continent":2856,"flags":1073741824}
+{"id":16394,"name":"Naxxramas","zone":"Naxxrammas","parent":0,"continent":2921,"flags":65539}
