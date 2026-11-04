@@ -10,6 +10,8 @@
 ## X-License: GPL-3.0
 ## Author: Tristabeau
 ## X-Website: https://github.com/LapassetAlexis/Ready2Quest
+## X-Curse-Project-ID: 1783258
+## X-Wago-ID: b6mze1KP
 ## OptionalDeps: Ready2Quest
 ## SavedVariables: QuestCompanionDB
 ## X-Category: Utility
