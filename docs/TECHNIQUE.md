@@ -41,6 +41,15 @@ Chaque addon décrit son identité dans `Config.lua`, chargé en premier (`ns.AP
 
 Comportement inchangé, sans le compagnon : ses réglages, ses commandes et ses modules ne le montrent plus. `/r2q reset` ne touche plus à la progression du compagnon, qui n'est plus chez lui.
 
+### Rapports annoncés par une icône (`Notice.lua`)
+
+- Les trois rapports automatiques ne s'ouvrent plus seuls : `RunChecklist` (hors check manuel), `ExpeditionFinish` et `ShowDungeonSheet` posent une icône (`ns:ShowNotice`) quand `db.reportIcon` est vrai (défaut). Coupé, l'ancien comportement revient.
+- Icônes du jeu, présentes sur Era et Forever : `Interface\GossipFrame\AvailableQuestIcon` (« ! ») et `ActiveQuestIcon` (« ? »), désaturées puis teintées ; halo `Interface\Buttons\UI-ActionButton-Border` en mode additif, de la même couleur.
+- Couleurs : départ, barème de la note (`Theme.ScoreColor`) ; retour, rouge si mort, orange s'il faut réparer (durabilité sous le seuil du check) ou racheter, bleu sinon ; donjon, rouge si trop bas niveau, orange si une ligne de préparation échoue, bleu sinon.
+- Vie de l'icône : pulsation `NOTICE_PULSE` (8 s), puis atténuée (alpha 0,6) `NOTICE_LINGER` (60 s), puis cachée. Une seule à la fois, la plus récente. En combat, elle attend `PLAYER_REGEN_ENABLED`. Clic : `onClick` du rapport ; clic droit : ignorée. Position mémorisée (`noticePoint`), placée avec le mode édition (`StartEditMode` / `StopEditMode` enveloppés).
+- **Barème unique** (`Theme.ScoreColor`, `Theme.ScoreTextColor`, socle) : 0-24 rouge, 25-59 orange (`ORANGE_DEEP`, nouveau), 60-84 ambre, 85+ vert. Avant, la couleur de la note basculait à 55 et le verdict à 60.
+- Tests `[NTC]` (`tests/modules/notice.lua`) ; les tests qui visent les fenêtres (expédition, donjon) coupent l'icône. Vérifiés par mutation.
+
 ### Notre base de données (`data/`) et les lieux sûrs
 
 - **Base** : `data/era/`, `data/forever/`. PNJ, objets et quêtes importés une fois de QuestieDB par `tools/import_questie.py` (corrections statiques, liste noire et événements de Questie appliqués) ; zones, sous-zones et dimensions des cartes importées des tables du client (wago.tools) par `tools/import_client.py`. Nos corrections : `data/<client>/fixes.json`, jamais écrasées. Voir `docs/DONNEES.md`.

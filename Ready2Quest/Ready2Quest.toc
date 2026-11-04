@@ -37,6 +37,7 @@ Equip.lua
 Stats.lua
 Checks.lua
 UI.lua
+Notice.lua
 Camp.lua
 Expedition.lua
 Dungeon.lua

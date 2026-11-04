@@ -17,7 +17,7 @@ For **WoW Forever** (1.60) and **Classic Era** (1.15). English and French.
 
 Each one can be switched on or off in one click (`/r2q options`).
 
-- **Pre-departure check**: when you leave a safe place, a readiness score out of 100 with tips. If the score is high, it's a single chat line. If it's low, a window opens. It checks bag space, greys to sell, food, potions, buffs, durability, repair gold, class reagents, new spells, hearthstone, profession reagents, quests to turn in and rested XP.
+- **Pre-departure check**: when you leave a safe place, a readiness score out of 100 with tips. If the score is high, it's a single chat line. If it's low, a "!" icon pulses in the color of your score: click it to open the report. Nothing opens by itself.
 - **Safe places, out of the box**: 80 capitals, villages and hubs, plus neutral towns and Forever's new zones. Small camps are learned as you play (innkeeper, flight master, mailbox…). On Forever, your campfire counts too.
 - **Expedition report**: back in town, a summary of your trip: duration, XP and levels, gold earned and spent, notable loot, deaths, wear, quests ready, what to restock.
 - **Before the dungeon**: at the entrance, a sheet for *that* dungeon, with suggested level, your quests for it and a short prep. It covers the 19 classic dungeons and 9 new Forever dungeons.

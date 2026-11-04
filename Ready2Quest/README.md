@@ -35,7 +35,8 @@ Le **compagnon de route** et son **carnet de voyage** sont un addon à part, [Qu
 Tout seul, **au moment où tu quittes une zone sûre** : ville, village, hub ou campement. Si tu y reviens dans les 6 secondes, rien ne se passe, pour ne pas t'alerter à chaque coin de rue. En vol, il attend que tu aies atterri. En combat, il attend la fin du combat. Mort ou fantôme, il ne dit rien.
 
 - **Note de 85 ou plus** : une simple ligne dans le chat, du genre « Sac bouclé, 92/100. Parti de Long-guet. »
-- **Note plus basse** : la fenêtre **Avant le départ** s'ouvre, avec la note, le verdict (*Prêt*, *Prêt avec réserves*, *Pas prêt*) et les conseils pour y remédier.
+- **Note plus basse** : une ligne dans le chat, et un **« ! »** (l'icône des quêtes à prendre) qui pulse quelques secondes en haut de l'écran, dans la couleur de ta note : rouge sous 25, orange de 25 à 59, ambre de 60 à 84. Clique dessus : la fenêtre **Avant le départ** s'ouvre, avec la note, le verdict (*Prêt*, *Prêt avec réserves*, *Pas prêt*) et les conseils pour y remédier. Clic droit : tu l'ignores. Rien ne s'ouvre tout seul pendant que tu pars, et pas d'icône en plein combat : elle attend la fin.
+- L'icône reste visible, atténuée, une minute après sa pulsation, puis s'en va. Tu préfères l'ancienne fenêtre automatique ? Réglages, **Général**, décoche « Rapports annoncés par une icône ».
 
 Tu peux aussi le lancer quand tu veux : `/r2q`, ou un clic gauche sur le bouton de la minicarte. Dans la fenêtre, la petite flèche du bandeau relance le check, et **Partir à l'aventure** la referme. Les réglages, eux, sont au clic droit sur le bouton de la minicarte.
 
@@ -77,7 +78,7 @@ La fenêtre indique toujours **d'où tu es parti** (« Parti de Comté-de-l'Or �
 
 ## Retour d'expédition
 
-La suite naturelle du check avant le départ : **départ → expédition → retour**. Quand tu reviens dans une zone sûre (village, capitale ou camp), une carte au même style résume ta sortie :
+La suite naturelle du check avant le départ : **départ → expédition → retour**. Quand tu reviens dans une zone sûre (village, capitale ou camp), un **« ? »** (l'icône des quêtes à rendre) s'affiche : bleu si tout va bien, orange s'il faut réparer ou racheter, rouge si tu es mort en route. Un clic ouvre la carte qui résume ta sortie :
 
 - la durée, l'XP gagnée et les niveaux pris ;
 - l'or gagné et dépensé, et le net ;
@@ -90,7 +91,7 @@ Pas de bilan pour un aller-retour sans intérêt : moins d'une minute, sans rien
 
 ## Avant le donjon
 
-En arrivant à l'entrée d'un donjon, ou en y entrant, une fiche pour **ce** donjon. Elle ne s'affiche qu'une fois par visite :
+En arrivant à l'entrée d'un donjon, ou en y entrant, un **« ! »** annonce la fiche de **ce** donjon (rouge si tu es trop bas niveau, orange si ta préparation a un manque, bleu sinon) ; un clic l'ouvre. Une seule fois par visite :
 
 - le niveau conseillé, comparé au tien ;
 - les quêtes de ce donjon que tu as dans ton journal ;
@@ -171,7 +172,7 @@ Les deux sont actifs par défaut et se coupent dans les réglages. Ils fonctionn
 
 `/r2q options`, ou un clic droit sur le bouton de la minicarte.
 
-- **Général** : activer l'addon, et tout ce qui touche à l'affichage (bouton de minicarte, fenêtre ou chat, note sous laquelle la fenêtre s'ouvre, placement des cadres).
+- **Général** : activer l'addon, et tout ce qui touche à l'affichage (bouton de minicarte, fenêtre ou chat, rapports annoncés par une icône, note sous laquelle un rapport s'annonce, placement des cadres et de l'icône).
 - **Modules** : chaque module a son interrupteur directement dans la liste de gauche, et sa page qui explique ce qu'il fait. Le Check avant le départ a ses sous-pages : Déclenchement, Zones sûres, Sacs & vivres, Équipement & perso, Buffs & métier. Résumé de stuff et Stats du portrait n'ont pas de réglage, mais leur page propose « Placer le cadre » (et « Afficher maintenant » pour le portrait).
 - **QoL** : Confort de jeu, avec ses sous-pages Marchand, La bonne récompense, Rythme de leveling, Sac plein et Après la mort. Les sous-pages d'un module ne s'affichent que quand il est ouvert.
 
@@ -214,8 +215,8 @@ Les deux sont actifs par défaut et se coupent dans les réglages. Ils fonctionn
 
 ## Questions fréquentes
 
-**La fenêtre ne s'ouvre pas quand je quitte le village.**
-Si ta note est de 85 ou plus, c'est normal : c'est une ligne dans le chat. Pour avoir toujours la fenêtre, mets « Fenêtre sous la note » à 100 dans Général. Sinon, tape `/r2q diag` dans le village : la ligne « zone sûre » doit indiquer `true`.
+**Rien ne s'affiche quand je quitte le village.**
+Si ta note est de 85 ou plus, c'est normal : c'est une ligne dans le chat. En dessous, ce n'est plus une fenêtre mais un « ! » qui pulse en haut de l'écran : clique dessus. Pour avoir toujours un rapport, mets « Fenêtre sous la note » à 100 dans Général ; pour retrouver la fenêtre automatique, décoche « Rapports annoncés par une icône ». Sinon, tape `/r2q diag` dans le village : la ligne « zone sûre » doit indiquer `true`.
 
 **Un village n'est pas reconnu.**
 Tape `/r2q safe` dans le village, ou laisse l'addon l'apprendre : un aubergiste, une boîte aux lettres ou un maître de vol suffisent.

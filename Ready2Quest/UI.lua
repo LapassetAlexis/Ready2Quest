@@ -27,11 +27,10 @@ local function Truncate(text, limit)
 end
 ns.Truncate = Truncate
 
+-- verdict de la couleur de la note (barème unique, Theme.ScoreColor)
 local function VerdictText(self)
-	local label, color = self:ScoreLabel()
-	if color == "green" then return Theme.T_GREEN .. label .. "|r" end
-	if color == "orange" then return Theme.T_ORANGE .. label .. "|r" end
-	return Theme.T_RED .. label .. "|r"
+	local label = self:ScoreLabel()
+	return Theme.ScoreTextColor((self.score or 0) / 100) .. label .. "|r"
 end
 
 -- ---------------------------------------------------------------------------

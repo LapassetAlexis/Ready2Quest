@@ -425,7 +425,15 @@ function ns:RunChecklist(trigger)
 	if trigger == "manual" then self.lastDeparture = nil end
 
 	if db.showWindow and self.ShowWindow and not self:IsDiscreetAlert(trigger) then
-		self:ShowWindow(results)
+		-- départ (pas un check manuel) : une icône annonce le rapport (Notice.lua)
+		if trigger ~= "manual" and self.WantsNotice and self:WantsNotice() then
+			self:PrintBrief()
+			local notice = self:NoticeDepart(self.score, (self:ScoreLabel()))
+			notice.onClick = function() ns:ShowWindow(results) end
+			self:ShowNotice(notice)
+		else
+			self:ShowWindow(results)
+		end
 	elseif db.showWindow and self.ShowWindow then
 		self:PrintBrief()
 	else

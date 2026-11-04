@@ -42,6 +42,7 @@ Theme.CONTROL   = { 0.16, 0.19, 0.21 }   -- piste, bouton au repos #2a3036
 Theme.GREEN     = { 0.44, 0.81, 0.48 }   -- statut OK #6fcf7a (pas le vert de rareté)
 Theme.RED       = { 0.89, 0.38, 0.31 }   -- statut échec #e2604f
 Theme.ORANGE    = { 0.91, 0.65, 0.29 }   -- statut alerte = l'ambre
+Theme.ORANGE_DEEP = { 0.93, 0.47, 0.20 } -- statut « pas prêt » #ed7833 (entre l'ambre et le rouge)
 Theme.GREY      = { 0.55, 0.55, 0.55 }
 -- Deuxième couleur (v1.21.0) : bleu de nuit, l'aiguille de la boussole.
 -- Rôle : information et navigation (groupes, statut « info », source d'une
@@ -56,6 +57,7 @@ Theme.T_GREY      = "|cff7d8389"
 Theme.T_GREEN     = "|cff6fcf7a"
 Theme.T_RED       = "|cffe2604f"
 Theme.T_ORANGE    = "|cffe8a54b"
+Theme.T_ORANGE_DEEP = "|cffed7833"
 Theme.T_WHITE     = "|cffffffff"
 Theme.T_BLUE      = "|cff5b8fd6"
 
@@ -490,10 +492,22 @@ function Theme.CreateIcon(parent, size, texture, quality)
 end
 
 -- Couleur d'une barre selon le ratio
+-- Barème unique de la note (fenêtre, verdict, chat, minicarte, icône) :
+--   85 et plus : vert (prêt) ; 60-84 : ambre (prêt avec réserves) ;
+--   25-59 : orange (pas prêt) ; 0-24 : rouge (pas prêt du tout)
 function Theme.ScoreColor(ratio)
 	if ratio >= 0.85 then return Theme.GREEN end
-	if ratio >= 0.55 then return Theme.ORANGE end
+	if ratio >= 0.60 then return Theme.ORANGE end
+	if ratio >= 0.25 then return Theme.ORANGE_DEEP end
 	return Theme.RED
+end
+
+-- Même barème, en code couleur de texte (« |cff… »)
+function Theme.ScoreTextColor(ratio)
+	if ratio >= 0.85 then return Theme.T_GREEN end
+	if ratio >= 0.60 then return Theme.T_ORANGE end
+	if ratio >= 0.25 then return Theme.T_ORANGE_DEEP end
+	return Theme.T_RED
 end
 
 if ns.Mark then ns.Mark("Theme") end
