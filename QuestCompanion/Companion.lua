@@ -1734,7 +1734,7 @@ function ns:CompanionTick(seconds)
 	-- toutes ses évolutions faites : il ne descend plus sous SERENE_FLOOR
 	local floor = (tonumber(data.stage) or 1) >= #ns.COMPANION_STAGES and SERENE_FLOOR or NEED_FLOOR
 	for _, key in ipairs(NEED_KEYS) do
-		local delta = -DECAY[key] * minutes
+		local delta = -DECAY[key] * minutes * (self.CompanionDecayFactor and self:CompanionDecayFactor(key) or 1)
 		if key == "energy" and resting then delta = REST_GAIN * minutes end
 		if key == "hunger" and self.companionEating then delta = EAT_GAIN * minutes end
 		data.needs[key] = Clamp(data.needs[key] + delta, floor, NEED_MAX)

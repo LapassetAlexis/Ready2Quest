@@ -167,7 +167,9 @@ function ns:CompanionFxUpdate(now)
 	elseif self.CompanionIsHappy and self:CompanionIsHappy() then
 		dy = math.sin(now * 1.6) * 2           -- heureux : il flotte
 	end
-	Offset(frame, dx, dy)
+	-- son caractère : effets plus ou moins amples (Personality.lua)
+	local scale = self.CompanionFxIntensity and self:CompanionFxIntensity() or 1
+	Offset(frame, dx * scale, dy * scale)
 	-- particules : montent et s'effacent
 	local keep = {}
 	for _, p in ipairs(state.particles) do

@@ -51,4 +51,6 @@ ZoneQuests_Era.lua
 ZoneQuests_Forever.lua
 ZoneQuests.lua
 Memories.lua
+PersonalityLines.lua
+Personality.lua
 JournalWindow.lua
