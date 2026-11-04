@@ -13,9 +13,13 @@ AREA_FLAG_LOWLEVEL). La liste des villages est donc éditée ici, à la main,
 et résolue en identifiants de zone ; le jeu traduit les noms à l'exécution
 (C_Map.GetAreaInfo), ce qui rend la base valable dans toutes les langues.
 
-Usage : python3 tools/gen_hubs.py AreaTable_era.csv AreaTable_forever.csv > Ready2Quest/Libs/Socle/Hubs.lua
+Usage : python3 -I tools/gen_hubs.py > Ready2Quest/Libs/Socle/Hubs.lua
+Lit AreaTable dans notre base (data/era/areas.jsonl, data/forever/areas.jsonl,
+importées par tools/import_client.py).
 """
-import csv, sys
+import json, os, sys
+
+ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
 CAPITAL_FACTION = {"Stormwind City": "A", "Ironforge": "A", "Darnassus": "A",
                    "Orgrimmar": "H", "Thunder Bluff": "H", "Undercity": "H"}
@@ -55,11 +59,18 @@ HUBS = [
     ("The Eventide", "A", "hub"),
 ]
 
-def load(path):
-    return {int(r["ID"]): r for r in csv.DictReader(open(path, encoding="utf-8"))}
+def load(client):
+    """AreaTable de notre base, sous la forme qu'avait le CSV de wago.tools."""
+    rows = {}
+    with open(os.path.join(ROOT, "data", client, "areas.jsonl"), encoding="utf-8") as handle:
+        for line in handle:
+            if line.strip():
+                r = json.loads(line)
+                rows[r["id"]] = {"AreaName_lang": r["name"], "Flags_0": r["flags"]}
+    return rows
 
-def main(era_path, forever_path):
-    era, fo = load(era_path), load(forever_path)
+def main():
+    era, fo = load("era"), load("forever")
     seen, entries, missing = set(), [], []
     def add(area_id, name, faction, kind, clients):
         if area_id in seen: return
@@ -98,4 +109,4 @@ def main(era_path, forever_path):
     sys.stderr.write(f"{len(entries)} entrées ; introuvables : {missing}\n")
 
 if __name__ == "__main__":
-    main(sys.argv[1], sys.argv[2])
+    main()

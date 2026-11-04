@@ -4,6 +4,8 @@
 -- où est le joueur et ce qui lui arrive, sans dépendre l'un de l'autre :
 --   * carte : ns:CurrentMap, MapInfo, MapChain, CurrentSubZone, InInstance ;
 --   * lieux connus (Hubs.lua) : ns:HubIndex, PlayerFaction, KnownHub ;
+--   * lieux repérés par leurs PNJ de service (Places.lua) : ns:KnownPlace,
+--     MapHasPlaces ;
 --   * camp de Forever : ns:AtCamp ;
 --   * donjons (DungeonData.lua) : ns:IsForeverClient, DungeonIndex,
 --     DetectDungeon, DungeonName, DungeonRange ;
@@ -149,6 +151,68 @@ function ns:AtCamp()
 	return false
 end
 
+
+-- ===========================================================================
+-- Lieux repérés par leurs PNJ de service (Places.lua, tools/gen_places.py)
+-- ===========================================================================
+-- Hubs.lua reconnaît un lieu au nom de sa sous-zone. Places.lua ajoute les
+-- camps sans sous-zone à eux : un point (x, y en % de la carte de zone) et un
+-- rayon en mètres, comparés à la position du joueur sur cette carte.
+function ns:PlaceTable()
+	local data = self.PLACE_DATA
+	if type(data) ~= "table" then return nil end
+	return data[self:IsForeverClient() and "forever" or "era"]
+end
+
+-- Position du joueur sur une carte, en % (nil en instance ou sans API)
+local function PlayerPercent(mapID)
+	if not (C_Map and type(C_Map.GetPlayerMapPosition) == "function") then return nil end
+	local ok, position = pcall(C_Map.GetPlayerMapPosition, mapID, "player")
+	if not ok or type(position) ~= "table" then return nil end
+	local x, y
+	if type(position.GetXY) == "function" then
+		x, y = position:GetXY()
+	else
+		x, y = position.x, position.y
+	end
+	if type(x) ~= "number" or type(y) ~= "number" or (x == 0 and y == 0) then return nil end
+	return x * 100, y * 100
+end
+ns.PlayerPercent = PlayerPercent
+
+-- Carte (ou carte parente) qui a des lieux repérés : sa liste et son échelle
+function ns:PlaceMap()
+	local data = self:PlaceTable()
+	local mapID = data and self:CurrentMap()
+	if not mapID then return nil end
+	for _, id in ipairs(self:MapChain(mapID)) do
+		if data.places[id] and data.scale[id] then return id, data.places[id], data.scale[id] end
+	end
+	return nil
+end
+
+function ns:MapHasPlaces()
+	return self:PlaceMap() ~= nil
+end
+
+-- Lieu sous le joueur : renvoie le lieu { x, y, rayon, faction, services }
+-- et sa carte ; ou nil, carte, true si le lieu est de l'autre faction.
+function ns:KnownPlace()
+	if self:InInstance() then return nil end
+	local mapID, places, scale = self:PlaceMap()
+	if not mapID then return nil end
+	local x, y = PlayerPercent(mapID)
+	if not x then return nil end
+	local faction = self:PlayerFaction()
+	for _, place in ipairs(places) do
+		local dx, dy = (x - place[1]) * scale[1], (y - place[2]) * scale[2]
+		if dx * dx + dy * dy <= place[3] * place[3] then
+			if place[4] == "N" or faction == nil or place[4] == faction then return place, mapID end
+			return nil, mapID, true
+		end
+	end
+	return nil
+end
 
 -- ===========================================================================
 -- Donjons

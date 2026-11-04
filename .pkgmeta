@@ -15,6 +15,7 @@ move-folders:
   Ready2Quest/Ready2Quest: Ready2Quest
 
 ignore:
+  - data
   - LICENSE
   - QuestCompanion
   - README.md

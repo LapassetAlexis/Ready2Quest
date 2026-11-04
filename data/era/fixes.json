@@ -1,0 +1,6 @@
+{
+  "_doc": "Corrections faites à la main dans notre base (voir docs/DONNEES.md). Jamais écrasées par tools/import_questie.py. Format : { \"npc\" | \"object\" | \"quest\" : { \"<id>\" : { \"<champ>\" : valeur, \"<champ>\" : null } } }.",
+  "npc": {},
+  "object": {},
+  "quest": {}
+}

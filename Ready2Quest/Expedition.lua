@@ -365,6 +365,14 @@ function ns:ExpeditionFinish(place)
 
 	local db = self:DB()
 	local shown = false
+	if db.expeditionWindow ~= false and self.WantsNotice and self:WantsNotice() then
+		-- une icône annonce le bilan (Notice.lua), la ligne du chat reste
+		local notice = self:NoticeReturn(report)
+		notice.onClick = function() ns:ShowExpeditionReport(report) end
+		self:ShowNotice(notice)
+		self:Print(self:ExpeditionChatLine(report))
+		return report
+	end
 	if db.expeditionWindow ~= false then shown = self:ShowExpeditionReport(report) ~= nil end
 	-- sans fenêtre possible (Theme absent), le chat prend le relais
 	if db.expeditionChat == true or (db.expeditionWindow ~= false and not shown) then

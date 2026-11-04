@@ -25,6 +25,8 @@ C_Map.GetAreaInfo = function(areaID) return AREAS[areaID] end
 
 local function Reset(level)
 	ResetWorld()
+	-- ces tests visent la fenêtre ; l'icône qui l'annonce : tests/modules/notice.lua
+	NS:DB().reportIcon = false
 	W = {}
 	NS.dungeonVisit, NS.lastDungeonSheet, NS.dungeonIndex = nil, nil, nil
 	if NS.dungeonFrame then NS.dungeonFrame:Hide() end

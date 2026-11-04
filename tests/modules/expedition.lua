@@ -20,6 +20,8 @@ local E = {}   -- une seule locale pour les aides (limite de 200 locales)
 
 function E.Reset()
 	ResetWorld()
+	-- ces tests visent la fenêtre ; l'icône qui l'annonce : tests/modules/notice.lua
+	NS:DB().reportIcon = false
 	NS.expedition, NS.lastExpedition = nil, nil
 	if NS.expeditionFrame then NS.expeditionFrame:Hide() end
 	NS.expeditionFrame = nil

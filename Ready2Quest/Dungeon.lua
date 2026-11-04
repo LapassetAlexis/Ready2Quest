@@ -333,6 +333,14 @@ end
 
 function ns:ShowDungeonSheet(sheet)
 	self.lastDungeonSheet = sheet
+	if self:DB().dungeonShowWindow ~= false and self.ShowDungeonWindow and self.WantsNotice and self:WantsNotice() then
+		-- une icône annonce la fiche (Notice.lua), une ligne dans le chat
+		local notice = self:NoticeDungeon(sheet)
+		notice.onClick = function() ns:ShowDungeonWindow(sheet) end
+		self:ShowNotice(notice)
+		self:Print(self:F("NOTICE_CHAT_DUNGEON", Theme.T_GOLD .. tostring(sheet.name) .. "|r"))
+		return
+	end
 	if self:DB().dungeonShowWindow ~= false and self.ShowDungeonWindow and self:ShowDungeonWindow(sheet) then return end
 	self:PrintDungeonSheet(sheet)
 end
