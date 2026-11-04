@@ -34,6 +34,7 @@ Core.lua
 CompanionData.lua
 CompanionLines.lua
 Companion.lua
+CompanionFx.lua
 Advice.lua
 Group.lua
 Journal.lua
@@ -49,4 +50,7 @@ CompanionChest.lua
 ZoneQuests_Era.lua
 ZoneQuests_Forever.lua
 ZoneQuests.lua
+Memories.lua
+PersonalityLines.lua
+Personality.lua
 JournalWindow.lua

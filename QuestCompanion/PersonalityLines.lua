@@ -1,0 +1,402 @@
+-- PersonalityLines.lua -- répliques propres à chaque caractère (QuestCompanion)
+--
+-- Pour un réservoir de CompanionLines.lua (LEVEL, KILL…), chaque caractère a
+-- ses propres versions : elles prennent le pas sur les répliques communes
+-- (Personality.lua, PERSONALITY_VARIANT_CHANCE). Mêmes arguments que le
+-- réservoir commun (%s, %d). NOTICE : ce que ce caractère remarque de
+-- lui-même ; FORMED : l'annonce quand son caractère se dessine.
+local ADDON, ns = ...
+if ns.blocked then return end
+
+local T = {}
+
+T.curious = {
+	FORMED = { { "Dis… tu as remarqué ? Je pose plein de questions. Je crois que je suis curieux !", "Say… have you noticed? I ask a lot of questions. I think I'm curious!" } },
+	HELLO = { { "Salut ! Moi c'est %s. Dis, on va où ? Et pourquoi ? Et après ?", "Hi! I'm %s. So, where are we going? Why? And then?" },
+		{ "%s au rapport ! Il y a tant de choses à voir !", "%s reporting! There's so much to see!" } },
+	LEVEL = { { "Niveau %d ! Qu'est-ce qu'on va découvrir maintenant ?", "Level %d! What will we discover now?" },
+		{ "Niveau %d ! Je me demande ce que ça change… tout, peut-être ?", "Level %d! I wonder what changes… everything, maybe?" },
+		{ "Niveau %d ! Il paraît que plus loin, il y a des choses encore jamais vues.", "Level %d! They say further on there are things never seen before." } },
+	KILL = { { "Tiens, il avait quoi dans les poches, celui-là ?", "Hey, what did that one have in its pockets?" },
+		{ "Je me demande d'où il venait…", "I wonder where it came from…" } },
+	DEAD = { { "Oh ! Alors c'est ça, l'autre côté ? Raconte !", "Oh! So that's the other side? Tell me!" },
+		{ "Aïe… Tu as vu quelque chose de beau, au moins ?", "Ouch… Did you at least see something pretty?" } },
+	REZ = { { "Te revoilà ! C'était comment, là-bas ?", "You're back! What was it like over there?" } },
+	EAT = { { "C'est quoi, ce plat ? Ça vient d'où ?", "What's that dish? Where's it from?" },
+		{ "Miam ! Tu crois qu'on en trouve ailleurs ?", "Yum! Think we can find it elsewhere?" } },
+	VIEW = { { "Oh ! Je n'avais jamais vu ça ! On fait le tour ?", "Oh! I've never seen this! Shall we look around?" },
+		{ "Un endroit neuf ! Je veux tout voir, tout de suite !", "A new place! I want to see it all, right now!" },
+		{ "Regarde ! Et là ! Et là-bas ! C'est quoi, là-bas ?", "Look! And there! And over there! What's over there?" } },
+	IDLE = { { "Tu crois qu'il y a quoi derrière cette colline ?", "What do you think is behind that hill?" },
+		{ "Pourquoi le ciel est bleu, ici, et violet ailleurs ?", "Why is the sky blue here and purple elsewhere?" },
+		{ "J'ai compté les cailloux du chemin. Enfin, presque tous.", "I counted the pebbles on the path. Well, almost all of them." } },
+	EVOLVE = { { "Je grandis ! Me voilà %s ! Je vais voir encore plus loin !", "I'm growing! Now I'm %s! I'll see even further!" } },
+	CAMP = { { "Un feu de camp ! On se raconte ce qu'on a vu ?", "A campfire! Shall we share what we saw?" } },
+	LOOT = { { "Oh, c'est quoi ? Je peux regarder de plus près ?", "Ooh, what's that? Can I take a closer look?" },
+		{ "Un objet rare ! D'où il sort, celui-là ?", "A rare item! Where did that come from?" } },
+	QUEST = { { "Mission accomplie ! Et la suivante, elle mène où ?", "Mission complete! And where does the next one lead?" } },
+	ADVICE_ELITE = { { "%s ! Fascinant… de loin. De très loin.", "%s! Fascinating… from afar. Very far." },
+		{ "Je voudrais bien voir %s de plus près, mais c'est un élite. On contourne ?", "I'd love a closer look at %s, but it's an elite. Go around?" } },
+	ADVICE_HEALTH = { { "Tu es tout abîmé… On se pose, et tu me racontes ?", "You're all banged up… Let's sit, and you tell me about it?" } },
+	ADVICE_FOOD = { { "Plus que %d vivres… on goûte quoi, après ?", "Only %d food left… what do we taste next?" } },
+	ADVICE_BAGS = { { "Plus que %d places… mais je veux tout garder !", "Only %d slots left… but I want to keep everything!" } },
+	PHOTO = { { "Clic ! Pour me souvenir de chaque détail.", "Click! To remember every detail." } },
+	NOTICE = { { "Oh, c'est quoi, cet endroit ? On n'y était jamais passés !", "Oh, what's this place? We've never been here!" },
+		{ "Tiens, un coin qu'on ne connaissait pas !", "Hey, a spot we didn't know!" },
+		{ "Ce sentier… on le suit ? Juste pour voir ?", "That trail… shall we follow it? Just to see?" } },
+}
+
+T.glutton = {
+	FORMED = { { "Je viens de comprendre un truc : je pense tout le temps à manger. Je suis gourmand !", "I just figured something out: I think about food all the time. I'm a glutton!" } },
+	HELLO = { { "Salut ! Moi c'est %s. Il y a un goûter, dans cette aventure ?", "Hi! I'm %s. Is there a snack in this adventure?" },
+		{ "%s, à ton service ! Tu as quoi dans ton sac, à manger ?", "%s, at your service! What food's in your bag?" } },
+	LEVEL = { { "Niveau %d ! Ça se fête… avec un gâteau ?", "Level %d! That calls for… a cake?" },
+		{ "Niveau %d ! J'ai faim de victoire. Et de tarte.", "Level %d! I'm hungry for victory. And pie." },
+		{ "Niveau %d ! Un festin, vite !", "Level %d! A feast, quick!" } },
+	KILL = { { "Il sentait le rôti, celui-là, non ?", "That one smelled like roast, didn't it?" },
+		{ "Bien joué ! Ça creuse, le combat.", "Nice! Fighting makes me hungry." } },
+	DEAD = { { "Aïe… Je garde ton sac. Et ton casse-croûte.", "Ouch… I'll guard your bag. And your sandwich." } },
+	REZ = { { "Te revoilà ! On fête ça avec un en-cas ?", "You're back! Celebrate with a snack?" } },
+	EAT = { { "Enfin ! J'ai cru que tu ne mangerais jamais !", "Finally! I thought you'd never eat!" },
+		{ "Miam miam miam ! Tu m'en donnes la moitié ?", "Nom nom nom! Half for me?" },
+		{ "Ça sent tellement bon… je bave un peu, pardon.", "Smells so good… I'm drooling a little, sorry." } },
+	VIEW = { { "Joli coin ! Il y a une auberge, par ici ?", "Nice spot! Is there an inn around here?" },
+		{ "Quelle vue ! Parfait pour un pique-nique.", "What a view! Perfect for a picnic." } },
+	IDLE = { { "Je rêve d'une tourte aux champignons…", "I'm dreaming of a mushroom pie…" },
+		{ "Mon ventre gargouille. Tu as entendu ?", "My tummy's rumbling. Did you hear?" },
+		{ "Si les nuages étaient en sucre, je volerais.", "If clouds were made of sugar, I'd fly." } },
+	EVOLVE = { { "Je grandis ! Me voilà %s ! Il me faudra des plus grosses portions.", "I'm growing! Now I'm %s! I'll need bigger portions." } },
+	CAMP = { { "Un feu ! On fait griller quelque chose ?", "A fire! Shall we grill something?" } },
+	LOOT = { { "Ça brille… ça se mange ?", "It's shiny… can you eat it?" } },
+	QUEST = { { "Mission accomplie ! Il y a une récompense en chocolat ?", "Mission done! Is there a chocolate reward?" } },
+	ADVICE_ELITE = { { "%s… trop gros pour nous. Et sûrement pas comestible.", "%s… too big for us. And surely not edible." } },
+	ADVICE_HEALTH = { { "Tu es tout pâle ! Mange quelque chose, et donne-m'en un peu.", "You're so pale! Eat something, and give me a bit." } },
+	ADVICE_FOOD = { { "Plus que %d vivres ?! C'est la catastrophe !", "Only %d food left?! It's a disaster!" },
+		{ "%d vivres… on fait des réserves, s'il te plaît ?", "%d food… let's stock up, please?" } },
+	ADVICE_BAGS = { { "Plus que %d places… garde de la place pour les gâteaux.", "Only %d slots… save room for cakes." } },
+	PHOTO = { { "Clic ! Dommage qu'on ne puisse pas goûter les photos.", "Click! Too bad you can't taste pictures." } },
+	NOTICE = { { "Tu n'aurais pas un petit quelque chose à grignoter ?", "Got a little something to nibble?" },
+		{ "Ça fait longtemps qu'on n'a pas mangé, non ?", "It's been a while since we ate, hasn't it?" },
+		{ "J'ai un petit creux. Un tout petit. Énorme, en fait.", "I'm a bit peckish. A tiny bit. Huge, actually." } },
+}
+
+T.daring = {
+	FORMED = { { "Tu sais quoi ? Je n'ai peur de rien. Je crois que je suis téméraire !", "You know what? I'm afraid of nothing. I think I'm daring!" } },
+	HELLO = { { "Salut ! Moi c'est %s. On va se battre contre quoi, aujourd'hui ?", "Hi! I'm %s. What are we fighting today?" },
+		{ "%s, prêt au combat ! En avant !", "%s, ready for battle! Onward!" } },
+	LEVEL = { { "Niveau %d ! Plus rien ne nous arrête !", "Level %d! Nothing can stop us now!" },
+		{ "Niveau %d ! Trouvons quelqu'un de plus costaud !", "Level %d! Let's find someone tougher!" },
+		{ "Niveau %d ! Je sens la puissance !", "Level %d! I feel the power!" } },
+	KILL = { { "Ha ! Au suivant !", "Ha! Next!" },
+		{ "Trop facile. Il y en a des plus gros ?", "Too easy. Are there bigger ones?" },
+		{ "Encore ! Encore !", "Again! Again!" } },
+	DEAD = { { "On s'est battus comme des héros. Revanche !", "We fought like heroes. Rematch!" },
+		{ "Il a eu de la chance. La prochaine fois, c'est nous.", "Lucky shot. Next time, it's us." } },
+	REZ = { { "Debout ! On y retourne, et on gagne !", "Up! Back in there, and we win!" } },
+	EAT = { { "On mange vite et on repart au combat !", "Quick bite and back to battle!" } },
+	VIEW = { { "Nouvelle zone ! Il y a des monstres à affronter ?", "New zone! Any monsters to face?" },
+		{ "Ça sent l'aventure par ici !", "Smells like adventure around here!" } },
+	IDLE = { { "On attend quoi ? Il y a des ennemis à battre !", "What are we waiting for? There are foes to beat!" },
+		{ "Je m'entraîne à rugir. Grrr ! Pas mal, non ?", "I'm practising my roar. Grrr! Not bad, eh?" } },
+	EVOLVE = { { "Me voilà %s ! Les monstres n'ont qu'à bien se tenir !", "Now I'm %s! Monsters had better watch out!" } },
+	CAMP = { { "Une pause ? D'accord, mais courte !", "A break? Fine, but a short one!" } },
+	LOOT = { { "Un butin de guerrier ! Bien mérité.", "A warrior's loot! Well earned." } },
+	QUEST = { { "Mission accomplie ! Donne-m'en une plus dure.", "Mission done! Give me a harder one." } },
+	ADVICE_ELITE = { { "%s ! Un élite… j'adorerais, mais on n'est pas prêts. Pas encore.", "%s! An elite… I'd love to, but we're not ready. Not yet." },
+		{ "%s… même moi, je dis prudence. C'est dire.", "%s… even I say careful. That says it all." } },
+	ADVICE_HEALTH = { { "Même les héros soufflent. Repose-toi, et on y retourne.", "Even heroes catch their breath. Rest, then back at it." } },
+	ADVICE_FOOD = { { "Plus que %d vivres : un guerrier sans vivres, c'est un guerrier à terre.", "Only %d food: a warrior without food is a fallen warrior." } },
+	ADVICE_BAGS = { { "%d places : trop de trophées ! On vend ?", "%d slots: too many trophies! Sell some?" } },
+	PHOTO = { { "Clic ! Pour la postérité. On est des héros !", "Click! For posterity. We're heroes!" } },
+	NOTICE = { { "Tu as vu ça ? Quel combat ! Encore un comme ça !", "Did you see that? What a fight! Another one like that!" },
+		{ "Un élite à terre ! On est trop forts !", "An elite down! We're too strong!" } },
+}
+
+T.lazy = {
+	FORMED = { { "Bâille… j'ai compris : j'aime surtout me reposer. Je suis un peu paresseux.", "Yawn… I get it now: I mostly love resting. I'm a bit lazy." } },
+	HELLO = { { "Salut… moi c'est %s. On n'est pas pressés, hein ?", "Hi… I'm %s. We're not in a hurry, right?" },
+		{ "%s… à ton service. Après une petite sieste ?", "%s… at your service. After a little nap?" } },
+	LEVEL = { { "Niveau %d… bravo. On fait une pause pour fêter ça ?", "Level %d… well done. Pause to celebrate?" },
+		{ "Niveau %d ! Ouf, ça mérite une sieste.", "Level %d! Phew, that deserves a nap." } },
+	KILL = { { "Bien joué… moi, je t'ai encouragé. Allongé.", "Nice… I cheered for you. Lying down." },
+		{ "Encore un… tu ne te fatigues jamais ?", "Another one… don't you ever get tired?" } },
+	DEAD = { { "Allongé par terre… je te comprends, c'est reposant.", "Lying on the ground… I get it, it's restful." } },
+	REZ = { { "Déjà debout ? Tu aurais pu rester un peu…", "Up already? You could've stayed a bit…" } },
+	EAT = { { "Manger assis, c'est le bonheur.", "Eating sitting down is bliss." } },
+	VIEW = { { "Jolie vue… parfaite pour une sieste.", "Nice view… perfect for a nap." },
+		{ "Un nouvel endroit… on s'assoit pour le regarder ?", "A new place… shall we sit and look at it?" } },
+	IDLE = { { "Zzz… hein ? Non non, je ne dormais pas.", "Zzz… huh? No no, I wasn't sleeping." },
+		{ "On est bien, là. Ne bougeons plus jamais.", "This is nice. Let's never move again." },
+		{ "Bâille… quelle belle journée pour ne rien faire.", "Yawn… what a lovely day to do nothing." } },
+	EVOLVE = { { "Me voilà %s… grandir, c'est fatigant.", "Now I'm %s… growing up is tiring." } },
+	CAMP = { { "Un feu de camp ! Enfin ! Je ne bouge plus.", "A campfire! Finally! I'm not moving." },
+		{ "Ahh… le feu, la chaleur… réveille-moi demain.", "Ahh… the fire, the warmth… wake me tomorrow." } },
+	LOOT = { { "Joli… tu le portes, hein ? Moi je suis fatigué.", "Pretty… you carry it, right? I'm tired." } },
+	QUEST = { { "Mission accomplie ! On a bien mérité une pause.", "Mission done! We've earned a break." } },
+	ADVICE_ELITE = { { "%s… trop d'efforts. On fait le tour, tranquillement.", "%s… too much effort. Let's go around, nice and easy." } },
+	ADVICE_HEALTH = { { "Tu es épuisé… je propose une très, très longue pause.", "You're worn out… I suggest a very, very long break." } },
+	ADVICE_FOOD = { { "Plus que %d vivres… il faudra marcher jusqu'au marchand. Pff.", "Only %d food… we'll have to walk to the vendor. Ugh." } },
+	ADVICE_BAGS = { { "%d places… et tout ce poids à porter. Pense à moi.", "%d slots… and all that weight to carry. Think of me." } },
+	PHOTO = { { "Clic… pas trop vite, je prends la pose. Allongé.", "Click… not too fast, I'm posing. Lying down." } },
+	NOTICE = { { "Ça fait longtemps qu'on ne s'est pas reposés… je dis ça, je dis rien.", "It's been ages since we rested… just saying." },
+		{ "Une auberge, un feu, un lit… tu ne trouves pas que ça manque ?", "An inn, a fire, a bed… don't you miss them?" } },
+}
+
+T.teasing = {
+	FORMED = { { "Héhé, j'adore te taquiner. Je crois que c'est mon caractère : taquin !", "Heh, I love teasing you. I think that's who I am: a teaser!" } },
+	HELLO = { { "Salut ! Moi c'est %s. Essaie de ne pas te perdre, cette fois.", "Hi! I'm %s. Try not to get lost this time." },
+		{ "%s à ton service ! Enfin, quand j'en ai envie.", "%s at your service! Well, when I feel like it." } },
+	LEVEL = { { "Niveau %d ! Il était temps, non ?", "Level %d! About time, eh?" },
+		{ "Niveau %d ! Je n'ai rien fait, mais je prends la moitié du mérite.", "Level %d! I did nothing, but I'll take half the credit." },
+		{ "Niveau %d ! Pas mal… pour toi.", "Level %d! Not bad… for you." } },
+	KILL = { { "Pas mal ! Tu as visé les yeux fermés ?", "Not bad! Did you aim with your eyes closed?" },
+		{ "Il est tombé tout seul, non ? Je plaisante !", "It fell by itself, right? Just kidding!" } },
+	DEAD = { { "Oups ! Celle-là, je la raconterai à tout le monde.", "Oops! I'm telling everyone about this one." },
+		{ "Bravo, tu as gagné… un aller simple au cimetière.", "Congrats, you won… a one-way trip to the graveyard." } },
+	REZ = { { "Te revoilà ! On fait comme si de rien n'était ?", "You're back! Shall we pretend it never happened?" } },
+	EAT = { { "Tu manges encore ? Tu vas finir aussi rond que moi.", "Eating again? You'll end up as round as me." } },
+	VIEW = { { "Une nouvelle zone ! Tu sais lire une carte, au moins ?", "A new zone! You can read a map, right?" },
+		{ "Joli ! Pour une fois qu'on ne tourne pas en rond.", "Nice! For once we're not going in circles." } },
+	IDLE = { { "Tu as quelque chose sur le nez. Non, je rigole.", "You've got something on your nose. No, kidding." },
+		{ "Je parie que tu ne sais pas où on est. Moi non plus !", "Bet you don't know where we are. Me neither!" } },
+	EVOLVE = { { "Me voilà %s ! Bientôt plus grand que toi.", "Now I'm %s! Soon taller than you." } },
+	CAMP = { { "Un feu ! Attention à tes sourcils, cette fois.", "A fire! Mind your eyebrows this time." } },
+	LOOT = { { "Ça brille ! Ça t'ira mieux qu'à moi. Quoique…", "Shiny! It'll suit you better than me. Then again…" } },
+	QUEST = { { "Mission accomplie ! Tu vois, quand tu veux.", "Mission done! See, you can when you want." } },
+	ADVICE_ELITE = { { "%s ! Même toi, tu ne devrais pas tenter ça.", "%s! Even you shouldn't try that." } },
+	ADVICE_HEALTH = { { "Tu as une mine affreuse ! Repose-toi, pour mes yeux.", "You look awful! Rest, for my eyes' sake." } },
+	ADVICE_FOOD = { { "Plus que %d vivres ? Tu as tout mangé en cachette ?", "Only %d food? Did you eat it all in secret?" } },
+	ADVICE_BAGS = { { "%d places ! Tu ramasses vraiment tout, hein ?", "%d slots! You really pick up everything, huh?" } },
+	PHOTO = { { "Clic ! Celle-là, je la garde pour te faire chanter.", "Click! Keeping this one for blackmail." } },
+	NOTICE = { { "Encore ?! Tu le fais exprès, avoue.", "Again?! You're doing it on purpose, admit it." },
+		{ "Deux fois de suite… je commence à tenir le compte.", "Twice in a row… I'm starting to keep score." } },
+}
+
+T.cuddly = {
+	FORMED = { { "Je t'aime tellement… j'ai compris : je suis câlin. Un câlin ?", "I love you so much… I get it now: I'm cuddly. A hug?" } },
+	HELLO = { { "Salut ! Moi c'est %s. Un câlin pour commencer ?", "Hi! I'm %s. A hug to start?" },
+		{ "%s est là ! Et tellement content de te voir !", "%s is here! And so happy to see you!" } },
+	LEVEL = { { "Niveau %d ! Je suis si fier de toi !", "Level %d! I'm so proud of you!" },
+		{ "Niveau %d ! Câlin de félicitations !", "Level %d! Congratulations hug!" } },
+	KILL = { { "Tu m'as protégé ! Merci !", "You protected me! Thank you!" },
+		{ "Bravo ! Viens là que je te félicite.", "Well done! Come here so I can congratulate you." } },
+	DEAD = { { "Non… je reste près de toi, je ne bouge pas.", "No… I'm staying right by you, not moving." },
+		{ "Je t'attends ici. Reviens vite, tu me manques déjà.", "I'll wait here. Come back soon, I miss you already." } },
+	REZ = { { "Te revoilà ! Je t'ai tellement attendu ! Câlin !", "You're back! I waited so long! Hug!" } },
+	EAT = { { "On mange ensemble, c'est encore meilleur.", "Eating together makes it even better." } },
+	VIEW = { { "C'est beau… et encore plus beau avec toi.", "It's beautiful… even more with you." } },
+	IDLE = { { "Je suis bien, là, avec toi.", "I'm happy here, with you." },
+		{ "Tu sais que tu es mon aventurier préféré ?", "You know you're my favourite adventurer?" } },
+	EVOLVE = { { "Me voilà %s ! Grâce à toi. Merci, merci !", "Now I'm %s! Thanks to you. Thank you, thank you!" } },
+	CAMP = { { "Un feu… on se serre l'un contre l'autre ?", "A fire… shall we snuggle up?" } },
+	LOOT = { { "Un cadeau ! C'est pour moi ? Non ? Pas grave.", "A present! Is it for me? No? That's fine." } },
+	QUEST = { { "Mission accomplie ! Tu es formidable.", "Mission done! You're wonderful." } },
+	ADVICE_ELITE = { { "%s… j'ai peur. Reste près de moi, on passe ailleurs ?", "%s… I'm scared. Stay close, go another way?" } },
+	ADVICE_HEALTH = { { "Tu as mal ? Viens, on se repose, je veille sur toi.", "Are you hurt? Come, let's rest, I'll watch over you." } },
+	ADVICE_FOOD = { { "Plus que %d vivres… je ne veux pas que tu aies faim.", "Only %d food… I don't want you to go hungry." } },
+	ADVICE_BAGS = { { "%d places… garde-m'en une, je me ferai tout petit.", "%d slots… save me one, I'll make myself tiny." } },
+	PHOTO = { { "Clic ! Une photo de nous deux. Je la garde contre mon cœur.", "Click! A picture of us. I'll keep it close to my heart." } },
+	NOTICE = { { "Tu ne m'as pas caressé depuis longtemps… je dis ça comme ça.", "You haven't petted me in a while… just saying." },
+		{ "Un petit câlin ? Juste un ? Clique sur moi !", "A little cuddle? Just one? Click me!" } },
+}
+
+-- Caractères propres à une apparence
+T.wise = {
+	FORMED = { { "Hou… on dit que la sagesse vient avec les plumes. La voilà.", "Hoo… they say wisdom comes with feathers. Here it is." } },
+	HELLO = { { "Hou. Je suis %s. Tout voyage commence par un premier pas.", "Hoo. I am %s. Every journey begins with a first step." },
+		{ "%s te salue. Le chemin nous attend, sans hâte.", "%s greets you. The road awaits, unhurried." } },
+	LEVEL = { { "Niveau %d. Ce n'est pas le sommet qui compte, mais l'ascension.", "Level %d. It's not the summit that matters, but the climb." },
+		{ "Niveau %d. Chaque pas t'apprend quelque chose. Hou.", "Level %d. Every step teaches you something. Hoo." } },
+	KILL = { { "La victoire appartient à qui sait attendre. Bien.", "Victory belongs to those who wait. Good." },
+		{ "Un combat de plus. Que t'a-t-il appris ?", "One more fight. What did it teach you?" } },
+	DEAD = { { "Tomber n'est rien. Se relever est tout.", "Falling is nothing. Rising is everything." } },
+	REZ = { { "Te voilà relevé. Plus sage qu'avant, j'espère.", "Back on your feet. Wiser than before, I hope." } },
+	EAT = { { "Un ventre plein garde l'esprit clair.", "A full belly keeps the mind clear." } },
+	VIEW = { { "Hou… chaque terre a son histoire. Écoute-la.", "Hoo… every land has its story. Listen to it." },
+		{ "Celui qui regarde voit loin. Regardons.", "Who looks, sees far. Let us look." } },
+	IDLE = { { "Le silence est aussi une réponse.", "Silence is also an answer." },
+		{ "La lune connaît tous les chemins. Moi, presque tous.", "The moon knows every path. I know almost all." } },
+	EVOLVE = { { "Me voilà %s. Grandir, c'est d'abord comprendre.", "Now I am %s. To grow is first to understand." } },
+	CAMP = { { "Le feu réchauffe le corps ; les histoires, l'esprit.", "Fire warms the body; stories, the mind." } },
+	LOOT = { { "Un trésor. Mais le vrai trésor, c'est le voyage.", "A treasure. But the real treasure is the journey." } },
+	QUEST = { { "Mission accomplie. Une promesse tenue vaut de l'or.", "Mission complete. A promise kept is worth gold." } },
+	ADVICE_ELITE = { { "%s. Le courage sans prudence n'est que folie.", "%s. Courage without caution is mere folly." } },
+	ADVICE_HEALTH = { { "Le sage se repose avant d'être las. Il est temps.", "The wise rest before they are weary. It is time." } },
+	ADVICE_FOOD = { { "Plus que %d vivres. Qui prévoit ne manque de rien.", "Only %d food. Who plans ahead lacks nothing." } },
+	ADVICE_BAGS = { { "%d places. Qui veut tout garder finit par tout porter.", "%d slots. Who keeps everything ends up carrying everything." } },
+	PHOTO = { { "Clic. Un instant figé, pour s'en souvenir.", "Click. A moment frozen, to remember." } },
+	NOTICE = { { "Hou. Terre nouvelle, leçon nouvelle.", "Hoo. New land, new lesson." },
+		{ "Ici, on dit que le vent porte de vieilles histoires.", "Here, they say the wind carries old stories." } },
+}
+
+T.parrot = {
+	FORMED = { { "Croâ ! Perroquet ! Perroquet ! Je répète tout, c'est mon caractère !", "Squawk! Parrot! Parrot! I repeat everything, that's who I am!" } },
+	HELLO = { { "Croâ ! %s ! Bonjour bonjour ! Croâ !", "Squawk! %s! Hello hello! Squawk!" },
+		{ "Bonjour ! Croâ ! On part ? On part !", "Hello! Squawk! Off we go? Off we go!" } },
+	LEVEL = { { "Niveau %d ! Niveau ! Niveau ! Croâ !", "Level %d! Level! Level! Squawk!" },
+		{ "Bravo ! Bravo ! Niveau %d !", "Bravo! Bravo! Level %d!" } },
+	KILL = { { "Bien joué ! Bien joué ! Croâ !", "Nice one! Nice one! Squawk!" },
+		{ "Un de moins ! Un de moins !", "One less! One less!" } },
+	DEAD = { { "Aïe ! Aïe ! Croâ… je t'attends ! Je t'attends !", "Ouch! Ouch! Squawk… I'll wait! I'll wait!" } },
+	REZ = { { "Revenu ! Revenu ! Croâ !", "Back! Back! Squawk!" } },
+	EAT = { { "Miam ! Miam ! Une graine ? Une graine ?", "Yum! Yum! A seed? A seed?" } },
+	VIEW = { { "Nouveau ! Nouveau ! Joli ! Croâ !", "New! New! Pretty! Squawk!" },
+		{ "Regarde ! Regarde ! Croâ !", "Look! Look! Squawk!" } },
+	IDLE = { { "Coco veut un biscuit ! Coco veut un biscuit !", "Polly wants a cracker! Polly wants a cracker!" },
+		{ "Croâ ? Croâ. Croâ !", "Squawk? Squawk. Squawk!" } },
+	EVOLVE = { { "%s ! Je grandis ! Je grandis ! Croâ !", "%s! I'm growing! I'm growing! Squawk!" } },
+	CAMP = { { "Feu ! Feu ! Chaud ! Croâ !", "Fire! Fire! Warm! Squawk!" } },
+	LOOT = { { "Ça brille ! Ça brille ! À moi ! Croâ !", "Shiny! Shiny! Mine! Squawk!" } },
+	QUEST = { { "Mission accomplie ! Mission accomplie !", "Mission complete! Mission complete!" } },
+	ADVICE_ELITE = { { "Danger ! Danger ! %s ! Croâ !", "Danger! Danger! %s! Squawk!" } },
+	ADVICE_HEALTH = { { "Repos ! Repos ! Tu es blessé ! Croâ !", "Rest! Rest! You're hurt! Squawk!" } },
+	ADVICE_FOOD = { { "%d vivres ! Pas assez ! Pas assez ! Croâ !", "%d food! Not enough! Not enough! Squawk!" } },
+	ADVICE_BAGS = { { "%d places ! Sacs pleins ! Sacs pleins ! Croâ !", "%d slots! Bags full! Bags full! Squawk!" } },
+	PHOTO = { { "Clic ! Clic ! Croâ !", "Click! Click! Squawk!" } },
+	NOTICE = { { "%s ! %s ! Croâ !", "%s! %s! Squawk!" },
+		{ "Nouvelle zone ! %s ! Joli nom ! Croâ !", "New zone! %s! Nice name! Squawk!" } },
+}
+
+T.mystic = {
+	FORMED = { { "Les esprits me murmurent ce que je suis… mystique. Je l'ai toujours senti.", "The spirits whisper what I am… mystic. I always felt it." } },
+	HELLO = { { "Je suis %s… les étoiles m'ont guidé jusqu'à toi.", "I am %s… the stars led me to you." },
+		{ "%s… je sens que ce voyage était écrit.", "%s… I sense this journey was written." } },
+	LEVEL = { { "Niveau %d… les astres s'alignent.", "Level %d… the stars align." },
+		{ "Niveau %d. Je l'avais vu dans les flammes.", "Level %d. I saw it in the flames." } },
+	KILL = { { "Son esprit s'en va… paix à lui.", "Its spirit departs… peace to it." },
+		{ "Les esprits approuvent.", "The spirits approve." } },
+	DEAD = { { "Le voile est mince, ici… reviens vers la lumière.", "The veil is thin here… come back to the light." } },
+	REZ = { { "Tu as traversé le voile et tu en es revenu. Rare présage.", "You crossed the veil and came back. A rare omen." } },
+	EAT = { { "Même les esprits ont faim, parfois.", "Even spirits get hungry, sometimes." } },
+	VIEW = { { "Cet endroit vibre… quelque chose d'ancien dort ici.", "This place hums… something ancient sleeps here." },
+		{ "Je sens une présence… bienveillante, je crois.", "I sense a presence… a kind one, I think." } },
+	IDLE = { { "Les feuilles murmurent. Tu entends ?", "The leaves are whispering. Do you hear?" },
+		{ "Je flotte un peu plus haut quand la lune se lève.", "I float a little higher when the moon rises." } },
+	EVOLVE = { { "Me voilà %s… ma lueur grandit.", "Now I am %s… my glow grows." } },
+	CAMP = { { "Le feu danse… il raconte l'avenir.", "The fire dances… it tells the future." } },
+	LOOT = { { "Cet objet garde un écho… il a une histoire.", "This item holds an echo… it has a story." } },
+	QUEST = { { "Une promesse accomplie apaise les esprits.", "A fulfilled promise soothes the spirits." } },
+	ADVICE_ELITE = { { "%s… une aura sombre. Je ne le sens pas.", "%s… a dark aura. I don't like it." } },
+	ADVICE_HEALTH = { { "Ta lumière faiblit… repose-toi, laisse-la revenir.", "Your light is fading… rest, let it return." } },
+	ADVICE_FOOD = { { "Plus que %d vivres… le présage n'est pas bon.", "Only %d food… the omen is not good." } },
+	ADVICE_BAGS = { { "%d places… trop d'objets troublent les esprits.", "%d slots… too many things trouble the spirits." } },
+	PHOTO = { { "Clic… un instant capturé hors du temps.", "Click… a moment caught outside of time." } },
+	NOTICE = { { "La nuit est tombée… les étoiles sont bavardes, ce soir.", "Night has fallen… the stars are chatty tonight." },
+		{ "Regarde le ciel. Quelque chose y passe.", "Look at the sky. Something is passing." } },
+}
+
+T.zen = {
+	FORMED = { { "Lentement… tranquillement… je suis zen. Tout va bien.", "Slowly… calmly… I am zen. All is well." } },
+	HELLO = { { "Bonjour. Je suis %s. Rien ne presse.", "Hello. I am %s. No rush." },
+		{ "%s. Respire. On y va, doucement.", "%s. Breathe. Let's go, gently." } },
+	LEVEL = { { "Niveau %d. Pas à pas, on arrive toujours.", "Level %d. Step by step, we always get there." },
+		{ "Niveau %d. Bien. Respire, savoure.", "Level %d. Good. Breathe, savour it." } },
+	KILL = { { "Calme. Précis. Bien.", "Calm. Precise. Good." },
+		{ "Le combat est passé. Retrouve ton souffle.", "The fight has passed. Find your breath." } },
+	DEAD = { { "Tout passe. Même ça.", "Everything passes. Even this." } },
+	REZ = { { "Te revoilà. Rien n'est perdu.", "There you are. Nothing is lost." } },
+	EAT = { { "Mange lentement. Chaque bouchée compte.", "Eat slowly. Every bite counts." } },
+	VIEW = { { "Un endroit nouveau. Prenons le temps de le regarder.", "A new place. Let's take time to look at it." } },
+	IDLE = { { "Inspire… expire… tu vois ? Ça va mieux.", "Breathe in… breathe out… see? Better." },
+		{ "La tortue arrive toujours. Toujours.", "The tortoise always arrives. Always." } },
+	EVOLVE = { { "Me voilà %s. Sans me presser.", "Now I am %s. Without hurrying." } },
+	CAMP = { { "Un feu. Le calme. Parfait.", "A fire. Calm. Perfect." } },
+	LOOT = { { "Joli. Mais rien ne vaut la paix.", "Nice. But nothing beats peace." } },
+	QUEST = { { "Accompli. Sans stress.", "Done. Stress-free." } },
+	ADVICE_ELITE = { { "%s. Pas la peine. On le laisse en paix.", "%s. Not worth it. Let's leave it in peace." } },
+	ADVICE_HEALTH = { { "Ton souffle est court. Assieds-toi, respire.", "You're short of breath. Sit, breathe." } },
+	ADVICE_FOOD = { { "Plus que %d vivres. Pas d'inquiétude, mais prévoyons.", "Only %d food. No worry, but let's plan." } },
+	ADVICE_BAGS = { { "%d places. Moins on porte, plus on avance.", "%d slots. The less we carry, the further we go." } },
+	PHOTO = { { "Clic. Un moment de paix, gardé.", "Click. A peaceful moment, kept." } },
+	NOTICE = { { "Ton souffle est court. Prends une minute pour toi.", "You're short of breath. Take a minute for yourself." },
+		{ "Doucement. Le chemin ne s'en ira pas.", "Gently. The road isn't going anywhere." } },
+}
+
+T.sly = {
+	FORMED = { { "Sss… je vois tout, je calcule tout. Je suis rusé. Sss.", "Sss… I see everything, I plan everything. I'm sly. Sss." } },
+	HELLO = { { "Sss… je suis %s. On va faire de bonnes affaires, toi et moi.", "Sss… I'm %s. We'll make good deals, you and I." },
+		{ "%s, à ton service… pour l'instant. Sss.", "%s, at your service… for now. Sss." } },
+	LEVEL = { { "Niveau %d… exactement comme prévu. Sss.", "Level %d… exactly as planned. Sss." },
+		{ "Niveau %d. Ils ne nous voient pas venir.", "Level %d. They don't see us coming." } },
+	KILL = { { "Sss… il n'a rien vu venir.", "Sss… it never saw it coming." },
+		{ "Proprement fait. Fouille-le, vite.", "Cleanly done. Search it, quick." } },
+	DEAD = { { "Sss… pas prévu, ça. On changera de plan.", "Sss… didn't plan that. We'll change tactics." } },
+	REZ = { { "Te revoilà. On revient par derrière, cette fois.", "You're back. We come from behind this time." } },
+	EAT = { { "Mange. Un ventre vide fait de mauvais calculs.", "Eat. An empty stomach makes bad plans." } },
+	VIEW = { { "Nouvelle zone… repère les sorties. Toujours.", "New zone… spot the exits. Always." },
+		{ "Sss… il y a sûrement des trésors cachés par ici.", "Sss… there must be hidden treasures here." } },
+	IDLE = { { "Je surveille. Quelqu'un nous observe… ou pas.", "I'm watching. Someone's watching us… or not." },
+		{ "Sss… j'ai un plan. Je te le dirai plus tard.", "Sss… I have a plan. I'll tell you later." } },
+	EVOLVE = { { "Me voilà %s… et plus malin encore. Sss.", "Now I'm %s… and even sharper. Sss." } },
+	CAMP = { { "Un feu… on nous voit de loin. Mais il fait bon.", "A fire… they can see us from afar. But it's cosy." } },
+	LOOT = { { "Sss… ça se revend cher, ça.", "Sss… that sells for a lot." },
+		{ "Joli butin. Garde-le, ou vends-le au bon moment.", "Nice loot. Keep it, or sell at the right time." } },
+	QUEST = { { "Mission accomplie. Négocie la récompense, la prochaine fois.", "Mission done. Haggle the reward next time." } },
+	ADVICE_ELITE = { { "%s… on ne l'affronte pas de face. On le contourne. Sss.", "%s… we don't face it head-on. We go around. Sss." } },
+	ADVICE_HEALTH = { { "Tu es blessé. Recule, soigne-toi, frappe ensuite.", "You're hurt. Back off, heal, strike later." } },
+	ADVICE_FOOD = { { "Plus que %d vivres. Achète avant la pénurie, pas après.", "Only %d food. Buy before the shortage, not after." } },
+	ADVICE_BAGS = { { "%d places. Vends le rebut, garde ce qui rapporte.", "%d slots. Sell the junk, keep what pays." } },
+	PHOTO = { { "Clic. Une preuve, au cas où. Sss.", "Click. Evidence, just in case. Sss." } },
+	NOTICE = { { "Sss… joli butin. Je l'avais repéré avant toi.", "Sss… nice loot. I spotted it before you." },
+		{ "Ça, ça vaut de l'or. Garde-le bien.", "That's worth gold. Keep it safe." } },
+}
+
+T.mischievous = {
+	FORMED = { { "Hihi ! J'adore les farces et les paillettes. Je suis espiègle !", "Hehe! I love pranks and sparkles. I'm mischievous!" } },
+	HELLO = { { "Coucou ! Moi c'est %s ! Tu veux voir un tour de magie ?", "Hi hi! I'm %s! Want to see a magic trick?" },
+		{ "%s est là ! Attention, ça va pétiller !", "%s is here! Watch out, it's gonna sparkle!" } },
+	LEVEL = { { "Niveau %d ! Paillettes pour tout le monde !", "Level %d! Sparkles for everyone!" },
+		{ "Niveau %d ! Hihi, je t'ai mis des étincelles dans les cheveux.", "Level %d! Hehe, I put sparks in your hair." } },
+	KILL = { { "Pouf ! Disparu ! Comme par magie.", "Poof! Gone! Like magic." },
+		{ "Hihi, il a fait une drôle de tête !", "Hehe, it made a funny face!" } },
+	DEAD = { { "Oups ! C'était pas une farce, ça…", "Oops! That wasn't a prank…" } },
+	REZ = { { "Te revoilà ! Abracadabra !", "You're back! Abracadabra!" } },
+	EAT = { { "J'ai saupoudré ton plat de poudre féerique. Juste un peu.", "I sprinkled fairy dust on your meal. Just a little." } },
+	VIEW = { { "Ooh ! Ici, il faut absolument faire une bêtise !", "Ooh! We absolutely must do something silly here!" },
+		{ "Nouvel endroit, nouvelles farces !", "New place, new pranks!" } },
+	IDLE = { { "Et si on cachait les bottes du prochain passant ?", "What if we hid the next passer-by's boots?" },
+		{ "Je fais des bulles. Regarde ! Pop !", "I'm blowing bubbles. Look! Pop!" },
+		{ "Tu as entendu ce bruit ? C'était moi ! Hihi.", "Did you hear that noise? It was me! Hehe." } },
+	EVOLVE = { { "Me voilà %s ! Encore plus de paillettes !", "Now I'm %s! Even more sparkles!" } },
+	CAMP = { { "Un feu ! Je peux faire des étincelles bleues ? Regarde !", "A fire! Can I make blue sparks? Look!" } },
+	LOOT = { { "Ça brille ! Presque autant que moi.", "Shiny! Almost as much as me." } },
+	QUEST = { { "Mission accomplie ! Tadaaa !", "Mission complete! Ta-daaa!" } },
+	ADVICE_ELITE = { { "%s ! Lui, on ne lui fait pas de farce. On file !", "%s! We don't prank that one. Let's scram!" } },
+	ADVICE_HEALTH = { { "Tu es tout cabossé ! Une petite pause, et je te fais rire.", "You're all dented! A short break, and I'll make you laugh." } },
+	ADVICE_FOOD = { { "Plus que %d vivres ! J'en ai peut-être caché quelques-uns. Peut-être.", "Only %d food! I may have hidden some. Maybe." } },
+	ADVICE_BAGS = { { "%d places ! Je n'y suis pour rien. Enfin, presque.", "%d slots! Not my fault. Well, almost." } },
+	PHOTO = { { "Clic ! Je t'ai fait des oreilles de lapin, hihi.", "Click! I gave you bunny ears, hehe." } },
+	NOTICE = { { "J'ai une idée de bêtise… tu veux savoir ? Non ? Tant pis !", "I've got a silly idea… want to know? No? Oh well!" },
+		{ "Psst ! Regarde derrière toi ! Hihi, rien du tout.", "Psst! Look behind you! Hehe, nothing at all." } },
+}
+
+-- ---------------------------------------------------------------------------
+-- Clés : COMP_SAY_<RÉSERVOIR>__<caractère>[_n] ; réservoirs « LEVEL__curious »
+-- ---------------------------------------------------------------------------
+local FR, EN, POOLS = {}, {}, {}
+for trait, pools in pairs(T) do
+	for pool, lines in pairs(pools) do
+		local name = pool .. "__" .. trait
+		local keys = {}
+		for index, pair in ipairs(lines) do
+			local key = "COMP_SAY_" .. name .. (index > 1 and ("_" .. index) or "")
+			FR[key], EN[key] = pair[1], pair[2]
+			keys[index] = key
+		end
+		POOLS[name] = keys
+	end
+end
+ns.RegisterStrings(FR, EN)
+if type(ns.COMPANION_POOLS) == "table" then
+	for name, keys in pairs(POOLS) do ns.COMPANION_POOLS[name] = keys end
+end
+-- même registre que les répliques communes (contrôle de parité fr/en)
+local shared = ns.COMPANION_LINE_STRINGS
+if type(shared) == "table" then
+	for key, text in pairs(FR) do shared.fr[key], shared.en[key] = text, EN[key] end
+end
+ns.PERSONALITY_POOLS = POOLS
+ns.PERSONALITY_LINES = T
+ns.PERSONALITY_LINE_STRINGS = { fr = FR, en = EN }
+
+if ns.Mark then ns.Mark("PersonalityLines") end

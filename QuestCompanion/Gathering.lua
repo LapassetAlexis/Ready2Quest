@@ -245,6 +245,8 @@ function ns:GatheringRecord(itemID, count, zoneID)
 	local entry = Items()[itemID]
 	if not entry then return nil end
 	count = tonumber(count) or 1
+	-- récolter nourrit la curiosité du compagnon, à chaque fois
+	if self.CompanionAdd and ns.COMPANION_CURIOSITY then self:CompanionAdd("curiosity", ns.COMPANION_CURIOSITY.gather) end
 	local data = self:GatheringData()
 	local record = data[itemID]
 	local first = record == nil

@@ -26,6 +26,7 @@ local PART_TAB = { villages = "explore", bestiary = "combat", named = "combat", 
 local FR = {
 	JRN_SEC_completion     = "Complétion",
 	JRN_SEC_evolution      = "Évolution",
+	JRN_SEC_memories       = "Souvenirs",
 	JRN_ZONE_PICK          = "Zone : %s",
 	JRN_ZONE_HERE          = "%s (ici)",
 	JRN_ZONE_NONE          = "Aucune zone pour l'instant : explore, ton carnet se remplit tout seul.",
@@ -77,6 +78,8 @@ local FR = {
 	JRN_NEED_mood_3        = "un butin rare lui plaît, chaque ennemi vaincu un peu",
 	JRN_NEED_curiosity_1   = "découvre de nouvelles zones et sous-zones",
 	JRN_NEED_curiosity_2   = "gagne des tampons : villages, capitales, donjons, rares",
+	JRN_NEED_curiosity_3   = "même tout exploré : reviens dans une zone pas vue depuis 2 h, entre en donjon, vaincs un élite ou un rare, prends un griffon, ouvre un coffre, récolte",
+	JRN_NEED_TIP_SERENE    = "Toutes ses évolutions faites : il ne descend plus sous %d %%.",
 	JRN_EVO_HOW            = "Comment ça marche",
 	JRN_EVO_HOW_1          = "Ton niveau ouvre chaque étape : 10, 20, 40 et 60.",
 	JRN_EVO_HOW_2          = "Pour la franchir, il doit être heureux : ses quatre envies à %d %% ou plus. Mange, repose-toi, rends des quêtes, explore.",
@@ -88,6 +91,7 @@ local FR = {
 local EN = {
 	JRN_SEC_completion     = "Completion",
 	JRN_SEC_evolution      = "Evolution",
+	JRN_SEC_memories       = "Memories",
 	JRN_ZONE_PICK          = "Zone: %s",
 	JRN_ZONE_HERE          = "%s (here)",
 	JRN_ZONE_NONE          = "No zone yet: explore, your journal fills itself.",
@@ -138,6 +142,8 @@ local EN = {
 	JRN_NEED_mood_3        = "rare loot pleases it, every foe defeated a little",
 	JRN_NEED_curiosity_1   = "discover new zones and subzones",
 	JRN_NEED_curiosity_2   = "earn stamps: villages, capitals, dungeons, rares",
+	JRN_NEED_curiosity_3   = "even with everything explored: come back to a zone unseen for 2 h, enter a dungeon, defeat an elite or a rare, take a flight, open a chest, gather",
+	JRN_NEED_TIP_SERENE    = "All its evolutions done: it never goes below %d %%.",
 	JRN_EVO_HOW            = "How it works",
 	JRN_EVO_HOW_1          = "Your level opens each stage: 10, 20, 40 and 60.",
 	JRN_EVO_HOW_2          = "To go through, it must be happy: all four needs at %d %% or more. Eat, rest, turn in quests, explore.",
@@ -305,7 +311,7 @@ end
 -- Infobulle d'une envie du compagnon : valeur, seuil du bonheur, et ce qui la
 -- remplit (les gains réels de Companion.lua : repas, repos, caresse, quêtes,
 -- niveaux, butin rare, exploration, tampons)
-ns.NEED_TIP_LINES = { hunger = 2, energy = 3, mood = 3, curiosity = 2 }
+ns.NEED_TIP_LINES = { hunger = 2, energy = 3, mood = 3, curiosity = 3 }
 function ns:NeedTooltipLines(key)
 	local data = self.CompanionData and self:CompanionData() or { needs = {} }
 	local value = math.floor(tonumber(data.needs and data.needs[key]) or 0)
@@ -321,6 +327,9 @@ function ns:NeedTooltipLines(key)
 		lines[#lines + 1] = "- " .. tostring(L["JRN_NEED_" .. key .. "_" .. index])
 	end
 	lines[#lines + 1] = L.JRN_NEED_TIP_DECAY
+	if (tonumber(data.stage) or 1) >= #(ns.COMPANION_STAGES or {}) and ns.COMPANION_SERENE_FLOOR then
+		lines[#lines + 1] = self:F("JRN_NEED_TIP_SERENE", ns.COMPANION_SERENE_FLOOR)
+	end
 	return lines, value >= happyMin
 end
 
@@ -511,7 +520,10 @@ function ns:EnsureJournalWindow()
 	local top = frame.contentTop - 8
 
 	frame.sections = {}
-	for index, section in ipairs({ "completion", "evolution" }) do
+	-- « Souvenirs » : l'album du compagnon (Memories.lua)
+	local sections = { "completion", "evolution" }
+	if self.BuildMemoriesPane then sections[3] = "memories" end
+	for index, section in ipairs(sections) do
 		local button = Theme.CreateButton(frame, 130, 22, L["JRN_SEC_" .. section], function() ns:SelectJournalKind(section) end)
 		button:SetPoint("TOPLEFT", frame, "TOPLEFT", 14 + (index - 1) * 136, top)
 		frame.sections[section] = button
@@ -519,6 +531,7 @@ function ns:EnsureJournalWindow()
 
 	BuildCompletion(self, frame, top)
 	BuildEvolution(self, frame, top)
+	if self.BuildMemoriesPane then self:BuildMemoriesPane(frame, top, WIDTH - 28) end
 
 	if frame.EnableMouseWheel then frame:EnableMouseWheel(true) end
 	frame:SetScript("OnMouseWheel", function(_, delta) ns:ScrollJournal(delta) end)
@@ -529,12 +542,16 @@ function ns:EnsureJournalWindow()
 	return frame
 end
 
--- « goals » / « evolution » : Évolution ; tout le reste : Complétion
--- (« completion », ou un ancien nom d'onglet)
+-- « goals » / « evolution » : Évolution ; « memories » : Souvenirs ; tout le
+-- reste : Complétion (« completion », ou un ancien nom d'onglet)
 function ns:SelectJournalKind(kind)
 	local frame = self:EnsureJournalWindow()
 	if not frame then return end
-	frame.kind = (kind == "evolution" or kind == "goals") and "evolution" or "completion"
+	if kind == "memories" and frame.mem then
+		frame.kind = "memories"
+	else
+		frame.kind = (kind == "evolution" or kind == "goals") and "evolution" or "completion"
+	end
 	frame.offset = 0
 	self:RefreshJournal()
 end
@@ -775,7 +792,7 @@ end
 function ns:RefreshJournal()
 	local frame = self.journalFrame
 	if not frame then return end
-	local section = frame.kind == "evolution" and "evolution" or "completion"
+	local section = (frame.kind == "evolution" or (frame.kind == "memories" and frame.mem)) and frame.kind or "completion"
 	frame.kind = section
 	for key, button in pairs(frame.sections) do TabColor(button, key == section) end
 	local counts = self:JournalCounts()
@@ -783,7 +800,14 @@ function ns:RefreshJournal()
 		frame.subtitle:SetText(self:F("JRN_TOTAL", counts.total)
 			.. (ModuleOn() and "" or ("  " .. Theme.T_GREY .. L.MODULE_OFF .. "|r")))
 	end
-	if section == "evolution" then
+	if frame.mem then frame.mem:Hide() end
+	if section == "memories" then
+		frame.comp:Hide()
+		frame.comp.zoneList:Hide()
+		frame.evo:Hide()
+		frame.mem:Show()
+		self:RefreshMemoriesPane(frame)
+	elseif section == "evolution" then
 		frame.comp:Hide()
 		frame.comp.zoneList:Hide()
 		frame.evo:Show()

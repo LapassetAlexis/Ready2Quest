@@ -45,6 +45,24 @@ local NEED_FLOOR = 15        -- plancher : jamais vide, jamais « en détresse �
 local NEED_START = 80
 -- baisse par minute de JEU (rien hors connexion)
 local DECAY = { hunger = 0.6, energy = 0.4, mood = 0.3, curiosity = 0.5 }
+-- Chaque envie doit rester simple à remonter, même tout exploré, même au
+-- niveau maximum. La curiosité se nourrit aussi de nouveauté relative :
+-- revenir dans une zone pas vue depuis un moment, bouger, les donjons, les
+-- élites et rares, les vols, les coffres, la récolte.
+local CURIOSITY = {
+	newZone = 15, newSub = 4,              -- premières fois
+	revisit = 8, revisitAfter = 2 * 3600,  -- zone pas vue depuis 2 h (temps réel)
+	subzone = 1, subzoneGap = 30,          -- changer de sous-zone, au plus toutes les 30 s
+	dungeon = 10, dungeonGap = 600,        -- chaque entrée en donjon (pas deux fois en 10 min)
+	elite = 8,                             -- chaque élite ou rare vaincu
+	flight = 5,                            -- chaque arrivée en griffon
+	chest = 20,                            -- chaque coffre de zone ouvert
+	gather = 1,                            -- chaque ressource récoltée
+}
+ns.COMPANION_CURIOSITY = CURIOSITY
+-- Plancher une fois toutes ses évolutions faites : il a tout vécu, il est serein
+local SERENE_FLOOR = 50
+ns.COMPANION_SERENE_FLOOR = SERENE_FLOOR
 local REST_GAIN   = 4        -- énergie par minute au repos (auberge, ville, camp)
 local EAT_GAIN    = 6        -- faim par minute pendant le repas
 local TICK        = 10       -- s entre deux mises à jour des besoins
@@ -77,6 +95,7 @@ ns.COMPANION_CHATTER_DEFAULT = 3
 local POOL_CATEGORY = {
 	EVOLVE = "event", UNLOCK = "event", READY = "event", CHEST = "event", TUTO = "tuto", TIP = "tip", GOAL = "tip", GOAL_STAGE = "tip",
 	IDLE = "chatter", NIGHT = "chatter",
+	PHOTO = "event", ANNIV = "event", RECALL = "chatter",
 	NEED_hunger = "need", NEED_energy = "need", NEED_mood = "need", NEED_curiosity = "need",
 }
 -- Pause (s) par famille : les sources fréquentes (combat, PNJ) ne doivent pas
@@ -116,10 +135,18 @@ ns.COMPANION_RULES = {
 -- ---------------------------------------------------------------------------
 local FR = {
 	OPT_PAGE_COMPANION_MAIN = "Compagnon",
-	OPT_PAGE_COMPANION_MAIN_SUB = "Sa créature, ses bulles, son apparence et ses ornements.",
+	OPT_PAGE_COMPANION_MAIN_SUB = "Sa créature, sa taille, son bavardage et son apparence.",
+	OPT_PAGE_COMPANION_ORN = "Ornements",
+	OPT_PAGE_COMPANION_ORN_SUB = "Les ornements de son cadre, gagnés en jouant : affiche ceux que tu aimes.",
 	OPT_PAGE_COMPANION     = "Compagnon de route",
 	OPT_PAGE_COMPANION_SUB = "Une petite créature qui voyage avec toi et réagit à ton aventure.",
 	OPT_COMP_SHOW          = "Afficher le compagnon",
+	OPT_COMP_SIZE          = "Taille",
+	COMP_SIZE_1            = "Petit",
+	COMP_SIZE_2            = "Moyen",
+	COMP_SIZE_3            = "Grand",
+	COMP_SIZE_4            = "Très grand",
+	COMP_SIZE_DESC         = "La taille de son cadre ; sa bulle reste lisible et le suit.",
 	OPT_COMP_CHATTER       = "Bavardage",
 	COMP_CHATTER_0         = "Muet",
 	COMP_CHATTER_1         = "Discret",
@@ -147,7 +174,7 @@ local FR = {
 	COMP_HOW_hunger        = "mange ou bois (ou pars avec des vivres)",
 	COMP_HOW_energy        = "repose-toi à l'auberge ou au feu de camp",
 	COMP_HOW_mood          = "caresse-le, rends des quêtes",
-	COMP_HOW_curiosity     = "explore : nouvelles zones, villages, tampons",
+	COMP_HOW_curiosity     = "bouge : zones nouvelles ou pas vues depuis un moment, donjons, élites, vols, récolte",
 	COMP_MOOD_radiant      = "radieux",
 	COMP_MOOD_happy        = "content",
 	COMP_MOOD_dreamy       = "rêveur",
@@ -251,14 +278,22 @@ local FR = {
 	COMP_MSG_APPEARANCE    = "Apparence : %s.",
 	COMP_MSG_MUTE          = "Bulles du compagnon : %s.",
 	COMP_MSG_FALLBACK      = "Modèle 3D indisponible sur ce client : la boussole le remplace.",
-	HELP_COMPANION         = "/qc compagnon [nom <nom> | caresse | apparence | muet | tuto] — ton compagnon de route",
+	HELP_COMPANION         = "/qc compagnon [nom <nom> | caresse | apparence | muet | tuto | anim] — ton compagnon de route",
 }
 local EN = {
 	OPT_PAGE_COMPANION_MAIN = "Companion",
-	OPT_PAGE_COMPANION_MAIN_SUB = "Its creature, bubbles, appearance and ornaments.",
+	OPT_PAGE_COMPANION_MAIN_SUB = "Its creature, size, chattiness and appearance.",
+	OPT_PAGE_COMPANION_ORN = "Ornaments",
+	OPT_PAGE_COMPANION_ORN_SUB = "The ornaments of its frame, earned by playing: show the ones you like.",
 	OPT_PAGE_COMPANION     = "Road companion",
 	OPT_PAGE_COMPANION_SUB = "A little creature that travels with you and reacts to your adventure.",
 	OPT_COMP_SHOW          = "Show the companion",
+	OPT_COMP_SIZE          = "Size",
+	COMP_SIZE_1            = "Small",
+	COMP_SIZE_2            = "Medium",
+	COMP_SIZE_3            = "Large",
+	COMP_SIZE_4            = "Huge",
+	COMP_SIZE_DESC         = "The size of its frame; its bubble stays readable and follows it.",
 	OPT_COMP_CHATTER       = "Chattiness",
 	COMP_CHATTER_0         = "Silent",
 	COMP_CHATTER_1         = "Discreet",
@@ -286,7 +321,7 @@ local EN = {
 	COMP_HOW_hunger        = "eat or drink (or set out with food)",
 	COMP_HOW_energy        = "rest at an inn or a campfire",
 	COMP_HOW_mood          = "pet it, turn in quests",
-	COMP_HOW_curiosity     = "explore: new zones, villages, stamps",
+	COMP_HOW_curiosity     = "move around: new zones or ones not seen in a while, dungeons, elites, flights, gathering",
 	COMP_MOOD_radiant      = "radiant",
 	COMP_MOOD_happy        = "happy",
 	COMP_MOOD_dreamy       = "dreamy",
@@ -387,7 +422,7 @@ local EN = {
 	COMP_MSG_APPEARANCE    = "Appearance: %s.",
 	COMP_MSG_MUTE          = "Companion bubbles: %s.",
 	COMP_MSG_FALLBACK      = "3D model unavailable on this client: the compass stands in.",
-	HELP_COMPANION         = "/qc compagnon [nom <name> | caresse | apparence | muet | tuto] — your road companion",
+	HELP_COMPANION         = "/qc compagnon [nom <name> | caresse | apparence | muet | tuto | anim] — your road companion",
 }
 ns.RegisterStrings(FR, EN)
 ns.COMPANION_STRINGS = { fr = FR, en = EN }   -- exposé aux tests (parité fr/en)
@@ -396,6 +431,7 @@ ns.RegisterDefaults({
 	companionEnabled    = true,
 	companionShow       = true,
 	companionPoint      = { point = "CENTER", x = 330, y = -170 },
+	companionSize       = 2,      -- réglette « Taille » : 1 petit, 2 moyen, 3 grand, 4 très grand
 	companionOrnRibbon  = true,
 	companionOrnLantern = true,
 	companionOrnMedal   = true,
@@ -416,6 +452,10 @@ ns.AddOptionPage({
 		{ key = "companionShow",       label = "OPT_COMP_SHOW",       kind = "bool" },
 		-- réglette « Bavardage » : le nom du cran, une phrase dessous, le détail
 		-- au survol, et le compagnon qui confirme
+		{ key = "companionSize",       label = "OPT_COMP_SIZE",       kind = "number", min = 1, max = 4, step = 1,
+			display = function(value) return L["COMP_SIZE_" .. value] end,
+			describe = function() return L.COMP_SIZE_DESC end,
+			onChange = function() ns:CompanionApplySize() end },
 		{ key = "companionChatter",    label = "OPT_COMP_CHATTER",    kind = "number", min = 0, max = 4, step = 1,
 			display = function(value) return L["COMP_CHATTER_" .. value] end,
 			describe = function(value) return L["COMP_CHATTER_DESC_" .. value] end,
@@ -426,7 +466,12 @@ ns.AddOptionPage({
 		{ key = "companionFrameStyle", label = "COMP_KIND_frame",     kind = "action" },
 		{ key = "companionBackground", label = "COMP_KIND_bg",        kind = "action" },
 		{ key = "companionTutorial",   label = "OPT_COMP_TUTO",       kind = "action" },
-		{ header = "OPT_COMP_ORNAMENTS" },
+	},
+})
+-- Ornements : sous-page à part (la page principale déborderait du panneau)
+ns.AddOptionPage({
+	id = "companionOrnaments", title = "OPT_PAGE_COMPANION_ORN", parent = "companion", group = "OPT_GROUP_MODULES",
+	rows = {
 		{ key = "companionOrnRibbon",  label = "COMP_ORN_RIBBON",     kind = "bool" },
 		{ key = "companionOrnLantern", label = "COMP_ORN_LANTERN",    kind = "bool" },
 		{ key = "companionOrnMedal",   label = "COMP_ORN_MEDAL",      kind = "bool" },
@@ -1091,6 +1136,37 @@ end
 -- ---------------------------------------------------------------------------
 local FRAME_W, FRAME_H = 104, 118
 local MODEL_H = 82
+-- Taille du cadre (réglette « Taille », db.companionSize 1 à 4) : échelle du
+-- cadre ; la bulle et l'infobulle gardent leur taille (lisibles) et le suivent.
+ns.COMPANION_SIZES = { 0.8, 1.0, 1.3, 1.6 }
+ns.COMPANION_SIZE_DEFAULT = 2
+
+function ns:CompanionSizeLevel()
+	local level = math.floor(tonumber(self:DB().companionSize) or ns.COMPANION_SIZE_DEFAULT)
+	if level < 1 then level = 1 elseif level > #ns.COMPANION_SIZES then level = #ns.COMPANION_SIZES end
+	return level
+end
+
+-- Applique la taille ; la position mémorisée (en unités du cadre) est recalée
+-- pour que le compagnon ne saute pas à l'écran quand on change de taille.
+function ns:CompanionApplySize()
+	local frame = self.companionFrame
+	if not frame or not frame.SetScale then return nil end
+	local scale = ns.COMPANION_SIZES[self:CompanionSizeLevel()]
+	local before = (frame.GetScale and frame:GetScale()) or 1
+	if before ~= scale then
+		local db = self:DB()
+		local point = db.companionPoint
+		if type(point) == "table" and before > 0 then
+			point.x = (tonumber(point.x) or 0) * before / scale
+			point.y = (tonumber(point.y) or 0) * before / scale
+			frame:ClearAllPoints()
+			frame:SetPoint(point.point or "CENTER", UIParent, point.point or "CENTER", point.x, point.y)
+		end
+		frame:SetScale(scale)
+	end
+	return scale
+end
 
 -- Un PlayerModel (ou Model) n'est gardé que s'il sait afficher une créature
 local function CreateModel(parent)
@@ -1217,6 +1293,9 @@ function ns:EnsureCompanionFrame()
 	if not frame then return nil end
 	frame:EnableMouse(true)
 	if self.RestorePoint then self:RestorePoint(frame, "companionPoint", { point = "CENTER", x = 330, y = -170 }) end
+	-- la position mémorisée est en unités du cadre à sa taille : on pose
+	-- l'échelle avant tout recalage
+	if frame.SetScale then frame:SetScale(ns.COMPANION_SIZES[self:CompanionSizeLevel()]) end
 
 	frame.model = CreateModel(frame)
 	if frame.model then
@@ -1652,12 +1731,19 @@ function ns:CompanionTick(seconds)
 	local data = self:CompanionData()
 	local minutes = seconds / 60
 	local resting = self:CompanionResting()
+	-- toutes ses évolutions faites : il ne descend plus sous SERENE_FLOOR
+	local floor = (tonumber(data.stage) or 1) >= #ns.COMPANION_STAGES and SERENE_FLOOR or NEED_FLOOR
 	for _, key in ipairs(NEED_KEYS) do
-		local delta = -DECAY[key] * minutes
+		local delta = -DECAY[key] * minutes * (self.CompanionDecayFactor and self:CompanionDecayFactor(key) or 1)
 		if key == "energy" and resting then delta = REST_GAIN * minutes end
 		if key == "hunger" and self.companionEating then delta = EAT_GAIN * minutes end
-		data.needs[key] = Clamp(data.needs[key] + delta, NEED_FLOOR, NEED_MAX)
+		data.needs[key] = Clamp(data.needs[key] + delta, floor, NEED_MAX)
 	end
+	-- arrivée en griffon : la fin d'un vol se voit au tick suivant
+	local rt = RT()
+	local onTaxi = Call(rawget(_G, "UnitOnTaxi"), "player") == true
+	if rt.onTaxi and not onTaxi then self:CompanionAdd("curiosity", CURIOSITY.flight) end
+	rt.onTaxi = onTaxi
 	-- somnolence : il se réveille en jouant, pas en attendant
 	if data.sleepy then
 		data.sleepyLeft = (tonumber(data.sleepyLeft) or 0) - seconds
@@ -1909,14 +1995,27 @@ function ns:CompanionCheckPlace(silent)
 	return (self:CompanionSay(entry.kind == "capital" and "CITY" or "VILLAGE", { args = { name }, cd = "place" }))
 end
 
+local function RealTime() return tonumber((Call(rawget(_G, "time")))) or 0 end
+
 function ns:CompanionOnZone(newArea)
 	local data = self:CompanionData()
 	local mapID = self.CurrentMap and self:CurrentMap()
+	local rt, now = RT(), Clock()
+	if type(data.zoneVisit) ~= "table" then data.zoneVisit = {} end
 	if newArea then
 		if mapID and not data.seenZones[mapID] then
 			data.seenZones[mapID] = true
-			self:CompanionAdd("curiosity", 15)
+			self:CompanionAdd("curiosity", CURIOSITY.newZone)
 			self:CompanionSay("VIEW")
+		elseif mapID and RealTime() - (tonumber(data.zoneVisit[mapID]) or 0) >= CURIOSITY.revisitAfter then
+			-- de retour dans une zone pas vue depuis un moment
+			self:CompanionAdd("curiosity", CURIOSITY.revisit)
+		end
+		if mapID then data.zoneVisit[mapID] = RealTime() end
+		-- chaque entrée en donjon (pas les allers-retours de la porte)
+		if self.InInstance and self:InInstance() and (not rt.lastDungeon or now - rt.lastDungeon >= CURIOSITY.dungeonGap) then
+			rt.lastDungeon = now
+			self:CompanionAdd("curiosity", CURIOSITY.dungeon)
 		end
 		self:CompanionCheckPlace()
 		return
@@ -1926,10 +2025,24 @@ function ns:CompanionOnZone(newArea)
 		local key = tostring(mapID) .. ":" .. sub
 		if not data.seenSub[key] then
 			data.seenSub[key] = true
-			self:CompanionAdd("curiosity", 4)   -- sans bulle : il y en aurait trop
+			self:CompanionAdd("curiosity", CURIOSITY.newSub)   -- sans bulle : il y en aurait trop
+		elseif sub ~= rt.lastSub and (not rt.lastSubGain or now - rt.lastSubGain >= CURIOSITY.subzoneGap) then
+			-- bouger, tout simplement
+			rt.lastSubGain = now
+			self:CompanionAdd("curiosity", CURIOSITY.subzone)
 		end
+		rt.lastSub = sub
 	end
 	self:CompanionCheckPlace()
+end
+
+-- Élite ou rare vaincu (la cible, morte au moment du coup fatal)
+local ELITE_CLASSES = { elite = true, rareelite = true, rare = true, worldboss = true }
+function ns:CompanionEliteKilled()
+	if not Call(rawget(_G, "UnitIsDead"), "target") then return false end
+	if not ELITE_CLASSES[Call(rawget(_G, "UnitClassification"), "target") or ""] then return false end
+	self:CompanionAdd("curiosity", CURIOSITY.elite)
+	return true
 end
 
 function ns:CompanionOnLevel(level)
@@ -1957,6 +2070,7 @@ function ns:CompanionOnKill()
 	if rt.lastKill and now - rt.lastKill < 2 then return false end
 	rt.lastKill = now
 	self:CompanionAdd("mood", 1)
+	self:CompanionEliteKilled()
 	return (self:CompanionSay("KILL", { cd = "kill" }))
 end
 

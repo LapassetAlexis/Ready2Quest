@@ -549,6 +549,24 @@ P.CHATTER_2 = { { "Je reste calme : mes conseils et les grands moments, c'est to
 P.CHATTER_3 = { { "Comme d'habitude, alors ! On papote ?", "Back to normal, then! Shall we chat?" } }
 P.CHATTER_4 = { { "Oh, j'ai le droit de bavarder ? J'ai plein de choses à te dire !", "Oh, I'm allowed to chat? I've got so much to tell you!" } }
 
+-- Souvenirs (Memories.lua) : la photo, le rappel d'un souvenir, les anniversaires
+P.PHOTO = {
+	{ "Clic ! Celle-là, je la garde.", "Click! I'm keeping this one." },
+	{ "Clic ! Souris !", "Click! Smile!" },
+	{ "Clic ! Pour l'album.", "Click! For the album." },
+	{ "Clic ! Un souvenir de plus.", "Click! One more memory." },
+}
+P.RECALL = {  -- %s = le souvenir
+	{ "Tu te souviens ? %s", "Remember? %s" },
+	{ "Je repensais à ça : %s", "I was thinking about this: %s" },
+	{ "Ah, le bon vieux temps… %s", "Ah, the good old days… %s" },
+	{ "Dans mon album, j'aime bien celui-là : %s", "In my album, I like this one: %s" },
+}
+P.ANNIV = {  -- %s = la durée (« une semaine »)
+	{ "Ça fait %s qu'on voyage ensemble !", "We've been travelling together for %s!" },
+	{ "Déjà %s ensemble ! Merci de m'emmener partout.", "%s together already! Thanks for taking me everywhere." },
+}
+
 -- ---------------------------------------------------------------------------
 -- Clés et enregistrement
 -- ---------------------------------------------------------------------------
