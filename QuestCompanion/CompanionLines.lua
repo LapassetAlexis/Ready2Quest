@@ -445,8 +445,16 @@ P.TUTO = {
 	{ "Mange, repose-toi à l'auberge, rends des quêtes, explore : ça me comble !", "Eat, rest at inns, turn in quests, explore: that fills me up!" },
 	{ "Je grandis avec tes niveaux : 10, 20, 40 et 60. Jamais de retour en arrière.", "I grow with your levels: 10, 20, 40 and 60. Never backwards." },
 	{ "Les tampons du carnet (/qc carnet) débloquent mes apparences et ornements.", "Journal stamps (/qc carnet) unlock my looks and ornaments." },
+	{ "En route, je te préviens : sacs pleins, vivres, réparations, munitions, un élite dans le coin…", "On the road, I'll warn you: full bags, food, repairs, ammo, an elite nearby…" },
+	{ "Je parle trop ? Pas assez ? Règle-moi avec la réglette « Bavardage », page Compagnon.", "Too chatty? Not enough? Tune me with the \"Chattiness\" slider, Companion page." },
 	{ "Pour me personnaliser : réglages, page Compagnon. Et je ne me fâche jamais !", "To customise me: settings, Companion page. And I never get cross!" },
 }
+
+-- Confirmation d'un nouveau cran de la réglette « Bavardage »
+P.CHATTER_1 = { { "D'accord, je me fais discret : je ne parle que si ça compte.", "Alright, I'll keep quiet: I only speak up when it matters." } }
+P.CHATTER_2 = { { "Je reste calme : mes conseils et les grands moments, c'est tout.", "I'll stay calm: my advice and the big moments, that's all." } }
+P.CHATTER_3 = { { "Comme d'habitude, alors ! On papote ?", "Back to normal, then! Shall we chat?" } }
+P.CHATTER_4 = { { "Oh, j'ai le droit de bavarder ? J'ai plein de choses à te dire !", "Oh, I'm allowed to chat? I've got so much to tell you!" } }
 
 -- ---------------------------------------------------------------------------
 -- Clés et enregistrement
