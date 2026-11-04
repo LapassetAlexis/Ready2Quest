@@ -55,7 +55,7 @@ Le carnet (`/qc`, le bouton de minicarte, ou clic droit sur la créature) a deux
   - **Métiers** : les ressources de ta compétence à récolter ;
   - **Quêtes** : les quêtes de la zone que ton personnage peut faire (faction, race, classe), faites et à faire. Elles comptent dans les 100 %. Aucun addon requis, sur Era comme sur Forever.
 - **Suivre à l'écran** : une case par zone. Cochée, les objectifs de la zone s'affichent dans le bloc « Carnet » en jeu. La zone où tu es est suivie d'office (décoche-la pour la masquer) ; coche d'autres zones pour garder un œil sur elles.
-- **Évolution** : l'étape de ta créature, la prochaine, ses envies, comment elle évolue, tes coffres à ouvrir, ta collection et ton parcours (zones, capitales, donjons, rares, paliers).
+- **Évolution** : l'étape de ta créature, la prochaine, ses envies, comment elle évolue, tes coffres à ouvrir, ta collection et ton parcours (zones, capitales, donjons, rares, paliers). Survole une envie (faim, énergie, moral, curiosité) pour savoir ce qui la remplit.
 
 ## Objectifs
 
