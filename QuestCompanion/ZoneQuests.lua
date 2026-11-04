@@ -16,7 +16,8 @@
 -- QUEST_LOG_UPDATE. En combat, l'oubli attend la fin du combat
 -- (PLAYER_REGEN_ENABLED) : la liste déjà calculée continue de servir.
 -- Vit sous le module Compagnon (db.companionEnabled), comme le carnet.
-local ADDON, ns = ...
+local ns = rawget(_G, "Ready2Quest")
+if type(ns) ~= "table" or not ns.QC then return end
 local L = ns.L
 
 local HINT_NAMES = 6

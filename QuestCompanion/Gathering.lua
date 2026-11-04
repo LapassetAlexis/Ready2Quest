@@ -17,7 +17,8 @@
 -- de ton client seulement). On retient en
 -- jouant où chaque ressource a été récoltée (par personnage, dans le carnet).
 -- Pas de module à part : même interrupteur que le carnet (Compagnon de route).
-local ADDON, ns = ...
+local ns = rawget(_G, "Ready2Quest")
+if type(ns) ~= "table" or not ns.QC then return end
 local L = ns.L
 
 local HINT_NAMES = 6    -- noms listés au survol, au-delà « … et N autres »

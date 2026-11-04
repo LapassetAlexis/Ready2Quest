@@ -34,7 +34,8 @@
 --
 -- Contrat avec le suivi d'objectifs du Carnet : ns:CompanionNextUnlocks()
 -- (voir sa définition).
-local ADDON, ns = ...
+local ns = rawget(_G, "Ready2Quest")
+if type(ns) ~= "table" or not ns.QC then return end
 local L = ns.L
 local Theme = ns.Theme
 
@@ -444,7 +445,7 @@ ns.CompanionOn = function() return ModuleOn() end
 -- État par personnage
 -- ---------------------------------------------------------------------------
 function ns:CompanionData()
-	local char = self:CharData()
+	local char = self:QCCharData()
 	local data = char.companion
 	if type(data) ~= "table" then
 		data = {}

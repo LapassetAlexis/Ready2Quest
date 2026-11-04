@@ -25,7 +25,8 @@
 -- Contrats avec le module parallèle « Compagnon » :
 --   ns:FireCallback("STAMP", { id, kind, name, new = true, level, date })
 --   ns:JournalCounts() -> { zone, subzone, dungeon, rare, level, capital, total }
-local ADDON, ns = ...
+local ns = rawget(_G, "Ready2Quest")
+if type(ns) ~= "table" or not ns.QC then return end
 local L = ns.L
 local Theme = ns.Theme
 
@@ -176,10 +177,10 @@ local function ModuleOn()
 	return db.enabled ~= false and db.companionEnabled ~= false
 end
 
--- Les tampons vivent dans les données du personnage (ns:CharData, Merchant.lua) :
+-- Les tampons vivent dans les données du personnage (ns:QCCharData, Bootstrap.lua) :
 -- la sauvegarde est partagée par le compte, le carnet ne l'est pas.
 function ns:JournalData()
-	local char = self:CharData()
+	local char = self:QCCharData()
 	if type(char.journal) ~= "table" then char.journal = {} end
 	if type(char.journal.stamps) ~= "table" then char.journal.stamps = {} end
 	return char.journal

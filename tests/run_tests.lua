@@ -38,6 +38,9 @@ local function NewRegion(kind, name)
 		end
 		self.events[event] = true
 	end
+	function region:UnregisterEvent(event)
+		self.events[event] = nil
+	end
 	function region:SetScript(script, fn)
 		self.scripts[script] = fn
 		if script == "OnEvent" then self.script = fn end
@@ -471,6 +474,9 @@ end
 -- 2. Chargement de l'addon (comme le client : chunk(nom, tablePrivée))
 ----------------------------------------------------------------------------
 local NS = {}
+-- QuestCompanion (sous-dossier) : addon séparé, qui dépend de Ready2Quest et
+-- reprend son namespace via _G.Ready2Quest ; sa table privée reste à part.
+local QC_PRIVATE = {}
 local function LoadAddonFile(name)
 	local path = ROOT .. "/" .. name
 	local handle, err = io.open(path, "r")
@@ -479,19 +485,30 @@ local function LoadAddonFile(name)
 	handle:close()
 	local chunk, compileError = loadstring(source, "@" .. path)
 	assert(chunk, "erreur de compilation dans " .. path .. ":\n" .. tostring(compileError))
-	chunk("Ready2Quest", NS)
+	-- comme le client : chaque addon reçoit son nom et sa propre table privée
+	if name:find("^QuestCompanion/") then
+		chunk("QuestCompanion", QC_PRIVATE)
+	else
+		chunk("Ready2Quest", NS)
+	end
 end
 
 -- La liste des fichiers vient du .toc, comme pour le client : un module
 -- ajouté au .toc est chargé ici sans autre modification.
+-- Ready2Quest d'abord, puis QuestCompanion (## Dependencies: Ready2Quest) :
+-- ses fichiers sont listés avec leur dossier, « QuestCompanion/Companion.lua ».
 local tocFiles = {}
 do
-	local handle = assert(io.open(ROOT .. "/Ready2Quest.toc", "r"), "Ready2Quest.toc introuvable")
-	for line in handle:lines() do
-		line = line:gsub("\r", ""):gsub("^%s+", ""):gsub("%s+$", "")
-		if line ~= "" and not line:find("^#") and line:find("%.lua$") then tocFiles[#tocFiles + 1] = line end
+	local function ReadToc(toc, prefix)
+		local handle = assert(io.open(ROOT .. "/" .. toc, "r"), toc .. " introuvable")
+		for line in handle:lines() do
+			line = line:gsub("\r", ""):gsub("^%s+", ""):gsub("%s+$", "")
+			if line ~= "" and not line:find("^#") and line:find("%.lua$") then tocFiles[#tocFiles + 1] = prefix .. line end
+		end
+		handle:close()
 	end
-	handle:close()
+	ReadToc("Ready2Quest.toc", "")
+	ReadToc("QuestCompanion/QuestCompanion.toc", "QuestCompanion/")
 end
 -- Les scénarios historiques comptent les contrôles et pages du cœur (13
 -- contrôles, 10 entrées de navigation…) : les fichiers de module du .toc ne
@@ -585,6 +602,7 @@ local function ResetWorld()
 	Mock:Reset()
 	-- les deux : la nouvelle variable, et l ancienne que Core migre
 	_G.Ready2QuestDB = nil
+	_G.QuestCompanionDB = nil
 	_G.ReadyToQuestDB = nil
 	_G.SacEtDepartDB = nil
 	NS._dbReady = false
@@ -1478,7 +1496,7 @@ ResetWorld()
 Say("\n== bootstrap et diagnostic ==")
 ResetWorld()
 Check("commande enregistrée par le bootstrap", type(SlashCmdList["SACETDEPART"]) == "function")
-Check("version exposée", NS.version == "1.25.0", NS.version)
+Check("version exposée", NS.version == "1.26.0", NS.version)
 
 local missingMods = {}
 for _, name in ipairs({ "Bootstrap", "Locales", "Compat", "Theme", "Core", "Buffs", "Reagents",
@@ -1499,7 +1517,7 @@ NS.HandleCommand = savedHandle
 Mock:Reset()
 NS:HandleCommand("diag")
 Check("/sd diag liste les modules", Mock:Output():find("modules :") ~= nil, Mock:Output())
-Check("/sd diag affiche la version", Mock:Output():find("1%.25%.0") ~= nil, Mock:Output())
+Check("/sd diag affiche la version", Mock:Output():find("1%.26%.0") ~= nil, Mock:Output())
 
 -- une erreur est enregistrée et affichée
 Mock:Reset()
@@ -3762,6 +3780,9 @@ do
 	Mock.world.build = nil
 	NS:DetectCapabilities()
 	for _, file in ipairs(Mock.moduleFiles) do LoadAddonFile(file) end
+	-- le client pose QuestCompanionDB puis envoie ADDON_LOADED("QuestCompanion")
+	Mock:Fire("ADDON_LOADED", "Ready2Quest")
+	Mock:Fire("ADDON_LOADED", "QuestCompanion")
 	for _, path in ipairs(MODULE_TEST_FILES or {}) do
 		Say("\n== module : " .. path .. " ==")
 		local handle = assert(io.open(ROOT .. "/" .. path, "r"))

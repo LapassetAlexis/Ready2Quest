@@ -15,7 +15,8 @@
 -- pour être petits et mignons, qui existent déjà côté client.
 -- Ce qu'on ne peut pas savoir hors jeu : que le modèle s'affiche bien dans
 -- un PlayerModel d'addon. D'où le repli sur la boussole (Companion.lua).
-local ADDON, ns = ...
+local ns = rawget(_G, "Ready2Quest")
+if type(ns) ~= "table" or not ns.QC then return end
 
 -- unlock : nil = dès le départ ; { stamp = <type>, count = n } = tampons du
 -- Carnet de voyage (ns:JournalCounts) ; { level = n } = niveau du joueur.

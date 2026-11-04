@@ -22,7 +22,7 @@ Ces données sont sous licence [GPL-3.0](https://www.gnu.org/licenses/gpl-3.0.ht
 
 ### Générer
 
-Les fichiers sont générés par `tools/gen_zone_data.py` (Python 3, sans dépendance, sortie déterministe) à partir de copies locales de QuestieDB et de Questie :
+Les fichiers sont générés par `tools/gen_zone_data.py`, à la racine du dépôt (Python 3, sans dépendance, sortie déterministe) à partir de copies locales de QuestieDB et de Questie :
 
 ```
 python3 -I tools/gen_zone_data.py /chemin/vers/QuestieDB --questie-src /chemin/vers/Questie \

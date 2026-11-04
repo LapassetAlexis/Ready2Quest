@@ -23,7 +23,8 @@
 --   * prochain palier de niveau.
 -- Chaque objectif se masque d'un clic droit (par personnage) ; la liste se
 -- recalcule à chaque tampon, changement de zone et montée de niveau.
-local ADDON, ns = ...
+local ns = rawget(_G, "Ready2Quest")
+if type(ns) ~= "table" or not ns.QC then return end
 local L = ns.L
 local Theme = ns.Theme
 
@@ -909,7 +910,7 @@ end
 function ns:EnsureJournalTracker()
 	if self.journalTracker then return self.journalTracker end
 	if not Theme then return nil end
-	local ok, frame = pcall(CreateFrame, "Frame", "Ready2QuestJournalTracker", UIParent)
+	local ok, frame = pcall(CreateFrame, "Frame", "QuestCompanionJournalTracker", UIParent)
 	if not ok or not frame then return nil end
 	frame:SetSize(TRACKER_WIDTH, TITLE_H)
 	-- même couche que les suivis de quêtes : sous les fenêtres, au-dessus du monde

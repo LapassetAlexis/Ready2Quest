@@ -110,8 +110,15 @@ function Z.LoadData(file, forever)
 	local fake = { marks = {} }
 	if forever ~= "none" then fake.IsForeverClient = function() return forever end end
 	fake.Mark = function(name) fake.marks[#fake.marks + 1] = name end
-	local chunk = assert(loadfile(ROOT .. "/" .. file))
-	chunk("Ready2Quest", fake)
+	-- les fichiers de QuestCompanion lisent le namespace dans _G.Ready2Quest :
+	-- on y pose le faux le temps du chargement
+	fake.QC = {}
+	local chunk = assert(loadfile(ROOT .. "/QuestCompanion/" .. file))
+	local saved = rawget(_G, "Ready2Quest")
+	_G.Ready2Quest = fake
+	local ok, err = pcall(chunk, "QuestCompanion", {})
+	_G.Ready2Quest = saved
+	assert(ok, err)
 	return fake
 end
 Z.DATA = {
@@ -124,7 +131,7 @@ do
 	Say("-- données de zone : chargement")
 	Check("[ZDATA] tables de zone chargées", NS.Loaded and NS.Loaded.ZoneCreatures and NS.Loaded.ZoneGathering)
 	local order = {}
-	for index, file in ipairs(_G.TOC_FILES or {}) do order[file] = index end
+	for index, file in ipairs(_G.TOC_FILES or {}) do order[(file:gsub("^QuestCompanion/", ""))] = index end
 	local before = true
 	for _, file in ipairs({ "ZoneCreatures_Era.lua", "ZoneCreatures_Forever.lua", "ZoneGathering_Era.lua",
 		"ZoneGathering_Forever.lua" }) do
@@ -156,7 +163,7 @@ do
 	Check("[ZDATA] sans IsForeverClient (harnais minimal) : la table se charge", type(Z.LoadData("ZoneCreatures_Era.lua",
 		"none").ZONE_CREATURES) == "table")
 	-- en-tête : source, couches, licence, « généré »
-	local handle = assert(io.open(ROOT .. "/ZoneCreatures_Forever.lua", "r"))
+	local handle = assert(io.open(ROOT .. "/QuestCompanion/ZoneCreatures_Forever.lua", "r"))
 	local head = handle:read(2000)
 	handle:close()
 	Check("[ZDATA] en-tête Forever : généré, source, couches, GPL-3.0", head:find("FICHIER GÉNÉRÉ", 1, true)

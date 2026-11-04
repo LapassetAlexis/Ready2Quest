@@ -1,0 +1,23 @@
+# Suite de tests hors jeu (client WoW simulé, Lua 5.1 via lupa), à chaque
+# push et pull request, et avant toute publication (release.yml).
+name: Tests
+
+on:
+  push:
+    branches: ['**']
+    tags-ignore: ['**']
+  pull_request:
+  workflow_call:
+
+jobs:
+  tests:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: lupa
+        run: pip install lupa
+      - name: Tests
+        run: python3 tests/run_tests.py
