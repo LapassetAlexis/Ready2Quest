@@ -26,6 +26,7 @@ local PART_TAB = { villages = "explore", bestiary = "combat", named = "combat", 
 local FR = {
 	JRN_SEC_completion     = "Complétion",
 	JRN_SEC_evolution      = "Évolution",
+	JRN_SEC_memories       = "Souvenirs",
 	JRN_ZONE_PICK          = "Zone : %s",
 	JRN_ZONE_HERE          = "%s (ici)",
 	JRN_ZONE_NONE          = "Aucune zone pour l'instant : explore, ton carnet se remplit tout seul.",
@@ -90,6 +91,7 @@ local FR = {
 local EN = {
 	JRN_SEC_completion     = "Completion",
 	JRN_SEC_evolution      = "Evolution",
+	JRN_SEC_memories       = "Memories",
 	JRN_ZONE_PICK          = "Zone: %s",
 	JRN_ZONE_HERE          = "%s (here)",
 	JRN_ZONE_NONE          = "No zone yet: explore, your journal fills itself.",
@@ -518,7 +520,10 @@ function ns:EnsureJournalWindow()
 	local top = frame.contentTop - 8
 
 	frame.sections = {}
-	for index, section in ipairs({ "completion", "evolution" }) do
+	-- « Souvenirs » : l'album du compagnon (Memories.lua)
+	local sections = { "completion", "evolution" }
+	if self.BuildMemoriesPane then sections[3] = "memories" end
+	for index, section in ipairs(sections) do
 		local button = Theme.CreateButton(frame, 130, 22, L["JRN_SEC_" .. section], function() ns:SelectJournalKind(section) end)
 		button:SetPoint("TOPLEFT", frame, "TOPLEFT", 14 + (index - 1) * 136, top)
 		frame.sections[section] = button
@@ -526,6 +531,7 @@ function ns:EnsureJournalWindow()
 
 	BuildCompletion(self, frame, top)
 	BuildEvolution(self, frame, top)
+	if self.BuildMemoriesPane then self:BuildMemoriesPane(frame, top, WIDTH - 28) end
 
 	if frame.EnableMouseWheel then frame:EnableMouseWheel(true) end
 	frame:SetScript("OnMouseWheel", function(_, delta) ns:ScrollJournal(delta) end)
@@ -536,12 +542,16 @@ function ns:EnsureJournalWindow()
 	return frame
 end
 
--- « goals » / « evolution » : Évolution ; tout le reste : Complétion
--- (« completion », ou un ancien nom d'onglet)
+-- « goals » / « evolution » : Évolution ; « memories » : Souvenirs ; tout le
+-- reste : Complétion (« completion », ou un ancien nom d'onglet)
 function ns:SelectJournalKind(kind)
 	local frame = self:EnsureJournalWindow()
 	if not frame then return end
-	frame.kind = (kind == "evolution" or kind == "goals") and "evolution" or "completion"
+	if kind == "memories" and frame.mem then
+		frame.kind = "memories"
+	else
+		frame.kind = (kind == "evolution" or kind == "goals") and "evolution" or "completion"
+	end
 	frame.offset = 0
 	self:RefreshJournal()
 end
@@ -782,7 +792,7 @@ end
 function ns:RefreshJournal()
 	local frame = self.journalFrame
 	if not frame then return end
-	local section = frame.kind == "evolution" and "evolution" or "completion"
+	local section = (frame.kind == "evolution" or (frame.kind == "memories" and frame.mem)) and frame.kind or "completion"
 	frame.kind = section
 	for key, button in pairs(frame.sections) do TabColor(button, key == section) end
 	local counts = self:JournalCounts()
@@ -790,7 +800,14 @@ function ns:RefreshJournal()
 		frame.subtitle:SetText(self:F("JRN_TOTAL", counts.total)
 			.. (ModuleOn() and "" or ("  " .. Theme.T_GREY .. L.MODULE_OFF .. "|r")))
 	end
-	if section == "evolution" then
+	if frame.mem then frame.mem:Hide() end
+	if section == "memories" then
+		frame.comp:Hide()
+		frame.comp.zoneList:Hide()
+		frame.evo:Hide()
+		frame.mem:Show()
+		self:RefreshMemoriesPane(frame)
+	elseif section == "evolution" then
 		frame.comp:Hide()
 		frame.comp.zoneList:Hide()
 		frame.evo:Show()

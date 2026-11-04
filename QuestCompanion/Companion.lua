@@ -95,6 +95,7 @@ ns.COMPANION_CHATTER_DEFAULT = 3
 local POOL_CATEGORY = {
 	EVOLVE = "event", UNLOCK = "event", READY = "event", CHEST = "event", TUTO = "tuto", TIP = "tip", GOAL = "tip", GOAL_STAGE = "tip",
 	IDLE = "chatter", NIGHT = "chatter",
+	PHOTO = "event", ANNIV = "event", RECALL = "chatter",
 	NEED_hunger = "need", NEED_energy = "need", NEED_mood = "need", NEED_curiosity = "need",
 }
 -- Pause (s) par famille : les sources fréquentes (combat, PNJ) ne doivent pas

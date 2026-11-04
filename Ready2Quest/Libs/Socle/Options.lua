@@ -140,6 +140,7 @@ function ns:RefreshOptions()
 			if def.kind == "bool" then
 				row.value:SetText(OnOff(value ~= false))
 				if row.toggle then row.toggle:SetChecked(value ~= false) end
+				if row.note and def.describe then row.note:SetText(def.describe(value ~= false)) end
 			else
 				if row.track then
 					local span = (def.max or 1) - (def.min or 0)
@@ -357,9 +358,11 @@ function ns:EnsureOptions()
 			row.value:Hide()
 			row:SetScript("OnClick", function()
 				local db = ns:DB()
-				db[def.key] = not (db[def.key] ~= false)
+				local before = db[def.key] ~= false
+				db[def.key] = not before
 				ns:RefreshOptions()
 				if ns.ApplyDisplayOptions then ns:ApplyDisplayOptions() end
+				if def.onChange then def.onChange(db[def.key], before) end
 			end)
 		else
 			local function Step(delta)
