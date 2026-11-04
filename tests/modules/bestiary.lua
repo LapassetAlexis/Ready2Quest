@@ -2,7 +2,7 @@
 -- Vu / abattu, engagement, exclusions (joueur, familier, bestiole, amical,
 -- GUID inattendu), instance, nommés, parts de complétion, objectifs et
 -- survol, persistance par personnage, interrupteur du module, robustesse.
-local Check, Say, ResetWorld, NS, Mock = T.Check, T.Say, T.ResetWorld, T.NS, T.Mock
+local Check, Say, ResetWorld, NS, Mock = T.Check, T.Say, T.ResetWorld, T.QNS, T.Mock
 
 -- Mocks propres à ce fichier, restaurés à la fin
 local saved, MOCKED = {}, { "IsInInstance", "GetInstanceInfo", "GetRealZoneText", "UnitClassification", "UnitGUID",
@@ -160,7 +160,7 @@ do
 	local s = B.Species(1413, 3100)
 	Check("[BST] cible : espèce retenue dans la zone", s and s.seen == true and s.killed == 0 and s.name == "Sanglier des Tarides"
 		and s.type == "Bête" and s.family == "Sanglier" and s.class == "normal" and s.level == 14)
-	Check("[BST] rangé dans le carnet du personnage", NS:QCCharData().journal.bestiary[1413][3100] == s)
+	Check("[BST] rangé dans le carnet du personnage", NS:CharData().journal.bestiary[1413][3100] == s)
 	B.See("mouseover", { guid = B.Guid(3101), name = "Kodo des plaines", type = "Bête", level = 13 }, "mouseover")
 	Check("[BST] survol : espèce retenue", B.Species(1413, 3101) ~= nil)
 	B.See("nameplate2", { guid = B.Guid(3102), name = "Centaure kolkar", type = "Humanoïde", level = 15 }, "nameplate")

@@ -78,7 +78,21 @@ def check_packages():
     return problems
 
 
+def check_socle():
+    """Le socle commun est embarqué dans chaque addon : les copies doivent être
+    identiques à la source (Ready2Quest/Libs/Socle). Sinon : tools/sync_socle.py."""
+    sys.path.insert(0, os.path.join(ROOT, "tools"))
+    import sync_socle
+    problems = []
+    for target in sync_socle.TARGETS:
+        for rel in sync_socle.differences(sync_socle.SOURCE, target):
+            problems.append("%s : %s diffère de Ready2Quest/Libs/Socle (python3 tools/sync_socle.py)"
+                            % (os.path.relpath(target, ROOT), rel))
+    return problems
+
+
 package_problems = check_packages()
+package_problems += check_socle()
 if package_problems:
     print("ERREUR: paquets de publication incomplets :")
     for problem in package_problems:

@@ -5,7 +5,7 @@
 -- faction, PNJ de service), parts « bestiary » / « named » / « gathering »
 -- calculées avec la table (préremplie + apprise), faction, espèce jamais vue
 -- listée, kill d'une espèce prérenseignée, zone hors tables (dynamique).
-local Check, Say, ResetWorld, NS, Mock = T.Check, T.Say, T.ResetWorld, T.NS, T.Mock
+local Check, Say, ResetWorld, NS, Mock = T.Check, T.Say, T.ResetWorld, T.QNS, T.Mock
 
 -- Mocks propres à ce fichier, restaurés à la fin
 local saved, MOCKED = {}, { "IsInInstance", "GetInstanceInfo", "GetRealZoneText", "UnitClassification", "UnitGUID",
@@ -110,15 +110,8 @@ function Z.LoadData(file, forever)
 	local fake = { marks = {} }
 	if forever ~= "none" then fake.IsForeverClient = function() return forever end end
 	fake.Mark = function(name) fake.marks[#fake.marks + 1] = name end
-	-- les fichiers de QuestCompanion lisent le namespace dans _G.Ready2Quest :
-	-- on y pose le faux le temps du chargement
-	fake.QC = {}
 	local chunk = assert(loadfile(ROOT .. "/QuestCompanion/" .. file))
-	local saved = rawget(_G, "Ready2Quest")
-	_G.Ready2Quest = fake
-	local ok, err = pcall(chunk, "QuestCompanion", {})
-	_G.Ready2Quest = saved
-	assert(ok, err)
+	chunk("QuestCompanion", fake)
 	return fake
 end
 Z.DATA = {

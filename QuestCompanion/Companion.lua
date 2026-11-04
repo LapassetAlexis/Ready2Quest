@@ -34,8 +34,8 @@
 --
 -- Contrat avec le suivi d'objectifs du Carnet : ns:CompanionNextUnlocks()
 -- (voir sa définition).
-local ns = rawget(_G, "Ready2Quest")
-if type(ns) ~= "table" or not ns.QC then return end
+local ADDON, ns = ...
+if ns.blocked then return end
 local L = ns.L
 local Theme = ns.Theme
 
@@ -210,9 +210,9 @@ local FR = {
 	COMP_LEFT_plevel_1     = "un niveau",
 	-- chat et commandes
 	COMP_MSG_NEXT          = "Prochain : %s (%d/%d)",
-	COMP_MSG_TUTO_MUTED    = "Bulles du compagnon coupées : rallume-les pour voir le tutoriel (/r2q compagnon muet).",
+	COMP_MSG_TUTO_MUTED    = "Bulles du compagnon coupées : rallume-les pour voir le tutoriel (/qc compagnon muet).",
 	COMP_MSG_TUTO_COMBAT   = "Le tutoriel du compagnon commencera après le combat.",
-	COMP_MSG_TUTO_SKIPPED  = "Tutoriel du compagnon passé (/r2q compagnon tuto pour le revoir).",
+	COMP_MSG_TUTO_SKIPPED  = "Tutoriel du compagnon passé (/qc compagnon tuto pour le revoir).",
 	COMP_MSG_UNLOCK_APP    = "Compagnon : nouvelle apparence débloquée, %s. Choisis-la dans les réglages.",
 	COMP_MSG_UNLOCK_ORN    = "Compagnon : nouvel ornement débloqué, %s.",
 	COMP_MSG_EVOLVE        = "Compagnon : %s devient %s !",
@@ -220,12 +220,12 @@ local FR = {
 	COMP_MSG_NEEDS         = "Faim %d · Énergie %d · Moral %d · Curiosité %d",
 	COMP_MSG_COLLECTION    = "Apparences %d/%d · Ornements %d/%d",
 	COMP_MSG_RENAMED       = "Ton compagnon s'appelle maintenant %s.",
-	COMP_MSG_NAME_BAD      = "Donne-lui un nom : /r2q compagnon nom <nom>",
-	COMP_MSG_OFF           = "Le compagnon est coupé (/r2q module compagnon on).",
+	COMP_MSG_NAME_BAD      = "Donne-lui un nom : /qc compagnon nom <nom>",
+	COMP_MSG_OFF           = "Le compagnon est coupé (/qc module compagnon on).",
 	COMP_MSG_APPEARANCE    = "Apparence : %s.",
 	COMP_MSG_MUTE          = "Bulles du compagnon : %s.",
 	COMP_MSG_FALLBACK      = "Modèle 3D indisponible sur ce client : la boussole le remplace.",
-	HELP_COMPANION         = "/r2q compagnon [nom <nom> | caresse | apparence | muet | tuto] — ton compagnon de route",
+	HELP_COMPANION         = "/qc compagnon [nom <nom> | caresse | apparence | muet | tuto] — ton compagnon de route",
 }
 local EN = {
 	OPT_PAGE_COMPANION_MAIN = "Companion",
@@ -335,9 +335,9 @@ local EN = {
 	COMP_LEFT_plevel       = "%d levels",
 	COMP_LEFT_plevel_1     = "one level",
 	COMP_MSG_NEXT          = "Next: %s (%d/%d)",
-	COMP_MSG_TUTO_MUTED    = "Companion bubbles are off: turn them on to see the tutorial (/r2q compagnon muet).",
+	COMP_MSG_TUTO_MUTED    = "Companion bubbles are off: turn them on to see the tutorial (/qc compagnon muet).",
 	COMP_MSG_TUTO_COMBAT   = "The companion tutorial will start after combat.",
-	COMP_MSG_TUTO_SKIPPED  = "Companion tutorial skipped (/r2q compagnon tuto to see it again).",
+	COMP_MSG_TUTO_SKIPPED  = "Companion tutorial skipped (/qc compagnon tuto to see it again).",
 	COMP_MSG_UNLOCK_APP    = "Companion: new appearance unlocked, %s. Pick it in the settings.",
 	COMP_MSG_UNLOCK_ORN    = "Companion: new ornament unlocked, %s.",
 	COMP_MSG_EVOLVE        = "Companion: %s becomes %s!",
@@ -345,12 +345,12 @@ local EN = {
 	COMP_MSG_NEEDS         = "Hunger %d · Energy %d · Mood %d · Curiosity %d",
 	COMP_MSG_COLLECTION    = "Appearances %d/%d · Ornaments %d/%d",
 	COMP_MSG_RENAMED       = "Your companion is now called %s.",
-	COMP_MSG_NAME_BAD      = "Give it a name: /r2q compagnon nom <name>",
-	COMP_MSG_OFF           = "The companion is off (/r2q module compagnon on).",
+	COMP_MSG_NAME_BAD      = "Give it a name: /qc compagnon nom <name>",
+	COMP_MSG_OFF           = "The companion is off (/qc module compagnon on).",
 	COMP_MSG_APPEARANCE    = "Appearance: %s.",
 	COMP_MSG_MUTE          = "Companion bubbles: %s.",
 	COMP_MSG_FALLBACK      = "3D model unavailable on this client: the compass stands in.",
-	HELP_COMPANION         = "/r2q compagnon [nom <name> | caresse | apparence | muet | tuto] — your road companion",
+	HELP_COMPANION         = "/qc compagnon [nom <name> | caresse | apparence | muet | tuto] — your road companion",
 }
 ns.RegisterStrings(FR, EN)
 ns.COMPANION_STRINGS = { fr = FR, en = EN }   -- exposé aux tests (parité fr/en)
@@ -445,7 +445,7 @@ ns.CompanionOn = function() return ModuleOn() end
 -- État par personnage
 -- ---------------------------------------------------------------------------
 function ns:CompanionData()
-	local char = self:QCCharData()
+	local char = self:CharData()
 	local data = char.companion
 	if type(data) ~= "table" then
 		data = {}
@@ -2219,14 +2219,14 @@ if type(ns.RefreshOptions) == "function" then
 		baseRefresh(self, ...)
 		local ok, err = pcall(self.CompanionRefreshPage, self)
 		if not ok and self.RecordError then self:RecordError("companion:options", err) end
-		-- « /r2q module compagnon off » passe par ici : le cadre suit
+		-- « /qc module compagnon off » passe par ici : le cadre suit
 		ok, err = pcall(self.CompanionUpdateVisibility, self)
 		if not ok and self.RecordError then self:RecordError("companion:display", err) end
 	end
 end
 
 -- ---------------------------------------------------------------------------
--- Commande : /r2q compagnon [nom <nom> | caresse | apparence | muet | tuto [passer]]
+-- Commande : /qc compagnon [nom <nom> | caresse | apparence | muet | tuto [passer]]
 -- ---------------------------------------------------------------------------
 function ns:CompanionStatusLine()
 	local data = self:CompanionData()

@@ -12,8 +12,8 @@
 -- Le niveau d'une zone vient d'une table posée à la main (zones classiques,
 -- uiMapID identiques sur Era et Forever). Zone inconnue (ajout de Forever) :
 -- on prend le niveau du joueur au moment où il la finit.
-local ns = rawget(_G, "Ready2Quest")
-if type(ns) ~= "table" or not ns.QC then return end
+local ADDON, ns = ...
+if ns.blocked then return end
 local L = ns.L
 local Theme = ns.Theme
 
@@ -40,7 +40,7 @@ local FR = {
 	CHEST_KIND_frame    = "Cadre",
 	CHEST_KIND_bg       = "Fond",
 	CHEST_OPTION        = "%s : %s",
-	CHEST_MSG_NEW       = "Coffre : %s terminée à 100 %% ! Ouvre-le pour choisir ta récompense (/r2q coffre).",
+	CHEST_MSG_NEW       = "Coffre : %s terminée à 100 %% ! Ouvre-le pour choisir ta récompense (/qc coffre).",
 	CHEST_MSG_PICKED    = "Coffre de %s : %s obtenu !",
 	CHEST_MSG_GOLDEN    = "%s terminée à 100 %% : tout le palier %d est déjà à toi, la zone devient dorée.",
 	CHEST_MSG_NONE      = "Aucun coffre à ouvrir. Termine une zone à 100 % pour en gagner un.",
@@ -49,7 +49,7 @@ local FR = {
 	CHEST_REWARD_TIER   = "un objet au choix (palier %d)",
 	CHEST_HINT          = "Clique pour choisir ta récompense parmi les objets du palier %d.",
 	CHEST_EQUIP_HINT    = "À équiper dans les options du compagnon.",
-	HELP_CHEST          = "/r2q coffre -- ouvre le coffre d'une zone terminée à 100 %",
+	HELP_CHEST          = "/qc coffre -- ouvre le coffre d'une zone terminée à 100 %",
 }
 local EN = {
 	CHEST_TITLE         = "%s chest",
@@ -59,7 +59,7 @@ local EN = {
 	CHEST_KIND_frame    = "Frame",
 	CHEST_KIND_bg       = "Background",
 	CHEST_OPTION        = "%s: %s",
-	CHEST_MSG_NEW       = "Chest: %s is 100%% complete! Open it to pick your reward (/r2q coffre).",
+	CHEST_MSG_NEW       = "Chest: %s is 100%% complete! Open it to pick your reward (/qc coffre).",
 	CHEST_MSG_PICKED    = "%s chest: you got %s!",
 	CHEST_MSG_GOLDEN    = "%s is 100%% complete: you already own all of tier %d, the zone turns golden.",
 	CHEST_MSG_NONE      = "No chest to open. Complete a zone to 100% to earn one.",
@@ -68,7 +68,7 @@ local EN = {
 	CHEST_REWARD_TIER   = "an item of your choice (tier %d)",
 	CHEST_HINT          = "Click to pick your reward among tier %d items.",
 	CHEST_EQUIP_HINT    = "Equip it in the companion options.",
-	HELP_CHEST          = "/r2q coffre -- open the chest of a zone completed to 100%",
+	HELP_CHEST          = "/qc coffre -- open the chest of a zone completed to 100%",
 }
 ns.RegisterStrings(FR, EN)
 ns.CHEST_STRINGS = { fr = FR, en = EN }

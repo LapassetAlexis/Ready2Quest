@@ -1,7 +1,7 @@
 -- Module « Carnet de voyage » (v1.25.0) : tampons de zone, village, capitale,
 -- donjon, rare, palier ; contrat STAMP / JournalCounts ; bandeau et chat ;
 -- fenêtre ; commandes ; réglages.
-local Check, Say, ResetWorld, NS, Mock = T.Check, T.Say, T.ResetWorld, T.NS, T.Mock
+local Check, Say, ResetWorld, NS, Mock = T.Check, T.Say, T.ResetWorld, T.QNS, T.Mock
 
 -- Mocks propres à ce fichier, restaurés à la fin
 local saved, MOCKED = {}, { "IsInInstance", "GetInstanceInfo", "GetRealZoneText", "UnitClassification", "UnitGUID",
@@ -415,10 +415,8 @@ do
 	Check("[JRN] sous-page du Compagnon de route", nav and nav.parentId == "companion" and nav.power == nil and page)
 	Check("[JRN] interrupteur unique sur le module parent", parentNav and parentNav.power ~= nil)
 	Check("[JRN] page rangée dans MODULES", (function()
-		local seen
 		for _, def in ipairs(NS.OPTION_PAGES) do
-			if def.id == "journal" then seen = true end
-			if def.id == "merchant" then return seen == true end
+			if def.id == "journal" then return def.group == "OPT_GROUP_MODULES" end
 		end
 	end)())
 	Check("[JRN] phrase d'explication", page and page.sub.text == NS.L.OPT_PAGE_JOURNAL_SUB)
@@ -471,7 +469,8 @@ do
 	Mock:Fire("PLAYER_ENTERING_WORLD", false, false)
 	Check("[JRN] rallumé : les paliers manqués sont rattrapés en silence", NS:HasStamp("level:20")
 		and NS:JournalData().stamps["level:20"].retro == true)
-	Check("[JRN] « carnet » vise le Compagnon de route, sans conflit", NS:FindModule("carnet").id == "companion" and not NS:FindCheck("carnet"))
+	Check("[JRN] « carnet » vise le Compagnon de route, sans conflit", NS:FindModule("carnet").id == "companion"
+		and not (NS.FindCheck and NS:FindCheck("carnet")))
 
 	-- interrupteur général de l'addon
 	J.Reset(20)

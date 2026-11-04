@@ -1,7 +1,7 @@
 -- Compagnon : cosmétiques du coffre (v1.25.0). Catalogue (paliers, libellés,
 -- numéros d'affichage), liste des récompenses, cadres et fonds posés sur le
 -- cadre (et leurs replis), ornements ajoutés, choix dans les réglages.
-local Check, Say, ResetWorld, NS, Mock = T.Check, T.Say, T.ResetWorld, T.NS, T.Mock
+local Check, Say, ResetWorld, NS, Mock = T.Check, T.Say, T.ResetWorld, T.QNS, T.Mock
 
 local K = { savedIsUnlocked = NS.CompanionIsUnlocked, savedCreateColor = rawget(_G, "CreateColor"), savedJournal = rawget(NS, "JournalCounts") }
 
@@ -128,7 +128,7 @@ do
 	Check("[COSM] or ciselé : bordure dorée du client posée", border and border:IsShown() and border.backdrop
 		and border.backdrop.edgeFile == "Interface\\DialogFrame\\UI-DialogBox-Gold-Border" and frame.frameBackdrop == true)
 	Check("[COSM] or ciselé : filet ambre et second filet", frame.top.vertex[1] == 0.91 and frame.styleInnerHolder:IsShown())
-	Check("[COSM] choix persisté par personnage", NS:QCCharData().companion.frameStyle == "gilded")
+	Check("[COSM] choix persisté par personnage", NS:CharData().companion.frameStyle == "gilded")
 	K.Give("frame", "frost")
 	NS:CompanionSetStyle("frame", "frost")
 	Check("[COSM] givre : teinte de la bordure", border.backdrop.edgeFile == "Interface\\Tooltips\\UI-Tooltip-Border"

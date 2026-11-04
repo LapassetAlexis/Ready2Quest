@@ -16,8 +16,8 @@
 -- Arguments : un réservoir dont les lignes ont un « %s » / « %d » reçoit
 -- toujours ses arguments (STAMP, LEVEL…), SAUF les avis sur les PNJ : là, le
 -- nom du PNJ peut manquer, et les lignes à « %s » sont alors écartées.
-local ns = rawget(_G, "Ready2Quest")
-if type(ns) ~= "table" or not ns.QC then return end
+local ADDON, ns = ...
+if ns.blocked then return end
 
 local P = {}
 
@@ -370,9 +370,9 @@ P.GOAL_STAGE = {
 -- ---------------------------------------------------------------------------
 P.TIP = {
 	{ "Astuce : lie-toi à l'auberge du village, ta pierre de foyer t'y ramènera.", "Tip: bind at the village inn, your hearthstone will bring you back." },
-	{ "Astuce : tes objets gris se vendent tout seuls chez le marchand.", "Tip: your grey items sell themselves at the vendor." },
+	{ "Astuce : /qc options règle mes bulles et mes astuces.", "Tip: /qc options sets my bubbles and my tips." },
 	{ "Astuce : le carnet compte les ennemis rares que TU as engagés.", "Tip: the journal counts the rares YOU actually engaged." },
-	{ "Astuce : /r2q lance le check avant le départ (sacs, vivres, réparations).", "Tip: /r2q runs the pre-departure check (bags, food, repairs)." },
+	{ "Astuce : /qc ouvre mon carnet, un clic droit sur moi aussi.", "Tip: /qc opens my journal, and so does a right-click on me." },
 	{ "Astuce : déconnecte-toi à l'auberge pour gagner de l'expérience reposée.", "Tip: log out at an inn to build rested experience." },
 	{ "Astuce : les quêtes grises ne rapportent presque plus d'expérience.", "Tip: grey quests give almost no experience." },
 	{ "Astuce : manger et boire en même temps fait repartir plus vite.", "Tip: eating and drinking together gets you going faster." },
@@ -381,10 +381,10 @@ P.TIP = {
 	{ "Astuce : ton maître de classe a du nouveau tous les deux niveaux.", "Tip: your class trainer has something new every two levels." },
 	{ "Astuce : un plus grand sac, c'est moins d'allers-retours.", "Tip: a bigger bag means fewer round trips." },
 	{ "Astuce : garde une potion de soins pour les mauvaises surprises.", "Tip: keep a healing potion for nasty surprises." },
-	{ "Astuce : chaque nouveau lieu ajoute un tampon au carnet (/r2q carnet).", "Tip: every new place adds a journal stamp (/r2q carnet)." },
+	{ "Astuce : chaque nouveau lieu ajoute un tampon au carnet (/qc carnet).", "Tip: every new place adds a journal stamp (/qc carnet)." },
 	{ "Astuce : les tampons du carnet débloquent mes apparences et ornements.", "Tip: journal stamps unlock my looks and ornaments." },
 	{ "Astuce : survole-moi pour voir ma faim, mon énergie, mon moral, ma curiosité.", "Tip: hover me to see my hunger, energy, mood and curiosity." },
-	{ "Astuce : tu peux me renommer avec /r2q compagnon nom.", "Tip: you can rename me with /r2q compagnon nom." },
+	{ "Astuce : tu peux me renommer avec /qc compagnon nom.", "Tip: you can rename me with /qc compagnon nom." },
 	{ "Astuce : parle à chaque maître de vol croisé, ça fait gagner un temps fou.", "Tip: talk to every flight master you pass, huge time saver." },
 	{ "Astuce : un ennemi bien plus fort que toi ? Mieux vaut le contourner.", "Tip: enemy far above you? Better go around." },
 	{ "Astuce : relis l'objectif, un objet de quête tombe parfois d'un seul type d'ennemi.", "Tip: reread objectives, quest items sometimes drop from one enemy type." },
@@ -444,7 +444,7 @@ P.TUTO = {
 	{ "J'ai quatre besoins : faim, énergie, moral, curiosité. Survole-moi pour les voir.", "I have four needs: hunger, energy, mood, curiosity. Hover me to see them." },
 	{ "Mange, repose-toi à l'auberge, rends des quêtes, explore : ça me comble !", "Eat, rest at inns, turn in quests, explore: that fills me up!" },
 	{ "Je grandis avec tes niveaux : 10, 20, 40 et 60. Jamais de retour en arrière.", "I grow with your levels: 10, 20, 40 and 60. Never backwards." },
-	{ "Les tampons du carnet (/r2q carnet) débloquent mes apparences et ornements.", "Journal stamps (/r2q carnet) unlock my looks and ornaments." },
+	{ "Les tampons du carnet (/qc carnet) débloquent mes apparences et ornements.", "Journal stamps (/qc carnet) unlock my looks and ornaments." },
 	{ "Pour me personnaliser : réglages, page Compagnon. Et je ne me fâche jamais !", "To customise me: settings, Companion page. And I never get cross!" },
 }
 

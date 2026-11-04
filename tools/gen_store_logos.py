@@ -8,7 +8,8 @@ QuestCompanion.
 
 Usage : python3 -I tools/gen_store_logos.py
 Écrit docs/publication/logo_ready2quest.png, logo_questcompanion.png et
-QuestCompanion/Textures/logo_petit.tga (icône de la liste des addons).
+QuestCompanion/Textures/logo_petit.tga (icône de la liste des addons, minicarte)
+et logo.tga (en-tête des réglages).
 Nécessite Pillow.
 """
 import math
@@ -16,7 +17,7 @@ import os
 from PIL import Image, ImageDraw, ImageFilter, ImageFont
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-fontpath = os.path.join(ROOT, "Ready2Quest", "Fonts", "Alegreya-Bold.ttf")
+fontpath = os.path.join(ROOT, "Ready2Quest", "Libs", "Socle", "Media", "Alegreya-Bold.ttf")
 OUT = os.path.join(ROOT, "docs", "publication")
 
 AMB=(232,165,75,255); AMB_D=(185,120,44,255); CREAM=(241,232,212,255)
@@ -148,4 +149,5 @@ if __name__ == "__main__":
     textures = os.path.join(ROOT, "QuestCompanion", "Textures")
     os.makedirs(textures, exist_ok=True)
     draw_qc(64).save(os.path.join(textures, "logo_petit.tga"), compression=None)
+    draw_qc(128).save(os.path.join(textures, "logo.tga"), compression=None)
     print("ok")

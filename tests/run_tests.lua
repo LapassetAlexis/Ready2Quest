@@ -474,9 +474,9 @@ end
 -- 2. Chargement de l'addon (comme le client : chunk(nom, tablePrivée))
 ----------------------------------------------------------------------------
 local NS = {}
--- QuestCompanion (sous-dossier) : addon séparé, qui dépend de Ready2Quest et
--- reprend son namespace via _G.Ready2Quest ; sa table privée reste à part.
-local QC_PRIVATE = {}
+-- QuestCompanion : addon autonome, avec sa propre table privée (son namespace)
+-- et sa copie du socle commun. Les tests de ses modules la reçoivent en T.QNS.
+local QNS = {}
 local function LoadAddonFile(name)
 	local path = ROOT .. "/" .. name
 	local handle, err = io.open(path, "r")
@@ -487,7 +487,7 @@ local function LoadAddonFile(name)
 	assert(chunk, "erreur de compilation dans " .. path .. ":\n" .. tostring(compileError))
 	-- comme le client : chaque addon reçoit son nom et sa propre table privée
 	if name:find("^QuestCompanion/") then
-		chunk("QuestCompanion", QC_PRIVATE)
+		chunk("QuestCompanion", QNS)
 	else
 		chunk("Ready2Quest", NS)
 	end
@@ -612,6 +612,7 @@ local function ResetWorld()
 	-- les deux : la nouvelle variable, et l ancienne que Core migre
 	_G.Ready2QuestDB = nil
 	_G.QuestCompanionDB = nil
+	QNS._dbReady = false
 	_G.ReadyToQuestDB = nil
 	_G.SacEtDepartDB = nil
 	NS._dbReady = false
@@ -3784,7 +3785,7 @@ end
 -- 4.99 Tests des modules (tests/modules/*.lua, listés par run_tests.py).
 -- Chaque fichier reçoit la boîte à outils du harnais dans la table T.
 do
-	_G.T = { Check = Check, Say = Say, ResetWorld = ResetWorld, Result = Result, NS = NS, Mock = Mock }
+	_G.T = { Check = Check, Say = Say, ResetWorld = ResetWorld, Result = Result, NS = NS, QNS = QNS, Mock = Mock }
 	-- build Forever par défaut au chargement des modules, comme en jeu
 	Mock.world.build = nil
 	NS:DetectCapabilities()

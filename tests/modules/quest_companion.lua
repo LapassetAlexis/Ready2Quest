@@ -1,183 +1,269 @@
--- QuestCompanion : addon séparé (v1.0.0), qui dépend de Ready2Quest (v1.26.0).
--- .toc des deux addons, namespace partagé via _G.Ready2Quest, progression
--- rangée dans QuestCompanionDB et reprise de Ready2QuestDB, garde sans R2Q.
-local Check, Say, ResetWorld, NS, Mock = T.Check, T.Say, T.ResetWorld, T.NS, T.Mock
+-- Ready2Quest (1.26.0) et QuestCompanion (1.0.0) : deux addons autonomes,
+-- rangés côte à côte (Ready2Quest/, QuestCompanion/), chacun avec sa copie du
+-- socle commun (Libs/Socle), son namespace, sa sauvegarde, sa commande, son
+-- panneau de réglages et son bouton de minicarte. Liens facultatifs : reprise
+-- des données de Ready2Quest 1.25, départs et retours de zone sûre.
+local Check, Say, ResetWorld, NS, QNS, Mock = T.Check, T.Say, T.ResetWorld, T.NS, T.QNS, T.Mock
 local ROOT = rawget(_G, "ADDON_ROOT") or "."
 
 local QCT = {}
-function QCT.ReadToc(path)
-	local handle = assert(io.open(ROOT .. "/" .. path, "r"))
+function QCT.Read(path)
+	local handle = io.open(ROOT .. "/" .. path, "rb")
+	if not handle then return nil end
 	local text = handle:read("*a")
 	handle:close()
+	return text
+end
+function QCT.TocFiles(text)
 	local files = {}
 	for line in text:gmatch("[^\n]+") do
 		line = line:gsub("\r", ""):gsub("^%s+", ""):gsub("%s+$", "")
-		if line ~= "" and not line:find("^#") then files[#files + 1] = line end
+		if line ~= "" and not line:find("^#") then files[#files + 1] = (line:gsub("\\", "/")) end
 	end
-	return text, files
+	return files
 end
 function QCT.Reset()
 	ResetWorld()
-	NS.companionSession = nil
-	NS.QC.loaded = true
+	QNS.companionSession = nil
+	if QNS.optionsFrame then QNS.optionsFrame:Hide() end
+	if QNS.journalFrame then QNS.journalFrame:Hide() end
+end
+-- Charge des fichiers de QuestCompanion dans une table neuve (un client où
+-- QuestCompanion serait seul), sans laisser leurs cadres réagir à la suite.
+function QCT.LoadFresh(files, r2q)
+	local saved = rawget(_G, "Ready2Quest")
+	_G.Ready2Quest = r2q
+	local fresh, before, errors = {}, #Mock.frames, {}
+	for _, file in ipairs(files) do
+		local chunk = assert(loadfile(ROOT .. "/QuestCompanion/" .. file))
+		local ok, err = pcall(chunk, "QuestCompanion", fresh)
+		if not ok then errors[#errors + 1] = file .. " : " .. tostring(err) end
+	end
+	_G.Ready2Quest = saved
+	for index = before + 1, #Mock.frames do Mock.frames[index].events = {} end
+	return fresh, errors
 end
 
--- 1. Les deux .toc ----------------------------------------------------------------------
+local QC_TOC = QCT.Read("QuestCompanion/QuestCompanion.toc")
+local R2Q_TOC = QCT.Read("Ready2Quest/Ready2Quest.toc")
+
+-- 1. Dépôt et .toc ----------------------------------------------------------------------
 do
-	Say("-- QuestCompanion : .toc")
-	local qcText, qcFiles = QCT.ReadToc("QuestCompanion/QuestCompanion.toc")
-	local r2qText, r2qFiles = QCT.ReadToc("Ready2Quest/Ready2Quest.toc")
-	Check("[QC] .toc : dépend de Ready2Quest", qcText:find("\n## Dependencies: Ready2Quest\n", 1, true) ~= nil)
-	Check("[QC] .toc : sa propre sauvegarde QuestCompanionDB", qcText:find("\n## SavedVariables: QuestCompanionDB\n", 1, true) ~= nil)
-	Check("[QC] .toc : version 1.0.0, comme NS.QC.version", qcText:find("\n## Version: 1.0.0\n", 1, true) ~= nil
-		and NS.QC.version == "1.0.0")
-	Check("[QC] .toc : Bootstrap.lua en premier", qcFiles[1] == "Bootstrap.lua", qcFiles[1])
-	Check("[QC] Ready2Quest.toc : version 1.26.0, comme NS.version", r2qText:find("\n## Version: 1.26.0\n", 1, true) ~= nil
-		and NS.version == "1.26.0")
-
-	local listed, missing = {}, {}
-	for _, file in ipairs(qcFiles) do
-		listed[file] = true
-		local handle = io.open(ROOT .. "/QuestCompanion/" .. file, "r")
-		if handle then handle:close() else missing[#missing + 1] = file end
+	Say("-- deux addons : .toc")
+	Check("[QC] .toc : sans dépendance obligatoire, Ready2Quest facultatif",
+		not QC_TOC:find("## Dependencies", 1, true) and not QC_TOC:find("## RequiredDeps", 1, true)
+		and QC_TOC:find("\n## OptionalDeps: Ready2Quest\n", 1, true) ~= nil)
+	Check("[QC] .toc : sa sauvegarde QuestCompanionDB", QC_TOC:find("\n## SavedVariables: QuestCompanionDB\n", 1, true) ~= nil)
+	Check("[QC] versions : QC 1.0.0, R2Q 1.26.0, comme leurs namespaces", QC_TOC:find("\n## Version: 1.0.0\n", 1, true)
+		and R2Q_TOC:find("\n## Version: 1.26.0\n", 1, true) and QNS.version == "1.0.0" and NS.version == "1.26.0")
+	for _, addon in ipairs({ { "Ready2Quest", R2Q_TOC }, { "QuestCompanion", QC_TOC } }) do
+		local files = QCT.TocFiles(addon[2])
+		Check("[QC] " .. addon[1] .. " : Config.lua puis le socle en tête", files[1] == "Config.lua"
+			and files[2] == "Libs/Socle/Base.lua" and files[3] == "Libs/Socle/Strings.lua", files[1])
+		local missing = {}
+		for _, file in ipairs(files) do
+			if not QCT.Read(addon[1] .. "/" .. file) then missing[#missing + 1] = file end
+		end
+		Check("[QC] " .. addon[1] .. " : chaque fichier du .toc existe dans son dossier", #missing == 0, table.concat(missing, ", "))
 	end
-	Check("[QC] .toc : chaque fichier listé existe dans QuestCompanion/", #missing == 0, table.concat(missing, ", "))
-
-	local leftovers = {}
-	for _, file in ipairs(r2qFiles) do
-		local handle = file ~= "Bootstrap.lua" and io.open(ROOT .. "/QuestCompanion/" .. file, "r")
-		if handle then handle:close(); leftovers[#leftovers + 1] = file end
+	local r2qFiles, leak = {}, {}
+	for _, file in ipairs(QCT.TocFiles(R2Q_TOC)) do r2qFiles[file] = true end
+	for _, file in ipairs(QCT.TocFiles(QC_TOC)) do
+		if r2qFiles[file] and not file:find("^Libs/Socle/") and file ~= "Config.lua" and file ~= "Locales.lua"
+			and file ~= "Core.lua" then leak[#leak + 1] = file end
 	end
-	Check("[QC] Ready2Quest.toc ne charge aucun fichier de QuestCompanion", #leftovers == 0, table.concat(leftovers, ", "))
-	for _, file in ipairs({ "Companion.lua", "Journal.lua", "JournalTracker.lua", "JournalWindow.lua", "Bestiary.lua",
-		"Gathering.lua", "CompanionChest.lua", "ZoneQuests.lua", "ZoneCreatures_Era.lua" }) do
-		local handle = io.open(ROOT .. "/Ready2Quest/" .. file, "r")
-		if handle then handle:close() end
-		Check("[QC] " .. file .. " n'est pas dans Ready2Quest/", handle == nil and listed[file] == true)
-	end
+	Check("[QC] aucun module partagé entre les deux .toc (hors socle)", #leak == 0, table.concat(leak, ", "))
+	Check("[QC] plus de fichiers d'addon à la racine du dépôt", QCT.Read("Core.lua") == nil and QCT.Read("Ready2Quest.toc") == nil
+		and QCT.Read("Companion.lua") == nil)
+end
 
-	local bad = {}
-	for _, file in ipairs(qcFiles) do
-		local handle = assert(io.open(ROOT .. "/QuestCompanion/" .. file, "r"))
-		local source = handle:read("*a")
-		handle:close()
-		if file ~= "Bootstrap.lua" and (source:find("local ADDON, ns = ...", 1, true)
-			or not source:find('local ns = rawget(_G, "Ready2Quest")\nif type(ns) ~= "table" or not ns.QC then return end', 1, true)) then
-			bad[#bad + 1] = file
+-- 2. Socle commun : deux copies identiques ------------------------------------------------
+do
+	Say("-- deux addons : socle")
+	local files = { "Base.lua", "Strings.lua", "Compat.lua", "Hubs.lua", "DungeonData.lua", "Theme.lua", "Store.lua",
+		"World.lua", "Commands.lua", "Options.lua", "Minimap.lua", "Media/losange.tga", "Media/losange_trait.tga",
+		"Media/Alegreya-Bold.ttf" }
+	local diff = {}
+	for _, file in ipairs(files) do
+		local a, b = QCT.Read("Ready2Quest/Libs/Socle/" .. file), QCT.Read("QuestCompanion/Libs/Socle/" .. file)
+		if not a or a ~= b then diff[#diff + 1] = file end
+	end
+	Check("[QC] socle identique dans les deux addons (tools/sync_socle.py)", #diff == 0, table.concat(diff, ", "))
+	local named = {}
+	for _, file in ipairs(files) do
+		local text = QCT.Read("Ready2Quest/Libs/Socle/" .. file) or ""
+		if file:find("%.lua$") and (text:find("Ready2QuestDB", 1, true) or text:find("QuestCompanionDB", 1, true)
+			or text:find("RunChecklist", 1, true) or text:find("ToggleJournal", 1, true)) then
+			named[#named + 1] = file
 		end
 	end
-	Check("[QC] chaque fichier reprend le namespace de Ready2Quest, avec la garde", #bad == 0, table.concat(bad, ", "))
-	Check("[QC] API publique : _G.QuestCompanion = NS.QC, _G.Ready2Quest = NS", rawget(_G, "QuestCompanion") == NS.QC
-		and rawget(_G, "Ready2Quest") == NS)
-	Check("[QC] modules marqués chargés", NS.Loaded["QC.Bootstrap"] and NS.Loaded.Companion and NS.Loaded.JournalWindow)
+	Check("[QC] le socle ne vise aucun des deux addons (tout passe par ns.APP et des crochets)", #named == 0,
+		table.concat(named, ", "))
 end
 
--- 2. Garde : QuestCompanion sans Ready2Quest -------------------------------------------
+-- 3. Namespaces, sauvegardes, commandes ---------------------------------------------------
 do
-	Say("-- QuestCompanion : sans Ready2Quest")
-	local saved = rawget(_G, "Ready2Quest")
-	_G.Ready2Quest = nil
+	Say("-- deux addons : séparés")
+	QCT.Reset()
+	Check("[QC] deux namespaces", QNS ~= NS and QNS.L ~= NS.L and QNS.Theme ~= NS.Theme and QNS.APP.id == "QuestCompanion"
+		and NS.APP.id == "Ready2Quest")
+	Check("[QC] deux sauvegardes", QNS:DB() == _G.QuestCompanionDB and NS:DB() == _G.Ready2QuestDB
+		and _G.QuestCompanionDB ~= _G.Ready2QuestDB)
+	Check("[QC] /qc et /questcompanion", type(SlashCmdList.QUESTCOMPANION) == "function" and SLASH_QUESTCOMPANION2 == "/qc"
+		and SLASH_QUESTCOMPANION1 == "/questcompanion")
+	Check("[QC] /r2q reste à Ready2Quest", type(SlashCmdList.SACETDEPART) == "function" and SLASH_SACETDEPART3 == "/r2q")
+	Check("[QC] commandes du compagnon sous /qc seulement", QNS.COMMANDS.carnet and QNS.COMMANDS.compagnon and QNS.COMMANDS.coffre
+		and not NS.COMMANDS.carnet and not NS.COMMANDS.compagnon and not NS.COMMANDS.coffre)
+	Check("[QC] commandes du check sous /r2q seulement", NS.COMMANDS.safe and NS.COMMANDS.checks
+		and not QNS.COMMANDS.safe and not QNS.COMMANDS.checks)
+	Check("[QC] chaque addon a ses modules", QNS:FindModule("compagnon") and not NS:FindModule("compagnon")
+		and NS:FindModule("depart") and not QNS:FindModule("depart"))
+	Check("[QC] les textes de QC parlent de /qc", QNS.L.HELP_COMPANION:find("/qc compagnon", 1, true)
+		and QNS.L.HELP_JOURNAL:find("/qc carnet", 1, true) and QNS.L.HELP_CHEST:find("/qc coffre", 1, true))
+
 	Mock:Reset()
-	local results = {}
-	for _, file in ipairs({ "Bootstrap.lua", "Companion.lua", "JournalTracker.lua", "ZoneQuests_Forever.lua" }) do
-		local chunk = assert(loadfile(ROOT .. "/QuestCompanion/" .. file))
-		results[file] = { pcall(chunk, "QuestCompanion", {}) }
-	end
-	_G.Ready2Quest = saved
-	local allOk = true
-	for _, result in pairs(results) do allOk = allOk and result[1] end
-	Check("[QC] sans Ready2Quest : aucun fichier ne plante", allOk)
-	Check("[QC] sans Ready2Quest : un message explique quoi faire", Mock:Output():find("Ready2Quest est requis", 1, true) ~= nil,
+	SlashCmdList.QUESTCOMPANION("")
+	Check("[QC] /qc sans argument : le carnet", QNS.journalFrame and QNS.journalFrame:IsShown())
+	QNS.journalFrame:Hide()
+	SlashCmdList.QUESTCOMPANION("help")
+	Check("[QC] /qc help : l'aide de QC", Mock:Output():find("/qc carnet", 1, true) and not Mock:Output():find("/r2q", 1, true),
 		Mock:Output())
-	Check("[QC] le namespace de Ready2Quest n'a pas été touché", rawget(_G, "Ready2Quest") == NS and NS.QC.version == "1.0.0")
-end
-
-do
-	Say("-- QuestCompanion : avec un Ready2Quest 1.25 qui embarque le compagnon")
-	local old = { version = "1.25.0", Loaded = { Companion = true }, Mark = function() end }
-	local saved = rawget(_G, "Ready2Quest")
-	_G.Ready2Quest = old
 	Mock:Reset()
-	local results = {}
-	for _, file in ipairs({ "Bootstrap.lua", "Companion.lua", "Journal.lua" }) do
-		local chunk = assert(loadfile(ROOT .. "/QuestCompanion/" .. file))
-		results[#results + 1] = pcall(chunk, "QuestCompanion", {})
-	end
-	_G.Ready2Quest = saved
-	Check("[QC] ancien Ready2Quest : rien ne plante", results[1] and results[2] and results[3])
-	Check("[QC] ancien Ready2Quest : QuestCompanion s'efface (pas de ns.QC, rien de redéfini)", old.QC == nil
-		and old.CompanionData == nil and old.JournalData == nil)
-	Check("[QC] ancien Ready2Quest : message pour mettre Ready2Quest à jour",
-		Mock:Output():find("mets Ready2Quest à jour", 1, true) ~= nil, Mock:Output())
+	SlashCmdList.QUESTCOMPANION("module compagnon off")
+	Check("[QC] /qc module compagnon off : réglage de QC", QNS:DB().companionEnabled == false and NS:DB().companionEnabled == nil)
+	SlashCmdList.QUESTCOMPANION("module compagnon on")
 end
 
--- 3. Sauvegarde propre et reprise de Ready2QuestDB --------------------------------------
+-- 4. Panneau de réglages et bouton de minicarte ------------------------------------------
 do
-	Say("-- QuestCompanion : sauvegarde")
+	Say("-- deux addons : réglages et minicarte")
 	QCT.Reset()
-	local key = NS:CharKey()
-	NS:DB().chars[key] = { trainerLevel = 10, companion = { name = "Pipo", stage = 2 },
-		journal = { stamps = { ["zone:1411"] = { kind = "zone" } } } }
-	local otherKey = "Autre-Royaume"
-	NS:DB().chars[otherKey] = { companion = { name = "Autre" } }
+	local frame = QNS:EnsureOptions()
+	Check("[QC] son propre panneau", frame and frame ~= NS:EnsureOptions() and frame.name == "QuestCompanionOptionsFrame"
+		and frame.brandName.text == QNS.APP.brand)
+	local pages = {}
+	for _, def in ipairs(QNS.OPTION_PAGES) do pages[def.id] = true end
+	local r2qPages = {}
+	for _, def in ipairs(NS.OPTION_PAGES) do r2qPages[def.id] = true end
+	Check("[QC] pages de QC : Général et Compagnon de route", pages.general and pages.companion and pages.journal
+		and not pages.departure and not pages.merchant)
+	Check("[QC] plus de compagnon dans les réglages de Ready2Quest", not r2qPages.companion and not r2qPages.journal
+		and r2qPages.departure and r2qPages.merchant)
+	Check("[QC] bouton principal : ouvrir le carnet", frame.runButton.text.text == "Ouvrir le carnet")
+	frame.runButton:Click()
+	Check("[QC] … qui ouvre le carnet", QNS.journalFrame and QNS.journalFrame:IsShown())
+	QNS.journalFrame:Hide()
 
-	local char = NS:QCCharData()
-	local old = NS:DB().chars[key]
-	Check("[QC] migration : compagnon repris de Ready2QuestDB", char.companion and char.companion.name == "Pipo"
-		and char.companion.stage == 2)
-	Check("[QC] migration : carnet repris", char.journal and char.journal.stamps["zone:1411"] ~= nil)
-	Check("[QC] migration : retiré de Ready2QuestDB, le reste du personnage y reste", old.companion == nil
-		and old.journal == nil and old.trainerLevel == 10)
-	Check("[QC] migration : rangé dans QuestCompanionDB, par personnage", type(_G.QuestCompanionDB) == "table"
-		and _G.QuestCompanionDB.chars[key] == char and char.migrated == true)
-	Check("[QC] migration : les autres personnages attendent leur connexion",
-		NS:DB().chars[otherKey].companion ~= nil and _G.QuestCompanionDB.chars[otherKey] == nil)
-	Check("[QC] CompanionData lit QuestCompanionDB", NS:CompanionData() == char.companion
-		and NS:CompanionData().name == "Pipo")
-	Check("[QC] JournalData lit QuestCompanionDB", NS:JournalData() == char.journal)
-
-	old.companion = { name = "Fantôme" }
-	Check("[QC] migration une seule fois", NS:QCCharData().companion.name == "Pipo" and old.companion.name == "Fantôme")
+	local button = QNS:EnsureMinimapButton()
+	Check("[QC] son propre bouton de minicarte, au dragonnet", button and button.name == "QuestCompanionMinimapButton"
+		and button ~= NS:EnsureMinimapButton() and button.icon.texture == "Interface\\AddOns\\QuestCompanion\\Textures\\logo_petit")
+	button:GetScript("OnClick")(button, "LeftButton")
+	Check("[QC] clic gauche : le carnet", QNS.journalFrame:IsShown())
+	QNS.journalFrame:Hide()
+	button:GetScript("OnClick")(button, "RightButton")
+	Check("[QC] clic droit : les réglages de QC", QNS.optionsFrame:IsShown() and not (NS.optionsFrame and NS.optionsFrame:IsShown()))
+	QNS.optionsFrame:Hide()
+	Check("[QC] le socle trouve ses médias dans chaque addon",
+		QNS.Theme.DIAMOND == "Interface\\AddOns\\QuestCompanion\\Libs\\Socle\\Media\\losange"
+		and NS.Theme.DIAMOND == "Interface\\AddOns\\Ready2Quest\\Libs\\Socle\\Media\\losange")
 end
 
+-- 5. Reprise depuis Ready2Quest 1.25 -----------------------------------------------------
 do
-	Say("-- QuestCompanion : nouveau personnage, puis reset de Ready2Quest")
+	Say("-- deux addons : reprise de Ready2Quest 1.25")
 	QCT.Reset()
-	local data = NS:CompanionData()
-	data.name = "Neuf"
-	Check("[QC] nouveau personnage : progression créée dans QuestCompanionDB",
-		_G.QuestCompanionDB.chars[NS:CharKey()].companion == data
-		and (NS:DB().chars[NS:CharKey()] or {}).companion == nil)
-	NS:HandleCommand("reset")
-	Check("[QC] /r2q reset ne touche pas la progression de QuestCompanion", NS:CompanionData().name == "Neuf")
-	Check("[QC] et ne la reprend pas de Ready2QuestDB vidé", (NS:DB().chars[NS:CharKey()] or {}).companion == nil)
+	local key = QNS:CharKey()
+	_G.Ready2QuestDB = { enabled = true, showWindow = false, companionBubbles = false, journalTracker = false,
+		journalTrackerPoint = { point = "TOP", x = 1, y = 2 },
+		chars = { [key] = { trainerLevel = 10, companion = { name = "Pipo", stage = 2 },
+			journal = { stamps = { ["zone:1411"] = { kind = "zone" } } } },
+			["Autre-Royaume"] = { companion = { name = "Autre" } },
+			["Sans-Compagnon"] = { trainerLevel = 4 } } }
+	NS._dbReady = false
+	local moved = QNS:MigrateFromReady2Quest()
+	local db, old = QNS:DB(), _G.Ready2QuestDB
+	Check("[QC] reprise : tous les personnages qui avaient un compagnon", moved == 2, moved)
+	Check("[QC] reprise : compagnon et carnet", db.chars[key].companion.name == "Pipo" and db.chars[key].journal.stamps["zone:1411"]
+		and db.chars["Autre-Royaume"].companion.name == "Autre")
+	Check("[QC] reprise : réglages du compagnon et du carnet", db.companionBubbles == false and db.journalTracker == false
+		and db.journalTrackerPoint.point == "TOP")
+	Check("[QC] reprise : retirés de Ready2QuestDB, le reste y reste", old.chars[key].companion == nil and old.chars[key].journal == nil
+		and old.chars[key].trainerLevel == 10 and old.companionBubbles == nil and old.journalTrackerPoint == nil
+		and old.showWindow == false and old.chars["Sans-Compagnon"].trainerLevel == 4)
+	Check("[QC] reprise : lue par le compagnon et le carnet", QNS:CompanionData().name == "Pipo" and QNS:JournalData().stamps["zone:1411"])
+	Check("[QC] reprise : une seule fois", db.migratedFromR2Q == true and QNS:MigrateFromReady2Quest() == 0)
+
+	QCT.Reset()
+	QNS:CompanionData().name = "Neuf"
+	_G.Ready2QuestDB = { chars = { [key] = { companion = { name = "Ancien" } } } }
+	QNS:MigrateFromReady2Quest()
+	Check("[QC] reprise : une progression déjà commencée dans QC l'emporte", QNS:CompanionData().name == "Neuf"
+		and _G.Ready2QuestDB.chars[key].companion == nil)
+
+	QCT.Reset()
+	_G.Ready2QuestDB = nil
+	Check("[QC] sans Ready2Quest : rien à reprendre, on réessaiera", QNS:MigrateFromReady2Quest() == 0
+		and QNS:DB().migratedFromR2Q == nil)
+
+	QCT.Reset()
+	_G.Ready2QuestDB = { chars = { [key] = { companion = { name = "Au chargement" } } } }
+	QNS:OnAddonLoaded()
+	Check("[QC] reprise lancée à ADDON_LOADED", QNS:CompanionData().name == "Au chargement")
+
+	-- lue avant ADDON_LOADED, la sauvegarde est un brouillon : le client la
+	-- remplace par la vraie, que le socle doit reprendre (réglages par défaut)
+	QCT.Reset()
+	local draft = QNS:DB()
+	local saved = { chars = { [key] = { companion = { name = "Sauvé" } } }, migratedFromR2Q = true }
+	_G.QuestCompanionDB = saved
+	QNS.loaderFrame:GetScript("OnEvent")(QNS.loaderFrame, "ADDON_LOADED", "QuestCompanion")
+	Check("[QC] ADDON_LOADED : la vraie sauvegarde est reprise, réglages par défaut compris", QNS:DB() == saved
+		and saved ~= draft and saved.showMinimap == true and QNS:CompanionData().name == "Sauvé")
+	QNS.loaderFrame:GetScript("OnEvent")(QNS.loaderFrame, "ADDON_LOADED", "Ready2Quest")
+	Check("[QC] ADDON_LOADED d'un autre addon : ignoré", QNS._dbReady == true)
+
+	QCT.Reset()
+	QNS:CompanionData().name = "Gardé"
+	QNS:DB().companionBubbles = false
+	Mock:Reset()
+	SlashCmdList.QUESTCOMPANION("reset")
+	Check("[QC] /qc reset : réglages remis, compagnon gardé", QNS:DB().companionBubbles ~= false and QNS:CompanionData().name == "Gardé")
+	SlashCmdList.SACETDEPART("reset")
+	Check("[QC] /r2q reset ne touche pas QC", QNS:CompanionData().name == "Gardé")
 end
 
+-- 6. Liens facultatifs avec Ready2Quest ---------------------------------------------------
 do
-	Say("-- QuestCompanion : avant ADDON_LOADED")
+	Say("-- deux addons : liens facultatifs")
 	QCT.Reset()
-	local key = NS:CharKey()
-	NS:DB().chars[key] = { companion = { name = "Attente" } }
-	NS.QC.loaded = false
-	local early = NS:QCCharData()
-	early.companion = { name = "Brouillon" }
-	Check("[QC] avant ADDON_LOADED : rien n'est écrit dans QuestCompanionDB", _G.QuestCompanionDB == nil)
-	Check("[QC] avant ADDON_LOADED : rien n'est retiré de Ready2QuestDB", NS:DB().chars[key].companion.name == "Attente")
+	local seen = {}
+	QNS:RegisterCallback("DEPARTURE", function() seen.departure = true end)
+	QNS:RegisterCallback("RETURN", function() seen["return"] = true end)
+	NS:FireCallback("DEPARTURE", "Village")
+	NS:FireCallback("RETURN", "Village")
+	Check("[QC] départ et retour de Ready2Quest relayés au compagnon", seen.departure and seen["return"] and QNS.r2qBridge == NS)
+	Check("[QC] pas de lien sans Ready2Quest", QNS:BridgeReady2Quest(false) == false and QNS:BridgeReady2Quest(QNS) == false)
+end
 
-	-- le client pose la sauvegarde puis annonce l'addon
-	_G.QuestCompanionDB = { chars = {} }
-	NS:QCOnAddonLoaded()
-	local char = NS:QCCharData()
-	Check("[QC] après ADDON_LOADED : la sauvegarde posée par le client est utilisée", _G.QuestCompanionDB.chars[key] == char)
-	Check("[QC] après ADDON_LOADED : migration faite, brouillon oublié", char.companion.name == "Attente"
-		and NS:DB().chars[key].companion == nil)
-	Check("[QC] ADDON_LOADED d'un autre addon : ignoré", (function()
-		NS.QC.loaded = false
-		Mock:Fire("ADDON_LOADED", "Ready2Quest")
-		local still = NS.QC.loaded == false
-		NS.QC.loaded = true
-		return still
-	end)())
+-- 7. QuestCompanion seul, et face à un Ready2Quest 1.25 ----------------------------------
+do
+	Say("-- deux addons : QuestCompanion seul")
+	local files = QCT.TocFiles(QC_TOC)
+	Mock:Reset()
+	local alone, errors = QCT.LoadFresh(files, nil)
+	Check("[QC] seul : tous ses fichiers se chargent", #errors == 0, table.concat(errors, " | "))
+	Check("[QC] seul : compagnon, carnet et réglages présents", alone.Loaded and alone.Loaded.Core and alone.Loaded.Companion
+		and alone.Loaded.JournalWindow and type(alone.ToggleJournal) == "function" and type(alone.EnsureOptions) == "function")
+	Check("[QC] seul : pas de lien vers Ready2Quest", alone.r2qBridge == nil)
+
+	Mock:Reset()
+	local old = { version = "1.25.0", Loaded = { Companion = true } }
+	local blocked, blockedErrors = QCT.LoadFresh(files, old)
+	Check("[QC] avec Ready2Quest 1.25 : rien ne plante", #blockedErrors == 0, table.concat(blockedErrors, " | "))
+	Check("[QC] avec Ready2Quest 1.25 : QC s'efface (pas de second compagnon)", blocked.blocked == "old-ready2quest"
+		and blocked.CompanionData == nil and blocked.ToggleJournal == nil and not blocked.Loaded.Core)
+	Check("[QC] avec Ready2Quest 1.25 : message pour le mettre à jour", Mock:Output():find("mets Ready2Quest à jour", 1, true) ~= nil,
+		Mock:Output())
 end
 
 QCT.Reset()

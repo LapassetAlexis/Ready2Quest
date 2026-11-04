@@ -204,4 +204,26 @@ function ns:FindModule(id)
 	return nil
 end
 
+-- ---------------------------------------------------------------------------
+-- La sauvegarde n'est posée par le client qu'à ADDON_LOADED(<cet addon>) : lue
+-- plus tôt, ns:DB() sert une table que le client remplace ensuite. À cet
+-- instant, on repart donc de la vraie sauvegarde (réglages par défaut
+-- réappliqués), puis l'addon peut y travailler : ns:OnAddonLoaded().
+-- ---------------------------------------------------------------------------
+local ok, loader = pcall(CreateFrame, "Frame")
+if ok and loader then
+	loader:RegisterEvent("ADDON_LOADED")
+	loader:SetScript("OnEvent", function(self, event, name)
+		if name ~= ADDON then return end
+		if self.UnregisterEvent then self:UnregisterEvent("ADDON_LOADED") end
+		ns._dbReady = false
+		ns.savedVariablesLoaded = true
+		if ns.OnAddonLoaded then
+			local done, err = pcall(ns.OnAddonLoaded, ns)
+			if not done then ns:RecordError("ADDON_LOADED", err) end
+		end
+	end)
+	ns.loaderFrame = loader
+end
+
 if ns.Mark then ns.Mark("Store") end

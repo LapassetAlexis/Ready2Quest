@@ -3,7 +3,7 @@
 -- compétence, butin du joueur compté (et pas celui des autres), zone retenue,
 -- objectif + survol, part de complétion de zone, sans métier, par personnage,
 -- interrupteur du module, robustesse.
-local Check, ResetWorld, NS, Mock = T.Check, T.ResetWorld, T.NS, T.Mock
+local Check, ResetWorld, NS, Mock = T.Check, T.ResetWorld, T.QNS, T.Mock
 
 -- Mocks propres à ce fichier, restaurés à la fin
 local saved, MOCKED = {}, { "GetNumSkillLines", "GetSkillLineInfo", "IsInInstance", "UnitName",

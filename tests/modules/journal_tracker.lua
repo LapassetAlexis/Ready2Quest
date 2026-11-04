@@ -2,7 +2,7 @@
 -- Sources (compagnon, villages de la zone, capitales, donjons, palier), tri,
 -- masquage, rafraîchissement, repli, combat, position, ancrage, module coupé,
 -- onglet « Objectifs », réglages, chaînes.
-local Check, Say, ResetWorld, NS, Mock = T.Check, T.Say, T.ResetWorld, T.NS, T.Mock
+local Check, Say, ResetWorld, NS, Mock = T.Check, T.Say, T.ResetWorld, T.QNS, T.Mock
 
 -- Mocks propres à ce fichier, restaurés à la fin
 local saved, MOCKED = {}, { "IsInInstance", "GetInstanceInfo", "GetRealZoneText", "InCombatLockdown", "UnitFactionGroup",
