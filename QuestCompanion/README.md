@@ -54,6 +54,7 @@ Elle a quatre envies : **faim**, **énergie**, **moral** et **curiosité**. Elle
 - **Elle ne t'en veut jamais** : elle ne meurt pas, ne régresse pas et ne tombe pas malade. Après une longue absence, elle est juste un peu ensommeillée : « Tu m'as manqué ! »
 - **Elle se personnalise** avec des **apparences** (dragonnets, rainette, chatons, lapin, tortue, ara, serpent, chouette, feu follet, dragon féerique), des **ornements**, des **cadres** (cuivre, chêne, argent, givre, runique, gangrené, or ciselé) et des **fonds** (parchemin, sous-bois, crépuscule, givre, marbre, braise, voûte étoilée, velours doré).
 - **Ils se gagnent dans les coffres de zone** : une zone terminée à 100 % ouvre un coffre, et tu **choisis** un objet de son palier (zones 1-19, 20-39 ou 40-60). Plus la zone est haute, plus l'objet est beau. Quand tu possèdes tout un palier, la zone devient dorée. `/qc coffre` ouvre un coffre en attente.
+- **Elle bouge** : un rebond quand tu montes de niveau, un tremblement devant un élite, un « ! » quand elle te conseille, des cœurs quand tu la caresses, des miettes au repas, des « Zzz » quand elle dort, et elle flotte doucement quand elle est heureuse. `/qc compagnon anim` fait défiler ses animations ; si l'une ne bouge pas avec ton apparence, `/qc compagnon anim non <nom>` la coupe (les effets restent).
 
 Tu peux la renommer avec `/qc compagnon nom Pépite`.
 
@@ -119,7 +120,7 @@ Le carnet fixe des **objectifs** : prochaine étape de la créature, prochaine a
 |---|---|
 | `/qc` | ouvre ton carnet de voyage (comme `/qc carnet`) |
 | `/qc options` | ouvre les réglages |
-| `/qc compagnon` | l'humeur de ton compagnon (`nom <nom>` pour le renommer, `tuto` pour revoir le tutoriel) |
+| `/qc compagnon` | l'humeur de ton compagnon (`nom <nom>` pour le renommer, `tuto` pour revoir le tutoriel, `anim` pour voir ses animations) |
 | `/qc coffre` | ouvre un coffre de zone en attente |
 | `/qc module compagnon off` | coupe le compagnon et son carnet |
 | `/qc minimap [on\|off]` | le bouton de minicarte |

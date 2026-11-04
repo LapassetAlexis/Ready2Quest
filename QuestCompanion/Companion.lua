@@ -277,7 +277,7 @@ local FR = {
 	COMP_MSG_APPEARANCE    = "Apparence : %s.",
 	COMP_MSG_MUTE          = "Bulles du compagnon : %s.",
 	COMP_MSG_FALLBACK      = "Modèle 3D indisponible sur ce client : la boussole le remplace.",
-	HELP_COMPANION         = "/qc compagnon [nom <nom> | caresse | apparence | muet | tuto] — ton compagnon de route",
+	HELP_COMPANION         = "/qc compagnon [nom <nom> | caresse | apparence | muet | tuto | anim] — ton compagnon de route",
 }
 local EN = {
 	OPT_PAGE_COMPANION_MAIN = "Companion",
@@ -421,7 +421,7 @@ local EN = {
 	COMP_MSG_APPEARANCE    = "Appearance: %s.",
 	COMP_MSG_MUTE          = "Companion bubbles: %s.",
 	COMP_MSG_FALLBACK      = "3D model unavailable on this client: the compass stands in.",
-	HELP_COMPANION         = "/qc compagnon [nom <name> | caresse | apparence | muet | tuto] — your road companion",
+	HELP_COMPANION         = "/qc compagnon [nom <name> | caresse | apparence | muet | tuto | anim] — your road companion",
 }
 ns.RegisterStrings(FR, EN)
 ns.COMPANION_STRINGS = { fr = FR, en = EN }   -- exposé aux tests (parité fr/en)
