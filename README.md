@@ -8,14 +8,13 @@ Pour **World of Warcraft Forever** et **Classic Era**. Interface en français et
 
 ## Ce que fait l'addon
 
-Ready2Quest réunit **sept modules** et un peu de **confort** (QoL). Chacun s'active ou se coupe d'un clic.
+Ready2Quest réunit **six modules** et un peu de **confort** (QoL). Chacun s'active ou se coupe d'un clic.
 
 | | Module | En une phrase |
 |---|---|---|
 | ◆ | **Check avant le départ** | Quand tu quittes un village, une capitale ou un camp, une note de préparation sur 100 et des conseils |
 | ◆ | **Retour d'expédition** | Quand tu rentres, le bilan de ta sortie : XP, or, butin, morts, usure, quêtes à rendre |
 | ◆ | **Avant le donjon** | À l'entrée d'un donjon, sa fiche : niveau conseillé, tes quêtes pour ce donjon, ta préparation |
-| ◆ | **Compagnon de route** | Une petite créature qui voyage avec toi, te parle, grandit avec toi, et son carnet de voyage qui la fait évoluer |
 | ◆ | **Kit de camp** *(Forever)* | Ton kit de feu de camp et ton objet de camp prêts, le compte à rebours des buffs au camp |
 | ◆ | **Résumé de stuff** | Quand tu changes d'objet, un petit résumé éphémère des stats gagnées ou perdues |
 | ◆ | **Stats du portrait** | Au survol de ton portrait, tes stats principales, choisies selon ta classe et ta spécialisation |
@@ -24,6 +23,8 @@ Ready2Quest réunit **sept modules** et un peu de **confort** (QoL). Chacun s'ac
 | ✦ | **Sac plein** | Sac plein en pleine nature : l'objet que tu perds le moins à jeter, en un clic |
 | ✦ | **Après la mort** | Courir jusqu'au corps ou le guérisseur des esprits ? Les deux options chiffrées |
 | ✦ | **Marchand** | Vente automatique des objets gris et réparation automatique chez les marchands |
+
+Le **compagnon de route** et son **carnet de voyage** sont dans un addon à part, [QuestCompanion](QuestCompanion/README.md), qui s'installe à côté de Ready2Quest.
 
 ---
 
@@ -96,69 +97,9 @@ En arrivant à l'entrée d'un donjon, ou en y entrant, une fiche pour **ce** don
 
 Elle couvre les 19 donjons classiques et les 9 nouveaux donjons de Forever : City of Dalaran, Ruins of Lordaeron, Hall of Thanes, Excavation Site, Krol'dok… Sur Forever, elle listera aussi les plans de métier qui tombent dans le donjon, dès que ces données seront connues.
 
-## Compagnon de route
+## Compagnon de route → QuestCompanion
 
-Une petite créature du jeu (un dragonnet pour commencer) t'accompagne dans un coin de l'écran. Le compagnon et le **carnet de voyage** forment un seul module : le carnet fait évoluer la créature.
-
-### Elle te parle
-
-De courtes bulles, jamais en combat, avec plusieurs phrases pour chaque situation :
-- quand tu **abats un monstre**, **manges**, **bois** ou te **reposes** ;
-- quand tu **parles à quelqu'un** : elle donne son avis sur le marchand, l'aubergiste, le maître de vol, le banquier, l'entraîneur ou le donneur de quêtes, et commente les créatures que tu cibles ;
-- quand tu quittes la ville sans vivres, meurs, découvres une zone ou t'assois au feu de camp ;
-- de temps en temps, une **astuce** de jeu, ou une petite **conversation** de quelques bulles, comme si elle te parlait.
-
-Elle dit aussi **ce dont elle a besoin** : « J'ai faim… », « On explore ? », « Encore 2 zones et j'aurai : Dragonnet cramoisi ! ».
-
-### Comment s'en occuper
-
-Elle a quatre envies : **faim**, **énergie**, **moral** et **curiosité**. Elles se remplissent quand tu manges, te reposes, rends une quête ou explores. Clique dessus pour lui faire une caresse, **clic droit** pour ouvrir son carnet sur les objectifs. Au premier lancement, un **tutoriel** en quelques bulles explique tout ça (à revoir avec `/r2q compagnon tuto`).
-
-- **Elle grandit avec toi** : Nouveau-né, Jeune (niveau 10), Aguerri (20), Vaillant (40) et Légendaire (60). Ton niveau ouvre l'étape, mais elle n'évolue que si elle est **heureuse** : ses quatre envies au moins à 70 %. Sinon elle te dit qu'elle est prête et ce qui lui manque, et elle attend. Petite fête à chaque étape.
-- **Elle ne t'en veut jamais** : elle ne meurt pas, ne régresse pas et ne tombe pas malade. Après une longue absence, elle est juste un peu ensommeillée : « Tu m'as manqué ! »
-- **Elle se personnalise** avec des **apparences** (dragonnets, rainette, chatons, lapin, tortue, ara, serpent, chouette, feu follet, dragon féerique), des **ornements**, des **cadres** (cuivre, chêne, argent, givre, runique, gangrené, or ciselé) et des **fonds** (parchemin, sous-bois, crépuscule, givre, marbre, braise, voûte étoilée, velours doré).
-- **Ils se gagnent dans les coffres de zone** : une zone terminée à 100 % ouvre un coffre, et tu **choisis** un objet de son palier (zones 1-19, 20-39 ou 40-60). Plus la zone est haute, plus l'objet est beau. Quand tu possèdes tout un palier, la zone devient dorée. `/r2q coffre` ouvre un coffre en attente.
-
-Tu peux la renommer avec `/r2q compagnon nom Pépite`.
-
-### Carnet de voyage
-
-Ta collection de voyage : un **tampon** pour chaque première fois.
-
-| Tampon | Quand |
-|---|---|
-| Zone | tu découvres une zone |
-| Village | tu entres dans un village ou un hub, de ta faction ou neutre |
-| Capitale | tu visites une capitale, même celle de l'autre faction |
-| Donjon | tu entres dans un donjon |
-| Rare | tu abats un ennemi rare que tu as toi-même engagé, avec ton familier ou ton groupe |
-| Palier | tu passes les niveaux 10, 20, 30, 40, 50 et 60 |
-
-Chaque nouveau tampon est annoncé par un petit bandeau, jamais en combat. Tout se gagne en jouant, sans paquet aléatoire.
-
-Le carnet (`/r2q carnet`, ou clic droit sur la créature) a deux parties :
-- **Complétion** : choisis une zone dans la liste (celle où tu es, par défaut) et vois son pourcentage, son coffre et, par onglet, ce qui est fait et ce qui reste :
-  - **Exploration** : les villages de la zone ;
-  - **Combat** : le bestiaire et les nommés ;
-  - **Métiers** : les ressources de ta compétence à récolter ;
-  - **Quêtes** : les quêtes de la zone que ton personnage peut faire (faction, race, classe), faites et à faire. Elles comptent dans les 100 %. Aucun addon requis, sur Era comme sur Forever.
-- **Suivre à l'écran** : une case par zone. Cochée, les objectifs de la zone s'affichent dans le bloc « Carnet » en jeu. La zone où tu es est suivie d'office (décoche-la pour la masquer) ; coche d'autres zones pour garder un œil sur elles.
-- **Évolution** : l'étape de ta créature, la prochaine, ses envies, comment elle évolue, tes coffres à ouvrir, ta collection et ton parcours (zones, capitales, donjons, rares, paliers).
-
-### Objectifs
-
-Le carnet fixe des **objectifs** : prochaine étape de la créature, prochaine apparence ou ornement, villages de la zone, capitales, donjons de ton niveau, prochain palier. Ils sont rangés dans l'onglet **Objectifs** du carnet, avec une barre de progression, et les plus proches s'affichent à l'écran sous le suivi des quêtes, dans un bloc **Carnet** : l'objectif le plus proche mis en avant avec sa barre, puis trois autres plus discrets.
-
-- **Complétion de zone** : chaque zone a son pourcentage, affiché dans l'onglet Zones du carnet et, pour la zone où tu es, dans le bloc à l'écran. Il mélange à parts égales :
-  - les **villages** visités ;
-  - le **bestiaire** : les espèces que tu as croisées et abattues (on compte des espèces différentes, pas un nombre de victimes) ;
-  - les **nommés** (élites, rares, boss) croisés et abattus ;
-  - la **récolte**, si tu es herboriste, mineur ou dépeceur : les herbes, minerais et cuirs de ta compétence que tu as déjà récoltés dans la zone.
-
-  Chaque zone arrive **préremplie**, sur Era comme sur Forever (îles et zones propres à Forever comprises) : ses créatures (nom, niveau, rang), les herbes et minerais qui y poussent et ses quêtes sont connus dès ta première visite. Ce qui manque à ces données (nouveautés récentes de Forever) se remplit en jouant.
-- **Survole un objectif** pour savoir quoi faire : les villages de la zone qu'il te reste à visiter, les capitales manquantes, les donjons de ton niveau avec leur tranche, l'XP avant le prochain niveau.
-- **Clic** : ouvre le carnet. **Clic droit** : masque l'objectif.
-- Le bloc se replie d'un clic sur son titre, se déplace en le glissant et se cache en combat (réglable dans les options du compagnon, page Carnet).
+Le compagnon de route et son carnet de voyage (complétion de zone, coffres, évolution) sont devenus un addon à part : **QuestCompanion**, dans le dossier `QuestCompanion/` de ce dépôt. Il s'appuie sur Ready2Quest, qui doit être installé avec lui. Voir son [README](QuestCompanion/README.md).
 
 ## Kit de camp *(Forever)*
 
@@ -248,8 +189,9 @@ Les deux sont actifs par défaut et se coupent dans les réglages. Ils fonctionn
 | `/r2q modules` | état des modules |
 | `/r2q module depart off` | coupe un module (`depart`, `expedition`, `dungeon`, `camp`, `companion`, `journal`, `stuff`, `portrait`…) |
 | `/r2q checks` · `check vivres off` | les contrôles du check avant le départ |
-| `/r2q carnet` | ouvre ton carnet de voyage |
-| `/r2q compagnon` | l'humeur de ton compagnon (`nom <nom>` pour le renommer) |
+| `/r2q carnet` | ouvre ton carnet de voyage *(avec QuestCompanion)* |
+| `/r2q compagnon` | l'humeur de ton compagnon, `nom <nom>` pour le renommer *(avec QuestCompanion)* |
+| `/r2q coffre` | ouvre un coffre de zone en attente *(avec QuestCompanion)* |
 | `/r2q xp` | ton rythme de leveling |
 | `/r2q jeter` | quoi jeter quand le sac est plein |
 | `/r2q diag` | diagnostic, à joindre si tu signales un problème |
@@ -260,7 +202,10 @@ Les deux sont actifs par défaut et se coupent dans les réglages. Ils fonctionn
 
 1. Copie le dossier `Ready2Quest` dans `World of Warcraft/<client>/Interface/AddOns/`.
 2. Vérifie le chemin : `…/Interface/AddOns/Ready2Quest/Ready2Quest.toc`, avec un seul niveau de dossier `Ready2Quest`.
-3. Lance le jeu, ou tape `/reload`. La ligne « Ready2Quest — fichiers chargés » apparaît dans le chat.
+3. **Pour le compagnon et le carnet**, copie aussi le dossier `QuestCompanion` (il est dans `Ready2Quest/`) **à côté** de `Ready2Quest`, directement dans `AddOns/` : `…/Interface/AddOns/QuestCompanion/QuestCompanion.toc`. Le client ne charge pas un addon rangé dans le dossier d'un autre.
+4. Lance le jeu, ou tape `/reload`. La ligne « Ready2Quest — fichiers chargés » apparaît dans le chat.
+
+**Tu avais le compagnon avec Ready2Quest 1.25 ou avant** ? Installe QuestCompanion : ta créature, ton carnet et tes coffres sont repris automatiquement, personnage par personnage, à sa première connexion. Sans QuestCompanion, ils restent dans la sauvegarde de Ready2Quest, rien n'est perdu.
 
 **Tu avais l'ancienne version « Ready to Quest »** ?
 - Supprime le dossier `AddOns/ReadyToQuest`.
@@ -295,8 +240,8 @@ Réglages, **QoL** › **Marchand** › « Vendre les gris ».
 - Tests hors jeu, sur un client WoW simulé : `python3 tests/run_tests.py` (nécessite le paquet `lupa`).
 - Base des zones sûres : `tools/gen_hubs.py` régénère `Hubs.lua` à partir des données du client publiées sur [wago.tools](https://wago.tools).
 - Police des titres : Alegreya (licence OFL, voir `Fonts/Alegreya-OFL.txt`).
-- Données des zones (créatures, récolte, quêtes) : générées depuis la base de [Questie](https://github.com/Questie/QuestieDB) par `tools/gen_zone_data.py`, voir `NOTICE.md`.
+- Données des zones de QuestCompanion (créatures, récolte, quêtes) : générées depuis la base de [Questie](https://github.com/Questie/QuestieDB) par `tools/gen_zone_data.py` dans `QuestCompanion/`, voir `QuestCompanion/NOTICE.md`.
 
 ## Licence
 
-Ready2Quest est un logiciel libre sous licence **GPL-3.0** (voir `LICENSE`) : tu peux l'utiliser, le modifier et le partager, à condition de garder la même licence. Les données de zones viennent de Questie, lui-même sous GPL-3.0.
+Ready2Quest et QuestCompanion sont des logiciels libres sous licence **GPL-3.0** (voir `LICENSE`) : tu peux les utiliser, les modifier et les partager, à condition de garder la même licence. Les données de zones de QuestCompanion viennent de Questie, lui-même sous GPL-3.0.

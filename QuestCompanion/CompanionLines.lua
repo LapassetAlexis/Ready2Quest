@@ -16,7 +16,8 @@
 -- Arguments : un réservoir dont les lignes ont un « %s » / « %d » reçoit
 -- toujours ses arguments (STAMP, LEVEL…), SAUF les avis sur les PNJ : là, le
 -- nom du PNJ peut manquer, et les lignes à « %s » sont alors écartées.
-local ADDON, ns = ...
+local ns = rawget(_G, "Ready2Quest")
+if type(ns) ~= "table" or not ns.QC then return end
 
 local P = {}
 

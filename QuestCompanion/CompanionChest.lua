@@ -12,7 +12,8 @@
 -- Le niveau d'une zone vient d'une table posée à la main (zones classiques,
 -- uiMapID identiques sur Era et Forever). Zone inconnue (ajout de Forever) :
 -- on prend le niveau du joueur au moment où il la finit.
-local ADDON, ns = ...
+local ns = rawget(_G, "Ready2Quest")
+if type(ns) ~= "table" or not ns.QC then return end
 local L = ns.L
 local Theme = ns.Theme
 
@@ -247,7 +248,7 @@ function ns:EnsureChestWindow(count)
 	local height = 96 + rows * (OPTION_H + OPTION_GAP)
 	local frame = self.chestFrame
 	if not frame then
-		frame = Theme.CreatePanel(UIParent, CHEST_W, height, "", { name = "Ready2QuestChestFrame" })
+		frame = Theme.CreatePanel(UIParent, CHEST_W, height, "", { name = "QuestCompanionChestFrame" })
 		if not frame then return nil end
 		frame:SetPoint("CENTER", UIParent, "CENTER", 0, 60)
 		frame.intro = frame:CreateFontString(nil, "OVERLAY", Theme.F_BODY)

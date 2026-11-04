@@ -30,7 +30,8 @@
 -- Points d'extension utilisés (JournalTracker.lua) :
 --   ns.RegisterZonePart : parts « bestiary » et « named » ;
 --   ns.RegisterGoalSource : « Bestiaire de <zone> », « Nommés de <zone> ».
-local ADDON, ns = ...
+local ns = rawget(_G, "Ready2Quest")
+if type(ns) ~= "table" or not ns.QC then return end
 local L = ns.L
 
 local HINT_NAMES = 6          -- noms listés au survol, au-delà « … et N autres »
