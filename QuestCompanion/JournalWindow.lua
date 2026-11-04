@@ -77,6 +77,8 @@ local FR = {
 	JRN_NEED_mood_3        = "un butin rare lui plaît, chaque ennemi vaincu un peu",
 	JRN_NEED_curiosity_1   = "découvre de nouvelles zones et sous-zones",
 	JRN_NEED_curiosity_2   = "gagne des tampons : villages, capitales, donjons, rares",
+	JRN_NEED_curiosity_3   = "même tout exploré : reviens dans une zone pas vue depuis 2 h, entre en donjon, vaincs un élite ou un rare, prends un griffon, ouvre un coffre, récolte",
+	JRN_NEED_TIP_SERENE    = "Toutes ses évolutions faites : il ne descend plus sous %d %%.",
 	JRN_EVO_HOW            = "Comment ça marche",
 	JRN_EVO_HOW_1          = "Ton niveau ouvre chaque étape : 10, 20, 40 et 60.",
 	JRN_EVO_HOW_2          = "Pour la franchir, il doit être heureux : ses quatre envies à %d %% ou plus. Mange, repose-toi, rends des quêtes, explore.",
@@ -138,6 +140,8 @@ local EN = {
 	JRN_NEED_mood_3        = "rare loot pleases it, every foe defeated a little",
 	JRN_NEED_curiosity_1   = "discover new zones and subzones",
 	JRN_NEED_curiosity_2   = "earn stamps: villages, capitals, dungeons, rares",
+	JRN_NEED_curiosity_3   = "even with everything explored: come back to a zone unseen for 2 h, enter a dungeon, defeat an elite or a rare, take a flight, open a chest, gather",
+	JRN_NEED_TIP_SERENE    = "All its evolutions done: it never goes below %d %%.",
 	JRN_EVO_HOW            = "How it works",
 	JRN_EVO_HOW_1          = "Your level opens each stage: 10, 20, 40 and 60.",
 	JRN_EVO_HOW_2          = "To go through, it must be happy: all four needs at %d %% or more. Eat, rest, turn in quests, explore.",
@@ -305,7 +309,7 @@ end
 -- Infobulle d'une envie du compagnon : valeur, seuil du bonheur, et ce qui la
 -- remplit (les gains réels de Companion.lua : repas, repos, caresse, quêtes,
 -- niveaux, butin rare, exploration, tampons)
-ns.NEED_TIP_LINES = { hunger = 2, energy = 3, mood = 3, curiosity = 2 }
+ns.NEED_TIP_LINES = { hunger = 2, energy = 3, mood = 3, curiosity = 3 }
 function ns:NeedTooltipLines(key)
 	local data = self.CompanionData and self:CompanionData() or { needs = {} }
 	local value = math.floor(tonumber(data.needs and data.needs[key]) or 0)
@@ -321,6 +325,9 @@ function ns:NeedTooltipLines(key)
 		lines[#lines + 1] = "- " .. tostring(L["JRN_NEED_" .. key .. "_" .. index])
 	end
 	lines[#lines + 1] = L.JRN_NEED_TIP_DECAY
+	if (tonumber(data.stage) or 1) >= #(ns.COMPANION_STAGES or {}) and ns.COMPANION_SERENE_FLOOR then
+		lines[#lines + 1] = self:F("JRN_NEED_TIP_SERENE", ns.COMPANION_SERENE_FLOOR)
+	end
 	return lines, value >= happyMin
 end
 

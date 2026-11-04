@@ -45,6 +45,24 @@ local NEED_FLOOR = 15        -- plancher : jamais vide, jamais « en détresse �
 local NEED_START = 80
 -- baisse par minute de JEU (rien hors connexion)
 local DECAY = { hunger = 0.6, energy = 0.4, mood = 0.3, curiosity = 0.5 }
+-- Chaque envie doit rester simple à remonter, même tout exploré, même au
+-- niveau maximum. La curiosité se nourrit aussi de nouveauté relative :
+-- revenir dans une zone pas vue depuis un moment, bouger, les donjons, les
+-- élites et rares, les vols, les coffres, la récolte.
+local CURIOSITY = {
+	newZone = 15, newSub = 4,              -- premières fois
+	revisit = 8, revisitAfter = 2 * 3600,  -- zone pas vue depuis 2 h (temps réel)
+	subzone = 1, subzoneGap = 30,          -- changer de sous-zone, au plus toutes les 30 s
+	dungeon = 10, dungeonGap = 600,        -- chaque entrée en donjon (pas deux fois en 10 min)
+	elite = 8,                             -- chaque élite ou rare vaincu
+	flight = 5,                            -- chaque arrivée en griffon
+	chest = 20,                            -- chaque coffre de zone ouvert
+	gather = 1,                            -- chaque ressource récoltée
+}
+ns.COMPANION_CURIOSITY = CURIOSITY
+-- Plancher une fois toutes ses évolutions faites : il a tout vécu, il est serein
+local SERENE_FLOOR = 50
+ns.COMPANION_SERENE_FLOOR = SERENE_FLOOR
 local REST_GAIN   = 4        -- énergie par minute au repos (auberge, ville, camp)
 local EAT_GAIN    = 6        -- faim par minute pendant le repas
 local TICK        = 10       -- s entre deux mises à jour des besoins
@@ -147,7 +165,7 @@ local FR = {
 	COMP_HOW_hunger        = "mange ou bois (ou pars avec des vivres)",
 	COMP_HOW_energy        = "repose-toi à l'auberge ou au feu de camp",
 	COMP_HOW_mood          = "caresse-le, rends des quêtes",
-	COMP_HOW_curiosity     = "explore : nouvelles zones, villages, tampons",
+	COMP_HOW_curiosity     = "bouge : zones nouvelles ou pas vues depuis un moment, donjons, élites, vols, récolte",
 	COMP_MOOD_radiant      = "radieux",
 	COMP_MOOD_happy        = "content",
 	COMP_MOOD_dreamy       = "rêveur",
@@ -286,7 +304,7 @@ local EN = {
 	COMP_HOW_hunger        = "eat or drink (or set out with food)",
 	COMP_HOW_energy        = "rest at an inn or a campfire",
 	COMP_HOW_mood          = "pet it, turn in quests",
-	COMP_HOW_curiosity     = "explore: new zones, villages, stamps",
+	COMP_HOW_curiosity     = "move around: new zones or ones not seen in a while, dungeons, elites, flights, gathering",
 	COMP_MOOD_radiant      = "radiant",
 	COMP_MOOD_happy        = "happy",
 	COMP_MOOD_dreamy       = "dreamy",
@@ -1652,12 +1670,19 @@ function ns:CompanionTick(seconds)
 	local data = self:CompanionData()
 	local minutes = seconds / 60
 	local resting = self:CompanionResting()
+	-- toutes ses évolutions faites : il ne descend plus sous SERENE_FLOOR
+	local floor = (tonumber(data.stage) or 1) >= #ns.COMPANION_STAGES and SERENE_FLOOR or NEED_FLOOR
 	for _, key in ipairs(NEED_KEYS) do
 		local delta = -DECAY[key] * minutes
 		if key == "energy" and resting then delta = REST_GAIN * minutes end
 		if key == "hunger" and self.companionEating then delta = EAT_GAIN * minutes end
-		data.needs[key] = Clamp(data.needs[key] + delta, NEED_FLOOR, NEED_MAX)
+		data.needs[key] = Clamp(data.needs[key] + delta, floor, NEED_MAX)
 	end
+	-- arrivée en griffon : la fin d'un vol se voit au tick suivant
+	local rt = RT()
+	local onTaxi = Call(rawget(_G, "UnitOnTaxi"), "player") == true
+	if rt.onTaxi and not onTaxi then self:CompanionAdd("curiosity", CURIOSITY.flight) end
+	rt.onTaxi = onTaxi
 	-- somnolence : il se réveille en jouant, pas en attendant
 	if data.sleepy then
 		data.sleepyLeft = (tonumber(data.sleepyLeft) or 0) - seconds
@@ -1909,14 +1934,27 @@ function ns:CompanionCheckPlace(silent)
 	return (self:CompanionSay(entry.kind == "capital" and "CITY" or "VILLAGE", { args = { name }, cd = "place" }))
 end
 
+local function RealTime() return tonumber((Call(rawget(_G, "time")))) or 0 end
+
 function ns:CompanionOnZone(newArea)
 	local data = self:CompanionData()
 	local mapID = self.CurrentMap and self:CurrentMap()
+	local rt, now = RT(), Clock()
+	if type(data.zoneVisit) ~= "table" then data.zoneVisit = {} end
 	if newArea then
 		if mapID and not data.seenZones[mapID] then
 			data.seenZones[mapID] = true
-			self:CompanionAdd("curiosity", 15)
+			self:CompanionAdd("curiosity", CURIOSITY.newZone)
 			self:CompanionSay("VIEW")
+		elseif mapID and RealTime() - (tonumber(data.zoneVisit[mapID]) or 0) >= CURIOSITY.revisitAfter then
+			-- de retour dans une zone pas vue depuis un moment
+			self:CompanionAdd("curiosity", CURIOSITY.revisit)
+		end
+		if mapID then data.zoneVisit[mapID] = RealTime() end
+		-- chaque entrée en donjon (pas les allers-retours de la porte)
+		if self.InInstance and self:InInstance() and (not rt.lastDungeon or now - rt.lastDungeon >= CURIOSITY.dungeonGap) then
+			rt.lastDungeon = now
+			self:CompanionAdd("curiosity", CURIOSITY.dungeon)
 		end
 		self:CompanionCheckPlace()
 		return
@@ -1926,10 +1964,24 @@ function ns:CompanionOnZone(newArea)
 		local key = tostring(mapID) .. ":" .. sub
 		if not data.seenSub[key] then
 			data.seenSub[key] = true
-			self:CompanionAdd("curiosity", 4)   -- sans bulle : il y en aurait trop
+			self:CompanionAdd("curiosity", CURIOSITY.newSub)   -- sans bulle : il y en aurait trop
+		elseif sub ~= rt.lastSub and (not rt.lastSubGain or now - rt.lastSubGain >= CURIOSITY.subzoneGap) then
+			-- bouger, tout simplement
+			rt.lastSubGain = now
+			self:CompanionAdd("curiosity", CURIOSITY.subzone)
 		end
+		rt.lastSub = sub
 	end
 	self:CompanionCheckPlace()
+end
+
+-- Élite ou rare vaincu (la cible, morte au moment du coup fatal)
+local ELITE_CLASSES = { elite = true, rareelite = true, rare = true, worldboss = true }
+function ns:CompanionEliteKilled()
+	if not Call(rawget(_G, "UnitIsDead"), "target") then return false end
+	if not ELITE_CLASSES[Call(rawget(_G, "UnitClassification"), "target") or ""] then return false end
+	self:CompanionAdd("curiosity", CURIOSITY.elite)
+	return true
 end
 
 function ns:CompanionOnLevel(level)
@@ -1957,6 +2009,7 @@ function ns:CompanionOnKill()
 	if rt.lastKill and now - rt.lastKill < 2 then return false end
 	rt.lastKill = now
 	self:CompanionAdd("mood", 1)
+	self:CompanionEliteKilled()
 	return (self:CompanionSay("KILL", { cd = "kill" }))
 end
 
