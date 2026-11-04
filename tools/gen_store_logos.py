@@ -13,7 +13,7 @@ Nécessite Pillow.
 """
 import math
 import os
-from PIL import Image, ImageDraw, ImageFont
+from PIL import Image, ImageDraw, ImageFilter, ImageFont
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 fontpath = os.path.join(ROOT, "Fonts", "Alegreya-Bold.ttf")
@@ -64,49 +64,79 @@ def draw_logo(size, full, parts=None):
     return im.resize((size,size),Image.LANCZOS)
 
 SHADOW = (52, 84, 132, 255)
+ROUND = 0.4  # rayon d'arrondi des angles de l'ombre (unités de la grille 64)
+
+
+def bezier(p0, p1, p2, steps=24):
+    """Points d'une courbe de Bézier quadratique p0 -> p2 (contrôle p1)."""
+    return [((1 - t) ** 2 * p0[0] + 2 * (1 - t) * t * p1[0] + t * t * p2[0],
+             (1 - t) ** 2 * p0[1] + 2 * (1 - t) * t * p1[1] + t * t * p2[1])
+            for t in (i / steps for i in range(steps + 1))]
 
 
 def whelp_shadow(d, T, u, color):
     """Silhouette d'un dragonnet assis, de profil (tête à gauche, aile levée,
-    queue en fer de lance), d'une seule couleur : l'« ombre » derrière QC."""
+    queue en fer de lance), tout en courbes, d'une seule couleur : l'« ombre »
+    derrière QC."""
     def poly(pts): d.polygon([T(*p) for p in pts], fill=color)
     def ell(x0, y0, x1, y1): d.ellipse([T(x0, y0), T(x1, y1)], fill=color)
-    # queue
-    d.line([T(44, 50), T(52, 54), T(58, 50), T(59.5, 43), T(57, 37.5)], fill=color,
-           width=int(3.2 * u), joint="curve")
-    poly([(56.2, 31.5), (60.2, 36.5), (57.2, 40.5), (53.6, 36.2)])
-    # aile levée, bord festonné
-    poly([(30, 31), (36, 9), (40, 5.5), (44, 11), (54, 18.5), (49, 21), (55, 27.5), (47, 28.5), (50, 34), (40, 34)])
-    # corps assis, pattes
+    def stroke(pts, width):
+        d.line([T(*p) for p in pts], fill=color, width=int(width * u), joint="curve")
+        for (x, y) in (pts[0], pts[-1]):
+            ell(x - width / 2, y - width / 2, x + width / 2, y + width / 2)
+    # queue souple et fer de lance
+    stroke(bezier((42, 50), (56, 58), (57.5, 41)), 3.4)
+    poly(bezier((57.5, 43.5), (50, 39), (56.3, 30.5)) + bezier((56.3, 30.5), (64.5, 37.5), (57.5, 43.5)))
+    # aile : bord d'attaque courbé, trois festons creusés
+    wing = (bezier((31, 32), (31, 13), (42, 5)) + bezier((42, 5), (51, 8), (57, 19))
+            + bezier((57, 19), (51, 22), (56.5, 28)) + bezier((56.5, 28), (49, 28), (50, 35))
+            + bezier((50, 35), (44, 31), (39, 36)))
+    poly(wing)
+    # corps assis, cuisse, patte avant
     ell(25, 29, 47, 53)
     ell(35, 40, 49, 55)
-    ell(25, 44, 32, 55.5)
-    # cou et tête
-    poly([(18, 25), (26, 18), (34, 31), (27, 37)])
-    ell(10, 12, 29, 29)
-    poly([(5, 21.5), (12, 16.5), (16, 27), (7.5, 26.5)])
-    # cornes
-    poly([(23, 15.5), (31, 4.5), (27, 17.5)])
-    poly([(19, 13.5), (22, 4), (23.5, 14.5)])
-    # crête dorsale
-    for (x, y) in [(29, 20), (32.5, 25), (35.5, 30)]:
-        poly([(x - 1.8, y + 1.2), (x + 1.6, y - 2.8), (x + 1.8, y + 2.2)])
+    ell(25, 43, 32.5, 55.5)
+    # cou souple, tête ronde, museau arrondi
+    stroke(bezier((20, 22), (27, 27), (33, 34)), 8)
+    ell(11, 12.5, 29, 29.5)
+    ell(4.5, 18.5, 17.5, 28)
+    # cornes en croissant, balayées vers l'arrière
+    poly(bezier((21.5, 15.5), (23, 6), (33.5, 5)) + bezier((33.5, 5), (27, 9.5), (27, 17.5)))
+    poly(bezier((17, 14.5), (16, 7), (22, 4)) + bezier((22, 4), (19.8, 9), (22.2, 14.5)))
+    # petites pointes sur la nuque
+    for (x, y) in [(29.5, 22), (33, 26.5)]:
+        poly(bezier((x - 2, y + 1.5), (x - 0.5, y - 1), (x + 1.5, y - 3)) + bezier((x + 1.5, y - 3), (x + 1, y), (x + 2, y + 2.5)))
 
 
 def draw_qc(size):
     """Logo de QuestCompanion : monogramme QC (Alegreya Bold, Q crème, C ambre,
-    comme R2Q) devant l'ombre d'un dragonnet. Fond transparent."""
+    comme R2Q) centré sur l'ombre d'un dragonnet. Fond transparent.
+
+    L'ombre est dessinée en masque, puis floutée et re-seuillée : les angles
+    des polygones s'arrondissent. Le dessin est ensuite centré dans l'image,
+    et QC centré sur le dessin."""
     k = 8; S = size * k; u = S / 64.0
-    im = Image.new("RGBA", (S, S), (0, 0, 0, 0)); d = ImageDraw.Draw(im)
-    SC = 1.0
-    T = lambda x, y: ((32 + (x - 32) * SC) * u, (31 + (y - 32) * SC) * u)
-    whelp_shadow(d, T, u * SC, SHADOW)
-    f = ImageFont.truetype(fontpath, int(21 * u))
+    mask = Image.new("L", (S, S), 0)
+    T = lambda x, y: (x * u, y * u)
+    whelp_shadow(ImageDraw.Draw(mask), T, u, 255)
+    mask = mask.filter(ImageFilter.GaussianBlur(ROUND * u)).point(lambda v: 255 if v >= 128 else 0)
+    x0, y0, x1, y1 = mask.getbbox()
+    margin = 3 * u
+    scale = min((S - 2 * margin) / (x1 - x0), (S - 2 * margin) / (y1 - y0))
+    w, h = int((x1 - x0) * scale), int((y1 - y0) * scale)
+    shape = mask.crop((x0, y0, x1, y1)).resize((w, h), Image.LANCZOS)
+    ox, oy = (S - w) // 2, (S - h) // 2
+    im = Image.new("RGBA", (S, S), (0, 0, 0, 0))
+    im.paste(Image.new("RGBA", (w, h), SHADOW), (ox, oy), shape)
+    d = ImageDraw.Draw(im)
+    f = ImageFont.truetype(fontpath, int(22 * u))
     parts = [("Q", CREAM), ("C", AMB)]
     total = sum(d.textlength(t, font=f) for t, _ in parts)
-    x = 33 * u - total / 2; y = 41 * u
+    # centre vertical : sur les capitales (le Q descend sous la ligne)
+    cap = d.textbbox((0, 0), "C", font=f, anchor="ls")
+    x = S / 2 - total / 2; y = S / 2 - (cap[1] + cap[3]) / 2
     for t, c in parts:
-        d.text((x, y), t, font=f, fill=c, anchor="lm", stroke_width=int(1.5 * u), stroke_fill=DIAL)
+        d.text((x, y), t, font=f, fill=c, anchor="ls", stroke_width=int(1.5 * u), stroke_fill=DIAL)
         x += d.textlength(t, font=f)
     return im.resize((size, size), Image.LANCZOS)
 
