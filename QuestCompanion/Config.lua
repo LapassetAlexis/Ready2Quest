@@ -18,7 +18,7 @@ ns.APP = {
 	slash = { "/questcompanion", "/qc" },
 	-- fichiers attendus, pour le diagnostic quand l'addon reste muet
 	coreFiles = { "Bootstrap", "Strings", "Locales", "Store", "World", "Commands", "Options", "Minimap",
-		"Core", "Companion", "Journal", "JournalTracker", "JournalWindow" },
+		"Core", "Companion", "Journal", "JournalTracker", "Bestiary", "Treats", "Shiny", "Daily", "Notify", "JournalWindow" },
 }
 
 -- Ready2Quest 1.25 ou avant embarque encore le compagnon : deux compagnons à

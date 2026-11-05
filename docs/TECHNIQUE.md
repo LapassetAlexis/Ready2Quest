@@ -6,7 +6,9 @@
 - **Catalogue** (`CompanionData.lua`) : six apparences de coffre (`tier` 1 à 3, deux par palier) et trois hors coffres (`tier` 0) dont l'`unlock` n'est pas un compteur : `{ inn = 3 }` (poulet, `Daily.lua` : `inn.full`, `INN_APPEARANCE_CARDS`), `{ missions = 10 }` (écureuil, `daily.perfect`, `MISSION_APPEARANCE_DAYS`), `{ shiny = 50 }` (hippogriffe, quatrième palier de `SHINY_REWARDS`). `DailyGrantAppearance` débloque une fois (chat et bulle `UNLOCK`). `CompanionNextUnlocks` ignore tout `unlock` sans `level` ni `stamp` ; `CompanionRequirement` dit `inn`, `missions`, `shiny`.
 - **Caractères** (`Personality.lua`, `PersonalityLines.lua`) : `fearful` (énergie, effets ×1,3, exclusif `chicken` ; remarque en combat sous 60 % de vie, une fois par combat) et `tinker` (curiosité, ×0,9, exclusif `squirrel_mech` ; remarque toutes les 20 min). `PERSONALITY_ORDER` passe à 14 (la réglette suit). Missions du jour : `rest` ×10 et `talks` ×4.
 - **Fiche au survol** (`Companion.lua`) : `CompanionLayoutHover` place tout de haut en bas (largeur 200, hauteur selon le contenu), rappelée par l'enveloppe du caractère.
-- Tests `[PETS]`, `[HOVER]`.
+- **Valeurs secrètes (Forever, moteur récent)** : `ns.Plain(v)` (Socle, `Compat.lua`) rend `nil` si `issecretvalue(v)`. Utilisé pour `UnitHealth`/`UnitHealthMax` (Advice, remarques Zen et Peureux) et `GetRaidTargetIndex` (Shiny). Toute nouvelle lecture de vie, de puissance ou d'icône doit passer par lui.
+- **Morts au bestiaire sans journal de combat** : `BestiaryOnXP` (événement `CHAT_MSG_COMBAT_XP_GAIN`, `ParseCombatXP` nommé) compte la cible morte (`units[guid]` ou `Adopt`). `bestiaryKilled[guid] = { at, source }` empêche la double prise entre « xp » et « log » pendant 120 s. `ns.bestiaryStats` (événements, coups, PARTY_KILL, UNIT_DIED, victimes, dont par l'XP) dans `/qc diag` (`DiagExtra`). `coreFiles` compte aussi Bestiary, Treats, Shiny, Daily, Notify.
+- Tests `[PETS]`, `[HOVER]`, `[FIX]`, `[BSTXP]`, `[SECRET]`.
 
 ## QuestCompanion 1.1.0 — complétion gamifiée
 

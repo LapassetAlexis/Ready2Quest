@@ -10,6 +10,21 @@ local ADDON, ns = ...
 
 ns.Caps = {}
 
+-- Valeurs « secrètes » (moteur récent, dont WoW Forever) : le client peut
+-- rendre la vie, la puissance, une icône de cible… sous une forme qu'un addon
+-- peut afficher mais ni comparer ni compter (« attempt to perform arithmetic
+-- on a secret number value »). ns.Plain(v) rend la valeur, ou nil si elle est
+-- secrète : l'appelant fait alors comme s'il ne savait pas. Sur Era (pas de
+-- issecretvalue), la valeur passe telle quelle.
+function ns.Plain(value)
+	local isSecret = rawget(_G, "issecretvalue")
+	if type(isSecret) == "function" then
+		local ok, secret = pcall(isSecret, value)
+		if not ok or secret then return nil end
+	end
+	return value
+end
+
 function ns:DetectCapabilities()
 	local caps = {}
 

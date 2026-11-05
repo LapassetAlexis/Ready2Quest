@@ -124,4 +124,88 @@ do
 	RF.Restore()
 end
 
+do
+	Say("-- bestiaire : morts par le message d'XP (Forever)")
+	RF.Reset()
+	Mock.world.maps[9950] = { mapID = 9950, name = "Val de l'XP", parentMapID = 1414, mapType = 3 }
+	Mock.world.mapID = 9950
+	NS.bestiaryUnits, NS.bestiaryKilled = {}, {}
+	local w = { dead = false, guid = "Creature-0-4378-1-12-6100-0000AAAA01" }
+	_G.UnitGUID = function(unit) if unit == "player" then return "Player-1-1" end if unit == "target" then return w.guid end end
+	_G.UnitName = function(unit) if unit == "player" then return "Testeur" end return "Loup" end
+	_G.UnitExists = function() return true end
+	_G.UnitIsPlayer = function(unit) return unit == "player" end
+	_G.UnitIsDead = function(unit) return unit == "target" and w.dead end
+	_G.UnitCanAttack = function() return true end
+	_G.UnitClassification = function() return "normal" end
+	_G.UnitLevel = function() return 10 end
+	NS:BestiarySeeUnit("target")
+	local book = NS:BestiaryData()[9950]
+	Check("[BSTXP] cible vue : au bestiaire", book and book[6100] and book[6100].killed == 0)
+	local before = NS.bestiaryStats.xpKills
+	w.dead = true
+	Mock:Fire("CHAT_MSG_COMBAT_XP_GAIN", "Loup meurt, vous gagnez 40 points d'expérience.")
+	Check("[BSTXP] sans journal de combat : la mort comptée par l'XP", book[6100].killed == 1
+		and NS.bestiaryStats.xpKills == before + 1, book[6100].killed)
+	NS:BestiaryCombat("PARTY_KILL", "Player-1-1", 0, w.guid, 0)
+	Check("[BSTXP] le journal de combat arrive après : pas compté deux fois", book[6100].killed == 1)
+	-- l'inverse : le journal d'abord, l'XP ensuite
+	w.guid, w.dead = "Creature-0-4378-1-12-6100-0000AAAA02", false
+	NS:BestiarySeeUnit("target")
+	NS:BestiaryCombat("SWING_DAMAGE", "Player-1-1", 0, w.guid, 0)
+	NS:BestiaryCombat("PARTY_KILL", "Player-1-1", 0, w.guid, 0)
+	w.dead = true
+	Mock:Fire("CHAT_MSG_COMBAT_XP_GAIN", "Loup meurt, vous gagnez 40 points d'expérience.")
+	Check("[BSTXP] journal puis XP : une seule mort de plus", book[6100].killed == 2, book[6100].killed)
+	-- cible vivante (l'XP vient d'un autre monstre) : rien
+	w.guid, w.dead = "Creature-0-4378-1-12-6100-0000AAAA03", false
+	NS:BestiarySeeUnit("target")
+	Mock:Fire("CHAT_MSG_COMBAT_XP_GAIN", "Loup meurt, vous gagnez 40 points d'expérience.")
+	Check("[BSTXP] cible encore vivante : rien", book[6100].killed == 2)
+	Check("[BSTXP] XP sans nom (quête) : rien", NS:BestiaryOnXP("Vous gagnez 40 points d'expérience.") == false)
+	-- /qc diag : ce que le bestiaire a reçu
+	local lines = {}
+	local print = NS.Print
+	NS.Print = function(_, text) lines[#lines + 1] = tostring(text) end
+	NS:DiagExtra()
+	NS.Print = print
+	Check("[BSTXP] /qc diag : la ligne du bestiaire", table.concat(lines, " "):find("victimes comptées", 1, true) ~= nil,
+		table.concat(lines, " | "))
+	RF.Restore()
+end
+
+do
+	Say("-- valeurs secrètes (Forever) : vie et icône de cible")
+	RF.Reset()
+	-- comme en jeu : tonumber la laisse passer, tout calcul ou comparaison échoue
+	local function Refuse() error("attempt to perform arithmetic on a secret number value") end
+	local SECRET = setmetatable({}, { __tostring = function() return "<secret>" end, __div = Refuse, __lt = Refuse,
+		__le = Refuse, __sub = Refuse, __add = Refuse, __mul = Refuse })
+	local realTonumber = tonumber
+	_G.tonumber = function(v, ...) if v == SECRET then return SECRET end return realTonumber(v, ...) end
+	local saved = { rawget(_G, "issecretvalue"), rawget(_G, "UnitHealth"), rawget(_G, "UnitHealthMax"),
+		rawget(_G, "UnitAffectingCombat"), rawget(_G, "GetRaidTargetIndex") }
+	_G.issecretvalue = function(v) return v == SECRET end
+	_G.UnitHealth = function() return SECRET end
+	_G.UnitHealthMax = function() return SECRET end
+	_G.UnitAffectingCombat = function() return true end
+	Check("[SECRET] ns.Plain : la valeur secrète devient nil", NS.Plain(SECRET) == nil and NS.Plain(42) == 42)
+	NS.errors = {}
+	Mock:Fire("PLAYER_REGEN_ENABLED")
+	local errs = {}
+	for _, e in ipairs(NS.errors) do errs[#errs + 1] = tostring(e.where) .. " : " .. tostring(e.message) end
+	Check("[SECRET] fin de combat, vie secrète : aucune erreur", #errs == 0, table.concat(errs, " || "))
+	Check("[SECRET] … et pas de conseil « vie basse »", NS:AdviceState().health == nil)
+	for _, look in ipairs({ "turtle", "chicken" }) do
+		NS:CompanionData().appearance = look
+		local ok, err = pcall(NS.PersonaTickNotice, NS, Mock.now, NS:PersonaState())
+		Check("[SECRET] remarque du caractère (" .. look .. ") : pas d'erreur", ok, tostring(err))
+	end
+	_G.GetRaidTargetIndex = function() return SECRET end
+	Check("[SECRET] icône de cible secrète : on n'y touche pas", NS:ShinyMark("target") == false)
+	_G.issecretvalue, _G.UnitHealth, _G.UnitHealthMax, _G.UnitAffectingCombat, _G.GetRaidTargetIndex =
+		saved[1], saved[2], saved[3], saved[4], saved[5]
+	_G.tonumber = realTonumber
+end
+
 ResetWorld()

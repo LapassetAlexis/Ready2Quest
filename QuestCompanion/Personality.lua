@@ -403,8 +403,9 @@ function ns:PersonaTickNotice(now, state)
 			state.nightSeen = nil
 		end
 	elseif trait == "zen" then
-		local health = tonumber(Call(G("UnitHealth"), "player")) or 1
-		local max = tonumber(Call(G("UnitHealthMax"), "player")) or 1
+		-- vie secrète (Forever) : 1/1, il ne remarque rien
+		local health = tonumber(ns.Plain(Call(G("UnitHealth"), "player"))) or 1
+		local max = tonumber(ns.Plain(Call(G("UnitHealthMax"), "player"))) or 1
 		local fighting = Call(G("UnitAffectingCombat"), "player") == true
 		if max > 0 and health / max < 0.5 and not fighting then return self:PersonaNotice("zen") end
 	elseif trait == "sly" then
@@ -418,8 +419,8 @@ function ns:PersonaTickNotice(now, state)
 		if money < state.money then state.money = money end
 	elseif trait == "fearful" then
 		-- ça tape fort : il voudrait souffler (une fois par combat difficile)
-		local health = tonumber(Call(G("UnitHealth"), "player")) or 1
-		local max = tonumber(Call(G("UnitHealthMax"), "player")) or 1
+		local health = tonumber(ns.Plain(Call(G("UnitHealth"), "player"))) or 1
+		local max = tonumber(ns.Plain(Call(G("UnitHealthMax"), "player"))) or 1
 		local fighting = Call(G("UnitAffectingCombat"), "player") == true
 		if fighting and max > 0 and health / max < 0.6 then
 			if not state.scared then

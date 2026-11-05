@@ -213,7 +213,10 @@ end
 -- Étoile au-dessus : seul ou chef du groupe, et pas d'icône déjà posée
 function ns:ShinyMark(unit)
 	if self:DB().companionShinyMark == false then return false end
-	if Call(G("GetRaidTargetIndex"), unit) then return false end
+	-- une icône déjà posée, ou une valeur secrète (Forever) : on n'y touche pas
+	local icon = Call(G("GetRaidTargetIndex"), unit)
+	if icon ~= nil and ns.Plain(icon) == nil then return false end
+	if ns.Plain(icon) then return false end
 	if Call(G("IsInGroup")) and not Call(G("UnitIsGroupLeader"), "player") then return false end
 	if type(G("SetRaidTarget")) ~= "function" then return false end
 	Call(G("SetRaidTarget"), unit, ns.SHINY_MARK)

@@ -396,9 +396,30 @@ local function Adopt(self, guid)
 	return entry
 end
 
-local function Kill(self, guid, entry)
+-- Ce que le journal de combat et les messages d'XP apportent : lu par /qc diag
+-- (« bestiaire : … »), pour comprendre un client qui ne compte pas les morts
+ns.bestiaryStats = { events = 0, hits = 0, partyKills = 0, died = 0, kills = 0, xpKills = 0 }
+-- Morts déjà comptées (par GUID, vidées avec le temps) : le journal de combat
+-- et le message d'XP arrivent tous les deux pour la même mort
+ns.bestiaryKilled = {}
+local KILLED_MEMORY = 120
+
+local function Kill(self, guid, entry, source)
 	self.bestiaryUnits[guid] = nil
 	if not ModuleOn() then return end
+	-- la même mort par les deux sources : le message d'XP ne recompte pas ce
+	-- que le journal a compté, ni le journal ce que l'XP a déjà compté
+	local now = ns.Now()
+	local prior = self.bestiaryKilled[guid]
+	local recent = prior and now >= prior.at and now - prior.at < KILLED_MEMORY
+	if recent and (source == "xp" or prior.source == "xp") then return end
+	self.bestiaryKilled[guid] = { at = now, source = source or "log" }
+	for other, mark in pairs(self.bestiaryKilled) do
+		if now - mark.at >= KILLED_MEMORY or now < mark.at then self.bestiaryKilled[other] = nil end
+	end
+	local stats = ns.bestiaryStats
+	stats.kills = stats.kills + 1
+	if source == "xp" then stats.xpKills = stats.xpKills + 1 end
 	local book = self:BestiaryData()
 	local zone = book[entry.zoneID]
 	local species = zone and zone[entry.npcID]
@@ -422,6 +443,7 @@ function ns:BestiaryCombat(subevent, sourceGUID, sourceFlags, destGUID, destFlag
 	local units = self.bestiaryUnits
 	local target = destGUID and units[destGUID]
 	if subevent == "UNIT_DIED" or subevent == "UNIT_DESTROYED" then
+		ns.bestiaryStats.died = ns.bestiaryStats.died + 1
 		if target then
 			if target.engaged then Kill(self, destGUID, target) else units[destGUID] = nil end
 		end
@@ -429,6 +451,7 @@ function ns:BestiaryCombat(subevent, sourceGUID, sourceFlags, destGUID, destFlag
 	end
 	local hit = subevent:find("_DAMAGE$") or subevent:find("_MISSED$")
 	if not hit and subevent ~= "PARTY_KILL" then return end
+	if subevent == "PARTY_KILL" then ns.bestiaryStats.partyKills = ns.bestiaryStats.partyKills + 1 end
 	if not target and destGUID and FromGroup(sourceGUID, sourceFlags) then
 		target = Adopt(self, destGUID)
 	end
@@ -437,6 +460,7 @@ function ns:BestiaryCombat(subevent, sourceGUID, sourceFlags, destGUID, destFlag
 			Kill(self, destGUID, target)
 		elseif hit then
 			target.engaged = true
+			ns.bestiaryStats.hits = ns.bestiaryStats.hits + 1
 		end
 		return
 	end
@@ -500,13 +524,45 @@ local HANDLERS = {
 	PLAYER_TARGET_CHANGED = function() ns:BestiarySeeUnit("target") end,
 	UPDATE_MOUSEOVER_UNIT = function() ns:BestiarySeeUnit("mouseover") end,
 	NAME_PLATE_UNIT_ADDED = function(unit) ns:BestiarySeeUnit(unit) end,
+	-- deuxième source : « X meurt, vous gagnez N points d'expérience ». Si le
+	-- journal de combat n'a rien donné, la cible morte est comptée ici.
+	CHAT_MSG_COMBAT_XP_GAIN = function(message) ns:BestiaryOnXP(message) end,
 	COMBAT_LOG_EVENT_UNFILTERED = function(...)
+		ns.bestiaryStats.events = ns.bestiaryStats.events + 1
 		-- coût nul sans mob repéré ni table livrée (les deux clients ont leur
 		-- table, ZoneCreatures_Era / _Forever : en pratique, toujours traité)
 		if not next(ns.bestiaryUnits) and rawget(ns, "ZONE_CREATURES") == nil then return end
 		ns:BestiaryCombat(CombatArgs(...))
 	end,
 }
+
+-- Une victime annoncée par le message d'XP : la cible, si elle est morte
+function ns:BestiaryOnXP(message)
+	if not ModuleOn() then return false end
+	local parse = self.ParseCombatXP
+	if type(parse) ~= "function" then return false end
+	local ok, xp, named = pcall(parse, self, message)
+	if not (ok and xp and named) then return false end
+	if not Call("UnitIsDead", "target") then return false end
+	local guid = Call("UnitGUID", "target")
+	if not NpcID(guid) then return false end
+	local entry = self.bestiaryUnits[guid] or Adopt(self, guid)
+	if not entry then return false end
+	local before = ns.bestiaryStats.kills
+	Kill(self, guid, entry, "xp")
+	return ns.bestiaryStats.kills > before
+end
+
+-- /qc diag : ce que le bestiaire a reçu depuis la connexion
+do
+	local previous = ns.DiagExtra
+	function ns:DiagExtra(...)
+		if previous then previous(self, ...) end
+		local st = ns.bestiaryStats
+		self:Print(string.format("  bestiaire : journal de combat %d, coups %d, PARTY_KILL %d, UNIT_DIED %d, victimes comptées %d (dont %d par l'XP)",
+			st.events, st.hits, st.partyKills, st.died, st.kills, st.xpKills))
+	end
+end
 
 local eventFrame = CreateFrame("Frame")
 for event in pairs(HANDLERS) do
