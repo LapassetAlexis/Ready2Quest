@@ -500,35 +500,57 @@ end
 -- clair), filet ambre lumineux, lueur ambre très discrète en haut.
 -- ---------------------------------------------------------------------------
 Theme.HEADER_HEIGHT = 100
-function Theme.CreatePageHeader(parent, width)
+-- En-tête compact (fenêtres des modules) : logo, titre F_TITLE, sous-titre
+-- F_BODY dessous, filet ambre ; le grand chiffre de la fenêtre garde F_DISPLAY.
+Theme.HEADER_COMPACT_HEIGHT = 64
+-- opts.compact : en-tête compact ; opts.logo : texture du logo (compact
+-- seulement, Theme.LOGO_SMALL par défaut, false = sans logo) ; opts.pad :
+-- marge gauche et droite (24 en grand, 20 en compact)
+function Theme.CreatePageHeader(parent, width, opts)
+	opts = opts or {}
 	local header = CreateFrame("Frame", nil, parent)
 	width = width or (parent.GetWidth and parent:GetWidth()) or 600
-	header:SetSize(width, Theme.HEADER_HEIGHT)
+	local compact = opts.compact and true or false
+	local height = compact and Theme.HEADER_COMPACT_HEIGHT or Theme.HEADER_HEIGHT
+	local pad = tonumber(opts.pad) or (compact and 20 or 24)
+	header:SetSize(width, height)
+	header.compact = compact
 
+	local glowHeight = compact and height or 72
 	header.topGlow = header:CreateTexture(nil, "BACKGROUND")
 	header.topGlow:SetTexture(Theme.SOLID)
 	header.topGlow:SetPoint("TOPLEFT", header, "TOPLEFT", 0, 0)
-	header.topGlow:SetSize(width, 72)
+	header.topGlow:SetSize(width, glowHeight)
 	Gradient(header.topGlow, "VERTICAL", Theme.GOLD, 0, Theme.GOLD, 0.06)
 	-- coin haut gauche un peu plus chaud
 	header.cornerGlow = header:CreateTexture(nil, "BACKGROUND")
 	header.cornerGlow:SetTexture(Theme.SOLID)
 	header.cornerGlow:SetPoint("TOPLEFT", header, "TOPLEFT", 0, 0)
-	header.cornerGlow:SetSize(math.floor(width * 0.45), 72)
+	header.cornerGlow:SetSize(math.floor(width * 0.45), glowHeight)
 	Gradient(header.cornerGlow, "HORIZONTAL", Theme.GOLD, 0.05, Theme.GOLD, 0)
 
-	header.title = Text(header, Theme.F_DISPLAY, Theme.PARCHMENT)
-	header.title:SetPoint("TOPLEFT", header, "TOPLEFT", 24, -22)
+	local left = pad
+	if compact and opts.logo ~= false then
+		header.logo = header:CreateTexture(nil, "ARTWORK")
+		header.logo:SetTexture(opts.logo or Theme.LOGO_SMALL)
+		header.logo:SetSize(28, 28)
+		header.logo:SetPoint("TOPLEFT", header, "TOPLEFT", pad, -14)
+		left = pad + 28 + 10
+	end
+	header.textLeft = left
+
+	header.title = Text(header, compact and Theme.F_TITLE or Theme.F_DISPLAY, Theme.PARCHMENT)
+	header.title:SetPoint("TOPLEFT", header, "TOPLEFT", left, compact and -14 or -22)
 	header.title:SetJustifyH("LEFT")
 	header.title:SetText("")
 
 	header.subtitle = Text(header, Theme.F_BODY, Theme.MUTED_LIGHT)
-	header.subtitle:SetPoint("TOPLEFT", header, "TOPLEFT", 24, -60)
+	header.subtitle:SetPoint("TOPLEFT", header, "TOPLEFT", left, compact and -35 or -60)
 	header.subtitle:SetJustifyH("LEFT")
 	header.subtitle:SetText("")
 
 	header.rule = Theme.CreateGlowRule(header, 2)
-	header.rule:Place(24, -86, width - 48)
+	header.rule:Place(pad, compact and -56 or -86, width - 2 * pad)
 
 	function header:SetTitle(text) self.title:SetText(text or "") end
 	function header:SetSubtitle(text) self.subtitle:SetText(text or "") end
@@ -906,9 +928,41 @@ local BUTTON_STYLES = {
 }
 BUTTON_STYLES.normal = BUTTON_STYLES.outline
 
+-- Largeur d'un texte dans un rôle de police : une sonde cachée par parent,
+-- réutilisée. Sans mesure possible, 7 px par octet (repli large).
+function Theme.TextWidth(parent, text, font)
+	text = tostring(text or "")
+	local probe = parent and parent.themeProbe
+	if parent and not probe and parent.CreateFontString then
+		probe = parent:CreateFontString(nil, "OVERLAY", font or Theme.F_LABEL)
+		probe:Hide()
+		parent.themeProbe = probe
+	end
+	local width = 0
+	if probe then
+		if probe.SetFontObject then probe:SetFontObject(font or Theme.F_LABEL) end
+		probe:SetText(text)
+		width = tonumber(probe.GetStringWidth and probe:GetStringWidth()) or 0
+		probe:SetText("")
+	end
+	if width <= 0 then width = #text * 7 end
+	return width
+end
+
+-- Largeur d'un bouton qui tient son libellé : texte + 16 de chaque côté,
+-- jamais sous `minimum` (72 par défaut)
+Theme.BUTTON_PAD = 32
+Theme.BUTTON_MIN = 72
+function Theme.ButtonWidth(parent, label, minimum)
+	local width = math.ceil(Theme.TextWidth(parent, label, Theme.F_LABEL) + Theme.BUTTON_PAD)
+	return math.max(tonumber(minimum) or Theme.BUTTON_MIN, width)
+end
+
+-- `width` nil ou "auto" : la largeur suit le libellé (Theme.ButtonWidth)
 function Theme.CreateButton(parent, width, height, label, onClick, style)
 	local button = CreateFrame("Button", nil, parent)
-	button:SetSize(width, height)
+	if width == nil or width == "auto" then width = Theme.ButtonWidth(parent, label) end
+	button:SetSize(width, height or 28)
 	button.style = style or "normal"
 	local spec = BUTTON_STYLES[button.style] or BUTTON_STYLES.outline
 	button.spec = spec
@@ -1512,6 +1566,268 @@ function Theme.ScoreTextColor(ratio)
 	if ratio >= 0.60 then return Theme.T_ORANGE end
 	if ratio >= 0.25 then return Theme.T_ORANGE_DEEP end
 	return Theme.T_RED
+end
+
+-- ===========================================================================
+-- Briques des fenêtres de modules (refonte 2026-11, lot 3 ; docs/UI.md,
+-- « Fenêtres des modules »)
+-- ===========================================================================
+
+-- Bouton-icône carré, au trait comme [×] : filet EDGE (ambre au survol),
+-- icône du jeu désaturée et estompée au repos, en couleurs au survol.
+-- `tip` : texte de l'infobulle (facultatif).
+function Theme.CreateIconButton(parent, size, texture, onClick, tip)
+	local button = CreateFrame("Button", nil, parent)
+	size = size or 24
+	button:SetSize(size, size)
+	button.border = Border(button, Theme.EDGE, 1)
+	button.icon = button:CreateTexture(nil, "OVERLAY")
+	button.icon:SetTexture(texture)
+	button.icon:SetPoint("CENTER", button, "CENTER", 0, 0)
+	button.icon:SetSize(size - 8, size - 8)
+	local function Rest(self)
+		if self.icon.SetDesaturated then self.icon:SetDesaturated(true) end
+		self.icon:SetAlpha(0.6)
+		self.border:SetColor(Theme.EDGE[1], Theme.EDGE[2], Theme.EDGE[3], 1)
+	end
+	Rest(button)
+	button:SetScript("OnEnter", function(self)
+		if self.icon.SetDesaturated then self.icon:SetDesaturated(false) end
+		self.icon:SetAlpha(1)
+		self.border:SetColor(Theme.GOLD[1], Theme.GOLD[2], Theme.GOLD[3], 1)
+		if tip then
+			local tooltip = rawget(_G, "GameTooltip")
+			if type(tooltip) == "table" and tooltip.SetOwner then
+				tooltip:SetOwner(self, "ANCHOR_BOTTOM")
+				Theme.TooltipLine(tooltip, tip, Theme.PARCHMENT)
+				tooltip:Show()
+			end
+		end
+	end)
+	button:SetScript("OnLeave", function(self)
+		Rest(self)
+		local tooltip = rawget(_G, "GameTooltip")
+		if tip and type(tooltip) == "table" and tooltip.Hide then tooltip:Hide() end
+	end)
+	if onClick then button:SetScript("OnClick", onClick) end
+	return button
+end
+
+-- Losange de statut : la forme dit l'état autant que la couleur (lisible par
+-- un daltonien). Plein = à voir, au trait = bon ou neutre.
+Theme.STATUS = {
+	ok   = { color = "GREEN",  outline = true },
+	info = { color = "BLUE",   outline = true },
+	warn = { color = "ORANGE", outline = false },
+	bad  = { color = "RED",    outline = false },
+	off  = { color = "MUTED",  outline = true },
+	item = { color = "GOLD",   outline = true },
+}
+-- `state` nil ou "none" : losange masqué. Retourne la couleur posée.
+function Theme.SetStatus(diamond, state)
+	if not diamond then return nil end
+	diamond.state = state
+	local spec = state and Theme.STATUS[state]
+	if not spec then
+		diamond:Hide()
+		return nil
+	end
+	local c = Theme[spec.color]
+	diamond:SetTexture(spec.outline and Theme.DIAMOND_LINE or Theme.DIAMOND)
+	diamond:SetVertexColor(c[1], c[2], c[3], 1)
+	diamond:Show()
+	return c
+end
+
+-- ---------------------------------------------------------------------------
+-- Ligne de liste : carte ROW / ROW_ALT (une sur deux), comme les cartes de
+-- réglage. opts.status : losange à gauche (taille, ou true = 9) ;
+-- opts.icon : icône d'objet (taille) ; opts.detail : texte secondaire aligné
+-- à droite ; opts.kind = "Button" : ligne cliquable, éclairée au survol.
+-- .text à gauche (après le losange ou l'icône), .control à droite.
+-- ---------------------------------------------------------------------------
+Theme.LIST_ROW_HEIGHT = 26
+Theme.LIST_ROW_GAP = 2
+function Theme.CreateListRow(parent, width, height, opts)
+	opts = opts or {}
+	local row = CreateFrame(opts.kind or "Frame", nil, parent)
+	width, height = width or 340, height or Theme.LIST_ROW_HEIGHT
+	row:SetSize(width, height)
+	row.bg = Solid(row, "BACKGROUND", Theme.ROW, 1)
+	row.bg:SetAllPoints()
+	row.hover = Solid(row, "BORDER", { 1, 1, 1 }, 0.025)
+	row.hover:SetAllPoints()
+	row.hover:Hide()
+	if opts.kind == "Button" then
+		row:SetScript("OnEnter", function(self) self.hover:Show() end)
+		row:SetScript("OnLeave", function(self) self.hover:Hide() end)
+	end
+
+	local left = 12
+	if opts.status then
+		local size = tonumber(opts.status) or 9
+		row.status = Theme.CreateDiamond(row, size, true)
+		row.status:SetPoint("LEFT", row, "LEFT", 12, 0)
+		left = 12 + size + 10
+	elseif opts.icon then
+		local size = tonumber(opts.icon) or 22
+		row.icon = Theme.CreateIcon(row, size)
+		row.icon:SetPoint("LEFT", row, "LEFT", 6, 0)
+		left = 6 + size + 10
+	end
+	row.textLeft = left
+	row.text = Text(row, opts.font or Theme.F_BODY, Theme.TEXT)
+	row.text:SetPoint("LEFT", row, "LEFT", left, 0)
+	row.text:SetJustifyH("LEFT")
+	if row.text.SetWordWrap then row.text:SetWordWrap(false) end
+	if opts.detail then
+		row.detail = Text(row, opts.detailFont or Theme.F_BODY, Theme.MUTED_LIGHT)
+		row.detail:SetPoint("RIGHT", row, "RIGHT", -12, 0)
+		row.detail:SetJustifyH("RIGHT")
+		if row.detail.SetWordWrap then row.detail:SetWordWrap(false) end
+	end
+	row.control = CreateFrame("Frame", nil, row)
+	row.control:SetPoint("TOPRIGHT", row, "TOPRIGHT", -8, 0)
+	row.control:SetPoint("BOTTOMRIGHT", row, "BOTTOMRIGHT", -8, 0)
+	row.control:SetWidth(math.floor(width / 2))
+
+	function row:SetAlt(alt)
+		self.alt = alt and true or false
+		local c = self.alt and Theme.ROW_ALT or Theme.ROW
+		self.bg:SetVertexColor(c[1], c[2], c[3], 1)
+	end
+	-- rang dans la liste (1, 2, …) : les rangs pairs en ROW_ALT
+	function row:SetIndex(index) self:SetAlt((tonumber(index) or 1) % 2 == 0) end
+	row:SetAlt(false)
+	return row
+end
+
+-- ---------------------------------------------------------------------------
+-- Bandeau flottant (toast) : fond WINDOW, filet EDGE, barre d'accent à
+-- gauche (ambre, ou couleur de statut : toast:SetAccent(c)). Déplaçable en
+-- mode édition (souris coupée par défaut, comme les cadres discrets).
+-- opts : name, strata (MEDIUM), alpha (0.94), accent (couleur, false = sans).
+-- .contentLeft : marge gauche du contenu, après la barre.
+-- ---------------------------------------------------------------------------
+Theme.TOAST_ACCENT = 3
+function Theme.CreateToast(parent, width, height, opts)
+	opts = opts or {}
+	local ok, frame = pcall(CreateFrame, "Frame", opts.name, parent or UIParent)
+	if not ok or not frame then return nil end
+	frame:SetSize(width, height)
+	frame:SetFrameStrata(opts.strata or "MEDIUM")
+	frame:SetClampedToScreen(true)
+	frame:EnableMouse(false)
+	frame:SetMovable(true)
+	if frame.RegisterForDrag then frame:RegisterForDrag("LeftButton") end
+	if frame.StartMoving then frame:SetScript("OnDragStart", frame.StartMoving) end
+	if frame.StopMovingOrSizing then frame:SetScript("OnDragStop", frame.StopMovingOrSizing) end
+	frame.chrome = "toast"
+
+	frame.bg = Solid(frame, "BACKGROUND", Theme.WINDOW, opts.alpha or 0.94)
+	frame.bg:SetAllPoints()
+	frame.border = Border(frame, Theme.EDGE, 1)
+	frame.accent = Solid(frame, "ARTWORK", Theme.GOLD, 1)
+	frame.accent:SetPoint("TOPLEFT", frame, "TOPLEFT", 1, -1)
+	frame.accent:SetPoint("BOTTOMLEFT", frame, "BOTTOMLEFT", 1, 1)
+	frame.accent:SetWidth(Theme.TOAST_ACCENT)
+	frame.contentLeft = 1 + Theme.TOAST_ACCENT + 10
+
+	function frame:SetAccent(color)
+		if color == false then self.accent:Hide(); return end
+		color = color or Theme.GOLD
+		self.accentColor = color
+		self.accent:SetVertexColor(color[1], color[2], color[3], 1)
+		self.accent:Show()
+	end
+	frame:SetAccent(opts.accent)
+	frame.contentTop = 0
+	return frame
+end
+
+-- ---------------------------------------------------------------------------
+-- Fenêtre de module : Theme.CreateWindow + en-tête compact (logo, titre,
+-- sous-titre, filet ambre) + pied facultatif (fond NAV) où s'alignent les
+-- boutons (frame:AddFooterButton). .title et .subtitle sont ceux de l'en-tête ;
+-- .contentTop = haut de la zone libre sous l'en-tête (négatif, depuis le haut
+-- de la fenêtre) ; .pad = marge latérale (20).
+-- opts : name, title, subtitle, strata, footer (hauteur, 52 par défaut ;
+-- false = sans pied), logo (texture, false = sans).
+-- ---------------------------------------------------------------------------
+Theme.DIALOG_PAD = 20
+Theme.DIALOG_FOOTER = 52
+Theme.DIALOG_BUTTON_HEIGHT = 28
+function Theme.CreateDialog(parent, width, height, opts)
+	opts = opts or {}
+	local footer = opts.footer
+	if footer == nil then footer = Theme.DIALOG_FOOTER end
+	local frame = Theme.CreateWindow(parent, width, height, { name = opts.name, strata = opts.strata,
+		alpha = opts.alpha, footer = footer ~= false and footer or nil })
+	if not frame then return nil end
+	frame.chrome = "dialog"
+	frame.pad = Theme.DIALOG_PAD
+	frame.close:SetSize(22, 22)
+	frame.close:ClearAllPoints()
+	frame.close:SetPoint("TOPRIGHT", frame, "TOPRIGHT", -16, -16)
+
+	frame.header = Theme.CreatePageHeader(frame.content, width - 2, { compact = true, logo = opts.logo, pad = Theme.DIALOG_PAD })
+	frame.header:SetPoint("TOPLEFT", frame.content, "TOPLEFT", 0, 0)
+	frame.title, frame.subtitle, frame.logo = frame.header.title, frame.header.subtitle, frame.header.logo
+	frame.title:SetText(opts.title or "")
+	frame.subtitle:SetText(opts.subtitle or "")
+	-- le sous-titre s'arrête avant le [×] (et un bouton-icône à sa gauche)
+	local textWidth = width - frame.header.textLeft - Theme.DIALOG_PAD - 2 * (22 + 8)
+	frame.subtitle:SetWidth(textWidth)
+	if frame.subtitle.SetWordWrap then frame.subtitle:SetWordWrap(false) end
+	frame.title:SetWidth(textWidth)
+	if frame.title.SetWordWrap then frame.title:SetWordWrap(false) end
+	frame.contentTop = -Theme.HEADER_COMPACT_HEIGHT - 1
+	frame.innerWidth = width - 2 - 2 * Theme.DIALOG_PAD
+
+	-- boutons du pied : "left" (contour, de gauche à droite), "right" (action
+	-- principale, de droite à gauche) ou "center" ; largeur au libellé
+	frame.footerButtons = { left = {}, right = {}, center = {} }
+	function frame:AddFooterButton(label, onClick, style, side, width)
+		local foot = self.footer
+		if not foot then return nil end
+		side = side or "right"
+		local list = self.footerButtons[side] or self.footerButtons.right
+		local button = Theme.CreateButton(foot, width or "auto", Theme.DIALOG_BUTTON_HEIGHT, label, onClick, style)
+		local previous = list[#list]
+		if side == "center" then
+			button:SetPoint("CENTER", foot, "CENTER", 0, 0)
+		elseif side == "left" then
+			if previous then button:SetPoint("LEFT", previous, "RIGHT", 10, 0)
+			else button:SetPoint("LEFT", foot, "LEFT", Theme.DIALOG_PAD, 0) end
+		else
+			if previous then button:SetPoint("RIGHT", previous, "LEFT", -10, 0)
+			else button:SetPoint("RIGHT", foot, "RIGHT", -Theme.DIALOG_PAD, 0) end
+		end
+		list[#list + 1] = button
+		return button
+	end
+	return frame
+end
+
+-- ---------------------------------------------------------------------------
+-- Infobulle du jeu (GameTooltip) aux couleurs du thème : titre ambre, texte
+-- courant, aide MUTED clair, paire libellé / valeur.
+-- ---------------------------------------------------------------------------
+function Theme.TooltipLine(tooltip, text, color, wrap)
+	if type(tooltip) ~= "table" or type(tooltip.AddLine) ~= "function" then return end
+	color = color or Theme.TEXT
+	tooltip:AddLine(text, color[1], color[2], color[3], wrap and true or nil)
+end
+function Theme.TooltipTitle(tooltip, text) Theme.TooltipLine(tooltip, text, Theme.GOLD) end
+function Theme.TooltipHint(tooltip, text, wrap) Theme.TooltipLine(tooltip, text, Theme.MUTED_LIGHT, wrap) end
+function Theme.TooltipPair(tooltip, label, value)
+	if type(tooltip) ~= "table" then return end
+	if type(tooltip.AddDoubleLine) == "function" then
+		tooltip:AddDoubleLine(label, value, Theme.TEXT[1], Theme.TEXT[2], Theme.TEXT[3],
+			Theme.PARCHMENT[1], Theme.PARCHMENT[2], Theme.PARCHMENT[3])
+	else
+		Theme.TooltipLine(tooltip, tostring(label) .. " : " .. tostring(value))
+	end
 end
 
 if ns.Mark then ns.Mark("Theme") end

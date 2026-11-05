@@ -1504,7 +1504,11 @@ do
 	refresh:Click()
 	Check("flèche : relance le check", NS.lastResults ~= nil and win:IsShown() == true)
 	Check("flèche : un tour sur elle-même", refresh.spin ~= nil and refresh.spin.plays >= 1)
-	Check("flèche : ne touche pas le « Parti de »", select(4, win.subtitle:GetPoint()) <= -58)
+	-- le sous-titre (« Parti de … ») s'arrête avant la flèche, posée à gauche du [×]
+	local refreshLeft = diag.width - 16 - win.close:GetWidth() - 8 - refresh:GetWidth()
+	Check("flèche : ne touche pas le « Parti de »", 1 + win.header.textLeft + win.subtitle:GetWidth() <= refreshLeft,
+		(1 + win.header.textLeft + win.subtitle:GetWidth()) .. " <= " .. refreshLeft)
+	Check("flèche : à gauche du [×]", select(2, refresh:GetPoint()) == win.close and select(1, refresh:GetPoint()) == "RIGHT")
 end
 
 -- 4.31 Bouton sans template Blizzard
@@ -2940,7 +2944,8 @@ NS:ToggleOptions()
 -- le diagnostic aussi
 NS:ToggleOptions()
 NS:RunChecklist("manual")
-Check("diagnostic : même surface plate", NS.window.chrome == "flat", NS.window.chrome)
+Check("diagnostic : fenêtre de module v2 (en-tête compact, pied)", NS.window.chrome == "dialog"
+	and NS.window.header and NS.window.header.compact and NS.window.footer ~= nil, NS.window.chrome)
 
 -- aucun template Blizzard requis : sans BackdropTemplate ni UIPanelButtonTemplate,
 -- le panneau est identique (c'est tout l'intérêt des contrôles dessinés)
@@ -3213,7 +3218,8 @@ Check("fenêtre : ligne « Parti de » affichée", NS.window and NS.window.depar
 	and NS.window.departed.text:find("boîte aux lettres") ~= nil,
 	NS.window and NS.window.departed and NS.window.departed.text)
 NS:RunChecklist("manual")
-Check("check manuel : pas de ligne « Parti de »", NS.window.departed.text == "", NS.window.departed.text)
+Check("check manuel : pas de ligne « Parti de »", not tostring(NS.window.departed.text):find("Parti de", 1, true)
+	and NS.window.departed.text == NS.L.PANEL_SUBTITLE, NS.window.departed.text)
 
 -- Chaînes : chaque nouvelle clé existe en frFR ET en enUS
 local newKeys = { "MSG_SAFE_PURGED", "MSG_SAFE_RESET", "SAFE_KIND_CITY", "SAFE_KIND_VILLAGE", "SRC_RESTING",
@@ -3546,8 +3552,11 @@ NS.window = nil
 Mock.world.durability = { [5] = { 5, 100 } }
 NS:RunChecklist("manual")
 local w = NS.window
-Check("[ID] note en police maison, grand corps", w.scoreValue.font and w.scoreValue.font.size >= 30
-	and tostring(w.scoreValue.font.path):find("Inter%-Bold") ~= nil, w.scoreValue.font and w.scoreValue.font.size)
+-- grand chiffre : F_DISPLAY (Inter Bold 26, docs/UI.md), plus grand que le titre
+local display = rawget(_G, NS.Theme.F_DISPLAY)
+Check("[ID] note en police maison, grand corps", w.scoreValue.fontObject == NS.Theme.F_DISPLAY
+	and tostring(display.font.path):find("Inter%-Bold") ~= nil
+	and display.font.size > rawget(_G, w.title.fontObject).font.size, tostring(w.scoreValue.fontObject))
 Check("[ID] verdict dans un tampon bordé", w.stamp and w.stamp.border and w.verdict.text ~= "", w.verdict.text)
 Check("[ID] tampon à la couleur du verdict", w.stamp.border.top.vertex[1] == w.verdict.textColor[1])
 Check("[ID] fenêtre : fondu à l'ouverture", w.fadeIn and w.fadeIn.plays >= 1)

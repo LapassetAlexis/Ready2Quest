@@ -318,41 +318,38 @@ end
 -- ---------------------------------------------------------------------------
 -- Fenêtre
 -- ---------------------------------------------------------------------------
-local WIDTH, LINE_HEIGHT, MAX_LINES = 380, 17, 6
+local WIDTH, MAX_LINES = 400, 6
+local ROW_CARD, ROW_STEP = 24, 26    -- ligne en carte (corps, guérisseur, verdict)
+local NOTE_LINE = 15                 -- interligne d'une note pâle (sur deux lignes)
+local GAP = 14
 
 -- Les lignes sont placées à chaque affichage : la note et la règle, plus
--- longues que la fenêtre, passent sur deux lignes plutôt que d'être coupées.
+-- longues que la fenêtre, passent sur deux lignes (texte pâle, sans carte)
+-- plutôt que d'être coupées.
 local function Line(frame, index)
 	frame.lines = frame.lines or {}
 	local line = frame.lines[index]
 	if line then return line end
-	line = CreateFrame("Frame", nil, frame)
-	line.text = line:CreateFontString(nil, "OVERLAY", Theme.F_BODY)
-	line.text:SetPoint("TOPLEFT", line, "TOPLEFT", 2, -1)
-	line.text:SetWidth(WIDTH - 32)
-	line.text:SetJustifyH("LEFT")
+	line = Theme.CreateListRow(frame, frame.innerWidth, ROW_CARD)
+	line.text:ClearAllPoints()
+	line.text:SetPoint("TOPLEFT", line, "TOPLEFT", 12, -5)
+	line.text:SetWidth(frame.innerWidth - 24)
 	frame.lines[index] = line
 	return line
 end
 
 function ns:EnsureDeathPanel()
 	if self.deathFrame then return self.deathFrame end
-	if not (Theme and Theme.CreatePanel) then return nil end
-	local frame = Theme.CreatePanel(UIParent, WIDTH, 160, L.DEATH_TITLE, { name = "Ready2QuestDeathFrame", titleSize = 14 })
+	if not (Theme and Theme.CreateDialog) then return nil end
+	local frame = Theme.CreateDialog(UIParent, WIDTH, 160, { name = "Ready2QuestDeathFrame", title = L.DEATH_TITLE,
+		subtitle = L.DEATH_QUESTION })
 	if not frame then return nil end
 	if self.RestorePoint then self:RestorePoint(frame, "deathPoint", { point = "CENTER", x = 0, y = -140 }) end
-	if frame.subtitle then
-		frame.subtitle:SetWidth(WIDTH - 170)
-		frame.subtitle:SetJustifyH("RIGHT")
-		frame.subtitle:SetWordWrap(false)
-		frame.subtitle:SetText(Theme.T_PARCHMENT .. L.DEATH_QUESTION .. "|r")
-	end
 	-- fermée à la main : plus rien jusqu'à la prochaine mort
-	frame.closeButton = Theme.CreateButton(frame, 90, 20, L.OPT_CLOSE, function()
+	frame.closeButton = frame:AddFooterButton(L.OPT_CLOSE, function()
 		ns.deathDismissed = true
 		frame:Hide()
-	end, "primary")
-	frame.closeButton:SetPoint("BOTTOMRIGHT", frame, "BOTTOMRIGHT", -14, 10)
+	end, "accent")
 	self.deathFrame = frame
 	return frame
 end
@@ -378,23 +375,36 @@ function ns:ShowDeathPanel(advice)
 		return false
 	end
 	local rows, tall = self:DeathPanelRows(advice)
-	local y = (frame.contentTop or -36) - 6
+	local y = (frame.contentTop or -65) - GAP
+	local rank = 0
 	for index = 1, MAX_LINES do
 		local text = rows[index]
 		if text or (frame.lines and frame.lines[index]) then
 			local line = Line(frame, index)
-			local height = (tall[index] and 2 or 1) * LINE_HEIGHT
+			local note = tall[index] == true
+			local height = note and (2 * NOTE_LINE + 4) or ROW_CARD
+			if note then
+				line.bg:Hide()
+				line.text:ClearAllPoints()
+				line.text:SetPoint("TOPLEFT", line, "TOPLEFT", 12, -2)
+			else
+				rank = rank + 1
+				line.bg:Show()
+				line:SetIndex(rank)
+				line.text:ClearAllPoints()
+				line.text:SetPoint("TOPLEFT", line, "TOPLEFT", 12, -5)
+			end
 			line:ClearAllPoints()
-			line:SetPoint("TOPLEFT", frame, "TOPLEFT", 14, y)
-			line:SetSize(WIDTH - 28, height - 2)
-			line.text:SetWordWrap(tall[index] == true)
-			line.text:SetHeight(height - 2)
+			line:SetPoint("TOPLEFT", frame, "TOPLEFT", frame.pad + 1, y)
+			line:SetSize(frame.innerWidth, height)
+			line.text:SetWordWrap(note)
+			line.text:SetHeight(note and (height - 4) or 14)
 			line.text:SetText(text or "")
-			if text then line:Show(); y = y - height else line:Hide() end
+			if text then line:Show(); y = y - height - (ROW_STEP - ROW_CARD) else line:Hide() end
 		end
 	end
 	frame.visibleLines = #rows
-	frame:SetHeight(-y + 44)
+	frame:SetHeight(-y - (ROW_STEP - ROW_CARD) + GAP + Theme.DIALOG_FOOTER)
 	if not frame:IsShown() then
 		frame:Show()
 		if Theme.FadeIn then pcall(Theme.FadeIn, frame) end

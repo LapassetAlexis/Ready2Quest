@@ -381,7 +381,7 @@ function Snap.Render(root, opts)
 				end
 				local wrap = (region.widthSet and region.kind == "FontString") and "normal" or "nowrap"
 				out[#out + 1] = string.format('<div class="txt" style="%s;font-size:%dpx;font-weight:%d;color:%s;justify-content:%s;'
-					.. 'align-items:%s;text-align:%s;white-space:%s%s%s">%s</div>',
+					.. 'align-items:%s;text-align:%s;white-space:%s%s%s"><span>%s</span></div>',
 					pos, font.size or 12, Weight(font.path), Css(c[1], c[2], c[3], (c[4] or 1) * alpha), align, valign,
 					justify:lower(), wrap, shadow, inset, Snap.TextHtml(text))
 			end
@@ -552,17 +552,73 @@ Snap.scenes.bricks = function(T)
 	return win, "Briques du socle (Theme v2)"
 end
 
+-- fenêtre de module centrée (la position sauvegardée n'a pas de sens ici)
+local function Centered(frame)
+	frame:ClearAllPoints()
+	frame:SetPoint("CENTER", UIParent, "CENTER", 0, 0)
+	return frame
+end
+
+-- Avant le départ : sortie de Comté-de-l'Or, sans vivres ni foyer, deux gris
 Snap.scenes["r2q-check"] = function(T)
 	local NS = T.NS
 	T.ResetWorld()
-	Mock.world.durability = { [5] = { 40, 100 } }
+	Mock.world.durability = { [5] = { 18, 100 } }
 	Mock.world.bags[0].items[1] = { itemID = 3001, stackCount = 1, quality = 0 }
+	Mock.world.bags[0].items[2] = { itemID = 3002, stackCount = 1, quality = 0 }
 	NS.window = nil
 	NS:RunChecklist("manual")
-	local win = NS.window
-	win:ClearAllPoints()
-	win:SetPoint("CENTER", UIParent, "CENTER", 0, 0)
-	return win, "Ready2Quest : avant le départ"
+	NS.lastDeparture = { name = "Comté-de-l'Or", source = "mail" }
+	NS:ShowWindow(NS.lastResults)
+	Mock:Advance(1)   -- fin de l'animation de la note
+	return Centered(NS.window), "Ready2Quest : avant le départ"
+end
+
+-- Avant le donjon : fiche complète (quêtes, plans, préparation incomplète)
+Snap.scenes["r2q-dungeon"] = function(T)
+	local NS = T.NS
+	T.ResetWorld()
+	T.LoadModules()
+	NS.dungeonFrame = nil
+	NS:ShowDungeonWindow({
+		name = "Les Mortemines", verdict = "ok", min = 17, max = 26, level = 21,
+		quests = { { title = "Edwin VanCleef", ready = false }, { title = "Les brigands du Défias", ready = true },
+			{ title = "Le Collier de Rouge", ready = false } },
+		blueprints = { { name = "Plan : bouclier de fer renforcé" } },
+		readiness = {
+			{ label = "Durabilité", detail = "92 %", ok = true },
+			{ label = "Vivres", detail = "0 nourriture", ok = false },
+			{ label = "Foyer", detail = "prête", ok = true },
+			{ label = "Sacs", detail = "3 places libres", ok = false },
+		},
+	})
+	return Centered(NS.dungeonFrame), "Ready2Quest : avant le donjon"
+end
+
+-- Retour d'expédition : XP, argent, butin (objets notables), morts, usure
+Snap.scenes["r2q-expedition"] = function(T)
+	local NS = T.NS
+	T.ResetWorld()
+	T.LoadModules()
+	NS.expeditionFrame = nil
+	NS:ShowExpeditionReport({
+		duration = 754, xp = 950, levels = 1, earned = 50000, spent = 20000, net = 30000,
+		loot = { { link = "|cff1eff00[Épée verte]|r", count = 1 }, { link = "|cff0070dd[Anneau bleu]|r", count = 2 } },
+		deaths = 2, duraLost = 35, durability = 55, quests = 1, newQuests = 1,
+		restock = { "Vivres" }, place = { name = "Comté-de-l'Or" },
+	})
+	return Centered(NS.expeditionFrame), "Ready2Quest : retour d'expédition"
+end
+
+-- Après la mort : fantôme à 175 m de son corps, niveau 22
+Snap.scenes["r2q-death"] = function(T)
+	local NS = T.NS
+	T.ResetWorld()
+	T.LoadModules()
+	NS.deathFrame, NS.deathDismissed = nil, nil
+	NS:ShowDeathPanel({ ghost = true, level = 22, distance = 175, runTime = 20, sickness = 600,
+		points = 50, cost = 25000, verdict = "run" })
+	return Centered(NS.deathFrame), "Ready2Quest : après la mort"
 end
 
 -- Réglages (refonte) : tous les modules chargés, fenêtre centrée, une page

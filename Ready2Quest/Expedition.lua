@@ -25,8 +25,7 @@ local ADDON, ns = ...
 local L = ns.L
 local Theme = ns.Theme
 
-local WIDTH      = 360
-local ROW_HEIGHT = 18
+local WIDTH      = 420
 local MAX_ITEMS  = 3      -- objets notables listés sous la ligne « Butin »
 local MIN_QUALITY = 2     -- inhabituel (vert) et au-dessus
 
@@ -479,58 +478,69 @@ function ns:ExpeditionLines(report)
 end
 
 -- ---------------------------------------------------------------------------
--- Fenêtre (même habillage que « Avant le départ »)
+-- Fenêtre (même habillage que « Avant le départ » : Theme.CreateDialog) : la
+-- durée en grand, puis une carte par ligne, losange à gauche ; les objets
+-- notables en retrait sous la ligne « Butin »
 -- ---------------------------------------------------------------------------
 local MAX_LINES = 12
+local ROW_CARD, ROW_STEP = 22, 24      -- carte, pas d'une ligne à l'autre
+local HERO = 62                         -- bloc de la durée
+local GAP = 14
+local NAME_WIDTH = 96
+ns.EXP_LAYOUT = { rowStep = ROW_STEP, rowCard = ROW_CARD }
 
 function ns:EnsureExpeditionWindow()
 	if self.expeditionFrame then return self.expeditionFrame end
-	if not Theme or not Theme.CreatePanel then return nil end
+	if not Theme or not Theme.CreateDialog then return nil end
 
-	local frame = Theme.CreatePanel(UIParent, WIDTH, 200, L.EXP_TITLE, { name = "Ready2QuestExpeditionFrame", titleSize = 14 })
+	local frame = Theme.CreateDialog(UIParent, WIDTH, 200, { name = "Ready2QuestExpeditionFrame", title = L.EXP_TITLE })
 	if not frame then return nil end
 	if self.RestorePoint then self:RestorePoint(frame, "expeditionPoint", { point = "CENTER", x = 0, y = 160 }) end
 
-	frame.subtitle:SetText("")
-	frame.subtitle:SetWidth(WIDTH - 190)
-	frame.subtitle:SetJustifyH("RIGHT")
-	frame.subtitle:SetWordWrap(false)
+	local pad, inner = frame.pad + 1, frame.innerWidth
+	local top = frame.contentTop - GAP
+	-- La durée en grand (F_DISPLAY) : c'est ce qu'on lit en premier
+	frame.hero = CreateFrame("Frame", nil, frame)
+	frame.hero:SetSize(inner, HERO)
+	frame.hero:SetPoint("TOPLEFT", frame, "TOPLEFT", pad, top)
+	frame.hero.bg = Theme.Solid(frame.hero, "BACKGROUND", Theme.ROW, 1)
+	frame.hero.bg:SetAllPoints()
+	frame.hero.border = Theme.Border(frame.hero, Theme.EDGE_SOFT, 1)
+	frame.duration = Theme.Text(frame.hero, Theme.F_DISPLAY, Theme.PARCHMENT)
+	frame.duration:SetPoint("LEFT", frame.hero, "LEFT", 16, 0)
+	frame.durationLabel = Theme.Text(frame.hero, Theme.F_BODY, Theme.MUTED)
+	frame.durationLabel:SetPoint("BOTTOMLEFT", frame.duration, "BOTTOMRIGHT", 8, 4)
+	frame.durationLabel:SetText(L.EXP_DURATION_LABEL)
 
-	local top = frame.contentTop
-	-- La durée en grand, dans la police maison : c'est ce qu'on lit en premier
-	frame.duration = Theme.CreateTitle(frame, 26)
-	frame.duration:SetPoint("TOPLEFT", frame, "TOPLEFT", 14, top - 6)
-	frame.durationLabel = frame:CreateFontString(nil, "OVERLAY", Theme.F_BODY)
-	frame.durationLabel:SetPoint("BOTTOMLEFT", frame.duration, "BOTTOMRIGHT", 6, 3)
-	frame.durationLabel:SetText(Theme.T_GREY .. L.EXP_DURATION_LABEL .. "|r")
-	frame.divider = Theme.CreateDivider(frame, WIDTH - 28, top - 42)
-
+	local rowsTop = top - HERO - GAP
 	frame.lines = {}
 	for index = 1, MAX_LINES do
-		local row = CreateFrame("Frame", nil, frame)
-		row:SetSize(WIDTH - 28, ROW_HEIGHT - 2)
-		row:SetPoint("TOPLEFT", frame, "TOPLEFT", 14, top - 50 - ((index - 1) * ROW_HEIGHT))
-		row.status = Theme.CreateDiamond(row, 8, true)
-		row.status:SetPoint("LEFT", row, "LEFT", 2, 0)
-		row.name = row:CreateFontString(nil, "OVERLAY", Theme.F_BODY)
-		row.name:SetPoint("LEFT", row, "LEFT", 18, 0)
-		row.name:SetWidth(84)
-		row.name:SetJustifyH("LEFT")
-		row.name:SetWordWrap(false)
-		row.value = row:CreateFontString(nil, "OVERLAY", Theme.F_BODY)
-		row.value:SetPoint("LEFT", row, "LEFT", 106, 0)
-		row.value:SetWidth(WIDTH - 28 - 106 - 4)
+		local row = Theme.CreateListRow(frame, inner, ROW_CARD, { status = 8 })
+		row:SetPoint("TOPLEFT", frame, "TOPLEFT", pad, rowsTop - ((index - 1) * ROW_STEP))
+		row:SetIndex(index)
+		row.name = row.text
+		row.name:SetWidth(NAME_WIDTH)
+		row.value = Theme.Text(row, Theme.F_BODY, Theme.TEXT)
 		row.value:SetJustifyH("LEFT")
-		row.value:SetWordWrap(false)
+		if row.value.SetWordWrap then row.value:SetWordWrap(false) end
 		row:Hide()
 		frame.lines[index] = row
 	end
+	frame.rowsTop = rowsTop
 
-	frame.closeButton = Theme.CreateButton(frame, 90, 20, L.OPT_CLOSE, function() frame:Hide() end, "primary")
-	frame.closeButton:SetPoint("BOTTOMRIGHT", frame, "BOTTOMRIGHT", -14, 10)
+	frame.closeButton = frame:AddFooterButton(L.OPT_CLOSE, function() frame:Hide() end, "accent")
 
 	self.expeditionFrame = frame
 	return frame
+end
+
+-- valeur d'une ligne : après le nom ; objet notable : dans la même colonne,
+-- sous le compte de la ligne « Butin »
+local function PlaceValue(row)
+	local left = row.textLeft + NAME_WIDTH + 8
+	row.value:ClearAllPoints()
+	row.value:SetPoint("LEFT", row, "LEFT", left, 0)
+	row.value:SetWidth(row:GetWidth() - left - 12)
 end
 
 function ns:ShowExpeditionReport(report)
@@ -563,6 +573,7 @@ function ns:ShowExpeditionReport(report)
 				row.name:SetTextColor(Theme.TEXT[1], Theme.TEXT[2], Theme.TEXT[3])
 				row.value:SetText(line.detail and (line.value .. "  " .. Theme.T_GREY .. line.detail .. "|r") or line.value)
 			end
+			PlaceValue(row)
 			row.line = line
 			row:Show()
 		else
@@ -571,7 +582,7 @@ function ns:ShowExpeditionReport(report)
 		end
 	end
 	frame.visibleLines = count
-	frame:SetHeight(36 + 50 + (count * ROW_HEIGHT) + 8 + 34)
+	frame:SetHeight(-frame.rowsTop + (count * ROW_STEP) - (ROW_STEP - ROW_CARD) + GAP + Theme.DIALOG_FOOTER)
 
 	frame:Show()
 	if Theme.FadeIn then Theme.FadeIn(frame, 0.2) end
