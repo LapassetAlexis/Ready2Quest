@@ -1,5 +1,16 @@
 # QuestCompanion
 
+## 1.3.0
+
+- **Nouvelle interface**, plus moderne et plus lisible :
+  - **police Inter** partout ;
+  - **réglages** dans une grande fenêtre : une entrée par page (Compagnon, Ornements, Carnet de voyage, Souvenirs, Caractère, Au jour le jour), une recherche, les réglages en cartes, et un **aperçu de ta créature** avec son cadre et son fond. Apparence, cadre et fond se choisissent dans une liste ; ce qui n'est pas encore gagné y apparaît grisé, avec sa condition ;
+  - **le carnet** passe dans le même style, en gardant son âme de carnet de voyage : navigation à gauche (Créature, Zones, Zone, Jour, Collection, Souvenirs), en-tête avec la zone et sa progression, liste des zones avec leur barre, fiches du bestiaire avec portrait, rang et état (abattu ou à abattre), collection avec les objets verrouillés et leur condition ;
+  - coffre de zone, question des photos, garde-manger, fiche au survol de la créature, bulle et tutoriel, annonces et suivi à l'écran : tout reprend ce style.
+- Les cadres et fonds gagnés pour ta créature ne changent pas.
+
+*English:* a new, modern interface: the Inter font everywhere; a large settings window with one entry per page, a search, card-style settings and a live preview of your creature (appearance, frame and background chosen from lists, locked ones greyed with their condition); the journal restyled while keeping its travel-notebook feel (left navigation, zone header, zone list with progress bars, bestiary cards with portrait, rank and killed state, collection with locked items); zone chest, photo prompt, pantry, hover card, bubble, tutorial, toasts and tracker restyled to match. Earned frames and backgrounds are unchanged.
+
 ## 1.2.1
 
 - **WoW Forever : victimes, rares et brillantes enfin comptés.** Comme le moteur récent de WoW (12.0), Forever ferme son journal de combat aux addons : le bestiaire n'en recevait rien (`/qc diag` le montrait : « journal de combat 0 »). QuestCompanion ne s'y abonne plus quand il est fermé et suit à la place les deux événements que le jeu garde ouverts : la mort d'un monstre tué par toi ou ton groupe, et la mort d'une créature proche. S'y ajoute le message d'expérience, qui comptait déjà les victimes depuis la 1.2.0. Maintenant :

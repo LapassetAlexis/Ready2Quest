@@ -193,10 +193,7 @@ function ns:DeparturePreview(container)
 	function container:Refresh(addon)
 		local value, sample = addon.score, false
 		if not value then value, sample = 85, true end
-		local saved = addon.score
-		addon.score = value
-		local label = addon:ScoreLabel()
-		addon.score = saved
+		local label = addon:ScoreLabel(value)
 		local c = Theme.ScoreColor(value / 100)
 		self.score:SetText(tostring(value))
 		self.score:SetTextColor(c[1], c[2], c[3], 1)

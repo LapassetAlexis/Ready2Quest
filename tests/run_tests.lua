@@ -195,6 +195,11 @@ local function NewRegion(kind, name, parent)
 	end
 	function region:SetFont(path, size, flags)
 		if Mock.world.fontRefused then return false end
+		-- client muet : SetFont ne rend rien, et un fichier refusé n'est pas posé
+		if Mock.world.fontSilent then
+			if Mock.world.fontSilent ~= "refuse" then self.font = { path = path, size = size, flags = flags } end
+			return nil
+		end
 		self.font = { path = path, size = size, flags = flags }
 		return true
 	end
@@ -1649,7 +1654,7 @@ ResetWorld()
 Say("\n== bootstrap et diagnostic ==")
 ResetWorld()
 Check("commande enregistrée par le bootstrap", type(SlashCmdList["SACETDEPART"]) == "function")
-Check("version exposée", NS.version == "1.27.1", NS.version)
+Check("version exposée", NS.version == "1.28.0", NS.version)
 
 local missingMods = {}
 for _, name in ipairs({ "Bootstrap", "Locales", "Compat", "Theme", "Core", "Buffs", "Reagents",
@@ -1670,7 +1675,7 @@ NS.HandleCommand = savedHandle
 Mock:Reset()
 NS:HandleCommand("diag")
 Check("/sd diag liste les modules", Mock:Output():find("modules :") ~= nil, Mock:Output())
-Check("/sd diag affiche la version", Mock:Output():find("1%.27%.1") ~= nil, Mock:Output())
+Check("/sd diag affiche la version", Mock:Output():find("1%.28%.0") ~= nil, Mock:Output())
 
 -- une erreur est enregistrée et affichée
 Mock:Reset()

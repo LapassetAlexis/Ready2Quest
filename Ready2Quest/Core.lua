@@ -507,8 +507,8 @@ end
 -- ---------------------------------------------------------------------------
 -- Bilan textuel du score
 -- ---------------------------------------------------------------------------
-function ns:ScoreLabel()
-	local score = self.score or 0
+function ns:ScoreLabel(score)
+	score = tonumber(score) or self.score or 0
 	if score >= 85 then return L.SCORE_READY, "green" end
 	if score >= 60 then return L.SCORE_RESERVES, "orange" end
 	return L.SCORE_NOT, "red"

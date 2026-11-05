@@ -54,6 +54,15 @@ do
 	_G.GameFontNormalSmall = saved
 	Mock.world.fontRefused = false
 	Check("[TH2] ni Inter ni copie : jamais un objet sans police", orphan.CAPS.name == "GameFontNormalSmall", orphan.CAPS.name)
+	-- client dont SetFont ne rend rien : on relit la police posée
+	Mock.world.fontSilent = "refuse"
+	local silentNo = Theme.CreateFonts("TestMuetRefus")
+	Mock.world.fontSilent = "ok"
+	local silentYes = Theme.CreateFonts("TestMuetOk")
+	Mock.world.fontSilent = nil
+	Check("[TH2] SetFont muet, fichier refusé : repli sur la police du jeu", silentNo.BODY.inter == false
+		and _G.TestMuetRefusFontBody.copiedFrom == _G.GameFontHighlightSmall)
+	Check("[TH2] SetFont muet, fichier posé : Inter gardée", silentYes.BODY.inter == true)
 	Check("[TH2] capitales accentuées", Theme.Upper("préparation à l'œuvre") == "PRÉPARATION À L'ŒUVRE", Theme.Upper("préparation à l'œuvre"))
 end
 
@@ -207,6 +216,13 @@ do
 	slider:SetValue(10)
 	slider.scripts.OnMouseWheel(slider, 1)
 	Check("[TH2] molette : un cran de plus, rappel", slider.value == 15 and changes[1] == 15)
+	Check("[TH2] molette activée aussi sur la zone sensible de la piste", slider.hit.mouseWheel == true)
+	Check("[TH2] curseur au repos : pas d'OnUpdate", slider.hit.scripts.OnUpdate == nil)
+	slider.hit.scripts.OnMouseDown(slider.hit)
+	Check("[TH2] glisser : suivi de la souris branché", slider.hit.scripts.OnUpdate ~= nil)
+	slider.hit.scripts.OnMouseUp(slider.hit)
+	Check("[TH2] relâché : suivi débranché", slider.hit.scripts.OnUpdate == nil)
+	slider:SetValue(15)
 	slider.scripts.OnMouseWheel(slider, -1); slider.scripts.OnMouseWheel(slider, -1); slider.scripts.OnMouseWheel(slider, -1)
 	slider.scripts.OnMouseWheel(slider, -1)
 	Check("[TH2] molette : bornée en bas, sans rappel inutile", slider.value == 0 and #changes == 4, #changes)

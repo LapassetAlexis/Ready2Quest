@@ -131,6 +131,11 @@ function Theme.CreateFonts(prefix)
 		end
 		if font and type(font.SetFont) == "function" then
 			local ok, applied = pcall(font.SetFont, font, entry.file, spec.size, "")
+			-- certains clients ne rendent rien : on relit la police réellement posée
+			if ok and applied == nil and type(font.GetFont) == "function" then
+				local got, path = pcall(font.GetFont, font)
+				applied = got and type(path) == "string" and path ~= ""
+			end
 			entry.inter = ok and applied ~= false
 			local usable = entry.inter
 			if not usable then
@@ -239,6 +244,10 @@ local Gradient = Theme.Gradient
 function Theme.TitleFont(fontString, size)
 	if not fontString or not fontString.SetFont then return false end
 	local ok, applied = pcall(fontString.SetFont, fontString, Theme.FONT_TITLE, size or 14, "")
+	if ok and applied == nil and type(fontString.GetFont) == "function" then
+		local got, path = pcall(fontString.GetFont, fontString)
+		applied = got and type(path) == "string" and path ~= ""
+	end
 	fontString.titleFont = ok and applied ~= false
 	return fontString.titleFont
 end
@@ -1094,22 +1103,27 @@ function Theme.CreateSlider(parent, width, minValue, maxValue, step, onChange, v
 		if not (x and left) then return nil end
 		return x / scale - left
 	end
-	slider.hit:SetScript("OnMouseDown", function()
-		slider.dragging = true
-		local x = CursorX(slider)
-		if x then slider:SetValueByUser(slider:ValueAt(x)) end
-	end)
-	slider.hit:SetScript("OnMouseUp", function() slider.dragging = false end)
-	slider.hit:SetScript("OnUpdate", function()
+	-- suivi de la souris seulement pendant le glisser (pas d'OnUpdate au repos)
+	local function Follow()
 		if not slider.dragging then return end
 		local x = CursorX(slider)
 		if x then slider:SetValueByUser(slider:ValueAt(x)) end
+	end
+	slider.hit:SetScript("OnMouseDown", function()
+		slider.dragging = true
+		Follow()
+		slider.hit:SetScript("OnUpdate", Follow)
+	end)
+	slider.hit:SetScript("OnMouseUp", function()
+		slider.dragging = false
+		slider.hit:SetScript("OnUpdate", nil)
 	end)
 	local function Wheel(_, delta)
 		local stepSize = slider.step > 0 and slider.step or (slider.max - slider.min) / 20
 		slider:SetValueByUser((slider.value or slider.min) + (delta > 0 and stepSize or -stepSize))
 	end
 	if slider.EnableMouseWheel then slider:EnableMouseWheel(true) end
+	if slider.hit.EnableMouseWheel then slider.hit:EnableMouseWheel(true) end
 	slider:SetScript("OnMouseWheel", Wheel)
 	slider.hit:SetScript("OnMouseWheel", Wheel)
 	slider:SetValue(slider.min)

@@ -1,5 +1,16 @@
 # Journal des modifications
 
+## 1.28.0
+
+- **Nouvelle interface**, plus moderne et plus lisible :
+  - **police Inter** partout (titres, libellés, chiffres) ;
+  - **réglages** dans une grande fenêtre (980 × 680) : une entrée par page dans la colonne de gauche, rangées par groupe avec l'interrupteur de chaque module, une recherche qui trouve un réglage sur toutes les pages, un grand titre et sa phrase d'explication, les réglages en cartes sur deux colonnes (interrupteurs, curseurs avec leur valeur, listes déroulantes) et des aperçus en tête de page (score du check, liseré des Rangs de sorts) ;
+  - **toutes les fenêtres** reprennent ce style : Avant le départ (grand score, sceau du verdict, lignes en cartes, conseils encadrés), Avant le donjon, Retour d'expédition, Après la mort, Place au butin, Rangs de sorts, Sac plein, Kit de camp, stats du portrait, résumé de stuff, icône et bulle de Ready2Quest, infobulles ;
+  - la page de Ready2Quest dans Échap > Options > AddOns suit aussi.
+- Rien ne change dans ce que fait l'addon : mêmes réglages, mêmes boutons, mêmes alertes.
+
+*English:* a new, modern interface: the Inter font everywhere; a large settings window with one navigation entry per page, module switches, a search across every page, card-style settings on two columns and live previews; every window (departure check, dungeon, expedition, death, room for loot, spell ranks, full bags, camp kit, portrait stats, gear summary, notice icon, tooltips) restyled to match. Behaviour is unchanged.
+
 ## 1.27.1
 
 - **Rangs de sorts : un fin liseré rouge** entoure, sur tes barres d'action, chaque sort qui a un meilleur rang dans ton livre. Il part tout seul une fois la case mise à jour ou ignorée. Barres de Blizzard, Bartender4 et Dominos ; il suit les pages et les postures. Réglable (page « Rangs de sorts »). Le liseré est un cadre à part posé sur le bouton : le bouton lui-même n'est jamais touché, et rien n'est créé en combat.
