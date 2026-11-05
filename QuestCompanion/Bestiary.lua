@@ -1,8 +1,7 @@
 -- Bestiary.lua -- bestiaire de zone et nommés du « Carnet de voyage » (v1.25.0)
 --
 -- La complétion d'une zone, côté créatures : les espèces de la zone livrées
--- avec l'addon (ZoneCreatures_Era.lua ou ZoneCreatures_Forever.lua selon le
--- client, tirées de la base de Questie, voir tools/gen_zone_data.py) UNION celles apprises en jouant, par personnage.
+-- avec l'addon (ZoneCreatures_Forever.lua, tirées de la base de Questie, voir tools/gen_zone_data.py) UNION celles apprises en jouant, par personnage.
 --   * Zone préremplie : toutes ses espèces comptent dès l'arrivée, quel que
 --              soit leur niveau (100 % strict), sauf celles amicales envers
 --              ta faction (champ f de la table).
@@ -529,8 +528,8 @@ local HANDLERS = {
 	CHAT_MSG_COMBAT_XP_GAIN = function(message) ns:BestiaryOnXP(message) end,
 	COMBAT_LOG_EVENT_UNFILTERED = function(...)
 		ns.bestiaryStats.events = ns.bestiaryStats.events + 1
-		-- coût nul sans mob repéré ni table livrée (les deux clients ont leur
-		-- table, ZoneCreatures_Era / _Forever : en pratique, toujours traité)
+		-- coût nul sans mob repéré ni table livrée (ZoneCreatures_Forever :
+		-- en pratique, toujours traité)
 		if not next(ns.bestiaryUnits) and rawget(ns, "ZONE_CREATURES") == nil then return end
 		ns:BestiaryCombat(CombatArgs(...))
 	end,

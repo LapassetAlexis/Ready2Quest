@@ -53,7 +53,7 @@ function ns:MapChain(mapID)
 end
 
 
--- Sous-zone courante : sur Era, un village (Comté-de-l'Or, Long-guet…) n'a pas
+-- Sous-zone courante : un village (Comté-de-l'Or, Long-guet…) n'a pas
 -- de mapID propre, c'est une sous-zone de la carte de zone.
 function ns:CurrentSubZone()
 	local fn = rawget(_G, "GetSubZoneText")

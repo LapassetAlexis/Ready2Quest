@@ -1010,6 +1010,27 @@ NS:HandleCommand("buffs")
 Check("/sd buffs s'exécute", Mock:Output():find("Buffs suivis") ~= nil)
 NS:HandleCommand("diag")
 Check("/sd diag s'exécute", Mock:Output():find("Diagnostic") ~= nil)
+do
+	-- sondes des points encore incertains sur Forever (affichées par /diag)
+	local savedBook, savedAura = rawget(_G, "C_SpellBook"), rawget(_G, "UnitAura")
+	_G.C_SpellBook = { GetSpellBookItemInfo = function() end }
+	_G.UnitAura = nil
+	NS:DetectCapabilities()
+	Check("/diag : sonde spellbookModern", NS.Caps.spellbookModern == true)
+	Check("/diag : sonde unitAuraLegacy", NS.Caps.unitAuraLegacy == false)
+	Check("/diag : sondes itemInfoGlobal et specialization", NS.Caps.itemInfoGlobal == true
+		and NS.Caps.specialization == true)
+	Mock:Reset()
+	NS:PrintCapabilities()
+	local out = Mock:Output()
+	Check("/diag : les quatre sondes listées", out:find("spellbookModern", 1, true) ~= nil
+		and out:find("unitAuraLegacy", 1, true) ~= nil and out:find("itemInfoGlobal", 1, true) ~= nil
+		and out:find("specialization", 1, true) ~= nil, out)
+	Check("/diag : plus de sonde historique", out:find("craftLegacy", 1, true) == nil
+		and out:find("questlogLegacy", 1, true) == nil and out:find("tradeskillLegacy", 1, true) == nil, out)
+	_G.C_SpellBook, _G.UnitAura = savedBook, savedAura
+	NS:DetectCapabilities()
+end
 NS:HandleCommand("nimportequoi")
 Check("commande inconnue gérée", Mock:Output():find("Commande inconnue") ~= nil)
 

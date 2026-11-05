@@ -10,7 +10,7 @@ Questie n'a servi qu'à **remplir** la base au départ, avec `tools/import_quest
 
 ## Contenu
 
-Un dossier par client, `data/era/` et `data/forever/` :
+Un dossier par client : `data/forever/` (WoW Forever, seul client pris en charge ; `data/era/` a été retiré avec le support de Classic Era) :
 
 | Fichier | Contenu |
 |---|---|
@@ -28,7 +28,7 @@ Une entité par ligne, triées par identifiant : un `git diff` montre exactement
 
 ## Corriger ou compléter
 
-On n'édite pas `npcs.jsonl`, `objects.jsonl` ni `quests.jsonl` à la main : un nouvel import les réécrit. Les corrections vont dans `data/<client>/fixes.json`, appliquées par-dessus à chaque génération, jamais écrasées :
+On n'édite pas `npcs.jsonl`, `objects.jsonl` ni `quests.jsonl` à la main : un nouvel import les réécrit. Les corrections vont dans `data/forever/fixes.json`, appliquées par-dessus à chaque génération, jamais écrasées :
 
 ```json
 {

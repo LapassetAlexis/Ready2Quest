@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 """Importe des tables du client WoW dans NOTRE base de données (data/).
 
-Tables du jeu publiées par wago.tools (extraites des fichiers du client), pour
-chaque client :
+Tables du jeu publiées par wago.tools (extraites des fichiers du client
+WoW Forever ; Classic Era n'est plus importé) :
     AreaTable        -> data/<client>/areas.jsonl  zones et sous-zones : nom
                         anglais, zone parente, continent, drapeaux (0x100 =
                         capitale)
@@ -27,7 +27,7 @@ import urllib.request
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 DATA = os.path.join(ROOT, "data")
-BUILDS = {"era": "1.15.9.70576", "forever": "1.60.1.70753"}
+BUILDS = {"forever": "1.60.1.70753"}
 URL = "https://wago.tools/db2/%s/csv?build=%s"
 
 
@@ -82,7 +82,7 @@ def main(argv=None):
     parser.add_argument("--from", dest="folder", help="dossier des CSV déjà téléchargés")
     parser.add_argument("--date", default=datetime.date.today().isoformat())
     args = parser.parse_args(argv)
-    for client in ("era", "forever"):
+    for client in BUILDS:
         export(client, args.folder, args.date)
 
 

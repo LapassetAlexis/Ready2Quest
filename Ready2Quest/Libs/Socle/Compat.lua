@@ -1,8 +1,9 @@
--- Compat.lua -- détection des capacités du client (Forever / Classic Era / …)
+-- Compat.lua -- détection des capacités du client (WoW Forever, /diag)
 --
--- L'addon utilise une dizaine d'API namespacées récentes. Certaines n'existent
--- pas dans les clients Classic. Plutôt que de tester au cas par cas dans chaque
--- module, on sonde une fois au chargement et on expose ns.Caps.
+-- L'addon utilise une dizaine d'API namespacées récentes. Plutôt que de tester
+-- au cas par cas dans chaque module, on sonde une fois au chargement et on
+-- expose ns.Caps (affiché par /diag : utile pour vérifier ce que le client
+-- de Forever expose vraiment).
 -- Fichier du socle commun (Libs/Socle), identique dans Ready2Quest et
 -- QuestCompanion : ne le modifier que dans Ready2Quest/Libs/Socle, puis
 -- python3 tools/sync_socle.py.
@@ -14,8 +15,8 @@ ns.Caps = {}
 -- rendre la vie, la puissance, une icône de cible… sous une forme qu'un addon
 -- peut afficher mais ni comparer ni compter (« attempt to perform arithmetic
 -- on a secret number value »). ns.Plain(v) rend la valeur, ou nil si elle est
--- secrète : l'appelant fait alors comme s'il ne savait pas. Sur Era (pas de
--- issecretvalue), la valeur passe telle quelle.
+-- secrète : l'appelant fait alors comme s'il ne savait pas. Sans
+-- issecretvalue, la valeur passe telle quelle.
 function ns.Plain(value)
 	local isSecret = rawget(_G, "issecretvalue")
 	if type(isSecret) == "function" then
@@ -41,6 +42,18 @@ function ns:DetectCapabilities()
 	caps.rested = type(GetXPExhaustion) == "function"
 	caps.resting = type(IsResting) == "function"
 	caps.sanctuary = type(UnitIsPVPSanctuary) == "function"
+
+	-- Points encore incertains sur Forever : les replis restent dans le code,
+	-- ces sondes (lues par /diag) disent lequel le client prend vraiment.
+	--   spellbookModern : livre de sorts C_SpellBook (sinon boucle historique, SpellRanks.lua)
+	--   unitAuraLegacy  : UnitAura global (repli de lecture des auras par index)
+	--   itemInfoGlobal  : GetItemInfo global (repli quand C_Item.GetItemInfo manque)
+	--   specialization  : GetSpecialization (sinon onglet de talents le plus fourni, Stats.lua)
+	local spellBook = rawget(_G, "C_SpellBook")
+	caps.spellbookModern = (type(spellBook) == "table" and type(spellBook.GetSpellBookItemInfo) == "function") and true or false
+	caps.unitAuraLegacy = type(rawget(_G, "UnitAura")) == "function"
+	caps.itemInfoGlobal = type(rawget(_G, "GetItemInfo")) == "function"
+	caps.specialization = type(rawget(_G, "GetSpecialization")) == "function"
 
 	ns.Caps = caps
 	return caps

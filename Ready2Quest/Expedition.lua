@@ -141,7 +141,7 @@ if ns.RegisterModule then
 end
 
 -- ---------------------------------------------------------------------------
--- Accès robustes au client : une API absente sur Era ne doit rien casser
+-- Accès robustes au client : une API absente ne doit rien casser
 -- ---------------------------------------------------------------------------
 local function Call(name, ...)
 	local fn = rawget(_G, name)
@@ -600,7 +600,7 @@ local HANDLERS = {
 
 local eventFrame = CreateFrame("Frame")
 for event in pairs(HANDLERS) do
-	-- un événement inconnu du client (Era, Forever) ne doit pas bloquer les autres
+	-- un événement inconnu du client ne doit pas bloquer les autres
 	pcall(eventFrame.RegisterEvent, eventFrame, event)
 end
 eventFrame:SetScript("OnEvent", function(_, event, ...)

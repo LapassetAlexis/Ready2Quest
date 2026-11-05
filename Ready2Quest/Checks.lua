@@ -248,7 +248,7 @@ ns.ItemCount = ItemCount
 
 local PlayerLevel, PlayerClass = ns.PlayerLevelNow, ns.PlayerClassToken
 
--- Composants consommés par les sorts de classe (Classic Era / Forever).
+-- Composants consommés par les sorts de classe.
 -- `level` = niveau à partir duquel le sort qui les consomme est appris.
 -- `items` = plusieurs objets interchangeables (rangs de Renaissance…).
 -- `ammo`  = munitions : le client compte l'emplacement 0 (projectiles équipés).

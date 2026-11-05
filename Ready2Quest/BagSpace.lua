@@ -252,9 +252,7 @@ local function PlayerClass()
 end
 
 -- Composants de classe (table de Checks.lua) et composants des recettes
--- suivies (C_TradeSkillUI des clients récents). Sur Era, la recette ouverte
--- dans la fenêtre de métier n'est connue que de Reagents.lua, qui ne l'expose
--- pas : on ne devine rien plutôt que d'ajouter une dépendance.
+-- suivies (C_TradeSkillUI).
 local function ProtectedItems()
 	local set = { [HEARTHSTONE] = true }
 	for _, req in ipairs((ns.CLASS_REAGENTS or {})[PlayerClass() or ""] or {}) do

@@ -74,7 +74,7 @@ local CAMP_OBJECTS = {
 	{ item = 279982, skill = 185, rank = 300, name = "Iron Oven" },
 }
 
--- Le client Era (et Forever) donne les métiers par leur NOM dans la fenêtre
+-- Le client Forever donne les métiers par leur NOM dans la fenêtre
 -- de compétences, sans numéro : on reconnaît les deux langues de l'addon.
 local SKILL_BY_NAME = {
 	["cooking"] = 185, ["cuisine"] = 185,

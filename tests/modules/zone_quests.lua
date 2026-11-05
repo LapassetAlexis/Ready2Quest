@@ -1,5 +1,5 @@
 -- Carnet de voyage : quêtes de chaque zone, tables livrées (ZoneQuests.lua,
--- ZoneQuests_Era.lua, ZoneQuests_Forever.lua, v1.25.0). Plus de Questie en jeu.
+-- ZoneQuests_Forever.lua, v1.25.0). Plus de Questie en jeu.
 -- Intégrité des deux tables, contenu réel connu, filtres race / classe,
 -- exclusives et quêtes fermées, faites / à faire, liste triée, cache et
 -- invalidation, combat, client sans table, fenêtre.

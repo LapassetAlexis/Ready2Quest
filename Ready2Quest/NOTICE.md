@@ -2,7 +2,7 @@
 
 ## Lieux sûrs repérés (`Libs/Socle/Places.lua`)
 
-`Libs/Socle/Places.lua` liste les camps et villages repérés par leurs PNJ de service (aubergiste, maître de vol, banquier, marchand, réparateur, entraîneur), pour Classic Era et WoW Forever. Il est généré par `tools/gen_places.py` depuis notre base de données (`data/` à la racine du dépôt, voir `docs/DONNEES.md`) :
+`Libs/Socle/Places.lua` liste les camps et villages repérés par leurs PNJ de service (aubergiste, maître de vol, banquier, marchand, réparateur, entraîneur), pour WoW Forever. Il est généré par `tools/gen_places.py` depuis notre base de données (`data/` à la racine du dépôt, voir `docs/DONNEES.md`) :
 
 - les PNJ (services, faction, positions) y ont été importés une fois de la base de [Questie](https://github.com/Questie/QuestieDB) (dépôt Questie/QuestieDB, commit `c5de61ab`, Questie 12.4.0), sous licence [GPL-3.0](https://www.gnu.org/licenses/gpl-3.0.html) ;
 - les dimensions des cartes viennent des tables du client (`UiMapAssignment`), publiées par [wago.tools](https://wago.tools).

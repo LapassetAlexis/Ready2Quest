@@ -1,9 +1,9 @@
 -- ZoneQuests.lua -- quêtes de chaque zone, tables livrées avec l'addon (v1.25.0)
 --
 -- Le client ne donne pas la liste des quêtes d'une zone : elle est tirée en
--- amont de la base de Questie (tools/gen_zone_data.py) dans ZoneQuests_Era.lua
--- et ZoneQuests_Forever.lua. Chaque fichier se garde lui-même : seul celui de
--- TON client remplit ns.ZONE_QUESTS. Aucun addon tiers n'est requis en jeu.
+-- amont de la base de Questie (tools/gen_zone_data.py) dans
+-- ZoneQuests_Forever.lua, qui se garde lui-même : seul le client Forever
+-- remplit ns.ZONE_QUESTS. Aucun addon tiers n'est requis en jeu.
 --
 -- Comptées : les quêtes de la zone faisables par CE personnage (masques de race
 -- et de classe de la table), hors quêtes qu'une autre a fermées (ex : choix
