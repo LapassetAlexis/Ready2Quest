@@ -50,7 +50,7 @@ Nothing in raids, nothing during a flight. Group makeup, dungeon and stragglers 
 
 ## How to look after it
 
-It has four needs: **hunger**, **energy**, **mood** and **curiosity**. They fill up when you eat, rest, turn in a quest or explore. Click it to give it a cuddle, **right-click** to open its journal on the goals. On first launch, a short **tutorial** in a few bubbles explains all this (replay it with `/qc compagnon tuto`). Even once everything is explored, each need stays easy to fill: curiosity also grows from a zone you haven't seen in 2 hours, every dungeon, every elite or rare you defeat, every gryphon flight, every chest and every gathering node, and even from simply coming and going. Once it has gone through all its evolutions, its needs never drop below 50%.
+It has four needs: **hunger**, **energy**, **mood** and **curiosity**. They fill up when you eat, rest, turn in a quest or explore. Click it to give it a cuddle, **Shift + click** to open its pantry, **right-click** to open its journal. On first launch, a short **tutorial** in a few bubbles explains all this (replay it with `/qc compagnon tuto`). Even once everything is explored, each need stays easy to fill: curiosity also grows from a zone you haven't seen in 2 hours, every dungeon, every elite or rare you defeat, every gryphon flight, every chest and every gathering node, and even from simply coming and going. Once it has gone through all its evolutions, its needs never drop below 50%.
 
 - **It grows with you**: Hatchling, Youngling (level 10), Seasoned (20), Valiant (40) and Legendary (60). Your level unlocks the stage, but it only evolves if it is **happy**: all four needs at 70% or more. Otherwise it tells you it's ready and what it's missing, and it waits. A little celebration at each stage.
 - **It never holds a grudge**: it doesn't die, doesn't regress and doesn't get sick. After a long absence, it's just a bit sleepy: "I missed you!"
@@ -78,14 +78,17 @@ Your travel collection: a **stamp** for every first time.
 
 Each new stamp is announced by a small banner, never in combat. Everything is earned by playing, no random packs.
 
-The journal (`/qc`, the minimap button, or right-click on the creature) has two parts:
-- **Completion**: pick a zone from the list (the one you're in, by default) and see its percentage, its chest and, tab by tab, what's done and what's left:
-  - **Exploration**: the zone's villages;
-  - **Combat**: the bestiary and the named mobs;
-  - **Professions**: the resources of your skill to gather;
-  - **Quests**: the zone's quests your character can do (faction, race, class), done and to do. They count toward the 100%. No addon required, on Era as on Forever.
-- **Track on screen**: one checkbox per zone. When checked, the zone's goals show in the in-game "Journal" tracker. The zone you're in is tracked by default (uncheck it to hide it); check other zones to keep an eye on them.
-- **Evolution**: your creature's stage, the next one, its needs, how it evolves, your chests to open, your collection and your journey (zones, capitals, dungeons, rares, milestones). Hover a need (hunger, energy, mood, curiosity) to see what fills it.
+The journal (`/qc`, the minimap button, or right-click on the creature) opens on the last tab you used. Its tabs run down the right side, and your **pantry** (treats) sits in its header: click a treat to give it.
+- **Zones**: a grid of every zone in the game, the ones you've never visited shown greyed out. Each tile gives its level range and percentage, and says if a chest is waiting. Filter by continent, sort by level or by percentage, click a tile to open it.
+- **Zone**: one zone, with arrows to the previous and next one (the mouse back button returns to the grid). Its percentage, its milestones (25, 50 and 75% give a treat, 100% the chest) and, tab by tab, what's done and what's left:
+  - **Exploration**: the zone's villages, on two columns;
+  - **Combat**: a card for each creature of the bestiary, its border coloured by rank (elite, rare, boss), "???" for those you've never met. Hover a card to see the creature in 3D next to the grid;
+  - **Professions**: the icons of the resources of your skill, in colour once gathered here;
+  - **Quests**: the zone's quests your character can do (faction, race, class), on two columns, filtered by to do or done. They count toward the 100%. No addon required, on Era as on Forever.
+- **Track on screen** (Zone tab): when on, the zone's goals show in the in-game "Journal" tracker. The zone you're in is tracked by default (turn it off to hide it); turn other zones on to keep an eye on them.
+- **Creature**: its stage, the next one, its character, its needs, how it evolves, your chests to open, your collection and your journey (zones, capitals, dungeons, rares, milestones). Hover a need (hunger, energy, mood, curiosity) to see what fills it.
+- **Collection**: every appearance, ornament, frame and background, the locked ones greyed out with where to get them. Hover an item to preview it, click to equip it (an ornament: click to wear it or take it off).
+- **Memories**: the album.
 
 ## Goals
 
@@ -192,7 +195,7 @@ Rien en raid, rien pendant un vol. Composition, donjon et retards sont des conse
 
 ## Comment s'en occuper
 
-Elle a quatre envies : **faim**, **énergie**, **moral** et **curiosité**. Elles se remplissent quand tu manges, te reposes, rends une quête ou explores. Clique dessus pour lui faire une caresse, **clic droit** pour ouvrir son carnet sur les objectifs. Au premier lancement, un **tutoriel** en quelques bulles explique tout ça (à revoir avec `/qc compagnon tuto`). Même tout exploré, chacune reste simple à remonter : la curiosité se nourrit aussi d'une zone pas vue depuis 2 h, de chaque donjon, de chaque élite ou rare vaincu, de chaque vol en griffon, de chaque coffre et de chaque récolte, et même de simples allées et venues. Une fois toutes ses évolutions faites, ses envies ne descendent plus sous 50 %.
+Elle a quatre envies : **faim**, **énergie**, **moral** et **curiosité**. Elles se remplissent quand tu manges, te reposes, rends une quête ou explores. Clique dessus pour lui faire une caresse, **Maj + clic** pour son garde-manger, **clic droit** pour ouvrir son carnet. Au premier lancement, un **tutoriel** en quelques bulles explique tout ça (à revoir avec `/qc compagnon tuto`). Même tout exploré, chacune reste simple à remonter : la curiosité se nourrit aussi d'une zone pas vue depuis 2 h, de chaque donjon, de chaque élite ou rare vaincu, de chaque vol en griffon, de chaque coffre et de chaque récolte, et même de simples allées et venues. Une fois toutes ses évolutions faites, ses envies ne descendent plus sous 50 %.
 
 - **Elle grandit avec toi** : Nouveau-né, Jeune (niveau 10), Aguerri (20), Vaillant (40) et Légendaire (60). Ton niveau ouvre l'étape, mais elle n'évolue que si elle est **heureuse** : ses quatre envies au moins à 70 %. Sinon elle te dit qu'elle est prête et ce qui lui manque, et elle attend. Petite fête à chaque étape.
 - **Elle ne t'en veut jamais** : elle ne meurt pas, ne régresse pas et ne tombe pas malade. Après une longue absence, elle est juste un peu ensommeillée : « Tu m'as manqué ! »
@@ -220,14 +223,17 @@ Ta collection de voyage : un **tampon** pour chaque première fois.
 
 Chaque nouveau tampon est annoncé par un petit bandeau, jamais en combat. Tout se gagne en jouant, sans paquet aléatoire.
 
-Le carnet (`/qc`, le bouton de minicarte, ou clic droit sur la créature) a deux parties :
-- **Complétion** : choisis une zone dans la liste (celle où tu es, par défaut) et vois son pourcentage, son coffre et, par onglet, ce qui est fait et ce qui reste :
-  - **Exploration** : les villages de la zone ;
-  - **Combat** : le bestiaire et les nommés ;
-  - **Métiers** : les ressources de ta compétence à récolter ;
-  - **Quêtes** : les quêtes de la zone que ton personnage peut faire (faction, race, classe), faites et à faire. Elles comptent dans les 100 %. Aucun addon requis, sur Era comme sur Forever.
-- **Suivre à l'écran** : une case par zone. Cochée, les objectifs de la zone s'affichent dans le bloc « Carnet » en jeu. La zone où tu es est suivie d'office (décoche-la pour la masquer) ; coche d'autres zones pour garder un œil sur elles.
-- **Évolution** : l'étape de ta créature, la prochaine, ses envies, comment elle évolue, tes coffres à ouvrir, ta collection et ton parcours (zones, capitales, donjons, rares, paliers). Survole une envie (faim, énergie, moral, curiosité) pour savoir ce qui la remplit.
+Le carnet (`/qc`, le bouton de minicarte, ou clic droit sur la créature) s'ouvre sur le dernier onglet utilisé. Ses onglets sont rangés sur le côté droit, et ton **garde-manger** (les friandises) est dans l'en-tête : un clic sur une friandise la donne.
+- **Zones** : une grille de toutes les zones du jeu, celles jamais visitées en gris. Chaque tuile donne sa tranche de niveaux et son pourcentage, et dit si un coffre t'attend. Filtre par continent, trie par niveau ou par pourcentage, clique sur une tuile pour l'ouvrir.
+- **Zone** : une zone, avec des flèches vers la précédente et la suivante (le bouton retour de la souris revient à la grille). Son pourcentage, ses paliers (25, 50 et 75 % donnent une friandise, 100 % le coffre) et, par onglet, ce qui est fait et ce qui reste :
+  - **Exploration** : les villages de la zone, sur deux colonnes ;
+  - **Combat** : une fiche par créature du bestiaire, au liseré de son rang (élite, rare, boss), « ??? » pour celles jamais croisées. Survole une fiche pour voir la créature en 3D à côté de la grille ;
+  - **Métiers** : les icônes des ressources de ta compétence, en couleur une fois récoltées ici ;
+  - **Quêtes** : les quêtes de la zone que ton personnage peut faire (faction, race, classe), sur deux colonnes, filtrées à faire ou faites. Elles comptent dans les 100 %. Aucun addon requis, sur Era comme sur Forever.
+- **Suivre à l'écran** (onglet Zone) : activé, les objectifs de la zone s'affichent dans le bloc « Carnet » en jeu. La zone où tu es est suivie d'office (désactive-la pour la masquer) ; active d'autres zones pour garder un œil sur elles.
+- **Créature** : l'étape de ta créature, la prochaine, son caractère, ses envies, comment elle évolue, tes coffres à ouvrir, ta collection et ton parcours (zones, capitales, donjons, rares, paliers). Survole une envie (faim, énergie, moral, curiosité) pour savoir ce qui la remplit.
+- **Collection** : toutes les apparences, ornements, cadres et fonds, ceux verrouillés en gris avec où les trouver. Survole un objet pour le voir, clique pour l'équiper (un ornement : clic pour le porter ou l'enlever).
+- **Souvenirs** : l'album.
 
 ## Objectifs
 

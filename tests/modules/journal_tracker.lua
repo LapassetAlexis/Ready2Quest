@@ -496,9 +496,13 @@ do
 	NS:ToggleJournal(true)
 	local f = NS.journalFrame
 	local comp = f.comp
-	Check("[WIN] ouvre sur la Complétion, zone où tu es", f.kind == "completion" and f.zoneID == 1413
-		and comp:IsShown() and not f.evo:IsShown())
-	Check("[WIN] liste déroulante : la zone, marquée « ici »", comp.zoneButton.text.text:find("Zone : Les Tarides (ici)", 1, true), comp.zoneButton.text.text)
+	Check("[WIN] ouvre sur la Zone, zone où tu es", f.kind == "completion" and f.zoneID == 1413
+		and comp:IsShown() and not f.evo:IsShown() and not f.zones:IsShown())
+	Check("[WIN] titre : la zone, marquée « ici », et ses niveaux", comp.title.text == "Les Tarides (ici)"
+		and comp.levels.text == "niveaux 10-25", comp.title.text .. " / " .. comp.levels.text)
+	Check("[WIN] onglets verticaux : Zones, Zone, Créature, Collection, Souvenirs", f.sections.zones and f.sections.completion
+		and f.sections.evolution and f.sections.collection and f.sections.memories
+		and f.sections.completion.text.text == "Zone" and f.sections.evolution.text.text == "Créature")
 	Check("[WIN] quatre activités", comp.tabs.explore and comp.tabs.combat and comp.tabs.craft and comp.tabs.quests
 		and comp.tabs.explore.text.text == "Exploration")
 	Check("[WIN] client sans liste de quêtes : onglet « Quêtes », grisé", NS:ZoneQuestsAvailable() == false
@@ -519,63 +523,120 @@ do
 	Check("[WIN] une seule activité suivie : pas de pourcentage, on dit pourquoi", comp.percent.text == ""
 		and comp.chest.text == NS.L.JRN_ZONE_NOPCT, comp.chest.text)
 	comp.tabs.combat:Click()
-	Check("[WIN] combat vide : comment remplir", comp.empty.text == NS.L.JRN_ACT_EMPTY_combat and not comp.lines[1]:IsShown())
+	Check("[WIN] combat vide : comment remplir", comp.empty.text == NS.L.JRN_ACT_EMPTY_combat and not comp.lines[1]:IsShown()
+		and not comp.cards[1]:IsShown())
 	comp.tabs.craft:Click()
 	Check("[WIN] métiers sans métier : message", comp.empty.text == NS.L.JRN_ACT_EMPTY_craft)
 	comp.tabs.quests:Click()
 	Check("[WIN] quêtes sans liste : message clair", comp.empty.text == "Pas de liste de quêtes pour ce client.", comp.empty.text)
 
-	-- bestiaire : une deuxième activité -> pourcentage, coffre annoncé, défilement
+	-- bestiaire : une deuxième activité -> pourcentage, coffre annoncé, fiches
 	local zone = {}
-	for index = 1, 14 do
+	for index = 1, 40 do
 		zone[1000 + index] = { name = "Bête " .. string.format("%02d", index), type = "Bête", seen = true, killed = index <= 4 and 1 or 0 }
 	end
 	zone[2000] = { name = "Chef kolkar", type = "Humanoïde", class = "elite", seen = true, killed = 0 }
+	zone[2001] = { name = "Abeille", type = "Bête", seen = false, killed = 0 }
 	NS:JournalData().bestiary = { [1413] = zone }
 	comp.tabs.combat:Click()
 	Check("[WIN] deux activités : pourcentage et barre", comp.percent.text ~= "" and comp.bar:IsShown(), comp.percent.text)
+	Check("[WIN] paliers 25 / 50 / 75 / 100 sous la barre", #comp.marks == 4 and comp.marks[1].text:find("25", 1, true)
+		and comp.marks[4].text:find("100", 1, true), comp.marks[1].text)
 	Check("[WIN] coffre annoncé avec son palier", comp.chest.text:find("palier 1", 1, true), comp.chest.text)
-	Check("[WIN] combat : bestiaire puis nommés, à abattre d'abord, nommé en tête", comp.lines[1].name.text == "Bestiaire : 4/15"
-		and comp.lines[2].name.text:find("Chef kolkar, élite", 1, true) and comp.lines[2].detail.text:find("à abattre", 1, true),
-		comp.lines[1].name.text .. " / " .. tostring(comp.lines[2].name.text))
+	Check("[WIN] combat : les parts en tête", comp.heads.text:find("Bestiaire : 4/42", 1, true)
+		and comp.heads.text:find("Nommés : 0/1", 1, true), comp.heads.text)
+	Check("[WIN] combat : des fiches, pas des lignes", comp.cards[1]:IsShown() and not comp.lines[1]:IsShown())
+	Check("[WIN] combat : nommé en tête, à abattre", comp.cards[1].name.text == "Chef kolkar"
+		and comp.cards[1].detail.text:find("à abattre", 1, true), comp.cards[1].name.text)
 	local order = true
-	for index = 3, #f.rows do
+	for index = 2, #f.rows do
 		local previous, item = f.rows[index - 1], f.rows[index]
-		if not item.header and not previous.header and previous.done and not item.done then order = false end
+		if previous.done and not item.done then order = false end
 	end
-	local lastItem
-	for _, item in ipairs(f.rows) do if not item.header then lastItem = item end end
-	Check("[WIN] combat : toutes les espèces à abattre avant les abattues", order and lastItem and lastItem.done == true)
-	Check("[WIN] combat : la part « Nommés » a son titre", f.rows[#f.rows].header and f.rows[#f.rows].name == "Nommés : 0/1",
-		f.rows[#f.rows].name)
+	Check("[WIN] combat : toutes les espèces à abattre avant les abattues", order and f.rows[#f.rows].done == true)
+	local unseen
+	for _, card in ipairs(comp.cards) do if card.item and card.item.id == 2001 then unseen = card end end
+	Check("[WIN] jamais croisée : « ??? »", unseen and unseen.name.text == "???", unseen and unseen.name.text)
+	comp.cards[1].scripts.OnEnter(comp.cards[1])
+	local preview = comp.preview
+	local said = {}
+	for _, line in ipairs(preview.lines) do said[#said + 1] = line.text or "" end
+	said = table.concat(said, " | ")
+	Check("[WIN] survol d'une fiche : aperçu de la créature", preview.title.text == "Chef kolkar"
+		and said:find("Rang : élite", 1, true) and said:find("Pas encore abattue", 1, true)
+		and preview.model and preview.model.creature == 2000, preview.title.text .. " / " .. said)
+	if unseen then unseen.scripts.OnEnter(unseen) end
+	Check("[WIN] survol d'une inconnue : « Jamais croisée. »", preview.title.text == "???"
+		and preview.lines[1].text == "Jamais croisée.", preview.lines[1].text)
 	local rows = #f.rows
-	Check("[WIN] de quoi défiler", rows > 11 and not comp.up:IsShown() and comp.down:IsShown(), rows)
+	local page = #comp.cards
+	Check("[WIN] de quoi défiler", rows > page and not comp.up:IsShown() and comp.down:IsShown(), rows)
 	f.scripts.OnMouseWheel(f, -1)
-	Check("[WIN] molette : une ligne plus bas", f.offset == 1 and comp.lines[1].item == f.rows[2])
+	Check("[WIN] molette : une rangée de fiches plus bas", f.offset == 4 and comp.cards[1].item == f.rows[5], f.offset)
 	for _ = 1, 100 do NS:ScrollJournal(-1) end
-	Check("[WIN] butée en bas, position affichée", f.offset == rows - 11 and not comp.down:IsShown()
-		and comp.position.text == string.format("%d-%d / %d", rows - 10, rows, rows), comp.position.text)
+	local last = math.ceil((rows - page) / 4) * 4
+	Check("[WIN] butée en bas, position affichée", f.offset == last and not comp.down:IsShown()
+		and comp.position.text == string.format("%d-%d / %d", last + 1, rows, rows), comp.position.text)
 	comp.tabs.explore:Click()
 	Check("[WIN] changer d'onglet remonte en haut", f.offset == 0)
 
-	-- liste des zones
+	-- grille des zones, flèches, retour
 	K.Stamp("zone", 1429, "Forêt d'Elwynn")
-	comp.zoneButton:Click()
-	local list = comp.zoneList
-	Check("[WIN] liste : ouverte, la zone d'ici en premier", list:IsShown() and list.buttons[1].text.text:find("Les Tarides (ici)", 1, true)
-		and list.buttons[2]:IsShown(), list.buttons[1].text.text)
-	Check("[WIN] liste : le pourcentage à côté", list.buttons[1].text.text:find("%", 1, true) ~= nil, list.buttons[1].text.text)
-	local elwynn
-	for _, button in ipairs(list.buttons) do if button.zoneID == 1429 then elwynn = button end end
+	f.sections.zones:Click()
+	local zones = f.zones
+	Check("[ZONES] onglet Zones : la grille, seule", f.kind == "zones" and zones:IsShown() and not comp:IsShown())
+	local total = 0
+	for _ in pairs(NS.ZONE_LEVELS) do total = total + 1 end
+	Check("[ZONES] toutes les zones du jeu, visitées ou non", #f.zoneList >= total
+		and zones.summary.text:find("/" .. #f.zoneList .. " visitées", 1, true), zones.summary.text)
+	local here, elwynn, ghost
+	for _, tile in ipairs(zones.tiles) do
+		if tile.zoneID == 1413 then here = tile end
+		if tile.zoneID == 1429 then elwynn = tile end
+		if tile.zone and not tile.zone.seen and not ghost then ghost = tile end
+	end
+	Check("[ZONES] la zone d'ici : son pourcentage, « ici »", here and here.percent.text:find("%", 1, true)
+		and here.badge.text:find("ici", 1, true), here and here.badge.text)
+	Check("[ZONES] jamais visitée : en silhouette", ghost and ghost.percent.text == "?" and ghost.alpha < 1
+		and ghost.badge.text:find("jamais visitée", 1, true))
+	Check("[ZONES] par niveau : les zones 1-10 d'abord", zones.tiles[1].zone and zones.tiles[1].zone.lo == 1)
+	zones.sorts.pct:Click()
+	Check("[ZONES] tri par % : la plus avancée d'abord", f.zoneSort == "pct" and zones.tiles[1].zoneID == 1413,
+		zones.tiles[1].zoneID)
+	zones.filters.ka:Click()
+	local onlyKa = true
+	for _, tile in ipairs(zones.tiles) do if tile.zone and tile.zone.continent ~= "ka" then onlyKa = false end end
+	Check("[ZONES] filtre Kalimdor", f.zoneFilter == "ka" and onlyKa)
+	zones.filters.all:Click()
+	zones.sorts.lvl:Click()
+	for _, tile in ipairs(zones.tiles) do if tile.zoneID == 1429 then elwynn = tile end end
 	elwynn:Click()
-	Check("[WIN] autre zone choisie : liste fermée, zone affichée", not list:IsShown() and f.zoneID == 1429
-		and comp.zoneButton.text.text:find("Forêt d'Elwynn", 1, true) and not comp.zoneButton.text.text:find("ici", 1, true))
+	Check("[ZONES] clic sur une tuile : la zone s'ouvre", f.kind == "completion" and f.zoneID == 1429
+		and comp.title.text == "Forêt d'Elwynn", comp.title.text)
 	Check("[WIN] Elwynn (Horde) : pas de village ami", comp.empty.text == NS.L.JRN_ACT_EMPTY_explore, comp.empty.text)
+	comp.next:Click()
+	local after = f.zoneID
+	Check("[WIN] flèche : la zone suivante", after ~= 1429)
+	comp.prev:Click()
+	Check("[WIN] flèche arrière : de retour", f.zoneID == 1429)
+	f.scripts.OnMouseUp(f, "Button4")
+	Check("[WIN] bouton retour de la souris : la grille", f.kind == "zones")
+	elwynn:Click()
 	Mock:Fire("ZONE_CHANGED")
 	Check("[WIN] le choix tient tant que la fenêtre est ouverte", f.zoneID == 1429)
 	f:Hide()
 	NS:ToggleJournal(true)
-	Check("[WIN] rouverte : de retour sur la zone d'ici", f.zoneID == 1413)
+	Check("[WIN] rouverte : dernier onglet, de retour sur la zone d'ici", f.kind == "completion" and f.zoneID == 1413)
+	f.sections.zones:Click()
+	f:Hide()
+	NS:ToggleJournal(true)
+	Check("[WIN] rouverte : l'onglet Zones retenu", f.kind == "zones" and NS:DB().journalTab == "zones")
+	f.sections.completion:Click()
+	-- de nouveau un petit bestiaire : la complétion d'ici reste en tête du suivi
+	local small = {}
+	for index = 1, 14 do small[1000 + index] = zone[1000 + index] end
+	small[2000] = zone[2000]
+	NS:JournalData().bestiary = { [1413] = small }
 
 	-- suivre à l'écran : la zone d'ici d'office, une autre si cochée
 	NS:DB().journalTracker = true

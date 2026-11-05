@@ -457,13 +457,14 @@ do
 	NS.companionFrame.scripts.OnMouseUp(NS.companionFrame, "LeftButton")
 	Check("[COMP] glisser le cadre : pas de caresse", C.Needs().mood == 66)
 	Mock.world.cursorX = nil
-	-- clic droit : son carnet, sur les objectifs (pas une caresse)
+	-- clic droit : son carnet, sur son dernier onglet (pas une caresse)
 	Mock.now = Mock.now + 60
 	if NS.journalFrame then NS.journalFrame:Hide() end
+	NS:DB().journalTab = "evolution"
 	NS.JournalCounts = C.savedJournal
 	NS.companionFrame.scripts.OnMouseDown(NS.companionFrame)
 	NS.companionFrame.scripts.OnMouseUp(NS.companionFrame, "RightButton")
-	Check("[COMP] clic droit : carnet ouvert sur les objectifs, sans caresse", NS.journalFrame and NS.journalFrame:IsShown()
+	Check("[COMP] clic droit : carnet ouvert sur son dernier onglet, sans caresse", NS.journalFrame and NS.journalFrame:IsShown()
 		and NS.journalFrame.kind == "evolution" and C.Needs().mood == 66)
 	NS.companionFrame.scripts.OnMouseDown(NS.companionFrame)
 	NS.companionFrame.scripts.OnMouseUp(NS.companionFrame, "RightButton")

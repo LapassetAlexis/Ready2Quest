@@ -1347,15 +1347,14 @@ function ns:EnsureCompanionFrame()
 	return frame
 end
 
--- Clic droit sur la créature : le carnet, sur l'onglet Objectifs (ce qu'il
--- reste à faire pour la faire évoluer). Déjà ouvert : on le ferme.
+-- Clic droit sur la créature : le carnet, sur son dernier onglet. Déjà
+-- ouvert : on le ferme.
 function ns:CompanionOpenJournal()
 	if type(self.ToggleJournal) ~= "function" then return nil end
 	local current = self.journalFrame
 	if current and current:IsShown() then current:Hide(); return current end
-	local frame = self:ToggleJournal(true)
-	if frame and self.SelectJournalKind then self:SelectJournalKind("goals") end
-	return frame
+	-- le carnet rouvre son dernier onglet (la Zone la première fois)
+	return self:ToggleJournal(true)
 end
 
 function ns:EnsureCompanionBubble()
