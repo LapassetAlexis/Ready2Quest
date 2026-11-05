@@ -679,10 +679,30 @@ function Theme.CreateTabs(parent, onSelect)
 		if on then tab.underline:Show() else tab.underline:Hide() end
 	end
 
+	-- marge de chaque onglet : 24 (12 de chaque côté), resserrée si la
+	-- rangée dépasse la largeur de la barre (jamais sous 10)
+	local function Padding(self, list)
+		local total, probe = 0, self.probe
+		if not probe then
+			probe = Text(self, Theme.F_HEADING, Theme.MUTED_LIGHT)
+			probe:Hide()
+			self.probe = probe
+		end
+		for _, def in ipairs(list) do
+			probe:SetText(def.label or tostring(def.id))
+			total = total + ((probe.GetStringWidth and probe:GetStringWidth()) or 60) + 4
+		end
+		local width = tonumber(self.GetWidth and self:GetWidth()) or 0
+		if width <= 0 or #list == 0 then return 24 end
+		local pad = math.floor((width - total) / #list)
+		return Clamp(pad, 10, 24)
+	end
+
 	function bar:SetTabs(list)
 		for _, tab in ipairs(self.tabs) do tab:Hide() end
 		self.byId = {}
 		local x = 0
+		self.padding = Padding(self, list or {})
 		for index, def in ipairs(list or {}) do
 			local tab = self.tabs[index]
 			if not tab then
@@ -701,7 +721,7 @@ function Theme.CreateTabs(parent, onSelect)
 			tab.id = def.id
 			tab.label:SetText(def.label or tostring(def.id))
 			local textWidth = (tab.label.GetStringWidth and tab.label:GetStringWidth()) or 60
-			local w = math.floor(textWidth + 0.5) + 24
+			local w = math.floor(textWidth + 0.5) + self.padding
 			tab:SetSize(w, Theme.TABS_HEIGHT)
 			tab:ClearAllPoints()
 			tab:SetPoint("BOTTOMLEFT", self, "BOTTOMLEFT", x, 0)
@@ -709,6 +729,7 @@ function Theme.CreateTabs(parent, onSelect)
 			x = x + w + 4
 			self.byId[def.id] = tab
 		end
+		self.used = x - 4
 		if not (self.selected and self.byId[self.selected]) then
 			self.selected = list and list[1] and list[1].id or nil
 		end
@@ -796,13 +817,21 @@ end
 -- Carte de réglage : fond ROW (ROW_ALT une rangée sur deux), libellé à
 -- gauche, zone .control à droite pour le contrôle (aligné à droite)
 -- ---------------------------------------------------------------------------
+-- `kind` = "Button" : carte cliquable (interrupteur, action), éclairée au survol
 Theme.CARD_HEIGHT = 38
-function Theme.CreateSettingCard(parent, width, height)
-	local card = CreateFrame("Frame", nil, parent)
+function Theme.CreateSettingCard(parent, width, height, kind)
+	local card = CreateFrame(kind or "Frame", nil, parent)
 	width, height = width or 340, height or Theme.CARD_HEIGHT
 	card:SetSize(width, height)
 	card.bg = Solid(card, "BACKGROUND", Theme.ROW, 1)
 	card.bg:SetAllPoints()
+	card.hover = Solid(card, "BORDER", { 1, 1, 1 }, 0.025)
+	card.hover:SetAllPoints()
+	card.hover:Hide()
+	if kind == "Button" then
+		card:SetScript("OnEnter", function(self) self.hover:Show() end)
+		card:SetScript("OnLeave", function(self) self.hover:Hide() end)
+	end
 	card.label = Text(card, Theme.F_LABEL, Theme.LABEL)
 	card.label:SetPoint("LEFT", card, "LEFT", 12, 0)
 	card.label:SetJustifyH("LEFT")
@@ -973,18 +1002,21 @@ end
 -- onChange(valeur, curseur) seulement sur une action de l'utilisateur ;
 -- :SetValue depuis le code ne rappelle pas.
 -- ---------------------------------------------------------------------------
+-- `valueWidth` : largeur de la case (44 par défaut), plus large pour un nom
+-- de cran (« Très grand »)
 Theme.SLIDER_VALUE_WIDTH = 44
-function Theme.CreateSlider(parent, width, minValue, maxValue, step, onChange)
+function Theme.CreateSlider(parent, width, minValue, maxValue, step, onChange, valueWidth)
 	local slider = CreateFrame("Frame", nil, parent)
 	width = width or 180
 	slider:SetSize(width, 18)
 	slider.min, slider.max = tonumber(minValue) or 0, tonumber(maxValue) or 1
 	if slider.max < slider.min then slider.min, slider.max = slider.max, slider.min end
 	slider.step = tonumber(step) or 0
-	slider.trackWidth = width - Theme.SLIDER_VALUE_WIDTH - 12
+	slider.valueWidth = tonumber(valueWidth) or Theme.SLIDER_VALUE_WIDTH
+	slider.trackWidth = width - slider.valueWidth - 12
 
 	slider.box = CreateFrame("Frame", nil, slider)
-	slider.box:SetSize(Theme.SLIDER_VALUE_WIDTH, 18)
+	slider.box:SetSize(slider.valueWidth, 18)
 	slider.box:SetPoint("RIGHT", slider, "RIGHT", 0, 0)
 	slider.box.bg = Solid(slider.box, "BACKGROUND", Theme.FIELD, 1)
 	slider.box.bg:SetAllPoints()
@@ -1085,13 +1117,20 @@ end
 -- ouvre la liste des choix { value, label, disabled, hint }. Un choix
 -- désactivé est grisé, avec son indice (« 30 brillantes »), et ne se choisit
 -- pas. onSelect(valeur, choix) sur un choix de l'utilisateur.
+-- opts.maxRows : lignes visibles (10 par défaut), le reste défile à la
+-- molette ; opts.listWidth : liste plus large que la case (indices longs).
 -- ---------------------------------------------------------------------------
 Theme.DROPDOWN_ROW = 22
-function Theme.CreateDropdown(parent, width, onSelect)
+Theme.DROPDOWN_MAX_ROWS = 10
+function Theme.CreateDropdown(parent, width, onSelect, opts)
+	opts = opts or {}
 	local dropdown = CreateFrame("Button", nil, parent)
 	width = width or 160
+	local listWidth = math.max(width, tonumber(opts.listWidth) or width)
+	dropdown.maxRows = tonumber(opts.maxRows) or Theme.DROPDOWN_MAX_ROWS
 	dropdown:SetSize(width, 22)
 	dropdown.options = {}
+	dropdown.offset = 0
 	dropdown.bg = Solid(dropdown, "BACKGROUND", Theme.FIELD, 1)
 	dropdown.bg:SetAllPoints()
 	dropdown.border = Border(dropdown, Theme.EDGE, 1)
@@ -1099,6 +1138,7 @@ function Theme.CreateDropdown(parent, width, onSelect)
 	dropdown.text:SetPoint("LEFT", dropdown, "LEFT", 8, 0)
 	dropdown.text:SetPoint("RIGHT", dropdown, "RIGHT", -22, 0)
 	dropdown.text:SetJustifyH("LEFT")
+	if dropdown.text.SetWordWrap then dropdown.text:SetWordWrap(false) end
 	dropdown.chevron = dropdown:CreateTexture(nil, "ARTWORK")
 	dropdown.chevron:SetTexture(Theme.CHEVRON)
 	dropdown.chevron:SetSize(12, 12)
@@ -1106,12 +1146,17 @@ function Theme.CreateDropdown(parent, width, onSelect)
 	dropdown.chevron:SetVertexColor(Theme.MUTED_LIGHT[1], Theme.MUTED_LIGHT[2], Theme.MUTED_LIGHT[3], 1)
 
 	local list = CreateFrame("Frame", nil, dropdown)
-	list:SetPoint("TOPLEFT", dropdown, "BOTTOMLEFT", 0, -2)
-	list:SetWidth(width)
+	list:SetPoint("TOPRIGHT", dropdown, "BOTTOMRIGHT", 0, -2)
+	list:SetWidth(listWidth)
 	list:SetFrameStrata("FULLSCREEN_DIALOG")
-	list.bg = Solid(list, "BACKGROUND", Theme.NAV, 0.98)
+	list.bg = Solid(list, "BACKGROUND", Theme.NAV, 1)
 	list.bg:SetAllPoints()
 	list.border = Border(list, Theme.EDGE, 1)
+	-- ascenseur : piste fine à droite, visible seulement si la liste défile
+	list.track = Solid(list, "BORDER", Theme.EDGE_SOFT, 1)
+	list.track:SetWidth(2)
+	list.thumb = Solid(list, "ARTWORK", Theme.GOLD, 0.8)
+	list.thumb:SetWidth(2)
 	list.rows = {}
 	list:Hide()
 	dropdown.list = list
@@ -1133,14 +1178,47 @@ function Theme.CreateDropdown(parent, width, onSelect)
 		if row.hovered and not entry.disabled then row.hover:Show() else row.hover:Hide() end
 	end
 
+	-- lignes visibles : options[offset + 1 .. offset + lignes]
+	local function Render()
+		local count = #dropdown.options
+		local shown = math.min(count, dropdown.maxRows)
+		dropdown.offset = Clamp(dropdown.offset or 0, 0, math.max(0, count - shown))
+		for index = 1, shown do
+			local row = list.rows[index]
+			local entry = dropdown.options[index + dropdown.offset]
+			row.entry = entry
+			row.label:SetText(entry.label or tostring(entry.value))
+			row.hint:SetText(entry.disabled and entry.hint or "")
+			row:Show()
+			PaintRow(row)
+		end
+		for index = shown + 1, #list.rows do list.rows[index]:Hide(); list.rows[index].entry = nil end
+		list:SetHeight(shown * Theme.DROPDOWN_ROW + 2)
+		if count > shown then
+			local trackH = shown * Theme.DROPDOWN_ROW - 4
+			list.track:ClearAllPoints()
+			list.track:SetPoint("TOPRIGHT", list, "TOPRIGHT", -3, -3)
+			list.track:SetHeight(trackH)
+			local thumbH = math.max(12, math.floor(trackH * shown / count + 0.5))
+			local y = math.floor((trackH - thumbH) * dropdown.offset / (count - shown) + 0.5)
+			list.thumb:ClearAllPoints()
+			list.thumb:SetPoint("TOPRIGHT", list, "TOPRIGHT", -3, -3 - y)
+			list.thumb:SetHeight(thumbH)
+			list.track:Show(); list.thumb:Show()
+		else
+			list.track:Hide(); list.thumb:Hide()
+		end
+	end
+	dropdown.Render = Render
+
 	function dropdown:SetOptions(options)
 		self.options = options or {}
-		for _, row in ipairs(list.rows) do row:Hide(); row.entry = nil end
-		for index, entry in ipairs(self.options) do
+		local shown = math.min(#self.options, self.maxRows)
+		for index = 1, shown do
 			local row = list.rows[index]
 			if not row then
 				row = CreateFrame("Button", nil, list)
-				row:SetSize(width - 2, Theme.DROPDOWN_ROW)
+				row:SetSize(listWidth - 2, Theme.DROPDOWN_ROW)
 				row.hover = Solid(row, "BACKGROUND", Theme.GOLD, 0.10)
 				row.hover:SetAllPoints()
 				row.hover:Hide()
@@ -1148,23 +1226,26 @@ function Theme.CreateDropdown(parent, width, onSelect)
 				row.label:SetPoint("LEFT", row, "LEFT", 8, 0)
 				row.label:SetJustifyH("LEFT")
 				row.hint = Text(row, Theme.F_SMALL, Theme.MUTED)
-				row.hint:SetPoint("RIGHT", row, "RIGHT", -8, 0)
+				row.hint:SetPoint("RIGHT", row, "RIGHT", -10, 0)
 				row.hint:SetJustifyH("RIGHT")
 				row:SetScript("OnClick", function(selfRow) dropdown:Choose(selfRow.entry and selfRow.entry.value) end)
 				row:SetScript("OnEnter", function(selfRow) selfRow.hovered = true; PaintRow(selfRow) end)
 				row:SetScript("OnLeave", function(selfRow) selfRow.hovered = false; PaintRow(selfRow) end)
+				if row.EnableMouseWheel then row:EnableMouseWheel(true) end
+				row:SetScript("OnMouseWheel", function(_, delta) dropdown:Scroll(delta) end)
 				list.rows[index] = row
 			end
-			row.entry = entry
 			row:ClearAllPoints()
 			row:SetPoint("TOPLEFT", list, "TOPLEFT", 1, -1 - (index - 1) * Theme.DROPDOWN_ROW)
-			row.label:SetText(entry.label or tostring(entry.value))
-			row.hint:SetText(entry.disabled and entry.hint or "")
-			row:Show()
-			PaintRow(row)
 		end
-		list:SetHeight(#self.options * Theme.DROPDOWN_ROW + 2)
+		Render()
 		self:SetValue(self.value)
+	end
+	-- molette : delta > 0 remonte la liste
+	function dropdown:Scroll(delta)
+		self.offset = (self.offset or 0) - (delta > 0 and 1 or -1)
+		Render()
+		return self.offset
 	end
 	-- depuis le code : sans rappel, même pour un choix désactivé (état sauvegardé)
 	function dropdown:SetValue(value)
@@ -1183,7 +1264,28 @@ function Theme.CreateDropdown(parent, width, onSelect)
 		if onSelect then onSelect(value, entry) end
 		return true
 	end
-	function dropdown:Open() list:Show(); self.border:SetColor(Theme.GOLD[1], Theme.GOLD[2], Theme.GOLD[3], 1) end
+	-- la liste s'ouvre vers le bas, ou vers le haut si elle sortirait de
+	-- l'écran (`up` : vers le haut d'office)
+	function dropdown:Open(up)
+		-- le choix courant en vue
+		for index, entry in ipairs(self.options) do
+			if entry.value == self.value and (index <= self.offset or index > self.offset + self.maxRows) then
+				self.offset = index - math.floor(self.maxRows / 2)
+			end
+		end
+		Render()
+		local bottom = self.GetBottom and tonumber(self:GetBottom())
+		if not up and bottom and bottom - (tonumber(list:GetHeight()) or 0) - 2 < 0 then up = true end
+		list:ClearAllPoints()
+		if up then
+			list:SetPoint("BOTTOMRIGHT", self, "TOPRIGHT", 0, 2)
+		else
+			list:SetPoint("TOPRIGHT", self, "BOTTOMRIGHT", 0, -2)
+		end
+		self.openedUp = up and true or false
+		list:Show()
+		self.border:SetColor(Theme.GOLD[1], Theme.GOLD[2], Theme.GOLD[3], 1)
+	end
 	function dropdown:Close() list:Hide(); self.border:SetColor(Theme.EDGE[1], Theme.EDGE[2], Theme.EDGE[3], 1) end
 	function dropdown:IsOpen() return list:IsShown() and true or false end
 	dropdown:SetScript("OnClick", function(self) if self:IsOpen() then self:Close() else self:Open() end end)
