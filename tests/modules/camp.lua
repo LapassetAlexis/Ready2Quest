@@ -354,7 +354,7 @@ do
 	local keys = {}
 	for _, row in ipairs(page and page.rows or {}) do keys[#keys + 1] = tostring(row.moduleId or (row.def and row.def.key)) end
 	Check("[CAMP] page : 2 contrôles et 2 réglages", table.concat(keys, ",") == "campkit,campobject,campCountdown,campDepartureLine", table.concat(keys, ","))
-	Check("[CAMP] page : sous-titre", page and page.sub:GetText() == NS.L.OPT_PAGE_CAMP_SUB)
+	Check("[CAMP] page : sous-titre", page and page.subText == NS.L.OPT_PAGE_CAMP_SUB)
 	local nav
 	for _, n in ipairs(frame.navButtons) do if n.pageId == "camp" then nav = n end end
 	Check("[CAMP] navigation : interrupteur du module", nav and nav.powerKey == "campEnabled")

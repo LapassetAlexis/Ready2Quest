@@ -37,4 +37,4 @@ Copie le dossier de chaque addon voulu dans `World of Warcraft/<client>/Interfac
 
 ## Licence
 
-Logiciels libres sous licence **GPL-3.0** (voir `LICENSE`). Les données de zones de QuestCompanion viennent de Questie, lui-même sous GPL-3.0. Police Alegreya : licence OFL.
+Logiciels libres sous licence **GPL-3.0** (voir `LICENSE`). Les données de zones de QuestCompanion viennent de Questie, lui-même sous GPL-3.0. Police Inter : licence OFL.

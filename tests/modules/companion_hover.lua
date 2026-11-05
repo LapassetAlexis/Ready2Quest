@@ -17,7 +17,7 @@ do
 	local last = hover.bars.curiosity
 	Check("[HOVER] l'aide sous la dernière barre, sans la toucher", hover.hint.top < last.top - 12,
 		tostring(hover.hint.top) .. " / " .. tostring(last.top))
-	Check("[HOVER] les envies sous la ligne du stade", hover.bars.hunger.top < -22)
+	Check("[HOVER] les envies sous la ligne du stade", hover.bars.hunger.top < hover.sub.top)
 	local short = hover.layoutHeight
 	Check("[HOVER] le cadre englobe l'aide", short >= -hover.hint.top + 12, short)
 	-- une ligne de stade plus longue (le caractère) : tout descend, le cadre grandit
@@ -26,7 +26,7 @@ do
 	NS:CompanionRefreshHover()
 	NS.CompanionTrait = saved
 	Check("[HOVER] le caractère dans la ligne du stade", hover.sub:GetText():find("Espiègle", 1, true) ~= nil, hover.sub:GetText())
-	local subBottom = -22 - NS.CompanionHoverTextHeight(hover.sub, 34)
+	local subBottom = hover.sub.top - NS.CompanionHoverTextHeight(hover.sub)
 	Check("[HOVER] ligne du stade sur deux lignes : les barres descendent dessous", hover.bars.hunger.top <= subBottom - 4,
 		tostring(hover.bars.hunger.top) .. " / " .. tostring(subBottom))
 	Check("[HOVER] l'aide reste sous les barres", hover.hint.top < hover.bars.curiosity.top - 12)

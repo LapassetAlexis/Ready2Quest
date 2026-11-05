@@ -7,21 +7,10 @@ ResetWorld()
 NS.optionsFrame = nil
 NS:ToggleOptions()
 local frame, lay = NS.optionsFrame, NS.OPT_LAYOUT
-local footerTop = -(lay.height - 44)          -- filet du pied : 44 px au-dessus du bas
--- pire cas : chaque module à sous-pages déplié tour à tour
-for _, pageId in ipairs({ "general", "bags", "merchant" }) do
-	NS:SelectOptionsPage(pageId)
-	local lowest, lowestId = 0, nil
-	for _, nav in ipairs(frame.navButtons) do
-		if nav:IsShown() then
-			local _, _, _, _, y = nav:GetPoint()
-			local bottom = (y or 0) - (nav.rowH or 22)
-			if bottom < lowest then lowest, lowestId = bottom, nav.pageId end
-		end
-	end
-	Check("[INT] navigation (" .. pageId .. " ouvert) : rien sous le pied", lowest >= footerTop,
-		tostring(lowestId) .. " " .. lowest .. " >= " .. footerTop)
-end
+-- la navigation (entrées de premier niveau) s'arrête au-dessus de la version,
+-- en bas de la colonne (18 px du bas, une ligne)
+local navFloor = -(lay.height - 2 - 40)
+Check("[INT] navigation : rien sous la version", frame.navBottom >= navFloor, frame.navBottom .. " >= " .. navFloor)
 -- ordre : tous les modules avant le titre QOL, un seul titre par groupe
 local seenQol, misplaced = false, {}
 for _, def in ipairs(NS.OPTION_PAGES) do
@@ -29,33 +18,32 @@ for _, def in ipairs(NS.OPTION_PAGES) do
 	elseif seenQol then misplaced[#misplaced + 1] = def.id end
 end
 Check("[INT] aucun module rangé sous le QoL", #misplaced == 0, table.concat(misplaced, ","))
-Check("[INT] un titre par groupe dans la navigation", #frame.navGroups == 2, #frame.navGroups)
+-- titres : le Check avant le départ, MODULES, le Confort de jeu ; chacun une fois
+local titles, twice = {}, 0
+for _, label in ipairs(frame.navGroups) do
+	if titles[label.text] then twice = twice + 1 end
+	titles[label.text] = true
+end
+Check("[INT] un titre par groupe dans la navigation", #frame.navGroups == 3 and twice == 0, #frame.navGroups)
 Check("[INT] panneau toujours à l'écran", lay.height <= lay.maxHeight, lay.height)
 
 local overflow = {}
-for id, page in pairs(frame.pages) do
-	if page.contentBottom < lay.contentLimit then overflow[#overflow + 1] = id .. "=" .. page.contentBottom end
+for id in pairs(frame.pages) do
+	for _, miss in ipairs(NS:OptionsUnreachable(id)) do overflow[#overflow + 1] = miss end
 end
-Check("[INT] aucune page de module ne déborde", #overflow == 0, table.concat(overflow, ", "))
+Check("[INT] chaque page de module se voit en entier (défilement)", #overflow == 0, table.concat(overflow, ", "))
 
 -- QuestCompanion : son propre panneau (même socle), mêmes règles
 do
 	QNS.optionsFrame = nil
 	QNS:ToggleOptions()
 	local qframe = QNS.optionsFrame
-	local qoverflow, below = {}, {}
-	for id, page in pairs(qframe.pages) do
-		if page.contentBottom < lay.contentLimit then qoverflow[#qoverflow + 1] = id .. "=" .. page.contentBottom end
+	local qoverflow = {}
+	for id in pairs(qframe.pages) do
+		for _, miss in ipairs(QNS:OptionsUnreachable(id)) do qoverflow[#qoverflow + 1] = miss end
 	end
-	QNS:SelectOptionsPage("companion")
-	for _, nav in ipairs(qframe.navButtons) do
-		if nav:IsShown() then
-			local _, _, _, _, y = nav:GetPoint()
-			if (y or 0) - (nav.rowH or 22) < footerTop then below[#below + 1] = nav.pageId end
-		end
-	end
-	Check("[INT] QC : aucune page ne déborde", #qoverflow == 0, table.concat(qoverflow, ", "))
-	Check("[INT] QC : navigation au-dessus du pied", #below == 0, table.concat(below, ", "))
+	Check("[INT] QC : chaque page se voit en entier", #qoverflow == 0, table.concat(qoverflow, ", "))
+	Check("[INT] QC : navigation au-dessus de la version", qframe.navBottom >= navFloor, qframe.navBottom)
 	qframe:Hide()
 end
 
@@ -105,12 +93,13 @@ do
 	local wrong = {}
 	for _, def in ipairs(QNS.COMPANION_ORNAMENTS or {}) do
 		for _, row in ipairs(QNS.optionsFrame.rows) do
-			if row.def and row.def.key == def.key and not QNS:CompanionIsUnlocked("orn", def) and row.toggle and row.toggle.checked then
+			if row.def and row.def.key == def.key and not QNS:CompanionIsUnlocked("orn", def)
+				and (row.toggle:IsShown() or not (row.lock and row.lock:IsShown())) then
 				wrong[#wrong + 1] = def.key
 			end
 		end
 	end
-	Check("[INT] ornements verrouillés : interrupteur éteint", #wrong == 0, table.concat(wrong, ","))
+	Check("[INT] ornements verrouillés : un verrou à la place de l'interrupteur", #wrong == 0, table.concat(wrong, ","))
 end
 
 -- Résumé de stuff : « Simuler un changement » montre un vrai cadre, au-dessus

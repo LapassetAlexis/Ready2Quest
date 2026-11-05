@@ -409,17 +409,21 @@ do
 	local nav, parentNav
 	for _, button in ipairs(o.navButtons) do
 		if button.pageId == "journal" then nav = button end
-		if button.pageId == "companion" then parentNav = button end
+	end
+	for _, header in ipairs(o.navHeaders) do
+		if header.pageId == "companion" then parentNav = header end
 	end
 	local page = o.pages.journal
-	Check("[JRN] sous-page du Compagnon de route", nav and nav.parentId == "companion" and nav.power == nil and page)
-	Check("[JRN] interrupteur unique sur le module parent", parentNav and parentNav.power ~= nil)
+	nav:Click()
+	Check("[JRN] sous-page du Compagnon de route : son entrée sous le titre du groupe", nav and nav.parentId == "companion" and page
+		and o.currentPage == "journal" and o.header.title.text == NS.L.OPT_PAGE_JOURNAL)
+	Check("[JRN] interrupteur unique sur le module parent", parentNav and parentNav.powerKey == "companionEnabled")
 	Check("[JRN] page rangée dans MODULES", (function()
 		for _, def in ipairs(NS.OPTION_PAGES) do
 			if def.id == "journal" then return def.group == "OPT_GROUP_MODULES" end
 		end
 	end)())
-	Check("[JRN] phrase d'explication", page and page.sub.text == NS.L.OPT_PAGE_JOURNAL_SUB)
+	Check("[JRN] phrase d'explication", page and page.subText == NS.L.OPT_PAGE_JOURNAL_SUB)
 	Check("[JRN] bandeau, chat et suivi réglables", page and #page.rows == 5, page and #page.rows)
 	local button = page and page.actionButtons and page.actionButtons.journal
 	Check("[JRN] bouton « Ouvrir le carnet »", button and button.text.text == "Ouvrir le carnet")

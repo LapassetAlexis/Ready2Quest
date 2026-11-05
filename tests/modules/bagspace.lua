@@ -408,13 +408,19 @@ do
 	for _, d in ipairs(NS.OPTION_PAGES) do if d.id == "bagspace" then def = d end end
 	Check("[BAG] page : sous-page du QoL", def and def.parent == "qol" and def.group == "OPT_GROUP_QOL")
 	local page = frame.pages.bagspace
-	Check("[BAG] page : construite, avec les listes", page and page.bagspaceBlock ~= nil)
-	Check("[BAG] page : liste « toujours garder » affichée", page.bagspaceBlock.keep.text:find("Os brisé", 1, true) ~= nil, page.bagspaceBlock.keep.text)
-	Check("[BAG] page : « toujours jeter » vide", page.bagspaceBlock.discard.text:find("(vide)", 1, true) ~= nil)
-	Check("[BAG] page : confirmation toujours, sans interrupteur", page.bagspaceBlock.confirm.text:find("toujours", 1, true) ~= nil)
+	local notes = page and page.notes or {}
+	Check("[BAG] page : construite, avec les listes", notes.bagspaceKeep ~= nil and notes.bagspaceDiscard ~= nil)
+	Check("[BAG] page : liste « toujours garder » affichée", notes.bagspaceKeep.text.text:find("Os brisé", 1, true) ~= nil, notes.bagspaceKeep.text.text)
+	Check("[BAG] page : « toujours jeter » vide", notes.bagspaceDiscard.text.text:find("(vide)", 1, true) ~= nil)
+	Check("[BAG] page : confirmation toujours, sans interrupteur", notes.bagspaceConfirm.text.text:find("toujours", 1, true) ~= nil)
 	NS:HandleCommand("jeter-toujours " .. B.Link(CLOTH))
-	Check("[BAG] page : rafraîchie après une commande", page.bagspaceBlock.discard.text:find("Étoffe", 1, true) ~= nil)
-	Check("[BAG] page : tient dans le cadre", page.contentBottom >= NS.OPT_LAYOUT.contentLimit, page.contentBottom)
+	Check("[BAG] page : rafraîchie après une commande", notes.bagspaceDiscard.text.text:find("Étoffe", 1, true) ~= nil)
+	NS:SelectOptionsPage("bagspace")
+	for _ = 1, 10 do NS:ScrollOptions(-1) end
+	Check("[BAG] page : l'aide du bas se voit (défilement)", notes.bagspaceHint:IsShown() == true)
+	local sections = 0
+	for _, item in ipairs(page.items) do if item.kind == "section" then sections = sections + 1 end end
+	Check("[BAG] page : sections Réglages, À garder, À jeter", sections == 3, sections)
 	local rowKeys = {}
 	for _, row in ipairs(page.rows) do rowKeys[#rowKeys + 1] = row.def and row.def.key end
 	Check("[BAG] page : interrupteurs module et cadre", table.concat(rowKeys, ",") == "bagspaceEnabled,bagspaceFrame", table.concat(rowKeys, ","))

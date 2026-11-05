@@ -31,7 +31,7 @@ local ZONE_LEVELS = {
 }
 ns.ZONE_LEVELS = ZONE_LEVELS
 
-local CHEST_W, OPTION_H, OPTION_GAP, COLUMNS = 440, 30, 6, 2
+local CHEST_W, OPTION_H, OPTION_GAP, COLUMNS = 480, 50, 10, 2
 
 local FR = {
 	CHEST_TITLE         = "Coffre de %s",
@@ -40,7 +40,8 @@ local FR = {
 	CHEST_KIND_orn      = "Ornement",
 	CHEST_KIND_frame    = "Cadre",
 	CHEST_KIND_bg       = "Fond",
-	CHEST_OPTION        = "%s : %s",
+	CHEST_SUB           = "Palier %d · un seul objet, gardé pour toujours",
+	CHEST_LATER         = "Plus tard",
 	CHEST_MSG_NEW       = "Coffre : %s terminée à 100 %% ! Ouvre-le pour choisir ta récompense (/qc coffre).",
 	CHEST_MSG_PICKED    = "Coffre de %s : %s obtenu !",
 	CHEST_MSG_GOLDEN    = "%s terminée à 100 %% : tout le palier %d est déjà à toi, la zone devient dorée.",
@@ -59,7 +60,8 @@ local EN = {
 	CHEST_KIND_orn      = "Ornament",
 	CHEST_KIND_frame    = "Frame",
 	CHEST_KIND_bg       = "Background",
-	CHEST_OPTION        = "%s: %s",
+	CHEST_SUB           = "Tier %d · one item, yours to keep",
+	CHEST_LATER         = "Later",
 	CHEST_MSG_NEW       = "Chest: %s is 100%% complete! Open it to pick your reward (/qc coffre).",
 	CHEST_MSG_PICKED    = "%s chest: you got %s!",
 	CHEST_MSG_GOLDEN    = "%s is 100%% complete: you already own all of tier %d, the zone turns golden.",
@@ -282,25 +284,51 @@ function ns:ChestPick(zoneID, reward)
 	return true
 end
 
--- Fenêtre : un bouton par objet proposé, deux colonnes
-function ns:EnsureChestWindow(count)
+-- Fenêtre (docs/UI.md, « Carnet et compagnon ») : fenêtre de module, une
+-- tuile par objet proposé sur deux colonnes (sorte en étiquette, nom), pied
+-- « Plus tard ». La hauteur suit le nombre d'objets.
+local INTRO_H = 34
+local function ChestHeight(count)
 	local rows = math.max(1, math.ceil((count or 1) / COLUMNS))
-	local height = 96 + rows * (OPTION_H + OPTION_GAP)
+	return Theme.HEADER_COMPACT_HEIGHT + 1 + 16 + INTRO_H + 10 + rows * (OPTION_H + OPTION_GAP) - OPTION_GAP + 20
+		+ Theme.DIALOG_FOOTER
+end
+ns.ChestHeight = ChestHeight
+
+function ns:EnsureChestWindow(count)
+	local height = ChestHeight(count)
 	local frame = self.chestFrame
 	if not frame then
-		frame = Theme.CreatePanel(UIParent, CHEST_W, height, "", { name = "QuestCompanionChestFrame" })
+		frame = Theme.CreateDialog(UIParent, CHEST_W, height, { name = "QuestCompanionChestFrame" })
 		if not frame then return nil end
 		frame:SetPoint("CENTER", UIParent, "CENTER", 0, 60)
-		frame.intro = frame:CreateFontString(nil, "OVERLAY", Theme.F_BODY)
-		frame.intro:SetPoint("TOPLEFT", frame, "TOPLEFT", 16, frame.contentTop - 8)
-		frame.intro:SetWidth(CHEST_W - 32)
+		frame.intro = Theme.Text(frame, Theme.F_BODY, Theme.LABEL)
+		frame.intro:SetPoint("TOPLEFT", frame, "TOPLEFT", frame.pad, frame.contentTop - 16)
+		frame.intro:SetWidth(frame.innerWidth)
 		frame.intro:SetJustifyH("LEFT")
+		if frame.intro.SetWordWrap then frame.intro:SetWordWrap(true) end
+		frame.later = frame:AddFooterButton(L.CHEST_LATER, function() frame:Hide() end, "outline")
 		frame.options = {}
 		frame:Hide()
 		self.chestFrame = frame
 	end
 	frame:SetHeight(height)
 	return frame
+end
+
+-- Une tuile d'objet : sorte en étiquette, nom dessous ; clic = le choisir
+local function OptionTile(frame, width)
+	local tile = Theme.CreateTile(frame, width, OPTION_H)
+	tile:SetAccent(Theme.GOLD)
+	tile.kindTag = Theme.CreateTag(tile, "", Theme.GOLD)
+	tile.kindTag:SetPoint("TOPLEFT", tile, "TOPLEFT", 14, -9)
+	tile.text = Theme.Text(tile, Theme.F_LABEL, Theme.LABEL)
+	tile.text:SetPoint("TOPLEFT", tile, "TOPLEFT", 14, -28)
+	tile.text:SetWidth(width - 28)
+	tile.text:SetJustifyH("LEFT")
+	if tile.text.SetWordWrap then tile.text:SetWordWrap(false) end
+	tile:SetScript("OnClick", function(self) ns:ChestPick(frame.zoneID, self.reward) end)
+	return tile
 end
 
 function ns:OpenChest(zoneID)
@@ -319,21 +347,25 @@ function ns:OpenChest(zoneID)
 	end
 	local frame = self:EnsureChestWindow(#options)
 	if not frame then return nil end
-	if frame.title and frame.title.SetText then frame.title:SetText(self:F("CHEST_TITLE", chest.name or ZoneName(self, zoneID))) end
+	frame.title:SetText(self:F("CHEST_TITLE", chest.name or ZoneName(self, zoneID)))
+	frame.subtitle:SetText(self:F("CHEST_SUB", chest.tier))
 	frame.zoneID = zoneID
 	frame.intro:SetText(self:F("CHEST_INTRO", chest.tier))
-	local width = (CHEST_W - 32 - OPTION_GAP * (COLUMNS - 1)) / COLUMNS
+	local width = math.floor((frame.innerWidth - OPTION_GAP * (COLUMNS - 1)) / COLUMNS)
+	local top = frame.contentTop - 16 - INTRO_H - 10
 	for index, reward in ipairs(options) do
 		local button = frame.options[index]
 		if not button then
-			button = Theme.CreateButton(frame, width, OPTION_H, "", function(self) ns:ChestPick(frame.zoneID, self.reward) end)
+			button = OptionTile(frame, width)
 			frame.options[index] = button
 		end
 		local col, row = (index - 1) % COLUMNS, math.floor((index - 1) / COLUMNS)
 		button:ClearAllPoints()
-		button:SetPoint("TOPLEFT", frame, "TOPLEFT", 16 + col * (width + OPTION_GAP), frame.contentTop - 34 - row * (OPTION_H + OPTION_GAP))
+		button:SetPoint("TOPLEFT", frame, "TOPLEFT", frame.pad + col * (width + OPTION_GAP), top - row * (OPTION_H + OPTION_GAP))
 		button.reward = reward
-		button:SetText(self:F("CHEST_OPTION", L["CHEST_KIND_" .. reward.kind] or reward.kind, self:ChestRewardLabel(reward)))
+		button.kindTag:SetTag(L["CHEST_KIND_" .. reward.kind] or reward.kind, Theme.GOLD)
+		button.text:SetText(self:ChestRewardLabel(reward))
+		button:SetAlpha(1)
 		button:Show()
 	end
 	for index = #options + 1, #frame.options do frame.options[index]:Hide(); frame.options[index].reward = nil end

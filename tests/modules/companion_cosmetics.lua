@@ -31,7 +31,6 @@ function K.Def(list, id) for _, def in ipairs(list) do if def.id == id then retu
 function K.Row(key)
 	for _, row in ipairs(NS.optionsFrame.rows) do if row.def and row.def.key == key then return row end end
 end
-function K.Swatch(row, id) for _, s in ipairs(row.swatches or {}) do if s.def.id == id then return s end end end
 
 do
 	Say("-- cosmétiques : catalogue")
@@ -237,34 +236,36 @@ do
 	NS:SelectOptionsPage("companion")
 	local row = K.Row("companionFrameStyle")
 	local bgRow = K.Row("companionBackground")
-	Check("[COSM] une pastille par cadre et par fond", row and #row.swatches == #NS.COMPANION_FRAMES
-		and bgRow and #bgRow.swatches == #NS.COMPANION_BACKGROUNDS)
-	Check("[COSM] ligne du cadre : nom du choix", row.label.text:find("Cadre : ", 1, true) and row.label.text:find("Ardoise", 1, true),
-		row.label.text)
-	local fel, copper = K.Swatch(row, "fel"), K.Swatch(row, "copper")
-	Check("[COSM] cadre verrouillé : estompé, palier affiché", fel.locked and fel.alpha == 0.35 and fel.tier:IsShown()
-		and fel.tier.text == "3")
-	Check("[COSM] cadre possédé : plein, sans palier", not copper.locked and copper.alpha == 1 and not copper.tier:IsShown())
-	_G.GameTooltip.lines = {}
-	fel.scripts.OnEnter(fel)
-	Check("[COSM] infobulle : « Palier 3 »", table.concat(_G.GameTooltip.lines, "|"):find("Palier 3", 1, true) ~= nil,
-		table.concat(_G.GameTooltip.lines, "|"))
-	fel:Click()
-	Check("[COSM] clic sur un verrouillé : rien ne change", NS:CompanionData().frameStyle == "slate")
-	copper:Click()
-	Check("[COSM] clic sur une pastille : choix appliqué et persisté", NS:CompanionData().frameStyle == "copper"
-		and NS.companionFrame.frameStyle == "copper" and row.label.text:find("Cuivre", 1, true) and copper.selected.top:IsShown()
-		and not K.Swatch(row, "slate").selected.top:IsShown())
-	row:Click()
-	Check("[COSM] clic sur la ligne : style possédé suivant", NS:CompanionData().frameStyle == "slate")
-	bgRow:Click()
+	local function Entry(r, id) for _, e in ipairs(r.dropdown.options) do if e.value == id then return e end end end
+	Check("[COSM] un choix par cadre et par fond", row and row.dropdown and #row.dropdown.options == #NS.COMPANION_FRAMES
+		and bgRow and bgRow.dropdown and #bgRow.dropdown.options == #NS.COMPANION_BACKGROUNDS)
+	Check("[COSM] carte du cadre : libellé, choix courant dans la liste", row.label.text == "Cadre" and row.dropdown.text.text == "Ardoise",
+		row.dropdown.text.text)
+	local fel, copper = Entry(row, "fel"), Entry(row, "copper")
+	Check("[COSM] cadre verrouillé : grisé, palier affiché", fel.disabled and fel.hint == "Palier 3", fel.hint)
+	Check("[COSM] cadre possédé : choisissable, sans palier", not copper.disabled and copper.hint == nil)
+	row.dropdown:Open()
+	local felRow
+	for _, r in ipairs(row.dropdown.list.rows) do if r:IsShown() and r.entry and r.entry.value == "fel" then felRow = r end end
+	Check("[COSM] liste ouverte : « Palier 3 » en face du cadre verrouillé", felRow and felRow.hint.text == "Palier 3")
+	Check("[COSM] clic sur un verrouillé : rien ne change", row.dropdown:Choose("fel") == false and NS:CompanionData().frameStyle == "slate")
+	row.dropdown:Choose("copper")
+	Check("[COSM] choix dans la liste : appliqué et persisté", NS:CompanionData().frameStyle == "copper"
+		and NS.companionFrame.frameStyle == "copper" and row.dropdown.text.text == "Cuivre" and row.dropdown.value == "copper")
+	local preview = NS.optionsFrame.previews.companionMain
+	local edge = preview and preview.box.edge.top.vertex
+	Check("[COSM] aperçu des réglages : le filet du cadre choisi", edge and math.abs(edge[1] - 0.80) < 0.01 and math.abs(edge[2] - 0.48) < 0.01,
+		edge and table.concat(edge, ","))
+	NS:RunOptionAction("companionFrameStyle")
+	Check("[COSM] action : style possédé suivant", NS:CompanionData().frameStyle == "slate")
+	NS:RunOptionAction("companionBackground")
 	Check("[COSM] fond : un seul possédé, le cycle y reste", NS:CompanionData().background == "night")
 	-- ornement du coffre verrouillé : son palier, pas de condition de tampons
 	local crown = K.Row("companionOrnCrown")
-	Check("[COSM] ornement du coffre verrouillé : « (palier 3) »", crown and crown.label.text:find("(palier 3)", 1, true),
-		crown and crown.label.text)
-	Check("[COSM] page Compagnon sans débordement", NS.optionsFrame.pages.companionMain.contentBottom >= NS.OPT_LAYOUT.contentLimit,
-		NS.optionsFrame.pages.companionMain.contentBottom)
+	Check("[COSM] ornement du coffre verrouillé : verrou « Palier 3 »", crown and crown.locked and crown.lock.label.text == "Palier 3",
+		crown and crown.lock and crown.lock.label.text)
+	Check("[COSM] page Compagnon sans débordement", #NS:OptionsUnreachable("companionMain") == 0,
+		table.concat(NS:OptionsUnreachable("companionMain"), ", "))
 	NS.optionsFrame:Hide()
 end
 

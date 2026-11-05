@@ -37,9 +37,11 @@ do
 	Check("[COLL] apparences : tout le catalogue", #apps == #NS.COMPANION_APPEARANCES)
 	Check("[COLL] compteur « possédés »", coll.count.text:find("possédés", 1, true) ~= nil, coll.count.text)
 	local green, frog, owl = W.Cell(f, "whelp_green"), W.Cell(f, "frog"), W.Cell(f, "owl")
-	Check("[COLL] dragonnet vert : équipé, liseré or", green and green.entry.equipped and green.edge.vertex[1] == NS.Theme.GOLD[1])
-	Check("[COLL] chouette verrouillée : en silhouette", owl and not owl.entry.owned and owl.alpha < 1
-		and owl.icon.texture == "Interface\\Icons\\INV_Misc_QuestionMark")
+	Check("[COLL] dragonnet vert : équipé, liseré or", green and green.entry.equipped and green.selected
+		and green.accent:IsShown() and green.accent.vertex[1] == NS.Theme.GOLD[1])
+	Check("[COLL] chouette verrouillée : un verrou qui dit son palier, pas d'icône", owl and not owl.entry.owned
+		and owl.alpha < 1 and owl.lock:IsShown() and not owl.icon:IsShown() and owl.lock.label.text:find("2", 1, true),
+		owl and owl.lock.label.text)
 	Check("[COLL] aperçu : l'objet équipé, sur la créature", coll.preview.title.text == NS.L.COMP_APP_WHELP_GREEN
 		and coll.preview.model.display == NS:CompanionAppearanceDef("whelp_green").display, coll.preview.title.text)
 	owl.scripts.OnEnter(owl)
@@ -85,10 +87,11 @@ do
 	local list, page = f.zoneList, #f.zones.tiles
 	Check("[ZONES] plus de zones qu'une page", #list > page, #list)
 	f.scripts.OnMouseWheel(f, -1)
-	Check("[ZONES] molette : une rangée plus bas", f.zoneOffset == 6 and f.zones.tiles[1].zoneID == list[7].id, f.zoneOffset)
+	local step = NS.JOURNAL_LAYOUT.zoneStep
+	Check("[ZONES] molette : trois rangées plus bas", f.zoneOffset == step and f.zones.tiles[1].zoneID == list[step + 1].id, f.zoneOffset)
 	for _ = 1, 50 do NS:ScrollJournal(-1) end
 	local last = f.zones.tiles[1].zone
-	Check("[ZONES] butée en bas : la dernière zone visible", f.zoneOffset % 6 == 0 and f.zoneOffset + page >= #list
+	Check("[ZONES] butée en bas : la dernière zone visible", f.zoneOffset % NS.JOURNAL_LAYOUT.tileCols == 0 and f.zoneOffset + page >= #list
 		and f.zoneOffset < #list and last ~= nil)
 	f.scripts.OnMouseWheel(f, 1)
 	Check("[ZONES] molette vers le haut", f.zones.tiles[1].zoneID == list[f.zoneOffset + 1].id)
@@ -169,7 +172,7 @@ do
 	NS:OpenJournalFor({ id = "stage", kind = "stage", source = "companion" })
 	Check("[JRNW] objectif du compagnon : Créature", f:IsShown() and f.kind == "evolution")
 	f:Hide()
-	Check("[JRNW] dimensions : 820 × 560", NS.JOURNAL_LAYOUT.width == 820 and NS.JOURNAL_LAYOUT.height == 560)
+	Check("[JRNW] dimensions : 980 × 680, comme les réglages", NS.JOURNAL_LAYOUT.width == 980 and NS.JOURNAL_LAYOUT.height == 680)
 	local missing = {}
 	for key in pairs(NS.JOURNAL_WINDOW_STRINGS.fr) do
 		if NS.JOURNAL_WINDOW_STRINGS.en[key] == nil then missing[#missing + 1] = key end

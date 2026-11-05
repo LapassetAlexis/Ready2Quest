@@ -349,51 +349,47 @@ function ns:PrintDungeonSheet(sheet)
 end
 
 -- ---------------------------------------------------------------------------
--- Fenêtre : même habillage que le diagnostic (Theme.CreatePanel), lignes
--- recyclées. Renvoie false si l'interface n'a pas pu être construite : la
--- fiche part alors dans le chat plutôt que de se perdre.
+-- Fenêtre de module (Theme.CreateDialog) : le niveau en tête, puis des
+-- sections (quêtes, plans, préparation) aux lignes en cartes, losange de
+-- statut à gauche. Lignes recyclées. Renvoie false si l'interface n'a pas pu
+-- être construite : la fiche part alors dans le chat plutôt que de se perdre.
 -- ---------------------------------------------------------------------------
-local WIDTH, LINE_HEIGHT = 380, 17
+local WIDTH = 420
+local ROW_CARD, ROW_STEP = 22, 24     -- carte, pas d'une ligne à l'autre
+local HEAD_STEP = 28                  -- titre de section (avec son espace au-dessus)
+local GAP = 14
 
 local function Line(frame, index)
 	frame.lines = frame.lines or {}
 	local line = frame.lines[index]
 	if line then return line end
-	line = CreateFrame("Frame", nil, frame)
-	line:SetSize(WIDTH - 28, LINE_HEIGHT - 2)
-	line.status = Theme.CreateDiamond(line, 8, true)
-	line.status:SetPoint("LEFT", line, "LEFT", 2, 0)
-	line.text = line:CreateFontString(nil, "OVERLAY", Theme.F_BODY)
-	line.text:SetPoint("LEFT", line, "LEFT", 16, 0)
-	line.text:SetWidth(WIDTH - 28 - 18)
-	line.text:SetJustifyH("LEFT")
-	line.text:SetWordWrap(false)
+	line = Theme.CreateListRow(frame, frame.innerWidth, ROW_CARD, { status = 8 })
+	line.text:SetWidth(frame.innerWidth - line.textLeft - 12)
 	frame.lines[index] = line
 	return line
 end
 
-local function SetStatus(line, state)
-	line.status.state = state
-	if state == "none" then line.status:Hide(); return end
-	line.status:Show()
-	local c = (state == "ok" and Theme.GREEN) or (state == "bad" and Theme.RED) or (state == "warn" and Theme.ORANGE) or Theme.GOLD
-	line.status:SetTexture((state == "ok" or state == "item") and Theme.DIAMOND_LINE or Theme.DIAMOND)
-	line.status:SetVertexColor(c[1], c[2], c[3], 1)
+-- kind : "level" (le niveau, en tête), "head" (titre de section), "row"
+-- (carte, avec ou sans losange), "note" (texte pâle, sans carte)
+local function Style(line, kind, rank)
+	line.kind = kind
+	local x = (kind == "head" and 0) or ((kind == "row" and line.status.state ~= "none") and line.textLeft) or 12
+	line.text:ClearAllPoints()
+	line.text:SetPoint("LEFT", line, "LEFT", x, kind == "head" and -4 or 0)
+	line.text:SetFontObject((kind == "head" and Theme.F_CAPS) or (kind == "level" and Theme.F_LABEL) or Theme.F_BODY)
+	local color = (kind == "head" and Theme.MUTED_LIGHT) or (kind == "note" and Theme.MUTED) or Theme.TEXT
+	line.text:SetTextColor(color[1], color[2], color[3])
+	if kind == "head" or kind == "note" then line.bg:Hide() else line.bg:Show() end
+	line:SetIndex(rank or 1)
 end
 
 function ns:EnsureDungeonWindow()
 	if self.dungeonFrame then return self.dungeonFrame end
-	if not (Theme and Theme.CreatePanel) then return nil end
-	local frame = Theme.CreatePanel(UIParent, WIDTH, 200, L.DGN_TITLE, { name = "Ready2QuestDungeonFrame", titleSize = 14 })
+	if not (Theme and Theme.CreateDialog) then return nil end
+	local frame = Theme.CreateDialog(UIParent, WIDTH, 200, { name = "Ready2QuestDungeonFrame", title = L.DGN_TITLE })
 	if not frame then return nil end
 	if self.RestorePoint then self:RestorePoint(frame, "dungeonPoint", { point = "CENTER", x = 0, y = 60 }) end
-	if frame.subtitle then
-		frame.subtitle:SetWidth(WIDTH - 170)
-		frame.subtitle:SetJustifyH("RIGHT")
-		frame.subtitle:SetWordWrap(false)
-	end
-	frame.closeButton = Theme.CreateButton(frame, 90, 20, L.OPT_CLOSE, function() frame:Hide() end, "primary")
-	frame.closeButton:SetPoint("BOTTOMRIGHT", frame, "BOTTOMRIGHT", -14, 10)
+	frame.closeButton = frame:AddFooterButton(L.OPT_CLOSE, function() frame:Hide() end, "accent")
 	self.dungeonFrame = frame
 	return frame
 end
@@ -405,43 +401,52 @@ function ns:ShowDungeonWindow(sheet)
 		return false
 	end
 	local rows = {}
-	local function Add(text, state) rows[#rows + 1] = { text = text, state = state or "none" } end
-	Add(self:LevelText(sheet))
-	Add(Theme.T_GOLD .. self:F("DGN_QUESTS", #sheet.quests) .. "|r")
+	local function Add(text, state, kind) rows[#rows + 1] = { text = text, state = state or "none", kind = kind or "row" } end
+	Add(self:LevelText(sheet), nil, "level")
+	Add(self:F("DGN_QUESTS", #sheet.quests), nil, "head")
 	for i = 1, math.min(#sheet.quests, MAX_QUESTS) do
 		local quest = sheet.quests[i]
 		Add(quest.ready and (quest.title .. "  " .. Theme.T_GREEN .. L.DGN_QUEST_READY .. "|r") or quest.title, quest.ready and "ok" or "item")
 	end
-	if #sheet.quests > MAX_QUESTS then Add(Theme.T_GREY .. self:F("DGN_MORE", #sheet.quests - MAX_QUESTS) .. "|r") end
+	if #sheet.quests > MAX_QUESTS then Add(self:F("DGN_MORE", #sheet.quests - MAX_QUESTS), nil, "note") end
 	if #sheet.quests == 0 then
-		Add(Theme.T_GREY .. (sheet.collapsed and L.DGN_QUESTS_COLLAPSED or L.DGN_QUESTS_NONE) .. "|r")
+		Add(sheet.collapsed and L.DGN_QUESTS_COLLAPSED or L.DGN_QUESTS_NONE, nil, "note")
 	end
 	if #sheet.blueprints > 0 then
-		Add(Theme.T_GOLD .. L.DGN_BLUEPRINTS .. "|r")
+		Add(L.DGN_BLUEPRINTS, nil, "head")
 		for _, item in ipairs(sheet.blueprints) do Add(tostring(item.name), "item") end
 	end
-	Add(Theme.T_GOLD .. L.DGN_PREP .. "|r")
+	Add(L.DGN_PREP, nil, "head")
 	for _, line in ipairs(sheet.readiness) do
 		Add(line.label .. "  " .. Theme.T_GREY .. line.detail .. "|r", line.ok and "ok" or "bad")
 	end
-	if #sheet.readiness == 0 then Add(Theme.T_GREY .. L.DGN_PREP_NONE .. "|r") end
+	if #sheet.readiness == 0 then Add(L.DGN_PREP_NONE, nil, "note") end
 
-	if frame.subtitle then frame.subtitle:SetText(Theme.T_PARCHMENT .. tostring(sheet.name) .. "|r") end
-	local top = frame.contentTop or -36
+	frame.subtitle:SetText(tostring(sheet.name))
+	local y = (frame.contentTop or -65) - GAP
+	local rank = 0
 	for index, row in ipairs(rows) do
 		local line = Line(frame, index)
+		if row.kind == "head" then
+			y = y - (HEAD_STEP - ROW_STEP)
+			rank = 0
+		elseif row.kind == "row" then
+			rank = rank + 1
+		end
 		line:ClearAllPoints()
-		line:SetPoint("TOPLEFT", frame, "TOPLEFT", 14, top - 6 - (index - 1) * LINE_HEIGHT)
-		line.text:SetText(row.text)
-		SetStatus(line, row.state)
+		line:SetPoint("TOPLEFT", frame, "TOPLEFT", frame.pad + 1, y)
+		line.text:SetText(row.kind == "head" and Theme.Upper(row.text) or row.text)
+		Theme.SetStatus(line.status, row.state)
+		Style(line, row.kind, rank)
 		line:Show()
+		y = y - ROW_STEP
 	end
 	for index = #rows + 1, #(frame.lines or {}) do
 		frame.lines[index].text:SetText("")
 		frame.lines[index]:Hide()
 	end
 	frame.visibleLines = #rows
-	frame:SetHeight(-top + 6 + #rows * LINE_HEIGHT + 44)
+	frame:SetHeight(-y + (ROW_STEP - ROW_CARD) + GAP + Theme.DIALOG_FOOTER)
 	frame:Show()
 	if Theme.FadeIn then pcall(Theme.FadeIn, frame) end
 	return true

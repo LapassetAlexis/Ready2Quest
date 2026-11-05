@@ -5,11 +5,21 @@ local Theme = ns.Theme
 
 local unpack = unpack or table.unpack   -- Lua 5.1 (client) / 5.4+
 
-local WIDTH      = 440
-local ROW_HEIGHT = 19
-local MAX_ADVICE = 3
-local ADVICE_STEP = 15     -- interligne des conseils
-local FOOTER = 50          -- pied : marge, bouton « Partir à l'aventure » (26), marge basse (12)
+-- Mise en page (docs/UI.md, « Fenêtres des modules ») : en-tête compact,
+-- bloc note (grand chiffre, tampon, barre), lignes en cartes, conseils, pied
+-- avec « Partir à l'aventure ».
+local WIDTH       = 480
+local ROW_HEIGHT  = 24     -- carte de 22 + 2 d'écart
+local ROW_CARD    = 22
+local NAME_WIDTH  = 128    -- colonne des noms de module
+local MAX_ADVICE  = 3
+local ADVICE_STEP = 18     -- interligne des conseils
+local SCORE_CARD  = 78     -- bloc note
+local SECTION     = 20     -- titre de section
+local GAP         = 14     -- entre deux blocs
+local ADVICE_PAD  = 10     -- marge haute et basse du bloc conseils
+local FOOTER      = 52     -- pied : bouton (28) centré
+local BUTTON_HEIGHT = 28
 local DETAIL_TITLE = 46   -- longueur max du texte de détail (évite le débordement)
 
 -- Coupe à `limit` octets sans jamais couper un caractère UTF-8 en deux (é, â…
@@ -36,98 +46,95 @@ local function VerdictText(self)
 end
 
 -- ---------------------------------------------------------------------------
--- Construction du panneau
+-- Construction de la fenêtre
 -- ---------------------------------------------------------------------------
 function ns:EnsureWindow()
 	if self.window then return self.window end
-	if not Theme or not Theme.CreatePanel then return nil end
+	if not Theme or not Theme.CreateDialog then return nil end
 
 	local rowCount = #(self.checks or {})
 	local height = self:WindowHeight(rowCount, false)
 
-	local frame = Theme.CreatePanel(UIParent, WIDTH, height, L.WIN_TITLE_DIAG, { name = "Ready2QuestDiagFrame", titleSize = 14 })
+	local frame = Theme.CreateDialog(UIParent, WIDTH, height, { name = "Ready2QuestDiagFrame",
+		title = L.WIN_TITLE_DIAG, footer = FOOTER })
 	if not frame then return nil end
 	ns:RestorePoint(frame, "diagPoint", { point = "CENTER", x = 0, y = 120 })
 
-	-- « Parti de Comté-de-l'Or · boîte aux lettres » : à droite du bandeau,
-	-- c'est le contexte de l'alerte (et l'endroit où repérer un village appris
-	-- à tort). Le sous-titre du bandeau sert à ça.
-	frame.subtitle:SetText("")
-	frame.subtitle:SetWidth(WIDTH - 214)   -- titre à gauche, flèche + croix à droite
-	frame.subtitle:SetJustifyH("RIGHT")
-	frame.subtitle:SetWordWrap(false)
+	-- « Parti de Comté-de-l'Or · boîte aux lettres » : le contexte de l'alerte
+	-- (et l'endroit où repérer un village appris à tort), en sous-titre
 	frame.departed = frame.subtitle
+	local pad, inner = frame.pad, frame.innerWidth
+	local top = frame.contentTop - GAP
 
-	local top = frame.contentTop
+	-- Bloc note : le chiffre en grand (F_DISPLAY), le verdict en tampon à
+	-- droite, la barre ambre dessous. C'est ce qu'on lit en premier.
+	frame.scoreCard = CreateFrame("Frame", nil, frame)
+	frame.scoreCard:SetSize(inner, SCORE_CARD)
+	frame.scoreCard:SetPoint("TOPLEFT", frame, "TOPLEFT", pad + 1, top)
+	frame.scoreCard.bg = Theme.Solid(frame.scoreCard, "BACKGROUND", Theme.ROW, 1)
+	frame.scoreCard.bg:SetAllPoints()
+	frame.scoreCard.border = Theme.Border(frame.scoreCard, Theme.EDGE_SOFT, 1)
 
-	-- Bloc note : le chiffre en grand, dans la police maison, et le verdict en
-	-- tampon à droite. C'est ce qu'on lit en premier.
-	frame.scoreValue = Theme.CreateTitle(frame, 34)
-	frame.scoreValue:SetPoint("TOPLEFT", frame, "TOPLEFT", 14, top - 6)
+	frame.scoreValue = Theme.Text(frame.scoreCard, Theme.F_DISPLAY, Theme.PARCHMENT)
+	frame.scoreValue:SetPoint("TOPLEFT", frame.scoreCard, "TOPLEFT", 16, -12)
+	frame.scoreValue:SetJustifyH("LEFT")
 
-	frame.scoreSuffix = frame:CreateFontString(nil, "OVERLAY", Theme.F_BODY)
+	frame.scoreSuffix = Theme.Text(frame.scoreCard, Theme.F_BODY, Theme.MUTED)
 	frame.scoreSuffix:SetPoint("BOTTOMLEFT", frame.scoreValue, "BOTTOMRIGHT", 6, 4)
-	frame.scoreSuffix:SetText(Theme.T_GREY .. "/ 100|r")
+	frame.scoreSuffix:SetText("/ 100")
 
-	frame.stamp = CreateFrame("Frame", nil, frame)
-	frame.stamp:SetSize(150, 24)
-	frame.stamp:SetPoint("TOPRIGHT", frame, "TOPRIGHT", -14, top - 12)
+	frame.stamp = CreateFrame("Frame", nil, frame.scoreCard)
+	frame.stamp:SetSize(140, 26)
+	frame.stamp:SetPoint("TOPRIGHT", frame.scoreCard, "TOPRIGHT", -16, -14)
+	frame.stamp.fill = Theme.Solid(frame.stamp, "BACKGROUND", Theme.GOLD, 0.10)
+	frame.stamp.fill:SetAllPoints()
 	frame.stamp.border = Theme.Border(frame.stamp, Theme.GOLD, 1)
-	frame.verdict = Theme.CreateTitle(frame.stamp, 12)
+	frame.verdict = Theme.Text(frame.stamp, Theme.F_LABEL, Theme.GOLD)
 	frame.verdict:SetPoint("CENTER", frame.stamp, "CENTER", 0, 0)
 	frame.verdict:SetText("")
 
-	frame.scoreBar = Theme.CreateBar(frame, WIDTH - 28, 5)
-	frame.scoreBar:SetPoint("TOPLEFT", frame, "TOPLEFT", 14, top - 46)
-
-	Theme.CreateDivider(frame, WIDTH - 28, top - 58)
+	frame.scoreBar = Theme.CreateBar(frame.scoreCard, inner - 32, 6)
+	frame.scoreBar:SetPoint("BOTTOMLEFT", frame.scoreCard, "BOTTOMLEFT", 16, 14)
 
 	-- Lignes de modules ------------------------------------------------------
 	-- Placées à chaque affichage (LayoutWindow) : les modules sans objet sont
 	-- masqués et les lignes en échec remontent en tête. Un losange porte le
 	-- statut : plein = à voir (ambre) ou en échec (rouge), au trait = OK. La
 	-- forme dit l'état autant que la couleur (lisible par un daltonien).
+	frame.checksHeader = Theme.CreateSection(frame, L.PANEL_PREPARATION)
+	frame.checksHeader:SetWidth(inner)
 	frame.rows = {}
-
 	for index = 1, rowCount do
-		local row = CreateFrame("Frame", nil, frame)
-		row:SetSize(WIDTH - 28, ROW_HEIGHT - 3)
-
-		row.status = Theme.CreateDiamond(row, 9, true)
-		row.status:SetPoint("LEFT", row, "LEFT", 2, 0)
-
-		row.name = row:CreateFontString(nil, "OVERLAY", Theme.F_BODY)
-		row.name:SetPoint("LEFT", row, "LEFT", 20, 0)
-		row.name:SetWidth(100)
-		row.name:SetJustifyH("LEFT")
-		row.name:SetWordWrap(false)
-
-		row.detail = row:CreateFontString(nil, "OVERLAY", Theme.F_BODY)
-		row.detail:SetPoint("LEFT", row, "LEFT", 128, 0)
-		row.detail:SetWidth(WIDTH - 28 - 128 - 4)
-		row.detail:SetJustifyH("LEFT")
-		row.detail:SetWordWrap(false)
-
+		local row = Theme.CreateListRow(frame, inner, ROW_CARD, { status = 9, detail = true })
+		row:SetIndex(index)
+		row.name = row.text
+		row.name:SetWidth(NAME_WIDTH)
+		row.detail:SetWidth(inner - row.textLeft - NAME_WIDTH - 12 - 12)
 		frame.rows[index] = row
 	end
 
-	-- Conseils ---------------------------------------------------------------
-	frame.adviceDivider = Theme.CreateDivider(frame, WIDTH - 28, 0)
-
-	frame.adviceHeader = frame:CreateFontString(nil, "OVERLAY", Theme.F_SMALL)
-	frame.adviceHeader:SetText(L.PANEL_ADVICE)
-	frame.adviceHeader:SetTextColor(Theme.GOLD_SOFT[1], Theme.GOLD_SOFT[2], Theme.GOLD_SOFT[3])
+	-- Conseils : un bloc à liseré ambre, puces en losange -------------------
+	frame.adviceHeader = Theme.CreateSection(frame, L.PANEL_ADVICE)
+	frame.adviceHeader:SetWidth(inner)
+	frame.adviceBlock = CreateFrame("Frame", nil, frame)
+	frame.adviceBlock:SetSize(inner, MAX_ADVICE * ADVICE_STEP + 2 * ADVICE_PAD)
+	frame.adviceBlock.bg = Theme.Solid(frame.adviceBlock, "BACKGROUND", Theme.ROW, 1)
+	frame.adviceBlock.bg:SetAllPoints()
+	frame.adviceBlock.bar = Theme.Solid(frame.adviceBlock, "ARTWORK", Theme.GOLD, 1)
+	frame.adviceBlock.bar:SetPoint("TOPLEFT", frame.adviceBlock, "TOPLEFT", 0, 0)
+	frame.adviceBlock.bar:SetPoint("BOTTOMLEFT", frame.adviceBlock, "BOTTOMLEFT", 0, 0)
+	frame.adviceBlock.bar:SetWidth(2)
 
 	frame.adviceLines, frame.adviceBullets = {}, {}
 	for index = 1, MAX_ADVICE do
-		local line = frame:CreateFontString(nil, "OVERLAY", Theme.F_BODY)
-		line:SetWidth(WIDTH - 40)
+		-- dans le bloc (au-dessus de son fond), placées depuis la fenêtre
+		local line = Theme.Text(frame.adviceBlock, Theme.F_BODY, Theme.TEXT)
+		line:SetWidth(inner - 34)
 		line:SetJustifyH("LEFT")
+		if line.SetWordWrap then line:SetWordWrap(false) end
 		line:SetText("")
-		line:SetTextColor(0.81, 0.78, 0.72)
 		frame.adviceLines[index] = line
-		local bullet = Theme.CreateDiamond(frame, 6, false)
-		bullet:SetTexture(Theme.DIAMOND)
+		local bullet = Theme.CreateDiamond(frame.adviceBlock, 6, false)
 		bullet:SetVertexColor(Theme.GOLD[1], Theme.GOLD[2], Theme.GOLD[3], 1)
 		frame.adviceBullets[index] = bullet
 	end
@@ -136,71 +143,32 @@ function ns:EnsureWindow()
 	frame:SetScript("OnUpdate", function(f) ns:AnimateScore(f) end)
 	self:LayoutWindow(frame, rowCount, false)
 
-	-- Pied (v1.25.0) : un seul appel, « Partir à l'aventure », en bleu de nuit.
-	-- Les réglages sont déjà au clic droit sur l'icône de la minicarte, et le
-	-- check se relance d'une flèche discrète dans le bandeau.
-	local BUTTON_HEIGHT = 26
-	local PADDING       = 28
-	local function LabelWidth(label)
-		local probe = frame:CreateFontString(nil, "OVERLAY", Theme.F_SMALL)
-		probe:SetText(label or "")
-		local w = probe:GetStringWidth()
-		probe:SetText("")
-		if not w or w <= 0 then
-			local len = utf8 and utf8.len(label or "") or #(label or "")
-			w = len * 7
-		end
-		return w + PADDING
-	end
-
-	local adventureWidth = math.max(200, LabelWidth(L.DIAG_ADVENTURE))
-	frame.adventureButton = Theme.CreateButton(frame, adventureWidth, BUTTON_HEIGHT, L.DIAG_ADVENTURE, function()
+	-- Pied (v1.25.0) : un seul appel, « Partir à l'aventure », en bleu de nuit,
+	-- centré. Les réglages sont déjà au clic droit sur l'icône de la minicarte,
+	-- et le check se relance de la flèche de l'en-tête.
+	local adventureWidth = math.max(200, Theme.ButtonWidth(frame, L.DIAG_ADVENTURE))
+	frame.adventureButton = Theme.CreateButton(frame.footer, adventureWidth, BUTTON_HEIGHT, L.DIAG_ADVENTURE, function()
 		frame:Hide()
 	end, "adventure")
-	frame.adventureButton:SetPoint("BOTTOM", frame, "BOTTOM", 0, 12)
+	frame.adventureButton:SetPoint("BOTTOM", frame, "BOTTOM", 0, (FOOTER - BUTTON_HEIGHT) / 2)
 
-	-- Flèche de rafraîchissement : à gauche de la croix du bandeau. Elle relance
-	-- le check et fait un tour sur elle-même (si le client sait animer une rotation).
-	frame.refreshButton = CreateFrame("Button", nil, frame)
-	frame.refreshButton:SetSize(16, 16)
-	frame.refreshButton:SetPoint("TOPRIGHT", frame, "TOPRIGHT", -34, -10)
-	frame.refreshButton.icon = frame.refreshButton:CreateTexture(nil, "OVERLAY")
-	frame.refreshButton.icon:SetTexture(Theme.REFRESH)
-	frame.refreshButton.icon:SetAllPoints()
-	-- au repos : désaturée et estompée (discrète) ; au survol : ses couleurs
-	local function RefreshRest(icon)
-		if icon.SetDesaturated then icon:SetDesaturated(true) end
-		icon:SetAlpha(0.6)
-	end
-	RefreshRest(frame.refreshButton.icon)
-	frame.refreshButton:SetScript("OnEnter", function(btn)
-		if btn.icon.SetDesaturated then btn.icon:SetDesaturated(false) end
-		btn.icon:SetAlpha(1)
-		if type(GameTooltip) == "table" and GameTooltip.SetOwner then
-			GameTooltip:SetOwner(btn, "ANCHOR_BOTTOM")
-			GameTooltip:AddLine(L.DIAG_REFRESH_TIP, 1, 1, 1)
-			GameTooltip:Show()
-		end
-	end)
-	frame.refreshButton:SetScript("OnLeave", function(btn)
-		RefreshRest(btn.icon)
-		if type(GameTooltip) == "table" and GameTooltip.Hide then GameTooltip:Hide() end
-	end)
-	frame.refreshButton:SetScript("OnClick", function(btn)
+	-- Flèche de rafraîchissement : à gauche du [×]. Elle relance le check et
+	-- fait un tour sur elle-même (si le client sait animer une rotation).
+	frame.refreshButton = Theme.CreateIconButton(frame, 22, Theme.REFRESH, function(btn)
 		ns:SpinRefresh(btn)
 		ns:RunChecklist("manual")
-	end)
-	-- le texte « Parti de … » se décale pour laisser la place à la flèche
-	if frame.subtitle then
-		frame.subtitle:ClearAllPoints()
-		frame.subtitle:SetPoint("RIGHT", frame, "TOPRIGHT", -58, -18)
+	end, L.DIAG_REFRESH_TIP)
+	frame.refreshButton:SetPoint("RIGHT", frame.close, "LEFT", -8, 0)
+	if frame.refreshButton.SetFrameLevel and frame.close.GetFrameLevel then
+		frame.refreshButton:SetFrameLevel(tonumber(frame.close:GetFrameLevel()) or 20)
 	end
 
 	ns.DIAG_LAYOUT = {
 		width = WIDTH,
 		adventureWidth = adventureWidth,
-		padding = PADDING,
+		padding = Theme.BUTTON_PAD,
 		height = BUTTON_HEIGHT,
+		footer = FOOTER,
 	}
 
 	self.window = frame
@@ -225,39 +193,46 @@ function ns:SpinRefresh(button)
 end
 
 -- ---------------------------------------------------------------------------
--- Mise en page variable : nombre de lignes visibles, ligne « Parti de »
+-- Mise en page variable : nombre de lignes visibles. Le « Parti de » est
+-- dans le sous-titre de l'en-tête : `hasDeparted` ne change plus rien
+-- (paramètre gardé pour les appels existants).
 -- ---------------------------------------------------------------------------
-local DEPARTED_HEIGHT = 14
+local HEADER = Theme and Theme.HEADER_COMPACT_HEIGHT or 64
 
-function ns:WindowHeight(visible, hasDeparted)
-	return 40 + 52 + 12 + (hasDeparted and DEPARTED_HEIGHT or 0) + (visible * ROW_HEIGHT)
-		+ 12 + 16 + (MAX_ADVICE * ADVICE_STEP) + FOOTER
+function ns:WindowHeight(visible)
+	return HEADER + 1 + GAP + SCORE_CARD + GAP + SECTION + 4 + (visible * ROW_HEIGHT)
+		+ GAP + SECTION + 4 + (MAX_ADVICE * ADVICE_STEP + 2 * ADVICE_PAD) + GAP + FOOTER
 end
 
-function ns:LayoutWindow(frame, visible, hasDeparted)
-	local top = frame.contentTop or -36
-	local rowsTop = top - 66 - (hasDeparted and DEPARTED_HEIGHT or 0)
+function ns:LayoutWindow(frame, visible)
+	local pad = (frame.pad or 20) + 1
+	local sectionTop = -(HEADER + 1) - GAP - SCORE_CARD - GAP
+	frame.checksHeader:ClearAllPoints()
+	frame.checksHeader:SetPoint("TOPLEFT", frame, "TOPLEFT", pad, sectionTop)
+	local rowsTop = sectionTop - SECTION - 4
 	for index, row in ipairs(frame.rows or {}) do
 		row:ClearAllPoints()
-		row:SetPoint("TOPLEFT", frame, "TOPLEFT", 14, rowsTop - ((index - 1) * ROW_HEIGHT))
+		row:SetPoint("TOPLEFT", frame, "TOPLEFT", pad, rowsTop - ((index - 1) * ROW_HEIGHT))
 		if index <= visible then row:Show() else row:Hide() end
 	end
 
-	local adviceTop = rowsTop - (visible * ROW_HEIGHT) - 10
-	frame.adviceDivider:ClearAllPoints()
-	frame.adviceDivider:SetPoint("TOPLEFT", frame, "TOPLEFT", 12, adviceTop)
+	local adviceTop = rowsTop - (visible * ROW_HEIGHT) - GAP + (ROW_HEIGHT - ROW_CARD)
 	frame.adviceHeader:ClearAllPoints()
-	frame.adviceHeader:SetPoint("TOPLEFT", frame, "TOPLEFT", 14, adviceTop - 12)
+	frame.adviceHeader:SetPoint("TOPLEFT", frame, "TOPLEFT", pad, adviceTop)
+	local blockTop = adviceTop - SECTION - 4
+	frame.adviceBlock:ClearAllPoints()
+	frame.adviceBlock:SetPoint("TOPLEFT", frame, "TOPLEFT", pad, blockTop)
 	for index, line in ipairs(frame.adviceLines or {}) do
+		local y = blockTop - ADVICE_PAD - ((index - 1) * ADVICE_STEP)
 		line:ClearAllPoints()
-		line:SetPoint("TOPLEFT", frame, "TOPLEFT", 26, adviceTop - 26 - ((index - 1) * ADVICE_STEP))
+		line:SetPoint("TOPLEFT", frame, "TOPLEFT", pad + 26, y)
 		local bullet = frame.adviceBullets and frame.adviceBullets[index]
 		if bullet then
 			bullet:ClearAllPoints()
-			bullet:SetPoint("TOPLEFT", frame, "TOPLEFT", 16, adviceTop - 29 - ((index - 1) * ADVICE_STEP))
+			bullet:SetPoint("TOPLEFT", frame, "TOPLEFT", pad + 12, y - 4)
 		end
 	end
-	frame:SetHeight(self:WindowHeight(visible, hasDeparted))
+	frame:SetHeight(self:WindowHeight(visible))
 	frame.visibleRows = visible
 end
 
@@ -310,12 +285,16 @@ function ns:ShowWindow(results)
 	frame.animFrom, frame.animTo, frame.animStart = 0, score, ns.Now()
 
 	if frame.verdict then
-		frame.verdict:SetText(self:ScoreLabel())
+		local label = self:ScoreLabel()
+		frame.verdict:SetText(label)
 		frame.verdict:SetTextColor(sr, sg, sb)
 		frame.stamp.border:SetColor(sr, sg, sb, 1)
+		frame.stamp.fill:SetVertexColor(sr, sg, sb, 0.10)
+		frame.stamp:SetWidth(math.max(120, math.ceil(Theme.TextWidth(frame.stamp, label, Theme.F_LABEL) + 32)))
 	end
 
-	frame.departed:SetText(self:DepartedShort() or "")
+	-- check manuel : pas de « Parti de », le sous-titre dit ce qu'est la fenêtre
+	frame.departed:SetText(self:DepartedShort() or L.PANEL_SUBTITLE)
 	local ordered = self:DisplayOrder(results)
 	self:LayoutWindow(frame, #ordered, false)
 
@@ -324,36 +303,25 @@ function ns:ShowWindow(results)
 		if result and result.disabled then
 			-- Module coupé par le joueur : grisé, en bas, hors calcul de la note
 			row.name:SetText(result.label)
-			row.name:SetTextColor(0.42, 0.42, 0.42)
-			row.status:SetTexture(Theme.DIAMOND_LINE)
-			row.status:SetVertexColor(0.35, 0.37, 0.40, 1)
-			row.status.state = "off"
-			row.detail:SetText(Theme.T_GREY .. tostring(result.detail or L.MODULE_OFF) .. "|r")
+			row.name:SetTextColor(Theme.MUTED[1], Theme.MUTED[2], Theme.MUTED[3])
+			Theme.SetStatus(row.status, "off")
+			row.detail:SetText(tostring(result.detail or L.MODULE_OFF))
+			row.detail:SetTextColor(Theme.MUTED[1], Theme.MUTED[2], Theme.MUTED[3])
 		elseif result then
 			row.name:SetText(result.label)
 			row.name:SetTextColor(Theme.TEXT[1], Theme.TEXT[2], Theme.TEXT[3])
 			row.detail:SetText(Truncate(result.detail, DETAIL_TITLE))
 
 			if result.ok or result.info then
-				local c = result.info and Theme.BLUE or Theme.GREEN
-				row.status:SetTexture(Theme.DIAMOND_LINE)
-				row.status:SetVertexColor(c[1], c[2], c[3], 1)
-				row.status.state = result.info and "info" or "ok"
-				row.detail:SetTextColor(0.55, 0.57, 0.59)
+				Theme.SetStatus(row.status, result.info and "info" or "ok")
+				row.detail:SetTextColor(Theme.MUTED_LIGHT[1], Theme.MUTED_LIGHT[2], Theme.MUTED_LIGHT[3])
 			else
 				-- rouge = échec qui pèse (poids >= 10 : vivres, sacs, durabilité,
 				-- réactifs…). Un petit module (gris, quêtes) reste ambre : 2 objets
 				-- gris en rouge sous un « PRÊT » vert se contredisaient (vu en jeu).
 				local severe = (result.score or 0) < 55 and (result.weight or 0) >= 10
-				local c = severe and Theme.RED or Theme.ORANGE
-				row.status:SetTexture(Theme.DIAMOND)
-				row.status:SetVertexColor(c[1], c[2], c[3], 1)
-				row.status.state = severe and "bad" or "warn"
-				if severe then
-					row.detail:SetTextColor(0.94, 0.64, 0.59)
-				else
-					row.detail:SetTextColor(0.94, 0.78, 0.55)
-				end
+				local c = Theme.SetStatus(row.status, severe and "bad" or "warn")
+				row.detail:SetTextColor(c[1], c[2], c[3])
 			end
 		else
 			row.name:SetText("")

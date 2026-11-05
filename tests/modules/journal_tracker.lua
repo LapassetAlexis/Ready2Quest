@@ -199,8 +199,10 @@ do
 		"Lanterne 18/25 villages | Atteins le niveau 30 27/30 | Feu follet — donjons 1/2 | Villages de Les Tarides 1/3",
 		K.Lines())
 	local line, second = tracker.lines[1], tracker.lines[2]
-	Check("[TRK] vedette : fond, filet ambre, losange plein, grande barre", line.featured and line.bg and line.accent
-		and line.diamond.texture == NS.Theme.DIAMOND and line.bar.height == 5
+	Check("[TRK] vedette : bandeau du thème (fond WINDOW, liseré ambre), losange plein, grande barre", line.featured
+		and line.chrome == "toast" and line.bg.vertex[1] == NS.Theme.WINDOW[1] and line.accent:IsShown()
+		and line.accent.vertex[1] == NS.Theme.GOLD[1] and line.diamond.texture == NS.Theme.DIAMOND
+		and line.bar.height > second.bar.height
 		and math.abs(line.bar.ratio - 18 / 25) < 1e-6, line.bar and line.bar.ratio)
 	Check("[TRK] secondaires : losange en trait, mini-barre, progression grisée", not second.featured
 		and second.diamond.texture == NS.Theme.DIAMOND_LINE and second.bar.height == 3
@@ -474,7 +476,7 @@ do
 	Check("[TRK] réglage « Masquer en combat »", rows.journalTrackerCombat and rows.journalTrackerCombat.label.text == "Masquer en combat")
 	Check("[TRK] action « Réinitialiser la position du suivi »", rows.journalTrackerReset
 		and rows.journalTrackerReset.label.text == "Réinitialiser la position du suivi")
-	Check("[TRK] la page tient dans le panneau", page.contentBottom >= NS.OPT_LAYOUT.contentLimit, page.contentBottom)
+	Check("[TRK] la page se voit en entier (défilement)", #NS:OptionsUnreachable(page.id) == 0, table.concat(NS:OptionsUnreachable(page.id), ", "))
 	rows.journalTracker:Click()
 	Check("[TRK] interrupteur coupé : suivi caché tout de suite", NS:DB().journalTracker == false and not tracker:IsShown())
 	rows.journalTracker:Click()
@@ -575,9 +577,10 @@ do
 	local page = #comp.cards
 	Check("[WIN] de quoi défiler", rows > page and not comp.up:IsShown() and comp.down:IsShown(), rows)
 	f.scripts.OnMouseWheel(f, -1)
-	Check("[WIN] molette : une rangée de fiches plus bas", f.offset == 4 and comp.cards[1].item == f.rows[5], f.offset)
+	local cols = NS.JOURNAL_LAYOUT.cardCols
+	Check("[WIN] molette : une rangée de fiches plus bas", f.offset == cols and comp.cards[1].item == f.rows[cols + 1], f.offset)
 	for _ = 1, 100 do NS:ScrollJournal(-1) end
-	local last = math.ceil((rows - page) / 4) * 4
+	local last = math.ceil((rows - page) / cols) * cols
 	Check("[WIN] butée en bas, position affichée", f.offset == last and not comp.down:IsShown()
 		and comp.position.text == string.format("%d-%d / %d", last + 1, rows, rows), comp.position.text)
 	comp.tabs.explore:Click()
@@ -714,7 +717,8 @@ do
 		end
 		Check("[WIN] conseils des envies en français et en anglais", #missing == 0, table.concat(missing, ", "))
 	end
-		Check("[WIN] Évolution : comment ça marche (3 lignes)", evo.howTitle.text == "Comment ça marche"
+		Check("[WIN] Évolution : comment ça marche (3 lignes)", evo.howTitle.raw == "Comment ça marche"
+		and evo.howTitle.label.text == "COMMENT ÇA MARCHE"
 		and evo.how[2].text:find("70", 1, true) and evo.how[3].text:find("100 %", 1, true) and not evo.how[3].text:find("%%", 1, true), evo.how[3].text)
 	Check("[WIN] Évolution : collection", evo.collection.text:find("Collection : ", 1, true), evo.collection.text)
 	Check("[WIN] Évolution : parcours (capitales 1/6)", evo.road.text:find("1/6 capitales", 1, true), evo.road.text)

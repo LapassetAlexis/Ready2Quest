@@ -26,12 +26,22 @@ end
 
 Mock.world = {}
 
-local function NewRegion(kind, name)
+-- Chaque région garde aussi de quoi la dessiner hors-jeu (tests/snapshot.lua) :
+-- parent (mockParent, mockChildren), ordre de création (mockId), couche
+-- (drawLayer, subLevel), taille posée ou non (widthSet, heightSet), Hide
+-- explicite (mockHidden : le client montre une région par défaut).
+Mock.serial = 0
+local function NewRegion(kind, name, parent)
+	Mock.serial = Mock.serial + 1
 	local region = {
 		kind = kind, name = name, events = {}, text = "", shown = false,
 		scripts = {}, width = 100, height = 100, vertex = { 1, 1, 1 },
-		texture = nil, points = {}, level = 1,
+		texture = nil, points = {}, level = 1, mockId = Mock.serial, mockChildren = {},
 	}
+	if parent then
+		region.mockParent = parent
+		if type(parent) == "table" and parent.mockChildren then table.insert(parent.mockChildren, region) end
+	end
 	function region:RegisterEvent(event)
 		if Mock.world.unknownEvents and Mock.world.unknownEvents[event] then
 			error("Attempt to register unknown event \"" .. tostring(event) .. "\"")
@@ -53,9 +63,10 @@ local function NewRegion(kind, name)
 		self.hooks = self.hooks or {}
 		self.hooks[kind] = fn
 	end
-	function region:CreateFontString(_, _, fontObject)
-		local fontString = NewRegion("FontString")
+	function region:CreateFontString(_, layer, fontObject)
+		local fontString = NewRegion("FontString", nil, self)
 		fontString.fontObject = fontObject
+		fontString.drawLayer = layer
 		-- approximation : 6.4 px par caractere pour F_SMALL. Suffisant pour
 		-- verifier qu'un libelle tient dans son bouton, ce qui est le point.
 		function fontString:GetStringWidth()
@@ -63,14 +74,40 @@ local function NewRegion(kind, name)
 		end
 		return fontString
 	end
-	function region:CreateTexture() return NewRegion("Texture") end
-	function region:SetSize(w, h) self.width, self.height = w, h end
-	function region:SetWidth(w) self.width = w end
-	function region:SetHeight(h) self.height = h end
+	function region:CreateTexture(_, layer, _, subLevel)
+		local texture = NewRegion("Texture", nil, self)
+		texture.drawLayer, texture.subLevel = layer, subLevel
+		return texture
+	end
+	function region:SetDrawLayer(layer, subLevel) self.drawLayer, self.subLevel = layer, subLevel end
+	function region:GetDrawLayer() return self.drawLayer, self.subLevel end
+	function region:GetParent() return self.mockParent end
+	function region:SetParent(parent)
+		local old = self.mockParent
+		if type(old) == "table" and old.mockChildren then
+			for index, child in ipairs(old.mockChildren) do
+				if child == self then table.remove(old.mockChildren, index); break end
+			end
+		end
+		self.mockParent = parent
+		if type(parent) == "table" and parent.mockChildren then table.insert(parent.mockChildren, self) end
+	end
+	function region:SetSize(w, h) self.width, self.height = w, h; self.widthSet, self.heightSet = true, true end
+	function region:SetWidth(w) self.width = w; self.widthSet = true end
+	function region:SetHeight(h) self.height = h; self.heightSet = true end
 	function region:GetWidth() return self.width end
 	function region:GetHeight() return self.height end
-	function region:SetAllPoints() end
-	function region:SetTexture(path) self.texture = path end
+	-- rangé à part de points/lastPoint : GetPoint reste celui de SetPoint
+	function region:SetAllPoints(relativeTo) self.allPoints = relativeTo or true end
+	function region:SetTexture(path) self.texture = path; self.colorTexture = nil end
+	function region:SetColorTexture(r, g, b, a)
+		self.texture = "Interface\\Buttons\\WHITE8X8"
+		self.colorTexture = { r, g, b, a or 1 }
+		-- simplification : la couleur posée se lit aussi dans vertex
+		self.vertex = { r, g, b, a or 1 }
+	end
+	function region:SetGradient(orientation, minColor, maxColor) self.gradient = { orientation, minColor, maxColor } end
+	-- (pas de SetGradientAlpha : l'ancienne API, absente de Forever ; testée à part)
 	function region:SetAtlas(path) self.atlas = path end
 	function region:SetVertexColor(r, g, b, a) self.vertex = { r, g, b, a } end
 	function region:SetAlpha(value) self.alpha = value end
@@ -86,12 +123,13 @@ local function NewRegion(kind, name)
 	function region:SetBackdropBorderColor(r, g, b, a) self.backdropBorderColor = { r, g, b, a } end
 	function region:SetFixedFrameStrata() end
 	function region:SetFixedFrameLevel() end
-	function region:SetTexCoord() end
-	function region:SetWordWrap() end
-	function region:SetFrameLevel(level) self.level = level end
+	-- coordonnées de texture : gardées pour l'aperçu (une icône retournée)
+	function region:SetTexCoord(...) self.texCoord = { ... } end
+	function region:SetWordWrap(wrap) self.wordWrap = wrap end
+	function region:SetFrameLevel(level) self.level = level; self.levelSet = true end
 	function region:GetFrameLevel() return self.level end
 	function region:SetClampedToScreen() end
-	function region:ClearAllPoints() self.points = {} end
+	function region:ClearAllPoints() self.points = {}; self.allPoints = nil end
 	function region:GetPoint()
 		local last = self.lastPoint
 		if last then return last.point, last.relTo, last.relPoint, last.x, last.y end
@@ -127,9 +165,18 @@ local function NewRegion(kind, name)
 	function region:GetCenter() return 500, 500 end
 	function region:GetEffectiveScale() return 1 end
 	function region:SetHitRectInsets() end
-	function region:SetJustifyH() end
-	function region:Show() self.shown = true end
-	function region:Hide() self.shown = false end
+	function region:SetJustifyH(value) self.justifyH = value end
+	function region:SetJustifyV(value) self.justifyV = value end
+	function region:EnableMouseWheel(value) self.mouseWheel = value end
+	-- champ de saisie (EditBox)
+	function region:SetAutoFocus(value) self.autoFocus = value end
+	function region:SetTextInsets(l, r, t, b) self.textInsets = { l, r, t, b } end
+	function region:SetMaxLetters(value) self.maxLetters = value end
+	function region:SetFocus() self.focused = true end
+	function region:ClearFocus() self.focused = false end
+	function region:HasFocus() return self.focused == true end
+	function region:Show() self.shown = true; self.mockHidden = false end
+	function region:Hide() self.shown = false; self.mockHidden = true end
 	function region:IsShown() return self.shown end
 	function region:CreateAnimationGroup()
 		local group = { plays = 0, animations = {} }
@@ -148,6 +195,11 @@ local function NewRegion(kind, name)
 	end
 	function region:SetFont(path, size, flags)
 		if Mock.world.fontRefused then return false end
+		-- client muet : SetFont ne rend rien, et un fichier refusé n'est pas posé
+		if Mock.world.fontSilent then
+			if Mock.world.fontSilent ~= "refuse" then self.font = { path = path, size = size, flags = flags } end
+			return nil
+		end
 		self.font = { path = path, size = size, flags = flags }
 		return true
 	end
@@ -160,7 +212,16 @@ local function NewRegion(kind, name)
 		local c = self.textColor or { 1, 1, 1, 1 }
 		return c[1], c[2], c[3], c[4]
 	end
-	function region:SetFontObject() end
+	function region:SetFontObject(font) self.fontObject = font end
+	-- objet de police (CreateFont) : copie d'un autre objet
+	function region:CopyFontObject(font)
+		if font == nil then error("CopyFontObject: objet de police attendu") end
+		self.copiedFrom = font
+	end
+	function region:GetFont()
+		if self.font then return self.font.path, self.font.size, self.font.flags end
+		return nil
+	end
 	function region:SetNormalFontObject() end
 	function region:SetDisabledFontObject() end
 	Mock.frames[#Mock.frames + 1] = region
@@ -174,7 +235,29 @@ _G.CreateFrame = function(kind, name, parent, template)
 	if template == "BackdropTemplate" and Mock.world.noBackdropTemplate then
 		error("Unknown frame template: " .. tostring(template))
 	end
-	return NewRegion(kind, name)
+	return NewRegion(kind, name, parent)
+end
+-- Objets de police : CreateFont(nom) les range en global, comme le client.
+-- Mock.world.noCreateFont simule un client sans CreateFont.
+_G.CreateFont = function(name)
+	if Mock.world and Mock.world.noCreateFont then error("CreateFont indisponible") end
+	local font = NewRegion("Font", name)
+	if name then _G[name] = font end
+	return font
+end
+-- polices du jeu (repli des objets du socle) : chemin et taille du client
+for fontName, size in pairs({ GameFontNormalHuge = 20, GameFontNormalLarge = 16, GameFontHighlight = 12,
+	GameFontHighlightSmall = 10, GameFontNormalSmall = 10, GameFontNormal = 12, NumberFontNormal = 14 }) do
+	local font = _G.CreateFont(fontName)
+	font.font = { path = "Fonts\\FRIZQT__.TTF", size = size, flags = "" }
+end
+-- CreateColor n'est PAS posé par défaut : des tests vérifient le repli d'un
+-- client sans (companion_cosmetics). Mock.CreateColor sert à ceux qui le veulent
+-- (tests/snapshot.lua, tests/modules/theme_v2.lua).
+function Mock.CreateColor(r, g, b, a)
+	local color = { r = r, g = g, b = b, a = a or 1 }
+	function color:GetRGBA() return self.r, self.g, self.b, self.a end
+	return color
 end
 _G.UIParent = NewRegion("Frame", "UIParent")
 _G.Minimap = NewRegion("Frame", "Minimap")
@@ -297,9 +380,22 @@ _G.GameTooltip = NewRegion("GameTooltip", "GameTooltip")
 function GameTooltip:GetItem() return nil, Mock.world.hoveredLink end
 function GameTooltip:GetRight() return 0 end
 function GameTooltip:SetOwner() end
-function GameTooltip:ClearLines() self.lines = {} end
-function GameTooltip:AddLine(text) self.lines = self.lines or {}; self.lines[#self.lines + 1] = tostring(text) end
-function GameTooltip:AddDoubleLine(a, b) self:AddLine(tostring(a) .. " " .. tostring(b)) end
+function GameTooltip:ClearLines() self.lines, self.styled = {}, {} end
+-- .lines : le texte seul (ce que lisent les tests) ; .styled : texte et
+-- couleurs, pour l'aperçu hors-jeu (tests/snapshot.lua, Snap.Tooltip)
+function GameTooltip:AddLine(text, r, g, b, wrap)
+	self.lines = self.lines or {}
+	self.lines[#self.lines + 1] = tostring(text)
+	self.styled = self.styled or {}
+	self.styled[#self.styled + 1] = { text = tostring(text), color = r and { r, g, b }, wrap = wrap }
+end
+function GameTooltip:AddDoubleLine(a, b, lr, lg, lb, rr, rg, rb)
+	self.lines = self.lines or {}
+	self.lines[#self.lines + 1] = tostring(a) .. " " .. tostring(b)
+	self.styled = self.styled or {}
+	self.styled[#self.styled + 1] = { text = tostring(a), color = lr and { lr, lg, lb },
+		right = tostring(b), rightColor = rr and { rr, rg, rb } }
+end
 function GameTooltip:Show() self.shown = true end
 function GameTooltip:Hide() self.shown = false end
 
@@ -620,6 +716,28 @@ local function ResetWorld()
 	NS.wasAtCamp = nil
 	NS.departed = nil
 	if NS.InvalidateReagents then NS:InvalidateReagents() end
+end
+
+----------------------------------------------------------------------------
+-- 3 bis. Aperçu hors-jeu (tests/snapshot.py) : l'addon est chargé, on rend
+-- une scène de tests/snapshot.lua en HTML et on s'arrête là, sans les tests.
+----------------------------------------------------------------------------
+if SNAPSHOT_SCENE then
+	local function LoadModules()
+		if Mock.modulesLoaded then return end
+		Mock.modulesLoaded = true
+		Mock.world.build = nil
+		NS:DetectCapabilities()
+		for _, file in ipairs(Mock.moduleFiles) do LoadAddonFile(file) end
+		Mock:Fire("ADDON_LOADED", "Ready2Quest")
+		Mock:Fire("ADDON_LOADED", "QuestCompanion")
+	end
+	ResetWorld()
+	_G.T = { Check = Check, Say = Say, ResetWorld = ResetWorld, NS = NS, QNS = QNS, Mock = Mock, LoadModules = LoadModules }
+	local Snap = assert(loadfile(ROOT .. "/tests/snapshot.lua"))()
+	_G.SNAPSHOT_RESULT = Snap.RunScene(SNAPSHOT_SCENE, SNAPSHOT_OUT, _G.T)
+	_G.TEST_OUTPUT, _G.TEST_FAILED = _G.SNAPSHOT_RESULT, 0
+	return
 end
 
 ----------------------------------------------------------------------------
@@ -1186,9 +1304,9 @@ for _, row in ipairs(NS.optionsFrame.rows) do
 end
 Check("ligne de seuil trouvée", numberRow ~= nil)
 local numberBefore = NS:DB().bagFreeThreshold
-numberRow.plus:Click()
+numberRow:Step(1)
 Check("bouton + incrémente", NS:DB().bagFreeThreshold == numberBefore + 1, NS:DB().bagFreeThreshold)
-numberRow.minus:Click()
+numberRow:Step(-1)
 Check("bouton - décrémente", NS:DB().bagFreeThreshold == numberBefore, NS:DB().bagFreeThreshold)
 
 NS:RefreshOptions()
@@ -1370,8 +1488,12 @@ do
 	Check("pied : bouton centré", point == "BOTTOM", point)
 	local c = adv.text.textColor or {}
 	Check("pied : texte clair, lisible sur le bleu", (c[1] or 0) > 0.9 and (c[2] or 0) > 0.9 and (c[3] or 0) > 0.9)
-	-- boutons ambre pleins (Fermer des réglages…) : encre sombre sans ombre noire
-	local close = NS:EnsureOptions().closeButton
+	-- boutons ambre pleins : encre sombre sans ombre noire. « Terminé » des
+	-- réglages est en contour ambre (docs/UI.md, pied)
+	local done = NS:EnsureOptions().closeButton
+	local amber = done.text.textColor or {}
+	Check("réglages : « Terminé » en contour ambre", done.style == "accent" and (amber[1] or 0) > 0.85 and (amber[3] or 1) < 0.35)
+	local close = NS.Theme.CreateButton(win, 100, 28, "Fermer", nil, "primary")
 	local ink, off, shadow = close.text.textColor or {}, close.text.shadowOffset or {}, close.text.shadow or {}
 	Check("boutons ambre : texte sombre", close.style == "primary" and (ink[1] or 1) < 0.2 and (ink[3] or 1) < 0.2)
 	Check("boutons ambre : sans l'ombre noire de la police (illisible)", off[1] == 0 and off[2] == 0
@@ -1401,7 +1523,11 @@ do
 	refresh:Click()
 	Check("flèche : relance le check", NS.lastResults ~= nil and win:IsShown() == true)
 	Check("flèche : un tour sur elle-même", refresh.spin ~= nil and refresh.spin.plays >= 1)
-	Check("flèche : ne touche pas le « Parti de »", select(4, win.subtitle:GetPoint()) <= -58)
+	-- le sous-titre (« Parti de … ») s'arrête avant la flèche, posée à gauche du [×]
+	local refreshLeft = diag.width - 16 - win.close:GetWidth() - 8 - refresh:GetWidth()
+	Check("flèche : ne touche pas le « Parti de »", 1 + win.header.textLeft + win.subtitle:GetWidth() <= refreshLeft,
+		(1 + win.header.textLeft + win.subtitle:GetWidth()) .. " <= " .. refreshLeft)
+	Check("flèche : à gauche du [×]", select(2, refresh:GetPoint()) == win.close and select(1, refresh:GetPoint()) == "RIGHT")
 end
 
 -- 4.31 Bouton sans template Blizzard
@@ -1528,7 +1654,7 @@ ResetWorld()
 Say("\n== bootstrap et diagnostic ==")
 ResetWorld()
 Check("commande enregistrée par le bootstrap", type(SlashCmdList["SACETDEPART"]) == "function")
-Check("version exposée", NS.version == "1.27.1", NS.version)
+Check("version exposée", NS.version == "1.28.0", NS.version)
 
 local missingMods = {}
 for _, name in ipairs({ "Bootstrap", "Locales", "Compat", "Theme", "Core", "Buffs", "Reagents",
@@ -1549,7 +1675,7 @@ NS.HandleCommand = savedHandle
 Mock:Reset()
 NS:HandleCommand("diag")
 Check("/sd diag liste les modules", Mock:Output():find("modules :") ~= nil, Mock:Output())
-Check("/sd diag affiche la version", Mock:Output():find("1%.27%.1") ~= nil, Mock:Output())
+Check("/sd diag affiche la version", Mock:Output():find("1%.28%.0") ~= nil, Mock:Output())
 
 -- une erreur est enregistrée et affichée
 Mock:Reset()
@@ -1964,7 +2090,14 @@ NS:OnEquipmentChanged()
 Check("toast affiché", NS.toastFrame ~= nil and NS.toastFrame:IsShown() == true)
 
 -- structure de la référence : titre espacé, règle, lignes valeur + libellé
-Check("aucun fond", NS.toastFrame.bg == nil)
+-- refonte 2026-11 : bandeau v2 (fond WINDOW, filet EDGE, liseré ambre), autour du
+-- contenu : il déborde du cadre (hauteur 10) jusque sous la ligne
+local toastScale = NS.toastFrame.rows[1].icon:GetWidth() / NS.TOAST_ICON
+Check("fond de bandeau sous le contenu", NS.toastFrame.chrome == "toast" and NS.toastFrame.bg
+	and NS.toastFrame.bg.vertex[1] == NS.Theme.WINDOW[1] and NS.toastFrame.border ~= nil
+	and NS.toastFrame.bg.points[1].y > 0
+	and NS.toastFrame.bg.points[2].y <= (NS.TOAST_ROW_TOP - 14) * toastScale,
+	tostring(NS.toastFrame.bg and NS.toastFrame.bg.points[2] and NS.toastFrame.bg.points[2].y))
 Check("aucune bordure hors édition", NS.toastFrame.moveGlow ~= nil
 	and NS.toastFrame.moveGlow:IsShown() == false)
 
@@ -2290,47 +2423,50 @@ Check("les cadres ne sont plus déplaçables en sortie",
 	NS.toastFrame == nil or NS.toastFrame:IsShown() == false)
 
 do -- portée locale (limite de 200 locales en Lua 5.1)
--- Géométrie du panneau par pages (v1.19.0) : colonne de droite d'une ligne,
--- pied en trois tiers, pages qui tiennent dans le cadre.
+-- Géométrie de la fenêtre de réglages (refonte 2026-11, docs/UI.md) :
+-- colonnes de cartes, pied, navigation, pages qu'on peut parcourir en entier.
 local lay = NS.OPT_LAYOUT
-Check("colonne de valeurs exposée", lay ~= nil)
-if lay then
-	local rowRight = lay.rowWidth
-	local valueEnd = rowRight + lay.valueRight
-	local plusStart = rowRight + lay.plusRight - lay.buttonWidth
-	local minusStart = rowRight + lay.minusRight - lay.buttonWidth
-	Check("les boutons tiennent dans la ligne", -plusStart <= lay.rowWidth, plusStart)
-	Check("la valeur ne touche pas le bouton -", valueEnd < minusStart, valueEnd .. " < " .. minusStart)
-	Check("les boutons - et + ne se chevauchent pas", minusStart + lay.buttonWidth <= plusStart,
-		(minusStart + lay.buttonWidth) .. " <= " .. plusStart)
-	Check("la page tient à droite de la navigation", lay.paneLeft + lay.paneWidth <= lay.width - 8,
-		lay.paneLeft + lay.paneWidth)
-end
-
-local foot = NS.OPT_LAYOUT and NS.OPT_LAYOUT.footer
-Check("grille du pied exposée", foot ~= nil)
-if foot then
-	local total = foot.widths[1] + foot.widths[2] + foot.widths[3] + (foot.gap * 2)
-	Check("les trois boutons remplissent la largeur utile", total == foot.inner, total .. " vs " .. foot.inner)
-	Check("marge droite égale à la marge gauche", (lay.width - (foot.margin + total)) == foot.margin,
-		(lay.width - (foot.margin + total)) .. " vs " .. foot.margin)
-end
+Check("géométrie des réglages exposée", lay ~= nil and lay.width == 980 and lay.height == 680 and lay.navWidth == 220)
+Check("deux colonnes de cartes + l'écart = la largeur utile", lay.colWidth * 2 + lay.colGap <= lay.inner
+	and lay.inner - (lay.colWidth * 2 + lay.colGap) <= 1, lay.colWidth .. " x2 + " .. lay.colGap .. " / " .. lay.inner)
+Check("marges égales autour des cartes", lay.margin * 2 + lay.inner == lay.contentWidth
+	and lay.contentWidth + lay.navWidth + 2 == lay.width)
 Check("bouton de réinitialisation des cadres présent",
 	NS.optionsFrame ~= nil and NS.optionsFrame.resetFramesButton ~= nil)
 
 local frame = NS:EnsureOptions()
 Check("panneau de réglages construit", frame ~= nil)
 if frame then
-	Check("panneau d'options : hauteur fixe qui tient à l'écran", frame.height == lay.height
+	Check("panneau d'options : taille fixe qui tient à l'écran", frame.width == lay.width and frame.height == lay.height
 		and frame.height <= lay.maxHeight, frame.height)
-	Check("11 entrées de navigation (3 modules, 5 sous-pages, Général, QoL, Marchand)", #frame.navButtons == 11, #frame.navButtons)
+	-- une entrée par page de premier niveau ; les sous-pages sont des onglets
+	local navIds = {}
+	for _, nav in ipairs(frame.navButtons) do navIds[#navIds + 1] = nav.pageId end
+	-- une entrée par page ; une page à sous-pages devient un titre de groupe
+	Check("navigation : une entrée par page, sous-pages comprises", table.concat(navIds, ",")
+		== "general,trigger,safe,bags,gear,buffs,toast,portrait,merchant", table.concat(navIds, ","))
+	local heads = {}
+	for _, header in ipairs(frame.navHeaders) do heads[#heads + 1] = header.pageId end
+	Check("navigation : Check avant le départ et QoL en titres de groupe", table.concat(heads, ",") == "departure,qol",
+		table.concat(heads, ","))
 
-	-- chaque page tient dans le cadre, au-dessus du pied
-	local overflow = {}
-	for id, page in pairs(frame.pages) do
-		if page.contentBottom < lay.contentLimit then overflow[#overflow + 1] = id .. "=" .. page.contentBottom end
+	-- pied : action principale et remise à zéro à gauche, Terminé à droite,
+	-- sans chevauchement, textes dans leurs boutons
+	local run, reset, done = frame.runButton, frame.resetButton, frame.closeButton
+	local rp, rx = select(1, run:GetPoint()), select(4, run:GetPoint())
+	Check("pied : action principale à gauche, en contour", rp == "LEFT" and rx == lay.margin and run.style == "outline")
+	Check("pied : Réinitialiser à droite de l'action, en contour", reset.lastPoint.relTo == run and reset.lastPoint.x >= 8
+		and reset.style == "outline")
+	Check("pied : Terminé à droite, en ambre", done.lastPoint.point == "RIGHT" and done.lastPoint.x == -lay.margin
+		and done.style == "accent" and done:GetText() == NS.L.OPT_DONE)
+	local leftEnd = lay.margin + run:GetWidth() + reset.lastPoint.x + reset:GetWidth()
+	Check("pied : les boutons ne se touchent pas", leftEnd + 16 <= lay.contentWidth - lay.margin - done:GetWidth(),
+		leftEnd .. " / " .. (lay.contentWidth - lay.margin - done:GetWidth()))
+	local tooNarrow = {}
+	for _, button in ipairs({ run, reset, done }) do
+		if button.text:GetStringWidth() + 16 > button:GetWidth() then tooNarrow[#tooNarrow + 1] = button:GetText() end
 	end
-	Check("aucune page ne déborde sur le pied", #overflow == 0, table.concat(overflow, ", ") .. " limite " .. lay.contentLimit)
+	Check("pied : chaque texte tient dans son bouton", #tooNarrow == 0, table.concat(tooNarrow, ", "))
 
 	-- tous les checks ont leur interrupteur, une seule fois
 	local seen, missingModule, twice = {}, {}, 0
@@ -2347,69 +2483,87 @@ if frame then
 	Check("aucun interrupteur en double", twice == 0, twice)
 	Check("aucun module rangé par défaut dans Général", #frame.unplaced == 0, table.concat(frame.unplaced, ", "))
 
-	-- colonne de valeurs commune, libellés qui tiennent
+	-- contrôles alignés à droite des cartes, libellés qui tiennent à gauche
 	local misaligned, tooLong = 0, {}
 	for _, row in ipairs(frame.rows) do
-		local point, _, _, x = row.value:GetPoint()
-		if point == "RIGHT" and x ~= lay.valueRight then misaligned = misaligned + 1 end
-		-- place du libellé : jusqu'à la piste (seuils), la valeur (actions) ou l'interrupteur
-		local room
-		if row.track then room = lay.rowWidth - 2 + lay.trackRight - lay.trackWidth - 6
-		elseif row.toggle then room = lay.rowWidth - 2 + lay.toggleRight - 30 - 6
-		else room = lay.rowWidth - 2 + lay.valueRight - lay.valueWidth end
-		if #(row.label.text or "") * 6.4 > room then tooLong[#tooLong + 1] = tostring(row.label.text) end
+		local control = row.controlRegion
+		local point, rel, _, x = control:GetPoint()
+		if point ~= "RIGHT" or rel ~= row or x ~= -lay.cardPad then misaligned = misaligned + 1 end
+		if row.truncated or row.labelWidth > row.labelRoom then tooLong[#tooLong + 1] = tostring(row.labelText) end
 	end
-	Check("les modules partagent la colonne de valeurs", misaligned == 0, misaligned)
+	Check("contrôles alignés au bord droit des cartes", misaligned == 0, misaligned)
 	Check("libellés d'options : aucun débordement", #tooLong == 0, table.concat(tooLong, ", "))
-	-- valeur maximale + unité : tient dans la colonne de valeur (sinon elle
-	-- mord la piste, vu sur un rendu avec « 25 pourcent »)
+	-- valeur maximale + unité : tient dans la case du curseur
 	local valueOverflow = {}
 	for _, row in ipairs(frame.rows) do
-		local def = row.def
-		if def and def.kind == "number" then
+		if row.slider then
+			local def = row.def
 			local text = tostring(def.max or 0) .. (def.suffix and (" " .. (NS.L[def.suffix] or "")) or "")
-			if #text * 6.2 > lay.valueWidth then valueOverflow[#valueOverflow + 1] = def.key .. "=" .. text end
+			row.slider.valueText:SetText(text)
+			if row.slider.valueText:GetStringWidth() + 8 > row.slider.valueWidth then valueOverflow[#valueOverflow + 1] = def.key .. "=" .. text end
 		end
 	end
-	Check("valeurs + unités : tiennent dans leur colonne", #valueOverflow == 0, table.concat(valueOverflow, ", "))
+	NS:RefreshOptions()
+	Check("valeurs + unités : tiennent dans leur case", #valueOverflow == 0, table.concat(valueOverflow, ", "))
 	local navTooLong = {}
 	for _, nav in ipairs(frame.navButtons) do
-		-- libellé à 26 px, interrupteur de 22 px à 8 px du bord droit
-		local room = (nav.width or lay.navWidth) - 26 - (nav.power and (22 + 8 + 4) or 4)
-		-- 5.3 px par caractère : mesuré sur une capture en jeu (« Vivres & potions » = 84 px)
-		-- en caractères, pas en octets (« é » = 2 octets, 1 glyphe)
-		local chars = select(2, tostring(nav.label.text or ""):gsub("[^\128-\191]", ""))
-		if chars * 5.3 > room then navTooLong[#navTooLong + 1] = nav.label.text end
+		if nav.label:GetStringWidth() > nav.label.width then navTooLong[#navTooLong + 1] = nav.label.text end
 	end
 	Check("libellés de navigation : aucun débordement", #navTooLong == 0, table.concat(navTooLong, ", "))
 
-	-- aucune ligne superposée dans une même page
-	local overlap = 0
-	for _, page in pairs(frame.pages) do
-		local spots = {}
-		for _, row in ipairs(page.rows) do
-			local _, _, _, x, y = row:GetPoint()
-			local key = tostring(x) .. ":" .. tostring(y)
-			if spots[key] then overlap = overlap + 1 end
-			spots[key] = true
+	-- chaque page : rien ne se chevauche, et tout se voit en défilant
+	local overlaps, unreachable = {}, {}
+	for id, page in pairs(frame.pages) do
+		NS:SelectOptionsPage(id)
+		local boxes = {}
+		for _, item in ipairs(page.items) do
+			local w = item.region:GetWidth()
+			for _, other in ipairs(boxes) do
+				if item.x < other.x + other.w and other.x < item.x + w and item.y < other.y + other.h and other.y < item.y + item.height then
+					overlaps[#overlaps + 1] = id
+				end
+			end
+			boxes[#boxes + 1] = { x = item.x, y = item.y, w = w, h = item.height }
+			if item.x + w > lay.inner then overlaps[#overlaps + 1] = id .. ":débord" end
+		end
+		local reached = {}
+		for _ = 1, #page.items + 2 do
+			for index, item in ipairs(page.items) do if item.region:IsShown() then reached[index] = true end end
+			NS:ScrollOptions(-1)
+		end
+		for index in ipairs(page.items) do
+			if not reached[index] then unreachable[#unreachable + 1] = id .. "#" .. index end
 		end
 	end
-	Check("options : aucune ligne superposée", overlap == 0, overlap)
+	Check("options : aucun élément superposé ni hors des colonnes", #overlaps == 0, table.concat(overlaps, ", "))
+	Check("options : chaque élément de chaque page se voit (défilement)", #unreachable == 0, table.concat(unreachable, ", "))
 end
 
--- Navigation : une seule page visible, choix mémorisé
+-- Navigation : une seule page visible, choix mémorisé, une entrée par sous-page
 NS:SelectOptionsPage("bags")
 local visiblePages = 0
 for _, page in pairs(frame.pages) do if page:IsShown() then visiblePages = visiblePages + 1 end end
 Check("navigation : une seule page visible", visiblePages == 1 and frame.pages.bags:IsShown())
 Check("navigation : page mémorisée", NS:DB().optionsPage == "bags")
+Check("navigation : pas d'onglets pour les sous-pages", not frame.tabs:IsShown())
+Check("en-tête : titre et phrase de la page choisie", frame.header.title.text == NS.L.OPT_PAGE_BAGS
+	and frame.header.subtitle.text == NS.L.OPT_PAGE_BAGS_SUB, frame.header.title.text)
 local function NavFor(id)
 	for _, nav in ipairs(frame.navButtons) do if nav.pageId == id then return nav end end
 end
+local function HeaderFor(id)
+	for _, header in ipairs(frame.navHeaders) do if header.pageId == id then return header end end
+end
+Check("navigation : l'entrée de la page est choisie", NavFor("bags").selected and not NavFor("general").selected
+	and not NavFor("trigger").selected)
 NavFor("safe"):Click()
 Check("navigation : clic sur « Zones sûres »", frame.currentPage == "safe" and frame.pages.safe:IsShown())
-NavFor("departure"):Click()
-Check("navigation : le module ouvre sa première sous-page", frame.currentPage == "trigger" and frame.currentParent == "departure")
+NavFor("general"):Click()
+Check("navigation : Général", frame.currentPage == "general")
+HeaderFor("departure"):Click()
+Check("navigation : le titre de groupe ouvre sa première page", frame.currentPage == "trigger" and frame.currentParent == "departure")
+NS:SelectOptionsPage("departure")
+Check("navigation : la page de groupe renvoie à sa première page", frame.currentPage == "trigger")
 Check("navigation : page inconnue -> Général", (function() NS:SelectOptionsPage("nope"); return frame.currentPage == "general" end)())
 Check("page Sacs : interrupteur + seuil réunis", (function()
 	local hasModule, hasThreshold = false, false
@@ -2565,7 +2719,7 @@ Mock.world.links["item:920"] = { name = "Gantelets", quality = 2, itemLevel = 20
 NS:OnEquipmentChanged()
 
 local tframe = NS.toastFrame
-Check("aucun fond", tframe.bg == nil)
+Check("fond de bandeau, liseré ambre", tframe.bg ~= nil and tframe.accent ~= nil and tframe.accent:IsShown())
 Check("titre de section présent", tframe.title ~= nil)
 Check("aucun bouton de fermeture", tframe.close == nil)
 Check("aucun filet permanent", tframe.top == nil and tframe.bottom == nil
@@ -2601,7 +2755,7 @@ Check("aucune ligne concaténée", frame.rows[1].value.text:find("·") == nil,
 
 -- le panneau de stats du portrait garde son filet, lui
 NS:StartEditMode()
-Check("stats du portrait toujours encadrées", NS.portraitFrame.top ~= nil)
+Check("stats du portrait toujours encadrées", NS.portraitFrame.border ~= nil and NS.portraitFrame.chrome == "toast")
 Check("lueur de déplacement sur le résumé", NS.toastFrame.moveGlow:IsShown() == true)
 NS:StopEditMode()
 Check("lueur masquée à la sortie", NS.toastFrame.moveGlow:IsShown() == false)
@@ -2789,28 +2943,35 @@ Say("\n== chrome des fenêtres ==")
 ResetWorld()
 NS:ToggleOptions()
 local win = NS.optionsFrame
--- v1.20.0 : surface plate maison, plus de fond ni de bord d'infobulle
-Check("surface plate appliquée", win.chrome == "flat", win.chrome)
+-- refonte 2026-11 : fenêtre v2 (Theme.CreateWindow), plus de bandeau titré
+Check("fenêtre v2 appliquée", win.chrome == "window", win.chrome)
 Check("aucun backdrop Blizzard", win.backdrop == nil)
 Check("fond presque opaque", win.bg and win.bg.vertex and win.bg.vertex[4] > 0.9, win.bg and win.bg.vertex and win.bg.vertex[4])
 Check("filet 1 px sur les quatre côtés", win.border and win.border.top and win.border.left and win.border.bottom and win.border.right)
-Check("coin d'accent ambre", win.accentH and win.accentH.vertex[1] > 0.9 and win.accentH.vertex[3] < 0.35,
-	win.accentH and table.concat(win.accentH.vertex, ","))
-Check("marque : logo boussole dans le bandeau", win.logo and tostring(win.logo.texture):find("logo") ~= nil,
-	win.logo and win.logo.texture)
-Check("titre en police maison", win.title and win.title.font and tostring(win.title.font.path):find("Alegreya") ~= nil,
-	win.title and win.title.font and win.title.font.path)
+Check("marque : logo boussole en tête de navigation", win.brandLogo and tostring(win.brandLogo.texture):find("logo") ~= nil,
+	win.brandLogo and win.brandLogo.texture)
+Check("marque : nom de l'addon en F_TITLE", win.brandName and win.brandName.fontObject == NS.Theme.F_TITLE
+	and tostring(win.brandName.text):find("Quest") ~= nil, win.brandName and win.brandName.text)
 Check("pas de portrait", win.portrait == nil)
-Check("titre présent", win.title ~= nil and tostring(win.title.text):find("Réglages") ~= nil,
-	win.title and win.title.text)
-Check("bouton de fermeture Blizzard", win.close ~= nil)
-Check("sous-titre présent", win.subtitle ~= nil)
-Check("contenu sous le bandeau", win.contentTop == -36, win.contentTop)
+Check("titre de page présent, en F_DISPLAY", win.header and win.header.title.fontObject == NS.Theme.F_DISPLAY
+	and tostring(win.header.title.text) ~= "", win.header and win.header.title.text)
+Check("bouton de fermeture [×]", win.close ~= nil)
+win.close:Click()
+Check("[×] ferme les réglages", win:IsShown() == false)
+Check("sous-titre présent", win.header.subtitle ~= nil)
+local escape = false
+for _, name in ipairs(UISpecialFrames) do if name == win:GetName() then escape = true end end
+Check("Échap ferme les réglages", escape)
+NS:ToggleOptions()
+win.closeButton:Click()
+Check("« Terminé » ferme les réglages", win:IsShown() == false)
+NS:ToggleOptions()
 
 -- le diagnostic aussi
 NS:ToggleOptions()
 NS:RunChecklist("manual")
-Check("diagnostic : même surface plate", NS.window.chrome == "flat", NS.window.chrome)
+Check("diagnostic : fenêtre de module v2 (en-tête compact, pied)", NS.window.chrome == "dialog"
+	and NS.window.header and NS.window.header.compact and NS.window.footer ~= nil, NS.window.chrome)
 
 -- aucun template Blizzard requis : sans BackdropTemplate ni UIPanelButtonTemplate,
 -- le panneau est identique (c'est tout l'intérêt des contrôles dessinés)
@@ -2820,11 +2981,10 @@ Mock.world.noButtonTemplate = true
 Mock.world.fontRefused = true
 NS:ToggleOptions()
 local fallback = NS.optionsFrame
-Check("sans templates : même chrome", fallback.chrome == "flat", fallback.chrome)
-Check("police refusée : repli GameFont sans erreur", fallback.title.titleFont == false)
+Check("sans templates : même fenêtre", fallback.chrome == "window", fallback.chrome)
 Mock.world.noButtonTemplate = false
 Mock.world.fontRefused = false
-Check("repli toujours titré", fallback.title ~= nil and tostring(fallback.title.text) ~= "")
+Check("repli toujours titré", fallback.header ~= nil and tostring(fallback.header.title.text) ~= "")
 Check("repli toujours complet", fallback.rows ~= nil and #fallback.rows == 31,
 	fallback.rows and #fallback.rows)
 Mock.world.noBackdropTemplate = false
@@ -3084,7 +3244,8 @@ Check("fenêtre : ligne « Parti de » affichée", NS.window and NS.window.depar
 	and NS.window.departed.text:find("boîte aux lettres") ~= nil,
 	NS.window and NS.window.departed and NS.window.departed.text)
 NS:RunChecklist("manual")
-Check("check manuel : pas de ligne « Parti de »", NS.window.departed.text == "", NS.window.departed.text)
+Check("check manuel : pas de ligne « Parti de »", not tostring(NS.window.departed.text):find("Parti de", 1, true)
+	and NS.window.departed.text == NS.L.PANEL_SUBTITLE, NS.window.departed.text)
 
 -- Chaînes : chaque nouvelle clé existe en frFR ET en enUS
 local newKeys = { "MSG_SAFE_PURGED", "MSG_SAFE_RESET", "SAFE_KIND_CITY", "SAFE_KIND_VILLAGE", "SRC_RESTING",
@@ -3417,8 +3578,11 @@ NS.window = nil
 Mock.world.durability = { [5] = { 5, 100 } }
 NS:RunChecklist("manual")
 local w = NS.window
-Check("[ID] note en police maison, grand corps", w.scoreValue.font and w.scoreValue.font.size >= 30
-	and tostring(w.scoreValue.font.path):find("Alegreya") ~= nil, w.scoreValue.font and w.scoreValue.font.size)
+-- grand chiffre : F_DISPLAY (Inter Bold 26, docs/UI.md), plus grand que le titre
+local display = rawget(_G, NS.Theme.F_DISPLAY)
+Check("[ID] note en police maison, grand corps", w.scoreValue.fontObject == NS.Theme.F_DISPLAY
+	and tostring(display.font.path):find("Inter%-Bold") ~= nil
+	and display.font.size > rawget(_G, w.title.fontObject).font.size, tostring(w.scoreValue.fontObject))
 Check("[ID] verdict dans un tampon bordé", w.stamp and w.stamp.border and w.verdict.text ~= "", w.verdict.text)
 Check("[ID] tampon à la couleur du verdict", w.stamp.border.top.vertex[1] == w.verdict.textColor[1])
 Check("[ID] fenêtre : fondu à l'ouverture", w.fadeIn and w.fadeIn.plays >= 1)
@@ -3437,18 +3601,21 @@ Check("[ID] préfixe du chat ambre, « 2 » bleu", NS.L.TAG:find("|cffe8a54b", 1
 NS.optionsFrame = nil
 NS:ToggleOptions()
 local o = NS.optionsFrame
-Check("[ID] options : deux groupes dans la navigation", #o.navGroups == 2, #o.navGroups)
-Check("[ID] options : bouton Fermer en ambre (principal)", o.closeButton.style == "primary")
-local toggles, tracks, subs = 0, 0, 0
+Check("[ID] options : trois titres de groupe (départ, modules, QoL)", #o.navGroups == 3, #o.navGroups)
+Check("[ID] options : bouton Terminé en contour ambre", o.closeButton.style == "accent")
+local toggles, sliders = 0, 0
 for _, row in ipairs(o.rows) do
 	if row.toggle then toggles = toggles + 1 end
-	if row.track then tracks = tracks + 1 end
+	if row.slider then sliders = sliders + 1 end
 end
-for _, page in pairs(o.pages) do if page.sub.text ~= "" then subs = subs + 1 end end
 Check("[ID] interrupteurs dessinés pour les booléens et contrôles", toggles == 13 + 7, toggles)
-Check("[ID] pistes pour les seuils", tracks == 10, tracks)
-local pageCount = 0
-for _ in pairs(o.pages) do pageCount = pageCount + 1 end
+Check("[ID] curseurs pour les seuils", sliders == 10, sliders)
+local pageCount, subs = 0, 0
+for id in pairs(o.pages) do
+	pageCount = pageCount + 1
+	NS:SelectOptionsPage(id)
+	if o.header.subtitle.text ~= "" and not tostring(o.header.subtitle.text):find("_SUB") then subs = subs + 1 end
+end
 Check("[ID] chaque page a sa phrase d'explication", subs == pageCount and pageCount == 9, subs .. "/" .. pageCount)
 local displayRows = {}
 for _, row in ipairs(o.pages.general.rows) do if row.def then displayRows[row.def.key] = true end end
@@ -3475,7 +3642,8 @@ local delayRow
 for _, row in ipairs(o.rows) do if row.def and row.def.key == "exitDelay" then delayRow = row end end
 NS:DB().exitDelay = 15
 NS:RefreshOptions()
-Check("[ID] piste pleine au maximum", delayRow.track.ratio == 1, delayRow.track.ratio)
+Check("[ID] curseur plein au maximum", delayRow.slider.value == delayRow.slider.max and math.abs(delayRow.slider.fill.width - delayRow.slider.trackWidth) <= 1,
+	delayRow.slider.value)
 local addonRow
 for _, row in ipairs(o.rows) do if row.def and row.def.key == "enabled" then addonRow = row end end
 Check("[ID] interrupteur actif = ambre", addonRow.toggle.checked == true and addonRow.toggle.knob.vertex[1] > 0.9)
@@ -3484,37 +3652,41 @@ Check("[ID] clic : interrupteur coupé", addonRow.toggle.checked == false and NS
 addonRow:Click()
 NS:SelectOptionsPage("bags")
 local function OptNav(id) for _, nav in ipairs(o.navButtons) do if nav.pageId == id then return nav end end end
-Check("[ID] navigation : page active teintée", OptNav("bags").tint:IsShown() and not OptNav("general").tint:IsShown())
-Check("[ID] navigation : le module parent reste actif", OptNav("departure").tint:IsShown())
-Check("[ID] titre de page en police maison", o.pages.bags.title.font ~= nil)
+Check("[ID] navigation : la page choisie est teintée", OptNav("bags").tint:IsShown() and not OptNav("general").tint:IsShown()
+	and not OptNav("trigger").tint:IsShown())
+Check("[ID] titre de page en F_DISPLAY", o.header.title.fontObject == NS.Theme.F_DISPLAY)
 -- v1.21.0 : marque Ready2Quest, deuxième couleur
 Check("[R2Q] navigation : logo complet en tête", tostring(o.brandLogo.texture):find("Textures\\logo$") ~= nil, o.brandLogo.texture)
 Check("[R2Q] navigation : nom avec le « 2 » bleu", o.brandName.text:find("|cff5b8fd62|r", 1, true) ~= nil, o.brandName.text)
-Check("[R2Q] bandeau : logo simplifié", tostring(o.logo.texture):find("logo_petit") ~= nil, o.logo.texture)
-Check("[R2Q] groupes de navigation en bleu", o.navGroups[1].textColor[3] > 0.8 and o.navGroups[1].textColor[1] < 0.4)
+Check("[R2Q] navigation : version et client en bas", tostring(o.version.text):find(NS.APP.version, 1, true) ~= nil, o.version.text)
+Check("[R2Q] groupes de navigation en ambre", o.navGroups[1].textColor[1] > 0.85 and o.navGroups[1].textColor[3] < 0.35)
 Check("[R2Q] commande /r2q", SLASH_SACETDEPART3 == "/r2q")
 
 -- v1.22.0 : trois modules, chacun avec son interrupteur dans la navigation
 NS.optionsFrame = nil
 NS:ToggleOptions()
 local function NavOf(id) for _, nav in ipairs(NS.optionsFrame.navButtons) do if nav.pageId == id then return nav end end end
+local function HeadOf(id) for _, h in ipairs(NS.optionsFrame.navHeaders) do if h.pageId == id then return h end end end
 local powered = {}
-for _, nav in ipairs(NS.optionsFrame.navButtons) do if nav.power then powered[#powered + 1] = nav.pageId end end
+for _, nav in ipairs(NS.optionsFrame.navButtons) do if nav.powerKey then powered[#powered + 1] = nav.pageId end end
+for _, h in ipairs(NS.optionsFrame.navHeaders) do if h.powerKey then powered[#powered + 1] = h.pageId end end
 table.sort(powered)
 Check("[NAV] interrupteur sur les 3 modules seulement", table.concat(powered, ",") == "departure,portrait,toast", table.concat(powered, ","))
-Check("[NAV] sous-pages en retrait, sans interrupteur", NavOf("trigger").parentId == "departure" and NavOf("trigger").power == nil)
-Check("[NAV] QoL : Marchand, sous-page du QoL", NavOf("merchant").power == nil and NavOf("merchant").parentId == "qol")
+Check("[NAV] interrupteur visible sur un module, absent ailleurs", HeadOf("departure").power:IsShown() and NavOf("toast").power:IsShown()
+	and not NavOf("general").power:IsShown() and not HeadOf("qol").power:IsShown() and not NavOf("trigger").power:IsShown())
+Check("[NAV] sous-pages : une entrée chacune, sous le titre de leur groupe", NavOf("trigger").parentId == "departure"
+	and NavOf("merchant").parentId == "qol" and HeadOf("departure").label.text == NS.Theme.Upper(NS.L.OPT_PAGE_DEPARTURE))
+local tabs = NS.optionsFrame.tabs
+for _, id in ipairs({ "general", "bags", "merchant" }) do
+	NS:SelectOptionsPage(id)
+	Check("[NAV] " .. id .. " : pas de barre d'onglets", not tabs:IsShown())
+end
 NS:SelectOptionsPage("general")
-Check("[NAV] sous-pages repliées hors de leur module", not NavOf("trigger"):IsShown() and not NavOf("merchant"):IsShown())
-NS:SelectOptionsPage("bags")
-Check("[NAV] sous-pages du départ dépliées", NavOf("trigger"):IsShown() and not NavOf("merchant"):IsShown())
-NS:SelectOptionsPage("merchant")
-Check("[NAV] sous-pages du QoL dépliées", NavOf("merchant"):IsShown() and not NavOf("trigger"):IsShown())
-NS:SelectOptionsPage("general")
-local dep = NavOf("departure")
-Check("[NAV] check avant le départ : allumé", dep.power.checked == true)
+local dep = HeadOf("departure")
+Check("[NAV] check avant le départ : allumé", dep.moduleOn == true)
 dep.power:Click()
-Check("[NAV] clic : module coupé", NS:DB().departureEnabled == false and dep.power.checked == false)
+Check("[NAV] clic : module coupé", NS:DB().departureEnabled == false and dep.moduleOn == false)
+Check("[NAV] module coupé : libellé grisé", dep.label.textColor[1] < 0.6)
 Check("[NAV] clic : on reste sur la page courante", NS.optionsFrame.currentPage == "general")
 dep.power:Click()
 Check("[NAV] second clic : rallumé", NS:DB().departureEnabled == true)
@@ -3640,10 +3812,14 @@ end
 NS.editBanner = nil
 NS:StartEditMode()
 local banner = NS.editBanner
-local hintTop = banner.contentTop - 4
-local buttonTop = -(banner.height - 10 - 20)
-Check("[JEU] bandeau d'édition : l'aide ne passe plus sous le bouton", hintTop - 26 >= buttonTop,
-	(hintTop - 26) .. " >= " .. buttonTop)
+-- refonte 2026-11 : bandeau, l'aide à gauche du bouton (côte à côte) ; elle
+-- doit s'arrêter avant lui et tenir dans la hauteur du bandeau
+local hintRight = banner.hint.lastPoint.x + banner.hint:GetWidth()
+local buttonLeft = banner.width - 12 - banner.stopButton:GetWidth()
+Check("[JEU] bandeau d'édition : l'aide ne passe plus sous le bouton", hintRight + 8 <= buttonLeft
+	and -banner.hint.lastPoint.y + 14 <= banner.height - 6, hintRight .. " + 8 <= " .. buttonLeft)
+Check("[JEU] bandeau d'édition : le texte tient dans le bouton",
+	banner.stopButton:GetWidth() >= banner.stopButton.text:GetStringWidth() + 16)
 Check("[JEU] bandeau d'édition : bouton Terminer en ambre", banner.stopButton.style == "primary")
 NS:StopEditMode()
 ResetWorld()
@@ -3669,7 +3845,10 @@ end
 -- 4.99 Tests des modules (tests/modules/*.lua, listés par run_tests.py).
 -- Chaque fichier reçoit la boîte à outils du harnais dans la table T.
 do
-	_G.T = { Check = Check, Say = Say, ResetWorld = ResetWorld, Result = Result, NS = NS, QNS = QNS, Mock = Mock }
+	-- LoadModules : rien à faire, les modules sont chargés juste après (les
+	-- scènes de tests/snapshot.lua l'appellent, tests/modules/windows_v2.lua les joue)
+	_G.T = { Check = Check, Say = Say, ResetWorld = ResetWorld, Result = Result, NS = NS, QNS = QNS, Mock = Mock,
+		LoadModules = function() end }
 	-- créatures brillantes : jamais au hasard pendant les tests (companion_shiny.lua règle sa chance)
 	if QNS then QNS.SHINY_CHANCE = 0 end
 	-- missions du jour : pas de tirage automatique (companion_daily.lua les tire lui-même)

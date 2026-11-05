@@ -193,25 +193,25 @@ do
 		and source.note.text:find("Recommandé", 1, true), source and source.value.text)
 	Check("[PERS] réglage « Son caractère : Selon son jeu »", pick and pick.value.text:find("Selon son jeu", 1, true)
 		and pick.note.text:find("Curieux", 1, true), pick and pick.note.text)
-	pick.plus:Click()
+	pick:Step(1)
 	Check("[PERS] + : Curieux choisi", NS:DB().companionTraitPick == 1 and pick.value.text:find("Curieux", 1, true))
-	pick.plus:Click(); pick.plus:Click()
+	pick:Step(1); pick:Step(1)
 	Check("[PERS] + + : Téméraire, et il l'est", NS:DB().companionTraitPick == 3 and NS:CompanionTrait() == "daring")
-	for _ = 1, 4 do pick.plus:Click() end
+	for _ = 1, 4 do pick:Step(1) end
 	Check("[PERS] après Câlin : Sage (déjà porté)", NS:DB().companionTraitPick == 7 and NS:CompanionTrait() == "wise",
 		NS:DB().companionTraitPick)
-	pick.plus:Click()
+	pick:Step(1)
 	Check("[PERS] les caractères d'apparence pas encore portés sont sautés : on reste sur Sage",
 		NS:DB().companionTraitPick == 7, NS:DB().companionTraitPick)
 	NS:PersonaData().unlocked.zen = true
-	pick.plus:Click()
+	pick:Step(1)
 	Check("[PERS] tortue portée un jour : Zen au choix", NS:DB().companionTraitPick == 10 and NS:CompanionTrait() == "zen",
 		NS:DB().companionTraitPick)
-	pick.minus:Click()
+	pick:Step(-1)
 	Check("[PERS] - : retour à Sage, en sautant les autres", NS:DB().companionTraitPick == 7, NS:DB().companionTraitPick)
 	data.appearance = "turtle"
 	Check("[PERS] l'apparence l'emporte (réglage Apparence)", NS:CompanionTrait() == "zen")
-	source.plus:Click()
+	source:Step(1)
 	Check("[PERS] réglage « Le sien » : le choix revient", NS:CompanionTrait() == "wise" and source.note.text:find("quelle que soit", 1, true))
 	NS.optionsFrame:Hide()
 	PE.Done()

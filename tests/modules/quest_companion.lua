@@ -54,8 +54,8 @@ do
 		not QC_TOC:find("## Dependencies", 1, true) and not QC_TOC:find("## RequiredDeps", 1, true)
 		and QC_TOC:find("\n## OptionalDeps: Ready2Quest\n", 1, true) ~= nil)
 	Check("[QC] .toc : sa sauvegarde QuestCompanionDB", QC_TOC:find("\n## SavedVariables: QuestCompanionDB\n", 1, true) ~= nil)
-	Check("[QC] versions : QC 1.2.1, R2Q 1.27.1, comme leurs namespaces", QC_TOC:find("\n## Version: 1.2.1\n", 1, true)
-		and R2Q_TOC:find("\n## Version: 1.27.1\n", 1, true) and QNS.version == "1.2.1" and NS.version == "1.27.1")
+	Check("[QC] versions : QC 1.3.0, R2Q 1.28.0, comme leurs namespaces", QC_TOC:find("\n## Version: 1.3.0\n", 1, true)
+		and R2Q_TOC:find("\n## Version: 1.28.0\n", 1, true) and QNS.version == "1.3.0" and NS.version == "1.28.0")
 	for _, addon in ipairs({ { "Ready2Quest", R2Q_TOC }, { "QuestCompanion", QC_TOC } }) do
 		local files = QCT.TocFiles(addon[2])
 		Check("[QC] " .. addon[1] .. " : Config.lua puis le socle en tête", files[1] == "Config.lua"
@@ -82,7 +82,7 @@ do
 	Say("-- deux addons : socle")
 	local files = { "Base.lua", "Strings.lua", "Compat.lua", "Hubs.lua", "DungeonData.lua", "Theme.lua", "Store.lua",
 		"World.lua", "Commands.lua", "Options.lua", "Minimap.lua", "Media/losange.tga", "Media/losange_trait.tga",
-		"Media/Alegreya-Bold.ttf" }
+		"Media/Inter-Regular.ttf", "Media/Inter-SemiBold.ttf", "Media/Inter-Bold.ttf", "Media/interrupteur.tga", "Media/chevron.tga" }
 	local diff = {}
 	for _, file in ipairs(files) do
 		local a, b = QCT.Read("Ready2Quest/Libs/Socle/" .. file), QCT.Read("QuestCompanion/Libs/Socle/" .. file)

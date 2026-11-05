@@ -190,9 +190,11 @@ do
 		for _, field in ipairs(NS.EXCLUSIVE_WINDOWS) do if field == "chestFrame" then return true end end
 	end)() == true)
 	local buttons = {}
-	for _, button in ipairs(frame.options) do if button:IsShown() then buttons[#buttons + 1] = button.text.text end end
-	Check("[CHEST] un bouton par objet, avec sa catégorie", #buttons == 2 and table.concat(buttons, "|"):find("Apparence", 1, true)
-		and table.concat(buttons, "|"):find("Ornement", 1, true), table.concat(buttons, "|"))
+	for _, button in ipairs(frame.options) do
+		if button:IsShown() then buttons[#buttons + 1] = button.kindTag.label.text .. " " .. button.text.text end
+	end
+	Check("[CHEST] un bouton par objet, avec sa catégorie", #buttons == 2 and table.concat(buttons, "|"):find("APPARENCE Rainette", 1, true)
+		and table.concat(buttons, "|"):find("ORNEMENT", 1, true), table.concat(buttons, "|"))
 	-- refuser un objet d'un autre palier
 	Check("[CHEST] objet d'un autre palier refusé", NS:ChestPick(8888, NS.COMPANION_REWARDS[3]) == false)
 	-- choisir la rainette

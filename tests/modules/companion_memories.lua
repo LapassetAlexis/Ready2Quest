@@ -12,7 +12,7 @@ for _, name in ipairs(GLOBALS) do MM.saved[name] = rawget(_G, name) end
 
 function MM.Reset()
 	ResetWorld()
-	for _, field in ipairs({ "companionFrame", "companionBubble", "companionHover", "journalFrame" }) do
+	for _, field in ipairs({ "companionFrame", "companionBubble", "companionHover", "journalFrame", "photoPrompt" }) do
 		if NS[field] then NS[field]:Hide() end
 		NS[field] = nil
 	end
@@ -57,6 +57,9 @@ function MM.Done()
 	ResetWorld()
 end
 function MM.List() return NS:MemoryData().memories end
+-- la question des photos : combien de fois posée, et y répondre
+function MM.Asked() return NS.photoPrompt and NS.photoPrompt.asks or 0 end
+function MM.Answer(button) NS.photoPrompt[button]:Click() end
 function MM.Find(key)
 	for _, memory in ipairs(MM.List()) do if memory.key == key then return memory end end
 end
@@ -165,15 +168,17 @@ do
 	Check("[MEM] photos coupées par défaut", NS:DB().companionPhotos == false)
 	NS:CompanionOnZone(true)                   -- pas un moment à photo : rien demandé
 	NS:CompanionOnLevel(10)
-	Check("[MEM] premier grand moment : il demande", #Mock.world.popups == 1
-		and Mock.world.popups[1].which == "QUESTCOMPANION_PHOTO" and Mock.world.popups[1].text:find("photo", 1, true)
-		and StaticPopupDialogs.QUESTCOMPANION_PHOTO.button3 == "Plus tard")
+	local prompt = NS.photoPrompt
+	Check("[MEM] premier grand moment : il demande (fenêtre de module)", MM.Asked() == 1 and prompt:IsShown()
+		and prompt.chrome == "dialog" and prompt.text.text:find("photo", 1, true) and prompt.later:GetText() == "Plus tard"
+		and prompt.yes.style == "primary" and #Mock.world.popups == 0)
 	NS:CompanionOnLevel(20)
-	Check("[MEM] pas deux fois la question", #Mock.world.popups == 1)
+	Check("[MEM] pas deux fois la question", MM.Asked() == 1)
 	MM.Shoot()
 	Check("[MEM] sans réponse : pas de photo", Mock.world.shots == 0)
-	StaticPopupDialogs.QUESTCOMPANION_PHOTO.OnAccept()
-	Check("[MEM] Oui : photos activées", NS:DB().companionPhotos == true and NS:DB().companionPhotosAsked == "yes")
+	MM.Answer("yes")
+	Check("[MEM] Oui : photos activées, la question se ferme", NS:DB().companionPhotos == true
+		and NS:DB().companionPhotosAsked == "yes" and not prompt:IsShown())
 	Mock:Advance(NS.MEMORY_PHOTO_DELAY)
 	Check("[MEM] « Clic ! » dans sa bulle avant la capture", NS.companionBubbleKey and NS.companionBubbleKey:find("PHOTO", 1, true)
 		and Mock.world.shots == 0, NS.companionBubbleKey)
@@ -186,28 +191,45 @@ do
 
 	MM.Reset()
 	NS:CompanionOnLevel(10)
-	StaticPopupDialogs.QUESTCOMPANION_PHOTO.OnCancel(nil, nil, "clicked")
+	MM.Answer("no")
 	Check("[MEM] Non : photos coupées, plus demandé", NS:DB().companionPhotos == false and NS:DB().companionPhotosAsked == "no")
 	MM.Shoot()
 	NS:CompanionOnLevel(20)
 	MM.Shoot()
-	Check("[MEM] Non : jamais de photo ni de question", Mock.world.shots == 0 and #Mock.world.popups == 1)
+	Check("[MEM] Non : jamais de photo ni de question", Mock.world.shots == 0 and MM.Asked() == 1)
 	Check("[MEM] Non : le souvenir reste écrit", MM.Find("level:20") ~= nil)
 
 	MM.Reset()
 	NS:CompanionOnLevel(10)
-	StaticPopupDialogs.QUESTCOMPANION_PHOTO.OnAlt()
+	MM.Answer("later")
 	Check("[MEM] Plus tard : rien de décidé", NS:DB().companionPhotos == false and NS:DB().companionPhotosAsked == "later")
 	Mock:Advance(60)
 	NS:CompanionOnLevel(20)
-	Check("[MEM] Plus tard : pas redemandé dans l'heure", #Mock.world.popups == 1)
+	Check("[MEM] Plus tard : pas redemandé dans l'heure", MM.Asked() == 1)
 	Mock:Advance(NS.MEMORY_ASK_AGAIN)
 	NS:CompanionOnLevel(30)
-	Check("[MEM] Plus tard : redemandé au grand moment suivant", #Mock.world.popups == 2)
+	Check("[MEM] Plus tard : redemandé au grand moment suivant", MM.Asked() == 2)
 	Mock:Advance(NS.MEMORY_PHOTO_WAIT + 1)
-	StaticPopupDialogs.QUESTCOMPANION_PHOTO.OnAccept()
+	MM.Answer("yes")
 	MM.Shoot()
 	Check("[MEM] Oui trop tard : pas de photo d'un moment passé", Mock.world.shots == 0 and NS:DB().companionPhotos == true)
+
+	-- [×] : vaut « Plus tard », la question reviendra
+	MM.Reset()
+	NS:CompanionOnLevel(10)
+	NS.photoPrompt.close:Click()
+	Check("[MEM] [×] : « Plus tard », rien de décidé", NS:DB().companionPhotosAsked == "later"
+		and NS:DB().companionPhotos == false and not NS.photoPrompt:IsShown())
+	-- client sans les briques du thème : la fenêtre du jeu, mêmes réponses
+	MM.Reset()
+	local dialog = NS.Theme.CreateDialog
+	NS.Theme.CreateDialog = nil
+	NS:CompanionOnLevel(10)
+	NS.Theme.CreateDialog = dialog
+	Check("[MEM] repli : la fenêtre du jeu", NS.photoPrompt == nil and #Mock.world.popups == 1
+		and Mock.world.popups[1].which == "QUESTCOMPANION_PHOTO" and StaticPopupDialogs.QUESTCOMPANION_PHOTO.button3 == "Plus tard")
+	StaticPopupDialogs.QUESTCOMPANION_PHOTO.OnAccept()
+	Check("[MEM] repli : Oui", NS:DB().companionPhotos == true and NS:DB().companionPhotosAsked == "yes")
 	MM.Done()
 end
 

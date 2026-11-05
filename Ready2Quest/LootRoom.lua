@@ -21,7 +21,9 @@ local Theme = ns.Theme
 
 ns.LOOTROOM_ROWS = 8
 local POPUP = "READY2QUEST_LOOTROOM_DESTROY"
-local WIDTH, ROW_H = 400, 30
+local WIDTH = 480
+local ROW_CARD, ROW_H = 36, 38       -- carte d'un objet, pas d'une ligne à l'autre
+local TARGET_CARD, GAP = 44, 14
 
 local FR = {
 	OPT_PAGE_LOOTROOM      = "Place au butin",
@@ -30,6 +32,7 @@ local FR = {
 	OPT_LOOTROOM_CONFIRM   = "Confirmer avant de jeter un objet vert ou mieux",
 	OPT_LOOTROOM_AUCTION   = "Prix de l'hôtel des ventes (Auctionator, TSM)",
 	LOOTROOM_TITLE         = "Place au butin",
+	LOOTROOM_SUB           = "Les moins chers de tes sacs, à jeter pour le butin.",
 	LOOTROOM_TARGET        = "Butin : %s ×%d — %s",
 	LOOTROOM_TARGET_QUEST  = "Butin : %s ×%d — objet de quête",
 	LOOTROOM_NO_TARGET     = "Les objets les moins chers de tes sacs.",
@@ -55,6 +58,7 @@ local EN = {
 	OPT_LOOTROOM_CONFIRM   = "Confirm before dropping a green item or better",
 	OPT_LOOTROOM_AUCTION   = "Auction house prices (Auctionator, TSM)",
 	LOOTROOM_TITLE         = "Room for loot",
+	LOOTROOM_SUB           = "The cheapest items in your bags, to drop for the loot.",
 	LOOTROOM_TARGET        = "Loot: %s ×%d — %s",
 	LOOTROOM_TARGET_QUEST  = "Loot: %s ×%d — quest item",
 	LOOTROOM_NO_TARGET     = "The cheapest items in your bags.",
@@ -287,67 +291,87 @@ local function Tooltip(owner, link, extra)
 	if type(tip) ~= "table" or not tip.SetOwner then return end
 	tip:SetOwner(owner, "ANCHOR_RIGHT")
 	if link and tip.SetHyperlink then pcall(tip.SetHyperlink, tip, link) end
-	if extra then tip:AddLine(extra, 0.85, 0.85, 0.85, true) end
+	if extra then Theme.TooltipHint(tip, extra, true) end
 	tip:Show()
 end
 local function HideTip() local tip = rawget(_G, "GameTooltip"); if tip and tip.Hide then tip:Hide() end end
 
+-- hauteur pour `count` lignes (au moins une : la phrase « rien à proposer »)
+local function LootRoomHeight(count)
+	return Theme.HEADER_COMPACT_HEIGHT + 1 + GAP + TARGET_CARD + GAP + math.max(1, count) * ROW_H
+		- (ROW_H - ROW_CARD) + GAP + Theme.DIALOG_FOOTER
+end
+
 function ns:EnsureLootRoom()
 	if self.lootRoomFrame then return self.lootRoomFrame end
-	if not (Theme and Theme.CreatePanel) then return nil end
-	local height = 100 + ns.LOOTROOM_ROWS * ROW_H
-	local frame = Theme.CreatePanel(UIParent, WIDTH, height, L.LOOTROOM_TITLE, { name = "Ready2QuestLootRoom" })
+	if not (Theme and Theme.CreateDialog) then return nil end
+	local frame = Theme.CreateDialog(UIParent, WIDTH, LootRoomHeight(ns.LOOTROOM_ROWS), { name = "Ready2QuestLootRoom",
+		title = L.LOOTROOM_TITLE, subtitle = L.LOOTROOM_SUB })
 	if not frame then return nil end
 	frame:SetPoint("CENTER", UIParent, "CENTER", 260, 60)
-	local top = frame.contentTop - 6
-	frame.targetIcon = Theme.CreateIcon(frame, 22)
-	frame.targetIcon:SetPoint("TOPLEFT", frame, "TOPLEFT", 14, top)
-	frame.target = frame:CreateFontString(nil, "OVERLAY", Theme.F_NORMAL)
-	frame.target:SetPoint("TOPLEFT", frame, "TOPLEFT", 42, top - 4)
-	frame.target:SetWidth(WIDTH - 56)
+	local pad, inner = frame.pad + 1, frame.innerWidth
+	local top = frame.contentTop - GAP
+
+	-- le butin bloqué, en tête : une carte à liseré ambre
+	frame.targetCard = CreateFrame("Frame", nil, frame)
+	frame.targetCard:SetSize(inner, TARGET_CARD)
+	frame.targetCard:SetPoint("TOPLEFT", frame, "TOPLEFT", pad, top)
+	frame.targetCard.bg = Theme.Solid(frame.targetCard, "BACKGROUND", Theme.ROW, 1)
+	frame.targetCard.bg:SetAllPoints()
+	frame.targetCard.bar = Theme.Solid(frame.targetCard, "ARTWORK", Theme.GOLD, 1)
+	frame.targetCard.bar:SetPoint("TOPLEFT", frame.targetCard, "TOPLEFT", 0, 0)
+	frame.targetCard.bar:SetPoint("BOTTOMLEFT", frame.targetCard, "BOTTOMLEFT", 0, 0)
+	frame.targetCard.bar:SetWidth(2)
+	frame.targetIcon = Theme.CreateIcon(frame.targetCard, 28)
+	frame.targetIcon:SetPoint("LEFT", frame.targetCard, "LEFT", 12, 0)
+	frame.target = Theme.Text(frame.targetCard, Theme.F_LABEL, Theme.LABEL)
+	frame.target:SetPoint("LEFT", frame.targetCard, "LEFT", 52, 0)
+	frame.target:SetWidth(inner - 64)
 	frame.target:SetJustifyH("LEFT")
+	if frame.target.SetWordWrap then frame.target:SetWordWrap(false) end
+
+	local rowsTop = top - TARGET_CARD - GAP
 	frame.rows = {}
 	for index = 1, ns.LOOTROOM_ROWS do
-		local y = top - 34 - (index - 1) * ROW_H
-		local row = CreateFrame("Frame", nil, frame)
-		row:SetSize(WIDTH - 28, ROW_H - 4)
-		row:SetPoint("TOPLEFT", frame, "TOPLEFT", 14, y)
-		row.icon = Theme.CreateIcon(row, 22)
-		row.icon:SetPoint("LEFT", row, "LEFT", 0, 0)
-		row.name = row:CreateFontString(nil, "OVERLAY", Theme.F_BODY)
-		row.name:SetPoint("TOPLEFT", row, "TOPLEFT", 28, -1)
-		row.name:SetWidth(200)
-		row.name:SetJustifyH("LEFT")
-		row.name:SetWordWrap(false)
-		row.price = row:CreateFontString(nil, "OVERLAY", Theme.F_SMALL)
-		row.price:SetPoint("TOPLEFT", row, "TOPLEFT", 28, -14)
-		row.price:SetWidth(200)
+		local row = Theme.CreateListRow(frame, inner, ROW_CARD, { icon = 24 })
+		row:SetPoint("TOPLEFT", frame, "TOPLEFT", pad, rowsTop - (index - 1) * ROW_H)
+		row:SetIndex(index)
+		row.ignore = Theme.CreateButton(row, nil, 24, L.LOOTROOM_BTN_IGNORE, function() ns:LootRoomIgnore(row.data) end, "outline")
+		row.ignore:SetPoint("RIGHT", row, "RIGHT", -8, 0)
+		row.delete = Theme.CreateButton(row, nil, 24, L.LOOTROOM_BTN_DELETE, function() ns:LootRoomDelete(row.data) end, "primary")
+		row.delete:SetPoint("RIGHT", row.ignore, "LEFT", -6, 0)
+		local textWidth = inner - row.textLeft - row.delete:GetWidth() - row.ignore:GetWidth() - 8 - 6 - 12
+		row.name = row.text
+		row.name:ClearAllPoints()
+		row.name:SetPoint("TOPLEFT", row, "TOPLEFT", row.textLeft, -5)
+		row.name:SetWidth(textWidth)
+		row.price = Theme.Text(row, Theme.F_SMALL, Theme.MUTED_LIGHT)
+		row.price:SetPoint("TOPLEFT", row, "TOPLEFT", row.textLeft, -20)
+		row.price:SetWidth(textWidth)
 		row.price:SetJustifyH("LEFT")
-		row.delete = Theme.CreateButton(row, 60, 20, L.LOOTROOM_BTN_DELETE, function() ns:LootRoomDelete(row.data) end, "primary")
-		row.delete:SetPoint("RIGHT", row, "RIGHT", -66, 0)
-		row.ignore = Theme.CreateButton(row, 60, 20, L.LOOTROOM_BTN_IGNORE, function() ns:LootRoomIgnore(row.data) end)
-		row.ignore:SetPoint("RIGHT", row, "RIGHT", 0, 0)
-		row.hover = CreateFrame("Button", nil, row)
-		row.hover:SetPoint("TOPLEFT", row, "TOPLEFT", 0, 0)
-		row.hover:SetSize(230, ROW_H - 4)
-		row.hover:SetScript("OnEnter", function(h)
+		if row.price.SetWordWrap then row.price:SetWordWrap(false) end
+		-- l'infobulle de l'objet au survol de son icône et de son nom
+		row.tipZone = CreateFrame("Button", nil, row)
+		row.tipZone:SetPoint("TOPLEFT", row, "TOPLEFT", 0, 0)
+		row.tipZone:SetSize(row.textLeft + textWidth, ROW_CARD)
+		row.tipZone:SetScript("OnEnter", function(h)
 			local data = row.data
 			if data then Tooltip(h, data.link, data.dearer and L.LOOTROOM_DEARER or nil) end
 		end)
-		row.hover:SetScript("OnLeave", HideTip)
+		row.tipZone:SetScript("OnLeave", HideTip)
 		row:Hide()
 		frame.rows[index] = row
 	end
-	frame.empty = frame:CreateFontString(nil, "OVERLAY", Theme.F_BODY)
-	frame.empty:SetPoint("TOPLEFT", frame, "TOPLEFT", 14, top - 40)
-	frame.empty:SetWidth(WIDTH - 28)
+	frame.empty = Theme.Text(frame, Theme.F_BODY, Theme.MUTED_LIGHT)
+	frame.empty:SetPoint("TOPLEFT", frame, "TOPLEFT", pad + 12, rowsTop - 6)
+	frame.empty:SetWidth(inner - 24)
 	frame.empty:SetJustifyH("LEFT")
-	frame.hint = frame:CreateFontString(nil, "OVERLAY", Theme.F_SMALL)
-	frame.hint:SetPoint("BOTTOMLEFT", frame, "BOTTOMLEFT", 14, 12)
-	frame.hint:SetWidth(WIDTH - 28)
+	-- l'aide, dans le pied
+	frame.hint = Theme.Text(frame.footer, Theme.F_SMALL, Theme.MUTED)
+	frame.hint:SetPoint("LEFT", frame.footer, "LEFT", Theme.DIALOG_PAD, 0)
+	frame.hint:SetWidth(inner)
 	frame.hint:SetJustifyH("LEFT")
 	frame.hint:SetText(L.LOOTROOM_HINT)
-	frame.hint:SetTextColor(Theme.MUTED[1], Theme.MUTED[2], Theme.MUTED[3])
 	frame:Hide()
 	self.lootRoomFrame = frame
 	return frame
@@ -379,7 +403,7 @@ function ns:LootRoomRefresh()
 			local price = self:F("LOOTROOM_VENDOR", Money(data.vendor))
 			if data.auction then price = price .. "  ·  " .. self:F("LOOTROOM_AUCTION", Money(data.auction)) end
 			row.price:SetText(price)
-			local c = data.dearer and Theme.MUTED or Theme.TEXT
+			local c = data.dearer and Theme.MUTED or Theme.MUTED_LIGHT
 			row.price:SetTextColor(c[1], c[2], c[3])
 			row:SetAlpha(data.dearer and 0.55 or 1)
 			row:Show()
@@ -388,6 +412,8 @@ function ns:LootRoomRefresh()
 		end
 	end
 	frame.empty:SetText(#rows == 0 and L.LOOTROOM_EMPTY or "")
+	-- la fenêtre suit la liste : pas de cartes vides sous la dernière
+	frame:SetHeight(LootRoomHeight(math.min(#rows, ns.LOOTROOM_ROWS)))
 	return self.lootRoom
 end
 

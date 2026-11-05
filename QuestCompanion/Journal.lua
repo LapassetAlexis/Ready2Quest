@@ -131,7 +131,7 @@ if ns.AddOptionPage then
 			-- suivi à l'écran (JournalTracker.lua : chaînes, défauts, action)
 			{ key = "journalTracker",       label = "OPT_JRN_TRACKER",        kind = "bool" },
 			{ key = "journalTrackerCombat", label = "OPT_JRN_TRACKER_COMBAT", kind = "bool" },
-			{ key = "journalTrackerReset",  label = "OPT_JRN_TRACKER_RESET",  kind = "action" },
+			{ key = "journalTrackerReset",  label = "OPT_JRN_TRACKER_RESET",  kind = "action", button = "OPT_RESET" },
 		},
 		-- bouton construit par Options.lua (L.OPT_ACTION_JOURNAL), action
 		-- traitée par le relais de RunOptionAction plus bas
@@ -461,20 +461,26 @@ function ns:JournalNotify(stamp)
 	self:JournalFlush()
 end
 
+-- Bandeau du thème (docs/UI.md) : liseré ambre, losange du tampon, « NOUVEAU
+-- TAMPON · SORTE » en capitales pâles, le nom en titre dessous
+local TOAST_W, TOAST_H = 280, 50
 function ns:EnsureJournalToast()
 	if self.journalToast then return self.journalToast end
-	if not (Theme and Theme.CreateDiscreet) then return nil end
-	local frame = Theme.CreateDiscreet(UIParent, 250, 38)
+	if not (Theme and Theme.CreateToast) then return nil end
+	local frame = Theme.CreateToast(UIParent, TOAST_W, TOAST_H)
 	if not frame then return nil end
+	local left = frame.contentLeft or 14
 	frame.diamond = Theme.CreateDiamond(frame, 12, false)
-	frame.diamond:SetPoint("LEFT", frame, "LEFT", 10, 0)
+	frame.diamond:SetPoint("LEFT", frame, "LEFT", left, 0)
 	frame.diamond:SetVertexColor(Theme.GOLD[1], Theme.GOLD[2], Theme.GOLD[3], 1)
-	frame.title = frame:CreateFontString(nil, "OVERLAY", Theme.F_SMALL)
-	frame.title:SetPoint("TOPLEFT", frame, "TOPLEFT", 30, -5)
-	frame.title:SetTextColor(Theme.BLUE[1], Theme.BLUE[2], Theme.BLUE[3])
-	frame.text = Theme.CreateTitle(frame, 13)
-	frame.text:SetPoint("BOTTOMLEFT", frame, "BOTTOMLEFT", 30, 5)
-	frame.text:SetWidth(210)
+	frame.title = Theme.Text(frame, Theme.F_CAPS, Theme.MUTED_LIGHT)
+	frame.title:SetPoint("TOPLEFT", frame, "TOPLEFT", left + 22, -10)
+	frame.title:SetWidth(TOAST_W - left - 22 - 12)
+	frame.title:SetJustifyH("LEFT")
+	if frame.title.SetWordWrap then frame.title:SetWordWrap(false) end
+	frame.text = Theme.Text(frame, Theme.F_TITLE, Theme.PARCHMENT)
+	frame.text:SetPoint("TOPLEFT", frame, "TOPLEFT", left + 22, -25)
+	frame.text:SetWidth(TOAST_W - left - 22 - 12)
 	frame.text:SetJustifyH("LEFT")
 	frame.text:SetWordWrap(false)
 	if self.RestorePoint then self:RestorePoint(frame, "journalToastPoint", { point = "TOP", x = 0, y = -190 }) end
@@ -490,13 +496,13 @@ function ns:ShowNextJournalToast()
 	if not frame then self.journalToasts = {}; return nil end
 	if #queue >= TOAST_COLLAPSE then
 		-- une rafale (première connexion) : un bandeau, pas six d'affilée
-		frame.title:SetText(L.JRN_TOAST_TITLE)
+		frame.title:SetText(Theme.Upper(L.JRN_TOAST_TITLE))
 		frame.text:SetText(self:F("JRN_TOAST_MANY", #queue))
 		frame.message = self:F("JRN_TOAST_MANY", #queue)
 		self.journalToasts = {}
 	else
 		local stamp = table.remove(queue, 1)
-		frame.title:SetText(L.JRN_TOAST_TITLE .. Theme.T_GREY .. "  " .. self:JournalKindLabel(stamp.kind) .. "|r")
+		frame.title:SetText(Theme.Upper(L.JRN_TOAST_TITLE) .. "  ·  " .. Theme.Upper(self:JournalKindLabel(stamp.kind)))
 		frame.text:SetText(stamp.name)
 		frame.message = self:F("JRN_TOAST", stamp.name)
 	end
@@ -528,16 +534,8 @@ function ns:UpdateJournalToast(now)
 end
 
 -- ---------------------------------------------------------------------------
--- Fenêtre du carnet
+-- Pages de tampons (la fenêtre du carnet vit dans JournalWindow.lua)
 -- ---------------------------------------------------------------------------
--- 520 de large : sept onglets (Objectifs + six sortes) restent lisibles
-local WIDTH, HEIGHT = 520, 404
-local LINES, LINE_H = 10, 22
-local KIND_COLOR = {
-	zone = Theme.GOLD, subzone = Theme.BLUE, capital = Theme.PARCHMENT,
-	dungeon = Theme.BLUE, rare = Theme.RED, level = Theme.GREEN,
-}
-
 -- Totaux « à découvrir » et lieux encore vierges, selon les données connues :
 -- villages / hubs amis (Hubs.lua), 6 capitales, donjons de ce client
 -- (DungeonData.lua), 6 paliers. Zones et rares : pas de total fiable.

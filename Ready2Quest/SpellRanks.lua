@@ -22,7 +22,9 @@ local Theme = ns.Theme
 
 ns.SPELLRANKS_SLOTS = 120       -- cases des barres (pages et barres de posture comprises)
 ns.SPELLRANKS_ROWS = 8
-local WIDTH, ROW_H = 420, 30
+local WIDTH = 520
+local ROW_CARD, ROW_H = 36, 38       -- carte d'un sort, pas d'une ligne à l'autre
+local GAP = 14
 local BOOK_ICON = "Interface\\Icons\\INV_Misc_Book_09"
 
 local FR = {
@@ -32,6 +34,7 @@ local FR = {
 	OPT_SPELLRANKS_FORGET   = "Oublier les cases ignorées",
 	OPT_SPELLRANKS_BORDER   = "Liseré rouge autour des sorts à mettre à jour",
 	SR_TITLE                = "Rangs de sorts",
+	SR_SUB                  = "Les sorts de tes barres qui ont un meilleur rang.",
 	SR_LINE                 = "%s : rang %d → rang %d",
 	SR_WHERE                = "barre %d, case %d",
 	SR_BTN_UPDATE           = "Mettre à jour",
@@ -45,6 +48,10 @@ local FR = {
 	SR_UPDATED              = "%s : rang %d sur la barre %d, case %d.",
 	SR_IGNORED              = "%s (rang %d) gardé sur la barre %d, case %d.",
 	SR_FORGOT               = "Cases ignorées oubliées : %d.",
+	SR_PREVIEW_OLD          = "Rang 3, le 5 est appris",
+	SR_PREVIEW_OK           = "Meilleur rang",
+	SR_PREVIEW_ON           = "Sur tes barres, un liseré rouge entoure le sort à mettre à jour.",
+	SR_PREVIEW_OFF          = "Liseré coupé : l'icône et le chat te préviennent quand même.",
 	CHK_SPELLRANKS          = "Sorts des barres à jour",
 	CHK_SPELLRANKS_DETAIL   = "%d sort(s) à un rang inférieur sur tes barres",
 	ADV_SPELLRANKS          = "Mets à jour les sorts de tes barres (/r2q sorts).",
@@ -57,6 +64,7 @@ local EN = {
 	OPT_SPELLRANKS_FORGET   = "Forget ignored slots",
 	OPT_SPELLRANKS_BORDER   = "Red outline around spells to update",
 	SR_TITLE                = "Spell ranks",
+	SR_SUB                  = "Spells on your bars that have a higher rank.",
 	SR_LINE                 = "%s: rank %d → rank %d",
 	SR_WHERE                = "bar %d, slot %d",
 	SR_BTN_UPDATE           = "Update",
@@ -70,6 +78,10 @@ local EN = {
 	SR_UPDATED              = "%s: rank %d on bar %d, slot %d.",
 	SR_IGNORED              = "%s (rank %d) kept on bar %d, slot %d.",
 	SR_FORGOT               = "Ignored slots forgotten: %d.",
+	SR_PREVIEW_OLD          = "Rank 3, rank 5 is known",
+	SR_PREVIEW_OK           = "Best rank",
+	SR_PREVIEW_ON           = "On your bars, a red outline surrounds the spell to update.",
+	SR_PREVIEW_OFF          = "Outline off: the icon and the chat still tell you.",
 	CHK_SPELLRANKS          = "Bar spells up to date",
 	CHK_SPELLRANKS_DETAIL   = "%d spell(s) at a lower rank on your bars",
 	ADV_SPELLRANKS          = "Update the spells on your bars (/r2q sorts).",
@@ -83,10 +95,12 @@ ns.RegisterDefaults({ spellranksEnabled = true, spellranksBorder = true })
 if ns.AddOptionPage then
 	ns.AddOptionPage({
 		id = "spellranks", title = "OPT_PAGE_SPELLRANKS", parent = "qol", group = "OPT_GROUP_QOL",
+		-- aperçu : deux cases de barre, le liseré rouge sur celle à mettre à jour
+		preview = function(self, container) return self:SpellRanksPreview(container) end,
 		rows = {
 			{ key = "spellranksEnabled", label = "OPT_SPELLRANKS_ENABLED", kind = "bool" },
 			{ key = "spellranksBorder", label = "OPT_SPELLRANKS_BORDER", kind = "bool" },
-			{ key = "spellranksForget", label = "OPT_SPELLRANKS_FORGET", kind = "action" },
+			{ key = "spellranksForget", label = "OPT_SPELLRANKS_FORGET", kind = "action", button = "OPT_BTN_FORGET" },
 		},
 	})
 end
@@ -283,44 +297,49 @@ end
 -- ---------------------------------------------------------------------------
 -- La fenêtre
 -- ---------------------------------------------------------------------------
+-- hauteur pour `count` lignes (au moins une : la phrase « tout est à jour »)
+local function SpellRanksHeight(count)
+	return Theme.HEADER_COMPACT_HEIGHT + 1 + GAP + math.max(1, count) * ROW_H - (ROW_H - ROW_CARD)
+		+ GAP + Theme.DIALOG_FOOTER
+end
+
 function ns:EnsureSpellRanks()
 	if self.spellRanksFrame then return self.spellRanksFrame end
-	if not (Theme and Theme.CreatePanel) then return nil end
-	local height = 90 + ns.SPELLRANKS_ROWS * ROW_H
-	local frame = Theme.CreatePanel(UIParent, WIDTH, height, L.SR_TITLE, { name = "Ready2QuestSpellRanks" })
+	if not (Theme and Theme.CreateDialog) then return nil end
+	local frame = Theme.CreateDialog(UIParent, WIDTH, SpellRanksHeight(ns.SPELLRANKS_ROWS), { name = "Ready2QuestSpellRanks",
+		title = L.SR_TITLE, subtitle = L.SR_SUB })
 	if not frame then return nil end
 	frame:SetPoint("CENTER", UIParent, "CENTER", 0, 40)
-	local top = frame.contentTop - 6
+	local pad, inner = frame.pad + 1, frame.innerWidth
+	local top = frame.contentTop - GAP
 	frame.rows = {}
 	for index = 1, ns.SPELLRANKS_ROWS do
-		local row = CreateFrame("Frame", nil, frame)
-		row:SetSize(WIDTH - 28, ROW_H - 4)
-		row:SetPoint("TOPLEFT", frame, "TOPLEFT", 14, top - (index - 1) * ROW_H)
-		row.icon = Theme.CreateIcon(row, 22)
-		row.icon:SetPoint("LEFT", row, "LEFT", 0, 0)
-		row.text = row:CreateFontString(nil, "OVERLAY", Theme.F_BODY)
-		row.text:SetPoint("TOPLEFT", row, "TOPLEFT", 28, -1)
-		row.text:SetWidth(200)
-		row.text:SetJustifyH("LEFT")
-		row.where = row:CreateFontString(nil, "OVERLAY", Theme.F_SMALL)
-		row.where:SetPoint("TOPLEFT", row, "TOPLEFT", 28, -14)
-		row.where:SetTextColor(Theme.MUTED[1], Theme.MUTED[2], Theme.MUTED[3])
-		row.update = Theme.CreateButton(row, 92, 20, L.SR_BTN_UPDATE, function() ns:SpellRankUpdate(row.data) end, "primary")
-		row.update:SetPoint("RIGHT", row, "RIGHT", -66, 0)
-		row.ignore = Theme.CreateButton(row, 60, 20, L.SR_BTN_IGNORE, function() ns:SpellRankIgnore(row.data) end)
-		row.ignore:SetPoint("RIGHT", row, "RIGHT", 0, 0)
+		local row = Theme.CreateListRow(frame, inner, ROW_CARD, { icon = 24 })
+		row:SetPoint("TOPLEFT", frame, "TOPLEFT", pad, top - (index - 1) * ROW_H)
+		row:SetIndex(index)
+		row.ignore = Theme.CreateButton(row, nil, 24, L.SR_BTN_IGNORE, function() ns:SpellRankIgnore(row.data) end, "outline")
+		row.ignore:SetPoint("RIGHT", row, "RIGHT", -8, 0)
+		row.update = Theme.CreateButton(row, nil, 24, L.SR_BTN_UPDATE, function() ns:SpellRankUpdate(row.data) end, "accent")
+		row.update:SetPoint("RIGHT", row.ignore, "LEFT", -6, 0)
+		local textWidth = inner - row.textLeft - row.update:GetWidth() - row.ignore:GetWidth() - 8 - 6 - 12
+		row.text:ClearAllPoints()
+		row.text:SetPoint("TOPLEFT", row, "TOPLEFT", row.textLeft, -5)
+		row.text:SetWidth(textWidth)
+		row.where = Theme.Text(row, Theme.F_SMALL, Theme.MUTED)
+		row.where:SetPoint("TOPLEFT", row, "TOPLEFT", row.textLeft, -20)
+		row.where:SetWidth(textWidth)
+		row.where:SetJustifyH("LEFT")
 		row:Hide()
 		frame.rows[index] = row
 	end
-	frame.empty = frame:CreateFontString(nil, "OVERLAY", Theme.F_BODY)
-	frame.empty:SetPoint("TOPLEFT", frame, "TOPLEFT", 14, top - 4)
-	frame.empty:SetWidth(WIDTH - 28)
+	frame.empty = Theme.Text(frame, Theme.F_BODY, Theme.MUTED_LIGHT)
+	frame.empty:SetPoint("TOPLEFT", frame, "TOPLEFT", pad + 12, top - 6)
+	frame.empty:SetWidth(inner - 24)
 	frame.empty:SetJustifyH("LEFT")
-	frame.more = frame:CreateFontString(nil, "OVERLAY", Theme.F_SMALL)
-	frame.more:SetPoint("BOTTOMLEFT", frame, "BOTTOMLEFT", 14, 16)
-	frame.more:SetTextColor(Theme.MUTED[1], Theme.MUTED[2], Theme.MUTED[3])
-	frame.all = Theme.CreateButton(frame, 150, 22, L.SR_BTN_ALL, function() ns:SpellRankUpdateAll() end, "primary")
-	frame.all:SetPoint("BOTTOMRIGHT", frame, "BOTTOMRIGHT", -14, 12)
+	-- pied : « et N autre(s) » à gauche, « Tout mettre à jour » à droite
+	frame.more = Theme.Text(frame.footer, Theme.F_SMALL, Theme.MUTED)
+	frame.more:SetPoint("LEFT", frame.footer, "LEFT", Theme.DIALOG_PAD, 0)
+	frame.all = frame:AddFooterButton(L.SR_BTN_ALL, function() ns:SpellRankUpdateAll() end, "primary")
 	frame:Hide()
 	self.spellRanksFrame = frame
 	return frame
@@ -350,6 +369,8 @@ function ns:SpellRanksRefresh()
 	frame.empty:SetText(#list == 0 and L.SR_NONE or "")
 	frame.more:SetText(#list > ns.SPELLRANKS_ROWS and self:F("SR_MORE", #list - ns.SPELLRANKS_ROWS) or "")
 	if #list > 0 then frame.all:Show() else frame.all:Hide() end
+	-- la fenêtre suit la liste : pas de cartes vides sous la dernière
+	frame:SetHeight(SpellRanksHeight(math.min(#list, #frame.rows)))
 	return list
 end
 
@@ -438,6 +459,50 @@ local function Border(button)
 	borders[button] = frame
 	return frame
 end
+
+-- Aperçu des réglages : une mini barre d'action de deux cases, la première
+-- à un rang inférieur (liseré rouge, le même que sur les vraies barres,
+-- s'il est activé), la seconde à jour
+function ns:SpellRanksPreview(container)
+	local SLOT = 40
+	local slots = {}
+	for index, spec in ipairs({ { "Interface\\Icons\\Spell_Holy_HolyBolt", "SR_PREVIEW_OLD" },
+		{ "Interface\\Icons\\Spell_Holy_FlashHeal", "SR_PREVIEW_OK" } }) do
+		local slot = CreateFrame("Frame", nil, container)
+		slot:SetSize(SLOT, SLOT)
+		slot:SetPoint("LEFT", container, "LEFT", 22 + (index - 1) * (SLOT + 150), 0)
+		slot.bg = Theme.Solid(slot, "BACKGROUND", Theme.INK, 1)
+		slot.bg:SetAllPoints()
+		slot.icon = slot:CreateTexture(nil, "ARTWORK")
+		slot.icon:SetTexture(spec[1])
+		slot.icon:SetPoint("TOPLEFT", slot, "TOPLEFT", 2, -2)
+		slot.icon:SetPoint("BOTTOMRIGHT", slot, "BOTTOMRIGHT", -2, 2)
+		if slot.icon.SetTexCoord then slot.icon:SetTexCoord(0.08, 0.92, 0.08, 0.92) end
+		slot.edge = Theme.Border(slot, Theme.EDGE, 1, "BORDER")
+		slot.caption = Theme.Text(container, Theme.F_SMALL, Theme.MUTED_LIGHT)
+		slot.caption:SetPoint("LEFT", slot, "RIGHT", 10, 0)
+		slot.caption:SetText(L[spec[2]])
+		slots[index] = slot
+	end
+	-- liseré rouge des barres (BORDER_COLOR), en quatre traits
+	local outline = CreateFrame("Frame", nil, slots[1])
+	outline:SetAllPoints(slots[1])
+	outline.edges = Theme.Border(outline, BORDER_COLOR, BORDER_COLOR[4], "OVERLAY")
+	container.slots, container.outline = slots, outline
+	container.hint = Theme.Text(container, Theme.F_SMALL, Theme.MUTED)
+	container.hint:SetPoint("LEFT", container, "LEFT", 404, 0)
+	container.hint:SetWidth(290)
+	container.hint:SetJustifyH("LEFT")
+	if container.hint.SetWordWrap then container.hint:SetWordWrap(true) end
+	function container:Refresh(addon)
+		local on = ModuleOn() and addon:DB().spellranksBorder ~= false
+		if on then self.outline:Show() else self.outline:Hide() end
+		self.hint:SetText(on and L.SR_PREVIEW_ON or L.SR_PREVIEW_OFF)
+	end
+	container:Refresh(self)
+	return container
+end
+ns.SPELLRANKS_BORDER_COLOR = BORDER_COLOR
 
 -- Pose ou retire les liserés ; rend le nombre de cases marquées
 function ns:SpellRanksMark()

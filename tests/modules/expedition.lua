@@ -154,12 +154,19 @@ do
 		end
 		Check("[EXP] morts : losange plein rouge", deathRow and deathRow.status.state == "filled"
 			and deathRow.status.vertex[1] > 0.8 and deathRow.status.vertex[2] < 0.5)
-		Check("[EXP] hauteur suit le nombre de lignes", f.height == 36 + 50 + f.visibleLines * 18 + 42, f.height)
+		-- la fenêtre suit le nombre de lignes : la dernière carte au-dessus du
+		-- pied, sans chevaucher ni laisser un grand vide
+		local _, _, _, _, lastY = f.lines[f.visibleLines]:GetPoint()
+		local lastBottom = -lastY + NS.EXP_LAYOUT.rowCard
+		local room = f.height - NS.Theme.DIALOG_FOOTER - lastBottom
+		Check("[EXP] hauteur suit le nombre de lignes", room >= 8 and room <= 24 and not f.lines[f.visibleLines + 1]:IsShown(),
+			f.height .. " : " .. room)
 		Check("[EXP] Échap ferme la fenêtre", (function()
 			for _, name in ipairs(UISpecialFrames) do if name == "Ready2QuestExpeditionFrame" then return true end end
 			return false
 		end)())
-		Check("[EXP] bouton Fermer ambre", f.closeButton.style == "primary")
+		Check("[EXP] bouton Fermer en contour ambre, dans le pied", f.closeButton.style == "accent"
+			and f.closeButton:GetParent() == f.footer)
 		f.closeButton:Click()
 		Check("[EXP] Fermer masque la fenêtre", f.shown == false)
 	end
@@ -280,7 +287,7 @@ do
 	local nav, page
 	for _, button in ipairs(o.navButtons) do if button.pageId == "expedition" then nav = button end end
 	page = o.pages.expedition
-	Check("[EXP] page de réglages avec interrupteur", nav ~= nil and nav.power ~= nil and page ~= nil)
+	Check("[EXP] page de réglages avec interrupteur", nav ~= nil and nav.powerKey == "expeditionEnabled" and page ~= nil)
 	Check("[EXP] page rangée dans MODULES, avant Marchand", (function()
 		local seen
 		for _, def in ipairs(NS.OPTION_PAGES) do
@@ -288,7 +295,7 @@ do
 			if def.id == "merchant" then return seen == true end
 		end
 	end)())
-	Check("[EXP] phrase d'explication", page and page.sub.text == NS.L.OPT_PAGE_EXPEDITION_SUB)
+	Check("[EXP] phrase d'explication", page and page.subText == NS.L.OPT_PAGE_EXPEDITION_SUB)
 	Check("[EXP] trois réglages sur la page", page and #page.rows == 3, page and #page.rows)
 	if nav then
 		nav.power:Click()
@@ -299,7 +306,7 @@ do
 	local minRow
 	for _, row in ipairs(page and page.rows or {}) do if row.def.key == "expeditionMinTrip" then minRow = row end end
 	if minRow then
-		minRow.plus:Click()
+		minRow:Step(1)
 		Check("[EXP] seuil réglable par pas de 30 s", NS:DB().expeditionMinTrip == 90, NS:DB().expeditionMinTrip)
 	end
 	o:Hide()

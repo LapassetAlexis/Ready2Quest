@@ -403,11 +403,28 @@ do
 		if row.def and row.def.key == "companionAppearance" then appRow = row end
 		if row.def and row.def.key == "companionOrnLantern" then lanternRow = row end
 	end
-	Check("[COMP] réglages : nom de l'apparence affiché", appRow and appRow.value.text:find("Dragonnet émeraude", 1, true), appRow and appRow.value.text)
-	Check("[COMP] réglages : ornement verrouillé avec son palier", lanternRow and lanternRow.label.text:find("palier", 1, true),
-		lanternRow and lanternRow.label.text)
-	Check("[COMP] page sans débordement", NS.optionsFrame.pages.companionMain.contentBottom >= NS.OPT_LAYOUT.contentLimit,
-		NS.optionsFrame.pages.companionMain.contentBottom)
+	local dd = appRow and appRow.dropdown
+	Check("[COMP] réglages : apparence en liste déroulante, nom affiché", dd and dd.text.text:find("Dragonnet émeraude", 1, true),
+		dd and dd.text.text)
+	local byValue = {}
+	for _, entry in ipairs(dd and dd.options or {}) do byValue[entry.value] = entry end
+	Check("[COMP] liste : toutes les apparences, les gagnées d'abord", dd and #dd.options == #NS.COMPANION_APPEARANCES
+		and not dd.options[1].disabled and not dd.options[2].disabled and dd.options[#dd.options].disabled == true)
+	Check("[COMP] liste : verrouillée = grisée avec sa condition", byValue.owl and byValue.owl.disabled and byValue.owl.hint == "Palier 2"
+		and byValue.chicken and byValue.chicken.hint == NS:CompanionRequirement({ inn = 3 }), byValue.owl and byValue.owl.hint)
+	local appBefore = data.appearance
+	Check("[COMP] liste : un choix verrouillé est refusé", dd:Choose("owl") == false and data.appearance == appBefore)
+	dd:Choose("whelp_red")
+	Check("[COMP] liste : choix d'une apparence gagnée", data.appearance == "whelp_red" and C.Model().display == 6290, data.appearance)
+	dd:Choose("frog")
+	Check("[COMP] réglages : ornement verrouillé, verrou avec son palier", lanternRow and lanternRow.locked
+		and lanternRow.lock.label.text == "Palier 2" and lanternRow.lock:IsShown() and not lanternRow.toggle:IsShown(),
+		lanternRow and lanternRow.lock and lanternRow.lock.label.text)
+	local lanternBefore = NS:DB().companionOrnLantern
+	lanternRow:Click()
+	Check("[COMP] ornement verrouillé : le clic ne change rien", NS:DB().companionOrnLantern == lanternBefore)
+	Check("[COMP] page sans débordement", #NS:OptionsUnreachable("companionMain") == 0,
+		table.concat(NS:OptionsUnreachable("companionMain"), ", "))
 	NS.optionsFrame:Hide()
 end
 
@@ -1177,8 +1194,8 @@ do
 	C.Quiet()
 	if tutoRow then tutoRow:Click() end
 	Check("[COMP] bouton des réglages : tutoriel rejoué", C.Key() == "TUTO" and NS:CompanionTutorialActive())
-	Check("[COMP] page Compagnon toujours sans débordement", NS.optionsFrame.pages.companionMain.contentBottom >= NS.OPT_LAYOUT.contentLimit,
-		NS.optionsFrame.pages.companionMain.contentBottom)
+	Check("[COMP] page Compagnon toujours sans débordement", #NS:OptionsUnreachable("companionMain") == 0,
+		table.concat(NS:OptionsUnreachable("companionMain"), ", "))
 	NS.optionsFrame:Hide()
 	NS:CompanionSkipTutorial()
 	-- jamais en combat : première apparition en plein combat

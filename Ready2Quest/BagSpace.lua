@@ -32,7 +32,7 @@ local HEARTHSTONE    = 6948
 local CLASS_PROJECTILE, CLASS_QUEST, CLASS_KEY = 6, 12, 13
 local CHAT_COOLDOWN  = 30     -- secondes entre deux suggestions dans le chat
 local POPUP          = "READY2QUEST_BAGSPACE_DESTROY"
-local WIDTH, HEIGHT  = 340, 52
+local WIDTH, HEIGHT  = 380, 62
 local LIST_SHOWN     = 6      -- objets affichés par liste dans les réglages
 
 -- ---------------------------------------------------------------------------
@@ -125,6 +125,12 @@ if ns.AddOptionPage then
 		rows = {
 			{ key = "bagspaceEnabled", label = "OPT_BAGSPACE_ENABLED", kind = "bool" },
 			{ key = "bagspaceFrame",   label = "OPT_BAGSPACE_FRAME",   kind = "bool" },
+			{ key = "bagspaceConfirm", kind = "note", text = "OPT_BAGSPACE_CONFIRM" },
+			{ header = "OPT_BAGSPACE_KEEP" },
+			{ key = "bagspaceKeep", kind = "note", text = function() return ns:BagSpaceListText("bagspaceKeep") end },
+			{ header = "OPT_BAGSPACE_DISCARD" },
+			{ key = "bagspaceDiscard", kind = "note", text = function() return ns:BagSpaceListText("bagspaceDiscard") end },
+			{ key = "bagspaceHint", kind = "note", small = true, text = "OPT_BAGSPACE_HINT" },
 		},
 	})
 end
@@ -621,31 +627,33 @@ function ns:BagSpaceDestroy(data)
 end
 
 -- ---------------------------------------------------------------------------
--- Cadre discret, près des sacs
+-- Bandeau (Theme.CreateToast), près des sacs : liseré orange (sac plein),
+-- la suggestion, puis l'action principale et ses deux variantes
 -- ---------------------------------------------------------------------------
 function ns:EnsureBagSpaceFrame()
 	if self.bagspaceFrame then return self.bagspaceFrame end
-	if not Theme or not Theme.CreateDiscreet or not Theme.CreateButton then return nil end
-	local ok, frame = pcall(Theme.CreateDiscreet, UIParent, WIDTH, HEIGHT)
+	if not Theme or not Theme.CreateToast or not Theme.CreateButton then return nil end
+	local ok, frame = pcall(Theme.CreateToast, UIParent, WIDTH, HEIGHT, { strata = "DIALOG", accent = Theme.ORANGE_DEEP })
 	if not ok or not frame then return nil end
-	frame:SetFrameStrata("DIALOG")
 	-- au-dessus des sacs ouverts, en bas à droite de l'écran
 	if self.RestorePoint then self:RestorePoint(frame, "bagspacePoint", { point = "BOTTOMRIGHT", x = -240, y = 180 }) end
+	local left = frame.contentLeft
 
-	frame.text = frame:CreateFontString(nil, "OVERLAY", Theme.F_BODY)
-	frame.text:SetPoint("TOPLEFT", frame, "TOPLEFT", 8, -7)
-	frame.text:SetWidth(WIDTH - 36)
+	frame.closeButton = Theme.CreateCloseButton(frame, 18)
+	frame.closeButton:SetPoint("TOPRIGHT", frame, "TOPRIGHT", -6, -6)
+	frame.closeButton:SetScript("OnClick", function() ns:HideBagSpaceFrame() end)
+
+	frame.text = Theme.Text(frame, Theme.F_BODY, Theme.TEXT)
+	frame.text:SetPoint("TOPLEFT", frame, "TOPLEFT", left, -9)
+	frame.text:SetWidth(WIDTH - left - 6 - 18 - 8)
 	frame.text:SetJustifyH("LEFT")
 	frame.text:SetWordWrap(false)
 
-	frame.closeButton = Theme.CreateButton(frame, 16, 16, "x", function() ns:HideBagSpaceFrame() end)
-	frame.closeButton:SetPoint("TOPRIGHT", frame, "TOPRIGHT", -4, -4)
-
-	frame.destroyButton = Theme.CreateButton(frame, 80, 18, L.BAG_BTN_DESTROY, function() ns:BagSpaceRequestDestroy() end, "primary")
-	frame.destroyButton:SetPoint("BOTTOMLEFT", frame, "BOTTOMLEFT", 8, 7)
-	frame.nextButton = Theme.CreateButton(frame, 80, 18, L.BAG_BTN_NEXT, function() ns:BagSpaceNext() end)
+	frame.destroyButton = Theme.CreateButton(frame, nil, 22, L.BAG_BTN_DESTROY, function() ns:BagSpaceRequestDestroy() end, "primary")
+	frame.destroyButton:SetPoint("BOTTOMLEFT", frame, "BOTTOMLEFT", left, 8)
+	frame.nextButton = Theme.CreateButton(frame, nil, 22, L.BAG_BTN_NEXT, function() ns:BagSpaceNext() end, "outline")
 	frame.nextButton:SetPoint("LEFT", frame.destroyButton, "RIGHT", 6, 0)
-	frame.keepButton = Theme.CreateButton(frame, 120, 18, L.BAG_BTN_KEEP, function() ns:BagSpaceKeepCurrent() end)
+	frame.keepButton = Theme.CreateButton(frame, nil, 22, L.BAG_BTN_KEEP, function() ns:BagSpaceKeepCurrent() end, "outline")
 	frame.keepButton:SetPoint("LEFT", frame.nextButton, "RIGHT", 6, 0)
 
 	frame:Hide()
@@ -703,9 +711,9 @@ ns.EXTRA_COMMANDS["garder"] = ListCommand(ns.BagSpaceToggleKeep)
 ns.EXTRA_COMMANDS["jeter-toujours"] = ListCommand(ns.BagSpaceToggleDiscard)
 
 -- ---------------------------------------------------------------------------
--- Page de réglages : la ligne de confirmation et les deux listes, sous les
--- interrupteurs. Options.lua ne sait construire que des réglages : on ajoute
--- ce bloc à la page une fois construite, au premier rafraîchissement.
+-- Page de réglages : la ligne de confirmation et les deux listes, en notes
+-- sous les interrupteurs (lignes `note` de la page, relues à chaque
+-- rafraîchissement des réglages)
 -- ---------------------------------------------------------------------------
 local function ListText(list)
 	local names = {}
@@ -719,50 +727,9 @@ local function ListText(list)
 	return text
 end
 
-function ns:BagSpaceRefreshPage()
-	local frame = self.optionsFrame
-	local page = frame and frame.pages and frame.pages.bagspace
-	if not page then return end
-	if not page.bagspaceBlock then
-		local y = page.contentBottom or -100
-		local width = page.GetWidth and page:GetWidth() or 360
-		local block = {}
-		local function Text(font, offset, height)
-			local fs = page:CreateFontString(nil, "OVERLAY", font)
-			fs:SetPoint("TOPLEFT", page, "TOPLEFT", 0, y - offset)
-			fs:SetWidth(width)
-			if height then fs:SetHeight(height) end
-			fs:SetJustifyH("LEFT")
-			return fs
-		end
-		block.confirm = Text(Theme.F_BODY, 0)
-		block.confirm:SetText(L.OPT_BAGSPACE_CONFIRM)
-		block.keepHeader = Text(Theme.F_SMALL, 26)
-		block.keepHeader:SetText(L.OPT_BAGSPACE_KEEP)
-		block.keepHeader:SetTextColor(Theme.GOLD_SOFT[1], Theme.GOLD_SOFT[2], Theme.GOLD_SOFT[3])
-		block.keep = Text(Theme.F_BODY, 42, 30)
-		block.discardHeader = Text(Theme.F_SMALL, 80)
-		block.discardHeader:SetText(L.OPT_BAGSPACE_DISCARD)
-		block.discardHeader:SetTextColor(Theme.GOLD_SOFT[1], Theme.GOLD_SOFT[2], Theme.GOLD_SOFT[3])
-		block.discard = Text(Theme.F_BODY, 96, 30)
-		block.hint = Text(Theme.F_SMALL, 134, 30)
-		block.hint:SetText(L.OPT_BAGSPACE_HINT)
-		block.hint:SetTextColor(0.55, 0.55, 0.55)
-		page.bagspaceBlock = block
-		page.contentBottom = y - 164
-	end
-	local db = self:DB()
-	page.bagspaceBlock.keep:SetText(ListText(ListOf(db, "bagspaceKeep")))
-	page.bagspaceBlock.discard:SetText(ListText(ListOf(db, "bagspaceDiscard")))
-end
-
-if type(ns.RefreshOptions) == "function" then
-	local baseRefresh = ns.RefreshOptions
-	function ns:RefreshOptions(...)
-		baseRefresh(self, ...)
-		local ok, err = pcall(self.BagSpaceRefreshPage, self)
-		if not ok and self.RecordError then self:RecordError("bagspace:options", err) end
-	end
+-- « bagspaceKeep » ou « bagspaceDiscard » : les noms, triés, bornés
+function ns:BagSpaceListText(key)
+	return ListText(ListOf(self:DB(), key))
 end
 
 -- ---------------------------------------------------------------------------

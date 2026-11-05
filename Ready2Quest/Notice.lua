@@ -76,7 +76,8 @@ ns.NOTICE_ICONS = {
 ns.NOTICE_GLOW = "Interface\\Buttons\\UI-ActionButton-Border"
 ns.NOTICE_PULSE = 8        -- secondes de pulsation
 ns.NOTICE_LINGER = 60      -- puis visible, atténuée, avant de disparaître
-local SIZE = 34
+local SIZE = 40            -- la tuile ; l'icône du jeu tient dedans, à 5 px du bord
+local ICON_INSET = 5
 
 local function InCombat()
 	if type(InCombatLockdown) == "function" and InCombatLockdown() then return true end
@@ -89,7 +90,7 @@ end
 
 -- Les rapports passent-ils par l'icône ?
 function ns:WantsNotice()
-	return self:DB().reportIcon ~= false and Theme and Theme.CreatePanel ~= nil
+	return self:DB().reportIcon ~= false and Theme and Theme.CreateDialog ~= nil
 end
 
 -- ---------------------------------------------------------------------------
@@ -160,9 +161,20 @@ function ns:EnsureNotice()
 	frame.glow:SetSize(SIZE * 1.9, SIZE * 1.9)
 	frame.glow:SetPoint("CENTER", frame, "CENTER", 0, 0)
 
+	-- tuile (docs/UI.md, bandeaux) : fond WINDOW, filet EDGE, barre basse à la
+	-- couleur du rapport
+	frame.tile = Theme.Solid(frame, "BORDER", Theme.WINDOW, 0.94)
+	frame.tile:SetAllPoints()
+	frame.border = Theme.Border(frame, Theme.EDGE, 1, "ARTWORK")
+	frame.accent = Theme.Solid(frame, "OVERLAY", Theme.GOLD, 1)
+	frame.accent:SetPoint("BOTTOMLEFT", frame, "BOTTOMLEFT", 1, 1)
+	frame.accent:SetPoint("BOTTOMRIGHT", frame, "BOTTOMRIGHT", -1, 1)
+	frame.accent:SetHeight(2)
+
 	-- icône du jeu, désaturée puis teintée : un jaune teinté donnerait un vert sale
 	frame.icon = frame:CreateTexture(nil, "ARTWORK")
-	frame.icon:SetAllPoints()
+	frame.icon:SetPoint("TOPLEFT", frame, "TOPLEFT", ICON_INSET, -ICON_INSET)
+	frame.icon:SetPoint("BOTTOMRIGHT", frame, "BOTTOMRIGHT", -ICON_INSET, ICON_INSET)
 
 	-- repère du mode édition (même habillage que le résumé et le portrait)
 	frame.moveGlow = Theme.Solid and Theme.Solid(frame, "OVERLAY", Theme.GOLD, 0.25) or nil
@@ -179,13 +191,9 @@ function ns:EnsureNotice()
 		if not notice or type(GameTooltip) ~= "table" or not GameTooltip.SetOwner then return end
 		GameTooltip:SetOwner(f, "ANCHOR_BOTTOM")
 		for index, line in ipairs(notice.lines or {}) do
-			if index == 1 then
-				GameTooltip:AddLine(line, notice.color[1], notice.color[2], notice.color[3])
-			else
-				GameTooltip:AddLine(line, 0.85, 0.85, 0.85)
-			end
+			Theme.TooltipLine(GameTooltip, line, index == 1 and (notice.color or Theme.GOLD) or Theme.TEXT)
 		end
-		GameTooltip:AddLine(L.NOTICE_CLICK, 0.6, 0.6, 0.6)
+		Theme.TooltipHint(GameTooltip, L.NOTICE_CLICK)
 		GameTooltip:Show()
 	end)
 	frame:SetScript("OnLeave", function()
@@ -220,6 +228,7 @@ function ns:DisplayNotice()
 	if frame.icon.SetDesaturated then frame.icon:SetDesaturated(true) end
 	frame.icon:SetVertexColor(color[1], color[2], color[3], 1)
 	frame.glow:SetVertexColor(color[1], color[2], color[3], 1)
+	frame.accent:SetVertexColor(color[1], color[2], color[3], 1)
 	local now = ns.Now()
 	notice.shownAt = now
 	notice.pulseUntil = now + ns.NOTICE_PULSE
@@ -279,6 +288,7 @@ if StartEdit and StopEdit then
 			if not self.notice then
 				frame.icon:SetTexture(ns.NOTICE_ICONS.depart)
 				frame.icon:SetVertexColor(Theme.GOLD[1], Theme.GOLD[2], Theme.GOLD[3], 1)
+				frame.accent:SetVertexColor(Theme.GOLD[1], Theme.GOLD[2], Theme.GOLD[3], 1)
 				frame.glow:SetAlpha(0.5)
 			end
 			frame:SetAlpha(1)
