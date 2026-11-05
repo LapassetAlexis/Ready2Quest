@@ -32,23 +32,8 @@ function ns:DetectCapabilities()
 	caps.auramodern = (C_UnitAuras and type(C_UnitAuras.GetPlayerAuraBySpellID) == "function") and true or false
 	caps.crafting = (C_TradeSkillUI and type(C_TradeSkillUI.GetRecipesTracked) == "function") and true or false
 
-	-- Chemin « métiers Classic » : recette sélectionnée + réactifs, avec le
-	-- nombre possédé fourni par le client.
-	caps.tradeskillLegacy = (type(GetTradeSkillLine) == "function"
-		and type(GetTradeSkillSelectionIndex) == "function"
-		and type(GetTradeSkillInfo) == "function"
-		and type(GetTradeSkillNumReagents) == "function"
-		and type(GetTradeSkillReagentInfo) == "function") and true or false
-
-	-- Era : Enchantement et dressage du chasseur passent par la fenêtre Craft
-	caps.craftLegacy = (type(GetCraftSelectionIndex) == "function"
-		and type(GetCraftInfo) == "function"
-		and type(GetCraftNumReagents) == "function"
-		and type(GetCraftReagentInfo) == "function") and true or false
-
 	caps.questlogNamespaced = (C_QuestLog and type(C_QuestLog.GetNumQuestLogEntries) == "function") and true or false
-	caps.questlogLegacy = (type(GetNumQuestLogEntries) == "function" and type(GetQuestLogTitle) == "function") and true or false
-	caps.quests = caps.questlogNamespaced or caps.questlogLegacy
+	caps.quests = caps.questlogNamespaced
 
 
 	caps.durability = type(GetInventoryItemDurability) == "function"
@@ -85,7 +70,6 @@ function ns:ClientFlavour()
 	-- Repli sur les capacités si GetBuildInfo est absent
 	local caps = ns.Caps
 	if caps.crafting and caps.questlogNamespaced then return "Forever" end
-	if caps.questlogLegacy then return "Classic (Era/MoP)" end
 	if caps.auramodern then return "moderne (non identifié)" end
 	return "inconnu"
 end

@@ -37,7 +37,7 @@ end
 do
 	Say("-- lieux : données")
 	local bad, counts = {}, {}
-	for _, client in ipairs({ "era", "forever" }) do
+	for _, client in ipairs({ "forever" }) do
 		local data = NS.PLACE_DATA and NS.PLACE_DATA[client]
 		counts[client] = 0
 		for mapID, list in pairs(data and data.places or {}) do
@@ -53,10 +53,10 @@ do
 			end
 		end
 	end
-	Check("[PLC] lieux d'Era et de Forever générés", counts.era >= 120 and counts.forever >= 120,
-		counts.era .. " / " .. counts.forever)
+	Check("[PLC] lieux de Forever générés, plus de lieux d'Era", counts.forever >= 120 and NS.PLACE_DATA.era == nil,
+		counts.forever)
 	Check("[PLC] chaque lieu est bien formé (position, rayon, faction, services)", #bad == 0, table.concat(bad, ", "))
-	for _, client in ipairs({ "era", "forever" }) do
+	for _, client in ipairs({ "forever" }) do
 		local places = NS.PLACE_DATA[client].places
 		local goldshire = P.Near(places[1429], 42.4, 67.1, 2)
 		local razor = P.Near(places[1411], 52.0, 42.2, 2)
@@ -65,7 +65,7 @@ do
 		Check("[PLC] " .. client .. " : Razor Hill, Horde", razor and razor[4] == "H")
 	end
 	local neutral
-	for _, p in ipairs(NS.PLACE_DATA.era.places[1434] or {}) do if p[4] == "N" and p[5] % 2 == 1 then neutral = p end end
+	for _, p in ipairs(NS.PLACE_DATA.forever.places[1434] or {}) do if p[4] == "N" and p[5] % 2 == 1 then neutral = p end end
 	Check("[PLC] Booty Bay : lieu neutre avec auberge", neutral ~= nil)
 	Check("[PLC] socle : Places.lua dans les deux .toc", (function()
 		for _, file in ipairs(TOC_FILES) do

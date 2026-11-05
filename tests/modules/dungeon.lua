@@ -6,7 +6,7 @@ local Check, Say, ResetWorld, NS, Mock = T.Check, T.Say, T.ResetWorld, T.NS, T.M
 local saved = {
 	IsInInstance = rawget(_G, "IsInInstance"), GetInstanceInfo = rawget(_G, "GetInstanceInfo"),
 	GetRealZoneText = rawget(_G, "GetRealZoneText"), GetAreaInfo = C_Map.GetAreaInfo,
-	GetQuestLogTitle = _G.GetQuestLogTitle, QLGetInfo = C_QuestLog.GetInfo,
+	QLGetInfo = C_QuestLog.GetInfo,
 	GetNumSkillLines = rawget(_G, "GetNumSkillLines"), GetSkillLineInfo = rawget(_G, "GetSkillLineInfo"),
 }
 -- noms traduits renvoyés par le « jeu » (client français)
@@ -57,12 +57,13 @@ do
 	local missing = {}
 	for _, key in ipairs(forever) do
 		local d = NS.DUNGEONS[key]
-		if not (d and d.forever and d.fo) then missing[#missing + 1] = key end
+		if not (d and d.fo) then missing[#missing + 1] = key end
 	end
 	Check("[DGN] les 9 donjons de Forever présents", #missing == 0, table.concat(missing, ","))
 	local dal = NS.DUNGEONS.dalaran
 	Check("[DGN] Cité de Dalaran : carte 2959, niveaux 28-33", dal.map == 2959 and dal.fo[1] == 28 and dal.fo[2] == 33)
-	Check("[DGN] Mortemines : niveaux Era du client (15-28)", NS.DUNGEONS.dm.era[1] == 15 and NS.DUNGEONS.dm.era[2] == 28)
+	Check("[DGN] Mortemines : niveaux de Forever seuls (17-26)", NS.DUNGEONS.dm.era == nil
+		and NS.DUNGEONS.dm.fo[1] == 17 and NS.DUNGEONS.dm.fo[2] == 26)
 	Check("[DGN] plans avancés : table présente", type(NS.DUNGEON_BLUEPRINTS) == "table")
 end
 
@@ -126,11 +127,6 @@ do
 	Check("[DGN] Forever : 20 ok", NS:DungeonVerdict(sfk, 20) == "ok")
 	Check("[DGN] Forever : 30 ok", NS:DungeonVerdict(sfk, 30) == "ok")
 	Check("[DGN] Forever : 31 gris", NS:DungeonVerdict(sfk, 31) == "grey")
-	Mock.world.build = { version = "1.15.9", build = "70576", date = "", toc = 11509 }
-	NS.dungeonIndex = nil
-	Check("[DGN] Era : fourchette du client (31 ok sur 18-32)", NS:DungeonVerdict(sfk, 31) == "ok")
-	Inside("City of Dalaran", 2959)
-	Check("[DGN] Era : donjon de Forever ignoré", NS.lastDungeonSheet == nil)
 	Reset(10); Sub("Donjon d'Ombrecroc")
 	Check("[DGN] entrée, niveau 10 : rien (passage)", NS.lastDungeonSheet == nil)
 	Reset(60); Sub("Donjon d'Ombrecroc")
@@ -159,42 +155,20 @@ do
 		{ title = "Les Mortemines", isHeader = true },
 		{ title = "Edwin VanCleef", questID = 4 },
 	}
-	-- forme historique (title, level, tag, group, isHeader, …) : celle du harnais
+	-- API C_QuestLog (Forever) avec en-têtes : celle du harnais
 	Reset(22); Mock.world.quests = log
 	Inside("Donjon d'Ombrecroc", 33)
 	local q = NS.lastDungeonSheet and NS.lastDungeonSheet.quests or {}
-	Check("[DGN] forme 5.x : 2 quêtes sous l'en-tête du donjon", #q == 2, #q)
-	Check("[DGN] forme 5.x : titres et « à rendre »", q[1] and q[1].title == "Le livre d'Ur" and q[2].ready == true and q[1].ready == false)
-	-- forme Era 1.13+ (title, level, suggestedGroup, isHeader, isCollapsed, isComplete)
-	_G.GetQuestLogTitle = function(index)
-		local e = Mock.world.quests[index]
-		if not e then return nil end
-		return e.title, 20, 0, e.isHeader == true, e.collapsed == true, e.ready and 1 or nil, 0, e.questID
-	end
+	Check("[DGN] 2 quêtes sous l'en-tête du donjon", #q == 2, #q)
+	Check("[DGN] titres et « à rendre » via ReadyForTurnIn", q[1] and q[1].title == "Le livre d'Ur" and q[2].ready == true and q[1].ready == false)
 	Reset(22); Mock.world.quests = log
 	Inside("Les Mortemines", 36)
 	q = NS.lastDungeonSheet and NS.lastDungeonSheet.quests or {}
-	Check("[DGN] forme Era : quête sous « Les Mortemines »", #q == 1 and q[1].title == "Edwin VanCleef", #q)
-	Reset(22); Mock.world.quests = log
-	Inside("Donjon d'Ombrecroc", 33)
-	q = NS.lastDungeonSheet and NS.lastDungeonSheet.quests or {}
-	Check("[DGN] forme Era : isComplete = 1 lu comme « à rendre »", #q == 2 and q[2].ready == true)
+	Check("[DGN] quête sous « Les Mortemines »", #q == 1 and q[1].title == "Edwin VanCleef", #q)
 	Reset(22)
 	Mock.world.quests = { { title = "Donjon d'Ombrecroc", isHeader = true, collapsed = true } }
 	Inside("Donjon d'Ombrecroc", 33)
 	Check("[DGN] en-tête replié signalé", NS.lastDungeonSheet and NS.lastDungeonSheet.collapsed == true)
-	_G.GetQuestLogTitle = saved.GetQuestLogTitle
-	-- API namespacée (Forever) avec en-têtes
-	C_QuestLog.GetInfo = function(index)
-		local e = Mock.world.quests[index]
-		if not e then return nil end
-		return { title = e.title, isHeader = e.isHeader == true, questID = e.questID }
-	end
-	Reset(22); Mock.world.quests = log
-	Inside("Donjon d'Ombrecroc", 33)
-	q = NS.lastDungeonSheet and NS.lastDungeonSheet.quests or {}
-	Check("[DGN] C_QuestLog : 2 quêtes, prête via ReadyForTurnIn", #q == 2 and q[2].ready == true and q[1].ready == false, #q)
-	C_QuestLog.GetInfo = saved.QLGetInfo
 	Reset(22)
 	Inside("Donjon d'Ombrecroc", 33)
 	Check("[DGN] journal vide : liste vide", NS.lastDungeonSheet and #NS.lastDungeonSheet.quests == 0)
@@ -296,6 +270,6 @@ end
 -- restauration
 _G.IsInInstance, _G.GetInstanceInfo, _G.GetRealZoneText = saved.IsInInstance, saved.GetInstanceInfo, saved.GetRealZoneText
 C_Map.GetAreaInfo = saved.GetAreaInfo
-_G.GetQuestLogTitle, C_QuestLog.GetInfo = saved.GetQuestLogTitle, saved.QLGetInfo
+C_QuestLog.GetInfo = saved.QLGetInfo
 _G.GetNumSkillLines, _G.GetSkillLineInfo = saved.GetNumSkillLines, saved.GetSkillLineInfo
 Reset(22)

@@ -161,7 +161,7 @@ end
 function ns:PlaceTable()
 	local data = self.PLACE_DATA
 	if type(data) ~= "table" then return nil end
-	return data[self:IsForeverClient() and "forever" or "era"]
+	return data.forever
 end
 
 -- Position du joueur sur une carte, en % (nil en instance ou sans API)
@@ -242,20 +242,16 @@ end
 function ns:DungeonIndex()
 	if self.dungeonIndex then return self.dungeonIndex end
 	local index = { byMap = {}, byName = {}, byEntrance = {} }
-	local forever = self:IsForeverClient()
 	for key, entry in pairs(self.DUNGEONS or {}) do
-		-- un donjon de Forever n'existe pas sur Era : pas de faux positif de nom
-		if not entry.forever or forever then
-			entry.key = key
-			if entry.map then index.byMap[entry.map] = entry end
-			for _, name in ipairs({ AreaName(entry.area) or false, entry.name or false }) do
-				local n = name and Normalize(name)
-				if n then index.byName[n] = entry end
-			end
-			for _, areaID in ipairs(entry.entrances or {}) do
-				local n = Normalize(AreaName(areaID))
-				if n then index.byEntrance[n] = entry end
-			end
+		entry.key = key
+		if entry.map then index.byMap[entry.map] = entry end
+		for _, name in ipairs({ AreaName(entry.area) or false, entry.name or false }) do
+			local n = name and Normalize(name)
+			if n then index.byName[n] = entry end
+		end
+		for _, areaID in ipairs(entry.entrances or {}) do
+			local n = Normalize(AreaName(areaID))
+			if n then index.byEntrance[n] = entry end
 		end
 	end
 	self.dungeonIndex = index
@@ -268,7 +264,7 @@ function ns:DungeonName(entry, instanceName)
 end
 
 function ns:DungeonRange(entry)
-	local range = (self:IsForeverClient() and entry.fo) or entry.era or entry.fo
+	local range = entry.fo
 	if type(range) ~= "table" then return nil end
 	return range[1], range[2]
 end

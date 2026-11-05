@@ -33,11 +33,6 @@ local function Fresh()
 	NS:DetectCapabilities()
 end
 
-local function SetEra()
-	Mock.world.build = { version = "1.15.9", build = "69722", date = "Oct 2026", toc = 11509 }
-	NS:DetectCapabilities()
-end
-
 local function FrameText() return NS.campFrame and NS.campFrame.text:GetText() end
 local function FrameShown() return NS.campFrame ~= nil and NS.campFrame:IsShown() end
 
@@ -181,25 +176,6 @@ do
 	NS:SetModuleEnabled("campkit", false)
 	NS:RunChecklist("manual")
 	Check("[CAMP] contrôle coupé : exclu de la note", Result("campkit").disabled == true and Result("campkit").weight == 0)
-end
-
--- ---------------------------------------------------------------------------
--- Era : pas de campement, contrôles muets
--- ---------------------------------------------------------------------------
-do
-	Fresh()
-	SetEra()
-	SetSkills({ { "Cuisine", false, 300 }, { "Forge", false, 300 } })
-	Bag({ { BASIC_KIT, 1 }, { SHARPENING_WHEEL, 1 } })
-	NS:RunChecklist("manual")
-	Check("[CAMP] Era : client identifié", NS:IsForever() == false, NS:ClientFlavour())
-	Check("[CAMP] Era : kit inactif (masqué)", Result("campkit").inactive == true and Result("campkit").weight == 0)
-	Check("[CAMP] Era : objet inactif (masqué)", Result("campobject").inactive == true)
-	Mock.world.auras[CAMP_NEARBY] = { spellId = CAMP_NEARBY }
-	Mock:Fire("UNIT_AURA", "player"); Mock:Advance(0.3)
-	Check("[CAMP] Era : jamais de compte à rebours", not FrameShown())
-	Mock.world.build = nil
-	NS:DetectCapabilities()
 end
 
 -- ---------------------------------------------------------------------------

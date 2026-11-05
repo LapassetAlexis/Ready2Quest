@@ -343,14 +343,11 @@ function ns:JournalDungeon()
 	if key and key ~= "" then return self:JournalEarn("dungeon", key, name or key) end
 end
 
--- Donjons de ce client (ceux de Forever n'existent pas sur Era)
+-- Donjons de la base (DungeonData.lua)
 function ns:JournalDungeonList()
 	local list = {}
-	local forever = self.IsForeverClient and self:IsForeverClient()
 	for key, entry in pairs(self.DUNGEONS or {}) do
-		if not entry.forever or forever then
-			list[#list + 1] = { key = key, name = self.DungeonName and self:DungeonName(entry) or entry.name or key }
-		end
+		list[#list + 1] = { key = key, name = self.DungeonName and self:DungeonName(entry) or entry.name or key }
 	end
 	return list
 end

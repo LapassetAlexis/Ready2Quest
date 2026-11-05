@@ -25,7 +25,7 @@ local function FullItemInfo(link)
 		d.sellPrice or 0, d.classID or 4, d.subClassID
 end
 C_Item.GetItemInfo = FullItemInfo
--- le cœur des tests peut avoir retiré l'API (scénarios Era) : on pose la nôtre
+-- le cœur des tests peut avoir retiré l'API (scénarios de repli) : on pose la nôtre
 local function MockItemStats(link)
 	local d = Mock.world.links and Mock.world.links[link]
 	return d and d.stats
@@ -403,7 +403,7 @@ do
 	NS:DB().enabled = true
 end
 
--- 9. Era sans GetItemStats : niveau d'objet + type d'armure ---------------------
+-- 9. Sans GetItemStats (repli) : niveau d'objet + type d'armure ---------------
 do
 	R.Reset("MAGE", 1)
 	R.Buttons(3)
@@ -413,9 +413,9 @@ do
 	local robe = R.Item(9403, "Robe neuve", { equipLoc = "INVTYPE_ROBE", classID = 4, subClassID = 1, itemLevel = 18 })
 	local low = R.Item(9404, "Robe d'apprenti", { equipLoc = "INVTYPE_ROBE", classID = 4, subClassID = 1, itemLevel = 10, sellPrice = 99 })
 	local ok = pcall(R.Offer, plate, robe, low)
-	Check("[RWD] Era sans GetItemStats : pas d'erreur", ok)
-	Check("[RWD] Era : niveau d'objet, plaques écartées", (R.Best()) == 2 and R.Label(2) == "Pour toi", tostring((R.Best())))
-	Check("[RWD] Era : infobulle en niveau d'objet", R.Has(R.Tooltip(2), "niveau d'objet +3"), R.Tooltip(2))
+	Check("[RWD] sans GetItemStats : pas d'erreur", ok)
+	Check("[RWD] sans GetItemStats : niveau d'objet, plaques écartées", (R.Best()) == 2 and R.Label(2) == "Pour toi", tostring((R.Best())))
+	Check("[RWD] sans GetItemStats : infobulle en niveau d'objet", R.Has(R.Tooltip(2), "niveau d'objet +3"), R.Tooltip(2))
 	C_Item.GetItemStats = MockItemStats
 end
 

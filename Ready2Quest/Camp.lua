@@ -10,7 +10,6 @@
 --   1. ajoute deux contrôles au Check avant le départ (kit, objet de camp) ;
 --   2. au camp, affiche un petit compte à rebours jusqu'aux buffs ;
 --   3. en quittant le camp, écrit dans le chat le temps de buffs restant.
--- Rien ne s'affiche sur Era (pas de campement) : tout est gardé par IsForever.
 --
 -- Tout le module vit dans ce fichier (API d'extension, voir Core.lua).
 local ADDON, ns = ...
@@ -191,15 +190,9 @@ end
 -- ---------------------------------------------------------------------------
 local function Now() return (ns.Now and ns.Now()) or 0 end
 
--- Le campement n'existe que sur Forever. Lu à chaque fois (et non une fois au
--- chargement) : coûte peu, et reste juste si GetBuildInfo change (tests).
-function ns:IsForever()
-	return type(self.ClientFlavour) == "function" and self:ClientFlavour() == "Forever"
-end
-
 function ns:CampEnabled()
 	local db = self:DB()
-	return db.enabled ~= false and db.campEnabled ~= false and self:IsForever()
+	return db.enabled ~= false and db.campEnabled ~= false
 end
 
 -- [skillID] = rang, d'après la fenêtre de compétences. Second retour : false
@@ -445,23 +438,19 @@ end
 -- ---------------------------------------------------------------------------
 -- Interrupteur, réglages, /r2q module camp
 -- ---------------------------------------------------------------------------
--- Page et module seulement là où le campement existe : sur Era, ils ne
--- feraient que du bruit. Les contrôles, eux, restent inactifs (masqués).
-if ns:IsForever() then
-	if ns.AddOptionPage then
-		ns.AddOptionPage({
-			id = "camp", title = "OPT_PAGE_CAMP", group = "OPT_GROUP_MODULES", power = "campEnabled",
-			modules = { "campkit", "campobject" },
-			rows = {
-				{ key = "campCountdown",     label = "OPT_CAMP_COUNTDOWN",  kind = "bool" },
-				{ key = "campDepartureLine", label = "OPT_CAMP_DEPARTLINE", kind = "bool" },
-			},
-		})
-	end
-	if ns.RegisterModule then
-		ns.RegisterModule({ id = "camp", key = "campEnabled", label = "OPT_PAGE_CAMP",
-			aliases = { "camp", "campement", "kit" } })
-	end
+if ns.AddOptionPage then
+	ns.AddOptionPage({
+		id = "camp", title = "OPT_PAGE_CAMP", group = "OPT_GROUP_MODULES", power = "campEnabled",
+		modules = { "campkit", "campobject" },
+		rows = {
+			{ key = "campCountdown",     label = "OPT_CAMP_COUNTDOWN",  kind = "bool" },
+			{ key = "campDepartureLine", label = "OPT_CAMP_DEPARTLINE", kind = "bool" },
+		},
+	})
+end
+if ns.RegisterModule then
+	ns.RegisterModule({ id = "camp", key = "campEnabled", label = "OPT_PAGE_CAMP",
+		aliases = { "camp", "campement", "kit" } })
 end
 
 -- ---------------------------------------------------------------------------

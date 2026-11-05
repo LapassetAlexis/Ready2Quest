@@ -123,33 +123,6 @@ end
 -- groupe les quêtes de donjon sous un en-tête au nom du donjon : c'est la
 -- seule source fiable (aucune table client ne relie une quête à un donjon).
 -- ---------------------------------------------------------------------------
-local function LegacyRows()
-	local rows = {}
-	if type(GetNumQuestLogEntries) ~= "function" or type(GetQuestLogTitle) ~= "function" then return rows end
-	local ok, total = pcall(GetNumQuestLogEntries)
-	if not ok or type(total) ~= "number" then return rows end
-	for i = 1, total do
-		local r = { pcall(GetQuestLogTitle, i) }
-		if r[1] and type(r[2]) == "string" then
-			-- même lecture des deux formes que ns.QuestLogReady (Checks.lua) :
-			-- la position du booléen isHeader désigne la forme
-			local isHeader, isCollapsed, isComplete
-			if type(r[5]) == "boolean" then
-				isHeader, isCollapsed, isComplete = r[5], r[6], r[7]
-			else
-				isHeader, isCollapsed, isComplete = r[6], r[7], r[8]
-			end
-			rows[#rows + 1] = {
-				title = r[2],
-				header = isHeader == true or isHeader == 1,
-				collapsed = isCollapsed == true or isCollapsed == 1,
-				ready = isComplete == true or isComplete == 1,
-			}
-		end
-	end
-	return rows
-end
-
 local function NamespacedRows()
 	local rows, headers = {}, 0
 	if not (C_QuestLog and type(C_QuestLog.GetNumQuestLogEntries) == "function" and type(C_QuestLog.GetInfo) == "function") then
@@ -176,10 +149,7 @@ local function NamespacedRows()
 end
 
 function ns:QuestLogRows()
-	local rows, headers = NamespacedRows()
-	-- API namespacée sans en-têtes (client partiel) : le journal historique, s'il existe
-	if headers == 0 and type(GetQuestLogTitle) == "function" then rows = LegacyRows() end
-	return rows
+	return (NamespacedRows())
 end
 
 -- Renvoie { {title, ready}, … }, et true si l'en-tête du donjon est replié
@@ -234,7 +204,7 @@ end
 
 function ns:DungeonBlueprints(entry)
 	local list = (self.DUNGEON_BLUEPRINTS or {})[entry.key]
-	if not list or #list == 0 or not self:IsForeverClient() then return {} end
+	if not list or #list == 0 then return {} end
 	local known, out = self:PlayerProfessions(), {}
 	for _, item in ipairs(list) do
 		if known[item.prof] then out[#out + 1] = item end

@@ -187,12 +187,7 @@ local function ReadyQuests()
 		end
 		return ready
 	end
-	local total = tonumber(Call("GetNumQuestLogEntries"))
-	if not total or not ns.QuestLogReady then return nil end
-	for i = 1, total do
-		if ns.QuestLogReady(i) then ready = ready + 1 end
-	end
-	return ready
+	return nil
 end
 
 -- ---------------------------------------------------------------------------

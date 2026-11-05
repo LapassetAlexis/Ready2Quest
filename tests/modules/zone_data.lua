@@ -1,5 +1,5 @@
 -- Carnet : créatures et récolte de chaque zone, préremplies (v1.25.0).
--- ZoneCreatures_<Era|Forever>.lua / ZoneGathering_<Era|Forever>.lua (générés par
+-- ZoneCreatures_Forever.lua / ZoneGathering_Forever.lua (générés par
 -- tools/gen_zone_data.py depuis la base de Questie) : garde de client (chaque
 -- fichier rechargé avec un faux ns), intégrité des deux clients, filtres (bestioles,
 -- faction, PNJ de service), parts « bestiary » / « named » / « gathering »
