@@ -192,6 +192,9 @@ _G.GetBuildInfo = function()
 	return b.version, b.build, b.date, b.toc
 end
 _G.GetTime = function() return Mock.now end
+-- journal de combat ouvert par défaut (les modules qui le testent remplacent
+-- la fonction) ; le cas « fermé » (moteur 12.0) est testé à part
+_G.CombatLogGetCurrentEventInfo = function() return nil end
 _G.time = function() return math.floor(Mock.now) end
 _G.print = function(...)
 	local parts = {}
@@ -1365,6 +1368,23 @@ do
 		(adv:GetWidth() or 0) .. " >= " .. probe:GetStringWidth())
 	local point = adv:GetPoint()
 	Check("pied : bouton centré", point == "BOTTOM", point)
+	local c = adv.text.textColor or {}
+	Check("pied : texte clair, lisible sur le bleu", (c[1] or 0) > 0.9 and (c[2] or 0) > 0.9 and (c[3] or 0) > 0.9)
+	-- boutons ambre pleins (Fermer des réglages…) : encre sombre sans ombre noire
+	local close = NS:EnsureOptions().closeButton
+	local ink, off, shadow = close.text.textColor or {}, close.text.shadowOffset or {}, close.text.shadow or {}
+	Check("boutons ambre : texte sombre", close.style == "primary" and (ink[1] or 1) < 0.2 and (ink[3] or 1) < 0.2)
+	Check("boutons ambre : sans l'ombre noire de la police (illisible)", off[1] == 0 and off[2] == 0
+		and (shadow[4] or 1) == 0)
+	-- dernier conseil (bas de sa ligne, ~12) au-dessus du haut du bouton : au moins 8 d'écart
+	for _, rows in ipairs({ 6, 13 }) do
+		NS:LayoutWindow(win, rows, false)
+		local _, _, _, _, y = win.adviceLines[#win.adviceLines]:GetPoint()
+		local lineBottom = -y + 12
+		local buttonTop = win:GetHeight() - 12 - adv:GetHeight()
+		Check("pied : le bouton ne colle pas au dernier conseil (" .. rows .. " lignes)",
+			buttonTop - lineBottom >= 8, buttonTop .. " - " .. lineBottom)
+	end
 	Check("pied : tient dans la fenêtre", (adv:GetWidth() or 0) <= diag.width - 28, adv:GetWidth())
 	win:Show()
 	adv:Click()
@@ -1508,7 +1528,7 @@ ResetWorld()
 Say("\n== bootstrap et diagnostic ==")
 ResetWorld()
 Check("commande enregistrée par le bootstrap", type(SlashCmdList["SACETDEPART"]) == "function")
-Check("version exposée", NS.version == "1.27.0", NS.version)
+Check("version exposée", NS.version == "1.27.1", NS.version)
 
 local missingMods = {}
 for _, name in ipairs({ "Bootstrap", "Locales", "Compat", "Theme", "Core", "Buffs", "Reagents",
@@ -1529,7 +1549,7 @@ NS.HandleCommand = savedHandle
 Mock:Reset()
 NS:HandleCommand("diag")
 Check("/sd diag liste les modules", Mock:Output():find("modules :") ~= nil, Mock:Output())
-Check("/sd diag affiche la version", Mock:Output():find("1%.27%.0") ~= nil, Mock:Output())
+Check("/sd diag affiche la version", Mock:Output():find("1%.27%.1") ~= nil, Mock:Output())
 
 -- une erreur est enregistrée et affichée
 Mock:Reset()

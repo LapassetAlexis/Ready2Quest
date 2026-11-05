@@ -1,5 +1,14 @@
 # Journal des modifications
 
+## 1.27.1
+
+- **Rangs de sorts : un fin liseré rouge** entoure, sur tes barres d'action, chaque sort qui a un meilleur rang dans ton livre. Il part tout seul une fois la case mise à jour ou ignorée. Barres de Blizzard, Bartender4 et Dominos ; il suit les pages et les postures. Réglable (page « Rangs de sorts »). Le liseré est un cadre à part posé sur le bouton : le bouton lui-même n'est jamais touché, et rien n'est créé en combat.
+- **Fenêtre « Avant le départ »** : le bouton « Partir à l'aventure » ne colle plus aux conseils (il les chevauchait de quelques points), il est un peu plus haut, et son texte passe en blanc : en sombre sur le bleu, il ne se lisait pas.
+- **Boutons ambre lisibles** (Fermer des réglages, des donjons et de l'expédition, Mettre à jour, Jeter, Détruire) : l'ombre noire de la police du jeu bavait sous le texte sombre. Elle est retirée sur ces boutons.
+- `/r2q diag` montre la nouvelle sonde `combatLog` : WoW Forever ferme son journal de combat aux addons, comme le moteur 12.0 (Ready2Quest ne s'en sert pas).
+
+*English:* Spell ranks: a thin red outline around each spell on your action bars that has a higher rank in your spellbook (Blizzard bars, Bartender4, Dominos; follows pages and stances; can be turned off). It goes away once the slot is updated or ignored. Before-you-go window: the "Off to adventure" button no longer overlaps the advice lines and its label is now white, readable on the blue. Amber buttons (Close, Update, Drop, Destroy) are readable again: the game font's black shadow no longer smears their dark label. /r2q diag shows a new combatLog probe (WoW Forever closes the combat log to addons; Ready2Quest does not use it).
+
 ## 1.27.0
 
 - **Nouveau module « Place au butin »**, inspiré de Delete Cheapest Item : sacs pleins devant un butin qui ne rentre pas, une fenêtre s'ouvre (ou `/r2q place`). En haut, l'objet du butin (une quête d'abord, sinon le plus cher) ; dessous, les objets les moins chers de tes sacs, prix du marchand et de l'hôtel des ventes (Auctionator ou TSM s'ils sont là), en gris s'ils valent plus que le butin. [Jeter] détruit l'objet puis ramasse le butin ; confirmation pour un objet vert ou mieux (réglable). [Ignorer] l'ajoute à la liste « toujours garder ». Devant un butin, il prend le relais de « Sac plein ».

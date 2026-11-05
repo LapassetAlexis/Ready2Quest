@@ -279,6 +279,83 @@ do
 	Check("[BST] rare : compté aussi au bestiaire", B.Species(1413, 5800).killed == 1)
 end
 
+-- 4 bis. Journal de combat fermé (moteur 12.0, WoW Forever) ---------------------------
+do
+	Say("-- bestiaire : journal de combat fermé (PARTY_KILL, UNIT_DIED, message d'XP)")
+	-- sonde et abonnement
+	local savedLog, savedCL = rawget(_G, "CombatLogGetCurrentEventInfo"), rawget(_G, "C_CombatLog")
+	_G.C_CombatLog = { IsCombatLogRestricted = function() return true end }
+	Check("[CL] C_CombatLog dit fermé : fermé", NS.CombatLogRestricted() == true)
+	_G.C_CombatLog = { IsCombatLogRestricted = function() return false end }
+	Check("[CL] C_CombatLog dit ouvert : ouvert", NS.CombatLogRestricted() == false)
+	_G.C_CombatLog = { IsCombatLogRestricted = function() error("refusé") end }
+	Check("[CL] C_CombatLog en erreur : d'après CombatLogGetCurrentEventInfo", NS.CombatLogRestricted() == false)
+	_G.C_CombatLog = nil
+	_G.CombatLogGetCurrentEventInfo = nil
+	Check("[CL] sans CombatLogGetCurrentEventInfo : fermé", NS.CombatLogRestricted() == true)
+	local function Frame(refuse)
+		local f = { got = {} }
+		function f:RegisterEvent(event)
+			if refuse and event == refuse then error("forbidden") end
+			self.got[event] = true
+		end
+		return f
+	end
+	local H = { COMBAT_LOG_EVENT_UNFILTERED = true, PARTY_KILL = true, UNIT_DIED = true, PLAYER_TARGET_CHANGED = true }
+	local closed = Frame()
+	local listened = NS.RegisterHandlers(closed, H)
+	Check("[CL] fermé : pas d'abonnement au journal, PARTY_KILL et UNIT_DIED à la place", listened == false
+		and not closed.got.COMBAT_LOG_EVENT_UNFILTERED and closed.got.PARTY_KILL and closed.got.UNIT_DIED
+		and closed.got.PLAYER_TARGET_CHANGED)
+	_G.CombatLogGetCurrentEventInfo = savedLog
+	local open = Frame()
+	listened = NS.RegisterHandlers(open, H)
+	Check("[CL] ouvert : le journal seul (une mort ne compte qu'une fois)", listened == true
+		and open.got.COMBAT_LOG_EVENT_UNFILTERED and not open.got.PARTY_KILL and not open.got.UNIT_DIED)
+	local refused = Frame("COMBAT_LOG_EVENT_UNFILTERED")
+	listened = NS.RegisterHandlers(refused, H)
+	Check("[CL] abonnement refusé : relais par PARTY_KILL et UNIT_DIED", listened == false
+		and refused.got.PARTY_KILL and refused.got.UNIT_DIED)
+	_G.C_CombatLog = savedCL
+
+	-- affiliation d'après le GUID
+	Check("[CL] GroupFlags : toi", NS.GroupFlags(PLAYER_GUID) == 1)
+	B.W.units.party1 = { guid = "Player-1-00000002" }
+	Check("[CL] GroupFlags : ton groupe", NS.GroupFlags("Player-1-00000002") == 2)
+	Check("[CL] GroupFlags : un inconnu", NS.GroupFlags("Player-1-00000099") == nil and NS.GroupFlags(nil) == nil)
+
+	-- les événements autonomes, tels que le client les envoie
+	local OnEvent = NS.bestiaryEventFrame.scripts.OnEvent
+	B.Reset()
+	local wolf = B.Target(3301, "Loup")
+	OnEvent(NS.bestiaryEventFrame, "PARTY_KILL", PLAYER_GUID, wolf)
+	Check("[CL] PARTY_KILL de toi : abattu", B.Species(1413, 3301).killed == 1)
+	local boar = B.Target(3302, "Sanglier")
+	OnEvent(NS.bestiaryEventFrame, "PARTY_KILL", "Player-1-00000099", boar)
+	Check("[CL] PARTY_KILL d'un inconnu : pas pour toi", (B.Species(1413, 3302).killed or 0) == 0)
+	B.W.units.party1 = { guid = "Player-1-00000002" }
+	OnEvent(NS.bestiaryEventFrame, "PARTY_KILL", "Player-1-00000002", boar)
+	Check("[CL] PARTY_KILL de ton groupe : abattu", B.Species(1413, 3302).killed == 1)
+	local ok = pcall(OnEvent, NS.bestiaryEventFrame, "UNIT_DIED", nil)
+	Check("[CL] UNIT_DIED vide : pas d'erreur", ok)
+
+	-- message d'XP seul : rare tamponné, brillante abattue
+	B.Reset()
+	local rare = B.Target(5801, "Croc-Gris", { class = "rare" })
+	NS:ShinyState().live[rare] = { zoneID = 1413, npcID = 5801, name = "Croc-Gris" }
+	local before = NS:ShinyData().count
+	B.W.units.target.dead = true
+	Mock:Fire("CHAT_MSG_COMBAT_XP_GAIN", "Croc-Gris meurt, vous gagnez 120 points d'expérience.")
+	Check("[CL] message d'XP : rare compté au bestiaire", B.Species(1413, 5801).killed == 1)
+	Check("[CL] message d'XP : tampon « rare » du carnet", NS:HasStamp("rare:5801"))
+	Check("[CL] message d'XP : la brillante est abattue", NS:ShinyData().count == before + 1
+		and NS:ShinyState().live[rare] == nil)
+	-- puis le même mort par PARTY_KILL : rien de plus
+	OnEvent(NS.bestiaryEventFrame, "PARTY_KILL", PLAYER_GUID, rare)
+	Check("[CL] XP puis PARTY_KILL : compté une seule fois", B.Species(1413, 5801).killed == 1
+		and NS:ShinyData().count == before + 1)
+end
+
 -- 5. Nommés, parts de complétion ------------------------------------------------------
 do
 	Say("-- bestiaire : nommés et complétion")

@@ -2656,6 +2656,11 @@ local HANDLERS = {
 	PLAYER_ALIVE           = function() ns:CompanionOnAlive() end,
 	PLAYER_UNGHOST         = function() ns:CompanionOnAlive() end,
 	COMBAT_LOG_EVENT_UNFILTERED = function(...) ns:CompanionOnCombatLog(...) end,
+	-- moteur 12.0 (Forever) : journal de combat fermé, l'événement autonome
+	PARTY_KILL = function(attacker)
+		attacker = ns.Plain(attacker)
+		if attacker and attacker == Call(rawget(_G, "UnitGUID"), "player") then ns:CompanionOnKill() end
+	end,
 	CHAT_MSG_COMBAT_XP_GAIN = function(message) ns:CompanionOnCombatXP(message) end,
 	-- avis sur la personne à qui l'on parle
 	GOSSIP_SHOW            = function() ns:CompanionOnNpc(ns.CompanionGossipKind()) end,
@@ -2688,10 +2693,7 @@ local HANDLERS = {
 }
 
 local events = CreateFrame("Frame")
-for event in pairs(HANDLERS) do
-	-- un événement inconnu du client ne doit pas bloquer les autres
-	pcall(events.RegisterEvent, events, event)
-end
+ns.RegisterHandlers(events, HANDLERS)
 events:SetScript("OnEvent", function(_, event, ...)
 	if not ModuleOn() then return end
 	local handler = HANDLERS[event]

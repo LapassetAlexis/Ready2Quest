@@ -8,6 +8,8 @@ local unpack = unpack or table.unpack   -- Lua 5.1 (client) / 5.4+
 local WIDTH      = 440
 local ROW_HEIGHT = 19
 local MAX_ADVICE = 3
+local ADVICE_STEP = 15     -- interligne des conseils
+local FOOTER = 50          -- pied : marge, bouton « Partir à l'aventure » (26), marge basse (12)
 local DETAIL_TITLE = 46   -- longueur max du texte de détail (évite le débordement)
 
 -- Coupe à `limit` octets sans jamais couper un caractère UTF-8 en deux (é, â…
@@ -137,7 +139,7 @@ function ns:EnsureWindow()
 	-- Pied (v1.25.0) : un seul appel, « Partir à l'aventure », en bleu de nuit.
 	-- Les réglages sont déjà au clic droit sur l'icône de la minicarte, et le
 	-- check se relance d'une flèche discrète dans le bandeau.
-	local BUTTON_HEIGHT = 22
+	local BUTTON_HEIGHT = 26
 	local PADDING       = 28
 	local function LabelWidth(label)
 		local probe = frame:CreateFontString(nil, "OVERLAY", Theme.F_SMALL)
@@ -155,7 +157,7 @@ function ns:EnsureWindow()
 	frame.adventureButton = Theme.CreateButton(frame, adventureWidth, BUTTON_HEIGHT, L.DIAG_ADVENTURE, function()
 		frame:Hide()
 	end, "adventure")
-	frame.adventureButton:SetPoint("BOTTOM", frame, "BOTTOM", 0, 10)
+	frame.adventureButton:SetPoint("BOTTOM", frame, "BOTTOM", 0, 12)
 
 	-- Flèche de rafraîchissement : à gauche de la croix du bandeau. Elle relance
 	-- le check et fait un tour sur elle-même (si le client sait animer une rotation).
@@ -229,7 +231,7 @@ local DEPARTED_HEIGHT = 14
 
 function ns:WindowHeight(visible, hasDeparted)
 	return 40 + 52 + 12 + (hasDeparted and DEPARTED_HEIGHT or 0) + (visible * ROW_HEIGHT)
-		+ 12 + 16 + (MAX_ADVICE * 13) + 34
+		+ 12 + 16 + (MAX_ADVICE * ADVICE_STEP) + FOOTER
 end
 
 function ns:LayoutWindow(frame, visible, hasDeparted)
@@ -248,11 +250,11 @@ function ns:LayoutWindow(frame, visible, hasDeparted)
 	frame.adviceHeader:SetPoint("TOPLEFT", frame, "TOPLEFT", 14, adviceTop - 12)
 	for index, line in ipairs(frame.adviceLines or {}) do
 		line:ClearAllPoints()
-		line:SetPoint("TOPLEFT", frame, "TOPLEFT", 26, adviceTop - 26 - ((index - 1) * 13))
+		line:SetPoint("TOPLEFT", frame, "TOPLEFT", 26, adviceTop - 26 - ((index - 1) * ADVICE_STEP))
 		local bullet = frame.adviceBullets and frame.adviceBullets[index]
 		if bullet then
 			bullet:ClearAllPoints()
-			bullet:SetPoint("TOPLEFT", frame, "TOPLEFT", 16, adviceTop - 29 - ((index - 1) * 13))
+			bullet:SetPoint("TOPLEFT", frame, "TOPLEFT", 16, adviceTop - 29 - ((index - 1) * ADVICE_STEP))
 		end
 	end
 	frame:SetHeight(self:WindowHeight(visible, hasDeparted))

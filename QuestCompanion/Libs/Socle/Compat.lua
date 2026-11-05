@@ -123,6 +123,56 @@ function ns:HookTooltip(kind, fn)
 	return nil
 end
 
+-- ---------------------------------------------------------------------------
+-- Journal de combat : fermé aux addons sur le moteur 12.0 (dont WoW Forever).
+-- S'y abonner y lève une erreur ; à la place, deux événements autonomes :
+-- PARTY_KILL (attackerGUID, targetGUID) et UNIT_DIED (unitGUID).
+-- ---------------------------------------------------------------------------
+function ns.CombatLogRestricted()
+	local api = rawget(_G, "C_CombatLog")
+	if type(api) == "table" and type(api.IsCombatLogRestricted) == "function" then
+		local ok, restricted = pcall(api.IsCombatLogRestricted)
+		if ok and restricted ~= nil then return ns.Plain(restricted) ~= false end
+	end
+	return type(rawget(_G, "CombatLogGetCurrentEventInfo")) ~= "function"
+end
+
+-- Drapeaux d'affiliation façon journal de combat (1 = moi ou mon familier,
+-- 2 = groupe, 4 = raid) d'après un GUID : les événements autonomes n'en
+-- donnent pas. nil pour un inconnu ou un GUID secret.
+function ns.GroupFlags(guid)
+	guid = ns.Plain(guid)
+	local unitGUID = rawget(_G, "UnitGUID")
+	if type(guid) ~= "string" or type(unitGUID) ~= "function" then return nil end
+	local function Is(unit)
+		local ok, other = pcall(unitGUID, unit)
+		return ok and ns.Plain(other) == guid
+	end
+	if Is("player") or Is("pet") then return 1 end
+	for i = 1, 4 do if Is("party" .. i) or Is("partypet" .. i) then return 2 end end
+	for i = 1, 40 do if Is("raid" .. i) then return 4 end end
+	return nil
+end
+
+-- Abonne frame aux événements de handlers. Le journal de combat seulement
+-- s'il est ouvert ; sinon (ou s'il refuse) PARTY_KILL et UNIT_DIED prennent
+-- le relais, jamais les deux (une mort ne compte qu'une fois). Un événement
+-- inconnu du client ne bloque pas les autres. Rend true si le journal est écouté.
+local CLEU = "COMBAT_LOG_EVENT_UNFILTERED"
+local STANDALONE = { PARTY_KILL = true, UNIT_DIED = true }
+function ns.RegisterHandlers(frame, handlers)
+	local logOpen = false
+	if handlers[CLEU] and not ns.CombatLogRestricted() then
+		logOpen = pcall(frame.RegisterEvent, frame, CLEU) and true or false
+	end
+	for event in pairs(handlers) do
+		if event ~= CLEU and not (STANDALONE[event] and logOpen) then
+			pcall(frame.RegisterEvent, frame, event)
+		end
+	end
+	return logOpen
+end
+
 local probeModel
 
 function ns:DetectCapabilities()
@@ -183,6 +233,7 @@ function ns:DetectCapabilities()
 	local compartment = rawget(_G, "AddonCompartmentFrame")
 	caps.addonCompartment = type(compartment) == "table" and type(compartment.RegisterAddon) == "function"
 	caps.itemAsync = Fn("Item", "CreateFromItemID")
+	caps.combatLog = not ns.CombatLogRestricted()
 	-- un seul modèle de sonde, jamais affiché, réutilisé à chaque détection
 	if probeModel == nil and type(rawget(_G, "CreateFrame")) == "function" then
 		local ok, model = pcall(CreateFrame, "PlayerModel")

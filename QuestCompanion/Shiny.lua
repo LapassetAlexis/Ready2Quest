@@ -298,31 +298,29 @@ function ns:ShinyCheckRewards()
 	return fresh
 end
 
--- Journal de combat : une brillante vivante dont l'espèce vient d'être
--- comptée abattue (Bestiary.lua) est une brillante abattue
+-- Une brillante vivante comptée abattue par le bestiaire (journal de combat
+-- ou message d'XP : Bestiary.lua, BestiaryOnKill) est une brillante abattue
 do
+	local onKill = ns.BestiaryOnKill
+	if onKill then
+		function ns:BestiaryOnKill(guid, ...)
+			local state = self.shinyState
+			local info = state and guid and state.live[guid]
+			if info then
+				local ok, err = pcall(self.ShinyKill, self, guid, info)
+				if not ok and self.RecordError then self:RecordError("shiny:kill", err) end
+			end
+			return onKill(self, guid, ...)
+		end
+	end
+	-- morte sans être comptée (tuée par d'autres) : elle n'est plus à guetter
 	local combat = ns.BestiaryCombat
 	if combat then
 		function ns:BestiaryCombat(subevent, sourceGUID, sourceFlags, destGUID, ...)
-			local state = self.shinyState
-			local info = state and destGUID and state.live[destGUID]
-			local before
-			if info then
-				local zone = self:BestiaryData()[info.zoneID]
-				before = zone and zone[info.npcID] and tonumber(zone[info.npcID].killed) or 0
-			end
 			local a, b = combat(self, subevent, sourceGUID, sourceFlags, destGUID, ...)
-			if info then
-				local ok, err = pcall(function()
-					local zone = self:BestiaryData()[info.zoneID]
-					local after = zone and zone[info.npcID] and tonumber(zone[info.npcID].killed) or 0
-					if after > before then
-						self:ShinyKill(destGUID, info)
-					elseif subevent == "UNIT_DIED" or subevent == "UNIT_DESTROYED" then
-						state.live[destGUID] = nil
-					end
-				end)
-				if not ok and self.RecordError then self:RecordError("shiny:kill", err) end
+			local state = self.shinyState
+			if state and destGUID and (subevent == "UNIT_DIED" or subevent == "UNIT_DESTROYED") then
+				state.live[destGUID] = nil
 			end
 			return a, b
 		end

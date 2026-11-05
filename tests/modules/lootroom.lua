@@ -190,6 +190,7 @@ do
 		ResetWorld()
 		if NS.spellRanksFrame then NS.spellRanksFrame:Hide() end
 		NS.spellRanksAnnounced, NS.spellRanksPending, NS.notice = nil, nil, nil
+		NS.spellRanksMarkDueAt, NS.spellRanksDueAt = nil, nil
 		W.actions = { [4] = 101, [5] = 102, [6] = 104, [16] = 101, [20] = 301, [30] = 401 }
 		W.placed, W.picked = {}, nil
 		_G.C_Spell, _G.C_SpellBook = nil, nil
@@ -279,6 +280,49 @@ do
 	Check("[RANK] livre récent (C_SpellBook) : le même résultat", #NS:SpellRankScan() == 2)
 	Enum.SpellBookSpellBank = savedBank
 	_G.C_SpellBook = nil
+	-- liseré rouge sur les barres
+	LR.SpellReset()
+	local function Button(name, fields)
+		local b = CreateFrame("Frame")
+		for k, v in pairs(fields) do b[k] = v end
+		_G[name] = b
+		return b
+	end
+	local b4 = Button("ActionButton4", { action = 4 })
+	local b5 = Button("ActionButton5", { action = 5 })
+	local bt = Button("BT4Button16", { _state_action = 16 })
+	local paged = Button("MultiBarLeftButton1", { GetPagedID = function() return 20 end })
+	Check("[RANK] case d'un bouton : action, Bartender, GetPagedID", NS.SpellRankButtonSlot(b4) == 4
+		and NS.SpellRankButtonSlot(bt) == 16 and NS.SpellRankButtonSlot(paged) == 20 and NS.SpellRankButtonSlot({}) == nil)
+	Check("[RANK] liseré : les deux cases à mettre à jour", NS:SpellRanksMark() == 2)
+	local border = NS.spellRanksBorders[b4]
+	Check("[RANK] liseré : sur la case 4 et la case 16 (Bartender), pas sur la 5", border and border:IsShown()
+		and NS.spellRanksBorders[bt]:IsShown() and (NS.spellRanksBorders[b5] == nil or not NS.spellRanksBorders[b5]:IsShown()))
+	NS:SpellRankIgnore(NS:SpellRankScan()[1])
+	Check("[RANK] liseré : case ignorée, plus de liseré", NS:SpellRanksMark() == 1 and not border:IsShown())
+	NS:SpellRanksForget()
+	NS:DB().spellranksBorder = false
+	Check("[RANK] liseré coupé dans les réglages : aucun", NS:SpellRanksMark() == 0 and not border:IsShown())
+	NS:DB().spellranksBorder = true
+	-- après une mise à jour, le liseré s'en va (au tour suivant)
+	NS:SpellRanksMark()
+	NS:SpellRankUpdateAll()
+	Mock:Advance(0.5)
+	Check("[RANK] mise à jour : les liserés partent d'eux-mêmes", not border:IsShown()
+		and not NS.spellRanksBorders[bt]:IsShown())
+	-- en combat : pas de nouveau cadre posé sur un bouton
+	LR.SpellReset()
+	local fresh = Button("MultiBarRightButton4", { action = 16 })
+	W.combat = true
+	NS:SpellRanksMark()
+	Check("[RANK] en combat : pas de nouveau liseré créé", NS.spellRanksBorders[fresh] == nil)
+	W.combat = false
+	Mock:Fire("PLAYER_REGEN_ENABLED")
+	Mock:Advance(1)
+	Check("[RANK] fin du combat : le liseré arrive", NS.spellRanksBorders[fresh] and NS.spellRanksBorders[fresh]:IsShown())
+	for _, name in ipairs({ "ActionButton4", "ActionButton5", "BT4Button16", "MultiBarLeftButton1", "MultiBarRightButton4" }) do
+		_G[name] = nil
+	end
 	NS:DB().spellranksEnabled = false
 	Check("[RANK] module coupé : rien d'annoncé", NS:SpellRanksCheck() == 0)
 	NS:DB().spellranksEnabled = true

@@ -416,6 +416,16 @@ local function FromGroup(sourceGUID, sourceFlags)
 	return flags ~= nil and flags % 8 > 0
 end
 
+-- Un rare tué par toi, compté par le bestiaire (journal de combat ou message
+-- d'XP) : son tampon. Le seul chemin quand le journal de combat est muet.
+function ns:JournalRareKilled(guid)
+	local rare = guid and self.journalRares[guid]
+	if not rare then return false end
+	self.journalRares[guid] = nil
+	if not ModuleOn() then return false end
+	return self:JournalEarn("rare", NpcID(guid) or rare.name, rare.name) ~= nil
+end
+
 function ns:JournalCombat(subevent, sourceGUID, sourceFlags, destGUID)
 	if type(subevent) ~= "string" or not destGUID then return end
 	local rare = self.journalRares[destGUID]
@@ -658,14 +668,22 @@ local HANDLERS = {
 		if not next(ns.journalRares) then return end      -- coût nul sans rare repéré
 		ns:JournalCombat(CombatArgs(...))
 	end,
+	-- moteur 12.0 (Forever) : journal de combat fermé
+	PARTY_KILL = function(attacker, target)
+		if not next(ns.journalRares) then return end
+		target = ns.Plain(target)
+		if target then ns:JournalCombat("PARTY_KILL", ns.Plain(attacker), ns.GroupFlags(attacker), target) end
+	end,
+	UNIT_DIED = function(guid)
+		if not next(ns.journalRares) then return end
+		guid = ns.Plain(guid)
+		if guid then ns:JournalCombat("UNIT_DIED", nil, nil, guid) end
+	end,
 	PLAYER_REGEN_ENABLED    = function() ns:JournalFlush() end,
 }
 
 local eventFrame = CreateFrame("Frame")
-for event in pairs(HANDLERS) do
-	-- un événement inconnu du client ne doit pas bloquer les autres
-	pcall(eventFrame.RegisterEvent, eventFrame, event)
-end
+ns.RegisterHandlers(eventFrame, HANDLERS)
 eventFrame:SetScript("OnEvent", function(_, event, ...)
 	local ok, err = pcall(HANDLERS[event], ...)
 	if not ok and ns.RecordError then ns:RecordError("journal:" .. tostring(event), err) end
