@@ -1388,38 +1388,79 @@ function ns:EnsureCompanionBubble()
 	return bubble
 end
 
--- Survol : quatre petites barres de besoins, le stade et l'humeur
+-- Survol : le nom, le stade et l'humeur (et son caractère), quatre petites
+-- barres de besoins, puis l'aide en gris. Tout est placé à chaque
+-- rafraîchissement, de haut en bas : une ligne qui passe à la ligne (le
+-- caractère, l'aide plus longue d'une langue) pousse la suite au lieu de la
+-- recouvrir, et le cadre prend la hauteur de son contenu.
+local HOVER_W, HOVER_PAD, HOVER_BAR_ROW = 200, 8, 15
+local function TextHeight(fontString, fallbackChars)
+	local height = fontString.GetStringHeight and tonumber(fontString:GetStringHeight()) or 0
+	if height and height > 0 then return height end
+	-- sans mesure (client ancien, banc de test) : une ligne de 12 px par tranche de texte
+	local text = tostring(fontString.GetText and fontString:GetText() or "")
+	return 12 * math.max(1, math.ceil(#text / fallbackChars))
+end
+ns.CompanionHoverTextHeight = TextHeight
+
 function ns:EnsureCompanionHover()
 	if self.companionHover then return self.companionHover end
 	local frame = self.companionFrame
 	if not frame then return nil end
-	local hover = Theme.CreateDiscreet(UIParent, 168, 118)
+	local hover = Theme.CreateDiscreet(UIParent, HOVER_W, 118)
 	if not hover then return nil end
 	hover:SetFrameStrata("TOOLTIP")
 	hover:SetPoint("BOTTOMRIGHT", frame, "BOTTOMLEFT", -6, 0)
 	hover.title = Theme.CreateTitle(hover, 13)
-	hover.title:SetPoint("TOPLEFT", hover, "TOPLEFT", 8, -6)
+	hover.title:SetPoint("TOPLEFT", hover, "TOPLEFT", HOVER_PAD, -6)
 	hover.sub = hover:CreateFontString(nil, "OVERLAY", Theme.F_SMALL)
-	hover.sub:SetPoint("TOPLEFT", hover, "TOPLEFT", 8, -22)
+	hover.sub:SetWidth(HOVER_W - 2 * HOVER_PAD)
+	hover.sub:SetJustifyH("LEFT")
+	if hover.sub.SetWordWrap then hover.sub:SetWordWrap(true) end
 	hover.bars = {}
-	for index, key in ipairs(NEED_KEYS) do
-		local y = -38 - (index - 1) * 15
+	for _, key in ipairs(NEED_KEYS) do
 		local label = hover:CreateFontString(nil, "OVERLAY", Theme.F_SMALL)
-		label:SetPoint("TOPLEFT", hover, "TOPLEFT", 8, y)
 		label:SetText(L["COMP_NEED_" .. key])
-		local bar = Theme.CreateBar(hover, 80, 6)
-		bar:SetPoint("TOPRIGHT", hover, "TOPRIGHT", -8, y - 3)
+		local bar = Theme.CreateBar(hover, 100, 6)
 		bar.label = label
 		hover.bars[key] = bar
 	end
 	hover.hint = hover:CreateFontString(nil, "OVERLAY", Theme.F_SMALL)
-	hover.hint:SetPoint("BOTTOMLEFT", hover, "BOTTOMLEFT", 8, 6)
-	hover.hint:SetWidth(152)
+	hover.hint:SetWidth(HOVER_W - 2 * HOVER_PAD)
+	hover.hint:SetJustifyH("LEFT")
+	if hover.hint.SetWordWrap then hover.hint:SetWordWrap(true) end
 	hover.hint:SetText(L.COMP_HOVER_HINT)
 	hover.hint:SetTextColor(Theme.MUTED[1], Theme.MUTED[2], Theme.MUTED[3])
 	hover:Hide()
 	self.companionHover = hover
 	return hover
+end
+
+-- Place tout de haut en bas et donne au cadre la hauteur de son contenu
+function ns:CompanionLayoutHover()
+	local hover = self.companionHover
+	if not hover then return nil end
+	local y = -22
+	hover.sub:ClearAllPoints()
+	hover.sub:SetPoint("TOPLEFT", hover, "TOPLEFT", HOVER_PAD, y)
+	y = y - TextHeight(hover.sub, 34) - 4
+	for _, key in ipairs(NEED_KEYS) do
+		local bar = hover.bars[key]
+		bar.label:ClearAllPoints()
+		bar.label:SetPoint("TOPLEFT", hover, "TOPLEFT", HOVER_PAD, y)
+		bar:ClearAllPoints()
+		bar:SetPoint("TOPRIGHT", hover, "TOPRIGHT", -HOVER_PAD, y - 3)
+		bar.top = y
+		y = y - HOVER_BAR_ROW
+	end
+	y = y - 4
+	hover.hint:ClearAllPoints()
+	hover.hint:SetPoint("TOPLEFT", hover, "TOPLEFT", HOVER_PAD, y)
+	hover.hint.top = y
+	local height = -y + TextHeight(hover.hint, 34) + 6
+	hover:SetHeight(height)
+	hover.layoutHeight = height
+	return height
 end
 
 function ns:CompanionRefreshHover()
@@ -1432,6 +1473,7 @@ function ns:CompanionRefreshHover()
 		local bar = hover.bars[key]
 		bar:SetValue(data.needs[key] / NEED_MAX)
 	end
+	self:CompanionLayoutHover()
 end
 
 function ns:CompanionShowHover()

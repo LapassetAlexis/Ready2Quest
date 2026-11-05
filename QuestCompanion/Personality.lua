@@ -261,6 +261,8 @@ Wrap("CompanionRefreshHover", function(original, self, ...)
 	if hover and hover.sub and hover.sub.GetText then
 		local trait = self:CompanionTrait()
 		if trait then hover.sub:SetText(tostring(hover.sub:GetText() or "") .. " · " .. self:PersonaLabel(trait)) end
+		-- la ligne a pu s'allonger : on replace la suite en dessous
+		if self.CompanionLayoutHover then self:CompanionLayoutHover() end
 	end
 	return result
 end)
