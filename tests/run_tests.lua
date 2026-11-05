@@ -124,7 +124,7 @@ local function NewRegion(kind, name, parent)
 	function region:SetFixedFrameStrata() end
 	function region:SetFixedFrameLevel() end
 	function region:SetTexCoord() end
-	function region:SetWordWrap() end
+	function region:SetWordWrap(wrap) self.wordWrap = wrap end
 	function region:SetFrameLevel(level) self.level = level; self.levelSet = true end
 	function region:GetFrameLevel() return self.level end
 	function region:SetClampedToScreen() end

@@ -137,6 +137,7 @@ Snap.Weight = Weight
 -- texte sans codes de couleur (|cffRRGGBB … |r), retours |n, textures |T…|t
 function Snap.PlainText(text)
 	text = tostring(text or "")
+	text = text:gsub("|H.-|h", ""):gsub("|h", "")
 	text = text:gsub("|c%x%x%x%x%x%x%x%x", ""):gsub("|r", ""):gsub("|n", "\n"):gsub("|T.-|t", "#")
 	return text
 end
@@ -186,7 +187,8 @@ Snap.Css = Css
 
 -- texte WoW -> HTML : |cffRRGGBB … |r en spans colorés
 function Snap.TextHtml(text)
-	text = tostring(text or ""):gsub("|T.-|t", "\1")
+	-- liens (|Hitem:…|h[Nom]|h) : le nom seul, comme en jeu
+	text = tostring(text or ""):gsub("|H.-|h", ""):gsub("|h", ""):gsub("|T.-|t", "\1")
 	local out, open = {}, false
 	local i = 1
 	while i <= #text do
@@ -379,9 +381,9 @@ function Snap.Render(root, opts)
 				if region.kind == "EditBox" and region.textInsets then
 					inset = string.format(";padding:0 %dpx 0 %dpx;box-sizing:border-box", region.textInsets[2] or 0, region.textInsets[1] or 0)
 				end
-				local wrap = (region.widthSet and region.kind == "FontString") and "normal" or "nowrap"
+				local wrap = (region.widthSet and region.kind == "FontString" and region.wordWrap ~= false) and "normal" or "nowrap"
 				out[#out + 1] = string.format('<div class="txt" style="%s;font-size:%dpx;font-weight:%d;color:%s;justify-content:%s;'
-					.. 'align-items:%s;text-align:%s;white-space:%s%s%s"><span>%s</span></div>',
+					.. 'align-items:%s;text-align:%s;white-space:%s%s%s"><span class="t">%s</span></div>',
 					pos, font.size or 12, Weight(font.path), Css(c[1], c[2], c[3], (c[4] or 1) * alpha), align, valign,
 					justify:lower(), wrap, shadow, inset, Snap.TextHtml(text))
 			end
@@ -407,6 +409,8 @@ function Snap.Render(root, opts)
 		".tex.file{font-size:9px;color:#9aa;display:flex;align-items:center;justify-content:center;overflow:hidden;"
 			.. "outline:1px dashed rgba(160,170,180,.35);outline-offset:-1px}",
 		".tex.img{outline:none;background:none!important}",
+		-- largeur posée sans retour à la ligne : coupé avec « … », comme en jeu
+		".t{overflow:hidden;text-overflow:ellipsis;max-width:100%}",
 		".icon{display:inline-block;width:1em;height:1em;background:#556;vertical-align:middle}",
 		"</style></head><body>",
 		'<div class="bar">' .. Escape(opts.title or "Aperçu") .. " · aperçu hors-jeu (tests/snapshot.lua), pas une capture du client</div>",
@@ -619,6 +623,54 @@ Snap.scenes["r2q-death"] = function(T)
 	NS:ShowDeathPanel({ ghost = true, level = 22, distance = 175, runTime = 20, sickness = 600,
 		points = 50, cost = 25000, verdict = "run" })
 	return Centered(NS.deathFrame), "Ready2Quest : après la mort"
+end
+
+-- liens d'objet colorés comme en jeu
+local function Link(name, quality)
+	local colors = { [0] = "9d9d9d", [1] = "ffffff", [2] = "1eff00", [3] = "0070dd" }
+	return "|cff" .. (colors[quality] or "ffffff") .. "|Hitem:1::::::::|h[" .. name .. "]|h|r"
+end
+
+-- Place au butin : sacs pleins devant un butin vert ; le plus cher en dernier
+-- (estompé : il vaut plus que le butin). Données posées à la place du scan.
+Snap.scenes["r2q-lootroom"] = function(T)
+	local NS = T.NS
+	T.ResetWorld()
+	T.LoadModules()
+	NS.lootRoomFrame = nil
+	NS.LootRoomLoot = function()
+		return { { link = Link("Cuir moyen renforcé", 2), count = 1, value = 1250, texture = "Interface\\Icons\\INV_Misc_LeatherScrap_08" } }
+	end
+	NS.LootRoomRows = function()
+		return {
+			{ itemID = 1, link = Link("Os brisé", 0), count = 1, vendor = 5 },
+			{ itemID = 2, link = Link("Patte de loup", 0), count = 3, vendor = 42 },
+			{ itemID = 3, link = Link("Caillou rugueux", 1), count = 4, vendor = 80 },
+			{ itemID = 4, link = Link("Étoffe de lin", 1), count = 12, vendor = 156, auction = 900 },
+			{ itemID = 5, link = Link("Anneau de la vigie", 2), count = 1, vendor = 2400, dearer = true },
+		}
+	end
+	local frame = NS:LootRoomOpen(true)
+	return Centered(frame), "Ready2Quest : place au butin"
+end
+
+-- Rangs de sorts : trois cases à mettre à jour, une de trop pour la liste
+Snap.scenes["r2q-spellranks"] = function(T)
+	local NS = T.NS
+	T.ResetWorld()
+	T.LoadModules()
+	NS.spellRanksFrame = nil
+	local list = {
+		{ name = "Lumière sacrée", rank = 3, bestRank = 5, bar = 1, case = 4, bestID = 1 },
+		{ name = "Éclair lumineux", rank = 2, bestRank = 4, bar = 1, case = 7, bestID = 2 },
+		{ name = "Marteau de la justice", rank = 1, bestRank = 2, bar = 2, case = 3, bestID = 3 },
+	}
+	NS.SpellRankScan = function() return list end
+	local saved = NS.SPELLRANKS_ROWS
+	NS.SPELLRANKS_ROWS = 8
+	local frame = NS:SpellRanksOpen()
+	NS.SPELLRANKS_ROWS = saved
+	return Centered(frame), "Ready2Quest : rangs de sorts"
 end
 
 -- Réglages (refonte) : tous les modules chargés, fenêtre centrée, une page

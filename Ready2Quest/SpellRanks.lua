@@ -22,7 +22,9 @@ local Theme = ns.Theme
 
 ns.SPELLRANKS_SLOTS = 120       -- cases des barres (pages et barres de posture comprises)
 ns.SPELLRANKS_ROWS = 8
-local WIDTH, ROW_H = 420, 30
+local WIDTH = 520
+local ROW_CARD, ROW_H = 36, 38       -- carte d'un sort, pas d'une ligne à l'autre
+local GAP = 14
 local BOOK_ICON = "Interface\\Icons\\INV_Misc_Book_09"
 
 local FR = {
@@ -32,6 +34,7 @@ local FR = {
 	OPT_SPELLRANKS_FORGET   = "Oublier les cases ignorées",
 	OPT_SPELLRANKS_BORDER   = "Liseré rouge autour des sorts à mettre à jour",
 	SR_TITLE                = "Rangs de sorts",
+	SR_SUB                  = "Les sorts de tes barres qui ont un meilleur rang.",
 	SR_LINE                 = "%s : rang %d → rang %d",
 	SR_WHERE                = "barre %d, case %d",
 	SR_BTN_UPDATE           = "Mettre à jour",
@@ -61,6 +64,7 @@ local EN = {
 	OPT_SPELLRANKS_FORGET   = "Forget ignored slots",
 	OPT_SPELLRANKS_BORDER   = "Red outline around spells to update",
 	SR_TITLE                = "Spell ranks",
+	SR_SUB                  = "Spells on your bars that have a higher rank.",
 	SR_LINE                 = "%s: rank %d → rank %d",
 	SR_WHERE                = "bar %d, slot %d",
 	SR_BTN_UPDATE           = "Update",
@@ -293,44 +297,49 @@ end
 -- ---------------------------------------------------------------------------
 -- La fenêtre
 -- ---------------------------------------------------------------------------
+-- hauteur pour `count` lignes (au moins une : la phrase « tout est à jour »)
+local function SpellRanksHeight(count)
+	return Theme.HEADER_COMPACT_HEIGHT + 1 + GAP + math.max(1, count) * ROW_H - (ROW_H - ROW_CARD)
+		+ GAP + Theme.DIALOG_FOOTER
+end
+
 function ns:EnsureSpellRanks()
 	if self.spellRanksFrame then return self.spellRanksFrame end
-	if not (Theme and Theme.CreatePanel) then return nil end
-	local height = 90 + ns.SPELLRANKS_ROWS * ROW_H
-	local frame = Theme.CreatePanel(UIParent, WIDTH, height, L.SR_TITLE, { name = "Ready2QuestSpellRanks" })
+	if not (Theme and Theme.CreateDialog) then return nil end
+	local frame = Theme.CreateDialog(UIParent, WIDTH, SpellRanksHeight(ns.SPELLRANKS_ROWS), { name = "Ready2QuestSpellRanks",
+		title = L.SR_TITLE, subtitle = L.SR_SUB })
 	if not frame then return nil end
 	frame:SetPoint("CENTER", UIParent, "CENTER", 0, 40)
-	local top = frame.contentTop - 6
+	local pad, inner = frame.pad + 1, frame.innerWidth
+	local top = frame.contentTop - GAP
 	frame.rows = {}
 	for index = 1, ns.SPELLRANKS_ROWS do
-		local row = CreateFrame("Frame", nil, frame)
-		row:SetSize(WIDTH - 28, ROW_H - 4)
-		row:SetPoint("TOPLEFT", frame, "TOPLEFT", 14, top - (index - 1) * ROW_H)
-		row.icon = Theme.CreateIcon(row, 22)
-		row.icon:SetPoint("LEFT", row, "LEFT", 0, 0)
-		row.text = row:CreateFontString(nil, "OVERLAY", Theme.F_BODY)
-		row.text:SetPoint("TOPLEFT", row, "TOPLEFT", 28, -1)
-		row.text:SetWidth(200)
-		row.text:SetJustifyH("LEFT")
-		row.where = row:CreateFontString(nil, "OVERLAY", Theme.F_SMALL)
-		row.where:SetPoint("TOPLEFT", row, "TOPLEFT", 28, -14)
-		row.where:SetTextColor(Theme.MUTED[1], Theme.MUTED[2], Theme.MUTED[3])
-		row.update = Theme.CreateButton(row, 92, 20, L.SR_BTN_UPDATE, function() ns:SpellRankUpdate(row.data) end, "primary")
-		row.update:SetPoint("RIGHT", row, "RIGHT", -66, 0)
-		row.ignore = Theme.CreateButton(row, 60, 20, L.SR_BTN_IGNORE, function() ns:SpellRankIgnore(row.data) end)
-		row.ignore:SetPoint("RIGHT", row, "RIGHT", 0, 0)
+		local row = Theme.CreateListRow(frame, inner, ROW_CARD, { icon = 24 })
+		row:SetPoint("TOPLEFT", frame, "TOPLEFT", pad, top - (index - 1) * ROW_H)
+		row:SetIndex(index)
+		row.ignore = Theme.CreateButton(row, nil, 24, L.SR_BTN_IGNORE, function() ns:SpellRankIgnore(row.data) end, "outline")
+		row.ignore:SetPoint("RIGHT", row, "RIGHT", -8, 0)
+		row.update = Theme.CreateButton(row, nil, 24, L.SR_BTN_UPDATE, function() ns:SpellRankUpdate(row.data) end, "accent")
+		row.update:SetPoint("RIGHT", row.ignore, "LEFT", -6, 0)
+		local textWidth = inner - row.textLeft - row.update:GetWidth() - row.ignore:GetWidth() - 8 - 6 - 12
+		row.text:ClearAllPoints()
+		row.text:SetPoint("TOPLEFT", row, "TOPLEFT", row.textLeft, -5)
+		row.text:SetWidth(textWidth)
+		row.where = Theme.Text(row, Theme.F_SMALL, Theme.MUTED)
+		row.where:SetPoint("TOPLEFT", row, "TOPLEFT", row.textLeft, -20)
+		row.where:SetWidth(textWidth)
+		row.where:SetJustifyH("LEFT")
 		row:Hide()
 		frame.rows[index] = row
 	end
-	frame.empty = frame:CreateFontString(nil, "OVERLAY", Theme.F_BODY)
-	frame.empty:SetPoint("TOPLEFT", frame, "TOPLEFT", 14, top - 4)
-	frame.empty:SetWidth(WIDTH - 28)
+	frame.empty = Theme.Text(frame, Theme.F_BODY, Theme.MUTED_LIGHT)
+	frame.empty:SetPoint("TOPLEFT", frame, "TOPLEFT", pad + 12, top - 6)
+	frame.empty:SetWidth(inner - 24)
 	frame.empty:SetJustifyH("LEFT")
-	frame.more = frame:CreateFontString(nil, "OVERLAY", Theme.F_SMALL)
-	frame.more:SetPoint("BOTTOMLEFT", frame, "BOTTOMLEFT", 14, 16)
-	frame.more:SetTextColor(Theme.MUTED[1], Theme.MUTED[2], Theme.MUTED[3])
-	frame.all = Theme.CreateButton(frame, 150, 22, L.SR_BTN_ALL, function() ns:SpellRankUpdateAll() end, "primary")
-	frame.all:SetPoint("BOTTOMRIGHT", frame, "BOTTOMRIGHT", -14, 12)
+	-- pied : « et N autre(s) » à gauche, « Tout mettre à jour » à droite
+	frame.more = Theme.Text(frame.footer, Theme.F_SMALL, Theme.MUTED)
+	frame.more:SetPoint("LEFT", frame.footer, "LEFT", Theme.DIALOG_PAD, 0)
+	frame.all = frame:AddFooterButton(L.SR_BTN_ALL, function() ns:SpellRankUpdateAll() end, "primary")
 	frame:Hide()
 	self.spellRanksFrame = frame
 	return frame
@@ -360,6 +369,8 @@ function ns:SpellRanksRefresh()
 	frame.empty:SetText(#list == 0 and L.SR_NONE or "")
 	frame.more:SetText(#list > ns.SPELLRANKS_ROWS and self:F("SR_MORE", #list - ns.SPELLRANKS_ROWS) or "")
 	if #list > 0 then frame.all:Show() else frame.all:Hide() end
+	-- la fenêtre suit la liste : pas de cartes vides sous la dernière
+	frame:SetHeight(SpellRanksHeight(math.min(#list, #frame.rows)))
 	return list
 end
 
