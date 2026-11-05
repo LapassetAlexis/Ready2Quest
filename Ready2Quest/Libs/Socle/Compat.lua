@@ -26,6 +26,8 @@ function ns.Plain(value)
 	return value
 end
 
+local probeModel
+
 function ns:DetectCapabilities()
 	local caps = {}
 
@@ -58,6 +60,38 @@ function ns:DetectCapabilities()
 	caps.unitAuraLegacy = type(rawget(_G, "UnitAura")) == "function"
 	caps.itemInfoGlobal = type(rawget(_G, "GetItemInfo")) == "function"
 	caps.specialization = type(rawget(_G, "GetSpecialization")) == "function"
+
+	-- API récentes exploitées quand le client les expose (sinon comportement
+	-- historique) : chaque module consulte ces drapeaux, /diag les affiche.
+	--   vignettes      : C_VignetteInfo (rares signalés en direct)
+	--   tooltipData    : TooltipDataProcessor (infobulles enrichies)
+	--   mapLevels      : C_Map.GetMapLevels (tranche de niveaux des zones)
+	--   lfgDungeons    : GetLFGDungeonInfo (niveaux des donjons)
+	--   questsOnMap    : C_QuestLine / C_TaskQuest (quêtes proposées sur la carte)
+	--   settingsPanel  : Settings.RegisterCanvasLayoutCategory (Échap > Options > AddOns)
+	--   addonCompartment : AddonCompartmentFrame (bouton des addons de la minicarte)
+	--   itemAsync      : Item:CreateFromItemID (chargement des objets)
+	--   modelAnimation : PlayerModel:SetAnimation (animations du compagnon)
+	local function Fn(tbl, key)
+		tbl = rawget(_G, tbl)
+		return type(tbl) == "table" and type(tbl[key]) == "function"
+	end
+	caps.vignettes = Fn("C_VignetteInfo", "GetVignettes") and Fn("C_VignetteInfo", "GetVignetteInfo")
+	caps.tooltipData = Fn("TooltipDataProcessor", "AddTooltipPostCall")
+		and type(rawget(_G, "Enum")) == "table" and type(Enum.TooltipDataType) == "table"
+	caps.mapLevels = Fn("C_Map", "GetMapLevels")
+	caps.lfgDungeons = type(rawget(_G, "GetLFGDungeonInfo")) == "function"
+	caps.questsOnMap = Fn("C_QuestLine", "GetAvailableQuestLines") or Fn("C_TaskQuest", "GetQuestsOnMap")
+	caps.settingsPanel = Fn("Settings", "RegisterCanvasLayoutCategory") and Fn("Settings", "RegisterAddOnCategory")
+	local compartment = rawget(_G, "AddonCompartmentFrame")
+	caps.addonCompartment = type(compartment) == "table" and type(compartment.RegisterAddon) == "function"
+	caps.itemAsync = Fn("Item", "CreateFromItemID")
+	-- un seul modèle de sonde, jamais affiché, réutilisé à chaque détection
+	if probeModel == nil and type(rawget(_G, "CreateFrame")) == "function" then
+		local ok, model = pcall(CreateFrame, "PlayerModel")
+		probeModel = ok and model or false
+	end
+	caps.modelAnimation = (probeModel and type(probeModel.SetAnimation) == "function") and true or false
 
 	ns.Caps = caps
 	return caps

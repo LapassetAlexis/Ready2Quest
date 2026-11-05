@@ -1033,6 +1033,21 @@ do
 	Check("/diag : les quatre sondes listées", out:find("spellbookModern", 1, true) ~= nil
 		and out:find("unitAuraLegacy", 1, true) ~= nil and out:find("itemInfoGlobal", 1, true) ~= nil
 		and out:find("specialization", 1, true) ~= nil, out)
+	for _, key in ipairs({ "vignettes", "tooltipData", "mapLevels", "lfgDungeons", "questsOnMap",
+		"settingsPanel", "addonCompartment", "itemAsync", "modelAnimation" }) do
+		Check("/diag : sonde " .. key .. " listée", out:find(key, 1, true) ~= nil
+			and type(NS.Caps[key]) == "boolean", out)
+	end
+	do
+		local savedVig = rawget(_G, "C_VignetteInfo")
+		_G.C_VignetteInfo = { GetVignettes = function() return {} end, GetVignetteInfo = function() end }
+		NS:DetectCapabilities()
+		Check("/diag : sonde vignettes vraie quand C_VignetteInfo est là", NS.Caps.vignettes == true)
+		_G.C_VignetteInfo = nil
+		NS:DetectCapabilities()
+		Check("/diag : sonde vignettes fausse sans C_VignetteInfo", NS.Caps.vignettes == false)
+		_G.C_VignetteInfo = savedVig
+	end
 	Check("/diag : plus de sonde historique", out:find("craftLegacy", 1, true) == nil
 		and out:find("questlogLegacy", 1, true) == nil and out:find("tradeskillLegacy", 1, true) == nil, out)
 	_G.C_SpellBook, _G.UnitAura = savedBook, savedAura
