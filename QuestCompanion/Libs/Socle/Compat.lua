@@ -43,12 +43,20 @@ end
 
 local itemWaits = {}   -- itemID -> { [onLoad] = true } : attentes en cours
 ns.itemWaits = itemWaits
+-- demandes de chargement récentes : itemID -> instant, pour ne pas relancer
+-- le serveur à chaque rafraîchissement (sacs, infobulles…)
+local itemRequested = {}
+local ITEM_REQUEST_GAP = 5
 
 local function RequestItem(item, onLoad)
 	local itemID = ItemIDOf(item)
 	if not itemID or itemID <= 0 then return end
 	local api = rawget(_G, "C_Item")
-	if type(api) == "table" and type(api.RequestLoadItemDataByID) == "function" then
+	local now = (ns.Now and ns.Now()) or 0
+	local last = itemRequested[itemID]
+	if type(api) == "table" and type(api.RequestLoadItemDataByID) == "function"
+		and not (last and now >= last and now - last < ITEM_REQUEST_GAP) then
+		itemRequested[itemID] = now
 		pcall(api.RequestLoadItemDataByID, itemID)
 	end
 	if type(onLoad) ~= "function" then return end

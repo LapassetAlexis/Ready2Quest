@@ -620,7 +620,7 @@ end
 -- ---------------------------------------------------------------------------
 function ns:RewardItemUpgradeLine(link)
 	if not self:RewardEnabled() or self:DB().rewardTooltip == false then return nil end
-	link = ns.Plain and ns.Plain(link) or link
+	link = ns.Plain(link)
 	if type(link) ~= "string" then return nil end
 	-- fenêtre de récompense ouverte : ses choix ont déjà leur ligne (RewardAddTooltip)
 	if self.rewardState and self.rewardState.active then return nil end

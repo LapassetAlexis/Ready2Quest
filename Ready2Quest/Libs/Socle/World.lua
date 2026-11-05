@@ -67,10 +67,12 @@ function ns:MapLevelRange(mapID)
 	if type(api) ~= "table" or type(api.GetMapLevels) ~= "function" then return nil end
 	local ok, low, high = pcall(api.GetMapLevels, mapID)
 	low, high = tonumber(ok and ns.Plain(low) or nil), tonumber(ok and ns.Plain(high) or nil)
-	local range = false
-	if low and high and low >= 1 and high >= low then range = { low, high } end
+	-- réponse vide (données de carte pas encore chargées ?) : pas de cache,
+	-- on redemandera au prochain appel
+	if not (low and high and low >= 1 and high >= low) then return nil end
+	local range = { low, high }
 	mapLevels[mapID] = range
-	return range or nil
+	return range
 end
 
 -- Sous-zone courante : un village (Comté-de-l'Or, Long-guet…) n'a pas
@@ -294,8 +296,8 @@ end
 -- union. Une tranche plus large que LFG_MAX_SPAN niveaux (donjon « à
 -- l'échelle » du moteur récent) ou au-delà du niveau maximum est écartée :
 -- DungeonData (fo) reste alors la référence.
-local LFG_SCAN_MAX, LFG_MAX_SPAN, LFG_RETRY = 3000, 20, 60
-local lfg = { ranges = nil, at = nil }
+local LFG_SCAN_MAX, LFG_MAX_SPAN, LFG_RETRY, LFG_TRIES = 3000, 20, 60, 3
+local lfg = { ranges = nil, at = nil, tries = 0 }
 ns.lfgDungeonCache = lfg
 
 local function LevelCap()
@@ -360,9 +362,14 @@ end
 function ns:DungeonLfgRange(entry)
 	if type(entry) ~= "table" or type(rawget(_G, "GetLFGDungeonInfo")) ~= "function" then return nil end
 	local now = (ns.Now and ns.Now()) or 0
-	if not lfg.ranges or (next(lfg.ranges) == nil and now - (lfg.at or 0) >= LFG_RETRY) then
+	-- balayage vide : au plus LFG_TRIES essais de suite par session, espacés
+	-- d'une minute (le suivi appelle ceci à chaque rafraîchissement)
+	if not lfg.ranges or (next(lfg.ranges) == nil and lfg.tries < LFG_TRIES
+		and now - (lfg.at or 0) >= LFG_RETRY) then
 		local ok, ranges = pcall(ScanLfg, self)
 		lfg.ranges, lfg.at = (ok and type(ranges) == "table") and ranges or {}, now
+		-- essais vides consécutifs seulement (un balayage fructueux remet à zéro)
+		lfg.tries = next(lfg.ranges) == nil and lfg.tries + 1 or 0
 		if not ok and self.RecordError then self:RecordError("dungeon:lfg", ranges) end
 	end
 	local key = entry.key

@@ -73,6 +73,13 @@ do
 	Check("[ITEM] pas en cache : nil", NS.ItemInfo("|cffffffff|Hitem:555::::|h[x]|h|r") == nil)
 	Check("[ITEM] pas en cache : chargement demandé (id tiré du lien)", W.requested[1] == 555, tostring(W.requested[1]))
 	Check("[ITEM] sans rappel : pas d'attente", #pending == 0)
+	-- rafraîchissements répétés : une demande au serveur, pas une par appel
+	local asked = #W.requested
+	NS.ItemInfo(555); NS.ItemInfo(555)
+	Check("[ITEM] demandes répétées : pas de relance immédiate", #W.requested == asked)
+	Mock.now = Mock.now + 6
+	NS.ItemInfo(555)
+	Check("[ITEM] demandes répétées : relance après quelques secondes", #W.requested == asked + 1)
 	local hits = 0
 	local function OnLoad() hits = hits + 1 end
 	NS.ItemInfo(556, OnLoad)
@@ -157,12 +164,17 @@ do
 	W.levels[1413] = { 12, 22 }
 	W.levels[424242] = { 30, 35 }
 	Forget()
-	Check("[ZLVL] avec l'API : le jeu l'emporte sur la table", Same(QNS:ZoneLevelRange(1413), 12, 22))
+	Check("[ZLVL] avec l'API : la table établie l'emporte sur le jeu", Same(QNS:ZoneLevelRange(1413), 10, 25))
 	Check("[ZLVL] avec l'API : zone absente des tables", Same(QNS:ZoneLevelRange(424242), 30, 35))
 	local before = W.calls
-	QNS:ZoneLevelRange(1413); QNS:ZoneLevelRange(1413)
+	QNS:ZoneLevelRange(424242); QNS:ZoneLevelRange(424242); QNS:MapLevelRange(424242)
 	Check("[ZLVL] mise en cache par carte", W.calls == before)
 	Check("[ZLVL] R2Q : même source (socle)", Same(NS:MapLevelRange(1413), 12, 22))
+	-- réponse vide : pas mise en cache, redemandée ensuite
+	W.levels[515151] = nil
+	Check("[ZLVL] réponse vide : rien", NS:MapLevelRange(515151) == nil)
+	W.levels[515151] = { 40, 45 }
+	Check("[ZLVL] réponse vide : redemandée plus tard", Same(NS:MapLevelRange(515151), 40, 45))
 	Check("[ZLVL] palier d'après le jeu", QNS:ZoneTier(424242) == 2)
 
 	-- valeurs inexploitables : la table, comme avant
@@ -265,6 +277,19 @@ do
 	Check("[LFG] avant une minute : pas de nouvel essai", NS:DungeonRange(D.dm) == 17)
 	Mock.now = Mock.now + 31
 	Check("[LFG] après une minute : nouvel essai", NS:DungeonRange(D.dm) == 18)
+
+	-- balayages vides répétés : trois essais au plus, puis on s'arrête
+	W.rows = {}
+	Forget()
+	NS.lfgDungeonCache.tries = 0
+	local scans = 0
+	local realInfo = _G.GetLFGDungeonInfo
+	_G.GetLFGDungeonInfo = function(...) if select(1, ...) == 1 then scans = scans + 1 end return realInfo(...) end
+	for _ = 1, 6 do NS:DungeonRange(D.dm); Mock.now = Mock.now + 61 end
+	Check("[LFG] balayages vides : trois essais au plus", scans == 3, tostring(scans))
+	_G.GetLFGDungeonInfo = realInfo
+	W.rows = rows
+	NS.lfgDungeonCache.tries = 0
 
 	W.error = true
 	Forget()

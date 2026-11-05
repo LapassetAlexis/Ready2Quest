@@ -825,7 +825,9 @@ end
 -- Sans Settings.RegisterCanvasLayoutCategory / RegisterAddOnCategory : rien.
 function ns:OpenOptionsFromSettings()
 	local panel = rawget(_G, "SettingsPanel")
-	if panel and type(panel.Hide) == "function" then pcall(panel.Hide, panel) end
+	local hideUI = rawget(_G, "HideUIPanel")
+	if panel and type(hideUI) == "function" then pcall(hideUI, panel)
+	elseif panel and type(panel.Hide) == "function" then pcall(panel.Hide, panel) end
 	local frame = self:EnsureOptions()
 	if frame and not frame:IsShown() then self:ToggleOptions() end
 end

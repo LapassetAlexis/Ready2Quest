@@ -112,7 +112,12 @@ function ns:LiveRareCheck(vignetteGUID)
 		name = (static and self:BestiaryStaticName(static[npcID])) or tostring(npcID)
 	end
 	-- carnet et bestiaire : à chaque passage (la mémoire du rare se rafraîchit)
-	if self.BestiarySeeGUID then self:BestiarySeeGUID(guid, name, "rare") end
+	-- classe déjà apprise (rare élite…) gardée ; sinon « rare » (la table de
+	-- zone, si elle connaît l'espèce, l'emporte de toute façon à l'affichage)
+	local known = self.BestiaryZone and self:BestiaryZone(zoneID)
+	known = known and known[npcID]
+	local class = (type(known) == "table" and RARE[known.class or ""] and known.class) or "rare"
+	if self.BestiarySeeGUID then self:BestiarySeeGUID(guid, name, class) end
 	if self.JournalSeeRare then self:JournalSeeRare(guid, name) end
 
 	self.liveRareAlerts = self.liveRareAlerts or {}

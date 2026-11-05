@@ -114,9 +114,11 @@ local computedLevels = {}
 function ns:ZoneLevelRange(zoneID)
 	zoneID = tonumber(zoneID)
 	if not zoneID then return nil end
+	-- la table établie l'emporte (tranches Classic sûres) ; le jeu complète
+	-- les zones qu'elle ne connaît pas, avant l'estimation par les créatures
+	if ZONE_LEVELS[zoneID] then return ZONE_LEVELS[zoneID] end
 	local live = self.MapLevelRange and self:MapLevelRange(zoneID)
 	if live then return live end
-	if ZONE_LEVELS[zoneID] then return ZONE_LEVELS[zoneID] end
 	if computedLevels[zoneID] ~= nil then return computedLevels[zoneID] or nil end
 	local creatures = type(ns.ZONE_CREATURES) == "table" and ns.ZONE_CREATURES[zoneID]
 	local lows, highs = {}, {}
