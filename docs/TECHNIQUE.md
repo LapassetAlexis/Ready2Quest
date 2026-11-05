@@ -1,5 +1,14 @@
 # Ready2Quest — notes techniques et historique
 
+## QuestCompanion 1.1.0 (en cours) — complétion gamifiée
+
+### Friandises (`QuestCompanion/Treats.lua`)
+
+Chargé après `Personality.lua` (lit `CompanionTrait`), avant `JournalWindow.lua`. Données par personnage dans la créature : `data.pantry` (biscuit, infusion, bonbon, carte, festin ; ramené dans `[0, TreatCap]` à chaque lecture), `data.milestones[zoneID]` (plus haut palier réclamé), `data.treatsInit` (rattrapage fait). Plafonds `TREAT_RULES.cap` (3) et `festinCap` (2). Paliers `TREAT_RULES.milestones` (25, 50, 75) d'une zone à au moins deux parts (comme le coffre) : 25 et 50 donnent `TreatForLowestNeed()` (égalité : faim, énergie, moral, curiosité), 75 un Festin. `TreatGrant` range, ou fait manger si la case est pleine (bulle `TREAT_FULL`) ; `TreatGive` (joueur) et `TreatEat` (envie(s) à 100 par `CompanionAdd`, effet `crumbs`/`hearts`/`alert`/`bounce`, Gourmand +`gluttonMood` de moral, bulle forcée `TREAT_EAT_<sorte>` ou `TREAT_SNIFF` pour la carte avec la part la moins avancée de la zone). Vérification par enveloppe de `RefreshJournalTracker`, après le coffre (sa bulle passe d'abord) ; la première fois, `TreatCatchUp` parcourt `JournalKnownZones` en silence puis dit `TREAT_RETRO` (mangées > 0) ou `TREAT_RETRO_KEPT`. Enveloppe de `ChestCheck` : coffre doré → Festin + deux `TreatRandom()` (`chest.treats`), bulle `TREAT_GOLDEN`. Enveloppe de `CompanionPet` : Maj (`IsShiftKeyDown`) ouvre ou ferme `treatMenu` (5 boutons, icônes `TREAT_ICONS`, compteur, grisé à 0) au lieu de la caresse. Répliques dans le registre commun (`COMPANION_POOLS`, `COMPANION_LINE_STRINGS`), variantes `__glutton`. Tests `[TREAT]`.
+
+À vérifier en jeu : les icônes `INV_ValentinesCandy`, `INV_Misc_Map_01`, `INV_Misc_Food_11`, `INV_Drink_07` sur Era et Forever ; le menu au-dessus de la créature, à toutes les tailles.
+
+
 > Document destiné au développement : historique version par version, choix d'API, compatibilité des clients, tests. Pour la présentation de l'addon, voir le [README](../README.md).
 
 

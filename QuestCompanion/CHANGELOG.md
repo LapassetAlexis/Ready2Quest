@@ -1,5 +1,11 @@
 # QuestCompanion
 
+## 1.1.0 (en cours)
+
+- **Friandises et garde-manger** : chaque palier d'une zone (25, 50 et 75 %) donne une friandise, rangée dans un garde-manger. **Maj + clic** sur la créature l'ouvre ; un clic sur une friandise la lui donne. Biscuit de voyage (faim à 100 %), Infusion douce (énergie), Bonbon pétillant (moral, et des cœurs), Carte au trésor (curiosité, et elle flaire ce qui reste dans la zone), Festin (les quatre envies). À 25 et 50 %, la friandise de l'envie la plus basse ; à 75 %, un Festin ; à 100 %, le coffre, comme avant. Trois de chaque sorte au plus, deux Festins : une friandise en trop est mangée tout de suite. Un **coffre doré** (palier de cosmétiques déjà complet) donne maintenant un Festin et deux friandises au hasard. Les paliers déjà franchis sont rattrapés à la première connexion, avec une seule bulle. Gourmand, il savoure deux fois : son moral monte aussi.
+
+*English:* treats and a pantry: each zone milestone (25, 50, 75%) gives a treat; Shift + click the creature to open the pantry and give one (Travel biscuit, Soothing tea, Fizzy candy, Treasure map, Feast). Three of each kind, two Feasts; extra treats get eaten on the spot. A golden chest now gives a Feast and two random treats. Milestones already reached are caught up once.
+
 ## 1.0.0
 
 **Première version, séparée de Ready2Quest 1.26.0.** First release, split from Ready2Quest 1.26.0.

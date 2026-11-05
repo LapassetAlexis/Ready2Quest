@@ -55,4 +55,5 @@ ZoneQuests.lua
 Memories.lua
 PersonalityLines.lua
 Personality.lua
+Treats.lua
 JournalWindow.lua

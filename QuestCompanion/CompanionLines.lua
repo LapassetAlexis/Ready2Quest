@@ -373,6 +373,7 @@ P.TIP = {
 	{ "Astuce : /qc options règle mes bulles et mes astuces.", "Tip: /qc options sets my bubbles and my tips." },
 	{ "Astuce : le carnet compte les ennemis rares que TU as engagés.", "Tip: the journal counts the rares YOU actually engaged." },
 	{ "Astuce : /qc ouvre mon carnet, un clic droit sur moi aussi.", "Tip: /qc opens my journal, and so does a right-click on me." },
+	{ "Astuce : Maj + clic sur moi ouvre mon garde-manger. Les friandises, c'est la vie.", "Tip: Shift + click on me opens my pantry. Treats are life." },
 	{ "Astuce : déconnecte-toi à l'auberge pour gagner de l'expérience reposée.", "Tip: log out at an inn to build rested experience." },
 	{ "Astuce : les quêtes grises ne rapportent presque plus d'expérience.", "Tip: grey quests give almost no experience." },
 	{ "Astuce : manger et boire en même temps fait repartir plus vite.", "Tip: eating and drinking together gets you going faster." },
