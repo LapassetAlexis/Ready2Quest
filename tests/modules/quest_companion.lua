@@ -82,7 +82,7 @@ do
 	Say("-- deux addons : socle")
 	local files = { "Base.lua", "Strings.lua", "Compat.lua", "Hubs.lua", "DungeonData.lua", "Theme.lua", "Store.lua",
 		"World.lua", "Commands.lua", "Options.lua", "Minimap.lua", "Media/losange.tga", "Media/losange_trait.tga",
-		"Media/Alegreya-Bold.ttf" }
+		"Media/Inter-Regular.ttf", "Media/Inter-SemiBold.ttf", "Media/Inter-Bold.ttf", "Media/interrupteur.tga", "Media/chevron.tga" }
 	local diff = {}
 	for _, file in ipairs(files) do
 		local a, b = QCT.Read("Ready2Quest/Libs/Socle/" .. file), QCT.Read("QuestCompanion/Libs/Socle/" .. file)

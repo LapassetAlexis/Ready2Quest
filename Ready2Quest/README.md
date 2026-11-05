@@ -259,7 +259,7 @@ See the [repository README](../README.md): tests, shared core, publishing.
 
 ## License
 
-Ready2Quest is free software under the **GPL-3.0** license (see `LICENSE`): you can use, modify and share it, as long as you keep the same license. The heading font, Alegreya, is under the OFL license (`Libs/Socle/Media/Alegreya-OFL.txt`).
+Ready2Quest is free software under the **GPL-3.0** license (see `LICENSE`): you can use, modify and share it, as long as you keep the same license. The interface font, Inter, is under the OFL license (`Libs/Socle/Media/Inter-OFL.txt`).
 
 ---
 
@@ -526,4 +526,4 @@ Voir le [README du dépôt](../README.md) : tests, socle commun, publication.
 
 ## Licence
 
-Ready2Quest est un logiciel libre sous licence **GPL-3.0** (voir `LICENSE`) : tu peux l'utiliser, le modifier et le partager, à condition de garder la même licence. La police des titres, Alegreya, est sous licence OFL (`Libs/Socle/Media/Alegreya-OFL.txt`).
+Ready2Quest est un logiciel libre sous licence **GPL-3.0** (voir `LICENSE`) : tu peux l'utiliser, le modifier et le partager, à condition de garder la même licence. La police de l'interface, Inter, est sous licence OFL (`Libs/Socle/Media/Inter-OFL.txt`).

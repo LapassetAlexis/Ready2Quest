@@ -26,12 +26,22 @@ end
 
 Mock.world = {}
 
-local function NewRegion(kind, name)
+-- Chaque région garde aussi de quoi la dessiner hors-jeu (tests/snapshot.lua) :
+-- parent (mockParent, mockChildren), ordre de création (mockId), couche
+-- (drawLayer, subLevel), taille posée ou non (widthSet, heightSet), Hide
+-- explicite (mockHidden : le client montre une région par défaut).
+Mock.serial = 0
+local function NewRegion(kind, name, parent)
+	Mock.serial = Mock.serial + 1
 	local region = {
 		kind = kind, name = name, events = {}, text = "", shown = false,
 		scripts = {}, width = 100, height = 100, vertex = { 1, 1, 1 },
-		texture = nil, points = {}, level = 1,
+		texture = nil, points = {}, level = 1, mockId = Mock.serial, mockChildren = {},
 	}
+	if parent then
+		region.mockParent = parent
+		if type(parent) == "table" and parent.mockChildren then table.insert(parent.mockChildren, region) end
+	end
 	function region:RegisterEvent(event)
 		if Mock.world.unknownEvents and Mock.world.unknownEvents[event] then
 			error("Attempt to register unknown event \"" .. tostring(event) .. "\"")
@@ -53,9 +63,10 @@ local function NewRegion(kind, name)
 		self.hooks = self.hooks or {}
 		self.hooks[kind] = fn
 	end
-	function region:CreateFontString(_, _, fontObject)
-		local fontString = NewRegion("FontString")
+	function region:CreateFontString(_, layer, fontObject)
+		local fontString = NewRegion("FontString", nil, self)
 		fontString.fontObject = fontObject
+		fontString.drawLayer = layer
 		-- approximation : 6.4 px par caractere pour F_SMALL. Suffisant pour
 		-- verifier qu'un libelle tient dans son bouton, ce qui est le point.
 		function fontString:GetStringWidth()
@@ -63,14 +74,40 @@ local function NewRegion(kind, name)
 		end
 		return fontString
 	end
-	function region:CreateTexture() return NewRegion("Texture") end
-	function region:SetSize(w, h) self.width, self.height = w, h end
-	function region:SetWidth(w) self.width = w end
-	function region:SetHeight(h) self.height = h end
+	function region:CreateTexture(_, layer, _, subLevel)
+		local texture = NewRegion("Texture", nil, self)
+		texture.drawLayer, texture.subLevel = layer, subLevel
+		return texture
+	end
+	function region:SetDrawLayer(layer, subLevel) self.drawLayer, self.subLevel = layer, subLevel end
+	function region:GetDrawLayer() return self.drawLayer, self.subLevel end
+	function region:GetParent() return self.mockParent end
+	function region:SetParent(parent)
+		local old = self.mockParent
+		if type(old) == "table" and old.mockChildren then
+			for index, child in ipairs(old.mockChildren) do
+				if child == self then table.remove(old.mockChildren, index); break end
+			end
+		end
+		self.mockParent = parent
+		if type(parent) == "table" and parent.mockChildren then table.insert(parent.mockChildren, self) end
+	end
+	function region:SetSize(w, h) self.width, self.height = w, h; self.widthSet, self.heightSet = true, true end
+	function region:SetWidth(w) self.width = w; self.widthSet = true end
+	function region:SetHeight(h) self.height = h; self.heightSet = true end
 	function region:GetWidth() return self.width end
 	function region:GetHeight() return self.height end
-	function region:SetAllPoints() end
-	function region:SetTexture(path) self.texture = path end
+	-- rangé à part de points/lastPoint : GetPoint reste celui de SetPoint
+	function region:SetAllPoints(relativeTo) self.allPoints = relativeTo or true end
+	function region:SetTexture(path) self.texture = path; self.colorTexture = nil end
+	function region:SetColorTexture(r, g, b, a)
+		self.texture = "Interface\\Buttons\\WHITE8X8"
+		self.colorTexture = { r, g, b, a or 1 }
+		-- simplification : la couleur posée se lit aussi dans vertex
+		self.vertex = { r, g, b, a or 1 }
+	end
+	function region:SetGradient(orientation, minColor, maxColor) self.gradient = { orientation, minColor, maxColor } end
+	-- (pas de SetGradientAlpha : l'ancienne API, absente de Forever ; testée à part)
 	function region:SetAtlas(path) self.atlas = path end
 	function region:SetVertexColor(r, g, b, a) self.vertex = { r, g, b, a } end
 	function region:SetAlpha(value) self.alpha = value end
@@ -88,10 +125,10 @@ local function NewRegion(kind, name)
 	function region:SetFixedFrameLevel() end
 	function region:SetTexCoord() end
 	function region:SetWordWrap() end
-	function region:SetFrameLevel(level) self.level = level end
+	function region:SetFrameLevel(level) self.level = level; self.levelSet = true end
 	function region:GetFrameLevel() return self.level end
 	function region:SetClampedToScreen() end
-	function region:ClearAllPoints() self.points = {} end
+	function region:ClearAllPoints() self.points = {}; self.allPoints = nil end
 	function region:GetPoint()
 		local last = self.lastPoint
 		if last then return last.point, last.relTo, last.relPoint, last.x, last.y end
@@ -127,9 +164,18 @@ local function NewRegion(kind, name)
 	function region:GetCenter() return 500, 500 end
 	function region:GetEffectiveScale() return 1 end
 	function region:SetHitRectInsets() end
-	function region:SetJustifyH() end
-	function region:Show() self.shown = true end
-	function region:Hide() self.shown = false end
+	function region:SetJustifyH(value) self.justifyH = value end
+	function region:SetJustifyV(value) self.justifyV = value end
+	function region:EnableMouseWheel(value) self.mouseWheel = value end
+	-- champ de saisie (EditBox)
+	function region:SetAutoFocus(value) self.autoFocus = value end
+	function region:SetTextInsets(l, r, t, b) self.textInsets = { l, r, t, b } end
+	function region:SetMaxLetters(value) self.maxLetters = value end
+	function region:SetFocus() self.focused = true end
+	function region:ClearFocus() self.focused = false end
+	function region:HasFocus() return self.focused == true end
+	function region:Show() self.shown = true; self.mockHidden = false end
+	function region:Hide() self.shown = false; self.mockHidden = true end
 	function region:IsShown() return self.shown end
 	function region:CreateAnimationGroup()
 		local group = { plays = 0, animations = {} }
@@ -160,7 +206,16 @@ local function NewRegion(kind, name)
 		local c = self.textColor or { 1, 1, 1, 1 }
 		return c[1], c[2], c[3], c[4]
 	end
-	function region:SetFontObject() end
+	function region:SetFontObject(font) self.fontObject = font end
+	-- objet de police (CreateFont) : copie d'un autre objet
+	function region:CopyFontObject(font)
+		if font == nil then error("CopyFontObject: objet de police attendu") end
+		self.copiedFrom = font
+	end
+	function region:GetFont()
+		if self.font then return self.font.path, self.font.size, self.font.flags end
+		return nil
+	end
 	function region:SetNormalFontObject() end
 	function region:SetDisabledFontObject() end
 	Mock.frames[#Mock.frames + 1] = region
@@ -174,7 +229,29 @@ _G.CreateFrame = function(kind, name, parent, template)
 	if template == "BackdropTemplate" and Mock.world.noBackdropTemplate then
 		error("Unknown frame template: " .. tostring(template))
 	end
-	return NewRegion(kind, name)
+	return NewRegion(kind, name, parent)
+end
+-- Objets de police : CreateFont(nom) les range en global, comme le client.
+-- Mock.world.noCreateFont simule un client sans CreateFont.
+_G.CreateFont = function(name)
+	if Mock.world and Mock.world.noCreateFont then error("CreateFont indisponible") end
+	local font = NewRegion("Font", name)
+	if name then _G[name] = font end
+	return font
+end
+-- polices du jeu (repli des objets du socle) : chemin et taille du client
+for fontName, size in pairs({ GameFontNormalHuge = 20, GameFontNormalLarge = 16, GameFontHighlight = 12,
+	GameFontHighlightSmall = 10, GameFontNormalSmall = 10, GameFontNormal = 12, NumberFontNormal = 14 }) do
+	local font = _G.CreateFont(fontName)
+	font.font = { path = "Fonts\\FRIZQT__.TTF", size = size, flags = "" }
+end
+-- CreateColor n'est PAS posé par défaut : des tests vérifient le repli d'un
+-- client sans (companion_cosmetics). Mock.CreateColor sert à ceux qui le veulent
+-- (tests/snapshot.lua, tests/modules/theme_v2.lua).
+function Mock.CreateColor(r, g, b, a)
+	local color = { r = r, g = g, b = b, a = a or 1 }
+	function color:GetRGBA() return self.r, self.g, self.b, self.a end
+	return color
 end
 _G.UIParent = NewRegion("Frame", "UIParent")
 _G.Minimap = NewRegion("Frame", "Minimap")
@@ -620,6 +697,28 @@ local function ResetWorld()
 	NS.wasAtCamp = nil
 	NS.departed = nil
 	if NS.InvalidateReagents then NS:InvalidateReagents() end
+end
+
+----------------------------------------------------------------------------
+-- 3 bis. Aperçu hors-jeu (tests/snapshot.py) : l'addon est chargé, on rend
+-- une scène de tests/snapshot.lua en HTML et on s'arrête là, sans les tests.
+----------------------------------------------------------------------------
+if SNAPSHOT_SCENE then
+	local function LoadModules()
+		if Mock.modulesLoaded then return end
+		Mock.modulesLoaded = true
+		Mock.world.build = nil
+		NS:DetectCapabilities()
+		for _, file in ipairs(Mock.moduleFiles) do LoadAddonFile(file) end
+		Mock:Fire("ADDON_LOADED", "Ready2Quest")
+		Mock:Fire("ADDON_LOADED", "QuestCompanion")
+	end
+	ResetWorld()
+	_G.T = { Check = Check, Say = Say, ResetWorld = ResetWorld, NS = NS, QNS = QNS, Mock = Mock, LoadModules = LoadModules }
+	local Snap = assert(loadfile(ROOT .. "/tests/snapshot.lua"))()
+	_G.SNAPSHOT_RESULT = Snap.RunScene(SNAPSHOT_SCENE, SNAPSHOT_OUT, _G.T)
+	_G.TEST_OUTPUT, _G.TEST_FAILED = _G.SNAPSHOT_RESULT, 0
+	return
 end
 
 ----------------------------------------------------------------------------
@@ -2798,7 +2897,7 @@ Check("coin d'accent ambre", win.accentH and win.accentH.vertex[1] > 0.9 and win
 	win.accentH and table.concat(win.accentH.vertex, ","))
 Check("marque : logo boussole dans le bandeau", win.logo and tostring(win.logo.texture):find("logo") ~= nil,
 	win.logo and win.logo.texture)
-Check("titre en police maison", win.title and win.title.font and tostring(win.title.font.path):find("Alegreya") ~= nil,
+Check("titre en police maison", win.title and win.title.font and tostring(win.title.font.path):find("Inter%-Bold") ~= nil,
 	win.title and win.title.font and win.title.font.path)
 Check("pas de portrait", win.portrait == nil)
 Check("titre présent", win.title ~= nil and tostring(win.title.text):find("Réglages") ~= nil,
@@ -3418,7 +3517,7 @@ Mock.world.durability = { [5] = { 5, 100 } }
 NS:RunChecklist("manual")
 local w = NS.window
 Check("[ID] note en police maison, grand corps", w.scoreValue.font and w.scoreValue.font.size >= 30
-	and tostring(w.scoreValue.font.path):find("Alegreya") ~= nil, w.scoreValue.font and w.scoreValue.font.size)
+	and tostring(w.scoreValue.font.path):find("Inter%-Bold") ~= nil, w.scoreValue.font and w.scoreValue.font.size)
 Check("[ID] verdict dans un tampon bordé", w.stamp and w.stamp.border and w.verdict.text ~= "", w.verdict.text)
 Check("[ID] tampon à la couleur du verdict", w.stamp.border.top.vertex[1] == w.verdict.textColor[1])
 Check("[ID] fenêtre : fondu à l'ouverture", w.fadeIn and w.fadeIn.plays >= 1)
