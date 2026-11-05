@@ -400,6 +400,7 @@ do
 	NS:JournalData().stamps["zone:1411"] = { id = "zone:1411", kind = "zone", name = "Durotar", at = 0 }
 	NS:DB().journalTracker = false
 	NS:ToggleJournal(true)
+	NS:SelectJournalKind("completion")
 	local f = NS.journalFrame
 	local comp = f and f.comp
 	Check("[ZQ] fenêtre : Durotar", f and f.zoneID == 1411)
@@ -436,6 +437,7 @@ do
 	NS:JournalData().stamps["zone:1411"] = { id = "zone:1411", kind = "zone", name = "Durotar", at = 0 }
 	NS:DB().journalTracker = false
 	NS:ToggleJournal(true)
+	NS:SelectJournalKind("completion")
 	comp = NS.journalFrame.comp
 	Check("[ZQ] client sans table : « Quêtes » grisé", comp.tabs.quests.text.text == "Quêtes"
 		and comp.tabs.quests.text.textColor[1] == NS.Theme.MUTED[1])

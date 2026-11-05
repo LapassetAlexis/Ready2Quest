@@ -81,7 +81,8 @@ Your travel collection: a **stamp** for every first time.
 
 Each new stamp is announced by a small banner, never in combat. Everything is earned by playing, no random packs.
 
-The journal (`/qc`, the minimap button, or right-click on the creature) opens on the last tab you used. Its tabs run down the right side, and your **pantry** (treats) sits in its header: click a treat to give it.
+The journal (`/qc`, the minimap button, or right-click on the creature) opens on the last tab you used (the first time, on **Creature**, the first tab). Its tabs run down the right side, and your **pantry** (treats) sits in its header: click a treat to give it.
+- **Creature**: its stage, the next one, its character, its needs, how it evolves, your chests to open, your collection and your journey (zones, capitals, dungeons, rares, milestones). Hover a need (hunger, energy, mood, curiosity) to see what fills it.
 - **Zones**: a grid of every zone in the game, Forever's own zones included, the ones you've never visited shown greyed out. Each tile gives its level range and percentage, and says if a chest is waiting. Filter by continent, sort by level or by percentage, click a tile to open it.
 - **Zone**: one zone, with arrows to the previous and next one (the mouse back button returns to the grid). Its percentage, its milestones (25, 50 and 75% give a treat, 100% the chest) and, tab by tab, what's done and what's left:
   - **Exploration**: the zone's villages, on two columns;
@@ -90,7 +91,6 @@ The journal (`/qc`, the minimap button, or right-click on the creature) opens on
   - **Quests**: the zone's quests your character can do (faction, race, class), on two columns, filtered by to do or done. They count toward the 100%. No addon required, on Era as on Forever.
 - **Track on screen** (Zone tab): when on, the zone's goals show in the in-game "Journal" tracker. The zone you're in is tracked by default (turn it off to hide it); turn other zones on to keep an eye on them.
 - **Day**: the missions of the day (with the button to change one), the inn loyalty card and the pantry.
-- **Creature**: its stage, the next one, its character, its needs, how it evolves, your chests to open, your collection and your journey (zones, capitals, dungeons, rares, milestones). Hover a need (hunger, energy, mood, curiosity) to see what fills it.
 - **Collection**: every appearance, ornament, frame and background, the locked ones greyed out with where to get them. Hover an item to preview it, click to equip it (an ornament: click to wear it or take it off).
 - **Memories**: the album.
 
@@ -230,7 +230,8 @@ Ta collection de voyage : un **tampon** pour chaque première fois.
 
 Chaque nouveau tampon est annoncé par un petit bandeau, jamais en combat. Tout se gagne en jouant, sans paquet aléatoire.
 
-Le carnet (`/qc`, le bouton de minicarte, ou clic droit sur la créature) s'ouvre sur le dernier onglet utilisé. Ses onglets sont rangés sur le côté droit, et ton **garde-manger** (les friandises) est dans l'en-tête : un clic sur une friandise la donne.
+Le carnet (`/qc`, le bouton de minicarte, ou clic droit sur la créature) s'ouvre sur le dernier onglet utilisé (la première fois, sur **Créature**, le premier onglet). Ses onglets sont rangés sur le côté droit, et ton **garde-manger** (les friandises) est dans l'en-tête : un clic sur une friandise la donne.
+- **Créature** : l'étape de ta créature, la prochaine, son caractère, ses envies, comment elle évolue, tes coffres à ouvrir, ta collection et ton parcours (zones, capitales, donjons, rares, paliers). Survole une envie (faim, énergie, moral, curiosité) pour savoir ce qui la remplit.
 - **Zones** : une grille de toutes les zones du jeu, celles propres à Forever comprises, celles jamais visitées en gris. Chaque tuile donne sa tranche de niveaux et son pourcentage, et dit si un coffre t'attend. Filtre par continent, trie par niveau ou par pourcentage, clique sur une tuile pour l'ouvrir.
 - **Zone** : une zone, avec des flèches vers la précédente et la suivante (le bouton retour de la souris revient à la grille). Son pourcentage, ses paliers (25, 50 et 75 % donnent une friandise, 100 % le coffre) et, par onglet, ce qui est fait et ce qui reste :
   - **Exploration** : les villages de la zone, sur deux colonnes ;
@@ -239,7 +240,6 @@ Le carnet (`/qc`, le bouton de minicarte, ou clic droit sur la créature) s'ouvr
   - **Quêtes** : les quêtes de la zone que ton personnage peut faire (faction, race, classe), sur deux colonnes, filtrées à faire ou faites. Elles comptent dans les 100 %. Aucun addon requis, sur Era comme sur Forever.
 - **Suivre à l'écran** (onglet Zone) : activé, les objectifs de la zone s'affichent dans le bloc « Carnet » en jeu. La zone où tu es est suivie d'office (désactive-la pour la masquer) ; active d'autres zones pour garder un œil sur elles.
 - **Jour** : les missions du jour (avec le bouton pour en changer une), la carte de fidélité des auberges et le garde-manger.
-- **Créature** : l'étape de ta créature, la prochaine, son caractère, ses envies, comment elle évolue, tes coffres à ouvrir, ta collection et ton parcours (zones, capitales, donjons, rares, paliers). Survole une envie (faim, énergie, moral, curiosité) pour savoir ce qui la remplit.
 - **Collection** : toutes les apparences, ornements, cadres et fonds, ceux verrouillés en gris avec où les trouver. Survole un objet pour le voir, clique pour l'équiper (un ornement : clic pour le porter ou l'enlever).
 - **Souvenirs** : l'album.
 

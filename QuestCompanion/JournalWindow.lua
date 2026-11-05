@@ -310,7 +310,8 @@ local CARD_COLS, CARD_ROWS, CARD_W, CARD_H, CARD_GAP = 4, 6, 114, 40, 6   -- 6 r
 local ICON_COLS, ICON_ROWS, ICON_SIZE, ICON_GAP = 8, 5, 48, 8
 local TILE_COLS, TILE_ROWS, TILE_W, TILE_H, TILE_GAP = 6, 4, 108, 90, 8
 local COLL_COLS, COLL_ROWS, COLL_W, COLL_H, COLL_GAP = 5, 5, 88, 62, 8
-local SECTIONS = { "zones", "completion", "day", "evolution", "collection", "memories" }
+-- la Créature d'abord : c'est elle, le cœur de l'addon
+local SECTIONS = { "evolution", "zones", "completion", "day", "collection", "memories" }
 local COLL_KINDS = { "app", "orn", "frame", "bg" }
 local MARKS = { 25, 50, 75, 100 }
 local CONTINENTS = { [1415] = "ek", [1414] = "ka" }
@@ -1090,7 +1091,7 @@ function ns:EnsureJournalWindow()
 	local frame = Theme.CreatePanel(UIParent, WIDTH, HEIGHT, L.JRN_TITLE, { name = "Ready2QuestJournalFrame" })
 	if not frame then return nil end
 	if self.RestorePoint then self:RestorePoint(frame, "journalPoint", { point = "CENTER", x = 0, y = 40 }) end
-	frame.kind, frame.activity, frame.offset = "completion", "explore", 0
+	frame.kind, frame.activity, frame.offset = "evolution", "explore", 0
 	frame.zoneFilter, frame.zoneSort, frame.zoneOffset = "all", "lvl", 0
 	frame.questFilter, frame.collKind = "all", "app"
 	local top = frame.contentTop - 8
@@ -1731,7 +1732,7 @@ do
 			if frame and not frame:IsShown() then
 				frame.zonePicked = nil
 				frame.offset = 0
-				frame.kind = KindOf(frame, self:DB().journalTab or "completion")
+				frame.kind = KindOf(frame, self:DB().journalTab or "evolution")
 			end
 		end
 		return previous(self, forceShow)
