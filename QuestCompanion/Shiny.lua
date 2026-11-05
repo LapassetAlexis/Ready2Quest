@@ -434,17 +434,19 @@ if ns.AddOptionPage then
 end
 
 -- ---------------------------------------------------------------------------
--- Horloge
+-- Horloge : dix fois par seconde suffit (objets révélés toutes les 0,3 s,
+-- étincelles toutes les 1,5 s)
 -- ---------------------------------------------------------------------------
+ns.SHINY_TICK = 0.1
 local ok, frame = pcall(CreateFrame, "Frame")
 if ok and frame then
-	frame:SetScript("OnUpdate", function()
+	frame:SetScript("OnUpdate", ns.Throttle(ns.SHINY_TICK, function()
 		local now = Clock()
 		local done, err = pcall(ns.ChestRevealStep, ns, now)
 		if not done and ns.RecordError then ns:RecordError("shiny:chest", err) end
 		done, err = pcall(ns.ShinyAuraTick, ns, now)
 		if not done and ns.RecordError then ns:RecordError("shiny:aura", err) end
-	end)
+	end))
 	ns.shinyEventFrame = frame
 end
 

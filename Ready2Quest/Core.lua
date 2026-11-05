@@ -328,7 +328,7 @@ function ns:Evaluate(trigger)
 	if self:ExitDelay() <= 0 then self:UpdatePendingExit(Now()) end
 end
 
--- Appelé à chaque image (OnUpdate) : confirme la sortie une fois le délai écoulé
+-- Appelé dix fois par seconde (OnUpdate, EXIT_TICK) : confirme la sortie une fois le délai écoulé
 function ns:UpdatePendingExit(now)
 	local pending = self.pendingExit
 	if not pending then return end
@@ -1025,15 +1025,21 @@ local frame = CreateFrame("Frame")
 frame:SetScript("OnEvent", function(_, event, ...)
 	ns:OnEvent(event, ...)
 end)
-frame:SetScript("OnUpdate", function()
-	-- fondu du résumé éphémère
+-- sortie en attente : pas besoin de chaque image, dix fois par seconde
+ns.EXIT_TICK = 0.1
+local watchExit = ns.Throttle(ns.EXIT_TICK, function()
+	if ns.pendingExit then ns:UpdatePendingExit(ns:Now()) end
+end)
+frame:SetScript("OnUpdate", function(f, elapsed)
+	-- fondu du résumé éphémère, image par image
 	if ns.toastHideAt and ns.UpdateToast then
 		ns:UpdateToast(ns:Now())
 	end
 	-- sortie de zone sûre en attente de confirmation
-	if ns.pendingExit then ns:UpdatePendingExit(ns:Now()) end
+	watchExit(f, elapsed)
 	-- lieux repérés par leurs PNJ (Places.lua) : y entrer ou en sortir ne
-	-- change pas forcément de sous-zone, aucun événement ne le dit. On regarde.
+	-- change pas forcément de sous-zone, aucun événement ne le dit. On regarde
+	-- (CheckPlaceMove s'espace lui-même, toutes les PLACE_CHECK secondes).
 	ns:CheckPlaceMove(ns:Now())
 end)
 ns:RegisterEvents(frame)

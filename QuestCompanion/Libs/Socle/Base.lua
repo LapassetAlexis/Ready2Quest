@@ -23,6 +23,24 @@ local function Mark(name)
 end
 ns.Mark = Mark
 
+-- Boucle OnUpdate espacée : ns.Throttle(intervalle, fn) rend un gestionnaire
+-- OnUpdate qui cumule le temps écoulé et n'appelle fn(cadre, cumul, ...)
+-- qu'une fois l'intervalle atteint (le cumul remis à zéro). fn reçoit le
+-- temps réellement écoulé depuis son dernier passage, pas celui d'une image.
+-- Pour les vérifications qui n'ont pas besoin de chaque image ; les
+-- animations, elles, restent image par image.
+function ns.Throttle(interval, fn)
+	interval = tonumber(interval) or 0
+	local pending = 0
+	return function(frame, elapsed, ...)
+		pending = pending + (tonumber(elapsed) or 0)
+		if pending < interval then return end
+		local step = pending
+		pending = 0
+		return fn(frame, step, ...)
+	end
+end
+
 -- Journalisation d'erreur, appelable depuis n'importe quel fichier
 function ns:RecordError(where, message)
 	message = tostring(message)

@@ -814,6 +814,68 @@ function ns:ToggleOptions()
 	end
 end
 
+-- ---------------------------------------------------------------------------
+-- Entrée dans Échap > Options > AddOns (Settings, moteur récent)
+-- ---------------------------------------------------------------------------
+-- Le grand panneau garde sa taille et sa fermeture : il n'est pas logé dans
+-- le cadre de Blizzard. La page native ne porte que le nom, la version, une
+-- ligne et un bouton qui ferme les options du jeu puis ouvre les nôtres.
+-- Une seule inscription par addon, à la connexion ; la catégorie est gardée
+-- (ns.settingsCategory) pour un éventuel Settings.OpenToCategory(category:GetID()).
+-- Sans Settings.RegisterCanvasLayoutCategory / RegisterAddOnCategory : rien.
+function ns:OpenOptionsFromSettings()
+	local panel = rawget(_G, "SettingsPanel")
+	if panel and type(panel.Hide) == "function" then pcall(panel.Hide, panel) end
+	local frame = self:EnsureOptions()
+	if frame and not frame:IsShown() then self:ToggleOptions() end
+end
+
+function ns:RegisterSettingsCategory()
+	if self.settingsTried then return self.settingsCategory end
+	local settings = rawget(_G, "Settings")
+	if type(settings) ~= "table" or type(settings.RegisterCanvasLayoutCategory) ~= "function"
+		or type(settings.RegisterAddOnCategory) ~= "function" or type(CreateFrame) ~= "function" then
+		return nil
+	end
+	self.settingsTried = true
+
+	local made, canvas = pcall(CreateFrame, "Frame")
+	if not made or not canvas then return nil end
+	local name = tostring(ns.APP.id)
+	canvas.name = name
+
+	canvas.title = canvas:CreateFontString(nil, "OVERLAY", Theme.F_TITLE)
+	canvas.title:SetPoint("TOPLEFT", canvas, "TOPLEFT", 16, -16)
+	canvas.title:SetText(ns.APP.brand or name)
+	canvas.version = canvas:CreateFontString(nil, "OVERLAY", Theme.F_SMALL)
+	canvas.version:SetPoint("TOPLEFT", canvas.title, "BOTTOMLEFT", 0, -6)
+	canvas.version:SetText(ns:F("SETTINGS_VERSION", tostring(ns.APP.version)))
+	canvas.hint = canvas:CreateFontString(nil, "OVERLAY", Theme.F_NORMAL)
+	canvas.hint:SetPoint("TOPLEFT", canvas.version, "BOTTOMLEFT", 0, -14)
+	canvas.hint:SetJustifyH("LEFT")
+	canvas.hint:SetText(L.SETTINGS_HINT)
+	canvas.open = Theme.CreateButton(canvas, 180, 24, L.SETTINGS_OPEN, function() ns:OpenOptionsFromSettings() end)
+	canvas.open:SetPoint("TOPLEFT", canvas.hint, "BOTTOMLEFT", 0, -14)
+
+	local ok, category = pcall(settings.RegisterCanvasLayoutCategory, canvas, name)
+	if not ok or category == nil then return nil end
+	if not pcall(settings.RegisterAddOnCategory, category) then return nil end
+	self.settingsCategory, self.settingsCanvas = category, canvas
+	return category
+end
+
+do
+	local ok, frame = pcall(CreateFrame, "Frame")
+	if ok and frame then
+		pcall(frame.RegisterEvent, frame, "PLAYER_LOGIN")
+		frame:SetScript("OnEvent", function()
+			local done, err = pcall(ns.RegisterSettingsCategory, ns)
+			if not done then ns:RecordError("settings", err) end
+		end)
+		ns.settingsEventFrame = frame
+	end
+end
+
 -- Applique immédiatement les réglages d'affichage
 function ns:ApplyDisplayOptions()
 	local db = self:DB()

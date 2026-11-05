@@ -16,6 +16,7 @@ local L = ns.L
 local Theme = ns.Theme
 
 ns.NOTIFY_GAP = 6            -- s entre deux annonces du carnet
+ns.NOTIFY_TICK = 0.2         -- s entre deux regards sur les annonces en attente
 ns.GLOW_ALPHA = 0.55         -- éclat maximal du liseré
 ns.GLOW_SPEED = 3            -- pulsations par seconde (en radians × 2π)
 ns.GLOW_FADE = 0.4           -- s pour s'éteindre après la bulle
@@ -243,7 +244,8 @@ function ns:GlowUpdate(now)
 	local frame = self.companionFrame
 	if not frame then return 0 end
 	local alpha = ModuleOn() and self:GlowAlpha(now) or 0
-	if alpha <= 0 and not frame.glow then return 0 end
+	-- éteint et déjà caché : rien à toucher (appelé à chaque image)
+	if alpha <= 0 and (not frame.glow or frame.glowAlpha == 0) then return 0 end
 	for _, tex in ipairs(GlowEdges(frame)) do
 		if alpha > 0 then tex:SetAlpha(alpha); tex:Show() else tex:Hide() end
 	end
@@ -261,12 +263,16 @@ if ok and frame then
 		local done, err = pcall(ns.NotifyQuest, ns, questID)
 		if not done and ns.RecordError then ns:RecordError("notify:quest", err) end
 	end)
-	frame:SetScript("OnUpdate", function()
-		local now = Clock()
-		local done, err = pcall(ns.GlowUpdate, ns, now)
-		if not done and ns.RecordError then ns:RecordError("notify:glow", err) end
-		done, err = pcall(ns.NotifyFlush, ns, now)
+	-- l'éclat pulse image par image ; les annonces en attente (écart de
+	-- NOTIFY_GAP s) se regardent cinq fois par seconde
+	local flush = ns.Throttle(ns.NOTIFY_TICK, function()
+		local done, err = pcall(ns.NotifyFlush, ns, Clock())
 		if not done and ns.RecordError then ns:RecordError("notify:flush", err) end
+	end)
+	frame:SetScript("OnUpdate", function(f, elapsed)
+		local done, err = pcall(ns.GlowUpdate, ns, Clock())
+		if not done and ns.RecordError then ns:RecordError("notify:glow", err) end
+		flush(f, elapsed)
 	end)
 	ns.notifyEventFrame = frame
 end

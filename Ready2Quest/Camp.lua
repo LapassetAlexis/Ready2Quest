@@ -464,14 +464,10 @@ frame:SetScript("OnEvent", function(_, event, unit)
 	if not ok and ns.RecordError then ns:RecordError("camp:" .. event, err) end
 end)
 -- le décompte avance sans événement : rafraîchi quatre fois par seconde
-local elapsedSince = 0
-frame:SetScript("OnUpdate", function(_, elapsed)
-	elapsedSince = elapsedSince + (tonumber(elapsed) or 0)
-	if elapsedSince < TICK then return end
-	elapsedSince = 0
+frame:SetScript("OnUpdate", ns.Throttle(TICK, function()
 	local ok, err = pcall(ns.UpdateCampFrame, ns)
 	if not ok and ns.RecordError then ns:RecordError("camp:tick", err) end
-end)
+end))
 ns.campEventFrame = frame
 
 if ns.Mark then ns.Mark("Camp") end
