@@ -142,6 +142,61 @@ Construite avec les briques ci-dessus ; les modules déclarent leurs pages avec
 - Pied : `ns.OPTIONS_MAIN` et « Réinitialiser » en contour à gauche,
   « Terminé » en accent à droite. Échap et [×] ferment.
 
+## Fenêtres des modules
+
+Toutes les autres fenêtres et cadres suivent le même langage, à leur taille
+(400 à 520 de large, pas 980).
+
+- `Theme.CreateDialog(parent, w, h, { name, title, subtitle, footer, logo })` :
+  `CreateWindow` + en-tête compact (64 : logo 28, titre `F_TITLE`, sous-titre
+  `F_BODY` MUTED clair, filet ambre lumineux) + pied NAV de 52 (`footer =
+  false` : sans). `.title`, `.subtitle` (coupé avant le [×] et un
+  bouton-icône), `.contentTop` (sous l'en-tête), `.pad` (20), `.innerWidth`.
+  `:AddFooterButton(texte, clic, style, côté)` : `right` (de droite à gauche,
+  action principale), `left` (secondaires), `center` ; hauteur 28, largeur au
+  libellé.
+- `Theme.CreatePageHeader(parent, w, { compact = true })` : l'en-tête compact
+  seul (le grand reste celui des réglages).
+- `Theme.CreateListRow(parent, w, h, { status, icon, detail, kind })` : carte
+  ROW / ROW_ALT (`:SetIndex(rang)`), losange ou icône à gauche, `.text`,
+  `.detail` aligné à droite, `.control` à droite. Pas de 24 (carte 22) pour
+  une ligne simple, 38 (carte 36) pour deux lignes avec boutons.
+- `Theme.SetStatus(losange, état)` : `ok` vert et `info` bleu au trait, `warn`
+  ambre et `bad` rouge pleins, `off` gris au trait, `item` ambre au trait,
+  `none` masqué.
+- `Theme.CreateToast(parent, w, h, { strata, accent })` : bandeau, fond
+  WINDOW 94 %, filet EDGE, liseré de 3 à gauche (`:SetAccent(couleur)`, ambre
+  par défaut, couleur de statut pour une alerte, `false` sans) ; souris coupée
+  hors du mode déplacement. `Theme.SkinToast(cadre, { outset })` habille un
+  cadre existant, le fond débordant autour du contenu.
+- `Theme.CreateIconButton(parent, taille, texture, clic, infobulle)` : carré
+  au trait comme [×], icône estompée au repos.
+- `Theme.CreateButton(parent, nil | "auto", …)` : largeur au libellé
+  (`Theme.ButtonWidth`, 16 de chaque côté, 72 au moins).
+- Infobulles du jeu : `Theme.TooltipTitle` (ambre), `TooltipLine` (texte),
+  `TooltipHint` (MUTED clair), `TooltipPair` (libellé / valeur PARCHMENT).
+
+| Fenêtre / cadre          | Brique         | En bref |
+|--------------------------|----------------|---------|
+| Avant le départ          | dialogue 480   | « Parti de … » en sous-titre, flèche à gauche du [×] ; bloc note (chiffre `F_DISPLAY`, tampon du verdict teinté, barre ambre) ; section Préparation, cartes à losange, détail à droite ; Conseils dans un bloc à liseré ambre ; pied : « Partir à l'aventure » bleu centré |
+| Avant le donjon          | dialogue 420   | niveau en carte, sections (quêtes, plans, préparation), cartes à losange, « Fermer » en accent |
+| Retour d'expédition      | dialogue 420   | durée `F_DISPLAY` dans un bloc, cartes nom / valeur, objets notables sous le compte du butin |
+| Après la mort            | dialogue 400   | corps, guérisseur, verdict en cartes ; note et règle en texte pâle sur deux lignes |
+| Place au butin           | dialogue 480   | butin bloqué dans une carte à liseré ambre ; cartes icône, nom, prix, « Jeter » (plein) / « Ignorer » ; aide dans le pied ; hauteur au nombre de lignes |
+| Rangs de sorts           | dialogue 520   | cartes icône, sort, case ; « Mettre à jour » (accent) / « Ignorer » ; « Tout mettre à jour » plein dans le pied |
+| Sac plein                | bandeau 380    | liseré orange, suggestion, « Jeter » plein, « Autre », « Garder toujours » |
+| Kit de camp              | bandeau 230    | décompte centré |
+| Résumé de stuff          | `SkinToast`    | même mise en page (titre espacé, filet, une ligne), fond autour, suit le libellé |
+| Stats du portrait        | bandeau 206    | liseré à la couleur de la classe, classe et niveau d'objet, filet, valeurs à droite |
+| Mode déplacement         | bandeau 460    | titre et aide à gauche, « Terminer le déplacement » plein à droite |
+| Icône d'annonce          | tuile 40       | fond WINDOW, filet EDGE, barre basse à la couleur du rapport, halo inchangé |
+| Bonne récompense         | —              | filet ambre 1 px et fond ambre à 12 %, étiquette `F_LABEL` ambre |
+| Page Échap > AddOns      | grand en-tête  | nom en `F_DISPLAY`, version, filet ; bouton en accent |
+
+Aperçus : `python3 tests/snapshot.py r2q-check|r2q-dungeon|… <sortie.html>`
+(une scène par fenêtre, `list` les donne toutes). Les infobulles du jeu y
+sont dessinées à l'approche (`Snap.Tooltip`, police du jeu).
+
 ## Règles
 
 - Aucune couleur, police ou taille en dur dans un module : jetons et briques

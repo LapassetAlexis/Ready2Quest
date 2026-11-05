@@ -166,7 +166,10 @@ function Snap.MeasureText(region, width)
 	for line in (text .. "\n"):gmatch("(.-)\n") do
 		lines = lines + 1
 		local w = Ems(line) * size * factor
-		if width and width > 0 and w > width then
+		-- SetWordWrap(false) : une seule ligne, coupée (« ... »)
+		if width and width > 0 and w > width and region.wordWrap == false then
+			w = width
+		elseif width and width > 0 and w > width then
 			lines = lines + math.floor(w / width)
 			w = width
 		end

@@ -90,7 +90,7 @@ end
 
 -- Les rapports passent-ils par l'icône ?
 function ns:WantsNotice()
-	return self:DB().reportIcon ~= false and Theme and Theme.CreatePanel ~= nil
+	return self:DB().reportIcon ~= false and Theme and Theme.CreateDialog ~= nil
 end
 
 -- ---------------------------------------------------------------------------

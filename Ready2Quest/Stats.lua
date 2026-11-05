@@ -662,7 +662,8 @@ end
 -- ---------------------------------------------------------------------------
 -- Panneau de stats au survol du portrait
 -- ---------------------------------------------------------------------------
-local STATS_WIDTH = 196
+local STATS_WIDTH = 206
+local STATS_VALUE = 96     -- colonne des valeurs, à droite (« 506  27,5 % »)
 local STATS_ROW   = 15
 local STATS_TOP   = 9      -- haut de la ligne de classe
 local STATS_LINES = 30     -- haut de la première statistique (sous le filet)
@@ -709,7 +710,7 @@ function ns:EnsurePortraitPanel()
 	for index = 1, 7 do
 		local label = Theme.Text(frame, Theme.F_SMALL, Theme.TEXT)
 		label:SetPoint("TOPLEFT", frame, "TOPLEFT", left, -STATS_LINES - ((index - 1) * STATS_ROW))
-		label:SetWidth(STATS_WIDTH - left - 70)
+		label:SetWidth(STATS_WIDTH - left - 10 - STATS_VALUE)
 		label:SetJustifyH("LEFT")
 		label:SetWordWrap(false)
 		label:SetText("")

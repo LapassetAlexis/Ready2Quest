@@ -3839,7 +3839,10 @@ end
 -- 4.99 Tests des modules (tests/modules/*.lua, listés par run_tests.py).
 -- Chaque fichier reçoit la boîte à outils du harnais dans la table T.
 do
-	_G.T = { Check = Check, Say = Say, ResetWorld = ResetWorld, Result = Result, NS = NS, QNS = QNS, Mock = Mock }
+	-- LoadModules : rien à faire, les modules sont chargés juste après (les
+	-- scènes de tests/snapshot.lua l'appellent, tests/modules/windows_v2.lua les joue)
+	_G.T = { Check = Check, Say = Say, ResetWorld = ResetWorld, Result = Result, NS = NS, QNS = QNS, Mock = Mock,
+		LoadModules = function() end }
 	-- créatures brillantes : jamais au hasard pendant les tests (companion_shiny.lua règle sa chance)
 	if QNS then QNS.SHINY_CHANCE = 0 end
 	-- missions du jour : pas de tirage automatique (companion_daily.lua les tire lui-même)

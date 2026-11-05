@@ -11,8 +11,13 @@ Usage :
   python3 tests/snapshot.py <scène> <sortie.html>
   python3 tests/snapshot.py all <dossier>       (toutes les scènes)
   python3 tests/snapshot.py list
-Scènes : bricks, r2q-check, r2q-options, r2q-options-bags, r2q-options-nav, r2q-options-spellranks,
-  qc-options-companion, qc-options-ornaments, options-search (Snap.scenes dans tests/snapshot.lua).
+Scènes (Snap.scenes dans tests/snapshot.lua ; « list » les donne toutes) :
+  bricks ; réglages : r2q-options, r2q-options-bags, r2q-options-nav, r2q-options-spellranks,
+  qc-options-companion, qc-options-ornaments, options-search ; fenêtres de Ready2Quest :
+  r2q-check, r2q-dungeon, r2q-expedition, r2q-death, r2q-lootroom, r2q-spellranks ; bandeaux :
+  r2q-bagspace, r2q-camp, r2q-gear-toast, r2q-portrait, r2q-edit-banner, r2q-notice,
+  r2q-exit-alert ; infobulles et divers : r2q-pace, r2q-minimap-tooltip, r2q-reward,
+  r2q-settings-canvas.
 Ne pas versionner les HTML produits.
 """
 import base64
