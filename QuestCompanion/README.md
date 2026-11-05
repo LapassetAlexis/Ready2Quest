@@ -81,7 +81,7 @@ Your travel collection: a **stamp** for every first time.
 Each new stamp is announced by a small banner, never in combat. Everything is earned by playing, no random packs.
 
 The journal (`/qc`, the minimap button, or right-click on the creature) opens on the last tab you used. Its tabs run down the right side, and your **pantry** (treats) sits in its header: click a treat to give it.
-- **Zones**: a grid of every zone in the game, the ones you've never visited shown greyed out. Each tile gives its level range and percentage, and says if a chest is waiting. Filter by continent, sort by level or by percentage, click a tile to open it.
+- **Zones**: a grid of every zone in the game, Forever's own zones included, the ones you've never visited shown greyed out. Each tile gives its level range and percentage, and says if a chest is waiting. Filter by continent, sort by level or by percentage, click a tile to open it.
 - **Zone**: one zone, with arrows to the previous and next one (the mouse back button returns to the grid). Its percentage, its milestones (25, 50 and 75% give a treat, 100% the chest) and, tab by tab, what's done and what's left:
   - **Exploration**: the zone's villages, on two columns;
   - **Combat**: a card for each creature of the bestiary, its border coloured by rank (elite, rare, boss), "???" for those you've never met. Hover a card to see the creature in 3D next to the grid;
@@ -229,7 +229,7 @@ Ta collection de voyage : un **tampon** pour chaque première fois.
 Chaque nouveau tampon est annoncé par un petit bandeau, jamais en combat. Tout se gagne en jouant, sans paquet aléatoire.
 
 Le carnet (`/qc`, le bouton de minicarte, ou clic droit sur la créature) s'ouvre sur le dernier onglet utilisé. Ses onglets sont rangés sur le côté droit, et ton **garde-manger** (les friandises) est dans l'en-tête : un clic sur une friandise la donne.
-- **Zones** : une grille de toutes les zones du jeu, celles jamais visitées en gris. Chaque tuile donne sa tranche de niveaux et son pourcentage, et dit si un coffre t'attend. Filtre par continent, trie par niveau ou par pourcentage, clique sur une tuile pour l'ouvrir.
+- **Zones** : une grille de toutes les zones du jeu, celles propres à Forever comprises, celles jamais visitées en gris. Chaque tuile donne sa tranche de niveaux et son pourcentage, et dit si un coffre t'attend. Filtre par continent, trie par niveau ou par pourcentage, clique sur une tuile pour l'ouvrir.
 - **Zone** : une zone, avec des flèches vers la précédente et la suivante (le bouton retour de la souris revient à la grille). Son pourcentage, ses paliers (25, 50 et 75 % donnent une friandise, 100 % le coffre) et, par onglet, ce qui est fait et ce qui reste :
   - **Exploration** : les villages de la zone, sur deux colonnes ;
   - **Combat** : une fiche par créature du bestiaire, au liseré de son rang (élite, rare, boss), « ??? » pour celles jamais croisées. Survole une fiche pour voir la créature en 3D à côté de la grille ;

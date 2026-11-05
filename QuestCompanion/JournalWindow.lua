@@ -525,13 +525,19 @@ end
 function ns:JournalAllZones(filter, sort)
 	local known, list, here = {}, {}, self.JournalZone and self:JournalZone()
 	for _, zone in ipairs(self:JournalKnownZones()) do known[zone.id] = true end
+	-- les zones du jeu : la table des niveaux et les zones préremplies du client
+	-- (créatures, quêtes ; celles propres à Forever comprises), puis le carnet
 	local ids = {}
-	for zoneID in pairs(ns.ZONE_LEVELS or {}) do ids[zoneID] = true end
+	for _, source in ipairs({ ns.ZONE_LEVELS, ns.ZONE_CREATURES, ns.ZONE_QUESTS }) do
+		for zoneID in pairs(type(source) == "table" and source or {}) do
+			if tonumber(zoneID) then ids[tonumber(zoneID)] = true end
+		end
+	end
 	for zoneID in pairs(known) do ids[zoneID] = true end
 	for zoneID in pairs(ids) do
 		local continent = self:JournalContinentOf(zoneID)
 		if not filter or filter == "all" or filter == continent then
-			local range = (ns.ZONE_LEVELS or {})[zoneID]
+			local range = self.ZoneLevelRange and self:ZoneLevelRange(zoneID)
 			local done = known[zoneID] and self.ZoneCompletion and self:ZoneCompletion(zoneID)
 			local percent = (done and #done.parts >= 2) and done.percent or nil
 			list[#list + 1] = { id = zoneID, name = ZoneName(self, zoneID), seen = known[zoneID] == true,
@@ -1383,7 +1389,7 @@ local function RefreshCompletion(self, frame)
 	end
 	local name = ZoneName(self, zoneID)
 	pane.title:SetText(zoneID == here and self:F("JRN_ZONE_HERE", name) or name)
-	local range = (ns.ZONE_LEVELS or {})[zoneID]
+	local range = self.ZoneLevelRange and self:ZoneLevelRange(zoneID)
 	pane.levels:SetText(range and self:F("JRN_ZONE_LEVELS", range[1], range[2]) or "")
 
 	local done = self.ZoneCompletion and self:ZoneCompletion(zoneID)

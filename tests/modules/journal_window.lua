@@ -95,6 +95,42 @@ do
 	f:Hide()
 end
 
+-- 1 ter. Zones sans tranche connue : niveaux calculés, et toutes dans la grille ----------------
+do
+	Say("-- carnet : zones préremplies")
+	W.Reset()
+	local creatures = NS.ZONE_CREATURES
+	local saved = creatures and creatures[99001]
+	if creatures then
+		local zone = {}
+		for index = 1, 10 do zone[5000 + index] = { lvl = { 20 + index, 21 + index }, rank = 0 } end
+		zone[5100] = { lvl = { 60, 60 }, rank = 1 }        -- un élite : écarté
+		zone[5101] = { lvl = { 1, 1 }, rank = 0 }          -- un extrême bas
+		creatures[99001] = zone
+		NS.ZoneLevelCache[99001] = nil
+		local range = NS:ZoneLevelRange(99001)
+		Check("[ZONES] tranche calculée : normales, sans les extrêmes ni les élites", range and range[1] == 21 and range[2] == 30,
+			range and (range[1] .. "-" .. range[2]))
+		Check("[ZONES] … et son palier de coffre", NS:ZoneTier(99001) == 2)
+		creatures[99001] = saved
+		NS.ZoneLevelCache[99001] = nil
+	end
+	Check("[ZONES] zone de la table : sa tranche", NS:ZoneLevelRange(1413)[1] == 10 and NS:ZoneLevelRange(1413)[2] == 25)
+	Check("[ZONES] zone inconnue : pas de tranche", NS:ZoneLevelRange(424242) == nil)
+	local forever = creatures and creatures[2482]
+	if forever then
+		local range = NS:ZoneLevelRange(2482)
+		Check("[ZONES] zone propre à Forever : une tranche", range ~= nil and range[1] >= 1, range and range[1])
+		local inGrid = false
+		for _, zone in ipairs(NS:JournalAllZones("all", "lvl")) do if zone.id == 2482 then inGrid = true end end
+		Check("[ZONES] … et dans la grille, même jamais visitée", inGrid)
+	end
+	local moonglade = creatures and creatures[1450]
+	if moonglade then
+		Check("[ZONES] Reflet-de-Lune (absente de la table) : une tranche", NS:ZoneLevelRange(1450) ~= nil)
+	end
+end
+
 -- 2. Garde-manger dans l'en-tête -----------------------------------------------------------------
 do
 	Say("-- carnet : garde-manger")
