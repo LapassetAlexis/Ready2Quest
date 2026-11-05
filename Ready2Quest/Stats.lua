@@ -225,6 +225,10 @@ local TOAST_LINE_MIDDLE = -TOAST_TEXT_HEIGHT / 2
 local ARROW_DOWN = ns.Theme.MEDIA .. "Textures\\fleche_baisse"
 local ARROW_UP   = ns.Theme.MEDIA .. "Textures\\fleche_hausse"
 local ARROW_SIZE = 10           -- cote de la fleche, en unites 1920
+-- fond du bandeau autour du cadre (gauche, haut, droite, bas), en unités
+-- 1920 : le contenu (titre à -6, ligne jusqu'à -44) y tient avec sa marge
+local TOAST_PLATE = { 14, 8, 12, 50 }
+ns.TOAST_PLATE = TOAST_PLATE
 
 -- Exposées pour les tests : la géométrie du bloc est vérifiable sans client.
 ns.TOAST_WIDTH = TOAST_WIDTH
@@ -348,6 +352,11 @@ function ns:EnsureToast()
 	if frame.StopMovingOrSizing then frame:SetScript("OnDragStop", frame.StopMovingOrSizing) end
 
 	ns:RestorePoint(frame, "toastPoint", { point = "CENTER", x = 0, y = -170 })
+	-- habillage de bandeau (docs/UI.md) : fond WINDOW, filet EDGE, liseré
+	-- ambre. Le cadre garde sa hauteur de 10 (position sauvegardée, zone de
+	-- saisie en édition) : le fond déborde autour du titre et de la ligne.
+	Theme.SkinToast(frame, { outset = { TOAST_PLATE[1] * factor, TOAST_PLATE[2] * factor,
+		TOAST_PLATE[3] * factor, TOAST_PLATE[4] * factor } })
 	-- décalage qui centre le contenu le plus large dans la largeur du bloc :
 	-- calculé avant toute création de région, elles en dépendent toutes.
 	local inset = ((TOAST_WIDTH - TOAST_CONTENT_WIDTH) / 2) - TOAST_CONTENT_LEFT
@@ -377,7 +386,7 @@ function ns:EnsureToast()
 
 	frame.rule = frame:CreateTexture(nil, "ARTWORK")
 	frame.rule:SetTexture(Theme.SOLID)
-	frame.rule:SetVertexColor(Theme.PARCHMENT[1], Theme.PARCHMENT[2], Theme.PARCHMENT[3], 0.45)
+	frame.rule:SetVertexColor(Theme.EDGE[1], Theme.EDGE[2], Theme.EDGE[3], 1)
 	frame.rule:SetPoint("TOPLEFT", frame, "TOPLEFT", 0, TOAST_RULE_Y * factor)
 	frame.rule:SetPoint("TOPRIGHT", frame, "TOPRIGHT", 0, TOAST_RULE_Y * factor)
 	frame.rule:SetHeight(1)
@@ -420,12 +429,9 @@ function ns:EnsureToast()
 		frame.rows[index] = { icon = icon, value = value, label = label, arrow = arrow }
 	end
 
-	-- Bordure visible uniquement en mode édition (sinon le cadre est invisible)
-	frame.moveGlow = frame:CreateTexture(nil, "OVERLAY")
-	frame.moveGlow:SetTexture(Theme.SOLID)
-	frame.moveGlow:SetVertexColor(Theme.GOLD[1], Theme.GOLD[2], Theme.GOLD[3], 0.55)
-	frame.moveGlow:SetPoint("TOPLEFT", -6, 4)
-	frame.moveGlow:SetPoint("BOTTOMRIGHT", 6, -4)
+	-- Repère du mode édition : le fond s'éclaire d'ambre (sous le texte)
+	frame.moveGlow = Theme.Solid(frame, "BORDER", Theme.GOLD, 0.12)
+	frame.moveGlow:SetAllPoints(frame.bg)
 	frame.moveGlow:Hide()
 
 	self.toastFrame = frame
@@ -462,7 +468,9 @@ function ns:ToastPlaceholderRows()
 	local rows = {}
 	for index = 1, TOAST_ROWS do
 		rows[index] = {
-			label = index == 1 and string.upper(L.STATS_NOCHANGE or "") or "",
+			-- même casse que les vrais libellés (PascalCase) : en capitales, il
+			-- débordait du bandeau
+			label = index == 1 and PascalCase(L.STATS_NOCHANGE or "") or "",
 			value = index == 1 and "-" or "",
 			improved = true,
 			placeholder = true,
@@ -530,8 +538,30 @@ function ns:ToastText(rows)
 		end
 	end
 
+	-- le fond suit le libellé le plus long (« Aucun changement mesurable » du
+	-- mode édition dépasse la colonne prévue)
+	self:FitToastPlate(frame)
+
 	frame.lastRows = rows
 	return table.concat(lines, " / ")
+end
+
+-- Bord droit du fond : au moins TOAST_PLATE[3] après le cadre, plus si un
+-- libellé déborde (12 de marge après lui)
+function ns:FitToastPlate(frame)
+	if not (frame and frame.bg and frame.rows) then return end
+	local factor = Factor()
+	local inset = ((TOAST_WIDTH - TOAST_CONTENT_WIDTH) / 2) - TOAST_CONTENT_LEFT
+	local right = TOAST_PLATE[3]
+	for _, row in ipairs(frame.rows) do
+		local width = tonumber(row.label.GetStringWidth and row.label:GetStringWidth()) or 0
+		local over = inset + TOAST_LABEL_LEFT + width / factor + 12 - TOAST_WIDTH
+		if row.label:GetText() ~= "" and over > right then right = over end
+	end
+	frame.bg:ClearAllPoints()
+	frame.bg:SetPoint("TOPLEFT", frame, "TOPLEFT", -TOAST_PLATE[1] * factor, TOAST_PLATE[2] * factor)
+	frame.bg:SetPoint("BOTTOMRIGHT", frame, "BOTTOMRIGHT", right * factor, -TOAST_PLATE[4] * factor)
+	frame.plateRight = right
 end
 
 -- /sd stuff : le panneau flottant a disparu, la commande imprime le même
@@ -632,20 +662,22 @@ end
 -- ---------------------------------------------------------------------------
 -- Panneau de stats au survol du portrait
 -- ---------------------------------------------------------------------------
-local STATS_WIDTH = 176
-local STATS_ROW   = 14
+local STATS_WIDTH = 196
+local STATS_ROW   = 15
+local STATS_TOP   = 9      -- haut de la ligne de classe
+local STATS_LINES = 30     -- haut de la première statistique (sous le filet)
 
+-- Bandeau (Theme.CreateToast) : liseré à la couleur de la classe, classe et
+-- niveau d'objet en tête, un filet, puis les statistiques (valeur à droite)
 function ns:EnsurePortraitPanel()
 	if self.portraitFrame then return self.portraitFrame end
 
-	local frame = Theme.CreateDiscreet(UIParent, STATS_WIDTH, 120)
+	local frame = Theme.CreateToast(UIParent, STATS_WIDTH, 120, { strata = "TOOLTIP" })
 	if not frame then return nil end
-	frame:SetFrameStrata("TOOLTIP")
 	frame:EnableMouse(false)
+	local left = frame.contentLeft
 
-	frame.moveGlow = frame:CreateTexture(nil, "OVERLAY")
-	frame.moveGlow:SetTexture(Theme.SOLID)
-	frame.moveGlow:SetVertexColor(Theme.GOLD[1], Theme.GOLD[2], Theme.GOLD[3], 0.14)
+	frame.moveGlow = Theme.Solid(frame, "BORDER", Theme.GOLD, 0.12)
 	frame.moveGlow:SetAllPoints()
 	frame.moveGlow:Hide()
 
@@ -656,33 +688,37 @@ function ns:EnsurePortraitPanel()
 		ns:DB().portraitManual = true
 	end)
 
-	frame.classLine = frame:CreateFontString(nil, "OVERLAY", Theme.F_SMALL)
-	frame.classLine:SetPoint("TOPLEFT", frame, "TOPLEFT", 7, -6)
-	frame.classLine:SetWidth(STATS_WIDTH - 60)
+	frame.classLine = Theme.Text(frame, Theme.F_LABEL)
+	frame.classLine:SetPoint("TOPLEFT", frame, "TOPLEFT", left, -STATS_TOP)
+	frame.classLine:SetWidth(STATS_WIDTH - left - 60)
 	frame.classLine:SetJustifyH("LEFT")
 	frame.classLine:SetWordWrap(false)
 
-	frame.ilvlLine = frame:CreateFontString(nil, "OVERLAY", Theme.F_SMALL)
-	frame.ilvlLine:SetPoint("TOPRIGHT", frame, "TOPRIGHT", -7, -6)
-	frame.ilvlLine:SetTextColor(0.70, 0.70, 0.70)
+	frame.ilvlLine = Theme.Text(frame, Theme.F_SMALL, Theme.MUTED_LIGHT)
+	frame.ilvlLine:SetPoint("TOPRIGHT", frame, "TOPRIGHT", -10, -STATS_TOP - 1)
+
+	frame.rule = Theme.Solid(frame, "ARTWORK", Theme.EDGE_SOFT, 1)
+	frame.rule:SetPoint("TOPLEFT", frame, "TOPLEFT", left, -STATS_LINES + 6)
+	frame.rule:SetPoint("TOPRIGHT", frame, "TOPRIGHT", -10, -STATS_LINES + 6)
+	frame.rule:SetHeight(1)
 
 	-- Cinq statistiques primaires (Force, Agilité, Intelligence, Esprit,
 	-- Endurance) puis l'armure et le DPS : sept lignes au total. Une boucle
 	-- trop courte tronquait le DPS sans le dire.
 	frame.lines = {}
 	for index = 1, 7 do
-		local left = frame:CreateFontString(nil, "OVERLAY", Theme.F_SMALL)
-		left:SetPoint("TOPLEFT", frame, "TOPLEFT", 7, -22 - ((index - 1) * STATS_ROW))
-		left:SetWidth(STATS_WIDTH - 70)
-		left:SetJustifyH("LEFT")
-		left:SetWordWrap(false)
-		left:SetText("")
+		local label = Theme.Text(frame, Theme.F_SMALL, Theme.TEXT)
+		label:SetPoint("TOPLEFT", frame, "TOPLEFT", left, -STATS_LINES - ((index - 1) * STATS_ROW))
+		label:SetWidth(STATS_WIDTH - left - 70)
+		label:SetJustifyH("LEFT")
+		label:SetWordWrap(false)
+		label:SetText("")
 
-		local right = frame:CreateFontString(nil, "OVERLAY", Theme.F_NUMBER)
-		right:SetPoint("TOPRIGHT", frame, "TOPRIGHT", -7, -22 - ((index - 1) * STATS_ROW))
+		local right = Theme.Text(frame, Theme.F_NUMBER, Theme.PARCHMENT)
+		right:SetPoint("TOPRIGHT", frame, "TOPRIGHT", -10, -STATS_LINES - ((index - 1) * STATS_ROW))
 		right:SetText("")
 
-		frame.lines[index] = { left = left, right = right }
+		frame.lines[index] = { left = label, right = right }
 	end
 
 	self.portraitFrame = frame
@@ -881,6 +917,7 @@ function ns:ShowPortraitStats()
 
 	frame.classLine:SetText(classText)
 	frame.classLine:SetTextColor(r, g, b)
+	if frame.SetAccent then frame:SetAccent({ r, g, b }) end
 	frame.ilvlLine:SetText(string.format("ilvl %d", math.floor(snapshot.ilvl + 0.5)))
 
 	-- Le panneau ne montre que les statistiques UTILES à la classe et à la
@@ -920,7 +957,7 @@ function ns:ShowPortraitStats()
 		local entry = entries[index]
 		if entry then
 			line.left:SetText(entry.left)
-			line.left:SetTextColor(0.86, 0.84, 0.78)
+			line.left:SetTextColor(Theme.TEXT[1], Theme.TEXT[2], Theme.TEXT[3])
 			line.right:SetText(entry.right)
 			line.left:Show()
 			line.right:Show()
@@ -931,7 +968,7 @@ function ns:ShowPortraitStats()
 	end
 
 	-- pas de cadre vide : la hauteur suit le nombre de lignes
-	frame:SetHeight(28 + (#entries * STATS_ROW) + 6)
+	frame:SetHeight(STATS_LINES + (#entries * STATS_ROW) + 8)
 
 	-- Ancrage : position choisie par le joueur, sinon au-dessus du portrait
 	frame:ClearAllPoints()

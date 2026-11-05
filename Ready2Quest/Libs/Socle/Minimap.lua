@@ -130,12 +130,12 @@ end
 function ns:ShowMinimapTooltip(owner, fromButton)
 	if type(GameTooltip) ~= "table" or not GameTooltip.SetOwner then return end
 	GameTooltip:SetOwner(owner, "ANCHOR_LEFT")
-	GameTooltip:AddLine(L.ADDON_NAME, Theme.GOLD[1], Theme.GOLD[2], Theme.GOLD[3])
+	Theme.TooltipTitle(GameTooltip, L.ADDON_NAME)
 	if self.MinimapTooltip then self:MinimapTooltip(GameTooltip) end
-	GameTooltip:AddLine(L.MINIMAP_LEFT, 0.8, 0.8, 0.8)
+	Theme.TooltipLine(GameTooltip, L.MINIMAP_LEFT, Theme.TEXT)
 	if fromButton then
-		GameTooltip:AddLine(L.MINIMAP_RIGHT, 0.8, 0.8, 0.8)
-		GameTooltip:AddLine(L.MINIMAP_DRAG, 0.6, 0.6, 0.6)
+		Theme.TooltipLine(GameTooltip, L.MINIMAP_RIGHT, Theme.TEXT)
+		Theme.TooltipHint(GameTooltip, L.MINIMAP_DRAG)
 	end
 	GameTooltip:Show()
 end

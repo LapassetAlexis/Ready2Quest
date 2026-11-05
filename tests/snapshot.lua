@@ -382,10 +382,11 @@ function Snap.Render(root, opts)
 					inset = string.format(";padding:0 %dpx 0 %dpx;box-sizing:border-box", region.textInsets[2] or 0, region.textInsets[1] or 0)
 				end
 				local wrap = (region.widthSet and region.kind == "FontString" and region.wordWrap ~= false) and "normal" or "nowrap"
+				local clip = region.widthSet and region.kind == "FontString" and region.wordWrap == false
 				out[#out + 1] = string.format('<div class="txt" style="%s;font-size:%dpx;font-weight:%d;color:%s;justify-content:%s;'
-					.. 'align-items:%s;text-align:%s;white-space:%s%s%s"><span class="t">%s</span></div>',
+					.. 'align-items:%s;text-align:%s;white-space:%s%s%s"><span%s>%s</span></div>',
 					pos, font.size or 12, Weight(font.path), Css(c[1], c[2], c[3], (c[4] or 1) * alpha), align, valign,
-					justify:lower(), wrap, shadow, inset, Snap.TextHtml(text))
+					justify:lower(), wrap, shadow, inset, clip and ' class="t"' or "", Snap.TextHtml(text))
 			end
 		end
 	end
@@ -419,6 +420,66 @@ function Snap.Render(root, opts)
 		"</div></body></html>",
 	}
 	return table.concat(html, "\n"), #items
+end
+
+-- Infobulle du jeu (GameTooltip du Mock) dessinée à l'approche : fond et
+-- bord du jeu, police du jeu, les couleurs passées à AddLine. `owner` : un
+-- cadre sous lequel la poser (facultatif). Retourne le cadre de l'aperçu.
+function Snap.Tooltip(tooltip, owner, width)
+	local tip = CreateFrame("Frame", nil, UIParent)
+	tip:SetFrameStrata("TOOLTIP")
+	width = width or 260
+	local lines = tooltip.styled or {}
+	local y = -10
+	tip.bg = tip:CreateTexture(nil, "BACKGROUND")
+	tip.bg:SetTexture("Interface\\Buttons\\WHITE8X8")
+	tip.bg:SetVertexColor(0.03, 0.03, 0.06, 0.92)
+	tip.bg:SetAllPoints()
+	for _, side in ipairs({ { "TOPLEFT", "TOPRIGHT", 0, 1 }, { "BOTTOMLEFT", "BOTTOMRIGHT", 0, 1 },
+		{ "TOPLEFT", "BOTTOMLEFT", 1, 0 }, { "TOPRIGHT", "BOTTOMRIGHT", 1, 0 } }) do
+		local edge = tip:CreateTexture(nil, "BORDER")
+		edge:SetTexture("Interface\\Buttons\\WHITE8X8")
+		edge:SetVertexColor(0.55, 0.55, 0.6, 1)
+		edge:SetPoint(side[1], tip, side[1], 0, 0)
+		edge:SetPoint(side[2], tip, side[2], 0, 0)
+		if side[3] == 1 then edge:SetWidth(1) else edge:SetHeight(1) end
+	end
+	for index, line in ipairs(lines) do
+		local fs = tip:CreateFontString(nil, "OVERLAY")
+		local c = line.color or { 1, 0.82, 0 }
+		fs:SetTextColor(c[1], c[2], c[3])
+		fs:SetFont("Fonts\\FRIZQT__.TTF", index == 1 and 14 or 12)
+		fs:SetPoint("TOPLEFT", tip, "TOPLEFT", 10, y)
+		fs:SetJustifyH("LEFT")
+		if line.wrap then fs:SetWidth(width - 20) end
+		fs:SetText(line.text)
+		local _, h = Snap.MeasureText(fs, line.wrap and (width - 20) or nil)
+		if line.right then
+			local r = tip:CreateFontString(nil, "OVERLAY")
+			local rc = line.rightColor or { 1, 1, 1 }
+			r:SetTextColor(rc[1], rc[2], rc[3])
+			r:SetFont("Fonts\\FRIZQT__.TTF", 12)
+			r:SetPoint("TOPRIGHT", tip, "TOPRIGHT", -10, y)
+			r:SetJustifyH("RIGHT")
+			r:SetText(line.right)
+		end
+		y = y - h - 2
+	end
+	tip:SetSize(width, -y + 8)
+	if owner then tip:SetPoint("TOP", owner, "BOTTOM", 0, -6) end
+	return tip
+end
+
+-- Plusieurs cadres sur une même scène : un cadre racine sans fond qui les
+-- englobe (le rendu dessine la racine et ses enfants)
+function Snap.Group(...)
+	local root = CreateFrame("Frame", nil, UIParent)
+	root:SetSize(1, 1)
+	root:SetPoint("CENTER", UIParent, "CENTER", 0, 0)
+	for _, frame in ipairs({ ... }) do
+		if frame then frame:SetParent(root) end
+	end
+	return root
 end
 
 function Snap.Snapshot(frame, path, opts)
@@ -671,6 +732,195 @@ Snap.scenes["r2q-spellranks"] = function(T)
 	local frame = NS:SpellRanksOpen()
 	NS.SPELLRANKS_ROWS = saved
 	return Centered(frame), "Ready2Quest : rangs de sorts"
+end
+
+-- Sac plein : le bandeau près des sacs, sur le gris le moins cher
+Snap.scenes["r2q-bagspace"] = function(T)
+	local NS = T.NS
+	T.ResetWorld()
+	T.LoadModules()
+	NS.bagspaceFrame = nil
+	NS.bagspace = { index = 1, list = { { link = Link("Os brisé", 0), count = 1, value = 5, bag = 0, slot = 4, itemID = 1 } } }
+	return Centered(NS:ShowBagSpaceFrame()), "Ready2Quest : sac plein"
+end
+
+-- Kit de camp : le décompte jusqu'aux buffs
+Snap.scenes["r2q-camp"] = function(T)
+	local NS = T.NS
+	T.ResetWorld()
+	T.LoadModules()
+	NS.campFrame = nil
+	local frame = NS:EnsureCampFrame()
+	frame.text:SetText(NS:F("CAMP_TIMER", "0:42"))
+	frame:Show()
+	return Centered(frame), "Ready2Quest : au camp"
+end
+
+-- les quatre icônes d'annonce, côte à côte (une seule à la fois en jeu)
+Snap.scenes["r2q-notice"] = function(T)
+	local NS = T.NS
+	T.ResetWorld()
+	T.LoadModules()
+	local tiles = {}
+	local notices = {
+		NS:NoticeDepart(92, "PRÊT"),
+		NS:NoticeReturn({ deaths = 1, durability = 40, restock = {} }),
+		NS:NoticeDungeon({ name = "Les Mortemines", verdict = "ok", readiness = { { ok = false } } }),
+		{ kind = "spells", color = NS.Theme.ORANGE, lines = { NS:F("SR_NOTICE", 2) } },
+	}
+	for index, notice in ipairs(notices) do
+		NS.noticeFrame = nil
+		NS:ShowNotice(notice)
+		local frame = NS.noticeFrame
+		NS:UpdateNotice(notice.pulseUntil + 1)   -- après la pulsation
+		frame:SetAlpha(1)
+		frame:ClearAllPoints()
+		frame:SetPoint("CENTER", UIParent, "CENTER", (index - 2.5) * 72, 0)
+		tiles[index] = frame
+	end
+	return Snap.Group(tiles[1], tiles[2], tiles[3], tiles[4]),
+		"Ready2Quest : icônes d'annonce (départ, retour, donjon, sorts)"
+end
+
+-- Sortie de ville : l'icône « départ » et sa bulle au survol
+Snap.scenes["r2q-exit-alert"] = function(T)
+	local NS = T.NS
+	T.ResetWorld()
+	T.LoadModules()
+	NS.noticeFrame = nil
+	Mock.world.durability = { [5] = { 18, 100 } }
+	NS:RunChecklist("manual")
+	local notice = NS:NoticeDepart(NS.score, (NS:ScoreLabel()))
+	NS:ShowNotice(notice)
+	local frame = Centered(NS.noticeFrame)
+	GameTooltip:ClearLines()
+	frame:GetScript("OnEnter")(frame)
+	return Snap.Group(frame, Snap.Tooltip(GameTooltip, frame, 250)), "Ready2Quest : alerte de sortie (icône et bulle)"
+end
+
+-- Résumé de stuff : un gain sur la stat principale
+Snap.scenes["r2q-gear-toast"] = function(T)
+	local NS = T.NS
+	T.ResetWorld()
+	T.LoadModules()
+	UIParent:SetSize(1920, 1080)   -- le résumé se mesure en unités 1920 (échelle 1)
+	NS.toastFrame = nil
+	NS:SimulateGearToast()
+	return Centered(NS.toastFrame), "Ready2Quest : résumé de stuff"
+end
+
+-- Stats du portrait
+Snap.scenes["r2q-portrait"] = function(T)
+	local NS = T.NS
+	T.ResetWorld()
+	T.LoadModules()
+	NS.portraitFrame = nil
+	NS.forceStats = true
+	NS:ShowPortraitStats()
+	NS.forceStats = nil
+	return Centered(NS.portraitFrame), "Ready2Quest : stats du portrait"
+end
+
+-- Rythme de leveling : l'infobulle de la barre d'XP
+Snap.scenes["r2q-pace"] = function(T)
+	local NS = T.NS
+	T.ResetWorld()
+	T.LoadModules()
+	NS.PaceTooltipLines = function(self)
+		return self:PaceLines({ session = 14200, recent = 16800, window = 15, remaining = 9350, seconds = 2350,
+			kills = 41, quests = 6, rest = { pct = 12.5, gain = 5, gainInn = 15, resting = false } })
+	end
+	local bar = CreateFrame("Frame", nil, UIParent)
+	bar:SetSize(1, 1)
+	bar:SetPoint("CENTER", UIParent, "CENTER", 0, 0)
+	GameTooltip:ClearLines()
+	NS:PaceOnBarEnter(bar)
+	return Snap.Tooltip(GameTooltip, bar, 330), "Ready2Quest : rythme de leveling (infobulle de la barre d'XP, police du jeu)"
+end
+
+-- Infobulle du bouton de minicarte, après un check
+Snap.scenes["r2q-minimap-tooltip"] = function(T)
+	local NS = T.NS
+	T.ResetWorld()
+	T.LoadModules()
+	NS:RunChecklist("manual")
+	if NS.window then NS.window:Hide() end
+	local owner = CreateFrame("Frame", nil, UIParent)
+	owner:SetSize(1, 1)
+	owner:SetPoint("CENTER", UIParent, "CENTER", 0, 0)
+	GameTooltip:ClearLines()
+	NS:ShowMinimapTooltip(owner, true)
+	return Snap.Tooltip(GameTooltip, owner, 280), "Ready2Quest : infobulle du bouton de minicarte (police du jeu)"
+end
+
+-- Mode déplacement : le bandeau, avec le résumé et les stats à placer
+Snap.scenes["r2q-edit-banner"] = function(T)
+	local NS = T.NS
+	T.ResetWorld()
+	T.LoadModules()
+	UIParent:SetSize(1920, 1080)   -- le résumé se mesure en unités 1920 (échelle 1)
+	NS.editBanner, NS.toastFrame, NS.portraitFrame = nil, nil, nil
+	NS:StartEditMode()
+	local banner = NS.editBanner
+	banner:ClearAllPoints()
+	banner:SetPoint("CENTER", UIParent, "CENTER", 0, 120)
+	NS.toastFrame:ClearAllPoints()
+	NS.toastFrame:SetPoint("CENTER", UIParent, "CENTER", -130, 0)
+	NS.portraitFrame:ClearAllPoints()
+	NS.portraitFrame:SetPoint("TOPLEFT", UIParent, "CENTER", 60, 40)
+	return Snap.Group(banner, NS.toastFrame, NS.portraitFrame), "Ready2Quest : mode déplacement des cadres"
+end
+
+-- Page de l'addon dans Échap > Options > AddOns
+Snap.scenes["r2q-settings-canvas"] = function(T)
+	local NS = T.NS
+	T.ResetWorld()
+	T.LoadModules()
+	local savedSettings = rawget(_G, "Settings")
+	_G.Settings = { RegisterCanvasLayoutCategory = function(frame) return { frame = frame } end,
+		RegisterAddOnCategory = function() end }
+	NS.settingsTried, NS.settingsCanvas = nil, nil
+	NS:RegisterSettingsCategory()
+	_G.Settings = savedSettings
+	local canvas = NS.settingsCanvas
+	canvas:SetSize(640, 220)
+	return Centered(canvas), "Ready2Quest : page Échap > Options > AddOns"
+end
+
+-- La bonne récompense : la récompense conseillée, cernée d'ambre
+Snap.scenes["r2q-reward"] = function(T)
+	local NS = T.NS
+	T.ResetWorld()
+	T.LoadModules()
+	local holder = CreateFrame("Frame", nil, UIParent)
+	holder:SetSize(310, 96)
+	holder:SetPoint("CENTER", UIParent, "CENTER", 0, 0)
+	holder.bg = holder:CreateTexture(nil, "BACKGROUND")
+	holder.bg:SetTexture("Interface\\QuestFrame\\QuestBG")
+	holder.bg:SetAllPoints()
+	local names = { "Bottes du sentier", "Gants de l'éclaireur", "Bâton de chêne" }
+	for index = 1, 3 do
+		local button = CreateFrame("Button", "QuestInfoRewardsFrameQuestInfoItem" .. index, holder)
+		button:SetSize(147, 41)
+		button:SetPoint("TOPLEFT", holder, "TOPLEFT", 4 + ((index - 1) % 2) * 153, -4 - math.floor((index - 1) / 2) * 46)
+		button.icon = button:CreateTexture(nil, "ARTWORK")
+		button.icon:SetTexture("Interface\\Icons\\INV_Boots_01")
+		button.icon:SetSize(37, 37)
+		button.icon:SetPoint("LEFT", button, "LEFT", 2, 0)
+		button.name = button:CreateFontString(nil, "OVERLAY")
+		button.name:SetFont("Fonts\\FRIZQT__.TTF", 11)
+		button.name:SetTextColor(0.1, 0.06, 0.02)
+		button.name:SetPoint("TOPLEFT", button, "TOPLEFT", 44, -6)
+		button.name:SetText(names[index])
+		_G["QuestInfoRewardsFrameQuestInfoItem" .. index] = button
+	end
+	NS.rewardState = { active = true }
+	NS.RewardEnabled = function() return true end
+	NS.RewardAnalyze = function()
+		return { mode = "upgrade", choices = { {}, {}, {} }, best = { index = 2, link = Link(names[2], 2) } }
+	end
+	NS:RewardApply(true)
+	return holder, "Ready2Quest : la bonne récompense (cadre de quête du jeu en vignette)"
 end
 
 -- Réglages (refonte) : tous les modules chargés, fenêtre centrée, une page

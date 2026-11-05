@@ -224,7 +224,7 @@ end
 -- Infobulle du bouton de minicarte (socle commun) : la dernière note
 function ns:MinimapTooltip(tooltip)
 	if not self.score then return end
-	tooltip:AddLine(string.format(L.MINIMAP_SCORE, self.score, self:ScoreLabel()), 1, 1, 1)
+	Theme.TooltipLine(tooltip, string.format(L.MINIMAP_SCORE, self.score, self:ScoreLabel()), Theme.ScoreColor(self.score / 100))
 end
 
 if ns.Mark then ns.Mark("OptionPages") end

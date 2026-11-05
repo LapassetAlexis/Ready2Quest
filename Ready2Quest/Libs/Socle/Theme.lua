@@ -258,16 +258,18 @@ local function Text(parent, font, color, layer)
 end
 Theme.Text = Text
 
--- Bordure 1 px sur les quatre côtés
-local function Border(frame, color, alpha, layer)
+-- Bordure 1 px sur les quatre côtés (de `around`, une région du cadre, ou
+-- du cadre lui-même)
+local function Border(frame, color, alpha, layer, around)
 	local edges = {}
 	for _, side in ipairs({ "top", "bottom", "left", "right" }) do
 		edges[side] = Solid(frame, layer or "BORDER", color, alpha)
 	end
-	edges.top:SetPoint("TOPLEFT"); edges.top:SetPoint("TOPRIGHT"); edges.top:SetHeight(1)
-	edges.bottom:SetPoint("BOTTOMLEFT"); edges.bottom:SetPoint("BOTTOMRIGHT"); edges.bottom:SetHeight(1)
-	edges.left:SetPoint("TOPLEFT"); edges.left:SetPoint("BOTTOMLEFT"); edges.left:SetWidth(1)
-	edges.right:SetPoint("TOPRIGHT"); edges.right:SetPoint("BOTTOMRIGHT"); edges.right:SetWidth(1)
+	local a = around or frame
+	edges.top:SetPoint("TOPLEFT", a, "TOPLEFT"); edges.top:SetPoint("TOPRIGHT", a, "TOPRIGHT"); edges.top:SetHeight(1)
+	edges.bottom:SetPoint("BOTTOMLEFT", a, "BOTTOMLEFT"); edges.bottom:SetPoint("BOTTOMRIGHT", a, "BOTTOMRIGHT"); edges.bottom:SetHeight(1)
+	edges.left:SetPoint("TOPLEFT", a, "TOPLEFT"); edges.left:SetPoint("BOTTOMLEFT", a, "BOTTOMLEFT"); edges.left:SetWidth(1)
+	edges.right:SetPoint("TOPRIGHT", a, "TOPRIGHT"); edges.right:SetPoint("BOTTOMRIGHT", a, "BOTTOMRIGHT"); edges.right:SetWidth(1)
 	function edges:SetColor(r, g, b, a)
 		for _, side in ipairs({ "top", "bottom", "left", "right" }) do self[side]:SetVertexColor(r, g, b, a or 1) end
 	end
@@ -1710,6 +1712,35 @@ end
 -- .contentLeft : marge gauche du contenu, après la barre.
 -- ---------------------------------------------------------------------------
 Theme.TOAST_ACCENT = 3
+-- Habille un cadre existant en bandeau : fond, filet, barre d'accent.
+-- opts.outset : marge du fond autour du cadre { gauche, haut, droite, bas }
+-- (un nombre = les quatre), pour un cadre dont le contenu touche les bords.
+function Theme.SkinToast(frame, opts)
+	opts = opts or {}
+	local o = opts.outset or 0
+	if type(o) == "number" then o = { o, o, o, o } end
+	frame.chrome = "toast"
+	frame.bg = Solid(frame, "BACKGROUND", Theme.WINDOW, opts.alpha or 0.94)
+	frame.bg:SetPoint("TOPLEFT", frame, "TOPLEFT", -o[1], o[2])
+	frame.bg:SetPoint("BOTTOMRIGHT", frame, "BOTTOMRIGHT", o[3], -o[4])
+	frame.border = Border(frame, Theme.EDGE, 1, "BORDER", frame.bg)
+	frame.accent = Solid(frame, "ARTWORK", Theme.GOLD, 1)
+	frame.accent:SetPoint("TOPLEFT", frame.bg, "TOPLEFT", 1, -1)
+	frame.accent:SetPoint("BOTTOMLEFT", frame.bg, "BOTTOMLEFT", 1, 1)
+	frame.accent:SetWidth(Theme.TOAST_ACCENT)
+	frame.contentLeft = 1 + Theme.TOAST_ACCENT + 10 - o[1]
+
+	function frame:SetAccent(color)
+		if color == false then self.accent:Hide(); return end
+		color = color or Theme.GOLD
+		self.accentColor = color
+		self.accent:SetVertexColor(color[1], color[2], color[3], 1)
+		self.accent:Show()
+	end
+	frame:SetAccent(opts.accent)
+	return frame
+end
+
 function Theme.CreateToast(parent, width, height, opts)
 	opts = opts or {}
 	local ok, frame = pcall(CreateFrame, "Frame", opts.name, parent or UIParent)
@@ -1722,25 +1753,7 @@ function Theme.CreateToast(parent, width, height, opts)
 	if frame.RegisterForDrag then frame:RegisterForDrag("LeftButton") end
 	if frame.StartMoving then frame:SetScript("OnDragStart", frame.StartMoving) end
 	if frame.StopMovingOrSizing then frame:SetScript("OnDragStop", frame.StopMovingOrSizing) end
-	frame.chrome = "toast"
-
-	frame.bg = Solid(frame, "BACKGROUND", Theme.WINDOW, opts.alpha or 0.94)
-	frame.bg:SetAllPoints()
-	frame.border = Border(frame, Theme.EDGE, 1)
-	frame.accent = Solid(frame, "ARTWORK", Theme.GOLD, 1)
-	frame.accent:SetPoint("TOPLEFT", frame, "TOPLEFT", 1, -1)
-	frame.accent:SetPoint("BOTTOMLEFT", frame, "BOTTOMLEFT", 1, 1)
-	frame.accent:SetWidth(Theme.TOAST_ACCENT)
-	frame.contentLeft = 1 + Theme.TOAST_ACCENT + 10
-
-	function frame:SetAccent(color)
-		if color == false then self.accent:Hide(); return end
-		color = color or Theme.GOLD
-		self.accentColor = color
-		self.accent:SetVertexColor(color[1], color[2], color[3], 1)
-		self.accent:Show()
-	end
-	frame:SetAccent(opts.accent)
+	Theme.SkinToast(frame, opts)
 	frame.contentTop = 0
 	return frame
 end

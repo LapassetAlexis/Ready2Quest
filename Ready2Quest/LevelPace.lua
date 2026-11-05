@@ -462,14 +462,13 @@ function ns:PaceOnBarEnter(bar)
 		if tip.ClearLines then tip:ClearLines() end
 		self.paceOwnsTooltip = true
 	end
-	tip:AddLine(L.PACE_TITLE, 0.91, 0.65, 0.29)
+	-- couleurs du thème : titre ambre, paires libellé / valeur, notes pâles
+	Theme.TooltipTitle(tip, L.PACE_TITLE)
 	for _, line in ipairs(lines) do
 		if line.text then
-			tip:AddLine(line.text, 0.7, 0.7, 0.7, true)
-		elseif tip.AddDoubleLine then
-			tip:AddDoubleLine(line.label, line.value, 0.85, 0.85, 0.85, 1, 1, 1)
+			Theme.TooltipHint(tip, line.text, true)
 		else
-			tip:AddLine(line.label .. " : " .. line.value)
+			Theme.TooltipPair(tip, line.label, line.value)
 		end
 	end
 	tip:Show()

@@ -32,7 +32,7 @@ local HEARTHSTONE    = 6948
 local CLASS_PROJECTILE, CLASS_QUEST, CLASS_KEY = 6, 12, 13
 local CHAT_COOLDOWN  = 30     -- secondes entre deux suggestions dans le chat
 local POPUP          = "READY2QUEST_BAGSPACE_DESTROY"
-local WIDTH, HEIGHT  = 340, 52
+local WIDTH, HEIGHT  = 380, 62
 local LIST_SHOWN     = 6      -- objets affichés par liste dans les réglages
 
 -- ---------------------------------------------------------------------------
@@ -627,31 +627,33 @@ function ns:BagSpaceDestroy(data)
 end
 
 -- ---------------------------------------------------------------------------
--- Cadre discret, près des sacs
+-- Bandeau (Theme.CreateToast), près des sacs : liseré orange (sac plein),
+-- la suggestion, puis l'action principale et ses deux variantes
 -- ---------------------------------------------------------------------------
 function ns:EnsureBagSpaceFrame()
 	if self.bagspaceFrame then return self.bagspaceFrame end
-	if not Theme or not Theme.CreateDiscreet or not Theme.CreateButton then return nil end
-	local ok, frame = pcall(Theme.CreateDiscreet, UIParent, WIDTH, HEIGHT)
+	if not Theme or not Theme.CreateToast or not Theme.CreateButton then return nil end
+	local ok, frame = pcall(Theme.CreateToast, UIParent, WIDTH, HEIGHT, { strata = "DIALOG", accent = Theme.ORANGE_DEEP })
 	if not ok or not frame then return nil end
-	frame:SetFrameStrata("DIALOG")
 	-- au-dessus des sacs ouverts, en bas à droite de l'écran
 	if self.RestorePoint then self:RestorePoint(frame, "bagspacePoint", { point = "BOTTOMRIGHT", x = -240, y = 180 }) end
+	local left = frame.contentLeft
 
-	frame.text = frame:CreateFontString(nil, "OVERLAY", Theme.F_BODY)
-	frame.text:SetPoint("TOPLEFT", frame, "TOPLEFT", 8, -7)
-	frame.text:SetWidth(WIDTH - 36)
+	frame.closeButton = Theme.CreateCloseButton(frame, 18)
+	frame.closeButton:SetPoint("TOPRIGHT", frame, "TOPRIGHT", -6, -6)
+	frame.closeButton:SetScript("OnClick", function() ns:HideBagSpaceFrame() end)
+
+	frame.text = Theme.Text(frame, Theme.F_BODY, Theme.TEXT)
+	frame.text:SetPoint("TOPLEFT", frame, "TOPLEFT", left, -9)
+	frame.text:SetWidth(WIDTH - left - 6 - 18 - 8)
 	frame.text:SetJustifyH("LEFT")
 	frame.text:SetWordWrap(false)
 
-	frame.closeButton = Theme.CreateButton(frame, 16, 16, "x", function() ns:HideBagSpaceFrame() end)
-	frame.closeButton:SetPoint("TOPRIGHT", frame, "TOPRIGHT", -4, -4)
-
-	frame.destroyButton = Theme.CreateButton(frame, 80, 18, L.BAG_BTN_DESTROY, function() ns:BagSpaceRequestDestroy() end, "primary")
-	frame.destroyButton:SetPoint("BOTTOMLEFT", frame, "BOTTOMLEFT", 8, 7)
-	frame.nextButton = Theme.CreateButton(frame, 80, 18, L.BAG_BTN_NEXT, function() ns:BagSpaceNext() end)
+	frame.destroyButton = Theme.CreateButton(frame, nil, 22, L.BAG_BTN_DESTROY, function() ns:BagSpaceRequestDestroy() end, "primary")
+	frame.destroyButton:SetPoint("BOTTOMLEFT", frame, "BOTTOMLEFT", left, 8)
+	frame.nextButton = Theme.CreateButton(frame, nil, 22, L.BAG_BTN_NEXT, function() ns:BagSpaceNext() end, "outline")
 	frame.nextButton:SetPoint("LEFT", frame.destroyButton, "RIGHT", 6, 0)
-	frame.keepButton = Theme.CreateButton(frame, 120, 18, L.BAG_BTN_KEEP, function() ns:BagSpaceKeepCurrent() end)
+	frame.keepButton = Theme.CreateButton(frame, nil, 22, L.BAG_BTN_KEEP, function() ns:BagSpaceKeepCurrent() end, "outline")
 	frame.keepButton:SetPoint("LEFT", frame.nextButton, "RIGHT", 6, 0)
 
 	frame:Hide()

@@ -499,6 +499,7 @@ function ns:RewardClearMarks()
 		if mark then
 			if mark.glow then mark.glow:Hide() end
 			if mark.label then mark.label:Hide() end
+			if mark.edge then for _, side in ipairs({ "top", "bottom", "left", "right" }) do mark.edge[side]:Hide() end end
 		end
 		marked[button] = nil
 	end
@@ -510,21 +511,20 @@ local function MarkButton(button, text)
 		mark = {}
 		mark.glow = button:CreateTexture(nil, "OVERLAY")
 		mark.glow:SetAllPoints(button)
-		local c = Theme and Theme.GOLD or { 0.91, 0.65, 0.29 }
-		if type(mark.glow.SetColorTexture) == "function" then
-			mark.glow:SetColorTexture(c[1], c[2], c[3], 0.22)
-		else
-			mark.glow:SetTexture("Interface\\Buttons\\WHITE8X8")
-			mark.glow:SetVertexColor(c[1], c[2], c[3], 0.22)
-		end
-		mark.label = button:CreateFontString(nil, "OVERLAY", Theme and Theme.F_SMALL or "GameFontNormalSmall")
-		mark.label:SetPoint("BOTTOMRIGHT", button, "BOTTOMRIGHT", -4, 3)
-		mark.label:SetTextColor(c[1], c[2], c[3], 1)
+		-- docs/UI.md : la récompense conseillée est cernée d'ambre (filet 1 px,
+		-- fond ambre léger), son étiquette en F_LABEL ambre
+		local c = Theme.GOLD
+		mark.glow:SetTexture(Theme.SOLID)
+		mark.glow:SetVertexColor(c[1], c[2], c[3], 0.12)
+		mark.edge = Theme.Border(button, c, 1, "OVERLAY")
+		mark.label = Theme.Text(button, Theme.F_LABEL, c)
+		mark.label:SetPoint("BOTTOMRIGHT", button, "BOTTOMRIGHT", -6, 4)
 		button.r2qRewardMark = mark
 	end
 	mark.label:SetText(text)
 	mark.glow:Show()
 	mark.label:Show()
+	for _, side in ipairs({ "top", "bottom", "left", "right" }) do mark.edge[side]:Show() end
 	marked[button] = true
 end
 

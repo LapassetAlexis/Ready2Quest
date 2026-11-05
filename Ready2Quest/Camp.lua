@@ -384,13 +384,14 @@ local function Clock(seconds)
 	return string.format("%d:%02d", math.floor(seconds / 60), seconds % 60)
 end
 
+-- bandeau (Theme.CreateToast) : liseré ambre, le décompte au centre
 function ns:EnsureCampFrame()
 	if self.campFrame then return self.campFrame end
-	if not (Theme and Theme.CreateDiscreet) then return nil end
-	local frame = Theme.CreateDiscreet(UIParent, 210, 22)
+	if not (Theme and Theme.CreateToast) then return nil end
+	local frame = Theme.CreateToast(UIParent, 230, 28)
 	if not frame then return nil end
-	frame.text = frame:CreateFontString(nil, "OVERLAY", Theme.F_SMALL)
-	frame.text:SetPoint("CENTER", frame, "CENTER", 0, 0)
+	frame.text = Theme.Text(frame, Theme.F_LABEL, Theme.LABEL)
+	frame.text:SetPoint("CENTER", frame, "CENTER", Theme.TOAST_ACCENT / 2, 0)
 	if self.RestorePoint then self:RestorePoint(frame, "campPoint", { point = "TOP", x = 0, y = -150 }) end
 	frame:Hide()
 	self.campFrame = frame

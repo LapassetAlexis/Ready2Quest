@@ -374,9 +374,22 @@ _G.GameTooltip = NewRegion("GameTooltip", "GameTooltip")
 function GameTooltip:GetItem() return nil, Mock.world.hoveredLink end
 function GameTooltip:GetRight() return 0 end
 function GameTooltip:SetOwner() end
-function GameTooltip:ClearLines() self.lines = {} end
-function GameTooltip:AddLine(text) self.lines = self.lines or {}; self.lines[#self.lines + 1] = tostring(text) end
-function GameTooltip:AddDoubleLine(a, b) self:AddLine(tostring(a) .. " " .. tostring(b)) end
+function GameTooltip:ClearLines() self.lines, self.styled = {}, {} end
+-- .lines : le texte seul (ce que lisent les tests) ; .styled : texte et
+-- couleurs, pour l'aperçu hors-jeu (tests/snapshot.lua, Snap.Tooltip)
+function GameTooltip:AddLine(text, r, g, b, wrap)
+	self.lines = self.lines or {}
+	self.lines[#self.lines + 1] = tostring(text)
+	self.styled = self.styled or {}
+	self.styled[#self.styled + 1] = { text = tostring(text), color = r and { r, g, b }, wrap = wrap }
+end
+function GameTooltip:AddDoubleLine(a, b, lr, lg, lb, rr, rg, rb)
+	self.lines = self.lines or {}
+	self.lines[#self.lines + 1] = tostring(a) .. " " .. tostring(b)
+	self.styled = self.styled or {}
+	self.styled[#self.styled + 1] = { text = tostring(a), color = lr and { lr, lg, lb },
+		right = tostring(b), rightColor = rr and { rr, rg, rb } }
+end
 function GameTooltip:Show() self.shown = true end
 function GameTooltip:Hide() self.shown = false end
 
@@ -2071,7 +2084,14 @@ NS:OnEquipmentChanged()
 Check("toast affiché", NS.toastFrame ~= nil and NS.toastFrame:IsShown() == true)
 
 -- structure de la référence : titre espacé, règle, lignes valeur + libellé
-Check("aucun fond", NS.toastFrame.bg == nil)
+-- refonte 2026-11 : bandeau v2 (fond WINDOW, filet EDGE, liseré ambre), autour du
+-- contenu : il déborde du cadre (hauteur 10) jusque sous la ligne
+local toastScale = NS.toastFrame.rows[1].icon:GetWidth() / NS.TOAST_ICON
+Check("fond de bandeau sous le contenu", NS.toastFrame.chrome == "toast" and NS.toastFrame.bg
+	and NS.toastFrame.bg.vertex[1] == NS.Theme.WINDOW[1] and NS.toastFrame.border ~= nil
+	and NS.toastFrame.bg.points[1].y > 0
+	and NS.toastFrame.bg.points[2].y <= (NS.TOAST_ROW_TOP - 14) * toastScale,
+	tostring(NS.toastFrame.bg and NS.toastFrame.bg.points[2] and NS.toastFrame.bg.points[2].y))
 Check("aucune bordure hors édition", NS.toastFrame.moveGlow ~= nil
 	and NS.toastFrame.moveGlow:IsShown() == false)
 
@@ -2693,7 +2713,7 @@ Mock.world.links["item:920"] = { name = "Gantelets", quality = 2, itemLevel = 20
 NS:OnEquipmentChanged()
 
 local tframe = NS.toastFrame
-Check("aucun fond", tframe.bg == nil)
+Check("fond de bandeau, liseré ambre", tframe.bg ~= nil and tframe.accent ~= nil and tframe.accent:IsShown())
 Check("titre de section présent", tframe.title ~= nil)
 Check("aucun bouton de fermeture", tframe.close == nil)
 Check("aucun filet permanent", tframe.top == nil and tframe.bottom == nil
@@ -2729,7 +2749,7 @@ Check("aucune ligne concaténée", frame.rows[1].value.text:find("·") == nil,
 
 -- le panneau de stats du portrait garde son filet, lui
 NS:StartEditMode()
-Check("stats du portrait toujours encadrées", NS.portraitFrame.top ~= nil)
+Check("stats du portrait toujours encadrées", NS.portraitFrame.border ~= nil and NS.portraitFrame.chrome == "toast")
 Check("lueur de déplacement sur le résumé", NS.toastFrame.moveGlow:IsShown() == true)
 NS:StopEditMode()
 Check("lueur masquée à la sortie", NS.toastFrame.moveGlow:IsShown() == false)
@@ -3786,10 +3806,14 @@ end
 NS.editBanner = nil
 NS:StartEditMode()
 local banner = NS.editBanner
-local hintTop = banner.contentTop - 4
-local buttonTop = -(banner.height - 10 - 20)
-Check("[JEU] bandeau d'édition : l'aide ne passe plus sous le bouton", hintTop - 26 >= buttonTop,
-	(hintTop - 26) .. " >= " .. buttonTop)
+-- refonte 2026-11 : bandeau, l'aide à gauche du bouton (côte à côte) ; elle
+-- doit s'arrêter avant lui et tenir dans la hauteur du bandeau
+local hintRight = banner.hint.lastPoint.x + banner.hint:GetWidth()
+local buttonLeft = banner.width - 12 - banner.stopButton:GetWidth()
+Check("[JEU] bandeau d'édition : l'aide ne passe plus sous le bouton", hintRight + 8 <= buttonLeft
+	and -banner.hint.lastPoint.y + 14 <= banner.height - 6, hintRight .. " + 8 <= " .. buttonLeft)
+Check("[JEU] bandeau d'édition : le texte tient dans le bouton",
+	banner.stopButton:GetWidth() >= banner.stopButton.text:GetStringWidth() + 16)
 Check("[JEU] bandeau d'édition : bouton Terminer en ambre", banner.stopButton.style == "primary")
 NS:StopEditMode()
 ResetWorld()

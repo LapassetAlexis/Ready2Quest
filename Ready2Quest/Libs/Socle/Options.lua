@@ -1627,18 +1627,19 @@ function ns:RegisterSettingsCategory()
 	local name = tostring(ns.APP.id)
 	canvas.name = name
 
-	canvas.title = canvas:CreateFontString(nil, "OVERLAY", Theme.F_TITLE)
-	canvas.title:SetPoint("TOPLEFT", canvas, "TOPLEFT", 16, -16)
+	-- en-tête de page (docs/UI.md) : le nom en grand, la version, le filet
+	-- ambre ; puis une ligne et le bouton en contour ambre
+	canvas.header = Theme.CreatePageHeader(canvas, 640)
+	canvas.header:SetPoint("TOPLEFT", canvas, "TOPLEFT", 0, 0)
+	canvas.title, canvas.version = canvas.header.title, canvas.header.subtitle
 	canvas.title:SetText(ns.APP.brand or name)
-	canvas.version = canvas:CreateFontString(nil, "OVERLAY", Theme.F_SMALL)
-	canvas.version:SetPoint("TOPLEFT", canvas.title, "BOTTOMLEFT", 0, -6)
 	canvas.version:SetText(ns:F("SETTINGS_VERSION", tostring(ns.APP.version)))
-	canvas.hint = canvas:CreateFontString(nil, "OVERLAY", Theme.F_NORMAL)
-	canvas.hint:SetPoint("TOPLEFT", canvas.version, "BOTTOMLEFT", 0, -14)
+	canvas.hint = Theme.Text(canvas, Theme.F_BODY, Theme.TEXT)
+	canvas.hint:SetPoint("TOPLEFT", canvas, "TOPLEFT", 24, -Theme.HEADER_HEIGHT - 8)
 	canvas.hint:SetJustifyH("LEFT")
 	canvas.hint:SetText(L.SETTINGS_HINT)
-	canvas.open = Theme.CreateButton(canvas, 180, 24, L.SETTINGS_OPEN, function() ns:OpenOptionsFromSettings() end)
-	canvas.open:SetPoint("TOPLEFT", canvas.hint, "BOTTOMLEFT", 0, -14)
+	canvas.open = Theme.CreateButton(canvas, nil, 28, L.SETTINGS_OPEN, function() ns:OpenOptionsFromSettings() end, "accent")
+	canvas.open:SetPoint("TOPLEFT", canvas.hint, "BOTTOMLEFT", 0, -16)
 
 	local ok, category = pcall(settings.RegisterCanvasLayoutCategory, canvas, name)
 	if not ok or category == nil then return nil end
@@ -1676,28 +1677,35 @@ end
 -- en édition sans autre issue que la commande /sd move stop.
 function ns:EnsureEditBanner()
 	if self.editBanner then return self.editBanner end
-	if not Theme or not Theme.CreatePanel then return nil end
+	if not Theme or not Theme.CreateToast then return nil end
 
-	-- 96 px : le bandeau du haut (36) + l'aide (2 lignes possibles) + le bouton.
-	-- À 74 px (avant la v1.20.0 et son bandeau plus haut), l'aide passait
-	-- sous le bouton et devenait illisible (vu en jeu).
-	local banner = Theme.CreatePanel(UIParent, 320, 96, L.OPT_EDIT_MODE, { strata = "TOOLTIP" })
+	-- bandeau (docs/UI.md) : liseré ambre, titre et aide à gauche, « Terminer
+	-- le déplacement » à droite, côte à côte : l'aide ne passe jamais sous le
+	-- bouton (vu en jeu avant la v1.20.0, quand ils étaient empilés)
+	local banner = Theme.CreateToast(UIParent, 460, 56, { strata = "TOOLTIP" })
 	if not banner then return nil end
-	banner:SetClampedToScreen(true)
 	banner:EnableMouse(true)
+	local left = banner.contentLeft
 
-	banner.hint = banner:CreateFontString(nil, "OVERLAY", Theme.F_SMALL)
-	banner.hint:SetPoint("TOPLEFT", banner, "TOPLEFT", 12, banner.contentTop - 4)
-	banner.hint:SetPoint("TOPRIGHT", banner, "TOPRIGHT", -12, banner.contentTop - 4)
-	banner.hint:SetJustifyH("LEFT")
-	if banner.hint.SetWordWrap then banner.hint:SetWordWrap(true) end
-	banner.hint:SetText(L.OPT_EDIT_HINT)
-	banner.hint:SetTextColor(0.70, 0.70, 0.70)
-
-	banner.stopButton = Theme.CreateButton(banner, 296, 20, L.OPT_EDIT_STOP, function()
+	banner.stopButton = Theme.CreateButton(banner, nil, 28, L.OPT_EDIT_STOP, function()
 		ns:StopEditMode()
 	end, "primary")
-	banner.stopButton:SetPoint("BOTTOM", banner, "BOTTOM", 0, 10)
+	banner.stopButton:SetPoint("RIGHT", banner, "RIGHT", -12, 0)
+	local textWidth = 460 - left - banner.stopButton:GetWidth() - 12 - 12
+
+	banner.title = Theme.Text(banner, Theme.F_LABEL, Theme.PARCHMENT)
+	banner.title:SetPoint("TOPLEFT", banner, "TOPLEFT", left, -11)
+	banner.title:SetWidth(textWidth)
+	banner.title:SetJustifyH("LEFT")
+	banner.title:SetText(L.OPT_EDIT_MODE)
+	if banner.title.SetWordWrap then banner.title:SetWordWrap(false) end
+
+	banner.hint = Theme.Text(banner, Theme.F_SMALL, Theme.MUTED_LIGHT)
+	banner.hint:SetPoint("TOPLEFT", banner, "TOPLEFT", left, -29)
+	banner.hint:SetWidth(textWidth)
+	banner.hint:SetJustifyH("LEFT")
+	if banner.hint.SetWordWrap then banner.hint:SetWordWrap(false) end
+	banner.hint:SetText(L.OPT_EDIT_HINT)
 
 	self.editBanner = banner
 	return banner
