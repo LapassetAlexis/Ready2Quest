@@ -806,6 +806,8 @@ function ns:OpenJournalFor(goal)
 	local frame = self:ToggleJournal(true)
 	local evolution = goal and (goal.kind == "stage" or goal.source == "companion")
 	if frame and self.SelectJournalKind then self:SelectJournalKind(evolution and "evolution" or "completion") end
+	-- un objectif de zone ouvre cette zone
+	if frame and not evolution and goal and goal.zoneID and self.SelectJournalZone then self:SelectJournalZone(goal.zoneID) end
 	return frame
 end
 

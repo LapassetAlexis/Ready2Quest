@@ -103,9 +103,40 @@ local function TierOfLevel(level)
 	return 3
 end
 
+-- Tranche de niveaux d'une zone : la table ci-dessus, sinon calculée à partir
+-- de ses créatures préremplies (ZoneCreatures_<client>.lua : zones propres à
+-- Forever, Reflet-de-Lune…) : les normales seulement, sans les extrêmes
+-- (un dixième de chaque côté). nil si la zone n'a ni l'un ni l'autre.
+local computedLevels = {}
+function ns:ZoneLevelRange(zoneID)
+	zoneID = tonumber(zoneID)
+	if not zoneID then return nil end
+	if ZONE_LEVELS[zoneID] then return ZONE_LEVELS[zoneID] end
+	if computedLevels[zoneID] ~= nil then return computedLevels[zoneID] or nil end
+	local creatures = type(ns.ZONE_CREATURES) == "table" and ns.ZONE_CREATURES[zoneID]
+	local lows, highs = {}, {}
+	for _, entry in pairs(type(creatures) == "table" and creatures or {}) do
+		local lvl = type(entry) == "table" and entry.lvl
+		if type(lvl) == "table" and tonumber(lvl[1]) and (tonumber(entry.rank) or 0) == 0 then
+			lows[#lows + 1] = tonumber(lvl[1])
+			highs[#highs + 1] = tonumber(lvl[2]) or tonumber(lvl[1])
+		end
+	end
+	local range = false
+	if #lows > 0 then
+		table.sort(lows); table.sort(highs)
+		local cut = math.floor(#lows * 0.1)
+		local lo, hi = lows[cut + 1], highs[#highs - cut]
+		range = { math.max(1, lo), math.max(lo, hi) }
+	end
+	computedLevels[zoneID] = range
+	return range or nil
+end
+ns.ZoneLevelCache = computedLevels
+
 -- Palier d'une zone : son niveau d'entrée, sinon le niveau du joueur
 function ns:ZoneTier(zoneID)
-	local range = ZONE_LEVELS[zoneID]
+	local range = self:ZoneLevelRange(zoneID)
 	if range then return TierOfLevel(range[1]), range end
 	return TierOfLevel(PlayerLevel()), nil
 end

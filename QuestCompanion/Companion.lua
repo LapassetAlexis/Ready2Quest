@@ -242,7 +242,7 @@ local FR = {
 	COMP_REQ_rare          = "%d rares",
 	COMP_REQ_level         = "%d tampons de niveau",
 	COMP_REQ_total         = "%d tampons",
-	COMP_HOVER_HINT        = "Clic : un câlin · clic droit : carnet · glisser : déplacer",
+	COMP_HOVER_HINT        = "Clic : un câlin · Maj + clic : friandises · clic droit : carnet · glisser : déplacer",
 	OPT_COMP_TUTO          = "Rejouer le tutoriel",
 	COMP_TUTO_NEXT         = "Suivant",
 	COMP_TUTO_SKIP         = "Passer",
@@ -388,7 +388,7 @@ local EN = {
 	COMP_REQ_rare          = "%d rares",
 	COMP_REQ_level         = "%d level stamps",
 	COMP_REQ_total         = "%d stamps",
-	COMP_HOVER_HINT        = "Click: a cuddle · right-click: journal · drag: move",
+	COMP_HOVER_HINT        = "Click: a cuddle · Shift + click: treats · right-click: journal · drag: move",
 	OPT_COMP_TUTO          = "Replay the tutorial",
 	COMP_TUTO_NEXT         = "Next",
 	COMP_TUTO_SKIP         = "Skip",
@@ -1347,15 +1347,14 @@ function ns:EnsureCompanionFrame()
 	return frame
 end
 
--- Clic droit sur la créature : le carnet, sur l'onglet Objectifs (ce qu'il
--- reste à faire pour la faire évoluer). Déjà ouvert : on le ferme.
+-- Clic droit sur la créature : le carnet, sur son dernier onglet. Déjà
+-- ouvert : on le ferme.
 function ns:CompanionOpenJournal()
 	if type(self.ToggleJournal) ~= "function" then return nil end
 	local current = self.journalFrame
 	if current and current:IsShown() then current:Hide(); return current end
-	local frame = self:ToggleJournal(true)
-	if frame and self.SelectJournalKind then self:SelectJournalKind("goals") end
-	return frame
+	-- le carnet rouvre son dernier onglet (la Zone la première fois)
+	return self:ToggleJournal(true)
 end
 
 function ns:EnsureCompanionBubble()

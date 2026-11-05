@@ -416,6 +416,19 @@ do
 		and first:find("Quêtes", 1, true) and comp.lines[2].item and not comp.lines[2].item.done
 		and comp.lines[2].detail.text:find("niveau", 1, true), first)
 	Check("[ZQ] onglet Quêtes : pas de message vide", comp.empty.text == "")
+	local function AllDone(want)
+		for _, item in ipairs(f.rows) do
+			if not item.header and (item.done == true) ~= want then return false end
+		end
+		return true
+	end
+	comp.questFilter.todo:Click()
+	local todo = #f.rows
+	Check("[ZQ] filtre « À faire » : seulement les quêtes à faire", f.questFilter == "todo" and todo > 0 and AllDone(false), todo)
+	comp.questFilter.done:Click()
+	Check("[ZQ] filtre « Faites » : seulement les faites", AllDone(true))
+	comp.questFilter.all:Click()
+	Check("[ZQ] « Toutes » : tout revient", #f.rows >= todo)
 	NS:ToggleJournal(false)
 	-- client sans table : onglet grisé, message clair
 	Q.Reset(false)
