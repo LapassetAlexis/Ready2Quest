@@ -760,6 +760,9 @@ do
 	D.Reset(11)
 	C.Login()
 	D.Calm()
+	-- tampon d'auberge déjà reçu aujourd'hui : l'aubergiste a son avis (Daily.lua)
+	local _, inn = NS:DailyData()
+	inn.day = NS:DailyToday()
 	local seen = {
 		merchant = D.Npc("MERCHANT_SHOW"), trainer = D.Npc("TRAINER_SHOW"), flight = D.Npc("TAXIMAP_OPENED"),
 		banker = D.Npc("BANKFRAME_OPENED"), quest = D.Npc("QUEST_DETAIL"), greeting = D.Npc("QUEST_GREETING"),

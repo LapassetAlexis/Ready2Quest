@@ -310,7 +310,7 @@ local CARD_COLS, CARD_ROWS, CARD_W, CARD_H, CARD_GAP = 4, 7, 114, 40, 6
 local ICON_COLS, ICON_ROWS, ICON_SIZE, ICON_GAP = 8, 5, 48, 8
 local TILE_COLS, TILE_ROWS, TILE_W, TILE_H, TILE_GAP = 6, 4, 108, 90, 8
 local COLL_COLS, COLL_ROWS, COLL_W, COLL_H, COLL_GAP = 5, 5, 88, 62, 8
-local SECTIONS = { "zones", "completion", "evolution", "collection", "memories" }
+local SECTIONS = { "zones", "completion", "day", "evolution", "collection", "memories" }
 local COLL_KINDS = { "app", "orn", "frame", "bg" }
 local MARKS = { 25, 50, 75, 100 }
 local CONTINENTS = { [1415] = "ek", [1414] = "ka" }
@@ -911,6 +911,136 @@ local function BuildCollection(self, frame, top)
 	pane.preview = BuildPreview(pane, frame, 14 + BODY_W + 8, top, top - bottom + 4)
 end
 
+-- Jour : missions, carte de fidélité des auberges, garde-manger (Daily.lua, Treats.lua)
+local MISSION_ROWS = 3
+local function BuildDay(self, frame, top)
+	local pane = CreateFrame("Frame", nil, frame)
+	pane:SetAllPoints()
+	frame.day = pane
+	local half = math.floor((CONTENT_W - 12) / 2)
+	local rightX = 14 + half + 12
+	pane.missionsTitle = Theme.CreateTitle(pane, 15)
+	pane.missionsTitle:SetPoint("TOPLEFT", frame, "TOPLEFT", 14, top)
+	pane.missions = {}
+	for index = 1, MISSION_ROWS do
+		local y = top - 30 - (index - 1) * 74
+		local row = {}
+		row.label = Text(pane, Theme.F_NORMAL, 14, y, half - 70)
+		row.label:SetWordWrap(true)
+		row.source = Muted(Text(pane, Theme.F_SMALL, 14, y - 34, half - 70))
+		row.count = Text(pane, Theme.F_BODY, 14 + half - 64, y, 64)
+		row.count:SetJustifyH("RIGHT")
+		row.bar = Theme.CreateBar(pane, half, 4)
+		row.bar:SetPoint("TOPLEFT", frame, "TOPLEFT", 14, y - 52)
+		row.reroll = Theme.CreateButton(pane, 64, 18, L.MIS_REROLL, function() ns:MissionReroll(index) end)
+		row.reroll:SetPoint("TOPLEFT", frame, "TOPLEFT", 14 + half - 64, y - 28)
+		row.reroll:SetScript("OnEnter", function(b) Tip(b, L.MIS_REROLL, { L.MIS_REROLL_TIP }) end)
+		row.reroll:SetScript("OnLeave", HideTip)
+		pane.missions[index] = row
+	end
+	pane.missionsHint = Muted(Text(pane, Theme.F_SMALL, 14, top - 30 - MISSION_ROWS * 74, half))
+	pane.missionsHint:SetWordWrap(true)
+
+	pane.innTitle = Theme.CreateTitle(pane, 15)
+	pane.innTitle:SetPoint("TOPLEFT", frame, "TOPLEFT", rightX, top)
+	pane.stamps = {}
+	local size = math.min(36, math.floor((half - 6 * 6) / 7))
+	for index = 1, 7 do
+		local stamp = pane:CreateTexture(nil, "ARTWORK")
+		stamp:SetSize(size, size)
+		stamp:SetPoint("TOPLEFT", frame, "TOPLEFT", rightX + (index - 1) * (size + 6), top - 30)
+		stamp:SetTexture(Theme.DIAMOND_LINE)
+		pane.stamps[index] = stamp
+	end
+	pane.innTotal = Text(pane, Theme.F_BODY, rightX, top - 40 - size, half)
+	pane.innHint = Muted(Text(pane, Theme.F_SMALL, rightX, top - 58 - size, half))
+	pane.innHint:SetWordWrap(true)
+
+	local pantryTop = top - 150
+	pane.pantryTitle = Theme.CreateTitle(pane, 15)
+	pane.pantryTitle:SetPoint("TOPLEFT", frame, "TOPLEFT", rightX, pantryTop)
+	pane.pantryHint = Muted(Text(pane, Theme.F_SMALL, rightX + 130, pantryTop - 4, half - 130))
+	pane.slots = {}
+	local slotW = math.floor((half - 4 * 6) / 5)
+	for index, kind in ipairs(ns.TREAT_KINDS or {}) do
+		local x = rightX + (index - 1) * (slotW + 6)
+		local slot = { kind = kind }
+		slot.icon = pane:CreateTexture(nil, "ARTWORK")
+		slot.icon:SetSize(32, 32)
+		slot.icon:SetPoint("TOPLEFT", frame, "TOPLEFT", x + math.floor((slotW - 32) / 2), pantryTop - 28)
+		slot.icon:SetTexture(ns.TREAT_ICONS[kind])
+		slot.count = Text(pane, Theme.F_BODY, x, pantryTop - 64, slotW)
+		slot.count:SetJustifyH("CENTER")
+		slot.name = Muted(Text(pane, Theme.F_SMALL, x, pantryTop - 82, slotW))
+		slot.name:SetJustifyH("CENTER")
+		slot.name:SetWordWrap(true)
+		slot.give = Theme.CreateButton(pane, slotW, 18, L.DAY_GIVE, function() ns:TreatGive(kind); ns:RefreshJournal() end)
+		slot.give:SetPoint("TOPLEFT", frame, "TOPLEFT", x, pantryTop - 116)
+		pane.slots[index] = slot
+	end
+end
+
+local function RefreshDay(self, frame)
+	local pane = frame.day
+	local daily, inn = self:DailyData()
+	pane.missionsTitle:SetText(L.DAY_MISSIONS)
+	local today = daily.day == self:DailyToday()
+	local on = self:DailyMissionsOn()
+	for index, row in ipairs(pane.missions) do
+		local mission = on and today and daily.missions[index] or nil
+		row.mission = mission
+		if mission then
+			row.label:SetText(self:MissionLabel(mission))
+			row.source:SetText(self:MissionSource(mission))
+			row.count:SetText(mission.done and (Theme.T_GREEN .. L.MIS_DONE .. "|r")
+				or string.format("%d/%d", mission.have or 0, mission.need))
+			row.bar:SetValue((mission.have or 0) / mission.need)
+			local c = mission.done and Theme.GREEN or Theme.GOLD
+			row.bar:SetColor(c[1], c[2], c[3], 1)
+			row.bar:Show()
+			if mission.source == "zone" and not mission.done and not daily.rerolled then row.reroll:Show() else row.reroll:Hide() end
+		else
+			row.label:SetText(index == 1 and (on and L.MIS_NONE or L.MIS_OFF) or "")
+			row.source:SetText("")
+			row.count:SetText("")
+			row.bar:Hide()
+			row.reroll:Hide()
+		end
+	end
+	pane.missionsHint:SetText(on and today and (daily.allDone and L.MIS_RENEW or L.MIS_ALL_BONUS) or "")
+	pane.innTitle:SetText(L.INN_TITLE)
+	for index, stamp in ipairs(pane.stamps) do
+		local got = index <= inn.card
+		stamp:SetTexture(got and Theme.DIAMOND or Theme.DIAMOND_LINE)
+		local c = got and Theme.GOLD or Theme.MUTED
+		stamp:SetVertexColor(c[1], c[2], c[3], 1)
+		stamp.got = got
+	end
+	pane.innTotal:SetText(self:F("INN_TOTAL", inn.total))
+	pane.innHint:SetText(self:F("INN_HINT", ns.INN_ENERGY, ns.INN_CARD))
+	pane.pantryTitle:SetText(L.DAY_PANTRY)
+	pane.pantryHint:SetText(L.DAY_PANTRY_HINT)
+	for _, slot in ipairs(pane.slots) do
+		local count = self:TreatCount(slot.kind)
+		slot.count:SetText(self:F("TREAT_COUNT", count, self:TreatCap(slot.kind)))
+		slot.name:SetText(self:TreatLabel(slot.kind))
+		if slot.icon.SetDesaturated then slot.icon:SetDesaturated(count == 0) end
+		if count > 0 then slot.give:Show() else slot.give:Hide() end
+	end
+end
+
+-- l'onglet Jour compte les missions qui restent
+local function DayNavLabel(self, frame)
+	local nav = frame.sections.day
+	if not (nav and self.DailyData) then return end
+	local daily = self:DailyData()
+	local open = 0
+	if self:DailyMissionsOn() and daily.day == self:DailyToday() then
+		for _, mission in ipairs(daily.missions) do if not mission.done then open = open + 1 end end
+	end
+	nav:SetText(open > 0 and (L.JRN_SEC_day .. " (" .. open .. ")") or L.JRN_SEC_day)
+end
+
 -- Garde-manger dans l'en-tête : un clic donne la friandise
 local function BuildPantry(self, frame)
 	if not ns.TREAT_KINDS then return end
@@ -962,7 +1092,7 @@ function ns:EnsureJournalWindow()
 	frame.sections = {}
 	local index = 0
 	for _, section in ipairs(SECTIONS) do
-		if section ~= "memories" or self.BuildMemoriesPane then
+		if (section ~= "memories" or self.BuildMemoriesPane) and (section ~= "day" or self.DailyData) then
 			index = index + 1
 			local button = Theme.CreateButton(frame, NAV_W - 12, 24, L["JRN_SEC_" .. section], function() ns:SelectJournalKind(section) end)
 			button:SetPoint("TOPRIGHT", frame, "TOPRIGHT", -7, top - (index - 1) * 28)
@@ -974,6 +1104,7 @@ function ns:EnsureJournalWindow()
 	BuildCompletion(self, frame, top)
 	BuildEvolution(self, frame, top)
 	BuildCollection(self, frame, top)
+	if self.DailyData then BuildDay(self, frame, top) end
 	if self.BuildMemoriesPane then self:BuildMemoriesPane(frame, top + 30, CONTENT_W) end
 	BuildPantry(self, frame)
 
@@ -999,6 +1130,7 @@ local function KindOf(frame, kind)
 	if kind == "evolution" or kind == "goals" then return "evolution" end
 	if kind == "memories" then return frame.mem and "memories" or "completion" end
 	if kind == "zones" or kind == "collection" then return kind end
+	if kind == "day" then return frame.day and "day" or "completion" end
 	return "completion"
 end
 
@@ -1533,7 +1665,7 @@ local function RefreshPantry(self, frame)
 	end
 end
 
-local PANES = { zones = "zones", completion = "comp", evolution = "evo", collection = "coll", memories = "mem" }
+local PANES = { zones = "zones", completion = "comp", day = "day", evolution = "evo", collection = "coll", memories = "mem" }
 function ns:RefreshJournal()
 	local frame = self.journalFrame
 	if not frame then return end
@@ -1550,6 +1682,7 @@ function ns:RefreshJournal()
 		if pane then if key == section then pane:Show() else pane:Hide() end end
 	end
 	RefreshPantry(self, frame)
+	DayNavLabel(self, frame)
 	if section == "memories" then
 		self:RefreshMemoriesPane(frame)
 	elseif section == "evolution" then
@@ -1558,6 +1691,8 @@ function ns:RefreshJournal()
 		RefreshZones(self, frame)
 	elseif section == "collection" then
 		RefreshCollection(self, frame)
+	elseif section == "day" then
+		RefreshDay(self, frame)
 	else
 		RefreshCompletion(self, frame)
 	end

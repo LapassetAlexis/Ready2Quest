@@ -3792,6 +3792,8 @@ do
 	_G.T = { Check = Check, Say = Say, ResetWorld = ResetWorld, Result = Result, NS = NS, QNS = QNS, Mock = Mock }
 	-- créatures brillantes : jamais au hasard pendant les tests (companion_shiny.lua règle sa chance)
 	if QNS then QNS.SHINY_CHANCE = 0 end
+	-- missions du jour : pas de tirage automatique (companion_daily.lua les tire lui-même)
+	if QNS then QNS.DAILY_AUTO = false end
 	-- build Forever par défaut au chargement des modules, comme en jeu
 	Mock.world.build = nil
 	NS:DetectCapabilities()
