@@ -122,6 +122,16 @@ ns.COMPANION_FRAMES = {
 	{ id = "gilded", label = "COMP_FRAME_GILDED", tier = 3, edge = { 0.91, 0.65, 0.29, 1 },
 		backdrop = { file = "Interface\\DialogFrame\\UI-DialogBox-Gold-Border", size = 16, color = { 1, 1, 1 } },
 		inner = { 0.91, 0.65, 0.29, 0.6 } },
+	-- QuestCompanion 1.2.0 : bordures du jeu telles quelles (non teintées),
+	-- vérifiées dans ManifestInterfaceData des deux builds (wago.tools)
+	{ id = "stone",    label = "COMP_FRAME_STONE",    tier = 1, edge = { 0.55, 0.55, 0.58, 0.9 },
+		backdrop = { file = DIALOG_BORDER, size = 16, color = { 1, 1, 1 } } },
+	{ id = "toast",    label = "COMP_FRAME_TOAST",    tier = 1, edge = { 0.36, 0.56, 0.84, 0.9 },
+		backdrop = { file = "Interface\\FriendsFrame\\UI-Toast-Border", size = 12, color = { 1, 1, 1 } } },
+	{ id = "glue",     label = "COMP_FRAME_GLUE",     tier = 2, edge = { 0.75, 0.62, 0.40, 0.9 },
+		backdrop = { file = "Interface\\Glues\\Common\\Glue-Tooltip-Border", size = 16, color = { 1, 1, 1 } } },
+	{ id = "carved",   label = "COMP_FRAME_CARVED",   tier = 3, edge = { 0.85, 0.70, 0.40, 1 },
+		backdrop = { file = "Interface\\Glues\\Common\\TextPanel-Border", size = 24, color = { 1, 1, 1 } } },
 }
 
 -- Fonds : la texture de fond du cadre (`texture`, sinon aplat) teintée par
@@ -147,6 +157,25 @@ ns.COMPANION_BACKGROUNDS = {
 		gradient = { top = { 0.02, 0.03, 0.10, 0.92 }, bottom = { 0.08, 0.10, 0.25, 0.90 } } },
 	{ id = "velvet",    label = "COMP_BG_VELVET",    tier = 3, texture = "Interface\\DialogFrame\\UI-DialogBox-Gold-Background",
 		color = { 0.70, 0.52, 0.30, 0.95 } },
+	-- QuestCompanion 1.2.0 : images du jeu, non teintées. Papiers à lettres du
+	-- courrier (moitié gauche de la lettre), parchemin des hauts faits, écrans
+	-- de chargement recadrés au centre (`coords` = gauche, droite, haut, bas).
+	{ id = "mail_og",   label = "COMP_BG_MAIL_OG",   tier = 1, texture = "Interface\\Stationery\\Stationery_OG1", color = { 1, 1, 1, 1 } },
+	{ id = "mail_uc",   label = "COMP_BG_MAIL_UC",   tier = 1, texture = "Interface\\Stationery\\Stationery_UC1", color = { 1, 1, 1, 1 } },
+	{ id = "mail_tb",   label = "COMP_BG_MAIL_TB",   tier = 1, texture = "Interface\\Stationery\\Stationery_TB1", color = { 1, 1, 1, 1 } },
+	{ id = "deeds",     label = "COMP_BG_DEEDS",     tier = 1, texture = "Interface\\AchievementFrame\\UI-Achievement-Parchment",
+		color = { 1, 1, 1, 1 } },
+	{ id = "mail_ill",  label = "COMP_BG_MAIL_ILL",  tier = 2, texture = "Interface\\Stationery\\Stationery_ILL1", color = { 1, 1, 1, 1 } },
+	{ id = "mail_val",  label = "COMP_BG_MAIL_VAL",  tier = 2, texture = "Interface\\Stationery\\Stationery_VAL1", color = { 1, 1, 1, 1 } },
+	{ id = "mail_chr",  label = "COMP_BG_MAIL_CHR",  tier = 2, texture = "Interface\\Stationery\\Stationery_CHR1", color = { 1, 1, 1, 1 } },
+	{ id = "kalimdor",  label = "COMP_BG_KALIMDOR",  tier = 2, texture = "Interface\\Glues\\LoadingScreens\\LoadScreenKalimdor",
+		color = { 1, 1, 1, 1 }, coords = { 0.25, 0.75, 0.15, 0.85 } },
+	{ id = "eastern",   label = "COMP_BG_EASTERN",   tier = 3, texture = "Interface\\Glues\\LoadingScreens\\LoadScreenEasternKingdom",
+		color = { 1, 1, 1, 1 }, coords = { 0.25, 0.75, 0.15, 0.85 } },
+	{ id = "moltencore", label = "COMP_BG_MOLTENCORE", tier = 3, texture = "Interface\\Glues\\LoadingScreens\\LoadScreenMoltenCore",
+		color = { 1, 1, 1, 1 }, coords = { 0.25, 0.75, 0.15, 0.85 } },
+	{ id = "ahnqiraj",  label = "COMP_BG_AHNQIRAJ",  tier = 3, texture = "Interface\\Glues\\LoadingScreens\\LoadScreenAhnQiraj40man",
+		color = { 1, 1, 1, 1 }, coords = { 0.25, 0.75, 0.15, 0.85 } },
 }
 
 -- Catalogue par type (clé = `kind` de ns:CompanionIsUnlocked)

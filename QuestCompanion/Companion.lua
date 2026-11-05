@@ -226,6 +226,10 @@ local FR = {
 	COMP_FRAME_RUNE        = "Runique",
 	COMP_FRAME_FEL         = "Gangrené",
 	COMP_FRAME_GILDED      = "Or ciselé",
+	COMP_FRAME_STONE       = "Pierre",
+	COMP_FRAME_TOAST       = "Messager",
+	COMP_FRAME_GLUE        = "Portail",
+	COMP_FRAME_CARVED      = "Sculpté",
 	COMP_BG_NIGHT          = "Nuit",
 	COMP_BG_PARCHMENT      = "Parchemin",
 	COMP_BG_FOREST         = "Sous-bois",
@@ -235,6 +239,17 @@ local FR = {
 	COMP_BG_EMBER          = "Braise",
 	COMP_BG_STARS          = "Voûte étoilée",
 	COMP_BG_VELVET         = "Velours doré",
+	COMP_BG_MAIL_OG        = "Lettre d'Orgrimmar",
+	COMP_BG_MAIL_UC        = "Lettre de Fossoyeuse",
+	COMP_BG_MAIL_TB        = "Lettre des Pitons",
+	COMP_BG_DEEDS          = "Parchemin des hauts faits",
+	COMP_BG_MAIL_ILL       = "Lettre enluminée",
+	COMP_BG_MAIL_VAL       = "Lettre d'amour",
+	COMP_BG_MAIL_CHR       = "Lettre d'hiver",
+	COMP_BG_KALIMDOR       = "Kalimdor",
+	COMP_BG_EASTERN        = "Royaumes de l'Est",
+	COMP_BG_MOLTENCORE     = "Cœur du Magma",
+	COMP_BG_AHNQIRAJ       = "Ahn'Qiraj",
 	COMP_KIND_app          = "Apparence",
 	COMP_KIND_orn          = "Ornement",
 	COMP_KIND_frame        = "Cadre",
@@ -383,6 +398,10 @@ local EN = {
 	COMP_FRAME_RUNE        = "Runic",
 	COMP_FRAME_FEL         = "Fel-touched",
 	COMP_FRAME_GILDED      = "Chased gold",
+	COMP_FRAME_STONE       = "Stone",
+	COMP_FRAME_TOAST       = "Messenger",
+	COMP_FRAME_GLUE        = "Gateway",
+	COMP_FRAME_CARVED      = "Carved",
 	COMP_BG_NIGHT          = "Night",
 	COMP_BG_PARCHMENT      = "Parchment",
 	COMP_BG_FOREST         = "Undergrowth",
@@ -392,6 +411,17 @@ local EN = {
 	COMP_BG_EMBER          = "Embers",
 	COMP_BG_STARS          = "Starry vault",
 	COMP_BG_VELVET         = "Golden velvet",
+	COMP_BG_MAIL_OG        = "Orgrimmar letter",
+	COMP_BG_MAIL_UC        = "Undercity letter",
+	COMP_BG_MAIL_TB        = "Thunder Bluff letter",
+	COMP_BG_DEEDS          = "Deeds parchment",
+	COMP_BG_MAIL_ILL       = "Illuminated letter",
+	COMP_BG_MAIL_VAL       = "Love letter",
+	COMP_BG_MAIL_CHR       = "Winter letter",
+	COMP_BG_KALIMDOR       = "Kalimdor",
+	COMP_BG_EASTERN        = "Eastern Kingdoms",
+	COMP_BG_MOLTENCORE     = "Molten Core",
+	COMP_BG_AHNQIRAJ       = "Ahn'Qiraj",
 	COMP_KIND_app          = "Appearance",
 	COMP_KIND_orn          = "Ornament",
 	COMP_KIND_frame        = "Frame",
@@ -1701,6 +1731,12 @@ function ns:CompanionApplyBackground()
 		path = Theme.SOLID
 		pcall(bg.SetTexture, bg, path)
 	end
+	-- image du jeu recadrée (écran de chargement), sinon la texture entière
+	if bg.SetTexCoord then
+		local c = (not fallback and def.coords) or { 0, 1, 0, 1 }
+		pcall(bg.SetTexCoord, bg, c[1], c[2], c[3], c[4])
+	end
+	frame.bgCoords = (not fallback) and def.coords or nil
 	SetColor(bg, def.color or { 0, 0, 0, 0.66 })
 	local gradient = nil
 	if def.gradient then gradient = ApplyGradient(bg, def.gradient.top, def.gradient.bottom) end
