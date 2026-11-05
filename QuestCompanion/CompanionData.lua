@@ -207,8 +207,10 @@ ns.COMPANION_STAGES = {
 }
 
 -- Animations (AnimationData, mêmes numéros et mêmes replis dans les deux
--- builds) : 0 Stand, 68 EmoteCheer, 69 EmoteDance, 100 Sleep (71 EmoteSleep
--- se replie sur 100). Une créature sans l'animation retombe sur Stand.
-ns.COMPANION_ANIMS = { idle = 0, cheer = 68, dance = 69, sleep = 100 }
+-- builds) : 0 Stand, 60 EmoteTalk, 68 EmoteCheer, 69 EmoteDance, 97 SitGround
+-- (96 SitGroundDown, 98 SitGroundUp), 100 Sleep (71 EmoteSleep se replie sur
+-- 100). Numéros relevés dans la table AnimationData documentée par
+-- TrinityCore. Une créature sans l'animation retombe sur Stand.
+ns.COMPANION_ANIMS = { idle = 0, talk = 60, cheer = 68, dance = 69, sit = 97, sleep = 100 }
 
 if ns.Mark then ns.Mark("CompanionData") end

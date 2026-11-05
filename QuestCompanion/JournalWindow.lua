@@ -322,6 +322,7 @@ ns.JOURNAL_LAYOUT = { width = WIDTH, height = HEIGHT, listCols = LIST_COLS, list
 local RANK_COLOR = {
 	elite = { 0.79, 0.80, 0.82 }, rareelite = { 0.29, 0.56, 0.88 }, rare = { 0.29, 0.56, 0.88 }, worldboss = Theme.GOLD,
 }
+ns.BESTIARY_RANK_COLOR = RANK_COLOR      -- repris par l'infobulle des créatures (Tooltips.lua)
 local APP_ICON = "Interface\\Icons\\Ability_Hunter_BeastCall"
 local ORN_ICON = "Interface\\Icons\\INV_Misc_Gem_Amethyst_02"
 local LOCK_ICON = "Interface\\Icons\\INV_Misc_QuestionMark"

@@ -26,6 +26,38 @@ function ns.Plain(value)
 	return value
 end
 
+-- Infobulles : une ligne ajoutée à GameTooltip au survol d'une unité
+-- (kind = "Unit") ou d'un objet ("Item"). Moteur récent :
+-- TooltipDataProcessor.AddTooltipPostCall, fn(tooltip, data) ; sinon
+-- GameTooltip:HookScript("OnTooltipSet<kind>"), fn(tooltip, nil). Une seule
+-- accroche par sorte (et par addon) ; seule GameTooltip est touchée, jamais
+-- les infobulles de comparaison ni celles d'autres addons. Renvoie la voie
+-- prise ("processor", "script") ou nil.
+ns.tooltipHooks = ns.tooltipHooks or {}
+function ns:HookTooltip(kind, fn)
+	if self.tooltipHooks[kind] or type(fn) ~= "function" then return self.tooltipHooks[kind] end
+	local function Run(tooltip, data)
+		if tooltip == nil or tooltip ~= rawget(_G, "GameTooltip") then return end
+		local ok, err = pcall(fn, tooltip, data)
+		if not ok and ns.RecordError then ns:RecordError("tooltip:" .. tostring(kind), err) end
+	end
+	local processor, enum = rawget(_G, "TooltipDataProcessor"), rawget(_G, "Enum")
+	local dataType = type(enum) == "table" and type(enum.TooltipDataType) == "table" and enum.TooltipDataType[kind]
+	if dataType ~= nil and dataType ~= false and type(processor) == "table"
+		and type(processor.AddTooltipPostCall) == "function"
+		and pcall(processor.AddTooltipPostCall, dataType, Run) then
+		self.tooltipHooks[kind] = "processor"
+		return "processor"
+	end
+	local tooltip = rawget(_G, "GameTooltip")
+	if type(tooltip) == "table" and type(tooltip.HookScript) == "function"
+		and pcall(tooltip.HookScript, tooltip, "OnTooltipSet" .. kind, function(tt) Run(tt, nil) end) then
+		self.tooltipHooks[kind] = "script"
+		return "script"
+	end
+	return nil
+end
+
 local probeModel
 
 function ns:DetectCapabilities()

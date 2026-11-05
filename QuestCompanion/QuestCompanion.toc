@@ -53,4 +53,6 @@ Treats.lua
 Shiny.lua
 Daily.lua
 Notify.lua
+LiveRares.lua
+Tooltips.lua
 JournalWindow.lua

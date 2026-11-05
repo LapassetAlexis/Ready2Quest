@@ -364,6 +364,35 @@ function ns:BestiarySeeUnit(unit)
 	return species
 end
 
+-- Une créature signalée sans unité à lire (vignette de la minicarte,
+-- LiveRares.lua) : vue, avec son nom et son rang s'ils sont connus ; reliée
+-- au journal de combat par son GUID, comme une cible. Renvoie l'espèce.
+function ns:BestiarySeeGUID(guid, name, class)
+	if not ModuleOn() then return nil end
+	local npcID = NpcID(guid)
+	if not npcID then return nil end
+	local zoneID = self:JournalZone()       -- nil en instance
+	if not zoneID then return nil end
+	local now = ns.Now()
+	local entry = self.bestiaryUnits[guid] or {}
+	entry.zoneID, entry.npcID, entry.seen = zoneID, npcID, now
+	self.bestiaryUnits[guid] = entry
+	Prune(now)
+	local book = self:BestiaryData()
+	book[zoneID] = book[zoneID] or {}
+	local species = book[zoneID][npcID]
+	local new = species == nil
+	species = species or { killed = 0 }
+	species.seen = true
+	if type(name) == "string" and name ~= "" then species.name = name end
+	species.name = species.name or tostring(npcID)
+	-- un rang lu sur la créature elle-même (cible, survol) l'emporte
+	if type(class) == "string" and (species.class == nil or species.class == "normal") then species.class = class end
+	book[zoneID][npcID] = species
+	if new then Changed() end
+	return species
+end
+
 -- ---------------------------------------------------------------------------
 -- Abattu
 -- ---------------------------------------------------------------------------

@@ -386,11 +386,18 @@ function ns:JournalSeeUnit(unit)
 	if not ModuleOn() or type(unit) ~= "string" then return end
 	if not RARE_CLASSES[Call("UnitClassification", unit) or ""] then return end
 	if Call("UnitIsPlayer", unit) then return end
-	local guid = Call("UnitGUID", unit)
+	self:JournalSeeRare(Call("UnitGUID", unit), Call("UnitName", unit))
+end
+
+-- Un rare repéré par son GUID (unité lue ci-dessus, ou vignette de la
+-- minicarte, LiveRares.lua) : retenu pour compter sa mort s'il est engagé.
+function ns:JournalSeeRare(guid, name)
+	if not ModuleOn() then return end
+	guid, name = ns.Plain(guid), ns.Plain(name)
 	if type(guid) ~= "string" or not (guid:find("^Creature%-") or guid:find("^Vehicle%-")) then return end
 	local now = ns.Now()
 	local rare = self.journalRares[guid] or {}
-	rare.name = Call("UnitName", unit) or rare.name
+	rare.name = name or rare.name
 	rare.seen = now
 	self.journalRares[guid] = rare
 	-- ménage : un rare croisé sans combat ne reste pas en mémoire
