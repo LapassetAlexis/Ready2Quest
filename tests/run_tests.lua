@@ -123,7 +123,8 @@ local function NewRegion(kind, name, parent)
 	function region:SetBackdropBorderColor(r, g, b, a) self.backdropBorderColor = { r, g, b, a } end
 	function region:SetFixedFrameStrata() end
 	function region:SetFixedFrameLevel() end
-	function region:SetTexCoord() end
+	-- coordonnées de texture : gardées pour l'aperçu (une icône retournée)
+	function region:SetTexCoord(...) self.texCoord = { ... } end
 	function region:SetWordWrap(wrap) self.wordWrap = wrap end
 	function region:SetFrameLevel(level) self.level = level; self.levelSet = true end
 	function region:GetFrameLevel() return self.level end

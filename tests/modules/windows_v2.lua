@@ -148,61 +148,8 @@ local function Scene(name)
 	return frame, restore
 end
 
--- blocs lisibles : textes (hors boutons) et boutons dessinés, visibles
-local function Blocks(root)
-	local list = {}
-	local function InButton(region)
-		local node = region.mockParent
-		while node and node ~= root do
-			if node.kind == "Button" then return true end
-			node = node.mockParent
-		end
-		return false
-	end
-	local function Walk(region)
-		if region.mockHidden then return end
-		if region.kind == "FontString" and tostring(region.text or "") ~= "" and not InButton(region) then
-			list[#list + 1] = region
-		elseif region.kind == "Button" and ((type(region.text) == "table" and region.text.text ~= "")
-			or type(region.label) == "table" or type(region.icon) == "table") then
-			list[#list + 1] = region
-		end
-		for _, child in ipairs(region.mockChildren or {}) do Walk(child) end
-	end
-	Walk(root)
-	return list
-end
-
-local function Label(region)
-	return tostring(region.text and (type(region.text) == "table" and region.text.text or region.text)
-		or (region.label and region.label.text) or region.kind)
-end
-
--- chevauchements (plus d'un pixel dans les deux sens) et sorties du cadre
-local function Layout(root)
-	local ctx = { memo = {}, root = root }
-	local box = Snap.Rect(root.bg or root, ctx)
-	local overlaps, outside = {}, {}
-	local blocks = Blocks(root)
-	local rects = {}
-	for index, region in ipairs(blocks) do rects[index] = Snap.Rect(region, ctx) end
-	for i = 1, #blocks do
-		local a = rects[i]
-		if a and box and (a.left < box.left - 1 or a.top < box.top - 1 or a.left + a.width > box.left + box.width + 1
-			or a.top + a.height > box.top + box.height + 1) then
-			outside[#outside + 1] = Label(blocks[i])
-		end
-		for j = i + 1, #blocks do
-			local b = rects[j]
-			if a and b then
-				local w = math.min(a.left + a.width, b.left + b.width) - math.max(a.left, b.left)
-				local h = math.min(a.top + a.height, b.top + b.height) - math.max(a.top, b.top)
-				if w > 1 and h > 1 then overlaps[#overlaps + 1] = Label(blocks[i]) .. " / " .. Label(blocks[j]) end
-			end
-		end
-	end
-	return overlaps, outside, #blocks
-end
+-- blocs, chevauchements, sorties du cadre : tests/snapshot.lua
+local function Layout(root) return Snap.Layout(root) end
 
 do
 	Say("-- fenêtres v2 : chaque fenêtre, sans chevauchement")

@@ -345,6 +345,9 @@ function Snap.Render(root, opts)
 			math.max(0, r.width), math.max(0, r.height))
 		if region.kind == "Texture" then
 			local style, file = TextureStyle(region, alpha)
+			-- texture retournée par SetTexCoord (haut et bas échangés)
+			local tc = region.texCoord
+			if style and tc and #tc == 4 and tc[3] > tc[4] then style = style .. ";transform:scaleY(-1)" end
 			if style then
 				if file then
 					local v = region.vertex or { 1, 1, 1, 1 }
@@ -483,6 +486,81 @@ function Snap.Group(...)
 		if frame then frame:SetParent(root) end
 	end
 	return root
+end
+
+-- ---------------------------------------------------------------------------
+-- Contrôles de mise en page (tests/modules/windows_v2.lua, companion_v2.lua)
+-- ---------------------------------------------------------------------------
+-- blocs lisibles : textes (hors boutons) et boutons dessinés, visibles
+function Snap.Blocks(root)
+	local list = {}
+	local function InButton(region)
+		local node = region.mockParent
+		while node and node ~= root do
+			if node.kind == "Button" then return true end
+			node = node.mockParent
+		end
+		return false
+	end
+	local function Walk(region)
+		if region.mockHidden then return end
+		if region.kind == "FontString" and tostring(region.text or "") ~= "" and not InButton(region) then
+			list[#list + 1] = region
+		elseif region.kind == "Button" and ((type(region.text) == "table" and region.text.text ~= "")
+			or type(region.label) == "table" or type(region.icon) == "table") then
+			list[#list + 1] = region
+		end
+		for _, child in ipairs(region.mockChildren or {}) do Walk(child) end
+	end
+	Walk(root)
+	return list
+end
+
+function Snap.Label(region)
+	return tostring(region.text and (type(region.text) == "table" and region.text.text or region.text)
+		or (region.label and region.label.text) or region.kind)
+end
+
+-- chevauchements (plus d'un pixel dans les deux sens) et sorties du cadre ;
+-- `blocks` : les blocs à comparer (Snap.Blocks(root) par défaut), `box` : le
+-- cadre qui les contient (le fond de root par défaut)
+function Snap.Layout(root, blocks, box)
+	local ctx = { memo = {}, root = root }
+	box = box or Snap.Rect(root.bg or root, ctx)
+	local overlaps, outside = {}, {}
+	blocks = blocks or Snap.Blocks(root)
+	local rects = {}
+	for index, region in ipairs(blocks) do rects[index] = Snap.Rect(region, ctx) end
+	for i = 1, #blocks do
+		local a = rects[i]
+		if a and box and (a.left < box.left - 1 or a.top < box.top - 1 or a.left + a.width > box.left + box.width + 1
+			or a.top + a.height > box.top + box.height + 1) then
+			outside[#outside + 1] = Snap.Label(blocks[i])
+		end
+		for j = i + 1, #blocks do
+			local b = rects[j]
+			if a and b then
+				local w = math.min(a.left + a.width, b.left + b.width) - math.max(a.left, b.left)
+				local h = math.min(a.top + a.height, b.top + b.height) - math.max(a.top, b.top)
+				if w > 1 and h > 1 then overlaps[#overlaps + 1] = Snap.Label(blocks[i]) .. " / " .. Snap.Label(blocks[j]) end
+			end
+		end
+	end
+	return overlaps, outside, #blocks
+end
+
+-- Textes visibles d'une carte (tuile, ligne) : ses FontStrings, même dans
+-- un bouton ; avec Snap.Layout(tuile, Snap.Texts(tuile)), rien ne se
+-- chevauche ni ne déborde de la carte
+function Snap.Texts(root)
+	local list = {}
+	local function Walk(region)
+		if region.mockHidden then return end
+		if region.kind == "FontString" and tostring(region.text or "") ~= "" then list[#list + 1] = region end
+		for _, child in ipairs(region.mockChildren or {}) do Walk(child) end
+	end
+	Walk(root)
+	return list
 end
 
 function Snap.Snapshot(frame, path, opts)
@@ -979,6 +1057,267 @@ Snap.scenes["options-search"] = function(T)
 	win.search:SetText("alerte")
 	win.search.scripts.OnTextChanged(win.search, true)
 	return win, "Ready2Quest : réglages, recherche « alerte »"
+end
+
+-- ---------------------------------------------------------------------------
+-- QuestCompanion (refonte, lot 4) : un personnage niveau 24 aux Tarides, son
+-- compagnon « Brindille », un carnet entamé. Données d'exemple posées à la
+-- place des scans ; le modèle 3D est remplacé par le logo (pas de 3D ici).
+-- ---------------------------------------------------------------------------
+local QC_MAPS = {
+	[947]  = { mapID = 947,  name = "Azeroth", parentMapID = 0, mapType = 1 },
+	[1414] = { mapID = 1414, name = "Kalimdor", parentMapID = 947, mapType = 2 },
+	[1415] = { mapID = 1415, name = "Royaumes de l'Est", parentMapID = 947, mapType = 2 },
+	[1411] = { mapID = 1411, name = "Durotar", parentMapID = 1414, mapType = 3 },
+	[1413] = { mapID = 1413, name = "Les Tarides", parentMapID = 1414, mapType = 3 },
+	[1412] = { mapID = 1412, name = "Mulgore", parentMapID = 1414, mapType = 3 },
+	[1440] = { mapID = 1440, name = "Orneval", parentMapID = 1414, mapType = 3 },
+	[1442] = { mapID = 1442, name = "Les Serres-Rocheuses", parentMapID = 1414, mapType = 3 },
+	[1429] = { mapID = 1429, name = "Forêt d'Elwynn", parentMapID = 1415, mapType = 3 },
+	[1436] = { mapID = 1436, name = "Marche de l'Ouest", parentMapID = 1415, mapType = 3 },
+	[1421] = { mapID = 1421, name = "Forêt des Pins-Argentés", parentMapID = 1415, mapType = 3 },
+	[1420] = { mapID = 1420, name = "Clairières de Tirisfal", parentMapID = 1415, mapType = 3 },
+	[1438] = { mapID = 1438, name = "Teldrassil", parentMapID = 1414, mapType = 3 },
+	[1426] = { mapID = 1426, name = "Dun Morogh", parentMapID = 1415, mapType = 3 },
+	[1439] = { mapID = 1439, name = "Sombrivage", parentMapID = 1414, mapType = 3 },
+	[1432] = { mapID = 1432, name = "Loch Modan", parentMapID = 1415, mapType = 3 },
+	[1433] = { mapID = 1433, name = "Les Carmines", parentMapID = 1415, mapType = 3 },
+	[1431] = { mapID = 1431, name = "Bois de la Pénombre", parentMapID = 1415, mapType = 3 },
+	[1424] = { mapID = 1424, name = "Contreforts de Hautebrande", parentMapID = 1415, mapType = 3 },
+	[1450] = { mapID = 1450, name = "Reflet-de-Lune", parentMapID = 1414, mapType = 3 },
+	[1416] = { mapID = 1416, name = "Montagnes d'Alterac", parentMapID = 1415, mapType = 3 },
+	[1417] = { mapID = 1417, name = "Hautes-terres d'Arathi", parentMapID = 1415, mapType = 3 },
+	[1443] = { mapID = 1443, name = "Désolace", parentMapID = 1414, mapType = 3 },
+	[1434] = { mapID = 1434, name = "Vallée de Strangleronce", parentMapID = 1415, mapType = 3 },
+	[1441] = { mapID = 1441, name = "Mille pointes", parentMapID = 1414, mapType = 3 },
+	[1437] = { mapID = 1437, name = "Les Paluns", parentMapID = 1415, mapType = 3 },
+	[2521] = { mapID = 2521, name = "Île de Kezan", parentMapID = 1414, mapType = 3 },
+}
+
+local QC_FRAMES = { "journalFrame", "companionFrame", "companionBubble", "companionHover", "chestFrame", "treatMenu",
+	"journalToast", "journalTracker", "photoPrompt" }
+
+local function QCWorld(T)
+	local ns = T.QNS
+	T.ResetWorld()
+	T.LoadModules()
+	for id, info in pairs(QC_MAPS) do Mock.world.maps[id] = info end
+	Mock.world.mapID = 1413
+	Mock.world.subzone = "La Croisée"
+	Mock.world.level = 24
+	UIParent.width, UIParent.height = Snap.SCREEN.width, Snap.SCREEN.height
+	for _, field in ipairs(QC_FRAMES) do
+		if ns[field] then ns[field]:Hide() end
+		ns[field] = nil
+	end
+	ns.companionRT, ns.companionBubbleUntil, ns.companionLastBubble = nil, nil, nil
+	ns.journalToasts, ns.journalChats, ns.journalToastHideAt = {}, {}, nil
+	local db = ns:DB()
+	db.journalTracker, db.companionShow = false, true
+	local data = ns:CompanionData()
+	data.name, data.tutoDone, data.appearance = "Brindille", true, "whelp_green"
+	data.frameStyle, data.background = "copper", "forest"
+	data.needs = { hunger = 82, energy = 64, mood = 91, curiosity = 46 }
+	for _, key in ipairs({ "app:frog", "frame:copper", "orn:ribbon", "bg:forest", "app:whelp_green" }) do data.unlocked[key] = true end
+	local journal = ns:JournalData()
+	local function Stamp(kind, key, name) journal.stamps[kind .. ":" .. key] = { id = kind .. ":" .. key, kind = kind, name = name, at = 0 } end
+	Stamp("zone", 1411, "Durotar"); Stamp("zone", 1413, "Les Tarides"); Stamp("zone", 1412, "Mulgore")
+	Stamp("subzone", 380, "La Croisée"); Stamp("subzone", 362, "Razor Hill"); Stamp("capital", 1637, "Orgrimmar")
+	Stamp("dungeon", "wc", "Cavernes des lamentations"); Stamp("level", 10, "Niveau 10"); Stamp("level", 20, "Niveau 20")
+	-- bestiaire des Tarides : abattus, vus, nommés (élite, rare, rare élite)
+	journal.bestiary = { [1413] = {
+		[3110] = { name = "Crocilisque Gueule-d'effroi", seen = true, killed = 6 },
+		[3236] = { name = "Kodo des Tarides", seen = true, killed = 3 },
+		[3242] = { name = "Messager zhévra", seen = true, killed = 0 },
+		[3243] = { name = "Grande crinière des savanes", seen = true, killed = 2 },
+		[3248] = { name = "Girafe des Tarides", seen = true, killed = 0 },
+		[3253] = { name = "Moissonneur silithide", seen = true, killed = 1 },
+		[3270] = { name = "Ancienne mystique Tranchegroin", seen = true, killed = 0 },
+		[3398] = { name = "Gesharahan", seen = true, killed = 1 },
+		[3630] = { name = "Embobineur déviant", seen = true, killed = 0 },
+		[3631] = { name = "Aiguillonneur déviant", seen = true, killed = 4 },
+	} }
+	local treats = ns.TreatData and ns:TreatData()
+	if treats then
+		treats.treatsInit = true
+		treats.pantry.biscuit, treats.pantry.bonbon, treats.pantry.infusion, treats.pantry.carte = 2, 1, 3, 0
+		treats.milestones[1413] = 25
+	end
+	return ns
+end
+
+local function QCJournal(T, kind, prepare)
+	local ns = QCWorld(T)
+	if prepare then prepare(ns) end
+	ns:ToggleJournal(true)
+	ns:SelectJournalKind(kind)
+	return Centered(ns.journalFrame), ns
+end
+
+Snap.scenes["qc-journal-creature"] = function(T)
+	local frame = QCJournal(T, "evolution", function(ns)
+		ns:ChestData()[1411] = { tier = 1, name = "Durotar", at = 0 }
+	end)
+	return frame, "QuestCompanion : carnet, page Créature"
+end
+
+Snap.scenes["qc-journal-zones"] = function(T)
+	return (QCJournal(T, "zones")), "QuestCompanion : carnet, page Zones"
+end
+
+-- la zone d'ici, onglet Exploration (villages, une ligne d'en-tête par part)
+Snap.scenes["qc-journal-zone"] = function(T)
+	local frame = QCJournal(T, "completion")
+	return frame, "QuestCompanion : carnet, page Zone (Exploration)"
+end
+
+-- fiches du bestiaire : abattues, vues, jamais croisées, élite, rare, rare élite
+Snap.scenes["qc-journal-bestiary"] = function(T)
+	local frame, ns = QCJournal(T, "completion", function(n)
+		-- une page de fiches : la table livrée des Tarides réduite à douze espèces
+		local all = rawget(n, "ZONE_CREATURES")
+		if type(all) == "table" and type(all[1413]) == "table" then
+			local keep = {}
+			for _, id in ipairs({ 3270, 3630, 3242, 3248, 3244, 3245, 3110, 3236, 3243, 3253, 3398, 3631 }) do
+				keep[id] = all[1413][id]
+			end
+			-- une copie : la table livrée reste entière pour la suite (tests)
+			local copy = {}
+			for zoneID, zone in pairs(all) do copy[zoneID] = zone end
+			copy[1413] = keep
+			n.ZONE_CREATURES = copy
+		end
+		local shiny = n.ShinyData and n:ShinyData()
+		if shiny then shiny.zones[1413] = { [3243] = 1793500000 } end
+	end)
+	ns:SelectJournalActivity("combat")
+	for _, card in ipairs(frame.comp.cards) do
+		if card.item and card.item.id == 3398 then card.scripts.OnEnter(card) end
+	end
+	return frame, "QuestCompanion : carnet, Les Tarides > Combat (fiche de Gesharahan survolée)"
+end
+
+Snap.scenes["qc-journal-day"] = function(T)
+	local frame = QCJournal(T, "day", function(ns)
+		ns:DailyPoll()
+		local daily, inn = ns:DailyData()
+		if daily.missions[1] then daily.missions[1].have = math.max(1, math.floor(daily.missions[1].need / 2)) end
+		if daily.missions[2] then daily.missions[2].have, daily.missions[2].done = daily.missions[2].need, true end
+		inn.card, inn.total, inn.full = 4, 11, 1
+		daily.perfect = 3
+	end)
+	return frame, "QuestCompanion : carnet, page Jour"
+end
+
+Snap.scenes["qc-journal-collection"] = function(T)
+	return (QCJournal(T, "collection")), "QuestCompanion : carnet, page Collection (apparences)"
+end
+
+Snap.scenes["qc-journal-memories"] = function(T)
+	local frame = QCJournal(T, "memories", function(ns)
+		local data = ns:MemoryData()
+		local list = {
+			{ kind = "level", args = { 10 }, zone = "Durotar" },
+			{ kind = "capital", args = { "Orgrimmar" }, zone = "Orgrimmar", photo = "WoWScrnShot_110326_201455.jpg" },
+			{ kind = "stage", args = { "Brindille", "Jeune" }, zone = "Les Tarides", photo = "WoWScrnShot_110526_183012.jpg" },
+			{ kind = "flight", args = {}, zone = "La Croisée" },
+			{ kind = "dungeon", args = { "Cavernes des lamentations" }, zone = "Les Tarides" },
+			{ kind = "rare", args = { "Gesharahan" }, zone = "Les Tarides", photo = "WoWScrnShot_110626_224711.jpg" },
+			{ kind = "level", args = { 20 }, zone = "Les Tarides" },
+			{ kind = "anniv", args = { "1w" }, zone = "Les Tarides" },
+			{ kind = "deathSilly", args = { "Kodo des Tarides", 21 }, zone = "Les Tarides" },
+		}
+		for index, memory in ipairs(list) do memory.at = 1793000000 + index * 86400; data.memories[index] = memory end
+	end)
+	return frame, "QuestCompanion : carnet, page Souvenirs"
+end
+
+-- le compagnon à l'écran : cadre (cadre cuivre, fond sous-bois), nom, bulle
+local function QCCompanion(T, prepare)
+	local ns = QCWorld(T)
+	local data = ns:CompanionData()
+	data.frameStyle, data.background = "copper", "forest"
+	if prepare then prepare(ns) end
+	ns:CompanionUpdateVisibility()
+	local frame = ns.companionFrame
+	frame:ClearAllPoints()
+	frame:SetPoint("CENTER", UIParent, "CENTER", 120, -60)
+	-- pas de 3D hors du jeu : la boussole de repli tient la place du modèle
+	if frame.model then frame.model:Hide() end
+	frame.fallback:Show()
+	return ns, frame
+end
+
+Snap.scenes["qc-companion"] = function(T)
+	local ns, frame = QCCompanion(T)
+	ns:CompanionSay("HELLO", { force = true, line = "COMP_SAY_HELLO", args = { ns:CompanionName() } })
+	return Snap.Group(frame, ns.companionBubble), "QuestCompanion : le compagnon à l'écran et sa bulle"
+end
+
+Snap.scenes["qc-companion-hover"] = function(T)
+	local ns, frame = QCCompanion(T)
+	ns:CompanionShowHover()
+	return Snap.Group(frame, ns.companionHover), "QuestCompanion : la fiche au survol du compagnon"
+end
+
+Snap.scenes["qc-tutorial"] = function(T)
+	local ns, frame = QCCompanion(T, function(n) n:CompanionData().tutoDone = nil end)
+	ns:CompanionStartTutorial(true)
+	return Snap.Group(frame, ns.companionBubble), "QuestCompanion : bulle du tutoriel (Passer / Suivant)"
+end
+
+Snap.scenes["qc-pantry"] = function(T)
+	local ns, frame = QCCompanion(T)
+	ns:TreatMenuToggle()
+	return Snap.Group(frame, ns.treatMenu), "QuestCompanion : garde-manger (Maj + clic sur la créature)"
+end
+
+Snap.scenes["qc-chest"] = function(T)
+	local ns = QCWorld(T)
+	ns:ChestData()[1411] = { tier = 1, name = "Durotar", at = 0 }
+	ns:DB().companionChestAnim = false
+	local frame = ns:OpenChest(1411)
+	return Centered(frame), "QuestCompanion : coffre de zone (ouverture, objets du palier 1)"
+end
+
+Snap.scenes["qc-notify"] = function(T)
+	local ns = QCWorld(T)
+	ns:JournalNotify({ kind = "subzone", name = "Camp Taurajo" })
+	local toast = ns.journalToast
+	toast:ClearAllPoints()
+	toast:SetPoint("CENTER", UIParent, "CENTER", 0, 0)
+	return toast, "QuestCompanion : bandeau « Nouveau tampon » du carnet"
+end
+
+Snap.scenes["qc-tracker"] = function(T)
+	local ns = QCWorld(T)
+	ns:DB().journalTracker = true
+	ns:RefreshJournalTracker()
+	local tracker = ns.journalTracker
+	tracker:ClearAllPoints()
+	tracker:SetPoint("CENTER", UIParent, "CENTER", 0, 0)
+	return tracker, "QuestCompanion : bloc « Carnet » à l'écran (objectifs suivis)"
+end
+
+Snap.scenes["qc-photo"] = function(T)
+	local ns = QCWorld(T)
+	ns:MemoryAsk({ kind = "level", args = { 20 } })
+	local prompt = ns.photoPrompt
+	return Centered(prompt), "QuestCompanion : demande d'accord pour les photos souvenirs"
+end
+
+Snap.scenes["qc-tooltip"] = function(T)
+	local ns = QCWorld(T)
+	GameTooltip:ClearLines()
+	GameTooltip:AddLine("Gesharahan", 1, 1, 1)
+	GameTooltip:AddLine("Niveau 20 Bête (rare élite)", 1, 1, 1)
+	local text, color
+	if ns.BestiaryTooltipLine then text, color = ns:BestiaryTooltipLine("Creature-0-0-0-0-3398-0000") end
+	if not text then text, color = ns:F("BST_TOOLTIP", ns:F("JRN_ITEM_KILLED", 1)), ns.Theme.GOLD end
+	GameTooltip:AddLine(text, color[1], color[2], color[3])
+	local tip = Snap.Tooltip(GameTooltip, nil, 260)
+	tip:SetPoint("CENTER", UIParent, "CENTER", 0, 0)
+	return tip, "QuestCompanion : infobulle d'une créature (ligne du bestiaire)"
 end
 
 function Snap.RunScene(name, path, T)

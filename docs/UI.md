@@ -197,6 +197,55 @@ Aperçus : `python3 tests/snapshot.py r2q-check|r2q-dungeon|… <sortie.html>`
 (une scène par fenêtre, `list` les donne toutes). Les infobulles du jeu y
 sont dessinées à l'approche (`Snap.Tooltip`, police du jeu).
 
+## Carnet et compagnon (QuestCompanion)
+
+Même langage, briques du lot 4 dans le socle :
+
+- `Theme.CreateChips(parent, { { id, label } }, onSelect)` : puces de filtre
+  au trait (F_BODY), la choisie en ambre (filet, texte, fond à 12 %).
+  `:Select(id, silent)`, `.byId[id]` (`.text`, `.selected`), `.used`.
+- `Theme.CreateTile(parent, w, h, { accent = "left" | "top" | false })` :
+  carte de grille, fond ROW, filet EDGE_SOFT (EDGE au survol, ambre si
+  `:SetSelected(true)`), liseré de 3 `:SetAccent(couleur)`, `:SetFill(c)` ;
+  survol du module par `tile.onEnter` / `tile.onLeave`.
+- `Theme.CreateTag(parent, texte, couleur)` : étiquette F_CAPS en capitales,
+  fond teinté à 16 % (rang d'une créature, sorte d'objet).
+- `Theme.CreatePager(parent, onStep)` : « 1-12 / 40 » et deux chevrons au
+  trait ; `:Update(décalage, page, total, max)`.
+- `Theme.CreateBubble(parent, w)` : bulle de parole, fond WINDOW, filet
+  EDGE, filet ambre en haut, pointe en losange ; `:SetText(texte, extra)`
+  lui donne la hauteur du texte (+ `extra` pour des boutons).
+- `Theme.TextHeight(texte, largeur, rôle)` : hauteur mesurée par le client,
+  sinon estimée ; sert à empiler des blocs de texte sans recouvrement.
+- `CreateTabs` : `:SetDim(id, on)` estompe un onglet ; onglets et entrées de
+  navigation ont `.text` comme les boutons. `CreateLockTag:SetText(t, max)`
+  coupe un verrou trop long.
+- Retirés : `CreatePanel`, `CreateDivider`. `CreateDiscreet` reste le support
+  du cadre du compagnon (ses cadres et fonds gagnés en repeignent le filet et
+  le fond).
+
+| Fenêtre / cadre          | Brique              | En bref |
+|--------------------------|---------------------|---------|
+| Carnet de voyage         | fenêtre 980 × 680   | navigation 220 (marque, « Carnet », une entrée par page, pastille bleue des missions sur Jour, total des tampons en bas) ; grand en-tête par page (titre, sous-titre : zone et niveaux, étape, total des zones) ; pied : garde-manger à gauche, « Fermer » en accent |
+| › Créature               | cartes              | portrait dans son cadre et son fond gagnés (`CompanionPortrait`), étapes en losanges, prochaine étape ; envies en cartes (barre fine, valeur ambre si comblée) ; « comment ça marche » numéroté ; parcours en cartes à losange, « Ouvrir le coffre » plein |
+| › Zones                  | liste 2 × 12        | puces continent et tri ; carte par zone : nom, niveaux, état, %, barre fine ; liseré bleu « ici », ambre à 100 % ; jamais visitée estompée, sans barre |
+| › Zone                   | carte + onglets     | carte de progression (grand %, barre et paliers, coffre, liseré ambre si coffre) ; flèches de zone à gauche du [×] ; onglets soulignés (Quêtes estompé sans liste) et « Suivre à l'écran » à droite ; listes pleine largeur ; fiches du bestiaire 2 × 6 (portrait 3D, rang en étiquette et liseré, tampon losange plein si abattue, étoile et fond doré pour une brillante) à côté de l'aperçu ; pagination en bas |
+| › Jour                   | deux colonnes       | missions en cartes (liseré ambre, vert si faite, « Changer » au trait) ; carte des auberges en losanges ; garde-manger en tuiles |
+| › Collection             | grille 5 × 5        | puces des sortes ; objet porté : filet et liseré ambre ; pas encore gagné : verrou en pointillés avec sa condition (« Palier 2 », « 50 brillantes ») ; aperçu à droite |
+| › Souvenirs              | cartes de liste     | losange ambre plein si photo, date à droite, lieu et photo dessous |
+| Coffre de zone           | dialogue 480        | tuiles sur deux colonnes (sorte en étiquette, nom), hauteur au nombre d'objets, « Plus tard » dans le pied ; révélation une à une inchangée |
+| Photos souvenirs         | dialogue 420        | Oui (plein) / Non à droite, Plus tard à gauche ; [×] = plus tard ; repli sur la fenêtre du jeu sans les briques |
+| Compagnon à l'écran      | cadre discret       | cadre et fond gagnés inchangés ; plaque du nom (F_LABEL) et de l'humeur (MUTED clair) |
+| Bulle, tutoriel          | bulle 220           | « Passer » au trait, « Suivant » plein, sous le texte |
+| Fiche au survol          | bandeau 220         | nom F_TITLE, stade et humeur, envies en barres fines avec valeur, filet, aide pâle ; hauteur au contenu |
+| Garde-manger (Maj+clic)  | bandeau             | titre en capitales, cases 34 au filet EDGE (ambre au survol), infobulle du thème |
+| Nouveau tampon           | bandeau 280         | losange ambre, « NOUVEAU TAMPON · SORTE », nom en titre |
+| Bloc « Carnet »          | bandeau (vedette)   | objectif en vedette en bandeau à liseré ambre, les suivants en lignes fines |
+
+Aperçus : `qc-journal-creature|zones|zone|bestiary|day|collection|memories`,
+`qc-companion`, `qc-companion-hover`, `qc-tutorial`, `qc-pantry`, `qc-chest`,
+`qc-notify`, `qc-tracker`, `qc-photo`, `qc-tooltip`.
+
 ## Règles
 
 - Aucune couleur, police ou taille en dur dans un module : jetons et briques
