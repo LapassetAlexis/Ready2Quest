@@ -448,6 +448,10 @@ local function Kill(self, guid, entry, source)
 	local stats = ns.bestiaryStats
 	stats.kills = stats.kills + 1
 	if source == "xp" then stats.xpKills = stats.xpKills + 1 end
+	-- une mort comptée, quelle que soit sa source : les brillantes et le carnet
+	-- s'y accrochent (sur Forever, le journal de combat peut rester muet)
+	local ok, err = pcall(self.BestiaryOnKill, self, guid, entry, source or "log")
+	if not ok and self.RecordError then self:RecordError("bestiary:onkill", err) end
 	local book = self:BestiaryData()
 	local zone = book[entry.zoneID]
 	local species = zone and zone[entry.npcID]
@@ -464,6 +468,12 @@ local function Kill(self, guid, entry, source)
 	local before = tonumber(species.killed) or 0
 	species.killed = before + 1
 	if before == 0 then Changed() end
+end
+
+-- Point d'accroche : une victime vient d'être comptée (journal de combat ou
+-- message d'XP). Le carnet tamponne le rare ; Shiny.lua l'enveloppe.
+function ns:BestiaryOnKill(guid, entry, source)
+	if self.JournalRareKilled then self:JournalRareKilled(guid) end
 end
 
 function ns:BestiaryCombat(subevent, sourceGUID, sourceFlags, destGUID, destFlags)
@@ -562,6 +572,15 @@ local HANDLERS = {
 		if not next(ns.bestiaryUnits) and rawget(ns, "ZONE_CREATURES") == nil then return end
 		ns:BestiaryCombat(CombatArgs(...))
 	end,
+	-- moteur 12.0 (Forever) : journal de combat fermé, ces deux-là le remplacent
+	PARTY_KILL = function(attacker, target)
+		target = ns.Plain(target)
+		if target then ns:BestiaryCombat("PARTY_KILL", ns.Plain(attacker), ns.GroupFlags(attacker), target) end
+	end,
+	UNIT_DIED = function(guid)
+		guid = ns.Plain(guid)
+		if guid then ns:BestiaryCombat("UNIT_DIED", nil, nil, guid) end
+	end,
 }
 
 -- Une victime annoncée par le message d'XP : la cible, si elle est morte
@@ -587,16 +606,14 @@ do
 	function ns:DiagExtra(...)
 		if previous then previous(self, ...) end
 		local st = ns.bestiaryStats
-		self:Print(string.format("  bestiaire : journal de combat %d, coups %d, PARTY_KILL %d, UNIT_DIED %d, victimes comptées %d (dont %d par l'XP)",
+		self:Print(string.format("  bestiaire : %s, journal de combat %d, coups %d, PARTY_KILL %d, UNIT_DIED %d, victimes comptées %d (dont %d par l'XP)",
+			st.combatLog and "journal de combat" or "PARTY_KILL/UNIT_DIED",
 			st.events, st.hits, st.partyKills, st.died, st.kills, st.xpKills))
 	end
 end
 
 local eventFrame = CreateFrame("Frame")
-for event in pairs(HANDLERS) do
-	-- un événement inconnu du client (plaques de nom) ne bloque pas les autres
-	pcall(eventFrame.RegisterEvent, eventFrame, event)
-end
+ns.bestiaryStats.combatLog = ns.RegisterHandlers(eventFrame, HANDLERS)
 eventFrame:SetScript("OnEvent", function(_, event, ...)
 	local ok, err = pcall(HANDLERS[event], ...)
 	if not ok and ns.RecordError then ns:RecordError("bestiary:" .. tostring(event), err) end

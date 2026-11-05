@@ -192,6 +192,9 @@ _G.GetBuildInfo = function()
 	return b.version, b.build, b.date, b.toc
 end
 _G.GetTime = function() return Mock.now end
+-- journal de combat ouvert par défaut (les modules qui le testent remplacent
+-- la fonction) ; le cas « fermé » (moteur 12.0) est testé à part
+_G.CombatLogGetCurrentEventInfo = function() return nil end
 _G.time = function() return math.floor(Mock.now) end
 _G.print = function(...)
 	local parts = {}

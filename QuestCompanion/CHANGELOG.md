@@ -1,5 +1,15 @@
 # QuestCompanion
 
+## 1.2.1
+
+- **WoW Forever : victimes, rares et brillantes enfin comptés.** Comme le moteur récent de WoW (12.0), Forever ferme son journal de combat aux addons : le bestiaire n'en recevait rien (`/qc diag` le montrait : « journal de combat 0 »). QuestCompanion ne s'y abonne plus quand il est fermé et suit à la place les deux événements que le jeu garde ouverts : la mort d'un monstre tué par toi ou ton groupe, et la mort d'une créature proche. S'y ajoute le message d'expérience, qui comptait déjà les victimes depuis la 1.2.0. Maintenant :
+  - une **brillante abattue** est bien comptée (avant, sur Forever, jamais) ;
+  - un **rare tué** te donne son tampon dans le carnet ;
+  - la créature réagit aussi aux victimes de ton groupe.
+- `/qc diag` dit quelle source le bestiaire écoute, et la nouvelle sonde `combatLog` dit si le journal de combat est ouvert.
+
+*English:* WoW Forever closes the combat log to addons, like the modern engine (12.0). QuestCompanion no longer registers it when closed and uses the PARTY_KILL and UNIT_DIED events plus the experience message instead: shinies killed and rares killed are now counted (rare stamps in the journal), and group kills count too. /qc diag shows the kill source and a new combatLog probe.
+
 ## 1.2.0
 
 - **WoW Forever seulement** : Classic Era n'est plus pris en charge. Le `.toc` ne déclare plus que Forever, et les tables de zone d'Era (créatures, quêtes, récolte) ne sont plus livrées : le zip est plus léger. Les versions déjà publiées pour Era restent téléchargeables.
