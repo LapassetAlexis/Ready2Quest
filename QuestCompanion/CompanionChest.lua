@@ -104,14 +104,18 @@ local function TierOfLevel(level)
 	return 3
 end
 
--- Tranche de niveaux d'une zone : la table ci-dessus, sinon calculée à partir
--- de ses créatures préremplies (ZoneCreatures_<client>.lua : zones propres à
--- Forever, Reflet-de-Lune…) : les normales seulement, sans les extrêmes
--- (un dixième de chaque côté). nil si la zone n'a ni l'un ni l'autre.
+-- Tranche de niveaux d'une zone (zoneID = uiMapID, ns:JournalZone) : celle
+-- du jeu (C_Map.GetMapLevels, socle ns:MapLevelRange) quand il la donne, sinon
+-- la table ci-dessus, sinon calculée à partir de ses créatures préremplies
+-- (ZoneCreatures_<client>.lua : zones propres à Forever, Reflet-de-Lune…) :
+-- les normales seulement, sans les extrêmes (un dixième de chaque côté). nil
+-- si la zone n'a rien de tout cela.
 local computedLevels = {}
 function ns:ZoneLevelRange(zoneID)
 	zoneID = tonumber(zoneID)
 	if not zoneID then return nil end
+	local live = self.MapLevelRange and self:MapLevelRange(zoneID)
+	if live then return live end
 	if ZONE_LEVELS[zoneID] then return ZONE_LEVELS[zoneID] end
 	if computedLevels[zoneID] ~= nil then return computedLevels[zoneID] or nil end
 	local creatures = type(ns.ZONE_CREATURES) == "table" and ns.ZONE_CREATURES[zoneID]

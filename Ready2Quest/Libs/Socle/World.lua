@@ -2,13 +2,14 @@
 --
 -- Ce dont Ready2Quest et QuestCompanion ont besoin tous les deux pour savoir
 -- où est le joueur et ce qui lui arrive, sans dépendre l'un de l'autre :
---   * carte : ns:CurrentMap, MapInfo, MapChain, CurrentSubZone, InInstance ;
+--   * carte : ns:CurrentMap, MapInfo, MapChain, MapLevelRange, CurrentSubZone,
+--     InInstance ;
 --   * lieux connus (Hubs.lua) : ns:HubIndex, PlayerFaction, KnownHub ;
 --   * lieux repérés par leurs PNJ de service (Places.lua) : ns:KnownPlace,
 --     MapHasPlaces ;
 --   * camp de Forever : ns:AtCamp ;
 --   * donjons (DungeonData.lua) : ns:IsForeverClient, DungeonIndex,
---     DetectDungeon, DungeonName, DungeonRange ;
+--     DetectDungeon, DungeonName, DungeonRange (DungeonLfgRange d'abord) ;
 --   * auras : ns.AuraByIndex ;
 --   * consommables : ns.ConsumableKind (« food », « combat ») ;
 --   * messages du jeu : ns:ParseCombatXP (gain d'XP), ns:ParseSelfLoot (butin).
@@ -52,6 +53,25 @@ function ns:MapChain(mapID)
 	return chain
 end
 
+-- Tranche de niveaux d'une carte selon le jeu (C_Map.GetMapLevels(uiMapID) :
+-- playerMinLevel, playerMaxLevel, …). { bas, haut }, ou nil si l'API manque,
+-- échoue ou rend des valeurs vides (nil, 0, secrètes, incohérentes) : les
+-- appelants gardent alors leurs tables. Gardée en cache par carte.
+local mapLevels = {}
+ns.mapLevelCache = mapLevels
+function ns:MapLevelRange(mapID)
+	mapID = tonumber(mapID)
+	if not mapID then return nil end
+	if mapLevels[mapID] ~= nil then return mapLevels[mapID] or nil end
+	local api = rawget(_G, "C_Map")
+	if type(api) ~= "table" or type(api.GetMapLevels) ~= "function" then return nil end
+	local ok, low, high = pcall(api.GetMapLevels, mapID)
+	low, high = tonumber(ok and ns.Plain(low) or nil), tonumber(ok and ns.Plain(high) or nil)
+	local range = false
+	if low and high and low >= 1 and high >= low then range = { low, high } end
+	mapLevels[mapID] = range
+	return range or nil
+end
 
 -- Sous-zone courante : un village (Comté-de-l'Or, Long-guet…) n'a pas
 -- de mapID propre, c'est une sous-zone de la carte de zone.
@@ -263,7 +283,101 @@ function ns:DungeonName(entry, instanceName)
 	return instanceName or AreaName(entry.area) or entry.name or "?"
 end
 
+-- Niveaux recommandés par le jeu (GetLFGDungeonInfo, outil de recherche de
+-- groupe). Retours utiles (warcraft.wiki.gg, API_GetLFGDungeonInfo) :
+-- 1 nom, 2 typeID (1 = donjon), 4/5 minLevel/maxLevel (portail), 7/8
+-- minRecLevel/maxRecLevel (recommandés), 12 difficulty (normal seulement), 15 isHoliday, 18 isTimeWalker,
+-- 22 lfgMapID (mapID d'instance, depuis 8.3.0). Une seule passe, paresseuse et
+-- bornée (ids 1..LFG_SCAN_MAX) : chaque donjon de DungeonData est relié par son
+-- mapID d'instance, ou à défaut (donjons sans map) par son nom traduit. Les
+-- ailes d'un même donjon (Monastère, Hache-Tripes…) partagent le mapID : leur
+-- union. Une tranche plus large que LFG_MAX_SPAN niveaux (donjon « à
+-- l'échelle » du moteur récent) ou au-delà du niveau maximum est écartée :
+-- DungeonData (fo) reste alors la référence.
+local LFG_SCAN_MAX, LFG_MAX_SPAN, LFG_RETRY = 3000, 20, 60
+local lfg = { ranges = nil, at = nil }
+ns.lfgDungeonCache = lfg
+
+local function LevelCap()
+	for _, name in ipairs({ "GetMaxLevelForPlayerExpansion", "GetMaxPlayerLevel" }) do
+		local fn = rawget(_G, name)
+		if type(fn) == "function" then
+			local ok, cap = pcall(fn)
+			cap = ok and tonumber(ns.Plain(cap)) or nil
+			if cap and cap > 0 then return cap end
+		end
+	end
+	return tonumber(rawget(_G, "MAX_PLAYER_LEVEL")) or nil
+end
+
+local function LfgLevels(minLevel, maxLevel, minRec, maxRec)
+	for _, pair in ipairs({ { minRec, maxRec }, { minLevel, maxLevel } }) do
+		local low, high = tonumber(ns.Plain(pair[1])), tonumber(ns.Plain(pair[2]))
+		if low and high and low >= 1 and high >= low then return low, high end
+	end
+	return nil
+end
+
+local function ScanLfg(self)
+	local fn = rawget(_G, "GetLFGDungeonInfo")
+	if type(fn) ~= "function" then return nil end
+	local byMap, byName = {}, {}
+	for key, entry in pairs(self.DUNGEONS or {}) do
+		if entry.map then byMap[entry.map] = key
+		else
+			for _, name in ipairs({ AreaName(entry.area) or false, entry.name or false }) do
+				local n = name and Normalize(name)
+				if n then byName[n] = key end
+			end
+		end
+	end
+	local found, cap = {}, LevelCap()
+	for id = 1, LFG_SCAN_MAX do
+		local ok, name, typeID, _, minLevel, maxLevel, _, minRec, maxRec, _, _, _, difficulty, _, _,
+			isHoliday, _, _, isTimeWalker, _, _, _, lfgMapID = pcall(fn, id)
+		difficulty = ok and tonumber(ns.Plain(difficulty)) or nil
+		if ok and ns.Plain(typeID) == 1 and isHoliday ~= true and isTimeWalker ~= true
+			and (difficulty == nil or difficulty <= 1) then
+			local mapID = tonumber(ns.Plain(lfgMapID))
+			local key = (mapID and mapID > 0 and byMap[mapID])
+				or byName[Normalize(ns.Plain(name)) or ""]
+			local low, high = LfgLevels(minLevel, maxLevel, minRec, maxRec)
+			if key and low then
+				local range = found[key]
+				if range then low, high = math.min(low, range[1]), math.max(high, range[2]) end
+				found[key] = { low, high }
+			end
+		end
+	end
+	for key, range in pairs(found) do
+		if range[2] - range[1] > LFG_MAX_SPAN or (cap and range[2] > cap) then found[key] = nil end
+	end
+	return found
+end
+
+-- Tranche du jeu pour ce donjon, ou nil. Rien trouvé du tout (données de
+-- recherche de groupe pas encore là ?) : nouvel essai au plus toutes les minutes.
+function ns:DungeonLfgRange(entry)
+	if type(entry) ~= "table" or type(rawget(_G, "GetLFGDungeonInfo")) ~= "function" then return nil end
+	local now = (ns.Now and ns.Now()) or 0
+	if not lfg.ranges or (next(lfg.ranges) == nil and now - (lfg.at or 0) >= LFG_RETRY) then
+		local ok, ranges = pcall(ScanLfg, self)
+		lfg.ranges, lfg.at = (ok and type(ranges) == "table") and ranges or {}, now
+		if not ok and self.RecordError then self:RecordError("dungeon:lfg", ranges) end
+	end
+	local key = entry.key
+	if not key then
+		for k, e in pairs(self.DUNGEONS or {}) do if e == entry then key = k end end
+	end
+	local range = key and lfg.ranges[key]
+	if range then return range[1], range[2] end
+	return nil
+end
+
 function ns:DungeonRange(entry)
+	if type(entry) ~= "table" then return nil end
+	local low, high = self:DungeonLfgRange(entry)
+	if low then return low, high end
 	local range = entry.fo
 	if type(range) ~= "table" then return nil end
 	return range[1], range[2]
@@ -358,10 +472,8 @@ local function ItemSpellName(itemID)
 end
 
 local function ItemName(itemID)
-	local fn = (C_Item and C_Item.GetItemInfo) or rawget(_G, "GetItemInfo")
-	if type(fn) ~= "function" then return nil end
-	local ok, name = pcall(fn, itemID)
-	if ok and type(name) == "string" then return name end
+	local name = ns.ItemInfo(itemID)
+	if type(name) == "string" then return name end
 	return nil
 end
 

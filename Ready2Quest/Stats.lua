@@ -311,8 +311,8 @@ end
 
 ns.PascalCase = PascalCase
 
--- Texture de l'objet équipé dans l'emplacement : d'abord le lien, puis
--- GetItemInfo (dernier retour), enfin l'API d'emplacement. Nil si aucune ne
+-- Texture de l'objet équipé dans l'emplacement : d'abord le lien, par
+-- ns.ItemInfo (10e retour), enfin l'API d'emplacement. Nil si aucune ne
 -- répond : l'icône reste alors simplement vide.
 local function SlotTexture(link, slot, previousLink)
 	-- Retirer un item doit quand même montrer SON icône : c'est le repère
@@ -321,9 +321,9 @@ local function SlotTexture(link, slot, previousLink)
 	local candidates = { link }
 	if type(previousLink) == "string" then candidates[#candidates + 1] = previousLink end
 	for _, candidate in ipairs(candidates) do
-		if type(candidate) == "string" and type(GetItemInfo) == "function" then
-			local ok, _, _, _, _, _, _, _, _, _, texture = pcall(GetItemInfo, candidate)
-			if ok and texture then return texture end
+		if type(candidate) == "string" then
+			local texture = select(10, ns.ItemInfo(candidate))
+			if texture then return texture end
 		end
 	end
 	if slot and type(GetInventoryItemTexture) == "function" then

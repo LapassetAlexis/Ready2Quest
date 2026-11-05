@@ -172,10 +172,8 @@ local function ModuleOn()
 end
 
 local function ItemInfo(item)
-	local fn = (C_Item and C_Item.GetItemInfo) or Global("GetItemInfo")
-	if type(fn) ~= "function" or item == nil then return nil end
-	local r = { pcall(fn, item) }
-	if not r[1] then return nil end
+	if item == nil then return nil end
+	local r = { true, ns.ItemInfo(item) }
 	-- name, link, quality, level, minLevel, type, subType, maxStack, equipLoc, texture, sellPrice
 	return { name = r[2], link = r[3], quality = r[4], maxStack = r[9], sellPrice = r[12] }
 end

@@ -2070,7 +2070,7 @@ end
 
 local LINK_COLORS = { ["0070dd"] = 3, ["a335ee"] = 4, ["ff8000"] = 5 }
 local function LinkQuality(link)
-	local _, _, quality = Call(rawget(_G, "GetItemInfo"), link)
+	local _, _, quality = ns.ItemInfo(link)
 	if type(quality) == "number" then return quality end
 	local iq = link:match("|cnIQ(%d+):")
 	if iq then return tonumber(iq) end

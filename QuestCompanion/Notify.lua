@@ -173,7 +173,7 @@ do
 			local a, b = record(self, itemID, count, zoneID, ...)
 			if zoneID and (before or 0) == 0 and data and type(data[itemID]) == "table" then
 				local ok, err = pcall(function()
-					local name = Call(G("GetItemInfo"), itemID)
+					local name = ns.ItemInfo(itemID)
 					if not name then
 						for _, entry in ipairs((self.GatheringZoneBand and self:GatheringZoneBand(zoneID)) or {}) do
 							if entry.itemID == itemID then name = entry.name end

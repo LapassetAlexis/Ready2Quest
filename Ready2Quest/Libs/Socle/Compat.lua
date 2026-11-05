@@ -26,6 +26,63 @@ function ns.Plain(value)
 	return value
 end
 
+-- Fiche d'un objet : mêmes retours que GetItemInfo (tous, sans troncature :
+-- certains appelants les captent en table), C_Item.GetItemInfo d'abord, la
+-- globale en repli. Objet pas encore en cache client : nil, et on demande
+-- son chargement (C_Item.RequestLoadItemDataByID) ; avec onLoad, l'appel
+-- est rappelé une fois l'objet chargé (Item:CreateFromItemID, une seule
+-- attente par objet et par fonction). Sans ces API : nil, comme avant.
+local unpack = unpack or table.unpack   -- Lua 5.1 (client) / 5.4+
+local function Pack(...) return { n = select("#", ...), ... } end
+
+local function ItemIDOf(item)
+	if type(item) == "number" then return item end
+	if type(item) == "string" then return tonumber(item) or tonumber(item:match("item:(%d+)")) end
+	return nil
+end
+
+local itemWaits = {}   -- itemID -> { [onLoad] = true } : attentes en cours
+ns.itemWaits = itemWaits
+
+local function RequestItem(item, onLoad)
+	local itemID = ItemIDOf(item)
+	if not itemID or itemID <= 0 then return end
+	local api = rawget(_G, "C_Item")
+	if type(api) == "table" and type(api.RequestLoadItemDataByID) == "function" then
+		pcall(api.RequestLoadItemDataByID, itemID)
+	end
+	if type(onLoad) ~= "function" then return end
+	local waits = itemWaits[itemID]
+	if waits then waits[onLoad] = true; return end
+	local mixin = rawget(_G, "Item")
+	if type(mixin) ~= "table" or type(mixin.CreateFromItemID) ~= "function" then return end
+	local ok, object = pcall(mixin.CreateFromItemID, mixin, itemID)
+	if not ok or type(object) ~= "table" or type(object.ContinueOnItemLoad) ~= "function" then return end
+	waits = { [onLoad] = true }
+	itemWaits[itemID] = waits
+	local queued = pcall(object.ContinueOnItemLoad, object, function()
+		itemWaits[itemID] = nil
+		for fn in pairs(waits) do
+			local done, err = pcall(fn, item)
+			if not done and ns.RecordError then ns:RecordError("item:load", err) end
+		end
+	end)
+	if not queued then itemWaits[itemID] = nil end
+end
+
+function ns.ItemInfo(item, onLoad)
+	if item == nil then return nil end
+	local api = rawget(_G, "C_Item")
+	local fn = (type(api) == "table" and type(api.GetItemInfo) == "function" and api.GetItemInfo)
+		or rawget(_G, "GetItemInfo")
+	if type(fn) ~= "function" then return nil end
+	local r = Pack(pcall(fn, item))
+	if not r[1] then return nil end
+	if r[2] ~= nil then return unpack(r, 2, r.n) end
+	RequestItem(item, onLoad)
+	return nil
+end
+
 -- Infobulles : une ligne ajoutée à GameTooltip au survol d'une unité
 -- (kind = "Unit") ou d'un objet ("Item"). Moteur récent :
 -- TooltipDataProcessor.AddTooltipPostCall, fn(tooltip, data) ; sinon

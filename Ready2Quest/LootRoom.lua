@@ -129,10 +129,9 @@ local function ItemIDFrom(link)
 end
 -- GetItemInfo rend 11 valeurs (le prix de vente en dernier) : on les garde toutes
 local function ItemData(item)
-	local fn = (rawget(_G, "C_Item") and C_Item.GetItemInfo) or Global("GetItemInfo")
-	if type(fn) ~= "function" or item == nil then return nil end
-	local r = { pcall(fn, item) }
-	if not r[1] or not r[2] then return nil end
+	if item == nil then return nil end
+	local r = { true, ns.ItemInfo(item) }
+	if not r[2] then return nil end
 	return { name = r[2], link = r[3], quality = r[4], maxStack = r[9], texture = r[11], sellPrice = r[12] }
 end
 local function Money(value)

@@ -94,12 +94,8 @@ end
 -- Nom affiché : celui du client s'il connaît l'objet, sinon le repli
 function ns:GatheringItemName(itemID)
 	local entry = Items()[itemID]
-	local itemAPI = rawget(_G, "C_Item")
-	local fn = (type(itemAPI) == "table" and itemAPI.GetItemInfo) or rawget(_G, "GetItemInfo")
-	if type(fn) == "function" then
-		local ok, name = pcall(fn, itemID)
-		if ok and type(name) == "string" and name ~= "" then return name end
-	end
+	local name = ns.ItemInfo(itemID)
+	if type(name) == "string" and name ~= "" then return name end
 	if not entry then return tostring(itemID) end
 	return (IsFrench() and entry.fr or entry.en) or entry.en or entry.fr or tostring(itemID)
 end

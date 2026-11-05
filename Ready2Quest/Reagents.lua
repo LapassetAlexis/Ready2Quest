@@ -37,11 +37,13 @@ local function BagCounts()
 end
 ns.BagCounts = BagCounts
 
+-- Objet pas encore en cache : « item:ID » cette fois, et la liste est
+-- recalculée au prochain affichage une fois l'objet chargé.
+local function OnItemLoaded() cache.entries, cache.at = nil, 0 end
+
 local function ItemName(itemID)
-	if C_Item and type(C_Item.GetItemInfo) == "function" then
-		local ok, name = pcall(C_Item.GetItemInfo, itemID)
-		if ok and type(name) == "string" then return name end
-	end
+	local name = ns.ItemInfo(itemID, OnItemLoaded)
+	if type(name) == "string" then return name end
 	return "item:" .. tostring(itemID)
 end
 

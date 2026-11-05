@@ -197,12 +197,12 @@ end
 -- distinguer « tu reçois » de « Machin reçoit » dans toutes les langues. Les
 -- formes « multiple » passent avant : « %s. » avalerait aussi « [X]x5. ».
 
--- Couleur du lien -> qualité, si GetItemInfo n'a pas encore l'objet en cache
+-- Couleur du lien -> qualité, si ns.ItemInfo n'a pas encore l'objet en cache
 local LINK_COLORS = { ["1eff00"] = 2, ["0070dd"] = 3, ["a335ee"] = 4, ["ff8000"] = 5, ["e6cc80"] = 6,
 	["9d9d9d"] = 0, ["ffffff"] = 1 }
 
 local function LinkQuality(link)
-	local _, _, quality = Call("GetItemInfo", link)
+	local _, _, quality = ns.ItemInfo(link)
 	if type(quality) == "number" then return quality end
 	-- clients récents : |cnIQ2:...  ; anciens : |cff1eff00...
 	local iq = link:match("|cnIQ(%d+):")

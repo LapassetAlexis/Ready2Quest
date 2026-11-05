@@ -257,6 +257,15 @@ function ns:JournalActivityRows(zoneID, activity)
 			end
 		end
 	end
+	-- Quêtes proposées sur la carte par le jeu, absentes de la table (API
+	-- récente, ZoneQuests.lua) : à part, hors du compte faites / total
+	if activity == "quests" and self.ZoneLiveQuests then
+		local ok, live = pcall(self.ZoneLiveQuests, self, zoneID)
+		if ok and type(live) == "table" and #live > 0 then
+			rows[#rows + 1] = { header = true, live = true, name = self:F("ZQ_LIVE_HEAD", #live) }
+			for _, item in ipairs(live) do rows[#rows + 1] = item end
+		end
+	end
 	return rows
 end
 

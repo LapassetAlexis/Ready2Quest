@@ -210,8 +210,7 @@ end
 local function ItemInfo(link)
 	if not link then return nil end
 	local c = rawget(_G, "C_Item")
-	local getInfo = (type(c) == "table" and c.GetItemInfo) or rawget(_G, "GetItemInfo")
-	local name, _, quality, itemLevel, minLevel, _, _, _, equipLoc, _, sellPrice, classID, subClassID = Call(getInfo, link)
+	local name, _, quality, itemLevel, minLevel, _, _, _, equipLoc, _, sellPrice, classID, subClassID = ns.ItemInfo(link)
 	if not name then return nil end
 	if classID == nil then
 		-- certains clients ne renvoient pas la classe : GetItemInfoInstant la donne

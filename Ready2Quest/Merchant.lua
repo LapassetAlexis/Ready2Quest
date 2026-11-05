@@ -95,11 +95,8 @@ end
 
 local function SellPrice(info)
 	if info.hasNoValue then return 0 end
-	local getInfo = (C_Item and C_Item.GetItemInfo) or rawget(_G, "GetItemInfo")
-	if type(getInfo) ~= "function" then return 0 end
-	local ok, _, _, _, _, _, _, _, _, _, _, price = pcall(getInfo, info.hyperlink or info.itemID)
-	if ok then return tonumber(price) or 0 end
-	return 0
+	local price = select(11, ns.ItemInfo(info.hyperlink or info.itemID))
+	return tonumber(price) or 0
 end
 
 local function UseItem(bag, slot)

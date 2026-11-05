@@ -219,11 +219,8 @@ local function ItemCount(itemID)
 end
 
 local function ItemName(entry)
-	local fn = (C_Item and C_Item.GetItemInfo) or rawget(_G, "GetItemInfo")
-	if type(fn) == "function" then
-		local ok, name = pcall(fn, entry.item)
-		if ok and type(name) == "string" and name ~= "" then return name end
-	end
+	local name = ns.ItemInfo(entry.item)
+	if type(name) == "string" and name ~= "" then return name end
 	return entry.name
 end
 
