@@ -95,6 +95,46 @@ Les jetons existants restent (`GOLD` = ambre #e8a54b, `BLUE` #5b8fd6,
 - Bouton plein ambre (`primary`) : encre sombre SANS ombre. Bouton bleu
   (`adventure`) : texte blanc.
 
+## Fenêtre de réglages (`Libs/Socle/Options.lua`)
+
+Construite avec les briques ci-dessus ; les modules déclarent leurs pages avec
+`ns.AddOptionPage`, comme avant.
+
+- Navigation : une entrée par page de premier niveau (sans `parent`), groupes
+  `group` en capitales ambre, interrupteur du module si la page a `power`
+  (clé de réglage) ou `modules`. Version et client en bas.
+- En-tête : titre de la page de premier niveau ; phrase `<titre>_SUB` de
+  l'onglet choisi, sinon de la page.
+- Onglets : les sous-pages (`parent = <id>`), dans l'ordre de déclaration ;
+  `<titre>_TAB` donne un nom d'onglet plus court. Pas de barre d'onglets pour
+  une page sans sous-page.
+- Aperçu : `preview = function(ns, conteneur)` sur une page (ou sa page
+  parente, pour tous ses onglets), bandeau de 88 px sous les onglets.
+  `conteneur.Refresh(conteneur, ns)`, s'il est posé, suit `RefreshOptions`.
+- Cartes : `bool` -> interrupteur ; `number` -> curseur + case de valeur
+  (`min`, `max`, `step`, `suffix`, `display`) ; `action` -> bouton
+  (`button` = clé du texte, « Lancer » par défaut), ou liste déroulante si la
+  ligne a `choices()` -> `{ value, label, disabled, hint }`, `current()` et
+  `choose(valeur)` (choix verrouillés grisés avec leur condition) ;
+  `describe(valeur)` -> phrase sous le libellé, carte pleine largeur qui
+  grandit avec la phrase ; `tooltip(valeur)` -> infobulle ; `note` -> bloc de
+  texte pleine largeur (`text` = clé ou fonction relue à chaque
+  rafraîchissement, `small`) ; `header` -> section. `modules` -> une carte
+  interrupteur par contrôle. Une carte dont le libellé ne tient pas à gauche
+  de son contrôle prend les deux colonnes ; au-delà, libellé tronqué et
+  entier dans l'infobulle. `card:SetLocked(texte)` remplace le contrôle par un
+  verrou (ornements pas encore gagnés).
+- Listes (`ns.OPTION_LISTS`) : bloc pleine largeur, lignes alternées, molette
+  et « ^ / v » ; `clear = { label, run }` et `hint` sous la liste.
+- Défilement : la page s'arrête sur le haut d'un élément ; un élément qui ne
+  tient pas entier est masqué (pas de rognage). Molette sur la zone de droite.
+- Recherche : les cartes de toutes les pages dont le libellé contient tous les
+  mots tapés (sans accents ni casse), regroupées par page ; la navigation
+  compte les résultats. Choisir une page, vider le champ ou fermer rend la vue
+  normale.
+- Pied : `ns.OPTIONS_MAIN` et « Réinitialiser » en contour à gauche,
+  « Terminé » en accent à droite. Échap et [×] ferment.
+
 ## Règles
 
 - Aucune couleur, police ou taille en dur dans un module : jetons et briques
