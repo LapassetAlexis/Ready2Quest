@@ -6,9 +6,10 @@
   - une **brillante abattue** est bien comptée (avant, sur Forever, jamais) ;
   - un **rare tué** te donne son tampon dans le carnet ;
   - la créature réagit aussi aux victimes de ton groupe.
+- **Boutons ambre lisibles** (Fermer et Ouvrir le coffre du carnet, Suivant du tutoriel) : l'ombre noire de la police du jeu bavait sous le texte sombre. Elle est retirée sur ces boutons.
 - `/qc diag` dit quelle source le bestiaire écoute, et la nouvelle sonde `combatLog` dit si le journal de combat est ouvert.
 
-*English:* WoW Forever closes the combat log to addons, like the modern engine (12.0). QuestCompanion no longer registers it when closed and uses the PARTY_KILL and UNIT_DIED events plus the experience message instead: shinies killed and rares killed are now counted (rare stamps in the journal), and group kills count too. /qc diag shows the kill source and a new combatLog probe.
+*English:* WoW Forever closes the combat log to addons, like the modern engine (12.0). QuestCompanion no longer registers it when closed and uses the PARTY_KILL and UNIT_DIED events plus the experience message instead: shinies killed and rares killed are now counted (rare stamps in the journal), and group kills count too. /qc diag shows the kill source and a new combatLog probe. Amber buttons (Close, Open chest, Next) are readable again: the game font's black shadow no longer smears their dark label.
 
 ## 1.2.0
 

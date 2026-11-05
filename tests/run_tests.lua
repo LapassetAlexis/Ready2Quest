@@ -1370,6 +1370,12 @@ do
 	Check("pied : bouton centré", point == "BOTTOM", point)
 	local c = adv.text.textColor or {}
 	Check("pied : texte clair, lisible sur le bleu", (c[1] or 0) > 0.9 and (c[2] or 0) > 0.9 and (c[3] or 0) > 0.9)
+	-- boutons ambre pleins (Fermer des réglages…) : encre sombre sans ombre noire
+	local close = NS:EnsureOptions().closeButton
+	local ink, off, shadow = close.text.textColor or {}, close.text.shadowOffset or {}, close.text.shadow or {}
+	Check("boutons ambre : texte sombre", close.style == "primary" and (ink[1] or 1) < 0.2 and (ink[3] or 1) < 0.2)
+	Check("boutons ambre : sans l'ombre noire de la police (illisible)", off[1] == 0 and off[2] == 0
+		and (shadow[4] or 1) == 0)
 	-- dernier conseil (bas de sa ligne, ~12) au-dessus du haut du bouton : au moins 8 d'écart
 	for _, rows in ipairs({ 6, 13 }) do
 		NS:LayoutWindow(win, rows, false)
