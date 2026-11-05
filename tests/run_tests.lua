@@ -1013,10 +1013,17 @@ Check("/sd diag s'exécute", Mock:Output():find("Diagnostic") ~= nil)
 do
 	-- sondes des points encore incertains sur Forever (affichées par /diag)
 	local savedBook, savedAura = rawget(_G, "C_SpellBook"), rawget(_G, "UnitAura")
+	local savedEnum = rawget(_G, "Enum")
 	_G.C_SpellBook = { GetSpellBookItemInfo = function() end }
 	_G.UnitAura = nil
 	NS:DetectCapabilities()
+	Check("/diag : livre de sorts incomplet (sans GetNumSpellBookSkillLines) : spellbookModern faux",
+		NS.Caps.spellbookModern == false)
+	_G.C_SpellBook.GetNumSpellBookSkillLines = function() return 0 end
+	_G.Enum = { SpellBookSpellBank = { Player = 0 } }
+	NS:DetectCapabilities()
 	Check("/diag : sonde spellbookModern", NS.Caps.spellbookModern == true)
+	_G.Enum = savedEnum
 	Check("/diag : sonde unitAuraLegacy", NS.Caps.unitAuraLegacy == false)
 	Check("/diag : sondes itemInfoGlobal et specialization", NS.Caps.itemInfoGlobal == true
 		and NS.Caps.specialization == true)

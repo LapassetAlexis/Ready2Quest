@@ -50,7 +50,11 @@ function ns:DetectCapabilities()
 	--   itemInfoGlobal  : GetItemInfo global (repli quand C_Item.GetItemInfo manque)
 	--   specialization  : GetSpecialization (sinon onglet de talents le plus fourni, Stats.lua)
 	local spellBook = rawget(_G, "C_SpellBook")
-	caps.spellbookModern = (type(spellBook) == "table" and type(spellBook.GetSpellBookItemInfo) == "function") and true or false
+	-- exactement ce dont a besoin la branche récente de SpellRanks.lua
+	local enum = rawget(_G, "Enum")
+	caps.spellbookModern = (type(spellBook) == "table" and type(spellBook.GetSpellBookItemInfo) == "function"
+		and type(spellBook.GetNumSpellBookSkillLines) == "function"
+		and type(enum) == "table" and type(enum.SpellBookSpellBank) == "table") and true or false
 	caps.unitAuraLegacy = type(rawget(_G, "UnitAura")) == "function"
 	caps.itemInfoGlobal = type(rawget(_G, "GetItemInfo")) == "function"
 	caps.specialization = type(rawget(_G, "GetSpecialization")) == "function"
