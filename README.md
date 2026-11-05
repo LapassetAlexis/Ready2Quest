@@ -1,6 +1,6 @@
 # Ready2Quest et QuestCompanion
 
-Deux addons pour **World of Warcraft Forever** et **Classic Era**, en français et en anglais. Ils fonctionnent chacun seul, et vont bien ensemble.
+Deux addons pour **World of Warcraft Forever**, en français et en anglais. Ils fonctionnent chacun seul, et vont bien ensemble.
 
 | Addon | Ce qu'il fait | Commande |
 |---|---|---|
@@ -22,7 +22,7 @@ Copie le dossier de chaque addon voulu dans `World of Warcraft/<client>/Interfac
 | `Ready2Quest/Libs/Socle/` | le **socle commun** : sauvegarde, commandes, panneau de réglages, thème, textes communs, bouton de minicarte, lecture du monde (carte, lieux, donjons) |
 | `tests/` | tests hors jeu, sur un client WoW simulé |
 | `tools/` | générateurs de données et outils de publication |
-| `data/` | notre base de données : PNJ, objets, quêtes et zones d'Era et de Forever ([docs/DONNEES.md](docs/DONNEES.md)) |
+| `data/` | notre base de données : PNJ, objets, quêtes et zones de Forever (et d'Era, dont les tables ne sont plus livrées) ([docs/DONNEES.md](docs/DONNEES.md)) |
 | `docs/` | notes techniques, guide de publication, fiches des pages CurseForge et Wago |
 
 ## Pour les développeurs
@@ -32,7 +32,7 @@ Copie le dossier de chaque addon voulu dans `World of Warcraft/<client>/Interfac
 - **Publication** sur CurseForge et Wago : tag `v*` pour Ready2Quest, `qc-v*` pour QuestCompanion. Voir [docs/PUBLIER.md](docs/PUBLIER.md).
 - [Notes techniques et historique des versions](docs/TECHNIQUE.md).
 - Zones sûres : `tools/gen_hubs.py` (lieux connus par leur sous-zone, `Libs/Socle/Hubs.lua`) et `tools/gen_places.py` (camps repérés par leurs PNJ de service, `Libs/Socle/Places.lua`), depuis `data/`. Donjons : `tools/gen_dungeons.py`.
-- **Notre base de données** (`data/`) : PNJ, objets, quêtes et zones d'Era et de Forever, importés une fois de [Questie](https://github.com/Questie/QuestieDB) puis corrigés et complétés ici. Les tables de zone de QuestCompanion en sont générées par `tools/gen_zone_data.py`. Voir [docs/DONNEES.md](docs/DONNEES.md).
+- **Notre base de données** (`data/`) : PNJ, objets, quêtes et zones de Forever (et d'Era, gardées pour les outils), importés une fois de [Questie](https://github.com/Questie/QuestieDB) puis corrigés et complétés ici. Les tables de zone de QuestCompanion en sont générées par `tools/gen_zone_data.py`. Voir [docs/DONNEES.md](docs/DONNEES.md).
 - Logos des pages et icône de QuestCompanion : `tools/gen_store_logos.py`.
 
 ## Licence

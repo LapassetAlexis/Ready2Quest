@@ -172,10 +172,8 @@ local function ModuleOn()
 end
 
 local function ItemInfo(item)
-	local fn = (C_Item and C_Item.GetItemInfo) or Global("GetItemInfo")
-	if type(fn) ~= "function" or item == nil then return nil end
-	local r = { pcall(fn, item) }
-	if not r[1] then return nil end
+	if item == nil then return nil end
+	local r = { true, ns.ItemInfo(item) }
 	-- name, link, quality, level, minLevel, type, subType, maxStack, equipLoc, texture, sellPrice
 	return { name = r[2], link = r[3], quality = r[4], maxStack = r[9], sellPrice = r[12] }
 end
@@ -252,9 +250,7 @@ local function PlayerClass()
 end
 
 -- Composants de classe (table de Checks.lua) et composants des recettes
--- suivies (C_TradeSkillUI des clients récents). Sur Era, la recette ouverte
--- dans la fenêtre de métier n'est connue que de Reagents.lua, qui ne l'expose
--- pas : on ne devine rien plutôt que d'ajouter une dépendance.
+-- suivies (C_TradeSkillUI).
 local function ProtectedItems()
 	local set = { [HEARTHSTONE] = true }
 	for _, req in ipairs((ns.CLASS_REAGENTS or {})[PlayerClass() or ""] or {}) do
@@ -476,6 +472,8 @@ function ns:BagSpaceAlert()
 	-- « en route » seulement : en zone sûre ou chez un marchand, on vend
 	if self.inSafe == true or self.merchantOpen == true then return nil end
 	if self:BagSpaceFreeSlots() > 0 then return nil end
+	-- devant un butin, « Place au butin » (LootRoom.lua) prend le relais
+	if self.LootRoomActive and self:LootRoomActive() then return nil end
 
 	local list = self:BagSpaceRebuild()
 	local candidate = self:BagSpaceCurrent()
@@ -784,6 +782,7 @@ local HANDLERS = {
 	UI_ERROR_MESSAGE = function(a, b) if ns:IsBagFullError(a, b) then ns:BagSpaceAlert() end end,
 	LOOT_OPENED      = function()
 		if ModuleOn() and ns:BagSpaceFreeSlots() == 0 and ns:BagSpaceLootBlocked() then ns:BagSpaceAlert() end
+		-- (avec « Place au butin » actif, BagSpaceAlert ne fait rien devant un butin)
 	end,
 	BAG_UPDATE_DELAYED = OnBagUpdate,
 	BAG_UPDATE         = OnBagUpdate,

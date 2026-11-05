@@ -42,7 +42,7 @@ ns.COMPANION_FX_STRINGS = { fr = FR, en = EN }
 ns.COMPANION_ANIMS.walk = ns.COMPANION_ANIMS.walk or 4
 ns.COMPANION_ANIMS.run = ns.COMPANION_ANIMS.run or 5
 ns.COMPANION_ANIMS.attack = ns.COMPANION_ANIMS.attack or 16
-ns.COMPANION_ANIM_ORDER = { "idle", "walk", "run", "attack", "cheer", "dance", "sleep" }
+ns.COMPANION_ANIM_ORDER = { "idle", "walk", "run", "attack", "talk", "cheer", "dance", "sit", "sleep" }
 ns.COMPANION_ANIM_STEP = 3
 
 -- durée, nombre de particules, couleur
@@ -290,10 +290,54 @@ local function Wrap(name, after)
 	end
 end
 
+-- ---------------------------------------------------------------------------
+-- Animations des grands moments : seulement quand le modèle sait jouer une
+-- animation (PlayerModel:SetAnimation). Sans lui (boussole de repli, client
+-- sans la méthode), rien ne change. Le retour au repos passe par l'horloge
+-- du compagnon (companionAnimUntil, Companion.lua).
+-- ---------------------------------------------------------------------------
+-- réservoir -> { animation, durée } ; les autres bulles : « talk »
+ns.COMPANION_MOMENT_ANIMS = {
+	MISSION_DONE = { "cheer", 2.5 }, MISSION_ALL = { "cheer", 2.5 },
+	SHINY_KILLED = { "dance", 3 }, TREAT_GOLDEN = { "dance", 3 }, INN_FULL = { "dance", 3 },
+	IDLE = { "sit", 8 },
+}
+ns.COMPANION_TALK_TIME = 1.5
+-- une animation en cours n'est remplacée que par une plus importante
+local MOMENT_RANK = { talk = 1, sit = 2, cheer = 3, dance = 4 }
+
+function ns:CompanionModelAnimates()
+	local frame = self.companionFrame
+	local model = frame and not frame.usesFallback and frame.model
+	return model ~= nil and model ~= false and type(model.SetAnimation) == "function"
+end
+
+-- Joue `name` pendant `duration` s, puis l'animation de l'humeur revient.
+-- Renvoie true si l'animation part.
+function ns:CompanionMoment(name, duration)
+	if not self:CompanionModelAnimates() or self.companionAnimTest then return false end
+	local frame = self.companionFrame
+	-- il dort : on ne le fait pas parler en dormant (la caresse le réveille d'abord)
+	if frame.animation == "sleep" or self:CompanionData().sleepy then return false end
+	local busy = self.companionAnimUntil and Clock() < self.companionAnimUntil
+	if busy and (MOMENT_RANK[frame.animation] or 3) > (MOMENT_RANK[name] or 0) then return false end
+	self:CompanionAnimate(name, duration)
+	return true
+end
+
 Wrap("CompanionPet", function(self) self:CompanionFx("hearts") end)
-Wrap("CompanionOnLevel", function(self) self:CompanionFx("bounce") end)
+Wrap("CompanionOnLevel", function(self)
+	self:CompanionFx("bounce")
+	self:CompanionMoment("cheer", 2.5)
+end)
 Wrap("CompanionSay", function(self, said, pool, opts)
 	if not said then return end
+	local moment = ns.COMPANION_MOMENT_ANIMS[pool]
+	if moment then
+		self:CompanionMoment(moment[1], moment[2])
+	else
+		self:CompanionMoment("talk", ns.COMPANION_TALK_TIME)
+	end
 	if pool == "ADVICE_ELITE" or pool == "ADVICE_RARE" then
 		self:CompanionFx("shake")
 		self:CompanionFx("alert")

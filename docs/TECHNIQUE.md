@@ -1,5 +1,25 @@
 # Ready2Quest — notes techniques et historique
 
+## Ready2Quest 1.27.0 — Place au butin, Rangs de sorts
+
+- **Place au butin** (`LootRoom.lua`, après `BagSpace.lua`) : `LootRoomLoot()` (objets du butin sans place ni pile à compléter, quêtes d'abord puis valeur), `LootRoomRows(cible)` (les `LOOTROOM_ROWS` premiers de `BagSpaceCandidates()`, mêmes protections, prix HV par `LootRoomAuction` : Auctionator `API.v1.GetAuctionPriceByItemLink`, sinon TSM `DBMarket`), `dearer` si la valeur dépasse celle du butin. `LootRoomDelete` : confirmation (`StaticPopup`) pour qualité ≥ 2 si `lootroomConfirm`, sinon `LootRoomDestroy` (vérifie la case, `PickupContainerItem`, `DeleteCursorItem`, puis `lootRoomPending` = case du butin, ramassée par `LootSlot` au `BAG_UPDATE_DELAYED`). `LootRoomIgnore` → `bagspaceKeep`. Déclencheurs : `LOOT_OPENED`, `UI_ERROR_MESSAGE` (sacs pleins) pendant un butin ; `LOOT_CLOSED` ferme. `/r2q place`. `BagSpaceAlert` s'efface si `LootRoomActive()`.
+- **Rangs de sorts** (`SpellRanks.lua`) : `SpellRankOf` (nom, rang lu dans le sous-texte), `SpellRankBook` (meilleur rang par nom : `C_SpellBook` + `Enum.SpellBookSpellBank.Player`, sinon onglets et `GetSpellBookItemInfo`), `SpellRankScan` (cases 1-120, `GetActionInfo`), ignorés par case dans `db.spellranksIgnore["case:sort"]`. `SpellRankUpdate` : hors combat, case inchangée, `PickupSpell` + `PlaceAction` + `ClearCursor`. `SpellRanksCheck` : icône `ShowNotice{ kind = "spells" }` et chat quand le nombre augmente, remis à la fin du combat. Check `barranks` (pas « spellranks » : id du module). `/r2q sorts`.
+- Tests `[LOOT]`, `[RANK]` (`tests/modules/lootroom.lua`).
+
+
+## QuestCompanion 1.2.0 — neuf créatures, deux caractères
+
+- **WoW Forever seulement** (QuestCompanion 1.2.0, Ready2Quest 1.26.1) : `## Interface: 16001` et `## Interface-Camelot: 16001` ; tables `*_Era.lua` retirées du `.toc` et du dépôt ; `tools/gen_zone_data.py` ne génère plus que Forever (`--flavor` par défaut) ; `data/era/` reste comme source des outils (Places, Hubs). Le code de compatibilité Era (Compat, gardes de client) est gardé, sans test de données Era. Les contenus nouveaux ne sont plus vérifiés que dans le build de Forever.
+- **Fin du support d'Era (nettoyage)** : WoW Forever tourne sur un moteur récent (`/diag` : `auramodern`, `container`, `crafting`, `questlogNamespaced` à `true` ; `craftLegacy`, `questlogLegacy`, `tradeskillLegacy` à `false`). Retirés : le chemin « recette sélectionnée » de `Reagents.lua` (`TRADE_SKILL_*`, `CRAFT_*`), la lecture du journal par `GetNumQuestLogEntries` / `GetQuestLogTitle` (`QuestLogReady`, repli de `Dungeon.lua` et d'`Expedition.lua`), les sondes `tradeskillLegacy`, `craftLegacy`, `questlogLegacy`, les gardes « Forever seulement » (donjons de Forever, module « Kit de camp » toujours chargé), les fourchettes Era de `DungeonData.lua`, le bloc `era` de `Places.lua`, `data/era/` et la gestion d'Era dans les outils (`gen_hubs.py`, `gen_places.py`, `gen_dungeons.py`, `import_client.py`, `import_questie.py`, `gen_zone_data.py`). `ns:IsForeverClient()` reste : les tables de zone générées s'en servent comme garde. Gardés : les replis d'une ligne (`C_Container`, `C_Item`, `UnitAura`, livre de sorts, onglets de talents), la détection des vivres par sous-classe et les noms de cadres d'Era dans les listes, encore incertains sur Forever. Nouvelles sondes `/diag` pour les trancher : `spellbookModern`, `unitAuraLegacy`, `itemInfoGlobal`, `specialization`. Tests : les scénarios « mode Era » tournent dans le monde Forever du harnais.
+- **Vérification des modèles** : `CreatureDisplayInfo` et `CreatureModelData` (CSV wago.tools, builds 1.15.9.70576 et 1.60.1.70753), chemins des fichiers par la liste communautaire `wowdev/wow-listfile` (l'API de recherche de wago.tools ne répondait plus). Gardés : même `.m2` et mêmes textures dans les deux builds. Nos 15 apparences d'avant repassent le même contrôle. En réserve, vérifiés aussi : chats sacré de Birmanie 5585, maine coon 5448, cornish rex 5586, grand-duc brun 4566, crapauds 1924 et 6297, serpents 1206, 1986, 1987, 2954 à 2958, bébés murlocs 15394 à 15398, cafard 2177, rat blanc 2176, bonhomme de neige 13610, petit renne 15901, mini Diablo 10992, zergling 10993.
+- **Catalogue** (`CompanionData.lua`) : six apparences de coffre (`tier` 1 à 3, deux par palier) et trois hors coffres (`tier` 0) dont l'`unlock` n'est pas un compteur : `{ inn = 3 }` (poulet, `Daily.lua` : `inn.full`, `INN_APPEARANCE_CARDS`), `{ missions = 10 }` (écureuil, `daily.perfect`, `MISSION_APPEARANCE_DAYS`), `{ shiny = 50 }` (hippogriffe, quatrième palier de `SHINY_REWARDS`). `DailyGrantAppearance` débloque une fois (chat et bulle `UNLOCK`). `CompanionNextUnlocks` ignore tout `unlock` sans `level` ni `stamp` ; `CompanionRequirement` dit `inn`, `missions`, `shiny`.
+- **Caractères** (`Personality.lua`, `PersonalityLines.lua`) : `fearful` (énergie, effets ×1,3, exclusif `chicken` ; remarque en combat sous 60 % de vie, une fois par combat) et `tinker` (curiosité, ×0,9, exclusif `squirrel_mech` ; remarque toutes les 20 min). `PERSONALITY_ORDER` passe à 14 (la réglette suit). Missions du jour : `rest` ×10 et `talks` ×4.
+- **Fiche au survol** (`Companion.lua`) : `CompanionLayoutHover` place tout de haut en bas (largeur 200, hauteur selon le contenu), rappelée par l'enveloppe du caractère.
+- **Cadres et fonds des images du jeu** (`CompanionData.lua`) : chemins vérifiés dans `ManifestInterfaceData` des deux builds (35 651 fichiers communs). Cadres `stone`, `toast`, `glue`, `carved` (`backdrop` non teinté) ; fonds `mail_*` (`Stationery_*1`), `deeds`, et quatre écrans de chargement recadrés par `coords` (`CompanionApplyBackground` appelle `SetTexCoord`, remis à 0-1 pour les autres, `frame.bgCoords`). Écartés : fonds de race et de talents (découpés en quatre).
+- **Valeurs secrètes (Forever, moteur récent)** : `ns.Plain(v)` (Socle, `Compat.lua`) rend `nil` si `issecretvalue(v)`. Utilisé pour `UnitHealth`/`UnitHealthMax` (Advice, remarques Zen et Peureux) et `GetRaidTargetIndex` (Shiny). Toute nouvelle lecture de vie, de puissance ou d'icône doit passer par lui.
+- **Morts au bestiaire sans journal de combat** : `BestiaryOnXP` (événement `CHAT_MSG_COMBAT_XP_GAIN`, `ParseCombatXP` nommé) compte la cible morte (`units[guid]` ou `Adopt`). `bestiaryKilled[guid] = { at, source }` empêche la double prise entre « xp » et « log » pendant 120 s. `ns.bestiaryStats` (événements, coups, PARTY_KILL, UNIT_DIED, victimes, dont par l'XP) dans `/qc diag` (`DiagExtra`). `coreFiles` compte aussi Bestiary, Treats, Shiny, Daily, Notify.
+- Tests `[PETS]`, `[HOVER]`, `[FIX]`, `[BSTXP]`, `[SECRET]`.
+
 ## QuestCompanion 1.1.0 — complétion gamifiée
 
 ### Friandises (`QuestCompanion/Treats.lua`)
@@ -591,6 +611,8 @@ Erreur Lua invisible ? `/console scriptErrors 1`.
 
 ## Tester sur Classic Era
 
+> **Historique.** Depuis Ready2Quest 1.26.1 et QuestCompanion 1.2.0, seul WoW Forever est pris en charge, et le code propre à Era et aux API historiques (métiers « recette sélectionnée », journal de quêtes par `GetQuestLogTitle`) a été retiré : voir « Fin du support d'Era » dans la section QuestCompanion 1.2.0. Cette section décrit l'état d'avant.
+
 **C'est le terrain d'essai principal tant que Forever n'est pas sorti.** Era (interface `11509`) est le client le plus pauvre en API : tout ce qui marche sur Era devrait marcher sur Forever. L'inverse n'est pas vrai : les chemins propres à Forever (recettes suivies, `GetItemStatDelta`) ne tournent jamais sur Era. La suite de tests rejoue les scénarios v1.18.0 en mode Era (API récentes retirées).
 
 | Point | Era |
@@ -601,6 +623,8 @@ Erreur Lua invisible ? `/console scriptErrors 1`.
 | Comparaison au survol | ilvl, stats si `GetItemStats` est exposé |
 
 ## Tester aussi sur Classic MoP
+
+> **Historique.** Depuis Ready2Quest 1.26.1 et QuestCompanion 1.2.0, seul WoW Forever est pris en charge, et le code propre à Era et aux API historiques (métiers « recette sélectionnée », journal de quêtes par `GetQuestLogTitle`) a été retiré : voir « Fin du support d'Era » dans la section QuestCompanion 1.2.0. Cette section décrit l'état d'avant.
 
 **Oui — et c'est même le meilleur terrain d'essai avant Forever.** Le client MoP Classic (interface `50504`, snapshot `5.5.4.69934`) est plus proche de Forever que Classic Era sur un point : il a aussi `C_Container`, `C_Map` et `C_UnitAuras`.
 
@@ -1801,7 +1825,7 @@ Compatibilité : `/r2q module vivres off` (ancienne forme, qui visait un contrô
 python3 tests/run_tests.py     →  720 réussis, 0 échoués
 ```
 
-Lua 5.1 (version du client), client WoW simulé. Couvre notamment : apprentissage par indices (sous-zone, capitale par deux quartiers, purge de l'ancien schéma), délai de sortie / vol / mort, nouveaux checks et automatismes du marchand en mode Era, chaîne de cartes parentes, anti-spam, filtrage des procs, **valeurs secrètes**, comptages sacs/vivres/potions/durabilité/quêtes, score pondéré et bilans, fenêtre de diagnostic (icônes, barres, bandeau), panneau d'équipement (17 lignes, moyenne, rareté, pièces faibles), comparaison au survol (amélioration, régressif, vide, anneaux), **les deux voies de hook tooltip**, bouton sans template Blizzard, et toutes les commandes.
+Lua 5.1 (version du client), client WoW simulé. Couvre notamment : apprentissage par indices (sous-zone, capitale par deux quartiers, purge de l'ancien schéma), délai de sortie / vol / mort, nouveaux checks et automatismes du marchand, chaîne de cartes parentes, anti-spam, filtrage des procs, **valeurs secrètes**, comptages sacs/vivres/potions/durabilité/quêtes, score pondéré et bilans, fenêtre de diagnostic (icônes, barres, bandeau), panneau d'équipement (17 lignes, moyenne, rareté, pièces faibles), comparaison au survol (amélioration, régressif, vide, anneaux), **les deux voies de hook tooltip**, bouton sans template Blizzard, et toutes les commandes.
 
 ---
 

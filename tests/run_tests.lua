@@ -275,7 +275,7 @@ _G.ITEM_QUALITY_COLORS = {
 	[4] = { r = 0.64, g = 0.21, b = 0.93 },
 }
 
--- Le client expose GetItemInfo en global (classique et Era) ; le mock doit le
+-- Le client expose GetItemInfo en global ; le mock doit le
 -- faire aussi, sinon tout chemin qui interroge l'API globale échoue en silence.
 _G.GetItemInfo = function(itemLinkOrID)
 	return _G.C_Item.GetItemInfo(itemLinkOrID)
@@ -353,32 +353,6 @@ _G.UnitClass = function() return "Guerrier", Mock.world.classToken or "WARRIOR",
 _G.GetSpecialization = function() return Mock.world.specIndex or 1 end
 _G.GetSpecializationInfo = function() return 71, Mock.world.specName or "Armes" end
 
-_G.GetTradeSkillLine = function() return "Alchimie", "Alchemy", 1 end
-_G.GetTradeSkillSelectionIndex = function() return Mock.world.tradeSkillSelection or 0 end
-_G.GetTradeSkillInfo = function(index)
-	local recipe = (Mock.world.tradeSkillRecipes or {})[index]
-	if not recipe then return nil end
-	return recipe.name, recipe.header and "header" or "normal", 1
-end
-_G.GetTradeSkillNumReagents = function(index)
-	local recipe = (Mock.world.tradeSkillRecipes or {})[index]
-	return recipe and #(recipe.reagents or {}) or 0
-end
-_G.GetTradeSkillReagentInfo = function(index, slot)
-	local recipe = (Mock.world.tradeSkillRecipes or {})[index]
-	local reagent = recipe and (recipe.reagents or {})[slot]
-	if not reagent then return nil end
-	return reagent.name, nil, reagent.need, reagent.have
-end
-
-_G.GetNumQuestLogEntries = function() return #(Mock.world.quests or {}) end
-_G.GetQuestLogTitle = function(index)
-	local q = (Mock.world.quests or {})[index]
-	if not q then return nil end
-	-- title, level, tag, suggestedGroup, isHeader, isCollapsed, isComplete, frequency, questID
-	return q.title, 1, nil, nil, q.isHeader == true, false, q.ready == true, 1, q.questID
-end
-
 _G.C_TradeSkillUI = {
 	GetRecipesTracked = function()
 		if Mock.world.trackedUnavailable then error("trade skill API unavailable") end
@@ -399,7 +373,7 @@ _G.C_QuestLog = {
 	GetInfo = function(index)
 		local q = Mock.world.quests[index]
 		if not q then return nil end
-		return { questID = q.questID, title = q.title }
+		return { questID = q.questID, title = q.title, isHeader = q.isHeader == true, isCollapsed = q.collapsed == true }
 	end,
 	ReadyForTurnIn = function(questID)
 		for _, q in ipairs(Mock.world.quests) do
@@ -607,8 +581,6 @@ local function ResetWorld()
 		ilvl = 18,
 		specName = "Armes",
 		specIndex = 1,
-		tradeSkillSelection = 0,
-		tradeSkillRecipes = {},
 	}
 	Mock.secretAuras = false
 	Mock.now = 1000
@@ -1038,6 +1010,49 @@ NS:HandleCommand("buffs")
 Check("/sd buffs s'exécute", Mock:Output():find("Buffs suivis") ~= nil)
 NS:HandleCommand("diag")
 Check("/sd diag s'exécute", Mock:Output():find("Diagnostic") ~= nil)
+do
+	-- sondes des points encore incertains sur Forever (affichées par /diag)
+	local savedBook, savedAura = rawget(_G, "C_SpellBook"), rawget(_G, "UnitAura")
+	local savedEnum = rawget(_G, "Enum")
+	_G.C_SpellBook = { GetSpellBookItemInfo = function() end }
+	_G.UnitAura = nil
+	NS:DetectCapabilities()
+	Check("/diag : livre de sorts incomplet (sans GetNumSpellBookSkillLines) : spellbookModern faux",
+		NS.Caps.spellbookModern == false)
+	_G.C_SpellBook.GetNumSpellBookSkillLines = function() return 0 end
+	_G.Enum = { SpellBookSpellBank = { Player = 0 } }
+	NS:DetectCapabilities()
+	Check("/diag : sonde spellbookModern", NS.Caps.spellbookModern == true)
+	_G.Enum = savedEnum
+	Check("/diag : sonde unitAuraLegacy", NS.Caps.unitAuraLegacy == false)
+	Check("/diag : sondes itemInfoGlobal et specialization", NS.Caps.itemInfoGlobal == true
+		and NS.Caps.specialization == true)
+	Mock:Reset()
+	NS:PrintCapabilities()
+	local out = Mock:Output()
+	Check("/diag : les quatre sondes listées", out:find("spellbookModern", 1, true) ~= nil
+		and out:find("unitAuraLegacy", 1, true) ~= nil and out:find("itemInfoGlobal", 1, true) ~= nil
+		and out:find("specialization", 1, true) ~= nil, out)
+	for _, key in ipairs({ "vignettes", "tooltipData", "mapLevels", "lfgDungeons", "questsOnMap",
+		"settingsPanel", "addonCompartment", "itemAsync", "modelAnimation" }) do
+		Check("/diag : sonde " .. key .. " listée", out:find(key, 1, true) ~= nil
+			and type(NS.Caps[key]) == "boolean", out)
+	end
+	do
+		local savedVig = rawget(_G, "C_VignetteInfo")
+		_G.C_VignetteInfo = { GetVignettes = function() return {} end, GetVignetteInfo = function() end }
+		NS:DetectCapabilities()
+		Check("/diag : sonde vignettes vraie quand C_VignetteInfo est là", NS.Caps.vignettes == true)
+		_G.C_VignetteInfo = nil
+		NS:DetectCapabilities()
+		Check("/diag : sonde vignettes fausse sans C_VignetteInfo", NS.Caps.vignettes == false)
+		_G.C_VignetteInfo = savedVig
+	end
+	Check("/diag : plus de sonde historique", out:find("craftLegacy", 1, true) == nil
+		and out:find("questlogLegacy", 1, true) == nil and out:find("tradeskillLegacy", 1, true) == nil, out)
+	_G.C_SpellBook, _G.UnitAura = savedBook, savedAura
+	NS:DetectCapabilities()
+end
 NS:HandleCommand("nimportequoi")
 Check("commande inconnue gérée", Mock:Output():find("Commande inconnue") ~= nil)
 
@@ -1388,8 +1403,8 @@ Check("/sd stuff répond sans erreur", Mock:Output() ~= nil and #Mock:Output() >
 Check("/sd stuff ne parle plus de panneau", Mock:Output():find("Panneau") == nil, Mock:Output())
 Check("/sd stuff n'a plus d'état à basculer", NS:DB().showStuff == nil)
 
--- 4.33 Mode Classic Era : API manquantes
-Say("\n== mode Classic Era ==")
+-- 4.33 API récentes manquantes (métiers, journal de quêtes, statistiques)
+Say("\n== API récentes manquantes ==")
 ResetWorld()
 local savedDelta = C_Item.GetItemStatDelta
 local savedStats = C_Item.GetItemStats
@@ -1399,12 +1414,10 @@ C_Item.GetItemStatDelta = nil
 C_Item.GetItemStats = nil
 _G.C_TradeSkillUI = nil
 C_QuestLog.GetNumQuestLogEntries = nil
-Mock.world.build = { version = "1.15.9", build = "69722", date = "Oct 2026", toc = 11509 }
 NS:DetectCapabilities()
 
-Check("client identifié comme Classic Era", NS:ClientFlavour() == "Classic Era", NS:ClientFlavour())
 Check("capacité crafting à false", NS.Caps.crafting == false)
-Check("capacité quêtes via globales", NS.Caps.quests == true)
+Check("sans C_QuestLog : pas de capacité quêtes", NS.Caps.quests == false)
 
 Mock.world.quests = { { questID = 11, title = "Un", ready = true }, { questID = 12, title = "Deux", ready = false } }
 Mock.world.rested = 3000
@@ -1414,8 +1427,7 @@ Mock.world.itemInfo[4001] = { name = "Pain", classID = 0, subClassID = 5 }
 NS:RunChecklist("manual")
 Check("checklist tourne sans les API récentes", NS.lastResults ~= nil and #NS.lastResults == 13, NS.lastResults and #NS.lastResults)
 local qClassic = Result("quests")
-Check("quêtes via GetNumQuestLogEntries", qClassic and qClassic.ok == false and qClassic.detail:find("1") ~= nil,
-	qClassic and qClassic.detail)
+Check("quêtes sans C_QuestLog -> OK silencieux", qClassic and qClassic.ok == true, qClassic and qClassic.detail)
 local rClassic = Result("reagents")
 Check("composants sans API métier -> OK", rClassic and rClassic.ok == true, rClassic and rClassic.detail)
 
@@ -1428,9 +1440,8 @@ C_Item.GetItemStatDelta = savedDelta
 C_Item.GetItemStats = savedStats
 _G.C_TradeSkillUI = savedTrade
 C_QuestLog.GetNumQuestLogEntries = savedNumQuest
-Mock.world.build = { version = "1.60.1", build = "69893", date = "Oct 1 2026", toc = 16001 }
 NS:DetectCapabilities()
-Check("retour au client moderne", NS:ClientFlavour() == "Forever", NS:ClientFlavour())
+Check("API rétablies : capacités métiers et quêtes de retour", NS.Caps.crafting == true and NS.Caps.quests == true)
 
 -- 4.34 Absence du template BackdropTemplate
 Say("\n== client sans BackdropTemplate ==")
@@ -1443,17 +1454,11 @@ Mock.world.noBackdropTemplate = false
 -- 4.35 Aucune API de quêtes du tout
 Say("\n== aucune API de quêtes ==")
 ResetWorld()
-local savedLegacyNum = _G.GetNumQuestLogEntries
-local savedLegacyTitle = _G.GetQuestLogTitle
-_G.GetNumQuestLogEntries = nil
-_G.GetQuestLogTitle = nil
 local savedNum2 = C_QuestLog.GetNumQuestLogEntries
 C_QuestLog.GetNumQuestLogEntries = nil
 NS:RunChecklist("manual")
 local qNone = Result("quests")
 Check("quêtes sans API -> OK silencieux", qNone and qNone.ok == true, qNone and qNone.detail)
-_G.GetNumQuestLogEntries = savedLegacyNum
-_G.GetQuestLogTitle = savedLegacyTitle
 C_QuestLog.GetNumQuestLogEntries = savedNum2
 
 -- 4.36 Détection du client par numéro d'interface
@@ -1475,10 +1480,9 @@ Check("Retail détecté", NS:ClientFlavour() == "Retail", NS:ClientFlavour())
 
 ResetWorld()
 
--- 4.37 MoP Classic : les modules dégradés se comportent bien
-Say("\n== MoP Classic ==")
+-- 4.37 Sans API métier : les événements optionnels ne sont pas tentés
+Say("\n== événements optionnels ==")
 ResetWorld()
-Mock.world.build = { version = "5.5.4", build = "69934", date = "Oct 2026", toc = 50504 }
 local sDelta, sTrade, sNum = C_Item.GetItemStatDelta, _G.C_TradeSkillUI, C_QuestLog.GetNumQuestLogEntries
 local sStats = C_Item.GetItemStats
 C_Item.GetItemStatDelta = nil
@@ -1486,19 +1490,13 @@ C_Item.GetItemStats = nil
 _G.C_TradeSkillUI = nil
 C_QuestLog.GetNumQuestLogEntries = nil
 NS:DetectCapabilities()
-local probeMoP = NewRegion("Frame", "probeMoP")
+local probeOptional = NewRegion("Frame", "probeOptional")
 Mock.world.unknownEvents = { TRACKED_RECIPE_UPDATE = true }
-local skippedMoP = NS:RegisterEvents(probeMoP)
+local skippedOptional = NS:RegisterEvents(probeOptional)
 Mock.world.unknownEvents = nil
-Check("MoP : événement retail jamais tenté", #skippedMoP == 0, table.concat(skippedMoP, ", "))
-Check("MoP : événements de base enregistrés", probeMoP.events.PLAYER_ENTERING_WORLD == true
-	and probeMoP.events.MERCHANT_SHOW == true)
-Check("MoP : client identifié", NS:ClientFlavour() == "Mists Classic", NS:ClientFlavour())
-Check("MoP : quêtes via globales disponibles", NS.Caps.quests == true)
-Mock.world.quests = { { questID = 21, title = "Quête", ready = true } }
-NS:RunChecklist("manual")
-local qMop = Result("quests")
-Check("MoP : quête prête détectée", qMop and qMop.ok == false, qMop and qMop.detail)
+Check("sans API métier : TRACKED_RECIPE_UPDATE jamais tenté", #skippedOptional == 0, table.concat(skippedOptional, ", "))
+Check("sans API métier : événements de base enregistrés", probeOptional.events.PLAYER_ENTERING_WORLD == true
+	and probeOptional.events.MERCHANT_SHOW == true)
 C_Item.GetItemStatDelta = sDelta
 C_Item.GetItemStats = sStats
 _G.C_TradeSkillUI = sTrade
@@ -1510,7 +1508,7 @@ ResetWorld()
 Say("\n== bootstrap et diagnostic ==")
 ResetWorld()
 Check("commande enregistrée par le bootstrap", type(SlashCmdList["SACETDEPART"]) == "function")
-Check("version exposée", NS.version == "1.26.0", NS.version)
+Check("version exposée", NS.version == "1.27.0", NS.version)
 
 local missingMods = {}
 for _, name in ipairs({ "Bootstrap", "Locales", "Compat", "Theme", "Core", "Buffs", "Reagents",
@@ -1531,7 +1529,7 @@ NS.HandleCommand = savedHandle
 Mock:Reset()
 NS:HandleCommand("diag")
 Check("/sd diag liste les modules", Mock:Output():find("modules :") ~= nil, Mock:Output())
-Check("/sd diag affiche la version", Mock:Output():find("1%.26%.0") ~= nil, Mock:Output())
+Check("/sd diag affiche la version", Mock:Output():find("1%.27%.0") ~= nil, Mock:Output())
 
 -- une erreur est enregistrée et affichée
 Mock:Reset()
@@ -1571,48 +1569,6 @@ Check("liste exposée pour /sd diag", NS.unsupportedEvents and NS.unsupportedEve
 NS:RunChecklist("manual")
 Check("checklist OK malgré l'événement manquant", NS.lastResults ~= nil and #NS.lastResults == 13)
 Mock.world.unknownEvents = nil
-
--- 4.40 Composants de métier en mode Classic (API legacy)
-Say("\n== métiers Classic (legacy) ==")
-ResetWorld()
-local sDelta2, sCraft2 = C_Item.GetItemStatDelta, _G.C_TradeSkillUI
-C_Item.GetItemStatDelta = nil
-_G.C_TradeSkillUI = nil
-Mock.world.build = { version = "1.15.9", build = "69722", date = "Oct 2026", toc = 11509 }
-NS:DetectCapabilities()
-Check("capacité tradeskillLegacy détectée", NS.Caps.tradeskillLegacy == true)
-
-Mock.world.tradeSkillRecipes = {
-	{ name = "Elixir de mana", reagents = {
-		{ name = "Etoffe de lin", need = 10, have = 4 },
-		{ name = "Fiole vide", need = 1, have = 3 },
-	} },
-}
-Mock.world.tradeSkillSelection = 1
-Mock.world.itemInfo[7002] = { name = "Etoffe de lin", classID = 7 }
-Mock.world.itemInfo[7003] = { name = "Fiole vide", classID = 7 }
-Mock.world.bags[0].items[1] = { itemID = 7002, stackCount = 4, quality = 1 }
-Mock.world.bags[0].items[2] = { itemID = 7003, stackCount = 3, quality = 1 }
-
-NS:ScanLegacyTradeSkill()
-NS:InvalidateReagents()
-NS:RunChecklist("manual")
-local legacyResult = Result("reagents")
-Check("recette sélectionnée lue", legacyResult ~= nil)
-Check("composant manquant nommé (legacy)", legacyResult and legacyResult.ok == false
-	and legacyResult.detail:find("Etoffe de lin") ~= nil, legacyResult and legacyResult.detail)
-Check("déficit legacy = 6", legacyResult and legacyResult.detail:find("6") ~= nil,
-	legacyResult and legacyResult.detail)
-
--- en-tête de métier ignoré
-Mock.world.tradeSkillRecipes[1].header = true
-NS:ScanLegacyTradeSkill()
-Mock.world.tradeSkillRecipes[1].header = nil
-
-C_Item.GetItemStatDelta = sDelta2
-_G.C_TradeSkillUI = sCraft2
-NS:DetectCapabilities()
-ResetWorld()
 
 -- 4.44 Lanceur sur la minicarte
 Say("\n== bouton de minicarte ==")
@@ -2907,29 +2863,10 @@ end
 NS:StopEditMode()
 
 do -- portée locale : Lua 5.1 limite le bloc principal à 200 locales
--- 4.40 v1.18.0 en mode Classic Era : nouveaux checks et marchand
-Say("\n== v1.18.0 : mode Era ==")
-local EraSaved = {}
-local function EnterEra()
-	ResetWorld()
-	EraSaved.delta, EraSaved.stats = C_Item.GetItemStatDelta, C_Item.GetItemStats
-	EraSaved.trade, EraSaved.numQuest = _G.C_TradeSkillUI, C_QuestLog.GetNumQuestLogEntries
-	C_Item.GetItemStatDelta, C_Item.GetItemStats = nil, nil
-	_G.C_TradeSkillUI = nil
-	C_QuestLog.GetNumQuestLogEntries = nil
-	Mock.world.build = { version = "1.15.9", build = "69722", date = "Oct 2026", toc = 11509 }
-	NS:DetectCapabilities()
-end
-local function LeaveEra()
-	C_Item.GetItemStatDelta, C_Item.GetItemStats = EraSaved.delta, EraSaved.stats
-	_G.C_TradeSkillUI, C_QuestLog.GetNumQuestLogEntries = EraSaved.trade, EraSaved.numQuest
-	Mock.world.build = nil
-	NS:DetectCapabilities()
-end
-
+-- 4.40 v1.18.0 : nouveaux checks et marchand
+Say("\n== v1.18.0 : checks et marchand ==")
 -- Composants de classe
-EnterEra()
-Check("Era : client identifié", NS:ClientFlavour() == "Classic Era", NS:ClientFlavour())
+ResetWorld()
 Mock.world.classToken = "WARRIOR"
 NS:RunChecklist("manual")
 Check("guerrier : composants inactifs", Result("classreagents") and Result("classreagents").disabled == true
@@ -2966,7 +2903,7 @@ NS:RunChecklist("manual")
 Check("druide : une graine d'un autre rang compte", Result("classreagents").ok == true, Result("classreagents").detail)
 
 -- Pierre de foyer
-EnterEra()
+ResetWorld()
 NS:RunChecklist("manual")
 local hs = Result("hearth")
 Check("pas de pierre de foyer : échec", hs and hs.ok == false and hs.score == 0, hs and hs.detail)
@@ -2985,7 +2922,7 @@ NS:RunChecklist("manual")
 Check("foyer en recharge 5 min : toléré", Result("hearth").ok == true, Result("hearth").detail)
 
 -- Réparation : muet sans mesure, puis estimation depuis le coût mesuré
-EnterEra()
+ResetWorld()
 Mock.world.durability = { [5] = { 50, 100 } }
 Mock.world.money = 100
 NS:RunChecklist("manual")
@@ -3007,7 +2944,7 @@ NS:RunChecklist("manual")
 Check("réparation estimée : or suffisant", Result("repair").ok == true, Result("repair").detail)
 
 -- Sorts à apprendre
-EnterEra()
+ResetWorld()
 Mock.world.level = 10
 Mock:Fire("PLAYER_ENTERING_WORLD", true, false)
 Check("premier login : niveau d'entraîneur initialisé", NS:CharData().trainerLevel == 10)
@@ -3030,7 +2967,7 @@ NS:RunChecklist("manual")
 Check("après l'entraîneur : sorts inactifs", Result("spells").disabled == true)
 
 -- Vente automatique des gris, par tranches de 12
-EnterEra()
+ResetWorld()
 Mock.world.bags[0] = { size = 16, items = {} }
 Mock.world.bags[1] = { size = 16, items = {} }
 for i = 1, 15 do
@@ -3067,7 +3004,7 @@ Mock:Fire("MERCHANT_CLOSED")
 C_Item.GetItemInfo = savedGetItemInfo
 
 -- Réparation automatique
-EnterEra()
+ResetWorld()
 Check("vente auto activée par défaut", NS:DB().autoSellGray == true)
 Check("réparation auto activée par défaut", NS:DB().autoRepair == true)
 Mock.world.canRepair = true
@@ -3099,7 +3036,7 @@ Check("réparation auto désactivée : rien", Mock.world.repaired == nil)
 Mock:Fire("MERCHANT_CLOSED")
 
 -- Réglages exposés dans le panneau d'options
-EnterEra()
+ResetWorld()
 NS.optionsFrame = nil
 NS:EnsureOptions()
 local optKeys = {}
@@ -3111,7 +3048,7 @@ Check("option : vente auto des gris", optKeys.autoSellGray ~= nil)
 Check("option : réparation auto", optKeys.autoRepair ~= nil)
 
 -- Ligne « Parti de » dans la fenêtre de diagnostic
-EnterEra()
+ResetWorld()
 NS:DB().safe["v:30:Comté-de-l'Or"] = { kind = "village", name = "Comté-de-l'Or", mapID = 30,
 	subzone = "Comté-de-l'Or", source = "mail" }
 Mock.world.mapID = 30
@@ -3121,7 +3058,7 @@ Mock.now = Mock.now + 60
 Mock.world.subzone = "Bois de l'Est"
 Mock:Fire("ZONE_CHANGED")
 Mock:Advance(6)
-Check("Era : sortie de village détectée", NS.lastResults ~= nil)
+Check("sortie de village détectée", NS.lastResults ~= nil)
 Check("fenêtre : ligne « Parti de » affichée", NS.window and NS.window.departed
 	and NS.window.departed.text:find("Parti de Comté%-de%-l'Or") ~= nil
 	and NS.window.departed.text:find("boîte aux lettres") ~= nil,
@@ -3152,12 +3089,12 @@ Check("nouvelles chaînes présentes en enUS", #missingEn == 0, table.concat(mis
 
 do
 -- ---------------------------------------------------------------------------
--- Correctifs de l'audit Era (v1.18.0)
+-- Correctifs de l'audit v1.18.0 (replis d'API conservés)
 -- ---------------------------------------------------------------------------
-Say("\n== audit Era : correctifs ==")
+Say("\n== audit v1.18.0 : correctifs ==")
 
 -- [2] vivres et potions en sous-classe générique 0 (vanilla)
-EnterEra()
+ResetWorld()
 local savedItemSpell = _G.GetItemSpell
 _G.GetItemSpell = function(itemID)
 	return ({ [117] = "Nourriture", [159] = "Boisson", [9999] = "Invocation" })[itemID]
@@ -3172,34 +3109,13 @@ Mock.world.bags[0].items[3] = { itemID = 118, stackCount = 3, quality = 1 }
 Mock.world.bags[0].items[4] = { itemID = 9999, stackCount = 1, quality = 1 }
 NS:DB().potionsThreshold = 3
 NS:RunChecklist("manual")
-Check("[2] Era : nourriture + boisson de sous-classe 0 comptées (10)", Result("vivres").detail:find("10") ~= nil,
+Check("[2] nourriture + boisson de sous-classe 0 comptées (10)", Result("vivres").detail:find("10") ~= nil,
 	Result("vivres").detail)
-Check("[2] Era : potion de sous-classe 0 comptée (3)", Result("potions").ok == true, Result("potions").detail)
+Check("[2] potion de sous-classe 0 comptée (3)", Result("potions").ok == true, Result("potions").detail)
 _G.GetItemSpell = savedItemSpell
 
--- [3] journal de quêtes Era : forme moderne, isComplete = 1
-EnterEra()
-local savedTitle = _G.GetQuestLogTitle
-_G.GetQuestLogTitle = function(index)
-	local rows = {
-		{ "Elwynn", 0, 0, true, false, nil },          -- en-tête
-		{ "Les loups", 5, 0, false, false, 1 },       -- terminée
-		{ "Le kobold", 6, 0, false, false, nil },      -- en cours
-		{ "Échouée", 6, 0, false, false, -1 },         -- échouée
-	}
-	local r = rows[index]
-	if not r then return nil end
-	return r[1], r[2], r[3], r[4], r[5], r[6], 0, 100 + index
-end
-Mock.world.quests = { {}, {}, {}, {} }
-NS:RunChecklist("manual")
-Check("[3] Era : quête terminée (isComplete = 1) détectée", Result("quests").ok == false
-	and Result("quests").detail:find("1") ~= nil, Result("quests").detail)
-Check("[3] en-tête et quête échouée ignorés", NS.QuestLogReady(1) == false and NS.QuestLogReady(4) == false)
-_G.GetQuestLogTitle = savedTitle
-
 -- [4] GetItemInfoInstant global quand C_Item n'en a pas
-EnterEra()
+ResetWorld()
 local savedInstant = C_Item.GetItemInfoInstant
 _G.GetItemInfoInstant = savedInstant
 C_Item.GetItemInfoInstant = nil
@@ -3211,7 +3127,7 @@ C_Item.GetItemInfoInstant = savedInstant
 _G.GetItemInfoInstant = nil
 
 -- [5] repli UnitAura : le spellId est le 10e retour
-EnterEra()
+ResetWorld()
 local savedByIndex = C_UnitAuras.GetAuraDataByIndex
 C_UnitAuras.GetAuraDataByIndex = nil
 _G.UnitAura = function(_, index)
@@ -3226,7 +3142,7 @@ _G.UnitAura = nil
 C_UnitAuras.GetAuraDataByIndex = savedByIndex
 
 -- [6] comparaison par famille : autre rang, version de groupe
-EnterEra()
+ResetWorld()
 NS:DB().buffs[1243] = { name = "Mot de pouvoir : Robustesse", duration = 1800, enabled = true, learned = true }
 Mock.world.auras = { [21562] = { name = "Prière de robustesse", duration = 3600 } }
 Mock.world.auraOrder = { 21562 }
@@ -3244,7 +3160,7 @@ Check("[6] Bénédiction supérieure = Bénédiction", NS.BuffFamily("Bénédict
 Check("[6] Don du fauve = Marque du fauve", NS.BuffFamily("Don du fauve") == NS.BuffFamily("Marque du fauve"))
 
 -- [7] sans GetPlayerAuraBySpellID : lecture par index, pas « illisible »
-EnterEra()
+ResetWorld()
 local savedByID = C_UnitAuras.GetPlayerAuraBySpellID
 C_UnitAuras.GetPlayerAuraBySpellID = nil
 NS:DB().buffs[1459] = { name = "Intelligence des arcanes", duration = 1800, enabled = true }
@@ -3258,7 +3174,7 @@ Check("[7] sans API par spellID : buff présent = OK", Result("buffs").ok == tru
 C_UnitAuras.GetPlayerAuraBySpellID = savedByID
 
 -- [23] buffs de consommables non appris, buffs oubliés après 7 jours
-EnterEra()
+ResetWorld()
 Mock.world.auras = { [19705] = { name = "Bien nourri", duration = 900 } }
 Mock.world.auraOrder = { 19705 }
 NS.lastBuffScan = nil
@@ -3270,70 +3186,15 @@ NS:DB().buffs[2000] = { name = "Buff mondial", duration = 7200, enabled = true, 
 NS:RunChecklist("manual")
 Check("[23] buff jamais revu depuis 8 jours : plus réclamé", Result("buffs").ok == true, Result("buffs").detail)
 
--- [8] [9] composants de métier : nombre possédé à jour, accroche de la sélection
-EnterEra()
-NS:ResetLegacyReagents()
-local hooks = {}
-_G.hooksecurefunc = function(name, fn) hooks[name] = fn end
-_G.TradeSkillFrame_SetSelection = function() end
-_G.GetTradeSkillReagentItemLink = function(index, slot)
-	local recipe = (Mock.world.tradeSkillRecipes or {})[index]
-	local reagent = recipe and (recipe.reagents or {})[slot]
-	return reagent and ("|Hitem:" .. reagent.itemID .. "::|h[x]|h") or nil
-end
-Mock.world.tradeSkillRecipes = {
-	{ name = "Bandage en lin", reagents = { { name = "Étoffe de lin", need = 2, have = 0, itemID = 2589 } } },
-	{ name = "Bandage épais", reagents = { { name = "Étoffe de laine", need = 2, have = 0, itemID = 2592 } } },
-}
-Mock.world.tradeSkillSelection = 1
-Mock:Fire("TRADE_SKILL_SHOW")
-Check("[9] sélection de recette accrochée", type(hooks.TradeSkillFrame_SetSelection) == "function")
-NS:InvalidateReagents()
-NS:RunChecklist("manual")
-Check("[8] composant manquant au départ", Result("reagents").ok == false, Result("reagents").detail)
-Mock.world.bags[0].items[5] = { itemID = 2589, stackCount = 4, quality = 1 }
-NS:InvalidateReagents()
-NS:RunChecklist("manual")
-Check("[8] sacs remplis ensuite : composant compté sans rescan", Result("reagents").ok == true, Result("reagents").detail)
-Mock.world.tradeSkillSelection = 2
-hooks.TradeSkillFrame_SetSelection(2)
-NS:RunChecklist("manual")
-Check("[9] changement de recette pris en compte", Result("reagents").detail:find("laine") ~= nil
-	or Result("reagents").detail:find("épais") ~= nil, Result("reagents").detail)
-
--- [10] fenêtre Craft (Enchantement) sur Era
-EnterEra()
-NS:ResetLegacyReagents()
-_G.GetCraftSelectionIndex = function() return 1 end
-_G.GetCraftInfo = function() return "Enchantement de bracelets", nil, "optimal" end
-_G.GetCraftNumReagents = function() return 1 end
-_G.GetCraftReagentInfo = function() return "Poussière étrange", nil, 3, 1 end
-_G.GetCraftReagentItemLink = function() return "|Hitem:10940::|h[Poussière étrange]|h" end
-NS:DetectCapabilities()
-Check("[10] capacité craftLegacy détectée", NS.Caps.craftLegacy == true)
--- le cadre d'événements a été enregistré au chargement, sans capacité Craft
--- dans le mock : on rejoue l'enregistrement comme le ferait le client Era
-NS:RegisterEvents(NS.eventFrame)
-Check("[10] CRAFT_SHOW écouté quand la capacité existe", NS.eventFrame.events.CRAFT_SHOW == true)
-Mock:Fire("CRAFT_SHOW")
-NS:InvalidateReagents()
-NS:RunChecklist("manual")
-Check("[10] composant d'enchantement manquant signalé", Result("reagents").ok == false
-	and Result("reagents").detail:find("Poussière") ~= nil, Result("reagents").detail)
-_G.GetCraftSelectionIndex, _G.GetCraftInfo, _G.GetCraftNumReagents = nil, nil, nil
-_G.GetCraftReagentInfo, _G.GetCraftReagentItemLink = nil, nil
-_G.hooksecurefunc, _G.TradeSkillFrame_SetSelection, _G.GetTradeSkillReagentItemLink = nil, nil, nil
-NS:ResetLegacyReagents()
-
 -- [11] puissance d'attaque = base + bonus (3 retours)
-EnterEra()
+ResetWorld()
 local savedAP = _G.UnitAttackPower
 _G.UnitAttackPower = function() return 100, 30, -5 end
 Check("[11] PA = base + posBuff + negBuff", NS:StatSnapshot().ap == 125, NS:StatSnapshot().ap)
 _G.UnitAttackPower = savedAP
 
--- [12] spé sur Era : onglet de talents le plus fourni
-EnterEra()
+-- [12] spé sans GetSpecialization : onglet de talents le plus fourni
+ResetWorld()
 local savedSpec, savedSpecInfo = _G.GetSpecialization, _G.GetSpecializationInfo
 _G.GetSpecialization, _G.GetSpecializationInfo = nil, nil
 _G.GetNumTalentTabs = function() return 3 end
@@ -3341,20 +3202,20 @@ _G.GetTalentTabInfo = function(tab)
 	local tabs = { { "Sacré", 5 }, { "Protection", 0 }, { "Vindicte", 31 } }
 	return tabs[tab][1], 135920, tabs[tab][2], "PaladinHoly"
 end
-Check("[12] Era : spé = onglet le plus fourni", NS.SpecIndex() == 3, NS.SpecIndex())
-Check("[12] Era : paladin Vindicte affiche l'Intelligence d'abord",
+Check("[12] sans GetSpecialization : spé = onglet le plus fourni", NS.SpecIndex() == 3, NS.SpecIndex())
+Check("[12] onglets de talents : paladin Vindicte affiche l'Intelligence d'abord",
 	firstStat("PALADIN", nil):find("Intelligence") ~= nil, firstStat("PALADIN", nil))
 _G.GetTalentTabInfo = function(tab)
 	local tabs = { { "Sacré", 0 }, { "Protection", 31 }, { "Vindicte", 5 } }
 	return tabs[tab][1], 135920, tabs[tab][2], "PaladinHoly"
 end
-Check("[12] Era : paladin Protection affiche l'Endurance d'abord",
+Check("[12] onglets de talents : paladin Protection affiche l'Endurance d'abord",
 	firstStat("PALADIN", nil):find("Endurance") ~= nil, firstStat("PALADIN", nil))
 _G.GetSpecialization, _G.GetSpecializationInfo = savedSpec, savedSpecInfo
 _G.GetNumTalentTabs, _G.GetTalentTabInfo = nil, nil
 
 -- [17] [18] [19] pourcentage, Esprit, ilvl de repli
-EnterEra()
+ResetWorld()
 local before = NS:StatSnapshot()
 Mock.world.stats = { 25, 14, 30, 12, 40 }
 local after = NS:StatSnapshot()
@@ -3389,7 +3250,7 @@ local cutText = NS.Truncate(string.rep("é", 30), 38)
 local lastByte = cutText:byte(#cutText - 3)
 Check("[21] troncature : aucun caractère coupé en deux", cutText:sub(-3) == "..."
 	and #cutText - 3 <= 38 and (#cutText - 3) % 2 == 0, cutText)
-EnterEra()
+ResetWorld()
 NS:RunChecklist("manual")
 local firstAdvice = NS.window and NS.window.adviceLines[1].text or ""
 Check("[22] puce de conseil en ASCII", not firstAdvice:find("•", 1, true), firstAdvice)
@@ -3402,7 +3263,7 @@ NS:RecordError("audit-15", "message unique de l'audit")
 Check("[15] message d'erreur : Ready to Quest", Mock:Output():find("Ready2Quest — erreur") ~= nil, Mock:Output())
 
 -- [16] /sd diag donne la raison, pas le mapID
-EnterEra()
+ResetWorld()
 Mock.world.resting = true
 Mock:Reset()
 NS:HandleCommand("diag")
@@ -3415,7 +3276,7 @@ do
 -- ---------------------------------------------------------------------------
 Say("\n== UX : alerte, combat, lignes, libellés ==")
 local function ReadyWorld()
-	EnterEra()
+	ResetWorld()
 	Mock.world.itemInfo[4001] = { name = "Pain", classID = 0, subClassID = 5 }
 	Mock.world.bags[0].items[1] = { itemID = 4001, stackCount = 10, quality = 1 }
 	Mock.world.bags[0].items[2] = { itemID = 6948, stackCount = 1, quality = 1 }
@@ -3469,7 +3330,7 @@ for label, count in pairs(labels) do if count > 1 then dup[#dup + 1] = label end
 Check("[UX4] aucun libellé de module en double", #dup == 0, table.concat(dup, ", "))
 
 -- [5] lignes sans objet masquées, échecs en tête, modules coupés en bas
-EnterEra()
+ResetWorld()
 NS:SetModuleEnabled("quests", false)
 Mock.world.durability = { [5] = { 5, 100 } }
 NS.window = nil
@@ -3495,7 +3356,7 @@ Check("[UX10] OK : losange au trait", okStatus and tostring(okStatus.texture):fi
 NS:SetModuleEnabled("quests", true)
 
 -- [6] repos : information, sans poids ni conseil
-EnterEra()
+ResetWorld()
 Mock.world.rested = 0
 NS:RunChecklist("manual")
 Check("[UX6] repos : poids nul", Result("rest").weight == 0)
@@ -3504,7 +3365,7 @@ for _, a in ipairs(NS.lastAdvice or {}) do if a.text == NS.L.ADV_REST then restA
 Check("[UX6] repos : pas de conseil", restAdvice == false)
 
 -- [7] détail des sorts : tient dans la colonne
-EnterEra()
+ResetWorld()
 Mock.world.level = 10
 Mock:Fire("PLAYER_ENTERING_WORLD", true, false)
 Mock.world.level = 12
@@ -3513,7 +3374,7 @@ Check("[UX7] sorts : détail court (<= 38)", #Result("spells").detail <= 38 and 
 	Result("spells").detail)
 
 -- [9] vente auto : prévenu une seule fois
-EnterEra()
+ResetWorld()
 Mock:Reset()
 Mock:Fire("MERCHANT_SHOW")
 Mock:Fire("MERCHANT_CLOSED")
@@ -3531,7 +3392,7 @@ do
 -- Identité visuelle (v1.20.0)
 -- ---------------------------------------------------------------------------
 Say("\n== identité visuelle ==")
-EnterEra()
+ResetWorld()
 NS.window = nil
 Mock.world.durability = { [5] = { 5, 100 } }
 NS:RunChecklist("manual")
@@ -3755,7 +3616,7 @@ do
 	_G.UnitFactionGroup, _G.GetRealZoneText, _G.IsInInstance = nil, nil, nil
 end
 
--- retours de la première session en jeu (Era, Vallée des épreuves)
+-- retours de la première session en jeu (Vallée des épreuves)
 NS.editBanner = nil
 NS:StartEditMode()
 local banner = NS.editBanner
@@ -3765,7 +3626,7 @@ Check("[JEU] bandeau d'édition : l'aide ne passe plus sous le bouton", hintTop 
 	(hintTop - 26) .. " >= " .. buttonTop)
 Check("[JEU] bandeau d'édition : bouton Terminer en ambre", banner.stopButton.style == "primary")
 NS:StopEditMode()
-EnterEra()
+ResetWorld()
 Mock.world.bags[0].items[1] = { itemID = 3001, stackCount = 1, quality = 0 }
 Mock.world.bags[0].items[2] = { itemID = 3002, stackCount = 1, quality = 0 }
 Mock.world.durability = { [5] = { 5, 100 } }
@@ -3782,7 +3643,6 @@ Check("[JEU] durabilité à 5 % : rouge (module lourd)", duraRow and duraRow.sta
 Check("[R2Q] API publique sous les deux noms", _G.Ready2Quest == NS and _G.ReadyToQuest == NS)
 
 end
-LeaveEra()
 Mock.world.classToken = nil
 end
 

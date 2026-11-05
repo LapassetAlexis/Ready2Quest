@@ -2,10 +2,11 @@
 --
 -- Règle voulue par le joueur :
 --   * une zone finie à 100 % (complétion du carnet, au moins deux parts :
---     villages, bestiaire, nommés, récolte) ouvre un coffre ;
+--     villages, bestiaire, nommés, récolte, quêtes) ouvre un coffre ;
 --   * le coffre propose les cosmétiques du PALIER de la zone (1 = zones 1-19,
 --     2 = 20-39, 3 = 40-60) encore verrouillés : le joueur en CHOISIT un ;
---   * palier épuisé : la zone devient « dorée » (un tampon d'honneur, sans objet).
+--   * palier épuisé : la zone devient « dorée » (un tampon d'honneur ; depuis la
+--     1.1.0, un Festin et deux friandises, Treats.lua).
 -- Plus la zone est haute, plus l'objet est beau : c'est le palier qui le dit
 -- (champ `tier` des cosmétiques, CompanionData.lua).
 --
@@ -103,15 +104,21 @@ local function TierOfLevel(level)
 	return 3
 end
 
--- Tranche de niveaux d'une zone : la table ci-dessus, sinon calculée à partir
--- de ses créatures préremplies (ZoneCreatures_<client>.lua : zones propres à
--- Forever, Reflet-de-Lune…) : les normales seulement, sans les extrêmes
--- (un dixième de chaque côté). nil si la zone n'a ni l'un ni l'autre.
+-- Tranche de niveaux d'une zone (zoneID = uiMapID, ns:JournalZone) : celle
+-- du jeu (C_Map.GetMapLevels, socle ns:MapLevelRange) quand il la donne, sinon
+-- la table ci-dessus, sinon calculée à partir de ses créatures préremplies
+-- (ZoneCreatures_<client>.lua : zones propres à Forever, Reflet-de-Lune…) :
+-- les normales seulement, sans les extrêmes (un dixième de chaque côté). nil
+-- si la zone n'a rien de tout cela.
 local computedLevels = {}
 function ns:ZoneLevelRange(zoneID)
 	zoneID = tonumber(zoneID)
 	if not zoneID then return nil end
+	-- la table établie l'emporte (tranches Classic sûres) ; le jeu complète
+	-- les zones qu'elle ne connaît pas, avant l'estimation par les créatures
 	if ZONE_LEVELS[zoneID] then return ZONE_LEVELS[zoneID] end
+	local live = self.MapLevelRange and self:MapLevelRange(zoneID)
+	if live then return live end
 	if computedLevels[zoneID] ~= nil then return computedLevels[zoneID] or nil end
 	local creatures = type(ns.ZONE_CREATURES) == "table" and ns.ZONE_CREATURES[zoneID]
 	local lows, highs = {}, {}

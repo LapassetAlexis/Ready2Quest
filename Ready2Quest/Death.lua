@@ -465,16 +465,12 @@ events:SetScript("OnEvent", function(_, event)
 end)
 -- la distance baisse pendant la course : recalcul chaque seconde, seulement
 -- quand la fenêtre est ouverte sur un fantôme
-local elapsed = 0
-events:SetScript("OnUpdate", function(_, delta)
-	elapsed = elapsed + (tonumber(delta) or 0)
-	if elapsed < REFRESH then return end
-	elapsed = 0
+events:SetScript("OnUpdate", ns.Throttle(REFRESH, function()
 	local frame = ns.deathFrame
 	if not (frame and frame:IsShown() and ns.deathAdvice and ns.deathAdvice.ghost) then return end
 	local ok, err = pcall(ns.EvaluateDeath, ns, false)
 	if not ok and ns.RecordError then ns:RecordError("death:refresh", err) end
-end)
+end))
 ns.deathEvents = events
 
 if ns.Mark then ns.Mark("Death") end

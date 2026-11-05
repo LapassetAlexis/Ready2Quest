@@ -431,6 +431,9 @@ do
 	C.Reset(11)
 	C.Login()
 	Check("[COMP] avec modèle : boussole cachée", NS.companionFrame.usesFallback == false and not NS.companionFrame.fallback:IsShown())
+	-- il salue en parlant (animation « talk »), puis revient au repos
+	Check("[COMP] avec modèle : il parle en saluant", C.Model().anim == NS.COMPANION_ANIMS.talk)
+	Mock:Advance(NS.COMPANION_TALK_TIME + 0.1)
 	Check("[COMP] avec modèle : animation de repos", C.Model().anim == NS.COMPANION_ANIMS.idle)
 	Mock:Advance(1)
 	Check("[COMP] avec modèle : léger balancement", type(C.Model().rotation) == "number")

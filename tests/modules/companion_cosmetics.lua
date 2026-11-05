@@ -59,8 +59,8 @@ do
 	Check("[COSM] id unique, libellé fr+en, palier 0-3, départ au palier 0", #problems == 0, table.concat(problems, ", "))
 	Check("[COSM] quatre types : apparences, ornements, cadres, fonds", kinds.app and kinds.orn and kinds.frame and kinds.bg)
 	-- v1.1.0 : plus un cadre et un fond des brillantes (Shiny.lua)
-	Check("[COSM] 6 à 9 cadres, 6 à 10 fonds", #NS.COMPANION_FRAMES >= 6 and #NS.COMPANION_FRAMES <= 9
-		and #NS.COMPANION_BACKGROUNDS >= 6 and #NS.COMPANION_BACKGROUNDS <= 10, #NS.COMPANION_FRAMES .. "/" .. #NS.COMPANION_BACKGROUNDS)
+	-- v1.2.0 : plus 4 cadres et 11 fonds tirés des images du jeu
+	Check("[COSM] 13 cadres, 21 fonds", #NS.COMPANION_FRAMES == 13 and #NS.COMPANION_BACKGROUNDS == 21, #NS.COMPANION_FRAMES .. "/" .. #NS.COMPANION_BACKGROUNDS)
 	local displays, okDisplay = {}, true
 	for _, def in ipairs(NS.COMPANION_APPEARANCES) do
 		if type(def.display) ~= "number" or def.display <= 0 or displays[def.display] then okDisplay = false end

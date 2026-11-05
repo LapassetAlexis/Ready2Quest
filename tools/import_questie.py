@@ -7,8 +7,8 @@ n'est lu pendant la partie), ni pour générer leurs fichiers. Les générateurs
 NOTRE base : versionnée dans ce dépôt, corrigée et complétée ici.
 
 Ce script sert à la remplir au départ, ou à y reprendre plus tard ce que
-Questie aurait ajouté (nouveautés de Forever). Il écrit, pour chaque client
-(data/era/, data/forever/) :
+Questie aurait ajouté (nouveautés de Forever). Il écrit, pour WoW Forever
+(data/forever/ ; Classic Era n'est plus importé) :
     npcs.jsonl      PNJ et créatures : noms (en, fr), niveaux, rang, faction,
                     services (npcFlags), apparitions par zone, quêtes
     objects.jsonl   objets du monde (nœuds de récolte, boîtes aux lettres…)
@@ -22,15 +22,14 @@ elles ne sont jamais écrasées par un nouvel import (voir docs/DONNEES.md).
 
 Usage :
     python3 -I tools/import_questie.py /chemin/vers/QuestieDB --questie-src /chemin/vers/Questie
-        [--flavor classic|forever|all] [--commit SHA] [--questie 12.4.0] [--date AAAA-MM-JJ]
+        [--commit SHA] [--questie 12.4.0] [--date AAAA-MM-JJ]
 
-Sources lues (chemins relatifs à la racine de QuestieDB, <F> = Classic ou
-Forever, <f> = classic ou forever) :
-    data/<F>/<f>QuestDB.lua / <f>NpcDB.lua / <f>ObjectDB.lua   données brutes
-    l10n/<F>/lookupQuests|lookupNpcs|lookupObjects/frFR.lua    noms français
-    support/Zones/*.lua (Era), support/Forever/Zones/*.lua      areaID -> uiMapID,
+Sources lues (chemins relatifs à la racine de QuestieDB) :
+    data/Forever/foreverQuestDB.lua / foreverNpcDB.lua / foreverObjectDB.lua   données brutes
+    l10n/Forever/lookupQuests|lookupNpcs|lookupObjects/frFR.lua    noms français
+    support/Forever/Zones/*.lua                                  areaID -> uiMapID,
                                                                 sous-zone -> zone
-    src/corrections/enum/*.lua, src/corrections/Era|Forever/... corrections
+    src/corrections/enum/*.lua, src/corrections/Forever/...      corrections
         statiques (Load), dans l'ordre de src/config.lua et docs/forever.md
 Questie/Questie (--questie-src) : QuestieQuestBlacklist.lua (quêtes cachées),
 Holidays/quests/*.lua (quêtes d'événements saisonniers).
@@ -666,14 +665,6 @@ def apply_corrections(data, corrections, stats):
 # Clients
 # ---------------------------------------------------------------------------
 FLAVORS = {
-    "classic": {
-        "name": "Era", "dir": "Classic", "prefix": "classic", "expansion": "Classic", "support": "support/Zones",
-        "forever": False,
-        "layers": {
-            "quest": [("src/corrections/Era/classicQuestFixes.lua", "corrections Era (classicQuestFixes)")],
-            "npc": [], "object": [],
-        },
-    },
     "forever": {
         "name": "Forever", "dir": "Forever", "prefix": "forever", "expansion": "Forever",
         "support": "support/Forever/Zones", "forever": True,
@@ -798,7 +789,7 @@ FIELDS = {
 }
 FILES = {"npc": "npcs.jsonl", "object": "objects.jsonl", "quest": "quests.jsonl"}
 LOOKUPS = {"npc": "lookupNpcs", "object": "lookupObjects", "quest": "lookupQuests"}
-CLIENT_DIR = {"classic": "era", "forever": "forever"}
+CLIENT_DIR = {"forever": "forever"}
 
 
 def to_json(value):
@@ -879,7 +870,6 @@ def main(argv=None):
     parser = argparse.ArgumentParser(description="Importe la base de Questie dans data/ (notre base).")
     parser.add_argument("questiedb", help="racine de la source QuestieDB (data/, l10n/, support/, src/)")
     parser.add_argument("--questie-src", help="racine de Questie/Questie (liste noire de quêtes, événements)")
-    parser.add_argument("--flavor", choices=("classic", "forever", "all"), default="all")
     parser.add_argument("--commit", help="commit QuestieDB (lu dans .git si absent)")
     parser.add_argument("--questie", default="12.4.0", help="version de Questie correspondante")
     parser.add_argument("--date", default=datetime.date.today().isoformat())
@@ -890,8 +880,7 @@ def main(argv=None):
     hidden, events = load_questie_policy(args.questie_src)
     if hidden is None:
         print("ATTENTION : sans --questie-src, ni liste noire de quêtes ni quêtes d'événement de Questie.")
-    for key in (("classic", "forever") if args.flavor == "all" else (args.flavor,)):
-        export(root, key, enums, (hidden, events), meta)
+    export(root, "forever", enums, (hidden, events), meta)
 
 
 if __name__ == "__main__":

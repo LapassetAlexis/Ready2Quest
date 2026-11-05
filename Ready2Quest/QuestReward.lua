@@ -54,6 +54,8 @@ local FR = {
 	REWARD_TT_DELTA      = "Par rapport au porté : %s",
 	REWARD_TT_UNUSABLE   = "Pas pour toi",
 	REWARD_TT_SAME       = "Pas mieux que ton équipement",
+	REWARD_TT_UPGRADE    = "Ready2Quest : amélioration",
+	REWARD_TT_UPGRADE_DELTA = "Ready2Quest : amélioration (%s)",
 	REWARD_ILVL          = "niveau d'objet %s",
 	REWARD_ARMOR         = "Armure",
 	REWARD_DPS           = "DPS",
@@ -72,6 +74,8 @@ local EN = {
 	REWARD_TT_DELTA      = "Compared to equipped: %s",
 	REWARD_TT_UNUSABLE   = "Not for you",
 	REWARD_TT_SAME       = "No better than your gear",
+	REWARD_TT_UPGRADE    = "Ready2Quest: upgrade",
+	REWARD_TT_UPGRADE_DELTA = "Ready2Quest: upgrade (%s)",
 	REWARD_ILVL          = "item level %s",
 	REWARD_ARMOR         = "Armor",
 	REWARD_DPS           = "DPS",
@@ -206,8 +210,7 @@ end
 local function ItemInfo(link)
 	if not link then return nil end
 	local c = rawget(_G, "C_Item")
-	local getInfo = (type(c) == "table" and c.GetItemInfo) or rawget(_G, "GetItemInfo")
-	local name, _, quality, itemLevel, _, _, _, _, equipLoc, _, sellPrice, classID, subClassID = Call(getInfo, link)
+	local name, _, quality, itemLevel, minLevel, _, _, _, equipLoc, _, sellPrice, classID, subClassID = ns.ItemInfo(link)
 	if not name then return nil end
 	if classID == nil then
 		-- certains clients ne renvoient pas la classe : GetItemInfoInstant la donne
@@ -216,7 +219,7 @@ local function ItemInfo(link)
 		classID, subClassID = cid, sid
 	end
 	return {
-		name = name, quality = quality, itemLevel = tonumber(itemLevel) or 0,
+		name = name, quality = quality, itemLevel = tonumber(itemLevel) or 0, minLevel = tonumber(minLevel),
 		equipLoc = equipLoc, sellPrice = tonumber(sellPrice) or 0,
 		classID = tonumber(classID), subClassID = tonumber(subClassID),
 	}
@@ -609,6 +612,59 @@ function ns:RewardHookTooltip()
 		if ok then self.rewardTooltipHooked = "OnTooltipSetItem" end
 	end
 end
+
+-- ---------------------------------------------------------------------------
+-- Survol de n'importe quel objet (sacs, butin, marchand…) : la même notation
+-- que les récompenses. Une ligne seulement quand l'objet améliore le porté ;
+-- rien sinon (ni « pas mieux », ni prix : le jeu affiche déjà le sien).
+-- ---------------------------------------------------------------------------
+function ns:RewardItemUpgradeLine(link)
+	if not self:RewardEnabled() or self:DB().rewardTooltip == false then return nil end
+	link = ns.Plain(link)
+	if type(link) ~= "string" then return nil end
+	-- fenêtre de récompense ouverte : ses choix ont déjà leur ligne (RewardAddTooltip)
+	if self.rewardState and self.rewardState.active then return nil end
+	local info = ItemInfo(link)
+	local slots = info and SLOTS[info.equipLoc]
+	if not slots then return nil end
+	-- l'objet porté lui-même (un anneau comparé à l'autre anneau) : rien
+	for _, slot in ipairs(slots) do
+		if ns.ItemLinkForSlot and ns.ItemLinkForSlot(slot) == link then return nil end
+	end
+	local weights, order = Weights()
+	local classFile, level = PlayerClass(), PlayerLevel()
+	if info.minLevel and info.minLevel > level then return nil end   -- pas encore portable
+	local suit = Suitability(info, classFile, level)
+	if suit <= 0 then return nil end
+	local replaced = Replaced(info.equipLoc, classFile, weights)
+	if not replaced then return nil end
+	local stats = ItemStats(link)
+	if RawScore(stats, info, weights) * suit - replaced.score <= EPSILON then return nil end
+	local text = self:RewardDeltaText({ info = info, stats = stats, replaced = replaced },
+		{ order = order, hasStats = StatsApi() ~= nil })
+	return text and self:F("REWARD_TT_UPGRADE_DELTA", text) or L.REWARD_TT_UPGRADE
+end
+
+function ns:RewardOnItemTooltip(tooltip)
+	if type(tooltip.GetItem) ~= "function" then return false end
+	local ok, _, link = pcall(tooltip.GetItem, tooltip)
+	if not ok then return false end
+	local line = self:RewardItemUpgradeLine(link)
+	if not line then return false end
+	local c = Theme and Theme.GREEN or { 0.44, 0.81, 0.48 }
+	tooltip:AddLine(line, c[1], c[2], c[3])
+	return true
+end
+
+function ns:RewardHookItemTooltip()
+	if not self.HookTooltip then return nil end
+	return self:HookTooltip("Item", function(tooltip, data)
+		if ns:RewardOnItemTooltip(tooltip) and data == nil and type(tooltip.Show) == "function" then
+			pcall(tooltip.Show, tooltip)   -- OnTooltipSetItem : le cadre reprend sa taille
+		end
+	end)
+end
+ns:RewardHookItemTooltip()
 
 -- ---------------------------------------------------------------------------
 -- Événements

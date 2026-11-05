@@ -287,23 +287,20 @@ local function ZoneVillages(self, zoneID, zoneName)
 	return { zoneID = zoneID, zoneName = tostring(zoneName or "?"), have = have, need = need, missing = missing, visited = visited }
 end
 
--- Donjons dont la plage (Era ou Forever) contient ton niveau
+-- Donjons dont la plage recommandée contient ton niveau
 local function LevelDungeons(self)
 	local level = Level()
 	if level <= 0 or not self.DungeonRange then return nil end
-	local forever = self.IsForeverClient and self:IsForeverClient()
 	local stamps, inRange, missing, have = self:JournalData().stamps, {}, {}, 0
 	for key, entry in pairs(self.DUNGEONS or {}) do
-		if not entry.forever or forever then
-			local low, high = self:DungeonRange(entry)
-			if low and high and level >= low and level <= high then
-				inRange[#inRange + 1] = key
-				if stamps["dungeon:" .. key] then
-					have = have + 1
-				else
-					missing[#missing + 1] = { low = low, high = high,
-						name = self.DungeonName and self:DungeonName(entry) or entry.name or key }
-				end
+		local low, high = self:DungeonRange(entry)
+		if low and high and level >= low and level <= high then
+			inRange[#inRange + 1] = key
+			if stamps["dungeon:" .. key] then
+				have = have + 1
+			else
+				missing[#missing + 1] = { low = low, high = high,
+					name = self.DungeonName and self:DungeonName(entry) or entry.name or key }
 			end
 		end
 	end
@@ -651,7 +648,8 @@ end
 
 -- Ceux du suivi : non masqués, les TRACKER_MAX premiers
 -- La complétion de la zone affichée remplace ses parts (villages, bestiaire,
--- nommés de cette zone) : elles restent dans l'onglet Objectifs.
+-- nommés de cette zone) : elles restent dans la liste des objectifs
+-- (JournalObjectives), et dans l'onglet Zone du carnet.
 -- Une zone décochée sort du suivi avec toutes ses parts.
 local ZONE_PART_PREFIX = { "villages:", "bestiary:", "named:" }
 function ns:JournalTrackerObjectives()
@@ -678,7 +676,8 @@ function ns:JournalTrackerObjectives()
 	return shown
 end
 
--- Lignes de l'onglet « Objectifs » de la fenêtre (Journal.lua)
+-- Les objectifs en lignes { name, earned, goal, detail } (l'ancien onglet
+-- « Objectifs » du carnet ; gardé pour les extensions qui l'utilisent)
 function ns:JournalGoalItems()
 	local items = {}
 	for _, goal in ipairs(self:JournalObjectives()) do

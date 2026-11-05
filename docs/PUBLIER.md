@@ -96,7 +96,7 @@ Un tag qui contient `beta` ou `alpha` (`v1.27.0-beta1`) part comme fichier bêta
 
 ## Versions du jeu
 
-Le packager déduit les versions du jeu de la ligne `## Interface:` : `16001` pour Forever, `11509` pour Classic Era, `20506` pour TBC Anniversary, `50504` pour Mists. Les fichiers seront donc proposés pour ces quatre clients, alors que l'addon n'est testé que sur Forever et Era. Pour ne publier que ces deux-là, ajoute `-g 1.60.1,1.15.9` aux `args` du packager dans `release.yml`. Il faudra alors mettre ces numéros à jour à chaque patch.
+Le packager déduit les versions du jeu de la ligne `## Interface:`. Depuis Ready2Quest 1.26.1 et QuestCompanion 1.2.0, les deux addons ne visent plus que WoW Forever : `## Interface: 16001` (et `## Interface-Camelot: 16001`). Les fichiers ne sont donc proposés que pour Forever ; les versions déjà publiées pour Era restent téléchargeables.
 
 ## Garde-fous
 

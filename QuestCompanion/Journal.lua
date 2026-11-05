@@ -42,6 +42,7 @@ ns.JOURNAL_MILESTONES = MILESTONES
 local TOAST_SECONDS = 4
 local TOAST_COLLAPSE = 3      -- à partir de 3 tampons en attente : un seul bandeau groupé
 local RARE_MEMORY = 900       -- un rare vu et jamais engagé est oublié après 15 min
+local RARE_ENGAGED_MEMORY = 1800 -- engagé puis laissé (fuite, évitement) : oublié après 30 min sans coup
 
 -- ---------------------------------------------------------------------------
 -- Chaînes, réglages, page d'options, module
@@ -342,14 +343,11 @@ function ns:JournalDungeon()
 	if key and key ~= "" then return self:JournalEarn("dungeon", key, name or key) end
 end
 
--- Donjons de ce client (ceux de Forever n'existent pas sur Era)
+-- Donjons de la base (DungeonData.lua)
 function ns:JournalDungeonList()
 	local list = {}
-	local forever = self.IsForeverClient and self:IsForeverClient()
 	for key, entry in pairs(self.DUNGEONS or {}) do
-		if not entry.forever or forever then
-			list[#list + 1] = { key = key, name = self.DungeonName and self:DungeonName(entry) or entry.name or key }
-		end
+		list[#list + 1] = { key = key, name = self.DungeonName and self:DungeonName(entry) or entry.name or key }
 	end
 	return list
 end
@@ -388,16 +386,24 @@ function ns:JournalSeeUnit(unit)
 	if not ModuleOn() or type(unit) ~= "string" then return end
 	if not RARE_CLASSES[Call("UnitClassification", unit) or ""] then return end
 	if Call("UnitIsPlayer", unit) then return end
-	local guid = Call("UnitGUID", unit)
+	self:JournalSeeRare(Call("UnitGUID", unit), Call("UnitName", unit))
+end
+
+-- Un rare repéré par son GUID (unité lue ci-dessus, ou vignette de la
+-- minicarte, LiveRares.lua) : retenu pour compter sa mort s'il est engagé.
+function ns:JournalSeeRare(guid, name)
+	if not ModuleOn() then return end
+	guid, name = ns.Plain(guid), ns.Plain(name)
 	if type(guid) ~= "string" or not (guid:find("^Creature%-") or guid:find("^Vehicle%-")) then return end
 	local now = ns.Now()
 	local rare = self.journalRares[guid] or {}
-	rare.name = Call("UnitName", unit) or rare.name
+	rare.name = name or rare.name
 	rare.seen = now
 	self.journalRares[guid] = rare
 	-- ménage : un rare croisé sans combat ne reste pas en mémoire
 	for other, entry in pairs(self.journalRares) do
-		if not entry.engaged and now - (entry.seen or now) > RARE_MEMORY then self.journalRares[other] = nil end
+		local memory = entry.engaged and RARE_ENGAGED_MEMORY or RARE_MEMORY
+		if now - (entry.seen or now) > memory then self.journalRares[other] = nil end
 	end
 end
 
@@ -426,7 +432,7 @@ function ns:JournalCombat(subevent, sourceGUID, sourceFlags, destGUID)
 			self.journalRares[destGUID] = nil
 			if ModuleOn() then self:JournalEarn("rare", NpcID(destGUID) or rare.name, rare.name) end
 		elseif subevent:find("_DAMAGE$") or subevent:find("_MISSED$") then
-			rare.engaged = true
+			rare.engaged, rare.seen = true, ns.Now()
 		end
 	end
 end

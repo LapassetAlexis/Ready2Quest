@@ -3,7 +3,7 @@
 -- Ce que Ready2Quest (check avant le départ) et QuestCompanion (conseils de
 -- route du compagnon) lisent tous les deux, avec les mêmes règles :
 --   * sacs : ns.EachBagItem, ns.FreeBagSlots, ns.CountConsumables(kind) ;
---   * quêtes : ns.QuestLogReady(index), ns:QuestCounts() -> total, prêtes ;
+--   * quêtes : ns:QuestCounts() -> total, prêtes ;
 --   * équipement : ns:LowestDurability() -> % de la pièce la plus usée ;
 --   * pierre de foyer : ns.HearthCooldown() -> secondes restantes ;
 --   * munitions : ns.AmmoCount, ns.AmmoInBags, ns.ReagentMinimum,
@@ -61,24 +61,6 @@ end
 
 ns.FreeBagSlots = FreeBagSlots
 
--- GetQuestLogTitle n'a pas la même forme partout :
---   Era 1.13+ / Classic modernes : title, level, suggestedGroup, isHeader, isCollapsed, isComplete, …
---   clients historiques (5.x)     : title, level, questTag, suggestedGroup, isHeader, isCollapsed, isComplete, …
--- isHeader est un booléen dans les deux cas : sa position désigne la forme.
--- isComplete vaut 1 (terminée), -1 (échouée) ou nil sur Era, true ailleurs.
-function ns.QuestLogReady(index)
-	if type(GetQuestLogTitle) ~= "function" then return false end
-	local r = { pcall(GetQuestLogTitle, index) }
-	if not r[1] or r[2] == nil then return false end
-	local isHeader, isComplete
-	if type(r[5]) == "boolean" then
-		isHeader, isComplete = r[5], r[7]
-	else
-		isHeader, isComplete = r[6], r[8]
-	end
-	if isHeader == true or isHeader == 1 then return false end
-	return isComplete == true or isComplete == 1
-end
 ns.EachBagItem = EachBagItem
 
 local function CountConsumables(kind)
@@ -94,8 +76,8 @@ end
 ns.CountConsumables = CountConsumables
 
 
--- Quêtes du journal : total, et prêtes à rendre (API namespacée récente, ou
--- globales historiques d'Era). nil si le journal ne se lit pas.
+-- Quêtes du journal : total, et prêtes à rendre (API C_QuestLog). nil si le
+-- journal ne se lit pas.
 function ns:QuestCounts()
 	local total, ready = 0, 0
 	if C_QuestLog and type(C_QuestLog.GetNumQuestLogEntries) == "function" then
@@ -108,17 +90,6 @@ function ns:QuestCounts()
 				local okReady, isReady = pcall(C_QuestLog.ReadyForTurnIn, info.questID)
 				if okReady and isReady == true then ready = ready + 1 end
 			end
-		end
-	elseif type(GetNumQuestLogEntries) == "function" and type(GetQuestLogTitle) == "function" then
-		local ok, entries = pcall(GetNumQuestLogEntries)
-		if not ok or type(entries) ~= "number" then return nil end
-		for i = 1, entries do
-			local r = { pcall(GetQuestLogTitle, i) }
-			if r[1] and r[2] ~= nil then
-				local isHeader = (type(r[5]) == "boolean") and r[5] or r[6]
-				if not (isHeader == true or isHeader == 1) then total = total + 1 end
-			end
-			if ns.QuestLogReady(i) then ready = ready + 1 end
 		end
 	else
 		return nil

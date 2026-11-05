@@ -141,7 +141,7 @@ if ns.RegisterModule then
 end
 
 -- ---------------------------------------------------------------------------
--- Accès robustes au client : une API absente sur Era ne doit rien casser
+-- Accès robustes au client : une API absente ne doit rien casser
 -- ---------------------------------------------------------------------------
 local function Call(name, ...)
 	local fn = rawget(_G, name)
@@ -187,12 +187,7 @@ local function ReadyQuests()
 		end
 		return ready
 	end
-	local total = tonumber(Call("GetNumQuestLogEntries"))
-	if not total or not ns.QuestLogReady then return nil end
-	for i = 1, total do
-		if ns.QuestLogReady(i) then ready = ready + 1 end
-	end
-	return ready
+	return nil
 end
 
 -- ---------------------------------------------------------------------------
@@ -202,12 +197,12 @@ end
 -- distinguer « tu reçois » de « Machin reçoit » dans toutes les langues. Les
 -- formes « multiple » passent avant : « %s. » avalerait aussi « [X]x5. ».
 
--- Couleur du lien -> qualité, si GetItemInfo n'a pas encore l'objet en cache
+-- Couleur du lien -> qualité, si ns.ItemInfo n'a pas encore l'objet en cache
 local LINK_COLORS = { ["1eff00"] = 2, ["0070dd"] = 3, ["a335ee"] = 4, ["ff8000"] = 5, ["e6cc80"] = 6,
 	["9d9d9d"] = 0, ["ffffff"] = 1 }
 
 local function LinkQuality(link)
-	local _, _, quality = Call("GetItemInfo", link)
+	local _, _, quality = ns.ItemInfo(link)
 	if type(quality) == "number" then return quality end
 	-- clients récents : |cnIQ2:...  ; anciens : |cff1eff00...
 	local iq = link:match("|cnIQ(%d+):")
@@ -605,7 +600,7 @@ local HANDLERS = {
 
 local eventFrame = CreateFrame("Frame")
 for event in pairs(HANDLERS) do
-	-- un événement inconnu du client (Era, Forever) ne doit pas bloquer les autres
+	-- un événement inconnu du client ne doit pas bloquer les autres
 	pcall(eventFrame.RegisterEvent, eventFrame, event)
 end
 eventFrame:SetScript("OnEvent", function(_, event, ...)

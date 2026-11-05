@@ -496,7 +496,10 @@ do
 	NS:ToggleJournal(true)
 	local f = NS.journalFrame
 	local comp = f.comp
-	Check("[WIN] ouvre sur la Zone, zone où tu es", f.kind == "completion" and f.zoneID == 1413
+	Check("[WIN] première ouverture : l'onglet Créature, le premier", f.kind == "evolution" and f.evo:IsShown()
+		and not comp:IsShown())
+	f.sections.completion:Click()
+	Check("[WIN] onglet Zone : la zone où tu es", f.kind == "completion" and f.zoneID == 1413
 		and comp:IsShown() and not f.evo:IsShown() and not f.zones:IsShown())
 	Check("[WIN] titre : la zone, marquée « ici », et ses niveaux", comp.title.text == "Les Tarides (ici)"
 		and comp.levels.text == "niveaux 10-25", comp.title.text .. " / " .. comp.levels.text)
@@ -728,6 +731,7 @@ do
 	K.Reset(27)
 	Mock.world.mapID = nil
 	NS:ToggleJournal(true)
+	NS:SelectJournalKind("completion")
 	Check("[WIN] aucune zone : invitation à explorer", NS.journalFrame.comp.empty.text == NS.L.JRN_ZONE_NONE, NS.journalFrame.comp.empty.text)
 	NS.journalFrame:Hide()
 end

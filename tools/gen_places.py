@@ -3,7 +3,7 @@
 
 Hubs.lua (tools/gen_hubs.py) connaît les capitales et les villages par le nom
 de leur sous-zone. Il manque les petits camps et tout lieu sans sous-zone à
-lui. Ici, on les trouve dans NOTRE base (data/<client>/npcs.jsonl) : un lieu
+lui. Ici, on les trouve dans NOTRE base (data/forever/npcs.jsonl) : un lieu
 sûr est un groupe de PNJ de service amicaux, proches les uns des autres, où
 l'on peut se préparer.
 
@@ -17,7 +17,7 @@ Règle (même esprit que les indices appris en jeu, Core.lua, CLUE_STRENGTH) :
 Groupes : PNJ à moins de LINK mètres (yards) l'un de l'autre, de proche en
 proche. Rayon d'un lieu : son PNJ le plus éloigné du centre, plus MARGIN.
 
-Lit : data/<client>/npcs.jsonl, zones.json (zone -> carte), maps.json
+Lit : data/forever/npcs.jsonl, zones.json (zone -> carte), maps.json
 (dimensions des cartes, tools/import_client.py). Sortie déterministe.
 
 Usage : python3 -I tools/gen_places.py
@@ -152,12 +152,12 @@ def main(out_path=OUT):
         "-- Places.lua -- GÉNÉRÉ par tools/gen_places.py, ne pas éditer à la main :",
         "-- corrige data/ et relance le script (voir docs/DONNEES.md).",
         "-- Lieux sûrs repérés par leurs PNJ de service (aubergiste, maître de vol,",
-        "-- banquier, ou marchand + réparateur ou entraîneur), Era et Forever, en",
+        "-- banquier, ou marchand + réparateur ou entraîneur), sur Forever, en",
         "-- complément de Hubs.lua (lieux connus par le nom de leur sous-zone).",
         "-- Source : notre base data/ (PNJ importés de Questie/QuestieDB, GPL-3.0 ;",
         "--   dimensions des cartes : tables du client, wago.tools).",
-        "-- ns.PLACE_DATA[client].scale[uiMapID]  = { mètres pour 1 % en x, en y }",
-        "-- ns.PLACE_DATA[client].places[uiMapID] = { { x %, y %, rayon en mètres,",
+        "-- ns.PLACE_DATA.forever.scale[uiMapID]  = { mètres pour 1 % en x, en y }",
+        "-- ns.PLACE_DATA.forever.places[uiMapID] = { { x %, y %, rayon en mètres,",
         "--     faction \"A\"|\"H\"|\"N\", services }, … }",
         "--   services : 1 auberge, 2 vol, 4 banque, 8 marchand, 16 réparation,",
         "--   32 entraîneur, 64 quêtes.",
@@ -169,7 +169,7 @@ def main(out_path=OUT):
         "ns.PLACE_DATA = {",
     ]
     summary = []
-    for client in ("era", "forever"):
+    for client in ("forever",):
         places, scales, meta = build(client)
         out.append("\t%s = {" % client)
         out.extend(lua(places, scales))

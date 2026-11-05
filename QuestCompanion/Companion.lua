@@ -96,6 +96,7 @@ local POOL_CATEGORY = {
 	EVOLVE = "event", UNLOCK = "event", READY = "event", CHEST = "event", TUTO = "tuto", TIP = "tip", GOAL = "tip", GOAL_STAGE = "tip",
 	IDLE = "chatter", NIGHT = "chatter",
 	PHOTO = "event", ANNIV = "event", RECALL = "chatter",
+	LEVEL = "event",      -- un grand moment : dit dès le cran Calme, comme promis
 	NEED_hunger = "need", NEED_energy = "need", NEED_mood = "need", NEED_curiosity = "need",
 }
 -- Pause (s) par famille : les sources fréquentes (combat, PNJ) ne doivent pas
@@ -199,6 +200,15 @@ local FR = {
 	COMP_APP_PARROT        = "Ara bleu",
 	COMP_APP_SNAKE         = "Serpent cramoisi",
 	COMP_APP_CAT_WHITE     = "Chaton blanc",
+	COMP_APP_CAT_SILVER    = "Chat tigré argenté",
+	COMP_APP_TOAD          = "Crapaud tacheté",
+	COMP_APP_CAT_BOMBAY    = "Chat Bombay",
+	COMP_APP_MACAW_RED     = "Ara écarlate",
+	COMP_APP_PANDA         = "Bébé panda",
+	COMP_APP_MURLOC        = "Bébé murloc",
+	COMP_APP_CHICKEN       = "Poulet",
+	COMP_APP_SQUIRREL_MECH = "Écureuil mécanique",
+	COMP_APP_HIPPOGRYPH    = "Bébé hippogriffe",
 	COMP_ORN_RIBBON        = "Ruban de voyage",
 	COMP_ORN_LANTERN       = "Lanterne",
 	COMP_ORN_MEDAL         = "Médaille",
@@ -216,6 +226,10 @@ local FR = {
 	COMP_FRAME_RUNE        = "Runique",
 	COMP_FRAME_FEL         = "Gangrené",
 	COMP_FRAME_GILDED      = "Or ciselé",
+	COMP_FRAME_STONE       = "Pierre",
+	COMP_FRAME_TOAST       = "Messager",
+	COMP_FRAME_GLUE        = "Portail",
+	COMP_FRAME_CARVED      = "Sculpté",
 	COMP_BG_NIGHT          = "Nuit",
 	COMP_BG_PARCHMENT      = "Parchemin",
 	COMP_BG_FOREST         = "Sous-bois",
@@ -225,6 +239,17 @@ local FR = {
 	COMP_BG_EMBER          = "Braise",
 	COMP_BG_STARS          = "Voûte étoilée",
 	COMP_BG_VELVET         = "Velours doré",
+	COMP_BG_MAIL_OG        = "Lettre d'Orgrimmar",
+	COMP_BG_MAIL_UC        = "Lettre de Fossoyeuse",
+	COMP_BG_MAIL_TB        = "Lettre des Pitons",
+	COMP_BG_DEEDS          = "Parchemin des hauts faits",
+	COMP_BG_MAIL_ILL       = "Lettre enluminée",
+	COMP_BG_MAIL_VAL       = "Lettre d'amour",
+	COMP_BG_MAIL_CHR       = "Lettre d'hiver",
+	COMP_BG_KALIMDOR       = "Kalimdor",
+	COMP_BG_EASTERN        = "Royaumes de l'Est",
+	COMP_BG_MOLTENCORE     = "Cœur du Magma",
+	COMP_BG_AHNQIRAJ       = "Ahn'Qiraj",
 	COMP_KIND_app          = "Apparence",
 	COMP_KIND_orn          = "Ornement",
 	COMP_KIND_frame        = "Cadre",
@@ -242,6 +267,8 @@ local FR = {
 	COMP_REQ_rare          = "%d rares",
 	COMP_REQ_level         = "%d tampons de niveau",
 	COMP_REQ_total         = "%d tampons",
+	COMP_REQ_inn           = "%d cartes d'auberge pleines",
+	COMP_REQ_missions      = "%d jours aux trois missions",
 	COMP_HOVER_HINT        = "Clic : un câlin · Maj + clic : friandises · clic droit : carnet · glisser : déplacer",
 	OPT_COMP_TUTO          = "Rejouer le tutoriel",
 	COMP_TUTO_NEXT         = "Suivant",
@@ -346,6 +373,15 @@ local EN = {
 	COMP_APP_PARROT        = "Blue macaw",
 	COMP_APP_SNAKE         = "Crimson snake",
 	COMP_APP_CAT_WHITE     = "White kitten",
+	COMP_APP_CAT_SILVER    = "Silver tabby",
+	COMP_APP_TOAD          = "Spotted toad",
+	COMP_APP_CAT_BOMBAY    = "Bombay cat",
+	COMP_APP_MACAW_RED     = "Scarlet macaw",
+	COMP_APP_PANDA         = "Panda cub",
+	COMP_APP_MURLOC        = "Baby murloc",
+	COMP_APP_CHICKEN       = "Chicken",
+	COMP_APP_SQUIRREL_MECH = "Mechanical squirrel",
+	COMP_APP_HIPPOGRYPH    = "Hippogryph hatchling",
 	COMP_ORN_RIBBON        = "Travel ribbon",
 	COMP_ORN_LANTERN       = "Lantern",
 	COMP_ORN_MEDAL         = "Medal",
@@ -362,6 +398,10 @@ local EN = {
 	COMP_FRAME_RUNE        = "Runic",
 	COMP_FRAME_FEL         = "Fel-touched",
 	COMP_FRAME_GILDED      = "Chased gold",
+	COMP_FRAME_STONE       = "Stone",
+	COMP_FRAME_TOAST       = "Messenger",
+	COMP_FRAME_GLUE        = "Gateway",
+	COMP_FRAME_CARVED      = "Carved",
 	COMP_BG_NIGHT          = "Night",
 	COMP_BG_PARCHMENT      = "Parchment",
 	COMP_BG_FOREST         = "Undergrowth",
@@ -371,6 +411,17 @@ local EN = {
 	COMP_BG_EMBER          = "Embers",
 	COMP_BG_STARS          = "Starry vault",
 	COMP_BG_VELVET         = "Golden velvet",
+	COMP_BG_MAIL_OG        = "Orgrimmar letter",
+	COMP_BG_MAIL_UC        = "Undercity letter",
+	COMP_BG_MAIL_TB        = "Thunder Bluff letter",
+	COMP_BG_DEEDS          = "Deeds parchment",
+	COMP_BG_MAIL_ILL       = "Illuminated letter",
+	COMP_BG_MAIL_VAL       = "Love letter",
+	COMP_BG_MAIL_CHR       = "Winter letter",
+	COMP_BG_KALIMDOR       = "Kalimdor",
+	COMP_BG_EASTERN        = "Eastern Kingdoms",
+	COMP_BG_MOLTENCORE     = "Molten Core",
+	COMP_BG_AHNQIRAJ       = "Ahn'Qiraj",
 	COMP_KIND_app          = "Appearance",
 	COMP_KIND_orn          = "Ornament",
 	COMP_KIND_frame        = "Frame",
@@ -388,6 +439,8 @@ local EN = {
 	COMP_REQ_rare          = "%d rares",
 	COMP_REQ_level         = "%d level stamps",
 	COMP_REQ_total         = "%d stamps",
+	COMP_REQ_inn           = "%d full inn cards",
+	COMP_REQ_missions      = "%d days with all three missions",
 	COMP_HOVER_HINT        = "Click: a cuddle · Shift + click: treats · right-click: journal · drag: move",
 	OPT_COMP_TUTO          = "Replay the tutorial",
 	COMP_TUTO_NEXT         = "Next",
@@ -696,6 +749,9 @@ end
 function ns:CompanionRequirement(unlock)
 	if not unlock then return "" end
 	if unlock.level then return self:F("COMP_REQ_LEVEL", unlock.level) end
+	if unlock.inn then return self:F("COMP_REQ_inn", unlock.inn) end
+	if unlock.missions then return self:F("COMP_REQ_missions", unlock.missions) end
+	if unlock.shiny then return self:F("COMP_REQ_shiny", unlock.shiny) end
 	return self:F("COMP_REQ_" .. tostring(unlock.stamp), unlock.count or 1)
 end
 
@@ -1388,38 +1444,79 @@ function ns:EnsureCompanionBubble()
 	return bubble
 end
 
--- Survol : quatre petites barres de besoins, le stade et l'humeur
+-- Survol : le nom, le stade et l'humeur (et son caractère), quatre petites
+-- barres de besoins, puis l'aide en gris. Tout est placé à chaque
+-- rafraîchissement, de haut en bas : une ligne qui passe à la ligne (le
+-- caractère, l'aide plus longue d'une langue) pousse la suite au lieu de la
+-- recouvrir, et le cadre prend la hauteur de son contenu.
+local HOVER_W, HOVER_PAD, HOVER_BAR_ROW = 200, 8, 15
+local function TextHeight(fontString, fallbackChars)
+	local height = fontString.GetStringHeight and tonumber(fontString:GetStringHeight()) or 0
+	if height and height > 0 then return height end
+	-- sans mesure (client ancien, banc de test) : une ligne de 12 px par tranche de texte
+	local text = tostring(fontString.GetText and fontString:GetText() or "")
+	return 12 * math.max(1, math.ceil(#text / fallbackChars))
+end
+ns.CompanionHoverTextHeight = TextHeight
+
 function ns:EnsureCompanionHover()
 	if self.companionHover then return self.companionHover end
 	local frame = self.companionFrame
 	if not frame then return nil end
-	local hover = Theme.CreateDiscreet(UIParent, 168, 118)
+	local hover = Theme.CreateDiscreet(UIParent, HOVER_W, 118)
 	if not hover then return nil end
 	hover:SetFrameStrata("TOOLTIP")
 	hover:SetPoint("BOTTOMRIGHT", frame, "BOTTOMLEFT", -6, 0)
 	hover.title = Theme.CreateTitle(hover, 13)
-	hover.title:SetPoint("TOPLEFT", hover, "TOPLEFT", 8, -6)
+	hover.title:SetPoint("TOPLEFT", hover, "TOPLEFT", HOVER_PAD, -6)
 	hover.sub = hover:CreateFontString(nil, "OVERLAY", Theme.F_SMALL)
-	hover.sub:SetPoint("TOPLEFT", hover, "TOPLEFT", 8, -22)
+	hover.sub:SetWidth(HOVER_W - 2 * HOVER_PAD)
+	hover.sub:SetJustifyH("LEFT")
+	if hover.sub.SetWordWrap then hover.sub:SetWordWrap(true) end
 	hover.bars = {}
-	for index, key in ipairs(NEED_KEYS) do
-		local y = -38 - (index - 1) * 15
+	for _, key in ipairs(NEED_KEYS) do
 		local label = hover:CreateFontString(nil, "OVERLAY", Theme.F_SMALL)
-		label:SetPoint("TOPLEFT", hover, "TOPLEFT", 8, y)
 		label:SetText(L["COMP_NEED_" .. key])
-		local bar = Theme.CreateBar(hover, 80, 6)
-		bar:SetPoint("TOPRIGHT", hover, "TOPRIGHT", -8, y - 3)
+		local bar = Theme.CreateBar(hover, 100, 6)
 		bar.label = label
 		hover.bars[key] = bar
 	end
 	hover.hint = hover:CreateFontString(nil, "OVERLAY", Theme.F_SMALL)
-	hover.hint:SetPoint("BOTTOMLEFT", hover, "BOTTOMLEFT", 8, 6)
-	hover.hint:SetWidth(152)
+	hover.hint:SetWidth(HOVER_W - 2 * HOVER_PAD)
+	hover.hint:SetJustifyH("LEFT")
+	if hover.hint.SetWordWrap then hover.hint:SetWordWrap(true) end
 	hover.hint:SetText(L.COMP_HOVER_HINT)
 	hover.hint:SetTextColor(Theme.MUTED[1], Theme.MUTED[2], Theme.MUTED[3])
 	hover:Hide()
 	self.companionHover = hover
 	return hover
+end
+
+-- Place tout de haut en bas et donne au cadre la hauteur de son contenu
+function ns:CompanionLayoutHover()
+	local hover = self.companionHover
+	if not hover then return nil end
+	local y = -22
+	hover.sub:ClearAllPoints()
+	hover.sub:SetPoint("TOPLEFT", hover, "TOPLEFT", HOVER_PAD, y)
+	y = y - TextHeight(hover.sub, 34) - 4
+	for _, key in ipairs(NEED_KEYS) do
+		local bar = hover.bars[key]
+		bar.label:ClearAllPoints()
+		bar.label:SetPoint("TOPLEFT", hover, "TOPLEFT", HOVER_PAD, y)
+		bar:ClearAllPoints()
+		bar:SetPoint("TOPRIGHT", hover, "TOPRIGHT", -HOVER_PAD, y - 3)
+		bar.top = y
+		y = y - HOVER_BAR_ROW
+	end
+	y = y - 4
+	hover.hint:ClearAllPoints()
+	hover.hint:SetPoint("TOPLEFT", hover, "TOPLEFT", HOVER_PAD, y)
+	hover.hint.top = y
+	local height = -y + TextHeight(hover.hint, 34) + 6
+	hover:SetHeight(height)
+	hover.layoutHeight = height
+	return height
 end
 
 function ns:CompanionRefreshHover()
@@ -1432,6 +1529,7 @@ function ns:CompanionRefreshHover()
 		local bar = hover.bars[key]
 		bar:SetValue(data.needs[key] / NEED_MAX)
 	end
+	self:CompanionLayoutHover()
 end
 
 function ns:CompanionShowHover()
@@ -1633,6 +1731,12 @@ function ns:CompanionApplyBackground()
 		path = Theme.SOLID
 		pcall(bg.SetTexture, bg, path)
 	end
+	-- image du jeu recadrée (écran de chargement), sinon la texture entière
+	if bg.SetTexCoord then
+		local c = (not fallback and def.coords) or { 0, 1, 0, 1 }
+		pcall(bg.SetTexCoord, bg, c[1], c[2], c[3], c[4])
+	end
+	frame.bgCoords = (not fallback) and def.coords or nil
 	SetColor(bg, def.color or { 0, 0, 0, 0.66 })
 	local gradient = nil
 	if def.gradient then gradient = ApplyGradient(bg, def.gradient.top, def.gradient.bottom) end
@@ -1738,6 +1842,8 @@ function ns:CompanionTick(seconds)
 		if key == "hunger" and self.companionEating then delta = EAT_GAIN * minutes end
 		data.needs[key] = Clamp(data.needs[key] + delta, floor, NEED_MAX)
 	end
+	-- prêt à évoluer : le repos ou le repas a pu combler la dernière envie
+	if data.stageReady and self:CompanionIsHappy() then self:CompanionCheckStage(PlayerLevel(), true) end
 	-- arrivée en griffon : la fin d'un vol se voit au tick suivant
 	local rt = RT()
 	local onTaxi = Call(rawget(_G, "UnitOnTaxi"), "player") == true
@@ -1833,7 +1939,9 @@ function ns:CompanionTryGoal()
 	if now < rt.goalAt then return false end
 	local target
 	for _, item in ipairs(self:CompanionNextUnlocks()) do
-		if item.need - item.have <= (GOAL_NEAR[item.source] or 3) then target = item; break end
+		-- prêt à évoluer : ce qui manque, ce sont des envies, pas des niveaux
+		-- (sa bulle READY le dit déjà)
+		if not item.ready and item.need - item.have <= (GOAL_NEAR[item.source] or 3) then target = item; break end
 	end
 	if not target then
 		rt.goalAt = now + 300      -- rien de proche : on regardera plus tard
@@ -1886,7 +1994,12 @@ function ns:CompanionLogin()
 	data.lastSeen = now
 	-- zone de connexion : connue d'emblée, pas de « Quelle vue ! » au chargement
 	local mapID = self.CurrentMap and self:CurrentMap()
-	if mapID then data.seenZones[mapID] = true end
+	if mapID then
+		data.seenZones[mapID] = true
+		-- et sa date de visite : y revenir plus tard n'est pas un « retour après 2 h » d'office
+		if type(data.zoneVisit) ~= "table" then data.zoneVisit = {} end
+		data.zoneVisit[mapID] = data.zoneVisit[mapID] or tonumber((Call(rawget(_G, "time")))) or 0
+	end
 	self:CompanionCheckPlace(true)
 	self:CompanionCheckStage(PlayerLevel(), not first)
 	self:CompanionCheckUnlocks(nil, first)
@@ -1957,7 +2070,7 @@ end
 
 local LINK_COLORS = { ["0070dd"] = 3, ["a335ee"] = 4, ["ff8000"] = 5 }
 local function LinkQuality(link)
-	local _, _, quality = Call(rawget(_G, "GetItemInfo"), link)
+	local _, _, quality = ns.ItemInfo(link)
 	if type(quality) == "number" then return quality end
 	local iq = link:match("|cnIQ(%d+):")
 	if iq then return tonumber(iq) end
@@ -2148,7 +2261,8 @@ local function GossipKind()
 		local options = Call(info.GetOptions)
 		if type(options) == "table" then
 			for _, option in ipairs(options) do
-				if type(option) == "table" and option.type == "binder" then return "innkeeper" end
+				-- l'API récente n'a plus de champ « type » : l'icône du foyer (fichier 132052) le dit
+				if type(option) == "table" and (option.type == "binder" or option.icon == 132052) then return "innkeeper" end
 			end
 		end
 		local quests = (tonumber((Call(info.GetNumAvailableQuests))) or 0) + (tonumber((Call(info.GetNumActiveQuests))) or 0)
@@ -2216,6 +2330,8 @@ function ns:CompanionNextUnlocks()
 		-- un cosmétique à palier se gagne au coffre d'une zone finie, pas au compteur
 		if (tonumber(def.tier) or 0) >= 1 then return end
 		if not unlock or data.unlocked[CosmeticKey(kind, def.id)] then return end
+		-- gagnés ailleurs (auberge, missions, brillantes) : pas d'objectif au compteur
+		if not (unlock.level or unlock.stamp) then return end
 		local item = { label = L[def.label], kind = kind, id = def.id }
 		if unlock.level then
 			item.stat, item.have, item.need, item.source = "level", level, unlock.level, "player"
@@ -2457,9 +2573,13 @@ function ns:CompanionSanitizeName(text)
 	if text == "" then return nil end
 	if #text > NAME_MAX then
 		text = text:sub(1, NAME_MAX)
-		-- ne pas couper un caractère UTF-8 en deux
-		while #text > 0 and text:byte(#text) >= 0x80 and text:byte(#text) < 0xC0 do text = text:sub(1, -2) end
-		if #text > 0 and text:byte(#text) >= 0xC0 then text = text:sub(1, -2) end
+		-- ne pas couper un caractère UTF-8 en deux : on remonte à l'octet de
+		-- tête du dernier caractère, qu'on retire seulement s'il est incomplet
+		local lead = #text
+		while lead > 1 and text:byte(lead) >= 0x80 and text:byte(lead) < 0xC0 do lead = lead - 1 end
+		local byte = text:byte(lead) or 0
+		local size = (byte >= 0xF0 and 4) or (byte >= 0xE0 and 3) or (byte >= 0xC0 and 2) or 1
+		if lead + size - 1 > #text then text = text:sub(1, lead - 1) end
 	end
 	return text
 end

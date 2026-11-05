@@ -59,6 +59,29 @@ ns.COMPANION_APPEARANCES = {
 	{ id = "snake",        display = 6303, label = "COMP_APP_SNAKE",        tier = 2 },
 	-- 9990 : creature/cat/cat.m2 + white.blp, échelle 0,5 (chaton blanc, mascotte rare)
 	{ id = "cat_white",    display = 9990, label = "COMP_APP_CAT_WHITE",    tier = 3 },
+	-- QuestCompanion 1.2.0. Même vérification (CreatureDisplayInfo et
+	-- CreatureModelData des deux builds, chemins par la liste communautaire
+	-- wowdev/wow-listfile) : même .m2 et mêmes textures sur Era et Forever.
+	-- 5555 : creature/cat/cat.m2 + silvertabby.blp, échelle 0,5 (chat tigré argenté, mascotte)
+	{ id = "cat_silver",   display = 5555, label = "COMP_APP_CAT_SILVER",   tier = 1 },
+	-- 901 : creature/frog/frog.m2 + frogbrownspots.blp, échelle 1 (crapaud tacheté)
+	{ id = "toad",         display = 901,  label = "COMP_APP_TOAD",         tier = 1 },
+	-- 5556 : creature/cat/cat.m2 + bombay.blp, échelle 0,5 (chat Bombay, mascotte)
+	{ id = "cat_bombay",   display = 5556, label = "COMP_APP_CAT_BOMBAY",   tier = 2 },
+	-- 5207 : creature/parrot/parrot.m2 + parrotskinred.blp, échelle 0,25 (ara écarlate)
+	{ id = "macaw_red",    display = 5207, label = "COMP_APP_MACAW_RED",    tier = 2 },
+	-- 10990 : creature/panda/pandacub.m2 + pandacubskin.blp, échelle 0,25 (bébé panda, mascotte rare)
+	{ id = "panda",        display = 10990, label = "COMP_APP_PANDA",       tier = 3 },
+	-- 15369 : creature/murloc/babymurloc.m2 + murlocbabyblue.blp, échelle 0,65 (bébé murloc, mascotte rare)
+	{ id = "murloc",       display = 15369, label = "COMP_APP_MURLOC",      tier = 3 },
+	-- Hors coffres : la carte d'auberge (Daily.lua), les missions (Daily.lua),
+	-- les brillantes (Shiny.lua). Leur caractère : poulet Peureux, écureuil Bricoleur.
+	-- 6193 : creature/chicken/chicken.m2 + chickenskinbrown.blp, échelle 1 (poulet)
+	{ id = "chicken",      display = 6193, label = "COMP_APP_CHICKEN",      tier = 0, unlock = { inn = 3 } },
+	-- 7937 : creature/squirrel/squirrel.m2 + squirrel_robo.blp, échelle 1,3 (écureuil mécanique)
+	{ id = "squirrel_mech", display = 7937, label = "COMP_APP_SQUIRREL_MECH", tier = 0, unlock = { missions = 10 } },
+	-- 16943 : creature/hippogryph/hippogryphpet.m2 + hippogryphpet.blp, échelle 0,15 (bébé hippogriffe)
+	{ id = "hippogryph",   display = 16943, label = "COMP_APP_HIPPOGRYPH",  tier = 0, unlock = { shiny = 50 } },
 }
 
 -- Ornements : décorations du cadre, dessinées avec les textures du Theme
@@ -99,6 +122,16 @@ ns.COMPANION_FRAMES = {
 	{ id = "gilded", label = "COMP_FRAME_GILDED", tier = 3, edge = { 0.91, 0.65, 0.29, 1 },
 		backdrop = { file = "Interface\\DialogFrame\\UI-DialogBox-Gold-Border", size = 16, color = { 1, 1, 1 } },
 		inner = { 0.91, 0.65, 0.29, 0.6 } },
+	-- QuestCompanion 1.2.0 : bordures du jeu telles quelles (non teintées),
+	-- vérifiées dans ManifestInterfaceData des deux builds (wago.tools)
+	{ id = "stone",    label = "COMP_FRAME_STONE",    tier = 1, edge = { 0.55, 0.55, 0.58, 0.9 },
+		backdrop = { file = DIALOG_BORDER, size = 16, color = { 1, 1, 1 } } },
+	{ id = "toast",    label = "COMP_FRAME_TOAST",    tier = 1, edge = { 0.36, 0.56, 0.84, 0.9 },
+		backdrop = { file = "Interface\\FriendsFrame\\UI-Toast-Border", size = 12, color = { 1, 1, 1 } } },
+	{ id = "glue",     label = "COMP_FRAME_GLUE",     tier = 2, edge = { 0.75, 0.62, 0.40, 0.9 },
+		backdrop = { file = "Interface\\Glues\\Common\\Glue-Tooltip-Border", size = 16, color = { 1, 1, 1 } } },
+	{ id = "carved",   label = "COMP_FRAME_CARVED",   tier = 3, edge = { 0.85, 0.70, 0.40, 1 },
+		backdrop = { file = "Interface\\Glues\\Common\\TextPanel-Border", size = 24, color = { 1, 1, 1 } } },
 }
 
 -- Fonds : la texture de fond du cadre (`texture`, sinon aplat) teintée par
@@ -124,6 +157,25 @@ ns.COMPANION_BACKGROUNDS = {
 		gradient = { top = { 0.02, 0.03, 0.10, 0.92 }, bottom = { 0.08, 0.10, 0.25, 0.90 } } },
 	{ id = "velvet",    label = "COMP_BG_VELVET",    tier = 3, texture = "Interface\\DialogFrame\\UI-DialogBox-Gold-Background",
 		color = { 0.70, 0.52, 0.30, 0.95 } },
+	-- QuestCompanion 1.2.0 : images du jeu, non teintées. Papiers à lettres du
+	-- courrier (moitié gauche de la lettre), parchemin des hauts faits, écrans
+	-- de chargement recadrés au centre (`coords` = gauche, droite, haut, bas).
+	{ id = "mail_og",   label = "COMP_BG_MAIL_OG",   tier = 1, texture = "Interface\\Stationery\\Stationery_OG1", color = { 1, 1, 1, 1 } },
+	{ id = "mail_uc",   label = "COMP_BG_MAIL_UC",   tier = 1, texture = "Interface\\Stationery\\Stationery_UC1", color = { 1, 1, 1, 1 } },
+	{ id = "mail_tb",   label = "COMP_BG_MAIL_TB",   tier = 1, texture = "Interface\\Stationery\\Stationery_TB1", color = { 1, 1, 1, 1 } },
+	{ id = "deeds",     label = "COMP_BG_DEEDS",     tier = 1, texture = "Interface\\AchievementFrame\\UI-Achievement-Parchment",
+		color = { 1, 1, 1, 1 } },
+	{ id = "mail_ill",  label = "COMP_BG_MAIL_ILL",  tier = 2, texture = "Interface\\Stationery\\Stationery_ILL1", color = { 1, 1, 1, 1 } },
+	{ id = "mail_val",  label = "COMP_BG_MAIL_VAL",  tier = 2, texture = "Interface\\Stationery\\Stationery_VAL1", color = { 1, 1, 1, 1 } },
+	{ id = "mail_chr",  label = "COMP_BG_MAIL_CHR",  tier = 2, texture = "Interface\\Stationery\\Stationery_CHR1", color = { 1, 1, 1, 1 } },
+	{ id = "kalimdor",  label = "COMP_BG_KALIMDOR",  tier = 2, texture = "Interface\\Glues\\LoadingScreens\\LoadScreenKalimdor",
+		color = { 1, 1, 1, 1 }, coords = { 0.25, 0.75, 0.15, 0.85 } },
+	{ id = "eastern",   label = "COMP_BG_EASTERN",   tier = 3, texture = "Interface\\Glues\\LoadingScreens\\LoadScreenEasternKingdom",
+		color = { 1, 1, 1, 1 }, coords = { 0.25, 0.75, 0.15, 0.85 } },
+	{ id = "moltencore", label = "COMP_BG_MOLTENCORE", tier = 3, texture = "Interface\\Glues\\LoadingScreens\\LoadScreenMoltenCore",
+		color = { 1, 1, 1, 1 }, coords = { 0.25, 0.75, 0.15, 0.85 } },
+	{ id = "ahnqiraj",  label = "COMP_BG_AHNQIRAJ",  tier = 3, texture = "Interface\\Glues\\LoadingScreens\\LoadScreenAhnQiraj40man",
+		color = { 1, 1, 1, 1 }, coords = { 0.25, 0.75, 0.15, 0.85 } },
 }
 
 -- Catalogue par type (clé = `kind` de ns:CompanionIsUnlocked)
@@ -155,8 +207,10 @@ ns.COMPANION_STAGES = {
 }
 
 -- Animations (AnimationData, mêmes numéros et mêmes replis dans les deux
--- builds) : 0 Stand, 68 EmoteCheer, 69 EmoteDance, 100 Sleep (71 EmoteSleep
--- se replie sur 100). Une créature sans l'animation retombe sur Stand.
-ns.COMPANION_ANIMS = { idle = 0, cheer = 68, dance = 69, sleep = 100 }
+-- builds) : 0 Stand, 60 EmoteTalk, 68 EmoteCheer, 69 EmoteDance, 97 SitGround
+-- (96 SitGroundDown, 98 SitGroundUp), 100 Sleep (71 EmoteSleep se replie sur
+-- 100). Numéros relevés dans la table AnimationData documentée par
+-- TrinityCore. Une créature sans l'animation retombe sur Stand.
+ns.COMPANION_ANIMS = { idle = 0, talk = 60, cheer = 68, dance = 69, sit = 97, sleep = 100 }
 
 if ns.Mark then ns.Mark("CompanionData") end

@@ -118,6 +118,7 @@ ns.MEMORY_CAPITALS = { [1453] = true, [1454] = true, [1455] = true, [1456] = tru
 ns.MEMORY_PHOTO_PER_DAY = 3
 ns.MEMORY_PHOTO_DELAY = 1        -- s après le moment (ou après le combat)
 ns.MEMORY_PHOTO_CLICK = 0.4      -- s entre « Clic ! » et la capture (la bulle est sur la photo)
+ns.MEMORY_TICK = 0.1             -- s entre deux passages de l'horloge (photo, relevé)
 ns.MEMORY_PHOTO_WAIT = 120       -- s au plus à attendre la fin du combat
 ns.MEMORY_RECALL_GAP = 3600      -- s de jeu entre deux rappels
 ns.MEMORY_ASK_AGAIN = 3600       -- « Plus tard » : redemandé au grand moment suivant, pas avant 1 h
@@ -227,7 +228,10 @@ function ns:MemoryWantPhoto(memory)
 		-- jamais demandé, ou « Plus tard » depuis assez longtemps : on demande
 		local asked = db.companionPhotosAsked
 		local laterOk = asked == "later" and Clock() - (self:MemoryState().askedAt or -math.huge) >= ns.MEMORY_ASK_AGAIN
-		if asked == nil or laterOk then self:MemoryAsk(memory) end
+		-- « asking » sans question ouverte dans cette session (/reload, déconnexion
+		-- pendant la question) : on redemande, sinon elle ne reviendrait jamais
+		local lost = asked == "asking" and self:MemoryState().askedAt == nil
+		if asked == nil or laterOk or lost then self:MemoryAsk(memory) end
 		return false
 	end
 	if self:MemoryPhotosToday().count >= ns.MEMORY_PHOTO_PER_DAY then return false end
@@ -591,7 +595,8 @@ if ok and frame then
 		local done, err = pcall(ns.MemoryPhotoDone, ns, event == "SCREENSHOT_SUCCEEDED")
 		if not done then ns:RecordError("memory:" .. tostring(event), err) end
 	end)
-	frame:SetScript("OnUpdate", function()
+	-- dix fois par seconde : la photo attend 1 s, puis 0,4 s après « Clic ! »
+	frame:SetScript("OnUpdate", ns.Throttle(ns.MEMORY_TICK, function()
 		local now = Clock()
 		local done, err = pcall(ns.MemoryPhotoStep, ns, now)
 		if not done then ns:RecordError("memory:photo", err) end
@@ -599,7 +604,7 @@ if ok and frame then
 		ns.memoryPollAt = now + 2
 		done, err = pcall(ns.MemoryPoll, ns)
 		if not done then ns:RecordError("memory:poll", err) end
-	end)
+	end))
 	ns.memoryEventFrame = frame
 end
 

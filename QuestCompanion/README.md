@@ -4,7 +4,7 @@
 
 **A road companion and its travel journal.** A little creature travels with you, talks to you and grows with you. Its journal tracks the completion of every zone, opens chests of cosmetic items and makes it evolve.
 
-For **World of Warcraft Forever** and **Classic Era**. Interface in English and French.
+For **World of Warcraft Forever**. Interface in English and French.
 
 > **Standalone.** QuestCompanion works on its own: its `/qc` command, its settings panel, its minimap button. It pairs nicely with [Ready2Quest](../Ready2Quest/README.md) but doesn't need it: if Ready2Quest is there, the companion also reacts when you leave town and come back.
 
@@ -54,10 +54,10 @@ It has four needs: **hunger**, **energy**, **mood** and **curiosity**. They fill
 
 - **It grows with you**: Hatchling, Youngling (level 10), Seasoned (20), Valiant (40) and Legendary (60). Your level unlocks the stage, but it only evolves if it is **happy**: all four needs at 70% or more. Otherwise it tells you it's ready and what it's missing, and it waits. A little celebration at each stage.
 - **It never holds a grudge**: it doesn't die, doesn't regress and doesn't get sick. After a long absence, it's just a bit sleepy: "I missed you!"
-- **You can customize it** with **appearances** (whelplings, tree frog, kittens, rabbit, turtle, macaw, snake, owlet, wisp, sprite darter), **ornaments**, **frames** (Copper, Oak, Silver, Frost, Runic, Fel-touched, Chased gold) and **backgrounds** (Parchment, Undergrowth, Dusk, Frost, Marble, Embers, Starry vault, Golden velvet).
+- **You can customize it** with **appearances** (whelplings, tree frog, kittens, rabbit, turtle, macaw, snake, owlet, wisp, sprite darter, and since 1.2.0 silver tabby, spotted toad, Bombay cat, scarlet macaw, panda cub, baby murloc, chicken, mechanical squirrel, hippogryph hatchling), **ornaments**, **frames** (Copper, Oak, Silver, Frost, Runic, Fel-touched, Chased gold) and **backgrounds** (Parchment, Undergrowth, Dusk, Frost, Marble, Embers, Starry vault, Golden velvet).
 - **You earn them from zone chests**: a zone at 100% opens a chest, and you **pick** one item from its tier (zones 1-19, 20-39 or 40-60). The higher the zone, the nicer the item. Once you own a whole tier, the zone turns golden. `/qc coffre` opens a pending chest.
 - **It moves**: a bounce when you level up, a shiver in front of an elite, a "!" when it gives you advice, hearts when you pet it, crumbs at mealtime, "Zzz" when it sleeps, and it floats gently when it's happy. `/qc compagnon anim` plays through its animations; if one doesn't work with your appearance, `/qc compagnon anim non <name>` turns it off (the effects stay).
-- **It has a character**: after three hours of watching you play, it becomes **Curious**, **Glutton**, **Daring**, **Lazy**, **Teasing** or **Cuddly**, depending on what you do most. The owlet, the macaw, the wisp, the turtle, the snake and the sprite darter each have their own (Wise, Parrot, Mystic, Zen, Sly, Mischievous). Its character changes its lines, its favourite need, what it notices and the way it moves. Settings: **Character** page.
+- **It has a character**: after three hours of watching you play, it becomes **Curious**, **Glutton**, **Daring**, **Lazy**, **Teasing** or **Cuddly**, depending on what you do most. The owlet, the macaw, the wisp, the turtle, the snake, the sprite darter, the chicken and the mechanical squirrel each have their own (Wise, Parrot, Mystic, Zen, Sly, Mischievous, Fearful, Tinker). Its character changes its lines, its favourite need, what it notices and the way it moves. Settings: **Character** page.
 - **Treats**: each milestone of a zone (25, 50 and 75%) earns a treat, kept in its **pantry**. **Shift + click** the creature to open it, then click a treat to give it: Travel biscuit (hunger to 100%), Soothing tea (energy), Fizzy candy (mood, with hearts), Treasure map (curiosity, and it sniffs out what's left in the zone), Feast (all four needs). At 25 and 50% you get the treat for its lowest need, at 75% a Feast, and at 100% the zone chest. Up to three of each kind and two Feasts: an extra one gets eaten on the spot. A golden chest (tier already complete) gives a Feast and two random treats.
 - **Shiny creatures**: the first time you target or hover a monster, it has a 1 in 150 chance of being shiny (three times more for an elite or a rare). Your companion spots it (bubble, "!", sparkles) and puts a **star** above its head if you play solo or lead the group. Defeat it: its bestiary card turns golden, your companion gets a treat (sometimes a Feast) and keeps a memory. At **5, 15 and 30** shinies, three cosmetics no chest gives: the **Sparkling** frame, the **Stardust** background and a **Shimmering aura**.
 - **Day by day**: one loyalty card for every inn, one stamp a day at any innkeeper (+20 energy), a Feast on the 7th stamp, no need for days in a row. And **missions of the day**: on your first zone of the day, your companion offers two missions there (only feasible ones: new species, an elite or a rare, gathering, quests, a place never seen, +3% completion) and one from its character. You can change a zone mission once a day; each mission done earns a treat, all three a Feast. They show in the on-screen block and in the journal's **Day** tab. Settings: **Day by day** page.
@@ -81,16 +81,16 @@ Your travel collection: a **stamp** for every first time.
 
 Each new stamp is announced by a small banner, never in combat. Everything is earned by playing, no random packs.
 
-The journal (`/qc`, the minimap button, or right-click on the creature) opens on the last tab you used. Its tabs run down the right side, and your **pantry** (treats) sits in its header: click a treat to give it.
+The journal (`/qc`, the minimap button, or right-click on the creature) opens on the last tab you used (the first time, on **Creature**, the first tab). Its tabs run down the right side, and your **pantry** (treats) sits in its header: click a treat to give it.
+- **Creature**: its stage, the next one, its character, its needs, how it evolves, your chests to open, your collection and your journey (zones, capitals, dungeons, rares, milestones). Hover a need (hunger, energy, mood, curiosity) to see what fills it.
 - **Zones**: a grid of every zone in the game, Forever's own zones included, the ones you've never visited shown greyed out. Each tile gives its level range and percentage, and says if a chest is waiting. Filter by continent, sort by level or by percentage, click a tile to open it.
 - **Zone**: one zone, with arrows to the previous and next one (the mouse back button returns to the grid). Its percentage, its milestones (25, 50 and 75% give a treat, 100% the chest) and, tab by tab, what's done and what's left:
   - **Exploration**: the zone's villages, on two columns;
   - **Combat**: a card for each creature of the bestiary, its border coloured by rank (elite, rare, boss), "???" for those you've never met. Hover a card to see the creature in 3D next to the grid;
   - **Professions**: the icons of the resources of your skill, in colour once gathered here;
-  - **Quests**: the zone's quests your character can do (faction, race, class), on two columns, filtered by to do or done. They count toward the 100%. No addon required, on Era as on Forever.
+  - **Quests**: the zone's quests your character can do (faction, race, class), on two columns, filtered by to do or done. They count toward the 100%. No addon required.
 - **Track on screen** (Zone tab): when on, the zone's goals show in the in-game "Journal" tracker. The zone you're in is tracked by default (turn it off to hide it); turn other zones on to keep an eye on them.
 - **Day**: the missions of the day (with the button to change one), the inn loyalty card and the pantry.
-- **Creature**: its stage, the next one, its character, its needs, how it evolves, your chests to open, your collection and your journey (zones, capitals, dungeons, rares, milestones). Hover a need (hunger, energy, mood, curiosity) to see what fills it.
 - **Collection**: every appearance, ornament, frame and background, the locked ones greyed out with where to get them. Hover an item to preview it, click to equip it (an ornament: click to wear it or take it off).
 - **Memories**: the album.
 
@@ -104,7 +104,7 @@ The journal sets **goals**: the creature's next stage, the next appearance or or
   - the **named mobs** (elites, rares, bosses) met and killed;
   - **gathering**, if you're an herbalist, miner or skinner: the herbs, ores and leathers of your skill that you've already gathered in the zone.
 
-  Every zone comes **pre-filled**, on Era as on Forever (Forever's own islands and zones included): its creatures (name, level, rank), the herbs and ores that grow there and its quests are known from your first visit. Whatever is missing from this data (recent Forever additions) fills in as you play.
+  Every zone comes **pre-filled** (Forever's own islands and zones included): its creatures (name, level, rank), the herbs and ores that grow there and its quests are known from your first visit. Whatever is missing from this data (recent Forever additions) fills in as you play.
 - **Hover a goal** to know what to do: the zone's villages you still have to visit, the missing capitals, the dungeons for your level with their level range, the XP to the next level.
 - **Click**: opens the journal. **Right-click**: hides the goal.
 - The block collapses with a click on its title, moves by dragging it and hides in combat (configurable in the companion options, Travel journal page).
@@ -153,7 +153,7 @@ QuestCompanion is free software under the **GPL-3.0** license (see `LICENSE`). T
 
 **Un compagnon de route et son carnet de voyage.** Une petite créature voyage avec toi, te parle et grandit avec toi. Son carnet suit la complétion de chaque zone, ouvre des coffres d'objets cosmétiques et la fait évoluer.
 
-Pour **World of Warcraft Forever** et **Classic Era**. Interface en français et en anglais.
+Pour **World of Warcraft Forever**. Interface en français et en anglais.
 
 > **Autonome.** QuestCompanion fonctionne seul : sa commande `/qc`, son panneau de réglages, son bouton de minicarte. Il va très bien avec [Ready2Quest](../Ready2Quest/README.md#francais), sans en avoir besoin : si Ready2Quest est là, le compagnon réagit en plus à tes départs et retours en ville.
 
@@ -203,10 +203,10 @@ Elle a quatre envies : **faim**, **énergie**, **moral** et **curiosité**. Elle
 
 - **Elle grandit avec toi** : Nouveau-né, Jeune (niveau 10), Aguerri (20), Vaillant (40) et Légendaire (60). Ton niveau ouvre l'étape, mais elle n'évolue que si elle est **heureuse** : ses quatre envies au moins à 70 %. Sinon elle te dit qu'elle est prête et ce qui lui manque, et elle attend. Petite fête à chaque étape.
 - **Elle ne t'en veut jamais** : elle ne meurt pas, ne régresse pas et ne tombe pas malade. Après une longue absence, elle est juste un peu ensommeillée : « Tu m'as manqué ! »
-- **Elle se personnalise** avec des **apparences** (dragonnets, rainette, chatons, lapin, tortue, ara, serpent, chouette, feu follet, dragon féerique), des **ornements**, des **cadres** (cuivre, chêne, argent, givre, runique, gangrené, or ciselé) et des **fonds** (parchemin, sous-bois, crépuscule, givre, marbre, braise, voûte étoilée, velours doré).
+- **Elle se personnalise** avec des **apparences** (dragonnets, rainette, chatons, lapin, tortue, ara, serpent, chouette, feu follet, dragon féerique, et depuis la 1.2.0 chat tigré argenté, crapaud tacheté, chat Bombay, ara écarlate, bébé panda, bébé murloc, poulet, écureuil mécanique, bébé hippogriffe), des **ornements**, des **cadres** (cuivre, chêne, argent, givre, runique, gangrené, or ciselé) et des **fonds** (parchemin, sous-bois, crépuscule, givre, marbre, braise, voûte étoilée, velours doré).
 - **Ils se gagnent dans les coffres de zone** : une zone terminée à 100 % ouvre un coffre, et tu **choisis** un objet de son palier (zones 1-19, 20-39 ou 40-60). Plus la zone est haute, plus l'objet est beau. Quand tu possèdes tout un palier, la zone devient dorée. `/qc coffre` ouvre un coffre en attente.
 - **Elle bouge** : un rebond quand tu montes de niveau, un tremblement devant un élite, un « ! » quand elle te conseille, des cœurs quand tu la caresses, des miettes au repas, des « Zzz » quand elle dort, et elle flotte doucement quand elle est heureuse. `/qc compagnon anim` fait défiler ses animations ; si l'une ne bouge pas avec ton apparence, `/qc compagnon anim non <nom>` la coupe (les effets restent).
-- **Elle a du caractère** : après trois heures à te regarder jouer, elle devient **Curieuse**, **Gourmande**, **Téméraire**, **Paresseuse**, **Taquine** ou **Câline**, selon ce que tu fais le plus. La chouette, l'ara, le feu follet, la tortue, le serpent et le dragon féerique ont chacun le leur (Sage, Perroquet, Mystique, Zen, Rusé, Espiègle). Son caractère change ses phrases, l'envie qu'elle préfère, ce qu'elle remarque et sa façon de bouger. Réglages : page **Caractère**.
+- **Elle a du caractère** : après trois heures à te regarder jouer, elle devient **Curieuse**, **Gourmande**, **Téméraire**, **Paresseuse**, **Taquine** ou **Câline**, selon ce que tu fais le plus. La chouette, l'ara, le feu follet, la tortue, le serpent, le dragon féerique, le poulet et l'écureuil mécanique ont chacun le leur (Sage, Perroquet, Mystique, Zen, Rusé, Espiègle, Peureux, Bricoleur). Son caractère change ses phrases, l'envie qu'elle préfère, ce qu'elle remarque et sa façon de bouger. Réglages : page **Caractère**.
 - **Des friandises** : chaque palier d'une zone (25, 50 et 75 %) rapporte une friandise, rangée dans son **garde-manger**. **Maj + clic** sur la créature l'ouvre, puis un clic sur une friandise la lui donne : Biscuit de voyage (faim à 100 %), Infusion douce (énergie), Bonbon pétillant (moral, et des cœurs), Carte au trésor (curiosité, et elle flaire ce qui reste dans la zone), Festin (les quatre envies). À 25 et 50 %, la friandise de son envie la plus basse ; à 75 %, un Festin ; à 100 %, le coffre de zone. Trois de chaque sorte et deux Festins au plus : une de trop est mangée tout de suite. Un coffre doré (palier déjà complet) donne un Festin et deux friandises au hasard.
 - **Des créatures brillantes** : la première fois que tu cibles ou survoles un monstre, il a une chance sur 150 d'être brillant (trois fois plus pour un élite ou un rare). Ta créature le repère (bulle, « ! », étincelles) et pose une **étoile** au-dessus de lui si tu joues seul ou mènes le groupe. Abats-le : sa fiche du bestiaire devient dorée, ta créature reçoit une friandise (parfois un Festin) et garde un souvenir. À **5, 15 et 30** brillantes, trois cosmétiques qu'aucun coffre ne donne : le cadre **Étincelant**, le fond **Poussière d'étoiles** et une **aura scintillante**.
 - **Au jour le jour** : une carte de fidélité pour toutes les auberges, un tampon par jour chez n'importe quel aubergiste (+20 d'énergie), un Festin au 7e tampon, sans jours d'affilée. Et des **missions du jour** : à ta première zone de la journée, ta créature t'en propose deux dans cette zone (seulement des faisables : espèces nouvelles, un élite ou un rare, récolte, quêtes, un lieu jamais vu, +3 % de complétion) et une de son caractère. Une mission de zone se change une fois par jour ; chaque mission faite rapporte une friandise, les trois un Festin. Elles s'affichent dans le bloc à l'écran et dans l'onglet **Jour** du carnet. Réglages : page **Au jour le jour**.
@@ -230,16 +230,16 @@ Ta collection de voyage : un **tampon** pour chaque première fois.
 
 Chaque nouveau tampon est annoncé par un petit bandeau, jamais en combat. Tout se gagne en jouant, sans paquet aléatoire.
 
-Le carnet (`/qc`, le bouton de minicarte, ou clic droit sur la créature) s'ouvre sur le dernier onglet utilisé. Ses onglets sont rangés sur le côté droit, et ton **garde-manger** (les friandises) est dans l'en-tête : un clic sur une friandise la donne.
+Le carnet (`/qc`, le bouton de minicarte, ou clic droit sur la créature) s'ouvre sur le dernier onglet utilisé (la première fois, sur **Créature**, le premier onglet). Ses onglets sont rangés sur le côté droit, et ton **garde-manger** (les friandises) est dans l'en-tête : un clic sur une friandise la donne.
+- **Créature** : l'étape de ta créature, la prochaine, son caractère, ses envies, comment elle évolue, tes coffres à ouvrir, ta collection et ton parcours (zones, capitales, donjons, rares, paliers). Survole une envie (faim, énergie, moral, curiosité) pour savoir ce qui la remplit.
 - **Zones** : une grille de toutes les zones du jeu, celles propres à Forever comprises, celles jamais visitées en gris. Chaque tuile donne sa tranche de niveaux et son pourcentage, et dit si un coffre t'attend. Filtre par continent, trie par niveau ou par pourcentage, clique sur une tuile pour l'ouvrir.
 - **Zone** : une zone, avec des flèches vers la précédente et la suivante (le bouton retour de la souris revient à la grille). Son pourcentage, ses paliers (25, 50 et 75 % donnent une friandise, 100 % le coffre) et, par onglet, ce qui est fait et ce qui reste :
   - **Exploration** : les villages de la zone, sur deux colonnes ;
   - **Combat** : une fiche par créature du bestiaire, au liseré de son rang (élite, rare, boss), « ??? » pour celles jamais croisées. Survole une fiche pour voir la créature en 3D à côté de la grille ;
   - **Métiers** : les icônes des ressources de ta compétence, en couleur une fois récoltées ici ;
-  - **Quêtes** : les quêtes de la zone que ton personnage peut faire (faction, race, classe), sur deux colonnes, filtrées à faire ou faites. Elles comptent dans les 100 %. Aucun addon requis, sur Era comme sur Forever.
+  - **Quêtes** : les quêtes de la zone que ton personnage peut faire (faction, race, classe), sur deux colonnes, filtrées à faire ou faites. Elles comptent dans les 100 %. Aucun addon requis.
 - **Suivre à l'écran** (onglet Zone) : activé, les objectifs de la zone s'affichent dans le bloc « Carnet » en jeu. La zone où tu es est suivie d'office (désactive-la pour la masquer) ; active d'autres zones pour garder un œil sur elles.
 - **Jour** : les missions du jour (avec le bouton pour en changer une), la carte de fidélité des auberges et le garde-manger.
-- **Créature** : l'étape de ta créature, la prochaine, son caractère, ses envies, comment elle évolue, tes coffres à ouvrir, ta collection et ton parcours (zones, capitales, donjons, rares, paliers). Survole une envie (faim, énergie, moral, curiosité) pour savoir ce qui la remplit.
 - **Collection** : toutes les apparences, ornements, cadres et fonds, ceux verrouillés en gris avec où les trouver. Survole un objet pour le voir, clique pour l'équiper (un ornement : clic pour le porter ou l'enlever).
 - **Souvenirs** : l'album.
 
@@ -253,7 +253,7 @@ Le carnet fixe des **objectifs** : prochaine étape de la créature, prochaine a
   - les **nommés** (élites, rares, boss) croisés et abattus ;
   - la **récolte**, si tu es herboriste, mineur ou dépeceur : les herbes, minerais et cuirs de ta compétence que tu as déjà récoltés dans la zone.
 
-  Chaque zone arrive **préremplie**, sur Era comme sur Forever (îles et zones propres à Forever comprises) : ses créatures (nom, niveau, rang), les herbes et minerais qui y poussent et ses quêtes sont connus dès ta première visite. Ce qui manque à ces données (nouveautés récentes de Forever) se remplit en jouant.
+  Chaque zone arrive **préremplie** (îles et zones propres à Forever comprises) : ses créatures (nom, niveau, rang), les herbes et minerais qui y poussent et ses quêtes sont connus dès ta première visite. Ce qui manque à ces données (nouveautés récentes de Forever) se remplit en jouant.
 - **Survole un objectif** pour savoir quoi faire : les villages de la zone qu'il te reste à visiter, les capitales manquantes, les donjons de ton niveau avec leur tranche, l'XP avant le prochain niveau.
 - **Clic** : ouvre le carnet. **Clic droit** : masque l'objectif.
 - Le bloc se replie d'un clic sur son titre, se déplace en le glissant et se cache en combat (réglable dans les options du compagnon, page Carnet).

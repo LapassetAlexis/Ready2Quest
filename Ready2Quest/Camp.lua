@@ -10,7 +10,6 @@
 --   1. ajoute deux contrôles au Check avant le départ (kit, objet de camp) ;
 --   2. au camp, affiche un petit compte à rebours jusqu'aux buffs ;
 --   3. en quittant le camp, écrit dans le chat le temps de buffs restant.
--- Rien ne s'affiche sur Era (pas de campement) : tout est gardé par IsForever.
 --
 -- Tout le module vit dans ce fichier (API d'extension, voir Core.lua).
 local ADDON, ns = ...
@@ -75,7 +74,7 @@ local CAMP_OBJECTS = {
 	{ item = 279982, skill = 185, rank = 300, name = "Iron Oven" },
 }
 
--- Le client Era (et Forever) donne les métiers par leur NOM dans la fenêtre
+-- Le client Forever donne les métiers par leur NOM dans la fenêtre
 -- de compétences, sans numéro : on reconnaît les deux langues de l'addon.
 local SKILL_BY_NAME = {
 	["cooking"] = 185, ["cuisine"] = 185,
@@ -191,15 +190,9 @@ end
 -- ---------------------------------------------------------------------------
 local function Now() return (ns.Now and ns.Now()) or 0 end
 
--- Le campement n'existe que sur Forever. Lu à chaque fois (et non une fois au
--- chargement) : coûte peu, et reste juste si GetBuildInfo change (tests).
-function ns:IsForever()
-	return type(self.ClientFlavour) == "function" and self:ClientFlavour() == "Forever"
-end
-
 function ns:CampEnabled()
 	local db = self:DB()
-	return db.enabled ~= false and db.campEnabled ~= false and self:IsForever()
+	return db.enabled ~= false and db.campEnabled ~= false
 end
 
 -- [skillID] = rang, d'après la fenêtre de compétences. Second retour : false
@@ -226,11 +219,8 @@ local function ItemCount(itemID)
 end
 
 local function ItemName(entry)
-	local fn = (C_Item and C_Item.GetItemInfo) or rawget(_G, "GetItemInfo")
-	if type(fn) == "function" then
-		local ok, name = pcall(fn, entry.item)
-		if ok and type(name) == "string" and name ~= "" then return name end
-	end
+	local name = ns.ItemInfo(entry.item)
+	if type(name) == "string" and name ~= "" then return name end
 	return entry.name
 end
 
@@ -445,23 +435,19 @@ end
 -- ---------------------------------------------------------------------------
 -- Interrupteur, réglages, /r2q module camp
 -- ---------------------------------------------------------------------------
--- Page et module seulement là où le campement existe : sur Era, ils ne
--- feraient que du bruit. Les contrôles, eux, restent inactifs (masqués).
-if ns:IsForever() then
-	if ns.AddOptionPage then
-		ns.AddOptionPage({
-			id = "camp", title = "OPT_PAGE_CAMP", group = "OPT_GROUP_MODULES", power = "campEnabled",
-			modules = { "campkit", "campobject" },
-			rows = {
-				{ key = "campCountdown",     label = "OPT_CAMP_COUNTDOWN",  kind = "bool" },
-				{ key = "campDepartureLine", label = "OPT_CAMP_DEPARTLINE", kind = "bool" },
-			},
-		})
-	end
-	if ns.RegisterModule then
-		ns.RegisterModule({ id = "camp", key = "campEnabled", label = "OPT_PAGE_CAMP",
-			aliases = { "camp", "campement", "kit" } })
-	end
+if ns.AddOptionPage then
+	ns.AddOptionPage({
+		id = "camp", title = "OPT_PAGE_CAMP", group = "OPT_GROUP_MODULES", power = "campEnabled",
+		modules = { "campkit", "campobject" },
+		rows = {
+			{ key = "campCountdown",     label = "OPT_CAMP_COUNTDOWN",  kind = "bool" },
+			{ key = "campDepartureLine", label = "OPT_CAMP_DEPARTLINE", kind = "bool" },
+		},
+	})
+end
+if ns.RegisterModule then
+	ns.RegisterModule({ id = "camp", key = "campEnabled", label = "OPT_PAGE_CAMP",
+		aliases = { "camp", "campement", "kit" } })
 end
 
 -- ---------------------------------------------------------------------------
@@ -478,14 +464,10 @@ frame:SetScript("OnEvent", function(_, event, unit)
 	if not ok and ns.RecordError then ns:RecordError("camp:" .. event, err) end
 end)
 -- le décompte avance sans événement : rafraîchi quatre fois par seconde
-local elapsedSince = 0
-frame:SetScript("OnUpdate", function(_, elapsed)
-	elapsedSince = elapsedSince + (tonumber(elapsed) or 0)
-	if elapsedSince < TICK then return end
-	elapsedSince = 0
+frame:SetScript("OnUpdate", ns.Throttle(TICK, function()
 	local ok, err = pcall(ns.UpdateCampFrame, ns)
 	if not ok and ns.RecordError then ns:RecordError("camp:tick", err) end
-end)
+end))
 ns.campEventFrame = frame
 
 if ns.Mark then ns.Mark("Camp") end

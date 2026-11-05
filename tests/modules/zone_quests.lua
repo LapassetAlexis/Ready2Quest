@@ -1,5 +1,5 @@
 -- Carnet de voyage : quêtes de chaque zone, tables livrées (ZoneQuests.lua,
--- ZoneQuests_Era.lua, ZoneQuests_Forever.lua, v1.25.0). Plus de Questie en jeu.
+-- ZoneQuests_Forever.lua, v1.25.0). Plus de Questie en jeu.
 -- Intégrité des deux tables, contenu réel connu, filtres race / classe,
 -- exclusives et quêtes fermées, faites / à faire, liste triée, cache et
 -- invalidation, combat, client sans table, fenêtre.
@@ -30,13 +30,14 @@ _G.IsQuestFlaggedCompleted = nil
 C_QuestLog.IsQuestFlaggedCompleted = function(id) Q.calls = Q.calls + 1; return Q.done[id] == true end
 C_Map.GetAreaInfo = nil
 
--- tables d'Era et de Forever, rechargées avec un faux ns (garde de client)
+-- table de Forever, rechargée avec un faux ns (garde de client). QuestCompanion
+-- 1.2.0 : WoW Forever seulement, plus de table d'Era.
 function Q.Load(file, forever)
 	local fake = { Mark = function() end, IsForeverClient = function() return forever end }
 	assert(loadfile(ROOT .. "/QuestCompanion/" .. file))("QuestCompanion", fake)
 	return fake.ZONE_QUESTS
 end
-Q.ERA, Q.FOREVER = Q.Load("ZoneQuests_Era.lua", false), Q.Load("ZoneQuests_Forever.lua", true)
+Q.FOREVER = Q.Load("ZoneQuests_Forever.lua", true)
 
 local MAPS = {
 	[947]  = { mapID = 947,  name = "Azeroth", parentMapID = 0, mapType = 1 },
@@ -51,7 +52,7 @@ function Q.Reset(tableToUse)
 	ResetWorld()
 	for id, info in pairs(MAPS) do Mock.world.maps[id] = info end
 	Mock.world.mapID = 1411
-	NS.ZONE_QUESTS = tableToUse == nil and Q.ERA or tableToUse or nil
+	NS.ZONE_QUESTS = tableToUse == nil and Q.FOREVER or tableToUse or nil
 	NS.ZONE_CREATURES, NS.ZONE_GATHERING = nil, nil
 	NS.zoneQuests.done, NS.zoneQuests.lists, NS.zoneQuests.builds, NS.zoneQuests.dirty = {}, {}, 0, false
 	Q.done, Q.race, Q.class, Q.locale, Q.combat, Q.calls = {}, 2, 1, "frFR", nil, 0
@@ -98,14 +99,13 @@ end
 do
 	Say("-- quêtes de zone : chargement")
 	Check("[ZQ] ZoneQuests.lua chargé, table du client (Forever dans le harnais)", NS.Loaded and NS.Loaded.ZoneQuests
-		and NS.Loaded.ZoneQuests_Forever and not NS.Loaded.ZoneQuests_Era and saved.ZONE_QUESTS ~= nil
+		and NS.Loaded.ZoneQuests_Forever and saved.ZONE_QUESTS ~= nil
 		and saved.ZONE_QUESTS[2521] ~= nil)
 	local order = {}
 	for index, file in ipairs(_G.TOC_FILES or {}) do order[(file:gsub("^[^/]+/", ""))] = index end
 	Check("[ZQ] .toc : tables avant ZoneQuests.lua, après JournalTracker.lua, avant JournalWindow.lua",
-		order["ZoneQuests_Era.lua"] and order["ZoneQuests_Forever.lua"] and order["ZoneQuests.lua"]
-		and order["Dungeon.lua"] < order["ZoneQuests_Era.lua"]
-		and order["ZoneQuests_Era.lua"] < order["ZoneQuests.lua"] and order["ZoneQuests_Forever.lua"] < order["ZoneQuests.lua"]
+		order["ZoneQuests_Forever.lua"] and order["ZoneQuests.lua"] and order["ZoneQuests_Era.lua"] == nil
+		and order["Dungeon.lua"] < order["ZoneQuests_Forever.lua"] and order["ZoneQuests_Forever.lua"] < order["ZoneQuests.lua"]
 		and order["JournalTracker.lua"] < order["ZoneQuests.lua"] and order["ZoneQuests.lua"] < order["JournalWindow.lua"])
 	local toc = ""
 	for _, file in ipairs({ "/Ready2Quest/Ready2Quest.toc", "/QuestCompanion/QuestCompanion.toc" }) do
@@ -117,17 +117,17 @@ do
 		and not toc:find("Questie", 1, true))
 	Check("[ZQ] plus d'API Questie dans l'addon", NS.QuestieAvailable == nil and NS.QuestiePart == nil
 		and rawget(NS, "QUESTIE_HINT") == nil)
-	Check("[ZQ] garde : Era ne se charge pas sur Forever, ni l'inverse", Q.Load("ZoneQuests_Era.lua", true) == nil
-		and Q.Load("ZoneQuests_Forever.lua", false) == nil and type(Q.ERA) == "table" and type(Q.FOREVER) == "table")
+	Check("[ZQ] garde : la table de Forever ne se charge que sur Forever", Q.Load("ZoneQuests_Forever.lua", false) == nil
+		and type(Q.FOREVER) == "table")
 end
 
--- 2. Intégrité (Era et Forever) ---------------------------------------------------------
+-- 2. Intégrité ------------------------------------------------------------------------
 do
 	Say("-- quêtes de zone : intégrité")
 	local known = { [1450] = true }
 	for zoneID in pairs(NS.ZONE_LEVELS or {}) do known[zoneID] = true end
-	for _, client in ipairs({ "Era", "Forever" }) do
-		local data, tag = client == "Era" and Q.ERA or Q.FOREVER, "[ZQ] " .. client .. " "
+	for _, client in ipairs({ "Forever" }) do
+		local data, tag = Q.FOREVER, "[ZQ] " .. client .. " "
 		local zones, count, bad, badZones, seen, twice = 0, 0, {}, {}, {}, 0
 		local maxRaces = 0
 		for zoneID, list in pairs(data) do
@@ -158,28 +158,15 @@ do
 			table.concat(badZones, ","))
 		Check(tag .. "ids, niveaux, masques, noms fr+en, ex", #bad == 0, table.concat(bad, ","))
 		Check(tag .. "une quête dans une seule zone", twice == 0, twice)
-		if client == "Era" then
-			Check(tag .. "masques de race classiques (< 2^11)", maxRaces < 2048, maxRaces)
-		else
-			Check(tag .. "masques de race avec Skyborne (bits 32 et 33)", maxRaces >= 2 ^ 32 and maxRaces < 2 ^ 34, maxRaces)
-		end
+		Check(tag .. "masques de race avec Skyborne (bits 32 et 33)", maxRaces >= 2 ^ 32 and maxRaces < 2 ^ 34, maxRaces)
 	end
-	local eraKB, foreverKB = Q.Size("ZoneQuests_Era.lua") / 1024, Q.Size("ZoneQuests_Forever.lua") / 1024
-	Check("[ZQ] tailles : moins de 500 Ko par fichier", eraKB < 500 and foreverKB < 500,
-		string.format("%.0f / %.0f Ko", eraKB, foreverKB))
+	local foreverKB = Q.Size("ZoneQuests_Forever.lua") / 1024
+	Check("[ZQ] taille : moins de 500 Ko", foreverKB < 500, string.format("%.0f Ko", foreverKB))
 end
 
 -- 3. Contenu réel ---------------------------------------------------------------------
 do
 	Say("-- quêtes de zone : contenu")
-	local place = Q.ERA[1411] and Q.ERA[1411][4641]
-	-- masque brut : orcs et trolls (130) ; corrigé par Questie (classicQuestFixes) : toute la Horde
-	Check("[ZQ] Era, Durotar : « Your Place In The World » (4641), Horde (masque corrigé)", place
-		and place.en == "Your Place In The World" and place.fr == "Votre place en ce monde"
-		and place.races == 2 + 16 + 32 + 128 and place.lvl == 1 and place.ex and place.ex[1] == 788)
-	local threat = Q.ERA[1429] and Q.ERA[1429][783]
-	Check("[ZQ] Era, Elwynn : « A Threat Within » (783), Alliance", threat and threat.en == "A Threat Within"
-		and threat.races == 1 + 4 + 8 + 64 and threat.ex and threat.ex[1] == 7)
 	local fthreat = Q.FOREVER[1429] and Q.FOREVER[1429][783]
 	Check("[ZQ] Forever, Elwynn : 783 ouverte aussi aux Skyborne de l'Alliance (2^32)", fthreat
 		and fthreat.races == 77 + 2 ^ 32)
@@ -187,9 +174,9 @@ do
 		and Q.FOREVER[1411][4641] and Q.FOREVER[1411][4641].en == "Your Place In The World"
 		and Q.FOREVER[1411][4641].races == 178 + 2 ^ 33)
 	Check("[ZQ] Forever : Île de Zephras (2521), « Coming of Age » (92460)", Q.FOREVER[2521]
-		and Q.FOREVER[2521][92460] and Q.FOREVER[2521][92460].en == "Coming of Age" and Q.ERA[2521] == nil)
-	Check("[ZQ] exclusives réelles : éclats de gangrechien / d'infernal (4962 <-> 4963)", Q.ERA[1413][4962].ex[1] == 4963
-		and Q.ERA[1413][4963].ex[1] == 4962 and Q.ERA[1413][4962].classes == 256)
+		and Q.FOREVER[2521][92460] and Q.FOREVER[2521][92460].en == "Coming of Age")
+	Check("[ZQ] exclusives réelles : éclats de gangrechien / d'infernal (4962 <-> 4963)", Q.FOREVER[1413][4962].ex[1] == 4963
+		and Q.FOREVER[1413][4963].ex[1] == 4962 and Q.FOREVER[1413][4962].classes == 256)
 	-- exclues en amont : cachée, répétable, métier, événement, JcJ
 	local function Anywhere(data, id)
 		for _, list in pairs(data) do if list[id] then return true end end
@@ -197,7 +184,7 @@ do
 	end
 	local absent = true
 	for _, id in ipairs({ 787, 5843, 813, 926, 16, 862, 171, 7141 }) do
-		absent = absent and not Anywhere(Q.ERA, id) and not Anywhere(Q.FOREVER, id)
+		absent = absent and not Anywhere(Q.FOREVER, id)
 	end
 	Check("[ZQ] exclues : cachées (787, 5843), répétables (813, 926, 16), métier (862), événement (171), JcJ (7141)", absent)
 end
@@ -209,7 +196,7 @@ do
 	Check("[ZQ] table chargée : disponible", NS:ZoneQuestsAvailable() == true)
 	local list = NS:ZoneQuestList(1411)
 	local ids = Q.Ids(list)
-	local expected = Q.Expected(Q.ERA[1411], 2, 1)
+	local expected = Q.Expected(Q.FOREVER[1411], 2, 1)
 	Check("[ZQ] orc guerrier, Durotar : exactement les quêtes de sa race et de sa classe",
 		list and #list == Q.Count(expected) and #list > 30, list and #list)
 	local same = true
@@ -221,7 +208,7 @@ do
 	ids = Q.Ids(NS:ZoneQuestList(1411))
 	Check("[ZQ] troll mage : « Tablette glyphée » (3086), plus de parchemin d'orc", ids[3086] and not ids[2383] and ids[4641])
 	Check("[ZQ] troll mage : liste à part (cache par race et classe)", #NS:ZoneQuestList(1411)
-		== Q.Count(Q.Expected(Q.ERA[1411], 8, 8)))
+		== Q.Count(Q.Expected(Q.FOREVER[1411], 8, 8)))
 	Q.race, Q.class = 1, 1   -- humain
 	Check("[ZQ] humain, Durotar : aucune quête de la Horde", Q.Ids(NS:ZoneQuestList(1411))[4641] == nil)
 	Check("[ZQ] humain, Elwynn : « A Threat Within » comptée", Q.Ids(NS:ZoneQuestList(1429))[783] ~= nil)
@@ -247,7 +234,7 @@ do
 	Say("-- quêtes de zone : faites et à faire")
 	Q.Reset()
 	local part = NS:ZoneQuestsPart(1411)
-	local total = Q.Count(Q.Expected(Q.ERA[1411], 2, 1))
+	local total = Q.Count(Q.Expected(Q.FOREVER[1411], 2, 1))
 	Check("[ZQ] rien de fait : 0/N", part and part.have == 0 and part.need == total, part and (part.have .. "/" .. part.need))
 	Check("[ZQ] survol : « À faire : », 6 noms puis « … et N autres »", part.hint[1] == "À faire :" and #part.hint == 8
 		and part.hint[2]:find("^  · ") and part.hint[8] == NS:F("JRN_HINT_MORE", total - 6), part.hint[8])
@@ -256,7 +243,7 @@ do
 		and items[#items].detail:find("^niveau ") ~= nil)
 	local sorted = true
 	for index = 2, #items do
-		local a, b = Q.ERA[1411][items[index - 1].id], Q.ERA[1411][items[index].id]
+		local a, b = Q.FOREVER[1411][items[index - 1].id], Q.FOREVER[1411][items[index].id]
 		local la = a.lvl > 0 and a.lvl or (a.req > 0 and a.req or 999)
 		local lb = b.lvl > 0 and b.lvl or (b.req > 0 and b.req or 999)
 		sorted = sorted and la <= lb
@@ -297,7 +284,7 @@ do
 	-- fermées par 4963 : 4962 (exclusive) et les quêtes qui y mènent
 	local closed = 0
 	for id in pairs(ids) do
-		for _, other in ipairs(Q.ERA[1413][id].ex or {}) do if other == 4963 then closed = closed + 1 end end
+		for _, other in ipairs(Q.FOREVER[1413][id].ex or {}) do if other == 4963 then closed = closed + 1 end end
 	end
 	Q.done[4963] = true
 	Mock:Fire("QUEST_TURNED_IN", 4963, 0, 0)
@@ -361,7 +348,7 @@ do
 		and def.label == "JRN_PART_quests" and type(def.Items) == "function" and #def.Items(NS, 1411) > 30)
 	local part = Q.Part(1411)
 	Check("[ZQ] complétion de zone : part « Quêtes »", part and part.label == "Quêtes"
-		and part.need == Q.Count(Q.Expected(Q.ERA[1411], 2, 1)))
+		and part.need == Q.Count(Q.Expected(Q.FOREVER[1411], 2, 1)))
 	-- client inconnu : pas de table
 	Q.Reset(false)
 	Check("[ZQ] client sans table : indisponible", NS:ZoneQuestsAvailable() == false)
@@ -400,6 +387,7 @@ do
 	NS:JournalData().stamps["zone:1411"] = { id = "zone:1411", kind = "zone", name = "Durotar", at = 0 }
 	NS:DB().journalTracker = false
 	NS:ToggleJournal(true)
+	NS:SelectJournalKind("completion")
 	local f = NS.journalFrame
 	local comp = f and f.comp
 	Check("[ZQ] fenêtre : Durotar", f and f.zoneID == 1411)
@@ -436,6 +424,7 @@ do
 	NS:JournalData().stamps["zone:1411"] = { id = "zone:1411", kind = "zone", name = "Durotar", at = 0 }
 	NS:DB().journalTracker = false
 	NS:ToggleJournal(true)
+	NS:SelectJournalKind("completion")
 	comp = NS.journalFrame.comp
 	Check("[ZQ] client sans table : « Quêtes » grisé", comp.tabs.quests.text.text == "Quêtes"
 		and comp.tabs.quests.text.textColor[1] == NS.Theme.MUTED[1])

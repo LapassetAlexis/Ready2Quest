@@ -3,18 +3,18 @@
 depuis NOTRE base de données (data/).
 
 Usage :
-    python3 -I tools/gen_zone_data.py [--flavor era|forever|all] [--date AAAA-MM-JJ]
+    python3 -I tools/gen_zone_data.py [--date AAAA-MM-JJ]
 
-Lit, pour chaque client (data/era/, data/forever/) : npcs.jsonl, objects.jsonl,
+Lit, pour WoW Forever (data/forever/) : npcs.jsonl, objects.jsonl,
 quests.jsonl, zones.json, source.json, et les corrections faites à la main
 (fixes.json, voir docs/DONNEES.md). Aucune autre source : ni Questie, ni réseau.
 
-Sorties (dans QuestCompanion/), une paire par client :
-    ZoneCreatures_Era.lua  / ZoneCreatures_Forever.lua   ns.ZONE_CREATURES
-    ZoneGathering_Era.lua  / ZoneGathering_Forever.lua   ns.ZONE_GATHERING
-    ZoneQuests_Era.lua     / ZoneQuests_Forever.lua      ns.ZONE_QUESTS
-Chaque fichier se garde lui-même (ns:IsForeverClient()) : un client ne
-construit que SES tables. Sortie déterministe. Les fichiers Lua sont réécrits
+Sorties (dans QuestCompanion/) :
+    ZoneCreatures_Forever.lua   ns.ZONE_CREATURES
+    ZoneGathering_Forever.lua   ns.ZONE_GATHERING
+    ZoneQuests_Forever.lua      ns.ZONE_QUESTS
+Chaque fichier se garde lui-même (ns:IsForeverClient()) : un autre client ne
+construit pas ces tables. Sortie déterministe. Les fichiers Lua sont réécrits
 en entier : ne les édite pas à la main, corrige data/ et relance ce script.
 """
 import argparse
@@ -38,9 +38,9 @@ def read(path):
         return handle.read()
 
 
-# Clients : dossier de data/ et suffixe des fichiers
+# Client : dossier de data/ et suffixe des fichiers (Classic Era n'est plus
+# généré depuis QuestCompanion 1.2.0)
 FLAVORS = {
-    "era": {"name": "Era", "forever": False},
     "forever": {"name": "Forever", "forever": True},
 }
 
@@ -111,9 +111,9 @@ SEASONAL = re.compile(
     r"Greatfather Winter|Smokywood|Noblegarden|Children's Week|Darkmoon|Harvest Festival|Festival|Firebreather", re.I)
 SEASONAL_FACTIONS = {1555}
 # QuestieNPCBlacklist (Questie : Database/Corrections/QuestieNPCBlacklist.lua) :
-# PNJ masqués par Questie sur Era et Forever (Expansions.Current = Era sur les
-# deux ; retirés du jeu ou d'événements passés)
-ERA_BLACKLIST = {8001, 13151, 13153, 13154, 13319, 13320, 13377, 13446, 13449, 15799}
+# PNJ masqués par Questie sur Forever (Expansions.Current = Era, l'énumération
+# de Questie pour les clients classiques ; retirés du jeu ou d'événements passés)
+QUESTIE_NPC_BLACKLIST = {8001, 13151, 13153, 13154, 13319, 13320, 13377, 13446, 13449, 15799}
 
 # ---------------------------------------------------------------------------
 # Récolte : nom de l'objet du monde -> itemID de GatheringData.lua
@@ -169,7 +169,7 @@ def creature_reason(npc_id, row, keys):
     sub_name = row.get(keys["subName"]) or ""
     if not name or not isinstance(name, str):
         return "sans nom"
-    if npc_id in ERA_BLACKLIST:
+    if npc_id in QUESTIE_NPC_BLACKLIST:
         return "liste noire Questie"
     if TECHNICAL.search(name):
         return "technique"
@@ -531,12 +531,12 @@ def generate(flavor_key, args):
 
 def main(argv=None):
     parser = argparse.ArgumentParser(description="Génère les tables de zone de QuestCompanion depuis data/.")
-    parser.add_argument("--flavor", choices=("era", "forever", "all"), default="all")
     parser.add_argument("--date", default=datetime.date.today().isoformat())
     parser.add_argument("--out", default=os.path.join(ROOT, "QuestCompanion"),
                         help="dossier de l'addon (par défaut : QuestCompanion/ du dépôt)")
     args = parser.parse_args(argv)
-    for key in (("era", "forever") if args.flavor == "all" else (args.flavor,)):
+    # QuestCompanion 1.2.0 : WoW Forever seulement (les tables d'Era ne sont plus livrées)
+    for key in FLAVORS:
         generate(key, args)
 
 

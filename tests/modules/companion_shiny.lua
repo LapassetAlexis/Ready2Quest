@@ -193,6 +193,12 @@ do
 	NS:ShinyCheckRewards()
 	local aura = NS:ShinyAuraDef()
 	Check("[SHINY] 30 : l'aura, portée", unlocked["orn:aura"] == true and NS:CompanionOrnamentShown(aura))
+	Check("[SHINY] après 30 : le bébé hippogriffe à 50", NS:ShinyNextReward().count == 50
+		and NS:ShinyNextReward().def.id == "hippogryph")
+	NS:ShinyData().count = 50
+	NS:ShinyCheckRewards()
+	Check("[SHINY] 50 : le bébé hippogriffe", unlocked["app:hippogryph"] == true
+		and NS:CompanionIsUnlocked("app", NS:CompanionAppearanceDef("hippogryph")))
 	Check("[SHINY] tout gagné : plus de prochain cadeau", NS:ShinyNextReward() == nil)
 	Check("[SHINY] pas deux fois", #NS:ShinyCheckRewards() == 0)
 	Check("[SHINY] condition lisible", NS:CompanionRequirement({ shiny = 15 }) == "15 brillantes")

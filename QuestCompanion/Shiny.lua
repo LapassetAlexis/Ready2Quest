@@ -34,12 +34,19 @@ local REWARDS = {
 		color = { 0.07, 0.05, 0.14, 0.92 }, stars = true } },
 	{ count = 30, kind = "orn", def = { id = "aura", key = "companionOrnAura", label = "COMP_ORN_AURA", tier = 0,
 		unlock = { shiny = 30 } } },
+	-- 1.2.0 : le bébé hippogriffe (catalogue des apparences, CompanionData.lua)
+	{ count = 50, kind = "app", id = "hippogryph" },
 }
+for _, reward in ipairs(REWARDS) do
+	if not reward.def and reward.kind == "app" then
+		for _, def in ipairs(ns.COMPANION_APPEARANCES or {}) do if def.id == reward.id then reward.def = def end end
+	end
+end
 ns.SHINY_REWARDS = REWARDS
-local LISTS = { frame = "COMPANION_FRAMES", bg = "COMPANION_BACKGROUNDS", orn = "COMPANION_ORNAMENTS" }
+local LISTS = { app = "COMPANION_APPEARANCES", frame = "COMPANION_FRAMES", bg = "COMPANION_BACKGROUNDS", orn = "COMPANION_ORNAMENTS" }
 for _, reward in ipairs(REWARDS) do
 	local list = ns[LISTS[reward.kind]]
-	if type(list) == "table" then
+	if type(list) == "table" and reward.def then
 		local present = false
 		for _, def in ipairs(list) do if def.id == reward.def.id then present = true end end
 		if not present then list[#list + 1] = reward.def end
@@ -206,7 +213,10 @@ end
 -- Étoile au-dessus : seul ou chef du groupe, et pas d'icône déjà posée
 function ns:ShinyMark(unit)
 	if self:DB().companionShinyMark == false then return false end
-	if Call(G("GetRaidTargetIndex"), unit) then return false end
+	-- une icône déjà posée, ou une valeur secrète (Forever) : on n'y touche pas
+	local icon = Call(G("GetRaidTargetIndex"), unit)
+	if icon ~= nil and ns.Plain(icon) == nil then return false end
+	if ns.Plain(icon) then return false end
 	if Call(G("IsInGroup")) and not Call(G("UnitIsGroupLeader"), "player") then return false end
 	if type(G("SetRaidTarget")) ~= "function" then return false end
 	Call(G("SetRaidTarget"), unit, ns.SHINY_MARK)
@@ -424,17 +434,19 @@ if ns.AddOptionPage then
 end
 
 -- ---------------------------------------------------------------------------
--- Horloge
+-- Horloge : dix fois par seconde suffit (objets révélés toutes les 0,3 s,
+-- étincelles toutes les 1,5 s)
 -- ---------------------------------------------------------------------------
+ns.SHINY_TICK = 0.1
 local ok, frame = pcall(CreateFrame, "Frame")
 if ok and frame then
-	frame:SetScript("OnUpdate", function()
+	frame:SetScript("OnUpdate", ns.Throttle(ns.SHINY_TICK, function()
 		local now = Clock()
 		local done, err = pcall(ns.ChestRevealStep, ns, now)
 		if not done and ns.RecordError then ns:RecordError("shiny:chest", err) end
 		done, err = pcall(ns.ShinyAuraTick, ns, now)
 		if not done and ns.RecordError then ns:RecordError("shiny:aura", err) end
-	end)
+	end))
 	ns.shinyEventFrame = frame
 end
 

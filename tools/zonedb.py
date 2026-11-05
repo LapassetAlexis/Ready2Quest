@@ -1,7 +1,7 @@
 """Lecture de NOTRE base de données (data/), pour les générateurs.
 
     import zonedb
-    db = zonedb.load("era")          # ou "forever"
+    db = zonedb.load("forever")
     db.entities["npc"]               # (données, clés) : {id: {champ: valeur}}, {champ: champ}
     db.fr["quest"][id]               # nom français
     db.to_map(areaID)                # uiMapID de la zone (sous-zone -> zone), ou None

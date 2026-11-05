@@ -1,5 +1,25 @@
 # Journal des modifications
 
+## 1.27.0
+
+- **Nouveau module « Place au butin »**, inspiré de Delete Cheapest Item : sacs pleins devant un butin qui ne rentre pas, une fenêtre s'ouvre (ou `/r2q place`). En haut, l'objet du butin (une quête d'abord, sinon le plus cher) ; dessous, les objets les moins chers de tes sacs, prix du marchand et de l'hôtel des ventes (Auctionator ou TSM s'ils sont là), en gris s'ils valent plus que le butin. [Jeter] détruit l'objet puis ramasse le butin ; confirmation pour un objet vert ou mieux (réglable). [Ignorer] l'ajoute à la liste « toujours garder ». Devant un butin, il prend le relais de « Sac plein ».
+- **Nouveau module « Rangs de sorts »** : un sort de tes barres a un meilleur rang dans ton livre ? L'icône de Ready2Quest le signale (à la connexion, après un sort appris, quand une barre change ; jamais en combat), le check avant le départ aussi. `/r2q sorts` liste les sorts avec leur barre et leur case : [Mettre à jour] pose le meilleur rang dans la même case, [Tout mettre à jour] fait tout. [Ignorer] ignore la case (un rang 1 gardé exprès), à oublier dans les réglages.
+- **Moteur récent de Forever mieux exploité** (chaque nouveauté reste sans effet si le client ne la propose pas) :
+  - **infobulle des objets** : « Ready2Quest : amélioration (+4 Force) » au survol d'une pièce qui fait mieux que celle que tu portes ;
+  - **niveaux des donjons lus dans le jeu** quand il les donne (recherche de groupe), les données livrées restant en secours ;
+  - **réglages dans Échap > Options > AddOns** (un bouton ouvre la fenêtre de Ready2Quest) et entrée dans le **bouton des addons de la minicarte** ;
+  - fiches d'objets demandées au serveur quand elles manquent (noms des composants justes dès la connexion) ;
+  - moins de calculs à chaque image (alerte de sortie de zone sûre, camp, mort) ;
+  - `/r2q diag` liste les nouvelles sondes : `vignettes`, `tooltipData`, `mapLevels`, `lfgDungeons`, `questsOnMap`, `settingsPanel`, `addonCompartment`, `itemAsync`, `modelAnimation`.
+
+*English:* two new modules. Room for loot (inspired by Delete Cheapest Item): with full bags in front of loot, the cheapest items in your bags with vendor and auction prices; Drop destroys one and picks the loot up, Ignore keeps it forever. Spell ranks: tells you when a spell on your bars has a higher rank in your spellbook, updates it in one click, and lets you ignore a slot. Better use of Forever's modern engine (each part only when the client offers it): an upgrade line in item tooltips, dungeon levels read from the game, an entry in Esc > Options > AddOns and in the minimap addon button, item data requested when missing, fewer per-frame computations, and new /diag probes.
+
+## 1.26.1
+
+- **WoW Forever seulement** : Classic Era n'est plus pris en charge (le `.toc` ne déclare plus que Forever ; Era, TBC et Mists disparaissent des versions annoncées sur CurseForge et Wago). Les versions déjà publiées pour Era restent téléchargeables.
+
+*English:* WoW Forever only: Classic Era is no longer supported (the `.toc` only declares Forever).
+
 ## 1.26.0
 
 - **Le compagnon devient un addon à part, autonome : QuestCompanion.** Le compagnon de route, le carnet de voyage, la complétion de zone et les coffres partent dans QuestCompanion, avec sa commande `/qc`, ses réglages et son bouton de minicarte. Il fonctionne seul ; installé à côté de Ready2Quest, il reprend ta progression (tous tes personnages) et réagit à tes départs et retours en ville.

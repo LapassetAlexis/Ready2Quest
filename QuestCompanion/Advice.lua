@@ -209,6 +209,8 @@ end
 -- ---------------------------------------------------------------------------
 function ns:AdviceSeeUnit(unit)
 	if not unit or self:InInstance() then return false end
+	-- en combat, le prévenir ne sert plus (et la bulle tomberait après, sur un cadavre)
+	if InCombat() then return false end
 	if not Call(rawget(_G, "UnitExists"), unit) or Call(rawget(_G, "UnitIsDead"), unit) then return false end
 	if not Call(rawget(_G, "UnitCanAttack"), "player", unit) then return false end
 	local class = Call(rawget(_G, "UnitClassification"), unit)
@@ -235,7 +237,9 @@ local HANDLERS = {
 	UPDATE_MOUSEOVER_UNIT = function() ns:AdviceSeeUnit("mouseover") end,
 	NAME_PLATE_UNIT_ADDED = function(unit) ns:AdviceSeeUnit(unit) end,
 	PLAYER_REGEN_ENABLED = function()
-		local health, maximum = Call(rawget(_G, "UnitHealth"), "player"), Call(rawget(_G, "UnitHealthMax"), "player")
+		-- secrètes sur le moteur récent (Forever) : on ne sait pas, on ne dit rien
+		local health = ns.Plain(Call(rawget(_G, "UnitHealth"), "player"))
+		local maximum = ns.Plain(Call(rawget(_G, "UnitHealthMax"), "player"))
 		if tonumber(health) and tonumber(maximum) and maximum > 0 and health / maximum < ns.ADVICE_HEALTH
 			and not Call(rawget(_G, "UnitIsDeadOrGhost"), "player") then
 			ns:AdviceState().health = math.floor(ns.Now())

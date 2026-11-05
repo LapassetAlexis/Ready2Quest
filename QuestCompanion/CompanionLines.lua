@@ -243,7 +243,7 @@ P.NPC_flight = {
 	{ "%s s'occupe bien de ses montures, ça se voit.", "%s takes good care of the mounts, you can tell." },
 	{ "Vu d'en haut, tout a l'air minuscule. Même toi.", "From up there, everything looks tiny. Even you." },
 	{ "Un vol ? J'espère avoir la place près du hublot.", "A flight? Hope I get the window seat." },
-	{ "La route du ciel ! Bien plus rapide à pied.", "The sky road! Much faster than walking." },
+	{ "La route du ciel ! Bien plus rapide qu'à pied.", "The sky road! Much faster than walking." },
 }
 P.NPC_banker = {
 	{ "Un banquier ! Range bien tes trésors.", "A banker! Tuck your treasures away." },
@@ -383,7 +383,7 @@ P.TIP = {
 	{ "Astuce : un plus grand sac, c'est moins d'allers-retours.", "Tip: a bigger bag means fewer round trips." },
 	{ "Astuce : garde une potion de soins pour les mauvaises surprises.", "Tip: keep a healing potion for nasty surprises." },
 	{ "Astuce : chaque nouveau lieu ajoute un tampon au carnet (/qc carnet).", "Tip: every new place adds a journal stamp (/qc carnet)." },
-	{ "Astuce : les tampons du carnet débloquent mes apparences et ornements.", "Tip: journal stamps unlock my looks and ornaments." },
+	{ "Astuce : chaque zone finie à 100 %% ouvre un coffre, avec une apparence ou un ornement pour moi.", "Tip: every zone finished to 100%% opens a chest, with a look or an ornament for me." },
 	{ "Astuce : survole-moi pour voir ma faim, mon énergie, mon moral, ma curiosité.", "Tip: hover me to see my hunger, energy, mood and curiosity." },
 	{ "Astuce : tu peux me renommer avec /qc compagnon nom.", "Tip: you can rename me with /qc compagnon nom." },
 	{ "Astuce : parle à chaque maître de vol croisé, ça fait gagner un temps fou.", "Tip: talk to every flight master you pass, huge time saver." },
@@ -391,7 +391,6 @@ P.TIP = {
 	{ "Astuce : relis l'objectif, un objet de quête tombe parfois d'un seul type d'ennemi.", "Tip: reread objectives, quest items sometimes drop from one enemy type." },
 	{ "Astuce : un métier de récolte rapporte de l'or en chemin.", "Tip: a gathering profession earns gold along the way." },
 	{ "Astuce : rends tes quêtes avant de partir, le check te le rappelle.", "Tip: turn in quests before leaving, the check reminds you." },
-	{ "Astuce : deux donjons visités, et je change d'allure !", "Tip: visit two dungeons and I get a new look!" },
 	{ "Astuce : le résumé de stuff montre ce que t'apporte un nouvel objet.", "Tip: the gear summary shows what a new item gives you." },
 	{ "Astuce : flèches, balles ou réactifs ? Fais le plein avant de partir.", "Tip: arrows, bullets or reagents? Stock up before leaving." },
 	{ "Astuce : l'auberge et la ville me redonnent de l'énergie.", "Tip: inns and towns restore my energy." },
@@ -445,7 +444,7 @@ P.TUTO = {
 	{ "J'ai quatre besoins : faim, énergie, moral, curiosité. Survole-moi pour les voir.", "I have four needs: hunger, energy, mood, curiosity. Hover me to see them." },
 	{ "Mange, repose-toi à l'auberge, rends des quêtes, explore : ça me comble !", "Eat, rest at inns, turn in quests, explore: that fills me up!" },
 	{ "Je grandis avec tes niveaux : 10, 20, 40 et 60. Jamais de retour en arrière.", "I grow with your levels: 10, 20, 40 and 60. Never backwards." },
-	{ "Les tampons du carnet (/qc carnet) débloquent mes apparences et ornements.", "Journal stamps (/qc carnet) unlock my looks and ornaments." },
+	{ "Finis une zone à 100 %% (carnet, /qc) : un coffre s'ouvre, avec une apparence ou un ornement pour moi.", "Finish a zone to 100%% (journal, /qc): a chest opens, with a look or an ornament for me." },
 	{ "En route, je te préviens : sacs pleins, vivres, réparations, munitions, un élite dans le coin…", "On the road, I'll warn you: full bags, food, repairs, ammo, an elite nearby…" },
 	{ "Je parle trop ? Pas assez ? Règle-moi avec la réglette « Bavardage », page Compagnon.", "Too chatty? Not enough? Tune me with the \"Chattiness\" slider, Companion page." },
 	{ "Pour me personnaliser : réglages, page Compagnon. Et je ne me fâche jamais !", "To customise me: settings, Companion page. And I never get cross!" },
@@ -565,7 +564,7 @@ P.RECALL = {  -- %s = le souvenir
 }
 P.ANNIV = {  -- %s = la durée (« une semaine »)
 	{ "Ça fait %s qu'on voyage ensemble !", "We've been travelling together for %s!" },
-	{ "Déjà %s ensemble ! Merci de m'emmener partout.", "%s together already! Thanks for taking me everywhere." },
+	{ "Déjà %s ensemble ! Merci de m'emmener partout.", "Together for %s already! Thanks for taking me everywhere." },
 }
 
 -- ---------------------------------------------------------------------------

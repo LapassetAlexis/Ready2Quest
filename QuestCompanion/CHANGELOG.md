@@ -1,5 +1,43 @@
 # QuestCompanion
 
+## 1.2.0
+
+- **WoW Forever seulement** : Classic Era n'est plus pris en charge. Le `.toc` ne déclare plus que Forever, et les tables de zone d'Era (créatures, quêtes, récolte) ne sont plus livrées : le zip est plus léger. Les versions déjà publiées pour Era restent téléchargeables.
+- **Neuf nouvelles créatures**, toutes présentes avec le même modèle sur Era et sur Forever :
+  - **dans les coffres de zone**, deux par palier : chat tigré argenté et crapaud tacheté (palier 1), chat Bombay et ara écarlate (palier 2), bébé panda et bébé murloc (palier 3) ;
+  - **le poulet**, à la troisième carte de fidélité des auberges remplie ;
+  - **l'écureuil mécanique**, au dixième jour où tu fais les trois missions du jour ;
+  - **le bébé hippogriffe**, à 50 créatures brillantes.
+- **Deux nouveaux caractères**, apportés par leur apparence (comme la chouette ou le serpent) : le poulet **Peureux** (il sursaute de tout, le dit quand un combat tape fort, adore les auberges) et l'écureuil mécanique **Bricoleur** (il démonte, répare et invente). Chacun a ses répliques, sa mission du jour et sa remarque.
+- **Cadres et fonds tirés des images du jeu**, à gagner dans les coffres de zone : quatre cadres (Pierre et Messager au palier 1, Portail au palier 2, Sculpté au palier 3) et onze fonds (lettres d'Orgrimmar, de Fossoyeuse et des Pitons, parchemin des hauts faits au palier 1 ; lettres enluminée, d'amour et d'hiver, Kalimdor au palier 2 ; Royaumes de l'Est, Cœur du Magma et Ahn'Qiraj au palier 3). Chaque image existe dans Era et dans Forever.
+- **Moteur récent de Forever mieux exploité** (chaque nouveauté reste sans effet si le client ne la propose pas) :
+  - **rares en direct** : un rare apparaît sur la minicarte, la créature te prévient (« un rare rôde ! ») et le bestiaire comme le carnet le notent tout de suite. Une alerte par rare toutes les 10 minutes, réglable (page « Au jour le jour ») ;
+  - **infobulle des monstres** : « Bestiaire : à abattre » ou « abattu (n) », et le rang des élites, rares et boss ;
+  - **la créature s'anime** : elle parle quand elle bavarde, applaudit au niveau gagné et aux missions, danse pour une brillante, le coffre doré ou une carte d'auberge pleine, s'assoit au repos ;
+  - **niveaux des zones lus dans le jeu** pour les zones que nos tables ne connaissent pas ;
+  - **quêtes proposées sur la carte** : l'onglet Quêtes du carnet ajoute celles que le jeu signale et que nos données n'ont pas ;
+  - **réglages dans Échap > Options > AddOns** et entrée dans le **bouton des addons de la minicarte** ;
+  - moins de calculs à chaque image (brillantes, photos, annonces).
+- Carnet : l'onglet **Créature** passe en tête, et c'est lui qui s'ouvre la première fois.
+- L'onglet **Jour** du carnet dit où tu en es : cartes d'auberge pleines, jours aux trois missions, et ce qu'ils rapportent.
+- **WoW Forever, moteur récent** :
+  - **erreur en fin de combat** (« attempt to perform arithmetic on a secret number value », Advice.lua) : ce client cache la vie du joueur aux addons, sous forme de valeur « secrète ». Le conseil « vie basse », les remarques des caractères Zen et Peureux et l'étoile des brillantes laissent maintenant ces valeurs de côté au lieu de calculer avec ;
+  - **les monstres tués restaient « à abattre »** : le bestiaire compte aussi la mort de ta cible par le message d'expérience (« X meurt, vous gagnez… »), sans jamais la compter deux fois avec le journal de combat. `/qc diag` montre ce qu'il reçoit (journal de combat, coups, victimes comptées) et la liste des modules vérifiés s'allonge.
+- **Relecture complète du code**, correctifs :
+  - le niveau gagné est de nouveau dit au cran Calme de la réglette Bavardage, comme promis ;
+  - prête à évoluer, la créature ne dit plus « encore 2 niveaux » quand ce sont des envies qui manquent ;
+  - le repos ou un repas qui comble la dernière envie la fait évoluer tout de suite ;
+  - un élite repéré en plein combat n'est plus annoncé après, sur son cadavre ;
+  - un rare engagé puis laissé (fuite, évitement) est oublié au bout de 30 min, comme pour le bestiaire ;
+  - l'aubergiste est reconnu aussi par la nouvelle interface de dialogue ;
+  - la mission « +3 % » s'affiche correctement en anglais ; « parle à N personnes » compte chaque PNJ une fois ;
+  - la question des photos revient si elle a été coupée par un rechargement ;
+  - dans le carnet : le rang « normal » est écrit dans l'aperçu, la dernière rangée de fiches ne passe plus sous le défilement, la Collection défile à la molette ;
+  - textes : astuces et tutoriel à jour (les apparences viennent des coffres de zone), quelques fautes (accords, « par-derrière », « plus rapide qu'à pied »), « Étouffante » pour l'herbe Stranglekelp.
+- **Correctif** : dans la fiche qui s'affiche au survol de la créature, l'aide en gris passait sous les barres des envies. La fiche se met maintenant en page de haut en bas et prend la hauteur de son contenu. Elle est aussi un peu plus large, pour le caractère.
+
+*English:* WoW Forever only (Classic Era is no longer supported, its zone tables are no longer shipped). Nine new creatures: six in zone chests (silver tabby, spotted toad, Bombay cat, scarlet macaw, panda cub, baby murloc), the chicken for three full inn cards, the mechanical squirrel for ten days with all three missions, the hippogryph hatchling for 50 shinies. Two appearance characters: the Fearful chicken and the Tinker squirrel. Four frames and eleven backgrounds made from game art (window borders, mail stationery, the achievement parchment, loading screens) join the zone chests. The Creature tab now comes first and opens the first time. The Day tab shows full inn cards and perfect mission days. Fix: the grey help line no longer overlaps the need bars in the hover card. WoW Forever: no more error at the end of combat (secret health values), and kills are also counted from the experience message. A full code review fixed level-up bubbles at Calm chattiness, a wrong goal reminder, stale elite warnings, the English "+3%" mission, NPCs counted twice, a lost photo question, the empty "normal" rank, the last card row under the pager, Collection scrolling and several typos. Better use of Forever's modern engine (each part only when the client offers it): live rare alerts from the minimap, bestiary status in creature tooltips, companion animations (talk, cheer, dance, sit), zone levels and map quests read from the game, an entry in Esc > Options > AddOns and in the minimap addon button, fewer per-frame computations.
+
 ## 1.1.0
 
 - **Friandises et garde-manger** : chaque palier d'une zone (25, 50 et 75 %) donne une friandise, rangée dans un garde-manger. **Maj + clic** sur la créature l'ouvre ; un clic sur une friandise la lui donne. Biscuit de voyage (faim à 100 %), Infusion douce (énergie), Bonbon pétillant (moral, et des cœurs), Carte au trésor (curiosité, et elle flaire ce qui reste dans la zone), Festin (les quatre envies). À 25 et 50 %, la friandise de l'envie la plus basse ; à 75 %, un Festin ; à 100 %, le coffre, comme avant. Trois de chaque sorte au plus, deux Festins : une friandise en trop est mangée tout de suite. Un **coffre doré** (palier de cosmétiques déjà complet) donne maintenant un Festin et deux friandises au hasard. Les paliers déjà franchis sont rattrapés à la première connexion, avec une seule bulle. Gourmand, il savoure deux fois : son moral monte aussi.

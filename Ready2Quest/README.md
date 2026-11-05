@@ -4,7 +4,7 @@
 
 **The adventurer's departure companion.** Before you leave town, Ready2Quest checks that your bags are ready: something to eat, room for loot, gear in good shape, your buffs, your hearthstone… and tells you at the right moment, not when it's too late.
 
-For **World of Warcraft Forever** and **Classic Era**. Interface in English and French.
+For **World of Warcraft Forever**. Interface in English and French.
 
 ---
 
@@ -24,6 +24,8 @@ Ready2Quest brings together **six modules** and a bit of **quality of life** (Qo
 | ✦ | **Leveling pace** | XP per hour, time to the next level, rested XP you'd earn by logging out |
 | ✦ | **Full bags** | Bags full out in the wild: the item that costs you the least to throw away, in one click |
 | ✦ | **After death** | Run back to your corpse or use the spirit healer? Both options, with the numbers |
+| ✦ | **Room for loot** | Full bags in front of loot: the cheapest items in your bags, one click to drop one and pick the loot up |
+| ✦ | **Spell ranks** | A spell on your bars has a higher rank in your spellbook: you get told, and update it in one click |
 | ✦ | **Merchant** | Automatic selling of grey items and automatic repairs at merchants |
 
 The **road companion** and its **travel journal** are a separate addon, [QuestCompanion](../QuestCompanion/README.md), which works on its own or with Ready2Quest.
@@ -69,7 +71,7 @@ Buffs need no setup: the addon remembers the ones that last several minutes on y
 A safe area is a place where you can **get ready without risk**: eat, repair, sell, set your hearthstone at the inn.
 
 - **Known right after install**: the capitals, villages and hubs of your faction, plus the neutral towns (Booty Bay, Gadgetzan, Everlook…). On Forever, the new zones such as Zephras Isle are covered too. That's 80 places, in both English and French.
-- **Camps too**: about 140 places on Era and 160 on Forever are detected by their service NPCs: an innkeeper, a flight master or a banker, or a group of at least three NPCs with a merchant and a repairer or a trainer. This also works for a camp without a subzone of its own: your position is used. A farm or a lone merchant on a road doesn't count.
+- **Camps too**: about 160 places on Forever are detected by their service NPCs: an innkeeper, a flight master or a banker, or a group of at least three NPCs with a merchant and a repairer or a trainer. This also works for a camp without a subzone of its own: your position is used. A farm or a lone merchant on a road doesn't count.
 - **The starting valleys** (Valley of Trials, Northshire, Coldridge, Shadowglen, Camp Narache, Deathknell, with their caves and buildings) count as a single safe area. Until you've left it, and up to level 6, nothing shows up on its own: the check is still available with `/r2q`. Your first real departure is when you leave the first village outside the valley.
 - **What doesn't count**: a village of the other faction, a dungeon, a battleground, a mine or a farm.
 - **Forever camps**: near a campfire, you're at camp. When you walk away from it, the check fires, just like leaving a village.
@@ -114,7 +116,6 @@ Camping on Forever makes the camp a real place to get ready. Ready2Quest helps y
 - **at camp**, a small countdown to the minute that grants the buffs, then "Camp buffs active";
 - **when you leave camp**, a reminder of the time left: "Camp buffs: 42 min left."
 
-On Classic Era, the module stays hidden: there's no camping.
 
 ## Gear summary
 
@@ -151,6 +152,23 @@ Your bags are full out in the wild and some loot won't fit? A small frame sugges
 - It never suggests a quest item, your hearthstone, your class reagents or your last food and drink.
 - **[Discard]** destroys it **after confirmation**, always, since it can't be undone. **[Other]** moves on to the next one. **[Always keep]** sets it aside for good.
 - `/r2q jeter` gives the suggestion in chat. `/r2q garder` and `/r2q jeter-toujours` manage your lists.
+
+### Room for loot
+
+Inspired by the *Delete Cheapest Item* addon. Your bags are full and some loot won't fit: a window opens by itself (or `/r2q place`).
+- At the top, **the loot that doesn't fit**: a quest item first, otherwise the most valuable one, with its price.
+- Below, **the cheapest items in your bags**, with their vendor price and, if Auctionator or TSM is installed, their auction price. An item worth more than the loot stays listed, but greyed out.
+- **[Drop]** destroys the item, then **picks the loot up** by itself. Grey and white items go on the click; a green item or better asks for confirmation first (an option).
+- **[Ignore]** never offers that item again (the same "always keep" list as Full bags).
+- Never offered: quest items, keys, your hearthstone, class reagents, reagents of tracked recipes, your last food.
+
+### Spell ranks
+
+A spell on your action bars has a higher rank in your spellbook (Holy Light rank 3 on the bar while you know rank 5)?
+- Checked at login, after you learn a spell, and when a bar changes; never in combat.
+- The Ready2Quest icon shows up (click: the list), with a line in chat, and the departure check gets a line too.
+- The list (`/r2q sorts`): each spell, its rank and the best one you know, its bar and slot. **[Update]** puts the best rank in the same slot, **[Update all]** does them all, out of combat.
+- **[Ignore]** ignores that **slot** for that spell: a rank 1 kept on purpose (a cheap heal) doesn't stop you from being told about the other slots. Settings, **Spell ranks** page, forget the ignored slots.
 
 ### After death
 
@@ -212,7 +230,7 @@ Both are on by default and can be turned off in the settings. They work even if 
 - Delete the `AddOns/ReadyToQuest` folder.
 - To keep your settings, rename `WTF/Account/<account>/SavedVariables/ReadyToQuest.lua` to `Ready2Quest.lua`.
 
-**Clients**: Forever (1.60) and Classic Era (1.15). The `.toc` file also declares TBC and MoP Classic, with no guarantee.
+**Client**: WoW Forever (1.60) only. Classic Era is no longer supported since 1.26.1.
 
 ---
 
@@ -253,7 +271,7 @@ Ready2Quest is free software under the **GPL-3.0** license (see `LICENSE`): you 
 
 **Le compagnon de départ de l'aventurier.** Avant que tu quittes la ville, Ready2Quest vérifie que ton sac est prêt : de quoi manger, de la place pour le butin, un équipement en état, tes buffs, ta pierre de foyer… et te le dit au bon moment, pas quand il est trop tard.
 
-Pour **World of Warcraft Forever** et **Classic Era**. Interface en français et en anglais.
+Pour **World of Warcraft Forever**. Interface en français et en anglais.
 
 ---
 
@@ -273,6 +291,8 @@ Ready2Quest réunit **six modules** et un peu de **confort** (QoL). Chacun s'act
 | ✦ | **Rythme de leveling** | XP par heure, temps avant le prochain niveau, repos à gagner en te déconnectant |
 | ✦ | **Sac plein** | Sac plein en pleine nature : l'objet que tu perds le moins à jeter, en un clic |
 | ✦ | **Après la mort** | Courir jusqu'au corps ou le guérisseur des esprits ? Les deux options chiffrées |
+| ✦ | **Place au butin** | Sacs pleins devant un butin : les objets les moins chers de tes sacs, un clic pour en jeter un et ramasser le butin |
+| ✦ | **Rangs de sorts** | Un sort de tes barres a un meilleur rang dans ton livre : tu es prévenu, et tu le mets à jour d'un clic |
 | ✦ | **Marchand** | Vente automatique des objets gris et réparation automatique chez les marchands |
 
 Le **compagnon de route** et son **carnet de voyage** sont un addon à part, [QuestCompanion](../QuestCompanion/README.md#francais), qui fonctionne seul ou avec Ready2Quest.
@@ -318,7 +338,7 @@ Les buffs n'ont rien à configurer : l'addon retient ceux qui durent plusieurs m
 Une zone sûre est un endroit où l'on peut **se préparer sans risque** : manger, réparer, vendre, se lier à l'auberge.
 
 - **Connues dès l'installation** : les capitales, les villages et les hubs de ta faction, ainsi que les villes neutres (Booty Bay, Gadgetzan, Everlook…). Sur Forever, c'est aussi le cas des nouvelles zones comme Zephras Isle. Cela fait 80 lieux, en français comme en anglais.
-- **Les camps aussi** : environ 140 lieux sur Era et 160 sur Forever sont repérés par leurs PNJ de service : un aubergiste, un maître de vol ou un banquier, ou un groupe d'au moins trois PNJ avec un marchand et un réparateur ou un entraîneur. Ça compte aussi pour un camp sans sous-zone à lui : on regarde ta position. Une ferme ou un marchand isolé sur une route ne comptent pas.
+- **Les camps aussi** : environ 160 lieux sur Forever sont repérés par leurs PNJ de service : un aubergiste, un maître de vol ou un banquier, ou un groupe d'au moins trois PNJ avec un marchand et un réparateur ou un entraîneur. Ça compte aussi pour un camp sans sous-zone à lui : on regarde ta position. Une ferme ou un marchand isolé sur une route ne comptent pas.
 - **Les vallées de départ** (Vallée des épreuves, Northshire, Coldridge, Sombrevallon, Camp Narache, Deathknell, avec leurs grottes et bâtiments) forment une seule zone sûre. Tant que tu n'en es pas sorti, et jusqu'au niveau 6, rien ne s'affiche tout seul : le check reste disponible avec `/r2q`. Le premier vrai départ, c'est quand tu quittes le premier village hors de la vallée.
 - **Ce qui ne compte pas** : un village de l'autre faction, un donjon, un champ de bataille, une mine ou une ferme.
 - **Les camps de Forever** : près d'un feu de camp, tu es au campement. Quand tu t'en éloignes, le check part, comme en quittant un village.
@@ -363,7 +383,6 @@ Le camping de Forever en fait un vrai lieu de préparation. Ready2Quest t'aide �
 - **au camp**, un petit compte à rebours jusqu'à la minute qui donne les buffs, puis « Buffs du camp actifs » ;
 - **en quittant le camp**, un rappel du temps restant : « Buffs du camp : encore 42 min ».
 
-Sur Classic Era, le module reste invisible : il n'y a pas de camping.
 
 ## Résumé de stuff
 
@@ -400,6 +419,23 @@ Ton sac est plein en pleine nature et un butin ne rentre pas ? Un petit cadre te
 - Il ne propose jamais un objet de quête, ta pierre de foyer, tes réactifs de classe ou tes derniers vivres.
 - **[Jeter]** le détruit **après confirmation**, toujours, puisque c'est irréversible. **[Autre]** passe au suivant. **[Garder toujours]** l'écarte pour de bon.
 - `/r2q jeter` donne la proposition dans le chat. `/r2q garder` et `/r2q jeter-toujours` gèrent tes listes.
+
+### Place au butin
+
+Inspiré de l'addon *Delete Cheapest Item*. Tes sacs sont pleins et un butin ne rentre pas : une fenêtre s'ouvre toute seule (ou `/r2q place`).
+- En haut, **le butin qui ne rentre pas** : un objet de quête d'abord, sinon le plus cher, avec son prix.
+- Dessous, **les objets les moins chers de tes sacs**, avec leur prix chez le marchand et, si Auctionator ou TSM est installé, à l'hôtel des ventes. Un objet qui vaut plus que le butin reste proposé, mais en gris.
+- **[Jeter]** détruit l'objet, puis **ramasse le butin** tout seul. Gris et blancs partent au clic ; un objet vert ou mieux demande d'abord confirmation (réglable).
+- **[Ignorer]** ne le propose plus jamais (la même liste « toujours garder » que Sac plein).
+- Jamais proposés : objets de quête, clés, pierre de foyer, composants de classe, composants des recettes suivies, dernière nourriture.
+
+### Rangs de sorts
+
+Un sort de tes barres d'action a un meilleur rang dans ton livre de sorts (Lumière sacrée rang 3 sur la barre alors que tu connais le rang 5) ?
+- Contrôlé à la connexion, après un sort appris et quand une barre change ; jamais en combat.
+- L'icône de Ready2Quest apparaît (clic : la liste), avec une ligne dans le chat, et le check avant le départ a sa ligne.
+- La liste (`/r2q sorts`) : chaque sort, son rang et le meilleur que tu connais, sa barre et sa case. **[Mettre à jour]** pose le meilleur rang dans la même case, **[Tout mettre à jour]** fait tout, hors combat.
+- **[Ignorer]** ignore cette **case** pour ce sort : un rang 1 gardé exprès (soin bon marché) ne t'empêche pas d'être prévenu pour les autres cases. Réglages, page **Rangs de sorts**, pour oublier les cases ignorées.
 
 ### Après la mort
 
@@ -461,7 +497,7 @@ Les deux sont actifs par défaut et se coupent dans les réglages. Ils fonctionn
 - Supprime le dossier `AddOns/ReadyToQuest`.
 - Pour garder tes réglages, renomme `WTF/Account/<compte>/SavedVariables/ReadyToQuest.lua` en `Ready2Quest.lua`.
 
-**Clients** : Forever (1.60) et Classic Era (1.15). Le fichier `.toc` déclare aussi TBC et MoP Classic, sans garantie.
+**Client** : WoW Forever (1.60) seulement. Classic Era n'est plus pris en charge depuis la 1.26.1.
 
 ---
 

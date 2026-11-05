@@ -45,7 +45,7 @@ local enUS = {
 	QC_HELP_OPTIONS      = "/qc options -- the settings",
 	QC_HELP_MODULES      = "/qc modules · /qc module compagnon on|off -- turns the companion on or off",
 	QC_HELP_MINIMAP      = "/qc minimap [on|off] -- the minimap button",
-	QC_HELP_RESET        = "/qc reset -- resets the settings (not your companion nor your journal)",
+	QC_HELP_RESET        = "/qc reset -- resets the settings (not your companion or your journal)",
 	QC_HELP_DIAG         = "/qc diag -- diagnostics, to attach to a bug report",
 	QC_MSG_MIGRATED      = "Companion, journal and chests taken over from Ready2Quest (%d character(s)).",
 }

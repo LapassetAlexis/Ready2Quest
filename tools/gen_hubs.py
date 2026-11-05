@@ -2,20 +2,19 @@
 """Génère Hubs.lua : la base des zones sûres livrée avec l'addon.
 
 Sources (données du client, publiées par wago.tools) :
-  AreaTable Era     1.15.9.70576  https://wago.tools/db2/AreaTable/csv?build=1.15.9.70576
   AreaTable Forever 1.60.1.70753  https://wago.tools/db2/AreaTable/csv?build=1.60.1.70753
 Liste des lieux : croisée warcraft.wiki.gg (Inn, Innkeeper), page Blizzard des
 trajets aériens Classic et warcraft.wiki.gg (Zephras Isle, Patch 1.60) pour Forever.
 
 Le client ne marque que les capitales (drapeau CAPITAL 0x100) : aucun drapeau
-« village » n'existe sur Era ni sur Forever (le 0x00100000 de TBC est
+« village » n'existe sur Forever (le 0x00100000 de TBC est
 AREA_FLAG_LOWLEVEL). La liste des villages est donc éditée ici, à la main,
 et résolue en identifiants de zone ; le jeu traduit les noms à l'exécution
 (C_Map.GetAreaInfo), ce qui rend la base valable dans toutes les langues.
 
 Usage : python3 -I tools/gen_hubs.py > Ready2Quest/Libs/Socle/Hubs.lua
-Lit AreaTable dans notre base (data/era/areas.jsonl, data/forever/areas.jsonl,
-importées par tools/import_client.py).
+Lit AreaTable dans notre base (data/forever/areas.jsonl, importée par
+tools/import_client.py).
 """
 import json, os, sys
 
@@ -84,35 +83,31 @@ def load(client):
     return rows
 
 def main():
-    era, fo = load("era"), load("forever")
+    fo = load("forever")
     seen, entries, missing = set(), [], []
-    def add(area_id, name, faction, kind, clients):
+    def add(area_id, name, faction, kind):
         if area_id in seen: return
         seen.add(area_id)
-        entries.append((area_id, name, faction, kind, clients))
-    for rows, tag in ((era, "era"), (fo, "forever")):
-        for i, r in rows.items():
-            if int(r["Flags_0"]) & 0x100 and r["AreaName_lang"] in CAPITAL_FACTION:
-                clients = "+".join(t for t, rr in (("era", era), ("forever", fo)) if i in rr)
-                add(i, r["AreaName_lang"], CAPITAL_FACTION[r["AreaName_lang"]], "capital", clients)
+        entries.append((area_id, name, faction, kind))
+    for i, r in fo.items():
+        if int(r["Flags_0"]) & 0x100 and r["AreaName_lang"] in CAPITAL_FACTION:
+            add(i, r["AreaName_lang"], CAPITAL_FACTION[r["AreaName_lang"]], "capital")
     for name, faction, kind in HUBS:
-        ids = sorted({i for rows in (era, fo) for i, r in rows.items() if r["AreaName_lang"] == name})
+        ids = sorted(i for i, r in fo.items() if r["AreaName_lang"] == name)
         if not ids: missing.append(name)
         for i in ids:
-            clients = "+".join(t for t, rr in (("era", era), ("forever", fo)) if i in rr)
-            add(i, name, faction, kind, clients)
+            add(i, name, faction, kind)
     for faction, names in START:
         for name in names:
-            ids = sorted({i for rows in (era, fo) for i, r in rows.items() if r["AreaName_lang"] == name})
+            ids = sorted(i for i, r in fo.items() if r["AreaName_lang"] == name)
             if not ids: missing.append(name)
             for i in ids:
-                clients = "+".join(t for t, rr in (("era", era), ("forever", fo)) if i in rr)
-                add(i, name, faction, "start", clients)
+                add(i, name, faction, "start")
     entries.sort(key=lambda e: (e[3] != "capital", e[2], e[1], e[0]))
     out = []
     out.append("-- Hubs.lua -- GÉNÉRÉ par tools/gen_hubs.py, ne pas éditer à la main")
     out.append("-- Zones sûres connues dès l'installation : capitales (drapeau CAPITAL du")
-    out.append("-- client), villages, hubs et auberges-sous-zones, Era 1.15.9 et Forever 1.60.1.")
+    out.append("-- client), villages, hubs et auberges-sous-zones de Forever 1.60.1.")
     out.append("-- [areaID] = { faction = \"A\"|\"H\"|\"N\", kind = \"capital\"|\"town\"|\"inn\"|\"hub\"|\"start\", name = nom anglais (repli) }")
     out.append("--   start : vallée de départ (niveaux 1-5) ; en partir ne déclenche aucune alerte.")
     out.append("-- Fichier du socle commun (Libs/Socle), identique dans Ready2Quest et")
@@ -121,9 +116,9 @@ def main():
     out.append("local ADDON, ns = ...")
     out.append("")
     out.append("ns.HUBS = {")
-    for area_id, name, faction, kind, clients in entries:
+    for area_id, name, faction, kind in entries:
         esc = name.replace('"', '\\"')
-        out.append(f'\t[{area_id}] = {{ faction = "{faction}", kind = "{kind}", name = "{esc}" }},  -- {clients}')
+        out.append(f'\t[{area_id}] = {{ faction = "{faction}", kind = "{kind}", name = "{esc}" }},')
     out.append("}")
     out.append("")
     out.append("if ns.Mark then ns.Mark(\"Hubs\") end")

@@ -90,12 +90,9 @@ end
 
 local function ItemData(link)
 	if not link then return nil end
-	-- repli sur la fonction globale (Era) si C_Item.GetItemInfo manque
-	local getInfo = (C_Item and C_Item.GetItemInfo) or rawget(_G, "GetItemInfo")
-	if type(getInfo) ~= "function" then return nil end
-
-	local ok, name, _, quality, itemLevel, _, _, _, _, itemEquipLoc, texture = pcall(getInfo, link)
-	if not ok or not name then return nil end
+	-- C_Item.GetItemInfo, sinon la globale (socle, ns.ItemInfo)
+	local name, _, quality, itemLevel, _, _, _, _, itemEquipLoc, texture = ns.ItemInfo(link)
+	if not name then return nil end
 	return {
 		name = name,
 		quality = quality or 1,

@@ -118,6 +118,9 @@ ns.RegisterStrings({
 	MSG_MODULE_UNKNOWN = "Module inconnu. Essaie " .. SLASH .. " modules.",
 	MSG_MODULES_HINT   = "|cff888888" .. SLASH .. " module <id> on|off|r",
 	MINIMAP_LEFT       = "Clic gauche : ouvrir",
+	SETTINGS_VERSION   = "Version %s",
+	SETTINGS_HINT      = "Les réglages de l'addon ont leur propre fenêtre.",
+	SETTINGS_OPEN      = "Ouvrir les réglages",
 }, {
 	OPT_TITLE           = "Settings",
 	OPT_HINT            = "Click a row to change the value.",
@@ -160,6 +163,9 @@ ns.RegisterStrings({
 	MSG_MODULE_UNKNOWN = "Unknown module. Try " .. SLASH .. " modules.",
 	MSG_MODULES_HINT   = "|cff888888" .. SLASH .. " module <id> on|off|r",
 	MINIMAP_LEFT       = "Left click: open",
+	SETTINGS_VERSION   = "Version %s",
+	SETTINGS_HINT      = "The addon's settings have their own window.",
+	SETTINGS_OPEN      = "Open the settings",
 })
 
 if ns.Mark then ns.Mark("Strings") end

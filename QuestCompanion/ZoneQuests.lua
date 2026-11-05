@@ -1,9 +1,9 @@
 -- ZoneQuests.lua -- quêtes de chaque zone, tables livrées avec l'addon (v1.25.0)
 --
 -- Le client ne donne pas la liste des quêtes d'une zone : elle est tirée en
--- amont de la base de Questie (tools/gen_zone_data.py) dans ZoneQuests_Era.lua
--- et ZoneQuests_Forever.lua. Chaque fichier se garde lui-même : seul celui de
--- TON client remplit ns.ZONE_QUESTS. Aucun addon tiers n'est requis en jeu.
+-- amont de la base de Questie (tools/gen_zone_data.py) dans
+-- ZoneQuests_Forever.lua, qui se garde lui-même : seul le client Forever
+-- remplit ns.ZONE_QUESTS. Aucun addon tiers n'est requis en jeu.
 --
 -- Comptées : les quêtes de la zone faisables par CE personnage (masques de race
 -- et de classe de la table), hors quêtes qu'une autre a fermées (ex : choix
@@ -16,6 +16,12 @@
 -- QUEST_LOG_UPDATE. En combat, l'oubli attend la fin du combat
 -- (PLAYER_REGEN_ENABLED) : la liste déjà calculée continue de servir.
 -- Vit sous le module Compagnon (db.companionEnabled), comme le carnet.
+--
+-- En complément (jamais à la place) : les quêtes que le jeu propose sur la
+-- carte de la zone (C_QuestLine.GetAvailableQuestLines, C_TaskQuest.
+-- GetQuestsOnMap) quand le client les expose. Seules celles absentes de la
+-- table et pas encore faites sont gardées (ns:ZoneLiveQuests) ; l'onglet
+-- Quêtes du carnet les liste à part, sans toucher au compte « faites / total ».
 local ADDON, ns = ...
 if ns.blocked then return end
 local L = ns.L
@@ -31,6 +37,8 @@ local FR = {
 	ZQ_LEVEL        = "niveau %d",
 	ZQ_DONE         = "faite",
 	ZQ_NO_LIST      = "Pas de liste de quêtes pour ce client.",
+	ZQ_LIVE_HEAD    = "Proposées sur la carte : %d",
+	ZQ_LIVE         = "sur la carte",
 }
 local EN = {
 	JRN_PART_quests = "Quests",
@@ -38,6 +46,8 @@ local EN = {
 	ZQ_LEVEL        = "level %d",
 	ZQ_DONE         = "done",
 	ZQ_NO_LIST      = "No quest list for this client.",
+	ZQ_LIVE_HEAD    = "Offered on the map: %d",
+	ZQ_LIVE         = "on the map",
 }
 ns.RegisterStrings(FR, EN)
 ns.ZONE_QUESTS_STRINGS = { fr = FR, en = EN }
@@ -119,7 +129,7 @@ end
 -- ---------------------------------------------------------------------------
 -- Statut et cache
 -- ---------------------------------------------------------------------------
-ns.zoneQuests = ns.zoneQuests or { done = {}, lists = {}, builds = 0, dirty = false }
+ns.zoneQuests = ns.zoneQuests or { done = {}, lists = {}, builds = 0, dirty = false, live = {}, requested = {} }
 local state = ns.zoneQuests
 
 local function Completed(id)
@@ -211,6 +221,75 @@ function ns:ZoneQuestList(zoneID)
 end
 
 -- ---------------------------------------------------------------------------
+-- Quêtes proposées sur la carte (API du moteur récent, en complément)
+-- ---------------------------------------------------------------------------
+local function LiveQuestID(info)
+	if type(info) ~= "table" then return nil end
+	local id = tonumber(ns.Plain(info.questID) or ns.Plain(info.questId))
+	return (id and id > 0) and id or nil
+end
+
+local function LiveName(text)
+	text = ns.Plain(text)
+	return (type(text) == "string" and text ~= "") and text or nil
+end
+
+local function TaskQuestName(id)
+	local task, log = rawget(_G, "C_TaskQuest"), rawget(_G, "C_QuestLog")
+	return LiveName(type(task) == "table" and Call(task.GetQuestInfoByQuestID, id))
+		or LiveName(type(log) == "table" and Call(log.GetTitleForQuestID, id))
+end
+
+local function BuildLive(self, zoneID, static)
+	local lines, task = rawget(_G, "C_QuestLine"), rawget(_G, "C_TaskQuest")
+	local found, list = {}, {}
+	local function Add(id, name)
+		if not id or found[id] or static[id] ~= nil or self:ZoneQuestDone(id) then return end
+		found[id] = true
+		list[#list + 1] = { id = id, name = name or tostring(id), done = false, live = true, detail = L.ZQ_LIVE }
+	end
+	if type(lines) == "table" then
+		-- demande une fois par zone : la réponse arrive par QUESTLINE_UPDATE
+		if not state.requested[zoneID] and type(lines.RequestQuestLinesForMap) == "function" then
+			state.requested[zoneID] = true
+			pcall(lines.RequestQuestLinesForMap, zoneID)
+		end
+		local available = Call(lines.GetAvailableQuestLines, zoneID)
+		for _, info in ipairs(type(available) == "table" and available or {}) do
+			local id = LiveQuestID(info)
+			Add(id, LiveName(type(info) == "table" and info.questName) or (id and TaskQuestName(id)))
+		end
+	end
+	if type(task) == "table" then
+		local onMap = Call(task.GetQuestsOnMap, zoneID)
+		for _, info in ipairs(type(onMap) == "table" and onMap or {}) do
+			local id = LiveQuestID(info)
+			if id then Add(id, TaskQuestName(id)) end
+		end
+	end
+	table.sort(list, Before)
+	return list
+end
+
+-- Quêtes du jeu pour cette zone, absentes de la table et pas encore faites ;
+-- liste vide sans l'API (ou si elle ne rend rien d'exploitable)
+function ns:ZoneLiveQuests(zoneID)
+	zoneID = tonumber(zoneID)
+	if not zoneID or not ModuleOn() then return {} end
+	local list = state.live[zoneID]
+	if list then return list end
+	local all = Table()
+	local static = (all and type(all[zoneID]) == "table") and all[zoneID] or {}
+	local ok, built = pcall(BuildLive, self, zoneID, static)
+	if not ok then
+		if self.RecordError then self:RecordError("zonequests:live", built) end
+		built = {}
+	end
+	state.live[zoneID] = built
+	return built
+end
+
+-- ---------------------------------------------------------------------------
 -- Part de complétion « Quêtes »
 -- ---------------------------------------------------------------------------
 function ns:ZoneQuestsPart(zoneID)
@@ -258,6 +337,7 @@ end
 -- Événements : le statut « faite » change, la table non
 -- ---------------------------------------------------------------------------
 local function Forget()
+	state.live = {}
 	if InCombat() then
 		state.dirty = true
 	else
@@ -267,7 +347,15 @@ end
 local function AfterCombat()
 	if state.dirty then state.done, state.lists, state.dirty = {}, {}, false end
 end
-local HANDLERS = { QUEST_TURNED_IN = Forget, QUEST_LOG_UPDATE = Forget, PLAYER_REGEN_ENABLED = AfterCombat }
+-- Lignes de quêtes reçues (après RequestQuestLinesForMap) : relire, et
+-- rafraîchir le carnet s'il est ouvert
+local function QuestLinesUpdated()
+	state.live = {}
+	local frame = ns.journalFrame
+	if frame and frame.IsShown and frame:IsShown() and ns.RefreshJournal then ns:RefreshJournal() end
+end
+local HANDLERS = { QUEST_TURNED_IN = Forget, QUEST_LOG_UPDATE = Forget, PLAYER_REGEN_ENABLED = AfterCombat,
+	QUESTLINE_UPDATE = QuestLinesUpdated }
 
 local eventFrame = CreateFrame("Frame")
 for event in pairs(HANDLERS) do pcall(eventFrame.RegisterEvent, eventFrame, event) end

@@ -31,6 +31,8 @@ local FR = {
 	TRAIT_zen            = "Zen",
 	TRAIT_sly            = "Rusé",
 	TRAIT_mischievous    = "Espiègle",
+	TRAIT_fearful        = "Peureux",
+	TRAIT_tinker         = "Bricoleur",
 	TRAIT_NONE           = "Pas encore formé",
 	TRAIT_AUTO           = "Selon son jeu",
 	TRAIT_DESC_curious     = "Il pose mille questions et remarque chaque coin nouveau. Aime explorer : curiosité +50 %%.",
@@ -45,13 +47,15 @@ local FR = {
 	TRAIT_DESC_zen         = "La tortue respire, ne se presse jamais, t'apaise après un combat. Aime le calme : énergie +50 %%.",
 	TRAIT_DESC_sly         = "Le serpent calcule tout et flaire les bonnes affaires. Aime l'or : curiosité +50 %%.",
 	TRAIT_DESC_mischievous = "Le dragon féerique fait des farces et met des paillettes partout. Aime jouer : moral +50 %%.",
+	TRAIT_DESC_fearful     = "Le poulet sursaute de tout, surveille vos arrières et adore les auberges. Aime être à l'abri : énergie +50 %%.",
+	TRAIT_DESC_tinker      = "L'écureuil mécanique démonte, répare et invente tout ce qu'il voit. Aime bricoler : curiosité +50 %%.",
 	TRAIT_FORMING        = "Son caractère se dessine en te regardant jouer (%d %%).",
 	TRAIT_MSG_FORMED     = "%s a trouvé son caractère : %s. (Réglages, page Caractère.)",
 	OPT_PAGE_CHARACTER   = "Caractère",
 	OPT_TRAIT_SOURCE     = "Caractère",
 	OPT_TRAIT_SOURCE_1   = "Apparence",
 	OPT_TRAIT_SOURCE_2   = "Le sien",
-	OPT_TRAIT_SOURCE_DESC_1 = "Recommandé : chouette, ara, feu follet, tortue, serpent et dragon féerique apportent leur caractère. Les autres gardent le sien.",
+	OPT_TRAIT_SOURCE_DESC_1 = "Recommandé : chouette, ara, feu follet, tortue, serpent, dragon féerique, poulet et écureuil mécanique apportent leur caractère. Les autres gardent le sien.",
 	OPT_TRAIT_SOURCE_DESC_2 = "Il garde son caractère quelle que soit son apparence.",
 	OPT_TRAIT_PICK       = "Son caractère",
 	OPT_TRAIT_NOW        = "Aujourd'hui : %s. %s",
@@ -70,6 +74,8 @@ local EN = {
 	TRAIT_zen            = "Zen",
 	TRAIT_sly            = "Sly",
 	TRAIT_mischievous    = "Mischievous",
+	TRAIT_fearful        = "Fearful",
+	TRAIT_tinker         = "Tinker",
 	TRAIT_NONE           = "Not formed yet",
 	TRAIT_AUTO           = "From your play",
 	TRAIT_DESC_curious     = "Asks a thousand questions and notices every new spot. Loves exploring: curiosity +50 %%.",
@@ -84,13 +90,15 @@ local EN = {
 	TRAIT_DESC_zen         = "The tortoise breathes, never hurries, calms you after a fight. Loves calm: energy +50 %%.",
 	TRAIT_DESC_sly         = "The snake plans everything and sniffs out good deals. Loves gold: curiosity +50 %%.",
 	TRAIT_DESC_mischievous = "The sprite plays pranks and puts sparkles everywhere. Loves to play: mood +50 %%.",
+	TRAIT_DESC_fearful     = "The chicken jumps at everything, watches your back and loves inns. Loves being safe: energy +50 %%.",
+	TRAIT_DESC_tinker      = "The mechanical squirrel takes apart, fixes and invents everything it sees. Loves tinkering: curiosity +50 %%.",
 	TRAIT_FORMING        = "Its character is taking shape as it watches you play (%d %%).",
 	TRAIT_MSG_FORMED     = "%s found its character: %s. (Settings, Character page.)",
 	OPT_PAGE_CHARACTER   = "Character",
 	OPT_TRAIT_SOURCE     = "Character",
 	OPT_TRAIT_SOURCE_1   = "Appearance",
 	OPT_TRAIT_SOURCE_2   = "Its own",
-	OPT_TRAIT_SOURCE_DESC_1 = "Recommended: owl, macaw, wisp, tortoise, snake and sprite bring their character. Others keep their own.",
+	OPT_TRAIT_SOURCE_DESC_1 = "Recommended: owl, macaw, wisp, tortoise, snake, sprite, chicken and mechanical squirrel bring their character. Others keep their own.",
 	OPT_TRAIT_SOURCE_DESC_2 = "It keeps its own character whatever its appearance.",
 	OPT_TRAIT_PICK       = "Its character",
 	OPT_TRAIT_NOW        = "Today: %s. %s",
@@ -118,9 +126,12 @@ local TRAITS = {
 	zen         = { need = "energy",    fx = 0.5, exclusive = "turtle" },
 	sly         = { need = "curiosity", fx = 0.9, exclusive = "snake" },
 	mischievous = { need = "mood",      fx = 1.5, exclusive = "sprite" },
+	fearful     = { need = "energy",    fx = 1.3, exclusive = "chicken" },
+	tinker      = { need = "curiosity", fx = 0.9, exclusive = "squirrel_mech" },
 }
 ns.PERSONALITY_TRAITS = TRAITS
-local ORDER = { "curious", "glutton", "daring", "lazy", "teasing", "cuddly", "wise", "parrot", "mystic", "zen", "sly", "mischievous" }
+local ORDER = { "curious", "glutton", "daring", "lazy", "teasing", "cuddly", "wise", "parrot", "mystic", "zen", "sly", "mischievous",
+	"fearful", "tinker" }
 ns.PERSONALITY_ORDER = ORDER
 local FORMED = { "curious", "glutton", "daring", "lazy", "teasing", "cuddly" }
 ns.PERSONALITY_FORMED = FORMED
@@ -261,6 +272,8 @@ Wrap("CompanionRefreshHover", function(original, self, ...)
 	if hover and hover.sub and hover.sub.GetText then
 		local trait = self:CompanionTrait()
 		if trait then hover.sub:SetText(tostring(hover.sub:GetText() or "") .. " · " .. self:PersonaLabel(trait)) end
+		-- la ligne a pu s'allonger : on replace la suite en dessous
+		if self.CompanionLayoutHover then self:CompanionLayoutHover() end
 	end
 	return result
 end)
@@ -390,8 +403,9 @@ function ns:PersonaTickNotice(now, state)
 			state.nightSeen = nil
 		end
 	elseif trait == "zen" then
-		local health = tonumber(Call(G("UnitHealth"), "player")) or 1
-		local max = tonumber(Call(G("UnitHealthMax"), "player")) or 1
+		-- vie secrète (Forever) : 1/1, il ne remarque rien
+		local health = tonumber(ns.Plain(Call(G("UnitHealth"), "player"))) or 1
+		local max = tonumber(ns.Plain(Call(G("UnitHealthMax"), "player"))) or 1
 		local fighting = Call(G("UnitAffectingCombat"), "player") == true
 		if max > 0 and health / max < 0.5 and not fighting then return self:PersonaNotice("zen") end
 	elseif trait == "sly" then
@@ -403,6 +417,26 @@ function ns:PersonaTickNotice(now, state)
 			return said
 		end
 		if money < state.money then state.money = money end
+	elseif trait == "fearful" then
+		-- ça tape fort : il voudrait souffler (une fois par combat difficile)
+		local health = tonumber(ns.Plain(Call(G("UnitHealth"), "player"))) or 1
+		local max = tonumber(ns.Plain(Call(G("UnitHealthMax"), "player"))) or 1
+		local fighting = Call(G("UnitAffectingCombat"), "player") == true
+		if fighting and max > 0 and health / max < 0.6 then
+			if not state.scared then
+				local said = self:PersonaNotice("fearful")
+				if said then state.scared = true end
+				return said
+			end
+		elseif not fighting then
+			state.scared = nil
+		end
+	elseif trait == "tinker" then
+		if now - (state.tinkerAt or state.started or now) >= 1200 then
+			local said = self:PersonaNotice("tinker")
+			if said then state.tinkerAt = now end
+			return said
+		end
 	elseif trait == "mischievous" then
 		if now - (state.prankAt or state.started or now) >= 1200 then
 			local said = self:PersonaNotice("mischievous")

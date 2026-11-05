@@ -125,6 +125,21 @@ function ns:UpdateMinimapDrag()
 	self.minimapDragMoved = true
 end
 
+-- Infobulle du lanceur : nom, lignes de l'addon (ns:MinimapTooltip), clic
+-- gauche ; clic droit et glisser seulement pour le bouton de la minicarte.
+function ns:ShowMinimapTooltip(owner, fromButton)
+	if type(GameTooltip) ~= "table" or not GameTooltip.SetOwner then return end
+	GameTooltip:SetOwner(owner, "ANCHOR_LEFT")
+	GameTooltip:AddLine(L.ADDON_NAME, Theme.GOLD[1], Theme.GOLD[2], Theme.GOLD[3])
+	if self.MinimapTooltip then self:MinimapTooltip(GameTooltip) end
+	GameTooltip:AddLine(L.MINIMAP_LEFT, 0.8, 0.8, 0.8)
+	if fromButton then
+		GameTooltip:AddLine(L.MINIMAP_RIGHT, 0.8, 0.8, 0.8)
+		GameTooltip:AddLine(L.MINIMAP_DRAG, 0.6, 0.6, 0.6)
+	end
+	GameTooltip:Show()
+end
+
 -- ---------------------------------------------------------------------------
 -- Création
 -- ---------------------------------------------------------------------------
@@ -201,16 +216,7 @@ function ns:EnsureMinimapButton()
 		end
 	end)
 
-	button:SetScript("OnEnter", function(self)
-		if type(GameTooltip) ~= "table" then return end
-		GameTooltip:SetOwner(self, "ANCHOR_LEFT")
-		GameTooltip:AddLine(L.ADDON_NAME, Theme.GOLD[1], Theme.GOLD[2], Theme.GOLD[3])
-		if ns.MinimapTooltip then ns:MinimapTooltip(GameTooltip) end
-		GameTooltip:AddLine(L.MINIMAP_LEFT, 0.8, 0.8, 0.8)
-		GameTooltip:AddLine(L.MINIMAP_RIGHT, 0.8, 0.8, 0.8)
-		GameTooltip:AddLine(L.MINIMAP_DRAG, 0.6, 0.6, 0.6)
-		GameTooltip:Show()
-	end)
+	button:SetScript("OnEnter", function(self) ns:ShowMinimapTooltip(self, true) end)
 
 	button:SetScript("OnLeave", function()
 		if type(GameTooltip) == "table" and GameTooltip.Hide then GameTooltip:Hide() end
@@ -269,6 +275,47 @@ function ns:CycleMinimapAngle()
 	db.minimapAngle = nextAngle
 	self:PositionMinimapButton()
 	self:Print(self:F("MSG_MINIMAP_POS", math.floor(nextAngle + 0.5)))
+end
+
+-- ---------------------------------------------------------------------------
+-- Bouton des addons de la minicarte (AddonCompartmentFrame, moteur récent)
+-- ---------------------------------------------------------------------------
+-- Une entrée par addon, inscrite une fois à la connexion : même icône et même
+-- clic gauche que le bouton de la minicarte, même infobulle (sans les lignes
+-- propres au bouton). Sans AddonCompartmentFrame.RegisterAddon : rien.
+function ns:RegisterAddonCompartment()
+	if self.compartmentEntry ~= nil then return self.compartmentEntry or nil end
+	local compartment = rawget(_G, "AddonCompartmentFrame")
+	if not compartment or type(compartment.RegisterAddon) ~= "function" then return nil end
+	local entry = {
+		text = tostring(ns.APP.id),
+		icon = ns.Theme and ns.Theme.LOGO_SMALL or "Interface\\Icons\\INV_Misc_Bag_10",
+		notCheckable = true,
+		func = function() if ns.DefaultCommand then ns:DefaultCommand() end end,
+		funcOnEnter = function(owner)
+			ns:ShowMinimapTooltip(type(owner) == "table" and owner or compartment, false)
+		end,
+		funcOnLeave = function()
+			if type(GameTooltip) == "table" and GameTooltip.Hide then GameTooltip:Hide() end
+		end,
+	}
+	-- marqué avant l'appel : un refus du client ne se retente pas
+	self.compartmentEntry = false
+	if not pcall(compartment.RegisterAddon, compartment, entry) then return nil end
+	self.compartmentEntry = entry
+	return entry
+end
+
+do
+	local ok, frame = pcall(CreateFrame, "Frame")
+	if ok and frame then
+		pcall(frame.RegisterEvent, frame, "PLAYER_LOGIN")
+		frame:SetScript("OnEvent", function()
+			local done, err = pcall(ns.RegisterAddonCompartment, ns)
+			if not done then ns:RecordError("compartment", err) end
+		end)
+		ns.compartmentEventFrame = frame
+	end
 end
 
 ns.Mark("Minimap")

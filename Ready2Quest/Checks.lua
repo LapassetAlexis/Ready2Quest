@@ -210,7 +210,6 @@ Add{
 		local ready = 0
 
 		if C_QuestLog and type(C_QuestLog.GetNumQuestLogEntries) == "function" then
-			-- Clients récents : API namespacée
 			local ok, total = pcall(C_QuestLog.GetNumQuestLogEntries)
 			if not ok or type(total) ~= "number" then return true, L.CHK_QUESTS_GOOD, 100 end
 			for i = 1, total do
@@ -219,13 +218,6 @@ Add{
 					local okReady, isReady = pcall(C_QuestLog.ReadyForTurnIn, info.questID)
 					if okReady and isReady == true then ready = ready + 1 end
 				end
-			end
-		elseif type(GetNumQuestLogEntries) == "function" and type(GetQuestLogTitle) == "function" then
-			-- Classic Era : globales historiques
-			local ok, total = pcall(GetNumQuestLogEntries)
-			if not ok or type(total) ~= "number" then return true, L.CHK_QUESTS_GOOD, 100 end
-			for i = 1, total do
-				if ns.QuestLogReady(i) then ready = ready + 1 end
 			end
 		else
 			return true, L.CHK_QUESTS_GOOD, 100
@@ -256,7 +248,7 @@ ns.ItemCount = ItemCount
 
 local PlayerLevel, PlayerClass = ns.PlayerLevelNow, ns.PlayerClassToken
 
--- Composants consommés par les sorts de classe (Classic Era / Forever).
+-- Composants consommés par les sorts de classe.
 -- `level` = niveau à partir duquel le sort qui les consomme est appris.
 -- `items` = plusieurs objets interchangeables (rangs de Renaissance…).
 -- `ammo`  = munitions : le client compte l'emplacement 0 (projectiles équipés).
