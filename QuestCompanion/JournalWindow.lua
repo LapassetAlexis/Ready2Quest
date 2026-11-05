@@ -790,6 +790,11 @@ local function BuildCompletion(self, frame, top)
 		card.detail:SetWidth(CARD_W - 10)
 		card.detail:SetJustifyH("LEFT")
 		card.detail:SetWordWrap(false)
+		card.star = card:CreateTexture(nil, "OVERLAY")
+		card.star:SetSize(12, 12)
+		card.star:SetPoint("TOPRIGHT", card, "TOPRIGHT", -3, -3)
+		card.star:SetTexture(ns.SHINY_STAR or "Interface\\TargetingFrame\\UI-RaidTargetingIcon_1")
+		card.star:Hide()
 		card:SetScript("OnEnter", function(c) if c.item then ns:JournalPreviewCreature(c.item) end end)
 		pane.cards[index] = card
 	end
@@ -867,6 +872,7 @@ local function BuildEvolution(self, frame, top)
 	pane.collection = Text(pane, Theme.F_BODY, 14, top - 332, width)
 	pane.road = Text(pane, Theme.F_BODY, 14, top - 354, width)
 	pane.road:SetWordWrap(true)
+	pane.shiny = Text(pane, Theme.F_BODY, 14, top - 392, width)
 end
 
 local function BuildCollection(self, frame, top)
@@ -1074,6 +1080,10 @@ function ns:JournalPreviewCreature(item)
 	if item.levelText then lines[#lines + 1] = self:F("JRN_PREV_LEVEL", item.levelText) end
 	lines[#lines + 1] = self:F("JRN_PREV_RANK", rank)
 	lines[#lines + 1] = (item.killed or 0) > 0 and self:F("JRN_PREV_KILLED", item.killed) or L.JRN_PREV_NOTYET
+	if item.shiny then
+		local when = rawget(_G, "date") and select(2, pcall(date, "%d/%m/%Y", item.shiny)) or tostring(item.shiny)
+		lines[#lines + 1] = self:F("SHINY_PREV", tostring(when))
+	end
 	PreviewSet(p, item.rawName or item.name, lines, { creature = tonumber(item.id) })
 	p.item = item
 end
@@ -1181,6 +1191,10 @@ local function RefreshZones(self, frame)
 			tile.bar:SetValue((zone.percent or 0) / 100)
 			local badge = ""
 			if zone.here then badge = Theme.T_BLUE .. L.JRN_TILE_HERE .. "|r" end
+			local shinies = self.ShinyZoneCount and self:ShinyZoneCount(zone.id) or 0
+			if shinies > 0 then
+				badge = (badge ~= "" and (badge .. "  ") or "") .. "|T" .. (ns.SHINY_STAR or "") .. ":10|t " .. shinies
+			end
 			if zone.chest and not zone.chest.opened then badge = Theme.T_GOLD .. L.JRN_TILE_CHEST .. "|r" end
 			if not zone.seen then badge = Theme.T_GREY .. L.JRN_TILE_UNSEEN .. "|r" end
 			tile.badge:SetText(badge)
@@ -1351,6 +1365,15 @@ local function RefreshCompletion(self, frame)
 				or level)
 			CellColor(cell, RANK_COLOR[item.class or ""] or Theme.CONTROL)
 			cell.bg:SetVertexColor(known and 0.09 or 0.066, known and 0.106 or 0.08, known and 0.125 or 0.094, 1)
+			-- brillante abattue : fiche dorée, étoile
+			item.shiny = self.ShinyFound and self:ShinyFound(zoneID, item.id) or nil
+			if item.shiny then
+				cell.star:Show()
+				cell.bg:SetVertexColor(0.17, 0.15, 0.08, 1)
+				CellColor(cell, { 1.0, 0.89, 0.48 })
+			else
+				cell.star:Hide()
+			end
 			cell:Show()
 		else
 			local texture
@@ -1448,6 +1471,13 @@ local function RefreshEvolution(self, frame)
 	local milestones = #(ns.JOURNAL_MILESTONES or { 10, 20, 30, 40, 50, 60 })
 	pane.road:SetText(self:F("JRN_EVO_ROAD", counts.zone or 0, counts.capital or 0, capitals or 0,
 		counts.dungeon or 0, counts.rare or 0, counts.level or 0, milestones))
+	if self.ShinyData then
+		local nextReward = self:ShinyNextReward()
+		local count = self:ShinyData().count
+		pane.shiny:SetText(nextReward and self:F("SHINY_EVO", count, nextReward.count) or self:F("SHINY_EVO_DONE", count))
+	else
+		pane.shiny:SetText("")
+	end
 end
 
 local function RefreshCollection(self, frame)

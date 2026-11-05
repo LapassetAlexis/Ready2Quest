@@ -56,4 +56,5 @@ Memories.lua
 PersonalityLines.lua
 Personality.lua
 Treats.lua
+Shiny.lua
 JournalWindow.lua

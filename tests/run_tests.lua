@@ -3790,6 +3790,8 @@ end
 -- Chaque fichier reçoit la boîte à outils du harnais dans la table T.
 do
 	_G.T = { Check = Check, Say = Say, ResetWorld = ResetWorld, Result = Result, NS = NS, QNS = QNS, Mock = Mock }
+	-- créatures brillantes : jamais au hasard pendant les tests (companion_shiny.lua règle sa chance)
+	if QNS then QNS.SHINY_CHANCE = 0 end
 	-- build Forever par défaut au chargement des modules, comme en jeu
 	Mock.world.build = nil
 	NS:DetectCapabilities()
