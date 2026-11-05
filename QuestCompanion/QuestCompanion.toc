@@ -58,4 +58,5 @@ Personality.lua
 Treats.lua
 Shiny.lua
 Daily.lua
+Notify.lua
 JournalWindow.lua
