@@ -1,10 +1,11 @@
--- Options.lua -- panneau de réglages, même habillage que le reste (Theme)
+-- Options.lua -- fenêtre de réglages (refonte 2026-11, docs/UI.md)
 --
--- v1.19.0 : navigation par pages, à la manière d'ElvUI. Une liste à gauche,
--- le contenu de la page à droite. Chaque page regroupe l'interrupteur d'un
--- module ET ses réglages : avant, l'interrupteur des vivres était dans
--- « Modules » et leur seuil dans « Alertes ». La hauteur du panneau ne dépend
--- plus du nombre de réglages (910 px en 1.18.0 avant refonte, hors écran).
+-- Fenêtre large : navigation à gauche (marque, recherche, groupes, une
+-- entrée par page de premier niveau avec l'interrupteur de son module), à
+-- droite l'en-tête de la page (grand titre, phrase), ses onglets (les
+-- sous-pages, `parent`), un aperçu facultatif (`preview`), puis les réglages
+-- en cartes sur deux colonnes, qui défilent à la molette. Pied : l'action
+-- principale de l'addon et « Réinitialiser » à gauche, « Terminé » à droite.
 --
 -- Fichier du socle commun (Libs/Socle), identique dans Ready2Quest et
 -- QuestCompanion : ne le modifier que dans Ready2Quest/Libs/Socle, puis
@@ -15,20 +16,42 @@ local ADDON, ns = ...
 local L = ns.L
 local Theme = ns.Theme
 
-local FRAME_WIDTH  = 600
-local FRAME_HEIGHT = 520   -- 440 -> 480 (v1.23.0) -> 520 (v1.25.0) : modules ajoutés à la navigation
-local NAV_WIDTH    = 178   -- place pour « Check avant le départ » + son interrupteur (mesuré en jeu)
-local PANE_LEFT    = NAV_WIDTH + 16
-local PANE_WIDTH   = FRAME_WIDTH - PANE_LEFT - 14
-local ROW_HEIGHT   = 22
+local FRAME_WIDTH  = 980
+local FRAME_HEIGHT = 680
+local NAV_WIDTH    = 220
+local FOOTER       = 56
+local CONTENT_W    = FRAME_WIDTH - 2 - NAV_WIDTH      -- 758 : zone de droite
+local MARGIN       = 24
+local INNER        = CONTENT_W - 2 * MARGIN           -- 710 : largeur des cartes
+local COL_GAP      = 8
+local COL          = math.floor((INNER - COL_GAP) / 2) -- 351 : une carte sur deux colonnes
+local PAD          = 12                               -- marge intérieure d'une carte
+local CARD_H       = Theme.CARD_HEIGHT or 38
+local NOTE_CARD_H  = 54                               -- carte avec sa phrase dessous (une ligne)
+local NOTE_LINE    = 14                               -- ligne de plus pour une phrase plus longue
+local NOTE_LINES   = 3
+local CARD_GAP     = 4
+local BLOCK_GAP    = 8
+local SECTION_H    = 20
+local SECTION_SPACE = 12                              -- au-dessus d'une section (sauf la première)
+local PREVIEW_H    = 88
+local TABS_TOP     = -(Theme.HEADER_HEIGHT or 100)
+local BODY_BOTTOM  = -(FRAME_HEIGHT - 2 - FOOTER - 12) -- bas utile du contenu, sous l'en-tête de la zone
+local LIST_LINE    = 24
 local LIST_LINES   = 9
+local SLIDER_TRACK = 96                               -- piste d'un curseur, demi-carte
+local SLIDER_TRACK_WIDE = 180                         -- piste d'un curseur, carte pleine largeur
 
 -- ---------------------------------------------------------------------------
--- Pages. `modules` = interrupteurs de checks (ns.checks), `rows` = réglages,
--- `list` = liste défilante (ns.OPTION_LISTS), `buttons` = actions, `info` =
--- paragraphes d'explication. Un module a son interrupteur dans la navigation
--- (`power` = clé de réglage) ; une sous-page porte `parent`. Chaque addon
--- déclare ses pages avec ns.AddOptionPage ; il en faut une d'id « general ».
+-- Pages. `modules` = interrupteurs de checks (ns.checks), `rows` = réglages
+-- (bool, number, action, note ; `header` = titre de section), `list` = liste
+-- défilante (ns.OPTION_LISTS), `actions` = boutons, `info` = paragraphes
+-- d'explication, `preview` = function(ns, conteneur) qui dessine l'aperçu
+-- sous les onglets (conteneur.Refresh, s'il est posé, suit RefreshOptions).
+-- Une page de premier niveau a son entrée dans la navigation, avec
+-- l'interrupteur de son module (`power` = clé de réglage) ; une sous-page
+-- (`parent`) est un onglet de sa page. Chaque addon déclare ses pages avec
+-- ns.AddOptionPage ; il en faut une d'id « general ».
 -- ---------------------------------------------------------------------------
 local PAGES = ns.OPTION_PAGES or {}
 ns.OPTION_PAGES = PAGES
@@ -56,26 +79,23 @@ ns.OPT_LAYOUT = {
 	width = FRAME_WIDTH,
 	height = FRAME_HEIGHT,
 	navWidth = NAV_WIDTH,
-	paneLeft = PANE_LEFT,
-	paneWidth = PANE_WIDTH,
-	rowWidth = PANE_WIDTH,
-	rowHeight = ROW_HEIGHT,
+	contentWidth = CONTENT_W,
+	margin = MARGIN,
+	inner = INNER,
+	colWidth = COL,
+	colGap = COL_GAP,
+	cardPad = PAD,
+	cardHeight = CARD_H,
+	noteCardHeight = NOTE_CARD_H,
+	cardGap = CARD_GAP,
+	previewHeight = PREVIEW_H,
+	tabsTop = TABS_TOP,
+	bodyBottom = BODY_BOTTOM,
+	footer = FOOTER,
+	listLine = LIST_LINE,
 	listLines = LIST_LINES,
-	-- [libellé] ... [piste 80] [valeur 44] [-][+]  ou  [libellé] ... [interrupteur]
-	valueRight = -78,
-	valueWidth = 44,
-	trackRight = -128,
-	trackWidth = 80,
-	toggleRight = -18,
-	plusRight = -18,
-	minusRight = -50,
-	buttonWidth = 22,
 	maxHeight = 740,
 }
-local VALUE_RIGHT = ns.OPT_LAYOUT.valueRight
-local VALUE_WIDTH = ns.OPT_LAYOUT.valueWidth
-local PLUS_RIGHT  = ns.OPT_LAYOUT.plusRight
-local MINUS_RIGHT = ns.OPT_LAYOUT.minusRight
 
 local function Clamp(value, minimum, maximum)
 	if value < minimum then return minimum end
@@ -100,96 +120,63 @@ local function OnOff(on)
 	return on and (Theme.T_GREEN .. L.OPT_ON .. "|r") or (Theme.T_GREY .. L.OPT_OFF .. "|r")
 end
 
--- ---------------------------------------------------------------------------
--- Rafraîchissement
--- ---------------------------------------------------------------------------
-function ns:RefreshOptions()
-	local frame = self.optionsFrame
-	if not frame then return end
-	local db = self:DB()
-
-	if frame.editButton and frame.editButton.SetText then
-		frame.editButton:SetText(self.editMode and L.OPT_EDIT_STOP or L.OPT_EDIT_BUTTON)
+local function PageDef(id)
+	for _, def in ipairs(PAGES) do
+		if def.id == id then return def end
 	end
-
-	for _, row in ipairs(frame.rows or {}) do
-		local suffix = ""
-		if row.def and row.def.suffix then
-			suffix = " " .. (L[row.def.suffix] or row.def.suffix)
-		end
-		if row.isModule then
-			local on = ns:IsModuleEnabled(row.moduleId)
-			row.value:SetText(OnOff(on))
-			if row.toggle then row.toggle:SetChecked(on) end
-			if on then
-				row.label:SetTextColor(0.85, 0.85, 0.85)
-			else
-				row.label:SetTextColor(0.42, 0.42, 0.42)
-			end
-		elseif row.def and row.def.kind == "action" then
-			if row.def.key == "minimapPos" then
-				row.value:SetText(Theme.T_GOLD .. string.format("%d°", math.floor((db.minimapAngle or 225) + 0.5)) .. "|r")
-			else
-				-- flèche ASCII volontaire : U+25B6 n'existe pas dans
-				-- GameFontNormal et s'affiche en losange (cf. 1.12.0)
-				row.value:SetText(Theme.T_GOLD .. ">|r")
-			end
-		elseif row.def then
-			local def = row.def
-			local value = db[def.key]
-			if def.kind == "bool" then
-				row.value:SetText(OnOff(value ~= false))
-				if row.toggle then row.toggle:SetChecked(value ~= false) end
-				if row.note and def.describe then row.note:SetText(def.describe(value ~= false)) end
-			else
-				if row.track then
-					local span = (def.max or 1) - (def.min or 0)
-					row.track:SetValue(span > 0 and (((value or 0) - (def.min or 0)) / span) or 0)
-				end
-				-- l'unité est portée par la valeur, pas par le libellé : la
-				-- colonne de gauche reste courte et scannable ; def.display
-				-- donne un nom au cran (« Calme ») à la place du nombre
-				if def.display then
-					row.value:SetText(Theme.T_GOLD .. tostring(def.display(value or 0)) .. "|r")
-				else
-					row.value:SetText(Theme.T_GOLD .. tostring(value or 0) .. "|r"
-						.. Theme.T_GREY .. suffix .. "|r")
-				end
-				if row.note and def.describe then row.note:SetText(def.describe(value or 0)) end
-			end
-		end
-	end
-
-	for _, nav in ipairs(frame.navButtons or {}) do
-		-- le module « Check avant le départ » reste actif quand une de ses
-		-- sous-pages est ouverte
-		local selected = nav.pageId == frame.currentPage or (nav.pageId == frame.currentParent)
-		local state
-		if nav.powerKey then
-			state = (db[nav.powerKey] ~= false) and "on" or "off"
-			nav.power:SetChecked(state == "on")
-		end
-		nav.state = state
-		if selected then
-			nav.label:SetTextColor(Theme.PARCHMENT[1], Theme.PARCHMENT[2], Theme.PARCHMENT[3])
-			nav.marker:Show(); nav.tint:Show()
-			nav.diamond:SetTexture(Theme.DIAMOND)
-			nav.diamond:SetVertexColor(Theme.GOLD[1], Theme.GOLD[2], Theme.GOLD[3], 1)
-		else
-			-- page dont tous les modules sont coupés : libellé éteint
-			if state == "off" then
-				nav.label:SetTextColor(0.40, 0.42, 0.44)
-			else
-				nav.label:SetTextColor(0.68, 0.70, 0.71)
-			end
-			nav.marker:Hide(); nav.tint:Hide()
-			nav.diamond:SetTexture(Theme.DIAMOND_LINE)
-			nav.diamond:SetVertexColor(0.35, 0.38, 0.42, 1)
-		end
-	end
-
-	for _, list in pairs(frame.lists or {}) do self:RefreshOptionList(list) end
+	return nil
 end
+
+-- Chaîne déclarée, ou nil (ns.L rend la clé elle-même quand elle manque)
+local function Declared(key)
+	if type(key) ~= "string" then return nil end
+	local text = L[key]
+	if text == nil or text == key or text == "" then return nil end
+	return text
+end
+
+local function Tip(owner, lines)
+	if type(GameTooltip) ~= "table" or not GameTooltip.SetOwner then return end
+	GameTooltip:SetOwner(owner, "ANCHOR_RIGHT")
+	for index, line in ipairs(lines) do
+		if index == 1 then
+			GameTooltip:AddLine(line, Theme.PARCHMENT[1], Theme.PARCHMENT[2], Theme.PARCHMENT[3])
+		else
+			GameTooltip:AddLine(line, 0.85, 0.85, 0.85, true)
+		end
+	end
+	GameTooltip:Show()
+end
+local function HideTip()
+	if type(GameTooltip) == "table" and GameTooltip.Hide then GameTooltip:Hide() end
+end
+
+-- Largeur d'un texte dans sa police : mesurée par le client, sinon estimée
+-- (6,6 px par caractère, en caractères et non en octets)
+local function TextWidth(fontString, text)
+	if text ~= nil then fontString:SetText(text) end
+	local width = fontString.GetStringWidth and tonumber(fontString:GetStringWidth()) or 0
+	if not width or width <= 0 then
+		local plain = tostring(fontString:GetText() or ""):gsub("|c%x%x%x%x%x%x%x%x", ""):gsub("|r", "")
+		width = select(2, plain:gsub("[^\128-\191]", "")) * 6.6
+	end
+	return width
+end
+ns.OptionTextWidth = TextWidth
+
+-- Recherche : minuscules, sans accents ni codes de couleur
+local FOLD = {
+	["à"] = "a", ["â"] = "a", ["ä"] = "a", ["ç"] = "c", ["é"] = "e", ["è"] = "e", ["ê"] = "e", ["ë"] = "e",
+	["î"] = "i", ["ï"] = "i", ["ô"] = "o", ["ö"] = "o", ["ù"] = "u", ["û"] = "u", ["ü"] = "u", ["ÿ"] = "y",
+	["œ"] = "oe", ["æ"] = "ae", ["À"] = "a", ["Â"] = "a", ["Ç"] = "c", ["É"] = "e", ["È"] = "e", ["Ê"] = "e",
+	["Î"] = "i", ["Ô"] = "o", ["Ù"] = "u", ["Û"] = "u", ["Œ"] = "oe",
+}
+local function Fold(text)
+	text = tostring(text or ""):gsub("|c%x%x%x%x%x%x%x%x", ""):gsub("|r", "")
+	text = text:gsub("[\195\197][\128-\191]", FOLD)
+	return ns.AsciiLower(text) or ""
+end
+ns.OptionFold = Fold
 
 -- ---------------------------------------------------------------------------
 -- Listes défilantes : zones sûres apprises, buffs suivis.
@@ -199,8 +186,8 @@ end
 -- ---------------------------------------------------------------------------
 -- ns.OPTION_LISTS[id] = { items = function() -> { { key, text, detail|value,
 --   action, onAction, onToggle } }, empty = clé du texte « liste vide »,
---   header = clé du titre, lines = nombre de lignes, extra = function(page, y)
---   -> y (boutons sous la liste) }
+--   header = clé du titre, lines = nombre de lignes, clear = { label, run }
+--   (bouton sous la liste), hint = clé d'une phrase d'aide sous la liste }
 ns.OPTION_LISTS = ns.OPTION_LISTS or {}
 local LIST_SOURCES = ns.OPTION_LISTS
 
@@ -239,36 +226,45 @@ function ns:ScrollOptionList(list, delta)
 	self:RefreshOptionList(list)
 end
 
-local function BuildList(page, source, top)
+-- Bloc de liste : pleine largeur, lignes alternées, pied (position, ^ v)
+local function BuildList(page, source)
 	local def = LIST_SOURCES[source] or {}
 	local list = { source = source, lines = {}, offset = 0, emptyText = def.empty }
 	local count = def.lines or LIST_LINES
 
-	for index = 1, count do
-		local line = CreateFrame("Button", nil, page)
-		line:SetSize(PANE_WIDTH, ROW_HEIGHT - 4)
-		line:SetPoint("TOPLEFT", page, "TOPLEFT", 0, top - ((index - 1) * ROW_HEIGHT))
+	local block = CreateFrame("Frame", nil, page)
+	block:SetSize(INNER, count * LIST_LINE + 34)
+	block.bg = Theme.Solid(block, "BACKGROUND", Theme.FIELD, 1)
+	block.bg:SetAllPoints()
+	block.border = Theme.Border(block, Theme.EDGE_SOFT, 1)
+	list.block = block
 
-		line.text = line:CreateFontString(nil, "OVERLAY", Theme.F_BODY)
-		line.text:SetPoint("LEFT", line, "LEFT", 2, 0)
-		line.text:SetWidth(170)
+	for index = 1, count do
+		local line = CreateFrame("Button", nil, block)
+		line:SetSize(INNER - 2, LIST_LINE)
+		line:SetPoint("TOPLEFT", block, "TOPLEFT", 1, -1 - (index - 1) * LIST_LINE)
+		line.bg = Theme.Solid(line, "BACKGROUND", index % 2 == 0 and Theme.ROW_ALT or Theme.ROW, 1)
+		line.bg:SetAllPoints()
+
+		line.text = Theme.Text(line, Theme.F_BODY, Theme.LABEL)
+		line.text:SetPoint("LEFT", line, "LEFT", PAD, 0)
+		line.text:SetWidth(300)
 		line.text:SetJustifyH("LEFT")
 		line.text:SetWordWrap(false)
-		line.text:SetTextColor(0.86, 0.84, 0.78)
 
-		line.detail = line:CreateFontString(nil, "OVERLAY", Theme.F_BODY)
-		line.detail:SetPoint("LEFT", line, "LEFT", 178, 0)
-		line.detail:SetWidth(150)
+		line.detail = Theme.Text(line, Theme.F_SMALL, Theme.MUTED_LIGHT)
+		line.detail:SetPoint("LEFT", line, "LEFT", 320, 0)
+		line.detail:SetWidth(260)
 		line.detail:SetJustifyH("LEFT")
 		line.detail:SetWordWrap(false)
 
-		line.action = Theme.CreateButton(line, 70, 17, L.OPT_REMOVE, function()
+		line.action = Theme.CreateButton(line, 76, 18, L.OPT_REMOVE, function()
 			if line.item and line.item.onAction then
 				line.item.onAction()
 				ns:RefreshOptions()
 			end
-		end)
-		line.action:SetPoint("RIGHT", line, "RIGHT", -2, 0)
+		end, "outline")
+		line.action:SetPoint("RIGHT", line, "RIGHT", -8, 0)
 
 		-- clic sur la ligne : bascule (buffs suivis)
 		line:SetScript("OnClick", function()
@@ -280,422 +276,866 @@ local function BuildList(page, source, top)
 		list.lines[index] = line
 	end
 
-	local bottom = top - (count * ROW_HEIGHT)
-	list.empty = page:CreateFontString(nil, "OVERLAY", Theme.F_BODY)
-	list.empty:SetPoint("TOPLEFT", page, "TOPLEFT", 2, top - 4)
-	list.empty:SetTextColor(0.55, 0.55, 0.55)
+	list.empty = Theme.Text(block, Theme.F_BODY, Theme.MUTED)
+	list.empty:SetPoint("TOPLEFT", block, "TOPLEFT", PAD, -8)
+	list.empty:SetJustifyH("LEFT")
 
-	list.position = page:CreateFontString(nil, "OVERLAY", Theme.F_SMALL)
-	list.position:SetPoint("TOPLEFT", page, "TOPLEFT", 2, bottom - 4)
-	list.position:SetTextColor(0.55, 0.55, 0.55)
+	list.position = Theme.Text(block, Theme.F_SMALL, Theme.MUTED)
+	list.position:SetPoint("BOTTOMLEFT", block, "BOTTOMLEFT", PAD, 9)
 
-	list.up = Theme.CreateButton(page, 22, 17, "^", function() ns:ScrollOptionList(list, 1) end)
-	list.up:SetPoint("TOPRIGHT", page, "TOPRIGHT", -26, bottom - 2)
-	list.down = Theme.CreateButton(page, 22, 17, "v", function() ns:ScrollOptionList(list, -1) end)
-	list.down:SetPoint("TOPRIGHT", page, "TOPRIGHT", -2, bottom - 2)
+	list.down = Theme.CreateButton(block, 24, 20, "v", function() ns:ScrollOptionList(list, -1) end, "outline")
+	list.down:SetPoint("BOTTOMRIGHT", block, "BOTTOMRIGHT", -8, 6)
+	list.up = Theme.CreateButton(block, 24, 20, "^", function() ns:ScrollOptionList(list, 1) end, "outline")
+	list.up:SetPoint("RIGHT", list.down, "LEFT", -4, 0)
 
-	if page.EnableMouseWheel then
-		page:EnableMouseWheel(true)
-		page:SetScript("OnMouseWheel", function(_, delta) ns:ScrollOptionList(list, delta) end)
-	end
-	list.bottom = bottom - 22
+	if block.EnableMouseWheel then block:EnableMouseWheel(true) end
+	block:SetScript("OnMouseWheel", function(_, delta) ns:ScrollOptionList(list, delta) end)
 	return list
 end
 
 -- ---------------------------------------------------------------------------
--- Construction
+-- Cartes de réglage. Chaque carte porte .def (la ligne déclarée), .label,
+-- .value (texte de valeur : OUI/non, « 12 s », « 225° »), son contrôle
+-- (.toggle, .slider, .dropdown, .button), :Refresh(db), et peut être
+-- verrouillée (:SetLocked(texte) : le contrôle cède la place à un verrou en
+-- pointillés). Une carte trop étroite pour son libellé prend les deux
+-- colonnes (.span = "full").
 -- ---------------------------------------------------------------------------
+local function NumberText(def, value)
+	if def.display then
+		local ok, text = pcall(def.display, value or 0)
+		return tostring(ok and text or (value or 0))
+	end
+	local suffix = def.suffix and (" " .. (L[def.suffix] or def.suffix)) or ""
+	return tostring(value or 0) .. suffix
+end
+
+local function NewCard(page, labelText)
+	local card = Theme.CreateSettingCard(page, COL, CARD_H, "Button")
+	card.labelText = labelText
+	card:SetLabel(labelText)
+	if card.label.SetWordWrap then card.label:SetWordWrap(false) end
+	-- texte de valeur : porté par toutes les cartes (lecteurs, tests), affiché
+	-- seulement quand il dit autre chose que le contrôle (angle du bouton)
+	card.value = Theme.Text(card, Theme.F_SMALL, Theme.GOLD)
+	card.value:SetJustifyH("RIGHT")
+	card.value:Hide()
+	card.span = "half"
+	card.searchText = Fold(labelText)
+
+	function card:SetLocked(text)
+		if text and text ~= "" then
+			if not self.lock then
+				self.lock = Theme.CreateLockTag(self, text)
+				self.lock:SetPoint("RIGHT", self, "RIGHT", -PAD, 0)
+			end
+			self.lock:SetText(text)
+			self.lock:Show()
+			if self.controlRegion then self.controlRegion:Hide() end
+			self.locked = true
+			self.label:SetTextColor(Theme.MUTED[1], Theme.MUTED[2], Theme.MUTED[3], 1)
+		else
+			if self.lock then self.lock:Hide() end
+			if self.controlRegion then self.controlRegion:Show() end
+			self.locked = nil
+			self.label:SetTextColor(Theme.LABEL[1], Theme.LABEL[2], Theme.LABEL[3], 1)
+		end
+	end
+
+	-- infobulle : libellé entier s'il est tronqué, puis def.tooltip(valeur)
+	card:SetScript("OnEnter", function(self)
+		self.hover:Show()
+		local lines = {}
+		if self.truncated then lines[#lines + 1] = self.labelText end
+		if self.def and self.def.tooltip then
+			local ok, extra = pcall(self.def.tooltip, ns:DB()[self.def.key])
+			for _, line in ipairs(ok and extra or {}) do lines[#lines + 1] = line end
+		end
+		if #lines > 0 then Tip(self, lines) end
+	end)
+	card:SetScript("OnLeave", function(self) self.hover:Hide(); HideTip() end)
+	return card
+end
+
+-- Place le libellé et décide de la largeur : demi-carte si le libellé tient
+-- à gauche du contrôle, sinon pleine largeur. `noteText` : phrase sous le
+-- libellé (carte plus haute, toujours pleine largeur).
+local function FitCard(card, controlWidth, wide)
+	local need = TextWidth(card.label, card.labelText)
+	card.labelWidth = need
+	local halfRoom = COL - 2 * PAD - controlWidth - 12
+	if wide or need > halfRoom then card.span = "full" end
+	local width = card.span == "full" and INNER or COL
+	card:SetWidth(width)
+	if card.control then card.control:SetWidth(math.max(1, controlWidth)) end
+	local room = width - 2 * PAD - controlWidth - 12
+	card.labelRoom = room
+	card.label:SetWidth(room)
+	card.truncated = need > room
+	card:SetHeight(card.note and math.max(NOTE_CARD_H, card:GetHeight() or 0) or CARD_H)
+	card.label:ClearAllPoints()
+	if card.note then
+		card.label:SetPoint("TOPLEFT", card, "TOPLEFT", PAD, -10)
+		card.note:ClearAllPoints()
+		card.note:SetPoint("TOPLEFT", card, "TOPLEFT", PAD, -29)
+		card.note:SetWidth(room)
+	else
+		card.label:SetPoint("LEFT", card, "LEFT", PAD, 0)
+	end
+end
+
+local function AddNote(card, def)
+	if not def.describe then return end
+	card.note = Theme.Text(card, Theme.F_SMALL, Theme.MUTED_LIGHT)
+	card.note:SetJustifyH("LEFT")
+	card.note:SetJustifyV("TOP")
+	if card.note.SetWordWrap then card.note:SetWordWrap(true) end
+end
+
+-- phrase sous le libellé, qui suit la valeur : la carte grandit d'une ligne
+-- par ligne de texte (trois au plus). Rend vrai si sa hauteur a changé.
+local function RefreshNote(card, value)
+	if not (card.note and card.def.describe) then return false end
+	local ok, text = pcall(card.def.describe, value)
+	text = ok and tostring(text or "") or ""
+	local lines = math.max(1, math.ceil(TextWidth(card.note, text) / math.max(1, card.labelRoom or 1)))
+	lines = math.min(lines, NOTE_LINES)
+	card.note:SetHeight(lines * NOTE_LINE)
+	local height = NOTE_CARD_H + (lines - 1) * NOTE_LINE
+	if math.abs((tonumber(card:GetHeight()) or 0) - height) > 0.5 then
+		card:SetHeight(height)
+		return true
+	end
+	return false
+end
+
+local function BoolCard(page, def)
+	local card = NewCard(page, L[def.label] or def.key)
+	card.def = def
+	AddNote(card, def)
+	card.toggle = Theme.CreateToggle(card)
+	card.toggle:SetPoint("RIGHT", card, "RIGHT", -PAD, 0)
+	card.controlRegion = card.toggle
+	FitCard(card, 32, def.describe ~= nil)
+	card:SetScript("OnClick", function(self)
+		if self.locked then return end
+		local db = ns:DB()
+		local before = db[def.key] ~= false
+		db[def.key] = not before
+		ns:RefreshOptions()
+		if ns.ApplyDisplayOptions then ns:ApplyDisplayOptions() end
+		if def.onChange then def.onChange(db[def.key], before) end
+	end)
+	function card:Refresh(db)
+		local on = db[def.key] ~= false
+		self.value:SetText(OnOff(on))
+		self.toggle:SetChecked(on)
+		return RefreshNote(self, on)
+	end
+	return card
+end
+
+local function ModuleCard(page, check)
+	local card = NewCard(page, CheckLabel(check))
+	card.isModule = true
+	card.moduleId = check.id
+	card.toggle = Theme.CreateToggle(card)
+	card.toggle:SetPoint("RIGHT", card, "RIGHT", -PAD, 0)
+	card.controlRegion = card.toggle
+	FitCard(card, 32)
+	card:SetScript("OnClick", function()
+		ns:SetModuleEnabled(check.id, not ns:IsModuleEnabled(check.id))
+		ns:RefreshOptions()
+	end)
+	function card:Refresh()
+		local on = ns:IsModuleEnabled(check.id)
+		self.value:SetText(OnOff(on))
+		self.toggle:SetChecked(on)
+		local c = on and Theme.LABEL or Theme.MUTED
+		self.label:SetTextColor(c[1], c[2], c[3], 1)
+	end
+	return card
+end
+
+local function NumberCard(page, def)
+	local card = NewCard(page, L[def.label] or def.key)
+	card.def = def
+	AddNote(card, def)
+	local minimum, maximum, step = def.min or 0, def.max or 999, def.step or 1
+	-- case de valeur : assez large pour le plus long des crans (« Très grand »)
+	local probe = Theme.Text(card, Theme.F_SMALL, Theme.LABEL)
+	probe:Hide()
+	local widest, count, value = 0, 0, minimum
+	while value <= maximum and count < 60 do
+		widest = math.max(widest, TextWidth(probe, NumberText(def, value)))
+		value, count = value + step, count + 1
+	end
+	widest = math.max(widest, TextWidth(probe, NumberText(def, maximum)))
+	local valueWidth = Clamp(math.ceil(widest) + 14, Theme.SLIDER_VALUE_WIDTH or 44, 120)
+	-- piste de même longueur sur toutes les demi-cartes (alignées d'une
+	-- rangée à l'autre) ; plus longue sur une carte pleine largeur, prise
+	-- quand le libellé ne tient pas à côté
+	local need = TextWidth(card.label, card.labelText)
+	local wide = def.describe ~= nil or need > COL - 2 * PAD - 12 - (SLIDER_TRACK + valueWidth + 12)
+	local track = wide and SLIDER_TRACK_WIDE or SLIDER_TRACK
+	local width = track + valueWidth + 12
+
+	card.slider = Theme.CreateSlider(card, width, minimum, maximum, step, function(new)
+		local db = ns:DB()
+		local before = db[def.key]
+		db[def.key] = new
+		ns:RefreshOptions()
+		-- l'addon réagit au nouveau cran (bulle de confirmation…)
+		if def.onChange and db[def.key] ~= before then def.onChange(db[def.key], before) end
+	end, valueWidth)
+	card.slider.format = function(v) return NumberText(def, v) end
+	card.slider:SetPoint("RIGHT", card, "RIGHT", -PAD, 0)
+	card.controlRegion = card.slider
+	card.value = card.slider.valueText
+	FitCard(card, width, wide)
+	-- un cran de plus ou de moins, comme la molette sur le curseur
+	function card:Step(delta)
+		return self.slider:SetValueByUser((self.slider.value or minimum) + (delta or 0) * step)
+	end
+	function card:Refresh(db)
+		local current = db[def.key]
+		self.slider:SetValue(current or 0)
+		-- valeur telle qu'enregistrée (le curseur l'arrondit à son cran)
+		self.slider.valueText:SetText(NumberText(def, current or 0))
+		return RefreshNote(self, current or 0)
+	end
+	return card
+end
+
+-- Action : un bouton sur la carte (et la carte entière cliquable) ; avec
+-- def.choices, une liste déroulante (choix verrouillés grisés, avec leur
+-- condition). def.choices() -> { { value, label, disabled, hint } },
+-- def.current() -> valeur, def.choose(valeur).
+local function ActionCard(page, def)
+	local card = NewCard(page, L[def.label] or def.key)
+	card.def = def
+	if def.choices then
+		local ok, options = pcall(def.choices)
+		options = ok and options or {}
+		local probe = Theme.Text(card, Theme.F_BODY, Theme.LABEL)
+		local hintProbe = Theme.Text(card, Theme.F_SMALL, Theme.MUTED)
+		probe:Hide(); hintProbe:Hide()
+		local longest, hint = 0, 0
+		for _, entry in ipairs(options) do
+			longest = math.max(longest, TextWidth(probe, entry.label or tostring(entry.value)))
+			if entry.hint then hint = math.max(hint, TextWidth(hintProbe, entry.hint)) end
+		end
+		local width = Clamp(math.ceil(longest) + 34, 150, 210)
+		local listWidth = Clamp(math.ceil(longest + hint) + 46, width, 330)
+		card.dropdown = Theme.CreateDropdown(card, width, function(value)
+			if def.choose then def.choose(value) end
+			ns:RefreshOptions()
+		end, { listWidth = listWidth })
+		card.dropdown:SetPoint("RIGHT", card, "RIGHT", -PAD, 0)
+		card.dropdown:SetOptions(options)
+		card.controlRegion = card.dropdown
+		FitCard(card, width)
+		card:SetScript("OnClick", function(self)
+			if self.dropdown:IsOpen() then self.dropdown:Close() else self.dropdown:Open() end
+		end)
+		function card:Refresh()
+			local okOptions, list = pcall(def.choices)
+			self.dropdown:SetOptions(okOptions and list or {})
+			local okValue, value = pcall(def.current or function() return nil end)
+			self.dropdown:SetValue(okValue and value or nil)
+		end
+		return card
+	end
+
+	local text = L[def.button or "OPT_BTN_RUN"]
+	local probe = Theme.Text(card, Theme.F_LABEL, Theme.LABEL)
+	probe:Hide()
+	local buttonWidth = math.max(84, math.ceil(TextWidth(probe, text)) + 28)
+	card.button = Theme.CreateButton(card, buttonWidth, 22, text, function() ns:RunOptionAction(def.key) end, "outline")
+	card.button:SetPoint("RIGHT", card, "RIGHT", -PAD, 0)
+	card.controlRegion = card.button
+	card.value:ClearAllPoints()
+	card.value:SetPoint("RIGHT", card.button, "LEFT", -10, 0)
+	-- valeur affichée à gauche du bouton : l'angle du bouton de minicarte
+	local valueWidth = def.key == "minimapPos" and 44 or 0
+	if valueWidth > 0 then card.value:Show() end
+	FitCard(card, buttonWidth + valueWidth)
+	card:SetScript("OnClick", function() ns:RunOptionAction(def.key) end)
+	function card:Refresh(db)
+		if def.key == "minimapPos" then
+			self.value:SetText(string.format("%d°", math.floor((db.minimapAngle or 225) + 0.5)))
+		else
+			self.value:SetText("")
+		end
+	end
+	return card
+end
+
+local function MakeCard(page, def)
+	if def.kind == "bool" then return BoolCard(page, def) end
+	if def.kind == "number" then return NumberCard(page, def) end
+	return ActionCard(page, def)
+end
+
+-- Bloc de texte pleine largeur (paragraphe d'explication, note d'une page) :
+-- `source` = clé de chaîne ou function() -> texte
+local function TextBlock(page, source, small)
+	local block = CreateFrame("Frame", nil, page)
+	block:SetSize(INNER, 16)
+	block.text = Theme.Text(block, small and Theme.F_SMALL or Theme.F_BODY, small and Theme.MUTED or Theme.TEXT)
+	block.text:SetPoint("TOPLEFT", block, "TOPLEFT", 0, 0)
+	block.text:SetWidth(INNER - 8)
+	block.text:SetJustifyH("LEFT")
+	if block.text.SetWordWrap then block.text:SetWordWrap(true) end
+	block.source, block.small = source, small
+	-- hauteur : celle du client, sinon estimée (~5,8 px par caractère, 15 par ligne)
+	function block:Refresh()
+		local text = self.source
+		if type(text) == "function" then
+			local ok, value = pcall(text)
+			text = ok and value or ""
+		else
+			text = L[text] or text
+		end
+		text = tostring(text or "")
+		self.text:SetText(text)
+		local height = self.text.GetStringHeight and tonumber(self.text:GetStringHeight()) or 0
+		if not height or height <= 0 or not self.text.SetWordWrap then
+			local chars = select(2, text:gsub("[^\128-\191]", ""))
+			local perLine = math.floor((INNER - 8) / (self.small and 5.4 or 5.9))
+			height = math.max(1, math.ceil(chars / perLine)) * (self.small and 14 or 15)
+		end
+		local changed = self.blockHeight ~= height
+		self.blockHeight = height
+		self:SetHeight(height)
+		return changed
+	end
+	block:Refresh()
+	return block
+end
+
+-- Rangée de boutons en contour (actions d'une page, cadres)
+local function ButtonRow(page, specs)
+	local block = CreateFrame("Frame", nil, page)
+	block:SetSize(INNER, 28)
+	local x, buttons = 0, {}
+	local probe = Theme.Text(block, Theme.F_LABEL, Theme.LABEL)
+	probe:Hide()
+	for index, spec in ipairs(specs) do
+		local width = math.max(110, math.ceil(TextWidth(probe, spec.label)) + 32)
+		local button = Theme.CreateButton(block, width, 28, spec.label, spec.run, "outline")
+		button:SetPoint("TOPLEFT", block, "TOPLEFT", x, 0)
+		buttons[index] = button
+		x = x + width + 10
+	end
+	block.buttons = buttons
+	return block, buttons
+end
+
+-- ---------------------------------------------------------------------------
+-- Mise en page : sections, cartes sur deux colonnes (ROW / ROW_ALT une
+-- rangée visuelle sur deux), blocs pleine largeur. Puis défilement : la
+-- page s'arrête sur le haut d'un élément, un élément qui ne tient pas
+-- entier dans la zone est masqué (pas de rognage à faire).
+-- ---------------------------------------------------------------------------
+-- item = { region, kind = "section" | "card" | "block", span = "half" | "full", height }
+local function Arrange(items)
+	local y, col, rowTop, rowH, visual, first = 0, 0, 0, 0, 0, true
+	local function CloseRow()
+		if col == 1 then
+			y = rowTop + rowH + CARD_GAP
+			col = 0
+		end
+	end
+	for _, item in ipairs(items) do
+		if not item.filtered then
+			item.height = item.region:GetHeight() or item.height or CARD_H
+			if item.kind == "section" then
+				CloseRow()
+				if not first then y = y + SECTION_SPACE end
+				item.x, item.y = 0, y
+				y = y + SECTION_H + 6
+				visual = 0
+			elseif item.kind == "card" and item.region.span ~= "full" then
+				if col == 0 then
+					rowTop, rowH = y, item.height
+					item.x, item.y = 0, y
+					col = 1
+					visual = visual + 1
+				else
+					item.x, item.y = COL + COL_GAP, rowTop
+					rowH = math.max(rowH, item.height)
+					col = 0
+					y = rowTop + rowH + CARD_GAP
+				end
+				item.region:SetAlt(visual % 2 == 0)
+			else
+				CloseRow()
+				item.x, item.y = 0, y
+				if item.kind == "card" then
+					visual = visual + 1
+					item.region:SetAlt(visual % 2 == 0)
+					y = y + item.height + CARD_GAP
+				else
+					y = y + item.height + BLOCK_GAP
+				end
+			end
+			first = false
+		end
+	end
+	CloseRow()
+	return y
+end
+
+-- arrêts du défilement : 0, puis le haut de chaque élément tant que la fin
+-- du contenu n'est pas en vue
+local function ScrollStops(container)
+	local maxOffset = math.max(0, (container.contentHeight or 0) - (container.viewHeight or 0))
+	local tops, seen = {}, {}
+	for _, item in ipairs(container.items or {}) do
+		if not item.filtered and item.y and item.y > 0 and not seen[item.y] then
+			seen[item.y] = true
+			tops[#tops + 1] = item.y
+		end
+	end
+	table.sort(tops)
+	local stops = { 0 }
+	if maxOffset > 0 then
+		local last
+		for _, top in ipairs(tops) do
+			if top < maxOffset then stops[#stops + 1] = top
+			elseif not last then last = top end
+		end
+		stops[#stops + 1] = last or maxOffset
+	end
+	return stops
+end
+
+function ns:ApplyOptionsScroll(container)
+	local stops = container.stops or { 0 }
+	container.stopIndex = Clamp(container.stopIndex or 1, 1, #stops)
+	local offset = stops[container.stopIndex]
+	container.offset = offset
+	local view = container.viewHeight or 0
+	for _, item in ipairs(container.items or {}) do
+		local region = item.region
+		if item.filtered then
+			region:Hide()
+		else
+			local top = item.y - offset
+			region:ClearAllPoints()
+			region:SetPoint("TOPLEFT", container, "TOPLEFT", item.x, -top)
+			if top >= 0 and top + item.height <= view + 1 then region:Show() else region:Hide() end
+		end
+	end
+	-- un titre de section sans rien de visible sous lui est masqué aussi
+	local items = container.items or {}
+	for index, item in ipairs(items) do
+		if item.kind == "section" and not item.filtered and item.region:IsShown() then
+			local nextItem = items[index + 1]
+			while nextItem and nextItem.filtered do index = index + 1; nextItem = items[index + 1] end
+			if nextItem and nextItem.kind ~= "section" and not nextItem.region:IsShown() then item.region:Hide() end
+		end
+	end
+	local frame = self.optionsFrame
+	if frame and frame.activeContainer == container and frame.scrollTrack then
+		local content = container.contentHeight or 0
+		if content > view and view > 0 then
+			local trackH = view
+			local thumbH = math.max(24, math.floor(trackH * view / content + 0.5))
+			local y = math.floor((trackH - thumbH) * offset / math.max(1, stops[#stops]) + 0.5)
+			frame.scrollThumb:ClearAllPoints()
+			frame.scrollThumb:SetPoint("TOPLEFT", frame.scrollTrack, "TOPLEFT", 0, -y)
+			frame.scrollThumb:SetHeight(thumbH)
+			frame.scrollTrack:SetHeight(trackH)
+			frame.scrollTrack:Show(); frame.scrollThumb:Show()
+		else
+			frame.scrollTrack:Hide(); frame.scrollThumb:Hide()
+		end
+	end
+end
+
+-- (Re)met en page un conteneur (page ou résultats de recherche) : les cartes
+-- y sont rattachées (une recherche les emprunte), défilement remis en haut
+-- sauf `keepScroll`
+function ns:LayoutOptionsContainer(container, keepScroll)
+	for _, item in ipairs(container.items or {}) do
+		if item.region.GetParent and item.region:GetParent() ~= container then item.region:SetParent(container) end
+	end
+	container.contentHeight = Arrange(container.items or {})
+	container.stops = ScrollStops(container)
+	if not keepScroll then container.stopIndex = 1 end
+	self:ApplyOptionsScroll(container)
+end
+
+-- Molette sur la zone de réglages : delta > 0 remonte
+function ns:ScrollOptions(delta)
+	local frame = self.optionsFrame
+	local container = frame and frame.activeContainer
+	if not container then return nil end
+	container.stopIndex = (container.stopIndex or 1) - (delta > 0 and 1 or -1)
+	self:ApplyOptionsScroll(container)
+	return container.offset
+end
+
+-- ---------------------------------------------------------------------------
+-- Rafraîchissement
+-- ---------------------------------------------------------------------------
+function ns:RefreshOptions()
+	local frame = self.optionsFrame
+	if not frame then return end
+	local db = self:DB()
+
+	if frame.editButton and frame.editButton.SetText then
+		frame.editButton:SetText(self.editMode and L.OPT_EDIT_STOP or L.OPT_EDIT_BUTTON)
+	end
+
+	-- cartes et notes dont le texte change de longueur : hauteur suivie
+	local grown = false
+	for _, card in ipairs(frame.rows or {}) do
+		if card.Refresh and card:Refresh(db) then grown = true end
+	end
+	for _, block in ipairs(frame.notes or {}) do
+		if type(block.source) == "function" and block:Refresh() then grown = true end
+	end
+	if grown and frame.activeContainer then self:LayoutOptionsContainer(frame.activeContainer, true) end
+
+	for _, nav in ipairs(frame.navButtons or {}) do
+		local state
+		if nav.powerKey then
+			state = (db[nav.powerKey] ~= false) and "on" or "off"
+		elseif nav.modules then
+			state = (self:PageModuleState(nav.modules) ~= "off") and "on" or "off"
+		end
+		nav.state = state
+		nav:SetModuleState(state)
+		nav:SetSelected(not frame.searching and nav.pageId == frame.currentTop)
+	end
+
+	for _, list in pairs(frame.lists or {}) do self:RefreshOptionList(list) end
+
+	local preview = frame.currentPreview
+	if preview and preview.Refresh then
+		local ok, err = pcall(preview.Refresh, preview, self)
+		if not ok then self:RecordError("options:preview", err) end
+	end
+end
+
+-- ---------------------------------------------------------------------------
+-- Construction d'une page
+-- ---------------------------------------------------------------------------
+local function Section(frame, page, key, detail)
+	local section = Theme.CreateSection(page, L[key] or key, detail)
+	section:SetWidth(INNER)
+	page.items[#page.items + 1] = { region = section, kind = "section", height = SECTION_H }
+	return section
+end
+
+local function AddCard(frame, page, card)
+	card.pageId = page.id
+	frame.rows[#frame.rows + 1] = card
+	page.rows[#page.rows + 1] = card
+	page.items[#page.items + 1] = { region = card, kind = "card", height = card:GetHeight() }
+	return card
+end
+
+local function AddBlock(page, block)
+	page.items[#page.items + 1] = { region = block, kind = "block", height = block:GetHeight() }
+	return block
+end
+
+local function BuildPage(frame, def, placed)
+	local page = CreateFrame("Frame", nil, frame.content)
+	page:SetSize(INNER, 400)
+	page.id = def.id
+	page.def = def
+	page.rows, page.items = {}, {}
+	-- phrase de l'en-tête quand la page est choisie
+	page.subText = Declared(def.title .. "_SUB")
+	frame.pages[def.id] = page
+
+	-- texte d'explication (paragraphes), pour les modules sans réglage
+	if def.info then
+		page.infoLines = {}
+		for _, key in ipairs(def.info) do
+			local block = AddBlock(page, TextBlock(page, key))
+			page.infoLines[#page.infoLines + 1] = block.text
+		end
+	end
+
+	if def.modules then
+		-- dans une sous-page du Check avant le départ, ce sont ses contrôles
+		page.modulesHeader = Section(frame, page, def.parent and "OPT_CHECKS" or "OPT_MODULES")
+		for _, id in ipairs(def.modules) do
+			local check = CheckDef(id)
+			if check then
+				AddCard(frame, page, ModuleCard(page, check))
+				placed[id] = true
+			end
+		end
+	end
+
+	if def.rows then
+		-- une page commence toujours par une section
+		local firstHeader = def.rows[1] and def.rows[1].header
+		if not firstHeader then
+			page.settingsHeader = Section(frame, page, "OPT_SETTINGS")
+		end
+		for _, rowDef in ipairs(def.rows) do
+			if rowDef.header then
+				page.sectionHeaders = page.sectionHeaders or {}
+				page.sectionHeaders[#page.sectionHeaders + 1] = Section(frame, page, rowDef.header)
+			elseif rowDef.kind == "note" then
+				local block = AddBlock(page, TextBlock(page, rowDef.text, rowDef.small))
+				block.def = rowDef
+				frame.notes[#frame.notes + 1] = block
+				page.notes = page.notes or {}
+				page.notes[rowDef.key or (#page.notes + 1)] = block
+			else
+				AddCard(frame, page, MakeCard(page, rowDef))
+			end
+		end
+	end
+
+	if def.list then
+		local source = LIST_SOURCES[def.list] or {}
+		page.listHeader = Section(frame, page, source.header or def.list)
+		local list = BuildList(page, def.list)
+		frame.lists[def.list] = list
+		AddBlock(page, list.block)
+		-- sous la liste : un bouton (tout effacer) et une phrase d'aide
+		if source.clear or source.hint then
+			local block = CreateFrame("Frame", nil, page)
+			block:SetSize(INNER, 30)
+			local x = 0
+			if source.clear then
+				local probe = Theme.Text(block, Theme.F_LABEL, Theme.LABEL)
+				probe:Hide()
+				local label = L[source.clear.label] or source.clear.label
+				local width = math.max(110, math.ceil(TextWidth(probe, label)) + 32)
+				page.clearButton = Theme.CreateButton(block, width, 26, label, function()
+					source.clear.run(ns)
+					ns:RefreshOptions()
+				end, "outline")
+				page.clearButton:SetPoint("LEFT", block, "LEFT", 0, 0)
+				x = width + 14
+			end
+			if source.hint then
+				page.hint = Theme.Text(block, Theme.F_SMALL, Theme.MUTED)
+				page.hint:SetPoint("LEFT", block, "LEFT", x, 0)
+				page.hint:SetWidth(INNER - x)
+				page.hint:SetJustifyH("LEFT")
+				if page.hint.SetWordWrap then page.hint:SetWordWrap(true) end
+				page.hint:SetText(L[source.hint] or source.hint)
+			end
+			AddBlock(page, block)
+		end
+	end
+
+	if def.frameButtons then
+		page.framesHeader = Section(frame, page, "OPT_SECTION_FRAMES")
+		local card = NewCard(page, L.OPT_FRAMES_LABEL)
+		card.span = "full"
+		local probe = Theme.Text(card, Theme.F_LABEL, Theme.LABEL)
+		probe:Hide()
+		local resetWidth = math.ceil(TextWidth(probe, L.OPT_RESET_FRAMES)) + 28
+		local editWidth = math.ceil(math.max(TextWidth(probe, L.OPT_EDIT_BUTTON), TextWidth(probe, L.OPT_EDIT_STOP))) + 28
+		frame.resetFramesButton = Theme.CreateButton(card, resetWidth, 22, L.OPT_RESET_FRAMES, function()
+			ns:HandleCommand("resetpos")
+		end, "outline")
+		frame.resetFramesButton:SetPoint("RIGHT", card, "RIGHT", -PAD, 0)
+		frame.editButton = Theme.CreateButton(card, editWidth, 22, L.OPT_EDIT_BUTTON, function()
+			ns:RunOptionAction("editMode")
+		end, "outline")
+		frame.editButton:SetPoint("RIGHT", frame.resetFramesButton, "LEFT", -8, 0)
+		FitCard(card, resetWidth + editWidth + 8, true)
+		card:SetScript("OnClick", nil)
+		page.framesCard = card
+		page.items[#page.items + 1] = { region = card, kind = "card", height = card:GetHeight() }
+	end
+
+	if def.actions then
+		page.actionsHeader = Section(frame, page, "OPT_SECTION_ACTIONS")
+		local specs = {}
+		for _, action in ipairs(def.actions) do
+			specs[#specs + 1] = { label = L["OPT_ACTION_" .. action:upper()] or action, run = function() ns:RunOptionAction(action) end }
+		end
+		local block, buttons = ButtonRow(page, specs)
+		page.actionButtons = {}
+		for index, action in ipairs(def.actions) do page.actionButtons[action] = buttons[index] end
+		AddBlock(page, block)
+	end
+
+	page:Hide()
+	return page
+end
+
+-- ---------------------------------------------------------------------------
+-- Construction de la fenêtre
+-- ---------------------------------------------------------------------------
+local function Children(topId)
+	local list = {}
+	for _, def in ipairs(PAGES) do
+		if def.parent == topId and not def.target then list[#list + 1] = def end
+	end
+	return list
+end
+
+-- titre court d'un onglet (`<titre>_TAB`), sinon le titre
+local function TabTitle(def)
+	return Declared(def.title .. "_TAB") or L[def.title] or def.title
+end
+
 function ns:EnsureOptions()
 	if self.optionsFrame then return self.optionsFrame end
-	if not Theme or not Theme.CreatePanel then return nil end
+	if not Theme or not Theme.CreateWindow then return nil end
 
-	local frame = Theme.CreatePanel(UIParent, FRAME_WIDTH, FRAME_HEIGHT, L.OPT_TITLE, { name = ns.APP.id .. "OptionsFrame" })
+	local frame = Theme.CreateWindow(UIParent, FRAME_WIDTH, FRAME_HEIGHT,
+		{ name = ns.APP.id .. "OptionsFrame", nav = NAV_WIDTH, footer = FOOTER })
 	if not frame then return nil end
-
+	frame:Hide()
 	ns:RestorePoint(frame, "optionsPoint", { point = "CENTER", x = 0, y = 20 })
-	if frame.subtitle then frame.subtitle:SetText(L.OPT_HINT) end
 
-	frame.rows, frame.pages, frame.navButtons, frame.lists = {}, {}, {}, {}
-	local top = frame.contentTop - 8
+	frame.rows, frame.pages, frame.navButtons, frame.lists, frame.notes = {}, {}, {}, {}, {}
+	frame.navGroups, frame.previews = {}, {}
+	local content = frame.content
 
-	-- fond de la colonne de navigation + filet de séparation
-	frame.navBackground = frame:CreateTexture(nil, "BORDER")
-	frame.navBackground:SetTexture(Theme.SOLID)
-	frame.navBackground:SetVertexColor(Theme.SURFACE_2[1], Theme.SURFACE_2[2], Theme.SURFACE_2[3], 1)
-	frame.navBackground:SetPoint("TOPLEFT", frame, "TOPLEFT", 1, -35)
-	frame.navBackground:SetSize(NAV_WIDTH + 5, FRAME_HEIGHT - 35 - 44)
-	frame.navLine = Theme.Solid(frame, "ARTWORK", Theme.GOLD_DIM, 1)
-	frame.navLine:SetPoint("TOPLEFT", frame, "TOPLEFT", NAV_WIDTH + 6, -35)
-	frame.navLine:SetSize(1, FRAME_HEIGHT - 35 - 44)
-	frame.footerLine = Theme.Solid(frame, "ARTWORK", Theme.GOLD_DIM, 1)
-	frame.footerLine:SetPoint("BOTTOMLEFT", frame, "BOTTOMLEFT", 1, 44)
-	frame.footerLine:SetSize(FRAME_WIDTH - 2, 1)
+	-- Navigation : marque, recherche, groupes et pages, version en bas
+	local nav = frame.nav
+	frame.brand = Theme.CreateNavBrand(nav, Theme.LOGO, ns.APP.brand or ns.APP.id)
+	frame.brand:SetPoint("TOPLEFT", nav, "TOPLEFT", 0, -8)
+	frame.brand:SetWidth(NAV_WIDTH)
+	frame.brandLogo, frame.brandName = frame.brand.logo, frame.brand.name
+	frame.search = Theme.CreateSearchBox(nav, NAV_WIDTH - 32, L.OPT_SEARCH, function(text) ns:SetOptionsSearch(text) end)
+	frame.search:SetPoint("TOPLEFT", nav, "TOPLEFT", 16, -86)
 
-	-- Fabrique d'une ligne de réglage
-	local function MakeRow(parent, def)
-		local row = CreateFrame("Button", nil, parent)
-		row:SetSize(PANE_WIDTH, ROW_HEIGHT - 6)
-		row.def = def
-
-		row.label = row:CreateFontString(nil, "OVERLAY", Theme.F_BODY)
-		row.label:SetPoint("LEFT", row, "LEFT", 2, 0)
-		row.label:SetJustifyH("LEFT")
-		row.label:SetText(L[def.label] or def.key)
-		row.label:SetTextColor(0.86, 0.84, 0.78)
-
-		row.value = row:CreateFontString(nil, "OVERLAY", Theme.F_NUMBER)
-		row.value:SetPoint("RIGHT", row, "RIGHT", VALUE_RIGHT, 0)
-		row.value:SetWidth(VALUE_WIDTH)
-		row.value:SetJustifyH("RIGHT")
-
-		if def.kind == "action" then
-			row:SetScript("OnClick", function() ns:RunOptionAction(def.key) end)
-		elseif def.kind == "bool" then
-			-- interrupteur dessiné ; le texte OUI/non reste porté (lecteurs, tests)
-			-- mais masqué : l'interrupteur dit déjà l'état
-			row.toggle = Theme.CreateToggle(row)
-			row.toggle:SetPoint("RIGHT", row, "RIGHT", ns.OPT_LAYOUT.toggleRight, 0)
-			row.value:Hide()
-			row:SetScript("OnClick", function()
-				local db = ns:DB()
-				local before = db[def.key] ~= false
-				db[def.key] = not before
-				ns:RefreshOptions()
-				if ns.ApplyDisplayOptions then ns:ApplyDisplayOptions() end
-				if def.onChange then def.onChange(db[def.key], before) end
-			end)
-		else
-			local function Step(delta)
-				local db = ns:DB()
-				local before = db[def.key]
-				db[def.key] = Clamp((db[def.key] or 0) + (delta * (def.step or 1)), def.min or 0, def.max or 999)
-				ns:RefreshOptions()
-				-- l'addon réagit au nouveau cran (bulle de confirmation…)
-				if def.onChange and db[def.key] ~= before then def.onChange(db[def.key], before) end
+	local navY, lastGroup = -126, nil
+	for _, def in ipairs(PAGES) do
+		if not def.parent then
+			if def.group and def.group ~= lastGroup then
+				if lastGroup ~= nil or #frame.navButtons > 0 then navY = navY - 8 end
+				local group = Theme.CreateNavGroup(nav, L[def.group] or def.group)
+				group:SetPoint("TOPLEFT", nav, "TOPLEFT", 18, navY - 2)
+				frame.navGroups[#frame.navGroups + 1] = group
+				navY = navY - 20
 			end
-			-- piste : la valeur dans sa plage, d'un coup d'œil
-			row.track = Theme.CreateBar(row, ns.OPT_LAYOUT.trackWidth, 3)
-			row.track:SetPoint("RIGHT", row, "RIGHT", ns.OPT_LAYOUT.trackRight, 0)
-			row.minus = Theme.CreateButton(row, 22, 17, "-", function() Step(-1) end)
-			row.minus:SetPoint("RIGHT", row, "RIGHT", MINUS_RIGHT, 0)
-			row.plus = Theme.CreateButton(row, 22, 17, "+", function() Step(1) end)
-			row.plus:SetPoint("RIGHT", row, "RIGHT", PLUS_RIGHT, 0)
-			if row.EnableMouseWheel then
-				row:EnableMouseWheel(true)
-				row:SetScript("OnMouseWheel", function(_, delta) Step(delta > 0 and 1 or -1) end)
+			lastGroup = def.group
+
+			local item = Theme.CreateNavItem(nav, NAV_WIDTH - 1)
+			item:SetPoint("TOPLEFT", nav, "TOPLEFT", 0, navY)
+			item:SetText(L[def.title] or def.title)
+			item.label:SetWidth(NAV_WIDTH - 18 - 40)
+			if item.label.SetWordWrap then item.label:SetWordWrap(false) end
+			item.pageId = def.id
+			item:SetScript("OnClick", function() ns:SelectOptionsPage(def.target or def.id) end)
+			-- Interrupteur du module, comme le bouton d'alimentation de la barre
+			-- latérale d'EllesmereUI : active ou coupe le module sans y naviguer.
+			if def.power then
+				item.powerKey = def.power
+				item.onPower = function() ns:ToggleModuleKey(def.power) end
+			elseif def.modules then
+				item.modules = def.modules
+				item.onPower = function() ns:TogglePageModules(def.id) end
 			end
-		end
-		-- infobulle de la ligne : def.tooltip(valeur) -> { lignes }
-		if def.tooltip then
-			row:SetScript("OnEnter", function(self)
-				if type(GameTooltip) ~= "table" or not GameTooltip.SetOwner then return end
-				GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
-				for index, line in ipairs(def.tooltip(ns:DB()[def.key]) or {}) do
-					if index == 1 then
-						GameTooltip:AddLine(line, Theme.PARCHMENT[1], Theme.PARCHMENT[2], Theme.PARCHMENT[3])
-					else
-						GameTooltip:AddLine(line, 0.85, 0.85, 0.85, true)
-					end
-				end
-				GameTooltip:Show()
-			end)
-			row:SetScript("OnLeave", function()
-				if type(GameTooltip) == "table" and GameTooltip.Hide then GameTooltip:Hide() end
-			end)
-		end
-		return row
-	end
-
-	local function MakeModuleRow(parent, def)
-		local row = CreateFrame("Button", nil, parent)
-		row:SetSize(PANE_WIDTH, ROW_HEIGHT - 6)
-		row.isModule = true
-		row.moduleId = def.id
-		row.label = row:CreateFontString(nil, "OVERLAY", Theme.F_BODY)
-		row.label:SetPoint("LEFT", row, "LEFT", 2, 0)
-		row.label:SetJustifyH("LEFT")
-		row.label:SetText(CheckLabel(def))
-		row.value = row:CreateFontString(nil, "OVERLAY", Theme.F_NUMBER)
-		row.value:SetPoint("RIGHT", row, "RIGHT", VALUE_RIGHT, 0)
-		row.value:SetWidth(VALUE_WIDTH)
-		row.value:SetJustifyH("RIGHT")
-		row.toggle = Theme.CreateToggle(row)
-		row.toggle:SetPoint("RIGHT", row, "RIGHT", ns.OPT_LAYOUT.toggleRight, 0)
-		row.value:Hide()
-		row:SetScript("OnClick", function()
-			ns:SetModuleEnabled(def.id, not ns:IsModuleEnabled(def.id))
-			ns:RefreshOptions()
-		end)
-		return row
-	end
-
-	local function Header(page, y, key)
-		local header = page:CreateFontString(nil, "OVERLAY", Theme.F_SMALL)
-		header:SetPoint("TOPLEFT", page, "TOPLEFT", 0, y)
-		header:SetText(L[key] or key)
-		header:SetTextColor(Theme.GOLD_SOFT[1], Theme.GOLD_SOFT[2], Theme.GOLD_SOFT[3])
-		return header
-	end
-
-	-- Marque en tête de navigation : logo complet et nom de l'addon (ns.APP.brand)
-	frame.brandLogo = frame:CreateTexture(nil, "OVERLAY")
-	frame.brandLogo:SetTexture(Theme.LOGO)
-	frame.brandLogo:SetSize(34, 34)
-	frame.brandLogo:SetPoint("TOPLEFT", frame, "TOPLEFT", 12, top - 2)
-	frame.brandName = Theme.CreateTitle(frame, 15)
-	frame.brandName:SetPoint("LEFT", frame.brandLogo, "RIGHT", 7, 0)
-	frame.brandName:SetText(ns.APP.brand or ns.APP.id)
-	frame.brandLine = Theme.Solid(frame, "ARTWORK", Theme.GOLD_DIM, 1)
-	frame.brandLine:SetPoint("TOPLEFT", frame, "TOPLEFT", 1, top - 42)
-	frame.brandLine:SetSize(NAV_WIDTH + 5, 1)
-
-	local placed = {}
-	local navY, lastGroup = top - 48, nil
-	frame.navOrder, frame.navTop = {}, top - 48
-	frame.navGroups = {}
-	for index, def in ipairs(PAGES) do
-		-- titre de groupe dans la navigation (« PRÉPARATION », « INTERFACE »)
-		if def.group and def.group ~= lastGroup then
-			navY = navY - 6
-			local groupLabel = frame:CreateFontString(nil, "OVERLAY", Theme.F_SMALL)
-			groupLabel:SetPoint("TOPLEFT", frame, "TOPLEFT", 16, navY - 2)
-			frame.navOrder[#frame.navOrder + 1] = { group = groupLabel }
-			groupLabel:SetText(L[def.group] or def.group)
-			groupLabel:SetTextColor(Theme.BLUE[1], Theme.BLUE[2], Theme.BLUE[3])
-			frame.navGroups[#frame.navGroups + 1] = groupLabel
-			navY = navY - 16
-		end
-		lastGroup = def.group
-
-		-- bouton de navigation : losange, libellé, liseré ambre + teinte si actif.
-		-- Une sous-page est en retrait, plus basse et sans interrupteur.
-		local sub = def.parent ~= nil
-		local rowH = sub and (ROW_HEIGHT - 2) or ROW_HEIGHT
-		local nav = CreateFrame("Button", nil, frame)
-		nav:SetSize(NAV_WIDTH - 4, rowH)
-		nav:SetPoint("TOPLEFT", frame, "TOPLEFT", 6, navY)
-		nav.rowH = rowH
-		frame.navOrder[#frame.navOrder + 1] = { nav = nav }
-		nav.pageId = def.id
-		nav.parentId = def.parent
-		nav.tint = Theme.Solid(nav, "BACKGROUND", Theme.GOLD, 0.12)
-		nav.tint:SetAllPoints()
-		nav.marker = Theme.Solid(nav, "ARTWORK", Theme.GOLD, 1)
-		nav.marker:SetPoint("LEFT", nav, "LEFT", 0, 0)
-		nav.marker:SetSize(2, rowH)
-		nav.diamond = Theme.CreateDiamond(nav, sub and 5 or 7, true)
-		nav.diamond:SetPoint("LEFT", nav, "LEFT", sub and 26 or 12, 0)
-		nav.label = nav:CreateFontString(nil, "OVERLAY", Theme.F_BODY)
-		nav.label:SetPoint("LEFT", nav, "LEFT", sub and 38 or 26, 0)
-		nav.label:SetJustifyH("LEFT")
-		nav.label:SetText(L[def.title] or def.title)
-		nav:SetScript("OnClick", function() ns:SelectOptionsPage(def.target or def.id) end)
-		frame.navButtons[index] = nav
-
-		-- Interrupteur du module, comme le bouton d'alimentation de la barre
-		-- latérale d'EllesmereUI : active ou coupe le module sans y naviguer.
-		if def.power then
-			nav.powerKey = def.power
-			nav.power = Theme.CreateToggle(nav, 22, 10, "Button")
-			nav.power:SetPoint("RIGHT", nav, "RIGHT", -8, 0)
-			nav.power:SetScript("OnClick", function() ns:ToggleModuleKey(def.power) end)
-			nav.power:SetScript("OnEnter", function(self)
-				if type(GameTooltip) ~= "table" or not GameTooltip.SetOwner then return end
-				GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
-				GameTooltip:AddLine(L[def.title] or def.title, Theme.PARCHMENT[1], Theme.PARCHMENT[2], Theme.PARCHMENT[3])
-				GameTooltip:AddLine(L.OPT_NAV_POWER_TIP, 0.8, 0.8, 0.8)
-				GameTooltip:Show()
-			end)
-			nav.power:SetScript("OnLeave", function()
-				if type(GameTooltip) == "table" and GameTooltip.Hide then GameTooltip:Hide() end
-			end)
-		end
-		navY = navY - rowH
-
-		-- entrée de navigation seule (le module « Check avant le départ » ouvre
-		-- sa première sous-page) : pas de page propre
-		if def.target then
-			-- rien à construire
-		else
-		-- page
-		local page = CreateFrame("Frame", nil, frame)
-		page:SetSize(PANE_WIDTH, FRAME_HEIGHT + top - 50)
-		page:SetPoint("TOPLEFT", frame, "TOPLEFT", PANE_LEFT, top)
-		page.id = def.id
-		page.rows = {}
-		frame.pages[def.id] = page
-
-		-- titre de page dans la police maison, et une phrase qui dit à quoi
-		-- sert la page
-		page.title = Theme.CreateTitle(page, 19)
-		page.title:SetPoint("TOPLEFT", page, "TOPLEFT", 0, 0)
-		page.title:SetText(L[def.title] or def.title)
-		page.sub = page:CreateFontString(nil, "OVERLAY", Theme.F_BODY)
-		page.sub:SetPoint("TOPLEFT", page, "TOPLEFT", 0, -24)
-		page.sub:SetWidth(PANE_WIDTH)
-		page.sub:SetJustifyH("LEFT")
-		page.sub:SetText(L[def.title .. "_SUB"] or "")
-		page.sub:SetTextColor(Theme.MUTED[1], Theme.MUTED[2], Theme.MUTED[3])
-		local y = -48
-
-		-- texte d'explication (paragraphes), pour les modules sans réglage
-		if def.info then
-			page.infoLines = {}
-			for _, key in ipairs(def.info) do
-				local text = L[key] or key
-				local para = page:CreateFontString(nil, "OVERLAY", Theme.F_BODY)
-				para:SetPoint("TOPLEFT", page, "TOPLEFT", 0, y)
-				para:SetWidth(PANE_WIDTH - 8)
-				para:SetJustifyH("LEFT")
-				if para.SetWordWrap then para:SetWordWrap(true) end
-				para:SetText(text)
-				para:SetTextColor(Theme.TEXT[1], Theme.TEXT[2], Theme.TEXT[3])
-				-- hauteur estimée (le client la donne, pas le harnais) : ~5,6 px
-				-- par caractère, 14 px par ligne
-				local chars = select(2, tostring(text):gsub("[^\128-\191]", ""))
-				local lines = math.max(1, math.ceil(chars * 5.6 / (PANE_WIDTH - 8)))
-				local height = (para.GetStringHeight and tonumber(para:GetStringHeight()) or 0)
-				if height <= 0 or not para.SetWordWrap then height = lines * 14 end
-				para.estimatedHeight = height
-				page.infoLines[#page.infoLines + 1] = para
-				y = y - height - 8
-			end
-			y = y - 4
-		end
-
-		if def.modules then
-			-- dans une sous-page du Check avant le départ, ce sont ses contrôles
-			page.modulesHeader = Header(page, y, def.parent and "OPT_CHECKS" or "OPT_MODULES")
-			y = y - 16
-			for _, id in ipairs(def.modules) do
-				local check = CheckDef(id)
-				if check then
-					local row = MakeModuleRow(page, check)
-					row:SetPoint("TOPLEFT", page, "TOPLEFT", 0, y)
-					frame.rows[#frame.rows + 1] = row
-					page.rows[#page.rows + 1] = row
-					placed[id] = true
-					y = y - ROW_HEIGHT
-				end
-			end
-			y = y - 8
-		end
-
-		if def.rows then
-			if def.modules then
-				page.settingsHeader = Header(page, y, "OPT_SETTINGS")
-				y = y - 16
-			end
-			for _, rowDef in ipairs(def.rows) do
-				if rowDef.header then
-					y = y - 4
-					page.sectionHeaders = page.sectionHeaders or {}
-					page.sectionHeaders[#page.sectionHeaders + 1] = Header(page, y, rowDef.header)
-					y = y - 16
-				else
-				local row = MakeRow(page, rowDef)
-				row:SetPoint("TOPLEFT", page, "TOPLEFT", 0, y)
-				frame.rows[#frame.rows + 1] = row
-				page.rows[#page.rows + 1] = row
-				y = y - ROW_HEIGHT
-				-- phrase sous la ligne, qui suit sa valeur : def.describe(valeur)
-				if rowDef.describe then
-					row.note = page:CreateFontString(nil, "OVERLAY", Theme.F_SMALL)
-					row.note:SetPoint("TOPLEFT", page, "TOPLEFT", 10, y + 4)
-					row.note:SetWidth(PANE_WIDTH - 14)
-					row.note:SetJustifyH("LEFT")
-					if row.note.SetWordWrap then row.note:SetWordWrap(true) end
-					row.note:SetTextColor(Theme.MUTED[1], Theme.MUTED[2], Theme.MUTED[3])
-					y = y - 26
-				end
-				end
-			end
-			y = y - 8
-		end
-
-		if def.list then
-			local source = LIST_SOURCES[def.list] or {}
-			page.listHeader = Header(page, y, source.header or def.list)
-			y = y - 18
-			local list = BuildList(page, def.list, y)
-			frame.lists[def.list] = list
-			y = list.bottom
-			if source.extra then y = source.extra(page, y) or y end
-		end
-
-		if def.frameButtons then
-			local half = math.floor((PANE_WIDTH - 8) / 2)
-			frame.editButton = Theme.CreateButton(page, half, 22, L.OPT_EDIT_BUTTON, function()
-				ns:RunOptionAction("editMode")
-			end)
-			frame.editButton:SetPoint("TOPLEFT", page, "TOPLEFT", 0, y - 6)
-			frame.resetFramesButton = Theme.CreateButton(page, half, 22, L.OPT_RESET_FRAMES, function()
-				ns:HandleCommand("resetpos")
-			end)
-			frame.resetFramesButton:SetPoint("TOPLEFT", page, "TOPLEFT", half + 8, y - 6)
-			y = y - 34
-		end
-
-		if def.actions then
-			for _, action in ipairs(def.actions) do
-				local button = Theme.CreateButton(page, 200, 22, L["OPT_ACTION_" .. action:upper()] or action, function()
-					ns:RunOptionAction(action)
+			if item.onPower then
+				item.power:SetScript("OnEnter", function(self)
+					Tip(self, { L[def.title] or def.title, L.OPT_NAV_POWER_TIP })
 				end)
-				button:SetPoint("TOPLEFT", page, "TOPLEFT", 0, y - 6)
-				page.actionButtons = page.actionButtons or {}
-				page.actionButtons[action] = button
-				y = y - 34
+				item.power:SetScript("OnLeave", HideTip)
 			end
+			frame.navButtons[#frame.navButtons + 1] = item
+			navY = navY - Theme.NAV_ITEM_HEIGHT
 		end
+	end
+	frame.navBottom = navY
 
-		page.contentBottom = y
-		page:Hide()
-		end
+	frame.version = Theme.Text(nav, Theme.F_SMALL, Theme.MUTED)
+	frame.version:SetPoint("BOTTOMLEFT", nav, "BOTTOMLEFT", 18, 18)
+	local client
+	if self.ClientFlavour then
+		local ok, flavour = pcall(self.ClientFlavour, self)
+		if ok then client = flavour end
+	end
+	frame.version:SetText(self:F("OPT_VERSION_LINE", tostring(ns.APP.version or "?"), tostring(client or "?")))
+
+	-- Zone de droite : en-tête, onglets, aperçu, ascenseur
+	frame.header = Theme.CreatePageHeader(content, CONTENT_W)
+	frame.header:SetPoint("TOPLEFT", content, "TOPLEFT", 0, 0)
+	frame.header.title:SetWidth(INNER - 40)
+	if frame.header.title.SetWordWrap then frame.header.title:SetWordWrap(false) end
+	frame.header.subtitle:SetWidth(INNER)
+	if frame.header.subtitle.SetWordWrap then frame.header.subtitle:SetWordWrap(false) end
+
+	frame.tabs = Theme.CreateTabs(content, function(id) ns:SelectOptionsPage(id) end)
+	frame.tabs:SetPoint("TOPLEFT", content, "TOPLEFT", MARGIN, TABS_TOP)
+	frame.tabs:SetWidth(INNER)
+
+	frame.previewStrip = CreateFrame("Frame", nil, content)
+	frame.previewStrip:SetSize(INNER, PREVIEW_H)
+	frame.previewStrip.bg = Theme.Solid(frame.previewStrip, "BACKGROUND", Theme.NAV, 1)
+	frame.previewStrip.bg:SetAllPoints()
+	frame.previewStrip.border = Theme.Border(frame.previewStrip, Theme.EDGE_SOFT, 1)
+	frame.previewStrip:Hide()
+
+	frame.scrollTrack = Theme.Solid(content, "BORDER", Theme.EDGE_SOFT, 1)
+	frame.scrollTrack:SetWidth(3)
+	frame.scrollThumb = Theme.Solid(content, "ARTWORK", Theme.GOLD, 0.8)
+	frame.scrollThumb:SetWidth(3)
+	frame.scrollTrack:Hide(); frame.scrollThumb:Hide()
+	if content.EnableMouseWheel then content:EnableMouseWheel(true) end
+	content:SetScript("OnMouseWheel", function(_, delta) ns:ScrollOptions(delta) end)
+
+	-- Pages
+	local placed = {}
+	for _, def in ipairs(PAGES) do
+		if not def.target then BuildPage(frame, def, placed) end
 	end
 
 	-- tout check sans page tombe dans « Général » : un module ajouté plus tard
 	-- ne doit pas devenir impossible à couper
 	frame.unplaced = {}
 	local general = frame.pages.general
-	local y = general.contentBottom
 	for _, check in ipairs(ns.checks or {}) do
 		if not placed[check.id] then
+			if #frame.unplaced == 0 then general.modulesHeader = Section(frame, general, "OPT_MODULES") end
 			frame.unplaced[#frame.unplaced + 1] = check.id
-			local row = MakeModuleRow(general, check)
-			row:SetPoint("TOPLEFT", general, "TOPLEFT", 0, y)
-			frame.rows[#frame.rows + 1] = row
-			general.rows[#general.rows + 1] = row
-			y = y - ROW_HEIGHT
+			AddCard(frame, general, ModuleCard(general, check))
 		end
 	end
-	general.contentBottom = y
 
-	-- Pied : trois boutons sur toute la largeur, en tiers égaux
-	local MARGIN, GAP = 16, 8
-	local inner = FRAME_WIDTH - (MARGIN * 2)
-	local available = inner - (GAP * 2)
-	local base = math.floor(available / 3)
-	local extra = available - (base * 3)
-	local widths = { base + (extra > 0 and 1 or 0), base + (extra > 1 and 1 or 0), base }
+	-- Résultats de recherche : un conteneur à part, qui emprunte les cartes
+	frame.searchPage = CreateFrame("Frame", nil, content)
+	frame.searchPage:SetSize(INNER, 400)
+	frame.searchPage.items, frame.searchPage.sections = {}, {}
+	frame.searchPage.empty = Theme.Text(frame.searchPage, Theme.F_BODY, Theme.MUTED)
+	frame.searchPage.empty:SetPoint("TOPLEFT", frame.searchPage, "TOPLEFT", 0, -4)
+	frame.searchPage:Hide()
 
-	-- bouton principal de l'addon (ns.OPTIONS_MAIN : le check, le carnet…)
+	-- Pied : action principale de l'addon et remise à zéro à gauche, Terminé à droite
+	local foot = frame.footer
+	local probe = Theme.Text(foot, Theme.F_LABEL, Theme.LABEL)
+	probe:Hide()
+	local function Width(text) return math.max(120, math.ceil(TextWidth(probe, text)) + 36) end
 	local main = ns.OPTIONS_MAIN or {}
-	frame.runButton = Theme.CreateButton(frame, widths[1], 20, L[main.label or ""] or tostring(main.label or ""), function()
+	local mainText = L[main.label or ""] or tostring(main.label or "")
+	frame.runButton = Theme.CreateButton(foot, Width(mainText), 28, mainText, function()
 		if main.run then main.run(ns) end
-	end)
-	frame.runButton:SetPoint("BOTTOMLEFT", frame, "BOTTOMLEFT", MARGIN, 12)
-	frame.resetButton = Theme.CreateButton(frame, widths[2], 20, L.OPT_RESET, function()
+	end, "outline")
+	frame.runButton:SetPoint("LEFT", foot, "LEFT", MARGIN, 0)
+	frame.resetButton = Theme.CreateButton(foot, Width(L.OPT_RESET), 28, L.OPT_RESET, function()
 		ns:HandleCommand("reset")
 		ns:RefreshOptions()
-	end)
-	frame.resetButton:SetPoint("LEFT", frame.runButton, "RIGHT", GAP, 0)
-	frame.closeButton = Theme.CreateButton(frame, widths[3], 20, L.OPT_CLOSE, function()
+	end, "outline")
+	frame.resetButton:SetPoint("LEFT", frame.runButton, "RIGHT", 10, 0)
+	frame.closeButton = Theme.CreateButton(foot, Width(L.OPT_DONE), 28, L.OPT_DONE, function()
 		frame:Hide()
-	end, "primary")
-	frame.closeButton:SetPoint("LEFT", frame.resetButton, "RIGHT", GAP, 0)
+	end, "accent")
+	frame.closeButton:SetPoint("RIGHT", foot, "RIGHT", -MARGIN, 0)
 
-	ns.OPT_LAYOUT.footer = { margin = MARGIN, gap = GAP, inner = inner, widths = widths }
-	ns.OPT_LAYOUT.contentLimit = -(FRAME_HEIGHT - 48) - top   -- bas utile d'une page (sous le titre du cadre)
+	-- la recherche se vide à la fermeture
+	frame:SetScript("OnHide", function()
+		if frame.searching then ns:SelectOptionsPage(frame.currentPage) end
+	end)
 
 	self.optionsFrame = frame
 	self:SelectOptionsPage(self:DB().optionsPage or "general")
@@ -728,8 +1168,7 @@ end
 
 -- Tout actif -> tout coupé ; coupé ou partiel -> tout rallumé
 function ns:TogglePageModules(pageId)
-	local page
-	for _, def in ipairs(PAGES) do if def.id == pageId then page = def end end
+	local page = PageDef(pageId)
 	if not page or not page.modules then return end
 	local enable = self:PageModuleState(page.modules) ~= "on"
 	for _, id in ipairs(page.modules) do
@@ -738,51 +1177,208 @@ function ns:TogglePageModules(pageId)
 	self:RefreshOptions()
 end
 
--- Navigation repliable : les sous-pages d'un module ne s'affichent que quand
--- ce module (ou l'une de ses sous-pages) est ouvert. Sans ça, chaque module
--- ajouté allongeait la liste jusqu'à passer sous le pied du panneau.
-function ns:LayoutNav()
-	local frame = self.optionsFrame
-	if not frame or not frame.navOrder then return end
-	local y = frame.navTop
-	for _, item in ipairs(frame.navOrder) do
-		if item.group then
-			y = y - 6
-			item.group:ClearAllPoints()
-			item.group:SetPoint("TOPLEFT", frame, "TOPLEFT", 16, y - 2)
-			y = y - 16
-		else
-			local nav = item.nav
-			local visible = not nav.parentId or nav.parentId == frame.currentParent
-			if visible then
-				nav:ClearAllPoints()
-				nav:SetPoint("TOPLEFT", frame, "TOPLEFT", 6, y)
-				nav:Show()
-				y = y - (nav.rowH or ROW_HEIGHT)
-			else
-				nav:Hide()
-			end
-		end
+-- Haut de la zone de réglages sous l'en-tête : sous les onglets s'il y en a,
+-- sous l'aperçu s'il y en a un
+local function PlaceBody(frame, hasTabs, preview)
+	local top = hasTabs and (TABS_TOP - Theme.TABS_HEIGHT - 12) or (TABS_TOP - 4)
+	if preview then
+		frame.previewStrip:ClearAllPoints()
+		frame.previewStrip:SetPoint("TOPLEFT", frame.content, "TOPLEFT", MARGIN, top)
+		frame.previewStrip:Show()
+		top = top - PREVIEW_H - 12
+	else
+		frame.previewStrip:Hide()
 	end
-	frame.navBottom = y
+	frame.bodyTop = top
+	frame.scrollTrack:ClearAllPoints()
+	frame.scrollTrack:SetPoint("TOPLEFT", frame.content, "TOPLEFT", CONTENT_W - 12, top)
+	return top, top - BODY_BOTTOM
+end
+
+local function ShowContainer(frame, container, top, view)
+	for _, page in pairs(frame.pages) do
+		if page ~= container then page:Hide() end
+	end
+	if frame.searchPage ~= container then frame.searchPage:Hide() end
+	container:ClearAllPoints()
+	container:SetPoint("TOPLEFT", frame.content, "TOPLEFT", MARGIN, top)
+	container:SetSize(INNER, view)
+	container.viewHeight = view
+	frame.activeContainer = container
+	container:Show()
+	ns:LayoutOptionsContainer(container)
+end
+
+-- aperçu d'une page (ou de sa page parente), construit une fois
+local function PreviewFor(frame, def)
+	local owner = def.preview and def or nil
+	if not owner and def.parent then
+		local parent = PageDef(def.parent)
+		if parent and parent.preview then owner = parent end
+	end
+	for _, other in pairs(frame.previews) do other:Hide() end
+	if not owner then return nil end
+	local container = frame.previews[owner.id]
+	if not container then
+		container = CreateFrame("Frame", nil, frame.previewStrip)
+		container:SetAllPoints(frame.previewStrip)
+		container:SetSize(INNER, PREVIEW_H)
+		container.pageId = owner.id
+		local ok, err = pcall(owner.preview, ns, container)
+		if not ok then ns:RecordError("options:preview", err) end
+		frame.previews[owner.id] = container
+	end
+	container:Show()
+	return container
 end
 
 function ns:SelectOptionsPage(id)
 	local frame = self.optionsFrame
 	if not frame then return end
 	-- entrée de navigation sans page propre (module parent) : sa première sous-page
-	for _, def in ipairs(PAGES) do
-		if def.id == id and def.target then id = def.target; break end
-	end
+	local target = PageDef(id)
+	if target and target.target then id = target.target end
 	if not frame.pages[id] then id = "general" end
+	local def = PageDef(id)
+
+	-- choisir une page referme la recherche
+	if frame.searching then
+		frame.searching = nil
+		frame.search.lastValue = ""
+		frame.search:SetText("")
+		frame.search:Refresh()
+		for _, nav in ipairs(frame.navButtons) do nav:SetBadge(nil) end
+	end
+
 	frame.currentPage = id
-	local parent
-	for _, def in ipairs(PAGES) do if def.id == id then parent = def.parent end end
-	frame.currentParent = parent
-	self:LayoutNav()
+	frame.currentParent = def.parent
+	frame.currentTop = def.parent or id
 	self:DB().optionsPage = id
-	for pageId, page in pairs(frame.pages) do
-		if pageId == id then page:Show() else page:Hide() end
+	local top = PageDef(frame.currentTop) or def
+
+	frame.header:SetTitle(L[top.title] or top.title)
+	frame.header:SetSubtitle(Declared(def.title .. "_SUB") or Declared(top.title .. "_SUB") or "")
+
+	local children = Children(frame.currentTop)
+	if #children > 0 then
+		local tabs = {}
+		for _, child in ipairs(children) do tabs[#tabs + 1] = { id = child.id, label = TabTitle(child) } end
+		frame.tabs:SetTabs(tabs)
+		frame.tabs:Select(id, true)
+		frame.tabs:Show()
+	else
+		frame.tabs:SetTabs({})
+		frame.tabs:Hide()
+	end
+
+	frame.currentPreview = PreviewFor(frame, def)
+	local bodyTop, view = PlaceBody(frame, #children > 0, frame.currentPreview)
+	ShowContainer(frame, frame.pages[id], bodyTop, view)
+	self:RefreshOptions()
+end
+
+-- Éléments d'une page qu'on ne verrait jamais, même en la faisant défiler
+-- jusqu'en bas (tests, diagnostic) : liste vide si tout se voit
+function ns:OptionsUnreachable(id)
+	local frame = self:EnsureOptions()
+	if not (frame and frame.pages[id]) then return { id } end
+	local page = frame.pages[id]
+	self:SelectOptionsPage(id)
+	local seen, missing = {}, {}
+	for _ = 1, #page.items + 2 do
+		for index, item in ipairs(page.items) do
+			if item.region:IsShown() then seen[index] = true end
+		end
+		self:ScrollOptions(-1)
+	end
+	for index in ipairs(page.items) do
+		if not seen[index] then missing[#missing + 1] = id .. "#" .. index end
+	end
+	page.stopIndex = 1
+	self:ApplyOptionsScroll(page)
+	return missing
+end
+
+-- ---------------------------------------------------------------------------
+-- Recherche : les cartes dont le libellé contient tous les mots tapés, de
+-- toutes les pages, regroupées par page (titre de la page, onglet entre
+-- parenthèses). La navigation compte les résultats de chaque page. Vider le
+-- champ (ou choisir une page) rend la vue normale.
+-- ---------------------------------------------------------------------------
+function ns:FindOptions(text)
+	local frame = self.optionsFrame
+	local query = Fold(text)
+	local words = {}
+	for word in query:gmatch("%S+") do words[#words + 1] = word end
+	local groups = {}
+	if not frame or #words == 0 then return groups, 0 end
+	local total = 0
+	for _, def in ipairs(PAGES) do
+		local page = frame.pages[def.id]
+		if page then
+			local found = {}
+			for _, card in ipairs(page.rows) do
+				local hit = true
+				for _, word in ipairs(words) do
+					if not card.searchText:find(word, 1, true) then hit = false; break end
+				end
+				if hit then found[#found + 1] = card end
+			end
+			if #found > 0 then
+				groups[#groups + 1] = { def = def, cards = found }
+				total = total + #found
+			end
+		end
+	end
+	return groups, total
+end
+
+function ns:SetOptionsSearch(text)
+	local frame = self.optionsFrame
+	if not frame then return end
+	text = tostring(text or ""):gsub("^%s+", ""):gsub("%s+$", "")
+	if Fold(text) == "" then
+		if frame.searching then self:SelectOptionsPage(frame.currentPage) end
+		return
+	end
+	frame.searching = true
+	frame.searchText = text
+	local groups, total = self:FindOptions(text)
+
+	local results = frame.searchPage
+	results.items = {}
+	local counts = {}
+	for index, group in ipairs(groups) do
+		local def = group.def
+		local topDef = def.parent and PageDef(def.parent) or def
+		local section = results.sections[index]
+		if not section then
+			section = Theme.CreateSection(results, "", nil)
+			section:SetWidth(INNER)
+			results.sections[index] = section
+		end
+		section:SetText(L[topDef.title] or topDef.title, def.parent and (L[def.title] or def.title) or nil)
+		results.items[#results.items + 1] = { region = section, kind = "section", height = SECTION_H }
+		for _, card in ipairs(group.cards) do
+			results.items[#results.items + 1] = { region = card, kind = "card", height = card:GetHeight() }
+		end
+		counts[topDef.id] = (counts[topDef.id] or 0) + #group.cards
+	end
+	for index = #groups + 1, #results.sections do results.sections[index]:Hide() end
+	results.total = total
+	results.empty:SetText(total == 0 and self:F("OPT_SEARCH_NONE", text) or "")
+
+	frame.header:SetTitle(L.OPT_SEARCH_TITLE)
+	frame.header:SetSubtitle(total > 0 and self:F("OPT_SEARCH_COUNT", total, text) or "")
+	frame.tabs:Hide()
+	for _, other in pairs(frame.previews) do other:Hide() end
+	frame.currentPreview = nil
+	local bodyTop, view = PlaceBody(frame, false, nil)
+	-- les pages rendent leurs cartes : elles sont rattachées aux résultats
+	ShowContainer(frame, results, bodyTop, view)
+	for _, nav in ipairs(frame.navButtons) do
+		local count = counts[nav.pageId]
+		nav:SetBadge(count and tostring(count) or nil)
 	end
 	self:RefreshOptions()
 end

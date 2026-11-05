@@ -112,13 +112,13 @@ do
 	row.scripts.OnLeave(row)
 
 	NS.companionBubbleKey = nil
-	row.minus:Click()
+	row:Step(-1)
 	Check("[CHAT] « - » : Calme, il le confirme", NS:DB().companionChatter == 2 and NS.companionBubbleKey == "CHATTER_2"
 		and row.value.text:find("Calme", 1, true) and row.note.text == NS.L.COMP_CHATTER_DESC_2)
-	row.minus:Click(); row.minus:Click()
+	row:Step(-1); row:Step(-1)
 	Check("[CHAT] jusqu'à Muet : la bulle s'en va", NS:DB().companionChatter == 0
 		and not (NS.companionBubble and NS.companionBubble:IsShown()))
-	row.minus:Click()
+	row:Step(-1)
 	Check("[CHAT] pas en dessous de 0", NS:DB().companionChatter == 0)
 	local missing = {}
 	for level = 0, 4 do

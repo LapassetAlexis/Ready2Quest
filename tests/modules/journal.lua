@@ -412,14 +412,16 @@ do
 		if button.pageId == "companion" then parentNav = button end
 	end
 	local page = o.pages.journal
-	Check("[JRN] sous-page du Compagnon de route", nav and nav.parentId == "companion" and nav.power == nil and page)
-	Check("[JRN] interrupteur unique sur le module parent", parentNav and parentNav.power ~= nil)
+	NS:SelectOptionsPage("journal")
+	Check("[JRN] sous-page du Compagnon de route : un onglet, pas une entrée", nav == nil and page and o.tabs.byId.journal ~= nil
+		and o.tabs.selected == "journal")
+	Check("[JRN] interrupteur unique sur le module parent", parentNav and parentNav.powerKey == "companionEnabled")
 	Check("[JRN] page rangée dans MODULES", (function()
 		for _, def in ipairs(NS.OPTION_PAGES) do
 			if def.id == "journal" then return def.group == "OPT_GROUP_MODULES" end
 		end
 	end)())
-	Check("[JRN] phrase d'explication", page and page.sub.text == NS.L.OPT_PAGE_JOURNAL_SUB)
+	Check("[JRN] phrase d'explication", page and page.subText == NS.L.OPT_PAGE_JOURNAL_SUB)
 	Check("[JRN] bandeau, chat et suivi réglables", page and #page.rows == 5, page and #page.rows)
 	local button = page and page.actionButtons and page.actionButtons.journal
 	Check("[JRN] bouton « Ouvrir le carnet »", button and button.text.text == "Ouvrir le carnet")

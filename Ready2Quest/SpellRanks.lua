@@ -45,6 +45,10 @@ local FR = {
 	SR_UPDATED              = "%s : rang %d sur la barre %d, case %d.",
 	SR_IGNORED              = "%s (rang %d) gardé sur la barre %d, case %d.",
 	SR_FORGOT               = "Cases ignorées oubliées : %d.",
+	SR_PREVIEW_OLD          = "Rang 3, le 5 est appris",
+	SR_PREVIEW_OK           = "Meilleur rang",
+	SR_PREVIEW_ON           = "Sur tes barres, un liseré rouge entoure le sort à mettre à jour.",
+	SR_PREVIEW_OFF          = "Liseré coupé : l'icône et le chat te préviennent quand même.",
 	CHK_SPELLRANKS          = "Sorts des barres à jour",
 	CHK_SPELLRANKS_DETAIL   = "%d sort(s) à un rang inférieur sur tes barres",
 	ADV_SPELLRANKS          = "Mets à jour les sorts de tes barres (/r2q sorts).",
@@ -70,6 +74,10 @@ local EN = {
 	SR_UPDATED              = "%s: rank %d on bar %d, slot %d.",
 	SR_IGNORED              = "%s (rank %d) kept on bar %d, slot %d.",
 	SR_FORGOT               = "Ignored slots forgotten: %d.",
+	SR_PREVIEW_OLD          = "Rank 3, rank 5 is known",
+	SR_PREVIEW_OK           = "Best rank",
+	SR_PREVIEW_ON           = "On your bars, a red outline surrounds the spell to update.",
+	SR_PREVIEW_OFF          = "Outline off: the icon and the chat still tell you.",
 	CHK_SPELLRANKS          = "Bar spells up to date",
 	CHK_SPELLRANKS_DETAIL   = "%d spell(s) at a lower rank on your bars",
 	ADV_SPELLRANKS          = "Update the spells on your bars (/r2q sorts).",
@@ -83,10 +91,12 @@ ns.RegisterDefaults({ spellranksEnabled = true, spellranksBorder = true })
 if ns.AddOptionPage then
 	ns.AddOptionPage({
 		id = "spellranks", title = "OPT_PAGE_SPELLRANKS", parent = "qol", group = "OPT_GROUP_QOL",
+		-- aperçu : deux cases de barre, le liseré rouge sur celle à mettre à jour
+		preview = function(self, container) return self:SpellRanksPreview(container) end,
 		rows = {
 			{ key = "spellranksEnabled", label = "OPT_SPELLRANKS_ENABLED", kind = "bool" },
 			{ key = "spellranksBorder", label = "OPT_SPELLRANKS_BORDER", kind = "bool" },
-			{ key = "spellranksForget", label = "OPT_SPELLRANKS_FORGET", kind = "action" },
+			{ key = "spellranksForget", label = "OPT_SPELLRANKS_FORGET", kind = "action", button = "OPT_BTN_FORGET" },
 		},
 	})
 end
@@ -438,6 +448,50 @@ local function Border(button)
 	borders[button] = frame
 	return frame
 end
+
+-- Aperçu des réglages : une mini barre d'action de deux cases, la première
+-- à un rang inférieur (liseré rouge, le même que sur les vraies barres,
+-- s'il est activé), la seconde à jour
+function ns:SpellRanksPreview(container)
+	local SLOT = 40
+	local slots = {}
+	for index, spec in ipairs({ { "Interface\\Icons\\Spell_Holy_HolyBolt", "SR_PREVIEW_OLD" },
+		{ "Interface\\Icons\\Spell_Holy_FlashHeal", "SR_PREVIEW_OK" } }) do
+		local slot = CreateFrame("Frame", nil, container)
+		slot:SetSize(SLOT, SLOT)
+		slot:SetPoint("LEFT", container, "LEFT", 22 + (index - 1) * (SLOT + 150), 0)
+		slot.bg = Theme.Solid(slot, "BACKGROUND", Theme.INK, 1)
+		slot.bg:SetAllPoints()
+		slot.icon = slot:CreateTexture(nil, "ARTWORK")
+		slot.icon:SetTexture(spec[1])
+		slot.icon:SetPoint("TOPLEFT", slot, "TOPLEFT", 2, -2)
+		slot.icon:SetPoint("BOTTOMRIGHT", slot, "BOTTOMRIGHT", -2, 2)
+		if slot.icon.SetTexCoord then slot.icon:SetTexCoord(0.08, 0.92, 0.08, 0.92) end
+		slot.edge = Theme.Border(slot, Theme.EDGE, 1, "BORDER")
+		slot.caption = Theme.Text(container, Theme.F_SMALL, Theme.MUTED_LIGHT)
+		slot.caption:SetPoint("LEFT", slot, "RIGHT", 10, 0)
+		slot.caption:SetText(L[spec[2]])
+		slots[index] = slot
+	end
+	-- liseré rouge des barres (BORDER_COLOR), en quatre traits
+	local outline = CreateFrame("Frame", nil, slots[1])
+	outline:SetAllPoints(slots[1])
+	outline.edges = Theme.Border(outline, BORDER_COLOR, BORDER_COLOR[4], "OVERLAY")
+	container.slots, container.outline = slots, outline
+	container.hint = Theme.Text(container, Theme.F_SMALL, Theme.MUTED)
+	container.hint:SetPoint("LEFT", container, "LEFT", 404, 0)
+	container.hint:SetWidth(290)
+	container.hint:SetJustifyH("LEFT")
+	if container.hint.SetWordWrap then container.hint:SetWordWrap(true) end
+	function container:Refresh(addon)
+		local on = ModuleOn() and addon:DB().spellranksBorder ~= false
+		if on then self.outline:Show() else self.outline:Hide() end
+		self.hint:SetText(on and L.SR_PREVIEW_ON or L.SR_PREVIEW_OFF)
+	end
+	container:Refresh(self)
+	return container
+end
+ns.SPELLRANKS_BORDER_COLOR = BORDER_COLOR
 
 -- Pose ou retire les liserés ; rend le nombre de cases marquées
 function ns:SpellRanksMark()

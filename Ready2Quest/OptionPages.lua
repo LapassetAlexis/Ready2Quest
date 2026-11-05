@@ -29,14 +29,17 @@ local R2Q_PAGES = {
 			{ key = "enabled",     label = "OPT_ENABLED",     kind = "bool" },
 			{ header = "OPT_SECTION_DISPLAY" },
 			{ key = "showMinimap", label = "OPT_MINIMAP",     kind = "bool" },
-			{ key = "minimapPos",  label = "OPT_MINIMAP_POS", kind = "action" },
+			{ key = "minimapPos",  label = "OPT_MINIMAP_POS", kind = "action", button = "OPT_BTN_CHANGE" },
 			{ key = "showWindow",  label = "OPT_SHOWWINDOW",  kind = "bool" },
 			{ key = "popupScore",  label = "OPT_POPUPSCORE",  kind = "number", min = 0, max = 100, step = 5 },
 		},
 		frameButtons = true,
 	},
 	-- MODULES ---------------------------------------------------------------
-	{ id = "departure", title = "OPT_PAGE_DEPARTURE", group = "OPT_GROUP_MODULES", power = "departureEnabled", target = "trigger" },
+	-- aperçu sous les onglets : la note du dernier check, comme en tête de
+	-- la fenêtre de diagnostic (DeparturePreview, plus bas)
+	{ id = "departure", title = "OPT_PAGE_DEPARTURE", group = "OPT_GROUP_MODULES", power = "departureEnabled", target = "trigger",
+		preview = function(self, container) return self:DeparturePreview(container) end },
 	{
 		id = "trigger", title = "OPT_PAGE_TRIGGER", parent = "departure", group = "OPT_GROUP_MODULES",
 		rows = {
@@ -147,23 +150,12 @@ end
 ns.OPTION_LISTS.safe = {
 	items = SafeItems, header = "OPT_SAFE_LIST", empty = "OPT_SAFE_EMPTY", lines = ns.OPT_LAYOUT.listLines,
 	-- sous la liste : tout oublier, et une ligne d'aide
-	extra = function(page, y)
-		page.clearButton = Theme.CreateButton(page, 150, 20, L.OPT_SAFE_CLEAR, function()
-			ns:HandleCommand("safe reset")
-			ns:RefreshOptions()
-		end)
-		page.clearButton:SetPoint("TOPLEFT", page, "TOPLEFT", 0, y - 6)
-		page.hint = page:CreateFontString(nil, "OVERLAY", Theme.F_SMALL)
-		page.hint:SetPoint("TOPLEFT", page, "TOPLEFT", 0, y - 34)
-		page.hint:SetWidth(ns.OPT_LAYOUT.paneWidth)
-		page.hint:SetJustifyH("LEFT")
-		page.hint:SetText(L.OPT_SAFE_HINT)
-		page.hint:SetTextColor(0.55, 0.55, 0.55)
-		return y
-	end,
+	clear = { label = "OPT_SAFE_CLEAR", run = function(self) self:HandleCommand("safe reset") end },
+	hint = "OPT_SAFE_HINT",
 }
+-- quatre lignes : la page des buffs porte aussi l'aperçu et six cartes
 ns.OPTION_LISTS.buffs = { items = BuffItems, header = "OPT_BUFFS_LIST", empty = "OPT_BUFFS_EMPTY",
-	lines = ns.OPT_LAYOUT.listLines - 4 }
+	lines = ns.OPT_LAYOUT.listLines - 5 }
 
 -- ---------------------------------------------------------------------------
 -- Actions, bouton principal, fenêtres exclusives, interrupteurs
@@ -181,6 +173,40 @@ ns.OPTION_ACTIONS.portraitShow = function(self)
 	self.forceStats = true
 	self:ShowPortraitStats()
 	self.forceStats = nil
+end
+
+-- Aperçu de la page « Check avant le départ » : la note du dernier check (ou
+-- une note d'exemple), sa barre et son verdict, aux couleurs de la fenêtre
+function ns:DeparturePreview(container)
+	local score = Theme.CreateTitle(container, 34)
+	score:SetPoint("LEFT", container, "LEFT", 22, 4)
+	local suffix = Theme.Text(container, Theme.F_BODY, Theme.MUTED)
+	suffix:SetPoint("BOTTOMLEFT", score, "BOTTOMRIGHT", 6, 5)
+	suffix:SetText("/ 100")
+	local verdict = Theme.Text(container, Theme.F_HEADING, Theme.PARCHMENT)
+	verdict:SetPoint("TOPLEFT", container, "TOPLEFT", 150, -24)
+	local note = Theme.Text(container, Theme.F_SMALL, Theme.MUTED)
+	note:SetPoint("TOPLEFT", verdict, "BOTTOMLEFT", 0, -6)
+	local bar = Theme.CreateBar(container, 360, 5)
+	bar:SetPoint("TOPLEFT", note, "BOTTOMLEFT", 0, -10)
+	container.score, container.verdict, container.note, container.bar = score, verdict, note, bar
+	function container:Refresh(addon)
+		local value, sample = addon.score, false
+		if not value then value, sample = 85, true end
+		local saved = addon.score
+		addon.score = value
+		local label = addon:ScoreLabel()
+		addon.score = saved
+		local c = Theme.ScoreColor(value / 100)
+		self.score:SetText(tostring(value))
+		self.score:SetTextColor(c[1], c[2], c[3], 1)
+		self.verdict:SetText(label)
+		self.note:SetText(sample and L.OPT_PREVIEW_SAMPLE or L.OPT_PREVIEW_LAST)
+		self.bar:SetColor(c[1], c[2], c[3], 1)
+		self.bar:SetValue(value / 100)
+	end
+	container:Refresh(self)
+	return container
 end
 
 ns.OPTIONS_MAIN = { label = "OPT_RUNCHECK", run = function(self) self:RunChecklist("manual") end }

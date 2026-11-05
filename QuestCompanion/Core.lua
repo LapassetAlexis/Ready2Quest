@@ -29,7 +29,7 @@ ns.AddOptionPage({
 		{ key = "enabled",     label = "OPT_ENABLED",     kind = "bool" },
 		{ header = "OPT_SECTION_DISPLAY" },
 		{ key = "showMinimap", label = "OPT_MINIMAP",     kind = "bool" },
-		{ key = "minimapPos",  label = "OPT_MINIMAP_POS", kind = "action" },
+		{ key = "minimapPos",  label = "OPT_MINIMAP_POS", kind = "action", button = "OPT_BTN_CHANGE" },
 	},
 })
 

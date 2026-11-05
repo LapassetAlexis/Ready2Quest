@@ -25,15 +25,15 @@ do
 		and row.value.text:find("Moyen", 1, true), row and row.value.text)
 	local point = NS:DB().companionPoint
 	local x, y = point.x, point.y
-	row.plus:Click()
+	row:Step(1)
 	Check("[SIZE] « + » : Grand, cadre agrandi (1,3)", NS:DB().companionSize == 3 and frame:GetScale() == 1.3
 		and row.value.text:find("Grand", 1, true))
 	Check("[SIZE] position recalée : il reste au même endroit à l'écran", math.abs(point.x * 1.3 - x) < 0.01
 		and math.abs(point.y * 1.3 - y) < 0.01, point.x .. "," .. point.y)
-	row.plus:Click()
-	row.plus:Click()
+	row:Step(1)
+	row:Step(1)
 	Check("[SIZE] pas au-delà de Très grand (1,6)", NS:DB().companionSize == 4 and frame:GetScale() == 1.6)
-	for _ = 1, 5 do row.minus:Click() end
+	for _ = 1, 5 do row:Step(-1) end
 	Check("[SIZE] pas en deçà de Petit (0,8)", NS:DB().companionSize == 1 and frame:GetScale() == 0.8)
 	Check("[SIZE] repositionné : de retour au même endroit à l'écran", math.abs(point.x * 0.8 - x) < 0.01, point.x)
 

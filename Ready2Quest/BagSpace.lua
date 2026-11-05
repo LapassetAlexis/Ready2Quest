@@ -125,6 +125,12 @@ if ns.AddOptionPage then
 		rows = {
 			{ key = "bagspaceEnabled", label = "OPT_BAGSPACE_ENABLED", kind = "bool" },
 			{ key = "bagspaceFrame",   label = "OPT_BAGSPACE_FRAME",   kind = "bool" },
+			{ key = "bagspaceConfirm", kind = "note", text = "OPT_BAGSPACE_CONFIRM" },
+			{ header = "OPT_BAGSPACE_KEEP" },
+			{ key = "bagspaceKeep", kind = "note", text = function() return ns:BagSpaceListText("bagspaceKeep") end },
+			{ header = "OPT_BAGSPACE_DISCARD" },
+			{ key = "bagspaceDiscard", kind = "note", text = function() return ns:BagSpaceListText("bagspaceDiscard") end },
+			{ key = "bagspaceHint", kind = "note", small = true, text = "OPT_BAGSPACE_HINT" },
 		},
 	})
 end
@@ -703,9 +709,9 @@ ns.EXTRA_COMMANDS["garder"] = ListCommand(ns.BagSpaceToggleKeep)
 ns.EXTRA_COMMANDS["jeter-toujours"] = ListCommand(ns.BagSpaceToggleDiscard)
 
 -- ---------------------------------------------------------------------------
--- Page de réglages : la ligne de confirmation et les deux listes, sous les
--- interrupteurs. Options.lua ne sait construire que des réglages : on ajoute
--- ce bloc à la page une fois construite, au premier rafraîchissement.
+-- Page de réglages : la ligne de confirmation et les deux listes, en notes
+-- sous les interrupteurs (lignes `note` de la page, relues à chaque
+-- rafraîchissement des réglages)
 -- ---------------------------------------------------------------------------
 local function ListText(list)
 	local names = {}
@@ -719,50 +725,9 @@ local function ListText(list)
 	return text
 end
 
-function ns:BagSpaceRefreshPage()
-	local frame = self.optionsFrame
-	local page = frame and frame.pages and frame.pages.bagspace
-	if not page then return end
-	if not page.bagspaceBlock then
-		local y = page.contentBottom or -100
-		local width = page.GetWidth and page:GetWidth() or 360
-		local block = {}
-		local function Text(font, offset, height)
-			local fs = page:CreateFontString(nil, "OVERLAY", font)
-			fs:SetPoint("TOPLEFT", page, "TOPLEFT", 0, y - offset)
-			fs:SetWidth(width)
-			if height then fs:SetHeight(height) end
-			fs:SetJustifyH("LEFT")
-			return fs
-		end
-		block.confirm = Text(Theme.F_BODY, 0)
-		block.confirm:SetText(L.OPT_BAGSPACE_CONFIRM)
-		block.keepHeader = Text(Theme.F_SMALL, 26)
-		block.keepHeader:SetText(L.OPT_BAGSPACE_KEEP)
-		block.keepHeader:SetTextColor(Theme.GOLD_SOFT[1], Theme.GOLD_SOFT[2], Theme.GOLD_SOFT[3])
-		block.keep = Text(Theme.F_BODY, 42, 30)
-		block.discardHeader = Text(Theme.F_SMALL, 80)
-		block.discardHeader:SetText(L.OPT_BAGSPACE_DISCARD)
-		block.discardHeader:SetTextColor(Theme.GOLD_SOFT[1], Theme.GOLD_SOFT[2], Theme.GOLD_SOFT[3])
-		block.discard = Text(Theme.F_BODY, 96, 30)
-		block.hint = Text(Theme.F_SMALL, 134, 30)
-		block.hint:SetText(L.OPT_BAGSPACE_HINT)
-		block.hint:SetTextColor(0.55, 0.55, 0.55)
-		page.bagspaceBlock = block
-		page.contentBottom = y - 164
-	end
-	local db = self:DB()
-	page.bagspaceBlock.keep:SetText(ListText(ListOf(db, "bagspaceKeep")))
-	page.bagspaceBlock.discard:SetText(ListText(ListOf(db, "bagspaceDiscard")))
-end
-
-if type(ns.RefreshOptions) == "function" then
-	local baseRefresh = ns.RefreshOptions
-	function ns:RefreshOptions(...)
-		baseRefresh(self, ...)
-		local ok, err = pcall(self.BagSpaceRefreshPage, self)
-		if not ok and self.RecordError then self:RecordError("bagspace:options", err) end
-	end
+-- « bagspaceKeep » ou « bagspaceDiscard » : les noms, triés, bornés
+function ns:BagSpaceListText(key)
+	return ListText(ListOf(self:DB(), key))
 end
 
 -- ---------------------------------------------------------------------------

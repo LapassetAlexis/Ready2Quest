@@ -474,7 +474,7 @@ do
 	Check("[TRK] réglage « Masquer en combat »", rows.journalTrackerCombat and rows.journalTrackerCombat.label.text == "Masquer en combat")
 	Check("[TRK] action « Réinitialiser la position du suivi »", rows.journalTrackerReset
 		and rows.journalTrackerReset.label.text == "Réinitialiser la position du suivi")
-	Check("[TRK] la page tient dans le panneau", page.contentBottom >= NS.OPT_LAYOUT.contentLimit, page.contentBottom)
+	Check("[TRK] la page se voit en entier (défilement)", #NS:OptionsUnreachable(page.id) == 0, table.concat(NS:OptionsUnreachable(page.id), ", "))
 	rows.journalTracker:Click()
 	Check("[TRK] interrupteur coupé : suivi caché tout de suite", NS:DB().journalTracker == false and not tracker:IsShown())
 	rows.journalTracker:Click()

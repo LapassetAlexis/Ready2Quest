@@ -481,7 +481,7 @@ if ns.AddOptionPage then
 					ns:DB().companionPhotosAsked = value and "yes" or "no"
 				end },
 			{ key = "companionRecall", label = "OPT_MEM_RECALL", kind = "bool" },
-			{ key = "companionAlbum", label = "OPT_MEM_ALBUM", kind = "action" },
+			{ key = "companionAlbum", label = "OPT_MEM_ALBUM", kind = "action", button = "OPT_BTN_OPEN" },
 		},
 	})
 end

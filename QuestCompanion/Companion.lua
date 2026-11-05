@@ -161,9 +161,7 @@ local FR = {
 	COMP_CHATTER_DESC_4    = "Bavard : tout, et plus souvent.",
 	COMP_CHATTER_TIP       = "Bavardage : ce que ton compagnon te dit",
 	COMP_CHATTER_TIP_HINT  = "Molette ou boutons - / + pour changer. /qc compagnon muet le fait taire d'un coup.",
-	OPT_COMP_APPEARANCE    = "Apparence (clic pour changer)",
 	OPT_COMP_ORNAMENTS     = "ORNEMENTS",
-	OPT_COMP_LOCKED        = "%s (à débloquer : %s)",
 	COMP_DEFAULT_NAME      = "Brindille",
 	COMP_NEED_hunger       = "Faim",
 	COMP_NEED_energy       = "Énergie",
@@ -259,7 +257,6 @@ local FR = {
 	COMP_REWARD_LABEL      = "%s : %s",
 	OPT_COMP_FRAME         = "Cadre : %s",
 	OPT_COMP_BG            = "Fond : %s",
-	OPT_COMP_LOCKED_TIER   = "%s (palier %s)",
 	COMP_REQ_LEVEL         = "niveau %d",
 	COMP_REQ_zone          = "%d zones",
 	COMP_REQ_subzone       = "%d lieux",
@@ -271,6 +268,7 @@ local FR = {
 	COMP_REQ_missions      = "%d jours aux trois missions",
 	COMP_HOVER_HINT        = "Clic : un câlin · Maj + clic : friandises · clic droit : carnet · glisser : déplacer",
 	OPT_COMP_TUTO          = "Rejouer le tutoriel",
+	COMP_PREVIEW_LINE      = "%s  ·  %s",
 	COMP_TUTO_NEXT         = "Suivant",
 	COMP_TUTO_SKIP         = "Passer",
 	-- reste avant un déblocage (rappel d'objectif) : pluriel, puis singulier
@@ -334,9 +332,7 @@ local EN = {
 	COMP_CHATTER_DESC_4    = "Chatty: everything, and more often.",
 	COMP_CHATTER_TIP       = "Chattiness: what your companion tells you",
 	COMP_CHATTER_TIP_HINT  = "Mouse wheel or - / + buttons to change. /qc compagnon muet silences it at once.",
-	OPT_COMP_APPEARANCE    = "Appearance (click to change)",
 	OPT_COMP_ORNAMENTS     = "ORNAMENTS",
-	OPT_COMP_LOCKED        = "%s (unlock: %s)",
 	COMP_DEFAULT_NAME      = "Sprig",
 	COMP_NEED_hunger       = "Hunger",
 	COMP_NEED_energy       = "Energy",
@@ -431,7 +427,6 @@ local EN = {
 	COMP_REWARD_LABEL      = "%s: %s",
 	OPT_COMP_FRAME         = "Frame: %s",
 	OPT_COMP_BG            = "Background: %s",
-	OPT_COMP_LOCKED_TIER   = "%s (tier %s)",
 	COMP_REQ_LEVEL         = "level %d",
 	COMP_REQ_zone          = "%d zones",
 	COMP_REQ_subzone       = "%d places",
@@ -443,6 +438,7 @@ local EN = {
 	COMP_REQ_missions      = "%d days with all three missions",
 	COMP_HOVER_HINT        = "Click: a cuddle · Shift + click: treats · right-click: journal · drag: move",
 	OPT_COMP_TUTO          = "Replay the tutorial",
+	COMP_PREVIEW_LINE      = "%s  ·  %s",
 	COMP_TUTO_NEXT         = "Next",
 	COMP_TUTO_SKIP         = "Skip",
 	COMP_LEFT_zone         = "%d zones",
@@ -497,8 +493,11 @@ ns.RegisterDefaults({
 
 -- Un seul module « Compagnon de route » : le carnet de voyage le fait évoluer.
 -- Entrée parente (un interrupteur) et deux sous-pages : Compagnon, Carnet.
+-- L'aperçu (sous les onglets de toutes ses pages) : le compagnon tel qu'il
+-- apparaît, avec son cadre et son fond (CompanionPreview, plus bas)
 ns.AddOptionPage({ id = "companion", title = "OPT_PAGE_COMPANION", group = "OPT_GROUP_MODULES",
-	power = "companionEnabled", target = "companionMain" })
+	power = "companionEnabled", target = "companionMain",
+	preview = function(self, container) return self:CompanionPreview(container) end })
 ns.AddOptionPage({
 	id = "companionMain", title = "OPT_PAGE_COMPANION_MAIN", parent = "companion", group = "OPT_GROUP_MODULES",
 	rows = {
@@ -514,11 +513,21 @@ ns.AddOptionPage({
 			describe = function(value) return L["COMP_CHATTER_DESC_" .. value] end,
 			tooltip = function() return ns:CompanionChatterTooltip() end,
 			onChange = function(value) ns:CompanionOnChatterChanged(value) end },
-		{ key = "companionAppearance", label = "OPT_COMP_APPEARANCE", kind = "action" },
-		-- clic sur la ligne : style suivant ; pastilles : choix direct (voir CompanionRefreshPage)
-		{ key = "companionFrameStyle", label = "COMP_KIND_frame",     kind = "action" },
-		{ key = "companionBackground", label = "COMP_KIND_bg",        kind = "action" },
-		{ key = "companionTutorial",   label = "OPT_COMP_TUTO",       kind = "action" },
+		-- listes déroulantes : ce qui est gagné se choisit, le reste est grisé
+		-- avec sa condition (CompanionChoices) ; l'action garde le choix suivant
+		{ key = "companionAppearance", label = "COMP_KIND_app",       kind = "action",
+			choices = function() return ns:CompanionChoices("app") end,
+			current = function() return ns:CompanionCurrentAppearance().id end,
+			choose = function(id) ns:CompanionSetAppearance(id) end },
+		{ key = "companionFrameStyle", label = "COMP_KIND_frame",     kind = "action",
+			choices = function() return ns:CompanionChoices("frame") end,
+			current = function() return ns:CompanionCurrentStyle("frame").id end,
+			choose = function(id) ns:CompanionSetStyle("frame", id) end },
+		{ key = "companionBackground", label = "COMP_KIND_bg",        kind = "action",
+			choices = function() return ns:CompanionChoices("bg") end,
+			current = function() return ns:CompanionCurrentStyle("bg").id end,
+			choose = function(id) ns:CompanionSetStyle("bg", id) end },
+		{ key = "companionTutorial",   label = "OPT_COMP_TUTO",       kind = "action", button = "OPT_BTN_REPLAY" },
 	},
 })
 -- Ornements : sous-page à part (la page principale déborderait du panneau)
@@ -842,6 +851,16 @@ function ns:CompanionCycleAppearance()
 	self:CompanionApplyModel()
 	if self.RefreshOptions then self:RefreshOptions() end
 	return nextDef
+end
+
+-- Choix direct (liste des réglages) ; refusé (nil) si verrouillé
+function ns:CompanionSetAppearance(id)
+	local def = self:CompanionAppearanceDef(id)
+	if not (def and self:CompanionIsUnlocked("app", def)) then return nil end
+	self:CompanionData().appearance = def.id
+	self:CompanionApplyModel()
+	if self.RefreshOptions then self:RefreshOptions() end
+	return def
 end
 
 function ns:CompanionOrnamentShown(def)
@@ -2403,72 +2422,31 @@ if type(ns.ApplyDisplayOptions) == "function" then
 	end
 end
 
--- Pastilles de choix (cadre, fond) : une par style, à droite de la ligne.
--- Débloqué : couleurs du style, clic = choix. Verrouillé : estompé, le
--- numéro de palier dessus, l'infobulle dit « Palier 2 ».
-local SWATCH, SWATCH_GAP = 15, 4
-local STYLE_ROWS = { companionFrameStyle = "frame", companionBackground = "bg" }
-
-local function SwatchTooltip(swatch)
-	local tip = rawget(_G, "GameTooltip")
-	if not tip then return end
-	Method(tip, "SetOwner", swatch, "ANCHOR_RIGHT")
-	Method(tip, "ClearLines")
-	Method(tip, "AddLine", L[swatch.def.label])
-	local status = swatch.locked and ns:F("COMP_TIER", swatch.def.tier) or L.COMP_TIER_OWNED
-	Method(tip, "AddLine", status, 0.6, 0.6, 0.6)
-	Method(tip, "Show")
+-- Ce qui manque pour un cosmétique verrouillé : sa condition (« 10 zones »)
+-- s'il en a une, sinon son palier de coffre (« Palier 2 »)
+function ns:CompanionLockText(def)
+	if def.unlock and not Tiered(def) then return self:CompanionRequirement(def.unlock) end
+	return self:F("COMP_TIER", tostring(def.tier or "?"))
 end
 
-local function BuildSwatches(row, kind)
-	local list = kind == "frame" and ns.COMPANION_FRAMES or ns.COMPANION_BACKGROUNDS
-	row.swatches = {}
-	for index, def in ipairs(list) do
-		local swatch = CreateFrame("Button", nil, row)
-		swatch:SetSize(SWATCH, SWATCH)
-		swatch:SetPoint("RIGHT", row, "RIGHT", -4 - (#list - index) * (SWATCH + SWATCH_GAP), 0)
-		swatch.def, swatch.kind = def, kind
-		swatch.fill = Theme.Solid(swatch, "BACKGROUND", Theme.SURFACE, 1)
-		swatch.fill:SetAllPoints()
-		swatch.edge = Theme.Border(swatch, Theme.GOLD_DIM, 1, "BORDER")
-		swatch.selected = Theme.Border(swatch, Theme.GOLD, 1, "OVERLAY")
-		swatch.tier = swatch:CreateFontString(nil, "OVERLAY", Theme.F_SMALL)
-		swatch.tier:SetPoint("CENTER", swatch, "CENTER", 0, 0)
-		swatch.tier:SetText(tostring(def.tier or ""))
-		if kind == "frame" then
-			local c = def.backdrop and def.backdrop.color or def.edge
-			swatch.edge:SetColor(c[1], c[2], c[3], 1)
+-- Choix des listes déroulantes (apparence, cadre, fond) : ce qui est gagné
+-- d'abord, puis le reste, grisé, avec sa condition
+local CHOICE_LISTS = {
+	app = function() return ns.COMPANION_APPEARANCES end,
+	frame = function() return ns.COMPANION_FRAMES end,
+	bg = function() return ns.COMPANION_BACKGROUNDS end,
+}
+function ns:CompanionChoices(kind)
+	local open, locked = {}, {}
+	for _, def in ipairs(CHOICE_LISTS[kind]() or {}) do
+		if self:CompanionIsUnlocked(kind, def) then
+			open[#open + 1] = { value = def.id, label = L[def.label] }
 		else
-			local c = def.gradient and def.gradient.bottom or def.color
-			swatch.fill:SetVertexColor(c[1], c[2], c[3], 1)
+			locked[#locked + 1] = { value = def.id, label = L[def.label], disabled = true, hint = self:CompanionLockText(def) }
 		end
-		swatch:SetScript("OnClick", function(s)
-			if s.locked then return end
-			ns:CompanionSetStyle(s.kind, s.def.id)
-		end)
-		swatch:SetScript("OnEnter", SwatchTooltip)
-		swatch:SetScript("OnLeave", function()
-			local tip = rawget(_G, "GameTooltip")
-			if tip then Method(tip, "Hide") end
-		end)
-		row.swatches[index] = swatch
 	end
-end
-
-function ns:CompanionRefreshStyleRow(row, kind)
-	if not row.swatches then BuildSwatches(row, kind) end
-	local current = self:CompanionCurrentStyle(kind)
-	row.label:SetText(self:F(kind == "frame" and "OPT_COMP_FRAME" or "OPT_COMP_BG", Theme.T_GOLD .. tostring(L[current.label]) .. "|r"))
-	row.value:SetText("")
-	for _, swatch in ipairs(row.swatches) do
-		swatch.locked = not self:CompanionIsUnlocked(kind, swatch.def)
-		swatch:SetAlpha(swatch.locked and 0.35 or 1)
-		if swatch.locked then swatch.tier:Show() else swatch.tier:Hide() end
-		for _, side in ipairs({ "top", "bottom", "left", "right" }) do
-			if swatch.def.id == current.id then swatch.selected[side]:Show() else swatch.selected[side]:Hide() end
-		end
-		swatch:Show()
-	end
+	for _, entry in ipairs(locked) do open[#open + 1] = entry end
+	return open
 end
 
 -- Infobulle de la réglette : le cran choisi en tête, puis les cinq
@@ -2493,43 +2471,115 @@ function ns:CompanionOnChatterChanged(level)
 	return (self:CompanionSay("CHATTER_" .. level, { force = true, category = "tuto" }))
 end
 
+-- Ornements pas encore gagnés : la carte montre un verrou (sa condition ou
+-- son palier) à la place de l'interrupteur
 function ns:CompanionRefreshPage()
 	local frame = self.optionsFrame
 	if not (frame and frame.rows) then return end
 	self:CompanionChatterLevel()   -- cran déduit des anciens réglages avant le premier affichage
+	local ornaments = {}
+	for _, def in ipairs(ns.COMPANION_ORNAMENTS) do ornaments[def.key] = def end
 	for _, row in ipairs(frame.rows) do
-		local key = row.def and row.def.key
-		if key == "companionAppearance" then
-			row.value:SetWidth(170)
-			row.value:SetText(Theme.T_GOLD .. tostring(L[self:CompanionCurrentAppearance().label]) .. "|r")
-		elseif key and STYLE_ROWS[key] then
-			self:CompanionRefreshStyleRow(row, STYLE_ROWS[key])
-		elseif key then
-			for _, def in ipairs(ns.COMPANION_ORNAMENTS) do
-				if def.key == key then
-					if self:CompanionIsUnlocked("orn", def) then
-						row.label:SetText(L[def.label])
-						row.label:SetTextColor(0.86, 0.84, 0.78)
-						if row.toggle then row.toggle:SetAlpha(1) end
-					else
-						-- gagné au coffre : le palier ; sinon la condition
-						if def.unlock and not Tiered(def) then
-							row.label:SetText(self:F("OPT_COMP_LOCKED", L[def.label], self:CompanionRequirement(def.unlock)))
-						else
-							row.label:SetText(self:F("OPT_COMP_LOCKED_TIER", L[def.label], tostring(def.tier or "?")))
-						end
-						row.label:SetTextColor(0.45, 0.45, 0.45)
-						-- verrouillé : l'interrupteur n'a pas à paraître allumé (il ne
-						-- montre rien tant que l'ornement n'est pas gagné) — vu sur un rendu
-						if row.toggle then
-							row.toggle:SetChecked(false)
-							row.toggle:SetAlpha(0.35)
-						end
-					end
-				end
+		local def = row.def and ornaments[row.def.key]
+		if def and row.SetLocked then
+			if self:CompanionIsUnlocked("orn", def) then
+				row:SetLocked(nil)
+			else
+				row:SetLocked(self:CompanionLockText(def))
 			end
 		end
 	end
+end
+
+-- Aperçu des réglages : le compagnon dans son cadre et sur son fond (mêmes
+-- styles que le vrai cadre), son nom, son apparence et son stade
+function ns:CompanionPreview(container)
+	local SIZE = 76
+	local box = CreateFrame("Frame", nil, container)
+	box:SetSize(SIZE, SIZE)
+	box:SetPoint("LEFT", container, "LEFT", 14, 0)
+	box.bg = box:CreateTexture(nil, "BACKGROUND")
+	box.bg:SetPoint("TOPLEFT", box, "TOPLEFT", 1, -1)
+	box.bg:SetPoint("BOTTOMRIGHT", box, "BOTTOMRIGHT", -1, 1)
+	box.edge = Theme.Border(box, Theme.GOLD_SOFT, 1, "BORDER")
+	box.innerHolder = CreateFrame("Frame", nil, box)
+	box.innerHolder:SetPoint("TOPLEFT", box, "TOPLEFT", 3, -3)
+	box.innerHolder:SetPoint("BOTTOMRIGHT", box, "BOTTOMRIGHT", -3, 3)
+	box.inner = Theme.Border(box.innerHolder, Theme.GOLD_SOFT, 1, "BORDER")
+	box.border = CreateBackdropFrame(box)
+	if box.border then
+		box.border:SetPoint("TOPLEFT", box, "TOPLEFT", -4, 4)
+		box.border:SetPoint("BOTTOMRIGHT", box, "BOTTOMRIGHT", 4, -4)
+	end
+	box.model = CreateModel(box)
+	if box.model then
+		box.model:SetPoint("TOPLEFT", box, "TOPLEFT", 3, -3)
+		box.model:SetPoint("BOTTOMRIGHT", box, "BOTTOMRIGHT", -3, 3)
+	end
+	box.fallback = box:CreateTexture(nil, "ARTWORK")
+	box.fallback:SetTexture(Theme.LOGO_SMALL)
+	box.fallback:SetSize(44, 44)
+	box.fallback:SetPoint("CENTER", box, "CENTER", 0, 0)
+	container.box = box
+
+	container.name = Theme.Text(container, Theme.F_TITLE, Theme.PARCHMENT)
+	container.name:SetPoint("TOPLEFT", container, "TOPLEFT", SIZE + 34, -20)
+	container.line = Theme.Text(container, Theme.F_BODY, Theme.MUTED_LIGHT)
+	container.line:SetPoint("TOPLEFT", container.name, "BOTTOMLEFT", 0, -6)
+	container.style = Theme.Text(container, Theme.F_SMALL, Theme.MUTED)
+	container.style:SetPoint("TOPLEFT", container.line, "BOTTOMLEFT", 0, -6)
+
+	function container:Refresh(addon)
+		local app = addon:CompanionCurrentAppearance()
+		local frameDef, bgDef = addon:CompanionCurrentStyle("frame"), addon:CompanionCurrentStyle("bg")
+		local b = self.box
+		-- fond : texture recadrée, teinte, dégradé (comme CompanionApplyBackground)
+		local ok, result = pcall(b.bg.SetTexture, b.bg, bgDef.texture or Theme.SOLID)
+		if not ok or result == false then pcall(b.bg.SetTexture, b.bg, Theme.SOLID) end
+		if b.bg.SetTexCoord then
+			local c = bgDef.coords or { 0, 1, 0, 1 }
+			pcall(b.bg.SetTexCoord, b.bg, c[1], c[2], c[3], c[4])
+		end
+		SetColor(b.bg, bgDef.color or { 0, 0, 0, 0.66 })
+		if bgDef.gradient then ApplyGradient(b.bg, bgDef.gradient.top, bgDef.gradient.bottom) end
+		-- cadre : filet, second filet, bordure du client
+		local e = frameDef.edge or ns.COMPANION_FRAMES[1].edge
+		b.edge:SetColor(e[1], e[2], e[3], e[4] or 1)
+		if frameDef.inner then
+			b.inner:SetColor(frameDef.inner[1], frameDef.inner[2], frameDef.inner[3], frameDef.inner[4] or 1)
+			b.innerHolder:Show()
+		else
+			b.innerHolder:Hide()
+		end
+		local applied = false
+		if b.border and frameDef.backdrop and type(b.border.SetBackdrop) == "function" then
+			local d = frameDef.backdrop
+			applied = pcall(b.border.SetBackdrop, b.border, { edgeFile = d.file, edgeSize = d.size or 16,
+				insets = { left = 0, right = 0, top = 0, bottom = 0 } }) and true or false
+			if applied and d.color then Method(b.border, "SetBackdropBorderColor", d.color[1], d.color[2], d.color[3], d.color[4] or 1) end
+		end
+		if b.border then if applied then b.border:Show() else b.border:Hide() end end
+		-- la créature : son modèle, sinon la boussole
+		local shown = false
+		if b.model then
+			if app.display and type(b.model.SetDisplayInfo) == "function" then shown = pcall(b.model.SetDisplayInfo, b.model, app.display) end
+			if not shown and app.npc and type(b.model.SetCreature) == "function" then shown = pcall(b.model.SetCreature, b.model, app.npc) end
+			if shown then
+				Method(b.model, "SetCamDistanceScale", 1.6)
+				b.model:Show()
+			else
+				b.model:Hide()
+			end
+		end
+		if shown then b.fallback:Hide() else b.fallback:Show() end
+		b.usesFallback = not shown
+		self.name:SetText(addon:CompanionName())
+		self.line:SetText(addon:F("COMP_PREVIEW_LINE", tostring(L[app.label]), tostring(addon:CompanionStageLabel())))
+		self.style:SetText(addon:F("COMP_PREVIEW_LINE", addon:F("OPT_COMP_FRAME", tostring(L[frameDef.label])),
+			addon:F("OPT_COMP_BG", tostring(L[bgDef.label]))))
+	end
+	container:Refresh(self)
+	return container
 end
 
 if type(ns.RefreshOptions) == "function" then

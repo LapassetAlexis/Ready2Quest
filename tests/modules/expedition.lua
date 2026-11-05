@@ -280,7 +280,7 @@ do
 	local nav, page
 	for _, button in ipairs(o.navButtons) do if button.pageId == "expedition" then nav = button end end
 	page = o.pages.expedition
-	Check("[EXP] page de réglages avec interrupteur", nav ~= nil and nav.power ~= nil and page ~= nil)
+	Check("[EXP] page de réglages avec interrupteur", nav ~= nil and nav.powerKey == "expeditionEnabled" and page ~= nil)
 	Check("[EXP] page rangée dans MODULES, avant Marchand", (function()
 		local seen
 		for _, def in ipairs(NS.OPTION_PAGES) do
@@ -288,7 +288,7 @@ do
 			if def.id == "merchant" then return seen == true end
 		end
 	end)())
-	Check("[EXP] phrase d'explication", page and page.sub.text == NS.L.OPT_PAGE_EXPEDITION_SUB)
+	Check("[EXP] phrase d'explication", page and page.subText == NS.L.OPT_PAGE_EXPEDITION_SUB)
 	Check("[EXP] trois réglages sur la page", page and #page.rows == 3, page and #page.rows)
 	if nav then
 		nav.power:Click()
@@ -299,7 +299,7 @@ do
 	local minRow
 	for _, row in ipairs(page and page.rows or {}) do if row.def.key == "expeditionMinTrip" then minRow = row end end
 	if minRow then
-		minRow.plus:Click()
+		minRow:Step(1)
 		Check("[EXP] seuil réglable par pas de 30 s", NS:DB().expeditionMinTrip == 90, NS:DB().expeditionMinTrip)
 	end
 	o:Hide()

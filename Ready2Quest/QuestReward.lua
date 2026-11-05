@@ -42,6 +42,7 @@ local CHAT_RETRY = 0.1     -- secondes : laisser l'interface créer ses boutons
 -- ---------------------------------------------------------------------------
 local FR = {
 	OPT_PAGE_REWARD      = "La bonne récompense",
+	OPT_PAGE_REWARD_TAB  = "Récompense",
 	OPT_PAGE_REWARD_SUB  = "Au rendu d'une quête, la récompense qui te sert est mise en avant.",
 	OPT_REWARD_ENABLED   = "Conseiller une récompense",
 	OPT_REWARD_TOOLTIP   = "Montrer dans l'infobulle",
@@ -62,6 +63,7 @@ local FR = {
 }
 local EN = {
 	OPT_PAGE_REWARD      = "The right reward",
+	OPT_PAGE_REWARD_TAB  = "Reward",
 	OPT_PAGE_REWARD_SUB  = "When you turn in a quest, the reward that suits you stands out.",
 	OPT_REWARD_ENABLED   = "Suggest a reward",
 	OPT_REWARD_TOOLTIP   = "Show in the tooltip",
