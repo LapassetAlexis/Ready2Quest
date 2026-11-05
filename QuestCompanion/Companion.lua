@@ -1075,8 +1075,8 @@ function ns:CompanionSay(pool, opts)
 	self.companionBubblePrio = prio
 	self.companionBubbleUntil = now + (opts.duration or BUBBLE_TIME)
 	local tuto = category == "tuto"
-	bubble.text:SetText(text)
-	bubble:SetHeight(math.max(26, math.ceil(#text / 30) * 13 + 14) + (tuto and 22 or 0))
+	-- la bulle prend la hauteur du texte, plus la rangée de boutons du tutoriel
+	bubble:SetText(text, tuto and (Theme.DIALOG_BUTTON_HEIGHT or 28) or 0)
 	if bubble.nextButton then
 		if tuto then bubble.nextButton:Show(); bubble.skipButton:Show()
 		else bubble.nextButton:Hide(); bubble.skipButton:Hide() end
@@ -1390,13 +1390,18 @@ function ns:EnsureCompanionFrame()
 	frame.zzz:SetTextColor(Theme.BLUE[1], Theme.BLUE[2], Theme.BLUE[3])
 	frame.zzz:Hide()
 
-	frame.name = frame:CreateFontString(nil, "OVERLAY", Theme.F_BODY)
-	frame.name:SetPoint("BOTTOM", frame, "BOTTOM", 0, 18)
+	-- plaque du nom : le nom (F_LABEL) et l'humeur dessous, centrés sous le
+	-- modèle ; le cadre et le fond gagnés restent ceux de CompanionData.lua
+	frame.name = Theme.Text(frame, Theme.F_LABEL, Theme.PARCHMENT)
+	frame.name:SetPoint("BOTTOM", frame, "BOTTOM", 0, 19)
 	frame.name:SetWidth(FRAME_W - 8)
-	frame.name:SetTextColor(Theme.PARCHMENT[1], Theme.PARCHMENT[2], Theme.PARCHMENT[3])
-	frame.mood = frame:CreateFontString(nil, "OVERLAY", Theme.F_SMALL)
-	frame.mood:SetPoint("BOTTOM", frame, "BOTTOM", 0, 5)
+	frame.name:SetJustifyH("CENTER")
+	if frame.name.SetWordWrap then frame.name:SetWordWrap(false) end
+	frame.mood = Theme.Text(frame, Theme.F_SMALL, Theme.MUTED_LIGHT)
+	frame.mood:SetPoint("BOTTOM", frame, "BOTTOM", 0, 6)
 	frame.mood:SetWidth(FRAME_W - 8)
+	frame.mood:SetJustifyH("CENTER")
+	if frame.mood.SetWordWrap then frame.mood:SetWordWrap(false) end
 
 	frame.ornaments = BuildOrnaments(frame)
 
@@ -1432,29 +1437,23 @@ function ns:CompanionOpenJournal()
 	return self:ToggleJournal(true)
 end
 
+-- Bulle (docs/UI.md, « Carnet et compagnon ») : brique Theme.CreateBubble,
+-- au-dessus du cadre, à sa taille de lecture quelle que soit l'échelle du
+-- compagnon. Pendant le tutoriel : « Passer » au trait, « Suivant » plein.
+local BUBBLE_W = 220
 function ns:EnsureCompanionBubble()
 	if self.companionBubble then return self.companionBubble end
 	local frame = self.companionFrame
 	if not frame then return nil end
-	local bubble = Theme.CreateDiscreet(UIParent, 190, 28)
+	local bubble = Theme.CreateBubble and Theme.CreateBubble(UIParent, BUBBLE_W, { strata = "HIGH" })
 	if not bubble then return nil end
-	bubble:SetFrameStrata("HIGH")
-	bubble:SetPoint("BOTTOM", frame, "TOP", 0, 8)
-	bubble.bg:SetVertexColor(Theme.SURFACE[1], Theme.SURFACE[2], Theme.SURFACE[3], 0.92)
-	bubble.tail = Theme.CreateDiamond(bubble, 10)
-	bubble.tail:SetPoint("TOP", bubble, "BOTTOM", 0, 5)
-	bubble.tail:SetVertexColor(Theme.SURFACE[1], Theme.SURFACE[2], Theme.SURFACE[3], 0.92)
-	bubble.text = bubble:CreateFontString(nil, "OVERLAY", Theme.F_BODY)
-	bubble.text:SetPoint("TOPLEFT", bubble, "TOPLEFT", 8, -6)
-	bubble.text:SetWidth(174)
-	bubble.text:SetJustifyH("CENTER")
-	bubble.text:SetWordWrap(true)
-	-- tutoriel : « Suivant » et « Passer », visibles seulement pendant ses bulles
+	bubble:SetPoint("BOTTOM", frame, "TOP", 0, 12)
 	if Theme.CreateButton then
-		bubble.nextButton = Theme.CreateButton(bubble, 70, 16, L.COMP_TUTO_NEXT, function() ns:CompanionTutorialNext() end, "primary")
-		bubble.nextButton:SetPoint("BOTTOMRIGHT", bubble, "BOTTOMRIGHT", -8, 6)
-		bubble.skipButton = Theme.CreateButton(bubble, 70, 16, L.COMP_TUTO_SKIP, function() ns:CompanionSkipTutorial() end)
-		bubble.skipButton:SetPoint("BOTTOMLEFT", bubble, "BOTTOMLEFT", 8, 6)
+		local h = (Theme.DIALOG_BUTTON_HEIGHT or 28) - 6
+		bubble.nextButton = Theme.CreateButton(bubble, "auto", h, L.COMP_TUTO_NEXT, function() ns:CompanionTutorialNext() end, "primary")
+		bubble.nextButton:SetPoint("BOTTOMRIGHT", bubble, "BOTTOMRIGHT", -Theme.BUBBLE_PAD, Theme.BUBBLE_PAD)
+		bubble.skipButton = Theme.CreateButton(bubble, "auto", h, L.COMP_TUTO_SKIP, function() ns:CompanionSkipTutorial() end, "outline")
+		bubble.skipButton:SetPoint("BOTTOMLEFT", bubble, "BOTTOMLEFT", Theme.BUBBLE_PAD, Theme.BUBBLE_PAD)
 		bubble.nextButton:Hide()
 		bubble.skipButton:Hide()
 	end
@@ -1468,44 +1467,56 @@ end
 -- rafraîchissement, de haut en bas : une ligne qui passe à la ligne (le
 -- caractère, l'aide plus longue d'une langue) pousse la suite au lieu de la
 -- recouvrir, et le cadre prend la hauteur de son contenu.
-local HOVER_W, HOVER_PAD, HOVER_BAR_ROW = 200, 8, 15
-local function TextHeight(fontString, fallbackChars)
-	local height = fontString.GetStringHeight and tonumber(fontString:GetStringHeight()) or 0
-	if height and height > 0 then return height end
-	-- sans mesure (client ancien, banc de test) : une ligne de 12 px par tranche de texte
-	local text = tostring(fontString.GetText and fontString:GetText() or "")
-	return 12 * math.max(1, math.ceil(#text / fallbackChars))
+local HOVER_W, HOVER_PAD, HOVER_BAR_ROW = 220, 12, 18
+local HOVER_LABEL_W = 70
+-- texte posé de bord à bord de la fiche (après le liseré du bandeau)
+local function HoverTextWidth(hover) return HOVER_W - (hover.contentLeft or HOVER_PAD) - HOVER_PAD end
+local function TextHeight(fontString, font)
+	local hover = fontString and fontString.GetParent and fontString:GetParent()
+	return Theme.TextHeight(fontString, hover and HoverTextWidth(hover) or (HOVER_W - 2 * HOVER_PAD), font or Theme.F_SMALL)
 end
 ns.CompanionHoverTextHeight = TextHeight
 
+-- Fiche au survol : bandeau du thème (liseré ambre), le nom en F_TITLE, le
+-- stade et l'humeur, quatre envies en barres fines (libellé, barre, valeur),
+-- un filet, puis l'aide en pâle. Tout se place de haut en bas
+-- (CompanionLayoutHover) : le cadre prend la hauteur de son contenu.
 function ns:EnsureCompanionHover()
 	if self.companionHover then return self.companionHover end
 	local frame = self.companionFrame
 	if not frame then return nil end
-	local hover = Theme.CreateDiscreet(UIParent, HOVER_W, 118)
+	local hover = Theme.CreateToast(UIParent, HOVER_W, 118, { strata = "TOOLTIP" })
 	if not hover then return nil end
-	hover:SetFrameStrata("TOOLTIP")
-	hover:SetPoint("BOTTOMRIGHT", frame, "BOTTOMLEFT", -6, 0)
-	hover.title = Theme.CreateTitle(hover, 13)
-	hover.title:SetPoint("TOPLEFT", hover, "TOPLEFT", HOVER_PAD, -6)
-	hover.sub = hover:CreateFontString(nil, "OVERLAY", Theme.F_SMALL)
-	hover.sub:SetWidth(HOVER_W - 2 * HOVER_PAD)
+	hover:SetPoint("BOTTOMRIGHT", frame, "BOTTOMLEFT", -8, 0)
+	local left = hover.contentLeft or HOVER_PAD
+	local width = HoverTextWidth(hover)
+	hover.title = Theme.Text(hover, Theme.F_TITLE, Theme.PARCHMENT)
+	hover.title:SetPoint("TOPLEFT", hover, "TOPLEFT", left, -HOVER_PAD)
+	hover.title:SetWidth(width)
+	hover.title:SetJustifyH("LEFT")
+	if hover.title.SetWordWrap then hover.title:SetWordWrap(false) end
+	hover.sub = Theme.Text(hover, Theme.F_SMALL, Theme.MUTED_LIGHT)
+	hover.sub:SetWidth(width)
 	hover.sub:SetJustifyH("LEFT")
 	if hover.sub.SetWordWrap then hover.sub:SetWordWrap(true) end
 	hover.bars = {}
 	for _, key in ipairs(NEED_KEYS) do
-		local label = hover:CreateFontString(nil, "OVERLAY", Theme.F_SMALL)
+		local label = Theme.Text(hover, Theme.F_SMALL, Theme.LABEL)
+		label:SetJustifyH("LEFT")
 		label:SetText(L["COMP_NEED_" .. key])
-		local bar = Theme.CreateBar(hover, 100, 6)
+		local bar = Theme.CreateBar(hover, width - HOVER_LABEL_W - 36, 4)
 		bar.label = label
+		bar.value = Theme.Text(hover, Theme.F_SMALL, Theme.MUTED_LIGHT)
+		bar.value:SetJustifyH("RIGHT")
 		hover.bars[key] = bar
 	end
-	hover.hint = hover:CreateFontString(nil, "OVERLAY", Theme.F_SMALL)
-	hover.hint:SetWidth(HOVER_W - 2 * HOVER_PAD)
+	hover.rule = Theme.Solid(hover, "ARTWORK", Theme.EDGE_SOFT, 1)
+	hover.rule:SetSize(width, 1)
+	hover.hint = Theme.Text(hover, Theme.F_SMALL, Theme.MUTED)
+	hover.hint:SetWidth(width)
 	hover.hint:SetJustifyH("LEFT")
 	if hover.hint.SetWordWrap then hover.hint:SetWordWrap(true) end
 	hover.hint:SetText(L.COMP_HOVER_HINT)
-	hover.hint:SetTextColor(Theme.MUTED[1], Theme.MUTED[2], Theme.MUTED[3])
 	hover:Hide()
 	self.companionHover = hover
 	return hover
@@ -1515,24 +1526,31 @@ end
 function ns:CompanionLayoutHover()
 	local hover = self.companionHover
 	if not hover then return nil end
-	local y = -22
+	local left = hover.contentLeft or HOVER_PAD
+	local y = -HOVER_PAD - 20
 	hover.sub:ClearAllPoints()
-	hover.sub:SetPoint("TOPLEFT", hover, "TOPLEFT", HOVER_PAD, y)
-	y = y - TextHeight(hover.sub, 34) - 4
+	hover.sub:SetPoint("TOPLEFT", hover, "TOPLEFT", left, y)
+	hover.sub.top = y
+	y = y - TextHeight(hover.sub) - 10
 	for _, key in ipairs(NEED_KEYS) do
 		local bar = hover.bars[key]
 		bar.label:ClearAllPoints()
-		bar.label:SetPoint("TOPLEFT", hover, "TOPLEFT", HOVER_PAD, y)
+		bar.label:SetPoint("TOPLEFT", hover, "TOPLEFT", left, y)
 		bar:ClearAllPoints()
-		bar:SetPoint("TOPRIGHT", hover, "TOPRIGHT", -HOVER_PAD, y - 3)
+		bar:SetPoint("TOPLEFT", hover, "TOPLEFT", left + HOVER_LABEL_W, y - 5)
+		bar.value:ClearAllPoints()
+		bar.value:SetPoint("TOPRIGHT", hover, "TOPRIGHT", -HOVER_PAD, y)
 		bar.top = y
 		y = y - HOVER_BAR_ROW
 	end
 	y = y - 4
+	hover.rule:ClearAllPoints()
+	hover.rule:SetPoint("TOPLEFT", hover, "TOPLEFT", left, y)
+	y = y - 8
 	hover.hint:ClearAllPoints()
-	hover.hint:SetPoint("TOPLEFT", hover, "TOPLEFT", HOVER_PAD, y)
+	hover.hint:SetPoint("TOPLEFT", hover, "TOPLEFT", left, y)
 	hover.hint.top = y
-	local height = -y + TextHeight(hover.hint, 34) + 6
+	local height = math.ceil(-y + TextHeight(hover.hint) + HOVER_PAD)
 	hover:SetHeight(height)
 	hover.layoutHeight = height
 	return height
@@ -1544,9 +1562,15 @@ function ns:CompanionRefreshHover()
 	local data = self:CompanionData()
 	hover.title:SetText(self:CompanionName())
 	hover.sub:SetText(Theme.T_GOLD .. self:CompanionStageLabel() .. "|r · " .. tostring(L["COMP_MOOD_" .. self:CompanionMood()]))
+	local happyMin = HAPPY_MIN
 	for _, key in ipairs(NEED_KEYS) do
 		local bar = hover.bars[key]
-		bar:SetValue(data.needs[key] / NEED_MAX)
+		local value = tonumber(data.needs[key]) or 0
+		bar:SetValue(value / NEED_MAX)
+		-- comblée (compte pour son bonheur) : ambre ; sinon gris
+		local c = value >= happyMin and Theme.GOLD or Theme.MUTED_LIGHT
+		bar:SetColor(c[1], c[2], c[3], 1)
+		bar.value:SetText(math.floor(value + 0.5) .. " %")
 	end
 	self:CompanionLayoutHover()
 end
@@ -1622,7 +1646,7 @@ function ns:CompanionRefreshLabels()
 	local frame = self.companionFrame
 	if not frame then return end
 	frame.name:SetText(self:CompanionName())
-	frame.mood:SetText(Theme.T_GREY .. tostring(L["COMP_MOOD_" .. self:CompanionMood()]) .. "|r")
+	frame.mood:SetText(tostring(L["COMP_MOOD_" .. self:CompanionMood()]))
 end
 
 function ns:CompanionApplyOrnaments()
@@ -2491,13 +2515,14 @@ function ns:CompanionRefreshPage()
 	end
 end
 
--- Aperçu des réglages : le compagnon dans son cadre et sur son fond (mêmes
--- styles que le vrai cadre), son nom, son apparence et son stade
-function ns:CompanionPreview(container)
-	local SIZE = 76
-	local box = CreateFrame("Frame", nil, container)
-	box:SetSize(SIZE, SIZE)
-	box:SetPoint("LEFT", container, "LEFT", 14, 0)
+-- Portrait : le compagnon dans son cadre et sur son fond gagnés (mêmes
+-- styles que le vrai cadre : filet, second filet, bordure du client, fond,
+-- dégradé). Carré de `size` px ; box:Refresh(addon) le met à jour. Sert à
+-- l'aperçu des réglages et à la page Créature du carnet.
+function ns:CompanionPortrait(parent, size)
+	size = size or 76
+	local box = CreateFrame("Frame", nil, parent)
+	box:SetSize(size, size)
 	box.bg = box:CreateTexture(nil, "BACKGROUND")
 	box.bg:SetPoint("TOPLEFT", box, "TOPLEFT", 1, -1)
 	box.bg:SetPoint("BOTTOMRIGHT", box, "BOTTOMRIGHT", -1, 1)
@@ -2518,8 +2543,63 @@ function ns:CompanionPreview(container)
 	end
 	box.fallback = box:CreateTexture(nil, "ARTWORK")
 	box.fallback:SetTexture(Theme.LOGO_SMALL)
-	box.fallback:SetSize(44, 44)
+	box.fallback:SetSize(math.floor(size * 0.58), math.floor(size * 0.58))
 	box.fallback:SetPoint("CENTER", box, "CENTER", 0, 0)
+
+	function box:Refresh(addon)
+		local app = addon:CompanionCurrentAppearance()
+		local frameDef, bgDef = addon:CompanionCurrentStyle("frame"), addon:CompanionCurrentStyle("bg")
+		-- fond : texture recadrée, teinte, dégradé (comme CompanionApplyBackground)
+		local ok, result = pcall(self.bg.SetTexture, self.bg, bgDef.texture or Theme.SOLID)
+		if not ok or result == false then pcall(self.bg.SetTexture, self.bg, Theme.SOLID) end
+		if self.bg.SetTexCoord then
+			local c = bgDef.coords or { 0, 1, 0, 1 }
+			pcall(self.bg.SetTexCoord, self.bg, c[1], c[2], c[3], c[4])
+		end
+		SetColor(self.bg, bgDef.color or { 0, 0, 0, 0.66 })
+		if bgDef.gradient then ApplyGradient(self.bg, bgDef.gradient.top, bgDef.gradient.bottom) end
+		-- cadre : filet, second filet, bordure du client
+		local e = frameDef.edge or ns.COMPANION_FRAMES[1].edge
+		self.edge:SetColor(e[1], e[2], e[3], e[4] or 1)
+		if frameDef.inner then
+			self.inner:SetColor(frameDef.inner[1], frameDef.inner[2], frameDef.inner[3], frameDef.inner[4] or 1)
+			self.innerHolder:Show()
+		else
+			self.innerHolder:Hide()
+		end
+		local applied = false
+		if self.border and frameDef.backdrop and type(self.border.SetBackdrop) == "function" then
+			local d = frameDef.backdrop
+			applied = pcall(self.border.SetBackdrop, self.border, { edgeFile = d.file, edgeSize = d.size or 16,
+				insets = { left = 0, right = 0, top = 0, bottom = 0 } }) and true or false
+			if applied and d.color then Method(self.border, "SetBackdropBorderColor", d.color[1], d.color[2], d.color[3], d.color[4] or 1) end
+		end
+		if self.border then if applied then self.border:Show() else self.border:Hide() end end
+		-- la créature : son modèle, sinon la boussole
+		local shown = false
+		if self.model then
+			if app.display and type(self.model.SetDisplayInfo) == "function" then shown = pcall(self.model.SetDisplayInfo, self.model, app.display) end
+			if not shown and app.npc and type(self.model.SetCreature) == "function" then shown = pcall(self.model.SetCreature, self.model, app.npc) end
+			if shown then
+				Method(self.model, "SetCamDistanceScale", 1.6)
+				self.model:Show()
+			else
+				self.model:Hide()
+			end
+		end
+		if shown then self.fallback:Hide() else self.fallback:Show() end
+		self.usesFallback = not shown
+		return app, frameDef, bgDef
+	end
+	return box
+end
+
+-- Aperçu des réglages : le portrait, son nom, son apparence et son stade,
+-- son cadre et son fond
+function ns:CompanionPreview(container)
+	local SIZE = 76
+	local box = self:CompanionPortrait(container, SIZE)
+	box:SetPoint("LEFT", container, "LEFT", 14, 0)
 	container.box = box
 
 	container.name = Theme.Text(container, Theme.F_TITLE, Theme.PARCHMENT)
@@ -2530,49 +2610,7 @@ function ns:CompanionPreview(container)
 	container.style:SetPoint("TOPLEFT", container.line, "BOTTOMLEFT", 0, -6)
 
 	function container:Refresh(addon)
-		local app = addon:CompanionCurrentAppearance()
-		local frameDef, bgDef = addon:CompanionCurrentStyle("frame"), addon:CompanionCurrentStyle("bg")
-		local b = self.box
-		-- fond : texture recadrée, teinte, dégradé (comme CompanionApplyBackground)
-		local ok, result = pcall(b.bg.SetTexture, b.bg, bgDef.texture or Theme.SOLID)
-		if not ok or result == false then pcall(b.bg.SetTexture, b.bg, Theme.SOLID) end
-		if b.bg.SetTexCoord then
-			local c = bgDef.coords or { 0, 1, 0, 1 }
-			pcall(b.bg.SetTexCoord, b.bg, c[1], c[2], c[3], c[4])
-		end
-		SetColor(b.bg, bgDef.color or { 0, 0, 0, 0.66 })
-		if bgDef.gradient then ApplyGradient(b.bg, bgDef.gradient.top, bgDef.gradient.bottom) end
-		-- cadre : filet, second filet, bordure du client
-		local e = frameDef.edge or ns.COMPANION_FRAMES[1].edge
-		b.edge:SetColor(e[1], e[2], e[3], e[4] or 1)
-		if frameDef.inner then
-			b.inner:SetColor(frameDef.inner[1], frameDef.inner[2], frameDef.inner[3], frameDef.inner[4] or 1)
-			b.innerHolder:Show()
-		else
-			b.innerHolder:Hide()
-		end
-		local applied = false
-		if b.border and frameDef.backdrop and type(b.border.SetBackdrop) == "function" then
-			local d = frameDef.backdrop
-			applied = pcall(b.border.SetBackdrop, b.border, { edgeFile = d.file, edgeSize = d.size or 16,
-				insets = { left = 0, right = 0, top = 0, bottom = 0 } }) and true or false
-			if applied and d.color then Method(b.border, "SetBackdropBorderColor", d.color[1], d.color[2], d.color[3], d.color[4] or 1) end
-		end
-		if b.border then if applied then b.border:Show() else b.border:Hide() end end
-		-- la créature : son modèle, sinon la boussole
-		local shown = false
-		if b.model then
-			if app.display and type(b.model.SetDisplayInfo) == "function" then shown = pcall(b.model.SetDisplayInfo, b.model, app.display) end
-			if not shown and app.npc and type(b.model.SetCreature) == "function" then shown = pcall(b.model.SetCreature, b.model, app.npc) end
-			if shown then
-				Method(b.model, "SetCamDistanceScale", 1.6)
-				b.model:Show()
-			else
-				b.model:Hide()
-			end
-		end
-		if shown then b.fallback:Hide() else b.fallback:Show() end
-		b.usesFallback = not shown
+		local app, frameDef, bgDef = self.box:Refresh(addon)
 		self.name:SetText(addon:CompanionName())
 		self.line:SetText(addon:F("COMP_PREVIEW_LINE", tostring(L[app.label]), tostring(addon:CompanionStageLabel())))
 		self.style:SetText(addon:F("COMP_PREVIEW_LINE", addon:F("OPT_COMP_FRAME", tostring(L[frameDef.label])),

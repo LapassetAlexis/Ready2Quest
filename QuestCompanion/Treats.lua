@@ -374,49 +374,54 @@ end
 -- ---------------------------------------------------------------------------
 -- Menu du garde-manger : Maj + clic sur la créature
 -- ---------------------------------------------------------------------------
-local BTN, GAP = 34, 6
+-- Bandeau du thème (liseré ambre) au-dessus de la créature : le titre en
+-- capitales, une case par friandise (icône, nombre, filet ambre au survol)
+local BTN, GAP, PAD = 34, 8, 10
 
 function ns:EnsureTreatMenu()
 	if self.treatMenu then return self.treatMenu end
 	local parent = self.companionFrame
 	if not parent then return nil end
-	local width = #KINDS * (BTN + GAP) + GAP
-	local ok, menu = pcall(CreateFrame, "Frame", "QuestCompanionTreatMenu", parent, "BackdropTemplate")
-	if not ok or not menu then ok, menu = pcall(CreateFrame, "Frame", "QuestCompanionTreatMenu", parent) end
+	local ok, menu = pcall(CreateFrame, "Frame", "QuestCompanionTreatMenu", parent)
 	if not ok or not menu then return nil end
-	menu:SetSize(width, BTN + 30)
-	menu:SetPoint("BOTTOM", parent, "TOP", 0, 26)
-	if menu.SetBackdrop then
-		pcall(menu.SetBackdrop, menu, { bgFile = Theme.SOLID, edgeFile = "Interface\\Tooltips\\UI-Tooltip-Border",
-			edgeSize = 12, insets = { left = 3, right = 3, top = 3, bottom = 3 } })
-		pcall(menu.SetBackdropColor, menu, Theme.SURFACE[1], Theme.SURFACE[2], Theme.SURFACE[3], 0.95)
-		pcall(menu.SetBackdropBorderColor, menu, Theme.GOLD_SOFT[1], Theme.GOLD_SOFT[2], Theme.GOLD_SOFT[3], 1)
-	end
+	Theme.SkinToast(menu, { alpha = 0.96 })
+	local left = menu.contentLeft or PAD
+	local width = left + #KINDS * (BTN + GAP) - GAP + PAD
+	menu:SetSize(width, PAD + 14 + 8 + BTN + PAD)
+	menu:SetPoint("BOTTOM", parent, "TOP", 0, 14)
 	if menu.SetFrameStrata then menu:SetFrameStrata("DIALOG") end
-	menu.title = menu:CreateFontString(nil, "OVERLAY", Theme.F_SMALL)
-	menu.title:SetPoint("TOP", menu, "TOP", 0, -5)
-	menu.title:SetText(L.TREAT_MENU_TITLE)
+	if menu.SetClampedToScreen then menu:SetClampedToScreen(true) end
+	menu.title = Theme.Text(menu, Theme.F_CAPS, Theme.MUTED_LIGHT)
+	menu.title:SetPoint("TOPLEFT", menu, "TOPLEFT", left, -PAD)
+	menu.title:SetJustifyH("LEFT")
+	menu.title:SetText(Theme.Upper(L.TREAT_MENU_TITLE))
 	menu.buttons = {}
 	for index, kind in ipairs(KINDS) do
 		local button = CreateFrame("Button", nil, menu)
 		button:SetSize(BTN, BTN)
-		button:SetPoint("BOTTOMLEFT", menu, "BOTTOMLEFT", GAP + (index - 1) * (BTN + GAP), GAP)
+		button:SetPoint("BOTTOMLEFT", menu, "BOTTOMLEFT", left + (index - 1) * (BTN + GAP), PAD)
+		button.border = Theme.Border(button, Theme.EDGE, 1)
 		button.icon = button:CreateTexture(nil, "ARTWORK")
-		button.icon:SetAllPoints()
+		button.icon:SetPoint("TOPLEFT", button, "TOPLEFT", 1, -1)
+		button.icon:SetPoint("BOTTOMRIGHT", button, "BOTTOMRIGHT", -1, 1)
 		button.icon:SetTexture(ICONS[kind])
-		button.count = button:CreateFontString(nil, "OVERLAY", Theme.F_NUMBER)
-		button.count:SetPoint("BOTTOMRIGHT", button, "BOTTOMRIGHT", -1, 1)
+		button.count = Theme.Text(button, Theme.F_NUMBER, Theme.PARCHMENT)
+		button.count:SetPoint("BOTTOMRIGHT", button, "BOTTOMRIGHT", -2, 2)
 		button.kind = kind
 		button:SetScript("OnClick", function(b) ns:TreatGive(b.kind) end)
 		button:SetScript("OnEnter", function(b)
+			b.border:SetColor(Theme.GOLD[1], Theme.GOLD[2], Theme.GOLD[3], 1)
 			if not GameTooltip then return end
 			GameTooltip:SetOwner(b, "ANCHOR_TOP")
-			GameTooltip:SetText(ns:TreatLabel(b.kind))
-			GameTooltip:AddLine(L["TREAT_DESC_" .. b.kind], 1, 1, 1, true)
-			GameTooltip:AddLine(ns:F("TREAT_COUNT", ns:TreatCount(b.kind), ns:TreatCap(b.kind)), 0.49, 0.51, 0.54)
+			Theme.TooltipTitle(GameTooltip, ns:TreatLabel(b.kind))
+			Theme.TooltipLine(GameTooltip, L["TREAT_DESC_" .. b.kind], Theme.TEXT, true)
+			Theme.TooltipHint(GameTooltip, ns:F("TREAT_COUNT", ns:TreatCount(b.kind), ns:TreatCap(b.kind)))
 			GameTooltip:Show()
 		end)
-		button:SetScript("OnLeave", function() if GameTooltip then GameTooltip:Hide() end end)
+		button:SetScript("OnLeave", function(b)
+			b.border:SetColor(Theme.EDGE[1], Theme.EDGE[2], Theme.EDGE[3], 1)
+			if GameTooltip then GameTooltip:Hide() end
+		end)
 		menu.buttons[kind] = button
 	end
 	menu:Hide()

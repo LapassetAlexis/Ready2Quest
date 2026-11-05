@@ -199,8 +199,10 @@ do
 		"Lanterne 18/25 villages | Atteins le niveau 30 27/30 | Feu follet — donjons 1/2 | Villages de Les Tarides 1/3",
 		K.Lines())
 	local line, second = tracker.lines[1], tracker.lines[2]
-	Check("[TRK] vedette : fond, filet ambre, losange plein, grande barre", line.featured and line.bg and line.accent
-		and line.diamond.texture == NS.Theme.DIAMOND and line.bar.height == 5
+	Check("[TRK] vedette : bandeau du thème (fond WINDOW, liseré ambre), losange plein, grande barre", line.featured
+		and line.chrome == "toast" and line.bg.vertex[1] == NS.Theme.WINDOW[1] and line.accent:IsShown()
+		and line.accent.vertex[1] == NS.Theme.GOLD[1] and line.diamond.texture == NS.Theme.DIAMOND
+		and line.bar.height > second.bar.height
 		and math.abs(line.bar.ratio - 18 / 25) < 1e-6, line.bar and line.bar.ratio)
 	Check("[TRK] secondaires : losange en trait, mini-barre, progression grisée", not second.featured
 		and second.diamond.texture == NS.Theme.DIAMOND_LINE and second.bar.height == 3
