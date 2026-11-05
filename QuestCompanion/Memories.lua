@@ -227,7 +227,10 @@ function ns:MemoryWantPhoto(memory)
 		-- jamais demandé, ou « Plus tard » depuis assez longtemps : on demande
 		local asked = db.companionPhotosAsked
 		local laterOk = asked == "later" and Clock() - (self:MemoryState().askedAt or -math.huge) >= ns.MEMORY_ASK_AGAIN
-		if asked == nil or laterOk then self:MemoryAsk(memory) end
+		-- « asking » sans question ouverte dans cette session (/reload, déconnexion
+		-- pendant la question) : on redemande, sinon elle ne reviendrait jamais
+		local lost = asked == "asking" and self:MemoryState().askedAt == nil
+		if asked == nil or laterOk or lost then self:MemoryAsk(memory) end
 		return false
 	end
 	if self:MemoryPhotosToday().count >= ns.MEMORY_PHOTO_PER_DAY then return false end

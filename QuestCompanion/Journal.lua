@@ -42,6 +42,7 @@ ns.JOURNAL_MILESTONES = MILESTONES
 local TOAST_SECONDS = 4
 local TOAST_COLLAPSE = 3      -- à partir de 3 tampons en attente : un seul bandeau groupé
 local RARE_MEMORY = 900       -- un rare vu et jamais engagé est oublié après 15 min
+local RARE_ENGAGED_MEMORY = 1800 -- engagé puis laissé (fuite, évitement) : oublié après 30 min sans coup
 
 -- ---------------------------------------------------------------------------
 -- Chaînes, réglages, page d'options, module
@@ -397,7 +398,8 @@ function ns:JournalSeeUnit(unit)
 	self.journalRares[guid] = rare
 	-- ménage : un rare croisé sans combat ne reste pas en mémoire
 	for other, entry in pairs(self.journalRares) do
-		if not entry.engaged and now - (entry.seen or now) > RARE_MEMORY then self.journalRares[other] = nil end
+		local memory = entry.engaged and RARE_ENGAGED_MEMORY or RARE_MEMORY
+		if now - (entry.seen or now) > memory then self.journalRares[other] = nil end
 	end
 end
 
@@ -426,7 +428,7 @@ function ns:JournalCombat(subevent, sourceGUID, sourceFlags, destGUID)
 			self.journalRares[destGUID] = nil
 			if ModuleOn() then self:JournalEarn("rare", NpcID(destGUID) or rare.name, rare.name) end
 		elseif subevent:find("_DAMAGE$") or subevent:find("_MISSED$") then
-			rare.engaged = true
+			rare.engaged, rare.seen = true, ns.Now()
 		end
 	end
 end

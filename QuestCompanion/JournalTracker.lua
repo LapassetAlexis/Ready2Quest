@@ -651,7 +651,8 @@ end
 
 -- Ceux du suivi : non masqués, les TRACKER_MAX premiers
 -- La complétion de la zone affichée remplace ses parts (villages, bestiaire,
--- nommés de cette zone) : elles restent dans l'onglet Objectifs.
+-- nommés de cette zone) : elles restent dans la liste des objectifs
+-- (JournalObjectives), et dans l'onglet Zone du carnet.
 -- Une zone décochée sort du suivi avec toutes ses parts.
 local ZONE_PART_PREFIX = { "villages:", "bestiary:", "named:" }
 function ns:JournalTrackerObjectives()
@@ -678,7 +679,8 @@ function ns:JournalTrackerObjectives()
 	return shown
 end
 
--- Lignes de l'onglet « Objectifs » de la fenêtre (Journal.lua)
+-- Les objectifs en lignes { name, earned, goal, detail } (l'ancien onglet
+-- « Objectifs » du carnet ; gardé pour les extensions qui l'utilisent)
 function ns:JournalGoalItems()
 	local items = {}
 	for _, goal in ipairs(self:JournalObjectives()) do

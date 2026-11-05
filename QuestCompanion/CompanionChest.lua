@@ -2,10 +2,11 @@
 --
 -- Règle voulue par le joueur :
 --   * une zone finie à 100 % (complétion du carnet, au moins deux parts :
---     villages, bestiaire, nommés, récolte) ouvre un coffre ;
+--     villages, bestiaire, nommés, récolte, quêtes) ouvre un coffre ;
 --   * le coffre propose les cosmétiques du PALIER de la zone (1 = zones 1-19,
 --     2 = 20-39, 3 = 40-60) encore verrouillés : le joueur en CHOISIT un ;
---   * palier épuisé : la zone devient « dorée » (un tampon d'honneur, sans objet).
+--   * palier épuisé : la zone devient « dorée » (un tampon d'honneur ; depuis la
+--     1.1.0, un Festin et deux friandises, Treats.lua).
 -- Plus la zone est haute, plus l'objet est beau : c'est le palier qui le dit
 -- (champ `tier` des cosmétiques, CompanionData.lua).
 --

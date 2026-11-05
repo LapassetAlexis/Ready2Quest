@@ -14,7 +14,7 @@
 --     friandises au hasard, au lieu de rien ;
 --   * à la mise à jour, les paliers déjà franchis sont rattrapés une fois,
 --     avec une seule bulle de résumé ;
---   * Gourmande : chaque friandise remonte aussi le moral (double plaisir).
+--   * Gourmand : chaque friandise remonte aussi le moral (double plaisir).
 local ADDON, ns = ...
 if ns.blocked then return end
 local L = ns.L
@@ -78,11 +78,11 @@ ns.TREAT_STRINGS = { fr = FR, en = EN }
 local P = {
 	TREAT_GOT = {   -- %s = la friandise
 		{ "Hop, au garde-manger : %s !", "Into the pantry: %s!" },
-		{ "Ooh, %s ! Je la garde pour plus tard.", "Ooh, %s! I'm saving it for later." },
-		{ "%s ! Merci, je la range.", "%s! Thanks, I'll put it away." },
+		{ "Ooh, %s ! Je garde ça pour plus tard.", "Ooh, %s! I'm saving it for later." },
+		{ "%s ! Merci, je range ça.", "%s! Thanks, I'll put it away." },
 	},
 	TREAT_FULL = {  -- %s = la friandise
-		{ "Plus de place pour : %s… tant pis, je la mange !", "No room left for: %s… oh well, I'll eat it!" },
+		{ "Plus de place pour : %s… tant pis, je mange ça !", "No room left for: %s… oh well, I'll eat it!" },
 		{ "Garde-manger plein ! %s ? Hop, dans le ventre.", "Pantry's full! %s? Straight into my tummy." },
 	},
 	TREAT_EAT_biscuit = {
@@ -90,7 +90,7 @@ local P = {
 		{ "Mmmh, un biscuit de voyage. Le meilleur.", "Mmm, a travel biscuit. The best." },
 	},
 	TREAT_EAT_infusion = {
-		{ "Ahhh… je me sens toute neuve.", "Ahhh… I feel brand new." },
+		{ "Ahhh… je me sens tout neuf.", "Ahhh… I feel brand new." },
 		{ "Une petite infusion, et c'est reparti !", "A little tea, and off we go again!" },
 	},
 	TREAT_EAT_bonbon = {
@@ -102,7 +102,7 @@ local P = {
 		{ "Ooh, une carte au trésor ! Mon flair s'éveille.", "Ooh, a treasure map! My nose is tingling." },
 	},
 	TREAT_EAT_festin = {
-		{ "UN FESTIN ! Pour moi toute seule ?!", "A FEAST! All for me?!" },
+		{ "UN FESTIN ! Pour moi tout seul ?!", "A FEAST! All for me?!" },
 		{ "Le plus beau jour de ma vie. Miam.", "Best day of my life. Yum." },
 	},
 	TREAT_SNIFF = { -- %s = ce qui reste (une part de la complétion)
@@ -118,7 +118,7 @@ local P = {
 	TREAT_GOLDEN = {
 		{ "Un coffre doré ? Pour moi, c'est un festin !", "A golden chest? For me, that's a feast!" },
 	},
-	-- Gourmande : le double plaisir (variantes du caractère)
+	-- Gourmand : le double plaisir (variantes du caractère)
 	TREAT_EAT_biscuit__glutton = {
 		{ "Encore ! ENCORE ! …Bon, merci.", "More! MORE! …OK, thank you." },
 		{ "Croc, croc, croc. J'adore manger.", "Crunch, crunch, crunch. I love eating." },

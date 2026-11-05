@@ -321,7 +321,7 @@ T.sly = {
 	KILL = { { "Sss… il n'a rien vu venir.", "Sss… it never saw it coming." },
 		{ "Proprement fait. Fouille-le, vite.", "Cleanly done. Search it, quick." } },
 	DEAD = { { "Sss… pas prévu, ça. On changera de plan.", "Sss… didn't plan that. We'll change tactics." } },
-	REZ = { { "Te revoilà. On revient par derrière, cette fois.", "You're back. We come from behind this time." } },
+	REZ = { { "Te revoilà. On revient par-derrière, cette fois.", "You're back. We come from behind this time." } },
 	EAT = { { "Mange. Un ventre vide fait de mauvais calculs.", "Eat. An empty stomach makes bad plans." } },
 	VIEW = { { "Nouvelle zone… repère les sorties. Toujours.", "New zone… spot the exits. Always." },
 		{ "Sss… il y a sûrement des trésors cachés par ici.", "Sss… there must be hidden treasures here." } },

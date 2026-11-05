@@ -209,6 +209,8 @@ end
 -- ---------------------------------------------------------------------------
 function ns:AdviceSeeUnit(unit)
 	if not unit or self:InInstance() then return false end
+	-- en combat, le prévenir ne sert plus (et la bulle tomberait après, sur un cadavre)
+	if InCombat() then return false end
 	if not Call(rawget(_G, "UnitExists"), unit) or Call(rawget(_G, "UnitIsDead"), unit) then return false end
 	if not Call(rawget(_G, "UnitCanAttack"), "player", unit) then return false end
 	local class = Call(rawget(_G, "UnitClassification"), unit)

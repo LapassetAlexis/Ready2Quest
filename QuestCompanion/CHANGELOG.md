@@ -9,9 +9,20 @@
   - **le bébé hippogriffe**, à 50 créatures brillantes.
 - **Deux nouveaux caractères**, apportés par leur apparence (comme la chouette ou le serpent) : le poulet **Peureux** (il sursaute de tout, le dit quand un combat tape fort, adore les auberges) et l'écureuil mécanique **Bricoleur** (il démonte, répare et invente). Chacun a ses répliques, sa mission du jour et sa remarque.
 - L'onglet **Jour** du carnet dit où tu en es : cartes d'auberge pleines, jours aux trois missions, et ce qu'ils rapportent.
+- **Relecture complète du code**, correctifs :
+  - le niveau gagné est de nouveau dit au cran Calme de la réglette Bavardage, comme promis ;
+  - prête à évoluer, la créature ne dit plus « encore 2 niveaux » quand ce sont des envies qui manquent ;
+  - le repos ou un repas qui comble la dernière envie la fait évoluer tout de suite ;
+  - un élite repéré en plein combat n'est plus annoncé après, sur son cadavre ;
+  - un rare engagé puis laissé (fuite, évitement) est oublié au bout de 30 min, comme pour le bestiaire ;
+  - l'aubergiste est reconnu aussi par la nouvelle interface de dialogue ;
+  - la mission « +3 % » s'affiche correctement en anglais ; « parle à N personnes » compte chaque PNJ une fois ;
+  - la question des photos revient si elle a été coupée par un rechargement ;
+  - dans le carnet : le rang « normal » est écrit dans l'aperçu, la dernière rangée de fiches ne passe plus sous le défilement, la Collection défile à la molette ;
+  - textes : astuces et tutoriel à jour (les apparences viennent des coffres de zone), quelques fautes (accords, « par-derrière », « plus rapide qu'à pied »), « Étouffante » pour l'herbe Stranglekelp.
 - **Correctif** : dans la fiche qui s'affiche au survol de la créature, l'aide en gris passait sous les barres des envies. La fiche se met maintenant en page de haut en bas et prend la hauteur de son contenu. Elle est aussi un peu plus large, pour le caractère.
 
-*English:* nine new creatures, each with the same model on Era and Forever: six in zone chests (silver tabby, spotted toad, Bombay cat, scarlet macaw, panda cub, baby murloc), the chicken for three full inn cards, the mechanical squirrel for ten days with all three missions, the hippogryph hatchling for 50 shinies. Two appearance characters: the Fearful chicken and the Tinker squirrel. The Day tab shows full inn cards and perfect mission days. Fix: the grey help line no longer overlaps the need bars in the hover card.
+*English:* nine new creatures, each with the same model on Era and Forever: six in zone chests (silver tabby, spotted toad, Bombay cat, scarlet macaw, panda cub, baby murloc), the chicken for three full inn cards, the mechanical squirrel for ten days with all three missions, the hippogryph hatchling for 50 shinies. Two appearance characters: the Fearful chicken and the Tinker squirrel. The Day tab shows full inn cards and perfect mission days. Fix: the grey help line no longer overlaps the need bars in the hover card. A full code review fixed level-up bubbles at Calm chattiness, a wrong goal reminder, stale elite warnings, the English "+3%" mission, NPCs counted twice, a lost photo question, the empty "normal" rank, the last card row under the pager, Collection scrolling and several typos.
 
 ## 1.1.0
 

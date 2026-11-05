@@ -90,7 +90,7 @@ local EN = {
 	MIS_gather       = "Gather %d times (%s)",
 	MIS_quests       = "Turn in %d quests (%s)",
 	MIS_village      = "Visit a place never seen (%s)",
-	MIS_percent      = "Bring %s up %d%%",
+	MIS_percent      = "Gain %d%% in %s",
 	MIS_kills        = "Defeat %d enemies",
 	MIS_places       = "Discover %d places",
 	MIS_meals        = "Eat or drink %d times",
@@ -267,7 +267,17 @@ do
 				if not ok and self.RecordError then self:RecordError("daily:inn", result) end
 			end
 			local said = onNpc(self, kind, ...)
-			if kind then pcall(self.MissionEvent, self, "talks", 1) end
+			-- « parle à N personnes » : chaque PNJ compte une fois par jour (le même
+			-- donneur de quête ouvre souvent deux fenêtres de suite)
+			if kind then
+				local guid = Call(G("UnitGUID"), "npc")
+				local daily = self:DailyData()
+				daily.talked = type(daily.talked) == "table" and daily.talked or {}
+				if not guid or not daily.talked[guid] then
+					if guid then daily.talked[guid] = true end
+					pcall(self.MissionEvent, self, "talks", 1)
+				end
+			end
 			return said
 		end
 	end
@@ -344,6 +354,7 @@ function ns:MissionDraw(zoneID)
 	own.trait = TRAIT_MISSIONS[trait or ""] and trait or nil
 	missions[3] = own
 	daily.day, daily.zoneID, daily.missions, daily.rerolled, daily.allDone = self:DailyToday(), zoneID, missions, nil, nil
+	daily.talked = {}
 	self:CompanionSay("MISSION_NEW", { force = true, category = "event" })
 	self:DailyChanged()
 	return missions

@@ -96,6 +96,7 @@ local POOL_CATEGORY = {
 	EVOLVE = "event", UNLOCK = "event", READY = "event", CHEST = "event", TUTO = "tuto", TIP = "tip", GOAL = "tip", GOAL_STAGE = "tip",
 	IDLE = "chatter", NIGHT = "chatter",
 	PHOTO = "event", ANNIV = "event", RECALL = "chatter",
+	LEVEL = "event",      -- un grand moment : dit dès le cran Calme, comme promis
 	NEED_hunger = "need", NEED_energy = "need", NEED_mood = "need", NEED_curiosity = "need",
 }
 -- Pause (s) par famille : les sources fréquentes (combat, PNJ) ne doivent pas
@@ -1805,6 +1806,8 @@ function ns:CompanionTick(seconds)
 		if key == "hunger" and self.companionEating then delta = EAT_GAIN * minutes end
 		data.needs[key] = Clamp(data.needs[key] + delta, floor, NEED_MAX)
 	end
+	-- prêt à évoluer : le repos ou le repas a pu combler la dernière envie
+	if data.stageReady and self:CompanionIsHappy() then self:CompanionCheckStage(PlayerLevel(), true) end
 	-- arrivée en griffon : la fin d'un vol se voit au tick suivant
 	local rt = RT()
 	local onTaxi = Call(rawget(_G, "UnitOnTaxi"), "player") == true
@@ -1900,7 +1903,9 @@ function ns:CompanionTryGoal()
 	if now < rt.goalAt then return false end
 	local target
 	for _, item in ipairs(self:CompanionNextUnlocks()) do
-		if item.need - item.have <= (GOAL_NEAR[item.source] or 3) then target = item; break end
+		-- prêt à évoluer : ce qui manque, ce sont des envies, pas des niveaux
+		-- (sa bulle READY le dit déjà)
+		if not item.ready and item.need - item.have <= (GOAL_NEAR[item.source] or 3) then target = item; break end
 	end
 	if not target then
 		rt.goalAt = now + 300      -- rien de proche : on regardera plus tard
@@ -1953,7 +1958,12 @@ function ns:CompanionLogin()
 	data.lastSeen = now
 	-- zone de connexion : connue d'emblée, pas de « Quelle vue ! » au chargement
 	local mapID = self.CurrentMap and self:CurrentMap()
-	if mapID then data.seenZones[mapID] = true end
+	if mapID then
+		data.seenZones[mapID] = true
+		-- et sa date de visite : y revenir plus tard n'est pas un « retour après 2 h » d'office
+		if type(data.zoneVisit) ~= "table" then data.zoneVisit = {} end
+		data.zoneVisit[mapID] = data.zoneVisit[mapID] or tonumber((Call(rawget(_G, "time")))) or 0
+	end
 	self:CompanionCheckPlace(true)
 	self:CompanionCheckStage(PlayerLevel(), not first)
 	self:CompanionCheckUnlocks(nil, first)
@@ -2215,7 +2225,8 @@ local function GossipKind()
 		local options = Call(info.GetOptions)
 		if type(options) == "table" then
 			for _, option in ipairs(options) do
-				if type(option) == "table" and option.type == "binder" then return "innkeeper" end
+				-- l'API récente n'a plus de champ « type » : l'icône du foyer (fichier 132052) le dit
+				if type(option) == "table" and (option.type == "binder" or option.icon == 132052) then return "innkeeper" end
 			end
 		end
 		local quests = (tonumber((Call(info.GetNumAvailableQuests))) or 0) + (tonumber((Call(info.GetNumActiveQuests))) or 0)
@@ -2526,9 +2537,13 @@ function ns:CompanionSanitizeName(text)
 	if text == "" then return nil end
 	if #text > NAME_MAX then
 		text = text:sub(1, NAME_MAX)
-		-- ne pas couper un caractère UTF-8 en deux
-		while #text > 0 and text:byte(#text) >= 0x80 and text:byte(#text) < 0xC0 do text = text:sub(1, -2) end
-		if #text > 0 and text:byte(#text) >= 0xC0 then text = text:sub(1, -2) end
+		-- ne pas couper un caractère UTF-8 en deux : on remonte à l'octet de
+		-- tête du dernier caractère, qu'on retire seulement s'il est incomplet
+		local lead = #text
+		while lead > 1 and text:byte(lead) >= 0x80 and text:byte(lead) < 0xC0 do lead = lead - 1 end
+		local byte = text:byte(lead) or 0
+		local size = (byte >= 0xF0 and 4) or (byte >= 0xE0 and 3) or (byte >= 0xC0 and 2) or 1
+		if lead + size - 1 > #text then text = text:sub(1, lead - 1) end
 	end
 	return text
 end

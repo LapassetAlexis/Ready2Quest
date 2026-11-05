@@ -83,7 +83,7 @@ local FR = {
 	JRN_EVO_HOW            = "Comment ça marche",
 	JRN_EVO_HOW_1          = "Ton niveau ouvre chaque étape : 10, 20, 40 et 60.",
 	JRN_EVO_HOW_2          = "Pour la franchir, il doit être heureux : ses quatre envies à %d %% ou plus. Mange, repose-toi, rends des quêtes, explore.",
-	JRN_EVO_HOW_3          = "Finis une zone à 100 %% (onglet Complétion) : un coffre s'ouvre, tu y choisis une apparence, un ornement, un cadre ou un fond.",
+	JRN_EVO_HOW_3          = "Finis une zone à 100 %% (onglet Zone) : un coffre s'ouvre, tu y choisis une apparence, un ornement, un cadre ou un fond.",
 	JRN_EVO_CHESTS         = "Coffres à ouvrir : %d",
 	JRN_EVO_COLLECTION     = "Collection : %d/%d  (palier 1 : %d/%d · palier 2 : %d/%d · palier 3 : %d/%d)",
 	JRN_EVO_ROAD           = "Parcours : %d zones · %d/%d capitales · %d donjons · %d rares · %d/%d paliers",
@@ -147,7 +147,7 @@ local EN = {
 	JRN_EVO_HOW            = "How it works",
 	JRN_EVO_HOW_1          = "Your level opens each stage: 10, 20, 40 and 60.",
 	JRN_EVO_HOW_2          = "To go through, it must be happy: all four needs at %d %% or more. Eat, rest, turn in quests, explore.",
-	JRN_EVO_HOW_3          = "Complete a zone to 100 %% (Completion tab): a chest opens and you pick a look, an ornament, a frame or a background.",
+	JRN_EVO_HOW_3          = "Complete a zone to 100 %% (Zone tab): a chest opens and you pick a look, an ornament, a frame or a background.",
 	JRN_EVO_CHESTS         = "Chests to open: %d",
 	JRN_EVO_COLLECTION     = "Collection: %d/%d  (tier 1: %d/%d · tier 2: %d/%d · tier 3: %d/%d)",
 	JRN_EVO_ROAD           = "Road: %d zones · %d/%d capitals · %d dungeons · %d rares · %d/%d milestones",
@@ -306,7 +306,7 @@ local CONTENT_W = WIDTH - NAV_W - 28
 local PREVIEW_W = 200
 local BODY_W = CONTENT_W - PREVIEW_W - 8
 local LIST_COLS, LIST_ROWS, LIST_ROW_H = 2, 15, 20
-local CARD_COLS, CARD_ROWS, CARD_W, CARD_H, CARD_GAP = 4, 7, 114, 40, 6
+local CARD_COLS, CARD_ROWS, CARD_W, CARD_H, CARD_GAP = 4, 6, 114, 40, 6   -- 6 rangées : la 7e passait sous le défilement
 local ICON_COLS, ICON_ROWS, ICON_SIZE, ICON_GAP = 8, 5, 48, 8
 local TILE_COLS, TILE_ROWS, TILE_W, TILE_H, TILE_GAP = 6, 4, 108, 90, 8
 local COLL_COLS, COLL_ROWS, COLL_W, COLL_H, COLL_GAP = 5, 5, 88, 62, 8
@@ -886,7 +886,7 @@ local function BuildCollection(self, frame, top)
 	pane:SetAllPoints()
 	frame.coll = pane
 	pane.kinds = Chips(pane, frame, 14, top, COLL_KINDS, "JRN_COLL_", function(key)
-		frame.collKind = key
+		frame.collKind, frame.collOffset = key, 0
 		ns:RefreshJournal()
 	end)
 	pane.count = Muted(Text(pane, Theme.F_SMALL, 14 + BODY_W - 150, top - 3, 150))
@@ -1198,6 +1198,8 @@ function ns:ScrollJournal(delta)
 	delta = tonumber(delta) or 0
 	if frame.kind == "zones" then
 		frame.zoneOffset = (frame.zoneOffset or 0) - delta * TILE_COLS
+	elseif frame.kind == "collection" then
+		frame.collOffset = (frame.collOffset or 0) - delta * COLL_COLS
 	elseif frame.kind == "memories" then
 		frame.offset = (frame.offset or 0) - delta
 	else
@@ -1220,7 +1222,9 @@ function ns:JournalPreviewCreature(item)
 		p.item = item
 		return
 	end
-	local rank = L[CLASS_LABEL[item.class or ""] or ""] or L.JRN_RANK_normal
+	-- L rend la clé elle-même quand elle manque : pas de L[""] (qui vaudrait "")
+	local tag = CLASS_LABEL[item.class or ""]
+	local rank = tag and L[tag] or L.JRN_RANK_normal
 	local lines = {}
 	if item.levelText then lines[#lines + 1] = self:F("JRN_PREV_LEVEL", item.levelText) end
 	lines[#lines + 1] = self:F("JRN_PREV_RANK", rank)
@@ -1636,8 +1640,12 @@ local function RefreshCollection(self, frame)
 		if entry.equipped and not equipped then equipped = entry end
 	end
 	pane.count:SetText(self:F("JRN_COLL_COUNT", owned, #list))
+	-- plus d'objets qu'une page (24 apparences pour 25 cases) : la molette avance d'une rangée
+	local page = #pane.items
+	local maxOffset = math.max(0, math.ceil((#list - page) / COLL_COLS) * COLL_COLS)
+	frame.collOffset = math.max(0, math.min(frame.collOffset or 0, maxOffset))
 	for index, cell in ipairs(pane.items) do
-		local entry = list[index]
+		local entry = list[index + frame.collOffset]
 		cell.entry = entry
 		if entry then
 			local icon = LOCK_ICON

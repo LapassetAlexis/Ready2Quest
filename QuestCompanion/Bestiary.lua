@@ -501,7 +501,8 @@ local HANDLERS = {
 	UPDATE_MOUSEOVER_UNIT = function() ns:BestiarySeeUnit("mouseover") end,
 	NAME_PLATE_UNIT_ADDED = function(unit) ns:BestiarySeeUnit(unit) end,
 	COMBAT_LOG_EVENT_UNFILTERED = function(...)
-		-- coût nul sans mob repéré ni table livrée (Forever : tout reste appris)
+		-- coût nul sans mob repéré ni table livrée (les deux clients ont leur
+		-- table, ZoneCreatures_Era / _Forever : en pratique, toujours traité)
 		if not next(ns.bestiaryUnits) and rawget(ns, "ZONE_CREATURES") == nil then return end
 		ns:BestiaryCombat(CombatArgs(...))
 	end,
