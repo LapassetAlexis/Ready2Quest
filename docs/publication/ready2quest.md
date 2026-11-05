@@ -1,9 +1,9 @@
 <!--
 Fiche de la page Ready2Quest sur CurseForge et Wago (à copier à la main, voir docs/PUBLIER.md).
 Summary EN (256 caractères max, ici 234) :
-  Leave town ready: a readiness score before each outing (food, bag space, durability, buffs, hearthstone), trip reports when you return, dungeon briefs, campfire kit tracking and gear stat diffs. For WoW Forever and Classic Era. EN/FR.
+  Leave town ready: a readiness score before each outing (food, bag space, durability, buffs, hearthstone), trip reports when you return, dungeon briefs, campfire kit tracking and gear stat diffs. For For WoW Forever. EN/FR.
 Summary FR (256 caractères max, ici 240) :
-  Pars prêt : une note de préparation avant chaque sortie (vivres, place dans les sacs, durabilité, buffs, pierre de foyer), le bilan au retour, la fiche du donjon, le kit de camp et le résumé de stuff. Pour WoW Forever et Classic Era. FR/EN.
+  Pars prêt : une note de préparation avant chaque sortie (vivres, place dans les sacs, durabilité, buffs, pierre de foyer), le bilan au retour, la fiche du donjon, le kit de camp et le résumé de stuff. Pour WoW Forever. FR/EN.
 Catégories : Quests & Leveling (principale), Bags & Inventory (additionnelle).
 Licence : GPLv3. Logo : docs/publication/logo_ready2quest.png.
 Captures à prendre en jeu : la fenêtre « Avant le départ », le bilan de retour, la fiche de donjon, l'étiquette « Pour toi » d'une récompense de quête, le cadre « Sac plein ».
@@ -13,7 +13,7 @@ Deux descriptions complètes ci-dessous : anglais, puis français. Coller celle 
 
 **Get ready before you leave town.** When you step out of a village, a capital or a camp, Ready2Quest checks that you are ready: food and water, room in your bags, gear in good shape, your usual buffs, your hearthstone… and tells you at the right moment, not when it is too late.
 
-For **WoW Forever** (1.60) and **Classic Era** (1.15). English and French.
+For **WoW Forever** (1.60). English and French.
 
 ## Modules
 
@@ -53,7 +53,7 @@ Free software, **GPL-3.0**. Source code: https://github.com/LapassetAlexis/Ready
 
 **Prépare ta sortie avant de quitter la ville.** Quand tu quittes un village, une capitale ou un camp, Ready2Quest vérifie que tu es prêt : vivres, place dans les sacs, équipement en état, tes buffs habituels, ta pierre de foyer… et te le dit au bon moment, pas quand il est trop tard.
 
-Pour **WoW Forever** (1.60) et **Classic Era** (1.15). En français et en anglais.
+Pour **WoW Forever** (1.60). En français et en anglais.
 
 ## Modules
 

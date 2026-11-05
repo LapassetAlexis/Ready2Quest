@@ -531,7 +531,8 @@ def generate(flavor_key, args):
 
 def main(argv=None):
     parser = argparse.ArgumentParser(description="Génère les tables de zone de QuestCompanion depuis data/.")
-    parser.add_argument("--flavor", choices=("era", "forever", "all"), default="all")
+    # QuestCompanion 1.2.0 : WoW Forever seulement (les tables d'Era ne sont plus livrées)
+    parser.add_argument("--flavor", choices=("era", "forever", "all"), default="forever")
     parser.add_argument("--date", default=datetime.date.today().isoformat())
     parser.add_argument("--out", default=os.path.join(ROOT, "QuestCompanion"),
                         help="dossier de l'addon (par défaut : QuestCompanion/ du dépôt)")

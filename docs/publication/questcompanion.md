@@ -1,9 +1,9 @@
 <!--
 Fiche de la page QuestCompanion sur CurseForge et Wago (à copier à la main, voir docs/PUBLIER.md).
 Summary EN (256 caractères max, ici 248) :
-  A little creature travels with you: it talks, eats, sleeps, grows and develops a personality from how you play. Its travel journal tracks zone completion, opens cosmetic chests and evolves it. Keeps memories and photos. WoW Forever and Classic Era.
+  A little creature travels with you: it talks, eats, sleeps, grows and develops a personality from how you play. Its travel journal tracks zone completion, opens cosmetic chests and evolves it. Keeps memories and photos. For WoW Forever.
 Summary FR (256 caractères max) :
-  Une petite créature voyage avec toi : elle parle, mange, dort, grandit et se forge un caractère selon ta façon de jouer. Son carnet suit la complétion des zones, ouvre des coffres cosmétiques et la fait évoluer. Souvenirs et photos. Forever et Era.
+  Une petite créature voyage avec toi : elle parle, mange, dort, grandit et se forge un caractère selon ta façon de jouer. Son carnet suit la complétion des zones, ouvre des coffres cosmétiques et la fait évoluer. Souvenirs et photos. Pour WoW Forever.
 Catégories : Companions (principale), Quests & Leveling (additionnelle). Si Companions n'existe pas : Miscellaneous (principale).
 Licence : GPLv3. Logo : docs/publication/logo_questcompanion.png.
 Relation : Optional Dependency -> Ready2Quest (facultatif).
@@ -14,7 +14,7 @@ Deux descriptions complètes ci-dessous : anglais, puis français. Coller celle 
 
 **A little travel companion, and a journal to complete every zone.** A small creature travels with you, talks to you and grows with you. Its journal tracks how complete each zone is and rewards a 100% zone with a chest of cosmetic items.
 
-For **WoW Forever** (1.60) and **Classic Era** (1.15). English and French.
+For **WoW Forever** (1.60). English and French.
 
 **Standalone.** Its own `/qc` command, settings and minimap button. It also pairs well with [Ready2Quest](https://github.com/LapassetAlexis/Ready2Quest): installed together, the companion reacts to your departures and returns.
 
@@ -39,7 +39,7 @@ For **WoW Forever** (1.60) and **Classic Era** (1.15). English and French.
   - **Combat**: the bestiary and the named foes.
   - **Professions**: the herbs, ores and leathers of your skill.
   - **Quests**: the quests of the zone your character can do.
-- **Prefilled zones**: creatures, gathering nodes and quests of every zone are known from your first visit, on Era and on Forever (Forever islands and zones included). No other addon needed.
+- **Prefilled zones**: creatures, gathering nodes and quests of every zone are known from your first visit (Forever islands and zones included). No other addon needed.
 - **Zone chests**: complete a zone to 100% and open a chest, then **choose** one cosmetic item of its tier (zones 1-19, 20-39, 40-60). The higher the zone, the finer the item.
 - **Evolution**: your creature's stage, its needs, your chests, your collection and your journey.
 - **Memories**: the album of your adventure, with its photos.
@@ -63,7 +63,7 @@ Free software, **GPL-3.0**. Zone data (creatures, gathering, quests) is generate
 
 **Un compagnon de route et son carnet pour compléter chaque zone.** Une petite créature voyage avec toi, te parle et grandit avec toi. Son carnet suit la complétion de chaque zone et récompense une zone à 100 % par un coffre d'objets cosmétiques.
 
-Pour **WoW Forever** (1.60) et **Classic Era** (1.15). En français et en anglais.
+Pour **WoW Forever** (1.60). En français et en anglais.
 
 **Autonome.** Sa commande `/qc`, ses réglages et son bouton de minicarte. Il va très bien avec [Ready2Quest](https://github.com/LapassetAlexis/Ready2Quest) : installés ensemble, le compagnon réagit en plus à tes départs et retours en ville.
 
@@ -88,7 +88,7 @@ Pour **WoW Forever** (1.60) et **Classic Era** (1.15). En français et en anglai
   - **Combat** : le bestiaire et les nommés.
   - **Métiers** : les herbes, minerais et cuirs de ta compétence.
   - **Quêtes** : les quêtes de la zone que ton personnage peut faire.
-- **Zones préremplies** : créatures, points de récolte et quêtes de chaque zone sont connus dès ta première visite, sur Era comme sur Forever (îles et zones propres à Forever comprises). Aucun autre addon requis.
+- **Zones préremplies** : créatures, points de récolte et quêtes de chaque zone sont connus dès ta première visite (îles et zones propres à Forever comprises). Aucun autre addon requis.
 - **Coffres de zone** : une zone à 100 % ouvre un coffre, et tu **choisis** un objet cosmétique de son palier (zones 1-19, 20-39, 40-60). Plus la zone est haute, plus l'objet est beau.
 - **Évolution** : l'étape de ta créature, ses envies, tes coffres, ta collection et ton parcours.
 - **Souvenirs** : l'album de ton aventure, avec ses photos.

@@ -4,7 +4,7 @@
 
 **A road companion and its travel journal.** A little creature travels with you, talks to you and grows with you. Its journal tracks the completion of every zone, opens chests of cosmetic items and makes it evolve.
 
-For **World of Warcraft Forever** and **Classic Era**. Interface in English and French.
+For **World of Warcraft Forever**. Interface in English and French.
 
 > **Standalone.** QuestCompanion works on its own: its `/qc` command, its settings panel, its minimap button. It pairs nicely with [Ready2Quest](../Ready2Quest/README.md) but doesn't need it: if Ready2Quest is there, the companion also reacts when you leave town and come back.
 
@@ -88,7 +88,7 @@ The journal (`/qc`, the minimap button, or right-click on the creature) opens on
   - **Exploration**: the zone's villages, on two columns;
   - **Combat**: a card for each creature of the bestiary, its border coloured by rank (elite, rare, boss), "???" for those you've never met. Hover a card to see the creature in 3D next to the grid;
   - **Professions**: the icons of the resources of your skill, in colour once gathered here;
-  - **Quests**: the zone's quests your character can do (faction, race, class), on two columns, filtered by to do or done. They count toward the 100%. No addon required, on Era as on Forever.
+  - **Quests**: the zone's quests your character can do (faction, race, class), on two columns, filtered by to do or done. They count toward the 100%. No addon required.
 - **Track on screen** (Zone tab): when on, the zone's goals show in the in-game "Journal" tracker. The zone you're in is tracked by default (turn it off to hide it); turn other zones on to keep an eye on them.
 - **Day**: the missions of the day (with the button to change one), the inn loyalty card and the pantry.
 - **Collection**: every appearance, ornament, frame and background, the locked ones greyed out with where to get them. Hover an item to preview it, click to equip it (an ornament: click to wear it or take it off).
@@ -104,7 +104,7 @@ The journal sets **goals**: the creature's next stage, the next appearance or or
   - the **named mobs** (elites, rares, bosses) met and killed;
   - **gathering**, if you're an herbalist, miner or skinner: the herbs, ores and leathers of your skill that you've already gathered in the zone.
 
-  Every zone comes **pre-filled**, on Era as on Forever (Forever's own islands and zones included): its creatures (name, level, rank), the herbs and ores that grow there and its quests are known from your first visit. Whatever is missing from this data (recent Forever additions) fills in as you play.
+  Every zone comes **pre-filled** (Forever's own islands and zones included): its creatures (name, level, rank), the herbs and ores that grow there and its quests are known from your first visit. Whatever is missing from this data (recent Forever additions) fills in as you play.
 - **Hover a goal** to know what to do: the zone's villages you still have to visit, the missing capitals, the dungeons for your level with their level range, the XP to the next level.
 - **Click**: opens the journal. **Right-click**: hides the goal.
 - The block collapses with a click on its title, moves by dragging it and hides in combat (configurable in the companion options, Travel journal page).
@@ -153,7 +153,7 @@ QuestCompanion is free software under the **GPL-3.0** license (see `LICENSE`). T
 
 **Un compagnon de route et son carnet de voyage.** Une petite créature voyage avec toi, te parle et grandit avec toi. Son carnet suit la complétion de chaque zone, ouvre des coffres d'objets cosmétiques et la fait évoluer.
 
-Pour **World of Warcraft Forever** et **Classic Era**. Interface en français et en anglais.
+Pour **World of Warcraft Forever**. Interface en français et en anglais.
 
 > **Autonome.** QuestCompanion fonctionne seul : sa commande `/qc`, son panneau de réglages, son bouton de minicarte. Il va très bien avec [Ready2Quest](../Ready2Quest/README.md#francais), sans en avoir besoin : si Ready2Quest est là, le compagnon réagit en plus à tes départs et retours en ville.
 
@@ -237,7 +237,7 @@ Le carnet (`/qc`, le bouton de minicarte, ou clic droit sur la créature) s'ouvr
   - **Exploration** : les villages de la zone, sur deux colonnes ;
   - **Combat** : une fiche par créature du bestiaire, au liseré de son rang (élite, rare, boss), « ??? » pour celles jamais croisées. Survole une fiche pour voir la créature en 3D à côté de la grille ;
   - **Métiers** : les icônes des ressources de ta compétence, en couleur une fois récoltées ici ;
-  - **Quêtes** : les quêtes de la zone que ton personnage peut faire (faction, race, classe), sur deux colonnes, filtrées à faire ou faites. Elles comptent dans les 100 %. Aucun addon requis, sur Era comme sur Forever.
+  - **Quêtes** : les quêtes de la zone que ton personnage peut faire (faction, race, classe), sur deux colonnes, filtrées à faire ou faites. Elles comptent dans les 100 %. Aucun addon requis.
 - **Suivre à l'écran** (onglet Zone) : activé, les objectifs de la zone s'affichent dans le bloc « Carnet » en jeu. La zone où tu es est suivie d'office (désactive-la pour la masquer) ; active d'autres zones pour garder un œil sur elles.
 - **Jour** : les missions du jour (avec le bouton pour en changer une), la carte de fidélité des auberges et le garde-manger.
 - **Collection** : toutes les apparences, ornements, cadres et fonds, ceux verrouillés en gris avec où les trouver. Survole un objet pour le voir, clique pour l'équiper (un ornement : clic pour le porter ou l'enlever).
@@ -253,7 +253,7 @@ Le carnet fixe des **objectifs** : prochaine étape de la créature, prochaine a
   - les **nommés** (élites, rares, boss) croisés et abattus ;
   - la **récolte**, si tu es herboriste, mineur ou dépeceur : les herbes, minerais et cuirs de ta compétence que tu as déjà récoltés dans la zone.
 
-  Chaque zone arrive **préremplie**, sur Era comme sur Forever (îles et zones propres à Forever comprises) : ses créatures (nom, niveau, rang), les herbes et minerais qui y poussent et ses quêtes sont connus dès ta première visite. Ce qui manque à ces données (nouveautés récentes de Forever) se remplit en jouant.
+  Chaque zone arrive **préremplie** (îles et zones propres à Forever comprises) : ses créatures (nom, niveau, rang), les herbes et minerais qui y poussent et ses quêtes sont connus dès ta première visite. Ce qui manque à ces données (nouveautés récentes de Forever) se remplit en jouant.
 - **Survole un objectif** pour savoir quoi faire : les villages de la zone qu'il te reste à visiter, les capitales manquantes, les donjons de ton niveau avec leur tranche, l'XP avant le prochain niveau.
 - **Clic** : ouvre le carnet. **Clic droit** : masque l'objectif.
 - Le bloc se replie d'un clic sur son titre, se déplace en le glissant et se cache en combat (réglable dans les options du compagnon, page Carnet).

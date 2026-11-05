@@ -4,7 +4,7 @@
 
 **The adventurer's departure companion.** Before you leave town, Ready2Quest checks that your bags are ready: something to eat, room for loot, gear in good shape, your buffs, your hearthstone… and tells you at the right moment, not when it's too late.
 
-For **World of Warcraft Forever** and **Classic Era**. Interface in English and French.
+For **World of Warcraft Forever**. Interface in English and French.
 
 ---
 
@@ -69,7 +69,7 @@ Buffs need no setup: the addon remembers the ones that last several minutes on y
 A safe area is a place where you can **get ready without risk**: eat, repair, sell, set your hearthstone at the inn.
 
 - **Known right after install**: the capitals, villages and hubs of your faction, plus the neutral towns (Booty Bay, Gadgetzan, Everlook…). On Forever, the new zones such as Zephras Isle are covered too. That's 80 places, in both English and French.
-- **Camps too**: about 140 places on Era and 160 on Forever are detected by their service NPCs: an innkeeper, a flight master or a banker, or a group of at least three NPCs with a merchant and a repairer or a trainer. This also works for a camp without a subzone of its own: your position is used. A farm or a lone merchant on a road doesn't count.
+- **Camps too**: about 160 places on Forever are detected by their service NPCs: an innkeeper, a flight master or a banker, or a group of at least three NPCs with a merchant and a repairer or a trainer. This also works for a camp without a subzone of its own: your position is used. A farm or a lone merchant on a road doesn't count.
 - **The starting valleys** (Valley of Trials, Northshire, Coldridge, Shadowglen, Camp Narache, Deathknell, with their caves and buildings) count as a single safe area. Until you've left it, and up to level 6, nothing shows up on its own: the check is still available with `/r2q`. Your first real departure is when you leave the first village outside the valley.
 - **What doesn't count**: a village of the other faction, a dungeon, a battleground, a mine or a farm.
 - **Forever camps**: near a campfire, you're at camp. When you walk away from it, the check fires, just like leaving a village.
@@ -114,7 +114,6 @@ Camping on Forever makes the camp a real place to get ready. Ready2Quest helps y
 - **at camp**, a small countdown to the minute that grants the buffs, then "Camp buffs active";
 - **when you leave camp**, a reminder of the time left: "Camp buffs: 42 min left."
 
-On Classic Era, the module stays hidden: there's no camping.
 
 ## Gear summary
 
@@ -212,7 +211,7 @@ Both are on by default and can be turned off in the settings. They work even if 
 - Delete the `AddOns/ReadyToQuest` folder.
 - To keep your settings, rename `WTF/Account/<account>/SavedVariables/ReadyToQuest.lua` to `Ready2Quest.lua`.
 
-**Clients**: Forever (1.60) and Classic Era (1.15). The `.toc` file also declares TBC and MoP Classic, with no guarantee.
+**Client**: WoW Forever (1.60) only. Classic Era is no longer supported since 1.26.1.
 
 ---
 
@@ -253,7 +252,7 @@ Ready2Quest is free software under the **GPL-3.0** license (see `LICENSE`): you 
 
 **Le compagnon de départ de l'aventurier.** Avant que tu quittes la ville, Ready2Quest vérifie que ton sac est prêt : de quoi manger, de la place pour le butin, un équipement en état, tes buffs, ta pierre de foyer… et te le dit au bon moment, pas quand il est trop tard.
 
-Pour **World of Warcraft Forever** et **Classic Era**. Interface en français et en anglais.
+Pour **World of Warcraft Forever**. Interface en français et en anglais.
 
 ---
 
@@ -318,7 +317,7 @@ Les buffs n'ont rien à configurer : l'addon retient ceux qui durent plusieurs m
 Une zone sûre est un endroit où l'on peut **se préparer sans risque** : manger, réparer, vendre, se lier à l'auberge.
 
 - **Connues dès l'installation** : les capitales, les villages et les hubs de ta faction, ainsi que les villes neutres (Booty Bay, Gadgetzan, Everlook…). Sur Forever, c'est aussi le cas des nouvelles zones comme Zephras Isle. Cela fait 80 lieux, en français comme en anglais.
-- **Les camps aussi** : environ 140 lieux sur Era et 160 sur Forever sont repérés par leurs PNJ de service : un aubergiste, un maître de vol ou un banquier, ou un groupe d'au moins trois PNJ avec un marchand et un réparateur ou un entraîneur. Ça compte aussi pour un camp sans sous-zone à lui : on regarde ta position. Une ferme ou un marchand isolé sur une route ne comptent pas.
+- **Les camps aussi** : environ 160 lieux sur Forever sont repérés par leurs PNJ de service : un aubergiste, un maître de vol ou un banquier, ou un groupe d'au moins trois PNJ avec un marchand et un réparateur ou un entraîneur. Ça compte aussi pour un camp sans sous-zone à lui : on regarde ta position. Une ferme ou un marchand isolé sur une route ne comptent pas.
 - **Les vallées de départ** (Vallée des épreuves, Northshire, Coldridge, Sombrevallon, Camp Narache, Deathknell, avec leurs grottes et bâtiments) forment une seule zone sûre. Tant que tu n'en es pas sorti, et jusqu'au niveau 6, rien ne s'affiche tout seul : le check reste disponible avec `/r2q`. Le premier vrai départ, c'est quand tu quittes le premier village hors de la vallée.
 - **Ce qui ne compte pas** : un village de l'autre faction, un donjon, un champ de bataille, une mine ou une ferme.
 - **Les camps de Forever** : près d'un feu de camp, tu es au campement. Quand tu t'en éloignes, le check part, comme en quittant un village.
@@ -363,7 +362,6 @@ Le camping de Forever en fait un vrai lieu de préparation. Ready2Quest t'aide �
 - **au camp**, un petit compte à rebours jusqu'à la minute qui donne les buffs, puis « Buffs du camp actifs » ;
 - **en quittant le camp**, un rappel du temps restant : « Buffs du camp : encore 42 min ».
 
-Sur Classic Era, le module reste invisible : il n'y a pas de camping.
 
 ## Résumé de stuff
 
@@ -461,7 +459,7 @@ Les deux sont actifs par défaut et se coupent dans les réglages. Ils fonctionn
 - Supprime le dossier `AddOns/ReadyToQuest`.
 - Pour garder tes réglages, renomme `WTF/Account/<compte>/SavedVariables/ReadyToQuest.lua` en `Ready2Quest.lua`.
 
-**Clients** : Forever (1.60) et Classic Era (1.15). Le fichier `.toc` déclare aussi TBC et MoP Classic, sans garantie.
+**Client** : WoW Forever (1.60) seulement. Classic Era n'est plus pris en charge depuis la 1.26.1.
 
 ---
 

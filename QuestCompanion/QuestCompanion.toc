@@ -1,8 +1,5 @@
-## Interface: 16001, 11509, 20506, 50504
+## Interface: 16001
 ## Interface-Camelot: 16001
-## Interface-Vanilla: 11509
-## Interface-TBC: 20506
-## Interface-Mists: 50504
 ## Title: |cffe8a54bQuest|r|cff5b8fd6Companion|r
 ## Notes: A little travel companion and its journal: zone completion, reward chests, evolution.
 ## Notes-frFR: Compagnon de route et carnet de voyage : complétion de zone, coffres, évolution.
@@ -41,15 +38,12 @@ Advice.lua
 Group.lua
 Journal.lua
 JournalTracker.lua
-ZoneCreatures_Era.lua
 ZoneCreatures_Forever.lua
-ZoneGathering_Era.lua
 ZoneGathering_Forever.lua
 Bestiary.lua
 GatheringData.lua
 Gathering.lua
 CompanionChest.lua
-ZoneQuests_Era.lua
 ZoneQuests_Forever.lua
 ZoneQuests.lua
 Memories.lua
