@@ -409,12 +409,14 @@ do
 	local nav, parentNav
 	for _, button in ipairs(o.navButtons) do
 		if button.pageId == "journal" then nav = button end
-		if button.pageId == "companion" then parentNav = button end
+	end
+	for _, header in ipairs(o.navHeaders) do
+		if header.pageId == "companion" then parentNav = header end
 	end
 	local page = o.pages.journal
-	NS:SelectOptionsPage("journal")
-	Check("[JRN] sous-page du Compagnon de route : un onglet, pas une entrée", nav == nil and page and o.tabs.byId.journal ~= nil
-		and o.tabs.selected == "journal")
+	nav:Click()
+	Check("[JRN] sous-page du Compagnon de route : son entrée sous le titre du groupe", nav and nav.parentId == "companion" and page
+		and o.currentPage == "journal" and o.header.title.text == NS.L.OPT_PAGE_JOURNAL)
 	Check("[JRN] interrupteur unique sur le module parent", parentNav and parentNav.powerKey == "companionEnabled")
 	Check("[JRN] page rangée dans MODULES", (function()
 		for _, def in ipairs(NS.OPTION_PAGES) do

@@ -18,7 +18,13 @@ for _, def in ipairs(NS.OPTION_PAGES) do
 	elseif seenQol then misplaced[#misplaced + 1] = def.id end
 end
 Check("[INT] aucun module rangé sous le QoL", #misplaced == 0, table.concat(misplaced, ","))
-Check("[INT] un titre par groupe dans la navigation", #frame.navGroups == 2, #frame.navGroups)
+-- titres : le Check avant le départ, MODULES, le Confort de jeu ; chacun une fois
+local titles, twice = {}, 0
+for _, label in ipairs(frame.navGroups) do
+	if titles[label.text] then twice = twice + 1 end
+	titles[label.text] = true
+end
+Check("[INT] un titre par groupe dans la navigation", #frame.navGroups == 3 and twice == 0, #frame.navGroups)
 Check("[INT] panneau toujours à l'écran", lay.height <= lay.maxHeight, lay.height)
 
 local overflow = {}

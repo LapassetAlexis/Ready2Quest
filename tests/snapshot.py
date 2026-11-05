@@ -11,7 +11,7 @@ Usage :
   python3 tests/snapshot.py <scène> <sortie.html>
   python3 tests/snapshot.py all <dossier>       (toutes les scènes)
   python3 tests/snapshot.py list
-Scènes : bricks, r2q-check, r2q-options, r2q-options-tabs, r2q-options-spellranks,
+Scènes : bricks, r2q-check, r2q-options, r2q-options-bags, r2q-options-nav, r2q-options-spellranks,
   qc-options-companion, qc-options-ornaments, options-search (Snap.scenes dans tests/snapshot.lua).
 Ne pas versionner les HTML produits.
 """

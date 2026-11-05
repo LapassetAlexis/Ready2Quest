@@ -100,16 +100,23 @@ Les jetons existants restent (`GOLD` = ambre #e8a54b, `BLUE` #5b8fd6,
 Construite avec les briques ci-dessus ; les modules déclarent leurs pages avec
 `ns.AddOptionPage`, comme avant.
 
-- Navigation : une entrée par page de premier niveau (sans `parent`), groupes
-  `group` en capitales ambre, interrupteur du module si la page a `power`
-  (clé de réglage) ou `modules`. Version et client en bas.
-- En-tête : titre de la page de premier niveau ; phrase `<titre>_SUB` de
-  l'onglet choisi, sinon de la page.
-- Onglets : les sous-pages (`parent = <id>`), dans l'ordre de déclaration ;
-  `<titre>_TAB` donne un nom d'onglet plus court. Pas de barre d'onglets pour
-  une page sans sous-page.
+- Navigation : une entrée par page. Une page de premier niveau qui a des
+  sous-pages (`parent = <id>`) devient un titre de groupe (son titre, en
+  capitales ambre, cliquable, avec l'interrupteur de son module) suivi d'une
+  entrée par sous-page, et d'abord « Vue d'ensemble » si elle a ses propres
+  réglages. Une page sans sous-page est une entrée sous le titre de son
+  `group`. Interrupteur d'une entrée : `power`, sinon le module enregistré
+  (`ns.RegisterModule`) qui porte le titre de la page, sinon `modules` pour
+  une page de premier niveau. La liste défile à la molette quand elle dépasse
+  la colonne ; la page choisie y reste en vue. Version et client en bas.
+- En-tête : titre de la page choisie, sa phrase `<titre>_SUB` (sinon celle
+  de son groupe).
+- Onglets : seulement pour une page qui les déclare,
+  `tabs = { { id, label, rows, … } }` (un conteneur par onglet, d'id
+  `<page>:<onglet>`, dernier onglet retenu). Sans `tabs`, pas de barre et le
+  contenu remonte sous l'en-tête.
 - Aperçu : `preview = function(ns, conteneur)` sur une page (ou sa page
-  parente, pour tous ses onglets), bandeau de 88 px sous les onglets.
+  parente, pour toutes ses sous-pages), bandeau de 88 px sous l'en-tête.
   `conteneur.Refresh(conteneur, ns)`, s'il est posé, suit `RefreshOptions`.
 - Cartes : `bool` -> interrupteur ; `number` -> curseur + case de valeur
   (`min`, `max`, `step`, `suffix`, `display`) ; `action` -> bouton

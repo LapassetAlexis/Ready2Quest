@@ -2412,8 +2412,13 @@ if frame then
 	-- une entrée par page de premier niveau ; les sous-pages sont des onglets
 	local navIds = {}
 	for _, nav in ipairs(frame.navButtons) do navIds[#navIds + 1] = nav.pageId end
-	Check("5 entrées de navigation (Général, 3 modules, QoL)", table.concat(navIds, ",") == "general,departure,toast,portrait,qol",
-		table.concat(navIds, ","))
+	-- une entrée par page ; une page à sous-pages devient un titre de groupe
+	Check("navigation : une entrée par page, sous-pages comprises", table.concat(navIds, ",")
+		== "general,trigger,safe,bags,gear,buffs,toast,portrait,merchant", table.concat(navIds, ","))
+	local heads = {}
+	for _, header in ipairs(frame.navHeaders) do heads[#heads + 1] = header.pageId end
+	Check("navigation : Check avant le départ et QoL en titres de groupe", table.concat(heads, ",") == "departure,qol",
+		table.concat(heads, ","))
 
 	-- pied : action principale et remise à zéro à gauche, Terminé à droite,
 	-- sans chevauchement, textes dans leurs boutons
@@ -2504,26 +2509,31 @@ if frame then
 	Check("options : chaque élément de chaque page se voit (défilement)", #unreachable == 0, table.concat(unreachable, ", "))
 end
 
--- Navigation : une seule page visible, choix mémorisé, sous-pages en onglets
+-- Navigation : une seule page visible, choix mémorisé, une entrée par sous-page
 NS:SelectOptionsPage("bags")
 local visiblePages = 0
 for _, page in pairs(frame.pages) do if page:IsShown() then visiblePages = visiblePages + 1 end end
 Check("navigation : une seule page visible", visiblePages == 1 and frame.pages.bags:IsShown())
 Check("navigation : page mémorisée", NS:DB().optionsPage == "bags")
-Check("onglets : les sous-pages du départ", frame.tabs:IsShown() and #frame.tabs.tabs >= 5 and frame.tabs.selected == "bags"
-	and frame.tabs.byId.trigger and frame.tabs.byId.safe and frame.tabs.byId.gear and frame.tabs.byId.buffs)
-Check("en-tête : titre du module, phrase de l'onglet", frame.header.title.text == NS.L.OPT_PAGE_DEPARTURE
-	and frame.header.subtitle.text == NS.L.OPT_PAGE_BAGS_SUB, frame.header.subtitle.text)
+Check("navigation : pas d'onglets pour les sous-pages", not frame.tabs:IsShown())
+Check("en-tête : titre et phrase de la page choisie", frame.header.title.text == NS.L.OPT_PAGE_BAGS
+	and frame.header.subtitle.text == NS.L.OPT_PAGE_BAGS_SUB, frame.header.title.text)
 local function NavFor(id)
 	for _, nav in ipairs(frame.navButtons) do if nav.pageId == id then return nav end end
 end
-Check("navigation : le module reste choisi sur ses onglets", NavFor("departure").selected and not NavFor("general").selected)
-frame.tabs.byId.safe:Click()
-Check("onglets : clic sur « Zones sûres »", frame.currentPage == "safe" and frame.pages.safe:IsShown())
+local function HeaderFor(id)
+	for _, header in ipairs(frame.navHeaders) do if header.pageId == id then return header end end
+end
+Check("navigation : l'entrée de la page est choisie", NavFor("bags").selected and not NavFor("general").selected
+	and not NavFor("trigger").selected)
+NavFor("safe"):Click()
+Check("navigation : clic sur « Zones sûres »", frame.currentPage == "safe" and frame.pages.safe:IsShown())
 NavFor("general"):Click()
-Check("navigation : Général, sans onglets", frame.currentPage == "general" and not frame.tabs:IsShown())
-NavFor("departure"):Click()
-Check("navigation : le module ouvre sa première sous-page", frame.currentPage == "trigger" and frame.currentParent == "departure")
+Check("navigation : Général", frame.currentPage == "general")
+HeaderFor("departure"):Click()
+Check("navigation : le titre de groupe ouvre sa première page", frame.currentPage == "trigger" and frame.currentParent == "departure")
+NS:SelectOptionsPage("departure")
+Check("navigation : la page de groupe renvoie à sa première page", frame.currentPage == "trigger")
 Check("navigation : page inconnue -> Général", (function() NS:SelectOptionsPage("nope"); return frame.currentPage == "general" end)())
 Check("page Sacs : interrupteur + seuil réunis", (function()
 	local hasModule, hasThreshold = false, false
@@ -3556,7 +3566,7 @@ Check("[ID] préfixe du chat ambre, « 2 » bleu", NS.L.TAG:find("|cffe8a54b", 1
 NS.optionsFrame = nil
 NS:ToggleOptions()
 local o = NS.optionsFrame
-Check("[ID] options : deux groupes dans la navigation", #o.navGroups == 2, #o.navGroups)
+Check("[ID] options : trois titres de groupe (départ, modules, QoL)", #o.navGroups == 3, #o.navGroups)
 Check("[ID] options : bouton Terminé en contour ambre", o.closeButton.style == "accent")
 local toggles, sliders = 0, 0
 for _, row in ipairs(o.rows) do
@@ -3607,8 +3617,8 @@ Check("[ID] clic : interrupteur coupé", addonRow.toggle.checked == false and NS
 addonRow:Click()
 NS:SelectOptionsPage("bags")
 local function OptNav(id) for _, nav in ipairs(o.navButtons) do if nav.pageId == id then return nav end end end
-Check("[ID] navigation : le module de la page est teinté", OptNav("departure").tint:IsShown() and not OptNav("general").tint:IsShown())
-Check("[ID] onglet de la page souligné", o.tabs.byId.bags.underline:IsShown() and not o.tabs.byId.trigger.underline:IsShown())
+Check("[ID] navigation : la page choisie est teintée", OptNav("bags").tint:IsShown() and not OptNav("general").tint:IsShown()
+	and not OptNav("trigger").tint:IsShown())
 Check("[ID] titre de page en F_DISPLAY", o.header.title.fontObject == NS.Theme.F_DISPLAY)
 -- v1.21.0 : marque Ready2Quest, deuxième couleur
 Check("[R2Q] navigation : logo complet en tête", tostring(o.brandLogo.texture):find("Textures\\logo$") ~= nil, o.brandLogo.texture)
@@ -3621,22 +3631,23 @@ Check("[R2Q] commande /r2q", SLASH_SACETDEPART3 == "/r2q")
 NS.optionsFrame = nil
 NS:ToggleOptions()
 local function NavOf(id) for _, nav in ipairs(NS.optionsFrame.navButtons) do if nav.pageId == id then return nav end end end
+local function HeadOf(id) for _, h in ipairs(NS.optionsFrame.navHeaders) do if h.pageId == id then return h end end end
 local powered = {}
 for _, nav in ipairs(NS.optionsFrame.navButtons) do if nav.powerKey then powered[#powered + 1] = nav.pageId end end
+for _, h in ipairs(NS.optionsFrame.navHeaders) do if h.powerKey then powered[#powered + 1] = h.pageId end end
 table.sort(powered)
 Check("[NAV] interrupteur sur les 3 modules seulement", table.concat(powered, ",") == "departure,portrait,toast", table.concat(powered, ","))
-Check("[NAV] interrupteur visible sur un module, absent ailleurs", NavOf("departure").power:IsShown() and not NavOf("general").power:IsShown()
-	and not NavOf("qol").power:IsShown())
-Check("[NAV] sous-pages en onglets, pas dans la navigation", NavOf("trigger") == nil and NavOf("merchant") == nil)
+Check("[NAV] interrupteur visible sur un module, absent ailleurs", HeadOf("departure").power:IsShown() and NavOf("toast").power:IsShown()
+	and not NavOf("general").power:IsShown() and not HeadOf("qol").power:IsShown() and not NavOf("trigger").power:IsShown())
+Check("[NAV] sous-pages : une entrée chacune, sous le titre de leur groupe", NavOf("trigger").parentId == "departure"
+	and NavOf("merchant").parentId == "qol" and HeadOf("departure").label.text == NS.Theme.Upper(NS.L.OPT_PAGE_DEPARTURE))
 local tabs = NS.optionsFrame.tabs
+for _, id in ipairs({ "general", "bags", "merchant" }) do
+	NS:SelectOptionsPage(id)
+	Check("[NAV] " .. id .. " : pas de barre d'onglets", not tabs:IsShown())
+end
 NS:SelectOptionsPage("general")
-Check("[NAV] Général : pas d'onglets", not tabs:IsShown())
-NS:SelectOptionsPage("bags")
-Check("[NAV] onglets du départ", tabs:IsShown() and tabs.byId.trigger ~= nil and tabs.byId.merchant == nil)
-NS:SelectOptionsPage("merchant")
-Check("[NAV] onglets du QoL", tabs:IsShown() and tabs.byId.merchant ~= nil and tabs.byId.trigger == nil)
-NS:SelectOptionsPage("general")
-local dep = NavOf("departure")
+local dep = HeadOf("departure")
 Check("[NAV] check avant le départ : allumé", dep.moduleOn == true)
 dep.power:Click()
 Check("[NAV] clic : module coupé", NS:DB().departureEnabled == false and dep.moduleOn == false)

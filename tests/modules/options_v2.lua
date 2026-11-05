@@ -27,30 +27,147 @@ local function WithPage(def, fn)
 	if not ok then error(err, 0) end
 end
 
--- 1. Onglets ----------------------------------------------------------------
+local function Header(ns, id)
+	for _, header in ipairs(ns.optionsFrame.navHeaders) do if header.pageId == id then return header end end
+end
+local function NavOrder(ns)
+	local out = {}
+	for _, item in ipairs(ns.optionsFrame.navList.items) do
+		local r = item.region
+		out[#out + 1] = item.kind == "section" and ("[" .. tostring(r.label.text) .. "]") or tostring(r.pageId)
+	end
+	return table.concat(out, ",")
+end
+
+-- 1. Navigation : une entrée par page --------------------------------------------
 do
-	Say("-- réglages v2 : onglets")
+	Say("-- réglages v2 : navigation")
 	T.ResetWorld()
-	local frame = Open(NS, "merchant")
-	local ids = {}
-	for _, tab in ipairs(frame.tabs.tabs) do if tab:IsShown() then ids[#ids + 1] = tab.id end end
-	Check("[OPT2] QoL : un onglet par sous-page, dans l'ordre", table.concat(ids, ",") == "merchant,reward,pace,bagspace,lootroom,spellranks,death",
-		table.concat(ids, ","))
-	Check("[OPT2] onglet court quand il existe (`_TAB`)", frame.tabs.byId.reward.label.text == NS.L.OPT_PAGE_REWARD_TAB
-		and frame.tabs.byId.pace.label.text == NS.L.OPT_PAGE_PACE_TAB)
-	Check("[OPT2] la rangée d'onglets tient dans la largeur", frame.tabs.used <= lay.inner, frame.tabs.used)
-	frame.tabs.byId.death:Click()
-	Check("[OPT2] clic sur un onglet : sa page, mémorisée", frame.currentPage == "death" and frame.pages.death:IsShown()
-		and NS:DB().optionsPage == "death" and frame.tabs.selected == "death")
-	Check("[OPT2] en-tête : titre du parent, phrase de l'onglet", frame.header.title.text == NS.L.OPT_PAGE_QOL
-		and frame.header.subtitle.text == NS.L.OPT_PAGE_DEATH_SUB)
-	Nav(NS, "camp"):Click()
-	Check("[OPT2] page sans sous-page : pas d'onglets", frame.currentPage == "camp" and not frame.tabs:IsShown())
-	-- la page mémorisée rouvre son onglet
+	local frame = Open(NS, "general")
+	Check("[OPT2] R2Q : groupes et entrées dans l'ordre des pages", NavOrder(NS) == "general,[CHECK AVANT LE DÉPART],trigger,safe,bags,gear,buffs,"
+		.. "[MODULES],toast,portrait,camp,expedition,dungeon,[CONFORT DE JEU],merchant,reward,pace,bagspace,lootroom,spellranks,death",
+		NavOrder(NS))
+	local qol = Header(NS, "qol")
+	Check("[OPT2] page à sous-pages : titre de groupe en capitales ambre", qol and qol.label.text == "CONFORT DE JEU"
+		and qol.label.fontObject == Theme.F_CAPS and qol.label.textColor[1] > 0.85)
+	Check("[OPT2] sous-page liée à un module : son interrupteur", Nav(NS, "spellranks").powerKey == "spellranksEnabled"
+		and Nav(NS, "reward").powerKey == "rewardEnabled" and Nav(NS, "merchant").powerKey == nil and Nav(NS, "spellranks").power:IsShown())
+	Nav(NS, "spellranks").power:Click()
+	Check("[OPT2] interrupteur d'une sous-page : coupe le module, reste sur la page", NS:DB().spellranksEnabled == false
+		and frame.currentPage == "general" and Nav(NS, "spellranks").moduleOn == false and Row(NS, "spellranksEnabled").toggle.checked == false)
+	Nav(NS, "spellranks").power:Click()
+	Check("[OPT2] titre de groupe d'un module : son interrupteur", Header(NS, "departure").powerKey == "departureEnabled"
+		and Header(NS, "departure").power:IsShown() and not qol.power:IsShown())
+	Nav(NS, "spellranks"):Click()
+	Check("[OPT2] en-tête : le titre de la sous-page choisie", frame.header.title.text == NS.L.OPT_PAGE_SPELLRANKS
+		and frame.header.subtitle.text == NS.L.OPT_PAGE_SPELLRANKS_SUB and Nav(NS, "spellranks").selected and not frame.tabs:IsShown())
+	local _, _, _, _, bodyY = frame.pages.spellranks:GetPoint()
+	Check("[OPT2] sans onglets : le contenu remonte sous l'en-tête", bodyY > lay.tabsTop - Theme.TABS_HEIGHT - lay.previewHeight, bodyY)
+	qol:Click()
+	Check("[OPT2] clic sur un titre de groupe : sa première page", frame.currentPage == "merchant")
+	-- chaque page a exactement une entrée, et chaque réglage s'atteint par elle
+	local entries, problems = {}, {}
+	for _, item in ipairs(frame.navButtons) do entries[item.pageId] = (entries[item.pageId] or 0) + 1 end
+	for id in pairs(frame.pages) do
+		if entries[id] ~= 1 then problems[#problems + 1] = id .. "x" .. tostring(entries[id]) end
+	end
+	for id, count in pairs(entries) do if not frame.pages[id] then problems[#problems + 1] = id .. ":sans page" end end
+	local shown = 0
+	for _, item in ipairs(frame.navButtons) do
+		item:Click()
+		for _, row in ipairs(frame.pages[item.pageId].rows) do
+			if row:GetParent() == frame.pages[item.pageId] and frame.pages[item.pageId]:IsShown() then shown = shown + 1
+			else problems[#problems + 1] = tostring(row.labelText) end
+		end
+	end
+	Check("[OPT2] R2Q : chaque page a une seule entrée, chaque réglage s'y affiche", #problems == 0 and shown == #frame.rows,
+		table.concat(problems, ", ") .. " " .. shown .. "/" .. #frame.rows)
 	frame:Hide()
-	local again = Open(NS)
-	Check("[OPT2] réouverture : la dernière page", again.currentPage == "camp")
-	again:Hide()
+
+	local qframe = Open(QNS, "general")
+	Check("[OPT2] QC : le Compagnon de route en groupe, une entrée par page", NavOrder(QNS) == "general,[COMPAGNON DE ROUTE],companionMain,"
+		.. "companionOrnaments,journal,companionMemories,companionCharacter,companionDaily", NavOrder(QNS))
+	Check("[OPT2] QC : l'interrupteur du module sur le titre du groupe", Header(QNS, "companion").powerKey == "companionEnabled")
+	local qcount = 0
+	for _, item in ipairs(qframe.navButtons) do
+		item:Click()
+		for _, row in ipairs(qframe.pages[item.pageId].rows) do if row:GetParent() == qframe.pages[item.pageId] then qcount = qcount + 1 end end
+	end
+	Check("[OPT2] QC : chaque réglage s'affiche par une entrée", qcount == #qframe.rows, qcount .. "/" .. #qframe.rows)
+	Nav(QNS, "journal"):Click()
+	Check("[OPT2] QC : en-tête de la sous-page", qframe.header.title.text == QNS.L.OPT_PAGE_JOURNAL)
+	qframe:Hide()
+end
+
+-- 1 bis. Navigation qui défile ----------------------------------------------------
+do
+	Say("-- réglages v2 : navigation qui défile")
+	T.ResetWorld()
+	local frame = Open(NS, "general")
+	local list = frame.navList
+	Check("[OPT2] R2Q : la navigation dépasse la colonne", list.contentHeight > list.viewHeight, list.contentHeight .. " / " .. list.viewHeight)
+	Check("[OPT2] navigation : en haut, la dernière entrée cachée, ascenseur", Nav(NS, "general"):IsShown() and not Nav(NS, "death"):IsShown()
+		and list.scrollThumb:IsShown())
+	for _ = 1, 30 do list.scripts.OnMouseWheel(list, -1) end
+	Check("[OPT2] molette : la navigation descend jusqu'à la dernière entrée", Nav(NS, "death"):IsShown() and not Nav(NS, "general"):IsShown()
+		and list.offset > 0)
+	local cut = 0
+	for _, item in ipairs(list.items) do
+		if item.region:IsShown() and (item.y < list.offset or item.y + item.height > list.offset + list.viewHeight + 1) then cut = cut + 1 end
+	end
+	Check("[OPT2] navigation : aucune entrée coupée", cut == 0, cut)
+	NS:SelectOptionsPage("trigger")
+	Check("[OPT2] la page choisie remonte dans la navigation, avec son titre", Nav(NS, "trigger"):IsShown() and Header(NS, "departure"):IsShown())
+	NS:SelectOptionsPage("death")
+	Check("[OPT2] la page choisie descend dans la navigation", Nav(NS, "death"):IsShown())
+	for _ = 1, 30 do NS:ScrollOptionsNav(1) end
+	Check("[OPT2] molette : bornée en haut", list.offset == 0 and Nav(NS, "general"):IsShown())
+	Check("[OPT2] navigation : au-dessus de la version", lay.navTop - lay.navView >= -(lay.height - 2 - 40))
+	frame:Hide()
+end
+
+-- 1 ter. Page parente avec ses réglages, onglets déclarés -----------------------------
+do
+	Say("-- réglages v2 : vue d'ensemble et onglets déclarés")
+	T.ResetWorld()
+	local parent = { id = "zzparent", title = "OPT_PAGE_GENERAL", rows = { { key = "optParent", label = "OPT_ENABLED", kind = "bool" } } }
+	local child = { id = "zzchild", title = "OPT_PAGE_QOL", parent = "zzparent", rows = { { key = "optChild", label = "OPT_MINIMAP", kind = "bool" } } }
+	local tabbed = { id = "zztabs", title = "OPT_PAGE_DEATH", tabs = {
+		{ id = "a", label = "OPT_SETTINGS", rows = { { key = "optTabA", label = "OPT_ENABLED", kind = "bool" } } },
+		{ id = "b", label = "OPT_MODULES", rows = { { key = "optTabB", label = "OPT_TEST_TAB_B", kind = "bool" } } },
+	} }
+	NS.L.OPT_TEST_TAB_B = "Réglage du second onglet"
+	NS.AddOptionPage(parent); NS.AddOptionPage(child); NS.AddOptionPage(tabbed)
+	local ok, err = pcall(function()
+		local frame = Open(NS, "general")
+		local overview, childNav = Nav(NS, "zzparent"), Nav(NS, "zzchild")
+		Check("[OPT2] parent avec réglages : « Vue d'ensemble » en tête de son groupe", Header(NS, "zzparent") ~= nil and overview
+			and overview.label.text == NS.L.OPT_NAV_OVERVIEW and childNav ~= nil)
+		overview:Click()
+		Check("[OPT2] vue d'ensemble : les réglages du parent", frame.currentPage == "zzparent" and Row(NS, "optParent"):IsShown())
+		local tabsNav = Nav(NS, "zztabs")
+		tabsNav:Click()
+		Check("[OPT2] onglets déclarés : barre visible, premier onglet", frame.tabs:IsShown() and frame.tabs.selected == "zztabs:a"
+			and frame.currentPage == "zztabs:a" and Row(NS, "optTabA"):IsShown() and tabsNav.selected)
+		local _, _, _, _, bodyY = frame.pages["zztabs:a"]:GetPoint()
+		Check("[OPT2] onglets déclarés : le contenu sous la barre", bodyY <= lay.tabsTop - Theme.TABS_HEIGHT, bodyY)
+		frame.tabs.byId["zztabs:b"]:Click()
+		Check("[OPT2] onglets déclarés : clic, l'autre onglet", frame.currentPage == "zztabs:b" and Row(NS, "optTabB"):IsShown()
+			and not frame.pages["zztabs:a"]:IsShown() and frame.header.title.text == NS.L.OPT_PAGE_DEATH and tabsNav.selected)
+		NS:SelectOptionsPage("general")
+		NS:SelectOptionsPage("zztabs")
+		Check("[OPT2] onglets déclarés : le dernier onglet retenu", frame.currentPage == "zztabs:b")
+		NS:SetOptionsSearch("second onglet")
+		Check("[OPT2] recherche dans un onglet : trouvée, l'onglet en détail", frame.searchPage.total == 1
+			and frame.searchPage.sections[1].detail.text == "(" .. NS.L.OPT_MODULES .. ")" and tabsNav.badge.text == "1")
+		frame:Hide()
+	end)
+	for _, def in ipairs({ parent, child, tabbed }) do
+		for index, existing in ipairs(NS.OPTION_PAGES) do if existing == def then table.remove(NS.OPTION_PAGES, index); break end end
+	end
+	NS.L.OPT_TEST_TAB_B = nil
+	NS.optionsFrame = nil
+	if not ok then error(err, 0) end
 	-- Theme : marge d'onglet resserrée quand la rangée déborde
 	local holder = CreateFrame("Frame", nil, UIParent)
 	holder:SetSize(300, 40)
@@ -84,8 +201,10 @@ do
 	local sections = 0
 	for _, item in ipairs(results.items) do if item.kind == "section" then sections = sections + 1 end end
 	Check("[OPT2] recherche : regroupée par page", sections >= 2 and results.items[1].kind == "section", sections)
-	Check("[OPT2] recherche : la navigation compte les résultats", Nav(NS, "departure").badge.text == tostring(expected)
-		and Nav(NS, "general").badge:IsShown() ~= true)
+	local badged = 0
+	for _, nav in ipairs(frame.navButtons) do if nav.badge:IsShown() then badged = badged + tonumber(nav.badge.text) end end
+	Check("[OPT2] recherche : chaque entrée compte ses résultats", Nav(NS, "trigger").badge.text == "2" and badged == expected
+		and Nav(NS, "general").badge:IsShown() ~= true, badged)
 	Check("[OPT2] recherche : titre et nombre", frame.header.title.text == NS.L.OPT_SEARCH_TITLE
 		and frame.header.subtitle.text:find(tostring(expected), 1, true) ~= nil)
 	-- une carte trouvée marche comme sur sa page
@@ -101,7 +220,7 @@ do
 	Type("")
 	Check("[OPT2] recherche vidée : page d'avant rendue", not frame.searching and frame.currentPage == "general"
 		and frame.pages.general:IsShown() and not results:IsShown())
-	Check("[OPT2] recherche vidée : badges retirés", Nav(NS, "departure").badge:IsShown() ~= true)
+	Check("[OPT2] recherche vidée : badges retirés", Nav(NS, "trigger").badge:IsShown() ~= true)
 	NS:SelectOptionsPage("trigger")
 	Check("[OPT2] la carte revient sur sa page", delay:GetParent() == frame.pages.trigger and delay:IsShown())
 	-- choisir une page pendant une recherche la referme
@@ -241,7 +360,8 @@ do
 		and departure.score.text == "85" and departure.note.text == NS.L.OPT_PREVIEW_SAMPLE)
 	local _, _, _, _, stripY = frame.previewStrip:GetPoint()
 	local _, _, _, _, bodyY = frame.pages.trigger:GetPoint()
-	Check("[OPT2] aperçu : entre les onglets et les réglages", stripY < lay.tabsTop - Theme.TABS_HEIGHT and bodyY <= stripY - lay.previewHeight,
+	Check("[OPT2] aperçu : sous l'en-tête, au-dessus des réglages", stripY <= lay.tabsTop and stripY > lay.tabsTop - Theme.TABS_HEIGHT
+		and bodyY <= stripY - lay.previewHeight,
 		stripY .. " / " .. bodyY)
 	NS.score = 42
 	NS:RefreshOptions()
@@ -278,12 +398,12 @@ do
 	-- QuestCompanion : le compagnon dans son cadre, sur tous les onglets du module
 	T.ResetWorld()
 	local qframe = Open(QNS, "companionMain")
-	local comp = qframe.previews.companion
+	local comp = qframe.previews.companionMain
 	Check("[OPT2] aperçu du compagnon : nom, apparence, cadre et fond", comp and comp:IsShown()
 		and comp.name.text == QNS:CompanionName() and comp.line.text:find(QNS.L[QNS:CompanionCurrentAppearance().label], 1, true)
 		and comp.style.text:find(QNS.L.COMP_FRAME_SLATE, 1, true) ~= nil, comp and comp.style.text)
 	QNS:SelectOptionsPage("companionOrnaments")
-	Check("[OPT2] aperçu du compagnon : aussi sur les ornements", comp:IsShown())
+	Check("[OPT2] aperçu du compagnon : sur sa page seulement", not comp:IsShown() and not qframe.previewStrip:IsShown())
 	QNS:SelectOptionsPage("general")
 	Check("[OPT2] aperçu du compagnon : pas sur Général", not comp:IsShown())
 	qframe:Hide()

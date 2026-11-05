@@ -252,7 +252,7 @@ do
 	row.dropdown:Choose("copper")
 	Check("[COSM] choix dans la liste : appliqué et persisté", NS:CompanionData().frameStyle == "copper"
 		and NS.companionFrame.frameStyle == "copper" and row.dropdown.text.text == "Cuivre" and row.dropdown.value == "copper")
-	local preview = NS.optionsFrame.previews.companion
+	local preview = NS.optionsFrame.previews.companionMain
 	local edge = preview and preview.box.edge.top.vertex
 	Check("[COSM] aperçu des réglages : le filet du cadre choisi", edge and math.abs(edge[1] - 0.80) < 0.01 and math.abs(edge[2] - 0.48) < 0.01,
 		edge and table.concat(edge, ","))

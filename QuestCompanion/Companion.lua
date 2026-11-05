@@ -493,13 +493,13 @@ ns.RegisterDefaults({
 
 -- Un seul module « Compagnon de route » : le carnet de voyage le fait évoluer.
 -- Entrée parente (un interrupteur) et deux sous-pages : Compagnon, Carnet.
--- L'aperçu (sous les onglets de toutes ses pages) : le compagnon tel qu'il
--- apparaît, avec son cadre et son fond (CompanionPreview, plus bas)
 ns.AddOptionPage({ id = "companion", title = "OPT_PAGE_COMPANION", group = "OPT_GROUP_MODULES",
-	power = "companionEnabled", target = "companionMain",
-	preview = function(self, container) return self:CompanionPreview(container) end })
+	power = "companionEnabled", target = "companionMain" })
 ns.AddOptionPage({
 	id = "companionMain", title = "OPT_PAGE_COMPANION_MAIN", parent = "companion", group = "OPT_GROUP_MODULES",
+	-- aperçu : le compagnon tel qu'il apparaît, avec son cadre et son fond
+	-- (CompanionPreview, plus bas)
+	preview = function(self, container) return self:CompanionPreview(container) end,
 	rows = {
 		{ key = "companionShow",       label = "OPT_COMP_SHOW",       kind = "bool" },
 		-- réglette « Bavardage » : le nom du cran, une phrase dessous, le détail

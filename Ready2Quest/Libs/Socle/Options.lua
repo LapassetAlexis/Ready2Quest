@@ -39,6 +39,9 @@ local TABS_TOP     = -(Theme.HEADER_HEIGHT or 100)
 local BODY_BOTTOM  = -(FRAME_HEIGHT - 2 - FOOTER - 12) -- bas utile du contenu, sous l'en-tête de la zone
 local LIST_LINE    = 24
 local LIST_LINES   = 9
+local NAV_TOP      = -118                             -- haut de la liste de navigation, sous la recherche
+local NAV_VIEW     = FRAME_HEIGHT - 2 + NAV_TOP - 44  -- hauteur visible (au-dessus de la version)
+local NAV_HEADER_H = 30                               -- titre de groupe, écart au-dessus compris
 local SLIDER_TRACK = 96                               -- piste d'un curseur, demi-carte
 local SLIDER_TRACK_WIDE = 180                         -- piste d'un curseur, carte pleine largeur
 
@@ -94,6 +97,9 @@ ns.OPT_LAYOUT = {
 	footer = FOOTER,
 	listLine = LIST_LINE,
 	listLines = LIST_LINES,
+	navTop = NAV_TOP,
+	navView = NAV_VIEW,
+	navHeaderHeight = NAV_HEADER_H,
 	maxHeight = 740,
 }
 
@@ -737,20 +743,23 @@ function ns:ApplyOptionsScroll(container)
 			if nextItem and nextItem.kind ~= "section" and not nextItem.region:IsShown() then item.region:Hide() end
 		end
 	end
+	-- ascenseur : celui du conteneur (navigation), ou celui de la zone de
+	-- réglages pour le conteneur affiché
 	local frame = self.optionsFrame
-	if frame and frame.activeContainer == container and frame.scrollTrack then
+	local track, thumb = container.scrollTrack, container.scrollThumb
+	if not track and frame and frame.activeContainer == container then track, thumb = frame.scrollTrack, frame.scrollThumb end
+	if track then
 		local content = container.contentHeight or 0
 		if content > view and view > 0 then
-			local trackH = view
-			local thumbH = math.max(24, math.floor(trackH * view / content + 0.5))
-			local y = math.floor((trackH - thumbH) * offset / math.max(1, stops[#stops]) + 0.5)
-			frame.scrollThumb:ClearAllPoints()
-			frame.scrollThumb:SetPoint("TOPLEFT", frame.scrollTrack, "TOPLEFT", 0, -y)
-			frame.scrollThumb:SetHeight(thumbH)
-			frame.scrollTrack:SetHeight(trackH)
-			frame.scrollTrack:Show(); frame.scrollThumb:Show()
+			local thumbH = math.max(24, math.floor(view * view / content + 0.5))
+			local y = math.floor((view - thumbH) * offset / math.max(1, stops[#stops]) + 0.5)
+			thumb:ClearAllPoints()
+			thumb:SetPoint("TOPLEFT", track, "TOPLEFT", 0, -y)
+			thumb:SetHeight(thumbH)
+			track:SetHeight(view)
+			track:Show(); thumb:Show()
 		else
-			frame.scrollTrack:Hide(); frame.scrollThumb:Hide()
+			track:Hide(); thumb:Hide()
 		end
 	end
 end
@@ -800,16 +809,20 @@ function ns:RefreshOptions()
 	end
 	if grown and frame.activeContainer then self:LayoutOptionsContainer(frame.activeContainer, true) end
 
+	-- navigation : interrupteurs (entrées et titres de groupe), entrée choisie
+	local function State(nav)
+		if nav.powerKey then return (db[nav.powerKey] ~= false) and "on" or "off" end
+		if nav.modules then return (self:PageModuleState(nav.modules) ~= "off") and "on" or "off" end
+		return nil
+	end
 	for _, nav in ipairs(frame.navButtons or {}) do
-		local state
-		if nav.powerKey then
-			state = (db[nav.powerKey] ~= false) and "on" or "off"
-		elseif nav.modules then
-			state = (self:PageModuleState(nav.modules) ~= "off") and "on" or "off"
-		end
-		nav.state = state
-		nav:SetModuleState(state)
-		nav:SetSelected(not frame.searching and nav.pageId == frame.currentTop)
+		nav.state = State(nav)
+		nav:SetModuleState(nav.state)
+		nav:SetSelected(not frame.searching and nav.pageId == frame.navPage)
+	end
+	for _, header in ipairs(frame.navHeaders or {}) do
+		header.state = State(header)
+		header:SetModuleState(header.state)
 	end
 
 	for _, list in pairs(frame.lists or {}) do self:RefreshOptionList(list) end
@@ -844,7 +857,24 @@ local function AddBlock(page, block)
 	return block
 end
 
-local function BuildPage(frame, def, placed)
+local BuildPage
+
+-- Page à onglets (`tabs = { { id, label, rows, … } }`) : un conteneur par
+-- onglet, d'id « <page>:<onglet> », qui hérite du titre de la page
+local function BuildTabbedPage(frame, def, placed)
+	frame.tabPages[def.id] = {}
+	for _, tab in ipairs(def.tabs) do
+		local tabDef = { id = def.id .. ":" .. tostring(tab.id), title = def.title, tabOf = def.id, tabId = tab.id,
+			rows = tab.rows, modules = tab.modules, list = tab.list, info = tab.info, actions = tab.actions }
+		frame.tabDefs[tabDef.id] = tabDef
+		local page = BuildPage(frame, tabDef, placed)
+		page.subText = Declared(def.title .. "_SUB")
+		frame.tabPages[def.id][#frame.tabPages[def.id] + 1] = page
+	end
+end
+
+function BuildPage(frame, def, placed)
+	if def.tabs then return BuildTabbedPage(frame, def, placed) end
 	local page = CreateFrame("Frame", nil, frame.content)
 	page:SetSize(INNER, 400)
 	page.id = def.id
@@ -853,6 +883,7 @@ local function BuildPage(frame, def, placed)
 	-- phrase de l'en-tête quand la page est choisie
 	page.subText = Declared(def.title .. "_SUB")
 	frame.pages[def.id] = page
+	frame.pageOrder[#frame.pageOrder + 1] = page
 
 	-- texte d'explication (paragraphes), pour les modules sans réglage
 	if def.info then
@@ -981,9 +1012,178 @@ local function Children(topId)
 	return list
 end
 
--- titre court d'un onglet (`<titre>_TAB`), sinon le titre
-local function TabTitle(def)
-	return Declared(def.title .. "_TAB") or L[def.title] or def.title
+-- la page porte-t-elle ses propres réglages (sinon c'est un simple titre de groupe)
+local function HasContent(def)
+	return not def.target and (def.rows or def.modules or def.list or def.info or def.actions or def.frameButtons or def.tabs) ~= nil
+end
+
+-- clé de l'interrupteur d'une page : `power`, sinon le module enregistré
+-- (ns.RegisterModule) qui porte le titre de la page
+local function ModuleKey(def)
+	if def.power then return def.power end
+	for _, module in ipairs(ns.MODULES or {}) do
+		if module.label == def.title and module.key then return module.key end
+	end
+	return nil
+end
+
+local function PowerTip(button, def)
+	button:SetScript("OnEnter", function(self) Tip(self, { L[def.title] or def.title, L.OPT_NAV_POWER_TIP }) end)
+	button:SetScript("OnLeave", HideTip)
+end
+
+-- Titre de groupe : capitales ambre. Celui d'une page à sous-pages est
+-- cliquable (sa première sous-page) et porte l'interrupteur de son module.
+local function NavHeader(frame, text, def)
+	local header = CreateFrame("Button", nil, frame.navList)
+	header:SetSize(NAV_WIDTH - 1, NAV_HEADER_H)
+	header.label = Theme.CreateNavGroup(header, text)
+	header.label:SetPoint("BOTTOMLEFT", header, "BOTTOMLEFT", 18, 8)
+	header.label:SetWidth(NAV_WIDTH - 18 - 40)
+	if header.label.SetWordWrap then header.label:SetWordWrap(false) end
+	header.power = CreateFrame("Button", nil, header)
+	header.power:SetSize(16, 16)
+	header.power:SetPoint("BOTTOMRIGHT", header, "BOTTOMRIGHT", -12, 4)
+	header.power.icon = header.power:CreateTexture(nil, "ARTWORK")
+	header.power.icon:SetTexture(Theme.POWER)
+	header.power.icon:SetAllPoints()
+	header.power:Hide()
+	function header:SetModuleState(state)
+		local c = Theme.GOLD
+		if state == nil then
+			self.moduleOn = nil
+			self.power:Hide()
+		else
+			self.moduleOn = (state == true or state == "on")
+			self.power:Show()
+			c = self.moduleOn and Theme.GOLD or Theme.MUTED
+			self.power.icon:SetVertexColor(c[1], c[2], c[3], 1)
+		end
+		self.label:SetTextColor(c[1], c[2], c[3], 1)
+	end
+	if def then
+		header.pageId = def.id
+		header:SetScript("OnClick", function()
+			local first = Children(def.id)[1]
+			ns:SelectOptionsPage(def.target or (HasContent(def) and def.id) or (first and first.id) or def.id)
+		end)
+		header.powerKey = ModuleKey(def)
+		if header.powerKey then
+			header.power:SetScript("OnClick", function() ns:ToggleModuleKey(header.powerKey) end)
+			PowerTip(header.power, def)
+		end
+		frame.navHeaders[#frame.navHeaders + 1] = header
+	end
+	frame.navGroups[#frame.navGroups + 1] = header.label
+	return header
+end
+
+local function NavItem(frame, def, text, topLevel)
+	local item = Theme.CreateNavItem(frame.navList, NAV_WIDTH - 1)
+	item:SetText(text or L[def.title] or def.title)
+	item.label:SetWidth(NAV_WIDTH - 18 - 40)
+	if item.label.SetWordWrap then item.label:SetWordWrap(false) end
+	item.pageId = def.id
+	item.parentId = def.parent
+	item:SetScript("OnClick", function() ns:SelectOptionsPage(def.id) end)
+	-- Interrupteur du module, comme le bouton d'alimentation de la barre
+	-- latérale d'EllesmereUI : active ou coupe le module sans y naviguer.
+	if not text then
+		item.powerKey = ModuleKey(def)
+		if item.powerKey then
+			item.onPower = function() ns:ToggleModuleKey(item.powerKey) end
+		elseif topLevel and def.modules then
+			item.modules = def.modules
+			item.onPower = function() ns:TogglePageModules(def.id) end
+		end
+		if item.onPower then PowerTip(item.power, def) end
+	end
+	frame.navButtons[#frame.navButtons + 1] = item
+	return item
+end
+
+-- Liste de navigation : une page à sous-pages devient un titre de groupe
+-- (son titre) suivi d'une entrée par sous-page (« Vue d'ensemble » d'abord
+-- si elle a ses propres réglages) ; une page sans sous-page est une entrée
+-- sous le titre de son `group`. La liste défile à la molette si elle dépasse.
+local function BuildNav(frame)
+	local list = CreateFrame("Frame", nil, frame.nav)
+	list:SetPoint("TOPLEFT", frame.nav, "TOPLEFT", 0, NAV_TOP)
+	list:SetSize(NAV_WIDTH - 1, NAV_VIEW)
+	list.items = {}
+	list.viewHeight = NAV_VIEW
+	list.scrollTrack = Theme.Solid(frame.nav, "BORDER", Theme.EDGE_SOFT, 1)
+	list.scrollTrack:SetWidth(2)
+	list.scrollTrack:SetPoint("TOPLEFT", frame.nav, "TOPLEFT", NAV_WIDTH - 5, NAV_TOP)
+	list.scrollThumb = Theme.Solid(frame.nav, "ARTWORK", Theme.GOLD, 0.8)
+	list.scrollThumb:SetWidth(2)
+	if list.EnableMouseWheel then list:EnableMouseWheel(true) end
+	list:SetScript("OnMouseWheel", function(_, delta) ns:ScrollOptionsNav(delta) end)
+	frame.navList = list
+
+	local function Add(region, kind)
+		list.items[#list.items + 1] = { region = region, kind = kind, x = 0, height = region:GetHeight() }
+	end
+	local lastGroup = nil
+	for _, def in ipairs(PAGES) do
+		if not def.parent then
+			local children = Children(def.id)
+			if #children > 0 then
+				Add(NavHeader(frame, L[def.title] or def.title, def), "section")
+				if HasContent(def) then Add(NavItem(frame, def, L.OPT_NAV_OVERVIEW), "card") end
+				for _, child in ipairs(children) do Add(NavItem(frame, child), "card") end
+				lastGroup = false   -- la page suivante reprend le titre de son groupe
+			else
+				if def.group and def.group ~= lastGroup then Add(NavHeader(frame, L[def.group] or def.group), "section") end
+				lastGroup = def.group
+				Add(NavItem(frame, def, nil, true), "card")
+			end
+		end
+	end
+	local y = 0
+	for _, item in ipairs(list.items) do
+		item.y = y
+		y = y + item.height
+	end
+	list.contentHeight = y
+	list.stops = ScrollStops(list)
+	list.stopIndex = 1
+	frame.navBottom = NAV_TOP - NAV_VIEW
+	ns:ApplyOptionsScroll(list)
+end
+
+-- molette sur la navigation : delta > 0 remonte
+function ns:ScrollOptionsNav(delta)
+	local list = self.optionsFrame and self.optionsFrame.navList
+	if not list then return nil end
+	list.stopIndex = (list.stopIndex or 1) - (delta > 0 and 1 or -1)
+	self:ApplyOptionsScroll(list)
+	return list.offset
+end
+
+-- la page choisie est visible dans la navigation (avec son titre de groupe
+-- quand c'est la première de son groupe)
+local function RevealNav(frame, pageId)
+	local list = frame.navList
+	for index, item in ipairs(list.items) do
+		if item.kind == "card" and item.region.pageId == pageId then
+			local previous = list.items[index - 1]
+			local top = (previous and previous.kind == "section") and previous.y or item.y
+			local bottom = item.y + item.height
+			local offset = list.stops[list.stopIndex or 1] or 0
+			if top < offset then
+				for stop = #list.stops, 1, -1 do
+					if list.stops[stop] <= top then list.stopIndex = stop; break end
+				end
+			elseif bottom > offset + list.viewHeight then
+				for stop = 1, #list.stops do
+					if list.stops[stop] + list.viewHeight >= bottom then list.stopIndex = stop; break end
+				end
+			end
+			ns:ApplyOptionsScroll(list)
+			return
+		end
+	end
 end
 
 function ns:EnsureOptions()
@@ -997,7 +1197,8 @@ function ns:EnsureOptions()
 	ns:RestorePoint(frame, "optionsPoint", { point = "CENTER", x = 0, y = 20 })
 
 	frame.rows, frame.pages, frame.navButtons, frame.lists, frame.notes = {}, {}, {}, {}, {}
-	frame.navGroups, frame.previews = {}, {}
+	frame.navGroups, frame.navHeaders, frame.previews, frame.pageOrder = {}, {}, {}, {}
+	frame.tabPages, frame.tabDefs, frame.tabChoice = {}, {}, {}
 	local content = frame.content
 
 	-- Navigation : marque, recherche, groupes et pages, version en bas
@@ -1008,46 +1209,7 @@ function ns:EnsureOptions()
 	frame.brandLogo, frame.brandName = frame.brand.logo, frame.brand.name
 	frame.search = Theme.CreateSearchBox(nav, NAV_WIDTH - 32, L.OPT_SEARCH, function(text) ns:SetOptionsSearch(text) end)
 	frame.search:SetPoint("TOPLEFT", nav, "TOPLEFT", 16, -86)
-
-	local navY, lastGroup = -126, nil
-	for _, def in ipairs(PAGES) do
-		if not def.parent then
-			if def.group and def.group ~= lastGroup then
-				if lastGroup ~= nil or #frame.navButtons > 0 then navY = navY - 8 end
-				local group = Theme.CreateNavGroup(nav, L[def.group] or def.group)
-				group:SetPoint("TOPLEFT", nav, "TOPLEFT", 18, navY - 2)
-				frame.navGroups[#frame.navGroups + 1] = group
-				navY = navY - 20
-			end
-			lastGroup = def.group
-
-			local item = Theme.CreateNavItem(nav, NAV_WIDTH - 1)
-			item:SetPoint("TOPLEFT", nav, "TOPLEFT", 0, navY)
-			item:SetText(L[def.title] or def.title)
-			item.label:SetWidth(NAV_WIDTH - 18 - 40)
-			if item.label.SetWordWrap then item.label:SetWordWrap(false) end
-			item.pageId = def.id
-			item:SetScript("OnClick", function() ns:SelectOptionsPage(def.target or def.id) end)
-			-- Interrupteur du module, comme le bouton d'alimentation de la barre
-			-- latérale d'EllesmereUI : active ou coupe le module sans y naviguer.
-			if def.power then
-				item.powerKey = def.power
-				item.onPower = function() ns:ToggleModuleKey(def.power) end
-			elseif def.modules then
-				item.modules = def.modules
-				item.onPower = function() ns:TogglePageModules(def.id) end
-			end
-			if item.onPower then
-				item.power:SetScript("OnEnter", function(self)
-					Tip(self, { L[def.title] or def.title, L.OPT_NAV_POWER_TIP })
-				end)
-				item.power:SetScript("OnLeave", HideTip)
-			end
-			frame.navButtons[#frame.navButtons + 1] = item
-			navY = navY - Theme.NAV_ITEM_HEIGHT
-		end
-	end
-	frame.navBottom = navY
+	BuildNav(frame)
 
 	frame.version = Theme.Text(nav, Theme.F_SMALL, Theme.MUTED)
 	frame.version:SetPoint("BOTTOMLEFT", nav, "BOTTOMLEFT", 18, 18)
@@ -1232,14 +1394,26 @@ local function PreviewFor(frame, def)
 	return container
 end
 
+local function DefOf(frame, id)
+	return PageDef(id) or frame.tabDefs[id]
+end
+
 function ns:SelectOptionsPage(id)
 	local frame = self.optionsFrame
 	if not frame then return end
-	-- entrée de navigation sans page propre (module parent) : sa première sous-page
+	-- entrée sans page propre (titre de groupe) : sa première sous-page
 	local target = PageDef(id)
 	if target and target.target then id = target.target end
+	target = PageDef(id)
+	if target and not HasContent(target) and Children(id)[1] then id = Children(id)[1].id end
+	-- page à onglets : son dernier onglet choisi, sinon le premier
+	target = PageDef(id)
+	if target and target.tabs and target.tabs[1] then
+		id = id .. ":" .. tostring(frame.tabChoice[id] or target.tabs[1].id)
+	end
 	if not frame.pages[id] then id = "general" end
-	local def = PageDef(id)
+	local def = DefOf(frame, id)
+	local owner = def.tabOf and PageDef(def.tabOf) or def
 
 	-- choisir une page referme la recherche
 	if frame.searching then
@@ -1251,29 +1425,33 @@ function ns:SelectOptionsPage(id)
 	end
 
 	frame.currentPage = id
-	frame.currentParent = def.parent
-	frame.currentTop = def.parent or id
+	frame.currentParent = owner.parent
+	frame.navPage = owner.id
 	self:DB().optionsPage = id
-	local top = PageDef(frame.currentTop) or def
 
-	frame.header:SetTitle(L[top.title] or top.title)
-	frame.header:SetSubtitle(Declared(def.title .. "_SUB") or Declared(top.title .. "_SUB") or "")
+	-- en-tête : le titre de la page choisie, sa phrase (sinon celle de son groupe)
+	local parent = owner.parent and PageDef(owner.parent)
+	frame.header:SetTitle(L[owner.title] or owner.title)
+	frame.header:SetSubtitle(Declared(owner.title .. "_SUB") or (parent and Declared(parent.title .. "_SUB")) or "")
 
-	local children = Children(frame.currentTop)
-	if #children > 0 then
+	if owner.tabs then
 		local tabs = {}
-		for _, child in ipairs(children) do tabs[#tabs + 1] = { id = child.id, label = TabTitle(child) } end
+		for _, tab in ipairs(owner.tabs) do
+			tabs[#tabs + 1] = { id = owner.id .. ":" .. tostring(tab.id), label = L[tab.label] or tab.label or tostring(tab.id) }
+		end
 		frame.tabs:SetTabs(tabs)
 		frame.tabs:Select(id, true)
 		frame.tabs:Show()
+		frame.tabChoice[owner.id] = def.tabId
 	else
 		frame.tabs:SetTabs({})
 		frame.tabs:Hide()
 	end
 
-	frame.currentPreview = PreviewFor(frame, def)
-	local bodyTop, view = PlaceBody(frame, #children > 0, frame.currentPreview)
+	frame.currentPreview = PreviewFor(frame, owner)
+	local bodyTop, view = PlaceBody(frame, owner.tabs ~= nil, frame.currentPreview)
 	ShowContainer(frame, frame.pages[id], bodyTop, view)
+	RevealNav(frame, owner.id)
 	self:RefreshOptions()
 end
 
@@ -1313,9 +1491,9 @@ function ns:FindOptions(text)
 	local groups = {}
 	if not frame or #words == 0 then return groups, 0 end
 	local total = 0
-	for _, def in ipairs(PAGES) do
-		local page = frame.pages[def.id]
-		if page then
+	for _, page in ipairs(frame.pageOrder) do
+		local def = page.def
+		do
 			local found = {}
 			for _, card in ipairs(page.rows) do
 				local hit = true
@@ -1350,19 +1528,26 @@ function ns:SetOptionsSearch(text)
 	local counts = {}
 	for index, group in ipairs(groups) do
 		local def = group.def
-		local topDef = def.parent and PageDef(def.parent) or def
+		local owner = def.tabOf and PageDef(def.tabOf) or def
+		local parent = owner.parent and PageDef(owner.parent)
+		local detail = parent and (L[parent.title] or parent.title) or nil
+		if def.tabOf then
+			for _, tab in ipairs(owner.tabs) do
+				if tab.id == def.tabId then detail = L[tab.label] or tab.label end
+			end
+		end
 		local section = results.sections[index]
 		if not section then
 			section = Theme.CreateSection(results, "", nil)
 			section:SetWidth(INNER)
 			results.sections[index] = section
 		end
-		section:SetText(L[topDef.title] or topDef.title, def.parent and (L[def.title] or def.title) or nil)
+		section:SetText(L[owner.title] or owner.title, detail)
 		results.items[#results.items + 1] = { region = section, kind = "section", height = SECTION_H }
 		for _, card in ipairs(group.cards) do
 			results.items[#results.items + 1] = { region = card, kind = "card", height = card:GetHeight() }
 		end
-		counts[topDef.id] = (counts[topDef.id] or 0) + #group.cards
+		counts[owner.id] = (counts[owner.id] or 0) + #group.cards
 	end
 	for index = #groups + 1, #results.sections do results.sections[index]:Hide() end
 	results.total = total

@@ -583,8 +583,13 @@ Snap.scenes["r2q-options"] = function(T)
 	return Options(T, T.NS, "general"), "Ready2Quest : réglages, page Général"
 end
 
-Snap.scenes["r2q-options-tabs"] = function(T)
+Snap.scenes["r2q-options-bags"] = function(T)
 	return Options(T, T.NS, "bags"), "Ready2Quest : réglages, Check avant le départ > Sacs & vivres"
+end
+
+-- navigation plus haute que sa colonne : défilée jusqu'en bas (Après la mort)
+Snap.scenes["r2q-options-nav"] = function(T)
+	return Options(T, T.NS, "death"), "Ready2Quest : réglages, navigation défilée (Confort de jeu > Après la mort)"
 end
 
 Snap.scenes["r2q-options-spellranks"] = function(T)

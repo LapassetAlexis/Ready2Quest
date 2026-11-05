@@ -48,7 +48,6 @@ local QUEST_GRACE        = 3              -- l'XP de quête arrive juste après 
 -- ---------------------------------------------------------------------------
 local FR = {
 	OPT_PAGE_PACE        = "Rythme de leveling",
-	OPT_PAGE_PACE_TAB    = "Rythme",
 	OPT_PAGE_PACE_SUB    = "Combien avant le prochain niveau : XP/h, temps, monstres, quêtes et repos.",
 	OPT_PACE_TOOLTIP     = "Au survol de la barre d'XP",
 	OPT_PACE_WINDOW      = "Fenêtre récente",
@@ -79,7 +78,6 @@ local FR = {
 }
 local EN = {
 	OPT_PAGE_PACE        = "Leveling pace",
-	OPT_PAGE_PACE_TAB    = "Pace",
 	OPT_PAGE_PACE_SUB    = "How long until next level: XP/h, time, kills, quests and rest.",
 	OPT_PACE_TOOLTIP     = "On XP bar hover",
 	OPT_PACE_WINDOW      = "Recent window",
