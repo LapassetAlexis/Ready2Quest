@@ -1368,6 +1368,17 @@ do
 		(adv:GetWidth() or 0) .. " >= " .. probe:GetStringWidth())
 	local point = adv:GetPoint()
 	Check("pied : bouton centré", point == "BOTTOM", point)
+	local c = adv.text.textColor or {}
+	Check("pied : texte clair, lisible sur le bleu", (c[1] or 0) > 0.9 and (c[2] or 0) > 0.9 and (c[3] or 0) > 0.9)
+	-- dernier conseil (bas de sa ligne, ~12) au-dessus du haut du bouton : au moins 8 d'écart
+	for _, rows in ipairs({ 6, 13 }) do
+		NS:LayoutWindow(win, rows, false)
+		local _, _, _, _, y = win.adviceLines[#win.adviceLines]:GetPoint()
+		local lineBottom = -y + 12
+		local buttonTop = win:GetHeight() - 12 - adv:GetHeight()
+		Check("pied : le bouton ne colle pas au dernier conseil (" .. rows .. " lignes)",
+			buttonTop - lineBottom >= 8, buttonTop .. " - " .. lineBottom)
+	end
 	Check("pied : tient dans la fenêtre", (adv:GetWidth() or 0) <= diag.width - 28, adv:GetWidth())
 	win:Show()
 	adv:Click()

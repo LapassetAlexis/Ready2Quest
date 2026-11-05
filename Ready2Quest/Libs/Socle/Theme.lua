@@ -358,7 +358,14 @@ function Theme.CreateButton(parent, width, height, label, onClick, style)
 	button.text = button:CreateFontString(nil, "OVERLAY", Theme.F_SMALL)
 	button.text:SetPoint("CENTER", 0, 0)
 	button.text:SetText(label)
-	if primary then
+	if button.style == "adventure" then
+		-- texte clair sur le bleu (un texte sombre s'y perd)
+		button.text:SetTextColor(1, 1, 1)
+		if button.text.SetShadowOffset then
+			button.text:SetShadowColor(0, 0, 0, 0.8)
+			button.text:SetShadowOffset(1, -1)
+		end
+	elseif primary then
 		button.text:SetTextColor(0.08, 0.09, 0.11)
 	else
 		button.text:SetTextColor(0.81, 0.78, 0.72)
