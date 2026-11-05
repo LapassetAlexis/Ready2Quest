@@ -32,6 +32,8 @@ local FR = {
 	MEM_ASK_YES            = "Oui",
 	MEM_ASK_NO             = "Non",
 	MEM_ASK_LATER          = "Plus tard",
+	MEM_ASK_TITLE          = "Photos souvenirs",
+	MEM_ASK_SUB            = "Pour l'album du carnet de voyage",
 	MEM_ASK_DONE_YES       = "Photos souvenirs activées. Tu peux les couper dans les réglages, page Souvenirs.",
 	MEM_ASK_DONE_NO        = "Pas de photos : les souvenirs restent écrits dans l'album. Réglable dans les réglages, page Souvenirs.",
 	OPT_PAGE_MEMORIES      = "Souvenirs",
@@ -74,6 +76,8 @@ local EN = {
 	MEM_ASK_YES            = "Yes",
 	MEM_ASK_NO             = "No",
 	MEM_ASK_LATER          = "Later",
+	MEM_ASK_TITLE          = "Memory pictures",
+	MEM_ASK_SUB            = "For the travel journal's album",
 	MEM_ASK_DONE_YES       = "Memory pictures on. You can turn them off in the settings, Memories page.",
 	MEM_ASK_DONE_NO        = "No pictures: memories stay written in the album. Change it in the settings, Memories page.",
 	OPT_PAGE_MEMORIES      = "Memories",
@@ -241,10 +245,47 @@ function ns:MemoryWantPhoto(memory)
 	return true
 end
 
+-- La question : une fenêtre de module (docs/UI.md), texte, « Oui » plein,
+-- « Non » au trait, « Plus tard » à gauche. Le [×] vaut « Plus tard » : la
+-- question reviendra. Pas d'Échap (comme l'ancienne fenêtre du jeu).
+local PROMPT_W = 420
+function ns:EnsurePhotoPrompt()
+	if self.photoPrompt then return self.photoPrompt end
+	if not (Theme and Theme.CreateDialog) then return nil end
+	local frame = Theme.CreateDialog(UIParent, PROMPT_W, 200, { title = L.MEM_ASK_TITLE, subtitle = L.MEM_ASK_SUB })
+	if not frame then return nil end
+	frame:SetPoint("TOP", UIParent, "TOP", 0, -160)
+	frame.text = Theme.Text(frame, Theme.F_BODY, Theme.LABEL)
+	frame.text:SetPoint("TOPLEFT", frame, "TOPLEFT", frame.pad, frame.contentTop - 18)
+	frame.text:SetWidth(frame.innerWidth)
+	frame.text:SetJustifyH("LEFT")
+	if frame.text.SetWordWrap then frame.text:SetWordWrap(true) end
+	local function Answer(answer) frame:Hide(); ns:MemoryAnswer(answer) end
+	frame.yes = frame:AddFooterButton(L.MEM_ASK_YES, function() Answer("yes") end, "primary")
+	frame.no = frame:AddFooterButton(L.MEM_ASK_NO, function() Answer("no") end, "outline")
+	frame.later = frame:AddFooterButton(L.MEM_ASK_LATER, function() Answer("later") end, "outline", "left")
+	frame.close:SetScript("OnClick", function() Answer("later") end)
+	frame.asks = 0
+	frame:Hide()
+	self.photoPrompt = frame
+	return frame
+end
+
 function ns:MemoryAsk(memory)
 	local state = self:MemoryState()
 	state.askedAt, state.askMemory = Clock(), memory
 	self:DB().companionPhotosAsked = "asking"
+	local prompt = self:EnsurePhotoPrompt()
+	if prompt then
+		prompt.text:SetText(self:F("MEM_ASK_TEXT", self:CompanionName()))
+		local h = Theme.TextHeight(prompt.text, prompt.innerWidth, Theme.F_BODY)
+		prompt:SetHeight(math.ceil(-prompt.contentTop + 18 + h + 22 + Theme.DIALOG_FOOTER))
+		prompt.asks = prompt.asks + 1
+		prompt:Show()
+		if Theme.FadeIn then Theme.FadeIn(prompt, 0.15) end
+		return prompt
+	end
+	-- repli : la fenêtre du jeu (client sans les briques du thème)
 	local dialogs = G("StaticPopupDialogs")
 	if type(dialogs) == "table" then
 		dialogs.QUESTCOMPANION_PHOTO = dialogs.QUESTCOMPANION_PHOTO or {
@@ -497,54 +538,61 @@ end
 -- ---------------------------------------------------------------------------
 -- Album : la partie « Souvenirs » du carnet (JournalWindow.lua l'appelle)
 -- ---------------------------------------------------------------------------
-local ROWS, ROW_H = 8, 36
+local ROWS, ROW_H, ROW_STEP = 8, 44, 48
 ns.MEMORY_ALBUM_ROWS = ROWS
 
-function ns:BuildMemoriesPane(frame, top, width)
-	local pane = CreateFrame("Frame", nil, frame)
+-- frame : la fenêtre du carnet ; content : sa zone de droite ; layout :
+-- { pad, top, width, pagerTop } (JournalWindow.lua). Chaque souvenir est une
+-- carte de liste : losange (ambre s'il a sa photo), texte, date à droite,
+-- lieu et photo dessous.
+function ns:BuildMemoriesPane(frame, content, layout)
+	layout = layout or {}
+	local pad, top, width = layout.pad or 24, layout.top or -106, layout.width or 710
+	local pane = CreateFrame("Frame", nil, content or frame)
 	pane:SetAllPoints()
 	frame.mem = pane
-	pane.header = pane:CreateFontString(nil, "OVERLAY", Theme.F_NORMAL)
-	pane.header:SetPoint("TOPLEFT", frame, "TOPLEFT", 14, top - 36)
-	pane.hint = pane:CreateFontString(nil, "OVERLAY", Theme.F_SMALL)
-	pane.hint:SetPoint("TOPLEFT", frame, "TOPLEFT", 14, top - 56)
-	pane.hint:SetTextColor(Theme.MUTED[1], Theme.MUTED[2], Theme.MUTED[3])
+	local function At(region, x, y)
+		region:ClearAllPoints()
+		region:SetPoint("TOPLEFT", content or frame, "TOPLEFT", pad + x, y)
+	end
+	pane.header = Theme.Text(pane, Theme.F_LABEL, Theme.LABEL)
+	At(pane.header, 0, top - 2)
+	pane.header:SetJustifyH("LEFT")
+	pane.hint = Theme.Text(pane, Theme.F_SMALL, Theme.MUTED)
+	pane.hint:SetPoint("TOPRIGHT", content or frame, "TOPLEFT", pad + width, top - 3)
+	pane.hint:SetJustifyH("RIGHT")
 	pane.rows = {}
-	local listTop = top - 80
+	local listTop = top - 30
 	for index = 1, ROWS do
-		local row = CreateFrame("Frame", nil, pane)
-		row:SetSize(width, ROW_H - 2)
-		row:SetPoint("TOPLEFT", frame, "TOPLEFT", 14, listTop - (index - 1) * ROW_H)
-		row.stamp = Theme.CreateDiamond(row, 10, false)
-		row.stamp:SetPoint("TOPLEFT", row, "TOPLEFT", 4, -3)
-		row.text = row:CreateFontString(nil, "OVERLAY", Theme.F_BODY)
-		row.text:SetPoint("TOPLEFT", row, "TOPLEFT", 22, 0)
-		row.text:SetWidth(width - 130)
-		row.text:SetJustifyH("LEFT")
-		row.date = row:CreateFontString(nil, "OVERLAY", Theme.F_SMALL)
-		row.date:SetPoint("TOPRIGHT", row, "TOPRIGHT", -2, 0)
+		local row = Theme.CreateListRow(pane, width, ROW_H, { status = 10, font = Theme.F_LABEL })
+		At(row, 0, listTop - (index - 1) * ROW_STEP)
+		row:SetIndex(index)
+		row.stamp = row.status
+		row.status:ClearAllPoints()
+		row.status:SetPoint("TOPLEFT", row, "TOPLEFT", 12, -9)
+		row.text:ClearAllPoints()
+		row.text:SetPoint("TOPLEFT", row, "TOPLEFT", row.textLeft, -7)
+		row.text:SetWidth(width - row.textLeft - 110)
+		row.text:SetTextColor(Theme.LABEL[1], Theme.LABEL[2], Theme.LABEL[3])
+		row.date = Theme.Text(row, Theme.F_SMALL, Theme.MUTED_LIGHT)
+		row.date:SetPoint("TOPRIGHT", row, "TOPRIGHT", -12, -8)
 		row.date:SetJustifyH("RIGHT")
-		row.date:SetTextColor(Theme.MUTED[1], Theme.MUTED[2], Theme.MUTED[3])
-		row.detail = row:CreateFontString(nil, "OVERLAY", Theme.F_SMALL)
-		row.detail:SetPoint("TOPLEFT", row, "TOPLEFT", 22, -16)
-		row.detail:SetWidth(width - 24)
+		row.detail = Theme.Text(row, Theme.F_SMALL, Theme.MUTED)
+		row.detail:SetPoint("TOPLEFT", row, "TOPLEFT", row.textLeft, -25)
+		row.detail:SetWidth(width - row.textLeft - 12)
 		row.detail:SetJustifyH("LEFT")
-		row.detail:SetTextColor(Theme.MUTED[1], Theme.MUTED[2], Theme.MUTED[3])
+		if row.detail.SetWordWrap then row.detail:SetWordWrap(false) end
 		row:Hide()
 		pane.rows[index] = row
 	end
-	local bottom = listTop - ROWS * ROW_H
-	pane.empty = pane:CreateFontString(nil, "OVERLAY", Theme.F_BODY)
-	pane.empty:SetPoint("TOPLEFT", frame, "TOPLEFT", 16, listTop - 4)
-	pane.empty:SetWidth(width - 4)
+	pane.empty = Theme.Text(pane, Theme.F_BODY, Theme.MUTED_LIGHT)
+	At(pane.empty, 0, listTop - 4)
+	pane.empty:SetWidth(width)
 	pane.empty:SetJustifyH("LEFT")
-	pane.empty:SetTextColor(Theme.MUTED[1], Theme.MUTED[2], Theme.MUTED[3])
-	pane.position = pane:CreateFontString(nil, "OVERLAY", Theme.F_SMALL)
-	pane.position:SetPoint("TOPLEFT", frame, "TOPLEFT", 16, bottom - 6)
-	pane.up = Theme.CreateButton(pane, 22, 17, "^", function() ns:ScrollJournal(1) end)
-	pane.up:SetPoint("TOPRIGHT", frame, "TOPRIGHT", -40, bottom - 4)
-	pane.down = Theme.CreateButton(pane, 22, 17, "v", function() ns:ScrollJournal(-1) end)
-	pane.down:SetPoint("TOPRIGHT", frame, "TOPRIGHT", -14, bottom - 4)
+	if pane.empty.SetWordWrap then pane.empty:SetWordWrap(true) end
+	pane.pager = Theme.CreatePager(pane, function(delta) ns:ScrollJournal(delta) end)
+	pane.pager:SetPoint("TOPRIGHT", content or frame, "TOPLEFT", pad + width, layout.pagerTop or (listTop - ROWS * ROW_STEP))
+	pane.position, pane.up, pane.down = pane.pager.position, pane.pager.up, pane.pager.down
 	pane:Hide()
 	return pane
 end
@@ -570,8 +618,7 @@ function ns:RefreshMemoriesPane(frame)
 			if memory.zone then detail[#detail + 1] = tostring(memory.zone) end
 			if memory.photo then detail[#detail + 1] = self:F("MEM_PHOTO", memory.photo) end
 			row.detail:SetText(table.concat(detail, "  ·  "))
-			local c = memory.photo and Theme.GOLD or Theme.MUTED
-			row.stamp:SetVertexColor(c[1], c[2], c[3], 1)
+			Theme.SetStatus(row.stamp, memory.photo and "warn" or "item")
 			row:Show()
 		else
 			row.memory = nil
@@ -579,10 +626,7 @@ function ns:RefreshMemoriesPane(frame)
 		end
 	end
 	pane.empty:SetText(#list == 0 and L.MEM_EMPTY or "")
-	pane.position:SetText(#list > ROWS
-		and string.format("%d-%d / %d", frame.offset + 1, math.min(#list, frame.offset + ROWS), #list) or "")
-	if frame.offset > 0 then pane.up:Show() else pane.up:Hide() end
-	if frame.offset < maxOffset then pane.down:Show() else pane.down:Hide() end
+	pane.pager:Update(frame.offset, ROWS, #list, maxOffset)
 end
 
 -- ---------------------------------------------------------------------------

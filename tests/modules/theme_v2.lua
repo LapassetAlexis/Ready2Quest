@@ -272,10 +272,9 @@ do
 	Check("[TH2] accent : filet et texte ambre, fond ambre à 7 %", SameColor(accent.border.top.vertex, Theme.GOLD)
 		and SameColor(accent.text.textColor, Theme.GOLD) and SameColor(accent.bg.vertex, Theme.GOLD) and Near(accent.bg.vertex[4], 0.07))
 	Check("[TH2] boutons en F_LABEL", primary.text.fontObject == Theme.F_LABEL)
-	local panel = Theme.CreatePanel(UIParent, 300, 200, "Panneau", { name = "TestTheme2Panel" })
-	Check("[TH2] panneau : fond WINDOW, filet EDGE, titre Inter", SameColor(panel.bg.vertex, Theme.WINDOW)
-		and SameColor(panel.border.top.vertex, Theme.EDGE) and tostring(panel.title.font.path):find("Inter%-Bold") ~= nil
-		and panel.close ~= nil and panel.contentTop == -36)
+	-- l'ancien panneau (CreatePanel) et le filet CreateDivider sont retirés :
+	-- plus rien ne s'en sert (lot 4, le carnet et le coffre passent à CreateWindow)
+	Check("[TH2] ancien panneau retiré", Theme.CreatePanel == nil and Theme.CreateDivider == nil)
 end
 
 -- 5. Rendu hors-jeu : résolution des ancres ---------------------------------

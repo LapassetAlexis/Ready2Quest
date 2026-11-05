@@ -575,9 +575,10 @@ do
 	local page = #comp.cards
 	Check("[WIN] de quoi défiler", rows > page and not comp.up:IsShown() and comp.down:IsShown(), rows)
 	f.scripts.OnMouseWheel(f, -1)
-	Check("[WIN] molette : une rangée de fiches plus bas", f.offset == 4 and comp.cards[1].item == f.rows[5], f.offset)
+	local cols = NS.JOURNAL_LAYOUT.cardCols
+	Check("[WIN] molette : une rangée de fiches plus bas", f.offset == cols and comp.cards[1].item == f.rows[cols + 1], f.offset)
 	for _ = 1, 100 do NS:ScrollJournal(-1) end
-	local last = math.ceil((rows - page) / 4) * 4
+	local last = math.ceil((rows - page) / cols) * cols
 	Check("[WIN] butée en bas, position affichée", f.offset == last and not comp.down:IsShown()
 		and comp.position.text == string.format("%d-%d / %d", last + 1, rows, rows), comp.position.text)
 	comp.tabs.explore:Click()
@@ -714,7 +715,8 @@ do
 		end
 		Check("[WIN] conseils des envies en français et en anglais", #missing == 0, table.concat(missing, ", "))
 	end
-		Check("[WIN] Évolution : comment ça marche (3 lignes)", evo.howTitle.text == "Comment ça marche"
+		Check("[WIN] Évolution : comment ça marche (3 lignes)", evo.howTitle.raw == "Comment ça marche"
+		and evo.howTitle.label.text == "COMMENT ÇA MARCHE"
 		and evo.how[2].text:find("70", 1, true) and evo.how[3].text:find("100 %", 1, true) and not evo.how[3].text:find("%%", 1, true), evo.how[3].text)
 	Check("[WIN] Évolution : collection", evo.collection.text:find("Collection : ", 1, true), evo.collection.text)
 	Check("[WIN] Évolution : parcours (capitales 1/6)", evo.road.text:find("1/6 capitales", 1, true), evo.road.text)

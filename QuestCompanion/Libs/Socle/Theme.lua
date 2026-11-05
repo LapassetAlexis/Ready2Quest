@@ -333,60 +333,6 @@ function Theme.CreateCloseButton(frame, size)
 end
 
 -- ---------------------------------------------------------------------------
--- Panneau (ancienne fenêtre, toujours utilisée par les modules) : fond
--- WINDOW, filet EDGE, coin ambre, bandeau avec la marque
--- ---------------------------------------------------------------------------
-local function BuildHeader(frame, titleText, options)
-	frame.logo = frame:CreateTexture(nil, "OVERLAY")
-	frame.logo:SetTexture(Theme.LOGO_SMALL)
-	frame.logo:SetSize(18, 18)
-	frame.logo:SetPoint("TOPLEFT", frame, "TOPLEFT", 12, -9)
-
-	frame.title = Theme.CreateTitle(frame, options.titleSize or 15)
-	frame.title:SetPoint("LEFT", frame.logo, "RIGHT", 7, 0)
-	frame.title:SetText(titleText or "")
-
-	frame.subtitle = Text(frame, Theme.F_SMALL, Theme.MUTED)
-	frame.subtitle:SetPoint("RIGHT", frame, "TOPRIGHT", -36, -18)
-	frame.subtitle:SetText("")
-
-	frame.headerLine = Solid(frame, "ARTWORK", Theme.EDGE_SOFT, 1)
-	frame.headerLine:SetPoint("TOPLEFT", frame, "TOPLEFT", 1, -34)
-	frame.headerLine:SetPoint("TOPRIGHT", frame, "TOPRIGHT", -1, -34)
-	frame.headerLine:SetHeight(1)
-
-	frame.close = Theme.CreateCloseButton(frame, 20)
-	frame.close:SetPoint("TOPRIGHT", frame, "TOPRIGHT", -8, -7)
-end
-
-function Theme.CreatePanel(parent, width, height, titleText, options)
-	options = options or {}
-	local ok, frame = pcall(CreateFrame, "Frame", options.name, parent or UIParent)
-	if not ok or not frame then frame = CreateFrame("Frame", options.name, parent or UIParent) end
-	if not frame then return nil end
-
-	frame.bg = Solid(frame, "BACKGROUND", Theme.WINDOW, options.alpha or 0.97)
-	frame.bg:SetAllPoints()
-	frame.border = Border(frame, Theme.EDGE, 1)
-	frame.accentH, frame.accentV = CornerAccent(frame)
-	frame.chrome = "flat"
-
-	frame:SetSize(width, height)
-	frame:SetFrameStrata(options.strata or "DIALOG")
-	Draggable(frame)
-
-	if options.title ~= false then
-		BuildHeader(frame, titleText, options)
-		frame.contentTop = -36
-	else
-		frame.contentTop = -10
-	end
-
-	Theme.RegisterEscapeClose(frame)
-	return frame
-end
-
--- ---------------------------------------------------------------------------
 -- Fenêtre v2 (docs/UI.md, « Fenêtre type ») : fond WINDOW, filet EDGE,
 -- [×] en haut à droite, Échap, déplaçable ; colonne de navigation facultative
 -- (opts.nav = sa largeur), pied facultatif (opts.footer = sa hauteur).
@@ -612,6 +558,7 @@ function Theme.CreateNavItem(parent, width)
 	item.label = Text(item, Theme.F_BODY, Theme.TEXT)
 	item.label:SetPoint("LEFT", item, "LEFT", 18, 0)
 	item.label:SetJustifyH("LEFT")
+	item.text = item.label          -- même nom que sur un bouton du thème
 
 	item.badge = Text(item, Theme.F_SMALL, Theme.BLUE)
 	item.badge:SetJustifyH("RIGHT")
@@ -697,10 +644,20 @@ function Theme.CreateTabs(parent, onSelect)
 	bar.rule:SetPoint("BOTTOMRIGHT", bar, "BOTTOMRIGHT", 0, 0)
 	bar.rule:SetHeight(1)
 
+	bar.dim = {}
 	local function Paint(tab)
 		local on = bar.selected == tab.id
-		SetColor(tab.label, on and Theme.PARCHMENT or (tab.hovered and Theme.TEXT or Theme.MUTED_LIGHT))
+		tab.selected = on
+		local rest = bar.dim[tab.id] and Theme.MUTED or Theme.MUTED_LIGHT
+		SetColor(tab.label, on and Theme.PARCHMENT or (tab.hovered and Theme.TEXT or rest))
 		if on then tab.underline:Show() else tab.underline:Hide() end
+	end
+	-- onglet estompé (MUTED au repos) : il reste cliquable (ex. une liste
+	-- absente de ce client, que l'onglet explique au survol)
+	function bar:SetDim(id, dim)
+		self.dim[id] = dim and true or nil
+		local tab = self.byId[id]
+		if tab then Paint(tab) end
 	end
 
 	-- marge de chaque onglet : 24 (12 de chaque côté), resserrée si la
@@ -733,6 +690,7 @@ function Theme.CreateTabs(parent, onSelect)
 				tab = CreateFrame("Button", nil, self)
 				tab.label = Text(tab, Theme.F_HEADING, Theme.MUTED_LIGHT)
 				tab.label:SetPoint("CENTER", tab, "CENTER", 0, 1)
+				tab.text = tab.label
 				tab.underline = Solid(tab, "ARTWORK", Theme.GOLD, 1)
 				tab.underline:SetPoint("BOTTOMLEFT", tab, "BOTTOMLEFT", 0, 0)
 				tab.underline:SetPoint("BOTTOMRIGHT", tab, "BOTTOMRIGHT", 0, 0)
@@ -902,16 +860,6 @@ function Theme.CreateBar(parent, width, height)
 	end
 
 	return bar
-end
-
--- ---------------------------------------------------------------------------
--- Filet de séparation
--- ---------------------------------------------------------------------------
-function Theme.CreateDivider(parent, width, y)
-	local line = Solid(parent, "ARTWORK", Theme.EDGE_SOFT, 1)
-	line:SetPoint("TOPLEFT", parent, "TOPLEFT", 12, y or 0)
-	line:SetSize(width or 100, 1)
-	return line
 end
 
 -- ---------------------------------------------------------------------------
@@ -1368,6 +1316,8 @@ end
 
 -- Verrou : case en pointillés, texte pâle (« 30 brillantes ») pour ce qui
 -- n'est pas encore gagné. Les pointillés sont des tirets de 3 px.
+-- tag:SetText(texte, largeurMax) : au-delà de largeurMax, le texte est coupé
+-- (« … » du client) et la case s'arrête à cette largeur.
 function Theme.CreateLockTag(parent, text)
 	local tag = CreateFrame("Frame", nil, parent)
 	tag.dashes = {}
@@ -1384,9 +1334,18 @@ function Theme.CreateLockTag(parent, text)
 		dash:Show()
 		return dash
 	end
-	function tag:SetText(value)
+	function tag:SetText(value, maxWidth)
 		self.label:SetText(value or "")
 		local w = math.floor(((self.label.GetStringWidth and self.label:GetStringWidth()) or 40) + 16 + 0.5)
+		maxWidth = tonumber(maxWidth)
+		if maxWidth and w > maxWidth then
+			w = math.floor(maxWidth)
+			self.label:SetWidth(w - 12)
+			if self.label.SetWordWrap then self.label:SetWordWrap(false) end
+			self.clipped = true
+		else
+			self.clipped = nil
+		end
 		local h = 18
 		self:SetSize(w, h)
 		local count = 0
@@ -1427,8 +1386,10 @@ function Theme.FadeIn(frame, duration)
 end
 
 -- ---------------------------------------------------------------------------
--- Cadre discret : pas de titre, pas de bouton, un simple filet doré 1 px
--- sur fond noir translucide. Pour les affichages flottants permanents.
+-- Cadre discret : pas de titre, pas de bouton, un simple filet 1 px sur fond
+-- noir translucide. C'est le support du cadre du compagnon : ses cadres et
+-- ses fonds gagnés (CompanionData.lua) repeignent ce filet (top, bottom,
+-- leftEdge, rightEdge) et ce fond (bg) ; ne pas en changer les champs.
 -- ---------------------------------------------------------------------------
 function Theme.CreateDiscreet(parent, width, height)
 	local ok, frame = pcall(CreateFrame, "Frame", nil, parent)
@@ -1820,6 +1781,257 @@ function Theme.CreateDialog(parent, width, height, opts)
 		return button
 	end
 	return frame
+end
+
+-- ===========================================================================
+-- Briques du carnet et du compagnon (refonte 2026-11, lot 4 ; docs/UI.md,
+-- « Carnet et compagnon »)
+-- ===========================================================================
+
+-- Taille de police d'un rôle (objet du socle), 12 sinon
+local ROLE_SIZE = {}
+for _, spec in ipairs(Theme.FONT_ROLES) do
+	local entry = Theme.fonts[spec.role]
+	if entry and entry.name then ROLE_SIZE[entry.name] = spec.size end
+end
+
+-- Hauteur d'un texte posé sur `width` px : la mesure du client
+-- (GetStringHeight) si elle existe, sinon une estimation (largeur du texte /
+-- largeur offerte, 1,25 interligne). Sert à empiler des blocs de texte de
+-- haut en bas sans qu'un retour à la ligne en recouvre un autre.
+function Theme.TextHeight(fontString, width, font)
+	if not fontString then return 0 end
+	local measured = fontString.GetStringHeight and tonumber(fontString:GetStringHeight())
+	if measured and measured > 0 then return measured end
+	local text = tostring(fontString.GetText and fontString:GetText() or "")
+	if text == "" then return 0 end
+	local size = ROLE_SIZE[font or ""] or 12
+	local lines = 0
+	local probeParent = fontString.GetParent and fontString:GetParent()
+	for line in (text .. "\n"):gmatch("(.-)\n") do
+		local w = Theme.TextWidth(probeParent, line, font)
+		lines = lines + math.max(1, math.ceil(w / math.max(1, tonumber(width) or 200)))
+	end
+	return math.ceil(lines * size * 1.25)
+end
+
+-- ---------------------------------------------------------------------------
+-- Puces de filtre : une rangée de petits boutons au trait (F_BODY), la puce
+-- choisie en ambre (filet, texte, fond à 12 %). defs = { { id, label } } ;
+-- onSelect(id) au clic. :Select(id, silent) ; .byId[id] = la puce (.text,
+-- .selected) ; .used = largeur occupée (pour aligner la rangée à droite).
+-- ---------------------------------------------------------------------------
+Theme.CHIP_HEIGHT = 24
+Theme.CHIP_PAD = 24
+function Theme.CreateChips(parent, defs, onSelect, opts)
+	opts = opts or {}
+	local row = CreateFrame("Frame", nil, parent)
+	row.chips, row.byId = {}, {}
+	local height = tonumber(opts.height) or Theme.CHIP_HEIGHT
+	local gap = tonumber(opts.gap) or 6
+	local function Paint(chip)
+		local on = row.selected == chip.id
+		chip.selected = on
+		local edge = on and Theme.GOLD or (chip.hovered and Theme.EDGE or Theme.EDGE_SOFT)
+		chip.border:SetColor(edge[1], edge[2], edge[3], 1)
+		chip.bg:SetVertexColor(Theme.GOLD[1], Theme.GOLD[2], Theme.GOLD[3], on and 0.12 or 0)
+		SetColor(chip.text, on and Theme.GOLD or (chip.hovered and Theme.LABEL or Theme.MUTED_LIGHT))
+	end
+	local x = 0
+	for index, def in ipairs(defs or {}) do
+		local chip = CreateFrame("Button", nil, row)
+		local width = math.ceil(Theme.TextWidth(row, def.label, Theme.F_BODY) + Theme.CHIP_PAD)
+		chip:SetSize(width, height)
+		chip:SetPoint("LEFT", row, "LEFT", x, 0)
+		chip.bg = Solid(chip, "BACKGROUND", Theme.GOLD, 0)
+		chip.bg:SetAllPoints()
+		chip.border = Border(chip, Theme.EDGE_SOFT, 1)
+		chip.text = Text(chip, Theme.F_BODY, Theme.MUTED_LIGHT)
+		chip.text:SetPoint("CENTER", chip, "CENTER", 0, 0)
+		chip.text:SetText(def.label or tostring(def.id))
+		chip.id = def.id
+		chip:SetScript("OnClick", function(self) row:Select(self.id) end)
+		chip:SetScript("OnEnter", function(self) self.hovered = true; Paint(self) end)
+		chip:SetScript("OnLeave", function(self) self.hovered = false; Paint(self) end)
+		row.chips[index], row.byId[def.id] = chip, chip
+		x = x + width + gap
+	end
+	row.used = math.max(0, x - gap)
+	row:SetSize(math.max(1, row.used), height)
+	function row:Select(id, silent)
+		if not self.byId[id] then return false end
+		self.selected = id
+		for _, chip in ipairs(self.chips) do Paint(chip) end
+		if onSelect and not silent then onSelect(id) end
+		return true
+	end
+	row.selected = opts.selected or (defs and defs[1] and defs[1].id)
+	for _, chip in ipairs(row.chips) do Paint(chip) end
+	return row
+end
+
+-- ---------------------------------------------------------------------------
+-- Tuile : carte cliquable d'une grille (fiche, objet, choix de coffre). Fond
+-- ROW, filet EDGE_SOFT (EDGE au survol, ambre si choisie), liseré d'accent
+-- facultatif de 3 px (opts.accent = "left" par défaut, "top", false).
+-- :SetAccent(couleur | nil), :SetSelected(on), :SetFill(couleur, alpha).
+-- Survol et sortie : tile.onEnter(tile) / tile.onLeave(tile), posés par le
+-- module (le survol du filet reste celui de la brique).
+-- ---------------------------------------------------------------------------
+Theme.TILE_ACCENT = 3
+function Theme.CreateTile(parent, width, height, opts)
+	opts = opts or {}
+	local tile = CreateFrame(opts.kind or "Button", nil, parent)
+	tile:SetSize(width, height)
+	tile.bg = Solid(tile, "BACKGROUND", Theme.ROW, 1)
+	tile.bg:SetAllPoints()
+	tile.border = Border(tile, Theme.EDGE_SOFT, 1)
+	tile.accent = Solid(tile, "ARTWORK", Theme.GOLD, 1)
+	if opts.accent == "top" then
+		tile.accent:SetPoint("TOPLEFT", tile, "TOPLEFT", 0, 0)
+		tile.accent:SetPoint("TOPRIGHT", tile, "TOPRIGHT", 0, 0)
+		tile.accent:SetHeight(Theme.TILE_ACCENT)
+	else
+		tile.accent:SetPoint("TOPLEFT", tile, "TOPLEFT", 0, 0)
+		tile.accent:SetPoint("BOTTOMLEFT", tile, "BOTTOMLEFT", 0, 0)
+		tile.accent:SetWidth(Theme.TILE_ACCENT)
+	end
+	tile.accent:Hide()
+	local function PaintEdge(self)
+		local c = self.selected and Theme.GOLD or (self.hovered and Theme.EDGE or Theme.EDGE_SOFT)
+		self.border:SetColor(c[1], c[2], c[3], 1)
+	end
+	function tile:SetAccent(color, alpha)
+		self.accentColor = color
+		if not color or opts.accent == false then self.accent:Hide(); return end
+		self.accent:SetVertexColor(color[1], color[2], color[3], alpha or 1)
+		self.accent:Show()
+	end
+	function tile:SetSelected(on) self.selected = on and true or false; PaintEdge(self) end
+	function tile:SetFill(color, alpha)
+		color = color or Theme.ROW
+		self.bg:SetVertexColor(color[1], color[2], color[3], alpha or 1)
+	end
+	tile:SetScript("OnEnter", function(self)
+		self.hovered = true
+		PaintEdge(self)
+		if self.onEnter then self.onEnter(self) end
+	end)
+	tile:SetScript("OnLeave", function(self)
+		self.hovered = false
+		PaintEdge(self)
+		if self.onLeave then self.onLeave(self) end
+	end)
+	tile:SetSelected(false)
+	return tile
+end
+
+-- ---------------------------------------------------------------------------
+-- Étiquette : petit texte F_CAPS en capitales sur un fond teinté à 16 %
+-- (rang d'une créature, état). :SetTag(texte, couleur) ; vide = cachée.
+-- ---------------------------------------------------------------------------
+Theme.TAG_HEIGHT = 15
+function Theme.CreateTag(parent, text, color)
+	local tag = CreateFrame("Frame", nil, parent)
+	tag.bg = Solid(tag, "BACKGROUND", Theme.GOLD, 0.16)
+	tag.bg:SetAllPoints()
+	tag.label = Text(tag, Theme.F_CAPS, Theme.GOLD)
+	tag.label:SetPoint("CENTER", tag, "CENTER", 0, 0)
+	function tag:SetTag(value, c)
+		value = value and Theme.Upper(value) or ""
+		c = c or Theme.GOLD
+		self.label:SetText(value)
+		self.color = c
+		SetColor(self.label, c)
+		self.bg:SetVertexColor(c[1], c[2], c[3], 0.16)
+		self:SetSize(math.ceil(Theme.TextWidth(self, value, Theme.F_CAPS) + 10), Theme.TAG_HEIGHT)
+		if value == "" then self:Hide() else self:Show() end
+	end
+	tag:SetTag(text, color)
+	return tag
+end
+
+-- ---------------------------------------------------------------------------
+-- Pagination d'une grille ou d'une liste : « 1-15 / 42 » (F_SMALL, MUTED
+-- clair) et deux boutons-icônes chevron (haut, bas), alignés à droite.
+-- onStep(1) remonte, onStep(-1) descend (comme la molette).
+-- :Update(décalage, page, total, décalageMax).
+-- ---------------------------------------------------------------------------
+Theme.PAGER_HEIGHT = 22
+function Theme.CreatePager(parent, onStep)
+	local pager = CreateFrame("Frame", nil, parent)
+	pager:SetSize(200, Theme.PAGER_HEIGHT)
+	pager.down = Theme.CreateIconButton(pager, Theme.PAGER_HEIGHT, Theme.CHEVRON, function() if onStep then onStep(-1) end end)
+	pager.down:SetPoint("RIGHT", pager, "RIGHT", 0, 0)
+	pager.up = Theme.CreateIconButton(pager, Theme.PAGER_HEIGHT, Theme.CHEVRON, function() if onStep then onStep(1) end end)
+	pager.up:SetPoint("RIGHT", pager.down, "LEFT", -6, 0)
+	-- le chevron pointe vers le bas : retourné pour « haut »
+	if pager.up.icon.SetTexCoord then pager.up.icon:SetTexCoord(0, 1, 1, 0) end
+	pager.position = Text(pager, Theme.F_SMALL, Theme.MUTED_LIGHT)
+	pager.position:SetPoint("RIGHT", pager.up, "LEFT", -10, 0)
+	pager.position:SetJustifyH("RIGHT")
+	function pager:Update(offset, page, total, maxOffset)
+		offset, page, total = tonumber(offset) or 0, tonumber(page) or 0, tonumber(total) or 0
+		maxOffset = tonumber(maxOffset) or math.max(0, total - page)
+		self.position:SetText(total > page and string.format("%d-%d / %d", offset + 1, math.min(total, offset + page), total) or "")
+		if offset > 0 then self.up:Show() else self.up:Hide() end
+		if offset < maxOffset then self.down:Show() else self.down:Hide() end
+	end
+	pager:Update(0, 0, 0, 0)
+	return pager
+end
+
+-- ---------------------------------------------------------------------------
+-- Bulle de parole : fond WINDOW, filet EDGE, filet ambre en haut, pointe en
+-- losange sous la bulle (au trait EDGE), texte F_BODY clair centré.
+-- bubble:SetText(texte, extra) donne à la bulle la hauteur du texte, plus
+-- `extra` px (des boutons dessous). opts : name, strata (HIGH).
+-- ---------------------------------------------------------------------------
+Theme.BUBBLE_PAD = 10
+Theme.BUBBLE_MIN = 34
+function Theme.CreateBubble(parent, width, opts)
+	opts = opts or {}
+	local ok, bubble = pcall(CreateFrame, "Frame", opts.name, parent or UIParent)
+	if not ok or not bubble then return nil end
+	bubble:SetSize(width, Theme.BUBBLE_MIN)
+	bubble:SetFrameStrata(opts.strata or "HIGH")
+	bubble:SetClampedToScreen(true)
+	bubble:EnableMouse(false)
+	bubble.chrome = "bubble"
+	bubble.bg = Solid(bubble, "BACKGROUND", Theme.WINDOW, 0.96)
+	bubble.bg:SetAllPoints()
+	bubble.border = Border(bubble, Theme.EDGE, 1)
+	bubble.rule = Solid(bubble, "ARTWORK", Theme.GOLD, 1)
+	bubble.rule:SetPoint("TOPLEFT", bubble, "TOPLEFT", 1, -1)
+	bubble.rule:SetPoint("TOPRIGHT", bubble, "TOPRIGHT", -1, -1)
+	bubble.rule:SetHeight(2)
+	-- pointe : un losange EDGE (sa moitié haute sous le fond), un losange
+	-- WINDOW plus petit par-dessus, qui efface le filet du bas à cet endroit
+	bubble.tailEdge = bubble:CreateTexture(nil, "BACKGROUND", nil, -8)
+	bubble.tailEdge:SetTexture(Theme.DIAMOND)
+	bubble.tailEdge:SetVertexColor(Theme.EDGE[1], Theme.EDGE[2], Theme.EDGE[3], 1)
+	bubble.tailEdge:SetSize(14, 14)
+	bubble.tailEdge:SetPoint("CENTER", bubble, "BOTTOM", 0, 0)
+	bubble.tail = bubble:CreateTexture(nil, "ARTWORK")
+	bubble.tail:SetTexture(Theme.DIAMOND)
+	bubble.tail:SetVertexColor(Theme.WINDOW[1], Theme.WINDOW[2], Theme.WINDOW[3], 1)
+	bubble.tail:SetSize(12, 12)
+	bubble.tail:SetPoint("CENTER", bubble, "BOTTOM", 0, 1)
+	local pad = Theme.BUBBLE_PAD
+	bubble.text = Text(bubble, Theme.F_BODY, Theme.LABEL)
+	bubble.text:SetPoint("TOPLEFT", bubble, "TOPLEFT", pad, -pad - 1)
+	bubble.text:SetWidth(width - 2 * pad)
+	bubble.text:SetJustifyH("CENTER")
+	if bubble.text.SetWordWrap then bubble.text:SetWordWrap(true) end
+	function bubble:SetText(value, extra)
+		self.text:SetText(value or "")
+		local h = Theme.TextHeight(self.text, width - 2 * pad, Theme.F_BODY)
+		local height = math.max(Theme.BUBBLE_MIN, math.ceil(h + 2 * pad + 2 + (tonumber(extra) or 0)))
+		self:SetHeight(height)
+		self.textHeight = h
+		return height
+	end
+	return bubble
 end
 
 -- ---------------------------------------------------------------------------

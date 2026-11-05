@@ -301,8 +301,8 @@ do
 	NS:DB().journalTracker = false
 	NS:ToggleJournal(true)
 	local f = NS.journalFrame
-	Check("[DAYW] onglet Jour, avec les missions qui restent", f.sections.day and f.sections.day.text.text == "Jour (3)",
-		f.sections.day and f.sections.day.text.text)
+	Check("[DAYW] onglet Jour, avec les missions qui restent (pastille)", f.sections.day and f.sections.day.text.text == "Jour"
+		and f.sections.day.badge.text == "3" and f.sections.day.badge:IsShown(), f.sections.day and f.sections.day.badge.text)
 	f.sections.day:Click()
 	local day = f.day
 	Check("[DAYW] affiché seul", f.kind == "day" and day:IsShown() and not f.comp:IsShown())

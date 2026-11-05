@@ -232,7 +232,7 @@ do
 	f.comp.tabs.combat:Click()
 	local card
 	for _, c in ipairs(f.comp.cards) do if c.item and c.item.id == 3500 then card = c end end
-	Check("[SHINY] fiche : étoile et liseré doré", card and card.star:IsShown() and card.edge.vertex[2] > 0.85)
+	Check("[SHINY] fiche : étoile et liseré doré", card and card.star:IsShown() and card.accent:IsShown() and card.accent.vertex[2] > 0.85)
 	card.scripts.OnEnter(card)
 	local said = {}
 	for _, line in ipairs(f.comp.preview.lines) do said[#said + 1] = line.text or "" end

@@ -15,8 +15,7 @@ if ns.blocked then return end
 local L = ns.L
 local Theme = ns.Theme
 
-local WIDTH, HEIGHT = 820, 560
-local LINES, LINE_H = 11, 20
+local WIDTH, HEIGHT = 980, 680
 local ZONE_LIST_MAX = 12
 local ACTIVITIES = { "explore", "combat", "craft", "quests" }
 ns.JOURNAL_ACTIVITIES = ACTIVITIES
@@ -301,37 +300,52 @@ function ns:JournalKnownZones()
 end
 
 -- ---------------------------------------------------------------------------
--- Fenêtre (QuestCompanion 1.1.0) : onglets verticaux à droite
---   Zones      grille de toutes les zones (jamais visitées en silhouette)
---   Zone       une zone : paliers, coffre, Exploration / Combat / Métiers /
---              Quêtes ; fiches du bestiaire et aperçu 3D au survol
---   Créature   étape, envies, comment elle évolue, parcours
+-- Fenêtre (refonte 2026-11, docs/UI.md « Carnet et compagnon ») : fenêtre v2
+-- avec colonne de navigation, une page par entrée
+--   Créature   portrait (cadre et fond gagnés), étape, envies, comment elle
+--              évolue, parcours
+--   Zones      liste de toutes les zones (jamais visitées en silhouette)
+--   Zone       une zone : progression et paliers, coffre, Exploration /
+--              Combat / Métiers / Quêtes ; fiches du bestiaire et aperçu 3D
+--   Jour       missions, carte des auberges, garde-manger (Daily.lua)
 --   Collection apparences, ornements, cadres, fonds : clic = équiper
 --   Souvenirs  l'album (Memories.lua)
--- Le garde-manger (Treats.lua) est dans l'en-tête, quel que soit l'onglet.
+-- Le garde-manger (Treats.lua) est aussi dans le pied, quelle que soit la page.
 -- ---------------------------------------------------------------------------
-local NAV_W = 112
-local CONTENT_W = WIDTH - NAV_W - 28
-local PREVIEW_W = 200
-local BODY_W = CONTENT_W - PREVIEW_W - 8
-local LIST_COLS, LIST_ROWS, LIST_ROW_H = 2, 15, 20
-local CARD_COLS, CARD_ROWS, CARD_W, CARD_H, CARD_GAP = 4, 6, 114, 40, 6   -- 6 rangées : la 7e passait sous le défilement
-local ICON_COLS, ICON_ROWS, ICON_SIZE, ICON_GAP = 8, 5, 48, 8
-local TILE_COLS, TILE_ROWS, TILE_W, TILE_H, TILE_GAP = 6, 4, 108, 90, 8
-local COLL_COLS, COLL_ROWS, COLL_W, COLL_H, COLL_GAP = 5, 5, 88, 62, 8
+local NAV_W, FOOTER_H = 220, 56
+local CONTENT_W = WIDTH - 2 - NAV_W               -- 758 : zone de droite
+local PAD = 24
+local INNER = CONTENT_W - 2 * PAD                 -- 710 : largeur utile
+local TOP = -(Theme.HEADER_HEIGHT or 100) - 6     -- première rangée sous l'en-tête
+local PAGER_Y = -(HEIGHT - 2 - FOOTER_H) + 8 + 22 -- haut de la pagination, 8 au-dessus du pied
+local PREVIEW_W = 210
+local GRID_W = INNER - PREVIEW_W - 16             -- grille à côté de l'aperçu
+local COL_GAP = 24
+local HALF = math.floor((INNER - COL_GAP) / 2)    -- 343 : une colonne sur deux
+local ZONE_COLS, ZONE_ROWS, ZONE_H, ZONE_STEP = 2, 12, 34, 36
+local LIST_COLS, LIST_ROWS, LIST_ROW_H = 2, 12, 26
+local CARD_COLS, CARD_ROWS, CARD_H, CARD_GAP = 2, 6, 46, 6
+local ICON_COLS, ICON_ROWS, ICON_SIZE, ICON_STEP_X, ICON_STEP_Y = 10, 5, 44, 70, 62
+local COLL_COLS, COLL_ROWS, COLL_H, COLL_GAP = 5, 5, 80, 8
+local CARD_W = math.floor((GRID_W - (CARD_COLS - 1) * 10) / CARD_COLS)
+local COLL_W = math.floor((GRID_W - (COLL_COLS - 1) * COLL_GAP) / COLL_COLS)
+local ZONE_W = math.floor((INNER - (ZONE_COLS - 1) * 12) / ZONE_COLS)
+local LIST_W = math.floor((INNER - (LIST_COLS - 1) * 12) / LIST_COLS)
 -- la Créature d'abord : c'est elle, le cœur de l'addon
 local SECTIONS = { "evolution", "zones", "completion", "day", "collection", "memories" }
 local COLL_KINDS = { "app", "orn", "frame", "bg" }
 local MARKS = { 25, 50, 75, 100 }
 local CONTINENTS = { [1415] = "ek", [1414] = "ka" }
-ns.JOURNAL_LAYOUT = { width = WIDTH, height = HEIGHT, listCols = LIST_COLS, listRows = LIST_ROWS, cardCols = CARD_COLS,
-	cardRows = CARD_ROWS, iconCols = ICON_COLS, iconRows = ICON_ROWS, tileCols = TILE_COLS, tileRows = TILE_ROWS,
-	collCols = COLL_COLS, collRows = COLL_ROWS }
+ns.JOURNAL_LAYOUT = { width = WIDTH, height = HEIGHT, nav = NAV_W, footer = FOOTER_H, pad = PAD, inner = INNER,
+	top = TOP, pagerTop = PAGER_Y, listCols = LIST_COLS, listRows = LIST_ROWS, cardCols = CARD_COLS, cardRows = CARD_ROWS,
+	iconCols = ICON_COLS, iconRows = ICON_ROWS, tileCols = ZONE_COLS, tileRows = ZONE_ROWS, collCols = COLL_COLS,
+	collRows = COLL_ROWS, zoneStep = ZONE_COLS * 3 }
 -- liseré des fiches : rang du bestiaire
 local RANK_COLOR = {
 	elite = { 0.79, 0.80, 0.82 }, rareelite = { 0.29, 0.56, 0.88 }, rare = { 0.29, 0.56, 0.88 }, worldboss = Theme.GOLD,
 }
 ns.BESTIARY_RANK_COLOR = RANK_COLOR      -- repris par l'infobulle des créatures (Tooltips.lua)
+local SHINY_COLOR = { 1.0, 0.89, 0.48 }  -- fiche d'une brillante abattue
 local APP_ICON = "Interface\\Icons\\Ability_Hunter_BeastCall"
 local ORN_ICON = "Interface\\Icons\\INV_Misc_Gem_Amethyst_02"
 local LOCK_ICON = "Interface\\Icons\\INV_Misc_QuestionMark"
@@ -383,6 +397,14 @@ local FR2 = {
 	JRN_COLL_HINT          = "Survole un objet pour le voir sur ta créature.",
 	JRN_BACK_HINT          = "Bouton retour de la souris : revenir aux zones.",
 	JRN_EVO_TRAIT          = "Caractère : %s",
+	JRN_EVO_STEP           = "Étape %d / %d",
+	JRN_EVO_ROAD_TITLE     = "Parcours",
+	JRN_NAV_GROUP          = "Carnet",
+	JRN_ZONE_STEP_PREV     = "Zone précédente",
+	JRN_ZONE_STEP_NEXT     = "Zone suivante",
+	JRN_SUB_day            = "Les missions du jour, la carte des auberges et le garde-manger.",
+	JRN_SUB_collection     = "Ce que la route t'a fait gagner : clic pour l'équiper.",
+	JRN_SUB_memories       = "Les grands moments de la route, dans l'ordre.",
 }
 local EN2 = {
 	JRN_SEC_zones          = "Zones",
@@ -431,28 +453,32 @@ local EN2 = {
 	JRN_COLL_HINT          = "Hover an item to see it on your creature.",
 	JRN_BACK_HINT          = "Mouse back button: back to the zones.",
 	JRN_EVO_TRAIT          = "Character: %s",
+	JRN_EVO_STEP           = "Stage %d / %d",
+	JRN_EVO_ROAD_TITLE     = "Road so far",
+	JRN_NAV_GROUP          = "Journal",
+	JRN_ZONE_STEP_PREV     = "Previous zone",
+	JRN_ZONE_STEP_NEXT     = "Next zone",
+	JRN_SUB_day            = "Today's missions, the inn loyalty card and the pantry.",
+	JRN_SUB_collection     = "What the road has earned you: click to equip it.",
+	JRN_SUB_memories       = "The big moments of the road, in order.",
 }
 ns.RegisterStrings(FR2, EN2)
 for key, text in pairs(FR2) do FR[key], EN[key] = text, EN2[key] end
 
-local function TabColor(button, selected)
-	if button.text and button.text.SetTextColor then
-		local c = selected and Theme.GOLD or { 0.81, 0.78, 0.72 }
-		button.text:SetTextColor(c[1], c[2], c[3])
-	end
-	button.selected = selected
+-- ---------------------------------------------------------------------------
+-- Petites aides de mise en page (tout se place depuis le haut gauche de la
+-- zone de droite, marge PAD comprise)
+-- ---------------------------------------------------------------------------
+local function At(region, content, x, y)
+	region:ClearAllPoints()
+	region:SetPoint("TOPLEFT", content, "TOPLEFT", PAD + x, y)
+	return region
 end
 
-local function Text(parent, font, x, y, width)
-	local text = parent:CreateFontString(nil, "OVERLAY", font or Theme.F_BODY)
-	text:SetPoint("TOPLEFT", parent, "TOPLEFT", x, y)
-	if width then text:SetWidth(width) end
+local function Text(parent, font, color, width)
+	local text = Theme.Text(parent, font or Theme.F_BODY, color or Theme.TEXT)
 	text:SetJustifyH("LEFT")
-	return text
-end
-
-local function Muted(text)
-	text:SetTextColor(Theme.MUTED[1], Theme.MUTED[2], Theme.MUTED[3])
+	if width then text:SetWidth(width) end
 	return text
 end
 
@@ -461,30 +487,28 @@ local function Tip(owner, title, lines)
 	if type(tip) ~= "table" then return end
 	pcall(tip.SetOwner, tip, owner, "ANCHOR_RIGHT")
 	if tip.ClearLines then tip:ClearLines() end
-	tip:AddLine(title, Theme.GOLD[1], Theme.GOLD[2], Theme.GOLD[3])
-	for _, line in ipairs(lines or {}) do tip:AddLine(line, 1, 1, 1, true) end
+	Theme.TooltipTitle(tip, title)
+	for _, line in ipairs(lines or {}) do Theme.TooltipLine(tip, line, Theme.TEXT, true) end
 	tip:Show()
 end
 local function HideTip() local tip = rawget(_G, "GameTooltip"); if tip and tip.Hide then tip:Hide() end end
 
--- Une case cliquable avec fond, liseré et textes : tuile, fiche, objet
-local function Cell(parent, width, height)
-	local cell = CreateFrame("Button", nil, parent)
-	cell:SetSize(width, height)
-	cell.bg = cell:CreateTexture(nil, "BACKGROUND")
-	cell.bg:SetTexture(Theme.SOLID)
-	cell.bg:SetAllPoints()
-	cell.bg:SetVertexColor(0.09, 0.106, 0.125, 1)
-	cell.edge = cell:CreateTexture(nil, "BORDER")
-	cell.edge:SetTexture(Theme.SOLID)
-	cell.edge:SetPoint("TOPLEFT", cell, "TOPLEFT", 0, 0)
-	cell.edge:SetPoint("BOTTOMLEFT", cell, "BOTTOMLEFT", 0, 0)
-	cell.edge:SetWidth(3)
-	cell:Hide()
-	return cell
+-- Titre de section : « Ses envies (heureux = …) » -> SES ENVIES (heureux = …)
+local function SectionText(section, text)
+	text = tostring(text or "")
+	local label, detail = text:match("^(.-)%s*%((.*)%)%s*$")
+	section:SetText(label or text, detail)
+	section.raw = text
 end
-local function CellColor(cell, c, alpha)
-	cell.edge:SetVertexColor(c[1], c[2], c[3], alpha or 1)
+
+-- Carte sombre de l'aperçu : fond NAV, filet EDGE_SOFT
+local function Panel(parent, width, height)
+	local p = CreateFrame("Frame", nil, parent)
+	p:SetSize(width, height)
+	p.bg = Theme.Solid(p, "BACKGROUND", Theme.NAV, 1)
+	p.bg:SetAllPoints()
+	p.border = Theme.Border(p, Theme.EDGE_SOFT, 1)
+	return p
 end
 
 -- Infobulle d'une envie du compagnon : valeur, seuil du bonheur, et ce qui la
@@ -516,11 +540,10 @@ function ns:ShowNeedTooltip(owner, key)
 	if type(GameTooltip) ~= "table" or not GameTooltip.SetOwner then return end
 	local lines, happy = self:NeedTooltipLines(key)
 	GameTooltip:SetOwner(owner, "ANCHOR_RIGHT")
-	local title = happy and Theme.GOLD or Theme.PARCHMENT
-	GameTooltip:AddLine(lines[1], title[1], title[2], title[3])
+	if happy then Theme.TooltipTitle(GameTooltip, lines[1]) else Theme.TooltipLine(GameTooltip, lines[1], Theme.PARCHMENT) end
 	for index = 2, #lines do
-		local shade = (index == #lines) and 0.6 or 0.85
-		GameTooltip:AddLine(lines[index], shade, shade, shade, true)
+		if index == #lines then Theme.TooltipHint(GameTooltip, lines[index], true)
+		else Theme.TooltipLine(GameTooltip, lines[index], Theme.TEXT, true) end
 	end
 	GameTooltip:Show()
 end
@@ -568,41 +591,62 @@ end
 -- ---------------------------------------------------------------------------
 -- Construction
 -- ---------------------------------------------------------------------------
-local function BuildPreview(parent, frame, x, y, height)
-	local p = CreateFrame("Frame", nil, parent)
-	p:SetSize(PREVIEW_W, height)
-	p:SetPoint("TOPLEFT", frame, "TOPLEFT", x, y)
-	p.bg = p:CreateTexture(nil, "BACKGROUND")
-	p.bg:SetTexture(Theme.SOLID)
-	p.bg:SetAllPoints()
-	p.bg:SetVertexColor(0.047, 0.059, 0.071, 1)
+-- Aperçu (fiche survolée, objet de la collection) : carte sombre, modèle 3D ou
+-- nuancier en haut, nom, puis des lignes empilées de haut en bas
+local PREVIEW_MODEL_H = 168
+local function BuildPreview(parent, content, x, y, height)
+	local p = Panel(parent, PREVIEW_W, height)
+	At(p, content, x, y)
+	p.stage = Theme.Solid(p, "BORDER", Theme.WINDOW, 1)
+	p.stage:SetPoint("TOPLEFT", p, "TOPLEFT", 1, -1)
+	p.stage:SetSize(PREVIEW_W - 2, PREVIEW_MODEL_H)
 	local ok, model = pcall(CreateFrame, "PlayerModel", nil, p)
 	if ok and model then
-		model:SetSize(PREVIEW_W - 16, 150)
-		model:SetPoint("TOP", p, "TOP", 0, -8)
+		model:SetSize(PREVIEW_W - 16, PREVIEW_MODEL_H - 12)
+		model:SetPoint("TOP", p, "TOP", 0, -7)
 		p.model = model
 	end
 	p.swatch = p:CreateTexture(nil, "ARTWORK")
-	p.swatch:SetSize(PREVIEW_W - 16, 150)
-	p.swatch:SetPoint("TOP", p, "TOP", 0, -8)
+	p.swatch:SetSize(PREVIEW_W - 16, PREVIEW_MODEL_H - 12)
+	p.swatch:SetPoint("TOP", p, "TOP", 0, -7)
 	p.swatch:Hide()
-	p.title = Theme.CreateTitle(p, 14)
-	p.title:SetPoint("TOPLEFT", p, "TOPLEFT", 8, -166)
-	p.title:SetWidth(PREVIEW_W - 16)
-	p.title:SetJustifyH("LEFT")
+	p.rule = Theme.Solid(p, "ARTWORK", Theme.EDGE_SOFT, 1)
+	p.rule:SetPoint("TOPLEFT", p, "TOPLEFT", 1, -1 - PREVIEW_MODEL_H)
+	p.rule:SetSize(PREVIEW_W - 2, 1)
+	p.title = Text(p, Theme.F_TITLE, Theme.PARCHMENT, PREVIEW_W - 28)
+	p.title:SetPoint("TOPLEFT", p, "TOPLEFT", 14, -PREVIEW_MODEL_H - 14)
+	if p.title.SetWordWrap then p.title:SetWordWrap(false) end
 	p.lines = {}
 	for index = 1, 5 do
-		local line = Text(p, Theme.F_BODY, 8, -188 - (index - 1) * 18, PREVIEW_W - 16)
-		line:SetWordWrap(true)
+		local line = Text(p, index == 1 and Theme.F_BODY or Theme.F_SMALL, index == 1 and Theme.LABEL or Theme.MUTED_LIGHT,
+			PREVIEW_W - 28)
+		if line.SetWordWrap then line:SetWordWrap(true) end
 		p.lines[index] = line
 	end
+	p.maxBottom = height - 10
 	return p
+end
+
+-- lignes de l'aperçu, de haut en bas (une ligne longue pousse la suivante)
+local function PreviewLayout(p)
+	local y = -PREVIEW_MODEL_H - 14 - 22
+	for index, line in ipairs(p.lines) do
+		line:ClearAllPoints()
+		line:SetPoint("TOPLEFT", p, "TOPLEFT", 14, y)
+		local h = Theme.TextHeight(line, PREVIEW_W - 28, index == 1 and Theme.F_BODY or Theme.F_SMALL)
+		line.top = y
+		if h > 0 then y = y - h - 6 end
+		-- plus de place : la ligne attend (rien ne déborde de la carte)
+		if -y > p.maxBottom then line:Hide() else line:Show() end
+	end
+	p.bottom = y
 end
 
 local function PreviewSet(p, title, lines, opts)
 	opts = opts or {}
 	p.title:SetText(title or "")
 	for index, line in ipairs(p.lines) do line:SetText(lines and lines[index] or "") end
+	PreviewLayout(p)
 	if p.model then
 		p.model.creature, p.model.display = nil, nil
 		if opts.creature then
@@ -631,188 +675,227 @@ local function PreviewSet(p, title, lines, opts)
 	end
 end
 
-local function Chips(parent, frame, x, y, keys, prefix, onPick)
-	local chips, cx = {}, x
-	for _, key in ipairs(keys) do
-		local label = L[prefix .. key] or key
-		local width = math.max(60, #label * 6 + 18)
-		local chip = Theme.CreateButton(parent, width, 18, label, function() onPick(key) end)
-		chip:SetPoint("TOPLEFT", frame, "TOPLEFT", cx, y)
-		chip.key = key
-		chips[key] = chip
-		cx = cx + width + 4
-	end
-	return chips, cx
+local function Chips(parent, keys, prefix, onPick)
+	local defs = {}
+	for _, key in ipairs(keys) do defs[#defs + 1] = { id = key, label = L[prefix .. key] or key } end
+	local row = Theme.CreateChips(parent, defs, onPick)
+	return row, row.byId
 end
 
-local function BuildZones(self, frame, top)
-	local pane = CreateFrame("Frame", nil, frame)
+-- Pagination : position et chevrons alignés à droite, une aide à gauche
+local function Pager(pane, content)
+	local pager = Theme.CreatePager(pane, function(delta) ns:ScrollJournal(delta) end)
+	pager:SetPoint("TOPRIGHT", content, "TOPLEFT", PAD + INNER, PAGER_Y)
+	pane.pager, pane.position, pane.up, pane.down = pager, pager.position, pager.up, pager.down
+	pane.hint = Text(pane, Theme.F_SMALL, Theme.MUTED, INNER - 240)
+	At(pane.hint, content, 0, PAGER_Y - 4)
+	if pane.hint.SetWordWrap then pane.hint:SetWordWrap(false) end
+	return pager
+end
+
+-- Zones : filtres et tri, liste sur deux colonnes (nom, niveaux, état, %)
+local function BuildZones(self, frame, content)
+	local pane = CreateFrame("Frame", nil, content)
 	pane:SetAllPoints()
 	frame.zones = pane
-	pane.filters = Chips(pane, frame, 14, top, { "all", "ek", "ka", "other" }, "JRN_FILTER_", function(key)
+	pane.filterRow, pane.filters = Chips(pane, { "all", "ek", "ka", "other" }, "JRN_FILTER_", function(key)
 		frame.zoneFilter, frame.zoneOffset = key, 0
 		ns:RefreshJournal()
 	end)
-	pane.sorts = Chips(pane, frame, 14 + CONTENT_W - 170, top, { "lvl", "pct" }, "JRN_SORT_", function(key)
+	At(pane.filterRow, content, 0, TOP)
+	pane.sortRow, pane.sorts = Chips(pane, { "lvl", "pct" }, "JRN_SORT_", function(key)
 		frame.zoneSort, frame.zoneOffset = key, 0
 		ns:RefreshJournal()
 	end)
-	pane.summary = Muted(Text(pane, Theme.F_SMALL, 14, top - 24, CONTENT_W))
+	pane.sortRow:SetPoint("TOPRIGHT", content, "TOPLEFT", PAD + INNER, TOP)
+	pane.summary = frame.header.subtitle
 	pane.tiles = {}
-	local gridTop = top - 44
-	for index = 1, TILE_COLS * TILE_ROWS do
-		local col, row = (index - 1) % TILE_COLS, math.floor((index - 1) / TILE_COLS)
-		local tile = Cell(pane, TILE_W, TILE_H)
-		tile:SetPoint("TOPLEFT", frame, "TOPLEFT", 14 + col * (TILE_W + TILE_GAP), gridTop - row * (TILE_H + TILE_GAP))
-		tile.name = tile:CreateFontString(nil, "OVERLAY", Theme.F_BODY)
-		tile.name:SetPoint("TOP", tile, "TOP", 0, -6)
-		tile.name:SetWidth(TILE_W - 10)
-		tile.name:SetJustifyH("CENTER")
-		tile.levels = Muted(tile:CreateFontString(nil, "OVERLAY", Theme.F_SMALL))
-		tile.levels:SetPoint("TOP", tile, "TOP", 0, -36)
-		tile.percent = Theme.CreateTitle(tile, 16)
-		tile.percent:SetPoint("TOP", tile, "TOP", 0, -50)
-		tile.bar = Theme.CreateBar(tile, TILE_W - 16, 3)
-		tile.bar:SetPoint("BOTTOM", tile, "BOTTOM", 0, 16)
-		tile.badge = tile:CreateFontString(nil, "OVERLAY", Theme.F_SMALL)
-		tile.badge:SetPoint("BOTTOM", tile, "BOTTOM", 0, 3)
+	local listTop = TOP - Theme.CHIP_HEIGHT - 14
+	for index = 1, ZONE_COLS * ZONE_ROWS do
+		local col, row = (index - 1) % ZONE_COLS, math.floor((index - 1) / ZONE_COLS)
+		local tile = Theme.CreateTile(pane, ZONE_W, ZONE_H)
+		At(tile, content, col * (ZONE_W + 12), listTop - row * ZONE_STEP)
+		tile:SetFill(row % 2 == 1 and Theme.ROW_ALT or Theme.ROW)
+		tile.rowFill = row % 2 == 1 and Theme.ROW_ALT or Theme.ROW
+		tile.name = Text(tile, Theme.F_LABEL, Theme.LABEL, ZONE_W - 14 - 128)
+		tile.name:SetPoint("TOPLEFT", tile, "TOPLEFT", 14, -4)
+		if tile.name.SetWordWrap then tile.name:SetWordWrap(false) end
+		tile.levels = Text(tile, Theme.F_SMALL, Theme.MUTED, 110)
+		tile.levels:SetPoint("TOPLEFT", tile, "TOPLEFT", 14, -19)
+		tile.percent = Text(tile, Theme.F_LABEL, Theme.PARCHMENT)
+		tile.percent:SetPoint("TOPRIGHT", tile, "TOPRIGHT", -14, -4)
+		tile.percent:SetJustifyH("RIGHT")
+		tile.bar = Theme.CreateBar(tile, 96, 3)
+		tile.bar:SetPoint("TOPRIGHT", tile, "TOPRIGHT", -14, -23)
+		tile.badge = Text(tile, Theme.F_SMALL, Theme.MUTED_LIGHT, ZONE_W - 14 - 110 - 14 - 96 - 10)
+		tile.badge:SetPoint("TOPRIGHT", tile, "TOPRIGHT", -14 - 96 - 10, -18)
+		tile.badge:SetJustifyH("RIGHT")
+		if tile.badge.SetWordWrap then tile.badge:SetWordWrap(false) end
 		tile:SetScript("OnClick", function(t) if t.zoneID then ns:OpenJournalZone(t.zoneID) end end)
-		tile:SetScript("OnEnter", function(t)
+		tile.onEnter = function(t)
 			if not t.zone then return end
 			local zone = t.zone
 			local lines = { zone.seen and (zone.percent and ns:F("JRN_ZONE_PERCENT", zone.percent) or L.JRN_ZONE_NOPCT)
 				or L.JRN_TILE_UNSEEN }
 			if zone.lo < 99 then lines[#lines + 1] = ns:F("JRN_ZONE_LEVELS", zone.lo, zone.hi) end
 			Tip(t, zone.name, lines)
-		end)
-		tile:SetScript("OnLeave", HideTip)
+		end
+		tile.onLeave = HideTip
+		tile:Hide()
 		pane.tiles[index] = tile
 	end
-	pane.position = Muted(Text(pane, Theme.F_SMALL, 14, gridTop - TILE_ROWS * (TILE_H + TILE_GAP) - 2))
+	Pager(pane, content)
 end
 
-local function BuildCompletion(self, frame, top)
-	local pane = CreateFrame("Frame", nil, frame)
+-- Zone : progression (paliers, coffre), activités en onglets, fiches et aperçu
+local function BuildCompletion(self, frame, content)
+	local pane = CreateFrame("Frame", nil, content)
 	pane:SetAllPoints()
 	frame.comp = pane
+	pane.title, pane.levels = frame.header.title, frame.header.subtitle
 
-	pane.prev = Theme.CreateButton(pane, 22, 22, "<", function() ns:StepJournalZone(-1) end)
-	pane.prev:SetPoint("TOPLEFT", frame, "TOPLEFT", 14, top)
-	pane.title = Theme.CreateTitle(pane, 17)
-	pane.title:SetPoint("TOPLEFT", frame, "TOPLEFT", 44, top - 2)
-	pane.levels = Muted(Text(pane, Theme.F_SMALL, 44, top - 22, 300))
-	pane.next = Theme.CreateButton(pane, 22, 22, ">", function() ns:StepJournalZone(1) end)
-	pane.next:SetPoint("TOPLEFT", frame, "TOPLEFT", 360, top)
-	-- suivre la zone dans le bloc « Carnet » en jeu
-	pane.watch = Theme.CreateToggle(pane, 30, 14, "Button")
-	pane.watch:SetPoint("TOPLEFT", frame, "TOPLEFT", 400, top - 4)
-	pane.watch:SetScript("OnClick", function()
-		if frame.zoneID then ns:JournalSetWatched(frame.zoneID, not ns:JournalIsWatched(frame.zoneID)) end
-	end)
-	pane.watchLabel = Text(pane, Theme.F_BODY, 436, top - 4)
-	pane.watchLabel:SetText(L.JRN_WATCH)
-	pane.watch:SetScript("OnEnter", function(owner) Tip(owner, L.JRN_WATCH, { L.JRN_WATCH_TIP }) end)
-	pane.watch:SetScript("OnLeave", HideTip)
-	pane.percent = Theme.CreateTitle(pane, 17)
-	pane.percent:SetPoint("TOPRIGHT", frame, "TOPLEFT", 14 + CONTENT_W, top - 2)
-	pane.percent:SetJustifyH("RIGHT")
+	-- zone précédente / suivante : à gauche du [×], dans l'en-tête
+	pane.next = Theme.CreateButton(pane, 24, 24, ">", function() ns:StepJournalZone(1) end)
+	pane.next:SetPoint("TOPRIGHT", content, "TOPRIGHT", -13 - 24 - 10, -13)
+	pane.prev = Theme.CreateButton(pane, 24, 24, "<", function() ns:StepJournalZone(-1) end)
+	pane.prev:SetPoint("RIGHT", pane.next, "LEFT", -6, 0)
+	for _, b in ipairs({ pane.prev, pane.next }) do
+		local tip = b == pane.prev and L.JRN_ZONE_STEP_PREV or L.JRN_ZONE_STEP_NEXT
+		b:HookScript("OnEnter", function(owner) Tip(owner, tip, { L.JRN_BACK_HINT }) end)
+		b:HookScript("OnLeave", HideTip)
+	end
 
-	-- barre et paliers 25 / 50 / 75 / 100
-	pane.bar = Theme.CreateBar(pane, CONTENT_W, 6)
-	pane.bar:SetPoint("TOPLEFT", frame, "TOPLEFT", 14, top - 40)
+	-- carte de progression : grand pourcentage, barre et paliers, coffre
+	local card = Theme.CreateTile(pane, INNER, 80, { kind = "Frame" })
+	At(card, content, 0, TOP)
+	pane.card = card
+	pane.percent = Text(card, Theme.F_DISPLAY, Theme.PARCHMENT)
+	pane.percent:SetPoint("TOPLEFT", card, "TOPLEFT", 18, -24)
+	local barX, barW = 120, INNER - 120 - 18
+	pane.bar = Theme.CreateBar(card, barW, 6)
+	pane.bar:SetPoint("TOPLEFT", card, "TOPLEFT", barX, -18)
 	pane.marks = {}
 	for index, mark in ipairs(MARKS) do
-		local m = pane:CreateFontString(nil, "OVERLAY", Theme.F_SMALL)
-		m:SetPoint("TOP", pane.bar, "TOPLEFT", CONTENT_W * mark / 100 - (mark == 100 and 14 or 0), -8)
+		local m = Text(card, Theme.F_SMALL, Theme.MUTED)
+		m:SetPoint("TOPRIGHT", card, "TOPLEFT", barX + math.floor(barW * mark / 100), -30)
+		m:SetJustifyH("RIGHT")
 		m.mark = mark
 		pane.marks[index] = m
 	end
-	pane.marksHover = CreateFrame("Frame", nil, pane)
-	pane.marksHover:SetPoint("TOPLEFT", pane.bar, "TOPLEFT", 0, 4)
-	pane.marksHover:SetSize(CONTENT_W, 24)
+	pane.marksHover = CreateFrame("Frame", nil, card)
+	pane.marksHover:SetPoint("TOPLEFT", card, "TOPLEFT", barX, -12)
+	pane.marksHover:SetSize(barW, 32)
 	pane.marksHover:SetScript("OnEnter", function(owner) Tip(owner, ns:F("JRN_MARK_TIP"), {}) end)
 	pane.marksHover:SetScript("OnLeave", HideTip)
-
-	pane.chest = Text(pane, Theme.F_BODY, 14, top - 70, CONTENT_W - 150)
-	pane.openChest = Theme.CreateButton(pane, 130, 20, L.JRN_OPEN_CHEST, function()
+	pane.openChest = Theme.CreateButton(card, "auto", 24, L.JRN_OPEN_CHEST, function()
 		if frame.zoneID then ns:OpenChest(frame.zoneID) end
 	end, "primary")
-	pane.openChest:SetPoint("TOPRIGHT", frame, "TOPLEFT", 14 + CONTENT_W, top - 66)
+	pane.openChest:SetPoint("TOPRIGHT", card, "TOPRIGHT", -18, -48)
+	pane.chest = Text(card, Theme.F_BODY, Theme.LABEL, barW - pane.openChest:GetWidth() - 16)
+	pane.chest:SetPoint("TOPLEFT", card, "TOPLEFT", barX, -54)
+	if pane.chest.SetWordWrap then pane.chest:SetWordWrap(false) end
 
-	pane.tabs = {}
-	local tabW = math.floor((CONTENT_W - (#ACTIVITIES - 1) * 4) / #ACTIVITIES)
-	for index, activity in ipairs(ACTIVITIES) do
-		local tab = Theme.CreateButton(pane, tabW, 20, L["JRN_ACT_" .. activity], function() ns:SelectJournalActivity(activity) end)
-		tab:SetPoint("TOPLEFT", frame, "TOPLEFT", 14 + (index - 1) * (tabW + 4), top - 92)
-		tab.activity = activity
-		pane.tabs[activity] = tab
-		if activity == "quests" and tab.HookScript then
-			-- l'onglet dit ce qu'il compte, ou qu'il n'a pas de liste pour ce client
-			tab:HookScript("OnEnter", function(owner)
-				local available = ns.ZoneQuestsAvailable and ns:ZoneQuestsAvailable()
-				Tip(owner, L.JRN_ACT_quests, { available and L.JRN_QUESTS_TIP or L.JRN_ACT_NO_QUESTS })
-			end)
-			tab:HookScript("OnLeave", HideTip)
-		end
+	-- activités : onglets soulignés ; suivre la zone à l'écran, à droite
+	local tabsY = TOP - 80 - 10
+	pane.tabBar = Theme.CreateTabs(pane, function(id) ns:SelectJournalActivity(id) end)
+	At(pane.tabBar, content, 0, tabsY)
+	pane.tabBar:SetWidth(INNER)
+	local defs = {}
+	for _, activity in ipairs(ACTIVITIES) do defs[#defs + 1] = { id = activity, label = L["JRN_ACT_" .. activity] } end
+	pane.tabBar:SetTabs(defs)
+	pane.tabs = pane.tabBar.byId
+	local questsTab = pane.tabs.quests
+	if questsTab and questsTab.HookScript then
+		-- l'onglet dit ce qu'il compte, ou qu'il n'a pas de liste pour ce client
+		questsTab:HookScript("OnEnter", function(owner)
+			local available = ns.ZoneQuestsAvailable and ns:ZoneQuestsAvailable()
+			Tip(owner, L.JRN_ACT_quests, { available and L.JRN_QUESTS_TIP or L.JRN_ACT_NO_QUESTS })
+		end)
+		questsTab:HookScript("OnLeave", HideTip)
 	end
+	pane.watch = Theme.CreateToggle(pane, 32, 15, "Button")
+	pane.watch:SetPoint("TOPRIGHT", content, "TOPLEFT", PAD + INNER, tabsY - 8)
+	pane.watch:SetScript("OnClick", function()
+		if frame.zoneID then ns:JournalSetWatched(frame.zoneID, not ns:JournalIsWatched(frame.zoneID)) end
+	end)
+	pane.watch:SetScript("OnEnter", function(owner) Tip(owner, L.JRN_WATCH, { L.JRN_WATCH_TIP }) end)
+	pane.watch:SetScript("OnLeave", HideTip)
+	pane.watchLabel = Text(pane, Theme.F_BODY, Theme.LABEL)
+	pane.watchLabel:SetPoint("RIGHT", pane.watch, "LEFT", -10, 0)
+	pane.watchLabel:SetJustifyH("RIGHT")
+	pane.watchLabel:SetText(L.JRN_WATCH)
 
-	local bodyTop = top - 120
-	pane.bodyTop = bodyTop
 	-- en-têtes des parts (« Bestiaire : 4/15 · Nommés : 0/1 ») et filtre des quêtes
-	pane.heads = Text(pane, Theme.F_BODY, 14, bodyTop, BODY_W - 200)
-	pane.heads:SetTextColor(Theme.GOLD[1], Theme.GOLD[2], Theme.GOLD[3])
-	pane.questFilter = Chips(pane, frame, 14 + BODY_W - 190, bodyTop + 2, { "all", "todo", "done" }, "JRN_Q_", function(key)
+	local headsY = tabsY - Theme.TABS_HEIGHT - 10
+	pane.questRow, pane.questFilter = Chips(pane, { "all", "todo", "done" }, "JRN_Q_", function(key)
 		frame.questFilter, frame.offset = key, 0
 		ns:RefreshJournal()
 	end)
-	local gridTop = bodyTop - 22
+	pane.questRow:SetPoint("TOPRIGHT", content, "TOPLEFT", PAD + INNER, headsY + 2)
+	pane.heads = Text(pane, Theme.F_LABEL, Theme.GOLD, INNER - pane.questRow.used - 16)
+	At(pane.heads, content, 0, headsY - 3)
+	if pane.heads.SetWordWrap then pane.heads:SetWordWrap(false) end
+	local gridTop = headsY - Theme.CHIP_HEIGHT - 10
+	pane.gridTop = gridTop
 
-	-- listes sur deux colonnes (Exploration, Quêtes)
+	-- listes sur deux colonnes (Exploration, Quêtes), toute la largeur
 	pane.lines = {}
-	local colW = math.floor((BODY_W - 8) / LIST_COLS)
 	for index = 1, LIST_COLS * LIST_ROWS do
 		local col, row = (index - 1) % LIST_COLS, math.floor((index - 1) / LIST_COLS)
-		local line = CreateFrame("Frame", nil, pane)
-		line:SetSize(colW, LIST_ROW_H - 2)
-		line:SetPoint("TOPLEFT", frame, "TOPLEFT", 14 + col * (colW + 8), gridTop - row * LIST_ROW_H)
-		line.stamp = Theme.CreateDiamond(line, 9, false)
-		line.stamp:SetPoint("LEFT", line, "LEFT", 2, 0)
-		line.name = line:CreateFontString(nil, "OVERLAY", Theme.F_BODY)
-		line.name:SetPoint("LEFT", line, "LEFT", 16, 0)
-		line.name:SetWidth(colW - 80)
-		line.name:SetJustifyH("LEFT")
-		line.name:SetWordWrap(false)
-		line.detail = line:CreateFontString(nil, "OVERLAY", Theme.F_SMALL)
-		line.detail:SetPoint("RIGHT", line, "RIGHT", -2, 0)
-		line.detail:SetWidth(76)
-		line.detail:SetJustifyH("RIGHT")
-		line.detail:SetWordWrap(false)
+		local line = Theme.CreateListRow(pane, LIST_W, LIST_ROW_H - 2, { status = 9, detail = true })
+		At(line, content, col * (LIST_W + 12), gridTop - row * LIST_ROW_H)
+		line:SetIndex(row + 1)
+		line.rowAlt = line.alt
+		line.stamp, line.name = line.status, line.text
+		line.detail:SetWidth(96)
+		line.name:SetWidth(LIST_W - line.textLeft - 96 - 12 - 8)
 		line:Hide()
 		pane.lines[index] = line
 	end
 
-	-- fiches du bestiaire (Combat)
+	-- fiches du bestiaire (Combat) : portrait, rang, tampon ; l'aperçu à droite
 	pane.cards = {}
 	for index = 1, CARD_COLS * CARD_ROWS do
 		local col, row = (index - 1) % CARD_COLS, math.floor((index - 1) / CARD_COLS)
-		local card = Cell(pane, CARD_W, CARD_H)
-		card:SetPoint("TOPLEFT", frame, "TOPLEFT", 14 + col * (CARD_W + CARD_GAP), gridTop - row * (CARD_H + CARD_GAP))
-		card.name = card:CreateFontString(nil, "OVERLAY", Theme.F_BODY)
-		card.name:SetPoint("TOPLEFT", card, "TOPLEFT", 7, -4)
-		card.name:SetWidth(CARD_W - 10)
-		card.name:SetJustifyH("LEFT")
-		card.name:SetWordWrap(false)
-		card.detail = Muted(card:CreateFontString(nil, "OVERLAY", Theme.F_SMALL))
-		card.detail:SetPoint("TOPLEFT", card, "TOPLEFT", 7, -20)
-		card.detail:SetWidth(CARD_W - 10)
-		card.detail:SetJustifyH("LEFT")
-		card.detail:SetWordWrap(false)
+		local card = Theme.CreateTile(pane, CARD_W, CARD_H)
+		At(card, content, col * (CARD_W + 10), gridTop - row * (CARD_H + CARD_GAP))
+		card.portrait = CreateFrame("Frame", nil, card)
+		card.portrait:SetSize(CARD_H - 10, CARD_H - 10)
+		card.portrait:SetPoint("LEFT", card, "LEFT", 9, 0)
+		card.portrait.bg = Theme.Solid(card.portrait, "BACKGROUND", Theme.FIELD, 1)
+		card.portrait.bg:SetAllPoints()
+		card.portrait.border = Theme.Border(card.portrait, Theme.EDGE_SOFT, 1)
+		card.portrait.unknown = Text(card.portrait, Theme.F_TITLE, Theme.MUTED)
+		card.portrait.unknown:SetPoint("CENTER", card.portrait, "CENTER", 0, 0)
+		card.portrait.unknown:SetJustifyH("CENTER")
+		card.portrait.unknown:SetText("?")
+		local okModel, model = pcall(CreateFrame, "PlayerModel", nil, card.portrait)
+		if okModel and model then
+			model:SetPoint("TOPLEFT", card.portrait, "TOPLEFT", 1, -1)
+			model:SetPoint("BOTTOMRIGHT", card.portrait, "BOTTOMRIGHT", -1, 1)
+			card.model = model
+		end
+		local textX = 9 + CARD_H - 10 + 10
+		card.textX = textX
+		card.name = Text(card, Theme.F_LABEL, Theme.PARCHMENT, CARD_W - textX - 46)
+		card.name:SetPoint("TOPLEFT", card, "TOPLEFT", textX, -8)
+		if card.name.SetWordWrap then card.name:SetWordWrap(false) end
+		card.rank = Theme.CreateTag(card, "", Theme.GOLD)
+		card.rank:SetPoint("TOPRIGHT", card, "TOPRIGHT", -10, -24)
+		card.detail = Text(card, Theme.F_SMALL, Theme.MUTED_LIGHT, CARD_W - textX - 10 - 60)
+		card.detail:SetPoint("TOPLEFT", card, "TOPLEFT", textX, -25)
+		if card.detail.SetWordWrap then card.detail:SetWordWrap(false) end
+		-- tampon : losange plein ambre une fois abattue, au trait sinon
+		card.stamp = Theme.CreateDiamond(card, 10, true)
+		card.stamp:SetPoint("TOPRIGHT", card, "TOPRIGHT", -10, -9)
 		card.star = card:CreateTexture(nil, "OVERLAY")
-		card.star:SetSize(12, 12)
-		card.star:SetPoint("TOPRIGHT", card, "TOPRIGHT", -3, -3)
+		card.star:SetSize(14, 14)
+		card.star:SetPoint("RIGHT", card.stamp, "LEFT", -4, 0)
 		card.star:SetTexture(ns.SHINY_STAR or "Interface\\TargetingFrame\\UI-RaidTargetingIcon_1")
 		card.star:Hide()
-		card:SetScript("OnEnter", function(c) if c.item then ns:JournalPreviewCreature(c.item) end end)
+		card.onEnter = function(c) if c.item then ns:JournalPreviewCreature(c.item) end end
+		card:SetScript("OnClick", function(c) if c.item then ns:JournalPreviewCreature(c.item) end end)
+		card:Hide()
 		pane.cards[index] = card
 	end
 
@@ -822,11 +905,14 @@ local function BuildCompletion(self, frame, top)
 		local col, row = (index - 1) % ICON_COLS, math.floor((index - 1) / ICON_COLS)
 		local icon = CreateFrame("Button", nil, pane)
 		icon:SetSize(ICON_SIZE, ICON_SIZE)
-		icon:SetPoint("TOPLEFT", frame, "TOPLEFT", 14 + col * (ICON_SIZE + ICON_GAP), gridTop - row * (ICON_SIZE + ICON_GAP + 4))
+		At(icon, content, col * ICON_STEP_X, gridTop - row * ICON_STEP_Y)
+		icon.border = Theme.Border(icon, Theme.EDGE, 1)
 		icon.tex = icon:CreateTexture(nil, "ARTWORK")
-		icon.tex:SetAllPoints()
-		icon.req = icon:CreateFontString(nil, "OVERLAY", Theme.F_SMALL)
-		icon.req:SetPoint("BOTTOMRIGHT", icon, "BOTTOMRIGHT", -1, 1)
+		icon.tex:SetPoint("TOPLEFT", icon, "TOPLEFT", 1, -1)
+		icon.tex:SetPoint("BOTTOMRIGHT", icon, "BOTTOMRIGHT", -1, 1)
+		if icon.tex.SetTexCoord then icon.tex:SetTexCoord(0.08, 0.92, 0.08, 0.92) end
+		icon.req = Theme.Text(icon, Theme.F_NUMBER, Theme.PARCHMENT)
+		icon.req:SetPoint("BOTTOMRIGHT", icon, "BOTTOMRIGHT", -2, 2)
 		icon:SetScript("OnEnter", function(i)
 			if i.item then Tip(i, i.item.name, { tostring(i.item.detail or "") }) end
 		end)
@@ -835,315 +921,374 @@ local function BuildCompletion(self, frame, top)
 		pane.icons[index] = icon
 	end
 
-	local bottom = gridTop - LIST_ROWS * LIST_ROW_H
-	pane.empty = Muted(Text(pane, Theme.F_BODY, 16, gridTop - 4, BODY_W - 8))
-	pane.empty:SetWordWrap(true)
-	pane.position = Muted(Text(pane, Theme.F_SMALL, 16, bottom - 6))
-	pane.up = Theme.CreateButton(pane, 22, 17, "^", function() ns:ScrollJournal(1) end)
-	pane.up:SetPoint("TOPLEFT", frame, "TOPLEFT", 14 + BODY_W - 48, bottom - 4)
-	pane.down = Theme.CreateButton(pane, 22, 17, "v", function() ns:ScrollJournal(-1) end)
-	pane.down:SetPoint("TOPLEFT", frame, "TOPLEFT", 14 + BODY_W - 22, bottom - 4)
-
-	pane.preview = BuildPreview(pane, frame, 14 + BODY_W + 8, bodyTop, bodyTop - bottom + 20)
+	pane.empty = Text(pane, Theme.F_BODY, Theme.MUTED_LIGHT, INNER)
+	At(pane.empty, content, 0, gridTop - 6)
+	if pane.empty.SetWordWrap then pane.empty:SetWordWrap(true) end
+	Pager(pane, content)
+	pane.preview = BuildPreview(pane, content, INNER - PREVIEW_W, gridTop, gridTop - PAGER_Y - 12)
 end
 
-local function BuildEvolution(self, frame, top)
-	local pane = CreateFrame("Frame", nil, frame)
+-- Créature : portrait, étape, envies, comment elle évolue, parcours
+local HERO_H, EVO_ROW, EVO_STEP = 104, 32, 36
+local function BuildEvolution(self, frame, content)
+	local pane = CreateFrame("Frame", nil, content)
 	pane:SetAllPoints()
 	frame.evo = pane
-	local width = CONTENT_W
-	pane.stage = Theme.CreateTitle(pane, 17)
-	pane.stage:SetPoint("TOPLEFT", frame, "TOPLEFT", 14, top - 2)
-	pane.next = Text(pane, Theme.F_NORMAL, 14, top - 28, width)
-	pane.next:SetWordWrap(true)
-	pane.trait = Text(pane, Theme.F_BODY, 14, top - 50, width)
-	pane.needsTitle = Muted(Text(pane, Theme.F_SMALL, 14, top - 76, width))
+	pane.stage = frame.header.subtitle
+
+	local hero = Theme.CreateTile(pane, INNER, HERO_H, { kind = "Frame" })
+	At(hero, content, 0, TOP)
+	hero:SetFill(Theme.NAV)
+	hero:SetAccent(Theme.GOLD)
+	pane.hero = hero
+	if self.CompanionPortrait then
+		hero.portrait = self:CompanionPortrait(hero, 72)
+		hero.portrait:SetPoint("LEFT", hero, "LEFT", 16, 0)
+	end
+	local textX = 16 + 72 + 18
+	pane.name = Text(hero, Theme.F_TITLE, Theme.PARCHMENT, 300)
+	pane.name:SetPoint("TOPLEFT", hero, "TOPLEFT", textX, -22)
+	if pane.name.SetWordWrap then pane.name:SetWordWrap(false) end
+	pane.look = Text(hero, Theme.F_BODY, Theme.MUTED_LIGHT, 300)
+	pane.look:SetPoint("TOPLEFT", hero, "TOPLEFT", textX, -44)
+	if pane.look.SetWordWrap then pane.look:SetWordWrap(false) end
+	pane.trait = Text(hero, Theme.F_SMALL, Theme.MUTED_LIGHT, 300)
+	pane.trait:SetPoint("TOPLEFT", hero, "TOPLEFT", textX, -66)
+	if pane.trait.SetWordWrap then pane.trait:SetWordWrap(false) end
+	-- étapes : un losange par étape, plein jusqu'à l'actuelle
+	local rightX = INNER - 300
+	pane.stageLabel = Text(hero, Theme.F_CAPS, Theme.GOLD)
+	pane.stageLabel:SetPoint("TOPLEFT", hero, "TOPLEFT", rightX, -22)
+	pane.steps = {}
+	for index = 1, #(ns.COMPANION_STAGES or {}) do
+		local step = Theme.CreateDiamond(hero, 11, true)
+		step:SetPoint("TOPLEFT", hero, "TOPLEFT", rightX + 110 + (index - 1) * 18, -21)
+		pane.steps[index] = step
+	end
+	pane.next = Text(hero, Theme.F_BODY, Theme.TEXT, 300 - 16)
+	pane.next:SetPoint("TOPLEFT", hero, "TOPLEFT", rightX, -44)
+	if pane.next.SetWordWrap then pane.next:SetWordWrap(true) end
+
+	-- deux colonnes : envies à gauche, comment ça marche à droite
+	local colY = TOP - HERO_H - 22
+	pane.needsTitle = Theme.CreateSection(pane, "")
+	pane.needsTitle:SetWidth(HALF)
+	At(pane.needsTitle, content, 0, colY)
 	pane.needs = {}
 	for index, key in ipairs({ "hunger", "energy", "mood", "curiosity" }) do
-		local y = top - 94 - (index - 1) * 20
-		local row = { key = key }
-		row.label = Text(pane, Theme.F_BODY, 14, y, 110)
-		row.bar = Theme.CreateBar(pane, 400, 5)
-		row.bar:SetPoint("TOPLEFT", frame, "TOPLEFT", 130, y - 5)
-		row.value = Text(pane, Theme.F_BODY, 540, y, 80)
-		-- zone de survol sur toute la ligne : quoi faire pour la remplir
-		row.hover = CreateFrame("Button", nil, pane)
-		row.hover:SetPoint("TOPLEFT", frame, "TOPLEFT", 10, y + 2)
-		row.hover:SetSize(600, 18)
-		row.hover:SetScript("OnEnter", function(region) ns:ShowNeedTooltip(region, key) end)
-		row.hover:SetScript("OnLeave", HideTip)
+		local row = Theme.CreateListRow(pane, HALF, EVO_ROW, { detail = true, font = Theme.F_LABEL })
+		At(row, content, 0, colY - 28 - (index - 1) * EVO_STEP)
+		row:SetIndex(index)
+		row.key = key
+		row.label, row.value = row.text, row.detail
+		row.value:SetWidth(52)
+		row.bar = Theme.CreateBar(row, HALF - 120 - 76, 4)
+		row.bar:SetPoint("LEFT", row, "LEFT", 120, 0)
+		-- survol sur toute la carte : quoi faire pour la remplir (la carte
+		-- s'éclaire comme une ligne cliquable)
+		row.shine = row.hover
+		row.hover = CreateFrame("Button", nil, row)
+		row.hover:SetAllPoints()
+		row.hover:SetScript("OnEnter", function(region) row.shine:Show(); ns:ShowNeedTooltip(region, key) end)
+		row.hover:SetScript("OnLeave", function() row.shine:Hide(); HideTip() end)
 		pane.needs[index] = row
 	end
-	pane.howTitle = Text(pane, Theme.F_SMALL, 14, top - 182, width)
-	pane.howTitle:SetTextColor(Theme.GOLD[1], Theme.GOLD[2], Theme.GOLD[3])
-	pane.how = {}
+	local rightCol = HALF + COL_GAP
+	pane.howTitle = Theme.CreateSection(pane, "")
+	pane.howTitle:SetWidth(HALF)
+	At(pane.howTitle, content, rightCol, colY)
+	pane.how, pane.howNumbers = {}, {}
 	for index = 1, 3 do
-		local line = Text(pane, Theme.F_BODY, 14, top - 200 - (index - 1) * 30, width)
-		line:SetWordWrap(true)
+		local number = Text(pane, Theme.F_LABEL, Theme.GOLD)
+		pane.howNumbers[index] = number
+		number:SetText(tostring(index))
+		local line = Text(pane, Theme.F_BODY, Theme.TEXT, HALF - 22)
+		if line.SetWordWrap then line:SetWordWrap(true) end
 		pane.how[index] = line
 	end
-	pane.divider = Theme.CreateDivider(pane, width, top - 296)
-	pane.chests = Text(pane, Theme.F_NORMAL, 14, top - 306, width - 150)
-	pane.openChest = Theme.CreateButton(pane, 130, 20, L.JRN_OPEN_CHEST, function() ns:OpenChest() end, "primary")
-	pane.openChest:SetPoint("TOPRIGHT", frame, "TOPLEFT", 14 + CONTENT_W, top - 302)
-	pane.collection = Text(pane, Theme.F_BODY, 14, top - 332, width)
-	pane.road = Text(pane, Theme.F_BODY, 14, top - 354, width)
-	pane.road:SetWordWrap(true)
-	pane.shiny = Text(pane, Theme.F_BODY, 14, top - 392, width)
+	pane.howTop = colY - 30
+
+	-- parcours : coffres, collection, route, brillantes
+	local roadY = colY - 28 - 4 * EVO_STEP - 18
+	pane.roadTitle = Theme.CreateSection(pane, L.JRN_EVO_ROAD_TITLE)
+	pane.roadTitle:SetWidth(INNER)
+	At(pane.roadTitle, content, 0, roadY)
+	pane.facts = {}
+	for index, field in ipairs({ "chests", "collection", "road", "shiny" }) do
+		local row = Theme.CreateListRow(pane, INNER, EVO_ROW, { status = 9 })
+		At(row, content, 0, roadY - 28 - (index - 1) * EVO_STEP)
+		row:SetIndex(index)
+		Theme.SetStatus(row.status, "item")
+		row.text:SetWidth(INNER - row.textLeft - 12 - (index == 1 and 170 or 0))
+		pane[field] = row.text
+		pane.facts[index] = row
+	end
+	pane.openChest = Theme.CreateButton(pane.facts[1], "auto", 22, L.JRN_OPEN_CHEST, function() ns:OpenChest() end, "primary")
+	pane.openChest:SetPoint("RIGHT", pane.facts[1], "RIGHT", -8, 0)
 end
 
-local function BuildCollection(self, frame, top)
-	local pane = CreateFrame("Frame", nil, frame)
+-- les trois lignes « comment ça marche », empilées selon leur hauteur
+local function LayoutHow(pane, content)
+	local y = pane.howTop
+	local x = HALF + COL_GAP
+	for index, line in ipairs(pane.how) do
+		At(pane.howNumbers[index], content, x, y)
+		At(line, content, x + 22, y)
+		y = y - Theme.TextHeight(line, HALF - 22, Theme.F_BODY) - 10
+	end
+	pane.howBottom = y
+end
+
+-- Collection : sortes en puces, grille d'objets (verrou pour ce qui n'est
+-- pas gagné), aperçu à droite
+local function BuildCollection(self, frame, content)
+	local pane = CreateFrame("Frame", nil, content)
 	pane:SetAllPoints()
 	frame.coll = pane
-	pane.kinds = Chips(pane, frame, 14, top, COLL_KINDS, "JRN_COLL_", function(key)
+	pane.kindRow, pane.kinds = Chips(pane, COLL_KINDS, "JRN_COLL_", function(key)
 		frame.collKind, frame.collOffset = key, 0
 		ns:RefreshJournal()
 	end)
-	pane.count = Muted(Text(pane, Theme.F_SMALL, 14 + BODY_W - 150, top - 3, 150))
+	At(pane.kindRow, content, 0, TOP)
+	pane.count = Text(pane, Theme.F_SMALL, Theme.MUTED_LIGHT, 150)
+	pane.count:SetPoint("TOPRIGHT", content, "TOPLEFT", PAD + GRID_W, TOP - 6)
 	pane.count:SetJustifyH("RIGHT")
 	pane.items = {}
-	local gridTop = top - 28
+	local gridTop = TOP - Theme.CHIP_HEIGHT - 14
 	for index = 1, COLL_COLS * COLL_ROWS do
 		local col, row = (index - 1) % COLL_COLS, math.floor((index - 1) / COLL_COLS)
-		local cell = Cell(pane, COLL_W, COLL_H)
-		cell:SetPoint("TOPLEFT", frame, "TOPLEFT", 14 + col * (COLL_W + COLL_GAP), gridTop - row * (COLL_H + COLL_GAP))
+		local cell = Theme.CreateTile(pane, COLL_W, COLL_H, { accent = "top" })
+		At(cell, content, col * (COLL_W + COLL_GAP), gridTop - row * (COLL_H + COLL_GAP))
 		cell.icon = cell:CreateTexture(nil, "ARTWORK")
-		cell.icon:SetSize(30, 30)
-		cell.icon:SetPoint("TOP", cell, "TOP", 0, -6)
-		cell.label = cell:CreateFontString(nil, "OVERLAY", Theme.F_SMALL)
-		cell.label:SetPoint("TOP", cell, "TOP", 0, -40)
-		cell.label:SetWidth(COLL_W - 6)
+		cell.icon:SetSize(32, 32)
+		cell.icon:SetPoint("TOP", cell, "TOP", 0, -12)
+		cell.lock = Theme.CreateLockTag(cell, "")
+		cell.lock:SetPoint("TOP", cell, "TOP", 0, -20)
+		cell.lock:Hide()
+		cell.label = Text(cell, Theme.F_SMALL, Theme.LABEL, COLL_W - 10)
+		cell.label:SetPoint("TOP", cell, "TOP", 0, -54)
 		cell.label:SetJustifyH("CENTER")
-		cell.label:SetWordWrap(false)
-		cell.tier = Muted(cell:CreateFontString(nil, "OVERLAY", Theme.F_SMALL))
-		cell.tier:SetPoint("TOPLEFT", cell, "TOPLEFT", 5, -3)
-		cell:SetScript("OnEnter", function(c) if c.entry then ns:JournalPreviewCosmetic(c.entry) end end)
+		if cell.label.SetWordWrap then cell.label:SetWordWrap(false) end
+		cell.tier = Text(cell, Theme.F_CAPS, Theme.MUTED)
+		cell.tier:SetPoint("TOPLEFT", cell, "TOPLEFT", 6, -6)
+		cell.onEnter = function(c) if c.entry then ns:JournalPreviewCosmetic(c.entry) end end
 		cell:SetScript("OnClick", function(c) if c.entry then ns:JournalEquip(c.entry) end end)
+		cell:Hide()
 		pane.items[index] = cell
 	end
-	local bottom = gridTop - COLL_ROWS * (COLL_H + COLL_GAP)
-	pane.hint = Muted(Text(pane, Theme.F_SMALL, 14, bottom - 4, BODY_W))
+	Pager(pane, content)
 	pane.hint:SetText(L.JRN_COLL_HINT)
-	pane.preview = BuildPreview(pane, frame, 14 + BODY_W + 8, top, top - bottom + 4)
+	pane.preview = BuildPreview(pane, content, INNER - PREVIEW_W, gridTop, gridTop - PAGER_Y - 12)
 end
 
--- Jour : missions, carte de fidélité des auberges, garde-manger (Daily.lua, Treats.lua)
-local MISSION_ROWS = 3
-local function BuildDay(self, frame, top)
-	local pane = CreateFrame("Frame", nil, frame)
+-- Jour : missions à gauche ; carte des auberges et garde-manger à droite
+-- (Daily.lua, Treats.lua)
+local MISSION_ROWS, MISSION_H, MISSION_STEP = 3, 72, 80
+local function BuildDay(self, frame, content)
+	local pane = CreateFrame("Frame", nil, content)
 	pane:SetAllPoints()
 	frame.day = pane
-	local half = math.floor((CONTENT_W - 12) / 2)
-	local rightX = 14 + half + 12
-	pane.missionsTitle = Theme.CreateTitle(pane, 15)
-	pane.missionsTitle:SetPoint("TOPLEFT", frame, "TOPLEFT", 14, top)
+	local rightX = HALF + COL_GAP
+	pane.missionsTitle = Theme.CreateSection(pane, L.DAY_MISSIONS)
+	pane.missionsTitle:SetWidth(HALF)
+	At(pane.missionsTitle, content, 0, TOP)
 	pane.missions = {}
 	for index = 1, MISSION_ROWS do
-		local y = top - 30 - (index - 1) * 74
-		local row = {}
-		row.label = Text(pane, Theme.F_NORMAL, 14, y, half - 70)
-		row.label:SetWordWrap(true)
-		row.source = Muted(Text(pane, Theme.F_SMALL, 14, y - 34, half - 70))
-		row.count = Text(pane, Theme.F_BODY, 14 + half - 64, y, 64)
-		row.count:SetJustifyH("RIGHT")
-		row.bar = Theme.CreateBar(pane, half, 4)
-		row.bar:SetPoint("TOPLEFT", frame, "TOPLEFT", 14, y - 52)
-		row.reroll = Theme.CreateButton(pane, 64, 18, L.MIS_REROLL, function() ns:MissionReroll(index) end)
-		row.reroll:SetPoint("TOPLEFT", frame, "TOPLEFT", 14 + half - 64, y - 28)
+		local row = Theme.CreateTile(pane, HALF, MISSION_H, { kind = "Frame" })
+		At(row, content, 0, TOP - 28 - (index - 1) * MISSION_STEP)
+		row.reroll = Theme.CreateButton(row, "auto", 20, L.MIS_REROLL, function() ns:MissionReroll(index) end)
+		row.reroll:SetPoint("TOPRIGHT", row, "TOPRIGHT", -12, -32)
 		row.reroll:SetScript("OnEnter", function(b) Tip(b, L.MIS_REROLL, { L.MIS_REROLL_TIP }) end)
 		row.reroll:SetScript("OnLeave", HideTip)
+		local textW = HALF - 14 - 12 - math.max(row.reroll:GetWidth(), 60) - 10
+		row.label = Text(row, Theme.F_LABEL, Theme.LABEL, textW)
+		row.label:SetPoint("TOPLEFT", row, "TOPLEFT", 14, -10)
+		if row.label.SetWordWrap then row.label:SetWordWrap(false) end
+		row.source = Text(row, Theme.F_SMALL, Theme.MUTED, textW)
+		row.source:SetPoint("TOPLEFT", row, "TOPLEFT", 14, -30)
+		if row.source.SetWordWrap then row.source:SetWordWrap(false) end
+		row.count = Text(row, Theme.F_NUMBER, Theme.PARCHMENT, 60)
+		row.count:SetPoint("TOPRIGHT", row, "TOPRIGHT", -12, -10)
+		row.count:SetJustifyH("RIGHT")
+		row.bar = Theme.CreateBar(row, HALF - 28, 4)
+		row.bar:SetPoint("BOTTOMLEFT", row, "BOTTOMLEFT", 14, 12)
 		pane.missions[index] = row
 	end
-	pane.missionsHint = Muted(Text(pane, Theme.F_SMALL, 14, top - 30 - MISSION_ROWS * 74, half))
-	pane.missionsHint:SetWordWrap(true)
-	pane.perfect = Muted(Text(pane, Theme.F_SMALL, 14, top - 60 - MISSION_ROWS * 74, half))
-	pane.perfect:SetWordWrap(true)
+	local hintY = TOP - 28 - MISSION_ROWS * MISSION_STEP - 4
+	pane.missionsHint = Text(pane, Theme.F_SMALL, Theme.MUTED_LIGHT, HALF)
+	At(pane.missionsHint, content, 0, hintY)
+	if pane.missionsHint.SetWordWrap then pane.missionsHint:SetWordWrap(true) end
+	pane.perfect = Text(pane, Theme.F_SMALL, Theme.MUTED, HALF)
+	if pane.perfect.SetWordWrap then pane.perfect:SetWordWrap(true) end
+	pane.hintTop = hintY
 
-	pane.innTitle = Theme.CreateTitle(pane, 15)
-	pane.innTitle:SetPoint("TOPLEFT", frame, "TOPLEFT", rightX, top)
+	pane.innTitle = Theme.CreateSection(pane, L.INN_TITLE)
+	pane.innTitle:SetWidth(HALF)
+	At(pane.innTitle, content, rightX, TOP)
 	pane.stamps = {}
-	local size = math.min(36, math.floor((half - 6 * 6) / 7))
+	local size, gap = 30, math.floor((HALF - 7 * 30) / 6)
 	for index = 1, 7 do
 		local stamp = pane:CreateTexture(nil, "ARTWORK")
 		stamp:SetSize(size, size)
-		stamp:SetPoint("TOPLEFT", frame, "TOPLEFT", rightX + (index - 1) * (size + 6), top - 30)
+		At(stamp, content, rightX + (index - 1) * (size + gap), TOP - 30)
 		stamp:SetTexture(Theme.DIAMOND_LINE)
 		pane.stamps[index] = stamp
 	end
-	pane.innTotal = Text(pane, Theme.F_BODY, rightX, top - 40 - size, half)
-	pane.innHint = Muted(Text(pane, Theme.F_SMALL, rightX, top - 58 - size, half))
-	pane.innHint:SetWordWrap(true)
-	pane.innGift = Muted(Text(pane, Theme.F_SMALL, rightX, top - 88 - size, half))
+	pane.innTotal = Text(pane, Theme.F_LABEL, Theme.LABEL, HALF)
+	At(pane.innTotal, content, rightX, TOP - 30 - size - 12)
+	pane.innHint = Text(pane, Theme.F_SMALL, Theme.MUTED_LIGHT, HALF)
+	if pane.innHint.SetWordWrap then pane.innHint:SetWordWrap(true) end
+	pane.innGift = Text(pane, Theme.F_SMALL, Theme.MUTED, HALF)
+	if pane.innGift.SetWordWrap then pane.innGift:SetWordWrap(true) end
+	pane.innTop = TOP - 30 - size - 12 - 20
 
-	local pantryTop = top - 150
-	pane.pantryTitle = Theme.CreateTitle(pane, 15)
-	pane.pantryTitle:SetPoint("TOPLEFT", frame, "TOPLEFT", rightX, pantryTop)
-	pane.pantryHint = Muted(Text(pane, Theme.F_SMALL, rightX + 130, pantryTop - 4, half - 130))
+	pane.pantryTitle = Theme.CreateSection(pane, L.DAY_PANTRY)
+	pane.pantryTitle:SetWidth(HALF)
+	pane.pantryHint = Text(pane, Theme.F_SMALL, Theme.MUTED, HALF)
+	if pane.pantryHint.SetWordWrap then pane.pantryHint:SetWordWrap(true) end
 	pane.slots = {}
-	local slotW = math.floor((half - 4 * 6) / 5)
+	local count = #(ns.TREAT_KINDS or {})
+	local slotW = count > 0 and math.floor((HALF - (count - 1) * 8) / count) or HALF
 	for index, kind in ipairs(ns.TREAT_KINDS or {}) do
-		local x = rightX + (index - 1) * (slotW + 6)
-		local slot = { kind = kind }
-		slot.icon = pane:CreateTexture(nil, "ARTWORK")
+		local slot = Theme.CreateTile(pane, slotW, 124, { kind = "Frame" })
+		slot.kind, slot.slotX = kind, rightX + (index - 1) * (slotW + 8)
+		slot.icon = slot:CreateTexture(nil, "ARTWORK")
 		slot.icon:SetSize(32, 32)
-		slot.icon:SetPoint("TOPLEFT", frame, "TOPLEFT", x + math.floor((slotW - 32) / 2), pantryTop - 28)
+		slot.icon:SetPoint("TOP", slot, "TOP", 0, -10)
 		slot.icon:SetTexture(ns.TREAT_ICONS[kind])
-		slot.count = Text(pane, Theme.F_BODY, x, pantryTop - 64, slotW)
+		slot.count = Text(slot, Theme.F_LABEL, Theme.PARCHMENT, slotW - 8)
+		slot.count:SetPoint("TOP", slot, "TOP", 0, -48)
 		slot.count:SetJustifyH("CENTER")
-		slot.name = Muted(Text(pane, Theme.F_SMALL, x, pantryTop - 82, slotW))
+		slot.name = Text(slot, Theme.F_SMALL, Theme.MUTED_LIGHT, slotW - 8)
+		slot.name:SetPoint("TOP", slot, "TOP", 0, -66)
 		slot.name:SetJustifyH("CENTER")
-		slot.name:SetWordWrap(true)
-		slot.give = Theme.CreateButton(pane, slotW, 18, L.DAY_GIVE, function() ns:TreatGive(kind); ns:RefreshJournal() end)
-		slot.give:SetPoint("TOPLEFT", frame, "TOPLEFT", x, pantryTop - 116)
+		if slot.name.SetWordWrap then slot.name:SetWordWrap(true) end
+		slot.give = Theme.CreateButton(slot, slotW - 12, 20, L.DAY_GIVE, function() ns:TreatGive(kind); ns:RefreshJournal() end)
+		slot.give:SetPoint("BOTTOM", slot, "BOTTOM", 0, 8)
 		pane.slots[index] = slot
 	end
 end
 
-local function RefreshDay(self, frame)
-	local pane = frame.day
-	local daily, inn = self:DailyData()
-	pane.missionsTitle:SetText(L.DAY_MISSIONS)
-	local today = daily.day == self:DailyToday()
-	local on = self:DailyMissionsOn()
-	for index, row in ipairs(pane.missions) do
-		local mission = on and today and daily.missions[index] or nil
-		row.mission = mission
-		if mission then
-			row.label:SetText(self:MissionLabel(mission))
-			row.source:SetText(self:MissionSource(mission))
-			row.count:SetText(mission.done and (Theme.T_GREEN .. L.MIS_DONE .. "|r")
-				or string.format("%d/%d", mission.have or 0, mission.need))
-			row.bar:SetValue((mission.have or 0) / mission.need)
-			local c = mission.done and Theme.GREEN or Theme.GOLD
-			row.bar:SetColor(c[1], c[2], c[3], 1)
-			row.bar:Show()
-			if mission.source == "zone" and not mission.done and not daily.rerolled then row.reroll:Show() else row.reroll:Hide() end
-		else
-			row.label:SetText(index == 1 and (on and L.MIS_NONE or L.MIS_OFF) or "")
-			row.source:SetText("")
-			row.count:SetText("")
-			row.bar:Hide()
-			row.reroll:Hide()
-		end
-	end
-	pane.missionsHint:SetText(on and today and (daily.allDone and L.MIS_RENEW or L.MIS_ALL_BONUS) or "")
-	pane.innTitle:SetText(L.INN_TITLE)
-	for index, stamp in ipairs(pane.stamps) do
-		local got = index <= inn.card
-		stamp:SetTexture(got and Theme.DIAMOND or Theme.DIAMOND_LINE)
-		local c = got and Theme.GOLD or Theme.MUTED
-		stamp:SetVertexColor(c[1], c[2], c[3], 1)
-		stamp.got = got
-	end
-	pane.innTotal:SetText(self:F("INN_TOTAL", inn.total, inn.full or 0))
-	local chicken = self.CompanionAppearanceDef and self:CompanionAppearanceDef(ns.INN_APPEARANCE or "")
-	pane.innGift:SetText(chicken and self:F("INN_GIFT", ns.INN_APPEARANCE_CARDS, L[chicken.label]) or "")
-	local squirrel = self.CompanionAppearanceDef and self:CompanionAppearanceDef(ns.MISSION_APPEARANCE or "")
-	pane.perfect:SetText(squirrel and self:F("MIS_PERFECT", daily.perfect or 0, ns.MISSION_APPEARANCE_DAYS, L[squirrel.label]) or "")
-	pane.innHint:SetText(self:F("INN_HINT", ns.INN_ENERGY, ns.INN_CARD))
-	pane.pantryTitle:SetText(L.DAY_PANTRY)
-	pane.pantryHint:SetText(L.DAY_PANTRY_HINT)
-	for _, slot in ipairs(pane.slots) do
-		local count = self:TreatCount(slot.kind)
-		slot.count:SetText(self:F("TREAT_COUNT", count, self:TreatCap(slot.kind)))
-		slot.name:SetText(self:TreatLabel(slot.kind))
-		if slot.icon.SetDesaturated then slot.icon:SetDesaturated(count == 0) end
-		if count > 0 then slot.give:Show() else slot.give:Hide() end
-	end
+-- empile la colonne de droite du Jour (textes de longueur variable)
+local function LayoutDay(pane, content)
+	local rightX = HALF + COL_GAP
+	local y = pane.innTop
+	At(pane.innHint, content, rightX, y)
+	y = y - Theme.TextHeight(pane.innHint, HALF, Theme.F_SMALL) - 4
+	At(pane.innGift, content, rightX, y)
+	local gift = Theme.TextHeight(pane.innGift, HALF, Theme.F_SMALL)
+	y = y - gift - (gift > 0 and 20 or 16)
+	At(pane.pantryTitle, content, rightX, y)
+	y = y - 24
+	At(pane.pantryHint, content, rightX, y)
+	y = y - Theme.TextHeight(pane.pantryHint, HALF, Theme.F_SMALL) - 10
+	for _, slot in ipairs(pane.slots) do At(slot, content, slot.slotX, y) end
+	pane.pantryBottom = y - 124
+	-- colonne de gauche : l'aide des missions puis les jours parfaits
+	local left = pane.hintTop - Theme.TextHeight(pane.missionsHint, HALF, Theme.F_SMALL) - 6
+	At(pane.perfect, content, 0, left)
 end
 
--- l'onglet Jour compte les missions qui restent
-local function DayNavLabel(self, frame)
-	local nav = frame.sections.day
-	if not (nav and self.DailyData) then return end
-	local daily = self:DailyData()
-	local open = 0
-	if self:DailyMissionsOn() and daily.day == self:DailyToday() then
-		for _, mission in ipairs(daily.missions) do if not mission.done then open = open + 1 end end
-	end
-	nav:SetText(open > 0 and (L.JRN_SEC_day .. " (" .. open .. ")") or L.JRN_SEC_day)
-end
-
--- Garde-manger dans l'en-tête : un clic donne la friandise
+-- Garde-manger dans le pied : un clic donne la friandise
 local function BuildPantry(self, frame)
-	if not ns.TREAT_KINDS then return end
+	if not ns.TREAT_KINDS or not frame.footer then return end
+	local foot = frame.footer
 	frame.pantry = {}
-	local x = -36
-	for index = #ns.TREAT_KINDS, 1, -1 do
-		local kind = ns.TREAT_KINDS[index]
-		local button = CreateFrame("Button", nil, frame)
-		button:SetSize(22, 22)
-		button:SetPoint("TOPRIGHT", frame, "TOPRIGHT", x, -7)
+	frame.pantryLabel = Text(foot, Theme.F_CAPS, Theme.MUTED_LIGHT)
+	frame.pantryLabel:SetPoint("LEFT", foot, "LEFT", PAD, 0)
+	frame.pantryLabel:SetText(Theme.Upper(L.DAY_PANTRY))
+	local x = PAD + math.ceil(Theme.TextWidth(foot, Theme.Upper(L.DAY_PANTRY), Theme.F_CAPS)) + 14
+	for _, kind in ipairs(ns.TREAT_KINDS) do
+		local button = CreateFrame("Button", nil, foot)
+		button:SetSize(30, 30)
+		button:SetPoint("LEFT", foot, "LEFT", x, 0)
+		button.border = Theme.Border(button, Theme.EDGE, 1)
 		button.icon = button:CreateTexture(nil, "ARTWORK")
-		button.icon:SetAllPoints()
+		button.icon:SetPoint("TOPLEFT", button, "TOPLEFT", 1, -1)
+		button.icon:SetPoint("BOTTOMRIGHT", button, "BOTTOMRIGHT", -1, 1)
 		button.icon:SetTexture(ns.TREAT_ICONS[kind])
-		button.count = button:CreateFontString(nil, "OVERLAY", Theme.F_NUMBER)
-		button.count:SetPoint("BOTTOMRIGHT", button, "BOTTOMRIGHT", 2, -2)
+		button.count = Theme.Text(button, Theme.F_NUMBER, Theme.PARCHMENT)
+		button.count:SetPoint("BOTTOMRIGHT", button, "BOTTOMRIGHT", -2, 2)
 		button.kind = kind
 		button:SetScript("OnClick", function(b) if ns.TreatGive then ns:TreatGive(b.kind); ns:RefreshJournal() end end)
 		button:SetScript("OnEnter", function(b)
+			b.border:SetColor(Theme.GOLD[1], Theme.GOLD[2], Theme.GOLD[3], 1)
 			Tip(b, ns:TreatLabel(b.kind), { L["TREAT_DESC_" .. b.kind], ns:F("TREAT_COUNT", ns:TreatCount(b.kind), ns:TreatCap(b.kind)) })
 		end)
-		button:SetScript("OnLeave", HideTip)
+		button:SetScript("OnLeave", function(b)
+			b.border:SetColor(Theme.EDGE[1], Theme.EDGE[2], Theme.EDGE[3], 1)
+			HideTip()
+		end)
 		frame.pantry[kind] = button
-		x = x - 26
-	end
-	if frame.subtitle then
-		frame.subtitle:ClearAllPoints()
-		frame.subtitle:SetPoint("RIGHT", frame, "TOPRIGHT", x - 4, -18)
+		x = x + 30 + 8
 	end
 end
 
 function ns:EnsureJournalWindow()
 	if self.journalFrame then return self.journalFrame end
-	if not Theme or not Theme.CreatePanel then return nil end
-	local frame = Theme.CreatePanel(UIParent, WIDTH, HEIGHT, L.JRN_TITLE, { name = "Ready2QuestJournalFrame" })
+	if not Theme or not Theme.CreateWindow then return nil end
+	local frame = Theme.CreateWindow(UIParent, WIDTH, HEIGHT, { name = "Ready2QuestJournalFrame", nav = NAV_W, footer = FOOTER_H })
 	if not frame then return nil end
-	if self.RestorePoint then self:RestorePoint(frame, "journalPoint", { point = "CENTER", x = 0, y = 40 }) end
+	frame.chrome = "journal"
+	if self.RestorePoint then self:RestorePoint(frame, "journalPoint", { point = "CENTER", x = 0, y = 20 }) end
 	frame.kind, frame.activity, frame.offset = "evolution", "explore", 0
 	frame.zoneFilter, frame.zoneSort, frame.zoneOffset = "all", "lvl", 0
 	frame.questFilter, frame.collKind = "all", "app"
-	local top = frame.contentTop - 8
+	local content, nav = frame.content, frame.nav
 
-	-- navigation : colonne à droite
-	frame.nav = frame:CreateTexture(nil, "BACKGROUND")
-	frame.nav:SetTexture(Theme.SOLID)
-	frame.nav:SetVertexColor(0.06, 0.07, 0.085, 1)
-	frame.nav:SetPoint("TOPRIGHT", frame, "TOPRIGHT", -1, frame.contentTop + 2)
-	frame.nav:SetPoint("BOTTOMRIGHT", frame, "BOTTOMRIGHT", -1, 1)
-	frame.nav:SetWidth(NAV_W)
+	-- navigation : marque, une entrée par page, le total du carnet en bas
+	frame.brand = Theme.CreateNavBrand(nav, Theme.LOGO, L.JRN_TITLE)
+	frame.brand:SetPoint("TOPLEFT", nav, "TOPLEFT", 0, -8)
+	frame.brand:SetWidth(NAV_W)
+	frame.title = frame.brand.name
+	frame.navGroup = Theme.CreateNavGroup(nav, L.JRN_NAV_GROUP)
+	frame.navGroup:SetPoint("TOPLEFT", nav, "TOPLEFT", 18, -92)
 	frame.sections = {}
-	local index = 0
+	local y = -112
 	for _, section in ipairs(SECTIONS) do
 		if (section ~= "memories" or self.BuildMemoriesPane) and (section ~= "day" or self.DailyData) then
-			index = index + 1
-			local button = Theme.CreateButton(frame, NAV_W - 12, 24, L["JRN_SEC_" .. section], function() ns:SelectJournalKind(section) end)
-			button:SetPoint("TOPRIGHT", frame, "TOPRIGHT", -7, top - (index - 1) * 28)
-			frame.sections[section] = button
+			local item = Theme.CreateNavItem(nav, NAV_W - 1)
+			item:SetPoint("TOPLEFT", nav, "TOPLEFT", 0, y)
+			item:SetText(L["JRN_SEC_" .. section])
+			item.section = section
+			item:SetScript("OnClick", function() ns:SelectJournalKind(section) end)
+			frame.sections[section] = item
+			y = y - Theme.NAV_ITEM_HEIGHT
 		end
 	end
+	frame.subtitle = Text(nav, Theme.F_SMALL, Theme.MUTED_LIGHT, NAV_W - 36)
+	frame.subtitle:SetPoint("BOTTOMLEFT", nav, "BOTTOMLEFT", 18, 18)
 
-	BuildZones(self, frame, top)
-	BuildCompletion(self, frame, top)
-	BuildEvolution(self, frame, top)
-	BuildCollection(self, frame, top)
-	if self.DailyData then BuildDay(self, frame, top) end
-	if self.BuildMemoriesPane then self:BuildMemoriesPane(frame, top + 30, CONTENT_W) end
+	-- en-tête de page : titre et sous-titre de la page choisie
+	frame.header = Theme.CreatePageHeader(content, CONTENT_W)
+	frame.header:SetPoint("TOPLEFT", content, "TOPLEFT", 0, 0)
+	frame.header.title:SetWidth(INNER - 100)
+	if frame.header.title.SetWordWrap then frame.header.title:SetWordWrap(false) end
+	frame.header.subtitle:SetWidth(INNER)
+	if frame.header.subtitle.SetWordWrap then frame.header.subtitle:SetWordWrap(false) end
+
+	BuildZones(self, frame, content)
+	BuildCompletion(self, frame, content)
+	BuildEvolution(self, frame, content)
+	BuildCollection(self, frame, content)
+	if self.DailyData then BuildDay(self, frame, content) end
+	if self.BuildMemoriesPane then self:BuildMemoriesPane(frame, content, { pad = PAD, top = TOP, width = INNER,
+		pagerTop = PAGER_Y }) end
 	BuildPantry(self, frame)
 
 	if frame.EnableMouseWheel then frame:EnableMouseWheel(true) end
 	frame:SetScript("OnMouseWheel", function(_, delta) ns:ScrollJournal(delta) end)
-	-- bouton retour de la souris : de la zone vers la grille des zones
+	-- bouton retour de la souris : de la zone vers la liste des zones
 	frame:SetScript("OnMouseUp", function(_, button)
 		if button == "Button4" and frame.kind == "completion" then ns:SelectJournalKind("zones") end
 	end)
-	frame.closeButton = Theme.CreateButton(frame, NAV_W - 12, 20, L.OPT_CLOSE, function() frame:Hide() end, "primary")
-	frame.closeButton:SetPoint("BOTTOMRIGHT", frame, "BOTTOMRIGHT", -7, 10)
+	frame.closeButton = Theme.CreateButton(frame.footer, "auto", 28, L.OPT_CLOSE, function() frame:Hide() end, "accent")
+	frame.closeButton:SetPoint("RIGHT", frame.footer, "RIGHT", -PAD, 0)
 	frame:Hide()
 	self.journalFrame = frame
 	return frame
 end
+
 
 -- ---------------------------------------------------------------------------
 -- Navigation
@@ -1208,7 +1353,8 @@ function ns:ScrollJournal(delta)
 	if not frame then return end
 	delta = tonumber(delta) or 0
 	if frame.kind == "zones" then
-		frame.zoneOffset = (frame.zoneOffset or 0) - delta * TILE_COLS
+		-- trois rangées de la liste des zones par cran
+		frame.zoneOffset = (frame.zoneOffset or 0) - delta * ZONE_COLS * 3
 	elseif frame.kind == "collection" then
 		frame.collOffset = (frame.collOffset or 0) - delta * COLL_COLS
 	elseif frame.kind == "memories" then
@@ -1326,8 +1472,9 @@ end
 -- ---------------------------------------------------------------------------
 local function RefreshZones(self, frame)
 	local pane = frame.zones
-	for key, chip in pairs(pane.filters) do TabColor(chip, key == frame.zoneFilter) end
-	for key, chip in pairs(pane.sorts) do TabColor(chip, key == frame.zoneSort) end
+	pane.filterRow:Select(frame.zoneFilter, true)
+	pane.sortRow:Select(frame.zoneSort, true)
+	frame.header:SetTitle(L.JRN_SEC_zones)
 	local all = self:JournalAllZones("all", "lvl")
 	local seen, full = 0, 0
 	for _, zone in ipairs(all) do
@@ -1337,8 +1484,8 @@ local function RefreshZones(self, frame)
 	pane.summary:SetText(self:F("JRN_ZONES_SUM", seen, #all, full))
 	local list = self:JournalAllZones(frame.zoneFilter, frame.zoneSort)
 	frame.zoneList = list
-	local page = TILE_COLS * TILE_ROWS
-	local maxOffset = math.max(0, math.ceil((#list - page) / TILE_COLS) * TILE_COLS)
+	local page = #pane.tiles
+	local maxOffset = math.max(0, math.ceil((#list - page) / ZONE_COLS) * ZONE_COLS)
 	frame.zoneOffset = math.max(0, math.min(frame.zoneOffset or 0, maxOffset))
 	for index, tile in ipairs(pane.tiles) do
 		local zone = list[index + frame.zoneOffset]
@@ -1348,7 +1495,11 @@ local function RefreshZones(self, frame)
 			tile.levels:SetText(zone.lo < 99 and self:F("JRN_ZONE_LEVELS", zone.lo, zone.hi) or "")
 			local golden = zone.percent == 100
 			tile.percent:SetText(zone.seen and (zone.percent and self:F("JRN_ZONE_PERCENT", zone.percent) or "-") or "?")
+			local pc = golden and Theme.GOLD or (zone.seen and Theme.PARCHMENT or Theme.MUTED)
+			tile.percent:SetTextColor(pc[1], pc[2], pc[3])
+			-- jamais visitée : ni barre ni chiffre, l'état suffit
 			tile.bar:SetValue((zone.percent or 0) / 100)
+			if zone.seen then tile.bar:Show() else tile.bar:Hide() end
 			local badge = ""
 			if zone.here then badge = Theme.T_BLUE .. L.JRN_TILE_HERE .. "|r" end
 			local shinies = self.ShinyZoneCount and self:ShinyZoneCount(zone.id) or 0
@@ -1358,22 +1509,69 @@ local function RefreshZones(self, frame)
 			if zone.chest and not zone.chest.opened then badge = Theme.T_GOLD .. L.JRN_TILE_CHEST .. "|r" end
 			if not zone.seen then badge = Theme.T_GREY .. L.JRN_TILE_UNSEEN .. "|r" end
 			tile.badge:SetText(badge)
-			CellColor(tile, golden and Theme.GOLD or (zone.seen and Theme.GOLD_SOFT or Theme.GOLD_DIM))
-			tile.bg:SetVertexColor(golden and 0.16 or 0.09, golden and 0.13 or 0.106, golden and 0.08 or 0.125, 1)
-			tile:SetAlpha(zone.seen and 1 or 0.45)
+			-- liseré : ambre pour une zone dorée, bleu pour celle où tu es
+			tile:SetAccent(golden and Theme.GOLD or (zone.here and Theme.BLUE or nil))
+			local nc = zone.seen and Theme.LABEL or Theme.MUTED_LIGHT
+			tile.name:SetTextColor(nc[1], nc[2], nc[3])
+			tile:SetAlpha(zone.seen and 1 or 0.55)
 			tile:Show()
 		else
 			tile:Hide()
 		end
 	end
-	pane.position:SetText(#list > page and string.format("%d-%d / %d", frame.zoneOffset + 1,
-		math.min(#list, frame.zoneOffset + page), #list) or "")
+	pane.pager:Update(frame.zoneOffset, page, #list, maxOffset)
 end
 
 local function ShowOnly(pane, what)
 	for _, line in ipairs(pane.lines) do if what ~= "lines" then line:Hide() end end
 	for _, card in ipairs(pane.cards) do if what ~= "cards" then card:Hide() end end
 	for _, icon in ipairs(pane.icons) do if what ~= "icons" then icon:Hide() end end
+end
+
+-- Une fiche du bestiaire : portrait (modèle de la créature, « ? » jamais
+-- croisée), nom, niveau ou état, rang, tampon
+local function PaintCard(self, cell, item, zoneID)
+	local known = item.seen or item.done
+	cell.name:SetText(known and (item.rawName or item.name) or L.JRN_CARD_UNSEEN)
+	local t = known and Theme.PARCHMENT or Theme.MUTED
+	cell.name:SetTextColor(t[1], t[2], t[3])
+	local level = item.levelText and self:F("JRN_PREV_LEVEL", item.levelText) or ""
+	cell.detail:SetText(known and (item.done and (Theme.T_GREEN .. tostring(item.detail) .. "|r") or tostring(item.detail or ""))
+		or level)
+	local rank = RANK_COLOR[item.class or ""]
+	cell.rank:SetTag(known and item.class and CLASS_LABEL[item.class] and L[CLASS_LABEL[item.class]] or "", rank or Theme.GOLD)
+	-- le détail s'arrête avant l'étiquette du rang
+	local tagW = cell.rank:IsShown() and (cell.rank:GetWidth() + 8) or 0
+	cell.detail:SetWidth(CARD_W - cell.textX - 10 - tagW)
+	cell:SetAccent(rank)
+	local edge = rank or Theme.EDGE_SOFT
+	cell.portrait.border:SetColor(edge[1], edge[2], edge[3], 1)
+	cell:SetFill(known and Theme.ROW or Theme.NAV)
+	-- tampon du carnet : plein une fois abattue
+	cell.stamp:SetTexture(item.done and Theme.DIAMOND or Theme.DIAMOND_LINE)
+	local sc = item.done and Theme.GOLD or Theme.MUTED
+	cell.stamp:SetVertexColor(sc[1], sc[2], sc[3], 1)
+	if cell.model then
+		if known and tonumber(item.id) then
+			if cell.model.SetCreature then pcall(cell.model.SetCreature, cell.model, tonumber(item.id)) end
+			if cell.model.SetPortraitZoom then pcall(cell.model.SetPortraitZoom, cell.model, 1) end
+			cell.model.creature = tonumber(item.id)
+			cell.model:Show()
+		else
+			cell.model.creature = nil
+			cell.model:Hide()
+		end
+	end
+	if known then cell.portrait.unknown:Hide() else cell.portrait.unknown:Show() end
+	-- brillante abattue : fiche dorée, étoile
+	item.shiny = self.ShinyFound and self:ShinyFound(zoneID, item.id) or nil
+	if item.shiny then
+		cell.star:Show()
+		cell:SetFill({ 0.17, 0.15, 0.08 })
+		cell:SetAccent(SHINY_COLOR)
+	else
+		cell.star:Hide()
+	end
 end
 
 local function RefreshCompletion(self, frame)
@@ -1388,27 +1586,34 @@ local function RefreshCompletion(self, frame)
 	end
 	local zoneID = frame.zoneID
 	local here = self.JournalZone and self:JournalZone()
-	for key, tab in pairs(pane.tabs) do TabColor(tab, key == (frame.activity or "explore")) end
+	local activity = frame.activity or "explore"
+	pane.tabBar:Select(activity, true)
 	pane.preview.item = nil
 	if not zoneID then
-		pane.title:SetText("-")
+		pane.title:SetText(L.JRN_SEC_completion)
 		pane.levels:SetText("")
 		pane.watch:Hide(); pane.watchLabel:Hide()
+		pane.prev:Hide(); pane.next:Hide()
 		pane.percent:SetText("")
 		pane.bar:Hide()
 		for _, m in ipairs(pane.marks) do m:SetText("") end
 		pane.chest:SetText("")
 		pane.openChest:Hide()
+		pane.card:Hide()
+		pane.tabBar:Hide()
 		pane.heads:SetText("")
 		ShowOnly(pane, "none")
-		for _, chip in pairs(pane.questFilter) do chip:Hide() end
+		pane.questRow:Hide()
 		pane.empty:SetText(L.JRN_ZONE_NONE)
-		pane.position:SetText("")
-		pane.up:Hide(); pane.down:Hide()
-		PreviewSet(pane.preview, "", {})
+		At(pane.empty, frame.content, 0, TOP)
+		pane.pager:Update(0, 0, 0, 0)
+		pane.hint:SetText("")
+		pane.preview:Hide()
 		frame.rows = {}
 		return
 	end
+	pane.card:Show(); pane.tabBar:Show(); pane.prev:Show(); pane.next:Show()
+	At(pane.empty, frame.content, 0, pane.gridTop - 6)
 	local name = ZoneName(self, zoneID)
 	pane.title:SetText(zoneID == here and self:F("JRN_ZONE_HERE", name) or name)
 	local range = self.ZoneLevelRange and self:ZoneLevelRange(zoneID)
@@ -1418,6 +1623,8 @@ local function RefreshCompletion(self, frame)
 	local counted = done and #done.parts >= 2
 	if counted then
 		pane.percent:SetText(self:F("JRN_ZONE_PERCENT", done.percent))
+		local pc = done.percent >= 100 and Theme.GOLD or Theme.PARCHMENT
+		pane.percent:SetTextColor(pc[1], pc[2], pc[3])
 		pane.bar:SetValue(done.ratio)
 		pane.bar:Show()
 	else
@@ -1437,8 +1644,10 @@ local function RefreshCompletion(self, frame)
 	end
 	local chest = self.ChestData and self:ChestData()[zoneID]
 	pane.openChest:Hide()
+	local accent = nil
 	if chest and chest.golden then
 		pane.chest:SetText(self:F("JRN_CHEST_GOLDEN", chest.tier or 1))
+		accent = Theme.GOLD
 	elseif chest and chest.opened then
 		local reward = chest.reward and chest.reward:match("^%w+:(.+)$")
 		local label = reward
@@ -1449,22 +1658,22 @@ local function RefreshCompletion(self, frame)
 	elseif chest then
 		pane.chest:SetText(L.JRN_CHEST_READY)
 		pane.openChest:Show()
+		accent = Theme.GOLD
 	elseif counted then
 		pane.chest:SetText(self:F("JRN_CHEST_TODO", self.ZoneTier and self:ZoneTier(zoneID) or 1))
 	else
 		pane.chest:SetText(L.JRN_ZONE_NOPCT)
 	end
+	pane.card:SetAccent(accent)
+	-- sans pourcentage : le texte du coffre prend la place du grand chiffre
+	pane.chest:ClearAllPoints()
+	pane.chest:SetPoint("TOPLEFT", pane.card, "TOPLEFT", counted and 120 or 18, counted and -54 or -32)
 
 	pane.watch:SetChecked(self:JournalIsWatched(zoneID))
 	pane.watch:Show(); pane.watchLabel:Show()
-	local activity = frame.activity or "explore"
 	-- Quêtes : grisé si ce client n'a pas de liste de quêtes
 	local quests = self.ZoneQuestsAvailable and self:ZoneQuestsAvailable()
-	local questsTab = pane.tabs.quests
-	questsTab:SetText(L.JRN_ACT_quests)
-	if not quests and activity ~= "quests" and questsTab.text.SetTextColor then
-		questsTab.text:SetTextColor(Theme.MUTED[1], Theme.MUTED[2], Theme.MUTED[3])
-	end
+	pane.tabBar:SetDim("quests", not quests)
 
 	-- lignes de l'onglet : en-têtes de parts à part, puis les éléments
 	local all = self:JournalActivityRows(zoneID, activity)
@@ -1481,15 +1690,18 @@ local function RefreshCompletion(self, frame)
 		end
 	end
 	frame.rows = rows
-	pane.heads:SetText(table.concat(heads, "  ·  "))
-	for key, chip in pairs(pane.questFilter) do
-		if activity == "quests" then chip:Show(); TabColor(chip, key == filter) else chip:Hide() end
-	end
+	-- les listes ont déjà une ligne d'en-tête par part : le résumé suffit
+	-- pour les fiches et les ressources
+	pane.heads:SetText((activity == "combat" or activity == "craft") and table.concat(heads, "  ·  ") or "")
+	if activity == "quests" then pane.questRow:Show(); pane.questRow:Select(filter, true) else pane.questRow:Hide() end
 	local mode, cells, step = "lines", pane.lines, LIST_COLS
 	if activity == "combat" then mode, cells, step = "cards", pane.cards, CARD_COLS end
 	if activity == "craft" then mode, cells, step = "icons", pane.icons, ICON_COLS end
 	frame.step = step
 	ShowOnly(pane, mode)
+	-- l'aperçu accompagne les fiches ; ailleurs, l'aide tient dans le bas
+	if mode == "cards" then pane.preview:Show(); pane.hint:SetText("") else
+		pane.preview:Hide(); pane.hint:SetText(L["JRN_PREV_HINT_" .. activity] or "") end
 	local page = #cells
 	local maxOffset = math.max(0, math.ceil((#rows - page) / step) * step)
 	frame.offset = math.max(0, math.min(frame.offset or 0, maxOffset))
@@ -1504,6 +1716,7 @@ local function RefreshCompletion(self, frame)
 				cell.name:SetText(item.name)
 				cell.name:SetTextColor(Theme.GOLD[1], Theme.GOLD[2], Theme.GOLD[3])
 				cell.detail:SetText("")
+				cell.bg:SetVertexColor(Theme.GOLD[1], Theme.GOLD[2], Theme.GOLD[3], 0.08)
 			else
 				cell.stamp:Show()
 				cell.stamp:SetTexture(item.done and Theme.DIAMOND or Theme.DIAMOND_LINE)
@@ -1513,27 +1726,11 @@ local function RefreshCompletion(self, frame)
 				cell.name:SetTextColor(t[1], t[2], t[3])
 				cell.name:SetText(item.name)
 				cell.detail:SetText(Theme.T_GREY .. tostring(item.detail or "") .. "|r")
+				cell:SetAlt(cell.rowAlt)
 			end
 			cell:Show()
 		elseif mode == "cards" then
-			local known = item.seen or item.done
-			cell.name:SetText(known and (item.rawName or item.name) or L.JRN_CARD_UNSEEN)
-			local t = known and Theme.PARCHMENT or Theme.MUTED
-			cell.name:SetTextColor(t[1], t[2], t[3])
-			local level = item.levelText and self:F("JRN_PREV_LEVEL", item.levelText) or ""
-			cell.detail:SetText(known and (item.done and (Theme.T_GREEN .. tostring(item.detail) .. "|r") or tostring(item.detail or ""))
-				or level)
-			CellColor(cell, RANK_COLOR[item.class or ""] or Theme.CONTROL)
-			cell.bg:SetVertexColor(known and 0.09 or 0.066, known and 0.106 or 0.08, known and 0.125 or 0.094, 1)
-			-- brillante abattue : fiche dorée, étoile
-			item.shiny = self.ShinyFound and self:ShinyFound(zoneID, item.id) or nil
-			if item.shiny then
-				cell.star:Show()
-				cell.bg:SetVertexColor(0.17, 0.15, 0.08, 1)
-				CellColor(cell, { 1.0, 0.89, 0.48 })
-			else
-				cell.star:Hide()
-			end
+			PaintCard(self, cell, item, zoneID)
 			cell:Show()
 		else
 			local texture
@@ -1545,6 +1742,8 @@ local function RefreshCompletion(self, frame)
 			cell.tex:SetTexture(texture or LOCK_ICON)
 			if cell.tex.SetDesaturated then cell.tex:SetDesaturated(not item.done) end
 			cell:SetAlpha(item.done and 1 or 0.45)
+			local edge = item.done and Theme.GOLD_SOFT or Theme.EDGE
+			cell.border:SetColor(edge[1], edge[2], edge[3], 1)
 			cell.req:SetText(item.req and tostring(item.req) or "")
 			cell:Show()
 		end
@@ -1560,10 +1759,7 @@ local function RefreshCompletion(self, frame)
 		end
 	end
 	pane.empty:SetText(empty)
-	pane.position:SetText(#rows > page
-		and string.format("%d-%d / %d", frame.offset + 1, math.min(#rows, frame.offset + page), #rows) or "")
-	if frame.offset > 0 then pane.up:Show() else pane.up:Hide() end
-	if frame.offset < maxOffset then pane.down:Show() else pane.down:Hide() end
+	pane.pager:Update(frame.offset, page, #rows, maxOffset)
 	PreviewSet(pane.preview, L["JRN_ACT_" .. activity], { L["JRN_PREV_HINT_" .. activity] })
 end
 
@@ -1587,8 +1783,22 @@ local function RefreshEvolution(self, frame)
 	local data = self.CompanionData and self:CompanionData() or { needs = {} }
 	local stage = self.CompanionStage and self:CompanionStage() or 1
 	local name = self.CompanionName and self:CompanionName() or "?"
-	pane.stage:SetText(self:F("JRN_EVO_STAGE", name, self.CompanionStageLabel and self:CompanionStageLabel(stage) or "",
-		stage, #stages))
+	local stageLabel = self.CompanionStageLabel and self:CompanionStageLabel(stage) or ""
+	frame.header:SetTitle(L.JRN_SEC_evolution)
+	pane.stage:SetText(self:F("JRN_EVO_STAGE", name, stageLabel, stage, #stages))
+	-- portrait : son cadre et son fond gagnés, son nom, son apparence
+	local hero = pane.hero
+	if hero.portrait and hero.portrait.Refresh then hero.portrait:Refresh(self) end
+	pane.name:SetText(name)
+	local app = self.CompanionCurrentAppearance and self:CompanionCurrentAppearance()
+	pane.look:SetText(app and (tostring(L[app.label]) .. "  ·  " .. stageLabel) or stageLabel)
+	pane.stageLabel:SetText(Theme.Upper(self:F("JRN_EVO_STEP", stage, #stages)))
+	for index, step in ipairs(pane.steps) do
+		local reached = index <= stage
+		step:SetTexture(reached and Theme.DIAMOND or Theme.DIAMOND_LINE)
+		local c = reached and Theme.GOLD or Theme.MUTED
+		step:SetVertexColor(c[1], c[2], c[3], 1)
+	end
 	local unitLevel = rawget(_G, "UnitLevel")
 	local ok, rawLevel = pcall(unitLevel or function() return 1 end, "player")
 	local level = tonumber(ok and rawLevel) or 1
@@ -1606,7 +1816,7 @@ local function RefreshEvolution(self, frame)
 	local trait = self.CompanionTrait and self:CompanionTrait()
 	pane.trait:SetText(self.PersonaLabel and self:F("JRN_EVO_TRAIT", self:PersonaLabel(trait)) or "")
 	local happyMin = ns.COMPANION_HAPPY_MIN or 70
-	pane.needsTitle:SetText(self:F("JRN_EVO_NEEDS", happyMin))
+	SectionText(pane.needsTitle, self:F("JRN_EVO_NEEDS", happyMin))
 	for _, row in ipairs(pane.needs) do
 		local value = math.floor(tonumber(data.needs and data.needs[row.key]) or 0)
 		row.label:SetText(L["COMP_NEED_" .. row.key] or row.key)
@@ -1614,15 +1824,19 @@ local function RefreshEvolution(self, frame)
 		local c = value >= happyMin and Theme.GOLD or Theme.MUTED
 		row.bar:SetColor(c[1], c[2], c[3], 1)
 		row.value:SetText(value .. " %")
+		local vc = value >= happyMin and Theme.GOLD or Theme.LABEL
+		row.value:SetTextColor(vc[1], vc[2], vc[3])
 	end
-	pane.howTitle:SetText(L.JRN_EVO_HOW)
+	SectionText(pane.howTitle, L.JRN_EVO_HOW)
 	pane.how[1]:SetText(L.JRN_EVO_HOW_1)
 	pane.how[2]:SetText(self:F("JRN_EVO_HOW_2", happyMin))
 	pane.how[3]:SetText(self:F("JRN_EVO_HOW_3"))
+	LayoutHow(pane, frame.content)
 
 	local pending = self.ChestPending and #self:ChestPending() or 0
 	pane.chests:SetText(self:F("JRN_EVO_CHESTS", pending))
 	if pending > 0 then pane.openChest:Show() else pane.openChest:Hide() end
+	Theme.SetStatus(pane.facts[1].status, pending > 0 and "warn" or "off")
 	local owned, total, byTier = CollectionCounts(self)
 	pane.collection:SetText(self:F("JRN_EVO_COLLECTION", owned, total, byTier[1][1], byTier[1][2],
 		byTier[2][1], byTier[2][2], byTier[3][1], byTier[3][2]))
@@ -1635,15 +1849,19 @@ local function RefreshEvolution(self, frame)
 		local nextReward = self:ShinyNextReward()
 		local count = self:ShinyData().count
 		pane.shiny:SetText(nextReward and self:F("SHINY_EVO", count, nextReward.count) or self:F("SHINY_EVO_DONE", count))
+		pane.facts[4]:Show()
 	else
 		pane.shiny:SetText("")
+		pane.facts[4]:Hide()
 	end
 end
 
 local function RefreshCollection(self, frame)
 	local pane = frame.coll
 	local kind = frame.collKind or "app"
-	for key, chip in pairs(pane.kinds) do TabColor(chip, key == kind) end
+	pane.kindRow:Select(kind, true)
+	frame.header:SetTitle(L.JRN_SEC_collection)
+	frame.header:SetSubtitle(L.JRN_SUB_collection)
 	local list = self:JournalCollection(kind)
 	local owned, equipped = 0, nil
 	for _, entry in ipairs(list) do
@@ -1651,7 +1869,7 @@ local function RefreshCollection(self, frame)
 		if entry.equipped and not equipped then equipped = entry end
 	end
 	pane.count:SetText(self:F("JRN_COLL_COUNT", owned, #list))
-	-- plus d'objets qu'une page (24 apparences pour 25 cases) : la molette avance d'une rangée
+	-- plus d'objets qu'une page : la molette avance d'une rangée
 	local page = #pane.items
 	local maxOffset = math.max(0, math.ceil((#list - page) / COLL_COLS) * COLL_COLS)
 	frame.collOffset = math.max(0, math.min(frame.collOffset or 0, maxOffset))
@@ -1670,21 +1888,107 @@ local function RefreshCollection(self, frame)
 					local c = entry.kind == "frame" and def.edge or def.color
 					if c and not def.texture then cell.icon:SetVertexColor(c[1], c[2], c[3], 1) end
 				end
+				cell.icon:Show()
+				cell.lock:Hide()
+			else
+				-- pas encore gagné : un verrou qui dit d'où il vient
+				cell.icon:Hide()
+				local lockText = self.CompanionLockText and entry.def and self:CompanionLockText(entry.def)
+					or self:F("JRN_COLL_SRC_TIER", entry.tier)
+				cell.lock:SetText(lockText, COLL_W - 10)
+				cell.lock:Show()
 			end
 			pcall(cell.icon.SetTexture, cell.icon, icon)
 			cell.label:SetText(entry.label)
-			cell.tier:SetText(entry.tier >= 1 and tostring(entry.tier) or "")
-			CellColor(cell, entry.equipped and Theme.GOLD or (entry.owned and Theme.GOLD_SOFT or Theme.GOLD_DIM))
-			cell:SetAlpha(entry.owned and 1 or 0.45)
+			local lc = entry.owned and Theme.LABEL or Theme.MUTED
+			cell.label:SetTextColor(lc[1], lc[2], lc[3])
+			-- palier en coin (le verrou le dit déjà pour ce qui n'est pas gagné)
+			cell.tier:SetText(entry.owned and entry.tier >= 1 and tostring(entry.tier) or "")
+			cell:SetAccent(entry.equipped and Theme.GOLD or nil)
+			cell:SetSelected(entry.equipped)
+			cell:SetFill(entry.owned and Theme.ROW or Theme.NAV)
+			cell:SetAlpha(entry.owned and 1 or 0.7)
 			cell:Show()
 		else
 			cell:Hide()
 		end
 	end
+	pane.pager:Update(frame.collOffset, page, #list, maxOffset)
 	local shown = pane.preview.entry
 	if not shown or shown.kind ~= kind then
 		if equipped or list[1] then self:JournalPreviewCosmetic(equipped or list[1]) end
 	end
+end
+
+local function RefreshDay(self, frame)
+	local pane = frame.day
+	local daily, inn = self:DailyData()
+	frame.header:SetTitle(L.JRN_SEC_day)
+	frame.header:SetSubtitle(L.JRN_SUB_day)
+	local today = daily.day == self:DailyToday()
+	local on = self:DailyMissionsOn()
+	for index, row in ipairs(pane.missions) do
+		local mission = on and today and daily.missions[index] or nil
+		row.mission = mission
+		if mission then
+			row.label:SetText(self:MissionLabel(mission))
+			row.source:SetText(self:MissionSource(mission))
+			row.count:SetText(mission.done and (Theme.T_GREEN .. L.MIS_DONE .. "|r")
+				or string.format("%d/%d", mission.have or 0, mission.need))
+			row.bar:SetValue((mission.have or 0) / mission.need)
+			local c = mission.done and Theme.GREEN or Theme.GOLD
+			row.bar:SetColor(c[1], c[2], c[3], 1)
+			row.bar:Show()
+			row:SetAccent(mission.done and Theme.GREEN or Theme.GOLD)
+			if mission.source == "zone" and not mission.done and not daily.rerolled then row.reroll:Show() else row.reroll:Hide() end
+			row:Show()
+		else
+			row.label:SetText(index == 1 and (on and L.MIS_NONE or L.MIS_OFF) or "")
+			row.source:SetText("")
+			row.count:SetText("")
+			row.bar:Hide()
+			row.reroll:Hide()
+			row:SetAccent(nil)
+			if index == 1 then row:Show() else row:Hide() end
+		end
+	end
+	pane.missionsHint:SetText(on and today and (daily.allDone and L.MIS_RENEW or L.MIS_ALL_BONUS) or "")
+	for index, stamp in ipairs(pane.stamps) do
+		local got = index <= inn.card
+		stamp:SetTexture(got and Theme.DIAMOND or Theme.DIAMOND_LINE)
+		local c = got and Theme.GOLD or Theme.MUTED
+		stamp:SetVertexColor(c[1], c[2], c[3], 1)
+		stamp.got = got
+	end
+	pane.innTotal:SetText(self:F("INN_TOTAL", inn.total, inn.full or 0))
+	local chicken = self.CompanionAppearanceDef and self:CompanionAppearanceDef(ns.INN_APPEARANCE or "")
+	pane.innGift:SetText(chicken and self:F("INN_GIFT", ns.INN_APPEARANCE_CARDS, L[chicken.label]) or "")
+	local squirrel = self.CompanionAppearanceDef and self:CompanionAppearanceDef(ns.MISSION_APPEARANCE or "")
+	pane.perfect:SetText(squirrel and self:F("MIS_PERFECT", daily.perfect or 0, ns.MISSION_APPEARANCE_DAYS, L[squirrel.label]) or "")
+	pane.innHint:SetText(self:F("INN_HINT", ns.INN_ENERGY, ns.INN_CARD))
+	pane.pantryHint:SetText(L.DAY_PANTRY_HINT)
+	for _, slot in ipairs(pane.slots) do
+		local count = self:TreatCount(slot.kind)
+		slot.count:SetText(self:F("TREAT_COUNT", count, self:TreatCap(slot.kind)))
+		slot.name:SetText(self:TreatLabel(slot.kind))
+		if slot.icon.SetDesaturated then slot.icon:SetDesaturated(count == 0) end
+		if count > 0 then slot.give:Show() else slot.give:Hide() end
+		slot:SetAccent(count > 0 and Theme.GOLD or nil)
+	end
+	LayoutDay(pane, frame.content)
+end
+
+-- la page Jour compte les missions qui restent (pastille bleue)
+local function DayNavLabel(self, frame)
+	local nav = frame.sections.day
+	if not (nav and self.DailyData) then return end
+	local daily = self:DailyData()
+	local open = 0
+	if self:DailyMissionsOn() and daily.day == self:DailyToday() then
+		for _, mission in ipairs(daily.missions) do if not mission.done then open = open + 1 end end
+	end
+	nav:SetText(L.JRN_SEC_day)
+	nav:SetBadge(open > 0 and tostring(open) or nil)
 end
 
 local function RefreshPantry(self, frame)
@@ -1703,12 +2007,10 @@ function ns:RefreshJournal()
 	if not frame then return end
 	local section = KindOf(frame, frame.kind)
 	frame.kind = section
-	for key, button in pairs(frame.sections) do TabColor(button, key == section) end
+	for key, item in pairs(frame.sections) do item:SetSelected(key == section) end
 	local counts = self:JournalCounts()
-	if frame.subtitle then
-		frame.subtitle:SetText(self:F("JRN_TOTAL", counts.total)
-			.. (ModuleOn() and "" or ("  " .. Theme.T_GREY .. L.MODULE_OFF .. "|r")))
-	end
+	frame.subtitle:SetText(self:F("JRN_TOTAL", counts.total)
+		.. (ModuleOn() and "" or ("|n" .. Theme.T_GREY .. L.MODULE_OFF .. "|r")))
 	for key, field in pairs(PANES) do
 		local pane = frame[field]
 		if pane then if key == section then pane:Show() else pane:Hide() end end
@@ -1716,6 +2018,8 @@ function ns:RefreshJournal()
 	RefreshPantry(self, frame)
 	DayNavLabel(self, frame)
 	if section == "memories" then
+		frame.header:SetTitle(L.JRN_SEC_memories)
+		frame.header:SetSubtitle(L.JRN_SUB_memories)
 		self:RefreshMemoriesPane(frame)
 	elseif section == "evolution" then
 		RefreshEvolution(self, frame)
