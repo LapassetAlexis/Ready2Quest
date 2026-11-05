@@ -9,6 +9,8 @@
 --   * la liste : par sort, son rang et le meilleur connu, sa barre et sa case,
 --     [Mettre à jour] (même case, meilleur rang) et [Ignorer] ;
 --     [Tout mettre à jour] en bas ;
+--   * sur les barres : un fin liseré rouge autour de la case concernée
+--     (barres de Blizzard, Bartender4, Dominos), réglable ;
 --   * ignorer, c'est ignorer une CASE pour ce sort : un Rang 1 gardé exprès
 --     (soin bon marché) n'empêche pas d'être prévenu pour les autres cases ;
 --     la liste des cases ignorées s'oublie dans les réglages.
@@ -28,6 +30,7 @@ local FR = {
 	OPT_PAGE_SPELLRANKS_SUB = "Un sort de tes barres a un meilleur rang dans ton livre : tu es prévenu.",
 	OPT_SPELLRANKS_ENABLED  = "Activer le module",
 	OPT_SPELLRANKS_FORGET   = "Oublier les cases ignorées",
+	OPT_SPELLRANKS_BORDER   = "Liseré rouge autour des sorts à mettre à jour",
 	SR_TITLE                = "Rangs de sorts",
 	SR_LINE                 = "%s : rang %d → rang %d",
 	SR_WHERE                = "barre %d, case %d",
@@ -52,6 +55,7 @@ local EN = {
 	OPT_PAGE_SPELLRANKS_SUB = "A spell on your bars has a higher rank in your spellbook: you get told.",
 	OPT_SPELLRANKS_ENABLED  = "Enable the module",
 	OPT_SPELLRANKS_FORGET   = "Forget ignored slots",
+	OPT_SPELLRANKS_BORDER   = "Red outline around spells to update",
 	SR_TITLE                = "Spell ranks",
 	SR_LINE                 = "%s: rank %d → rank %d",
 	SR_WHERE                = "bar %d, slot %d",
@@ -74,13 +78,14 @@ local EN = {
 ns.RegisterStrings(FR, EN)
 ns.SPELLRANKS_STRINGS = { fr = FR, en = EN }
 
-ns.RegisterDefaults({ spellranksEnabled = true })
+ns.RegisterDefaults({ spellranksEnabled = true, spellranksBorder = true })
 
 if ns.AddOptionPage then
 	ns.AddOptionPage({
 		id = "spellranks", title = "OPT_PAGE_SPELLRANKS", parent = "qol", group = "OPT_GROUP_QOL",
 		rows = {
 			{ key = "spellranksEnabled", label = "OPT_SPELLRANKS_ENABLED", kind = "bool" },
+			{ key = "spellranksBorder", label = "OPT_SPELLRANKS_BORDER", kind = "bool" },
 			{ key = "spellranksForget", label = "OPT_SPELLRANKS_FORGET", kind = "action" },
 		},
 	})
@@ -116,6 +121,13 @@ end
 local function InCombat()
 	return Call(Global("InCombatLockdown")) == true
 end
+-- Liserés à revoir dans `delay` secondes (la plus proche échéance l'emporte)
+local function MarkSoon(delay)
+	local at = ns.Now() + delay
+	local due = ns.spellRanksMarkDueAt
+	if not due or due > at then ns.spellRanksMarkDueAt = at end
+end
+
 local function C(name)
 	local api = rawget(_G, "C_Spell")
 	if type(api) == "table" and type(api[name]) == "function" then return api[name] end
@@ -315,6 +327,9 @@ function ns:EnsureSpellRanks()
 end
 
 function ns:SpellRanksRefresh()
+	-- les liserés suivent (un peu plus tard : une page de barre change d'un coup
+	-- des dizaines de cases)
+	MarkSoon(0.2)
 	local frame = self.spellRanksFrame
 	if not (frame and frame:IsShown()) then return nil end
 	local list = self:SpellRankScan()
@@ -369,6 +384,85 @@ if ns.AddCheck then
 end
 
 -- ---------------------------------------------------------------------------
+-- Liseré rouge sur les cases des barres dont le sort a un meilleur rang
+-- (cases ignorées exceptées). Un cadre à nous, posé sur le bouton : le bouton
+-- sécurisé lui-même n'est jamais touché. Créé hors combat seulement.
+-- ---------------------------------------------------------------------------
+ns.SPELLRANKS_BUTTONS = {
+	{ "ActionButton%d", 12 }, { "MultiBarBottomLeftButton%d", 12 }, { "MultiBarBottomRightButton%d", 12 },
+	{ "MultiBarRightButton%d", 12 }, { "MultiBarLeftButton%d", 12 }, { "MultiBar5Button%d", 12 },
+	{ "MultiBar6Button%d", 12 }, { "MultiBar7Button%d", 12 },
+	{ "BT4Button%d", 180 },           -- Bartender4
+	{ "DominosActionButton%d", 180 }, -- Dominos
+}
+local BORDER_COLOR, BORDER_SIZE = { 1, 0.15, 0.1, 0.95 }, 1.5
+local borders = setmetatable({}, { __mode = "k" })   -- bouton -> notre liseré
+ns.spellRanksBorders = borders
+
+-- Case d'action affichée par un bouton (page et posture comprises)
+function ns.SpellRankButtonSlot(button)
+	if type(button) ~= "table" then return nil end
+	local slot = tonumber(button.action) or tonumber(button._state_action)
+	if slot then return slot end
+	if type(button.GetPagedID) == "function" then
+		local ok, id = pcall(button.GetPagedID, button)
+		if ok and tonumber(id) then return tonumber(id) end
+	end
+	local paged = Global("ActionButton_GetPagedID")
+	if paged then return tonumber((Call(paged, button))) end
+	return nil
+end
+
+local function Border(button)
+	local border = borders[button]
+	if border then return border end
+	if InCombat() then return nil end
+	local ok, frame = pcall(CreateFrame, "Frame", nil, button)
+	if not ok or not frame then return nil end
+	pcall(frame.SetAllPoints, frame, button)
+	if type(button.GetFrameLevel) == "function" then
+		pcall(frame.SetFrameLevel, frame, (tonumber((Call(button.GetFrameLevel, button))) or 0) + 5)
+	end
+	local function Edge(a, b, horizontal)
+		local tex = frame:CreateTexture(nil, "OVERLAY")
+		tex:SetColorTexture(BORDER_COLOR[1], BORDER_COLOR[2], BORDER_COLOR[3], BORDER_COLOR[4])
+		tex:SetPoint(a, frame, a)
+		tex:SetPoint(b, frame, b)
+		if horizontal then tex:SetHeight(BORDER_SIZE) else tex:SetWidth(BORDER_SIZE) end
+	end
+	pcall(Edge, "TOPLEFT", "TOPRIGHT", true)
+	pcall(Edge, "BOTTOMLEFT", "BOTTOMRIGHT", true)
+	pcall(Edge, "TOPLEFT", "BOTTOMLEFT", false)
+	pcall(Edge, "TOPRIGHT", "BOTTOMRIGHT", false)
+	frame:Hide()
+	borders[button] = frame
+	return frame
+end
+
+-- Pose ou retire les liserés ; rend le nombre de cases marquées
+function ns:SpellRanksMark()
+	local slots = {}
+	if ModuleOn() and self:DB().spellranksBorder ~= false then
+		for _, entry in ipairs(self:SpellRankScan()) do slots[entry.slot] = true end
+	end
+	local marked = 0
+	for _, family in ipairs(ns.SPELLRANKS_BUTTONS) do
+		for index = 1, family[2] do
+			local button = rawget(_G, string.format(family[1], index))
+			if type(button) == "table" then
+				local slot = ns.SpellRankButtonSlot(button)
+				local want = slot and slots[slot] and (type(button.IsVisible) ~= "function" or button:IsVisible())
+				local border = want and Border(button) or borders[button]
+				if border then
+					if want then border:Show(); marked = marked + 1 else border:Hide() end
+				end
+			end
+		end
+	end
+	return marked
+end
+
+-- ---------------------------------------------------------------------------
 -- Événements, commande
 -- ---------------------------------------------------------------------------
 local HANDLERS = {
@@ -376,7 +470,15 @@ local HANDLERS = {
 	LEARNED_SPELL_IN_TAB  = function() ns.spellRanksDueAt = ns.Now() + 1 end,
 	SPELLS_CHANGED        = function() ns.spellRanksDueAt = ns.spellRanksDueAt or (ns.Now() + 1) end,
 	ACTIONBAR_SLOT_CHANGED = function() ns:SpellRanksRefresh() end,
-	PLAYER_REGEN_ENABLED  = function() if ns.spellRanksPending then ns.spellRanksDueAt = ns.Now() + 1 end end,
+	-- la page ou la posture change : les mêmes boutons montrent d'autres cases
+	ACTIONBAR_PAGE_CHANGED = function() MarkSoon(0.2) end,
+	UPDATE_BONUS_ACTIONBAR = function() MarkSoon(0.2) end,
+	UPDATE_SHAPESHIFT_FORM = function() MarkSoon(0.2) end,
+	PLAYER_REGEN_ENABLED  = function()
+		if ns.spellRanksPending then ns.spellRanksDueAt = ns.Now() + 1 end
+		-- liserés qui n'ont pas pu être créés en combat
+		MarkSoon(0.5)
+	end,
 }
 local ok, eventFrame = pcall(CreateFrame, "Frame")
 if ok and eventFrame then
@@ -386,11 +488,19 @@ if ok and eventFrame then
 		if not done and ns.RecordError then ns:RecordError("spellranks:" .. tostring(event), err) end
 	end)
 	eventFrame:SetScript("OnUpdate", function()
+		local now = ns.Now()
 		local due = ns.spellRanksDueAt
-		if not due or ns.Now() < due then return end
-		ns.spellRanksDueAt = nil
-		local done, err = pcall(ns.SpellRanksCheck, ns)
-		if not done and ns.RecordError then ns:RecordError("spellranks:check", err) end
+		if due and now >= due then
+			ns.spellRanksDueAt = nil
+			local done, err = pcall(ns.SpellRanksCheck, ns)
+			if not done and ns.RecordError then ns:RecordError("spellranks:check", err) end
+		end
+		local mark = ns.spellRanksMarkDueAt
+		if mark and now >= mark then
+			ns.spellRanksMarkDueAt = nil
+			local done, err = pcall(ns.SpellRanksMark, ns)
+			if not done and ns.RecordError then ns:RecordError("spellranks:mark", err) end
+		end
 	end)
 	ns.spellRanksEventFrame = eventFrame
 end
