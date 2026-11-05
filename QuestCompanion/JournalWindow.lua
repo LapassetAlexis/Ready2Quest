@@ -946,6 +946,8 @@ local function BuildDay(self, frame, top)
 	end
 	pane.missionsHint = Muted(Text(pane, Theme.F_SMALL, 14, top - 30 - MISSION_ROWS * 74, half))
 	pane.missionsHint:SetWordWrap(true)
+	pane.perfect = Muted(Text(pane, Theme.F_SMALL, 14, top - 60 - MISSION_ROWS * 74, half))
+	pane.perfect:SetWordWrap(true)
 
 	pane.innTitle = Theme.CreateTitle(pane, 15)
 	pane.innTitle:SetPoint("TOPLEFT", frame, "TOPLEFT", rightX, top)
@@ -961,6 +963,7 @@ local function BuildDay(self, frame, top)
 	pane.innTotal = Text(pane, Theme.F_BODY, rightX, top - 40 - size, half)
 	pane.innHint = Muted(Text(pane, Theme.F_SMALL, rightX, top - 58 - size, half))
 	pane.innHint:SetWordWrap(true)
+	pane.innGift = Muted(Text(pane, Theme.F_SMALL, rightX, top - 88 - size, half))
 
 	local pantryTop = top - 150
 	pane.pantryTitle = Theme.CreateTitle(pane, 15)
@@ -1022,7 +1025,11 @@ local function RefreshDay(self, frame)
 		stamp:SetVertexColor(c[1], c[2], c[3], 1)
 		stamp.got = got
 	end
-	pane.innTotal:SetText(self:F("INN_TOTAL", inn.total))
+	pane.innTotal:SetText(self:F("INN_TOTAL", inn.total, inn.full or 0))
+	local chicken = self.CompanionAppearanceDef and self:CompanionAppearanceDef(ns.INN_APPEARANCE or "")
+	pane.innGift:SetText(chicken and self:F("INN_GIFT", ns.INN_APPEARANCE_CARDS, L[chicken.label]) or "")
+	local squirrel = self.CompanionAppearanceDef and self:CompanionAppearanceDef(ns.MISSION_APPEARANCE or "")
+	pane.perfect:SetText(squirrel and self:F("MIS_PERFECT", daily.perfect or 0, ns.MISSION_APPEARANCE_DAYS, L[squirrel.label]) or "")
 	pane.innHint:SetText(self:F("INN_HINT", ns.INN_ENERGY, ns.INN_CARD))
 	pane.pantryTitle:SetText(L.DAY_PANTRY)
 	pane.pantryHint:SetText(L.DAY_PANTRY_HINT)

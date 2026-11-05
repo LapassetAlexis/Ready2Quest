@@ -59,6 +59,29 @@ ns.COMPANION_APPEARANCES = {
 	{ id = "snake",        display = 6303, label = "COMP_APP_SNAKE",        tier = 2 },
 	-- 9990 : creature/cat/cat.m2 + white.blp, échelle 0,5 (chaton blanc, mascotte rare)
 	{ id = "cat_white",    display = 9990, label = "COMP_APP_CAT_WHITE",    tier = 3 },
+	-- QuestCompanion 1.2.0. Même vérification (CreatureDisplayInfo et
+	-- CreatureModelData des deux builds, chemins par la liste communautaire
+	-- wowdev/wow-listfile) : même .m2 et mêmes textures sur Era et Forever.
+	-- 5555 : creature/cat/cat.m2 + silvertabby.blp, échelle 0,5 (chat tigré argenté, mascotte)
+	{ id = "cat_silver",   display = 5555, label = "COMP_APP_CAT_SILVER",   tier = 1 },
+	-- 901 : creature/frog/frog.m2 + frogbrownspots.blp, échelle 1 (crapaud tacheté)
+	{ id = "toad",         display = 901,  label = "COMP_APP_TOAD",         tier = 1 },
+	-- 5556 : creature/cat/cat.m2 + bombay.blp, échelle 0,5 (chat Bombay, mascotte)
+	{ id = "cat_bombay",   display = 5556, label = "COMP_APP_CAT_BOMBAY",   tier = 2 },
+	-- 5207 : creature/parrot/parrot.m2 + parrotskinred.blp, échelle 0,25 (ara écarlate)
+	{ id = "macaw_red",    display = 5207, label = "COMP_APP_MACAW_RED",    tier = 2 },
+	-- 10990 : creature/panda/pandacub.m2 + pandacubskin.blp, échelle 0,25 (bébé panda, mascotte rare)
+	{ id = "panda",        display = 10990, label = "COMP_APP_PANDA",       tier = 3 },
+	-- 15369 : creature/murloc/babymurloc.m2 + murlocbabyblue.blp, échelle 0,65 (bébé murloc, mascotte rare)
+	{ id = "murloc",       display = 15369, label = "COMP_APP_MURLOC",      tier = 3 },
+	-- Hors coffres : la carte d'auberge (Daily.lua), les missions (Daily.lua),
+	-- les brillantes (Shiny.lua). Leur caractère : poulet Peureux, écureuil Bricoleur.
+	-- 6193 : creature/chicken/chicken.m2 + chickenskinbrown.blp, échelle 1 (poulet)
+	{ id = "chicken",      display = 6193, label = "COMP_APP_CHICKEN",      tier = 0, unlock = { inn = 3 } },
+	-- 7937 : creature/squirrel/squirrel.m2 + squirrel_robo.blp, échelle 1,3 (écureuil mécanique)
+	{ id = "squirrel_mech", display = 7937, label = "COMP_APP_SQUIRREL_MECH", tier = 0, unlock = { missions = 10 } },
+	-- 16943 : creature/hippogryph/hippogryphpet.m2 + hippogryphpet.blp, échelle 0,15 (bébé hippogriffe)
+	{ id = "hippogryph",   display = 16943, label = "COMP_APP_HIPPOGRYPH",  tier = 0, unlock = { shiny = 50 } },
 }
 
 -- Ornements : décorations du cadre, dessinées avec les textures du Theme

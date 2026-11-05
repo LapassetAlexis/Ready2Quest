@@ -1,5 +1,13 @@
 # Ready2Quest — notes techniques et historique
 
+## QuestCompanion 1.2.0 — neuf créatures, deux caractères
+
+- **Vérification des modèles** : `CreatureDisplayInfo` et `CreatureModelData` (CSV wago.tools, builds 1.15.9.70576 et 1.60.1.70753), chemins des fichiers par la liste communautaire `wowdev/wow-listfile` (l'API de recherche de wago.tools ne répondait plus). Gardés : même `.m2` et mêmes textures dans les deux builds. Nos 15 apparences d'avant repassent le même contrôle. En réserve, vérifiés aussi : chats sacré de Birmanie 5585, maine coon 5448, cornish rex 5586, grand-duc brun 4566, crapauds 1924 et 6297, serpents 1206, 1986, 1987, 2954 à 2958, bébés murlocs 15394 à 15398, cafard 2177, rat blanc 2176, bonhomme de neige 13610, petit renne 15901, mini Diablo 10992, zergling 10993.
+- **Catalogue** (`CompanionData.lua`) : six apparences de coffre (`tier` 1 à 3, deux par palier) et trois hors coffres (`tier` 0) dont l'`unlock` n'est pas un compteur : `{ inn = 3 }` (poulet, `Daily.lua` : `inn.full`, `INN_APPEARANCE_CARDS`), `{ missions = 10 }` (écureuil, `daily.perfect`, `MISSION_APPEARANCE_DAYS`), `{ shiny = 50 }` (hippogriffe, quatrième palier de `SHINY_REWARDS`). `DailyGrantAppearance` débloque une fois (chat et bulle `UNLOCK`). `CompanionNextUnlocks` ignore tout `unlock` sans `level` ni `stamp` ; `CompanionRequirement` dit `inn`, `missions`, `shiny`.
+- **Caractères** (`Personality.lua`, `PersonalityLines.lua`) : `fearful` (énergie, effets ×1,3, exclusif `chicken` ; remarque en combat sous 60 % de vie, une fois par combat) et `tinker` (curiosité, ×0,9, exclusif `squirrel_mech` ; remarque toutes les 20 min). `PERSONALITY_ORDER` passe à 14 (la réglette suit). Missions du jour : `rest` ×10 et `talks` ×4.
+- **Fiche au survol** (`Companion.lua`) : `CompanionLayoutHover` place tout de haut en bas (largeur 200, hauteur selon le contenu), rappelée par l'enveloppe du caractère.
+- Tests `[PETS]`, `[HOVER]`.
+
 ## QuestCompanion 1.1.0 — complétion gamifiée
 
 ### Friandises (`QuestCompanion/Treats.lua`)

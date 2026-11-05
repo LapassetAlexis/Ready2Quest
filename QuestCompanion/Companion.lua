@@ -199,6 +199,15 @@ local FR = {
 	COMP_APP_PARROT        = "Ara bleu",
 	COMP_APP_SNAKE         = "Serpent cramoisi",
 	COMP_APP_CAT_WHITE     = "Chaton blanc",
+	COMP_APP_CAT_SILVER    = "Chat tigré argenté",
+	COMP_APP_TOAD          = "Crapaud tacheté",
+	COMP_APP_CAT_BOMBAY    = "Chat Bombay",
+	COMP_APP_MACAW_RED     = "Ara écarlate",
+	COMP_APP_PANDA         = "Bébé panda",
+	COMP_APP_MURLOC        = "Bébé murloc",
+	COMP_APP_CHICKEN       = "Poulet",
+	COMP_APP_SQUIRREL_MECH = "Écureuil mécanique",
+	COMP_APP_HIPPOGRYPH    = "Bébé hippogriffe",
 	COMP_ORN_RIBBON        = "Ruban de voyage",
 	COMP_ORN_LANTERN       = "Lanterne",
 	COMP_ORN_MEDAL         = "Médaille",
@@ -242,6 +251,8 @@ local FR = {
 	COMP_REQ_rare          = "%d rares",
 	COMP_REQ_level         = "%d tampons de niveau",
 	COMP_REQ_total         = "%d tampons",
+	COMP_REQ_inn           = "%d cartes d'auberge pleines",
+	COMP_REQ_missions      = "%d jours aux trois missions",
 	COMP_HOVER_HINT        = "Clic : un câlin · Maj + clic : friandises · clic droit : carnet · glisser : déplacer",
 	OPT_COMP_TUTO          = "Rejouer le tutoriel",
 	COMP_TUTO_NEXT         = "Suivant",
@@ -346,6 +357,15 @@ local EN = {
 	COMP_APP_PARROT        = "Blue macaw",
 	COMP_APP_SNAKE         = "Crimson snake",
 	COMP_APP_CAT_WHITE     = "White kitten",
+	COMP_APP_CAT_SILVER    = "Silver tabby",
+	COMP_APP_TOAD          = "Spotted toad",
+	COMP_APP_CAT_BOMBAY    = "Bombay cat",
+	COMP_APP_MACAW_RED     = "Scarlet macaw",
+	COMP_APP_PANDA         = "Panda cub",
+	COMP_APP_MURLOC        = "Baby murloc",
+	COMP_APP_CHICKEN       = "Chicken",
+	COMP_APP_SQUIRREL_MECH = "Mechanical squirrel",
+	COMP_APP_HIPPOGRYPH    = "Hippogryph hatchling",
 	COMP_ORN_RIBBON        = "Travel ribbon",
 	COMP_ORN_LANTERN       = "Lantern",
 	COMP_ORN_MEDAL         = "Medal",
@@ -388,6 +408,8 @@ local EN = {
 	COMP_REQ_rare          = "%d rares",
 	COMP_REQ_level         = "%d level stamps",
 	COMP_REQ_total         = "%d stamps",
+	COMP_REQ_inn           = "%d full inn cards",
+	COMP_REQ_missions      = "%d days with all three missions",
 	COMP_HOVER_HINT        = "Click: a cuddle · Shift + click: treats · right-click: journal · drag: move",
 	OPT_COMP_TUTO          = "Replay the tutorial",
 	COMP_TUTO_NEXT         = "Next",
@@ -696,6 +718,9 @@ end
 function ns:CompanionRequirement(unlock)
 	if not unlock then return "" end
 	if unlock.level then return self:F("COMP_REQ_LEVEL", unlock.level) end
+	if unlock.inn then return self:F("COMP_REQ_inn", unlock.inn) end
+	if unlock.missions then return self:F("COMP_REQ_missions", unlock.missions) end
+	if unlock.shiny then return self:F("COMP_REQ_shiny", unlock.shiny) end
 	return self:F("COMP_REQ_" .. tostring(unlock.stamp), unlock.count or 1)
 end
 
@@ -2258,6 +2283,8 @@ function ns:CompanionNextUnlocks()
 		-- un cosmétique à palier se gagne au coffre d'une zone finie, pas au compteur
 		if (tonumber(def.tier) or 0) >= 1 then return end
 		if not unlock or data.unlocked[CosmeticKey(kind, def.id)] then return end
+		-- gagnés ailleurs (auberge, missions, brillantes) : pas d'objectif au compteur
+		if not (unlock.level or unlock.stamp) then return end
 		local item = { label = L[def.label], kind = kind, id = def.id }
 		if unlock.level then
 			item.stat, item.have, item.need, item.source = "level", level, unlock.level, "player"

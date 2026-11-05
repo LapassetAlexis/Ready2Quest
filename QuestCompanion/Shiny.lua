@@ -34,12 +34,19 @@ local REWARDS = {
 		color = { 0.07, 0.05, 0.14, 0.92 }, stars = true } },
 	{ count = 30, kind = "orn", def = { id = "aura", key = "companionOrnAura", label = "COMP_ORN_AURA", tier = 0,
 		unlock = { shiny = 30 } } },
+	-- 1.2.0 : le bébé hippogriffe (catalogue des apparences, CompanionData.lua)
+	{ count = 50, kind = "app", id = "hippogryph" },
 }
+for _, reward in ipairs(REWARDS) do
+	if not reward.def and reward.kind == "app" then
+		for _, def in ipairs(ns.COMPANION_APPEARANCES or {}) do if def.id == reward.id then reward.def = def end end
+	end
+end
 ns.SHINY_REWARDS = REWARDS
-local LISTS = { frame = "COMPANION_FRAMES", bg = "COMPANION_BACKGROUNDS", orn = "COMPANION_ORNAMENTS" }
+local LISTS = { app = "COMPANION_APPEARANCES", frame = "COMPANION_FRAMES", bg = "COMPANION_BACKGROUNDS", orn = "COMPANION_ORNAMENTS" }
 for _, reward in ipairs(REWARDS) do
 	local list = ns[LISTS[reward.kind]]
-	if type(list) == "table" then
+	if type(list) == "table" and reward.def then
 		local present = false
 		for _, def in ipairs(list) do if def.id == reward.def.id then present = true end end
 		if not present then list[#list + 1] = reward.def end

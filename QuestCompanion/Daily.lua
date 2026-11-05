@@ -20,6 +20,9 @@ ns.INN_ENERGY = 20
 ns.INN_CARD = 7
 ns.MISSION_CURIOSITY = 10
 ns.MISSION_POLL = 2
+-- Apparences gagnées au jour le jour (QuestCompanion 1.2.0, CompanionData.lua)
+ns.INN_APPEARANCE, ns.INN_APPEARANCE_CARDS = "chicken", 3
+ns.MISSION_APPEARANCE, ns.MISSION_APPEARANCE_DAYS = "squirrel_mech", 10
 
 -- Missions de zone : cible, faisable ?, mesure de départ
 local ZONE_MISSIONS = { "species", "named", "gather", "quests", "village", "percent" }
@@ -33,6 +36,7 @@ local TRAIT_MISSIONS = {
 	wise = { kind = "turnins", need = 3 },    parrot = { kind = "talks", need = 3 },
 	mystic = { kind = "nightKills", need = 5 }, zen = { kind = "calm", need = 15 },
 	sly = { kind = "gold", need = 1 },         mischievous = { kind = "pets", need = 5 },
+	fearful = { kind = "rest", need = 10 },    tinker = { kind = "talks", need = 4 },
 }
 ns.DAILY_TRAIT_MISSIONS = TRAIT_MISSIONS
 local GENERIC = { kind = "pets", need = 3 }
@@ -68,7 +72,10 @@ local FR = {
 	MIS_GOAL_HINT    = "Mission du jour : clic pour l'onglet Jour du carnet.",
 	INN_TITLE        = "Carte de fidélité des auberges",
 	INN_HINT         = "Un tampon par jour chez n'importe quel aubergiste (+%d d'énergie). Au %de : un Festin. Pas besoin de jours d'affilée.",
-	INN_TOTAL        = "Tampons : %d en tout",
+	INN_TOTAL        = "Tampons : %d en tout · cartes pleines : %d",
+	INN_GIFT         = "À %d cartes pleines : %s.",
+	MIS_PERFECT      = "Jours aux trois missions : %d · à %d : %s.",
+	DAILY_MSG_UNLOCK = "Nouvelle apparence : %s !",
 	DAY_MISSIONS     = "Missions du jour",
 	DAY_PANTRY       = "Garde-manger",
 	DAY_PANTRY_HINT  = "Maj + clic sur la créature",
@@ -108,7 +115,10 @@ local EN = {
 	MIS_GOAL_HINT    = "Mission of the day: click for the journal's Day tab.",
 	INN_TITLE        = "Inn loyalty card",
 	INN_HINT         = "One stamp a day at any innkeeper (+%d energy). On the %dth: a Feast. No need for days in a row.",
-	INN_TOTAL        = "Stamps: %d in all",
+	INN_TOTAL        = "Stamps: %d in all · full cards: %d",
+	INN_GIFT         = "At %d full cards: %s.",
+	MIS_PERFECT      = "Days with all three missions: %d · at %d: %s.",
+	DAILY_MSG_UNLOCK = "New appearance: %s!",
 	DAY_MISSIONS     = "Missions of the day",
 	DAY_PANTRY       = "Pantry",
 	DAY_PANTRY_HINT  = "Shift + click the creature",
@@ -197,8 +207,24 @@ function ns:DailyData()
 	local inn = type(data.inn) == "table" and data.inn or {}
 	inn.card = math.max(0, math.floor(tonumber(inn.card) or 0))
 	inn.total = math.max(0, math.floor(tonumber(inn.total) or 0))
+	inn.full = math.max(0, math.floor(tonumber(inn.full) or 0))
+	daily.perfect = math.max(0, math.floor(tonumber(daily.perfect) or 0))
 	data.inn = inn
 	return daily, inn
+end
+
+-- Une apparence gagnée au jour le jour (une fois) : chat et bulle
+function ns:DailyGrantAppearance(id)
+	local unlocked = self:CompanionData().unlocked
+	local key = "app:" .. tostring(id)
+	if unlocked[key] then return false end
+	local def = self.CompanionAppearanceDef and self:CompanionAppearanceDef(id)
+	if not def then return false end
+	unlocked[key] = true
+	local label = L[def.label] or id
+	self:Print(self:F("DAILY_MSG_UNLOCK", label))
+	self:CompanionSay("UNLOCK", { force = true, category = "event", args = { label } })
+	return true
 end
 
 function ns:DailyMissionsOn()
@@ -219,6 +245,8 @@ function ns:InnStamp()
 	if self.CompanionFx then self:CompanionFx("hearts") end
 	if inn.card >= ns.INN_CARD then
 		inn.card = 0
+		inn.full = inn.full + 1
+		if inn.full >= ns.INN_APPEARANCE_CARDS then self:DailyGrantAppearance(ns.INN_APPEARANCE) end
 		if self.TreatGrant then self:TreatGrant("festin", { quiet = true }) end
 		self:CompanionSay("INN_FULL", { force = true, category = "event" })
 		self:DailyChanged()
@@ -355,6 +383,8 @@ local function Advance(self, mission, have)
 	for _, other in ipairs(daily.missions) do if not other.done then all = false end end
 	if all then
 		daily.allDone = true
+		daily.perfect = (tonumber(daily.perfect) or 0) + 1
+		if daily.perfect >= ns.MISSION_APPEARANCE_DAYS then self:DailyGrantAppearance(ns.MISSION_APPEARANCE) end
 		if self.TreatGrant then self:TreatGrant("festin", { quiet = true }) end
 		self:CompanionSay("MISSION_ALL", { force = true, category = "event" })
 	else
