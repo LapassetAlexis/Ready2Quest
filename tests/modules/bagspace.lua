@@ -201,8 +201,16 @@ do
 
 	B.Reset()
 	Mock.world.loot = { B.Link(NEWLOOT) }
+	NS:DB().lootroomEnabled = false
 	Mock:Fire("LOOT_OPENED")
-	Check("[BAG] butin qui ne rentre pas : cadre affiché", B.Shown())
+	Check("[BAG] butin qui ne rentre pas, « Place au butin » coupé : cadre affiché", B.Shown())
+	NS:DB().lootroomEnabled = true
+	B.Reset()
+	Mock.world.loot = { B.Link(NEWLOOT) }
+	Mock:Fire("LOOT_OPENED")
+	Check("[BAG] butin qui ne rentre pas : « Place au butin » prend le relais", not B.Shown()
+		and NS.lootRoomFrame and NS.lootRoomFrame:IsShown())
+	NS.lootRoomFrame:Hide()
 
 	B.Reset()
 	Mock.world.loot = { B.Link(CLOTH) }   -- pile de 3 sur 20 : il rentre

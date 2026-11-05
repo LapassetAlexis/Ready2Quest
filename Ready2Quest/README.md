@@ -24,6 +24,8 @@ Ready2Quest brings together **six modules** and a bit of **quality of life** (Qo
 | ✦ | **Leveling pace** | XP per hour, time to the next level, rested XP you'd earn by logging out |
 | ✦ | **Full bags** | Bags full out in the wild: the item that costs you the least to throw away, in one click |
 | ✦ | **After death** | Run back to your corpse or use the spirit healer? Both options, with the numbers |
+| ✦ | **Room for loot** | Full bags in front of loot: the cheapest items in your bags, one click to drop one and pick the loot up |
+| ✦ | **Spell ranks** | A spell on your bars has a higher rank in your spellbook: you get told, and update it in one click |
 | ✦ | **Merchant** | Automatic selling of grey items and automatic repairs at merchants |
 
 The **road companion** and its **travel journal** are a separate addon, [QuestCompanion](../QuestCompanion/README.md), which works on its own or with Ready2Quest.
@@ -151,6 +153,23 @@ Your bags are full out in the wild and some loot won't fit? A small frame sugges
 - **[Discard]** destroys it **after confirmation**, always, since it can't be undone. **[Other]** moves on to the next one. **[Always keep]** sets it aside for good.
 - `/r2q jeter` gives the suggestion in chat. `/r2q garder` and `/r2q jeter-toujours` manage your lists.
 
+### Room for loot
+
+Inspired by the *Delete Cheapest Item* addon. Your bags are full and some loot won't fit: a window opens by itself (or `/r2q place`).
+- At the top, **the loot that doesn't fit**: a quest item first, otherwise the most valuable one, with its price.
+- Below, **the cheapest items in your bags**, with their vendor price and, if Auctionator or TSM is installed, their auction price. An item worth more than the loot stays listed, but greyed out.
+- **[Drop]** destroys the item, then **picks the loot up** by itself. Grey and white items go on the click; a green item or better asks for confirmation first (an option).
+- **[Ignore]** never offers that item again (the same "always keep" list as Full bags).
+- Never offered: quest items, keys, your hearthstone, class reagents, reagents of tracked recipes, your last food.
+
+### Spell ranks
+
+A spell on your action bars has a higher rank in your spellbook (Holy Light rank 3 on the bar while you know rank 5)?
+- Checked at login, after you learn a spell, and when a bar changes; never in combat.
+- The Ready2Quest icon shows up (click: the list), with a line in chat, and the departure check gets a line too.
+- The list (`/r2q sorts`): each spell, its rank and the best one you know, its bar and slot. **[Update]** puts the best rank in the same slot, **[Update all]** does them all, out of combat.
+- **[Ignore]** ignores that **slot** for that spell: a rank 1 kept on purpose (a cheap heal) doesn't stop you from being told about the other slots. Settings, **Spell ranks** page, forget the ignored slots.
+
 ### After death
 
 When you die, then once you've released your spirit:
@@ -272,6 +291,8 @@ Ready2Quest réunit **six modules** et un peu de **confort** (QoL). Chacun s'act
 | ✦ | **Rythme de leveling** | XP par heure, temps avant le prochain niveau, repos à gagner en te déconnectant |
 | ✦ | **Sac plein** | Sac plein en pleine nature : l'objet que tu perds le moins à jeter, en un clic |
 | ✦ | **Après la mort** | Courir jusqu'au corps ou le guérisseur des esprits ? Les deux options chiffrées |
+| ✦ | **Place au butin** | Sacs pleins devant un butin : les objets les moins chers de tes sacs, un clic pour en jeter un et ramasser le butin |
+| ✦ | **Rangs de sorts** | Un sort de tes barres a un meilleur rang dans ton livre : tu es prévenu, et tu le mets à jour d'un clic |
 | ✦ | **Marchand** | Vente automatique des objets gris et réparation automatique chez les marchands |
 
 Le **compagnon de route** et son **carnet de voyage** sont un addon à part, [QuestCompanion](../QuestCompanion/README.md#francais), qui fonctionne seul ou avec Ready2Quest.
@@ -398,6 +419,23 @@ Ton sac est plein en pleine nature et un butin ne rentre pas ? Un petit cadre te
 - Il ne propose jamais un objet de quête, ta pierre de foyer, tes réactifs de classe ou tes derniers vivres.
 - **[Jeter]** le détruit **après confirmation**, toujours, puisque c'est irréversible. **[Autre]** passe au suivant. **[Garder toujours]** l'écarte pour de bon.
 - `/r2q jeter` donne la proposition dans le chat. `/r2q garder` et `/r2q jeter-toujours` gèrent tes listes.
+
+### Place au butin
+
+Inspiré de l'addon *Delete Cheapest Item*. Tes sacs sont pleins et un butin ne rentre pas : une fenêtre s'ouvre toute seule (ou `/r2q place`).
+- En haut, **le butin qui ne rentre pas** : un objet de quête d'abord, sinon le plus cher, avec son prix.
+- Dessous, **les objets les moins chers de tes sacs**, avec leur prix chez le marchand et, si Auctionator ou TSM est installé, à l'hôtel des ventes. Un objet qui vaut plus que le butin reste proposé, mais en gris.
+- **[Jeter]** détruit l'objet, puis **ramasse le butin** tout seul. Gris et blancs partent au clic ; un objet vert ou mieux demande d'abord confirmation (réglable).
+- **[Ignorer]** ne le propose plus jamais (la même liste « toujours garder » que Sac plein).
+- Jamais proposés : objets de quête, clés, pierre de foyer, composants de classe, composants des recettes suivies, dernière nourriture.
+
+### Rangs de sorts
+
+Un sort de tes barres d'action a un meilleur rang dans ton livre de sorts (Lumière sacrée rang 3 sur la barre alors que tu connais le rang 5) ?
+- Contrôlé à la connexion, après un sort appris et quand une barre change ; jamais en combat.
+- L'icône de Ready2Quest apparaît (clic : la liste), avec une ligne dans le chat, et le check avant le départ a sa ligne.
+- La liste (`/r2q sorts`) : chaque sort, son rang et le meilleur que tu connais, sa barre et sa case. **[Mettre à jour]** pose le meilleur rang dans la même case, **[Tout mettre à jour]** fait tout, hors combat.
+- **[Ignorer]** ignore cette **case** pour ce sort : un rang 1 gardé exprès (soin bon marché) ne t'empêche pas d'être prévenu pour les autres cases. Réglages, page **Rangs de sorts**, pour oublier les cases ignorées.
 
 ### Après la mort
 

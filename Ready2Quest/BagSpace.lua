@@ -476,6 +476,8 @@ function ns:BagSpaceAlert()
 	-- « en route » seulement : en zone sûre ou chez un marchand, on vend
 	if self.inSafe == true or self.merchantOpen == true then return nil end
 	if self:BagSpaceFreeSlots() > 0 then return nil end
+	-- devant un butin, « Place au butin » (LootRoom.lua) prend le relais
+	if self.LootRoomActive and self:LootRoomActive() then return nil end
 
 	local list = self:BagSpaceRebuild()
 	local candidate = self:BagSpaceCurrent()
@@ -784,6 +786,7 @@ local HANDLERS = {
 	UI_ERROR_MESSAGE = function(a, b) if ns:IsBagFullError(a, b) then ns:BagSpaceAlert() end end,
 	LOOT_OPENED      = function()
 		if ModuleOn() and ns:BagSpaceFreeSlots() == 0 and ns:BagSpaceLootBlocked() then ns:BagSpaceAlert() end
+		-- (avec « Place au butin » actif, BagSpaceAlert ne fait rien devant un butin)
 	end,
 	BAG_UPDATE_DELAYED = OnBagUpdate,
 	BAG_UPDATE         = OnBagUpdate,

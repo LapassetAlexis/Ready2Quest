@@ -1,5 +1,12 @@
 # Journal des modifications
 
+## 1.27.0
+
+- **Nouveau module « Place au butin »**, inspiré de Delete Cheapest Item : sacs pleins devant un butin qui ne rentre pas, une fenêtre s'ouvre (ou `/r2q place`). En haut, l'objet du butin (une quête d'abord, sinon le plus cher) ; dessous, les objets les moins chers de tes sacs, prix du marchand et de l'hôtel des ventes (Auctionator ou TSM s'ils sont là), en gris s'ils valent plus que le butin. [Jeter] détruit l'objet puis ramasse le butin ; confirmation pour un objet vert ou mieux (réglable). [Ignorer] l'ajoute à la liste « toujours garder ». Devant un butin, il prend le relais de « Sac plein ».
+- **Nouveau module « Rangs de sorts »** : un sort de tes barres a un meilleur rang dans ton livre ? L'icône de Ready2Quest le signale (à la connexion, après un sort appris, quand une barre change ; jamais en combat), le check avant le départ aussi. `/r2q sorts` liste les sorts avec leur barre et leur case : [Mettre à jour] pose le meilleur rang dans la même case, [Tout mettre à jour] fait tout. [Ignorer] ignore la case (un rang 1 gardé exprès), à oublier dans les réglages.
+
+*English:* two new modules. Room for loot (inspired by Delete Cheapest Item): with full bags in front of loot, the cheapest items in your bags with vendor and auction prices; Drop destroys one and picks the loot up, Ignore keeps it forever. Spell ranks: tells you when a spell on your bars has a higher rank in your spellbook, updates it in one click, and lets you ignore a slot.
+
 ## 1.26.1
 
 - **WoW Forever seulement** : Classic Era n'est plus pris en charge (le `.toc` ne déclare plus que Forever ; Era, TBC et Mists disparaissent des versions annoncées sur CurseForge et Wago). Les versions déjà publiées pour Era restent téléchargeables.

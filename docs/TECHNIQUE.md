@@ -1,5 +1,12 @@
 # Ready2Quest — notes techniques et historique
 
+## Ready2Quest 1.27.0 — Place au butin, Rangs de sorts
+
+- **Place au butin** (`LootRoom.lua`, après `BagSpace.lua`) : `LootRoomLoot()` (objets du butin sans place ni pile à compléter, quêtes d'abord puis valeur), `LootRoomRows(cible)` (les `LOOTROOM_ROWS` premiers de `BagSpaceCandidates()`, mêmes protections, prix HV par `LootRoomAuction` : Auctionator `API.v1.GetAuctionPriceByItemLink`, sinon TSM `DBMarket`), `dearer` si la valeur dépasse celle du butin. `LootRoomDelete` : confirmation (`StaticPopup`) pour qualité ≥ 2 si `lootroomConfirm`, sinon `LootRoomDestroy` (vérifie la case, `PickupContainerItem`, `DeleteCursorItem`, puis `lootRoomPending` = case du butin, ramassée par `LootSlot` au `BAG_UPDATE_DELAYED`). `LootRoomIgnore` → `bagspaceKeep`. Déclencheurs : `LOOT_OPENED`, `UI_ERROR_MESSAGE` (sacs pleins) pendant un butin ; `LOOT_CLOSED` ferme. `/r2q place`. `BagSpaceAlert` s'efface si `LootRoomActive()`.
+- **Rangs de sorts** (`SpellRanks.lua`) : `SpellRankOf` (nom, rang lu dans le sous-texte), `SpellRankBook` (meilleur rang par nom : `C_SpellBook` + `Enum.SpellBookSpellBank.Player`, sinon onglets et `GetSpellBookItemInfo`), `SpellRankScan` (cases 1-120, `GetActionInfo`), ignorés par case dans `db.spellranksIgnore["case:sort"]`. `SpellRankUpdate` : hors combat, case inchangée, `PickupSpell` + `PlaceAction` + `ClearCursor`. `SpellRanksCheck` : icône `ShowNotice{ kind = "spells" }` et chat quand le nombre augmente, remis à la fin du combat. Check `barranks` (pas « spellranks » : id du module). `/r2q sorts`.
+- Tests `[LOOT]`, `[RANK]` (`tests/modules/lootroom.lua`).
+
+
 ## QuestCompanion 1.2.0 — neuf créatures, deux caractères
 
 - **WoW Forever seulement** (QuestCompanion 1.2.0, Ready2Quest 1.26.1) : `## Interface: 16001` et `## Interface-Camelot: 16001` ; tables `*_Era.lua` retirées du `.toc` et du dépôt ; `tools/gen_zone_data.py` ne génère plus que Forever (`--flavor` par défaut) ; `data/era/` reste comme source des outils (Places, Hubs). Le code de compatibilité Era (Compat, gardes de client) est gardé, sans test de données Era. Les contenus nouveaux ne sont plus vérifiés que dans le build de Forever.
