@@ -565,15 +565,54 @@ Snap.scenes["r2q-check"] = function(T)
 	return win, "Ready2Quest : avant le départ"
 end
 
-Snap.scenes["r2q-options"] = function(T)
-	local NS = T.NS
+-- Réglages (refonte) : tous les modules chargés, fenêtre centrée, une page
+local function Options(T, ns, page, prepare)
 	T.ResetWorld()
-	NS.optionsFrame = nil
-	NS:ToggleOptions()
-	local win = NS.optionsFrame
+	T.LoadModules()
+	ns.optionsFrame = nil
+	if prepare then prepare(ns) end
+	ns:ToggleOptions()
+	local win = ns.optionsFrame
 	win:ClearAllPoints()
 	win:SetPoint("CENTER", UIParent, "CENTER", 0, 0)
-	return win, "Ready2Quest : réglages (actuels)"
+	if page then ns:SelectOptionsPage(page) end
+	return win
+end
+
+Snap.scenes["r2q-options"] = function(T)
+	return Options(T, T.NS, "general"), "Ready2Quest : réglages, page Général"
+end
+
+Snap.scenes["r2q-options-tabs"] = function(T)
+	return Options(T, T.NS, "bags"), "Ready2Quest : réglages, Check avant le départ > Sacs & vivres"
+end
+
+Snap.scenes["r2q-options-spellranks"] = function(T)
+	return Options(T, T.NS, "spellranks"), "Ready2Quest : réglages, Confort de jeu > Rangs de sorts"
+end
+
+Snap.scenes["qc-options-companion"] = function(T)
+	local win = Options(T, T.QNS, "companionMain", function(ns)
+		local data = ns:CompanionData()
+		data.unlocked["frame:copper"] = true
+		data.unlocked["app:frog"] = true
+	end)
+	-- la liste des fonds ouverte : ce qui est gagné, puis le reste grisé avec sa condition
+	for _, row in ipairs(T.QNS.optionsFrame.rows) do
+		if row.def and row.def.key == "companionBackground" then row.dropdown:Open(true) end
+	end
+	return win, "QuestCompanion : réglages, Compagnon de route > Compagnon (liste des fonds ouverte)"
+end
+
+Snap.scenes["qc-options-ornaments"] = function(T)
+	return Options(T, T.QNS, "companionOrnaments"), "QuestCompanion : réglages, Compagnon de route > Ornements"
+end
+
+Snap.scenes["options-search"] = function(T)
+	local win = Options(T, T.NS, "general")
+	win.search:SetText("alerte")
+	win.search.scripts.OnTextChanged(win.search, true)
+	return win, "Ready2Quest : réglages, recherche « alerte »"
 end
 
 function Snap.RunScene(name, path, T)
