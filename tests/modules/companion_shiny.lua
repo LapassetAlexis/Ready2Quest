@@ -231,20 +231,13 @@ do
 	NS:OpenMenagerieZone(9800)
 	local card
 	for _, c in ipairs(f.men.items) do if c.entry and c.entry.npc == 3500 then card = c end end
-	Check("[SHINY] Ménagerie : étoile et liseré doré", card and card.star:IsShown() and card.accent:IsShown() and card.accent.vertex[2] > 0.75)
+	Check("[SHINY] Ménagerie : étoile de la brillante abattue", card and card.star:IsShown())
 	card.scripts.OnEnter(card)
 	local said = {}
 	for _, line in ipairs(f.men.preview.lines) do said[#said + 1] = line.text or "" end
 	Check("[SHINY] aperçu : « Brillante, abattue le … »", table.concat(said, " "):find("Brillante, abattue le", 1, true))
-	f.sections.zones:Click()
-	for _ = 1, 20 do NS:ScrollJournal(-1) end
-	local tile
-	for _, t in ipairs(f.zones.tiles) do if t.zoneID == 9800 then tile = t end end
-	Check("[SHINY] tuile : le nombre de brillantes", tile and tile.badge.text:find("UI-RaidTargetingIcon_1", 1, true)
-		and tile.badge.text:find(" 1", 1, true), tile and tile.badge.text)
 	f.sections.evolution:Click()
-	Check("[SHINY] Créature : brillantes et prochain cadeau", f.evo.shiny.text == "Brillantes : 1  ·  prochain cadeau à 5",
-		f.evo.shiny.text)
+	Check("[SHINY] Compagnon : le compteur de brillantes", f.evo.stats.shiny.value.text == "1", f.evo.stats.shiny.value.text)
 	f:Hide()
 end
 

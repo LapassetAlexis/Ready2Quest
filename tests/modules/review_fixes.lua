@@ -29,30 +29,19 @@ do
 	Check("[FIX] mission « +3 % » en anglais : lisible", ok and text == "Gain 3% in Westfall", tostring(text))
 	ok = pcall(NS.F, NS, "COMP_SAY_TIP_" .. 1)
 	Check("[FIX] astuces : aucun « % » seul", ok)
-	-- aperçu d'une créature normale : son rang écrit
+	-- aperçu d'une créature normale : son rang écrit (la fiche de Zone est
+	-- retirée, l'aperçu des créatures est celui de la Ménagerie)
 	NS:DB().journalTracker = false
 	NS:ToggleJournal(true)
-	NS:JournalPreviewCreature({ id = 1, rawName = "Loup", seen = true, killed = 2, levelText = "10" })
+	NS:SelectJournalKind("menagerie")
+	NS:JournalPreviewMenagerie({ npc = 1, no = 1, name = "Loup", known = true, class = "normal", level = 10, killed = 2 })
 	local said = {}
-	for _, line in ipairs(NS.journalFrame.comp.preview.lines) do said[#said + 1] = line.text or "" end
-	Check("[FIX] créature normale : « Rang : normal »", table.concat(said, "|"):find("Rang : normal", 1, true) ~= nil,
+	for _, line in ipairs(NS.journalFrame.men.preview.lines) do said[#said + 1] = line.text or "" end
+	Check("[FIX] créature normale : « Normal · niveau 10 »", table.concat(said, "|"):find("Normal · niveau 10", 1, true) ~= nil,
 		table.concat(said, "|"))
-	Check("[FIX] fiches : 6 rangées, au-dessus du défilement", NS.JOURNAL_LAYOUT.cardRows == 6)
-	-- Collection : plus d'objets qu'une page, la molette
-	local f = NS.journalFrame
-	f.sections.collection:Click()
-	local saved = NS.JournalCollection
-	NS.JournalCollection = function(self, kind)
-		local list = saved(self, kind)
-		for index = 1, 12 do list[#list + 1] = { kind = kind, def = { id = "extra" .. index }, owned = false, equipped = false,
-			label = "Extra " .. index, tier = 0 } end
-		return list
-	end
-	NS:RefreshJournal()
-	NS:ScrollJournal(-1)
-	Check("[FIX] Collection : la molette avance d'une rangée", f.collOffset == 5 and f.coll.items[1].entry ~= nil)
-	NS.JournalCollection = saved
-	f:Hide()
+	-- (fiches du Combat sur 6 rangées et molette de la grille Collection : retirées
+	-- avec la page Zone et la page Collection)
+	NS.journalFrame:Hide()
 	-- nom : couper sans perdre un « é » complet
 	local name = NS:CompanionSanitizeName(string.rep("a", 22) .. "éx")
 	Check("[FIX] nom de 24 octets : le « é » complet reste", name == string.rep("a", 22) .. "é", name)

@@ -269,7 +269,7 @@ function ns:ShinyKill(guid, info)
 	local kind = math.random() < ns.SHINY_FESTIN_CHANCE and "festin" or (self.TreatRandom and self:TreatRandom())
 	if kind and self.TreatGrant then self:TreatGrant(kind, { quiet = true }) end
 	if self.MemoryRecord then
-		self:MemoryRecord("shiny", "shiny:" .. shiny.count, { info.name }, { zone = info.zoneName })
+		self:MemoryRecord("shiny", "shiny:" .. shiny.count, { info.name }, { zone = info.zoneName, npc = info.npcID })
 	end
 	self:CompanionSay("SHINY_KILLED", { force = true, args = { info.name } })
 	if self.CompanionFx then self:CompanionFx("bounce"); self:CompanionFx("sparkle") end

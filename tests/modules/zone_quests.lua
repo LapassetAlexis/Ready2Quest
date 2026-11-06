@@ -389,48 +389,47 @@ do
 	NS:ToggleJournal(true)
 	NS:SelectJournalKind("completion")
 	local f = NS.journalFrame
-	local comp = f and f.comp
-	Check("[ZQ] fenêtre : Durotar", f and f.zoneID == 1411)
-	Check("[ZQ] onglet « Quêtes », pas grisé, sans « Questie »", comp.tabs.quests.text.text == "Quêtes"
-		and comp.tabs.quests.text.textColor[1] ~= NS.Theme.MUTED[1], comp.tabs.quests.text.text)
-	comp.tabs.quests.hooks.OnEnter(comp.tabs.quests)
+	-- carnet 1.5.0 : la fiche de Zone devient la Complétion (frame.prog), ses
+	-- onglets des cartes de part
+	local prog = f and f.prog
+	Check("[ZQ] fenêtre : Durotar", f and f.kind == "progress" and f.zoneID == 1411)
+	local quests = prog.parts.quests
+	Check("[ZQ] part « Quêtes », pas grisée, sans « Questie »", quests.label.text == "Quêtes"
+		and quests.label.textColor[1] ~= NS.Theme.MUTED[1] and not quests.dim, quests.label.text)
+	quests.onEnter(quests)
 	local tip = table.concat(_G.GameTooltip.lines or {}, " ")
-	Check("[ZQ] survol : ce que l'onglet compte, sans Questie", tip:find(NS.L.JRN_QUESTS_TIP, 1, true) ~= nil
+	Check("[ZQ] survol : ce que la part compte, sans Questie", tip:find(NS.L.JRN_QUESTS_TIP, 1, true) ~= nil
 		and not tip:find("Questie", 1, true), tip)
-	comp.tabs.quests.hooks.OnLeave(comp.tabs.quests)
-	comp.tabs.quests:Click()
-	local first = comp.lines[1].name.text
-	Check("[ZQ] onglet Quêtes : en-tête puis quêtes à faire", comp.lines[1].item and comp.lines[1].item.header
-		and first:find("Quêtes", 1, true) and comp.lines[2].item and not comp.lines[2].item.done
-		and comp.lines[2].detail.text:find("niveau", 1, true), first)
-	Check("[ZQ] onglet Quêtes : pas de message vide", comp.empty.text == "")
-	local function AllDone(want)
-		for _, item in ipairs(f.rows) do
-			if not item.header and (item.done == true) ~= want then return false end
+	quests.onLeave(quests)
+	quests:Click()
+	local first = prog.items[1]
+	Check("[ZQ] part Quêtes : en-tête puis quêtes à faire", prog.head.text:find("Quêtes", 1, true)
+		and first.item and not first.item.header and not first.item.done
+		and first.detail.text:find("niveau", 1, true), prog.head.text)
+	Check("[ZQ] part Quêtes : pas de message vide", prog.empty.text == "")
+	-- plus de filtre À faire / Faites / Toutes : la liste montre les quêtes à
+	-- faire d'abord, les faites ensuite
+	local ordered, seenDone, todo = true, false, 0
+	for _, item in ipairs(f.progRows) do
+		if not item.header then
+			if item.done then seenDone = true elseif seenDone then ordered = false else todo = todo + 1 end
 		end
-		return true
 	end
-	comp.questFilter.todo:Click()
-	local todo = #f.rows
-	Check("[ZQ] filtre « À faire » : seulement les quêtes à faire", f.questFilter == "todo" and todo > 0 and AllDone(false), todo)
-	comp.questFilter.done:Click()
-	Check("[ZQ] filtre « Faites » : seulement les faites", AllDone(true))
-	comp.questFilter.all:Click()
-	Check("[ZQ] « Toutes » : tout revient", #f.rows >= todo)
+	Check("[ZQ] quêtes à faire d'abord, faites ensuite", ordered and todo > 0, todo)
 	NS:ToggleJournal(false)
-	-- client sans table : onglet grisé, message clair
+	-- client sans table : part grisée, message clair
 	Q.Reset(false)
 	NS.CompanionNextUnlocks = function() return {} end
 	NS:JournalData().stamps["zone:1411"] = { id = "zone:1411", kind = "zone", name = "Durotar", at = 0 }
 	NS:DB().journalTracker = false
 	NS:ToggleJournal(true)
 	NS:SelectJournalKind("completion")
-	comp = NS.journalFrame.comp
-	Check("[ZQ] client sans table : « Quêtes » grisé", comp.tabs.quests.text.text == "Quêtes"
-		and comp.tabs.quests.text.textColor[1] == NS.Theme.MUTED[1])
-	comp.tabs.quests:Click()
+	prog = NS.journalFrame.prog
+	Check("[ZQ] client sans table : « Quêtes » grisé", prog.parts.quests.label.text == "Quêtes"
+		and prog.parts.quests.label.textColor[1] == NS.Theme.MUTED[1])
+	prog.parts.quests:Click()
 	Check("[ZQ] client sans table : « Pas de liste de quêtes pour ce client. »",
-		comp.empty.text == "Pas de liste de quêtes pour ce client.", comp.empty.text)
+		prog.empty.text == "Pas de liste de quêtes pour ce client.", prog.empty.text)
 	NS:ToggleJournal(false)
 	NS:DB().journalTracker = nil
 end

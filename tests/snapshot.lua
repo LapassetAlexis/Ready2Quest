@@ -1161,37 +1161,14 @@ Snap.scenes["qc-journal-creature"] = function(T)
 	return frame, "QuestCompanion : carnet, page Créature"
 end
 
-Snap.scenes["qc-journal-zones"] = function(T)
-	return (QCJournal(T, "zones")), "QuestCompanion : carnet, page Zones"
-end
-
--- la zone d'ici, onglet Exploration (villages, une ligne d'en-tête par part)
-Snap.scenes["qc-journal-zone"] = function(T)
-	local frame = QCJournal(T, "completion")
-	return frame, "QuestCompanion : carnet, page Zone (Exploration)"
-end
-
--- fiches du bestiaire : abattues, vues, jamais croisées, élite, rare, rare élite
-Snap.scenes["qc-journal-bestiary"] = function(T)
-	local frame, ns = QCJournal(T, "completion", function(n)
-		-- une page de fiches : la table livrée des Tarides réduite à douze espèces
-		local all = rawget(n, "ZONE_CREATURES")
-		if type(all) == "table" and type(all[1413]) == "table" then
-			local keep = {}
-			for _, id in ipairs({ 3270, 3630, 3242, 3248, 3244, 3245, 3110, 3236, 3243, 3253, 3398, 3631 }) do
-				keep[id] = all[1413][id]
-			end
-			-- une copie : la table livrée reste entière pour la suite (tests)
-			local copy = {}
-			for zoneID, zone in pairs(all) do copy[zoneID] = zone end
-			copy[1413] = keep
-			n.ZONE_CREATURES = copy
-		end
-		local shiny = n.ShinyData and n:ShinyData()
-		if shiny then shiny.zones[1413] = { [3243] = 1793500000 } end
+-- page Complétion sur Les Tarides : liste des zones, carte (%, paliers), parts,
+-- liste des villages et ligne du bestiaire (remplace les pages Zones et Zone)
+Snap.scenes["qc-journal-progress"] = function(T)
+	local frame = QCJournal(T, "progress", function(ns)
+		-- deux villages des Tarides sur trois (La Croisée déjà tamponnée, Cabestan)
+		ns:JournalData().stamps["subzone:392"] = { id = "subzone:392", kind = "subzone", name = "Cabestan", at = 0 }
 	end)
-	ns:SelectJournalActivity("combat")
-	return frame, "QuestCompanion : carnet, Les Tarides > Combat (renvoi vers la Ménagerie)"
+	return frame, "QuestCompanion : carnet, page Complétion (Les Tarides)"
 end
 
 Snap.scenes["qc-journal-day"] = function(T)
@@ -1240,10 +1217,6 @@ Snap.scenes["qc-journal-menagerie"] = function(T)
 		ns.menagerieStatic = nil
 	end)
 	return frame, "QuestCompanion : carnet, page Ménagerie (Les Tarides, filtres et recherche)"
-end
-
-Snap.scenes["qc-journal-collection"] = function(T)
-	return (QCJournal(T, "collection")), "QuestCompanion : carnet, page Collection (apparences)"
 end
 
 Snap.scenes["qc-journal-memories"] = function(T)

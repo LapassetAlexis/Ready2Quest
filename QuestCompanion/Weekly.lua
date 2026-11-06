@@ -192,6 +192,8 @@ function ns:WeeklyEvent(kind, amount)
 			moved = true
 			if mission.have >= mission.need then
 				mission.done = true
+				local companion = self:CompanionData()
+				companion.missionsDone = (tonumber(companion.missionsDone) or 0) + 1
 				self:MissionGrant("weekly")
 				if self.CompanionFx then self:CompanionFx("bounce") end
 				local all = true

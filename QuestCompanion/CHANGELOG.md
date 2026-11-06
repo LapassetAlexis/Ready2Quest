@@ -1,5 +1,16 @@
 # QuestCompanion
 
+## 1.5.0
+
+- **Le carnet en cinq pages** : Compagnon · Ménagerie · Missions · Complétion · Souvenirs.
+  - **Compagnon** : ta créature en grand (portrait encadré, caractère, étapes, sa dernière réplique), cinq chiffres (capturées, brillantes, jours ensemble, missions faites, distance parcourue), ses envies, et son allure (apparences, cadre, fond, ornements : l'ancienne Collection).
+  - **Distance parcourue ensemble** : comptée en route, en mètres puis en kilomètres ; ni les téléportations, ni la pierre de foyer, ni les changements de continent ne comptent.
+  - **Ménagerie** : une seule liste numérotée façon Pokédex (numéro, type, nom ou « ??? », abattue, capturée, brillante) et sa fiche en 3D.
+  - **Complétion** (anciennes pages Zones et Zone) : la liste des zones à gauche ; à droite le pourcentage, les paliers 25/50/75/100 et ce qu'ils rapportent, l'exploration, la récolte et les quêtes, le coffre ; le bestiaire n'y est plus qu'un compteur, détaillé dans la Ménagerie.
+  - **Souvenirs** : des photos façon polaroïd recréées par le compagnon (lui en 3D, la créature du moment, un ciel selon le souvenir), puisqu'un addon ne peut pas lire les captures d'écran du jeu.
+
+*English:* the journal now has five pages: Companion (big portrait, character, steps, its last line, captured / shinies / days together / missions / distance travelled together, needs, look: appearances, frame, background, ornaments), Menagerie (one numbered creature index with a 3D card), Missions, Completion (zone list, milestones and their rewards, exploration, gathering, quests, chest; the bestiary is now a counter pointing to the Menagerie) and Souvenirs (polaroid-style photos recreated by your companion, since addons can't read in-game screenshots). Distance travelled together ignores teleports, hearthstones and continent changes.
+
 ## 1.4.0
 
 - **Capture des monstres (ménagerie)** : en plus des mascottes, chaque monstre abattu peut désormais être capturé et devenir une apparence de ton compagnon.

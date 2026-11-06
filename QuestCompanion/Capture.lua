@@ -689,7 +689,7 @@ function ns:CaptureResolve(rolling)
 		self:CompanionSay(target.shiny and "CAPTURE_SHINY" or "CAPTURE_OK", { force = true, args = { target.name } })
 		if self.CompanionFx then self:CompanionFx("bounce"); self:CompanionFx("hearts") end
 		if self.MemoryRecord then
-			self:MemoryRecord("capture", "capture:" .. tostring(target.npcID), { target.name })
+			self:MemoryRecord("capture", "capture:" .. tostring(target.npcID), { target.name }, { npc = target.npcID })
 		end
 		self:CompanionAdd("mood", 5)
 		if fresh and data.count % ns.CAPTURE_GIFT_EVERY == 0 then

@@ -242,7 +242,7 @@ Même langage, briques du lot 4 dans le socle :
 | Nouveau tampon           | bandeau 280         | losange ambre, « NOUVEAU TAMPON · SORTE », nom en titre |
 | Bloc « Carnet »          | bandeau (vedette)   | objectif en vedette en bandeau à liseré ambre, les suivants en lignes fines |
 
-Aperçus : `qc-journal-creature|zones|zone|bestiary|day|collection|memories`,
+Aperçus : `qc-journal-creature|menagerie|day|progress|memories`, `qc-capture`, `qc-capture-shake|ok|fail`,
 `qc-companion`, `qc-companion-hover`, `qc-tutorial`, `qc-pantry`, `qc-chest`,
 `qc-notify`, `qc-tracker`, `qc-photo`, `qc-tooltip`.
 
