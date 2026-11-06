@@ -93,7 +93,8 @@ local CHATTER = {
 ns.COMPANION_CHATTER = CHATTER
 ns.COMPANION_CHATTER_DEFAULT = 3
 local POOL_CATEGORY = {
-	EVOLVE = "event", UNLOCK = "event", READY = "event", CHEST = "event", TUTO = "tuto", TIP = "tip", GOAL = "tip", GOAL_STAGE = "tip",
+	EVOLVE = "event", UNLOCK = "event", READY = "event", CHEST = "event", TUTO = "tuto", TUTO_MENAGERIE = "tuto",
+	TIP = "tip", GOAL = "tip", GOAL_STAGE = "tip",
 	IDLE = "chatter", NIGHT = "chatter",
 	PHOTO = "event", ANNIV = "event", RECALL = "chatter",
 	LEVEL = "event",      -- un grand moment : dit dès le cran Calme, comme promis
@@ -116,6 +117,10 @@ local NIGHT_GRACE = 600
 local IDLE_REST  = 300                 -- 5 min au repos sans rien dire : un mot
 local CONVO_STEP = 3.5                 -- s entre deux bulles d'une conversation
 local TUTO_STEP  = 9                   -- s par bulle du tutoriel (« Suivant » accélère)
+local TUTO_WAIT  = 90                  -- s qu'une étape qui attend un geste (le filet) garde sa bulle avant de la redire
+-- Tutoriel de la ménagerie (2.2.0) : lancé de lui-même à la première occasion
+-- de capture ; coupé dans le banc de test (comme le tirage des missions)
+ns.TUTO_MENAGERIE_AUTO = ns.TUTO_MENAGERIE_AUTO ~= false
 local HISTORY    = 6                   -- lignes récentes évitées par réservoir (réservoirs triplés en 1.4.0)
 local SAME_NPC   = 120                 -- même PNJ (bavardage puis vendeur) : un avis
 local SAME_HUB   = 600                 -- même village ré-entré : pas de nouveau mot
@@ -124,7 +129,7 @@ ns.COMPANION_RULES = {
 	floor = NEED_FLOOR, max = NEED_MAX, decay = DECAY, restGain = REST_GAIN, bubbleGap = BUBBLE_GAP,
 	petCooldown = PET_COOLDOWN, sleepyAfter = SLEEPY_AFTER, sleepyMin = SLEEPY_MIN, sleepyMax = SLEEPY_MAX,
 	priority = PRIORITY, cooldowns = COOLDOWNS, tipGap = TIP_GAP, tipJitter = TIP_JITTER, needLow = NEED_LOW,
-	needGrace = NEED_GRACE, idleRest = IDLE_REST, convoStep = CONVO_STEP, tutoStep = TUTO_STEP,
+	needGrace = NEED_GRACE, idleRest = IDLE_REST, convoStep = CONVO_STEP, tutoStep = TUTO_STEP, tutoWait = TUTO_WAIT,
 	goalFirst = GOAL_FIRST, bubbleTime = BUBBLE_TIME,
 	-- part des PNJ non humanoïdes jugés sur leur nature plutôt que leur rôle
 	-- (lu à chaque fois : les tests le fixent à 0 ou 1)
@@ -291,6 +296,8 @@ local FR = {
 	COMP_MSG_TUTO_MUTED    = "Bulles du compagnon coupées (Bavardage : Muet) : remonte la réglette, ou /qc compagnon muet, pour voir le tutoriel.",
 	COMP_MSG_TUTO_COMBAT   = "Le tutoriel du compagnon commencera après le combat.",
 	COMP_MSG_TUTO_SKIPPED  = "Tutoriel du compagnon passé (/qc compagnon tuto pour le revoir).",
+	COMP_MSG_TUTO_MEN_SKIPPED = "Tutoriel de la ménagerie passé (/qc compagnon tuto menagerie pour le revoir).",
+	COMP_MSG_TUTO_MEN_OFF  = "La capture est coupée (réglages, page Au jour le jour) : rallume-la pour le tutoriel de la ménagerie.",
 	COMP_MSG_UNLOCK_APP    = "Compagnon : nouvelle apparence débloquée, %s. Choisis-la dans les réglages.",
 	COMP_MSG_UNLOCK_ORN    = "Compagnon : nouvel ornement débloqué, %s.",
 	COMP_MSG_EVOLVE        = "Compagnon : %s devient %s !",
@@ -303,7 +310,7 @@ local FR = {
 	COMP_MSG_APPEARANCE    = "Apparence : %s.",
 	COMP_MSG_MUTE          = "Bulles du compagnon : %s.",
 	COMP_MSG_FALLBACK      = "Modèle 3D indisponible sur ce client : la boussole le remplace.",
-	HELP_COMPANION         = "/qc compagnon [nom <nom> | caresse | apparence | muet | tuto | anim] — ton compagnon de route",
+	HELP_COMPANION         = "/qc compagnon [nom <nom> | caresse | apparence | muet | tuto [menagerie | passer] | anim] — ton compagnon de route",
 }
 local EN = {
 	OPT_PAGE_COMPANION_MAIN = "Companion",
@@ -459,6 +466,8 @@ local EN = {
 	COMP_MSG_TUTO_MUTED    = "Companion bubbles are off (Chattiness: Silent): raise the slider, or /qc compagnon muet, to see the tutorial.",
 	COMP_MSG_TUTO_COMBAT   = "The companion tutorial will start after combat.",
 	COMP_MSG_TUTO_SKIPPED  = "Companion tutorial skipped (/qc compagnon tuto to see it again).",
+	COMP_MSG_TUTO_MEN_SKIPPED = "Menagerie tutorial skipped (/qc compagnon tuto menagerie to see it again).",
+	COMP_MSG_TUTO_MEN_OFF  = "Capture is off (settings, Day by day page): turn it back on for the menagerie tutorial.",
 	COMP_MSG_UNLOCK_APP    = "Companion: new appearance unlocked, %s. Pick it in the settings.",
 	COMP_MSG_UNLOCK_ORN    = "Companion: new ornament unlocked, %s.",
 	COMP_MSG_EVOLVE        = "Companion: %s becomes %s!",

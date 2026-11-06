@@ -781,7 +781,52 @@ P.TUTO = {
 	{ "Finis une zone à 100 %% (carnet, /qc) : un coffre s'ouvre, avec une apparence ou un ornement pour moi.", "Finish a zone to 100%% (journal, /qc): a chest opens, with a look or an ornament for me." },
 	{ "En route, je te préviens : sacs pleins, vivres, réparations, munitions, un élite dans le coin…", "On the road, I'll warn you: full bags, food, repairs, ammo, an elite nearby…" },
 	{ "Je parle trop ? Pas assez ? Règle-moi avec la réglette « Bavardage », page Compagnon.", "Too chatty? Not enough? Tune me with the \"Chattiness\" slider, Companion page." },
-	{ "Pour me personnaliser : réglages, page Compagnon. Et je ne me fâche jamais !", "To customise me: settings, Companion page. And I never get cross!" },
+	{ "Pour me personnaliser : réglages, page Compagnon. Et dès que tu abats un monstre, je t'explique le filet !", "To customise me: settings, Companion page. And as soon as you defeat a monster, I'll explain the net!" },
+}
+
+-- ---------------------------------------------------------------------------
+-- Tutoriel de la ménagerie (2.2.0) : ce qu'apportent la 2.0 et la 2.1. Il
+-- commence à la PREMIÈRE OCCASION DE CAPTURE (un monstre dans le filet, hors
+-- combat) : START attend que le joueur lance le filet, la scène se joue en
+-- silence, puis OK ou FAIL selon le verdict, puis la suite (TUTO_MENAGERIE)
+-- au rythme du tutoriel. LATE : le monstre est parti avant le clic (le
+-- tutoriel reprendra à l'occasion suivante). INTRO ouvre le rejeu
+-- (/qc compagnon tuto menagerie), sans attendre de capture.
+-- Chaque bulle de la suite reçoit SES arguments (Companion.lua,
+-- ns:CompanionMenagerieTutorialSteps), tirés des constantes des modules :
+-- aucun chiffre n'est écrit ici.
+--   1 : %d s de filet après le combat          6 : %d %% d'envie pour la pleine force
+--   2 : %d %% de chance de 3 étoiles           7 : brillantes ×%s en zone scellée
+--   3 : 1 sur %d, jusqu'à 1 sur %d après %d    8 : %d espèces (1er titre), %d (dernier), %s = son nom
+--   5 : effets après %d min
+-- ---------------------------------------------------------------------------
+P.TUTO_MENAGERIE_START = {
+	{ "Un monstre qui manque à ma ménagerie ! Clique sur le filet, là, à côté de moi : je le capture.", "A monster missing from my menagerie! Click the net, right there next to me: I'll capture it." },
+}
+P.TUTO_MENAGERIE_OK = {
+	{ "Voilà ! Elle rejoint ma ménagerie (page Ménagerie du carnet, /qc).", "There! It joins my menagerie (Menagerie page of the journal, /qc)." },
+}
+P.TUTO_MENAGERIE_FAIL = {
+	{ "Il s'est échappé, ça arrive ! Au prochain, retente.", "It got away, it happens! Try again on the next one." },
+}
+P.TUTO_MENAGERIE_LATE = {
+	{ "Trop tard, il est parti… la prochaine fois !", "Too late, it's gone… next time!" },
+}
+P.TUTO_MENAGERIE_INTRO = {
+	{ "On révise la ménagerie ? Tu vois le filet, à côté de moi : un monstre abattu qui manque à ta ménagerie y tombe.", "Menagerie refresher? See the net next to me: a defeated monster missing from your menagerie lands in it." },
+}
+P.TUTO_MENAGERIE = {
+	{ "Le filet garde un monstre %d s après le combat. Clic : je capture le meilleur ; clic droit : la liste. Le bandeau « Capture possible » te prévient.", "The net keeps a monster %d s after the fight. Click: I capture the best one; right-click: the list. The \"Capture possible\" banner lets you know." },
+	{ "Chaque capture vaut 1 à 3 étoiles (3 étoiles : %d %% de chance). Recapture pour tenter mieux, je garde le meilleur spécimen.", "Each capture is worth 1 to 3 stars (3 stars: a %d%% chance). Recapture to try for better, I keep the best specimen." },
+	{ "Les brillantes ! 1 chance sur %d au départ, jusqu'à 1 sur %d après %d abattus de la même espèce. Insiste, ça paie.", "Shinies! 1 chance in %d to start, up to 1 in %d after %d kills of the same species. Keep at it, it pays off." },
+	{ "Un losange doré sur une barre de nom : une brillante ! Chaque espèce a deux versions à capturer. Et brillant, je suis tout doré.", "A gold diamond on a nameplate: a shiny! Every species has two versions to capture. And as a shiny, I'm all golden." },
+	{ "Emmène-la : clic sur elle dans la Ménagerie. Selon son type, elle t'aide à chasser et me rend la vie douce ; ses effets arrivent après %d min.", "Take it along: click it in the Menagerie. By its type, it helps you hunt and makes my life sweet; its effects kick in after %d min." },
+	{ "Changer se confirme. Mes envies à %d %% ou plus : effets entiers, alors nourris-moi ! Une mascotte reste le compagnon de cœur.", "Switching asks first. My needs at %d%% or more: full effects, so feed me! A mascot stays the companion of the heart." },
+	{ "Capture toutes les espèces d'une zone : elle est scellée ! Un cadre, puis un fond à ses couleurs, et brillantes ×%s là-bas, pour toujours.", "Capture every species of a zone: it gets sealed! A frame, then a background in its colours, and shinies ×%s there, for good." },
+	{ "Par type, des paliers renforcent mes effets. À %d espèces, ton premier titre de dresseur ; à %d, « %s ». Ça claque.", "Per type, milestones strengthen my effects. At %d species, your first trainer title; at %d, \"%s\". Fancy." },
+	{ "Chaque jour, une mission de ménagerie ; chaque semaine, une chasse au brillant et des missions par type. Friandises et aides à la clé.", "Every day, a menagerie mission; every week, a shiny hunt and missions by type. Treats and aids as rewards." },
+	{ "Ta fiche de dresseur : /qc fiche. Ton titre, moi en 3D, une vitrine de 3 créatures. Clic droit sur un autre dresseur : la sienne.", "Your trainer card: /qc fiche. Your title, me in 3D, a showcase of 3 creatures. Right-click another trainer: theirs." },
+	{ "Tout est écrit dans le carnet, page Guide (/qc). Pour me réentendre : /qc compagnon tuto menagerie. Allez, à la chasse !", "It's all written in the journal, Guide page (/qc). To hear me again: /qc compagnon tuto menagerie. Now, off to the hunt!" },
 }
 
 -- ---------------------------------------------------------------------------
