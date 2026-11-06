@@ -54,8 +54,8 @@ do
 		not QC_TOC:find("## Dependencies", 1, true) and not QC_TOC:find("## RequiredDeps", 1, true)
 		and QC_TOC:find("\n## OptionalDeps: Ready2Quest\n", 1, true) ~= nil)
 	Check("[QC] .toc : sa sauvegarde QuestCompanionDB", QC_TOC:find("\n## SavedVariables: QuestCompanionDB\n", 1, true) ~= nil)
-	Check("[QC] versions : QC 1.5.2, R2Q 1.29.0, comme leurs namespaces", QC_TOC:find("\n## Version: 1.5.2\n", 1, true)
-		and R2Q_TOC:find("\n## Version: 1.29.0\n", 1, true) and QNS.version == "1.5.2" and NS.version == "1.29.0")
+	Check("[QC] versions : QC 1.5.3, R2Q 1.29.1, comme leurs namespaces", QC_TOC:find("\n## Version: 1.5.3\n", 1, true)
+		and R2Q_TOC:find("\n## Version: 1.29.1\n", 1, true) and QNS.version == "1.5.3" and NS.version == "1.29.1")
 	for _, addon in ipairs({ { "Ready2Quest", R2Q_TOC }, { "QuestCompanion", QC_TOC } }) do
 		local files = QCT.TocFiles(addon[2])
 		Check("[QC] " .. addon[1] .. " : Config.lua puis le socle en tête", files[1] == "Config.lua"

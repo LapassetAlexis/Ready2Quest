@@ -1,8 +1,10 @@
 -- Tooltips.lua -- le bestiaire dans l'infobulle des créatures (QuestCompanion)
 --
--- Au survol d'une créature de la zone, une ligne dit où elle en est dans le
--- bestiaire : « à abattre » ou « abattu (n) », avec son rang si c'est un
--- nommé (rare, élite…). Mêmes libellés et couleurs que le carnet
+-- Au survol d'une créature de la zone, une ligne dit où elle en est dans la
+-- ménagerie (1.5.3) : « capturé » (vert, doré si brillant) ou « à capturer »
+-- avec ta chance du moment, et son rang si c'est un nommé (rare, élite…).
+-- Capture coupée dans les réglages : la ligne du bestiaire d'avant
+-- (« à abattre » ou « abattu (n) »). Mêmes libellés et couleurs que le carnet
 -- (JournalWindow.lua). Une créature hors bestiaire (amicale, bestiole, en
 -- instance) : rien.
 -- Accroche commune du socle (ns:HookTooltip, Libs/Socle/Compat.lua) :
@@ -12,8 +14,20 @@ if ns.blocked then return end
 local L = ns.L
 local Theme = ns.Theme
 
-local FR = { BST_TOOLTIP = "Bestiaire : %s" }
-local EN = { BST_TOOLTIP = "Bestiary: %s" }
+local FR = {
+	BST_TOOLTIP        = "Bestiaire : %s",
+	MEN_TOOLTIP        = "Ménagerie : %s",
+	MEN_TIP_CAUGHT     = "capturé",
+	MEN_TIP_SHINY      = "capturé, brillant",
+	MEN_TIP_TODO       = "à capturer · %d %%",
+}
+local EN = {
+	BST_TOOLTIP        = "Bestiary: %s",
+	MEN_TOOLTIP        = "Menagerie: %s",
+	MEN_TIP_CAUGHT     = "captured",
+	MEN_TIP_SHINY      = "captured, shiny",
+	MEN_TIP_TODO       = "to capture · %d%%",
+}
 ns.RegisterStrings(FR, EN)
 ns.TOOLTIP_STRINGS = { fr = FR, en = EN }
 
@@ -29,20 +43,26 @@ local function Hex(c)
 		math.floor(c[3] * 255 + 0.5))
 end
 
--- GUID de l'unité survolée : data.guid (moteur récent), sinon tooltip:GetUnit()
+-- GUID de l'unité survolée : data.guid (moteur récent), sinon
+-- tooltip:GetUnit() ; second retour : son niveau, si on le lit
 local function HoveredGUID(tooltip, data)
+	local unit
+	if type(tooltip.GetUnit) == "function" then
+		local ok, _, u = pcall(tooltip.GetUnit, tooltip)
+		unit = ok and ns.Plain(u) or nil
+		if type(unit) ~= "string" then unit = nil end
+	end
+	local level = unit and tonumber(ns.Plain(Call(rawget(_G, "UnitLevel"), unit))) or nil
 	local guid = type(data) == "table" and ns.Plain(data.guid) or nil
-	if type(guid) == "string" then return guid end
-	if type(tooltip.GetUnit) ~= "function" then return nil end
-	local ok, _, unit = pcall(tooltip.GetUnit, tooltip)
-	unit = ok and ns.Plain(unit) or nil
-	if type(unit) ~= "string" then return nil end
+	if type(guid) == "string" then return guid, level end
+	if not unit then return nil end
 	guid = ns.Plain(Call(rawget(_G, "UnitGUID"), unit))
-	return type(guid) == "string" and guid or nil
+	return type(guid) == "string" and guid or nil, level
 end
 
--- Texte et couleur de la ligne, ou nil : l'espèce de ce GUID dans la zone
-function ns:BestiaryTooltipLine(guid)
+-- Texte et couleur de la ligne, ou nil : l'espèce de ce GUID dans la zone.
+-- level : niveau de la créature survolée (chance de capture)
+function ns:BestiaryTooltipLine(guid, level)
 	if not (ns.CompanionOn and ns.CompanionOn()) then return nil end
 	local npcID = ns.BestiaryNpcID and ns.BestiaryNpcID(guid)
 	if not npcID then return nil end
@@ -51,15 +71,29 @@ function ns:BestiaryTooltipLine(guid)
 	local species = self:BestiarySpecies(zoneID)[npcID]
 	if type(species) ~= "table" then return nil end
 	local killed = tonumber(species.killed) or 0
-	local status = killed > 0 and self:F("JRN_ITEM_KILLED", killed) or L.JRN_ITEM_TO_KILL
-	local text = self:F("BST_TOOLTIP", status)
 	local class = species.class
+	local text, color
+	local capture = self.CaptureChance and self.CaptureData and self:DB().companionCapture ~= false
+	if capture then
+		local caught = self:CaptureData().creatures[npcID]
+		if caught then
+			text = self:F("MEN_TOOLTIP", caught.shiny and L.MEN_TIP_SHINY or L.MEN_TIP_CAUGHT)
+			color = caught.shiny and (Theme.GOLD_LIGHT or Theme.GOLD) or Theme.GREEN
+		else
+			local chance = self:CaptureChance({ class = class or "normal", level = level or species.level })
+			text = self:F("MEN_TOOLTIP", self:F("MEN_TIP_TODO", math.floor(chance * 100 + 0.5 + 1e-9)))
+			color = Theme.MUTED_LIGHT or Theme.MUTED
+		end
+	else
+		-- carnet : abattu en ambre, encore à faire en gris
+		text = self:F("BST_TOOLTIP", killed > 0 and self:F("JRN_ITEM_KILLED", killed) or L.JRN_ITEM_TO_KILL)
+		color = killed > 0 and Theme.GOLD or Theme.MUTED
+	end
 	if self:BestiaryIsNamed(species) then
 		local color = (ns.BESTIARY_RANK_COLOR or {})[class] or Theme.GOLD
 		text = text .. " · " .. Hex(color) .. tostring(L["BST_CLASS_" .. class]) .. "|r"
 	end
-	-- carnet : abattu en ambre, encore à faire en gris
-	return text, killed > 0 and Theme.GOLD or Theme.MUTED
+	return text, color
 end
 
 function ns:BestiaryOnTooltip(tooltip, data)

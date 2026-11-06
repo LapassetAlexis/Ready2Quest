@@ -107,8 +107,8 @@ do
 		and NS:FindModule("portee") ~= nil)
 	local page
 	for _, def in ipairs(NS.OPTION_PAGES) do if def.id == "aggro" then page = def end end
-	Check("[AGGRO] sous-page du QoL, 4 réglages", page and page.parent == "qol" and page.group == "OPT_GROUP_QOL"
-		and #page.rows == 4)
+	Check("[AGGRO] sous-page du QoL, 5 réglages (dont le style de marque)", page and page.parent == "qol" and page.group == "OPT_GROUP_QOL"
+		and #page.rows == 5 and page.rows[5].key == "aggroStyle")
 	local db = NS:DB()
 	Check("[AGGRO] défauts : actif, Maj, infobulle, anneaux", db.aggroEnabled == true and db.aggroKey == "shift"
 		and db.aggroTooltip == true and db.aggroRings == true)
@@ -280,6 +280,23 @@ do
 	Check("[AGGRO] neutre : pas d'anneau", not A.RingShown("nameplate4"))
 	Check("[AGGRO] anneau accroché au cadre de base de la barre", A.Ring("nameplate1"):GetParent() == A.W.plates.nameplate1
 		and A.Ring("nameplate1").lastPoint and A.Ring("nameplate1").lastPoint.relTo == A.W.plates.nameplate1)
+
+	-- style par défaut : la pastille (losange à gauche), pas le grand anneau
+	local r1 = A.Ring("nameplate1")
+	Check("[AGGRO] marque par défaut : pastille, anneau caché", NS:AggroStyle() == "dot" and r1.dot:IsShown()
+		and not r1.ringTexture:IsShown() and not r1.bar:IsShown() and r1.texture == r1.dot)
+	Check("[AGGRO] pastille : à gauche de la barre, au-dessus d'elle", r1.dotBack.lastPoint and r1.dotBack.lastPoint.relTo == A.W.plates.nameplate1
+		and r1.dotBack.lastPoint.point == "RIGHT")
+	NS:AggroSetStyle("bar")
+	Check("[AGGRO] style trait : une ligne sous la barre, à la couleur", r1.bar:IsShown() and not r1.dot:IsShown()
+		and r1.texture == r1.bar and r1.bar.vertex[1] == NS.Theme.RED[1])
+	NS:AggroSetStyle("ring")
+	Check("[AGGRO] style anneau : l'ancien halo", r1.ringTexture:IsShown() and not r1.bar:IsShown()
+		and r1.width == NS.AGGRO_RING_SIZE)
+	NS:AggroSetStyle("nimportequoi")
+	Check("[AGGRO] style inconnu : refusé", NS:AggroStyle() == "ring")
+	Check("[AGGRO] trois styles proposés", #NS:AggroStyleChoices() == 3)
+	NS:AggroSetStyle("dot")
 
 	-- le joueur s'approche : le verdict suit au passage suivant
 	A.W.units.nameplate3.dist = 18
