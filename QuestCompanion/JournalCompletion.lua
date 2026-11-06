@@ -141,7 +141,7 @@ end
 -- Éléments d'une part : à faire d'abord, puis faits (ordre de la part gardé) ;
 -- les quêtes proposées sur la carte, hors compte, à la suite sous leur titre
 function ns:JournalProgressItems(zoneID, part)
-	local todo, done, live, heads = {}, {}, {}, {}
+	local todo, done, live, heads, locked = {}, {}, {}, {}, {}
 	local inLive = false
 	for _, row in ipairs(zoneID and self.JournalActivityRows and self:JournalActivityRows(zoneID, part) or {}) do
 		if row.header then
@@ -151,11 +151,14 @@ function ns:JournalProgressItems(zoneID, part)
 			live[#live + 1] = row
 		elseif row.done then
 			done[#done + 1] = row
+		elseif row.locked then
+			locked[#locked + 1] = row      -- pas encore à ta portée : tout en bas
 		else
 			todo[#todo + 1] = row
 		end
 	end
 	for _, row in ipairs(done) do todo[#todo + 1] = row end
+	for _, row in ipairs(locked) do todo[#todo + 1] = row end
 	for _, row in ipairs(live) do todo[#todo + 1] = row end
 	return todo, heads
 end
@@ -510,7 +513,7 @@ local function RefreshItems(self, frame, pane, zoneID, part, quests, seen)
 			local c = item.done and Theme.GOLD or Theme.MUTED
 			line.status:SetVertexColor(c[1], c[2], c[3], 1)
 			line.text:SetText(tostring(item.name or ""))
-			Paint(line.text, item.done and Theme.PARCHMENT or Theme.TEXT)
+			Paint(line.text, item.done and Theme.PARCHMENT or (item.locked and Theme.MUTED or Theme.TEXT))
 			line.detail:SetText(Theme.T_GREY .. tostring(item.detail or "") .. "|r")
 			line:SetAlt(line.rowAlt)
 			line:Show()

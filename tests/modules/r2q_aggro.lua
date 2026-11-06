@@ -285,6 +285,8 @@ do
 	local r1 = A.Ring("nameplate1")
 	Check("[AGGRO] marque par défaut : pastille, anneau caché", NS:AggroStyle() == "dot" and r1.dot:IsShown()
 		and not r1.ringTexture:IsShown() and not r1.bar:IsShown() and r1.texture == r1.dot)
+	Check("[AGGRO] pastille : 16 px, rentrée vers le nom", NS.AGGRO_DOT_SIZE == 16 and r1.dot.width == 16
+		and r1.dotBack.lastPoint.x == NS.AGGRO_DOT_INSET and NS.AGGRO_DOT_INSET > 2)
 	Check("[AGGRO] pastille : à gauche de la barre, au-dessus d'elle", r1.dotBack.lastPoint and r1.dotBack.lastPoint.relTo == A.W.plates.nameplate1
 		and r1.dotBack.lastPoint.point == "RIGHT")
 	NS:AggroSetStyle("bar")

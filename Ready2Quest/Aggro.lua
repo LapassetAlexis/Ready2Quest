@@ -36,7 +36,8 @@ local AGGRO_MARGIN = 5      -- ambre : jusqu'à 5 m au-delà de la portée
 local SKULL_GAP    = 10     -- niveau « ?? » : au moins dix niveaux de plus
 ns.AGGRO_TICK = 0.2
 ns.AGGRO_RING_SIZE = 96
-ns.AGGRO_DOT_SIZE = 12          -- pastille (losange)
+ns.AGGRO_DOT_SIZE = 16          -- pastille (losange)
+ns.AGGRO_DOT_INSET = 14         -- bord droit de la pastille, depuis le bord gauche de la barre : tout près du nom
 ns.AGGRO_BAR_W, ns.AGGRO_BAR_H, ns.AGGRO_BAR_Y = 70, 3, 10   -- trait sous la barre
 -- anneau livré avec l'addon (Textures/aggro_ring.tga) : présent à coup sûr
 ns.AGGRO_RING_TEXTURE = ns.Theme.MEDIA .. "Textures\\aggro_ring"
@@ -494,7 +495,7 @@ local function RingFor(plate)
 	frame.dotBack = frame:CreateTexture(nil, "ARTWORK")
 	frame.dotBack:SetTexture(Theme.DIAMOND)
 	frame.dotBack:SetSize(ns.AGGRO_DOT_SIZE + 4, ns.AGGRO_DOT_SIZE + 4)
-	frame.dotBack:SetPoint("RIGHT", plate, "LEFT", 2, 0)
+	frame.dotBack:SetPoint("RIGHT", plate, "LEFT", ns.AGGRO_DOT_INSET, 0)
 	frame.dotBack:SetVertexColor(0, 0, 0, 0.8)
 	frame.dot = frame:CreateTexture(nil, "OVERLAY")
 	frame.dot:SetTexture(Theme.DIAMOND)

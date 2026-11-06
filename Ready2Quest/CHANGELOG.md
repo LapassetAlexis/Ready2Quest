@@ -1,5 +1,9 @@
 # Journal des modifications
 
+## 1.29.2
+
+- **Portée d'aggro** : la pastille est plus grosse (16 px) et rentrée vers le nom, pour la voir d'un coup d'œil.
+
 ## 1.29.1
 
 - **Portée d'aggro, marque plus discrète** : le grand anneau autour des barres de nom laisse la place, par défaut, à une **pastille** (un petit losange à gauche de la barre, rouge / ambre / vert, qui bat quand tu es dans le rayon). Réglage **Marque** : pastille, **trait** sous la barre, ou l'**anneau** d'avant.
