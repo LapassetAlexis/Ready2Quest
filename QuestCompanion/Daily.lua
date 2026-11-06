@@ -7,7 +7,9 @@
 --
 -- Missions : chaque jour, à la première zone où tu entres, la créature
 -- propose deux missions de cette zone (seulement celles qui y sont
--- faisables) et une mission de son caractère. Une mission de zone peut être
+-- faisables) et une mission de son caractère. 2.0 : une de ménagerie
+-- (capturer, MissionsMenagerie.lua) et une d'exploration (lieux, récolte,
+-- quêtes) ; plus de missions « abattre des espèces ». Une mission de zone peut être
 -- changée une fois par jour. Chaque mission faite : une friandise (envie la
 -- plus basse) et un peu de curiosité ; les trois : un Festin. Une mission
 -- non faite est simplement remplacée le lendemain.
@@ -26,7 +28,11 @@ ns.MISSION_APPEARANCE, ns.MISSION_APPEARANCE_DAYS = "squirrel_mech", 10
 
 -- Missions de zone : cible, faisable ?, mesure de départ
 -- « captures » (1.4.0) : capturer des créatures, où que ce soit (Capture.lua)
-local ZONE_MISSIONS = { "species", "named", "gather", "quests", "village", "percent", "captures" }
+-- 2.0 : ZONE_MISSIONS = les missions d'exploration ; celles de ménagerie
+-- (dont « captures ») sont tirées par MissionsMenagerie.lua. « species » et
+-- « named » ne sont plus tirées (elles restent lisibles pour les missions en
+-- cours d'une sauvegarde).
+local ZONE_MISSIONS = { "gather", "quests", "village", "percent" }
 local ANYWHERE = { kills = true, talks = true, captures = true }
 ns.DAILY_ZONE_MISSIONS = ZONE_MISSIONS
 local NEED = { species = 3, named = 1, gather = 5, quests = 2, village = 1, percent = 3, kills = 10, talks = 3, captures = 2 }
@@ -104,7 +110,7 @@ local FR = {
 	DAY_GIVE         = "Donner",
 	JRN_SEC_day      = "Missions",
 	OPT_DAILY_MISSIONS = "Missions du jour",
-	OPT_DAILY_MISSIONS_DESC = "Deux missions de zone et une de son caractère chaque jour, dans le carnet (onglet Jour) et le bloc à l'écran.",
+	OPT_DAILY_MISSIONS_DESC = "Chaque jour une mission de ménagerie, une d'exploration et une de son caractère, dans le carnet (onglet Missions) et le bloc à l'écran.",
 }
 local EN = {
 	MIS_species      = "Defeat %d species never defeated (%s)",
@@ -156,7 +162,7 @@ local EN = {
 	DAY_GIVE         = "Give",
 	JRN_SEC_day      = "Missions",
 	OPT_DAILY_MISSIONS = "Missions of the day",
-	OPT_DAILY_MISSIONS_DESC = "Two zone missions and one from its character every day, in the journal (Day tab) and the on-screen block.",
+	OPT_DAILY_MISSIONS_DESC = "Every day a menagerie mission, an exploration mission and one from its character, in the journal (Missions tab) and the on-screen block.",
 }
 ns.RegisterStrings(FR, EN)
 if ns.KEEP_STRINGS then ns.DAILY_STRINGS = { fr = FR, en = EN } end
@@ -364,7 +370,8 @@ local function NewMission(self, kind, zoneID, need, source)
 		start = zoneID and self:MissionMeasure(kind, zoneID) or 0 }
 end
 
--- Tire les deux missions de zone (faisables, différentes) et celle du caractère
+-- Tire les deux missions du jour (une de ménagerie si la capture est
+-- allumée, une d'exploration ; faisables, différentes) et celle du caractère
 function ns:MissionDraw(zoneID)
 	local daily = self:DailyData()
 	local pool = {}
@@ -372,12 +379,15 @@ function ns:MissionDraw(zoneID)
 		if self:MissionFeasible(kind, zoneID) then pool[#pool + 1] = kind end
 	end
 	local missions = {}
+	-- ménagerie (MissionsMenagerie.lua) : nil si la capture est coupée
+	local own = self.MissionMenagerieDraw and self:MissionMenagerieDraw(zoneID)
+	if own then missions[1] = own end
 	while #missions < 2 and #pool > 0 do
 		local kind = table.remove(pool, math.random(#pool))
 		missions[#missions + 1] = NewMission(self, kind, not ANYWHERE[kind] and zoneID or nil, nil, "zone")
 	end
-	-- zone toute faite : des ennemis à abattre, des gens à qui parler, où que ce soit
-	for _, kind in ipairs({ "kills", "talks" }) do
+	-- zone toute faite : des gens à qui parler, des ennemis à abattre, où que ce soit
+	for _, kind in ipairs({ "talks", "kills" }) do
 		if #missions < 2 then missions[#missions + 1] = NewMission(self, kind, nil, NEED[kind], "zone") end
 	end
 	local trait = self.CompanionTrait and self:CompanionTrait()
@@ -399,11 +409,22 @@ function ns:MissionReroll(index)
 	if daily.rerolled or not mission or mission.source ~= "zone" or mission.done then return false end
 	local used = {}
 	for _, other in ipairs(daily.missions) do used[other.kind] = true end
+	-- une mission de ménagerie se change contre une autre de ménagerie
+	if self.MissionIsMenagerie and self:MissionIsMenagerie(mission) then
+		local other = self.MissionMenagerieDraw and self:MissionMenagerieDraw(daily.zoneID, daily.missions)
+		if not other then return false end
+		daily.missions[index] = other
+		daily.rerolled = true
+		self:DailyChanged()
+		return true
+	end
 	local pool = {}
 	for _, kind in ipairs(ZONE_MISSIONS) do
 		if not used[kind] and self:MissionFeasible(kind, daily.zoneID) then pool[#pool + 1] = kind end
 	end
-	if not used.kills and #pool == 0 then pool[1] = "kills" end
+	for _, kind in ipairs({ "talks", "kills" }) do
+		if not used[kind] and #pool == 0 then pool[1] = kind end
+	end
 	if #pool == 0 then return false end
 	local kind = pool[math.random(#pool)]
 	daily.missions[index] = NewMission(self, kind, not ANYWHERE[kind] and daily.zoneID or nil, nil, "zone")
@@ -474,8 +495,10 @@ end
 
 -- Un événement de jeu : chaque mission concernée avance
 -- (kind : pets, meals, elites, kills, nightKills, turnins, talks, places,
--- gather, village, rest, calm, gold ; zoneID : là où ça s'est passé)
-function ns:MissionEvent(kind, amount, zoneID)
+-- gather, village, rest, calm, gold ; capNew, capNamed, capType : captures
+-- de MissionsMenagerie.lua ; zoneID : là où ça s'est passé ; info : détails,
+-- { ctype = clé de type } pour une mission par type)
+function ns:MissionEvent(kind, amount, zoneID, info)
 	if not self:DailyMissionsOn() then return false end
 	local daily = self:DailyData()
 	if daily.day ~= self:DailyToday() then return false end
@@ -488,6 +511,8 @@ function ns:MissionEvent(kind, amount, zoneID)
 			if kind == "turnins" and mission.kind == "quests" then match = true end
 			if kind == "places" and mission.kind == "village" then match = true end
 			if match and mission.zoneID and zoneID ~= mission.zoneID then match = false end
+			-- mission par type : seulement ce type
+			if match and mission.ctype and (type(info) ~= "table" or info.ctype ~= mission.ctype) then match = false end
 			if match then
 				moved = Advance(self, mission, (mission.have or 0) + (tonumber(amount) or 1)) or moved
 			end
@@ -526,7 +551,7 @@ function ns:MissionSource(mission)
 		if mission.trait and self.PersonaLabel then return self:F("MIS_SOURCE_trait", self:PersonaLabel(mission.trait)) end
 		return L.MIS_SOURCE_none
 	end
-	return self:F("MIS_SOURCE_zone", ZoneName(self, mission.zoneID))
+	return self:F("MIS_SOURCE_zone", ZoneName(self, mission.zoneID or self:DailyData().zoneID))
 end
 
 -- Le tirage du jour : à la première zone où l'on entre (pas en instance)

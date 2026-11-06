@@ -1,6 +1,7 @@
 -- Compagnon : au jour le jour (Daily.lua). Carte de fidélité des auberges (un
 -- tampon par jour, Festin au 7e, pas de série), missions du jour (deux de zone
--- faisables, une du caractère ; changer une fois ; friandise, Festin des
+-- faisables, une du caractère ; 2.0 : la première de ménagerie, voir aussi
+-- qc2_missions.lua ; changer une fois ; friandise, Festin des
 -- trois), onglet Jour du carnet, objectifs du bloc à l'écran, réglage.
 local Check, Say, ResetWorld, NS, Mock = T.Check, T.Say, T.ResetWorld, T.QNS, T.Mock
 
@@ -112,10 +113,10 @@ do
 	Check("[MIS] zone presque finie : pas de +3 %", not NS:MissionFeasible("percent", 9800))
 	NS:DB().companionCapture = false
 	NS:MissionDraw(9800)
-	Check("[MIS] zone toute faite : ennemis et gens à qui parler", DY.Kinds() == "kills,talks,pets", DY.Kinds())
+	Check("[MIS] zone toute faite, capture coupée : gens à qui parler et ennemis", DY.Kinds() == "talks,kills,pets", DY.Kinds())
 	NS:DB().companionCapture = true
 	NS:MissionDraw(9800)
-	Check("[MIS] … ou une capture, partout faisable", DY.Kinds() == "captures,kills,pets", DY.Kinds())
+	Check("[MIS] … capture allumée : une capture (ménagerie), partout faisable", DY.Kinds() == "captures,talks,pets", DY.Kinds())
 
 	DY.Reset()
 	DY.First()
@@ -280,10 +281,13 @@ do
 	DY.First()
 	NS:DailyPoll()
 	local daily = NS:DailyData()
-	local before = daily.missions[1].kind
+	-- 2.0 : mission 1 = ménagerie (ici « captures », rien d'autre à capturer
+	-- dans la zone : pas d'autre mission de ménagerie), mission 2 = exploration
+	local before = daily.missions[2].kind
 	Check("[MIS] mission du caractère : pas changeable", NS:MissionReroll(3) == false)
-	Check("[MIS] une mission de zone changée", NS:MissionReroll(1) == true and daily.missions[1].kind ~= before
-		and daily.missions[1].kind ~= daily.missions[2].kind and daily.missions[1].have == 0)
+	Check("[MIS] ménagerie sans autre choix : pas changeable", NS:MissionReroll(1) == false and not daily.rerolled)
+	Check("[MIS] une mission d'exploration changée", NS:MissionReroll(2) == true and daily.missions[2].kind ~= before
+		and daily.missions[2].kind ~= daily.missions[1].kind and daily.missions[2].have == 0)
 	Check("[MIS] une seule fois par jour", NS:MissionReroll(2) == false and daily.rerolled == true)
 	DY.day = "2026-11-06"
 	NS:DailyPoll()
@@ -319,8 +323,9 @@ do
 	Check("[DAYW] trois missions de la semaine, récompense lasso", day.missions[4].mission ~= nil and day.missions[6].mission ~= nil
 		and day.missions[4].source.text:find("Lasso tressé", 1, true) ~= nil, day.missions[4].source.text)
 	Check("[DAYW] … une capture dans le lot", day.missions[4].mission.kind == "captures" or day.missions[4].mission.kind == "captureNamed")
-	day.missions[2].reroll:Click()
-	Check("[DAYW] changé : le bouton disparaît", NS:DailyData().rerolled and not day.missions[3].reroll:IsShown())
+	day.missions[3].reroll:Click()
+	Check("[DAYW] changé : le bouton disparaît", NS:DailyData().rerolled and not day.missions[3].reroll:IsShown()
+		and not day.missions[2].reroll:IsShown())
 	Check("[DAYW] besace de capture affichée", #day.aids == 3 and day.aids[1].count.text:find("^%d+ / 10$") ~= nil, day.aids[1].count.text)
 	Check("[DAYW] carte : 3 tampons sur 7", day.stamps[3].got and not day.stamps[4].got)
 	local slot

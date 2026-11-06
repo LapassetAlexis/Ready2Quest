@@ -7,7 +7,9 @@
 -- enchaîner les missions du jour, abattre, tamponner le carnet, récolter,
 -- rendre des quêtes. Une capture au moins dans le lot si la capture est
 -- allumée, et (1.6.0) toujours une chasse au brillant : en abattre un, ou en
--- capturer un.
+-- capturer un. 2.0 : la mission de capture est, si possible, une mission
+-- par type (« emmène un Mort-vivant et capture 2 Morts-vivants »,
+-- MissionsMenagerie.lua).
 -- Chaque mission faite : un Lasso tressé et une friandise ; les trois : un
 -- Sifflet du dompteur et un Festin (ns.MISSION_REWARDS, Daily.lua).
 local ADDON, ns = ...
@@ -158,7 +160,10 @@ function ns:WeeklyDraw(later)
 		end
 	end
 	local picked = {}
-	if #captures > 0 then picked[#picked + 1] = table.remove(captures, math.random(#captures)) end
+	-- 2.0 : une mission par type si une est faisable (MissionsMenagerie.lua)
+	local typed = CaptureOn(self) and self.MenagerieWeeklyTypeMission and self:MenagerieWeeklyTypeMission() or nil
+	if typed then picked[#picked + 1] = typed
+	elseif #captures > 0 then picked[#picked + 1] = table.remove(captures, math.random(#captures)) end
 	if #shinies > 0 then picked[#picked + 1] = table.remove(shinies, math.random(#shinies)) end
 	for _, def in ipairs(captures) do pool[#pool + 1] = def end
 	while #picked < ns.WEEKLY_COUNT and #pool > 0 do
@@ -166,7 +171,7 @@ function ns:WeeklyDraw(later)
 	end
 	local missions = {}
 	for index, def in ipairs(picked) do
-		missions[index] = { kind = def.kind, need = def.need, have = 0, source = "week" }
+		missions[index] = { kind = def.kind, need = def.need, have = 0, source = "week", ctype = def.ctype }
 	end
 	weekly.week, weekly.missions, weekly.allDone = self:WeeklyId(), missions, nil
 	local timer = G("C_Timer")
@@ -194,13 +199,15 @@ function ns:WeeklyPoll(later)
 end
 
 -- Un événement : chaque mission de la semaine concernée avance
-function ns:WeeklyEvent(kind, amount)
+-- info : { ctype = clé de type } pour une mission par type
+function ns:WeeklyEvent(kind, amount, info)
 	if not (self.DailyMissionsOn and self:DailyMissionsOn()) then return false end
 	local weekly = self:WeeklyCurrent()
 	if not weekly then return false end
 	local moved = false
 	for _, mission in ipairs(weekly.missions) do
-		if not mission.done and mission.kind == kind then
+		local typeOk = not mission.ctype or (type(info) == "table" and info.ctype == mission.ctype)
+		if not mission.done and mission.kind == kind and typeOk then
 			mission.have = math.min(mission.need, (mission.have or 0) + (tonumber(amount) or 1))
 			moved = true
 			if mission.have >= mission.need then
