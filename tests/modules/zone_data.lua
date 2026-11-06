@@ -408,6 +408,24 @@ do
 	Z.skills = { HEADER, { "Herboristerie", false, true, 10 } }
 	part = Z.Part("gathering")
 	Check("[ZDATA] Elwynn à 10 : Terrestrine (15) hors de portée -> 2", part and part.need == 2, part and part.need)
+	-- 1.5.5 : ce qui pousse ici mais demande plus de compétence est montré, grisé, jamais compté
+	local all = NS:GatheringZoneList(1429, true)
+	local locked
+	for _, entry in ipairs(all) do if entry.locked then locked = entry end end
+	Check("[ZDATA] liste complète : Terrestrine montrée, verrouillée (15)", #all == 3 and locked and locked.itemID == 2449
+		and locked.req == 15 and not locked.grayed)
+	local rows = NS:JournalProgressItems(1429, "craft")
+	local last = rows[#rows]
+	Check("[ZDATA] carnet : la verrouillée en fin de liste, « compétence 15 requise »", last and last.locked
+		and last.detail == "compétence 15 requise", last and last.detail)
+	-- rien à ta portée mais tout pour plus tard : la liste le montre quand même
+	Z.skills = { HEADER, { "Minage", false, true, 1 } }
+	Mock.world.mapID = 1419
+	Check("[ZDATA] Terres foudroyées à 1 en minage : pas de part", Z.Part("gathering") == nil)
+	local later = NS:JournalProgressItems(1419, "craft")
+	Check("[ZDATA] … mais les minerais pour plus tard sont listés, grisés", #later > 0 and later[1].locked, #later)
+	Z.skills = { HEADER, { "Herboristerie", false, true, 10 } }
+	Mock.world.mapID = 1429
 	-- dépeçage : jamais filtré (pas de données de zone)
 	Z.skills = { HEADER, { "Dépeçage", false, true, 60 } }
 	part = Z.Part("gathering")

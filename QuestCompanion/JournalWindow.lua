@@ -55,6 +55,7 @@ local FR = {
 	JRN_ITEM_GATHERED      = "récolté",
 	JRN_ITEM_TO_GATHER     = "à récolter (%d)",
 	JRN_ITEM_TO_GATHER_GRAY = "à récolter (gris)",
+	JRN_ITEM_GATHER_LOCKED = "compétence %d requise",
 	JRN_ITEM_NAMED         = "%s, %s",
 	JRN_EVO_STAGE          = "%s — %s (étape %d/%d)",
 	JRN_EVO_NEXT_LEVEL     = "Prochaine étape : %s au niveau %d (tu es niveau %d).",
@@ -120,6 +121,7 @@ local EN = {
 	JRN_ITEM_GATHERED      = "gathered",
 	JRN_ITEM_TO_GATHER     = "to gather (%d)",
 	JRN_ITEM_TO_GATHER_GRAY = "to gather (grey)",
+	JRN_ITEM_GATHER_LOCKED = "needs skill %d",
 	JRN_ITEM_NAMED         = "%s, %s",
 	JRN_EVO_STAGE          = "%s — %s (stage %d/%d)",
 	JRN_EVO_NEXT_LEVEL     = "Next stage: %s at level %d (you are level %d).",
@@ -215,12 +217,14 @@ local function GatheringItems(self, zoneID)
 	if not (self.GatheringZoneList and self.GatheringData) then return items end
 	local data = self:GatheringData()
 	-- zone préremplie (ZoneGathering_<client>.lua) : seulement ce qui y pousse
-	for _, entry in ipairs((self:GatheringZoneList(zoneID))) do
+	-- ce qui demande plus de compétence vient aussi, grisé, en fin de liste
+	for _, entry in ipairs((self:GatheringZoneList(zoneID, true))) do
 		local record = data[entry.itemID]
 		local done = record and type(record.zones) == "table" and (tonumber(record.zones[zoneID]) or 0) > 0
 		local todo = entry.grayed and L.JRN_ITEM_TO_GATHER_GRAY or self:F("JRN_ITEM_TO_GATHER", entry.req)
+		if entry.locked then todo = self:F("JRN_ITEM_GATHER_LOCKED", entry.req) end
 		items[#items + 1] = { name = entry.name, done = done == true, req = entry.req, itemID = entry.itemID,
-			detail = done and L.JRN_ITEM_GATHERED or todo }
+			locked = entry.locked and not done or nil, detail = done and L.JRN_ITEM_GATHERED or todo }
 	end
 	table.sort(items, function(a, b)
 		if a.done ~= b.done then return not a.done end
@@ -254,6 +258,11 @@ function ns:JournalActivityRows(zoneID, activity)
 				rows[#rows + 1] = { header = true, name = self:F("JRN_PART_HEAD", L[def.label] or def.label or def.id,
 					math.min(tonumber(part.have) or 0, part.need), part.need), ratio = (tonumber(part.have) or 0) / part.need }
 				for _, item in ipairs(PartItems(self, def, zoneID)) do rows[#rows + 1] = item end
+			elseif ok and part == nil and def.id == "gathering" then
+				-- rien à ta portée ici, mais des ressources pour plus tard : montrées, grisées
+				for _, item in ipairs(PartItems(self, def, zoneID)) do
+					if item.locked then rows[#rows + 1] = item end
+				end
 			end
 		end
 	end

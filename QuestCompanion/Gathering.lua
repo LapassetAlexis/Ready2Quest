@@ -443,8 +443,10 @@ end
 -- Ce que la zone t'offre à récolter (1.5.1) : herbes et minerais d'une zone
 -- connue que ta compétence permet (requise <= rang), même GRIS — un mineur
 -- confirmé finit aussi les zones de départ ; dépeçage et zones hors table :
--- ta tranche seule (sinon le monde entier). gray = true : plus de points.
-function ns:GatheringZoneList(zoneID)
+-- ta tranche seule (sinon le monde entier). grayed = true : plus de points.
+-- withLocked (1.5.5) : aussi ce qui pousse ici mais demande plus de
+-- compétence (locked = true) — montré dans la liste, jamais compté.
+function ns:GatheringZoneList(zoneID, withLocked)
 	local professions = self:GatheringProfessions()
 	local set = self:GatheringZoneSet(zoneID)
 	local list, profs = {}, {}
@@ -454,10 +456,12 @@ function ns:GatheringZoneList(zoneID)
 			local kept = 0
 			if set and ZONE_FILTERED[prof] then
 				for itemID, entry in pairs(Items()) do
-					if entry.prof == prof and entry.req <= rank and set[itemID] then
+					if entry.prof == prof and set[itemID] and (entry.req <= rank or withLocked) then
+						local locked = entry.req > rank
 						list[#list + 1] = { itemID = itemID, req = entry.req, gray = entry.gray,
-							grayed = rank >= entry.gray, name = self:GatheringItemName(itemID) }
-						kept = kept + 1
+							grayed = not locked and rank >= entry.gray, locked = locked or nil,
+							name = self:GatheringItemName(itemID) }
+						if not locked then kept = kept + 1 end
 					end
 				end
 			else

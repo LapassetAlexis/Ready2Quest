@@ -1,5 +1,11 @@
 # QuestCompanion
 
+## 1.5.5
+
+- **Métiers, tout ce que la zone offre** : la liste montre aussi les herbes et minerais de la zone que ta compétence ne permet pas encore, grisés en fin de liste avec la compétence requise (« compétence 155 requise »). Ils ne comptent pas dans le pourcentage. Une zone où rien n'est encore à ta portée les montre quand même.
+
+*English:* the Professions list also shows the zone's herbs and ores you can't gather yet, greyed with the skill they need (not counted).
+
 ## 1.5.4
 
 - **Souvenirs, de vrais décors de WoW** :
