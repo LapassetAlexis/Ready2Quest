@@ -745,7 +745,7 @@ local function BuildPreview(parent, content, x, y, height)
 	p.title:SetPoint("TOPLEFT", p, "TOPLEFT", 14, -PREVIEW_MODEL_H - 14)
 	if p.title.SetWordWrap then p.title:SetWordWrap(false) end
 	p.lines = {}
-	for index = 1, 5 do
+	for index = 1, 8 do
 		local line = Text(p, index == 1 and Theme.F_BODY or Theme.F_SMALL, index == 1 and Theme.LABEL or Theme.MUTED_LIGHT,
 			PREVIEW_W - 28)
 		if line.SetWordWrap then line:SetWordWrap(true) end
@@ -972,10 +972,14 @@ local function BuildEvolution(self, frame, content)
 		cell.onEnter = function(c) if c.def then Tip(c, L[c.def.label] or c.def.label, { L.JRN_EVO_LOOK_TIP }) end end
 		cell:SetScript("OnLeave", HideTip)
 		cell:SetScript("OnClick", function(c)
-			if c.def and ns:CompanionSetAppearance(c.def.id) then
+			if not c.def then return end
+			local function Done()
 				if ns.CompanionApplyModel then pcall(ns.CompanionApplyModel, ns) end
 				ns:RefreshJournal()
 			end
+			-- confirmation qui compare les effets (CompanionEffects.lua)
+			if ns.CompanionAskAppearance then ns:CompanionAskAppearance(c.def.id, Done)
+			elseif ns:CompanionSetAppearance(c.def.id) then Done() end
 		end)
 		pane.looks[index] = cell
 	end
@@ -1003,6 +1007,8 @@ local function BuildEvolution(self, frame, content)
 	pane.orns = {}
 	pane.ornNone = Text(pane, Theme.F_SMALL, Theme.MUTED, HALF)
 	At(pane.ornNone, content, rx, ddY - 66)
+	-- ses effets, sous les envies (CompanionEffects.lua)
+	if self.CompanionEffectsBuildPane then self:CompanionEffectsBuildPane(pane, content, 0, colY - 26 - 4 * EVO_STEP - 4, HALF) end
 end
 
 -- Collection : sortes en puces, grille d'objets (verrou pour ce qui n'est
@@ -1669,6 +1675,7 @@ local function RefreshEvolution(self, frame)
 	end
 	for index = count + 1, #pane.orns do pane.orns[index]:Hide() end
 	if count == 0 then pane.ornNone:SetText(L.JRN_EVO_ORN_NONE) else pane.ornNone:SetText("") end
+	if self.CompanionEffectsRefreshPane then self:CompanionEffectsRefreshPane(pane) end
 end
 
 local function RarityColor(entry)
@@ -1711,6 +1718,10 @@ function ns:JournalPreviewMenagerie(entry, keep)
 	local rank = L["CAPTURE_RANK_" .. tostring(entry.class or "normal")]
 	local lines = { self:F("JRN_MEN_RANK", rank, LevelText(entry)) }
 	if entry.zoneID then lines[#lines + 1] = self:F("JRN_MEN_ZONE", ZoneName(self, entry.zoneID)) end
+	-- « Chasse : … / Confort : … » de cette créature (CompanionEffects.lua)
+	if self.CompanionEffectsLines then
+		for _, line in ipairs(self:CompanionEffectsLines(entry, shinyView)) do lines[#lines + 1] = line end
+	end
 	if not entry.known then
 		lines[#lines + 1] = L.JRN_MEN_NEVER
 		PreviewSet(frame.men.preview, L.JRN_MEN_UNKNOWN, lines, {})
@@ -1736,7 +1747,8 @@ function ns:JournalPreviewMenagerie(entry, keep)
 		end
 		lines[#lines + 1] = current == id and L.JRN_MEN_EQUIPPED or L.JRN_MEN_EQUIP
 	else
-		local chance = self.CaptureChance and self:CaptureChance({ class = entry.class, level = entry.level or entry.lo }) or 0
+		local chance = self.CaptureChance and self:CaptureChance({ class = entry.class, level = entry.level or entry.lo,
+			type = entry.type, npcID = entry.npc, shiny = shinyView or nil }) or 0
 		if shinyView then
 			lines[#lines + 1] = self:F("JRN_MEN_SHINY_SEEN", Day(entry.shinySeen) or "?")
 		else
@@ -1766,11 +1778,17 @@ function ns:JournalMenagerieEquip(entry)
 	local wantShiny = preview and preview.entry and preview.entry.npc == entry.npc and preview.shiny == true
 	local hasNormal, hasShiny = entry.normal ~= false, entry.shiny == true
 	local shiny = (wantShiny and hasShiny) or (not hasNormal and hasShiny)
-	if not self:CompanionSetAppearance("cap:" .. tostring(entry.npc) .. (shiny and ":s" or "")) then return false end
-	if self.CompanionApplyModel then pcall(self.CompanionApplyModel, self) end
-	if self.RefreshOptions then pcall(self.RefreshOptions, self) end
-	self:RefreshJournal()
-	self:JournalPreviewMenagerie(entry)
+	local id = "cap:" .. tostring(entry.npc) .. (shiny and ":s" or "")
+	local function Done()
+		if self.CompanionApplyModel then pcall(self.CompanionApplyModel, self) end
+		if self.RefreshOptions then pcall(self.RefreshOptions, self) end
+		self:RefreshJournal()
+		self:JournalPreviewMenagerie(entry)
+	end
+	-- confirmation qui compare les effets (CompanionEffects.lua)
+	if self.CompanionAskAppearance then return self:CompanionAskAppearance(id, Done) ~= nil end
+	if not self:CompanionSetAppearance(id) then return false end
+	Done()
 	return true
 end
 
