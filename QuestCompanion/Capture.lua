@@ -239,11 +239,18 @@ function ns:CaptureData()
 	-- 1.6.0 : deux versions par espèce, la normale (normal, at) et la
 	-- brillante (shiny, shinyAt). Avant, capturer la brillante remplaçait la
 	-- fiche : elle devient la version brillante, la normale reste à capturer.
-	for _, entry in pairs(capture.creatures) do
-		if type(entry) == "table" and entry.normal == nil then
-			entry.normal = not entry.shiny
-			if entry.shiny and not entry.shinyAt then entry.shinyAt = entry.at end
+	-- Pas à chaque lecture : CaptureData est lue dans des boucles chaudes
+	-- (CaptureHas, CaptureStars). Le parcours ne se refait que si le nombre
+	-- d'espèces a bougé depuis le dernier (pairN) ; les fiches écrites par
+	-- l'addon ont toujours `normal`.
+	if capture.pairN ~= capture.count then
+		for _, entry in pairs(capture.creatures) do
+			if type(entry) == "table" and entry.normal == nil then
+				entry.normal = not entry.shiny
+				if entry.shiny and not entry.shinyAt then entry.shinyAt = entry.at end
+			end
 		end
+		capture.pairN = capture.count
 	end
 	data.capture = capture
 	return capture

@@ -396,6 +396,74 @@ do
 	Check("[QC2CAP] /qc filet sans rien : le dit", printed[1] == NS.L.CAPTURE_Q_NOTHING, printed[1])
 end
 
+-- 7 ter. Coût : lectures des captures, horloge de la file -----------------------------------------------------
+do
+	Say("-- qc2 capture : coût des lectures")
+	Q.Reset()
+	NS:CompanionData().capture = { creatures = { [21] = { name = "Ancienne brillante", at = 5, shiny = true } }, count = 1 }
+	local data = NS:CaptureData()
+	Check("[QC2CAP] migration 1.6.0 faite une fois, repère posé", data.creatures[21].normal == false and data.pairN == 1)
+	data.creatures[22] = { name = "Sans version", at = 6 }
+	NS:CaptureData()
+	Check("[QC2CAP] … pas refaite à chaque lecture", data.creatures[22].normal == nil)
+	data.count = 2
+	NS:CaptureData()
+	Check("[QC2CAP] … refaite quand le nombre d'espèces bouge", data.creatures[22].normal == true)
+	-- la Ménagerie lit les fiches directement (pas un CaptureStars par espèce)
+	local calls, stars = 0, NS.CaptureStars
+	NS.CaptureStars = function(...) calls = calls + 1; return stars(...) end
+	NS:MenagerieList({ zone = "all" })
+	NS.CaptureStars = stars
+	Check("[QC2CAP] MenagerieList : étoiles sans CaptureStars par espèce", calls == 0, calls)
+	-- horloge : le tri ne se refait pas dix fois par seconde
+	Q.Reset()
+	Q.SeeKill(4900, { name = "Lièvre" })
+	Q.SeeKill(4901, { name = "Renard" })
+	local prunes, prune = 0, NS.CaptureQueuePrune
+	NS.CaptureQueuePrune = function(...) prunes = prunes + 1; return prune(...) end
+	local t0 = NS.Now()
+	NS:CaptureTick(t0)
+	prunes = 0
+	for step = 1, 9 do NS:CaptureTick(t0 + step * 0.1) end
+	Check("[QC2CAP] horloge : pas de tri à chaque passage sans changement", prunes == 0, prunes)
+	NS:CaptureTick(t0 + 1.05)
+	Check("[QC2CAP] … une fois par seconde au plus", prunes == 1, prunes)
+	local capture = NS:CaptureData()
+	capture.serial = (tonumber(capture.serial) or 0) + 1
+	NS:CaptureTick(t0 + 1.1)
+	Check("[QC2CAP] … et dès que les captures changent", prunes == 2, prunes)
+	local expires = NS:CaptureQueueState()[1].expires
+	NS:CaptureTick(expires + 0.05)
+	NS.CaptureQueuePrune = prune
+	Check("[QC2CAP] … un candidat au bout de son temps sort tout de suite", #NS:CaptureQueueState() == 0)
+end
+
+-- 7 quater. Date de première capture : figée --------------------------------------------------------------------
+do
+	Say("-- qc2 capture : première capture")
+	Q.Reset()
+	Mock:Reset()
+	Q.SeeKill(4950, { name = "Biche", spawn = "B1" })
+	Q.Roll(0)
+	NS:CaptureThrow()
+	Q.Settle()
+	local capture = NS:CaptureData()
+	local entry = capture.creatures[4950]
+	local first = entry.firstAt
+	Check("[QC2CAP] première capture : date gardée (espèce et ménagerie)", first ~= nil and first == entry.at
+		and capture.firstAt == first)
+	NS:CaptureGrant("sifflet", { quiet = true, silent = true })
+	NS:CaptureToggleAid("sifflet")
+	Mock:Advance(500)
+	Q.SeeKill(4950, { name = "Biche", spawn = "B2" })
+	Q.Roll(0.97)
+	NS:CaptureThrow()
+	Q.Settle()
+	Check("[QC2CAP] recapture meilleure : at bouge, la première date non", entry.stars == 3 and entry.at ~= first
+		and entry.firstAt == first and capture.firstAt == first and NS:CaptureEarliestAt() == first,
+		tostring(entry.stars) .. " " .. tostring(entry.at) .. " " .. tostring(first) .. " " .. tostring(entry.firstAt) .. " " .. tostring(capture.firstAt))
+end
+
 -- 8. Textes, réglage ----------------------------------------------------------------------------------------
 do
 	Say("-- qc2 capture : textes")

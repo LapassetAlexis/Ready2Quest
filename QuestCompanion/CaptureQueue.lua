@@ -127,9 +127,10 @@ do
 	end
 end
 
--- 1 à 3, ou nil si cette version n'est pas capturée
-function ns:CaptureStars(npcID, shiny)
-	local entry = self:CaptureData().creatures[tonumber(npcID) or npcID]
+local EarliestAt
+
+-- Étoiles d'une fiche (sans relire les données) : 1 à 3, ou nil
+local function EntryStars(entry, shiny)
 	if type(entry) ~= "table" then return nil end
 	local stars
 	if shiny then
@@ -140,6 +141,11 @@ function ns:CaptureStars(npcID, shiny)
 		stars = entry.stars
 	end
 	return math.max(1, math.min(ns.CAPTURE_STAR_MAX, math.floor(tonumber(stars) or 1)))
+end
+
+-- 1 à 3, ou nil si cette version n'est pas capturée
+function ns:CaptureStars(npcID, shiny)
+	return EntryStars(self:CaptureData().creatures[tonumber(npcID) or npcID], shiny)
 end
 
 -- La qualité d'une capture : 1, 2 ou 3 étoiles (CAPTURE_STAR_ODDS)
@@ -174,10 +180,12 @@ do
 		function ns:MenagerieList(...)
 			local list, stats = base(self, ...)
 			local creatures = self:CaptureData().creatures
+			-- la fiche lue directement : pas de CaptureData par espèce
 			for _, item in ipairs(list or {}) do
-				if item.captured and creatures[item.npc] then
-					item.stars = self:CaptureStars(item.npc, false)
-					item.shinyStars = self:CaptureStars(item.npc, true)
+				local entry = item.captured and creatures[item.npc]
+				if type(entry) == "table" then
+					item.stars = EntryStars(entry, false)
+					item.shinyStars = EntryStars(entry, true)
 				end
 			end
 			return list, stats
@@ -219,20 +227,26 @@ local function Better(a, b)
 end
 
 -- Remet la file à jour : raisons recalculées (une capture a pu changer la
--- donne), expirés et sans intérêt retirés, tri. Renvoie la file.
+-- donne), expirés et sans intérêt retirés, tri. Sur place, sans table
+-- nouvelle. Renvoie la file.
 function ns:CaptureQueuePrune(now)
 	local queue = self:CaptureQueueState()
 	now = now or Clock()
-	local kept = {}
-	for _, candidate in ipairs(queue) do
+	local kept = 0
+	for index = 1, #queue do
+		local candidate = queue[index]
 		candidate.reason = self:CaptureQueueReason(candidate)
 		candidate.have = self:CaptureStars(candidate.npcID, candidate.shiny and true or false)
-		if candidate.reason and not (candidate.expires and now > candidate.expires) then kept[#kept + 1] = candidate end
+		if candidate.reason and not (candidate.expires and now > candidate.expires) then
+			kept = kept + 1
+			queue[kept] = candidate
+		end
 	end
-	table.sort(kept, Better)
-	while #kept > ns.CAPTURE_QUEUE_MAX do table.remove(kept) end
-	for index = #queue, 1, -1 do queue[index] = nil end
-	for index, candidate in ipairs(kept) do queue[index] = candidate end
+	for index = #queue, kept + 1, -1 do queue[index] = nil end
+	table.sort(queue, Better)
+	for index = #queue, ns.CAPTURE_QUEUE_MAX + 1, -1 do queue[index] = nil end
+	local state = self:CaptureState()
+	state.queuePrunedAt, state.queuePrunedSerial = now, self:CaptureData().serial
 	return queue
 end
 
@@ -361,6 +375,31 @@ do
 	end
 end
 
+-- Première date d'une fiche (firstAt, sinon la plus ancienne de at / shinyAt)
+function EarliestAt(entry)
+	if type(entry) ~= "table" then return nil end
+	local first = tonumber(entry.firstAt)
+	if first and first > 0 then return first end
+	for _, at in ipairs({ tonumber(entry.at) or false, tonumber(entry.shinyAt) or false }) do
+		if at and at > 0 and (not first or at < first) then first = at end
+	end
+	return first
+end
+
+-- Date de la toute première capture : capture.firstAt (posée à la capture
+-- suivante, puis figée), sinon la plus ancienne des fiches
+function ns:CaptureEarliestAt()
+	local capture = self:CaptureData()
+	local first = tonumber(capture.firstAt)
+	if first and first > 0 then return first end
+	first = nil
+	for _, entry in pairs(capture.creatures) do
+		local at = EarliestAt(entry)
+		if at and (not first or at < first) then first = at end
+	end
+	return first
+end
+
 -- Le verdict : étoiles tirées, meilleur spécimen gardé
 do
 	local base = ns.CaptureResolve
@@ -373,13 +412,20 @@ do
 		end
 		local shiny = target.shiny and true or false
 		local before = self:CaptureStars(target.npcID, shiny)
-		local old = self:CaptureData().creatures[target.npcID]
+		local capture = self:CaptureData()
+		local old = capture.creatures[target.npcID]
 		local oldAt = old and (shiny and old.shinyAt or old.at)
+		-- dates de première capture (de l'espèce, de la ménagerie) : une
+		-- recapture meilleure remplace `at`, elles ne bougent plus
+		local oldFirst = EarliestAt(old)
+		if not tonumber(capture.firstAt) then capture.firstAt = ns:CaptureEarliestAt() end
 		rolling.stars = rolling.stars or self:CaptureRollStars()
 		rolling.starsBefore = before
 		local result = base(self, rolling)
 		local entry = self:CaptureData().creatures[target.npcID]
 		if entry then
+			entry.firstAt = oldFirst or EarliestAt(entry)
+			if not tonumber(capture.firstAt) then capture.firstAt = entry.firstAt end
 			local better = before == nil or rolling.stars > before
 			local best = math.max(before or 0, rolling.stars)
 			if shiny then entry.shinyStars = best else entry.stars = best end
@@ -406,7 +452,11 @@ do
 	end
 end
 
--- Horloge (Capture.lua) : la file aussi (fin du combat, temps écoulé)
+-- Horloge (Capture.lua, 10 fois par seconde) : la file aussi (fin du
+-- combat, temps écoulé). Le tri ne se refait que si quelque chose a bougé
+-- (compte lancé, captures, un candidat arrivé au bout de son temps), et au
+-- plus tard une fois par seconde ; rien n'est alloué à chaque passage.
+ns.CAPTURE_QUEUE_PRUNE_GAP = 1
 do
 	local base = ns.CaptureTick
 	function ns:CaptureTick(now)
@@ -414,11 +464,22 @@ do
 		local state = self.captureState
 		local queue = state and state.queue
 		if not (queue and #queue > 0) then return end
+		now = now or Clock()
 		local changed = false
 		if not InCombat() and self:CaptureQueueStartTimers(now) then changed = true end
-		local before = #queue
-		self:CaptureQueuePrune(now)
-		if #queue ~= before then changed = true end
+		local due = changed or state.queuePrunedSerial ~= self:CaptureData().serial or not state.queuePrunedAt
+			or now - state.queuePrunedAt >= ns.CAPTURE_QUEUE_PRUNE_GAP or now < state.queuePrunedAt
+		if not due then
+			for index = 1, #queue do
+				local expires = queue[index].expires
+				if expires and now > expires then due = true; break end
+			end
+		end
+		if due then
+			local before = #queue
+			self:CaptureQueuePrune(now)
+			if #queue ~= before then changed = true end
+		end
 		if changed then self:CaptureQueueRefresh() end
 		if self.captureQueueList and self.captureQueueList:IsShown() then self:CaptureRefreshQueueList(now) end
 	end
