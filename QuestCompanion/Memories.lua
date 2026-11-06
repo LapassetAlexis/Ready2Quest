@@ -113,7 +113,7 @@ local EN = {
 	MEM_ANNIV_ny           = "%d years",
 }
 ns.RegisterStrings(FR, EN)
-ns.MEMORY_STRINGS = { fr = FR, en = EN }
+if ns.KEEP_STRINGS then ns.MEMORY_STRINGS = { fr = FR, en = EN } end
 
 ns.RegisterDefaults({
 	companionPhotos = false,      -- accord du joueur : demandé une fois, au premier grand moment

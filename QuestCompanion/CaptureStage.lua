@@ -65,7 +65,7 @@ local EN = {
 	OPT_DAILY_CAPTURE_ANIM = "Animated capture",
 }
 ns.RegisterStrings(FR, EN)
-ns.CAPTURE_STAGE_STRINGS = { fr = FR, en = EN }
+if ns.KEEP_STRINGS then ns.CAPTURE_STAGE_STRINGS = { fr = FR, en = EN } end
 
 ns.RegisterDefaults({ companionCaptureAnim = true })
 if type(ns.DAILY_OPTION_ROWS) == "table" then

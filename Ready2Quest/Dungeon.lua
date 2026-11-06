@@ -73,7 +73,7 @@ local EN = {
 	DGN_CHAT_BLUEPRINTS = "Advanced Blueprints: %s",
 }
 ns.RegisterStrings(FR, EN)
-ns.DUNGEON_STRINGS = { fr = FR, en = EN }   -- exposé aux tests (parité fr/en)
+if ns.KEEP_STRINGS then ns.DUNGEON_STRINGS = { fr = FR, en = EN } end   -- exposé aux tests (parité fr/en)
 
 ns.RegisterDefaults({
 	dungeonEnabled    = true,   -- module « Avant le donjon »

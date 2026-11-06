@@ -21,15 +21,17 @@ if ns.IsForeverClient and ns:IsForeverClient() ~= true then return end
 -- Créatures combattables en extérieur : ni bestioles, ni PNJ techniques, ni PNJ
 -- amicaux envers les deux factions, ni événements saisonniers (voir le script).
 
+-- Chargement paresseux : une fonction par zone, construite à sa première lecture
+-- (ns.LazyZones, Core.lua) ; parcourir avec ns.ZoneIds / ns.ZoneEach, pas pairs.
+
 local function C(lo, hi, rank, fr, en, f)
 	return { lvl = { lo, hi }, rank = rank, fr = fr, en = en, f = f }
 end
 
 local Z = {}
-ns.ZONE_CREATURES = Z
 
 -- Durotar
-Z[1411] = {
+Z[1411] = function() return {
 [3098]=C(1,2,0,"Sanglier tacheté","Mottled Boar"),
 [3099]=C(6,7,0,"Sanglier tacheté redoutable","Dire Mottled Boar"),
 [3100]=C(8,9,0,"Ancien sanglier tacheté","Elder Mottled Boar"),
@@ -118,9 +120,9 @@ Z[1411] = {
 [276194]=C(12,12,4,"Dustwind Eggtender","Dustwind Eggtender"),
 [276198]=C(9,9,4,"Shal'ma","Shal'ma"),
 [276801]=C(1,2,0,"Swift Orange Raptor","Swift Orange Raptor"),
-}
+} end
 -- Mulgore
-Z[1412] = {
+Z[1412] = function() return {
 [2949]=C(5,6,0,"Tanneur crin-pâle","Palemane Tanner"),
 [2950]=C(6,7,0,"Ecorcheur crin-pâle","Palemane Skinner"),
 [2951]=C(7,8,0,"Braconnier crin-pâle","Palemane Poacher"),
@@ -190,9 +192,9 @@ Z[1412] = {
 [276105]=C(12,12,4,"Stormherald Ukta","Stormherald Ukta"),
 [276108]=C(12,12,4,"Thornstarter Igleg","Thornstarter Igleg"),
 [276109]=C(10,10,4,"Snarlsnout","Snarlsnout"),
-}
+} end
 -- The Barrens
-Z[1413] = {
+Z[1413] = function() return {
 [3110]=C(9,11,0,"Crocilisque Gueule-d'effroi","Dreadmaw Crocolisk"),
 [3231]=C(11,12,0,"Crocilisque Gueule-d'effroi corrompu","Corrupted Dreadmaw Crocolisk"),
 [3234]=C(14,15,0,"Kodo égaré des Tarides","Lost Barrens Kodo"),
@@ -401,9 +403,9 @@ Z[1413] = {
 [274740]=C(22,22,0,"Kitzy Werkblaster","Kitzy Werkblaster","H"),
 [274845]=C(20,20,0,"Pallwick Boneset","Pallwick Boneset","H"),
 [275276]=C(55,55,1,"Nizook Boof","Nizook Boof"),
-}
+} end
 -- Alterac Mountains
-Z[1416] = {
+Z[1416] = function() return {
 [1958]=C(17,18,0,"Maître des flots Aileron noir","Vile Fin Tidecaller"),
 [2240]=C(32,33,0,"Détrousseur du Syndicat","Syndicate Footpad"),
 [2241]=C(33,34,0,"Larron du Syndicat","Syndicate Thief"),
@@ -517,9 +519,9 @@ Z[1416] = {
 [275356]=C(26,26,0,"Arcane Familiar","Arcane Familiar"),
 [276215]=C(55,55,0,"Kirin Tor Enforcer","Kirin Tor Enforcer","A"),
 [276235]=C(60,60,0,"Archmage Modera","Archmage Modera","A"),
-}
+} end
 -- Arathi Highlands
-Z[1417] = {
+Z[1417] = function() return {
 [1418]=C(28,29,0,"Ecumeur Branchie-bleue","Bluegill Raider"),
 [2552]=C(30,31,0,"Troll Witherbark","Witherbark Troll"),
 [2553]=C(31,32,0,"Exhalombre Witherbark","Witherbark Shadowcaster"),
@@ -611,9 +613,9 @@ Z[1417] = {
 [257296]=C(36,36,0,"Muggol Breezebeard","Muggol Breezebeard"),
 [259023]=C(37,37,0,"Veyric Thunderhame","Veyric Thunderhame"),
 [264850]=C(20,30,0,"Hawk","Hawk"),
-}
+} end
 -- Badlands
-Z[1418] = {
+Z[1418] = function() return {
 [92]=C(39,40,0,"Elémentaire de roche","Rock Elemental"),
 [2701]=C(38,39,0,"Ogre Crache-poussières","Dustbelcher Ogre"),
 [2715]=C(39,40,0,"Brute Crache-poussières","Dustbelcher Brute"),
@@ -674,9 +676,9 @@ Z[1418] = {
 [165189]=C(7,30,0,"Cat","Cat"),
 [213795]=C(40,40,0,"Gharrik","Gharrik"),
 [218931]=C(41,41,0,"Dark Rider","Dark Rider"),
-}
+} end
 -- Blasted Lands
-Z[1419] = {
+Z[1419] = function() return {
 [5974]=C(45,46,0,"Ogre Cognepeur","Dreadmaul Ogre"),
 [5975]=C(46,47,0,"Ogre-mage Cognepeur","Dreadmaul Ogre Mage"),
 [5976]=C(46,47,0,"Brute Cognepeur","Dreadmaul Brute"),
@@ -740,9 +742,9 @@ Z[1419] = {
 [221740]=C(50,50,0,"Calefactus the Unleashed","Calefactus the Unleashed"),
 [223544]=C(45,48,0,"Fel Interloper","Fel Interloper"),
 [228414]=C(56,56,0,"Heliath","Heliath"),
-}
+} end
 -- Tirisfal Glades
-Z[1420] = {
+Z[1420] = function() return {
 [1501]=C(1,1,0,"Zombie lunatique","Mindless Zombie"),
 [1502]=C(1,2,0,"Zombie décharné","Wretched Zombie"),
 [1504]=C(2,3,0,"Jeune Tisse-nuit","Young Night Web Spider"),
@@ -874,9 +876,9 @@ Z[1420] = {
 [276110]=C(55,55,0,"Knight of Mourning","Knight of Mourning","H"),
 [277730]=C(8,9,0,"Rabid Forest Wolf","Rabid Forest Wolf"),
 [277882]=C(12,13,0,"Foothills Duskbat","Foothills Duskbat"),
-}
+} end
 -- Silverpine Forest
-Z[1421] = {
+Z[1421] = function() return {
 [1765]=C(10,11,0,"Worg","Worg"),
 [1766]=C(11,12,0,"Worg chamarré","Mottled Worg"),
 [1767]=C(12,13,0,"Déchiqueteur Aileron noir","Vile Fin Shredder"),
@@ -973,9 +975,9 @@ Z[1421] = {
 [268707]=C(1,20,0,"Prairie Wolf Pup","Prairie Wolf Pup"),
 [271368]=C(1,22,0,"Shadowgale Squirrel","Shadowgale Squirrel"),
 [277882]=C(12,13,0,"Foothills Duskbat","Foothills Duskbat"),
-}
+} end
 -- Western Plaguelands
-Z[1422] = {
+Z[1422] = function() return {
 [1783]=C(50,51,0,"Ecorcheur Squelette","Skeletal Flayer"),
 [1784]=C(51,52,0,"Ensorceleur Squelette","Skeletal Sorcerer"),
 [1785]=C(52,54,0,"Terreur Squelette","Skeletal Terror"),
@@ -1053,9 +1055,9 @@ Z[1422] = {
 [12387]=C(56,57,0,"Grande gelée maléfique","Large Vile Slime"),
 [232912]=C(55,55,0,"Ada Darkhardt","Ada Darkhardt","A"),
 [262033]=C(60,60,0,"Suspicious Adventurer","Suspicious Adventurer"),
-}
+} end
 -- Eastern Plaguelands
-Z[1423] = {
+Z[1423] = function() return {
 [6547]=C(25,25,0,"Victime agonisante","Suffering Victim","H"),
 [8519]=C(54,55,0,"Fléau","Blighted Surge"),
 [8520]=C(55,56,0,"Ravageur de la peste","Plague Ravager"),
@@ -1151,9 +1153,9 @@ Z[1423] = {
 [15712]=C(60,60,0,"Tas de terre","Dirt Mound"),
 [16117]=C(60,60,0,"Pourceau pestiféré","Plagued Swine"),
 [16184]=C(60,60,1,"Surveillant nérubien","Nerubian Overseer"),
-}
+} end
 -- Hillsbrad Foothills
-Z[1424] = {
+Z[1424] = function() return {
 [232]=C(23,23,0,"Ray le fermier","Farmer Ray","A"),
 [2244]=C(21,22,0,"Mage de l'ombre du Syndicat","Syndicate Shadow Mage"),
 [2248]=C(30,31,0,"Yéti des grottes","Cave Yeti"),
@@ -1244,9 +1246,9 @@ Z[1424] = {
 [275089]=C(55,55,0,"Tarren Mill Elite","Tarren Mill Elite"),
 [275164]=C(30,55,1,"Arcane Sentry","Arcane Sentry","A"),
 [276316]=C(31,31,0,"Raul Sweete","Raul Sweete"),
-}
+} end
 -- The Hinterlands
-Z[1425] = {
+Z[1425] = function() return {
 [2505]=C(49,50,0,"Gueule d'acier des mers","Saltwater Snapjaw"),
 [2639]=C(45,46,0,"Lanceur de haches Vilebranch","Vilebranch Axe Thrower"),
 [2640]=C(46,47,0,"Sorcier-docteur Vilebranch","Vilebranch Witch Doctor"),
@@ -1337,9 +1339,9 @@ Z[1425] = {
 [222407]=C(47,47,0,"Enraged Leywalker","Enraged Leywalker"),
 [222978]=C(50,50,0,"Green Sludge","Green Sludge"),
 [223591]=C(1,1,0,"Echo of a Lost Soul","Echo of a Lost Soul"),
-}
+} end
 -- Dun Morogh
-Z[1426] = {
+Z[1426] = function() return {
 [704]=C(2,2,0,"Loup des bois décharné","Ragged Timber Wolf"),
 [705]=C(1,1,0,"Jeune loup décharné","Ragged Young Wolf"),
 [706]=C(3,4,0,"Jeune troll Frostmane","Frostmane Troll Whelp"),
@@ -1424,9 +1426,9 @@ Z[1426] = {
 [276083]=C(30,30,0,"Mountaineer Stoneanvil","Mountaineer Stoneanvil","A"),
 [276111]=C(10,10,4,"Ghostfang","Ghostfang"),
 [278166]=C(6,6,0,"Mountaineer Cornelius","Mountaineer Cornelius","A"),
-}
+} end
 -- Searing Gorge
-Z[1427] = {
+Z[1427] = function() return {
 [5833]=C(48,48,1,"Margol l'Enragée","Margol the Rager"),
 [5839]=C(43,44,0,"Géologue Sombrefer","Dark Iron Geologist"),
 [5840]=C(46,47,0,"Forge-vapeur Sombrefer","Dark Iron Steamsmith"),
@@ -1475,9 +1477,9 @@ Z[1427] = {
 [228726]=C(55,56,0,"Flamebringer Elementalist","Flamebringer Elementalist"),
 [228727]=C(55,56,0,"Flamebringer Defender","Flamebringer Defender"),
 [228747]=C(55,56,0,"Flamebringer Stalker","Flamebringer Stalker"),
-}
+} end
 -- Burning Steppes
-Z[1428] = {
+Z[1428] = function() return {
 [7025]=C(55,56,0,"Soldat Blackrock","Blackrock Soldier"),
 [7026]=C(55,56,0,"Sorcier Blackrock","Blackrock Sorcerer"),
 [7027]=C(56,57,0,"Pourfendeur Blackrock","Blackrock Slayer"),
@@ -1528,9 +1530,9 @@ Z[1428] = {
 [10119]=C(60,60,2,"Volchan","Volchan"),
 [14388]=C(50,51,1,"Drake noir insoumis","Rogue Black Drake"),
 [16043]=C(58,60,0,"Seigneur-magma Bokk","Magma Lord Bokk"),
-}
+} end
 -- Elwynn Forest
-Z[1429] = {
+Z[1429] = function() return {
 [6]=C(1,2,0,"Vermine kobold","Kobold Vermin"),
 [30]=C(5,6,0,"Araignée forestière","Forest Spider"),
 [38]=C(3,4,0,"Nervi défias","Defias Thug"),
@@ -1603,9 +1605,9 @@ Z[1429] = {
 [274909]=C(5,5,0,"Eviatar Achitov","Eviatar Achitov","A"),
 [276180]=C(11,11,4,"Elder Finseer","Elder Finseer"),
 [276189]=C(10,10,4,"Matriarch Bristlefur","Matriarch Bristlefur"),
-}
+} end
 -- Deadwind Pass
-Z[1430] = {
+Z[1430] = function() return {
 [7369]=C(55,56,0,"Brute de Deuillevent","Deadwind Brute"),
 [7370]=C(58,60,0,"Ame errante","Restless Shade"),
 [7371]=C(56,57,0,"Marteleur de Deuillevent","Deadwind Mauler"),
@@ -1619,9 +1621,9 @@ Z[1430] = {
 [165189]=C(7,30,0,"Cat","Cat"),
 [218931]=C(41,41,0,"Dark Rider","Dark Rider"),
 [276246]=C(60,60,1,"Mistmantle Prowler","Mistmantle Prowler"),
-}
+} end
 -- Duskwood
-Z[1431] = {
+Z[1431] = function() return {
 [3]=C(24,25,0,"Dévoreur","Flesh Eater"),
 [48]=C(21,22,0,"Guerrier squelette","Skeletal Warrior"),
 [202]=C(23,24,0,"Squelette infernal","Skeletal Horror"),
@@ -1716,9 +1718,9 @@ Z[1431] = {
 [272291]=C(25,25,0,"Lost Knight","Lost Knight"),
 [276246]=C(60,60,1,"Mistmantle Prowler","Mistmantle Prowler"),
 [277645]=C(22,23,0,"Gray Fox","Gray Fox"),
-}
+} end
 -- Loch Modan
-Z[1432] = {
+Z[1432] = function() return {
 [1155]=C(15,15,0,"Kelt Thomasin","Kelt Thomasin","A"),
 [1161]=C(11,12,0,"Trogg Brisepierre","Stonesplinter Trogg"),
 [1162]=C(11,12,0,"Eclaireur Brisepierre","Stonesplinter Scout"),
@@ -1779,9 +1781,9 @@ Z[1432] = {
 [209958]=C(18,18,0,"Graix","Graix"),
 [269185]=C(15,17,0,"Headsplitter","Headsplitter"),
 [270693]=C(15,15,0,"Daggerfang","Daggerfang"),
-}
+} end
 -- Redridge Mountains
-Z[1433] = {
+Z[1433] = function() return {
 [334]=C(26,26,1,"Gath'Ilzogg","Gath'Ilzogg"),
 [335]=C(24,24,1,"Roussi","Singe"),
 [345]=C(24,24,0,"Fouailleventre","Bellygrub"),
@@ -1851,9 +1853,9 @@ Z[1433] = {
 [256739]=C(60,60,0,"Crate of Blacksmithing Goods","Crate of Blacksmithing Goods"),
 [264850]=C(20,30,0,"Hawk","Hawk"),
 [271898]=C(18,19,0,"Greater Tarantula","Greater Tarantula"),
-}
+} end
 -- Stranglethorn Vale
-Z[1434] = {
+Z[1434] = function() return {
 [587]=C(33,34,0,"Guerrier Bloodscalp","Bloodscalp Warrior"),
 [588]=C(34,35,0,"Eclaireur Bloodscalp","Bloodscalp Scout"),
 [595]=C(34,35,0,"Chasseur Bloodscalp","Bloodscalp Hunter"),
@@ -2015,9 +2017,9 @@ Z[1434] = {
 [267806]=C(50,50,0,"\"Flipfin\"","\"Flipfin\""),
 [269175]=C(36,38,0,"Carnivorous Weed","Carnivorous Weed"),
 [274931]=C(55,55,0,"Elril Everlight","Elril Everlight"),
-}
+} end
 -- Swamp of Sorrows
-Z[1435] = {
+Z[1435] = function() return {
 [740]=C(34,35,0,"Jeune dragonnet","Adolescent Whelp"),
 [741]=C(35,36,0,"Dragonnet rêveur","Dreaming Whelp"),
 [742]=C(41,42,0,"Wyrmide vert","Green Wyrmkin"),
@@ -2077,9 +2079,9 @@ Z[1435] = {
 [223591]=C(1,1,0,"Echo of a Lost Soul","Echo of a Lost Soul"),
 [271636]=C(1,1,0,"Weevil K. Neevil","Weevil K. Neevil"),
 [275088]=C(55,55,0,"Enraged Stonard Grunt","Enraged Stonard Grunt"),
-}
+} end
 -- Westfall
-Z[1436] = {
+Z[1436] = function() return {
 [36]=C(11,12,0,"Golem des moissons","Harvest Golem"),
 [95]=C(11,12,0,"Contrebandier défias","Defias Smuggler"),
 [98]=C(17,18,0,"Sous-chef Rivepatte","Riverpaw Taskmaster"),
@@ -2165,9 +2167,9 @@ Z[1436] = {
 [272310]=C(1,1,0,"Mocha","Mocha"),
 [272614]=C(1,1,0,"Cappy","Cappy"),
 [274081]=C(1,1,0,"Princess","Princess"),
-}
+} end
 -- Wetlands
-Z[1437] = {
+Z[1437] = function() return {
 [1007]=C(20,21,0,"Gnoll Poil-moussu","Mosshide Gnoll"),
 [1008]=C(21,22,0,"Bâtard Poil-moussu","Mosshide Mongrel"),
 [1009]=C(22,23,0,"Tisseur de brumes Poil-moussu","Mosshide Mistweaver"),
@@ -2278,9 +2280,9 @@ Z[1437] = {
 [271481]=C(28,28,1,"Captive Fire Elemental","Captive Fire Elemental"),
 [272914]=C(1,1,0,"Cat","Cat"),
 [272944]=C(1,1,0,"Dog","Dog"),
-}
+} end
 -- Teldrassil
-Z[1438] = {
+Z[1438] = function() return {
 [1984]=C(1,2,0,"Jeune sanglier des chardons","Young Thistle Boar"),
 [1985]=C(2,3,0,"Sanglier des chardons","Thistle Boar"),
 [1986]=C(3,4,0,"Araignée Tissebois","Webwood Spider"),
@@ -2358,9 +2360,9 @@ Z[1438] = {
 [275708]=C(9,10,0,"Blooming Lasher","Blooming Lasher","A"),
 [276099]=C(8,8,4,"Wrathvine","Wrathvine","A"),
 [276101]=C(10,10,4,"Nightscreech","Nightscreech","A"),
-}
+} end
 -- Darkshore
-Z[1439] = {
+Z[1439] = function() return {
 [2069]=C(14,15,0,"Traquelune","Moonstalker"),
 [2070]=C(16,17,0,"Traquelune chétif","Moonstalker Runt"),
 [2071]=C(19,20,0,"Matriarche traquelune","Moonstalker Matriarch"),
@@ -2459,9 +2461,9 @@ Z[1439] = {
 [270298]=C(10,12,0,"Child of Jai'vhanel","Child of Jai'vhanel","A"),
 [271368]=C(1,22,0,"Shadowgale Squirrel","Shadowgale Squirrel"),
 [271903]=C(19,20,0,"Stormscale Beastmistress","Stormscale Beastmistress"),
-}
+} end
 -- Ashenvale
-Z[1440] = {
+Z[1440] = function() return {
 [3664]=C(24,24,0,"Ilkrud Magthrull","Ilkrud Magthrull"),
 [3696]=C(30,30,0,"Ran Dent-rouge","Ran Bloodtooth"),
 [3711]=C(20,21,0,"Myrmidon Irequeue","Wrathtail Myrmidon"),
@@ -2644,9 +2646,9 @@ Z[1440] = {
 [267214]=C(28,28,0,"Va'xug Firefure","Va'xug Firefure"),
 [271181]=C(24,27,0,"Eye of Kilrogg","Eye of Kilrogg"),
 [271915]=C(1,1,0,"Jungle Boa","Jungle Boa"),
-}
+} end
 -- Thousand Needles
-Z[1441] = {
+Z[1441] = function() return {
 [4093]=C(25,26,0,"Querelleur galak","Galak Wrangler"),
 [4094]=C(24,25,0,"Eclaireur galak","Galak Scout"),
 [4095]=C(27,28,0,"Marteleur galak","Galak Mauler"),
@@ -2728,9 +2730,9 @@ Z[1441] = {
 [218871]=C(37,37,0,"Death's Head Cultist","Death's Head Cultist"),
 [264850]=C(20,30,0,"Hawk","Hawk"),
 [270094]=C(30,30,1,"Stormheart","Stormheart"),
-}
+} end
 -- Stonetalon Mountains
-Z[1442] = {
+Z[1442] = function() return {
 [2676]=C(40,41,0,"Moissonneur compact","Compact Harvest Reaper"),
 [3988]=C(19,20,0,"Opérateur de la KapitalRisk","Venture Co. Operator"),
 [3989]=C(18,19,0,"Déboiseur de la KapitalRisk","Venture Co. Logger"),
@@ -2821,9 +2823,9 @@ Z[1442] = {
 [269138]=C(1,1,0,"White Riding Kodo","White Riding Kodo"),
 [269140]=C(1,1,0,"Brown Riding Kodo","Brown Riding Kodo"),
 [269141]=C(1,1,0,"Lavender Riding Kodo","Lavender Riding Kodo"),
-}
+} end
 -- Desolace
-Z[1443] = {
+Z[1443] = function() return {
 [4632]=C(30,31,0,"Centaure kolkar","Kolkar Centaur"),
 [4633]=C(30,31,0,"Eclaireur kolkar","Kolkar Scout"),
 [4634]=C(31,32,0,"Marteleur kolkar","Kolkar Mauler"),
@@ -2960,9 +2962,9 @@ Z[1443] = {
 [253066]=C(45,45,1,"Umarak","Umarak"),
 [253272]=C(43,43,0,"Magram Necromancer","Magram Necromancer"),
 [268705]=C(34,34,0,"Aka'rai","Aka'rai"),
-}
+} end
 -- Feralas
-Z[1444] = {
+Z[1444] = function() return {
 [5229]=C(40,41,0,"Ogre Gordunni","Gordunni Ogre"),
 [5232]=C(42,43,0,"Brute Gordunni","Gordunni Brute"),
 [5234]=C(43,44,0,"Marteleur Gordunni","Gordunni Mauler"),
@@ -3085,9 +3087,9 @@ Z[1444] = {
 [222799]=C(41,42,0,"Simmering Elemental","Simmering Elemental"),
 [222968]=C(52,52,0,"Lethlas","Lethlas"),
 [223544]=C(45,48,0,"Fel Interloper","Fel Interloper"),
-}
+} end
 -- Dustwallow Marsh
-Z[1445] = {
+Z[1445] = function() return {
 [2937]=C(43,43,1,"Dagun le Vorace","Dagun the Ravenous"),
 [4323]=C(41,42,0,"Jeune incendiaire","Searing Hatchling"),
 [4324]=C(42,43,0,"Dragonnet incendiaire","Searing Whelp"),
@@ -3198,9 +3200,9 @@ Z[1445] = {
 [165189]=C(7,30,0,"Cat","Cat"),
 [221575]=C(45,45,0,"Elrick","Elrick","A"),
 [269453]=C(55,55,1,"Theramore Elite","Theramore Elite","A"),
-}
+} end
 -- Tanaris
-Z[1446] = {
+Z[1446] = function() return {
 [5419]=C(42,43,0,"Basilic Peau-de-verre","Glasshide Basilisk"),
 [5420]=C(45,46,0,"Contemplateur Peau-de-verre","Glasshide Gazer"),
 [5421]=C(48,49,0,"Pétrificateur Peau-de-verre","Glasshide Petrifier"),
@@ -3278,9 +3280,9 @@ Z[1446] = {
 [222625]=C(45,46,0,"Corrupt Moderate Manifestation of Earth","Corrupt Moderate Manifestation of Earth","H"),
 [223591]=C(1,1,0,"Echo of a Lost Soul","Echo of a Lost Soul"),
 [260405]=C(45,45,0,"Wharfmaster Steamfizzle","Wharfmaster Steamfizzle"),
-}
+} end
 -- Azshara
-Z[1447] = {
+Z[1447] = function() return {
 [193]=C(50,51,1,"Draconide bleu","Blue Dragonspawn"),
 [6116]=C(45,46,0,"Apparition bien-née","Highborne Apparition"),
 [6117]=C(46,47,0,"Jeune liche bien-née","Highborne Lichling"),
@@ -3363,9 +3365,9 @@ Z[1447] = {
 [223544]=C(45,48,0,"Fel Interloper","Fel Interloper"),
 [239822]=C(45,45,0,"Commander Truesong","Commander Truesong"),
 [240482]=C(45,45,0,"Berdun Cliffbrew","Berdun Cliffbrew"),
-}
+} end
 -- Felwood
-Z[1448] = {
+Z[1448] = function() return {
 [7086]=C(49,50,0,"Limon maudit","Cursed Ooze"),
 [7092]=C(51,52,0,"Limon corrompu","Tainted Ooze"),
 [7093]=C(53,53,0,"Vil limon","Vile Ooze"),
@@ -3437,9 +3439,9 @@ Z[1448] = {
 [14467]=C(55,55,1,"Kroshius","Kroshius"),
 [14522]=C(54,54,0,"Ur'dan","Ur'dan"),
 [14523]=C(57,57,0,"Ulathek","Ulathek"),
-}
+} end
 -- Un'Goro Crater
-Z[1449] = {
+Z[1449] = function() return {
 [6498]=C(54,55,1,"Diablosaure","Devilsaur"),
 [6499]=C(54,56,1,"Diablosaure Cuiracier","Ironhide Devilsaur"),
 [6500]=C(54,55,1,"Diablosaure Rex","Tyrant Devilsaur"),
@@ -3492,15 +3494,15 @@ Z[1449] = {
 [9684]=C(56,56,0,"Lar'korwi","Lar'korwi"),
 [14460]=C(54,56,0,"Envahisseur flamboyant","Blazing Invader"),
 [14461]=C(58,58,1,"Baron Charr","Baron Charr"),
-}
+} end
 -- Moonglade
-Z[1450] = {
+Z[1450] = function() return {
 [11553]=C(52,53,0,"Pliebois Grumegueule","Timbermaw Woodbender"),
 [258912]=C(60,60,0,"Elaren Stargrove","Elaren Stargrove"),
 [271698]=C(23,23,0,"Restless Spirit","Restless Spirit"),
-}
+} end
 -- Silithus
-Z[1451] = {
+Z[1451] = function() return {
 [11698]=C(57,58,1,"Aiguillonneur de la Ruche'Ashi","Hive'Ashi Stinger"),
 [11721]=C(57,58,1,"Ouvrière de la Ruche'Ashi","Hive'Ashi Worker"),
 [11722]=C(58,59,1,"Défenseur de la Ruche'Ashi","Hive'Ashi Defender"),
@@ -3580,9 +3582,9 @@ Z[1451] = {
 [17766]=C(60,60,1,"Sentinelle de silithyste, Horde","Horde Silithyst Sentinel","H"),
 [227533]=C(56,58,0,"Astral Wraith","Astral Wraith"),
 [229200]=C(56,58,0,"Astral Wraith","Astral Wraith"),
-}
+} end
 -- Winterspring
-Z[1452] = {
+Z[1452] = function() return {
 [7428]=C(59,60,1,"Géant Cognegivre","Frostmaul Giant"),
 [7429]=C(59,60,1,"Protecteur Cognegivre","Frostmaul Preserver"),
 [7430]=C(55,56,0,"Jeune sabre-de-givre","Frostsaber Cub"),
@@ -3649,9 +3651,9 @@ Z[1452] = {
 [232940]=C(58,58,0,"Felhound Spellseeker","Felhound Spellseeker"),
 [249474]=C(56,56,0,"Rustleaf Fox","Rustleaf Fox","A"),
 [265577]=C(58,58,0,"Zippie Fizzbolt","Zippie Fizzbolt"),
-}
+} end
 -- Mount Hyjal
-Z[2482] = {
+Z[2482] = function() return {
 [40833]=C(60,60,0,"Tiala Whitemane","Tiala Whitemane","A"),
 [244511]=C(60,60,0,"Zet'gan","Zet'gan"),
 [244517]=C(60,60,0,"Sefira Everbright","Sefira Everbright"),
@@ -3683,9 +3685,9 @@ Z[2482] = {
 [267182]=C(60,60,0,"Ve'ho Manyhorns","Ve'ho Manyhorns"),
 [268044]=C(60,60,0,"Loren Ravenlock","Loren Ravenlock"),
 [275173]=C(60,60,0,"Blackthorne Outrunner","Blackthorne Outrunner"),
-}
+} end
 -- Zephras Isle
-Z[2521] = {
+Z[2521] = function() return {
 [165189]=C(7,30,0,"Cat","Cat"),
 [250868]=C(6,6,0,"Vuldren","Vuldren"),
 [250874]=C(10,10,0,"Vuldren Alpha","Vuldren Alpha"),
@@ -3785,9 +3787,9 @@ Z[2521] = {
 [276416]=C(9,10,0,"Windshaper Elementalist","Windshaper Elementalist","H"),
 [277067]=C(11,11,0,"Vela El'wyth","Vela El'wyth"),
 [277410]=C(10,10,0,"Cereza Galeforce","Cereza Galeforce"),
-}
+} end
 -- Riverglades
-Z[2548] = {
+Z[2548] = function() return {
 [165189]=C(7,30,0,"Cat","Cat"),
 [255769]=C(37,38,0,"Redridge Brute","Redridge Brute"),
 [255772]=C(36,36,0,"Redridge Trapper","Redridge Trapper"),
@@ -3844,10 +3846,12 @@ Z[2548] = {
 [263380]=C(42,42,0,"Ghostmaw","Ghostmaw"),
 [272228]=C(36,36,0,"Harvest Sentry","Harvest Sentry"),
 [272313]=C(39,40,0,"Brineshell Clacker","Brineshell Clacker"),
-}
+} end
 -- Shen'dralas
-Z[2652] = {
+Z[2652] = function() return {
 [253272]=C(43,43,0,"Magram Necromancer","Magram Necromancer"),
-}
+} end
+
+ns.ZONE_CREATURES = ns.LazyZones(Z)
 
 if ns.Mark then ns.Mark("ZoneCreatures") end

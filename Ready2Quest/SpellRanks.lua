@@ -88,7 +88,7 @@ local EN = {
 	HELP_SPELLRANKS         = "/r2q sorts — the spells on your bars that have a higher rank",
 }
 ns.RegisterStrings(FR, EN)
-ns.SPELLRANKS_STRINGS = { fr = FR, en = EN }
+if ns.KEEP_STRINGS then ns.SPELLRANKS_STRINGS = { fr = FR, en = EN } end
 
 ns.RegisterDefaults({ spellranksEnabled = true, spellranksBorder = true })
 

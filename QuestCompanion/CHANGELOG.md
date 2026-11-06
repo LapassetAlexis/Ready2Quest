@@ -1,5 +1,11 @@
 # QuestCompanion
 
+## 1.6.1
+
+- **Plus léger** : l'addon prend environ 2 Mo de mémoire au lieu de 5,8 Mo. Les créatures et les quêtes de chaque zone ne sont construites qu'en arrivant dans la zone (ou en ouvrant la Ménagerie, sans les garder ensuite), seule la langue de ton client reste en mémoire, et le compagnon au repos ne recalcule plus sa position à chaque image.
+
+*English:* lighter: about 2 MB of memory instead of 5.8 MB (zone data built on demand, only your client's language kept, no per-frame work for an idle companion).
+
 ## 1.6.0
 
 - **Deux versions par espèce** : la normale et la brillante se capturent chacune de leur côté. Une brillante capturée devient une apparence à part : ton compagnon prend une lumière dorée et scintille. Tes anciennes brillantes capturées deviennent la version brillante de leur espèce ; la version normale reste à capturer.

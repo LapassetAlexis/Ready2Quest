@@ -153,6 +153,14 @@ import glob
 module_tests = sorted(os.path.relpath(p, ROOT) for p in glob.glob(os.path.join(ROOT, "tests", "modules", "*.lua")))
 globals_.MODULE_TEST_FILES = lua.table_from(module_tests)
 
+# --memoire : mémoire Lua laissée par chaque fichier des addons au chargement
+# (code compilé compris), comme sur un client français ; les tests ne tournent pas
+MEMORY = "--memoire" in sys.argv
+if MEMORY:
+    # l'addon tel que le client le charge : sans le mode test, sans les tests
+    globals_.MEMORY_REPORT = lua.table()
+    globals_.MEMORY_ONLY = True
+
 try:
     lua.execute(source)
 except Exception as exc:  # erreur Lua non gérée
@@ -172,5 +180,15 @@ try:
 except UnicodeEncodeError:
     encoding = sys.stdout.encoding or "cp1252"
     print(output.encode(encoding, "replace").decode(encoding, "replace"))
+if MEMORY:
+    rows = [(row.name, float(row.kb)) for row in globals_.MEMORY_REPORT.values()]
+    totals = Counter()
+    for name, kb in rows:
+        totals[name.split("/")[0]] += kb
+    print("\n== Mémoire Lua au chargement (Ko, après ramassage) ==")
+    for name, kb in sorted(rows, key=lambda r: -r[1])[:25]:
+        print("%8.1f  %s" % (kb, name))
+    for addon, kb in sorted(totals.items()):
+        print("%8.1f  TOTAL %s" % (kb, addon))
 failed = int(globals_.TEST_FAILED or 0)
 raise SystemExit(1 if failed else 0)

@@ -66,7 +66,7 @@ local EN = {
 	JRN_PROG_MEN_OPEN      = "Menagerie",
 }
 ns.RegisterStrings(FR, EN)
-ns.JOURNAL_PROGRESS_STRINGS = { fr = FR, en = EN }
+if ns.KEEP_STRINGS then ns.JOURNAL_PROGRESS_STRINGS = { fr = FR, en = EN } end
 
 -- les trois parts montrées (le combat vit dans la Ménagerie)
 local PARTS = { "explore", "craft", "quests" }

@@ -154,7 +154,7 @@ local EN = {
 	JRN_EVO_ROAD           = "Road: %d zones · %d/%d capitals · %d dungeons · %d rares · %d/%d milestones",
 }
 ns.RegisterStrings(FR, EN)
-ns.JOURNAL_WINDOW_STRINGS = { fr = FR, en = EN }
+if ns.KEEP_STRINGS then ns.JOURNAL_WINDOW_STRINGS = { fr = FR, en = EN } end
 
 local function ModuleOn()
 	local db = ns:DB()
@@ -691,7 +691,7 @@ function ns:JournalAllZones(filter, sort)
 	-- (créatures, quêtes ; celles propres à Forever comprises), puis le carnet
 	local ids = {}
 	for _, source in ipairs({ ns.ZONE_LEVELS, ns.ZONE_CREATURES, ns.ZONE_QUESTS }) do
-		for zoneID in pairs(type(source) == "table" and source or {}) do
+		for _, zoneID in ipairs(ns.ZoneIds(source)) do
 			if tonumber(zoneID) then ids[tonumber(zoneID)] = true end
 		end
 	end

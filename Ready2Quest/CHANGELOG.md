@@ -1,5 +1,9 @@
 # Journal des modifications
 
+## 1.29.3
+
+- **Plus léger** : seule la langue de ton client reste en mémoire (0,77 Mo au lieu de 0,89 Mo).
+
 ## 1.29.2
 
 - **Portée d'aggro** : la pastille est plus grosse (16 px) et rentrée vers le nom, pour la voir d'un coup d'œil.

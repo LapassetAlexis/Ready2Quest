@@ -33,7 +33,7 @@ C_Map.GetAreaInfo = nil
 -- table de Forever, rechargée avec un faux ns (garde de client). QuestCompanion
 -- 1.2.0 : WoW Forever seulement, plus de table d'Era.
 function Q.Load(file, forever)
-	local fake = { Mark = function() end, IsForeverClient = function() return forever end }
+	local fake = { Mark = function() end, IsForeverClient = function() return forever end, LazyZones = T.QNS.LazyZones }
 	assert(loadfile(ROOT .. "/QuestCompanion/" .. file))("QuestCompanion", fake)
 	return fake.ZONE_QUESTS
 end
@@ -130,7 +130,8 @@ do
 		local data, tag = Q.FOREVER, "[ZQ] " .. client .. " "
 		local zones, count, bad, badZones, seen, twice = 0, 0, {}, {}, {}, 0
 		local maxRaces = 0
-		for zoneID, list in pairs(data) do
+		for _, zoneID in ipairs(NS.ZoneIds(data)) do
+			local list = data[zoneID]
 			zones = zones + 1
 			if not known[zoneID] and not (client == "Forever" and zoneID > 2000) then badZones[#badZones + 1] = zoneID end
 			for id, q in pairs(list) do
@@ -179,7 +180,7 @@ do
 		and Q.FOREVER[1413][4963].ex[1] == 4962 and Q.FOREVER[1413][4962].classes == 256)
 	-- exclues en amont : cachée, répétable, métier, événement, JcJ
 	local function Anywhere(data, id)
-		for _, list in pairs(data) do if list[id] then return true end end
+		for _, zoneID in ipairs(NS.ZoneIds(data)) do if data[zoneID][id] then return true end end
 		return false
 	end
 	local absent = true

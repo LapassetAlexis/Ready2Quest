@@ -30,7 +30,7 @@ local EN = {
 	TRAVEL_LABEL = "travelled together",
 }
 ns.RegisterStrings(FR, EN)
-ns.TRAVEL_STRINGS = { fr = FR, en = EN }
+if ns.KEEP_STRINGS then ns.TRAVEL_STRINGS = { fr = FR, en = EN } end
 
 local function Call(fn, ...)
 	if type(fn) ~= "function" then return nil end

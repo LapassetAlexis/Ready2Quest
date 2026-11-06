@@ -50,7 +50,7 @@ local EN = {
 	ZQ_LIVE         = "on the map",
 }
 ns.RegisterStrings(FR, EN)
-ns.ZONE_QUESTS_STRINGS = { fr = FR, en = EN }
+if ns.KEEP_STRINGS then ns.ZONE_QUESTS_STRINGS = { fr = FR, en = EN } end
 
 -- ---------------------------------------------------------------------------
 -- Accès robustes
@@ -78,7 +78,7 @@ end
 -- Table du client : présente et non vide
 local function Table()
 	local all = rawget(ns, "ZONE_QUESTS")
-	if type(all) ~= "table" or next(all) == nil then return nil end
+	if type(all) ~= "table" or #ns.ZoneIds(all) == 0 then return nil end
 	return all
 end
 

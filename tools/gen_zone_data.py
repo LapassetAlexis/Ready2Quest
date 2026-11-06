@@ -400,24 +400,28 @@ def write_creatures(path, zones, meta, flavor, layers, names):
         "-- Créatures combattables en extérieur : ni bestioles, ni PNJ techniques, ni PNJ",
         "-- amicaux envers les deux factions, ni événements saisonniers (voir le script).",
         "",
+        "-- Chargement paresseux : une fonction par zone, construite à sa première lecture",
+        "-- (ns.LazyZones, Core.lua) ; parcourir avec ns.ZoneIds / ns.ZoneEach, pas pairs.",
+        "",
         "local function C(lo, hi, rank, fr, en, f)",
         "\treturn { lvl = { lo, hi }, rank = rank, fr = fr, en = en, f = f }",
         "end",
         "",
         "local Z = {}",
-        "ns.ZONE_CREATURES = Z",
         "",
     ]))
     for ui_map in sorted(zones):
         out.append("-- %s" % names[ui_map])
-        out.append("Z[%d] = {" % ui_map)
+        out.append("Z[%d] = function() return {" % ui_map)
         for npc_id in sorted(zones[ui_map]):
             lo, hi, rank, fr, en, f = zones[ui_map][npc_id]
             args = "%d,%d,%d,%s,%s" % (lo, hi, rank, lua_string(fr), lua_string(en))
             if f:
                 args += ',"%s"' % f
             out.append("[%d]=C(%s)," % (npc_id, args))
-        out.append("}")
+        out.append("} end")
+    out.append("")
+    out.append("ns.ZONE_CREATURES = ns.LazyZones(Z)")
     out.append("")
     out.append('if ns.Mark then ns.Mark("ZoneCreatures") end')
     out.append("")
@@ -463,17 +467,19 @@ def write_quests(path, zones, meta, flavor, layers, names):
         "--   zone unique des donneurs. Exclues : quêtes cachées par Questie, d'événement",
         "--   saisonnier, répétables, journalières / hebdomadaires, de métier, JcJ (voir le script).",
         "",
+        "-- Chargement paresseux : une fonction par zone, construite à sa première lecture",
+        "-- (ns.LazyZones, Core.lua) ; parcourir avec ns.ZoneIds / ns.ZoneEach, pas pairs.",
+        "",
         "local function Q(lvl, req, races, classes, fr, en, ex)",
         "\treturn { lvl = lvl, req = req, races = races, classes = classes, fr = fr or en, en = en, ex = ex }",
         "end",
         "",
         "local Z = {}",
-        "ns.ZONE_QUESTS = Z",
         "",
     ]))
     for ui_map in sorted(zones):
         out.append("-- %s" % names[ui_map])
-        out.append("Z[%d] = {" % ui_map)
+        out.append("Z[%d] = function() return {" % ui_map)
         for qid in sorted(zones[ui_map]):
             lvl, req, races, classes, fr, en, ex = zones[ui_map][qid]
             args = "%d,%d,%d,%d,%s,%s" % (lvl, req, races, classes, "nil" if fr == en else lua_string(fr),
@@ -481,7 +487,9 @@ def write_quests(path, zones, meta, flavor, layers, names):
             if ex:
                 args += ",{%s}" % ",".join(str(i) for i in ex)
             out.append("[%d]=Q(%s)," % (qid, args))
-        out.append("}")
+        out.append("} end")
+    out.append("")
+    out.append("ns.ZONE_QUESTS = ns.LazyZones(Z)")
     out.append("")
     out.append('if ns.Mark then ns.Mark("ZoneQuests_%s") end' % flavor["name"])
     out.append("")

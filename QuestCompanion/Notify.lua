@@ -34,7 +34,7 @@ local EN = {
 	NOTIFY_PART_quests    = "quests",
 }
 ns.RegisterStrings(FR, EN)
-ns.NOTIFY_STRINGS = { fr = FR, en = EN }
+if ns.KEEP_STRINGS then ns.NOTIFY_STRINGS = { fr = FR, en = EN } end
 
 local P = {
 	FOUND = {   -- %s = l'entrée, %s = la part (« bestiaire 13/24 »)

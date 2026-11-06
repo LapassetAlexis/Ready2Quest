@@ -36,7 +36,7 @@ local EN = {
 	COMP_ANIM_UNKNOWN    = "Unknown animation. Names: %s.",
 }
 ns.RegisterStrings(FR, EN)
-ns.COMPANION_FX_STRINGS = { fr = FR, en = EN }
+if ns.KEEP_STRINGS then ns.COMPANION_FX_STRINGS = { fr = FR, en = EN } end
 
 -- animations de créature essayées par le défilé (identifiants du client)
 ns.COMPANION_ANIMS.walk = ns.COMPANION_ANIMS.walk or 4
@@ -60,7 +60,12 @@ ns.COMPANION_FX = FX
 local function Clock() return (ns.Now and ns.Now()) or 0 end
 
 -- Décalage du modèle (ou de la boussole de repli) dans son cadre
+-- appelé à chaque image : rien à toucher si le décalage n'a pas bougé
+-- (au dixième de pixel), et pas de nouvelle table (1.6.1)
 local function Offset(frame, dx, dy)
+	dx, dy = math.floor(dx * 10 + 0.5) / 10, math.floor(dy * 10 + 0.5) / 10
+	local last = frame.fxOffset
+	if last and last[1] == dx and last[2] == dy then return end
 	if frame.model and frame.model.SetPoint then
 		frame.model:ClearAllPoints()
 		frame.model:SetPoint("TOPLEFT", frame, "TOPLEFT", 4 + dx, -4 + dy)
@@ -69,7 +74,7 @@ local function Offset(frame, dx, dy)
 		frame.fallback:ClearAllPoints()
 		frame.fallback:SetPoint("TOP", frame, "TOP", dx, -14 + dy)
 	end
-	frame.fxOffset = { dx, dy }
+	if last then last[1], last[2] = dx, dy else frame.fxOffset = { dx, dy } end
 end
 
 local function State(self)
@@ -170,9 +175,12 @@ function ns:CompanionFxUpdate(now)
 	-- son caractère : effets plus ou moins amples (Personality.lua)
 	local scale = self.CompanionFxIntensity and self:CompanionFxIntensity() or 1
 	Offset(frame, dx * scale, dy * scale)
-	-- particules : montent et s'effacent
-	local keep = {}
-	for _, p in ipairs(state.particles) do
+	-- particules : montent et s'effacent (tassées sur place : pas de table
+	-- neuve à chaque image)
+	local particles = state.particles
+	local kept = 0
+	for index = 1, #particles do
+		local p = particles[index]
 		if now >= p.untilAt then
 			if p.region then p.region:Hide() end
 			state.pool[#state.pool + 1] = p
@@ -181,10 +189,11 @@ function ns:CompanionFxUpdate(now)
 			p.region:ClearAllPoints()
 			p.region:SetPoint("CENTER", frame, "CENTER", p.x, p.y + p.rise * ratio)
 			p.region:SetAlpha(1 - ratio)
-			keep[#keep + 1] = p
+			kept = kept + 1
+			particles[kept] = p
 		end
 	end
-	state.particles = keep
+	for index = #particles, kept + 1, -1 do particles[index] = nil end
 	if frame.flash and state.flashUntil then
 		if now >= state.flashUntil then
 			frame.flash:Hide()

@@ -1,5 +1,18 @@
 # Ready2Quest — notes techniques et historique
 
+## QuestCompanion 1.6.1 / Ready2Quest 1.29.3 — mémoire
+
+Mesure : `python3 tests/run_tests.py --memoire` charge les deux addons comme un client français (sans le mode test, sans jouer les tests) et donne la mémoire Lua laissée par chaque fichier, code compilé compris, après ramassage.
+
+| | avant | après |
+|---|---|---|
+| QuestCompanion | 5,8 Mo | 2,1 Mo |
+| Ready2Quest | 0,89 Mo | 0,77 Mo |
+
+- **Tables de zones paresseuses** (`ns.LazyZones`, `QuestCompanion/Core.lua`) : `ZoneCreatures_<client>.lua` et `ZoneQuests_<client>.lua` (générés) gardent une fonction par zone ; la zone n'est construite en tables qu'à sa première lecture, puis gardée. Créatures 2,1 → 0,45 Mo, quêtes 1,27 → 0,33 Mo. `pairs` ne voit pas les zones pas encore lues : parcourir avec `ns.ZoneIds(t)` et `ns.ZoneEach(t, fn)` (le Pokédex parcourt tout le jeu sans rien retenir).
+- **Une seule langue** (`Libs/Socle/Strings.lua`) : le client ne garde que sa langue ; sur un client anglais, une clé sans traduction prend le français dès sa déclaration (même repli qu'avant). Les tables sources exposées aux tests de parité (`ns.*_STRINGS`, `ns.PERSONALITY_LINES`) ne sont gardées qu'en test (`ns.KEEP_STRINGS`, global `ADDON_TESTING` posé par le harnais). Répliques de caractère 0,98 → 0,18 Mo.
+- **Animation du compagnon** (`CompanionFx.lua`) : au repos, plus de repositionnement ni de table neuve à chaque image ; particules tassées sur place.
+
 ## Ready2Quest 1.27.0 — Place au butin, Rangs de sorts
 
 - **Place au butin** (`LootRoom.lua`, après `BagSpace.lua`) : `LootRoomLoot()` (objets du butin sans place ni pile à compléter, quêtes d'abord puis valeur), `LootRoomRows(cible)` (les `LOOTROOM_ROWS` premiers de `BagSpaceCandidates()`, mêmes protections, prix HV par `LootRoomAuction` : Auctionator `API.v1.GetAuctionPriceByItemLink`, sinon TSM `DBMarket`), `dearer` si la valeur dépasse celle du butin. `LootRoomDelete` : confirmation (`StaticPopup`) pour qualité ≥ 2 si `lootroomConfirm`, sinon `LootRoomDestroy` (vérifie la case, `PickupContainerItem`, `DeleteCursorItem`, puis `lootRoomPending` = case du butin, ramassée par `LootSlot` au `BAG_UPDATE_DELAYED`). `LootRoomIgnore` → `bagspaceKeep`. Déclencheurs : `LOOT_OPENED`, `UI_ERROR_MESSAGE` (sacs pleins) pendant un butin ; `LOOT_CLOSED` ferme. `/r2q place`. `BagSpaceAlert` s'efface si `LootRoomActive()`.

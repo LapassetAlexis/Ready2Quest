@@ -72,7 +72,7 @@ local EN = {
 	TREAT_NONE           = "No treat yet: bring a zone to 25% for the first one.",
 }
 ns.RegisterStrings(FR, EN)
-ns.TREAT_STRINGS = { fr = FR, en = EN }
+if ns.KEEP_STRINGS then ns.TREAT_STRINGS = { fr = FR, en = EN } end
 
 -- Répliques (même registre que CompanionLines : clés COMP_SAY_<RÉSERVOIR>[_n])
 local P = {

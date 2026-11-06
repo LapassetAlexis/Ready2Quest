@@ -74,7 +74,7 @@ local EN = {
 	HELP_CHEST          = "/qc coffre -- open the chest of a zone completed to 100%",
 }
 ns.RegisterStrings(FR, EN)
-ns.CHEST_STRINGS = { fr = FR, en = EN }
+if ns.KEEP_STRINGS then ns.CHEST_STRINGS = { fr = FR, en = EN } end
 
 if type(ns.HELP) == "table" then
 	for _, section in ipairs(ns.HELP) do

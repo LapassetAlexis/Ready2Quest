@@ -12,18 +12,36 @@ local ADDON, ns = ...
 
 local frFR, enUS = {}, {}
 
+local base = frFR
+local locale = (GetLocale and GetLocale()) or "frFR"
+local french = locale == "frFR" or locale == "fr"
+if not french then
+	base = enUS
+end
+
+-- Mémoire (1.6.1 / 1.29.3) : seule la langue du client est gardée. Sur un
+-- client anglais, une clé sans traduction prend le texte français dès sa
+-- déclaration (même repli qu'avant, sans garder tout le français). Les tests
+-- (ADDON_TESTING) gardent les deux langues et les tables sources exposées
+-- (ns.KEEP_STRINGS) pour contrôler la parité fr/en.
+ns.KEEP_STRINGS = rawget(_G, "ADDON_TESTING") and true or false
+
 -- API d'extension : chaque fichier déclare ses chaînes, sans toucher aux
 -- autres. ns.RegisterStrings({ CLE = "fr" }, { CLE = "en" }) ; la dernière
 -- déclaration d'une clé l'emporte (l'addon prime sur le socle).
 function ns.RegisterStrings(fr, en)
-	for k, v in pairs(fr or {}) do frFR[k] = v end
-	for k, v in pairs(en or {}) do enUS[k] = v end
-end
-
-local base = frFR
-local locale = (GetLocale and GetLocale()) or "frFR"
-if locale ~= "frFR" and locale ~= "fr" then
-	base = enUS
+	if french or ns.KEEP_STRINGS then
+		for k, v in pairs(fr or {}) do frFR[k] = v end
+	end
+	if not french or ns.KEEP_STRINGS then
+		for k, v in pairs(en or {}) do enUS[k] = v end
+		if not french and not ns.KEEP_STRINGS then
+			-- repli français pour les clés que l'anglais n'a pas (encore)
+			for k, v in pairs(fr or {}) do
+				if enUS[k] == nil then enUS[k] = v end
+			end
+		end
+	end
 end
 
 -- Repli : toute clé absente de la langue active retombe sur le français.

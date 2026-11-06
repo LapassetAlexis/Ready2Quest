@@ -71,7 +71,7 @@ local EN = {
 	GATHER_REPORT_PARTIAL   = "· collapsed category in the skills window",
 }
 ns.RegisterStrings(FR, EN)
-ns.GATHERING_STRINGS = { fr = FR, en = EN }
+if ns.KEEP_STRINGS then ns.GATHERING_STRINGS = { fr = FR, en = EN } end
 
 -- ---------------------------------------------------------------------------
 -- Accès robustes

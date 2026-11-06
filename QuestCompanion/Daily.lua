@@ -159,7 +159,7 @@ local EN = {
 	OPT_DAILY_MISSIONS_DESC = "Two zone missions and one from its character every day, in the journal (Day tab) and the on-screen block.",
 }
 ns.RegisterStrings(FR, EN)
-ns.DAILY_STRINGS = { fr = FR, en = EN }
+if ns.KEEP_STRINGS then ns.DAILY_STRINGS = { fr = FR, en = EN } end
 
 local P = {
 	MISSION_NEW = {

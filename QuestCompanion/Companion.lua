@@ -474,7 +474,7 @@ local EN = {
 	HELP_COMPANION         = "/qc compagnon [nom <name> | caresse | apparence | muet | tuto | anim] — your road companion",
 }
 ns.RegisterStrings(FR, EN)
-ns.COMPANION_STRINGS = { fr = FR, en = EN }   -- exposé aux tests (parité fr/en)
+if ns.KEEP_STRINGS then ns.COMPANION_STRINGS = { fr = FR, en = EN } end   -- exposé aux tests (parité fr/en)
 
 ns.RegisterDefaults({
 	companionEnabled    = true,

@@ -101,7 +101,7 @@ local EN = {
 	OPT_DAILY_CHEST        = "Animated chest opening",
 }
 ns.RegisterStrings(FR, EN)
-ns.SHINY_STRINGS = { fr = FR, en = EN }
+if ns.KEEP_STRINGS then ns.SHINY_STRINGS = { fr = FR, en = EN } end
 -- libellés du catalogue : même registre que les autres cosmétiques
 if type(ns.COMPANION_STRINGS) == "table" then
 	for _, key in ipairs({ "COMP_FRAME_SPARKLE", "COMP_BG_STARDUST", "COMP_ORN_AURA", "COMP_REQ_shiny" }) do

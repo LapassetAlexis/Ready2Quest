@@ -1001,6 +1001,6 @@ for name, lines in pairs(P) do
 end
 ns.RegisterStrings(FR, EN)
 ns.COMPANION_POOLS = POOLS
-ns.COMPANION_LINE_STRINGS = { fr = FR, en = EN }   -- exposé aux tests (parité fr/en)
+if ns.KEEP_STRINGS then ns.COMPANION_LINE_STRINGS = { fr = FR, en = EN } end   -- exposé aux tests (parité fr/en)
 
 if ns.Mark then ns.Mark("CompanionLines") end

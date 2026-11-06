@@ -107,7 +107,7 @@ end
 local ROOT = rawget(_G, "ADDON_ROOT") or "."
 local FOREVER_ZONES = { [2482] = true, [2521] = true, [2524] = true, [2548] = true, [2652] = true }
 function Z.LoadData(file, forever)
-	local fake = { marks = {} }
+	local fake = { marks = {}, LazyZones = NS.LazyZones }
 	if forever ~= "none" then fake.IsForeverClient = function() return forever end end
 	fake.Mark = function(name) fake.marks[#fake.marks + 1] = name end
 	local chunk = assert(loadfile(ROOT .. "/QuestCompanion/" .. file))
@@ -169,7 +169,8 @@ do
 		for zoneID in pairs(NS.ZONE_LEVELS or {}) do known[zoneID] = true end
 		if client == "Forever" then for zoneID in pairs(FOREVER_ZONES) do known[zoneID] = true end end
 		local zones, lines, bad, badZones, missing = 0, 0, {}, {}, {}
-		for zoneID, list in pairs(data.creatures) do
+		for _, zoneID in ipairs(NS.ZoneIds(data.creatures)) do
+			local list = data.creatures[zoneID]
 			zones = zones + 1
 			if not known[zoneID] then badZones[#badZones + 1] = tostring(zoneID) end
 			for npcID, e in pairs(list) do

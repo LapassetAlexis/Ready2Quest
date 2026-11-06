@@ -173,7 +173,7 @@ local STRINGS_EN = {
 	CAMP_TIMER_ACTIVE = "Camp buffs active",
 	CAMP_DEPART_BUFFS = "Camp buffs: %d min left.",
 }
-ns.CAMP_STRINGS = { fr = STRINGS_FR, en = STRINGS_EN }
+if ns.KEEP_STRINGS then ns.CAMP_STRINGS = { fr = STRINGS_FR, en = STRINGS_EN } end
 if ns.RegisterStrings then ns.RegisterStrings(STRINGS_FR, STRINGS_EN) end
 
 if ns.RegisterDefaults then

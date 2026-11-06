@@ -137,7 +137,7 @@ local EN = {
 	HELP_CAPTURE           = "/qc capture -- your menagerie and capture aids",
 }
 ns.RegisterStrings(FR, EN)
-ns.CAPTURE_STRINGS = { fr = FR, en = EN }
+if ns.KEEP_STRINGS then ns.CAPTURE_STRINGS = { fr = FR, en = EN } end
 if type(ns.MEMORY_STRINGS) == "table" then
 	ns.MEMORY_STRINGS.fr.MEM_TXT_capture, ns.MEMORY_STRINGS.en.MEM_TXT_capture = FR.MEM_TXT_capture, EN.MEM_TXT_capture
 end
@@ -462,14 +462,17 @@ function ns:MenagerieCatalog()
 	if cache and cache.faction == faction then return cache end
 	local all = rawget(ns, "ZONE_CREATURES")
 	local zones = {}
-	for zoneID in pairs(type(all) == "table" and all or {}) do zones[#zones + 1] = zoneID end
+	for _, zoneID in ipairs(ns.ZoneIds(all)) do zones[#zones + 1] = zoneID end
+	-- chaque zone lue une fois pour l'occasion (table paresseuse : rien n'est gardé)
+	local byZone = {}
+	ns.ZoneEach(all, function(zoneID, zone) byZone[zoneID] = zone end)
 	table.sort(zones, function(a, b)
 		if ZoneLevel(a) ~= ZoneLevel(b) then return ZoneLevel(a) < ZoneLevel(b) end
 		return a < b
 	end)
 	local byNpc, list = {}, {}
 	for order, zoneID in ipairs(zones) do
-		for npcID, entry in pairs(all[zoneID]) do
+		for npcID, entry in pairs(byZone[zoneID] or {}) do
 			local npc = tonumber(npcID)
 			local f = type(entry) == "table" and entry.f
 			local forYou = f == nil or (faction ~= nil and not tostring(f):find(faction, 1, true))
