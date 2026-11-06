@@ -1283,9 +1283,12 @@ Snap.scenes["qc-capture"] = function(T)
 	local data = ns:CaptureData()
 	data.items.appat, data.items.lasso, data.items.sifflet = 3, 1, 0
 	ns:BestiaryData()[1413] = { [3100] = { name = "Loup des plaines", class = "elite", level = 21, killed = 1 } }
+	ns:BestiaryData()[1413][3101] = { name = "Sanglier", class = "normal", level = 20, killed = 1 }
 	ns:CaptureOffer("Creature-0-1-1-1-3100-0001", { zoneID = 1413, npcID = 3100 })
+	ns:CaptureOffer("Creature-0-1-1-1-3101-0001", { zoneID = 1413, npcID = 3101 })
 	ns:CaptureToggleAid("appat")
-	return Centered(ns.capturePrompt), "QuestCompanion : capture proposée (élite, appât choisi)"
+	-- 2.0 : plus de fenêtre automatique, la liste du filet (clic droit)
+	return Centered(ns:CaptureShowQueueList()), "QuestCompanion : liste du filet (élite en tête, appât choisi)"
 end
 
 local function QCCaptureStage(T, success, at)

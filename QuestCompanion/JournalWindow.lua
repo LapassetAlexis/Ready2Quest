@@ -1079,13 +1079,13 @@ local function BuildMenagerie(self, frame, content)
 		row.icon:SetTexCoord(0.08, 0.92, 0.08, 0.92)
 		row.text:ClearAllPoints()
 		row.text:SetPoint("LEFT", row, "LEFT", 58 + rowH - 8 + 8, 0)
-		row.text:SetWidth(GRID_W - 58 - rowH - 128)
+		row.text:SetWidth(GRID_W - 58 - rowH - 158)
 		row.label = row.text
 		-- nom (ou « ??? ») à la couleur de sa rareté, type à droite, et
 		-- l'étoile d'une brillante ; capturée : liseré vert à gauche (1.5.1)
 		row.detail:ClearAllPoints()
 		row.detail:SetPoint("RIGHT", row, "RIGHT", -30, 0)
-		row.detail:SetWidth(90)
+		row.detail:SetWidth(120)
 		row.star = Theme.CreateDiamond(row, 8)
 		row.star:SetPoint("RIGHT", row, "RIGHT", -12, 0)
 		row.star:SetVertexColor(Theme.GOLD_LIGHT[1], Theme.GOLD_LIGHT[2], Theme.GOLD_LIGHT[3], 1)
@@ -1726,7 +1726,14 @@ function ns:JournalPreviewMenagerie(entry, keep)
 	local caught = shinyView and entry.shiny or (not shinyView and entry.normal ~= false and entry.captured)
 	if caught then
 		local when = Day(shinyView and entry.shinyAt or entry.at)
-		if when then lines[#lines + 1] = self:F(shinyView and "JRN_MEN_SHINY_CAUGHT" or "JRN_MEN_CAUGHT", when) end
+		-- 2.0 : la qualité du spécimen gardé (CaptureQueue.lua), sur la même ligne
+		local stars = self.CaptureStars and self:CaptureStars(entry.npc, shinyView)
+		stars = stars and self:CaptureStarsText(stars, 12)
+		if when then
+			lines[#lines + 1] = self:F(shinyView and "JRN_MEN_SHINY_CAUGHT" or "JRN_MEN_CAUGHT", when) .. (stars and ("  " .. stars) or "")
+		elseif stars then
+			lines[#lines + 1] = self:F("CAPTURE_STARS_LABEL", stars)
+		end
 		lines[#lines + 1] = current == id and L.JRN_MEN_EQUIPPED or L.JRN_MEN_EQUIP
 	else
 		local chance = self.CaptureChance and self:CaptureChance({ class = entry.class, level = entry.level or entry.lo }) or 0
@@ -1853,7 +1860,9 @@ local function RefreshMenagerie(self, frame)
 			local lc = RarityColor(entry)
 			row.label:SetTextColor(lc[1], lc[2], lc[3])
 			row.label:SetAlpha(entry.known and 1 or 0.75)
-			row.detail:SetText(entry.known and (entry.type or "") or "")
+			-- 2.0 : les étoiles du meilleur spécimen (CaptureQueue.lua), avant le type
+			local stars = entry.captured and self.CaptureStarsText and self:CaptureStarsText(entry.stars or entry.shinyStars, 10) or ""
+			row.detail:SetText(entry.known and (stars ~= "" and (stars .. " ") or "") .. (entry.type or "") or "")
 			-- liseré vert : la version normale capturée ; losange doré : la
 			-- brillante, plein si capturée, au trait si seulement reconnue
 			if entry.captured and entry.normal ~= false then row.caught:Show() else row.caught:Hide() end
