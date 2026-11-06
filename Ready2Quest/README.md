@@ -125,7 +125,11 @@ To see what it looks like and where it shows up without changing gear: settings,
 
 ## Portrait stats
 
-Hover your portrait: a frame shows your main stats, **only the ones that matter for your class and spec** (no Spirit for a warrior). A feral druid sees other stats in bear form.
+Hover your portrait: a frame shows your main stats, **only the ones that matter for your class and spec** (no Spirit for a warrior). A feral druid sees other stats in bear form. It works with replacement unit frames too (EllesmereUI, ElvUI, Shadowed Unit Frames, oUF…): the frame shows up above whichever portrait you hover.
+
+## Aggro range
+
+Hold **Shift** (or Ctrl, Alt, or "always" in the settings) out of combat: each hostile monster's nameplate gets a **ring** — red if you're inside its estimated aggro radius, amber if you're close to it, green if you're safe — and hovering it adds a tooltip line such as "Aggro ~17 yd · you are 20-25 yd away · out of range". The radius is an estimate (20 yd at equal level, ±1 yd per level of difference, 5 to 45 yd); the distance is a range band measured by the game. Addons can't draw on the ground, hence the ring around the nameplate. Settings: **Quality of life → Aggro range**.
 
 ## Quality of life (QoL)
 
@@ -392,7 +396,11 @@ Pour voir à quoi il ressemble et où il apparaît sans changer d'équipement : 
 
 ## Stats du portrait
 
-Survole ton portrait : un cadre affiche tes stats principales, **seulement celles qui comptent pour ta classe et ta spécialisation** (pas d'Esprit pour un guerrier). Un druide farouche voit d'autres stats en forme d'ours.
+Survole ton portrait : un cadre affiche tes stats principales, **seulement celles qui comptent pour ta classe et ta spécialisation** (pas d'Esprit pour un guerrier). Un druide farouche voit d'autres stats en forme d'ours. Ça marche aussi avec les cadres d'unité de remplacement (EllesmereUI, ElvUI, Shadowed Unit Frames, oUF…) : le cadre s'affiche au-dessus du portrait survolé.
+
+## Portée d'aggro
+
+Maintiens **Maj** (ou Ctrl, Alt, ou « toujours » dans les réglages) hors combat : la barre de nom de chaque monstre hostile s'entoure d'un **anneau** — rouge si tu es dans son rayon d'aggro estimé, ambre si tu en es proche, vert si tu es tranquille — et son survol ajoute une ligne à l'infobulle, par exemple « Aggro ~17 m · tu es à 20-25 m · hors de portée ». Le rayon est une estimation (20 m à niveau égal, ±1 m par niveau d'écart, de 5 à 45 m) ; la distance est une tranche de portée mesurée par le jeu. Les addons ne peuvent pas dessiner au sol, d'où l'anneau autour de la barre de nom. Réglages : **Confort de jeu → Portée d'aggro**.
 
 ## Confort de jeu (QoL)
 

@@ -34,10 +34,25 @@ function ns:DamageReduction(armor, level)
 	return (armor / denominator) * 100
 end
 
+-- Nombre lisible : une valeur secrète (moteur 12.0) compte comme absente
+local function Num(value)
+	return tonumber(ns.Plain(value))
+end
+
+-- Valeur d'une stat pour le relevé. Secrète (moteur 12.0) : 0, mais notée
+-- dans snapshot.secret, pour ne pas la comparer (un faux « −500 Force »)
+local function Stat(snapshot, key, value)
+	if value ~= nil and ns.Plain(value) == nil then
+		snapshot.secret[key] = true
+		return 0
+	end
+	return tonumber(value) or 0
+end
+
 function ns:StatSnapshot()
-	local snapshot = {}
+	local snapshot = { secret = {} }
 	local unitLevel = Call(UnitLevel, "player")
-	local level = tonumber(unitLevel) or 60
+	local level = Num(unitLevel) or 60
 	snapshot.level = level
 
 	-- toujours passer par une locale : jamais un appel en argument de tonumber()
@@ -45,30 +60,31 @@ function ns:StatSnapshot()
 	local agility = Call(UnitStat, "player", 2)
 	local stamina = Call(UnitStat, "player", 3)
 	local intellect = Call(UnitStat, "player", 4)
-	snapshot.str = tonumber(strength) or 0
-	snapshot.agi = tonumber(agility) or 0
-	snapshot.sta = tonumber(stamina) or 0
-	snapshot.int = tonumber(intellect) or 0
+	snapshot.str = Stat(snapshot, "str", strength)
+	snapshot.agi = Stat(snapshot, "agi", agility)
+	snapshot.sta = Stat(snapshot, "sta", stamina)
+	snapshot.int = Stat(snapshot, "int", intellect)
 
 	-- UnitArmor(unit) -> base, effective, attackPower, damage
 	local _, armorEffective = Call(UnitArmor, "player")
-	snapshot.armor = tonumber(armorEffective) or 0
+	snapshot.armor = Stat(snapshot, "armor", armorEffective)
 	snapshot.reduction = self:DamageReduction(snapshot.armor, level)
 
 	-- Esprit : 5e statistique primaire (UnitStat 5). Elle manquait au relevé,
 	-- alors que c'est la statistique principale de certaines spécialisations.
 	local spirit = Call(UnitStat, "player", 5)
-	snapshot.spi = tonumber(spirit) or 0
+	snapshot.spi = Stat(snapshot, "spi", spirit)
 
 	-- UnitDamage(unit) -> min main, max main, mod, ...
 	local dmgMin, dmgMax = Call(UnitDamage, "player")
-	snapshot.dmgMin = tonumber(dmgMin) or 0
-	snapshot.dmgMax = tonumber(dmgMax) or 0
+	snapshot.dmgMin = Stat(snapshot, "dmgMin", dmgMin)
+	snapshot.dmgMax = Stat(snapshot, "dmgMax", dmgMax)
 
 	-- UnitAttackSpeed(unit) -> main, off : ne JAMAIS passer l'appel directement
 	-- à tonumber(), le 2e retour deviendrait l'argument « base ».
 	local speedMain = Call(UnitAttackSpeed, "player")
-	snapshot.speed = tonumber(speedMain) or 0
+	snapshot.speed = Stat(snapshot, "speed", speedMain)
+	if snapshot.secret.speed or snapshot.secret.dmgMin or snapshot.secret.dmgMax then snapshot.secret.dps = true end
 	if snapshot.speed > 0 then
 		snapshot.dps = ((snapshot.dmgMin + snapshot.dmgMax) / 2) / snapshot.speed
 	else
@@ -78,18 +94,18 @@ function ns:StatSnapshot()
 	-- UnitAttackPower(unit) -> base, posBuff, negBuff (trois retours seulement).
 	-- La PA venue de l'équipement est dans posBuff : la PA réelle est la somme.
 	local apBase, apPos, apNeg = Call(UnitAttackPower, "player")
-	snapshot.ap = (tonumber(apBase) or 0) + (tonumber(apPos) or 0) + (tonumber(apNeg) or 0)
+	snapshot.ap = Stat(snapshot, "ap", apBase) + Stat(snapshot, "ap", apPos) + Stat(snapshot, "ap", apNeg)
 
 	local crit = Call(GetCritChance)
-	snapshot.crit = tonumber(crit) or 0
+	snapshot.crit = Stat(snapshot, "crit", crit)
 	local haste = Call(GetHaste)
-	snapshot.haste = tonumber(haste) or 0
+	snapshot.haste = Stat(snapshot, "haste", haste)
 
 	local avg, equipped = Call(GetAverageItemLevel)
-	snapshot.ilvl = tonumber(equipped) or tonumber(avg) or 0
+	snapshot.ilvl = Num(equipped) or Num(avg) or 0
 	-- Era : GetAverageItemLevel peut manquer, on calcule depuis l'équipement
 	if snapshot.ilvl <= 0 and self.AverageItemLevel then
-		snapshot.ilvl = tonumber(self:AverageItemLevel()) or 0
+		snapshot.ilvl = Num(self:AverageItemLevel()) or 0
 	end
 
 	-- Liens équipés, pour repérer l'emplacement modifié
@@ -125,8 +141,11 @@ function ns:DiffSnapshots(before, after)
 	local rows = {}
 	if type(before) ~= "table" or type(after) ~= "table" then return rows end
 
+	local secretBefore = type(before.secret) == "table" and before.secret or {}
+	local secretAfter = type(after.secret) == "table" and after.secret or {}
 	for _, def in ipairs(COMPARED) do
-		if def.kind ~= "hidden" then
+		-- une valeur secrète d'un côté ou de l'autre : pas de comparaison
+		if def.kind ~= "hidden" and not secretBefore[def.key] and not secretAfter[def.key] then
 			local old = tonumber(before[def.key]) or 0
 			local new = tonumber(after[def.key]) or 0
 			local delta = new - old
@@ -977,8 +996,9 @@ function ns:ShowPortraitStats()
 		local point = db.portraitPoint
 		frame:SetPoint(point.point or "CENTER", UIParent, point.point or "CENTER",
 			point.x or 0, point.y or 0)
-	elseif type(PlayerFrame) == "table" then
-		frame:SetPoint("BOTTOM", PlayerFrame, "TOP", 0, 6)
+	elseif self:PortraitAnchorFrame() then
+		-- au-dessus du cadre survolé : celui de Blizzard ou d'un addon d'interface
+		frame:SetPoint("BOTTOM", self:PortraitAnchorFrame(), "TOP", 0, 6)
 	else
 		frame:SetPoint("BOTTOM", UIParent, "BOTTOM", 0, 220)
 	end
@@ -991,58 +1011,332 @@ function ns:HidePortraitStats()
 	if self.portraitFrame then self.portraitFrame:Hide() end
 end
 
+-- ---------------------------------------------------------------------------
+-- Survol du cadre du joueur
+--
+-- Le cadre de Blizzard (PlayerFrame) n'est pas toujours là : une interface
+-- complète (EllesmereUI, ElvUI, Shadowed Unit Frames…) le masque et pose le
+-- sien. Deux voies, qui se complètent :
+--   * accroches OnEnter/OnLeave sur les cadres connus, quand ils existent
+--     (ils naissent parfois tard : on réessaie à 1, 3 et 6 s de l'entrée en jeu) ;
+--   * repli générique : dix fois par seconde (module actif seulement), le
+--     cadre sous la souris, ou l'un de ses trois parents, dont l'unité est
+--     « player ».
+-- Un seul cadre survolé à la fois (ns.portraitHover) : quand les deux voies
+-- le voient, le panneau n'est montré qu'une fois, et seule la voie qui l'a
+-- montré le masque.
+-- ---------------------------------------------------------------------------
+ns.PORTRAIT_FRAMES = {
+	"PlayerFrame",                    -- Blizzard
+	"EllesmereUIUnitFrames_Player",   -- EllesmereUI (oUF)
+	"ElvUF_Player",                   -- ElvUI (oUF)
+	"SUFUnitplayer",                  -- Shadowed Unit Frames
+	"LUFUnitplayer",                  -- Luna Unit Frames
+	"PitBull4_Frames_Player",         -- PitBull 4
+	"XPerl_Player",                   -- Z-Perl
+	"UUF_Player",                     -- UnhaltedUnitFrames (oUF)
+	"TukuiPlayerFrame", "TukuiPlayer",
+	"oUF_Player", "oUF_PlayerFrame", "oUF_player",
+}
+ns.PORTRAIT_RETRY = { 1, 3, 6 }
+ns.PORTRAIT_POLL = 0.1
+local PORTRAIT_PARENTS = 3
+
+-- Unité affichée par un cadre (attribut sécurisé, sinon champ .unit), ou nil
+local function FrameUnit(frame)
+	if type(frame) ~= "table" then return nil end
+	local unit
+	if type(frame.GetAttribute) == "function" then
+		local ok, value = pcall(frame.GetAttribute, frame, "unit")
+		if ok then unit = ns.Plain(value) end
+	end
+	if type(unit) ~= "string" then
+		local ok, value = pcall(function() return frame.unit end)
+		unit = ok and ns.Plain(value) or nil
+	end
+	return type(unit) == "string" and unit or nil
+end
+ns.PortraitFrameUnit = FrameUnit
+
+-- Cadre sous la souris : GetMouseFoci (moteur récent), sinon GetMouseFocus
+local function MouseFocus()
+	local foci = rawget(_G, "GetMouseFoci")
+	if type(foci) == "function" then
+		local ok, list = pcall(foci)
+		if ok and type(list) == "table" then return list[1] end
+	end
+	local focus = rawget(_G, "GetMouseFocus")
+	if type(focus) == "function" then
+		local ok, frame = pcall(focus)
+		if ok then return frame end
+	end
+	return nil
+end
+
+-- Le cadre du joueur sous la souris (le survolé ou l'un de ses parents), ou nil
+function ns:PortraitHoveredFrame()
+	local frame = MouseFocus()
+	for _ = 0, PORTRAIT_PARENTS do
+		if type(frame) ~= "table" then return nil end
+		if FrameUnit(frame) == "player" then return frame end
+		if type(frame.GetParent) ~= "function" then return nil end
+		local ok, parent = pcall(frame.GetParent, frame)
+		frame = ok and parent or nil
+	end
+	return nil
+end
+
+-- Cadre au-dessus duquel le panneau se pose : le dernier survolé, sinon
+-- PlayerFrame, sinon le premier cadre connu
+function ns:PortraitAnchorFrame()
+	if type(self.portraitAnchor) == "table" then return self.portraitAnchor end
+	for _, name in ipairs(self.PORTRAIT_FRAMES) do
+		local frame = rawget(_G, name)
+		-- un PlayerFrame masqué par une interface de remplacement : on passe
+		if type(frame) == "table" then
+			local ok, visible = true, true
+			if type(frame.IsVisible) == "function" then ok, visible = pcall(frame.IsVisible, frame) end
+			if ok and visible then return frame end
+		end
+	end
+	return nil
+end
+
+function ns:PortraitHoverEnter(frame, source)
+	if type(frame) ~= "table" then return end
+	local panel = self.portraitFrame
+	if self.portraitHover == frame and panel and panel:IsShown() then return end
+	self.portraitHover, self.portraitHoverSource = frame, source or "hook"
+	self.portraitAnchor = frame
+	self:ShowPortraitStats()
+end
+
+function ns:PortraitHoverLeave(frame)
+	if self.portraitHover == nil or (frame ~= nil and self.portraitHover ~= frame) then return end
+	self.portraitHover, self.portraitHoverSource = nil, nil
+	self:HidePortraitStats()
+end
+
+local function HookPortraitFrame(frame)
+	if type(frame) ~= "table" or type(frame.HookScript) ~= "function" then return false end
+	ns.portraitHooks = ns.portraitHooks or {}
+	if ns.portraitHooks[frame] then return false end
+	local ok = pcall(frame.HookScript, frame, "OnEnter", function(self) ns:PortraitHoverEnter(self, "hook") end)
+	if not ok then return false end
+	pcall(frame.HookScript, frame, "OnLeave", function(self) ns:PortraitHoverLeave(self) end)
+	ns.portraitHooks[frame] = true
+	return true
+end
+
+-- Accroche les cadres connus présents ; rend le nombre de nouvelles accroches
+function ns:HookPortraitFrames()
+	local count = 0
+	for _, name in ipairs(self.PORTRAIT_FRAMES) do
+		if HookPortraitFrame(rawget(_G, name)) then count = count + 1 end
+	end
+	if count > 0 then self.portraitHooked = true end
+	return count
+end
+
+-- Repli générique, une fois tous les PORTRAIT_POLL : il montre le panneau
+-- quand aucune accroche ne l'a fait, et ne masque que ce qu'il a montré
+function ns:PortraitPoll()
+	local db = self:DB()
+	if db.showPortraitStats == false or self.editMode then return end
+	local frame = self:PortraitHoveredFrame()
+	if frame then
+		if not self.portraitHover then self:PortraitHoverEnter(frame, "poll") end
+	elseif self.portraitHover then
+		-- montré par le repli : il le masque ; montré par une accroche dont le
+		-- cadre a disparu (fondu, masqué) sans OnLeave : aussi
+		local hover = self.portraitHover
+		local visible = true
+		if type(hover.IsVisible) == "function" then
+			local ok, v = pcall(hover.IsVisible, hover)
+			visible = ok and v and true or false
+		end
+		if self.portraitHoverSource == "poll" or not visible then self:PortraitHoverLeave() end
+	end
+end
+
 function ns:InitPlayerFrameHooks()
-	if self.portraitHooked then return end
-	if type(PlayerFrame) ~= "table" or type(PlayerFrame.HookScript) ~= "function" then return end
-
-	local ok = pcall(PlayerFrame.HookScript, PlayerFrame, "OnEnter", function()
-		ns:ShowPortraitStats()
-	end)
-	if not ok then return end
-
-	pcall(PlayerFrame.HookScript, PlayerFrame, "OnLeave", function()
-		ns:HidePortraitStats()
-	end)
-
-	self.portraitHooked = true
+	self:HookPortraitFrames()
+	if not self.portraitPoller and type(CreateFrame) == "function" then
+		local ok, poller = pcall(CreateFrame, "Frame")
+		if ok and poller then
+			poller:SetScript("OnUpdate", ns.Throttle(self.PORTRAIT_POLL, function()
+				local okPoll, err = pcall(ns.PortraitPoll, ns)
+				if not okPoll and ns.RecordError then ns:RecordError("portrait:poll", err) end
+			end))
+			self.portraitPoller = poller
+		end
+	end
+	-- les interfaces complètes créent leurs cadres après l'entrée en jeu
+	if not self.portraitRetried and type(C_Timer) == "table" and type(C_Timer.After) == "function" then
+		self.portraitRetried = true
+		for _, delay in ipairs(self.PORTRAIT_RETRY) do
+			C_Timer.After(delay, function() pcall(ns.HookPortraitFrames, ns) end)
+		end
+	end
 end
 
 -- ---------------------------------------------------------------------------
 -- Changement d'équipement
+--
+-- Un PLAYER_EQUIPMENT_CHANGED par emplacement : un ensemble équipé d'un coup
+-- en donne plusieurs. On les regroupe (ns.gearPending) et on compare au
+-- relevé d'AVANT la première pièce. Sur le moteur récent, les statistiques ne
+-- sont pas toujours recalculées 0,2 s après l'événement : sans écart, on
+-- réessaie (GEAR_RETRY, et à chaque UNIT_STATS / PLAYER_AVG_ITEM_LEVEL_UPDATE
+-- du joueur). Le relevé de référence n'avance qu'une fois l'écart trouvé, ou
+-- à la dernière tentative : avant, un diff vide écrasait la référence et le
+-- vrai changement n'était plus jamais montré.
 -- ---------------------------------------------------------------------------
+ns.GEAR_RETRY = { 0.3, 0.8, 1.5 }
+
 function ns:CaptureStatBaseline()
 	self.statBefore = self:StatSnapshot()
+	self.gearPending = nil
 end
 
-function ns:OnEquipmentChanged()
+-- Un événement : l'emplacement s'ajoute à la série, les tentatives repartent
+function ns:QueueEquipmentChange(slot)
+	slot = tonumber(ns.Plain(slot))
+	local pending = self.gearPending
+	if not pending then
+		pending = { slots = {}, serial = 0, startedAt = self:Now() }
+		self.gearPending = pending
+	end
+	if slot then
+		local known = false
+		for _, value in ipairs(pending.slots) do if value == slot then known = true end end
+		if not known then pending.slots[#pending.slots + 1] = slot end
+	end
+	pending.serial = pending.serial + 1
+	local serial = pending.serial
+	if type(C_Timer) ~= "table" or type(C_Timer.After) ~= "function" then
+		return self:OnEquipmentChanged(true)
+	end
+	local retries = self.GEAR_RETRY
+	for index, delay in ipairs(retries) do
+		C_Timer.After(delay, function()
+			-- une pièce de plus entre-temps : ses propres tentatives prennent le relais
+			if ns.gearPending ~= pending or pending.serial ~= serial then return end
+			local ok, err = pcall(ns.OnEquipmentChanged, ns, index == #retries)
+			if not ok and ns.RecordError then ns:RecordError("stuff:diff", err) end
+		end)
+	end
+end
+
+-- Statistiques recalculées par le client : une tentative de plus, s'il en attend
+function ns:OnStatsUpdated(unit)
+	if unit ~= nil and ns.Plain(unit) ~= "player" then return end
+	if not self.gearPending then return end
+	self:OnEquipmentChanged(false)
+end
+
+-- Emplacement modifié (pour l'icône du toast) : d'abord ceux de la série
+local function ChangedSlot(before, after, pending)
+	local beforeSlots, afterSlots = before.slots or {}, after.slots or {}
+	for _, slot in ipairs(pending and pending.slots or {}) do
+		if beforeSlots[slot] ~= afterSlots[slot] then return slot end
+	end
+	for slot = 1, 19 do
+		if beforeSlots[slot] ~= afterSlots[slot] then return slot end
+	end
+	return nil
+end
+
+local function GearOutcome(state, slot, rows, pending)
+	local waited
+	if pending and pending.startedAt then waited = math.max(0, ns:Now() - pending.startedAt) end
+	ns.gearLast = { state = state, slot = slot, rows = rows or 0, waited = waited,
+		events = pending and pending.serial or 0 }
+end
+
+-- final : dernière tentative (sans écart, on s'y résout). Appel direct, sans
+-- série en cours : une tentative unique, donc finale.
+function ns:OnEquipmentChanged(final)
 	local db = self:DB()
+	local pending = self.gearPending
+	if final == nil then final = (pending == nil) end
 	local before = self.statBefore
 	local after = self:StatSnapshot()
 
 	if not before then
-		self.statBefore = after
-		return
+		self.statBefore, self.gearPending = after, nil
+		GearOutcome("nobaseline", nil, 0, pending)
+		return "nobaseline"
 	end
 
-	-- Emplacement modifié (pour l'icône du toast)
-	local changedSlot
-	for slot = 1, 19 do
-		if (before.slots and before.slots[slot]) ~= (after.slots and after.slots[slot]) then
-			changedSlot = slot
-			break
-		end
+	local changedSlot = ChangedSlot(before, after, pending)
+	if not changedSlot then
+		if not final then return "wait" end
+		-- rien de visible (même objet remis) : on ignore, la référence suit
+		self.statBefore, self.gearPending = after, nil
+		GearOutcome("noslot", nil, 0, pending)
+		return "noslot"
 	end
-	if not changedSlot then return end   -- rien de visible : on ignore
 
+	-- des stats illisibles pour l'instant (secrètes) : on attend la relecture
+	-- suivante, sans toucher à la référence
+	if not final and next(after.secret or {}) ~= nil then return "wait" end
 	local rows = self:DiffSnapshots(before, after)
+	if #rows == 0 and not final then return "wait" end
 
-	if db.showGearToast ~= false then
-		local beforeLink = before.slots and before.slots[changedSlot]
-		local afterLink = after.slots and after.slots[changedSlot]
-		self:ShowGearToast(rows, SlotTexture(afterLink, changedSlot, beforeLink))
+	-- référence suivante : une stat restée secrète garde sa dernière valeur lue
+	for key in pairs(after.secret or {}) do
+		if before[key] ~= nil and not (before.secret or {})[key] then after[key] = before[key]; after.secret[key] = nil end
 	end
+	self.statBefore, self.gearPending = after, nil
+	if #rows == 0 then
+		GearOutcome("nodelta", changedSlot, 0, pending)
+		return "nodelta"
+	end
+	if db.showGearToast == false then
+		GearOutcome("disabled", changedSlot, #rows, pending)
+		return "disabled"
+	end
+	local beforeLink = before.slots and before.slots[changedSlot]
+	local afterLink = after.slots and after.slots[changedSlot]
+	self:ShowGearToast(rows, SlotTexture(afterLink, changedSlot, beforeLink))
+	GearOutcome("shown", changedSlot, #rows, pending)
+	return "shown"
+end
 
-	self.statBefore = after
+-- Ligne de /r2q diag : issue du dernier changement d'équipement
+function ns:GearDiagLine()
+	local last = self.gearLast
+	if self.gearPending then
+		return self:F("MSG_DIAG_GEAR_PENDING", #self.gearPending.slots)
+	end
+	if not last then return L.MSG_DIAG_GEAR_NONE end
+	local slot = tostring(last.slot or "?")
+	if last.state == "shown" then return self:F("MSG_DIAG_GEAR_SHOWN", slot, last.rows) end
+	if last.state == "disabled" then return self:F("MSG_DIAG_GEAR_DISABLED", slot, last.rows) end
+	if last.state == "nodelta" then
+		local retries = self.GEAR_RETRY
+		local seconds = string.format("%.1f", retries[#retries] or 0):gsub("%.", L.MSG_DIAG_DECIMAL or ".")
+		return self:F("MSG_DIAG_GEAR_NODELTA", slot, seconds)
+	end
+	if last.state == "noslot" then return L.MSG_DIAG_GEAR_NOSLOT end
+	return L.MSG_DIAG_GEAR_NOBASE
+end
+
+-- UNIT_STATS et PLAYER_AVG_ITEM_LEVEL_UPDATE : un cadre à part, l'un ou
+-- l'autre peut manquer au client (pcall, sans alerte)
+do
+	local ok, statsFrame = pcall(CreateFrame, "Frame")
+	if ok and statsFrame then
+		pcall(statsFrame.RegisterEvent, statsFrame, "UNIT_STATS")
+		pcall(statsFrame.RegisterEvent, statsFrame, "PLAYER_AVG_ITEM_LEVEL_UPDATE")
+		statsFrame:SetScript("OnEvent", function(_, event, unit)
+			if event == "PLAYER_AVG_ITEM_LEVEL_UPDATE" then unit = "player" end
+			local okStats, err = pcall(ns.OnStatsUpdated, ns, unit)
+			if not okStats and ns.RecordError then ns:RecordError("stuff:" .. tostring(event), err) end
+		end)
+		ns.statsEventFrame = statsFrame
+	end
 end
 
 -- ---------------------------------------------------------------------------

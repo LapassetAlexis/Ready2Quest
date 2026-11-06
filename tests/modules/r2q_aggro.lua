@@ -1,0 +1,382 @@
+-- Module « Portée d'aggro » : formule, verdicts, distance par paliers,
+-- touche, combat, infobulle, anneaux des barres de nom, diag.
+local Check, Say, ResetWorld, NS, Mock = T.Check, T.Say, T.ResetWorld, T.NS, T.Mock
+
+local NAMES = { "UnitExists", "UnitIsPlayer", "UnitIsDead", "UnitCanAttack", "UnitCreatureType", "UnitReaction",
+	"IsShiftKeyDown", "IsControlKeyDown", "IsAltKeyDown", "InCombatLockdown", "UnitAffectingCombat",
+	"C_NamePlate", "CheckInteractDistance", "UnitLevel" }
+local saved = {}
+for _, name in ipairs(NAMES) do saved[name] = rawget(_G, name) end
+saved.inRange = C_Item.IsItemInRange
+
+local A = { W = {} }   -- une seule locale pour les aides
+-- portée de chaque objet du barème, d'après la table du module
+A.itemRange = {}
+for _, step in ipairs(NS.AGGRO_RANGE_ITEMS) do
+	for _, itemID in ipairs(step[2]) do A.itemRange[itemID] = step[1] end
+end
+
+local function Unit(unit) return A.W.units[unit] end
+function A.Install()
+	_G.UnitExists = function(unit) return unit == "player" or Unit(unit) ~= nil end
+	_G.UnitIsPlayer = function(unit) return unit == "player" or (Unit(unit) and Unit(unit).player) or false end
+	_G.UnitIsDead = function(unit) return Unit(unit) and Unit(unit).dead or false end
+	_G.UnitCanAttack = function(_, unit) return Unit(unit) ~= nil and not Unit(unit).friendly end
+	_G.UnitCreatureType = function(unit) return Unit(unit) and Unit(unit).creature or "Humanoïde" end
+	_G.UnitReaction = function(unit) return Unit(unit) and Unit(unit).reaction or 2 end
+	_G.UnitLevel = function(unit)
+		if unit == "player" then return A.W.level end
+		return Unit(unit) and Unit(unit).level
+	end
+	_G.IsShiftKeyDown = function() return A.W.shift == true end
+	_G.IsControlKeyDown = function() return A.W.ctrl == true end
+	_G.IsAltKeyDown = function() return A.W.alt == true end
+	_G.InCombatLockdown = function() return false end
+	_G.UnitAffectingCombat = function(unit) return unit == "player" and A.W.combat == true end
+	C_Item.IsItemInRange = function(itemID, unit)
+		if A.W.noItems then return nil end
+		local u, range = Unit(unit), A.itemRange[itemID]
+		if not u or not u.dist or not range then return nil end
+		return u.dist <= range
+	end
+	_G.CheckInteractDistance = function(unit, index)
+		local u = Unit(unit)
+		if not u or not u.dist or not A.W.interact then return nil end
+		return u.dist <= ({ [3] = 10, [4] = 28 })[index]
+	end
+	_G.C_NamePlate = {
+		GetNamePlateForUnit = function(unit) return A.W.plates[unit] end,
+		GetNamePlates = function()
+			local list = {}
+			for _, plate in pairs(A.W.plates) do list[#list + 1] = plate end
+			return list
+		end,
+	}
+end
+
+function A.Reset()
+	ResetWorld()
+	A.W = { level = 20, units = {}, plates = {} }
+	A.Install()
+	NS.aggroPlates, NS.aggroRings, NS.aggroScanned, NS.aggroShowing, NS.aggroMeasured = {}, {}, nil, nil, nil
+	-- mesures fraîches à chaque appel : les tests déplacent les monstres sans
+	-- faire avancer l'horloge (le cache a son propre test, à la fin)
+	NS.aggroDistCache, NS.AGGRO_DISTANCE_CACHE = nil, 0
+	GameTooltip:ClearLines()
+end
+function A.Mob(unit, level, dist, extra)
+	local mob = { level = level, dist = dist }
+	for k, v in pairs(extra or {}) do mob[k] = v end
+	A.W.units[unit] = mob
+	return mob
+end
+function A.Plate(unit)
+	local plate = CreateFrame("Frame", "NamePlate_" .. unit)
+	plate.namePlateUnitToken = unit
+	A.W.plates[unit] = plate
+	Mock:Fire("NAME_PLATE_UNIT_ADDED", unit)
+	return plate
+end
+function A.Ring(unit)
+	local plate = A.W.plates[unit]
+	return plate and NS.aggroRings[plate]
+end
+function A.RingShown(unit) local ring = A.Ring(unit); return ring ~= nil and ring:IsShown() == true end
+function A.Tip() return table.concat(GameTooltip.lines or {}, "\n") end
+
+-- 1. Chaînes, module, page -----------------------------------------------------
+do
+	Say("-- aggro : chaînes, module, réglages")
+	A.Reset()
+	local strings = NS.AGGRO_STRINGS
+	local missing = {}
+	for key, value in pairs(strings.fr) do
+		if type(strings.en[key]) ~= "string" then missing[#missing + 1] = "en:" .. key end
+		if NS.L[key] ~= value then missing[#missing + 1] = "fr:" .. key end
+		local function Specs(text)
+			local list = {}
+			for spec in tostring(text):gsub("%%%%", ""):gmatch("%%[%d%$]*[sd]") do list[#list + 1] = spec end
+			return table.concat(list, ",")
+		end
+		if Specs(value) ~= Specs(strings.en[key] or "") then missing[#missing + 1] = "spec:" .. key end
+	end
+	for key in pairs(strings.en) do if strings.fr[key] == nil then missing[#missing + 1] = "fr?" .. key end end
+	Check("[AGGRO] chaînes en français et en anglais, mêmes placeholders", #missing == 0, table.concat(missing, ", "))
+	Check("[AGGRO] Aggro.lua chargé", NS.Loaded.Aggro == true)
+	Check("[AGGRO] module « aggro » inscrit", NS:FindModule("aggro") and NS:FindModule("aggro").key == "aggroEnabled"
+		and NS:FindModule("portee") ~= nil)
+	local page
+	for _, def in ipairs(NS.OPTION_PAGES) do if def.id == "aggro" then page = def end end
+	Check("[AGGRO] sous-page du QoL, 4 réglages", page and page.parent == "qol" and page.group == "OPT_GROUP_QOL"
+		and #page.rows == 4)
+	local db = NS:DB()
+	Check("[AGGRO] défauts : actif, Maj, infobulle, anneaux", db.aggroEnabled == true and db.aggroKey == "shift"
+		and db.aggroTooltip == true and db.aggroRings == true)
+	local choices = NS:AggroKeyChoices()
+	Check("[AGGRO] quatre choix de touche", #choices == 4 and choices[1].value == "shift" and choices[4].value == "always")
+	NS:AggroSetKey("n'importe quoi")
+	Check("[AGGRO] touche inconnue refusée", NS:AggroKey() == "shift")
+	-- la liste déroulante des réglages : choisir, puis relire
+	page.rows[2].choose("ctrl")
+	Check("[AGGRO] choix de la liste enregistré", db.aggroKey == "ctrl" and page.rows[2].current() == "ctrl")
+	db.aggroKey = "shift"
+end
+
+-- 2. Formule et verdicts -------------------------------------------------------
+do
+	Say("-- aggro : portée estimée")
+	local R = NS.AggroRadius
+	Check("[AGGRO] niveau égal : 20", R(20, 20) == 20)
+	Check("[AGGRO] joueur 5 niveaux au-dessus : 15", R(25, 20) == 15)
+	Check("[AGGRO] joueur 5 niveaux en dessous : 25", R(20, 25) == 25)
+	Check("[AGGRO] borné à 5", R(60, 1) == 5, R(60, 1))
+	Check("[AGGRO] borné à 45", R(1, 60) == 45, R(1, 60))
+	Check("[AGGRO] niveau « ?? » : dix de plus", R(30, -1) == 30, R(30, -1))
+	Check("[AGGRO] niveau illisible : rien", R(nil, 20) == nil and R(20, nil) == nil)
+
+	local V = NS.AggroVerdict
+	Check("[AGGRO] 10-15 m pour 17 : rouge", V(17, 10, 15) == "red")
+	Check("[AGGRO] 15-20 m pour 17 : ambre (peut-être dedans)", V(17, 15, 20) == "amber")
+	Check("[AGGRO] 20-25 m pour 17 : ambre (moins de 5 m de marge)", V(17, 20, 25) == "amber")
+	Check("[AGGRO] 25-30 m pour 17 : vert", V(17, 25, 30) == "green")
+	Check("[AGGRO] moins de 5 m : rouge", V(5, 0, 5) == "red")
+	Check("[AGGRO] au-delà de 80 m : vert", V(45, 80, nil) == "green")
+	Check("[AGGRO] sans mesure : pas de verdict", V(20, nil, nil) == nil)
+end
+
+-- 3. Distance par paliers ------------------------------------------------------
+do
+	Say("-- aggro : distance")
+	A.Reset()
+	A.Mob("nameplate1", 20, 22)
+	local low, high = NS:AggroDistance("nameplate1")
+	Check("[AGGRO] 22 m : entre 20 et 25", low == 20 and high == 25, tostring(low) .. "-" .. tostring(high))
+	A.Mob("nameplate1", 20, 3)
+	low, high = NS:AggroDistance("nameplate1")
+	Check("[AGGRO] 3 m : moins de 5", low == 0 and high == 5, tostring(low) .. "-" .. tostring(high))
+	A.Mob("nameplate1", 20, 120)
+	low, high = NS:AggroDistance("nameplate1")
+	Check("[AGGRO] 120 m : plus de 80", low == 80 and high == nil, tostring(low) .. "-" .. tostring(high))
+	Check("[AGGRO] mesure notée pour le diag", NS.aggroMeasured == true)
+
+	-- objets muets (pas en cache, ou client fermé) : CheckInteractDistance prend le relais
+	A.W.noItems, A.W.interact = true, true
+	A.Mob("nameplate1", 20, 22)
+	low, high = NS:AggroDistance("nameplate1")
+	Check("[AGGRO] repli interaction : entre 10 et 28", low == 10 and high == 28, tostring(low) .. "-" .. tostring(high))
+	A.W.interact = false
+	low, high = NS:AggroDistance("nameplate1")
+	Check("[AGGRO] aucune réponse : pas de distance", low == nil and high == nil)
+	-- une API qui lève une erreur ne casse rien
+	C_Item.IsItemInRange = function() error("restricted") end
+	_G.CheckInteractDistance = function() error("restricted") end
+	local ok, l2 = pcall(NS.AggroDistance, NS, "nameplate1")
+	Check("[AGGRO] API refusée : pas d'erreur, pas de distance", ok and l2 == nil)
+	A.Install()
+end
+
+-- 4. Touche et combat ----------------------------------------------------------
+do
+	Say("-- aggro : touche et combat")
+	A.Reset()
+	Check("[AGGRO] sans touche : inactif", NS:AggroActive() == false)
+	A.W.shift = true
+	Check("[AGGRO] Maj tenue : actif", NS:AggroActive() == true)
+	A.W.combat = true
+	Check("[AGGRO] en combat : inactif", NS:AggroActive() == false)
+	A.W.combat, A.W.shift = false, false
+	NS:DB().aggroKey = "ctrl"
+	A.W.ctrl = true
+	Check("[AGGRO] Ctrl choisi : Ctrl suffit", NS:AggroActive() == true)
+	A.W.ctrl, A.W.shift = false, true
+	Check("[AGGRO] Ctrl choisi : Maj ne suffit pas", NS:AggroActive() == false)
+	NS:DB().aggroKey = "alt"
+	A.W.alt = true
+	Check("[AGGRO] Alt choisi", NS:AggroActive() == true)
+	NS:DB().aggroKey = "always"
+	A.W.alt, A.W.shift = false, false
+	Check("[AGGRO] « toujours » : sans touche", NS:AggroActive() == true)
+	NS:DB().aggroEnabled = false
+	Check("[AGGRO] module coupé : inactif", NS:AggroActive() == false)
+	NS:DB().aggroEnabled, NS:DB().aggroKey = true, "shift"
+end
+
+-- 5. Infobulle -----------------------------------------------------------------
+do
+	Say("-- aggro : infobulle")
+	A.Reset()
+	A.Mob("mouseover", 20, 22)
+	GameTooltip:ClearLines()
+	Check("[AGGRO] sans la touche : rien dans l'infobulle", NS:AggroOnTooltip(GameTooltip, {}) == false and #GameTooltip.lines == 0)
+	A.W.shift = true
+	NS:AggroOnTooltip(GameTooltip, {})
+	Check("[AGGRO] ligne : portée, distance, verdict",
+		A.Tip():find("Aggro ~20 m · tu es à 20-25 m · à la limite", 1, true) ~= nil, A.Tip())
+	Check("[AGGRO] couleur ambre", GameTooltip.styled[1].color[1] == NS.Theme.ORANGE[1])
+	Check("[AGGRO] mention d'estimation", A.Tip():find("Estimation", 1, true) ~= nil)
+
+	GameTooltip:ClearLines()
+	A.Mob("mouseover", 20, 12)
+	NS:AggroOnTooltip(GameTooltip, {})
+	Check("[AGGRO] 12 m d'un monstre de même niveau : dans sa portée, rouge",
+		A.Tip():find("dans sa portée", 1, true) ~= nil and GameTooltip.styled[1].color[1] == NS.Theme.RED[1], A.Tip())
+
+	GameTooltip:ClearLines()
+	A.W.level = 30
+	A.Mob("mouseover", 20, 22)     -- 10 niveaux de moins : portée 10
+	NS:AggroOnTooltip(GameTooltip, {})
+	Check("[AGGRO] monstre bien plus faible : hors de portée, vert",
+		A.Tip():find("Aggro ~10 m", 1, true) ~= nil and A.Tip():find("hors de portée", 1, true) ~= nil
+		and GameTooltip.styled[1].color[1] == NS.Theme.GREEN[1], A.Tip())
+	A.W.level = 20
+
+	GameTooltip:ClearLines()
+	A.Mob("mouseover", 20, nil)     -- aucune mesure possible
+	NS:AggroOnTooltip(GameTooltip, {})
+	Check("[AGGRO] sans distance : la portée seule", A.Tip():find("Aggro ~20 m", 1, true) ~= nil
+		and A.Tip():find("tu es", 1, true) == nil, A.Tip())
+
+	GameTooltip:ClearLines()
+	A.Mob("mouseover", 20, 22, { reaction = 4 })
+	NS:AggroOnTooltip(GameTooltip, {})
+	Check("[AGGRO] neutre : n'attaque pas", A.Tip():find("neutre, n'attaque pas", 1, true) ~= nil, A.Tip())
+
+	GameTooltip:ClearLines()
+	A.Mob("mouseover", 20, 22, { player = true })
+	Check("[AGGRO] joueur : rien", NS:AggroOnTooltip(GameTooltip, {}) == false)
+	A.Mob("mouseover", 1, 5, { creature = "Bestiole" })
+	Check("[AGGRO] bestiole : rien", NS:AggroOnTooltip(GameTooltip, {}) == false)
+	A.Mob("mouseover", 20, 5, { friendly = true })
+	Check("[AGGRO] PNJ amical : rien", NS:AggroOnTooltip(GameTooltip, {}) == false)
+
+	A.Mob("mouseover", 20, 22)
+	A.W.combat = true
+	Check("[AGGRO] en combat : rien", NS:AggroOnTooltip(GameTooltip, {}) == false)
+	A.W.combat = false
+	NS:DB().aggroTooltip = false
+	Check("[AGGRO] infobulle coupée : rien", NS:AggroOnTooltip(GameTooltip, {}) == false)
+	NS:DB().aggroTooltip = true
+end
+
+-- 6. Anneaux des barres de nom -------------------------------------------------
+do
+	Say("-- aggro : anneaux")
+	A.Reset()
+	A.Mob("nameplate1", 20, 12)                       -- rouge
+	A.Mob("nameplate2", 20, 22)                       -- ambre
+	A.Mob("nameplate3", 20, 60)                       -- vert
+	A.Mob("nameplate4", 20, 12, { reaction = 4 })     -- neutre : pas d'anneau
+	for i = 1, 4 do A.Plate("nameplate" .. i) end
+	Mock:Advance(NS.AGGRO_TICK)
+	Check("[AGGRO] touche relâchée : aucun anneau", not A.RingShown("nameplate1") and not A.RingShown("nameplate2"))
+
+	A.W.shift = true
+	Mock:Advance(NS.AGGRO_TICK)
+	Check("[AGGRO] dans la portée : anneau rouge", A.RingShown("nameplate1") and A.Ring("nameplate1").verdict == "red"
+		and A.Ring("nameplate1").texture.vertex[1] == NS.Theme.RED[1])
+	Check("[AGGRO] à la limite : anneau ambre", A.RingShown("nameplate2") and A.Ring("nameplate2").verdict == "amber")
+	Check("[AGGRO] loin : anneau vert, discret", A.RingShown("nameplate3") and A.Ring("nameplate3").verdict == "green"
+		and A.Ring("nameplate3").alpha < 0.9)
+	Check("[AGGRO] neutre : pas d'anneau", not A.RingShown("nameplate4"))
+	Check("[AGGRO] anneau accroché au cadre de base de la barre", A.Ring("nameplate1"):GetParent() == A.W.plates.nameplate1
+		and A.Ring("nameplate1").lastPoint and A.Ring("nameplate1").lastPoint.relTo == A.W.plates.nameplate1)
+
+	-- le joueur s'approche : le verdict suit au passage suivant
+	A.W.units.nameplate3.dist = 18
+	Mock:Advance(NS.AGGRO_TICK)
+	Check("[AGGRO] rafraîchi pendant que la touche est tenue", A.Ring("nameplate3").verdict == "red")
+
+	-- nouvelle barre pendant que la touche est tenue : anneau tout de suite
+	A.Mob("nameplate5", 20, 3)
+	A.Plate("nameplate5")
+	Check("[AGGRO] barre ajoutée : anneau immédiat", A.RingShown("nameplate5"))
+
+	-- barre retirée : anneau masqué et oublié
+	local ring5 = A.Ring("nameplate5")
+	A.W.plates.nameplate5 = nil
+	Mock:Fire("NAME_PLATE_UNIT_REMOVED", "nameplate5")
+	Check("[AGGRO] barre retirée : anneau masqué", ring5:IsShown() == false and NS.aggroPlates.nameplate5 == nil)
+
+	-- combat : tout disparaît
+	A.W.combat = true
+	Mock:Fire("PLAYER_REGEN_DISABLED")
+	Check("[AGGRO] entrée en combat : anneaux masqués", not A.RingShown("nameplate1") and not A.RingShown("nameplate2"))
+	Mock:Advance(NS.AGGRO_TICK)
+	Check("[AGGRO] en combat : pas de retour des anneaux", not A.RingShown("nameplate1"))
+	A.W.combat = false
+	Mock:Fire("PLAYER_REGEN_ENABLED")
+	Check("[AGGRO] sortie de combat, touche tenue : anneaux revenus", A.RingShown("nameplate1"))
+
+	-- touche relâchée : tout disparaît (MODIFIER_STATE_CHANGED, sans attendre)
+	A.W.shift = false
+	Mock:Fire("MODIFIER_STATE_CHANGED", "LSHIFT", 0)
+	Check("[AGGRO] touche relâchée : anneaux masqués aussitôt", not A.RingShown("nameplate1") and not A.RingShown("nameplate3"))
+
+	-- option anneaux coupée
+	A.W.shift = true
+	NS:DB().aggroRings = false
+	Mock:Advance(NS.AGGRO_TICK)
+	Check("[AGGRO] anneaux coupés dans les réglages", not A.RingShown("nameplate1"))
+	NS:DB().aggroRings = true
+
+	-- sans mesure de distance : pas d'anneau
+	A.W.noItems = true
+	Mock:Advance(NS.AGGRO_TICK)
+	Check("[AGGRO] sans distance : pas d'anneau", not A.RingShown("nameplate1"))
+	A.W.noItems = false
+end
+
+do
+	Say("-- aggro : barres présentes avant le premier passage, diag")
+	A.Reset()
+	A.Mob("nameplate7", 20, 12)
+	local plate = CreateFrame("Frame", "NamePlate7")
+	plate.namePlateUnitToken = "nameplate7"
+	A.W.plates.nameplate7 = plate     -- pas d'événement : déjà là au /reload
+	A.W.shift = true
+	Mock:Advance(NS.AGGRO_TICK)
+	Check("[AGGRO] barres existantes reprises (GetNamePlates)", A.RingShown("nameplate7"))
+	local line = NS:AggroDiagLine()
+	Check("[AGGRO] diag : touche, état, barres, anneaux", line:find("touche Maj", 1, true) ~= nil
+		and line:find("actif", 1, true) ~= nil and line:find("1 barre", 1, true) ~= nil
+		and line:find("1 anneau", 1, true) ~= nil and line:find("oui", 1, true) ~= nil, line)
+	Mock:Reset()
+	NS:HandleCommand("diag")
+	Check("[AGGRO] /r2q diag dit l'état de l'aggro", Mock:Output():find("aggro :", 1, true) ~= nil)
+	NS:DB().aggroEnabled = false
+	Check("[AGGRO] diag : module coupé", NS:AggroDiagLine():find("désactivé", 1, true) ~= nil)
+	NS:DB().aggroEnabled = true
+	-- C_NamePlate absent (client restreint) : rien ne casse
+	_G.C_NamePlate = nil
+	NS.aggroPlates, NS.aggroScanned = {}, nil
+	local ok = pcall(function()
+		Mock:Fire("NAME_PLATE_UNIT_ADDED", "nameplate8")
+		Mock:Advance(NS.AGGRO_TICK)
+	end)
+	Check("[AGGRO] sans C_NamePlate : aucune erreur", ok and NS.aggroPlates.nameplate8 == nil)
+end
+
+-- Cache des mesures : une par unité et par demi-seconde
+do
+	T.Say("-- aggro : cache des mesures")
+	A.Reset()
+	NS.AGGRO_DISTANCE_CACHE = 0.5
+	A.Mob("nameplate1", 20, 22, { guid = "Creature-0-1-1-1-500-1" })
+	local calls = 0
+	local inner = C_Item.IsItemInRange
+	C_Item.IsItemInRange = function(...) calls = calls + 1; return inner(...) end
+	local low1 = NS:AggroDistance("nameplate1")
+	local first = calls
+	A.W.units.nameplate1.dist = 3
+	local low2 = NS:AggroDistance("nameplate1")
+	T.Check("[AGGRO] cache : même mesure dans la demi-seconde, sans rappeler le client", calls == first and low1 == low2 and first > 0)
+	T.Mock:Advance(1)
+	local low3 = NS:AggroDistance("nameplate1")
+	T.Check("[AGGRO] cache : remesuré ensuite", calls > first and low3 ~= low1, tostring(low3))
+	C_Item.IsItemInRange = inner
+	NS.AGGRO_DISTANCE_CACHE = 0.5
+end
+
+for _, name in ipairs(NAMES) do _G[name] = saved[name] end
+C_Item.IsItemInRange = saved.inRange
+NS.aggroPlates, NS.aggroRings, NS.aggroShowing, NS.aggroScanned = {}, {}, nil, nil
