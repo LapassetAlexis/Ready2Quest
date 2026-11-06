@@ -396,7 +396,7 @@ function ns:MissionDraw(zoneID)
 	own.trait = TRAIT_MISSIONS[trait or ""] and trait or nil
 	missions[3] = own
 	daily.day, daily.zoneID, daily.missions, daily.rerolled, daily.allDone = self:DailyToday(), zoneID, missions, nil, nil
-	daily.talked = {}
+	daily.talked, daily.percentV = {}, ns.MISSION_PERCENT_V
 	self:CompanionSay("MISSION_NEW", { force = true, category = "event" })
 	self:DailyChanged()
 	return missions
@@ -522,11 +522,29 @@ function ns:MissionEvent(kind, amount, zoneID, info)
 	return moved
 end
 
+-- Formule du pourcentage d'exploration d'une zone : 2 = QC 2.0 (lieux,
+-- récolte, quêtes ; le bestiaire et les nommés en sont sortis). Une mission
+-- « pourcentage » tirée avec l'ancienne formule (le jour de la mise à jour)
+-- a un départ mesuré autrement : il est remesuré, le progrès gardé.
+ns.MISSION_PERCENT_V = 2
+local function PercentMigrate(self, daily)
+	if daily.percentV == ns.MISSION_PERCENT_V then return end
+	for _, mission in ipairs(daily.missions) do
+		if not mission.done and mission.zoneID and mission.kind == "percent" then
+			-- mesure pas encore disponible : on réessaiera au prochain relevé
+			if not (self.ZoneCompletion and self:ZoneCompletion(mission.zoneID)) then return end
+			mission.start = self:MissionMeasure("percent", mission.zoneID) - (tonumber(mission.have) or 0)
+		end
+	end
+	daily.percentV = ns.MISSION_PERCENT_V
+end
+
 -- Missions mesurées (espèces, pourcentage) : relues au rafraîchissement
 function ns:MissionRemeasure()
 	if not self:DailyMissionsOn() then return false end
 	local daily = self:DailyData()
 	if daily.day ~= self:DailyToday() then return false end
+	PercentMigrate(self, daily)
 	local moved = false
 	for _, mission in ipairs(daily.missions) do
 		if not mission.done and mission.zoneID and (mission.kind == "species" or mission.kind == "percent") then

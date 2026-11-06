@@ -246,4 +246,31 @@ do
 	Check("[QM] événement du bon type : compte", weekly.missions[1].have == 1)
 end
 
+-- 5. Mission « pourcentage » tirée le jour de la mise à jour (ancienne formule) ---------------------
+do
+	Say("-- qc2 missions : pourcentage le jour de la mise à jour")
+	QM.Reset()
+	local percent = 20
+	local savedCompletion = NS.ZoneCompletion
+	NS.ZoneCompletion = function(_, zoneID) if zoneID == 9900 then return { percent = percent, parts = { {}, {} } } end end
+	local daily = NS:DailyData()
+	-- tirée ce matin avec l'ancienne formule (bestiaire compris : 50 %), 1 point déjà gagné
+	daily.day, daily.zoneID, daily.percentV = NS:DailyToday(), 9900, nil
+	daily.missions = { { kind = "percent", zoneID = 9900, need = 3, have = 1, start = 50, source = "zone" },
+		{ kind = "talks", need = 3, have = 0, source = "zone" }, { kind = "pets", need = 3, have = 0, source = "trait" } }
+	NS:MissionRemeasure()
+	local mission = daily.missions[1]
+	Check("[QM] pourcentage : départ remesuré avec la nouvelle formule, progrès gardé", mission.start == 19
+		and mission.have == 1 and not mission.done and daily.percentV == NS.MISSION_PERCENT_V, tostring(mission.start))
+	percent = 22
+	NS:MissionRemeasure()
+	Check("[QM] … et la mission avance de nouveau", mission.done == true, tostring(mission.have))
+	mission.start, mission.done, mission.have = 0, nil, 0
+	NS:MissionRemeasure()
+	Check("[QM] remesure une seule fois", mission.start == 0)
+	NS:MissionDraw(9900)
+	Check("[QM] tirage du jour : formule notée", NS:DailyData().percentV == NS.MISSION_PERCENT_V)
+	NS.ZoneCompletion = savedCompletion
+end
+
 QM.Done()
