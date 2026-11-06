@@ -194,7 +194,7 @@ do
 	f.sections.menagerie:Click()
 	local pane = f.men
 	Check("[MEN] par défaut : la zone actuelle", f.kind == "menagerie" and pane:IsShown() and pane.zone:GetValue() == "here"
-		and pane.count.text == "2 capturées · 3 croisées · 4 en tout", pane.count.text)
+		and pane.count.text == "2 capturées · brillantes : 1 · 3 croisées · 4 en tout", pane.count.text)
 	Check("[MEN] liste des zones : actuelle, toutes, puis chaque zone", #pane.zone.options == 4
 		and pane.zone.options[2].value == "all" and pane.zone.options[3].value == 1411)
 	local keys = {}
@@ -225,7 +225,7 @@ do
 	Check("[MEN] aperçu d'une inconnue : « ??? », niveau, comment la trouver", pane.preview.title.text == "???"
 		and pane.preview.lines[1].text:find("5-6", 1, true) ~= nil, pane.preview.lines[1].text)
 	pane.zone:Choose("all")
-	Check("[MEN] zone « toutes »", f.menZone == "all" and pane.count.text == "2 capturées · 3 croisées · 5 en tout", pane.count.text)
+	Check("[MEN] zone « toutes »", f.menZone == "all" and pane.count.text == "2 capturées · brillantes : 1 · 3 croisées · 5 en tout", pane.count.text)
 	pane.search:SetText("kodo")
 	if pane.search.scripts and pane.search.scripts.OnTextChanged then pane.search.scripts.OnTextChanged(pane.search) end
 	Check("[MEN] recherche dans la page", f.menSearch == "kodo" and pane.items[1].entry and pane.items[1].entry.npc == 3201

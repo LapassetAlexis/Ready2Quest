@@ -6,7 +6,8 @@
 -- Elles nourrissent la ménagerie : capturer, capturer un élite ou un rare,
 -- enchaîner les missions du jour, abattre, tamponner le carnet, récolter,
 -- rendre des quêtes. Une capture au moins dans le lot si la capture est
--- allumée.
+-- allumée, et (1.6.0) toujours une chasse au brillant : en abattre un, ou en
+-- capturer un.
 -- Chaque mission faite : un Lasso tressé et une friandise ; les trois : un
 -- Sifflet du dompteur et un Festin (ns.MISSION_REWARDS, Daily.lua).
 local ADDON, ns = ...
@@ -22,8 +23,13 @@ local WEEKLY = {
 	{ kind = "stamps",       need = 6 },
 	{ kind = "gather",       need = 20 },
 	{ kind = "turnins",      need = 15 },
+	{ kind = "shinyKill",    need = 1 },
+	{ kind = "shinyCapture", need = 1 },
 }
-local CAPTURE_KINDS = { captures = true, captureNamed = true }
+local CAPTURE_KINDS = { captures = true, captureNamed = true, shinyCapture = true }
+-- une chasse au brillant par semaine (1.6.0)
+local SHINY_KINDS = { shinyKill = true, shinyCapture = true }
+ns.WEEKLY_SHINY_KINDS = SHINY_KINDS
 ns.WEEKLY_MISSIONS = WEEKLY
 
 local FR = {
@@ -34,6 +40,8 @@ local FR = {
 	WK_stamps       = "Gagne %d tampons du carnet",
 	WK_gather       = "Récolte %d fois",
 	WK_turnins      = "Rends %d quêtes",
+	WK_shinyKill    = "Abats une créature brillante",
+	WK_shinyCapture = "Capture une créature brillante",
 	WK_SOURCE       = "mission de la semaine",
 	WK_ENDS         = "Nouvelles missions dans %s.",
 	WK_ALL_BONUS    = "Les 3 missions de la semaine : un Sifflet du dompteur et un Festin en plus.",
@@ -49,6 +57,8 @@ local EN = {
 	WK_stamps       = "Earn %d journal stamps",
 	WK_gather       = "Gather %d times",
 	WK_turnins      = "Turn in %d quests",
+	WK_shinyKill    = "Defeat a shiny creature",
+	WK_shinyCapture = "Capture a shiny creature",
 	WK_SOURCE       = "mission of the week",
 	WK_ENDS         = "New missions in %s.",
 	WK_ALL_BONUS    = "All 3 weekly missions: a Tamer's whistle and a Feast on top.",
@@ -137,16 +147,19 @@ end
 -- `later` : la bulle attend (celle des missions du jour vient de partir)
 function ns:WeeklyDraw(later)
 	local weekly = self:WeeklyData()
-	local pool, captures = {}, {}
+	local pool, captures, shinies = {}, {}, {}
 	for _, def in ipairs(WEEKLY) do
-		if CAPTURE_KINDS[def.kind] then
+		if SHINY_KINDS[def.kind] then
+			if not CAPTURE_KINDS[def.kind] or CaptureOn(self) then shinies[#shinies + 1] = def end
+		elseif CAPTURE_KINDS[def.kind] then
 			if CaptureOn(self) then captures[#captures + 1] = def end
 		else
 			pool[#pool + 1] = def
 		end
 	end
 	local picked = {}
-	if #captures > 0 then picked[1] = table.remove(captures, math.random(#captures)) end
+	if #captures > 0 then picked[#picked + 1] = table.remove(captures, math.random(#captures)) end
+	if #shinies > 0 then picked[#picked + 1] = table.remove(shinies, math.random(#shinies)) end
 	for _, def in ipairs(captures) do pool[#pool + 1] = def end
 	while #picked < ns.WEEKLY_COUNT and #pool > 0 do
 		picked[#picked + 1] = table.remove(pool, math.random(#pool))

@@ -347,7 +347,7 @@ local LIST_W = math.floor((INNER - (LIST_COLS - 1) * 12) / LIST_COLS)
 -- 1.5.0 : cinq pages. « progress » (Complétion : zones et fiche de zone) et
 -- l'album viennent d'ailleurs (ns.JOURNAL_PANES) ; Collection rejoint Compagnon
 local SECTIONS = { "evolution", "menagerie", "day", "progress", "memories" }
-local MEN_STATES = { "all", "captured", "missing", "tokill" }
+local MEN_STATES = { "all", "captured", "missing", "tokill", "shiny" }
 local MEN_RANKS = { "all", "normal", "elite", "rare", "boss" }
 local MEN_SORTS = { "no", "name", "level", "rank", "date" }
 local MEN_ROW_H = 30
@@ -417,7 +417,14 @@ local FR2 = {
 	JRN_MEN_captured       = "Capturées",
 	JRN_MEN_missing        = "À capturer",
 	JRN_MEN_tokill         = "À abattre",
+	JRN_MEN_shiny          = "Brillantes",
 	JRN_MEN_COUNT          = "%d capturées · %d croisées · %d en tout",
+	JRN_MEN_COUNT_SHINY    = "%d capturées · brillantes : %d · %d croisées · %d en tout",
+	JRN_MEN_SEE_SHINY      = "Version brillante",
+	JRN_MEN_SEE_NORMAL     = "Version normale",
+	JRN_MEN_SHINY_CAUGHT   = "Brillante capturée le %s",
+	JRN_MEN_SHINY_SEEN     = "Brillante repérée le %s · pas encore capturée",
+	JRN_MEN_SHINY_UNSEEN   = "Brillante jamais repérée : abats-en, ta chance monte",
 	JRN_MEN_HINT           = "Survol : sa fiche. Clic sur une créature capturée : elle devient ton compagnon.",
 	JRN_MEN_ZONE_HERE      = "Zone actuelle (%s)",
 	JRN_MEN_ZONE_ALL       = "Toutes les zones",
@@ -521,7 +528,14 @@ local EN2 = {
 	JRN_MEN_captured       = "Captured",
 	JRN_MEN_missing        = "To capture",
 	JRN_MEN_tokill         = "To defeat",
+	JRN_MEN_shiny          = "Shiny",
 	JRN_MEN_COUNT          = "%d captured · %d met · %d in all",
+	JRN_MEN_COUNT_SHINY    = "%d captured · %d shiny · %d met · %d in all",
+	JRN_MEN_SEE_SHINY      = "Shiny version",
+	JRN_MEN_SEE_NORMAL     = "Normal version",
+	JRN_MEN_SHINY_CAUGHT   = "Shiny captured on %s",
+	JRN_MEN_SHINY_SEEN     = "Shiny spotted on %s · not captured yet",
+	JRN_MEN_SHINY_UNSEEN   = "Shiny never spotted: defeat more, your odds go up",
 	JRN_MEN_HINT           = "Hover: its card. Click a captured creature: it becomes your companion.",
 	JRN_MEN_ZONE_HERE      = "Current zone (%s)",
 	JRN_MEN_ZONE_ALL       = "All zones",
@@ -766,6 +780,7 @@ local function PreviewSet(p, title, lines, opts)
 		if opts.creature then
 			if p.model.SetCreature then pcall(p.model.SetCreature, p.model, opts.creature) end
 			p.model.creature = opts.creature
+			if ns.ModelShinyLight then ns.ModelShinyLight(p.model, opts.shiny) end
 			p.model:Show()
 		elseif opts.display then
 			if p.model.SetDisplayInfo then pcall(p.model.SetDisplayInfo, p.model, opts.display) end
@@ -1039,12 +1054,14 @@ local function BuildMenagerie(self, frame, content)
 		Changed()
 	end)
 	At(pane.stateRow, content, 0, rowY)
-	local searchW = math.max(120, GRID_W - (pane.stateRow.used or 300) - 12)
+	-- la recherche va jusqu'au bord droit (au-dessus de l'aperçu, qui commence
+	-- plus bas) : cinq puces d'état tiennent à côté (1.6.0)
+	local searchW = math.max(120, INNER - (pane.stateRow.used or 300) - 12)
 	pane.search = Theme.CreateSearchBox(pane, searchW, L.JRN_MEN_SEARCH, function(text)
 		frame.menSearch = text or ""
 		Changed()
 	end)
-	pane.search:SetPoint("TOPRIGHT", content, "TOPLEFT", PAD + GRID_W, rowY)
+	pane.search:SetPoint("TOPRIGHT", content, "TOPLEFT", PAD + INNER, rowY)
 	-- la liste, façon Pokédex : numéro, type, nom, marques ; la fiche à droite
 	pane.items = {}
 	local gridTop = rowY - Theme.CHIP_HEIGHT - 12
@@ -1096,6 +1113,14 @@ local function BuildMenagerie(self, frame, content)
 	At(pane.empty, content, 0, gridTop - 10)
 	if pane.empty.SetWordWrap then pane.empty:SetWordWrap(true) end
 	pane.preview = BuildPreview(pane, content, INNER - PREVIEW_W, gridTop, gridTop - PAGER_Y - 12)
+	-- normale / brillante : la fiche montre l'une ou l'autre (1.6.0)
+	pane.preview.variant = Theme.CreateButton(pane.preview, "auto", 20, L.JRN_MEN_SEE_SHINY, function()
+		local preview = frame.men.preview
+		preview.shiny = not preview.shiny
+		if preview.entry then ns:JournalPreviewMenagerie(preview.entry, true) end
+	end)
+	pane.preview.variant:SetPoint("TOPRIGHT", pane.preview, "TOPRIGHT", -6, -6)
+	pane.preview.variant:Hide()
 end
 
 -- Missions : à gauche, celles du compagnon, du jour et de la semaine (avec
@@ -1499,12 +1524,13 @@ local function PaintLook(cell, def, worn)
 	cell.label:SetText(L[def.label] or def.label)
 	-- le modèle n'est rechargé que s'il change (sinon l'animation repart à
 	-- chaque rafraîchissement)
-	local key = tostring(def.display) .. ":" .. tostring(def.npc)
+	local key = tostring(def.display) .. ":" .. tostring(def.npc) .. (def.shiny and ":s" or "")
 	if cell.model and cell.lookKey ~= key then
 		cell.lookKey = key
 		local shown = false
 		if def.display and cell.model.SetDisplayInfo then shown = pcall(cell.model.SetDisplayInfo, cell.model, def.display) end
 		if not shown and def.npc and cell.model.SetCreature then shown = pcall(cell.model.SetCreature, cell.model, def.npc) end
+		if shown and ns.ModelShinyLight then ns.ModelShinyLight(cell.model, def.shiny) end
 		if shown then cell.model:Show() else cell.model:Hide() end
 	end
 	local rarity = def.captured and ns.CAPTURE_RARITY and ns.CAPTURE_RARITY[def.class or "normal"]
@@ -1662,9 +1688,26 @@ local function ZoneName(self, zoneID)
 	return (info and info.name) or tostring(zoneID or "?")
 end
 
-function ns:JournalPreviewMenagerie(entry)
+-- keep : garder la version montrée (normale ou brillante) ; sinon, une autre
+-- créature repart sur la normale, sauf si seule la brillante est capturée
+function ns:JournalPreviewMenagerie(entry, keep)
 	local frame = self.journalFrame
 	if not (frame and frame.men and entry) then return end
+	local preview = frame.men.preview
+	if not keep and (preview.entry == nil or preview.entry.npc ~= entry.npc) then
+		preview.shiny = entry.shiny and entry.normal == false or false
+	end
+	local canShiny = entry.known and (entry.shiny or entry.shinySeen) and true or false
+	if not canShiny then preview.shiny = false end
+	local shinyView = preview.shiny == true
+	if preview.variant then
+		if canShiny then
+			preview.variant:SetText(shinyView and L.JRN_MEN_SEE_NORMAL or L.JRN_MEN_SEE_SHINY)
+			preview.variant:Show()
+		else
+			preview.variant:Hide()
+		end
+	end
 	local rank = L["CAPTURE_RANK_" .. tostring(entry.class or "normal")]
 	local lines = { self:F("JRN_MEN_RANK", rank, LevelText(entry)) }
 	if entry.zoneID then lines[#lines + 1] = self:F("JRN_MEN_ZONE", ZoneName(self, entry.zoneID)) end
@@ -1674,29 +1717,49 @@ function ns:JournalPreviewMenagerie(entry)
 		frame.men.preview.entry = entry
 		return
 	end
-	if entry.captured then
-		local when = (tonumber(entry.at) or 0) > 0 and rawget(_G, "date") and select(2, pcall(date, "%d/%m/%Y", entry.at))
-		if type(when) == "string" then lines[#lines + 1] = self:F("JRN_MEN_CAUGHT", when) end
-		local current = self:CompanionData().appearance
-		lines[#lines + 1] = current == ("cap:" .. entry.npc) and L.JRN_MEN_EQUIPPED or L.JRN_MEN_EQUIP
+	local function Day(at)
+		local when = (tonumber(at) or 0) > 0 and rawget(_G, "date") and select(2, pcall(date, "%d/%m/%Y", at))
+		return type(when) == "string" and when or nil
+	end
+	local current = self:CompanionData().appearance
+	local id = "cap:" .. entry.npc .. (shinyView and ":s" or "")
+	local caught = shinyView and entry.shiny or (not shinyView and entry.normal ~= false and entry.captured)
+	if caught then
+		local when = Day(shinyView and entry.shinyAt or entry.at)
+		if when then lines[#lines + 1] = self:F(shinyView and "JRN_MEN_SHINY_CAUGHT" or "JRN_MEN_CAUGHT", when) end
+		lines[#lines + 1] = current == id and L.JRN_MEN_EQUIPPED or L.JRN_MEN_EQUIP
 	else
 		local chance = self.CaptureChance and self:CaptureChance({ class = entry.class, level = entry.level or entry.lo }) or 0
-		lines[#lines + 1] = self:F("JRN_MEN_NOTYET", math.floor(chance * 100 + 0.5 + 1e-9))
+		if shinyView then
+			lines[#lines + 1] = self:F("JRN_MEN_SHINY_SEEN", Day(entry.shinySeen) or "?")
+		else
+			lines[#lines + 1] = self:F("JRN_MEN_NOTYET", math.floor(chance * 100 + 0.5 + 1e-9))
+		end
 	end
 	lines[#lines + 1] = (entry.killed or 0) > 0 and self:F("JRN_MEN_KILLED", entry.killed) or L.JRN_MEN_NOT_KILLED
-	if entry.shinyKilled then
-		local when = rawget(_G, "date") and select(2, pcall(date, "%d/%m/%Y", entry.shinyKilled))
-		lines[#lines + 1] = self:F("SHINY_PREV", tostring(type(when) == "string" and when or entry.shinyKilled))
+	if not shinyView then
+		if entry.shiny then
+			lines[#lines + 1] = self:F("JRN_MEN_SHINY_CAUGHT", Day(entry.shinyAt) or "?")
+		elseif entry.shinySeen then
+			lines[#lines + 1] = self:F("JRN_MEN_SHINY_SEEN", Day(entry.shinySeen) or "?")
+		else
+			lines[#lines + 1] = L.JRN_MEN_SHINY_UNSEEN
+		end
 	end
-	local title = entry.shiny and self:F("CAPTURE_SHINY_TAG", entry.name) or entry.name
-	PreviewSet(frame.men.preview, title, lines, { creature = entry.npc })
-	frame.men.preview.entry = entry
+	local title = shinyView and self:F("CAPTURE_SHINY_TAG", entry.name) or entry.name
+	PreviewSet(preview, title, lines, { creature = entry.npc, shiny = shinyView })
+	preview.entry = entry
 end
 
 -- Clic : une créature capturée devient le compagnon
+-- La version montrée dans la fiche si elle est capturée, sinon l'autre
 function ns:JournalMenagerieEquip(entry)
 	if not (entry and entry.captured and self.CompanionSetAppearance) then return false end
-	if not self:CompanionSetAppearance("cap:" .. tostring(entry.npc)) then return false end
+	local preview = self.journalFrame and self.journalFrame.men and self.journalFrame.men.preview
+	local wantShiny = preview and preview.entry and preview.entry.npc == entry.npc and preview.shiny == true
+	local hasNormal, hasShiny = entry.normal ~= false, entry.shiny == true
+	local shiny = (wantShiny and hasShiny) or (not hasNormal and hasShiny)
+	if not self:CompanionSetAppearance("cap:" .. tostring(entry.npc) .. (shiny and ":s" or "")) then return false end
 	if self.CompanionApplyModel then pcall(self.CompanionApplyModel, self) end
 	if self.RefreshOptions then pcall(self.RefreshOptions, self) end
 	self:RefreshJournal()
@@ -1766,7 +1829,11 @@ local function RefreshMenagerie(self, frame)
 	pane.stateRow:Select(frame.menState or "all", true)
 	local list, stats = self:MenagerieList({ zone = self:MenagerieZoneValue(frame.menZone or "here"),
 		state = frame.menState, rank = frame.menRank, search = frame.menSearch, sort = frame.menSort })
-	pane.count:SetText(self:F("JRN_MEN_COUNT", stats.captured, stats.known, stats.total))
+	if (stats.shinySeen or 0) > 0 then
+		pane.count:SetText(self:F("JRN_MEN_COUNT_SHINY", stats.captured, stats.shinySeen, stats.known, stats.total))
+	else
+		pane.count:SetText(self:F("JRN_MEN_COUNT", stats.captured, stats.known, stats.total))
+	end
 	pane.empty:SetText(#list == 0 and (stats.total == 0 and L.JRN_MEN_EMPTY or L.JRN_MEN_NONE) or "")
 	local page = #pane.items
 	local maxOffset = math.max(0, #list - page)
@@ -1787,9 +1854,16 @@ local function RefreshMenagerie(self, frame)
 			row.label:SetTextColor(lc[1], lc[2], lc[3])
 			row.label:SetAlpha(entry.known and 1 or 0.75)
 			row.detail:SetText(entry.known and (entry.type or "") or "")
-			if entry.captured then row.caught:Show() else row.caught:Hide() end
-			if entry.shiny or entry.shinyKilled then row.star:Show() else row.star:Hide() end
-			local worn = current == ("cap:" .. entry.npc)
+			-- liseré vert : la version normale capturée ; losange doré : la
+			-- brillante, plein si capturée, au trait si seulement reconnue
+			if entry.captured and entry.normal ~= false then row.caught:Show() else row.caught:Hide() end
+			if entry.shiny or entry.shinySeen then
+				row.star:SetTexture(entry.shiny and Theme.DIAMOND or Theme.DIAMOND_LINE)
+				row.star:Show()
+			else
+				row.star:Hide()
+			end
+			local worn = current == ("cap:" .. entry.npc) or current == ("cap:" .. entry.npc .. ":s")
 			local picked = shown and shown.npc == entry.npc
 			if picked or worn then row.mark:Show() else row.mark:Hide() end
 			local mc = worn and Theme.GOLD or { 1, 1, 1 }

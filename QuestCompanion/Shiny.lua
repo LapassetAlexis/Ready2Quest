@@ -2,7 +2,11 @@
 --
 -- Une petite chasse : la première fois que tu cibles ou survoles un monstre
 -- (une fois par monstre, par son GUID), il a SHINY_CHANCE d'être brillant
--- (×SHINY_RANK_MULT pour un élite ou un rare). La créature le voit : bulle,
+-- (×SHINY_RANK_MULT pour un élite ou un rare). Toutes les espèces peuvent
+-- l'être. Chasse (1.6.0) : plus tu as abattu de cette espèce, plus la chance
+-- monte (jusqu'à ×SHINY_CHAIN_MAX après SHINY_CHAIN_KILLS abattus). Une
+-- brillante repérée est reconnue pour toujours (ns:ShinyKnown) : la
+-- Ménagerie la montre, capturée ou non. La créature le voit : bulle,
 -- « ! », étincelles, et une étoile au-dessus de sa tête (icône de cible, si tu
 -- joues seul ou mènes le groupe, et s'il n'en a pas déjà une).
 --   * abattu : fiche dorée au bestiaire, une friandise (parfois un Festin), un
@@ -11,13 +15,18 @@
 --     dans aucun coffre.
 -- Ouverture de coffre : les objets se révèlent un par un, la créature
 -- s'emballe (réglage « Ouverture animée des coffres »).
--- Réglages : page « Au jour le jour » (étoile, ouverture animée).
+-- Repère (1.6.0) : un losange doré qui scintille sur la barre de nom de
+-- chaque brillante repérée, seul ou en groupe.
+-- Réglages : page « Au jour le jour » (étoile, losange, ouverture animée).
 local ADDON, ns = ...
 if ns.blocked then return end
+local Theme = ns.Theme
 local L = ns.L
 
 ns.SHINY_CHANCE = ns.SHINY_CHANCE or (1 / 150)
 ns.SHINY_RANK_MULT = 3
+ns.SHINY_CHAIN_KILLS = 50         -- abattus de l'espèce pour la chance maximale
+ns.SHINY_CHAIN_MAX = 3.75         -- ×3,75 : 1/150 -> 1/40
 ns.SHINY_FESTIN_CHANCE = 0.15
 ns.SHINY_RANKS = { elite = true, rare = true, rareelite = true, worldboss = true }
 ns.SHINY_MARK = 1                 -- icône de cible : l'étoile
@@ -68,6 +77,8 @@ local FR = {
 	OPT_PAGE_DAILY         = "Au jour le jour",
 	OPT_DAILY_MARK         = "Étoile sur les brillantes",
 	OPT_DAILY_MARK_DESC    = "Une étoile au-dessus d'une créature brillante, si tu joues seul ou mènes le groupe, et si elle n'a pas déjà d'icône.",
+	OPT_DAILY_PLATE        = "Losange doré sur la barre de nom des brillantes",
+	OPT_DAILY_PLATE_DESC   = "Au-dessus du nom d'une créature brillante repérée : il scintille tant qu'elle est en vie. Seul ou en groupe.",
 	OPT_DAILY_CHEST        = "Ouverture animée des coffres",
 }
 local EN = {
@@ -85,6 +96,8 @@ local EN = {
 	OPT_PAGE_DAILY         = "Day by day",
 	OPT_DAILY_MARK         = "Star on shinies",
 	OPT_DAILY_MARK_DESC    = "A star above a shiny creature, if you play solo or lead the group, and if it has no icon yet.",
+	OPT_DAILY_PLATE        = "Gold diamond on shiny nameplates",
+	OPT_DAILY_PLATE_DESC   = "Above the name of a spotted shiny creature: it sparkles while it lives. Solo or in a group.",
 	OPT_DAILY_CHEST        = "Animated chest opening",
 }
 ns.RegisterStrings(FR, EN)
@@ -137,6 +150,7 @@ end
 
 ns.RegisterDefaults({
 	companionShinyMark = true,
+	companionShinyPlate = true,
 	companionChestAnim = true,
 	companionOrnAura = true,
 })
@@ -167,6 +181,8 @@ function ns:ShinyData()
 	local shiny = type(data.shiny) == "table" and data.shiny or {}
 	shiny.count = math.max(0, math.floor(tonumber(shiny.count) or 0))
 	shiny.zones = type(shiny.zones) == "table" and shiny.zones or {}
+	-- espèces dont une brillante a été repérée : [npcID] = date (1.6.0)
+	shiny.seen = type(shiny.seen) == "table" and shiny.seen or {}
 	data.shiny = shiny
 	return shiny
 end
@@ -186,6 +202,37 @@ function ns:ShinyFound(zoneID, npcID)
 	return zone and zone[npcID] or nil
 end
 
+-- Brillante de cette espèce reconnue (repérée ou abattue, n'importe où) :
+-- sa date, ou nil
+function ns:ShinyKnown(npcID)
+	local data = self:ShinyData()
+	local npc = tonumber(npcID) or npcID
+	if data.seen[npc] then return data.seen[npc] end
+	for _, zone in pairs(data.zones) do
+		if type(zone) == "table" and zone[npc] then return zone[npc] end
+	end
+	return nil
+end
+
+-- Chance qu'un monstre soit brillant : base, rang, et la chasse (abattus de
+-- son espèce)
+function ns:ShinyChance(class, killed)
+	local chance = (tonumber(ns.SHINY_CHANCE) or 0) * (ns.SHINY_RANKS[class or ""] and ns.SHINY_RANK_MULT or 1)
+	local chain = math.min(tonumber(killed) or 0, ns.SHINY_CHAIN_KILLS) / ns.SHINY_CHAIN_KILLS
+	return chance * (1 + (ns.SHINY_CHAIN_MAX - 1) * chain)
+end
+
+-- Abattus de l'espèce, toutes zones (bestiaire)
+local function SpeciesKills(self, npcID)
+	local total = 0
+	for _, zone in pairs(self.BestiaryData and self:BestiaryData() or {}) do
+		local species = type(zone) == "table" and zone[npcID]
+		if type(species) == "table" then total = total + (tonumber(species.killed) or 0) end
+	end
+	return total
+end
+ns.ShinySpeciesKills = SpeciesKills
+
 function ns:ShinyZoneCount(zoneID)
 	local count = 0
 	for _ in pairs(self:ShinyData().zones[zoneID] or {}) do count = count + 1 end
@@ -204,9 +251,10 @@ end
 -- ---------------------------------------------------------------------------
 -- Repérer, marquer, abattre
 -- ---------------------------------------------------------------------------
-function ns:ShinyRoll(unit)
+function ns:ShinyRoll(unit, entry)
 	local class = Call(G("UnitClassification"), unit)
-	local chance = (tonumber(ns.SHINY_CHANCE) or 0) * (ns.SHINY_RANKS[class or ""] and ns.SHINY_RANK_MULT or 1)
+	local killed = entry and entry.npcID and SpeciesKills(self, entry.npcID) or 0
+	local chance = self:ShinyChance(class, killed)
 	return chance > 0 and math.random() < chance
 end
 
@@ -227,6 +275,10 @@ function ns:ShinySpot(unit, guid, entry, species)
 	local state = self:ShinyState()
 	local name = (species and species.name) or Call(G("UnitName"), unit) or "?"
 	state.live[guid] = { zoneID = entry.zoneID, npcID = entry.npcID, name = name, at = Clock() }
+	-- reconnue : la Ménagerie la garde, même sans capture
+	local data = self:ShinyData()
+	local npc = tonumber(entry.npcID) or entry.npcID
+	if npc and not data.seen[npc] then data.seen[npc] = Call(G("time")) or 0 end
 	self:CompanionSay("SHINY_SPOTTED", { force = true, args = { name } })
 	if self.CompanionFx then self:CompanionFx("alert"); self:CompanionFx("sparkle") end
 	state.live[guid].marked = self:ShinyMark(unit)
@@ -248,7 +300,7 @@ do
 					-- une mémoire de session : vidée de temps en temps, sans perdre les brillantes vivantes
 					if state.rolledCount > 5000 then state.rolled, state.rolledCount = {}, 0 end
 					state.rolled[guid], state.rolledCount = true, state.rolledCount + 1
-					if self:ShinyRoll(unit) then self:ShinySpot(unit, guid, entry, species) end
+					if self:ShinyRoll(unit, entry) then self:ShinySpot(unit, guid, entry, species) end
 				end)
 				if not ok and self.RecordError then self:RecordError("shiny:see", err) end
 			end
@@ -266,6 +318,7 @@ function ns:ShinyKill(guid, info)
 	if not shiny.zones[info.zoneID][info.npcID] then
 		shiny.zones[info.zoneID][info.npcID] = Call(G("time")) or 0
 	end
+	if self.WeeklyEvent then pcall(self.WeeklyEvent, self, "shinyKill", 1) end
 	local kind = math.random() < ns.SHINY_FESTIN_CHANCE and "festin" or (self.TreatRandom and self:TreatRandom())
 	if kind and self.TreatGrant then self:TreatGrant(kind, { quiet = true }) end
 	if self.MemoryRecord then
@@ -319,8 +372,9 @@ do
 		function ns:BestiaryCombat(subevent, sourceGUID, sourceFlags, destGUID, ...)
 			local a, b = combat(self, subevent, sourceGUID, sourceFlags, destGUID, ...)
 			local state = self.shinyState
-			if state and destGUID and (subevent == "UNIT_DIED" or subevent == "UNIT_DESTROYED") then
+			if state and destGUID and (subevent == "UNIT_DIED" or subevent == "UNIT_DESTROYED") and state.live[destGUID] then
 				state.live[destGUID] = nil
+				if self.ShinyPlatesRefresh then pcall(self.ShinyPlatesRefresh, self) end
 			end
 			return a, b
 		end
@@ -367,7 +421,9 @@ function ns:ShinyAuraTick(now)
 	local state = self:ShinyState()
 	if now < (state.auraAt or 0) then return false end
 	state.auraAt = now + ns.SHINY_AURA_EVERY
-	if not self:CompanionOrnamentShown(self:ShinyAuraDef()) then return false end
+	-- l'aura gagnée, ou un compagnon brillant (1.6.0) : il scintille
+	local app = self.CompanionCurrentAppearance and self:CompanionCurrentAppearance()
+	if not (self:CompanionOrnamentShown(self:ShinyAuraDef()) or (app and app.shiny)) then return false end
 	return self:CompanionFx("sparkle")
 end
 
@@ -422,6 +478,9 @@ end
 ns.DAILY_OPTION_ROWS = {
 	{ key = "companionShinyMark", label = "OPT_DAILY_MARK", kind = "bool",
 		describe = function() return L.OPT_DAILY_MARK_DESC end },
+	{ key = "companionShinyPlate", label = "OPT_DAILY_PLATE", kind = "bool",
+		describe = function() return L.OPT_DAILY_PLATE_DESC end,
+		onChange = function() ns:ShinyPlatesRefresh() end },
 	{ key = "companionChestAnim", label = "OPT_DAILY_CHEST", kind = "bool" },
 }
 if ns.AddOptionPage then
@@ -446,6 +505,146 @@ if ok and frame then
 		if not done and ns.RecordError then ns:RecordError("shiny:aura", err) end
 	end))
 	ns.shinyEventFrame = frame
+end
+
+-- ---------------------------------------------------------------------------
+-- Repère sur la barre de nom (1.6.0) : un losange doré qui scintille au-dessus
+-- du nom de chaque brillante repérée encore en vie, seul ou en groupe, sans
+-- toucher aux icônes de cible. Accroché au cadre de base de la barre
+-- (C_NamePlate) : il suit aussi les barres d'un addon.
+-- ---------------------------------------------------------------------------
+ns.SHINY_PLATE_SIZE = 18
+ns.SHINY_PLATE_Y = 8              -- au-dessus du haut de la barre
+ns.shinyPlates = ns.shinyPlates or {}   -- unité -> cadre de base de la barre
+ns.shinyPlateMarks = ns.shinyPlateMarks or {}  -- cadre de base -> repère
+
+local function PlateFor(unit)
+	local api = G("C_NamePlate")
+	if type(api) ~= "table" or type(api.GetNamePlateForUnit) ~= "function" then return nil end
+	local ok, plate = pcall(api.GetNamePlateForUnit, unit)
+	if not ok or type(plate) ~= "table" then return nil end
+	if type(plate.IsForbidden) == "function" then
+		local okF, forbidden = pcall(plate.IsForbidden, plate)
+		if okF and forbidden then return nil end
+	end
+	return plate
+end
+
+local function MarkFor(plate)
+	local mark = ns.shinyPlateMarks[plate]
+	if mark then return mark end
+	local ok, frame = pcall(CreateFrame, "Frame", nil, plate)
+	if not ok or not frame then return nil end
+	local size = ns.SHINY_PLATE_SIZE
+	frame:SetSize(size * 2, size * 2)
+	frame:SetPoint("BOTTOM", plate, "TOP", 0, ns.SHINY_PLATE_Y - size / 2)
+	if frame.SetFrameLevel and plate.GetFrameLevel then
+		pcall(frame.SetFrameLevel, frame, (tonumber(plate:GetFrameLevel()) or 1) + 6)
+	end
+	local gold, light = Theme.GOLD, Theme.GOLD_LIGHT or Theme.GOLD
+	-- halo doux, losange sombre (liseré), losange doré
+	frame.glow = frame:CreateTexture(nil, "BACKGROUND")
+	frame.glow:SetTexture(Theme.DIAMOND)
+	frame.glow:SetSize(size * 1.9, size * 1.9)
+	frame.glow:SetPoint("CENTER", frame, "CENTER", 0, 0)
+	frame.glow:SetVertexColor(light[1], light[2], light[3], 0.35)
+	if frame.glow.SetBlendMode then pcall(frame.glow.SetBlendMode, frame.glow, "ADD") end
+	frame.back = frame:CreateTexture(nil, "ARTWORK")
+	frame.back:SetTexture(Theme.DIAMOND)
+	frame.back:SetSize(size + 4, size + 4)
+	frame.back:SetPoint("CENTER", frame, "CENTER", 0, 0)
+	frame.back:SetVertexColor(0, 0, 0, 0.8)
+	frame.gem = frame:CreateTexture(nil, "OVERLAY")
+	frame.gem:SetTexture(Theme.DIAMOND)
+	frame.gem:SetSize(size, size)
+	frame.gem:SetPoint("CENTER", frame, "CENTER", 0, 0)
+	frame.gem:SetVertexColor(gold[1], gold[2], gold[3], 1)
+	-- scintillement : le halo respire, le losange s'éclaire
+	frame:SetScript("OnUpdate", function(self)
+		local t = Clock()
+		local pulse = 0.5 + 0.5 * math.sin(t * math.pi * 1.6)
+		self.glow:SetAlpha(0.25 + 0.5 * pulse)
+		self.glow:SetSize(size * (1.6 + 0.5 * pulse), size * (1.6 + 0.5 * pulse))
+		local c = { gold[1] + (light[1] - gold[1]) * pulse, gold[2] + (light[2] - gold[2]) * pulse, gold[3] + (light[3] - gold[3]) * pulse }
+		self.gem:SetVertexColor(c[1], c[2], c[3], 1)
+	end)
+	frame:Hide()
+	ns.shinyPlateMarks[plate] = frame
+	return frame
+end
+
+-- Pose ou retire le repère d'une unité ; rend true s'il est montré
+function ns:ShinyPlateUpdate(unit)
+	local plate = self.shinyPlates[unit] or PlateFor(unit)
+	if not plate then return false end
+	self.shinyPlates[unit] = plate
+	local guid = ns.Plain(Call(G("UnitGUID"), unit))
+	local live = type(guid) == "string" and self:ShinyState().live[guid]
+	local show = live and ModuleOn() and self:DB().companionShinyPlate ~= false
+	local mark = show and MarkFor(plate) or self.shinyPlateMarks[plate]
+	if not mark then return false end
+	if show then
+		mark.guid = guid
+		mark:Show()
+	else
+		mark.guid = nil
+		mark:Hide()
+	end
+	return show and true or false
+end
+
+-- Toutes les barres visibles (une brillante repérée, abattue, réglage changé)
+function ns:ShinyPlatesRefresh()
+	local api = G("C_NamePlate")
+	if type(api) == "table" and type(api.GetNamePlates) == "function" then
+		local ok, plates = pcall(api.GetNamePlates)
+		for _, plate in ipairs(ok and type(plates) == "table" and plates or {}) do
+			local unit = ns.Plain(plate.namePlateUnitToken)
+			if type(unit) == "string" then self.shinyPlates[unit] = plate end
+		end
+	end
+	local shown = 0
+	for unit in pairs(self.shinyPlates) do
+		local ok, on = pcall(self.ShinyPlateUpdate, self, unit)
+		if ok and on then shown = shown + 1 end
+	end
+	return shown
+end
+
+do
+	local plateFrame = CreateFrame("Frame")
+	local PLATE_EVENTS = {
+		NAME_PLATE_UNIT_ADDED = function(unit)
+			if type(unit) == "string" then ns.shinyPlates[unit] = nil; ns:ShinyPlateUpdate(unit) end
+		end,
+		NAME_PLATE_UNIT_REMOVED = function(unit)
+			local plate = type(unit) == "string" and ns.shinyPlates[unit]
+			local mark = plate and ns.shinyPlateMarks[plate]
+			if mark then mark:Hide(); mark.guid = nil end
+			if type(unit) == "string" then ns.shinyPlates[unit] = nil end
+		end,
+	}
+	for event in pairs(PLATE_EVENTS) do pcall(plateFrame.RegisterEvent, plateFrame, event) end
+	plateFrame:SetScript("OnEvent", function(_, event, ...)
+		local ok, err = pcall(PLATE_EVENTS[event], ...)
+		if not ok and ns.RecordError then ns:RecordError("shiny:plate", err) end
+	end)
+	ns.shinyPlateFrame = plateFrame
+end
+
+-- repérée : son repère tout de suite ; abattue ou morte : il s'en va
+do
+	local spot, kill = ns.ShinySpot, ns.ShinyKill
+	function ns:ShinySpot(...)
+		local result = spot(self, ...)
+		pcall(self.ShinyPlatesRefresh, self)
+		return result
+	end
+	function ns:ShinyKill(...)
+		local result = kill(self, ...)
+		pcall(self.ShinyPlatesRefresh, self)
+		return result
+	end
 end
 
 if ns.Mark then ns.Mark("Shiny") end

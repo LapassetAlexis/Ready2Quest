@@ -235,8 +235,34 @@ function ns:CaptureData()
 	end
 	capture.count = math.max(0, math.floor(tonumber(capture.count) or 0))
 	capture.tries = math.max(0, math.floor(tonumber(capture.tries) or 0))
+	-- 1.6.0 : deux versions par espèce, la normale (normal, at) et la
+	-- brillante (shiny, shinyAt). Avant, capturer la brillante remplaçait la
+	-- fiche : elle devient la version brillante, la normale reste à capturer.
+	for _, entry in pairs(capture.creatures) do
+		if type(entry) == "table" and entry.normal == nil then
+			entry.normal = not entry.shiny
+			if entry.shiny and not entry.shinyAt then entry.shinyAt = entry.at end
+		end
+	end
 	data.capture = capture
 	return capture
+end
+
+-- Cette version de l'espèce est-elle capturée ? shiny : la brillante
+function ns:CaptureHas(npcID, shiny)
+	local entry = self:CaptureData().creatures[tonumber(npcID) or npcID]
+	if type(entry) ~= "table" then return false end
+	if shiny then return entry.shiny == true end
+	return entry.normal ~= false
+end
+
+-- Nombre de brillantes capturées
+function ns:CaptureShinyCount()
+	local count = 0
+	for _, entry in pairs(self:CaptureData().creatures) do
+		if type(entry) == "table" and entry.shiny then count = count + 1 end
+	end
+	return count
 end
 
 function ns:CaptureState()
@@ -392,11 +418,18 @@ function ns:CaptureAppearances()
 	local cache = self.captureAppCache
 	if cache and cache.count == data.count and cache.n == data.serial and cache.creatures == data.creatures then return cache.list end
 	local list = {}
+	-- une apparence par version capturée : « cap:<npc> » et « cap:<npc>:s »
 	for npcID, entry in pairs(data.creatures) do
 		local name = tostring(entry.name or npcID)
-		if entry.shiny then name = self:F("CAPTURE_SHINY_TAG", name) end
-		list[#list + 1] = { id = "cap:" .. tostring(npcID), npc = tonumber(npcID), label = name,
-			captured = true, class = entry.class, at = entry.at, shiny = entry.shiny }
+		if entry.normal ~= false then
+			list[#list + 1] = { id = "cap:" .. tostring(npcID), npc = tonumber(npcID), label = name,
+				captured = true, class = entry.class, at = entry.at }
+		end
+		if entry.shiny then
+			list[#list + 1] = { id = "cap:" .. tostring(npcID) .. ":s", npc = tonumber(npcID),
+				label = self:F("CAPTURE_SHINY_TAG", name), captured = true, class = entry.class,
+				at = entry.shinyAt or entry.at, shiny = true }
+		end
 	end
 	table.sort(list, function(a, b)
 		if (a.at or 0) ~= (b.at or 0) then return (a.at or 0) < (b.at or 0) end
@@ -534,7 +567,10 @@ function ns:MenagerieList(opts)
 			item.class = item.class or known.class
 			item.type = item.type or known.type
 			item.level = item.level or tonumber(known.level)
-			item.captured, item.shiny, item.at, item.known = true, known.shiny, known.at, true
+			-- captured : au moins une version ; normal / shiny : chacune
+			item.captured, item.known = true, true
+			item.normal, item.shiny = known.normal ~= false, known.shiny == true
+			item.at, item.shinyAt = known.at, known.shinyAt
 			if known.zoneID and #item.zones == 0 then item.zones[1] = known.zoneID end
 		end
 	end
@@ -556,7 +592,7 @@ function ns:MenagerieList(opts)
 	local zone = opts.zone or "all"
 	local state, rank = opts.state or "all", opts.rank or "all"
 	local query = Fold(opts.search or ""):gsub("^%s+", ""):gsub("%s+$", "")
-	local stats = { total = 0, known = 0, captured = 0, killed = 0 }
+	local stats = { total = 0, known = 0, captured = 0, killed = 0, shinySeen = 0, shinies = 0 }
 	local list = {}
 	for _, item in pairs(view) do
 		item.name = item.name or tostring(item.npc)
@@ -571,8 +607,13 @@ function ns:MenagerieList(opts)
 			if item.known then stats.known = stats.known + 1 end
 			if item.captured then stats.captured = stats.captured + 1 end
 			if item.killed > 0 then stats.killed = stats.killed + 1 end
+			-- brillante reconnue (repérée, abattue ou capturée) : pas besoin de la capturer
+			item.shinySeen = item.shinySeen or item.shinyKilled or (self.ShinyKnown and self:ShinyKnown(item.npc)) or (item.shiny and item.shinyAt) or nil
+			if item.shinySeen then stats.shinySeen = (stats.shinySeen or 0) + 1 end
+			if item.shiny then stats.shinies = (stats.shinies or 0) + 1 end
 			local keep = (state == "all") or (state == "captured" and item.captured)
 				or (state == "missing" and not item.captured) or (state == "tokill" and item.killed == 0)
+				or (state == "shiny" and item.shinySeen ~= nil)
 			keep = keep and (rank == "all" or RANK_GROUP[item.class] == rank)
 			-- recherche : sur les noms connus seulement (une inconnue reste « ??? »)
 			if keep and query ~= "" then keep = item.known and Fold(item.name):find(query, 1, true) ~= nil end
@@ -609,8 +650,8 @@ function ns:CaptureOffer(guid, entry, shiny)
 	local state = self:CaptureState()
 	if state.rolling then return nil end              -- un filet à la fois
 	local npcID = tonumber(entry.npcID) or entry.npcID
-	local known = self:CaptureData().creatures[npcID]
-	if known and (known.shiny or not shiny) then return nil end
+	-- chaque version se capture une fois : la normale, et la brillante à part
+	if self:CaptureHas(npcID, shiny and true or false) then return nil end
 	local book = self.BestiaryData and self:BestiaryData()
 	local species = book and book[entry.zoneID] and book[entry.zoneID][entry.npcID] or {}
 	local name = species.name or (shiny and shiny.name) or tostring(npcID)
@@ -667,15 +708,23 @@ function ns:CaptureResolve(rolling)
 	local target = rolling.target
 	local data = self:CaptureData()
 	if rolling.success then
-		-- une brillante d'une espèce déjà capturée remplace sa fiche : une
-		-- créature de plus seulement si l'espèce est nouvelle
+		-- une fiche par espèce, deux versions dedans (1.6.0) : une créature de
+		-- plus seulement si l'espèce est nouvelle
 		local fresh = data.creatures[target.npcID] == nil
-		data.creatures[target.npcID] = {
-			name = target.name, class = target.class, level = target.level, type = target.type,
-			family = target.family, zoneID = target.zoneID, at = Call(G("time")) or 0,
-			shiny = target.shiny,
-		}
+		local now = Call(G("time")) or 0
+		local entry = data.creatures[target.npcID] or { normal = false }
+		entry.name, entry.class, entry.level = target.name, target.class, target.level or entry.level
+		entry.type, entry.family = target.type or entry.type, target.family or entry.family
+		entry.zoneID = entry.zoneID or target.zoneID
+		if target.shiny then
+			entry.shiny, entry.shinyAt = true, now
+			entry.at = entry.at or now
+		else
+			entry.normal, entry.at = true, now
+		end
+		data.creatures[target.npcID] = entry
 		if fresh then data.count = data.count + 1 end
+		if target.shiny and self.WeeklyEvent then pcall(self.WeeklyEvent, self, "shinyCapture", 1) end
 		-- missions : une capture (et une capture d'élite ou de rare)
 		if self.MissionEvent then pcall(self.MissionEvent, self, "captures", 1) end
 		if self.WeeklyEvent then
