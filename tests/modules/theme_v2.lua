@@ -253,6 +253,16 @@ do
 	dd.list.rows[2]:Click()
 	Check("[TH2] choix actif : rappel, texte, liste fermée", chosen == "mid" and dd.text.text == "Au centre" and not dd:IsOpen())
 	Check("[TH2] Choose refuse une valeur inconnue", dd:Choose("nope") == false)
+	-- deux listes voisines (cadre et fond) : en ouvrir une referme l'autre
+	local dd2 = Theme.CreateDropdown(card.control, 150, nil)
+	dd2:SetOptions({ { value = "a", label = "A" }, { value = "b", label = "B" } })
+	dd:Click()
+	dd2:Click()
+	Check("[TH2] une seule liste ouverte : la voisine se referme", dd2:IsOpen() and not dd:IsOpen())
+	dd:Click()
+	Check("[TH2] et inversement", dd:IsOpen() and not dd2:IsOpen())
+	dd:Click()
+	Check("[TH2] fermée : plus de liste ouverte retenue", not dd:IsOpen() and Theme.openDropdown == nil)
 
 	local swatch = Theme.CreateSwatch(card.control)
 	swatch:SetColor(0.1, 0.2, 0.3)

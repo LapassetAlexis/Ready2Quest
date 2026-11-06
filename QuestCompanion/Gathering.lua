@@ -41,6 +41,10 @@ local FR = {
 	JRN_PART_gathering      = "Récolte",
 	GATHER_PART_TODO        = "Ressources de ta compétence pas encore récoltées dans %s :",
 	GATHER_PART_DONE        = "Toutes les ressources de ta compétence ont été récoltées dans %s.",
+	GATHER_PROFS            = "Tes métiers : %s",
+	GATHER_PROFS_NONE       = "Aucun métier repéré (fenêtre de compétences).",
+	GATHER_PROF_RANK        = "%s %d",
+	GATHER_ONLY_GATHER      = "Seuls l'herboristerie, le minage et le dépeçage se suivent zone par zone.",
 }
 local EN = {
 	GATHER_PROF_herbalism   = "Herbalism",
@@ -57,6 +61,10 @@ local EN = {
 	JRN_PART_gathering      = "Gathering",
 	GATHER_PART_TODO        = "Resources of your skill not gathered yet in %s:",
 	GATHER_PART_DONE        = "Every resource of your skill has been gathered in %s.",
+	GATHER_PROFS            = "Your professions: %s",
+	GATHER_PROFS_NONE       = "No profession found (skills window).",
+	GATHER_PROF_RANK        = "%s %d",
+	GATHER_ONLY_GATHER      = "Only herbalism, mining and skinning are tracked zone by zone.",
 }
 ns.RegisterStrings(FR, EN)
 ns.GATHERING_STRINGS = { fr = FR, en = EN }
@@ -151,6 +159,56 @@ function ns:GatheringProfessions()
 	journal.gatheringSkills = {}
 	for prof, rank in pairs(found) do journal.gatheringSkills[prof] = rank end
 	return found
+end
+
+-- Tous tes métiers (récolte, artisanat, secondaires), dans l'ordre de
+-- ns.PROFESSION_LIST : { { key, name, rank } }. name : celui de la fenêtre de
+-- compétences. Catégorie repliée : la dernière liste lue est gardée.
+local LIST_BY_NAME
+function ns:PlayerProfessions()
+	if not LIST_BY_NAME then
+		LIST_BY_NAME = {}
+		for order, def in ipairs(ns.PROFESSION_LIST or {}) do
+			for _, name in ipairs(def.names or {}) do LIST_BY_NAME[Lower(name)] = { key = def.key, order = order } end
+		end
+	end
+	local found, collapsed = {}, false
+	local count, info = rawget(_G, "GetNumSkillLines"), rawget(_G, "GetSkillLineInfo")
+	local ok, total = false, nil
+	if type(count) == "function" and type(info) == "function" then ok, total = pcall(count) end
+	if ok and type(total) == "number" then
+		for index = 1, total do
+			local okLine, name, isHeader, isExpanded, rank = pcall(info, index)
+			if okLine and type(name) == "string" then
+				if isHeader == true or isHeader == 1 then
+					if isExpanded == false or isExpanded == 0 then collapsed = true end
+				else
+					local def = LIST_BY_NAME[Lower(name)]
+					if def then found[#found + 1] = { key = def.key, name = name, rank = tonumber(rank) or 0, order = def.order } end
+				end
+			end
+		end
+	end
+	local journal = self:JournalData()
+	if (collapsed or not ok) and #found == 0 and type(journal.professions) == "table" then
+		for _, entry in ipairs(journal.professions) do
+			if type(entry) == "table" and entry.key then found[#found + 1] = entry end
+		end
+	elseif ok then
+		journal.professions = found
+	end
+	table.sort(found, function(a, b) return (a.order or 99) < (b.order or 99) end)
+	return found
+end
+
+-- « Minage 215 · Forge 180 · Cuisine 75 », nil sans métier
+function ns:PlayerProfessionsText()
+	local parts = {}
+	for _, entry in ipairs(self:PlayerProfessions()) do
+		parts[#parts + 1] = self:F("GATHER_PROF_RANK", tostring(entry.name), tonumber(entry.rank) or 0)
+	end
+	if #parts == 0 then return nil end
+	return table.concat(parts, "  ·  ")
 end
 
 -- ---------------------------------------------------------------------------
@@ -337,12 +395,45 @@ function ns:GatheringZoneBand(zoneID)
 	return band, profs
 end
 
--- nil sans métier de récolte (ou module coupé), ou si rien de ta tranche ne
--- pousse dans la zone : la part ne s'applique pas.
+-- Ce que la zone t'offre à récolter (1.5.1) : herbes et minerais d'une zone
+-- connue que ta compétence permet (requise <= rang), même GRIS — un mineur
+-- confirmé finit aussi les zones de départ ; dépeçage et zones hors table :
+-- ta tranche seule (sinon le monde entier). gray = true : plus de points.
+function ns:GatheringZoneList(zoneID)
+	local professions = self:GatheringProfessions()
+	local set = self:GatheringZoneSet(zoneID)
+	local list, profs = {}, {}
+	for _, prof in ipairs(ns.GATHERING_PROFESSION_ORDER or {}) do
+		local rank = tonumber(professions[prof])
+		if rank then
+			local kept = 0
+			if set and ZONE_FILTERED[prof] then
+				for itemID, entry in pairs(Items()) do
+					if entry.prof == prof and entry.req <= rank and set[itemID] then
+						list[#list + 1] = { itemID = itemID, req = entry.req, gray = entry.gray,
+							grayed = rank >= entry.gray, name = self:GatheringItemName(itemID) }
+						kept = kept + 1
+					end
+				end
+			else
+				for _, entry in ipairs((self:GatheringBand(prof, rank))) do
+					list[#list + 1] = entry
+					kept = kept + 1
+				end
+			end
+			if kept > 0 then profs[#profs + 1] = prof end
+		end
+	end
+	table.sort(list, ByReq)
+	return list, profs
+end
+
+-- nil sans métier de récolte (ou module coupé), ou si rien de récoltable
+-- ne pousse dans la zone : la part ne s'applique pas.
 function ns:GatheringZonePart(zoneID)
 	if not ModuleOn() or not zoneID then return nil end
 	local data = self:GatheringData()
-	local band, profs = self:GatheringZoneBand(zoneID)
+	local band, profs = self:GatheringZoneList(zoneID)
 	if #band == 0 then return nil end
 	local have, missing = 0, {}
 	for _, entry in ipairs(band) do

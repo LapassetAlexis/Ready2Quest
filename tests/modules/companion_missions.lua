@@ -197,6 +197,15 @@ do
 		and pane.count.text == "2 capturées · 3 croisées · 4 en tout", pane.count.text)
 	Check("[MEN] liste des zones : actuelle, toutes, puis chaque zone", #pane.zone.options == 4
 		and pane.zone.options[2].value == "all" and pane.zone.options[3].value == 1411)
+	local keys = {}
+	for index = 3, #pane.zone.options do keys[#keys + 1] = NS.ZoneSortKey(pane.zone.options[index].label) end
+	local sorted = true
+	for index = 2, #keys do if keys[index - 1] > keys[index] then sorted = false end end
+	Check("[MEN] zones : par ordre alphabétique", sorted, table.concat(keys, ", "))
+	Check("[MEN] clé de tri : accents et article de tête ignorés", NS.ZoneSortKey("Les Tarides") == "tarides"
+		and NS.ZoneSortKey("Étangs") == "etangs" and NS.ZoneSortKey("L'Âtreval") == "atreval"
+		and NS.ZoneSortKey("The Barrens") == "barrens" and NS.ZoneSortKey("Lesath") == "lesath"
+		and NS.ZoneSortKey("Durotar") < NS.ZoneSortKey("Les Tarides"))
 	local unknown, kodo
 	for _, cell in ipairs(pane.items) do
 		if cell.entry and cell.entry.npc == 3101 then unknown = cell end
@@ -204,7 +213,14 @@ do
 	end
 	Check("[MEN] inconnue : « ??? » et son numéro", unknown and unknown.label.text == "???" and unknown.no.text == "n° 002")
 	Check("[MEN] capturée : son nom, en couleur", kodo and kodo.label.text == "Kodo des plaines" and kodo.icon.alpha == 1)
-	Check("[MEN] abattue : tampon plein", kodo.stamp.texture == NS.Theme.DIAMOND and unknown.stamp.texture == NS.Theme.DIAMOND_LINE)
+	-- 1.5.1 : nom ou « ??? » à la couleur de la rareté, liseré vert si capturée,
+	-- plus de colonnes de marques (tampon, pastille)
+	local elite = NS.CAPTURE_RARITY[unknown.entry.class or "normal"].color
+	Check("[MEN] inconnue : « ??? » à la couleur de sa rareté", unknown.entry.class ~= "normal"
+		and unknown.label.textColor[1] == elite[1] and unknown.label.textColor[2] == elite[2] and unknown.label.textColor[3] == elite[3])
+	Check("[MEN] capturée : liseré vert à gauche", kodo.caught:IsShown() and kodo.caught.width == 3
+		and kodo.caught.vertex[2] == NS.Theme.GREEN[2] and not unknown.caught:IsShown())
+	Check("[MEN] plus de tampon ni de pastille dans la ligne", kodo.stamp == nil)
 	unknown.scripts.OnEnter(unknown)
 	Check("[MEN] aperçu d'une inconnue : « ??? », niveau, comment la trouver", pane.preview.title.text == "???"
 		and pane.preview.lines[1].text:find("5-6", 1, true) ~= nil, pane.preview.lines[1].text)

@@ -1,4 +1,4 @@
--- JournalCompletion.lua -- page Complétion du carnet (1.5.0)
+-- JournalCompletion.lua -- page Exploration du carnet (1.5.0 ; « Complétion » jusqu'en 1.5.0)
 --
 -- Une seule page pour finir les zones (remplace Zones et la fiche de Zone) :
 --   * à gauche, toutes les zones par niveau : nom, « ici », pourcentage et
@@ -6,7 +6,7 @@
 --     clic = la zone ; la molette fait défiler cette liste ;
 --   * à droite, la zone choisie : carte (grand %, niveaux, barre, les quatre
 --     paliers et ce qu'ils donnent, coffre à ouvrir, suivi à l'écran), trois
---     cartes de part (Exploration, Métiers, Quêtes) qui choisissent la liste
+--     cartes de part (Lieux, Métiers, Quêtes) qui choisissent la liste
 --     du dessous, la liste de la part (à faire d'abord), et une ligne du
 --     bestiaire qui renvoie à la Ménagerie.
 -- Page externe du carnet : ns.JOURNAL_PANES.progress (JournalWindow.lua).
@@ -16,7 +16,7 @@ local L = ns.L
 local Theme = ns.Theme
 
 local FR = {
-	JRN_SEC_progress       = "Complétion",
+	JRN_SEC_progress       = "Exploration",
 	JRN_SUB_progress       = "Finis les zones : paliers, coffres et aides de capture.",
 	JRN_PROG_LEVELS        = "niveaux %d-%d",
 	JRN_PROG_MARK          = "%d %%",
@@ -41,7 +41,7 @@ local FR = {
 	JRN_PROG_MEN_OPEN      = "Ménagerie",
 }
 local EN = {
-	JRN_SEC_progress       = "Completion",
+	JRN_SEC_progress       = "Exploration",
 	JRN_SUB_progress       = "Complete zones: milestones, chests and capture aids.",
 	JRN_PROG_LEVELS        = "levels %d-%d",
 	JRN_PROG_MARK          = "%d%%",
@@ -128,6 +128,14 @@ function ns:JournalProgressParts(zoneID)
 		if slot then slot.have, slot.need = slot.have + part.have, slot.need + part.need end
 	end
 	return out, done
+end
+
+-- Tes métiers, nommés (1.5.1) : la carte Métiers dit ce qu'elle a repéré,
+-- même quand rien ne se suit ici (artisanat, cuisine, pêche, secourisme)
+function ns:JournalCraftLines()
+	local text = self.PlayerProfessionsText and self:PlayerProfessionsText()
+	if not text then return { L.GATHER_PROFS_NONE or "" } end
+	return { self:F("GATHER_PROFS", text), L.GATHER_ONLY_GATHER }
 end
 
 -- Éléments d'une part : à faire d'abord, puis faits (ordre de la part gardé) ;
@@ -285,6 +293,8 @@ local function Build(self, frame, content, ui)
 			if t.part == "quests" then
 				local available = ns.ZoneQuestsAvailable and ns:ZoneQuestsAvailable()
 				lines[2] = available and L.JRN_QUESTS_TIP or L.JRN_ACT_NO_QUESTS
+			elseif t.part == "craft" then
+				for _, line in ipairs(ns:JournalCraftLines()) do lines[#lines + 1] = line end
 			end
 			Tip(t, L["JRN_ACT_" .. t.part], lines)
 		end
@@ -514,6 +524,7 @@ local function RefreshItems(self, frame, pane, zoneID, part, quests, seen)
 			empty = L.JRN_ACT_NO_QUESTS
 		else
 			empty = L["JRN_ACT_EMPTY_" .. part] or L.JRN_PROG_NA
+			if part == "craft" then empty = table.concat({ empty, unpack(self:JournalCraftLines()) }, "\n") end
 		end
 	end
 	pane.empty:SetText(empty)

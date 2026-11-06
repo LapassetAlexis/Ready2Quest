@@ -125,6 +125,27 @@ do
 	found = NS:GatheringProfessions()
 	Check("[GTH] métier désappris : oublié", found.herbalism == nil and found.mining == 81)
 
+	-- tous les métiers (1.5.1) : récolte, artisanat et secondaires, nommés
+	G.skills = { { "Compétences secondaires", true, true }, { "Pêche", false, true, 40 }, { "Cuisine", false, true, 75 },
+		{ "Secourisme", false, true, 60 }, HEADER, { "Forge", false, true, 180 }, { "Minage", false, true, 215 } }
+	local all = NS:PlayerProfessions()
+	local keys = {}
+	for _, entry in ipairs(all) do keys[#keys + 1] = entry.key .. "=" .. entry.rank end
+	Check("[GTH] tous les métiers : récolte, artisanat puis secondaires", table.concat(keys, ",")
+		== "mining=215,blacksmithing=180,cooking=75,fishing=40,firstaid=60", table.concat(keys, ","))
+	Check("[GTH] métiers en clair (noms du client)", NS:PlayerProfessionsText() == "Minage 215  ·  Forge 180  ·  Cuisine 75  ·  Pêche 40  ·  Secourisme 60",
+		NS:PlayerProfessionsText())
+	local lines = NS:JournalCraftLines()
+	Check("[GTH] carte Métiers : tes métiers et ce qui se suit par zone", lines[1]:find("Forge 180", 1, true)
+		and lines[2] == NS.L.GATHER_ONLY_GATHER, lines[1])
+	G.skills = { { "Professions", true, false } }
+	Check("[GTH] tous les métiers, catégorie repliée : dernière liste lue", #NS:PlayerProfessions() == 5)
+	G.skills = { HEADER }
+	Check("[GTH] aucun métier : nil et message", NS:PlayerProfessionsText() == nil
+		and NS:JournalCraftLines()[1] == NS.L.GATHER_PROFS_NONE)
+	G.skills = { HEADER, { "Minage", false, true, 81 } }
+	NS:GatheringProfessions()
+
 	local band, low = NS:GatheringBand("herbalism", 120)
 	Check("[GTH] tranche 120 : de Mage royal à Tombeline, gris exclus", G.Ids(band) == "785,2450,3820,2453,3355,3369" and low == 120,
 		G.Ids(band) .. " low=" .. tostring(low))

@@ -3,7 +3,7 @@
 ## Title: |cffe8a54bQuest|r|cff5b8fd6Companion|r
 ## Notes: A little travel companion and its journal: zone completion, reward chests, evolution.
 ## Notes-frFR: Compagnon de route et carnet de voyage : complétion de zone, coffres, évolution.
-## Version: 1.5.0
+## Version: 1.5.1
 ## X-License: GPL-3.0
 ## Author: Tristabeau
 ## X-Website: https://github.com/LapassetAlexis/Ready2Quest

@@ -100,4 +100,22 @@ ns.GATHERING_PROFESSIONS = {
 }
 ns.GATHERING_PROFESSION_ORDER = { "herbalism", "mining", "skinning" }
 
+-- Tous les métiers (1.5.1) : la carte Métiers les nomme, même ceux qui ne se
+-- suivent pas par zone (artisanat, cuisine, pêche, secourisme). Ordre
+-- d'affichage : récolte, artisanat, secondaires.
+ns.PROFESSION_LIST = {
+	{ key = "herbalism",      names = { "herbalism", "herboristerie" } },
+	{ key = "mining",         names = { "mining", "minage" } },
+	{ key = "skinning",       names = { "skinning", "dépeçage", "depecage" } },
+	{ key = "alchemy",        names = { "alchemy", "alchimie" } },
+	{ key = "blacksmithing",  names = { "blacksmithing", "forge" } },
+	{ key = "enchanting",     names = { "enchanting", "enchantement" } },
+	{ key = "engineering",    names = { "engineering", "ingénierie", "ingenierie" } },
+	{ key = "leatherworking", names = { "leatherworking", "travail du cuir" } },
+	{ key = "tailoring",      names = { "tailoring", "couture" } },
+	{ key = "cooking",        names = { "cooking", "cuisine" } },
+	{ key = "fishing",        names = { "fishing", "pêche", "peche" } },
+	{ key = "firstaid",       names = { "first aid", "secourisme", "premiers soins" } },
+}
+
 if ns.Mark then ns.Mark("GatheringData") end

@@ -1,5 +1,15 @@
 # QuestCompanion
 
+## 1.5.1
+
+- **Compagnon** : le grand portrait cadre la créature de plus près ; les listes Cadre et Fond ne s'ouvrent plus l'une sur l'autre (ouvrir une liste referme l'autre, partout dans l'addon).
+- **Complétion devient Exploration** ; sa carte « Exploration » devient « Lieux ».
+- **Métiers** : un herboriste ou un mineur confirmé finit aussi les zones basses — les herbes et minerais de la zone que ta compétence permet comptent, même gris (marqués « à récolter (gris) »). La carte nomme tous tes métiers (artisanat, cuisine, pêche, secourisme compris) et dit que seuls herboristerie, minage et dépeçage se suivent zone par zone.
+- **Ménagerie** : le nom (ou « ??? ») prend la couleur de la rareté de la créature, un liseré vert à gauche marque les capturées ; les colonnes de marques (abattue, capturée) disparaissent de la ligne. La liste des zones est triée par ordre alphabétique (accents et « Les / La / Le / L' / The » ignorés).
+- **Souvenirs** : chaque photo a sa pose — un geste selon le moment (fête pour un niveau, assis après une mort ou pour un anniversaire), un angle et un cadrage propres au souvenir, toujours les mêmes d'un affichage à l'autre.
+
+*English:* the Companion portrait is framed closer; the Frame and Background lists no longer open on top of each other. Completion is renamed Exploration (its Exploration card becomes Places). Professions: zone resources your skill allows now count even when grey, and the card names every profession you know. Menagerie: names (or "???") in their rarity colour, a green edge for captured ones, no more mark columns; zones sorted alphabetically. Souvenirs: each photo gets its own pose (gesture, angle, framing).
+
 ## 1.5.0
 
 - **Le carnet en cinq pages** : Compagnon · Ménagerie · Missions · Complétion · Souvenirs.

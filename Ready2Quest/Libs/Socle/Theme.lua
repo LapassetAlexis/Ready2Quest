@@ -1137,6 +1137,8 @@ end
 -- pas. onSelect(valeur, choix) sur un choix de l'utilisateur.
 -- opts.maxRows : lignes visibles (10 par défaut), le reste défile à la
 -- molette ; opts.listWidth : liste plus large que la case (indices longs).
+-- Une seule liste ouverte à la fois (Theme.openDropdown) : en ouvrir une
+-- referme l'autre, sinon deux listes voisines se recouvrent.
 -- ---------------------------------------------------------------------------
 Theme.DROPDOWN_ROW = 22
 Theme.DROPDOWN_MAX_ROWS = 10
@@ -1285,6 +1287,10 @@ function Theme.CreateDropdown(parent, width, onSelect, opts)
 	-- la liste s'ouvre vers le bas, ou vers le haut si elle sortirait de
 	-- l'écran (`up` : vers le haut d'office)
 	function dropdown:Open(up)
+		-- une seule liste ouverte à la fois : celle d'à côté se referme
+		local other = Theme.openDropdown
+		if other and other ~= self and other.IsOpen and other:IsOpen() then other:Close() end
+		Theme.openDropdown = self
 		-- le choix courant en vue
 		for index, entry in ipairs(self.options) do
 			if entry.value == self.value and (index <= self.offset or index > self.offset + self.maxRows) then
@@ -1304,7 +1310,11 @@ function Theme.CreateDropdown(parent, width, onSelect, opts)
 		list:Show()
 		self.border:SetColor(Theme.GOLD[1], Theme.GOLD[2], Theme.GOLD[3], 1)
 	end
-	function dropdown:Close() list:Hide(); self.border:SetColor(Theme.EDGE[1], Theme.EDGE[2], Theme.EDGE[3], 1) end
+	function dropdown:Close()
+		list:Hide()
+		self.border:SetColor(Theme.EDGE[1], Theme.EDGE[2], Theme.EDGE[3], 1)
+		if Theme.openDropdown == self then Theme.openDropdown = nil end
+	end
 	function dropdown:IsOpen() return list:IsShown() and true or false end
 	dropdown:SetScript("OnClick", function(self) if self:IsOpen() then self:Close() else self:Open() end end)
 	dropdown:SetScript("OnHide", function(self) self:Close() end)
