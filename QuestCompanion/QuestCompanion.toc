@@ -30,6 +30,7 @@ Libs\Socle\Commands.lua
 Libs\Socle\Options.lua
 Libs\Socle\Minimap.lua
 Core.lua
+CreatureTypes.lua
 CompanionData.lua
 CompanionLines.lua
 Companion.lua
@@ -54,10 +55,15 @@ Treats.lua
 Shiny.lua
 Capture.lua
 CaptureStage.lua
+CaptureQueue.lua
+CompanionEffects.lua
+MenagerieCollection.lua
 Daily.lua
 Weekly.lua
+MissionsMenagerie.lua
 Notify.lua
 LiveRares.lua
 Tooltips.lua
 JournalWindow.lua
 JournalCompletion.lua
+TrainerCard.lua
