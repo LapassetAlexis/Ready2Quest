@@ -69,6 +69,13 @@ You can rename it with `/qc compagnon nom Nugget`.
 
 ## Travel journal
 
+**Since 1.5.0, five pages** (`/qc`, or right-click your companion):
+- **Companion**: your creature up close (portrait with its frame and background, character, evolution steps, its last line), five numbers (captured, shinies, days together, missions done, **distance travelled together**), its needs, and its look: appearances (mascots and captured creatures), frame, background, ornaments.
+- **Menagerie**: every capturable creature, as one numbered list to filter (zone, captured / to capture / to defeat, rarity, name search, sorting), with a 3D card.
+- **Missions**: companion, daily and weekly missions with their rewards, the capture pack, the pantry and the inn card.
+- **Completion**: every zone and its progress; for the chosen zone, its milestones and what they give, exploration, gathering and quests, and the zone chest.
+- **Souvenirs**: the album of the road, each memory with a photo recreated by your companion (in-game screenshots stay in the Screenshots folder: addons can't read them).
+
 Your travel collection: a **stamp** for every first time.
 
 | Stamp | When |
@@ -219,6 +226,13 @@ Elle a quatre envies : **faim**, **énergie**, **moral** et **curiosité**. Elle
 Tu peux la renommer avec `/qc compagnon nom Pépite`.
 
 ## Carnet de voyage
+
+**Depuis la 1.5.0, cinq pages** (`/qc`, ou clic droit sur ton compagnon) :
+- **Compagnon** : ta créature en grand (portrait avec son cadre et son fond, caractère, étapes d'évolution, sa dernière réplique), cinq chiffres (capturées, brillantes, jours ensemble, missions faites, **distance parcourue ensemble**), ses envies, et son allure : apparences (mascottes et créatures capturées), cadre, fond, ornements.
+- **Ménagerie** : toutes les créatures capturables, en une liste numérotée à filtrer (zone, capturées / à capturer / à abattre, rareté, recherche par nom, tris), avec une fiche en 3D.
+- **Missions** : missions du compagnon, du jour et de la semaine avec leurs récompenses, la besace de capture, le garde-manger et la carte des auberges.
+- **Complétion** : toutes les zones et leur progression ; pour la zone choisie, ses paliers et ce qu'ils rapportent, l'exploration, la récolte, les quêtes et le coffre de zone.
+- **Souvenirs** : l'album de la route, chaque souvenir avec sa photo recréée par ton compagnon (les captures d'écran du jeu restent dans le dossier Screenshots : un addon ne peut pas les lire).
 
 Ta collection de voyage : un **tampon** pour chaque première fois.
 

@@ -140,13 +140,13 @@ local function Rect(region) return Snap.Rect(region, { memo = {} }) end
 local function Bottom(region) local r = Rect(region); return r and (r.top + r.height) end
 
 -- les cartes visibles d'une liste : leurs textes tiennent dedans, sans se chevaucher
-local function CardsClean(cards)
+local function CardsClean(cards, ignore)
 	local bad, count = {}, 0
 	for _, card in ipairs(cards or {}) do
 		if Snap.Visible(card) then
 			count = count + 1
 			local overlaps, outside = Snap.Layout(card, Snap.Texts(card), Rect(card))
-			for _, o in ipairs(overlaps) do bad[#bad + 1] = o end
+			for _, o in ipairs(overlaps) do if not (ignore and ignore[o]) then bad[#bad + 1] = o end end
 			for _, o in ipairs(outside) do bad[#bad + 1] = "hors carte : " .. o end
 		end
 	end
@@ -166,8 +166,9 @@ end
 do
 	Say("-- carnet et compagnon v2 : chaque fenêtre, sans chevauchement")
 	local journal = {
-		{ "qc-journal-creature", "evolution" }, { "qc-journal-zones", "zones" }, { "qc-journal-zone", "completion" },
-		{ "qc-journal-bestiary", "completion" }, { "qc-journal-day", "day" }, { "qc-journal-collection", "collection" },
+		-- carnet 1.5.0 : Zones, Zone (et son onglet Combat) et Collection sont
+		-- remplacées par la Complétion (et la Ménagerie / le Compagnon)
+		{ "qc-journal-creature", "evolution" }, { "qc-journal-progress", "progress" }, { "qc-journal-day", "day" },
 		{ "qc-journal-memories", "memories" }, { "qc-journal-menagerie", "menagerie" },
 	}
 	for _, spec in ipairs(journal) do
@@ -193,21 +194,37 @@ do
 				and lastPantry < close.left - 12 and frame.closeButton:GetWidth() >= frame.closeButton.text:GetStringWidth() + 16,
 				tostring(lastPantry) .. " / " .. tostring(close and close.left))
 			-- cartes de la page : textes tenus, la dernière au-dessus de la pagination
-			local pane = ({ evolution = frame.evo, zones = frame.zones, completion = frame.comp, day = frame.day,
-				collection = frame.coll, memories = frame.mem, menagerie = frame.men })[kind]
+			local pane = ({ evolution = frame.evo, progress = frame.prog, day = frame.day,
+				memories = frame.mem, menagerie = frame.men })[kind]
 			local lists = {}
-			for _, field in ipairs({ "tiles", "cards", "items", "rows", "missions", "slots", "needs", "facts", "lines" }) do
+			for _, field in ipairs({ "tiles", "cards", "items", "rows", "missions", "slots", "needs", "facts", "lines",
+				"marks", "parts", "zones" }) do
 				if pane[field] then lists[#lists + 1] = pane[field] end
 			end
 			local bad, cards = {}, 0
+			-- Ménagerie : le nom (une ligne, coupé à sa largeur fixe) et le type
+			-- (calé à droite dans 90 px) ont des cadres qui se recouvrent de
+			-- quelques pixels ; on mesure ici les glyphes du type : le nom coupé
+			-- doit s'arrêter avant eux
+			local ignore = {}
+			if kind == "menagerie" then
+				for _, row in ipairs(pane.items) do
+					if Snap.Visible(row) and row.detail.text ~= "" and row.detail.justifyH == "RIGHT" then
+						local label, detail = Rect(row.label), Rect(row.detail)
+						local glyphs = Snap.MeasureText(row.detail)
+						local clear = label.left + label.width <= detail.left + detail.width - glyphs - 4
+						Check("[CV2] Ménagerie : « " .. row.label.text .. " » s'arrête avant son type", clear,
+							tostring(label.left + label.width) .. " / " .. tostring(detail.left + detail.width - glyphs))
+						if clear then ignore[Snap.Label(row.label) .. " / " .. Snap.Label(row.detail)] = true end
+					end
+				end
+			end
 			for _, list in ipairs(lists) do
-				local b, n = CardsClean(list)
+				local b, n = CardsClean(list, ignore)
 				cards = cards + n
 				for _, o in ipairs(b) do bad[#bad + 1] = o end
 			end
-			-- Combat ne montre plus de fiches (renvoi vers la Ménagerie)
-			local combat = name == "qc-journal-bestiary"
-			Check("[CV2] " .. name .. " : chaque carte tient ses textes", (cards > 0 or combat) and #bad == 0,
+			Check("[CV2] " .. name .. " : chaque carte tient ses textes", cards > 0 and #bad == 0,
 				cards .. " : " .. table.concat(bad, " | "))
 			for _, list in ipairs(lists) do
 				if list and list[1] and pane.pager then
@@ -222,14 +239,8 @@ do
 		end
 	end
 
-	-- page Zone, Combat : plus de fiches, le renvoi vers la Ménagerie
-	local frame, restore = Scene("qc-journal-bestiary")
-	if frame then
-		local comp = frame.comp
-		Check("[CV2] Combat : bouton vers la Ménagerie, sans fiches ni aperçu", comp.toMen:IsShown()
-			and not comp.cards[1]:IsShown() and not comp.preview:IsShown() and comp.empty.text == T.QNS.L.JRN_COMBAT_MEN)
-		restore()
-	end
+	-- (onglet Combat de la page Zone supprimé : le bestiaire d'une zone vit dans la
+	-- Ménagerie, la Complétion n'en garde qu'une ligne et un bouton)
 	-- Ménagerie : grille à gauche de l'aperçu
 	frame, restore = Scene("qc-journal-menagerie")
 	if frame then
@@ -243,15 +254,17 @@ do
 			tostring(right) .. " / " .. tostring(preview.left))
 		restore()
 	end
-	frame, restore = Scene("qc-journal-zone")
+	-- Complétion (ex-page Zone, Exploration) : la liste des villages, sans aperçu ;
+	-- le suivi à l'écran est dans la carte de la zone, à droite du nom
+	frame, restore = Scene("qc-journal-progress")
 	if frame then
-		local comp = frame.comp
-		Check("[CV2] Exploration : sans aperçu, l'aide en bas", not comp.preview:IsShown() and comp.hint.text ~= ""
-			and comp.lines[1]:IsShown())
-		local tabs = Rect(comp.tabBar)
-		local watch = Rect(comp.watchLabel)
-		Check("[CV2] suivre à l'écran : sur la rangée des onglets, à droite du dernier", watch.top >= tabs.top - 1
-			and watch.left > Rect(comp.tabs.quests).left + comp.tabs.quests:GetWidth())
+		local prog = frame.prog
+		Check("[CV2] Complétion : Les Tarides, villages listés", frame.zoneID == 1413 and frame.progPart == nil
+			and prog.items[1]:IsShown() and prog.head.text:find("Villages", 1, true) ~= nil, prog.head.text)
+		local card, watch, name = Rect(prog.card), Rect(prog.watchLabel), Rect(prog.name)
+		Check("[CV2] suivre à l'écran : dans la carte, à droite du nom", watch.top >= card.top
+			and watch.left + watch.width <= card.left + card.width and watch.left > name.left + prog.name:GetWidth(),
+			tostring(watch.left) .. " / " .. tostring(name.left + prog.name:GetWidth()))
 		restore()
 	end
 

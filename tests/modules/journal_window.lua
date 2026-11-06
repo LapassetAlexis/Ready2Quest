@@ -1,5 +1,6 @@
 -- Carnet 1.1.0 : Collection (clic = équiper, aperçu), garde-manger de l'en-tête,
--- Créature (caractère), objectif de zone qui ouvre sa zone.
+-- Créature (caractère), objectif de zone qui ouvre sa zone. Carnet 1.5.0 : la
+-- Collection passe dans « Son allure » (Compagnon), la zone dans la Complétion.
 local Check, Say, ResetWorld, NS, Mock = T.Check, T.Say, T.ResetWorld, T.QNS, T.Mock
 
 local W = {}
@@ -13,13 +14,11 @@ end
 function W.Find(list, id)
 	for _, entry in ipairs(list) do if entry.def.id == id then return entry end end
 end
-function W.Cell(frame, id)
-	for _, cell in ipairs(frame.coll.items) do
-		if cell.entry and cell.entry.def.id == id then return cell end
-	end
-end
 
--- 1. Collection ----------------------------------------------------------------------------
+-- 1. Allure (ex-Collection) ------------------------------------------------------------------
+-- Carnet 1.5.0 : la page Collection (grille de tous les objets, verrous, aperçu)
+-- est retirée ; on porte ses apparences, cadres, fonds et ornements depuis la
+-- page Compagnon (« Son allure »). Les données du catalogue restent.
 do
 	Say("-- carnet : Collection")
 	W.Reset()
@@ -28,75 +27,48 @@ do
 	data.appearance = "whelp_green"
 	NS:ToggleJournal(true)
 	local f = NS.journalFrame
-	f.sections.collection:Click()
-	local coll = f.coll
-	Check("[COLL] onglet Collection : affiché seul", f.kind == "collection" and coll:IsShown() and not f.comp:IsShown())
-	Check("[COLL] quatre sortes", coll.kinds.app and coll.kinds.orn and coll.kinds.frame and coll.kinds.bg
-		and coll.kinds.app.text.text == "Apparences")
+	Check("[COLL] plus d'onglet Collection : l'ancien nom mène au Compagnon", f.sections.collection == nil and (function()
+		NS:SelectJournalKind("collection"); return f.kind == "evolution" and f.evo:IsShown()
+	end)())
+	local evo = f.evo
 	local apps = NS:JournalCollection("app")
 	Check("[COLL] apparences : tout le catalogue", #apps == #NS.COMPANION_APPEARANCES)
-	Check("[COLL] compteur « possédés »", coll.count.text:find("possédés", 1, true) ~= nil, coll.count.text)
-	local green, frog, owl = W.Cell(f, "whelp_green"), W.Cell(f, "frog"), W.Cell(f, "owl")
-	Check("[COLL] dragonnet vert : équipé, liseré or", green and green.entry.equipped and green.selected
-		and green.accent:IsShown() and green.accent.vertex[1] == NS.Theme.GOLD[1])
-	Check("[COLL] chouette verrouillée : un verrou qui dit son palier, pas d'icône", owl and not owl.entry.owned
-		and owl.alpha < 1 and owl.lock:IsShown() and not owl.icon:IsShown() and owl.lock.label.text:find("2", 1, true),
-		owl and owl.lock.label.text)
-	Check("[COLL] aperçu : l'objet équipé, sur la créature", coll.preview.title.text == NS.L.COMP_APP_WHELP_GREEN
-		and coll.preview.model.display == NS:CompanionAppearanceDef("whelp_green").display, coll.preview.title.text)
-	owl.scripts.OnEnter(owl)
-	Check("[COLL] survol d'un objet verrouillé : sa source", coll.preview.lines[1].text == "Verrouillé."
-		and coll.preview.lines[2].text:find("palier 2", 1, true), coll.preview.lines[2].text)
-	owl:Click()
-	Check("[COLL] clic sur un verrouillé : rien", data.appearance == "whelp_green" and NS:JournalEquip(owl.entry) == false)
+	Check("[COLL] dragonnet vert : équipé", W.Find(apps, "whelp_green").equipped and not W.Find(apps, "owl").owned)
+	local function Look(id)
+		for _, cell in ipairs(evo.looks) do if cell:IsShown() and cell.def and cell.def.id == id then return cell end end
+	end
+	local green, frog = Look("whelp_green"), Look("frog")
+	Check("[COLL] allure : les apparences possédées seulement, la portée en or", green and frog and Look("owl") == nil
+		and green.selected and green.accent:IsShown() and green.accent.vertex[1] == NS.Theme.GOLD[1])
+	Check("[COLL] clic sur un verrouillé : rien", NS:CompanionSetAppearance("owl") == nil and data.appearance == "whelp_green")
 	frog:Click()
-	Check("[COLL] clic sur la rainette : équipée", data.appearance == "frog" and W.Cell(f, "frog").entry.equipped)
-	Check("[COLL] … l'aperçu suit", coll.preview.lines[1].text == "Équipé.", coll.preview.lines[1].text)
+	Check("[COLL] clic sur la rainette : équipée", data.appearance == "frog" and W.Find(NS:JournalCollection("app"), "frog").equipped
+		and Look("frog").selected)
 
-	coll.kinds.frame:Click()
-	Check("[COLL] cadres", f.collKind == "frame" and W.Cell(f, "copper") ~= nil)
-	W.Cell(f, "copper"):Click()
-	Check("[COLL] cadre cuivre : équipé", NS:CompanionCurrentStyle("frame").id == "copper")
-	W.Cell(f, "copper").scripts.OnEnter(W.Cell(f, "copper"))
-	Check("[COLL] aperçu d'un cadre : sa couleur", coll.preview.swatch:IsShown())
-	W.Cell(f, "oak"):Click()
-	Check("[COLL] cadre verrouillé : refusé", NS:CompanionCurrentStyle("frame").id == "copper")
+	Check("[COLL] cadres : la liste les propose", evo.frameStyle.value ~= nil)
+	evo.frameStyle:Choose("copper")
+	Check("[COLL] cadre cuivre : équipé", NS:CompanionCurrentStyle("frame").id == "copper" and evo.frameStyle.value == "copper")
+	Check("[COLL] cadre verrouillé : refusé", evo.frameStyle:Choose("oak") == false
+		and NS:CompanionCurrentStyle("frame").id == "copper")
 
-	coll.kinds.orn:Click()
-	local ribbon = W.Cell(f, "ribbon")
-	Check("[COLL] ornement possédé : porté", ribbon and ribbon.entry.equipped)
-	ribbon:Click()
-	Check("[COLL] clic : l'ornement s'enlève", NS:DB().companionOrnRibbon == false and not W.Cell(f, "ribbon").entry.equipped)
-	Check("[COLL] … « Clic : le porter. »", coll.preview.lines[1].text == "Clic : le porter.", coll.preview.lines[1].text)
-	W.Cell(f, "ribbon"):Click()
+	local ribbon
+	for _, button in ipairs(evo.orns) do if button:IsShown() and button.text.text == NS.L.COMP_ORN_RIBBON then ribbon = button end end
+	Check("[COLL] ornement possédé : porté", ribbon and NS:DB().companionOrnRibbon ~= false
+		and W.Find(NS:JournalCollection("orn"), "ribbon").equipped)
+	if ribbon then ribbon:Click() end
+	Check("[COLL] clic : l'ornement s'enlève", NS:DB().companionOrnRibbon == false
+		and not W.Find(NS:JournalCollection("orn"), "ribbon").equipped)
+	for _, button in ipairs(evo.orns) do if button:IsShown() and button.text.text == NS.L.COMP_ORN_RIBBON then ribbon = button end end
+	if ribbon then ribbon:Click() end
 	Check("[COLL] clic encore : remis", NS:DB().companionOrnRibbon == true)
 
-	coll.kinds.bg:Click()
 	local base = W.Find(NS:JournalCollection("bg"), "night")
 	Check("[COLL] fond de base : possédé d'office", base and base.owned and NS:JournalCosmeticSource(base) == "possédé d'office")
 	f:Hide()
 end
 
--- 1 bis. Grille des zones : la molette avance d'une rangée -------------------------------------
-do
-	Say("-- carnet : grille des zones")
-	W.Reset()
-	NS:ToggleJournal(true)
-	local f = NS.journalFrame
-	f.sections.zones:Click()
-	local list, page = f.zoneList, #f.zones.tiles
-	Check("[ZONES] plus de zones qu'une page", #list > page, #list)
-	f.scripts.OnMouseWheel(f, -1)
-	local step = NS.JOURNAL_LAYOUT.zoneStep
-	Check("[ZONES] molette : trois rangées plus bas", f.zoneOffset == step and f.zones.tiles[1].zoneID == list[step + 1].id, f.zoneOffset)
-	for _ = 1, 50 do NS:ScrollJournal(-1) end
-	local last = f.zones.tiles[1].zone
-	Check("[ZONES] butée en bas : la dernière zone visible", f.zoneOffset % NS.JOURNAL_LAYOUT.tileCols == 0 and f.zoneOffset + page >= #list
-		and f.zoneOffset < #list and last ~= nil)
-	f.scripts.OnMouseWheel(f, 1)
-	Check("[ZONES] molette vers le haut", f.zones.tiles[1].zoneID == list[f.zoneOffset + 1].id)
-	f:Hide()
-end
+-- (1 bis, grille des zones : retirée avec la page Zones ; la molette de la liste
+-- des zones de la Complétion est testée dans journal_progress.lua)
 
 -- 1 ter. Zones sans tranche connue : niveaux calculés, et toutes dans la grille ----------------
 do
@@ -164,10 +136,16 @@ do
 	NS:ToggleJournal(true)
 	local f = NS.journalFrame
 	f.sections.evolution:Click()
-	Check("[JRNW] Créature : son caractère", f.evo.trait.text:find("Caractère : ", 1, true) ~= nil, f.evo.trait.text)
+	-- pas encore de caractère : pas d'étiquette ; formé : son nom à côté du nom
+	Check("[JRNW] Créature : pas de caractère formé, pas d'étiquette", NS:CompanionTrait() ~= nil or not f.evo.traitTag:IsShown())
+	NS:PersonaData().formed = "curious"
+	NS:RefreshJournal()
+	local trait = NS:PersonaLabel(NS:CompanionTrait())
+	Check("[JRNW] Créature : son caractère (étiquette à côté du nom)", trait and trait ~= "" and f.evo.traitTag:IsShown()
+		and f.evo.traitTag.label.text == NS.Theme.Upper(trait), f.evo.traitTag.label.text)
 	f:Hide()
 	NS:OpenJournalFor({ id = "zone:1411", zoneID = 1411, source = "journal" })
-	Check("[JRNW] objectif de zone : sa zone s'ouvre", f:IsShown() and f.kind == "completion" and f.zoneID == 1411)
+	Check("[JRNW] objectif de zone : sa zone s'ouvre", f:IsShown() and f.kind == "progress" and f.zoneID == 1411)
 	f:Hide()
 	NS:OpenJournalFor({ id = "stage", kind = "stage", source = "companion" })
 	Check("[JRNW] objectif du compagnon : Créature", f:IsShown() and f.kind == "evolution")

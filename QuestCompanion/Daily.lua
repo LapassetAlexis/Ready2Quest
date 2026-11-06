@@ -450,6 +450,9 @@ local function Advance(self, mission, have)
 	mission.have = math.max(mission.have or 0, math.min(have, mission.need))
 	if mission.have < mission.need then return true end
 	mission.done = true
+	-- compteur de toujours (page Compagnon du carnet)
+	local companion = self:CompanionData()
+	companion.missionsDone = (tonumber(companion.missionsDone) or 0) + 1
 	self:MissionGrant(mission.source == "trait" and "trait" or "zone")
 	if self.WeeklyEvent then pcall(self.WeeklyEvent, self, "dailies", 1) end
 	self:CompanionAdd("curiosity", ns.MISSION_CURIOSITY)

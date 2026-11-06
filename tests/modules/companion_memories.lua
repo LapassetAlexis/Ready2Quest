@@ -330,7 +330,7 @@ do
 	NS:OpenMemories()
 	local frame = NS.journalFrame
 	Check("[MEM] album : section « Souvenirs » du carnet", frame and frame.kind == "memories" and frame.mem:IsShown()
-		and not frame.evo:IsShown() and not frame.comp:IsShown() and frame.sections.memories.text.text == "Souvenirs")
+		and not frame.evo:IsShown() and not frame.prog:IsShown() and frame.sections.memories.text.text == "Souvenirs")
 	Check("[MEM] album vide : il explique", frame.mem.empty.text:find("Pas encore", 1, true))
 	for level = 10, 60, 10 do NS:CompanionOnLevel(level) end
 	Mock.world.mapID = 1453
@@ -338,19 +338,24 @@ do
 	NS:CompanionOnZone(true)
 	MM.Find("level:10").photo = "WoWScrnShot_110426_101010.jpg"
 	NS:RefreshJournal()
-	local row = frame.mem.rows[1]
-	Check("[MEM] album : ordre chronologique, texte, date, lieu, photo", row:IsShown() and row.text.text == "Niveau 10 atteint."
-		and row.date.text:find("^%d%d/%d%d/%d%d%d%d$") and row.detail.text:find("Plaine sauvage", 1, true)
-		and row.detail.text:find("WoWScrnShot_110426_101010.jpg", 1, true), row.detail.text)
-	Check("[MEM] album : en-tête (souvenirs, photos) et dossier", frame.mem.header.text == "Souvenirs : " .. #MM.List() .. "  ·  photos : 1"
-		and frame.mem.hint.text:find("Screenshots", 1, true), frame.mem.header.text)
+	local card = frame.mem.cards[1]
+	Check("[MEM] album : ordre chronologique, polaroïd (légende, lieu · date, losange de la capture)", card:IsShown()
+		and card.caption.text == "Niveau 10 atteint." and card.meta.text:find("Plaine sauvage", 1, true)
+		and card.meta.text:find("%d%d/%d%d/%d%d%d%d$") and card.stamp:IsShown() and not frame.mem.cards[2].stamp:IsShown(),
+		card.meta.text)
+	Check("[MEM] album : en-tête (souvenirs, photos) et la note sur les captures", frame.mem.header.text == "Souvenirs : " .. #MM.List() .. "  ·  photos : 1"
+		and frame.mem.hint.text:find("Screenshots", 1, true) and frame.mem.hint.text:find("recréée", 1, true), frame.mem.header.text)
 	for i = 1, 5 do NS:MemoryRecord("rare", "rare:" .. i, { "Rare " .. i }) end
 	NS:RefreshJournal()
-	Check("[MEM] album : 8 lignes, défilement", frame.mem.rows[8]:IsShown() and frame.mem.down:IsShown() and not frame.mem.up:IsShown()
-		and frame.mem.position.text == "1-8 / " .. #MM.List(), frame.mem.position.text)
+	local page = NS.MEMORY_ALBUM_PAGE
+	Check("[MEM] album : une page de polaroïds, défilement", #frame.mem.cards == page and frame.mem.cards[page]:IsShown()
+		and frame.mem.down:IsShown() and not frame.mem.up:IsShown()
+		and frame.mem.position.text == "1-" .. page .. " / " .. #MM.List(), frame.mem.position.text)
 	NS:ScrollJournal(-10)
-	Check("[MEM] album : fin de liste", frame.mem.rows[8].text.text:find("Rare 5", 1, true) and frame.mem.up:IsShown()
-		and not frame.mem.down:IsShown(), frame.mem.rows[8].text.text)
+	local lastShown
+	for _, c in ipairs(frame.mem.cards) do if c:IsShown() then lastShown = c end end
+	Check("[MEM] album : fin de liste", lastShown and lastShown.caption.text:find("Rare 5", 1, true) and frame.mem.up:IsShown()
+		and not frame.mem.down:IsShown(), lastShown and lastShown.caption.text)
 	NS:SelectJournalKind("evolution")
 	Check("[MEM] retour à Évolution : album caché", frame.evo:IsShown() and not frame.mem:IsShown())
 	frame:Hide()

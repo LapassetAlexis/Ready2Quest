@@ -378,14 +378,15 @@ do
 	local f = NS.journalFrame
 	Check("[JRN] /r2q carnet ouvre le carnet", f and f:IsShown())
 	Check("[JRN] fenêtre Theme (titre)", f and f.title and f.title.text == "Carnet de voyage")
-	Check("[JRN] sections : Zones (avec la fiche de zone) et Créature", f.sections and f.sections.zones and f.sections.evolution)
+	Check("[JRN] sections : Complétion (ex-Zones) et Compagnon", f.sections and f.sections.progress and f.sections.evolution)
 	Check("[JRN] total en sous-titre", f.subtitle.text:find("6 tampon", 1, true), f.subtitle.text)
 	Check("[JRN] ouvre sur la Créature, premier onglet", f.kind == "evolution")
-	-- un nouveau tampon rafraîchit la fenêtre ouverte (section Évolution : parcours)
+	-- un nouveau tampon rafraîchit la fenêtre ouverte (la ligne « parcours » du
+	-- Compagnon n'existe plus : on suit le total de tampons sous le titre)
 	f.sections.evolution:Click()
-	local before = f.evo.road.text
+	local before = f.subtitle.text
 	J.Map(1436)
-	Check("[JRN] fenêtre ouverte : rafraîchie au gain", f.evo.road.text ~= before and f.evo.road.text:find("3 zones", 1, true), f.evo.road.text)
+	Check("[JRN] fenêtre ouverte : rafraîchie au gain", f.subtitle.text ~= before and f.subtitle.text:find("7 tampon", 1, true), f.subtitle.text)
 	NS:HandleCommand("journal")
 	Check("[JRN] /r2q journal : referme", not f:IsShown())
 	NS:HandleCommand("carnet")

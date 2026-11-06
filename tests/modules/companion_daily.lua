@@ -309,7 +309,7 @@ do
 		and f.sections.day.badge.text == "6" and f.sections.day.badge:IsShown(), f.sections.day and f.sections.day.badge.text)
 	f.sections.day:Click()
 	local day = f.day
-	Check("[DAYW] affiché seul", f.kind == "day" and day:IsShown() and not f.comp:IsShown())
+	Check("[DAYW] affiché seul", f.kind == "day" and day:IsShown() and not f.evo:IsShown())
 	Check("[DAYW] mission du compagnon en tête, libellé et compteur", day.missions[1].label.text == "Fais-moi 3 caresses"
 		and day.missions[1].count.text == "0/3", day.missions[1].label.text)
 	Check("[DAYW] … sa récompense : friandise et appât", day.missions[1].source.text:find("Appât savoureux", 1, true) ~= nil,
