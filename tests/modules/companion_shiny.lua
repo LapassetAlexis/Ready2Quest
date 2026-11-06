@@ -228,14 +228,13 @@ do
 	NS:DB().journalTracker = false
 	NS:ToggleJournal(true)
 	local f = NS.journalFrame
-	NS:OpenJournalZone(9800)
-	f.comp.tabs.combat:Click()
+	NS:OpenMenagerieZone(9800)
 	local card
-	for _, c in ipairs(f.comp.cards) do if c.item and c.item.id == 3500 then card = c end end
-	Check("[SHINY] fiche : étoile et liseré doré", card and card.star:IsShown() and card.accent:IsShown() and card.accent.vertex[2] > 0.85)
+	for _, c in ipairs(f.men.items) do if c.entry and c.entry.npc == 3500 then card = c end end
+	Check("[SHINY] Ménagerie : étoile et liseré doré", card and card.star:IsShown() and card.accent:IsShown() and card.accent.vertex[2] > 0.75)
 	card.scripts.OnEnter(card)
 	local said = {}
-	for _, line in ipairs(f.comp.preview.lines) do said[#said + 1] = line.text or "" end
+	for _, line in ipairs(f.men.preview.lines) do said[#said + 1] = line.text or "" end
 	Check("[SHINY] aperçu : « Brillante, abattue le … »", table.concat(said, " "):find("Brillante, abattue le", 1, true))
 	f.sections.zones:Click()
 	for _ = 1, 20 do NS:ScrollJournal(-1) end

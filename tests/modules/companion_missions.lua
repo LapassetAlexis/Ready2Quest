@@ -133,45 +133,103 @@ end
 do
 	Say("-- missions : ménagerie")
 	MS.Reset()
-	local book = NS:BestiaryData()
-	book[1413] = {
-		[3100] = { name = "Loup", class = "normal", level = 12, type = "Bête", seen = true, killed = 4 },
-		[3101] = { name = "Kodo", class = "normal", level = 14, type = "Bête", seen = true },
-		[3102] = { name = "Raptor", class = "elite", level = 16, type = "Bête", seen = true, killed = 1 },
+	-- une petite table livrée de test : deux zones, une espèce partagée, une
+	-- amicale envers la Horde (exclue pour un Horde)
+	local savedTable = rawget(NS, "ZONE_CREATURES")
+	local savedFaction = NS.BestiaryFaction
+	NS.BestiaryFaction = function() return "H" end
+	NS.ZONE_CREATURES = {
+		[1411] = { [3100] = { lvl = { 1, 2 }, rank = 0, fr = "Sanglier", en = "Boar" },
+			[3101] = { lvl = { 5, 6 }, rank = 1, fr = "Gardien", en = "Guard" },
+			[3199] = { lvl = { 3, 3 }, rank = 0, fr = "Garde ami", en = "Friendly", f = "H" } },
+		[1413] = { [3200] = { lvl = { 12, 13 }, rank = 4, fr = "Rare des plaines", en = "Plains rare" },
+			[3201] = { lvl = { 10, 11 }, rank = 0, fr = "Kodo", en = "Kodo" },
+			[3101] = { lvl = { 5, 6 }, rank = 1, fr = "Gardien", en = "Guard" } },
 	}
+	NS.menagerieStatic = nil
+	local all, stats = NS:MenagerieList({ zone = "all" })
+	Check("[MEN] toutes les espèces capturables (table livrée, ta faction)", #all == 4 and stats.total == 4 and stats.known == 0,
+		#all .. "/" .. stats.total)
+	local byNpc = {}
+	for _, e in ipairs(all) do byNpc[e.npc] = e end
+	Check("[MEN] numéro fixe : zones par niveau, puis niveau", byNpc[3100].no == 1 and byNpc[3101].no == 2
+		and byNpc[3201].no == 3 and byNpc[3200].no == 4)
+	Check("[MEN] espèce de deux zones : une seule fiche, deux zones", #byNpc[3101].zones == 2)
+	Check("[MEN] jamais croisée : inconnue", not byNpc[3100].known)
+	-- ce qu'on apprend et capture
+	NS:BestiaryData()[1413] = { [3201] = { name = "Kodo des plaines", seen = true, killed = 2, type = "Bête", level = 11 },
+		[3999] = { name = "Bête hors table", seen = true, killed = 0, class = "normal" } }
 	local data = NS:CaptureData()
-	data.creatures[3101] = { name = "Kodo", class = "normal", level = 14, zoneID = 1413, at = 0 }
-	data.count = 1
-	local list, captured, seen = NS:MenagerieList("all")
-	Check("[MEN] toutes les espèces croisées", #list == 3 and captured == 1 and seen == 3)
-	Check("[MEN] numérotées par niveau la première fois", list[1].npc == 3100 and list[1].no == 1 and list[3].no == 3)
-	book[1413][3099] = { name = "Lapin géant", class = "normal", level = 5, seen = true }
-	list = NS:MenagerieList("all")
-	Check("[MEN] une nouvelle espèce prend le numéro suivant (les autres ne bougent pas)",
-		list[1].npc == 3100 and list[1].no == 1 and list[4].npc == 3099 and list[4].no == 4)
-	local only = NS:MenagerieList("captured")
-	Check("[MEN] filtre « capturées »", #only == 1 and only[1].captured and only[1].npc == 3101)
-	Check("[MEN] filtre « à capturer »", #NS:MenagerieList("missing") == 3)
-	-- carnet : la page, la grille, l'aperçu, l'équipement
+	data.creatures[3201] = { name = "Kodo des plaines", class = "normal", zoneID = 1413, at = 1700000000 }
+	data.creatures[3200] = { name = "Rare des plaines", class = "rare", zoneID = 1413, at = 1800000000, shiny = true }
+	data.count = 2
+	local zone, zstats = NS:MenagerieList({ zone = 1413 })
+	Check("[MEN] zone choisie : ses espèces seulement", #zone == 4 and zstats.total == 4 and zstats.captured == 2
+		and zstats.known == 3, #zone .. " " .. zstats.total .. " " .. zstats.captured .. " " .. zstats.known)
+	local extra
+	for _, e in ipairs(zone) do if e.npc == 3999 then extra = e end end
+	Check("[MEN] espèce hors table : numérotée à la suite", extra and extra.no == 5 and extra.known)
+	Check("[MEN] filtre « capturées »", #NS:MenagerieList({ zone = 1413, state = "captured" }) == 2)
+	Check("[MEN] filtre « à capturer »", #NS:MenagerieList({ zone = 1413, state = "missing" }) == 2)
+	Check("[MEN] filtre « à abattre »", #NS:MenagerieList({ zone = 1413, state = "tokill" }) == 3)
+	Check("[MEN] filtre de rareté : rare (rare et rare élite)", #NS:MenagerieList({ zone = "all", rank = "rare" }) == 1)
+	Check("[MEN] filtre de rareté : élite", #NS:MenagerieList({ zone = "all", rank = "elite" }) == 1)
+	local found = NS:MenagerieList({ zone = "all", search = "kodo" })
+	Check("[MEN] recherche par nom (sans casse)", #found == 1 and found[1].npc == 3201)
+	Check("[MEN] recherche : les inconnues ne se trouvent pas", #NS:MenagerieList({ zone = "all", search = "sanglier" }) == 0)
+	Check("[MEN] recherche sans accents", #NS:MenagerieList({ zone = "all", search = "bete hors" }) == 1)
+	local byDate = NS:MenagerieList({ zone = "all", sort = "date" })
+	Check("[MEN] tri par capture : la plus récente d'abord", byDate[1].npc == 3200 and byDate[2].npc == 3201)
+	local byName = NS:MenagerieList({ zone = "all", sort = "name" })
+	Check("[MEN] tri par nom : les connues d'abord", byName[1].known and not byName[#byName].known)
+	local byRank = NS:MenagerieList({ zone = "all", sort = "rank" })
+	Check("[MEN] tri par rareté : la plus rare d'abord", byRank[1].class == "rare")
+
+	-- carnet : la page, ses filtres, l'aperçu, l'équipement
+	Mock.world.mapID = 1413
 	NS:DB().journalTracker = false
 	NS:ToggleJournal(true)
 	local f = NS.journalFrame
-	Check("[MEN] onglet Ménagerie juste après la Créature", f.sections.menagerie ~= nil)
+	f.menZone, f.menState, f.menRank, f.menSearch, f.menSort = "here", "all", "all", "", "no"
 	f.sections.menagerie:Click()
 	local pane = f.men
-	Check("[MEN] page affichée, compteur", f.kind == "menagerie" and pane:IsShown()
-		and pane.count.text == "1 capturées · 4 croisées", pane.count.text)
-	Check("[MEN] cases : numéro et nom", pane.items[1].no.text == "n° 001" and pane.items[1].label.text == "Loup")
-	local kodo
-	for _, cell in ipairs(pane.items) do if cell.entry and cell.entry.npc == 3101 then kodo = cell end end
-	Check("[MEN] capturée : en couleur ; croisée : grisée", kodo and kodo.icon.alpha == 1 and pane.items[1].icon.alpha < 1)
-	NS:JournalPreviewMenagerie(pane.items[1].entry)
-	Check("[MEN] aperçu d'une non capturée : sa chance", pane.preview.lines[3].text:find("chance", 1, true) ~= nil,
-		pane.preview.lines[3].text)
-	Check("[MEN] clic sur une non capturée : rien", NS:JournalMenagerieEquip(pane.items[1].entry) == false)
-	Check("[MEN] clic sur une capturée : elle devient le compagnon", NS:JournalMenagerieEquip(kodo.entry) == true
-		and NS:CompanionData().appearance == "cap:3101")
+	Check("[MEN] par défaut : la zone actuelle", f.kind == "menagerie" and pane:IsShown() and pane.zone:GetValue() == "here"
+		and pane.count.text == "2 capturées · 3 croisées · 4 en tout", pane.count.text)
+	Check("[MEN] liste des zones : actuelle, toutes, puis chaque zone", #pane.zone.options == 4
+		and pane.zone.options[2].value == "all" and pane.zone.options[3].value == 1411)
+	local unknown, kodo
+	for _, cell in ipairs(pane.items) do
+		if cell.entry and cell.entry.npc == 3101 then unknown = cell end
+		if cell.entry and cell.entry.npc == 3201 then kodo = cell end
+	end
+	Check("[MEN] inconnue : « ??? » et son numéro", unknown and unknown.label.text == "???" and unknown.no.text == "n° 002")
+	Check("[MEN] capturée : son nom, en couleur", kodo and kodo.label.text == "Kodo des plaines" and kodo.icon.alpha == 1)
+	Check("[MEN] abattue : tampon plein", kodo.stamp.texture == NS.Theme.DIAMOND and unknown.stamp.texture == NS.Theme.DIAMOND_LINE)
+	unknown.scripts.OnEnter(unknown)
+	Check("[MEN] aperçu d'une inconnue : « ??? », niveau, comment la trouver", pane.preview.title.text == "???"
+		and pane.preview.lines[1].text:find("5-6", 1, true) ~= nil, pane.preview.lines[1].text)
+	pane.zone:Choose("all")
+	Check("[MEN] zone « toutes »", f.menZone == "all" and pane.count.text == "2 capturées · 3 croisées · 5 en tout", pane.count.text)
+	pane.search:SetText("kodo")
+	if pane.search.scripts and pane.search.scripts.OnTextChanged then pane.search.scripts.OnTextChanged(pane.search) end
+	Check("[MEN] recherche dans la page", f.menSearch == "kodo" and pane.items[1].entry and pane.items[1].entry.npc == 3201
+		and not pane.items[2]:IsShown())
+	pane.search:SetText("")
+	if pane.search.scripts and pane.search.scripts.OnTextChanged then pane.search.scripts.OnTextChanged(pane.search) end
+	pane.rank:Choose("rare")
+	Check("[MEN] rareté dans la page", pane.items[1].entry and pane.items[1].entry.npc == 3200 and not pane.items[2]:IsShown())
+	pane.rank:Choose("all")
+	local entries = {}
+	for _, e in ipairs(NS:MenagerieList({ zone = "all" })) do entries[e.npc] = e end
+	Check("[MEN] clic sur une inconnue : rien", NS:JournalMenagerieEquip(entries[3101]) == false)
+	Check("[MEN] clic sur une capturée : elle devient le compagnon", NS:JournalMenagerieEquip(entries[3201]) == true
+		and NS:CompanionData().appearance == "cap:3201")
+	-- depuis la fiche d'une zone
+	NS:OpenMenagerieZone(1411)
+	Check("[MEN] ouverte depuis une zone : filtrée sur elle", f.kind == "menagerie" and f.menZone == 1411
+		and pane.zone:GetValue() == 1411)
 	f:Hide()
+	NS.ZONE_CREATURES, NS.BestiaryFaction, NS.menagerieStatic = savedTable, savedFaction, nil
 end
 
 MS.Done()

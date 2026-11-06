@@ -500,14 +500,16 @@ do
 	local comp = f.comp
 	Check("[WIN] première ouverture : l'onglet Créature, le premier", f.kind == "evolution" and f.evo:IsShown()
 		and not comp:IsShown())
-	f.sections.completion:Click()
-	Check("[WIN] onglet Zone : la zone où tu es", f.kind == "completion" and f.zoneID == 1413
+	Check("[WIN] pas d'entrée « Zone » au menu : la fiche s'ouvre depuis Zones", f.sections.completion == nil)
+	NS:SelectJournalKind("completion")
+	Check("[WIN] fiche de zone : la zone où tu es", f.kind == "completion" and f.zoneID == 1413
 		and comp:IsShown() and not f.evo:IsShown() and not f.zones:IsShown())
 	Check("[WIN] titre : la zone, marquée « ici », et ses niveaux", comp.title.text == "Les Tarides (ici)"
 		and comp.levels.text == "niveaux 10-25", comp.title.text .. " / " .. comp.levels.text)
-	Check("[WIN] onglets verticaux : Zones, Zone, Créature, Collection, Souvenirs", f.sections.zones and f.sections.completion
-		and f.sections.evolution and f.sections.collection and f.sections.memories
-		and f.sections.completion.text.text == "Zone" and f.sections.evolution.text.text == "Créature")
+	Check("[WIN] menu : Créature, Ménagerie, Missions, Zones, Collection, Souvenirs", f.sections.zones and f.sections.menagerie
+		and f.sections.evolution and f.sections.collection and f.sections.memories and f.sections.day
+		and f.sections.evolution.text.text == "Créature")
+	Check("[WIN] la fiche de zone allume « Zones » dans le menu", f.sections.zones.selected and comp.back ~= nil, tostring(f.sections.zones.selected) .. "/" .. tostring(comp.back:IsShown()))
 	Check("[WIN] quatre activités", comp.tabs.explore and comp.tabs.combat and comp.tabs.craft and comp.tabs.quests
 		and comp.tabs.explore.text.text == "Exploration")
 	Check("[WIN] client sans liste de quêtes : onglet « Quêtes », grisé", NS:ZoneQuestsAvailable() == false
@@ -528,8 +530,8 @@ do
 	Check("[WIN] une seule activité suivie : pas de pourcentage, on dit pourquoi", comp.percent.text == ""
 		and comp.chest.text == NS.L.JRN_ZONE_NOPCT, comp.chest.text)
 	comp.tabs.combat:Click()
-	Check("[WIN] combat vide : comment remplir", comp.empty.text == NS.L.JRN_ACT_EMPTY_combat and not comp.lines[1]:IsShown()
-		and not comp.cards[1]:IsShown())
+	Check("[WIN] combat : renvoie à la Ménagerie", comp.empty.text == NS.L.JRN_COMBAT_MEN and comp.toMen:IsShown()
+		and not comp.lines[1]:IsShown() and not comp.cards[1]:IsShown())
 	comp.tabs.craft:Click()
 	Check("[WIN] métiers sans métier : message", comp.empty.text == NS.L.JRN_ACT_EMPTY_craft)
 	comp.tabs.quests:Click()
@@ -550,39 +552,39 @@ do
 	Check("[WIN] coffre annoncé avec son palier", comp.chest.text:find("palier 1", 1, true), comp.chest.text)
 	Check("[WIN] combat : les parts en tête", comp.heads.text:find("Bestiaire : 4/42", 1, true)
 		and comp.heads.text:find("Nommés : 0/1", 1, true), comp.heads.text)
-	Check("[WIN] combat : des fiches, pas des lignes", comp.cards[1]:IsShown() and not comp.lines[1]:IsShown())
-	Check("[WIN] combat : nommé en tête, à abattre", comp.cards[1].name.text == "Chef kolkar"
-		and comp.cards[1].detail.text:find("à abattre", 1, true), comp.cards[1].name.text)
-	local order = true
-	for index = 2, #f.rows do
-		local previous, item = f.rows[index - 1], f.rows[index]
-		if previous.done and not item.done then order = false end
+	Check("[WIN] combat : plus de fiches ici, le bouton vers la Ménagerie", not comp.cards[1]:IsShown() and comp.toMen:IsShown())
+	comp.toMen:Click()
+	local men = f.men
+	Check("[WIN] Ménagerie ouverte sur la zone", f.kind == "menagerie" and men:IsShown() and f.menZone == 1413
+		and men.zone:GetValue() == 1413)
+	local list = NS:MenagerieList({ zone = 1413 })
+	local chief, bee
+	for _, entry in ipairs(list) do
+		if entry.npc == 2000 then chief = entry end
+		if entry.npc == 2001 then bee = entry end
 	end
-	Check("[WIN] combat : toutes les espèces à abattre avant les abattues", order and f.rows[#f.rows].done == true)
-	local unseen
-	for _, card in ipairs(comp.cards) do if card.item and card.item.id == 2001 then unseen = card end end
-	Check("[WIN] jamais croisée : « ??? »", unseen and unseen.name.text == "???", unseen and unseen.name.text)
-	comp.cards[1].scripts.OnEnter(comp.cards[1])
-	local preview = comp.preview
-	local said = {}
-	for _, line in ipairs(preview.lines) do said[#said + 1] = line.text or "" end
-	said = table.concat(said, " | ")
-	Check("[WIN] survol d'une fiche : aperçu de la créature", preview.title.text == "Chef kolkar"
-		and said:find("Rang : élite", 1, true) and said:find("Pas encore abattue", 1, true)
-		and preview.model and preview.model.creature == 2000, preview.title.text .. " / " .. said)
-	if unseen then unseen.scripts.OnEnter(unseen) end
-	Check("[WIN] survol d'une inconnue : « Jamais croisée. »", preview.title.text == "???"
-		and preview.lines[1].text == "Jamais croisée.", preview.lines[1].text)
-	local rows = #f.rows
-	local page = #comp.cards
-	Check("[WIN] de quoi défiler", rows > page and not comp.up:IsShown() and comp.down:IsShown(), rows)
-	f.scripts.OnMouseWheel(f, -1)
-	local cols = NS.JOURNAL_LAYOUT.cardCols
-	Check("[WIN] molette : une rangée de fiches plus bas", f.offset == cols and comp.cards[1].item == f.rows[cols + 1], f.offset)
-	for _ = 1, 100 do NS:ScrollJournal(-1) end
-	local last = math.ceil((rows - page) / cols) * cols
-	Check("[WIN] butée en bas, position affichée", f.offset == last and not comp.down:IsShown()
-		and comp.position.text == string.format("%d-%d / %d", last + 1, rows, rows), comp.position.text)
+	Check("[WIN] Ménagerie : les espèces apprises de la zone", chief and chief.known and chief.class == "elite")
+	Check("[WIN] Ménagerie : jamais croisée = inconnue", bee and not bee.known)
+	local beeCell
+	for _, cell in ipairs(men.items) do if cell.entry and cell.entry.npc == 2001 then beeCell = cell end end
+	if not beeCell then
+		NS:SelectJournalKind("menagerie")
+		f.menState = "tokill"
+		NS:RefreshJournal()
+		for _ = 1, 30 do
+			for _, cell in ipairs(men.items) do if cell.entry and cell.entry.npc == 2001 then beeCell = cell end end
+			if beeCell then break end
+			NS:ScrollJournal(-1)
+		end
+	end
+	Check("[WIN] jamais croisée : « ??? »", beeCell and beeCell.label.text == "???", beeCell and beeCell.label.text)
+	if beeCell then beeCell.scripts.OnEnter(beeCell) end
+	Check("[WIN] survol d'une inconnue : « ??? » et comment la trouver", men.preview.title.text == "???"
+		and table.concat({ men.preview.lines[1].text or "", men.preview.lines[2].text or "", men.preview.lines[3].text or "" }, " ")
+			:find(NS.L.JRN_MEN_NEVER, 1, true) ~= nil, men.preview.title.text)
+	f.menState = "all"
+	NS:OpenJournalZone(1413)
+	comp.tabs.combat:Click()
 	comp.tabs.explore:Click()
 	Check("[WIN] changer d'onglet remonte en haut", f.offset == 0)
 
@@ -637,7 +639,7 @@ do
 	f:Hide()
 	NS:ToggleJournal(true)
 	Check("[WIN] rouverte : l'onglet Zones retenu", f.kind == "zones" and NS:DB().journalTab == "zones")
-	f.sections.completion:Click()
+	NS:SelectJournalKind("completion")
 	-- de nouveau un petit bestiaire : la complétion d'ici reste en tête du suivi
 	local small = {}
 	for index = 1, 14 do small[1000 + index] = zone[1000 + index] end
@@ -723,7 +725,7 @@ do
 	Check("[WIN] Évolution : collection", evo.collection.text:find("Collection : ", 1, true), evo.collection.text)
 	Check("[WIN] Évolution : parcours (capitales 1/6)", evo.road.text:find("1/6 capitales", 1, true), evo.road.text)
 	Check("[WIN] Évolution : pas de coffre, pas de bouton", evo.chests.text == "Coffres à ouvrir : 0" and not evo.openChest:IsShown())
-	f.sections.completion:Click()
+	NS:SelectJournalKind("completion")
 	Check("[WIN] retour à la Complétion", comp:IsShown() and not evo:IsShown())
 	-- une seule fenêtre à la fois
 	NS:ToggleOptions()
