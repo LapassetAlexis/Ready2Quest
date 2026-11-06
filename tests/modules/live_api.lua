@@ -254,7 +254,7 @@ do
 		and type(GameTooltip.hooks and GameTooltip.hooks.OnTooltipSetUnit) == "function")
 	LA.HoverUnit(LA.Guid(5001))
 	GameTooltip.hooks.OnTooltipSetUnit(GameTooltip)
-	Check("[TT] repli : rare de la zone « à abattre · rare »", LA.Lines():find("Bestiaire : à abattre", 1, true)
+	Check("[TT] repli : rare de la zone « à capturer · 8 % · rare »", LA.Lines():find("Ménagerie : à capturer · 8 %", 1, true)
 		and LA.Lines():find("rare", 1, true), LA.Lines())
 
 	-- moteur récent : TooltipDataProcessor, le GUID dans data.guid
@@ -266,11 +266,23 @@ do
 	GameTooltip:ClearLines()
 	GameTooltip.GetUnit = nil
 	LA.PostCall(2, GameTooltip, { guid = LA.Guid(5002) })
-	Check("[TT] processeur : loup normal « à abattre », sans rang", LA.Lines() == "Bestiaire : à abattre", LA.Lines())
+	Check("[TT] processeur : loup normal « à capturer · 30 % », sans rang", LA.Lines() == "Ménagerie : à capturer · 30 %", LA.Lines())
+	QNS:CaptureData().creatures[5002] = { name = "Loup des plaines", class = "normal" }
+	GameTooltip:ClearLines()
+	LA.PostCall(2, GameTooltip, { guid = LA.Guid(5002) })
+	Check("[TT] capturé : « Ménagerie : capturé »", LA.Lines() == "Ménagerie : capturé", LA.Lines())
+	QNS:CaptureData().creatures[5002].shiny = true
+	GameTooltip:ClearLines()
+	LA.PostCall(2, GameTooltip, { guid = LA.Guid(5002) })
+	Check("[TT] capturé brillant", LA.Lines() == "Ménagerie : capturé, brillant", LA.Lines())
+	QNS:CaptureData().creatures[5002] = nil
+	-- capture coupée : la ligne du bestiaire d'avant
+	QNS:DB().companionCapture = false
 	QNS:BestiaryData()[ZONE] = { [5002] = { name = "Loup des plaines", seen = true, killed = 3, class = "normal" } }
 	GameTooltip:ClearLines()
 	LA.PostCall(2, GameTooltip, { guid = LA.Guid(5002) })
-	Check("[TT] déjà abattu : « abattu (3) »", LA.Lines() == "Bestiaire : abattu (3)", LA.Lines())
+	Check("[TT] capture coupée : bestiaire « abattu (3) »", LA.Lines() == "Bestiaire : abattu (3)", LA.Lines())
+	QNS:DB().companionCapture = true
 	GameTooltip:ClearLines()
 	LA.PostCall(2, GameTooltip, { guid = LA.Guid(5003) })
 	Check("[TT] élite : son rang", LA.Lines():find("élite", 1, true) ~= nil, LA.Lines())

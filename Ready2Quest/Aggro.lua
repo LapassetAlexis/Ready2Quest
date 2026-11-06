@@ -6,11 +6,14 @@
 --     la distance qui nous en sépare et le verdict
 --     (« Aggro ~17 m · tu es à 20-25 m · hors de portée ») ; « ~ » et non
 --     « ≈ » : la police des infobulles s'arrête au Latin-1 (« ± », « · » y sont)
---   * un anneau coloré autour de la barre de nom de chaque PNJ hostile
---     visible : rouge = dans sa portée, ambre = à moins de 5 m de plus,
---     vert = tranquille. L'anneau est accroché au cadre de base de la barre
---     de nom (C_NamePlate), pas à son habillage : il suit aussi les barres
---     d'un addon (EllesmereUI, Plater…).
+--   * une marque colorée sur la barre de nom de chaque PNJ hostile visible :
+--     rouge = dans sa portée, ambre = à moins de 5 m de plus, vert =
+--     tranquille. Trois styles (réglage « Marque ») : pastille (un losange à
+--     gauche de la barre, qui bat quand c'est rouge ; par défaut depuis la
+--     1.29.1), trait (une ligne fine sous la barre) ou anneau (le grand halo
+--     d'avant). La marque est accrochée au cadre de base de la barre de nom
+--     (C_NamePlate), pas à son habillage : elle suit aussi les barres d'un
+--     addon (EllesmereUI, Plater…).
 --
 -- Portée (règles classiques, estimation) : 20 m à niveau égal, 1 m de moins
 -- par niveau du joueur au-dessus du monstre, 1 m de plus par niveau en
@@ -33,6 +36,8 @@ local AGGRO_MARGIN = 5      -- ambre : jusqu'à 5 m au-delà de la portée
 local SKULL_GAP    = 10     -- niveau « ?? » : au moins dix niveaux de plus
 ns.AGGRO_TICK = 0.2
 ns.AGGRO_RING_SIZE = 96
+ns.AGGRO_DOT_SIZE = 12          -- pastille (losange)
+ns.AGGRO_BAR_W, ns.AGGRO_BAR_H, ns.AGGRO_BAR_Y = 70, 3, 10   -- trait sous la barre
 -- anneau livré avec l'addon (Textures/aggro_ring.tga) : présent à coup sûr
 ns.AGGRO_RING_TEXTURE = ns.Theme.MEDIA .. "Textures\\aggro_ring"
 ns.AGGRO_RING_FALLBACK = "Interface\\CharacterFrame\\TempPortraitAlphaMask"
@@ -44,7 +49,11 @@ local FR = {
 	OPT_PAGE_AGGRO       = "Portée d'aggro",
 	OPT_AGGRO_KEY        = "Afficher en tenant",
 	OPT_AGGRO_TOOLTIP    = "Dans l'infobulle des monstres",
-	OPT_AGGRO_RINGS      = "Anneau sur les barres de nom",
+	OPT_AGGRO_RINGS      = "Marque sur les barres de nom",
+	OPT_AGGRO_STYLE      = "Marque",
+	AGGRO_STYLE_dot      = "Pastille (discrète)",
+	AGGRO_STYLE_bar      = "Trait sous la barre",
+	AGGRO_STYLE_ring     = "Anneau (grand halo)",
 	AGGRO_KEY_shift      = "Maj",
 	AGGRO_KEY_ctrl       = "Ctrl",
 	AGGRO_KEY_alt        = "Alt",
@@ -73,7 +82,11 @@ local EN = {
 	OPT_PAGE_AGGRO       = "Aggro range",
 	OPT_AGGRO_KEY        = "Show while holding",
 	OPT_AGGRO_TOOLTIP    = "In monster tooltips",
-	OPT_AGGRO_RINGS      = "Ring on nameplates",
+	OPT_AGGRO_RINGS      = "Mark on nameplates",
+	OPT_AGGRO_STYLE      = "Mark",
+	AGGRO_STYLE_dot      = "Dot (subtle)",
+	AGGRO_STYLE_bar      = "Line under the bar",
+	AGGRO_STYLE_ring     = "Ring (big glow)",
 	AGGRO_KEY_shift      = "Shift",
 	AGGRO_KEY_ctrl       = "Ctrl",
 	AGGRO_KEY_alt        = "Alt",
@@ -107,7 +120,9 @@ ns.RegisterDefaults({
 	aggroKey     = "shift",   -- shift, ctrl, alt ou always
 	aggroTooltip = true,
 	aggroRings   = true,
+	aggroStyle   = "dot",     -- dot, bar ou ring
 })
+ns.AGGRO_STYLES = { "dot", "bar", "ring" }
 
 ns.AGGRO_KEYS = { "shift", "ctrl", "alt", "always" }
 local KEY_TEST = { shift = "IsShiftKeyDown", ctrl = "IsControlKeyDown", alt = "IsAltKeyDown" }
@@ -123,6 +138,10 @@ if ns.AddOptionPage then
 				choose = function(value) ns:AggroSetKey(value) end },
 			{ key = "aggroTooltip", label = "OPT_AGGRO_TOOLTIP", kind = "bool" },
 			{ key = "aggroRings",   label = "OPT_AGGRO_RINGS",   kind = "bool" },
+			{ key = "aggroStyle",   label = "OPT_AGGRO_STYLE",   kind = "action",
+				choices = function() return ns:AggroStyleChoices() end,
+				current = function() return ns:AggroStyle() end,
+				choose = function(value) ns:AggroSetStyle(value) end },
 		},
 	})
 end
@@ -158,6 +177,24 @@ end
 function ns:AggroSetKey(value)
 	if KEY_TEST[value] or value == "always" then self:DB().aggroKey = value end
 	self:AggroRefresh()
+end
+
+function ns:AggroStyle()
+	local style = self:DB().aggroStyle
+	for _, key in ipairs(self.AGGRO_STYLES) do if key == style then return style end end
+	return "dot"
+end
+
+function ns:AggroSetStyle(value)
+	for _, key in ipairs(self.AGGRO_STYLES) do if key == value then self:DB().aggroStyle = value end end
+	for _, ring in pairs(self.aggroRings or {}) do ring.style = nil end
+	self:AggroRefresh()
+end
+
+function ns:AggroStyleChoices()
+	local list = {}
+	for _, key in ipairs(self.AGGRO_STYLES) do list[#list + 1] = { value = key, label = L["AGGRO_STYLE_" .. key] } end
+	return list
 end
 
 function ns:AggroKeyChoices()
@@ -443,7 +480,8 @@ local function RingFor(plate)
 	frame:SetSize(size, size)
 	frame:SetPoint("CENTER", plate, "CENTER", 0, 0)
 	if frame.SetFrameLevel and plate.GetFrameLevel then
-		pcall(frame.SetFrameLevel, frame, math.max(0, (tonumber(plate:GetFrameLevel()) or 1) - 1))
+		frame.plateLevel = tonumber(plate:GetFrameLevel()) or 1
+		pcall(frame.SetFrameLevel, frame, math.max(0, frame.plateLevel - 1))
 	end
 	local texture = frame:CreateTexture(nil, "BACKGROUND")
 	texture:SetAllPoints(frame)
@@ -451,6 +489,22 @@ local function RingFor(plate)
 	local okSet, set = pcall(texture.SetTexture, texture, ns.AGGRO_RING_TEXTURE)
 	if not okSet or set == false then texture:SetTexture(ns.AGGRO_RING_FALLBACK); frame.fallback = true end
 	if texture.SetBlendMode then pcall(texture.SetBlendMode, texture, "ADD") end
+	frame.ringTexture = texture
+	-- pastille : un losange à gauche de la barre, avec un liseré sombre
+	frame.dotBack = frame:CreateTexture(nil, "ARTWORK")
+	frame.dotBack:SetTexture(Theme.DIAMOND)
+	frame.dotBack:SetSize(ns.AGGRO_DOT_SIZE + 4, ns.AGGRO_DOT_SIZE + 4)
+	frame.dotBack:SetPoint("RIGHT", plate, "LEFT", 2, 0)
+	frame.dotBack:SetVertexColor(0, 0, 0, 0.8)
+	frame.dot = frame:CreateTexture(nil, "OVERLAY")
+	frame.dot:SetTexture(Theme.DIAMOND)
+	frame.dot:SetSize(ns.AGGRO_DOT_SIZE, ns.AGGRO_DOT_SIZE)
+	frame.dot:SetPoint("CENTER", frame.dotBack, "CENTER", 0, 0)
+	-- trait : une ligne fine sous la barre
+	frame.bar = frame:CreateTexture(nil, "OVERLAY")
+	frame.bar:SetTexture(Theme.SOLID or "Interface\\Buttons\\WHITE8X8")
+	frame.bar:SetSize(ns.AGGRO_BAR_W, ns.AGGRO_BAR_H)
+	frame.bar:SetPoint("TOP", plate, "BOTTOM", 0, ns.AGGRO_BAR_Y)
 	frame.texture = texture
 	frame:Hide()
 	ns.aggroRings[plate] = frame
@@ -484,8 +538,31 @@ function ns:AggroUpdatePlate(unit)
 	local ring = RingFor(plate)
 	if not ring then return nil end
 	local color = self.AGGRO_COLORS[verdict]
+	local style = self:AggroStyle()
+	if ring.style ~= style then
+		ring.style = style
+		-- l'anneau occupe tout le cadre ; pastille et trait se tiennent à la barre
+		local isRing = style == "ring"
+		ring:SetSize(isRing and ns.AGGRO_RING_SIZE or 1, isRing and ns.AGGRO_RING_SIZE or 1)
+		if isRing then ring.ringTexture:Show() else ring.ringTexture:Hide() end
+		if style == "dot" then ring.dot:Show(); ring.dotBack:Show() else ring.dot:Hide(); ring.dotBack:Hide() end
+		if style == "bar" then ring.bar:Show() else ring.bar:Hide() end
+		-- l'anneau passe sous la barre ; pastille et trait au-dessus d'elle
+		if ring.SetFrameLevel and ring.plateLevel then
+			pcall(ring.SetFrameLevel, ring, math.max(0, ring.plateLevel + (isRing and -1 or 5)))
+		end
+	end
+	ring.texture = (style == "dot" and ring.dot) or (style == "bar" and ring.bar) or ring.ringTexture
 	ring.texture:SetVertexColor(color[1], color[2], color[3])
-	ring:SetAlpha(verdict == "green" and 0.45 or (ring.fallback and 0.35 or 0.9))
+	if style == "ring" then
+		ring:SetAlpha(verdict == "green" and 0.45 or (ring.fallback and 0.35 or 0.9))
+	elseif verdict == "red" then
+		-- rouge : la marque bat (un battement par seconde, au rythme du tick)
+		local now = (ns.Now and ns.Now()) or 0
+		ring:SetAlpha(0.6 + 0.4 * math.abs(math.sin(now * math.pi)))
+	else
+		ring:SetAlpha(verdict == "green" and 0.6 or 1)
+	end
 	ring.verdict = verdict
 	ring:Show()
 	return verdict

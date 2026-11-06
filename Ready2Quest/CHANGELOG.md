@@ -1,5 +1,10 @@
 # Journal des modifications
 
+## 1.29.1
+
+- **Portée d'aggro, marque plus discrète** : le grand anneau autour des barres de nom laisse la place, par défaut, à une **pastille** (un petit losange à gauche de la barre, rouge / ambre / vert, qui bat quand tu es dans le rayon). Réglage **Marque** : pastille, **trait** sous la barre, ou l'**anneau** d'avant.
+- **Listes déroulantes** : une seule ouverte à la fois, ouvrir une liste referme la voisine (elles se recouvraient).
+
 ## 1.29.0
 
 - **Nouveau module : portée d'aggro.** Maintiens Maj (réglable : Ctrl, Alt ou toujours) hors combat : un anneau entoure la barre de nom de chaque monstre hostile (rouge : dans son rayon d'aggro estimé, ambre : tout près, vert : tranquille), et son infobulle donne le rayon estimé, ta distance et le verdict. Rayon : 20 m à niveau égal, ±1 m par niveau d'écart (5 à 45 m). Les monstres neutres sont signalés sans anneau. Marche aussi avec les barres de nom d'EllesmereUI.

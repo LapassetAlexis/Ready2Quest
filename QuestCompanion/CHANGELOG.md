@@ -1,5 +1,11 @@
 # QuestCompanion
 
+## 1.5.3
+
+- **Infobulle des monstres** : elle parle de capture. « Ménagerie : à capturer · 30 % » (ta chance du moment, selon son rang et son niveau), « capturé » en vert, « capturé, brillant » en doré ; le rang des nommés reste affiché. Capture coupée dans les réglages : l'ancienne ligne du bestiaire (« abattu (n) »).
+
+*English:* the monster tooltip now talks about capture: "Menagerie: to capture · 30%" (your current chance), "captured" or "captured, shiny".
+
 ## 1.5.2
 
 - **Métiers enfin lus sur WoW Forever** : le client récent ne donne plus la fenêtre de compétences historique ; l'addon lit maintenant tes métiers par `GetProfessions` (et garde l'ancienne lecture pour les autres clients). Nouvelle commande `/qc metiers` : ce que le jeu donne à l'addon, pour signaler un bogue.
