@@ -271,10 +271,17 @@ do
 	GameTooltip:ClearLines()
 	LA.PostCall(2, GameTooltip, { guid = LA.Guid(5002) })
 	Check("[TT] capturé : « Ménagerie : capturé »", LA.Lines() == "Ménagerie : capturé", LA.Lines())
+	-- 1.6.0 : la brillante repérée sous la souris parle de SA version
+	QNS:ShinyState().live[LA.Guid(5002)] = { npcID = 5002, zoneID = ZONE, name = "Loup des plaines" }
+	GameTooltip:ClearLines()
+	LA.PostCall(2, GameTooltip, { guid = LA.Guid(5002) })
+	Check("[TT] brillante, normale déjà capturée : « BRILLANTE · à capturer »",
+		LA.Lines() == "Ménagerie : BRILLANTE · à capturer · 30 %", LA.Lines())
 	QNS:CaptureData().creatures[5002].shiny = true
 	GameTooltip:ClearLines()
 	LA.PostCall(2, GameTooltip, { guid = LA.Guid(5002) })
-	Check("[TT] capturé brillant", LA.Lines() == "Ménagerie : capturé, brillant", LA.Lines())
+	Check("[TT] brillante capturée", LA.Lines() == "Ménagerie : BRILLANTE · capturée", LA.Lines())
+	QNS:ShinyState().live[LA.Guid(5002)] = nil
 	QNS:CaptureData().creatures[5002] = nil
 	-- capture coupée : la ligne du bestiaire d'avant
 	QNS:DB().companionCapture = false

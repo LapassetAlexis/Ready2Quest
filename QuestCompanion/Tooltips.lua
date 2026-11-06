@@ -18,15 +18,17 @@ local FR = {
 	BST_TOOLTIP        = "Bestiaire : %s",
 	MEN_TOOLTIP        = "Ménagerie : %s",
 	MEN_TIP_CAUGHT     = "capturé",
-	MEN_TIP_SHINY      = "capturé, brillant",
+	MEN_TIP_SHINY_CAUGHT = "capturée",
 	MEN_TIP_TODO       = "à capturer · %d %%",
+	MEN_TIP_SHINY      = "BRILLANTE · %s",
 }
 local EN = {
 	BST_TOOLTIP        = "Bestiary: %s",
 	MEN_TOOLTIP        = "Menagerie: %s",
 	MEN_TIP_CAUGHT     = "captured",
-	MEN_TIP_SHINY      = "captured, shiny",
+	MEN_TIP_SHINY_CAUGHT = "captured",
 	MEN_TIP_TODO       = "to capture · %d%%",
+	MEN_TIP_SHINY      = "SHINY · %s",
 }
 ns.RegisterStrings(FR, EN)
 ns.TOOLTIP_STRINGS = { fr = FR, en = EN }
@@ -74,16 +76,22 @@ function ns:BestiaryTooltipLine(guid, level)
 	local class = species.class
 	local text, color
 	local capture = self.CaptureChance and self.CaptureData and self:DB().companionCapture ~= false
+	-- cette créature-ci est-elle une brillante repérée ? (Shiny.lua)
+	local live = self.shinyState and self.shinyState.live and self.shinyState.live[guid]
 	if capture then
-		local caught = self:CaptureData().creatures[npcID]
-		if caught then
-			text = self:F("MEN_TOOLTIP", caught.shiny and L.MEN_TIP_SHINY or L.MEN_TIP_CAUGHT)
-			color = caught.shiny and (Theme.GOLD_LIGHT or Theme.GOLD) or Theme.GREEN
+		-- la version qu'on a sous les yeux : la brillante, ou la normale
+		local has = self.CaptureHas and self:CaptureHas(npcID, live and true or false)
+		local status
+		if has then
+			status = live and L.MEN_TIP_SHINY_CAUGHT or L.MEN_TIP_CAUGHT
+			color = live and (Theme.GOLD_LIGHT or Theme.GOLD) or Theme.GREEN
 		else
 			local chance = self:CaptureChance({ class = class or "normal", level = level or species.level })
-			text = self:F("MEN_TOOLTIP", self:F("MEN_TIP_TODO", math.floor(chance * 100 + 0.5 + 1e-9)))
-			color = Theme.MUTED_LIGHT or Theme.MUTED
+			status = self:F("MEN_TIP_TODO", math.floor(chance * 100 + 0.5 + 1e-9))
+			color = live and (Theme.GOLD_LIGHT or Theme.GOLD) or (Theme.MUTED_LIGHT or Theme.MUTED)
 		end
+		if live then status = self:F("MEN_TIP_SHINY", status) end
+		text = self:F("MEN_TOOLTIP", status)
 	else
 		-- carnet : abattu en ambre, encore à faire en gris
 		text = self:F("BST_TOOLTIP", killed > 0 and self:F("JRN_ITEM_KILLED", killed) or L.JRN_ITEM_TO_KILL)

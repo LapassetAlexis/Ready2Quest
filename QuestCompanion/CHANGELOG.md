@@ -1,5 +1,16 @@
 # QuestCompanion
 
+## 1.6.0
+
+- **Deux versions par espèce** : la normale et la brillante se capturent chacune de leur côté. Une brillante capturée devient une apparence à part : ton compagnon prend une lumière dorée et scintille. Tes anciennes brillantes capturées deviennent la version brillante de leur espèce ; la version normale reste à capturer.
+- **Reconnue sans capture** : une brillante repérée reste connue. La Ménagerie le montre (losange doré au trait ; plein une fois capturée), a un filtre **Brillantes** et compte les brillantes reconnues. La fiche passe de la version normale à la brillante d'un bouton, et un clic sur la ligne équipe la version montrée.
+- **Chasse** : toutes les espèces peuvent être brillantes ; plus tu as abattu d'une espèce, plus ta chance monte (1 sur 150 au départ, 1 sur 40 après 50 abattus, ×3 pour un élite ou un rare).
+- **Missions de la semaine** : chaque semaine, une chasse au brillant (« Abats une créature brillante » ou « Capture une créature brillante »).
+- **Infobulle** : sur une brillante, « Ménagerie : BRILLANTE · à capturer · 30 % » ou « BRILLANTE · capturée », selon sa version à elle.
+- **Repérer une brillante** : un losange doré scintille au-dessus du nom de chaque brillante repérée encore en vie, seul ou en groupe, sans toucher aux icônes de cible (réglage « Losange doré sur la barre de nom des brillantes », page Au jour le jour). L'étoile au-dessus de sa tête reste pour le joueur seul ou le chef du groupe.
+
+*English:* each species now has a normal and a shiny capture; a shiny companion is golden-lit and sparkles. Spotted shinies are recognised in the Menagerie without capturing them (Shiny filter, normal/shiny toggle on the card). The more of a species you defeat, the higher its shiny odds (1/150 up to 1/40). One weekly mission is always a shiny hunt. A sparkling gold diamond sits on the nameplate of every spotted shiny, solo or in a group.
+
 ## 1.5.5
 
 - **Métiers, tout ce que la zone offre** : la liste montre aussi les herbes et minerais de la zone que ta compétence ne permet pas encore, grisés en fin de liste avec la compétence requise (« compétence 155 requise »). Ils ne comptent pas dans le pourcentage. Une zone où rien n'est encore à ta portée les montre quand même.

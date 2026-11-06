@@ -621,7 +621,7 @@ end
 -- Ravenclaw »), seule la mascotte porte le nom que tu lui as donné (1.5.2)
 function ns:CompanionName()
 	local data = self:CompanionData()
-	local npc = type(data.appearance) == "string" and tonumber(data.appearance:match("^cap:(%d+)$"))
+	local npc = type(data.appearance) == "string" and tonumber(data.appearance:match("^cap:(%d+)"))
 	if npc and self.CaptureData then
 		local ok, capture = pcall(self.CaptureData, self)
 		local entry = ok and type(capture) == "table" and type(capture.creatures) == "table"
@@ -1634,6 +1634,7 @@ function ns:CompanionApplyModel()
 		-- créature capturée : un modèle de taille réelle (un ours, un géant…),
 		-- cadré de plus loin et sans l'échelle du stade, faite pour les mascottes
 		Method(model, "SetModelScale", app.captured and 1 or stageDef.scale)
+		ns.ModelShinyLight(model, app.shiny)
 		Method(model, "SetCamDistanceScale", app.captured and (ns.CAPTURE_CAM_DISTANCE or 2.4) or 1.6)
 		model:Show()
 		frame.fallback:Hide()
@@ -2543,6 +2544,42 @@ function ns:CompanionRefreshPage()
 	end
 end
 
+-- Lumière dorée d'une version brillante (1.6.0) : le jeu ne recolore pas
+-- un modèle, mais il change la lumière qui l'éclaire. API récente (une
+-- table, moteur de Forever) ou historique (une liste) ; la lumière d'origine
+-- est lue une fois (GetLight) et remise quand la version n'est plus brillante.
+local SHINY_AMBIENT, SHINY_DIFFUSE = { 1.0, 0.82, 0.38 }, { 1.0, 0.9, 0.55 }
+function ns.ModelShinyLight(model, on)
+	if not (model and type(model.SetLight) == "function") then return false end
+	on = on and true or false
+	if model.shinyLit == on then return true end
+	if model.baseLight == nil then
+		local packed = { pcall(model.GetLight or function() error("no") end, model) }
+		model.baseLight = packed[1] and { select(2, unpack(packed)) } or false
+	end
+	local ok = false
+	if on then
+		local vec, color = rawget(_G, "CreateVector3D"), rawget(_G, "CreateColor")
+		if type(vec) == "function" and type(color) == "function" then
+			ok = pcall(model.SetLight, model, true, {
+				omnidirectional = false, point = vec(-1, 1, -1),
+				ambientIntensity = 1.1, ambientColor = color(SHINY_AMBIENT[1], SHINY_AMBIENT[2], SHINY_AMBIENT[3]),
+				diffuseIntensity = 1.0, diffuseColor = color(SHINY_DIFFUSE[1], SHINY_DIFFUSE[2], SHINY_DIFFUSE[3]),
+			})
+		end
+		if not ok then
+			ok = pcall(model.SetLight, model, true, false, -1, 1, -1, 1.1, SHINY_AMBIENT[1], SHINY_AMBIENT[2],
+				SHINY_AMBIENT[3], 1.0, SHINY_DIFFUSE[1], SHINY_DIFFUSE[2], SHINY_DIFFUSE[3])
+		end
+	elseif model.baseLight then
+		ok = pcall(model.SetLight, model, unpack(model.baseLight))
+	else
+		ok = true
+	end
+	if ok then model.shinyLit = on end
+	return ok
+end
+
 -- Portrait : le compagnon dans son cadre et sur son fond gagnés (mêmes
 -- styles que le vrai cadre : filet, second filet, bordure du client, fond,
 -- dégradé). Carré de `size` px ; box:Refresh(addon) le met à jour. Sert à
@@ -2613,6 +2650,7 @@ function ns:CompanionPortrait(parent, size, zoom)
 			if not shown and app.npc and type(self.model.SetCreature) == "function" then shown = pcall(self.model.SetCreature, self.model, app.npc) end
 			if shown then
 				Method(self.model, "SetCamDistanceScale", self.camScale)
+				ns.ModelShinyLight(self.model, app.shiny)
 				self.model:Show()
 			else
 				self.model:Hide()

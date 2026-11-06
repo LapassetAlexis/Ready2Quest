@@ -207,7 +207,7 @@ local function LookNow(self)
 	if not self.CompanionCurrentAppearance then return nil end
 	local ok, app = pcall(self.CompanionCurrentAppearance, self)
 	if not (ok and type(app) == "table") then return nil end
-	local look = { display = tonumber(app.display), npc = tonumber(app.npc) }
+	local look = { display = tonumber(app.display), npc = tonumber(app.npc), shiny = app.shiny or nil }
 	if not (look.display or look.npc) then return nil end
 	return look
 end
@@ -801,7 +801,7 @@ end
 function ns:MemoryLook(memory, now)
 	local look = type(memory) == "table" and memory.look
 	if type(look) == "table" and (tonumber(look.display) or tonumber(look.npc)) then
-		return { display = tonumber(look.display), npc = tonumber(look.npc) }
+		return { display = tonumber(look.display), npc = tonumber(look.npc), shiny = look.shiny or nil }
 	end
 	return now or LookNow(self)
 end
@@ -1080,6 +1080,7 @@ local function FillCard(self, card, memory, now, position)
 		card.pose = self:MemoryPose(memory, duo, position)
 		PlaceModels(card, duo, card.pose)
 		shown = ShowModel(card.model, look.display, look.npc, nil, card.pose)
+		if ns.ModelShinyLight then ns.ModelShinyLight(card.model, shown and look.shiny) end
 	end
 	local creatureShown = false
 	if card.creature then

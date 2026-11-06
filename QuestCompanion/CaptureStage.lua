@@ -300,6 +300,8 @@ function ns:CaptureShowStage(rolling)
 		frame.model:Show()
 		shown = Method(frame.model, "SetCreature", target.npcID)
 		Method(frame.model, "SetCamDistanceScale", ns.CAPTURE_STAGE_CAM)
+		-- une brillante : sous sa lumière dorée (1.6.0)
+		if ns.ModelShinyLight then ns.ModelShinyLight(frame.model, target.shiny) end
 		Method(frame.model, "SetFacing", 0)
 		Method(frame.model, "SetAlpha", 1)
 		if not shown then frame.model:Hide() end

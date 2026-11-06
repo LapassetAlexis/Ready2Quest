@@ -235,7 +235,7 @@ do
 	card.scripts.OnEnter(card)
 	local said = {}
 	for _, line in ipairs(f.men.preview.lines) do said[#said + 1] = line.text or "" end
-	Check("[SHINY] aperçu : « Brillante, abattue le … »", table.concat(said, " "):find("Brillante, abattue le", 1, true))
+	Check("[SHINY] aperçu : « Brillante repérée le … »", table.concat(said, " "):find("Brillante repérée le", 1, true), table.concat(said, " "))
 	f.sections.evolution:Click()
 	Check("[SHINY] Compagnon : le compteur de brillantes", f.evo.stats.shiny.value.text == "1", f.evo.stats.shiny.value.text)
 	f:Hide()
