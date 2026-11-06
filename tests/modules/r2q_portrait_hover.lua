@@ -34,6 +34,7 @@ function H.UnitFrame(name, unit, parent)
 	local frame = CreateFrame("Button", name, parent)
 	frame.attributes = { unit = unit }
 	function frame:GetAttribute(key) return self.attributes[key] end
+	frame:Show()   -- un cadre d'unité est à l'écran
 	return frame
 end
 
@@ -160,6 +161,39 @@ do
 	Check("[PORT] module coupé : pas de sondage", not H.Shown() and NS.portraitHover == nil)
 	NS:DB().showPortraitStats = true
 	H.focus = nil
+end
+
+do
+	Say("-- portrait : ElvUI")
+	H.Reset()
+	local elv = H.UnitFrame("ElvUF_Player", "player")
+	_G.ElvUF_Player = elv
+	NS:HookPortraitFrames()
+	-- ElvUI remet ses scripts en reconfigurant ses cadres (SetScript efface
+	-- les accroches) : le sondage prend le relais
+	elv.hooks = nil
+	local health = CreateFrame("StatusBar", nil, elv)
+	H.focus = health
+	Mock:Advance(NS.PORTRAIT_POLL)
+	Check("[PORT] ElvUI, accroche perdue : le sondage affiche", H.Shown() and NS.portraitHover == elv)
+	Check("[PORT] ElvUI : panneau posé au-dessus de son cadre", H.AnchoredTo(elv))
+	H.focus = nil
+	Mock:Advance(NS.PORTRAIT_POLL)
+	Check("[PORT] ElvUI : masqué en partant", not H.Shown())
+	-- ElvUI masque le PlayerFrame de Blizzard : on ne s'y ancre pas
+	local blizzard = rawget(_G, "PlayerFrame")
+	local wasShown = blizzard and blizzard:IsShown()
+	if blizzard then blizzard:Hide() end
+	-- un seul jeu de cadres à l'écran : celui d'ElvUI
+	local ellesmere = rawget(_G, "EllesmereUIUnitFrames_Player")
+	local ellesmereShown = ellesmere and ellesmere:IsShown()
+	if ellesmere then ellesmere:Hide() end
+	NS.portraitAnchor = nil
+	Check("[PORT] ElvUI : ancre par défaut = son cadre, pas le PlayerFrame masqué", NS:PortraitAnchorFrame() == elv,
+		tostring(NS:PortraitAnchorFrame() and NS:PortraitAnchorFrame():GetName()))
+	if blizzard and wasShown then blizzard:Show() end
+	if ellesmere and ellesmereShown then ellesmere:Show() end
+	_G.ElvUF_Player = saved.ElvUF
 end
 
 _G.GetMouseFoci = saved.GetMouseFoci

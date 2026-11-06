@@ -1073,6 +1073,14 @@ local function MouseFocus()
 	return nil
 end
 
+-- Un cadre visible à l'écran (IsVisible, sinon IsShown) ; illisible : visible
+local function FrameVisible(frame)
+	local fn = frame.IsVisible or frame.IsShown
+	if type(fn) ~= "function" then return true end
+	local ok, visible = pcall(fn, frame)
+	return not ok or visible and true or false
+end
+
 -- Le cadre du joueur sous la souris (le survolé ou l'un de ses parents), ou nil
 function ns:PortraitHoveredFrame()
 	local frame = MouseFocus()
@@ -1093,11 +1101,7 @@ function ns:PortraitAnchorFrame()
 	for _, name in ipairs(self.PORTRAIT_FRAMES) do
 		local frame = rawget(_G, name)
 		-- un PlayerFrame masqué par une interface de remplacement : on passe
-		if type(frame) == "table" then
-			local ok, visible = true, true
-			if type(frame.IsVisible) == "function" then ok, visible = pcall(frame.IsVisible, frame) end
-			if ok and visible then return frame end
-		end
+		if type(frame) == "table" and FrameVisible(frame) then return frame end
 	end
 	return nil
 end
@@ -1149,13 +1153,7 @@ function ns:PortraitPoll()
 	elseif self.portraitHover then
 		-- montré par le repli : il le masque ; montré par une accroche dont le
 		-- cadre a disparu (fondu, masqué) sans OnLeave : aussi
-		local hover = self.portraitHover
-		local visible = true
-		if type(hover.IsVisible) == "function" then
-			local ok, v = pcall(hover.IsVisible, hover)
-			visible = ok and v and true or false
-		end
-		if self.portraitHoverSource == "poll" or not visible then self:PortraitHoverLeave() end
+		if self.portraitHoverSource == "poll" or not FrameVisible(self.portraitHover) then self:PortraitHoverLeave() end
 	end
 end
 
