@@ -168,7 +168,7 @@ do
 	local journal = {
 		{ "qc-journal-creature", "evolution" }, { "qc-journal-zones", "zones" }, { "qc-journal-zone", "completion" },
 		{ "qc-journal-bestiary", "completion" }, { "qc-journal-day", "day" }, { "qc-journal-collection", "collection" },
-		{ "qc-journal-memories", "memories" },
+		{ "qc-journal-memories", "memories" }, { "qc-journal-menagerie", "menagerie" },
 	}
 	for _, spec in ipairs(journal) do
 		local name, kind = spec[1], spec[2]
@@ -194,7 +194,7 @@ do
 				tostring(lastPantry) .. " / " .. tostring(close and close.left))
 			-- cartes de la page : textes tenus, la dernière au-dessus de la pagination
 			local pane = ({ evolution = frame.evo, zones = frame.zones, completion = frame.comp, day = frame.day,
-				collection = frame.coll, memories = frame.mem })[kind]
+				collection = frame.coll, memories = frame.mem, menagerie = frame.men })[kind]
 			local lists = {}
 			for _, field in ipairs({ "tiles", "cards", "items", "rows", "missions", "slots", "needs", "facts", "lines" }) do
 				if pane[field] then lists[#lists + 1] = pane[field] end
@@ -205,7 +205,10 @@ do
 				cards = cards + n
 				for _, o in ipairs(b) do bad[#bad + 1] = o end
 			end
-			Check("[CV2] " .. name .. " : chaque carte tient ses textes", cards > 0 and #bad == 0, cards .. " : " .. table.concat(bad, " | "))
+			-- Combat ne montre plus de fiches (renvoi vers la Ménagerie)
+			local combat = name == "qc-journal-bestiary"
+			Check("[CV2] " .. name .. " : chaque carte tient ses textes", (cards > 0 or combat) and #bad == 0,
+				cards .. " : " .. table.concat(bad, " | "))
 			for _, list in ipairs(lists) do
 				if list and list[1] and pane.pager then
 					local ok, lowest, limit = AbovePager(list, Snap.Visible(pane.pager) and pane.pager or nil, frame.footer)
@@ -219,29 +222,25 @@ do
 		end
 	end
 
-	-- page Zone : les fiches à côté de l'aperçu, sans le toucher ; liste pleine largeur
+	-- page Zone, Combat : plus de fiches, le renvoi vers la Ménagerie
 	local frame, restore = Scene("qc-journal-bestiary")
 	if frame then
 		local comp = frame.comp
-		local preview = Rect(comp.preview)
+		Check("[CV2] Combat : bouton vers la Ménagerie, sans fiches ni aperçu", comp.toMen:IsShown()
+			and not comp.cards[1]:IsShown() and not comp.preview:IsShown() and comp.empty.text == T.QNS.L.JRN_COMBAT_MEN)
+		restore()
+	end
+	-- Ménagerie : grille à gauche de l'aperçu
+	frame, restore = Scene("qc-journal-menagerie")
+	if frame then
+		local men = frame.men
+		local preview = Rect(men.preview)
 		local right = 0
-		for _, card in ipairs(comp.cards) do
-			if card:IsShown() then local r = Rect(card); right = math.max(right, r.left + r.width) end
+		for _, cell in ipairs(men.items) do
+			if cell:IsShown() then local r = Rect(cell); right = math.max(right, r.left + r.width) end
 		end
-		Check("[CV2] fiches : à gauche de l'aperçu", comp.preview:IsShown() and right > 0 and right <= preview.left - 8,
+		Check("[CV2] Ménagerie : cases à gauche de l'aperçu", right > 0 and right <= preview.left - 8,
 			tostring(right) .. " / " .. tostring(preview.left))
-		local stamped, ranked, shiny = 0, 0, 0
-		for _, card in ipairs(comp.cards) do
-			if card.item and card:IsShown() then
-				if card.item.done and card.stamp.texture == Theme.DIAMOND then stamped = stamped + 1 end
-				if card.rank:IsShown() then ranked = ranked + 1 end
-				if card.star:IsShown() then shiny = shiny + 1 end
-			end
-		end
-		Check("[CV2] fiches : tampon plein des abattues, rang en étiquette, brillante étoilée", stamped >= 5 and ranked >= 3
-			and shiny == 1, stamped .. "/" .. ranked .. "/" .. shiny)
-		Check("[CV2] fiche survolée : aperçu de Gesharahan, lignes dans la carte", comp.preview.title.text == "Gesharahan"
-			and #Snap.Layout(comp.preview, Snap.Texts(comp.preview), Rect(comp.preview)) == 0)
 		restore()
 	end
 	frame, restore = Scene("qc-journal-zone")

@@ -1191,10 +1191,7 @@ Snap.scenes["qc-journal-bestiary"] = function(T)
 		if shiny then shiny.zones[1413] = { [3243] = 1793500000 } end
 	end)
 	ns:SelectJournalActivity("combat")
-	for _, card in ipairs(frame.comp.cards) do
-		if card.item and card.item.id == 3398 then card.scripts.OnEnter(card) end
-	end
-	return frame, "QuestCompanion : carnet, Les Tarides > Combat (fiche de Gesharahan survolée)"
+	return frame, "QuestCompanion : carnet, Les Tarides > Combat (renvoi vers la Ménagerie)"
 end
 
 Snap.scenes["qc-journal-day"] = function(T)
@@ -1216,30 +1213,33 @@ end
 
 Snap.scenes["qc-journal-menagerie"] = function(T)
 	local frame = QCJournal(T, "menagerie", function(ns)
+		-- les Tarides de la table livrée : quelques espèces croisées, abattues,
+		-- capturées (une brillante), le reste en « ??? »
+		local all = rawget(ns, "ZONE_CREATURES") or {}
+		local zone = all[1413] or {}
+		local ids = {}
+		for npc in pairs(zone) do ids[#ids + 1] = npc end
+		table.sort(ids)
 		local book = ns:BestiaryData()
-		book[1413] = {
-			[3100] = { name = "Loup des plaines", class = "normal", level = 12, type = "Bête", seen = true, killed = 4 },
-			[3101] = { name = "Kodo des plaines", class = "normal", level = 14, type = "Bête", seen = true, killed = 2 },
-			[3102] = { name = "Centaure Kolkar", class = "normal", level = 15, type = "Humanoïde", seen = true, killed = 6 },
-			[3103] = { name = "Raptor Tranchegueule", class = "elite", level = 16, type = "Bête", seen = true, killed = 1 },
-			[3104] = { name = "Esprit de la Terre", class = "normal", level = 17, type = "Élémentaire", seen = true },
-			[3105] = { name = "Takk le Bondisseur", class = "rare", level = 19, type = "Bête", seen = true, killed = 1 },
-			[3106] = { name = "Géant des collines", class = "normal", level = 18, type = "Géant", seen = true },
-			[3107] = { name = "Zombie pourrissant", class = "normal", level = 13, type = "Mort-vivant", seen = true, killed = 3 },
-			[3108] = { name = "Gardien mécanique", class = "elite", level = 20, type = "Mécanique", seen = true },
-			[3109] = { name = "Diablotin", class = "normal", level = 11, type = "Démon", seen = true, killed = 2 },
-			[3110] = { name = "Dragonnet noir", class = "normal", level = 16, type = "Draconien", seen = true, killed = 1 },
-			[3111] = { name = "Hyène tachetée", class = "normal", level = 12, type = "Bête", seen = true, killed = 5 },
-		}
+		book[1413] = {}
 		local data = ns:CaptureData()
-		for _, npc in ipairs({ 3100, 3102, 3103, 3105, 3109 }) do
-			local sp = book[1413][npc]
-			data.creatures[npc] = { name = sp.name, class = sp.class, level = sp.level, type = sp.type, zoneID = 1413, at = 0,
-				shiny = npc == 3109 or nil }
+		for index, npc in ipairs(ids) do
+			if index % 3 ~= 0 and index <= 30 then
+				local entry = zone[npc]
+				local lvl = type(entry.lvl) == "table" and entry.lvl[1] or 15
+				book[1413][npc] = { name = entry.fr, seen = true, killed = index % 2, level = lvl,
+					type = ({ "Bête", "Humanoïde", "Élémentaire", "Bête" })[index % 4 + 1] }
+				if index % 4 == 1 then
+					data.creatures[npc] = { name = entry.fr, zoneID = 1413, at = 1793500000 + index,
+						class = (ns.BESTIARY_RANK_CLASS or {})[tonumber(entry.rank) or 0] or "normal", shiny = index == 5 or nil }
+				end
+			end
 		end
-		data.count = 5
+		data.count = 0
+		for _ in pairs(data.creatures) do data.count = data.count + 1 end
+		ns.menagerieStatic = nil
 	end)
-	return frame, "QuestCompanion : carnet, page Ménagerie (Pokédex des captures)"
+	return frame, "QuestCompanion : carnet, page Ménagerie (Les Tarides, filtres et recherche)"
 end
 
 Snap.scenes["qc-journal-collection"] = function(T)

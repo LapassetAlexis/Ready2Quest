@@ -390,7 +390,7 @@ end
 function ns:CaptureAppearances()
 	local data = self:CaptureData()
 	local cache = self.captureAppCache
-	if cache and cache.count == data.count and cache.n == data.serial then return cache.list end
+	if cache and cache.count == data.count and cache.n == data.serial and cache.creatures == data.creatures then return cache.list end
 	local list = {}
 	for npcID, entry in pairs(data.creatures) do
 		local name = tostring(entry.name or npcID)
@@ -402,34 +402,126 @@ function ns:CaptureAppearances()
 		if (a.at or 0) ~= (b.at or 0) then return (a.at or 0) < (b.at or 0) end
 		return a.id < b.id
 	end)
-	self.captureAppCache = { count = data.count, n = data.serial, list = list }
+	self.captureAppCache = { count = data.count, n = data.serial, creatures = data.creatures, list = list }
 	return list
 end
 
 -- ---------------------------------------------------------------------------
--- La ménagerie comme un Pokédex : toutes les espèces vues, numérotées dans
--- l'ordre où elles sont entrées au carnet (un numéro ne change plus)
+-- La ménagerie comme un Pokédex : TOUTES les créatures capturables du jeu
+-- (la table des zones livrée avec l'addon, ns.ZONE_CREATURES, filtrée par
+-- ta faction), plus celles apprises en route qui n'y sont pas. Numéro fixe :
+-- zones par niveau, puis niveau de la créature, puis son identifiant.
 -- ---------------------------------------------------------------------------
--- Entrées : { npc, no, name, class, level, type, zoneID, killed, captured,
--- shiny, at }. filter : "all", "captured", "missing".
-function ns:MenagerieList(filter)
+local RANK_GROUP = { normal = "normal", trivial = "normal", minus = "normal", elite = "elite",
+	rare = "rare", rareelite = "rare", worldboss = "boss" }
+local RANK_ORDER = { trivial = 0, minus = 0, normal = 1, elite = 2, rare = 3, rareelite = 4, worldboss = 5 }
+ns.MENAGERIE_RANK_GROUP = RANK_GROUP
+
+local function ZoneLevel(zoneID)
+	local levels = ns.ZONE_LEVELS and ns.ZONE_LEVELS[zoneID]
+	return levels and levels[1] or 99
+end
+
+-- Partie fixe (la table livrée), calculée une fois par faction
+function ns:MenagerieCatalog()
+	local faction = self.BestiaryFaction and self:BestiaryFaction() or nil
+	local cache = self.menagerieStatic
+	if cache and cache.faction == faction then return cache end
+	local all = rawget(ns, "ZONE_CREATURES")
+	local zones = {}
+	for zoneID in pairs(type(all) == "table" and all or {}) do zones[#zones + 1] = zoneID end
+	table.sort(zones, function(a, b)
+		if ZoneLevel(a) ~= ZoneLevel(b) then return ZoneLevel(a) < ZoneLevel(b) end
+		return a < b
+	end)
+	local byNpc, list = {}, {}
+	for order, zoneID in ipairs(zones) do
+		for npcID, entry in pairs(all[zoneID]) do
+			local npc = tonumber(npcID)
+			local f = type(entry) == "table" and entry.f
+			local forYou = f == nil or (faction ~= nil and not tostring(f):find(faction, 1, true))
+			if npc and type(entry) == "table" and forYou then
+				local item = byNpc[npc]
+				if not item then
+					local lvl = type(entry.lvl) == "table" and entry.lvl or {}
+					item = { npc = npc, staticName = self.BestiaryStaticName and self:BestiaryStaticName(entry) or entry.fr,
+						class = (ns.BESTIARY_RANK_CLASS and ns.BESTIARY_RANK_CLASS[tonumber(entry.rank) or 0]) or "normal",
+						lo = tonumber(lvl[1]), hi = tonumber(lvl[2]) or tonumber(lvl[1]), zones = {}, zoneOrder = order }
+					byNpc[npc] = item
+					list[#list + 1] = item
+				end
+				item.zones[#item.zones + 1] = zoneID
+			end
+		end
+	end
+	table.sort(list, function(a, b)
+		if a.zoneOrder ~= b.zoneOrder then return a.zoneOrder < b.zoneOrder end
+		if (a.lo or 0) ~= (b.lo or 0) then return (a.lo or 0) < (b.lo or 0) end
+		return a.npc < b.npc
+	end)
+	for index, item in ipairs(list) do item.no = index end
+	cache = { faction = faction, byNpc = byNpc, list = list, count = #list, zones = zones }
+	self.menagerieStatic = cache
+	return cache
+end
+
+-- Zones de la table, triées par niveau (liste du filtre « zone »)
+function ns:MenagerieZones()
+	return self:MenagerieCatalog().zones
+end
+
+local function Fold(text)
+	if ns.OptionFold then return ns.OptionFold(text) end
+	return string.lower(tostring(text or ""))
+end
+
+-- opts : { zone = uiMapID | "all", state = "all" | "captured" | "missing" |
+-- "tokill", rank = "all" | "normal" | "elite" | "rare" | "boss", search = texte,
+-- sort = "no" | "name" | "level" | "rank" | "date" }. Rend la liste et le
+-- compte de la portée (zone choisie) : { total, known, captured, killed }.
+-- Entrées : { npc, no, name, known, class, lo, hi, level, type, zones,
+-- zoneID, killed, captured, shiny, at }. Une espèce jamais croisée garde son
+-- nom (name) mais `known` est faux : la fenêtre l'affiche « ??? ».
+function ns:MenagerieList(opts)
+	if type(opts) == "string" then opts = { state = opts, zone = "all" } end
+	opts = opts or {}
+	local catalog = self:MenagerieCatalog()
 	local data = self:CaptureData()
-	data.dex = type(data.dex) == "table" and data.dex or {}
-	data.dexNext = math.max(1, math.floor(tonumber(data.dexNext) or 1))
-	local byNpc, fresh = {}, {}
+	data.dexExtra = type(data.dexExtra) == "table" and data.dexExtra or {}
+	data.dexExtraNext = math.max(1, math.floor(tonumber(data.dexExtraNext) or 1))
+	local view = {}
+	local function Item(npc, base)
+		local item = view[npc]
+		if item then return item end
+		item = { npc = npc, killed = 0, zones = {} }
+		if base then
+			item.no, item.name, item.class, item.lo, item.hi = base.no, base.staticName, base.class, base.lo, base.hi
+			for _, zoneID in ipairs(base.zones) do item.zones[#item.zones + 1] = zoneID end
+		end
+		view[npc] = item
+		return item
+	end
+	for _, base in ipairs(catalog.list) do Item(base.npc, base) end
+	-- ce que le carnet a appris en route (nom du client, type, niveau vu)
 	local book = self.BestiaryData and self:BestiaryData() or {}
 	for zoneID, zone in pairs(book) do
 		if type(zone) == "table" then
 			for npcID, species in pairs(zone) do
 				local npc = tonumber(npcID)
-				if npc and type(species) == "table" and (species.seen or (tonumber(species.killed) or 0) > 0) then
-					local entry = byNpc[npc]
-					if not entry then
-						entry = { npc = npc, name = species.name or tostring(npc), class = species.class or "normal",
-							level = species.level, type = species.type, zoneID = zoneID, killed = 0 }
-						byNpc[npc] = entry
-					end
-					entry.killed = entry.killed + (tonumber(species.killed) or 0)
+				if npc and type(species) == "table" then
+					local item = Item(npc, catalog.byNpc[npc])
+					if species.name and species.name ~= tostring(npc) then item.name = species.name end
+					item.type = species.type or item.type
+					item.level = tonumber(species.level) or item.level
+					if not catalog.byNpc[npc] then item.class = species.class or item.class end
+					item.killed = item.killed + (tonumber(species.killed) or 0)
+					-- une brillante abattue ici (Shiny.lua) : date gardée pour la fiche
+					local shinyAt = self.ShinyFound and self:ShinyFound(zoneID, npcID)
+					if shinyAt then item.shinyKilled = shinyAt end
+					if species.seen or (tonumber(species.killed) or 0) > 0 then item.known = true end
+					local listed = false
+					for _, z in ipairs(item.zones) do if z == zoneID then listed = true end end
+					if not listed then item.zones[#item.zones + 1] = zoneID end
 				end
 			end
 		end
@@ -437,39 +529,75 @@ function ns:MenagerieList(filter)
 	for npcID, known in pairs(data.creatures) do
 		local npc = tonumber(npcID)
 		if npc then
-			local entry = byNpc[npc]
-			if not entry then
-				entry = { npc = npc, name = known.name or tostring(npc), class = known.class or "normal",
-					level = known.level, type = known.type, zoneID = known.zoneID, killed = 0 }
-				byNpc[npc] = entry
-			end
-			entry.captured, entry.shiny, entry.at = true, known.shiny, known.at
+			local item = Item(npc, catalog.byNpc[npc])
+			item.name = item.name or known.name
+			item.class = item.class or known.class
+			item.type = item.type or known.type
+			item.level = item.level or tonumber(known.level)
+			item.captured, item.shiny, item.at, item.known = true, known.shiny, known.at, true
+			if known.zoneID and #item.zones == 0 then item.zones[1] = known.zoneID end
 		end
 	end
-	-- numéros : les nouvelles espèces à la suite, dans un ordre stable
-	for npc, entry in pairs(byNpc) do
-		if data.dex[npc] then entry.no = data.dex[npc] else fresh[#fresh + 1] = entry end
+	-- numéros des espèces hors table : à la suite, et ils ne bougent plus
+	local fresh = {}
+	for npc, item in pairs(view) do
+		if not item.no then
+			local extra = data.dexExtra[npc]
+			if extra then item.no = catalog.count + extra else fresh[#fresh + 1] = item end
+		end
 	end
-	table.sort(fresh, function(a, b)
-		if (a.level or 0) ~= (b.level or 0) then return (a.level or 0) < (b.level or 0) end
-		return a.npc < b.npc
+	table.sort(fresh, function(a, b) return a.npc < b.npc end)
+	for _, item in ipairs(fresh) do
+		data.dexExtra[item.npc] = data.dexExtraNext
+		item.no = catalog.count + data.dexExtraNext
+		data.dexExtraNext = data.dexExtraNext + 1
+	end
+
+	local zone = opts.zone or "all"
+	local state, rank = opts.state or "all", opts.rank or "all"
+	local query = Fold(opts.search or ""):gsub("^%s+", ""):gsub("%s+$", "")
+	local stats = { total = 0, known = 0, captured = 0, killed = 0 }
+	local list = {}
+	for _, item in pairs(view) do
+		item.name = item.name or tostring(item.npc)
+		item.class = item.class or "normal"
+		local here = zone == "all"
+		if not here then
+			for _, z in ipairs(item.zones) do if z == zone then here = true end end
+		end
+		if here then
+			item.zoneID = zone ~= "all" and zone or item.zones[1]
+			stats.total = stats.total + 1
+			if item.known then stats.known = stats.known + 1 end
+			if item.captured then stats.captured = stats.captured + 1 end
+			if item.killed > 0 then stats.killed = stats.killed + 1 end
+			local keep = (state == "all") or (state == "captured" and item.captured)
+				or (state == "missing" and not item.captured) or (state == "tokill" and item.killed == 0)
+			keep = keep and (rank == "all" or RANK_GROUP[item.class] == rank)
+			-- recherche : sur les noms connus seulement (une inconnue reste « ??? »)
+			if keep and query ~= "" then keep = item.known and Fold(item.name):find(query, 1, true) ~= nil end
+			if keep then list[#list + 1] = item end
+		end
+	end
+	local sort = opts.sort or "no"
+	table.sort(list, function(a, b)
+		if sort == "name" then
+			if a.known ~= b.known then return a.known == true end
+			local fa, fb = Fold(a.name), Fold(b.name)
+			if fa ~= fb then return fa < fb end
+		elseif sort == "level" then
+			local la, lb = a.level or a.lo or 0, b.level or b.lo or 0
+			if la ~= lb then return la < lb end
+		elseif sort == "rank" then
+			local ra, rb = RANK_ORDER[a.class] or 1, RANK_ORDER[b.class] or 1
+			if ra ~= rb then return ra > rb end
+		elseif sort == "date" then
+			if (a.captured == true) ~= (b.captured == true) then return a.captured == true end
+			if (a.at or 0) ~= (b.at or 0) then return (a.at or 0) > (b.at or 0) end
+		end
+		return a.no < b.no
 	end)
-	for _, entry in ipairs(fresh) do
-		entry.no = data.dexNext
-		data.dex[entry.npc] = entry.no
-		data.dexNext = data.dexNext + 1
-	end
-	local list, captured, seen = {}, 0, 0
-	for _, entry in pairs(byNpc) do
-		seen = seen + 1
-		if entry.captured then captured = captured + 1 end
-		if filter == "captured" and entry.captured or filter == "missing" and not entry.captured
-			or filter ~= "captured" and filter ~= "missing" then
-			list[#list + 1] = entry
-		end
-	end
-	table.sort(list, function(a, b) return a.no < b.no end)
-	return list, captured, seen
+	return list, stats
 end
 
 -- ---------------------------------------------------------------------------

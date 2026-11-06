@@ -333,8 +333,12 @@ local ZONE_W = math.floor((INNER - (ZONE_COLS - 1) * 12) / ZONE_COLS)
 local LIST_W = math.floor((INNER - (LIST_COLS - 1) * 12) / LIST_COLS)
 -- la Créature d'abord : c'est elle, le cœur de l'addon
 -- 1.4.0 : la Ménagerie (Pokédex des captures) juste après la Créature
-local SECTIONS = { "evolution", "menagerie", "day", "zones", "completion", "collection", "memories" }
-local MEN_FILTERS = { "all", "captured", "missing" }
+-- la fiche d'une zone (« completion ») s'ouvre depuis Zones : pas d'entrée à elle
+local SECTIONS = { "evolution", "menagerie", "day", "zones", "collection", "memories" }
+local MEN_STATES = { "all", "captured", "missing", "tokill" }
+local MEN_RANKS = { "all", "normal", "elite", "rare", "boss" }
+local MEN_SORTS = { "no", "name", "level", "rank", "date" }
+local MEN_ROWS = COLL_ROWS - 1
 local COLL_KINDS = { "app", "orn", "frame", "bg" }
 local MARKS = { 25, 50, 75, 100 }
 local CONTINENTS = { [1415] = "ek", [1414] = "ka" }
@@ -398,15 +402,36 @@ local FR2 = {
 	JRN_COLL_SRC_TIER      = "coffre de zone, palier %d",
 	JRN_COLL_HINT          = "Survole un objet pour le voir sur ta créature.",
 	JRN_SEC_menagerie      = "Ménagerie",
-	JRN_SUB_menagerie      = "Toutes les créatures croisées, numérotées : en couleur celles que tu as capturées.",
+	JRN_SUB_menagerie      = "Toutes les créatures capturables, numérotées : en couleur celles que tu as capturées.",
 	JRN_MEN_all            = "Toutes",
 	JRN_MEN_captured       = "Capturées",
 	JRN_MEN_missing        = "À capturer",
-	JRN_MEN_COUNT          = "%d capturées · %d croisées",
+	JRN_MEN_tokill         = "À abattre",
+	JRN_MEN_COUNT          = "%d capturées · %d croisées · %d en tout",
 	JRN_MEN_HINT           = "Survol : sa fiche. Clic sur une créature capturée : elle devient ton compagnon.",
+	JRN_MEN_ZONE_HERE      = "Zone actuelle (%s)",
+	JRN_MEN_ZONE_ALL       = "Toutes les zones",
+	JRN_MEN_RANK_all       = "Toutes raretés",
+	JRN_MEN_RANK_normal    = "Normal",
+	JRN_MEN_RANK_elite     = "Élite",
+	JRN_MEN_RANK_rare      = "Rare",
+	JRN_MEN_RANK_boss      = "Boss",
+	JRN_MEN_SORT_no        = "Tri : numéro",
+	JRN_MEN_SORT_name      = "Tri : nom",
+	JRN_MEN_SORT_level     = "Tri : niveau",
+	JRN_MEN_SORT_rank      = "Tri : rareté",
+	JRN_MEN_SORT_date      = "Tri : capture",
+	JRN_MEN_SEARCH         = "Chercher un nom…",
+	JRN_MEN_UNKNOWN        = "???",
+	JRN_MEN_NEVER          = "Jamais croisée : approche-toi, cible-la.",
+	JRN_MEN_NOT_KILLED     = "Pas encore abattue",
+	JRN_MEN_NONE           = "Aucune créature ne correspond à ces filtres.",
+	JRN_BACK_ZONES         = "< Zones",
+	JRN_COMBAT_MEN         = "Le bestiaire de la zone vit dans la Ménagerie : abattues, capturées, et celles qui restent à trouver.",
+	JRN_COMBAT_OPEN        = "Voir dans la Ménagerie",
 	JRN_MEN_NO             = "n° %03d",
 	JRN_MEN_RANK           = "%s · niveau %s",
-	JRN_MEN_ZONE           = "Croisée : %s",
+	JRN_MEN_ZONE           = "Zone : %s",
 	JRN_MEN_CAUGHT         = "Capturée le %s",
 	JRN_MEN_NOTYET         = "Pas encore capturée · chance ~%d %%",
 	JRN_MEN_KILLED         = "Abattue %d fois",
@@ -470,15 +495,36 @@ local EN2 = {
 	JRN_COLL_SRC_TIER      = "zone chest, tier %d",
 	JRN_COLL_HINT          = "Hover an item to see it on your creature.",
 	JRN_SEC_menagerie      = "Menagerie",
-	JRN_SUB_menagerie      = "Every creature you've met, numbered: the ones you captured are in colour.",
+	JRN_SUB_menagerie      = "Every creature you can capture, numbered: the ones you captured are in colour.",
 	JRN_MEN_all            = "All",
 	JRN_MEN_captured       = "Captured",
 	JRN_MEN_missing        = "To capture",
-	JRN_MEN_COUNT          = "%d captured · %d met",
+	JRN_MEN_tokill         = "To defeat",
+	JRN_MEN_COUNT          = "%d captured · %d met · %d in all",
 	JRN_MEN_HINT           = "Hover: its card. Click a captured creature: it becomes your companion.",
+	JRN_MEN_ZONE_HERE      = "Current zone (%s)",
+	JRN_MEN_ZONE_ALL       = "All zones",
+	JRN_MEN_RANK_all       = "All rarities",
+	JRN_MEN_RANK_normal    = "Normal",
+	JRN_MEN_RANK_elite     = "Elite",
+	JRN_MEN_RANK_rare      = "Rare",
+	JRN_MEN_RANK_boss      = "Boss",
+	JRN_MEN_SORT_no        = "Sort: number",
+	JRN_MEN_SORT_name      = "Sort: name",
+	JRN_MEN_SORT_level     = "Sort: level",
+	JRN_MEN_SORT_rank      = "Sort: rarity",
+	JRN_MEN_SORT_date      = "Sort: capture",
+	JRN_MEN_SEARCH         = "Search a name…",
+	JRN_MEN_UNKNOWN        = "???",
+	JRN_MEN_NEVER          = "Never met: get close, target it.",
+	JRN_MEN_NOT_KILLED     = "Not defeated yet",
+	JRN_MEN_NONE           = "No creature matches these filters.",
+	JRN_BACK_ZONES         = "< Zones",
+	JRN_COMBAT_MEN         = "The zone's bestiary lives in the Menagerie: defeated, captured, and the ones left to find.",
+	JRN_COMBAT_OPEN        = "Open in the Menagerie",
 	JRN_MEN_NO             = "No. %03d",
 	JRN_MEN_RANK           = "%s · level %s",
-	JRN_MEN_ZONE           = "Met in: %s",
+	JRN_MEN_ZONE           = "Zone: %s",
 	JRN_MEN_CAUGHT         = "Captured on %s",
 	JRN_MEN_NOTYET         = "Not captured yet · chance ~%d%%",
 	JRN_MEN_KILLED         = "Defeated %d times",
@@ -793,6 +839,9 @@ local function BuildCompletion(self, frame, content)
 	pane.next:SetPoint("TOPRIGHT", content, "TOPRIGHT", -13 - 24 - 10, -13)
 	pane.prev = Theme.CreateButton(pane, 24, 24, "<", function() ns:StepJournalZone(-1) end)
 	pane.prev:SetPoint("RIGHT", pane.next, "LEFT", -6, 0)
+	-- retour à la liste des zones (la fiche n'a plus d'entrée dans le menu)
+	pane.back = Theme.CreateButton(pane, "auto", 24, L.JRN_BACK_ZONES, function() ns:SelectJournalKind("zones") end)
+	pane.back:SetPoint("RIGHT", pane.prev, "LEFT", -10, 0)
 	for _, b in ipairs({ pane.prev, pane.next }) do
 		local tip = b == pane.prev and L.JRN_ZONE_STEP_PREV or L.JRN_ZONE_STEP_NEXT
 		b:HookScript("OnEnter", function(owner) Tip(owner, tip, { L.JRN_BACK_HINT }) end)
@@ -888,6 +937,12 @@ local function BuildCompletion(self, frame, content)
 	end
 
 	-- fiches du bestiaire (Combat) : portrait, rang, tampon ; l'aperçu à droite
+	-- Combat : le bestiaire de la zone est dans la Ménagerie
+	pane.toMen = Theme.CreateButton(pane, "auto", 28, L.JRN_COMBAT_OPEN, function()
+		ns:OpenMenagerieZone(frame.zoneID)
+	end, "accent")
+	At(pane.toMen, content, 0, gridTop - 40)
+	pane.toMen:Hide()
 	pane.cards = {}
 	for index = 1, CARD_COLS * CARD_ROWS do
 		local col, row = (index - 1) % CARD_COLS, math.floor((index - 1) / CARD_COLS)
@@ -1135,18 +1190,42 @@ local function BuildMenagerie(self, frame, content)
 	local pane = CreateFrame("Frame", nil, content)
 	pane:SetAllPoints()
 	frame.men = pane
-	frame.menFilter = frame.menFilter or "all"
-	pane.filterRow, pane.filters = Chips(pane, MEN_FILTERS, "JRN_MEN_", function(key)
-		frame.menFilter, frame.menOffset = key, 0
-		ns:RefreshJournal()
-	end)
-	At(pane.filterRow, content, 0, TOP)
-	pane.count = Text(pane, Theme.F_SMALL, Theme.MUTED_LIGHT, 200)
-	pane.count:SetPoint("TOPRIGHT", content, "TOPLEFT", PAD + GRID_W, TOP - 6)
+	frame.menZone, frame.menState = frame.menZone or "here", frame.menState or "all"
+	frame.menRank, frame.menSort, frame.menSearch = frame.menRank or "all", frame.menSort or "no", frame.menSearch or ""
+	local function Changed() frame.menOffset = 0; ns:RefreshJournal() end
+	-- 1re rangée : zone, rareté, tri
+	pane.zone = Theme.CreateDropdown(pane, 200, function(value) frame.menZone = value; Changed() end,
+		{ listWidth = 260, maxRows = 14 })
+	At(pane.zone, content, 0, TOP)
+	pane.rank = Theme.CreateDropdown(pane, 124, function(value) frame.menRank = value; Changed() end)
+	At(pane.rank, content, 210, TOP)
+	local ranks = {}
+	for _, key in ipairs(MEN_RANKS) do ranks[#ranks + 1] = { value = key, label = L["JRN_MEN_RANK_" .. key] } end
+	pane.rank:SetOptions(ranks)
+	pane.sort = Theme.CreateDropdown(pane, GRID_W - 344, function(value) frame.menSort = value; Changed() end)
+	At(pane.sort, content, 344, TOP)
+	local sorts = {}
+	for _, key in ipairs(MEN_SORTS) do sorts[#sorts + 1] = { value = key, label = L["JRN_MEN_SORT_" .. key] } end
+	pane.sort:SetOptions(sorts)
+	pane.count = Text(pane, Theme.F_SMALL, Theme.MUTED_LIGHT, PREVIEW_W)
+	pane.count:SetPoint("TOPRIGHT", content, "TOPLEFT", PAD + INNER, TOP - 4)
 	pane.count:SetJustifyH("RIGHT")
+	-- 2e rangée : état, recherche
+	local rowY = TOP - 32
+	pane.stateRow, pane.states = Chips(pane, MEN_STATES, "JRN_MEN_", function(key)
+		frame.menState = key
+		Changed()
+	end)
+	At(pane.stateRow, content, 0, rowY)
+	local searchW = math.max(120, GRID_W - (pane.stateRow.used or 300) - 12)
+	pane.search = Theme.CreateSearchBox(pane, searchW, L.JRN_MEN_SEARCH, function(text)
+		frame.menSearch = text or ""
+		Changed()
+	end)
+	pane.search:SetPoint("TOPRIGHT", content, "TOPLEFT", PAD + GRID_W, rowY)
 	pane.items = {}
-	local gridTop = TOP - Theme.CHIP_HEIGHT - 14
-	for index = 1, COLL_COLS * COLL_ROWS do
+	local gridTop = rowY - Theme.CHIP_HEIGHT - 12
+	for index = 1, COLL_COLS * MEN_ROWS do
 		local col, row = (index - 1) % COLL_COLS, math.floor((index - 1) / COLL_COLS)
 		local cell = Theme.CreateTile(pane, COLL_W, COLL_H, { accent = "top" })
 		At(cell, content, col * (COLL_W + COLL_GAP), gridTop - row * (COLL_H + COLL_GAP))
@@ -1156,8 +1235,11 @@ local function BuildMenagerie(self, frame, content)
 		cell.icon:SetTexCoord(0.08, 0.92, 0.08, 0.92)
 		cell.no = Text(cell, Theme.F_CAPS, Theme.MUTED)
 		cell.no:SetPoint("TOPLEFT", cell, "TOPLEFT", 6, -6)
-		cell.star = Theme.CreateDiamond and Theme.CreateDiamond(cell, 8) or cell:CreateTexture(nil, "OVERLAY")
-		cell.star:SetPoint("TOPRIGHT", cell, "TOPRIGHT", -6, -7)
+		-- tampon : plein une fois abattue (complétion de zone), au trait sinon
+		cell.stamp = Theme.CreateDiamond(cell, 8, true)
+		cell.stamp:SetPoint("TOPRIGHT", cell, "TOPRIGHT", -6, -7)
+		cell.star = Theme.CreateDiamond(cell, 8)
+		cell.star:SetPoint("RIGHT", cell.stamp, "LEFT", -4, 0)
 		cell.star:SetVertexColor(Theme.GOLD_LIGHT[1], Theme.GOLD_LIGHT[2], Theme.GOLD_LIGHT[3], 1)
 		cell.star:Hide()
 		cell.label = Text(cell, Theme.F_SMALL, Theme.LABEL, COLL_W - 10)
@@ -1562,9 +1644,8 @@ function ns:JournalCollection(kind)
 		frame = self.CompanionCurrentStyle and self:CompanionCurrentStyle("frame").id,
 		bg = self.CompanionCurrentStyle and self:CompanionCurrentStyle("bg").id,
 	}
+	-- les créatures capturées vivent dans la Ménagerie : ici, les cosmétiques
 	local catalog = ns[CATALOG[kind]] or {}
-	-- apparences : les mascottes, puis la ménagerie (Capture.lua)
-	if kind == "app" and self.CompanionAllAppearances then catalog = self:CompanionAllAppearances() end
 	for _, def in ipairs(catalog) do
 		local owned = self:CompanionIsUnlocked(kind, def)
 		local equipped
@@ -1750,6 +1831,8 @@ local function RefreshCompletion(self, frame)
 	end
 	local zoneID = frame.zoneID
 	local here = self.JournalZone and self:JournalZone()
+	-- le titre s'arrête avant « < Zones » et les flèches
+	frame.header.title:SetWidth(INNER - 100 - pane.back:GetWidth() - 12)
 	local activity = frame.activity or "explore"
 	pane.tabBar:Select(activity, true)
 	pane.preview.item = nil
@@ -1853,6 +1936,8 @@ local function RefreshCompletion(self, frame)
 			rows[#rows + 1] = item
 		end
 	end
+	-- Combat : plus de fiches ici, la Ménagerie de la zone les montre
+	if activity == "combat" then rows = {} end
 	frame.rows = rows
 	-- les listes ont déjà une ligne d'en-tête par part : le résumé suffit
 	-- pour les fiches et les ressources
@@ -1864,8 +1949,9 @@ local function RefreshCompletion(self, frame)
 	frame.step = step
 	ShowOnly(pane, mode)
 	-- l'aperçu accompagne les fiches ; ailleurs, l'aide tient dans le bas
-	if mode == "cards" then pane.preview:Show(); pane.hint:SetText("") else
-		pane.preview:Hide(); pane.hint:SetText(L["JRN_PREV_HINT_" .. activity] or "") end
+	pane.preview:Hide()
+	pane.hint:SetText(activity ~= "combat" and L["JRN_PREV_HINT_" .. activity] or "")
+	if activity == "combat" and self.MenagerieList then pane.toMen:Show() else pane.toMen:Hide() end
 	local page = #cells
 	local maxOffset = math.max(0, math.ceil((#rows - page) / step) * step)
 	frame.offset = math.max(0, math.min(frame.offset or 0, maxOffset))
@@ -1913,7 +1999,9 @@ local function RefreshCompletion(self, frame)
 		end
 	end
 	local empty = ""
-	if not seenZone and zoneID ~= here and #rows == 0 then
+	if activity == "combat" and self.MenagerieList then
+		empty = L.JRN_COMBAT_MEN
+	elseif not seenZone and zoneID ~= here and #rows == 0 then
 		empty = L.JRN_UNSEEN_ZONE
 	elseif #rows == 0 then
 		if activity == "quests" and not quests then
@@ -2090,14 +2178,28 @@ local function RarityColor(entry)
 	return rarity and rarity.color or Theme.PARCHMENT
 end
 
+local function LevelText(entry)
+	if entry.level then return tostring(entry.level) end
+	if entry.lo then return entry.lo == entry.hi and tostring(entry.lo) or (entry.lo .. "-" .. entry.hi) end
+	return "?"
+end
+
+local function ZoneName(self, zoneID)
+	local info = zoneID and self.MapInfo and self:MapInfo(zoneID)
+	return (info and info.name) or tostring(zoneID or "?")
+end
+
 function ns:JournalPreviewMenagerie(entry)
 	local frame = self.journalFrame
 	if not (frame and frame.men and entry) then return end
 	local rank = L["CAPTURE_RANK_" .. tostring(entry.class or "normal")]
-	local lines = { self:F("JRN_MEN_RANK", rank, entry.level and tostring(entry.level) or "?") }
-	if entry.zoneID then
-		local info = self.MapInfo and self:MapInfo(entry.zoneID)
-		lines[#lines + 1] = self:F("JRN_MEN_ZONE", (info and info.name) or tostring(entry.zoneID))
+	local lines = { self:F("JRN_MEN_RANK", rank, LevelText(entry)) }
+	if entry.zoneID then lines[#lines + 1] = self:F("JRN_MEN_ZONE", ZoneName(self, entry.zoneID)) end
+	if not entry.known then
+		lines[#lines + 1] = L.JRN_MEN_NEVER
+		PreviewSet(frame.men.preview, L.JRN_MEN_UNKNOWN, lines, {})
+		frame.men.preview.entry = entry
+		return
 	end
 	if entry.captured then
 		local when = (tonumber(entry.at) or 0) > 0 and rawget(_G, "date") and select(2, pcall(date, "%d/%m/%Y", entry.at))
@@ -2105,10 +2207,14 @@ function ns:JournalPreviewMenagerie(entry)
 		local current = self:CompanionData().appearance
 		lines[#lines + 1] = current == ("cap:" .. entry.npc) and L.JRN_MEN_EQUIPPED or L.JRN_MEN_EQUIP
 	else
-		local chance = self.CaptureChance and self:CaptureChance(entry) or 0
+		local chance = self.CaptureChance and self:CaptureChance({ class = entry.class, level = entry.level or entry.lo }) or 0
 		lines[#lines + 1] = self:F("JRN_MEN_NOTYET", math.floor(chance * 100 + 0.5 + 1e-9))
 	end
-	if (entry.killed or 0) > 0 then lines[#lines + 1] = self:F("JRN_MEN_KILLED", entry.killed) end
+	lines[#lines + 1] = (entry.killed or 0) > 0 and self:F("JRN_MEN_KILLED", entry.killed) or L.JRN_MEN_NOT_KILLED
+	if entry.shinyKilled then
+		local when = rawget(_G, "date") and select(2, pcall(date, "%d/%m/%Y", entry.shinyKilled))
+		lines[#lines + 1] = self:F("SHINY_PREV", tostring(type(when) == "string" and when or entry.shinyKilled))
+	end
 	local title = entry.shiny and self:F("CAPTURE_SHINY_TAG", entry.name) or entry.name
 	PreviewSet(frame.men.preview, title, lines, { creature = entry.npc })
 	frame.men.preview.entry = entry
@@ -2125,14 +2231,49 @@ function ns:JournalMenagerieEquip(entry)
 	return true
 end
 
+-- La Ménagerie d'une zone (bouton de la fiche de zone, onglet Combat)
+function ns:OpenMenagerieZone(zoneID)
+	local frame = self:EnsureJournalWindow()
+	if not frame then return end
+	frame.menZone = tonumber(zoneID) or "here"
+	frame.menState, frame.menRank, frame.menSearch, frame.menOffset = "all", "all", "", 0
+	if frame.men and frame.men.search then frame.men.search:SetText("") end
+	self:SelectJournalKind("menagerie")
+end
+
+-- « here » : la zone où l'on est (toutes en instance)
+function ns:MenagerieZoneValue(value)
+	if value == "here" then return (self.JournalZone and self:JournalZone()) or "all" end
+	return value or "all"
+end
+
+local function MenagerieZoneOptions(self)
+	local here = self.JournalZone and self:JournalZone()
+	local options = {
+		{ value = "here", label = self:F("JRN_MEN_ZONE_HERE", here and ZoneName(self, here) or "-") },
+		{ value = "all", label = L.JRN_MEN_ZONE_ALL },
+	}
+	for _, zoneID in ipairs(self.MenagerieZones and self:MenagerieZones() or {}) do
+		local levels = ns.ZONE_LEVELS and ns.ZONE_LEVELS[zoneID]
+		options[#options + 1] = { value = zoneID, label = ZoneName(self, zoneID),
+			hint = levels and (levels[1] .. "-" .. levels[2]) or nil }
+	end
+	return options
+end
+
 local function RefreshMenagerie(self, frame)
 	local pane = frame.men
 	frame.header:SetTitle(L.JRN_SEC_menagerie)
 	frame.header:SetSubtitle(L.JRN_SUB_menagerie)
-	pane.filterRow:Select(frame.menFilter or "all", true)
-	local list, captured, seen = self:MenagerieList(frame.menFilter or "all")
-	pane.count:SetText(self:F("JRN_MEN_COUNT", captured, seen))
-	pane.empty:SetText(seen == 0 and L.JRN_MEN_EMPTY or "")
+	pane.zone:SetOptions(MenagerieZoneOptions(self))
+	pane.zone:SetValue(frame.menZone or "here")
+	pane.rank:SetValue(frame.menRank or "all")
+	pane.sort:SetValue(frame.menSort or "no")
+	pane.stateRow:Select(frame.menState or "all", true)
+	local list, stats = self:MenagerieList({ zone = self:MenagerieZoneValue(frame.menZone or "here"),
+		state = frame.menState, rank = frame.menRank, search = frame.menSearch, sort = frame.menSort })
+	pane.count:SetText(self:F("JRN_MEN_COUNT", stats.captured, stats.known, stats.total))
+	pane.empty:SetText(#list == 0 and (stats.total == 0 and L.JRN_MEN_EMPTY or L.JRN_MEN_NONE) or "")
 	local page = #pane.items
 	local maxOffset = math.max(0, math.ceil((#list - page) / COLL_COLS) * COLL_COLS)
 	frame.menOffset = math.max(0, math.min(frame.menOffset or 0, maxOffset))
@@ -2141,17 +2282,22 @@ local function RefreshMenagerie(self, frame)
 		local entry = list[index + frame.menOffset]
 		cell.entry = entry
 		if entry then
-			pcall(cell.icon.SetTexture, cell.icon, TYPE_ICONS[entry.type or ""] or MEN_DEFAULT_ICON)
+			local icon = entry.known and (TYPE_ICONS[entry.type or ""] or MEN_DEFAULT_ICON) or LOCK_ICON
+			pcall(cell.icon.SetTexture, cell.icon, icon)
 			if cell.icon.SetDesaturated then cell.icon:SetDesaturated(not entry.captured) end
-			cell.icon:SetAlpha(entry.captured and 1 or 0.45)
+			cell.icon:SetAlpha(entry.captured and 1 or (entry.known and 0.45 or 0.3))
 			cell.no:SetText(self:F("JRN_MEN_NO", entry.no))
-			cell.label:SetText(entry.name)
+			cell.label:SetText(entry.known and entry.name or L.JRN_MEN_UNKNOWN)
 			local lc = entry.captured and RarityColor(entry) or Theme.MUTED
 			cell.label:SetTextColor(lc[1], lc[2], lc[3])
-			if entry.shiny then cell.star:Show() else cell.star:Hide() end
-			local equipped = current == ("cap:" .. entry.npc)
-			cell:SetAccent(entry.captured and RarityColor(entry) or nil)
-			cell:SetSelected(equipped)
+			local killed = (entry.killed or 0) > 0
+			cell.stamp:SetTexture(killed and Theme.DIAMOND or Theme.DIAMOND_LINE)
+			local sc = killed and Theme.GOLD or Theme.EDGE
+			cell.stamp:SetVertexColor(sc[1], sc[2], sc[3], 1)
+			if entry.shiny or entry.shinyKilled then cell.star:Show() else cell.star:Hide() end
+			-- liseré : rareté si capturée ; doré pour une brillante abattue
+			cell:SetAccent(entry.captured and RarityColor(entry) or (entry.shinyKilled and Theme.GOLD_LIGHT) or nil)
+			cell:SetSelected(current == ("cap:" .. entry.npc))
 			cell:SetFill(entry.captured and Theme.ROW or Theme.NAV)
 			cell:Show()
 		else
@@ -2160,8 +2306,10 @@ local function RefreshMenagerie(self, frame)
 	end
 	pane.pager:Update(frame.menOffset, page, #list, maxOffset)
 	local shown = pane.preview.entry
-	if list[1] and not (shown and shown.npc) then self:JournalPreviewMenagerie(list[1]) end
-	if not list[1] then PreviewSet(pane.preview, "", {}, {}); pane.preview.entry = nil end
+	local still = false
+	for _, entry in ipairs(list) do if shown and entry.npc == shown.npc then still = true end end
+	if list[1] and not still then self:JournalPreviewMenagerie(list[1])
+	elseif not list[1] then PreviewSet(pane.preview, "", {}, {}); pane.preview.entry = nil end
 end
 
 local function MissionRow(self, row, mission, label, reward)
@@ -2296,7 +2444,10 @@ function ns:RefreshJournal()
 	if not frame then return end
 	local section = KindOf(frame, frame.kind)
 	frame.kind = section
-	for key, item in pairs(frame.sections) do item:SetSelected(key == section) end
+	-- la fiche d'une zone se range sous « Zones »
+	local navKey = section == "completion" and "zones" or section
+	frame.header.title:SetWidth(INNER - 100)
+	for key, item in pairs(frame.sections) do item:SetSelected(key == navKey) end
 	local counts = self:JournalCounts()
 	frame.subtitle:SetText(self:F("JRN_TOTAL", counts.total)
 		.. (ModuleOn() and "" or ("|n" .. Theme.T_GREY .. L.MODULE_OFF .. "|r")))

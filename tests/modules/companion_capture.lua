@@ -295,8 +295,10 @@ do
 	Check("[CAP] le modèle de la créature (SetCreature)", model and model.creature == 3500, model and tostring(model.creature))
 	local coll
 	for _, entry in ipairs(NS:JournalCollection("app")) do if entry.def.id == "cap:3500" then coll = entry end end
-	Check("[CAP] dans la Collection du carnet, possédée et portée", coll and coll.owned and coll.equipped)
-	Check("[CAP] … sa source : la date de capture", NS:JournalCosmeticSource(coll):find(NS.L.CAPTURE_SRC:sub(1, 6), 1, true) ~= nil)
+	Check("[CAP] pas dans la Collection (elle vit dans la Ménagerie)", coll == nil)
+	local men
+	for _, entry in ipairs(NS:MenagerieList({ zone = "all", state = "captured" })) do if entry.npc == 3500 then men = entry end end
+	Check("[CAP] dans la Ménagerie, capturée", men ~= nil and men.captured and men.known)
 	-- dix captures : un sifflet offert
 	local data = NS:CaptureData()
 	for npc = 3501, 3509 do
