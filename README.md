@@ -4,8 +4,8 @@ Deux addons pour **World of Warcraft Forever**, en français et en anglais. Ils 
 
 | Addon | Ce qu'il fait | Commande |
 |---|---|---|
-| [**Ready2Quest**](Ready2Quest/README.md) | Prépare ta sortie : check avant de quitter la ville, bilan au retour, fiche de donjon, kit de camp, et du confort de jeu (bonne récompense, rythme de leveling, sac plein, après la mort, marchand). | `/r2q` |
-| [**QuestCompanion**](QuestCompanion/README.md) | Un compagnon de route qui grandit avec toi, et son carnet de voyage : complétion de chaque zone, coffres d'objets cosmétiques, évolution. | `/qc` |
+| [**Ready2Quest**](Ready2Quest/README.md) | Prépare ta sortie : check avant de quitter la ville, bilan au retour, fiche de donjon, kit de camp, portée d'aggro, et du confort de jeu (bonne récompense, rythme de leveling, sac plein, place au butin, rangs de sorts, après la mort, marchand). | `/r2q` |
+| [**QuestCompanion**](QuestCompanion/README.md) | Un compagnon de route qui grandit avec toi, sa ménagerie à capturer (versions normales et brillantes) et son carnet de voyage : exploration de chaque zone, missions, coffres d'objets cosmétiques, souvenirs en photo. | `/qc` |
 
 Ensemble, le compagnon réagit en plus à tes départs et retours en ville.
 
@@ -29,11 +29,13 @@ Copie le dossier de chaque addon voulu dans `World of Warcraft/<client>/Interfac
 
 - **Socle commun** : chaque addon embarque sa copie de `Libs/Socle`, comme une lib WoW. On ne le modifie que dans `Ready2Quest/Libs/Socle`, puis `python3 -I tools/sync_socle.py` le recopie dans `QuestCompanion/Libs/Socle`. Ce qui change d'un addon à l'autre (nom, sauvegarde, commande, logo) est dans son `Config.lua`.
 - **Tests** : `python3 tests/run_tests.py` (paquet `lupa` requis). Ils refusent de tourner si les deux copies du socle diffèrent, ou si un fichier de la racine risque de partir dans un zip publié.
+- **Mémoire** : `python3 tests/run_tests.py --memoire` donne la mémoire Lua que prend chaque fichier des deux addons au chargement (comme un client français, sans jouer les tests).
+- **Données de zone paresseuses** : les tables générées (`ZoneCreatures_Forever.lua`, `ZoneQuests_Forever.lua`) ne construisent une zone qu'à sa première lecture ; les parcourir avec `ns.ZoneIds` / `ns.ZoneEach` (voir [docs/TECHNIQUE.md](docs/TECHNIQUE.md)).
 - **Publication** sur CurseForge et Wago : tag `v*` pour Ready2Quest, `qc-v*` pour QuestCompanion. Voir [docs/PUBLIER.md](docs/PUBLIER.md).
 - [Notes techniques et historique des versions](docs/TECHNIQUE.md).
 - Zones sûres : `tools/gen_hubs.py` (lieux connus par leur sous-zone, `Libs/Socle/Hubs.lua`) et `tools/gen_places.py` (camps repérés par leurs PNJ de service, `Libs/Socle/Places.lua`), depuis `data/`. Donjons : `tools/gen_dungeons.py`.
 - **Notre base de données** (`data/`) : PNJ, objets, quêtes et zones de Forever (et d'Era, gardées pour les outils), importés une fois de [Questie](https://github.com/Questie/QuestieDB) puis corrigés et complétés ici. Les tables de zone de QuestCompanion en sont générées par `tools/gen_zone_data.py`. Voir [docs/DONNEES.md](docs/DONNEES.md).
-- Logos des pages et icône de QuestCompanion : `tools/gen_store_logos.py`.
+- Logos des pages et icône de QuestCompanion : `tools/gen_store_logos.py`. Paysages peints des photos souvenirs : `tools/gen_memory_scenes.py` (les écrans de chargement du jeu sont référencés par identifiant de fichier, jamais livrés).
 
 ## Licence
 

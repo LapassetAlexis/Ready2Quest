@@ -1,7 +1,7 @@
 <!--
 Fiche de la page Ready2Quest sur CurseForge et Wago (à copier à la main, voir docs/PUBLIER.md).
-Summary EN (256 caractères max, ici 234) :
-  Leave town ready: a readiness score before each outing (food, bag space, durability, buffs, hearthstone), trip reports when you return, dungeon briefs, campfire kit tracking and gear stat diffs. For For WoW Forever. EN/FR.
+Summary EN (256 caractères max, ici 218) :
+  Leave town ready: a readiness score before each outing (food, bag space, durability, buffs, hearthstone), trip reports when you return, dungeon briefs, campfire kit tracking and gear stat diffs. For WoW Forever. EN/FR.
 Summary FR (256 caractères max, ici 240) :
   Pars prêt : une note de préparation avant chaque sortie (vivres, place dans les sacs, durabilité, buffs, pierre de foyer), le bilan au retour, la fiche du donjon, le kit de camp et le résumé de stuff. Pour WoW Forever. FR/EN.
 Catégories : Quests & Leveling (principale), Bags & Inventory (additionnelle).
@@ -26,12 +26,15 @@ Each one can be switched on or off in one click (`/r2q options`).
 - **Camp kit** *(Forever)*: your campfire kit and camp item ready, and a countdown for camp buffs.
 - **Gear summary**: a short toast with the stats you gained or lost when you swap an item.
 - **Portrait stats**: hover your portrait to see your main stats, picked for your class and spec.
+- **Aggro range**: hold Shift out of combat and each hostile nameplate gets a small diamond (or a line, or a ring): red inside its estimated aggro radius, amber close, green safe; its tooltip gives the radius, your distance and the verdict.
 
 ## Quality of life
 
 - **Best quest reward**: the reward that helps you most is highlighted ("For you"). If none is an upgrade, the one that sells best gets the "To sell" tag.
 - **Leveling pace**: XP per hour, time to next level, rested XP you would gain by logging out here (`/r2q xp`).
 - **Full bags**: out in the wild with full bags? It suggests the item you lose least by dropping, and always asks before destroying anything.
+- **Room for loot**: loot that won't fit in your full bags? It offers your cheapest items (vendor and auction price), drops the one you pick and picks the loot up for you; anything better than white asks first.
+- **Spell ranks**: after training, it tells you which action bar buttons still use an old rank of a spell and swaps them in one click, out of combat.
 - **After death**: run back or use the spirit healer? Both options with the numbers.
 - **Merchant**: auto-sell greys and auto-repair (both can be turned off).
 
@@ -66,12 +69,15 @@ Chacun s'active ou se coupe d'un clic (`/r2q options`).
 - **Kit de camp** *(Forever)* : ton kit de feu de camp et ton objet de camp prêts, et le compte à rebours des buffs au camp.
 - **Résumé de stuff** : un petit résumé éphémère des stats gagnées ou perdues quand tu changes d'objet.
 - **Stats du portrait** : survole ton portrait pour voir tes stats principales, choisies selon ta classe et ta spécialisation.
+- **Portée d'aggro** : maintiens Maj hors combat et chaque barre de nom hostile reçoit un petit losange (ou un trait, ou un anneau) : rouge dans son rayon d'aggro estimé, ambre tout près, vert tranquille ; son infobulle donne le rayon, ta distance et le verdict.
 
 ## Confort
 
 - **La bonne récompense de quête** : celle qui t'aide le plus est mise en avant (« Pour toi »). Si aucune n'est une amélioration, celle qui se vend le mieux porte l'étiquette « À vendre ».
 - **Rythme de leveling** : XP par heure, temps avant le prochain niveau, XP de repos gagnée si tu te déconnectes ici (`/r2q xp`).
 - **Sac plein** : en pleine nature avec les sacs pleins ? Il te propose l'objet que tu perds le moins à jeter, et demande toujours avant de détruire quoi que ce soit.
+- **Place au butin** : un butin qui ne rentre pas dans tes sacs pleins ? Il te propose tes objets les moins chers (prix marchand et hôtel des ventes), jette celui que tu choisis et ramasse le butin à ta place ; au-delà du blanc, il demande d'abord.
+- **Rangs de sorts** : après l'entraîneur, il te dit quels boutons de tes barres utilisent encore un ancien rang d'un sort et les remplace d'un clic, hors combat.
 - **Après la mort** : courir jusqu'au corps ou passer par le gardien des âmes ? Les deux choix, avec les chiffres.
 - **Marchand** : vente automatique des gris et réparation automatique (les deux se coupent).
 

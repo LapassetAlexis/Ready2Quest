@@ -58,6 +58,8 @@ python3 -I tools/sync_socle.py                                     # recopie le 
 python3 tests/run_tests.py             # refuse de tourner si un fichier généré ne suit plus data/
 ```
 
+Les tables de zone de QuestCompanion (`ZoneCreatures_Forever.lua`, `ZoneQuests_Forever.lua`) sont **paresseuses** : une fonction par zone, construite à la première lecture (`ns.LazyZones`, `QuestCompanion/Core.lua`). En Lua, `pairs` n'y voit que les zones déjà lues : on les parcourt avec `ns.ZoneIds(t)` (identifiants) et `ns.ZoneEach(t, fn)` (chaque zone, sans garder celles qui n'étaient pas encore lues).
+
 Un PNJ de service corrigé ou ajouté dans `fixes.json` (par exemple un camp de Forever que Questie ne connaît pas encore) devient un lieu sûr à la prochaine génération de `Places.lua`.
 
 ## Reprendre des nouveautés de Questie (facultatif)
