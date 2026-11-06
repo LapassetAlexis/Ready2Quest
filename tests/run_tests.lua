@@ -130,6 +130,13 @@ local function NewRegion(kind, name, parent)
 	function region:SetFixedFrameLevel() end
 	-- coordonnées de texture : gardées pour l'aperçu (une icône retournée)
 	function region:SetTexCoord(...) self.texCoord = { ... } end
+	-- rotation (radians, sens trigonométrique), mode de fusion, rognage des
+	-- enfants : gardés pour les tests et l'aperçu (tests/snapshot.lua)
+	function region:SetRotation(radians) self.rotation = radians end
+	function region:GetRotation() return self.rotation or 0 end
+	function region:SetBlendMode(mode) self.blendMode = mode end
+	function region:GetBlendMode() return self.blendMode or "BLEND" end
+	function region:SetClipsChildren(value) self.clipsChildren = value end
 	function region:SetWordWrap(wrap) self.wordWrap = wrap end
 	function region:SetFrameLevel(level) self.level = level; self.levelSet = true end
 	function region:GetFrameLevel() return self.level end

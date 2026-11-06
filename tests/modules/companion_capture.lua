@@ -47,7 +47,7 @@ function CP.Quiet()
 end
 function CP.Reset()
 	ResetWorld()
-	for _, field in ipairs({ "companionFrame", "companionBubble", "companionHover", "journalFrame", "capturePrompt", "captureQueueList", "captureNetButton" }) do
+	for _, field in ipairs({ "companionFrame", "companionBubble", "companionHover", "journalFrame", "capturePrompt", "captureQueueList", "captureNetButton", "captureToast" }) do
 		if NS[field] then NS[field]:Hide() end
 		NS[field] = nil
 	end
@@ -346,22 +346,36 @@ do
 	Check("[CAPFX] rareté : rare = violet, trois losanges", stage.rarity == NS.CAPTURE_RARITY.rare
 		and stage.pips[3]:IsShown() and not stage.pips[4]:IsShown())
 	Check("[CAPFX] le nom à la couleur de la rareté", stage.name:GetText() == "Ours gris")
-	Check("[CAPFX] t=0 : le filet est lancé", NS:CaptureStageUpdate(rolling.start) == "throw")
-	Check("[CAPFX] en vol : le filet maillé encore replié", NS:CaptureStageUpdate(rolling.start + 0.1) == "throw"
-		and not stage.mesh:IsShown())
-	Check("[CAPFX] après le vol : les secousses", NS:CaptureStageUpdate(rolling.start + NS.CAPTURE_THROW_TIME + 0.1) == "shake")
-	Check("[CAPFX] le filet maillé couvre la scène (cordes en losanges + bord)", stage.mesh:IsShown()
-		and #stage.mesh.lines > 12 and stage.mesh.width == stage.scene.width)
+	local art = NS.CAPTURE_ART
+	Check("[CAPFX] nos textures (Textures/, tools/gen_capture_assets.py) : filet, paquet, halo, rayons, ruban, étoiles, fond",
+		stage.net.texture == art.net and stage.bundle.texture == art.bundle and stage.halo.texture == art.halo
+		and stage.rays.texture == art.rays and stage.ribbonPanel.texture == art.ribbon and stage.starSlots[1].texture == art.stars
+		and stage.stageBg.texture == art.stage and stage.ropes[1].texture == art.rope)
+	Check("[CAPFX] halo, rayons, éclair et étincelles en fusion additive, pas le filet", stage.halo.blendMode == "ADD"
+		and stage.rays.blendMode == "ADD" and stage.flash.blendMode == "ADD" and stage.burst[1].blendMode == "ADD"
+		and stage.net.blendMode == nil)
+	Check("[CAPFX] t=0 : le paquet est lancé", NS:CaptureStageUpdate(rolling.start) == "throw" and stage.bundle:IsShown())
+	Check("[CAPFX] en vol : le paquet tourne, sa traînée derrière lui, le filet encore replié",
+		NS:CaptureStageUpdate(rolling.start + 0.3) == "throw" and (stage.bundle.rotation or 0) > 0
+		and stage.trail[1]:IsShown() and not stage.net:IsShown() and not stage.banner:IsShown())
+	Check("[CAPFX] à l'apogée : le filet s'ouvre, entier (moitié gauche de la feuille), encore petit",
+		NS:CaptureStageUpdate(rolling.start + NS.CAPTURE_THROW_TIME - 0.05) == "throw"
+		and stage.net:IsShown() and stage.net.texCoord[1] == 0 and stage.net.texCoord[2] == 0.5 and stage.netFrame:GetScale() < 1)
+	Check("[CAPFX] après le vol : les secousses ; l'ombre au sol, la poussière, le premier losange allumé",
+		NS:CaptureStageUpdate(rolling.start + NS.CAPTURE_THROW_TIME + 0.05) == "shake"
+		and stage.netShadow:IsShown() and stage.dust:IsShown() and stage.shakeDots[1]:IsShown() and not stage.bundle:IsShown())
 	NS:CaptureStageUpdate(rolling.start + NS.CAPTURE_THROW_TIME + NS.CAPTURE_DRAPE_TIME + 0.01)
-	Check("[CAPFX] posé : à sa taille, opaque, cordes à leur place", math.abs(stage.mesh:GetScale() - 1) < 0.08
-		and stage.mesh.alpha == 1 and not stage.mesh.tear)
+	Check("[CAPFX] posé : à sa taille, opaque, l'ombre recollée au filet", math.abs(stage.netFrame:GetScale() - 1) < 0.08
+		and stage.net.alpha == 1 and stage.netShadow.points[1].y > -12)
 	Check("[CAPFX] le vol retarde la première secousse", rolling.nextAt >= rolling.start + NS.CAPTURE_THROW_TIME + NS.CAPTURE_SHAKE_STEP - 1e-6)
 	for _ = 1, 4 do Mock:Advance(1); NS:CaptureTick(NS.Now()) end
 	Check("[CAPFX] verdict : capturé, la scène reste affichée", rolling.result == "ok" and stage:IsShown())
-	Check("[CAPFX] … bannière, gerbe de losanges", NS:CaptureStageUpdate(rolling.resultAt + 0.2) == "ok"
-		and stage.bannerText:GetText() == NS.L.CAPTURE_GOT and stage.particles[1]:IsShown())
-	Check("[CAPFX] … la gerbe s'éteint", NS:CaptureStageUpdate(rolling.resultAt + 1.5) == "ok" and not stage.particles[1]:IsShown())
-	Check("[CAPFX] … le filet s'est refermé et effacé", not stage.mesh:IsShown())
+	Check("[CAPFX] … ruban « Capturé ! », rayons, gerbe d'étincelles", NS:CaptureStageUpdate(rolling.resultAt + 0.2) == "ok"
+		and stage.banner:IsShown() and stage.bannerText:GetText() == NS.L.CAPTURE_GOT and stage.rays:IsShown()
+		and stage.burst[1]:IsShown() and not stage.shakeDots[1]:IsShown())
+	Check("[CAPFX] … la gerbe s'éteint, le filet s'est refermé et effacé", NS:CaptureStageUpdate(rolling.resultAt + 1.5) == "ok"
+		and not stage.burst[1]:IsShown() and not stage.net:IsShown() and not stage.netShadow:IsShown())
+	Check("[CAPFX] … pas de motes dorées ni de seconde gerbe : pas une brillante", not stage.motes[1]:IsShown() and not stage.rays2:IsShown())
 	stage:GetScript("OnMouseUp")(stage)
 	NS:CaptureTick(NS.Now())
 	Check("[CAPFX] un clic ferme la scène", not stage:IsShown() and NS:CaptureState().rolling == nil)
@@ -370,13 +384,34 @@ do
 	CP.Roll(0.99)
 	NS:CaptureThrow()
 	rolling = NS:CaptureState().rolling
+	Check("[CAPFX] nouveau lancer : le filet repart entier, rien ne vole", NS:CaptureStageUpdate(rolling.start + 0.1) == "throw"
+		and stage.net.texCoord[1] == 0 and not stage.ropes[1]:IsShown() and not stage.banner:IsShown())
 	for _ = 1, 4 do Mock:Advance(1); NS:CaptureTick(NS.Now()) end
 	Check("[CAPFX] échec : « Échappé », en rouge", rolling.result == "fail"
 		and NS:CaptureStageUpdate(rolling.resultAt + 0.3) == "fail" and stage.bannerText:GetText() == NS.L.CAPTURE_FLED)
+	Check("[CAPFX] … le filet déchiré (moitié droite) tombe, ses cordes volent, la poussière de la fuite",
+		stage.net.texCoord[1] == 0.5 and stage.net:IsShown() and stage.netFrame.points[1].y < 0
+		and stage.ropes[1]:IsShown() and stage.puffs[1]:IsShown() and not stage.starSlots[1]:IsShown())
+	Check("[CAPFX] … puis tout est retombé", NS:CaptureStageUpdate(rolling.resultAt + 1.5) == "fail"
+		and not stage.net:IsShown() and not stage.ropes[1]:IsShown())
 	for _ = 1, 5 do Mock:Advance(1); NS:CaptureTick(NS.Now()) end
 	Check("[CAPFX] fermée seule après le temps d'affichage", not stage:IsShown())
-	-- brillante : dorée
+	-- brillante : dorée, deux gerbes de rayons, motes
 	Check("[CAPFX] brillante : couleur dorée", NS:CaptureRarity({ class = "normal", shiny = true }).color == NS.Theme.GOLD_LIGHT)
+	NS.SHINY_CHANCE = 1
+	CP.SeeKill(3602, { name = "Cerf", level = 20 })
+	NS.SHINY_CHANCE = 0
+	CP.Roll(0)
+	NS:CaptureThrow()
+	rolling = NS:CaptureState().rolling
+	Check("[CAPFX] brillante lancée : le nom le dit, le filet entier", rolling.target.shiny == true
+		and stage.name:GetText() == NS:F("CAPTURE_SHINY_TAG", "Cerf") and stage.net.texCoord[1] == 0)
+	for _ = 1, 4 do Mock:Advance(1); NS:CaptureTick(NS.Now()) end
+	Check("[CAPFX] … capturée : deuxième gerbe à contresens, motes dorées, pied « Brillante ! »",
+		NS:CaptureStageUpdate(rolling.resultAt + 0.5) == "ok" and stage.rays2:IsShown() and (stage.rays2.rotation or 0) < 0
+		and stage.motes[1]:IsShown() and stage.footer:GetText() == NS.L.CAPTURE_STAGE_SHINY)
+	stage:GetScript("OnMouseUp")(stage)
+	NS:CaptureTick(NS.Now())
 	Check("[CAPFX] boss : cinq losanges", NS:CaptureRarity({ class = "worldboss" }).pips == 5)
 	local row
 	for _, r in ipairs(NS.DAILY_OPTION_ROWS) do if r.key == "companionCaptureAnim" then row = r end end

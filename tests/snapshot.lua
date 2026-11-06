@@ -345,14 +345,25 @@ function Snap.Render(root, opts)
 			math.max(0, r.width), math.max(0, r.height))
 		if region.kind == "Texture" then
 			local style, file = TextureStyle(region, alpha)
-			-- texture retournée par SetTexCoord (haut et bas échangés)
+			-- texture retournée par SetTexCoord (haut et bas échangés), tournée
+			-- (SetRotation, sens trigonométrique), en fusion additive ; une
+			-- découpe de feuille de sprites part en data-crop (tests/snapshot.py)
 			local tc = region.texCoord
-			if style and tc and #tc == 4 and tc[3] > tc[4] then style = style .. ";transform:scaleY(-1)" end
+			local transform, crop = "", ""
+			if tc and #tc == 4 then
+				if tc[3] > tc[4] then transform = " scaleY(-1)" end
+				crop = string.format(' data-crop="%.4f,%.4f,%.4f,%.4f"', tc[1], tc[2], math.min(tc[3], tc[4]), math.max(tc[3], tc[4]))
+			end
+			if region.rotation and region.rotation ~= 0 then
+				transform = transform .. string.format(" rotate(%.1fdeg)", -math.deg(region.rotation))
+			end
+			if style and transform ~= "" then style = style .. ";transform:" .. transform:sub(2) end
+			if style and region.blendMode == "ADD" then style = style .. ";mix-blend-mode:plus-lighter" end
 			if style then
 				if file then
 					local v = region.vertex or { 1, 1, 1, 1 }
-					out[#out + 1] = string.format('<div class="tex file" data-src="%s" data-tint="%s" style="%s;%s" title="%s">%s</div>',
-						Escape(tostring(file)), Css(v[1], v[2], v[3], (v[4] or 1) * alpha), pos, style, Escape(tostring(file)),
+					out[#out + 1] = string.format('<div class="tex file" data-src="%s" data-tint="%s"%s style="%s;%s" title="%s">%s</div>',
+						Escape(tostring(file)), Css(v[1], v[2], v[3], (v[4] or 1) * alpha), crop, pos, style, Escape(tostring(file)),
 						(r.width >= 24 and r.height >= 10) and Escape(Basename(file)) or "")
 				else
 					out[#out + 1] = string.format('<div class="tex" style="%s;%s"></div>', pos, style)
@@ -1308,7 +1319,9 @@ local function QCCaptureStage(T, success, at)
 		rolling.done = rolling.shakes
 		rolling.result = success and "ok" or "fail"
 		rolling.resultAt = rolling.start + 3
-		ns:CaptureStageUpdate(rolling.resultAt + (success and 0.35 or 0.3))
+		-- deux étoiles sur trois (CaptureQueue.lua les tire à la résolution)
+		rolling.stars = success and 2 or nil
+		ns:CaptureStageUpdate(rolling.resultAt + (success and 0.85 or 0.3))
 	end
 	return Centered(ns.captureStage)
 end
@@ -1316,10 +1329,19 @@ Snap.scenes["qc-capture-shake"] = function(T)
 	return QCCaptureStage(T, true, "shake"), "QuestCompanion : capture animée, le filet secoue (rare)"
 end
 Snap.scenes["qc-capture-ok"] = function(T)
-	return QCCaptureStage(T, true, "ok"), "QuestCompanion : capture animée, capturé ! (gerbe de losanges)"
+	return QCCaptureStage(T, true, "ok"), "QuestCompanion : capture animée, capturé ! (rayons, gerbe, ruban, étoiles)"
 end
 Snap.scenes["qc-capture-fail"] = function(T)
 	return QCCaptureStage(T, false, "fail"), "QuestCompanion : capture animée, échappé"
+end
+-- le bandeau « Capture possible » (2.1.0), deux candidats dans le filet
+Snap.scenes["qc-capture-toast"] = function(T)
+	local ns = QCWorld(T)
+	ns:BestiaryData()[1413] = { [3100] = { name = "Ours gris", class = "rare", level = 21, killed = 1 },
+		[3101] = { name = "Sanglier", class = "normal", level = 20, killed = 1 } }
+	ns:CaptureOffer("Creature-0-1-1-1-3100-0001", { zoneID = 1413, npcID = 3100 })
+	ns:CaptureOffer("Creature-0-1-1-1-3101-0001", { zoneID = 1413, npcID = 3101 })
+	return Centered(ns:CaptureToastShow()), "QuestCompanion : bandeau « Capture possible » (rare, et 1 de plus)"
 end
 
 Snap.scenes["qc-chest"] = function(T)

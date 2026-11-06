@@ -31,10 +31,21 @@ ns.CAPTURE_STAR_MAX = 3
 -- capture sur dix en moyenne, de quoi donner envie de recapturer sans
 -- en faire une corvée.
 ns.CAPTURE_STAR_ODDS = { 60, 30, 10 }
--- l'étoile (icône de cible du jeu, teintée) : pleine dorée, vide grise
-ns.CAPTURE_STAR_ICON = "Interface\\TargetingFrame\\UI-RaidTargetingIcon_1"
-local NET_ICON = "Interface\\Icons\\Spell_Nature_Web"
-local NET_SIZE = 22
+-- les étoiles et le glyphe du filet : nos textures (CaptureStage.lua,
+-- tools/gen_capture_assets.py), sinon celles du jeu
+local ART = ns.CAPTURE_ART
+ns.CAPTURE_STAR_ICON = ART and ART.stars or "Interface\\TargetingFrame\\UI-RaidTargetingIcon_1"
+local NET_ICON = ART and ART.icon or "Interface\\Icons\\Spell_Nature_Web"
+local ICON_GAME_SHINY, ICON_GAME_REST = { 1, 0.85, 0.4 }, { 1, 1, 1 }
+-- Le filet (2.1.0) : un vrai bouton de 44 px, à côté du compagnon (pas sur
+-- son portrait, où il passait inaperçu), qui suit sa taille et bat en doré
+-- quand un candidat arrive ; et un bandeau « Capture possible ».
+local NET_SIZE = 44
+ns.CAPTURE_NET_SIZE = NET_SIZE
+ns.CAPTURE_NET_GAP = 8            -- px entre le cadre du compagnon et le filet
+ns.CAPTURE_NET_PULSE = 4          -- s de battement doré à l'arrivée d'un candidat
+ns.CAPTURE_TOAST_SECONDS = 5      -- s d'affichage du bandeau « Capture possible »
+local TOAST_W, TOAST_H, TOAST_ICON = 300, 60, 30
 local LIST_W, LIST_ROW_H, LIST_ROWS = 300, 24, 6
 
 local RANK_ORDER = { trivial = 0, minus = 0, normal = 1, elite = 2, rare = 3, rareelite = 4, worldboss = 5 }
@@ -54,6 +65,11 @@ local FR = {
 	CAPTURE_Q_EMPTY        = "Rien à capturer pour l'instant.",
 	CAPTURE_Q_LIST_HINT    = "Clic sur une ligne : la capturer. L'aide choisie sert au prochain essai.",
 	CAPTURE_Q_AID          = "Aide : %s",
+	CAPTURE_TOAST_TITLE    = "Capture possible",
+	CAPTURE_TOAST_MORE     = "et %d de plus",
+	CAPTURE_TOAST_HINT     = "Clic : capturer · clic droit : la liste",
+	OPT_DAILY_CAPTURE_TOAST = "Bandeau « Capture possible »",
+	OPT_DAILY_CAPTURE_TOAST_DESC = "Un bandeau dès qu'un monstre abattu peut être capturé (après le combat). Clic dessus : le filet.",
 	CAPTURE_STARS_LABEL    = "Qualité : %s",
 	CAPTURE_MSG_STARS      = "%s : %s.",
 	CAPTURE_MSG_STARS_BEST = "%s : %s, ton meilleur spécimen !",
@@ -76,6 +92,11 @@ local EN = {
 	CAPTURE_Q_EMPTY        = "Nothing to capture right now.",
 	CAPTURE_Q_LIST_HINT    = "Click a line to capture it. The chosen aid is used on the next try.",
 	CAPTURE_Q_AID          = "Aid: %s",
+	CAPTURE_TOAST_TITLE    = "Capture possible",
+	CAPTURE_TOAST_MORE     = "and %d more",
+	CAPTURE_TOAST_HINT     = "Click: capture · right-click: the list",
+	OPT_DAILY_CAPTURE_TOAST = "\"Capture possible\" banner",
+	OPT_DAILY_CAPTURE_TOAST_DESC = "A banner as soon as a defeated monster can be captured (after combat). Click it: the net.",
 	CAPTURE_STARS_LABEL    = "Quality: %s",
 	CAPTURE_MSG_STARS      = "%s: %s.",
 	CAPTURE_MSG_STARS_BEST = "%s: %s, your best specimen!",
@@ -85,6 +106,19 @@ local EN = {
 }
 ns.RegisterStrings(FR, EN)
 if ns.KEEP_STRINGS then ns.CAPTURE_QUEUE_STRINGS = { fr = FR, en = EN } end
+
+ns.RegisterDefaults({ companionCaptureToast = true })
+if type(ns.DAILY_OPTION_ROWS) == "table" then
+	local present, at = false, 1
+	for index, row in ipairs(ns.DAILY_OPTION_ROWS) do
+		if row.key == "companionCaptureToast" then present = true end
+		if row.key == "companionCapture" or row.key == "companionCaptureAnim" then at = index + 1 end
+	end
+	if not present then
+		table.insert(ns.DAILY_OPTION_ROWS, at, { key = "companionCaptureToast", label = "OPT_DAILY_CAPTURE_TOAST", kind = "bool",
+			describe = function() return L.OPT_DAILY_CAPTURE_TOAST_DESC end })
+	end
+end
 
 local function G(name) return rawget(_G, name) end
 local function Clock() return (ns.Now and ns.Now()) or 0 end
@@ -162,7 +196,12 @@ end
 
 -- Texte des étoiles (pleines dorées, vides grises), pour le chat et les fiches
 local function StarIcon(full, size)
-	local c = full and { 246, 199, 125 } or { 90, 90, 90 }
+	local c = full and { 246, 199, 125 } or { 120, 126, 132 }
+	if ART and ns.CAPTURE_STAR_ICON == ART.stars then
+		-- notre feuille 128x64 : l'étoile pleine à gauche, la vide à droite
+		local x = full and 0 or 64
+		return string.format("|T%s:%d:%d:0:0:128:64:%d:%d:0:64:%d:%d:%d|t", ns.CAPTURE_STAR_ICON, size, size, x, x + 64, c[1], c[2], c[3])
+	end
 	return string.format("|T%s:%d:%d:0:0:16:16:0:16:0:16:%d:%d:%d|t", ns.CAPTURE_STAR_ICON, size, size, c[1], c[2], c[3])
 end
 function ns:CaptureStarsText(stars, size)
@@ -303,6 +342,8 @@ function ns:CaptureOffer(guid, entry, shiny)
 	-- le compagnon le signale pour une nouveauté (pas pour chaque amélioration)
 	if candidate.reason ~= "stars" then self:CompanionSay("CAPTURE_PROMPT", { args = { candidate.name } }) end
 	self:CaptureQueueRefresh()
+	-- et le bandeau « Capture possible » ; en combat, il attend la fin du combat
+	if not InCombat() then self:CaptureToastShow() end
 	return candidate
 end
 
@@ -358,6 +399,7 @@ do
 			end
 			if not picked then return false end
 			self:CaptureQueueRemove(picked)
+			self:CaptureToastHide()
 			local pending = {}
 			for key, value in pairs(picked) do pending[key] = value end
 			pending.expires = Clock() + (ns.CAPTURE_WINDOW or 12)
@@ -466,7 +508,12 @@ do
 		if not (queue and #queue > 0) then return end
 		now = now or Clock()
 		local changed = false
-		if not InCombat() and self:CaptureQueueStartTimers(now) then changed = true end
+		if self.captureToastHideAt and now >= self.captureToastHideAt then self:CaptureToastHide() end
+		if not InCombat() and self:CaptureQueueStartTimers(now) then
+			changed = true
+			-- fin du combat : ceux qui attendaient sont annoncés
+			self:CaptureToastShow()
+		end
 		local due = changed or state.queuePrunedSerial ~= self:CaptureData().serial or not state.queuePrunedAt
 			or now - state.queuePrunedAt >= ns.CAPTURE_QUEUE_PRUNE_GAP or now < state.queuePrunedAt
 		if not due then
@@ -485,31 +532,21 @@ do
 	end
 end
 
--- La scène : les étoiles du spécimen sous la rareté
+-- La scène : le pied dit si le spécimen bat celui qu'on avait (les étoiles
+-- elles-mêmes sont dessinées par CaptureStage.lua, depuis rolling.stars)
 do
 	local base = ns.CaptureStageUpdate
 	if base then
 		function ns:CaptureStageUpdate(now)
 			local phase = base(self, now)
 			local frame = self.captureStage
-			if not frame then return phase end
-			if not frame.qcStars then
-				frame.qcStars = Theme.Text(frame, Theme.F_BODY, Theme.PARCHMENT)
-				frame.qcStars:SetPoint("TOP", frame.name, "BOTTOM", 0, -18)
-				frame.qcStars:SetJustifyH("CENTER")
-			end
-			local rolling = frame.rolling
-			if phase == "ok" and rolling and rolling.stars then
-				frame.qcStars:SetText(self:CaptureStarsText(rolling.stars, 16))
-				frame.qcStars:Show()
+			local rolling = frame and frame.rolling
+			if phase == "ok" and rolling and rolling.starsBefore then
 				local r = now - (rolling.resultAt or now)
-				if rolling.starsBefore and r <= 1.2 then
+				if r <= 1.2 then
 					frame.footer:SetText(rolling.starsBetter and L.CAPTURE_STAGE_BEST
 						or self:F("CAPTURE_STAGE_KEPT", rolling.starsBefore))
 				end
-			else
-				frame.qcStars:SetText("")
-				frame.qcStars:Hide()
 			end
 			return phase
 		end
@@ -539,10 +576,25 @@ local function ShowNetTooltip(button)
 	tooltip:Show()
 end
 
--- Le filet vit sur l'écran, pas dans le cadre du compagnon (QC 2.0) : posé
--- sur le compagnon quand il est affiché, seul sous le personnage quand le
+-- Le filet vit sur l'écran, pas dans le cadre du compagnon (QC 2.0) : à
+-- côté du compagnon quand il est affiché (à sa droite, ou à sa gauche s'il
+-- touche le bord de l'écran), à sa taille ; seul sous le personnage quand le
 -- compagnon est masqué (réglage) — on peut toujours capturer.
 ns.CAPTURE_NET_ALONE = { point = "CENTER", x = 0, y = -170 }
+
+-- Le compagnon touche-t-il le bord droit de l'écran, filet compris ?
+local function NetCrowdsRight(frame, scale)
+	if not (frame.GetRight and UIParent and UIParent.GetWidth) then return false end
+	local ok, right = pcall(frame.GetRight, frame)
+	right = ok and tonumber(ns.Plain and ns.Plain(right) or right) or nil
+	if not right then return false end
+	local frameScale = (frame.GetEffectiveScale and frame:GetEffectiveScale()) or 1
+	local screen = (UIParent:GetWidth() or 0) * ((UIParent.GetEffectiveScale and UIParent:GetEffectiveScale()) or 1)
+	if screen <= 0 then return false end
+	local needed = (ns.CAPTURE_NET_GAP + NET_SIZE + 4) * (scale or 1) * frameScale
+	return right * frameScale + needed > screen
+end
+
 function ns:CapturePlaceNet()
 	local button = self.captureNetButton
 	if not button then return nil end
@@ -550,14 +602,25 @@ function ns:CapturePlaceNet()
 	local onCompanion = frame and frame.IsShown and frame:IsShown() and true or false
 	button:ClearAllPoints()
 	if onCompanion then
-		button:SetPoint("TOPLEFT", frame, "TOPLEFT", 4, -4)
+		local scale = (frame.GetScale and frame:GetScale()) or 1
+		if button.SetScale then button:SetScale(scale) end
+		local gap = ns.CAPTURE_NET_GAP
+		if NetCrowdsRight(frame, 1) then
+			button:SetPoint("RIGHT", frame, "LEFT", -gap, 0)
+			button.side = "left"
+		else
+			button:SetPoint("LEFT", frame, "RIGHT", gap, 0)
+			button.side = "right"
+		end
 		if button.SetFrameStrata and frame.GetFrameStrata then pcall(button.SetFrameStrata, button, frame:GetFrameStrata()) end
 		button:SetFrameLevel((frame:GetFrameLevel() or 1) + 8)
 		frame.captureNet = button
 	else
+		if button.SetScale then button:SetScale(1) end
 		local spot = ns.CAPTURE_NET_ALONE
 		button:SetPoint(spot.point, UIParent, spot.point, spot.x, spot.y)
 		if button.SetFrameStrata then pcall(button.SetFrameStrata, button, "MEDIUM") end
+		button.side = nil
 	end
 	button.alone = not onCompanion
 	return onCompanion and "companion" or "alone"
@@ -572,8 +635,13 @@ function ns:EnsureCaptureNet()
 	button.glow = Theme.Solid(button, "BACKGROUND", Theme.GOLD_LIGHT, 0)
 	button.glow:SetPoint("TOPLEFT", button, "TOPLEFT", -3, 3)
 	button.glow:SetPoint("BOTTOMRIGHT", button, "BOTTOMRIGHT", 3, -3)
-	button.count = Theme.Text(button, Theme.F_SMALL, Theme.PARCHMENT)
-	button.count:SetPoint("BOTTOMRIGHT", button, "BOTTOMRIGHT", 3, -3)
+	-- le compteur, dans un coin sombre pour rester lisible sur l'icône
+	button.countBack = Theme.Solid(button, "ARTWORK", Theme.INK or { 0, 0, 0 }, 0.75)
+	button.countBack:SetSize(18, 16)
+	button.countBack:SetPoint("BOTTOMRIGHT", button, "BOTTOMRIGHT", -1, 1)
+	button.count = Theme.Text(button, Theme.F_LABEL, Theme.PARCHMENT)
+	button.count:SetPoint("CENTER", button.countBack, "CENTER", 0, 0)
+	button.count:SetJustifyH("CENTER")
 	button:SetScript("OnClick", function(_, mouse)
 		if mouse == "RightButton" then ns:CaptureToggleQueueList() else ns:CaptureThrow() end
 	end)
@@ -584,10 +652,18 @@ function ns:EnsureCaptureNet()
 		local tooltip = Tooltip()
 		if tooltip and tooltip.Hide then tooltip:Hide() end
 	end)
-	-- scintillement : seulement quand une brillante attend
+	-- scintillement : tant qu'une brillante attend, et quelques secondes à
+	-- l'arrivée d'un candidat (le battement attire l'œil, sans clignoter)
 	button:SetScript("OnUpdate", function(b)
-		if not b.shiny then return end
-		b.glow:SetAlpha(0.20 + 0.35 * math.abs(math.sin(Clock() * 3)))
+		local now = Clock()
+		if b.shiny then
+			b.glow:SetAlpha(0.20 + 0.35 * math.abs(math.sin(now * 3)))
+		elseif b.pulseUntil and now < b.pulseUntil then
+			b.glow:SetAlpha(0.15 + 0.35 * math.abs(math.sin(now * 2.5)))
+		elseif b.pulseUntil then
+			b.pulseUntil = nil
+			b.glow:SetAlpha(0)
+		end
 	end)
 	button:Hide()
 	self:CapturePlaceNet()
@@ -598,17 +674,21 @@ end
 function ns:CaptureStyleNet()
 	local button = self.captureNetButton
 	if not button then return end
-	local lit = button.hover or button.shiny
 	if button.icon.SetDesaturated then button.icon:SetDesaturated(false) end
-	button.icon:SetAlpha(lit and 1 or 0.85)
-	local c = button.shiny and Theme.GOLD_LIGHT or (button.hover and Theme.GOLD or Theme.EDGE)
+	button.icon:SetAlpha(1)
+	-- liseré doré au repos (un filet qui attend doit se voir), or clair au
+	-- survol ou pour une brillante
+	local c = (button.shiny or button.hover) and Theme.GOLD_LIGHT or Theme.GOLD
 	if button.border and button.border.SetColor then button.border:SetColor(c[1], c[2], c[3], 1) end
-	if button.shiny then
-		button.icon:SetVertexColor(1, 0.85, 0.4, 1)
-	else
-		button.icon:SetVertexColor(1, 1, 1, 1)
-		button.glow:SetAlpha(0)
-	end
+	local g = button.shiny and Theme.GOLD_LIGHT or Theme.GOLD
+	if button.glow.SetVertexColor then button.glow:SetVertexColor(g[1], g[2], g[3], 1) end
+	-- notre glyphe blanc prend sa couleur : ambre au repos, or si brillante
+	-- ou au survol (l'icône du jeu, en repli, reste en couleurs)
+	local ours = ART and NET_ICON == ART.icon
+	local tint = button.shiny and (ours and Theme.GOLD_LIGHT or ICON_GAME_SHINY)
+		or (ours and (button.hover and Theme.GOLD_LIGHT or Theme.GOLD) or ICON_GAME_REST)
+	button.icon:SetVertexColor(tint[1], tint[2], tint[3], 1)
+	if not button.shiny and not (button.pulseUntil and Clock() < button.pulseUntil) then button.glow:SetAlpha(0) end
 end
 
 -- Bouton et liste à jour (après chaque changement de la file)
@@ -622,17 +702,122 @@ function ns:CaptureQueueRefresh()
 			if count > 0 then
 				button.count:SetText(tostring(count))
 				button.shiny = self:CaptureQueueHasShiny()
+				-- un candidat de plus : le filet bat quelques secondes
+				if count > (button.lastCount or 0) then button.pulseUntil = Clock() + ns.CAPTURE_NET_PULSE end
+				button.lastCount = count
 				self:CaptureStyleNet()
 				button:Show()
 			else
-				button.shiny = nil
+				button.shiny, button.lastCount, button.pulseUntil = nil, 0, nil
 				button:Hide()
 			end
 		end
 	end
+	if count == 0 then self:CaptureToastHide() end
 	if count == 0 then self:CaptureHideQueueList()
 	elseif self.captureQueueList and self.captureQueueList:IsShown() then self:CaptureRefreshQueueList() end
 	return count
+end
+
+-- ---------------------------------------------------------------------------
+-- Le bandeau « Capture possible » (2.1.0) : dès qu'un monstre abattu peut
+-- être capturé, hors combat (en combat, il attend la fin du combat, comme le
+-- compte à rebours de la file). Même bandeau que les tampons du carnet :
+-- liseré doré, icône du filet, titre en capitales, le nom de la créature.
+-- Clic : le filet (le meilleur candidat) ; clic droit : la liste. Il se
+-- déplace comme les autres bandeaux et garde sa place (captureToastPoint).
+-- ---------------------------------------------------------------------------
+function ns:EnsureCaptureToast()
+	if self.captureToast then return self.captureToast end
+	if not (Theme and Theme.CreateToast) then return nil end
+	local frame = Theme.CreateToast(UIParent, TOAST_W, TOAST_H, { strata = "HIGH", accent = Theme.GOLD })
+	if not frame then return nil end
+	local left = frame.contentLeft or 14
+	frame.icon = frame:CreateTexture(nil, "ARTWORK")
+	frame.icon:SetTexture(NET_ICON)
+	frame.ownGlyph = ART and NET_ICON == ART.icon
+	if frame.ownGlyph then
+		frame.icon:SetVertexColor(Theme.GOLD[1], Theme.GOLD[2], Theme.GOLD[3], 1)
+	else
+		frame.icon:SetTexCoord(0.08, 0.92, 0.08, 0.92)
+	end
+	frame.icon:SetSize(TOAST_ICON, TOAST_ICON)
+	frame.icon:SetPoint("LEFT", frame, "LEFT", left, 0)
+	local textLeft = left + TOAST_ICON + 10
+	local textW = TOAST_W - textLeft - 12
+	frame.title = Theme.Text(frame, Theme.F_CAPS, Theme.MUTED_LIGHT)
+	frame.title:SetPoint("TOPLEFT", frame, "TOPLEFT", textLeft, -9)
+	frame.title:SetWidth(textW)
+	frame.title:SetJustifyH("LEFT")
+	if frame.title.SetWordWrap then frame.title:SetWordWrap(false) end
+	frame.text = Theme.Text(frame, Theme.F_TITLE, Theme.PARCHMENT)
+	frame.text:SetPoint("TOPLEFT", frame, "TOPLEFT", textLeft, -23)
+	frame.text:SetWidth(textW)
+	frame.text:SetJustifyH("LEFT")
+	if frame.text.SetWordWrap then frame.text:SetWordWrap(false) end
+	frame.hint = Theme.Text(frame, Theme.F_SMALL, Theme.MUTED)
+	frame.hint:SetPoint("TOPLEFT", frame, "TOPLEFT", textLeft, -43)
+	frame.hint:SetWidth(textW)
+	frame.hint:SetJustifyH("LEFT")
+	if frame.hint.SetWordWrap then frame.hint:SetWordWrap(false) end
+	-- un bouton invisible par-dessus : clic, clic droit, et le glisser du bandeau
+	local ok, button = pcall(CreateFrame, "Button", nil, frame)
+	if ok and button then
+		button:SetAllPoints(frame)
+		if button.RegisterForClicks then button:RegisterForClicks("LeftButtonUp", "RightButtonUp") end
+		if button.RegisterForDrag then button:RegisterForDrag("LeftButton") end
+		button:SetScript("OnClick", function(_, mouse)
+			if mouse == "RightButton" then ns:CaptureToggleQueueList() else ns:CaptureThrow() end
+			ns:CaptureToastHide()
+		end)
+		button:SetScript("OnDragStart", function() if frame.StartMoving then pcall(frame.StartMoving, frame) end end)
+		button:SetScript("OnDragStop", function()
+			local stop = frame.GetScript and frame:GetScript("OnDragStop")
+			if type(stop) == "function" then pcall(stop, frame) elseif frame.StopMovingOrSizing then pcall(frame.StopMovingOrSizing, frame) end
+		end)
+		frame.button = button
+	end
+	if self.RestorePoint then self:RestorePoint(frame, "captureToastPoint", { point = "TOP", x = 0, y = -240 }) end
+	frame:Hide()
+	self.captureToast = frame
+	return frame
+end
+
+-- Montre (ou remet à jour) le bandeau pour le meilleur candidat de la file
+function ns:CaptureToastShow()
+	if not Enabled() or self:DB().companionCaptureToast == false or InCombat() then return nil end
+	local queue = self:CaptureQueuePrune()
+	local best = queue[1]
+	if not best then self:CaptureToastHide(); return nil end
+	local frame = self:EnsureCaptureToast()
+	if not frame then return nil end
+	local name = best.shiny and self:F("CAPTURE_SHINY_TAG", best.name) or best.name
+	frame.title:SetText(Theme.Upper and Theme.Upper(L.CAPTURE_TOAST_TITLE) or L.CAPTURE_TOAST_TITLE)
+	frame.text:SetText(name)
+	if #queue > 1 then
+		frame.hint:SetText(self:F("CAPTURE_TOAST_MORE", #queue - 1) .. "  ·  " .. L.CAPTURE_TOAST_HINT)
+	else
+		frame.hint:SetText(L.CAPTURE_TOAST_HINT)
+	end
+	local accent = best.shiny and (Theme.GOLD_LIGHT or Theme.GOLD) or Theme.GOLD
+	if frame.SetAccent then frame:SetAccent(accent) end
+	if frame.ownGlyph then frame.icon:SetVertexColor(accent[1], accent[2], accent[3], 1) end
+	frame.candidate = best
+	if not frame:IsShown() then
+		frame:Show()
+		if Theme.FadeIn then pcall(Theme.FadeIn, frame, 0.2) end
+	end
+	self.captureToastHideAt = Clock() + ns.CAPTURE_TOAST_SECONDS
+	return frame
+end
+
+function ns:CaptureToastHide()
+	self.captureToastHideAt = nil
+	local frame = self.captureToast
+	if frame then
+		frame.candidate = nil
+		frame:Hide()
+	end
 end
 
 -- ---------------------------------------------------------------------------
@@ -794,7 +979,8 @@ do
 	end
 end
 
--- compagnon montré ou masqué : le filet suit (sur lui, ou seul à l'écran)
+-- compagnon montré ou masqué : le filet suit (sur lui, ou seul à l'écran) ;
+-- sa taille changée (réglage) : le filet aussi
 do
 	local base = ns.CompanionUpdateVisibility
 	if base then
@@ -802,6 +988,14 @@ do
 			local a, b = base(self, ...)
 			if self.captureNetButton then pcall(self.CapturePlaceNet, self) end
 			return a, b
+		end
+	end
+	local size = ns.CompanionApplySize
+	if size then
+		function ns:CompanionApplySize(...)
+			local scale = size(self, ...)
+			if self.captureNetButton then pcall(self.CapturePlaceNet, self) end
+			return scale
 		end
 	end
 end

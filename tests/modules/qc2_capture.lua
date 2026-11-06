@@ -44,7 +44,7 @@ function Q.Install()
 end
 function Q.Reset()
 	ResetWorld()
-	for _, field in ipairs({ "companionFrame", "companionBubble", "companionHover", "journalFrame", "capturePrompt", "captureQueueList", "captureNetButton" }) do
+	for _, field in ipairs({ "companionFrame", "companionBubble", "companionHover", "journalFrame", "capturePrompt", "captureQueueList", "captureNetButton", "captureToast" }) do
 		if NS[field] then NS[field]:Hide() end
 		NS[field] = nil
 	end
@@ -328,11 +328,16 @@ do
 	local stage, rolling = NS.captureStage, NS:CaptureState().rolling
 	Check("[QC2CAP] clic sur le filet : la scène se joue", stage and stage:IsShown() and rolling ~= nil)
 	NS:CaptureStageUpdate(rolling.start + 0.1)
-	Check("[QC2CAP] pendant le lancer : pas d'étoiles", not stage.qcStars:IsShown())
+	Check("[QC2CAP] pendant le lancer : pas d'étoiles", not stage.starSlots[1]:IsShown())
 	for _ = 1, 4 do Mock:Advance(1); NS:CaptureTick(NS.Now()) end
 	Check("[QC2CAP] capturé : 3 étoiles tirées", rolling.result == "ok" and rolling.stars == 3)
-	Check("[QC2CAP] … affichées sous la rareté", NS:CaptureStageUpdate(rolling.resultAt + 0.3) == "ok"
-		and stage.qcStars:IsShown() and select(2, stage.qcStars:GetText():gsub("|T", "")) == 3)
+	Check("[QC2CAP] … affichées une à une sous la rareté (la troisième après 0,8 s), pleines",
+		NS:CaptureStageUpdate(rolling.resultAt + 0.5) == "ok" and stage.starSlots[1]:IsShown() and not stage.starSlots[3]:IsShown()
+		and NS:CaptureStageUpdate(rolling.resultAt + 1.0) == "ok" and stage.starSlots[3]:IsShown()
+		and stage.starSlots[3].texCoord[1] == 0 and stage.starSlots[3].texCoord[2] == 0.5 and stage.starSpark:IsShown())
+	Check("[QC2CAP] … le texte des étoiles découpe notre feuille (pleine à gauche, vide à droite)",
+		NS:CaptureStarsText(2, 12):find(":0:0:128:64:0:64:0:64:", 1, true) ~= nil
+		and NS:CaptureStarsText(2, 12):find(":0:0:128:64:64:128:0:64:", 1, true) ~= nil)
 	stage:GetScript("OnMouseUp")(stage)
 	NS:CaptureTick(NS.Now())
 	NS:DB().companionCaptureAnim = false
@@ -394,6 +399,93 @@ do
 	NS.EXTRA_COMMANDS["filet"](NS)
 	NS.Print = oldPrint
 	Check("[QC2CAP] /qc filet sans rien : le dit", printed[1] == NS.L.CAPTURE_Q_NOTHING, printed[1])
+end
+
+-- 7 quater. Filet visible : gros, à côté du compagnon, à sa taille ; bandeau « Capture possible » ------------
+do
+	Say("-- qc2 capture : filet visible et bandeau")
+	Q.Reset()
+	NS.captureToastHideAt = nil
+	NS:DB().companionSize = 2
+	NS:CompanionApplySize()
+	Q.SeeKill(4400, { name = "Raptor" })
+	local net = NS.captureNetButton
+	Check("[QC2CAP] filet : 44 px, icône 36 px, visible au repos", net and net.width == 44 and NS.CAPTURE_NET_SIZE == 44
+		and net.icon.width == 36 and net.icon.alpha == 1, net and net.width)
+	Check("[QC2CAP] filet : à côté du compagnon (à sa droite), pas sur son portrait", net.side == "right"
+		and net.lastPoint.point == "LEFT" and net.lastPoint.relTo == NS.companionFrame and net.lastPoint.relPoint == "RIGHT"
+		and net.lastPoint.x == NS.CAPTURE_NET_GAP, tostring(net.lastPoint.point) .. "/" .. tostring(net.lastPoint.relPoint))
+	Check("[QC2CAP] filet : compteur sur fond sombre", net.countBack and net.count:GetText() == "1")
+	Check("[QC2CAP] filet : il bat quelques secondes à l'arrivée", net.pulseUntil and net.pulseUntil > NS.Now())
+	net.scripts.OnUpdate(net)
+	Check("[QC2CAP] … le halo s'allume pendant le battement", (net.glow.alpha or 0) > 0)
+
+	-- le bandeau : hors combat, tout de suite
+	local toast = NS.captureToast
+	Check("[QC2CAP] bandeau « Capture possible » montré, nom de la créature", toast and toast:IsShown()
+		and toast.title:GetText() == NS.Theme.Upper(NS.L.CAPTURE_TOAST_TITLE) and toast.text:GetText() == "Raptor"
+		and toast.hint:GetText() == NS.L.CAPTURE_TOAST_HINT and NS.captureToastHideAt ~= nil, toast and toast.text:GetText())
+	Q.SeeKill(4401, { name = "Raptor B" })
+	Check("[QC2CAP] un deuxième : « et 1 de plus »", toast.hint:GetText():find("et 1 de plus", 1, true) ~= nil, toast.hint:GetText())
+	Mock:Advance(NS.CAPTURE_TOAST_SECONDS + 1); NS:CaptureTick(NS.Now())
+	Check("[QC2CAP] bandeau : s'efface seul au bout de " .. NS.CAPTURE_TOAST_SECONDS .. " s", not toast:IsShown() and NS.captureToastHideAt == nil)
+	net.scripts.OnUpdate(net)
+	Check("[QC2CAP] filet : le battement s'éteint", net.pulseUntil == nil and net.glow.alpha == 0)
+
+	-- il suit la taille du compagnon
+	NS:DB().companionSize = 4
+	NS:CompanionApplySize()
+	Check("[QC2CAP] filet : à la taille du compagnon (Très grand = ×1,6)", net:GetScale() == NS.COMPANION_SIZES[4], net:GetScale())
+	NS:DB().companionSize = 2
+	NS:CompanionApplySize()
+	Check("[QC2CAP] … et de retour à ×1", net:GetScale() == 1)
+	-- au bord droit de l'écran : il passe à gauche
+	NS.companionFrame.GetRight = function() return (UIParent:GetWidth() or 1024) - 10 end
+	NS:CapturePlaceNet()
+	Check("[QC2CAP] compagnon au bord droit : le filet passe à sa gauche", net.side == "left"
+		and net.lastPoint.point == "RIGHT" and net.lastPoint.relPoint == "LEFT")
+	NS.companionFrame.GetRight = nil
+	NS:CapturePlaceNet()
+	Check("[QC2CAP] … sinon à droite", net.side == "right")
+
+	-- en combat : le bandeau attend la fin du combat
+	NS:CaptureQueueClear()
+	Q.combat = true
+	Q.SeeKill(4402, { name = "Raptor C" })
+	Check("[QC2CAP] en combat : pas de bandeau", not toast:IsShown())
+	Q.combat = false
+	NS:CaptureTick(NS.Now())
+	Check("[QC2CAP] fin du combat : le bandeau", toast:IsShown() and toast.text:GetText() == "Raptor C")
+	-- clic : le filet ; le bandeau s'efface
+	Q.Roll(0)
+	toast.button:Click("LeftButton")
+	Check("[QC2CAP] clic sur le bandeau : capture lancée, bandeau effacé", NS:CaptureState().rolling ~= nil and not toast:IsShown())
+	Q.Settle()
+	-- clic droit : la liste
+	Q.SeeKill(4403, { name = "Raptor D" })
+	toast.button:Click("RightButton")
+	Check("[QC2CAP] clic droit : la liste, bandeau effacé", NS.captureQueueList and NS.captureQueueList:IsShown() and not toast:IsShown())
+	NS:CaptureHideQueueList()
+	-- brillante : nom marqué
+	NS:CaptureQueueClear()
+	NS.SHINY_CHANCE = 1
+	Q.Roll(0)
+	Q.SeeKill(4404, { name = "Raptor doré" })
+	NS.SHINY_CHANCE = 0
+	Check("[QC2CAP] brillante : le bandeau le dit", toast:IsShown() and toast.text:GetText():find("Raptor doré", 1, true)
+		and toast.text:GetText() ~= "Raptor doré", toast.text:GetText())
+	-- réglage coupé : plus de bandeau, le filet reste
+	NS:CaptureQueueClear()
+	NS:DB().companionCaptureToast = false
+	Q.SeeKill(4405, { name = "Raptor E" })
+	Check("[QC2CAP] réglage coupé : pas de bandeau, le filet reste", not toast:IsShown() and net:IsShown())
+	NS:DB().companionCaptureToast = true
+	local row
+	for _, def in ipairs(NS.DAILY_OPTION_ROWS) do if def.key == "companionCaptureToast" then row = def end end
+	Check("[QC2CAP] réglage « bandeau » dans la page Au jour le jour", row and row.kind == "bool" and row.describe() == NS.L.OPT_DAILY_CAPTURE_TOAST_DESC)
+	-- plus rien dans la file : bandeau et filet s'effacent
+	NS:CaptureQueueClear()
+	Check("[QC2CAP] file vidée : bandeau et filet effacés", not toast:IsShown() and not net:IsShown())
 end
 
 -- 7 ter. Coût : lectures des captures, horloge de la file -----------------------------------------------------

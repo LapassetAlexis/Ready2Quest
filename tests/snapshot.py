@@ -119,10 +119,10 @@ def addon_file(game_path):
 def embed_textures(out):
     text = open(out, encoding="utf-8").read()
     cache = {}
-    pattern = re.compile(r'<div class="tex file" data-src="([^"]*)" data-tint="([^"]*)" style="([^"]*)" title="[^"]*">[^<]*</div>')
+    pattern = re.compile(r'<div class="tex file" data-src="([^"]*)" data-tint="([^"]*)"(?: data-crop="([^"]*)")? style="([^"]*)" title="[^"]*">[^<]*</div>')
 
     def replace(match):
-        src, tint, style = html.unescape(match.group(1)), match.group(2), match.group(3)
+        src, tint, crop, style = html.unescape(match.group(1)), match.group(2), match.group(3), match.group(4)
         local = addon_file(src)
         if not local:
             return match.group(0)
@@ -138,12 +138,20 @@ def embed_textures(out):
                           float(tint_match.group(4)))
         else:
             r, g, b, a = 255, 255, 255, 1.0
+        # découpe d'une feuille de sprites (SetTexCoord) : position et taille du fond
+        geometry = "center/100% 100%"
+        if crop:
+            left, right, top, bottom = (float(v) for v in crop.split(","))   # l'ordre de SetTexCoord
+            width, height = max(right - left, 1e-6), max(bottom - top, 1e-6)
+            px = left / (1 - width) * 100 if width < 0.9999 else 0
+            py = top / (1 - height) * 100 if height < 0.9999 else 0
+            geometry = "%.3f%% %.3f%%/%.3f%% %.3f%%" % (px, py, 100 / width, 100 / height)
         if (r, g, b) == (255, 255, 255):
-            look = "background:url(%s) center/100%% 100%% no-repeat;opacity:%.3f" % (uri, a)
+            look = "background:url(%s) %s no-repeat;opacity:%.3f" % (uri, geometry, a)
         else:
             # texture blanche teintée : masque + couleur de sommet
-            look = ("background:%s;-webkit-mask:url(%s) center/100%% 100%% no-repeat;mask:url(%s) center/100%% 100%% no-repeat"
-                    % (tint, uri, uri))
+            look = ("background:%s;-webkit-mask:url(%s) %s no-repeat;mask:url(%s) %s no-repeat"
+                    % (tint, uri, geometry, uri, geometry))
         return '<div class="tex" title="%s" style="%s;%s"></div>' % (html.escape(src), pos, look)
 
     text = pattern.sub(replace, text)
