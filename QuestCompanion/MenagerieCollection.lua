@@ -526,6 +526,22 @@ function ns:MenagerieCollectionCheck(target, opts)
 	return true
 end
 
+-- Rattrapage : les tables de zone lues sans être gardées (ns.ZonePeek), le
+-- rattrapage passe sur toutes les zones où l'on a capturé une fois
+local peeking = false
+do
+	local static = ns.BestiaryStaticZone
+	if static then
+		function ns:BestiaryStaticZone(zoneID, ...)
+			if peeking and ns.ZonePeek then
+				local zone = zoneID and ns.ZonePeek(rawget(ns, "ZONE_CREATURES"), zoneID)
+				return type(zone) == "table" and zone or nil
+			end
+			return static(self, zoneID, ...)
+		end
+	end
+end
+
 function ns:MenagerieCollectionCatchUp()
 	if not ModuleOn() then return nil end
 	local coll = self:MenagerieCollectionData()
@@ -537,9 +553,14 @@ function ns:MenagerieCollectionCatchUp()
 		if zoneID then zones[zoneID] = true end
 	end
 	local sealed = 0
-	for zoneID in pairs(zones) do
-		if self:MenagerieSealCheck(zoneID, { quiet = true }) then sealed = sealed + 1 end
-	end
+	peeking = true
+	local ok, err = pcall(function()
+		for zoneID in pairs(zones) do
+			if self:MenagerieSealCheck(zoneID, { quiet = true }) then sealed = sealed + 1 end
+		end
+	end)
+	peeking = false
+	if not ok then error(err, 0) end
 	local types = self:MenagerieTypeCheck({ quiet = true })
 	local ranks = self:MenagerieRankCheck({ quiet = true })
 	if sealed > 0 or #ranks > 0 then
@@ -561,6 +582,8 @@ do
 			return success
 		end
 	end
+	-- Le suivi se rafraîchit à chaque monstre abattu : le sceau de la zone ne
+	-- se revérifie qu'au changement de zone ou de captures (capture.serial)
 	local refresh = ns.RefreshJournalTracker
 	if refresh then
 		function ns:RefreshJournalTracker(...)
@@ -571,7 +594,13 @@ do
 						self:MenagerieCollectionCatchUp()
 					else
 						local zoneID = self.JournalZone and self:JournalZone()
-						if zoneID then self:MenagerieSealCheck(zoneID) end
+						local capture = self.CaptureData and self:CaptureData()
+						local serial = capture and capture.serial
+						local last = self.menagerieSealSeen
+						if zoneID and not (last and last.zone == zoneID and last.serial == serial and last.count == (capture and capture.count)) then
+							self.menagerieSealSeen = { zone = zoneID, serial = serial, count = capture and capture.count }
+							self:MenagerieSealCheck(zoneID)
+						end
 					end
 				end)
 				if not ok and self.RecordError then self:RecordError("menagerie:catchup", err) end

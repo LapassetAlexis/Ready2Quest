@@ -263,6 +263,43 @@ do
 	CC.Reset()
 	NS:RefreshJournalTracker()
 	Check("[CATCH] au premier recalcul du suivi", NS:MenagerieCollectionData().init == true)
+	-- tables paresseuses : le rattrapage ne garde pas les zones qu'il lit
+	CC.Reset()
+	local makers = {}
+	for zoneID, zone in pairs(ZONES) do makers[zoneID] = function() return zone end end
+	NS.ZONE_CREATURES = NS.LazyZones(makers)
+	CC.Caught(101); CC.Caught(102); CC.Caught(103)
+	CC.Caught(201, { zoneID = 1412 })
+	local sealed = NS:MenagerieCollectionCatchUp()
+	Check("[CATCH] tables paresseuses : sceaux posés, zones pas gardées", sealed == 2 and NS:MenagerieSealed(1412)
+		and rawget(NS.ZONE_CREATURES, 1413) == nil and rawget(NS.ZONE_CREATURES, 1412) == nil, tostring(sealed))
+	Check("[CATCH] … lecture ordinaire ensuite : gardée", NS:BestiaryStaticZone(1429) ~= nil
+		and rawget(NS.ZONE_CREATURES, 1429) ~= nil)
+	NS.ZONE_CREATURES = ZONES
+end
+
+-- 8 bis. Le suivi (chaque monstre abattu) ne revérifie pas le sceau pour rien ---------------------------
+do
+	Say("-- QC 2.0 collection : sceau vérifié au changement seulement")
+	CC.Reset()
+	CC.Caught(101)
+	NS:MenagerieCollectionData().init = true
+	NS.menagerieSealSeen = nil
+	local checks, progress = 0, NS.MenagerieSealProgress
+	NS.MenagerieSealProgress = function(...) checks = checks + 1; return progress(...) end
+	NS:RefreshJournalTracker()
+	NS:RefreshJournalTracker()
+	NS:RefreshJournalTracker()
+	Check("[SEAL] suivi rafraîchi trois fois : une seule vérification", checks == 1, checks)
+	local capture = NS:CaptureData()
+	capture.serial = (tonumber(capture.serial) or 0) + 1
+	NS:RefreshJournalTracker()
+	Check("[SEAL] … refaite quand les captures changent", checks == 2, checks)
+	Mock.world.mapID = 1412
+	NS:RefreshJournalTracker()
+	Check("[SEAL] … et au changement de zone", checks == 3, checks)
+	NS.MenagerieSealProgress = progress
+	Mock.world.mapID = 1413
 end
 
 -- 9. Affichage : Ménagerie et Exploration -------------------------------------------------------------

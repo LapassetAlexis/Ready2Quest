@@ -187,6 +187,18 @@ function ns.ZoneEach(t, fn)
 	end
 end
 
+-- Une zone, sans la garder si elle n'était pas encore lue (rattrapages qui
+-- passent sur beaucoup de zones une seule fois)
+function ns.ZonePeek(t, zoneID)
+	if type(t) ~= "table" or zoneID == nil then return nil end
+	local lazy = lazyZones[t]
+	if not lazy then return t[zoneID] end
+	local zone = rawget(t, zoneID)
+	if zone ~= nil then return zone end
+	local make = lazy.makers[zoneID]
+	return type(make) == "function" and make() or nil
+end
+
 -- API publique
 _G.QuestCompanion = ns
 
