@@ -180,6 +180,21 @@ function ns:MemoryText(memory)
 	return self:F("MEM_TXT_" .. tostring(memory.kind), unpack(args))
 end
 
+-- la carte d'instance où l'on est (8e retour de GetInstanceInfo)
+local function InstanceMap()
+	local fn = G("GetInstanceInfo")
+	if type(fn) ~= "function" then return nil end
+	local packed = { pcall(fn) }
+	return packed[1] and tonumber(ns.Plain and ns.Plain(packed[9]) or packed[9]) or nil
+end
+
+-- la zone où l'on est (uiMapID), nil en instance ou hors zone
+local function ZoneMap(self)
+	if not self.JournalZone then return nil end
+	local ok, mapID = pcall(self.JournalZone, self)
+	return ok and tonumber(mapID) or nil
+end
+
 local function ZoneName(self)
 	local mapID = self.CurrentMap and self:CurrentMap()
 	local info = mapID and self.MapInfo and self:MapInfo(mapID)
@@ -210,6 +225,11 @@ function ns:MemoryRecord(kind, key, args, opts)
 	local memory = {
 		at = RealTime(), kind = kind, args = args or {},
 		zone = opts.zone or ZoneName(self),
+		-- la zone (uiMapID) : son décor sur la photo (1.5.4)
+		map = tonumber(opts.map) or ZoneMap(self),
+		-- la carte d'instance (GetInstanceInfo : 0 Royaumes de l'Est, 1 Kalimdor,
+		-- 36 Mortemines…) : l'image officielle de la photo (1.5.4)
+		instance = tonumber(opts.instance) or InstanceMap(),
 		look = LookNow(self), npc = tonumber(opts.npc),
 	}
 	if existing and opts.replace then
@@ -614,16 +634,6 @@ local SCENES = {
 		Mix(Theme.PARCHMENT, Theme.BLUE, 0.15), Mix(Theme.BLUE, Theme.PARCHMENT, 0.45) },
 }
 ns.MEMORY_SCENES = SCENES
-local KIND_SCENE = {
-	level = "meadow", capture = "meadow", mount = "meadow", groupFull = "meadow",
-	stage = "dawn", anniv = "dawn",
-	rare = "dusk",
-	dungeon = "cave", groupDungeon = "cave",
-	capital = "city",
-	shiny = "gold", chest = "gold",
-	death = "storm", deathSilly = "storm", deathFall = "storm",
-	flight = "sky",
-}
 
 -- petit hachage stable d'un texte (le lieu) : même lieu, même lumière
 local function Hash(text)
@@ -635,10 +645,141 @@ end
 
 -- Le décor d'un souvenir : { id, sky = { haut, bas }, ground = { haut, bas } },
 -- le même à chaque affichage (moment, puis lieu pour la lumière)
+-- Décor peint selon la ZONE (1.5.4) : chaque zone a son paysage. Les
+-- donjons gardent la grotte, les capitales la ville, un vol le ciel.
+local ZONE_BIOME = {
+	-- Kalimdor
+	[1411] = "canyon", [1412] = "savanna", [1413] = "savanna", [1438] = "nightforest", [1439] = "nightforest",
+	[1440] = "nightforest", [1441] = "canyon", [1442] = "canyon", [1443] = "desert", [1444] = "jungle",
+	[1445] = "swamp", [1446] = "desert", [1447] = "nightforest", [1448] = "blight", [1449] = "jungle",
+	[1450] = "nightforest", [1451] = "desert", [1452] = "snow",
+	-- Royaumes de l'Est
+	[1416] = "snow", [1417] = "forest", [1418] = "canyon", [1419] = "volcanic", [1420] = "blight",
+	[1421] = "blight", [1422] = "blight", [1423] = "blight", [1424] = "forest", [1425] = "forest",
+	[1426] = "snow", [1427] = "volcanic", [1428] = "volcanic", [1429] = "forest", [1430] = "blight",
+	[1431] = "nightforest", [1432] = "forest", [1433] = "forest", [1434] = "jungle", [1435] = "swamp",
+	[1436] = "savanna", [1437] = "swamp",
+	-- capitales
+	[1453] = "city", [1454] = "city", [1455] = "city", [1456] = "city", [1457] = "city", [1458] = "city",
+}
+ns.MEMORY_ZONE_BIOME = ZONE_BIOME
+-- moments qui imposent leur décor
+local KIND_PLACE = { dungeon = "cave", groupDungeon = "cave", capital = "city", flight = "sky" }
+-- couleurs de repli (dégradés sous le décor) de chaque biome
+local BIOME_COLORS = {
+	forest = "meadow", nightforest = "dusk", canyon = "dawn", savanna = "gold", snow = "sky",
+	swamp = "storm", desert = "gold", blight = "storm", jungle = "meadow", volcanic = "dusk",
+	cave = "cave", city = "city", sky = "sky",
+}
+
+-- uiMapID d'un souvenir : retenu (1.5.4), sinon retrouvé par le nom de zone
+-- (souvenirs d'avant), parmi les zones connues
+local mapByName
+local function MemoryMap(self, memory)
+	local map = tonumber(memory.map)
+	if map then return map end
+	if type(memory.zone) ~= "string" or not self.MapInfo then return nil end
+	if not mapByName then
+		mapByName = {}
+		for id in pairs(ZONE_BIOME) do
+			local ok, info = pcall(self.MapInfo, self, id)
+			if ok and type(info) == "table" and type(info.name) == "string" then mapByName[info.name] = id end
+		end
+	end
+	return mapByName[memory.zone]
+end
+
+-- Images officielles du jeu (1.5.4) : écrans de chargement du client, par
+-- identifiant de fichier (rien n'est embarqué dans l'addon). Pas d'image
+-- par zone extérieure dans le jeu : seulement les donjons et raids (écrans
+-- classiques : logo en haut, cadre en bas), les lieux propres à Forever et
+-- la vue aérienne de chaque continent (le premier vol). Posées par-dessus le
+-- paysage peint : si le client n'a pas le fichier, le paysage reste.
+--   box : partie peinte de l'image { u0, u1, v0, v1, largeur, hauteur }
+local ART_BOX = {
+	classic = { 0, 1, 0.24, 0.77, 2048, 2048 },   -- 2048², logo et cadre retirés
+	wide    = { 0, 1, 0.15, 0.85, 2992, 1684 },   -- bandes du haut et du bas retirées
+}
+local INSTANCE_ART = {
+	-- donjons
+	[389] = 131862, [43] = 131882, [36] = 131833, [33] = 131869, [48] = 131823, [34] = 131870,
+	[90] = 131841, [47] = 131865, [189] = 131852, [129] = 131864, [70] = 131876, [209] = 131885,
+	[349] = 131850, [109] = 131872, [230] = 131824, [229] = 131825, [429] = 131835, [289] = 131868,
+	[329] = 131871,
+	-- raids et champs de bataille
+	[409] = 131851, [469] = 131827, [309] = 131886, [509] = 131818, [531] = 131819, [533] = 131854,
+	[489] = 131883, [529] = 131820, [30] = 131861,
+}
+-- lieux propres à Forever : grands écrans peints (16:9, bandes)
+local FOREVER_ART = {
+	[2991] = 7950679,   -- île de Zéphras
+	[2997] = 8423398,   -- îles Sombrelance
+	[2998] = 7963777,   -- site de fouilles des Paluns
+	[2999] = 7963782,   -- ruines de Lordaeron
+	[3065] = 7963781,   -- salle des Thanes
+	[2959] = 7963775,   -- cité de Dalaran
+}
+-- premier vol : le continent vu du ciel
+local FLIGHT_ART = { [0] = 7963776, [1] = 7963779 }
+ns.MEMORY_INSTANCE_ART, ns.MEMORY_FOREVER_ART, ns.MEMORY_FLIGHT_ART = INSTANCE_ART, FOREVER_ART, FLIGHT_ART
+ns.MEMORY_ART_BOX = ART_BOX
+
+-- souvenirs de donjon d'avant la 1.5.4 : l'instance retrouvée par son nom
+local function DungeonByName(name)
+	if type(name) ~= "string" then return nil end
+	local area = rawget(_G, "C_Map")
+	for _, def in pairs(ns.DUNGEONS or {}) do
+		if def.name == name then return def.map end
+		if def.area and type(area) == "table" and type(area.GetAreaInfo) == "function" then
+			local ok, local_name = pcall(area.GetAreaInfo, def.area)
+			if ok and local_name == name then return def.map end
+		end
+	end
+	return nil
+end
+
+-- { file, box } ou nil : l'image officielle du souvenir
+function ns:MemoryArt(memory)
+	memory = type(memory) == "table" and memory or {}
+	local instance = tonumber(memory.instance)
+	if not instance and (memory.kind == "dungeon" or memory.kind == "groupDungeon") then
+		instance = DungeonByName(memory.zone)
+	end
+	if not instance then return nil end
+	if memory.kind == "flight" and FLIGHT_ART[instance] then return { file = FLIGHT_ART[instance], box = ART_BOX.wide } end
+	if FOREVER_ART[instance] then return { file = FOREVER_ART[instance], box = ART_BOX.wide } end
+	if INSTANCE_ART[instance] then return { file = INSTANCE_ART[instance], box = ART_BOX.classic } end
+	return nil
+end
+
+-- Recadrage d'une image (box) dans une photo de proportions `aspect`,
+-- décalé de `pan` (0..1) sur l'axe en trop : u0, u1, v0, v1
+function ns.MemoryCrop(box, aspect, pan)
+	local u0, u1, v0, v1, w, h = box[1], box[2], box[3], box[4], box[5], box[6]
+	local artAspect = ((u1 - u0) * w) / ((v1 - v0) * h)
+	pan = math.max(0, math.min(1, tonumber(pan) or 0.5))
+	if artAspect > aspect then
+		local span = (v1 - v0) * h * aspect / w
+		local start = u0 + pan * ((u1 - u0) - span)
+		return start, start + span, v0, v1
+	end
+	local span = (u1 - u0) * w / aspect / h
+	local start = v0 + ((v1 - v0) - span) / 2
+	return u0, u1, start, start + span
+end
+
+function ns:MemoryBiome(memory)
+	memory = type(memory) == "table" and memory or {}
+	local place = KIND_PLACE[memory.kind]
+	if place then return place end
+	local map = MemoryMap(self, memory)
+	return (map and ZONE_BIOME[map]) or "forest"
+end
+
 function ns:MemoryScene(memory)
 	memory = memory or {}
-	local id = KIND_SCENE[memory.kind] or "meadow"
-	local base = SCENES[id]
+	local id = self:MemoryBiome(memory)
+	local base = SCENES[BIOME_COLORS[id] or "meadow"]
 	-- -6 % à +6 % de lumière selon le lieu
 	local shade = ((Hash(memory.zone) % 13) - 6) / 100
 	local toward = shade < 0 and Theme.INK or Theme.PARCHMENT
@@ -820,6 +961,9 @@ local function NewCard(pane, index, w, h)
 	card.backdrop = photo:CreateTexture(nil, "BACKGROUND", nil, 1)
 	card.backdrop:SetAllPoints(photo)
 	card.backdrop:Hide()
+	card.artTexture = photo:CreateTexture(nil, "BACKGROUND", nil, 2)
+	card.artTexture:SetAllPoints(photo)
+	card.artTexture:Hide()
 	card.fallback = photo:CreateTexture(nil, "ARTWORK")
 	card.fallback:SetTexture(Theme.LOGO)
 	card.fallback:SetSize(math.min(64, photoH - 16), math.min(64, photoH - 16))
@@ -917,6 +1061,15 @@ local function FillCard(self, card, memory, now, position)
 		card.backdrop:Show()
 	elseif card.backdrop then
 		card.backdrop:Hide()
+	end
+	-- l'image officielle du jeu, par-dessus, quand le souvenir en a une
+	local art = self:MemoryArt(memory)
+	card.art = art
+	if card.artTexture and art and pcall(card.artTexture.SetTexture, card.artTexture, art.file) then
+		Method(card.artTexture, "SetTexCoord", ns.MemoryCrop(art.box, card.photoW / card.photoH, scene.pan))
+		card.artTexture:Show()
+	elseif card.artTexture then
+		card.artTexture:Hide()
 	end
 	local look = self:MemoryLook(memory, now) or {}
 	local npc = self:MemoryCreature(memory)

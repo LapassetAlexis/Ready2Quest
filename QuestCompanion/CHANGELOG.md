@@ -1,5 +1,14 @@
 # QuestCompanion
 
+## 1.5.4
+
+- **Souvenirs, de vrais décors de WoW** :
+  - en donjon, en raid ou sur un champ de bataille, la photo prend **l'écran de chargement du jeu** (les Mortemines, les Cavernes des lamentations, le Gouffre de Ragefeu…) ; les lieux propres à Forever (île de Zéphras, îles Sombrelance, ruines de Lordaeron, Dalaran…) ont leur grand écran peint, et le premier vol montre le continent vu du ciel. Ces images sont celles du client, l'addon n'en embarque aucune ;
+  - ailleurs, chaque zone a son paysage façon Warcraft : forêt ensoleillée (Elwynn, Loch Modan), forêt de nuit (Orneval, Sombrivage), canyons rouges (Durotar), savane (les Tarides, la Marche de l'Ouest), neige (Dun Morogh), marais (les Paluns), désert (Tanaris), terres maudites (Tirisfal, les Maleterres), jungle (Strangleronce, Un'Goro), terres volcaniques (Steppes ardentes). Ils remplacent les décors « prairie, aube, orage » ;
+  - les souvenirs retiennent désormais leur zone et leur instance ; les anciens retrouvent leur décor par le nom de la zone ou du donjon.
+
+*English:* Souvenirs use the game's own loading-screen art in dungeons, raids, Forever's own places and for the first flight, and a Warcraft-style landscape for each zone elsewhere.
+
 ## 1.5.3
 
 - **Infobulle des monstres** : elle parle de capture. « Ménagerie : à capturer · 30 % » (ta chance du moment, selon son rang et son niveau), « capturé » en vert, « capturé, brillant » en doré ; le rang des nommés reste affiché. Capture coupée dans les réglages : l'ancienne ligne du bestiaire (« abattu (n) »).
