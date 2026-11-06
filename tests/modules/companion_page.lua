@@ -106,6 +106,13 @@ do
 		for _, cell in ipairs(evo.looks) do if cell.def and cell.def.id == "cap:7001" then captured = cell end end
 	end
 	Check("[CPAGE] allure : la créature capturée parmi les apparences", captured ~= nil)
+	-- une créature capturée garde son nom ; la mascotte, le sien (1.5.2)
+	NS:CompanionData().name = "Brindille"
+	NS:CompanionData().appearance = "cap:7001"
+	Check("[CPAGE] compagnon capturé : il s'appelle Kodo, pas Brindille", NS:CompanionName() == "Kodo"
+		and NS:CompanionOwnName() == "Brindille")
+	NS:CompanionData().appearance = NS.COMPANION_APPEARANCES[1].id
+	Check("[CPAGE] retour à la mascotte : Brindille", NS:CompanionName() == "Brindille")
 	captured.scripts.OnClick(captured)
 	Check("[CPAGE] clic : elle devient l'apparence portée", NS:CompanionData().appearance == "cap:7001")
 	Check("[CPAGE] cadre et fond : deux listes", #evo.frameStyle.options > 0 and #evo.bgStyle.options > 0)

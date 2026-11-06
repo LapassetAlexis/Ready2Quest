@@ -341,13 +341,21 @@ do
 		and stage.pips[3]:IsShown() and not stage.pips[4]:IsShown())
 	Check("[CAPFX] le nom à la couleur de la rareté", stage.name:GetText() == "Ours gris")
 	Check("[CAPFX] t=0 : le filet est lancé", NS:CaptureStageUpdate(rolling.start) == "throw")
+	Check("[CAPFX] en vol : le filet maillé encore replié", NS:CaptureStageUpdate(rolling.start + 0.1) == "throw"
+		and not stage.mesh:IsShown())
 	Check("[CAPFX] après le vol : les secousses", NS:CaptureStageUpdate(rolling.start + NS.CAPTURE_THROW_TIME + 0.1) == "shake")
+	Check("[CAPFX] le filet maillé couvre la scène (cordes en losanges + bord)", stage.mesh:IsShown()
+		and #stage.mesh.lines > 12 and stage.mesh.width == stage.scene.width)
+	NS:CaptureStageUpdate(rolling.start + NS.CAPTURE_THROW_TIME + NS.CAPTURE_DRAPE_TIME + 0.01)
+	Check("[CAPFX] posé : à sa taille, opaque, cordes à leur place", math.abs(stage.mesh:GetScale() - 1) < 0.08
+		and stage.mesh.alpha == 1 and not stage.mesh.tear)
 	Check("[CAPFX] le vol retarde la première secousse", rolling.nextAt >= rolling.start + NS.CAPTURE_THROW_TIME + NS.CAPTURE_SHAKE_STEP - 1e-6)
 	for _ = 1, 4 do Mock:Advance(1); NS:CaptureTick(NS.Now()) end
 	Check("[CAPFX] verdict : capturé, la scène reste affichée", rolling.result == "ok" and stage:IsShown())
 	Check("[CAPFX] … bannière, gerbe de losanges", NS:CaptureStageUpdate(rolling.resultAt + 0.2) == "ok"
 		and stage.bannerText:GetText() == NS.L.CAPTURE_GOT and stage.particles[1]:IsShown())
 	Check("[CAPFX] … la gerbe s'éteint", NS:CaptureStageUpdate(rolling.resultAt + 1.5) == "ok" and not stage.particles[1]:IsShown())
+	Check("[CAPFX] … le filet s'est refermé et effacé", not stage.mesh:IsShown())
 	stage:GetScript("OnMouseUp")(stage)
 	NS:CaptureTick(NS.Now())
 	Check("[CAPFX] un clic ferme la scène", not stage:IsShown() and NS:CaptureState().rolling == nil)

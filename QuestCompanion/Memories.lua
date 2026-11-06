@@ -592,6 +592,9 @@ local INK_PEN = Mix(Theme.INK, Theme.BLUE, 0.22)    -- encre bleu nuit
 ns.MEMORY_PAPER = PAPER
 
 -- Décors de la photo : haut et bas du ciel, haut et bas du sol
+-- décors peints, un par scène (512 x 256)
+local SCENE_TEXTURE = "Interface\\AddOns\\" .. tostring(ADDON or "QuestCompanion") .. "\\Textures\\scene_"
+ns.MEMORY_SCENE_TEXTURE = SCENE_TEXTURE
 local SCENES = {
 	meadow  = { Mix(Theme.BLUE, Theme.INK, 0.15), Mix(Theme.BLUE, Theme.PARCHMENT, 0.55),
 		Mix(Theme.GREEN, Theme.GOLD_SOFT, 0.3), Mix(Theme.GREEN, Theme.INK, 0.6) },
@@ -644,6 +647,10 @@ function ns:MemoryScene(memory)
 		id = id, shade = shade,
 		sky = { Mix(base[1], toward, t), Mix(base[2], toward, t) },
 		ground = { Mix(base[3], toward, t), Mix(base[4], toward, t) },
+		-- décor peint (1.5.2, tools/gen_memory_scenes.py) et son cadrage :
+		-- 0 = bord gauche de l'image, 1 = bord droit ; selon le moment et le lieu
+		texture = SCENE_TEXTURE .. id,
+		pan = (Hash(tostring(memory.zone) .. "|" .. tostring(memory.at)) % 101) / 100,
 	}
 end
 
@@ -658,37 +665,82 @@ function ns:MemoryLook(memory, now)
 	return now or LookNow(self)
 end
 
--- La pose du compagnon sur la photo (1.5.1) : pas deux photos pareilles.
--- Le geste suit le moment (fête pour un niveau, assis pour un anniversaire,
--- abattu après une mort), l'angle et le cadrage varient d'un souvenir à
--- l'autre — tirés du souvenir lui-même (moment, date, lieu) : la même photo
--- à chaque affichage. En duo, il reste tourné vers la créature.
--- Renvoie { facing (radians), anim (ns.COMPANION_ANIMS), zoom (× distance) }.
-local KIND_GESTURES = {
-	level = { "cheer", "dance", "cheer" }, stage = { "cheer", "dance" },
-	shiny = { "cheer", "dance" }, chest = { "cheer", "dance" },
-	capture = { "cheer", "idle", "talk" }, rare = { "cheer", "idle" },
-	groupFull = { "dance", "cheer", "talk" }, groupDungeon = { "cheer", "talk" },
-	anniv = { "sit", "cheer", "dance" },
-	death = { "sit" }, deathSilly = { "sit", "talk" }, deathFall = { "sit" },
-	dungeon = { "idle", "talk" }, capital = { "talk", "idle", "sit" },
-	flight = { "idle", "cheer" }, mount = { "cheer", "idle" },
+-- La pose du compagnon sur la photo (1.5.2) : un vrai cadrage par souvenir.
+--   * le plan (shot) : en pied au centre, gros plan sur la tête, plan
+--     taille, petit dans le paysage à gauche ou à droite, de profil, de dos
+--     face à l'horizon, en l'air. Le plan suit la place du souvenir dans
+--     l'album (deux photos voisines n'ont jamais le même), sauf quelques
+--     moments qui ont le leur (un vol se photographie en l'air) ;
+--   * le geste suit le moment, parmi ceux que les créatures savent faire
+--     (pas seulement les émotes des personnages : une bête ne danse pas) ;
+--   * l'angle varie encore un peu d'un souvenir à l'autre.
+-- Toujours le même pour un même souvenir. En duo, le compagnon reste tourné
+-- vers la créature, en pied.
+-- Rend { shot, gesture, anim, facing, zoom, portrait, w, h, x, y } :
+-- w, h = taille du modèle (part de la photo), x = décalage du centre (part
+-- de la largeur), y = hauteur des pieds (part de la hauteur), portrait =
+-- SetPortraitZoom (0 = en pied, 1 = la tête), zoom = × distance de caméra.
+local MEMORY_ANIMS = {
+	idle = 0, walk = 4, run = 5, wound = 8, attack = 16, ready = 25, jump = 38, roar = 53,
+	talk = 60, cheer = 68, dance = 69, sit = 97, sleep = 100,
 }
-local SOLO_FACINGS = { 0.35, -0.35, 0.8, -0.8, 0, 1.3, -1.3 }
-local DUO_FACINGS = { 0.6, 0.45, 0.85 }
-local ZOOMS = { 1, 0.85, 1.15, 0.92 }
-function ns:MemoryPose(memory, duo)
+ns.MEMORY_ANIMS = MEMORY_ANIMS
+local SHOTS = {
+	{ id = "full",   w = 0.80, h = 1.00, x = 0,     y = 0,    zoom = 1.00, portrait = 0,    facing = 0.35 },
+	{ id = "close",  w = 1.00, h = 1.00, x = 0,     y = 0,    zoom = 1.00, portrait = 0.85, facing = 0.25 },
+	{ id = "farL",   w = 0.42, h = 0.55, x = -0.26, y = 0.05, zoom = 1.00, portrait = 0,    facing = 0.9 },
+	{ id = "side",   w = 0.80, h = 1.00, x = 0.12,  y = 0,    zoom = 1.00, portrait = 0,    facing = -1.45 },
+	{ id = "medium", w = 1.00, h = 1.00, x = 0,     y = 0,    zoom = 1.00, portrait = 0.45, facing = -0.4 },
+	{ id = "farR",   w = 0.42, h = 0.55, x = 0.26,  y = 0.05, zoom = 1.00, portrait = 0,    facing = -0.9 },
+	{ id = "back",   w = 0.70, h = 0.85, x = -0.08, y = 0,    zoom = 1.00, portrait = 0,    facing = 2.6 },
+	{ id = "high",   w = 0.60, h = 0.75, x = 0.14,  y = 0.30, zoom = 1.00, portrait = 0,    facing = 0.6 },
+}
+ns.MEMORY_SHOTS = SHOTS
+local SHOT_BY_ID = {}
+for _, shot in ipairs(SHOTS) do SHOT_BY_ID[shot.id] = shot end
+-- moments qui ont leur plan, parmi lesquels on choisit encore
+local KIND_SHOTS = {
+	flight = { "high", "farL", "farR" }, mount = { "farL", "farR", "side" },
+	death = { "close", "medium" }, deathFall = { "close", "medium" }, deathSilly = { "close", "medium" },
+	anniv = { "close", "medium", "full" }, capital = { "back", "farL", "farR" },
+}
+local KIND_GESTURES = {
+	level = { "cheer", "roar", "jump", "dance" }, stage = { "roar", "cheer", "jump" },
+	shiny = { "cheer", "jump", "dance" }, chest = { "cheer", "jump", "dance" },
+	capture = { "ready", "attack", "roar" }, rare = { "attack", "ready", "roar" },
+	groupFull = { "dance", "cheer", "talk" }, groupDungeon = { "cheer", "ready", "talk" },
+	anniv = { "sit", "dance", "cheer" },
+	death = { "wound", "sit" }, deathSilly = { "wound", "talk" }, deathFall = { "wound", "sit" },
+	dungeon = { "ready", "walk", "idle" }, capital = { "walk", "idle", "talk" },
+	flight = { "run", "jump", "idle" }, mount = { "run", "walk" },
+}
+-- position : la place du souvenir dans l'album (1, 2, …), nil = selon le souvenir
+function ns:MemoryPose(memory, duo, position)
 	memory = type(memory) == "table" and memory or {}
 	local seed = Hash(tostring(memory.kind) .. "|" .. tostring(memory.at) .. "|" .. tostring(memory.zone))
 	local gestures = KIND_GESTURES[memory.kind] or { "idle", "talk", "cheer" }
 	local gesture = gestures[seed % #gestures + 1]
-	local anims = ns.COMPANION_ANIMS or {}
-	local facings = duo and DUO_FACINGS or SOLO_FACINGS
+	local shot
+	if duo then
+		shot = { id = "duo", w = 0.56, h = 1, x = 0, y = 0, zoom = 1, portrait = 0, facing = 0.6 }
+	else
+		local own = KIND_SHOTS[memory.kind]
+		local pos = tonumber(position)
+		if own then
+			shot = SHOT_BY_ID[own[((pos or seed) % #own) + 1]]
+		elseif pos then
+			-- pas de 3 sur 8 plans : 8 souvenirs de suite, 8 plans différents
+			shot = SHOTS[(pos * 3) % #SHOTS + 1]
+		else
+			shot = SHOTS[seed % #SHOTS + 1]
+		end
+	end
+	-- un peu de jeu dans l'angle (jamais au point de tourner le dos au duo)
+	local jitter = ((math.floor(seed / 7) % 5) - 2) * 0.12
 	return {
-		gesture = gesture,
-		anim = anims[gesture] or anims.idle or 0,
-		facing = facings[math.floor(seed / 7) % #facings + 1],
-		zoom = ZOOMS[math.floor(seed / 53) % #ZOOMS + 1],
+		shot = shot.id, gesture = gesture, anim = MEMORY_ANIMS[gesture] or 0,
+		facing = shot.facing + jitter, zoom = shot.zoom * (1 + ((math.floor(seed / 53) % 3) - 1) * 0.08),
+		portrait = shot.portrait, w = shot.w, h = shot.h, x = shot.x, y = shot.y,
 	}
 end
 
@@ -717,6 +769,9 @@ local function ShowModel(model, display, npc, facing, pose)
 		model.lookKey = key
 		-- une créature (capturée ou du moment) est de taille réelle : de plus loin
 		local cam = model.mascot and 1.6 or (ns.CAPTURE_CAM_DISTANCE or 2.4)
+		-- gros plan : la caméra « portrait » du client, sans recul
+		if pose and (pose.portrait or 0) > 0 then cam = 1 end
+		Method(model, "SetPortraitZoom", (pose and pose.portrait) or 0)
 		Method(model, "SetCamDistanceScale", cam * ((pose and pose.zoom) or 1))
 		Method(model, "SetFacing", (pose and pose.facing) or facing or 0)
 		Method(model, "SetAnimation", (pose and pose.anim) or 0)
@@ -762,6 +817,9 @@ local function NewCard(pane, index, w, h)
 	card.ground = Theme.Solid(photo, "BACKGROUND", Theme.GREEN, 1)
 	card.ground:SetPoint("TOPLEFT", photo, "BOTTOMLEFT", 0, horizon)
 	card.ground:SetPoint("BOTTOMRIGHT", photo, "BOTTOMRIGHT", 0, 0)
+	card.backdrop = photo:CreateTexture(nil, "BACKGROUND", nil, 1)
+	card.backdrop:SetAllPoints(photo)
+	card.backdrop:Hide()
 	card.fallback = photo:CreateTexture(nil, "ARTWORK")
 	card.fallback:SetTexture(Theme.LOGO)
 	card.fallback:SetSize(math.min(64, photoH - 16), math.min(64, photoH - 16))
@@ -816,10 +874,14 @@ end
 
 -- Place les modèles : seul, le compagnon au milieu ; avec la créature du
 -- moment, chacun sa moitié, tournés l'un vers l'autre
-local function PlaceModels(card, duo)
+local function PlaceModels(card, duo, pose)
 	local photo, w, h = card.photo, card.photoW, card.photoH
 	for _, model in ipairs({ card.model, card.creature }) do model:ClearAllPoints() end
-	if duo then
+	if not duo and pose then
+		-- le plan du souvenir : taille, côté, hauteur des pieds
+		card.model:SetPoint("BOTTOM", photo, "BOTTOM", math.floor(pose.x * w + 0.5), math.floor(pose.y * h + 0.5))
+		card.model:SetSize(math.floor(w * pose.w), math.floor(h * pose.h))
+	elseif duo then
 		card.model:SetPoint("BOTTOMLEFT", photo, "BOTTOMLEFT", 0, 0)
 		card.model:SetSize(math.floor(w * 0.56), h)
 		card.creature:SetPoint("BOTTOMRIGHT", photo, "BOTTOMRIGHT", 0, 0)
@@ -830,7 +892,7 @@ local function PlaceModels(card, duo)
 	end
 end
 
-local function FillCard(self, card, memory, now)
+local function FillCard(self, card, memory, now, position)
 	card.memory = memory
 	card.caption:SetText(self:MemoryText(memory))
 	local meta = {}
@@ -840,17 +902,30 @@ local function FillCard(self, card, memory, now)
 	card.meta:SetText(table.concat(meta, "  ·  "))
 	local scene = self:MemoryScene(memory)
 	card.scene = scene.id
-	-- dégradés verticaux (de bas en haut) : ciel clair à l'horizon, sol sombre devant
+	-- dégradés verticaux (de bas en haut) : ciel clair à l'horizon, sol sombre
+	-- devant ; le décor peint par-dessus, recadré selon le souvenir
 	Theme.Gradient(card.sky, "VERTICAL", scene.sky[2], 1, scene.sky[1], 1)
 	Theme.Gradient(card.ground, "VERTICAL", scene.ground[2], 1, scene.ground[1], 1)
+	local painted = card.backdrop and pcall(card.backdrop.SetTexture, card.backdrop, scene.texture)
+	if painted then
+		-- image 2:1 ; la photo est plus haute : on n'en garde qu'une bande
+		local span = math.min(1, (card.photoW / card.photoH) / 2)
+		local u0 = scene.pan * (1 - span)
+		Method(card.backdrop, "SetTexCoord", u0, u0 + span, 0, 1)
+		local light = 1 + math.min(0, scene.shade) * 2
+		card.backdrop:SetVertexColor(light, light, light, 1)
+		card.backdrop:Show()
+	elseif card.backdrop then
+		card.backdrop:Hide()
+	end
 	local look = self:MemoryLook(memory, now) or {}
 	local npc = self:MemoryCreature(memory)
 	local duo = npc ~= nil and card.creature ~= nil
 	card.look, card.npc = look, duo and npc or nil
 	local shown = false
 	if card.model then
-		PlaceModels(card, duo)
-		card.pose = self:MemoryPose(memory, duo)
+		card.pose = self:MemoryPose(memory, duo, position)
+		PlaceModels(card, duo, card.pose)
 		shown = ShowModel(card.model, look.display, look.npc, nil, card.pose)
 	end
 	local creatureShown = false
@@ -950,7 +1025,7 @@ function ns:RefreshMemoriesPane(frame)
 	for index, card in ipairs(pane.cards) do
 		local memory = list[offset + index]
 		if memory then
-			FillCard(self, card, memory, now)
+			FillCard(self, card, memory, now, offset + index)
 		else
 			card.memory = nil
 			card:Hide()

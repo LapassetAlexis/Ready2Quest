@@ -610,10 +610,25 @@ function ns:CompanionData()
 	return data
 end
 
-function ns:CompanionName()
+-- Le nom que tu as donné à ta mascotte (/qc compagnon nom)
+function ns:CompanionOwnName()
 	local name = self:CompanionData().name
 	if type(name) == "string" and name ~= "" then return name end
 	return L.COMP_DEFAULT_NAME
+end
+
+-- Le nom affiché : une créature capturée garde le sien (« Champion
+-- Ravenclaw »), seule la mascotte porte le nom que tu lui as donné (1.5.2)
+function ns:CompanionName()
+	local data = self:CompanionData()
+	local npc = type(data.appearance) == "string" and tonumber(data.appearance:match("^cap:(%d+)$"))
+	if npc and self.CaptureData then
+		local ok, capture = pcall(self.CaptureData, self)
+		local entry = ok and type(capture) == "table" and type(capture.creatures) == "table"
+			and (capture.creatures[npc] or capture.creatures[tostring(npc)])
+		if type(entry) == "table" and type(entry.name) == "string" and entry.name ~= "" then return entry.name end
+	end
+	return self:CompanionOwnName()
 end
 
 -- Un besoin ne passe jamais sous le plancher ni au-dessus de 100

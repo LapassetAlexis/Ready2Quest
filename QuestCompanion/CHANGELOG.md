@@ -1,5 +1,14 @@
 # QuestCompanion
 
+## 1.5.2
+
+- **Métiers enfin lus sur WoW Forever** : le client récent ne donne plus la fenêtre de compétences historique ; l'addon lit maintenant tes métiers par `GetProfessions` (et garde l'ancienne lecture pour les autres clients). Nouvelle commande `/qc metiers` : ce que le jeu donne à l'addon, pour signaler un bogue.
+- **Souvenirs** : de vrais décors peints (prairie, aube, crépuscule, grotte, ville, trésor, orage, au-dessus des nuages), recadrés différemment pour chaque souvenir. Chaque photo a son plan — en pied, gros plan sur la tête, plan taille, petit dans le paysage à gauche ou à droite, de profil, de dos face à l'horizon, en l'air — et deux photos voisines n'ont jamais le même. Les gestes sont ceux que les créatures savent faire (rugir, sauter, attaquer, marcher, courir…), selon le moment.
+- **Capture** : un vrai filet maillé couvre toute la scène (plus de carré qui laisse dépasser la créature) : il tombe et rebondit, se resserre à chaque secousse pendant qu'elle se débat, se referme sur elle si elle est prise, se déchire si elle s'échappe.
+- **Compagnon capturé** : il garde le nom de son espèce (« Champion Ravenclaw ») ; le nom que tu as donné reste celui de ta mascotte.
+
+*English:* professions are now read through `GetProfessions` on WoW Forever (new `/qc metiers` diagnostic). Souvenirs get painted backdrops and a distinct shot and gesture per photo. The capture scene now throws a real mesh net that covers the whole scene, tightens, closes or tears. A captured companion keeps its species name.
+
 ## 1.5.1
 
 - **Compagnon** : le grand portrait cadre la créature de plus près ; les listes Cadre et Fond ne s'ouvrent plus l'une sur l'autre (ouvrir une liste referme l'autre, partout dans l'addon).

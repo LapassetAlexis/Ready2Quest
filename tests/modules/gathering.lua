@@ -6,7 +6,7 @@
 local Check, ResetWorld, NS, Mock = T.Check, T.ResetWorld, T.QNS, T.Mock
 
 -- Mocks propres à ce fichier, restaurés à la fin
-local saved, MOCKED = {}, { "GetNumSkillLines", "GetSkillLineInfo", "IsInInstance", "UnitName",
+local saved, MOCKED = {}, { "GetNumSkillLines", "GetSkillLineInfo", "GetProfessions", "GetProfessionInfo", "IsInInstance", "UnitName",
 	"LOOT_ITEM_SELF", "LOOT_ITEM_SELF_MULTIPLE", "LOOT_ITEM_PUSHED_SELF", "LOOT_ITEM_PUSHED_SELF_MULTIPLE" }
 for _, name in ipairs(MOCKED) do saved[name] = rawget(_G, name) end
 -- Ces tests couvrent le comportement 100 % dynamique (zone absente des tables
@@ -143,6 +143,40 @@ do
 	G.skills = { HEADER }
 	Check("[GTH] aucun métier : nil et message", NS:PlayerProfessionsText() == nil
 		and NS:JournalCraftLines()[1] == NS.L.GATHER_PROFS_NONE)
+	G.skills = { HEADER, { "Minage", false, true, 81 } }
+	NS:GatheringProfessions()
+
+	-- moteur récent (WoW Forever) : GetProfessions / GetProfessionInfo, sans
+	-- fenêtre de compétences historique (1.5.2)
+	local oldCount, oldLine = _G.GetNumSkillLines, _G.GetSkillLineInfo
+	_G.GetNumSkillLines, _G.GetSkillLineInfo = nil, nil
+	local PROFS = { [3] = { "Minage", 215, 186 }, [7] = { "Forge", 180, 164 }, [9] = { "Pêche", 40, 356 },
+		[10] = { "Cuisine", 75, 185 } }
+	_G.GetProfessions = function() return 7, 3, nil, 9, 10 end
+	_G.GetProfessionInfo = function(index)
+		local p = PROFS[index]
+		return p[1], "icon", p[2], 300, 4, 0, p[3], 0
+	end
+	local keys = {}
+	for _, entry in ipairs(NS:PlayerProfessions()) do keys[#keys + 1] = entry.key .. "=" .. entry.rank end
+	Check("[GTH] GetProfessions : métiers lus par leur ligne de compétence", table.concat(keys, ",")
+		== "mining=215,blacksmithing=180,cooking=75,fishing=40", table.concat(keys, ","))
+	Check("[GTH] GetProfessions : minage suivi pour la récolte", NS:GatheringProfessions().mining == 215)
+	-- nom inconnu mais ligne connue : reconnu quand même
+	PROFS[3] = { "Mining (beta)", 216, 186 }
+	Check("[GTH] GetProfessions : ligne 186 = minage, quel que soit le nom", NS:GatheringProfessions().mining == 216)
+	_G.GetProfessionInfo = function() error("panne") end
+	Check("[GTH] GetProfessionInfo en panne : la dernière liste sert", pcall(NS.PlayerProfessions, NS))
+	_G.GetProfessions, _G.GetProfessionInfo = nil, nil
+	Check("[GTH] aucune API : la dernière liste complète sert", NS:GatheringProfessions().mining ~= nil)
+	-- /qc metiers : diagnostic
+	local printed = {}
+	local oldPrint = NS.Print
+	NS.Print = function(_, msg) printed[#printed + 1] = msg end
+	NS.EXTRA_COMMANDS["metiers"](NS)
+	NS.Print = oldPrint
+	Check("[GTH] /qc metiers : API vues et métiers", #printed == 2 and printed[1]:find("API", 1, true) ~= nil, table.concat(printed, " | "))
+	_G.GetNumSkillLines, _G.GetSkillLineInfo = oldCount, oldLine
 	G.skills = { HEADER, { "Minage", false, true, 81 } }
 	NS:GatheringProfessions()
 
