@@ -161,6 +161,11 @@ do
 	zone[2000] = { name = "Chef kolkar", type = "Humanoïde", class = "elite", seen = true, killed = 1 }
 	zone[2001] = { name = "Abeille", type = "Bête", seen = false, killed = 0 }
 	NS:JournalData().bestiary = { [1413] = zone }
+	-- QC 2.0 : le bestiaire ne compte plus dans le % (MenagerieCollection.lua) ;
+	-- une seconde activité d'exploration (quêtes, 9/10) pour avoir un %
+	P.fakeQuests = { id = "fakequests", label = "JRN_PART_quests", tab = "quests",
+		Compute = function(_, zoneID) if zoneID == 1413 then return { have = 9, need = 10 } end end }
+	NS.RegisterZonePart(P.fakeQuests)
 	NS:RefreshJournal()
 	local done = NS:ZoneCompletion(1413)
 	Check("[PROG] deux activités : grand % et barre", done and #done.parts >= 2
@@ -317,6 +322,7 @@ do
 end
 
 -- remise en état
+for index = #NS.ZONE_PARTS, 1, -1 do if NS.ZONE_PARTS[index] == P.fakeQuests then table.remove(NS.ZONE_PARTS, index) end end
 for _, name in ipairs(MOCKED) do _G[name] = saved[name] end
 C_Map.GetAreaInfo = saved.GetAreaInfo
 NS.ZONE_CREATURES, NS.ZONE_GATHERING, NS.ZONE_QUESTS = saved.ZONE_CREATURES, saved.ZONE_GATHERING, saved.ZONE_QUESTS

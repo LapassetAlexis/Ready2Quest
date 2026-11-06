@@ -539,7 +539,14 @@ do
 	parts.quests:Click()
 	Check("[WIN] quêtes sans liste : message clair", prog.empty.text == "Pas de liste de quêtes pour ce client.", prog.empty.text)
 
-	-- bestiaire : une deuxième activité -> pourcentage, coffre annoncé
+	-- une deuxième activité -> pourcentage, coffre annoncé. QC 2.0 : le
+	-- bestiaire ne compte plus dans le % (MenagerieCollection.lua) : une part
+	-- d'exploration de test (quêtes) ; le bestiaire garde sa ligne et sa Ménagerie
+	K.fakeQuests = { id = "fakequests", label = "JRN_PART_quests", tab = "quests", Compute = function(_, zoneID)
+		if zoneID == 1413 then return { have = 1, need = 4 } end
+		if zoneID == 1429 and K.fake1429 then return { have = 0, need = 1 } end
+	end }
+	NS.RegisterZonePart(K.fakeQuests)
 	local zone = {}
 	for index = 1, 40 do
 		zone[1000 + index] = { name = "Bête " .. string.format("%02d", index), type = "Bête", seen = true, killed = index <= 4 and 1 or 0 }
@@ -656,7 +663,7 @@ do
 	Check("[WATCH] recochée : les objectifs masqués avant sont réactivés", not NS:JournalData().dismissed["zone:1413"]
 		and not NS:JournalData().dismissed["villages:1413"])
 	-- une autre zone : cochée à la main
-	NS:JournalData().bestiary[1429] = { [9] = { name = "Loup", type = "Bête", seen = true, killed = 0 } }
+	K.fake1429 = true
 	NS:SelectJournalZone(1429)
 	Check("[WATCH] autre zone : décochée d'office", prog.watch.checked == false)
 	Check("[WATCH] autre zone non cochée : absente du suivi", not K.Lines():find("Elwynn", 1, true), K.Lines())
@@ -732,6 +739,8 @@ do
 	NS.optionsFrame:Hide()
 	NS.optionsFrame = nil
 	NS:JournalData().bestiary = nil
+	K.fake1429 = nil
+	for index = #NS.ZONE_PARTS, 1, -1 do if NS.ZONE_PARTS[index] == K.fakeQuests then table.remove(NS.ZONE_PARTS, index) end end
 	-- aucune zone connue
 	K.Reset(27)
 	Mock.world.mapID = nil

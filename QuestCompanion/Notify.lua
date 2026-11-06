@@ -94,6 +94,15 @@ function ns:NotifyPartText(zoneID, partID)
 			return string.format("%s %d/%d", L["NOTIFY_PART_" .. partID] or partID, part.have, part.need)
 		end
 	end
+	-- part hors du pourcentage de la zone (bestiaire, QC 2.0) : comptée à part
+	for _, def in ipairs(zoneID and ns.ZONE_PARTS or {}) do
+		if def.id == partID and def.exploration == false then
+			local ok, part = pcall(def.Compute, self, zoneID)
+			if ok and type(part) == "table" and tonumber(part.need) and part.need > 0 then
+				return string.format("%s %d/%d", L["NOTIFY_PART_" .. partID] or partID, math.min(tonumber(part.have) or 0, part.need), part.need)
+			end
+		end
+	end
 	return L["NOTIFY_PART_" .. partID] or partID
 end
 
