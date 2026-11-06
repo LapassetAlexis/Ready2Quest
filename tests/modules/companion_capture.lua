@@ -47,7 +47,7 @@ function CP.Quiet()
 end
 function CP.Reset()
 	ResetWorld()
-	for _, field in ipairs({ "companionFrame", "companionBubble", "companionHover", "journalFrame", "capturePrompt", "captureQueueList" }) do
+	for _, field in ipairs({ "companionFrame", "companionBubble", "companionHover", "journalFrame", "capturePrompt", "captureQueueList", "captureNetButton" }) do
 		if NS[field] then NS[field]:Hide() end
 		NS[field] = nil
 	end

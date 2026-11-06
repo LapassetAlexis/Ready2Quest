@@ -44,7 +44,7 @@ function Q.Install()
 end
 function Q.Reset()
 	ResetWorld()
-	for _, field in ipairs({ "companionFrame", "companionBubble", "companionHover", "journalFrame", "capturePrompt", "captureQueueList" }) do
+	for _, field in ipairs({ "companionFrame", "companionBubble", "companionHover", "journalFrame", "capturePrompt", "captureQueueList", "captureNetButton" }) do
 		if NS[field] then NS[field]:Hide() end
 		NS[field] = nil
 	end
@@ -365,6 +365,35 @@ do
 	Check("[QC2CAP] fiche : la qualité du spécimen (avec la date, ou seule)", (joined:find("Capturée le", 1, true) ~= nil
 		or joined:find("Qualité", 1, true) ~= nil) and select(2, joined:gsub("|T", "")) == 3, joined)
 	f:Hide()
+end
+
+-- 7 bis. Compagnon masqué : le filet reste, seul à l'écran ; /qc filet ---------------------------------------
+do
+	Say("-- qc2 capture : compagnon masqué")
+	Q.Reset()
+	Q.SeeKill(4300, { name = "Loup seul" })
+	local net = NS.captureNetButton
+	Check("[QC2CAP] compagnon affiché : le filet est posé sur lui", net and net:IsShown() and not net.alone
+		and net:GetParent() ~= nil)
+	NS.companionFrame:Hide()
+	NS:CapturePlaceNet()
+	Check("[QC2CAP] compagnon masqué : le filet reste, seul à l'écran", net:IsShown() and net.alone == true
+		and net.lastPoint and net.lastPoint.relTo == UIParent)
+	NS.companionFrame:Show()
+	NS:CapturePlaceNet()
+	Check("[QC2CAP] compagnon de retour : le filet revient sur lui", net.alone == false
+		and net.lastPoint.relTo == NS.companionFrame)
+	Q.Roll(0)
+	NS.EXTRA_COMMANDS["filet"](NS)
+	Check("[QC2CAP] /qc filet : lance la capture du meilleur candidat", NS:CaptureState().rolling ~= nil)
+	Q.Settle()
+	NS:CaptureQueueClear()
+	local printed = {}
+	local oldPrint = NS.Print
+	NS.Print = function(_, msg) printed[#printed + 1] = msg end
+	NS.EXTRA_COMMANDS["filet"](NS)
+	NS.Print = oldPrint
+	Check("[QC2CAP] /qc filet sans rien : le dit", printed[1] == NS.L.CAPTURE_Q_NOTHING, printed[1])
 end
 
 -- 8. Textes, réglage ----------------------------------------------------------------------------------------

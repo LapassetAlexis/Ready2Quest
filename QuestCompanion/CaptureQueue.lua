@@ -49,6 +49,7 @@ local FR = {
 	CAPTURE_Q_LEFT         = "%d s",
 	CAPTURE_Q_CLICK        = "Clic : capturer %s",
 	CAPTURE_Q_RIGHT        = "Clic droit : la liste (choisir, aides, tout ignorer)",
+	CAPTURE_Q_NOTHING      = "Rien à capturer pour l'instant : abats un monstre qui manque à ta ménagerie.",
 	CAPTURE_Q_IGNORE       = "Tout ignorer",
 	CAPTURE_Q_EMPTY        = "Rien à capturer pour l'instant.",
 	CAPTURE_Q_LIST_HINT    = "Clic sur une ligne : la capturer. L'aide choisie sert au prochain essai.",
@@ -70,6 +71,7 @@ local EN = {
 	CAPTURE_Q_LEFT         = "%ds",
 	CAPTURE_Q_CLICK        = "Click: capture %s",
 	CAPTURE_Q_RIGHT        = "Right-click: the list (pick, aids, ignore all)",
+	CAPTURE_Q_NOTHING      = "Nothing to capture right now: defeat a monster your menagerie is missing.",
 	CAPTURE_Q_IGNORE       = "Ignore all",
 	CAPTURE_Q_EMPTY        = "Nothing to capture right now.",
 	CAPTURE_Q_LIST_HINT    = "Click a line to capture it. The chosen aid is used on the next try.",
@@ -476,13 +478,34 @@ local function ShowNetTooltip(button)
 	tooltip:Show()
 end
 
+-- Le filet vit sur l'écran, pas dans le cadre du compagnon (QC 2.0) : posé
+-- sur le compagnon quand il est affiché, seul sous le personnage quand le
+-- compagnon est masqué (réglage) — on peut toujours capturer.
+ns.CAPTURE_NET_ALONE = { point = "CENTER", x = 0, y = -170 }
+function ns:CapturePlaceNet()
+	local button = self.captureNetButton
+	if not button then return nil end
+	local frame = self.companionFrame
+	local onCompanion = frame and frame.IsShown and frame:IsShown() and true or false
+	button:ClearAllPoints()
+	if onCompanion then
+		button:SetPoint("TOPLEFT", frame, "TOPLEFT", 4, -4)
+		if button.SetFrameStrata and frame.GetFrameStrata then pcall(button.SetFrameStrata, button, frame:GetFrameStrata()) end
+		button:SetFrameLevel((frame:GetFrameLevel() or 1) + 8)
+		frame.captureNet = button
+	else
+		local spot = ns.CAPTURE_NET_ALONE
+		button:SetPoint(spot.point, UIParent, spot.point, spot.x, spot.y)
+		if button.SetFrameStrata then pcall(button.SetFrameStrata, button, "MEDIUM") end
+	end
+	button.alone = not onCompanion
+	return onCompanion and "companion" or "alone"
+end
+
 function ns:EnsureCaptureNet()
-	local parent = self.companionFrame
-	if not parent then return nil end
-	if parent.captureNet then return parent.captureNet end
-	local button = Theme.CreateIconButton(parent, NET_SIZE, NET_ICON)
-	button:SetPoint("TOPLEFT", parent, "TOPLEFT", 4, -4)
-	button:SetFrameLevel((parent:GetFrameLevel() or 1) + 8)
+	if self.captureNetButton then self:CapturePlaceNet(); return self.captureNetButton end
+	local button = Theme.CreateIconButton(UIParent, NET_SIZE, NET_ICON)
+	self.captureNetButton = button
 	if button.RegisterForClicks then button:RegisterForClicks("LeftButtonUp", "RightButtonUp") end
 	-- le halo doré d'une brillante, derrière l'icône
 	button.glow = Theme.Solid(button, "BACKGROUND", Theme.GOLD_LIGHT, 0)
@@ -506,13 +529,13 @@ function ns:EnsureCaptureNet()
 		b.glow:SetAlpha(0.20 + 0.35 * math.abs(math.sin(Clock() * 3)))
 	end)
 	button:Hide()
-	parent.captureNet = button
+	self:CapturePlaceNet()
 	return button
 end
 
 -- Couleurs : ambre au repos, or plein (et halo) pour une brillante
 function ns:CaptureStyleNet()
-	local button = self.companionFrame and self.companionFrame.captureNet
+	local button = self.captureNetButton
 	if not button then return end
 	local lit = button.hover or button.shiny
 	if button.icon.SetDesaturated then button.icon:SetDesaturated(false) end
@@ -530,11 +553,11 @@ end
 -- Bouton et liste à jour (après chaque changement de la file)
 function ns:CaptureQueueRefresh()
 	local queue = self:CaptureQueueState()
-	local frame = self.companionFrame
 	local count = (Enabled() and #queue) or 0
-	if frame then
-		local button = frame.captureNet or (count > 0 and self:EnsureCaptureNet())
+	do
+		local button = self.captureNetButton or (count > 0 and self:EnsureCaptureNet())
 		if button then
+			self:CapturePlaceNet()
 			if count > 0 then
 				button.count:SetText(tostring(count))
 				button.shiny = self:CaptureQueueHasShiny()
@@ -701,13 +724,33 @@ do
 	if base then
 		function ns:EnsureCompanionFrame(...)
 			local frame = base(self, ...)
-			if frame and not frame.captureNet and self.captureState and self.captureState.queue
-				and #self.captureState.queue > 0 then
+			if self.captureNetButton then pcall(self.CapturePlaceNet, self)
+			elseif frame and self.captureState and self.captureState.queue and #self.captureState.queue > 0 then
 				pcall(self.CaptureQueueRefresh, self)
 			end
 			return frame
 		end
 	end
+end
+
+-- compagnon montré ou masqué : le filet suit (sur lui, ou seul à l'écran)
+do
+	local base = ns.CompanionUpdateVisibility
+	if base then
+		function ns:CompanionUpdateVisibility(...)
+			local a, b = base(self, ...)
+			if self.captureNetButton then pcall(self.CapturePlaceNet, self) end
+			return a, b
+		end
+	end
+end
+
+-- /qc filet : capture le meilleur candidat (même compagnon masqué)
+if ns.EXTRA_COMMANDS then
+	ns.EXTRA_COMMANDS["filet"] = function(self)
+		if not self:CaptureThrow() then self:Print(L.CAPTURE_Q_NOTHING) end
+	end
+	ns.EXTRA_COMMANDS["net"] = ns.EXTRA_COMMANDS["filet"]
 end
 
 if ns.Mark then ns.Mark("CaptureQueue") end
