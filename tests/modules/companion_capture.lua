@@ -47,7 +47,7 @@ function CP.Quiet()
 end
 function CP.Reset()
 	ResetWorld()
-	for _, field in ipairs({ "companionFrame", "companionBubble", "companionHover", "journalFrame", "capturePrompt" }) do
+	for _, field in ipairs({ "companionFrame", "companionBubble", "companionHover", "journalFrame", "capturePrompt", "captureQueueList" }) do
 		if NS[field] then NS[field]:Hide() end
 		NS[field] = nil
 	end
@@ -127,34 +127,34 @@ do
 	Check("[CAP] rang inconnu : comme un normal", Pct({ class = "??", level = 20 }, nil, 20) == 30)
 end
 
--- 2. Le coup fatal ouvre la fenêtre --------------------------------------------------------------
+-- 2. Le coup fatal : dans la file du filet (2.0 : plus de fenêtre automatique) ----------------------
 do
 	Say("-- capture : proposée au coup fatal")
 	CP.Reset()
 	CP.SeeKill(3100, { name = "Loup des plaines", level = 19 })
-	local pending = NS:CaptureState().pending
-	Check("[CAP] abattu : capture proposée", pending and pending.npcID == 3100 and pending.name == "Loup des plaines")
-	Check("[CAP] … fenêtre affichée avec son nom", NS.capturePrompt and NS.capturePrompt:IsShown()
-		and NS.capturePrompt.name:GetText() == "Loup des plaines")
+	local queue = NS:CaptureQueue()
+	Check("[CAP] abattu : capture proposée (file du filet)", queue[1] and queue[1].npcID == 3100
+		and queue[1].name == "Loup des plaines" and queue[1].reason == "new")
+	Check("[CAP] … pas de fenêtre qui s'ouvre seule", not (NS.capturePrompt and NS.capturePrompt:IsShown()))
+	Check("[CAP] … le filet du compagnon, avec son compteur", NS.companionFrame.captureNet
+		and NS.companionFrame.captureNet:IsShown() and NS.companionFrame.captureNet.count:GetText() == "1")
 	Check("[CAP] … le compagnon pousse à tenter", NS.companionBubbleKey == "CAPTURE_PROMPT"
 		and NS.companionBubbleText:find("Loup des plaines", 1, true) ~= nil, NS.companionBubbleText)
-	Check("[CAP] … chance affichée (normal, 1 niveau dessous)", NS.capturePrompt.chance:GetText():find("31", 1, true) ~= nil,
-		NS.capturePrompt.chance:GetText())
-	Check("[CAP] … le modèle de la créature", NS.capturePrompt.model and NS.capturePrompt.model.creature == 3100
-		or NS.capturePrompt.icon:IsShown())
-	Mock:Advance(NS.CAPTURE_WINDOW + 1)
+	Check("[CAP] … chance affichée (normal, 1 niveau dessous)", NS:CaptureQueueLine(queue[1]):find("31", 1, true) ~= nil,
+		NS:CaptureQueueLine(queue[1]))
+	Mock:Advance(NS.CAPTURE_QUEUE_TIME + 1)
 	NS:CaptureTick(NS.Now())
-	Check("[CAP] temps écoulé : fenêtre fermée, plus d'essai", NS:CaptureState().pending == nil
-		and not NS.capturePrompt:IsShown() and NS:CaptureThrow() == false)
+	Check("[CAP] temps écoulé : sorti de la file, filet caché, plus d'essai", #NS:CaptureQueue() == 0
+		and not NS.companionFrame.captureNet:IsShown() and NS:CaptureThrow() == false)
 	CP.Reset()
 	NS:DB().companionCapture = false
 	CP.SeeKill(3101)
-	Check("[CAP] réglage coupé : rien proposé", NS:CaptureState().pending == nil and not NS.capturePrompt)
+	Check("[CAP] réglage coupé : rien proposé", #NS:CaptureQueue() == 0 and not NS.capturePrompt)
 	NS:DB().companionCapture = true
 	CP.Reset()
 	NS:DB().companionEnabled = false
 	CP.SeeKill(3102)
-	Check("[CAP] compagnon coupé : rien", NS.captureState == nil or NS.captureState.pending == nil)
+	Check("[CAP] compagnon coupé : rien", NS.captureState == nil or #NS:CaptureQueue() == 0)
 	NS:DB().companionEnabled = true
 end
 
@@ -178,7 +178,13 @@ do
 		and NS:CaptureState().rolling == nil)
 	CP.Quiet()
 	CP.SeeKill(3200, { name = "Kodo", spawn = "00002B" })
-	Check("[CAP] espèce déjà capturée : plus proposée", NS:CaptureState().pending == nil)
+	local again = NS:CaptureQueue()[1]
+	Check("[CAP] espèce déjà capturée (1 étoile) : proposée pour un meilleur spécimen", again and again.npcID == 3200
+		and again.reason == "stars")
+	NS:CaptureQueueClear()
+	kodo.stars = 3
+	CP.SeeKill(3200, { name = "Kodo", spawn = "00002C" })
+	Check("[CAP] espèce déjà capturée à 3 étoiles : plus proposée", #NS:CaptureQueue() == 0)
 	CP.SeeKill(3201, { name = "Hyène", level = 20 })
 	CP.Roll(0.99)
 	NS:CaptureThrow()
@@ -190,7 +196,7 @@ do
 	Check("[CAP] … dit dans le chat", Mock:Output():find("Hyène s'est échappé", 1, true) ~= nil, Mock:Output())
 	CP.Quiet()
 	CP.SeeKill(3201, { name = "Hyène", spawn = "00003C" })
-	Check("[CAP] espèce ratée : se repropose au prochain", NS:CaptureState().pending ~= nil)
+	Check("[CAP] espèce ratée : se repropose au prochain", NS:CaptureQueue()[1] and NS:CaptureQueue()[1].npcID == 3201)
 end
 
 -- 4. Aides --------------------------------------------------------------------------------------
@@ -204,7 +210,7 @@ do
 	Check("[CAP] plafond : 10 appâts", items.appat == 10 and NS:CaptureGrant("appat", { quiet = true }) == "full")
 	CP.SeeKill(3300, { name = "Raptor", class = "elite", level = 20 })
 	Check("[CAP] choisir l'appât", NS:CaptureToggleAid("appat") == "appat"
-		and NS.capturePrompt.chance:GetText():find("23", 1, true) ~= nil, NS.capturePrompt.chance:GetText())
+		and NS:CaptureQueueLine(NS:CaptureQueueBest()):find("23", 1, true) ~= nil, NS:CaptureQueueLine(NS:CaptureQueueBest()))
 	Check("[CAP] sans sifflet en poche : pas choisissable", NS:CaptureToggleAid("sifflet") == "appat")
 	Check("[CAP] reclic : reposé", NS:CaptureToggleAid("appat") == nil)
 	NS:CaptureToggleAid("appat")
@@ -215,8 +221,8 @@ do
 	NS:CaptureGrant("sifflet", { quiet = true })
 	CP.SeeKill(3301, { name = "Seigneur", class = "worldboss", level = 63 })
 	NS:CaptureToggleAid("sifflet")
-	Check("[CAP] sifflet : « assurée » affiché", NS.capturePrompt.chance:GetText():find(NS.L.CAPTURE_SURE:gsub("%%s · ", ""), 1, true) ~= nil,
-		NS.capturePrompt.chance:GetText())
+	Check("[CAP] sifflet : « assurée » affiché", NS:CaptureQueueLine(NS:CaptureQueueBest()):find(NS.L.CAPTURE_SURE:gsub("%%s · ", ""), 1, true) ~= nil,
+		NS:CaptureQueueLine(NS:CaptureQueueBest()))
 	CP.Roll(0.999)
 	NS:CaptureThrow()
 	CP.Settle()
@@ -265,7 +271,7 @@ do
 	CP.Roll(0)
 	local guid = CP.SeeKill(3400, { name = "Loup brillant" })
 	Check("[CAP] brillante abattue : un lasso et la capture proposée", NS:CaptureData().items.lasso == 1
-		and NS:CaptureState().pending and NS:CaptureState().pending.shiny == true, tostring(guid))
+		and NS:CaptureQueueBest() and NS:CaptureQueueBest().shiny == true, tostring(guid))
 	NS:CaptureThrow()
 	CP.Settle()
 	Check("[CAP] brillante capturée : marquée", NS:CaptureData().creatures[3400].shiny == true)
@@ -335,7 +341,7 @@ do
 	CP.SeeKill(3600, { name = "Ours gris", class = "rare", level = 20 })
 	CP.Roll(0)
 	Check("[CAPFX] clic : la scène remplace la petite fenêtre", NS:CaptureThrow() == true
-		and NS.captureStage and NS.captureStage:IsShown() and not NS.capturePrompt:IsShown())
+		and NS.captureStage and NS.captureStage:IsShown() and not (NS.capturePrompt and NS.capturePrompt:IsShown()))
 	local stage, rolling = NS.captureStage, NS:CaptureState().rolling
 	Check("[CAPFX] rareté : rare = violet, trois losanges", stage.rarity == NS.CAPTURE_RARITY.rare
 		and stage.pips[3]:IsShown() and not stage.pips[4]:IsShown())
