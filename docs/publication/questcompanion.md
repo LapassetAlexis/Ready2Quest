@@ -34,7 +34,9 @@ For **WoW Forever** (1.60). English and French.
 
 ## Capture your menagerie
 
-- **Capture what you defeat**: a "Capture?" window, one click, one try; a mesh net drops over the creature, shakes once, twice, three times… and it's yours, or it tears and the creature runs off. Odds depend on rank and level; **capture aids** (bait, lasso, tamer's whistle) come from the journal.
+- **Capture what you defeat**: a discreet net button on your companion, a queue for whole packs, one click, one try; a mesh net drops over the creature, shakes once, twice, three times… and it's yours, or it tears and the creature runs off. Each specimen has 1 to 3 stars: recapture for a better one. Odds depend on rank and level; **capture aids** (bait, lasso, tamer's whistle) come from the journal.
+- **Your companion helps you hunt**: each captured creature you take along gives a hunt effect and a comfort effect tied to its type (Beast, Humanoid, Undead, Elemental, Dragonkin, Demon, Giant, Mechanical), stronger for elites, rares, shinies and starred specimens. Mascots give a general bonus that grows as they evolve.
+- **Seals, titles and a trainer card**: capture every species of a zone to seal it, earn trainer titles, and show your card (title, companion, a showcase of 3) to other players who have the addon, from the right-click menu.
 - **Every creature of the game**: the **Menagerie** lists every capturable creature (about 3,500 for your faction), numbered like a creature index, "???" until you meet it, its name in its rarity colour, with a 3D card. Click a captured one: it becomes your companion, and keeps its own name.
 - **Shinies**: any monster can be shiny (1 in 150, more for elites and rares, and more the more of that species you defeat). A gold diamond sparkles over its nameplate and your companion calls it out. Each species has a **normal and a shiny capture**; a shiny companion glows gold. A spotted shiny stays known in the Menagerie, even uncaught.
 
@@ -86,7 +88,9 @@ Pour **WoW Forever** (1.60). En français et en anglais.
 
 ## Ta ménagerie à capturer
 
-- **Capture ce que tu abats** : une fenêtre « Capturer ? », un clic, un essai ; un filet maillé tombe sur la créature, bouge une fois, deux fois, trois fois… et elle est à toi, ou il se déchire et elle s'enfuit. La chance dépend du rang et du niveau ; des **aides de capture** (appât, lasso, sifflet du dompteur) se gagnent dans le carnet.
+- **Capture ce que tu abats** : un bouton filet discret sur ton compagnon, une file pour les packs entiers, un clic, un essai ; un filet maillé tombe sur la créature, bouge une fois, deux fois, trois fois… et elle est à toi, ou il se déchire et elle s'enfuit. Chaque spécimen a 1 à 3 étoiles : recapture pour un meilleur. La chance dépend du rang et du niveau ; des **aides de capture** (appât, lasso, sifflet du dompteur) se gagnent dans le carnet.
+- **Ton compagnon t'aide à chasser** : chaque créature capturée que tu emmènes donne un effet de chasse et un effet de confort liés à son type (Bête, Humanoïde, Mort-vivant, Élémentaire, Draconien, Démon, Géant, Mécanique), plus forts pour un élite, un rare, une brillante ou un spécimen étoilé. Les mascottes donnent un bonus général qui grandit avec leur évolution.
+- **Sceaux, titres et fiche de dresseur** : capture toutes les espèces d'une zone pour la sceller, gagne des titres de dresseur, et montre ta fiche (titre, compagnon, vitrine de 3) aux autres joueurs qui ont l'addon, depuis le menu du clic droit.
 - **Toutes les créatures du jeu** : la **Ménagerie** liste toutes les créatures capturables (environ 3 500 pour ta faction), numérotées comme un Pokédex, « ??? » tant que tu ne les as pas croisées, leur nom à la couleur de leur rareté, avec une fiche en 3D. Clic sur une capturée : elle devient ton compagnon, et garde son nom.
 - **Les brillantes** : n'importe quel monstre peut être brillant (une chance sur 150, plus pour un élite ou un rare, et plus tu as abattu de son espèce). Un losange doré scintille sur sa barre de nom et ton compagnon te prévient. Chaque espèce a une **capture normale et une capture brillante** ; un compagnon brillant luit d'or. Une brillante repérée reste connue dans la Ménagerie, même sans capture.
 

@@ -114,6 +114,10 @@ do
 	NS:CompanionData().appearance = NS.COMPANION_APPEARANCES[1].id
 	Check("[CPAGE] retour à la mascotte : Brindille", NS:CompanionName() == "Brindille")
 	captured.scripts.OnClick(captured)
+	-- 2.0 : une confirmation qui compare les effets, puis « Emmener »
+	Check("[CPAGE] clic : confirmation demandée d'abord", NS.effectsConfirm:IsShown()
+		and NS:CompanionData().appearance ~= "cap:7001")
+	NS:CompanionConfirmAnswer(true)
 	Check("[CPAGE] clic : elle devient l'apparence portée", NS:CompanionData().appearance == "cap:7001")
 	Check("[CPAGE] cadre et fond : deux listes", #evo.frameStyle.options > 0 and #evo.bgStyle.options > 0)
 	Check("[CPAGE] anciennes pages redirigées : Collection -> Compagnon",

@@ -5,7 +5,8 @@
 -- abattu peut désormais être CAPTURÉ et devenir une apparence du compagnon.
 --   * un monstre compté abattu (Bestiary.lua, BestiaryOnKill) ouvre une petite
 --     fenêtre « Capturer ? » pendant CAPTURE_WINDOW secondes : son modèle, son
---     rang, la chance, et les aides qu'on a en poche ;
+--     rang, la chance, et les aides qu'on a en poche (2.0 : plus de fenêtre
+--     automatique, une file et un bouton filet, voir CaptureQueue.lua) ;
 --   * un clic = un essai, un seul par monstre. Le compagnon secoue le filet
 --     (une, deux, trois secousses) puis c'est gagné… ou il s'échappe, et le
 --     compagnon se moque gentiment ;
@@ -84,7 +85,7 @@ local FR = {
 	CAPTURE_MSG_FULL       = "%s : ta besace en est pleine.",
 	CAPTURE_MSG_GIFT       = "%d captures ! Ton compagnon t'offre un %s.",
 	CAPTURE_MSG_SUMMARY    = "Ménagerie : %d créatures capturées (%d essais). Aides : %s.",
-	CAPTURE_MSG_EMPTY      = "Ménagerie vide pour l'instant : abats un monstre, puis clique sur « Capturer ».",
+	CAPTURE_MSG_EMPTY      = "Ménagerie vide pour l'instant : abats un monstre, puis clique sur le filet du compagnon.",
 	CAPTURE_RANK_normal    = "Normal",
 	CAPTURE_RANK_trivial   = "Insignifiant",
 	CAPTURE_RANK_minus     = "Insignifiant",
@@ -95,7 +96,7 @@ local FR = {
 	CAPTURE_SHINY_TAG      = "%s (brillant)",
 	CAPTURE_SRC            = "Capturé le %s",
 	OPT_DAILY_CAPTURE      = "Capturer les monstres abattus",
-	OPT_DAILY_CAPTURE_DESC = "Après un monstre abattu, une fenêtre propose de le capturer : il devient une apparence du compagnon.",
+	OPT_DAILY_CAPTURE_DESC = "Les monstres abattus qui valent le coup attendent 30 s après le combat : un filet sur le compagnon les capture (clic droit : la liste). Ils deviennent des apparences du compagnon.",
 	MEM_TXT_capture        = "Capturé : %s",
 	HELP_CAPTURE           = "/qc capture -- ta ménagerie et tes aides de capture",
 }
@@ -121,7 +122,7 @@ local EN = {
 	CAPTURE_MSG_FULL       = "%s: your pack is full of them.",
 	CAPTURE_MSG_GIFT       = "%d captures! Your companion gives you a %s.",
 	CAPTURE_MSG_SUMMARY    = "Menagerie: %d creatures captured (%d tries). Aids: %s.",
-	CAPTURE_MSG_EMPTY      = "Your menagerie is empty: defeat a monster, then click \"Capture\".",
+	CAPTURE_MSG_EMPTY      = "Your menagerie is empty: defeat a monster, then click the net on your companion.",
 	CAPTURE_RANK_normal    = "Normal",
 	CAPTURE_RANK_trivial   = "Trivial",
 	CAPTURE_RANK_minus     = "Trivial",
@@ -132,7 +133,7 @@ local EN = {
 	CAPTURE_SHINY_TAG      = "%s (shiny)",
 	CAPTURE_SRC            = "Captured on %s",
 	OPT_DAILY_CAPTURE      = "Capture defeated monsters",
-	OPT_DAILY_CAPTURE_DESC = "After you defeat a monster, a small window offers to capture it: it becomes a companion look.",
+	OPT_DAILY_CAPTURE_DESC = "Defeated monsters worth catching wait 30 s after combat: a net on your companion captures them (right-click: the list). They become companion looks.",
 	MEM_TXT_capture        = "Captured: %s",
 	HELP_CAPTURE           = "/qc capture -- your menagerie and capture aids",
 }
@@ -238,11 +239,18 @@ function ns:CaptureData()
 	-- 1.6.0 : deux versions par espèce, la normale (normal, at) et la
 	-- brillante (shiny, shinyAt). Avant, capturer la brillante remplaçait la
 	-- fiche : elle devient la version brillante, la normale reste à capturer.
-	for _, entry in pairs(capture.creatures) do
-		if type(entry) == "table" and entry.normal == nil then
-			entry.normal = not entry.shiny
-			if entry.shiny and not entry.shinyAt then entry.shinyAt = entry.at end
+	-- Pas à chaque lecture : CaptureData est lue dans des boucles chaudes
+	-- (CaptureHas, CaptureStars). Le parcours ne se refait que si le nombre
+	-- d'espèces a bougé depuis le dernier (pairN) ; les fiches écrites par
+	-- l'addon ont toujours `normal`.
+	if capture.pairN ~= capture.count then
+		for _, entry in pairs(capture.creatures) do
+			if type(entry) == "table" and entry.normal == nil then
+				entry.normal = not entry.shiny
+				if entry.shiny and not entry.shinyAt then entry.shinyAt = entry.at end
+			end
 		end
+		capture.pairN = capture.count
 	end
 	data.capture = capture
 	return capture
@@ -737,7 +745,8 @@ function ns:CaptureResolve(rolling)
 		end
 		data.serial = (tonumber(data.serial) or 0) + 1
 		self.captureAppCache = nil
-		self:Print(self:F("CAPTURE_MSG_OK", target.name))
+		-- une recapture (étoiles, CaptureQueue.lua) a son propre message : pas « il rejoint ta ménagerie »
+		if not rolling.starsBefore then self:Print(self:F("CAPTURE_MSG_OK", target.name)) end
 		self:CompanionSay(target.shiny and "CAPTURE_SHINY" or "CAPTURE_OK", { force = true, args = { target.name } })
 		if self.CompanionFx then self:CompanionFx("bounce"); self:CompanionFx("hearts") end
 		if self.MemoryRecord then

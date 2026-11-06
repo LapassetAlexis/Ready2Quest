@@ -745,7 +745,7 @@ local function BuildPreview(parent, content, x, y, height)
 	p.title:SetPoint("TOPLEFT", p, "TOPLEFT", 14, -PREVIEW_MODEL_H - 14)
 	if p.title.SetWordWrap then p.title:SetWordWrap(false) end
 	p.lines = {}
-	for index = 1, 5 do
+	for index = 1, 8 do
 		local line = Text(p, index == 1 and Theme.F_BODY or Theme.F_SMALL, index == 1 and Theme.LABEL or Theme.MUTED_LIGHT,
 			PREVIEW_W - 28)
 		if line.SetWordWrap then line:SetWordWrap(true) end
@@ -972,10 +972,14 @@ local function BuildEvolution(self, frame, content)
 		cell.onEnter = function(c) if c.def then Tip(c, L[c.def.label] or c.def.label, { L.JRN_EVO_LOOK_TIP }) end end
 		cell:SetScript("OnLeave", HideTip)
 		cell:SetScript("OnClick", function(c)
-			if c.def and ns:CompanionSetAppearance(c.def.id) then
+			if not c.def then return end
+			local function Done()
 				if ns.CompanionApplyModel then pcall(ns.CompanionApplyModel, ns) end
 				ns:RefreshJournal()
 			end
+			-- confirmation qui compare les effets (CompanionEffects.lua)
+			if ns.CompanionAskAppearance then ns:CompanionAskAppearance(c.def.id, Done)
+			elseif ns:CompanionSetAppearance(c.def.id) then Done() end
 		end)
 		pane.looks[index] = cell
 	end
@@ -1003,6 +1007,8 @@ local function BuildEvolution(self, frame, content)
 	pane.orns = {}
 	pane.ornNone = Text(pane, Theme.F_SMALL, Theme.MUTED, HALF)
 	At(pane.ornNone, content, rx, ddY - 66)
+	-- ses effets, sous les envies (CompanionEffects.lua)
+	if self.CompanionEffectsBuildPane then self:CompanionEffectsBuildPane(pane, content, 0, colY - 26 - 4 * EVO_STEP - 4, HALF) end
 end
 
 -- Collection : sortes en puces, grille d'objets (verrou pour ce qui n'est
@@ -1066,7 +1072,9 @@ local function BuildMenagerie(self, frame, content)
 	pane.items = {}
 	local gridTop = rowY - Theme.CHIP_HEIGHT - 12
 	local rowH = MEN_ROW_H
-	local count = math.floor((gridTop - PAGER_Y - 12) / rowH)
+	-- QC 2.0 : bandeau de la collection sous la liste (MenagerieCollection.lua)
+	local collH = self.MenagerieCollectionBuild and (tonumber(ns.MENAGERIE_COLLECTION_H) or 0) or 0
+	local count = math.floor((gridTop - PAGER_Y - 12 - (collH > 0 and collH + 8 or 0)) / rowH)
 	for index = 1, count do
 		local row = Theme.CreateListRow(pane, GRID_W, rowH - 2, { kind = "Button", detail = true, detailFont = Theme.F_SMALL })
 		At(row, content, 0, gridTop - (index - 1) * rowH)
@@ -1079,13 +1087,13 @@ local function BuildMenagerie(self, frame, content)
 		row.icon:SetTexCoord(0.08, 0.92, 0.08, 0.92)
 		row.text:ClearAllPoints()
 		row.text:SetPoint("LEFT", row, "LEFT", 58 + rowH - 8 + 8, 0)
-		row.text:SetWidth(GRID_W - 58 - rowH - 128)
+		row.text:SetWidth(GRID_W - 58 - rowH - 158)
 		row.label = row.text
 		-- nom (ou « ??? ») à la couleur de sa rareté, type à droite, et
 		-- l'étoile d'une brillante ; capturée : liseré vert à gauche (1.5.1)
 		row.detail:ClearAllPoints()
 		row.detail:SetPoint("RIGHT", row, "RIGHT", -30, 0)
-		row.detail:SetWidth(90)
+		row.detail:SetWidth(120)
 		row.star = Theme.CreateDiamond(row, 8)
 		row.star:SetPoint("RIGHT", row, "RIGHT", -12, 0)
 		row.star:SetVertexColor(Theme.GOLD_LIGHT[1], Theme.GOLD_LIGHT[2], Theme.GOLD_LIGHT[3], 1)
@@ -1106,6 +1114,9 @@ local function BuildMenagerie(self, frame, content)
 		end)
 		row:Hide()
 		pane.items[index] = row
+	end
+	if collH > 0 then
+		self:MenagerieCollectionBuild(pane, content, { x = 0, y = gridTop - count * rowH - 6, w = GRID_W, h = collH })
 	end
 	Pager(pane, content)
 	pane.hint:SetText(L.JRN_MEN_HINT)
@@ -1669,6 +1680,7 @@ local function RefreshEvolution(self, frame)
 	end
 	for index = count + 1, #pane.orns do pane.orns[index]:Hide() end
 	if count == 0 then pane.ornNone:SetText(L.JRN_EVO_ORN_NONE) else pane.ornNone:SetText("") end
+	if self.CompanionEffectsRefreshPane then self:CompanionEffectsRefreshPane(pane) end
 end
 
 local function RarityColor(entry)
@@ -1711,6 +1723,10 @@ function ns:JournalPreviewMenagerie(entry, keep)
 	local rank = L["CAPTURE_RANK_" .. tostring(entry.class or "normal")]
 	local lines = { self:F("JRN_MEN_RANK", rank, LevelText(entry)) }
 	if entry.zoneID then lines[#lines + 1] = self:F("JRN_MEN_ZONE", ZoneName(self, entry.zoneID)) end
+	-- « Chasse : … / Confort : … » de cette créature (CompanionEffects.lua)
+	if self.CompanionEffectsLines then
+		for _, line in ipairs(self:CompanionEffectsLines(entry, shinyView)) do lines[#lines + 1] = line end
+	end
 	if not entry.known then
 		lines[#lines + 1] = L.JRN_MEN_NEVER
 		PreviewSet(frame.men.preview, L.JRN_MEN_UNKNOWN, lines, {})
@@ -1726,10 +1742,18 @@ function ns:JournalPreviewMenagerie(entry, keep)
 	local caught = shinyView and entry.shiny or (not shinyView and entry.normal ~= false and entry.captured)
 	if caught then
 		local when = Day(shinyView and entry.shinyAt or entry.at)
-		if when then lines[#lines + 1] = self:F(shinyView and "JRN_MEN_SHINY_CAUGHT" or "JRN_MEN_CAUGHT", when) end
+		-- 2.0 : la qualité du spécimen gardé (CaptureQueue.lua), sur la même ligne
+		local stars = self.CaptureStars and self:CaptureStars(entry.npc, shinyView)
+		stars = stars and self:CaptureStarsText(stars, 12)
+		if when then
+			lines[#lines + 1] = self:F(shinyView and "JRN_MEN_SHINY_CAUGHT" or "JRN_MEN_CAUGHT", when) .. (stars and ("  " .. stars) or "")
+		elseif stars then
+			lines[#lines + 1] = self:F("CAPTURE_STARS_LABEL", stars)
+		end
 		lines[#lines + 1] = current == id and L.JRN_MEN_EQUIPPED or L.JRN_MEN_EQUIP
 	else
-		local chance = self.CaptureChance and self:CaptureChance({ class = entry.class, level = entry.level or entry.lo }) or 0
+		local chance = self.CaptureChance and self:CaptureChance({ class = entry.class, level = entry.level or entry.lo,
+			type = entry.type, npcID = entry.npc, shiny = shinyView or nil }) or 0
 		if shinyView then
 			lines[#lines + 1] = self:F("JRN_MEN_SHINY_SEEN", Day(entry.shinySeen) or "?")
 		else
@@ -1759,11 +1783,17 @@ function ns:JournalMenagerieEquip(entry)
 	local wantShiny = preview and preview.entry and preview.entry.npc == entry.npc and preview.shiny == true
 	local hasNormal, hasShiny = entry.normal ~= false, entry.shiny == true
 	local shiny = (wantShiny and hasShiny) or (not hasNormal and hasShiny)
-	if not self:CompanionSetAppearance("cap:" .. tostring(entry.npc) .. (shiny and ":s" or "")) then return false end
-	if self.CompanionApplyModel then pcall(self.CompanionApplyModel, self) end
-	if self.RefreshOptions then pcall(self.RefreshOptions, self) end
-	self:RefreshJournal()
-	self:JournalPreviewMenagerie(entry)
+	local id = "cap:" .. tostring(entry.npc) .. (shiny and ":s" or "")
+	local function Done()
+		if self.CompanionApplyModel then pcall(self.CompanionApplyModel, self) end
+		if self.RefreshOptions then pcall(self.RefreshOptions, self) end
+		self:RefreshJournal()
+		self:JournalPreviewMenagerie(entry)
+	end
+	-- confirmation qui compare les effets (CompanionEffects.lua)
+	if self.CompanionAskAppearance then return self:CompanionAskAppearance(id, Done) ~= nil end
+	if not self:CompanionSetAppearance(id) then return false end
+	Done()
 	return true
 end
 
@@ -1853,7 +1883,9 @@ local function RefreshMenagerie(self, frame)
 			local lc = RarityColor(entry)
 			row.label:SetTextColor(lc[1], lc[2], lc[3])
 			row.label:SetAlpha(entry.known and 1 or 0.75)
-			row.detail:SetText(entry.known and (entry.type or "") or "")
+			-- 2.0 : les étoiles du meilleur spécimen (CaptureQueue.lua), avant le type
+			local stars = entry.captured and self.CaptureStarsText and self:CaptureStarsText(entry.stars or entry.shinyStars, 10) or ""
+			row.detail:SetText(entry.known and (stars ~= "" and (stars .. " ") or "") .. (entry.type or "") or "")
 			-- liseré vert : la version normale capturée ; losange doré : la
 			-- brillante, plein si capturée, au trait si seulement reconnue
 			if entry.captured and entry.normal ~= false then row.caught:Show() else row.caught:Hide() end
@@ -1874,6 +1906,10 @@ local function RefreshMenagerie(self, frame)
 		end
 	end
 	pane.pager:Update(frame.menOffset, page, #list, maxOffset)
+	if pane.collection and self.MenagerieCollectionRefresh then
+		local ok, err = pcall(self.MenagerieCollectionRefresh, self, pane, self:MenagerieZoneValue(frame.menZone or "here"))
+		if not ok and self.RecordError then self:RecordError("menagerie:collection", err) end
+	end
 	local still = false
 	for _, entry in ipairs(list) do if shown and entry.npc == shown.npc then still = true end end
 	if list[1] and not still then self:JournalPreviewMenagerie(list[1])

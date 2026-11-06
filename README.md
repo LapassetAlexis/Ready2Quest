@@ -5,7 +5,7 @@ Deux addons pour **World of Warcraft Forever**, en français et en anglais. Ils 
 | Addon | Ce qu'il fait | Commande |
 |---|---|---|
 | [**Ready2Quest**](Ready2Quest/README.md) | Prépare ta sortie : check avant de quitter la ville, bilan au retour, fiche de donjon, kit de camp, portée d'aggro, et du confort de jeu (bonne récompense, rythme de leveling, sac plein, place au butin, rangs de sorts, après la mort, marchand). | `/r2q` |
-| [**QuestCompanion**](QuestCompanion/README.md) | Un compagnon de route qui grandit avec toi, sa ménagerie à capturer (versions normales et brillantes) et son carnet de voyage : exploration de chaque zone, missions, coffres d'objets cosmétiques, souvenirs en photo. | `/qc` |
+| [**QuestCompanion**](QuestCompanion/README.md) | Un compagnon de route qui collectionne les créatures : capture les monstres (normaux, brillants, étoilés), emmène celui qui t'aide à chasser, scelle les zones, gagne des titres et montre ta fiche de dresseur ; et son carnet de voyage : exploration, missions, coffres cosmétiques, souvenirs en photo. | `/qc` |
 
 Ensemble, le compagnon réagit en plus à tes départs et retours en ville.
 

@@ -1,5 +1,16 @@
 # Ready2Quest — notes techniques et historique
 
+## QuestCompanion 2.0.0 — la ménagerie au cœur
+
+Cinq lots codés en parallèle depuis une base commune (`CreatureTypes.lua`, un fichier réservé par lot), selon des contrats écrits : [docs/QC2-CONTRATS.md](QC2-CONTRATS.md). Chaque lot s'accroche aux autres par enveloppes de fonctions, dans l'ordre du `.toc` (`Capture.lua` → `CaptureQueue.lua` → `CompanionEffects.lua` → `MenagerieCollection.lua` → `MissionsMenagerie.lua` → `TrainerCard.lua`) ; `ns:CaptureResolve` est enveloppé par les cinq.
+
+- **`CaptureQueue.lua`** : file `ns:CaptureQueue()` (12 au plus, 30 s après le combat, tri : brillante > nouvelle > rang > étoiles), bouton filet indépendant (`ns.captureNetButton`, `ns:CapturePlaceNet`), étoiles `entry.stars` / `entry.shinyStars` (`ns:CaptureStars`), `entry.firstAt`, `/qc filet`.
+- **`CompanionEffects.lua`** : `ns:CompanionEffects()`, `ns:CompanionEffectValue(id)` ; effets par type (chasse, confort) via enveloppes de `CaptureChance`, `ShinyChance`, `ShinyRoll`, `CaptureSpend`, `TreatCheckZone`, `CompanionDecayFactor`… ; force = rang + brillant + étoiles + `ns:MenagerieTypeBonus`, réglée par les envies ; confirmation (`ns:CompanionAskAppearance`) et délai de 2 min (`CompanionData().effects`).
+- **`MenagerieCollection.lua`** : parts de zone `exploration = false` (bestiaire, nommés) ignorées par `ns:ZoneCompletion` ; sceaux (`ns:MenagerieSealProgress`, `ns:MenagerieSealed`, `ns:MenagerieSeals`, boss du monde exclus), cosmétiques par biome, brillant ×1,5 en zone scellée ; `ns:MenagerieTypeBonus` ; titres (`ns:TrainerTitle`) ; données `CompanionData().collection` ; rattrapage sans garder les tables de zone (`ns.ZonePeek`).
+- **`MissionsMenagerie.lua`** (+ `Daily.lua`, `Weekly.lua`) : missions du jour par catégorie (ménagerie, exploration, caractère), `typeCapture` à la semaine ; `MissionEvent` / `WeeklyEvent` reçoivent `info` (`ctype`).
+- **`TrainerCard.lua`** : préfixe `QCTrainer` ; messages `H` (annonce), `A` (accusé), `P` (sonde), `R` (demande), `N` (refus), `C` (fiche en morceaux de 200 octets) ; sérialisation `clé=valeur;…` échappée, champs inconnus ignorés, textes reçus neutralisés (`|`) et bornés ; débit limité, rien en combat ; clés de joueur normalisées (`ns:TrainerKey`) ; cache des détenteurs 14 j ; `Menu.ModifyMenu` sur les menus de joueur ; ligne d'infobulle via `ns.UNIT_TOOLTIP_LINES` (`Tooltips.lua`).
+- Relecture indépendante après fusion : 11 défauts corrigés (coût quadratique de `CaptureData`, fiche construite seulement à l'envoi, casse des noms, sondes et morceaux non fiables, usurpation du nom, valeurs secrètes…).
+
 ## QuestCompanion 1.6.1 / Ready2Quest 1.29.3 — mémoire
 
 Mesure : `python3 tests/run_tests.py --memoire` charge les deux addons comme un client français (sans le mode test, sans jouer les tests) et donne la mémoire Lua laissée par chaque fichier, code compilé compris, après ramassage.

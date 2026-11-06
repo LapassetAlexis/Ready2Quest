@@ -1,5 +1,20 @@
 # QuestCompanion
 
+## 2.0.0 — la ménagerie au cœur
+
+QuestCompanion devient d'abord un jeu de collection de créatures : tout sert à capturer et à compléter ta ménagerie.
+
+- **Le filet** : plus de fenêtre automatique. Un bouton filet discret sur le compagnon (compteur, doré si une brillante attend) ; un pack entier se met en file, chacun 30 s à partir de la fin du combat ; clic = le meilleur candidat, clic droit = la liste. `/qc filet`. Le bouton reste à l'écran si le compagnon est masqué.
+- **Étoiles** : chaque capture est un spécimen de 1 à 3 étoiles ; recapture pour tenter mieux, le meilleur est gardé.
+- **Compagnon actif** : la créature emmenée donne un effet de chasse et un effet de confort selon son type (Bête, Humanoïde, Mort-vivant, Élémentaire, Draconien, Démon, Géant, Mécanique), plus forts selon son rang, sa brillance, ses étoiles et ta collection du type. Les mascottes donnent un bonus général qui grandit avec leur évolution. Un compagnon heureux donne ses effets en entier, jamais moins de la moitié. Changer de compagnon demande une confirmation, et les effets arrivent au bout de 2 minutes. Patte sur les barres de nom des Bêtes à capturer, chance avec bonus dans l'infobulle.
+- **Exploration et Ménagerie séparées** : le pourcentage d'une zone ne compte plus que lieux, récolte et quêtes. Les créatures vivent dans la Ménagerie. Paliers et coffres déjà gagnés restent acquis.
+- **Sceaux de zone** : toutes les espèces d'une zone capturées (hors boss du monde) = un sceau, un cadre puis un fond aux couleurs du paysage, et une meilleure chance de brillant dans la zone.
+- **Collection par type et titres de dresseur** : des paliers par type renforcent son effet ; 10, 25, 50, 100 et 250 espèces donnent un titre et une récompense. Les captures d'avant sont rattrapées à la mise à jour.
+- **Missions** : chaque jour une mission de ménagerie, une d'exploration et celle du caractère ; chaque semaine, en plus de la chasse au brillant, des missions par type (« emmène un Mort-vivant et capture 2 Morts-vivants »).
+- **Fiche de dresseur** : titre, compagnon en 3D, vitrine de 3 créatures, chiffres et badges de sceaux, consultable par les autres joueurs qui ont l'addon (menu du clic droit, ligne dans l'infobulle). `/qc fiche [nom]`. Partagée par défaut, se coupe dans les réglages.
+
+*English:* QuestCompanion becomes a creature-collecting game. A discreet net button and a capture queue (packs, 30 s after combat), 1-3 star specimens, companion effects by creature type (hunt + comfort, scaled by rank, shiny, stars and type collection; mascots give a general bonus), switching asks for confirmation and effects start after 2 minutes. Exploration and Menagerie are separated; zone seals, type milestones and trainer titles; menagerie-focused daily and weekly missions; a trainer card other addon users can open from the right-click menu.
+
 ## 1.6.1
 
 - **Plus léger** : l'addon prend environ 2 Mo de mémoire au lieu de 5,8 Mo. Les créatures et les quêtes de chaque zone ne sont construites qu'en arrivant dans la zone (ou en ouvrant la Ménagerie, sans les garder ensuite), seule la langue de ton client reste en mémoire, et le compagnon au repos ne recalcule plus sa position à chaque image.

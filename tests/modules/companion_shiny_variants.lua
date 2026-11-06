@@ -39,7 +39,7 @@ function SV.Install()
 end
 function SV.Reset()
 	ResetWorld()
-	for _, field in ipairs({ "companionFrame", "companionBubble", "companionHover", "journalFrame", "capturePrompt" }) do
+	for _, field in ipairs({ "companionFrame", "companionBubble", "companionHover", "journalFrame", "capturePrompt", "captureQueueList" }) do
 		if NS[field] then NS[field]:Hide() end
 		NS[field] = nil
 	end
@@ -108,19 +108,21 @@ end
 do
 	SV.Reset()
 	SV.SeeKill(3100, "AAAA")
-	Check("[SHV] normale abattue : capture proposée", NS:CaptureState().pending ~= nil)
+	Check("[SHV] normale abattue : capture proposée", NS:CaptureQueueBest() ~= nil)
 	SV.Capture()
 	Check("[SHV] normale capturée", NS:CaptureHas(3100, false) and not NS:CaptureHas(3100, true))
 	-- la normale encore : plus proposée
+	-- 2.0 : déjà capturée à 3 étoiles, elle ne se propose plus
+	NS:CaptureData().creatures[3100].stars = 3
 	SV.SeeKill(3100, "BBBB")
-	Check("[SHV] normale déjà capturée : plus proposée", NS:CaptureState().pending == nil)
+	Check("[SHV] normale déjà capturée (3 étoiles) : plus proposée", NS:CaptureQueueBest() == nil)
 	-- une brillante de la même espèce : proposée, et capturée À CÔTÉ
 	NS:WeeklyData().week = NS:WeeklyId()
 	NS:WeeklyData().missions = { { kind = "shinyCapture", need = 1, have = 0, source = "week" } }
 	NS.SHINY_CHANCE = 1
 	SV.Roll(0)
 	local guid = SV.SeeKill(3100, "CCCC")
-	Check("[SHV] brillante de l'espèce : proposée malgré la normale", NS:CaptureState().pending and NS:CaptureState().pending.shiny)
+	Check("[SHV] brillante de l'espèce : proposée malgré la normale", NS:CaptureQueueBest() and NS:CaptureQueueBest().shiny)
 	NS.SHINY_CHANCE = 0
 	SV.Capture()
 	local entry = NS:CaptureData().creatures[3100]
@@ -231,10 +233,13 @@ do
 	Check("[SHV] bouton : la fiche passe à la brillante", preview.shiny == true and preview.title.text:find("Lion", 1, true)
 		and preview.variant.text.text == "Version normale")
 	row:Click()
+	-- 2.0 : une confirmation qui compare les effets, puis « Emmener »
+	NS:CompanionConfirmAnswer(true)
 	Check("[SHV] clic sur la ligne : la version montrée devient le compagnon", NS:CompanionData().appearance == "cap:3400:s",
 		NS:CompanionData().appearance)
 	preview.variant:Click()
 	row:Click()
+	NS:CompanionConfirmAnswer(true)
 	Check("[SHV] … et la normale", NS:CompanionData().appearance == "cap:3400")
 	f:Hide()
 end

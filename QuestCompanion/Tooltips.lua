@@ -86,8 +86,17 @@ function ns:BestiaryTooltipLine(guid, level)
 			status = live and L.MEN_TIP_SHINY_CAUGHT or L.MEN_TIP_CAUGHT
 			color = live and (Theme.GOLD_LIGHT or Theme.GOLD) or Theme.GREEN
 		else
-			local chance = self:CaptureChance({ class = class or "normal", level = level or species.level })
-			status = self:F("MEN_TIP_TODO", math.floor(chance * 100 + 0.5 + 1e-9))
+			-- type et espèce : les effets du compagnon (CompanionEffects.lua) en tiennent compte
+			local info = { class = class or "normal", level = level or species.level, type = species.type, npcID = npcID,
+				shiny = live and true or nil }
+			local chance = self:CaptureChance(info)
+			local pct = math.floor(chance * 100 + 0.5 + 1e-9)
+			local base = self.CaptureChanceBase and math.floor(self:CaptureChanceBase(info) * 100 + 0.5 + 1e-9) or pct
+			if pct > base and L.MEN_TIP_TODO_BONUS then
+				status = self:F("MEN_TIP_TODO_BONUS", pct, pct - base)
+			else
+				status = self:F("MEN_TIP_TODO", pct)
+			end
 			color = live and (Theme.GOLD_LIGHT or Theme.GOLD) or (Theme.MUTED_LIGHT or Theme.MUTED)
 		end
 		if live then status = self:F("MEN_TIP_SHINY", status) end
@@ -113,8 +122,18 @@ function ns:BestiaryOnTooltip(tooltip, data)
 	return true
 end
 
+-- Autres lignes d'infobulle d'unité (fiche de dresseur, TrainerCard.lua) :
+-- le socle ne pose qu'une accroche par sorte, elles passent par celle-ci.
+-- fn(ns, tooltip, data), chacune protégée.
+ns.UNIT_TOOLTIP_LINES = ns.UNIT_TOOLTIP_LINES or {}
 function ns:BestiaryHookTooltip()
-	return self:HookTooltip("Unit", function(tooltip, data) ns:BestiaryOnTooltip(tooltip, data) end)
+	return self:HookTooltip("Unit", function(tooltip, data)
+		ns:BestiaryOnTooltip(tooltip, data)
+		for _, fn in ipairs(ns.UNIT_TOOLTIP_LINES) do
+			local ok, err = pcall(fn, ns, tooltip, data)
+			if not ok and ns.RecordError then ns:RecordError("tooltip:unit", err) end
+		end
+	end)
 end
 ns:BestiaryHookTooltip()
 

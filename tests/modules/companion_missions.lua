@@ -238,8 +238,11 @@ do
 	local entries = {}
 	for _, e in ipairs(NS:MenagerieList({ zone = "all" })) do entries[e.npc] = e end
 	Check("[MEN] clic sur une inconnue : rien", NS:JournalMenagerieEquip(entries[3101]) == false)
-	Check("[MEN] clic sur une capturée : elle devient le compagnon", NS:JournalMenagerieEquip(entries[3201]) == true
-		and NS:CompanionData().appearance == "cap:3201")
+	-- 2.0 : une confirmation qui compare les effets, puis « Emmener »
+	Check("[MEN] clic sur une capturée : confirmation demandée", NS:JournalMenagerieEquip(entries[3201]) == true
+		and NS.effectsConfirm:IsShown() and NS:CompanionData().appearance ~= "cap:3201")
+	NS:CompanionConfirmAnswer(true)
+	Check("[MEN] clic sur une capturée : elle devient le compagnon", NS:CompanionData().appearance == "cap:3201")
 	-- depuis la fiche d'une zone
 	NS:OpenMenagerieZone(1411)
 	Check("[MEN] ouverte depuis une zone : filtrée sur elle", f.kind == "menagerie" and f.menZone == 1411
