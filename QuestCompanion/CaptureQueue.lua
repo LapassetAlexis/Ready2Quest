@@ -405,7 +405,11 @@ function ns:CaptureOffer(guid, entry, shiny)
 	if candidate.reason ~= "stars" then self:CompanionSay("CAPTURE_PROMPT", { args = { candidate.name } }) end
 	self:CaptureQueueRefresh()
 	-- et le bandeau « Capture possible » ; en combat, il attend la fin du combat
-	if not InCombat() then self:CaptureToastShow() end
+	if not InCombat() then
+		self:CaptureToastShow()
+		-- première occasion de capture : le tutoriel de la ménagerie (Companion.lua, 2.3.0)
+		if self.CompanionMenagerieOpportunity then pcall(self.CompanionMenagerieOpportunity, self) end
+	end
 	return candidate
 end
 
@@ -448,6 +452,14 @@ do
 	local base = ns.CaptureThrow
 	function ns:CaptureThrow(guid)
 		local state = self:CaptureState()
+		-- la liste se referme dès qu'on lance (ou qu'on essaie de lancer)
+		self:CaptureHideQueueList()
+		-- le verdict du lancer précédent est encore à l'écran : on le referme
+		-- et on enchaîne, sans attendre la fin de ses 3,5 s
+		if state.rolling and state.rolling.result then
+			state.rolling.closeAt = Clock()
+			self:CaptureTick(Clock())
+		end
 		if state.rolling then return false end
 		local picked
 		if not state.pending or guid then
@@ -460,6 +472,9 @@ do
 				picked = queue[1]
 			end
 			if not picked then return false end
+			-- le tutoriel de la ménagerie attendait ce geste (avant que la
+			-- file ne se vide : le filet part, ce n'est pas « trop tard »)
+			if self.CompanionSequenceAdvance then pcall(self.CompanionSequenceAdvance, self, "net") end
 			self:CaptureQueueRemove(picked)
 			self:CaptureToastHide()
 			self:CapturePlaySound("throw")
@@ -475,6 +490,8 @@ do
 		if not staged and self.CaptureShowPrompt then self:CaptureShowPrompt() end
 		self:CaptureHideQueueList()
 		local thrown = base(self)
+		-- (lancer depuis la petite fenêtre déjà ouverte : le geste compte aussi)
+		if thrown and self.CompanionSequenceAdvance then pcall(self.CompanionSequenceAdvance, self, "net") end
 		self:CaptureQueueRefresh()
 		return thrown
 	end
@@ -566,8 +583,14 @@ ns.CAPTURE_QUEUE_PRUNE_GAP = 1
 do
 	local base = ns.CaptureTick
 	function ns:CaptureTick(now)
+		local before = self.captureState and self.captureState.rolling
 		base(self, now)
 		local state = self.captureState
+		-- la scène (ou la petite fenêtre) vient de se refermer sur son verdict :
+		-- le tutoriel de la ménagerie reprend (Companion.lua, 2.3.0)
+		if before and before.result and not (state and state.rolling) and self.CompanionSequenceAdvance then
+			pcall(self.CompanionSequenceAdvance, self, "stage", { ok = before.success and true or false })
+		end
 		local queue = state and state.queue
 		if not (queue and #queue > 0) then return end
 		now = now or Clock()
@@ -575,8 +598,10 @@ do
 		if self.captureToastHideAt and now >= self.captureToastHideAt then self:CaptureToastHide() end
 		if not InCombat() and self:CaptureQueueStartTimers(now) then
 			changed = true
-			-- fin du combat : ceux qui attendaient sont annoncés
+			-- fin du combat : ceux qui attendaient sont annoncés, et c'est
+			-- aussi une occasion de capture pour le tutoriel de la ménagerie
 			self:CaptureToastShow()
+			if self.CompanionMenagerieOpportunity then pcall(self.CompanionMenagerieOpportunity, self) end
 		end
 		local due = changed or state.queuePrunedSerial ~= self:CaptureData().serial or not state.queuePrunedAt
 			or now - state.queuePrunedAt >= ns.CAPTURE_QUEUE_PRUNE_GAP or now < state.queuePrunedAt
@@ -768,6 +793,8 @@ function ns:EnsureCaptureNet()
 	-- l'arrivée d'un candidat (le battement attire l'œil, sans clignoter)
 	button:SetScript("OnUpdate", function(b)
 		local now = Clock()
+		-- le tutoriel de la ménagerie attend le clic sur le filet : il bat tant que l'étape attend
+		if ns.CompanionSequenceWaits and ns:CompanionSequenceWaits("net") then b.pulseUntil = now + ns.CAPTURE_NET_PULSE end
 		if b.shiny then
 			b.glow:SetAlpha(0.20 + 0.35 * math.abs(math.sin(now * 3)))
 		elseif b.pulseUntil and now < b.pulseUntil then
@@ -828,6 +855,9 @@ function ns:CaptureQueueRefresh()
 	if count == 0 then self:CaptureToastHide() end
 	if count == 0 then self:CaptureHideQueueList()
 	elseif self.captureQueueList and self.captureQueueList:IsShown() then self:CaptureRefreshQueueList() end
+	-- filet vide (temps écoulé, Ignorer, Tout ignorer) alors que le tutoriel de
+	-- la ménagerie attendait le clic : « Trop tard… », il reviendra (Companion.lua)
+	if count == 0 and self.CompanionSequenceAbort then pcall(self.CompanionSequenceAbort, self, "net") end
 	return count
 end
 
@@ -1058,9 +1088,11 @@ function ns:EnsureCaptureQueueList()
 	if self.captureQueueList then return self.captureQueueList end
 	if not (Theme and Theme.CreateToast) then return nil end
 	local height = 34 + LIST_ROWS * LIST_ROW_H + 70
-	local frame = Theme.CreateToast(UIParent, LIST_W, height, { strata = "HIGH" })
+	-- un nom global : Échap la referme (UISpecialFrames), comme les fenêtres du thème (2.3.0)
+	local frame = Theme.CreateToast(UIParent, LIST_W, height, { strata = "HIGH", name = "QuestCompanionCaptureList" })
 	if not frame then return nil end
 	frame:EnableMouse(true)
+	if Theme.RegisterEscapeClose then pcall(Theme.RegisterEscapeClose, frame) end
 	self:RestorePoint(frame, "captureListPoint", { point = "BOTTOM", x = 0, y = 260 })
 	-- clic droit sur le fond : on referme
 	frame:SetScript("OnMouseUp", function(_, mouse) if mouse == "RightButton" then ns:CaptureHideQueueList() end end)
@@ -1068,6 +1100,11 @@ function ns:EnsureCaptureQueueList()
 	frame.title = Theme.Text(frame, Theme.F_SMALL, Theme.GOLD)
 	frame.title:SetPoint("TOPLEFT", frame, "TOPLEFT", pad, -pad)
 	frame.title:SetText(L.CAPTURE_Q_TITLE)
+	-- « × » en haut à droite (brique du thème), comme les autres fenêtres
+	if Theme.CreateCloseButton then
+		frame.close = Theme.CreateCloseButton(frame, 18)
+		frame.close:SetPoint("TOPRIGHT", frame, "TOPRIGHT", -8, -8)
+	end
 	frame.rows = {}
 	for index = 1, LIST_ROWS do
 		local row = Theme.CreateListRow(frame, LIST_W - 2 * pad, LIST_ROW_H - 2,
@@ -1076,7 +1113,11 @@ function ns:EnsureCaptureQueueList()
 		row:SetIndex(index)
 		row.text:SetWidth(110)
 		row.detail:SetWidth(LIST_W - 2 * pad - 130)
-		row:SetScript("OnClick", function(r) if r.candidate then ns:CaptureThrow(r.candidate) end end)
+		-- clic sur une ligne : le filet part sur ce candidat, la liste se referme
+		row:SetScript("OnClick", function(r)
+			ns:CaptureHideQueueList()
+			if r.candidate then ns:CaptureThrow(r.candidate) end
+		end)
 		row:Hide()
 		frame.rows[index] = row
 	end

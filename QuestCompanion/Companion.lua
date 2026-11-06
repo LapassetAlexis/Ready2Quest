@@ -93,7 +93,8 @@ local CHATTER = {
 ns.COMPANION_CHATTER = CHATTER
 ns.COMPANION_CHATTER_DEFAULT = 3
 local POOL_CATEGORY = {
-	EVOLVE = "event", UNLOCK = "event", READY = "event", CHEST = "event", TUTO = "tuto", TIP = "tip", GOAL = "tip", GOAL_STAGE = "tip",
+	EVOLVE = "event", UNLOCK = "event", READY = "event", CHEST = "event", TUTO = "tuto", TUTO_MENAGERIE = "tuto",
+	TIP = "tip", GOAL = "tip", GOAL_STAGE = "tip",
 	IDLE = "chatter", NIGHT = "chatter",
 	PHOTO = "event", ANNIV = "event", RECALL = "chatter",
 	LEVEL = "event",      -- un grand moment : dit dès le cran Calme, comme promis
@@ -116,6 +117,10 @@ local NIGHT_GRACE = 600
 local IDLE_REST  = 300                 -- 5 min au repos sans rien dire : un mot
 local CONVO_STEP = 3.5                 -- s entre deux bulles d'une conversation
 local TUTO_STEP  = 9                   -- s par bulle du tutoriel (« Suivant » accélère)
+local TUTO_WAIT  = 90                  -- s qu'une étape qui attend un geste (le filet) garde sa bulle avant de la redire
+-- Tutoriel de la ménagerie (2.3.0) : lancé de lui-même à la première occasion
+-- de capture ; coupé dans le banc de test (comme le tirage des missions)
+ns.TUTO_MENAGERIE_AUTO = ns.TUTO_MENAGERIE_AUTO ~= false
 local HISTORY    = 6                   -- lignes récentes évitées par réservoir (réservoirs triplés en 1.4.0)
 local SAME_NPC   = 120                 -- même PNJ (bavardage puis vendeur) : un avis
 local SAME_HUB   = 600                 -- même village ré-entré : pas de nouveau mot
@@ -124,7 +129,7 @@ ns.COMPANION_RULES = {
 	floor = NEED_FLOOR, max = NEED_MAX, decay = DECAY, restGain = REST_GAIN, bubbleGap = BUBBLE_GAP,
 	petCooldown = PET_COOLDOWN, sleepyAfter = SLEEPY_AFTER, sleepyMin = SLEEPY_MIN, sleepyMax = SLEEPY_MAX,
 	priority = PRIORITY, cooldowns = COOLDOWNS, tipGap = TIP_GAP, tipJitter = TIP_JITTER, needLow = NEED_LOW,
-	needGrace = NEED_GRACE, idleRest = IDLE_REST, convoStep = CONVO_STEP, tutoStep = TUTO_STEP,
+	needGrace = NEED_GRACE, idleRest = IDLE_REST, convoStep = CONVO_STEP, tutoStep = TUTO_STEP, tutoWait = TUTO_WAIT,
 	goalFirst = GOAL_FIRST, bubbleTime = BUBBLE_TIME,
 	-- part des PNJ non humanoïdes jugés sur leur nature plutôt que leur rôle
 	-- (lu à chaque fois : les tests le fixent à 0 ou 1)
@@ -296,6 +301,8 @@ local FR = {
 	COMP_MSG_TUTO_MUTED    = "Bulles du compagnon coupées (Bavardage : Muet) : remonte la réglette, ou /qc compagnon muet, pour voir le tutoriel.",
 	COMP_MSG_TUTO_COMBAT   = "Le tutoriel du compagnon commencera après le combat.",
 	COMP_MSG_TUTO_SKIPPED  = "Tutoriel du compagnon passé (/qc compagnon tuto pour le revoir).",
+	COMP_MSG_TUTO_MEN_SKIPPED = "Tutoriel de la ménagerie passé (/qc compagnon tuto menagerie pour le revoir).",
+	COMP_MSG_TUTO_MEN_OFF  = "La capture est coupée (réglages, page Au jour le jour) : rallume-la pour le tutoriel de la ménagerie.",
 	COMP_MSG_UNLOCK_APP    = "Compagnon : nouvelle apparence débloquée, %s. Choisis-la dans les réglages.",
 	COMP_MSG_UNLOCK_ORN    = "Compagnon : nouvel ornement débloqué, %s.",
 	COMP_MSG_EVOLVE        = "Compagnon : %s devient %s !",
@@ -308,7 +315,7 @@ local FR = {
 	COMP_MSG_APPEARANCE    = "Apparence : %s.",
 	COMP_MSG_MUTE          = "Bulles du compagnon : %s.",
 	COMP_MSG_FALLBACK      = "Modèle 3D indisponible sur ce client : la boussole le remplace.",
-	HELP_COMPANION         = "/qc compagnon [nom <nom> | caresse | apparence | muet | tuto | anim] — ton compagnon de route",
+	HELP_COMPANION         = "/qc compagnon [nom <nom> | caresse | apparence | muet | tuto [menagerie | passer] | anim] — ton compagnon de route",
 }
 local EN = {
 	OPT_PAGE_COMPANION_MAIN = "Companion",
@@ -469,6 +476,8 @@ local EN = {
 	COMP_MSG_TUTO_MUTED    = "Companion bubbles are off (Chattiness: Silent): raise the slider, or /qc compagnon muet, to see the tutorial.",
 	COMP_MSG_TUTO_COMBAT   = "The companion tutorial will start after combat.",
 	COMP_MSG_TUTO_SKIPPED  = "Companion tutorial skipped (/qc compagnon tuto to see it again).",
+	COMP_MSG_TUTO_MEN_SKIPPED = "Menagerie tutorial skipped (/qc compagnon tuto menagerie to see it again).",
+	COMP_MSG_TUTO_MEN_OFF  = "Capture is off (settings, Day by day page): turn it back on for the menagerie tutorial.",
 	COMP_MSG_UNLOCK_APP    = "Companion: new appearance unlocked, %s. Pick it in the settings.",
 	COMP_MSG_UNLOCK_ORN    = "Companion: new ornament unlocked, %s.",
 	COMP_MSG_EVOLVE        = "Companion: %s becomes %s!",
@@ -1103,7 +1112,8 @@ function ns:CompanionSay(pool, opts)
 	-- tutoriel reprendra son étape après la bulle
 	if seq and not opts.seq then
 		if seq.kind == "tuto" then
-			seq.index = math.max(0, seq.index - 1)
+			-- (une étape qui attend un geste garde son rang : elle sera redite)
+			if not seq.waiting then seq.index = math.max(0, seq.index - 1) end
 			seq.nextAt = now + BUBBLE_TIME
 		else
 			rt.seq = nil
@@ -1138,15 +1148,46 @@ function ns:CompanionHideBubble()
 end
 
 -- ---------------------------------------------------------------------------
--- Séquences : petite conversation (clic) et tutoriel
+-- Séquences : petite conversation (clic), tutoriel de base, tutoriel de la
+-- ménagerie (2.3.0). `steps` : les clés du réservoir `pool`, ou des étapes
+-- détaillées { key, pool, args, waitFor } ; `waitFor` (liste de gestes :
+-- "net" = le filet lancé, "stage" = la scène de capture refermée) retient la
+-- séquence tant que le geste n'est pas venu (ns:CompanionSequenceAdvance,
+-- appelé par CaptureQueue.lua) ; `result = { ok = étape, fail = étape }`
+-- choisit l'étape selon le verdict de la scène. opts.stepArgs : les
+-- arguments de chaque étape (sinon `args` pour toutes) ; opts.manual : rejeu
+-- demandé par le joueur.
 -- ---------------------------------------------------------------------------
-function ns:CompanionStartSequence(kind, pool, steps, stepTime, args)
+function ns:CompanionStartSequence(kind, pool, steps, stepTime, args, opts)
+	opts = opts or {}
 	local rt = RT()
 	rt.seq = {
 		kind = kind, pool = pool, steps = steps, index = 0, step = stepTime, args = args,
+		stepArgs = opts.stepArgs, manual = opts.manual and true or false,
 		prio = kind == "tuto" and PRIORITY.tuto or PRIORITY.reaction, nextAt = Clock(),
 	}
 	return self:CompanionSequenceStep()
+end
+
+-- L'étape `index` d'une séquence : clé, réservoir, arguments, gestes attendus
+local function SequenceStep(seq, index)
+	local step = seq.steps[index]
+	if step == nil then return nil end
+	local key, pool, args, waitFor = step, seq.pool, seq.args, nil
+	if type(step) == "table" then
+		if step.result then step = step.result[seq.result or "fail"] or step.result.fail end
+		key, pool, args, waitFor = step.key, step.pool or seq.pool, step.args or seq.args, step.waitFor
+	end
+	if seq.stepArgs and seq.stepArgs[index] then args = seq.stepArgs[index] end
+	return key, pool, args, waitFor
+end
+
+-- Dit une étape ; une étape qui attend un geste garde sa bulle plus longtemps
+local function SaySequenceStep(self, seq, key, pool, args, waiting)
+	return self:CompanionSay(pool, {
+		seq = true, line = key, args = args, category = seq.kind == "tuto" and "tuto" or "reaction",
+		duration = waiting and TUTO_WAIT or math.max(BUBBLE_TIME, seq.step),
+	})
 end
 
 function ns:CompanionSequenceStep()
@@ -1159,19 +1200,35 @@ function ns:CompanionSequenceStep()
 		self:CompanionPauseTutorial()
 		return false
 	end
-	seq.index = seq.index + 1
-	local key = seq.steps[seq.index]
-	if not key then
-		rt.seq = nil
-		if seq.kind == "tuto" then self:CompanionFinishTutorial() end
+	-- l'étape attend un geste : sa bulle reste, redite si elle s'est effacée
+	-- (sauf pendant la scène de capture, où l'on se tait)
+	if seq.waiting then
+		local shown = self.companionBubblePrio == PRIORITY.tuto and self.companionBubbleUntil and now < self.companionBubbleUntil
+		if seq.waiting[1] == "net" and not shown then
+			local key, pool, args = SequenceStep(seq, seq.index)
+			local ok, why = SaySequenceStep(self, seq, key, pool, args, true)
+			if not ok and why ~= "busy" then rt.seq = nil; return false end
+			if not ok then seq.nextAt = now + BUBBLE_TIME; return false end
+		end
+		seq.nextAt = now + TUTO_WAIT
 		return false
 	end
-	local ok, why = self:CompanionSay(seq.pool, {
-		seq = true, line = key, args = seq.args, category = seq.kind == "tuto" and "tuto" or "reaction",
-		duration = math.max(BUBBLE_TIME, seq.step),
-	})
+	seq.index = seq.index + 1
+	local key, pool, args, waitFor = SequenceStep(seq, seq.index)
+	if not key then
+		rt.seq = nil
+		if seq.kind == "tuto" then self:CompanionFinishTutorial(seq.pool, { manual = seq.manual }) end
+		return false
+	end
+	local ok, why = SaySequenceStep(self, seq, key, pool, args, waitFor ~= nil)
 	if ok then
-		seq.nextAt = now + seq.step
+		if waitFor then
+			seq.waiting = {}
+			for index, tag in ipairs(type(waitFor) == "table" and waitFor or { waitFor }) do seq.waiting[index] = tag end
+			seq.nextAt = now + TUTO_WAIT
+		else
+			seq.nextAt = now + seq.step
+		end
 		return true
 	end
 	if why == "busy" then
@@ -1181,9 +1238,53 @@ function ns:CompanionSequenceStep()
 		return false
 	end
 	-- coupé, muet ou masqué : la séquence s'arrête (le tutoriel n'est pas
-	-- marqué comme vu, il reviendra à la prochaine connexion)
+	-- marqué comme vu, il reviendra à la prochaine connexion ou occasion)
 	rt.seq = nil
 	return false
+end
+
+-- Le geste attendu est venu (CaptureQueue.lua) : "net" = le filet est lancé
+-- (la scène se joue : silence jusqu'à sa fermeture), "stage" = la scène est
+-- refermée (info.ok : capturée). Rend true si la séquence l'attendait.
+function ns:CompanionSequenceAdvance(tag, info)
+	local rt = self.companionRT
+	local seq = rt and rt.seq
+	if not (seq and seq.waiting and seq.waiting[1] == tag) then return false end
+	table.remove(seq.waiting, 1)
+	if tag == "net" then
+		if self.companionBubblePrio == PRIORITY.tuto then self:CompanionHideBubble() end
+	elseif tag == "stage" then
+		seq.result = (info and info.ok) and "ok" or "fail"
+	end
+	if #seq.waiting == 0 then
+		seq.waiting = nil
+		seq.nextAt = Clock()
+		self:CompanionSequenceStep()
+	else
+		seq.nextAt = Clock() + TUTO_WAIT
+	end
+	return true
+end
+
+-- Le geste attendu ne viendra plus (le filet s'est vidé) : une bulle le dit,
+-- la séquence s'arrête sans être marquée comme vue et repartira à l'occasion
+-- suivante. Rend true si la séquence attendait ce geste.
+function ns:CompanionSequenceAbort(tag)
+	local rt = self.companionRT
+	local seq = rt and rt.seq
+	if not (seq and seq.waiting and seq.waiting[1] == tag) then return false end
+	rt.seq = nil
+	if self.companionBubblePrio == PRIORITY.tuto then self:CompanionHideBubble() end
+	if seq.pool == "TUTO_MENAGERIE" and tag == "net" and not InCombat() then
+		self:CompanionSay("TUTO_MENAGERIE_LATE", { force = true, category = "event" })
+	end
+	return true
+end
+
+-- La séquence en cours attend-elle ce geste ? (le filet bat tant que oui)
+function ns:CompanionSequenceWaits(tag)
+	local seq = self.companionRT and self.companionRT.seq
+	return seq ~= nil and seq.waiting ~= nil and seq.waiting[1] == tag
 end
 
 -- Conversation : une au hasard, jamais la même que les dernières
@@ -1211,14 +1312,117 @@ function ns:CompanionStartTutorial(manual)
 	return self:CompanionStartSequence("tuto", "TUTO", ns.COMPANION_POOLS.TUTO, TUTO_STEP, { self:CompanionName() })
 end
 
--- Combat qui commence : la bulle du tutoriel s'efface, son étape reviendra.
+-- ---------------------------------------------------------------------------
+-- Tutoriel de la ménagerie (2.3.0) : ce qu'apportent les versions 2.0 à 2.2.
+-- Une fois par personnage, à la PREMIÈRE OCCASION DE CAPTURE (CaptureQueue.lua
+-- appelle ns:CompanionMenagerieOpportunity : un monstre dans le filet, hors
+-- combat), en mode guidé : la première bulle attend que le joueur lance le
+-- filet, la scène se joue en silence, puis le verdict et la suite. Jamais si
+-- la capture est coupée (le drapeau tutoMenagerieDone reste à faux), jamais
+-- pendant le tutoriel de base ni à la connexion « à vide ».
+-- /qc compagnon tuto menagerie (et le bouton de la page Guide) le rejoue au
+-- temps, sans attendre de capture. Les chiffres des bulles viennent des
+-- constantes des modules (CaptureQueue, Shiny, CompanionEffects,
+-- MenagerieCollection), jamais des textes.
+-- ---------------------------------------------------------------------------
+-- Les étapes et les arguments de chacune ; `guided` : la version qui attend
+-- le filet (START, puis OK ou FAIL), sinon INTRO
+function ns:CompanionMenagerieTutorialSteps(guided)
+	local pools = ns.COMPANION_POOLS
+	local shiny = tonumber(ns.SHINY_CHANCE) or 0
+	local base = shiny > 0 and math.floor(1 / shiny + 0.5) or 0
+	local best = shiny > 0 and math.floor(1 / (shiny * (tonumber(ns.SHINY_CHAIN_MAX) or 1)) + 0.5) or 0
+	local odds = ns.CAPTURE_STAR_ODDS or {}
+	local ranks = ns.TRAINER_RANKS or {}
+	local first, last = ranks[1], ranks[#ranks]
+	local args = {
+		{ ns.CAPTURE_QUEUE_TIME or 0 },
+		{ odds[#odds] or 0 },
+		{ base, best, ns.SHINY_CHAIN_KILLS or 0 },
+		{},
+		{ math.floor((ns.EFFECT_DELAY or 0) / 60 + 0.5) },
+		{ ns.EFFECT_NEED_OK or 0 },
+		{ math.floor(((ns.SEAL_SHINY_MULT or 1) - 1) * 100 + 0.5) },
+		{ first and first.count or 0, last and last.count or 0 },
+		{}, {}, {},
+	}
+	local steps, stepArgs = {}, {}
+	if guided then
+		steps[1] = { key = pools.TUTO_MENAGERIE_START[1], pool = "TUTO_MENAGERIE_START", waitFor = { "net", "stage" } }
+		steps[2] = { result = {
+			ok = { key = pools.TUTO_MENAGERIE_OK[1], pool = "TUTO_MENAGERIE_OK" },
+			fail = { key = pools.TUTO_MENAGERIE_FAIL[1], pool = "TUTO_MENAGERIE_FAIL" },
+		} }
+	else
+		steps[1] = { key = pools.TUTO_MENAGERIE_INTRO[1], pool = "TUTO_MENAGERIE_INTRO" }
+	end
+	for index, key in ipairs(pools.TUTO_MENAGERIE) do
+		steps[#steps + 1] = key
+		stepArgs[#steps] = args[index] or {}
+	end
+	return steps, stepArgs
+end
+
+-- Le tutoriel peut-il se jouer ? (module, capture et bulles allumés ; à la
+-- demande, la raison est dite dans le chat)
+local function MenagerieTutorialReady(self, manual)
+	if not ModuleOn() then return false end
+	local db = self:DB()
+	if db.companionCapture == false or not self.CaptureQueue then
+		if manual then self:Print(L.COMP_MSG_TUTO_MEN_OFF) end
+		return false
+	end
+	if self:CompanionChatterLevel() == 0 or db.companionShow == false then
+		if manual then self:Print(L.COMP_MSG_TUTO_MUTED) end
+		return false
+	end
+	return true
+end
+
+-- Première occasion de capture (CaptureQueue.lua, hors combat) : le
+-- tutoriel guidé, une fois par personnage. Rend true s'il commence.
+function ns:CompanionMenagerieOpportunity()
+	if not ns.TUTO_MENAGERIE_AUTO then return false end
+	if not ModuleOn() then return false end
+	local data = self:CompanionData()
+	if data.tutoMenagerieDone or not data.tutoDone then return false end
+	local rt = RT()
+	-- jamais deux tutoriels à la fois, jamais en combat : l'occasion suivante fera l'affaire
+	if rt.tutoPending or (rt.seq and rt.seq.kind == "tuto") or InCombat() then return false end
+	if not MenagerieTutorialReady(self, false) then return false end
+	local steps, stepArgs = self:CompanionMenagerieTutorialSteps(true)
+	return self:CompanionStartSequence("tuto", "TUTO_MENAGERIE", steps, TUTO_STEP, nil, { stepArgs = stepArgs })
+end
+
+-- Rejeu (/qc compagnon tuto menagerie, bouton « Revoir le tutoriel » de la
+-- page Guide) : les mêmes bulles, au temps, sans attendre de capture
+function ns:CompanionStartMenagerieTutorial()
+	if not MenagerieTutorialReady(self, true) then return false end
+	local rt = RT()
+	if InCombat() then
+		rt.tutoMenageriePending = true
+		self:Print(L.COMP_MSG_TUTO_COMBAT)
+		return false
+	end
+	rt.tutoMenageriePending = nil
+	if rt.seq and rt.seq.kind == "tuto" then
+		rt.seq = nil
+		if self.companionBubblePrio == PRIORITY.tuto then self:CompanionHideBubble() end
+	end
+	rt.tutoPending = nil
+	local steps, stepArgs = self:CompanionMenagerieTutorialSteps(false)
+	return self:CompanionStartSequence("tuto", "TUTO_MENAGERIE", steps, TUTO_STEP, nil, { stepArgs = stepArgs, manual = true })
+end
+
+-- Combat qui commence : la bulle du tutoriel s'efface, son étape reviendra
+-- (une étape qui attend un geste garde son rang : elle sera redite).
 -- Appelée dès PLAYER_REGEN_DISABLED, où InCombatLockdown() vaut encore faux.
 function ns:CompanionPauseTutorial()
 	local seq = self.companionRT and self.companionRT.seq
 	if not (seq and seq.kind == "tuto") then return false end
 	if self.companionBubblePrio == PRIORITY.tuto and self.companionBubbleUntil then
 		self:CompanionHideBubble()
-		seq.index = math.max(0, seq.index - 1)
+		if not seq.waiting then seq.index = math.max(0, seq.index - 1) end
 	end
 	seq.nextAt = Clock() + 1
 	return true
@@ -1236,19 +1440,36 @@ function ns:CompanionTutorialNext()
 	return true
 end
 
-function ns:CompanionFinishTutorial()
-	self:CompanionData().tutoDone = true
+-- Fin d'un tutoriel (lu jusqu'au bout, ou passé) : `pool` dit lequel (TUTO,
+-- le tutoriel de base ; TUTO_MENAGERIE, celui de la ménagerie, qui ouvre
+-- alors le carnet sur sa page Guide quand il s'est joué de lui-même jusqu'au
+-- bout). opts.skipped : passé ; opts.manual : c'était un rejeu.
+function ns:CompanionFinishTutorial(pool, opts)
+	opts = opts or {}
+	local data = self:CompanionData()
 	local rt = RT()
-	rt.tutoPending = nil
-	if rt.seq and rt.seq.kind == "tuto" then rt.seq = nil end
+	local seq = rt.seq
+	pool = pool or (seq and seq.kind == "tuto" and seq.pool) or (rt.tutoMenageriePending and "TUTO_MENAGERIE") or "TUTO"
+	if seq and seq.kind == "tuto" then rt.seq = nil end
 	if self.companionBubblePrio == PRIORITY.tuto then self:CompanionHideBubble() end
+	if pool == "TUTO_MENAGERIE" then
+		data.tutoMenagerieDone = true
+		rt.tutoMenageriePending = nil
+		if not opts.skipped and not opts.manual and self.OpenJournalGuide then pcall(self.OpenJournalGuide, self) end
+		return
+	end
+	data.tutoDone = true
+	rt.tutoPending = nil
 end
 
 function ns:CompanionSkipTutorial()
-	local active = self:CompanionTutorialActive() or RT().tutoPending
-	self:CompanionFinishTutorial()
-	if active then self:Print(L.COMP_MSG_TUTO_SKIPPED) end
-	return active and true or false
+	local rt = RT()
+	local seq = rt.seq
+	local pool = (seq and seq.kind == "tuto" and seq.pool) or (rt.tutoPending and "TUTO")
+		or (rt.tutoMenageriePending and "TUTO_MENAGERIE") or nil
+	self:CompanionFinishTutorial(pool or "TUTO", { skipped = true })
+	if pool then self:Print(pool == "TUTO_MENAGERIE" and L.COMP_MSG_TUTO_MEN_SKIPPED or L.COMP_MSG_TUTO_SKIPPED) end
+	return pool ~= nil
 end
 
 -- ---------------------------------------------------------------------------
@@ -1989,6 +2210,7 @@ end
 function ns:CompanionChatter(seconds)
 	local rt = RT()
 	if rt.tutoPending and not InCombat() then self:CompanionStartTutorial(false) end
+	if rt.tutoMenageriePending and not InCombat() then self:CompanionStartMenagerieTutorial() end
 	if InCombat() then return end
 	if self:CompanionTryNeed() then return end
 	if self:CompanionTryGoal() then return end
@@ -2828,6 +3050,8 @@ function ns:CompanionCommand(rest)
 		local what = (arg or ""):lower()
 		if what == "passer" or what == "skip" or what == "stop" then return self:CompanionSkipTutorial() end
 		self:CompanionUpdateVisibility()
+		-- « tuto menagerie » : le tutoriel de la ménagerie (2.3.0), rejoué au temps
+		if what == "menagerie" or what == "ménagerie" or what == "capture" then return self:CompanionStartMenagerieTutorial() end
 		return self:CompanionStartTutorial(true)
 	end
 	self:CompanionCheckUnlocks()
@@ -2885,6 +3109,7 @@ local HANDLERS = {
 	PLAYER_REGEN_ENABLED   = function()
 		local rt = ns.companionRT
 		if rt and rt.tutoPending then ns:CompanionStartTutorial(false) end
+		if rt and rt.tutoMenageriePending then ns:CompanionStartMenagerieTutorial() end
 	end,
 	QUEST_TURNED_IN        = function()
 		ns:CompanionAdd("mood", 12)
