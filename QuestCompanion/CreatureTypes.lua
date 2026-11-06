@@ -33,10 +33,10 @@ BY_NAME[ns.AsciiLower("Machine")] = "mechanical"
 BY_NAME[ns.AsciiLower("Machines")] = "mechanical"
 
 function ns:CreatureTypeKey(text)
+	-- ns.Plain d'abord : comparer une valeur secrète (même à "") lève une erreur
+	if ns.Plain then text = ns.Plain(text) end
 	if type(text) ~= "string" or text == "" then return nil end
-	local plain = ns.Plain and ns.Plain(text) or text
-	if type(plain) ~= "string" then return nil end
-	return BY_NAME[ns.AsciiLower(plain)]
+	return BY_NAME[ns.AsciiLower(text)]
 end
 
 -- Libellé dans la langue du client

@@ -256,6 +256,20 @@ do
 	NS:ShinyRoll("target", { npcID = 7001 })
 	NS.ShinyChance = before
 	Check("[EFF] tirage d'une brillante : le type de l'unité est connu", seenType == "undead" and NS.effectShinyType == nil)
+	-- type secret (Forever) : CreatureTypeKey passe par ns.Plain avant toute comparaison
+	local savedSecret = rawget(_G, "issecretvalue")
+	_G.issecretvalue = function(v) return v == "Mort-vivant" end
+	Check("[EFF] type secret : pas de clé, sans erreur", pcall(NS.CreatureTypeKey, NS, "Mort-vivant")
+		and NS:CreatureTypeKey("Mort-vivant") == nil and NS:CreatureTypeKey("Bête") == "beast")
+	_G.issecretvalue = savedSecret
+	-- CreatureTypeKey en erreur : le tirage se fait quand même
+	local savedKey = NS.CreatureTypeKey
+	NS.CreatureTypeKey = function() error("valeur secrète") end
+	seenType = "?"
+	NS.ShinyChance = function(self, class, killed, typeKey) seenType = typeKey or self.effectShinyType; return 0 end
+	local rolled = pcall(NS.ShinyRoll, NS, "target", { npcID = 7001 })
+	NS.ShinyChance, NS.CreatureTypeKey = before, savedKey
+	Check("[EFF] type illisible : ShinyRoll ne tombe pas, sans bonus de type", rolled and seenType == nil, tostring(seenType))
 	-- Draconien : abattus comptés en plus
 	EF.Add(5205, "Draconien", "normal")
 	EF.Take("cap:5205")
@@ -371,6 +385,21 @@ do
 	NS.companionLastPet = nil
 	NS:CompanionPet()
 	Check("[EFF] Démon : une caresse remonte le moral de 25 % en plus", Near(needs.mood, 50 + 8 * 1.25), tostring(needs.mood))
+	-- le garde-manger (Maj + clic) rend vrai aussi : pas de moral gratuit
+	local savedShift = rawget(_G, "IsShiftKeyDown")
+	_G.IsShiftKeyDown = function() return true end
+	needs.mood = 50
+	NS.companionLastPet = nil
+	local opened = NS:CompanionPet()
+	_G.IsShiftKeyDown = savedShift
+	if NS.treatMenu then NS.treatMenu:Hide() end
+	Check("[EFF] Démon : ouvrir le garde-manger (Maj + clic) ne donne pas de moral", opened and needs.mood == 50,
+		tostring(opened) .. " " .. tostring(needs.mood))
+	-- une caresse refusée (délai entre deux caresses) non plus
+	NS:CompanionPet()
+	local after = needs.mood
+	NS:CompanionPet()
+	Check("[EFF] Démon : caresse trop rapprochée, pas de bonus", needs.mood == after, tostring(needs.mood))
 	NS.CompanionTrait = savedTrait
 end
 
@@ -498,6 +527,34 @@ do
 	Check("[EFF] capturée : la patte s'en va", not mark:IsShown())
 	NS.effectPlateFrame:GetScript("OnEvent")(NS.effectPlateFrame, "NAME_PLATE_UNIT_REMOVED", "nameplate1")
 	Check("[EFF] barre retirée : oubliée", NS.effectPlates.nameplate1 == nil)
+	-- barre de nom qui apparaît : avec l'effet, la patte ; sans, rien de coûteux
+	local onEvent = NS.effectPlateFrame:GetScript("OnEvent")
+	local fox = Plate("nameplate5", 7405, "Bête")
+	onEvent(NS.effectPlateFrame, "NAME_PLATE_UNIT_ADDED", "nameplate5")
+	Check("[EFF] barre ajoutée, repérage actif : patte posée", NS.effectPlateMarks[fox] and NS.effectPlateMarks[fox]:IsShown())
+	EF.Add(5702, "Humanoïde", "normal")
+	EF.Take("cap:5702")
+	NS:EffectPlatesRefresh()
+	local lookups, effects = 0, 0
+	local getPlate = _G.C_NamePlate.GetNamePlateForUnit
+	_G.C_NamePlate.GetNamePlateForUnit = function(unit) lookups = lookups + 1; return getPlate(unit) end
+	local savedEffects = NS.CompanionEffects
+	NS.CompanionEffects = function(...) effects = effects + 1; return savedEffects(...) end
+	for index = 1, 20 do
+		Plate("nameplate" .. (10 + index), 7500 + index, "Bête")
+		onEvent(NS.effectPlateFrame, "NAME_PLATE_UNIT_ADDED", "nameplate" .. (10 + index))
+	end
+	NS.CompanionEffects = savedEffects
+	_G.C_NamePlate.GetNamePlateForUnit = getPlate
+	Check("[EFF] sans repérage : 20 barres ajoutées, ni barre lue ni effets recalculés", lookups == 0 and effects == 0,
+		lookups .. " / " .. effects)
+	-- retours secrets du client : pas de patte, sans erreur
+	local savedSecret = rawget(_G, "issecretvalue")
+	_G.issecretvalue = function(v) return v == true end
+	_G.UnitIsPlayer = function() return true end
+	Check("[EFF] UnitIsPlayer secret : lu par ns.Plain, sans erreur", pcall(NS.EffectSpotUnit, NS, "nameplate5", "beast"))
+	_G.issecretvalue = savedSecret
+	EF.Install()
 	NS.effectPlates = {}
 end
 

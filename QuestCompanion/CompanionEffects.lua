@@ -460,8 +460,9 @@ do
 	local roll = ns.ShinyRoll
 	if roll then
 		function ns:ShinyRoll(unit, entry, ...)
+			-- type secret ou illisible : pas de bonus de type, le tirage se fait quand même
 			local text = Call(G("UnitCreatureType"), unit)
-			self.effectShinyType = self.CreatureTypeKey and self:CreatureTypeKey(text) or nil
+			self.effectShinyType = self.CreatureTypeKey and Call(self.CreatureTypeKey, self, text) or nil
 			local ok, result = pcall(roll, self, unit, entry, ...)
 			self.effectShinyType = nil
 			if not ok then error(result, 0) end
@@ -571,13 +572,16 @@ do
 	end
 end
 
--- Démon : une caresse compte plus
+-- Démon : une caresse compte plus. Seulement une vraie caresse : l'appel
+-- rend vrai aussi pour le garde-manger (Maj + clic, Treats.lua) et le
+-- tutoriel ; une caresse, elle, remet companionLastPet à l'heure.
 do
 	local pet = ns.CompanionPet
 	if pet then
 		function ns:CompanionPet(...)
+			local before = self.companionLastPet
 			local done = pet(self, ...)
-			if done then
+			if done and self.companionLastPet ~= nil and self.companionLastPet ~= before then
 				local found = ActiveOf(self, "pet")
 				if found then self:CompanionAdd("mood", 8 * found[1].value) end
 			end
@@ -737,6 +741,7 @@ end
 -- encore capturées (comme le losange des brillantes, Shiny.lua)
 -- ---------------------------------------------------------------------------
 ns.EFFECT_PLATE_SIZE = 16
+ns.EFFECT_SPOT_TTL = 5            -- s : type repéré gardé entre deux barres de nom
 ns.EFFECT_PLATE_X = -24           -- à gauche du losange des brillantes
 ns.EFFECT_PLATE_Y = 6
 ns.EFFECT_PAW = "Interface\\Icons\\Ability_Tracking"
@@ -791,14 +796,15 @@ end
 function ns:EffectSpotUnit(unit, spotType)
 	spotType = spotType or self:EffectSpotType()
 	if not spotType then return false end
-	if Call(G("UnitIsPlayer"), unit) or Call(G("UnitPlayerControlled"), unit) then return false end
+	-- retours du client passés par ns.Plain : une valeur secrète ne se compare pas
+	if ns.Plain(Call(G("UnitIsPlayer"), unit)) or ns.Plain(Call(G("UnitPlayerControlled"), unit)) then return false end
 	local reaction = tonumber(ns.Plain(Call(G("UnitReaction"), unit, "player")))
 	if reaction then
 		if reaction > 4 then return false end
-	elseif Call(G("UnitCanAttack"), "player", unit) ~= true then
+	elseif ns.Plain(Call(G("UnitCanAttack"), "player", unit)) ~= true then
 		return false
 	end
-	if self.CreatureTypeKey and self:CreatureTypeKey(Call(G("UnitCreatureType"), unit)) ~= spotType then return false end
+	if not self.CreatureTypeKey or Call(self.CreatureTypeKey, self, Call(G("UnitCreatureType"), unit)) ~= spotType then return false end
 	local guid = ns.Plain(Call(G("UnitGUID"), unit))
 	local npc = type(guid) == "string" and ns.BestiaryNpcID and ns.BestiaryNpcID(guid)
 	if not npc then return false end
@@ -827,6 +833,7 @@ function ns:EffectPlatesRefresh()
 		end
 	end
 	local spotType = self:EffectSpotType()
+	self.effectSpotCache = { type = spotType or false, at = ns.Now and ns.Now() or 0 }
 	local shown = 0
 	for unit in pairs(self.effectPlates) do
 		local ok, on = pcall(self.EffectPlateUpdate, self, unit, spotType or false)
@@ -839,8 +846,19 @@ do
 	local ok, plateFrame = pcall(CreateFrame, "Frame")
 	if ok and plateFrame then
 		local PLATE_EVENTS = {
+			-- chaque barre de nom qui apparaît : rien de coûteux sans l'effet de
+			-- repérage (type gardé par EffectPlatesRefresh, relu au plus toutes
+			-- les EFFECT_SPOT_TTL secondes)
 			NAME_PLATE_UNIT_ADDED = function(unit)
-				if type(unit) == "string" then ns.effectPlates[unit] = nil; ns:EffectPlateUpdate(unit) end
+				if type(unit) ~= "string" then return end
+				ns.effectPlates[unit] = nil
+				if not ModuleOn() then return end
+				local cache, now = ns.effectSpotCache, ns.Now and ns.Now() or 0
+				if not cache or now - cache.at >= ns.EFFECT_SPOT_TTL or now < cache.at then
+					cache = { type = ns:EffectSpotType() or false, at = now }
+					ns.effectSpotCache = cache
+				end
+				if cache.type then ns:EffectPlateUpdate(unit, cache.type) end
 			end,
 			NAME_PLATE_UNIT_REMOVED = function(unit)
 				local plate = type(unit) == "string" and ns.effectPlates[unit]
