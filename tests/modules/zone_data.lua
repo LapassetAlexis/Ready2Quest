@@ -394,10 +394,20 @@ do
 	Mock.world.mapID = 9200
 	part = Z.Part("gathering")
 	Check("[ZDATA] zone hors tables : toute la tranche -> 6", part and part.need == 6, part and part.need)
-	-- rien de ta tranche dans la zone : la part ne s'applique pas
+	-- herboriste confirmé en zone de départ (1.5.1) : les herbes grises de la
+	-- zone comptent aussi (récoltables, sans points) ; la liste le dit
 	Z.skills = { HEADER, { "Herboristerie", false, true, 290 } }
 	Mock.world.mapID = 1429
-	Check("[ZDATA] Elwynn à 290 en herboristerie : aucune part", Z.Part("gathering") == nil)
+	part = Z.Part("gathering")
+	Check("[ZDATA] Elwynn à 290 en herboristerie : les 3 herbes de la zone, grises", part and part.need == 3,
+		part and part.need)
+	local list = NS:GatheringZoneList(1429)
+	Check("[ZDATA] liste de zone : grises marquées", #list == 3 and list[1].grayed and list[3].grayed)
+	Check("[ZDATA] tranche à points inchangée (objectif, missions) : vide", #(NS:GatheringZoneBand(1429)) == 0)
+	-- requise au-dessus du rang : jamais comptée
+	Z.skills = { HEADER, { "Herboristerie", false, true, 10 } }
+	part = Z.Part("gathering")
+	Check("[ZDATA] Elwynn à 10 : Terrestrine (15) hors de portée -> 2", part and part.need == 2, part and part.need)
 	-- dépeçage : jamais filtré (pas de données de zone)
 	Z.skills = { HEADER, { "Dépeçage", false, true, 60 } }
 	part = Z.Part("gathering")

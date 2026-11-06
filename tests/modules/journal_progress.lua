@@ -51,7 +51,7 @@ do
 	local def = NS.JOURNAL_PANES and NS.JOURNAL_PANES.progress
 	Check("[PROG] page externe « progress » (champ prog)", def and def.field == "prog" and type(def.build) == "function"
 		and type(def.refresh) == "function" and type(def.scroll) == "function")
-	Check("[PROG] titre et sous-titre", def and NS.L[def.title] == "Complétion"
+	Check("[PROG] titre et sous-titre", def and NS.L[def.title] == "Exploration"
 		and NS.L[def.subtitle]:find("paliers, coffres", 1, true) ~= nil)
 	local strings, missing = NS.JOURNAL_PROGRESS_STRINGS, {}
 	for key, value in pairs(strings.fr) do
@@ -76,10 +76,10 @@ local pane = f.prog
 do
 	Say("-- carnet : Complétion, ouverture")
 	Check("[PROG] page construite", pane ~= nil and pane.card ~= nil and #pane.zones > 10 and #pane.items > 5)
-	Check("[PROG] entrée « Complétion » au menu", f.sections.progress and f.sections.progress.text.text == "Complétion")
+	Check("[PROG] entrée « Exploration » au menu", f.sections.progress and f.sections.progress.text.text == "Exploration")
 	NS:SelectJournalKind("progress")
 	Check("[PROG] page affichée seule", f.kind == "progress" and pane:IsShown() and not f.evo:IsShown())
-	Check("[PROG] en-tête : titre de la page", f.header.title.text == "Complétion", f.header.title.text)
+	Check("[PROG] en-tête : titre de la page", f.header.title.text == "Exploration", f.header.title.text)
 	Check("[PROG] anciens noms (zones, completion) : la Complétion", (function()
 		NS:SelectJournalKind("zones"); local a = f.kind
 		NS:SelectJournalKind("completion"); return a == "progress" and f.kind == "progress"
@@ -123,8 +123,8 @@ end
 do
 	Say("-- carnet : Complétion, parts")
 	local explore, craft, quests = pane.parts.explore, pane.parts.craft, pane.parts.quests
-	Check("[PROG] trois cartes : Exploration, Métiers, Quêtes", explore and craft and quests
-		and explore.label.text == "Exploration" and craft.label.text == "Métiers" and quests.label.text == "Quêtes")
+	Check("[PROG] trois cartes : Lieux, Métiers, Quêtes", explore and craft and quests
+		and explore.label.text == "Lieux" and craft.label.text == "Métiers" and quests.label.text == "Quêtes")
 	Check("[PROG] Exploration : 1/3, choisie par défaut", explore.count.text == "1/3" and explore.selected
 		and explore.accent:IsShown() and not craft.selected, explore.count.text)
 	Check("[PROG] Métiers sans métier : estompée", craft.dim and craft.alpha < 1 and craft.count.text == "—")
@@ -141,7 +141,8 @@ do
 	Check("[PROG] clic sur Quêtes : la liste change", f.progPart == "quests" and quests.selected and not explore.selected
 		and not pane.items[1]:IsShown() and pane.empty.text == NS.L.JRN_ACT_NO_QUESTS, pane.empty.text)
 	craft:Click()
-	Check("[PROG] Métiers : son message", f.progPart == "craft" and pane.empty.text == NS.L.JRN_ACT_EMPTY_craft)
+	Check("[PROG] Métiers : son message, et aucun métier repéré", f.progPart == "craft"
+		and pane.empty.text == NS.L.JRN_ACT_EMPTY_craft .. "\n" .. NS.L.GATHER_PROFS_NONE, pane.empty.text)
 	explore:Click()
 	Check("[PROG] retour à Exploration", f.progPart == "explore" and pane.items[1]:IsShown())
 	quests.onEnter(quests)

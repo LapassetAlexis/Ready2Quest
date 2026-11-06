@@ -658,6 +658,40 @@ function ns:MemoryLook(memory, now)
 	return now or LookNow(self)
 end
 
+-- La pose du compagnon sur la photo (1.5.1) : pas deux photos pareilles.
+-- Le geste suit le moment (fête pour un niveau, assis pour un anniversaire,
+-- abattu après une mort), l'angle et le cadrage varient d'un souvenir à
+-- l'autre — tirés du souvenir lui-même (moment, date, lieu) : la même photo
+-- à chaque affichage. En duo, il reste tourné vers la créature.
+-- Renvoie { facing (radians), anim (ns.COMPANION_ANIMS), zoom (× distance) }.
+local KIND_GESTURES = {
+	level = { "cheer", "dance", "cheer" }, stage = { "cheer", "dance" },
+	shiny = { "cheer", "dance" }, chest = { "cheer", "dance" },
+	capture = { "cheer", "idle", "talk" }, rare = { "cheer", "idle" },
+	groupFull = { "dance", "cheer", "talk" }, groupDungeon = { "cheer", "talk" },
+	anniv = { "sit", "cheer", "dance" },
+	death = { "sit" }, deathSilly = { "sit", "talk" }, deathFall = { "sit" },
+	dungeon = { "idle", "talk" }, capital = { "talk", "idle", "sit" },
+	flight = { "idle", "cheer" }, mount = { "cheer", "idle" },
+}
+local SOLO_FACINGS = { 0.35, -0.35, 0.8, -0.8, 0, 1.3, -1.3 }
+local DUO_FACINGS = { 0.6, 0.45, 0.85 }
+local ZOOMS = { 1, 0.85, 1.15, 0.92 }
+function ns:MemoryPose(memory, duo)
+	memory = type(memory) == "table" and memory or {}
+	local seed = Hash(tostring(memory.kind) .. "|" .. tostring(memory.at) .. "|" .. tostring(memory.zone))
+	local gestures = KIND_GESTURES[memory.kind] or { "idle", "talk", "cheer" }
+	local gesture = gestures[seed % #gestures + 1]
+	local anims = ns.COMPANION_ANIMS or {}
+	local facings = duo and DUO_FACINGS or SOLO_FACINGS
+	return {
+		gesture = gesture,
+		anim = anims[gesture] or anims.idle or 0,
+		facing = facings[math.floor(seed / 7) % #facings + 1],
+		zoom = ZOOMS[math.floor(seed / 53) % #ZOOMS + 1],
+	}
+end
+
 -- la créature du moment (capture, rare, brillante), si on la connaît
 function ns:MemoryCreature(memory)
 	if type(memory) ~= "table" or not ns.MEMORY_CREATURE_KINDS[memory.kind] then return nil end
@@ -666,23 +700,26 @@ end
 
 -- Pose un modèle (mascotte : SetDisplayInfo, créature : SetCreature), comme
 -- CompanionApplyModel ; rien d'autre si c'est déjà lui
-local function ShowModel(model, display, npc, facing)
+-- pose (facultative) : { facing, anim, zoom } de ns:MemoryPose
+local function ShowModel(model, display, npc, facing, pose)
 	if not model then return false end
 	local key = tostring(display) .. ":" .. tostring(npc)
 	local shown = model.lookKey == key
 	if not shown then
-		local mascot = false
+		model.mascot = false
 		if display and type(model.SetDisplayInfo) == "function" then
 			shown = pcall(model.SetDisplayInfo, model, display)
-			mascot = shown
+			model.mascot = shown
 		end
 		if not shown and npc and type(model.SetCreature) == "function" then shown = pcall(model.SetCreature, model, npc) end
-		-- une créature (capturée ou du moment) est de taille réelle : de plus loin
-		if shown then Method(model, "SetCamDistanceScale", mascot and 1.6 or (ns.CAPTURE_CAM_DISTANCE or 2.4)) end
 	end
 	if shown then
 		model.lookKey = key
-		Method(model, "SetFacing", facing or 0)
+		-- une créature (capturée ou du moment) est de taille réelle : de plus loin
+		local cam = model.mascot and 1.6 or (ns.CAPTURE_CAM_DISTANCE or 2.4)
+		Method(model, "SetCamDistanceScale", cam * ((pose and pose.zoom) or 1))
+		Method(model, "SetFacing", (pose and pose.facing) or facing or 0)
+		Method(model, "SetAnimation", (pose and pose.anim) or 0)
 		model:Show()
 	else
 		model.lookKey = nil
@@ -813,7 +850,8 @@ local function FillCard(self, card, memory, now)
 	local shown = false
 	if card.model then
 		PlaceModels(card, duo)
-		shown = ShowModel(card.model, look.display, look.npc, duo and 0.6 or 0.35)
+		card.pose = self:MemoryPose(memory, duo)
+		shown = ShowModel(card.model, look.display, look.npc, nil, card.pose)
 	end
 	local creatureShown = false
 	if card.creature then

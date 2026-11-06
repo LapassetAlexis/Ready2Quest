@@ -45,6 +45,7 @@ function MP.StubModels(pane)
 			model.SetCreature = function(m, id) m.shownCreature, m.shownDisplay = id, nil; calls.creature = calls.creature + 1 end
 			model.SetCamDistanceScale = function(m, v) m.cam = v end
 			model.SetFacing = function(m, v) m.facing = v end
+			model.SetAnimation = function(m, v) m.anim = v end
 			model.ClearModel = function(m) m.shownDisplay, m.shownCreature = nil, nil end
 			model.lookKey = nil
 		end
@@ -141,6 +142,28 @@ do
 	Check("[MPH] papier clair (≈ #f4efe4)", NS.MEMORY_PAPER[1] > 0.93 and NS.MEMORY_PAPER[2] > 0.9 and NS.MEMORY_PAPER[3] > 0.85)
 end
 
+-- 2 bis. Pose : variée d'un souvenir à l'autre, stable pour un même souvenir ---
+do
+	local anims = NS.COMPANION_ANIMS
+	local level = { kind = "level", at = 1000, zone = "Durotar" }
+	local p1, p2 = NS:MemoryPose(level), NS:MemoryPose(level)
+	Check("[MPH] pose : la même à chaque affichage", p1.facing == p2.facing and p1.anim == p2.anim and p1.zoom == p2.zoom)
+	Check("[MPH] pose : niveau = fête (cheer ou dance)", p1.anim == anims.cheer or p1.anim == anims.dance, p1.gesture)
+	Check("[MPH] pose : anniversaire assis ou en fête", ({ sit = true, cheer = true, dance = true })[NS:MemoryPose({ kind = "anniv", at = 5 }).gesture])
+	Check("[MPH] pose : mort = assis, abattu", NS:MemoryPose({ kind = "death", at = 7, zone = "x" }).gesture == "sit")
+	local facings, gestures, zooms = {}, {}, {}
+	for i = 1, 40 do
+		local pose = NS:MemoryPose({ kind = (i % 2 == 0) and "level" or "capital", at = 1000 + i * 3607, zone = "Zone " .. i })
+		facings[pose.facing], gestures[pose.gesture], zooms[pose.zoom] = true, true, true
+	end
+	local function Count(t) local n = 0 for _ in pairs(t) do n = n + 1 end return n end
+	Check("[MPH] pose : angles, gestes et cadrages variés", Count(facings) >= 4 and Count(gestures) >= 3 and Count(zooms) >= 3,
+		Count(facings) .. "/" .. Count(gestures) .. "/" .. Count(zooms))
+	local duo = NS:MemoryPose({ kind = "capture", at = 1, zone = "z" }, true)
+	Check("[MPH] pose en duo : tourné vers la créature (à droite)", duo.facing > 0)
+	Check("[MPH] pose : souvenir vide sans erreur", pcall(NS.MemoryPose, NS, nil))
+end
+
 -- 3. Album : polaroïds, modèles, pool fixe, pagination, mise en page ---------
 do
 	Say("-- souvenirs : photo recréée, album")
@@ -168,11 +191,13 @@ do
 	NS:RefreshJournal()
 	Check("[MPH] le compagnon en 3D (SetDisplayInfo), seul, au milieu", card.model.shownDisplay == tonumber(app.display)
 		and card.model:IsShown() and not card.creature:IsShown() and not card.fallback:IsShown()
-		and card.model.cam == 1.6, tostring(card.model.shownDisplay))
+		and math.abs(card.model.cam - 1.6 * card.pose.zoom) < 1e-9, tostring(card.model.shownDisplay))
 	local cap = pane.cards[2]
 	Check("[MPH] capture : la créature (SetCreature) à côté du compagnon", cap.creature:IsShown()
 		and cap.creature.shownCreature == 42 and cap.model:IsShown() and cap.model.shownDisplay == tonumber(app.display)
 		and cap.model:GetWidth() < cap.photoW and cap.creature.facing < 0 and cap.model.facing > 0)
+	Check("[MPH] compagnon posé : geste et angle du souvenir", card.model.anim == card.pose.anim
+		and card.model.facing == card.pose.facing)
 	Check("[MPH] rare sans npc connu : le compagnon seul", pane.cards[3].model:IsShown() and not pane.cards[3].creature:IsShown())
 	local before = calls.display + calls.creature
 	NS:RefreshJournal()
@@ -185,7 +210,7 @@ do
 	pane.cards[1].model.lookKey = nil
 	NS:RefreshJournal()
 	Check("[MPH] allure du jour retenue (créature capturée) : SetCreature", card.model.shownCreature == 777
-		and card.model.cam == (NS.CAPTURE_CAM_DISTANCE or 2.4))
+		and math.abs(card.model.cam - (NS.CAPTURE_CAM_DISTANCE or 2.4) * card.pose.zoom) < 1e-9)
 
 	-- beaucoup de souvenirs : toujours les mêmes cartes et les mêmes modèles
 	local models = CountModels()

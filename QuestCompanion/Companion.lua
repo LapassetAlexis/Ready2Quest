@@ -2532,10 +2532,13 @@ end
 -- styles que le vrai cadre : filet, second filet, bordure du client, fond,
 -- dégradé). Carré de `size` px ; box:Refresh(addon) le met à jour. Sert à
 -- l'aperçu des réglages et à la page Créature du carnet.
-function ns:CompanionPortrait(parent, size)
+-- zoom : < 1 rapproche la caméra (le grand portrait du carnet : 0.65)
+ns.PORTRAIT_CAM_DISTANCE = 1.6
+function ns:CompanionPortrait(parent, size, zoom)
 	size = size or 76
 	local box = CreateFrame("Frame", nil, parent)
 	box:SetSize(size, size)
+	box.camScale = ns.PORTRAIT_CAM_DISTANCE * (tonumber(zoom) or 1)
 	box.bg = box:CreateTexture(nil, "BACKGROUND")
 	box.bg:SetPoint("TOPLEFT", box, "TOPLEFT", 1, -1)
 	box.bg:SetPoint("BOTTOMRIGHT", box, "BOTTOMRIGHT", -1, 1)
@@ -2594,7 +2597,7 @@ function ns:CompanionPortrait(parent, size)
 			if app.display and type(self.model.SetDisplayInfo) == "function" then shown = pcall(self.model.SetDisplayInfo, self.model, app.display) end
 			if not shown and app.npc and type(self.model.SetCreature) == "function" then shown = pcall(self.model.SetCreature, self.model, app.npc) end
 			if shown then
-				Method(self.model, "SetCamDistanceScale", 1.6)
+				Method(self.model, "SetCamDistanceScale", self.camScale)
 				self.model:Show()
 			else
 				self.model:Hide()

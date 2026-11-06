@@ -89,6 +89,14 @@ do
 		and evo.stats.days.value.text == "12" and evo.stats.missions.value.text == "34"
 		and evo.stats.km.value.text:find("km", 1, true) ~= nil, evo.stats.days.value.text .. " / " .. evo.stats.km.value.text)
 	Check("[CPAGE] une bulle, jamais vide", (evo.bubble.text.text or "") ~= "")
+	Check("[CPAGE] grand portrait : caméra rapprochée (plus que l'aperçu des réglages)",
+		evo.hero.portrait.camScale < NS.PORTRAIT_CAM_DISTANCE and NS:CompanionPortrait(evo.hero, 76).camScale == NS.PORTRAIT_CAM_DISTANCE,
+		tostring(evo.hero.portrait.camScale))
+	-- cadre et fond : jamais deux listes ouvertes l'une sur l'autre
+	evo.frameStyle:Click()
+	evo.bgStyle:Click()
+	Check("[CPAGE] cadre puis fond : la liste du cadre se referme", evo.bgStyle:IsOpen() and not evo.frameStyle:IsOpen())
+	evo.bgStyle:Click()
 	Check("[CPAGE] envies : quatre lignes", #evo.needs == 4 and evo.needs[1].value.text:find("%%") ~= nil)
 	local captured
 	for _, cell in ipairs(evo.looks) do if cell.def and cell.def.id == "cap:7001" then captured = cell end end

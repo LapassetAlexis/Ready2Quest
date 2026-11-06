@@ -28,7 +28,7 @@ local FR = {
 	JRN_ZONE_PICK          = "Zone : %s",
 	JRN_ZONE_HERE          = "%s (ici)",
 	JRN_ZONE_NONE          = "Aucune zone pour l'instant : explore, ton carnet se remplit tout seul.",
-	JRN_ACT_explore        = "Exploration",
+	JRN_ACT_explore        = "Lieux",
 	JRN_ACT_combat         = "Combat",
 	JRN_ACT_craft          = "Métiers",
 	JRN_ACT_quests         = "Quêtes",
@@ -37,7 +37,7 @@ local FR = {
 	JRN_WATCH_TIP          = "Cochée : les objectifs de cette zone s'affichent dans le bloc « Carnet » en jeu. La zone où tu es est suivie d'office ; décoche-la pour la masquer.",
 	JRN_ACT_EMPTY_explore  = "Aucun village connu dans cette zone.",
 	JRN_ACT_EMPTY_combat   = "Aucune créature croisée ici : cible-les ou survole-les pour les noter.",
-	JRN_ACT_EMPTY_craft    = "Pas de métier de récolte (herboristerie, minage ou dépeçage), ou rien de ta compétence ici.",
+	JRN_ACT_EMPTY_craft    = "Rien à récolter ici pour tes métiers.",
 	JRN_ACT_EMPTY_quests   = "Aucune quête connue pour toi dans cette zone.",
 	JRN_ACT_NO_QUESTS      = "Pas de liste de quêtes pour ce client.",
 	JRN_ZONE_PERCENT       = "%d %%",
@@ -54,6 +54,7 @@ local FR = {
 	JRN_ITEM_LEVEL         = "%s (niv. %s)",
 	JRN_ITEM_GATHERED      = "récolté",
 	JRN_ITEM_TO_GATHER     = "à récolter (%d)",
+	JRN_ITEM_TO_GATHER_GRAY = "à récolter (gris)",
 	JRN_ITEM_NAMED         = "%s, %s",
 	JRN_EVO_STAGE          = "%s — %s (étape %d/%d)",
 	JRN_EVO_NEXT_LEVEL     = "Prochaine étape : %s au niveau %d (tu es niveau %d).",
@@ -81,7 +82,7 @@ local FR = {
 	JRN_EVO_HOW            = "Comment ça marche",
 	JRN_EVO_HOW_1          = "Ton niveau ouvre chaque étape : 10, 20, 40 et 60.",
 	JRN_EVO_HOW_2          = "Pour la franchir, il doit être heureux : ses quatre envies à %d %% ou plus. Mange, repose-toi, rends des quêtes, explore.",
-	JRN_EVO_HOW_3          = "Finis une zone à 100 %% (page Complétion) : un coffre s'ouvre, tu y choisis une apparence, un ornement, un cadre ou un fond.",
+	JRN_EVO_HOW_3          = "Finis une zone à 100 %% (page Exploration) : un coffre s'ouvre, tu y choisis une apparence, un ornement, un cadre ou un fond.",
 	JRN_EVO_CHESTS         = "Coffres à ouvrir : %d",
 	JRN_EVO_COLLECTION     = "Collection : %d/%d  (palier 1 : %d/%d · palier 2 : %d/%d · palier 3 : %d/%d)",
 	JRN_EVO_ROAD           = "Parcours : %d zones · %d/%d capitales · %d donjons · %d rares · %d/%d paliers",
@@ -92,7 +93,7 @@ local EN = {
 	JRN_ZONE_PICK          = "Zone: %s",
 	JRN_ZONE_HERE          = "%s (here)",
 	JRN_ZONE_NONE          = "No zone yet: explore, your journal fills itself.",
-	JRN_ACT_explore        = "Exploration",
+	JRN_ACT_explore        = "Places",
 	JRN_ACT_combat         = "Combat",
 	JRN_ACT_craft          = "Professions",
 	JRN_ACT_quests         = "Quests",
@@ -101,7 +102,7 @@ local EN = {
 	JRN_WATCH_TIP          = "Checked: this zone's goals show in the in-game \"Journal\" tracker. The zone you are in is tracked by default; uncheck it to hide it.",
 	JRN_ACT_EMPTY_explore  = "No known village in this zone.",
 	JRN_ACT_EMPTY_combat   = "No creature met here yet: target or hover them to log them.",
-	JRN_ACT_EMPTY_craft    = "No gathering profession (herbalism, mining or skinning), or nothing of your skill here.",
+	JRN_ACT_EMPTY_craft    = "Nothing to gather here for your professions.",
 	JRN_ACT_EMPTY_quests   = "No known quest for you in this zone.",
 	JRN_ACT_NO_QUESTS      = "No quest list for this client.",
 	JRN_ZONE_PERCENT       = "%d %%",
@@ -118,6 +119,7 @@ local EN = {
 	JRN_ITEM_LEVEL         = "%s (lvl %s)",
 	JRN_ITEM_GATHERED      = "gathered",
 	JRN_ITEM_TO_GATHER     = "to gather (%d)",
+	JRN_ITEM_TO_GATHER_GRAY = "to gather (grey)",
 	JRN_ITEM_NAMED         = "%s, %s",
 	JRN_EVO_STAGE          = "%s — %s (stage %d/%d)",
 	JRN_EVO_NEXT_LEVEL     = "Next stage: %s at level %d (you are level %d).",
@@ -144,7 +146,7 @@ local EN = {
 	JRN_EVO_HOW            = "How it works",
 	JRN_EVO_HOW_1          = "Your level opens each stage: 10, 20, 40 and 60.",
 	JRN_EVO_HOW_2          = "To go through, it must be happy: all four needs at %d %% or more. Eat, rest, turn in quests, explore.",
-	JRN_EVO_HOW_3          = "Complete a zone to 100 %% (Completion page): a chest opens and you pick a look, an ornament, a frame or a background.",
+	JRN_EVO_HOW_3          = "Complete a zone to 100 %% (Exploration page): a chest opens and you pick a look, an ornament, a frame or a background.",
 	JRN_EVO_CHESTS         = "Chests to open: %d",
 	JRN_EVO_COLLECTION     = "Collection: %d/%d  (tier 1: %d/%d · tier 2: %d/%d · tier 3: %d/%d)",
 	JRN_EVO_ROAD           = "Road: %d zones · %d/%d capitals · %d dungeons · %d rares · %d/%d milestones",
@@ -207,17 +209,18 @@ local function BestiaryItems(self, zoneID)
 	return items
 end
 
--- Récolte : les ressources de ta tranche, récoltées ou non dans cette zone
+-- Récolte : ce que la zone t'offre à ta compétence (même gris), récolté ou non
 local function GatheringItems(self, zoneID)
 	local items = {}
-	if not (self.GatheringZoneBand and self.GatheringData) then return items end
+	if not (self.GatheringZoneList and self.GatheringData) then return items end
 	local data = self:GatheringData()
 	-- zone préremplie (ZoneGathering_<client>.lua) : seulement ce qui y pousse
-	for _, entry in ipairs((self:GatheringZoneBand(zoneID))) do
+	for _, entry in ipairs((self:GatheringZoneList(zoneID))) do
 		local record = data[entry.itemID]
 		local done = record and type(record.zones) == "table" and (tonumber(record.zones[zoneID]) or 0) > 0
+		local todo = entry.grayed and L.JRN_ITEM_TO_GATHER_GRAY or self:F("JRN_ITEM_TO_GATHER", entry.req)
 		items[#items + 1] = { name = entry.name, done = done == true, req = entry.req, itemID = entry.itemID,
-			detail = done and L.JRN_ITEM_GATHERED or self:F("JRN_ITEM_TO_GATHER", entry.req) }
+			detail = done and L.JRN_ITEM_GATHERED or todo }
 	end
 	table.sort(items, function(a, b)
 		if a.done ~= b.done then return not a.done end
@@ -816,6 +819,8 @@ ns.JOURNAL_PANES = ns.JOURNAL_PANES or {}
 -- ornements : l'ancienne Collection)
 local HERO_H, EVO_ROW, EVO_STEP = 176, 30, 34
 local PORTRAIT = 148
+-- caméra rapprochée : le compagnon remplit le grand cadre du héros
+local PORTRAIT_ZOOM = 0.65
 local STAT_H = 54
 local LOOK_COUNT, LOOK_W, LOOK_H = 5, 52, 66
 local STATS = { "captures", "shiny", "days", "missions", "km" }
@@ -832,7 +837,7 @@ local function BuildEvolution(self, frame, content)
 	hero:SetAccent(Theme.GOLD)
 	pane.hero = hero
 	if self.CompanionPortrait then
-		hero.portrait = self:CompanionPortrait(hero, PORTRAIT)
+		hero.portrait = self:CompanionPortrait(hero, PORTRAIT, PORTRAIT_ZOOM)
 		hero.portrait:SetPoint("LEFT", hero, "LEFT", 14, 0)
 	end
 	local textX = 14 + PORTRAIT + 20
@@ -1048,26 +1053,25 @@ local function BuildMenagerie(self, frame, content)
 		row.icon:SetTexCoord(0.08, 0.92, 0.08, 0.92)
 		row.text:ClearAllPoints()
 		row.text:SetPoint("LEFT", row, "LEFT", 58 + rowH - 8 + 8, 0)
-		row.text:SetWidth(GRID_W - 58 - rowH - 158)
+		row.text:SetWidth(GRID_W - 58 - rowH - 128)
 		row.label = row.text
+		-- nom (ou « ??? ») à la couleur de sa rareté, type à droite, et
+		-- l'étoile d'une brillante ; capturée : liseré vert à gauche (1.5.1)
 		row.detail:ClearAllPoints()
-		row.detail:SetPoint("RIGHT", row, "RIGHT", -66, 0)
+		row.detail:SetPoint("RIGHT", row, "RIGHT", -30, 0)
 		row.detail:SetWidth(90)
-		-- marques à droite : brillante, abattue (tampon), capturée (pastille)
-		row.caught = row:CreateTexture(nil, "ARTWORK")
-		row.caught:SetTexture(Theme.SOLID)
-		row.caught:SetSize(10, 10)
-		row.caught:SetPoint("RIGHT", row, "RIGHT", -12, 0)
-		row.stamp = Theme.CreateDiamond(row, 8, true)
-		row.stamp:SetPoint("RIGHT", row.caught, "LEFT", -10, 0)
 		row.star = Theme.CreateDiamond(row, 8)
-		row.star:SetPoint("RIGHT", row.stamp, "LEFT", -8, 0)
+		row.star:SetPoint("RIGHT", row, "RIGHT", -12, 0)
 		row.star:SetVertexColor(Theme.GOLD_LIGHT[1], Theme.GOLD_LIGHT[2], Theme.GOLD_LIGHT[3], 1)
 		row.star:Hide()
-		row.mark = Theme.Solid(row, "ARTWORK", Theme.GOLD, 1)
-		row.mark:SetPoint("TOPLEFT", row, "TOPLEFT", 0, 0)
-		row.mark:SetPoint("BOTTOMLEFT", row, "BOTTOMLEFT", 0, 0)
-		row.mark:SetWidth(2)
+		row.caught = Theme.Solid(row, "ARTWORK", Theme.GREEN, 1)
+		row.caught:SetPoint("TOPLEFT", row, "TOPLEFT", 0, 0)
+		row.caught:SetPoint("BOTTOMLEFT", row, "BOTTOMLEFT", 0, 0)
+		row.caught:SetWidth(3)
+		row.caught:Hide()
+		-- choisie dans la fiche, ou portée : la ligne s'éclaire
+		row.mark = Theme.Solid(row, "BORDER", Theme.GOLD, 0.10)
+		row.mark:SetAllPoints()
 		row.mark:Hide()
 		row:HookScript("OnEnter", function(r) if r.entry then ns:JournalPreviewMenagerie(r.entry) end end)
 		row:SetScript("OnClick", function(r)
@@ -1707,17 +1711,38 @@ function ns:MenagerieZoneValue(value)
 	return value or "all"
 end
 
+-- clé de tri alphabétique : minuscules sans accents, sans article de tête
+-- (« Les Tarides » se range à T, « The Barrens » à B)
+local function SortKey(name)
+	local text = ns.OptionFold and ns.OptionFold(name) or string.lower(tostring(name or ""))
+	text = text:gsub("^%s+", "")
+	for _, article in ipairs({ "les ", "le ", "la ", "l'", "the " }) do
+		if text:sub(1, #article) == article then return text:sub(#article + 1) end
+	end
+	return text
+end
+
+ns.ZoneSortKey = SortKey
+
 local function MenagerieZoneOptions(self)
 	local here = self.JournalZone and self:JournalZone()
 	local options = {
 		{ value = "here", label = self:F("JRN_MEN_ZONE_HERE", here and ZoneName(self, here) or "-") },
 		{ value = "all", label = L.JRN_MEN_ZONE_ALL },
 	}
+	-- les zones par ordre alphabétique (accents ignorés), sous « ici » et « toutes »
+	local zones = {}
 	for _, zoneID in ipairs(self.MenagerieZones and self:MenagerieZones() or {}) do
 		local levels = ns.ZONE_LEVELS and ns.ZONE_LEVELS[zoneID]
-		options[#options + 1] = { value = zoneID, label = ZoneName(self, zoneID),
+		local name = ZoneName(self, zoneID)
+		zones[#zones + 1] = { value = zoneID, label = name, key = SortKey(name),
 			hint = levels and (levels[1] .. "-" .. levels[2]) or nil }
 	end
+	table.sort(zones, function(a, b)
+		if a.key ~= b.key then return a.key < b.key end
+		return a.value < b.value
+	end)
+	for _, option in ipairs(zones) do options[#options + 1] = option end
 	return options
 end
 
@@ -1749,21 +1774,17 @@ local function RefreshMenagerie(self, frame)
 			row.icon:SetAlpha(entry.captured and 1 or (entry.known and 0.5 or 0.3))
 			row.no:SetText(self:F("JRN_MEN_NO", entry.no))
 			row.label:SetText(entry.known and entry.name or L.JRN_MEN_UNKNOWN)
-			local lc = entry.captured and RarityColor(entry) or (entry.known and Theme.TEXT or Theme.MUTED)
+			local lc = RarityColor(entry)
 			row.label:SetTextColor(lc[1], lc[2], lc[3])
+			row.label:SetAlpha(entry.known and 1 or 0.75)
 			row.detail:SetText(entry.known and (entry.type or "") or "")
-			local killed = (entry.killed or 0) > 0
-			row.stamp:SetTexture(killed and Theme.DIAMOND or Theme.DIAMOND_LINE)
-			local sc = killed and Theme.GOLD or Theme.EDGE
-			row.stamp:SetVertexColor(sc[1], sc[2], sc[3], 1)
-			local cc = entry.captured and RarityColor(entry) or Theme.EDGE
-			row.caught:SetVertexColor(cc[1], cc[2], cc[3], entry.captured and 1 or 0.6)
+			if entry.captured then row.caught:Show() else row.caught:Hide() end
 			if entry.shiny or entry.shinyKilled then row.star:Show() else row.star:Hide() end
 			local worn = current == ("cap:" .. entry.npc)
 			local picked = shown and shown.npc == entry.npc
 			if picked or worn then row.mark:Show() else row.mark:Hide() end
-			row.mark:SetVertexColor((worn and Theme.GOLD or Theme.EDGE)[1], (worn and Theme.GOLD or Theme.EDGE)[2],
-				(worn and Theme.GOLD or Theme.EDGE)[3], 1)
+			local mc = worn and Theme.GOLD or { 1, 1, 1 }
+			row.mark:SetVertexColor(mc[1], mc[2], mc[3], worn and 0.12 or 0.05)
 			row:Show()
 		else
 			row:Hide()

@@ -332,7 +332,7 @@ do
 	Check("[ZONE] part en panne ignorée", done and #done.parts == 2)
 	Check("[ZONE] autre zone : seules les parts qui s'appliquent", NS:ZoneCompletion(1429) == nil)
 	local goal = K.Find(NS:JournalObjectives(), "zone:1413")
-	Check("[ZONE] objectif « Complétion de Les Tarides », en pourcentage", goal and goal.label == "Complétion de Les Tarides"
+	Check("[ZONE] objectif « Exploration de Les Tarides », en pourcentage", goal and goal.label == "Exploration de Les Tarides"
 		and goal.progress == "29 %", goal and (goal.label .. " " .. goal.progress))
 	local hint = goal and table.concat(goal.hint, " | ") or ""
 	Check("[ZONE] survol : chaque part, puis la plus simple à finir", hint:find("Villages : 1/3", 1, true)
@@ -341,7 +341,7 @@ do
 	-- le suivi : la complétion remplace ses parts
 	NS:RefreshJournalTracker()
 	local lines = K.Lines()
-	Check("[ZONE] suivi : complétion affichée, villages de la zone absorbés", lines:find("Complétion de Les Tarides", 1, true)
+	Check("[ZONE] suivi : complétion affichée, villages de la zone absorbés", lines:find("Exploration de Les Tarides", 1, true)
 		and not lines:find("Villages de Les Tarides", 1, true), lines)
 	Check("[ZONE] onglet Objectifs : les villages restent", K.Find(NS:JournalObjectives(), "villages:1413") ~= nil)
 	NS:JournalDismiss("zone:1413", true)
@@ -515,8 +515,8 @@ do
 	Check("[WIN] la Complétion allume son entrée du menu", f.sections.progress.selected and not f.sections.evolution.selected)
 	-- le Combat n'est plus une part de la zone : il vit dans la Ménagerie
 	local parts = prog.parts
-	Check("[WIN] trois parts (Exploration, Métiers, Quêtes)", parts.explore and parts.craft and parts.quests
-		and parts.combat == nil and parts.explore.label.text == "Exploration")
+	Check("[WIN] trois parts (Lieux, Métiers, Quêtes)", parts.explore and parts.craft and parts.quests
+		and parts.combat == nil and parts.explore.label.text == "Lieux")
 	Check("[WIN] client sans liste de quêtes : part « Quêtes », grisée", NS:ZoneQuestsAvailable() == false
 		and parts.quests.label.text == "Quêtes" and parts.quests.label.textColor[1] == NS.Theme.MUTED[1] and parts.quests.dim,
 		parts.quests.label.text)
@@ -535,7 +535,7 @@ do
 		and prog.nopct:IsShown() and prog.nopct.text == NS.L.JRN_ZONE_NOPCT, prog.percent.text)
 	Check("[WIN] combat : renvoie à la Ménagerie", prog.toMen:IsShown() and prog.bestiary:IsShown())
 	parts.craft:Click()
-	Check("[WIN] métiers sans métier : message", prog.empty.text == NS.L.JRN_ACT_EMPTY_craft)
+	Check("[WIN] métiers sans métier : message", prog.empty.text:find(NS.L.JRN_ACT_EMPTY_craft, 1, true) == 1, prog.empty.text)
 	parts.quests:Click()
 	Check("[WIN] quêtes sans liste : message clair", prog.empty.text == "Pas de liste de quêtes pour ce client.", prog.empty.text)
 
@@ -644,7 +644,7 @@ do
 	NS:RefreshJournal()
 	Check("[WATCH] zone d'ici : cochée d'office", prog.watch.checked == true and prog.watchLabel.text == "Suivre à l'écran")
 	NS:RefreshJournalTracker()
-	Check("[WATCH] suivi : la complétion d'ici affichée", K.Lines():find("Complétion de Les Tarides", 1, true), K.Lines())
+	Check("[WATCH] suivi : la complétion d'ici affichée", K.Lines():find("Exploration de Les Tarides", 1, true), K.Lines())
 	prog.watch:Click()
 	Check("[WATCH] décochée : retenue", NS:JournalData().watch[1413] == false and prog.watch.checked == false)
 	Check("[WATCH] décochée : la zone et ses parts quittent le suivi", not K.Lines():find("Les Tarides", 1, true), K.Lines())
@@ -652,7 +652,7 @@ do
 	NS:JournalDismiss("zone:1413", true)
 	NS:JournalDismiss("villages:1413", true)
 	prog.watch:Click()
-	Check("[WATCH] recochée : de retour", K.Lines():find("Complétion de Les Tarides", 1, true), K.Lines())
+	Check("[WATCH] recochée : de retour", K.Lines():find("Exploration de Les Tarides", 1, true), K.Lines())
 	Check("[WATCH] recochée : les objectifs masqués avant sont réactivés", not NS:JournalData().dismissed["zone:1413"]
 		and not NS:JournalData().dismissed["villages:1413"])
 	-- une autre zone : cochée à la main
@@ -662,7 +662,7 @@ do
 	Check("[WATCH] autre zone non cochée : absente du suivi", not K.Lines():find("Elwynn", 1, true), K.Lines())
 	prog.watch:Click()
 	Check("[WATCH] autre zone cochée : dans le suivi, même avec une seule activité", NS:JournalIsWatched(1429)
-		and K.Lines():find("Complétion de Forêt d'Elwynn", 1, true), K.Lines())
+		and K.Lines():find("Exploration de Forêt d'Elwynn", 1, true), K.Lines())
 	prog.watch.scripts.OnEnter(prog.watch)
 	Check("[WATCH] survol : explication", table.concat(_G.GameTooltip.lines or {}, " "):find("bloc", 1, true) ~= nil)
 	prog.watch.scripts.OnLeave(prog.watch)
