@@ -1,11 +1,13 @@
 # QuestCompanion
 
-## 2.1.0
+## 2.1.0 — la capture en scène
 
+- **Capture animée refaite**, avec de vraies textures peintes pour l'addon à la place des rectangles et des icônes du jeu. Le filet roulé en boule part en arc, en tournant, avec une traînée d'étincelles, et s'ouvre à l'apogée ; un filet de cordes torsadées, nœuds et lest tombe sur la créature (son ombre le rejoint à l'impact, un nuage de poussière), puis oscille et se resserre à chaque secousse pendant qu'un halo à la couleur de la rareté pulse de plus en plus vite. Capturé : éclair, gerbe de rayons et d'étincelles, le filet se referme sur elle, elle tourne sur elle-même, un ruban « Capturé ! » surgit, puis les étoiles du spécimen s'allument une à une. Échappé : le filet se déchire et tombe, ses cordes volent, le monstre file dans la poussière. Une brillante : tout en or, deuxième gerbe à contresens, motes dorées, reflet sur le ruban. L'aide utilisée s'affiche près du titre.
+- **Bouton filet et étoiles** : le bouton a son propre glyphe (ambre, or si une brillante attend) et les étoiles des spécimens (scène, liste du filet, Ménagerie, chat) sont de vraies étoiles dorées à facettes.
 - **Le filet se voit** : le bouton passe de 22 à 44 px et se pose **à côté** du compagnon (à sa droite, ou à sa gauche s'il touche le bord de l'écran) au lieu de son portrait, où il passait inaperçu ; il suit la taille du compagnon, garde un liseré doré et bat quelques secondes quand un monstre arrive dans le filet.
 - **Bandeau « Capture possible »** : dès qu'un monstre abattu peut être capturé (après le combat), un bandeau le nomme (« et N de plus » s'il y en a plusieurs) ; clic dessus : le filet, clic droit : la liste. Il se déplace comme les autres bandeaux. Réglage « Bandeau « Capture possible » », page Au jour le jour.
 
-*English:* the net button is now 44 px, sits beside the companion (right, or left near the screen edge) instead of over its portrait, follows its size and pulses when a monster joins the net; a "Capture possible" banner names the creature as soon as it can be captured (after combat), click = net, right-click = list (Day by day setting).
+*English:* the capture scene is redrawn with dedicated hand-painted textures: a balled net thrown in an arc with a spark trail, a real rope net (knots, lead weights, its own shadow) that drops, wobbles and tightens with every shake, rarity-coloured rays, sparks and a ribbon on success with the specimen's stars lighting one by one, a torn net and flying ropes on failure, everything golden for a shiny. The net button gets its own glyph and specimen stars their own texture. The net button is now 44 px, sits beside the companion (right, or left near the screen edge) instead of over its portrait, follows its size and pulses when a monster joins the net; a "Capture possible" banner names the creature as soon as it can be captured (after combat), click = net, right-click = list (Day by day setting).
 
 ## 2.0.0 — la ménagerie au cœur
 

@@ -31,9 +31,12 @@ ns.CAPTURE_STAR_MAX = 3
 -- capture sur dix en moyenne, de quoi donner envie de recapturer sans
 -- en faire une corvée.
 ns.CAPTURE_STAR_ODDS = { 60, 30, 10 }
--- l'étoile (icône de cible du jeu, teintée) : pleine dorée, vide grise
-ns.CAPTURE_STAR_ICON = "Interface\\TargetingFrame\\UI-RaidTargetingIcon_1"
-local NET_ICON = "Interface\\Icons\\Spell_Nature_Web"
+-- les étoiles et le glyphe du filet : nos textures (CaptureStage.lua,
+-- tools/gen_capture_assets.py), sinon celles du jeu
+local ART = ns.CAPTURE_ART
+ns.CAPTURE_STAR_ICON = ART and ART.stars or "Interface\\TargetingFrame\\UI-RaidTargetingIcon_1"
+local NET_ICON = ART and ART.icon or "Interface\\Icons\\Spell_Nature_Web"
+local ICON_GAME_SHINY, ICON_GAME_REST = { 1, 0.85, 0.4 }, { 1, 1, 1 }
 -- Le filet (2.1.0) : un vrai bouton de 44 px, à côté du compagnon (pas sur
 -- son portrait, où il passait inaperçu), qui suit sa taille et bat en doré
 -- quand un candidat arrive ; et un bandeau « Capture possible ».
@@ -193,7 +196,12 @@ end
 
 -- Texte des étoiles (pleines dorées, vides grises), pour le chat et les fiches
 local function StarIcon(full, size)
-	local c = full and { 246, 199, 125 } or { 90, 90, 90 }
+	local c = full and { 246, 199, 125 } or { 120, 126, 132 }
+	if ART and ns.CAPTURE_STAR_ICON == ART.stars then
+		-- notre feuille 128x64 : l'étoile pleine à gauche, la vide à droite
+		local x = full and 0 or 64
+		return string.format("|T%s:%d:%d:0:0:128:64:%d:%d:0:64:%d:%d:%d|t", ns.CAPTURE_STAR_ICON, size, size, x, x + 64, c[1], c[2], c[3])
+	end
 	return string.format("|T%s:%d:%d:0:0:16:16:0:16:0:16:%d:%d:%d|t", ns.CAPTURE_STAR_ICON, size, size, c[1], c[2], c[3])
 end
 function ns:CaptureStarsText(stars, size)
@@ -524,31 +532,21 @@ do
 	end
 end
 
--- La scène : les étoiles du spécimen sous la rareté
+-- La scène : le pied dit si le spécimen bat celui qu'on avait (les étoiles
+-- elles-mêmes sont dessinées par CaptureStage.lua, depuis rolling.stars)
 do
 	local base = ns.CaptureStageUpdate
 	if base then
 		function ns:CaptureStageUpdate(now)
 			local phase = base(self, now)
 			local frame = self.captureStage
-			if not frame then return phase end
-			if not frame.qcStars then
-				frame.qcStars = Theme.Text(frame, Theme.F_BODY, Theme.PARCHMENT)
-				frame.qcStars:SetPoint("TOP", frame.name, "BOTTOM", 0, -18)
-				frame.qcStars:SetJustifyH("CENTER")
-			end
-			local rolling = frame.rolling
-			if phase == "ok" and rolling and rolling.stars then
-				frame.qcStars:SetText(self:CaptureStarsText(rolling.stars, 16))
-				frame.qcStars:Show()
+			local rolling = frame and frame.rolling
+			if phase == "ok" and rolling and rolling.starsBefore then
 				local r = now - (rolling.resultAt or now)
-				if rolling.starsBefore and r <= 1.2 then
+				if r <= 1.2 then
 					frame.footer:SetText(rolling.starsBetter and L.CAPTURE_STAGE_BEST
 						or self:F("CAPTURE_STAGE_KEPT", rolling.starsBefore))
 				end
-			else
-				frame.qcStars:SetText("")
-				frame.qcStars:Hide()
 			end
 			return phase
 		end
@@ -684,12 +682,13 @@ function ns:CaptureStyleNet()
 	if button.border and button.border.SetColor then button.border:SetColor(c[1], c[2], c[3], 1) end
 	local g = button.shiny and Theme.GOLD_LIGHT or Theme.GOLD
 	if button.glow.SetVertexColor then button.glow:SetVertexColor(g[1], g[2], g[3], 1) end
-	if button.shiny then
-		button.icon:SetVertexColor(1, 0.85, 0.4, 1)
-	else
-		button.icon:SetVertexColor(1, 1, 1, 1)
-		if not (button.pulseUntil and Clock() < button.pulseUntil) then button.glow:SetAlpha(0) end
-	end
+	-- notre glyphe blanc prend sa couleur : ambre au repos, or si brillante
+	-- ou au survol (l'icône du jeu, en repli, reste en couleurs)
+	local ours = ART and NET_ICON == ART.icon
+	local tint = button.shiny and (ours and Theme.GOLD_LIGHT or ICON_GAME_SHINY)
+		or (ours and (button.hover and Theme.GOLD_LIGHT or Theme.GOLD) or ICON_GAME_REST)
+	button.icon:SetVertexColor(tint[1], tint[2], tint[3], 1)
+	if not button.shiny and not (button.pulseUntil and Clock() < button.pulseUntil) then button.glow:SetAlpha(0) end
 end
 
 -- Bouton et liste à jour (après chaque changement de la file)
@@ -736,7 +735,12 @@ function ns:EnsureCaptureToast()
 	local left = frame.contentLeft or 14
 	frame.icon = frame:CreateTexture(nil, "ARTWORK")
 	frame.icon:SetTexture(NET_ICON)
-	frame.icon:SetTexCoord(0.08, 0.92, 0.08, 0.92)
+	frame.ownGlyph = ART and NET_ICON == ART.icon
+	if frame.ownGlyph then
+		frame.icon:SetVertexColor(Theme.GOLD[1], Theme.GOLD[2], Theme.GOLD[3], 1)
+	else
+		frame.icon:SetTexCoord(0.08, 0.92, 0.08, 0.92)
+	end
 	frame.icon:SetSize(TOAST_ICON, TOAST_ICON)
 	frame.icon:SetPoint("LEFT", frame, "LEFT", left, 0)
 	local textLeft = left + TOAST_ICON + 10
@@ -795,7 +799,9 @@ function ns:CaptureToastShow()
 	else
 		frame.hint:SetText(L.CAPTURE_TOAST_HINT)
 	end
-	if frame.SetAccent then frame:SetAccent(best.shiny and (Theme.GOLD_LIGHT or Theme.GOLD) or Theme.GOLD) end
+	local accent = best.shiny and (Theme.GOLD_LIGHT or Theme.GOLD) or Theme.GOLD
+	if frame.SetAccent then frame:SetAccent(accent) end
+	if frame.ownGlyph then frame.icon:SetVertexColor(accent[1], accent[2], accent[3], 1) end
 	frame.candidate = best
 	if not frame:IsShown() then
 		frame:Show()
