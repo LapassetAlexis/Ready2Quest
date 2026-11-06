@@ -124,7 +124,7 @@ do
 	local b = NS:MemoryScene({ kind = "dungeon", zone = "Mortemines" })
 	local c = NS:MemoryScene({ kind = "level", zone = "Mortemines" })
 	Check("[MPH] décor : le même à chaque fois", a.id == b.id and a.sky[1][1] == b.sky[1][1] and a.ground[2][3] == b.ground[2][3])
-	Check("[MPH] décor : selon le moment (donjon ≠ niveau)", a.id == "cave" and c.id == "meadow")
+	Check("[MPH] décor : selon le moment (donjon ≠ niveau)", a.id == "cave" and c.id == "forest")
 	local shades = {}
 	for _, zone in ipairs({ "Durotar", "Les Tarides", "Orgrimmar", "Mulgore", "Hurlevent" }) do
 		shades[NS:MemoryScene({ kind = "level", zone = zone }).shade] = true
@@ -179,6 +179,36 @@ do
 	Check("[MPH] pose : souvenir vide sans erreur", pcall(NS.MemoryPose, NS, nil))
 	-- décor peint : une image par scène, recadrée selon le souvenir
 	local scene = NS:MemoryScene({ kind = "dungeon", zone = "Mortemines", at = 5 })
+	-- décor selon la zone (1.5.4) : retenue par son uiMapID, sinon par son nom
+	Check("[MPH] décor par zone : Durotar = canyon, Elwynn = forêt, Tirisfal = terres maudites",
+		NS:MemoryBiome({ kind = "level", map = 1411 }) == "canyon" and NS:MemoryBiome({ kind = "level", map = 1429 }) == "forest"
+		and NS:MemoryBiome({ kind = "level", map = 1420 }) == "blight")
+	Check("[MPH] décor : donjon = grotte, vol = ciel, quelle que soit la zone",
+		NS:MemoryBiome({ kind = "dungeon", map = 1411 }) == "cave" and NS:MemoryBiome({ kind = "flight", map = 1411 }) == "sky")
+	-- images officielles du jeu (1.5.4) : donjons, lieux de Forever, vol
+	local dm = NS:MemoryArt({ kind = "dungeon", instance = 36 })
+	Check("[MPH] image officielle : Mortemines = son écran de chargement", dm and dm.file == 131833
+		and dm.box == NS.MEMORY_ART_BOX.classic)
+	Check("[MPH] image officielle : île de Zéphras, même pour un niveau", (NS:MemoryArt({ kind = "level", instance = 2991 }) or {}).file == 7950679)
+	Check("[MPH] image officielle : premier vol = le continent vu du ciel", (NS:MemoryArt({ kind = "flight", instance = 1 }) or {}).file == 7963779
+		and NS:MemoryArt({ kind = "level", instance = 1 }) == nil)
+	Check("[MPH] image officielle : ancien souvenir de donjon retrouvé par son nom",
+		(NS:MemoryArt({ kind = "dungeon", zone = "Wailing Caverns" }) or {}).file == 131882)
+	Check("[MPH] image officielle : zone extérieure = pas d'image (paysage peint)", NS:MemoryArt({ kind = "level", map = 1411 }) == nil)
+	-- recadrage : jamais hors de la partie peinte, aux proportions de la photo
+	local u0, u1, v0, v1 = NS.MemoryCrop(NS.MEMORY_ART_BOX.wide, 1.5, 0)
+	local ratio = ((u1 - u0) * 2992) / ((v1 - v0) * 1684)
+	Check("[MPH] recadrage 16:9 : bandes retirées, proportions de la photo", math.abs(ratio - 1.5) < 0.01
+		and v0 == 0.15 and v1 == 0.85 and u0 == 0)
+	u0, u1, v0, v1 = NS.MemoryCrop(NS.MEMORY_ART_BOX.classic, 1.5, 1)
+	Check("[MPH] recadrage classique : logo et cadre retirés", v0 == 0.24 and v1 == 0.77 and u1 <= 1 and u0 >= 0
+		and math.abs(((u1 - u0) * 2048) / ((v1 - v0) * 2048) - 1.5) < 0.01)
+	Check("[MPH] décor : zone inconnue = forêt", NS:MemoryBiome({ kind = "level", map = 99999 }) == "forest")
+	local biomes = {}
+	for _, biome in pairs(NS.MEMORY_ZONE_BIOME) do biomes[biome] = true end
+	local nb = 0
+	for _ in pairs(biomes) do nb = nb + 1 end
+	Check("[MPH] décor : onze paysages pour les zones (et la ville)", nb == 11, nb)
 	Check("[MPH] décor peint : la texture de la scène", scene.texture == NS.MEMORY_SCENE_TEXTURE .. "cave"
 		and scene.pan >= 0 and scene.pan <= 1)
 	local pans = {}
@@ -222,7 +252,7 @@ do
 		and cap.model:GetWidth() < cap.photoW and cap.creature.facing < 0 and cap.model.facing > 0)
 	Check("[MPH] compagnon posé : geste, angle et plan du souvenir", card.model.anim == card.pose.anim
 		and card.model.facing == card.pose.facing and card.model:GetWidth() == math.floor(card.photoW * card.pose.w))
-	Check("[MPH] décor peint posé et recadré", card.backdrop:IsShown() and card.backdrop.texture == NS.MEMORY_SCENE_TEXTURE .. "meadow")
+	Check("[MPH] décor peint posé et recadré", card.backdrop:IsShown() and card.backdrop.texture == NS.MEMORY_SCENE_TEXTURE .. card.scene)
 	Check("[MPH] deux photos voisines : deux plans différents", pane.cards[1].pose.shot ~= pane.cards[3].pose.shot)
 	Check("[MPH] rare sans npc connu : le compagnon seul", pane.cards[3].model:IsShown() and not pane.cards[3].creature:IsShown())
 	local before = calls.display + calls.creature

@@ -74,7 +74,7 @@ You can rename it with `/qc compagnon nom Nugget`.
 - **Menagerie**: every capturable creature, as one numbered list to filter (zone, captured / to capture / to defeat, rarity, name search, sorting), with a 3D card.
 - **Missions**: companion, daily and weekly missions with their rewards, the capture pack, the pantry and the inn card.
 - **Exploration** (called Completion until 1.5.0): every zone and its progress; for the chosen zone, its milestones and what they give, places, professions (the gathering of the zone, grey resources included, and every profession you know) and quests, and the zone chest.
-- **Souvenirs**: the album of the road, each memory with a photo recreated by your companion on a painted backdrop (meadow, dawn, dusk, cave, city, treasure, storm, above the clouds), each with its own shot (close-up, far away, from behind, mid-air…) and gesture (in-game screenshots stay in the Screenshots folder: addons can't read them).
+- **Souvenirs**: the album of the road, each memory with a photo recreated by your companion on the game's own loading-screen art for dungeons, raids, Forever's own places and the first flight, and elsewhere on a Warcraft-style landscape for the zone (Elwynn forest, Durotar canyons, Dun Morogh snow, Tirisfal blight…), each with its own shot (close-up, far away, from behind, mid-air…) and gesture (in-game screenshots stay in the Screenshots folder: addons can't read them).
 
 Your travel collection: a **stamp** for every first time.
 
@@ -233,7 +233,7 @@ Tu peux la renommer avec `/qc compagnon nom Pépite`.
 - **Ménagerie** : toutes les créatures capturables, en une liste numérotée à filtrer (zone, capturées / à capturer / à abattre, rareté, recherche par nom, tris), avec une fiche en 3D.
 - **Missions** : missions du compagnon, du jour et de la semaine avec leurs récompenses, la besace de capture, le garde-manger et la carte des auberges.
 - **Exploration** (« Complétion » jusqu'à la 1.5.0) : toutes les zones et leur progression ; pour la zone choisie, ses paliers et ce qu'ils rapportent, les lieux, les métiers (la récolte de la zone, ressources grises comprises, et tous les métiers que tu connais) et les quêtes, et le coffre de zone.
-- **Souvenirs** : l'album de la route, chaque souvenir avec sa photo recréée par ton compagnon sur un décor peint (prairie, aube, crépuscule, grotte, ville, trésor, orage, au-dessus des nuages), chacune avec son cadrage (gros plan, au loin, de dos, en l'air…) et son geste (les captures d'écran du jeu restent dans le dossier Screenshots : un addon ne peut pas les lire).
+- **Souvenirs** : l'album de la route, chaque souvenir avec sa photo recréée par ton compagnon sur l'image du jeu lui-même pour les donjons, les raids, les lieux propres à Forever et le premier vol (écrans de chargement), et ailleurs sur un paysage façon Warcraft propre à la zone (forêt d'Elwynn, canyons de Durotar, neige de Dun Morogh, terres maudites de Tirisfal…), chacune avec son cadrage (gros plan, au loin, de dos, en l'air…) et son geste (les captures d'écran du jeu restent dans le dossier Screenshots : un addon ne peut pas les lire).
 
 Ta collection de voyage : un **tampon** pour chaque première fois.
 
