@@ -26,15 +26,17 @@ if ns.IsForeverClient and ns:IsForeverClient() ~= true then return end
 --   zone unique des donneurs. Exclues : quêtes cachées par Questie, d'événement
 --   saisonnier, répétables, journalières / hebdomadaires, de métier, JcJ (voir le script).
 
+-- Chargement paresseux : une fonction par zone, construite à sa première lecture
+-- (ns.LazyZones, Core.lua) ; parcourir avec ns.ZoneIds / ns.ZoneEach, pas pairs.
+
 local function Q(lvl, req, races, classes, fr, en, ex)
 	return { lvl = lvl, req = req, races = races, classes = classes, fr = fr or en, en = en, ex = ex }
 end
 
 local Z = {}
-ns.ZONE_QUESTS = Z
 
 -- Durotar
-Z[1411] = {
+Z[1411] = function() return {
 [784]=Q(7,3,8589934770,0,"Vaincre les traîtres","Vanquish the Betrayers",{825}),
 [786]=Q(8,5,8589934770,0,"Déjouer l'agression des Kolkar","Thwarting Kolkar Aggression"),
 [788]=Q(2,1,8589934770,0,"La dent tranchante","Cutting Teeth"),
@@ -128,9 +130,9 @@ Z[1411] = {
 [99051]=Q(11,9,8589934770,0,nil,"Threat from Below",{99052}),
 [99052]=Q(12,10,8589934770,0,nil,"Threat from Below"),
 [99123]=Q(8,4,8589934770,0,nil,"Lost in the Shadows"),
-}
+} end
 -- Mulgore
-Z[1412] = {
+Z[1412] = function() return {
 [743]=Q(8,5,8589934770,0,"Le danger des Furies-des-vents","Dangers of the Windfury"),
 [745]=Q(8,1,8589934770,0,"Partager la terre","Sharing the Land"),
 [746]=Q(8,6,8589934770,0,"Les fouilles des nains","Dwarven Digging"),
@@ -210,9 +212,9 @@ Z[1412] = {
 [99196]=Q(60,12,8589934770,0,nil,"A Donation of Wool"),
 [99197]=Q(60,26,8589934770,0,nil,"A Donation of Silk"),
 [99411]=Q(7,5,8589934770,0,nil,"Kyle's Gone Missing!"),
-}
+} end
 -- The Barrens
-Z[1413] = {
+Z[1413] = function() return {
 [63]=Q(23,20,8589934770,64,"L'appel de l'eau","Call of Water",{100}),
 [220]=Q(23,20,8589934770,64,"L'appel de l'eau","Call of Water"),
 [819]=Q(15,11,8589934770,0,"Tonneau vide de Chen","Chen's Empty Keg",{821}),
@@ -373,9 +375,9 @@ Z[1413] = {
 [98093]=Q(23,18,8589934770,0,nil,"Field to Clear"),
 [98094]=Q(25,19,8589934770,0,nil,"Scout Support"),
 [98095]=Q(25,19,8589934770,0,nil,"Valuable Vantages"),
-}
+} end
 -- Alterac Mountains
-Z[1416] = {
+Z[1416] = function() return {
 [500]=Q(36,30,4294967373,0,"La prime Cassecrête","Crushridge Bounty",{504}),
 [504]=Q(40,30,4294967373,0,"Les Combattants Cassecrête","Crushridge Warmongers"),
 [505]=Q(33,26,4294967373,0,"Syndicat d'assassins","Syndicate Assassins"),
@@ -409,9 +411,9 @@ Z[1416] = {
 [97287]=Q(33,24,8589934770,0,nil,"Shrewd Negotiations"),
 [99191]=Q(60,12,4294967373,0,nil,"A Donation of Wool"),
 [99192]=Q(60,26,4294967373,0,nil,"A Donation of Silk"),
-}
+} end
 -- Arathi Highlands
-Z[1417] = {
+Z[1417] = function() return {
 [635]=Q(35,30,0,0,"Le cristal dans les montagnes","Crystal in the Mountains"),
 [639]=Q(37,32,8589934770,0,"Glyphe de Strom","Sigil of Strom",{640}),
 [640]=Q(40,32,8589934770,0,"Le Glyphe qui fut brisé","The Broken Sigil",{641}),
@@ -470,9 +472,9 @@ Z[1417] = {
 [96135]=Q(40,30,4294967373,64,nil,"Heed My Call"),
 [96264]=Q(33,30,4294967373,64,nil,"Elemental Aid"),
 [97539]=Q(36,30,8589934770,0,nil,"Silky Sutures"),
-}
+} end
 -- Badlands
-Z[1418] = {
+Z[1418] = function() return {
 [17]=Q(42,38,4294967373,0,"Rechercher les composants à Uldaman","Uldaman Reagent Run"),
 [692]=Q(41,30,0,0,"Les fragments perdus","The Lost Fragments",{656}),
 [703]=Q(40,33,0,0,"Ailes de busard grillées","Barbecued Buzzard Wings"),
@@ -539,9 +541,9 @@ Z[1418] = {
 [2418]=Q(36,30,0,0,"Les pierres de puissance","Power Stones"),
 [3821]=Q(52,48,8589934770,0,"Le Rocher des Cognepeurs","Dreadmaul Rock",{3822}),
 [4062]=Q(54,52,8589934770,0,"La révolte des machines","The Rise of the Machines",{4063}),
-}
+} end
 -- Blasted Lands
-Z[1419] = {
+Z[1419] = function() return {
 [2521]=Q(55,45,0,0,"Au service de Kum'isha","To Serve Kum'isha",{2522}),
 [2581]=Q(50,45,0,0,"Joues de Raillecroc","Snickerfang Jowls",{2582}),
 [2583]=Q(50,45,0,0,"La vitalité du sanglier","A Boar's Vitality",{2584}),
@@ -564,9 +566,9 @@ Z[1419] = {
 [7581]=Q(60,60,0,256,"Les ancrages de la prison","The Prison's Bindings",{7583}),
 [7582]=Q(60,60,0,256,"Les parois de la prison","The Prison's Casing",{7583}),
 [7583]=Q(60,60,0,256,nil,"Suppression"),
-}
+} end
 -- Tirisfal Glades
-Z[1420] = {
+Z[1420] = function() return {
 [8]=Q(5,1,8589934770,0,"Un marché de voleur","A Rogue's Deal",{590}),
 [354]=Q(11,7,8589934770,0,"Morts dans la Famille","Deaths in the Family"),
 [355]=Q(10,7,8589934770,0,"Parler à Sevren","Speak with Sevren",{408}),
@@ -664,9 +666,9 @@ Z[1420] = {
 [99152]=Q(10,7,8589934770,0,nil,"As Above, So Below"),
 [99153]=Q(10,7,8589934770,0,nil,"The One That Got Away"),
 [99156]=Q(13,6,8589934770,0,nil,"Rear Guard Patrol"),
-}
+} end
 -- Silverpine Forest
-Z[1421] = {
+Z[1421] = function() return {
 [96]=Q(23,20,8589934770,64,"L'appel de l'eau","Call of Water"),
 [99]=Q(15,9,8589934770,0,"La folie d'Arugal","Arugal's Folly"),
 [100]=Q(23,20,8589934770,64,"L'appel de l'eau","Call of Water",{96}),
@@ -731,9 +733,9 @@ Z[1421] = {
 [96204]=Q(22,18,16,2,nil,"The Windshaper's Wrath"),
 [98298]=Q(16,9,8589934770,0,nil,"Arugal's Folly"),
 [98299]=Q(20,9,8589934770,0,nil,"Stop the Spread"),
-}
+} end
 -- Western Plaguelands
-Z[1422] = {
+Z[1422] = function() return {
 [105]=Q(60,50,8589934770,0,"Hélas, Andorhal","Alas, Andorhal"),
 [211]=Q(60,50,4294967373,0,"Hélas, Andorhal","Alas, Andorhal"),
 [838]=Q(55,55,8589934770,0,nil,"Scholomance",{964}),
@@ -816,9 +818,9 @@ Z[1422] = {
 [8414]=Q(52,50,5,2,"La dissipation du mal","Dispelling Evil",{8416}),
 [8416]=Q(52,50,5,2,"Pierres du Fléau inertes","Inert Scourgestones",{8418}),
 [8418]=Q(52,50,5,2,"Forger la pierre de pouvoir","Forging the Mightstone"),
-}
+} end
 -- Eastern Plaguelands
-Z[1423] = {
+Z[1423] = function() return {
 [5065]=Q(58,40,0,0,"Les tablettes perdues de Mosh'aru","The Lost Tablets of Mosh'aru",{4788}),
 [5142]=Q(55,50,0,0,"La petite Pamela","Little Pamela",{5149,5601}),
 [5149]=Q(55,50,0,0,"Poupée de Pamela","Pamela's Doll"),
@@ -885,9 +887,9 @@ Z[1423] = {
 [9141]=Q(60,55,0,0,"On m'appelle \"Le Coq\"","They Call Me \"The Rooster\"",{9142}),
 [9664]=Q(60,55,4294967373,0,"Fonder de nouveaux avant-postes","Establishing New Outposts"),
 [9665]=Q(60,55,8589934770,0,"Renforcer nos défenses","Bolstering Our Defenses"),
-}
+} end
 -- Hillsbrad Foothills
-Z[1424] = {
+Z[1424] = function() return {
 [494]=Q(20,19,8589934770,0,"Prêts à frapper","Time To Strike"),
 [496]=Q(22,19,8589934770,0,"L'élixir de souffrance","Elixir of Suffering",{499}),
 [498]=Q(22,17,8589934770,0,"Sauvetage","The Rescue",{533}),
@@ -947,9 +949,9 @@ Z[1424] = {
 [95126]=Q(25,20,16,2,nil,"The Moonsilver Blade"),
 [98059]=Q(27,23,4294967373,0,nil,"Hillsbrad's Hoard"),
 [98071]=Q(27,23,4294967373,0,nil,"Brewer's Trade"),
-}
+} end
 -- The Hinterlands
-Z[1425] = {
+Z[1425] = function() return {
 [77]=Q(48,42,8589934770,0,"Une situation délicate","A Sticky Situation",{81}),
 [485]=Q(48,43,0,0,"Trouver OOX-09/HL !","Find OOX-09/HL!",{836}),
 [836]=Q(48,43,0,0,"À la rescousse de OOX-09/HL !","Rescue OOX-09/HL!"),
@@ -994,9 +996,9 @@ Z[1425] = {
 [7861]=Q(51,46,8589934770,0,"On recherche : la vile prêtresse Maléficia et ses sbires","Wanted: Vile Priestess Hexx and Her Minions"),
 [7862]=Q(51,46,8589934770,0,"Offre d’emploi : capitaine de la garde du village des Revantusk","Job Opening: Guard Captain of Revantusk Village"),
 [8273]=Q(47,42,8589934770,0,"La gratitude d'Oran","Oran's Gratitude"),
-}
+} end
 -- Dun Morogh
-Z[1426] = {
+Z[1426] = function() return {
 [170]=Q(2,1,4294967373,0,"Une nouvelle menace","A New Threat"),
 [179]=Q(1,1,4294967373,0,"Tailleur chez les nains","Dwarven Outfitters"),
 [182]=Q(4,1,4294967373,0,"La caverne des trolls","The Troll Cave",{218}),
@@ -1112,9 +1114,9 @@ Z[1426] = {
 [99160]=Q(8,5,4294967373,0,nil,"Rime's Wrath",{99161}),
 [99161]=Q(8,5,4294967373,0,nil,"Rime's Wrath"),
 [99162]=Q(8,5,4294967373,0,nil,"Treacherous Cold"),
-}
+} end
 -- Searing Gorge
-Z[1427] = {
+Z[1427] = function() return {
 [3181]=Q(48,40,4294967373,0,"La corne de la bête","The Horn of the Beast",{3182}),
 [3367]=Q(48,40,4294967373,0,"Les pierres de Suntara","Suntara Stones",{3368}),
 [3368]=Q(48,40,4294967373,0,"Les pierres de Suntara","Suntara Stones",{3371}),
@@ -1141,9 +1143,9 @@ Z[1427] = {
 [7727]=Q(49,45,0,0,"Incendosaures ? N'importosaures, plutôt","Incendosaurs? Whateverosaur is More Like It"),
 [7728]=Q(48,45,0,0,"OBJETS VOLES : Tuyère et longue-vue","STOLEN: Smithing Tuyere and Lookout's Spyglass"),
 [7729]=Q(48,45,0,0,"OFFRE D'EMPLOI : Réduire la concurrence","JOB OPPORTUNITY: Culling the Competition"),
-}
+} end
 -- Burning Steppes
-Z[1428] = {
+Z[1428] = function() return {
 [3822]=Q(53,48,8589934770,0,nil,"Krom'Grul"),
 [3823]=Q(52,48,4294967373,0,"Exterminer les Brûlentrailles","Extinguish the Firegut",{3824}),
 [3824]=Q(53,48,4294967373,0,"Le seigneur-brute Gor'tesh","Gor'tesh the Brute Lord",{3825}),
@@ -1172,9 +1174,9 @@ Z[1428] = {
 [7629]=Q(60,60,0,256,"Livraison de diablotin","Imp Delivery"),
 [7630]=Q(60,60,0,256,"L'arcanite","Arcanite"),
 [7631]=Q(60,60,0,256,"Le destrier de l'effroi de Xoroth","Dreadsteed of Xoroth"),
-}
+} end
 -- Elwynn Forest
-Z[1429] = {
+Z[1429] = function() return {
 [6]=Q(5,2,4294967373,0,"La prime pour Garrick Padfoot","Bounty on Garrick Padfoot"),
 [7]=Q(2,1,4294967373,0,"Nettoyer le camp des kobolds","Kobold Camp Cleanup",{15}),
 [11]=Q(10,6,4294967373,0,"Prime pour les gnolls Rivepatte","Riverpaw Gnoll Bounty"),
@@ -1270,9 +1272,9 @@ Z[1429] = {
 [99130]=Q(7,4,4294967373,0,nil,"An Enticing Offer",{99131}),
 [99131]=Q(7,4,4294967373,0,nil,"Baited for Success"),
 [99143]=Q(7,4,4294967373,0,nil,"Bottles and Baubles"),
-}
+} end
 -- Duskwood
-Z[1431] = {
+Z[1431] = function() return {
 [5]=Q(20,17,4294967373,0,"L'estomac qui gargouille","Jitters' Growling Gut",{93}),
 [55]=Q(32,20,4294967373,0,nil,"Morbent Fel"),
 [56]=Q(24,18,4294967373,0,"Les Veilleurs","The Night Watch",{57}),
@@ -1353,9 +1355,9 @@ Z[1431] = {
 [96138]=Q(28,18,4294967373,0,nil,"Merrick's Bow"),
 [96139]=Q(22,18,4294967373,0,nil,"The Valor Family"),
 [99267]=Q(60,1,4294967373,0,nil,"An Unfortunate End"),
-}
+} end
 -- Loch Modan
-Z[1432] = {
+Z[1432] = function() return {
 [161]=Q(18,16,4294967373,0,"Une sombre menace se dessine","A Dark Threat Looms",{274}),
 [199]=Q(18,16,4294967373,0,"Une sombre menace se dessine","A Dark Threat Looms",{161}),
 [217]=Q(17,10,4294967373,0,"À la défense des terres du roi","In Defense of the King's Lands"),
@@ -1407,9 +1409,9 @@ Z[1432] = {
 [94495]=Q(22,20,4294967373,64,nil,"Call of Water"),
 [94502]=Q(23,20,4294967373,64,nil,"Call of Water"),
 [94616]=Q(20,20,4294967373,64,nil,"Water Sapta"),
-}
+} end
 -- Redridge Mountains
-Z[1433] = {
+Z[1433] = function() return {
 [19]=Q(25,18,4294967373,0,nil,"Tharil'zun"),
 [20]=Q(21,18,4294967373,0,"La menace des Blackrock","Blackrock Menace",{19}),
 [34]=Q(24,18,4294967373,0,"Un indésirable","An Unwelcome Guest"),
@@ -1456,9 +1458,9 @@ Z[1433] = {
 [98386]=Q(21,15,4294967373,0,nil,"Alther's Mill"),
 [98387]=Q(21,18,4294967373,0,nil,"Blackrock Blockade"),
 [98407]=Q(17,11,4294967373,0,nil,"Show of Force"),
-}
+} end
 -- Stranglethorn Vale
-Z[1434] = {
+Z[1434] = function() return {
 [185]=Q(31,28,0,0,"Maîtrise de la chasse au tigre","Tiger Mastery",{186}),
 [186]=Q(33,28,0,0,"Maîtrise de la chasse au tigre","Tiger Mastery",{187}),
 [187]=Q(35,28,0,0,"Maîtrise de la chasse au tigre","Tiger Mastery",{188}),
@@ -1574,9 +1576,9 @@ Z[1434] = {
 [97331]=Q(35,30,0,0,nil,"Zimmix's Great Escape"),
 [97420]=Q(36,31,4294967373,0,nil,"Reduce, Reuse, Reconcile"),
 [98463]=Q(33,28,4294967373,0,nil,"Talk of the Town"),
-}
+} end
 -- Swamp of Sorrows
-Z[1435] = {
+Z[1435] = function() return {
 [698]=Q(40,35,8589934770,0,"Petit bonus du soir","Lack of Surplus",{699}),
 [699]=Q(42,35,8589934770,0,"Petit bonus du soir","Lack of Surplus",{1422}),
 [1116]=Q(36,30,0,0,"De la Poussière de rêve dans les marécages","Dream Dust in the Swamp",{1117}),
@@ -1608,9 +1610,9 @@ Z[1435] = {
 [93464]=Q(38,30,0,0,nil,"The Visiting Mage"),
 [93585]=Q(34,30,4294967373,0,nil,"This Light of Mine"),
 [93663]=Q(35,30,8589934770,0,nil,"Lost in Transit"),
-}
+} end
 -- Westfall
-Z[1436] = {
+Z[1436] = function() return {
 [9]=Q(15,8,4294967373,0,"Les champs de mort","The Killing Fields"),
 [12]=Q(12,9,4294967373,0,"La milice du peuple","The People's Militia",{13}),
 [13]=Q(14,9,4294967373,0,"La milice du peuple","The People's Militia",{14}),
@@ -1662,9 +1664,9 @@ Z[1436] = {
 [92909]=Q(15,8,4294967373,0,nil,"Harvesting the Harvesters"),
 [94503]=Q(23,20,4294967373,64,nil,"Call of Water"),
 [98021]=Q(13,7,4294967296,0,nil,"Journey to Sentinel Hill"),
-}
+} end
 -- Wetlands
-Z[1437] = {
+Z[1437] = function() return {
 [275]=Q(26,20,4294967373,0,"Fièvre sur le pays","Blisters on The Land"),
 [276]=Q(21,20,4294967373,0,"Piétinements de pattes","Tramping Paws",{277}),
 [277]=Q(23,20,4294967373,0,"Feu interdit","Fire Taboo",{275}),
@@ -1734,9 +1736,9 @@ Z[1437] = {
 [98310]=Q(32,24,4294967373,0,nil,"Gleaning Our Future"),
 [98459]=Q(21,18,4294967373,0,nil,"A Lack of Virtue"),
 [98461]=Q(21,18,4294967373,0,nil,"Unrequited Love"),
-}
+} end
 -- Teldrassil
-Z[1438] = {
+Z[1438] = function() return {
 [456]=Q(2,1,4294967373,0,"L'Equilibre de la nature","The Balance of Nature",{457}),
 [457]=Q(3,1,4294967373,0,"L'Equilibre de la nature","The Balance of Nature"),
 [458]=Q(1,1,4294967373,0,"La Protectrice sylvestre","The Woodland Protector",{459}),
@@ -1821,9 +1823,9 @@ Z[1438] = {
 [99050]=Q(10,4,4294967373,0,nil,"The Great Tree Provides",{99073}),
 [99053]=Q(9,4,4294967373,0,nil,"Escaping Ban'ethil"),
 [99073]=Q(10,4,4294967373,0,nil,"Easing Suffering"),
-}
+} end
 -- Darkshore
-Z[1439] = {
+Z[1439] = function() return {
 [729]=Q(20,15,4294967373,0,"Les absences du Prospecteur","The Absent Minded Prospector",{731}),
 [731]=Q(20,15,4294967373,0,"Les absences du Prospecteur","The Absent Minded Prospector",{741}),
 [741]=Q(20,15,4294967373,0,"Les absences du Prospecteur","The Absent Minded Prospector",{942}),
@@ -1903,9 +1905,9 @@ Z[1439] = {
 [98025]=Q(13,10,4294967373,0,nil,"WANTED: Jai'vhanel"),
 [98028]=Q(21,17,4294967373,0,nil,"Baron Marinous"),
 [98042]=Q(17,12,4294967373,0,nil,"It's All Fun and Games Until..."),
-}
+} end
 -- Ashenvale
-Z[1440] = {
+Z[1440] = function() return {
 [2]=Q(30,20,8589934770,0,"La griffe de Serres-tranchantes","Sharptalon's Claw"),
 [23]=Q(24,20,8589934770,0,"La patte d'Ursangous","Ursangous's Paw"),
 [24]=Q(27,20,8589934770,0,"La tête de Shadumbra","Shadumbra's Head"),
@@ -1979,9 +1981,9 @@ Z[1440] = {
 [98027]=Q(29,25,4294967373,0,nil,"Gleaming Crescent Necklace"),
 [98417]=Q(30,23,4294967373,0,nil,"Vengeful Trail"),
 [98418]=Q(30,23,4294967373,0,nil,"Shared Fury"),
-}
+} end
 -- Thousand Needles
-Z[1441] = {
+Z[1441] = function() return {
 [1100]=Q(34,29,4294967373,0,"Journal de Lonebrow","Lonebrow's Journal",{1101}),
 [1104]=Q(30,28,0,0,"Le venin acide des salines","Salt Flat Venom"),
 [1105]=Q(30,28,0,0,"Les carapaces durcies","Hardened Shells"),
@@ -2052,9 +2054,9 @@ Z[1441] = {
 [98070]=Q(31,27,8589934770,0,nil,"Stop the Screeching"),
 [98155]=Q(29,27,4294967373,0,nil,"Pristine Pesterhide Pelts"),
 [98156]=Q(31,27,4294967373,0,nil,"Packaged Pristine Pelts"),
-}
+} end
 -- Stonetalon Mountains
-Z[1442] = {
+Z[1442] = function() return {
 [1057]=Q(27,20,4294967373,0,"À la reconquête du Val calciné","Reclaiming the Charred Vale",{1059}),
 [1058]=Q(26,20,8589934770,0,"Magie de la forêt de Jin'Zil","Jin'Zil's Forest Magic"),
 [1059]=Q(27,20,4294967373,0,"À la reconquête du Val calciné","Reclaiming the Charred Vale"),
@@ -2108,9 +2110,9 @@ Z[1442] = {
 [86574]=Q(24,20,4294967373,0,nil,"Stonetalon Supply Run"),
 [86576]=Q(26,18,8589934770,0,nil,"Bloodfury Trinkets"),
 [97538]=Q(26,20,8589934770,0,nil,"Pigments for Paints"),
-}
+} end
 -- Desolace
-Z[1443] = {
+Z[1443] = function() return {
 [261]=Q(39,34,4294967373,0,"Sur le chemin écarlate","Down the Scarlet Path",{1052}),
 [1052]=Q(40,34,4294967373,0,"Sur le chemin écarlate","Down the Scarlet Path",{1053}),
 [1361]=Q(32,30,8589934770,0,nil,"Regthar Deathgate",{1362}),
@@ -2190,9 +2192,9 @@ Z[1443] = {
 [96222]=Q(42,30,8589934770,0,nil,"Khan Hratha"),
 [97265]=Q(33,28,8589934770,0,nil,"Hate the Hatefury"),
 [97284]=Q(33,30,4294967373,0,nil,"Vahlarriel's Vengeance"),
-}
+} end
 -- Feralas
-Z[1444] = {
+Z[1444] = function() return {
 [2766]=Q(45,40,0,0,"Trouvez OOX-22/FE !","Find OOX-22/FE!",{2767}),
 [2767]=Q(45,40,0,0,"Sauvez OOX-22/FE !","Rescue OOX-22/FE!"),
 [2821]=Q(46,40,4294967373,0,"La marque de la qualité","The Mark of Quality",{7733}),
@@ -2267,9 +2269,9 @@ Z[1444] = {
 [7732]=Q(48,39,8589934770,0,"Le rapport sur les Zukk'ash","Zukk'ash Report"),
 [7733]=Q(48,40,4294967373,0,"Qualité améliorée","Improved Quality"),
 [7734]=Q(48,40,8589934770,0,"Qualité améliorée","Improved Quality"),
-}
+} end
 -- Dustwallow Marsh
-Z[1445] = {
+Z[1445] = function() return {
 [1133]=Q(20,18,4294967373,0,"Le voyage vers Astranaar","Journey to Astranaar"),
 [1135]=Q(30,25,4294967373,0,"Le venin de Haut-perchoir","Highperch Venom"),
 [1166]=Q(43,38,8589934770,0,"Les soucis du Seigneur Mok'Morokk","Overlord Mok'Morokk's Concern"),
@@ -2335,9 +2337,9 @@ Z[1445] = {
 [6601]=Q(60,55,8589934770,0,nil,"Ascension...",{6602}),
 [7541]=Q(40,30,8589934770,0,"Un service pour la Horde","Service to the Horde"),
 [8970]=Q(60,58,0,0,"Votre avenir passe par l'île d'Alcaz","I See Alcaz Island In Your Future...",{8985}),
-}
+} end
 -- Tanaris
-Z[1446] = {
+Z[1446] = function() return {
 [10]=Q(48,39,0,0,"La rédemption de Scrimshank","The Scrimshank Redemption",{110}),
 [32]=Q(48,39,8589934770,0,"L'ascension des silithides","Rise of the Silithid"),
 [82]=Q(47,39,0,0,"Enquête au Repaire nuisible","Noxious Lair Investigation",{10}),
@@ -2433,9 +2435,9 @@ Z[1446] = {
 [9269]=Q(60,60,0,1024,nil,"Atiesh, Greatstaff of the Guardian",{9257,9270,9271}),
 [9270]=Q(60,60,0,128,nil,"Atiesh, Greatstaff of the Guardian",{9257,9269,9271}),
 [9271]=Q(60,60,0,256,nil,"Atiesh, Greatstaff of the Guardian",{9257,9269,9270}),
-}
+} end
 -- Azshara
-Z[1447] = {
+Z[1447] = function() return {
 [3141]=Q(57,45,0,0,nil,"Loramus",{3508}),
 [3508]=Q(58,45,0,0,"Briser l'Amulette","Breaking the Ward",{3509}),
 [3509]=Q(58,45,0,0,"Le nom de la bête","The Name of the Beast",{3510}),
@@ -2478,9 +2480,9 @@ Z[1447] = {
 [8729]=Q(60,60,0,0,"Le courroux de Neptulon","The Wrath of Neptulon"),
 [9362]=Q(60,60,0,128,"Le seigneur de guerre Krellian","Warlord Krellian",{9364}),
 [9364]=Q(60,60,0,128,"Magie morcelée","Fragmented Magic"),
-}
+} end
 -- Felwood
-Z[1448] = {
+Z[1448] = function() return {
 [939]=Q(54,49,4294967373,0,"Flûte de Xavaric","Flute of Xavaric",{4441}),
 [4101]=Q(55,48,4294967373,0,"Purifie Gangrebois","Cleansing Felwood",{5882}),
 [4102]=Q(55,48,8589934770,0,"Purifie Gangrebois","Cleansing Felwood"),
@@ -2531,9 +2533,9 @@ Z[1448] = {
 [8481]=Q(60,45,0,0,"La racine du mal","The Root of All Evil"),
 [8484]=Q(60,45,4294967373,0,"Négocier la paix","The Brokering of Peace"),
 [8485]=Q(60,45,8589934770,0,"Négocier la paix","The Brokering of Peace"),
-}
+} end
 -- Un'Goro Crater
-Z[1449] = {
+Z[1449] = function() return {
 [974]=Q(55,51,0,0,"À la recherche de la source","Finding the Source",{980}),
 [980]=Q(55,51,0,0,"Les nouvelles sources","The New Springs",{4842}),
 [3844]=Q(52,47,0,0,"C'est un Secret pour tout le monde","It's a Secret to Everybody",{3845}),
@@ -2582,9 +2584,9 @@ Z[1449] = {
 [9051]=Q(52,50,0,1024,"Test de toxicité","Toxic Test",{9053}),
 [9052]=Q(52,50,0,1024,"Le poison de Pétale-de-sang","Bloodpetal Poison",{9051}),
 [9053]=Q(52,50,0,1024,"Un meilleur ingrédient","A Better Ingredient"),
-}
+} end
 -- Moonglade
-Z[1450] = {
+Z[1450] = function() return {
 [28]=Q(16,16,32,1024,"L'épreuve du lac","Trial of the Lake",{30}),
 [29]=Q(16,16,8,1024,"L'épreuve du lac","Trial of the Lake",{272}),
 [30]=Q(16,16,32,1024,"L'épreuve du lion de mer","Trial of the Sea Lion",{31}),
@@ -2619,9 +2621,9 @@ Z[1450] = {
 [98731]=Q(20,20,8,1024,nil,"Blessings of the Great Cat Spirit"),
 [98738]=Q(20,20,12884901888,0,nil,"Blessings of the Great Windborne Cat Spirit"),
 [98739]=Q(20,20,32,1024,nil,"Blessings of the Great Cat Spirit"),
-}
+} end
 -- Silithus
-Z[1451] = {
+Z[1451] = function() return {
 [1125]=Q(55,54,0,0,"Les esprits de Sudevent","The Spirits of Southwind",{1126}),
 [1126]=Q(57,54,0,0,"Une ruche dans la tour","Hive in the Tower",{6844}),
 [6844]=Q(57,54,0,0,"Umber, Archiviste","Umber, Archivist",{6845}),
@@ -2678,9 +2680,9 @@ Z[1451] = {
 [9416]=Q(60,1,8589934770,0,"Se présenter au général Kirika","Report to General Kirika"),
 [9419]=Q(60,1,4294967373,0,"Passer le désert au peigne fin","Scouring the Desert"),
 [9422]=Q(60,1,8589934770,0,"Passer le désert au peigne fin","Scouring the Desert"),
-}
+} end
 -- Winterspring
-Z[1452] = {
+Z[1452] = function() return {
 [969]=Q(60,55,0,0,"Que la chance soit avec vous","Luck Be With You",{975}),
 [975]=Q(60,55,0,0,"Cache de Mau'ari","Cache of Mau'ari"),
 [977]=Q(58,52,0,0,"Yéti ? Y es-tu ?","Are We There, Yeti?",{5163}),
@@ -2721,9 +2723,9 @@ Z[1452] = {
 [6604]=Q(59,53,4294967373,0,"Les Indomptables enragés","Enraged Wildkin",{4861}),
 [6605]=Q(54,49,8589934770,0,"Une étrange personne","A Strange One",{4505}),
 [8471]=Q(56,50,0,0,"Le totem rituel des Tombe-hiver","Winterfall Ritual Totem"),
-}
+} end
 -- Zephras Isle
-Z[2521] = {
+Z[2521] = function() return {
 [92460]=Q(1,1,0,0,nil,"Coming of Age"),
 [92461]=Q(1,1,0,0,nil,"Harmony in Balance"),
 [92462]=Q(2,1,0,0,nil,"Infestation Investigation"),
@@ -2855,9 +2857,9 @@ Z[2521] = {
 [97257]=Q(10,10,8589934592,64,nil,"Call of Fire"),
 [98512]=Q(11,6,0,0,nil,"Al'Aketh Assassins"),
 [99260]=Q(10,5,4294967373,0,nil,"Fillion's Mission",{92840}),
-}
+} end
 -- Darkspear Islands
-Z[2524] = {
+Z[2524] = function() return {
 [98887]=Q(39,30,8589934770,0,nil,"Conflict at Darkspear Islands"),
 [98888]=Q(39,30,8589934770,0,nil,"Conflict at Darkspear Islands"),
 [98889]=Q(49,40,8589934770,0,nil,"Conflict at Darkspear Islands"),
@@ -2876,13 +2878,13 @@ Z[2524] = {
 [98908]=Q(60,50,8589934770,0,nil,"The Battle for Darkspear Islands!"),
 [98910]=Q(39,30,0,0,nil,"Darkspear's Basic Care Package"),
 [98913]=Q(39,30,0,0,nil,"Theramore Basic Care Package"),
-}
+} end
 -- Riverglades
-Z[2548] = {
+Z[2548] = function() return {
 [95161]=Q(22,15,4294967373,0,nil,"Remember That I Love You"),
-}
+} end
 -- Shen'dralas
-Z[2652] = {
+Z[2652] = function() return {
 [92841]=Q(40,30,4294967373,0,nil,"Valley of Bones"),
 [92844]=Q(42,30,4294967373,0,nil,"Mountain of Bones"),
 [92846]=Q(40,30,4294967373,0,nil,"Outcast Necromancers"),
@@ -2902,6 +2904,8 @@ Z[2652] = {
 [93125]=Q(43,30,0,0,nil,"Going Home"),
 [93129]=Q(43,30,0,0,nil,"Threat of Starvation"),
 [93188]=Q(43,30,0,0,nil,"Return to Orgrul"),
-}
+} end
+
+ns.ZONE_QUESTS = ns.LazyZones(Z)
 
 if ns.Mark then ns.Mark("ZoneQuests_Forever") end

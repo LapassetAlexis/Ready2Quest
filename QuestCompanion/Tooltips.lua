@@ -31,7 +31,7 @@ local EN = {
 	MEN_TIP_SHINY      = "SHINY · %s",
 }
 ns.RegisterStrings(FR, EN)
-ns.TOOLTIP_STRINGS = { fr = FR, en = EN }
+if ns.KEEP_STRINGS then ns.TOOLTIP_STRINGS = { fr = FR, en = EN } end
 
 local function Call(fn, ...)
 	if type(fn) ~= "function" then return nil end

@@ -78,7 +78,7 @@ local EN = {
 	HELP_LOOTROOM          = "/r2q place — the cheapest items in your bags, to drop for some loot",
 }
 ns.RegisterStrings(FR, EN)
-ns.LOOTROOM_STRINGS = { fr = FR, en = EN }
+if ns.KEEP_STRINGS then ns.LOOTROOM_STRINGS = { fr = FR, en = EN } end
 
 ns.RegisterDefaults({
 	lootroomEnabled = true,

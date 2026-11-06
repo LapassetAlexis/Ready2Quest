@@ -51,7 +51,7 @@ local EN = {
 	NOTICE_PLACEHOLDER = "Report",
 }
 ns.RegisterStrings(FR, EN)
-ns.NOTICE_STRINGS = { fr = FR, en = EN }   -- exposé aux tests (parité fr/en)
+if ns.KEEP_STRINGS then ns.NOTICE_STRINGS = { fr = FR, en = EN } end   -- exposé aux tests (parité fr/en)
 
 ns.RegisterDefaults({
 	reportIcon  = true,

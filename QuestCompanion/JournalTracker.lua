@@ -148,7 +148,7 @@ local EN = {
 	JRN_ITEM_VISITED       = "visited",
 }
 ns.RegisterStrings(FR, EN)
-ns.JOURNAL_TRACKER_STRINGS = { fr = FR, en = EN }
+if ns.KEEP_STRINGS then ns.JOURNAL_TRACKER_STRINGS = { fr = FR, en = EN } end
 
 ns.RegisterDefaults({
 	journalTracker       = true,

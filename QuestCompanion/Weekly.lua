@@ -67,7 +67,7 @@ local EN = {
 	WK_HOURS        = "%d h",
 }
 ns.RegisterStrings(FR, EN)
-ns.WEEKLY_STRINGS = { fr = FR, en = EN }
+if ns.KEEP_STRINGS then ns.WEEKLY_STRINGS = { fr = FR, en = EN } end
 
 local P = {
 	WEEKLY_NEW = {

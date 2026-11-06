@@ -1,5 +1,29 @@
 # Ready2Quest — notes techniques et historique
 
+## QuestCompanion 1.6.1 / Ready2Quest 1.29.3 — mémoire
+
+Mesure : `python3 tests/run_tests.py --memoire` charge les deux addons comme un client français (sans le mode test, sans jouer les tests) et donne la mémoire Lua laissée par chaque fichier, code compilé compris, après ramassage.
+
+| | avant | après |
+|---|---|---|
+| QuestCompanion | 5,8 Mo | 2,1 Mo |
+| Ready2Quest | 0,89 Mo | 0,77 Mo |
+
+- **Tables de zones paresseuses** (`ns.LazyZones`, `QuestCompanion/Core.lua`) : `ZoneCreatures_<client>.lua` et `ZoneQuests_<client>.lua` (générés) gardent une fonction par zone ; la zone n'est construite en tables qu'à sa première lecture, puis gardée. Créatures 2,1 → 0,45 Mo, quêtes 1,27 → 0,33 Mo. `pairs` ne voit pas les zones pas encore lues : parcourir avec `ns.ZoneIds(t)` et `ns.ZoneEach(t, fn)` (le Pokédex parcourt tout le jeu sans rien retenir).
+- **Une seule langue** (`Libs/Socle/Strings.lua`) : le client ne garde que sa langue ; sur un client anglais, une clé sans traduction prend le français dès sa déclaration (même repli qu'avant). Les tables sources exposées aux tests de parité (`ns.*_STRINGS`, `ns.PERSONALITY_LINES`) ne sont gardées qu'en test (`ns.KEEP_STRINGS`, global `ADDON_TESTING` posé par le harnais). Répliques de caractère 0,98 → 0,18 Mo.
+- **Animation du compagnon** (`CompanionFx.lua`) : au repos, plus de repositionnement ni de table neuve à chaque image ; particules tassées sur place.
+
+## QuestCompanion 1.5.1 → 1.6.0 / Ready2Quest 1.29.1 → 1.29.2
+
+- **Listes déroulantes du socle** (`Theme.CreateDropdown`) : une seule ouverte à la fois (`Theme.openDropdown`), ouvrir une liste referme l'autre.
+- **Métiers** (`Gathering.lua`) : `ns:ReadProfessions` lit `GetProfessions` / `GetProfessionInfo` (moteur récent de Forever, sans `GetSkillLineInfo`), reconnus par leur ligne de compétence (`ns.PROFESSION_LIST`, `GatheringData.lua`), puis l'ancienne fenêtre de compétences si elle existe ; dernière liste complète gardée (`journal.professions`). `/qc metiers` : diagnostic. `ns:GatheringZoneList(zoneID, withLocked)` : ce que la zone offre à ta compétence, même gris (compté), et ce qui demande plus de compétence (`locked`, montré en fin de liste, jamais compté).
+- **Page Exploration** (ex-Complétion) ; carte « Lieux ». Infobulle des monstres (`Tooltips.lua`) tournée vers la capture.
+- **Souvenirs** (`Memories.lua`) : `ns:MemoryPose(memory, duo, position)` — huit plans (`ns.MEMORY_SHOTS`, pas de 3 sur 8 : deux voisins jamais pareils), gestes que les créatures savent faire (`ns.MEMORY_ANIMS`), `SetPortraitZoom` pour les gros plans. Décor : `ns:MemoryArt` pose l'écran de chargement du client par identifiant de fichier (donjons et raids classiques recadrés sans logo, lieux propres à Forever, continent vu du ciel pour le premier vol), sinon `ns:MemoryBiome` choisit un des paysages peints par `tools/gen_memory_scenes.py` selon la zone (`ns.MEMORY_ZONE_BIOME`) ; les souvenirs retiennent `map` (uiMapID) et `instance` (8e retour de `GetInstanceInfo`), les anciens sont retrouvés par leur nom.
+- **Capture** (`CaptureStage.lua`) : filet maillé en cordes (textures fines tournées), `ns.CaptureDrawNet` (pose, resserrement, fermeture, déchirure corde par corde).
+- **Compagnon capturé** : `ns:CompanionName()` rend le nom de l'espèce ; `ns:CompanionOwnName()` celui donné à la mascotte.
+- **Brillants** (QC 1.6.0) : fiche de capture à deux versions (`normal`/`at`, `shiny`/`shinyAt` ; migration des anciennes fiches), `ns:CaptureHas(npc, shiny)`, apparences `cap:<npc>` et `cap:<npc>:s`, lumière dorée `ns.ModelShinyLight` (`SetLight`, forme récente en table puis liste historique, lumière d'origine relue par `GetLight`). `ns:ShinyKnown` (repérée, abattue), `ns:ShinyChance(class, killed)` (×3,75 au plus après 50 abattus de l'espèce), missions de la semaine `shinyKill` / `shinyCapture` (une par semaine), losange doré sur la barre de nom (`ns:ShinyPlatesRefresh`).
+- **Portée d'aggro** (R2Q) : `aggroStyle` = `dot` (défaut), `bar` ou `ring`.
+
 ## Ready2Quest 1.27.0 — Place au butin, Rangs de sorts
 
 - **Place au butin** (`LootRoom.lua`, après `BagSpace.lua`) : `LootRoomLoot()` (objets du butin sans place ni pile à compléter, quêtes d'abord puis valeur), `LootRoomRows(cible)` (les `LOOTROOM_ROWS` premiers de `BagSpaceCandidates()`, mêmes protections, prix HV par `LootRoomAuction` : Auctionator `API.v1.GetAuctionPriceByItemLink`, sinon TSM `DBMarket`), `dearer` si la valeur dépasse celle du butin. `LootRoomDelete` : confirmation (`StaticPopup`) pour qualité ≥ 2 si `lootroomConfirm`, sinon `LootRoomDestroy` (vérifie la case, `PickupContainerItem`, `DeleteCursorItem`, puis `lootRoomPending` = case du butin, ramassée par `LootSlot` au `BAG_UPDATE_DELAYED`). `LootRoomIgnore` → `bagspaceKeep`. Déclencheurs : `LOOT_OPENED`, `UI_ERROR_MESSAGE` (sacs pleins) pendant un butin ; `LOOT_CLOSED` ferme. `/r2q place`. `BagSpaceAlert` s'efface si `LootRoomActive()`.

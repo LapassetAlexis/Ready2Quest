@@ -114,7 +114,7 @@ local EN = {
 }
 ns.RegisterStrings(FR, EN)
 -- exposées aux tests : chaque clé doit exister dans les deux langues
-ns.EXPEDITION_STRINGS = { fr = FR, en = EN }
+if ns.KEEP_STRINGS then ns.EXPEDITION_STRINGS = { fr = FR, en = EN } end
 
 ns.RegisterDefaults({
 	expeditionEnabled = true,

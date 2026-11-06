@@ -25,7 +25,7 @@ local EN = {
 	OPT_DAILY_RARE_DESC = "Your companion tells you when a rare shows up on the minimap.",
 }
 ns.RegisterStrings(FR, EN)
-ns.LIVE_RARE_STRINGS = { fr = FR, en = EN }
+if ns.KEEP_STRINGS then ns.LIVE_RARE_STRINGS = { fr = FR, en = EN } end
 
 local P = {
 	RARE_LIVE = {   -- %s = le rare

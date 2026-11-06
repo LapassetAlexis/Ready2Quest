@@ -5,6 +5,11 @@
 -- résultats. Ne remplace pas un test en jeu : ça valide la LOGIQUE, pas les
 -- contrats d'API réels (le /sd diag existe pour ça).
 
+-- Mode test : les addons gardent les deux langues et leurs tables de textes
+-- exposées (ns.KEEP_STRINGS, Strings.lua). Pas en mesure de mémoire
+-- (--memoire) : on mesure alors l'addon tel que le client le charge.
+if not rawget(_G, "MEMORY_ONLY") then _G.ADDON_TESTING = true end
+
 local ROOT = ADDON_ROOT or "."
 
 ----------------------------------------------------------------------------
@@ -560,6 +565,12 @@ local function LoadAddonFile(name)
 	assert(handle, "ouverture impossible: " .. path .. " (" .. tostring(err) .. ")")
 	local source = handle:read("*a")
 	handle:close()
+	-- mesure de la mémoire (python3 tests/run_tests.py --memoire) : ce que
+	-- chaque fichier laisse en mémoire Lua une fois chargé (code compilé
+	-- compris, après ramassage)
+	local report = rawget(_G, "MEMORY_REPORT")
+	local before
+	if report then collectgarbage("collect"); collectgarbage("collect"); before = collectgarbage("count") end
 	local chunk, compileError = loadstring(source, "@" .. path)
 	assert(chunk, "erreur de compilation dans " .. path .. ":\n" .. tostring(compileError))
 	-- comme le client : chaque addon reçoit son nom et sa propre table privée
@@ -567,6 +578,11 @@ local function LoadAddonFile(name)
 		chunk("QuestCompanion", QNS)
 	else
 		chunk("Ready2Quest", NS)
+	end
+	if report then
+		source, chunk = nil, nil
+		collectgarbage("collect"); collectgarbage("collect")
+		report[#report + 1] = { name = name, kb = collectgarbage("count") - before }
 	end
 end
 
@@ -613,6 +629,11 @@ do
 	end
 end
 _G.TOC_FILES = tocFiles
+-- mesure de la mémoire seule : tous les fichiers chargés, puis on s'arrête
+if rawget(_G, "MEMORY_ONLY") then
+	for _, file in ipairs(Mock.moduleFiles) do LoadAddonFile(file) end
+	return
+end
 
 ----------------------------------------------------------------------------
 -- 3. Assertions
@@ -1654,7 +1675,7 @@ ResetWorld()
 Say("\n== bootstrap et diagnostic ==")
 ResetWorld()
 Check("commande enregistrée par le bootstrap", type(SlashCmdList["SACETDEPART"]) == "function")
-Check("version exposée", NS.version == "1.29.2", NS.version)
+Check("version exposée", NS.version == "1.29.3", NS.version)
 
 local missingMods = {}
 for _, name in ipairs({ "Bootstrap", "Locales", "Compat", "Theme", "Core", "Buffs", "Reagents",
@@ -1675,7 +1696,7 @@ NS.HandleCommand = savedHandle
 Mock:Reset()
 NS:HandleCommand("diag")
 Check("/sd diag liste les modules", Mock:Output():find("modules :") ~= nil, Mock:Output())
-Check("/sd diag affiche la version", Mock:Output():find("1%.29%.2") ~= nil, Mock:Output())
+Check("/sd diag affiche la version", Mock:Output():find("1%.29%.3") ~= nil, Mock:Output())
 
 -- une erreur est enregistrée et affichée
 Mock:Reset()

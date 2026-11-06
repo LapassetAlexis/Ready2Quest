@@ -51,6 +51,6 @@ local enUS = {
 }
 
 ns.RegisterStrings(frFR, enUS)
-ns.QC_STRINGS = { fr = frFR, en = enUS }   -- exposé aux tests (parité fr/en)
+if ns.KEEP_STRINGS then ns.QC_STRINGS = { fr = frFR, en = enUS } end   -- exposé aux tests (parité fr/en)
 
 if ns.Mark then ns.Mark("Locales") end

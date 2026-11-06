@@ -1664,7 +1664,7 @@ if type(shared) == "table" then
 	for key, text in pairs(FR) do shared.fr[key], shared.en[key] = text, EN[key] end
 end
 ns.PERSONALITY_POOLS = POOLS
-ns.PERSONALITY_LINES = T
-ns.PERSONALITY_LINE_STRINGS = { fr = FR, en = EN }
+if ns.KEEP_STRINGS then ns.PERSONALITY_LINES = T end
+if ns.KEEP_STRINGS then ns.PERSONALITY_LINE_STRINGS = { fr = FR, en = EN } end
 
 if ns.Mark then ns.Mark("PersonalityLines") end

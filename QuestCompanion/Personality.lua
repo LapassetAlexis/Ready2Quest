@@ -105,7 +105,7 @@ local EN = {
 	HOVER_TRAIT          = "%s",
 }
 ns.RegisterStrings(FR, EN)
-ns.PERSONALITY_STRINGS = { fr = FR, en = EN }
+if ns.KEEP_STRINGS then ns.PERSONALITY_STRINGS = { fr = FR, en = EN } end
 
 ns.RegisterDefaults({
 	companionTraitSource = 1,     -- 1 : celui de l'apparence (recommandé), 2 : le sien

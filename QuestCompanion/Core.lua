@@ -137,6 +137,56 @@ if ok and frame then
 	ns.coreEventFrame = frame
 end
 
+-- ---------------------------------------------------------------------------
+-- Tables de zones paresseuses (1.6.1) : les données livrées par zone
+-- (ZoneCreatures_<client>.lua, ZoneQuests_<client>.lua) restent dans le
+-- fichier sous forme d'une fonction par zone ; la zone n'est construite en
+-- tables qu'à sa première lecture (t[zoneID]) et gardée ensuite. On ne paie
+-- donc en mémoire que les zones vraiment visitées.
+-- `pairs` ne voit pas les zones pas encore lues : on passe par
+-- ns.ZoneIds(t) (les identifiants) et ns.ZoneEach(t, fn) (chaque zone, sans
+-- garder celles qui n'étaient pas encore lues : le Pokédex parcourt tout le
+-- jeu sans tout retenir).
+-- ---------------------------------------------------------------------------
+local lazyZones = setmetatable({}, { __mode = "k" })   -- table -> { makers, ids }
+function ns.LazyZones(makers)
+	local ids = {}
+	for zoneID in pairs(makers) do ids[#ids + 1] = zoneID end
+	table.sort(ids)
+	local proxy = setmetatable({}, { __index = function(self, zoneID)
+		local make = makers[zoneID]
+		if type(make) ~= "function" then return nil end
+		local zone = make()
+		rawset(self, zoneID, zone)
+		return zone
+	end })
+	lazyZones[proxy] = { makers = makers, ids = ids }
+	return proxy
+end
+
+-- Identifiants des zones d'une table (paresseuse ou ordinaire)
+function ns.ZoneIds(t)
+	local lazy = type(t) == "table" and lazyZones[t]
+	if lazy then return lazy.ids end
+	local ids = {}
+	for zoneID in pairs(type(t) == "table" and t or {}) do ids[#ids + 1] = zoneID end
+	return ids
+end
+
+-- Chaque zone : fn(zoneID, zone). Une zone pas encore lue est construite pour
+-- l'occasion et n'est pas gardée.
+function ns.ZoneEach(t, fn)
+	local lazy = type(t) == "table" and lazyZones[t]
+	if not lazy then
+		for zoneID, zone in pairs(type(t) == "table" and t or {}) do fn(zoneID, zone) end
+		return
+	end
+	for _, zoneID in ipairs(lazy.ids) do
+		local zone = rawget(t, zoneID) or lazy.makers[zoneID]()
+		fn(zoneID, zone)
+	end
+end
+
 -- API publique
 _G.QuestCompanion = ns
 

@@ -117,7 +117,7 @@ local EN = {
 	DEATH_MIN_SEC        = "%d min %02d",
 }
 ns.RegisterStrings(FR, EN)
-ns.DEATH_STRINGS = { fr = FR, en = EN }   -- exposé aux tests (parité fr/en)
+if ns.KEEP_STRINGS then ns.DEATH_STRINGS = { fr = FR, en = EN } end   -- exposé aux tests (parité fr/en)
 
 ns.RegisterDefaults({
 	deathEnabled = true,    -- module « Après la mort »

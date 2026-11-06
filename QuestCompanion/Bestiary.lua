@@ -68,7 +68,7 @@ local EN = {
 	BST_LEVEL           = "lvl %s",
 }
 ns.RegisterStrings(FR, EN)
-ns.BESTIARY_STRINGS = { fr = FR, en = EN }
+if ns.KEEP_STRINGS then ns.BESTIARY_STRINGS = { fr = FR, en = EN } end
 
 -- ---------------------------------------------------------------------------
 -- Accès robustes

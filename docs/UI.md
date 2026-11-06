@@ -85,7 +85,8 @@ Les jetons existants restent (`GOLD` = ambre #e8a54b, `BLUE` #5b8fd6,
     actif ; CONTROL + curseur MUTED à gauche sinon ;
   - curseur : piste fine 3 px, part remplie ambre, poignée ambre, valeur dans
     une petite case à droite ;
-  - liste déroulante : case FIELD bordée EDGE, texte + chevron ;
+  - liste déroulante : case FIELD bordée EDGE, texte + chevron ; une seule liste
+    ouverte à la fois (en ouvrir une referme l'autre, `Theme.openDropdown`) ;
   - nuancier : carré 15 bordé ;
   - roue crantée : ouvre des réglages fins ;
   - verrou : case en pointillés « 30 brillantes » pour ce qui n'est pas gagné.
