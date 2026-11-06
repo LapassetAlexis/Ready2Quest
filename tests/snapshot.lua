@@ -616,7 +616,7 @@ Snap.scenes.bricks = function(T)
 	Item("Missions du jour", true, false, "2/3")
 	local version = Theme.Text(nav, Theme.F_SMALL, Theme.MUTED)
 	version:SetPoint("BOTTOMLEFT", nav, "BOTTOMLEFT", 18, 18)
-	version:SetText("v1.28.0  ·  Forever")
+	version:SetText("v1.29.0  ·  Forever")
 
 	local content = win.content
 	local header = Theme.CreatePageHeader(content, 758)
@@ -1205,8 +1205,41 @@ Snap.scenes["qc-journal-day"] = function(T)
 		if daily.missions[2] then daily.missions[2].have, daily.missions[2].done = daily.missions[2].need, true end
 		inn.card, inn.total, inn.full = 4, 11, 1
 		daily.perfect = 3
+		local weekly = ns.WeeklyCurrent and ns:WeeklyCurrent()
+		if weekly and weekly.missions[1] then weekly.missions[1].have = 2 end
+		if weekly and weekly.missions[2] then weekly.missions[2].have, weekly.missions[2].done = weekly.missions[2].need, true end
+		local items = ns:CaptureData().items
+		items.appat, items.lasso, items.sifflet = 4, 1, 0
 	end)
-	return frame, "QuestCompanion : carnet, page Jour"
+	return frame, "QuestCompanion : carnet, page Missions"
+end
+
+Snap.scenes["qc-journal-menagerie"] = function(T)
+	local frame = QCJournal(T, "menagerie", function(ns)
+		local book = ns:BestiaryData()
+		book[1413] = {
+			[3100] = { name = "Loup des plaines", class = "normal", level = 12, type = "Bête", seen = true, killed = 4 },
+			[3101] = { name = "Kodo des plaines", class = "normal", level = 14, type = "Bête", seen = true, killed = 2 },
+			[3102] = { name = "Centaure Kolkar", class = "normal", level = 15, type = "Humanoïde", seen = true, killed = 6 },
+			[3103] = { name = "Raptor Tranchegueule", class = "elite", level = 16, type = "Bête", seen = true, killed = 1 },
+			[3104] = { name = "Esprit de la Terre", class = "normal", level = 17, type = "Élémentaire", seen = true },
+			[3105] = { name = "Takk le Bondisseur", class = "rare", level = 19, type = "Bête", seen = true, killed = 1 },
+			[3106] = { name = "Géant des collines", class = "normal", level = 18, type = "Géant", seen = true },
+			[3107] = { name = "Zombie pourrissant", class = "normal", level = 13, type = "Mort-vivant", seen = true, killed = 3 },
+			[3108] = { name = "Gardien mécanique", class = "elite", level = 20, type = "Mécanique", seen = true },
+			[3109] = { name = "Diablotin", class = "normal", level = 11, type = "Démon", seen = true, killed = 2 },
+			[3110] = { name = "Dragonnet noir", class = "normal", level = 16, type = "Draconien", seen = true, killed = 1 },
+			[3111] = { name = "Hyène tachetée", class = "normal", level = 12, type = "Bête", seen = true, killed = 5 },
+		}
+		local data = ns:CaptureData()
+		for _, npc in ipairs({ 3100, 3102, 3103, 3105, 3109 }) do
+			local sp = book[1413][npc]
+			data.creatures[npc] = { name = sp.name, class = sp.class, level = sp.level, type = sp.type, zoneID = 1413, at = 0,
+				shiny = npc == 3109 or nil }
+		end
+		data.count = 5
+	end)
+	return frame, "QuestCompanion : carnet, page Ménagerie (Pokédex des captures)"
 end
 
 Snap.scenes["qc-journal-collection"] = function(T)
@@ -1270,6 +1303,47 @@ Snap.scenes["qc-pantry"] = function(T)
 	local ns, frame = QCCompanion(T)
 	ns:TreatMenuToggle()
 	return Snap.Group(frame, ns.treatMenu), "QuestCompanion : garde-manger (Maj + clic sur la créature)"
+end
+
+Snap.scenes["qc-capture"] = function(T)
+	local ns = QCWorld(T)
+	local data = ns:CaptureData()
+	data.items.appat, data.items.lasso, data.items.sifflet = 3, 1, 0
+	ns:BestiaryData()[1413] = { [3100] = { name = "Loup des plaines", class = "elite", level = 21, killed = 1 } }
+	ns:CaptureOffer("Creature-0-1-1-1-3100-0001", { zoneID = 1413, npcID = 3100 })
+	ns:CaptureToggleAid("appat")
+	return Centered(ns.capturePrompt), "QuestCompanion : capture proposée (élite, appât choisi)"
+end
+
+local function QCCaptureStage(T, success, at)
+	local ns = QCWorld(T)
+	ns:DB().companionCaptureAnim = true
+	ns:BestiaryData()[1413] = { [3100] = { name = "Ours gris", class = "rare", level = 21, killed = 1 } }
+	ns:CaptureOffer("Creature-0-1-1-1-3100-0001", { zoneID = 1413, npcID = 3100 })
+	local saved = math.random
+	math.random = function(a, b) if a then return a end return success and 0 or 0.99 end
+	ns:CaptureThrow()
+	math.random = saved
+	local rolling = ns:CaptureState().rolling
+	if at == "shake" then
+		rolling.done = 1
+		ns:CaptureStageUpdate(rolling.start + ns.CAPTURE_THROW_TIME + 0.7)
+	else
+		rolling.done = rolling.shakes
+		rolling.result = success and "ok" or "fail"
+		rolling.resultAt = rolling.start + 3
+		ns:CaptureStageUpdate(rolling.resultAt + (success and 0.35 or 0.3))
+	end
+	return Centered(ns.captureStage)
+end
+Snap.scenes["qc-capture-shake"] = function(T)
+	return QCCaptureStage(T, true, "shake"), "QuestCompanion : capture animée, le filet secoue (rare)"
+end
+Snap.scenes["qc-capture-ok"] = function(T)
+	return QCCaptureStage(T, true, "ok"), "QuestCompanion : capture animée, capturé ! (gerbe de losanges)"
+end
+Snap.scenes["qc-capture-fail"] = function(T)
+	return QCCaptureStage(T, false, "fail"), "QuestCompanion : capture animée, échappé"
 end
 
 Snap.scenes["qc-chest"] = function(T)

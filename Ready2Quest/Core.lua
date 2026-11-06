@@ -628,10 +628,11 @@ ns.handlers = {
 		if self.InvalidateReagents then self:InvalidateReagents() end
 	end,
 
-	PLAYER_EQUIPMENT_CHANGED = function(self)
-		-- différé : le client n'a pas toujours recalculé à l'instant de l'event
-		if type(C_Timer) == "table" and type(C_Timer.After) == "function" then
-			C_Timer.After(0.2, function() self:OnEquipmentChanged() end)
+	PLAYER_EQUIPMENT_CHANGED = function(self, slot)
+		-- différé et regroupé : un événement par emplacement, et le client n'a
+		-- pas toujours recalculé les stats à l'instant (Stats.lua, GEAR_RETRY)
+		if self.QueueEquipmentChange then
+			self:QueueEquipmentChange(slot)
 		elseif self.OnEquipmentChanged then
 			self:OnEquipmentChanged()
 		end
@@ -971,6 +972,9 @@ local COMMANDS = {
 		self:Print(self:F("MSG_DIAG_SAFE", tostring(safe) .. " (" .. tostring(why) .. ", "
 			.. tostring(self:CurrentSubZone()) .. ")"))
 		if self.DiagAuras then self:DiagAuras() else self:Print(L.MSG_DIAG_NOAURA) end
+		-- dernier changement d'équipement (résumé de stuff), portée d'aggro
+		if self.GearDiagLine then self:Print(self:GearDiagLine()) end
+		if self.AggroDiagLine then self:Print(self:AggroDiagLine()) end
 	end,
 }
 

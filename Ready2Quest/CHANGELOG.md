@@ -1,5 +1,13 @@
 # Journal des modifications
 
+## 1.29.0
+
+- **Nouveau module : portée d'aggro.** Maintiens Maj (réglable : Ctrl, Alt ou toujours) hors combat : un anneau entoure la barre de nom de chaque monstre hostile (rouge : dans son rayon d'aggro estimé, ambre : tout près, vert : tranquille), et son infobulle donne le rayon estimé, ta distance et le verdict. Rayon : 20 m à niveau égal, ±1 m par niveau d'écart (5 à 45 m). Les monstres neutres sont signalés sans anneau. Marche aussi avec les barres de nom d'EllesmereUI.
+- **Stats du portrait avec les interfaces de remplacement** : le survol marchait seulement sur le portrait de Blizzard. Il marche maintenant avec EllesmereUI, ElvUI, Shadowed Unit Frames, oUF et consorts, et le cadre se pose au-dessus du portrait survolé.
+- **Résumé de stuff plus fiable** : sur le moteur moderne, les stats ne sont pas toujours recalculées tout de suite après un changement d'équipement, et le résumé pouvait ne jamais s'afficher. Les changements d'emplacement sont regroupés et l'écart est relu jusqu'à 1,5 s. `/r2q diag` dit ce qui s'est passé au dernier changement.
+
+*English:* new aggro range module: hold Shift (or Ctrl, Alt, or always) out of combat and each hostile nameplate gets a ring (red inside its estimated aggro radius, amber close, green safe), with radius, distance and verdict in its tooltip. Portrait stats now work with replacement unit frames (EllesmereUI, ElvUI, SUF, oUF…). The gear summary is more reliable on the modern engine (changes grouped, stats re-read up to 1.5 s), and `/r2q diag` reports the last gear change.
+
 ## 1.28.0
 
 - **Nouvelle interface**, plus moderne et plus lisible :

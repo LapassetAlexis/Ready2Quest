@@ -332,7 +332,9 @@ local COLL_W = math.floor((GRID_W - (COLL_COLS - 1) * COLL_GAP) / COLL_COLS)
 local ZONE_W = math.floor((INNER - (ZONE_COLS - 1) * 12) / ZONE_COLS)
 local LIST_W = math.floor((INNER - (LIST_COLS - 1) * 12) / LIST_COLS)
 -- la Créature d'abord : c'est elle, le cœur de l'addon
-local SECTIONS = { "evolution", "zones", "completion", "day", "collection", "memories" }
+-- 1.4.0 : la Ménagerie (Pokédex des captures) juste après la Créature
+local SECTIONS = { "evolution", "menagerie", "day", "zones", "completion", "collection", "memories" }
+local MEN_FILTERS = { "all", "captured", "missing" }
 local COLL_KINDS = { "app", "orn", "frame", "bg" }
 local MARKS = { 25, 50, 75, 100 }
 local CONTINENTS = { [1415] = "ek", [1414] = "ka" }
@@ -395,6 +397,22 @@ local FR2 = {
 	JRN_COLL_SRC_BASE      = "possédé d'office",
 	JRN_COLL_SRC_TIER      = "coffre de zone, palier %d",
 	JRN_COLL_HINT          = "Survole un objet pour le voir sur ta créature.",
+	JRN_SEC_menagerie      = "Ménagerie",
+	JRN_SUB_menagerie      = "Toutes les créatures croisées, numérotées : en couleur celles que tu as capturées.",
+	JRN_MEN_all            = "Toutes",
+	JRN_MEN_captured       = "Capturées",
+	JRN_MEN_missing        = "À capturer",
+	JRN_MEN_COUNT          = "%d capturées · %d croisées",
+	JRN_MEN_HINT           = "Survol : sa fiche. Clic sur une créature capturée : elle devient ton compagnon.",
+	JRN_MEN_NO             = "n° %03d",
+	JRN_MEN_RANK           = "%s · niveau %s",
+	JRN_MEN_ZONE           = "Croisée : %s",
+	JRN_MEN_CAUGHT         = "Capturée le %s",
+	JRN_MEN_NOTYET         = "Pas encore capturée · chance ~%d %%",
+	JRN_MEN_KILLED         = "Abattue %d fois",
+	JRN_MEN_EQUIP          = "Clic : en faire ton compagnon",
+	JRN_MEN_EQUIPPED       = "C'est ton compagnon",
+	JRN_MEN_EMPTY          = "Aucune créature croisée pour l'instant : cible ou survole des monstres.",
 	JRN_BACK_HINT          = "Bouton retour de la souris : revenir aux zones.",
 	JRN_EVO_TRAIT          = "Caractère : %s",
 	JRN_EVO_STEP           = "Étape %d / %d",
@@ -402,7 +420,7 @@ local FR2 = {
 	JRN_NAV_GROUP          = "Carnet",
 	JRN_ZONE_STEP_PREV     = "Zone précédente",
 	JRN_ZONE_STEP_NEXT     = "Zone suivante",
-	JRN_SUB_day            = "Les missions du jour, la carte des auberges et le garde-manger.",
+	JRN_SUB_day            = "Missions du compagnon, du jour et de la semaine : de quoi nourrir ta créature et capturer.",
 	JRN_SUB_collection     = "Ce que la route t'a fait gagner : clic pour l'équiper.",
 	JRN_SUB_memories       = "Les grands moments de la route, dans l'ordre.",
 }
@@ -451,6 +469,22 @@ local EN2 = {
 	JRN_COLL_SRC_BASE      = "owned from the start",
 	JRN_COLL_SRC_TIER      = "zone chest, tier %d",
 	JRN_COLL_HINT          = "Hover an item to see it on your creature.",
+	JRN_SEC_menagerie      = "Menagerie",
+	JRN_SUB_menagerie      = "Every creature you've met, numbered: the ones you captured are in colour.",
+	JRN_MEN_all            = "All",
+	JRN_MEN_captured       = "Captured",
+	JRN_MEN_missing        = "To capture",
+	JRN_MEN_COUNT          = "%d captured · %d met",
+	JRN_MEN_HINT           = "Hover: its card. Click a captured creature: it becomes your companion.",
+	JRN_MEN_NO             = "No. %03d",
+	JRN_MEN_RANK           = "%s · level %s",
+	JRN_MEN_ZONE           = "Met in: %s",
+	JRN_MEN_CAUGHT         = "Captured on %s",
+	JRN_MEN_NOTYET         = "Not captured yet · chance ~%d%%",
+	JRN_MEN_KILLED         = "Defeated %d times",
+	JRN_MEN_EQUIP          = "Click: make it your companion",
+	JRN_MEN_EQUIPPED       = "It's your companion",
+	JRN_MEN_EMPTY          = "No creature met yet: target or hover some monsters.",
 	JRN_BACK_HINT          = "Mouse back button: back to the zones.",
 	JRN_EVO_TRAIT          = "Character: %s",
 	JRN_EVO_STEP           = "Stage %d / %d",
@@ -458,7 +492,7 @@ local EN2 = {
 	JRN_NAV_GROUP          = "Journal",
 	JRN_ZONE_STEP_PREV     = "Previous zone",
 	JRN_ZONE_STEP_NEXT     = "Next zone",
-	JRN_SUB_day            = "Today's missions, the inn loyalty card and the pantry.",
+	JRN_SUB_day            = "Companion, daily and weekly missions: food for your creature and capture aids.",
 	JRN_SUB_collection     = "What the road has earned you: click to equip it.",
 	JRN_SUB_memories       = "The big moments of the road, in order.",
 }
@@ -1081,66 +1115,148 @@ local function BuildCollection(self, frame, content)
 	pane.preview = BuildPreview(pane, content, INNER - PREVIEW_W, gridTop, gridTop - PAGER_Y - 12)
 end
 
--- Jour : missions à gauche ; carte des auberges et garde-manger à droite
--- (Daily.lua, Treats.lua)
-local MISSION_ROWS, MISSION_H, MISSION_STEP = 3, 72, 80
+-- Ménagerie : le Pokédex des captures. Grille numérotée (toutes les espèces
+-- croisées ; en couleur de rareté celles qui sont capturées), aperçu 3D
+-- (Capture.lua, ns:MenagerieList)
+local TYPE_ICONS = {
+	["Bête"] = "Interface\\Icons\\Ability_Hunter_Pet_Wolf", Beast = "Interface\\Icons\\Ability_Hunter_Pet_Wolf",
+	["Humanoïde"] = "Interface\\Icons\\INV_Misc_Head_Human_01", Humanoid = "Interface\\Icons\\INV_Misc_Head_Human_01",
+	["Démon"] = "Interface\\Icons\\Spell_Shadow_SummonImp", Demon = "Interface\\Icons\\Spell_Shadow_SummonImp",
+	["Draconien"] = "Interface\\Icons\\INV_Misc_Head_Dragon_01", Dragonkin = "Interface\\Icons\\INV_Misc_Head_Dragon_01",
+	["Élémentaire"] = "Interface\\Icons\\Spell_Fire_Fire", Elemental = "Interface\\Icons\\Spell_Fire_Fire",
+	["Géant"] = "Interface\\Icons\\Spell_Nature_Earthquake", Giant = "Interface\\Icons\\Spell_Nature_Earthquake",
+	["Mort-vivant"] = "Interface\\Icons\\Spell_Shadow_RaiseDead", Undead = "Interface\\Icons\\Spell_Shadow_RaiseDead",
+	["Mécanique"] = "Interface\\Icons\\INV_Misc_Gear_01", Mechanical = "Interface\\Icons\\INV_Misc_Gear_01",
+}
+local MEN_DEFAULT_ICON = "Interface\\Icons\\Ability_Hunter_BeastTaming"
+ns.MENAGERIE_TYPE_ICONS = TYPE_ICONS
+
+local function BuildMenagerie(self, frame, content)
+	local pane = CreateFrame("Frame", nil, content)
+	pane:SetAllPoints()
+	frame.men = pane
+	frame.menFilter = frame.menFilter or "all"
+	pane.filterRow, pane.filters = Chips(pane, MEN_FILTERS, "JRN_MEN_", function(key)
+		frame.menFilter, frame.menOffset = key, 0
+		ns:RefreshJournal()
+	end)
+	At(pane.filterRow, content, 0, TOP)
+	pane.count = Text(pane, Theme.F_SMALL, Theme.MUTED_LIGHT, 200)
+	pane.count:SetPoint("TOPRIGHT", content, "TOPLEFT", PAD + GRID_W, TOP - 6)
+	pane.count:SetJustifyH("RIGHT")
+	pane.items = {}
+	local gridTop = TOP - Theme.CHIP_HEIGHT - 14
+	for index = 1, COLL_COLS * COLL_ROWS do
+		local col, row = (index - 1) % COLL_COLS, math.floor((index - 1) / COLL_COLS)
+		local cell = Theme.CreateTile(pane, COLL_W, COLL_H, { accent = "top" })
+		At(cell, content, col * (COLL_W + COLL_GAP), gridTop - row * (COLL_H + COLL_GAP))
+		cell.icon = cell:CreateTexture(nil, "ARTWORK")
+		cell.icon:SetSize(30, 30)
+		cell.icon:SetPoint("TOP", cell, "TOP", 0, -16)
+		cell.icon:SetTexCoord(0.08, 0.92, 0.08, 0.92)
+		cell.no = Text(cell, Theme.F_CAPS, Theme.MUTED)
+		cell.no:SetPoint("TOPLEFT", cell, "TOPLEFT", 6, -6)
+		cell.star = Theme.CreateDiamond and Theme.CreateDiamond(cell, 8) or cell:CreateTexture(nil, "OVERLAY")
+		cell.star:SetPoint("TOPRIGHT", cell, "TOPRIGHT", -6, -7)
+		cell.star:SetVertexColor(Theme.GOLD_LIGHT[1], Theme.GOLD_LIGHT[2], Theme.GOLD_LIGHT[3], 1)
+		cell.star:Hide()
+		cell.label = Text(cell, Theme.F_SMALL, Theme.LABEL, COLL_W - 10)
+		cell.label:SetPoint("TOP", cell, "TOP", 0, -54)
+		cell.label:SetJustifyH("CENTER")
+		if cell.label.SetWordWrap then cell.label:SetWordWrap(false) end
+		cell.onEnter = function(c) if c.entry then ns:JournalPreviewMenagerie(c.entry) end end
+		cell:SetScript("OnClick", function(c) if c.entry then ns:JournalMenagerieEquip(c.entry) end end)
+		cell:Hide()
+		pane.items[index] = cell
+	end
+	Pager(pane, content)
+	pane.hint:SetText(L.JRN_MEN_HINT)
+	pane.empty = Text(pane, Theme.F_BODY, Theme.MUTED_LIGHT, GRID_W)
+	At(pane.empty, content, 0, gridTop - 10)
+	if pane.empty.SetWordWrap then pane.empty:SetWordWrap(true) end
+	pane.preview = BuildPreview(pane, content, INNER - PREVIEW_W, gridTop, gridTop - PAGER_Y - 12)
+end
+
+-- Missions : à gauche, celles du compagnon, du jour et de la semaine (avec
+-- leur récompense) ; à droite, carte des auberges, garde-manger et besace de
+-- capture (Daily.lua, Weekly.lua, Treats.lua, Capture.lua)
+local MISSION_H, MISSION_STEP, GROUP_H = 52, 58, 26
+-- rangées : 1 = compagnon (mission 3 du jour), 2-3 = jour (missions 1-2),
+-- 4-6 = semaine
+local MISSION_GROUPS = {
+	{ id = "trait", rows = { { daily = 3 } } },
+	{ id = "zone",  rows = { { daily = 1 }, { daily = 2 } } },
+	{ id = "week",  rows = { { weekly = 1 }, { weekly = 2 }, { weekly = 3 } } },
+}
+local AID_TILE_H = 64
+
 local function BuildDay(self, frame, content)
 	local pane = CreateFrame("Frame", nil, content)
 	pane:SetAllPoints()
 	frame.day = pane
 	local rightX = HALF + COL_GAP
-	pane.missionsTitle = Theme.CreateSection(pane, L.DAY_MISSIONS)
-	pane.missionsTitle:SetWidth(HALF)
-	At(pane.missionsTitle, content, 0, TOP)
-	pane.missions = {}
-	for index = 1, MISSION_ROWS do
-		local row = Theme.CreateTile(pane, HALF, MISSION_H, { kind = "Frame" })
-		At(row, content, 0, TOP - 28 - (index - 1) * MISSION_STEP)
-		row.reroll = Theme.CreateButton(row, "auto", 20, L.MIS_REROLL, function() ns:MissionReroll(index) end)
-		row.reroll:SetPoint("TOPRIGHT", row, "TOPRIGHT", -12, -32)
-		row.reroll:SetScript("OnEnter", function(b) Tip(b, L.MIS_REROLL, { L.MIS_REROLL_TIP }) end)
-		row.reroll:SetScript("OnLeave", HideTip)
-		local textW = HALF - 14 - 12 - math.max(row.reroll:GetWidth(), 60) - 10
-		row.label = Text(row, Theme.F_LABEL, Theme.LABEL, textW)
-		row.label:SetPoint("TOPLEFT", row, "TOPLEFT", 14, -10)
-		if row.label.SetWordWrap then row.label:SetWordWrap(false) end
-		row.source = Text(row, Theme.F_SMALL, Theme.MUTED, textW)
-		row.source:SetPoint("TOPLEFT", row, "TOPLEFT", 14, -30)
-		if row.source.SetWordWrap then row.source:SetWordWrap(false) end
-		row.count = Text(row, Theme.F_NUMBER, Theme.PARCHMENT, 60)
-		row.count:SetPoint("TOPRIGHT", row, "TOPRIGHT", -12, -10)
-		row.count:SetJustifyH("RIGHT")
-		row.bar = Theme.CreateBar(row, HALF - 28, 4)
-		row.bar:SetPoint("BOTTOMLEFT", row, "BOTTOMLEFT", 14, 12)
-		pane.missions[index] = row
+	pane.missions, pane.groups = {}, {}
+	local y = TOP
+	for _, group in ipairs(MISSION_GROUPS) do
+		local title = Theme.CreateSection(pane, L["DAY_GROUP_" .. group.id])
+		title:SetWidth(HALF)
+		At(title, content, 0, y)
+		pane.groups[group.id] = title
+		y = y - GROUP_H
+		for _, slot in ipairs(group.rows) do
+			local row = Theme.CreateTile(pane, HALF, MISSION_H, { kind = "Frame" })
+			At(row, content, 0, y)
+			row.slot, row.group = slot, group.id
+			if slot.daily and group.id == "zone" then
+				row.reroll = Theme.CreateButton(row, "auto", 18, L.MIS_REROLL, function() ns:MissionReroll(slot.daily) end)
+				row.reroll:SetPoint("TOPRIGHT", row, "TOPRIGHT", -12, -26)
+				row.reroll:SetScript("OnEnter", function(b) Tip(b, L.MIS_REROLL, { L.MIS_REROLL_TIP }) end)
+				row.reroll:SetScript("OnLeave", HideTip)
+			end
+			local textW = HALF - 14 - 12 - 70 - 10
+			row.label = Text(row, Theme.F_LABEL, Theme.LABEL, textW)
+			row.label:SetPoint("TOPLEFT", row, "TOPLEFT", 14, -8)
+			if row.label.SetWordWrap then row.label:SetWordWrap(false) end
+			row.source = Text(row, Theme.F_SMALL, Theme.MUTED, textW)
+			row.source:SetPoint("TOPLEFT", row, "TOPLEFT", 14, -25)
+			if row.source.SetWordWrap then row.source:SetWordWrap(false) end
+			row.count = Text(row, Theme.F_NUMBER, Theme.PARCHMENT, 70)
+			row.count:SetPoint("TOPRIGHT", row, "TOPRIGHT", -12, -8)
+			row.count:SetJustifyH("RIGHT")
+			row.bar = Theme.CreateBar(row, HALF - 28, 3)
+			row.bar:SetPoint("BOTTOMLEFT", row, "BOTTOMLEFT", 14, 7)
+			pane.missions[#pane.missions + 1] = row
+			y = y - MISSION_STEP
+		end
+		y = y - 4
 	end
-	local hintY = TOP - 28 - MISSION_ROWS * MISSION_STEP - 4
 	pane.missionsHint = Text(pane, Theme.F_SMALL, Theme.MUTED_LIGHT, HALF)
-	At(pane.missionsHint, content, 0, hintY)
 	if pane.missionsHint.SetWordWrap then pane.missionsHint:SetWordWrap(true) end
+	pane.weekHint = Text(pane, Theme.F_SMALL, Theme.MUTED_LIGHT, HALF)
+	if pane.weekHint.SetWordWrap then pane.weekHint:SetWordWrap(true) end
 	pane.perfect = Text(pane, Theme.F_SMALL, Theme.MUTED, HALF)
 	if pane.perfect.SetWordWrap then pane.perfect:SetWordWrap(true) end
-	pane.hintTop = hintY
+	pane.hintTop = y + 2
 
 	pane.innTitle = Theme.CreateSection(pane, L.INN_TITLE)
 	pane.innTitle:SetWidth(HALF)
 	At(pane.innTitle, content, rightX, TOP)
 	pane.stamps = {}
-	local size, gap = 30, math.floor((HALF - 7 * 30) / 6)
+	local size, gap = 26, math.floor((HALF - 7 * 26) / 6)
 	for index = 1, 7 do
 		local stamp = pane:CreateTexture(nil, "ARTWORK")
 		stamp:SetSize(size, size)
-		At(stamp, content, rightX + (index - 1) * (size + gap), TOP - 30)
+		At(stamp, content, rightX + (index - 1) * (size + gap), TOP - 28)
 		stamp:SetTexture(Theme.DIAMOND_LINE)
 		pane.stamps[index] = stamp
 	end
 	pane.innTotal = Text(pane, Theme.F_LABEL, Theme.LABEL, HALF)
-	At(pane.innTotal, content, rightX, TOP - 30 - size - 12)
+	At(pane.innTotal, content, rightX, TOP - 28 - size - 10)
 	pane.innHint = Text(pane, Theme.F_SMALL, Theme.MUTED_LIGHT, HALF)
 	if pane.innHint.SetWordWrap then pane.innHint:SetWordWrap(true) end
 	pane.innGift = Text(pane, Theme.F_SMALL, Theme.MUTED, HALF)
 	if pane.innGift.SetWordWrap then pane.innGift:SetWordWrap(true) end
-	pane.innTop = TOP - 30 - size - 12 - 20
+	pane.innTop = TOP - 28 - size - 10 - 20
 
 	pane.pantryTitle = Theme.CreateSection(pane, L.DAY_PANTRY)
 	pane.pantryTitle:SetWidth(HALF)
@@ -1150,26 +1266,52 @@ local function BuildDay(self, frame, content)
 	local count = #(ns.TREAT_KINDS or {})
 	local slotW = count > 0 and math.floor((HALF - (count - 1) * 8) / count) or HALF
 	for index, kind in ipairs(ns.TREAT_KINDS or {}) do
-		local slot = Theme.CreateTile(pane, slotW, 124, { kind = "Frame" })
+		local slot = Theme.CreateTile(pane, slotW, 112, { kind = "Frame" })
 		slot.kind, slot.slotX = kind, rightX + (index - 1) * (slotW + 8)
 		slot.icon = slot:CreateTexture(nil, "ARTWORK")
-		slot.icon:SetSize(32, 32)
-		slot.icon:SetPoint("TOP", slot, "TOP", 0, -10)
+		slot.icon:SetSize(28, 28)
+		slot.icon:SetPoint("TOP", slot, "TOP", 0, -8)
 		slot.icon:SetTexture(ns.TREAT_ICONS[kind])
 		slot.count = Text(slot, Theme.F_LABEL, Theme.PARCHMENT, slotW - 8)
-		slot.count:SetPoint("TOP", slot, "TOP", 0, -48)
+		slot.count:SetPoint("TOP", slot, "TOP", 0, -40)
 		slot.count:SetJustifyH("CENTER")
 		slot.name = Text(slot, Theme.F_SMALL, Theme.MUTED_LIGHT, slotW - 8)
-		slot.name:SetPoint("TOP", slot, "TOP", 0, -66)
+		slot.name:SetPoint("TOP", slot, "TOP", 0, -56)
 		slot.name:SetJustifyH("CENTER")
 		if slot.name.SetWordWrap then slot.name:SetWordWrap(true) end
 		slot.give = Theme.CreateButton(slot, slotW - 12, 20, L.DAY_GIVE, function() ns:TreatGive(kind); ns:RefreshJournal() end)
-		slot.give:SetPoint("BOTTOM", slot, "BOTTOM", 0, 8)
+		slot.give:SetPoint("BOTTOM", slot, "BOTTOM", 0, 6)
 		pane.slots[index] = slot
+	end
+
+	-- besace de capture : les trois aides et leur nombre
+	pane.aidTitle = Theme.CreateSection(pane, L.DAY_AIDS)
+	pane.aidTitle:SetWidth(HALF)
+	pane.aids = {}
+	local aids = ns.CAPTURE_AIDS or {}
+	local aidW = #aids > 0 and math.floor((HALF - (#aids - 1) * 8) / #aids) or HALF
+	for index, aid in ipairs(aids) do
+		local tile = Theme.CreateTile(pane, aidW, AID_TILE_H, { kind = "Frame" })
+		tile.aid, tile.slotX = aid.id, rightX + (index - 1) * (aidW + 8)
+		tile.icon = tile:CreateTexture(nil, "ARTWORK")
+		tile.icon:SetSize(28, 28)
+		tile.icon:SetPoint("LEFT", tile, "LEFT", 10, 0)
+		tile.icon:SetTexture(aid.icon)
+		tile.count = Text(tile, Theme.F_LABEL, Theme.PARCHMENT, aidW - 50)
+		tile.count:SetPoint("TOPLEFT", tile, "TOPLEFT", 46, -12)
+		tile.name = Text(tile, Theme.F_SMALL, Theme.MUTED_LIGHT, aidW - 50)
+		tile.name:SetPoint("TOPLEFT", tile, "TOPLEFT", 46, -30)
+		if tile.name.SetWordWrap then tile.name:SetWordWrap(true) end
+		if tile.EnableMouse then tile:EnableMouse(true) end
+		tile:SetScript("OnEnter", function(t)
+			Tip(t, ns:CaptureAidLabel(aid.id), { L["CAPTURE_AID_DESC_" .. aid.id], L.DAY_AIDS_HINT })
+		end)
+		tile:SetScript("OnLeave", HideTip)
+		pane.aids[index] = tile
 	end
 end
 
--- empile la colonne de droite du Jour (textes de longueur variable)
+-- empile la colonne de droite des Missions (textes de longueur variable)
 local function LayoutDay(pane, content)
 	local rightX = HALF + COL_GAP
 	local y = pane.innTop
@@ -1177,16 +1319,26 @@ local function LayoutDay(pane, content)
 	y = y - Theme.TextHeight(pane.innHint, HALF, Theme.F_SMALL) - 4
 	At(pane.innGift, content, rightX, y)
 	local gift = Theme.TextHeight(pane.innGift, HALF, Theme.F_SMALL)
-	y = y - gift - (gift > 0 and 20 or 16)
+	y = y - gift - (gift > 0 and 4 or 0)
+	-- les jours aux trois missions : ici, la colonne de gauche est pleine
+	At(pane.perfect, content, rightX, y)
+	local perfect = Theme.TextHeight(pane.perfect, HALF, Theme.F_SMALL)
+	y = y - perfect - 14
 	At(pane.pantryTitle, content, rightX, y)
-	y = y - 24
+	y = y - 22
 	At(pane.pantryHint, content, rightX, y)
-	y = y - Theme.TextHeight(pane.pantryHint, HALF, Theme.F_SMALL) - 10
+	y = y - Theme.TextHeight(pane.pantryHint, HALF, Theme.F_SMALL) - 8
 	for _, slot in ipairs(pane.slots) do At(slot, content, slot.slotX, y) end
-	pane.pantryBottom = y - 124
-	-- colonne de gauche : l'aide des missions puis les jours parfaits
-	local left = pane.hintTop - Theme.TextHeight(pane.missionsHint, HALF, Theme.F_SMALL) - 6
-	At(pane.perfect, content, 0, left)
+	y = y - 112 - 16
+	At(pane.aidTitle, content, rightX, y)
+	y = y - 24
+	for _, tile in ipairs(pane.aids) do At(tile, content, tile.slotX, y) end
+	pane.pantryBottom = y - AID_TILE_H
+	-- colonne de gauche : les aides des missions, puis les jours parfaits
+	local left = pane.hintTop
+	At(pane.missionsHint, content, 0, left)
+	left = left - Theme.TextHeight(pane.missionsHint, HALF, Theme.F_SMALL) - 4
+	At(pane.weekHint, content, 0, left)
 end
 
 -- Garde-manger dans le pied : un clic donne la friandise
@@ -1246,7 +1398,8 @@ function ns:EnsureJournalWindow()
 	frame.sections = {}
 	local y = -112
 	for _, section in ipairs(SECTIONS) do
-		if (section ~= "memories" or self.BuildMemoriesPane) and (section ~= "day" or self.DailyData) then
+		if (section ~= "memories" or self.BuildMemoriesPane) and (section ~= "day" or self.DailyData)
+			and (section ~= "menagerie" or self.MenagerieList) then
 			local item = Theme.CreateNavItem(nav, NAV_W - 1)
 			item:SetPoint("TOPLEFT", nav, "TOPLEFT", 0, y)
 			item:SetText(L["JRN_SEC_" .. section])
@@ -1271,6 +1424,7 @@ function ns:EnsureJournalWindow()
 	BuildCompletion(self, frame, content)
 	BuildEvolution(self, frame, content)
 	BuildCollection(self, frame, content)
+	if self.MenagerieList then BuildMenagerie(self, frame, content) end
 	if self.DailyData then BuildDay(self, frame, content) end
 	if self.BuildMemoriesPane then self:BuildMemoriesPane(frame, content, { pad = PAD, top = TOP, width = INNER,
 		pagerTop = PAGER_Y }) end
@@ -1300,6 +1454,7 @@ local function KindOf(frame, kind)
 	if kind == "memories" then return frame.mem and "memories" or "completion" end
 	if kind == "zones" or kind == "collection" then return kind end
 	if kind == "day" then return frame.day and "day" or "completion" end
+	if kind == "menagerie" then return frame.men and "menagerie" or "completion" end
 	return "completion"
 end
 
@@ -1357,6 +1512,8 @@ function ns:ScrollJournal(delta)
 		frame.zoneOffset = (frame.zoneOffset or 0) - delta * ZONE_COLS * 3
 	elseif frame.kind == "collection" then
 		frame.collOffset = (frame.collOffset or 0) - delta * COLL_COLS
+	elseif frame.kind == "menagerie" then
+		frame.menOffset = (frame.menOffset or 0) - delta * COLL_COLS
 	elseif frame.kind == "memories" then
 		frame.offset = (frame.offset or 0) - delta
 	else
@@ -1405,7 +1562,10 @@ function ns:JournalCollection(kind)
 		frame = self.CompanionCurrentStyle and self:CompanionCurrentStyle("frame").id,
 		bg = self.CompanionCurrentStyle and self:CompanionCurrentStyle("bg").id,
 	}
-	for _, def in ipairs(ns[CATALOG[kind]] or {}) do
+	local catalog = ns[CATALOG[kind]] or {}
+	-- apparences : les mascottes, puis la ménagerie (Capture.lua)
+	if kind == "app" and self.CompanionAllAppearances then catalog = self:CompanionAllAppearances() end
+	for _, def in ipairs(catalog) do
 		local owned = self:CompanionIsUnlocked(kind, def)
 		local equipped
 		if kind == "orn" then equipped = owned and self:CompanionOrnamentShown(def)
@@ -1417,6 +1577,10 @@ function ns:JournalCollection(kind)
 end
 
 function ns:JournalCosmeticSource(entry)
+	if entry.def.captured then
+		local when = entry.def.at and rawget(_G, "date") and select(2, pcall(date, "%d/%m/%Y", entry.def.at))
+		return self:F("CAPTURE_SRC", tostring(when or "?"))
+	end
 	if entry.tier >= 1 then return self:F("JRN_COLL_SRC_TIER", entry.tier) end
 	if entry.def.unlock and self.CompanionRequirement then
 		local ok, text = pcall(self.CompanionRequirement, self, entry.def.unlock)
@@ -1433,7 +1597,7 @@ function ns:JournalPreviewCosmetic(entry)
 	elseif entry.kind == "orn" then state = entry.equipped and L.JRN_COLL_ORN_ON or L.JRN_COLL_ORN_OFF
 	else state = entry.equipped and L.JRN_COLL_EQUIPPED or L.JRN_COLL_CLICK end
 	local opts = {}
-	if entry.kind == "app" then opts.display = entry.def.display
+	if entry.kind == "app" then opts.display, opts.creature = entry.def.display, entry.def.npc
 	elseif entry.kind == "frame" then opts.color = entry.def.edge
 	elseif entry.kind == "bg" then
 		if entry.def.texture then opts.texture = entry.def.texture else opts.color = entry.def.color end
@@ -1920,6 +2084,100 @@ local function RefreshCollection(self, frame)
 	end
 end
 
+local function RarityColor(entry)
+	if entry.shiny then return Theme.GOLD_LIGHT end
+	local rarity = ns.CAPTURE_RARITY and ns.CAPTURE_RARITY[entry.class or "normal"]
+	return rarity and rarity.color or Theme.PARCHMENT
+end
+
+function ns:JournalPreviewMenagerie(entry)
+	local frame = self.journalFrame
+	if not (frame and frame.men and entry) then return end
+	local rank = L["CAPTURE_RANK_" .. tostring(entry.class or "normal")]
+	local lines = { self:F("JRN_MEN_RANK", rank, entry.level and tostring(entry.level) or "?") }
+	if entry.zoneID then
+		local info = self.MapInfo and self:MapInfo(entry.zoneID)
+		lines[#lines + 1] = self:F("JRN_MEN_ZONE", (info and info.name) or tostring(entry.zoneID))
+	end
+	if entry.captured then
+		local when = (tonumber(entry.at) or 0) > 0 and rawget(_G, "date") and select(2, pcall(date, "%d/%m/%Y", entry.at))
+		if type(when) == "string" then lines[#lines + 1] = self:F("JRN_MEN_CAUGHT", when) end
+		local current = self:CompanionData().appearance
+		lines[#lines + 1] = current == ("cap:" .. entry.npc) and L.JRN_MEN_EQUIPPED or L.JRN_MEN_EQUIP
+	else
+		local chance = self.CaptureChance and self:CaptureChance(entry) or 0
+		lines[#lines + 1] = self:F("JRN_MEN_NOTYET", math.floor(chance * 100 + 0.5 + 1e-9))
+	end
+	if (entry.killed or 0) > 0 then lines[#lines + 1] = self:F("JRN_MEN_KILLED", entry.killed) end
+	local title = entry.shiny and self:F("CAPTURE_SHINY_TAG", entry.name) or entry.name
+	PreviewSet(frame.men.preview, title, lines, { creature = entry.npc })
+	frame.men.preview.entry = entry
+end
+
+-- Clic : une créature capturée devient le compagnon
+function ns:JournalMenagerieEquip(entry)
+	if not (entry and entry.captured and self.CompanionSetAppearance) then return false end
+	if not self:CompanionSetAppearance("cap:" .. tostring(entry.npc)) then return false end
+	if self.CompanionApplyModel then pcall(self.CompanionApplyModel, self) end
+	if self.RefreshOptions then pcall(self.RefreshOptions, self) end
+	self:RefreshJournal()
+	self:JournalPreviewMenagerie(entry)
+	return true
+end
+
+local function RefreshMenagerie(self, frame)
+	local pane = frame.men
+	frame.header:SetTitle(L.JRN_SEC_menagerie)
+	frame.header:SetSubtitle(L.JRN_SUB_menagerie)
+	pane.filterRow:Select(frame.menFilter or "all", true)
+	local list, captured, seen = self:MenagerieList(frame.menFilter or "all")
+	pane.count:SetText(self:F("JRN_MEN_COUNT", captured, seen))
+	pane.empty:SetText(seen == 0 and L.JRN_MEN_EMPTY or "")
+	local page = #pane.items
+	local maxOffset = math.max(0, math.ceil((#list - page) / COLL_COLS) * COLL_COLS)
+	frame.menOffset = math.max(0, math.min(frame.menOffset or 0, maxOffset))
+	local current = self:CompanionData().appearance
+	for index, cell in ipairs(pane.items) do
+		local entry = list[index + frame.menOffset]
+		cell.entry = entry
+		if entry then
+			pcall(cell.icon.SetTexture, cell.icon, TYPE_ICONS[entry.type or ""] or MEN_DEFAULT_ICON)
+			if cell.icon.SetDesaturated then cell.icon:SetDesaturated(not entry.captured) end
+			cell.icon:SetAlpha(entry.captured and 1 or 0.45)
+			cell.no:SetText(self:F("JRN_MEN_NO", entry.no))
+			cell.label:SetText(entry.name)
+			local lc = entry.captured and RarityColor(entry) or Theme.MUTED
+			cell.label:SetTextColor(lc[1], lc[2], lc[3])
+			if entry.shiny then cell.star:Show() else cell.star:Hide() end
+			local equipped = current == ("cap:" .. entry.npc)
+			cell:SetAccent(entry.captured and RarityColor(entry) or nil)
+			cell:SetSelected(equipped)
+			cell:SetFill(entry.captured and Theme.ROW or Theme.NAV)
+			cell:Show()
+		else
+			cell:Hide()
+		end
+	end
+	pane.pager:Update(frame.menOffset, page, #list, maxOffset)
+	local shown = pane.preview.entry
+	if list[1] and not (shown and shown.npc) then self:JournalPreviewMenagerie(list[1]) end
+	if not list[1] then PreviewSet(pane.preview, "", {}, {}); pane.preview.entry = nil end
+end
+
+local function MissionRow(self, row, mission, label, reward)
+	row.mission = mission
+	row.label:SetText(label)
+	row.source:SetText(reward or "")
+	row.count:SetText(mission.done and (Theme.T_GREEN .. L.MIS_DONE .. "|r")
+		or string.format("%d/%d", mission.have or 0, mission.need))
+	row.bar:SetValue((mission.have or 0) / mission.need)
+	local c = mission.done and Theme.GREEN or (row.group == "week" and Theme.BLUE or Theme.GOLD)
+	row.bar:SetColor(c[1], c[2], c[3], 1)
+	row.bar:Show()
+	row:SetAccent(c)
+	row:Show()
+end
+
 local function RefreshDay(self, frame)
 	local pane = frame.day
 	local daily, inn = self:DailyData()
@@ -1927,32 +2185,49 @@ local function RefreshDay(self, frame)
 	frame.header:SetSubtitle(L.JRN_SUB_day)
 	local today = daily.day == self:DailyToday()
 	local on = self:DailyMissionsOn()
-	for index, row in ipairs(pane.missions) do
-		local mission = on and today and daily.missions[index] or nil
-		row.mission = mission
+	local weekly = on and self.WeeklyCurrent and self:WeeklyCurrent() or nil
+	local trait = self.CompanionTrait and self:CompanionTrait()
+	local traitLabel = trait and self.PersonaLabel and self:PersonaLabel(trait)
+	pane.groups.trait:SetText(L.DAY_GROUP_trait, traitLabel)
+	pane.groups.week:SetText(L.DAY_GROUP_week, weekly and self.WeeklyEndsText and self:WeeklyEndsText() or nil)
+	local firstEmpty = {}
+	for _, row in ipairs(pane.missions) do
+		local mission, label, reward
+		if row.slot.daily and on and today then
+			mission = daily.missions[row.slot.daily]
+			if mission then
+				label = self:MissionLabel(mission)
+				reward = self.MissionRewardText and self:MissionRewardText(mission.source == "trait" and "trait" or "zone")
+			end
+		elseif row.slot.weekly and weekly then
+			mission = weekly.missions[row.slot.weekly]
+			if mission then
+				label = self:WeeklyLabel(mission)
+				reward = self.MissionRewardText and self:MissionRewardText("weekly")
+			end
+		end
 		if mission then
-			row.label:SetText(self:MissionLabel(mission))
-			row.source:SetText(self:MissionSource(mission))
-			row.count:SetText(mission.done and (Theme.T_GREEN .. L.MIS_DONE .. "|r")
-				or string.format("%d/%d", mission.have or 0, mission.need))
-			row.bar:SetValue((mission.have or 0) / mission.need)
-			local c = mission.done and Theme.GREEN or Theme.GOLD
-			row.bar:SetColor(c[1], c[2], c[3], 1)
-			row.bar:Show()
-			row:SetAccent(mission.done and Theme.GREEN or Theme.GOLD)
-			if mission.source == "zone" and not mission.done and not daily.rerolled then row.reroll:Show() else row.reroll:Hide() end
-			row:Show()
+			MissionRow(self, row, mission, label, reward)
+			if row.reroll then
+				if not mission.done and not daily.rerolled then row.reroll:Show() else row.reroll:Hide() end
+			end
+			row.bar:SetWidth(row.reroll and row.reroll:IsShown() and (HALF - 28 - row.reroll:GetWidth() - 8) or (HALF - 28))
 		else
-			row.label:SetText(index == 1 and (on and L.MIS_NONE or L.MIS_OFF) or "")
+			-- un groupe vide : une seule rangée qui explique
+			local empty = not firstEmpty[row.group]
+			firstEmpty[row.group] = true
+			row.mission = nil
+			row.label:SetText(empty and (on and L.MIS_NONE or L.MIS_OFF) or "")
 			row.source:SetText("")
 			row.count:SetText("")
 			row.bar:Hide()
-			row.reroll:Hide()
+			if row.reroll then row.reroll:Hide() end
 			row:SetAccent(nil)
-			if index == 1 then row:Show() else row:Hide() end
+			if empty then row:Show() else row:Hide() end
 		end
 	end
 	pane.missionsHint:SetText(on and today and (daily.allDone and L.MIS_RENEW or L.MIS_ALL_BONUS) or "")
+	pane.weekHint:SetText(weekly and (weekly.allDone and L.WK_ALL_DONE or L.WK_ALL_BONUS) or "")
 	for index, stamp in ipairs(pane.stamps) do
 		local got = index <= inn.card
 		stamp:SetTexture(got and Theme.DIAMOND or Theme.DIAMOND_LINE)
@@ -1975,17 +2250,30 @@ local function RefreshDay(self, frame)
 		if count > 0 then slot.give:Show() else slot.give:Hide() end
 		slot:SetAccent(count > 0 and Theme.GOLD or nil)
 	end
+	for _, tile in ipairs(pane.aids) do
+		local count = self.CaptureAidCount and self:CaptureAidCount(tile.aid) or 0
+		local cap
+		for _, def in ipairs(ns.CAPTURE_AIDS or {}) do if def.id == tile.aid then cap = def.cap end end
+		tile.count:SetText(self:F("TREAT_COUNT", count, cap or 0))
+		tile.name:SetText(self:CaptureAidLabel(tile.aid))
+		if tile.icon.SetDesaturated then tile.icon:SetDesaturated(count == 0) end
+		tile:SetAccent(count > 0 and Theme.GOLD or nil)
+	end
 	LayoutDay(pane, frame.content)
 end
 
--- la page Jour compte les missions qui restent (pastille bleue)
+-- la page Missions compte les missions qui restent, jour et semaine (pastille)
 local function DayNavLabel(self, frame)
 	local nav = frame.sections.day
 	if not (nav and self.DailyData) then return end
 	local daily = self:DailyData()
 	local open = 0
-	if self:DailyMissionsOn() and daily.day == self:DailyToday() then
-		for _, mission in ipairs(daily.missions) do if not mission.done then open = open + 1 end end
+	if self:DailyMissionsOn() then
+		if daily.day == self:DailyToday() then
+			for _, mission in ipairs(daily.missions) do if not mission.done then open = open + 1 end end
+		end
+		local weekly = self.WeeklyCurrent and self:WeeklyCurrent()
+		for _, mission in ipairs(weekly and weekly.missions or {}) do if not mission.done then open = open + 1 end end
 	end
 	nav:SetText(L.JRN_SEC_day)
 	nav:SetBadge(open > 0 and tostring(open) or nil)
@@ -2001,7 +2289,8 @@ local function RefreshPantry(self, frame)
 	end
 end
 
-local PANES = { zones = "zones", completion = "comp", day = "day", evolution = "evo", collection = "coll", memories = "mem" }
+local PANES = { zones = "zones", completion = "comp", day = "day", evolution = "evo", collection = "coll", memories = "mem",
+	menagerie = "men" }
 function ns:RefreshJournal()
 	local frame = self.journalFrame
 	if not frame then return end
@@ -2029,6 +2318,8 @@ function ns:RefreshJournal()
 		RefreshCollection(self, frame)
 	elseif section == "day" then
 		RefreshDay(self, frame)
+	elseif section == "menagerie" then
+		RefreshMenagerie(self, frame)
 	else
 		RefreshCompletion(self, frame)
 	end
