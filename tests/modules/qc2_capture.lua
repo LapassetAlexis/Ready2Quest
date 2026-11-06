@@ -328,11 +328,16 @@ do
 	local stage, rolling = NS.captureStage, NS:CaptureState().rolling
 	Check("[QC2CAP] clic sur le filet : la scène se joue", stage and stage:IsShown() and rolling ~= nil)
 	NS:CaptureStageUpdate(rolling.start + 0.1)
-	Check("[QC2CAP] pendant le lancer : pas d'étoiles", not stage.qcStars:IsShown())
+	Check("[QC2CAP] pendant le lancer : pas d'étoiles", not stage.starSlots[1]:IsShown())
 	for _ = 1, 4 do Mock:Advance(1); NS:CaptureTick(NS.Now()) end
 	Check("[QC2CAP] capturé : 3 étoiles tirées", rolling.result == "ok" and rolling.stars == 3)
-	Check("[QC2CAP] … affichées sous la rareté", NS:CaptureStageUpdate(rolling.resultAt + 0.3) == "ok"
-		and stage.qcStars:IsShown() and select(2, stage.qcStars:GetText():gsub("|T", "")) == 3)
+	Check("[QC2CAP] … affichées une à une sous la rareté (la troisième après 0,8 s), pleines",
+		NS:CaptureStageUpdate(rolling.resultAt + 0.5) == "ok" and stage.starSlots[1]:IsShown() and not stage.starSlots[3]:IsShown()
+		and NS:CaptureStageUpdate(rolling.resultAt + 1.0) == "ok" and stage.starSlots[3]:IsShown()
+		and stage.starSlots[3].texCoord[1] == 0 and stage.starSlots[3].texCoord[2] == 0.5 and stage.starSpark:IsShown())
+	Check("[QC2CAP] … le texte des étoiles découpe notre feuille (pleine à gauche, vide à droite)",
+		NS:CaptureStarsText(2, 12):find(":0:0:128:64:0:64:0:64:", 1, true) ~= nil
+		and NS:CaptureStarsText(2, 12):find(":0:0:128:64:64:128:0:64:", 1, true) ~= nil)
 	stage:GetScript("OnMouseUp")(stage)
 	NS:CaptureTick(NS.Now())
 	NS:DB().companionCaptureAnim = false
