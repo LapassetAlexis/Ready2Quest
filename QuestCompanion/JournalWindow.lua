@@ -346,7 +346,8 @@ local LIST_W = math.floor((INNER - (LIST_COLS - 1) * 12) / LIST_COLS)
 -- la fiche d'une zone (« completion ») s'ouvre depuis Zones : pas d'entrée à elle
 -- 1.5.0 : cinq pages. « progress » (Complétion : zones et fiche de zone) et
 -- l'album viennent d'ailleurs (ns.JOURNAL_PANES) ; Collection rejoint Compagnon
-local SECTIONS = { "evolution", "menagerie", "day", "progress", "memories" }
+-- 2.3.0 : « guide » (la ménagerie expliquée, JournalGuide.lua), en dernier
+local SECTIONS = { "evolution", "menagerie", "day", "progress", "memories", "guide" }
 local MEN_STATES = { "all", "captured", "missing", "tokill", "shiny" }
 local MEN_RANKS = { "all", "normal", "elite", "rare", "boss" }
 local MEN_SORTS = { "no", "name", "level", "rank", "date" }

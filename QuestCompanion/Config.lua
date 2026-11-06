@@ -8,7 +8,7 @@ local ADDON, ns = ...
 
 ns.APP = {
 	id = "QuestCompanion",
-	version = "2.2.0",
+	version = "2.3.0",
 	-- nom dans l'en-tête des réglages
 	brand = "Quest|cff5b8fd6Companion|r",
 	-- sauvegarde (## SavedVariables)

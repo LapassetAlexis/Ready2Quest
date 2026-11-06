@@ -1249,6 +1249,14 @@ Snap.scenes["qc-journal-memories"] = function(T)
 	return frame, "QuestCompanion : carnet, page Souvenirs"
 end
 
+-- page Guide (2.3.0) : le sommaire à gauche, la section « Ton compagnon
+-- chasse avec toi » à droite, avec la table des huit types
+Snap.scenes["qc-journal-guide"] = function(T)
+	local frame, ns = QCJournal(T, "guide")
+	ns:JournalGuidePick("effects")
+	return frame, "QuestCompanion : carnet, page Guide (la table des types)"
+end
+
 -- le compagnon à l'écran : cadre (cadre cuivre, fond sous-bois), nom, bulle
 local function QCCompanion(T, prepare)
 	local ns = QCWorld(T)

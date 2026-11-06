@@ -86,7 +86,7 @@ local FR = {
 	CAPTURE_STAGE_NEW   = "Nouvelle apparence pour ton compagnon",
 	CAPTURE_STAGE_SHINY = "Brillante ! Nouvelle apparence pour ton compagnon",
 	CAPTURE_STAGE_FAIL  = "Il reviendra. Toi aussi.",
-	CAPTURE_STAGE_CLOSE = "Clic pour fermer",
+	CAPTURE_STAGE_CLOSE = "Clic ou Échap pour fermer",
 	OPT_DAILY_CAPTURE_ANIM = "Capture animée",
 }
 local EN = {
@@ -94,7 +94,7 @@ local EN = {
 	CAPTURE_STAGE_NEW   = "New look for your companion",
 	CAPTURE_STAGE_SHINY = "Shiny! New look for your companion",
 	CAPTURE_STAGE_FAIL  = "It'll be back. So will you.",
-	CAPTURE_STAGE_CLOSE = "Click to close",
+	CAPTURE_STAGE_CLOSE = "Click or Escape to close",
 	OPT_DAILY_CAPTURE_ANIM = "Animated capture",
 }
 ns.RegisterStrings(FR, EN)
@@ -172,14 +172,24 @@ end
 -- ---------------------------------------------------------------------------
 function ns:EnsureCaptureStage()
 	if self.captureStage then return self.captureStage end
-	local frame = Theme.CreateToast(UIParent, STAGE_W, STAGE_H, { strata = "DIALOG" })
+	-- un nom global : Échap la referme (UISpecialFrames), comme les fenêtres du thème (2.3.0)
+	local frame = Theme.CreateToast(UIParent, STAGE_W, STAGE_H, { strata = "DIALOG", name = "QuestCompanionCaptureStage" })
 	if not frame then return nil end
 	frame:ClearAllPoints()
 	frame:SetPoint("CENTER", UIParent, "CENTER", 0, 60)
 	frame:EnableMouse(true)
+	if Theme.RegisterEscapeClose then pcall(Theme.RegisterEscapeClose, frame) end
 	-- un clic, une fois le verdict tombé : on ferme
 	frame:SetScript("OnMouseUp", function()
 		local rolling = ns.captureState and ns.captureState.rolling
+		if rolling and rolling.result then rolling.closeAt = Clock() end
+	end)
+	-- cachée (Échap, ou la fin du lancer) : le verdict tombé, le lancer se
+	-- termine au prochain relevé ; sans verdict encore, la capture se résout
+	-- quand même et son résultat reste annoncé dans le chat
+	frame:SetScript("OnHide", function(f)
+		local rolling = ns.captureState and ns.captureState.rolling
+		f.rolling = nil
 		if rolling and rolling.result then rolling.closeAt = Clock() end
 	end)
 	local level = frame:GetFrameLevel() or 1
