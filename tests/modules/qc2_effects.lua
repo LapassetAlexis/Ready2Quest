@@ -305,6 +305,8 @@ do
 	EF.Add(5304, "Humanoïde", "normal")
 	EF.Take("cap:5304")
 	local pantry = NS:TreatData().pantry
+	-- garde-manger vide : la friandise tirée ne peut pas être mangée sur place (plafond 3)
+	for kind in pairs(pantry) do pantry[kind] = 0 end
 	local before = 0
 	for _, n in pairs(pantry) do before = before + n end
 	NS:TreatData().milestones[1414] = nil
