@@ -155,6 +155,9 @@ ns.TRAINER_ANNOUNCE_GAP = 60        -- s entre deux annonces sur un même canal
 ns.TRAINER_HOLDER_TTL = 14 * 86400  -- un détenteur pas revu depuis 14 jours est oublié
 ns.TRAINER_CARD_FRESH = 60          -- s : fiche reçue récente, pas redemandée
 ns.TRAINER_INBOX_TTL = 30           -- s pour recevoir tous les morceaux d'une fiche
+ns.TRAINER_IN_WINDOW = 10           -- s : fenêtre du plafond de messages reçus par joueur
+ns.TRAINER_IN_MAX = 40              -- messages reçus d'un même joueur par fenêtre (une fiche : 20 au plus)
+ns.TRAINER_OWN_TTL = 300            -- s : ma fiche sérialisée gardée (en plus de sa clé)
 ns.TRAINER_SHOWCASE_SIZE = 3
 ns.TRAINER_CONTINENTS = { "ek", "ka", "other" }
 -- menus du clic droit sur un joueur (moteur récent, Menu.ModifyMenu)
@@ -171,7 +174,11 @@ local function Call(fn, ...)
 end
 local function Clock() return (ns.Now and ns.Now()) or 0 end
 local function Epoch() return tonumber(Call(G("time"))) or 0 end
-local function Plain(v) return ns.Plain and ns.Plain(v) or v end
+-- (pas « ns.Plain(v) or v » : une valeur secrète reviendrait telle quelle)
+local function Plain(v)
+	if ns.Plain then return ns.Plain(v) end
+	return v
+end
 local function Str(v)
 	v = Plain(v)
 	if type(v) == "string" and v ~= "" then return v end
@@ -188,15 +195,19 @@ local state = {
 	answered = {},   -- joueur -> instant du dernier envoi de fiche
 	acked = {},      -- joueur -> instant du dernier accusé
 	announced = {},  -- canal -> instant de la dernière annonce
+	incoming = {},   -- expéditeur -> { at, n } : plafond des messages reçus
 }
+-- Toutes ces tables (et le cache des détenteurs) sont indexées par la clé
+-- d'un joueur (ns:TrainerKey : minuscules, royaume sans espaces ni traits
+-- d'union) : « Élodie », « élodie », « Bob-Hyjal » et « bob-hyjal » sont les mêmes.
 ns.trainerState = state
 
 -- remise à zéro (tests, /reload simulé)
 function ns:TrainerResetSession()
 	state.queue, state.tokens, state.seq = {}, ns.TRAINER_BURST, 0
 	state.inbox, state.cards, state.pending, state.probed = {}, {}, {}, {}
-	state.answered, state.acked, state.announced = {}, {}, {}
-	state.inGroup = nil
+	state.answered, state.acked, state.announced, state.incoming = {}, {}, {}, {}
+	state.inGroup, state.guildAnnounced, state.ownText = nil, nil, nil
 end
 
 function ns:TrainerSharing()
@@ -219,6 +230,19 @@ local function MyRealm()
 	return realm and (realm:gsub("[%s%-]", "")) or "?"
 end
 
+-- Minuscules, lettres accentuées comprises (À..Þ en UTF-8, sauf ×). Pas de
+-- string.lower : selon la locale du client, il touche aussi aux octets > 127
+-- et casserait l'UTF-8.
+local function Lower(text)
+	text = text:gsub("\195([\128-\158])", function(c)
+		if c == "\151" then return nil end
+		return "\195" .. string.char(c:byte() + 32)
+	end)
+	return (text:gsub("[A-Z]", function(c) return string.char(c:byte() + 32) end))
+end
+
+-- Royaume : sans espaces ni traits d'union (« Azjol-Nerub » -> « AzjolNerub »),
+-- comme l'expéditeur d'un message d'addon et le menu (contextData.server)
 function ns:TrainerFullName(name, realm)
 	name, realm = Str(name), Str(realm)
 	if not name then return nil end
@@ -226,9 +250,19 @@ function ns:TrainerFullName(name, realm)
 		local n, r = name:match("^([^%-]+)%-(.+)$")
 		if n then name, realm = n, r end
 	end
-	realm = realm and realm:gsub("%s", "") or MyRealm()
+	realm = realm and (realm:gsub("[%s%-]", "")) or MyRealm()
 	if realm == "" then realm = MyRealm() end
 	return name .. "-" .. realm
+end
+
+-- Clé d'un joueur (tables de session, cache des détenteurs) : insensible à la casse
+function ns:TrainerKey(name)
+	local full = self:TrainerFullName(name)
+	return full and Lower(full) or nil
+end
+
+local function IsMe(self, key)
+	return key ~= nil and key == self:TrainerKey(self:TrainerMe())
 end
 
 function ns:TrainerMe()
@@ -241,7 +275,7 @@ end
 function ns:TrainerShortName(full)
 	full = tostring(full or "?")
 	local name, realm = full:match("^([^%-]+)%-(.+)$")
-	if name and realm == MyRealm() then return name end
+	if name and Lower(realm) == Lower(MyRealm()) then return name end
 	return full
 end
 
@@ -260,6 +294,16 @@ end
 function ns:TrainerHolders()
 	local db = self:DB()
 	if type(db.trainerHolders) ~= "table" then db.trainerHolders = {} end
+	-- clés d'avant (« Nom-Royaume » avec la casse) : passées en clés de joueur, une fois
+	if db.trainerHoldersV ~= 1 then
+		local old = db.trainerHolders
+		db.trainerHolders = {}
+		for name, seen in pairs(old) do
+			local key = type(name) == "string" and self:TrainerKey(name)
+			if key and type(seen) == "number" and seen > (db.trainerHolders[key] or 0) then db.trainerHolders[key] = seen end
+		end
+		db.trainerHoldersV = 1
+	end
 	return db.trainerHolders
 end
 
@@ -277,15 +321,15 @@ function ns:TrainerPruneHolders(now)
 end
 
 function ns:TrainerMarkHolder(name)
-	name = self:TrainerFullName(name)
-	if not name or name == self:TrainerMe() then return end
-	self:TrainerHolders()[name] = Epoch()
+	local key = self:TrainerKey(name)
+	if not key or IsMe(self, key) then return end
+	self:TrainerHolders()[key] = Epoch()
 end
 
 function ns:TrainerIsHolder(name)
-	name = self:TrainerFullName(name)
-	if not name or name == self:TrainerMe() then return false end
-	local seen = self:TrainerHolders()[name]
+	local key = self:TrainerKey(name)
+	if not key or IsMe(self, key) then return false end
+	local seen = self:TrainerHolders()[key]
 	return type(seen) == "number" and Epoch() - seen <= ns.TRAINER_HOLDER_TTL
 end
 
@@ -345,12 +389,26 @@ local function ListOf(raw)
 	return list
 end
 
+-- coupe à `max` octets au plus sans couper un caractère UTF-8 en deux
+local function Utf8Cut(value, max)
+	if #value <= max then return value end
+	local cut = max
+	-- l'octet qui suit la coupe doit commencer un caractère (pas 10xxxxxx)
+	while cut > 0 do
+		local b = value:byte(cut + 1)
+		if not b or b < 128 or b >= 192 then break end
+		cut = cut - 1
+	end
+	return value:sub(1, cut)
+end
+ns.TrainerUtf8Cut = Utf8Cut
+
 -- texte reçu d'un autre joueur, sûr à afficher : pas de codes |c, |T, |H
 -- (un « | » s'écrit « || »), longueur bornée
 local function SafeText(value, max)
 	if type(value) ~= "string" then return nil end
 	value = value:gsub("[%c]", "")
-	if #value > (max or 48) then value = value:sub(1, max or 48) end
+	value = Utf8Cut(value, max or 48)
 	value = value:gsub("|", "||")
 	if value == "" then return nil end
 	return value
@@ -431,11 +489,15 @@ function ns:TrainerOwnCard()
 		if ok and type(title) == "string" and title ~= "" then card.title = title end
 	end
 	local capture = self.CaptureData and self:CaptureData() or { creatures = {} }
-	local first
-	for _, entry in pairs(capture.creatures or {}) do
-		if type(entry) == "table" then
-			for _, at in ipairs({ tonumber(entry.at) or false, tonumber(entry.shinyAt) or false }) do
-				if at and at > 0 and (not first or at < first) then first = at end
+	-- première capture : la date figée (lot 1 : capture.firstAt, firstAt par
+	-- fiche), pas `at` qu'une recapture meilleure remplace
+	local first = self.CaptureEarliestAt and Call(self.CaptureEarliestAt, self) or nil
+	if not first then
+		for _, entry in pairs(capture.creatures or {}) do
+			if type(entry) == "table" then
+				for _, at in ipairs({ tonumber(entry.firstAt) or false, tonumber(entry.at) or false, tonumber(entry.shinyAt) or false }) do
+					if at and at > 0 and (not first or at < first) then first = at end
+				end
 			end
 		end
 	end
@@ -478,6 +540,11 @@ function ns:TrainerOwnCard()
 				comp.active = fx.active and true or false
 				comp.hunt = type(fx.hunt) == "table" and fx.hunt.label or nil
 				comp.comfort = type(fx.comfort) == "table" and fx.comfort.label or nil
+				-- envoyés en identifiant + valeur : le libellé se refait chez l'autre
+				comp.huntId = type(fx.hunt) == "table" and fx.hunt.id or nil
+				comp.huntValue = type(fx.hunt) == "table" and tonumber(fx.hunt.value) or nil
+				comp.comfortId = type(fx.comfort) == "table" and fx.comfort.id or nil
+				comp.comfortValue = type(fx.comfort) == "table" and tonumber(fx.comfort.value) or nil
 			end
 		end
 		card.companion = comp
@@ -505,7 +572,11 @@ function ns:TrainerSerializeCard(card)
 		f.cm = comp.mascot and 1 or nil
 		f.cy, f.ct, f.cp = comp.stars, comp.typeKey, comp.strength
 		f.ca = comp.active == false and 0 or nil
-		f.ch, f.cc = comp.hunt, comp.comfort
+		-- effets : identifiant et valeur (le libellé, long et traduit, se refait
+		-- chez le destinataire) ; le libellé seulement s'il n'y a pas d'identifiant
+		local function Value(v) return v and string.format("%.3f", v) or nil end
+		if comp.huntId then f.hi, f.hv = comp.huntId, Value(comp.huntValue) else f.ch = comp.hunt end
+		if comp.comfortId then f.ci, f.cv = comp.comfortId, Value(comp.comfortValue) else f.cc = comp.comfort end
 	end
 	for slot = 1, ns.TRAINER_SHOWCASE_SIZE do
 		local item = card.showcase and card.showcase[slot]
@@ -525,6 +596,20 @@ end
 
 local CLASSES = { normal = true, trivial = true, minus = true, elite = true, rare = true, rareelite = true, worldboss = true }
 
+-- Libellé d'un effet reçu (identifiant du lot 2 + valeur), dans ma langue ;
+-- nil si l'effet est inconnu ici
+local function EffectLabel(self, id, value)
+	local defs = ns.COMPANION_EFFECTS
+	local def = type(id) == "string" and type(defs) == "table" and defs[id]
+	value = tonumber(value)
+	if not (def and value) then return nil end
+	value = math.max(0, math.min(value, tonumber(def.cap) or value))
+	local key = "EFF_" .. id
+	if L[key] == nil or L[key] == key then return nil end
+	local ok, text = pcall(self.F, self, key, math.floor(value * 100 + 0.5 + 1e-9))
+	return ok and type(text) == "string" and text or nil
+end
+
 -- texte -> table, champs inconnus ignorés, valeurs bornées et sûres
 function ns:TrainerParseCard(text)
 	local f = ns.TrainerDecode(text)
@@ -537,7 +622,8 @@ function ns:TrainerParseCard(text)
 		local typeKey = S("ct", 16)
 		card.companion = { name = S("cl", 48), npc = Int(f.cn, 1), display = Int(f.cd, 1), class = CLASSES[class or ""] and class or nil,
 			shiny = f.cs == "1", mascot = f.cm == "1", stars = Int(f.cy, 1, 3), typeKey = typeKey,
-			strength = tonumber(f.cp), active = f.ca ~= "0", hunt = S("ch", 80), comfort = S("cc", 80) }
+			strength = tonumber(f.cp), active = f.ca ~= "0",
+			hunt = EffectLabel(self, f.hi, f.hv) or S("ch", 160), comfort = EffectLabel(self, f.ci, f.cv) or S("cc", 160) }
 	end
 	for slot = 1, ns.TRAINER_SHOWCASE_SIZE do
 		local list = ListOf(f["v" .. slot])
@@ -613,12 +699,53 @@ function ns:TrainerChunks(text, seq)
 	return chunks
 end
 
+-- Ma fiche en texte, gardée tant que rien ne change (captures, compagnon,
+-- vitrine, effets) et au plus TRAINER_OWN_TTL secondes : une demande reçue
+-- ne reconstruit pas toute la Ménagerie
+local function OwnCardKey(self)
+	local capture = self.CaptureData and self:CaptureData() or {}
+	local data = self:CompanionData()
+	local showcase = self:TrainerShowcase()
+	local parts = { tostring(capture.serial), tostring(capture.count), tostring(data.appearance),
+		tostring(showcase[1]), tostring(showcase[2]), tostring(showcase[3]),
+		tostring(self.CompanionName and Call(self.CompanionName, self)), tostring(self:TrainerMe()) }
+	if self.CompanionEffects then
+		local ok, fx = pcall(self.CompanionEffects, self)
+		if ok and type(fx) == "table" then parts[#parts + 1] = tostring(fx.active) .. ":" .. tostring(fx.strength) end
+	end
+	return table.concat(parts, "|")
+end
+
+function ns:TrainerOwnCardText()
+	local key, now = OwnCardKey(self), Clock()
+	local cache = state.ownText
+	if cache and cache.key == key and now >= cache.at and now - cache.at < ns.TRAINER_OWN_TTL then return cache.text end
+	local text = self:TrainerSerializeCard(self:TrainerOwnCard())
+	state.ownText = { key = key, text = text, at = now }
+	return text
+end
+
+-- La fiche n'est pas construite ici (une demande peut arriver en combat, ou
+-- en rafale) : une place dans la file, remplie au moment de l'envoi
 function ns:TrainerSendCard(target)
 	if not ChatApi() then return false end
-	state.seq = (state.seq % 999) + 1
-	local text = self:TrainerSerializeCard(self:TrainerOwnCard())
-	for _, chunk in ipairs(self:TrainerChunks(text, state.seq)) do Queue(chunk, "WHISPER", target) end
+	for _, msg in ipairs(state.queue) do
+		if msg.card and msg.target == target then return true end
+	end
+	local queue = state.queue
+	if #queue >= ns.TRAINER_QUEUE_MAX then table.remove(queue, 1) end
+	queue[#queue + 1] = { card = true, channel = "WHISPER", target = target, at = Clock() }
 	return true
+end
+
+-- Une place « fiche » en tête de file : remplacée par ses morceaux
+local function ExpandCard(self, msg)
+	state.seq = (state.seq % 999) + 1
+	local ok, text = pcall(self.TrainerOwnCardText, self)
+	if not ok or type(text) ~= "string" then return end
+	for index, chunk in ipairs(self:TrainerChunks(text, state.seq)) do
+		table.insert(state.queue, index, { text = chunk, channel = msg.channel, target = msg.target, at = Clock() })
+	end
 end
 
 -- Envoie ce que le débit permet ; appelé par l'horloge (elapsed : s écoulées)
@@ -631,7 +758,10 @@ function ns:TrainerPump(elapsed)
 	local api, sent = ChatApi(), 0
 	while #queue > 0 and state.tokens >= 1 do
 		local msg = table.remove(queue, 1)
-		if now - (msg.at or now) <= ns.TRAINER_QUEUE_TTL and api then
+		local fresh = now - (msg.at or now) <= ns.TRAINER_QUEUE_TTL
+		if msg.card then
+			if fresh then ExpandCard(self, msg) end
+		elseif fresh and api then
 			pcall(api.SendAddonMessage, ns.TRAINER_PREFIX, msg.text, msg.channel, msg.target)
 			state.tokens = state.tokens - 1
 			sent = sent + 1
@@ -649,33 +779,57 @@ local function Split(text)
 	return fields
 end
 
-local function Resolve(self, sender, status)
-	local pending = state.pending[sender]
+-- key : clé du joueur (ns:TrainerKey)
+local function Resolve(self, key, status)
+	local pending = state.pending[key]
 	if pending then pending.status = status end
-	if self.trainerFrame and self.trainerFrame.viewing == sender then self:TrainerRefreshWindow() end
+	local frame = self.trainerFrame
+	if frame and frame.viewing and self:TrainerKey(frame.viewing) == key then self:TrainerRefreshWindow() end
 end
 
-local function OnCardChunk(self, sender, fields)
-	local seq, index, total = Int(fields[3], 0), Int(fields[4], 1), Int(fields[5], 1, 20)
-	if not (seq and index and total) or index > total then return end
+-- Un morceau de fiche ; une série incohérente (numéro hors du total, total
+-- qui change en route) est rejetée, jamais d'erreur
+local function OnCardChunk(self, sender, key, fields)
+	local seq, index, total = Int(fields[3], 0), tonumber(fields[4]), tonumber(fields[5])
+	if not (seq and index and total) or index ~= math.floor(index) or total ~= math.floor(total) then return end
+	if total < 1 or total > 20 or index < 1 or index > total then return end
 	-- le texte peut contenir « ~ » échappé seulement : le reste du message est le morceau
 	local piece = table.concat(fields, "~", 6)
-	local box = state.inbox[sender]
+	local box = state.inbox[key]
 	if not box or box.seq ~= seq or Clock() - box.at > ns.TRAINER_INBOX_TTL then
 		box = { seq = seq, total = total, parts = {}, got = 0, at = Clock() }
-		state.inbox[sender] = box
+		state.inbox[key] = box
 	end
+	if total ~= box.total or index > box.total then return end
 	if box.parts[index] == nil then
 		box.parts[index] = piece
 		box.got = box.got + 1
 	end
 	if box.got < box.total then return end
-	state.inbox[sender] = nil
-	local ok, card = pcall(self.TrainerParseCard, self, table.concat(box.parts))
+	state.inbox[key] = nil
+	local ok, card = pcall(function()
+		local parts = {}
+		for i = 1, box.total do
+			if type(box.parts[i]) ~= "string" then error("morceau manquant") end
+			parts[i] = box.parts[i]
+		end
+		return self:TrainerParseCard(table.concat(parts))
+	end)
 	if not ok or type(card) ~= "table" then return end
 	card.sender = sender
-	state.cards[sender] = { card = card, at = Clock() }
-	Resolve(self, sender, "ok")
+	state.cards[key] = { card = card, at = Clock() }
+	Resolve(self, key, "ok")
+end
+
+-- Plafond des messages reçus d'un même joueur : au-delà, ignorés
+local function Flooded(key, now)
+	local box = state.incoming[key]
+	if not box or now < box.at or now - box.at >= ns.TRAINER_IN_WINDOW then
+		box = { at = now, n = 0 }
+		state.incoming[key] = box
+	end
+	box.n = box.n + 1
+	return box.n > ns.TRAINER_IN_MAX
 end
 
 -- prefix, texte, canal, expéditeur : les arguments de CHAT_MSG_ADDON
@@ -683,35 +837,38 @@ function ns:TrainerOnAddonMessage(prefix, text, channel, sender)
 	prefix, text, channel, sender = Plain(prefix), Plain(text), Plain(channel), Plain(sender)
 	if prefix ~= ns.TRAINER_PREFIX or type(text) ~= "string" or type(sender) ~= "string" then return false end
 	sender = self:TrainerFullName(sender)
-	if not sender or sender == self:TrainerMe() then return false end
+	local key = sender and self:TrainerKey(sender)
+	if not key or IsMe(self, key) then return false end
+	local now = Clock()
+	if Flooded(key, now) then return false end
 	local fields = Split(text)
 	local kind = fields[1]
 	-- version illisible : ce n'est pas un message de QC
 	if not tonumber(fields[2]) then return false end
 	self:TrainerMarkHolder(sender)
 	local sharing = self:TrainerSharing()
-	local now = Clock()
 	if kind == "H" or kind == "P" then
-		-- accusé, au plus une fois toutes les 5 min par joueur ; muet si non partagé
-		local last = state.acked[sender]
-		if sharing and (kind == "P" or not last or now - last >= ns.TRAINER_ACK_GAP) then
-			state.acked[sender] = now
+		-- accusé (annonce ou sonde), au plus une fois toutes les 5 min par
+		-- joueur ; muet si non partagé
+		local last = state.acked[key]
+		if sharing and (not last or now < last or now - last >= ns.TRAINER_ACK_GAP) then
+			state.acked[key] = now
 			self:TrainerSend("A", "WHISPER", sender)
 		end
 	elseif kind == "R" then
 		if not sharing then
 			self:TrainerSend("N", "WHISPER", sender)
 		else
-			local last = state.answered[sender]
-			if not last or now - last >= ns.TRAINER_ANSWER_GAP then
-				state.answered[sender] = now
+			local last = state.answered[key]
+			if not last or now < last or now - last >= ns.TRAINER_ANSWER_GAP then
+				state.answered[key] = now
 				self:TrainerSendCard(sender)
 			end
 		end
 	elseif kind == "N" then
-		Resolve(self, sender, "refused")
+		Resolve(self, key, "refused")
 	elseif kind == "C" then
-		OnCardChunk(self, sender, fields)
+		OnCardChunk(self, sender, key, fields)
 	end
 	-- A et tout type inconnu : le détenteur est noté, rien d'autre
 	return true
@@ -722,8 +879,9 @@ end
 -- ---------------------------------------------------------------------------
 function ns:TrainerRequest(name)
 	name = self:TrainerFullName(name)
-	if not name or name == self:TrainerMe() then return false end
-	state.pending[name] = { at = Clock(), status = "pending" }
+	local key = name and self:TrainerKey(name)
+	if not key or IsMe(self, key) then return false end
+	state.pending[key] = { at = Clock(), status = "pending" }
 	self:TrainerSend("R", "WHISPER", name)
 	return true
 end
@@ -738,17 +896,20 @@ function ns:TrainerCheckTimeouts(now)
 	for sender, box in pairs(state.inbox) do
 		if now - box.at > ns.TRAINER_INBOX_TTL then state.inbox[sender] = nil end
 	end
+	for sender, box in pairs(state.incoming) do
+		if now < box.at or now - box.at >= ns.TRAINER_IN_WINDOW then state.incoming[sender] = nil end
+	end
 end
 
 -- La fiche reçue d'un joueur (table) et son âge, ou nil
 function ns:TrainerCard(name)
-	local entry = state.cards[self:TrainerFullName(name) or ""]
+	local entry = state.cards[self:TrainerKey(name) or ""]
 	if not entry then return nil end
 	return entry.card, Clock() - entry.at
 end
 
 function ns:TrainerStatus(name)
-	local pending = state.pending[self:TrainerFullName(name) or ""]
+	local pending = state.pending[self:TrainerKey(name) or ""]
 	return pending and pending.status or nil
 end
 
@@ -783,9 +944,17 @@ function ns:TrainerOnRoster()
 	return false
 end
 
+-- Guilde : une annonce par session (PLAYER_GUILD_UPDATE tombe souvent) ;
+-- une nouvelle seulement après être sorti d'une guilde
 function ns:TrainerOnGuild()
-	if Plain(Call(G("IsInGuild"))) then return self:TrainerAnnounce("GUILD") end
-	return false
+	if Plain(Call(G("IsInGuild"))) ~= true then
+		state.guildAnnounced = nil
+		return false
+	end
+	if state.guildAnnounced then return false end
+	local sent = self:TrainerAnnounce("GUILD")
+	if sent then state.guildAnnounced = true end
+	return sent
 end
 
 -- Cible un joueur hors combat : une sonde silencieuse, une fois par session
@@ -793,12 +962,13 @@ function ns:TrainerOnTarget(unit)
 	unit = unit or "target"
 	if not self:TrainerSharing() or self:TrainerBlocked() then return false end
 	local name = self:TrainerUnitName(unit)
-	if not name or name == self:TrainerMe() or state.probed[name] then return false end
+	local key = name and self:TrainerKey(name)
+	if not key or IsMe(self, key) or state.probed[key] then return false end
 	-- chuchotement impossible vers l'autre faction
-	if Call(G("UnitIsFriend"), "player", unit) == false then return false end
+	if Plain(Call(G("UnitIsFriend"), "player", unit)) == false then return false end
 	local mine, theirs = Plain(Call(G("UnitFactionGroup"), "player")), Plain(Call(G("UnitFactionGroup"), unit))
 	if mine and theirs and mine ~= theirs then return false end
-	state.probed[name] = true
+	state.probed[key] = true
 	return self:TrainerSend("P", "WHISPER", name)
 end
 
@@ -1098,7 +1268,8 @@ local function PaintTile(self, tile, item, own)
 end
 
 local function PaintCard(self, frame, card, own)
-	frame.header:SetTitle(self:TrainerShortName(card.name or frame.viewing))
+	-- le nom vient de l'expéditeur réel, jamais du champ `n` reçu (usurpation)
+	frame.header:SetTitle(self:TrainerShortName(own and card.name or card.sender or frame.viewing))
 	frame.header:SetSubtitle(card.title or L.TRAINER_DEFAULT_TITLE)
 	local comp = card.companion
 	if comp then
@@ -1208,11 +1379,11 @@ function ns:TrainerOpen(name)
 	local frame = self:EnsureTrainerWindow()
 	if not frame then return nil end
 	local full = name and self:TrainerFullName(name) or nil
-	if full == self:TrainerMe() then full = nil end
+	if full and IsMe(self, self:TrainerKey(full)) then full = nil end
 	frame.viewing = full
 	if full then
 		local _, age = self:TrainerCard(full)
-		local pending = state.pending[full]
+		local pending = state.pending[self:TrainerKey(full)]
 		if not age or age > ns.TRAINER_CARD_FRESH then
 			if not (pending and pending.status == "pending") then self:TrainerRequest(full) end
 		end
@@ -1227,7 +1398,7 @@ function ns:TrainerCommand(rest)
 	rest = type(rest) == "string" and rest:gsub("^%s+", ""):gsub("%s+$", "") or ""
 	if rest == "" then return self:TrainerOpen(nil) end
 	local full = self:TrainerFullName(rest:sub(1, 1):upper() .. rest:sub(2))
-	if full and not self:TrainerIsHolder(full) and full ~= self:TrainerMe() then
+	if full and not self:TrainerIsHolder(full) and not IsMe(self, self:TrainerKey(full)) then
 		self:Print(self:F("TRAINER_MSG_UNKNOWN", self:TrainerShortName(full)))
 	end
 	return self:TrainerOpen(full)

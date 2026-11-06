@@ -155,7 +155,8 @@ do
 	QNS.JournalContinentOf = function(_, zoneID) return zoneID == 1429 and "ek" or "ka" end
 	QNS.CaptureStars = function(_, npc, shiny) return shiny and 3 or 2 end
 	QNS.CompanionEffects = function() return { typeKey = "beast", strength = 2.5, active = false,
-		hunt = { id = "spot", value = 1, label = "repère les Bêtes" }, comfort = { id = "hunger", value = 0.2, label = "faim -20 %" } } end
+		hunt = { id = "spot", value = 0.25, label = "repère les Bêtes" },
+		comfort = { id = "decay_hunger", value = 0.2, label = "faim -20 %" } } end
 	QNS:CompanionData().appearance = "cap:7002:s"
 	card = QNS:TrainerOwnCard()
 	Check("[TRN] lot 3 : titre, sceaux, badges par continent", card.title == "Maître des bêtes" and card.seals == 3
@@ -168,9 +169,11 @@ do
 		and card.companion.class == "rare" and not card.companion.mascot)
 	local text = QNS:TrainerSerializeCard(card)
 	local back = QNS:TrainerParseCard(text)
+	-- effets : envoyés en identifiant + valeur, libellé refait dans la langue du destinataire
 	Check("[TRN] aller-retour de la fiche entière", back.name == card.name and back.title == card.title and back.first == card.first
 		and back.species == card.species and back.seals == 3 and back.badges.ka == 2 and back.companion.npc == 7002
-		and back.companion.shiny and back.companion.hunt == card.companion.hunt and back.companion.active == false
+		and back.companion.shiny and back.companion.hunt == QNS:F("EFF_spot", 25)
+		and back.companion.comfort == QNS:F("EFF_decay_hunger", 20) and back.companion.active == false
 		and back.showcase[1].npc == 7002 and back.showcase[2].stars == 2)
 	Check("[TRN] nom piégé de la vitrine : affiché tel quel, sans code", back.showcase[1].name == "Griffe;Grise=||cffff0000",
 		back.showcase[1].name)
@@ -217,8 +220,9 @@ do
 	local card = QNS:TrainerCard("Bob")
 	Check("[TRN] fiche reçue, recollée dans le désordre", card and card.name == "Testeur-Royaume" and card.showcase[1]
 		and card.showcase[1].npc == 7001 and QNS:TrainerStatus("Bob") == "ok")
+	-- (la fiche rejouée est la nôtre : son champ « n » dit Testeur, le titre dit qui l'a vraiment envoyée)
 	Check("[TRN] fenêtre : la fiche affichée, sans réglage de partage", f.state == "card" and f.body:IsShown()
-		and f.header.title.text == "Testeur" and not f.shareToggle:IsShown() and f.retryButton:IsShown()
+		and f.header.title.text == "Bob" and not f.shareToggle:IsShown() and f.retryButton:IsShown()
 		and not f.tiles[1].picker:IsShown())
 	Check("[TRN] fenêtre : chiffres et vitrine", f.lines[2].text:find("3", 1, true) ~= nil and f.tiles[1].name.text == "Kodo"
 		and f.tiles[1].item and f.tiles[1].item.npc == 7001, f.lines[2].text .. " / " .. tostring(f.tiles[1].name.text)
@@ -468,6 +472,141 @@ do
 	for key in pairs(S and S.fr or {}) do if not S.en[key] then same = false end end
 	for key in pairs(S and S.en or {}) do if not S.fr[key] then same = false end end
 	Check("[TRN] textes : mêmes clés en français et en anglais", same)
+end
+
+-- 8. Relecture : coût, noms, débit entrant, morceaux, usurpation, effets ---------------------------
+do
+	Say("-- fiche de dresseur : relecture")
+	TC.Reset()
+	TC.Captures()
+	local builds, own = 0, QNS.TrainerOwnCard
+	QNS.TrainerOwnCard = function(...) builds = builds + 1; return own(...) end
+	-- une demande en combat : rien n'est construit, rien ne part
+	TC.combat = true
+	QNS:TrainerOnAddonMessage("QCTrainer", "R~1", "WHISPER", "Bob-Royaume")
+	TC.Flush()
+	Check("[TRN] demande en combat : fiche pas construite", builds == 0 and #TC.sent == 0, builds)
+	TC.combat = false
+	TC.Flush()
+	Check("[TRN] hors combat : construite une fois, envoyée", builds == 1 and TC.Kinds(TC.Take()):find("^C") ~= nil, builds)
+	QNS:TrainerOnAddonMessage("QCTrainer", "R~1", "WHISPER", "Cid-Royaume")
+	TC.Flush()
+	Check("[TRN] autre demande, rien n'a changé : fiche en cache", builds == 1 and #TC.Take() > 0, builds)
+	local capture = QNS:CaptureData()
+	capture.serial = (tonumber(capture.serial) or 0) + 1
+	QNS:TrainerOnAddonMessage("QCTrainer", "R~1", "WHISPER", "Dan-Royaume")
+	TC.Flush()
+	Check("[TRN] captures changées : refaite", builds == 2, builds)
+	QNS:TrainerSetShowcase(1, "cap:7001")
+	QNS:TrainerOnAddonMessage("QCTrainer", "R~1", "WHISPER", "Eli-Royaume")
+	TC.Flush()
+	TC.Take()
+	Check("[TRN] vitrine changée : refaite", builds == 3, builds)
+	QNS.TrainerOwnCard = own
+
+	-- première capture : la date figée du lot 1, pas `at`
+	capture.firstAt = TC.now - 86400 * 30
+	Check("[TRN] première capture : capture.firstAt", QNS:TrainerOwnCard().first == TC.now - 86400 * 30)
+	capture.firstAt = nil
+	capture.creatures[7001].firstAt = TC.now - 86400 * 20
+	Check("[TRN] … sinon la plus ancienne firstAt des fiches", QNS:TrainerOwnCard().first == TC.now - 86400 * 20)
+
+	-- noms : casse, accents, royaume à trait d'union
+	TC.Reset()
+	QNS:TrainerOnAddonMessage("QCTrainer", "H~1", "PARTY", "Bob-Hyjal")
+	Check("[TRN] « Bob-hyjal » : détenteur reconnu", QNS:TrainerIsHolder("Bob-hyjal") and QNS:TrainerIsHolder("bob-HYJAL"))
+	Check("[TRN] clé : minuscules, accents compris", QNS:TrainerKey("Élodie") == "élodie-royaume"
+		and QNS:TrainerKey("élodie-Royaume") == "élodie-royaume", tostring(QNS:TrainerKey("Élodie")))
+	Check("[TRN] menu : royaume avec trait d'union", QNS:TrainerMenuTarget({ name = "Kim", server = "Azjol-Nerub" }) == "Kim-AzjolNerub"
+		and QNS:TrainerFullName("Kim-Azjol-Nerub") == "Kim-AzjolNerub")
+	TC.Take()
+	QNS:HandleCommand("fiche élodie")
+	local f = QNS.trainerFrame
+	Check("[TRN] /qc fiche élodie : demande en cours", f:IsShown() and f.state == "pending")
+	QNS:TrainerOnAddonMessage("QCTrainer", "C~1~4~1~1~n=" .. QNS.TrainerEscape("Élodie-Royaume") .. ";sp=7", "WHISPER", "Élodie-Royaume")
+	Check("[TRN] … fiche reçue de « Élodie » : affichée", f.state == "card" and QNS:TrainerStatus("élodie") == "ok"
+		and QNS:TrainerCard("ÉLODIE") ~= nil, f.state)
+	f:Hide()
+	local db = QNS:DB()
+	db.trainerHolders, db.trainerHoldersV = { ["Vieux-Royaume"] = TC.now }, nil
+	Check("[TRN] cache des détenteurs d'avant : clés converties", QNS:TrainerIsHolder("vieux")
+		and QNS:TrainerHolders()["vieux-royaume"] == TC.now)
+
+	-- usurpation : le titre vient de l'expéditeur, pas du champ « n »
+	QNS:TrainerOpen("Fred")
+	QNS:TrainerOnAddonMessage("QCTrainer", "C~1~5~1~1~n=Roi-Royaume;sp=99", "WHISPER", "Fred-Royaume")
+	Check("[TRN] usurpation : le titre dit Fred, pas le nom reçu", f.state == "card" and f.header.title.text == "Fred",
+		f.header.title.text)
+	f:Hide()
+
+	-- sondes et messages entrants
+	TC.Reset()
+	QNS:TrainerOnAddonMessage("QCTrainer", "P~1", "WHISPER", "Gil-Royaume")
+	QNS:TrainerOnAddonMessage("QCTrainer", "P~1", "WHISPER", "Gil-Royaume")
+	QNS:TrainerOnAddonMessage("QCTrainer", "P~1", "WHISPER", "gil-royaume")
+	TC.Flush()
+	Check("[TRN] sondes répétées : un seul accusé", TC.Kinds(TC.Take()) == "A")
+	local accepted = 0
+	for _ = 1, QNS.TRAINER_IN_MAX + 10 do
+		if QNS:TrainerOnAddonMessage("QCTrainer", "A~1", "WHISPER", "Hal-Royaume") then accepted = accepted + 1 end
+	end
+	Check("[TRN] rafale d'un même joueur : plafonnée", accepted == QNS.TRAINER_IN_MAX, accepted)
+	Mock.now = Mock.now + QNS.TRAINER_IN_WINDOW + 1
+	Check("[TRN] … puis de nouveau écouté", QNS:TrainerOnAddonMessage("QCTrainer", "A~1", "WHISPER", "Hal-Royaume"))
+
+	-- morceaux incohérents : rejetés, sans erreur
+	local function Feed(list)
+		local ok = true
+		for _, text in ipairs(list) do
+			if not pcall(QNS.TrainerOnAddonMessage, QNS, "QCTrainer", text, "WHISPER", "Ian-Royaume") then ok = false end
+		end
+		return ok
+	end
+	Check("[TRN] morceau hors du total de la série : sans erreur, pas de fiche",
+		Feed({ "C~1~6~1~2~sp=1", "C~1~6~3~3~;st=2" }) and QNS:TrainerCard("Ian") == nil)
+	Check("[TRN] total qui change en route : rejeté", Feed({ "C~1~7~2~2~;st=2", "C~1~7~1~1~sp=1" })
+		and QNS:TrainerCard("Ian") == nil)
+	Check("[TRN] numéros absurdes : rejetés", Feed({ "C~1~8~0~1~x", "C~1~8~1~99~x", "C~1~8~1.5~2~x", "C~1~8~x~y~z" })
+		and QNS:TrainerCard("Ian") == nil)
+	Check("[TRN] une série propre ensuite : reçue", Feed({ "C~1~9~2~2~;st=40", "C~1~9~1~2~sp=12" })
+		and QNS:TrainerCard("Ian") and QNS:TrainerCard("Ian").species == 12 and QNS:TrainerCard("Ian").total == 40)
+
+	-- effets : libellé refait ici ; ancien format (libellé) coupé sans casser l'UTF-8
+	local card = QNS:TrainerParseCard("n=x;cn=7;hi=capture_named;hv=0.180;ci=pet_mood;cv=9")
+	Check("[TRN] effets reçus : libellés refaits (valeur bornée au plafond)", card.companion.hunt == QNS:F("EFF_capture_named", 18)
+		and card.companion.comfort == QNS:F("EFF_pet_mood", 100), tostring(card.companion.comfort))
+	card = QNS:TrainerParseCard("n=x;cn=7;hi=inconnu;hv=1;ch=" .. QNS.TrainerEscape(string.rep("é", 120)))
+	local hunt = card.companion.hunt
+	Check("[TRN] effet inconnu : libellé reçu, coupé sur un caractère entier", hunt and #hunt <= 160 and #hunt % 2 == 0
+		and hunt:sub(-2) == "é", hunt and #hunt)
+	Check("[TRN] coupe UTF-8 : jamais au milieu d'un caractère", QNS.TrainerUtf8Cut("aé", 2) == "a"
+		and QNS.TrainerUtf8Cut("aé", 3) == "aé" and QNS.TrainerUtf8Cut("abc", 2) == "ab")
+
+	-- guilde : une annonce par session
+	TC.Reset()
+	TC.guild = true
+	QNS:TrainerOnEvent("PLAYER_GUILD_UPDATE")
+	TC.Flush()
+	Mock.now = Mock.now + 600
+	QNS:TrainerOnEvent("PLAYER_GUILD_UPDATE")
+	QNS:TrainerOnEvent("PLAYER_GUILD_UPDATE")
+	TC.Flush()
+	local guildSent = TC.Take()
+	Check("[TRN] guilde : une seule annonce par session", TC.Kinds(guildSent) == "H", TC.Kinds(guildSent))
+	TC.guild = false
+	QNS:TrainerOnEvent("PLAYER_GUILD_UPDATE")
+	TC.guild = true
+	Mock.now = Mock.now + 120
+	QNS:TrainerOnEvent("PLAYER_GUILD_UPDATE")
+	TC.Flush()
+	Check("[TRN] … une nouvelle guilde : une annonce", TC.Kinds(TC.Take()) == "H")
+
+	-- UnitIsFriend secret : lu par ns.Plain, sans erreur
+	_G.UnitIsFriend = function() return SECRET end
+	_G.issecretvalue = function(v) return v == SECRET end
+	TC.units.target = { name = "Jon" }
+	Check("[TRN] UnitIsFriend secret : sans erreur", pcall(QNS.TrainerOnTarget, QNS, "target"))
+	_G.issecretvalue = TC.saved.issecretvalue
 end
 
 TC.Done()
