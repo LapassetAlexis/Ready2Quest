@@ -45,7 +45,16 @@ ns.CAPTURE_NET_SIZE = NET_SIZE
 ns.CAPTURE_NET_GAP = 8            -- px entre le cadre du compagnon et le filet
 ns.CAPTURE_NET_PULSE = 4          -- s de battement doré à l'arrivée d'un candidat
 ns.CAPTURE_TOAST_SECONDS = 5      -- s d'affichage du bandeau « Capture possible »
-local TOAST_W, TOAST_H, TOAST_ICON = 300, 60, 30
+local TOAST_W, TOAST_H, TOAST_ICON = 340, 86, 34
+ns.CAPTURE_MUTE_CHOICES = { 5, 15, 30, 60 }   -- minutes de sourdine proposées par le bandeau
+-- Sons (2.2.0) : des kits du client, par numéro (SoundKitConstants.lua de
+-- l'interface de Blizzard ; les numéros sont les mêmes sur tous les clients) :
+--   ready : UI_PET_BATTLES_TRAP_READY (le piège des mascottes est prêt)
+--   throw : UI_PET_BATTLE_CAMERA_MOVE_IN
+--   ok    : LFG_REWARDS (la petite musique de récompense)
+--   shiny : UI_LEGENDARY_LOOT_TOAST (fanfare)
+--   fail  : UI_GARRISON_MISSION_COMPLETE_ENCOUNTER_FAIL
+ns.CAPTURE_SOUNDS = { ready = 28814, throw = 32047, ok = 17316, shiny = 63971, fail = 43501 }
 local LIST_W, LIST_ROW_H, LIST_ROWS = 300, 24, 6
 
 local RANK_ORDER = { trivial = 0, minus = 0, normal = 1, elite = 2, rare = 3, rareelite = 4, worldboss = 5 }
@@ -68,6 +77,24 @@ local FR = {
 	CAPTURE_TOAST_TITLE    = "Capture possible",
 	CAPTURE_TOAST_MORE     = "et %d de plus",
 	CAPTURE_TOAST_HINT     = "Clic : capturer · clic droit : la liste",
+	CAPTURE_TOAST_NEW      = "Jamais capturée",
+	CAPTURE_TOAST_OWNED    = "Déjà capturée %s",
+	CAPTURE_TOAST_OWNED_SHINY = "brillante %s",
+	CAPTURE_TOAST_BETTER   = "peut faire mieux",
+	CAPTURE_TOAST_CHANCE   = "%d %% de chance",
+	CAPTURE_TOAST_SURE     = "capture assurée",
+	CAPTURE_TOAST_IGNORE   = "Ignorer",
+	CAPTURE_TOAST_IGNORE_TIP = "Retire cette créature du filet (les autres restent).",
+	CAPTURE_TOAST_MUTE     = "Sourdine",
+	CAPTURE_TOAST_MUTE_TIP = "Plus de bandeau ni de son pendant un moment ; le filet reste.",
+	CAPTURE_TOAST_MUTE_MIN = "%d min",
+	CAPTURE_TOAST_MUTE_HOUR = "1 h",
+	CAPTURE_TOAST_MUTE_CANCEL = "Annuler",
+	CAPTURE_Q_MUTED        = "Sourdine : encore %s",
+	CAPTURE_MSG_MUTED      = "Capture en sourdine pendant %s : plus de bandeau ni de son. Le filet reste (/qc filet sourdine off pour réactiver).",
+	CAPTURE_MSG_UNMUTED    = "Fin de la sourdine : bandeau et sons de capture de retour.",
+	OPT_DAILY_CAPTURE_SOUND = "Sons de capture",
+	OPT_DAILY_CAPTURE_SOUND_DESC = "Un carillon quand une capture est possible, une petite musique quand elle réussit (fanfare pour une brillante).",
 	OPT_DAILY_CAPTURE_TOAST = "Bandeau « Capture possible »",
 	OPT_DAILY_CAPTURE_TOAST_DESC = "Un bandeau dès qu'un monstre abattu peut être capturé (après le combat). Clic dessus : le filet.",
 	CAPTURE_STARS_LABEL    = "Qualité : %s",
@@ -95,6 +122,24 @@ local EN = {
 	CAPTURE_TOAST_TITLE    = "Capture possible",
 	CAPTURE_TOAST_MORE     = "and %d more",
 	CAPTURE_TOAST_HINT     = "Click: capture · right-click: the list",
+	CAPTURE_TOAST_NEW      = "Never captured",
+	CAPTURE_TOAST_OWNED    = "Already captured %s",
+	CAPTURE_TOAST_OWNED_SHINY = "shiny %s",
+	CAPTURE_TOAST_BETTER   = "could do better",
+	CAPTURE_TOAST_CHANCE   = "%d%% chance",
+	CAPTURE_TOAST_SURE     = "guaranteed capture",
+	CAPTURE_TOAST_IGNORE   = "Ignore",
+	CAPTURE_TOAST_IGNORE_TIP = "Removes this creature from the net (the others stay).",
+	CAPTURE_TOAST_MUTE     = "Mute",
+	CAPTURE_TOAST_MUTE_TIP = "No banner and no sound for a while; the net stays.",
+	CAPTURE_TOAST_MUTE_MIN = "%d min",
+	CAPTURE_TOAST_MUTE_HOUR = "1 h",
+	CAPTURE_TOAST_MUTE_CANCEL = "Cancel",
+	CAPTURE_Q_MUTED        = "Muted: %s left",
+	CAPTURE_MSG_MUTED      = "Capture muted for %s: no banner and no sound. The net stays (/qc filet sourdine off to turn it back on).",
+	CAPTURE_MSG_UNMUTED    = "Mute over: capture banner and sounds are back.",
+	OPT_DAILY_CAPTURE_SOUND = "Capture sounds",
+	OPT_DAILY_CAPTURE_SOUND_DESC = "A chime when a capture is possible, a little tune when it succeeds (a fanfare for a shiny).",
 	OPT_DAILY_CAPTURE_TOAST = "\"Capture possible\" banner",
 	OPT_DAILY_CAPTURE_TOAST_DESC = "A banner as soon as a defeated monster can be captured (after combat). Click it: the net.",
 	CAPTURE_STARS_LABEL    = "Quality: %s",
@@ -107,17 +152,34 @@ local EN = {
 ns.RegisterStrings(FR, EN)
 if ns.KEEP_STRINGS then ns.CAPTURE_QUEUE_STRINGS = { fr = FR, en = EN } end
 
-ns.RegisterDefaults({ companionCaptureToast = true })
+ns.RegisterDefaults({ companionCaptureToast = true, companionCaptureSound = true })
 if type(ns.DAILY_OPTION_ROWS) == "table" then
-	local present, at = false, 1
+	local present, presentSound, at = false, false, 1
 	for index, row in ipairs(ns.DAILY_OPTION_ROWS) do
 		if row.key == "companionCaptureToast" then present = true end
+		if row.key == "companionCaptureSound" then presentSound = true end
 		if row.key == "companionCapture" or row.key == "companionCaptureAnim" then at = index + 1 end
 	end
 	if not present then
 		table.insert(ns.DAILY_OPTION_ROWS, at, { key = "companionCaptureToast", label = "OPT_DAILY_CAPTURE_TOAST", kind = "bool",
 			describe = function() return L.OPT_DAILY_CAPTURE_TOAST_DESC end })
+		at = at + 1
 	end
+	if not presentSound then
+		table.insert(ns.DAILY_OPTION_ROWS, at, { key = "companionCaptureSound", label = "OPT_DAILY_CAPTURE_SOUND", kind = "bool",
+			describe = function() return L.OPT_DAILY_CAPTURE_SOUND_DESC end })
+	end
+end
+
+-- Joue un son de capture (clé de ns.CAPTURE_SOUNDS), sauf réglage coupé ou
+-- sourdine ; rend true si le client a accepté de le jouer
+function ns:CapturePlaySound(key)
+	local id = ns.CAPTURE_SOUNDS[key]
+	if not id or self:DB().companionCaptureSound == false or self:CaptureMuted() then return false end
+	local play = rawget(_G, "PlaySound")   -- (défini avant les aides du fichier)
+	if type(play) ~= "function" then return false end
+	local ok, willPlay = pcall(play, id)
+	return ok and willPlay ~= false
 end
 
 local function G(name) return rawget(_G, name) end
@@ -400,6 +462,7 @@ do
 			if not picked then return false end
 			self:CaptureQueueRemove(picked)
 			self:CaptureToastHide()
+			self:CapturePlaySound("throw")
 			local pending = {}
 			for key, value in pairs(picked) do pending[key] = value end
 			pending.expires = Clock() + (ns.CAPTURE_WINDOW or 12)
@@ -447,6 +510,7 @@ do
 	local base = ns.CaptureResolve
 	function ns:CaptureResolve(rolling)
 		local target = rolling and rolling.target
+		if target then self:CapturePlaySound(rolling.success and (target.shiny and "shiny" or "ok") or "fail") end
 		if not (target and rolling.success) then
 			local result = base(self, rolling)
 			self:CaptureQueueRefresh()
@@ -573,7 +637,55 @@ local function ShowNetTooltip(button)
 		Theme.TooltipLine(tooltip, ns:F("CAPTURE_Q_AID", ns:CaptureAidLabel(aid)), Theme.MUTED_LIGHT)
 	end
 	Theme.TooltipLine(tooltip, L.CAPTURE_Q_RIGHT, Theme.MUTED_LIGHT)
+	local left = ns:CaptureMuted()
+	if left then Theme.TooltipLine(tooltip, ns:F("CAPTURE_Q_MUTED", ns:CaptureMuteText(left)), Theme.MUTED) end
 	tooltip:Show()
+end
+
+-- ---------------------------------------------------------------------------
+-- Sourdine (2.2.0) : plus de bandeau ni de son de capture pendant N minutes
+-- (temps réel, gardé dans les réglages) ; le filet et la liste restent.
+-- ---------------------------------------------------------------------------
+local function RealTime()
+	local fn = G("time")
+	return type(fn) == "function" and tonumber(fn()) or Clock()
+end
+
+-- secondes de sourdine restantes, ou nil
+function ns:CaptureMuted()
+	local untilAt = tonumber(self:DB().captureMuteUntil)
+	if not untilAt then return nil end
+	local left = untilAt - RealTime()
+	if left <= 0 then self:DB().captureMuteUntil = nil; return nil end
+	return left
+end
+
+-- « 12 min », « 1 h 05 », « 40 s »
+function ns:CaptureMuteText(seconds)
+	seconds = math.max(0, math.floor(tonumber(seconds) or 0))
+	if seconds >= 3600 then
+		local h, m = math.floor(seconds / 3600), math.floor((seconds % 3600) / 60)
+		return m > 0 and string.format("%d h %02d", h, m) or string.format("%d h", h)
+	elseif seconds >= 60 then
+		return self:F("CAPTURE_TOAST_MUTE_MIN", math.ceil(seconds / 60))
+	end
+	return seconds .. " s"
+end
+
+function ns:CaptureMute(minutes)
+	minutes = tonumber(minutes) or 15
+	if minutes <= 0 then return self:CaptureUnmute() end
+	self:DB().captureMuteUntil = RealTime() + minutes * 60
+	self:CaptureToastHide()
+	self:Print(self:F("CAPTURE_MSG_MUTED", self:CaptureMuteText(minutes * 60)))
+	return self:DB().captureMuteUntil
+end
+
+function ns:CaptureUnmute()
+	if not self:DB().captureMuteUntil then return false end
+	self:DB().captureMuteUntil = nil
+	self:Print(L.CAPTURE_MSG_UNMUTED)
+	return true
 end
 
 -- Le filet vit sur l'écran, pas dans le cadre du compagnon (QC 2.0) : à
@@ -755,9 +867,15 @@ function ns:EnsureCaptureToast()
 	frame.text:SetWidth(textW)
 	frame.text:SetJustifyH("LEFT")
 	if frame.text.SetWordWrap then frame.text:SetWordWrap(false) end
+	-- ce qu'on a déjà de cette espèce (étoiles), et la chance
+	frame.info = Theme.Text(frame, Theme.F_SMALL, Theme.MUTED_LIGHT)
+	frame.info:SetPoint("TOPLEFT", frame, "TOPLEFT", textLeft, -42)
+	frame.info:SetWidth(textW)
+	frame.info:SetJustifyH("LEFT")
+	if frame.info.SetWordWrap then frame.info:SetWordWrap(false) end
 	frame.hint = Theme.Text(frame, Theme.F_SMALL, Theme.MUTED)
-	frame.hint:SetPoint("TOPLEFT", frame, "TOPLEFT", textLeft, -43)
-	frame.hint:SetWidth(textW)
+	frame.hint:SetPoint("BOTTOMLEFT", frame, "BOTTOMLEFT", textLeft, 9)
+	frame.hint:SetWidth(textW - 130)
 	frame.hint:SetJustifyH("LEFT")
 	if frame.hint.SetWordWrap then frame.hint:SetWordWrap(false) end
 	-- un bouton invisible par-dessus : clic, clic droit, et le glisser du bandeau
@@ -777,15 +895,98 @@ function ns:EnsureCaptureToast()
 		end)
 		frame.button = button
 	end
+	-- Ignorer et Sourdine, en bas à droite, par-dessus le bouton invisible
+	local above = (frame.button and frame.button.GetFrameLevel and frame.button:GetFrameLevel() or frame:GetFrameLevel() or 1) + 2
+	frame.mute = Theme.CreateButton(frame, "auto", 18, L.CAPTURE_TOAST_MUTE, function() ns:CaptureToastToggleMuteRow() end)
+	frame.mute:SetPoint("BOTTOMRIGHT", frame, "BOTTOMRIGHT", -8, 7)
+	frame.mute:SetFrameLevel(above)
+	frame.ignore = Theme.CreateButton(frame, "auto", 18, L.CAPTURE_TOAST_IGNORE, function() ns:CaptureToastIgnore() end)
+	frame.ignore:SetPoint("RIGHT", frame.mute, "LEFT", -6, 0)
+	frame.ignore:SetFrameLevel(above)
+	frame.mute:Show(); frame.ignore:Show()
+	for _, b in ipairs({ frame.mute, frame.ignore }) do
+		b.tip = b == frame.mute and L.CAPTURE_TOAST_MUTE_TIP or L.CAPTURE_TOAST_IGNORE_TIP
+		b:HookScript("OnEnter", function(self)
+			local tooltip = Tooltip()
+			if not tooltip then return end
+			tooltip:SetOwner(self, "ANCHOR_TOP")
+			Theme.TooltipLine(tooltip, self.tip, Theme.PARCHMENT)
+			tooltip:Show()
+		end)
+		b:HookScript("OnLeave", function() local t = Tooltip(); if t and t.Hide then t:Hide() end end)
+	end
+	-- la rangée des durées de sourdine : remplace la ligne du bas tant qu'on choisit
+	local row = CreateFrame("Frame", nil, frame)
+	row:SetPoint("BOTTOMLEFT", frame, "BOTTOMLEFT", textLeft - 4, 5)
+	row:SetPoint("BOTTOMRIGHT", frame, "BOTTOMRIGHT", -6, 5)
+	row:SetHeight(22)
+	row:SetFrameLevel(above + 1)
+	row.bg = Theme.Solid(row, "BACKGROUND", Theme.NAV or Theme.WINDOW, 1)
+	row.bg:SetAllPoints()
+	row.choices = {}
+	local anchor
+	for index, minutes in ipairs(ns.CAPTURE_MUTE_CHOICES) do
+		local label = minutes >= 60 and L.CAPTURE_TOAST_MUTE_HOUR or ns:F("CAPTURE_TOAST_MUTE_MIN", minutes)
+		local choice = Theme.CreateButton(row, "auto", 18, label, function() ns:CaptureMute(minutes) end, "accent")
+		if anchor then choice:SetPoint("LEFT", anchor, "RIGHT", 4, 0) else choice:SetPoint("LEFT", row, "LEFT", 4, 0) end
+		choice.minutes = minutes
+		row.choices[index] = choice
+		anchor = choice
+	end
+	row.cancel = Theme.CreateButton(row, "auto", 18, L.CAPTURE_TOAST_MUTE_CANCEL, function() ns:CaptureToastToggleMuteRow(false) end)
+	row.cancel:SetPoint("RIGHT", row, "RIGHT", -4, 0)
+	row:Hide()
+	frame.muteRow = row
 	if self.RestorePoint then self:RestorePoint(frame, "captureToastPoint", { point = "TOP", x = 0, y = -240 }) end
 	frame:Hide()
 	self.captureToast = frame
 	return frame
 end
 
+-- Ignorer : le candidat du bandeau sort du filet ; le suivant prend sa place
+function ns:CaptureToastIgnore()
+	local frame = self.captureToast
+	local candidate = frame and frame.candidate
+	if not candidate then return false end
+	self:CaptureQueueRemove(candidate)
+	if #self:CaptureQueuePrune() > 0 then self:CaptureToastShow() else self:CaptureToastHide() end
+	return true
+end
+
+function ns:CaptureToastToggleMuteRow(show)
+	local frame = self.captureToast
+	if not (frame and frame.muteRow) then return false end
+	if show == nil then show = not frame.muteRow:IsShown() end
+	if show then frame.muteRow:Show() else frame.muteRow:Hide() end
+	-- tant qu'on choisit, le bandeau ne s'efface pas tout seul
+	if show then self.captureToastHideAt = Clock() + 60 else self.captureToastHideAt = Clock() + ns.CAPTURE_TOAST_SECONDS end
+	return show
+end
+
+-- La ligne d'infos du bandeau : ce qu'on a déjà de cette espèce, et la chance
+function ns:CaptureToastInfo(candidate)
+	local parts = {}
+	local normal = self.CaptureStars and self:CaptureStars(candidate.npcID, false)
+	local shiny = self.CaptureStars and self:CaptureStars(candidate.npcID, true)
+	if normal or shiny then
+		local owned = normal and self:CaptureStarsText(normal, 10) or ""
+		if shiny then
+			local tag = self:F("CAPTURE_TOAST_OWNED_SHINY", self:CaptureStarsText(shiny, 10))
+			owned = owned ~= "" and (owned .. " · " .. tag) or tag
+		end
+		parts[#parts + 1] = self:F("CAPTURE_TOAST_OWNED", owned)
+		if candidate.reason == "stars" then parts[#parts + 1] = L.CAPTURE_TOAST_BETTER end
+	else
+		parts[#parts + 1] = L.CAPTURE_TOAST_NEW
+	end
+	local chance, sure = self:CaptureChance(candidate, self:CaptureState().aid)
+	parts[#parts + 1] = sure and L.CAPTURE_TOAST_SURE or self:F("CAPTURE_TOAST_CHANCE", math.floor((chance or 0) * 100 + 0.5 + 1e-9))
+	return table.concat(parts, " · "), (normal or shiny) and true or false
+end
+
 -- Montre (ou remet à jour) le bandeau pour le meilleur candidat de la file
 function ns:CaptureToastShow()
-	if not Enabled() or self:DB().companionCaptureToast == false or InCombat() then return nil end
+	if not Enabled() or self:DB().companionCaptureToast == false or InCombat() or self:CaptureMuted() then return nil end
 	local queue = self:CaptureQueuePrune()
 	local best = queue[1]
 	if not best then self:CaptureToastHide(); return nil end
@@ -794,11 +995,16 @@ function ns:CaptureToastShow()
 	local name = best.shiny and self:F("CAPTURE_SHINY_TAG", best.name) or best.name
 	frame.title:SetText(Theme.Upper and Theme.Upper(L.CAPTURE_TOAST_TITLE) or L.CAPTURE_TOAST_TITLE)
 	frame.text:SetText(name)
+	local info, owned = self:CaptureToastInfo(best)
+	frame.info:SetText(info)
+	local ic = owned and Theme.MUTED_LIGHT or Theme.GOLD
+	frame.info:SetTextColor(ic[1], ic[2], ic[3])
 	if #queue > 1 then
 		frame.hint:SetText(self:F("CAPTURE_TOAST_MORE", #queue - 1) .. "  ·  " .. L.CAPTURE_TOAST_HINT)
 	else
 		frame.hint:SetText(L.CAPTURE_TOAST_HINT)
 	end
+	if frame.muteRow then frame.muteRow:Hide() end
 	local accent = best.shiny and (Theme.GOLD_LIGHT or Theme.GOLD) or Theme.GOLD
 	if frame.SetAccent then frame:SetAccent(accent) end
 	if frame.ownGlyph then frame.icon:SetVertexColor(accent[1], accent[2], accent[3], 1) end
@@ -806,6 +1012,10 @@ function ns:CaptureToastShow()
 	if not frame:IsShown() then
 		frame:Show()
 		if Theme.FadeIn then pcall(Theme.FadeIn, frame, 0.2) end
+	end
+	if frame.chimedFor ~= best.serial then
+		frame.chimedFor = best.serial
+		self:CapturePlaySound("ready")
 	end
 	self.captureToastHideAt = Clock() + ns.CAPTURE_TOAST_SECONDS
 	return frame
@@ -1002,7 +1212,17 @@ end
 
 -- /qc filet : capture le meilleur candidat (même compagnon masqué)
 if ns.EXTRA_COMMANDS then
-	ns.EXTRA_COMMANDS["filet"] = function(self)
+	ns.EXTRA_COMMANDS["filet"] = function(self, rest)
+		local sub, arg = tostring(rest or ""):match("^%s*(%S*)%s*(.-)%s*$")
+		sub = (sub or ""):lower()
+		if sub == "sourdine" or sub == "mute" then
+			if arg == "off" or arg == "non" or arg == "0" then
+				if not self:CaptureUnmute() then self:Print(L.CAPTURE_MSG_UNMUTED) end
+			else
+				self:CaptureMute(tonumber(arg) or 15)
+			end
+			return
+		end
 		if not self:CaptureThrow() then self:Print(L.CAPTURE_Q_NOTHING) end
 	end
 	ns.EXTRA_COMMANDS["net"] = ns.EXTRA_COMMANDS["filet"]

@@ -592,7 +592,7 @@ end
 local function StageOk(frame, r, rolling, c)
 	local shiny = frame.shiny
 	local col = shiny and Theme.GOLD_LIGHT or c
-	if not frame.played then frame.played = true; PlayKit("UI_EPICLOOT_TOAST") end
+	if not frame.played then frame.played = true; if not ns.CapturePlaySound then PlayKit("UI_EPICLOOT_TOAST") end end
 	Tint(frame.flash, WHITE, 1)
 	Fade(frame.flash, 1 - r / 0.4)
 	-- les rayons grandissent, tournent, puis s'effacent
@@ -691,7 +691,7 @@ end
 -- Échappé : le filet bascule sur sa version déchirée et tombe, ses cordes
 -- volent, le monstre file sur le côté dans la poussière et s'efface
 local function StageFail(frame, r, c)
-	if not frame.played then frame.played = true; PlayKit("IG_QUEST_LOG_ABANDON_QUEST") end
+	if not frame.played then frame.played = true; if not ns.CapturePlaySound then PlayKit("IG_QUEST_LOG_ABANDON_QUEST") end end
 	if not frame.torn then
 		frame.torn = true
 		Coord(frame.net, COORDS.netTorn)
