@@ -1,5 +1,13 @@
 # QuestCompanion
 
+## 2.2.0
+
+- **Bandeau « Capture possible » plus complet** : il dit si tu as déjà cette espèce et avec combien d'étoiles (version normale et brillante), si le spécimen peut faire mieux, et ta chance du moment. Deux boutons : **Ignorer** (la créature sort du filet, le bandeau passe à la suivante) et **Sourdine** (5, 15, 30 min ou 1 h : plus de bandeau ni de son, le filet reste ; `/qc filet sourdine [min|off]`).
+- **Sons de capture**, pris dans les sons du jeu : un carillon quand une capture est possible (le piège des mascottes), un son au lancer, une petite musique de récompense quand la créature est prise, une fanfare pour une brillante, un son d'échec. Réglage « Sons de capture » (page Au jour le jour) ; la sourdine les coupe aussi.
+- **Cadrage du compagnon** : dans son cadre à l'écran, la créature est maintenant cadrée en **Portrait** (la tête, comme ton portrait) : une bête capturée, de taille réelle, n'apparaît plus toute petite. Réglage « Cadrage » (page Compagnon de route) : Portrait, Buste ou En pied (comme avant).
+
+*English:* the "Capture possible" banner now says whether you already own the species and with how many stars, if the specimen could do better, and your current odds, with Ignore and Mute (5/15/30/60 min) buttons; capture sounds from the game's own sound kits (a chime when a capture is possible, a tune on success, a fanfare for a shiny) with a setting; the companion is now framed as a portrait in its on-screen frame (Framing setting: Portrait, Bust, Full body).
+
 ## 2.1.0 — la capture en scène
 
 - **Capture animée refaite**, avec de vraies textures peintes pour l'addon à la place des rectangles et des icônes du jeu. Le filet roulé en boule part en arc, en tournant, avec une traînée d'étincelles, et s'ouvre à l'apogée ; un filet de cordes torsadées, nœuds et lest tombe sur la créature (son ombre le rejoint à l'impact, un nuage de poussière), puis oscille et se resserre à chaque secousse pendant qu'un halo à la couleur de la rareté pulse de plus en plus vite. Capturé : éclair, gerbe de rayons et d'étincelles, le filet se referme sur elle, elle tourne sur elle-même, un ruban « Capturé ! » surgit, puis les étoiles du spécimen s'allument une à une. Échappé : le filet se déchire et tombe, ses cordes volent, le monstre file dans la poussière. Une brillante : tout en or, deuxième gerbe à contresens, motes dorées, reflet sur le ruban. L'aide utilisée s'affiche près du titre.

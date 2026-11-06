@@ -14,7 +14,7 @@ For **World of Warcraft Forever**. Interface in English and French.
 
 Since 2.0, QuestCompanion is first a **creature-collecting game**: capture what you defeat, complete your menagerie, take the right companion along.
 
-- **The net**: no more pop-up. When a defeated monster is worth capturing (a missing species, a shiny, or a specimen that could beat yours), a big **net button** shows up beside your companion, with a count, and a **"Capture possible" banner** names the creature (click it: the net); it turns gold and sparkles when a shiny is waiting. Whole packs queue up; each one waits **30 s from the end of the fight**. **Click**: captures the best one (shiny, then new species, then rarest, then a star upgrade). **Right-click**: the list (pick one, choose an aid, ignore all). `/qc filet` does the same, and the button stays on screen when the companion is hidden.
+- **The net**: no more pop-up. When a defeated monster is worth capturing (a missing species, a shiny, or a specimen that could beat yours), a big **net button** shows up beside your companion, with a count, and a **"Capture possible" banner** names the creature, says whether you already own it and with how many stars, your odds, with **Ignore** and **Mute** buttons (click the banner: the net); a chime plays, and a little tune when the capture succeeds (**Capture sounds** setting); it turns gold and sparkles when a shiny is waiting. Whole packs queue up; each one waits **30 s from the end of the fight**. **Click**: captures the best one (shiny, then new species, then rarest, then a star upgrade). **Right-click**: the list (pick one, choose an aid, ignore all). `/qc filet` does the same, and the button stays on screen when the companion is hidden.
 - **Stars**: each capture is a 1 to 3-star specimen (3 stars about one time in ten). Recapture to try for better: the best one is kept.
 - **Your companion helps you hunt**: a captured creature you take along gives two effects tied to its **type** — a **hunt** effect and a **comfort** effect:
 
@@ -152,7 +152,7 @@ Light on memory: about 2 MB (zone data is built only when you get there, and onl
 
 `/qc options`, or right-click the whelp minimap button.
 - **General**: enable the addon, the minimap button and its position.
-- **Road companion**: the **Size** slider (Small, Medium, Large, Huge: its frame grows, its bubble stays readable), the **Chattiness** slider (Silent, Discreet, Calm, Normal, Chatty: the line under the slider says what each step does, and it confirms it itself), appearance, frame and background; the **Ornaments** and **Travel journal** sub-pages (banner, chat, on-screen tracking).
+- **Road companion**: the **Size** slider (Small, Medium, Large, Huge: its frame grows, its bubble stays readable), the **Framing** (Portrait, the head like your own portrait; Bust; Full body), the **Chattiness** slider (Silent, Discreet, Calm, Normal, Chatty: the line under the slider says what each step does, and it confirms it itself), appearance, frame and background; the **Ornaments** and **Travel journal** sub-pages (banner, chat, on-screen tracking).
 
 ## Commands
 
@@ -197,7 +197,7 @@ Pour **World of Warcraft Forever**. Interface en français et en anglais.
 
 Depuis la 2.0, QuestCompanion est d'abord un **jeu de collection de créatures** : capture ce que tu abats, complète ta ménagerie, emmène le bon compagnon.
 
-- **Le filet** : plus de fenêtre qui s'ouvre toute seule. Quand un monstre abattu vaut le coup (une espèce qui te manque, une brillante, ou un spécimen qui pourrait battre le tien), un gros **bouton filet** apparaît à côté de ton compagnon, avec un compteur, et un **bandeau « Capture possible »** nomme la créature (clic dessus : le filet) ; il devient doré et scintille si une brillante attend. Un pack entier se met en file ; chacun attend **30 s à partir de la fin du combat**. **Clic** : la capture du meilleur (brillante, puis espèce nouvelle, puis le plus rare, puis une amélioration d'étoiles). **Clic droit** : la liste (en choisir un, choisir une aide, tout ignorer). `/qc filet` fait la même chose, et le bouton reste à l'écran quand le compagnon est masqué.
+- **Le filet** : plus de fenêtre qui s'ouvre toute seule. Quand un monstre abattu vaut le coup (une espèce qui te manque, une brillante, ou un spécimen qui pourrait battre le tien), un gros **bouton filet** apparaît à côté de ton compagnon, avec un compteur, et un **bandeau « Capture possible »** nomme la créature, dit si tu l'as déjà et avec combien d'étoiles, ta chance, avec des boutons **Ignorer** et **Sourdine** (clic sur le bandeau : le filet) ; un carillon sonne, et une petite musique quand la capture réussit (réglage **Sons de capture**) ; il devient doré et scintille si une brillante attend. Un pack entier se met en file ; chacun attend **30 s à partir de la fin du combat**. **Clic** : la capture du meilleur (brillante, puis espèce nouvelle, puis le plus rare, puis une amélioration d'étoiles). **Clic droit** : la liste (en choisir un, choisir une aide, tout ignorer). `/qc filet` fait la même chose, et le bouton reste à l'écran quand le compagnon est masqué.
 - **Les étoiles** : chaque capture est un spécimen de 1 à 3 étoiles (3 étoiles environ une fois sur dix). Recapture pour tenter mieux : le meilleur est gardé.
 - **Ton compagnon t'aide à chasser** : une créature capturée que tu emmènes donne deux effets liés à son **type**, un de **chasse** et un de **confort** :
 
@@ -335,7 +335,7 @@ Léger en mémoire : environ 2 Mo (les données d'une zone ne sont construites q
 
 `/qc options`, ou un clic droit sur le bouton de minicarte au dragonnet.
 - **Général** : activer l'addon, le bouton de minicarte et sa position.
-- **Compagnon de route** : la réglette **Taille** (Petit, Moyen, Grand, Très grand : son cadre grandit, sa bulle reste lisible), la réglette **Bavardage** (Muet, Discret, Calme, Normal, Bavard : la phrase sous la réglette dit ce que fait chaque cran, et il te le confirme lui-même), apparence, cadre et fond ; les sous-pages **Ornements** et **Carnet** (bandeau, chat, suivi à l'écran).
+- **Compagnon de route** : la réglette **Taille** (Petit, Moyen, Grand, Très grand : son cadre grandit, sa bulle reste lisible), le **Cadrage** (Portrait, la tête comme ton portrait ; Buste ; En pied), la réglette **Bavardage** (Muet, Discret, Calme, Normal, Bavard : la phrase sous la réglette dit ce que fait chaque cran, et il te le confirme lui-même), apparence, cadre et fond ; les sous-pages **Ornements** et **Carnet** (bandeau, chat, suivi à l'écran).
 
 ## Commandes
 

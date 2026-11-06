@@ -148,6 +148,11 @@ local FR = {
 	COMP_SIZE_3            = "Grand",
 	COMP_SIZE_4            = "Très grand",
 	COMP_SIZE_DESC         = "La taille de son cadre ; sa bulle reste lisible et le suit.",
+	OPT_COMP_FRAMING       = "Cadrage",
+	COMP_FRAMING_portrait  = "Portrait (la tête)",
+	COMP_FRAMING_buste     = "Buste",
+	COMP_FRAMING_pied      = "En pied",
+	COMP_FRAMING_DESC      = "Comment la créature est cadrée dans son cadre à l'écran. Une créature capturée est de taille réelle : en pied, elle est toute petite.",
 	OPT_COMP_CHATTER       = "Bavardage",
 	COMP_CHATTER_0         = "Muet",
 	COMP_CHATTER_1         = "Discret",
@@ -319,6 +324,11 @@ local EN = {
 	COMP_SIZE_3            = "Large",
 	COMP_SIZE_4            = "Huge",
 	COMP_SIZE_DESC         = "The size of its frame; its bubble stays readable and follows it.",
+	OPT_COMP_FRAMING       = "Framing",
+	COMP_FRAMING_portrait  = "Portrait (the head)",
+	COMP_FRAMING_buste     = "Bust",
+	COMP_FRAMING_pied      = "Full body",
+	COMP_FRAMING_DESC      = "How the creature is framed in its on-screen frame. A captured creature is life-size: full body, it looks tiny.",
 	OPT_COMP_CHATTER       = "Chattiness",
 	COMP_CHATTER_0         = "Silent",
 	COMP_CHATTER_1         = "Discreet",
@@ -481,6 +491,7 @@ ns.RegisterDefaults({
 	companionShow       = true,
 	companionPoint      = { point = "CENTER", x = 330, y = -170 },
 	companionSize       = 2,      -- réglette « Taille » : 1 petit, 2 moyen, 3 grand, 4 très grand
+	companionFraming    = "portrait",   -- cadrage du modèle : portrait (tête), buste, pied (2.2.0)
 	companionOrnRibbon  = true,
 	companionOrnLantern = true,
 	companionOrnMedal   = true,
@@ -508,6 +519,11 @@ ns.AddOptionPage({
 			display = function(value) return L["COMP_SIZE_" .. value] end,
 			describe = function() return L.COMP_SIZE_DESC end,
 			onChange = function() ns:CompanionApplySize() end },
+		{ key = "companionFraming",    label = "OPT_COMP_FRAMING",    kind = "action",
+			choices = function() return ns:CompanionFramingChoices() end,
+			current = function() return ns:CompanionFraming() end,
+			describe = function() return L.COMP_FRAMING_DESC end,
+			choose = function(id) ns:CompanionSetFraming(id) end },
 		{ key = "companionChatter",    label = "OPT_COMP_CHATTER",    kind = "number", min = 0, max = 4, step = 1,
 			display = function(value) return L["COMP_CHATTER_" .. value] end,
 			describe = function(value) return L["COMP_CHATTER_DESC_" .. value] end,
@@ -1617,6 +1633,30 @@ end
 
 -- Modèle : apparence, échelle du stade, animation de l'humeur. Sans
 -- SetDisplayInfo (ou s'il refuse), la boussole prend la place.
+-- Cadrage du modèle dans le cadre à l'écran (2.2.0)
+ns.COMPANION_FRAMINGS = { "portrait", "buste", "pied" }
+ns.COMPANION_FRAMING_ZOOM = { portrait = 1, buste = 0.55, pied = 0 }
+
+function ns:CompanionFraming()
+	local framing = self:DB().companionFraming
+	if ns.COMPANION_FRAMING_ZOOM[framing] then return framing end
+	return "portrait"
+end
+
+function ns:CompanionFramingChoices()
+	local list = {}
+	for _, id in ipairs(ns.COMPANION_FRAMINGS) do list[#list + 1] = { value = id, label = L["COMP_FRAMING_" .. id] } end
+	return list
+end
+
+function ns:CompanionSetFraming(id)
+	if not ns.COMPANION_FRAMING_ZOOM[id] then return nil end
+	self:DB().companionFraming = id
+	self:CompanionApplyModel()
+	if self.RefreshOptions then pcall(self.RefreshOptions, self) end
+	return id
+end
+
 function ns:CompanionApplyModel()
 	local frame = self.companionFrame
 	if not frame then return end
@@ -1636,9 +1676,18 @@ function ns:CompanionApplyModel()
 	if shown then
 		-- créature capturée : un modèle de taille réelle (un ours, un géant…),
 		-- cadré de plus loin et sans l'échelle du stade, faite pour les mascottes
+		-- cadrage (réglage, 2.2.0) : en pied comme avant, ou la caméra
+		-- « portrait » du client (buste, tête) — la créature remplit son cadre,
+		-- qu'elle soit une mascotte ou une bête de taille réelle
+		local zoom = ns.COMPANION_FRAMING_ZOOM[self:CompanionFraming()] or 0
 		Method(model, "SetModelScale", app.captured and 1 or stageDef.scale)
+		if zoom > 0 then
+			Method(model, "SetCamDistanceScale", 1)
+		else
+			Method(model, "SetCamDistanceScale", app.captured and (ns.CAPTURE_CAM_DISTANCE or 2.4) or 1.6)
+		end
+		Method(model, "SetPortraitZoom", zoom)
 		ns.ModelShinyLight(model, app.shiny)
-		Method(model, "SetCamDistanceScale", app.captured and (ns.CAPTURE_CAM_DISTANCE or 2.4) or 1.6)
 		model:Show()
 		frame.fallback:Hide()
 	else
