@@ -458,6 +458,9 @@ end
 --   ns.RegisterZonePart({ id = "bestiary", label = "JRN_PART_bestiary",
 --     Compute = function(self, zoneID) return { have =, need =, hint = { … } } end })
 -- Compute renvoie nil quand la part ne s'applique pas (pas de métier, rien vu).
+-- exploration = false : la part garde sa liste (onglets du carnet) mais ne
+-- compte pas dans le pourcentage de la zone (QC 2.0 : le bestiaire vit dans la
+-- Ménagerie, MenagerieCollection.lua).
 ns.ZONE_PARTS = ns.ZONE_PARTS or {}
 function ns.RegisterZonePart(def)
 	if type(def) == "table" and def.id and type(def.Compute) == "function" then
@@ -490,7 +493,8 @@ function ns:ZoneCompletion(zoneID)
 	if not zoneID then return nil end
 	local parts, sum = {}, 0
 	for _, def in ipairs(ns.ZONE_PARTS) do
-		local ok, part = pcall(def.Compute, self, zoneID)
+		local ok, part = true, nil
+		if def.exploration ~= false then ok, part = pcall(def.Compute, self, zoneID) end
 		if ok and type(part) == "table" and tonumber(part.need) and part.need > 0 then
 			local have = math.min(math.max(tonumber(part.have) or 0, 0), part.need)
 			parts[#parts + 1] = { id = def.id, label = L[def.label] or def.label or def.id,

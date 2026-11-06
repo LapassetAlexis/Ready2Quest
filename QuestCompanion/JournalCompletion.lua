@@ -8,7 +8,7 @@
 --     paliers et ce qu'ils donnent, coffre à ouvrir, suivi à l'écran), trois
 --     cartes de part (Lieux, Métiers, Quêtes) qui choisissent la liste
 --     du dessous, la liste de la part (à faire d'abord), et une ligne du
---     bestiaire qui renvoie à la Ménagerie.
+--     sceau de la zone (QC 2.0, sinon le bestiaire) qui renvoie à la Ménagerie.
 -- Page externe du carnet : ns.JOURNAL_PANES.progress (JournalWindow.lua).
 local ADDON, ns = ...
 if ns.blocked then return end
@@ -450,8 +450,15 @@ local function RefreshCard(self, frame, pane, zoneID, here, done)
 		pane.bar:Hide()
 		pane.nopct:Show()
 	end
+	-- un palier déjà gagné reste acquis, même si le % a baissé depuis
+	-- (QC 2.0 : le bestiaire est sorti du pourcentage) : friandise réclamée
+	-- (Treats.lua), coffre posé (CompanionChest.lua)
+	local milestones = self.TreatData and self:TreatData().milestones
+	local claimed = type(milestones) == "table" and tonumber(milestones[zoneID]) or 0
+	local earnedChest = self.ChestData and self:ChestData()[zoneID] ~= nil
 	for _, tile in ipairs(pane.marks) do
-		local reached = counted and done.percent >= tile.mark
+		local reached = counted and (done.percent >= tile.mark
+			or (tile.mark < 100 and claimed >= tile.mark) or (tile.mark >= 100 and earnedChest))
 		tile.reached = reached
 		tile.gift:SetText(self:JournalMilestoneGift(zoneID, tile.mark))
 		Paint(tile.label, reached and Theme.GOLD or Theme.MUTED)
@@ -535,8 +542,14 @@ local function RefreshItems(self, frame, pane, zoneID, part, quests, seen)
 end
 
 local function RefreshBestiary(self, frame, pane, zoneID)
-	local counts = self.BestiaryCounts and self:BestiaryCounts(zoneID)
-	if not counts or counts.seen == 0 then
+	-- QC 2.0 : le sceau de la zone (MenagerieCollection.lua), sinon le bestiaire
+	local seal, sealed
+	if self.MenagerieSealLine then seal, sealed = self:MenagerieSealLine(zoneID) end
+	local counts = not seal and self.BestiaryCounts and self:BestiaryCounts(zoneID)
+	Paint(pane.bestiary, sealed and Theme.GOLD or Theme.MUTED_LIGHT)
+	if seal then
+		pane.bestiary:SetText(seal)
+	elseif not counts or counts.seen == 0 then
 		pane.bestiary:SetText(L.JRN_PROG_BESTIARY_NONE)
 	elseif counts.namedSeen > 0 then
 		pane.bestiary:SetText(self:F("JRN_PROG_BESTIARY_NAMED", counts.killed, counts.seen, counts.namedKilled, counts.namedSeen))

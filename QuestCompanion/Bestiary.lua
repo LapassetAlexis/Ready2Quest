@@ -512,10 +512,12 @@ end
 -- ---------------------------------------------------------------------------
 -- Complétion de zone et objectifs
 -- ---------------------------------------------------------------------------
+-- QC 2.0 : hors du pourcentage d'exploration (exploration = false) ; la
+-- collection de la zone, c'est le sceau de la Ménagerie (MenagerieCollection.lua)
 if ns.RegisterZonePart then
-	ns.RegisterZonePart({ id = "bestiary", label = "JRN_PART_bestiary",
+	ns.RegisterZonePart({ id = "bestiary", label = "JRN_PART_bestiary", exploration = false,
 		Compute = function(self, zoneID) return self:BestiaryPart(zoneID, false) end })
-	ns.RegisterZonePart({ id = "named", label = "JRN_PART_named",
+	ns.RegisterZonePart({ id = "named", label = "JRN_PART_named", exploration = false,
 		Compute = function(self, zoneID) return self:BestiaryPart(zoneID, true) end })
 end
 

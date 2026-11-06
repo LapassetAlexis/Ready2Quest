@@ -1066,7 +1066,9 @@ local function BuildMenagerie(self, frame, content)
 	pane.items = {}
 	local gridTop = rowY - Theme.CHIP_HEIGHT - 12
 	local rowH = MEN_ROW_H
-	local count = math.floor((gridTop - PAGER_Y - 12) / rowH)
+	-- QC 2.0 : bandeau de la collection sous la liste (MenagerieCollection.lua)
+	local collH = self.MenagerieCollectionBuild and (tonumber(ns.MENAGERIE_COLLECTION_H) or 0) or 0
+	local count = math.floor((gridTop - PAGER_Y - 12 - (collH > 0 and collH + 8 or 0)) / rowH)
 	for index = 1, count do
 		local row = Theme.CreateListRow(pane, GRID_W, rowH - 2, { kind = "Button", detail = true, detailFont = Theme.F_SMALL })
 		At(row, content, 0, gridTop - (index - 1) * rowH)
@@ -1106,6 +1108,9 @@ local function BuildMenagerie(self, frame, content)
 		end)
 		row:Hide()
 		pane.items[index] = row
+	end
+	if collH > 0 then
+		self:MenagerieCollectionBuild(pane, content, { x = 0, y = gridTop - count * rowH - 6, w = GRID_W, h = collH })
 	end
 	Pager(pane, content)
 	pane.hint:SetText(L.JRN_MEN_HINT)
@@ -1874,6 +1879,10 @@ local function RefreshMenagerie(self, frame)
 		end
 	end
 	pane.pager:Update(frame.menOffset, page, #list, maxOffset)
+	if pane.collection and self.MenagerieCollectionRefresh then
+		local ok, err = pcall(self.MenagerieCollectionRefresh, self, pane, self:MenagerieZoneValue(frame.menZone or "here"))
+		if not ok and self.RecordError then self:RecordError("menagerie:collection", err) end
+	end
 	local still = false
 	for _, entry in ipairs(list) do if shown and entry.npc == shown.npc then still = true end end
 	if list[1] and not still then self:JournalPreviewMenagerie(list[1])
