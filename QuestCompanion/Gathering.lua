@@ -45,6 +45,8 @@ local FR = {
 	GATHER_PROFS_NONE       = "Aucun métier repéré (fenêtre de compétences).",
 	GATHER_PROF_RANK        = "%s %d",
 	GATHER_ONLY_GATHER      = "Seuls l'herboristerie, le minage et le dépeçage se suivent zone par zone.",
+	GATHER_REPORT_API       = "Métiers — API : %s (lecture : %s) %s",
+	GATHER_REPORT_PARTIAL   = "· catégorie repliée dans la fenêtre de compétences",
 }
 local EN = {
 	GATHER_PROF_herbalism   = "Herbalism",
@@ -65,6 +67,8 @@ local EN = {
 	GATHER_PROFS_NONE       = "No profession found (skills window).",
 	GATHER_PROF_RANK        = "%s %d",
 	GATHER_ONLY_GATHER      = "Only herbalism, mining and skinning are tracked zone by zone.",
+	GATHER_REPORT_API       = "Professions — API: %s (read: %s) %s",
+	GATHER_REPORT_PARTIAL   = "· collapsed category in the skills window",
 }
 ns.RegisterStrings(FR, EN)
 ns.GATHERING_STRINGS = { fr = FR, en = EN }
@@ -118,87 +122,128 @@ function ns:GatheringData()
 end
 
 -- ---------------------------------------------------------------------------
--- Métiers : { herbalism = rang, mining = rang, skinning = rang } (connus seuls)
+-- Lecture des métiers (1.5.2) : deux API selon le client
 -- ---------------------------------------------------------------------------
--- La fenêtre de compétences ne liste pas les lignes d'une catégorie repliée :
--- le dernier rang lu est gardé (par personnage) et sert dans ce seul cas.
-local BY_NAME
-local function ProfessionByName()
-	if BY_NAME then return BY_NAME end
-	BY_NAME = {}
-	for prof, def in pairs(Professions()) do
-		for _, name in ipairs(def.names or {}) do BY_NAME[Lower(name)] = prof end
+-- * GetProfessions / GetProfessionInfo (moteur récent, dont WoW Forever) :
+--   jusqu'à cinq métiers (deux principaux, archéologie, pêche, cuisine ; le
+--   secourisme là où il existe), avec leur ligne de compétence ;
+-- * GetNumSkillLines / GetSkillLineInfo (fenêtre de compétences historique) :
+--   une catégorie repliée ne liste pas ses lignes.
+-- Les deux sont lues quand elles existent (l'une peut manquer un métier).
+-- Rend { { key, name, rank, order } } (métiers connus seuls), ok (une API au
+-- moins a répondu) et partial (catégorie repliée : liste peut-être incomplète).
+local BY_NAME, BY_SKILL
+local function Tables()
+	if BY_NAME then return BY_NAME, BY_SKILL end
+	BY_NAME, BY_SKILL = {}, {}
+	for order, def in ipairs(ns.PROFESSION_LIST or {}) do
+		local entry = { key = def.key, order = order }
+		for _, name in ipairs(def.names or {}) do BY_NAME[Lower(name)] = entry end
+		if def.skill then BY_SKILL[def.skill] = entry end
 	end
-	return BY_NAME
+	return BY_NAME, BY_SKILL
 end
 
-function ns:GatheringProfessions()
-	local found = {}
-	local count, info = rawget(_G, "GetNumSkillLines"), rawget(_G, "GetSkillLineInfo")
-	if type(count) ~= "function" or type(info) ~= "function" then return found end
-	local ok, total = pcall(count)
-	if not ok or type(total) ~= "number" then return found end
-	local byName, collapsed = ProfessionByName(), false
-	for index = 1, total do
-		local okLine, name, isHeader, isExpanded, rank = pcall(info, index)
-		if okLine and type(name) == "string" then
-			if isHeader == true or isHeader == 1 then
-				if isExpanded == false or isExpanded == 0 then collapsed = true end
-			else
-				local prof = byName[Lower(name)]
-				if prof then found[prof] = tonumber(rank) or 0 end
-			end
-		end
-	end
-	local journal = self:JournalData()
-	if collapsed and type(journal.gatheringSkills) == "table" then
-		for prof, rank in pairs(journal.gatheringSkills) do
-			if found[prof] == nil and Professions()[prof] then found[prof] = tonumber(rank) or 0 end
-		end
-	end
-	journal.gatheringSkills = {}
-	for prof, rank in pairs(found) do journal.gatheringSkills[prof] = rank end
-	return found
+local function Plain(value)
+	if ns.Plain then return ns.Plain(value) end
+	return value
 end
 
--- Tous tes métiers (récolte, artisanat, secondaires), dans l'ordre de
--- ns.PROFESSION_LIST : { { key, name, rank } }. name : celui de la fenêtre de
--- compétences. Catégorie repliée : la dernière liste lue est gardée.
-local LIST_BY_NAME
-function ns:PlayerProfessions()
-	if not LIST_BY_NAME then
-		LIST_BY_NAME = {}
-		for order, def in ipairs(ns.PROFESSION_LIST or {}) do
-			for _, name in ipairs(def.names or {}) do LIST_BY_NAME[Lower(name)] = { key = def.key, order = order } end
-		end
+function ns:ReadProfessions()
+	local byName, bySkill = Tables()
+	local found, seen, ok, partial = {}, {}, false, false
+	local function Add(def, name, rank)
+		if not def or seen[def.key] then return end
+		seen[def.key] = true
+		found[#found + 1] = { key = def.key, name = name, rank = tonumber(rank) or 0, order = def.order }
 	end
-	local found, collapsed = {}, false
-	local count, info = rawget(_G, "GetNumSkillLines"), rawget(_G, "GetSkillLineInfo")
-	local ok, total = false, nil
-	if type(count) == "function" and type(info) == "function" then ok, total = pcall(count) end
-	if ok and type(total) == "number" then
-		for index = 1, total do
-			local okLine, name, isHeader, isExpanded, rank = pcall(info, index)
-			if okLine and type(name) == "string" then
-				if isHeader == true or isHeader == 1 then
-					if isExpanded == false or isExpanded == 0 then collapsed = true end
-				else
-					local def = LIST_BY_NAME[Lower(name)]
-					if def then found[#found + 1] = { key = def.key, name = name, rank = tonumber(rank) or 0, order = def.order } end
+	-- moteur récent
+	local list, info = rawget(_G, "GetProfessions"), rawget(_G, "GetProfessionInfo")
+	if type(list) == "function" and type(info) == "function" then
+		local packed = { pcall(list) }
+		if packed[1] then
+			ok = true
+			for index = 2, 7 do
+				local slot = Plain(packed[index])
+				if type(slot) == "number" then
+					local okInfo, name, _, rank, _, _, _, skillLine = pcall(info, slot)
+					name, rank, skillLine = Plain(name), Plain(rank), Plain(skillLine)
+					if okInfo and type(name) == "string" then
+						Add(bySkill[tonumber(skillLine) or -1] or byName[Lower(name)], name, rank)
+					else
+						partial = true   -- un métier illisible : ne pas oublier les autres
+					end
 				end
 			end
 		end
 	end
-	local journal = self:JournalData()
-	if (collapsed or not ok) and #found == 0 and type(journal.professions) == "table" then
-		for _, entry in ipairs(journal.professions) do
-			if type(entry) == "table" and entry.key then found[#found + 1] = entry end
+	-- fenêtre de compétences historique
+	local count, line = rawget(_G, "GetNumSkillLines"), rawget(_G, "GetSkillLineInfo")
+	if type(count) == "function" and type(line) == "function" then
+		local okCount, total = pcall(count)
+		if okCount and type(total) == "number" then
+			ok = true
+			for index = 1, total do
+				local okLine, name, isHeader, isExpanded, rank = pcall(line, index)
+				if okLine and type(name) == "string" then
+					if isHeader == true or isHeader == 1 then
+						if not (isExpanded == true or isExpanded == 1) then partial = true end
+					else
+						Add(byName[Lower(name)], name, rank)
+					end
+				end
+			end
 		end
-	elseif ok then
-		journal.professions = found
 	end
-	table.sort(found, function(a, b) return (a.order or 99) < (b.order or 99) end)
+	table.sort(found, function(a, b) return a.order < b.order end)
+	return found, ok, partial
+end
+
+-- Tous tes métiers, dans l'ordre de ns.PROFESSION_LIST : { { key, name, rank } }.
+-- Lecture vide ou incomplète (API absente, catégorie repliée) : la
+-- dernière liste complète lue sert (par personnage).
+function ns:PlayerProfessions()
+	local found, ok, partial = self:ReadProfessions()
+	local journal = self:JournalData()
+	local cached = type(journal.professions) == "table" and journal.professions or nil
+	if ok and not partial then
+		journal.professions = found
+	elseif cached then
+		local have = {}
+		for _, entry in ipairs(found) do have[entry.key] = true end
+		for _, entry in ipairs(cached) do
+			if type(entry) == "table" and entry.key and not have[entry.key] then found[#found + 1] = entry end
+		end
+		table.sort(found, function(a, b) return (a.order or 99) < (b.order or 99) end)
+	end
 	return found
+end
+
+-- Métiers de récolte : { herbalism = rang, mining = rang, skinning = rang } (connus seuls)
+function ns:GatheringProfessions()
+	local out = {}
+	for _, entry in ipairs(self:PlayerProfessions()) do
+		if Professions()[entry.key] then out[entry.key] = tonumber(entry.rank) or 0 end
+	end
+	return out
+end
+
+-- /qc metiers : ce que le client dit de tes métiers (pour un rapport de bogue)
+function ns:ProfessionsReport()
+	local found, ok, partial = self:ReadProfessions()
+	local api = {}
+	if type(rawget(_G, "GetProfessions")) == "function" then api[#api + 1] = "GetProfessions" end
+	if type(rawget(_G, "GetNumSkillLines")) == "function" then api[#api + 1] = "GetSkillLineInfo" end
+	self:Print(self:F("GATHER_REPORT_API", #api > 0 and table.concat(api, ", ") or "-",
+		ok and "ok" or "-", partial and L.GATHER_REPORT_PARTIAL or ""))
+	local text = self:PlayerProfessionsText()
+	self:Print(text and self:F("GATHER_PROFS", text) or L.GATHER_PROFS_NONE)
+	return found
+end
+if ns.EXTRA_COMMANDS then
+	ns.EXTRA_COMMANDS["metiers"] = function(self) self:ProfessionsReport() end
+	ns.EXTRA_COMMANDS["métiers"] = ns.EXTRA_COMMANDS["metiers"]
+	ns.EXTRA_COMMANDS["professions"] = ns.EXTRA_COMMANDS["metiers"]
 end
 
 -- « Minage 215 · Forge 180 · Cuisine 75 », nil sans métier

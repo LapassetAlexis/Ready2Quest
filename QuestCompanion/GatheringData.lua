@@ -102,20 +102,21 @@ ns.GATHERING_PROFESSION_ORDER = { "herbalism", "mining", "skinning" }
 
 -- Tous les métiers (1.5.1) : la carte Métiers les nomme, même ceux qui ne se
 -- suivent pas par zone (artisanat, cuisine, pêche, secourisme). Ordre
--- d'affichage : récolte, artisanat, secondaires.
+-- d'affichage : récolte, artisanat, secondaires. skill = identifiant de
+-- ligne de compétence (GetProfessionInfo le rend : reconnu sans le nom).
 ns.PROFESSION_LIST = {
-	{ key = "herbalism",      names = { "herbalism", "herboristerie" } },
-	{ key = "mining",         names = { "mining", "minage" } },
-	{ key = "skinning",       names = { "skinning", "dépeçage", "depecage" } },
-	{ key = "alchemy",        names = { "alchemy", "alchimie" } },
-	{ key = "blacksmithing",  names = { "blacksmithing", "forge" } },
-	{ key = "enchanting",     names = { "enchanting", "enchantement" } },
-	{ key = "engineering",    names = { "engineering", "ingénierie", "ingenierie" } },
-	{ key = "leatherworking", names = { "leatherworking", "travail du cuir" } },
-	{ key = "tailoring",      names = { "tailoring", "couture" } },
-	{ key = "cooking",        names = { "cooking", "cuisine" } },
-	{ key = "fishing",        names = { "fishing", "pêche", "peche" } },
-	{ key = "firstaid",       names = { "first aid", "secourisme", "premiers soins" } },
+	{ key = "herbalism",      skill = 182, names = { "herbalism", "herboristerie" } },
+	{ key = "mining",         skill = 186, names = { "mining", "minage" } },
+	{ key = "skinning",       skill = 393, names = { "skinning", "dépeçage", "depecage" } },
+	{ key = "alchemy",        skill = 171, names = { "alchemy", "alchimie" } },
+	{ key = "blacksmithing",  skill = 164, names = { "blacksmithing", "forge" } },
+	{ key = "enchanting",     skill = 333, names = { "enchanting", "enchantement" } },
+	{ key = "engineering",    skill = 202, names = { "engineering", "ingénierie", "ingenierie" } },
+	{ key = "leatherworking", skill = 165, names = { "leatherworking", "travail du cuir" } },
+	{ key = "tailoring",      skill = 197, names = { "tailoring", "couture" } },
+	{ key = "cooking",        skill = 185, names = { "cooking", "cuisine" } },
+	{ key = "fishing",        skill = 356, names = { "fishing", "pêche", "peche" } },
+	{ key = "firstaid",       skill = 129, names = { "first aid", "secourisme", "premiers soins" } },
 }
 
 if ns.Mark then ns.Mark("GatheringData") end

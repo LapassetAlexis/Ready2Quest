@@ -74,7 +74,7 @@ You can rename it with `/qc compagnon nom Nugget`.
 - **Menagerie**: every capturable creature, as one numbered list to filter (zone, captured / to capture / to defeat, rarity, name search, sorting), with a 3D card.
 - **Missions**: companion, daily and weekly missions with their rewards, the capture pack, the pantry and the inn card.
 - **Exploration** (called Completion until 1.5.0): every zone and its progress; for the chosen zone, its milestones and what they give, places, professions (the gathering of the zone, grey resources included, and every profession you know) and quests, and the zone chest.
-- **Souvenirs**: the album of the road, each memory with a photo recreated by your companion (in-game screenshots stay in the Screenshots folder: addons can't read them).
+- **Souvenirs**: the album of the road, each memory with a photo recreated by your companion on a painted backdrop (meadow, dawn, dusk, cave, city, treasure, storm, above the clouds), each with its own shot (close-up, far away, from behind, mid-air…) and gesture (in-game screenshots stay in the Screenshots folder: addons can't read them).
 
 Your travel collection: a **stamp** for every first time.
 
@@ -143,6 +143,7 @@ The journal sets **goals**: the creature's next stage, the next appearance or or
 | `/qc compagnon` | your companion's mood (`nom <name>` to rename it, `tuto` to replay the tutorial, `anim` to see its animations) |
 | `/qc coffre` | opens a pending zone chest |
 | `/qc capture` | your menagerie and capture aids |
+| `/qc metiers` | the professions the game gives the addon (to report a bug) |
 | `/qc module compagnon off` | turns off the companion and its journal |
 | `/qc minimap [on\|off]` | the minimap button |
 | `/qc reset` | resets the settings, without touching your creature or your journal |
@@ -232,7 +233,7 @@ Tu peux la renommer avec `/qc compagnon nom Pépite`.
 - **Ménagerie** : toutes les créatures capturables, en une liste numérotée à filtrer (zone, capturées / à capturer / à abattre, rareté, recherche par nom, tris), avec une fiche en 3D.
 - **Missions** : missions du compagnon, du jour et de la semaine avec leurs récompenses, la besace de capture, le garde-manger et la carte des auberges.
 - **Exploration** (« Complétion » jusqu'à la 1.5.0) : toutes les zones et leur progression ; pour la zone choisie, ses paliers et ce qu'ils rapportent, les lieux, les métiers (la récolte de la zone, ressources grises comprises, et tous les métiers que tu connais) et les quêtes, et le coffre de zone.
-- **Souvenirs** : l'album de la route, chaque souvenir avec sa photo recréée par ton compagnon (les captures d'écran du jeu restent dans le dossier Screenshots : un addon ne peut pas les lire).
+- **Souvenirs** : l'album de la route, chaque souvenir avec sa photo recréée par ton compagnon sur un décor peint (prairie, aube, crépuscule, grotte, ville, trésor, orage, au-dessus des nuages), chacune avec son cadrage (gros plan, au loin, de dos, en l'air…) et son geste (les captures d'écran du jeu restent dans le dossier Screenshots : un addon ne peut pas les lire).
 
 Ta collection de voyage : un **tampon** pour chaque première fois.
 
@@ -301,6 +302,7 @@ Le carnet fixe des **objectifs** : prochaine étape de la créature, prochaine a
 | `/qc compagnon` | l'humeur de ton compagnon (`nom <nom>` pour le renommer, `tuto` pour revoir le tutoriel, `anim` pour voir ses animations) |
 | `/qc coffre` | ouvre un coffre de zone en attente |
 | `/qc capture` | ta ménagerie et tes aides de capture |
+| `/qc metiers` | les métiers que le jeu donne à l'addon (pour signaler un bogue) |
 | `/qc module compagnon off` | coupe le compagnon et son carnet |
 | `/qc minimap [on\|off]` | le bouton de minicarte |
 | `/qc reset` | remet les réglages à zéro, sans toucher à ta créature ni à ton carnet |
