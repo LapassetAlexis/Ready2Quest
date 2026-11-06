@@ -54,6 +54,7 @@ Shiny.lua
 Capture.lua
 CaptureStage.lua
 Daily.lua
+Weekly.lua
 Notify.lua
 LiveRares.lua
 Tooltips.lua

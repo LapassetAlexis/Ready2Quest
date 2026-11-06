@@ -25,9 +25,11 @@ ns.INN_APPEARANCE, ns.INN_APPEARANCE_CARDS = "chicken", 3
 ns.MISSION_APPEARANCE, ns.MISSION_APPEARANCE_DAYS = "squirrel_mech", 10
 
 -- Missions de zone : cible, faisable ?, mesure de départ
-local ZONE_MISSIONS = { "species", "named", "gather", "quests", "village", "percent" }
+-- « captures » (1.4.0) : capturer des créatures, où que ce soit (Capture.lua)
+local ZONE_MISSIONS = { "species", "named", "gather", "quests", "village", "percent", "captures" }
+local ANYWHERE = { kills = true, talks = true, captures = true }
 ns.DAILY_ZONE_MISSIONS = ZONE_MISSIONS
-local NEED = { species = 3, named = 1, gather = 5, quests = 2, village = 1, percent = 3, kills = 10, talks = 3 }
+local NEED = { species = 3, named = 1, gather = 5, quests = 2, village = 1, percent = 3, kills = 10, talks = 3, captures = 2 }
 -- Missions de caractère : sorte et cible
 local TRAIT_MISSIONS = {
 	curious = { kind = "places", need = 2 },  glutton = { kind = "meals", need = 3 },
@@ -40,6 +42,17 @@ local TRAIT_MISSIONS = {
 }
 ns.DAILY_TRAIT_MISSIONS = TRAIT_MISSIONS
 local GENERIC = { kind = "pets", need = 3 }
+
+-- Récompenses (1.4.0) : de quoi nourrir la créature ET de quoi capturer.
+-- treat : "need" = la friandise de l'envie la plus basse, "draw" = au hasard,
+-- ou une sorte ; aid : une aide de capture (Capture.lua), "draw" = tirage.
+ns.MISSION_REWARDS = {
+	zone      = { treat = "need",   aid = "appat" },
+	trait     = { treat = "need",   aid = "appat" },
+	allDaily  = { treat = "festin", aid = "lasso" },
+	weekly    = { treat = "draw",   aid = "lasso" },
+	allWeekly = { treat = "festin", aid = "sifflet" },
+}
 
 local FR = {
 	MIS_species      = "Abats %d espèces jamais vaincues (%s)",
@@ -59,17 +72,21 @@ local FR = {
 	MIS_nightKills   = "Abats %d ennemis de nuit",
 	MIS_calm         = "Joue %d minutes sans tomber",
 	MIS_gold         = "Gagne %d pièce d'or",
+	MIS_captures     = "Capture %d créatures",
+	MIS_REWARD       = "Gain : %s",
+	MIS_REWARD_TREAT = "friandise",
+	MIS_REWARD_AID   = "aide de capture",
 	MIS_SOURCE_zone  = "mission de %s",
 	MIS_SOURCE_trait = "mission de %s",
 	MIS_SOURCE_none  = "sa mission du jour",
 	MIS_DONE         = "faite",
 	MIS_REROLL       = "Changer",
 	MIS_REROLL_TIP   = "Une mission de zone peut être changée une fois par jour.",
-	MIS_ALL_BONUS    = "Les 3 missions faites : un Festin en plus. Rien n'est perdu si tu ne les fais pas.",
+	MIS_ALL_BONUS    = "Les 3 missions du jour faites : un Festin et un Lasso tressé en plus. Rien n'est perdu si tu ne les fais pas.",
 	MIS_RENEW        = "Nouvelles missions demain.",
 	MIS_NONE         = "Entre dans une zone : la créature te proposera ses missions du jour.",
 	MIS_OFF          = "Missions du jour coupées (réglages, page Au jour le jour).",
-	MIS_GOAL_HINT    = "Mission du jour : clic pour l'onglet Jour du carnet.",
+	MIS_GOAL_HINT    = "Mission du jour : clic pour l'onglet Missions du carnet.",
 	INN_TITLE        = "Carte de fidélité des auberges",
 	INN_HINT         = "Un tampon par jour chez n'importe quel aubergiste (+%d d'énergie). Au %de : un Festin. Pas besoin de jours d'affilée.",
 	INN_TOTAL        = "Tampons : %d en tout · cartes pleines : %d",
@@ -77,10 +94,15 @@ local FR = {
 	MIS_PERFECT      = "Jours aux trois missions : %d · à %d : %s.",
 	DAILY_MSG_UNLOCK = "Nouvelle apparence : %s !",
 	DAY_MISSIONS     = "Missions du jour",
+	DAY_GROUP_trait  = "Du compagnon",
+	DAY_GROUP_zone   = "Du jour",
+	DAY_GROUP_week   = "De la semaine",
+	DAY_AIDS         = "Besace de capture",
+	DAY_AIDS_HINT    = "À choisir dans la fenêtre de capture, après un monstre abattu.",
 	DAY_PANTRY       = "Garde-manger",
 	DAY_PANTRY_HINT  = "Maj + clic sur la créature",
 	DAY_GIVE         = "Donner",
-	JRN_SEC_day      = "Jour",
+	JRN_SEC_day      = "Missions",
 	OPT_DAILY_MISSIONS = "Missions du jour",
 	OPT_DAILY_MISSIONS_DESC = "Deux missions de zone et une de son caractère chaque jour, dans le carnet (onglet Jour) et le bloc à l'écran.",
 }
@@ -102,17 +124,21 @@ local EN = {
 	MIS_nightKills   = "Defeat %d enemies at night",
 	MIS_calm         = "Play %d minutes without dying",
 	MIS_gold         = "Earn %d gold coin",
+	MIS_captures     = "Capture %d creatures",
+	MIS_REWARD       = "Gain: %s",
+	MIS_REWARD_TREAT = "treat",
+	MIS_REWARD_AID   = "capture aid",
 	MIS_SOURCE_zone  = "%s mission",
 	MIS_SOURCE_trait = "%s mission",
 	MIS_SOURCE_none  = "its mission of the day",
 	MIS_DONE         = "done",
 	MIS_REROLL       = "Change",
 	MIS_REROLL_TIP   = "A zone mission can be changed once a day.",
-	MIS_ALL_BONUS    = "All 3 missions done: a Feast on top. Nothing is lost if you skip them.",
+	MIS_ALL_BONUS    = "All 3 daily missions done: a Feast and a Braided lasso on top. Nothing is lost if you skip them.",
 	MIS_RENEW        = "New missions tomorrow.",
 	MIS_NONE         = "Enter a zone: your companion will offer its missions of the day.",
 	MIS_OFF          = "Daily missions turned off (settings, Day by day page).",
-	MIS_GOAL_HINT    = "Mission of the day: click for the journal's Day tab.",
+	MIS_GOAL_HINT    = "Mission of the day: click for the journal's Missions tab.",
 	INN_TITLE        = "Inn loyalty card",
 	INN_HINT         = "One stamp a day at any innkeeper (+%d energy). On the %dth: a Feast. No need for days in a row.",
 	INN_TOTAL        = "Stamps: %d in all · full cards: %d",
@@ -120,10 +146,15 @@ local EN = {
 	MIS_PERFECT      = "Days with all three missions: %d · at %d: %s.",
 	DAILY_MSG_UNLOCK = "New appearance: %s!",
 	DAY_MISSIONS     = "Missions of the day",
+	DAY_GROUP_trait  = "From your companion",
+	DAY_GROUP_zone   = "Of the day",
+	DAY_GROUP_week   = "Of the week",
+	DAY_AIDS         = "Capture pack",
+	DAY_AIDS_HINT    = "Pick one in the capture window, after you defeat a monster.",
 	DAY_PANTRY       = "Pantry",
 	DAY_PANTRY_HINT  = "Shift + click the creature",
 	DAY_GIVE         = "Give",
-	JRN_SEC_day      = "Day",
+	JRN_SEC_day      = "Missions",
 	OPT_DAILY_MISSIONS = "Missions of the day",
 	OPT_DAILY_MISSIONS_DESC = "Two zone missions and one from its character every day, in the journal (Day tab) and the on-screen block.",
 }
@@ -133,7 +164,7 @@ ns.DAILY_STRINGS = { fr = FR, en = EN }
 local P = {
 	MISSION_NEW = {
 		{ "Nouvelles missions du jour ! Regarde dans mon carnet.", "New missions of the day! Have a look in my journal." },
-		{ "J'ai des idées pour aujourd'hui… onglet Jour !", "I've got ideas for today… Day tab!" },
+		{ "J'ai des idées pour aujourd'hui… onglet Missions !", "I've got ideas for today… Missions tab!" },
 	},
 	MISSION_DONE = {
 		{ "Mission accomplie ! Une friandise pour moi ?", "Mission done! A treat for me?" },
@@ -305,6 +336,7 @@ function ns:MissionMeasure(kind, zoneID)
 end
 
 function ns:MissionFeasible(kind, zoneID)
+	if kind == "captures" then return self.CaptureData ~= nil and ModuleOn() and self:DB().companionCapture ~= false end
 	if not zoneID then return kind == "kills" end
 	if kind == "species" then
 		local counts = self.BestiaryCounts and self:BestiaryCounts(zoneID)
@@ -342,7 +374,7 @@ function ns:MissionDraw(zoneID)
 	local missions = {}
 	while #missions < 2 and #pool > 0 do
 		local kind = table.remove(pool, math.random(#pool))
-		missions[#missions + 1] = NewMission(self, kind, zoneID, nil, "zone")
+		missions[#missions + 1] = NewMission(self, kind, not ANYWHERE[kind] and zoneID or nil, nil, "zone")
 	end
 	-- zone toute faite : des ennemis à abattre, des gens à qui parler, où que ce soit
 	for _, kind in ipairs({ "kills", "talks" }) do
@@ -374,10 +406,42 @@ function ns:MissionReroll(index)
 	if not used.kills and #pool == 0 then pool[1] = "kills" end
 	if #pool == 0 then return false end
 	local kind = pool[math.random(#pool)]
-	daily.missions[index] = NewMission(self, kind, kind ~= "kills" and daily.zoneID or nil, kind == "kills" and NEED.kills or nil, "zone")
+	daily.missions[index] = NewMission(self, kind, not ANYWHERE[kind] and daily.zoneID or nil, nil, "zone")
 	daily.rerolled = true
 	self:DailyChanged()
 	return true
+end
+
+-- Récompense d'une mission (ns.MISSION_REWARDS[scope]) : rend ce qui a été
+-- gagné, { { kind = "treat"|"aid", id } }
+function ns:MissionGrant(scope)
+	local def = ns.MISSION_REWARDS[scope]
+	local got = {}
+	if not def then return got end
+	if def.treat and self.TreatGrant then
+		local kind = def.treat
+		if kind == "need" then kind = self.TreatForLowestNeed and self:TreatForLowestNeed() end
+		if kind == "draw" then kind = self.TreatRandom and self:TreatRandom() end
+		if kind then self:TreatGrant(kind, { quiet = true }); got[#got + 1] = { kind = "treat", id = kind } end
+	end
+	if def.aid and self.CaptureGrant and self:DB().companionCapture ~= false then
+		local result, id = self:CaptureGrant(def.aid, { quiet = true, silent = true })
+		if result == "ok" then got[#got + 1] = { kind = "aid", id = id } end
+	end
+	return got
+end
+
+-- Ce que rapporte une mission, en clair (« friandise + Appât savoureux »)
+function ns:MissionRewardText(scope)
+	local def = ns.MISSION_REWARDS[scope]
+	if not def then return "" end
+	local parts = {}
+	if def.treat == "festin" then parts[#parts + 1] = self.TreatLabel and self:TreatLabel("festin") or "festin"
+	elseif def.treat then parts[#parts + 1] = L.MIS_REWARD_TREAT end
+	if def.aid and self.CaptureAidLabel and self:DB().companionCapture ~= false then
+		parts[#parts + 1] = def.aid == "draw" and L.MIS_REWARD_AID or self:CaptureAidLabel(def.aid)
+	end
+	return self:F("MIS_REWARD", table.concat(parts, " + "))
 end
 
 -- Avance une mission ; faite : sa récompense, et le Festin des trois
@@ -386,7 +450,8 @@ local function Advance(self, mission, have)
 	mission.have = math.max(mission.have or 0, math.min(have, mission.need))
 	if mission.have < mission.need then return true end
 	mission.done = true
-	if self.TreatGrant and self.TreatForLowestNeed then self:TreatGrant(self:TreatForLowestNeed(), { quiet = true }) end
+	self:MissionGrant(mission.source == "trait" and "trait" or "zone")
+	if self.WeeklyEvent then pcall(self.WeeklyEvent, self, "dailies", 1) end
 	self:CompanionAdd("curiosity", ns.MISSION_CURIOSITY)
 	if self.CompanionFx then self:CompanionFx("bounce") end
 	local daily = self:DailyData()
@@ -396,7 +461,7 @@ local function Advance(self, mission, have)
 		daily.allDone = true
 		daily.perfect = (tonumber(daily.perfect) or 0) + 1
 		if daily.perfect >= ns.MISSION_APPEARANCE_DAYS then self:DailyGrantAppearance(ns.MISSION_APPEARANCE) end
-		if self.TreatGrant then self:TreatGrant("festin", { quiet = true }) end
+		self:MissionGrant("allDaily")
 		self:CompanionSay("MISSION_ALL", { force = true, category = "event" })
 	else
 		self:CompanionSay("MISSION_DONE", { force = true, category = "event" })

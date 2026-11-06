@@ -110,8 +110,12 @@ do
 	Check("[MIS] moins de 2 quêtes : pas de quêtes", not NS:MissionFeasible("quests", 9800))
 	DY.percent = 98
 	Check("[MIS] zone presque finie : pas de +3 %", not NS:MissionFeasible("percent", 9800))
+	NS:DB().companionCapture = false
 	NS:MissionDraw(9800)
 	Check("[MIS] zone toute faite : ennemis et gens à qui parler", DY.Kinds() == "kills,talks,pets", DY.Kinds())
+	NS:DB().companionCapture = true
+	NS:MissionDraw(9800)
+	Check("[MIS] … ou une capture, partout faisable", DY.Kinds() == "captures,kills,pets", DY.Kinds())
 
 	DY.Reset()
 	DY.First()
@@ -301,17 +305,23 @@ do
 	NS:DB().journalTracker = false
 	NS:ToggleJournal(true)
 	local f = NS.journalFrame
-	Check("[DAYW] onglet Jour, avec les missions qui restent (pastille)", f.sections.day and f.sections.day.text.text == "Jour"
-		and f.sections.day.badge.text == "3" and f.sections.day.badge:IsShown(), f.sections.day and f.sections.day.badge.text)
+	Check("[DAYW] onglet Missions, avec les missions qui restent (pastille)", f.sections.day and f.sections.day.text.text == "Missions"
+		and f.sections.day.badge.text == "6" and f.sections.day.badge:IsShown(), f.sections.day and f.sections.day.badge.text)
 	f.sections.day:Click()
 	local day = f.day
 	Check("[DAYW] affiché seul", f.kind == "day" and day:IsShown() and not f.comp:IsShown())
-	Check("[DAYW] trois missions, libellé et compteur", day.missions[3].label.text == "Fais-moi 3 caresses"
-		and day.missions[3].count.text == "0/3", day.missions[3].label.text)
-	Check("[DAYW] changer : sur les missions de zone seulement", day.missions[1].reroll:IsShown()
-		and not day.missions[3].reroll:IsShown())
-	day.missions[1].reroll:Click()
-	Check("[DAYW] changé : le bouton disparaît", NS:DailyData().rerolled and not day.missions[2].reroll:IsShown())
+	Check("[DAYW] mission du compagnon en tête, libellé et compteur", day.missions[1].label.text == "Fais-moi 3 caresses"
+		and day.missions[1].count.text == "0/3", day.missions[1].label.text)
+	Check("[DAYW] … sa récompense : friandise et appât", day.missions[1].source.text:find("Appât savoureux", 1, true) ~= nil,
+		day.missions[1].source.text)
+	Check("[DAYW] changer : sur les missions du jour seulement", day.missions[2].reroll:IsShown()
+		and day.missions[1].reroll == nil)
+	Check("[DAYW] trois missions de la semaine, récompense lasso", day.missions[4].mission ~= nil and day.missions[6].mission ~= nil
+		and day.missions[4].source.text:find("Lasso tressé", 1, true) ~= nil, day.missions[4].source.text)
+	Check("[DAYW] … une capture dans le lot", day.missions[4].mission.kind == "captures" or day.missions[4].mission.kind == "captureNamed")
+	day.missions[2].reroll:Click()
+	Check("[DAYW] changé : le bouton disparaît", NS:DailyData().rerolled and not day.missions[3].reroll:IsShown())
+	Check("[DAYW] besace de capture affichée", #day.aids == 3 and day.aids[1].count.text:find("^%d+ / 10$") ~= nil, day.aids[1].count.text)
 	Check("[DAYW] carte : 3 tampons sur 7", day.stamps[3].got and not day.stamps[4].got)
 	local slot
 	for _, s in ipairs(day.slots) do if s.kind == "bonbon" then slot = s end end

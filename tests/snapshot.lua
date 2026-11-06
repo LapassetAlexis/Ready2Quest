@@ -1205,8 +1205,41 @@ Snap.scenes["qc-journal-day"] = function(T)
 		if daily.missions[2] then daily.missions[2].have, daily.missions[2].done = daily.missions[2].need, true end
 		inn.card, inn.total, inn.full = 4, 11, 1
 		daily.perfect = 3
+		local weekly = ns.WeeklyCurrent and ns:WeeklyCurrent()
+		if weekly and weekly.missions[1] then weekly.missions[1].have = 2 end
+		if weekly and weekly.missions[2] then weekly.missions[2].have, weekly.missions[2].done = weekly.missions[2].need, true end
+		local items = ns:CaptureData().items
+		items.appat, items.lasso, items.sifflet = 4, 1, 0
 	end)
-	return frame, "QuestCompanion : carnet, page Jour"
+	return frame, "QuestCompanion : carnet, page Missions"
+end
+
+Snap.scenes["qc-journal-menagerie"] = function(T)
+	local frame = QCJournal(T, "menagerie", function(ns)
+		local book = ns:BestiaryData()
+		book[1413] = {
+			[3100] = { name = "Loup des plaines", class = "normal", level = 12, type = "Bête", seen = true, killed = 4 },
+			[3101] = { name = "Kodo des plaines", class = "normal", level = 14, type = "Bête", seen = true, killed = 2 },
+			[3102] = { name = "Centaure Kolkar", class = "normal", level = 15, type = "Humanoïde", seen = true, killed = 6 },
+			[3103] = { name = "Raptor Tranchegueule", class = "elite", level = 16, type = "Bête", seen = true, killed = 1 },
+			[3104] = { name = "Esprit de la Terre", class = "normal", level = 17, type = "Élémentaire", seen = true },
+			[3105] = { name = "Takk le Bondisseur", class = "rare", level = 19, type = "Bête", seen = true, killed = 1 },
+			[3106] = { name = "Géant des collines", class = "normal", level = 18, type = "Géant", seen = true },
+			[3107] = { name = "Zombie pourrissant", class = "normal", level = 13, type = "Mort-vivant", seen = true, killed = 3 },
+			[3108] = { name = "Gardien mécanique", class = "elite", level = 20, type = "Mécanique", seen = true },
+			[3109] = { name = "Diablotin", class = "normal", level = 11, type = "Démon", seen = true, killed = 2 },
+			[3110] = { name = "Dragonnet noir", class = "normal", level = 16, type = "Draconien", seen = true, killed = 1 },
+			[3111] = { name = "Hyène tachetée", class = "normal", level = 12, type = "Bête", seen = true, killed = 5 },
+		}
+		local data = ns:CaptureData()
+		for _, npc in ipairs({ 3100, 3102, 3103, 3105, 3109 }) do
+			local sp = book[1413][npc]
+			data.creatures[npc] = { name = sp.name, class = sp.class, level = sp.level, type = sp.type, zoneID = 1413, at = 0,
+				shiny = npc == 3109 or nil }
+		end
+		data.count = 5
+	end)
+	return frame, "QuestCompanion : carnet, page Ménagerie (Pokédex des captures)"
 end
 
 Snap.scenes["qc-journal-collection"] = function(T)

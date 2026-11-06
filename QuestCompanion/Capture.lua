@@ -407,6 +407,72 @@ function ns:CaptureAppearances()
 end
 
 -- ---------------------------------------------------------------------------
+-- La ménagerie comme un Pokédex : toutes les espèces vues, numérotées dans
+-- l'ordre où elles sont entrées au carnet (un numéro ne change plus)
+-- ---------------------------------------------------------------------------
+-- Entrées : { npc, no, name, class, level, type, zoneID, killed, captured,
+-- shiny, at }. filter : "all", "captured", "missing".
+function ns:MenagerieList(filter)
+	local data = self:CaptureData()
+	data.dex = type(data.dex) == "table" and data.dex or {}
+	data.dexNext = math.max(1, math.floor(tonumber(data.dexNext) or 1))
+	local byNpc, fresh = {}, {}
+	local book = self.BestiaryData and self:BestiaryData() or {}
+	for zoneID, zone in pairs(book) do
+		if type(zone) == "table" then
+			for npcID, species in pairs(zone) do
+				local npc = tonumber(npcID)
+				if npc and type(species) == "table" and (species.seen or (tonumber(species.killed) or 0) > 0) then
+					local entry = byNpc[npc]
+					if not entry then
+						entry = { npc = npc, name = species.name or tostring(npc), class = species.class or "normal",
+							level = species.level, type = species.type, zoneID = zoneID, killed = 0 }
+						byNpc[npc] = entry
+					end
+					entry.killed = entry.killed + (tonumber(species.killed) or 0)
+				end
+			end
+		end
+	end
+	for npcID, known in pairs(data.creatures) do
+		local npc = tonumber(npcID)
+		if npc then
+			local entry = byNpc[npc]
+			if not entry then
+				entry = { npc = npc, name = known.name or tostring(npc), class = known.class or "normal",
+					level = known.level, type = known.type, zoneID = known.zoneID, killed = 0 }
+				byNpc[npc] = entry
+			end
+			entry.captured, entry.shiny, entry.at = true, known.shiny, known.at
+		end
+	end
+	-- numéros : les nouvelles espèces à la suite, dans un ordre stable
+	for npc, entry in pairs(byNpc) do
+		if data.dex[npc] then entry.no = data.dex[npc] else fresh[#fresh + 1] = entry end
+	end
+	table.sort(fresh, function(a, b)
+		if (a.level or 0) ~= (b.level or 0) then return (a.level or 0) < (b.level or 0) end
+		return a.npc < b.npc
+	end)
+	for _, entry in ipairs(fresh) do
+		entry.no = data.dexNext
+		data.dex[entry.npc] = entry.no
+		data.dexNext = data.dexNext + 1
+	end
+	local list, captured, seen = {}, 0, 0
+	for _, entry in pairs(byNpc) do
+		seen = seen + 1
+		if entry.captured then captured = captured + 1 end
+		if filter == "captured" and entry.captured or filter == "missing" and not entry.captured
+			or filter ~= "captured" and filter ~= "missing" then
+			list[#list + 1] = entry
+		end
+	end
+	table.sort(list, function(a, b) return a.no < b.no end)
+	return list, captured, seen
+end
+
+-- ---------------------------------------------------------------------------
 -- Le coup fatal : on propose la capture
 -- ---------------------------------------------------------------------------
 -- `entry` : { zoneID, npcID } (Bestiary.lua) ; `shiny` : brillante abattue
@@ -482,6 +548,13 @@ function ns:CaptureResolve(rolling)
 			shiny = target.shiny,
 		}
 		if fresh then data.count = data.count + 1 end
+		-- missions : une capture (et une capture d'élite ou de rare)
+		if self.MissionEvent then pcall(self.MissionEvent, self, "captures", 1) end
+		if self.WeeklyEvent then
+			pcall(self.WeeklyEvent, self, "captures", 1)
+			local named = target.class == "elite" or target.class == "rare" or target.class == "rareelite" or target.class == "worldboss"
+			if named then pcall(self.WeeklyEvent, self, "captureNamed", 1) end
+		end
 		data.serial = (tonumber(data.serial) or 0) + 1
 		self.captureAppCache = nil
 		self:Print(self:F("CAPTURE_MSG_OK", target.name))
