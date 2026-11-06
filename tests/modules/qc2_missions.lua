@@ -8,6 +8,9 @@ local Check, Say, ResetWorld, NS, Mock = T.Check, T.Say, T.ResetWorld, T.QNS, T.
 local QM = { saved = {}, random = math.random,
 	savedTable = rawget(NS, "ZONE_CREATURES"), savedFaction = NS.BestiaryFaction,
 	savedStars = NS.CaptureStars, savedEffects = NS.CompanionEffects }
+-- QM.Reset simule l'absence des lots 1 et 2 ; la vraie fonction des étoiles
+-- (lot 1) est remise là où les captures passent réellement par lui
+local REAL_STARS = QM.savedStars
 local GLOBALS = { "date", "time", "C_DateAndTime" }
 for _, name in ipairs(GLOBALS) do QM.saved[name] = rawget(_G, name) end
 
@@ -146,6 +149,7 @@ end
 do
 	Say("-- qc2 missions : captures du jour")
 	QM.Reset()
+	NS.CaptureStars = REAL_STARS
 	local daily = NS:DailyData()
 	daily.day, daily.zoneID = NS:DailyToday(), 9900
 	daily.missions = {
@@ -190,10 +194,11 @@ do
 	Check("[QM] un Mort-vivant à emmener, deux à capturer (bestiaire) : mission", def and def.kind == "typeCapture"
 		and def.ctype == "undead" and def.need == 2)
 	creatures[5005] = { name = "Goule", class = "normal", type = "Mort-vivant", normal = true }
+	NS.CaptureStars = nil
 	Check("[QM] plus qu'un Mort-vivant à capturer : pas faisable", NS:MenagerieWeeklyTypeMission() == nil)
 	NS.CaptureStars = function() return 2 end
 	Check("[QM] … sauf recapture (lot 1)", NS:MenagerieWeeklyTypeMission() ~= nil)
-	NS.CaptureStars = nil
+	NS.CaptureStars = REAL_STARS
 	creatures[5005] = nil
 	NS:WeeklyDraw()
 	local weekly = NS:WeeklyCurrent()
