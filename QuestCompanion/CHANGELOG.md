@@ -1,5 +1,12 @@
 # QuestCompanion
 
+## 2.1.0
+
+- **Le filet se voit** : le bouton passe de 22 à 44 px et se pose **à côté** du compagnon (à sa droite, ou à sa gauche s'il touche le bord de l'écran) au lieu de son portrait, où il passait inaperçu ; il suit la taille du compagnon, garde un liseré doré et bat quelques secondes quand un monstre arrive dans le filet.
+- **Bandeau « Capture possible »** : dès qu'un monstre abattu peut être capturé (après le combat), un bandeau le nomme (« et N de plus » s'il y en a plusieurs) ; clic dessus : le filet, clic droit : la liste. Il se déplace comme les autres bandeaux. Réglage « Bandeau « Capture possible » », page Au jour le jour.
+
+*English:* the net button is now 44 px, sits beside the companion (right, or left near the screen edge) instead of over its portrait, follows its size and pulses when a monster joins the net; a "Capture possible" banner names the creature as soon as it can be captured (after combat), click = net, right-click = list (Day by day setting).
+
 ## 2.0.0 — la ménagerie au cœur
 
 QuestCompanion devient d'abord un jeu de collection de créatures : tout sert à capturer et à compléter ta ménagerie.

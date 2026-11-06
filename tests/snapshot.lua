@@ -1321,6 +1321,15 @@ end
 Snap.scenes["qc-capture-fail"] = function(T)
 	return QCCaptureStage(T, false, "fail"), "QuestCompanion : capture animée, échappé"
 end
+-- le bandeau « Capture possible » (2.1.0), deux candidats dans le filet
+Snap.scenes["qc-capture-toast"] = function(T)
+	local ns = QCWorld(T)
+	ns:BestiaryData()[1413] = { [3100] = { name = "Ours gris", class = "rare", level = 21, killed = 1 },
+		[3101] = { name = "Sanglier", class = "normal", level = 20, killed = 1 } }
+	ns:CaptureOffer("Creature-0-1-1-1-3100-0001", { zoneID = 1413, npcID = 3100 })
+	ns:CaptureOffer("Creature-0-1-1-1-3101-0001", { zoneID = 1413, npcID = 3101 })
+	return Centered(ns:CaptureToastShow()), "QuestCompanion : bandeau « Capture possible » (rare, et 1 de plus)"
+end
 
 Snap.scenes["qc-chest"] = function(T)
 	local ns = QCWorld(T)
