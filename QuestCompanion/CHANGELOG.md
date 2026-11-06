@@ -1,5 +1,12 @@
 # QuestCompanion
 
+## 2.1.0 — la capture en scène
+
+- **Capture animée refaite**, avec de vraies textures peintes pour l'addon à la place des rectangles et des icônes du jeu. Le filet roulé en boule part en arc, en tournant, avec une traînée d'étincelles, et s'ouvre à l'apogée ; un filet de cordes torsadées, nœuds et lest tombe sur la créature (son ombre le rejoint à l'impact, un nuage de poussière), puis oscille et se resserre à chaque secousse pendant qu'un halo à la couleur de la rareté pulse de plus en plus vite. Capturé : éclair, gerbe de rayons et d'étincelles, le filet se referme sur elle, elle tourne sur elle-même, un ruban « Capturé ! » surgit, puis les étoiles du spécimen s'allument une à une. Échappé : le filet se déchire et tombe, ses cordes volent, le monstre file dans la poussière. Une brillante : tout en or, deuxième gerbe à contresens, motes dorées, reflet sur le ruban. L'aide utilisée s'affiche près du titre.
+- **Bouton filet et étoiles** : le bouton a son propre glyphe (ambre, or si une brillante attend) et les étoiles des spécimens (scène, liste du filet, Ménagerie, chat) sont de vraies étoiles dorées à facettes.
+
+*English:* the capture scene is redrawn with dedicated hand-painted textures: a balled net thrown in an arc with a spark trail, a real rope net (knots, lead weights, its own shadow) that drops, wobbles and tightens with every shake, rarity-coloured rays, sparks and a ribbon on success with the specimen's stars lighting one by one, a torn net and flying ropes on failure, everything golden for a shiny. The net button gets its own glyph and specimen stars their own texture.
+
 ## 2.0.0 — la ménagerie au cœur
 
 QuestCompanion devient d'abord un jeu de collection de créatures : tout sert à capturer et à compléter ta ménagerie.
