@@ -8,7 +8,7 @@ local ADDON, ns = ...
 
 ns.APP = {
 	id = "QuestCompanion",
-	version = "1.3.0",
+	version = "1.4.0",
 	-- nom dans l'en-tête des réglages
 	brand = "Quest|cff5b8fd6Companion|r",
 	-- sauvegarde (## SavedVariables)
@@ -18,7 +18,7 @@ ns.APP = {
 	slash = { "/questcompanion", "/qc" },
 	-- fichiers attendus, pour le diagnostic quand l'addon reste muet
 	coreFiles = { "Bootstrap", "Strings", "Locales", "Store", "World", "Commands", "Options", "Minimap",
-		"Core", "Companion", "Journal", "JournalTracker", "Bestiary", "Treats", "Shiny", "Daily", "Notify", "LiveRares", "Tooltips", "JournalWindow" },
+		"Core", "Companion", "Journal", "JournalTracker", "Bestiary", "Treats", "Shiny", "Capture", "Daily", "Notify", "LiveRares", "Tooltips", "JournalWindow" },
 }
 
 -- Ready2Quest 1.25 ou avant embarque encore le compagnon : deux compagnons à

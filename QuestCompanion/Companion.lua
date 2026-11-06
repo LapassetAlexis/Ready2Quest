@@ -116,7 +116,7 @@ local NIGHT_GRACE = 600
 local IDLE_REST  = 300                 -- 5 min au repos sans rien dire : un mot
 local CONVO_STEP = 3.5                 -- s entre deux bulles d'une conversation
 local TUTO_STEP  = 9                   -- s par bulle du tutoriel (« Suivant » accélère)
-local HISTORY    = 2                   -- lignes récentes évitées par réservoir
+local HISTORY    = 6                   -- lignes récentes évitées par réservoir (réservoirs triplés en 1.4.0)
 local SAME_NPC   = 120                 -- même PNJ (bavardage puis vendeur) : un avis
 local SAME_HUB   = 600                 -- même village ré-entré : pas de nouveau mot
 
@@ -775,8 +775,19 @@ function ns:CompanionIsUnlocked(kind, def)
 	return self:CompanionData().unlocked[CosmeticKey(kind, def.id)] == true
 end
 
+-- Le catalogue des mascottes, puis la ménagerie (créatures capturées,
+-- Capture.lua) : toutes les apparences possibles
+function ns:CompanionAllAppearances()
+	local captured = self.CaptureAppearances and self:CaptureAppearances()
+	if type(captured) ~= "table" or #captured == 0 then return ns.COMPANION_APPEARANCES end
+	local list = {}
+	for _, def in ipairs(ns.COMPANION_APPEARANCES) do list[#list + 1] = def end
+	for _, def in ipairs(captured) do list[#list + 1] = def end
+	return list
+end
+
 function ns:CompanionAppearanceDef(id)
-	for _, def in ipairs(ns.COMPANION_APPEARANCES) do
+	for _, def in ipairs(self:CompanionAllAppearances()) do
 		if def.id == id then return def end
 	end
 	return nil
@@ -823,7 +834,7 @@ end
 
 function ns:CompanionUnlockedAppearances()
 	local list = {}
-	for _, def in ipairs(ns.COMPANION_APPEARANCES) do
+	for _, def in ipairs(self:CompanionAllAppearances()) do
 		if self:CompanionIsUnlocked("app", def) then list[#list + 1] = def end
 	end
 	return list
@@ -1605,8 +1616,10 @@ function ns:CompanionApplyModel()
 	frame.usesFallback = not shown
 	frame.displayID = shown and app.display or nil
 	if shown then
-		Method(model, "SetModelScale", stageDef.scale)
-		Method(model, "SetCamDistanceScale", 1.6)
+		-- créature capturée : un modèle de taille réelle (un ours, un géant…),
+		-- cadré de plus loin et sans l'échelle du stade, faite pour les mascottes
+		Method(model, "SetModelScale", app.captured and 1 or stageDef.scale)
+		Method(model, "SetCamDistanceScale", app.captured and (ns.CAPTURE_CAM_DISTANCE or 2.4) or 1.6)
 		model:Show()
 		frame.fallback:Hide()
 	else
@@ -2456,7 +2469,7 @@ end
 -- Choix des listes déroulantes (apparence, cadre, fond) : ce qui est gagné
 -- d'abord, puis le reste, grisé, avec sa condition
 local CHOICE_LISTS = {
-	app = function() return ns.COMPANION_APPEARANCES end,
+	app = function() return ns:CompanionAllAppearances() end,
 	frame = function() return ns.COMPANION_FRAMES end,
 	bg = function() return ns.COMPANION_BACKGROUNDS end,
 }

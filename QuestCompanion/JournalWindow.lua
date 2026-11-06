@@ -1405,7 +1405,10 @@ function ns:JournalCollection(kind)
 		frame = self.CompanionCurrentStyle and self:CompanionCurrentStyle("frame").id,
 		bg = self.CompanionCurrentStyle and self:CompanionCurrentStyle("bg").id,
 	}
-	for _, def in ipairs(ns[CATALOG[kind]] or {}) do
+	local catalog = ns[CATALOG[kind]] or {}
+	-- apparences : les mascottes, puis la ménagerie (Capture.lua)
+	if kind == "app" and self.CompanionAllAppearances then catalog = self:CompanionAllAppearances() end
+	for _, def in ipairs(catalog) do
 		local owned = self:CompanionIsUnlocked(kind, def)
 		local equipped
 		if kind == "orn" then equipped = owned and self:CompanionOrnamentShown(def)
@@ -1417,6 +1420,10 @@ function ns:JournalCollection(kind)
 end
 
 function ns:JournalCosmeticSource(entry)
+	if entry.def.captured then
+		local when = entry.def.at and rawget(_G, "date") and select(2, pcall(date, "%d/%m/%Y", entry.def.at))
+		return self:F("CAPTURE_SRC", tostring(when or "?"))
+	end
 	if entry.tier >= 1 then return self:F("JRN_COLL_SRC_TIER", entry.tier) end
 	if entry.def.unlock and self.CompanionRequirement then
 		local ok, text = pcall(self.CompanionRequirement, self, entry.def.unlock)
@@ -1433,7 +1440,7 @@ function ns:JournalPreviewCosmetic(entry)
 	elseif entry.kind == "orn" then state = entry.equipped and L.JRN_COLL_ORN_ON or L.JRN_COLL_ORN_OFF
 	else state = entry.equipped and L.JRN_COLL_EQUIPPED or L.JRN_COLL_CLICK end
 	local opts = {}
-	if entry.kind == "app" then opts.display = entry.def.display
+	if entry.kind == "app" then opts.display, opts.creature = entry.def.display, entry.def.npc
 	elseif entry.kind == "frame" then opts.color = entry.def.edge
 	elseif entry.kind == "bg" then
 		if entry.def.texture then opts.texture = entry.def.texture else opts.color = entry.def.color end

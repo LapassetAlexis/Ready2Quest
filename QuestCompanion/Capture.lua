@@ -1,0 +1,779 @@
+-- Capture.lua -- la ménagerie : capturer les monstres abattus (QuestCompanion 1.4.0)
+--
+-- Retour des joueurs : débloquer chaque compagnon par des objectifs, c'est
+-- lent et peu interactif. En plus des mascottes (qui restent), chaque monstre
+-- abattu peut désormais être CAPTURÉ et devenir une apparence du compagnon.
+--   * un monstre compté abattu (Bestiary.lua, BestiaryOnKill) ouvre une petite
+--     fenêtre « Capturer ? » pendant CAPTURE_WINDOW secondes : son modèle, son
+--     rang, la chance, et les aides qu'on a en poche ;
+--   * un clic = un essai, un seul par monstre. Le compagnon secoue le filet
+--     (une, deux, trois secousses) puis c'est gagné… ou il s'échappe, et le
+--     compagnon se moque gentiment ;
+--   * la chance dépend du rang (normal 30 %, élite 15 %, rare 8 %, rare élite
+--     5 %, boss 2 %) et de l'écart de niveau (plus haut que toi : plus dur) ;
+--   * aides (pas des balles : des objets de dresseur), gagnées au hasard des
+--     complétions du carnet (tampons, paliers de zone, brillantes) :
+--       Appât savoureux ×1,5 · Lasso tressé ×2,5 · Sifflet du dompteur = assuré ;
+--   * une espèce déjà capturée ne se propose plus (sauf en version brillante) ;
+--   * toutes les CAPTURE_GIFT_EVERY captures : un Sifflet offert.
+-- Les créatures capturées rejoignent la liste des apparences (réglages,
+-- Collection du carnet) : Companion.lua les lit par ns:CaptureAppearances().
+-- Réglage : page « Au jour le jour » (« Capturer les monstres abattus »).
+local ADDON, ns = ...
+if ns.blocked then return end
+local L = ns.L
+local Theme = ns.Theme
+
+ns.CAPTURE_WINDOW = 12            -- s pour tenter sa chance après le coup fatal
+ns.CAPTURE_SHAKE_STEP = 0.55      -- s entre deux secousses du filet
+ns.CAPTURE_MAX = 0.95             -- jamais tout à fait sûr sans Sifflet
+ns.CAPTURE_GIFT_EVERY = 10        -- un Sifflet offert toutes les 10 captures
+ns.CAPTURE_RATES = {
+	trivial = 0.40, minus = 0.40, normal = 0.30, elite = 0.15,
+	rare = 0.08, rareelite = 0.05, worldboss = 0.02,
+}
+-- écart de niveau : -6 % par niveau au-dessus de toi (plancher ×0,35),
+-- +3 % par niveau en dessous (plafond ×1,5)
+ns.CAPTURE_LEVEL_STEP = { above = 0.06, below = 0.03, floor = 0.35, ceil = 1.5 }
+
+local AIDS = {
+	{ id = "appat",   mult = 1.5, cap = 10, icon = "Interface\\Icons\\INV_Misc_Food_14" },
+	{ id = "lasso",   mult = 2.5, cap = 5,  icon = "Interface\\Icons\\Spell_Nature_StrangleVines" },
+	{ id = "sifflet", sure = true, cap = 3, icon = "Interface\\Icons\\INV_Misc_Horn_01" },
+}
+local AID_BY_ID = {}
+for _, aid in ipairs(AIDS) do AID_BY_ID[aid.id] = aid end
+ns.CAPTURE_AIDS = AIDS
+
+-- d'où viennent les aides : tampon du carnet (sorte -> { chance, tirage })
+-- `pick` : une aide fixe, ou "draw" = tirage pondéré (DRAW)
+local STAMP_DROPS = {
+	subzone = { chance = 0.25, pick = "appat" },
+	capital = { chance = 0.25, pick = "appat" },
+	zone    = { chance = 1.0,  pick = "draw" },
+	rare    = { chance = 0.5,  pick = "lasso" },
+	dungeon = { chance = 1.0,  pick = "lasso", bonus = { chance = 0.2, pick = "sifflet" } },
+	level   = { chance = 0.3,  pick = "draw" },
+}
+local DRAW = { { "appat", 60 }, { "lasso", 33 }, { "sifflet", 7 } }
+-- paliers de complétion d'une zone (Treats.lua) : 25 -> appât, 50 -> lasso,
+-- 75 -> tirage (avec sa chance de Sifflet)
+local MILESTONE_DROPS = { [25] = "appat", [50] = "lasso", [75] = "draw" }
+ns.CAPTURE_STAMP_DROPS = STAMP_DROPS
+ns.CAPTURE_MILESTONE_DROPS = MILESTONE_DROPS
+
+local FR = {
+	CAPTURE_aid_appat      = "Appât savoureux",
+	CAPTURE_aid_lasso      = "Lasso tressé",
+	CAPTURE_aid_sifflet    = "Sifflet du dompteur",
+	CAPTURE_AID_DESC_appat   = "Chance de capture ×1,5.",
+	CAPTURE_AID_DESC_lasso   = "Chance de capture ×2,5.",
+	CAPTURE_AID_DESC_sifflet = "Capture assurée.",
+	CAPTURE_TITLE          = "Capturer ?",
+	CAPTURE_CHANCE         = "%s · %d %%",
+	CAPTURE_SURE           = "%s · assurée",
+	CAPTURE_THROW          = "Capturer",
+	CAPTURE_AID_HINT       = "Clic : utiliser pour cet essai (%d en poche).",
+	CAPTURE_AID_NONE       = "Aucun en poche. Les tampons et paliers du carnet en rapportent.",
+	CAPTURE_SHAKING        = "Le filet bouge…",
+	CAPTURE_GOT            = "Capturé !",
+	CAPTURE_FLED           = "Échappé…",
+	CAPTURE_MSG_OK         = "%s capturé ! Il rejoint ta ménagerie (apparences du compagnon).",
+	CAPTURE_MSG_FAIL       = "%s s'est échappé.",
+	CAPTURE_MSG_ITEM       = "Tu trouves : %s (%d en poche).",
+	CAPTURE_MSG_FULL       = "%s : ta besace en est pleine.",
+	CAPTURE_MSG_GIFT       = "%d captures ! Ton compagnon t'offre un %s.",
+	CAPTURE_MSG_SUMMARY    = "Ménagerie : %d créatures capturées (%d essais). Aides : %s.",
+	CAPTURE_MSG_EMPTY      = "Ménagerie vide pour l'instant : abats un monstre, puis clique sur « Capturer ».",
+	CAPTURE_RANK_normal    = "Normal",
+	CAPTURE_RANK_trivial   = "Insignifiant",
+	CAPTURE_RANK_minus     = "Insignifiant",
+	CAPTURE_RANK_elite     = "Élite",
+	CAPTURE_RANK_rare      = "Rare",
+	CAPTURE_RANK_rareelite = "Rare élite",
+	CAPTURE_RANK_worldboss = "Boss",
+	CAPTURE_SHINY_TAG      = "%s (brillant)",
+	CAPTURE_SRC            = "Capturé le %s",
+	OPT_DAILY_CAPTURE      = "Capturer les monstres abattus",
+	OPT_DAILY_CAPTURE_DESC = "Après un monstre abattu, une fenêtre propose de le capturer : il devient une apparence du compagnon.",
+	MEM_TXT_capture        = "Capturé : %s",
+	HELP_CAPTURE           = "/qc capture -- ta ménagerie et tes aides de capture",
+}
+local EN = {
+	CAPTURE_aid_appat      = "Tasty bait",
+	CAPTURE_aid_lasso      = "Braided lasso",
+	CAPTURE_aid_sifflet    = "Tamer's whistle",
+	CAPTURE_AID_DESC_appat   = "Capture chance ×1.5.",
+	CAPTURE_AID_DESC_lasso   = "Capture chance ×2.5.",
+	CAPTURE_AID_DESC_sifflet = "Guaranteed capture.",
+	CAPTURE_TITLE          = "Capture?",
+	CAPTURE_CHANCE         = "%s · %d%%",
+	CAPTURE_SURE           = "%s · guaranteed",
+	CAPTURE_THROW          = "Capture",
+	CAPTURE_AID_HINT       = "Click: use it for this try (%d in your pack).",
+	CAPTURE_AID_NONE       = "None in your pack. Journal stamps and zone milestones bring some.",
+	CAPTURE_SHAKING        = "The net is moving…",
+	CAPTURE_GOT            = "Captured!",
+	CAPTURE_FLED           = "Got away…",
+	CAPTURE_MSG_OK         = "%s captured! It joins your menagerie (companion looks).",
+	CAPTURE_MSG_FAIL       = "%s got away.",
+	CAPTURE_MSG_ITEM       = "You find: %s (%d in your pack).",
+	CAPTURE_MSG_FULL       = "%s: your pack is full of them.",
+	CAPTURE_MSG_GIFT       = "%d captures! Your companion gives you a %s.",
+	CAPTURE_MSG_SUMMARY    = "Menagerie: %d creatures captured (%d tries). Aids: %s.",
+	CAPTURE_MSG_EMPTY      = "Your menagerie is empty: defeat a monster, then click \"Capture\".",
+	CAPTURE_RANK_normal    = "Normal",
+	CAPTURE_RANK_trivial   = "Trivial",
+	CAPTURE_RANK_minus     = "Trivial",
+	CAPTURE_RANK_elite     = "Elite",
+	CAPTURE_RANK_rare      = "Rare",
+	CAPTURE_RANK_rareelite = "Rare elite",
+	CAPTURE_RANK_worldboss = "Boss",
+	CAPTURE_SHINY_TAG      = "%s (shiny)",
+	CAPTURE_SRC            = "Captured on %s",
+	OPT_DAILY_CAPTURE      = "Capture defeated monsters",
+	OPT_DAILY_CAPTURE_DESC = "After you defeat a monster, a small window offers to capture it: it becomes a companion look.",
+	MEM_TXT_capture        = "Captured: %s",
+	HELP_CAPTURE           = "/qc capture -- your menagerie and capture aids",
+}
+ns.RegisterStrings(FR, EN)
+ns.CAPTURE_STRINGS = { fr = FR, en = EN }
+if type(ns.MEMORY_STRINGS) == "table" then
+	ns.MEMORY_STRINGS.fr.MEM_TXT_capture, ns.MEMORY_STRINGS.en.MEM_TXT_capture = FR.MEM_TXT_capture, EN.MEM_TXT_capture
+end
+
+-- Répliques : même mécanique que les autres réservoirs (CompanionLines.lua).
+-- Ton voulu par les joueurs : un compagnon taquin, qui se moque gentiment.
+local P = {
+	CAPTURE_PROMPT = {   -- %s = la créature
+		{ "%s est KO. On l'embarque ?", "%s is down. Shall we take it home?" },
+		{ "Vite, %s ne bouge plus : c'est le moment !", "Quick, %s isn't moving: now's our chance!" },
+		{ "%s ferait un super compagnon… enfin, presque aussi bien que moi.", "%s would make a great companion… almost as good as me." },
+		{ "Tu le laisses là, %s ? Moi je dis : filet !", "You're leaving %s there? I say: net!" },
+		{ "%s, dans ma ménagerie ? Clique, clique !", "%s, in my menagerie? Click, click!" },
+		{ "On tente %s ? Promis, je partage ma gamelle.", "Try for %s? I promise I'll share my bowl." },
+	},
+	CAPTURE_OK = {   -- %s = la créature
+		{ "%s est à nous ! Bienvenue dans la bande !", "%s is ours! Welcome to the crew!" },
+		{ "Capturé ! %s, je te préviens : la place près du feu est à moi.", "Captured! %s, fair warning: the spot by the fire is mine." },
+		{ "Et hop, %s dans la ménagerie. Quel talent… le mien, surtout.", "And there, %s in the menagerie. Such talent… mostly mine." },
+		{ "%s capturé ! Tu vois, quand tu m'écoutes…", "%s captured! See what happens when you listen to me…" },
+		{ "Un %s tout neuf ! Je lui apprends les bonnes manières.", "A brand-new %s! I'll teach it some manners." },
+		{ "Gagné ! %s fait déjà les yeux doux à mes friandises.", "Got it! %s is already eyeing my treats." },
+	},
+	CAPTURE_FAIL = {   -- %s = la créature
+		{ "%s s'est fait la malle. Ton lancer, c'était… audacieux.", "%s ran off. That throw was… bold." },
+		{ "Raté ! Même %s avait pitié de toi.", "Missed! Even %s felt sorry for you." },
+		{ "%s s'échappe. Tu visais quoi, exactement ? La lune ?", "%s escapes. What were you aiming at? The moon?" },
+		{ "Le filet est vide. %s te salue de loin, très loin.", "The net is empty. %s waves at you from far, far away." },
+		{ "%s s'en va. Je dirai à personne. Enfin, à presque personne.", "%s is gone. I won't tell anyone. Well, almost anyone." },
+		{ "%s, 1 — toi, 0. On retente sur le prochain ?", "%s 1, you 0. Try again on the next one?" },
+		{ "%s était à deux doigts… les tiens étaient ailleurs.", "%s was so close… your fingers were elsewhere." },
+		{ "Tu lances comme tu cours au cimetière : %s a filé.", "You throw like you run back from the graveyard: %s fled." },
+	},
+	CAPTURE_ITEM = {   -- %s = l'aide trouvée
+		{ "Oh, un %s ! Ça va nous servir.", "Oh, a %s! That'll come in handy." },
+		{ "%s trouvé ! Range-le bien, pas comme tes potions.", "Found a %s! Keep it safe, unlike your potions." },
+		{ "Tiens, un %s. Le prochain monstre n'a qu'à bien se tenir.", "Look, a %s. The next monster had better behave." },
+	},
+	CAPTURE_SHINY = {   -- %s = la créature
+		{ "Un %s BRILLANT capturé ! Je pleure. De joie. Un peu de jalousie.", "A SHINY %s captured! I'm crying. With joy. And a bit of envy." },
+		{ "%s brillant dans la ménagerie… tu vas le mettre en vitrine ?", "A shiny %s in the menagerie… putting it on display?" },
+	},
+}
+local LINES_FR, LINES_EN, POOLS = {}, {}, {}
+for name, lines in pairs(P) do
+	local keys = {}
+	for index, pair in ipairs(lines) do
+		local key = "COMP_SAY_" .. name .. (index > 1 and ("_" .. index) or "")
+		LINES_FR[key], LINES_EN[key] = pair[1], pair[2]
+		keys[index] = key
+	end
+	POOLS[name] = keys
+end
+ns.RegisterStrings(LINES_FR, LINES_EN)
+if type(ns.COMPANION_POOLS) == "table" then
+	for name, keys in pairs(POOLS) do ns.COMPANION_POOLS[name] = keys end
+end
+local shared = ns.COMPANION_LINE_STRINGS
+if type(shared) == "table" then
+	for key, text in pairs(LINES_FR) do shared.fr[key], shared.en[key] = text, LINES_EN[key] end
+end
+ns.CAPTURE_POOLS = POOLS
+
+ns.RegisterDefaults({ companionCapture = true })
+if type(ns.DAILY_OPTION_ROWS) == "table" then
+	local present = false
+	for _, row in ipairs(ns.DAILY_OPTION_ROWS) do if row.key == "companionCapture" then present = true end end
+	if not present then
+		table.insert(ns.DAILY_OPTION_ROWS, 1, { key = "companionCapture", label = "OPT_DAILY_CAPTURE", kind = "bool",
+			describe = function() return L.OPT_DAILY_CAPTURE_DESC end })
+	end
+end
+
+local function Call(fn, ...)
+	if type(fn) ~= "function" then return nil end
+	local ok, a, b = pcall(fn, ...)
+	if ok then return a, b end
+	return nil
+end
+local function G(name) return rawget(_G, name) end
+local function Clock() return (ns.Now and ns.Now()) or 0 end
+local function ModuleOn() return ns.CompanionOn and ns.CompanionOn() or false end
+local function Enabled() return ModuleOn() and ns:DB().companionCapture ~= false end
+
+-- ---------------------------------------------------------------------------
+-- Données (par personnage, avec le compagnon)
+-- ---------------------------------------------------------------------------
+function ns:CaptureData()
+	local data = self:CompanionData()
+	local capture = type(data.capture) == "table" and data.capture or {}
+	capture.creatures = type(capture.creatures) == "table" and capture.creatures or {}
+	capture.items = type(capture.items) == "table" and capture.items or {}
+	for _, aid in ipairs(AIDS) do
+		capture.items[aid.id] = math.max(0, math.floor(tonumber(capture.items[aid.id]) or 0))
+	end
+	capture.count = math.max(0, math.floor(tonumber(capture.count) or 0))
+	capture.tries = math.max(0, math.floor(tonumber(capture.tries) or 0))
+	data.capture = capture
+	return capture
+end
+
+function ns:CaptureState()
+	local state = self.captureState
+	if not state then
+		state = {}
+		self.captureState = state
+	end
+	return state
+end
+
+function ns:CaptureAidCount(id) return self:CaptureData().items[id] or 0 end
+function ns:CaptureAidLabel(id) return L["CAPTURE_aid_" .. tostring(id)] end
+
+function ns:CaptureIsCaptured(npcID)
+	return self:CaptureData().creatures[tonumber(npcID) or npcID] ~= nil
+end
+
+-- ---------------------------------------------------------------------------
+-- Chance
+-- ---------------------------------------------------------------------------
+-- `info` : { class, level } ; `aidID` : aide choisie (ou nil). Renvoie la
+-- chance (0..1) et true si la capture est assurée.
+function ns:CaptureChance(info, aidID, playerLevel)
+	local aid = aidID and AID_BY_ID[aidID]
+	if aid and aid.sure then return 1, true end
+	local base = ns.CAPTURE_RATES[(info and info.class) or "normal"] or ns.CAPTURE_RATES.normal
+	local factor = 1
+	local level = tonumber(info and info.level)
+	local mine = tonumber(playerLevel or ns.Plain(Call(G("UnitLevel"), "player")))
+	if level and level > 0 and mine and mine > 0 then
+		local diff, step = level - mine, ns.CAPTURE_LEVEL_STEP
+		if diff > 0 then factor = math.max(step.floor, 1 - step.above * diff)
+		elseif diff < 0 then factor = math.min(step.ceil, 1 - step.below * diff) end
+	end
+	local chance = base * factor * (aid and aid.mult or 1)
+	return math.max(0, math.min(ns.CAPTURE_MAX, chance)), false
+end
+
+-- ---------------------------------------------------------------------------
+-- Aides : gagner, dépenser
+-- ---------------------------------------------------------------------------
+local function Draw()
+	local total = 0
+	for _, entry in ipairs(DRAW) do total = total + entry[2] end
+	local roll = math.random() * total
+	for _, entry in ipairs(DRAW) do
+		roll = roll - entry[2]
+		if roll < 0 then return entry[1] end
+	end
+	return DRAW[1][1]
+end
+ns.CaptureDraw = Draw
+
+-- Renvoie "ok" (rangée) ou "full" (besace pleine) ; opts.quiet : sans bulle
+function ns:CaptureGrant(id, opts)
+	opts = opts or {}
+	if id == "draw" then id = Draw() end
+	local aid = AID_BY_ID[id]
+	if not aid then return nil end
+	local items = self:CaptureData().items
+	local label = self:CaptureAidLabel(id)
+	if items[id] >= aid.cap then
+		if not opts.silent then self:Print(self:F("CAPTURE_MSG_FULL", label)) end
+		return "full", id
+	end
+	items[id] = items[id] + 1
+	if not opts.silent then self:Print(self:F("CAPTURE_MSG_ITEM", label, items[id])) end
+	if not opts.quiet then self:CompanionSay("CAPTURE_ITEM", { args = { label } }) end
+	self:CaptureRefreshPrompt()
+	return "ok", id
+end
+
+function ns:CaptureSpend(id)
+	local items = self:CaptureData().items
+	if not (id and AID_BY_ID[id]) or (items[id] or 0) <= 0 then return false end
+	items[id] = items[id] - 1
+	return true
+end
+
+-- Une bulle un peu plus tard : celle du tampon ou du palier passe d'abord
+ns.CAPTURE_SAY_DELAY = 6
+function ns:CaptureSayLater(pool, arg)
+	local timer = G("C_Timer")
+	if type(timer) == "table" and type(timer.After) == "function" then
+		pcall(timer.After, ns.CAPTURE_SAY_DELAY, function() ns:CompanionSay(pool, { args = { arg } }) end)
+	else
+		self:CompanionSay(pool, { args = { arg } })
+	end
+end
+
+-- Tampon du carnet : une chance d'aide selon sa sorte
+function ns:CaptureOnStamp(stamp)
+	if type(stamp) ~= "table" or stamp.new == false or not Enabled() then return nil end
+	local drop = STAMP_DROPS[stamp.kind or ""]
+	if not drop then return nil end
+	local got = {}
+	-- le chat suit le réglage du carnet (« Tampons dans le chat », coupé par
+	-- défaut) : la bulle du compagnon suffit
+	local silent = self:DB().journalChat ~= true
+	if math.random() < drop.chance then
+		local result, id = self:CaptureGrant(drop.pick, { quiet = true, silent = silent })
+		if result == "ok" then got[#got + 1] = id end
+	end
+	if drop.bonus and math.random() < drop.bonus.chance then
+		local result, id = self:CaptureGrant(drop.bonus.pick, { quiet = true, silent = silent })
+		if result == "ok" then got[#got + 1] = id end
+	end
+	-- une seule bulle pour le lot, APRÈS celle du tampon (qui a la priorité)
+	if #got > 0 then self:CaptureSayLater("CAPTURE_ITEM", self:CaptureAidLabel(got[#got])) end
+	return got
+end
+
+ns:RegisterCallback("STAMP", function(self, stamp)
+	local ok, err = pcall(self.CaptureOnStamp, self, stamp)
+	if not ok and self.RecordError then self:RecordError("capture:stamp", err) end
+end)
+
+-- Paliers de complétion de zone (25, 50, 75 %) : en plus de la friandise
+do
+	local check = ns.TreatCheckZone
+	if check then
+		function ns:TreatCheckZone(zoneID, opts, ...)
+			local gained = check(self, zoneID, opts, ...)
+			if type(gained) == "table" and #gained > 0 and Enabled() then
+				local ok, err = pcall(function()
+					local last
+					local silent = (opts and opts.quiet) or self:DB().journalChat ~= true
+					for _, gain in ipairs(gained) do
+						local pick = MILESTONE_DROPS[gain.mark]
+						if pick then
+							local result, id = self:CaptureGrant(pick, { quiet = true, silent = silent })
+							if result == "ok" then last = id end
+						end
+					end
+					-- rattrapage (mise à jour) : ni bulle ni chat
+					if last and not (opts and opts.quiet) then self:CaptureSayLater("CAPTURE_ITEM", self:CaptureAidLabel(last)) end
+				end)
+				if not ok and self.RecordError then self:RecordError("capture:milestone", err) end
+			end
+			return gained
+		end
+	end
+end
+
+-- ---------------------------------------------------------------------------
+-- La ménagerie comme apparences du compagnon (Companion.lua)
+-- ---------------------------------------------------------------------------
+-- Définitions façon catalogue : { id = "cap:<npc>", npc, label = nom, captured }
+-- (L rend la clé elle-même quand elle manque : le nom s'affiche tel quel).
+function ns:CaptureAppearances()
+	local data = self:CaptureData()
+	local cache = self.captureAppCache
+	if cache and cache.count == data.count and cache.n == data.serial then return cache.list end
+	local list = {}
+	for npcID, entry in pairs(data.creatures) do
+		local name = tostring(entry.name or npcID)
+		if entry.shiny then name = self:F("CAPTURE_SHINY_TAG", name) end
+		list[#list + 1] = { id = "cap:" .. tostring(npcID), npc = tonumber(npcID), label = name,
+			captured = true, class = entry.class, at = entry.at, shiny = entry.shiny }
+	end
+	table.sort(list, function(a, b)
+		if (a.at or 0) ~= (b.at or 0) then return (a.at or 0) < (b.at or 0) end
+		return a.id < b.id
+	end)
+	self.captureAppCache = { count = data.count, n = data.serial, list = list }
+	return list
+end
+
+-- ---------------------------------------------------------------------------
+-- Le coup fatal : on propose la capture
+-- ---------------------------------------------------------------------------
+-- `entry` : { zoneID, npcID } (Bestiary.lua) ; `shiny` : brillante abattue
+function ns:CaptureOffer(guid, entry, shiny)
+	if not Enabled() or type(entry) ~= "table" or not entry.npcID then return nil end
+	local state = self:CaptureState()
+	if state.rolling then return nil end              -- un filet à la fois
+	local npcID = tonumber(entry.npcID) or entry.npcID
+	local known = self:CaptureData().creatures[npcID]
+	if known and (known.shiny or not shiny) then return nil end
+	local book = self.BestiaryData and self:BestiaryData()
+	local species = book and book[entry.zoneID] and book[entry.zoneID][entry.npcID] or {}
+	local name = species.name or (shiny and shiny.name) or tostring(npcID)
+	state.pending = {
+		guid = guid, npcID = npcID, zoneID = entry.zoneID, name = name,
+		class = species.class or "normal", level = species.level, type = species.type,
+		family = species.family, shiny = shiny and true or nil,
+		expires = Clock() + ns.CAPTURE_WINDOW,
+	}
+	-- l'aide choisie la dernière fois reste choisie s'il en reste
+	if state.aid and self:CaptureAidCount(state.aid) <= 0 then state.aid = nil end
+	self:CaptureShowPrompt()
+	self:CompanionSay("CAPTURE_PROMPT", { args = { name } })
+	return state.pending
+end
+
+-- Un essai. Renvoie true si le filet est lancé.
+function ns:CaptureThrow()
+	local state = self:CaptureState()
+	local pending = state.pending
+	if not pending or state.rolling then return false end
+	if Clock() > pending.expires then
+		state.pending = nil
+		self:CaptureHidePrompt()
+		return false
+	end
+	local aid = state.aid
+	if aid and not self:CaptureSpend(aid) then aid = nil end
+	local chance, sure = self:CaptureChance(pending, aid)
+	local success = sure or math.random() < chance
+	-- comme un filet qui se débat : trois secousses pour une prise, une à
+	-- trois avant de céder pour un échec
+	local shakes = success and 3 or math.random(1, 3)
+	local data = self:CaptureData()
+	data.tries = data.tries + 1
+	state.pending = nil
+	-- scène animée (CaptureStage.lua) : le lancer du filet passe avant les secousses
+	local staged = self.CaptureStageOn and self:CaptureStageOn() or false
+	local now = Clock()
+	state.rolling = { target = pending, success = success, shakes = shakes, done = 0, start = now,
+		staged = staged or nil, nextAt = now + (staged and ns.CAPTURE_THROW_TIME or 0) + ns.CAPTURE_SHAKE_STEP,
+		aid = aid, chance = chance }
+	if staged then
+		self:CaptureHidePrompt()
+		self:CaptureShowStage(state.rolling)
+	else
+		self:CaptureRefreshPrompt()
+	end
+	if self.CompanionFx then self:CompanionFx("shake") end
+	return true
+end
+
+function ns:CaptureResolve(rolling)
+	local target = rolling.target
+	local data = self:CaptureData()
+	if rolling.success then
+		-- une brillante d'une espèce déjà capturée remplace sa fiche : une
+		-- créature de plus seulement si l'espèce est nouvelle
+		local fresh = data.creatures[target.npcID] == nil
+		data.creatures[target.npcID] = {
+			name = target.name, class = target.class, level = target.level, type = target.type,
+			family = target.family, zoneID = target.zoneID, at = Call(G("time")) or 0,
+			shiny = target.shiny,
+		}
+		if fresh then data.count = data.count + 1 end
+		data.serial = (tonumber(data.serial) or 0) + 1
+		self.captureAppCache = nil
+		self:Print(self:F("CAPTURE_MSG_OK", target.name))
+		self:CompanionSay(target.shiny and "CAPTURE_SHINY" or "CAPTURE_OK", { force = true, args = { target.name } })
+		if self.CompanionFx then self:CompanionFx("bounce"); self:CompanionFx("hearts") end
+		if self.MemoryRecord then
+			self:MemoryRecord("capture", "capture:" .. tostring(target.npcID), { target.name })
+		end
+		self:CompanionAdd("mood", 5)
+		if fresh and data.count % ns.CAPTURE_GIFT_EVERY == 0 then
+			-- besace de sifflets pleine : le message le dit (CaptureGrant)
+			local result = self:CaptureGrant("sifflet", { quiet = true, silent = true })
+			if result == "ok" then self:Print(self:F("CAPTURE_MSG_GIFT", data.count, self:CaptureAidLabel("sifflet")))
+			else self:Print(self:F("CAPTURE_MSG_FULL", self:CaptureAidLabel("sifflet"))) end
+		end
+		if self.RefreshOptions then pcall(self.RefreshOptions, self) end
+		if self.journalFrame and self.journalFrame:IsShown() and self.RefreshJournal then pcall(self.RefreshJournal, self) end
+	else
+		self:Print(self:F("CAPTURE_MSG_FAIL", target.name))
+		self:CompanionSay("CAPTURE_FAIL", { force = true, args = { target.name } })
+	end
+	return rolling.success
+end
+
+-- Horloge : secousses, puis verdict ; fenêtre expirée : on la ferme
+function ns:CaptureTick(now)
+	local state = self.captureState
+	if not state then return end
+	local rolling = state.rolling
+	if rolling then
+		if now < rolling.nextAt then return end
+		rolling.done = rolling.done + 1
+		if rolling.done < rolling.shakes then
+			rolling.nextAt = now + ns.CAPTURE_SHAKE_STEP
+			if self.CompanionFx then self:CompanionFx("shake") end
+			self:CaptureRefreshPrompt()
+			return
+		end
+		if not rolling.result then
+			-- une seule fois, même si l'annonce plante : sinon chaque tour
+			-- recompterait la capture et le filet resterait bloqué
+			rolling.result = rolling.success and "ok" or "fail"
+			local done, err = pcall(self.CaptureResolve, self, rolling)
+			if not done and self.RecordError then self:RecordError("capture:resolve", err) end
+			rolling.resultAt = now
+			rolling.closeAt = now + (rolling.staged and ns.CAPTURE_STAGE_HOLD or 2)
+			self:CaptureRefreshPrompt()
+			return
+		end
+		if now >= (rolling.closeAt or now) then
+			state.rolling = nil
+			self:CaptureHidePrompt()
+			if self.CaptureHideStage then self:CaptureHideStage() end
+		end
+		return
+	end
+	local pending = state.pending
+	if pending then
+		if now > pending.expires then
+			state.pending = nil
+			self:CaptureHidePrompt()
+		else
+			self:CaptureRefreshTimer(now)
+		end
+	end
+end
+
+-- Choisir (ou reposer) une aide pour l'essai en cours
+function ns:CaptureToggleAid(id)
+	local state = self:CaptureState()
+	if state.aid == id then state.aid = nil
+	elseif AID_BY_ID[id] and self:CaptureAidCount(id) > 0 then state.aid = id end
+	self:CaptureRefreshPrompt()
+	return state.aid
+end
+
+-- Le coup fatal compté par le bestiaire. Chargé après Shiny.lua : la
+-- brillante vivante est encore connue ici.
+do
+	local onKill = ns.BestiaryOnKill
+	if onKill then
+		function ns:BestiaryOnKill(guid, entry, ...)
+			local shinyState = self.shinyState
+			local shiny = shinyState and guid and shinyState.live and shinyState.live[guid]
+			local result = { onKill(self, guid, entry, ...) }
+			local ok, err = pcall(self.CaptureOffer, self, guid, entry, shiny)
+			if not ok and self.RecordError then self:RecordError("capture:offer", err) end
+			if shiny and Enabled() then pcall(self.CaptureGrant, self, "lasso", { quiet = true }) end
+			return unpack(result)
+		end
+	end
+end
+
+-- ---------------------------------------------------------------------------
+-- Fenêtre « Capturer ? »
+-- ---------------------------------------------------------------------------
+local PROMPT_W, PROMPT_H, MODEL_SIZE, AID_SIZE = 304, 104, 64, 26
+
+function ns:EnsureCapturePrompt()
+	if self.capturePrompt then return self.capturePrompt end
+	if not (Theme and Theme.CreateToast) then return nil end
+	local frame = Theme.CreateToast(UIParent, PROMPT_W, PROMPT_H, { strata = "HIGH" })
+	if not frame then return nil end
+	frame:EnableMouse(true)
+	self:RestorePoint(frame, "capturePoint", { point = "BOTTOM", x = 0, y = 260 })
+	-- clic droit : on laisse filer
+	frame:SetScript("OnMouseUp", function(_, button)
+		if button == "RightButton" and not ns:CaptureState().rolling then
+			ns:CaptureState().pending = nil
+			ns:CaptureHidePrompt()
+		end
+	end)
+
+	local pad = 12
+	local ok, model = pcall(CreateFrame, "PlayerModel", nil, frame)
+	if ok and model then
+		model:SetSize(MODEL_SIZE, MODEL_SIZE)
+		model:SetPoint("TOPLEFT", frame, "TOPLEFT", pad, -pad)
+		frame.model = model
+	end
+	frame.icon = frame:CreateTexture(nil, "ARTWORK")
+	frame.icon:SetSize(MODEL_SIZE - 16, MODEL_SIZE - 16)
+	frame.icon:SetPoint("CENTER", frame, "TOPLEFT", pad + MODEL_SIZE / 2, -pad - MODEL_SIZE / 2)
+	frame.icon:SetTexture("Interface\\Icons\\Ability_Hunter_BeastTaming")
+	frame.icon:Hide()
+
+	local left = pad + MODEL_SIZE + 10
+	frame.title = Theme.Text(frame, Theme.F_SMALL, Theme.GOLD)
+	frame.title:SetPoint("TOPLEFT", frame, "TOPLEFT", left, -pad)
+	frame.title:SetText(L.CAPTURE_TITLE)
+	frame.name = Theme.Text(frame, Theme.F_BODY, Theme.PARCHMENT)
+	frame.name:SetPoint("TOPLEFT", frame.title, "BOTTOMLEFT", 0, -3)
+	frame.name:SetWidth(PROMPT_W - left - pad)
+	frame.name:SetJustifyH("LEFT")
+	if frame.name.SetWordWrap then frame.name:SetWordWrap(false) end
+	frame.chance = Theme.Text(frame, Theme.F_SMALL, Theme.MUTED_LIGHT)
+	frame.chance:SetPoint("TOPLEFT", frame.name, "BOTTOMLEFT", 0, -3)
+
+	frame.aids = {}
+	for index, aid in ipairs(AIDS) do
+		local button = Theme.CreateIconButton(frame, AID_SIZE, aid.icon, function() ns:CaptureToggleAid(aid.id) end)
+		button:SetPoint("BOTTOMLEFT", frame, "BOTTOMLEFT", left + (index - 1) * (AID_SIZE + 6), pad)
+		button.count = Theme.Text(button, Theme.F_SMALL, Theme.PARCHMENT)
+		button.count:SetPoint("BOTTOMRIGHT", button, "BOTTOMRIGHT", 2, -2)
+		button.aid = aid.id
+		-- infobulle : nom, effet, combien en poche
+		button:SetScript("OnEnter", function(self)
+			local tooltip = G("GameTooltip")
+			if type(tooltip) ~= "table" or not tooltip.SetOwner then return end
+			tooltip:SetOwner(self, "ANCHOR_TOP")
+			local count = ns:CaptureAidCount(aid.id)
+			Theme.TooltipLine(tooltip, ns:CaptureAidLabel(aid.id), Theme.PARCHMENT)
+			Theme.TooltipLine(tooltip, L["CAPTURE_AID_DESC_" .. aid.id], Theme.TEXT)
+			Theme.TooltipLine(tooltip, count > 0 and ns:F("CAPTURE_AID_HINT", count) or L.CAPTURE_AID_NONE, Theme.MUTED_LIGHT)
+			tooltip:Show()
+		end)
+		button:SetScript("OnLeave", function()
+			local tooltip = G("GameTooltip")
+			if type(tooltip) == "table" and tooltip.Hide then tooltip:Hide() end
+			ns:CaptureRefreshPrompt()
+		end)
+		frame.aids[index] = button
+	end
+
+	frame.throw = Theme.CreateButton(frame, 90, Theme.DIALOG_BUTTON_HEIGHT or 28, L.CAPTURE_THROW,
+		function() ns:CaptureThrow() end, "primary")
+	frame.throw:SetPoint("BOTTOMRIGHT", frame, "BOTTOMRIGHT", -pad, pad - 2)
+
+	frame.status = Theme.Text(frame, Theme.F_BODY, Theme.GOLD)
+	frame.status:SetPoint("RIGHT", frame, "BOTTOMRIGHT", -pad, pad + 12)
+	frame.status:SetJustifyH("RIGHT")
+	frame.status:Hide()
+
+	if Theme.CreateBar then
+		frame.timer = Theme.CreateBar(frame, PROMPT_W - 2, 2)
+		frame.timer:SetPoint("BOTTOMLEFT", frame, "BOTTOMLEFT", 1, 1)
+	end
+	frame:Hide()
+	self.capturePrompt = frame
+	return frame
+end
+
+function ns:CaptureShowPrompt()
+	local frame = self:EnsureCapturePrompt()
+	if not frame then return nil end
+	local target = self:CaptureState().pending
+	if target and frame.model then
+		frame.model:Show()
+		local shown = pcall(frame.model.SetCreature, frame.model, target.npcID)
+		if shown and frame.model.SetPortraitZoom then pcall(frame.model.SetPortraitZoom, frame.model, 0.6) end
+		if shown then frame.icon:Hide() else frame.icon:Show(); frame.model:Hide() end
+	end
+	self:CaptureRefreshPrompt()
+	frame:Show()
+	if Theme.FadeIn then pcall(Theme.FadeIn, frame) end
+	return frame
+end
+
+function ns:CaptureHidePrompt()
+	if self.capturePrompt then self.capturePrompt:Hide() end
+end
+
+function ns:CaptureRefreshTimer(now)
+	local frame, pending = self.capturePrompt, self.captureState and self.captureState.pending
+	if not (frame and frame.timer and pending) then return end
+	frame.timer:SetValue((pending.expires - (now or Clock())) / ns.CAPTURE_WINDOW)
+end
+
+function ns:CaptureRefreshPrompt()
+	local frame = self.capturePrompt
+	if not frame then return end
+	local state = self:CaptureState()
+	-- le lancer se joue sur la scène animée : la petite fenêtre reste fermée
+	if state.rolling and state.rolling.staged then return end
+	local target = state.pending or (state.rolling and state.rolling.target)
+	if not target then return end
+	frame.name:SetText(target.shiny and self:F("CAPTURE_SHINY_TAG", target.name) or target.name)
+	local rank = L["CAPTURE_RANK_" .. tostring(target.class)]
+	local chance, sure = self:CaptureChance(target, state.pending and state.aid)
+	if state.rolling then chance, sure = state.rolling.chance, state.rolling.aid == "sifflet" end
+	frame.chance:SetText(sure and self:F("CAPTURE_SURE", rank) or self:F("CAPTURE_CHANCE", rank, math.floor(chance * 100 + 0.5 + 1e-9)))
+	for _, button in ipairs(frame.aids) do
+		local count = self:CaptureAidCount(button.aid)
+		button.count:SetText(count > 0 and tostring(count) or "")
+		local chosen = state.aid == button.aid and state.pending ~= nil
+		if button.icon.SetDesaturated then button.icon:SetDesaturated(not chosen) end
+		button.icon:SetAlpha(chosen and 1 or (count > 0 and 0.6 or 0.25))
+		local c = chosen and Theme.GOLD or Theme.EDGE
+		if button.border and button.border.SetColor then button.border:SetColor(c[1], c[2], c[3], 1) end
+		if state.rolling then button:Hide() else button:Show() end
+	end
+	if state.rolling then
+		frame.throw:Hide()
+		frame.status:Show()
+		local rolling = state.rolling
+		if rolling.result == "ok" then
+			frame.status:SetText(L.CAPTURE_GOT)
+			frame.status:SetTextColor(Theme.GREEN[1], Theme.GREEN[2], Theme.GREEN[3])
+		elseif rolling.result == "fail" then
+			frame.status:SetText(L.CAPTURE_FLED)
+			frame.status:SetTextColor(Theme.RED[1], Theme.RED[2], Theme.RED[3])
+		else
+			-- une pastille par secousse
+			frame.status:SetText(L.CAPTURE_SHAKING .. " " .. string.rep("• ", rolling.done + 1))
+			frame.status:SetTextColor(Theme.GOLD[1], Theme.GOLD[2], Theme.GOLD[3])
+		end
+		if frame.timer then frame.timer:Hide() end
+	else
+		frame.throw:Show()
+		frame.status:Hide()
+		if frame.timer then frame.timer:Show() end
+		self:CaptureRefreshTimer()
+	end
+end
+
+-- ---------------------------------------------------------------------------
+-- /qc capture
+-- ---------------------------------------------------------------------------
+function ns:CaptureSummary()
+	local data = self:CaptureData()
+	local parts = {}
+	for _, aid in ipairs(AIDS) do parts[#parts + 1] = self:CaptureAidLabel(aid.id) .. " " .. data.items[aid.id] end
+	if data.count == 0 then self:Print(L.CAPTURE_MSG_EMPTY) end
+	self:Print(self:F("CAPTURE_MSG_SUMMARY", data.count, data.tries, table.concat(parts, ", ")))
+	return data
+end
+
+if type(ns.HELP) == "table" then
+	for _, section in ipairs(ns.HELP) do
+		if section[1] == "HELP_H_OPEN" and type(section[2]) == "table" then
+			table.insert(section[2], "HELP_CAPTURE")
+		end
+	end
+end
+if type(ns.EXTRA_COMMANDS) == "table" then
+	ns.EXTRA_COMMANDS["capture"] = function(self) self:CaptureSummary() end
+	ns.EXTRA_COMMANDS["menagerie"] = ns.EXTRA_COMMANDS["capture"]
+end
+
+-- ---------------------------------------------------------------------------
+-- Horloge
+-- ---------------------------------------------------------------------------
+ns.CAPTURE_TICK = 0.1
+do
+	local ok, frame = pcall(CreateFrame, "Frame")
+	if ok and frame and ns.Throttle then
+		frame:SetScript("OnUpdate", ns.Throttle(ns.CAPTURE_TICK, function()
+			local done, err = pcall(ns.CaptureTick, ns, Clock())
+			if not done and ns.RecordError then ns:RecordError("capture:tick", err) end
+		end))
+		ns.captureEventFrame = frame
+	end
+end
+
+if ns.Mark then ns.Mark("Capture") end

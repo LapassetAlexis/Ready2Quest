@@ -616,7 +616,7 @@ Snap.scenes.bricks = function(T)
 	Item("Missions du jour", true, false, "2/3")
 	local version = Theme.Text(nav, Theme.F_SMALL, Theme.MUTED)
 	version:SetPoint("BOTTOMLEFT", nav, "BOTTOMLEFT", 18, 18)
-	version:SetText("v1.28.0  ·  Forever")
+	version:SetText("v1.29.0  ·  Forever")
 
 	local content = win.content
 	local header = Theme.CreatePageHeader(content, 758)
@@ -1270,6 +1270,47 @@ Snap.scenes["qc-pantry"] = function(T)
 	local ns, frame = QCCompanion(T)
 	ns:TreatMenuToggle()
 	return Snap.Group(frame, ns.treatMenu), "QuestCompanion : garde-manger (Maj + clic sur la créature)"
+end
+
+Snap.scenes["qc-capture"] = function(T)
+	local ns = QCWorld(T)
+	local data = ns:CaptureData()
+	data.items.appat, data.items.lasso, data.items.sifflet = 3, 1, 0
+	ns:BestiaryData()[1413] = { [3100] = { name = "Loup des plaines", class = "elite", level = 21, killed = 1 } }
+	ns:CaptureOffer("Creature-0-1-1-1-3100-0001", { zoneID = 1413, npcID = 3100 })
+	ns:CaptureToggleAid("appat")
+	return Centered(ns.capturePrompt), "QuestCompanion : capture proposée (élite, appât choisi)"
+end
+
+local function QCCaptureStage(T, success, at)
+	local ns = QCWorld(T)
+	ns:DB().companionCaptureAnim = true
+	ns:BestiaryData()[1413] = { [3100] = { name = "Ours gris", class = "rare", level = 21, killed = 1 } }
+	ns:CaptureOffer("Creature-0-1-1-1-3100-0001", { zoneID = 1413, npcID = 3100 })
+	local saved = math.random
+	math.random = function(a, b) if a then return a end return success and 0 or 0.99 end
+	ns:CaptureThrow()
+	math.random = saved
+	local rolling = ns:CaptureState().rolling
+	if at == "shake" then
+		rolling.done = 1
+		ns:CaptureStageUpdate(rolling.start + ns.CAPTURE_THROW_TIME + 0.7)
+	else
+		rolling.done = rolling.shakes
+		rolling.result = success and "ok" or "fail"
+		rolling.resultAt = rolling.start + 3
+		ns:CaptureStageUpdate(rolling.resultAt + (success and 0.35 or 0.3))
+	end
+	return Centered(ns.captureStage)
+end
+Snap.scenes["qc-capture-shake"] = function(T)
+	return QCCaptureStage(T, true, "shake"), "QuestCompanion : capture animée, le filet secoue (rare)"
+end
+Snap.scenes["qc-capture-ok"] = function(T)
+	return QCCaptureStage(T, true, "ok"), "QuestCompanion : capture animée, capturé ! (gerbe de losanges)"
+end
+Snap.scenes["qc-capture-fail"] = function(T)
+	return QCCaptureStage(T, false, "fail"), "QuestCompanion : capture animée, échappé"
 end
 
 Snap.scenes["qc-chest"] = function(T)

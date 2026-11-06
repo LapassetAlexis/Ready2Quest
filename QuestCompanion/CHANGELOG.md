@@ -1,5 +1,18 @@
 # QuestCompanion
 
+## 1.4.0
+
+- **Capture des monstres (ménagerie)** : en plus des mascottes, chaque monstre abattu peut désormais être capturé et devenir une apparence de ton compagnon.
+  - au coup fatal, une fenêtre « Capturer ? » (12 s) montre le monstre, son rang et ta chance ; un clic, un essai ; le filet secoue une à trois fois, puis c'est gagné… ou il s'échappe ;
+  - chance selon le rang (normal 30 %, élite 15 %, rare 8 %, rare élite 5 %, boss 2 %) et l'écart de niveau ;
+  - **aides de capture**, gagnées au hasard des tampons du carnet, des paliers de zone (25, 50, 75 %) et des brillantes : Appât savoureux (×1,5), Lasso tressé (×2,5), Sifflet du dompteur (capture assurée) ; un Sifflet offert toutes les 10 captures ;
+  - les créatures capturées rejoignent la liste des apparences (réglages et Collection du carnet) ; une brillante capturée reste marquée ;
+  - **capture animée**, façon ouverture de paquet : le filet part en arc vers le monstre, le recouvre, secoue sous un halo à la couleur de sa rareté (blanc, bleu, violet, orange, doré pour une brillante) ; capturé : éclair, gerbe de losanges, la créature tourne sur elle-même, bannière « Capturé ! » et sa rareté en losanges ; raté : le filet tombe et le monstre file (réglage « Capture animée ») ;
+  - `/qc capture` résume ta ménagerie ; réglage sur la page « Au jour le jour ».
+- **Un compagnon bien plus bavard, et plus moqueur** : environ trois fois plus de répliques (2 300 au lieu de 700), pour chaque situation et chaque caractère, avec un ton plus taquin (morts, retours du cimetière, sacs pleins, détours, bestioles inoffensives…). Il évite désormais de répéter ses six dernières répliques.
+
+*English:* monster capture (menagerie): every defeated monster can now be captured and become a companion look. A "Capture?" window (12 s) shows the monster, its rank and your chance; one click, one try, and an animated scene, like opening a card pack: the net flies to the monster, shakes under a rarity-coloured glow, then a flash, a burst and a "Captured!" banner, or the monster runs off. Chance depends on rank and level gap. Capture aids drop at random from journal stamps, zone milestones and shinies: Tasty bait (×1.5), Braided lasso (×2.5), Tamer's whistle (guaranteed), plus a free whistle every 10 captures. Captured creatures join the appearance list (settings and journal Collection). `/qc capture` sums up your menagerie. The companion also has about three times more lines (2,300 instead of 700) with a more teasing tone, and avoids repeating its last six lines.
+
 ## 1.3.0
 
 - **Nouvelle interface**, plus moderne et plus lisible :
