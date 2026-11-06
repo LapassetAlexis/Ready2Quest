@@ -518,7 +518,10 @@ ns.AddOptionPage({
 		{ key = "companionAppearance", label = "COMP_KIND_app",       kind = "action",
 			choices = function() return ns:CompanionChoices("app") end,
 			current = function() return ns:CompanionCurrentAppearance().id end,
-			choose = function(id) ns:CompanionSetAppearance(id) end },
+			-- confirmation qui compare les effets (CompanionEffects.lua)
+			choose = function(id)
+				if ns.CompanionAskAppearance then ns:CompanionAskAppearance(id) else ns:CompanionSetAppearance(id) end
+			end },
 		{ key = "companionFrameStyle", label = "COMP_KIND_frame",     kind = "action",
 			choices = function() return ns:CompanionChoices("frame") end,
 			current = function() return ns:CompanionCurrentStyle("frame").id end,

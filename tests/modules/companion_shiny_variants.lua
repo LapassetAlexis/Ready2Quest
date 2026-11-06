@@ -231,10 +231,13 @@ do
 	Check("[SHV] bouton : la fiche passe à la brillante", preview.shiny == true and preview.title.text:find("Lion", 1, true)
 		and preview.variant.text.text == "Version normale")
 	row:Click()
+	-- 2.0 : une confirmation qui compare les effets, puis « Emmener »
+	NS:CompanionConfirmAnswer(true)
 	Check("[SHV] clic sur la ligne : la version montrée devient le compagnon", NS:CompanionData().appearance == "cap:3400:s",
 		NS:CompanionData().appearance)
 	preview.variant:Click()
 	row:Click()
+	NS:CompanionConfirmAnswer(true)
 	Check("[SHV] … et la normale", NS:CompanionData().appearance == "cap:3400")
 	f:Hide()
 end
