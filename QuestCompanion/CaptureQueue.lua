@@ -386,6 +386,10 @@ do
 				if shiny then entry.shinyAt = oldAt else entry.at = oldAt end
 			end
 			rolling.starsBest, rolling.starsBetter = best, better
+			-- les étoiles ont pu changer : les effets du compagnon (lot 2) se recalculent
+			local capture = self:CaptureData()
+			capture.serial = (tonumber(capture.serial) or 0) + 1
+			self.captureAppCache = nil
 			local text = self:CaptureStarsText(rolling.stars)
 			if before == nil then
 				self:Print(self:F("CAPTURE_MSG_STARS", target.name, text))

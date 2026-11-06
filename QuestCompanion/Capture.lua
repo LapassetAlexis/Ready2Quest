@@ -738,7 +738,8 @@ function ns:CaptureResolve(rolling)
 		end
 		data.serial = (tonumber(data.serial) or 0) + 1
 		self.captureAppCache = nil
-		self:Print(self:F("CAPTURE_MSG_OK", target.name))
+		-- une recapture (étoiles, CaptureQueue.lua) a son propre message : pas « il rejoint ta ménagerie »
+		if not rolling.starsBefore then self:Print(self:F("CAPTURE_MSG_OK", target.name)) end
 		self:CompanionSay(target.shiny and "CAPTURE_SHINY" or "CAPTURE_OK", { force = true, args = { target.name } })
 		if self.CompanionFx then self:CompanionFx("bounce"); self:CompanionFx("hearts") end
 		if self.MemoryRecord then

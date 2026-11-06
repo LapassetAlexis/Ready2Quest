@@ -28,6 +28,9 @@ if ns.KEEP_STRINGS then ns.CREATURE_TYPE_STRINGS = { fr = FR, en = EN } end
 local BY_NAME = {}
 for key, name in pairs(FR) do BY_NAME[ns.AsciiLower(name)] = key:gsub("^CTYPE_", "") end
 for key, name in pairs(EN) do BY_NAME[ns.AsciiLower(name)] = key:gsub("^CTYPE_", "") end
+-- autres noms possibles selon la version du client
+BY_NAME[ns.AsciiLower("Machine")] = "mechanical"
+BY_NAME[ns.AsciiLower("Machines")] = "mechanical"
 
 function ns:CreatureTypeKey(text)
 	if type(text) ~= "string" or text == "" then return nil end

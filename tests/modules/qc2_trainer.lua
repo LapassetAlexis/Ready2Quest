@@ -142,8 +142,11 @@ do
 		and card.shinies == 1 and (card.shinySeen or 0) >= 1, tostring(card.species) .. "/" .. tostring(card.total))
 	Check("[TRN] vitrine : brillante et élite", card.showcase[1].npc == 7002 and card.showcase[1].shiny
 		and card.showcase[1].typeKey == "beast" and card.showcase[2].npc == 7003 and card.showcase[3] == nil)
-	Check("[TRN] sans les lots 1 à 3 : ni titre, ni sceaux, ni étoiles", card.title == nil and card.seals == nil
-		and card.showcase[2].stars == nil)
+	-- version assemblée (lots 1 à 3 présents) : 3 espèces, pas encore de titre
+	-- (le premier vient à 10), aucun sceau, étoiles de la vitrine lues (1 par défaut)
+	Check("[TRN] avec les lots 1 à 3 : pas encore de titre ni de sceau, étoiles lues", card.title == nil
+		and (card.seals or 0) == 0 and card.showcase[2].stars == 1, tostring(card.title) .. " / " .. tostring(card.seals)
+		.. " / " .. tostring(card.showcase[2].stars))
 	Check("[TRN] compagnon : la mascotte, son modèle", card.companion and card.companion.mascot
 		and card.companion.display ~= nil and card.companion.name == QNS:CompanionName())
 	-- les lots 1, 2 et 3 présents
