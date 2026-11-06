@@ -14,7 +14,7 @@ For **World of Warcraft Forever**. Interface in English and French.
 
 Since 2.0, QuestCompanion is first a **creature-collecting game**: capture what you defeat, complete your menagerie, take the right companion along.
 
-- **The net**: no more pop-up. When a defeated monster is worth capturing (a missing species, a shiny, or a specimen that could beat yours), a big **net button** shows up beside your companion, with a count, and a **"Capture possible" banner** names the creature, says whether you already own it and with how many stars, your odds, with **Ignore** and **Mute** buttons (click the banner: the net); a chime plays, and a little tune when the capture succeeds (**Capture sounds** setting); it turns gold and sparkles when a shiny is waiting. Whole packs queue up; each one waits **30 s from the end of the fight**. **Click**: captures the best one (shiny, then new species, then rarest, then a star upgrade). **Right-click**: the list (pick one, choose an aid, ignore all). `/qc filet` does the same, and the button stays on screen when the companion is hidden.
+- **The net**: no more pop-up. When a defeated monster is worth capturing (a missing species, a shiny, or a specimen that could beat yours), a big **net button** shows up beside your companion, with a count, and a **"Capture possible" banner** names the creature, says whether you already own it and with how many stars, your odds, with **Ignore** and **Mute** buttons (click the banner: the net); a chime plays, and a little tune when the capture succeeds (**Capture sounds** setting); it turns gold and sparkles when a shiny is waiting. Whole packs queue up; each one waits **30 s from the end of the fight**. **Click**: captures the best one (shiny, then new species, then rarest, then a star upgrade). **Right-click**: the list (pick one, choose an aid, ignore all). `/qc filet` does the same, and the button stays on screen when the companion is hidden. The list closes by itself once the net is thrown or empty, and has a **×**; **Escape** closes it, and the capture scene too ("Click or Escape to close").
 - **Stars**: each capture is a 1 to 3-star specimen (3 stars about one time in ten). Recapture to try for better: the best one is kept.
 - **Your companion helps you hunt**: a captured creature you take along gives two effects tied to its **type** — a **hunt** effect and a **comfort** effect:
 
@@ -33,6 +33,7 @@ Since 2.0, QuestCompanion is first a **creature-collecting game**: capture what 
 - **Zone seals**: capture every species of a zone (world bosses aside) and it gets a **seal**: a frame, then a background, in the colours of its landscape, and better shiny odds in that zone for good.
 - **Type collection and titles**: every 10, 20 and 40 captures of a type (5, 10, 20 for the rarest types) strengthen that type's effect. At 10, 25, 50, 100 and 250 species you earn a **trainer title** (Apprentice trainer … Grand master trainer) and a reward.
 - **Trainer card**: your title, your companion in 3D, a **showcase of 3 creatures** you choose, your numbers and your seal badges. Other players who have the addon can open it from the **right-click menu** on you (the entry only shows for players known to have the addon), and you theirs; a "QuestCompanion trainer" line shows in their tooltip. `/qc fiche` opens yours (to pick your showcase), `/qc fiche <name>` asks for someone's. Shared by default, can be turned off (Day by day page): then the addon stays silent.
+- **Menagerie tutorial and Guide page** (2.3.0): the first time a monster lands in the net (out of combat, or as soon as the fight ends), your companion walks you through it in bubbles: it asks you to click the net (which pulses until you do), stays quiet during the scene, comments the verdict, then explains stars, shinies, taking a creature along, seals, titles, missions and the trainer card, and opens the journal on its **Guide** page. Once per character, never in combat, never with capture turned off. `/qc compagnon tuto menagerie` replays it (no capture needed). The **Guide** page explains everything section by section with the game's own numbers, including the table of the eight types, and has a **Replay the tutorial** button.
 
 ## Road companion
 
@@ -93,12 +94,13 @@ You can rename it with `/qc compagnon nom Nugget`.
 
 ## Travel journal
 
-**Since 1.5.0, five pages** (`/qc`, or right-click your companion):
+**Since 1.5.0, five pages, six with the Guide since 2.3.0** (`/qc`, or right-click your companion):
 - **Companion**: your creature up close (portrait with its frame and background, character, evolution steps, its last line), five numbers (captured, shinies, days together, missions done, **distance travelled together**), its needs, and its look: appearances (mascots and captured creatures), frame, background, ornaments.
 - **Menagerie**: every capturable creature, as one numbered list to filter (zone, captured / to capture / to defeat, rarity, name search, sorting), with a 3D card.
 - **Missions**: companion, daily and weekly missions with their rewards, the capture pack, the pantry and the inn card.
 - **Exploration** (called Completion until 1.5.0): every zone and its progress; for the chosen zone, its milestones and what they give, places, professions (the gathering of the zone, grey resources included, and every profession you know) and quests, and the zone chest.
 - **Souvenirs**: the album of the road, each memory with a photo recreated by your companion on the game's own loading-screen art for dungeons, raids, Forever's own places and the first flight, and elsewhere on a Warcraft-style landscape for the zone (Elwynn forest, Durotar canyons, Dun Morogh snow, Tirisfal blight…), each with its own shot (close-up, far away, from behind, mid-air…) and gesture (in-game screenshots stay in the Screenshots folder: addons can't read them).
+- **Guide** (since 2.3.0): the menagerie explained, section by section (the net, stars, shinies, your companion hunts with you, exploring and sealing zones, trainer titles, missions, trainer card, settings and commands), with a contents list on the left, the mouse wheel to scroll and a **Replay the tutorial** button.
 
 Your travel collection: a **stamp** for every first time.
 
@@ -162,7 +164,7 @@ Light on memory: about 2 MB (zone data is built only when you get there, and onl
 |---|---|
 | `/qc` | opens your travel journal (same as `/qc carnet`) |
 | `/qc options` | opens the settings |
-| `/qc compagnon` | your companion's mood (`nom <name>` to rename it, `tuto` to replay the tutorial, `anim` to see its animations) |
+| `/qc compagnon` | your companion's mood (`nom <name>` to rename it, `tuto` to replay the tutorial, `tuto menagerie` for the menagerie one, `anim` to see its animations) |
 | `/qc coffre` | opens a pending zone chest |
 | `/qc capture` | your menagerie and capture aids |
 | `/qc filet` | captures the best creature waiting in the net |
@@ -197,7 +199,7 @@ Pour **World of Warcraft Forever**. Interface en français et en anglais.
 
 Depuis la 2.0, QuestCompanion est d'abord un **jeu de collection de créatures** : capture ce que tu abats, complète ta ménagerie, emmène le bon compagnon.
 
-- **Le filet** : plus de fenêtre qui s'ouvre toute seule. Quand un monstre abattu vaut le coup (une espèce qui te manque, une brillante, ou un spécimen qui pourrait battre le tien), un gros **bouton filet** apparaît à côté de ton compagnon, avec un compteur, et un **bandeau « Capture possible »** nomme la créature, dit si tu l'as déjà et avec combien d'étoiles, ta chance, avec des boutons **Ignorer** et **Sourdine** (clic sur le bandeau : le filet) ; un carillon sonne, et une petite musique quand la capture réussit (réglage **Sons de capture**) ; il devient doré et scintille si une brillante attend. Un pack entier se met en file ; chacun attend **30 s à partir de la fin du combat**. **Clic** : la capture du meilleur (brillante, puis espèce nouvelle, puis le plus rare, puis une amélioration d'étoiles). **Clic droit** : la liste (en choisir un, choisir une aide, tout ignorer). `/qc filet` fait la même chose, et le bouton reste à l'écran quand le compagnon est masqué.
+- **Le filet** : plus de fenêtre qui s'ouvre toute seule. Quand un monstre abattu vaut le coup (une espèce qui te manque, une brillante, ou un spécimen qui pourrait battre le tien), un gros **bouton filet** apparaît à côté de ton compagnon, avec un compteur, et un **bandeau « Capture possible »** nomme la créature, dit si tu l'as déjà et avec combien d'étoiles, ta chance, avec des boutons **Ignorer** et **Sourdine** (clic sur le bandeau : le filet) ; un carillon sonne, et une petite musique quand la capture réussit (réglage **Sons de capture**) ; il devient doré et scintille si une brillante attend. Un pack entier se met en file ; chacun attend **30 s à partir de la fin du combat**. **Clic** : la capture du meilleur (brillante, puis espèce nouvelle, puis le plus rare, puis une amélioration d'étoiles). **Clic droit** : la liste (en choisir un, choisir une aide, tout ignorer). `/qc filet` fait la même chose, et le bouton reste à l'écran quand le compagnon est masqué. La liste se ferme d'elle-même quand le filet part ou se vide, et a un **×** ; **Échap** la ferme, ainsi que la scène de capture (« Clic ou Échap pour fermer »).
 - **Les étoiles** : chaque capture est un spécimen de 1 à 3 étoiles (3 étoiles environ une fois sur dix). Recapture pour tenter mieux : le meilleur est gardé.
 - **Ton compagnon t'aide à chasser** : une créature capturée que tu emmènes donne deux effets liés à son **type**, un de **chasse** et un de **confort** :
 
@@ -216,6 +218,7 @@ Depuis la 2.0, QuestCompanion est d'abord un **jeu de collection de créatures**
 - **Les sceaux de zone** : capture toutes les espèces d'une zone (hors boss du monde) et elle reçoit un **sceau** : un cadre, puis un fond, aux couleurs de son paysage, et une meilleure chance de brillant dans cette zone pour toujours.
 - **Collection par type et titres** : 10, 20 et 40 captures d'un type (5, 10, 20 pour les types les plus rares) renforcent son effet. À 10, 25, 50, 100 et 250 espèces, tu gagnes un **titre de dresseur** (Apprenti dresseur … Grand maître dresseur) et une récompense.
 - **Fiche de dresseur** : ton titre, ton compagnon en 3D, une **vitrine de 3 créatures** que tu choisis, tes chiffres et les badges de tes sceaux. Les autres joueurs qui ont l'addon l'ouvrent depuis le **menu du clic droit** sur toi (l'entrée n'apparaît que pour les joueurs connus comme détenteurs), et toi la leur ; une ligne « Dresseur QuestCompanion » s'affiche dans leur infobulle. `/qc fiche` ouvre la tienne (pour choisir ta vitrine), `/qc fiche <nom>` demande celle de quelqu'un. Partagée par défaut, se coupe (page Au jour le jour) : l'addon reste alors muet.
+- **Tutoriel de la ménagerie et page Guide** (2.3.0) : la première fois qu'un monstre tombe dans le filet (hors combat, ou dès la fin du combat), ton compagnon te guide en bulles : il te demande de cliquer sur le filet (qui bat tant que tu n'as pas cliqué), se tait pendant la scène, commente le verdict, puis explique les étoiles, les brillantes, emmener une créature, les sceaux, les titres, les missions et la fiche de dresseur, et ouvre le carnet sur sa page **Guide**. Une fois par personnage, jamais en combat, jamais si la capture est coupée. `/qc compagnon tuto menagerie` le rejoue (sans attendre de capture). La page **Guide** explique tout, section par section, avec les chiffres du jeu, dont la table des huit types, et un bouton **Revoir le tutoriel**.
 
 ## Compagnon de route
 
@@ -276,12 +279,13 @@ Tu peux la renommer avec `/qc compagnon nom Pépite`.
 
 ## Carnet de voyage
 
-**Depuis la 1.5.0, cinq pages** (`/qc`, ou clic droit sur ton compagnon) :
+**Depuis la 1.5.0, cinq pages, six avec le Guide depuis la 2.3.0** (`/qc`, ou clic droit sur ton compagnon) :
 - **Compagnon** : ta créature en grand (portrait avec son cadre et son fond, caractère, étapes d'évolution, sa dernière réplique), cinq chiffres (capturées, brillantes, jours ensemble, missions faites, **distance parcourue ensemble**), ses envies, et son allure : apparences (mascottes et créatures capturées), cadre, fond, ornements.
 - **Ménagerie** : toutes les créatures capturables, en une liste numérotée à filtrer (zone, capturées / à capturer / à abattre, rareté, recherche par nom, tris), avec une fiche en 3D.
 - **Missions** : missions du compagnon, du jour et de la semaine avec leurs récompenses, la besace de capture, le garde-manger et la carte des auberges.
 - **Exploration** (« Complétion » jusqu'à la 1.5.0) : toutes les zones et leur progression ; pour la zone choisie, ses paliers et ce qu'ils rapportent, les lieux, les métiers (la récolte de la zone, ressources grises comprises, et tous les métiers que tu connais) et les quêtes, et le coffre de zone.
 - **Souvenirs** : l'album de la route, chaque souvenir avec sa photo recréée par ton compagnon sur l'image du jeu lui-même pour les donjons, les raids, les lieux propres à Forever et le premier vol (écrans de chargement), et ailleurs sur un paysage façon Warcraft propre à la zone (forêt d'Elwynn, canyons de Durotar, neige de Dun Morogh, terres maudites de Tirisfal…), chacune avec son cadrage (gros plan, au loin, de dos, en l'air…) et son geste (les captures d'écran du jeu restent dans le dossier Screenshots : un addon ne peut pas les lire).
+- **Guide** (depuis la 2.3.0) : la ménagerie expliquée, section par section (le filet, les étoiles, les brillantes, ton compagnon chasse avec toi, explorer et sceller les zones, titres de dresseur, missions, fiche de dresseur, réglages et commandes), avec un sommaire à gauche, la molette pour faire défiler et un bouton **Revoir le tutoriel**.
 
 Ta collection de voyage : un **tampon** pour chaque première fois.
 
@@ -345,7 +349,7 @@ Léger en mémoire : environ 2 Mo (les données d'une zone ne sont construites q
 |---|---|
 | `/qc` | ouvre ton carnet de voyage (comme `/qc carnet`) |
 | `/qc options` | ouvre les réglages |
-| `/qc compagnon` | l'humeur de ton compagnon (`nom <nom>` pour le renommer, `tuto` pour revoir le tutoriel, `anim` pour voir ses animations) |
+| `/qc compagnon` | l'humeur de ton compagnon (`nom <nom>` pour le renommer, `tuto` pour revoir le tutoriel, `tuto menagerie` celui de la ménagerie, `anim` pour voir ses animations) |
 | `/qc coffre` | ouvre un coffre de zone en attente |
 | `/qc capture` | ta ménagerie et tes aides de capture |
 | `/qc filet` | capture la meilleure créature qui attend dans le filet |

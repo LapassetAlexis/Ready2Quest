@@ -118,7 +118,7 @@ local IDLE_REST  = 300                 -- 5 min au repos sans rien dire : un mot
 local CONVO_STEP = 3.5                 -- s entre deux bulles d'une conversation
 local TUTO_STEP  = 9                   -- s par bulle du tutoriel (« Suivant » accélère)
 local TUTO_WAIT  = 90                  -- s qu'une étape qui attend un geste (le filet) garde sa bulle avant de la redire
--- Tutoriel de la ménagerie (2.2.0) : lancé de lui-même à la première occasion
+-- Tutoriel de la ménagerie (2.3.0) : lancé de lui-même à la première occasion
 -- de capture ; coupé dans le banc de test (comme le tirage des missions)
 ns.TUTO_MENAGERIE_AUTO = ns.TUTO_MENAGERIE_AUTO ~= false
 local HISTORY    = 6                   -- lignes récentes évitées par réservoir (réservoirs triplés en 1.4.0)
