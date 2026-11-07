@@ -69,56 +69,83 @@ end
 -- instance), rencontre (ENCOUNTER_END, table DungeonEncounter de Forever
 -- 1.60.1), donjon (relevé d'entrée : repli des boss sans autre détection)
 -- ---------------------------------------------------------------------------
+-- Une chaîne par boss : « npcIDs/rencontres/statistiques[/donjon] » (listes
+-- séparées par des virgules, champ vide = rien), lue à la demande
 local BOSSES = {
 	-- palier 1
-	rfc       = { npc = { 11519 }, enc = { 2735 }, stat = { 15027 } },
-	wc        = { npc = { 3654 },  enc = { 592 },  stat = { 15028 } },
-	dm        = { npc = { 639 },   enc = { 2747 }, stat = { 63570 } },
-	sfk       = { npc = { 4275 },  enc = { 2755 }, stat = { 1092 } },
-	stocks    = { npc = { 1716 },  enc = { 2760 }, stat = { 15029 } },
-	bfd       = { npc = { 4829 },  enc = { 2767, 2891, 2910 }, stat = { 6137 } },
-	thanes    = { enc = { 3496 }, stat = { 63573 } },
-	lordaeron = { enc = { 3354 }, stat = { 63571 } },
+	rfc       = "11519/2735/15027",
+	wc        = "3654/592/15028",
+	dm        = "639/2747/63570",
+	sfk       = "4275/2755/1092",
+	stocks    = "1716/2760/15029",
+	bfd       = "4829/2767,2891,2910/6137",
+	thanes    = "/3496/63573",
+	lordaeron = "/3354/63571",
 	-- palier 2
-	gnomer    = { npc = { 7800 },  enc = { 2772, 2940 }, stat = { 6140 } },
-	rfk       = { npc = { 4421 },  enc = { 2778 }, stat = { 6139 } },
-	sm        = { npc = { 3977, 3976 }, enc = { 450 }, stat = { 6786, 1093 } },
-	rfd       = { npc = { 7358 },  enc = { 2785 }, stat = { 6141 } },
-	dalaran   = { enc = { 3303 }, stat = { 63572 } },
+	gnomer    = "7800/2772,2940/6140",
+	rfk       = "4421/2778/6139",
+	sm        = "3977,3976/450/6786,1093",
+	rfd       = "7358/2785/6141",
+	dalaran   = "/3303/63572",
 	-- palier 3
-	ulda      = { npc = { 2748 },  enc = { 554 },  stat = { 6142 } },
-	zf        = { npc = { 7267 },  enc = { 600 },  stat = { 1094 } },
-	mara      = { npc = { 12201 }, enc = { 429 },  stat = { 6143 } },
-	st        = { npc = { 5709 },  enc = { 493, 2959, 3584 }, stat = { 6144 } },
-	alcaz     = { stat = { 63575 }, entry = "alcaz" },
+	ulda      = "2748/554/6142",
+	zf        = "7267/600/1094",
+	mara      = "12201/429/6143",
+	st        = "5709/493,2959,3584/6144",
+	alcaz     = "//63575/alcaz",
 	-- palier 4
-	brd       = { npc = { 9019 },  enc = { 2790 }, stat = { 1095 } },
-	lbrs      = { npc = { 9568 },  enc = { 275 },  stat = { 6145 } },
-	ubrs      = { npc = { 10363 }, enc = { 3069 }, stat = { 1096 } },
-	dmaul     = { npc = { 11501 }, enc = { 368 },  stat = { 6146 } },
-	scholo    = { npc = { 1853 },  enc = { 2801 }, stat = { 15030 } },
-	strat     = { npc = { 10440 }, enc = { 484 },  stat = { 1097, 15031 } },
-	shaper    = { stat = { 63574 }, entry = "shaper" },
+	brd       = "9019/2790/1095",
+	lbrs      = "9568/275/6145",
+	ubrs      = "10363/3069/1096",
+	dmaul     = "11501/368/6146",
+	scholo    = "1853/2801/15030",
+	strat     = "10440/484/1097,15031",
+	shaper    = "//63574/shaper",
 	-- raids
-	ony       = { npc = { 10184 }, enc = { 1084 }, stat = { 1098 } },
-	mc        = { npc = { 11502 }, enc = { 672 } },
-	zg        = { npc = { 14834 }, enc = { 793 } },
-	bwl       = { npc = { 11583 }, enc = { 617 } },
-	aq20      = { npc = { 15339 }, enc = { 723 } },
-	aq40      = { npc = { 15727 }, enc = { 717 } },
-	naxx      = { npc = { 15990 }, enc = { 1114 } },
-	hyjal     = { stat = { 63580 } },
-	barrow    = { stat = { 63581 } },
+	ony       = "10184/1084/1098",
+	mc        = "11502/672/",
+	zg        = "14834/793/",
+	bwl       = "11583/617/",
+	aq20      = "15339/723/",
+	aq40      = "15727/717/",
+	naxx      = "15990/1114/",
+	hyjal     = "//63580",
+	barrow    = "//63581",
 }
 ns.FEAT_BOSSES = BOSSES
 -- boss du monde connus (repli du rang de la table de zone)
 local WORLD_BOSSES = { [6109] = true, [12397] = true, [14887] = true, [14888] = true, [14889] = true, [14890] = true }
 
-local BOSS_BY_NPC, BOSS_BY_ENC = {}, {}
-for key, boss in pairs(BOSSES) do
-	for _, id in ipairs(boss.npc or {}) do BOSS_BY_NPC[id] = key end
-	for _, id in ipairs(boss.enc or {}) do BOSS_BY_ENC[id] = key end
-	Extra(boss.stat)
+-- Champ d'un boss : 1 npcIDs, 2 rencontres, 3 statistiques (listes de
+-- nombres), 4 donjon de repli (texte ou nil)
+local function BossField(key, field)
+	local spec = BOSSES[key]
+	if not spec then return nil end
+	local index = 0
+	for part in (spec .. "/"):gmatch("([^/]*)/") do
+		index = index + 1
+		if index == field then
+			if field == 4 then return part ~= "" and part or nil end
+			local ids = {}
+			for id in part:gmatch("%d+") do ids[#ids + 1] = tonumber(id) end
+			return ids
+		end
+	end
+	return field ~= 4 and {} or nil
+end
+ns.FeatBossField = BossField
+
+-- npcID et rencontre -> boss, construits à la première mort vue
+local bossByNpc, bossByEnc
+local function BossIndex()
+	if not bossByNpc then
+		bossByNpc, bossByEnc = {}, {}
+		for key in pairs(BOSSES) do
+			for _, id in ipairs(BossField(key, 1)) do bossByNpc[id] = key end
+			for _, id in ipairs(BossField(key, 2)) do bossByEnc[id] = key end
+		end
+	end
+	return bossByNpc, bossByEnc
 end
 
 local SOURCES = ns.FEAT_SOURCES or {}
@@ -127,29 +154,49 @@ local LISTS = ns.FEAT_LISTS or {}
 ns.FEAT_LISTS = LISTS
 
 -- Un boss : vaincu (1+) d'après la statistique, notre suivi, ou à défaut
--- l'entrée dans son donjon quand rien d'autre ne peut le dire
-local BOSS_TOPICS = { "boss", "kill", "place" }
-for key, boss in pairs(BOSSES) do
-	SOURCES["boss_" .. key] = {
-		topics = BOSS_TOPICS, retro = true,
+-- l'entrée dans son donjon quand rien d'autre ne peut le dire. Sources
+-- « boss_<clé> » créées à la première lecture (métatable de FEAT_SOURCES).
+local BOSS_TOPICS = ns.FeatTopics("boss", "kill", "place")
+local function BossSource(key)
+	return {
+		topics = BOSS_TOPICS,
 		get = function(self)
 			local own = Ctr(self, "boss_" .. key)
-			local stat = boss.stat and StatMax(self, boss.stat)
+			local stats = BossField(key, 3)
+			local stat = #stats > 0 and StatMax(self, stats) or nil
 			local best = math.max(own, stat or 0)
-			if best == 0 and boss.entry and stat == nil then
+			local entry = BossField(key, 4)
+			if best == 0 and entry and stat == nil then
 				local journal = self:CharData().journal
 				local stamps = type(journal) == "table" and type(journal.stamps) == "table" and journal.stamps or {}
-				if stamps["dungeon:" .. boss.entry] ~= nil then return 1 end
+				if stamps["dungeon:" .. entry] ~= nil then return 1 end
 			end
 			return best
 		end,
 	}
 end
+do
+	local meta = getmetatable(SOURCES) or {}
+	local base = meta.__index
+	meta.__index = function(t, name)
+		local key = type(name) == "string" and name:match("^boss_(.+)$")
+		if key and BOSSES[key] then
+			local source = BossSource(key)
+			rawset(t, name, source)
+			return source
+		end
+		if type(base) == "function" then return base(t, name) end
+		if type(base) == "table" then return base[name] end
+		return nil
+	end
+	setmetatable(SOURCES, meta)
+end
 
 -- Une mort de boss vue par l'une des sources ; rend la clé comptée (ou nil)
 local recentKills = {}
 function ns:FeatBossKill(npcID, encounterID)
-	local key = (npcID and BOSS_BY_NPC[tonumber(npcID)]) or (encounterID and BOSS_BY_ENC[tonumber(encounterID)])
+	local byNpc, byEnc = BossIndex()
+	local key = (npcID and byNpc[tonumber(npcID)]) or (encounterID and byEnc[tonumber(encounterID)])
 	if not key or not Awake() then return nil end
 	local now = Now()
 	local last = recentKills[key]
@@ -173,22 +220,26 @@ end
 -- ---------------------------------------------------------------------------
 -- plus haut solde vu (cuivre, CharData().feats.ctr.goldMax), en pièces d'or
 Extra({ 334 })
-SOURCES.goldMax = {
-	topics = { "money" }, retro = true,
-	get = function(self)
-		local copper = CtrMax(self, "goldMax", Num(Call(G("GetMoney"))))
-		return math.floor(math.max(copper, StatMax(self, { 334 }) or 0) / 10000)
-	end,
-}
-SOURCES.mountSeen = { topics = { "mount" }, retro = false, get = function(self) return Ctr(self, "mounted") > 0 and 1 or 0 end }
-SOURCES.taxiRides = { topics = { "taxi" }, retro = false, get = function(self) return Ctr(self, "taxi") end }
-SOURCES.deaths = { topics = { "death" }, retro = false, get = function(self) return Ctr(self, "deaths") end }
-SOURCES.questsDone = { topics = { "quest" }, retro = false, get = function(self) return Ctr(self, "quests") end }
-SOURCES.emotes = { topics = { "emote" }, retro = false, get = function(self) return Ctr(self, "emotes", "account") end }
-SOURCES.raidEntered = { topics = { "instance" }, retro = false,
-	get = function(self) return self:FeatStore("char").flag.raidEnter and 1 or 0 end }
-SOURCES.worldBoss = { topics = { "kill" }, retro = false, get = function(self) return Ctr(self, "worldBoss") end }
-SOURCES.captureInside = { topics = { "capture" }, retro = false, get = function(self) return Ctr(self, "captureInside") end }
+-- (sources et listes posées à la première lecture du catalogue, ou d'une
+-- source absente : métatable de FEAT_SOURCES, FeatsData.lua)
+ns.FeatCatalog(function()
+	SOURCES.goldMax = {
+		topics = ns.FeatTopics("money"),
+		get = function(self)
+			local copper = CtrMax(self, "goldMax", Num(Call(G("GetMoney"))))
+			return math.floor(math.max(copper, StatMax(self, { 334 }) or 0) / 10000)
+		end,
+	}
+	SOURCES.mountSeen = { topics = ns.FeatTopics("mount"), retro = false, get = function(self) return Ctr(self, "mounted") > 0 and 1 or 0 end }
+	SOURCES.taxiRides = { topics = ns.FeatTopics("taxi"), retro = false, get = function(self) return Ctr(self, "taxi") end }
+	SOURCES.deaths = { topics = ns.FeatTopics("death"), retro = false, get = function(self) return Ctr(self, "deaths") end }
+	SOURCES.questsDone = { topics = ns.FeatTopics("quest"), retro = false, get = function(self) return Ctr(self, "quests") end }
+	SOURCES.emotes = { topics = ns.FeatTopics("emote"), retro = false, get = function(self) return Ctr(self, "emotes", "account") end }
+	SOURCES.raidEntered = { topics = ns.FeatTopics("instance"), retro = false,
+		get = function(self) return self:FeatStore("char").flag.raidEnter and 1 or 0 end }
+	SOURCES.worldBoss = { topics = ns.FeatTopics("kill"), retro = false, get = function(self) return Ctr(self, "worldBoss") end }
+	SOURCES.captureInside = { topics = ns.FeatTopics("capture"), retro = false, get = function(self) return Ctr(self, "captureInside") end }
+end)
 
 -- Métiers : ns:PlayerProfessions (dernière liste complète gardée par
 -- personnage), principaux = tout sauf cuisine, pêche, secourisme
@@ -218,37 +269,39 @@ local function Profs(self)
 		return out
 	end) or { primary = {}, rank = {} }
 end
-SOURCES.profPrimary = { topics = { "prof" }, retro = true, get = function(self) return #Profs(self).primary end }
-SOURCES.profBest = {
-	topics = { "prof" }, retro = true,
-	get = function(self)
-		local best = StatMax(self, PRIMARY_STATS) or 0
-		for _, rank in ipairs(Profs(self).primary) do best = math.max(best, rank) end
-		return best
-	end,
-}
-SOURCES.profPrimary300 = {
-	topics = { "prof" }, retro = true,
-	get = function(self)
-		local count = 0
-		for _, rank in ipairs(Profs(self).primary) do if rank >= 300 then count = count + 1 end end
-		return count
-	end,
-}
-for key, stat in pairs(SECONDARY) do
-	SOURCES["prof_" .. key] = { topics = { "prof" }, retro = true,
-		get = function(self) return math.max(Profs(self).rank[key] or 0, StatMax(self, { stat }) or 0) end }
-end
-SOURCES.gathered = {
-	topics = { "prof" }, retro = true,
-	get = function(self)
-		local total = 0
-		for _, entry in pairs(self.GatheringData and self:GatheringData() or {}) do
-			if type(entry) == "table" then total = total + (tonumber(entry.count) or 0) end
-		end
-		return total
-	end,
-}
+ns.FeatCatalog(function()
+	SOURCES.profPrimary = { topics = ns.FeatTopics("prof"), get = function(self) return #Profs(self).primary end }
+	SOURCES.profBest = {
+		topics = ns.FeatTopics("prof"),
+		get = function(self)
+			local best = StatMax(self, PRIMARY_STATS) or 0
+			for _, rank in ipairs(Profs(self).primary) do best = math.max(best, rank) end
+			return best
+		end,
+	}
+	SOURCES.profPrimary300 = {
+		topics = ns.FeatTopics("prof"),
+		get = function(self)
+			local count = 0
+			for _, rank in ipairs(Profs(self).primary) do if rank >= 300 then count = count + 1 end end
+			return count
+		end,
+	}
+	for key, stat in pairs(SECONDARY) do
+		SOURCES["prof_" .. key] = { topics = ns.FeatTopics("prof"),
+			get = function(self) return math.max(Profs(self).rank[key] or 0, StatMax(self, { stat }) or 0) end }
+	end
+	SOURCES.gathered = {
+		topics = ns.FeatTopics("prof"),
+		get = function(self)
+			local total = 0
+			for _, entry in pairs(self.GatheringData and self:GatheringData() or {}) do
+				if type(entry) == "table" then total = total + (tonumber(entry.count) or 0) end
+			end
+			return total
+		end,
+	}
+end)
 
 -- Réputations : C_Reputation (moteur récent) ou GetFactionInfo ; le plus
 -- haut compte vu est gardé (comme les statistiques « Most factions at… »).
@@ -292,7 +345,7 @@ local function ScanReputation()
 end
 local function RepSource(field)
 	return {
-		topics = { "rep" }, retro = true,
+		topics = ns.FeatTopics("rep"),
 		get = function(self)
 			local scan = Memo("rep", ScanReputation)
 			local kept = CtrMax(self, "rep_" .. field, scan and scan[field] or nil)
@@ -301,21 +354,25 @@ local function RepSource(field)
 		end,
 	}
 end
-SOURCES.repHonored = RepSource("honored")
-SOURCES.repExalted = RepSource("exalted")
+ns.FeatCatalog(function()
+	SOURCES.repHonored = RepSource("honored")
+	SOURCES.repExalted = RepSource("exalted")
+end)
 
 -- Dernière quête de la chaîne de Lord Valthalak : ns.FEAT_VALTHALAK_QUEST,
 -- id à relever (QuestV2) ; d'ici là la ligne reste « à vérifier »
-SOURCES.questValthalak = {
-	topics = { "quest" }, retro = true,
-	get = function()
-		local id = ns.FEAT_VALTHALAK_QUEST
-		if not id then return 0 end
-		local log = G("C_QuestLog")
-		local fn = type(log) == "table" and log.IsQuestFlaggedCompleted or G("IsQuestFlaggedCompleted")
-		return Call(fn, id) and 1 or 0
-	end,
-}
+ns.FeatCatalog(function()
+	SOURCES.questValthalak = {
+		topics = ns.FeatTopics("quest"),
+		get = function()
+			local id = ns.FEAT_VALTHALAK_QUEST
+			if not id then return 0 end
+			local log = G("C_QuestLog")
+			local fn = type(log) == "table" and log.IsQuestFlaggedCompleted or G("IsQuestFlaggedCompleted")
+			return Call(fn, id) and 1 or 0
+		end,
+	}
+end)
 
 -- Hauts faits obtenus d'une catégorie (métas composés)
 local function EarnedIn(self, cat)
@@ -325,16 +382,18 @@ local function EarnedIn(self, cat)
 	end
 	return count
 end
-for _, cat in ipairs({ "dng", "prof", "quest" }) do
-	SOURCES["featsCat_" .. cat] = { topics = { "feat" }, retro = true, get = function(self) return EarnedIn(self, cat) end }
-end
+ns.FeatCatalog(function()
+	for _, cat in ipairs({ "dng", "prof", "quest" }) do
+		SOURCES["featsCat_" .. cat] = { topics = ns.FeatTopics("feat"), get = function(self) return EarnedIn(self, cat) end }
+	end
+end)
 
 -- ---------------------------------------------------------------------------
 -- Listes : paliers de donjons (boss final ; entrée seule quand aucun boss
 -- n'est connu), héros d'Azeroth
 -- ---------------------------------------------------------------------------
 local function BossList(items)
-	return { topics = { "boss", "kill", "place" },
+	return { topics = ns.FeatTopics("boss", "kill", "place"),
 		items = function()
 			local out = {}
 			for i, item in ipairs(items) do
@@ -343,120 +402,111 @@ local function BossList(items)
 			return out
 		end }
 end
-LISTS.dngTier1 = BossList({ "rfc", "wc", "dm", "sfk", "stocks", "bfd", "thanes", "lordaeron" })
-LISTS.dngTier2 = BossList({ "gnomer", "rfk", "sm", "rfd", "dalaran", "excavation", "drowned" })
-LISTS.dngTier3 = BossList({ "ulda", "zf", "mara", "st", "kroldok", "alcaz" })
-LISTS.dngTier4 = BossList({ "brd", "lbrs", "ubrs", "dmaul", "scholo", "strat", "blackmaw", "shaper" })
-LISTS.hero = { topics = { "feat", "level" },
-	items = function() return { { "level", 60 }, { "featsCat_dng", 5 }, { "featsCat_prof", 3 }, { "featsCat_quest", 3 } } end }
+ns.FeatCatalog(function()
+	LISTS.dngTier1 = BossList({ "rfc", "wc", "dm", "sfk", "stocks", "bfd", "thanes", "lordaeron" })
+	LISTS.dngTier2 = BossList({ "gnomer", "rfk", "sm", "rfd", "dalaran", "excavation", "drowned" })
+	LISTS.dngTier3 = BossList({ "ulda", "zf", "mara", "st", "kroldok", "alcaz" })
+	LISTS.dngTier4 = BossList({ "brd", "lbrs", "ubrs", "dmaul", "scholo", "strat", "blackmaw", "shaper" })
+	LISTS.hero = { topics = ns.FeatTopics("feat", "level"),
+		items = function() return { { "level", 60 }, { "featsCat_dng", 5 }, { "featsCat_prof", 3 }, { "featsCat_quest", 3 } } end }
+end)
 
 -- ---------------------------------------------------------------------------
--- Catalogue (codes n = rang du document §2 ; pending = ⚠️ sans repli).
--- Lignes compactes, recopiées en tables à clés seules (pas de partie
--- tableau gardée en mémoire pour rien : le moteur ne lit que les clés).
+-- Catalogue (codes n = rang du document §2 ; pending = ⚠️ sans repli),
+-- construit à la première lecture (ns.FeatCatalog, FeatsData.lua).
+-- Statistiques lisibles sur Forever (relevé en jeu du 2026-11-07, « -- » =
+-- 0) : 60, 98, 333, 334, 339, 341, 349, 353, 377, 529, 588, 932, 1098, 1149,
+-- 1524, 1537, 15027, 63570, 63573, 64222 ; les lignes qui n'attendaient que
+-- leur confirmation ne sont plus grisées.
 -- ---------------------------------------------------------------------------
 local C, A = "char", "account"
-for _, row in ipairs({
-	-- Personnage (les niveaux, les victimes et la pierre de foyer : FeatsData.lua)
-	{ "char_gold_100",    92, "char", 10, C, crit = { "count", "goldMax", 100 } },
-	{ "char_gold_1000",   93, "char", 25, C, crit = { "count", "goldMax", 1000 }, reward = { title = 22 } },
-	{ "char_gold_looted", 94, "char", 10, C, crit = { "stat", { 333 }, 1000000 }, desc = "FEATD_goldLooted", pending = true },
-	{ "char_mount",       95, "char", 10, C, crit = { "stat", { 339 }, 1, alt = "mountSeen" }, desc = "FEATD_mount" },
-	{ "char_mount_epic",  96, "char", 25, C, crit = { "flag", "mountEpic" }, desc = "FEATD_mountEpic", pending = true },
-	{ "char_flight_25",   97, "char", 10, C, crit = { "stat", { 349 }, 25, alt = "taxiRides" }, desc = "FEATD_flight" },
-	{ "char_epic",       101, "char", 10, C, crit = { "stat", { 341, 342 }, 1 }, desc = "FEATD_epic", pending = true },
-	{ "char_deaths_1",   102, "char", 5,  C, crit = { "stat", { 60 }, 1, alt = "deaths" }, desc = "FEATD_death1" },
-	{ "char_deaths_100", 103, "char", 10, C, crit = { "stat", { 60 }, 100, alt = "deaths" }, desc = "FEATD_deaths", reward = { title = 23 } },
-	{ "char_camp_25",    104, "char", 10, C, crit = { "stat", { 64222 }, 25 }, desc = "FEATD_camp", pending = true,
-		reward = { cosmetic = { "bg", "feat_campfire" } } },
-	{ "char_food_500",   105, "char", 10, C, crit = { "stat", { 346, 347 }, 500 }, desc = "FEATD_food", pending = true },
-	{ "char_potions_100", 106, "char", 10, C, crit = { "stat", { 345, 922, 923, 811 }, 100 }, desc = "FEATD_potions", pending = true },
-	-- Donjons et raids (les entrées : FeatsData.lua)
-	{ "dng_runs_50",     111, "dng", 10, C, crit = { "stat", { 932 }, 50 }, desc = "FEATD_runs", pending = true },
-	{ "dng_tier1",       112, "dng", 10, C, crit = { "list", "dngTier1" }, reward = { aids = { lasso = 2 } } },
-	{ "dng_tier2",       113, "dng", 10, C, crit = { "list", "dngTier2" }, reward = { aids = { lasso = 2 } } },
-	{ "dng_tier3",       114, "dng", 25, C, crit = { "list", "dngTier3" }, reward = { aids = { sifflet = 1 } } },
-	{ "dng_tier4",       115, "dng", 25, C, crit = { "list", "dngTier4" }, reward = { aids = { sifflet = 1 } } },
-	{ "dng_raid_enter",  116, "dng", 10, C, crit = { "stat", { 934, 64184 }, 1, alt = "raidEntered" }, desc = "FEATD_raidEnter" },
-	{ "dng_raid_ony",    117, "dng", 25, C, crit = { "count", "boss_ony", 1 }, desc = "FEATD_boss_ony" },
-	{ "dng_raid_mc",     118, "dng", 25, C, crit = { "count", "boss_mc", 1 }, desc = "FEATD_boss_mc" },
-	{ "dng_raid_zg",     119, "dng", 25, C, crit = { "count", "boss_zg", 1 }, desc = "FEATD_boss_zg" },
-	{ "dng_raid_bwl",    120, "dng", 25, C, crit = { "count", "boss_bwl", 1 }, desc = "FEATD_boss_bwl" },
-	{ "dng_raid_aq20",   121, "dng", 25, C, crit = { "count", "boss_aq20", 1 }, desc = "FEATD_boss_aq20" },
-	{ "dng_raid_aq40",   122, "dng", 50, C, crit = { "count", "boss_aq40", 1 }, desc = "FEATD_boss_aq40",
-		reward = { cosmetic = { "orn", "feat_eye" } } },
-	{ "dng_raid_naxx",   123, "dng", 50, C, crit = { "count", "boss_naxx", 1 }, desc = "FEATD_boss_naxx", reward = { title = 25 } },
-	{ "dng_raid_hyjal",  124, "dng", 25, C, crit = { "count", "boss_hyjal", 1 }, desc = "FEATD_boss_hyjal", pending = true,
-		reward = { cosmetic = { "orn", "feat_wildcrown" } } },
-	{ "dng_raid_barrow", 125, "dng", 25, C, crit = { "count", "boss_barrow", 1 }, desc = "FEATD_boss_barrow", pending = true },
-	{ "dng_world_boss",  126, "dng", 25, C, crit = { "count", "worldBoss", 1 } },
-	{ "dng_capture_inside", 127, "dng", 10, C, crit = { "count", "captureInside", 1 } },
-	-- Métiers
-	{ "prof_first",      128, "prof", 5,  C, crit = { "count", "profPrimary", 1 } },
-	{ "prof_150",        129, "prof", 10, C, crit = { "count", "profBest", 150 } },
-	{ "prof_225",        130, "prof", 10, C, crit = { "count", "profBest", 225 } },
-	{ "prof_300",        131, "prof", 25, C, crit = { "count", "profBest", 300 }, reward = { title = 26 } },
-	{ "prof_double_300", 132, "prof", 25, C, crit = { "count", "profPrimary300", 2 }, reward = { title = 27 } },
-	{ "prof_cook_300",   133, "prof", 10, C, crit = { "count", "prof_cooking", 300 }, reward = { title = 28 } },
-	{ "prof_fish_300",   134, "prof", 10, C, crit = { "count", "prof_fishing", 300 }, reward = { title = 29 } },
-	{ "prof_aid_300",    135, "prof", 10, C, crit = { "count", "prof_firstaid", 300 } },
-	{ "prof_secondary_all", 136, "prof", 25, C, crit = { "meta", { "prof_cook_300", "prof_fish_300", "prof_aid_300" } },
-		desc = "FEATD_profSecondary" },
-	{ "prof_fish_250",   137, "prof", 10, C, crit = { "stat", { 1518 }, 250 }, desc = "FEATD_fishCaught", pending = true },
-	{ "prof_gather_100", 138, "prof", 5,  C, crit = { "count", "gathered", 100 } },
-	{ "prof_gather_1000", 139, "prof", 10, C, crit = { "count", "gathered", 1000 } },
-	-- Quêtes, réputations et honneur
-	{ "quest_10",        140, "quest", 5,  C, crit = { "stat", { 98 }, 10, alt = "questsDone" }, desc = "FEATD_quests" },
-	{ "quest_100",       141, "quest", 10, C, crit = { "stat", { 98 }, 100, alt = "questsDone" }, desc = "FEATD_quests" },
-	{ "quest_500",       142, "quest", 25, C, crit = { "stat", { 98 }, 500, alt = "questsDone" }, desc = "FEATD_quests" },
-	{ "quest_1000",      143, "quest", 50, C, crit = { "stat", { 98 }, 1000, alt = "questsDone" }, desc = "FEATD_quests",
-		reward = { title = 30 } },
-	{ "quest_valthalak", 144, "quest", 25, C, crit = { "count", "questValthalak", 1 }, pending = true },
-	{ "rep_honored_10",  145, "quest", 10, C, crit = { "stat", { 529 }, 10, alt = "repHonored" }, desc = "FEATD_repHonored" },
-	{ "rep_exalted_1",   146, "quest", 10, C, crit = { "stat", { 377 }, 1, alt = "repExalted" }, desc = "FEATD_repExalted1" },
-	{ "rep_exalted_5",   147, "quest", 25, C, crit = { "stat", { 377 }, 5, alt = "repExalted" }, desc = "FEATD_repExalted",
-		reward = { title = 31 } },
-	{ "pvp_hk_100",      148, "quest", 10, C, crit = { "stat", { 588 }, 100 }, desc = "FEATD_hk", pending = true },
-	{ "pvp_bg_win",      149, "quest", 10, C, crit = { "stat", { 840 }, 1 }, desc = "FEATD_bgWin", pending = true },
-	{ "pvp_duel_10",     150, "quest", 5,  C, crit = { "stat", { 319 }, 10 }, desc = "FEATD_duels", pending = true },
-	-- Insolite (compte : obtenu par l'un de tes personnages ; statistiques)
-	{ "fun_hogger_death", 155, "fun", 5, A, crit = { "stat", { 594 }, 1 }, desc = "FEATD_hoggerDeath", pending = true },
-	{ "fun_critters_kill", 158, "fun", 5, A, crit = { "stat", { 108 }, 50 }, desc = "FEATD_critters", pending = true },
-	{ "fun_drown",       159, "fun", 5, A, crit = { "stat", { 112 }, 1 }, desc = "FEATD_drown", pending = true },
-	{ "fun_fall",        160, "fun", 5, A, crit = { "stat", { 114 }, 1 }, desc = "FEATD_fall", pending = true },
-	{ "fun_lava",        161, "fun", 5, A, crit = { "stat", { 115 }, 1 }, desc = "FEATD_lava", pending = true },
-	{ "fun_emotes",      162, "fun", 5, A, crit = { "stat", { 1042, 1045, 1047, 1065, 1066, 1067 }, 100, alt = "emotes" },
-		desc = "FEATD_emotes" },
-	{ "fun_respec",      165, "fun", 5, A, crit = { "stat", { 1149 }, 1 }, desc = "FEATD_respec", pending = true },
-	-- Grands hauts faits qui dépendent des catégories du jeu
-	{ "meta_dungeons",   169, "meta", 50, A, crit = { "meta", { "dng_tier1", "dng_tier2", "dng_tier3", "dng_tier4" } },
-		desc = "FEATD_metaDungeons", reward = { title = 36 } },
-	{ "meta_hero",       170, "meta", 50, A, crit = { "list", "hero" }, reward = { title = 37 } },
-}) do
-	local def = { id = row[1], n = row[2], cat = row[3], pts = row[4], scope = row[5], crit = row.crit }
-	def.desc, def.reward, def.pending = row.desc, row.reward, row.pending
-	ns.FeatAdd(def)
-end
+ns.FeatCatalog(function()
+	for _, row in ipairs({
+		-- Personnage (les niveaux, les victimes et la pierre de foyer : FeatsData.lua)
+		{ "char_gold_100",    92, "char", 10, C, crit = { "count", "goldMax", 100 } },
+		{ "char_gold_1000",   93, "char", 25, C, crit = { "count", "goldMax", 1000 }, reward = { title = 22 } },
+		{ "char_gold_looted", 94, "char", 10, C, crit = { "stat", { 333 }, 1000000 }, desc = "FEATD_goldLooted" },
+		{ "char_mount",       95, "char", 10, C, crit = { "stat", { 339 }, 1, alt = "mountSeen" }, desc = "FEATD_mount" },
+		{ "char_mount_epic",  96, "char", 25, C, crit = { "flag", "mountEpic" }, desc = "FEATD_mountEpic", pending = true },
+		{ "char_flight_25",   97, "char", 10, C, crit = { "stat", { 349 }, 25, alt = "taxiRides" }, desc = "FEATD_flight" },
+		{ "char_epic",       101, "char", 10, C, crit = { "stat", { 341, 342 }, 1 }, desc = "FEATD_epic" },
+		{ "char_deaths_1",   102, "char", 5,  C, crit = { "stat", { 60 }, 1, alt = "deaths" }, desc = "FEATD_death1" },
+		{ "char_deaths_100", 103, "char", 10, C, crit = { "stat", { 60 }, 100, alt = "deaths" }, desc = "FEATD_deaths", reward = { title = 23 } },
+		{ "char_camp_25",    104, "char", 10, C, crit = { "stat", { 64222 }, 25 }, desc = "FEATD_camp",
+			reward = { cosmetic = { "bg", "feat_campfire" } } },
+		{ "char_food_500",   105, "char", 10, C, crit = { "stat", { 346, 347 }, 500 }, desc = "FEATD_food", pending = true },
+		{ "char_potions_100", 106, "char", 10, C, crit = { "stat", { 345, 922, 923, 811 }, 100 }, desc = "FEATD_potions", pending = true },
+		-- Donjons et raids (les entrées : FeatsData.lua)
+		{ "dng_runs_50",     111, "dng", 10, C, crit = { "stat", { 932 }, 50 }, desc = "FEATD_runs" },
+		{ "dng_tier1",       112, "dng", 10, C, crit = { "list", "dngTier1" }, reward = { aids = { lasso = 2 } } },
+		{ "dng_tier2",       113, "dng", 10, C, crit = { "list", "dngTier2" }, reward = { aids = { lasso = 2 } } },
+		{ "dng_tier3",       114, "dng", 25, C, crit = { "list", "dngTier3" }, reward = { aids = { sifflet = 1 } } },
+		{ "dng_tier4",       115, "dng", 25, C, crit = { "list", "dngTier4" }, reward = { aids = { sifflet = 1 } } },
+		{ "dng_raid_enter",  116, "dng", 10, C, crit = { "stat", { 934, 64184 }, 1, alt = "raidEntered" }, desc = "FEATD_raidEnter" },
+		{ "dng_raid_ony",    117, "dng", 25, C, crit = { "count", "boss_ony", 1 }, desc = "FEATD_boss_ony" },
+		{ "dng_raid_mc",     118, "dng", 25, C, crit = { "count", "boss_mc", 1 }, desc = "FEATD_boss_mc" },
+		{ "dng_raid_zg",     119, "dng", 25, C, crit = { "count", "boss_zg", 1 }, desc = "FEATD_boss_zg" },
+		{ "dng_raid_bwl",    120, "dng", 25, C, crit = { "count", "boss_bwl", 1 }, desc = "FEATD_boss_bwl" },
+		{ "dng_raid_aq20",   121, "dng", 25, C, crit = { "count", "boss_aq20", 1 }, desc = "FEATD_boss_aq20" },
+		{ "dng_raid_aq40",   122, "dng", 50, C, crit = { "count", "boss_aq40", 1 }, desc = "FEATD_boss_aq40",
+			reward = { cosmetic = { "orn", "feat_eye" } } },
+		{ "dng_raid_naxx",   123, "dng", 50, C, crit = { "count", "boss_naxx", 1 }, desc = "FEATD_boss_naxx", reward = { title = 25 } },
+		{ "dng_raid_hyjal",  124, "dng", 25, C, crit = { "count", "boss_hyjal", 1 }, desc = "FEATD_boss_hyjal", pending = true,
+			reward = { cosmetic = { "orn", "feat_wildcrown" } } },
+		{ "dng_raid_barrow", 125, "dng", 25, C, crit = { "count", "boss_barrow", 1 }, desc = "FEATD_boss_barrow", pending = true },
+		{ "dng_world_boss",  126, "dng", 25, C, crit = { "count", "worldBoss", 1 } },
+		{ "dng_capture_inside", 127, "dng", 10, C, crit = { "count", "captureInside", 1 } },
+		-- Métiers
+		{ "prof_first",      128, "prof", 5,  C, crit = { "count", "profPrimary", 1 } },
+		{ "prof_150",        129, "prof", 10, C, crit = { "count", "profBest", 150 } },
+		{ "prof_225",        130, "prof", 10, C, crit = { "count", "profBest", 225 } },
+		{ "prof_300",        131, "prof", 25, C, crit = { "count", "profBest", 300 }, reward = { title = 26 } },
+		{ "prof_double_300", 132, "prof", 25, C, crit = { "count", "profPrimary300", 2 }, reward = { title = 27 } },
+		{ "prof_cook_300",   133, "prof", 10, C, crit = { "count", "prof_cooking", 300 }, reward = { title = 28 } },
+		{ "prof_fish_300",   134, "prof", 10, C, crit = { "count", "prof_fishing", 300 }, reward = { title = 29 } },
+		{ "prof_aid_300",    135, "prof", 10, C, crit = { "count", "prof_firstaid", 300 } },
+		{ "prof_secondary_all", 136, "prof", 25, C, crit = { "meta", { "prof_cook_300", "prof_fish_300", "prof_aid_300" } },
+			desc = "FEATD_profSecondary" },
+		{ "prof_fish_250",   137, "prof", 10, C, crit = { "stat", { 1518 }, 250 }, desc = "FEATD_fishCaught", pending = true },
+		{ "prof_gather_100", 138, "prof", 5,  C, crit = { "count", "gathered", 100 } },
+		{ "prof_gather_1000", 139, "prof", 10, C, crit = { "count", "gathered", 1000 } },
+		-- Quêtes, réputations et honneur
+		{ "quest_10",        140, "quest", 5,  C, crit = { "stat", { 98 }, 10, alt = "questsDone" }, desc = "FEATD_quests" },
+		{ "quest_100",       141, "quest", 10, C, crit = { "stat", { 98 }, 100, alt = "questsDone" }, desc = "FEATD_quests" },
+		{ "quest_500",       142, "quest", 25, C, crit = { "stat", { 98 }, 500, alt = "questsDone" }, desc = "FEATD_quests" },
+		{ "quest_1000",      143, "quest", 50, C, crit = { "stat", { 98 }, 1000, alt = "questsDone" }, desc = "FEATD_quests",
+			reward = { title = 30 } },
+		{ "quest_valthalak", 144, "quest", 25, C, crit = { "count", "questValthalak", 1 }, pending = true },
+		{ "rep_honored_10",  145, "quest", 10, C, crit = { "stat", { 529 }, 10, alt = "repHonored" }, desc = "FEATD_repHonored" },
+		{ "rep_exalted_1",   146, "quest", 10, C, crit = { "stat", { 377 }, 1, alt = "repExalted" }, desc = "FEATD_repExalted1" },
+		{ "rep_exalted_5",   147, "quest", 25, C, crit = { "stat", { 377 }, 5, alt = "repExalted" }, desc = "FEATD_repExalted",
+			reward = { title = 31 } },
+		{ "pvp_hk_100",      148, "quest", 10, C, crit = { "stat", { 588 }, 100 }, desc = "FEATD_hk" },
+		{ "pvp_bg_win",      149, "quest", 10, C, crit = { "stat", { 840 }, 1 }, desc = "FEATD_bgWin", pending = true },
+		{ "pvp_duel_10",     150, "quest", 5,  C, crit = { "stat", { 319 }, 10 }, desc = "FEATD_duels", pending = true },
+		-- Insolite (compte : obtenu par l'un de tes personnages ; statistiques)
+		{ "fun_hogger_death", 155, "fun", 5, A, crit = { "stat", { 594 }, 1 }, desc = "FEATD_hoggerDeath", pending = true },
+		{ "fun_critters_kill", 158, "fun", 5, A, crit = { "stat", { 108 }, 50 }, desc = "FEATD_critters", pending = true },
+		{ "fun_drown",       159, "fun", 5, A, crit = { "stat", { 112 }, 1 }, desc = "FEATD_drown", pending = true },
+		{ "fun_fall",        160, "fun", 5, A, crit = { "stat", { 114 }, 1 }, desc = "FEATD_fall", pending = true },
+		{ "fun_lava",        161, "fun", 5, A, crit = { "stat", { 115 }, 1 }, desc = "FEATD_lava", pending = true },
+		{ "fun_emotes",      162, "fun", 5, A, crit = { "stat", { 1042, 1045, 1047, 1065, 1066, 1067 }, 100, alt = "emotes" },
+			desc = "FEATD_emotes" },
+		{ "fun_respec",      165, "fun", 5, A, crit = { "stat", { 1149 }, 1 }, desc = "FEATD_respec" },
+		-- hors numérotation du document (code 174, titre T39) : petit méta des
+		-- morts pour rire ; grisé tant que la noyade, la chute et la lave
+		-- (stats 112, 114, 115) ne sont pas confirmées
+		{ "fun_unlucky",     174, "fun", 5, A, crit = { "meta", { "char_deaths_1", "fun_drown", "fun_fall", "fun_lava" } },
+			desc = "FEATD_unlucky", reward = { title = 39 }, pending = true },
+		-- Grands hauts faits qui dépendent des catégories du jeu
+		{ "meta_dungeons",   169, "meta", 50, A, crit = { "meta", { "dng_tier1", "dng_tier2", "dng_tier3", "dng_tier4" } },
+			desc = "FEATD_metaDungeons", reward = { title = 36 } },
+		-- cadre de fiche « Lauriers » en attente (cosmétiques de fiche reportés) : reward.soon
+		{ "meta_hero",       170, "meta", 50, A, crit = { "list", "hero" }, reward = { title = 37, soon = { "cardframe", "card_laurels" } } },
+	}) do ns.FeatAdd(row) end
+end)
 
--- ---------------------------------------------------------------------------
--- Titres de ces hauts faits (registre ; le lot D peut déjà les avoir posés)
--- ---------------------------------------------------------------------------
-ns.FEAT_TITLES = ns.FEAT_TITLES or {}
-for code, title in pairs({
-	[22] = { m = "%s le Fortuné", f = "%s la Fortunée", en = "%s the Wealthy" },
-	[23] = { m = "%s le Revenant", f = "%s la Revenante", en = "%s the Revenant" },
-	[25] = { m = "%s, Briseur de nécropole", f = "%s, Briseuse de nécropole", en = "%s the Necropolis Breaker" },
-	[26] = { m = "%s aux mains d'or", en = "%s the Goldhanded" },
-	[27] = { m = "%s le Polyvalent", f = "%s la Polyvalente", en = "%s the Versatile" },
-	[28] = { m = "Chef %s", en = "Chef %s" },
-	[29] = { m = "%s le Pêcheur", f = "%s la Pêcheuse", en = "%s the Fisher" },
-	[30] = { m = "%s, Mémoire des chemins", en = "%s, Keeper of Paths" },
-	[31] = { m = "%s le Bienvenu", f = "%s la Bienvenue", en = "%s the Welcome" },
-	[36] = { m = "%s, Terreur des cachots", en = "%s, Dread of the Dungeons" },
-	[37] = { m = "%s, Héros d'Azeroth", f = "%s, Héroïne d'Azeroth", en = "%s, Hero of Azeroth", enf = "%s, Heroine of Azeroth" },
-}) do
-	ns.FEAT_TITLES[code] = ns.FEAT_TITLES[code] or title
-end
+-- Titres de ces hauts faits : registre unique dans FeatsTitles.lua (lot D).
 
 -- ---------------------------------------------------------------------------
 -- Chaînes
@@ -514,6 +564,7 @@ local FR = {
 	FEATD_lava            = "Mourir dans le feu ou la lave",
 	FEATD_emotes          = "Faire %d émotes (câlin, acclamation, salut, rire, violon, paume au front)",
 	FEATD_respec          = "Réinitialiser ses talents",
+	FEATD_unlucky         = "Mourir une fois, noyé, d'une chute et dans le feu ou la lave",
 	FEATD_metaDungeons    = "Obtenir les %d paliers de donjons",
 	FEATD_list_hero       = "Niveau 60, 5 hauts faits de Donjons et raids, 3 de Métiers et 3 de Quêtes",
 	FEAT_char_gold_100    = "Bourse ronde",
@@ -575,6 +626,7 @@ local FR = {
 	FEAT_fun_lava         = "Ça chauffe !",
 	FEAT_fun_emotes       = "Expressif",
 	FEAT_fun_respec       = "Changement de cap",
+	FEAT_fun_unlucky      = "La poisse",
 	FEAT_meta_dungeons    = "Terreur des cachots",
 	FEAT_meta_hero        = "Héros d'Azeroth",
 }
@@ -631,6 +683,7 @@ local EN = {
 	FEATD_lava            = "Die in fire or lava",
 	FEATD_emotes          = "Use %d emotes (hug, cheer, wave, LOL, violin, facepalm)",
 	FEATD_respec          = "Reset your talents",
+	FEATD_unlucky         = "Die once, drown, die from a fall and in fire or lava",
 	FEATD_metaDungeons    = "Earn the %d dungeon tiers",
 	FEATD_list_hero       = "Level 60, 5 Dungeons and Raids, 3 Professions and 3 Quests achievements",
 	FEAT_char_gold_100    = "A Round Purse",
@@ -692,6 +745,7 @@ local EN = {
 	FEAT_fun_lava         = "Feeling the Heat",
 	FEAT_fun_emotes       = "Expressive",
 	FEAT_fun_respec       = "Change of Heart",
+	FEAT_fun_unlucky      = "Rotten Luck",
 	FEAT_meta_dungeons    = "Dread of the Dungeons",
 	FEAT_meta_hero        = "Hero of Azeroth",
 }
@@ -774,7 +828,7 @@ end
 ns.FeatJeuOnEmote = OnEmote
 
 -- Monture : vue une fois (IsMounted) ; monture rapide au sol (en attente)
-local watch                  -- cadre de l'horloge (montures, vols)
+local watchElapsed           -- horloge des montures et des vols (nil : arrêtée)
 local mountCheckAt, wasOnTaxi, taxiUntil = 0, false, 0
 local function Mounted() return Call(G("IsMounted")) == true end
 local function OnTaxi() return Call(G("UnitOnTaxi"), "player") == true end
@@ -792,20 +846,23 @@ local function WatchTick()
 		if onTaxi and wasOnTaxi == false then Bump("taxi"); Touch("taxi") end
 		wasOnTaxi = onTaxi
 	end
-	if not (looking or now < taxiUntil) and watch then watch:SetScript("OnUpdate", nil) end
+	if not (looking or now < taxiUntil) then
+		watchElapsed = nil
+		ns.FeatClock("jeu", nil)
+	end
 end
 
-local function OnWatch(self, elapsed)
-	self.elapsed = (self.elapsed or 0) + (tonumber(elapsed) or 0)
-	if self.elapsed < 1 then return end
-	self.elapsed = 0
+local function OnWatch(elapsed)
+	watchElapsed = (watchElapsed or 0) + (tonumber(elapsed) or 0)
+	if watchElapsed < 1 then return end
+	watchElapsed = 0
 	local ok, err = pcall(WatchTick)
 	if not ok and ns.RecordError then ns:RecordError("feats:jeu", err) end
 end
+-- (horloge du cadre partagé des hauts faits, FeatsData.lua)
 local function Watch()
-	if not watch then return end
-	watch.elapsed = 0
-	watch:SetScript("OnUpdate", OnWatch)
+	watchElapsed = 0
+	ns.FeatClock("jeu", OnWatch)
 end
 
 function ns:FeatJeuMountCheck(force)
@@ -830,8 +887,7 @@ function ns:FeatJeuTaxiCheck(window)
 end
 
 -- Instance : raid vu (drapeau), journal des morts ouvert seulement dedans
-local combat                 -- cadre des morts en instance
-local COMBAT_EVENTS = { "COMBAT_LOG_EVENT_UNFILTERED", "PARTY_KILL", "UNIT_DIED" }
+local combatListening        -- morts écoutées (dans une instance seulement)
 local COMBAT_HANDLERS = {
 	COMBAT_LOG_EVENT_UNFILTERED = function()
 		local fn = G("CombatLogGetCurrentEventInfo")
@@ -853,14 +909,12 @@ function ns:FeatJeuZone()
 			Touch("instance")
 		end
 	end
-	if not combat then return inside end
-	if inside and not combat.listening then
-		combat.listening = true
-		if ns.RegisterHandlers then ns.RegisterHandlers(combat, COMBAT_HANDLERS)
-		else for event in pairs(COMBAT_HANDLERS) do pcall(combat.RegisterEvent, combat, event) end end
-	elseif not inside and combat.listening then
-		combat.listening = nil
-		for _, event in ipairs(COMBAT_EVENTS) do pcall(combat.UnregisterEvent, combat, event) end
+	if inside and not combatListening then
+		combatListening = true
+		ns.FeatListen(COMBAT_HANDLERS)
+	elseif not inside and combatListening then
+		combatListening = nil
+		ns.FeatUnlisten(COMBAT_HANDLERS)
 	end
 	return inside
 end
@@ -875,7 +929,8 @@ function ns:FeatJeuInit()
 		function ns:FeatStatIDs(...)
 			local list, set = base(self, ...), {}
 			for _, id in ipairs(list) do set[id] = true end
-			for id in pairs(STAT_EXTRA) do if not set[id] then list[#list + 1] = id end end
+			for key in pairs(BOSSES) do for _, id in ipairs(BossField(key, 3)) do Extra({ id }) end end
+			for id in pairs(STAT_EXTRA) do if not set[id] then set[id] = true; list[#list + 1] = id end end
 			table.sort(list)
 			return list
 		end
@@ -912,24 +967,9 @@ local HANDLERS = {
 	end,
 }
 
-do
-	local function Dispatch(handlers, tag)
-		return function(_, event, ...)
-			local fn = handlers[event]
-			if not fn then return end
-			local ok, err = pcall(fn, ...)
-			if not ok and ns.RecordError then ns:RecordError(tag .. tostring(event), err) end
-		end
-	end
-	-- un seul cadre : événements, horloge des montures et des vols, morts en
-	-- instance (abonnées seulement dedans, FeatJeuZone)
-	local all = setmetatable({}, { __index = function(_, event) return HANDLERS[event] or COMBAT_HANDLERS[event] end })
-	local ok, frame = pcall(CreateFrame, "Frame")
-	if ok and frame then
-		watch, combat = frame, frame
-		for event in pairs(HANDLERS) do pcall(frame.RegisterEvent, frame, event) end
-		frame:SetScript("OnEvent", Dispatch(all, "feats:jeu:"))
-	end
-end
+-- un seul cadre pour tous les hauts faits (FeatsData.lua) : ces événements,
+-- l'horloge des montures et des vols, les morts en instance (abonnées
+-- seulement dedans, FeatJeuZone)
+ns.FeatListen(HANDLERS)
 
 if ns.Mark then ns.Mark("FeatsCatJeu") end

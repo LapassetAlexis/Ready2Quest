@@ -31,9 +31,19 @@ Since 2.0, QuestCompanion is first a **creature-collecting game**: capture what 
 
   The **strength** grows with its rank (elite ×1.5, rare ×2, boss ×2.5), if it's shiny, with its stars and with your type collection. Your **mascots** (the companions you didn't capture) are the companion of the heart: a modest general bonus that grows with their evolution stage. A **happy** companion (all needs at 50% or more) gives its effects in full, never less than half. Switching companion asks for **confirmation** (old and new effects side by side) and the effects kick in after **2 minutes**: you pick a companion for an outing, not for each target. The Companion page shows its effects and the countdown; the monster tooltip shows your odds with the bonus ("to capture · 45% (+15)").
 - **Zone seals**: capture every species of a zone (world bosses aside) and it gets a **seal**: a frame, then a background, in the colours of its landscape, and better shiny odds in that zone for good.
-- **Type collection and titles**: every 10, 20 and 40 captures of a type (5, 10, 20 for the rarest types) strengthen that type's effect. At 10, 25, 50, 100 and 250 species you earn a **trainer title** (Apprentice trainer … Grand master trainer) and a reward.
+- **Type collection and titles**: every 10, 20 and 40 captures of a type (5, 10, 20 for the rarest types) strengthen that type's effect. At 10, 25, 50, 100 and 250 species you earn a **trainer title** (Apprentice trainer … Grand master trainer) and a reward, through their achievement (35 more titles come from other achievements).
 - **Trainer card**: your title, your companion in 3D, a **showcase of 3 creatures** you choose, your numbers and your seal badges. Other players who have the addon can open it from the **right-click menu** on you (the entry only shows for players known to have the addon), and you theirs; a "QuestCompanion trainer" line shows in their tooltip. `/qc fiche` opens yours (to pick your showcase), `/qc fiche <name>` asks for someone's. Shared by default, can be turned off (Day by day page): then the addon stays silent.
 - **Menagerie tutorial and Guide page** (2.3.0): the first time a monster lands in the net (out of combat, or as soon as the fight ends), your companion walks you through it in bubbles: it asks you to click the net (which pulses until you do), stays quiet during the scene, comments the verdict, then explains stars, shinies, taking a creature along, seals, titles, missions and the trainer card, and opens the journal on its **Guide** page. Once per character, never in combat, never with capture turned off. `/qc compagnon tuto menagerie` replays it (no capture needed). The **Guide** page explains everything section by section with the game's own numbers, including the table of the eight types, and has a **Replay the tutorial** button.
+
+## Achievements and titles (2.7)
+
+Forever has no achievement window: QuestCompanion brings its own, with points.
+
+- **174 achievements in 11 categories**: Menagerie, Shinies, Zones and seals, Day by day, Guild and friends, Character, Dungeons and raids, Professions, Quests, reputation and honor, Oddities, Feats of feats. They come from your captures and seals, your companion, and from the game itself (levels, gold, mounts, flights, the last boss of each dungeon, raids from Onyxia to Kel'Thuzad, professions, quests, reputation).
+- **Account or character**: collection achievements (menagerie, shinies, guild, oddities, feats of feats) count for all your characters; performance ones (levels, zones, dungeons, professions, quests) belong to each character.
+- **Nothing to redo**: what you did before is awarded silently at login (your journal stamps, your milestones, your character statistics). A few achievements whose statistic isn't verified on Forever yet are greyed out "detection coming soon"; `/qc hf diag` shows what your client reads.
+- **The Achievements page** of the journal (`/qc hf`): your points, the categories, progress, rewards and dates. An "Achievement earned" banner (golden wings for the big ones), never in combat.
+- **40 titles**: "Trainer Dyokrion", "Dyokrion the Tracker"…, masculine or feminine (from your character or your pick). Choose yours on your trainer card or with `/qc title`; it shows on your card with your points, and your big achievements are announced to your guild with your title.
 
 ## Road companion
 
@@ -93,9 +103,10 @@ You can rename it with `/qc compagnon nom Nugget`.
 
 ## Travel journal
 
-**Five pages** (`/qc`, or right-click your companion; the Memories album was removed in 2.6.0):
+**Six pages** (`/qc`, or right-click your companion; the Memories album was removed in 2.6.0):
 - **Companion**: your creature up close (portrait with its frame and background, character, evolution steps, its last line), five numbers (captured, shinies, days together, missions done, **distance travelled together**), its needs, and its look: appearances (mascots and captured creatures), frame, background, ornaments.
 - **Menagerie**: every capturable creature, as one numbered list to filter (zone, captured / to capture / to defeat, rarity, name search, sorting), with a 3D card.
+- **Achievements** (since 2.7.0): your points, the categories and the list with progress, reward and date; All / Earned / In progress filters.
 - **Missions**: companion, daily and weekly missions with their rewards, the capture pack, the pantry and the inn card.
 - **Exploration** (called Completion until 1.5.0): every zone and its progress; for the chosen zone, its milestones and what they give, places, professions (the gathering of the zone, grey resources included, and every profession you know) and quests, and the zone chest.
 - **Guide** (since 2.3.0): the menagerie explained, section by section (the net, stars, shinies, your companion hunts with you, exploring and sealing zones, trainer titles, missions, trainer card, settings and commands), with a contents list on the left, the mouse wheel to scroll and a **Replay the tutorial** button.
@@ -111,7 +122,7 @@ Your travel collection: a **stamp** for every first time.
 | Rare | you kill a rare enemy that you engaged yourself, with your pet or your group |
 | Milestone | you reach levels 10, 20, 30, 40, 50 and 60 |
 
-Each new stamp is announced by a small banner, never in combat. Everything is earned by playing, no random packs.
+Since 2.7.0, stamps are taken silently and give the matching achievements (with their date for the ones you already had). Everything is earned by playing, no random packs.
 
 The journal (`/qc`, the minimap button, or right-click on the creature) opens on the last page you used; your **pantry** (treats) sits in its footer: click a treat to give it.
 - **Exploration**: on the left, every zone by level (percentage, "here", a gold bar at 100%; the mouse wheel scrolls it). On the right, the chosen zone: its percentage, level range, the four milestones and what they give (25 and 50%: a treat and a capture aid, 75%: a Feast, 100%: the chest), the chest to open and **Track on screen**. Three cards pick the list below:
@@ -167,6 +178,8 @@ Light on memory: about 2 MB (zone data is built only when you get there, and onl
 | `/qc capture` | your menagerie and capture aids |
 | `/qc filet` | captures the best creature waiting in the net |
 | `/qc fiche [name]` | your trainer card, or asks for someone's |
+| `/qc hf` | your achievements (`/qc hf diag`: the client statistics the addon can read) |
+| `/qc title [number\|name\|auto\|none]` | the title on your trainer card (no argument: the list of your titles) |
 | `/qc metiers` | the professions the game gives the addon (to report a bug) |
 | `/qc module compagnon off` | turns off the companion and its journal |
 | `/qc minimap [on\|off]` | the minimap button |
@@ -218,9 +231,19 @@ Depuis la 2.0, QuestCompanion est d'abord un **jeu de collection de créatures**
 
   La **force** monte avec son rang (élite ×1,5, rare ×2, boss ×2,5), si elle est brillante, avec ses étoiles et avec ta collection du type. Tes **mascottes** (les compagnons que tu n'as pas capturés) sont le compagnon de cœur : un bonus général modeste qui grandit avec leur étape d'évolution. Un compagnon **heureux** (toutes ses envies à 50 % ou plus) donne ses effets en entier, jamais moins de la moitié. Changer de compagnon demande une **confirmation** (anciens et nouveaux effets côte à côte), et les effets arrivent au bout de **2 minutes** : on choisit un compagnon pour une sortie, pas pour chaque cible. La page Compagnon montre ses effets et le compte à rebours ; l'infobulle des monstres montre ta chance avec le bonus (« à capturer · 45 % (+15) »).
 - **Les sceaux de zone** : capture toutes les espèces d'une zone (hors boss du monde) et elle reçoit un **sceau** : un cadre, puis un fond, aux couleurs de son paysage, et une meilleure chance de brillant dans cette zone pour toujours.
-- **Collection par type et titres** : 10, 20 et 40 captures d'un type (5, 10, 20 pour les types les plus rares) renforcent son effet. À 10, 25, 50, 100 et 250 espèces, tu gagnes un **titre de dresseur** (Apprenti dresseur … Grand maître dresseur) et une récompense.
+- **Collection par type et titres** : 10, 20 et 40 captures d'un type (5, 10, 20 pour les types les plus rares) renforcent son effet. À 10, 25, 50, 100 et 250 espèces, tu gagnes un **titre de dresseur** (Apprenti dresseur … Grand maître dresseur) et une récompense, par leur haut fait (35 autres titres viennent d'autres hauts faits).
 - **Fiche de dresseur** : ton titre, ton compagnon en 3D, une **vitrine de 3 créatures** que tu choisis, tes chiffres et les badges de tes sceaux. Les autres joueurs qui ont l'addon l'ouvrent depuis le **menu du clic droit** sur toi (l'entrée n'apparaît que pour les joueurs connus comme détenteurs), et toi la leur ; une ligne « Dresseur QuestCompanion » s'affiche dans leur infobulle. `/qc fiche` ouvre la tienne (pour choisir ta vitrine), `/qc fiche <nom>` demande celle de quelqu'un. Partagée par défaut, se coupe (page Au jour le jour) : l'addon reste alors muet.
 - **Tutoriel de la ménagerie et page Guide** (2.3.0) : la première fois qu'un monstre tombe dans le filet (hors combat, ou dès la fin du combat), ton compagnon te guide en bulles : il te demande de cliquer sur le filet (qui bat tant que tu n'as pas cliqué), se tait pendant la scène, commente le verdict, puis explique les étoiles, les brillantes, emmener une créature, les sceaux, les titres, les missions et la fiche de dresseur, et ouvre le carnet sur sa page **Guide**. Une fois par personnage, jamais en combat, jamais si la capture est coupée. `/qc compagnon tuto menagerie` le rejoue (sans attendre de capture). La page **Guide** explique tout, section par section, avec les chiffres du jeu, dont la table des huit types, et un bouton **Revoir le tutoriel**.
+
+## Hauts faits et titres (2.7)
+
+Forever n'a pas de fenêtre de hauts faits : QuestCompanion apporte la sienne, avec des points.
+
+- **174 hauts faits en 11 catégories** : Ménagerie, Brillantes, Zones et sceaux, Au jour le jour, Guilde et entraide, Personnage, Donjons et raids, Métiers, Quêtes, réputations et honneur, Insolite, Grands hauts faits. Ils viennent de tes captures et de tes sceaux, de ton compagnon, et du jeu lui-même (niveaux, or, montures, vols, le dernier boss de chaque donjon, les raids d'Onyxia à Kel'Thuzad, métiers, quêtes, réputations).
+- **Compte ou personnage** : les hauts faits de collection (ménagerie, brillantes, guilde, insolite, grands hauts faits) valent pour tous tes personnages ; ceux de performance (niveaux, zones, donjons, métiers, quêtes) sont à chaque personnage.
+- **Rien à refaire** : ce que tu as déjà fait est attribué en silence à la connexion (tes tampons du carnet, tes paliers, les statistiques de ton personnage). Quelques hauts faits dont la statistique n'est pas encore vérifiée sur Forever sont grisés « détection bientôt disponible » ; `/qc hf diag` dit ce que ton client sait lire.
+- **La page Hauts faits** du carnet (`/qc hf`) : tes points, les catégories, la progression, les récompenses et les dates. Un bandeau « Haut fait obtenu » (des ailes dorées pour les gros), jamais en combat.
+- **40 titres** : « Dresseur Dyokrion », « Dyokrion le Traqueur »…, au masculin ou au féminin (selon ton personnage ou à ton choix). Tu choisis le tien sur ta fiche de dresseur ou avec `/qc titre` ; il s'affiche sur ta fiche avec tes points, et tes gros hauts faits sont annoncés à ta guilde avec ton titre.
 
 ## Compagnon de route
 
@@ -280,9 +303,10 @@ Tu peux la renommer avec `/qc compagnon nom Pépite`.
 
 ## Carnet de voyage
 
-**Cinq pages** (`/qc`, ou clic droit sur ton compagnon ; l'album Souvenirs est retiré depuis la 2.6.0) :
+**Six pages** (`/qc`, ou clic droit sur ton compagnon ; l'album Souvenirs est retiré depuis la 2.6.0) :
 - **Compagnon** : ta créature en grand (portrait avec son cadre et son fond, caractère, étapes d'évolution, sa dernière réplique), cinq chiffres (capturées, brillantes, jours ensemble, missions faites, **distance parcourue ensemble**), ses envies, et son allure : apparences (mascottes et créatures capturées), cadre, fond, ornements.
 - **Ménagerie** : toutes les créatures capturables, en une liste numérotée à filtrer (zone, capturées / à capturer / à abattre, rareté, recherche par nom, tris), avec une fiche en 3D.
+- **Hauts faits** (depuis la 2.7.0) : tes points, les catégories et la liste avec progression, récompense et date ; filtres Tous / Obtenus / En cours.
 - **Missions** : missions du compagnon, du jour et de la semaine avec leurs récompenses, la besace de capture, le garde-manger et la carte des auberges.
 - **Exploration** (« Complétion » jusqu'à la 1.5.0) : toutes les zones et leur progression ; pour la zone choisie, ses paliers et ce qu'ils rapportent, les lieux, les métiers (la récolte de la zone, ressources grises comprises, et tous les métiers que tu connais) et les quêtes, et le coffre de zone.
 - **Guide** (depuis la 2.3.0) : la ménagerie expliquée, section par section (le filet, les étoiles, les brillantes, ton compagnon chasse avec toi, explorer et sceller les zones, titres de dresseur, missions, fiche de dresseur, réglages et commandes), avec un sommaire à gauche, la molette pour faire défiler et un bouton **Revoir le tutoriel**.
@@ -298,7 +322,7 @@ Ta collection de voyage : un **tampon** pour chaque première fois.
 | Rare | tu abats un ennemi rare que tu as toi-même engagé, avec ton familier ou ton groupe |
 | Palier | tu passes les niveaux 10, 20, 30, 40, 50 et 60 |
 
-Chaque nouveau tampon est annoncé par un petit bandeau, jamais en combat. Tout se gagne en jouant, sans paquet aléatoire.
+Depuis la 2.7.0, les tampons se prennent en silence et donnent les hauts faits qui vont avec (à leur date pour ceux que tu avais déjà). Tout se gagne en jouant, sans paquet aléatoire.
 
 Le carnet (`/qc`, le bouton de minicarte, ou clic droit sur la créature) s'ouvre sur la dernière page utilisée ; ton **garde-manger** (les friandises) est dans son pied : un clic sur une friandise la donne.
 - **Exploration** : à gauche, toutes les zones par niveau (pourcentage, « ici », un filet doré à 100 % ; la molette fait défiler). À droite, la zone choisie : son pourcentage, sa tranche de niveaux, les quatre paliers et ce qu'ils rapportent (25 et 50 % : une friandise et une aide de capture, 75 % : un Festin, 100 % : le coffre), le coffre à ouvrir et **Suivre à l'écran**. Trois cartes choisissent la liste du dessous :
@@ -354,6 +378,8 @@ Léger en mémoire : environ 2 Mo (les données d'une zone ne sont construites q
 | `/qc capture` | ta ménagerie et tes aides de capture |
 | `/qc filet` | capture la meilleure créature qui attend dans le filet |
 | `/qc fiche [nom]` | ta fiche de dresseur, ou demande celle de quelqu'un |
+| `/qc hf` | tes hauts faits (`/qc hf diag` : les statistiques du client que l'addon sait lire) |
+| `/qc titre [numéro\|nom\|auto\|aucun]` | le titre de ta fiche de dresseur (sans argument : la liste de tes titres) |
 | `/qc metiers` | les métiers que le jeu donne à l'addon (pour signaler un bogue) |
 | `/qc module compagnon off` | coupe le compagnon et son carnet |
 | `/qc minimap [on\|off]` | le bouton de minicarte |

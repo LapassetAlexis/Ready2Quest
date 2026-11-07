@@ -66,14 +66,15 @@ local FR = {
 	GUIDE_titles_1         = "Chaque type de créature a ses paliers de captures : %s espèces pour les types courants, %s pour les plus rares (%s). Chaque palier atteint renforce l'effet d'un compagnon de ce type (+%s de force).",
 	GUIDE_titles_H         = "Les titres",
 	GUIDE_titles_2         = "Les captures d'avant la 2.0 sont rattrapées à la mise à jour : sceaux, paliers et titres déjà mérités sont donnés d'un coup. Ton titre s'affiche sur ta fiche de dresseur et dans la Ménagerie.",
+	GUIDE_titles_3         = "Depuis la 2.7, ces paliers sont des hauts faits, et %d titres en tout se gagnent par les hauts faits (« %s », « %s »…). Choisis le tien sur ta fiche de dresseur ou avec /qc titre ; « %s » (page Carnet de voyage) : selon ton personnage, masculin ou féminin.",
 	GUIDE_SEC_missions     = "Missions",
 	GUIDE_missions_1       = "Chaque jour, trois missions : une de ménagerie (capturer une espèce jamais capturée de la zone, %d créatures d'un type, un élite ou un rare), une d'exploration (lieux, récolte, quêtes) et celle du caractère de ton compagnon. Chacune rapporte %s ; les trois, %s.",
 	GUIDE_missions_2       = "Chaque semaine, trois missions plus longues, renouvelées à la remise à zéro hebdomadaire : toujours une chasse au brillant (en abattre une, ou en capturer une) et, si possible, une mission par type (« emmène un Mort-vivant et capture %d Morts-vivants » : seule compte une capture faite avec un compagnon de ce type). Chacune rapporte %s ; les trois, %s.",
 	GUIDE_missions_3       = "Tout se suit sur la page Missions du carnet, avec la besace de capture (appâts, lassos, sifflets) à côté du garde-manger. Un %s est aussi offert toutes les %d captures.",
 	GUIDE_SEC_card         = "Fiche de dresseur",
-	GUIDE_card_1           = "Ta fiche de dresseur montre ton titre, ton compagnon en 3D avec ses effets, une vitrine de 3 créatures que tu choisis, tes chiffres (espèces, brillantes capturées et reconnues, sceaux) et les badges de tes sceaux par continent. Rien de privé.",
+	GUIDE_card_1           = "Ta fiche de dresseur montre ton titre, ton compagnon en 3D avec ses effets, une vitrine de 3 créatures que tu choisis, tes chiffres (espèces, brillantes capturées et reconnues, sceaux, points de hauts faits) et les badges de tes sceaux par continent. Rien de privé.",
 	GUIDE_card_2           = "/qc fiche ouvre la tienne (c'est là que tu choisis ta vitrine) ; /qc fiche <nom> demande celle d'un autre joueur. Les joueurs qui ont l'addon ont « %s » dans le menu du clic droit (seulement pour les joueurs connus comme détenteurs) et une ligne « %s » dans leur infobulle.",
-	GUIDE_card_4           = "Tes exploits partent aussi à ta guilde : brillante, élite, rare ou boss capturé, sceau de zone, palier d'espèces et titre. Chez les guildeux qui ont QuestCompanion, un bandeau « GUILDE » l'annonce ; un clic ouvre ta fiche. Réglages : « Annoncer mes exploits à la guilde », « Voir les exploits de la guilde ».",
+	GUIDE_card_4           = "Tes exploits partent aussi à ta guilde : brillante, élite, rare ou boss capturé, sceau de zone, palier d'espèces et titre, gros haut fait (25 points ou plus, ou un titre). Chez les guildeux qui ont QuestCompanion, un bandeau « GUILDE » l'annonce ; un clic ouvre ta fiche. Réglages : « Annoncer mes exploits à la guilde », « Voir les exploits de la guilde ».",
 	GUIDE_card_3           = "Partagée par défaut ; coupe « %s » dans les réglages (page Au jour le jour) : ta fiche n'est envoyée à personne et l'addon reste muet. Les échanges passent par des messages d'addon invisibles, jamais en combat.",
 	GUIDE_SEC_settings     = "Réglages et commandes",
 	GUIDE_settings_1       = "Page Au jour le jour : %s (tout coupe, infobulle comprise) · %s · %s · %s · %s · %s · %s.",
@@ -81,7 +82,7 @@ local FR = {
 	GUIDE_settings_3       = "Commandes : /qc filet (capture le meilleur candidat), /qc filet tout (tout capturer), /qc filet sourdine [min|off], /qc capture (ta ménagerie et tes aides), /qc fiche [nom] (fiche de dresseur), /qc compagnon tuto menagerie (revoir ce tutoriel), /qc compagnon tuto (le tutoriel de base).",
 	GUIDE_settings_4       = "Le tutoriel de la ménagerie se joue une fois par personnage, à ta première occasion de capture : ton compagnon te guide jusqu'au clic sur le filet, laisse la scène se jouer, puis t'explique le reste. Jamais en combat, jamais si la capture est coupée. Le bouton « %s », en bas à gauche, le rejoue.",
 	GUIDE_settings_5       = "Style de l'interface (page Compagnon de route) : %s ou %s. /qc style azeroth|sobre.",
-	GUIDE_settings_6       = "Hauts faits (page du carnet) : /qc hf l'ouvre, /qc hf diag dit quelles statistiques du client sont lisibles. Bandeau, chat et fanfare : page Carnet de voyage.",
+	GUIDE_settings_6       = "Hauts faits (page du carnet) : /qc hf l'ouvre, /qc hf diag dit quelles statistiques du client sont lisibles ; ce qui attend encore sa vérification est grisé. Les hauts faits de collection valent pour tout ton compte, ceux de performance pour ce personnage. /qc titre choisit ton titre. Bandeau, chat, fanfare et forme des titres : page Carnet de voyage.",
 }
 local EN = {
 	JRN_SEC_guide          = "Guide",
@@ -129,14 +130,15 @@ local EN = {
 	GUIDE_titles_1         = "Each creature type has its capture milestones: %s species for the common types, %s for the rarest (%s). Each milestone reached strengthens the effect of a companion of that type (+%s strength).",
 	GUIDE_titles_H         = "The titles",
 	GUIDE_titles_2         = "Captures from before 2.0 are caught up at the update: seals, milestones and titles already deserved are granted at once. Your title shows on your trainer card and in the Menagerie.",
+	GUIDE_titles_3         = "Since 2.7, these milestones are achievements, and %d titles in all are earned through achievements (\"%s\", \"%s\"…). Pick yours on your trainer card or with /qc title; \"%s\" (Travel journal page): from your character, masculine or feminine.",
 	GUIDE_SEC_missions     = "Missions",
 	GUIDE_missions_1       = "Every day, three missions: a menagerie one (capture a never-captured species of the zone, %d creatures of a type, an elite or a rare), an exploration one (places, gathering, quests) and your companion's character mission. Each gives %s; all three, %s.",
 	GUIDE_missions_2       = "Every week, three longer missions, renewed at the weekly reset: always a shiny hunt (defeat one, or capture one) and, when possible, a mission by type (\"take an Undead along and capture %d Undead\": only a capture made with a companion of that type counts). Each gives %s; all three, %s.",
 	GUIDE_missions_3       = "Everything is tracked on the journal's Missions page, with the capture pack (baits, lassos, whistles) next to the pantry. A %s is also given every %d captures.",
 	GUIDE_SEC_card         = "Trainer card",
-	GUIDE_card_1           = "Your trainer card shows your title, your companion in 3D with its effects, a showcase of 3 creatures you choose, your numbers (species, shinies captured and known, seals) and your seal badges per continent. Nothing private.",
+	GUIDE_card_1           = "Your trainer card shows your title, your companion in 3D with its effects, a showcase of 3 creatures you choose, your numbers (species, shinies captured and known, seals, achievement points) and your seal badges per continent. Nothing private.",
 	GUIDE_card_2           = "/qc fiche opens yours (that is where you pick your showcase); /qc fiche <name> asks for another player's. Players who have the addon get \"%s\" in the right-click menu (only for players known to have it) and a \"%s\" line in their tooltip.",
-	GUIDE_card_4           = "Your feats also go to your guild: shiny, elite, rare or boss captured, zone seal, species milestone and title. Guildmates running QuestCompanion see a \"GUILD\" banner; a click opens your card. Settings: \"Announce my feats to the guild\", \"Show guild feats\".",
+	GUIDE_card_4           = "Your feats also go to your guild: shiny, elite, rare or boss captured, zone seal, species milestone and title, big achievement (25 points or more, or a title). Guildmates running QuestCompanion see a \"GUILD\" banner; a click opens your card. Settings: \"Announce my feats to the guild\", \"Show guild feats\".",
 	GUIDE_card_3           = "Shared by default; turn off \"%s\" in the settings (Day by day page): your card is sent to nobody and the addon stays silent. Exchanges go through invisible addon messages, never in combat.",
 	GUIDE_SEC_settings     = "Settings and commands",
 	GUIDE_settings_1       = "Day by day page: %s (turns everything off, tooltip included) · %s · %s · %s · %s · %s · %s.",
@@ -144,7 +146,7 @@ local EN = {
 	GUIDE_settings_3       = "Commands: /qc filet (captures the best candidate), /qc filet tout (capture all), /qc filet sourdine [min|off], /qc capture (your menagerie and aids), /qc fiche [name] (trainer card), /qc compagnon tuto menagerie (replay this tutorial), /qc compagnon tuto (the base tutorial).",
 	GUIDE_settings_4       = "The menagerie tutorial plays once per character, at your first capture opportunity: your companion guides you to the click on the net, lets the scene play, then explains the rest. Never in combat, never when capture is off. The \"%s\" button, bottom left, replays it.",
 	GUIDE_settings_5       = "Interface style (Road companion page): %s or %s. /qc style azeroth|sobre.",
-	GUIDE_settings_6       = "Achievements (journal page): /qc hf opens it, /qc hf diag tells which client statistics are readable. Banner, chat and fanfare: Travel journal page.",
+	GUIDE_settings_6       = "Achievements (journal page): /qc hf opens it, /qc hf diag tells which client statistics are readable; what still awaits verification is greyed out. Collection achievements count for your whole account, performance ones for this character. /qc title picks your title. Banner, chat, fanfare and title form: Travel journal page.",
 }
 ns.RegisterStrings(FR, EN)
 if ns.KEEP_STRINGS then ns.GUIDE_STRINGS = { fr = FR, en = EN } end
@@ -308,6 +310,13 @@ function BUILD.titles(self, cols)
 		blocks[#blocks + 1] = Row({ tostring(rank.count), L["TRAINER_" .. rank.key], gift }, cols.titles)
 	end
 	blocks[#blocks + 1] = P(L.GUIDE_titles_2)
+	-- titres des hauts faits (FeatsTitles.lua, chargé après : lu à l'affichage)
+	local count = 0
+	for _ in pairs(ns.FEAT_TITLES or {}) do count = count + 1 end
+	if count > 0 and self.FeatTitleText then
+		blocks[#blocks + 1] = P(self:F("GUIDE_titles_3", count, self:FeatTitleText(19, "Dyokrion") or "",
+			self:FeatTitleText(35) or "", L.OPT_FEAT_TITLE_FORM or ""))
+	end
 	return blocks
 end
 

@@ -153,38 +153,42 @@ end
 function ns:FeatMenagerieScan() return Scan(self) end
 function ns:FeatMenagerieScanReset() scan, scanKey = nil, nil end
 
-local CAP, SHINY = { "capture", "seal" }, { "shiny", "capture" }
+local CAP, SHINY = ns.FeatTopics("capture", "seal"), ns.FeatTopics("shiny", "capture")
 local function ScanSource(field, topics)
-	return { topics = topics or CAP, retro = true, get = function(self) return Scan(self)[field] or 0 end }
+	return { topics = topics or CAP, get = function(self) return Scan(self)[field] or 0 end }
 end
 
--- Ménagerie
-for _, field in ipairs({ "elite", "rare", "boss", "stars3", "murlocs", "critter", "hogger" }) do
-	SOURCES[field] = ScanSource(field)
-end
-for _, typeKey in ipairs(ns.CREATURE_TYPES or {}) do
-	SOURCES["type_" .. typeKey] = { topics = CAP, retro = true,
-		get = function(self) return Scan(self).types[typeKey] or 0 end }
-end
--- types au palier 1 (au moins le premier seuil, union du compte)
-SOURCES.typesTier1 = { topics = CAP, retro = true, get = function(self)
-	local types, n = Scan(self).types, 0
-	for _, typeKey in ipairs(ns.CREATURE_TYPES or {}) do
-		local need = self.MenagerieTypeTiers and self:MenagerieTypeTiers(typeKey)[1] or 10
-		if (types[typeKey] or 0) >= need then n = n + 1 end
+-- Sources et listes : posées à la première lecture du catalogue (ou d'une
+-- source absente, métatable de FEAT_SOURCES : FeatsData.lua)
+ns.FeatCatalog(function()
+	-- Ménagerie
+	for _, field in ipairs({ "elite", "rare", "boss", "stars3", "murlocs", "critter", "hogger" }) do
+		SOURCES[field] = ScanSource(field)
 	end
-	return n
-end }
--- Brillantes
-SOURCES.shinySeen = ScanSource("shinySeen", SHINY)
-SOURCES.shinyFound = ScanSource("shinyFound", SHINY)
-SOURCES.shinyNamed = ScanSource("shinyNamed", SHINY)
-SOURCES.shiny3 = ScanSource("shiny3", SHINY)
-SOURCES.shinyZones = ScanSource("shinyZones", SHINY)
+	for _, typeKey in ipairs(ns.CREATURE_TYPES or {}) do
+		SOURCES["type_" .. typeKey] = { topics = CAP,
+			get = function(self) return Scan(self).types[typeKey] or 0 end }
+	end
+	-- types au palier 1 (au moins le premier seuil, union du compte)
+	SOURCES.typesTier1 = { topics = CAP, get = function(self)
+		local types, n = Scan(self).types, 0
+		for _, typeKey in ipairs(ns.CREATURE_TYPES or {}) do
+			local need = self.MenagerieTypeTiers and self:MenagerieTypeTiers(typeKey)[1] or 10
+			if (types[typeKey] or 0) >= need then n = n + 1 end
+		end
+		return n
+	end }
+	-- Brillantes
+	SOURCES.shinySeen = ScanSource("shinySeen", SHINY)
+	SOURCES.shinyFound = ScanSource("shinyFound", SHINY)
+	SOURCES.shinyNamed = ScanSource("shinyNamed", SHINY)
+	SOURCES.shiny3 = ScanSource("shiny3", SHINY)
+	SOURCES.shinyZones = ScanSource("shinyZones", SHINY)
 
--- Compagnons emmenés (effet actif) : types vus, compte
-SOURCES.companionTypes = { topics = { "companion" }, retro = true,
-	get = function(self) return Keys(self:FeatStore("account").ctypes) end }
+	-- Compagnons emmenés (effet actif) : types vus, compte
+	SOURCES.companionTypes = { topics = ns.FeatTopics("companion"),
+		get = function(self) return Keys(self:FeatStore("account").ctypes) end }
+end)
 
 -- ---------------------------------------------------------------------------
 -- Zones et sceaux (personnage)
@@ -225,21 +229,23 @@ local function Seals(self) return self.MenagerieCollectionData and self:Menageri
 local function Milestones(self) return Sub(self:CompanionData(), "milestones") or {} end
 
 local function SealsIn(cont)
-	return { topics = { "seal", "capture" }, retro = true, get = function(self)
+	return { topics = ns.FeatTopics("seal", "capture"), get = function(self)
 		local seals, n = Seals(self), 0
 		for _, z in ipairs(ContinentZones(self, cont, true)) do if seals[z] ~= nil then n = n + 1 end end
 		return n
 	end }
 end
 local function DoneIn(cont)
-	return { topics = { "zone" }, retro = true, get = function(self)
+	return { topics = ns.FeatTopics("zone"), get = function(self)
 		local marks, n = Milestones(self), 0
 		for _, z in ipairs(ContinentZones(self, cont)) do if (tonumber(marks[z]) or 0) >= 100 then n = n + 1 end end
 		return n
 	end }
 end
-SOURCES.sealsEk, SOURCES.sealsKa = SealsIn("ek"), SealsIn("ka")
-SOURCES.zones100Ek, SOURCES.zones100Ka = DoneIn("ek"), DoneIn("ka")
+ns.FeatCatalog(function()
+	SOURCES.sealsEk, SOURCES.sealsKa = SealsIn("ek"), SealsIn("ka")
+	SOURCES.zones100Ek, SOURCES.zones100Ka = DoneIn("ek"), DoneIn("ka")
+end)
 -- Liste « toutes les zones » d'un continent : élément i = la source ≥ i
 -- (barre x/y sans une source par zone)
 local function Ladder(source, cont, sealable)
@@ -249,55 +255,64 @@ local function Ladder(source, cont, sealable)
 		return items
 	end }
 end
-LISTS.sealsEk, LISTS.sealsKa = Ladder("sealsEk", "ek", true), Ladder("sealsKa", "ka", true)
-LISTS.zones100Ek, LISTS.zones100Ka = Ladder("zones100Ek", "ek"), Ladder("zones100Ka", "ka")
+ns.FeatCatalog(function()
+	LISTS.sealsEk, LISTS.sealsKa = Ladder("sealsEk", "ek", true), Ladder("sealsKa", "ka", true)
+	LISTS.zones100Ek, LISTS.zones100Ka = Ladder("zones100Ek", "ek"), Ladder("zones100Ka", "ka")
+end)
 
-SOURCES.biomesSealed = { topics = { "seal", "capture" }, retro = true, get = function(self)
-	local n = 0
-	for _, biome in ipairs(ns.MENAGERIE_BIOMES or {}) do
-		if self.MenagerieBiomeSeals and self:MenagerieBiomeSeals(biome) >= 1 then n = n + 1 end
-	end
-	return n
-end }
--- zones à 100 % (le palier 100 des friandises : au moins deux parts)
-SOURCES.zones100 = { topics = { "zone" }, retro = true, get = function(self)
-	local n = 0
-	for _, mark in pairs(Milestones(self)) do if (tonumber(mark) or 0) >= 100 then n = n + 1 end end
-	return n
-end }
-SOURCES.milestones = { topics = { "zone" }, retro = true, get = function(self)
-	local n = 0
-	for _, mark in pairs(Milestones(self)) do n = n + math.floor((tonumber(mark) or 0) / 25) end
-	return n
-end }
-local function Chests(golden)
-	return { topics = { "zone" }, retro = true, get = function(self)
+ns.FeatCatalog(function()
+	SOURCES.biomesSealed = { topics = ns.FeatTopics("seal", "capture"), get = function(self)
 		local n = 0
-		for _, chest in pairs(self.ChestData and self:ChestData() or {}) do
-			if type(chest) == "table" and chest.opened and ((chest.golden and true or false) == golden) then n = n + 1 end
+		for _, biome in ipairs(ns.MENAGERIE_BIOMES or {}) do
+			if self.MenagerieBiomeSeals and self:MenagerieBiomeSeals(biome) >= 1 then n = n + 1 end
 		end
 		return n
 	end }
-end
-SOURCES.golden, SOURCES.chests = Chests(true), Chests(false)
-
--- Zones propres à Forever (uiMapID à relever en jeu) et zones extérieures
--- (ZONE_LEVELS) : lignes « à vérifier », grisées
-ns.FEAT_FOREVER_ZONES = {}
-LISTS.foreverZones = { topics = { "place" }, items = function()
-	local items = {}
-	for i, z in ipairs(ns.FEAT_FOREVER_ZONES) do items[i] = "zone:" .. z end
-	return items
-end }
-LISTS.outdoorZones = { topics = { "place" }, items = function()
-	local items, seen = {}, {}
-	for _, z in ipairs(ns.ZoneIds and ns.ZoneIds(ns.ZONE_LEVELS) or {}) do
-		if tonumber(z) and not seen[tonumber(z)] then seen[tonumber(z)] = true; items[#items + 1] = "zone:" .. tonumber(z) end
+	-- zones à 100 % (le palier 100 des friandises : au moins deux parts)
+	SOURCES.zones100 = { topics = ns.FeatTopics("zone"), get = function(self)
+		local n = 0
+		for _, mark in pairs(Milestones(self)) do if (tonumber(mark) or 0) >= 100 then n = n + 1 end end
+		return n
+	end }
+	SOURCES.milestones = { topics = ns.FeatTopics("zone"), get = function(self)
+		local n = 0
+		for _, mark in pairs(Milestones(self)) do n = n + math.floor((tonumber(mark) or 0) / 25) end
+		return n
+	end }
+	local function Chests(golden)
+		return { topics = ns.FeatTopics("zone"), get = function(self)
+			local n = 0
+			for _, chest in pairs(self.ChestData and self:ChestData() or {}) do
+				if type(chest) == "table" and chest.opened and ((chest.golden and true or false) == golden) then n = n + 1 end
+			end
+			return n
+		end }
 	end
-	for _, z in ipairs(ns.FEAT_FOREVER_ZONES) do items[#items + 1] = "zone:" .. z end
-	table.sort(items)
-	return items
-end }
+	SOURCES.golden, SOURCES.chests = Chests(true), Chests(false)
+end)
+
+-- Zones propres à Forever (uiMapID relevés en jeu, C_Map.GetMapInfo) : Mont
+-- Hyjal 2482, Riverglades 2548 (données de zone de l'addon), Shen'dralas 2652 ;
+-- zones extérieures : ZONE_LEVELS plus celles-ci
+ns.FEAT_FOREVER_ZONES = { 2482, 2548, 2652 }
+ns.FeatCatalog(function()
+	LISTS.foreverZones = { topics = ns.FeatTopics("place"), items = function()
+		local items = {}
+		for i, z in ipairs(ns.FEAT_FOREVER_ZONES) do items[i] = "zone:" .. z end
+		return items
+	end }
+	LISTS.outdoorZones = { topics = ns.FeatTopics("place"), items = function()
+		local items, seen = {}, {}
+		for _, z in ipairs(ns.ZoneIds and ns.ZoneIds(ns.ZONE_LEVELS) or {}) do
+			if tonumber(z) and not seen[tonumber(z)] then seen[tonumber(z)] = true; items[#items + 1] = "zone:" .. tonumber(z) end
+		end
+		for _, z in ipairs(ns.FEAT_FOREVER_ZONES) do
+			if not seen[z] then seen[z] = true; items[#items + 1] = "zone:" .. z end
+		end
+		table.sort(items)
+		return items
+	end }
+end)
 
 -- Deux continents le même jour : relevé du jour en cours (changement de
 -- zone) ou, pour la migration, les relevés « zone » datés du carnet
@@ -306,23 +321,25 @@ local function Day(at)
 	if type(text) == "string" and text:find("^%d%d%d%d%d%d%d%d$") then return text end
 	return tostring(math.floor((tonumber(at) or 0) / 86400))
 end
-SOURCES.twoContinents = { topics = { "zone", "place" }, retro = true, get = function(self)
-	if self:FeatStore("char").flag.twoCont then return 1 end
-	local journal = Sub(self:CharData(), "journal")
-	local days = {}
-	for id, stamp in pairs(Sub(journal, "stamps") or {}) do
-		local z = tostring(id):match("^zone:(%d+)$")
-		local at = type(stamp) == "table" and tonumber(stamp.at)
-		local cont = z and at and at > 0 and Continent(self, z)
-		if cont == "ek" or cont == "ka" then
-			local d = Day(at)
-			days[d] = days[d] or {}
-			days[d][cont] = true
-			if days[d].ek and days[d].ka then return 1 end
+ns.FeatCatalog(function()
+	SOURCES.twoContinents = { topics = ns.FeatTopics("zone", "place"), get = function(self)
+		if self:FeatStore("char").flag.twoCont then return 1 end
+		local journal = Sub(self:CharData(), "journal")
+		local days = {}
+		for id, stamp in pairs(Sub(journal, "stamps") or {}) do
+			local z = tostring(id):match("^zone:(%d+)$")
+			local at = type(stamp) == "table" and tonumber(stamp.at)
+			local cont = z and at and at > 0 and Continent(self, z)
+			if cont == "ek" or cont == "ka" then
+				local d = Day(at)
+				days[d] = days[d] or {}
+				days[d][cont] = true
+				if days[d].ek and days[d].ka then return 1 end
+			end
 		end
-	end
-	return 0
-end }
+		return 0
+	end }
+end)
 
 function ns:FeatNoteContinent(zoneID)
 	if not Awake() then return nil end
@@ -345,72 +362,76 @@ local function Daily(self)
 	if not self.DailyData then return nil end
 	return self:DailyData()
 end
-SOURCES.perfect = { topics = { "mission" }, retro = true, get = function(self)
-	local daily = Daily(self)
-	return daily and daily.perfect or 0
-end }
-SOURCES.innDays = { topics = { "mission" }, retro = true, get = function(self)
-	local _, inn = Daily(self)
-	return inn and inn.total or 0
-end }
-SOURCES.travelKm = { topics = { "minute", "companion" }, retro = true, get = function(self)
-	return math.floor((tonumber(self:CompanionData().travel) or 0) / 1000)
-end }
-SOURCES.daysTogether = { topics = { "minute", "companion" }, retro = true, get = function(self)
-	return self.CompanionDaysTogether and tonumber(self:CompanionDaysTogether()) or 0
-end }
+ns.FeatCatalog(function()
+	SOURCES.perfect = { topics = ns.FeatTopics("mission"), get = function(self)
+		local daily = Daily(self)
+		return daily and daily.perfect or 0
+	end }
+	SOURCES.innDays = { topics = ns.FeatTopics("mission"), get = function(self)
+		local _, inn = Daily(self)
+		return inn and inn.total or 0
+	end }
+	SOURCES.travelKm = { topics = ns.FeatTopics("minute", "companion"), get = function(self)
+		return math.floor((tonumber(self:CompanionData().travel) or 0) / 1000)
+	end }
+	SOURCES.daysTogether = { topics = ns.FeatTopics("minute", "companion"), get = function(self)
+		return self.CompanionDaysTogether and tonumber(self:CompanionDaysTogether()) or 0
+	end }
+end)
 
 -- ---------------------------------------------------------------------------
 -- Guilde et entraide, Insolite (compte)
 -- ---------------------------------------------------------------------------
-SOURCES.showcase = { topics = { "card" }, retro = true, get = function(self)
-	local n = 0
-	for _, id in pairs(self.TrainerShowcase and self:TrainerShowcase() or {}) do
-		if type(id) == "string" and id ~= "" then n = n + 1 end
-	end
-	return n
-end }
--- un titre choisi sur l'un des personnages (feats.title, lot D)
-SOURCES.titleSet = { topics = { "card", "feat" }, retro = true, get = function(self)
-	local db, n = self:DB(), 0
-	for _, char in pairs(type(db.chars) == "table" and db.chars or {}) do
-		local code = tonumber(Sub(char, "feats") and char.feats.title)
-		if code and code > 0 then n = 1 end
-	end
-	return n
-end }
-SOURCES.companionName = { topics = { "companion", "minute" }, retro = true, get = function(self)
-	local n = 0
-	EachCompanion(self, function(data) if type(data.name) == "string" and data.name ~= "" then n = 1 end end)
-	return n
-end }
-SOURCES.hoggerKilled = { topics = { "kill" }, retro = true, get = function(self)
-	for _, zone in pairs(self.BestiaryData and self:BestiaryData() or {}) do
-		local entry = type(zone) == "table" and (zone[ns.FEAT_HOGGER] or zone[tostring(ns.FEAT_HOGGER)])
-		if type(entry) == "table" and (tonumber(entry.killed) or 0) > 0 then return 1 end
-	end
-	return 0
-end }
--- jour anniversaire de la rencontre (au moins un an) : pas en rattrapage,
--- pour que le bandeau tombe le jour même
-SOURCES.birthday = { topics = { "minute", "companion" }, retro = false, get = function(self)
-	local since = tonumber(self:CompanionData().since) or 0
-	local now = Time()
-	if since <= 0 or now - since < 360 * 86400 then return 0 end
-	local a, b = Call(G("date"), "%m%d", since), Call(G("date"), "%m%d", now)
-	return (type(a) == "string" and a == b) and 1 or 0
-end }
+ns.FeatCatalog(function()
+	SOURCES.showcase = { topics = ns.FeatTopics("card"), get = function(self)
+		local n = 0
+		for _, id in pairs(self.TrainerShowcase and self:TrainerShowcase() or {}) do
+			if type(id) == "string" and id ~= "" then n = n + 1 end
+		end
+		return n
+	end }
+	-- un titre choisi sur l'un des personnages (feats.title, lot D)
+	SOURCES.titleSet = { topics = ns.FeatTopics("card", "feat"), get = function(self)
+		local db, n = self:DB(), 0
+		for _, char in pairs(type(db.chars) == "table" and db.chars or {}) do
+			local code = tonumber(Sub(char, "feats") and char.feats.title)
+			if code and code > 0 then n = 1 end
+		end
+		return n
+	end }
+	SOURCES.companionName = { topics = ns.FeatTopics("companion", "minute"), get = function(self)
+		local n = 0
+		EachCompanion(self, function(data) if type(data.name) == "string" and data.name ~= "" then n = 1 end end)
+		return n
+	end }
+	SOURCES.hoggerKilled = { topics = ns.FeatTopics("kill"), get = function(self)
+		for _, zone in pairs(self.BestiaryData and self:BestiaryData() or {}) do
+			local entry = type(zone) == "table" and (zone[ns.FEAT_HOGGER] or zone[tostring(ns.FEAT_HOGGER)])
+			if type(entry) == "table" and (tonumber(entry.killed) or 0) > 0 then return 1 end
+		end
+		return 0
+	end }
+	-- jour anniversaire de la rencontre (au moins un an) : pas en rattrapage,
+	-- pour que le bandeau tombe le jour même
+	SOURCES.birthday = { topics = ns.FeatTopics("minute", "companion"), retro = false, get = function(self)
+		local since = tonumber(self:CompanionData().since) or 0
+		local now = Time()
+		if since <= 0 or now - since < 360 * 86400 then return 0 end
+		local a, b = Call(G("date"), "%m%d", since), Call(G("date"), "%m%d", now)
+		return (type(a) == "string" and a == b) and 1 or 0
+	end }
 
--- Grands hauts faits : un haut fait obtenu, le total de points
-SOURCES.featPoints = { topics = { "feat" }, retro = true,
-	get = function(self) return (self:FeatPoints(nil)) end }
-for _, id in ipairs({ "meta_menagerie", "meta_shiny", "meta_zones" }) do
-	SOURCES["got_" .. id] = { topics = { "feat" }, retro = true,
-		get = function(self) return self:FeatGot(id) and 1 or 0 end }
-end
-LISTS.trainerMeta = { topics = { "feat" }, items = function()
-	return { { "got_meta_menagerie", 1 }, { "got_meta_shiny", 1 }, { "got_meta_zones", 1 }, { "featPoints", 1000 } }
-end }
+	-- Grands hauts faits : un haut fait obtenu, le total de points
+	SOURCES.featPoints = { topics = ns.FeatTopics("feat"),
+		get = function(self) return (self:FeatPoints(nil)) end }
+	for _, id in ipairs({ "meta_menagerie", "meta_shiny", "meta_zones" }) do
+		SOURCES["got_" .. id] = { topics = ns.FeatTopics("feat"),
+			get = function(self) return self:FeatGot(id) and 1 or 0 end }
+	end
+	LISTS.trainerMeta = { topics = ns.FeatTopics("feat"), items = function()
+		return { { "got_meta_menagerie", 1 }, { "got_meta_shiny", 1 }, { "got_meta_zones", 1 }, { "featPoints", 1000 } }
+	end }
+end)
 
 -- ---------------------------------------------------------------------------
 -- Catalogue (n = rang dans le document, jamais réutilisé)
@@ -436,103 +457,116 @@ local function Aids(id, n)
 	ONE[id] = ONE[id] or { [id] = 1 }
 	return ONE[id]
 end
-local ROWS = {
-	-- Ménagerie
-	{ "men_species_10",  2, "men", 10, A, crit = { "count", "species", 10 },  reward = { title = 1, aids = { appat = 1, lasso = 1 } }, paid = 10 },
-	{ "men_species_25",  3, "men", 10, A, crit = { "count", "species", 25 },  reward = { title = 2, cosmetic = { "frame", "trainer" } }, paid = 25 },
-	{ "men_species_50",  4, "men", 10, A, crit = { "count", "species", 50 },  reward = { title = 3, aids = Aids("sifflet"), cosmetic = { "bg", "menagerie" } }, paid = 50 },
-	{ "men_species_100", 5, "men", 25, A, crit = { "count", "species", 100 }, reward = { title = 4, aids = Aids("sifflet"), cosmetic = { "frame", "master" } }, paid = 100 },
-	{ "men_species_250", 6, "men", 50, A, crit = { "count", "species", 250 }, reward = { title = 5, aids = Aids("sifflet", 2), cosmetic = { "bg", "grandmaster" } }, paid = 250 },
-	{ "men_species_500", 7, "men", 50, A, crit = { "count", "species", 500 }, reward = { title = 6, soon = { "cardbg", "card_census" } } },
-	{ "men_elite_1",     8, "men", 5,  A, crit = { "count", "elite", 1 } },
-	{ "men_rare_1",      9, "men", 10, A, crit = { "count", "rare", 1 },  reward = { aids = Aids("lasso") } },
-	{ "men_rare_10",    10, "men", 25, A, crit = { "count", "rare", 10 }, reward = { title = 7 } },
-	{ "men_boss_1",     11, "men", 25, A, crit = { "count", "boss", 1 },  reward = { soon = { "orn", "feat_chain" } } },
-	{ "men_types_t1",   12, "men", 10, A, crit = { "count", "typesTier1", 8 }, reward = { aids = Aids("lasso") } },
-	{ "men_type_beast",      13, "men", 10, A, crit = { "count", "type_beast", 40 },      reward = { aids = Aids("lasso") } },
-	{ "men_type_humanoid",   14, "men", 10, A, crit = { "count", "type_humanoid", 40 },   reward = { aids = Aids("lasso") } },
-	{ "men_type_undead",     15, "men", 10, A, crit = { "count", "type_undead", 40 },     reward = { aids = Aids("lasso") } },
-	{ "men_type_elemental",  16, "men", 10, A, crit = { "count", "type_elemental", 40 },  reward = { aids = Aids("lasso") } },
-	{ "men_type_dragonkin",  17, "men", 10, A, crit = { "count", "type_dragonkin", 20 },  reward = { title = 8 } },
-	{ "men_type_demon",      18, "men", 10, A, crit = { "count", "type_demon", 20 },      reward = { title = 9 } },
-	{ "men_type_giant",      19, "men", 10, A, crit = { "count", "type_giant", 20 },      reward = { aids = Aids("lasso") } },
-	{ "men_type_mechanical", 20, "men", 10, A, crit = { "count", "type_mechanical", 20 }, reward = { aids = Aids("lasso") } },
-	{ "men_types_master", 21, "men", 25, A, crit = { "meta", { "men_type_beast", "men_type_humanoid", "men_type_undead",
-		"men_type_elemental", "men_type_dragonkin", "men_type_demon", "men_type_giant", "men_type_mechanical" } },
-		reward = { title = 10, soon = { "frame", "feat_eight" } }, desc = "FEATD_typesMaster" },
-	{ "men_stars3_1",   22, "men", 5,  A, crit = { "count", "stars3", 1 } },
-	{ "men_stars3_25",  23, "men", 10, A, crit = { "count", "stars3", 25 },  reward = { aids = Aids("appat", 2) } },
-	{ "men_stars3_100", 24, "men", 25, A, crit = { "count", "stars3", 100 }, reward = { title = 11, soon = { "orn", "feat_goldstars" } } },
-	{ "men_batch_5",    25, "men", 10, A, crit = { "flag", "batch5" } },
-	{ "men_bad_luck",   26, "men", 5,  A, crit = { "streak", "capFail", 10 }, reward = { title = 40, aids = Aids("appat", 3) } },
-	{ "men_level_gap",  27, "men", 10, A, crit = { "flag", "levelGap" } },
-	{ "men_companion_types", 28, "men", 10, A, crit = { "count", "companionTypes", 8 } },
-	{ "men_companion_boss",  29, "men", 10, A, crit = { "flag", "companionBoss" } },
-	-- Brillantes
-	{ "shiny_seen_1",   30, "shiny", 5,  A, crit = { "count", "shinySeen", 1 } },
-	{ "shiny_found_5",  31, "shiny", 10, A, crit = { "count", "shinyFound", 5 },  reward = { cosmetic = { "frame", "sparkle" } } },
-	{ "shiny_found_15", 32, "shiny", 10, A, crit = { "count", "shinyFound", 15 }, reward = { cosmetic = { "bg", "stardust" } } },
-	{ "shiny_found_30", 33, "shiny", 25, A, crit = { "count", "shinyFound", 30 }, reward = { cosmetic = { "orn", "aura" } } },
-	{ "shiny_found_50", 34, "shiny", 25, A, crit = { "count", "shinyFound", 50 }, reward = { title = 12, appearance = "hippogryph" } },
-	{ "shiny_cap_10",   36, "shiny", 25, A, crit = { "count", "shinyCap", 10 }, reward = { aids = Aids("sifflet") } },
-	{ "shiny_cap_25",   37, "shiny", 50, A, crit = { "count", "shinyCap", 25 }, reward = { title = 13 } },
-	{ "shiny_elite",    38, "shiny", 10, A, crit = { "count", "shinyNamed", 1 } },
-	{ "shiny_3stars",   39, "shiny", 25, A, crit = { "count", "shiny3", 1 }, reward = { soon = { "orn", "feat_prism_orn" } } },
-	{ "shiny_sealed",   40, "shiny", 10, A, crit = { "flag", "shinySealed" } },
-	{ "shiny_zones_10", 41, "shiny", 25, A, crit = { "count", "shinyZones", 10 } },
-	-- Zones et sceaux
-	{ "zone_seal_5",     43, "zone", 10, CH, crit = { "count", "seals", 5 },  reward = { aids = Aids("sifflet") } },
-	{ "zone_seal_15",    44, "zone", 25, CH, crit = { "count", "seals", 15 }, reward = { title = 14 } },
-	{ "zone_seal_ek",    45, "zone", 50, CH, crit = { "list", "sealsEk" }, reward = { soon = { "cardframe", "card_crest_ek" } } },
-	{ "zone_seal_ka",    46, "zone", 50, CH, crit = { "list", "sealsKa" }, reward = { soon = { "cardframe", "card_crest_ka" } } },
-	{ "zone_all_biomes", 47, "zone", 25, CH, crit = { "count", "biomesSealed", 10 }, reward = { title = 15 } },
-	-- uiMapID de Riverglades, Mont Hyjal et Shen'dralas à relever en jeu
-	{ "zone_visit_all",  50, "zone", 50, CH, crit = { "list", "outdoorZones" }, reward = { title = 16 }, pending = true },
-	{ "zone_forever_new", 51, "zone", 10, CH, crit = { "list", "foreverZones" }, pending = true },
-	{ "zone_100_1",      56, "zone", 10, CH, crit = { "count", "zones100", 1 } },
-	{ "zone_100_10",     57, "zone", 25, CH, crit = { "count", "zones100", 10 }, reward = { soon = { "bg", "feat_atlas" } } },
-	{ "zone_golden",     58, "zone", 10, CH, crit = { "count", "golden", 1 } },
-	{ "zone_chests_10",  59, "zone", 10, CH, crit = { "count", "chests", 10 }, reward = { aids = Aids("sifflet") } },
-	{ "zone_milestones_25", 60, "zone", 10, CH, crit = { "count", "milestones", 25 } },
-	{ "zone_quests_zone", 61, "zone", 10, CH, crit = { "flag", "questZone" } },
-	{ "zone_ek_100",     62, "zone", 50, CH, crit = { "list", "zones100Ek" } },
-	{ "zone_ka_100",     63, "zone", 50, CH, crit = { "list", "zones100Ka" } },
-	{ "zone_two_continents", 64, "zone", 5, CH, crit = { "count", "twoContinents", 1 } },
-	-- Au jour le jour
-	{ "day_mission_25",  66, "day", 10, CH, crit = { "count", "missions", 25 },  reward = { aids = Aids("lasso") } },
-	{ "day_mission_100", 67, "day", 25, CH, crit = { "count", "missions", 100 }, reward = { title = 18 } },
-	-- l'écureuil mécanique reste donné par Daily.lua (même condition)
-	{ "day_perfect_10",  68, "day", 10, CH, crit = { "count", "perfect", 10 } },
-	{ "day_weekly_all",  69, "day", 10, CH, crit = { "flag", "weeklyAll" } },
-	{ "day_inn_30",      70, "day", 10, CH, crit = { "count", "innDays", 30 } },
-	{ "day_travel_100",  74, "day", 10, CH, crit = { "count", "travelKm", 100 } },
-	{ "day_travel_1000", 75, "day", 25, CH, crit = { "count", "travelKm", 1000 }, reward = { soon = { "orn", "feat_compass" } } },
-	{ "day_days_30",     76, "day", 10, CH, crit = { "count", "daysTogether", 30 } },
-	{ "day_days_365",    77, "day", 25, CH, crit = { "count", "daysTogether", 365 }, reward = { title = 20, soon = { "orn", "feat_anniversary" } } },
-	{ "day_pets_100",    78, "day", 10, CH, crit = { "streak", "pets", 100 } },
-	-- Guilde et entraide
-	{ "soc_card_1",        79, "soc", 5,  A, crit = { "streak", "cards", 1 }, desc = "FEATD_card1" },
-	{ "soc_card_10",       80, "soc", 10, A, crit = { "streak", "cards", 10 } },
-	{ "soc_showcase",      81, "soc", 5,  A, crit = { "count", "showcase", 3 } },
-	{ "soc_guild_feat",    82, "soc", 5,  A, crit = { "flag", "guildFeat" } },
-	{ "soc_guild_cheer",   83, "soc", 5,  A, crit = { "streak", "guildSeen", 25 } },
-	{ "soc_group_capture", 84, "soc", 5,  A, crit = { "flag", "groupCapture" } },
-	{ "soc_title",         85, "soc", 5,  A, crit = { "count", "titleSet", 1 } },
-	-- Insolite (ménagerie, compagnon, carnet ; les statistiques : lot C)
-	{ "fun_name",           151, "fun", 5,  A, crit = { "count", "companionName", 1 } },
-	{ "fun_dance",          152, "fun", 5,  A, crit = { "streak", "dances", 10 } },
-	{ "fun_hogger_kill",    153, "fun", 10, A, crit = { "count", "hoggerKilled", 1 } },
-	{ "fun_hogger_capture", 154, "fun", 10, A, crit = { "count", "hogger", 1 }, reward = { title = 32 } },
-	{ "fun_murlocs",        156, "fun", 10, A, crit = { "count", "murlocs", 5 }, reward = { title = 33 } },
-	{ "fun_critter",        157, "fun", 5,  A, crit = { "count", "critter", 1 } },
-	{ "fun_night_owl",      163, "fun", 5,  A, crit = { "flag", "nightOwl" }, reward = { title = 34 } },
-	{ "fun_birthday",       164, "fun", 10, A, crit = { "count", "birthday", 1 } },
-	-- Grands hauts faits
-	{ "meta_shiny",   167, "meta", 25, A, crit = { "meta", "shiny", 10 }, reward = { soon = { "frame", "feat_prism" } } },
-	{ "meta_zones",   168, "meta", 25, A, crit = { "meta", "zone", 15 },  reward = { soon = { "cardbg", "card_atlas" } } },
-	{ "meta_trainer", 173, "meta", 50, A, crit = { "list", "trainerMeta" }, reward = { title = 38, soon = { "cardbg", "card_pantheon" } } },
-}
+-- lignes construites à la première lecture du catalogue (FeatsData.lua)
 ns.FEAT_MENAGERIE_IDS = {}
+ns.FeatCatalog(function()
+	local ROWS = {
+		-- Ménagerie
+		{ "men_species_10",  2, "men", 10, A, crit = { "count", "species", 10 },  reward = { title = 1, aids = { appat = 1, lasso = 1 } }, paid = 10 },
+		{ "men_species_25",  3, "men", 10, A, crit = { "count", "species", 25 },  reward = { title = 2, cosmetic = { "frame", "trainer" } }, paid = 25 },
+		{ "men_species_50",  4, "men", 10, A, crit = { "count", "species", 50 },  reward = { title = 3, aids = Aids("sifflet"), cosmetic = { "bg", "menagerie" } }, paid = 50 },
+		{ "men_species_100", 5, "men", 25, A, crit = { "count", "species", 100 }, reward = { title = 4, aids = Aids("sifflet"), cosmetic = { "frame", "master" } }, paid = 100 },
+		{ "men_species_250", 6, "men", 50, A, crit = { "count", "species", 250 }, reward = { title = 5, aids = Aids("sifflet", 2), cosmetic = { "bg", "grandmaster" } }, paid = 250 },
+		{ "men_species_500", 7, "men", 50, A, crit = { "count", "species", 500 }, reward = { title = 6, soon = { "cardbg", "card_census" } } },
+		{ "men_elite_1",     8, "men", 5,  A, crit = { "count", "elite", 1 } },
+		{ "men_rare_1",      9, "men", 10, A, crit = { "count", "rare", 1 },  reward = { aids = Aids("lasso") } },
+		{ "men_rare_10",    10, "men", 25, A, crit = { "count", "rare", 10 }, reward = { title = 7 } },
+		{ "men_boss_1",     11, "men", 25, A, crit = { "count", "boss", 1 },  reward = { soon = { "orn", "feat_chain" } } },
+		{ "men_types_t1",   12, "men", 10, A, crit = { "count", "typesTier1", 8 }, reward = { aids = Aids("lasso") } },
+		{ "men_type_beast",      13, "men", 10, A, crit = { "count", "type_beast", 40 },      reward = { aids = Aids("lasso") } },
+		{ "men_type_humanoid",   14, "men", 10, A, crit = { "count", "type_humanoid", 40 },   reward = { aids = Aids("lasso") } },
+		{ "men_type_undead",     15, "men", 10, A, crit = { "count", "type_undead", 40 },     reward = { aids = Aids("lasso") } },
+		{ "men_type_elemental",  16, "men", 10, A, crit = { "count", "type_elemental", 40 },  reward = { aids = Aids("lasso") } },
+		{ "men_type_dragonkin",  17, "men", 10, A, crit = { "count", "type_dragonkin", 20 },  reward = { title = 8 } },
+		{ "men_type_demon",      18, "men", 10, A, crit = { "count", "type_demon", 20 },      reward = { title = 9 } },
+		{ "men_type_giant",      19, "men", 10, A, crit = { "count", "type_giant", 20 },      reward = { aids = Aids("lasso") } },
+		{ "men_type_mechanical", 20, "men", 10, A, crit = { "count", "type_mechanical", 20 }, reward = { aids = Aids("lasso") } },
+		{ "men_types_master", 21, "men", 25, A, crit = { "meta", { "men_type_beast", "men_type_humanoid", "men_type_undead",
+			"men_type_elemental", "men_type_dragonkin", "men_type_demon", "men_type_giant", "men_type_mechanical" } },
+			reward = { title = 10, soon = { "frame", "feat_eight" } }, desc = "FEATD_typesMaster" },
+		{ "men_stars3_1",   22, "men", 5,  A, crit = { "count", "stars3", 1 } },
+		{ "men_stars3_25",  23, "men", 10, A, crit = { "count", "stars3", 25 },  reward = { aids = Aids("appat", 2) } },
+		{ "men_stars3_100", 24, "men", 25, A, crit = { "count", "stars3", 100 }, reward = { title = 11, soon = { "orn", "feat_goldstars" } } },
+		{ "men_batch_5",    25, "men", 10, A, crit = { "flag", "batch5" } },
+		{ "men_bad_luck",   26, "men", 5,  A, crit = { "streak", "capFail", 10 }, reward = { title = 40, aids = Aids("appat", 3) } },
+		{ "men_level_gap",  27, "men", 10, A, crit = { "flag", "levelGap" } },
+		{ "men_companion_types", 28, "men", 10, A, crit = { "count", "companionTypes", 8 } },
+		{ "men_companion_boss",  29, "men", 10, A, crit = { "flag", "companionBoss" } },
+		-- Brillantes
+		{ "shiny_seen_1",   30, "shiny", 5,  A, crit = { "count", "shinySeen", 1 } },
+		{ "shiny_found_5",  31, "shiny", 10, A, crit = { "count", "shinyFound", 5 },  reward = { cosmetic = { "frame", "sparkle" } } },
+		{ "shiny_found_15", 32, "shiny", 10, A, crit = { "count", "shinyFound", 15 }, reward = { cosmetic = { "bg", "stardust" } } },
+		{ "shiny_found_30", 33, "shiny", 25, A, crit = { "count", "shinyFound", 30 }, reward = { cosmetic = { "orn", "aura" } } },
+		{ "shiny_found_50", 34, "shiny", 25, A, crit = { "count", "shinyFound", 50 }, reward = { title = 12, appearance = "hippogryph" } },
+		{ "shiny_cap_10",   36, "shiny", 25, A, crit = { "count", "shinyCap", 10 }, reward = { aids = Aids("sifflet") } },
+		{ "shiny_cap_25",   37, "shiny", 50, A, crit = { "count", "shinyCap", 25 }, reward = { title = 13 } },
+		{ "shiny_elite",    38, "shiny", 10, A, crit = { "count", "shinyNamed", 1 } },
+		{ "shiny_3stars",   39, "shiny", 25, A, crit = { "count", "shiny3", 1 }, reward = { soon = { "orn", "feat_prism_orn" } } },
+		{ "shiny_sealed",   40, "shiny", 10, A, crit = { "flag", "shinySealed" } },
+		{ "shiny_zones_10", 41, "shiny", 25, A, crit = { "count", "shinyZones", 10 } },
+		-- Zones et sceaux
+		{ "zone_seal_5",     43, "zone", 10, CH, crit = { "count", "seals", 5 },  reward = { aids = Aids("sifflet") } },
+		{ "zone_seal_15",    44, "zone", 25, CH, crit = { "count", "seals", 15 }, reward = { title = 14 } },
+		{ "zone_seal_ek",    45, "zone", 50, CH, crit = { "list", "sealsEk" }, reward = { soon = { "cardframe", "card_crest_ek" } } },
+		{ "zone_seal_ka",    46, "zone", 50, CH, crit = { "list", "sealsKa" }, reward = { soon = { "cardframe", "card_crest_ka" } } },
+		{ "zone_all_biomes", 47, "zone", 25, CH, crit = { "count", "biomesSealed", 10 }, reward = { title = 15 } },
+		-- zones propres à Forever : ns.FEAT_FOREVER_ZONES (uiMapID relevés en jeu)
+		{ "zone_visit_all",  50, "zone", 50, CH, crit = { "list", "outdoorZones" }, reward = { title = 16 } },
+		{ "zone_forever_new", 51, "zone", 10, CH, crit = { "list", "foreverZones" } },
+		{ "zone_100_1",      56, "zone", 10, CH, crit = { "count", "zones100", 1 } },
+		{ "zone_100_10",     57, "zone", 25, CH, crit = { "count", "zones100", 10 }, reward = { soon = { "bg", "feat_atlas" } } },
+		{ "zone_golden",     58, "zone", 10, CH, crit = { "count", "golden", 1 } },
+		{ "zone_chests_10",  59, "zone", 10, CH, crit = { "count", "chests", 10 }, reward = { aids = Aids("sifflet") } },
+		{ "zone_milestones_25", 60, "zone", 10, CH, crit = { "count", "milestones", 25 } },
+		{ "zone_quests_zone", 61, "zone", 10, CH, crit = { "flag", "questZone" } },
+		{ "zone_ek_100",     62, "zone", 50, CH, crit = { "list", "zones100Ek" } },
+		{ "zone_ka_100",     63, "zone", 50, CH, crit = { "list", "zones100Ka" } },
+		{ "zone_two_continents", 64, "zone", 5, CH, crit = { "count", "twoContinents", 1 } },
+		-- Au jour le jour
+		{ "day_mission_25",  66, "day", 10, CH, crit = { "count", "missions", 25 },  reward = { aids = Aids("lasso") } },
+		{ "day_mission_100", 67, "day", 25, CH, crit = { "count", "missions", 100 }, reward = { title = 18 } },
+		-- l'écureuil mécanique reste donné par Daily.lua (même condition)
+		{ "day_perfect_10",  68, "day", 10, CH, crit = { "count", "perfect", 10 } },
+		{ "day_weekly_all",  69, "day", 10, CH, crit = { "flag", "weeklyAll" } },
+		{ "day_inn_30",      70, "day", 10, CH, crit = { "count", "innDays", 30 } },
+		{ "day_travel_100",  74, "day", 10, CH, crit = { "count", "travelKm", 100 } },
+		{ "day_travel_1000", 75, "day", 25, CH, crit = { "count", "travelKm", 1000 }, reward = { soon = { "orn", "feat_compass" } } },
+		{ "day_days_30",     76, "day", 10, CH, crit = { "count", "daysTogether", 30 } },
+		{ "day_days_365",    77, "day", 25, CH, crit = { "count", "daysTogether", 365 }, reward = { title = 20, soon = { "orn", "feat_anniversary" } } },
+		{ "day_pets_100",    78, "day", 10, CH, crit = { "streak", "pets", 100 } },
+		-- Guilde et entraide
+		{ "soc_card_1",        79, "soc", 5,  A, crit = { "streak", "cards", 1 }, desc = "FEATD_card1" },
+		{ "soc_card_10",       80, "soc", 10, A, crit = { "streak", "cards", 10 } },
+		{ "soc_showcase",      81, "soc", 5,  A, crit = { "count", "showcase", 3 } },
+		{ "soc_guild_feat",    82, "soc", 5,  A, crit = { "flag", "guildFeat" } },
+		{ "soc_guild_cheer",   83, "soc", 5,  A, crit = { "streak", "guildSeen", 25 } },
+		{ "soc_group_capture", 84, "soc", 5,  A, crit = { "flag", "groupCapture" } },
+		{ "soc_title",         85, "soc", 5,  A, crit = { "count", "titleSet", 1 } },
+		-- Insolite (ménagerie, compagnon, carnet ; les statistiques : lot C)
+		{ "fun_name",           151, "fun", 5,  A, crit = { "count", "companionName", 1 } },
+		{ "fun_dance",          152, "fun", 5,  A, crit = { "streak", "dances", 10 } },
+		{ "fun_hogger_kill",    153, "fun", 10, A, crit = { "count", "hoggerKilled", 1 } },
+		{ "fun_hogger_capture", 154, "fun", 10, A, crit = { "count", "hogger", 1 }, reward = { title = 32 } },
+		{ "fun_murlocs",        156, "fun", 10, A, crit = { "count", "murlocs", 5 }, reward = { title = 33 } },
+		{ "fun_critter",        157, "fun", 5,  A, crit = { "count", "critter", 1 } },
+		{ "fun_night_owl",      163, "fun", 5,  A, crit = { "flag", "nightOwl" }, reward = { title = 34 } },
+		{ "fun_birthday",       164, "fun", 10, A, crit = { "count", "birthday", 1 } },
+		-- Grands hauts faits
+		{ "meta_shiny",   167, "meta", 25, A, crit = { "meta", "shiny", 10 }, reward = { soon = { "frame", "feat_prism" } } },
+		{ "meta_zones",   168, "meta", 25, A, crit = { "meta", "zone", 15 },  reward = { soon = { "cardbg", "card_atlas" } } },
+		{ "meta_trainer", 173, "meta", 50, A, crit = { "list", "trainerMeta" }, reward = { title = 38, soon = { "cardbg", "card_pantheon" } } },
+	}
+	-- ligne de départ liée : son fond de fiche (lot E) en attente
+	for _, def in ipairs(ns.FEAT_DEFS) do
+		if def.id == "meta_points_1500" and not def.reward then def.reward = { soon = { "cardbg", "card_renown" } } end
+	end
+	for _, row in ipairs(ROWS) do
+		if row.paid then row.paid = RankPaid(row.paid) end
+		ns.FeatAdd(row)
+		ns.FEAT_MENAGERIE_IDS[#ns.FEAT_MENAGERIE_IDS + 1] = row[1]
+	end
+	ns.FeatResolveSoon()
+end)
 
 -- un cosmétique du compagnon existe-t-il déjà ? (sinon : reward.soon)
 local LISTS_OF = { frame = "COMPANION_FRAMES", bg = "COMPANION_BACKGROUNDS", orn = "COMPANION_ORNAMENTS", app = "COMPANION_APPEARANCES" }
@@ -549,44 +583,8 @@ function ns.FeatResolveSoon()
 	end
 end
 
--- ligne de départ liée : son fond de fiche (lot E) en attente
-for _, def in ipairs(ns.FEAT_DEFS) do
-	if (def.id or def[1]) == "meta_points_1500" and not def.reward then def.reward = { soon = { "cardbg", "card_renown" } } end
-end
-for _, row in ipairs(ROWS) do
-	if row.paid then row.paid = RankPaid(row.paid) end
-	ns.FeatAdd(row)
-	ns.FEAT_MENAGERIE_IDS[#ns.FEAT_MENAGERIE_IDS + 1] = row[1]
-end
-ns.FeatResolveSoon()
 
--- ---------------------------------------------------------------------------
--- Titres de ce lot (registre ; rendu et choix : lot D, qui les reprend)
--- ---------------------------------------------------------------------------
-local TITLES = {
-	[6]  = { m = "%s l'Arpenteur des bêtes", f = "%s l'Arpenteuse des bêtes", en = "%s the Beastwalker" },
-	[7]  = { m = "%s le Collectionneur", f = "%s la Collectionneuse", en = "%s the Collector" },
-	[8]  = { m = "%s le Dompteur de dragons", f = "%s la Dompteuse de dragons", en = "%s the Dragon Tamer" },
-	[9]  = { m = "%s le Lieur de démons", f = "%s la Lieuse de démons", en = "%s the Demonbinder" },
-	[10] = { m = "%s, Maître des huit familles", f = "%s, Maîtresse des huit familles", en = "%s, Master of the Eight Families" },
-	[11] = { m = "%s l'Esthète", en = "%s the Connoisseur" },
-	[12] = { m = "%s le Chasseur de brillantes", f = "%s la Chasseuse de brillantes", en = "%s the Shiny Hunter" },
-	[13] = { m = "%s, Maître des brillantes", f = "%s, Maîtresse des brillantes", en = "%s, Master of Shinies" },
-	[14] = { m = "%s le Gardien des sceaux", f = "%s la Gardienne des sceaux", en = "%s the Seal Keeper" },
-	[15] = { m = "%s le Globe-trotteur", f = "%s la Globe-trotteuse", en = "%s the Globetrotter" },
-	[16] = { m = "%s l'Arpenteur", f = "%s l'Arpenteuse", en = "%s the Wayfarer" },
-	[18] = { m = "%s l'Infatigable", en = "%s the Tireless" },
-	[20] = { m = "%s, Ami fidèle", f = "%s, Amie fidèle", en = "%s, Faithful Friend" },
-	[32] = { m = "%s, Dompteur de Lardeur", f = "%s, Dompteuse de Lardeur", en = "%s, Hogger's Handler" },
-	[33] = { m = "%s, Ami des murlocs", f = "%s, Amie des murlocs", en = "%s, Friend of Murlocs" },
-	[34] = { m = "%s le Noctambule", f = "%s la Noctambule", en = "%s the Night Owl" },
-	[38] = { m = "%s le Légendaire", f = "%s la Légendaire", en = "%s the Legendary" },
-	[40] = { m = "%s, Bredouille", en = "%s the Empty-Handed" },
-}
-ns.FEAT_TITLES = ns.FEAT_TITLES or {}
-for code, title in pairs(TITLES) do
-	if ns.FEAT_TITLES[code] == nil then ns.FEAT_TITLES[code] = title end
-end
+-- Titres de ce lot : registre unique dans FeatsTitles.lua (lot D).
 
 -- ---------------------------------------------------------------------------
 -- Crochets : faits ponctuels et compteurs (rien tant que le moteur dort)
@@ -702,19 +700,13 @@ end
 
 -- Changement de zone (continents du jour) ; horloge d'une minute (temps
 -- ensemble, kilomètres, anniversaire, nom de la mascotte)
+-- (cadre partagé des hauts faits, FeatsData.lua)
 do
-	local ok, frame = pcall(CreateFrame, "Frame")
-	if ok and frame then
-		frame:RegisterEvent("ZONE_CHANGED_NEW_AREA")
-		frame:RegisterEvent("PLAYER_ENTERING_WORLD")
-		frame:SetScript("OnEvent", function()
-			local fine, err = pcall(ns.FeatNoteContinent, ns)
-			if not fine and ns.RecordError then ns:RecordError("feats:continent", err) end
-		end)
-		if ns.Throttle then
-			frame:SetScript("OnUpdate", ns.Throttle(60, function() if Awake() then ns:FeatTouch("minute") end end))
-		end
-		ns.featMenagerieFrame = frame
+	local function Continent() ns:FeatNoteContinent() end
+	ns.FeatListen({ ZONE_CHANGED_NEW_AREA = Continent, PLAYER_ENTERING_WORLD = Continent })
+	if ns.Throttle then
+		local minute = ns.Throttle(60, function() if Awake() then ns:FeatTouch("minute") end end)
+		ns.FeatClock("minute", function(elapsed) minute(nil, elapsed) end)
 	end
 end
 

@@ -653,6 +653,17 @@ _G.TOC_FILES = tocFiles
 -- mesure de la mémoire seule : tous les fichiers chargés, puis on s'arrête
 if rawget(_G, "MEMORY_ONLY") then
 	for _, file in ipairs(Mock.moduleFiles) do LoadAddonFile(file) end
+	-- les hauts faits construisent leur catalogue à la première lecture (index
+	-- du moteur, quelques secondes après la connexion) : ce qu'il ajoute
+	local report = rawget(_G, "MEMORY_REPORT")
+	if report and QNS.FeatDefs then
+		collectgarbage("collect"); collectgarbage("collect")
+		local before = collectgarbage("count")
+		QNS:FeatDefs()
+		collectgarbage("collect"); collectgarbage("collect")
+		report[#report + 1] = { name = "Après connexion/QuestCompanion : catalogue des hauts faits construit",
+			kb = collectgarbage("count") - before }
+	end
 	return
 end
 

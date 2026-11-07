@@ -103,11 +103,11 @@ do
 		end
 	end
 	table.sort(pending)
-	local expected = { "char_camp_25", "char_epic", "char_food_500", "char_gold_looted", "char_hearth_50", "char_mount_epic",
-		"char_potions_100", "dng_raid_barrow", "dng_raid_hyjal", "dng_runs_50", "fun_critters_kill", "fun_drown", "fun_fall",
-		"fun_hogger_death", "fun_lava", "fun_respec", "prof_fish_250", "pvp_bg_win", "pvp_duel_10", "pvp_hk_100", "quest_valthalak" }
+	local expected = { "char_food_500", "char_mount_epic", "char_potions_100", "dng_raid_barrow", "dng_raid_hyjal",
+		"fun_critters_kill", "fun_drown", "fun_fall", "fun_hogger_death", "fun_lava", "fun_unlucky", "prof_fish_250",
+		"pvp_bg_win", "pvp_duel_10", "quest_valthalak" }
 	table.sort(expected)
-	Check("[HFJ] lignes « à vérifier » : seulement les statistiques sans repli (21)",
+	Check("[HFJ] lignes « à vérifier » : seulement les statistiques pas encore lues sur Forever (15)",
 		table.concat(pending, ",") == table.concat(expected, ","), table.concat(pending, ","))
 	local titles = {}
 	for _, code in ipairs({ 22, 23, 25, 26, 27, 28, 29, 30, 31, 36, 37 }) do

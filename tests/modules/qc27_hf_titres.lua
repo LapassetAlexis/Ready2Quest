@@ -456,7 +456,7 @@ do
 	local rejected = {}
 	for _, msg in ipairs({
 		"E~1~h~998~0~0~-~0",          -- haut fait inconnu chez nous
-		"E~1~h~98~0~0~-~0",           -- haut fait « à vérifier » (jamais attribué)
+		"E~1~h~105~0~0~-~0",          -- haut fait « à vérifier » (jamais attribué)
 		"E~1~h~73~5~0~-~0",           -- zone glissée
 		"E~1~h~73~0~2~-~0",           -- étoiles glissées
 		"E~1~h~73~0~0~rare~0",        -- rang glissé
