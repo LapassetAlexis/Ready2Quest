@@ -413,7 +413,11 @@ end)
 
 -- ---------------------------------------------------------------------------
 -- Catalogue (codes n = rang du document §2 ; pending = ⚠️ sans repli),
--- construit à la première lecture (ns.FeatCatalog, FeatsData.lua)
+-- construit à la première lecture (ns.FeatCatalog, FeatsData.lua).
+-- Statistiques lisibles sur Forever (relevé en jeu du 2026-11-07, « -- » =
+-- 0) : 60, 98, 333, 334, 339, 341, 349, 353, 377, 529, 588, 932, 1098, 1149,
+-- 1524, 1537, 15027, 63570, 63573, 64222 ; les lignes qui n'attendaient que
+-- leur confirmation ne sont plus grisées.
 -- ---------------------------------------------------------------------------
 local C, A = "char", "account"
 ns.FeatCatalog(function()
@@ -421,19 +425,19 @@ ns.FeatCatalog(function()
 		-- Personnage (les niveaux, les victimes et la pierre de foyer : FeatsData.lua)
 		{ "char_gold_100",    92, "char", 10, C, crit = { "count", "goldMax", 100 } },
 		{ "char_gold_1000",   93, "char", 25, C, crit = { "count", "goldMax", 1000 }, reward = { title = 22 } },
-		{ "char_gold_looted", 94, "char", 10, C, crit = { "stat", { 333 }, 1000000 }, desc = "FEATD_goldLooted", pending = true },
+		{ "char_gold_looted", 94, "char", 10, C, crit = { "stat", { 333 }, 1000000 }, desc = "FEATD_goldLooted" },
 		{ "char_mount",       95, "char", 10, C, crit = { "stat", { 339 }, 1, alt = "mountSeen" }, desc = "FEATD_mount" },
 		{ "char_mount_epic",  96, "char", 25, C, crit = { "flag", "mountEpic" }, desc = "FEATD_mountEpic", pending = true },
 		{ "char_flight_25",   97, "char", 10, C, crit = { "stat", { 349 }, 25, alt = "taxiRides" }, desc = "FEATD_flight" },
-		{ "char_epic",       101, "char", 10, C, crit = { "stat", { 341, 342 }, 1 }, desc = "FEATD_epic", pending = true },
+		{ "char_epic",       101, "char", 10, C, crit = { "stat", { 341, 342 }, 1 }, desc = "FEATD_epic" },
 		{ "char_deaths_1",   102, "char", 5,  C, crit = { "stat", { 60 }, 1, alt = "deaths" }, desc = "FEATD_death1" },
 		{ "char_deaths_100", 103, "char", 10, C, crit = { "stat", { 60 }, 100, alt = "deaths" }, desc = "FEATD_deaths", reward = { title = 23 } },
-		{ "char_camp_25",    104, "char", 10, C, crit = { "stat", { 64222 }, 25 }, desc = "FEATD_camp", pending = true,
+		{ "char_camp_25",    104, "char", 10, C, crit = { "stat", { 64222 }, 25 }, desc = "FEATD_camp",
 			reward = { cosmetic = { "bg", "feat_campfire" } } },
 		{ "char_food_500",   105, "char", 10, C, crit = { "stat", { 346, 347 }, 500 }, desc = "FEATD_food", pending = true },
 		{ "char_potions_100", 106, "char", 10, C, crit = { "stat", { 345, 922, 923, 811 }, 100 }, desc = "FEATD_potions", pending = true },
 		-- Donjons et raids (les entrées : FeatsData.lua)
-		{ "dng_runs_50",     111, "dng", 10, C, crit = { "stat", { 932 }, 50 }, desc = "FEATD_runs", pending = true },
+		{ "dng_runs_50",     111, "dng", 10, C, crit = { "stat", { 932 }, 50 }, desc = "FEATD_runs" },
 		{ "dng_tier1",       112, "dng", 10, C, crit = { "list", "dngTier1" }, reward = { aids = { lasso = 2 } } },
 		{ "dng_tier2",       113, "dng", 10, C, crit = { "list", "dngTier2" }, reward = { aids = { lasso = 2 } } },
 		{ "dng_tier3",       114, "dng", 25, C, crit = { "list", "dngTier3" }, reward = { aids = { sifflet = 1 } } },
@@ -477,7 +481,7 @@ ns.FeatCatalog(function()
 		{ "rep_exalted_1",   146, "quest", 10, C, crit = { "stat", { 377 }, 1, alt = "repExalted" }, desc = "FEATD_repExalted1" },
 		{ "rep_exalted_5",   147, "quest", 25, C, crit = { "stat", { 377 }, 5, alt = "repExalted" }, desc = "FEATD_repExalted",
 			reward = { title = 31 } },
-		{ "pvp_hk_100",      148, "quest", 10, C, crit = { "stat", { 588 }, 100 }, desc = "FEATD_hk", pending = true },
+		{ "pvp_hk_100",      148, "quest", 10, C, crit = { "stat", { 588 }, 100 }, desc = "FEATD_hk" },
 		{ "pvp_bg_win",      149, "quest", 10, C, crit = { "stat", { 840 }, 1 }, desc = "FEATD_bgWin", pending = true },
 		{ "pvp_duel_10",     150, "quest", 5,  C, crit = { "stat", { 319 }, 10 }, desc = "FEATD_duels", pending = true },
 		-- Insolite (compte : obtenu par l'un de tes personnages ; statistiques)
@@ -488,7 +492,12 @@ ns.FeatCatalog(function()
 		{ "fun_lava",        161, "fun", 5, A, crit = { "stat", { 115 }, 1 }, desc = "FEATD_lava", pending = true },
 		{ "fun_emotes",      162, "fun", 5, A, crit = { "stat", { 1042, 1045, 1047, 1065, 1066, 1067 }, 100, alt = "emotes" },
 			desc = "FEATD_emotes" },
-		{ "fun_respec",      165, "fun", 5, A, crit = { "stat", { 1149 }, 1 }, desc = "FEATD_respec", pending = true },
+		{ "fun_respec",      165, "fun", 5, A, crit = { "stat", { 1149 }, 1 }, desc = "FEATD_respec" },
+		-- hors numérotation du document (code 174, titre T39) : petit méta des
+		-- morts pour rire ; grisé tant que la noyade, la chute et la lave
+		-- (stats 112, 114, 115) ne sont pas confirmées
+		{ "fun_unlucky",     174, "fun", 5, A, crit = { "meta", { "char_deaths_1", "fun_drown", "fun_fall", "fun_lava" } },
+			desc = "FEATD_unlucky", reward = { title = 39 }, pending = true },
 		-- Grands hauts faits qui dépendent des catégories du jeu
 		{ "meta_dungeons",   169, "meta", 50, A, crit = { "meta", { "dng_tier1", "dng_tier2", "dng_tier3", "dng_tier4" } },
 			desc = "FEATD_metaDungeons", reward = { title = 36 } },
@@ -554,6 +563,7 @@ local FR = {
 	FEATD_lava            = "Mourir dans le feu ou la lave",
 	FEATD_emotes          = "Faire %d émotes (câlin, acclamation, salut, rire, violon, paume au front)",
 	FEATD_respec          = "Réinitialiser ses talents",
+	FEATD_unlucky         = "Mourir une fois, noyé, d'une chute et dans le feu ou la lave",
 	FEATD_metaDungeons    = "Obtenir les %d paliers de donjons",
 	FEATD_list_hero       = "Niveau 60, 5 hauts faits de Donjons et raids, 3 de Métiers et 3 de Quêtes",
 	FEAT_char_gold_100    = "Bourse ronde",
@@ -615,6 +625,7 @@ local FR = {
 	FEAT_fun_lava         = "Ça chauffe !",
 	FEAT_fun_emotes       = "Expressif",
 	FEAT_fun_respec       = "Changement de cap",
+	FEAT_fun_unlucky      = "La poisse",
 	FEAT_meta_dungeons    = "Terreur des cachots",
 	FEAT_meta_hero        = "Héros d'Azeroth",
 }
@@ -671,6 +682,7 @@ local EN = {
 	FEATD_lava            = "Die in fire or lava",
 	FEATD_emotes          = "Use %d emotes (hug, cheer, wave, LOL, violin, facepalm)",
 	FEATD_respec          = "Reset your talents",
+	FEATD_unlucky         = "Die once, drown, die from a fall and in fire or lava",
 	FEATD_metaDungeons    = "Earn the %d dungeon tiers",
 	FEATD_list_hero       = "Level 60, 5 Dungeons and Raids, 3 Professions and 3 Quests achievements",
 	FEAT_char_gold_100    = "A Round Purse",
@@ -732,6 +744,7 @@ local EN = {
 	FEAT_fun_lava         = "Feeling the Heat",
 	FEAT_fun_emotes       = "Expressive",
 	FEAT_fun_respec       = "Change of Heart",
+	FEAT_fun_unlucky      = "Rotten Luck",
 	FEAT_meta_dungeons    = "Dread of the Dungeons",
 	FEAT_meta_hero        = "Hero of Azeroth",
 }

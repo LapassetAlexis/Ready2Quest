@@ -108,7 +108,11 @@ do
 		if id then rank = rank + 1; order[id] = rank end
 	end
 	local off = {}
-	for _, def in ipairs(defs) do if order[def.id] ~= def.n then off[#off + 1] = def.id end end
+	-- au-delà de 173 : lignes hors numérotation, citées dans le document
+	for _, def in ipairs(defs) do
+		local extra = def.n > 173 and doc:find("`" .. def.id .. "` (code " .. def.n .. ")", 1, true)
+		if order[def.id] ~= def.n and not extra then off[#off + 1] = def.id end
+	end
 	Check("[HF] codes n = rang dans le catalogue du document (173 lignes)", rank == 173 and #off == 0, table.concat(off, ", "))
 	local parity = {}
 	for _, set in ipairs({ NS.FEAT_STRINGS, NS.FEAT_DATA_STRINGS, NS.JOURNAL_FEATS_STRINGS }) do
@@ -317,9 +321,9 @@ do
 	-- haut fait marqué « à vérifier » : grisé, jamais obtenu
 	HF.stats[353] = "80"
 	NS:FeatStatReset()
-	local _, _, hearth = NS:FeatProgress("char_hearth_50")
+	local _, _, hearth = NS:FeatProgress("char_food_500")
 	NS:FeatEvaluate(nil)
-	Check("[HF] haut fait « à vérifier » : grisé et jamais attribué", hearth == "pending" and NS:FeatGot("char_hearth_50") == nil)
+	Check("[HF] haut fait « à vérifier » : grisé et jamais attribué", hearth == "pending" and NS:FeatGot("char_food_500") == nil)
 	-- statistique sans repli et illisible : grisée aussi
 	local probe = NS.FeatAdd({ "test_stat_noalt", 901, "char", 10, "char", crit = { "stat", { 9999 }, 5 }, desc = "FEATD_kills" })
 	HF.stats[107] = nil
@@ -525,7 +529,7 @@ do
 			for _, row in ipairs(pane.rows) do if row.def and row.def.id == id and row:IsShown() then return row end end
 		end
 	end
-	local pending = Find("char_hearth_50")
+	local pending = Find("char_food_500")
 	Check("[HF] ligne « à vérifier » grisée, « détection bientôt disponible »", pending and pending.alpha == 0.45
 		and pending.desc.text:find("détection bientôt disponible", 1, true) and not pending.bar:IsShown(),
 		pending and pending.desc.text)

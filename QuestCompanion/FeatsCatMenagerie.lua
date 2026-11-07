@@ -306,7 +306,9 @@ ns.FeatCatalog(function()
 		for _, z in ipairs(ns.ZoneIds and ns.ZoneIds(ns.ZONE_LEVELS) or {}) do
 			if tonumber(z) and not seen[tonumber(z)] then seen[tonumber(z)] = true; items[#items + 1] = "zone:" .. tonumber(z) end
 		end
-		for _, z in ipairs(ns.FEAT_FOREVER_ZONES) do items[#items + 1] = "zone:" .. z end
+		for _, z in ipairs(ns.FEAT_FOREVER_ZONES) do
+			if not seen[z] then seen[z] = true; items[#items + 1] = "zone:" .. z end
+		end
 		table.sort(items)
 		return items
 	end }
@@ -508,9 +510,9 @@ ns.FeatCatalog(function()
 		{ "zone_seal_ek",    45, "zone", 50, CH, crit = { "list", "sealsEk" }, reward = { soon = { "cardframe", "card_crest_ek" } } },
 		{ "zone_seal_ka",    46, "zone", 50, CH, crit = { "list", "sealsKa" }, reward = { soon = { "cardframe", "card_crest_ka" } } },
 		{ "zone_all_biomes", 47, "zone", 25, CH, crit = { "count", "biomesSealed", 10 }, reward = { title = 15 } },
-		-- uiMapID de Riverglades, Mont Hyjal et Shen'dralas à relever en jeu
-		{ "zone_visit_all",  50, "zone", 50, CH, crit = { "list", "outdoorZones" }, reward = { title = 16 }, pending = true },
-		{ "zone_forever_new", 51, "zone", 10, CH, crit = { "list", "foreverZones" }, pending = true },
+		-- zones propres à Forever : ns.FEAT_FOREVER_ZONES (uiMapID relevés en jeu)
+		{ "zone_visit_all",  50, "zone", 50, CH, crit = { "list", "outdoorZones" }, reward = { title = 16 } },
+		{ "zone_forever_new", 51, "zone", 10, CH, crit = { "list", "foreverZones" } },
 		{ "zone_100_1",      56, "zone", 10, CH, crit = { "count", "zones100", 1 } },
 		{ "zone_100_10",     57, "zone", 25, CH, crit = { "count", "zones100", 10 }, reward = { soon = { "bg", "feat_atlas" } } },
 		{ "zone_golden",     58, "zone", 10, CH, crit = { "count", "golden", 1 } },

@@ -267,8 +267,8 @@ ns.FeatCatalog(function()
 		-- repli : les abattus du bestiaire
 		{ "char_kills_1000", 99, "char", 10, "char", crit = { "stat", { 107 }, 1000, alt = "bestiaryKills" }, desc = "FEATD_kills" },
 		{ "char_kills_10000", 100, "char", 25, "char", crit = { "stat", { 107 }, 10000, alt = "bestiaryKills" }, desc = "FEATD_kills" },
-		-- statistique 353 pas encore vérifiée en jeu : grisée
-		{ "char_hearth_50",  98, "char", 10, "char", crit = { "stat", { 353 }, 50 }, desc = "FEATD_hearth", pending = true },
+		-- statistique 353 (« retours par la pierre de foyer »), lisible sur Forever (relevé du 2026-11-07)
+		{ "char_hearth_50",  98, "char", 10, "char", crit = { "stat", { 353 }, 50 }, desc = "FEATD_hearth" },
 		-- Donjons (personnage)
 		{ "dng_visit_1",    107, "dng", 5,  "char", crit = { "count", "placeDungeon", 1 },  reward = { aids = { lasso = 1 } } },
 		{ "dng_visit_10",   108, "dng", 10, "char", crit = { "count", "placeDungeon", 10 }, reward = { aids = { sifflet = 1 } } },
