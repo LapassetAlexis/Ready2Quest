@@ -1,13 +1,11 @@
 <!--
 Fiche de la page Ready2Quest sur CurseForge et Wago (à copier à la main, voir docs/PUBLIER.md).
-Summary EN (256 caractères max, ici 218) :
-  Leave town ready: a readiness score before each outing (food, bag space, durability, buffs, hearthstone), trip reports when you return, dungeon briefs, campfire kit tracking and gear stat diffs. For WoW Forever. EN/FR.
-Summary FR (256 caractères max, ici 240) :
-  Pars prêt : une note de préparation avant chaque sortie (vivres, place dans les sacs, durabilité, buffs, pierre de foyer), le bilan au retour, la fiche du donjon, le kit de camp et le résumé de stuff. Pour WoW Forever. FR/EN.
+Summary EN (obligatoire en anglais sur CurseForge, 256 caractères max, ici 231) :
+  Leave town ready: a readiness score before each outing (food, bags, durability, buffs, hearthstone), trip reports, dungeon briefs, aggro range on nameplates, best quest reward tags and old spell ranks fixed. For WoW Forever. EN/FR.
 Catégories : Quests & Leveling (principale), Bags & Inventory (additionnelle).
 Licence : GPLv3. Logo : docs/publication/logo_ready2quest.png.
 Captures à prendre en jeu : la fenêtre « Avant le départ », le bilan de retour, la fiche de donjon, l'étiquette « Pour toi » d'une récompense de quête, le cadre « Sac plein ».
-Deux descriptions complètes ci-dessous : anglais, puis français. Coller celle de la langue voulue.
+Une seule description, anglais d'abord puis français (règle des stores : l'anglais en premier). Coller le tout.
 -->
 # Ready2Quest
 
@@ -19,7 +17,7 @@ For **WoW Forever** (1.60). English and French.
 
 Each one can be switched on or off in one click (`/r2q options`).
 
-- **Pre-departure check**: when you leave a safe place, a readiness score out of 100 with tips. It checks bags, greys, food and water, potions, buffs, durability, repair gold, class reagents, spells to learn, hearthstone, profession, quests to turn in and rest. If the score is high, it's a single chat line. If it's low, a "!" icon pulses in the color of your score: click it to open the report. Nothing opens by itself.
+- **Pre-departure check**: when you leave a safe place, a readiness score out of 100 with tips. It checks bags, greys, food and water, potions, buffs (it knows which ones replace each other: one paladin blessing, one mage armor, one hunter aspect…), durability, repair gold, class reagents, spells to learn, hearthstone, profession, quests to turn in and rest. If the score is high, it's a single chat line. If it's low, a "!" icon pulses in the color of your score: click it to open the report. Nothing opens by itself.
 - **Safe places, out of the box**: 80 capitals, villages and hubs, plus neutral towns and Forever's new zones. Small camps are learned as you play (innkeeper, flight master, mailbox…). On Forever, your campfire counts too.
 - **Expedition report**: back in town, a summary of your trip: duration, XP and levels, gold earned and spent, notable loot, deaths, wear, quests ready, what to restock.
 - **Before the dungeon**: at the entrance, a sheet for *that* dungeon, with suggested level, your quests for it and a short prep. It covers the 19 classic dungeons and 9 new Forever dungeons.
@@ -40,7 +38,7 @@ Each one can be switched on or off in one click (`/r2q options`).
 
 ## Companion
 
-The **travel companion** and its **journal** are a separate, standalone addon: **QuestCompanion** (`/qc`). Installed together, the companion also reacts to your departures and returns.
+The **travel companion**, its **creature menagerie** and its **journal** are a separate, standalone addon: [**Quest Companion**](https://www.curseforge.com/wow/addons/quest-companion) (`/qc`). Installed together, the companion also reacts to your departures and returns.
 
 ## Commands
 
@@ -62,7 +60,7 @@ Pour **WoW Forever** (1.60). En français et en anglais.
 
 Chacun s'active ou se coupe d'un clic (`/r2q options`).
 
-- **Check avant le départ** : quand tu quittes un lieu sûr, une note de préparation sur 100 et des conseils. Il contrôle les sacs, les gris, les vivres, les potions, les buffs, la durabilité, l'or de réparation, les réactifs de classe, les sorts à apprendre, la pierre de foyer, le métier, les quêtes à rendre et le repos. Note haute : une seule ligne dans le chat. Note basse : une icône « ! » clignote à la couleur de ta note, clique dessus pour ouvrir le rapport. Rien ne s'ouvre tout seul.
+- **Check avant le départ** : quand tu quittes un lieu sûr, une note de préparation sur 100 et des conseils. Il contrôle les sacs, les gris, les vivres, les potions, les buffs (il sait lesquels se remplacent : une bénédiction de paladin, une armure de mage, un aspect de chasseur…), la durabilité, l'or de réparation, les réactifs de classe, les sorts à apprendre, la pierre de foyer, le métier, les quêtes à rendre et le repos. Note haute : une seule ligne dans le chat. Note basse : une icône « ! » clignote à la couleur de ta note, clique dessus pour ouvrir le rapport. Rien ne s'ouvre tout seul.
 - **Lieux sûrs connus dès l'installation** : 80 capitales, villages et hubs, plus les villes neutres et les nouvelles zones de Forever. Les petits camps s'apprennent en jouant (aubergiste, maître de vol, boîte aux lettres…). Sur Forever, ton feu de camp compte aussi.
 - **Retour d'expédition** : de retour en ville, le bilan de ta sortie : durée, XP et niveaux, or gagné et dépensé, butin notable, morts, usure, quêtes prêtes, quoi racheter.
 - **Avant le donjon** : à l'entrée, la fiche de *ce* donjon, avec le niveau conseillé, tes quêtes pour lui et une préparation courte. Les 19 donjons classiques et les 9 nouveaux donjons de Forever.
@@ -83,7 +81,7 @@ Chacun s'active ou se coupe d'un clic (`/r2q options`).
 
 ## Compagnon
 
-Le **compagnon de route** et son **carnet de voyage** sont un addon à part et autonome : **QuestCompanion** (`/qc`). Installés ensemble, le compagnon réagit en plus à tes départs et retours en ville.
+Le **compagnon de route**, sa **ménagerie de créatures** et son **carnet de voyage** sont un addon à part et autonome : [**Quest Companion**](https://www.curseforge.com/wow/addons/quest-companion) (`/qc`). Installés ensemble, le compagnon réagit en plus à tes départs et retours en ville.
 
 ## Commandes
 
