@@ -454,6 +454,15 @@ ns.journalToasts, ns.journalChats = {}, {}
 
 function ns:JournalKindLabel(kind) return L["JRN_TAB_" .. tostring(kind)] or tostring(kind) end
 
+-- Un bandeau sans tampon (sceau de zone, titre de dresseur : 2.5.0) : même
+-- file, même réglage, pas de ligne de chat (ces gains ont déjà la leur)
+function ns:JournalToastPush(entry)
+	if type(entry) ~= "table" or self:DB().journalToast == false then return false end
+	table.insert(self.journalToasts, entry)
+	self:JournalFlush()
+	return true
+end
+
 function ns:JournalNotify(stamp)
 	local db = self:DB()
 	if db.journalToast ~= false then table.insert(self.journalToasts, stamp) end
@@ -466,9 +475,22 @@ end
 local TOAST_W, TOAST_H = 280, 50
 function ns:EnsureJournalToast()
 	if self.journalToast then return self.journalToast end
+	-- style de l'interface (2.5.0, AzerothStyle.lua) : Azeroth = bandeau doré,
+	-- logo dans le cadre carré, bouclier d'or
+	local cached = self.StyleCached and self:StyleCached("journalToast")
+	if cached then self.journalToast = cached; return cached end
+	local frame = self.AzerothOn and self:AzerothOn() and self:AzerothCreateBanner({ strata = "MEDIUM" })
+	if frame then
+		frame.icon:SetTexture(Theme.LOGO_SMALL)
+		if self.RestorePoint then self:RestorePoint(frame, "journalToastPoint", { point = "TOP", x = 0, y = -190 }) end
+		frame:Hide()
+		self.journalToast = frame
+		return frame
+	end
 	if not (Theme and Theme.CreateToast) then return nil end
-	local frame = Theme.CreateToast(UIParent, TOAST_W, TOAST_H)
+	frame = Theme.CreateToast(UIParent, TOAST_W, TOAST_H)
 	if not frame then return nil end
+	frame.uiStyle = "sobre"
 	local left = frame.contentLeft or 14
 	frame.diamond = Theme.CreateDiamond(frame, 12, false)
 	frame.diamond:SetPoint("LEFT", frame, "LEFT", left, 0)
@@ -508,6 +530,7 @@ function ns:ShowNextJournalToast()
 	end
 	frame:Show()
 	if Theme.FadeIn then Theme.FadeIn(frame, 0.2) end
+	if self.StyleShown then self:StyleShown(frame, { shield = "gold", play = true }) end
 	self.journalToastHideAt = ns.Now() + TOAST_SECONDS
 	return frame
 end

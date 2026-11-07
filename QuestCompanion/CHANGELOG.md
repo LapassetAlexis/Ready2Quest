@@ -1,5 +1,17 @@
 # QuestCompanion
 
+## 2.5.0 — le style Azeroth
+
+- **Style Azeroth** (nouveau, par défaut) : les bandeaux prennent l'allure des hauts faits du jeu : le bandeau doré à volutes, l'icône dans son cadre doré, le titre en petites capitales sur le parchemin, le nom en grand au centre, un bouclier à droite (gris : pas encore à toi ; or : gagné). Ils éclosent comme un haut fait : lueur, reflet, éclat sur le bouclier. Les textures sont celles du client ; s'il ne les a pas, le style Sobre s'affiche à la place, sans erreur.
+- **Capture possible** : bandeau doré (« CAPTURE POSSIBLE », la créature, bouclier gris), et dessous une bande sombre pour les infos (étoiles déjà obtenues, chance, « et N de plus »), l'aide et les boutons Tout capturer, Ignorer, Sourdine. Rien ne se chevauche.
+- **« Capturé ! »** : un court bandeau quand la scène de capture se referme, bouclier d'or, étoiles et éclat ; « Brillant capturé ! » avec le nom en or et un reflet. Après « Tout capturer », un seul bandeau pour la plus belle prise (« et N de plus »). Jamais en combat, rien en sourdine. Aussi en style Sobre.
+- **Guilde, tampons, sceaux, titres** : le bandeau « GUILDE » prend la variante de guilde (cadre rond à volutes) ; les tampons du carnet ont le bandeau doré et le bouclier d'or ; un sceau de zone et un nouveau titre de dresseur ont désormais leur bandeau aussi.
+- **Cadre du compagnon** : en Azeroth, un cadre rond à volutes autour du portrait et une plaque dorée pour le nom. Taille, cadrage, bulle, filet et survol ne changent pas.
+- **Noms longs** : la police du nom rapetisse pour tenir dans le bandeau ; un nom vraiment trop long finit par des points de suspension.
+- **Réglage** « Style de l'interface » (page Compagnon de route) : Azeroth ou Sobre (le style d'avant), appliqué tout de suite, sans /reload. Commande `/qc style azeroth|sobre`. La page Guide le mentionne.
+
+*English:* new default "Azeroth" interface style: achievement-style golden banners (client atlas, falls back to the Plain style if missing) for Capture possible (with a dark info strip), guild feats, journal stamps, zone seals and trainer titles; a new short "Captured!" / "Shiny captured!" banner after a capture (best catch of a batch); round vine frame around the companion. Setting "Interface style" (Azeroth / Plain), applied live; `/qc style azeroth|sobre`.
+
 ## 2.4.1 — le filet propose le choix
 
 - **Le filet propose le choix** : dès que deux créatures attendent, le clic sur le filet (ou sur le bandeau « Capture possible ») ouvre un petit choix près du filet : « Capturer : <la meilleure> » ou « Tout capturer (N) ». Maj+clic capture la meilleure tout de suite, Ctrl+clic tente tout ; Échap, un clic ailleurs ou un second clic referment. Avec une seule créature, le clic capture directement, comme avant.

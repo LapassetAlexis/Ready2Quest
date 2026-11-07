@@ -581,11 +581,52 @@ end
 -- Le bandeau : liseré doré, glyphe du filet, « GUILDE », la ligne, la créature
 function ns:EnsureGuildFeatToast()
 	if self.guildFeatToast then return self.guildFeatToast end
+	-- style de l'interface (2.5.0, AzerothStyle.lua)
+	local cached = self.StyleCached and self:StyleCached("guildFeatToast")
+	if cached then self.guildFeatToast = cached; return cached end
+	local art = ns.CAPTURE_ART
+	-- Azeroth : variante « guilde » du bandeau, cadre rond à volutes ; la
+	-- sous-ligne (créature, étoiles) sous le nom, l'aide en infobulle seulement
+	local frame = self.AzerothOn and self:AzerothOn()
+		and self:AzerothCreateBanner({ strata = "HIGH", guild = true, round = true, name = "QuestCompanionGuildFeatAzeroth" })
+	if frame then
+		frame.ownGlyph = art and art.icon and true or false
+		frame.icon:SetTexture(frame.ownGlyph and art.icon or Theme.LOGO_SMALL)
+		if frame.ownGlyph then frame.icon:SetVertexColor(Theme.GOLD_LIGHT[1], Theme.GOLD_LIGHT[2], Theme.GOLD_LIGHT[3], 1) end
+		frame.info = frame.stars
+		frame.hint = frame.banner:CreateFontString(nil, "OVERLAY", Theme.F_SMALL)
+		frame.hint:Hide()
+	else
+		frame = self:GuildFeatToastSobre(art)
+	end
+	if not frame then return nil end
+	-- un bouton invisible par-dessus : clic (la fiche) et glisser
+	local ok, button = pcall(CreateFrame, "Button", nil, frame)
+	if ok and button then
+		button:SetAllPoints(frame)
+		if button.RegisterForClicks then button:RegisterForClicks("LeftButtonUp", "RightButtonUp") end
+		if button.RegisterForDrag then button:RegisterForDrag("LeftButton") end
+		button:SetScript("OnClick", function(_, mouse) ns:GuildFeatsClick(mouse) end)
+		button:SetScript("OnDragStart", function() if frame.StartMoving then pcall(frame.StartMoving, frame) end end)
+		button:SetScript("OnDragStop", function()
+			local stop = frame.GetScript and frame:GetScript("OnDragStop")
+			if type(stop) == "function" then pcall(stop, frame) elseif frame.StopMovingOrSizing then pcall(frame.StopMovingOrSizing, frame) end
+		end)
+		frame.button = button
+	end
+	if self.RestorePoint then self:RestorePoint(frame, "guildFeatToastPoint", { point = "TOP", x = 0, y = -150 }) end
+	frame:Hide()
+	self.guildFeatToast = frame
+	return frame
+end
+
+-- Le bandeau Sobre (le style d'avant 2.5.0) : liseré doré, glyphe, quatre lignes
+function ns:GuildFeatToastSobre(art)
 	if not (Theme and Theme.CreateToast) then return nil end
 	local frame = Theme.CreateToast(UIParent, TOAST_W, TOAST_H, { strata = "HIGH", accent = Theme.GOLD,
 		name = "QuestCompanionGuildFeat" })
 	if not frame then return nil end
-	local art = ns.CAPTURE_ART
+	frame.uiStyle = "sobre"
 	local left = frame.contentLeft or 14
 	frame.icon = frame:CreateTexture(nil, "ARTWORK")
 	frame.ownGlyph = art and art.icon and true or false
@@ -607,23 +648,6 @@ function ns:EnsureGuildFeatToast()
 	frame.text = Line(Theme.F_TITLE, Theme.PARCHMENT, -23)
 	frame.info = Line(Theme.F_SMALL, Theme.PARCHMENT, -43)
 	frame.hint = Line(Theme.F_SMALL, Theme.MUTED, -60)
-	-- un bouton invisible par-dessus : clic (la fiche) et glisser
-	local ok, button = pcall(CreateFrame, "Button", nil, frame)
-	if ok and button then
-		button:SetAllPoints(frame)
-		if button.RegisterForClicks then button:RegisterForClicks("LeftButtonUp", "RightButtonUp") end
-		if button.RegisterForDrag then button:RegisterForDrag("LeftButton") end
-		button:SetScript("OnClick", function(_, mouse) ns:GuildFeatsClick(mouse) end)
-		button:SetScript("OnDragStart", function() if frame.StartMoving then pcall(frame.StartMoving, frame) end end)
-		button:SetScript("OnDragStop", function()
-			local stop = frame.GetScript and frame:GetScript("OnDragStop")
-			if type(stop) == "function" then pcall(stop, frame) elseif frame.StopMovingOrSizing then pcall(frame.StopMovingOrSizing, frame) end
-		end)
-		frame.button = button
-	end
-	if self.RestorePoint then self:RestorePoint(frame, "guildFeatToastPoint", { point = "TOP", x = 0, y = -150 }) end
-	frame:Hide()
-	self.guildFeatToast = frame
 	return frame
 end
 
@@ -653,10 +677,11 @@ function ns:GuildFeatsShowToast(item)
 	frame.hint:SetText(more and (more .. "  ·  " .. L.GFEAT_HINT) or L.GFEAT_HINT)
 	local accent = info.shiny and (Theme.GOLD_LIGHT or Theme.GOLD) or Theme.GOLD
 	if frame.SetAccent then frame:SetAccent(accent) end
-	if frame.ownGlyph then frame.icon:SetVertexColor(accent[1], accent[2], accent[3], 1) end
+	if frame.ownGlyph and not frame.azeroth then frame.icon:SetVertexColor(accent[1], accent[2], accent[3], 1) end
 	state.showing, state.hideAt = item, Clock() + ns.GFEAT_TOAST_SECONDS
 	frame:Show()
 	if Theme.FadeIn then pcall(Theme.FadeIn, frame, 0.2) end
+	if self.StyleShown then self:StyleShown(frame, { shiny = info.shiny, play = true }) end
 	PlayFeatSound(self, info.shiny)
 	return frame
 end
