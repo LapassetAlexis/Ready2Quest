@@ -27,6 +27,12 @@
 -- dans la langue de l'expéditeur) reste envoyé pour les versions d'avant ;
 -- le destinataire rend ti dans sa langue, et retombe sur t si le code lui
 -- est inconnu.
+-- Vitrine des hauts faits (2.8.0, champs facultatifs, ignorés des versions
+-- d'avant) : hf = liste de 3 hauts faits au plus, « n:date » (n = code
+-- numérique du haut fait, 1 à 9999 ; date = seconde d'obtention, facultative),
+-- hk = obtenus par catégorie pour les mini-barres, « cat:nombre ». À la
+-- lecture : un code inconnu ici, en double, mal formé ou de trop est écarté ;
+-- une catégorie inconnue aussi, et un nombre est borné au total d'ici.
 --
 -- Envoi : file d'attente avec limite de débit (seau de 6 messages, un de plus
 -- par seconde), jamais en combat ni pendant un verrou de messagerie (moteur
@@ -88,6 +94,13 @@ local FR = {
 	TRAINER_FEATS          = "Hauts faits : %d · %d points",
 	TRAINER_FEATS_SPLIT    = "Hauts faits : %d · %d points (compte %d, perso %d)",
 	TRAINER_TITLE_FORM     = "Forme",
+	TRAINER_TITLE_SHOWN    = "Titre affiché :",
+	TRAINER_FEATS_HEAD     = "Hauts faits",
+	TRAINER_FEATS_DETAIL   = "%d obtenus · %d points · compte %d, perso %d",
+	TRAINER_FEATS_EMPTY    = "—",
+	TRAINER_FEATS_PICK_AUTO = "Vitrine : les plus récents",
+	TRAINER_FEATS_PICK_SOME = "Vitrine : %d/3 choisis",
+	TRAINER_FEATS_PICKED   = "» %s",
 	OPT_DAILY_TRAINER      = "Partager ma fiche de dresseur",
 	HELP_TRAINER           = "/qc fiche [nom] — ta fiche de dresseur, ou celle d'un autre joueur",
 }
@@ -135,6 +148,13 @@ local EN = {
 	TRAINER_FEATS          = "Achievements: %d · %d points",
 	TRAINER_FEATS_SPLIT    = "Achievements: %d · %d points (account %d, character %d)",
 	TRAINER_TITLE_FORM     = "Form",
+	TRAINER_TITLE_SHOWN    = "Displayed title:",
+	TRAINER_FEATS_HEAD     = "Achievements",
+	TRAINER_FEATS_DETAIL   = "%d earned · %d points · account %d, character %d",
+	TRAINER_FEATS_EMPTY    = "—",
+	TRAINER_FEATS_PICK_AUTO = "Showcase: most recent",
+	TRAINER_FEATS_PICK_SOME = "Showcase: %d/3 picked",
+	TRAINER_FEATS_PICKED   = "» %s",
 	OPT_DAILY_TRAINER      = "Share my trainer card",
 	HELP_TRAINER           = "/qc fiche [name] — your trainer card, or another player's",
 }
@@ -176,6 +196,8 @@ ns.TRAINER_IN_WINDOW = 10           -- s : fenêtre du plafond de messages reçu
 ns.TRAINER_IN_MAX = 40              -- messages reçus d'un même joueur par fenêtre (une fiche : 20 au plus)
 ns.TRAINER_OWN_TTL = 300            -- s : ma fiche sérialisée gardée (en plus de sa clé)
 ns.TRAINER_SHOWCASE_SIZE = 3
+ns.TRAINER_FEAT_SHOWCASE = 3        -- hauts faits en vitrine (2.8.0)
+ns.TRAINER_FEAT_CATS = { "men", "shiny", "zone", "char" }   -- les quatre mini-barres
 ns.TRAINER_CONTINENTS = { "ek", "ka", "other" }
 -- menus du clic droit sur un joueur (moteur récent, Menu.ModifyMenu)
 ns.TRAINER_MENUS = { "MENU_UNIT_PLAYER", "MENU_UNIT_PARTY", "MENU_UNIT_RAID_PLAYER", "MENU_UNIT_RAID",
@@ -241,9 +263,17 @@ end
 -- Noms : toujours « Nom-Royaume » (royaume sans espaces), comme l'expéditeur
 -- d'un message d'addon
 -- ---------------------------------------------------------------------------
+-- 2.8.0 : sans GetNormalizedRealmName ni GetRealmName lisibles (valeur
+-- secrète, client sans l'API), le royaume du joueur lui-même (UnitFullName)
+-- : sinon « ? » ne ressemblait à aucun royaume et le nom gardait son
+-- « -Royaume » sur sa propre fiche
 local function MyRealm()
 	local realm = Str(Call(G("GetNormalizedRealmName")))
 	if not realm then realm = Str(Call(G("GetRealmName"))) end
+	if not realm then
+		local _, own = Call(G("UnitFullName"), "player")
+		realm = Str(own)
+	end
 	return realm and (realm:gsub("[%s%-]", "")) or "?"
 end
 
@@ -495,6 +525,91 @@ function ns:TrainerSetShowcase(slot, id)
 	return true
 end
 
+-- ---------------------------------------------------------------------------
+-- Vitrine des hauts faits (2.8.0) : 3 hauts faits obtenus, ceux que le joueur
+-- épingle d'abord (sélecteur « Vitrine : … » de sa fiche), complétés par les
+-- plus récents. Les épinglés sont gardés par identifiant (CompanionData) ;
+-- un épinglé qui n'est plus obtenu (autre personnage) est sauté.
+-- ---------------------------------------------------------------------------
+function ns:TrainerFeatPins()
+	local data = self:CompanionData()
+	data.trainer = type(data.trainer) == "table" and data.trainer or {}
+	data.trainer.featPins = type(data.trainer.featPins) == "table" and data.trainer.featPins or {}
+	return data.trainer.featPins
+end
+
+-- Les hauts faits obtenus, du plus récent au plus ancien : { def, at }
+function ns:TrainerFeatsEarned()
+	local list = {}
+	if not (self.FeatDefs and self.FeatGot) then return list end
+	for _, def in ipairs(self:FeatDefs()) do
+		local got = self:FeatGot(def)
+		if got then list[#list + 1] = { def = def, at = tonumber(type(got) == "table" and got.at) or 0 } end
+	end
+	table.sort(list, function(a, b)
+		if a.at ~= b.at then return a.at > b.at end
+		return (tonumber(a.def.n) or 0) < (tonumber(b.def.n) or 0)
+	end)
+	return list
+end
+
+-- La vitrine : { { def, n, at }, … } (3 au plus)
+function ns:TrainerFeatShowcase()
+	local earned = self:TrainerFeatsEarned()
+	local byId, out, used = {}, {}, {}
+	for _, item in ipairs(earned) do byId[item.def.id] = item end
+	local function Add(item)
+		if item and not used[item.def.id] and #out < ns.TRAINER_FEAT_SHOWCASE then
+			used[item.def.id] = true
+			out[#out + 1] = { def = item.def, n = tonumber(item.def.n), at = item.at }
+		end
+	end
+	for _, id in ipairs(self:TrainerFeatPins()) do Add(byId[id]) end
+	for _, item in ipairs(earned) do Add(item) end
+	return out
+end
+
+-- Épingle (ou retire) un haut fait obtenu ; "auto" : plus d'épingle (les
+-- plus récents). Rend true si la vitrine a changé.
+function ns:TrainerFeatPick(value)
+	local pins = self:TrainerFeatPins()
+	if value == "auto" then
+		for index = #pins, 1, -1 do pins[index] = nil end
+		self:TrainerRefreshWindow()
+		return true
+	end
+	if value == "picked" then return false end
+	local def = self.FeatDef and self:FeatDef(value)
+	if not (def and self:FeatGot(def)) then return false end
+	for index, id in ipairs(pins) do
+		if id == value then
+			table.remove(pins, index)
+			self:TrainerRefreshWindow()
+			return true
+		end
+	end
+	table.insert(pins, 1, value)
+	while #pins > ns.TRAINER_FEAT_SHOWCASE do table.remove(pins) end
+	self:TrainerRefreshWindow()
+	return true
+end
+
+-- Le sélecteur : « les plus récents », l'état « n/3 choisis », puis chaque
+-- haut fait obtenu (les épinglés marqués « » »)
+function ns:TrainerFeatPickOptions()
+	local pins, pinned = self:TrainerFeatPins(), {}
+	for _, id in ipairs(pins) do pinned[id] = true end
+	local options = { { value = "auto", label = L.TRAINER_FEATS_PICK_AUTO } }
+	local count = 0
+	for _, id in ipairs(pins) do if self.FeatDef and self:FeatDef(id) and self:FeatGot(id) then count = count + 1 end end
+	if count > 0 then options[#options + 1] = { value = "picked", label = self:F("TRAINER_FEATS_PICK_SOME", count) } end
+	for _, item in ipairs(self:TrainerFeatsEarned()) do
+		local name = self:FeatName(item.def)
+		options[#options + 1] = { value = item.def.id, label = pinned[item.def.id] and self:F("TRAINER_FEATS_PICKED", name) or name }
+	end
+	return options, count > 0 and "picked" or "auto"
+end
+
 local function Continent(self, zoneID)
 	if self.JournalContinentOf then
 		local ok, key = pcall(self.JournalContinentOf, self, zoneID)
@@ -587,6 +702,20 @@ function ns:TrainerOwnCard()
 		end
 		card.companion = comp
 	end
+	-- vitrine des hauts faits et obtenus par catégorie (2.8.0)
+	if self.FeatDefs then
+		card.featShowcase = {}
+		for index, item in ipairs(self:TrainerFeatShowcase()) do
+			card.featShowcase[index] = { n = item.n, at = item.at, def = item.def }
+		end
+		if self.FeatCategoryStats then
+			card.featCats = {}
+			for _, cat in ipairs(ns.TRAINER_FEAT_CATS) do
+				local ok, got, total = pcall(self.FeatCategoryStats, self, cat)
+				if ok and tonumber(total) and total > 0 then card.featCats[cat] = tonumber(got) or 0 end
+			end
+		end
+	end
 	-- vitrine
 	for slot = 1, ns.TRAINER_SHOWCASE_SIZE do
 		local npc, shiny = ParseCapId(self:TrainerShowcase()[slot])
@@ -625,6 +754,22 @@ function ns:TrainerSerializeCard(card)
 				item.name or "" }
 		end
 	end
+	-- 2.8.0 : la vitrine des hauts faits (« n:date ») et les catégories (« cat:nombre »)
+	local feats = {}
+	for _, item in ipairs(card.featShowcase or {}) do
+		local n = tonumber(item.n)
+		if n and #feats < ns.TRAINER_FEAT_SHOWCASE then
+			local at = tonumber(item.at)
+			feats[#feats + 1] = string.format("%d", n) .. ((at and at > 0) and string.format(":%d", at) or "")
+		end
+	end
+	if #feats > 0 then f.hf = feats end
+	local cats = {}
+	for _, cat in ipairs(ns.TRAINER_FEAT_CATS) do
+		local got = card.featCats and tonumber(card.featCats[cat])
+		if got then cats[#cats + 1] = cat .. ":" .. math.max(0, math.floor(got)) end
+	end
+	if #cats > 0 then f.hk = cats end
 	local badges = {}
 	for _, key in ipairs(ns.TRAINER_CONTINENTS) do
 		local count = card.badges and tonumber(card.badges[key])
@@ -688,6 +833,37 @@ function ns:TrainerParseCard(text)
 	-- points : les trois champs, tous lisibles, ou rien
 	local account, char, count = Digits(f.ap, 5), Digits(f.aq, 5), Digits(f.ac, 3)
 	if account and char and count then card.feats = { account = account, char = char, count = count } end
+	-- vitrine des hauts faits (2.8.0) : codes connus ici seulement, sans
+	-- doublon, trois au plus ; date facultative (10 chiffres au plus)
+	card.featShowcase = {}
+	local seen = {}
+	for _, item in ipairs(ListOf(f.hf)) do
+		if #card.featShowcase >= ns.TRAINER_FEAT_SHOWCASE then break end
+		local nText, atText = item:match("^(%d+):?(%d*)$")
+		local n = Digits(nText, 4)
+		-- une date présente mais illisible : l'élément entier est écarté
+		local at = atText and atText ~= "" and Digits(atText, 10) or nil
+		local badAt = atText and atText ~= "" and not at
+		local def = n and n >= 1 and not badAt and not seen[n] and self.FeatDefByCode and self:FeatDefByCode(n) or nil
+		if def then
+			seen[n] = true
+			card.featShowcase[#card.featShowcase + 1] = { n = n, at = at, def = def }
+		end
+	end
+	-- obtenus par catégorie : catégories des mini-barres seulement, bornés au total d'ici
+	local known = {}
+	for _, cat in ipairs(ns.TRAINER_FEAT_CATS) do known[cat] = true end
+	for _, item in ipairs(ListOf(f.hk)) do
+		local cat, got = item:match("^(%a+):(%d+)$")
+		got = Digits(got, 4)
+		if cat and known[cat] and got and not (card.featCats and card.featCats[cat]) and self.FeatCategoryStats then
+			local ok, _, total = pcall(self.FeatCategoryStats, self, cat)
+			if ok and tonumber(total) and total > 0 then
+				card.featCats = card.featCats or {}
+				card.featCats[cat] = math.min(got, total)
+			end
+		end
+	end
 	return card
 end
 
@@ -768,6 +944,8 @@ local function OwnCardKey(self)
 		parts[#parts + 1] = tostring(ok and code) .. ":" .. tostring(Call(self.FeatTitleGender, self))
 			.. ":" .. tostring(Call(self.FeatPoints, self, nil))
 	end
+	-- 2.8.0 : la vitrine des hauts faits épinglée
+	if self.TrainerFeatPins then parts[#parts + 1] = table.concat(self:TrainerFeatPins(), ",") end
 	return table.concat(parts, "|")
 end
 
@@ -1105,13 +1283,24 @@ end
 -- ---------------------------------------------------------------------------
 -- Fenêtre de fiche
 -- ---------------------------------------------------------------------------
-local WIN_W, WIN_H, FOOT_H, PAD = 620, 530, 52, 20
-local MODEL_W, MODEL_H = 200, 210
+-- 2.8.0 : fenêtre agrandie (bloc des hauts faits) ; le choix du titre passe
+-- sous l'en-tête (« Titre affiché : … »), loin du bouton de fermeture ; le
+-- portrait du compagnon fait 206 px
+local WIN_W, WIN_H, FOOT_H, PAD = 780, 580, 52, 20
+local MODEL_W, MODEL_H = 206, 206
 local COL_X = PAD + MODEL_W + 20
 local COL_W = WIN_W - COL_X - PAD
-local TILE_W, TILE_H, TILE_GAP = 180, 64, 10
-local SHOW_Y = -356
-ns.TRAINER_LAYOUT = { width = WIN_W, height = WIN_H, footer = FOOT_H }
+local TILE_GAP = 10
+local TILE_W, TILE_H = math.floor((WIN_W - 2 * PAD - 2 * TILE_GAP) / 3), 64
+local TITLE_Y, BODY_Y = -68, -96          -- rangée du titre affiché, haut des colonnes
+local LINES_W, LINE_STEP = 304, 18        -- chiffres (1-5), à gauche des sceaux
+local BADGE_X = COL_X + LINES_W + 10
+local FEATS_Y = -264                      -- bloc des hauts faits (colonne de droite)
+local FEAT_GAP, FEAT_H = 8, 52
+local FEAT_W = math.floor((COL_W - 2 * FEAT_GAP) / 3)
+local SHOW_Y = -392
+ns.TRAINER_LAYOUT = { width = WIN_W, height = WIN_H, footer = FOOT_H, pad = PAD, titleY = TITLE_Y, bodyY = BODY_Y,
+	colX = COL_X, colW = COL_W, model = MODEL_W, featsY = FEATS_Y, showY = SHOW_Y, featW = FEAT_W, featH = FEAT_H }
 
 local function Line(parent, font, color, width)
 	local text = Theme.Text(parent, font or Theme.F_BODY, color or Theme.TEXT)
@@ -1192,6 +1381,47 @@ local function BuildTile(self, parent, x, slot)
 	return tile
 end
 
+-- Une carte de la vitrine des hauts faits : icône (cadre d'icône en
+-- Azeroth), nom, date, points (bouclier en Azeroth, losange en Sobre)
+local function BuildFeatCard(self, parent, index)
+	local card = Theme.CreateTile(parent, FEAT_W, FEAT_H, { kind = "Frame", accent = false })
+	card:SetPoint("TOPLEFT", parent, "TOPLEFT", COL_X + (index - 1) * (FEAT_W + FEAT_GAP), FEATS_Y - 24)
+	card.icon = card:CreateTexture(nil, "ARTWORK")
+	card.icon:SetSize(32, 32)
+	card.icon:SetPoint("LEFT", card, "LEFT", 9, 0)
+	card.icon:SetTexCoord(0.08, 0.92, 0.08, 0.92)
+	card.name = Line(card, Theme.F_LABEL, Theme.LABEL, FEAT_W - 54)
+	card.name:SetPoint("TOPLEFT", card, "TOPLEFT", 48, -8)
+	card.date = Line(card, Theme.F_SMALL, Theme.MUTED_LIGHT, FEAT_W - 90)
+	card.date:SetPoint("TOPLEFT", card, "TOPLEFT", 48, -27)
+	card.mark = Theme.CreateDiamond(card, 18)
+	card.mark:SetPoint("BOTTOMRIGHT", card, "BOTTOMRIGHT", -26, 6)
+	card.pts = Line(card, Theme.F_NUMBER, Theme.PARCHMENT, 24)
+	card.pts:SetPoint("LEFT", card.mark, "RIGHT", 2, 0)
+	card.index = index
+	if card.EnableMouse then card:EnableMouse(true) end
+	card.onEnter = function(c) if c.def and ns.JournalFeatsTip then ns:JournalFeatsTip(c) end end
+	card.onLeave = function() local tip = rawget(_G, "GameTooltip"); if tip and tip.Hide then tip:Hide() end end
+	return card
+end
+
+-- Une mini-barre d'une catégorie : libellé, barre, « obtenus/total »
+local function BuildFeatBar(self, parent, index, cat)
+	local col, row = (index - 1) % 2, math.floor((index - 1) / 2)
+	local half = math.floor((COL_W - 16) / 2)
+	local x, y = COL_X + col * (half + 16), FEATS_Y - 24 - FEAT_H - 10 - row * 18
+	local bar = { cat = cat }
+	bar.label = Line(parent, Theme.F_SMALL, Theme.MUTED_LIGHT, 96)
+	bar.label:SetPoint("TOPLEFT", parent, "TOPLEFT", x, y)
+	bar.label:SetText(L["FEATC_" .. cat] or cat)
+	bar.bar = Theme.CreateBar(parent, half - 96 - 48, 4)
+	bar.bar:SetPoint("TOPLEFT", parent, "TOPLEFT", x + 98, y - 4)
+	bar.count = Line(parent, Theme.F_SMALL, Theme.MUTED_LIGHT, 44)
+	bar.count:SetPoint("TOPLEFT", parent, "TOPLEFT", x + half - 44, y)
+	bar.count:SetJustifyH("RIGHT")
+	return bar
+end
+
 function ns:EnsureTrainerWindow()
 	if self.trainerFrame then return self.trainerFrame end
 	if not (Theme and Theme.CreateWindow) then return nil end
@@ -1204,11 +1434,17 @@ function ns:EnsureTrainerWindow()
 	local content = frame.content
 	frame.header = Theme.CreatePageHeader(content, WIN_W - 2, { compact = true })
 	frame.header:SetPoint("TOPLEFT", content, "TOPLEFT", 0, 0)
-	-- à droite de l'en-tête (ma fiche) : le choix du titre
-	frame.titlePicker = Theme.CreateDropdown(content, 220, function(value)
+	-- sous le nom (ma fiche) : « Titre affiché : [choix] » ; plus rien en
+	-- haut à droite, où se tient le bouton de fermeture (2.8.0)
+	frame.titleLabel = Line(content, Theme.F_LABEL, Theme.MUTED_LIGHT)
+	frame.titleLabel:SetPoint("TOPLEFT", content, "TOPLEFT", PAD, TITLE_Y - 3)
+	frame.titleLabel:SetText(L.TRAINER_TITLE_SHOWN)
+	frame.titleLabel:Hide()
+	local labelW = math.ceil(Theme.TextWidth(content, L.TRAINER_TITLE_SHOWN, Theme.F_LABEL))
+	frame.titlePicker = Theme.CreateDropdown(content, 240, function(value)
 		if ns.FeatTitlePick then ns:FeatTitlePick(value) end
 	end, { listWidth = 300, maxRows = 12 })
-	frame.titlePicker:SetPoint("TOPRIGHT", content, "TOPRIGHT", -PAD, -22)
+	frame.titlePicker:SetPoint("TOPLEFT", content, "TOPLEFT", PAD + labelW + 8, TITLE_Y)
 	frame.titlePicker:Hide()
 
 	-- message à la place de la fiche (demande en cours, rien reçu, refus)
@@ -1224,10 +1460,10 @@ function ns:EnsureTrainerWindow()
 	frame.body = body
 	-- compagnon : grand modèle, nom, étiquettes, étoiles
 	frame.compSection = Theme.CreateSection(body, L.TRAINER_COMPANION)
-	frame.compSection:SetPoint("TOPLEFT", body, "TOPLEFT", PAD, -72)
+	frame.compSection:SetPoint("TOPLEFT", body, "TOPLEFT", PAD, BODY_Y)
 	local stage = CreateFrame("Frame", nil, body)
 	stage:SetSize(MODEL_W, MODEL_H)
-	stage:SetPoint("TOPLEFT", body, "TOPLEFT", PAD, -94)
+	stage:SetPoint("TOPLEFT", body, "TOPLEFT", PAD, BODY_Y - 22)
 	stage.bg = Theme.Solid(stage, "BACKGROUND", Theme.NAV, 1)
 	stage.bg:SetAllPoints()
 	stage.border = Theme.Border(stage, Theme.EDGE_SOFT, 1)
@@ -1247,23 +1483,37 @@ function ns:EnsureTrainerWindow()
 
 	-- colonne de droite : chiffres, effets, sceaux
 	frame.infoSection = Theme.CreateSection(body, L.TRAINER_TITLE)
-	frame.infoSection:SetPoint("TOPLEFT", body, "TOPLEFT", COL_X, -72)
+	frame.infoSection:SetPoint("TOPLEFT", body, "TOPLEFT", COL_X, BODY_Y)
 	frame.lines = {}
 	for index = 1, 8 do
-		local line = Line(body, index <= 5 and Theme.F_BODY or Theme.F_SMALL, index <= 5 and Theme.TEXT or Theme.MUTED_LIGHT, COL_W)
-		line:SetPoint("TOPLEFT", body, "TOPLEFT", COL_X, -96 - (index - 1) * 20)
+		local line = Line(body, index <= 5 and Theme.F_BODY or Theme.F_SMALL, index <= 5 and Theme.TEXT or Theme.MUTED_LIGHT,
+			index <= 5 and LINES_W or COL_W)
+		line:SetPoint("TOPLEFT", body, "TOPLEFT", COL_X, BODY_Y - 24 - (index - 1) * LINE_STEP - (index > 5 and 6 or 0))
 		frame.lines[index] = line
 	end
+	-- sceaux par continent : à droite des chiffres, un par ligne
 	frame.badgeSection = Theme.CreateSection(body, L.TRAINER_BADGES)
-	frame.badgeSection:SetPoint("TOPLEFT", body, "TOPLEFT", COL_X, -262)
+	frame.badgeSection:SetPoint("TOPLEFT", body, "TOPLEFT", BADGE_X, BODY_Y)
 	frame.badges = {}
 	for index, key in ipairs(ns.TRAINER_CONTINENTS) do
 		local tag = Theme.CreateTag(body, "", Theme.GOLD)
 		tag.key = key
 		frame.badges[index] = tag
 	end
-	frame.badgeNone = Line(body, Theme.F_SMALL, Theme.MUTED, COL_W)
-	frame.badgeNone:SetPoint("TOPLEFT", body, "TOPLEFT", COL_X, -286)
+	frame.badgeNone = Line(body, Theme.F_SMALL, Theme.MUTED, WIN_W - PAD - BADGE_X)
+	frame.badgeNone:SetPoint("TOPLEFT", body, "TOPLEFT", BADGE_X, BODY_Y - 24)
+
+	-- hauts faits (2.8.0) : nombre et points, vitrine de 3, quatre mini-barres
+	frame.featsSection = Theme.CreateSection(body, L.TRAINER_FEATS_HEAD)
+	frame.featsSection:SetPoint("TOPLEFT", body, "TOPLEFT", COL_X, FEATS_Y)
+	frame.featsPicker = Theme.CreateDropdown(body, 200, function(value) ns:TrainerFeatPick(value) end,
+		{ listWidth = 280, maxRows = 12 })
+	frame.featsPicker:SetPoint("TOPRIGHT", body, "TOPLEFT", COL_X + COL_W, FEATS_Y + 1)
+	frame.featsPicker:Hide()
+	frame.featCards = {}
+	for index = 1, ns.TRAINER_FEAT_SHOWCASE do frame.featCards[index] = BuildFeatCard(self, body, index) end
+	frame.featBars = {}
+	for index, cat in ipairs(ns.TRAINER_FEAT_CATS) do frame.featBars[index] = BuildFeatBar(self, body, index, cat) end
 
 	-- vitrine : trois tuiles
 	frame.showSection = Theme.CreateSection(body, L.TRAINER_SHOWCASE)
@@ -1374,9 +1624,67 @@ function ns:TrainerCardHeading(card, name)
 	return heading, subtitle or L.TRAINER_DEFAULT_TITLE
 end
 
+-- Le bloc des hauts faits : nombre et points, vitrine, mini-barres
+local function PaintFeats(self, frame, card, own)
+	local feats = type(card.feats) == "table" and card.feats or nil
+	local account, char = feats and tonumber(feats.account) or 0, feats and tonumber(feats.char) or 0
+	local detail = (feats and account + char > 0)
+		and self:F("TRAINER_FEATS_DETAIL", tonumber(feats.count) or 0, account + char, account, char) or nil
+	frame.featsSection:SetText(L.TRAINER_FEATS_HEAD, detail)
+	for index, tile in ipairs(frame.featCards) do
+		local item = card.featShowcase and card.featShowcase[index]
+		local def = item and (item.def or (self.FeatDefByCode and self:FeatDefByCode(item.n)))
+		tile.def, tile.entry = def, def and { got = true, at = item.at } or nil
+		if def then
+			pcall(tile.icon.SetTexture, tile.icon, self:FeatIcon(def))
+			tile.icon:Show()
+			tile.name:SetText(self:FeatName(def))
+			tile.date:SetText(FormatDate(item.at) or "")
+			tile.pts:SetText(tostring(def.pts or 0))
+			tile.mark:Show()
+			tile:SetAccent(Theme.GOLD)
+		else
+			tile.icon:Hide()
+			tile.name:SetText(L.TRAINER_FEATS_EMPTY)
+			tile.date:SetText("")
+			tile.pts:SetText("")
+			tile.mark:Hide()
+			tile:SetAccent(nil)
+		end
+	end
+	for _, bar in ipairs(frame.featBars) do
+		local got = card.featCats and tonumber(card.featCats[bar.cat])
+		local total = 0
+		if self.FeatCategoryStats then
+			local ok, _, t = pcall(self.FeatCategoryStats, self, bar.cat)
+			total = ok and tonumber(t) or 0
+		end
+		if got and total > 0 then
+			bar.bar:SetValue(got / total)
+			bar.bar:Show()
+			bar.count:SetText(string.format("%d/%d", got, total))
+		else
+			bar.bar:SetValue(0)
+			bar.bar:Hide()
+			bar.count:SetText(L.TRAINER_FEATS_EMPTY)
+		end
+		bar.shown = got ~= nil
+	end
+	if own and self.TrainerFeatPickOptions then
+		local options, value = self:TrainerFeatPickOptions()
+		frame.featsPicker:SetOptions(options)
+		frame.featsPicker:SetValue(value)
+		frame.featsPicker:Show()
+	else
+		frame.featsPicker:Hide()
+	end
+end
+
 local function PaintCard(self, frame, card, own)
-	-- le nom vient de l'expéditeur réel, jamais du champ `n` reçu (usurpation)
+	-- le nom vient de l'expéditeur réel, jamais du champ `n` reçu (usurpation) ;
+	-- ma fiche : mon nom seul, jamais « -Royaume » (2.8.0)
 	local name = self:TrainerShortName(own and card.name or card.sender or frame.viewing)
+	if own then name = tostring(card.name or name):match("^([^%-]+)") or name end
 	local heading, subtitle = self:TrainerCardHeading(card, name)
 	frame.header:SetTitle(heading)
 	frame.header:SetSubtitle(subtitle)
@@ -1384,10 +1692,12 @@ local function PaintCard(self, frame, card, own)
 		frame.titlePicker:SetOptions(self:FeatTitleOptions(name))
 		frame.titlePicker:SetValue(self:FeatTitleOptionValue())
 		frame.titlePicker:Show()
+		frame.titleLabel:Show()
 		frame.formPicker:SetOptions(self:FeatTitleFormChoices())
 		frame.formPicker:SetValue(self:FeatTitleForm())
 	else
 		frame.titlePicker:Hide()
+		frame.titleLabel:Hide()
 	end
 	local comp = card.companion
 	if comp then
@@ -1425,21 +1735,22 @@ local function PaintCard(self, frame, card, own)
 		end
 	end
 	for index, line in ipairs(frame.lines) do line:SetText(lines[index] or "") end
-	-- sceaux par continent
-	local x, any = COL_X, false
+	-- sceaux par continent : un par ligne, à droite des chiffres
+	local y, any = BODY_Y - 24, false
 	for _, tag in ipairs(frame.badges) do
 		local count = card.badges and card.badges[tag.key]
 		if count and count > 0 then
 			tag:SetTag(L["TRAINER_CONT_" .. tag.key] .. " " .. count, Theme.GOLD)
 			tag:ClearAllPoints()
-			tag:SetPoint("TOPLEFT", frame.body, "TOPLEFT", x, -286)
-			x = x + (tonumber(tag:GetWidth()) or 80) + 6
+			tag:SetPoint("TOPLEFT", frame.body, "TOPLEFT", BADGE_X, y)
+			y = y - 20
 			any = true
 		else
 			tag:SetTag("")
 		end
 	end
 	frame.badgeNone:SetText(any and "" or L.TRAINER_BADGES_NONE)
+	PaintFeats(self, frame, card, own)
 	for slot, tile in ipairs(frame.tiles) do PaintTile(self, tile, card.showcase and card.showcase[slot], own) end
 end
 
@@ -1465,6 +1776,7 @@ function ns:TrainerRefreshWindow()
 	end
 	local status = not own and self:TrainerStatus(frame.viewing) or nil
 	local who = self:TrainerShortName(frame.viewing)
+	frame.shownCard = card
 	if card then
 		frame.status:SetText("")
 		frame.statusHint:SetText("")
@@ -1479,6 +1791,7 @@ function ns:TrainerRefreshWindow()
 		frame.header:SetTitle(who)
 		frame.header:SetSubtitle(L.TRAINER_TITLE)
 		frame.titlePicker:Hide()
+		frame.titleLabel:Hide()
 		frame.received:SetText("")
 		if status == "refused" then
 			frame.status:SetText(self:F("TRAINER_REFUSED", who))

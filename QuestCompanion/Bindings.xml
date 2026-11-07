@@ -1,0 +1,10 @@
+<!-- Raccourcis de QuestCompanion (menu Raccourcis du jeu, section « QuestCompanion ») :
+     noms et en-tête dans Bindings.lua (BINDING_HEADER_ / BINDING_NAME_), fonctions globales aussi. -->
+<Bindings>
+	<Binding name="QUESTCOMPANION_FEATS" header="QUESTCOMPANION" category="ADDONS">
+		QuestCompanion_ToggleFeats()
+	</Binding>
+	<Binding name="QUESTCOMPANION_JOURNAL" category="ADDONS">
+		QuestCompanion_ToggleJournal()
+	</Binding>
+</Bindings>

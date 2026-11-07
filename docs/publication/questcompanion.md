@@ -1,7 +1,7 @@
 <!--
 Fiche de la page QuestCompanion sur CurseForge et Wago (à copier à la main, voir docs/PUBLIER.md).
-Summary EN (obligatoire en anglais sur CurseForge, 256 caractères max, ici 237) :
-  Catch the monsters you defeat in WoW Forever: 1-3 star specimens and rare shinies, a companion that hunts with you, zone seals, trainer titles, a trainer card and guild feat alerts shared with other players. Plus a travel journal. FR/EN.
+Summary EN (obligatoire en anglais sur CurseForge, 256 caractères max, ici 205) :
+  Catch the monsters you defeat in WoW Forever: 1-3 star specimens, rare shinies, 174 achievements and 40 titles, a companion that hunts with you, zone seals and a trainer card shared with your guild. FR/EN.
 Catégories : Companions (principale), Quests & Leveling (additionnelle). Si Companions n'existe pas : Miscellaneous (principale).
 Licence : GPLv3. Logo : docs/publication/logo_questcompanion.png.
 Relation : Optional Dependency -> Ready2Quest (facultatif).
@@ -16,6 +16,10 @@ Une seule description, anglais d'abord puis français (règle des stores : l'ang
 
 For **WoW Forever** (1.60). English and French. Free, standalone (`/qc`), about 2 MB of memory. Pairs well with [Ready2Quest](https://www.curseforge.com/wow/addons/ready2quest).
 
+## New in 2.8: the journal in the Azeroth style
+
+- The travel journal and the trainer card now look like the game's achievement frame: wood, parchment, header plate, shields, green progress bars. Your trainer card shows a showcase of 3 achievements, and the **Y** key opens your achievements (if it was free).
+
 ## New in 2.7: achievements and titles
 
 - **174 achievements, with points**: menagerie, shinies, zones and seals, day by day, guild, character, dungeons and raids (the last boss of each dungeon, Onyxia to Kel'Thuzad), professions, quests and reputation, oddities. Collection ones count for your whole account, performance ones for each character.
@@ -24,7 +28,7 @@ For **WoW Forever** (1.60). English and French. Free, standalone (`/qc`), about 
 
 ## New in 2.4
 
-- **Capture all**: when several creatures wait in your net, throw at all of them at once. A grid of face-down cards flips over in a wave, shinies revealed last.
+- **Capture all**: when several creatures wait in your net, throw at all of them at once: a volley of nets drops on every creature, each one shakes and holds or tears, shinies last.
 - **Guild feats**: when a guildmate who runs Quest Companion catches a shiny, an elite, a rare or a boss, seals a zone or earns a title, you get a "GUILD" banner. Click it to open their trainer card. Nothing is posted in chat.
 - **Bestiary-style Menagerie**: undiscovered species stay hidden ("???") until you meet them, with type filters (Beast, Undead, Demon…) and a sort by kills.
 
@@ -93,6 +97,10 @@ Free software, **GPL-3.0**. Zone data (creatures, gathering, quests) is generate
 
 Pour **WoW Forever** (1.60). En français et en anglais. Gratuit, autonome (`/qc`), environ 2 Mo de mémoire. Va très bien avec [Ready2Quest](https://www.curseforge.com/wow/addons/ready2quest).
 
+## Nouveau en 2.8 : le carnet en style Azeroth
+
+- Le carnet de voyage et la fiche de dresseur prennent l'habit du cadre des hauts faits du jeu : bois, parchemin, plaque d'en-tête, boucliers, barres vertes. Ta fiche montre une vitrine de 3 hauts faits, et la touche **Y** ouvre tes hauts faits (si elle était libre).
+
 ## Nouveau en 2.7 : hauts faits et titres
 
 - **174 hauts faits, avec des points** : ménagerie, brillantes, zones et sceaux, au jour le jour, guilde, personnage, donjons et raids (le dernier boss de chaque donjon, d'Onyxia à Kel'Thuzad), métiers, quêtes et réputations, insolite. Ceux de collection valent pour tout ton compte, ceux de performance pour chaque personnage.
@@ -101,7 +109,7 @@ Pour **WoW Forever** (1.60). En français et en anglais. Gratuit, autonome (`/qc
 
 ## Nouveau en 2.4
 
-- **Tout capturer** : quand plusieurs créatures attendent dans ton filet, lance-le sur toutes d'un coup. Une grille de cartes face cachée se retourne en vague, les brillantes en dernier.
+- **Tout capturer** : quand plusieurs créatures attendent dans ton filet, lance-le sur toutes d'un coup : une volée de filets tombe sur chacune, qui tient ou se déchire, les brillantes en dernier.
 - **Exploits de la guilde** : quand un membre de ta guilde qui a Quest Companion capture une brillante, une élite, un rare ou un boss, scelle une zone ou gagne un titre, un bandeau « GUILDE » te l'annonce. Un clic ouvre sa fiche de dresseur. Rien n'est écrit dans le chat.
 - **Ménagerie façon bestiaire** : une espèce jamais croisée reste cachée (« ??? »), avec des filtres par type (Bête, Mort-vivant, Démon…) et un tri par abattues.
 

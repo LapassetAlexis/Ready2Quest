@@ -756,6 +756,12 @@ function ns:AzerothVerdict(parent, width, height)
 	Atlas(banner.shine, AZ.shine)
 	if banner.shine.SetBlendMode then banner.shine:SetBlendMode("ADD") end
 	banner.shine:Hide()
+	-- 2.8.0 : à gauche, la tête de la créature (modèle 3D en portrait) dans le
+	-- cadre d'icône des hauts faits ; à droite, son niveau dans le bouclier
+	ns.AzerothPortraitSlot(banner, math.floor(78 * k), math.floor(-10 * k), math.floor(-18 * k))
+	banner.text:SetPoint("TOP", banner, "TOP", 14, math.floor(LAY.nameY * k))
+	banner.nameW = width - 140
+	banner.text:SetWidth(banner.nameW)
 	function banner:SetShield(kind) self.shieldKind = ns.AzerothShield(self.shield, kind) end
 	function banner:Fit()
 		ns.AzerothFit(self.title, width - 60, 11, 9)
@@ -763,6 +769,94 @@ function ns:AzerothVerdict(parent, width, height)
 	end
 	banner:Hide()
 	return banner
+end
+
+-- Le cadre d'icône des hauts faits avec, dedans, la tête d'une créature :
+-- modèle 3D cadré en portrait (SetPortraitZoom), icône de son type en repli.
+-- host:SetCreature(target) (nil : vide), host:SetLevel(n) écrit le niveau
+-- dans le bouclier (host.shield). Le modèle est un cadre : le cadre d'icône
+-- passe au-dessus dans un cadre à lui. size : côté du cadre d'icône.
+ns.AZEROTH_PORTRAIT_ICON = "Interface\\Icons\\Ability_Hunter_BeastTaming"
+function ns.AzerothPortraitSlot(host, size, x, y)
+	local level = (host.GetFrameLevel and host:GetFrameLevel()) or 1
+	local inner = math.floor(size * 0.6)
+	local anchor = CreateFrame("Frame", nil, host)
+	anchor:SetSize(size, size)
+	anchor:SetPoint("TOPLEFT", host, "TOPLEFT", x, y)
+	host.portraitAnchor = anchor
+	local ok, model = pcall(CreateFrame, "PlayerModel", nil, host)
+	if ok and model then
+		model:SetSize(inner, inner)
+		model:SetPoint("CENTER", anchor, "CENTER", 0, 0)
+		model:SetFrameLevel(level + 1)
+		model:Hide()
+		host.portrait = model
+	end
+	host.portraitIcon = host:CreateTexture(nil, "ARTWORK", nil, 1)
+	host.portraitIcon:SetSize(inner, inner)
+	host.portraitIcon:SetPoint("CENTER", anchor, "CENTER", 0, 0)
+	host.portraitIcon:SetTexCoord(0.08, 0.92, 0.08, 0.92)
+	host.portraitIcon:Hide()
+	local ring = CreateFrame("Frame", nil, host)
+	ring:SetAllPoints(anchor)
+	ring:SetFrameLevel(level + 3)
+	ring:EnableMouse(false)
+	host.portraitRing = ring
+	host.iconFrame = ring:CreateTexture(nil, "ARTWORK")
+	host.iconFrame:SetAllPoints(ring)
+	Atlas(host.iconFrame, AZ.frame)
+	host.iconFrame:Show()
+	host.levelText = host:CreateFontString(nil, "OVERLAY", Theme.F_NUMBER or Theme.F_TITLE)
+	host.levelText:SetJustifyH("CENTER")
+	AzFont(host.levelText, 15, "OUTLINE")
+	host.levelText:SetTextColor(1, 1, 1, 1)
+	if host.levelText.SetShadowColor then host.levelText:SetShadowColor(0, 0, 0, 1) end
+	if host.levelText.SetShadowOffset then host.levelText:SetShadowOffset(1, -1) end
+	host.levelText:SetText("")
+	host.levelText:Hide()
+	function host:SetCreature(target)
+		local model, icon = self.portrait, self.portraitIcon
+		self.portraitNpc = target and tonumber(target.npcID or target.npc) or nil
+		local shown = false
+		if model and self.portraitNpc then
+			model:Show()
+			shown = Method(model, "SetCreature", self.portraitNpc) and true or false
+			if shown then
+				Method(model, "SetPortraitZoom", 1)
+				Method(model, "SetCamDistanceScale", 1)
+				Method(model, "SetPosition", 0, 0, 0)
+				if ns.ModelShinyLight then ns.ModelShinyLight(model, target.shiny) end
+			else
+				model:Hide()
+			end
+		elseif model then
+			model:Hide()
+		end
+		self.portraitShown = shown
+		if target and not shown then
+			local types = ns.MENAGERIE_TYPE_ICONS
+			icon:SetTexture((types and types[target.type or ""]) or ns.AZEROTH_PORTRAIT_ICON)
+			icon:Show()
+		else
+			icon:Hide()
+		end
+		return shown
+	end
+	function host:SetLevel(value)
+		local n = tonumber(value)
+		local fs = self.levelText
+		fs:ClearAllPoints()
+		if self.shield then fs:SetPoint("CENTER", self.shield, "CENTER", 0, 3) end
+		if n and n > 0 and self.shield and self.shield:IsShown() then
+			fs:SetText(tostring(math.floor(n)))
+			fs:Show()
+		else
+			fs:SetText("")
+			fs:Hide()
+		end
+		return fs:GetText()
+	end
+	return anchor
 end
 
 -- Le bouton doré des fenêtres de capture (dessiné : dégradé brun-or, liseré
@@ -929,6 +1023,25 @@ function ns:CaptureResultShow(result)
 	frame:Show()
 	if Theme.FadeIn then pcall(Theme.FadeIn, frame, 0.2) end
 	self:StyleShown(frame, { shiny = result.shiny, shield = "gold", play = true, bling = true, shine = result.shiny })
+	-- 2.8.0 (Azeroth) : la tête de la créature dans le cadre d'icône, son niveau dans le bouclier
+	if frame.azeroth then
+		local banner = frame.banner
+		if not banner.SetCreature then
+			banner.shield = frame.shield
+			ns.AzerothPortraitSlot(banner, 86, -30, -20)
+		end
+		local slot = result.npcID and true or false
+		if slot then
+			banner:SetCreature({ npcID = result.npcID, type = result.type, shiny = result.shiny })
+			frame.iconFrame:Hide(); frame.icon:Hide()
+			banner.portraitRing:Show()
+		else
+			banner:SetCreature(nil)
+			frame.iconFrame:Show(); frame.icon:Show()
+			banner.portraitRing:Hide()
+		end
+		banner:SetLevel(result.level)
+	end
 	self.captureResultHideAt = Clock() + ns.CAPTURE_RESULT_SECONDS
 	return frame
 end
@@ -971,7 +1084,8 @@ do
 			local target = rolling and rolling.target
 			if target and rolling.success and not rolling.batch and not self.captureBatchResolving
 				and not SceneShowsVerdict(self, rolling) then
-				self:CaptureResultQueue({ name = target.name, shiny = target.shiny and true or false, stars = rolling.stars })
+				self:CaptureResultQueue({ name = target.name, shiny = target.shiny and true or false, stars = rolling.stars,
+					npcID = target.npcID, level = target.level, type = target.type })
 			end
 			return result
 		end
@@ -994,7 +1108,8 @@ do
 				end
 				if best then
 					self:CaptureResultQueue({ name = best.target.name, shiny = best.target.shiny and true or false,
-						stars = best.stars, more = got - 1 })
+						stars = best.stars, more = got - 1, npcID = best.target.npcID, level = best.target.level,
+						type = best.target.type })
 				end
 			end
 			return base(self, batch, ...)
@@ -1330,12 +1445,62 @@ end
 -- texte brun foncé. Même ancre, même fondu, ne prend pas la souris ; la
 -- bulle Sobre (Theme.CreateBubble) n'est que masquée, et revient telle quelle.
 -- ---------------------------------------------------------------------------
+-- 2.8.0 : en jeu, la bulle montrait un texte brun sur un fond sombre et
+-- transparent. Cause : SetAtlas("TalkingHeads-TextBackground") ne peint
+-- rien sur Forever alors que C_Texture.GetAtlasInfo connaît l'atlas (le
+-- contrôle passait) et que SetAtlas ne rend rien (Atlas() le comptait comme
+-- réussi) ; l'habit Sobre étant masqué, il ne restait derrière l'encre que le
+-- monde. Le parchemin vient maintenant de son fichier (1111217, vérifié en
+-- jeu) et de ses coordonnées, comme les textures du carnet, posé au-dessus
+-- d'un aplat parchemin clair du thème : le texte reste lisible même si le
+-- fichier manquait. Ordre : aplat (BACKGROUND 0) < parchemin (BACKGROUND 2)
+-- < nom et texte (OVERLAY).
+ns.AZEROTH_TALK_FILE = { file = 1111217, c = { 1 / 1024, 571 / 1024, 1 / 1024, 156 / 1024 } }
+ns.AZEROTH_PORTRAIT_BG = { file = 1111217, c = { 573 / 1024, 688 / 1024, 315 / 1024, 430 / 1024 } }
+ns.AZEROTH_PARCH_SOLID = { 0.92, 0.86, 0.71 }   -- aplat parchemin clair (#ebdbb5)
+
+-- Pose une texture du client par son fichier (FileDataID) et ses
+-- coordonnées ; false si le client la refuse (SetTexture rend false, ou
+-- GetTexture reste vide) : l'appelant garde alors son repli
+function ns.AzerothFileTexture(tex, spec)
+	if not (tex and spec and spec.file) then return false end
+	local ok, result
+	if spec.wrap then ok, result = pcall(tex.SetTexture, tex, spec.file, "REPEAT", "CLAMP")
+	else ok, result = pcall(tex.SetTexture, tex, spec.file) end
+	if ok and result ~= false and type(tex.GetTexture) == "function" then
+		local done, current = pcall(tex.GetTexture, tex)
+		if done and current == nil then ok = false end
+	end
+	if not ok or result == false then
+		tex.azFailed = true
+		return false
+	end
+	tex.azFailed = nil
+	local c = spec.c
+	if c and #c == 8 then tex:SetTexCoord(c[1], c[2], c[3], c[4], c[5], c[6], c[7], c[8])
+	elseif c then tex:SetTexCoord(c[1], c[2], c[3], c[4])
+	else tex:SetTexCoord(0, 1, 0, 1) end
+	tex.azFile = spec.file
+	return true
+end
+
 local function BubbleSkin(bubble)
 	if bubble.azTalk then return bubble.azTalk end
 	local skin = {}
-	skin.bg = bubble:CreateTexture(nil, "BACKGROUND", nil, 1)
+	-- l'aplat clair dessous, en retrait des bords déchirés du parchemin
+	local p = ns.AZEROTH_PARCH_SOLID
+	skin.backdrop = bubble:CreateTexture(nil, "BACKGROUND", nil, 0)
+	skin.backdrop:SetTexture(Theme.SOLID)
+	skin.backdrop:SetVertexColor(p[1], p[2], p[3], 0.97)
+	skin.backdrop:SetPoint("TOPLEFT", bubble, "TOPLEFT", 6, -6)
+	skin.backdrop:SetPoint("BOTTOMRIGHT", bubble, "BOTTOMRIGHT", -6, 6)
+	skin.bg = bubble:CreateTexture(nil, "BACKGROUND", nil, 2)
 	skin.bg:SetAllPoints(bubble)
-	Atlas(skin.bg, FXA.talk)
+	skin.bg.atlasName = FXA.talk
+	if ns.AzerothFileTexture(skin.bg, ns.AZEROTH_TALK_FILE) then
+		skin.bg:SetVertexColor(1, 1, 1, 1)
+		skin.bg:SetAlpha(1)
+	end
 	skin.name = bubble:CreateFontString(nil, "OVERLAY", Theme.F_CAPS)
 	skin.name:SetPoint("TOPLEFT", bubble, "TOPLEFT", FXC.bubbleLeft, FXC.bubbleNameY)
 	AzFont(skin.name, 10)
@@ -1357,7 +1522,8 @@ local function BubbleSkin(bubble)
 		Additive(skin.sheen)
 		skin.sheen:Hide()
 	end
-	skin.regions = { skin.bg, skin.name, skin.text }
+	skin.regions = { skin.backdrop, skin.bg, skin.name, skin.text }
+	if skin.bg.azFailed then skin.regions = { skin.backdrop, skin.name, skin.text }; skin.bg:Hide() end
 	bubble.azTalk = skin
 	return skin
 end
