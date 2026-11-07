@@ -220,22 +220,26 @@ end
 -- ---------------------------------------------------------------------------
 -- plus haut solde vu (cuivre, CharData().feats.ctr.goldMax), en pièces d'or
 Extra({ 334 })
-SOURCES.goldMax = {
-	topics = ns.FeatTopics("money"),
-	get = function(self)
-		local copper = CtrMax(self, "goldMax", Num(Call(G("GetMoney"))))
-		return math.floor(math.max(copper, StatMax(self, { 334 }) or 0) / 10000)
-	end,
-}
-SOURCES.mountSeen = { topics = ns.FeatTopics("mount"), retro = false, get = function(self) return Ctr(self, "mounted") > 0 and 1 or 0 end }
-SOURCES.taxiRides = { topics = ns.FeatTopics("taxi"), retro = false, get = function(self) return Ctr(self, "taxi") end }
-SOURCES.deaths = { topics = ns.FeatTopics("death"), retro = false, get = function(self) return Ctr(self, "deaths") end }
-SOURCES.questsDone = { topics = ns.FeatTopics("quest"), retro = false, get = function(self) return Ctr(self, "quests") end }
-SOURCES.emotes = { topics = ns.FeatTopics("emote"), retro = false, get = function(self) return Ctr(self, "emotes", "account") end }
-SOURCES.raidEntered = { topics = ns.FeatTopics("instance"), retro = false,
-	get = function(self) return self:FeatStore("char").flag.raidEnter and 1 or 0 end }
-SOURCES.worldBoss = { topics = ns.FeatTopics("kill"), retro = false, get = function(self) return Ctr(self, "worldBoss") end }
-SOURCES.captureInside = { topics = ns.FeatTopics("capture"), retro = false, get = function(self) return Ctr(self, "captureInside") end }
+-- (sources et listes posées à la première lecture du catalogue, ou d'une
+-- source absente : métatable de FEAT_SOURCES, FeatsData.lua)
+ns.FeatCatalog(function()
+	SOURCES.goldMax = {
+		topics = ns.FeatTopics("money"),
+		get = function(self)
+			local copper = CtrMax(self, "goldMax", Num(Call(G("GetMoney"))))
+			return math.floor(math.max(copper, StatMax(self, { 334 }) or 0) / 10000)
+		end,
+	}
+	SOURCES.mountSeen = { topics = ns.FeatTopics("mount"), retro = false, get = function(self) return Ctr(self, "mounted") > 0 and 1 or 0 end }
+	SOURCES.taxiRides = { topics = ns.FeatTopics("taxi"), retro = false, get = function(self) return Ctr(self, "taxi") end }
+	SOURCES.deaths = { topics = ns.FeatTopics("death"), retro = false, get = function(self) return Ctr(self, "deaths") end }
+	SOURCES.questsDone = { topics = ns.FeatTopics("quest"), retro = false, get = function(self) return Ctr(self, "quests") end }
+	SOURCES.emotes = { topics = ns.FeatTopics("emote"), retro = false, get = function(self) return Ctr(self, "emotes", "account") end }
+	SOURCES.raidEntered = { topics = ns.FeatTopics("instance"), retro = false,
+		get = function(self) return self:FeatStore("char").flag.raidEnter and 1 or 0 end }
+	SOURCES.worldBoss = { topics = ns.FeatTopics("kill"), retro = false, get = function(self) return Ctr(self, "worldBoss") end }
+	SOURCES.captureInside = { topics = ns.FeatTopics("capture"), retro = false, get = function(self) return Ctr(self, "captureInside") end }
+end)
 
 -- Métiers : ns:PlayerProfessions (dernière liste complète gardée par
 -- personnage), principaux = tout sauf cuisine, pêche, secourisme
@@ -265,37 +269,39 @@ local function Profs(self)
 		return out
 	end) or { primary = {}, rank = {} }
 end
-SOURCES.profPrimary = { topics = ns.FeatTopics("prof"), get = function(self) return #Profs(self).primary end }
-SOURCES.profBest = {
-	topics = ns.FeatTopics("prof"),
-	get = function(self)
-		local best = StatMax(self, PRIMARY_STATS) or 0
-		for _, rank in ipairs(Profs(self).primary) do best = math.max(best, rank) end
-		return best
-	end,
-}
-SOURCES.profPrimary300 = {
-	topics = ns.FeatTopics("prof"),
-	get = function(self)
-		local count = 0
-		for _, rank in ipairs(Profs(self).primary) do if rank >= 300 then count = count + 1 end end
-		return count
-	end,
-}
-for key, stat in pairs(SECONDARY) do
-	SOURCES["prof_" .. key] = { topics = ns.FeatTopics("prof"),
-		get = function(self) return math.max(Profs(self).rank[key] or 0, StatMax(self, { stat }) or 0) end }
-end
-SOURCES.gathered = {
-	topics = ns.FeatTopics("prof"),
-	get = function(self)
-		local total = 0
-		for _, entry in pairs(self.GatheringData and self:GatheringData() or {}) do
-			if type(entry) == "table" then total = total + (tonumber(entry.count) or 0) end
-		end
-		return total
-	end,
-}
+ns.FeatCatalog(function()
+	SOURCES.profPrimary = { topics = ns.FeatTopics("prof"), get = function(self) return #Profs(self).primary end }
+	SOURCES.profBest = {
+		topics = ns.FeatTopics("prof"),
+		get = function(self)
+			local best = StatMax(self, PRIMARY_STATS) or 0
+			for _, rank in ipairs(Profs(self).primary) do best = math.max(best, rank) end
+			return best
+		end,
+	}
+	SOURCES.profPrimary300 = {
+		topics = ns.FeatTopics("prof"),
+		get = function(self)
+			local count = 0
+			for _, rank in ipairs(Profs(self).primary) do if rank >= 300 then count = count + 1 end end
+			return count
+		end,
+	}
+	for key, stat in pairs(SECONDARY) do
+		SOURCES["prof_" .. key] = { topics = ns.FeatTopics("prof"),
+			get = function(self) return math.max(Profs(self).rank[key] or 0, StatMax(self, { stat }) or 0) end }
+	end
+	SOURCES.gathered = {
+		topics = ns.FeatTopics("prof"),
+		get = function(self)
+			local total = 0
+			for _, entry in pairs(self.GatheringData and self:GatheringData() or {}) do
+				if type(entry) == "table" then total = total + (tonumber(entry.count) or 0) end
+			end
+			return total
+		end,
+	}
+end)
 
 -- Réputations : C_Reputation (moteur récent) ou GetFactionInfo ; le plus
 -- haut compte vu est gardé (comme les statistiques « Most factions at… »).
@@ -348,21 +354,25 @@ local function RepSource(field)
 		end,
 	}
 end
-SOURCES.repHonored = RepSource("honored")
-SOURCES.repExalted = RepSource("exalted")
+ns.FeatCatalog(function()
+	SOURCES.repHonored = RepSource("honored")
+	SOURCES.repExalted = RepSource("exalted")
+end)
 
 -- Dernière quête de la chaîne de Lord Valthalak : ns.FEAT_VALTHALAK_QUEST,
 -- id à relever (QuestV2) ; d'ici là la ligne reste « à vérifier »
-SOURCES.questValthalak = {
-	topics = ns.FeatTopics("quest"),
-	get = function()
-		local id = ns.FEAT_VALTHALAK_QUEST
-		if not id then return 0 end
-		local log = G("C_QuestLog")
-		local fn = type(log) == "table" and log.IsQuestFlaggedCompleted or G("IsQuestFlaggedCompleted")
-		return Call(fn, id) and 1 or 0
-	end,
-}
+ns.FeatCatalog(function()
+	SOURCES.questValthalak = {
+		topics = ns.FeatTopics("quest"),
+		get = function()
+			local id = ns.FEAT_VALTHALAK_QUEST
+			if not id then return 0 end
+			local log = G("C_QuestLog")
+			local fn = type(log) == "table" and log.IsQuestFlaggedCompleted or G("IsQuestFlaggedCompleted")
+			return Call(fn, id) and 1 or 0
+		end,
+	}
+end)
 
 -- Hauts faits obtenus d'une catégorie (métas composés)
 local function EarnedIn(self, cat)
@@ -372,9 +382,11 @@ local function EarnedIn(self, cat)
 	end
 	return count
 end
-for _, cat in ipairs({ "dng", "prof", "quest" }) do
-	SOURCES["featsCat_" .. cat] = { topics = ns.FeatTopics("feat"), get = function(self) return EarnedIn(self, cat) end }
-end
+ns.FeatCatalog(function()
+	for _, cat in ipairs({ "dng", "prof", "quest" }) do
+		SOURCES["featsCat_" .. cat] = { topics = ns.FeatTopics("feat"), get = function(self) return EarnedIn(self, cat) end }
+	end
+end)
 
 -- ---------------------------------------------------------------------------
 -- Listes : paliers de donjons (boss final ; entrée seule quand aucun boss
@@ -390,12 +402,14 @@ local function BossList(items)
 			return out
 		end }
 end
-LISTS.dngTier1 = BossList({ "rfc", "wc", "dm", "sfk", "stocks", "bfd", "thanes", "lordaeron" })
-LISTS.dngTier2 = BossList({ "gnomer", "rfk", "sm", "rfd", "dalaran", "excavation", "drowned" })
-LISTS.dngTier3 = BossList({ "ulda", "zf", "mara", "st", "kroldok", "alcaz" })
-LISTS.dngTier4 = BossList({ "brd", "lbrs", "ubrs", "dmaul", "scholo", "strat", "blackmaw", "shaper" })
-LISTS.hero = { topics = ns.FeatTopics("feat", "level"),
-	items = function() return { { "level", 60 }, { "featsCat_dng", 5 }, { "featsCat_prof", 3 }, { "featsCat_quest", 3 } } end }
+ns.FeatCatalog(function()
+	LISTS.dngTier1 = BossList({ "rfc", "wc", "dm", "sfk", "stocks", "bfd", "thanes", "lordaeron" })
+	LISTS.dngTier2 = BossList({ "gnomer", "rfk", "sm", "rfd", "dalaran", "excavation", "drowned" })
+	LISTS.dngTier3 = BossList({ "ulda", "zf", "mara", "st", "kroldok", "alcaz" })
+	LISTS.dngTier4 = BossList({ "brd", "lbrs", "ubrs", "dmaul", "scholo", "strat", "blackmaw", "shaper" })
+	LISTS.hero = { topics = ns.FeatTopics("feat", "level"),
+		items = function() return { { "level", 60 }, { "featsCat_dng", 5 }, { "featsCat_prof", 3 }, { "featsCat_quest", 3 } } end }
+end)
 
 -- ---------------------------------------------------------------------------
 -- Catalogue (codes n = rang du document §2 ; pending = ⚠️ sans repli),

@@ -158,33 +158,37 @@ local function ScanSource(field, topics)
 	return { topics = topics or CAP, get = function(self) return Scan(self)[field] or 0 end }
 end
 
--- Ménagerie
-for _, field in ipairs({ "elite", "rare", "boss", "stars3", "murlocs", "critter", "hogger" }) do
-	SOURCES[field] = ScanSource(field)
-end
-for _, typeKey in ipairs(ns.CREATURE_TYPES or {}) do
-	SOURCES["type_" .. typeKey] = { topics = CAP,
-		get = function(self) return Scan(self).types[typeKey] or 0 end }
-end
--- types au palier 1 (au moins le premier seuil, union du compte)
-SOURCES.typesTier1 = { topics = CAP, get = function(self)
-	local types, n = Scan(self).types, 0
-	for _, typeKey in ipairs(ns.CREATURE_TYPES or {}) do
-		local need = self.MenagerieTypeTiers and self:MenagerieTypeTiers(typeKey)[1] or 10
-		if (types[typeKey] or 0) >= need then n = n + 1 end
+-- Sources et listes : posées à la première lecture du catalogue (ou d'une
+-- source absente, métatable de FEAT_SOURCES : FeatsData.lua)
+ns.FeatCatalog(function()
+	-- Ménagerie
+	for _, field in ipairs({ "elite", "rare", "boss", "stars3", "murlocs", "critter", "hogger" }) do
+		SOURCES[field] = ScanSource(field)
 	end
-	return n
-end }
--- Brillantes
-SOURCES.shinySeen = ScanSource("shinySeen", SHINY)
-SOURCES.shinyFound = ScanSource("shinyFound", SHINY)
-SOURCES.shinyNamed = ScanSource("shinyNamed", SHINY)
-SOURCES.shiny3 = ScanSource("shiny3", SHINY)
-SOURCES.shinyZones = ScanSource("shinyZones", SHINY)
+	for _, typeKey in ipairs(ns.CREATURE_TYPES or {}) do
+		SOURCES["type_" .. typeKey] = { topics = CAP,
+			get = function(self) return Scan(self).types[typeKey] or 0 end }
+	end
+	-- types au palier 1 (au moins le premier seuil, union du compte)
+	SOURCES.typesTier1 = { topics = CAP, get = function(self)
+		local types, n = Scan(self).types, 0
+		for _, typeKey in ipairs(ns.CREATURE_TYPES or {}) do
+			local need = self.MenagerieTypeTiers and self:MenagerieTypeTiers(typeKey)[1] or 10
+			if (types[typeKey] or 0) >= need then n = n + 1 end
+		end
+		return n
+	end }
+	-- Brillantes
+	SOURCES.shinySeen = ScanSource("shinySeen", SHINY)
+	SOURCES.shinyFound = ScanSource("shinyFound", SHINY)
+	SOURCES.shinyNamed = ScanSource("shinyNamed", SHINY)
+	SOURCES.shiny3 = ScanSource("shiny3", SHINY)
+	SOURCES.shinyZones = ScanSource("shinyZones", SHINY)
 
--- Compagnons emmenés (effet actif) : types vus, compte
-SOURCES.companionTypes = { topics = ns.FeatTopics("companion"),
-	get = function(self) return Keys(self:FeatStore("account").ctypes) end }
+	-- Compagnons emmenés (effet actif) : types vus, compte
+	SOURCES.companionTypes = { topics = ns.FeatTopics("companion"),
+		get = function(self) return Keys(self:FeatStore("account").ctypes) end }
+end)
 
 -- ---------------------------------------------------------------------------
 -- Zones et sceaux (personnage)
@@ -238,8 +242,10 @@ local function DoneIn(cont)
 		return n
 	end }
 end
-SOURCES.sealsEk, SOURCES.sealsKa = SealsIn("ek"), SealsIn("ka")
-SOURCES.zones100Ek, SOURCES.zones100Ka = DoneIn("ek"), DoneIn("ka")
+ns.FeatCatalog(function()
+	SOURCES.sealsEk, SOURCES.sealsKa = SealsIn("ek"), SealsIn("ka")
+	SOURCES.zones100Ek, SOURCES.zones100Ka = DoneIn("ek"), DoneIn("ka")
+end)
 -- Liste « toutes les zones » d'un continent : élément i = la source ≥ i
 -- (barre x/y sans une source par zone)
 local function Ladder(source, cont, sealable)
@@ -249,55 +255,62 @@ local function Ladder(source, cont, sealable)
 		return items
 	end }
 end
-LISTS.sealsEk, LISTS.sealsKa = Ladder("sealsEk", "ek", true), Ladder("sealsKa", "ka", true)
-LISTS.zones100Ek, LISTS.zones100Ka = Ladder("zones100Ek", "ek"), Ladder("zones100Ka", "ka")
+ns.FeatCatalog(function()
+	LISTS.sealsEk, LISTS.sealsKa = Ladder("sealsEk", "ek", true), Ladder("sealsKa", "ka", true)
+	LISTS.zones100Ek, LISTS.zones100Ka = Ladder("zones100Ek", "ek"), Ladder("zones100Ka", "ka")
+end)
 
-SOURCES.biomesSealed = { topics = ns.FeatTopics("seal", "capture"), get = function(self)
-	local n = 0
-	for _, biome in ipairs(ns.MENAGERIE_BIOMES or {}) do
-		if self.MenagerieBiomeSeals and self:MenagerieBiomeSeals(biome) >= 1 then n = n + 1 end
-	end
-	return n
-end }
--- zones à 100 % (le palier 100 des friandises : au moins deux parts)
-SOURCES.zones100 = { topics = ns.FeatTopics("zone"), get = function(self)
-	local n = 0
-	for _, mark in pairs(Milestones(self)) do if (tonumber(mark) or 0) >= 100 then n = n + 1 end end
-	return n
-end }
-SOURCES.milestones = { topics = ns.FeatTopics("zone"), get = function(self)
-	local n = 0
-	for _, mark in pairs(Milestones(self)) do n = n + math.floor((tonumber(mark) or 0) / 25) end
-	return n
-end }
-local function Chests(golden)
-	return { topics = ns.FeatTopics("zone"), get = function(self)
+ns.FeatCatalog(function()
+	SOURCES.biomesSealed = { topics = ns.FeatTopics("seal", "capture"), get = function(self)
 		local n = 0
-		for _, chest in pairs(self.ChestData and self:ChestData() or {}) do
-			if type(chest) == "table" and chest.opened and ((chest.golden and true or false) == golden) then n = n + 1 end
+		for _, biome in ipairs(ns.MENAGERIE_BIOMES or {}) do
+			if self.MenagerieBiomeSeals and self:MenagerieBiomeSeals(biome) >= 1 then n = n + 1 end
 		end
 		return n
 	end }
-end
-SOURCES.golden, SOURCES.chests = Chests(true), Chests(false)
-
--- Zones propres à Forever (uiMapID à relever en jeu) et zones extérieures
--- (ZONE_LEVELS) : lignes « à vérifier », grisées
-ns.FEAT_FOREVER_ZONES = {}
-LISTS.foreverZones = { topics = ns.FeatTopics("place"), items = function()
-	local items = {}
-	for i, z in ipairs(ns.FEAT_FOREVER_ZONES) do items[i] = "zone:" .. z end
-	return items
-end }
-LISTS.outdoorZones = { topics = ns.FeatTopics("place"), items = function()
-	local items, seen = {}, {}
-	for _, z in ipairs(ns.ZoneIds and ns.ZoneIds(ns.ZONE_LEVELS) or {}) do
-		if tonumber(z) and not seen[tonumber(z)] then seen[tonumber(z)] = true; items[#items + 1] = "zone:" .. tonumber(z) end
+	-- zones à 100 % (le palier 100 des friandises : au moins deux parts)
+	SOURCES.zones100 = { topics = ns.FeatTopics("zone"), get = function(self)
+		local n = 0
+		for _, mark in pairs(Milestones(self)) do if (tonumber(mark) or 0) >= 100 then n = n + 1 end end
+		return n
+	end }
+	SOURCES.milestones = { topics = ns.FeatTopics("zone"), get = function(self)
+		local n = 0
+		for _, mark in pairs(Milestones(self)) do n = n + math.floor((tonumber(mark) or 0) / 25) end
+		return n
+	end }
+	local function Chests(golden)
+		return { topics = ns.FeatTopics("zone"), get = function(self)
+			local n = 0
+			for _, chest in pairs(self.ChestData and self:ChestData() or {}) do
+				if type(chest) == "table" and chest.opened and ((chest.golden and true or false) == golden) then n = n + 1 end
+			end
+			return n
+		end }
 	end
-	for _, z in ipairs(ns.FEAT_FOREVER_ZONES) do items[#items + 1] = "zone:" .. z end
-	table.sort(items)
-	return items
-end }
+	SOURCES.golden, SOURCES.chests = Chests(true), Chests(false)
+end)
+
+-- Zones propres à Forever (uiMapID relevés en jeu, C_Map.GetMapInfo) : Mont
+-- Hyjal 2482, Riverglades 2548 (données de zone de l'addon), Shen'dralas 2652 ;
+-- zones extérieures : ZONE_LEVELS plus celles-ci
+ns.FEAT_FOREVER_ZONES = { 2482, 2548, 2652 }
+ns.FeatCatalog(function()
+	LISTS.foreverZones = { topics = ns.FeatTopics("place"), items = function()
+		local items = {}
+		for i, z in ipairs(ns.FEAT_FOREVER_ZONES) do items[i] = "zone:" .. z end
+		return items
+	end }
+	LISTS.outdoorZones = { topics = ns.FeatTopics("place"), items = function()
+		local items, seen = {}, {}
+		for _, z in ipairs(ns.ZoneIds and ns.ZoneIds(ns.ZONE_LEVELS) or {}) do
+			if tonumber(z) and not seen[tonumber(z)] then seen[tonumber(z)] = true; items[#items + 1] = "zone:" .. tonumber(z) end
+		end
+		for _, z in ipairs(ns.FEAT_FOREVER_ZONES) do items[#items + 1] = "zone:" .. z end
+		table.sort(items)
+		return items
+	end }
+end)
 
 -- Deux continents le même jour : relevé du jour en cours (changement de
 -- zone) ou, pour la migration, les relevés « zone » datés du carnet
@@ -306,23 +319,25 @@ local function Day(at)
 	if type(text) == "string" and text:find("^%d%d%d%d%d%d%d%d$") then return text end
 	return tostring(math.floor((tonumber(at) or 0) / 86400))
 end
-SOURCES.twoContinents = { topics = ns.FeatTopics("zone", "place"), get = function(self)
-	if self:FeatStore("char").flag.twoCont then return 1 end
-	local journal = Sub(self:CharData(), "journal")
-	local days = {}
-	for id, stamp in pairs(Sub(journal, "stamps") or {}) do
-		local z = tostring(id):match("^zone:(%d+)$")
-		local at = type(stamp) == "table" and tonumber(stamp.at)
-		local cont = z and at and at > 0 and Continent(self, z)
-		if cont == "ek" or cont == "ka" then
-			local d = Day(at)
-			days[d] = days[d] or {}
-			days[d][cont] = true
-			if days[d].ek and days[d].ka then return 1 end
+ns.FeatCatalog(function()
+	SOURCES.twoContinents = { topics = ns.FeatTopics("zone", "place"), get = function(self)
+		if self:FeatStore("char").flag.twoCont then return 1 end
+		local journal = Sub(self:CharData(), "journal")
+		local days = {}
+		for id, stamp in pairs(Sub(journal, "stamps") or {}) do
+			local z = tostring(id):match("^zone:(%d+)$")
+			local at = type(stamp) == "table" and tonumber(stamp.at)
+			local cont = z and at and at > 0 and Continent(self, z)
+			if cont == "ek" or cont == "ka" then
+				local d = Day(at)
+				days[d] = days[d] or {}
+				days[d][cont] = true
+				if days[d].ek and days[d].ka then return 1 end
+			end
 		end
-	end
-	return 0
-end }
+		return 0
+	end }
+end)
 
 function ns:FeatNoteContinent(zoneID)
 	if not Awake() then return nil end
@@ -345,72 +360,76 @@ local function Daily(self)
 	if not self.DailyData then return nil end
 	return self:DailyData()
 end
-SOURCES.perfect = { topics = ns.FeatTopics("mission"), get = function(self)
-	local daily = Daily(self)
-	return daily and daily.perfect or 0
-end }
-SOURCES.innDays = { topics = ns.FeatTopics("mission"), get = function(self)
-	local _, inn = Daily(self)
-	return inn and inn.total or 0
-end }
-SOURCES.travelKm = { topics = ns.FeatTopics("minute", "companion"), get = function(self)
-	return math.floor((tonumber(self:CompanionData().travel) or 0) / 1000)
-end }
-SOURCES.daysTogether = { topics = ns.FeatTopics("minute", "companion"), get = function(self)
-	return self.CompanionDaysTogether and tonumber(self:CompanionDaysTogether()) or 0
-end }
+ns.FeatCatalog(function()
+	SOURCES.perfect = { topics = ns.FeatTopics("mission"), get = function(self)
+		local daily = Daily(self)
+		return daily and daily.perfect or 0
+	end }
+	SOURCES.innDays = { topics = ns.FeatTopics("mission"), get = function(self)
+		local _, inn = Daily(self)
+		return inn and inn.total or 0
+	end }
+	SOURCES.travelKm = { topics = ns.FeatTopics("minute", "companion"), get = function(self)
+		return math.floor((tonumber(self:CompanionData().travel) or 0) / 1000)
+	end }
+	SOURCES.daysTogether = { topics = ns.FeatTopics("minute", "companion"), get = function(self)
+		return self.CompanionDaysTogether and tonumber(self:CompanionDaysTogether()) or 0
+	end }
+end)
 
 -- ---------------------------------------------------------------------------
 -- Guilde et entraide, Insolite (compte)
 -- ---------------------------------------------------------------------------
-SOURCES.showcase = { topics = ns.FeatTopics("card"), get = function(self)
-	local n = 0
-	for _, id in pairs(self.TrainerShowcase and self:TrainerShowcase() or {}) do
-		if type(id) == "string" and id ~= "" then n = n + 1 end
-	end
-	return n
-end }
--- un titre choisi sur l'un des personnages (feats.title, lot D)
-SOURCES.titleSet = { topics = ns.FeatTopics("card", "feat"), get = function(self)
-	local db, n = self:DB(), 0
-	for _, char in pairs(type(db.chars) == "table" and db.chars or {}) do
-		local code = tonumber(Sub(char, "feats") and char.feats.title)
-		if code and code > 0 then n = 1 end
-	end
-	return n
-end }
-SOURCES.companionName = { topics = ns.FeatTopics("companion", "minute"), get = function(self)
-	local n = 0
-	EachCompanion(self, function(data) if type(data.name) == "string" and data.name ~= "" then n = 1 end end)
-	return n
-end }
-SOURCES.hoggerKilled = { topics = ns.FeatTopics("kill"), get = function(self)
-	for _, zone in pairs(self.BestiaryData and self:BestiaryData() or {}) do
-		local entry = type(zone) == "table" and (zone[ns.FEAT_HOGGER] or zone[tostring(ns.FEAT_HOGGER)])
-		if type(entry) == "table" and (tonumber(entry.killed) or 0) > 0 then return 1 end
-	end
-	return 0
-end }
--- jour anniversaire de la rencontre (au moins un an) : pas en rattrapage,
--- pour que le bandeau tombe le jour même
-SOURCES.birthday = { topics = ns.FeatTopics("minute", "companion"), retro = false, get = function(self)
-	local since = tonumber(self:CompanionData().since) or 0
-	local now = Time()
-	if since <= 0 or now - since < 360 * 86400 then return 0 end
-	local a, b = Call(G("date"), "%m%d", since), Call(G("date"), "%m%d", now)
-	return (type(a) == "string" and a == b) and 1 or 0
-end }
+ns.FeatCatalog(function()
+	SOURCES.showcase = { topics = ns.FeatTopics("card"), get = function(self)
+		local n = 0
+		for _, id in pairs(self.TrainerShowcase and self:TrainerShowcase() or {}) do
+			if type(id) == "string" and id ~= "" then n = n + 1 end
+		end
+		return n
+	end }
+	-- un titre choisi sur l'un des personnages (feats.title, lot D)
+	SOURCES.titleSet = { topics = ns.FeatTopics("card", "feat"), get = function(self)
+		local db, n = self:DB(), 0
+		for _, char in pairs(type(db.chars) == "table" and db.chars or {}) do
+			local code = tonumber(Sub(char, "feats") and char.feats.title)
+			if code and code > 0 then n = 1 end
+		end
+		return n
+	end }
+	SOURCES.companionName = { topics = ns.FeatTopics("companion", "minute"), get = function(self)
+		local n = 0
+		EachCompanion(self, function(data) if type(data.name) == "string" and data.name ~= "" then n = 1 end end)
+		return n
+	end }
+	SOURCES.hoggerKilled = { topics = ns.FeatTopics("kill"), get = function(self)
+		for _, zone in pairs(self.BestiaryData and self:BestiaryData() or {}) do
+			local entry = type(zone) == "table" and (zone[ns.FEAT_HOGGER] or zone[tostring(ns.FEAT_HOGGER)])
+			if type(entry) == "table" and (tonumber(entry.killed) or 0) > 0 then return 1 end
+		end
+		return 0
+	end }
+	-- jour anniversaire de la rencontre (au moins un an) : pas en rattrapage,
+	-- pour que le bandeau tombe le jour même
+	SOURCES.birthday = { topics = ns.FeatTopics("minute", "companion"), retro = false, get = function(self)
+		local since = tonumber(self:CompanionData().since) or 0
+		local now = Time()
+		if since <= 0 or now - since < 360 * 86400 then return 0 end
+		local a, b = Call(G("date"), "%m%d", since), Call(G("date"), "%m%d", now)
+		return (type(a) == "string" and a == b) and 1 or 0
+	end }
 
--- Grands hauts faits : un haut fait obtenu, le total de points
-SOURCES.featPoints = { topics = ns.FeatTopics("feat"),
-	get = function(self) return (self:FeatPoints(nil)) end }
-for _, id in ipairs({ "meta_menagerie", "meta_shiny", "meta_zones" }) do
-	SOURCES["got_" .. id] = { topics = ns.FeatTopics("feat"),
-		get = function(self) return self:FeatGot(id) and 1 or 0 end }
-end
-LISTS.trainerMeta = { topics = ns.FeatTopics("feat"), items = function()
-	return { { "got_meta_menagerie", 1 }, { "got_meta_shiny", 1 }, { "got_meta_zones", 1 }, { "featPoints", 1000 } }
-end }
+	-- Grands hauts faits : un haut fait obtenu, le total de points
+	SOURCES.featPoints = { topics = ns.FeatTopics("feat"),
+		get = function(self) return (self:FeatPoints(nil)) end }
+	for _, id in ipairs({ "meta_menagerie", "meta_shiny", "meta_zones" }) do
+		SOURCES["got_" .. id] = { topics = ns.FeatTopics("feat"),
+			get = function(self) return self:FeatGot(id) and 1 or 0 end }
+	end
+	LISTS.trainerMeta = { topics = ns.FeatTopics("feat"), items = function()
+		return { { "got_meta_menagerie", 1 }, { "got_meta_shiny", 1 }, { "got_meta_zones", 1 }, { "featPoints", 1000 } }
+	end }
+end)
 
 -- ---------------------------------------------------------------------------
 -- Catalogue (n = rang dans le document, jamais réutilisé)

@@ -111,6 +111,18 @@ function ns.FeatCompact(row)
 	return setmetatable(def, DEF_MT)
 end
 
+-- Sources et listes des critères (contrat : Feats.lua) ; celles des
+-- catalogues sont posées par leurs fonctions de construction : une lecture
+-- d'un nom absent construit d'abord ce qui attend
+ns.FEAT_SOURCES = ns.FEAT_SOURCES or {}
+ns.FEAT_LISTS = ns.FEAT_LISTS or {}
+for _, t in ipairs({ ns.FEAT_SOURCES, ns.FEAT_LISTS }) do
+	setmetatable(t, { __index = function(self, name)
+		if ns.FeatLoadCatalog and ns.FeatLoadCatalog() then return rawget(self, name) end
+		return nil
+	end })
+end
+
 -- Listes de sujets des sources et des listes, partagées (lecture seule)
 local topicSets = {}
 function ns.FeatTopics(...)
