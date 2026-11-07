@@ -1,0 +1,1397 @@
+-- JournalAzeroth.lua -- habit « Azeroth » du carnet et de la fiche de dresseur (QuestCompanion 2.8.0)
+--
+-- Le carnet de voyage (toutes ses pages) et la fiche de dresseur s'habillent
+-- comme le cadre des hauts faits de Wrath quand le style de l'interface est
+-- Azeroth (ns:AzerothScenesOn : les atlas des bandeaux et le bois sont là) :
+--   * cadre en bois (atlas achievement-wood-nineslice), plaque d'en-tête qui
+--     déborde au-dessus de la fenêtre (titre, case des points), parchemins
+--     (colonne de gauche, pages), séparateurs de métal, volutes ;
+--   * catégories de gauche (fond des catégories, surbrillance du jeu teintée
+--     d'or), garde-manger en bas de la colonne ;
+--   * lignes et cartes sur le fond des hauts faits, barres de progression
+--     vertes à bordure du jeu (orange pour une envie basse), barres de nom
+--     or/gris, cadres d'icône, boucliers, bandeaux de section, paliers de
+--     zone en bandes or/grises, page du guide sur le parchemin des
+--     statistiques avec filigranes ;
+--   * texte brun foncé sur le parchemin, titres dorés ombrés.
+-- Les textures sont celles du client, désignées par leur FileDataID
+-- (interface/achievementframe/*), jamais livrées. Une texture refusée par le
+-- client (SetTexture rend false, GetTexture reste vide) : l'élément garde son
+-- habit Sobre (et sa couleur de texte), le reste du carnet reste Azeroth.
+--
+-- Comment : la mise en page ne change pas (JournalWindow.lua et les pages
+-- gardent leurs mesures). Pendant la construction et chaque rafraîchissement
+-- d'un carnet Azeroth, les briques du thème créées (Theme.Text, CreateTile,
+-- CreateBar…) sont relevées (Capture) puis rhabillées une fois ; après chaque
+-- rafraîchissement, les textes posés sur du parchemin passent des couleurs
+-- claires du thème à l'encre (Recolor), puis chaque page reçoit ses détails.
+-- La fenêtre grandit du bois, de la bande de la plaque et du séparateur :
+-- la zone des pages garde sa taille.
+-- Style changé à chaud (/qc style) : un carnet (ou une fiche) affiché est
+-- remplacé tout de suite par celui du nouveau style, son état recopié ; un
+-- carnet fermé l'est à sa prochaine ouverture. Chaque style garde le sien
+-- (ns.uiStyleCache) : deux carnets au plus, jamais reconstruits ensuite.
+local ADDON, ns = ...
+if ns.blocked then return end
+local L = ns.L
+local Theme = ns.Theme
+
+local FR = {
+	CARNET_AZ_POINTS = "%d points",
+	CARNET_AZ_STAMPS = "%d tampons",
+}
+local EN = {
+	CARNET_AZ_POINTS = "%d points",
+	CARNET_AZ_STAMPS = "%d stamps",
+}
+ns.RegisterStrings(FR, EN)
+if ns.KEEP_STRINGS then ns.CARNET_AZ_STRINGS = { fr = FR, en = EN } end
+
+-- ---------------------------------------------------------------------------
+-- Les textures (interface/achievementframe, FileDataID) et leurs découpes
+-- ---------------------------------------------------------------------------
+local function C(l, r, t, b, w, h) return { l / w, r / w, t / h, b / h } end
+local T = {
+	parchV    = { file = 130662, w = 256, h = 512 },                  -- colonne de gauche
+	parchH    = { file = 130661, w = 512, h = 256 },                  -- pages
+	parchHD   = { file = 130660, w = 512, h = 256 },                  -- lignes non obtenues, inconnues
+	achBg     = { file = 235397, w = 512, h = 512 },                  -- lignes, cartes
+	headA     = { file = 235402, c = C(0, 504, 9, 103, 512, 256) },   -- plaque d'en-tête (504×94)
+	headB     = { file = 235402, c = C(0, 214, 114, 197, 512, 256) }, -- son bout droit (214×83)
+	ptBox     = { file = 235402, c = C(217, 346, 109, 143, 512, 256) }, -- case des points (129×34)
+	catBg     = { file = 130652, c = C(0, 167, 0, 29, 256, 32) },     -- catégorie
+	catHl     = { file = 235400, c = C(0, 167, 0, 29, 256, 32) },     -- sa surbrillance (teintée d'or)
+	titleGold = { file = 130667, c = C(0, 487, 0, 20, 512, 64) },     -- barre de nom, obtenu
+	titleGrey = { file = 130667, c = C(0, 487, 22, 42, 512, 64) },    -- barre de nom, pas encore
+	metalL    = { file = 130658, c = C(0, 10, 0, 454, 16, 512) },
+	metalT    = { file = 130659, c = C(0, 454, 0, 10, 512, 16) },
+	metalJ    = { file = 130657, c = C(0, 26, 0, 26, 32, 32) },
+	curl      = { file = 130671, c = C(0, 40, 0, 40, 64, 64) },       -- volute des coins
+	curlR     = { file = 130671, c = C(40, 0, 0, 40, 64, 64) },
+	pbarL     = { file = 235405, c = C(1, 9, 1, 24, 256, 32) },       -- bordure de barre, 3 morceaux
+	pbarM     = { file = 235405, c = C(9, 215, 1, 24, 256, 32) },
+	pbarR     = { file = 235405, c = C(215, 223, 1, 24, 256, 32) },
+	iconFrame = { file = 130656, c = { 0, 0.5625, 0, 0.5625 } },
+	shieldBig = { file = 130665, c = { 0.17, 0.83, 0.2, 0.8 } },
+	tiny      = { file = 235415 },
+	shadow    = { file = 130654, c = C(0, 92, 0, 128, 128, 128) },
+	tsuL      = { file = 130668, c = C(6, 32, 0, 26, 64, 32) },       -- filigrane : coins
+	tsuR      = { file = 130668, c = C(32, 58, 0, 26, 64, 32) },
+	tsuV      = { file = 130670, c = C(2, 14, 0, 16, 16, 16) },       -- bouts du filigrane
+	tsuH      = 130669,                                               -- filigrane, répété
+	stats     = { file = 235412, w = 512, h = 512 },                  -- page du guide
+	statHead  = { file = 235411, c = C(0, 256, 0, 23, 256, 128) },
+	statRow   = { file = 235411, c = C(0, 256, 48, 69, 256, 128) },
+	recent    = { file = 235408, c = C(11, 246, 0, 23, 256, 32) },    -- bandeau de section
+	reward    = { file = 130663, c = C(5, 347, 0, 18, 512, 32) },     -- bande de récompense
+	stripGrey = { file = 452109, c = C(0, 488, 190, 210, 512, 256) }, -- palier pas encore atteint
+	stripGold = { file = 452109, c = C(0, 488, 211, 234, 512, 256) }, -- palier atteint
+	wood      = 130672,                                               -- encadré fin, 8 morceaux de 64
+}
+ns.CARNET_TEX = T
+-- géométrie : bande de la plaque, bois, colonne de gauche, séparateur de
+-- métal ; plaque de 706×100 qui déborde de 46 px au-dessus de la fenêtre
+ns.CARNET_LAYOUT = { band = 56, wood = 16, nav = 196, gap = 10, plateW = 706, plateH = 100, plateUp = 46,
+	navItemH = 29, navStep = 31, navTop = -30 }
+local LAY = ns.CARNET_LAYOUT
+ns.carnetMissing = ns.carnetMissing or {}
+
+local INK = { 0.17, 0.10, 0.03 }          -- brun foncé (#2b1a08)
+local INK_SOFT = { 0.23, 0.14, 0.06 }     -- #3a2410
+local INK_MUTED = { 0.30, 0.20, 0.10 }
+local AMBER = { 0.48, 0.29, 0.03 }        -- l'ambre du thème sur parchemin (#7a4a08)
+local GOLD_HEAD = { 0.97, 0.85, 0.47 }    -- titres dorés ombrés (#f8d877)
+local GOLD_TEXT = { 1, 0.84, 0.42 }       -- texte des boutons, de la plaque
+local LIGHT = { 0.93, 0.89, 0.80 }        -- texte clair sur fond sombre
+local LIGHT_SOFT = { 0.89, 0.82, 0.66 }
+local NAV_INK = { 0.29, 0.17, 0.05 }
+local WOOD_BG = { 0.10, 0.07, 0.04 }
+local CAT_GOLD = { 1, 0.76, 0.25 }        -- teinte de la surbrillance des catégories
+local BAR_GREEN = { 0.10, 0.62, 0.10 }
+local BAR_ORANGE = { 0.80, 0.33, 0.08 }
+local BAR_GOLD = { 0.78, 0.56, 0.12 }
+local EDGE_DARK = { 0.106, 0.063, 0.024 }
+ns.CARNET_COLORS = { ink = INK, inkSoft = INK_SOFT, amber = AMBER, gold = GOLD_HEAD, light = LIGHT,
+	catGold = CAT_GOLD, green = BAR_GREEN, orange = BAR_ORANGE, barGold = BAR_GOLD }
+local STATUS_BAR = "Interface\\TargetingFrame\\UI-StatusBar"
+local CLOSE_TEX = "Interface\\Buttons\\UI-Panel-MinimizeButton-Up"
+local SIDES = { "top", "bottom", "left", "right" }
+
+local function Method(obj, name, ...)
+	local fn = obj and obj[name]
+	if type(fn) ~= "function" then return false end
+	return pcall(fn, obj, ...)
+end
+local SetTex = ns.AzerothFileTexture
+local function AzFont(fs, size, flags) if ns.AzerothFont then return ns.AzerothFont(fs, size, flags) end end
+local function Shadow(fs)
+	if fs.SetShadowColor then fs:SetShadowColor(0, 0, 0, 1) end
+	if fs.SetShadowOffset then fs:SetShadowOffset(1, -1) end
+end
+local function NoShadow(fs) if Theme.NoShadow then Theme.NoShadow(fs) end end
+local function Paint(fs, c, a) fs:SetTextColor(c[1], c[2], c[3], a or 1) end
+local function HideAll(list) for _, side in ipairs(SIDES) do if list and list[side] then list[side]:Hide() end end end
+local function Has(list, pred) for _, v in ipairs(list or {}) do if pred(v) then return true end end return false end
+local function Level(frame) return (frame and frame.GetFrameLevel and frame:GetFrameLevel()) or 1 end
+
+-- Une texture du client sur `parent`, ou nil (refusée : rien de visible)
+local function NewTex(parent, layer, sub, spec)
+	local tex = parent:CreateTexture(nil, layer or "BACKGROUND", nil, sub or 0)
+	if SetTex(tex, spec) then
+		tex:Show()
+		return tex
+	end
+	if spec and spec.file then ns.carnetMissing[spec.file] = true end
+	tex:Hide()
+	return nil
+end
+
+-- Recadre `tex` (spec.w × spec.h) pour couvrir w × h sans déformer
+local function Cover(tex, spec, w, h)
+	w, h = tonumber(w) or 0, tonumber(h) or 0
+	if not (tex and spec and spec.w and w > 0 and h > 0) then return end
+	local ratio, base = w / h, spec.w / spec.h
+	if ratio > base then
+		local f = base / ratio
+		tex:SetTexCoord(0, 1, 0.5 - f / 2, 0.5 + f / 2)
+	else
+		local f = ratio / base
+		tex:SetTexCoord(0.5 - f / 2, 0.5 + f / 2, 0, 1)
+	end
+end
+
+local function Desaturate(tex, on)
+	if tex.SetDesaturated then pcall(tex.SetDesaturated, tex, on and true or false) end
+	tex.azGrey = on and true or nil
+end
+
+-- Le cadre d'icône des hauts faits autour d'une icône (size : côté du cadre)
+local function Ring(host, icon, size)
+	local ring = NewTex(host, "ARTWORK", 3, T.iconFrame)
+	if not ring then return nil end
+	ring:SetSize(size, size)
+	ring:SetPoint("CENTER", icon, "CENTER", 0, 0)
+	return ring
+end
+
+-- Le filigrane « tsunami » : deux bouts et la frise répétée (x, y depuis le
+-- haut gauche de `parent`). corners : les coins à volute au lieu des bouts.
+local function Filigree(parent, x, y, width, corners)
+	local capW = corners and 26 or 12
+	local l = NewTex(parent, "ARTWORK", 1, corners and T.tsuL or T.tsuV)
+	local r = NewTex(parent, "ARTWORK", 1, corners and T.tsuR or T.tsuV)
+	local mid = parent:CreateTexture(nil, "ARTWORK", nil, 0)
+	local midW = math.max(1, width - 2 * capW + 4)
+	local ok = SetTex(mid, { file = T.tsuH, wrap = true, c = { 0, midW / 512, 2 / 16, 14 / 16 } })
+	if not (l and r and ok) then
+		for _, tex in ipairs({ l, r, mid }) do if tex then tex:Hide() end end
+		ns.carnetMissing[T.tsuH] = not ok or nil
+		return nil
+	end
+	local capH = corners and 26 or 14
+	l:SetSize(capW, capH); l:SetPoint("TOPLEFT", parent, "TOPLEFT", x, y)
+	r:SetSize(capW, capH); r:SetPoint("TOPLEFT", parent, "TOPLEFT", x + width - capW, y)
+	if not corners then r:SetTexCoord(T.tsuV.c[2], T.tsuV.c[1], T.tsuV.c[3], T.tsuV.c[4]) end
+	mid:SetHeight(12)
+	mid:SetPoint("LEFT", l, "RIGHT", -2, 0)
+	mid:SetPoint("RIGHT", r, "LEFT", 2, 0)
+	mid:SetAlpha(0.9)
+	mid:Show()
+	return { l = l, m = mid, r = r }
+end
+
+-- L'encadré fin en bois des hauts faits (ui-achievement-woodborder) : 8
+-- morceaux de 32 px qui débordent de `out` px ; les bords haut et bas sont
+-- les morceaux verticaux tournés d'un quart de tour
+local WOOD_SEG = { l = 0, r = 1, t = 2, b = 3, tl = 4, tr = 5, bl = 6, br = 7 }
+local function WoodBorder(target, out)
+	if target.azWoodBorder then return target.azWoodBorder end
+	local host = CreateFrame("Frame", nil, target)
+	host:SetAllPoints(target)
+	host:SetFrameLevel(Level(target) + 4)
+	host:EnableMouse(false)
+	local S, O = 32, out or 6
+	local p = {}
+	for key, i in pairs(WOOD_SEG) do
+		local u0, u1 = i * 64 / 512, (i * 64 + 64) / 512
+		local c = (key == "t" or key == "b") and { u0, 1, u1, 1, u0, 0, u1, 0 } or { u0, u1, 0, 1 }
+		p[key] = NewTex(host, "OVERLAY", 0, { file = T.wood, c = c })
+		if not p[key] then host:Hide(); return nil end
+	end
+	for _, key in ipairs({ "tl", "tr", "bl", "br" }) do p[key]:SetSize(S, S) end
+	p.tl:SetPoint("TOPLEFT", target, "TOPLEFT", -O, O)
+	p.tr:SetPoint("TOPRIGHT", target, "TOPRIGHT", O, O)
+	p.bl:SetPoint("BOTTOMLEFT", target, "BOTTOMLEFT", -O, -O)
+	p.br:SetPoint("BOTTOMRIGHT", target, "BOTTOMRIGHT", O, -O)
+	p.t:SetPoint("TOPLEFT", p.tl, "TOPRIGHT", 0, 0); p.t:SetPoint("TOPRIGHT", p.tr, "TOPLEFT", 0, 0); p.t:SetHeight(S)
+	p.b:SetPoint("BOTTOMLEFT", p.bl, "BOTTOMRIGHT", 0, 0); p.b:SetPoint("BOTTOMRIGHT", p.br, "BOTTOMLEFT", 0, 0); p.b:SetHeight(S)
+	p.l:SetPoint("TOPLEFT", p.tl, "BOTTOMLEFT", 0, 0); p.l:SetPoint("BOTTOMLEFT", p.bl, "TOPLEFT", 0, 0); p.l:SetWidth(S)
+	p.r:SetPoint("TOPRIGHT", p.tr, "BOTTOMRIGHT", 0, 0); p.r:SetPoint("BOTTOMRIGHT", p.br, "TOPRIGHT", 0, 0); p.r:SetWidth(S)
+	host.pieces = p
+	host:Show()
+	target.azWoodBorder = host
+	return host
+end
+
+-- ---------------------------------------------------------------------------
+-- Les fonds des tuiles et des lignes
+-- ---------------------------------------------------------------------------
+local STYLE_SPEC = { light = T.achBg, parchd = T.parchHD, dark = T.catBg, gold = T.stripGold, grey = T.stripGrey,
+	statrow = T.statRow, stathead = T.statHead, talk = ns.AZEROTH_TALK_FILE, portrait = ns.AZEROTH_PORTRAIT_BG }
+local DARK_STYLES = { dark = true, gold = true, grey = true, statrow = true, stathead = true, portrait = true }
+ns.carnetCtxSerial = ns.carnetCtxSerial or 0
+
+-- Habille une tuile (ou une ligne, une carte) : light (fond des hauts faits),
+-- parchd (parchemin désaturé), dark (fond des catégories), gold / grey
+-- (bandes des paliers), statrow / stathead, talk (parchemin des Talking
+-- Heads), band (voile brun). Refusée : le fond Sobre revient (et le texte
+-- garde ses couleurs claires, la tuile devenant « sombre »).
+local function TileStyle(tile, style)
+	if not tile then return false end
+	if tile.azStyle == style then return true end
+	local bg = tile.azBg
+	if not bg then
+		bg = tile:CreateTexture(nil, "BACKGROUND", nil, 1)
+		bg:SetAllPoints(tile)
+		tile.azBg = bg
+	end
+	local ok
+	if style == "band" then
+		bg:SetTexture(Theme.SOLID)
+		bg:SetTexCoord(0, 1, 0, 1)
+		bg:SetVertexColor(0.23, 0.13, 0.03, 0.14)
+		ok = true
+	else
+		local spec = STYLE_SPEC[style]
+		ok = SetTex(bg, spec)
+		if ok then
+			bg:SetVertexColor(1, 1, 1, 1)
+			if spec.w then Cover(bg, spec, tile:GetWidth(), tile:GetHeight()) end
+		elseif spec and spec.file then
+			ns.carnetMissing[spec.file] = true
+		end
+	end
+	local before = tile.azSurface
+	if ok then
+		bg:Show()
+		if tile.bg then tile.bg:Hide() end
+		tile.azSurface = DARK_STYLES[style] and "dark" or "light"
+		tile.azStyle = style
+	else
+		bg:Hide()
+		if tile.bg then tile.bg:Show() end
+		tile.azSurface = "dark"
+		tile.azStyle = nil
+	end
+	if before ~= tile.azSurface then ns.carnetCtxSerial = ns.carnetCtxSerial + 1 end
+	return ok
+end
+ns.CarnetTileStyle = TileStyle
+
+-- Une tuile sombre choisie : la surbrillance du jeu, teintée d'or
+local function Selectable(tile)
+	if tile.azHl or tile.azStyle ~= "dark" then return end
+	local hl = NewTex(tile, "BORDER", 2, T.catHl)
+	if not hl then return end
+	hl:SetAllPoints(tile)
+	if hl.SetBlendMode then hl:SetBlendMode("ADD") end
+	hl:SetVertexColor(CAT_GOLD[1], CAT_GOLD[2], CAT_GOLD[3], 1)
+	hl:Hide()
+	tile.azHl = hl
+	HideAll(tile.border)
+	local set = tile.SetSelected
+	function tile:SetSelected(on)
+		set(self, on)
+		if self.azHl then if on then self.azHl:Show() else self.azHl:Hide() end end
+	end
+	tile:SetSelected(tile.selected)
+end
+
+-- ---------------------------------------------------------------------------
+-- Les briques du thème, rhabillées à leur création
+-- ---------------------------------------------------------------------------
+local SKIN = {}
+
+function SKIN.Text(fs, frame, reg) reg.texts[#reg.texts + 1] = fs end
+
+function SKIN.CreateTile(tile) TileStyle(tile, "light") end
+
+function SKIN.CreateListRow(row)
+	TileStyle(row, "light")
+	if row.azStyle and not row.azEdge then row.azEdge = Theme.Border(row, EDGE_DARK, 0.8, "BORDER") end
+end
+
+-- Une barre : piste sombre, remplissage vert du jeu (UI-StatusBar), bordure
+-- des hauts faits (3 morceaux) dès 8 px ; bar.azPaint(bar) choisit la couleur
+local function BarPaint(bar)
+	local c = (bar.azPaint and bar.azPaint(bar)) or BAR_GREEN
+	bar.fill:SetVertexColor(c[1], c[2], c[3], 1)
+	bar.azColor = c
+end
+function SKIN.CreateBar(bar)
+	local h = tonumber(bar:GetHeight()) or 4
+	local newH = h >= 6 and 14 or (h >= 4 and 10 or (h >= 3 and 8 or 4))
+	bar:SetHeight(newH)
+	bar.bg:SetVertexColor(0.07, 0.04, 0.01, 1)
+	SetTex(bar.fill, { file = STATUS_BAR })
+	function bar:SetColor() BarPaint(self) end
+	BarPaint(bar)
+	if newH >= 8 then
+		local edge = CreateFrame("Frame", nil, bar)
+		edge:SetPoint("TOPLEFT", bar, "TOPLEFT", -3, 3)
+		edge:SetPoint("BOTTOMRIGHT", bar, "BOTTOMRIGHT", 3, -3)
+		edge:SetFrameLevel(Level(bar) + 1)
+		edge:EnableMouse(false)
+		local l, m, r = NewTex(edge, "OVERLAY", 0, T.pbarL), NewTex(edge, "OVERLAY", 0, T.pbarM), NewTex(edge, "OVERLAY", 0, T.pbarR)
+		if l and m and r then
+			l:SetWidth(8); l:SetPoint("TOPLEFT", edge, "TOPLEFT", 0, 0); l:SetPoint("BOTTOMLEFT", edge, "BOTTOMLEFT", 0, 0)
+			r:SetWidth(8); r:SetPoint("TOPRIGHT", edge, "TOPRIGHT", 0, 0); r:SetPoint("BOTTOMRIGHT", edge, "BOTTOMRIGHT", 0, 0)
+			m:SetPoint("TOPLEFT", l, "TOPRIGHT", 0, 0); m:SetPoint("BOTTOMRIGHT", r, "BOTTOMLEFT", 0, 0)
+			bar.azEdge = edge
+		else
+			edge:Hide()
+		end
+	end
+	bar.azSurface = "dark"
+end
+
+function SKIN.CreateChips(row)
+	for _, chip in ipairs(row.chips or {}) do
+		local bg = NewTex(chip, "BACKGROUND", 1, T.catBg)
+		if bg then
+			bg:SetAllPoints(chip)
+			chip.azBg = bg
+			if chip.bg then chip.bg:Hide() end
+			HideAll(chip.border)
+			local hl = NewTex(chip, "BORDER", 1, T.catHl)
+			if hl then
+				hl:SetAllPoints(chip)
+				if hl.SetBlendMode then hl:SetBlendMode("ADD") end
+				hl:SetVertexColor(CAT_GOLD[1], CAT_GOLD[2], CAT_GOLD[3], 1)
+				hl:Hide()
+				chip.azHl = hl
+			end
+			chip.azSurface = "dark"
+		end
+	end
+	local function Lit(self)
+		for _, chip in ipairs(self.chips or {}) do
+			if chip.azHl then if chip.selected then chip.azHl:Show() else chip.azHl:Hide() end end
+		end
+	end
+	local select = row.Select
+	function row:Select(id, silent)
+		local result = select(self, id, silent)
+		Lit(self)
+		return result
+	end
+	Lit(row)
+end
+
+-- Boutons : rouge des fenêtres du jeu (principal), brun (secondaire),
+-- liseré d'or dedans, texte doré ombré (dessinés : pas de texture de bouton)
+local BUTTONS = {
+	red   = { top = { 0.56, 0.12, 0.05 }, bottom = { 0.30, 0.05, 0.01 }, edge = { 0.77, 0.60, 0.27 } },
+	brown = { top = { 0.20, 0.12, 0.05 }, bottom = { 0.09, 0.05, 0.02 }, edge = { 0.54, 0.42, 0.17 } },
+}
+ns.CARNET_BUTTONS = BUTTONS
+function SKIN.CreateButton(button)
+	local skin = (button.style == "primary" or button.style == "accent") and BUTTONS.red or BUTTONS.brown
+	local fill = button:CreateTexture(nil, "BACKGROUND", nil, 1)
+	fill:SetTexture(Theme.SOLID)
+	fill:SetPoint("TOPLEFT", button, "TOPLEFT", 1, -1)
+	fill:SetPoint("BOTTOMRIGHT", button, "BOTTOMRIGHT", -1, 1)
+	if Theme.Gradient then Theme.Gradient(fill, "VERTICAL", skin.bottom, 1, skin.top, 1) end
+	fill:Show()
+	button.azFill = fill
+	button.azOuter = Theme.Border(button, { 0.08, 0.03, 0 }, 1, "BORDER")
+	button.azInner = Theme.Border(button, skin.edge, 0.85, "BORDER", fill)
+	if button.bg then button.bg:Hide() end
+	HideAll(button.border)
+	if button.text then
+		Paint(button.text, GOLD_TEXT)
+		Shadow(button.text)
+	end
+	button.azSkin = skin == BUTTONS.red and "red" or "brown"
+	button.azSurface = "dark"
+end
+
+local function Field(box)
+	if box.bg then box.bg:SetVertexColor(0.12, 0.07, 0.03, 1) end
+	if box.border and box.border.SetColor then box.border:SetColor(0.54, 0.42, 0.17, 1) end
+	if box.chevron then box.chevron:SetVertexColor(GOLD_TEXT[1], GOLD_TEXT[2], GOLD_TEXT[3], 1) end
+	box.azSurface = "dark"
+end
+SKIN.CreateDropdown, SKIN.CreateSearchBox = Field, Field
+
+function SKIN.CreateTag(tag)
+	local bg = NewTex(tag, "BACKGROUND", 1, T.reward)
+	if not bg then return end
+	bg:SetAllPoints(tag)
+	if tag.bg then tag.bg:Hide() end
+	tag.azBg = bg
+	tag.azSurface = "dark"
+end
+
+-- Entrée de la colonne : fond des catégories ; le survol et le choix du
+-- thème deviennent la surbrillance du jeu teintée d'or (le thème les
+-- montre et les cache toujours), la barre d'accent disparaît
+function SKIN.CreateNavItem(item)
+	local bg = NewTex(item, "BACKGROUND", -2, T.catBg)
+	if not bg then return end
+	local inset = 8
+	bg:SetPoint("TOPLEFT", item, "TOPLEFT", inset, -1)
+	bg:SetPoint("BOTTOMRIGHT", item, "BOTTOMRIGHT", -inset, 1)
+	item.azBg = bg
+	for _, key in ipairs({ "hover", "tint" }) do
+		local tex = item[key]
+		if tex and SetTex(tex, T.catHl) then
+			tex:ClearAllPoints()
+			tex:SetPoint("TOPLEFT", item, "TOPLEFT", inset, -1)
+			tex:SetPoint("BOTTOMRIGHT", item, "BOTTOMRIGHT", -inset, 1)
+			if tex.SetBlendMode then tex:SetBlendMode("ADD") end
+			local a = key == "hover" and 0.5 or 1
+			if Theme.Gradient then Theme.Gradient(tex, "HORIZONTAL", CAT_GOLD, a, CAT_GOLD, a)
+			else tex:SetVertexColor(CAT_GOLD[1], CAT_GOLD[2], CAT_GOLD[3], a) end
+		end
+	end
+	if item.bar then item.bar:SetAlpha(0) end
+	item.azSurface = "dark"
+end
+
+-- En-tête de page : titre doré ombré (police des hauts faits), sous-titre
+-- brun, filigrane à la place du filet ambre
+function SKIN.CreatePageHeader(header, frame)
+	local content = frame and frame.content
+	if not (content and content.azSurface == "light") then return end
+	for _, key in ipairs({ "topGlow", "cornerGlow", "logo" }) do if header[key] then header[key]:Hide() end end
+	if header.rule then
+		for _, seg in ipairs(header.rule.segments or {}) do seg:Hide() end
+		for _, glow in ipairs(header.rule.glow or {}) do glow:Hide() end
+	end
+	AzFont(header.title, header.compact and 19 or 22)
+	Paint(header.title, GOLD_HEAD)
+	Shadow(header.title)
+	header.title.azKeep = true
+	Paint(header.subtitle, INK_SOFT)
+	NoShadow(header.subtitle)
+	header.subtitle.azKeep = true
+	local pad = header.compact and 20 or 24
+	local width = (tonumber(header:GetWidth()) or 600) - 2 * pad
+	header.azFiligree = Filigree(header, pad, header.compact and -52 or -80, width)
+	header.azSurface = "light"
+end
+
+local WRAP = { "Text", "CreateTile", "CreateListRow", "CreateBar", "CreateChips", "CreateButton", "CreateDropdown",
+	"CreateSearchBox", "CreateTag", "CreateNavItem", "CreatePageHeader" }
+ns.CARNET_WRAPPED = WRAP
+
+-- Relève les briques créées pendant fn(...) dans reg.new (puis SkinNew)
+local capturing = false
+local function CaptureRun(reg, fn, ...)
+	if capturing then return fn(...) end
+	capturing = true
+	local saved = {}
+	for _, name in ipairs(WRAP) do
+		local orig = Theme[name]
+		if type(orig) == "function" then
+			saved[name] = orig
+			Theme[name] = function(...)
+				local widget = orig(...)
+				if type(widget) == "table" then reg.new[#reg.new + 1] = { widget, name } end
+				return widget
+			end
+		end
+	end
+	local results = { pcall(fn, ...) }
+	for name, orig in pairs(saved) do Theme[name] = orig end
+	capturing = false
+	if not results[1] then error(results[2], 0) end
+	return results[2], results[3]
+end
+ns.CarnetCaptureRun = CaptureRun
+
+local function NewReg() return { new = {}, texts = {} } end
+
+local function SkinNew(frame, reg)
+	local list = reg.new
+	reg.new = {}
+	for _, item in ipairs(list) do
+		local widget, kind = item[1], item[2]
+		if not widget.azSkinned then
+			widget.azSkinned = true
+			local fn = SKIN[kind]
+			if fn then
+				local ok, err = pcall(fn, widget, frame, reg)
+				if not ok and ns.RecordError then ns:RecordError("carnet:skin:" .. kind, err) end
+			end
+		end
+	end
+end
+
+-- ---------------------------------------------------------------------------
+-- Les textes : sur parchemin, les couleurs claires du thème deviennent
+-- l'encre ; sur fond sombre (catégories, boutons, bandes) elles restent
+-- ---------------------------------------------------------------------------
+local REMAP
+local function Remaps()
+	if REMAP then return REMAP end
+	REMAP = {}
+	local function Add(from, to) if from then REMAP[#REMAP + 1] = { from, to } end end
+	Add(Theme.PARCHMENT, INK); Add(Theme.LABEL, INK); Add(Theme.TEXT, INK)
+	Add(Theme.MUTED_LIGHT, INK_SOFT); Add(Theme.MUTED, INK_MUTED); Add(Theme.GREY, { 0.35, 0.30, 0.25 })
+	Add(Theme.GOLD, AMBER); Add(Theme.GOLD_LIGHT, AMBER); Add(Theme.GOLD_SOFT, { 0.42, 0.23, 0 })
+	Add(Theme.GREEN, { 0.11, 0.42, 0.07 }); Add(Theme.BLUE, { 0.10, 0.25, 0.55 }); Add(Theme.RED, { 0.60, 0.12, 0.05 })
+	Add(Theme.ORANGE_DEEP, { 0.62, 0.25, 0.04 })
+	return REMAP
+end
+local function Near(r, g, b, c) return math.abs(r - c[1]) < 0.02 and math.abs(g - c[2]) < 0.02 and math.abs(b - c[3]) < 0.02 end
+
+-- La surface sous un texte : le premier parent qui en dit une ; aucune :
+-- l'habit Sobre (sombre)
+local function Dark(fs, stop)
+	if fs.azCtxSerial == ns.carnetCtxSerial and fs.azCtx then return fs.azCtx == "dark" end
+	local parent, depth, surface = fs.GetParent and fs:GetParent(), 0, nil
+	while parent and depth < 16 and not surface do
+		surface = parent.azSurface
+		if parent == stop then break end
+		parent = parent.GetParent and parent:GetParent()
+		depth = depth + 1
+	end
+	fs.azCtx, fs.azCtxSerial = surface or "dark", ns.carnetCtxSerial
+	return fs.azCtx == "dark"
+end
+
+function ns.CarnetInk(fs)
+	local r, g, b, a = fs:GetTextColor()
+	r, g, b = tonumber(r), tonumber(g), tonumber(b)
+	if not (r and g and b) then return false end
+	for _, pair in ipairs(Remaps()) do
+		if Near(r, g, b, pair[1]) then
+			Paint(fs, pair[2], a)
+			NoShadow(fs)
+			return true
+		end
+	end
+	if 0.3 * r + 0.59 * g + 0.11 * b > 0.5 then
+		fs:SetTextColor(0.12 + r * 0.3, 0.07 + g * 0.3, 0.02 + b * 0.3, a or 1)
+		NoShadow(fs)
+		return true
+	end
+	return false
+end
+
+local function Recolor(frame)
+	local reg = frame.azReg
+	if not reg then return 0 end
+	local count = 0
+	for _, fs in ipairs(reg.texts) do
+		if not fs.azKeep and not Dark(fs, frame) and ns.CarnetInk(fs) then count = count + 1 end
+	end
+	return count
+end
+ns.CarnetRecolor = Recolor
+
+-- ---------------------------------------------------------------------------
+-- La fenêtre : bois, plaque, parchemins, métal, bouton de fermeture
+-- ---------------------------------------------------------------------------
+local function WindowWood(over, frame)
+	local S, O = ns.AZEROTH_WOOD_SIZE or 64, ns.AZEROTH_WOOD_OUT or 8
+	local wood = {}
+	local function Piece(key)
+		local tex = over:CreateTexture(nil, "BORDER", nil, 1)
+		tex:SetSize(S, S)
+		if ns.AzerothAtlas then ns.AzerothAtlas(tex, ns.AZEROTH_WOOD[key]) end
+		tex:Show()
+		wood[key] = tex
+		return tex
+	end
+	Piece("tl"):SetPoint("TOPLEFT", frame, "TOPLEFT", -O, O)
+	Piece("tr"):SetPoint("TOPRIGHT", frame, "TOPRIGHT", O, O)
+	Piece("bl"):SetPoint("BOTTOMLEFT", frame, "BOTTOMLEFT", -O, -O)
+	Piece("br"):SetPoint("BOTTOMRIGHT", frame, "BOTTOMRIGHT", O, -O)
+	local top, bottom, left, right = Piece("top"), Piece("bottom"), Piece("left"), Piece("right")
+	top:SetPoint("TOPLEFT", wood.tl, "TOPRIGHT", 0, 0); top:SetPoint("TOPRIGHT", wood.tr, "TOPLEFT", 0, 0)
+	bottom:SetPoint("BOTTOMLEFT", wood.bl, "BOTTOMRIGHT", 0, 0); bottom:SetPoint("BOTTOMRIGHT", wood.br, "BOTTOMLEFT", 0, 0)
+	left:SetPoint("TOPLEFT", wood.tl, "BOTTOMLEFT", 0, 0); left:SetPoint("BOTTOMLEFT", wood.bl, "TOPLEFT", 0, 0)
+	right:SetPoint("TOPRIGHT", wood.tr, "BOTTOMRIGHT", 0, 0); right:SetPoint("BOTTOMRIGHT", wood.br, "TOPRIGHT", 0, 0)
+	Method(top, "SetHorizTile", true); Method(bottom, "SetHorizTile", true)
+	Method(left, "SetVertTile", true); Method(right, "SetVertTile", true)
+	return wood
+end
+
+-- La plaque d'en-tête (deux morceaux de ui-achievement-header), son titre et
+-- la case des points ; nil si le client refuse la texture
+local function Plate(frame, over, title)
+	local plate = CreateFrame("Frame", nil, over)
+	plate:SetSize(LAY.plateW, LAY.plateH)
+	plate:SetPoint("TOP", frame, "TOP", 0, LAY.plateUp)
+	plate:SetFrameLevel(Level(over) + 1)
+	plate:EnableMouse(false)
+	local b, a = NewTex(plate, "ARTWORK", 0, T.headB), NewTex(plate, "ARTWORK", 1, T.headA)
+	if not (a and b) then
+		if a then a:Hide() end
+		if b then b:Hide() end
+		plate:Hide()
+		return nil
+	end
+	a:SetSize(504, 94); a:SetPoint("TOPLEFT", plate, "TOPLEFT", 0, 0)
+	b:SetSize(214, 83); b:SetPoint("TOPLEFT", plate, "TOPLEFT", 492, -6)
+	plate.left, plate.right = a, b
+	plate.title = plate:CreateFontString(nil, "OVERLAY", Theme.F_TITLE)
+	plate.title:SetPoint("TOPLEFT", plate, "TOPLEFT", 258, -50)
+	plate.title:SetSize(232, 20)
+	plate.title:SetJustifyH("CENTER")
+	AzFont(plate.title, 15)
+	Paint(plate.title, GOLD_TEXT)
+	Shadow(plate.title)
+	if plate.title.SetWordWrap then plate.title:SetWordWrap(false) end
+	plate.title:SetText(title or "")
+	plate.box = NewTex(plate, "ARTWORK", 2, T.ptBox)
+	if plate.box then
+		plate.box:SetSize(129, 34)
+		plate.box:SetPoint("TOPLEFT", plate, "TOPLEFT", 60, -44)
+		plate.count = plate:CreateFontString(nil, "OVERLAY", Theme.F_LABEL)
+		plate.count:SetPoint("CENTER", plate.box, "CENTER", 10, 0)
+		Paint(plate.count, { 0.95, 0.87, 0.66 })
+		Shadow(plate.count)
+		plate.count:SetText("")
+		plate.icon = NewTex(plate, "OVERLAY", 0, T.tiny)
+		if plate.icon then
+			plate.icon:SetSize(18, 18)
+			plate.icon:SetPoint("RIGHT", plate.count, "LEFT", -4, 0)
+		end
+	end
+	function plate:SetCount(text)
+		if not self.count then return end
+		self.count:SetText(text or "")
+		if self.icon then if text and text ~= "" then self.icon:Show() else self.icon:Hide() end end
+	end
+	plate:Show()
+	return plate
+end
+
+-- Le cadre Azeroth autour d'une fenêtre du thème (Theme.CreateWindow) ; la
+-- zone de droite (frame.content) garde sa taille, la fenêtre grandit
+local function Chrome(self, frame, title)
+	local content, nav = frame.content, frame.nav
+	local cw, ch = tonumber(content:GetWidth()) or 0, tonumber(content:GetHeight()) or 0
+	local navW = nav and LAY.nav or 0
+	local W = LAY.wood + (nav and (navW + LAY.gap) or 0) + cw + LAY.wood
+	local H = LAY.band + ch + LAY.wood
+	frame:SetSize(W, H)
+	frame.azSize = { W, H }
+	Method(frame, "SetClampRectInsets", -8, 8, LAY.plateUp, -8)
+	frame.azeroth, frame.uiStyle = true, "azeroth"
+	if frame.bg then frame.bg:SetVertexColor(WOOD_BG[1], WOOD_BG[2], WOOD_BG[3], 0.98) end
+	HideAll(frame.border)
+	local over = CreateFrame("Frame", nil, frame)
+	over:SetAllPoints(frame)
+	over:SetFrameLevel(Level(frame) + 30)
+	over:EnableMouse(false)
+	frame.azOver = over
+	frame.azWood = WindowWood(over, frame)
+	if nav then
+		nav:ClearAllPoints()
+		nav:SetPoint("TOPLEFT", frame, "TOPLEFT", LAY.wood, -LAY.band)
+		nav:SetPoint("BOTTOMLEFT", frame, "BOTTOMLEFT", LAY.wood, LAY.wood)
+		nav:SetWidth(navW)
+		local parch = NewTex(nav, "BACKGROUND", 1, T.parchV)
+		if parch then
+			parch:SetAllPoints(nav)
+			Cover(parch, T.parchV, navW, ch)
+			if nav.bg then nav.bg:Hide() end
+			nav.azBg, nav.azSurface = parch, "light"
+		end
+		if nav.separator then nav.separator:Hide() end
+		frame.azMetalL = NewTex(over, "ARTWORK", 0, T.metalL)
+		if frame.azMetalL then
+			frame.azMetalL:SetWidth(LAY.gap)
+			frame.azMetalL:SetPoint("TOPLEFT", nav, "TOPRIGHT", 0, 0)
+			frame.azMetalL:SetPoint("BOTTOMLEFT", nav, "BOTTOMRIGHT", 0, 0)
+		end
+		content:ClearAllPoints()
+		content:SetPoint("TOPLEFT", nav, "TOPRIGHT", LAY.gap, 0)
+	else
+		content:ClearAllPoints()
+		content:SetPoint("TOPLEFT", frame, "TOPLEFT", LAY.wood, -LAY.band)
+	end
+	content:SetPoint("BOTTOMRIGHT", frame, "BOTTOMRIGHT", -LAY.wood, LAY.wood)
+	content:SetSize(cw, ch)
+	local page = NewTex(content, "BACKGROUND", -2, T.parchH)
+	if page then
+		page:SetAllPoints(content)
+		Cover(page, T.parchH, cw, ch)
+		content.azBg, content.azSurface = page, "light"
+		if frame.footer then
+			if frame.footer.bg then frame.footer.bg:Hide() end
+			if frame.footer.line then frame.footer.line:Hide() end
+		end
+		local shade = NewTex(content, "BACKGROUND", -1, T.shadow)
+		if shade then
+			shade:SetPoint("TOPLEFT", content, "TOPLEFT", 0, 0)
+			shade:SetPoint("BOTTOMLEFT", content, "BOTTOMLEFT", 0, 0)
+			shade:SetWidth(34)
+			shade:SetAlpha(0.4)
+		end
+	end
+	frame.azMetalT = NewTex(over, "ARTWORK", 0, T.metalT)
+	if frame.azMetalT then
+		frame.azMetalT:SetHeight(10)
+		frame.azMetalT:SetPoint("TOPLEFT", frame, "TOPLEFT", LAY.wood, -(LAY.band - 10))
+		frame.azMetalT:SetPoint("TOPRIGHT", frame, "TOPRIGHT", -LAY.wood, -(LAY.band - 10))
+	end
+	if nav then
+		local joint = NewTex(over, "ARTWORK", 1, T.metalJ)
+		if joint then
+			joint:SetSize(26, 26)
+			joint:SetPoint("CENTER", frame, "TOPLEFT", LAY.wood + navW + LAY.gap / 2, -(LAY.band - 5))
+		end
+	end
+	for index, spec in ipairs({ T.curl, T.curlR }) do
+		local curl = NewTex(over, "ARTWORK", 2, spec)
+		if curl then
+			curl:SetSize(40, 40)
+			if index == 1 then curl:SetPoint("TOPLEFT", content, "TOPLEFT", -2, 2)
+			else curl:SetPoint("TOPRIGHT", content, "TOPRIGHT", 2, 2) end
+		end
+	end
+	frame.azPlate = Plate(frame, over, title)
+	-- le bouton de fermeture du jeu, dans le bois
+	local close = frame.close
+	if close then
+		local icon = close:CreateTexture(nil, "ARTWORK")
+		if SetTex(icon, { file = CLOSE_TEX }) then
+			icon:SetSize(32, 32)
+			icon:SetPoint("CENTER", close, "CENTER", 0, 0)
+			icon:Show()
+			close.azIcon = icon
+			if close.label then close.label:Hide() end
+			HideAll(close.border)
+		else
+			icon:Hide()
+		end
+		close:ClearAllPoints()
+		close:SetPoint("TOPRIGHT", frame, "TOPRIGHT", -8, -8)
+		close:SetFrameLevel(Level(over) + 6)
+	end
+	if frame.settingsButton then frame.settingsButton:SetFrameLevel(Level(over) + 6) end
+	return over
+end
+ns.CarnetChrome = Chrome
+
+-- ---------------------------------------------------------------------------
+-- Le carnet : colonne de gauche, pages
+-- ---------------------------------------------------------------------------
+local function ModuleOn()
+	local db = ns:DB()
+	return db.enabled ~= false and db.companionEnabled ~= false
+end
+
+local function JournalNav(self, frame)
+	local nav = frame.nav
+	if not nav then return end
+	if frame.azPlate and frame.brand then frame.brand:Hide() end
+	if frame.navGroup then
+		frame.navGroup:ClearAllPoints()
+		frame.navGroup:SetPoint("TOPLEFT", nav, "TOPLEFT", 14, -12)
+		if nav.azSurface == "light" then
+			Paint(frame.navGroup, NAV_INK)
+			NoShadow(frame.navGroup)
+			frame.navGroup.azKeep = true
+		end
+	end
+	local items = {}
+	for _, item in pairs(frame.sections or {}) do items[#items + 1] = item end
+	table.sort(items, function(a, b) return (select(5, a:GetPoint()) or 0) > (select(5, b:GetPoint()) or 0) end)
+	for index, item in ipairs(items) do
+		item:ClearAllPoints()
+		item:SetPoint("TOPLEFT", nav, "TOPLEFT", 0, LAY.navTop - (index - 1) * LAY.navStep)
+		item:SetSize(LAY.nav, LAY.navItemH)
+	end
+	frame.azNavItems = items
+	-- une entrée restée Sobre (fond refusé) : la colonne aussi, sinon son
+	-- texte clair tomberait sur le parchemin
+	if nav.azBg and Has(items, function(item) return not item.azBg end) then
+		nav.azBg:Hide()
+		if nav.bg then nav.bg:Show() end
+		nav.azSurface = nil
+		if frame.navGroup then frame.navGroup.azKeep = nil; Paint(frame.navGroup, Theme.GOLD) end
+	end
+	-- le garde-manger, en bas de la colonne
+	if frame.pantry then
+		if frame.pantryLabel then
+			frame.pantryLabel:SetParent(nav)
+			frame.pantryLabel:ClearAllPoints()
+			frame.pantryLabel:SetPoint("BOTTOMLEFT", nav, "BOTTOMLEFT", 12, 50)
+		end
+		local index = 0
+		for _, kind in ipairs(ns.TREAT_KINDS or {}) do
+			local button = frame.pantry[kind]
+			if button then
+				button:SetParent(nav)
+				button:ClearAllPoints()
+				button:SetPoint("BOTTOMLEFT", nav, "BOTTOMLEFT", 10 + index * 36, 12)
+				button:SetSize(32, 32)
+				HideAll(button.border)
+				button.icon:ClearAllPoints()
+				button.icon:SetPoint("TOPLEFT", button, "TOPLEFT", 4, -4)
+				button.icon:SetPoint("BOTTOMRIGHT", button, "BOTTOMRIGHT", -4, 4)
+				button.azRing = NewTex(button, "OVERLAY", 0, T.iconFrame)
+				if button.azRing then button.azRing:SetAllPoints(button) end
+				if button.count then
+					Paint(button.count, { 1, 1, 1 })
+					Shadow(button.count)
+					button.count.azKeep = true
+				end
+				index = index + 1
+			end
+		end
+		frame.azPantry = true
+	end
+	if frame.subtitle then
+		frame.subtitle:ClearAllPoints()
+		frame.subtitle:SetPoint("BOTTOMLEFT", nav, "BOTTOMLEFT", 12, 72)
+		frame.subtitle:SetWidth(LAY.nav - 24)
+	end
+end
+
+local PAGE, POST = {}, {}
+ns.CARNET_PAGE_SKINS, ns.CARNET_PAGE_POSTS = PAGE, POST
+
+local function Strip(section)
+	local strip = NewTex(section, "BACKGROUND", 1, T.recent)
+	if not strip then return nil end
+	strip:SetPoint("LEFT", section, "LEFT", 0, 0)
+	strip:SetSize(tonumber(section:GetWidth()) or 300, 23)
+	section.azStrip, section.azSurface = strip, "dark"
+	if section.label then
+		section.label:ClearAllPoints()
+		section.label:SetPoint("LEFT", section, "LEFT", 10, 0)
+		Paint(section.label, { 0.95, 0.84, 0.54 })
+		Shadow(section.label)
+		section.label.azKeep = true
+	end
+	if section.detail then
+		Paint(section.detail, { 0.84, 0.77, 0.60 })
+		section.detail.azKeep = true
+	end
+	return strip
+end
+
+local function GoldTitle(fs, size)
+	AzFont(fs, size)
+	Paint(fs, GOLD_HEAD)
+	Shadow(fs)
+	fs.azKeep = true
+end
+
+-- Envie : verte comblée, orange basse, or entre les deux
+local function NeedPaint(bar)
+	local value = (tonumber(bar.ratio) or 0) * 100
+	if value >= (ns.COMPANION_HAPPY_MIN or 70) then return BAR_GREEN end
+	if value < 30 then return BAR_ORANGE end
+	return BAR_GOLD
+end
+ns.CarnetNeedPaint = NeedPaint
+
+function PAGE.evolution(self, frame)
+	local pane = frame.evo
+	if not pane then return end
+	local hero = pane.hero
+	if hero then
+		TileStyle(hero, "light")
+		WoodBorder(hero)
+		local portrait = hero.portrait
+		if portrait and ns.AZEROTH_ATLAS then
+			local ring = CreateFrame("Frame", nil, hero)
+			ring:SetPoint("CENTER", portrait, "CENTER", 0, 0)
+			ring:SetSize((tonumber(portrait:GetWidth()) or 148) + 34, (tonumber(portrait:GetHeight()) or 148) + 34)
+			ring:SetFrameLevel(Level(portrait) + 6)
+			ring:EnableMouse(false)
+			local vine = ring:CreateTexture(nil, "OVERLAY")
+			vine:SetAllPoints(ring)
+			if ns.AzerothAtlas and ns.AzerothAtlas(vine, ns.AZEROTH_ATLAS.frameRound) then vine:Show() else ring:Hide() end
+			pane.azVine = vine
+		end
+	end
+	if pane.name then GoldTitle(pane.name, 19) end
+	if pane.bubble then TileStyle(pane.bubble, "talk") end
+	for _, tile in pairs(pane.stats or {}) do
+		if TileStyle(tile, "dark") then
+			HideAll(tile.border)
+			GoldTitle(tile.value, 16)
+			Paint(tile.label, LIGHT_SOFT)
+			tile.label.azKeep = true
+		end
+	end
+	for _, row in ipairs(pane.needs or {}) do
+		TileStyle(row, "band")
+		if row.bar then
+			row.bar:SetHeight(14)
+			row.bar.azPaint = NeedPaint
+			BarPaint(row.bar)
+		end
+	end
+end
+
+function PAGE.menagerie(self, frame)
+	local pane = frame.men
+	if not (pane and pane.preview) then return end
+	local p = pane.preview
+	TileStyle(p, "light")
+	HideAll(p.border)
+	if p.stage and SetTex(p.stage, ns.AZEROTH_PORTRAIT_BG) then p.stage:SetVertexColor(1, 1, 1, 1) end
+	if p.rule then p.rule:Hide() end
+	local y = select(5, p.title:GetPoint()) or -182
+	p.azTitle = NewTex(p, "ARTWORK", 1, T.titleGrey)
+	if p.azTitle then
+		p.azTitle:SetPoint("TOPLEFT", p, "TOPLEFT", 8, y + 4)
+		p.azTitle:SetPoint("TOPRIGHT", p, "TOPRIGHT", -8, y + 4)
+		p.azTitle:SetHeight(20)
+		p.title:ClearAllPoints()
+		p.title:SetPoint("CENTER", p.azTitle, "CENTER", 0, 0)
+		p.title:SetJustifyH("CENTER")
+		Paint(p.title, { 1, 1, 1 })
+		Shadow(p.title)
+		p.title.azKeep = true
+	end
+	WoodBorder(p)
+end
+
+function POST.menagerie(self, frame)
+	local pane = frame.men
+	if not pane then return end
+	for _, row in ipairs(pane.items or {}) do
+		local entry = row.entry
+		if entry then
+			if entry.known then
+				TileStyle(row, "light")
+			else
+				-- jamais croisée : parchemin désaturé, texte clair ombré
+				TileStyle(row, "parchd")
+				for _, fs in ipairs({ row.label, row.no, row.detail }) do
+					if fs then Paint(fs, LIGHT); Shadow(fs) end
+				end
+			end
+		end
+	end
+end
+
+function PAGE.feats(self, frame)
+	local pane = frame.feats
+	if not pane then return end
+	for _, row in ipairs(pane.cats or {}) do
+		if TileStyle(row, "dark") then Selectable(row) end
+	end
+	local w = tonumber(pane.RW) or 500
+	for _, row in ipairs(pane.rows or {}) do
+		row.azTitle = NewTex(row, "ARTWORK", -1, T.titleGold)
+		if row.azTitle then
+			row.azTitle:SetPoint("TOPLEFT", row, "TOPLEFT", 58, -4)
+			row.azTitle:SetPoint("TOPRIGHT", row, "TOPRIGHT", -62, -4)
+			row.azTitle:SetHeight(18)
+			row.name:ClearAllPoints()
+			row.name:SetPoint("CENTER", row.azTitle, "CENTER", 0, 0)
+			row.name:SetWidth(w - 140)
+			row.name:SetJustifyH("CENTER")
+			Shadow(row.name)
+			row.name.azKeep = true
+			row.desc:ClearAllPoints()
+			row.desc:SetPoint("TOP", row.azTitle, "BOTTOM", 0, -3)
+			row.desc:SetWidth(w - 200)
+			row.desc:SetJustifyH("CENTER")
+			if row.scope then
+				row.scope:ClearAllPoints()
+				row.scope:SetPoint("TOPRIGHT", row, "TOPRIGHT", -64, -24)
+			end
+		end
+		row.azRing = Ring(row, row.icon, 52)
+		if row.pts then
+			AzFont(row.pts, 13)
+			Shadow(row.pts)
+			row.pts.azKeep = true
+		end
+	end
+	local ui, content = ns.JournalUI, frame.content
+	local shield = NewTex(pane, "ARTWORK", 0, T.shieldBig)
+	if shield and ui then
+		shield:SetSize(52, 44)
+		ui.At(shield, content, 0, ui.TOP + 6)
+		ui.At(pane.totals, content, 60, ui.TOP - 2)
+		ui.At(pane.count, content, 60, ui.TOP - 19)
+		pane.azShieldText = pane:CreateFontString(nil, "OVERLAY", Theme.F_NUMBER)
+		pane.azShieldText:SetPoint("CENTER", shield, "CENTER", 0, 2)
+		AzFont(pane.azShieldText, 14, "OUTLINE")
+		Paint(pane.azShieldText, { 1, 1, 1 })
+		pane.azShield = shield
+	end
+end
+
+function POST.feats(self, frame)
+	local pane = frame.feats
+	if not pane then return end
+	for _, row in ipairs(pane.rows or {}) do
+		local entry = row.entry
+		if entry then
+			TileStyle(row, entry.got and "light" or "parchd")
+			if row.azTitle then SetTex(row.azTitle, entry.got and T.titleGold or T.titleGrey) end
+			if row.pts then Paint(row.pts, entry.got and { 1, 1, 1 } or { 0.85, 0.85, 0.85 }) end
+			if row.name and row.azTitle then Paint(row.name, entry.got and { 1, 1, 1 } or { 0.91, 0.89, 0.83 }) end
+		end
+	end
+	if pane.azShieldText and self.FeatPoints then pane.azShieldText:SetText(tostring((self:FeatPoints()))) end
+end
+
+function PAGE.day(self, frame)
+	local pane = frame.day
+	if not pane then return end
+	local sections = { pane.innTitle, pane.pantryTitle, pane.aidTitle }
+	for _, group in pairs(pane.groups or {}) do sections[#sections + 1] = group end
+	for _, section in ipairs(sections) do Strip(section) end
+	for _, slot in ipairs(pane.slots or {}) do slot.azRing = Ring(slot, slot.icon, 40) end
+	for _, tile in ipairs(pane.aids or {}) do tile.azRing = Ring(tile, tile.icon, 40) end
+end
+
+function POST.day(self, frame)
+	local pane = frame.day
+	if not pane then return end
+	-- carte des auberges : un petit bouclier par tampon (gris : pas encore)
+	for _, stamp in ipairs(pane.stamps or {}) do
+		if SetTex(stamp, T.tiny) then
+			stamp:SetVertexColor(1, 1, 1, 1)
+			Desaturate(stamp, not stamp.got)
+			stamp:SetAlpha(stamp.got and 1 or 0.6)
+		end
+	end
+end
+
+function PAGE.progress(self, frame)
+	local pane = frame.prog
+	if not pane then return end
+	for _, row in ipairs(pane.zones or {}) do
+		if TileStyle(row, "dark") then Selectable(row) end
+	end
+	if pane.card then
+		TileStyle(pane.card, "light")
+		WoodBorder(pane.card)
+	end
+	if pane.name then GoldTitle(pane.name, 15) end
+	for _, tile in ipairs(pane.parts or {}) do
+		if TileStyle(tile, "dark") then Selectable(tile) end
+	end
+	for _, tile in ipairs(pane.marks or {}) do
+		TileStyle(tile, "grey")
+		HideAll(tile.border)
+	end
+end
+
+function POST.progress(self, frame)
+	local pane = frame.prog
+	if not pane then return end
+	for _, tile in ipairs(pane.marks or {}) do
+		if TileStyle(tile, tile.reached and "gold" or "grey") then
+			Paint(tile.label, tile.reached and GOLD_HEAD or { 0.86, 0.82, 0.74 })
+			Paint(tile.gift, tile.reached and { 1, 0.95, 0.78 } or { 0.80, 0.76, 0.68 })
+			Shadow(tile.label)
+		end
+	end
+	for _, line in ipairs(pane.items or {}) do
+		local item = line.item
+		if item then
+			if item.header then
+				if TileStyle(line, "stathead") then Paint(line.text, GOLD_HEAD); Shadow(line.text) end
+			else
+				TileStyle(line, "light")
+			end
+		end
+	end
+end
+
+function PAGE.guide(self, frame)
+	local pane = frame.guide
+	if not pane then return end
+	for _, row in ipairs(pane.rows or {}) do
+		if TileStyle(row, "dark") then Selectable(row) end
+	end
+	local ui, content = ns.JournalUI, frame.content
+	if not ui then return end
+	local page = NewTex(pane, "BACKGROUND", 1, T.stats)
+	if page then
+		local x0, x1 = ui.PAD + pane.RX - 12, ui.PAD + ui.INNER + 8
+		local y0, y1 = ui.TOP + 10, ui.PAGER_Y - 28
+		page:SetPoint("TOPLEFT", content, "TOPLEFT", x0, y0)
+		page:SetPoint("BOTTOMRIGHT", content, "TOPLEFT", x1, y1)
+		Cover(page, T.stats, x1 - x0, y0 - y1)
+		local veil = Theme.Solid(pane, "BACKGROUND", { 0.95, 0.87, 0.68 }, 0.30)
+		veil:SetDrawLayer("BACKGROUND", 2)
+		veil:SetPoint("TOPLEFT", page, "TOPLEFT", 0, 0)
+		veil:SetPoint("BOTTOMRIGHT", page, "BOTTOMRIGHT", 0, 0)
+		pane.azPage, pane.azVeil = page, veil
+	end
+	if pane.title then GoldTitle(pane.title, 18) end
+	pane.azFiligree = Filigree(pane, ui.PAD + pane.RX, ui.TOP - 20, pane.RW, true)
+end
+
+function POST.guide(self, frame)
+	local pane = frame.guide
+	if not pane then return end
+	for _, head in ipairs(pane.heads or {}) do GoldTitle(head, 13) end
+end
+
+-- ---------------------------------------------------------------------------
+-- Construction et rafraîchissement du carnet Azeroth
+-- ---------------------------------------------------------------------------
+function ns:JournalStyle() return (self.AzerothScenesOn and self:AzerothScenesOn()) and "azeroth" or "sobre" end
+
+local function JournalCounter(self)
+	if self.FeatPoints then return self:F("CARNET_AZ_POINTS", (self:FeatPoints())) end
+	local counts = self.JournalCounts and self:JournalCounts()
+	return self:F("CARNET_AZ_STAMPS", counts and counts.total or 0)
+end
+
+local function SkinJournal(self, frame, reg)
+	frame.azReg = reg
+	Chrome(self, frame, L.JRN_TITLE)
+	SkinNew(frame, reg)
+	JournalNav(self, frame)
+	for section, fn in pairs(PAGE) do
+		local ok, err = pcall(fn, self, frame)
+		if not ok and self.RecordError then self:RecordError("carnet:" .. section, err) end
+	end
+end
+
+local function PostJournal(self, frame)
+	Recolor(frame)
+	local post = POST[frame.kind]
+	if post then post(self, frame) end
+	if frame.azPlate then frame.azPlate:SetCount(JournalCounter(self)) end
+	-- la case de la plaque porte les points ; la colonne ne dit plus que « module coupé »
+	if frame.subtitle and frame.azPlate then
+		frame.subtitle:SetText(ModuleOn() and "" or (L.MODULE_OFF or ""))
+	end
+end
+
+local function Stash(self, field, frame, style)
+	self.uiStyleCache[field] = self.uiStyleCache[field] or {}
+	self.uiStyleCache[field][style] = frame
+end
+local function Cached(self, field, style)
+	local slot = self.uiStyleCache and self.uiStyleCache[field]
+	local frame = slot and slot[style]
+	if frame then slot[style] = nil end
+	return frame
+end
+
+do
+	local ensure = ns.EnsureJournalWindow
+	if ensure then
+		function ns:EnsureJournalWindow(...)
+			if self.journalFrame then return self.journalFrame end
+			local style = self:JournalStyle()
+			local cached = Cached(self, "journalFrame", style)
+			if cached then
+				self.journalFrame = cached
+				return cached
+			end
+			if style ~= "azeroth" then
+				local frame = ensure(self, ...)
+				if frame then frame.uiStyle = "sobre" end
+				return frame
+			end
+			local reg = NewReg()
+			local frame = CaptureRun(reg, ensure, self, ...)
+			if frame then
+				local ok, err = pcall(SkinJournal, self, frame, reg)
+				if not ok and self.RecordError then self:RecordError("carnet:azeroth", err) end
+			end
+			return frame
+		end
+	end
+	local refresh = ns.RefreshJournal
+	if refresh then
+		function ns:RefreshJournal(...)
+			local frame = self.journalFrame
+			if not (frame and frame.azeroth and frame.azReg) then return refresh(self, ...) end
+			local a, b = CaptureRun(frame.azReg, refresh, self, ...)
+			SkinNew(frame, frame.azReg)
+			local ok, err = pcall(PostJournal, self, frame)
+			if not ok and self.RecordError then self:RecordError("carnet:post", err) end
+			return a, b
+		end
+	end
+end
+
+-- ---------------------------------------------------------------------------
+-- La fiche de dresseur Azeroth : même cadre, portrait dans le cadre à
+-- volutes sur le fond des Talking Heads, chiffres sur les bandes des
+-- statistiques, vitrine des hauts faits (cadres d'icône, petits boucliers)
+-- ---------------------------------------------------------------------------
+local function SkinTrainer(self, frame, reg)
+	frame.azReg = reg
+	Chrome(self, frame, L.TRAINER_TITLE)
+	SkinNew(frame, reg)
+	local stage = frame.stage
+	if stage then
+		local bg = NewTex(stage, "BACKGROUND", 1, ns.AZEROTH_PORTRAIT_BG)
+		if bg then
+			bg:SetPoint("TOPLEFT", stage, "TOPLEFT", 18, -18)
+			bg:SetPoint("BOTTOMRIGHT", stage, "BOTTOMRIGHT", -18, 18)
+			if stage.bg then stage.bg:Hide() end
+			HideAll(stage.border)
+			stage.azBg = bg
+		end
+		local ring = CreateFrame("Frame", nil, stage)
+		ring:SetAllPoints(stage)
+		ring:SetFrameLevel(Level(stage) + 6)
+		ring:EnableMouse(false)
+		local vine = ring:CreateTexture(nil, "OVERLAY")
+		vine:SetAllPoints(ring)
+		if ns.AzerothAtlas and ns.AzerothAtlas(vine, ns.AZEROTH_ATLAS.frameRound) then
+			vine:Show()
+			if frame.model then
+				frame.model:ClearAllPoints()
+				frame.model:SetPoint("TOPLEFT", stage, "TOPLEFT", 18, -16)
+				frame.model:SetPoint("BOTTOMRIGHT", stage, "BOTTOMRIGHT", -18, 18)
+			end
+		else
+			ring:Hide()
+		end
+		frame.azVine = vine
+		stage.azSurface = "dark"
+	end
+	if frame.compName then AzFont(frame.compName, 15) end
+	-- les cinq chiffres sur les bandes des statistiques
+	frame.azBands = {}
+	for index = 1, 5 do
+		local line = frame.lines and frame.lines[index]
+		if line and frame.body then
+			local band = NewTex(frame.body, "BACKGROUND", 2, T.statRow)
+			if band then
+				band:SetPoint("TOPLEFT", line, "TOPLEFT", -8, 3)
+				band:SetSize((ns.TRAINER_LAYOUT and 304 or 300) + 14, 17)
+				if index % 2 == 1 then band:SetVertexColor(1.25, 1.25, 1.25, 1) end
+				Paint(line, LIGHT)
+				Shadow(line)
+				line.azKeep = true
+				frame.azBands[index] = band
+			end
+		end
+	end
+	for _, card in ipairs(frame.featCards or {}) do
+		card.azRing = Ring(card, card.icon, 44)
+		if card.mark and SetTex(card.mark, T.tiny) then
+			card.mark:SetSize(18, 18)
+			card.mark:SetVertexColor(1, 1, 1, 1)
+			card.azShield = true
+		end
+	end
+end
+
+local function PostTrainer(self, frame)
+	Recolor(frame)
+	local card = frame.shownCard
+	local feats = card and type(card.feats) == "table" and card.feats
+	local points = feats and ((tonumber(feats.account) or 0) + (tonumber(feats.char) or 0)) or 0
+	if frame.azPlate then frame.azPlate:SetCount(points > 0 and self:F("CARNET_AZ_POINTS", points) or "") end
+end
+
+do
+	local ensure = ns.EnsureTrainerWindow
+	if ensure then
+		function ns:EnsureTrainerWindow(...)
+			if self.trainerFrame then return self.trainerFrame end
+			local style = self:JournalStyle()
+			local cached = Cached(self, "trainerFrame", style)
+			if cached then
+				self.trainerFrame = cached
+				return cached
+			end
+			if style ~= "azeroth" then
+				local frame = ensure(self, ...)
+				if frame then frame.uiStyle = "sobre" end
+				return frame
+			end
+			local reg = NewReg()
+			local frame = CaptureRun(reg, ensure, self, ...)
+			if frame then
+				local ok, err = pcall(SkinTrainer, self, frame, reg)
+				if not ok and self.RecordError then self:RecordError("carnet:trainer", err) end
+			end
+			return frame
+		end
+	end
+	local refresh = ns.TrainerRefreshWindow
+	if refresh then
+		function ns:TrainerRefreshWindow(...)
+			local frame = self.trainerFrame
+			if not (frame and frame.azeroth and frame.azReg) then return refresh(self, ...) end
+			local a, b = CaptureRun(frame.azReg, refresh, self, ...)
+			SkinNew(frame, frame.azReg)
+			local ok, err = pcall(PostTrainer, self, frame)
+			if not ok and self.RecordError then self:RecordError("carnet:trainerpost", err) end
+			return a, b
+		end
+	end
+end
+
+-- ---------------------------------------------------------------------------
+-- Changement de style à chaud : la fenêtre affichée est remplacée par celle
+-- du nouveau style (état recopié) ; fermée, elle le sera à l'ouverture
+-- ---------------------------------------------------------------------------
+local JOURNAL_STATE = { "kind", "activity", "offset", "zoneFilter", "zoneSort", "zoneOffset", "questFilter", "collKind",
+	"menZone", "menState", "menRank", "menSort", "menSearch", "menType", "menOffset", "featsCat", "featsOffset",
+	"zoneID", "zonePicked", "progPart", "progOffset", "progItemOffset", "guideSection", "guideOffset", "lookOffset" }
+
+function ns:CarnetRestyle()
+	local want = self:JournalStyle()
+	local swapped = {}
+	local journal = self.journalFrame
+	if journal and (journal.azeroth and "azeroth" or "sobre") ~= want then
+		local shown = journal:IsShown()
+		journal:Hide()
+		Stash(self, "journalFrame", journal, journal.azeroth and "azeroth" or "sobre")
+		self.journalFrame = nil
+		if shown then
+			local fresh = self:EnsureJournalWindow()
+			if fresh then
+				for _, key in ipairs(JOURNAL_STATE) do fresh[key] = journal[key] end
+				if self.RefreshJournal then self:RefreshJournal() end
+				if self.CloseOtherWindows then pcall(self.CloseOtherWindows, self, fresh) end
+				fresh:Show()
+			end
+		end
+		swapped.journal = true
+	end
+	local trainer = self.trainerFrame
+	if trainer and (trainer.azeroth and "azeroth" or "sobre") ~= want then
+		local shown = trainer:IsShown()
+		trainer:Hide()
+		Stash(self, "trainerFrame", trainer, trainer.azeroth and "azeroth" or "sobre")
+		self.trainerFrame = nil
+		if shown then
+			local fresh = self:EnsureTrainerWindow()
+			if fresh then
+				fresh.viewing = trainer.viewing
+				fresh:Show()
+				self:TrainerRefreshWindow()
+			end
+		end
+		swapped.trainer = true
+	end
+	return swapped
+end
+
+do
+	local apply = ns.ApplyUIStyle
+	if apply then
+		function ns:ApplyUIStyle(...)
+			local style = apply(self, ...)
+			local ok, err = pcall(self.CarnetRestyle, self)
+			if not ok and self.RecordError then self:RecordError("carnet:restyle", err) end
+			return style
+		end
+	end
+end
+
+if ns.Mark then ns.Mark("JournalAzeroth") end

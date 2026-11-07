@@ -70,7 +70,9 @@ do
 	Check("[FX] il parle", Speak() == true)
 	local bubble = NS.companionBubble
 	local skin = bubble and bubble.azTalk
-	Check("[FX] bulle : parchemin des Talking Heads", skin and bubble.azBubble and skin.bg.atlas == A.talk and skin.bg:IsShown())
+	-- 2.8.0 : le parchemin par son fichier (1111217) et ses coordonnées, plus SetAtlas
+	Check("[FX] bulle : parchemin des Talking Heads", skin and bubble.azBubble and skin.bg.texture == 1111217
+		and skin.bg.atlasName == A.talk and skin.bg.texCoord and skin.bg:IsShown())
 	Check("[FX] bulle : texte brun foncé, sans ombre", skin and skin.text:GetText() == NS.companionBubbleText
 		and skin.text.textColor[1] < 0.3 and skin.text.textColor[3] < 0.1 and skin.text.shadow and skin.text.shadow[4] == 0)
 	Check("[FX] bulle : le nom du compagnon en capitales en haut", skin and skin.name:GetText() == NS.AzerothUpper(NS:CompanionName())

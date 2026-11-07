@@ -16,6 +16,10 @@ Une seule description, anglais d'abord puis français (règle des stores : l'ang
 
 For **WoW Forever** (1.60). English and French. Free, standalone (`/qc`), about 2 MB of memory. Pairs well with [Ready2Quest](https://www.curseforge.com/wow/addons/ready2quest).
 
+## New in 2.8: the journal in the Azeroth style
+
+- The travel journal and the trainer card now look like the game's achievement frame: wood, parchment, header plate, shields, green progress bars. Your trainer card shows a showcase of 3 achievements, and the **Y** key opens your achievements (if it was free).
+
 ## New in 2.7: achievements and titles
 
 - **174 achievements, with points**: menagerie, shinies, zones and seals, day by day, guild, character, dungeons and raids (the last boss of each dungeon, Onyxia to Kel'Thuzad), professions, quests and reputation, oddities. Collection ones count for your whole account, performance ones for each character.
@@ -92,6 +96,10 @@ Free software, **GPL-3.0**. Zone data (creatures, gathering, quests) is generate
 ![Une brillante tente sa chance contre le filet](https://media.forgecdn.net/attachments/2161/225/f-gif.gif)
 
 Pour **WoW Forever** (1.60). En français et en anglais. Gratuit, autonome (`/qc`), environ 2 Mo de mémoire. Va très bien avec [Ready2Quest](https://www.curseforge.com/wow/addons/ready2quest).
+
+## Nouveau en 2.8 : le carnet en style Azeroth
+
+- Le carnet de voyage et la fiche de dresseur prennent l'habit du cadre des hauts faits du jeu : bois, parchemin, plaque d'en-tête, boucliers, barres vertes. Ta fiche montre une vitrine de 3 hauts faits, et la touche **Y** ouvre tes hauts faits (si elle était libre).
 
 ## Nouveau en 2.7 : hauts faits et titres
 

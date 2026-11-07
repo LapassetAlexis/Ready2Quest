@@ -505,6 +505,7 @@ local function Rest(frame)
 		frame.banner.shine:Hide()
 		frame.banner.glow:SetAlpha(0)
 		frame.banner:SetShield(nil)
+		if frame.banner.SetLevel then frame.banner:SetLevel(nil) end
 		frame.banner.filled = nil
 	end
 	frame.banner:Hide()
@@ -731,6 +732,9 @@ local function Verdict(frame, r, ok, rolling)
 			banner.line:Hide()
 		end
 		banner:SetShield(ok and "gold" or "grey")
+		-- 2.8.0 : la tête de la créature dans le cadre d'icône, son niveau dans le bouclier
+		if banner.SetCreature then banner:SetCreature(target) end
+		if banner.SetLevel then banner:SetLevel(target.level) end
 		banner:Fit()
 	end
 	banner:Show()

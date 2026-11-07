@@ -104,7 +104,12 @@ local function NewRegion(kind, name, parent)
 	function region:GetHeight() return self.height end
 	-- rangé à part de points/lastPoint : GetPoint reste celui de SetPoint
 	function region:SetAllPoints(relativeTo) self.allPoints = relativeTo or true end
-	function region:SetTexture(path) self.texture = path; self.colorTexture = nil end
+	-- Mock.world.textureRefused[fichier] : le client refuse ce fichier (SetTexture rend false, rien n'est posé)
+	function region:SetTexture(path)
+		local refused = Mock.world.textureRefused
+		if refused and path ~= nil and refused[path] then return false end
+		self.texture = path; self.colorTexture = nil
+	end
 	function region:SetColorTexture(r, g, b, a)
 		self.texture = "Interface\\Buttons\\WHITE8X8"
 		self.colorTexture = { r, g, b, a or 1 }
