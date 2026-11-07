@@ -25,6 +25,17 @@ end
 -- (ADDON_TESTING) gardent les deux langues et les tables sources exposées
 -- (ns.KEEP_STRINGS) pour contrôler la parité fr/en.
 ns.KEEP_STRINGS = rawget(_G, "ADDON_TESTING") and true or false
+-- langue gardée : le français (client frFR), sinon l'anglais
+ns.STRINGS_FRENCH = french
+
+-- Sources de textes calculés (QC 2.8.1 / R2Q 1.29.5) : fn(clé) -> texte ou
+-- nil, consultées quand la clé n'est déclarée dans aucune langue. Sert aux
+-- données gardées sous une forme plus légère qu'une clé par texte (répliques
+-- du compagnon de QuestCompanion).
+local sources = {}
+function ns.RegisterStringSource(fn)
+	if type(fn) == "function" then sources[#sources + 1] = fn end
+end
 
 -- API d'extension : chaque fichier déclare ses chaînes, sans toucher aux
 -- autres. ns.RegisterStrings({ CLE = "fr" }, { CLE = "en" }) ; la dernière
@@ -54,6 +65,10 @@ setmetatable(L, { __index = function(_, key)
 	if value ~= nil then return value end
 	value = frFR[key]
 	if value ~= nil then return value end
+	for i = 1, #sources do
+		value = sources[i](key)
+		if value ~= nil then return value end
+	end
 	return key
 end })
 ns.L = L

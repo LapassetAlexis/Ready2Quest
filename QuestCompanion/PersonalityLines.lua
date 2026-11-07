@@ -1585,28 +1585,13 @@ T.mischievous = {
 -- ---------------------------------------------------------------------------
 -- Clés : COMP_SAY_<RÉSERVOIR>__<caractère>[_n] ; réservoirs « LEVEL__curious »
 -- ---------------------------------------------------------------------------
-local FR, EN, POOLS = {}, {}, {}
+local P = {}
 for trait, pools in pairs(T) do
-	for pool, lines in pairs(pools) do
-		local name = pool .. "__" .. trait
-		local keys = {}
-		for index, pair in ipairs(lines) do
-			local key = "COMP_SAY_" .. name .. (index > 1 and ("_" .. index) or "")
-			FR[key], EN[key] = pair[1], pair[2]
-			keys[index] = key
-		end
-		POOLS[name] = keys
-	end
+	for pool, lines in pairs(pools) do P[pool .. "__" .. trait] = lines end
 end
-ns.RegisterStrings(FR, EN)
-if type(ns.COMPANION_POOLS) == "table" then
-	for name, keys in pairs(POOLS) do ns.COMPANION_POOLS[name] = keys end
-end
--- même registre que les répliques communes (contrôle de parité fr/en)
-local shared = ns.COMPANION_LINE_STRINGS
-if type(shared) == "table" then
-	for key, text in pairs(FR) do shared.fr[key], shared.en[key] = text, EN[key] end
-end
+-- enregistrement commun (CompanionLines.lua) : même registre que les
+-- répliques communes ; listes de clés et textes en test seulement
+local POOLS, FR, EN = ns.RegisterCompanionLines(P)
 ns.PERSONALITY_POOLS = POOLS
 if ns.KEEP_STRINGS then ns.PERSONALITY_LINES = T end
 if ns.KEEP_STRINGS then ns.PERSONALITY_LINE_STRINGS = { fr = FR, en = EN } end

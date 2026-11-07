@@ -1004,20 +1004,93 @@ P.CHATTER_4 = { { "Oh, j'ai le droit de bavarder ? J'ai plein de choses à te di
 -- ---------------------------------------------------------------------------
 -- Clés et enregistrement
 -- ---------------------------------------------------------------------------
-local FR, EN, POOLS = {}, {}, {}
-for name, lines in pairs(P) do
-	local keys = {}
-	for index, pair in ipairs(lines) do
-		local key = "COMP_SAY_" .. name .. (index > 1 and ("_" .. index) or "")
-		-- deux réservoirs aux noms voisins ne doivent jamais se marcher dessus
-		if FR[key] ~= nil then error("CompanionLines: clé en double " .. key) end
-		FR[key], EN[key] = pair[1], pair[2]
-		keys[index] = key
-	end
-	POOLS[name] = keys
+-- ns.RegisterCompanionLines(P) : enregistrement commun de tous les fichiers de
+-- répliques (ici, PersonalityLines, Treats, Shiny, Capture, Daily, Weekly,
+-- Notify, LiveRares). Clé de la ligne n d'un réservoir : COMP_SAY_<RÉSERVOIR>
+-- pour n = 1, COMP_SAY_<RÉSERVOIR>_<n> ensuite.
+-- Mémoire (2.8.1) : sur le client, seuls les textes de sa langue sont gardés,
+-- en une liste par réservoir ; les clés n'existent qu'à la lecture (ns.L par
+-- ns.RegisterStringSource, listes de ns.COMPANION_POOLS faites au premier
+-- usage d'un réservoir). En test (ns.KEEP_STRINGS) : clés, deux langues et
+-- listes déclarées d'avance, comme avant (contrôles de parité fr/en).
+local PREFIX = "COMP_SAY_"
+local lineTexts = {}   -- réservoir -> { texte ou false, … } (client)
+
+local function LineKey(name, index)
+	return PREFIX .. name .. (index > 1 and ("_" .. index) or "")
 end
-ns.RegisterStrings(FR, EN)
-ns.COMPANION_POOLS = POOLS
-if ns.KEEP_STRINGS then ns.COMPANION_LINE_STRINGS = { fr = FR, en = EN } end   -- exposé aux tests (parité fr/en)
+ns.CompanionLineKey = LineKey
+
+-- Réservoir et rang d'une clé de réplique ; has(nom) dit si le réservoir existe
+function ns.CompanionLineParse(key, has)
+	if type(key) ~= "string" or key:sub(1, #PREFIX) ~= PREFIX then return nil end
+	local name = key:sub(#PREFIX + 1)
+	if has(name) then return name, 1 end
+	local base, digits = name:match("^(.+)_(%d+)$")
+	local index = tonumber(digits)
+	if base and index and index > 1 and tostring(index) == digits and has(base) then return base, index end
+	return nil
+end
+
+local function HasTexts(name) return lineTexts[name] ~= nil end
+if ns.RegisterStringSource then
+	ns.RegisterStringSource(function(key)
+		local name, index = ns.CompanionLineParse(key, HasTexts)
+		if not name then return nil end
+		return lineTexts[name][index] or nil
+	end)
+end
+
+-- Listes de clés d'un réservoir, faites à la première lecture (client)
+ns.COMPANION_POOLS = setmetatable({}, { __index = function(self, name)
+	local texts = name ~= nil and lineTexts[name]
+	if not texts then return nil end
+	local keys = {}
+	for index = 1, #texts do keys[index] = LineKey(name, index) end
+	rawset(self, name, keys)
+	return keys
+end })
+
+-- Rend (en test seulement) les listes de clés, les textes fr et en
+function ns.RegisterCompanionLines(P, unique)
+	if not ns.KEEP_STRINGS then
+		local french = ns.STRINGS_FRENCH ~= false
+		for name, lines in pairs(P) do
+			local texts = {}
+			for index, pair in ipairs(lines) do
+				-- même repli que ns.RegisterStrings : l'anglais manquant prend le français
+				local text = pair[1]
+				if not french and pair[2] ~= nil then text = pair[2] end
+				texts[index] = text or false
+			end
+			lineTexts[name] = texts
+			rawset(ns.COMPANION_POOLS, name, nil)
+		end
+		return nil
+	end
+	local FR, EN, POOLS = {}, {}, {}
+	for name, lines in pairs(P) do
+		local keys = {}
+		for index, pair in ipairs(lines) do
+			local key = LineKey(name, index)
+			-- deux réservoirs aux noms voisins ne doivent jamais se marcher dessus
+			if unique and FR[key] ~= nil then error("CompanionLines: clé en double " .. key) end
+			FR[key], EN[key] = pair[1], pair[2]
+			keys[index] = key
+		end
+		POOLS[name] = keys
+	end
+	ns.RegisterStrings(FR, EN)
+	for name, keys in pairs(POOLS) do rawset(ns.COMPANION_POOLS, name, keys) end
+	-- même registre pour toutes les répliques (contrôle de parité fr/en)
+	local shared = ns.COMPANION_LINE_STRINGS
+	if type(shared) == "table" then
+		for key, text in pairs(FR) do shared.fr[key], shared.en[key] = text, EN[key] end
+	end
+	return POOLS, FR, EN
+end
+
+if ns.KEEP_STRINGS then ns.COMPANION_LINE_STRINGS = { fr = {}, en = {} } end   -- exposé aux tests (parité fr/en)
+ns.RegisterCompanionLines(P, true)
 
 if ns.Mark then ns.Mark("CompanionLines") end

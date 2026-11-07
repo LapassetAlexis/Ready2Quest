@@ -84,24 +84,8 @@ local P = {
 		{ "Les trois de la semaine ! Un sifflet de dompteur, rien que ça !", "All three weekly missions! A tamer's whistle, no less!" },
 	},
 }
-local LINES_FR, LINES_EN, POOLS = {}, {}, {}
-for name, lines in pairs(P) do
-	local keys = {}
-	for index, pair in ipairs(lines) do
-		local key = "COMP_SAY_" .. name .. (index > 1 and ("_" .. index) or "")
-		LINES_FR[key], LINES_EN[key] = pair[1], pair[2]
-		keys[index] = key
-	end
-	POOLS[name] = keys
-end
-ns.RegisterStrings(LINES_FR, LINES_EN)
-if type(ns.COMPANION_POOLS) == "table" then
-	for name, keys in pairs(POOLS) do ns.COMPANION_POOLS[name] = keys end
-end
-local shared = ns.COMPANION_LINE_STRINGS
-if type(shared) == "table" then
-	for key, text in pairs(LINES_FR) do shared.fr[key], shared.en[key] = text, LINES_EN[key] end
-end
+-- enregistrement commun (CompanionLines.lua) ; listes de clés en test seulement
+local POOLS = ns.RegisterCompanionLines(P)
 ns.WEEKLY_POOLS = POOLS
 
 local function Call(fn, ...)
