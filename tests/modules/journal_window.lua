@@ -27,6 +27,18 @@ do
 	data.appearance = "whelp_green"
 	NS:ToggleJournal(true)
 	local f = NS.journalFrame
+	do
+		local gear = f.settingsButton
+		Check("[JRN] roue crantée dans l'en-tête, à gauche du ×", gear and gear:IsShown() ~= false
+			and select(2, gear:GetPoint()) == f.close and select(1, gear:GetPoint()) == "RIGHT",
+			tostring(gear and gear:IsShown()) .. " / " .. tostring(gear and select(1, gear:GetPoint())) .. " / " .. tostring(gear and select(2, gear:GetPoint()) == f.close))
+		if NS.optionsFrame then NS.optionsFrame:Hide() end
+		gear:Click()
+		Check("[JRN] roue : ouvre les réglages de QuestCompanion", NS.optionsFrame ~= nil and NS.optionsFrame:IsShown())
+		NS.optionsFrame:Hide()
+		NS:ToggleJournal(true)
+		f = NS.journalFrame
+	end
 	Check("[COLL] plus d'onglet Collection : l'ancien nom mène au Compagnon", f.sections.collection == nil and (function()
 		NS:SelectJournalKind("collection"); return f.kind == "evolution" and f.evo:IsShown()
 	end)())

@@ -7,6 +7,7 @@
 - **Le choix au filet** : un petit panneau en bois à côté du filet, du côté où il y a la place, toujours dans l'écran. Il montre le filet dans son cadre doré, « N CRÉATURES DANS LE FILET » et deux boutons dorés : « Capturer : … » (brillante, chance dessous) et « Tout capturer (N) » (ce que coûte chaque essai), puis les raccourcis.
 - **Tout capturer** : grande fenêtre en bois, plaque « TOUT CAPTURER » / « Captures : N », l'aide et Arrêter / Fermer dessous. Chaque créature apparaît dans le cadre d'icône doré des hauts faits. La volée de filets est la même ; au verdict, un bouclier d'or ou gris s'affiche au coin, avec les étoiles ou « échappée ». La brillante tombe toujours en dernier, avec sa lueur dorée.
 - **Sobre et repli** : en style Sobre, ces fenêtres ne changent pas. Si le client n'a pas le cadre en bois, elles restent en Sobre, et les bandeaux gardent le style Azeroth. Un changement de style pendant une scène s'applique à la suivante.
+- **Roue crantée** dans l'en-tête du carnet, à gauche du × : elle ouvre les réglages de QuestCompanion.
 
 *English:* the capture windows get the Azeroth look: achievement wood frame, title plate, achievement-banner verdict (gold or grey shield, bling), golden buttons in the net chooser (placed beside the net, kept on screen), achievement icon frames and shields in Capture all. The "Captured!" toast no longer repeats a verdict the Azeroth scene already showed. Plain style unchanged; falls back to Plain if the wood atlases are missing.
 

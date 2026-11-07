@@ -25,6 +25,7 @@ local PART_TAB = { villages = "explore", bestiary = "combat", named = "combat", 
 local FR = {
 	JRN_SEC_evolution      = "Compagnon",
 	JRN_SEC_memories       = "Souvenirs",
+	JRN_SETTINGS_TIP       = "Réglages de QuestCompanion",
 	JRN_ZONE_PICK          = "Zone : %s",
 	JRN_ZONE_HERE          = "%s (ici)",
 	JRN_ZONE_NONE          = "Aucune zone pour l'instant : explore, ton carnet se remplit tout seul.",
@@ -91,6 +92,7 @@ local FR = {
 local EN = {
 	JRN_SEC_evolution      = "Companion",
 	JRN_SEC_memories       = "Memories",
+	JRN_SETTINGS_TIP       = "QuestCompanion settings",
 	JRN_ZONE_PICK          = "Zone: %s",
 	JRN_ZONE_HERE          = "%s (here)",
 	JRN_ZONE_NONE          = "No zone yet: explore, your journal fills itself.",
@@ -1400,6 +1402,15 @@ function ns:EnsureJournalWindow()
 
 	if frame.EnableMouseWheel then frame:EnableMouseWheel(true) end
 	frame:SetScript("OnMouseWheel", function(_, delta) ns:ScrollJournal(delta) end)
+	-- Roue crantée dans l'en-tête, à gauche du × : les réglages de l'addon
+	if Theme.CreateGearButton and frame.close then
+		frame.settingsButton = Theme.CreateGearButton(frame, 22, function() ns:ToggleOptions() end, L.JRN_SETTINGS_TIP)
+		frame.settingsButton:SetPoint("RIGHT", frame.close, "LEFT", -8, 0)
+		frame.settingsButton:Show()
+		if frame.settingsButton.SetFrameLevel and frame.close.GetFrameLevel then
+			frame.settingsButton:SetFrameLevel(tonumber(frame.close:GetFrameLevel()) or 20)
+		end
+	end
 	frame.closeButton = Theme.CreateButton(frame.footer, "auto", 28, L.OPT_CLOSE, function() frame:Hide() end, "accent")
 	frame.closeButton:SetPoint("RIGHT", frame.footer, "RIGHT", -PAD, 0)
 	frame:Hide()
