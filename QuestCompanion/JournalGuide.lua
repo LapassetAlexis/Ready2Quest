@@ -40,7 +40,7 @@ local FR = {
 	GUIDE_SEC_net          = "Le filet",
 	GUIDE_net_1            = "Plus de fenêtre qui s'ouvre toute seule. Quand un monstre abattu vaut le coup (une espèce qui manque à ta ménagerie, une brillante, ou un spécimen qui pourrait battre le tien), il tombe dans le filet posé à côté de ton compagnon.",
 	GUIDE_net_2            = "Un pack entier se met en file (%d monstres au plus) ; chacun y reste %d s à partir de la fin du combat. Le bouton montre leur nombre, devient doré si une brillante attend et bat quelques secondes quand un monstre arrive. Il reste à l'écran si le compagnon est masqué.",
-	GUIDE_net_3            = "Clic : la capture du meilleur candidat (brillante, puis espèce nouvelle, puis le plus rare, puis une amélioration d'étoiles). Clic droit : la liste, pour en choisir un, choisir une aide ou tout ignorer ; elle se referme d'elle-même quand le filet part, par son « × » ou par Échap. /qc filet fait la même chose.",
+	GUIDE_net_3            = "Clic : la capture du meilleur candidat (brillante, puis espèce nouvelle, puis le plus rare, puis une amélioration d'étoiles). Clic droit : la liste, pour en choisir un, choisir une aide ou tout ignorer ; elle se referme d'elle-même quand le filet part, par son « × » ou par Échap. /qc filet fait la même chose. Dès que deux créatures attendent, « Tout capturer » (dans la liste ou le bandeau, /qc filet tout) les tente toutes d'un coup : une grille de cartes se retourne, brillantes et espèces nouvelles en dernier.",
 	GUIDE_net_4            = "Le bandeau « Capture possible » nomme la créature dès qu'elle peut être capturée, dit si tu as déjà l'espèce (et avec combien d'étoiles), ta chance, et « et N de plus » s'il y en a plusieurs. Clic dessus : le filet ; clic droit : la liste ; Ignorer la sort du filet ; Sourdine coupe bandeau et sons pendant %s (/qc filet sourdine [min|off]). Un carillon l'accompagne (réglage %s).",
 	GUIDE_net_5            = "La scène de capture se joue (réglage %s) et se referme seule après le verdict ; un clic ou Échap la ferment avant. Ta chance dépend du rang (normal %d %%, élite %d %%, rare %d %%, boss %d %%) et de l'écart de niveau ; les aides la multiplient : %s, %s, %s. Elles tombent des tampons du carnet, des paliers de zone et des missions.",
 	GUIDE_SEC_stars        = "Les étoiles",
@@ -73,11 +73,12 @@ local FR = {
 	GUIDE_SEC_card         = "Fiche de dresseur",
 	GUIDE_card_1           = "Ta fiche de dresseur montre ton titre, ton compagnon en 3D avec ses effets, une vitrine de 3 créatures que tu choisis, tes chiffres (espèces, brillantes capturées et reconnues, sceaux) et les badges de tes sceaux par continent. Rien de privé.",
 	GUIDE_card_2           = "/qc fiche ouvre la tienne (c'est là que tu choisis ta vitrine) ; /qc fiche <nom> demande celle d'un autre joueur. Les joueurs qui ont l'addon ont « %s » dans le menu du clic droit (seulement pour les joueurs connus comme détenteurs) et une ligne « %s » dans leur infobulle.",
+	GUIDE_card_4           = "Tes exploits partent aussi à ta guilde : brillante, élite, rare ou boss capturé, sceau de zone, palier d'espèces et titre. Chez les guildeux qui ont QuestCompanion, un bandeau « GUILDE » l'annonce ; un clic ouvre ta fiche. Réglages : « Annoncer mes exploits à la guilde », « Voir les exploits de la guilde ».",
 	GUIDE_card_3           = "Partagée par défaut ; coupe « %s » dans les réglages (page Au jour le jour) : ta fiche n'est envoyée à personne et l'addon reste muet. Les échanges passent par des messages d'addon invisibles, jamais en combat.",
 	GUIDE_SEC_settings     = "Réglages et commandes",
 	GUIDE_settings_1       = "Page Au jour le jour : %s (tout coupe, infobulle comprise) · %s · %s · %s · %s · %s · %s.",
 	GUIDE_settings_2       = "Page Compagnon de route : %s (%s), pour que la créature remplisse son cadre à l'écran, même une bête capturée de taille réelle ; la réglette %s (Muet coupe aussi les tutoriels).",
-	GUIDE_settings_3       = "Commandes : /qc filet (capture le meilleur candidat), /qc filet sourdine [min|off], /qc capture (ta ménagerie et tes aides), /qc fiche [nom] (fiche de dresseur), /qc compagnon tuto menagerie (revoir ce tutoriel), /qc compagnon tuto (le tutoriel de base).",
+	GUIDE_settings_3       = "Commandes : /qc filet (capture le meilleur candidat), /qc filet tout (tout capturer), /qc filet sourdine [min|off], /qc capture (ta ménagerie et tes aides), /qc fiche [nom] (fiche de dresseur), /qc compagnon tuto menagerie (revoir ce tutoriel), /qc compagnon tuto (le tutoriel de base).",
 	GUIDE_settings_4       = "Le tutoriel de la ménagerie se joue une fois par personnage, à ta première occasion de capture : ton compagnon te guide jusqu'au clic sur le filet, laisse la scène se jouer, puis t'explique le reste. Jamais en combat, jamais si la capture est coupée. Le bouton « %s », en bas à gauche, le rejoue.",
 }
 local EN = {
@@ -100,7 +101,7 @@ local EN = {
 	GUIDE_SEC_net          = "The net",
 	GUIDE_net_1            = "No more pop-up. When a defeated monster is worth capturing (a species missing from your menagerie, a shiny, or a specimen that could beat yours), it lands in the net beside your companion.",
 	GUIDE_net_2            = "Whole packs queue up (%d monsters at most); each one stays %d s from the end of the fight. The button shows their count, turns gold when a shiny is waiting and pulses for a few seconds when a monster arrives. It stays on screen when the companion is hidden.",
-	GUIDE_net_3            = "Click: captures the best candidate (shiny, then new species, then rarest, then a star upgrade). Right-click: the list, to pick one, choose an aid or ignore them all; it closes by itself when the net goes, with its \"×\" or with Escape. /qc filet does the same.",
+	GUIDE_net_3            = "Click: captures the best candidate (shiny, then new species, then rarest, then a star upgrade). Right-click: the list, to pick one, choose an aid or ignore them all; it closes by itself when the net goes, with its \"×\" or with Escape. /qc filet does the same. As soon as two creatures wait, \"Capture all\" (in the list or the banner, /qc filet tout) tries them all at once: a grid of cards flips over, shinies and new species last.",
 	GUIDE_net_4            = "The \"Capture possible\" banner names the creature as soon as it can be captured, says whether you already own the species (and with how many stars), your odds, and \"and N more\" when several wait. Click it: the net; right-click: the list; Ignore drops it from the net; Mute silences banner and sounds for %s (/qc filet sourdine [min|off]). A chime comes with it (%s setting).",
 	GUIDE_net_5            = "The capture scene plays (%s setting) and closes by itself after the verdict; a click or Escape closes it sooner. Your odds depend on the rank (normal %d%%, elite %d%%, rare %d%%, boss %d%%) and the level gap; aids multiply them: %s, %s, %s. They drop from journal stamps, zone milestones and missions.",
 	GUIDE_SEC_stars        = "Stars",
@@ -133,11 +134,12 @@ local EN = {
 	GUIDE_SEC_card         = "Trainer card",
 	GUIDE_card_1           = "Your trainer card shows your title, your companion in 3D with its effects, a showcase of 3 creatures you choose, your numbers (species, shinies captured and known, seals) and your seal badges per continent. Nothing private.",
 	GUIDE_card_2           = "/qc fiche opens yours (that is where you pick your showcase); /qc fiche <name> asks for another player's. Players who have the addon get \"%s\" in the right-click menu (only for players known to have it) and a \"%s\" line in their tooltip.",
+	GUIDE_card_4           = "Your feats also go to your guild: shiny, elite, rare or boss captured, zone seal, species milestone and title. Guildmates running QuestCompanion see a \"GUILD\" banner; a click opens your card. Settings: \"Announce my feats to the guild\", \"Show guild feats\".",
 	GUIDE_card_3           = "Shared by default; turn off \"%s\" in the settings (Day by day page): your card is sent to nobody and the addon stays silent. Exchanges go through invisible addon messages, never in combat.",
 	GUIDE_SEC_settings     = "Settings and commands",
 	GUIDE_settings_1       = "Day by day page: %s (turns everything off, tooltip included) · %s · %s · %s · %s · %s · %s.",
 	GUIDE_settings_2       = "Road companion page: %s (%s), so the creature fills its on-screen frame, even a life-size captured beast; the %s slider (Silent also turns the tutorials off).",
-	GUIDE_settings_3       = "Commands: /qc filet (captures the best candidate), /qc filet sourdine [min|off], /qc capture (your menagerie and aids), /qc fiche [name] (trainer card), /qc compagnon tuto menagerie (replay this tutorial), /qc compagnon tuto (the base tutorial).",
+	GUIDE_settings_3       = "Commands: /qc filet (captures the best candidate), /qc filet tout (capture all), /qc filet sourdine [min|off], /qc capture (your menagerie and aids), /qc fiche [name] (trainer card), /qc compagnon tuto menagerie (replay this tutorial), /qc compagnon tuto (the base tutorial).",
 	GUIDE_settings_4       = "The menagerie tutorial plays once per character, at your first capture opportunity: your companion guides you to the click on the net, lets the scene play, then explains the rest. Never in combat, never when capture is off. The \"%s\" button, bottom left, replays it.",
 }
 ns.RegisterStrings(FR, EN)
@@ -319,6 +321,7 @@ function BUILD.card(self)
 		P(L.GUIDE_card_1),
 		P(self:F("GUIDE_card_2", L.TRAINER_MENU, L.TRAINER_TOOLTIP)),
 		P(self:F("GUIDE_card_3", L.OPT_DAILY_TRAINER)),
+		P(L.GUIDE_card_4),
 	}
 end
 

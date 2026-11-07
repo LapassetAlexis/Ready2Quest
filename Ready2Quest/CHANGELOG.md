@@ -3,6 +3,7 @@
 ## 1.29.3
 
 - **Plus léger** : seule la langue de ton client reste en mémoire (0,77 Mo au lieu de 0,89 Mo).
+- **Buffs qui se remplacent** : une seule bénédiction de paladin, une armure de mage, une peau de démoniste, un bouclier de chaman, un cri de guerrier, un aspect de chasseur, un feu intérieur, une forme de druide… Si l'un est actif, les autres ne sont plus « manquants » ; sinon seul le dernier que tu avais est réclamé.
 
 ## 1.29.2
 
