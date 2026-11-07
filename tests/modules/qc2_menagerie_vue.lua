@@ -135,7 +135,7 @@ do
 	text = Lines(p)
 	Check("[MV] fiche croisée : nom, niveau, modèle, abattues", p.title.text == "Golem de fer" and text:find("16", 1, true)
 		and text:find(NS:F("JRN_MEN_KILLED", 2), 1, true) and p.model.creature == 3204, text)
-	Check("[MV] fiche croisée : effets de chasse cachés", not text:find("Chasse", 1, true), text)
+	Check("[MV] fiche croisée : effets de chasse et de confort visibles", text:find("Chasse", 1, true) ~= nil, text)
 	seen.hooks.OnEnter(seen)
 	Check("[MV] brillante reconnue : bouton « Version brillante »", p.variant:IsShown()
 		and Lines(p):find("Brillante repérée", 1, true) ~= nil, Lines(p))

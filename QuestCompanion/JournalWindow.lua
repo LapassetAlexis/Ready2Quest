@@ -1730,7 +1730,7 @@ function ns:JournalPreviewMenagerie(entry, keep)
 	end
 	-- 2.4 : trois paliers. Jamais croisée : verrouillée (ni nom, ni niveau, ni
 	-- modèle ; la zone où la chercher). Croisée : nom, niveaux, modèle,
-	-- abattues, chance. Capturée : tout, effets de chasse et de confort compris.
+	-- abattues, chance. Capturée : tout (les effets de chasse et de confort se voient dès la croisée).
 	if not entry.known then
 		local lines = { L.MENV_LOCKED }
 		if entry.zoneID then lines[#lines + 1] = self:F("JRN_MEN_ZONE", ZoneName(self, entry.zoneID)) end
@@ -1743,8 +1743,8 @@ function ns:JournalPreviewMenagerie(entry, keep)
 	local lines = { self:F("JRN_MEN_RANK", rank, LevelText(entry)) }
 	if entry.zoneID then lines[#lines + 1] = self:F("JRN_MEN_ZONE", ZoneName(self, entry.zoneID)) end
 	-- « Chasse : … / Confort : … » de cette créature (CompanionEffects.lua) :
-	-- dévoilés une fois capturée
-	if entry.captured and self.CompanionEffectsLines then
+	-- dès qu'elle est croisée, pour choisir quoi capturer
+	if self.CompanionEffectsLines then
 		for _, line in ipairs(self:CompanionEffectsLines(entry, shinyView)) do lines[#lines + 1] = line end
 	end
 	local function Day(at)

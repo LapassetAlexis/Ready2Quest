@@ -298,10 +298,10 @@ do
 	-- B : espèce déjà capturée (1 étoile) -> amélioration, pas gardée
 	NS:CaptureData().creatures[6501] = { name = "Connu", class = "normal", normal = true, stars = 1, at = 1 }
 	NS:CaptureData().count = (NS:CaptureData().count or 0) + 1
-	LOT.SeeKill(6500, { name = "Nouveau rare", class = "rare" })     -- nouvelle espèce, capturée : gardée
+	LOT.SeeKill(6500, { name = "Nouveau rare", class = "rare" })     -- nouvelle espèce, capturée : dans la vague
 	LOT.SeeKill(6501, { name = "Connu" })
 	LOT.SeeKill(6502, { name = "Fuyard", class = "elite" })        -- échappée
-	LOT.SeeKill(6503, { name = "Nouveau" })                         -- nouvelle espèce, capturée : gardée
+	LOT.SeeKill(6503, { name = "Nouveau" })                         -- nouvelle espèce, capturée : dans la vague
 	LOT.OfferShiny(6504, "Brillant")                                -- brillante : la toute dernière
 	local chance = NS.CaptureChance
 	NS.CaptureChance = function(self, info, aid, ...)
@@ -313,8 +313,10 @@ do
 	NS.CaptureChance = chance
 	local order = {}
 	for _, card in ipairs(batch.order) do order[#order + 1] = card.result.target.npcID end
-	Check("[LOT] ordinaires d'abord, puis les gardées, de la plus modeste à la plus belle",
-		table.concat(order, ",") == "6501,6502,6503,6500,6504", table.concat(order, ","))
+	-- seules les brillantes sont gardées pour la fin (les espèces nouvelles restent dans la vague)
+	Check("[LOT] la vague d'abord (espèces nouvelles comprises), la brillante gardée pour la fin",
+		table.concat(order, ",") == "6500,6501,6502,6503,6504" and not batch.order[1].special and batch.order[5].special,
+		table.concat(order, ","))
 	local lastWave, firstSpecial = 0, math.huge
 	for _, card in ipairs(batch.order) do
 		if card.special then firstSpecial = math.min(firstSpecial, card.flipAt) else lastWave = math.max(lastWave, card.flipAt) end
@@ -338,12 +340,12 @@ do
 	Run(firstSpecial - 0.03 - (NS.Now() - batch.startedAt), 0.01)
 	local waveDone = true
 	for _, card in ipairs(batch.order) do if not card.special and not card.revealed then waveDone = false end end
-	Check("[LOT] la vague finie, toujours aucune gardée retournée", waveDone and not batch.order[3].faced)
+	Check("[LOT] la vague finie, toujours aucune gardée retournée", waveDone and not batch.order[5].faced)
 	Run(12, 0.01)
 	Check("[LOT] tout est retourné, la brillante en dernier", batch.done and batch.order[5].revealed
 		and batch.order[5].result.target.shiny)
-	Check("[LOT] gardées : leur musique (fanfare pour la brillante)", Count(LOT.sounds, NS.CAPTURE_SOUNDS.shiny) == 1
-		and Count(LOT.sounds, NS.CAPTURE_SOUNDS.ok) == 2, table.concat(LOT.sounds, ","))
+	Check("[LOT] gardée : la fanfare pour la brillante", Count(LOT.sounds, NS.CAPTURE_SOUNDS.shiny) == 1,
+		table.concat(LOT.sounds, ","))
 	Check("[LOT] la brillante : halo doré", batch.order[5].tile.halo:IsShown())
 	-- le bruit des cartes : pas plus d'un toutes les 0,06 s
 	LOT.Reset()

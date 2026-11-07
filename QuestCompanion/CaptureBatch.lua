@@ -10,8 +10,8 @@
 --     tutoriel…). Rien n'est recopié ici ;
 --   * les verdicts tombent TOUS d'abord et sont enregistrés tout de suite ;
 --     la scène ne fait que les montrer : une grille de cartes face cachée,
---     retournées en vague diagonale, les brillantes et les espèces nouvelles
---     gardées pour la fin, de la plus modeste à la plus belle ;
+--     retournées en vague diagonale, les brillantes gardées pour la fin, de
+--     la plus modeste à la plus belle ;
 --   * l'aide choisie sert à chaque essai, comme pour un lancer seul ; s'il
 --     n'en reste pas assez pour tous, on tente ceux qu'elle couvre (dans
 --     l'ordre de la file) et les autres restent dans le filet ;
@@ -133,9 +133,10 @@ local function Strength(result)
 	return (target.shiny and 1000 or 0) + (result.fresh and 100 or 0)
 		+ (RANK_ORDER[target.class] or 1) * 10 + (tonumber(result.stars) or 0)
 end
--- Une brillante ou une espèce nouvelle capturée : retournée à la fin
+-- Une brillante capturée : retournée à la fin (les espèces nouvelles, la
+-- plupart du filet, se retournent dans la vague : elle garde son effet)
 local function Special(result)
-	return result.success and (result.target.shiny or result.fresh) and true or false
+	return result.success and result.target.shiny and true or false
 end
 ns.CaptureBatchStrength, ns.CaptureBatchSpecial = Strength, Special
 
