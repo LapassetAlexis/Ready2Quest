@@ -13,7 +13,7 @@ function RF.Reset()
 		if NS[field] then NS[field]:Hide() end
 		NS[field] = nil
 	end
-	NS.companionRT, NS.companionSession, NS.memoryState = nil, nil, nil
+	NS.companionRT, NS.companionSession = nil, nil
 	NS:CompanionData().tutoDone = true
 	NS:TreatData().treatsInit = true
 	NS:CompanionUpdateVisibility()
@@ -62,7 +62,7 @@ do
 end
 
 do
-	Say("-- relecture : PNJ, photos, conseils")
+	Say("-- relecture : PNJ, conseils")
 	RF.Reset()
 	-- « parle à N personnes » : un PNJ compte une fois
 	local daily = NS:DailyData()
@@ -74,17 +74,6 @@ do
 	NS:CompanionOnNpc("quest")
 	Check("[FIX] même PNJ, deux fenêtres : compté une fois", daily.missions[1].have == 1, daily.missions[1].have)
 	_G.UnitGUID = RF.saved.UnitGUID
-	-- photos : une question laissée ouverte (rechargement) revient
-	if NS.photoPrompt then NS.photoPrompt:Hide() end
-	NS.photoPrompt = nil
-	NS:DB().companionPhotos, NS:DB().companionPhotosAsked = false, "asking"
-	NS.memoryState = nil
-	NS:MemoryWantPhoto({ kind = "level" })
-	local function Asked() return NS.photoPrompt and NS.photoPrompt.asks or 0 end
-	Check("[FIX] question des photos perdue au rechargement : redemandée", Asked() == 1)
-	NS:MemoryWantPhoto({ kind = "level" })
-	Check("[FIX] … mais pas deux fois dans la même session", Asked() == 1)
-	NS.photoPrompt:Hide()
 	-- conseils : un élite vu en plein combat n'est pas annoncé après
 	_G.IsInInstance = function() return false, "none" end
 	_G.UnitExists = function() return true end

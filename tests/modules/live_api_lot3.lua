@@ -241,30 +241,27 @@ do
 	Check("[THR] R2Q camp : au plus 4 par seconde", campCalls >= 3 and campCalls <= 4, campCalls)
 	NS.UpdateCampFrame = camp
 
-	-- QC : brillants (0,1 s), souvenirs (0,1 s), annonces (0,2 s)
-	local counts = { shiny = 0, aura = 0, photo = 0, flush = 0, glow = 0 }
-	local saved = { QNS.ChestRevealStep, QNS.ShinyAuraTick, QNS.MemoryPhotoStep, QNS.NotifyFlush, QNS.GlowUpdate }
+	-- QC : brillants (0,1 s), annonces (0,2 s)
+	local counts = { shiny = 0, aura = 0, flush = 0, glow = 0 }
+	local saved = { QNS.ChestRevealStep, QNS.ShinyAuraTick, QNS.NotifyFlush, QNS.GlowUpdate }
 	QNS.ChestRevealStep = function() counts.shiny = counts.shiny + 1 end
 	QNS.ShinyAuraTick = function() counts.aura = counts.aura + 1 end
-	QNS.MemoryPhotoStep = function() counts.photo = counts.photo + 1 end
 	QNS.NotifyFlush = function() counts.flush = counts.flush + 1 end
 	QNS.GlowUpdate = function() counts.glow = counts.glow + 1 end
-	for _, frame in ipairs({ QNS.shinyEventFrame, QNS.memoryEventFrame, QNS.notifyEventFrame }) do
+	for _, frame in ipairs({ QNS.shinyEventFrame, QNS.notifyEventFrame }) do
 		frame.scripts.OnUpdate(frame, 1)
 	end
 	for key in pairs(counts) do counts[key] = 0 end
 	for _ = 1, 60 do
-		for _, frame in ipairs({ QNS.shinyEventFrame, QNS.memoryEventFrame, QNS.notifyEventFrame }) do
+		for _, frame in ipairs({ QNS.shinyEventFrame, QNS.notifyEventFrame }) do
 			frame.scripts.OnUpdate(frame, 1 / 60)
 		end
 	end
 	Check("[THR] QC coffre et aura : au plus 10 par seconde", counts.shiny >= 8 and counts.shiny <= 10
 		and counts.aura == counts.shiny, counts.shiny)
-	Check("[THR] QC photo : au plus 10 par seconde", counts.photo >= 8 and counts.photo <= 10, counts.photo)
 	Check("[THR] QC annonces en attente : au plus 5 par seconde", counts.flush >= 4 and counts.flush <= 5, counts.flush)
 	Check("[THR] QC éclat du liseré : à chaque image", counts.glow == 60, counts.glow)
-	QNS.ChestRevealStep, QNS.ShinyAuraTick, QNS.MemoryPhotoStep, QNS.NotifyFlush, QNS.GlowUpdate =
-		saved[1], saved[2], saved[3], saved[4], saved[5]
+	QNS.ChestRevealStep, QNS.ShinyAuraTick, QNS.NotifyFlush, QNS.GlowUpdate = saved[1], saved[2], saved[3], saved[4]
 
 	-- éclat éteint et déjà caché : on ne touche plus aux bords
 	local hides = 0

@@ -509,8 +509,8 @@ do
 		and prog:IsShown() and not f.evo:IsShown())
 	Check("[WIN] titre : la zone, marquée « ici », et ses niveaux", prog.name.text == "Les Tarides (ici)"
 		and prog.levels.text == "niveaux 10-25", prog.name.text .. " / " .. prog.levels.text)
-	Check("[WIN] menu : Compagnon, Ménagerie, Missions, Complétion, Souvenirs", f.sections.progress and f.sections.menagerie
-		and f.sections.evolution and f.sections.memories and f.sections.day and f.sections.collection == nil
+	Check("[WIN] menu : Compagnon, Ménagerie, Missions, Complétion (plus de Souvenirs)", f.sections.progress and f.sections.menagerie
+		and f.sections.evolution and f.sections.memories == nil and f.sections.day and f.sections.collection == nil
 		and f.sections.evolution.text.text == "Compagnon")
 	Check("[WIN] la Complétion allume son entrée du menu", f.sections.progress.selected and not f.sections.evolution.selected)
 	-- le Combat n'est plus une part de la zone : il vit dans la Ménagerie

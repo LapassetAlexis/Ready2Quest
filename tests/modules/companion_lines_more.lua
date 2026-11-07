@@ -19,7 +19,7 @@ end
 -- réservoirs dont l'argument EST le message (niveau, stade, tampon…) : toutes
 -- les lignes le reprennent, comme la première
 local STRICT = { HELLO = true, LEVEL = true, READY = true, CHEST = true, EVOLVE = true, UNLOCK = true,
-	STAMP = true, RECALL = true, ANNIV = true, GOAL = true, GOAL_STAGE = true }
+	STAMP = true, GOAL = true, GOAL_STAGE = true }
 local function Strict(pool)
 	return STRICT[pool] or pool:find("^ADVICE_") ~= nil or pool:find("^GROUP_") ~= nil
 end

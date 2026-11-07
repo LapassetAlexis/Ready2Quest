@@ -9,7 +9,6 @@
 --   hearts   petits cœurs (caresse)
 --   crumbs   miettes (repas)
 --   alert    « ! » au-dessus de lui (conseil de route)
---   flash    éclair blanc (photo souvenir)
 --   zzz      « Zzz » qui montent (il dort au camp)
 -- Les vraies animations de la créature s'y ajoutent quand elle les joue :
 -- /qc compagnon anim les fait défiler, et « /qc compagnon anim non <nom> »
@@ -52,7 +51,6 @@ local FX = {
 	hearts = { duration = 1.6, count = 4, color = { 1.0, 0.45, 0.65 } },
 	crumbs = { duration = 1.2, count = 5, color = { 0.78, 0.58, 0.32 } },
 	alert  = { duration = 2.0 },
-	flash  = { duration = 0.5 },
 	zzz    = { duration = 2.4, count = 2 },
 }
 ns.COMPANION_FX = FX
@@ -107,16 +105,6 @@ function ns:CompanionFx(kind)
 	local now, state = Clock(), State(self)
 	if kind == "bounce" or kind == "shake" then
 		state.motion = { kind = kind, at = now, untilAt = now + def.duration }
-	elseif kind == "flash" then
-		if not frame.flash then
-			frame.flash = frame:CreateTexture(nil, "OVERLAY")
-			frame.flash:SetAllPoints()
-			frame.flash:SetTexture(Theme.SOLID)
-		end
-		frame.flash:SetVertexColor(1, 1, 1, 1)
-		frame.flash:SetAlpha(0.9)
-		frame.flash:Show()
-		state.flashUntil = now + def.duration
 	elseif kind == "alert" then
 		if not frame.alert then
 			frame.alert = frame:CreateTexture(nil, "OVERLAY")
@@ -194,14 +182,6 @@ function ns:CompanionFxUpdate(now)
 		end
 	end
 	for index = #particles, kept + 1, -1 do particles[index] = nil end
-	if frame.flash and state.flashUntil then
-		if now >= state.flashUntil then
-			frame.flash:Hide()
-			state.flashUntil = nil
-		else
-			frame.flash:SetAlpha(0.9 * (state.flashUntil - now) / FX.flash.duration)
-		end
-	end
 	if frame.alert and state.alertUntil and now >= state.alertUntil then
 		frame.alert:Hide()
 		state.alertUntil = nil

@@ -24,7 +24,6 @@ local PART_TAB = { villages = "explore", bestiary = "combat", named = "combat", 
 
 local FR = {
 	JRN_SEC_evolution      = "Compagnon",
-	JRN_SEC_memories       = "Souvenirs",
 	JRN_SETTINGS_TIP       = "Réglages de QuestCompanion",
 	JRN_ZONE_PICK          = "Zone : %s",
 	JRN_ZONE_HERE          = "%s (ici)",
@@ -91,7 +90,6 @@ local FR = {
 }
 local EN = {
 	JRN_SEC_evolution      = "Companion",
-	JRN_SEC_memories       = "Memories",
 	JRN_SETTINGS_TIP       = "QuestCompanion settings",
 	JRN_ZONE_PICK          = "Zone: %s",
 	JRN_ZONE_HERE          = "%s (here)",
@@ -321,7 +319,6 @@ end
 --              Combat / Métiers / Quêtes ; fiches du bestiaire et aperçu 3D
 --   Jour       missions, carte des auberges, garde-manger (Daily.lua)
 --   Collection apparences, ornements, cadres, fonds : clic = équiper
---   Souvenirs  l'album (Memories.lua)
 -- Le garde-manger (Treats.lua) est aussi dans le pied, quelle que soit la page.
 -- ---------------------------------------------------------------------------
 local NAV_W, FOOTER_H = 220, 56
@@ -346,10 +343,11 @@ local LIST_W = math.floor((INNER - (LIST_COLS - 1) * 12) / LIST_COLS)
 -- la Créature d'abord : c'est elle, le cœur de l'addon
 -- 1.4.0 : la Ménagerie (Pokédex des captures) juste après la Créature
 -- la fiche d'une zone (« completion ») s'ouvre depuis Zones : pas d'entrée à elle
--- 1.5.0 : cinq pages. « progress » (Complétion : zones et fiche de zone) et
--- l'album viennent d'ailleurs (ns.JOURNAL_PANES) ; Collection rejoint Compagnon
+-- 1.5.0 : « progress » (Complétion : zones et fiche de zone) vient d'ailleurs
+-- (ns.JOURNAL_PANES) ; Collection rejoint Compagnon
 -- 2.3.0 : « guide » (la ménagerie expliquée, JournalGuide.lua), en dernier
-local SECTIONS = { "evolution", "menagerie", "day", "progress", "memories", "guide" }
+-- 2.6.0 : plus de page « Souvenirs » (l'album est retiré)
+local SECTIONS = { "evolution", "menagerie", "day", "progress", "guide" }
 local MEN_STATES = { "all", "captured", "missing", "tokill", "shiny" }
 local MEN_RANKS = { "all", "normal", "elite", "rare", "boss" }
 local MEN_SORTS = { "no", "name", "level", "rank", "kills", "date" }
@@ -481,7 +479,6 @@ local FR2 = {
 	JRN_ZONE_STEP_NEXT     = "Zone suivante",
 	JRN_SUB_day            = "Missions du compagnon, du jour et de la semaine : de quoi nourrir ta créature et capturer.",
 	JRN_SUB_collection     = "Ce que la route t'a fait gagner : clic pour l'équiper.",
-	JRN_SUB_memories       = "Les grands moments de la route, dans l'ordre.",
 }
 local EN2 = {
 	JRN_FILTER_all         = "All",
@@ -593,7 +590,6 @@ local EN2 = {
 	JRN_ZONE_STEP_NEXT     = "Next zone",
 	JRN_SUB_day            = "Companion, daily and weekly missions: food for your creature and capture aids.",
 	JRN_SUB_collection     = "What the road has earned you: click to equip it.",
-	JRN_SUB_memories       = "The big moments of the road, in order.",
 }
 ns.RegisterStrings(FR2, EN2)
 for key, text in pairs(FR2) do FR[key], EN[key] = text, EN2[key] end
@@ -829,7 +825,7 @@ end
 
 -- Zones : filtres et tri, liste sur deux colonnes (nom, niveaux, état, %)
 -- Briques et mesures du carnet, pour les pages construites ailleurs
--- (ns.JOURNAL_PANES : JournalCompletion.lua, Memories.lua…)
+-- (ns.JOURNAL_PANES : JournalCompletion.lua, JournalGuide.lua…)
 ns.JournalUI = {
 	At = At, Text = Text, Tip = Tip, HideTip = HideTip, Panel = Panel, Chips = Chips, Pager = Pager,
 	BuildPreview = BuildPreview, PreviewSet = PreviewSet,
@@ -1366,8 +1362,7 @@ function ns:EnsureJournalWindow()
 	local y = -112
 	for _, section in ipairs(SECTIONS) do
 		local external = ns.JOURNAL_PANES[section]
-		local builtin = section == "evolution" or (section == "memories" and self.BuildMemoriesPane)
-			or (section == "day" and self.DailyData) or (section == "menagerie" and self.MenagerieList)
+		local builtin = section == "evolution" or (section == "day" and self.DailyData) or (section == "menagerie" and self.MenagerieList)
 		if external or builtin then
 			local item = Theme.CreateNavItem(nav, NAV_W - 1)
 			item:SetPoint("TOPLEFT", nav, "TOPLEFT", 0, y)
@@ -1396,8 +1391,6 @@ function ns:EnsureJournalWindow()
 		local ok, err = pcall(def.build, self, frame, content, ns.JournalUI)
 		if not ok and self.RecordError then self:RecordError("journal:" .. section, err) end
 	end
-	if self.BuildMemoriesPane then self:BuildMemoriesPane(frame, content, { pad = PAD, top = TOP, width = INNER,
-		pagerTop = PAGER_Y }) end
 	BuildPantry(self, frame)
 
 	if frame.EnableMouseWheel then frame:EnableMouseWheel(true) end
@@ -1422,15 +1415,14 @@ end
 -- ---------------------------------------------------------------------------
 -- Navigation
 -- ---------------------------------------------------------------------------
--- « goals » / « evolution » : Créature ; « memories », « zones »,
--- « collection » ; tout le reste : Zone (« completion », ou un ancien nom)
+-- « goals » / « evolution » : Créature ; « zones », « completion » : la
+-- Complétion ; tout le reste (« memories » d'avant la 2.6.0 compris) : Créature
 local function KindOf(frame, kind)
 	local external = ns.JOURNAL_PANES[kind]
 	if external and frame[external.field] then return kind end
 	-- anciens noms (Zones, Zone, Collection, Jour) : leur page d'aujourd'hui
 	local progress = ns.JOURNAL_PANES.progress
 	if (kind == "zones" or kind == "completion") and progress and frame[progress.field] then return "progress" end
-	if kind == "memories" and frame.mem then return "memories" end
 	if kind == "day" and frame.day then return "day" end
 	if kind == "menagerie" and frame.men then return "menagerie" end
 	return "evolution"
@@ -1465,8 +1457,6 @@ function ns:ScrollJournal(delta)
 	elseif ns.JOURNAL_PANES[frame.kind] then
 		local def = ns.JOURNAL_PANES[frame.kind]
 		if def.scroll then def.scroll(self, frame, delta) end
-	elseif frame.kind == "memories" then
-		frame.offset = (frame.offset or 0) - delta
 	else
 		frame.offset = (frame.offset or 0) - delta * (frame.step or 1)
 	end
@@ -1516,19 +1506,12 @@ end
 -- ---------------------------------------------------------------------------
 -- Rafraîchissement
 -- ---------------------------------------------------------------------------
--- Jours passés ensemble : depuis le premier souvenir (ou le premier passage
--- par cette page, pour un compagnon d'avant la 1.5.0)
+-- Jours passés ensemble : depuis le premier passage par cette page (la
+-- reprise de la 2.6.0, Core.lua, l'a recalé sur le plus vieux souvenir)
 function ns:CompanionSince()
 	local data = self:CompanionData()
 	if not tonumber(data.since) then
-		local oldest
-		local mem = self.MemoryData and self:MemoryData()
-		for _, memory in ipairs(mem and mem.memories or {}) do
-			local at = tonumber(memory.at)
-			if at and at > 0 and (not oldest or at < oldest) then oldest = at end
-		end
-		local now = tonumber((select(2, pcall(rawget(_G, "time") or function() return 0 end)))) or 0
-		data.since = oldest or now
+		data.since = tonumber((select(2, pcall(rawget(_G, "time") or function() return 0 end)))) or 0
 	end
 	return tonumber(data.since)
 end
@@ -2076,7 +2059,7 @@ local function RefreshPantry(self, frame)
 	end
 end
 
-local PANES = { day = "day", evolution = "evo", memories = "mem", menagerie = "men" }
+local PANES = { day = "day", evolution = "evo", menagerie = "men" }
 function ns:RefreshJournal()
 	local frame = self.journalFrame
 	if not frame then return end
@@ -2103,10 +2086,6 @@ function ns:RefreshJournal()
 		frame.header:SetSubtitle(def.subtitle and L[def.subtitle] or "")
 		local ok, err = pcall(def.refresh, self, frame, ns.JournalUI)
 		if not ok and self.RecordError then self:RecordError("journal:" .. section, err) end
-	elseif section == "memories" then
-		frame.header:SetTitle(L.JRN_SEC_memories)
-		frame.header:SetSubtitle(L.JRN_SUB_memories)
-		self:RefreshMemoriesPane(frame)
 	elseif section == "day" then
 		RefreshDay(self, frame)
 	elseif section == "menagerie" then

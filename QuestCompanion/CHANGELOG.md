@@ -1,5 +1,13 @@
 # QuestCompanion
 
+## 2.6.0 — sans Souvenirs
+
+- **Les Souvenirs s'en vont** : plus d'album dans le carnet, plus de photos (captures d'écran), plus de question d'accord pour les photos, plus d'anniversaires ni de souvenirs racontés à voix haute. La page de réglages « Souvenirs » disparaît aussi. Le carnet garde cinq pages : Compagnon, Ménagerie, Missions, Exploration, Guide.
+- **Sauvegarde nettoyée** : au premier chargement, une seule fois et sans rien dire, les données de l'album quittent ta sauvegarde, qui maigrit d'autant. Le compteur « jours ensemble » est gardé : il repart de ton plus vieux souvenir.
+- **Plus léger** : le module et trois décors peints qui ne servaient qu'aux photos sont retirés (environ 1,2 Mo de moins sur le disque, 60 Ko de moins en mémoire). Les paysages des sceaux de zone restent.
+
+*English:* the Memories feature is removed: no more album page in the journal, no screenshots or photo consent prompt, no anniversaries or recalled memories, no Memories settings page. On first load, the album data is silently dropped from your saved variables once (the "days together" count is kept, starting from your oldest memory). The addon is lighter (about 1.2 MB less on disk, 60 KB less memory); zone seal landscapes stay.
+
 ## 2.5.1 — les fenêtres de capture en style Azeroth
 
 - **Scène de capture** : en style Azeroth, la scène prend le cadre en bois des hauts faits, sur un fond sombre et chaud. En haut, une plaque dorée « CAPTURE » avec le nom de la créature (en or pour une brillante). Au centre, le modèle et notre filet, qui tombe, se secoue et tient ou se déchire comme avant ; les secousses s'allument en losanges dorés. En bas, le verdict devient un bandeau de haut fait : « CAPTURÉ ! », le nom, les étoiles, un bouclier d'or et son éclat ; ou « ÉCHAPPÉ… », une phrase et un bouclier gris. « Clic ou Échap pour fermer » reste dans le cadre, au-dessus du bois.

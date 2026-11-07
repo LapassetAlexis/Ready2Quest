@@ -96,7 +96,6 @@ local POOL_CATEGORY = {
 	EVOLVE = "event", UNLOCK = "event", READY = "event", CHEST = "event", TUTO = "tuto", TUTO_MENAGERIE = "tuto",
 	TIP = "tip", GOAL = "tip", GOAL_STAGE = "tip",
 	IDLE = "chatter", NIGHT = "chatter",
-	PHOTO = "event", ANNIV = "event", RECALL = "chatter",
 	LEVEL = "event",      -- un grand moment : dit dès le cran Calme, comme promis
 	NEED_hunger = "need", NEED_energy = "need", NEED_mood = "need", NEED_curiosity = "need",
 }

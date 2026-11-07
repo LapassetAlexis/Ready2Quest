@@ -6,8 +6,8 @@
 --     normale ; les boss du monde ne comptent pas) -> la zone est scellée pour
 --     toujours. Dans une zone scellée, les brillantes sont plus fréquentes
 --     (×SEAL_SHINY_MULT, enveloppe de ns:ShinyChance). Chaque biome a son
---     cadre (premier sceau du biome) et son paysage en fond (deuxième sceau),
---     aux couleurs des décors des souvenirs (Memories.lua).
+--     cadre (premier sceau du biome) et son paysage peint en fond (deuxième
+--     sceau : Textures/scene_<biome>.tga, tools/gen_seal_scenes.py).
 --   * Complétion par type : des paliers d'espèces capturées par type de
 --     créature renforcent l'effet du compagnon de ce type
 --     (ns:MenagerieTypeBonus, lu par CompanionEffects.lua).
@@ -36,9 +36,28 @@ ns.TRAINER_RANKS = {
 	{ count = 250, key = "grandmaster", aids = { "sifflet", "sifflet" }, cosmetic = { kind = "bg", id = "grandmaster" } },
 }
 
--- biomes extérieurs (Memories.lua) ; une zone sans biome connu : forêt
+-- biomes extérieurs ; une zone sans biome connu : forêt
 local BIOMES = { "forest", "nightforest", "canyon", "savanna", "snow", "swamp", "desert", "blight", "jungle", "volcanic" }
 ns.MENAGERIE_BIOMES = BIOMES
+-- le biome de chaque zone extérieure (uiMapID) : son cadre et son paysage
+-- (repris de l'ancien album des souvenirs, retiré en 2.6.0)
+local ZONE_BIOME = {
+	-- Kalimdor
+	[1411] = "canyon", [1412] = "savanna", [1413] = "savanna", [1438] = "nightforest", [1439] = "nightforest",
+	[1440] = "nightforest", [1441] = "canyon", [1442] = "canyon", [1443] = "desert", [1444] = "jungle",
+	[1445] = "swamp", [1446] = "desert", [1447] = "nightforest", [1448] = "blight", [1449] = "jungle",
+	[1450] = "nightforest", [1451] = "desert", [1452] = "snow",
+	-- Royaumes de l'Est
+	[1416] = "snow", [1417] = "forest", [1418] = "canyon", [1419] = "volcanic", [1420] = "blight",
+	[1421] = "blight", [1422] = "blight", [1423] = "blight", [1424] = "forest", [1425] = "forest",
+	[1426] = "snow", [1427] = "volcanic", [1428] = "volcanic", [1429] = "forest", [1430] = "blight",
+	[1431] = "nightforest", [1432] = "forest", [1433] = "forest", [1434] = "jungle", [1435] = "swamp",
+	[1436] = "savanna", [1437] = "swamp",
+}
+ns.MENAGERIE_ZONE_BIOME = ZONE_BIOME
+-- paysages peints, un par biome (512 x 256, tools/gen_seal_scenes.py)
+local SCENE_TEXTURE = "Interface\\AddOns\\" .. tostring(ADDON or "QuestCompanion") .. "\\Textures\\scene_"
+ns.MENAGERIE_SCENE_TEXTURE = SCENE_TEXTURE
 -- liseré du cadre de chaque biome : { filet, filet intérieur }, tirés des
 -- teintes des décors peints (sol, ciel)
 local BIOME_EDGE = {
@@ -182,7 +201,7 @@ for _, biome in ipairs(BIOMES) do
 		backdrop = { file = TOOLTIP_BORDER, size = 14, color = { edge[1][1], edge[1][2], edge[1][3] } } } }
 	COSMETICS[#COSMETICS + 1] = { kind = "bg", def = { id = "seal_" .. biome, label = "COMP_BG_SEAL_" .. biome,
 		tier = 0, unlock = { seal = biome, count = 2 },
-		texture = (ns.MEMORY_SCENE_TEXTURE or ("Interface\\AddOns\\" .. tostring(ADDON or "QuestCompanion") .. "\\Textures\\scene_")) .. biome,
+		texture = SCENE_TEXTURE .. biome,
 		color = { 1, 1, 1, 1 }, coords = { 0.2, 0.8, 0.05, 0.95 } } }
 	FR["COMP_FRAME_SEAL_" .. biome] = string.format(FR.COMP_FRAME_SEAL, FR["BIOME_" .. biome])
 	EN["COMP_FRAME_SEAL_" .. biome] = string.format(EN.COMP_FRAME_SEAL, EN["BIOME_" .. biome])
@@ -258,7 +277,7 @@ function ns:MenagerieCollectionData()
 end
 
 function ns:MenagerieZoneBiome(zoneID)
-	local biome = ns.MEMORY_ZONE_BIOME and ns.MEMORY_ZONE_BIOME[tonumber(zoneID) or zoneID]
+	local biome = ZONE_BIOME[tonumber(zoneID) or zoneID]
 	if biome and BIOME_EDGE[biome] then return biome end
 	return "forest"
 end

@@ -86,7 +86,7 @@ do
 
 	local qframe = Open(QNS, "general")
 	Check("[OPT2] QC : le Compagnon de route en groupe, une entrée par page", NavOrder(QNS) == "general,[COMPAGNON DE ROUTE],companionMain,"
-		.. "companionOrnaments,journal,companionMemories,companionCharacter,companionDaily", NavOrder(QNS))
+		.. "companionOrnaments,journal,companionCharacter,companionDaily", NavOrder(QNS))
 	Check("[OPT2] QC : l'interrupteur du module sur le titre du groupe", Header(QNS, "companion").powerKey == "companionEnabled")
 	local qcount = 0
 	for _, item in ipairs(qframe.navButtons) do

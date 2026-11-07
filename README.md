@@ -5,7 +5,7 @@ Deux addons pour **World of Warcraft Forever**, en français et en anglais. Ils 
 | Addon | Ce qu'il fait | Commande |
 |---|---|---|
 | [**Ready2Quest**](Ready2Quest/README.md) | Prépare ta sortie : check avant de quitter la ville, bilan au retour, fiche de donjon, kit de camp, portée d'aggro, et du confort de jeu (bonne récompense, rythme de leveling, sac plein, place au butin, rangs de sorts, après la mort, marchand). | `/r2q` |
-| [**QuestCompanion**](QuestCompanion/README.md) | Un compagnon de route qui collectionne les créatures : capture les monstres (normaux, brillants, étoilés), emmène celui qui t'aide à chasser, scelle les zones, gagne des titres et montre ta fiche de dresseur ; et son carnet de voyage : exploration, missions, coffres cosmétiques, souvenirs en photo. | `/qc` |
+| [**QuestCompanion**](QuestCompanion/README.md) | Un compagnon de route qui collectionne les créatures : capture les monstres (normaux, brillants, étoilés), emmène celui qui t'aide à chasser, scelle les zones, gagne des titres et montre ta fiche de dresseur ; et son carnet de voyage : exploration, missions, coffres cosmétiques. | `/qc` |
 
 Ensemble, le compagnon réagit en plus à tes départs et retours en ville.
 
@@ -39,7 +39,7 @@ Copie le dossier de chaque addon voulu dans `World of Warcraft/<client>/Interfac
 - [Notes techniques et historique des versions](docs/TECHNIQUE.md).
 - Zones sûres : `tools/gen_hubs.py` (lieux connus par leur sous-zone, `Libs/Socle/Hubs.lua`) et `tools/gen_places.py` (camps repérés par leurs PNJ de service, `Libs/Socle/Places.lua`), depuis `data/`. Donjons : `tools/gen_dungeons.py`.
 - **Notre base de données** (`data/`) : PNJ, objets, quêtes et zones de Forever (et d'Era, gardées pour les outils), importés une fois de [Questie](https://github.com/Questie/QuestieDB) puis corrigés et complétés ici. Les tables de zone de QuestCompanion en sont générées par `tools/gen_zone_data.py`. Voir [docs/DONNEES.md](docs/DONNEES.md).
-- Logos des pages et icône de QuestCompanion : `tools/gen_store_logos.py`. Paysages peints des photos souvenirs : `tools/gen_memory_scenes.py` (les écrans de chargement du jeu sont référencés par identifiant de fichier, jamais livrés).
+- Logos des pages et icône de QuestCompanion : `tools/gen_store_logos.py`. Paysages peints des sceaux de zone : `tools/gen_seal_scenes.py`.
 
 ## Licence
 

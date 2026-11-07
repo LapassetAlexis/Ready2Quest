@@ -1,19 +1,18 @@
 #!/usr/bin/env python3
-"""Peint les décors des photos souvenirs de QuestCompanion (1.5.4).
+"""Peint les paysages des sceaux de zone de QuestCompanion (fonds « sceau »).
 
-Un décor par sorte de zone (Memories.lua, ZONE_BIOME), dans l'esprit des
+Un paysage par biome (MenagerieCollection.lua, ZONE_BIOME), dans l'esprit des
 paysages de Warcraft : silhouettes franches, couleurs saturées, lumière d'un
 côté. forest (Elwynn), nightforest (Orneval), canyon (Durotar), savanna (les
 Tarides), snow (Dun Morogh), swamp (les Paluns), desert (Tanaris), blight
-(Tirisfal), jungle (Strangleronce), volcanic (Steppes ardentes) ; et cave
-(donjon), city (capitale), sky (vol). L'horizon est aux deux tiers : le
-compagnon pose sur le sol.
+(Tirisfal), jungle (Strangleronce), volcanic (Steppes ardentes). Peints en
+1.5.4 pour l'album des souvenirs (retiré en 2.6.0), ils restent le fond
+gagné au deuxième sceau d'un biome.
 
 TGA 24 bits non compressé 512x256 (origine en bas à gauche), recadré en jeu
-(SetTexCoord) selon la photo : un cadrage différent par souvenir.
-Bruit déterministe (hachage) : même sortie à chaque lancement.
+(SetTexCoord). Bruit déterministe (hachage) : même sortie à chaque lancement.
 
-Usage : python3 -I tools/gen_memory_scenes.py
+Usage : python3 -I tools/gen_seal_scenes.py
 """
 import math
 import os
@@ -155,20 +154,6 @@ def hills(c, color, seed, base, height, scale, haze=None, haze_t=0.0, octaves=4,
     c.fill(f)
 
 
-def ground(c, near, far, seed, texture=0.08):
-    hy = HORIZON * H
-
-    def f(x, y, p):
-        if y < hy - 2:
-            return p
-        t = (y - hy) / (H - hy)
-        col = mix(far, near, t)
-        n = fbm(x / 18.0, y / 6.0, seed, 3) - 0.5
-        col = mix(col, (0, 0, 0) if n < 0 else (1, 1, 1), abs(n) * texture * 2)
-        return mix(p, col, smooth(hy - 2, hy + 2, y))
-    c.fill(f)
-
-
 def grass(c, color, seed, count, y_min, length=9):
     """touffes : traits fins penchés au premier plan"""
     blades = []
@@ -253,50 +238,6 @@ def bolt(c, color, x0, seed):
         i += 1
 
 
-def buildings(c, color, lit, seed, base, count):
-    """silhouettes de toits, de tours et de flèches, fenêtres allumées"""
-    x = -10.0
-    i = 0
-    rects = []
-    while x < W + 10 and i < count:
-        w = 18 + hash2(i, 51, seed) * 34
-        h = 24 + hash2(i, 52, seed) * 46
-        tower = hash2(i, 53, seed) > 0.72
-        if tower:
-            w, h = w * 0.55, h * 1.6
-        rects.append((x, w, h, tower, i))
-        x += w + hash2(i, 54, seed) * 6
-        i += 1
-    bottom = base * H
-    for (x0, w, h, tower, k) in rects:
-        top = bottom - h
-        roof = 10 + hash2(k, 55, seed) * 10 if not tower else 22
-        for y in range(int(top - roof) - 1, int(bottom) + 1):
-            for xx in range(int(x0), int(x0 + w) + 1):
-                if not (0 <= xx < W and 0 <= y < H):
-                    continue
-                cx = x0 + w / 2
-                inside = y >= top or (y >= top - roof and abs(xx - cx) <= (y - (top - roof)) / roof * w / 2)
-                if inside:
-                    c.px[y][xx] = color
-                    # fenêtres
-                    if y > top + 4 and y < bottom - 4 and int(xx - x0) % 7 in (2, 3) and int(y - top) % 9 in (3, 4, 5):
-                        if hash2(int(xx - x0) // 7 + k * 13, int(y - top) // 9, seed) > 0.55:
-                            c.px[y][xx] = lit
-
-
-def stalactites(c, color, seed, count):
-    for i in range(count):
-        cx = hash2(i, 61, seed) * W
-        w = 6 + hash2(i, 62, seed) * 16
-        ln = 14 + hash2(i, 63, seed) * 42
-        for y in range(int(ln)):
-            half = w / 2 * (1 - y / ln)
-            for x in range(int(cx - half), int(cx + half) + 1):
-                if 0 <= x < W and 0 <= y < H:
-                    c.px[y][x] = mix(c.px[y][x], color, 0.95)
-
-
 def glow(c, cx, cy, radius, color, strength):
     def f(x, y, p):
         d = math.hypot(x - cx, y - cy)
@@ -310,68 +251,6 @@ def vignette(c, strength, color=(0.0, 0.0, 0.0)):
         d = math.sqrt(dx * dx * 0.6 + dy * dy * 0.9)
         return mix(p, color, smooth(0.75, 1.45, d) * strength)
     c.fill(f)
-
-
-# ---------------------------------------------------------------------------
-# Scènes
-# ---------------------------------------------------------------------------
-def cave():
-    c = Canvas()
-    sky(c, hexc("#14110f"), hexc("#2b241f"), hexc("#3d3129"))
-    # parois rocheuses : bruit sombre sur les côtés
-    def walls(x, y, p):
-        n = fbm(x / 26.0, y / 26.0, 51, 5)
-        side = smooth(0.25, 0.0, x / W) + smooth(0.75, 1.0, x / W)
-        return mix(p, mix(hexc("#1a1612"), hexc("#4a3d33"), n), min(1, side * 1.4 + n * 0.25))
-    c.fill(walls)
-    glow(c, 330, 120, 120, hexc("#ff9d45"), 0.55)
-    glow(c, 330, 120, 30, hexc("#ffe2a0"), 0.6)
-    stalactites(c, hexc("#120f0c"), 53, 26)
-    hills(c, hexc("#2a221c"), 55, 0.64, 0.10, 60, None, 0, 5, 1.0)
-    ground(c, hexc("#1c1713"), hexc("#3a2f27"), 57, 0.14)
-    dots(c, [hexc("#7fd6ff"), hexc("#b38cff")], 59, 26, int(H * 0.68), H - 6, 1.2)
-    vignette(c, 0.7)
-    return c
-
-
-def city():
-    c = Canvas()
-    sky(c, hexc("#3a5f95"), hexc("#8fb2d6"), hexc("#e7d9c4"))
-    sun(c, 90, 50, 11, hexc("#fffbe8"), hexc("#fff0c8"), 60)
-    clouds(c, hexc("#ffffff"), hexc("#a9bdd2"), 61, 15, 70, 0.6, 70, 0.8)
-    buildings(c, hexc("#8a96ab"), hexc("#b9c2d2"), 63, HORIZON - 0.02, 40)   # lointains
-    buildings(c, hexc("#4b5468"), hexc("#ffd479"), 65, HORIZON + 0.04, 40)
-    ground(c, hexc("#6b6258"), hexc("#a39887"), 67, 0.12)
-    # pavés
-    def cobbles(x, y, p):
-        if y < HORIZON * H + 6:
-            return p
-        row = int((y - HORIZON * H) / 7)
-        off = 6 if row % 2 else 0
-        edge = ((x + off) % 12 < 1) or ((y - HORIZON * H) % 7 < 1)
-        return mix(p, hexc("#4d463f"), 0.45 if edge else 0)
-    c.fill(cobbles)
-    vignette(c, 0.4)
-    return c
-
-
-def sky_scene():
-    c = Canvas()
-    sky(c, hexc("#2a5fb0"), hexc("#73a8e0"), hexc("#cfe6f7"))
-    sun(c, 400, 60, 14, hexc("#ffffff"), hexc("#fff5d0"), 90)
-    clouds(c, hexc("#ffffff"), hexc("#c2d3e6"), 111, 20, 60, 0.6, 60, 0.6)
-    # mer de nuages à la place du sol
-    def sea(x, y, p):
-        top = ridge(x, 113, HORIZON * H + 6, 30, 50, 5)
-        a = smooth(top - 3, top + 3, y)
-        if a <= 0:
-            return p
-        n = fbm(x / 40.0, y / 14.0, 115, 5)
-        col = mix(hexc("#a9c0da"), hexc("#ffffff"), smooth(0.35, 0.75, n) * (1 - smooth(top, top + 70, y) * 0.3))
-        return mix(p, col, a)
-    c.fill(sea)
-    vignette(c, 0.3, hexc("#0e2a55"))
-    return c
 
 
 # ---------------------------------------------------------------------------
@@ -819,7 +698,7 @@ def volcanic():
 SCENES = {
     "forest": forest, "nightforest": nightforest, "canyon": canyon, "savanna": savanna,
     "snow": snow, "swamp": swamp, "desert": desert, "blight": blight, "jungle": jungle,
-    "volcanic": volcanic, "cave": cave, "city": city, "sky": sky_scene,
+    "volcanic": volcanic,
 }
 
 
