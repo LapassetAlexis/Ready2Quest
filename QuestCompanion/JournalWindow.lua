@@ -350,7 +350,7 @@ local LIST_W = math.floor((INNER - (LIST_COLS - 1) * 12) / LIST_COLS)
 local SECTIONS = { "evolution", "menagerie", "day", "progress", "memories", "guide" }
 local MEN_STATES = { "all", "captured", "missing", "tokill", "shiny" }
 local MEN_RANKS = { "all", "normal", "elite", "rare", "boss" }
-local MEN_SORTS = { "no", "name", "level", "rank", "date" }
+local MEN_SORTS = { "no", "name", "level", "rank", "kills", "date" }
 local MEN_ROW_H = 30
 local COLL_KINDS = { "app", "orn", "frame", "bg" }
 local MARKS = { 25, 50, 75, 100 }
@@ -438,6 +438,7 @@ local FR2 = {
 	JRN_MEN_SORT_name      = "Tri : nom",
 	JRN_MEN_SORT_level     = "Tri : niveau",
 	JRN_MEN_SORT_rank      = "Tri : rareté",
+	JRN_MEN_SORT_kills     = "Tri : abattues",
 	JRN_MEN_SORT_date      = "Tri : capture",
 	JRN_MEN_SEARCH         = "Chercher un nom…",
 	JRN_MEN_UNKNOWN        = "???",
@@ -549,6 +550,7 @@ local EN2 = {
 	JRN_MEN_SORT_name      = "Sort: name",
 	JRN_MEN_SORT_level     = "Sort: level",
 	JRN_MEN_SORT_rank      = "Sort: rarity",
+	JRN_MEN_SORT_kills     = "Sort: kills",
 	JRN_MEN_SORT_date      = "Sort: capture",
 	JRN_MEN_SEARCH         = "Search a name…",
 	JRN_MEN_UNKNOWN        = "???",
@@ -1069,9 +1071,14 @@ local function BuildMenagerie(self, frame, content)
 		Changed()
 	end)
 	pane.search:SetPoint("TOPRIGHT", content, "TOPLEFT", PAD + INNER, rowY)
+	-- 3e rangée (2.4) : boutons de type, « Tous » (MenagerieView.lua)
+	local typeH = 0
+	if self.MenagerieViewBuild then
+		typeH = tonumber(self:MenagerieViewBuild(pane, content, 0, rowY - Theme.CHIP_HEIGHT - 8, frame)) or 0
+	end
 	-- la liste, façon Pokédex : numéro, type, nom, marques ; la fiche à droite
 	pane.items = {}
-	local gridTop = rowY - Theme.CHIP_HEIGHT - 12
+	local gridTop = rowY - Theme.CHIP_HEIGHT - 12 - (typeH > 0 and typeH + 8 or 0)
 	local rowH = MEN_ROW_H
 	-- QC 2.0 : bandeau de la collection sous la liste (MenagerieCollection.lua)
 	local collH = self.MenagerieCollectionBuild and (tonumber(ns.MENAGERIE_COLLECTION_H) or 0) or 0
@@ -1721,18 +1728,24 @@ function ns:JournalPreviewMenagerie(entry, keep)
 			preview.variant:Hide()
 		end
 	end
-	local rank = L["CAPTURE_RANK_" .. tostring(entry.class or "normal")]
-	local lines = { self:F("JRN_MEN_RANK", rank, LevelText(entry)) }
-	if entry.zoneID then lines[#lines + 1] = self:F("JRN_MEN_ZONE", ZoneName(self, entry.zoneID)) end
-	-- « Chasse : … / Confort : … » de cette créature (CompanionEffects.lua)
-	if self.CompanionEffectsLines then
-		for _, line in ipairs(self:CompanionEffectsLines(entry, shinyView)) do lines[#lines + 1] = line end
-	end
+	-- 2.4 : trois paliers. Jamais croisée : verrouillée (ni nom, ni niveau, ni
+	-- modèle ; la zone où la chercher). Croisée : nom, niveaux, modèle,
+	-- abattues, chance. Capturée : tout, effets de chasse et de confort compris.
 	if not entry.known then
+		local lines = { L.MENV_LOCKED }
+		if entry.zoneID then lines[#lines + 1] = self:F("JRN_MEN_ZONE", ZoneName(self, entry.zoneID)) end
 		lines[#lines + 1] = L.JRN_MEN_NEVER
 		PreviewSet(frame.men.preview, L.JRN_MEN_UNKNOWN, lines, {})
 		frame.men.preview.entry = entry
 		return
+	end
+	local rank = L["CAPTURE_RANK_" .. tostring(entry.class or "normal")]
+	local lines = { self:F("JRN_MEN_RANK", rank, LevelText(entry)) }
+	if entry.zoneID then lines[#lines + 1] = self:F("JRN_MEN_ZONE", ZoneName(self, entry.zoneID)) end
+	-- « Chasse : … / Confort : … » de cette créature (CompanionEffects.lua) :
+	-- dévoilés une fois capturée
+	if entry.captured and self.CompanionEffectsLines then
+		for _, line in ipairs(self:CompanionEffectsLines(entry, shinyView)) do lines[#lines + 1] = line end
 	end
 	local function Day(at)
 		local when = (tonumber(at) or 0) > 0 and rawget(_G, "date") and select(2, pcall(date, "%d/%m/%Y", at))
@@ -1804,6 +1817,7 @@ function ns:OpenMenagerieZone(zoneID)
 	if not frame then return end
 	frame.menZone = tonumber(zoneID) or "here"
 	frame.menState, frame.menRank, frame.menSearch, frame.menOffset = "all", "all", "", 0
+	frame.menType = nil
 	if frame.men and frame.men.search then frame.men.search:SetText("") end
 	self:SelectJournalKind("menagerie")
 end
@@ -1859,7 +1873,12 @@ local function RefreshMenagerie(self, frame)
 	pane.sort:SetValue(frame.menSort or "no")
 	pane.stateRow:Select(frame.menState or "all", true)
 	local list, stats = self:MenagerieList({ zone = self:MenagerieZoneValue(frame.menZone or "here"),
-		state = frame.menState, rank = frame.menRank, search = frame.menSearch, sort = frame.menSort })
+		state = frame.menState, rank = frame.menRank, search = frame.menSearch, sort = frame.menSort, ctype = frame.menType })
+	-- boutons de type : sélection et comptes (MenagerieView.lua)
+	if pane.types and self.MenagerieViewRefresh then
+		local ok, err = pcall(self.MenagerieViewRefresh, self, pane, frame, stats)
+		if not ok and self.RecordError then self:RecordError("menagerie:types", err) end
+	end
 	if (stats.shinySeen or 0) > 0 then
 		pane.count:SetText(self:F("JRN_MEN_COUNT_SHINY", stats.captured, stats.shinySeen, stats.known, stats.total))
 	else
@@ -1884,9 +1903,13 @@ local function RefreshMenagerie(self, frame)
 			local lc = RarityColor(entry)
 			row.label:SetTextColor(lc[1], lc[2], lc[3])
 			row.label:SetAlpha(entry.known and 1 or 0.75)
+			-- 2.4 : une espèce jamais croisée est verrouillée, case sombre
+			if entry.known then row:SetAlt(row.alt) else row.bg:SetVertexColor(Theme.FIELD[1], Theme.FIELD[2], Theme.FIELD[3], 1) end
 			-- 2.0 : les étoiles du meilleur spécimen (CaptureQueue.lua), avant le type
 			local stars = entry.captured and self.CaptureStarsText and self:CaptureStarsText(entry.stars or entry.shinyStars, 10) or ""
-			row.detail:SetText(entry.known and (stars ~= "" and (stars .. " ") or "") .. (entry.type or "") or "")
+			-- verrouillée : pas de type, seulement la zone où la chercher (toutes zones)
+			local hint = (not entry.known and frame.menZone == "all" and entry.zoneID) and ZoneName(self, entry.zoneID) or ""
+			row.detail:SetText(entry.known and (stars ~= "" and (stars .. " ") or "") .. (entry.type or "") or hint)
 			-- liseré vert : la version normale capturée ; losange doré : la
 			-- brillante, plein si capturée, au trait si seulement reconnue
 			if entry.captured and entry.normal ~= false then row.caught:Show() else row.caught:Hide() end

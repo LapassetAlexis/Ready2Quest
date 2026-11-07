@@ -521,8 +521,11 @@ end
 
 -- opts : { zone = uiMapID | "all", state = "all" | "captured" | "missing" |
 -- "tokill", rank = "all" | "normal" | "elite" | "rare" | "boss", search = texte,
--- sort = "no" | "name" | "level" | "rank" | "date" }. Rend la liste et le
--- compte de la portée (zone choisie) : { total, known, captured, killed }.
+-- ctype = clé de type (CreatureTypes.lua) ou nil, sort = "no" | "name" |
+-- "level" | "rank" | "date" | "kills" }. Rend la liste et le compte de la
+-- portée (zone choisie) : { total, known, captured, killed, types }, où
+-- types[clé] = { known, captured } (espèces croisées seulement : le type
+-- d'une inconnue n'est jamais dit).
 -- Entrées : { npc, no, name, known, class, lo, hi, level, type, zones,
 -- zoneID, killed, captured, shiny, at }. Une espèce jamais croisée garde son
 -- nom (name) mais `known` est faux : la fenêtre l'affiche « ??? ».
@@ -603,7 +606,8 @@ function ns:MenagerieList(opts)
 	local zone = opts.zone or "all"
 	local state, rank = opts.state or "all", opts.rank or "all"
 	local query = Fold(opts.search or ""):gsub("^%s+", ""):gsub("%s+$", "")
-	local stats = { total = 0, known = 0, captured = 0, killed = 0, shinySeen = 0, shinies = 0 }
+	local ctype = opts.ctype ~= "all" and opts.ctype or nil
+	local stats = { total = 0, known = 0, captured = 0, killed = 0, shinySeen = 0, shinies = 0, types = {} }
 	local list = {}
 	for _, item in pairs(view) do
 		item.name = item.name or tostring(item.npc)
@@ -622,10 +626,19 @@ function ns:MenagerieList(opts)
 			item.shinySeen = item.shinySeen or item.shinyKilled or (self.ShinyKnown and self:ShinyKnown(item.npc)) or (item.shiny and item.shinyAt) or nil
 			if item.shinySeen then stats.shinySeen = (stats.shinySeen or 0) + 1 end
 			if item.shiny then stats.shinies = (stats.shinies or 0) + 1 end
+			-- type : seulement pour une espèce croisée (une inconnue ne dit rien)
+			item.typeKey = item.known and self.CreatureTypeKey and self:CreatureTypeKey(item.type) or nil
+			if item.typeKey then
+				local count = stats.types[item.typeKey] or { known = 0, captured = 0 }
+				stats.types[item.typeKey] = count
+				count.known = count.known + 1
+				if item.captured then count.captured = count.captured + 1 end
+			end
 			local keep = (state == "all") or (state == "captured" and item.captured)
 				or (state == "missing" and not item.captured) or (state == "tokill" and item.killed == 0)
 				or (state == "shiny" and item.shinySeen ~= nil)
 			keep = keep and (rank == "all" or RANK_GROUP[item.class] == rank)
+			keep = keep and (ctype == nil or item.typeKey == ctype)
 			-- recherche : sur les noms connus seulement (une inconnue reste « ??? »)
 			if keep and query ~= "" then keep = item.known and Fold(item.name):find(query, 1, true) ~= nil end
 			if keep then list[#list + 1] = item end
@@ -643,6 +656,8 @@ function ns:MenagerieList(opts)
 		elseif sort == "rank" then
 			local ra, rb = RANK_ORDER[a.class] or 1, RANK_ORDER[b.class] or 1
 			if ra ~= rb then return ra > rb end
+		elseif sort == "kills" then
+			if (a.killed or 0) ~= (b.killed or 0) then return (a.killed or 0) > (b.killed or 0) end
 		elseif sort == "date" then
 			if (a.captured == true) ~= (b.captured == true) then return a.captured == true end
 			if (a.at or 0) ~= (b.at or 0) then return (a.at or 0) > (b.at or 0) end
