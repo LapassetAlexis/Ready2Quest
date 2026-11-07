@@ -1,5 +1,13 @@
 # QuestCompanion
 
+## 2.8.1 — plus léger
+
+- **Moins de mémoire** : 1,76 Mo au chargement au lieu de 2,75 Mo. Les créatures et quêtes de chaque zone sont gardées sous une forme compacte et lues seulement quand tu arrives dans la zone ; les répliques du compagnon ne gardent que la langue de ton client.
+- **Moins de travail à chaque image** : rien n'est calculé pour les effets du compagnon quand il est caché, le repère des brillantes scintille sans rien allouer, le bestiaire lit ton identifiant une seule fois au lieu de le relire à chaque coup.
+- **Ménage** : des textes jamais affichés, restes de pages retirées du carnet, sont supprimés. Rien ne change à l'écran, ni dans ta sauvegarde.
+
+*English:* lighter: 1.76 MB at load instead of 2.75 MB. Each zone's creatures and quests are kept in a compact form and only read when you get there; companion lines keep only your client's language. Less per-frame work: nothing is computed for companion effects while it is hidden, the shiny nameplate marker sparkles without allocating, and the bestiary reads your GUID once instead of on every hit. Unused texts left over from removed journal pages are gone. Nothing changes on screen or in your saved data.
+
 ## 2.8.0 — le carnet en style Azeroth
 
 - **Carnet de voyage en style Azeroth** : en style Azeroth (le style par défaut), le carnet prend l'habit du cadre des hauts faits du jeu : cadre en bois, plaque « Carnet de voyage » qui déborde au-dessus de la fenêtre avec ta case de points, parchemins, séparateurs de métal, catégories de gauche sur leur fond du jeu avec la surbrillance dorée, garde-manger en bas de la colonne, bouton de fermeture du jeu. Texte brun foncé sur le parchemin, titres dorés.

@@ -1,5 +1,11 @@
 # Journal des modifications
 
+## 1.29.5
+
+- **Ménage** : des textes jamais affichés (anciennes sections de réglages, emplacements d'équipement) et deux aides inutilisées sont retirés. Socle commun : les textes peuvent venir d'une source calculée (utilisé par Quest Companion pour alléger ses répliques). Rien ne change à l'écran ni dans ta sauvegarde.
+
+*English:* cleanup: unused texts (old settings sections, equipment slot names) and two unused helpers are removed. Shared core: texts can come from a computed source (used by Quest Companion to lighten its companion lines). Nothing changes on screen or in your saved data.
+
 ## 1.29.4
 
 - **Roue crantée** dans l'en-tête de la fenêtre « Avant le départ », à côté de la flèche : elle ouvre les réglages de Ready2Quest.
