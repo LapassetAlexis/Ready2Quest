@@ -12,6 +12,8 @@ Une seule description, anglais d'abord puis français (règle des stores : l'ang
 
 **Capture the monsters you defeat and build your menagerie.** Every creature of WoW Forever can be caught, with 1 to 3 stars and rare **shiny** versions. Take one along as your hunting companion, seal every zone, earn trainer titles and show off your trainer card to your guild. A little travel companion and its journal come along for the ride.
 
+![A shiny creature tries its luck against the net](https://media.forgecdn.net/attachments/2161/225/f-gif.gif)
+
 For **WoW Forever** (1.60). English and French. Free, standalone (`/qc`), about 2 MB of memory. Pairs well with [Ready2Quest](https://www.curseforge.com/wow/addons/ready2quest).
 
 ## New in 2.4
@@ -82,6 +84,8 @@ Free software, **GPL-3.0**. Zone data (creatures, gathering, quests) is generate
 # Quest Companion – Ménagerie de créatures (français)
 
 **Capture les monstres que tu abats et remplis ta ménagerie.** Toutes les créatures de WoW Forever se capturent, avec 1 à 3 étoiles et de rares versions **brillantes**. Emmène-en une comme compagnon de chasse, scelle chaque zone, gagne des titres de dresseur et montre ta fiche à ta guilde. Un petit compagnon de route et son carnet de voyage t'accompagnent.
+
+![Une brillante tente sa chance contre le filet](https://media.forgecdn.net/attachments/2161/225/f-gif.gif)
 
 Pour **WoW Forever** (1.60). En français et en anglais. Gratuit, autonome (`/qc`), environ 2 Mo de mémoire. Va très bien avec [Ready2Quest](https://www.curseforge.com/wow/addons/ready2quest).
 
