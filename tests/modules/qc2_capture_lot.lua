@@ -433,6 +433,23 @@ do
 	frame:Hide()
 end
 
+-- 6b. Deux abattus en combat : à la fin du combat, le bandeau propose « Tout capturer » -----------
+do
+	Say("-- tout capturer : après un combat")
+	LOT.Reset()
+	LOT.combat = true
+	LOT.SeeKill(6710, { name = "Raptor A" })
+	LOT.SeeKill(6711, { name = "Raptor B" })
+	LOT.combat = false
+	NS:CaptureTick(NS.Now() + 0.5)
+	local toast = NS.captureToast
+	Check("[LOT] fin de combat, deux candidats : bandeau avec « Tout capturer »", toast and toast:IsShown()
+		and toast.all and toast.all:IsShown(), toast and tostring(toast:IsShown()) .. "/" .. tostring(toast.all and toast.all:IsShown()))
+	NS:CaptureToggleQueueList()
+	local list = NS.captureQueueList
+	Check("[LOT] fin de combat : la liste propose « Tout capturer »", list and list.all and list.all:IsShown())
+end
+
 -- 7. Jamais en combat ; le tutoriel suit ------------------------------------------------------
 do
 	Say("-- tout capturer : combat et tutoriel")
