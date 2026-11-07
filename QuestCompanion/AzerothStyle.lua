@@ -1055,6 +1055,13 @@ local RING_W, RING_H, RING_Y = 108, 104, -45   -- centre du portrait (modèle de
 local MASK = "Interface\\CharacterFrame\\TempPortraitAlphaMask"
 ns.AZEROTH_RING = { w = RING_W, h = RING_H, y = RING_Y }
 
+-- La plaque « mini » : bande claire en haut (~30 %), bande sombre dessous.
+-- Le nom (blanc) au milieu de la bande sombre, l'humeur (brune) dans la claire.
+local PLATE_H = 42
+local PLATE_NAME_Y = 16   -- centre du nom, depuis le bas de la plaque
+local PLATE_MOOD_Y = 35   -- centre de l'humeur, depuis le bas de la plaque
+ns.AZEROTH_COMPANION_PLATE = { height = PLATE_H, nameY = PLATE_NAME_Y, moodY = PLATE_MOOD_Y }
+
 local function BuildCompanionSkin(frame)
 	local skin = CreateFrame("Frame", nil, frame)
 	skin:SetAllPoints(frame)
@@ -1065,7 +1072,7 @@ local function BuildCompanionSkin(frame)
 	Atlas(skin.ring, AZ.frameRound)
 	local w = (frame:GetWidth() or 104) + 8
 	skin.plate = skin:CreateTexture(nil, "BACKGROUND")
-	skin.plate:SetSize(w, 34)
+	skin.plate:SetSize(w, PLATE_H)
 	skin.plate:SetPoint("BOTTOM", frame, "BOTTOM", 0, 0)
 	Atlas(skin.plate, AZ.plate)
 	-- le fond gagné, en disque sous l'anneau (masque du client, s'il existe)
@@ -1125,11 +1132,15 @@ function ns:CompanionApplyUIStyle()
 			if fs and fs.SetParent then fs:SetParent(skin) end
 		end
 		if frame.name then
+			frame.name:ClearAllPoints()
+			frame.name:SetPoint("CENTER", skin.plate, "BOTTOM", 0, PLATE_NAME_Y)
 			frame.name:SetTextColor(1, 1, 1, 1)
 			if frame.name.SetShadowColor then frame.name:SetShadowColor(0, 0, 0, 1) end
 			if frame.name.SetShadowOffset then frame.name:SetShadowOffset(1, -1) end
 		end
 		if frame.mood then
+			frame.mood:ClearAllPoints()
+			frame.mood:SetPoint("CENTER", skin.plate, "BOTTOM", 0, PLATE_MOOD_Y)
 			frame.mood:SetTextColor(INK[1], INK[2], INK[3], 1)
 			if Theme.NoShadow then Theme.NoShadow(frame.mood) end
 		end
@@ -1139,7 +1150,12 @@ function ns:CompanionApplyUIStyle()
 		for _, fs in ipairs({ frame.name, frame.mood }) do
 			if fs and fs.SetParent then fs:SetParent(frame) end
 		end
-		if frame.name then frame.name:SetTextColor(Theme.PARCHMENT[1], Theme.PARCHMENT[2], Theme.PARCHMENT[3], 1) end
+		-- les places du style Sobre (Companion.lua)
+		if frame.name then
+			frame.name:ClearAllPoints(); frame.name:SetPoint("BOTTOM", frame, "BOTTOM", 0, 19)
+			frame.name:SetTextColor(Theme.PARCHMENT[1], Theme.PARCHMENT[2], Theme.PARCHMENT[3], 1)
+		end
+		if frame.mood then frame.mood:ClearAllPoints(); frame.mood:SetPoint("BOTTOM", frame, "BOTTOM", 0, 6) end
 		if frame.mood then frame.mood:SetTextColor(Theme.MUTED_LIGHT[1], Theme.MUTED_LIGHT[2], Theme.MUTED_LIGHT[3], 1) end
 		if frame.mood and frame.mood.SetShadowColor then frame.mood:SetShadowColor(0, 0, 0, 0.6); frame.mood:SetShadowOffset(1, -1) end
 		EdgesShown(frame, true)

@@ -372,6 +372,17 @@ do
 		and skin.ring.atlas == "ui-achievement-guild-iconframe" and skin.plate.atlas == "ui-achievement-alert-background-mini")
 	Check("[AZ] compagnon : nom et humeur sur la plaque, nom blanc", frame.name:GetParent() == skin and frame.mood:GetParent() == skin
 		and frame.name.textColor[1] == 1 and frame.name.textColor[3] == 1)
+	do
+		-- 2.6.0 : le nom au milieu de la bande sombre, l'humeur dans la bande claire, centrés sur la plaque
+		local P = NS.AZEROTH_COMPANION_PLATE
+		local np, nrel, nrp, nx, ny = frame.name:GetPoint(1)
+		local mp, mrel, mrp, mx, my = frame.mood:GetPoint(1)
+		Check("[AZ] compagnon : nom centré dans la bande sombre de la plaque", np == "CENTER" and nrel == skin.plate and nrp == "BOTTOM"
+			and nx == 0 and ny == P.nameY and ny < P.height * 0.7, tostring(np) .. " " .. tostring(ny))
+		Check("[AZ] compagnon : humeur dans la bande claire, au-dessus du nom", mp == "CENTER" and mrel == skin.plate and mx == 0
+			and my == P.moodY and my > P.height * 0.7, tostring(my))
+		Check("[AZ] compagnon : plaque à la hauteur des deux lignes", skin.plate:GetHeight() == P.height)
+	end
 	Check("[AZ] compagnon : liseré rectangulaire caché", frame.top.mockHidden and frame.leftEdge.mockHidden)
 	Check("[AZ] compagnon : l'habillage ne prend pas la souris (caresse, survol)", not skin.mouseEnabled
 		and frame.scripts.OnEnter ~= nil and frame.scripts.OnMouseUp ~= nil)
@@ -396,7 +407,8 @@ do
 	-- Sobre : l'habillage s'en va, le cadre d'avant revient
 	NS:SetUIStyle("sobre")
 	Check("[AZ] Sobre : cadre d'avant (liseré, nom sur le cadre)", not skin:IsShown() and frame.uiStyle == "sobre"
-		and frame.name:GetParent() == frame and not frame.top.mockHidden)
+		and frame.name:GetParent() == frame and not frame.top.mockHidden
+		and select(2, frame.name:GetPoint(1)) == frame and select(5, frame.name:GetPoint(1)) == 19)
 	NS:SetUIStyle("azeroth")
 	Check("[AZ] Azeroth de nouveau : rhabillé sur place", skin:IsShown() and frame.name:GetParent() == skin and frame.top.mockHidden)
 	-- page Guide : le réglage y est cité
