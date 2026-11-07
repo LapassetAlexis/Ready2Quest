@@ -1,5 +1,9 @@
 # Journal des modifications
 
+## 1.29.4
+
+- **Roue crantée** dans l'en-tête de la fenêtre « Avant le départ », à côté de la flèche : elle ouvre les réglages de Ready2Quest.
+
 ## 1.29.3
 
 - **Plus léger** : seule la langue de ton client reste en mémoire (0,77 Mo au lieu de 0,89 Mo).

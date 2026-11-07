@@ -163,6 +163,18 @@ function ns:EnsureWindow()
 		frame.refreshButton:SetFrameLevel(tonumber(frame.close:GetFrameLevel()) or 20)
 	end
 
+	-- Roue crantée : les réglages, à gauche de la flèche
+	frame.settingsButton = Theme.CreateGearButton(frame, 22, function() ns:ToggleOptions() end, L.DIAG_SETTINGS_TIP)
+	frame.settingsButton:SetPoint("RIGHT", frame.refreshButton, "LEFT", -6, 0)
+	frame.settingsButton:Show()
+	if frame.settingsButton.SetFrameLevel and frame.close.GetFrameLevel then
+		frame.settingsButton:SetFrameLevel(tonumber(frame.close:GetFrameLevel()) or 20)
+	end
+	-- le titre et le « Parti de … » s'arrêtent avant la roue
+	for _, fs in ipairs({ frame.subtitle, frame.title }) do
+		if fs and fs.GetWidth and fs.SetWidth then fs:SetWidth(math.max(40, (tonumber(fs:GetWidth()) or 0) - (22 + 6))) end
+	end
+
 	ns.DIAG_LAYOUT = {
 		width = WIDTH,
 		adventureWidth = adventureWidth,
