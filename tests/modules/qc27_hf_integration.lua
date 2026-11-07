@@ -36,6 +36,9 @@ end
 I.UNPENDED = { char_hearth_50 = true, char_gold_looted = true, char_epic = true, char_camp_25 = true, dng_runs_50 = true,
 	pvp_hk_100 = true, fun_respec = true, zone_visit_all = true, zone_forever_new = true }
 
+I.LOT_E = { feat_chain = true, feat_eight = true, feat_goldstars = true, feat_prism_orn = true, feat_atlas = true,
+	feat_compass = true, feat_anniversary = true, feat_prism = true }
+
 -- before = true : le catalogue tel qu'avant l'intégration (ces lignes grisées,
 -- sans « La poisse », « Héros d'Azeroth » sans cadre de fiche) ; sinon tel quel
 function I.Catalogue(before)
@@ -50,6 +53,14 @@ function I.Catalogue(before)
 		local reward = def.reward
 		-- cadre de fiche de « Héros d'Azeroth » mis en attente à l'intégration
 		if before and def.id == "meta_hero" then reward = { title = reward.title } end
+		-- lot E (FeatsCosmetics.lua) : ces cosmétiques attendaient (reward.soon) et
+		-- existent maintenant (reward.cosmetic) ; même ligne, on les relit en attente
+		if type(reward) == "table" and reward.cosmetic and I.LOT_E[reward.cosmetic[2]] then
+			local copy = {}
+			for key, value in pairs(reward) do copy[key] = value end
+			copy.soon, copy.cosmetic = copy.cosmetic, nil
+			reward = copy
+		end
 		lines[#lines + 1] = table.concat({ def.id, def.n, def.cat, def.pts, def.scope, I.Ser(def.crit), I.Ser(reward),
 			tostring(def.desc), tostring(pending), type(def.paid) }, "|")
 	end

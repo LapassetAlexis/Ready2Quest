@@ -380,6 +380,9 @@ do
 		NS:FeatRewardText(NS:FeatDef("men_species_500")))
 	Check("[HF-E] cadre de fiche reporté : seul", NS:FeatRewardText(NS:FeatDef("zone_seal_ek")) == "cadre de fiche (à venir)",
 		NS:FeatRewardText(NS:FeatDef("zone_seal_ek")))
+	Check("[HF-E] lauriers de « Héros d'Azeroth » reportés : « cadre de fiche (à venir) » après le titre",
+		NS:FeatRewardText(NS:FeatDef("meta_hero")):find("cadre de fiche (à venir)", 1, true) ~= nil
+		and not NS:FeatRewardText(NS:FeatDef("meta_hero")):find("laurels", 1, true), NS:FeatRewardText(NS:FeatDef("meta_hero")))
 	Check("[HF-E] cosmétique du compagnon : son nom", NS:FeatRewardText(NS:FeatDef("men_boss_1")) == "Chaîne du colosse"
 		and NS:FeatRewardText(NS:FeatDef("meta_shiny")) == "Cadre prismatique")
 	local pending = 0
@@ -389,7 +392,7 @@ do
 			if def.reward.soon[1] ~= "cardbg" and def.reward.soon[1] ~= "cardframe" then pending = -99 end
 		end
 	end
-	Check("[HF-E] seules les récompenses de fiche restent en attente (6)", pending == 6, pending)
+	Check("[HF-E] seules les récompenses de fiche restent en attente (7, dont les lauriers)", pending == 7, pending)
 	-- un id inconnu du catalogue (ligne future) : « récompense à venir », pas son id
 	local text = NS:FeatRewardText({ id = "x", reward = { cosmetic = { "orn", "feat_inconnu" } } })
 	Check("[HF-E] id inconnu : « récompense à venir »", text == "récompense à venir", text)
