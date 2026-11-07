@@ -508,16 +508,26 @@ end
 function ns:MenagerieRankCheck(opts)
 	opts = opts or {}
 	if not ModuleOn() then return {} end
-	local ranks, count, gained = self:MenagerieCollectionData().ranks, self:MenagerieSpeciesCount(), {}
+	local coll = self:MenagerieCollectionData()
+	local ranks, count, gained = coll.ranks, self:MenagerieSpeciesCount(), {}
 	for _, rank in ipairs(ns.TRAINER_RANKS) do
 		if count >= rank.count and not ranks[rank.count] then
 			ranks[rank.count] = Now()
-			for _, id in ipairs(rank.aids or {}) do
-				if self.CaptureGrant then pcall(self.CaptureGrant, self, id, { quiet = true, silent = true }) end
+			-- 2.7 : aides, cosmétique et bandeau passent par le haut fait
+			-- men_species_<n> (FeatsCatMenagerie.lua) ; le palier reste noté
+			-- (date, annonce de guilde), marqué « payé par le haut fait »
+			local byFeat = self.FeatLegacyHandled and self:FeatLegacyHandled("men_species_" .. rank.count)
+			if byFeat then
+				coll.featRanks = type(coll.featRanks) == "table" and coll.featRanks or {}
+				coll.featRanks[rank.count] = true
+			else
+				for _, id in ipairs(rank.aids or {}) do
+					if self.CaptureGrant then pcall(self.CaptureGrant, self, id, { quiet = true, silent = true }) end
+				end
+				if rank.cosmetic then Unlock(self, rank.cosmetic.kind, rank.cosmetic.id) end
 			end
-			if rank.cosmetic then Unlock(self, rank.cosmetic.kind, rank.cosmetic.id) end
 			gained[#gained + 1] = rank
-			if not opts.quiet then
+			if not opts.quiet and not byFeat then
 				local title = L["TRAINER_" .. rank.key]
 				self:Print(self:F("MEN_RANK_MSG", rank.count, title, self:F("MEN_RANK_GIFT", self:TrainerRankGift(rank))))
 				if self.CompanionSay then self:CompanionSay("UNLOCK", { force = true, args = { title } }) end

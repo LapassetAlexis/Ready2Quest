@@ -329,7 +329,9 @@ function ns:ShinyCheckRewards()
 	local fresh = {}
 	for _, reward in ipairs(REWARDS) do
 		local key = reward.kind .. ":" .. reward.def.id
-		if count >= reward.count and not unlocked[key] then
+		-- 2.7 : le haut fait shiny_found_<n> donne la récompense (FeatsCatMenagerie.lua)
+		local byFeat = self.FeatLegacyHandled and self:FeatLegacyHandled("shiny_found_" .. reward.count)
+		if count >= reward.count and not unlocked[key] and not byFeat then
 			unlocked[key] = true
 			fresh[#fresh + 1] = reward
 			local label = L[reward.def.label]
