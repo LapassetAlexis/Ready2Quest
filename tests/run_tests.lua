@@ -271,6 +271,20 @@ function Mock.CreateColor(r, g, b, a)
 	function color:GetRGBA() return self.r, self.g, self.b, self.a end
 	return color
 end
+-- Atlas du client (C_Texture.GetAtlasInfo, QuestCompanion 2.5.0) : absent par
+-- défaut, le style Azeroth retombe alors sur Sobre partout. Mock.InstallAtlas(true)
+-- pose l'API avec tous les atlas ; Mock.InstallAtlas({ nom = true }) : ces atlas
+-- manquent ; Mock.InstallAtlas(nil) l'ôte.
+function Mock.InstallAtlas(mode)
+	if mode == nil then _G.C_Texture = nil; return end
+	local missing = type(mode) == "table" and mode or {}
+	_G.C_Texture = {
+		GetAtlasInfo = function(name)
+			if missing[name] then return nil end
+			return { width = 64, height = 64, file = 4035524 }
+		end,
+	}
+end
 _G.UIParent = NewRegion("Frame", "UIParent")
 _G.Minimap = NewRegion("Frame", "Minimap")
 _G.Minimap.width, _G.Minimap.height = 140, 140

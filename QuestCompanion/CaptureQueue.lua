@@ -995,9 +995,34 @@ end
 
 function ns:EnsureCaptureToast()
 	if self.captureToast then return self.captureToast end
-	if not (Theme and Theme.CreateToast) then return nil end
+	-- style de l'interface (2.5.0, AzerothStyle.lua) : un bandeau déjà fait
+	-- pour le style courant resservit ; Azeroth = bandeau doré + bande sombre
+	local cached = self.StyleCached and self:StyleCached("captureToast")
+	if cached then self.captureToast = cached; return cached end
+	local frame = self.AzerothOn and self:AzerothOn() and self:AzerothCreateBanner({ strata = "HIGH", strip = true })
+	if frame then
+		frame.icon:SetTexture(NET_ICON)
+		frame.ownGlyph = ART and NET_ICON == ART.icon
+		if frame.ownGlyph then frame.icon:SetVertexColor(Theme.GOLD_LIGHT[1], Theme.GOLD_LIGHT[2], Theme.GOLD_LIGHT[3], 1)
+		else frame.icon:SetTexCoord(0.08, 0.92, 0.08, 0.92) end
+	elseif not (Theme and Theme.CreateToast) then
+		return nil
+	else
+		frame = self:CaptureToastSobre()
+	end
+	if not frame then return nil end
+	self:CaptureToastControls(frame)
+	if self.RestorePoint then self:RestorePoint(frame, "captureToastPoint", { point = "TOP", x = 0, y = -240 }) end
+	frame:Hide()
+	self.captureToast = frame
+	return frame
+end
+
+-- Le bandeau Sobre (le style d'avant 2.5.0) : liseré doré, glyphe, textes
+function ns:CaptureToastSobre()
 	local frame = Theme.CreateToast(UIParent, TOAST_W, TOAST_H, { strata = "HIGH", accent = Theme.GOLD })
 	if not frame then return nil end
+	frame.uiStyle = "sobre"
 	local left = frame.contentLeft or 14
 	frame.icon = frame:CreateTexture(nil, "ARTWORK")
 	frame.icon:SetTexture(NET_ICON)
@@ -1033,6 +1058,14 @@ function ns:EnsureCaptureToast()
 	frame.hint:SetWidth(textW)
 	frame.hint:SetJustifyH("LEFT")
 	if frame.hint.SetWordWrap then frame.hint:SetWordWrap(false) end
+	return frame
+end
+
+-- Clic, Ignorer, Sourdine et la rangée des durées : communs aux deux styles.
+-- Les boutons vont en bas de la zone d'infos (frame.strip en Azeroth, le
+-- bandeau entier en Sobre).
+function ns:CaptureToastControls(frame)
+	local zone = frame.strip or frame
 	-- un bouton invisible par-dessus : clic, clic droit, et le glisser du bandeau
 	local ok, button = pcall(CreateFrame, "Button", nil, frame)
 	if ok and button then
@@ -1054,7 +1087,7 @@ function ns:EnsureCaptureToast()
 	-- Ignorer et Sourdine, en bas à droite, par-dessus le bouton invisible
 	local above = (frame.button and frame.button.GetFrameLevel and frame.button:GetFrameLevel() or frame:GetFrameLevel() or 1) + 2
 	frame.mute = Theme.CreateButton(frame, "auto", 18, L.CAPTURE_TOAST_MUTE, function() ns:CaptureToastToggleMuteRow() end)
-	frame.mute:SetPoint("BOTTOMRIGHT", frame, "BOTTOMRIGHT", -8, 7)
+	frame.mute:SetPoint("BOTTOMRIGHT", zone, "BOTTOMRIGHT", -8, 7)
 	frame.mute:SetFrameLevel(above)
 	frame.ignore = Theme.CreateButton(frame, "auto", 18, L.CAPTURE_TOAST_IGNORE, function() ns:CaptureToastIgnore() end)
 	frame.ignore:SetPoint("RIGHT", frame.mute, "LEFT", -6, 0)
@@ -1074,8 +1107,8 @@ function ns:EnsureCaptureToast()
 	-- la rangée des durées de sourdine : remplace la ligne du bas tant qu'on choisit
 	-- (toute la largeur du bandeau, boutons compacts : 4 durées + Annuler tiennent)
 	local row = CreateFrame("Frame", nil, frame)
-	row:SetPoint("BOTTOMLEFT", frame, "BOTTOMLEFT", 6, 5)
-	row:SetPoint("BOTTOMRIGHT", frame, "BOTTOMRIGHT", -6, 5)
+	row:SetPoint("BOTTOMLEFT", zone, "BOTTOMLEFT", 6, 5)
+	row:SetPoint("BOTTOMRIGHT", zone, "BOTTOMRIGHT", -6, 5)
 	row:SetHeight(22)
 	row:SetFrameLevel(above + 1)
 	row.bg = Theme.Solid(row, "BACKGROUND", Theme.NAV or Theme.WINDOW, 1)
@@ -1094,9 +1127,6 @@ function ns:EnsureCaptureToast()
 	row.cancel:SetPoint("RIGHT", row, "RIGHT", -4, 0)
 	row:Hide()
 	frame.muteRow = row
-	if self.RestorePoint then self:RestorePoint(frame, "captureToastPoint", { point = "TOP", x = 0, y = -240 }) end
-	frame:Hide()
-	self.captureToast = frame
 	return frame
 end
 
@@ -1166,10 +1196,13 @@ function ns:CaptureToastShow()
 	if frame.SetAccent then frame:SetAccent(accent) end
 	if frame.ownGlyph then frame.icon:SetVertexColor(accent[1], accent[2], accent[3], 1) end
 	frame.candidate = best
-	if not frame:IsShown() then
+	local fresh = not frame:IsShown()
+	if fresh then
 		frame:Show()
 		if Theme.FadeIn then pcall(Theme.FadeIn, frame, 0.2) end
 	end
+	-- Azeroth : nom ajusté à la largeur, bouclier gris (pas encore à toi), apparition
+	if self.StyleShown then self:StyleShown(frame, { shiny = best.shiny, shield = "grey", play = fresh }) end
 	if frame.chimedFor ~= best.serial then
 		frame.chimedFor = best.serial
 		self:CapturePlaySound("ready")

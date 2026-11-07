@@ -80,6 +80,7 @@ local FR = {
 	GUIDE_settings_2       = "Page Compagnon de route : %s (%s), pour que la créature remplisse son cadre à l'écran, même une bête capturée de taille réelle ; la réglette %s (Muet coupe aussi les tutoriels).",
 	GUIDE_settings_3       = "Commandes : /qc filet (capture le meilleur candidat), /qc filet tout (tout capturer), /qc filet sourdine [min|off], /qc capture (ta ménagerie et tes aides), /qc fiche [nom] (fiche de dresseur), /qc compagnon tuto menagerie (revoir ce tutoriel), /qc compagnon tuto (le tutoriel de base).",
 	GUIDE_settings_4       = "Le tutoriel de la ménagerie se joue une fois par personnage, à ta première occasion de capture : ton compagnon te guide jusqu'au clic sur le filet, laisse la scène se jouer, puis t'explique le reste. Jamais en combat, jamais si la capture est coupée. Le bouton « %s », en bas à gauche, le rejoue.",
+	GUIDE_settings_5       = "Style de l'interface (page Compagnon de route) : %s ou %s. /qc style azeroth|sobre.",
 }
 local EN = {
 	JRN_SEC_guide          = "Guide",
@@ -141,6 +142,7 @@ local EN = {
 	GUIDE_settings_2       = "Road companion page: %s (%s), so the creature fills its on-screen frame, even a life-size captured beast; the %s slider (Silent also turns the tutorials off).",
 	GUIDE_settings_3       = "Commands: /qc filet (captures the best candidate), /qc filet tout (capture all), /qc filet sourdine [min|off], /qc capture (your menagerie and aids), /qc fiche [name] (trainer card), /qc compagnon tuto menagerie (replay this tutorial), /qc compagnon tuto (the base tutorial).",
 	GUIDE_settings_4       = "The menagerie tutorial plays once per character, at your first capture opportunity: your companion guides you to the click on the net, lets the scene play, then explains the rest. Never in combat, never when capture is off. The \"%s\" button, bottom left, replays it.",
+	GUIDE_settings_5       = "Interface style (Road companion page): %s or %s. /qc style azeroth|sobre.",
 }
 ns.RegisterStrings(FR, EN)
 if ns.KEEP_STRINGS then ns.GUIDE_STRINGS = { fr = FR, en = EN } end
@@ -334,6 +336,7 @@ function BUILD.settings(self)
 		P(self:F("GUIDE_settings_2", L.OPT_COMP_FRAMING, table.concat(framings, ", "), L.OPT_COMP_CHATTER)),
 		P(L.GUIDE_settings_3),
 		P(self:F("GUIDE_settings_4", L.GUIDE_REPLAY)),
+		P(self:F("GUIDE_settings_5", L.UI_STYLE_azeroth, L.UI_STYLE_sobre)),
 	}
 end
 
