@@ -69,6 +69,65 @@ local function BuffFamily(name)
 end
 ns.BuffFamily = BuffFamily
 
+-- Buffs exclusifs, toutes classes : un seul à la fois depuis le même lanceur
+-- (le nouveau remplace l'ancien). Si l'un est actif, les autres du groupe ne
+-- sont pas « manquants », et on n'en réclame qu'un : le dernier vu.
+-- Noms normalisés (minuscules, version simple), frFR et enUS.
+local EXCLUSIVE_GROUPS = {
+	-- Paladin : une bénédiction par paladin, une aura, un sceau
+	{ key = "blessing", prefixes = { "bénédiction de ", "bénédiction du ", "bénédiction des ",
+		"blessing of " } },
+	{ key = "paladin-aura", prefixes = { "aura de dévotion", "aura de vindicte", "aura de concentration",
+		"aura de résistance", "aura de croisé", "aura de sainteté", "aura de rétribution",
+		"devotion aura", "retribution aura", "concentration aura", "crusader aura", "sanctity aura" },
+		suffixes = { " resistance aura" } },
+	{ key = "seal", prefixes = { "sceau de ", "sceau du ", "sceau des ", "seal of " } },
+	-- Mage : une armure, amplification ou atténuation
+	{ key = "mage-armor", names = { "armure de givre", "armure de glace", "armure du mage",
+		"armure de la fournaise", "armure de lave", "frost armor", "ice armor", "mage armor",
+		"molten armor" } },
+	{ key = "mage-magic", names = { "amplification de la magie", "atténuation de la magie",
+		"amplify magic", "dampen magic" } },
+	-- Démoniste : une peau / armure
+	{ key = "warlock-armor", names = { "peau de démon", "armure démoniaque", "gangrarmure",
+		"demon skin", "demon armor", "fel armor" } },
+	-- Chaman : un bouclier sur soi
+	{ key = "shaman-shield", names = { "bouclier de foudre", "bouclier d'eau", "lightning shield",
+		"water shield" } },
+	-- Guerrier : un cri à la fois
+	{ key = "warrior-shout", names = { "cri de guerre", "cri de commandement", "battle shout",
+		"commanding shout" } },
+	-- Chasseur : un aspect
+	{ key = "hunter-aspect", prefixes = { "aspect du ", "aspect de la ", "aspect des ", "aspect de l'",
+		"aspect of the " } },
+	-- Prêtre : feu intérieur ou volonté intérieure
+	{ key = "priest-inner", names = { "feu intérieur", "volonté intérieure", "inner fire", "inner will" } },
+	-- Druide : une forme
+	{ key = "druid-form", names = { "forme d'ours", "forme d'ours redoutable", "forme de félin",
+		"forme aquatique", "forme de voyage", "forme de sélénien", "bear form", "dire bear form",
+		"cat form", "aquatic form", "travel form", "moonkin form" } },
+}
+local EXCLUSIVE_BY_NAME = {}
+for _, group in ipairs(EXCLUSIVE_GROUPS) do
+	for _, name in ipairs(group.names or {}) do EXCLUSIVE_BY_NAME[name] = group.key end
+end
+
+-- Groupe exclusif d'une famille (nil si le buff est indépendant)
+local function ExclusiveGroup(family)
+	if type(family) ~= "string" then return nil end
+	if EXCLUSIVE_BY_NAME[family] then return EXCLUSIVE_BY_NAME[family] end
+	for _, group in ipairs(EXCLUSIVE_GROUPS) do
+		for _, prefix in ipairs(group.prefixes or {}) do
+			if family:sub(1, #prefix) == prefix then return group.key end
+		end
+		for _, suffix in ipairs(group.suffixes or {}) do
+			if #family > #suffix and family:sub(-#suffix) == suffix then return group.key end
+		end
+	end
+	return nil
+end
+ns.BuffExclusiveGroup = ExclusiveGroup
+
 -- Un buff suivi qui n'a pas été vu depuis 7 jours n'est plus réclamé : buff
 -- mondial ponctuel, ancien groupe, talent abandonné…
 local FORGET_AFTER = 7 * 24 * 3600
@@ -88,7 +147,11 @@ local function CurrentFamilies()
 		if not aura then break end
 		any = true
 		local family = BuffFamily(aura.name)
-		if family then families[family] = true end
+		if family then
+			families[family] = true
+			local group = ExclusiveGroup(family)
+			if group then families["group:" .. group] = true end
+		end
 	end
 	return families, any
 end
@@ -171,11 +234,32 @@ function ns:EvaluateBuffs()
 	local families = CurrentFamilies()
 	local seen = {}
 
+	-- Groupe exclusif : on ne réclame que le dernier vu (la bénédiction que
+	-- le paladin pose d'habitude), pas la première trouvée au hasard.
+	local groupPick = {}
+	for spellId, entry in pairs(db.buffs) do
+		local group = entry.enabled ~= false and ExclusiveGroup(BuffFamily(entry.name))
+		if group then
+			local best = groupPick[group]
+			local seenAt = type(entry.lastSeen) == "number" and entry.lastSeen or 0
+			if not best or seenAt > best.seenAt
+				or (seenAt == best.seenAt and spellId < best.spellId) then
+				groupPick[group] = { spellId = spellId, seenAt = seenAt }
+			end
+		end
+	end
+
 	for spellId, entry in pairs(db.buffs) do
 		local family = BuffFamily(entry.name) or tostring(spellId)
+		local group = ExclusiveGroup(family)
+		local skip = false
+		if group then
+			family = "group:" .. group
+			skip = groupPick[group] and groupPick[group].spellId ~= spellId
+		end
 		local stale = now and entry.learned and type(entry.lastSeen) == "number"
 			and (now - entry.lastSeen) > FORGET_AFTER
-		if entry.enabled ~= false and not stale and not seen[family] then
+		if entry.enabled ~= false and not skip and not stale and not seen[family] then
 			seen[family] = true
 			watched = watched + 1
 			local active = families[family] == true

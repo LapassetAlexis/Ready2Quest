@@ -3368,6 +3368,39 @@ Check("[6] Bénédiction supérieure = Bénédiction", NS.BuffFamily("Bénédict
 	== NS.BuffFamily("Bénédiction de puissance"))
 Check("[6] Don du fauve = Marque du fauve", NS.BuffFamily("Don du fauve") == NS.BuffFamily("Marque du fauve"))
 
+-- [6b] buffs exclusifs (toutes classes) : un seul réclamé, satisfait par n'importe lequel
+ResetWorld()
+NS:DB().buffs[19740] = { name = "Bénédiction de puissance", duration = 600, enabled = true, learned = true, lastSeen = 100 }
+NS:DB().buffs[19742] = { name = "Bénédiction de sagesse", duration = 600, enabled = true, learned = true, lastSeen = 200 }
+NS:DB().buffs[25898] = { name = "Bénédiction supérieure des rois", duration = 1800, enabled = true, learned = true, lastSeen = 50 }
+Mock.world.auras = { [19740] = { name = "Bénédiction de puissance", duration = 600 } }
+Mock.world.auraOrder = { 19740 }
+NS:RunChecklist("manual")
+Check("[6b] paladin : une bénédiction active couvre les autres", Result("buffs").ok == true, Result("buffs").detail)
+Mock.world.auras = {}
+Mock.world.auraOrder = {}
+NS:RunChecklist("manual")
+local blessDetail = Result("buffs").detail or ""
+Check("[6b] paladin : une seule bénédiction réclamée", Result("buffs").ok == false
+	and select(2, blessDetail:gsub("Bénédiction", "")) == 1, blessDetail)
+Check("[6b] paladin : la dernière vue est réclamée", blessDetail:find("sagesse") ~= nil, blessDetail)
+do
+	local G = NS.BuffExclusiveGroup
+	local function same(a, b) return G(NS.BuffFamily(a)) ~= nil and G(NS.BuffFamily(a)) == G(NS.BuffFamily(b)) end
+	Check("[6b] mage : armures exclusives", same("Armure de givre", "Armure du mage") and same("Ice Armor", "Mage Armor"))
+	Check("[6b] mage : amplification / atténuation", same("Amplification de la magie", "Atténuation de la magie"))
+	Check("[6b] démoniste : peau / armure", same("Peau de démon", "Armure démoniaque"))
+	Check("[6b] chaman : boucliers", same("Bouclier de foudre", "Bouclier d'eau"))
+	Check("[6b] guerrier : cris", same("Cri de guerre", "Cri de commandement"))
+	Check("[6b] chasseur : aspects", same("Aspect du faucon", "Aspect du singe") and same("Aspect of the Hawk", "Aspect of the Pack"))
+	Check("[6b] paladin : auras et sceaux", same("Aura de dévotion", "Aura de résistance au feu")
+		and same("Fire Resistance Aura", "Devotion Aura") and same("Sceau de piété", "Sceau du croisé"))
+	Check("[6b] prêtre : feu / volonté intérieure", same("Feu intérieur", "Volonté intérieure"))
+	Check("[6b] indépendants : pas de groupe", G(NS.BuffFamily("Intelligence des arcanes")) == nil
+		and G(NS.BuffFamily("Marque du fauve")) == nil and G(NS.BuffFamily("Mot de pouvoir : Robustesse")) == nil)
+	Check("[6b] bénédiction et aura : groupes différents", not same("Bénédiction de sagesse", "Aura de dévotion"))
+end
+
 -- [7] sans GetPlayerAuraBySpellID : lecture par index, pas « illisible »
 ResetWorld()
 local savedByID = C_UnitAuras.GetPlayerAuraBySpellID
