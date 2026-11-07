@@ -73,6 +73,7 @@ GuildFeats.lua
 AzerothStyle.lua
 FeatsData.lua
 FeatsCatMenagerie.lua
+FeatsCatJeu.lua
 Feats.lua
 JournalFeats.lua
 FeatsTitles.lua

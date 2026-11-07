@@ -161,7 +161,9 @@ do
 		local h = io.open(ROOT .. "/QuestCompanion/QuestCompanion.toc", "rb")
 		local toc = h and h:read("*a") or ""
 		if h then h:close() end
-		return toc:find("FeatsData.lua\nFeatsCatMenagerie.lua\nFeats.lua", 1, true) ~= nil
+		-- les catalogues (ménagerie, puis jeu) entre les données et le moteur
+		return toc:find("FeatsData.lua\nFeatsCatMenagerie.lua\n", 1, true) ~= nil
+			and toc:find("FeatsCatMenagerie.lua\n[%w_\n.]-Feats.lua\n") ~= nil
 	end)())
 	Check("[HF-B] cosmétiques pas encore fabriqués : en attente (reward.soon), pas de déblocage fantôme",
 		NS:FeatDef("men_boss_1").reward.cosmetic == nil and NS:FeatDef("men_boss_1").reward.soon[2] == "feat_chain")
