@@ -50,6 +50,10 @@ The **travel companion**, its **creature menagerie** and its **journal** are a s
 
 ![Settings: every module on or off in one click](https://media.forgecdn.net/attachments/2147/116/r2q-3-png.png)
 
+## Community
+
+Questions, bugs, ideas, shinies to show off: join the [Discord](https://discord.gg/b9mYCUhxRb) (English welcome in #addons-english).
+
 ## License
 
 Free software, **GPL-3.0**. Source code: https://github.com/LapassetAlexis/Ready2Quest
@@ -92,6 +96,10 @@ Le **compagnon de route**, sa **ménagerie de créatures** et son **carnet de vo
 ## Commandes
 
 `/r2q` lance le check, `/r2q options` ouvre les réglages, `/r2q help` liste tout, `/r2q diag` affiche un diagnostic à joindre à un signalement de bug.
+
+## Communauté
+
+Questions, bugs, idées, brillantes à montrer : rejoins le [Discord](https://discord.gg/b9mYCUhxRb).
 
 ## Licence
 

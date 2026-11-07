@@ -175,6 +175,10 @@ Light on memory: about 2 MB (zone data is built only when you get there, and onl
 | `/qc reset` | resets the settings, without touching your creature or your journal |
 | `/qc diag` | diagnostics, to attach if you report a problem |
 
+## Community
+
+Questions, bugs, ideas: join the [Discord](https://discord.gg/b9mYCUhxRb).
+
 ## Data and license
 
 QuestCompanion is free software under the **GPL-3.0** license (see `LICENSE`). The zone data (creatures, gathering, quests) is generated from the [Questie](https://github.com/Questie/QuestieDB) database, also under GPL-3.0, by `tools/gen_zone_data.py`: see `NOTICE.md`.
@@ -359,6 +363,10 @@ Léger en mémoire : environ 2 Mo (les données d'une zone ne sont construites q
 | `/qc minimap [on\|off]` | le bouton de minicarte |
 | `/qc reset` | remet les réglages à zéro, sans toucher à ta créature ni à ton carnet |
 | `/qc diag` | diagnostic, à joindre si tu signales un problème |
+
+## Communauté
+
+Questions, bugs, idées : rejoins le [Discord](https://discord.gg/b9mYCUhxRb).
 
 ## Données et licence
 

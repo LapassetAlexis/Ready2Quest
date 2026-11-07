@@ -67,6 +67,10 @@ For **WoW Forever** (1.60). English and French. Free, standalone (`/qc`), about 
 
 `/qc` opens the journal (so does the minimap button, or a right-click on the companion), `/qc filet` throws the net, `/qc filet tout` captures everything waiting, `/qc capture` sums up your menagerie, `/qc fiche [name]` opens a trainer card, `/qc options` opens the settings, `/qc help` lists everything.
 
+## Community
+
+Questions, bugs, ideas, shinies to show off: join the [Discord](https://discord.gg/b9mYCUhxRb) (English welcome in #addons-english).
+
 ## License and data
 
 Free software, **GPL-3.0**. Zone data (creatures, gathering, quests) is generated from the [Questie](https://github.com/Questie/QuestieDB) database, also GPL-3.0. Source code: https://github.com/LapassetAlexis/Ready2Quest
@@ -123,6 +127,10 @@ Pour **WoW Forever** (1.60). En français et en anglais. Gratuit, autonome (`/qc
 ## Commandes
 
 `/qc` ouvre le carnet (comme le bouton de minicarte ou un clic droit sur le compagnon), `/qc filet` lance le filet, `/qc filet tout` capture tout ce qui attend, `/qc capture` résume ta ménagerie, `/qc fiche [nom]` ouvre une fiche de dresseur, `/qc options` ouvre les réglages, `/qc help` liste tout.
+
+## Communauté
+
+Questions, bugs, idées, brillantes à montrer : rejoins le [Discord](https://discord.gg/b9mYCUhxRb).
 
 ## Licence et données
 

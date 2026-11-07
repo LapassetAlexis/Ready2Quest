@@ -9,6 +9,10 @@ Deux addons pour **World of Warcraft Forever**, en français et en anglais. Ils 
 
 Ensemble, le compagnon réagit en plus à tes départs et retours en ville.
 
+## Communauté
+
+Questions, bugs, idées : rejoins le [Discord](https://discord.gg/b9mYCUhxRb) (section « Addons WoW Forever »). Les addons sont aussi sur [CurseForge](https://www.curseforge.com/wow/addons/quest-companion) et [Wago](https://addons.wago.io/addons/quest-companion).
+
 ## Installation
 
 Copie le dossier de chaque addon voulu dans `World of Warcraft/<client>/Interface/AddOns/` : `…/AddOns/Ready2Quest/Ready2Quest.toc`, `…/AddOns/QuestCompanion/QuestCompanion.toc`. Le dépôt est rangé comme le dossier `AddOns`.
