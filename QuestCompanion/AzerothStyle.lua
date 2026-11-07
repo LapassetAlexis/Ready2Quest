@@ -1042,6 +1042,8 @@ do
 			local gained = rank(self, opts, ...)
 			if type(gained) == "table" and #gained > 0 and not (type(opts) == "table" and opts.quiet) and self.JournalToastPush then
 				local best = gained[#gained]
+				-- 2.7 : le bandeau du haut fait men_species_<n> le remplace
+				if self.FeatLegacyHandled and self:FeatLegacyHandled("men_species_" .. tostring(best.count)) then return gained end
 				self:JournalToastPush({ kind = "rank", name = L["TRAINER_" .. tostring(best.key)] or tostring(best.count) })
 			end
 			return gained

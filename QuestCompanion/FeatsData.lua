@@ -64,13 +64,8 @@ ns.FEAT_CAPITALS = CAPITALS
 ns.FEAT_DEFS = {
 	-- Ménagerie (compte : union des captures de tous tes personnages)
 	{ "men_first",        1, "men", 5,  "account", crit = { "count", "species", 1 },   reward = { aids = { appat = 1 } } },
-	-- les aides et cosmétiques des paliers restent donnés par MenagerieRankCheck
-	-- tant que le lot B ne les a pas déplacés ici (pas de double don)
-	{ "men_species_10",   2, "men", 10, "account", crit = { "count", "species", 10 },  reward = { title = 1 } },
-	{ "men_species_25",   3, "men", 10, "account", crit = { "count", "species", 25 },  reward = { title = 2 } },
-	{ "men_species_50",   4, "men", 10, "account", crit = { "count", "species", 50 },  reward = { title = 3 } },
-	{ "men_species_100",  5, "men", 25, "account", crit = { "count", "species", 100 }, reward = { title = 4 } },
-	{ "men_species_250",  6, "men", 50, "account", crit = { "count", "species", 250 }, reward = { title = 5 } },
+	-- paliers d'espèces (men_species_*) : FeatsCatMenagerie.lua (lot B), avec
+	-- les aides et cosmétiques déplacés de TRAINER_RANKS
 	-- Brillantes (compte)
 	{ "shiny_cap_1",     35, "shiny", 10, "account", crit = { "count", "shinyCap", 1 }, reward = { aids = { lasso = 1 } } },
 	-- Zones et sceaux (personnage)

@@ -664,7 +664,10 @@ function ns:FeatGrant(def, opts)
 	opts = opts or {}
 	local reward, given = def and def.reward, {}
 	if type(reward) ~= "table" then return given end
-	if type(reward.aids) == "table" and not opts.cosmeticsOnly and self.CaptureGrant then
+	-- def.paid(self) : aides déjà données par l'ancien système (paliers d'espèces
+	-- d'avant la 2.7, lot B) : pas de double don
+	local paid = type(def.paid) == "function" and select(2, pcall(def.paid, self)) == true
+	if type(reward.aids) == "table" and not opts.cosmeticsOnly and not paid and self.CaptureGrant then
 		local ids = {}
 		for id in pairs(reward.aids) do ids[#ids + 1] = id end
 		table.sort(ids)
