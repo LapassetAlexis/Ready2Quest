@@ -1,5 +1,16 @@
 # QuestCompanion
 
+## 2.7.0 (effets)
+
+- **La bulle façon « Talking Head »** : en style Azeroth, le compagnon parle sur le parchemin des dialogues du jeu, son nom en petites capitales en haut, le texte en brun foncé. La bulle prend la hauteur du texte, reste au-dessus du cadre et ne gêne pas les clics.
+- **Une lueur ronde quand il parle** : le liseré jaune rectangulaire qui clignotait laisse place à une lueur dorée et ronde, derrière l'anneau du portrait, qui respire tant que la bulle est là. Le style Sobre garde son liseré.
+- **Brillante repérée** : des éclats d'étoile dorés scintillent autour du cadre pendant quelques secondes, et la lueur bat plus vite.
+- **Évolution et niveau** : une lueur autour du portrait, de la poussière dorée qui monte, et au-dessus du cadre une ligne « Aguerri ! » (ou « Niveau 12 ! ») entre deux volutes, avec une ligne de lumière dessous. La bulle monte d'un cran le temps de l'effet : rien ne se chevauche.
+- **Nouveau titre** : un titre de dresseur gagné arrive avec des ailes dorées et un éclat derrière son bandeau.
+- Toutes ces textures sont celles du client ; s'il en manque une, l'effet est simplement sauté.
+
+*English:* Azeroth style visual effects: the companion speaks on the in-game "Talking Head" parchment (name in small caps, dark brown text); a soft round golden glow breathes behind the portrait ring while it speaks (replacing the rectangular yellow border; the Plain style keeps it); golden star bursts twinkle around the frame when a shiny is spotted; on evolution or level up, a glow around the portrait, rising golden dust and a compact "Seasoned!" / "Level 12!" line between two filigrees above the frame (the bubble moves up meanwhile); a new trainer title arrives with golden wings and a burst. All textures come from the game client; a missing one simply skips its effect.
+
 ## 2.6.0 — sans Souvenirs
 
 - **Les Souvenirs s'en vont** : plus d'album dans le carnet, plus de photos (captures d'écran), plus de question d'accord pour les photos, plus d'anniversaires ni de souvenirs racontés à voix haute. La page de réglages « Souvenirs » disparaît aussi. Le carnet garde cinq pages : Compagnon, Ménagerie, Missions, Exploration, Guide.

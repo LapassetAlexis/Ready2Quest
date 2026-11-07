@@ -24,6 +24,9 @@
 -- des hauts faits, plaque de titre, bandeau de verdict, boutons dorés
 -- (dessinés). Il leur faut en plus le bois (ns:AzerothScenesOn) ; sans lui,
 -- elles restent en Sobre. Construites par CaptureStage.lua et CaptureBatch.lua.
+-- 2.7.0 (effets) : bulle façon « Talking Head », lueur ronde quand le
+-- compagnon parle, éclats d'une brillante, évolution / niveau, ailes des
+-- grandes récompenses (ns:AzerothRewardFX) : section « Effets Azeroth ».
 local ADDON, ns = ...
 if ns.blocked then return end
 local L = ns.L
@@ -1185,6 +1188,797 @@ do
 			if frame and frame.uiStyle == "azeroth" then EdgesShown(frame, false) end
 			return a, b
 		end
+	end
+end
+
+-- ===========================================================================
+-- Effets Azeroth (2.7.0) : bulle façon « Talking Head », lueur ronde quand
+-- le compagnon parle, éclats d'étoile pour une brillante, montée de niveau
+-- et évolution (volutes, ligne de lumière, poussière dorée), ailes et éclat
+-- des grandes récompenses (ns:AzerothRewardFX). Style Azeroth seulement :
+-- le style Sobre ne change pas. Chaque effet demande ses atlas au client
+-- (ns.AzerothHasAtlas) ; s'il en manque un, l'effet (ou sa pièce) est sauté
+-- sans bruit. Rien ne prend la souris ; tout est créé à la demande et
+-- réutilisé ; une seule horloge (OnUpdate posée le temps des effets,
+-- retirée ensuite), la lueur suit celle du liseré (Notify.lua).
+-- ===========================================================================
+ns.AZEROTH_FX_ATLAS = {
+	talk      = "TalkingHeads-TextBackground",   -- parchemin des « Talking Heads » (570×155)
+	talkSheen = "TalkingHeads-Glow-TextSheen",
+	circle    = "BonusChest-CircleGlow",         -- lueur ronde blanche (teintée d'or)
+	circleAlt = "garrlanding-circleglow",
+	star      = "OBJFX_StarBurst",
+	iconGlow  = "AftLevelup-IconGlow",
+	line      = "AftLevelup-GlowLine",
+	dots1     = "AftLevelup-Dots1",
+	dots2     = "AftLevelup-Dots2",
+	filigree  = "AftLevelup-FiligreeLeft",       -- la droite : la même, retournée
+	cloud     = "AftLevelup-SoftCloud",
+	wings     = "titleprestige-wings",           -- l'aile gauche ; la droite, retournée
+	burst     = "BonusChest-Burst-Uncommon",
+}
+local FXA = ns.AZEROTH_FX_ATLAS
+-- durées (s) et géométrie (maquette validée, docs/TECHNIQUE.md)
+ns.AZEROTH_FX = {
+	glowPeriod = 2.2, glowShinyPeriod = 1.2, glowSize = 1.45, glowFade = 0.4,
+	shinyTime = 4, sparkPeriod = 1.8, sparkSize = 30,
+	levelTime = 3.2, levelPulse = 1.6, levelCycle = 2.4,
+	groupH = 30, groupY = 10, groupLift = 36, filigreeW = 84, filigreeH = 21, filigreeGap = 6, levelFont = 18,
+	rewardTime = 2.4,
+	bubbleW = 290, bubbleLeft = 24, bubbleRight = 40, bubbleNameY = -13, bubbleTextY = -30,
+	bubbleBottom = 18, bubbleMin = 64, sheenTime = 0.9,
+}
+local FXC = ns.AZEROTH_FX
+local FX_GOLD = { 1, 0.80, 0.38 }          -- teinte des lueurs blanches
+local FX_NAME = { 0.48, 0.29, 0.07 }       -- nom du compagnon sur le parchemin (#7a4a12)
+local FX_TEXT = { 1, 0.86, 0.45 }          -- « Aguerri ! »
+-- éclats autour du cadre : position (fraction du cadre depuis son coin
+-- haut gauche) et décalage dans le cycle
+local SPARKS = { { 0.0, 0.13, 0 }, { 1.06, 0.2, 0.5 }, { 0.58, -0.03, 1.0 }, { 1.15, 0.67, 1.3 } }
+local DOTS = { { 0.27, 0.36, 0, "dots1" }, { 0.85, 0.19, 0.8, "dots2" } }
+
+local FXFR = {
+	AZ_FX_EVOLVE = "%s !",
+	AZ_FX_LEVEL  = "Niveau %d !",
+}
+local FXEN = {
+	AZ_FX_EVOLVE = "%s!",
+	AZ_FX_LEVEL  = "Level %d!",
+}
+ns.RegisterStrings(FXFR, FXEN)
+if ns.KEEP_STRINGS then ns.AZEROTH_FX_STRINGS = { fr = FXFR, en = FXEN } end
+
+local function HasFx(key) return ns.AzerothHasAtlas(FXA[key]) and true or false end
+local function Additive(tex) if tex.SetBlendMode then tex:SetBlendMode("ADD") end end
+local function Gold(tex) tex:SetVertexColor(FX_GOLD[1], FX_GOLD[2], FX_GOLD[3], 1) end
+local function Rotate(tex, radians) Method(tex, "SetRotation", radians) end
+local function Pulse(t, period)            -- 0 → 1 → 0, en douceur
+	return 0.5 - 0.5 * math.cos(2 * math.pi * t / period)
+end
+
+-- L'atlas retourné de gauche à droite : coordonnées de l'atlas inversées
+-- (C_Texture.GetAtlasInfo) ; sans elles, l'atlas tel quel
+local function AtlasMirrored(tex, name)
+	local api = G("C_Texture")
+	if type(api) == "table" and type(api.GetAtlasInfo) == "function" then
+		local ok, info = pcall(api.GetAtlasInfo, name)
+		if ok and ns.Plain then info = ns.Plain(info) end
+		local file = ok and type(info) == "table" and (info.file or info.filename)
+		if file and tonumber(info.leftTexCoord) and tonumber(info.rightTexCoord) then
+			tex:SetTexture(file)
+			tex:SetTexCoord(info.rightTexCoord, info.leftTexCoord, info.topTexCoord or 0, info.bottomTexCoord or 1)
+			tex.mirrored = true
+			return true
+		end
+	end
+	return Atlas(tex, name)
+end
+ns.AzerothAtlasMirrored = AtlasMirrored
+
+-- Le compagnon est-il habillé en Azeroth, affiché, module allumé ?
+local function AzCompanion(self)
+	local frame = self.companionFrame
+	if not (frame and frame.uiStyle == "azeroth" and frame:IsShown()) then return nil end
+	if ns.CompanionOn and not ns.CompanionOn() then return nil end
+	return frame
+end
+
+-- Le calque des effets sur le cadre : au-dessus du modèle et de l'anneau,
+-- sans souris (la caresse, le survol et le filet passent au travers)
+local function FxLayer(frame)
+	if frame.azFxLayer then return frame.azFxLayer end
+	local layer = CreateFrame("Frame", nil, frame)
+	layer:SetAllPoints(frame)
+	layer:SetFrameLevel((frame:GetFrameLevel() or 1) + 8)
+	layer:EnableMouse(false)
+	frame.azFxLayer = layer
+	return layer
+end
+
+-- ---------------------------------------------------------------------------
+-- L'horloge des effets : posée tant qu'un effet joue, retirée ensuite
+-- ---------------------------------------------------------------------------
+local FxStep
+local function FxState(self)
+	local state = self.azFx
+	if not state then state = { rewards = {} }; self.azFx = state end
+	return state
+end
+local function FxStart(self)
+	local driver = self.azFxDriver
+	if not driver then
+		local ok, frame = pcall(CreateFrame, "Frame")
+		if not ok or not frame then return false end
+		driver = frame
+		self.azFxDriver = driver
+	end
+	if not driver.running then
+		driver.running = true
+		driver:SetScript("OnUpdate", function(f)
+			local done, busy = pcall(FxStep, ns, Clock())
+			if not done and ns.RecordError then ns:RecordError("azeroth:fx", busy) end
+			if not done or not busy then f:SetScript("OnUpdate", nil); f.running = nil end
+		end)
+	end
+	return true
+end
+
+-- ---------------------------------------------------------------------------
+-- 1. La bulle : parchemin des « Talking Heads », nom en petites capitales,
+-- texte brun foncé. Même ancre, même fondu, ne prend pas la souris ; la
+-- bulle Sobre (Theme.CreateBubble) n'est que masquée, et revient telle quelle.
+-- ---------------------------------------------------------------------------
+local function BubbleSkin(bubble)
+	if bubble.azTalk then return bubble.azTalk end
+	local skin = {}
+	skin.bg = bubble:CreateTexture(nil, "BACKGROUND", nil, 1)
+	skin.bg:SetAllPoints(bubble)
+	Atlas(skin.bg, FXA.talk)
+	skin.name = bubble:CreateFontString(nil, "OVERLAY", Theme.F_CAPS)
+	skin.name:SetPoint("TOPLEFT", bubble, "TOPLEFT", FXC.bubbleLeft, FXC.bubbleNameY)
+	AzFont(skin.name, 10)
+	skin.name:SetTextColor(FX_NAME[1], FX_NAME[2], FX_NAME[3], 1)
+	if Theme.NoShadow then Theme.NoShadow(skin.name) end
+	skin.name:SetJustifyH("LEFT")
+	skin.name:SetWidth(FXC.bubbleW - FXC.bubbleLeft - FXC.bubbleRight)
+	if skin.name.SetWordWrap then skin.name:SetWordWrap(false) end
+	skin.text = bubble:CreateFontString(nil, "OVERLAY", Theme.F_BODY)
+	skin.text:SetPoint("TOPLEFT", bubble, "TOPLEFT", FXC.bubbleLeft, FXC.bubbleTextY)
+	skin.text:SetWidth(FXC.bubbleW - FXC.bubbleLeft - FXC.bubbleRight)
+	skin.text:SetJustifyH("LEFT")
+	if skin.text.SetWordWrap then skin.text:SetWordWrap(true) end
+	skin.text:SetTextColor(INK[1], INK[2], INK[3], 1)
+	if Theme.NoShadow then Theme.NoShadow(skin.text) end
+	if HasFx("talkSheen") then
+		skin.sheen = bubble:CreateTexture(nil, "ARTWORK", nil, 2)
+		Atlas(skin.sheen, FXA.talkSheen)
+		Additive(skin.sheen)
+		skin.sheen:Hide()
+	end
+	skin.regions = { skin.bg, skin.name, skin.text }
+	bubble.azTalk = skin
+	return skin
+end
+
+local function SobreChrome(bubble, shown)
+	local list = { bubble.bg, bubble.rule, bubble.tail, bubble.tailEdge, bubble.text }
+	local border = bubble.border
+	if type(border) == "table" then
+		for _, side in ipairs({ "top", "bottom", "left", "right" }) do list[#list + 1] = border[side] end
+	end
+	for _, region in pairs(list) do
+		if region and region.Show then if shown then region:Show() else region:Hide() end end
+	end
+end
+
+local function PlaceTutoButtons(bubble, az)
+	local x, y = Theme.BUBBLE_PAD or 10, Theme.BUBBLE_PAD or 10
+	if az then x, y = FXC.bubbleLeft, 14 end
+	if bubble.nextButton then
+		bubble.nextButton:ClearAllPoints()
+		bubble.nextButton:SetPoint("BOTTOMRIGHT", bubble, "BOTTOMRIGHT", -x, y)
+	end
+	if bubble.skipButton then
+		bubble.skipButton:ClearAllPoints()
+		bubble.skipButton:SetPoint("BOTTOMLEFT", bubble, "BOTTOMLEFT", x, y)
+	end
+end
+
+-- Hauteur de la bulle Azeroth : nom, texte, marge, boutons du tutoriel
+local function AzBubbleLayout(self, bubble)
+	local skin = bubble.azTalk
+	skin.name:SetText(ns.AzerothUpper(self.CompanionName and self:CompanionName() or ""))
+	skin.text:SetText(bubble.text and bubble.text:GetText() or "")
+	local textW = FXC.bubbleW - FXC.bubbleLeft - FXC.bubbleRight
+	local h = Theme.TextHeight and Theme.TextHeight(skin.text, textW, Theme.F_BODY) or 14
+	local height = math.max(FXC.bubbleMin, math.ceil(-FXC.bubbleTextY + h + FXC.bubbleBottom + (tonumber(bubble.azExtra) or 0)))
+	bubble:SetWidth(FXC.bubbleW)
+	bubble:SetHeight(height)
+	return height
+end
+
+-- Habille la bulle selon le style du compagnon (et la rhabille si affichée)
+function ns:CompanionBubbleApplyStyle()
+	local bubble = self.companionBubble
+	if not bubble then return nil end
+	local frame = self.companionFrame
+	local az = frame ~= nil and frame.uiStyle == "azeroth" and HasFx("talk")
+	if az then
+		local skin = BubbleSkin(bubble)
+		bubble.sobreW = bubble.sobreW or bubble:GetWidth()
+		SobreChrome(bubble, false)
+		for _, region in ipairs(skin.regions) do region:Show() end
+		PlaceTutoButtons(bubble, true)
+		bubble.azBubble = true
+		AzBubbleLayout(self, bubble)
+	elseif bubble.azBubble then
+		local skin = bubble.azTalk
+		for _, region in ipairs(skin.regions) do region:Hide() end
+		if skin.sheen then skin.sheen:Hide() end
+		SobreChrome(bubble, true)
+		PlaceTutoButtons(bubble, false)
+		bubble.azBubble = nil
+		if bubble.sobreW then bubble:SetWidth(bubble.sobreW) end
+		bubble:SetText(bubble.text and bubble.text:GetText() or "", bubble.azExtra)
+	end
+	return az and "azeroth" or "sobre"
+end
+
+-- la bulle : SetText garde la mesure Sobre, puis la mise en page Azeroth ;
+-- un reflet traverse le parchemin à chaque nouvelle réplique
+local function SkinBubble(self, bubble)
+	if bubble.azWrapped then return end
+	bubble.azWrapped = true
+	local base = bubble.SetText
+	function bubble:SetText(value, extra)
+		self.azExtra = extra
+		local height = base(self, value, extra)
+		if self.azBubble then
+			height = AzBubbleLayout(ns, self)
+			local skin = self.azTalk
+			if skin.sheen then
+				FxState(ns).sheenAt = Clock()
+				FxStart(ns)
+			end
+		end
+		return height
+	end
+end
+
+do
+	local ensure = ns.EnsureCompanionBubble
+	if ensure then
+		function ns:EnsureCompanionBubble(...)
+			local fresh = not self.companionBubble
+			local bubble = ensure(self, ...)
+			if bubble and fresh then
+				SkinBubble(self, bubble)
+				self:CompanionBubbleApplyStyle()
+			end
+			return bubble
+		end
+	end
+end
+
+-- ---------------------------------------------------------------------------
+-- 2. La lueur ronde : derrière l'anneau (sous le fond du portrait : elle
+-- déborde en halo), dorée, elle respire tant que la bulle est là, plus vite
+-- quand une brillante est repérée. Remplace le liseré rectangulaire.
+-- ---------------------------------------------------------------------------
+local function RoundGlow(frame)
+	if frame.azGlow ~= nil then return frame.azGlow or nil end
+	local key = HasFx("circle") and "circle" or (HasFx("circleAlt") and "circleAlt") or nil
+	if not key then return nil end   -- pas d'atlas : pas de lueur (et pas de liseré)
+	local glow = frame:CreateTexture(nil, "BACKGROUND", nil, -8)
+	glow:SetPoint("CENTER", frame, "TOP", 0, RING_Y)
+	Atlas(glow, FXA[key])
+	Additive(glow)
+	Gold(glow)
+	glow:SetAlpha(0)
+	glow:Hide()
+	glow.base = math.floor(RING_W * FXC.glowSize)
+	glow:SetSize(glow.base, glow.base)
+	frame.azGlow = glow
+	return glow
+end
+
+-- Force de la lueur (0..1) : la bulle, puis son extinction ; la brillante
+function ns:AzerothGlowEnvelope(now)
+	local e = 0
+	local untilAt = self.companionBubbleUntil
+	if untilAt then
+		if now < untilAt then e = 1
+		elseif now - untilAt < FXC.glowFade then e = 1 - (now - untilAt) / FXC.glowFade end
+	end
+	local state = self.azFx
+	local shiny = state and state.shinyUntil
+	if shiny and now < shiny + FXC.glowFade then
+		e = math.max(e, now < shiny and 1 or 1 - (now - shiny) / FXC.glowFade)
+	end
+	return e, shiny ~= nil and now < shiny
+end
+
+local function AzGlowStep(self, frame, now)
+	local env, shiny = 0, false
+	if ns.CompanionOn and ns.CompanionOn() then env, shiny = self:AzerothGlowEnvelope(now) end
+	local glow = frame.azGlow
+	if env <= 0 then
+		if glow and frame.azGlowAlpha ~= 0 then glow:Hide(); frame.azGlowAlpha = 0 end
+		return 0
+	end
+	glow = RoundGlow(frame)
+	if not glow then return 0 end
+	local p = Pulse(now, shiny and FXC.glowShinyPeriod or FXC.glowPeriod)
+	local alpha = env * (0.15 + 0.6 * p)
+	local size = math.floor(glow.base * (0.92 + 0.12 * p) + 0.5)
+	if glow.size ~= size then glow:SetSize(size, size); glow.size = size end
+	glow:SetAlpha(alpha)
+	glow:Show()
+	frame.azGlowAlpha = alpha
+	return alpha
+end
+
+do
+	local glowUpdate = ns.GlowUpdate
+	if glowUpdate then
+		function ns:GlowUpdate(now, ...)
+			local frame = self.companionFrame
+			if not (frame and frame.uiStyle == "azeroth") then
+				if frame and frame.azGlow and frame.azGlowAlpha ~= 0 then frame.azGlow:Hide(); frame.azGlowAlpha = 0 end
+				return glowUpdate(self, now, ...)
+			end
+			-- Azeroth : le liseré rectangulaire s'éteint, la lueur ronde le remplace
+			if type(frame.glow) == "table" and frame.glowAlpha ~= 0 then
+				for _, tex in ipairs(frame.glow) do tex:Hide() end
+				frame.glowAlpha = 0
+			end
+			return AzGlowStep(self, frame, now or Clock())
+		end
+	end
+end
+
+-- ---------------------------------------------------------------------------
+-- 3. Brillante repérée : éclats d'étoile dorés qui scintillent autour du
+-- cadre (décalés), lueur plus rapide, FXC.shinyTime s
+-- ---------------------------------------------------------------------------
+local function Sparks(frame)
+	if frame.azSparks then return frame.azSparks end
+	local layer = FxLayer(frame)
+	local list = {}
+	for index = 1, #SPARKS do
+		local tex = layer:CreateTexture(nil, "OVERLAY", nil, 3)
+		Atlas(tex, FXA.star)
+		Additive(tex)
+		Gold(tex)
+		tex:Hide()
+		list[index] = tex
+	end
+	frame.azSparks = list
+	return list
+end
+
+function ns:AzerothShinyFX()
+	local frame = AzCompanion(self)
+	if not frame then return false end
+	local state = FxState(self)
+	local now = Clock()
+	state.shinyUntil = now + FXC.shinyTime
+	if HasFx("star") then
+		state.sparkAt = now
+		local w, h = frame:GetWidth() or 104, frame:GetHeight() or 118
+		for index, tex in ipairs(Sparks(frame)) do
+			local s = SPARKS[index]
+			tex:ClearAllPoints()
+			tex:SetPoint("CENTER", frame, "TOPLEFT", math.floor(s[1] * w), -math.floor(s[2] * h))
+			tex:SetAlpha(0)
+		end
+	end
+	FxStart(self)
+	return true
+end
+
+local function SparkStep(frame, state, now)
+	local list = frame.azSparks
+	if not (list and state.sparkAt) then return false end
+	local t = now - state.sparkAt
+	local fade = Clamp01((state.shinyUntil - now) / FXC.glowFade)
+	if t >= FXC.shinyTime then
+		for _, tex in ipairs(list) do tex:Hide() end
+		state.sparkAt = nil
+		return false
+	end
+	for index, tex in ipairs(list) do
+		local lt = t - SPARKS[index][3]
+		if lt < 0 then
+			tex:Hide()
+		else
+			-- 0 → 40 % : apparaît et grandit en tournant ; 70 % : éteint
+			local p = (lt % FXC.sparkPeriod) / FXC.sparkPeriod
+			local alpha, scale = 0, 0.3
+			if p < 0.4 then alpha, scale = p / 0.4, 0.3 + 0.7 * p / 0.4
+			elseif p < 0.7 then alpha, scale = 1 - (p - 0.4) / 0.3, 1 end
+			local size = math.max(1, math.floor(FXC.sparkSize * scale + 0.5))
+			tex:SetSize(size, size)
+			Rotate(tex, math.rad(30) * math.min(1, p / 0.4))
+			tex:SetAlpha(alpha * fade)
+			tex:Show()
+		end
+	end
+	return true
+end
+
+-- ---------------------------------------------------------------------------
+-- 4. Évolution / niveau : lueur autour du portrait, poussière dorée qui
+-- monte, et une ligne au-dessus du cadre : volute, « Aguerri ! », volute
+-- retournée, collées au texte (le groupe suit sa largeur, FXC.groupH px de
+-- haut), un nuage doux derrière, la ligne de lumière qui passe dessous. La
+-- bulle, si elle est là, monte d'un cran le temps de l'effet : rien ne se
+-- chevauche.
+-- ---------------------------------------------------------------------------
+local function LevelParts(frame)
+	if frame.azLevel then return frame.azLevel end
+	local layer = FxLayer(frame)
+	local parts = {}
+	if HasFx("iconGlow") then
+		parts.iglow = layer:CreateTexture(nil, "OVERLAY", nil, 1)
+		parts.iglow:SetPoint("CENTER", frame, "TOP", 0, RING_Y)
+		Atlas(parts.iglow, FXA.iconGlow)
+		Additive(parts.iglow)
+		parts.iglow.base = math.floor(RING_W * 1.1)
+		parts.iglow:Hide()
+	end
+	parts.dots = {}
+	for index, d in ipairs(DOTS) do
+		if HasFx(d[4]) then
+			local tex = layer:CreateTexture(nil, "OVERLAY", nil, 2)
+			tex:SetSize(58, 34)
+			Atlas(tex, FXA[d[4]])
+			Additive(tex)
+			tex:Hide()
+			parts.dots[index] = tex
+		end
+	end
+	-- le groupe du titre : hors du cadre (pas à son échelle), même strate que la bulle
+	local group = CreateFrame("Frame", nil, UIParent)
+	group:SetFrameStrata("HIGH")
+	group:SetSize(200, FXC.groupH)
+	group:EnableMouse(false)
+	if HasFx("cloud") then
+		group.cloud = group:CreateTexture(nil, "BACKGROUND")
+		group.cloud:SetPoint("CENTER", group, "CENTER", 0, 0)
+		Atlas(group.cloud, FXA.cloud)
+	end
+	group.text = group:CreateFontString(nil, "OVERLAY", Theme.F_TITLE)
+	group.text:SetPoint("CENTER", group, "CENTER", 0, 0)
+	AzFont(group.text, FXC.levelFont)
+	group.text:SetTextColor(FX_TEXT[1], FX_TEXT[2], FX_TEXT[3], 1)
+	if group.text.SetShadowColor then group.text:SetShadowColor(0, 0, 0, 1) end
+	if group.text.SetShadowOffset then group.text:SetShadowOffset(1, -1) end
+	if group.text.SetWordWrap then group.text:SetWordWrap(false) end
+	if HasFx("filigree") then
+		group.left = group:CreateTexture(nil, "ARTWORK")
+		group.left:SetSize(FXC.filigreeW, FXC.filigreeH)
+		group.left:SetPoint("RIGHT", group.text, "LEFT", -FXC.filigreeGap, 0)
+		Atlas(group.left, FXA.filigree)
+		group.right = group:CreateTexture(nil, "ARTWORK")
+		group.right:SetSize(FXC.filigreeW, FXC.filigreeH)
+		group.right:SetPoint("LEFT", group.text, "RIGHT", FXC.filigreeGap, 0)
+		AtlasMirrored(group.right, FXA.filigree)
+	end
+	if HasFx("line") then
+		group.line = group:CreateTexture(nil, "OVERLAY")
+		group.line:SetPoint("TOP", group, "BOTTOM", 0, 4)
+		Atlas(group.line, FXA.line)
+		Additive(group.line)
+	end
+	group:Hide()
+	parts.group = group
+	frame.azLevel = parts
+	return parts
+end
+
+-- La bulle monte au-dessus du groupe (ou revient à sa place)
+local function LiftBubble(self, lift)
+	local bubble, frame = self.companionBubble, self.companionFrame
+	if not (bubble and frame) then return end
+	if lift and not bubble.azLift then
+		local point, rel, relPoint, x, y = bubble:GetPoint(1)
+		bubble.azLift = { point or "BOTTOM", rel or frame, relPoint or "TOP", x or 0, y or 12 }
+		bubble:ClearAllPoints()
+		bubble:SetPoint(bubble.azLift[1], bubble.azLift[2], bubble.azLift[3], bubble.azLift[4], bubble.azLift[5] + FXC.groupLift)
+	elseif not lift and bubble.azLift then
+		local p = bubble.azLift
+		bubble.azLift = nil
+		bubble:ClearAllPoints()
+		bubble:SetPoint(p[1], p[2], p[3], p[4], p[5])
+	end
+end
+
+-- Lance l'effet ; `text` : « Aguerri ! », « Niveau 12 ! »
+function ns:AzerothLevelFX(text, kind)
+	local frame = AzCompanion(self)
+	if not frame then return false end
+	local parts = LevelParts(frame)
+	local group = parts.group
+	group.text:SetText(text or "")
+	local textW = math.ceil(Measure(group.text))
+	local width = textW + (group.left and 2 * (FXC.filigreeW + FXC.filigreeGap) or 0)
+	group:SetSize(math.max(40, width), FXC.groupH)
+	if group.cloud then group.cloud:SetSize(width + 40, FXC.groupH + 14) end
+	if group.line then group.line.base = width + 40; group.line:SetSize(width + 40, 12) end
+	group:ClearAllPoints()
+	group:SetPoint("BOTTOM", frame, "TOP", 0, FXC.groupY)
+	group:SetAlpha(0)
+	group:Show()
+	local state = FxState(self)
+	state.level = { at = Clock(), kind = kind or "level", text = text }
+	FxStart(self)
+	return true
+end
+
+local function LevelStop(self, frame)
+	local parts = frame and frame.azLevel
+	if parts then
+		parts.group:Hide()
+		if parts.iglow then parts.iglow:Hide() end
+		for _, tex in pairs(parts.dots) do tex:Hide() end
+	end
+	LiftBubble(self, false)
+	if self.azFx then self.azFx.level = nil end
+end
+
+local function LevelStep(self, frame, state, now)
+	local fx = state.level
+	if not fx then return false end
+	local parts = LevelParts(frame)
+	local t = now - fx.at
+	if t >= FXC.levelTime then LevelStop(self, frame); return false end
+	local env = math.min(Clamp01(t / 0.3), Clamp01((FXC.levelTime - t) / 0.5))
+	-- la bulle affichée : elle passe au-dessus du groupe
+	local bubble = self.companionBubble
+	LiftBubble(self, bubble ~= nil and bubble:IsShown())
+	if parts.iglow then
+		local p = Pulse(t, FXC.levelPulse)
+		local size = math.floor(parts.iglow.base * (0.92 + 0.12 * p) + 0.5)
+		parts.iglow:SetSize(size, size)
+		parts.iglow:SetAlpha(env * (0.15 + 0.6 * p))
+		parts.iglow:Show()
+	end
+	local w, h = frame:GetWidth() or 104, frame:GetHeight() or 118
+	for index, tex in pairs(parts.dots) do
+		local d = DOTS[index]
+		local lt = t - d[3]
+		if lt < 0 then
+			tex:Hide()
+		else
+			local p = (lt % FXC.levelCycle) / FXC.levelCycle
+			local alpha = p < 0.4 and p / 0.4 or 1 - (p - 0.4) / 0.6
+			tex:ClearAllPoints()
+			tex:SetPoint("CENTER", frame, "TOPLEFT", math.floor(d[1] * w), -math.floor(d[2] * h) - 20 + math.floor(60 * p))
+			tex:SetAlpha(alpha * env)
+			tex:Show()
+		end
+	end
+	local group = parts.group
+	group:SetAlpha(env)
+	if group.cloud then group.cloud:SetAlpha(0.55) end
+	if group.line then
+		local p = (t % FXC.levelCycle) / FXC.levelCycle
+		local alpha, scale = 0, 1
+		if p < 0.3 then alpha, scale = p / 0.3, 0.2 + 0.8 * p / 0.3
+		elseif p < 0.8 then alpha = 1 - (p - 0.3) / 0.5 end
+		group.line:SetWidth(math.max(1, math.floor(group.line.base * scale)))
+		group.line:SetAlpha(alpha)
+	end
+	return true
+end
+
+-- ---------------------------------------------------------------------------
+-- 5. Les grandes récompenses : ailes dorées de part et d'autre et un éclat
+-- derrière un bandeau (« Nouveau titre », gros haut fait). API pour les
+-- hauts faits : ns:AzerothRewardFX(frame[, opts]) ; opts.anchor : la région
+-- à encadrer (défaut : frame.banner, sinon frame). Rend true si un effet part.
+-- ---------------------------------------------------------------------------
+function ns:AzerothRewardFX(frame, opts)
+	if not (frame and frame.CreateTexture) or not self:AzerothOn() then return false end
+	opts = opts or {}
+	local wings, burst = HasFx("wings"), HasFx("burst")
+	if not (wings or burst) then return false end
+	local anchor = opts.anchor or frame.banner or frame
+	local fx = frame.azReward
+	if not fx then
+		fx = {}
+		if wings then
+			fx.left = frame:CreateTexture(nil, "BACKGROUND", nil, -8)
+			Atlas(fx.left, FXA.wings)
+			fx.right = frame:CreateTexture(nil, "BACKGROUND", nil, -8)
+			AtlasMirrored(fx.right, FXA.wings)
+		end
+		if burst then
+			fx.burst = frame:CreateTexture(nil, "BACKGROUND", nil, -7)
+			Atlas(fx.burst, FXA.burst)
+			Additive(fx.burst)
+		end
+		frame.azReward = fx
+	end
+	local h = tonumber(anchor:GetHeight()) or 90
+	fx.h = h
+	if fx.left then
+		fx.left:ClearAllPoints(); fx.left:SetPoint("CENTER", anchor, "LEFT", 0, math.floor(h * 0.2))
+		fx.right:ClearAllPoints(); fx.right:SetPoint("CENTER", anchor, "RIGHT", 0, math.floor(h * 0.2))
+	end
+	if fx.burst then fx.burst:ClearAllPoints(); fx.burst:SetPoint("CENTER", anchor, "CENTER", 0, 0) end
+	fx.at = Clock()
+	FxState(self).rewards[frame] = true
+	FxStart(self)
+	return true
+end
+
+local function RewardStop(frame)
+	local fx = frame.azReward
+	if not fx then return end
+	for _, key in ipairs({ "left", "right", "burst" }) do if fx[key] then fx[key]:Hide() end end
+	fx.at = nil
+end
+
+local function RewardStep(frame, now)
+	local fx = frame.azReward
+	if not (fx and fx.at) or not frame:IsShown() then RewardStop(frame); return false end
+	local p = (now - fx.at) / FXC.rewardTime
+	if p >= 1 then RewardStop(frame); return false end
+	local h = fx.h
+	if fx.left then
+		-- les ailes s'ouvrent (0,4 → 1, en se redressant), restent, s'effacent
+		local alpha, scale = 1, 1
+		if p < 0.25 then alpha, scale = p / 0.25, 0.4 + 0.6 * p / 0.25
+		elseif p > 0.85 then alpha = 1 - (p - 0.85) / 0.15 end
+		local wh = math.max(1, math.floor(h * 1.56 * scale))
+		local ww = math.max(1, math.floor(h * 1.32 * scale))
+		local turn = math.rad(10) * (1 - math.min(1, p / 0.25))
+		fx.left:SetSize(ww, wh); fx.right:SetSize(ww, wh)
+		Rotate(fx.left, -turn); Rotate(fx.right, turn)
+		fx.left:SetAlpha(alpha); fx.right:SetAlpha(alpha)
+		fx.left:Show(); fx.right:Show()
+	end
+	if fx.burst then
+		local alpha = p < 0.25 and p / 0.25 or Clamp01(1 - (p - 0.25) / 0.45)
+		local scale = 0.3 + 1.0 * math.min(1, p / 0.7)
+		fx.burst:SetSize(math.max(1, math.floor(h * 1.7 * scale)), math.max(1, math.floor(h * 1.46 * scale)))
+		Rotate(fx.burst, math.rad(45) * math.min(1, p / 0.7))
+		fx.burst:SetAlpha(alpha)
+		fx.burst:Show()
+	end
+	return true
+end
+
+-- Démonstration : un titre de dresseur gagné (file du carnet) a ses ailes
+do
+	local showNext = ns.ShowNextJournalToast
+	if showNext then
+		function ns:ShowNextJournalToast(...)
+			local head = self.journalToasts and self.journalToasts[1]
+			local frame = showNext(self, ...)
+			if frame and frame.azeroth and head and (head.kind == "rank" or head.big)
+				and frame.text and frame.text:GetText() == head.name then
+				self:AzerothRewardFX(frame)
+			end
+			return frame
+		end
+	end
+end
+
+-- ---------------------------------------------------------------------------
+-- L'horloge (une image) : reflet de la bulle, éclats, niveau, récompenses
+-- ---------------------------------------------------------------------------
+local function SheenStep(self, state, now)
+	local bubble = self.companionBubble
+	local skin = bubble and bubble.azTalk
+	local sheen = skin and skin.sheen
+	if not (state.sheenAt and sheen) then return false end
+	local p = (now - state.sheenAt) / FXC.sheenTime
+	if p >= 1 or not bubble.azBubble or not bubble:IsShown() then
+		sheen:Hide(); state.sheenAt = nil
+		return false
+	end
+	local w, h = bubble:GetWidth() or FXC.bubbleW, bubble:GetHeight() or FXC.bubbleMin
+	sheen:SetSize(70, h)
+	sheen:ClearAllPoints()
+	sheen:SetPoint("CENTER", bubble, "LEFT", math.floor(w * p), 0)
+	sheen:SetAlpha(0.6 * (p < 0.3 and p / 0.3 or 1 - (p - 0.3) / 0.7))
+	sheen:Show()
+	return true
+end
+
+-- Tout éteindre (changement de style, cadre caché)
+function ns:AzerothFxStop()
+	local state = self.azFx
+	local frame = self.companionFrame
+	if frame then
+		for _, tex in ipairs(frame.azSparks or {}) do tex:Hide() end
+		LevelStop(self, frame)
+	end
+	if state then
+		state.sparkAt, state.shinyUntil, state.level, state.sheenAt = nil, nil, nil, nil
+		for f in pairs(state.rewards) do RewardStop(f) end
+		state.rewards = {}
+	end
+	local bubble = self.companionBubble
+	if bubble and bubble.azTalk and bubble.azTalk.sheen then bubble.azTalk.sheen:Hide() end
+end
+
+FxStep = function(self, now)
+	local state = FxState(self)
+	local busy = false
+	local frame = self.companionFrame
+	local companionAz = AzCompanion(self) ~= nil
+	if frame and not companionAz and (state.sparkAt or state.level) then
+		-- style changé, cadre caché : les effets du compagnon s'arrêtent
+		for _, tex in ipairs(frame.azSparks or {}) do tex:Hide() end
+		state.sparkAt = nil
+		LevelStop(self, frame)
+	end
+	if companionAz then
+		if SparkStep(frame, state, now) then busy = true end
+		if LevelStep(self, frame, state, now) then busy = true end
+	end
+	if SheenStep(self, state, now) then busy = true end
+	for f in pairs(state.rewards) do
+		if RewardStep(f, now) then busy = true else state.rewards[f] = nil end
+	end
+	return busy
+end
+ns.AzerothFxStep = function(now) return FxStep(ns, now or Clock()) end
+
+-- ---------------------------------------------------------------------------
+-- Déclencheurs : sur les moments qui existent déjà (brillante repérée,
+-- évolution, niveau) ; changement de style
+-- ---------------------------------------------------------------------------
+do
+	local spot = ns.ShinySpot
+	if spot then
+		function ns:ShinySpot(...)
+			local result = spot(self, ...)
+			if result then
+				local ok, err = pcall(self.AzerothShinyFX, self)
+				if not ok and self.RecordError then self:RecordError("azeroth:shiny", err) end
+			end
+			return result
+		end
+	end
+	local stage = ns.CompanionCheckStage
+	if stage then
+		function ns:CompanionCheckStage(level, celebrate, ...)
+			local evolved = stage(self, level, celebrate, ...)
+			if evolved == true and celebrate ~= false then
+				local ok, err = pcall(function()
+					self:AzerothLevelFX(self:F("AZ_FX_EVOLVE", self:CompanionStageLabel()), "evolve")
+				end)
+				if not ok and self.RecordError then self:RecordError("azeroth:evolve", err) end
+			end
+			return evolved
+		end
+	end
+	local onLevel = ns.CompanionOnLevel
+	if onLevel then
+		function ns:CompanionOnLevel(level, ...)
+			local a, b = onLevel(self, level, ...)
+			local fx = self.azFx and self.azFx.level
+			-- l'évolution du même niveau a déjà son effet
+			if not (fx and fx.kind == "evolve" and Clock() - fx.at < 0.5) then
+				local n = tonumber(level) or Call(G("UnitLevel"), "player") or 0
+				local ok, err = pcall(self.AzerothLevelFX, self, self:F("AZ_FX_LEVEL", n), "level")
+				if not ok and self.RecordError then self:RecordError("azeroth:level", err) end
+			end
+			return a, b
+		end
+	end
+	local apply = ns.CompanionApplyUIStyle
+	function ns:CompanionApplyUIStyle(...)
+		local style = apply(self, ...)
+		local frame = self.companionFrame
+		if frame and frame.uiStyle ~= "azeroth" then self:AzerothFxStop() end
+		self:CompanionBubbleApplyStyle()
+		return style
 	end
 end
 
