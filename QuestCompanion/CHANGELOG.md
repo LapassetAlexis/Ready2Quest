@@ -1,5 +1,17 @@
 # QuestCompanion
 
+## 2.8.2 — style Azeroth plus lisible
+
+- **Bulle du compagnon lisible** : elle s'affiche enfin sur un parchemin clair. Le fond utilisé jusqu'ici était la boîte sombre et translucide des dialogues du jeu, qui assombrissait tout ; la bulle prend maintenant le parchemin des hauts faits, avec un liseré brun et un texte brun très foncé. Nouvelle commande `/qc debug bulle` : elle affiche l'état de la bulle (textures, couches, transparence) à joindre à un retour.
+- **Textes lisibles sur les parchemins** : chaque couleur de texte du style Azeroth a été mesurée sur la vraie texture du jeu placée sous elle, et réglée pour un contraste d'au moins 4,5:1 (3:1 pour les grands titres). Un voile crème éclaircit les parchemins sous le texte. Hauts faits : description brun foncé, récompense en vert sombre, date lisible ; lignes pas encore obtenues en texte clair. Ménagerie : numéros, noms (couleur de rareté foncée) et types lisibles, bloc du sceau aussi. Titres de page et intertitres du guide à l'encre brun-rouge ; titre du guide doré sur une bande sombre. Titres des bandeaux et humeur du compagnon sur une bande éclaircie.
+- **Catégories du carnet** : le texte n'est plus collé à gauche (12 px de marge) et le compteur reste dans le bouton.
+- **Infobulles** : celle d'un haut fait s'ouvre à côté de la ligne survolée, plus au bord de la fenêtre ; celle des boutons de type de la Ménagerie s'ouvre dessous et ne cache plus les commandes.
+- **Guide** : le titre de section ne chevauche plus le filigrane ni la première ligne.
+- **Compagnon** : en style Azeroth, la créature reste dans l'ouverture de son cadre, quels que soient la taille et le cadrage. Le cadrage est appliqué de nouveau une fois le modèle chargé (avant, il pouvait être ignoré).
+- **Bandeau de capture** : la tête de la créature est centrée dans son cadre, le niveau au centre du bouclier (aussi les points des hauts faits).
+
+*English:* the Azeroth style is readable. The companion bubble finally sits on light parchment (it used the game's dark, see-through dialogue box, which darkened everything); new `/qc debug bulle` prints the bubble state for bug reports. Every Azeroth text colour was measured on the real game texture beneath it and tuned to at least 4.5:1 contrast (3:1 for large titles), with a cream veil under the text: achievements (dark description, dark green reward, readable date; not-yet-earned rows in light text), menagerie rows and seal block, page titles and guide headings in red-brown ink, guide title in gold on a dark band, banner titles and companion mood on a lightened band. Journal categories get a 12 px left margin, the counter stays inside. Achievement tooltips open next to the hovered row; menagerie type tooltips open below and no longer hide the controls. The guide heading no longer overlaps the filigree. The companion model stays inside its frame opening at every size and framing, and its framing is re-applied once the model has loaded. In the capture banner, the creature head is centred in its frame and the level in the shield's face.
+
 ## 2.8.1 — plus léger
 
 - **Moins de mémoire** : 1,76 Mo au chargement au lieu de 2,75 Mo. Les créatures et quêtes de chaque zone sont gardées sous une forme compacte et lues seulement quand tu arrives dans la zone ; les répliques du compagnon ne gardent que la langue de ton client.

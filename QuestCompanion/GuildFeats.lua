@@ -770,7 +770,9 @@ GuildFeatDecor = function(self, frame, info, feat)
 	if points and not frame.featPoints then
 		if frame.azeroth and frame.banner and frame.shield then
 			frame.featPoints = frame.banner:CreateFontString(nil, "OVERLAY", Theme.F_NUMBER)
-			frame.featPoints:SetPoint("CENTER", frame.shield, "CENTER", 0, 4)
+			-- au centre visuel de l'écu (2.8.2)
+			if ns.AzerothShieldCenter then ns.AzerothShieldCenter(frame.featPoints, frame.shield)
+			else frame.featPoints:SetPoint("CENTER", frame.shield, "CENTER", 0, 4) end
 			if ns.AzerothFont then ns.AzerothFont(frame.featPoints, 16, "OUTLINE") end
 			frame.featPoints:SetTextColor(1, 1, 1, 1)
 		else

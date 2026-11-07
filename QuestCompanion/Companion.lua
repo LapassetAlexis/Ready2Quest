@@ -1472,6 +1472,37 @@ end
 -- ---------------------------------------------------------------------------
 local FRAME_W, FRAME_H = 104, 118
 local MODEL_H = 82
+-- place du modèle dans le cadre (depuis son coin haut gauche) ; le style
+-- Azeroth la remplace par l'ouverture de son cadre (frame.modelBase)
+ns.COMPANION_MODEL_BASE = { x = 4, y = -4, w = FRAME_W - 8, h = MODEL_H }
+ns.COMPANION_FRAME_SIZE = { w = FRAME_W, h = FRAME_H }
+
+-- Pose le modèle à sa place (frame.modelBase), décalé de (dx, dy) par les
+-- effets (CompanionFx.lua)
+function ns:CompanionPlaceModel(dx, dy)
+	local frame = self.companionFrame
+	local model = frame and frame.model
+	if not (model and model.SetPoint) then return nil end
+	local base = frame.modelBase or ns.COMPANION_MODEL_BASE
+	model:ClearAllPoints()
+	model:SetPoint("TOPLEFT", frame, "TOPLEFT", base.x + (dx or 0), base.y + (dy or 0))
+	model:SetSize(base.w, base.h)
+	return base
+end
+
+-- Le cadrage d'un modèle (zoom portrait, distance, position) : model.framing
+-- le repose ; rappelé à la fin du chargement (OnModelLoaded) et à
+-- l'affichage, car un réglage posé avant la fin du chargement est perdu
+function ns.ModelKeepFraming(model)
+	if not model or model.azFramingHooked then return model end
+	model.azFramingHooked = true
+	local function Again(m) if m.framing then pcall(m.framing, m) end end
+	for _, event in ipairs({ "OnModelLoaded", "OnShow" }) do
+		if model.HookScript then pcall(model.HookScript, model, event, Again)
+		elseif model.SetScript then pcall(model.SetScript, model, event, Again) end
+	end
+	return model
+end
 -- Taille du cadre (réglette « Taille », db.companionSize 1 à 4) : échelle du
 -- cadre ; la bulle et l'infobulle gardent leur taille (lisibles) et le suivent.
 ns.COMPANION_SIZES = { 0.8, 1.0, 1.3, 1.6 }
@@ -1634,9 +1665,14 @@ function ns:EnsureCompanionFrame()
 	if frame.SetScale then frame:SetScale(ns.COMPANION_SIZES[self:CompanionSizeLevel()]) end
 
 	frame.model = CreateModel(frame)
+	frame.modelBase = ns.COMPANION_MODEL_BASE
 	if frame.model then
 		frame.model:SetPoint("TOPLEFT", frame, "TOPLEFT", 4, -4)
 		frame.model:SetSize(FRAME_W - 8, MODEL_H)
+		-- 2.8.2 : le cadrage (portrait, distance) est reposé quand le modèle a
+		-- fini de charger ; posé avant, le client l'ignore et la créature sort
+		-- de son cadre (vue de loin, décentrée)
+		ns.ModelKeepFraming(frame.model)
 	end
 	-- repli : la boussole de l'addon, si le client n'offre pas de modèle
 	frame.fallback = frame:CreateTexture(nil, "ARTWORK")
@@ -1896,13 +1932,16 @@ function ns:CompanionApplyModel()
 		-- « portrait » du client (buste, tête) — la créature remplit son cadre,
 		-- qu'elle soit une mascotte ou une bête de taille réelle
 		local zoom = ns.COMPANION_FRAMING_ZOOM[self:CompanionFraming()] or 0
-		Method(model, "SetModelScale", app.captured and 1 or stageDef.scale)
-		if zoom > 0 then
-			Method(model, "SetCamDistanceScale", 1)
-		else
-			Method(model, "SetCamDistanceScale", app.captured and (ns.CAPTURE_CAM_DISTANCE or 2.4) or 1.6)
+		local scale = app.captured and 1 or stageDef.scale
+		local distance = zoom > 0 and 1 or (app.captured and (ns.CAPTURE_CAM_DISTANCE or 2.4) or 1.6)
+		model.framing = function(m)
+			Method(m, "SetModelScale", scale)
+			Method(m, "SetCamDistanceScale", distance)
+			Method(m, "SetPortraitZoom", zoom)
+			Method(m, "SetPosition", 0, 0, 0)
 		end
-		Method(model, "SetPortraitZoom", zoom)
+		model.framing(model)
+		model.framingZoom = zoom
 		ns.ModelShinyLight(model, app.shiny)
 		model:Show()
 		frame.fallback:Hide()

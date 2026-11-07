@@ -105,7 +105,8 @@ do
 		local b = f.pantry[kind]; return b:GetParent() == f.nav and b.azRing and b.azRing.texture == 130656 end))
 	Check("[CZ] bouton de fermeture du jeu", f.close.azIcon and f.close.azIcon.texture:find("MinimizeButton") ~= nil
 		and f.close.label.mockHidden)
-	Check("[CZ] en-tête : titre doré ombré, filigrane", f.header.title.azKeep and f.header.title.textColor[1] > 0.9
+	-- 2.8.2 : titre à l'encre brun-rouge (l'or ombré tombait à 1,7:1 sur le parchemin)
+	Check("[CZ] en-tête : titre à l'encre, filigrane", f.header.title.azKeep and f.header.title.textColor[1] == NS.AZEROTH_INK.title[1]
 		and f.header.azFiligree and f.header.azFiligree.m.texture == TX.tsuH and f.header.rule.segments[1].mockHidden)
 	Check("[CZ] bouton Fermer : rouge, texte doré", f.closeButton.azSkin == "red" and f.closeButton.bg.mockHidden
 		and f.closeButton.text.textColor[1] == 1)
@@ -131,7 +132,8 @@ do
 	need.bar.ratio = 0.9; need.bar:SetColor(1, 1, 1)
 	Check("[CZ] … envie comblée : verte", need.bar.azColor == NS.CARNET_COLORS.green)
 	Check("[CZ] Compagnon : texte brun sur le parchemin", evo.look.textColor[1] < 0.3 and evo.look.textColor[3] < 0.1)
-	Check("[CZ] Compagnon : bulle sur le parchemin des Talking Heads", evo.bubble.azBg.texture == 1111217)
+	Check("[CZ] Compagnon : bulle sur le parchemin des hauts faits (2.8.2), voilée", evo.bubble.azBg.texture == 130661
+		and evo.bubble.azVeil and evo.bubble.azVeil:IsShown())
 
 	Open("menagerie")
 	local men = f.men
@@ -174,7 +176,8 @@ do
 	Open("guide")
 	local guide = f.guide
 	Check("[CZ] Guide : page sur le parchemin des statistiques (235412)", guide.azPage and guide.azPage.texture == 235412)
-	Check("[CZ] Guide : titre doré, filigrane à volutes", guide.title.azKeep and guide.azFiligree and guide.azFiligree.l.texture == 130668)
+	Check("[CZ] Guide : titre doré sur sa bande, filigrane", guide.title.azKeep and guide.azBand and guide.azBand.texture == 235411
+		and guide.azFiligree and guide.azFiligree.l.texture == 130670)
 	Check("[CZ] Guide : intertitres dorés ombrés", #guide.heads == 0 or guide.heads[1].azKeep)
 	Check("[CZ] Guide : sommaire sombre, section choisie en or", guide.rows[1].azHl:IsShown())
 	local ok, errs = NoErrors()
@@ -336,13 +339,13 @@ do
 	NS:CompanionSay("EAT", { force = true })
 	local bubble = NS.companionBubble
 	local skin = bubble and bubble.azTalk
-	Check("[CZ] bulle : parchemin par son fichier (1111217), coordonnées, opaque", skin and skin.bg.texture == 1111217
+	Check("[CZ] bulle : parchemin par son fichier (130661), recadré, opaque", skin and skin.bg.texture == 130661
 		and skin.bg.texCoord[2] > 0.5 and skin.bg:IsShown() and skin.bg.vertex[4] == 1)
 	Check("[CZ] bulle : aplat parchemin clair sous le parchemin", skin.backdrop:IsShown() and skin.backdrop.drawLayer == "BACKGROUND"
 		and skin.bg.drawLayer == "BACKGROUND" and skin.backdrop.subLevel < skin.bg.subLevel and skin.backdrop.vertex[1] > 0.85)
 	Check("[CZ] bulle : texte au-dessus, habit Sobre masqué", skin.text.drawLayer == "OVERLAY" and bubble.bg.mockHidden
 		and bubble.rule.mockHidden)
-	CZ.Reset(nil, { [1111217] = true })
+	CZ.Reset(nil, { [130661] = true })
 	NS:CompanionUpdateVisibility()
 	NS:EnsureCompanionFrame()
 	NS.companionLastBubble, NS.companionBubbleUntil, NS.companionBubblePrio = nil, nil, nil

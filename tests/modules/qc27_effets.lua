@@ -70,9 +70,9 @@ do
 	Check("[FX] il parle", Speak() == true)
 	local bubble = NS.companionBubble
 	local skin = bubble and bubble.azTalk
-	-- 2.8.0 : le parchemin par son fichier (1111217) et ses coordonnées, plus SetAtlas
-	Check("[FX] bulle : parchemin des Talking Heads", skin and bubble.azBubble and skin.bg.texture == 1111217
-		and skin.bg.atlasName == A.talk and skin.bg.texCoord and skin.bg:IsShown())
+	-- 2.8.2 : le parchemin des hauts faits (130661) par son fichier, recadré
+	Check("[FX] bulle : parchemin des hauts faits", skin and bubble.azBubble and skin.bg.texture == 130661
+		and skin.bg.texCoord and skin.bg:IsShown())
 	Check("[FX] bulle : texte brun foncé, sans ombre", skin and skin.text:GetText() == NS.companionBubbleText
 		and skin.text.textColor[1] < 0.3 and skin.text.textColor[3] < 0.1 and skin.text.shadow and skin.text.shadow[4] == 0)
 	Check("[FX] bulle : le nom du compagnon en capitales en haut", skin and skin.name:GetText() == NS.AzerothUpper(NS:CompanionName())
@@ -253,7 +253,9 @@ do
 	Speak()
 	Run(0.5)
 	local bubble = NS.companionBubble
-	Check("[FX] sans parchemin : bulle Sobre", not bubble.azBubble and not bubble.bg.mockHidden and not bubble.text.mockHidden and bubble.azTalk == nil)
+	-- 2.8.2 : la bulle ne dépend plus de l'atlas des Talking Heads
+	Check("[FX] sans atlas des Talking Heads : bulle Azeroth quand même", bubble.azBubble and bubble.bg.mockHidden
+		and bubble.azTalk.bg.texture == 130661)
 	Check("[FX] sans lueur ronde : ni lueur ni liseré", not frame.azGlow and not Edges(frame))
 	Check("[FX] sans éclats : la brillante passe sans erreur", NS:AzerothShinyFX() == true and (Run(0.5) or true)
 		and frame.azSparks == nil)
