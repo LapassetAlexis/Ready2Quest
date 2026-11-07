@@ -1,7 +1,7 @@
 -- QuestCompanion 2.6.0 : les Souvenirs sont retirés. Plus d'album dans le
 -- carnet, plus de page de réglages, plus de photos ni d'anniversaires ; un
 -- ménage unique et silencieux vide les données de l'album de la sauvegarde.
--- Les paysages des sceaux de zone (scene_<biome>.tga) restent.
+-- Les fonds des sceaux de zone restent (sols du client depuis la 2.7.0, MenagerieCollection.lua).
 local Check, Say, ResetWorld, NS, Mock = T.Check, T.Say, T.ResetWorld, T.QNS, T.Mock
 local ROOT = rawget(_G, "ADDON_ROOT") or "."
 
