@@ -222,8 +222,13 @@ do
 		and kodo.caught.vertex[2] == NS.Theme.GREEN[2] and not unknown.caught:IsShown())
 	Check("[MEN] plus de tampon ni de pastille dans la ligne", kodo.stamp == nil)
 	unknown.scripts.OnEnter(unknown)
-	Check("[MEN] aperçu d'une inconnue : « ??? », niveau, comment la trouver", pane.preview.title.text == "???"
-		and pane.preview.lines[1].text:find("5-6", 1, true) ~= nil, pane.preview.lines[1].text)
+	-- 2.4 : une inconnue est verrouillée (MenagerieView.lua) : plus de niveau,
+	-- seulement la zone où la chercher
+	local unknownText = table.concat({ pane.preview.lines[1].text or "", pane.preview.lines[2].text or "",
+		pane.preview.lines[3].text or "" }, " ")
+	Check("[MEN] aperçu d'une inconnue : « ??? », verrouillée, comment la trouver", pane.preview.title.text == "???"
+		and pane.preview.lines[1].text == NS.L.MENV_LOCKED and not unknownText:find("5-6", 1, true)
+		and unknownText:find(NS.L.JRN_MEN_NEVER, 1, true) ~= nil, unknownText)
 	pane.zone:Choose("all")
 	Check("[MEN] zone « toutes »", f.menZone == "all" and pane.count.text == "2 capturées · brillantes : 1 · 3 croisées · 5 en tout", pane.count.text)
 	pane.search:SetText("kodo")

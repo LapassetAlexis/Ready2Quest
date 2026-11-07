@@ -157,6 +157,16 @@ do
 	Check("[FI] Sourdine : la rangée des durées (5, 15, 30 min, 1 h) et Annuler", toast.muteRow:IsShown()
 		and #toast.muteRow.choices == 4 and toast.muteRow.choices[4].minutes == 60
 		and toast.muteRow.choices[4].text:GetText() == NS.L.CAPTURE_TOAST_MUTE_HOUR)
+	do
+		-- 2.3.1 : les durées et Annuler tiennent dans la largeur du bandeau, sans se chevaucher
+		local total = toast.muteRow.cancel:GetWidth() + 8
+		for _, c in ipairs(toast.muteRow.choices) do total = total + c:GetWidth() + 4 end
+		Check("[FI] rangée de sourdine : tout tient dans le bandeau", total <= toast:GetWidth() - 12, total)
+		-- l'aide a sa propre ligne, au-dessus de la rangée des boutons
+		local _, _, _, _, hintY = toast.hint:GetPoint(1)
+		Check("[FI] aide sur sa ligne, au-dessus des boutons", toast.hint:GetWidth() > 200
+			and type(hintY) == "number" and hintY < -50 and hintY > -(toast:GetHeight() - 30), hintY)
+	end
 	toast.muteRow.cancel:Click()
 	Check("[FI] Annuler : la rangée se cache", not toast.muteRow:IsShown())
 	toast.mute:Click()
@@ -285,6 +295,21 @@ do
 		if not (NS.CAPTURE_QUEUE_STRINGS.fr[key] and NS.CAPTURE_QUEUE_STRINGS.en[key]) then missing[#missing + 1] = key end
 	end
 	Check("[FI] textes fr et en", #missing == 0, table.concat(missing, ", "))
+end
+
+-- 7. Filet lisible sur sol clair (2.3.1) ----------------------------------------------------------------
+do
+	Say("-- filet : contraste")
+	FI.Reset()
+	FI.SeeKill(5400, { name = "Hyène" })
+	local net = NS.captureNetButton
+	local function near(v, c) return v and math.abs((v[1] or -1) - c[1]) < 0.01 and math.abs((v[2] or -1) - c[2]) < 0.01
+		and math.abs((v[3] or -1) - c[3]) < 0.01 end
+	Check("[FI] filet : plaque sombre opaque et ombre portée", net.plate and net.shadow
+		and (net.plate.alpha or net.plate.vertex and net.plate.vertex[4] or 1) > 0.9, net.plate and net.plate.alpha)
+	Check("[FI] filet : liseré doré dedans, noir dehors", net.ring and near(net.ring.top.vertex, NS.Theme.GOLD)
+		and near(net.border.top.vertex, { 0, 0, 0 }))
+	Check("[FI] filet : compteur en pastille dorée", near(net.countBack.vertex, NS.Theme.GOLD) and net.count:GetText() == "1")
 end
 
 for _, name in ipairs(GLOBALS) do _G[name] = FI.saved[name] end

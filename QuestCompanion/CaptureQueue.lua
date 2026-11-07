@@ -45,7 +45,7 @@ ns.CAPTURE_NET_SIZE = NET_SIZE
 ns.CAPTURE_NET_GAP = 8            -- px entre le cadre du compagnon et le filet
 ns.CAPTURE_NET_PULSE = 4          -- s de battement doré à l'arrivée d'un candidat
 ns.CAPTURE_TOAST_SECONDS = 5      -- s d'affichage du bandeau « Capture possible »
-local TOAST_W, TOAST_H, TOAST_ICON = 340, 86, 34
+local TOAST_W, TOAST_H, TOAST_ICON = 384, 102, 34
 ns.CAPTURE_MUTE_CHOICES = { 5, 15, 30, 60 }   -- minutes de sourdine proposées par le bandeau
 -- Sons (2.2.0) : des kits du client, par numéro (SoundKitConstants.lua de
 -- l'interface de Blizzard ; les numéros sont les mêmes sur tous les clients) :
@@ -768,15 +768,32 @@ function ns:EnsureCaptureNet()
 	local button = Theme.CreateIconButton(UIParent, NET_SIZE, NET_ICON)
 	self.captureNetButton = button
 	if button.RegisterForClicks then button:RegisterForClicks("LeftButtonUp", "RightButtonUp") end
-	-- le halo doré d'une brillante, derrière l'icône
+	-- 2.3.1 : lisible sur n'importe quel sol (sable, neige, pierre claire). Une
+	-- ombre portée sombre autour, une plaque d'encre opaque derrière le glyphe,
+	-- un double liseré (sombre dehors, doré dedans).
+	button.shadow = Theme.Solid(button, "BACKGROUND", { 0, 0, 0 }, 0.55)
+	button.shadow:SetPoint("TOPLEFT", button, "TOPLEFT", -4, 4)
+	button.shadow:SetPoint("BOTTOMRIGHT", button, "BOTTOMRIGHT", 4, -4)
+	if button.shadow.SetDrawLayer then button.shadow:SetDrawLayer("BACKGROUND", -8) end
+	-- le halo doré d'une brillante (et du battement), entre l'ombre et la plaque
 	button.glow = Theme.Solid(button, "BACKGROUND", Theme.GOLD_LIGHT, 0)
 	button.glow:SetPoint("TOPLEFT", button, "TOPLEFT", -3, 3)
 	button.glow:SetPoint("BOTTOMRIGHT", button, "BOTTOMRIGHT", 3, -3)
-	-- le compteur, dans un coin sombre pour rester lisible sur l'icône
-	button.countBack = Theme.Solid(button, "ARTWORK", Theme.INK or { 0, 0, 0 }, 0.75)
+	if button.glow.SetDrawLayer then button.glow:SetDrawLayer("BACKGROUND", 0) end
+	button.plate = Theme.Solid(button, "BACKGROUND", Theme.INK or { 0.06, 0.07, 0.09 }, 0.94)
+	button.plate:SetPoint("TOPLEFT", button, "TOPLEFT", 1, -1)
+	button.plate:SetPoint("BOTTOMRIGHT", button, "BOTTOMRIGHT", -1, 1)
+	if button.plate.SetDrawLayer then button.plate:SetDrawLayer("BACKGROUND", 4) end
+	button.ring = Theme.Border(button, Theme.GOLD, 1, "BORDER", button.plate)
+	if button.border and button.border.SetColor then button.border:SetColor(0, 0, 0, 1) end
+	-- le compteur : pastille dorée sur le coin, texte sombre (se voit partout)
+	button.countBack = Theme.Solid(button, "ARTWORK", Theme.GOLD, 1)
 	button.countBack:SetSize(18, 16)
-	button.countBack:SetPoint("BOTTOMRIGHT", button, "BOTTOMRIGHT", -1, 1)
-	button.count = Theme.Text(button, Theme.F_LABEL, Theme.PARCHMENT)
+	button.countBack:SetPoint("CENTER", button, "TOPRIGHT", -2, -2)
+	if button.countBack.SetDrawLayer then button.countBack:SetDrawLayer("OVERLAY", 6) end
+	button.countEdge = Theme.Border(button, { 0, 0, 0 }, 1, "OVERLAY", button.countBack)
+	button.count = Theme.Text(button, Theme.F_LABEL, Theme.INK or { 0, 0, 0 })
+	if button.count.SetDrawLayer then button.count:SetDrawLayer("OVERLAY", 7) end
 	button.count:SetPoint("CENTER", button.countBack, "CENTER", 0, 0)
 	button.count:SetJustifyH("CENTER")
 	button:SetScript("OnClick", function(_, mouse)
@@ -818,7 +835,13 @@ function ns:CaptureStyleNet()
 	-- liseré doré au repos (un filet qui attend doit se voir), or clair au
 	-- survol ou pour une brillante
 	local c = (button.shiny or button.hover) and Theme.GOLD_LIGHT or Theme.GOLD
-	if button.border and button.border.SetColor then button.border:SetColor(c[1], c[2], c[3], 1) end
+	-- liseré doré dedans, noir dehors : contraste sur sol clair comme sombre
+	if button.ring and button.ring.SetColor then button.ring:SetColor(c[1], c[2], c[3], 1) end
+	if button.border and button.border.SetColor then button.border:SetColor(0, 0, 0, 1) end
+	if button.countBack and button.countBack.SetVertexColor then
+		local cc = button.shiny and Theme.GOLD_LIGHT or Theme.GOLD
+		button.countBack:SetVertexColor(cc[1], cc[2], cc[3], 1)
+	end
 	local g = button.shiny and Theme.GOLD_LIGHT or Theme.GOLD
 	if button.glow.SetVertexColor then button.glow:SetVertexColor(g[1], g[2], g[3], 1) end
 	-- notre glyphe blanc prend sa couleur : ambre au repos, or si brillante
@@ -869,6 +892,12 @@ end
 -- Clic : le filet (le meilleur candidat) ; clic droit : la liste. Il se
 -- déplace comme les autres bandeaux et garde sa place (captureToastPoint).
 -- ---------------------------------------------------------------------------
+-- Bouton compact (la rangée de sourdine) : le libellé et un peu d'air
+local function CompactWidth(parent, label)
+	local w = Theme.TextWidth and Theme.TextWidth(parent, label, Theme.F_LABEL) or 30
+	return math.max(36, math.ceil((tonumber(w) or 30) + 16))
+end
+
 function ns:EnsureCaptureToast()
 	if self.captureToast then return self.captureToast end
 	if not (Theme and Theme.CreateToast) then return nil end
@@ -903,9 +932,10 @@ function ns:EnsureCaptureToast()
 	frame.info:SetWidth(textW)
 	frame.info:SetJustifyH("LEFT")
 	if frame.info.SetWordWrap then frame.info:SetWordWrap(false) end
+	-- l'aide sur sa propre ligne, sous les infos : les boutons ont la rangée du bas
 	frame.hint = Theme.Text(frame, Theme.F_SMALL, Theme.MUTED)
-	frame.hint:SetPoint("BOTTOMLEFT", frame, "BOTTOMLEFT", textLeft, 9)
-	frame.hint:SetWidth(textW - 130)
+	frame.hint:SetPoint("TOPLEFT", frame, "TOPLEFT", textLeft, -57)
+	frame.hint:SetWidth(textW)
 	frame.hint:SetJustifyH("LEFT")
 	if frame.hint.SetWordWrap then frame.hint:SetWordWrap(false) end
 	-- un bouton invisible par-dessus : clic, clic droit, et le glisser du bandeau
@@ -946,8 +976,9 @@ function ns:EnsureCaptureToast()
 		b:HookScript("OnLeave", function() local t = Tooltip(); if t and t.Hide then t:Hide() end end)
 	end
 	-- la rangée des durées de sourdine : remplace la ligne du bas tant qu'on choisit
+	-- (toute la largeur du bandeau, boutons compacts : 4 durées + Annuler tiennent)
 	local row = CreateFrame("Frame", nil, frame)
-	row:SetPoint("BOTTOMLEFT", frame, "BOTTOMLEFT", textLeft - 4, 5)
+	row:SetPoint("BOTTOMLEFT", frame, "BOTTOMLEFT", 6, 5)
 	row:SetPoint("BOTTOMRIGHT", frame, "BOTTOMRIGHT", -6, 5)
 	row:SetHeight(22)
 	row:SetFrameLevel(above + 1)
@@ -957,13 +988,13 @@ function ns:EnsureCaptureToast()
 	local anchor
 	for index, minutes in ipairs(ns.CAPTURE_MUTE_CHOICES) do
 		local label = minutes >= 60 and L.CAPTURE_TOAST_MUTE_HOUR or ns:F("CAPTURE_TOAST_MUTE_MIN", minutes)
-		local choice = Theme.CreateButton(row, "auto", 18, label, function() ns:CaptureMute(minutes) end, "accent")
+		local choice = Theme.CreateButton(row, CompactWidth(row, label), 18, label, function() ns:CaptureMute(minutes) end, "accent")
 		if anchor then choice:SetPoint("LEFT", anchor, "RIGHT", 4, 0) else choice:SetPoint("LEFT", row, "LEFT", 4, 0) end
 		choice.minutes = minutes
 		row.choices[index] = choice
 		anchor = choice
 	end
-	row.cancel = Theme.CreateButton(row, "auto", 18, L.CAPTURE_TOAST_MUTE_CANCEL, function() ns:CaptureToastToggleMuteRow(false) end)
+	row.cancel = Theme.CreateButton(row, CompactWidth(row, L.CAPTURE_TOAST_MUTE_CANCEL), 18, L.CAPTURE_TOAST_MUTE_CANCEL, function() ns:CaptureToastToggleMuteRow(false) end)
 	row.cancel:SetPoint("RIGHT", row, "RIGHT", -4, 0)
 	row:Hide()
 	frame.muteRow = row
