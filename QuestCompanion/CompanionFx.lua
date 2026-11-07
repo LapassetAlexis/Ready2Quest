@@ -349,11 +349,15 @@ end)
 local ok, frame = pcall(CreateFrame, "Frame")
 if ok and frame then
 	frame:SetScript("OnUpdate", function()
+		-- 2.8.1 : compagnon absent ou caché (module coupé, masqué), rien à
+		-- animer ni à mesurer à chaque image ; ses effets reprennent à
+		-- l'affichage, là où l'horloge en est
+		local f = ns.companionFrame
+		if not (f and f:IsShown()) and not ns.companionAnimTest then return end
 		local now = Clock()
 		local done, err = pcall(ns.CompanionFxUpdate, ns, now)
 		if not done then ns:RecordError("fx:update", err) end
 		if ns.companionAnimTest then pcall(ns.CompanionAnimTestStep, ns, now) end
-		local f = ns.companionFrame
 		if f and f.animation == "sleep" and (not ns.companionZzzAt or now - ns.companionZzzAt >= 3) then
 			ns.companionZzzAt = now
 			ns:CompanionFx("zzz")

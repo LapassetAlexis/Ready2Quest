@@ -533,8 +533,9 @@ local function MarkFor(plate)
 		local pulse = 0.5 + 0.5 * math.sin(t * math.pi * 1.6)
 		self.glow:SetAlpha(0.25 + 0.5 * pulse)
 		self.glow:SetSize(size * (1.6 + 0.5 * pulse), size * (1.6 + 0.5 * pulse))
-		local c = { gold[1] + (light[1] - gold[1]) * pulse, gold[2] + (light[2] - gold[2]) * pulse, gold[3] + (light[3] - gold[3]) * pulse }
-		self.gem:SetVertexColor(c[1], c[2], c[3], 1)
+		-- trois nombres, pas de table neuve à chaque image (2.8.1)
+		self.gem:SetVertexColor(gold[1] + (light[1] - gold[1]) * pulse, gold[2] + (light[2] - gold[2]) * pulse,
+			gold[3] + (light[3] - gold[3]) * pulse, 1)
 	end)
 	frame:Hide()
 	ns.shinyPlateMarks[plate] = frame

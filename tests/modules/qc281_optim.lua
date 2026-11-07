@@ -121,3 +121,54 @@ do
 	end
 	Check("[OPT] aucune réplique déclarée aussi en texte ordinaire", #twice == 0, table.concat(twice, ","))
 end
+
+-- 3. Processeur : rien à chaque image sans compagnon affiché ----------------------------------------
+do
+	Say("-- 2.8.1 : animation du compagnon seulement s'il est affiché")
+	T.ResetWorld()
+	NS:CompanionData().tutoDone = true
+	NS:CompanionUpdateVisibility()
+	local frame = NS:EnsureCompanionFrame()
+	local driver = NS.companionFxFrame
+	local update = driver and driver.scripts and driver.scripts.OnUpdate
+	Check("[OPT] horloge des effets en place", frame ~= nil and type(update) == "function")
+	if frame and update then
+		local calls, real = 0, NS.CompanionFxUpdate
+		NS.CompanionFxUpdate = function(...) calls = calls + 1; return real(...) end
+		frame:Show()
+		update(driver, 1 / 60)
+		Check("[OPT] compagnon affiché : animé à chaque image", calls == 1)
+		frame:Hide()
+		for _ = 1, 30 do update(driver, 1 / 60) end
+		Check("[OPT] compagnon caché : aucun calcul d'animation", calls == 1, calls)
+		frame:Show()
+		update(driver, 1 / 60)
+		Check("[OPT] de nouveau affiché : l'animation reprend", calls == 2)
+		NS.CompanionFxUpdate = real
+	end
+	-- le repère des brillantes : pas de table neuve à chaque image
+	local plate = CreateFrame("Frame")
+	_G.C_NamePlate = _G.C_NamePlate or {}
+	local savedPlate = _G.C_NamePlate.GetNamePlateForUnit
+	_G.C_NamePlate.GetNamePlateForUnit = function() return plate end
+	NS.shinyPlates["nameplate9"] = nil
+	local guid = "Creature-0-1-2-3-4-3098-0000000009"
+	local savedGUID = _G.UnitGUID
+	_G.UnitGUID = function(unit) if unit == "nameplate9" then return guid end return savedGUID(unit) end
+	NS:ShinyState().live[guid] = { at = 1 }
+	NS:ShinyPlateUpdate("nameplate9")
+	local mark = NS.shinyPlateMarks[plate]
+	local pulse = mark and mark.scripts and mark.scripts.OnUpdate
+	Check("[OPT] repère de brillante posé, avec son scintillement", mark ~= nil and mark:IsShown() and type(pulse) == "function")
+	if pulse then
+		-- le losange suit l'éclat (couleur relue entre deux instants)
+		local saved = Mock.now
+		pulse(mark); local c1 = mark.gem.vertex and mark.gem.vertex[1]
+		Mock.now = Mock.now + 0.3
+		pulse(mark); local c2 = mark.gem.vertex and mark.gem.vertex[1]
+		Mock.now = saved
+		Check("[OPT] scintillement : la couleur suit l'éclat", type(c1) == "number" and type(c2) == "number" and c1 ~= c2, tostring(c1) .. "/" .. tostring(c2))
+	end
+	NS:ShinyState().live[guid] = nil
+	_G.UnitGUID, _G.C_NamePlate.GetNamePlateForUnit = savedGUID, savedPlate
+end
