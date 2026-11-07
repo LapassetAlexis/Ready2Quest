@@ -261,6 +261,10 @@ Settings, **QoL** › **Merchant** › "Sell gray items".
 
 See the [repository README](../README.md): tests, shared core, publishing.
 
+## Community
+
+Questions, bugs, ideas: join the [Discord](https://discord.gg/b9mYCUhxRb).
+
 ## License
 
 Ready2Quest is free software under the **GPL-3.0** license (see `LICENSE`): you can use, modify and share it, as long as you keep the same license. The interface font, Inter, is under the OFL license (`Libs/Socle/Media/Inter-OFL.txt`).
@@ -531,6 +535,10 @@ Réglages, **QoL** › **Marchand** › « Vendre les gris ».
 ## Pour les développeurs
 
 Voir le [README du dépôt](../README.md) : tests, socle commun, publication.
+
+## Communauté
+
+Questions, bugs, idées : rejoins le [Discord](https://discord.gg/b9mYCUhxRb).
 
 ## Licence
 

@@ -12,6 +12,8 @@ Une seule description, anglais d'abord puis français (règle des stores : l'ang
 
 **Capture the monsters you defeat and build your menagerie.** Every creature of WoW Forever can be caught, with 1 to 3 stars and rare **shiny** versions. Take one along as your hunting companion, seal every zone, earn trainer titles and show off your trainer card to your guild. A little travel companion and its journal come along for the ride.
 
+![A shiny creature tries its luck against the net](https://media.forgecdn.net/attachments/2161/225/f-gif.gif)
+
 For **WoW Forever** (1.60). English and French. Free, standalone (`/qc`), about 2 MB of memory. Pairs well with [Ready2Quest](https://www.curseforge.com/wow/addons/ready2quest).
 
 ## New in 2.4
@@ -29,6 +31,8 @@ For **WoW Forever** (1.60). English and French. Free, standalone (`/qc`), about 
 - **Seals, titles, trainer card**: catch every species of a zone to seal it, earn trainer titles at 10/25/50/100/250 species, and show your trainer card (title, companion, a showcase of 3) to other players who have the addon, from the right-click menu.
 - **A guided first capture**: your companion walks you through it, and the journal's Guide page explains everything.
 
+![The Menagerie: every creature, numbered, hidden until you meet it](https://media.forgecdn.net/attachments/2155/840/qc-3-png.png)
+
 ## The travel companion
 
 - **It talks**: short bubbles, never in combat, when you kill, eat, rest, talk to an NPC, discover a zone, sit by a campfire… plus tips and small conversations.
@@ -43,6 +47,10 @@ For **WoW Forever** (1.60). English and French. Free, standalone (`/qc`), about 
 - **Treats**: zone milestones earn treats for its pantry (Shift + click it): biscuit, tea, candy, treasure map, Feast.
 - **Cosmetics**: nineteen mascot appearances plus every creature you capture, ornaments, frames and backgrounds.
 
+![Your companion: its needs, stats and looks](https://media.forgecdn.net/attachments/2155/842/qc-1-png.png)
+
+![The companion on screen](https://media.forgecdn.net/attachments/2155/841/qc-2-png.png)
+
 ## The journal
 
 - **Exploration**: every zone and its percentage. For the chosen zone: its milestones (treats, capture aids, a Feast), its places, the herbs and ores for your professions (including those that need more skill), its quests your character can do, and its chest. A 100% zone opens a chest where you **choose** a cosmetic item (zones 1-19, 20-39, 40-60).
@@ -53,9 +61,17 @@ For **WoW Forever** (1.60). English and French. Free, standalone (`/qc`), about 
 - **Stamps** for every first, and an **on-screen tracker** with your closest goals.
 - **Light**: about 2 MB of memory.
 
+![Missions of the day and week, pantry and capture aids](https://media.forgecdn.net/attachments/2155/839/qc-4-png.png)
+
+![Exploration: every zone, its milestones and chest](https://media.forgecdn.net/attachments/2155/838/qc-5-png.png)
+
 ## Commands
 
 `/qc` opens the journal (so does the minimap button, or a right-click on the companion), `/qc filet` throws the net, `/qc filet tout` captures everything waiting, `/qc capture` sums up your menagerie, `/qc fiche [name]` opens a trainer card, `/qc options` opens the settings, `/qc help` lists everything.
+
+## Community
+
+Questions, bugs, ideas, shinies to show off: join the [Discord](https://discord.gg/b9mYCUhxRb) (English welcome in #addons-english).
 
 ## License and data
 
@@ -68,6 +84,8 @@ Free software, **GPL-3.0**. Zone data (creatures, gathering, quests) is generate
 # Quest Companion – Ménagerie de créatures (français)
 
 **Capture les monstres que tu abats et remplis ta ménagerie.** Toutes les créatures de WoW Forever se capturent, avec 1 à 3 étoiles et de rares versions **brillantes**. Emmène-en une comme compagnon de chasse, scelle chaque zone, gagne des titres de dresseur et montre ta fiche à ta guilde. Un petit compagnon de route et son carnet de voyage t'accompagnent.
+
+![Une brillante tente sa chance contre le filet](https://media.forgecdn.net/attachments/2161/225/f-gif.gif)
 
 Pour **WoW Forever** (1.60). En français et en anglais. Gratuit, autonome (`/qc`), environ 2 Mo de mémoire. Va très bien avec [Ready2Quest](https://www.curseforge.com/wow/addons/ready2quest).
 
@@ -113,6 +131,10 @@ Pour **WoW Forever** (1.60). En français et en anglais. Gratuit, autonome (`/qc
 ## Commandes
 
 `/qc` ouvre le carnet (comme le bouton de minicarte ou un clic droit sur le compagnon), `/qc filet` lance le filet, `/qc filet tout` capture tout ce qui attend, `/qc capture` résume ta ménagerie, `/qc fiche [nom]` ouvre une fiche de dresseur, `/qc options` ouvre les réglages, `/qc help` liste tout.
+
+## Communauté
+
+Questions, bugs, idées, brillantes à montrer : rejoins le [Discord](https://discord.gg/b9mYCUhxRb).
 
 ## Licence et données
 

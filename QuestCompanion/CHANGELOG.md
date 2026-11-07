@@ -1,5 +1,13 @@
 # QuestCompanion
 
+## 2.4.1 — le filet propose le choix
+
+- **Le filet propose le choix** : dès que deux créatures attendent, le clic sur le filet (ou sur le bandeau « Capture possible ») ouvre un petit choix près du filet : « Capturer : <la meilleure> » ou « Tout capturer (N) ». Maj+clic capture la meilleure tout de suite, Ctrl+clic tente tout ; Échap, un clic ailleurs ou un second clic referment. Avec une seule créature, le clic capture directement, comme avant.
+- **Tout capturer, en vraies captures** : au lieu de cartes qui se retournent, une volée de filets tombe sur toutes les créatures à la fois ; chaque filet se secoue, puis tient (étoiles) ou se déchire (la créature file). Les brillantes se débattent plus longtemps et tombent en dernier, avec leur fanfare et leur halo doré. Arrêter montre tout d'un coup.
+- **Le temps s'arrête dès le clic** : plus aucune créature ne s'efface du filet pendant que tu choisis ni pendant la scène de capture ; chacune reprend ensuite avec le temps qui lui restait.
+
+*English:* clicking the net with two or more creatures now offers "Capture: <best>" or "Capture all (N)" (Shift-click: best, Ctrl-click: all); Capture all plays real capture scenes side by side (nets drop, shake, hold or tear, shinies last); the 30 s countdown pauses from the click until the capture ends.
+
 ## 2.4.0 — tout capturer, la guilde, le bestiaire
 
 - **Tout capturer** : dès que deux créatures attendent dans le filet, « Tout capturer » (liste du clic droit, bandeau « Capture possible », `/qc filet tout`) les tente toutes d'un coup, chacune avec les règles d'un lancer (chance, aide, étoiles, brillantes, missions, sceaux). Les résultats sont enregistrés tout de suite, puis une grille de cartes face cachée les révèle en vague ; les brillantes sont gardées pour la fin. « Arrêter » montre tout, Échap ferme. L'aide choisie sert à chaque essai : s'il n'en reste pas assez, les autres restent dans le filet. Jamais en combat.

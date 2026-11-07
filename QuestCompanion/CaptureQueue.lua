@@ -13,6 +13,9 @@
 --   * clic : capture du meilleur candidat (brillante > espèce nouvelle > plus
 --     rare > amélioration d'étoiles), la scène de capture se joue
 --     (CaptureStage.lua) ; clic droit : la liste (choisir, aides, tout ignorer).
+--     Deux candidats ou plus : le clic propose le choix (CaptureBatch.lua) ;
+--   * le compte à rebours s'arrête dès le clic (filet, bandeau) : rien ne
+--     s'efface pendant qu'on choisit ni pendant la scène (ns:CaptureQueueHold).
 -- Étoiles : chaque capture tire une qualité de 1 à 3 étoiles (3 la plus
 -- rare, CAPTURE_STAR_ODDS). On peut recapturer pour tenter mieux : le
 -- meilleur spécimen est gardé (entry.stars, entry.shinyStars).
@@ -333,12 +336,14 @@ end
 function ns:CaptureQueuePrune(now)
 	local queue = self:CaptureQueueState()
 	now = now or Clock()
+	-- (l'heure de la file : figée pendant une pause du compte à rebours)
+	local clock = self:CaptureQueueClock(now)
 	local kept = 0
 	for index = 1, #queue do
 		local candidate = queue[index]
 		candidate.reason = self:CaptureQueueReason(candidate)
 		candidate.have = self:CaptureStars(candidate.npcID, candidate.shiny and true or false)
-		if candidate.reason and not (candidate.expires and now > candidate.expires) then
+		if candidate.reason and not (candidate.expires and clock > candidate.expires) then
 			kept = kept + 1
 			queue[kept] = candidate
 		end
@@ -349,6 +354,81 @@ function ns:CaptureQueuePrune(now)
 	local state = self:CaptureState()
 	state.queuePrunedAt, state.queuePrunedSerial = now, self:CaptureData().serial
 	return queue
+end
+
+-- ---------------------------------------------------------------------------
+-- Le compte à rebours en pause (2.5.0). Retour des joueurs : le temps filait
+-- pendant qu'on choisissait, pendant la scène d'un lancer seul ou celle de
+-- « Tout capturer », et les suivants s'effaçaient sous leurs yeux. Désormais,
+-- dès le clic (filet, bandeau), l'heure de la file se fige : chaque raison de
+-- pause (« chooser », « throw », « batch ») est une prise ; quand la dernière
+-- est lâchée, chaque candidat reprend avec le temps qui lui restait (expires
+-- décalé de la durée de la pause, jamais remis à 30 s). Chaque prise a son
+-- contrôle (CAPTURE_HOLD_CHECKS) : l'horloge lâche d'elle-même une prise
+-- dont la raison a disparu (scène fermée par Échap, etc.).
+-- ---------------------------------------------------------------------------
+ns.CAPTURE_HOLD_CHECKS = ns.CAPTURE_HOLD_CHECKS or {}
+-- un lancer seul : tant que le filet est en l'air (ou son verdict à l'écran)
+ns.CAPTURE_HOLD_CHECKS.throw = function(self)
+	local state = self.captureState
+	return state ~= nil and (state.rolling ~= nil or state.pending ~= nil)
+end
+
+-- L'heure de la file : `now`, ou l'instant de la pause tant qu'elle dure
+function ns:CaptureQueueClock(now)
+	local state = self.captureState
+	return (state and state.queuePausedAt) or now or Clock()
+end
+
+function ns:CaptureQueuePaused()
+	local state = self.captureState
+	return state ~= nil and state.queuePausedAt ~= nil
+end
+
+-- Pose une prise (`reason`) : la première fige l'heure de la file
+function ns:CaptureQueueHold(reason)
+	local state = self:CaptureState()
+	state.queueHolds = state.queueHolds or {}
+	if not next(state.queueHolds) then state.queuePausedAt = Clock() end
+	state.queueHolds[reason] = true
+	return true
+end
+
+-- Lâche une prise ; la dernière relance le compte : chacun reprend avec le
+-- temps qui lui restait. Rend true si la prise était posée.
+function ns:CaptureQueueRelease(reason)
+	local state = self.captureState
+	local holds = state and state.queueHolds
+	if not (holds and holds[reason]) then return false end
+	holds[reason] = nil
+	if next(holds) then return true end
+	local pausedAt = state.queuePausedAt
+	state.queuePausedAt = nil
+	if pausedAt then
+		local shift = math.max(0, Clock() - pausedAt)
+		for _, candidate in ipairs(self:CaptureQueueState()) do
+			if candidate.expires then candidate.expires = candidate.expires + shift end
+		end
+	end
+	return true
+end
+
+-- Les prises dont la raison a disparu sont lâchées (horloge de la file).
+-- Rend true si le compte a pu reprendre.
+function ns:CaptureQueueCheckHolds()
+	local state = self.captureState
+	local holds = state and state.queueHolds
+	if not (holds and next(holds)) then return false end
+	local stale
+	for reason in pairs(holds) do
+		local check = ns.CAPTURE_HOLD_CHECKS[reason]
+		if not (check and check(self)) then stale = reason; break end
+	end
+	if not stale then return false end
+	-- (lâchée hors du parcours, puis un nouveau tour pour les autres)
+	self:CaptureQueueRelease(stale)
+	self:CaptureQueueCheckHolds()
+	return true
 end
 
 -- La file triée : { guid, npcID, name, class, type, shiny, reason, expires }
@@ -395,7 +475,8 @@ function ns:CaptureOffer(guid, entry, shiny)
 	candidate.reason = self:CaptureQueueReason(candidate)
 	if not candidate.reason then return nil end
 	-- en plein combat, le compte attend la fin du combat
-	if not InCombat() then candidate.expires = Clock() + ns.CAPTURE_QUEUE_TIME end
+	-- (pendant une pause, il garde ses 30 s pour la reprise)
+	if not InCombat() then candidate.expires = self:CaptureQueueClock() + ns.CAPTURE_QUEUE_TIME end
 	queue[#queue + 1] = candidate
 	self:CaptureQueuePrune()
 	local still = false
@@ -432,7 +513,7 @@ end
 
 -- Fin du combat : le compte à rebours démarre pour ceux qui attendaient
 function ns:CaptureQueueStartTimers(now)
-	now = now or Clock()
+	now = self:CaptureQueueClock(now or Clock())
 	local started = false
 	for _, candidate in ipairs(self:CaptureQueueState()) do
 		if not candidate.expires then
@@ -490,6 +571,9 @@ do
 		if not staged and self.CaptureShowPrompt then self:CaptureShowPrompt() end
 		self:CaptureHideQueueList()
 		local thrown = base(self)
+		-- le compte à rebours des autres attend la fin de la scène (reprise :
+		-- CAPTURE_HOLD_CHECKS.throw, quand le lancer se termine)
+		if thrown then self:CaptureQueueHold("throw") end
 		-- (lancer depuis la petite fenêtre déjà ouverte : le geste compte aussi)
 		if thrown and self.CompanionSequenceAdvance then pcall(self.CompanionSequenceAdvance, self, "net") end
 		self:CaptureQueueRefresh()
@@ -591,6 +675,8 @@ do
 		if before and before.result and not (state and state.rolling) and self.CompanionSequenceAdvance then
 			pcall(self.CompanionSequenceAdvance, self, "stage", { ok = before.success and true or false })
 		end
+		-- la scène refermée, le choix abandonné… : le compte à rebours reprend
+		local resumed = self:CaptureQueueCheckHolds()
 		local queue = state and state.queue
 		if not (queue and #queue > 0) then return end
 		now = now or Clock()
@@ -603,12 +689,13 @@ do
 			self:CaptureToastShow()
 			if self.CompanionMenagerieOpportunity then pcall(self.CompanionMenagerieOpportunity, self) end
 		end
-		local due = changed or state.queuePrunedSerial ~= self:CaptureData().serial or not state.queuePrunedAt
+		local due = changed or resumed or state.queuePrunedSerial ~= self:CaptureData().serial or not state.queuePrunedAt
 			or now - state.queuePrunedAt >= ns.CAPTURE_QUEUE_PRUNE_GAP or now < state.queuePrunedAt
 		if not due then
+			local clock = self:CaptureQueueClock(now)
 			for index = 1, #queue do
 				local expires = queue[index].expires
-				if expires and now > expires then due = true; break end
+				if expires and clock > expires then due = true; break end
 			end
 		end
 		if due then
@@ -655,7 +742,10 @@ local function ShowNetTooltip(button)
 	if best then
 		local name = best.shiny and ns:F("CAPTURE_SHINY_TAG", best.name) or best.name
 		Theme.TooltipLine(tooltip, ns:CaptureQueueLine(best), Theme.PARCHMENT)
-		Theme.TooltipLine(tooltip, ns:F("CAPTURE_Q_CLICK", name), Theme.MUTED_LIGHT)
+		-- deux candidats ou plus : le choix et ses raccourcis (CaptureBatch.lua)
+		if not (ns.CaptureNetClickLines and ns:CaptureNetClickLines(tooltip, queue, name)) then
+			Theme.TooltipLine(tooltip, ns:F("CAPTURE_Q_CLICK", name), Theme.MUTED_LIGHT)
+		end
 	end
 	local aid = ns:CaptureState().aid
 	if aid and ns:CaptureAidCount(aid) > 0 then
@@ -796,9 +886,7 @@ function ns:EnsureCaptureNet()
 	if button.count.SetDrawLayer then button.count:SetDrawLayer("OVERLAY", 7) end
 	button.count:SetPoint("CENTER", button.countBack, "CENTER", 0, 0)
 	button.count:SetJustifyH("CENTER")
-	button:SetScript("OnClick", function(_, mouse)
-		if mouse == "RightButton" then ns:CaptureToggleQueueList() else ns:CaptureThrow() end
-	end)
+	button:SetScript("OnClick", function(_, mouse) ns:CaptureNetClick(mouse) end)
 	button:SetScript("OnEnter", function(b) b.hover = true; ns:CaptureStyleNet(); ShowNetTooltip(b) end)
 	button:SetScript("OnLeave", function(b)
 		b.hover = nil
@@ -824,6 +912,13 @@ function ns:EnsureCaptureNet()
 	button:Hide()
 	self:CapturePlaceNet()
 	return button
+end
+
+-- Le clic sur le filet (et sur le bandeau) : clic droit, la liste ; clic, le
+-- meilleur candidat. CaptureBatch.lua y ajoute le choix à deux candidats.
+function ns:CaptureNetClick(mouse)
+	if mouse == "RightButton" then return self:CaptureToggleQueueList() end
+	return self:CaptureThrow()
 end
 
 -- Couleurs : ambre au repos, or plein (et halo) pour une brillante
@@ -944,9 +1039,10 @@ function ns:EnsureCaptureToast()
 		button:SetAllPoints(frame)
 		if button.RegisterForClicks then button:RegisterForClicks("LeftButtonUp", "RightButtonUp") end
 		if button.RegisterForDrag then button:RegisterForDrag("LeftButton") end
+		-- même geste que sur le filet (à deux candidats : le choix, près du filet)
 		button:SetScript("OnClick", function(_, mouse)
-			if mouse == "RightButton" then ns:CaptureToggleQueueList() else ns:CaptureThrow() end
 			ns:CaptureToastHide()
+			ns:CaptureNetClick(mouse)
 		end)
 		button:SetScript("OnDragStart", function() if frame.StartMoving then pcall(frame.StartMoving, frame) end end)
 		button:SetScript("OnDragStop", function()
@@ -1108,7 +1204,8 @@ function ns:CaptureQueueLine(candidate, now)
 	parts[#parts + 1] = sure and self:F("CAPTURE_SURE", L["CAPTURE_RANK_" .. tostring(candidate.class)])
 		or self:F("CAPTURE_CHANCE", L["CAPTURE_RANK_" .. tostring(candidate.class)], math.floor(chance * 100 + 0.5 + 1e-9))
 	if candidate.expires then
-		parts[#parts + 1] = self:F("CAPTURE_Q_LEFT", math.max(0, math.ceil(candidate.expires - (now or Clock()))))
+		-- (en pause, le temps restant ne bouge pas)
+		parts[#parts + 1] = self:F("CAPTURE_Q_LEFT", math.max(0, math.ceil(candidate.expires - self:CaptureQueueClock(now or Clock()))))
 	else
 		parts[#parts + 1] = L.CAPTURE_Q_WAIT
 	end
