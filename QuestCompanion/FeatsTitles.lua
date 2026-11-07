@@ -265,6 +265,8 @@ end
 
 -- Après un changement de titre ou de forme : fiche et page à jour
 function ns:FeatTitlesChanged()
+	-- le haut fait « Nom de scène » (titre choisi) se réévalue
+	if self.FeatTouch then pcall(self.FeatTouch, self, "card") end
 	if self.trainerState then self.trainerState.ownText = nil end
 	if self.TrainerRefreshWindow then pcall(self.TrainerRefreshWindow, self) end
 	if self.journalFrame and self.journalFrame:IsShown() and self.RefreshJournal then pcall(self.RefreshJournal, self) end
