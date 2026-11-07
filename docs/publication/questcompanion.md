@@ -29,6 +29,8 @@ For **WoW Forever** (1.60). English and French. Free, standalone (`/qc`), about 
 - **Seals, titles, trainer card**: catch every species of a zone to seal it, earn trainer titles at 10/25/50/100/250 species, and show your trainer card (title, companion, a showcase of 3) to other players who have the addon, from the right-click menu.
 - **A guided first capture**: your companion walks you through it, and the journal's Guide page explains everything.
 
+![The Menagerie: every creature, numbered, hidden until you meet it](https://media.forgecdn.net/attachments/2155/840/qc-3-png.png)
+
 ## The travel companion
 
 - **It talks**: short bubbles, never in combat, when you kill, eat, rest, talk to an NPC, discover a zone, sit by a campfire… plus tips and small conversations.
@@ -43,6 +45,10 @@ For **WoW Forever** (1.60). English and French. Free, standalone (`/qc`), about 
 - **Treats**: zone milestones earn treats for its pantry (Shift + click it): biscuit, tea, candy, treasure map, Feast.
 - **Cosmetics**: nineteen mascot appearances plus every creature you capture, ornaments, frames and backgrounds.
 
+![Your companion: its needs, stats and looks](https://media.forgecdn.net/attachments/2155/842/qc-1-png.png)
+
+![The companion on screen](https://media.forgecdn.net/attachments/2155/841/qc-2-png.png)
+
 ## The journal
 
 - **Exploration**: every zone and its percentage. For the chosen zone: its milestones (treats, capture aids, a Feast), its places, the herbs and ores for your professions (including those that need more skill), its quests your character can do, and its chest. A 100% zone opens a chest where you **choose** a cosmetic item (zones 1-19, 20-39, 40-60).
@@ -52,6 +58,10 @@ For **WoW Forever** (1.60). English and French. Free, standalone (`/qc`), about 
 - **Memories**: the album of your adventure. Each memory gets a photo recreated by your companion, on the game's own loading-screen art for dungeons, raids and Forever's own places, or a Warcraft-style landscape of the zone elsewhere, each with its own shot and gesture.
 - **Stamps** for every first, and an **on-screen tracker** with your closest goals.
 - **Light**: about 2 MB of memory.
+
+![Missions of the day and week, pantry and capture aids](https://media.forgecdn.net/attachments/2155/839/qc-4-png.png)
+
+![Exploration: every zone, its milestones and chest](https://media.forgecdn.net/attachments/2155/838/qc-5-png.png)
 
 ## Commands
 

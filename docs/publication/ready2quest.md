@@ -13,6 +13,8 @@ Une seule description, anglais d'abord puis français (règle des stores : l'ang
 
 For **WoW Forever** (1.60). English and French.
 
+![Pre-departure check: a readiness score out of 100 with tips](https://media.forgecdn.net/attachments/2147/118/r2q-1-png.png)
+
 ## Modules
 
 Each one can be switched on or off in one click (`/r2q options`).
@@ -25,6 +27,8 @@ Each one can be switched on or off in one click (`/r2q options`).
 - **Gear summary**: a short toast with the stats you gained or lost when you swap an item.
 - **Portrait stats**: hover your portrait to see your main stats, picked for your class and spec.
 - **Aggro range**: hold Shift out of combat and each hostile nameplate gets a small diamond (or a line, or a ring): red inside its estimated aggro radius, amber close, green safe; its tooltip gives the radius, your distance and the verdict.
+
+![Gear summary when you swap an item](https://media.forgecdn.net/attachments/2147/117/r2q-2-png.png)
 
 ## Quality of life
 
@@ -43,6 +47,8 @@ The **travel companion**, its **creature menagerie** and its **journal** are a s
 ## Commands
 
 `/r2q` runs the check, `/r2q options` opens the settings, `/r2q help` lists everything, `/r2q diag` prints a diagnostic to attach to a bug report.
+
+![Settings: every module on or off in one click](https://media.forgecdn.net/attachments/2147/116/r2q-3-png.png)
 
 ## License
 
