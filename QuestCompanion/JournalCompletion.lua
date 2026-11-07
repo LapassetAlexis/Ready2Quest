@@ -202,7 +202,7 @@ local function Build(self, frame, content, ui)
 			local lines = {}
 			if zone.lo < 99 then lines[1] = ns:F("JRN_PROG_LEVELS", zone.lo, zone.hi) end
 			if not zone.seen then lines[#lines + 1] = L.JRN_PROG_UNSEEN end
-			Tip(r, zone.name, lines)
+			Tip(r, zone.name, lines, "row")
 		end
 		row.onLeave = HideTip
 		row:Hide()

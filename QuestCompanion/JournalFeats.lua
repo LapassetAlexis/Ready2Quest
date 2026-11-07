@@ -270,8 +270,7 @@ local function FillRow(self, row, entry)
 	if azeroth and ns.AzerothShield then
 		ns.AzerothShield(row.shield, entry.got and "gold" or "grey")
 		row.diamond:Hide()
-		row.pts:ClearAllPoints()
-		row.pts:SetPoint("CENTER", row.shield, "CENTER", 0, 3)
+		ns.AzerothShieldCenter(row.pts, row.shield)
 	else
 		row.shield:Hide()
 		row.diamond:Show()
@@ -324,7 +323,8 @@ function ns:JournalFeatsTip(row)
 	local def, entry = row and row.def, row and row.entry
 	local tip = rawget(_G, "GameTooltip")
 	if not (def and type(tip) == "table") then return end
-	pcall(tip.SetOwner, tip, row, "ANCHOR_RIGHT")
+	-- à côté de la ligne survolée (2.8.2 : plus au-dessus, au bord de la fenêtre)
+	ns.JournalTipAnchor(tip, row, "row")
 	if tip.ClearLines then tip:ClearLines() end
 	Theme.TooltipTitle(tip, self:FeatName(def))
 	Theme.TooltipLine(tip, self:FeatDescription(def), Theme.TEXT, true)

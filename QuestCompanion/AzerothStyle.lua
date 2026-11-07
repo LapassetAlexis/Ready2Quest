@@ -81,9 +81,144 @@ ns.CAPTURE_RESULT_SECONDS = 3.5   -- s d'affichage du bandeau « Capturé ! »
 ns.CAPTURE_RESULT_STALE = 30      -- s d'attente au plus (combat) avant de l'oublier
 local AZ = ns.AZEROTH_ATLAS
 local LAY = ns.AZEROTH_LAYOUT
-local INK = { 0.23, 0.14, 0.06 }          -- brun foncé du parchemin (#3a2410)
 local SHINY_NAME = { 1, 0.886, 0.478 }    -- nom d'une brillante (#ffe27a)
 local STAR_GOLD = { 1, 0.84, 0.29 }
+
+-- ---------------------------------------------------------------------------
+-- Encres et voiles (2.8.2) : lisibilité mesurée
+-- ---------------------------------------------------------------------------
+-- Les fonds des hauts faits (parchemins 130661/130662, fond des lignes
+-- 235397, page des statistiques 235412, bandeaux de l'atlas 4035524) sont
+-- des tons moyens (luminance relative 0,15 à 0,30) : même un texte noir n'y
+-- atteint pas 4,5:1 sur leurs parties les plus sombres. Sous les textes
+-- sombres, un voile crème (aplat du thème) éclaircit donc le fond ; les
+-- encres sont choisies pour tenir le seuil WCAG 2.x (4,5:1 texte courant,
+-- 3:1 grand titre de 16 px et plus) contre le PIRE fond : les 10 % les plus
+-- sombres de la zone du texte (les 10 % les plus clairs pour un texte
+-- clair). Mesures : textures du client (wago.tools), même découpe, même
+-- couleur, même voile, composées comme en jeu (docs/TECHNIQUE.md, 2.8.2).
+-- L'ombre de la police n'est pas comptée.
+ns.AZEROTH_INK = {
+	veil = { 0.98, 0.94, 0.82 },             -- crème du voile
+	alpha = { bubble = 0.40, page = 0.35, nav = 0.45, light = 0.40, guide = 0.50, strip = 0.50 },
+	ink = { 0.10, 0.06, 0.02 },              -- texte courant (#1a0f05)
+	inkSoft = { 0.17, 0.10, 0.03 },          -- texte du thème sur parchemin (#2b1a08)
+	inkMuted = { 0.24, 0.15, 0.06 },         -- secondaire, dates (#3d260f)
+	title = { 0.36, 0.14, 0.00 },            -- titres sur parchemin, nom de la bulle (#5c2400)
+	head = { 0.30, 0.11, 0.00 },             -- intertitres (12 px) du guide (#4d1c00)
+	reward = { 0.00, 0.22, 0.02 },           -- « Récompense : … » (vert sombre)
+	amber = { 0.32, 0.12, 0.00 },            -- l'ambre du thème sur parchemin
+	green = { 0.00, 0.22, 0.00 }, blue = { 0.04, 0.16, 0.42 }, red = { 0.38, 0.04, 0.02 },
+	orange = { 0.34, 0.11, 0.00 }, grey = { 0.20, 0.17, 0.14 },
+	light = { 0.93, 0.89, 0.80 },            -- texte clair sur fond sombre (lignes pas encore obtenues)
+	rewardLight = { 0.62, 0.92, 0.52 },
+	white = { 1, 1, 1 }, barGrey = { 0.91, 0.89, 0.83 }, goldHead = { 0.97, 0.85, 0.47 },
+	star = { 1, 0.84, 0.29 }, tagBlue = { 0.357, 0.561, 0.839 }, tagGrey = { 0.64, 0.66, 0.68 },
+	navText = { 0.85, 0.83, 0.78 }, navSel = { 0.95, 0.91, 0.83 },
+	stripLabel = { 0.95, 0.84, 0.54 }, stripDetail = { 0.84, 0.77, 0.60 },
+	markGold = { 0.97, 0.85, 0.47 }, markGrey = { 0.86, 0.82, 0.74 },
+	-- rareté du nom dans la Ménagerie, sur la ligne claire
+	rTrivial = { 0.24, 0.22, 0.20 }, rElite = { 0.00, 0.18, 0.45 }, rRare = { 0.32, 0.06, 0.48 },
+	rBoss = { 0.40, 0.15, 0.00 }, rShiny = { 0.28, 0.15, 0.00 },
+	tagShade = { 0.10, 0.06, 0.02, 0.92 },   -- sous la bande de l'étiquette (Compte / Perso)
+}
+-- rôle -> { encre, luminance du pire fond mesurée, seuil, taille (px) } ;
+-- commentaire : texte sombre/clair, pire fond, fond moyen, contraste obtenu
+ns.AZEROTH_CONTRAST = {
+	["bubble.name"] = { "title", 0.3918, 4.5, 10 },   -- sombre, fond 0.392 (moy. 0.431) : 5.19:1
+	["bubble.text"] = { "ink", 0.3838, 4.5, 12 },   -- sombre, fond 0.384 (moy. 0.429) : 7.78:1
+	["feat.name"] = { "white", 0.0725, 4.5, 12 },   -- clair, fond 0.072 (moy. 0.035) : 8.57:1
+	["feat.desc"] = { "ink", 0.3678, 4.5, 11 },   -- sombre, fond 0.368 (moy. 0.419) : 7.50:1
+	["feat.reward"] = { "reward", 0.3326, 4.5, 11 },   -- sombre, fond 0.333 (moy. 0.413) : 4.87:1
+	["feat.date"] = { "inkMuted", 0.4149, 4.5, 11 },   -- sombre, fond 0.415 (moy. 0.449) : 6.25:1
+	["feat.count"] = { "inkMuted", 0.4137, 4.5, 11 },   -- sombre, fond 0.414 (moy. 0.443) : 6.24:1
+	["feat.scopeAccount"] = { "tagBlue", 0.0140, 4.5, 10 },   -- clair, fond 0.014 (moy. 0.008) : 4.96:1
+	["feat.scopeChar"] = { "tagGrey", 0.0140, 4.5, 10 },   -- clair, fond 0.014 (moy. 0.008) : 6.86:1
+	["featOpen.name"] = { "barGrey", 0.0517, 4.5, 12 },   -- clair, fond 0.052 (moy. 0.028) : 8.04:1
+	["featOpen.desc"] = { "light", 0.1013, 4.5, 11 },   -- clair, fond 0.101 (moy. 0.084) : 5.44:1
+	["featOpen.reward"] = { "rewardLight", 0.0967, 4.5, 11 },   -- clair, fond 0.097 (moy. 0.081) : 4.99:1
+	["featOpen.count"] = { "light", 0.0920, 4.5, 11 },   -- clair, fond 0.092 (moy. 0.081) : 5.80:1
+	["nav.label"] = { "navText", 0.0128, 4.5, 12 },   -- clair, fond 0.013 (moy. 0.006) : 11.27:1
+	["nav.selected"] = { "navSel", 0.1060, 4.5, 12 },   -- clair, fond 0.106 (moy. 0.068) : 5.54:1
+	["nav.badge"] = { "tagBlue", 0.0107, 4.5, 11 },   -- clair, fond 0.011 (moy. 0.005) : 5.23:1
+	["nav.group"] = { "ink", 0.2300, 4.5, 10 },   -- sombre, fond 0.230 (moy. 0.246) : 5.02:1
+	["nav.pantry"] = { "inkSoft", 0.3843, 4.5, 11 },   -- sombre, fond 0.384 (moy. 0.422) : 6.94:1
+	["men.no"] = { "inkSoft", 0.2744, 4.5, 11 },   -- sombre, fond 0.274 (moy. 0.304) : 5.19:1
+	["men.name"] = { "ink", 0.3861, 4.5, 12 },   -- sombre, fond 0.386 (moy. 0.443) : 7.82:1
+	["men.trivial"] = { "rTrivial", 0.3861, 4.5, 12 },   -- sombre, fond 0.386 (moy. 0.443) : 4.81:1
+	["men.elite"] = { "rElite", 0.3861, 4.5, 12 },   -- sombre, fond 0.386 (moy. 0.443) : 5.33:1
+	["men.rare"] = { "rRare", 0.3861, 4.5, 12 },   -- sombre, fond 0.386 (moy. 0.443) : 5.11:1
+	["men.boss"] = { "rBoss", 0.3861, 4.5, 12 },   -- sombre, fond 0.386 (moy. 0.443) : 4.73:1
+	["men.shiny"] = { "rShiny", 0.3861, 4.5, 12 },   -- sombre, fond 0.386 (moy. 0.443) : 5.62:1
+	["men.detail"] = { "inkSoft", 0.4179, 4.5, 11 },   -- sombre, fond 0.418 (moy. 0.450) : 7.48:1
+	["menUnknown.no"] = { "light", 0.0363, 4.5, 11 },   -- clair, fond 0.036 (moy. 0.027) : 9.54:1
+	["menUnknown.name"] = { "light", 0.1013, 4.5, 12 },   -- clair, fond 0.101 (moy. 0.089) : 5.44:1
+	["seal.title"] = { "ink", 0.3375, 4.5, 12 },   -- sombre, fond 0.338 (moy. 0.430) : 6.95:1
+	["seal.detail"] = { "inkSoft", 0.3472, 4.5, 11 },   -- sombre, fond 0.347 (moy. 0.432) : 6.35:1
+	["seal.trainer"] = { "amber", 0.3406, 4.5, 11 },   -- sombre, fond 0.341 (moy. 0.426) : 5.05:1
+	["page.ink"] = { "ink", 0.3172, 4.5, 12 },   -- sombre, fond 0.317 (moy. 0.390) : 6.59:1
+	["page.inkSoft"] = { "inkSoft", 0.3172, 4.5, 12 },   -- sombre, fond 0.317 (moy. 0.390) : 5.87:1
+	["page.inkMuted"] = { "inkMuted", 0.3172, 4.5, 11 },   -- sombre, fond 0.317 (moy. 0.390) : 4.94:1
+	["page.amber"] = { "amber", 0.3172, 4.5, 11 },   -- sombre, fond 0.317 (moy. 0.390) : 4.75:1
+	["page.green"] = { "green", 0.3172, 4.5, 11 },   -- sombre, fond 0.317 (moy. 0.390) : 4.69:1
+	["page.blue"] = { "blue", 0.3172, 4.5, 11 },   -- sombre, fond 0.317 (moy. 0.390) : 4.77:1
+	["page.red"] = { "red", 0.3172, 4.5, 11 },   -- sombre, fond 0.317 (moy. 0.390) : 4.73:1
+	["page.orange"] = { "orange", 0.3172, 4.5, 11 },   -- sombre, fond 0.317 (moy. 0.390) : 4.68:1
+	["page.grey"] = { "grey", 0.3172, 4.5, 11 },   -- sombre, fond 0.317 (moy. 0.390) : 4.84:1
+	["page.title"] = { "title", 0.2924, 3.0, 22 },   -- sombre, fond 0.292 (moy. 0.321) : 4.02:1
+	["guide.title"] = { "goldHead", 0.0078, 3.0, 18 },   -- clair, fond 0.008 (moy. 0.005) : 13.09:1
+	["guide.head"] = { "head", 0.3300, 4.5, 12 },   -- sombre, fond 0.330 (moy. 0.453) : 5.14:1
+	["guide.text"] = { "inkSoft", 0.3300, 4.5, 12 },   -- sombre, fond 0.330 (moy. 0.453) : 6.08:1
+	["tile.text"] = { "ink", 0.3252, 4.5, 12 },   -- sombre, fond 0.325 (moy. 0.425) : 6.73:1
+	["tile.title"] = { "title", 0.3252, 3.0, 16 },   -- sombre, fond 0.325 (moy. 0.425) : 4.41:1
+	["strip.label"] = { "stripLabel", 0.0145, 4.5, 11 },   -- clair, fond 0.015 (moy. 0.009) : 11.47:1
+	["strip.detail"] = { "stripDetail", 0.0158, 4.5, 11 },   -- clair, fond 0.016 (moy. 0.012) : 9.31:1
+	["mark.gold"] = { "markGold", 0.0557, 4.5, 11 },   -- clair, fond 0.056 (moy. 0.042) : 7.16:1
+	["mark.grey"] = { "markGrey", 0.0200, 4.5, 11 },   -- clair, fond 0.020 (moy. 0.015) : 9.91:1
+	["trainer.band"] = { "light", 0.0585, 4.5, 12 },   -- clair, fond 0.059 (moy. 0.046) : 7.58:1
+	["banner.title"] = { "ink", 0.3048, 4.5, 12 },   -- sombre, fond 0.305 (moy. 0.397) : 6.37:1
+	["banner.name"] = { "white", 0.0549, 3.0, 20 },   -- clair, fond 0.055 (moy. 0.033) : 10.01:1
+	["banner.stars"] = { "star", 0.0969, 4.5, 11 },   -- clair, fond 0.097 (moy. 0.063) : 5.10:1
+	["verdict.title"] = { "ink", 0.2798, 4.5, 11 },   -- sombre, fond 0.280 (moy. 0.380) : 5.92:1
+	["verdict.name"] = { "white", 0.0252, 3.0, 20 },   -- clair, fond 0.025 (moy. 0.019) : 13.96:1
+	["cplate.name"] = { "white", 0.0293, 4.5, 12 },   -- clair, fond 0.029 (moy. 0.022) : 13.24:1
+	["cplate.mood"] = { "ink", 0.2763, 4.5, 10 },   -- sombre, fond 0.276 (moy. 0.373) : 5.85:1
+	["splate.title"] = { "ink", 0.3363, 4.5, 11 },   -- sombre, fond 0.336 (moy. 0.405) : 6.93:1
+	["splate.name"] = { "white", 0.0252, 3.0, 17 },   -- clair, fond 0.025 (moy. 0.021) : 13.97:1
+}
+-- Luminance relative WCAG 2.x d'une couleur (0..1)
+local function Lin(c) if c <= 0.03928 then return c / 12.92 end return ((c + 0.055) / 1.055) ^ 2.4 end
+function ns.AzerothLuminance(c) return 0.2126 * Lin(c[1]) + 0.7152 * Lin(c[2]) + 0.0722 * Lin(c[3]) end
+-- Contraste d'une encre sur un fond de luminance `bg`
+function ns.AzerothContrast(c, bg)
+	local a, b = ns.AzerothLuminance(c), tonumber(bg) or 0
+	if a < b then a, b = b, a end
+	return (a + 0.05) / (b + 0.05)
+end
+local INKS = ns.AZEROTH_INK
+-- Un voile crème (aplat du thème) sous les textes sombres : `alpha` (clé de
+-- AZEROTH_INK.alpha), sur `region` ou un rectangle (x0, y0, x1, y1 en
+-- fractions de `region`, depuis le haut gauche)
+function ns.AzerothVeil(parent, region, key, sub, frac, layer)
+	local tex = parent:CreateTexture(nil, layer or "BACKGROUND", nil, sub or 2)
+	tex:SetTexture(Theme.SOLID)
+	local c, a = INKS.veil, INKS.alpha[key] or 0.4
+	tex:SetVertexColor(c[1], c[2], c[3], a)
+	region = region or parent
+	if frac then
+		local w, h = tonumber(region:GetWidth()) or 0, tonumber(region:GetHeight()) or 0
+		tex:SetPoint("TOPLEFT", region, "TOPLEFT", math.floor(w * frac[1] + 0.5), -math.floor(h * frac[2] + 0.5))
+		tex:SetPoint("BOTTOMRIGHT", region, "TOPLEFT", math.floor(w * frac[3] + 0.5), -math.floor(h * frac[4] + 0.5))
+	else
+		tex:SetAllPoints(region)
+	end
+	tex.azVeilKey = key
+	tex:Show()
+	return tex
+end
+-- la bande claire des bandeaux (fond « alert ») et de la plaque « mini »
+ns.AZEROTH_TITLE_BAND = { banner = { 0.17, 0.205, 0.83, 0.345 }, plate = { 0.09, 0.10, 0.91, 0.33 } }
+local INK = INKS.ink                      -- encre des bandes claires (2.8.2 : #1a0f05)
 
 local FR = {
 	OPT_UI_STYLE           = "Style de l'interface",
@@ -455,6 +590,8 @@ function ns:AzerothCreateBanner(opts)
 	frame.bg = banner:CreateTexture(nil, "BACKGROUND")
 	frame.bg:SetAllPoints(banner)
 	Atlas(frame.bg, opts.guild and AZ.bgGuild or AZ.bg)
+	-- 2.8.2 : la bande claire du titre, éclaircie (encre lisible, 6,4:1)
+	frame.titleBand = ns.AzerothVeil(banner, banner, "strip", 1, ns.AZEROTH_TITLE_BAND.banner)
 	frame.glow = banner:CreateTexture(nil, "BACKGROUND", nil, -1)
 	frame.glow:SetSize(520, 200)
 	frame.glow:SetPoint("CENTER", banner, "CENTER", 0, 0)
@@ -669,6 +806,7 @@ function ns:AzerothPlate(parent, width, height)
 	plate.bg = plate:CreateTexture(nil, "ARTWORK")
 	plate.bg:SetAllPoints(plate)
 	Atlas(plate.bg, AZ.plate)
+	plate.titleBand = ns.AzerothVeil(plate, plate, "strip", 1, ns.AZEROTH_TITLE_BAND.plate, "ARTWORK")
 	plate.nameW = width - 60
 	plate.title = plate:CreateFontString(nil, "OVERLAY", Theme.F_CAPS)
 	plate.title:SetPoint("TOP", plate, "TOP", 0, -math.floor(height * 0.2))
@@ -717,6 +855,7 @@ function ns:AzerothVerdict(parent, width, height)
 	banner.bg = banner:CreateTexture(nil, "BACKGROUND")
 	banner.bg:SetAllPoints(banner)
 	Atlas(banner.bg, AZ.bg)
+	banner.titleBand = ns.AzerothVeil(banner, banner, "strip", 1, ns.AZEROTH_TITLE_BAND.banner)
 	banner.nameW = width - 100
 	banner.title = banner:CreateFontString(nil, "OVERLAY", Theme.F_CAPS)
 	banner.title:SetPoint("TOP", banner, "TOP", 2, math.floor(LAY.titleY * k))
@@ -777,24 +916,50 @@ end
 -- dans le bouclier (host.shield). Le modèle est un cadre : le cadre d'icône
 -- passe au-dessus dans un cadre à lui. size : côté du cadre d'icône.
 ns.AZEROTH_PORTRAIT_ICON = "Interface\\Icons\\Ability_Hunter_BeastTaming"
+-- 2.8.2 : l'ouverture du cadre d'icône (ui-achievement-iconframe, 74×74 :
+-- trou transparent de 17 à 57, mesuré sur la texture) et le centre visuel
+-- de l'écu du bouclier (ui-achievement-shield-1, 63×56 : écu de 19 à 47 en
+-- largeur, de 11 à 46 en hauteur, partie large en haut) : fractions du
+-- bouclier, x vers la droite, y vers le haut ; les chiffres d'une police
+-- sont hauts dans leur boîte (pas de jambage) : 1 px de moins
+ns.AZEROTH_ICON_HOLE = { l = 17 / 74, r = 57 / 74, t = 17 / 74, b = 57 / 74 }
+ns.AZEROTH_SHIELD_FACE = { x = 0.025, y = 0.02, digits = -1 }
+
+-- Les points d'une région posée dans un trou (fractions) d'une autre
+local function InHole(region, anchor, size, hole)
+	region:ClearAllPoints()
+	region:SetPoint("TOPLEFT", anchor, "TOPLEFT", math.floor(size * hole.l + 0.5), -math.floor(size * hole.t + 0.5))
+	region:SetPoint("BOTTOMRIGHT", anchor, "TOPLEFT", math.floor(size * hole.r + 0.5), -math.floor(size * hole.b + 0.5))
+end
+
+-- Un nombre au centre visuel de l'écu d'un bouclier
+function ns.AzerothShieldCenter(fs, shield)
+	if not (fs and shield) then return nil end
+	local face = ns.AZEROTH_SHIELD_FACE
+	local w, h = tonumber(shield:GetWidth()) or 0, tonumber(shield:GetHeight()) or 0
+	local x = math.floor(w * face.x + 0.5)
+	local y = math.floor(h * face.y + 0.5) + face.digits
+	fs:ClearAllPoints()
+	fs:SetPoint("CENTER", shield, "CENTER", x, y)
+	return x, y
+end
+
 function ns.AzerothPortraitSlot(host, size, x, y)
 	local level = (host.GetFrameLevel and host:GetFrameLevel()) or 1
-	local inner = math.floor(size * 0.6)
 	local anchor = CreateFrame("Frame", nil, host)
 	anchor:SetSize(size, size)
 	anchor:SetPoint("TOPLEFT", host, "TOPLEFT", x, y)
 	host.portraitAnchor = anchor
 	local ok, model = pcall(CreateFrame, "PlayerModel", nil, host)
 	if ok and model then
-		model:SetSize(inner, inner)
-		model:SetPoint("CENTER", anchor, "CENTER", 0, 0)
+		InHole(model, anchor, size, ns.AZEROTH_ICON_HOLE)
 		model:SetFrameLevel(level + 1)
 		model:Hide()
+		if ns.ModelKeepFraming then ns.ModelKeepFraming(model) end
 		host.portrait = model
 	end
 	host.portraitIcon = host:CreateTexture(nil, "ARTWORK", nil, 1)
-	host.portraitIcon:SetSize(inner, inner)
-	host.portraitIcon:SetPoint("CENTER", anchor, "CENTER", 0, 0)
+	InHole(host.portraitIcon, anchor, size, ns.AZEROTH_ICON_HOLE)
 	host.portraitIcon:SetTexCoord(0.08, 0.92, 0.08, 0.92)
 	host.portraitIcon:Hide()
 	local ring = CreateFrame("Frame", nil, host)
@@ -822,9 +987,14 @@ function ns.AzerothPortraitSlot(host, size, x, y)
 			model:Show()
 			shown = Method(model, "SetCreature", self.portraitNpc) and true or false
 			if shown then
-				Method(model, "SetPortraitZoom", 1)
-				Method(model, "SetCamDistanceScale", 1)
-				Method(model, "SetPosition", 0, 0, 0)
+				-- reposé à la fin du chargement (ns.ModelKeepFraming) : posé
+				-- trop tôt, le client l'ignorait et la tête sortait du cadre
+				model.framing = function(m)
+					Method(m, "SetPortraitZoom", 1)
+					Method(m, "SetCamDistanceScale", 1)
+					Method(m, "SetPosition", 0, 0, 0)
+				end
+				model.framing(model)
 				if ns.ModelShinyLight then ns.ModelShinyLight(model, target.shiny) end
 			else
 				model:Hide()
@@ -845,8 +1015,7 @@ function ns.AzerothPortraitSlot(host, size, x, y)
 	function host:SetLevel(value)
 		local n = tonumber(value)
 		local fs = self.levelText
-		fs:ClearAllPoints()
-		if self.shield then fs:SetPoint("CENTER", self.shield, "CENTER", 0, 3) end
+		if self.shield then ns.AzerothShieldCenter(fs, self.shield) else fs:ClearAllPoints() end
 		if n and n > 0 and self.shield and self.shield:IsShown() then
 			fs:SetText(tostring(math.floor(n)))
 			fs:Show()
@@ -1181,6 +1350,24 @@ local PLATE_H = 42
 local PLATE_NAME_Y = 16   -- centre du nom, depuis le bas de la plaque
 local PLATE_MOOD_Y = 35   -- centre de l'humeur, depuis le bas de la plaque
 ns.AZEROTH_COMPANION_PLATE = { height = PLATE_H, nameY = PLATE_NAME_Y, moodY = PLATE_MOOD_Y }
+-- 2.8.2 : l'ouverture du cadre (ui-achievement-guild-iconframe, 78×75 dans
+-- l'atlas : le trou transparent va de 16 à 58 en largeur, de 17 à 57 en
+-- hauteur, mesuré sur la texture du client). Le modèle 3D y est posé, à 1 px
+-- du bord : avant, il gardait le rectangle Sobre (96×82), plus large que
+-- l'ouverture, et la créature débordait sous les volutes et à côté.
+ns.AZEROTH_RING_HOLE = { l = 16 / 78, r = 58 / 78, t = 17 / 75, b = 57 / 75 }
+
+-- Place du modèle dans le cadre Azeroth (depuis le coin haut gauche du cadre)
+function ns.AzerothCompanionModelBase(frameW)
+	local hole = ns.AZEROTH_RING_HOLE
+	local left = (frameW or 104) / 2 - RING_W / 2          -- bord gauche de l'anneau
+	local top = RING_Y + RING_H / 2                          -- bord haut de l'anneau (au-dessus du cadre)
+	local x0 = math.ceil(left + RING_W * hole.l) + 1
+	local x1 = math.floor(left + RING_W * hole.r) - 1
+	local y0 = math.floor(top - RING_H * hole.t) - 1
+	local y1 = math.ceil(top - RING_H * hole.b) + 1
+	return { x = x0, y = y0, w = x1 - x0, h = y0 - y1 }
+end
 
 local function BuildCompanionSkin(frame)
 	local skin = CreateFrame("Frame", nil, frame)
@@ -1195,6 +1382,8 @@ local function BuildCompanionSkin(frame)
 	skin.plate:SetSize(w, PLATE_H)
 	skin.plate:SetPoint("BOTTOM", frame, "BOTTOM", 0, 0)
 	Atlas(skin.plate, AZ.plate)
+	-- 2.8.2 : la bande claire de la plaque éclaircie sous l'humeur (5,9:1)
+	skin.moodBand = ns.AzerothVeil(skin, skin.plate, "strip", 1, ns.AZEROTH_TITLE_BAND.plate)
 	-- le fond gagné, en disque sous l'anneau (masque du client, s'il existe)
 	if frame.CreateMaskTexture then
 		local ok, mask = pcall(frame.CreateMaskTexture, frame)
@@ -1247,6 +1436,12 @@ function ns:CompanionApplyUIStyle()
 		skin:Show()
 		EdgesShown(frame, false)
 		Masked(frame, true)
+		-- le modèle dans l'ouverture du cadre, sous l'anneau (niveau du cadre + 1 < habit + 4)
+		frame.modelBase = ns.AzerothCompanionModelBase(frame.GetWidth and frame:GetWidth() or nil)
+		if frame.model then
+			if frame.model.SetFrameLevel then frame.model:SetFrameLevel((frame:GetFrameLevel() or 1) + 1) end
+			self:CompanionPlaceModel(frame.fxOffset and frame.fxOffset[1], frame.fxOffset and frame.fxOffset[2])
+		end
 		-- nom et humeur sur la plaque (au-dessus du modèle et de l'anneau)
 		for _, fs in ipairs({ frame.name, frame.mood }) do
 			if fs and fs.SetParent then fs:SetParent(skin) end
@@ -1267,6 +1462,8 @@ function ns:CompanionApplyUIStyle()
 	elseif frame.uiStyle == "azeroth" then
 		if skin then skin:Hide() end
 		Masked(frame, false)
+		frame.modelBase = ns.COMPANION_MODEL_BASE
+		if frame.model and self.CompanionPlaceModel then self:CompanionPlaceModel(frame.fxOffset and frame.fxOffset[1], frame.fxOffset and frame.fxOffset[2]) end
 		for _, fs in ipairs({ frame.name, frame.mood }) do
 			if fs and fs.SetParent then fs:SetParent(frame) end
 		end
@@ -1347,7 +1544,6 @@ ns.AZEROTH_FX = {
 }
 local FXC = ns.AZEROTH_FX
 local FX_GOLD = { 1, 0.80, 0.38 }          -- teinte des lueurs blanches
-local FX_NAME = { 0.48, 0.29, 0.07 }       -- nom du compagnon sur le parchemin (#7a4a12)
 local FX_TEXT = { 1, 0.86, 0.45 }          -- « Aguerri ! »
 -- éclats autour du cadre : position (fraction du cadre depuis son coin
 -- haut gauche) et décalage dans le cycle
@@ -1455,7 +1651,17 @@ end
 -- d'un aplat parchemin clair du thème : le texte reste lisible même si le
 -- fichier manquait. Ordre : aplat (BACKGROUND 0) < parchemin (BACKGROUND 2)
 -- < nom et texte (OVERLAY).
-ns.AZEROTH_TALK_FILE = { file = 1111217, c = { 1 / 1024, 571 / 1024, 1 / 1024, 156 / 1024 } }
+-- 2.8.2 : toujours illisible en jeu (texte brun sur une boîte sombre et
+-- translucide, luminance uniforme ×0,31). Cause : « TalkingHeads-
+-- TextBackground » EST la boîte sombre et translucide des Talking Heads
+-- (fichier 1111217, rectangle 1..571 × 472..627 de l'atlas 604) ; sur
+-- Forever, la découpe 1..156 retombait sur cette boîte, posée par-dessus
+-- l'aplat clair : elle l'assombrissait. Le parchemin de la bulle est
+-- maintenant celui des hauts faits, vérifié en jeu sur Forever :
+-- ui-achievement-parchment-horizontal (130661, 512×256), recadré sans
+-- déformation à la taille de la bulle, plus un voile crème (40 %) : encre
+-- #1a0f05 à 7,8:1, nom #5c2400 à 5,2:1 sur le pire fond.
+ns.AZEROTH_TALK_FILE = { file = 130661, w = 512, h = 256 }
 ns.AZEROTH_PORTRAIT_BG = { file = 1111217, c = { 573 / 1024, 688 / 1024, 315 / 1024, 430 / 1024 } }
 ns.AZEROTH_PARCH_SOLID = { 0.92, 0.86, 0.71 }   -- aplat parchemin clair (#ebdbb5)
 
@@ -1484,27 +1690,47 @@ function ns.AzerothFileTexture(tex, spec)
 	return true
 end
 
+-- Recadre une texture (spec.w × spec.h) pour couvrir w × h sans la déformer
+function ns.AzerothCover(tex, spec, w, h)
+	w, h = tonumber(w) or 0, tonumber(h) or 0
+	if not (tex and spec and spec.w and w > 0 and h > 0) then return nil end
+	local ratio, base = w / h, spec.w / spec.h
+	local c
+	if ratio > base then
+		local f = base / ratio
+		c = { 0, 1, 0.5 - f / 2, 0.5 + f / 2 }
+	else
+		local f = ratio / base
+		c = { 0.5 - f / 2, 0.5 + f / 2, 0, 1 }
+	end
+	tex:SetTexCoord(c[1], c[2], c[3], c[4])
+	return c
+end
+
+-- Ordre de dessin, de bas en haut : aplat clair (BACKGROUND 0, le repli
+-- si le client refusait le fichier), parchemin (BACKGROUND 1), voile crème
+-- (BACKGROUND 2), liseré brun (BORDER), nom et texte (OVERLAY). Tout est
+-- sur la bulle elle-même : le cadre affiché.
 local function BubbleSkin(bubble)
 	if bubble.azTalk then return bubble.azTalk end
 	local skin = {}
-	-- l'aplat clair dessous, en retrait des bords déchirés du parchemin
 	local p = ns.AZEROTH_PARCH_SOLID
 	skin.backdrop = bubble:CreateTexture(nil, "BACKGROUND", nil, 0)
 	skin.backdrop:SetTexture(Theme.SOLID)
-	skin.backdrop:SetVertexColor(p[1], p[2], p[3], 0.97)
-	skin.backdrop:SetPoint("TOPLEFT", bubble, "TOPLEFT", 6, -6)
-	skin.backdrop:SetPoint("BOTTOMRIGHT", bubble, "BOTTOMRIGHT", -6, 6)
-	skin.bg = bubble:CreateTexture(nil, "BACKGROUND", nil, 2)
+	skin.backdrop:SetVertexColor(p[1], p[2], p[3], 1)
+	skin.backdrop:SetAllPoints(bubble)
+	skin.bg = bubble:CreateTexture(nil, "BACKGROUND", nil, 1)
 	skin.bg:SetAllPoints(bubble)
-	skin.bg.atlasName = FXA.talk
 	if ns.AzerothFileTexture(skin.bg, ns.AZEROTH_TALK_FILE) then
 		skin.bg:SetVertexColor(1, 1, 1, 1)
 		skin.bg:SetAlpha(1)
 	end
+	skin.veil = ns.AzerothVeil(bubble, bubble, "bubble", 2)
+	skin.edge = Theme.Border and Theme.Border(bubble, { 0.24, 0.14, 0.05 }, 1, "BORDER") or nil
 	skin.name = bubble:CreateFontString(nil, "OVERLAY", Theme.F_CAPS)
 	skin.name:SetPoint("TOPLEFT", bubble, "TOPLEFT", FXC.bubbleLeft, FXC.bubbleNameY)
 	AzFont(skin.name, 10)
-	skin.name:SetTextColor(FX_NAME[1], FX_NAME[2], FX_NAME[3], 1)
+	skin.name:SetTextColor(INKS.title[1], INKS.title[2], INKS.title[3], 1)
 	if Theme.NoShadow then Theme.NoShadow(skin.name) end
 	skin.name:SetJustifyH("LEFT")
 	skin.name:SetWidth(FXC.bubbleW - FXC.bubbleLeft - FXC.bubbleRight)
@@ -1522,8 +1748,17 @@ local function BubbleSkin(bubble)
 		Additive(skin.sheen)
 		skin.sheen:Hide()
 	end
-	skin.regions = { skin.backdrop, skin.bg, skin.name, skin.text }
-	if skin.bg.azFailed then skin.regions = { skin.backdrop, skin.name, skin.text }; skin.bg:Hide() end
+	skin.regions = { skin.backdrop, skin.bg, skin.veil, skin.name, skin.text }
+	for _, side in ipairs({ "top", "bottom", "left", "right" }) do
+		if skin.edge and skin.edge[side] then skin.regions[#skin.regions + 1] = skin.edge[side] end
+	end
+	if skin.bg.azFailed then
+		-- fichier refusé : l'aplat clair seul (le voile n'y ajoute rien)
+		for index = #skin.regions, 1, -1 do
+			if skin.regions[index] == skin.bg or skin.regions[index] == skin.veil then table.remove(skin.regions, index) end
+		end
+		skin.bg:Hide(); skin.veil:Hide()
+	end
 	bubble.azTalk = skin
 	return skin
 end
@@ -1562,6 +1797,7 @@ local function AzBubbleLayout(self, bubble)
 	local height = math.max(FXC.bubbleMin, math.ceil(-FXC.bubbleTextY + h + FXC.bubbleBottom + (tonumber(bubble.azExtra) or 0)))
 	bubble:SetWidth(FXC.bubbleW)
 	bubble:SetHeight(height)
+	if not skin.bg.azFailed then ns.AzerothCover(skin.bg, ns.AZEROTH_TALK_FILE, FXC.bubbleW, height) end
 	return height
 end
 
@@ -1570,7 +1806,8 @@ function ns:CompanionBubbleApplyStyle()
 	local bubble = self.companionBubble
 	if not bubble then return nil end
 	local frame = self.companionFrame
-	local az = frame ~= nil and frame.uiStyle == "azeroth" and HasFx("talk")
+	-- 2.8.2 : plus d'atlas des Talking Heads exigé (le parchemin vient de son fichier)
+	local az = frame ~= nil and frame.uiStyle == "azeroth"
 	if az then
 		local skin = BubbleSkin(bubble)
 		bubble.sobreW = bubble.sobreW or bubble:GetWidth()
@@ -2190,8 +2427,125 @@ function ns:UIStyleCommand(rest)
 	return id
 end
 
+-- ---------------------------------------------------------------------------
+-- /qc debug bulle (2.8.2) : l'état réel de la bulle, à copier dans un retour
+-- (cadre affiché, strate, niveau, alpha ; chaque texture : affichée, couche,
+-- alpha, couleur, fichier, découpe). Bulle cachée : une réplique d'essai
+-- s'affiche 8 s pour la capture d'écran.
+-- ---------------------------------------------------------------------------
+local DBGFR = {
+	AZ_DEBUG_USAGE  = "/qc debug bulle — état de la bulle du compagnon (pour un retour)",
+	AZ_DEBUG_HEAD   = "Bulle : style %s, %s, alpha %s (effectif %s), strate %s, niveau %s, %s×%s",
+	AZ_DEBUG_NONE   = "Bulle : pas de compagnon affiché.",
+	AZ_DEBUG_SAMPLE = "Essai de lecture : cette bulle doit être sur un parchemin clair.",
+	AZ_DEBUG_MODEL  = "Modèle : %s, %s×%s à (%s, %s), niveau %s (habit %s), cadrage %s",
+	AZ_DEBUG_SHOWN  = "affichée",
+	AZ_DEBUG_HIDDEN = "cachée",
+}
+local DBGEN = {
+	AZ_DEBUG_USAGE  = "/qc debug bulle — companion bubble state (for a report)",
+	AZ_DEBUG_HEAD   = "Bubble: style %s, %s, alpha %s (effective %s), strata %s, level %s, %s×%s",
+	AZ_DEBUG_NONE   = "Bubble: no companion on screen.",
+	AZ_DEBUG_SAMPLE = "Reading test: this bubble should sit on light parchment.",
+	AZ_DEBUG_MODEL  = "Model: %s, %s×%s at (%s, %s), level %s (skin %s), framing %s",
+	AZ_DEBUG_SHOWN  = "shown",
+	AZ_DEBUG_HIDDEN = "hidden",
+}
+ns.RegisterStrings(DBGFR, DBGEN)
+if ns.KEEP_STRINGS then ns.AZEROTH_DEBUG_STRINGS = { fr = DBGFR, en = DBGEN } end
+
+local function Num(v) v = tonumber(v); return v and string.format("%.2f", v) or "?" end
+local function Get(obj, name, ...)
+	local fn = obj and obj[name]
+	if type(fn) ~= "function" then return nil end
+	local r = { pcall(fn, obj, ...) }
+	if not r[1] then return nil end
+	return unpack(r, 2)
+end
+
+-- Une ligne par texture (ou texte) de la bulle
+function ns.AzerothRegionLine(name, region)
+	if not region then return name .. ": -" end
+	local layer, sub = Get(region, "GetDrawLayer")
+	local isText = Get(region, "GetObjectType") == "FontString"
+	local r, g, b, a
+	if isText then r, g, b, a = Get(region, "GetTextColor") else r, g, b, a = Get(region, "GetVertexColor") end
+	local parts = { name .. ":", Get(region, "IsShown") and "shown" or "hidden",
+		"visible=" .. tostring(Get(region, "IsVisible") and true or false),
+		tostring(layer or "?") .. "/" .. tostring(sub or 0), "alpha=" .. Num(Get(region, "GetAlpha")),
+		"rgba=" .. Num(r) .. "," .. Num(g) .. "," .. Num(b) .. "," .. Num(a) }
+	if not isText then
+		parts[#parts + 1] = "tex=" .. tostring(Get(region, "GetTexture"))
+		local c = { Get(region, "GetTexCoord") }
+		if #c >= 4 then parts[#parts + 1] = "coord=" .. Num(c[1]) .. "," .. Num(c[2]) .. "," .. Num(c[3]) .. "," .. Num(c[4]) end
+	elseif region.GetText then
+		parts[#parts + 1] = "text=" .. tostring(Get(region, "GetText") or ""):sub(1, 24)
+	end
+	return table.concat(parts, " ")
+end
+
+function ns:AzerothDebugBubble()
+	local lines = {}
+	local frame = self.companionFrame
+	if not frame and self.EnsureCompanionFrame and self.CompanionUpdateVisibility and self:CompanionUpdateVisibility() then
+		frame = self:EnsureCompanionFrame()
+	end
+	local bubble = frame and self.EnsureCompanionBubble and self:EnsureCompanionBubble()
+	if not bubble then
+		lines[1] = L.AZ_DEBUG_NONE
+		for _, line in ipairs(lines) do self:Print(line) end
+		return lines
+	end
+	if not bubble:IsShown() then
+		bubble:SetText(L.AZ_DEBUG_SAMPLE)
+		bubble:Show()
+		self.companionBubbleUntil = Clock() + 8
+	end
+	lines[#lines + 1] = self:F("AZ_DEBUG_HEAD", bubble.azBubble and "azeroth" or "sobre",
+		bubble:IsShown() and L.AZ_DEBUG_SHOWN or L.AZ_DEBUG_HIDDEN, Num(Get(bubble, "GetAlpha")),
+		Num(Get(bubble, "GetEffectiveAlpha")), tostring(Get(bubble, "GetFrameStrata")), tostring(Get(bubble, "GetFrameLevel")),
+		Num(Get(bubble, "GetWidth")), Num(Get(bubble, "GetHeight")))
+	local skin = bubble.azTalk
+	local list = {
+		{ "sobre.bg", bubble.bg }, { "sobre.rule", bubble.rule }, { "sobre.tail", bubble.tail },
+		{ "sobre.text", bubble.text },
+	}
+	if type(bubble.border) == "table" then list[#list + 1] = { "sobre.border.top", bubble.border.top } end
+	if skin then
+		for _, pair in ipairs({ { "az.backdrop", skin.backdrop }, { "az.parchment", skin.bg }, { "az.veil", skin.veil },
+			{ "az.name", skin.name }, { "az.text", skin.text } }) do list[#list + 1] = pair end
+		if skin.edge then list[#list + 1] = { "az.edge.top", skin.edge.top } end
+	end
+	for _, pair in ipairs(list) do lines[#lines + 1] = ns.AzerothRegionLine(pair[1], pair[2]) end
+	local model = frame.model
+	if model then
+		local base = frame.modelBase or {}
+		lines[#lines + 1] = self:F("AZ_DEBUG_MODEL", model:IsShown() and L.AZ_DEBUG_SHOWN or L.AZ_DEBUG_HIDDEN,
+			Num(Get(model, "GetWidth")), Num(Get(model, "GetHeight")), tostring(base.x), tostring(base.y),
+			tostring(Get(model, "GetFrameLevel")), tostring(frame.azSkin and Get(frame.azSkin, "GetFrameLevel") or "-"),
+			tostring(model.framingZoom))
+	end
+	for _, line in ipairs(lines) do self:Print(line) end
+	return lines
+end
+
+function ns:AzerothDebugCommand(rest)
+	local word = tostring(rest or ""):match("^%s*(%S*)")
+	word = (word or ""):lower()
+	if word == "bulle" or word == "bubble" then return self:AzerothDebugBubble() end
+	self:Print(L.AZ_DEBUG_USAGE)
+	return nil
+end
+
 if ns.EXTRA_COMMANDS then
 	ns.EXTRA_COMMANDS["style"] = function(self, rest) self:UIStyleCommand(rest) end
+	-- /qc debug bulle (une autre commande « debug » existante garde le reste)
+	local debugBase = ns.EXTRA_COMMANDS["debug"]
+	ns.EXTRA_COMMANDS["debug"] = function(self, rest, ...)
+		local word = (tostring(rest or ""):match("^%s*(%S*)") or ""):lower()
+		if debugBase and word ~= "bulle" and word ~= "bubble" then return debugBase(self, rest, ...) end
+		return self:AzerothDebugCommand(rest)
+	end
 end
 if type(ns.HELP) == "table" then
 	for _, section in ipairs(ns.HELP) do

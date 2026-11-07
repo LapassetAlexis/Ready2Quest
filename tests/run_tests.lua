@@ -120,6 +120,12 @@ local function NewRegion(kind, name, parent)
 	-- (pas de SetGradientAlpha : l'ancienne API, absente de Forever ; testée à part)
 	function region:SetAtlas(path) self.atlas = path end
 	function region:SetVertexColor(r, g, b, a) self.vertex = { r, g, b, a } end
+	-- lecture (2.8.2, /qc debug bulle) : type, fichier, alpha, découpe, couleur
+	function region:GetObjectType() return self.kind end
+	function region:GetTexture() return self.texture end
+	function region:GetAlpha() return self.alpha or 1 end
+	function region:GetTexCoord() local c = self.texCoord or { 0, 1, 0, 1 }; return c[1], c[2], c[3], c[4] end
+	function region:GetVertexColor() local v = self.vertex or {}; return v[1], v[2], v[3], v[4] or 1 end
 	function region:SetAlpha(value) self.alpha = value end
 	-- échelle du cadre (SetScale) : rangée à part, « scale » est un champ libre
 	-- des addons (le compagnon y garde la taille de son modèle)

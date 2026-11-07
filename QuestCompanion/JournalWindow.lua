@@ -534,10 +534,43 @@ local function Text(parent, font, color, width)
 	return text
 end
 
-local function Tip(owner, title, lines)
+-- Où poser l'infobulle (2.8.2) : ANCHOR_RIGHT la posait AU-DESSUS du coin
+-- droit de l'élément, sur la rangée de commandes (boutons de type de la
+-- Ménagerie) ou loin à droite d'une ligne des hauts faits.
+--   "row"   : à droite de la ligne, son haut à hauteur de la ligne ; pas la
+--             place à droite de l'écran : sous la ligne, alignée à droite ;
+--   "below" : sous l'élément, centrée (les boutons : rien au-dessus caché) ;
+--   "above" : au-dessus (boutons du bas de la fenêtre).
+-- L'infobulle du jeu reste bornée à l'écran.
+ns.JOURNAL_TIP_GAP = 8
+ns.JOURNAL_TIP_ROOM = 300   -- largeur à prévoir à droite d'une ligne
+function ns.JournalTipAnchor(tip, owner, mode)
+	if type(tip) ~= "table" or not owner then return nil end
+	pcall(tip.SetOwner, tip, owner, "ANCHOR_NONE")
+	if tip.ClearAllPoints then tip:ClearAllPoints() end
+	local gap = ns.JOURNAL_TIP_GAP
+	if mode == "row" then
+		local right = owner.GetRight and tonumber(owner:GetRight())
+		local screen = UIParent and UIParent.GetRight and tonumber(UIParent:GetRight())
+		if right and screen and screen > 0 and right + gap + ns.JOURNAL_TIP_ROOM > screen then
+			tip:SetPoint("TOPRIGHT", owner, "BOTTOMRIGHT", 0, -2)
+			return "below"
+		end
+		tip:SetPoint("TOPLEFT", owner, "TOPRIGHT", gap, 0)
+		return "right"
+	end
+	if mode == "above" then
+		tip:SetPoint("BOTTOM", owner, "TOP", 0, 4)
+		return "above"
+	end
+	tip:SetPoint("TOP", owner, "BOTTOM", 0, -4)
+	return "below"
+end
+
+local function Tip(owner, title, lines, mode)
 	local tip = rawget(_G, "GameTooltip")
 	if type(tip) ~= "table" then return end
-	pcall(tip.SetOwner, tip, owner, "ANCHOR_RIGHT")
+	ns.JournalTipAnchor(tip, owner, mode)
 	if tip.ClearLines then tip:ClearLines() end
 	Theme.TooltipTitle(tip, title)
 	for _, line in ipairs(lines or {}) do Theme.TooltipLine(tip, line, Theme.TEXT, true) end
@@ -1251,7 +1284,7 @@ local function BuildPantry(self, frame)
 		button:SetScript("OnClick", function(b) if ns.TreatGive then ns:TreatGive(b.kind); ns:RefreshJournal() end end)
 		button:SetScript("OnEnter", function(b)
 			b.border:SetColor(Theme.GOLD[1], Theme.GOLD[2], Theme.GOLD[3], 1)
-			Tip(b, ns:TreatLabel(b.kind), { L["TREAT_DESC_" .. b.kind], ns:F("TREAT_COUNT", ns:TreatCount(b.kind), ns:TreatCap(b.kind)) })
+			Tip(b, ns:TreatLabel(b.kind), { L["TREAT_DESC_" .. b.kind], ns:F("TREAT_COUNT", ns:TreatCount(b.kind), ns:TreatCap(b.kind)) }, "above")
 		end)
 		button:SetScript("OnLeave", function(b)
 			b.border:SetColor(Theme.EDGE[1], Theme.EDGE[2], Theme.EDGE[3], 1)

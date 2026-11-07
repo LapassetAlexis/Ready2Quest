@@ -92,19 +92,21 @@ ns.CARNET_TEX = T
 -- géométrie : bande de la plaque, bois, colonne de gauche, séparateur de
 -- métal ; plaque de 706×100 qui déborde de 46 px au-dessus de la fenêtre
 ns.CARNET_LAYOUT = { band = 56, wood = 16, nav = 196, gap = 10, plateW = 706, plateH = 100, plateUp = 46,
-	navItemH = 29, navStep = 31, navTop = -30 }
+	navItemH = 29, navStep = 31, navTop = -30, navPad = 12, navBadgePad = 10 }
 local LAY = ns.CARNET_LAYOUT
 ns.carnetMissing = ns.carnetMissing or {}
 
-local INK = { 0.17, 0.10, 0.03 }          -- brun foncé (#2b1a08)
-local INK_SOFT = { 0.23, 0.14, 0.06 }     -- #3a2410
-local INK_MUTED = { 0.30, 0.20, 0.10 }
-local AMBER = { 0.48, 0.29, 0.03 }        -- l'ambre du thème sur parchemin (#7a4a08)
+-- 2.8.2 : encres mesurées (ns.AZEROTH_INK, AzerothStyle.lua) : chacune
+-- tient 4,5:1 sur le pire fond voilé (page, lignes, tuiles)
+local INKS = ns.AZEROTH_INK
+local INK = INKS.inkSoft                  -- texte du thème sur parchemin (#2b1a08)
+local INK_SOFT = INKS.inkSoft
+local INK_MUTED = INKS.inkMuted           -- #3d260f
+local AMBER = INKS.amber                  -- l'ambre du thème sur parchemin (#521f00)
 local GOLD_HEAD = { 0.97, 0.85, 0.47 }    -- titres dorés ombrés (#f8d877)
 local GOLD_TEXT = { 1, 0.84, 0.42 }       -- texte des boutons, de la plaque
 local LIGHT = { 0.93, 0.89, 0.80 }        -- texte clair sur fond sombre
 local LIGHT_SOFT = { 0.89, 0.82, 0.66 }
-local NAV_INK = { 0.29, 0.17, 0.05 }
 local WOOD_BG = { 0.10, 0.07, 0.04 }
 local CAT_GOLD = { 1, 0.76, 0.25 }        -- teinte de la surbrillance des catégories
 local BAR_GREEN = { 0.10, 0.62, 0.10 }
@@ -238,7 +240,10 @@ end
 -- ---------------------------------------------------------------------------
 local STYLE_SPEC = { light = T.achBg, parchd = T.parchHD, dark = T.catBg, gold = T.stripGold, grey = T.stripGrey,
 	statrow = T.statRow, stathead = T.statHead, talk = ns.AZEROTH_TALK_FILE, portrait = ns.AZEROTH_PORTRAIT_BG }
-local DARK_STYLES = { dark = true, gold = true, grey = true, statrow = true, stathead = true, portrait = true }
+-- 2.8.2 : le parchemin désaturé (parchd) est sombre (luminance 0,09) :
+-- texte clair dessus ; les fonds clairs (light, talk) ont leur voile crème
+local DARK_STYLES = { dark = true, gold = true, grey = true, statrow = true, stathead = true, portrait = true, parchd = true }
+local VEILED = { light = "light", talk = "bubble" }
 ns.carnetCtxSerial = ns.carnetCtxSerial or 0
 
 -- Habille une tuile (ou une ligne, une carte) : light (fond des hauts faits),
@@ -272,6 +277,16 @@ local function TileStyle(tile, style)
 		end
 	end
 	local before = tile.azSurface
+	local veilKey = ok and VEILED[style]
+	if veilKey then
+		if not tile.azVeil then tile.azVeil = ns.AzerothVeil(tile, tile, veilKey, 2) end
+		local a = INKS.alpha[veilKey]
+		tile.azVeil:SetVertexColor(INKS.veil[1], INKS.veil[2], INKS.veil[3], a)
+		tile.azVeil.azVeilKey = veilKey
+		tile.azVeil:Show()
+	elseif tile.azVeil then
+		tile.azVeil:Hide()
+	end
 	if ok then
 		bg:Show()
 		if tile.bg then tile.bg:Hide() end
@@ -424,11 +439,27 @@ local function Field(box)
 end
 SKIN.CreateDropdown, SKIN.CreateSearchBox = Field, Field
 
+-- 2.8.2 : la bande de récompense est translucide par endroits : sur une
+-- ligne voilée, le clair passait au travers (bleu à 2,1:1). Un fond brun
+-- opaque dessous, la bande assombrie : bleu 5,0:1, gris 6,9:1.
 function SKIN.CreateTag(tag)
 	local bg = NewTex(tag, "BACKGROUND", 1, T.reward)
 	if not bg then return end
 	bg:SetAllPoints(tag)
-	if tag.bg then tag.bg:Hide() end
+	bg:SetVertexColor(0.5, 0.5, 0.5, 1)
+	if tag.bg then
+		local c = INKS.tagShade
+		tag.bg:SetTexture(Theme.SOLID)
+		tag.bg:SetVertexColor(c[1], c[2], c[3], c[4])
+		tag.bg:SetDrawLayer("BACKGROUND", 0)
+		tag.bg:Show()
+		local set = tag.SetTag
+		function tag:SetTag(...)
+			local result = set(self, ...)
+			self.bg:SetVertexColor(c[1], c[2], c[3], c[4])
+			return result
+		end
+	end
 	tag.azBg = bg
 	tag.azSurface = "dark"
 end
@@ -456,6 +487,34 @@ function SKIN.CreateNavItem(item)
 		end
 	end
 	if item.bar then item.bar:SetAlpha(0) end
+	-- 2.8.2 : le texte collait au bord gauche du fond : posé depuis le fond
+	-- lui-même, 12 px dedans ; le compteur 10 px avant son bord droit
+	if item.label then
+		item.label:ClearAllPoints()
+		item.label:SetPoint("LEFT", bg, "LEFT", LAY.navPad, 0)
+		item.label:SetPoint("RIGHT", bg, "RIGHT", -LAY.navPad - 22, 0)
+		item.label:SetJustifyH("LEFT")
+		if item.label.SetWordWrap then item.label:SetWordWrap(false) end
+	end
+	if item.badge then
+		local place = item.SetBadge
+		local function Badge(self)
+			self.badge:ClearAllPoints()
+			self.badge:SetPoint("RIGHT", self.azBg, "RIGHT", -LAY.navBadgePad, 0)
+		end
+		function item:SetBadge(...)
+			local result = place(self, ...)
+			Badge(self)
+			return result
+		end
+		local state = item.SetModuleState
+		function item:SetModuleState(...)
+			local result = state(self, ...)
+			if not (self.power and self.power:IsShown()) then Badge(self) end
+			return result
+		end
+		Badge(item)
+	end
 	item.azSurface = "dark"
 end
 
@@ -470,8 +529,10 @@ function SKIN.CreatePageHeader(header, frame)
 		for _, glow in ipairs(header.rule.glow or {}) do glow:Hide() end
 	end
 	AzFont(header.title, header.compact and 19 or 22)
-	Paint(header.title, GOLD_HEAD)
-	Shadow(header.title)
+	-- 2.8.2 : l'or ombré tombait à 1,7:1 sur le parchemin : titre à l'encre
+	-- brun-rouge, sans ombre (4,0:1 pour un grand titre, seuil 3)
+	Paint(header.title, INKS.title)
+	NoShadow(header.title)
 	header.title.azKeep = true
 	Paint(header.subtitle, INK_SOFT)
 	NoShadow(header.subtitle)
@@ -538,11 +599,12 @@ local function Remaps()
 	if REMAP then return REMAP end
 	REMAP = {}
 	local function Add(from, to) if from then REMAP[#REMAP + 1] = { from, to } end end
-	Add(Theme.PARCHMENT, INK); Add(Theme.LABEL, INK); Add(Theme.TEXT, INK)
-	Add(Theme.MUTED_LIGHT, INK_SOFT); Add(Theme.MUTED, INK_MUTED); Add(Theme.GREY, { 0.35, 0.30, 0.25 })
-	Add(Theme.GOLD, AMBER); Add(Theme.GOLD_LIGHT, AMBER); Add(Theme.GOLD_SOFT, { 0.42, 0.23, 0 })
-	Add(Theme.GREEN, { 0.11, 0.42, 0.07 }); Add(Theme.BLUE, { 0.10, 0.25, 0.55 }); Add(Theme.RED, { 0.60, 0.12, 0.05 })
-	Add(Theme.ORANGE_DEEP, { 0.62, 0.25, 0.04 })
+	-- 2.8.2 : toutes à 4,5:1 au moins sur le pire fond voilé (0,317)
+	Add(Theme.PARCHMENT, INKS.ink); Add(Theme.LABEL, INKS.ink); Add(Theme.TEXT, INKS.inkSoft)
+	Add(Theme.MUTED_LIGHT, INKS.inkSoft); Add(Theme.MUTED, INKS.inkMuted); Add(Theme.GREY, INKS.grey)
+	Add(Theme.GOLD, INKS.amber); Add(Theme.GOLD_LIGHT, INKS.amber); Add(Theme.GOLD_SOFT, INKS.amber)
+	Add(Theme.GREEN, INKS.green); Add(Theme.BLUE, INKS.blue); Add(Theme.RED, INKS.red)
+	Add(Theme.ORANGE_DEEP, INKS.orange)
 	return REMAP
 end
 local function Near(r, g, b, c) return math.abs(r - c[1]) < 0.02 and math.abs(g - c[2]) < 0.02 and math.abs(b - c[3]) < 0.02 end
@@ -574,7 +636,8 @@ function ns.CarnetInk(fs)
 		end
 	end
 	if 0.3 * r + 0.59 * g + 0.11 * b > 0.5 then
-		fs:SetTextColor(0.12 + r * 0.3, 0.07 + g * 0.3, 0.02 + b * 0.3, a or 1)
+		-- une couleur claire inconnue : assombrie (blanc -> #282321, 4,7:1)
+		fs:SetTextColor(0.04 + r * 0.12, 0.03 + g * 0.11, 0.02 + b * 0.11, a or 1)
 		NoShadow(fs)
 		return true
 	end
@@ -702,6 +765,7 @@ local function Chrome(self, frame, title)
 			Cover(parch, T.parchV, navW, ch)
 			if nav.bg then nav.bg:Hide() end
 			nav.azBg, nav.azSurface = parch, "light"
+			nav.azVeil = ns.AzerothVeil(nav, nav, "nav", 2)
 		end
 		if nav.separator then nav.separator:Hide() end
 		frame.azMetalL = NewTex(over, "ARTWORK", 0, T.metalL)
@@ -734,6 +798,8 @@ local function Chrome(self, frame, title)
 			shade:SetWidth(34)
 			shade:SetAlpha(0.4)
 		end
+		-- 2.8.2 : le voile crème des pages (texte du thème à 4,7:1 au moins)
+		content.azVeil = ns.AzerothVeil(content, content, "page", 0)
 	end
 	frame.azMetalT = NewTex(over, "ARTWORK", 0, T.metalT)
 	if frame.azMetalT then
@@ -796,7 +862,7 @@ local function JournalNav(self, frame)
 		frame.navGroup:ClearAllPoints()
 		frame.navGroup:SetPoint("TOPLEFT", nav, "TOPLEFT", 14, -12)
 		if nav.azSurface == "light" then
-			Paint(frame.navGroup, NAV_INK)
+			Paint(frame.navGroup, INKS.ink)
 			NoShadow(frame.navGroup)
 			frame.navGroup.azKeep = true
 		end
@@ -879,10 +945,17 @@ local function Strip(section)
 	return strip
 end
 
-local function GoldTitle(fs, size)
+-- Titre doré ombré sur fond sombre ; sur parchemin (light) : encre
+-- brun-rouge sans ombre (l'or n'y tient pas 3:1)
+local function GoldTitle(fs, size, light)
 	AzFont(fs, size)
-	Paint(fs, GOLD_HEAD)
-	Shadow(fs)
+	if light then
+		Paint(fs, INKS.title)
+		NoShadow(fs)
+	else
+		Paint(fs, GOLD_HEAD)
+		Shadow(fs)
+	end
 	fs.azKeep = true
 end
 
@@ -915,7 +988,7 @@ function PAGE.evolution(self, frame)
 			pane.azVine = vine
 		end
 	end
-	if pane.name then GoldTitle(pane.name, 19) end
+	if pane.name then GoldTitle(pane.name, 19, true) end
 	if pane.bubble then TileStyle(pane.bubble, "talk") end
 	for _, tile in pairs(pane.stats or {}) do
 		if TileStyle(tile, "dark") then
@@ -959,6 +1032,16 @@ function PAGE.menagerie(self, frame)
 	WoodBorder(p)
 end
 
+-- 2.8.2 : la couleur de rareté du nom, en version sombre pour la ligne
+-- claire (la couleur claire du jeu y tombait sous 2:1)
+local RARITY_INK = { trivial = "rTrivial", minus = "rTrivial", normal = "ink", elite = "rElite", rare = "rRare",
+	rareelite = "rRare", worldboss = "rBoss" }
+ns.CARNET_RARITY_INK = RARITY_INK
+function ns.CarnetRarityInk(entry)
+	if entry and entry.shiny then return INKS.rShiny end
+	return INKS[RARITY_INK[entry and entry.class or "normal"] or "ink"] or INKS.ink
+end
+
 function POST.menagerie(self, frame)
 	local pane = frame.men
 	if not pane then return end
@@ -966,14 +1049,19 @@ function POST.menagerie(self, frame)
 		local entry = row.entry
 		if entry then
 			if entry.known then
+				-- ligne claire voilée : n° et type 5,2:1 et plus, nom à sa rareté (4,7:1 et plus)
 				TileStyle(row, "light")
+				if row.no then Paint(row.no, INKS.inkSoft); NoShadow(row.no) end
+				if row.label then Paint(row.label, ns.CarnetRarityInk(entry)); NoShadow(row.label) end
+				if row.detail then Paint(row.detail, INKS.inkSoft); NoShadow(row.detail) end
 			else
-				-- jamais croisée : parchemin désaturé, texte clair ombré
+				-- jamais croisée : parchemin désaturé, texte clair ombré (5,4:1)
 				TileStyle(row, "parchd")
 				for _, fs in ipairs({ row.label, row.no, row.detail }) do
 					if fs then Paint(fs, LIGHT); Shadow(fs) end
 				end
 			end
+			for _, fs in ipairs({ row.label, row.no, row.detail }) do if fs then fs.azKeep = true end end
 		end
 	end
 end
@@ -1037,7 +1125,20 @@ function POST.feats(self, frame)
 			TileStyle(row, entry.got and "light" or "parchd")
 			if row.azTitle then SetTex(row.azTitle, entry.got and T.titleGold or T.titleGrey) end
 			if row.pts then Paint(row.pts, entry.got and { 1, 1, 1 } or { 0.85, 0.85, 0.85 }) end
-			if row.name and row.azTitle then Paint(row.name, entry.got and { 1, 1, 1 } or { 0.91, 0.89, 0.83 }) end
+			if row.name and row.azTitle then Paint(row.name, entry.got and INKS.white or INKS.barGrey) end
+			-- 2.8.2 : une encre par rôle (AZEROTH_CONTRAST feat.* / featOpen.*) :
+			-- obtenu, ligne claire voilée ; pas encore, parchemin sombre
+			local got = entry.got and true or false
+			local roles = got and { desc = "ink", reward = "reward", date = "inkMuted", count = "inkMuted" }
+				or { desc = "light", reward = "rewardLight", date = "light", count = "light" }
+			for field, key in pairs(roles) do
+				local fs = row[field]
+				if fs then
+					Paint(fs, INKS[key])
+					if got then NoShadow(fs) else Shadow(fs) end
+					fs.azKeep = true
+				end
+			end
 		end
 	end
 	if pane.azShieldText and self.FeatPoints then pane.azShieldText:SetText(tostring((self:FeatPoints()))) end
@@ -1076,7 +1177,7 @@ function PAGE.progress(self, frame)
 		TileStyle(pane.card, "light")
 		WoodBorder(pane.card)
 	end
-	if pane.name then GoldTitle(pane.name, 15) end
+	if pane.name then GoldTitle(pane.name, 15, true) end
 	for _, tile in ipairs(pane.parts or {}) do
 		if TileStyle(tile, "dark") then Selectable(tile) end
 	end
@@ -1123,20 +1224,48 @@ function PAGE.guide(self, frame)
 		page:SetPoint("TOPLEFT", content, "TOPLEFT", x0, y0)
 		page:SetPoint("BOTTOMRIGHT", content, "TOPLEFT", x1, y1)
 		Cover(page, T.stats, x1 - x0, y0 - y1)
-		local veil = Theme.Solid(pane, "BACKGROUND", { 0.95, 0.87, 0.68 }, 0.30)
-		veil:SetDrawLayer("BACKGROUND", 2)
-		veil:SetPoint("TOPLEFT", page, "TOPLEFT", 0, 0)
-		veil:SetPoint("BOTTOMRIGHT", page, "BOTTOMRIGHT", 0, 0)
+		-- voile crème (50 %) : texte 6,1:1, intertitres 5,1:1 sur le pire fond
+		local veil = ns.AzerothVeil(pane, page, "guide", 2)
 		pane.azPage, pane.azVeil = page, veil
 	end
-	if pane.title then GoldTitle(pane.title, 18) end
-	pane.azFiligree = Filigree(pane, ui.PAD + pane.RX, ui.TOP - 20, pane.RW, true)
+	-- 2.8.2 : le titre chevauchait le filigrane et la première ligne. De haut
+	-- en bas : le titre doré sur la bande sombre des statistiques (13:1),
+	-- le filigrane, puis le texte (pane.bodyTop descend d'autant)
+	local G = ns.CARNET_GUIDE_LAYOUT
+	local x = ui.PAD + pane.RX
+	pane.azBand = NewTex(pane, "ARTWORK", 0, T.statHead)
+	if pane.azBand then
+		pane.azBand:SetPoint("TOPLEFT", content, "TOPLEFT", x - 6, ui.TOP + G.bandUp)
+		pane.azBand:SetSize(pane.RW + 12, G.bandH)
+	end
+	if pane.title then
+		GoldTitle(pane.title, 18, not pane.azBand)
+		if pane.azBand then
+			pane.title:ClearAllPoints()
+			pane.title:SetPoint("LEFT", pane.azBand, "LEFT", 10, 0)
+		end
+	end
+	pane.azFiligree = Filigree(pane, x, ui.TOP - G.filigreeY, pane.RW)
+	local shift = G.bodyY - (ui.TOP - (pane.bodyTop or ui.TOP))
+	if shift > 0 and pane.bodyTop then
+		pane.bodyTop = pane.bodyTop - shift
+		if pane.areaH then pane.areaH = pane.areaH - shift end
+	end
 end
+-- y depuis le haut des pages (ui.TOP) : bande du titre (dépasse de 4 px,
+-- 26 de haut), filigrane (14 de haut), début du texte
+ns.CARNET_GUIDE_LAYOUT = { bandUp = 4, bandH = 26, filigreeY = 28, filigreeH = 14, bodyY = 48 }
 
 function POST.guide(self, frame)
 	local pane = frame.guide
 	if not pane then return end
-	for _, head in ipairs(pane.heads or {}) do GoldTitle(head, 13) end
+	-- intertitres : encre brun-rouge sans ombre (l'or ombré tombait à 1,6:1)
+	for _, head in ipairs(pane.heads or {}) do
+		AzFont(head, 13)
+		Paint(head, INKS.head)
+		NoShadow(head)
+		head.azKeep = true
+	end
 end
 
 -- ---------------------------------------------------------------------------

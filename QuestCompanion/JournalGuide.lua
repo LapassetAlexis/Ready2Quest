@@ -402,7 +402,7 @@ local function Build(self, frame, content, ui)
 	pane.replay = Theme.CreateButton(pane, "auto", Theme.PAGER_HEIGHT, L.GUIDE_REPLAY, function() ns:JournalGuideReplay() end, "accent")
 	At(pane.replay, content, 0, PAGER_Y)
 	if pane.replay.HookScript then
-		pane.replay:HookScript("OnEnter", function(b) Tip(b, L.GUIDE_REPLAY, { L.GUIDE_REPLAY_TIP }) end)
+		pane.replay:HookScript("OnEnter", function(b) Tip(b, L.GUIDE_REPLAY, { L.GUIDE_REPLAY_TIP }, "above") end)
 		pane.replay:HookScript("OnLeave", HideTip)
 	end
 

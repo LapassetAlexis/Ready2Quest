@@ -711,7 +711,7 @@ function ns:MenagerieCollectionBuild(pane, content, box)
 	strip.trainer = ui.Text(strip, Theme.F_SMALL, Theme.GOLD, box.w - 44)
 	strip.trainer:SetPoint("TOPLEFT", strip, "TOPLEFT", 32, -46)
 	if strip.trainer.SetWordWrap then strip.trainer:SetWordWrap(false) end
-	strip.onEnter = function(s) ui.Tip(s, s.tipTitle or "", ns:MenagerieCollectionTip()) end
+	strip.onEnter = function(s) ui.Tip(s, s.tipTitle or "", ns:MenagerieCollectionTip(), "row") end
 	strip.onLeave = ui.HideTip
 	pane.collection = strip
 	return strip

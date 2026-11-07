@@ -64,10 +64,8 @@ local function Offset(frame, dx, dy)
 	dx, dy = math.floor(dx * 10 + 0.5) / 10, math.floor(dy * 10 + 0.5) / 10
 	local last = frame.fxOffset
 	if last and last[1] == dx and last[2] == dy then return end
-	if frame.model and frame.model.SetPoint then
-		frame.model:ClearAllPoints()
-		frame.model:SetPoint("TOPLEFT", frame, "TOPLEFT", 4 + dx, -4 + dy)
-	end
+	-- la place du modèle dépend du style (frame.modelBase, 2.8.2)
+	if frame.model and frame.model.SetPoint then ns:CompanionPlaceModel(dx, dy) end
 	if frame.fallback and frame.fallback.SetPoint then
 		frame.fallback:ClearAllPoints()
 		frame.fallback:SetPoint("TOP", frame, "TOP", dx, -14 + dy)
