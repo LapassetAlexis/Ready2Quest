@@ -68,3 +68,4 @@ JournalWindow.lua
 JournalCompletion.lua
 JournalGuide.lua
 TrainerCard.lua
+GuildFeats.lua

@@ -17,12 +17,14 @@
 --   N  refus (fiche non partagée)
 --   C  fiche : C~1~<série>~<morceau>~<total>~<texte>, découpée en morceaux
 --      de 200 octets au plus (limite du client : 255 par message)
+--   E  exploit annoncé à la guilde (GuildFeats.lua)
 -- La fiche est une liste « clé=valeur » séparée par « ; », les listes par
 -- « , » ; les caractères réservés sont échappés en %XX. Pas de bibliothèque.
 --
 -- Envoi : file d'attente avec limite de débit (seau de 6 messages, un de plus
 -- par seconde), jamais en combat ni pendant un verrou de messagerie (moteur
--- récent : rencontres). Sans réponse au bout de 12 s : « Pas de fiche reçue ».
+-- récent : rencontres) ; un message refusé par le client (débit, codes 3 et 8)
+-- est réessayé une seconde plus tard, 5 fois au plus. Sans réponse au bout de 12 s : « Pas de fiche reçue ».
 -- Découverte : annonce à l'entrée en groupe / raid / guilde, sonde quand on
 -- cible un joueur hors combat (une fois par joueur et par session) ; cache
 -- des détenteurs dans la sauvegarde, oublié au bout de 14 jours.
@@ -148,6 +150,8 @@ ns.TRAINER_BURST = 6                -- messages d'affilée au plus
 ns.TRAINER_RATE = 1                 -- messages regagnés par seconde
 ns.TRAINER_QUEUE_MAX = 40
 ns.TRAINER_QUEUE_TTL = 60           -- s : un message trop vieux n'est plus envoyé
+ns.TRAINER_RETRY_MAX = 5            -- essais d'un message refusé par le client (débit)
+ns.TRAINER_RETRY_DELAY = 1          -- s avant de réessayer
 ns.TRAINER_TIMEOUT = 12             -- s sans fiche : « Pas de fiche reçue »
 ns.TRAINER_ANSWER_GAP = 10          -- s entre deux envois de fiche au même joueur
 ns.TRAINER_ACK_GAP = 300            -- s entre deux accusés au même joueur
@@ -207,7 +211,7 @@ function ns:TrainerResetSession()
 	state.queue, state.tokens, state.seq = {}, ns.TRAINER_BURST, 0
 	state.inbox, state.cards, state.pending, state.probed = {}, {}, {}, {}
 	state.answered, state.acked, state.announced, state.incoming = {}, {}, {}, {}
-	state.inGroup, state.guildAnnounced, state.ownText = nil, nil, nil
+	state.inGroup, state.guildAnnounced, state.ownText, state.holdUntil = nil, nil, nil, nil
 end
 
 function ns:TrainerSharing()
@@ -755,6 +759,8 @@ function ns:TrainerPump(elapsed)
 	self:TrainerCheckTimeouts(now)
 	local queue = state.queue
 	if #queue == 0 or self:TrainerBlocked() then return 0 end
+	if state.holdUntil and now < state.holdUntil then return 0 end
+	state.holdUntil = nil
 	local api, sent = ChatApi(), 0
 	while #queue > 0 and state.tokens >= 1 do
 		local msg = table.remove(queue, 1)
@@ -762,7 +768,15 @@ function ns:TrainerPump(elapsed)
 		if msg.card then
 			if fresh then ExpandCard(self, msg) end
 		elseif fresh and api then
-			pcall(api.SendAddonMessage, ns.TRAINER_PREFIX, msg.text, msg.channel, msg.target)
+			local ok, result = pcall(api.SendAddonMessage, ns.TRAINER_PREFIX, msg.text, msg.channel, msg.target)
+			-- moteur récent : le client refuse un message de trop (codes 3 et 8,
+			-- débit de l'addon ou du canal) ; il repart un peu plus tard, en tête
+			if ok and (result == 3 or result == 8) and (msg.tries or 0) < ns.TRAINER_RETRY_MAX then
+				msg.tries = (msg.tries or 0) + 1
+				table.insert(queue, 1, msg)
+				state.holdUntil = now + ns.TRAINER_RETRY_DELAY
+				break
+			end
 			state.tokens = state.tokens - 1
 			sent = sent + 1
 		end
