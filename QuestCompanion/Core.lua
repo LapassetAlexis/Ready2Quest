@@ -185,27 +185,40 @@ end
 -- ---------------------------------------------------------------------------
 -- Tables de zones paresseuses (1.6.1) : les données livrées par zone
 -- (ZoneCreatures_<client>.lua, ZoneQuests_<client>.lua) restent dans le
--- fichier sous forme d'une fonction par zone ; la zone n'est construite en
+-- fichier sous forme d'une chaîne compacte par zone (2.8.1 ; une fonction par
+-- zone avant, bien plus lourde en code compilé) ; la zone n'est construite en
 -- tables qu'à sa première lecture (t[zoneID]) et gardée ensuite. On ne paie
 -- donc en mémoire que les zones vraiment visitées.
+-- ns.LazyZones(makers, build) : makers[zoneID] = fonction qui rend la zone, ou
+-- valeur passée à build(valeur) (la chaîne de la zone).
 -- `pairs` ne voit pas les zones pas encore lues : on passe par
 -- ns.ZoneIds(t) (les identifiants) et ns.ZoneEach(t, fn) (chaque zone, sans
 -- garder celles qui n'étaient pas encore lues : le Pokédex parcourt tout le
 -- jeu sans tout retenir).
 -- ---------------------------------------------------------------------------
-local lazyZones = setmetatable({}, { __mode = "k" })   -- table -> { makers, ids }
-function ns.LazyZones(makers)
+local lazyZones = setmetatable({}, { __mode = "k" })   -- table -> { makers, ids, build }
+
+-- La zone construite, nil si inconnue
+local function BuildZone(lazy, zoneID)
+	local make = lazy.makers[zoneID]
+	if type(make) == "function" then return make() end
+	if make ~= nil and lazy.build then return lazy.build(make) end
+	return nil
+end
+
+function ns.LazyZones(makers, build)
 	local ids = {}
 	for zoneID in pairs(makers) do ids[#ids + 1] = zoneID end
 	table.sort(ids)
+	local lazy = { makers = makers, ids = ids, build = build }
 	local proxy = setmetatable({}, { __index = function(self, zoneID)
-		local make = makers[zoneID]
-		if type(make) ~= "function" then return nil end
-		local zone = make()
+		if zoneID == nil then return nil end
+		local zone = BuildZone(lazy, zoneID)
+		if zone == nil then return nil end
 		rawset(self, zoneID, zone)
 		return zone
 	end })
-	lazyZones[proxy] = { makers = makers, ids = ids }
+	lazyZones[proxy] = lazy
 	return proxy
 end
 
@@ -227,7 +240,7 @@ function ns.ZoneEach(t, fn)
 		return
 	end
 	for _, zoneID in ipairs(lazy.ids) do
-		local zone = rawget(t, zoneID) or lazy.makers[zoneID]()
+		local zone = rawget(t, zoneID) or BuildZone(lazy, zoneID)
 		fn(zoneID, zone)
 	end
 end
@@ -240,8 +253,7 @@ function ns.ZonePeek(t, zoneID)
 	if not lazy then return t[zoneID] end
 	local zone = rawget(t, zoneID)
 	if zone ~= nil then return zone end
-	local make = lazy.makers[zoneID]
-	return type(make) == "function" and make() or nil
+	return BuildZone(lazy, zoneID)
 end
 
 -- API publique
