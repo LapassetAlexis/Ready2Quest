@@ -33,7 +33,6 @@ local FR = {
 	NOTICE_DUNGEON_LOW = "Niveau trop bas pour ce donjon",
 	NOTICE_DUNGEON_PREP = "Préparation à revoir",
 	NOTICE_CHAT_DUNGEON = "Avant le donjon : %s. Clique sur le « ! » pour sa fiche.",
-	NOTICE_PLACEHOLDER = "Rapport",
 }
 local EN = {
 	OPT_REPORT_ICON    = "Reports announced by an icon",
@@ -48,7 +47,6 @@ local EN = {
 	NOTICE_DUNGEON_LOW = "Level too low for this dungeon",
 	NOTICE_DUNGEON_PREP = "Readiness to check",
 	NOTICE_CHAT_DUNGEON = "Before the dungeon: %s. Click the \"!\" for its sheet.",
-	NOTICE_PLACEHOLDER = "Report",
 }
 ns.RegisterStrings(FR, EN)
 if ns.KEEP_STRINGS then ns.NOTICE_STRINGS = { fr = FR, en = EN } end   -- exposé aux tests (parité fr/en)

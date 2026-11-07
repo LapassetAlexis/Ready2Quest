@@ -398,8 +398,12 @@ end
 -- ---------------------------------------------------------------------------
 -- Dans ton camp : toi, ton familier (affiliation MINE), ton groupe ou ton
 -- raid (bits 0x1/0x2/0x4, lus sans la bibliothèque `bit`), comme Journal.lua
+-- GUID du joueur : fixe pour la session, lu une fois (chaque coup du journal
+-- de combat passe ici)
+local playerGUID
 local function FromGroup(guid, flags)
-	if guid and guid == Call("UnitGUID", "player") then return true end
+	if guid and not playerGUID then playerGUID = Call("UnitGUID", "player") end
+	if guid and guid == playerGUID then return true end
 	flags = tonumber(flags)
 	return flags ~= nil and flags % 8 > 0
 end

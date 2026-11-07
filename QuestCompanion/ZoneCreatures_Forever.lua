@@ -21,3837 +21,3845 @@ if ns.IsForeverClient and ns:IsForeverClient() ~= true then return end
 -- Créatures combattables en extérieur : ni bestioles, ni PNJ techniques, ni PNJ
 -- amicaux envers les deux factions, ni événements saisonniers (voir le script).
 
--- Chargement paresseux : une fonction par zone, construite à sa première lecture
--- (ns.LazyZones, Core.lua) ; parcourir avec ns.ZoneIds / ns.ZoneEach, pas pairs.
+-- Chargement paresseux : une chaîne compacte par zone, lue en tables à sa
+-- première lecture (ns.LazyZones, Core.lua) ; parcourir avec ns.ZoneIds /
+-- ns.ZoneEach, pas pairs. Une ligne par créature, champs séparés par une
+-- tabulation : npcID, niveau min, niveau max, rang, nom français (vide =
+-- comme l'anglais), nom anglais, puis f s'il y en a un.
 
-local function C(lo, hi, rank, fr, en, f)
-	return { lvl = { lo, hi }, rank = rank, fr = fr, en = en, f = f }
+local function Zone(text)
+	local zone = {}
+	for npc, lo, hi, rank, fr, en, f in text:gmatch("(%d+)\t(%-?%d+)\t(%-?%d+)\t(%-?%d+)\t([^\t\n]*)\t([^\t\n]*)\t?([^\t\n]*)\n") do
+		zone[tonumber(npc)] = { lvl = { tonumber(lo), tonumber(hi) }, rank = tonumber(rank),
+			fr = fr ~= "" and fr or en, en = en, f = f ~= "" and f or nil }
+	end
+	return zone
 end
 
 local Z = {}
 
 -- Durotar
-Z[1411] = function() return {
-[3098]=C(1,2,0,"Sanglier tacheté","Mottled Boar"),
-[3099]=C(6,7,0,"Sanglier tacheté redoutable","Dire Mottled Boar"),
-[3100]=C(8,9,0,"Ancien sanglier tacheté","Elder Mottled Boar"),
-[3101]=C(3,4,0,"Vil quasit","Vile Familiar"),
-[3102]=C(3,4,0,"Traqueur corrompu","Felstalker"),
-[3103]=C(6,7,0,"Claqueur makrura","Makrura Clacker"),
-[3104]=C(6,7,0,"Coquillard makrura","Makrura Shellhide"),
-[3105]=C(8,9,0,"Makrura claque-pinces","Makrura Snapclaw"),
-[3106]=C(5,6,0,"Clampant de l'écume pygmée","Pygmy Surf Crawler"),
-[3107]=C(7,8,0,"Clampant de l'écume","Surf Crawler"),
-[3108]=C(9,10,0,"Clampant de l'écume incrusté","Encrusted Surf Crawler"),
-[3110]=C(9,11,0,"Crocilisque Gueule-d'effroi","Dreadmaw Crocolisk"),
-[3111]=C(6,7,0,"Huran Tranchecrin","Razormane Quilboar"),
-[3112]=C(7,8,0,"Eclaireur Tranchecrin","Razormane Scout"),
-[3113]=C(8,9,0,"Lève-poussière Tranchecrin","Razormane Dustrunner"),
-[3114]=C(9,10,0,"Garde de guerre Tranchecrin","Razormane Battleguard"),
-[3115]=C(7,8,0,"Harpie Terrevent","Dustwind Harpy"),
-[3116]=C(7,8,0,"Pilleuse Terrevent","Dustwind Pillager"),
-[3117]=C(9,10,0,"Terrevent sauvage","Dustwind Savage"),
-[3118]=C(10,11,0,"Sorcière des tempêtes Terrevent","Dustwind Storm Witch"),
-[3119]=C(6,7,0,"Manoeuvre kolkar","Kolkar Drudge"),
-[3120]=C(7,8,0,"Estafette kolkar","Kolkar Outrunner"),
-[3121]=C(7,8,0,"Tigre de Durotar","Durotar Tiger"),
-[3122]=C(6,8,0,"Fouette-queue Griffesang","Bloodtalon Taillasher"),
-[3123]=C(8,10,0,"Tranche-gueule Griffesang","Bloodtalon Scythemaw"),
-[3124]=C(3,3,0,"Scorpide ouvrier","Scorpid Worker"),
-[3125]=C(5,6,0,"Scorpide cliquetant","Clattering Scorpid"),
-[3126]=C(7,8,0,"Scorpide blindé","Armored Scorpid"),
-[3127]=C(9,10,0,"Scorpide queue-venin","Venomtail Scorpid"),
-[3128]=C(5,6,0,"Marin de Kul Tiras","Kul Tiras Sailor","A"),
-[3129]=C(6,7,0,"Soldat de marine de Kul Tiras","Kul Tiras Marine","A"),
-[3130]=C(9,10,0,"Lézard-tonnerre","Thunder Lizard"),
-[3131]=C(10,11,0,"Foudroyant","Lightning Hide"),
-[3141]=C(8,8,0,"Ancien makrura","Makrura Elder"),
-[3183]=C(5,5,0,"Yarrog Baneshadow","Yarrog Baneshadow"),
-[3192]=C(8,8,0,"Lieutenant Benedict","Lieutenant Benedict","A"),
-[3195]=C(8,9,0,"Nervi de la Lame ardente","Burning Blade Thug"),
-[3196]=C(9,10,0,"Néophyte de la Lame ardente","Burning Blade Neophyte"),
-[3197]=C(9,10,0,"Fanatique de la Lame ardente","Burning Blade Fanatic"),
-[3198]=C(10,11,0,"Apprenti de la Lame ardente","Burning Blade Apprentice"),
-[3199]=C(10,11,0,"Sectateur de la Lame ardente","Burning Blade Cultist"),
-[3203]=C(12,12,0,"Fizzle Darkstorm","Fizzle Darkstorm"),
-[3204]=C(14,14,0,"Gazz'uz","Gazz'uz"),
-[3205]=C(10,10,0,"Zalazane","Zalazane"),
-[3206]=C(8,9,0,"Troll vaudou","Voodoo Troll"),
-[3207]=C(8,9,0,"Troll maléficié","Hexed Troll"),
-[3225]=C(10,11,0,"Sanglier tacheté corrompu","Corrupted Mottled Boar"),
-[3226]=C(10,11,0,"Scorpide corrompu","Corrupted Scorpid"),
-[3227]=C(10,11,0,"Tranche-gueule Griffesang corrompu","Corrupted Bloodtalon Scythemaw"),
-[3228]=C(10,11,0,"Clampant de l'écume corrompu","Corrupted Surf Crawler"),
-[3231]=C(11,12,0,"Crocilisque Gueule-d'effroi corrompu","Corrupted Dreadmaw Crocolisk"),
-[3281]=C(4,4,0,"Sarkoth","Sarkoth"),
-[3297]=C(25,30,0,"Protecteur de Sen'jin","Sen'jin Watcher","H"),
-[4311]=C(30,30,0,"Holgar Stormaxe","Holgar Stormaxe","H"),
-[5435]=C(14,14,1,"Requin du sable","Sand Shark"),
-[5808]=C(9,9,4,"Seigneur de guerre Kolkanis","Warlord Kolkanis"),
-[5822]=C(11,11,2,"Gangretisseur Scornn","Felweaver Scornn"),
-[5823]=C(11,11,4,"Ecorcheur mortel","Death Flayer"),
-[5824]=C(11,11,2,"Capitaine Plate-défense","Captain Flat Tusk"),
-[5826]=C(9,9,4,"Géomaîtresse Mottle","Geolord Mottle"),
-[5890]=C(1,1,0,"Esprit de la Terre de Redrock","Redrock Earth Spirit"),
-[5893]=C(12,12,0,"Manifestation de feu mineure","Minor Manifestation of Fire"),
-[5952]=C(55,55,0,"Grunt de la tanière","Den Grunt","H"),
-[6607]=C(5,5,0,"Harroc","Harroc","H"),
-[6787]=C(16,16,0,"Yelnagi Blackarm","Yelnagi Blackarm","H"),
-[10556]=C(4,4,0,"Péon fainéant","Lazy Peon","H"),
-[10676]=C(35,35,0,"Ecumeur Jhash","Raider Jhash","H"),
-[10682]=C(35,35,0,"Ecumeur Kerr","Raider Kerr","H"),
-[12430]=C(7,7,0,"Grunt Kor'ja","Grunt Kor'ja","H"),
-[13157]=C(12,12,0,"Makasgar","Makasgar"),
-[16096]=C(55,55,1,"Cogneur de Gentepression","Steamwheedle Bruiser","H"),
-[165189]=C(7,30,0,"Cat","Cat"),
-[185317]=C(20,30,0,"Incubus","Incubus"),
-[204070]=C(8,8,0,"Soboz","Soboz"),
-[208124]=C(7,7,0,"Raluk","Raluk"),
-[208180]=C(7,8,0,"Razormane Poacher","Razormane Poacher"),
-[266849]=C(5,6,0,"Ridgeshade Lurker","Ridgeshade Lurker"),
-[266850]=C(5,6,0,"Ridgeshade Creeper","Ridgeshade Creeper"),
-[266851]=C(8,8,1,"Ukorsbane","Ukorsbane"),
-[266852]=C(12,12,1,"Halikor","Halikor"),
-[267322]=C(6,6,0,"Thedda","Thedda","H"),
-[268530]=C(9,9,0,"Bloodtalon Matriarch","Bloodtalon Matriarch"),
-[275662]=C(9,10,0,"Spitelash Scout","Spitelash Scout"),
-[275663]=C(10,11,0,"Spitelash Attendant","Spitelash Attendant"),
-[275666]=C(11,11,1,"Aggor the Young","Aggor the Young"),
-[276194]=C(12,12,4,"Dustwind Eggtender","Dustwind Eggtender"),
-[276198]=C(9,9,4,"Shal'ma","Shal'ma"),
-[276801]=C(1,2,0,"Swift Orange Raptor","Swift Orange Raptor"),
-} end
+Z[1411] = [[
+3098	1	2	0	Sanglier tacheté	Mottled Boar
+3099	6	7	0	Sanglier tacheté redoutable	Dire Mottled Boar
+3100	8	9	0	Ancien sanglier tacheté	Elder Mottled Boar
+3101	3	4	0	Vil quasit	Vile Familiar
+3102	3	4	0	Traqueur corrompu	Felstalker
+3103	6	7	0	Claqueur makrura	Makrura Clacker
+3104	6	7	0	Coquillard makrura	Makrura Shellhide
+3105	8	9	0	Makrura claque-pinces	Makrura Snapclaw
+3106	5	6	0	Clampant de l'écume pygmée	Pygmy Surf Crawler
+3107	7	8	0	Clampant de l'écume	Surf Crawler
+3108	9	10	0	Clampant de l'écume incrusté	Encrusted Surf Crawler
+3110	9	11	0	Crocilisque Gueule-d'effroi	Dreadmaw Crocolisk
+3111	6	7	0	Huran Tranchecrin	Razormane Quilboar
+3112	7	8	0	Eclaireur Tranchecrin	Razormane Scout
+3113	8	9	0	Lève-poussière Tranchecrin	Razormane Dustrunner
+3114	9	10	0	Garde de guerre Tranchecrin	Razormane Battleguard
+3115	7	8	0	Harpie Terrevent	Dustwind Harpy
+3116	7	8	0	Pilleuse Terrevent	Dustwind Pillager
+3117	9	10	0	Terrevent sauvage	Dustwind Savage
+3118	10	11	0	Sorcière des tempêtes Terrevent	Dustwind Storm Witch
+3119	6	7	0	Manoeuvre kolkar	Kolkar Drudge
+3120	7	8	0	Estafette kolkar	Kolkar Outrunner
+3121	7	8	0	Tigre de Durotar	Durotar Tiger
+3122	6	8	0	Fouette-queue Griffesang	Bloodtalon Taillasher
+3123	8	10	0	Tranche-gueule Griffesang	Bloodtalon Scythemaw
+3124	3	3	0	Scorpide ouvrier	Scorpid Worker
+3125	5	6	0	Scorpide cliquetant	Clattering Scorpid
+3126	7	8	0	Scorpide blindé	Armored Scorpid
+3127	9	10	0	Scorpide queue-venin	Venomtail Scorpid
+3128	5	6	0	Marin de Kul Tiras	Kul Tiras Sailor	A
+3129	6	7	0	Soldat de marine de Kul Tiras	Kul Tiras Marine	A
+3130	9	10	0	Lézard-tonnerre	Thunder Lizard
+3131	10	11	0	Foudroyant	Lightning Hide
+3141	8	8	0	Ancien makrura	Makrura Elder
+3183	5	5	0		Yarrog Baneshadow
+3192	8	8	0		Lieutenant Benedict	A
+3195	8	9	0	Nervi de la Lame ardente	Burning Blade Thug
+3196	9	10	0	Néophyte de la Lame ardente	Burning Blade Neophyte
+3197	9	10	0	Fanatique de la Lame ardente	Burning Blade Fanatic
+3198	10	11	0	Apprenti de la Lame ardente	Burning Blade Apprentice
+3199	10	11	0	Sectateur de la Lame ardente	Burning Blade Cultist
+3203	12	12	0		Fizzle Darkstorm
+3204	14	14	0		Gazz'uz
+3205	10	10	0		Zalazane
+3206	8	9	0	Troll vaudou	Voodoo Troll
+3207	8	9	0	Troll maléficié	Hexed Troll
+3225	10	11	0	Sanglier tacheté corrompu	Corrupted Mottled Boar
+3226	10	11	0	Scorpide corrompu	Corrupted Scorpid
+3227	10	11	0	Tranche-gueule Griffesang corrompu	Corrupted Bloodtalon Scythemaw
+3228	10	11	0	Clampant de l'écume corrompu	Corrupted Surf Crawler
+3231	11	12	0	Crocilisque Gueule-d'effroi corrompu	Corrupted Dreadmaw Crocolisk
+3281	4	4	0		Sarkoth
+3297	25	30	0	Protecteur de Sen'jin	Sen'jin Watcher	H
+4311	30	30	0		Holgar Stormaxe	H
+5435	14	14	1	Requin du sable	Sand Shark
+5808	9	9	4	Seigneur de guerre Kolkanis	Warlord Kolkanis
+5822	11	11	2	Gangretisseur Scornn	Felweaver Scornn
+5823	11	11	4	Ecorcheur mortel	Death Flayer
+5824	11	11	2	Capitaine Plate-défense	Captain Flat Tusk
+5826	9	9	4	Géomaîtresse Mottle	Geolord Mottle
+5890	1	1	0	Esprit de la Terre de Redrock	Redrock Earth Spirit
+5893	12	12	0	Manifestation de feu mineure	Minor Manifestation of Fire
+5952	55	55	0	Grunt de la tanière	Den Grunt	H
+6607	5	5	0		Harroc	H
+6787	16	16	0		Yelnagi Blackarm	H
+10556	4	4	0	Péon fainéant	Lazy Peon	H
+10676	35	35	0	Ecumeur Jhash	Raider Jhash	H
+10682	35	35	0	Ecumeur Kerr	Raider Kerr	H
+12430	7	7	0		Grunt Kor'ja	H
+13157	12	12	0		Makasgar
+16096	55	55	1	Cogneur de Gentepression	Steamwheedle Bruiser	H
+165189	7	30	0		Cat
+185317	20	30	0		Incubus
+204070	8	8	0		Soboz
+208124	7	7	0		Raluk
+208180	7	8	0		Razormane Poacher
+266849	5	6	0		Ridgeshade Lurker
+266850	5	6	0		Ridgeshade Creeper
+266851	8	8	1		Ukorsbane
+266852	12	12	1		Halikor
+267322	6	6	0		Thedda	H
+268530	9	9	0		Bloodtalon Matriarch
+275662	9	10	0		Spitelash Scout
+275663	10	11	0		Spitelash Attendant
+275666	11	11	1		Aggor the Young
+276194	12	12	4		Dustwind Eggtender
+276198	9	9	4		Shal'ma
+276801	1	2	0		Swift Orange Raptor
+]]
 -- Mulgore
-Z[1412] = function() return {
-[2949]=C(5,6,0,"Tanneur crin-pâle","Palemane Tanner"),
-[2950]=C(6,7,0,"Ecorcheur crin-pâle","Palemane Skinner"),
-[2951]=C(7,8,0,"Braconnier crin-pâle","Palemane Poacher"),
-[2952]=C(3,4,0,"Huran Dos-hirsute","Bristleback Quilboar"),
-[2953]=C(3,4,0,"Chaman Dos-hirsute","Bristleback Shaman"),
-[2954]=C(4,5,0,"Sanglier de guerre Dos-hirsute","Bristleback Battleboar"),
-[2955]=C(1,2,0,"Trotteur des plaines","Plainstrider"),
-[2956]=C(6,8,0,"Trotteur des plaines adulte","Adult Plainstrider"),
-[2957]=C(8,9,0,"Vieux trotteur des plaines","Elder Plainstrider"),
-[2958]=C(5,6,0,"Loup des prairies","Prairie Wolf"),
-[2959]=C(7,8,0,"Traqueur des prairies","Prairie Stalker"),
-[2960]=C(9,10,0,"Loup Alpha des prairies","Prairie Wolf Alpha"),
-[2961]=C(3,3,0,"Puma des montagnes","Mountain Cougar"),
-[2962]=C(7,8,0,"Harpie Furie-des-vents","Windfury Harpy"),
-[2963]=C(8,9,0,"Sorcière du vent Furie-des-vents","Windfury Wind Witch"),
-[2964]=C(9,10,0,"Ensorceleuse Furie-des-vents","Windfury Sorceress"),
-[2965]=C(10,11,0,"Matriarche Furie-des-vents","Windfury Matriarch"),
-[2966]=C(3,4,0,"Sanglier de guerre","Battleboar"),
-[2967]=C(8,9,0,"Centaure galak","Galak Centaur"),
-[2968]=C(9,10,0,"Estafette galak","Galak Outrunner"),
-[2969]=C(5,7,0,"Rapace nerveux","Wiry Swoop"),
-[2970]=C(7,9,0,"Rapace","Swoop"),
-[2971]=C(8,10,0,"Rapace acéré","Taloned Swoop"),
-[2972]=C(7,8,0,"Jeune kodo","Kodo Calf"),
-[2973]=C(10,11,0,"Kodo adulte","Kodo Bull"),
-[2974]=C(11,12,0,"Matriarche kodo","Kodo Matriarch"),
-[2975]=C(5,6,0,"Journalier de la KapitalRisk","Venture Co. Hireling"),
-[2976]=C(6,7,0,"Travailleur de la KapitalRisk","Venture Co. Laborer"),
-[2977]=C(7,8,0,"Sous-chef de la KapitalRisk","Venture Co. Taskmaster"),
-[2978]=C(8,9,0,"Ouvrier de la KapitalRisk","Venture Co. Worker"),
-[2979]=C(9,10,0,"Superviseur de la KapitalRisk","Venture Co. Supervisor"),
-[2989]=C(7,8,0,"Terrassier de Bael'dun","Bael'dun Digger","A"),
-[2990]=C(8,9,0,"Expert de Bael'dun","Bael'dun Appraiser","A"),
-[3035]=C(7,8,0,"Puma des basses plaines","Flatland Cougar"),
-[3051]=C(12,12,0,"Superviseur Fizsprocket","Supervisor Fizsprocket"),
-[3056]=C(12,12,4,"Hurleur fantomatique","Ghost Howl"),
-[3058]=C(11,11,0,"Arra'chea","Arra'chea"),
-[3068]=C(9,9,4,"Mazzranache","Mazzranache"),
-[3229]=C(5,5,0,"Mouchard de Mantépine","\"Squealer\" Thornmantle"),
-[3232]=C(9,10,0,"Intrus Dos-hirsute","Bristleback Interloper"),
-[3566]=C(9,9,0,"Rôdeur des basses plaines","Flatland Prowler"),
-[5785]=C(11,11,2,"Sœur Cinglehaine","Sister Hatelash"),
-[5786]=C(9,9,4,"Travépieu","Snagglespear"),
-[5787]=C(11,11,4,"Massacreur Emilgund","Enforcer Emilgund"),
-[5807]=C(10,10,4,"Le Rake","The Rake"),
-[5890]=C(1,1,0,"Esprit de la Terre de Redrock","Redrock Earth Spirit"),
-[7975]=C(57,57,0,"Protecteur de Mulgore","Mulgore Protector","H"),
-[8554]=C(5,5,0,"Chef Brochaigu Mantépine","Chief Sharptusk Thornmantle"),
-[10721]=C(5,5,0,"Guerrier novice","Novice Warrior","H"),
-[165189]=C(7,30,0,"Cat","Cat"),
-[259058]=C(10,10,0,"Windshaper Shaman","Windshaper Shaman","H"),
-[262504]=C(55,55,1,"Earthen Ring Shaman","Earthen Ring Shaman","H"),
-[262523]=C(10,10,0,"Galestrider","Galestrider","H"),
-[264079]=C(27,28,0,"Gloomrise Hatchling","Gloomrise Hatchling"),
-[264081]=C(28,28,0,"Gloomrise Spinner","Gloomrise Spinner"),
-[264082]=C(30,30,1,"Broodmother Valraxx","Broodmother Valraxx"),
-[264083]=C(28,29,0,"Gloomrise Soldier","Gloomrise Soldier"),
-[264096]=C(28,29,0,"Gnawed Corpse","Gnawed Corpse"),
-[264287]=C(10,10,0,"Galestrider Handler","Galestrider Handler","H"),
-[264850]=C(20,30,0,"Hawk","Hawk"),
-[267226]=C(1,1,0,"Grey Riding Kodo","Grey Riding Kodo"),
-[267321]=C(8,8,0,"Karne Grayhoof","Karne Grayhoof","H"),
-[268558]=C(5,6,0,"Chakuyak","Chakuyak"),
-[272173]=C(12,12,1,"Venture Co. Clearclutter","Venture Co. Clearclutter"),
-[275102]=C(55,55,0,"Mesa Brave","Mesa Brave","H"),
-[275767]=C(11,11,0,"Herak the Pillager","Herak the Pillager"),
-[276105]=C(12,12,4,"Stormherald Ukta","Stormherald Ukta"),
-[276108]=C(12,12,4,"Thornstarter Igleg","Thornstarter Igleg"),
-[276109]=C(10,10,4,"Snarlsnout","Snarlsnout"),
-} end
+Z[1412] = [[
+2949	5	6	0	Tanneur crin-pâle	Palemane Tanner
+2950	6	7	0	Ecorcheur crin-pâle	Palemane Skinner
+2951	7	8	0	Braconnier crin-pâle	Palemane Poacher
+2952	3	4	0	Huran Dos-hirsute	Bristleback Quilboar
+2953	3	4	0	Chaman Dos-hirsute	Bristleback Shaman
+2954	4	5	0	Sanglier de guerre Dos-hirsute	Bristleback Battleboar
+2955	1	2	0	Trotteur des plaines	Plainstrider
+2956	6	8	0	Trotteur des plaines adulte	Adult Plainstrider
+2957	8	9	0	Vieux trotteur des plaines	Elder Plainstrider
+2958	5	6	0	Loup des prairies	Prairie Wolf
+2959	7	8	0	Traqueur des prairies	Prairie Stalker
+2960	9	10	0	Loup Alpha des prairies	Prairie Wolf Alpha
+2961	3	3	0	Puma des montagnes	Mountain Cougar
+2962	7	8	0	Harpie Furie-des-vents	Windfury Harpy
+2963	8	9	0	Sorcière du vent Furie-des-vents	Windfury Wind Witch
+2964	9	10	0	Ensorceleuse Furie-des-vents	Windfury Sorceress
+2965	10	11	0	Matriarche Furie-des-vents	Windfury Matriarch
+2966	3	4	0	Sanglier de guerre	Battleboar
+2967	8	9	0	Centaure galak	Galak Centaur
+2968	9	10	0	Estafette galak	Galak Outrunner
+2969	5	7	0	Rapace nerveux	Wiry Swoop
+2970	7	9	0	Rapace	Swoop
+2971	8	10	0	Rapace acéré	Taloned Swoop
+2972	7	8	0	Jeune kodo	Kodo Calf
+2973	10	11	0	Kodo adulte	Kodo Bull
+2974	11	12	0	Matriarche kodo	Kodo Matriarch
+2975	5	6	0	Journalier de la KapitalRisk	Venture Co. Hireling
+2976	6	7	0	Travailleur de la KapitalRisk	Venture Co. Laborer
+2977	7	8	0	Sous-chef de la KapitalRisk	Venture Co. Taskmaster
+2978	8	9	0	Ouvrier de la KapitalRisk	Venture Co. Worker
+2979	9	10	0	Superviseur de la KapitalRisk	Venture Co. Supervisor
+2989	7	8	0	Terrassier de Bael'dun	Bael'dun Digger	A
+2990	8	9	0	Expert de Bael'dun	Bael'dun Appraiser	A
+3035	7	8	0	Puma des basses plaines	Flatland Cougar
+3051	12	12	0	Superviseur Fizsprocket	Supervisor Fizsprocket
+3056	12	12	4	Hurleur fantomatique	Ghost Howl
+3058	11	11	0		Arra'chea
+3068	9	9	4		Mazzranache
+3229	5	5	0	Mouchard de Mantépine	"Squealer" Thornmantle
+3232	9	10	0	Intrus Dos-hirsute	Bristleback Interloper
+3566	9	9	0	Rôdeur des basses plaines	Flatland Prowler
+5785	11	11	2	Sœur Cinglehaine	Sister Hatelash
+5786	9	9	4	Travépieu	Snagglespear
+5787	11	11	4	Massacreur Emilgund	Enforcer Emilgund
+5807	10	10	4	Le Rake	The Rake
+5890	1	1	0	Esprit de la Terre de Redrock	Redrock Earth Spirit
+7975	57	57	0	Protecteur de Mulgore	Mulgore Protector	H
+8554	5	5	0	Chef Brochaigu Mantépine	Chief Sharptusk Thornmantle
+10721	5	5	0	Guerrier novice	Novice Warrior	H
+165189	7	30	0		Cat
+259058	10	10	0		Windshaper Shaman	H
+262504	55	55	1		Earthen Ring Shaman	H
+262523	10	10	0		Galestrider	H
+264079	27	28	0		Gloomrise Hatchling
+264081	28	28	0		Gloomrise Spinner
+264082	30	30	1		Broodmother Valraxx
+264083	28	29	0		Gloomrise Soldier
+264096	28	29	0		Gnawed Corpse
+264287	10	10	0		Galestrider Handler	H
+264850	20	30	0		Hawk
+267226	1	1	0		Grey Riding Kodo
+267321	8	8	0		Karne Grayhoof	H
+268558	5	6	0		Chakuyak
+272173	12	12	1		Venture Co. Clearclutter
+275102	55	55	0		Mesa Brave	H
+275767	11	11	0		Herak the Pillager
+276105	12	12	4		Stormherald Ukta
+276108	12	12	4		Thornstarter Igleg
+276109	10	10	4		Snarlsnout
+]]
 -- The Barrens
-Z[1413] = function() return {
-[3110]=C(9,11,0,"Crocilisque Gueule-d'effroi","Dreadmaw Crocolisk"),
-[3231]=C(11,12,0,"Crocilisque Gueule-d'effroi corrompu","Corrupted Dreadmaw Crocolisk"),
-[3234]=C(14,15,0,"Kodo égaré des Tarides","Lost Barrens Kodo"),
-[3235]=C(24,25,0,"Grand kodo des Tarides","Greater Barrens Kodo"),
-[3236]=C(19,20,0,"Kodo des Tarides","Barrens Kodo"),
-[3237]=C(25,26,0,"Kodo laineux","Wooly Kodo"),
-[3238]=C(22,23,0,"Orageux","Stormhide"),
-[3239]=C(20,21,0,"Tête-tonnerre","Thunderhead"),
-[3240]=C(18,19,0,"Groin-tempête","Stormsnout"),
-[3241]=C(15,16,0,"Patriarche des savanes","Savannah Patriarch"),
-[3242]=C(13,14,0,"Messager zhévra","Zhevra Runner"),
-[3243]=C(12,13,0,"Grande crinière des savanes","Savannah Highmane"),
-[3244]=C(11,12,0,"Grand trotteur des plaines","Greater Plainstrider"),
-[3245]=C(16,17,0,"Trotteur des plaines hargneux","Ornery Plainstrider"),
-[3246]=C(12,13,0,"Trotteur des plaines fugitif","Fleeting Plainstrider"),
-[3247]=C(18,20,0,"Jeune faucon-tonnerre","Thunderhawk Hatchling"),
-[3248]=C(15,16,0,"Girafe des Tarides","Barrens Giraffe"),
-[3249]=C(23,24,0,"Grand faucon-tonnerre","Greater Thunderhawk"),
-[3250]=C(20,21,0,"Rampant silithide","Silithid Creeper"),
-[3251]=C(20,20,0,"Larve silithide","Silithid Grub"),
-[3252]=C(21,22,0,"Grouillant silithide","Silithid Swarmer"),
-[3253]=C(24,24,4,"Moissonneur silithide","Silithid Harvester"),
-[3254]=C(11,13,0,"Flagellant solécaille","Sunscale Lashtail"),
-[3255]=C(13,15,0,"Hurleur solécaille","Sunscale Screecher"),
-[3256]=C(16,18,0,"Faucheur solécaille","Sunscale Scytheclaw"),
-[3257]=C(19,19,0,"Ishamuhale","Ishamuhale"),
-[3258]=C(17,18,0,"Chasseur Dos-hirsute","Bristleback Hunter"),
-[3260]=C(16,17,0,"Sourcier Dos-hirsute","Bristleback Water Seeker"),
-[3261]=C(18,19,0,"Tisseur d’épines Dos-hirsute","Bristleback Thornweaver"),
-[3263]=C(19,20,0,"Géomancienne Dos-hirsute","Bristleback Geomancer"),
-[3265]=C(11,12,0,"Chasseur Tranchecrin","Razormane Hunter"),
-[3266]=C(12,13,0,"Défenseur Tranchecrin","Razormane Defender"),
-[3267]=C(10,11,0,"Sourcier Tranchecrin","Razormane Water Seeker"),
-[3268]=C(10,11,0,"Tisseuse d’épines Tranchecrin","Razormane Thornweaver"),
-[3269]=C(12,13,0,"Géomancienne Tranchecrin","Razormane Geomancer"),
-[3270]=C(15,15,2,"Ancienne mystique Tranchegroin","Elder Mystic Razorsnout"),
-[3271]=C(13,14,0,"Mystique Tranchecrin","Razormane Mystic"),
-[3272]=C(12,13,0,"Querelleur kolkar","Kolkar Wrangler"),
-[3273]=C(13,14,0,"Légion-tempête kolkar","Kolkar Stormer"),
-[3274]=C(14,15,0,"Coursier kolkar","Kolkar Pack Runner"),
-[3275]=C(15,16,0,"Maraudeur kolkar","Kolkar Marauder"),
-[3276]=C(14,15,0,"Harpie Ensorçaile","Witchwing Harpy"),
-[3277]=C(15,16,0,"Volplume Ensorçaile","Witchwing Roguefeather"),
-[3278]=C(16,17,0,"Tueuse Ensorçaile","Witchwing Slayer"),
-[3279]=C(17,18,0,"Embusquée Ensorçaile","Witchwing Ambusher"),
-[3280]=C(17,18,0,"Imploratrice céleste Ensorçaile","Witchwing Windcaller"),
-[3282]=C(15,16,0,"Mercenaire de la KapitalRisk","Venture Co. Mercenary"),
-[3283]=C(14,17,0,"Massacreur de la KapitalRisk","Venture Co. Enforcer"),
-[3284]=C(14,15,0,"Manouvrier de la KapitalRisk","Venture Co. Drudger"),
-[3285]=C(13,14,0,"Péon de la KapitalRisk","Venture Co. Peon"),
-[3286]=C(15,18,0,"Surveillant de la KapitalRisk","Venture Co. Overseer"),
-[3295]=C(19,19,4,"Limace bestiale","Sludge Beast"),
-[3374]=C(21,22,0,"Excavateur de Bael'dun","Bael'dun Excavator","A"),
-[3375]=C(22,23,0,"Contremaître de Bael'dun","Bael'dun Foreman","A"),
-[3376]=C(23,24,0,"Soldat de Bael'dun","Bael'dun Soldier","A"),
-[3377]=C(24,25,0,"Fusilier de Bael'dun","Bael'dun Rifleman","A"),
-[3378]=C(26,26,0,"Officier de Bael'dun","Bael'dun Officer","A"),
-[3379]=C(10,11,0,"Cogneur de la Lame ardente","Burning Blade Bruiser"),
-[3380]=C(11,12,0,"Acolyte de la Lame ardente","Burning Blade Acolyte"),
-[3381]=C(12,13,0,"Brigand des Mers du sud","Southsea Brigand"),
-[3382]=C(13,14,0,"Canonnier des Mers du sud","Southsea Cannoneer"),
-[3383]=C(12,15,0,"Coupe-gorge des Mers du sud","Southsea Cutthroat"),
-[3384]=C(12,15,0,"Corsaire des Mers du sud","Southsea Privateer"),
-[3385]=C(15,16,0,"Soldat de marine de Theramore","Theramore Marine","A"),
-[3386]=C(16,17,0,"Protectrice de Theramore","Theramore Preserver","A"),
-[3393]=C(20,20,0,"Capitaine Fairmount","Captain Fairmount","A"),
-[3394]=C(16,16,0,"Barak Kodobane","Barak Kodobane"),
-[3395]=C(18,18,0,"Verog le Derviche","Verog the Dervish"),
-[3396]=C(19,19,0,"Hezrul Marque-de-sang","Hezrul Bloodmark"),
-[3397]=C(14,15,0,"Sanguinaire kolkar","Kolkar Bloodcharger"),
-[3398]=C(20,20,2,"Gesharahan","Gesharahan"),
-[3414]=C(30,30,0,"Général Twinbraid","General Twinbraid","A"),
-[3415]=C(11,12,0,"Chasseresse des savanes","Savannah Huntress"),
-[3416]=C(17,18,0,"Matriarche des savanes","Savannah Matriarch"),
-[3424]=C(20,22,0,"Faucon-tonnerre des nuages","Thunderhawk Cloudscraper"),
-[3425]=C(14,15,0,"Rôdeur des savanes","Savannah Prowler"),
-[3426]=C(17,18,0,"Etalon zhévra","Zhevra Charger"),
-[3434]=C(23,23,0,"Nak","Nak"),
-[3435]=C(25,25,0,"Lok Plaie-des-orcs","Lok Orcbane"),
-[3436]=C(21,21,0,"Kuz","Kuz"),
-[3438]=C(15,15,0,"Kreenig Grondegroin","Kreenig Snarlsnout"),
-[3444]=C(1,1,0,"Rat fouisseur","Dig Rat"),
-[3445]=C(18,18,0,"Superviseur Lugwizzle","Supervisor Lugwizzle"),
-[3452]=C(20,20,0,"Serena Plumesang","Serena Bloodfeather"),
-[3454]=C(19,19,0,"Canonnier Smythe","Cannoneer Smythe","A"),
-[3455]=C(19,19,0,"Canonnier Whessan","Cannoneer Whessan","A"),
-[3456]=C(20,21,0,"Guide Tranchecrin","Razormane Pathfinder"),
-[3457]=C(22,23,0,"Traqueur Tranchecrin","Razormane Stalker"),
-[3458]=C(23,24,0,"Prophète Tranchecrin","Razormane Seer"),
-[3459]=C(24,25,0,"Frénétique Tranchecrin","Razormane Warfrenzy"),
-[3461]=C(15,16,0,"Gueule d'acier des oasis","Oasis Snapjaw"),
-[3463]=C(18,19,0,"Girafe errante des Tarides","Wandering Barrens Giraffe"),
-[3466]=C(20,21,0,"Coursier zhévra","Zhevra Courser"),
-[3467]=C(16,16,0,"Baron de Longrivage","Baron Longshore"),
-[3470]=C(15,15,4,"Rathorian","Rathorian"),
-[3471]=C(16,16,0,"Artisan Sniggles","Tinkerer Sniggles"),
-[3472]=C(25,25,0,"Washte Pawne","Washte Pawne"),
-[3473]=C(24,24,0,"Owatanka","Owatanka"),
-[3474]=C(22,22,0,"Lakota'mani","Lakota'mani"),
-[3475]=C(16,16,0,"Echeyakee","Echeyakee"),
-[3476]=C(27,27,0,"Isha Awak","Isha Awak"),
-[3501]=C(40,40,0,"Garde de la Horde","Horde Guard","H"),
-[3503]=C(18,19,0,"Protecteur silithide","Silithid Protector"),
-[3630]=C(15,16,1,"Embobineur déviant","Deviate Coiler"),
-[3631]=C(16,17,1,"Aiguillonneur déviant","Deviate Stinglash"),
-[3632]=C(15,16,1,"Rampant déviant","Deviate Creeper"),
-[3633]=C(16,17,1,"Tueur déviant","Deviate Slayer"),
-[3634]=C(15,16,1,"Traqueur déviant","Deviate Stalker"),
-[3638]=C(16,17,1,"Ectoplasme dévorant","Devouring Ectoplasm"),
-[3641]=C(16,17,1,"Rôdeur déviant","Deviate Lurker"),
-[3652]=C(19,19,2,"Trigore le Flagelleur","Trigore the Lasher"),
-[3655]=C(18,18,1,"Magglish le Dingue","Mad Magglish"),
-[3672]=C(20,20,2,"Boahn","Boahn"),
-[3809]=C(21,22,0,"Ours d’Ashenvale","Ashenvale Bear"),
-[3835]=C(1,1,0,"Crapaud-bile","Biletoad"),
-[3939]=C(7,8,0,"Loup Tranchecrin","Razormane Wolf"),
-[3986]=C(25,25,0,"Sarilus Foulborne","Sarilus Foulborne","H"),
-[4099]=C(26,27,0,"Maraudeur galak","Galak Marauder"),
-[4127]=C(15,16,0,"Hyène Jappecroc","Hecklefang Hyena"),
-[4128]=C(22,23,0,"Traqueuse Jappecroc","Hecklefang Stalker"),
-[4129]=C(18,19,0,"Grogneuse Jappecroc","Hecklefang Snarler"),
-[4316]=C(13,13,0,"Chien de meute kolkar","Kolkar Packhound"),
-[5434]=C(46,47,1,"Requin du corail","Coral Shark"),
-[5435]=C(14,14,1,"Requin du sable","Sand Shark"),
-[5766]=C(9,13,0,"Jeune lion des savanes","Savannah Cub"),
-[5827]=C(27,27,2,"Brontus","Brontus"),
-[5828]=C(23,23,2,"Humar le Fier","Humar the Pridelord"),
-[5829]=C(17,17,4,"Snort la Moqueuse","Snort the Heckler"),
-[5830]=C(19,19,2,"Sœur Rathtalon","Sister Rathtalon"),
-[5831]=C(21,21,2,"Vif-crins","Swiftmane"),
-[5832]=C(24,24,4,"Grondeterre","Thunderstomp"),
-[5834]=C(25,25,4,"Azzere la lame céleste","Azzere the Skyblade"),
-[5835]=C(19,19,4,"Contremaître Grills","Foreman Grills"),
-[5836]=C(19,19,4,"Ingénieur Whirleygig","Engineer Whirleygig"),
-[5837]=C(15,15,4,"Bras-de-pierre","Stonearm"),
-[5838]=C(17,17,4,"Brise-épieu","Brokespear"),
-[5841]=C(17,17,2,"Rochelance","Rocklance"),
-[5842]=C(19,19,2,"Takk le Bondisseur","Takk the Leaper"),
-[5859]=C(26,26,2,"Hagg Taurenbane","Hagg Taurenbane"),
-[5863]=C(19,19,4,"Géoprêtresse Gukk'rok","Geopriest Gukk'rok"),
-[5864]=C(22,22,2,"Peau-piquante Swinegart","Swinegart Spearhide"),
-[5865]=C(13,13,4,"Dishu","Dishu"),
-[6020]=C(18,19,0,"Makrura à carapace gluante","Slimeshell Makrura"),
-[6132]=C(23,24,1,"Serviteur de Tranchebauge","Razorfen Servitor"),
-[6238]=C(33,33,0,"Grand Will","Big Will"),
-[6494]=C(13,13,0,"Tazan","Tazan"),
-[6606]=C(16,16,0,"Surveillant Glibby","Overseer Glibby"),
-[6668]=C(23,23,0,"Seigneur Cyrik Blackforge","Lord Cyrik Blackforge","A"),
-[7067]=C(22,22,0,"Pantin de la KapitalRisk","Venture Co. Drone"),
-[7167]=C(18,18,0,"Polly","Polly"),
-[7168]=C(18,18,0,"Polly","Polly"),
-[7233]=C(30,30,1,"Sous-chef Fizzule","Taskmaster Fizzule"),
-[7287]=C(22,22,0,"Contremaître Silixiz","Foreman Silixiz"),
-[7288]=C(23,23,1,"Grand contremaître Puzik Gallywix","Grand Foreman Puzik Gallywix"),
-[7307]=C(23,23,0,"Sentinelle de la KapitalRisk","Venture Co. Lookout"),
-[7308]=C(22,22,0,"Patrouilleur de la KapitalRisk","Venture Co. Patroller"),
-[7310]=C(25,25,0,"Pantin muté de la KapitalRisk","Mutated Venture Co. Drone"),
-[7327]=C(34,35,1,"Guerrier flétri","Withered Warrior"),
-[7332]=C(34,35,1,"Lanceur flétri","Withered Spearhide"),
-[7335]=C(35,36,1,"Géomancienne de la Tête de Mort","Death's Head Geomancer"),
-[7872]=C(33,34,1,"Sectateur de la Tête de Mort","Death's Head Cultist"),
-[7873]=C(33,34,1,"Garde de guerre de Tranchebauge","Razorfen Battleguard"),
-[7874]=C(33,34,1,"Tisseur d'épines de Tranchebauge","Razorfen Thornweaver"),
-[7895]=C(36,36,2,"Ambassadeur Ragesang","Ambassador Bloodrage"),
-[8016]=C(40,40,0,"Garde des Tarides","Barrens Guard","H"),
-[8236]=C(14,15,0,"Furie des marais","Muck Frenzy"),
-[9336]=C(19,19,0,"Chef Copperplug","Boss Copperplug"),
-[9456]=C(20,20,1,"Chef de guerre Krom'zar","Warlord Krom'zar"),
-[9523]=C(15,16,0,"Prophète-tempête kolkar","Kolkar Stormseer"),
-[9524]=C(16,17,0,"Envahisseur kolkar","Kolkar Invader"),
-[10636]=C(30,30,0,"Kodo de bât","Pack Kodo","H"),
-[12319]=C(14,14,0,"Toxicologue de la Lame ardente","Burning Blade Toxicologist"),
-[12320]=C(13,13,0,"Ecraseur de la Lame ardente","Burning Blade Crusher"),
-[12865]=C(36,36,1,"Ambassadeur Malcin","Ambassador Malcin"),
-[14718]=C(26,26,0,"Travailleur de la Horde","Horde Laborer","H"),
-[14857]=C(2,2,0,"Erk","Erk","H"),
-[14859]=C(40,40,0,"Garde Taruc","Guard Taruc","H"),
-[14872]=C(2,2,0,"Trok","Trok","H"),
-[14893]=C(40,40,0,"Garde Kurall","Guard Kurall","H"),
-[14901]=C(4,4,0,"Péon","Peon","H"),
-[14909]=C(15,15,0,"Pooka","Pooka","H"),
-[165189]=C(7,30,0,"Cat","Cat"),
-[185317]=C(20,30,0,"Incubus","Incubus"),
-[185334]=C(22,22,0,"Isaac Pearson","Isaac Pearson"),
-[209797]=C(20,20,1,"Bruuz","Bruuz"),
-[212694]=C(25,25,0,"Hirzek","Hirzek"),
-[218931]=C(41,41,0,"Dark Rider","Dark Rider"),
-[254695]=C(25,25,0,"Repair Bot","Repair Bot"),
-[256392]=C(60,60,0,"Pack Kodo","Pack Kodo","H"),
-[256398]=C(60,60,0,"Off-Duty Pack Kodo","Off-Duty Pack Kodo","H"),
-[261367]=C(19,19,0,"Terry Longdrink","Terry Longdrink"),
-[261368]=C(16,18,0,"Kul Tiras Marine","Kul Tiras Marine"),
-[262119]=C(17,18,0,"Corporal Adamore","Corporal Adamore"),
-[264850]=C(20,30,0,"Hawk","Hawk"),
-[267307]=C(20,20,1,"Chol'aruk","Chol'aruk"),
-[267308]=C(18,19,1,"Razormane Flesheater","Razormane Flesheater"),
-[267314]=C(18,19,1,"Razormane Berserker","Razormane Berserker"),
-[268614]=C(16,16,0,"Ghost of Olgra","Ghost of Olgra"),
-[268622]=C(22,23,0,"Encroaching Soldier","Encroaching Soldier"),
-[268623]=C(23,23,1,"Outraged Pillager","Outraged Pillager"),
-[268624]=C(16,19,0,"Razormane Raider","Razormane Raider"),
-[268707]=C(1,20,0,"Prairie Wolf Pup","Prairie Wolf Pup"),
-[269453]=C(55,55,1,"Theramore Elite","Theramore Elite","A"),
-[269454]=C(55,55,1,"Darkspear Elite","Darkspear Elite","H"),
-[271913]=C(1,1,0,"Plagued Cockroach","Plagued Cockroach"),
-[274740]=C(22,22,0,"Kitzy Werkblaster","Kitzy Werkblaster","H"),
-[274845]=C(20,20,0,"Pallwick Boneset","Pallwick Boneset","H"),
-[275276]=C(55,55,1,"Nizook Boof","Nizook Boof"),
-} end
+Z[1413] = [[
+3110	9	11	0	Crocilisque Gueule-d'effroi	Dreadmaw Crocolisk
+3231	11	12	0	Crocilisque Gueule-d'effroi corrompu	Corrupted Dreadmaw Crocolisk
+3234	14	15	0	Kodo égaré des Tarides	Lost Barrens Kodo
+3235	24	25	0	Grand kodo des Tarides	Greater Barrens Kodo
+3236	19	20	0	Kodo des Tarides	Barrens Kodo
+3237	25	26	0	Kodo laineux	Wooly Kodo
+3238	22	23	0	Orageux	Stormhide
+3239	20	21	0	Tête-tonnerre	Thunderhead
+3240	18	19	0	Groin-tempête	Stormsnout
+3241	15	16	0	Patriarche des savanes	Savannah Patriarch
+3242	13	14	0	Messager zhévra	Zhevra Runner
+3243	12	13	0	Grande crinière des savanes	Savannah Highmane
+3244	11	12	0	Grand trotteur des plaines	Greater Plainstrider
+3245	16	17	0	Trotteur des plaines hargneux	Ornery Plainstrider
+3246	12	13	0	Trotteur des plaines fugitif	Fleeting Plainstrider
+3247	18	20	0	Jeune faucon-tonnerre	Thunderhawk Hatchling
+3248	15	16	0	Girafe des Tarides	Barrens Giraffe
+3249	23	24	0	Grand faucon-tonnerre	Greater Thunderhawk
+3250	20	21	0	Rampant silithide	Silithid Creeper
+3251	20	20	0	Larve silithide	Silithid Grub
+3252	21	22	0	Grouillant silithide	Silithid Swarmer
+3253	24	24	4	Moissonneur silithide	Silithid Harvester
+3254	11	13	0	Flagellant solécaille	Sunscale Lashtail
+3255	13	15	0	Hurleur solécaille	Sunscale Screecher
+3256	16	18	0	Faucheur solécaille	Sunscale Scytheclaw
+3257	19	19	0		Ishamuhale
+3258	17	18	0	Chasseur Dos-hirsute	Bristleback Hunter
+3260	16	17	0	Sourcier Dos-hirsute	Bristleback Water Seeker
+3261	18	19	0	Tisseur d’épines Dos-hirsute	Bristleback Thornweaver
+3263	19	20	0	Géomancienne Dos-hirsute	Bristleback Geomancer
+3265	11	12	0	Chasseur Tranchecrin	Razormane Hunter
+3266	12	13	0	Défenseur Tranchecrin	Razormane Defender
+3267	10	11	0	Sourcier Tranchecrin	Razormane Water Seeker
+3268	10	11	0	Tisseuse d’épines Tranchecrin	Razormane Thornweaver
+3269	12	13	0	Géomancienne Tranchecrin	Razormane Geomancer
+3270	15	15	2	Ancienne mystique Tranchegroin	Elder Mystic Razorsnout
+3271	13	14	0	Mystique Tranchecrin	Razormane Mystic
+3272	12	13	0	Querelleur kolkar	Kolkar Wrangler
+3273	13	14	0	Légion-tempête kolkar	Kolkar Stormer
+3274	14	15	0	Coursier kolkar	Kolkar Pack Runner
+3275	15	16	0	Maraudeur kolkar	Kolkar Marauder
+3276	14	15	0	Harpie Ensorçaile	Witchwing Harpy
+3277	15	16	0	Volplume Ensorçaile	Witchwing Roguefeather
+3278	16	17	0	Tueuse Ensorçaile	Witchwing Slayer
+3279	17	18	0	Embusquée Ensorçaile	Witchwing Ambusher
+3280	17	18	0	Imploratrice céleste Ensorçaile	Witchwing Windcaller
+3282	15	16	0	Mercenaire de la KapitalRisk	Venture Co. Mercenary
+3283	14	17	0	Massacreur de la KapitalRisk	Venture Co. Enforcer
+3284	14	15	0	Manouvrier de la KapitalRisk	Venture Co. Drudger
+3285	13	14	0	Péon de la KapitalRisk	Venture Co. Peon
+3286	15	18	0	Surveillant de la KapitalRisk	Venture Co. Overseer
+3295	19	19	4	Limace bestiale	Sludge Beast
+3374	21	22	0	Excavateur de Bael'dun	Bael'dun Excavator	A
+3375	22	23	0	Contremaître de Bael'dun	Bael'dun Foreman	A
+3376	23	24	0	Soldat de Bael'dun	Bael'dun Soldier	A
+3377	24	25	0	Fusilier de Bael'dun	Bael'dun Rifleman	A
+3378	26	26	0	Officier de Bael'dun	Bael'dun Officer	A
+3379	10	11	0	Cogneur de la Lame ardente	Burning Blade Bruiser
+3380	11	12	0	Acolyte de la Lame ardente	Burning Blade Acolyte
+3381	12	13	0	Brigand des Mers du sud	Southsea Brigand
+3382	13	14	0	Canonnier des Mers du sud	Southsea Cannoneer
+3383	12	15	0	Coupe-gorge des Mers du sud	Southsea Cutthroat
+3384	12	15	0	Corsaire des Mers du sud	Southsea Privateer
+3385	15	16	0	Soldat de marine de Theramore	Theramore Marine	A
+3386	16	17	0	Protectrice de Theramore	Theramore Preserver	A
+3393	20	20	0	Capitaine Fairmount	Captain Fairmount	A
+3394	16	16	0		Barak Kodobane
+3395	18	18	0	Verog le Derviche	Verog the Dervish
+3396	19	19	0	Hezrul Marque-de-sang	Hezrul Bloodmark
+3397	14	15	0	Sanguinaire kolkar	Kolkar Bloodcharger
+3398	20	20	2		Gesharahan
+3414	30	30	0	Général Twinbraid	General Twinbraid	A
+3415	11	12	0	Chasseresse des savanes	Savannah Huntress
+3416	17	18	0	Matriarche des savanes	Savannah Matriarch
+3424	20	22	0	Faucon-tonnerre des nuages	Thunderhawk Cloudscraper
+3425	14	15	0	Rôdeur des savanes	Savannah Prowler
+3426	17	18	0	Etalon zhévra	Zhevra Charger
+3434	23	23	0		Nak
+3435	25	25	0	Lok Plaie-des-orcs	Lok Orcbane
+3436	21	21	0		Kuz
+3438	15	15	0	Kreenig Grondegroin	Kreenig Snarlsnout
+3444	1	1	0	Rat fouisseur	Dig Rat
+3445	18	18	0	Superviseur Lugwizzle	Supervisor Lugwizzle
+3452	20	20	0	Serena Plumesang	Serena Bloodfeather
+3454	19	19	0	Canonnier Smythe	Cannoneer Smythe	A
+3455	19	19	0	Canonnier Whessan	Cannoneer Whessan	A
+3456	20	21	0	Guide Tranchecrin	Razormane Pathfinder
+3457	22	23	0	Traqueur Tranchecrin	Razormane Stalker
+3458	23	24	0	Prophète Tranchecrin	Razormane Seer
+3459	24	25	0	Frénétique Tranchecrin	Razormane Warfrenzy
+3461	15	16	0	Gueule d'acier des oasis	Oasis Snapjaw
+3463	18	19	0	Girafe errante des Tarides	Wandering Barrens Giraffe
+3466	20	21	0	Coursier zhévra	Zhevra Courser
+3467	16	16	0	Baron de Longrivage	Baron Longshore
+3470	15	15	4		Rathorian
+3471	16	16	0	Artisan Sniggles	Tinkerer Sniggles
+3472	25	25	0		Washte Pawne
+3473	24	24	0		Owatanka
+3474	22	22	0		Lakota'mani
+3475	16	16	0		Echeyakee
+3476	27	27	0		Isha Awak
+3501	40	40	0	Garde de la Horde	Horde Guard	H
+3503	18	19	0	Protecteur silithide	Silithid Protector
+3630	15	16	1	Embobineur déviant	Deviate Coiler
+3631	16	17	1	Aiguillonneur déviant	Deviate Stinglash
+3632	15	16	1	Rampant déviant	Deviate Creeper
+3633	16	17	1	Tueur déviant	Deviate Slayer
+3634	15	16	1	Traqueur déviant	Deviate Stalker
+3638	16	17	1	Ectoplasme dévorant	Devouring Ectoplasm
+3641	16	17	1	Rôdeur déviant	Deviate Lurker
+3652	19	19	2	Trigore le Flagelleur	Trigore the Lasher
+3655	18	18	1	Magglish le Dingue	Mad Magglish
+3672	20	20	2		Boahn
+3809	21	22	0	Ours d’Ashenvale	Ashenvale Bear
+3835	1	1	0	Crapaud-bile	Biletoad
+3939	7	8	0	Loup Tranchecrin	Razormane Wolf
+3986	25	25	0		Sarilus Foulborne	H
+4099	26	27	0	Maraudeur galak	Galak Marauder
+4127	15	16	0	Hyène Jappecroc	Hecklefang Hyena
+4128	22	23	0	Traqueuse Jappecroc	Hecklefang Stalker
+4129	18	19	0	Grogneuse Jappecroc	Hecklefang Snarler
+4316	13	13	0	Chien de meute kolkar	Kolkar Packhound
+5434	46	47	1	Requin du corail	Coral Shark
+5435	14	14	1	Requin du sable	Sand Shark
+5766	9	13	0	Jeune lion des savanes	Savannah Cub
+5827	27	27	2		Brontus
+5828	23	23	2	Humar le Fier	Humar the Pridelord
+5829	17	17	4	Snort la Moqueuse	Snort the Heckler
+5830	19	19	2	Sœur Rathtalon	Sister Rathtalon
+5831	21	21	2	Vif-crins	Swiftmane
+5832	24	24	4	Grondeterre	Thunderstomp
+5834	25	25	4	Azzere la lame céleste	Azzere the Skyblade
+5835	19	19	4	Contremaître Grills	Foreman Grills
+5836	19	19	4	Ingénieur Whirleygig	Engineer Whirleygig
+5837	15	15	4	Bras-de-pierre	Stonearm
+5838	17	17	4	Brise-épieu	Brokespear
+5841	17	17	2	Rochelance	Rocklance
+5842	19	19	2	Takk le Bondisseur	Takk the Leaper
+5859	26	26	2		Hagg Taurenbane
+5863	19	19	4	Géoprêtresse Gukk'rok	Geopriest Gukk'rok
+5864	22	22	2	Peau-piquante Swinegart	Swinegart Spearhide
+5865	13	13	4		Dishu
+6020	18	19	0	Makrura à carapace gluante	Slimeshell Makrura
+6132	23	24	1	Serviteur de Tranchebauge	Razorfen Servitor
+6238	33	33	0	Grand Will	Big Will
+6494	13	13	0		Tazan
+6606	16	16	0	Surveillant Glibby	Overseer Glibby
+6668	23	23	0	Seigneur Cyrik Blackforge	Lord Cyrik Blackforge	A
+7067	22	22	0	Pantin de la KapitalRisk	Venture Co. Drone
+7167	18	18	0		Polly
+7168	18	18	0		Polly
+7233	30	30	1	Sous-chef Fizzule	Taskmaster Fizzule
+7287	22	22	0	Contremaître Silixiz	Foreman Silixiz
+7288	23	23	1	Grand contremaître Puzik Gallywix	Grand Foreman Puzik Gallywix
+7307	23	23	0	Sentinelle de la KapitalRisk	Venture Co. Lookout
+7308	22	22	0	Patrouilleur de la KapitalRisk	Venture Co. Patroller
+7310	25	25	0	Pantin muté de la KapitalRisk	Mutated Venture Co. Drone
+7327	34	35	1	Guerrier flétri	Withered Warrior
+7332	34	35	1	Lanceur flétri	Withered Spearhide
+7335	35	36	1	Géomancienne de la Tête de Mort	Death's Head Geomancer
+7872	33	34	1	Sectateur de la Tête de Mort	Death's Head Cultist
+7873	33	34	1	Garde de guerre de Tranchebauge	Razorfen Battleguard
+7874	33	34	1	Tisseur d'épines de Tranchebauge	Razorfen Thornweaver
+7895	36	36	2	Ambassadeur Ragesang	Ambassador Bloodrage
+8016	40	40	0	Garde des Tarides	Barrens Guard	H
+8236	14	15	0	Furie des marais	Muck Frenzy
+9336	19	19	0	Chef Copperplug	Boss Copperplug
+9456	20	20	1	Chef de guerre Krom'zar	Warlord Krom'zar
+9523	15	16	0	Prophète-tempête kolkar	Kolkar Stormseer
+9524	16	17	0	Envahisseur kolkar	Kolkar Invader
+10636	30	30	0	Kodo de bât	Pack Kodo	H
+12319	14	14	0	Toxicologue de la Lame ardente	Burning Blade Toxicologist
+12320	13	13	0	Ecraseur de la Lame ardente	Burning Blade Crusher
+12865	36	36	1	Ambassadeur Malcin	Ambassador Malcin
+14718	26	26	0	Travailleur de la Horde	Horde Laborer	H
+14857	2	2	0		Erk	H
+14859	40	40	0	Garde Taruc	Guard Taruc	H
+14872	2	2	0		Trok	H
+14893	40	40	0	Garde Kurall	Guard Kurall	H
+14901	4	4	0	Péon	Peon	H
+14909	15	15	0		Pooka	H
+165189	7	30	0		Cat
+185317	20	30	0		Incubus
+185334	22	22	0		Isaac Pearson
+209797	20	20	1		Bruuz
+212694	25	25	0		Hirzek
+218931	41	41	0		Dark Rider
+254695	25	25	0		Repair Bot
+256392	60	60	0		Pack Kodo	H
+256398	60	60	0		Off-Duty Pack Kodo	H
+261367	19	19	0		Terry Longdrink
+261368	16	18	0		Kul Tiras Marine
+262119	17	18	0		Corporal Adamore
+264850	20	30	0		Hawk
+267307	20	20	1		Chol'aruk
+267308	18	19	1		Razormane Flesheater
+267314	18	19	1		Razormane Berserker
+268614	16	16	0		Ghost of Olgra
+268622	22	23	0		Encroaching Soldier
+268623	23	23	1		Outraged Pillager
+268624	16	19	0		Razormane Raider
+268707	1	20	0		Prairie Wolf Pup
+269453	55	55	1		Theramore Elite	A
+269454	55	55	1		Darkspear Elite	H
+271913	1	1	0		Plagued Cockroach
+274740	22	22	0		Kitzy Werkblaster	H
+274845	20	20	0		Pallwick Boneset	H
+275276	55	55	1		Nizook Boof
+]]
 -- Alterac Mountains
-Z[1416] = function() return {
-[1958]=C(17,18,0,"Maître des flots Aileron noir","Vile Fin Tidecaller"),
-[2240]=C(32,33,0,"Détrousseur du Syndicat","Syndicate Footpad"),
-[2241]=C(33,34,0,"Larron du Syndicat","Syndicate Thief"),
-[2242]=C(35,36,0,"Espion du Syndicat","Syndicate Spy"),
-[2243]=C(36,37,0,"Sentinelle du Syndicat","Syndicate Sentry"),
-[2245]=C(37,38,0,"Saboteur du Syndicat","Syndicate Saboteur"),
-[2246]=C(38,39,0,"Assassin du Syndicat","Syndicate Assassin"),
-[2247]=C(39,40,0,"Massacreur du Syndicat","Syndicate Enforcer"),
-[2250]=C(32,33,0,"Yéti des montagnes","Mountain Yeti"),
-[2251]=C(33,34,0,"Yéti géant","Giant Yeti"),
-[2252]=C(34,35,0,"Ogre Cassecrête","Crushridge Ogre"),
-[2253]=C(35,36,0,"Brute Cassecrête","Crushridge Brute"),
-[2254]=C(36,37,1,"Mutileur Cassecrête","Crushridge Mauler"),
-[2255]=C(37,38,1,"Mage Cassecrête","Crushridge Mage"),
-[2256]=C(38,39,1,"Massacreur Cassecrête","Crushridge Enforcer"),
-[2257]=C(43,43,1,"Mug'thol","Mug'thol"),
-[2258]=C(37,37,4,"Furie-de-pierre","Stone Fury"),
-[2271]=C(31,32,0,"Défenseur de Dalaran","Dalaran Shield Guard"),
-[2272]=C(32,33,0,"Théurge de Dalaran","Dalaran Theurgist"),
-[2287]=C(39,40,1,"Combattant Cassecrête","Crushridge Warmonger"),
-[2306]=C(40,40,0,"Baron Vardus","Baron Vardus"),
-[2318]=C(35,36,0,"Mage de l'ombre d'Argus","Argus Shadow Mage"),
-[2319]=C(34,35,0,"Sorcier du Syndicat","Syndicate Wizard"),
-[2320]=C(40,40,0,"Nagaz","Nagaz"),
-[2349]=C(24,25,0,"Rampemousse géante","Giant Moss Creeper"),
-[2351]=C(21,22,0,"Ours gris","Gray Bear"),
-[2356]=C(25,26,0,"Vieil ours gris","Elder Gray Bear"),
-[2358]=C(32,35,0,"Invocateur de Dalaran","Dalaran Summoner"),
-[2359]=C(32,34,0,"Elémentaire asservi","Elemental Slave"),
-[2386]=C(55,55,0,"Garde de Southshore","Southshore Guard","A"),
-[2406]=C(32,33,0,"Lion des montagnes","Mountain Lion"),
-[2407]=C(33,34,0,"Lion des montagnes massif","Hulking Mountain Lion"),
-[2408]=C(30,31,0,"Gueule d'acier","Snapjaw"),
-[2411]=C(33,33,0,"Ricter","Ricter"),
-[2412]=C(33,33,0,"Alina","Alina"),
-[2413]=C(33,34,0,"Dermot","Dermot"),
-[2414]=C(33,35,0,"Kegan Darkmar","Kegan Darkmar"),
-[2415]=C(33,36,0,"Gardienne Belamoore","Warden Belamoore"),
-[2416]=C(36,37,1,"Pilleur Cassecrête","Crushridge Plunderer"),
-[2417]=C(39,39,1,"Grel'borg l'Avare","Grel'borg the Miser"),
-[2420]=C(41,41,1,"Targ","Targ"),
-[2421]=C(40,40,1,"Fouilleboue","Muckrake"),
-[2422]=C(39,39,1,"Glommus","Glommus"),
-[2423]=C(41,41,0,"Seigneur Aliden Perenolde","Lord Aliden Perenolde"),
-[2431]=C(37,37,0,"Geôlier Borhuin","Jailor Borhuin"),
-[2440]=C(32,33,0,"Détrousseur ivre","Drunken Footpad"),
-[2447]=C(44,44,2,"Narillasanz","Narillasanz"),
-[2452]=C(36,36,4,"Grybou","Skhowl"),
-[2453]=C(39,39,4,"Lo'Grosh","Lo'Grosh"),
-[2628]=C(33,34,0,"Ouvrier de Dalaran","Dalaran Worker"),
-[3984]=C(33,33,1,"Nancy Vishas","Nancy Vishas"),
-[3985]=C(34,34,1,"Grand-père Vishas","Grandpa Vishas"),
-[4504]=C(37,37,0,"Gueule-glacée","Frostmaw"),
-[6033]=C(15,16,0,"Furie lacustre","Lake Frenzy"),
-[6239]=C(40,40,1,"Cyclonien","Cyclonian"),
-[13602]=C(36,36,1,"L'abominable Grinche","The Abominable Greench"),
-[14221]=C(36,36,4,"Gravis Slipknot","Gravis Slipknot"),
-[14222]=C(35,35,4,"Araga","Araga"),
-[14223]=C(32,32,4,"Benj le teigneux","Cranky Benj"),
-[14281]=C(23,23,4,"Jimmy le Saignant","Jimmy the Bleeder"),
-[14284]=C(59,59,1,"Légionnaire Stormpike","Stormpike Battleguard","A"),
-[14285]=C(61,61,1,"Légionnaire Frostwolf","Frostwolf Battleguard","H"),
-[16392]=C(60,60,1,"Capitaine Armando Ossex","Captain Armando Ossex","A"),
-[28686]=C(35,35,0,"Caliel Brightwillow","Caliel Brightwillow"),
-[29538]=C(35,35,0,"Hexil Garrot","Hexil Garrot"),
-[29568]=C(55,55,0,"\"Techs\" Rickard Rustbolt","\"Techs\" Rickard Rustbolt"),
-[29660]=C(35,35,0,"Sai","Sai"),
-[30104]=C(35,35,0,"Adamman the Trader","Adamman the Trader","A"),
-[30137]=C(35,35,0,"Shifty Vickers","Shifty Vickers"),
-[32330]=C(35,35,0,"Minzi the Minx","Minzi the Minx"),
-[32334]=C(35,35,0,"Nixi Fireclaw","Nixi Fireclaw"),
-[32337]=C(35,35,0,"Christi Stockton","Christi Stockton"),
-[32411]=C(35,35,0,"Afsaneh Asrar","Afsaneh Asrar"),
-[32451]=C(28,28,0,"Dalaran Citizen","Dalaran Citizen","A"),
-[32453]=C(28,28,0,"Dalaran Citizen","Dalaran Citizen","A"),
-[32454]=C(28,28,0,"Dalaran Citizen","Dalaran Citizen","A"),
-[32688]=C(35,35,0,"Archmage Tenaj","Archmage Tenaj","A"),
-[32738]=C(35,35,0,"Kat Sunflower","Kat Sunflower","A"),
-[32741]=C(35,35,0,"Conjurer Weinhaus","Conjurer Weinhaus","A"),
-[32746]=C(35,35,0,"Geffon the Unruly","Geffon the Unruly"),
-[32747]=C(35,35,0,"Mendez Nightshadow","Mendez Nightshadow"),
-[32748]=C(35,35,0,"Bimble Sparkfingers","Bimble Sparkfingers"),
-[34365]=C(45,45,0,"Orphan Matron Aria","Orphan Matron Aria","A"),
-[35826]=C(35,35,0,"Kaye Toogie","Kaye Toogie"),
-[165189]=C(7,30,0,"Cat","Cat"),
-[217305]=C(34,35,0,"Ancient Fire Elemental","Ancient Fire Elemental"),
-[246752]=C(26,26,0,"Arcanist Ginsberg","Arcanist Ginsberg"),
-[246848]=C(55,55,0,"Kirin Tor Guard","Kirin Tor Guard","A"),
-[251787]=C(1,1,0,"Lilly","Lilly"),
-[251955]=C(28,28,0,"Lucian Trias","Lucian Trias"),
-[251956]=C(28,28,0,"Lizi Silverstone","Lizi Silverstone","A"),
-[252081]=C(26,26,0,"Sebastian Bower","Sebastian Bower"),
-[256306]=C(30,30,0,"Arcanist Laurain","Arcanist Laurain","A"),
-[256317]=C(30,30,0,"Animated Broom","Animated Broom"),
-[256359]=C(28,28,0,"Dalaran Wizard","Dalaran Wizard","A"),
-[256371]=C(25,25,0,"Theresa Wolf","Theresa Wolf","A"),
-[264265]=C(25,25,0,"Magus Olvek","Magus Olvek"),
-[264850]=C(20,30,0,"Hawk","Hawk"),
-[265675]=C(30,30,0,"High Order Mage","High Order Mage","A"),
-[265727]=C(28,28,0,"Seasoned Adventurer","Seasoned Adventurer"),
-[272389]=C(34,34,0,"Marsh Owl","Marsh Owl"),
-[275013]=C(28,28,0,"Archivist Helm Anvilhand","Archivist Helm Anvilhand"),
-[275018]=C(28,28,0,"Bitty Frostflinger","Bitty Frostflinger"),
-[275030]=C(28,28,0,"Archivist Delv Fortuz","Archivist Delv Fortuz","A"),
-[275164]=C(30,55,1,"Arcane Sentry","Arcane Sentry","A"),
-[275186]=C(60,60,0,"Galestrider","Galestrider","A"),
-[275251]=C(40,40,0,"Paymaster Chang","Paymaster Chang"),
-[275283]=C(28,28,0,"Breanni","Breanni","A"),
-[275351]=C(28,28,0,"Adorean Lew","Adorean Lew"),
-[275353]=C(28,28,0,"Merleaux","Merleaux","A"),
-[275356]=C(26,26,0,"Arcane Familiar","Arcane Familiar"),
-[276215]=C(55,55,0,"Kirin Tor Enforcer","Kirin Tor Enforcer","A"),
-[276235]=C(60,60,0,"Archmage Modera","Archmage Modera","A"),
-} end
+Z[1416] = [[
+1958	17	18	0	Maître des flots Aileron noir	Vile Fin Tidecaller
+2240	32	33	0	Détrousseur du Syndicat	Syndicate Footpad
+2241	33	34	0	Larron du Syndicat	Syndicate Thief
+2242	35	36	0	Espion du Syndicat	Syndicate Spy
+2243	36	37	0	Sentinelle du Syndicat	Syndicate Sentry
+2245	37	38	0	Saboteur du Syndicat	Syndicate Saboteur
+2246	38	39	0	Assassin du Syndicat	Syndicate Assassin
+2247	39	40	0	Massacreur du Syndicat	Syndicate Enforcer
+2250	32	33	0	Yéti des montagnes	Mountain Yeti
+2251	33	34	0	Yéti géant	Giant Yeti
+2252	34	35	0	Ogre Cassecrête	Crushridge Ogre
+2253	35	36	0	Brute Cassecrête	Crushridge Brute
+2254	36	37	1	Mutileur Cassecrête	Crushridge Mauler
+2255	37	38	1	Mage Cassecrête	Crushridge Mage
+2256	38	39	1	Massacreur Cassecrête	Crushridge Enforcer
+2257	43	43	1		Mug'thol
+2258	37	37	4	Furie-de-pierre	Stone Fury
+2271	31	32	0	Défenseur de Dalaran	Dalaran Shield Guard
+2272	32	33	0	Théurge de Dalaran	Dalaran Theurgist
+2287	39	40	1	Combattant Cassecrête	Crushridge Warmonger
+2306	40	40	0		Baron Vardus
+2318	35	36	0	Mage de l'ombre d'Argus	Argus Shadow Mage
+2319	34	35	0	Sorcier du Syndicat	Syndicate Wizard
+2320	40	40	0		Nagaz
+2349	24	25	0	Rampemousse géante	Giant Moss Creeper
+2351	21	22	0	Ours gris	Gray Bear
+2356	25	26	0	Vieil ours gris	Elder Gray Bear
+2358	32	35	0	Invocateur de Dalaran	Dalaran Summoner
+2359	32	34	0	Elémentaire asservi	Elemental Slave
+2386	55	55	0	Garde de Southshore	Southshore Guard	A
+2406	32	33	0	Lion des montagnes	Mountain Lion
+2407	33	34	0	Lion des montagnes massif	Hulking Mountain Lion
+2408	30	31	0	Gueule d'acier	Snapjaw
+2411	33	33	0		Ricter
+2412	33	33	0		Alina
+2413	33	34	0		Dermot
+2414	33	35	0		Kegan Darkmar
+2415	33	36	0	Gardienne Belamoore	Warden Belamoore
+2416	36	37	1	Pilleur Cassecrête	Crushridge Plunderer
+2417	39	39	1	Grel'borg l'Avare	Grel'borg the Miser
+2420	41	41	1		Targ
+2421	40	40	1	Fouilleboue	Muckrake
+2422	39	39	1		Glommus
+2423	41	41	0	Seigneur Aliden Perenolde	Lord Aliden Perenolde
+2431	37	37	0	Geôlier Borhuin	Jailor Borhuin
+2440	32	33	0	Détrousseur ivre	Drunken Footpad
+2447	44	44	2		Narillasanz
+2452	36	36	4	Grybou	Skhowl
+2453	39	39	4		Lo'Grosh
+2628	33	34	0	Ouvrier de Dalaran	Dalaran Worker
+3984	33	33	1		Nancy Vishas
+3985	34	34	1	Grand-père Vishas	Grandpa Vishas
+4504	37	37	0	Gueule-glacée	Frostmaw
+6033	15	16	0	Furie lacustre	Lake Frenzy
+6239	40	40	1	Cyclonien	Cyclonian
+13602	36	36	1	L'abominable Grinche	The Abominable Greench
+14221	36	36	4		Gravis Slipknot
+14222	35	35	4		Araga
+14223	32	32	4	Benj le teigneux	Cranky Benj
+14281	23	23	4	Jimmy le Saignant	Jimmy the Bleeder
+14284	59	59	1	Légionnaire Stormpike	Stormpike Battleguard	A
+14285	61	61	1	Légionnaire Frostwolf	Frostwolf Battleguard	H
+16392	60	60	1	Capitaine Armando Ossex	Captain Armando Ossex	A
+28686	35	35	0		Caliel Brightwillow
+29538	35	35	0		Hexil Garrot
+29568	55	55	0		"Techs" Rickard Rustbolt
+29660	35	35	0		Sai
+30104	35	35	0		Adamman the Trader	A
+30137	35	35	0		Shifty Vickers
+32330	35	35	0		Minzi the Minx
+32334	35	35	0		Nixi Fireclaw
+32337	35	35	0		Christi Stockton
+32411	35	35	0		Afsaneh Asrar
+32451	28	28	0		Dalaran Citizen	A
+32453	28	28	0		Dalaran Citizen	A
+32454	28	28	0		Dalaran Citizen	A
+32688	35	35	0		Archmage Tenaj	A
+32738	35	35	0		Kat Sunflower	A
+32741	35	35	0		Conjurer Weinhaus	A
+32746	35	35	0		Geffon the Unruly
+32747	35	35	0		Mendez Nightshadow
+32748	35	35	0		Bimble Sparkfingers
+34365	45	45	0		Orphan Matron Aria	A
+35826	35	35	0		Kaye Toogie
+165189	7	30	0		Cat
+217305	34	35	0		Ancient Fire Elemental
+246752	26	26	0		Arcanist Ginsberg
+246848	55	55	0		Kirin Tor Guard	A
+251787	1	1	0		Lilly
+251955	28	28	0		Lucian Trias
+251956	28	28	0		Lizi Silverstone	A
+252081	26	26	0		Sebastian Bower
+256306	30	30	0		Arcanist Laurain	A
+256317	30	30	0		Animated Broom
+256359	28	28	0		Dalaran Wizard	A
+256371	25	25	0		Theresa Wolf	A
+264265	25	25	0		Magus Olvek
+264850	20	30	0		Hawk
+265675	30	30	0		High Order Mage	A
+265727	28	28	0		Seasoned Adventurer
+272389	34	34	0		Marsh Owl
+275013	28	28	0		Archivist Helm Anvilhand
+275018	28	28	0		Bitty Frostflinger
+275030	28	28	0		Archivist Delv Fortuz	A
+275164	30	55	1		Arcane Sentry	A
+275186	60	60	0		Galestrider	A
+275251	40	40	0		Paymaster Chang
+275283	28	28	0		Breanni	A
+275351	28	28	0		Adorean Lew
+275353	28	28	0		Merleaux	A
+275356	26	26	0		Arcane Familiar
+276215	55	55	0		Kirin Tor Enforcer	A
+276235	60	60	0		Archmage Modera	A
+]]
 -- Arathi Highlands
-Z[1417] = function() return {
-[1418]=C(28,29,0,"Ecumeur Branchie-bleue","Bluegill Raider"),
-[2552]=C(30,31,0,"Troll Witherbark","Witherbark Troll"),
-[2553]=C(31,32,0,"Exhalombre Witherbark","Witherbark Shadowcaster"),
-[2554]=C(32,33,0,"Lanceur de haches Witherbark","Witherbark Axe Thrower"),
-[2555]=C(33,34,0,"Sorcier-docteur Witherbark","Witherbark Witch Doctor"),
-[2556]=C(34,35,0,"Chasseur de têtes Witherbark","Witherbark Headhunter"),
-[2557]=C(35,36,0,"Chasseur des ombres Witherbark","Witherbark Shadow Hunter"),
-[2558]=C(36,37,1,"Berserker Witherbark","Witherbark Berserker"),
-[2559]=C(30,31,0,"Arpenteur des hautes-terres","Highland Strider"),
-[2560]=C(33,34,0,"Vandale des hautes-terres","Highland Thrasher"),
-[2561]=C(36,37,0,"Charognard des hautes-terres","Highland Fleshstalker"),
-[2562]=C(32,33,0,"Ogre Rochepoing","Boulderfist Ogre"),
-[2563]=C(32,33,0,"Rampant des plaines","Plains Creeper"),
-[2564]=C(33,34,0,"Massacreur Rochepoing","Boulderfist Enforcer"),
-[2565]=C(35,36,0,"Rampant des plaines géant","Giant Plains Creeper"),
-[2566]=C(35,36,0,"Brute Rochepoing","Boulderfist Brute"),
-[2567]=C(36,37,0,"Magus Rochepoing","Boulderfist Magus"),
-[2569]=C(37,38,1,"Marteleur Rochepoing","Boulderfist Mauler"),
-[2570]=C(38,39,1,"Chaman Rochepoing","Boulderfist Shaman"),
-[2571]=C(39,40,1,"Seigneur Rochepoing","Boulderfist Lord"),
-[2572]=C(35,36,0,"Kobold Sèche-moustache","Drywhisker Kobold"),
-[2573]=C(37,38,0,"Géomètre Sèche-moustache","Drywhisker Surveyor"),
-[2574]=C(36,37,0,"Terrassier Sèche-moustache","Drywhisker Digger"),
-[2575]=C(31,32,0,"Fournisseur Sombrefer","Dark Iron Supplier"),
-[2577]=C(31,32,0,"Exhalombre Sombrefer","Dark Iron Shadowcaster"),
-[2578]=C(31,32,0,"Jeune busard des mésas","Young Mesa Buzzard"),
-[2579]=C(34,35,0,"Busard des mésas","Mesa Buzzard"),
-[2580]=C(37,38,0,"Ancien busard des mésas","Elder Mesa Buzzard"),
-[2581]=C(31,32,0,"Milice des Dabyrie","Dabyrie Militia","A"),
-[2582]=C(30,31,0,"Travailleur des Dabyrie","Dabyrie Laborer","A"),
-[2583]=C(37,38,1,"Chasseur de trolls de Stromgarde","Stromgarde Troll Hunter","A"),
-[2584]=C(38,39,1,"Défenseur de Stromgarde","Stromgarde Defender","A"),
-[2585]=C(39,40,1,"Redresseur de torts de Stromgarde","Stromgarde Vindicator","A"),
-[2586]=C(30,31,0,"Malandrin du Syndicat","Syndicate Highwayman"),
-[2587]=C(32,33,0,"Eclaireur du Syndicat","Syndicate Pathstalker"),
-[2588]=C(36,37,1,"Rôdeur du Syndicat","Syndicate Prowler"),
-[2589]=C(31,32,0,"Mercenaire du Syndicat","Syndicate Mercenary"),
-[2590]=C(35,36,1,"Conjurateur du Syndicat","Syndicate Conjuror"),
-[2591]=C(37,38,1,"Magus du Syndicat","Syndicate Magus"),
-[2592]=C(38,39,0,"Exilé grondant","Rumbling Exile"),
-[2595]=C(38,39,0,"Ecumeur Daguéchine","Daggerspine Raider"),
-[2596]=C(39,40,0,"Sorcière Daguéchine","Daggerspine Sorceress"),
-[2597]=C(40,40,1,"Seigneur Falconcrest","Lord Falconcrest"),
-[2598]=C(39,39,2,"Darbel Montrose","Darbel Montrose"),
-[2599]=C(38,38,1,"Otto","Otto"),
-[2600]=C(34,34,4,"Singer","Singer"),
-[2601]=C(42,42,2,"Foulbelly","Foulbelly"),
-[2602]=C(39,39,2,"Ruul Onestone","Ruul Onestone"),
-[2603]=C(36,36,4,"Kovork","Kovork"),
-[2604]=C(39,39,4,"Molok l’Anéantisseur","Molok the Crusher"),
-[2605]=C(40,40,4,"Zalas Witherbark","Zalas Witherbark"),
-[2606]=C(37,37,4,"Nimar le Pourfendeur","Nimar the Slayer"),
-[2609]=C(40,40,4,"Géomancien Dague-de-silex","Geomancer Flintdagger"),
-[2611]=C(42,42,1,"Fozruk","Fozruk"),
-[2618]=C(33,34,0,"Péon de Trépas-d'Orgrim","Hammerfall Peon","H"),
-[2619]=C(34,35,0,"Grunt de Trépas-d'Orgrim","Hammerfall Grunt","H"),
-[2714]=C(35,35,0,"Messagère des Réprouvés","Forsaken Courier","H"),
-[2721]=C(35,35,0,"Garde du corps Réprouvé","Forsaken Bodyguard","H"),
-[2733]=C(36,36,0,"Apothicaire Jorell","Apothecary Jorell","H"),
-[2755]=C(44,44,1,"Myzrael","Myzrael"),
-[2760]=C(38,39,0,"Exilé ardent","Burning Exile"),
-[2761]=C(38,39,0,"Exilé grimpeur","Cresting Exile"),
-[2762]=C(38,39,0,"Exilé foudroyant","Thundering Exile"),
-[2763]=C(42,42,1,"Thenan","Thenan"),
-[2764]=C(40,40,0,"Sleeby","Sleeby"),
-[2765]=C(39,39,0,"Znort","Znort"),
-[2773]=C(40,40,1,"Or'Kalar","Or'Kalar"),
-[2779]=C(41,41,4,"Prince Nazjak","Prince Nazjak"),
-[2783]=C(40,40,1,"Marez Cowl","Marez Cowl"),
-[2793]=C(39,39,0,"Kor'gresh Coldrage","Kor'gresh Coldrage"),
-[2794]=C(38,38,1,"Gardien invoqué","Summoned Guardian","A"),
-[4062]=C(30,31,0,"Bombardier Sombrefer","Dark Iron Bombardier"),
-[4063]=C(39,39,0,"Feeboz","Feeboz"),
-[4479]=C(33,33,0,"Fardel Dabyrie","Fardel Dabyrie","A"),
-[4480]=C(35,35,0,"Kenata Dabyrie","Kenata Dabyrie","A"),
-[4481]=C(34,34,0,"Marcel Dabyrie","Marcel Dabyrie","A"),
-[10696]=C(41,45,0,"Défenseur du Refuge de l'Ornière","Refuge Pointe Defender","A"),
-[12923]=C(43,43,0,"Soldat blessé","Injured Soldier","H"),
-[12924]=C(44,44,0,"Soldat grièvement blessé","Badly Injured Soldier","H"),
-[12925]=C(46,46,0,"Soldat agonisant","Critically Injured Soldier","H"),
-[12998]=C(15,15,0,"Fermier Nain","Dwarven Farmer","A"),
-[15128]=C(55,55,1,"Profanateur d'élite","Defiler Elite","H"),
-[15130]=C(40,40,1,"Soldat d'élite de la Ligue d'Arathor","League of Arathor Elite","A"),
-[165189]=C(7,30,0,"Cat","Cat"),
-[217302]=C(37,37,0,"Tam'kar","Tam'kar"),
-[218029]=C(34,35,0,"Witherbark Champion","Witherbark Champion"),
-[218032]=C(35,35,0,"Witherbark Goliath","Witherbark Goliath"),
-[218931]=C(41,41,0,"Dark Rider","Dark Rider"),
-[257296]=C(36,36,0,"Muggol Breezebeard","Muggol Breezebeard"),
-[259023]=C(37,37,0,"Veyric Thunderhame","Veyric Thunderhame"),
-[264850]=C(20,30,0,"Hawk","Hawk"),
-} end
+Z[1417] = [[
+1418	28	29	0	Ecumeur Branchie-bleue	Bluegill Raider
+2552	30	31	0	Troll Witherbark	Witherbark Troll
+2553	31	32	0	Exhalombre Witherbark	Witherbark Shadowcaster
+2554	32	33	0	Lanceur de haches Witherbark	Witherbark Axe Thrower
+2555	33	34	0	Sorcier-docteur Witherbark	Witherbark Witch Doctor
+2556	34	35	0	Chasseur de têtes Witherbark	Witherbark Headhunter
+2557	35	36	0	Chasseur des ombres Witherbark	Witherbark Shadow Hunter
+2558	36	37	1	Berserker Witherbark	Witherbark Berserker
+2559	30	31	0	Arpenteur des hautes-terres	Highland Strider
+2560	33	34	0	Vandale des hautes-terres	Highland Thrasher
+2561	36	37	0	Charognard des hautes-terres	Highland Fleshstalker
+2562	32	33	0	Ogre Rochepoing	Boulderfist Ogre
+2563	32	33	0	Rampant des plaines	Plains Creeper
+2564	33	34	0	Massacreur Rochepoing	Boulderfist Enforcer
+2565	35	36	0	Rampant des plaines géant	Giant Plains Creeper
+2566	35	36	0	Brute Rochepoing	Boulderfist Brute
+2567	36	37	0	Magus Rochepoing	Boulderfist Magus
+2569	37	38	1	Marteleur Rochepoing	Boulderfist Mauler
+2570	38	39	1	Chaman Rochepoing	Boulderfist Shaman
+2571	39	40	1	Seigneur Rochepoing	Boulderfist Lord
+2572	35	36	0	Kobold Sèche-moustache	Drywhisker Kobold
+2573	37	38	0	Géomètre Sèche-moustache	Drywhisker Surveyor
+2574	36	37	0	Terrassier Sèche-moustache	Drywhisker Digger
+2575	31	32	0	Fournisseur Sombrefer	Dark Iron Supplier
+2577	31	32	0	Exhalombre Sombrefer	Dark Iron Shadowcaster
+2578	31	32	0	Jeune busard des mésas	Young Mesa Buzzard
+2579	34	35	0	Busard des mésas	Mesa Buzzard
+2580	37	38	0	Ancien busard des mésas	Elder Mesa Buzzard
+2581	31	32	0	Milice des Dabyrie	Dabyrie Militia	A
+2582	30	31	0	Travailleur des Dabyrie	Dabyrie Laborer	A
+2583	37	38	1	Chasseur de trolls de Stromgarde	Stromgarde Troll Hunter	A
+2584	38	39	1	Défenseur de Stromgarde	Stromgarde Defender	A
+2585	39	40	1	Redresseur de torts de Stromgarde	Stromgarde Vindicator	A
+2586	30	31	0	Malandrin du Syndicat	Syndicate Highwayman
+2587	32	33	0	Eclaireur du Syndicat	Syndicate Pathstalker
+2588	36	37	1	Rôdeur du Syndicat	Syndicate Prowler
+2589	31	32	0	Mercenaire du Syndicat	Syndicate Mercenary
+2590	35	36	1	Conjurateur du Syndicat	Syndicate Conjuror
+2591	37	38	1	Magus du Syndicat	Syndicate Magus
+2592	38	39	0	Exilé grondant	Rumbling Exile
+2595	38	39	0	Ecumeur Daguéchine	Daggerspine Raider
+2596	39	40	0	Sorcière Daguéchine	Daggerspine Sorceress
+2597	40	40	1	Seigneur Falconcrest	Lord Falconcrest
+2598	39	39	2		Darbel Montrose
+2599	38	38	1		Otto
+2600	34	34	4		Singer
+2601	42	42	2		Foulbelly
+2602	39	39	2		Ruul Onestone
+2603	36	36	4		Kovork
+2604	39	39	4	Molok l’Anéantisseur	Molok the Crusher
+2605	40	40	4		Zalas Witherbark
+2606	37	37	4	Nimar le Pourfendeur	Nimar the Slayer
+2609	40	40	4	Géomancien Dague-de-silex	Geomancer Flintdagger
+2611	42	42	1		Fozruk
+2618	33	34	0	Péon de Trépas-d'Orgrim	Hammerfall Peon	H
+2619	34	35	0	Grunt de Trépas-d'Orgrim	Hammerfall Grunt	H
+2714	35	35	0	Messagère des Réprouvés	Forsaken Courier	H
+2721	35	35	0	Garde du corps Réprouvé	Forsaken Bodyguard	H
+2733	36	36	0	Apothicaire Jorell	Apothecary Jorell	H
+2755	44	44	1		Myzrael
+2760	38	39	0	Exilé ardent	Burning Exile
+2761	38	39	0	Exilé grimpeur	Cresting Exile
+2762	38	39	0	Exilé foudroyant	Thundering Exile
+2763	42	42	1		Thenan
+2764	40	40	0		Sleeby
+2765	39	39	0		Znort
+2773	40	40	1		Or'Kalar
+2779	41	41	4		Prince Nazjak
+2783	40	40	1		Marez Cowl
+2793	39	39	0		Kor'gresh Coldrage
+2794	38	38	1	Gardien invoqué	Summoned Guardian	A
+4062	30	31	0	Bombardier Sombrefer	Dark Iron Bombardier
+4063	39	39	0		Feeboz
+4479	33	33	0		Fardel Dabyrie	A
+4480	35	35	0		Kenata Dabyrie	A
+4481	34	34	0		Marcel Dabyrie	A
+10696	41	45	0	Défenseur du Refuge de l'Ornière	Refuge Pointe Defender	A
+12923	43	43	0	Soldat blessé	Injured Soldier	H
+12924	44	44	0	Soldat grièvement blessé	Badly Injured Soldier	H
+12925	46	46	0	Soldat agonisant	Critically Injured Soldier	H
+12998	15	15	0	Fermier Nain	Dwarven Farmer	A
+15128	55	55	1	Profanateur d'élite	Defiler Elite	H
+15130	40	40	1	Soldat d'élite de la Ligue d'Arathor	League of Arathor Elite	A
+165189	7	30	0		Cat
+217302	37	37	0		Tam'kar
+218029	34	35	0		Witherbark Champion
+218032	35	35	0		Witherbark Goliath
+218931	41	41	0		Dark Rider
+257296	36	36	0		Muggol Breezebeard
+259023	37	37	0		Veyric Thunderhame
+264850	20	30	0		Hawk
+]]
 -- Badlands
-Z[1418] = function() return {
-[92]=C(39,40,0,"Elémentaire de roche","Rock Elemental"),
-[2701]=C(38,39,0,"Ogre Crache-poussières","Dustbelcher Ogre"),
-[2715]=C(39,40,0,"Brute Crache-poussières","Dustbelcher Brute"),
-[2716]=C(40,41,0,"Chasseur Wyrm Crache-poussières","Dustbelcher Wyrmhunter"),
-[2717]=C(41,42,0,"Marteleur Crache-poussières","Dustbelcher Mauler"),
-[2718]=C(42,43,0,"Chaman Crache-poussières","Dustbelcher Shaman"),
-[2719]=C(44,45,0,"Seigneur Crache-poussières","Dustbelcher Lord"),
-[2720]=C(43,44,0,"Ogre-mage Crache-poussières","Dustbelcher Ogre Mage"),
-[2723]=C(38,39,0,"Golem de pierre","Stone Golem"),
-[2725]=C(41,43,0,"Dragonnet flamboyant","Scalding Whelp"),
-[2726]=C(43,45,1,"Gardien des terres brûlées","Scorched Guardian"),
-[2727]=C(35,36,0,"Coyote des rochers","Crag Coyote"),
-[2728]=C(37,38,0,"Coyote farouche des rochers","Feral Crag Coyote"),
-[2729]=C(38,40,0,"Ancien coyote des rochers","Elder Crag Coyote"),
-[2730]=C(42,43,0,"Coyote des rochers enragé","Rabid Crag Coyote"),
-[2731]=C(36,37,0,"Traqueur des crêtes","Ridge Stalker"),
-[2732]=C(38,39,0,"Chasseresse des récifs","Ridge Huntress"),
-[2734]=C(40,41,0,"Patriarche Traqueur des récifs","Ridge Stalker Patriarch"),
-[2735]=C(37,39,0,"Elémentaire de roche inférieur","Lesser Rock Elemental"),
-[2736]=C(42,44,0,"Elémentaire de roche supérieur","Greater Rock Elemental"),
-[2739]=C(35,36,0,"Tunnelier Ombreforge","Shadowforge Tunneler"),
-[2740]=C(36,37,0,"Tisseur d’ombre Ombreforge","Shadowforge Darkweaver"),
-[2742]=C(37,39,0,"Psalmodieur Ombreforge","Shadowforge Chanter"),
-[2743]=C(38,39,0,"Guerrier Ombreforge","Shadowforge Warrior"),
-[2744]=C(40,40,4,"Commandant Ombreforge","Shadowforge Commander"),
-[2745]=C(42,42,1,"Ambassadeur Infernus","Ambassador Infernus"),
-[2749]=C(40,40,2,"Golem de siège","Siege Golem"),
-[2751]=C(36,36,4,"Golem de guerre","War Golem"),
-[2752]=C(45,45,4,"Grondeur","Rumbler"),
-[2753]=C(38,38,0,"Barnabus","Barnabus"),
-[2754]=C(45,45,2,"Anathemus","Anathemus"),
-[2757]=C(50,50,1,"Cinglenoir","Blacklash"),
-[2759]=C(50,50,1,"Hematus","Hematus"),
-[2791]=C(42,43,0,"Elémentaire de roche enragé","Enraged Rock Elemental"),
-[2829]=C(35,37,0,"Busard affamé","Starving Buzzard"),
-[2830]=C(37,39,0,"Busard","Buzzard"),
-[2831]=C(39,41,0,"Busard géant","Giant Buzzard"),
-[2850]=C(37,37,4,"Brèchedent","Broken Tooth"),
-[2892]=C(39,40,1,"Prophète Cavepierre","Stonevault Seer"),
-[2893]=C(39,40,0,"Briseur d’os Cavepierre","Stonevault Bonesnapper"),
-[2894]=C(40,41,0,"Chaman Cavepierre","Stonevault Shaman"),
-[2906]=C(36,37,0,"Guerrier Crache-poussières","Dustbelcher Warrior"),
-[2907]=C(36,37,0,"Mystique Crache-poussières","Dustbelcher Mystic"),
-[2919]=C(45,45,0,"Gardien Fam'retor","Fam'retor Guardian"),
-[2931]=C(55,56,2,"Zaricotl","Zaricotl"),
-[2932]=C(38,38,1,"Magregan Deepshadow","Magregan Deepshadow"),
-[2944]=C(41,42,0,"Boss Tho'grun","Boss Tho'grun"),
-[2945]=C(42,42,0,"Murdaloc","Murdaloc"),
-[3560]=C(37,37,0,"Gardien Guérisseur","Healing Ward"),
-[4844]=C(35,36,1,"Géomètre Ombreforge","Shadowforge Surveyor"),
-[4845]=C(36,37,1,"Forban Ombreforge","Shadowforge Ruffian"),
-[4846]=C(35,36,1,"Terrassier Ombreforge","Shadowforge Digger"),
-[4851]=C(36,37,1,"Mange-roches Cavepierre","Stonevault Rockchewer"),
-[4856]=C(36,37,1,"Chasseur Cavepierre","Stonevault Cave Hunter"),
-[6733]=C(39,40,1,"Cogneur Cavepierre","Stonevault Basher"),
-[7057]=C(38,38,2,"Maître des fouilles Shovelphlange","Digmaster Shovelphlange"),
-[8155]=C(55,55,0,"Grunt de Kargath","Kargath Grunt","H"),
-[165189]=C(7,30,0,"Cat","Cat"),
-[213795]=C(40,40,0,"Gharrik","Gharrik"),
-[218931]=C(41,41,0,"Dark Rider","Dark Rider"),
-} end
+Z[1418] = [[
+92	39	40	0	Elémentaire de roche	Rock Elemental
+2701	38	39	0	Ogre Crache-poussières	Dustbelcher Ogre
+2715	39	40	0	Brute Crache-poussières	Dustbelcher Brute
+2716	40	41	0	Chasseur Wyrm Crache-poussières	Dustbelcher Wyrmhunter
+2717	41	42	0	Marteleur Crache-poussières	Dustbelcher Mauler
+2718	42	43	0	Chaman Crache-poussières	Dustbelcher Shaman
+2719	44	45	0	Seigneur Crache-poussières	Dustbelcher Lord
+2720	43	44	0	Ogre-mage Crache-poussières	Dustbelcher Ogre Mage
+2723	38	39	0	Golem de pierre	Stone Golem
+2725	41	43	0	Dragonnet flamboyant	Scalding Whelp
+2726	43	45	1	Gardien des terres brûlées	Scorched Guardian
+2727	35	36	0	Coyote des rochers	Crag Coyote
+2728	37	38	0	Coyote farouche des rochers	Feral Crag Coyote
+2729	38	40	0	Ancien coyote des rochers	Elder Crag Coyote
+2730	42	43	0	Coyote des rochers enragé	Rabid Crag Coyote
+2731	36	37	0	Traqueur des crêtes	Ridge Stalker
+2732	38	39	0	Chasseresse des récifs	Ridge Huntress
+2734	40	41	0	Patriarche Traqueur des récifs	Ridge Stalker Patriarch
+2735	37	39	0	Elémentaire de roche inférieur	Lesser Rock Elemental
+2736	42	44	0	Elémentaire de roche supérieur	Greater Rock Elemental
+2739	35	36	0	Tunnelier Ombreforge	Shadowforge Tunneler
+2740	36	37	0	Tisseur d’ombre Ombreforge	Shadowforge Darkweaver
+2742	37	39	0	Psalmodieur Ombreforge	Shadowforge Chanter
+2743	38	39	0	Guerrier Ombreforge	Shadowforge Warrior
+2744	40	40	4	Commandant Ombreforge	Shadowforge Commander
+2745	42	42	1	Ambassadeur Infernus	Ambassador Infernus
+2749	40	40	2	Golem de siège	Siege Golem
+2751	36	36	4	Golem de guerre	War Golem
+2752	45	45	4	Grondeur	Rumbler
+2753	38	38	0		Barnabus
+2754	45	45	2		Anathemus
+2757	50	50	1	Cinglenoir	Blacklash
+2759	50	50	1		Hematus
+2791	42	43	0	Elémentaire de roche enragé	Enraged Rock Elemental
+2829	35	37	0	Busard affamé	Starving Buzzard
+2830	37	39	0	Busard	Buzzard
+2831	39	41	0	Busard géant	Giant Buzzard
+2850	37	37	4	Brèchedent	Broken Tooth
+2892	39	40	1	Prophète Cavepierre	Stonevault Seer
+2893	39	40	0	Briseur d’os Cavepierre	Stonevault Bonesnapper
+2894	40	41	0	Chaman Cavepierre	Stonevault Shaman
+2906	36	37	0	Guerrier Crache-poussières	Dustbelcher Warrior
+2907	36	37	0	Mystique Crache-poussières	Dustbelcher Mystic
+2919	45	45	0	Gardien Fam'retor	Fam'retor Guardian
+2931	55	56	2		Zaricotl
+2932	38	38	1		Magregan Deepshadow
+2944	41	42	0		Boss Tho'grun
+2945	42	42	0		Murdaloc
+3560	37	37	0	Gardien Guérisseur	Healing Ward
+4844	35	36	1	Géomètre Ombreforge	Shadowforge Surveyor
+4845	36	37	1	Forban Ombreforge	Shadowforge Ruffian
+4846	35	36	1	Terrassier Ombreforge	Shadowforge Digger
+4851	36	37	1	Mange-roches Cavepierre	Stonevault Rockchewer
+4856	36	37	1	Chasseur Cavepierre	Stonevault Cave Hunter
+6733	39	40	1	Cogneur Cavepierre	Stonevault Basher
+7057	38	38	2	Maître des fouilles Shovelphlange	Digmaster Shovelphlange
+8155	55	55	0	Grunt de Kargath	Kargath Grunt	H
+165189	7	30	0		Cat
+213795	40	40	0		Gharrik
+218931	41	41	0		Dark Rider
+]]
 -- Blasted Lands
-Z[1419] = function() return {
-[5974]=C(45,46,0,"Ogre Cognepeur","Dreadmaul Ogre"),
-[5975]=C(46,47,0,"Ogre-mage Cognepeur","Dreadmaul Ogre Mage"),
-[5976]=C(46,47,0,"Brute Cognepeur","Dreadmaul Brute"),
-[5977]=C(53,54,0,"Marteleur Cognepeur","Dreadmaul Mauler"),
-[5978]=C(54,55,0,"Démoniste Cognepeur","Dreadmaul Warlock"),
-[5979]=C(45,47,0,"Perdu décati","Wretched Lost One"),
-[5981]=C(51,53,0,"Chercheur du portail","Portal Seeker"),
-[5982]=C(46,48,0,"Pourfendeur noir","Black Slayer"),
-[5983]=C(49,50,0,"Racleur-d'os","Bonepicker"),
-[5984]=C(45,46,0,"Raillecroc affamée","Starving Snickerfang"),
-[5985]=C(49,50,0,"Hyène Raillecroc","Snickerfang Hyena"),
-[5988]=C(50,51,0,"Aiguillonneur scorpok","Scorpok Stinger"),
-[5990]=C(46,48,0,"Basilic Rougepierre","Redstone Basilisk"),
-[5991]=C(51,52,0,"Peau de cristal Rougepierre","Redstone Crystalhide"),
-[5992]=C(48,49,0,"Sanglier cendré","Ashmane Boar"),
-[5993]=C(52,53,0,"Sanglier infernal","Helboar"),
-[5996]=C(47,48,0,"Mineur de Rempart-du-Néant","Nethergarde Miner","A"),
-[5997]=C(47,48,0,"Ingénieur de Rempart-du-Néant","Nethergarde Engineer","A"),
-[5998]=C(46,48,0,"Contremaître de Rempart-du-Néant","Nethergarde Foreman","A"),
-[5999]=C(49,49,0,"Soldat de Rempart-du-Néant","Nethergarde Soldier","A"),
-[6000]=C(49,49,0,"Clerc de Rempart-du-Néant","Nethergarde Cleric","A"),
-[6001]=C(48,48,0,"Analyste de Rempart-du-Néant","Nethergarde Analyst","A"),
-[6002]=C(50,50,0,"Guette-faille de Rempart-du-Néant","Nethergarde Riftwatcher","A"),
-[6003]=C(55,55,0,"Officier de Rempart-du-Néant","Nethergarde Officer","A"),
-[6004]=C(51,52,0,"Sectateur lige d'ombre","Shadowsworn Cultist"),
-[6005]=C(52,53,0,"Nervi lige d'ombre","Shadowsworn Thug"),
-[6006]=C(52,53,0,"Adepte lige d'ombre","Shadowsworn Adept"),
-[6007]=C(53,54,0,"Massacreur lige d'ombre","Shadowsworn Enforcer"),
-[6008]=C(53,54,0,"Démoniste lige d'ombre","Shadowsworn Warlock"),
-[6009]=C(54,55,0,"Lige d'ombre tisseur d’effroi","Shadowsworn Dreadweaver"),
-[6010]=C(54,55,0,"Gangrechien","Felhound"),
-[6011]=C(54,55,0,"Gangregarde sentinelle","Felguard Sentry"),
-[7664]=C(60,60,1,"Razelikh le Souilleur","Razelikh the Defiler"),
-[7665]=C(58,58,1,"Grol le Destructeur","Grol the Destroyer"),
-[7666]=C(58,58,1,"Archimage Allistarj","Archmage Allistarj"),
-[7667]=C(59,59,1,"Dame Sevine","Lady Sevine"),
-[7668]=C(57,57,0,"Serviteur de Razelikh","Servant of Razelikh"),
-[7669]=C(53,54,0,"Serviteur de Grol","Servant of Grol"),
-[7670]=C(54,55,0,"Serviteur d'Allistarj","Servant of Allistarj"),
-[7671]=C(55,56,0,"Serviteur de Sevine","Servant of Sevine"),
-[7728]=C(55,55,1,"Kirith le Damné","Kirith the Damned"),
-[7734]=C(60,60,1,"Ilifar","Ilifar"),
-[7735]=C(60,60,1,"Gangrénaire","Felcular"),
-[7846]=C(60,60,3,"Teremus le Dévoreur","Teremus the Devourer"),
-[7851]=C(55,55,1,"Elite de Rempart-du-Néant","Nethergarde Elite","A"),
-[8296]=C(48,48,4,"Mojo le Tordu","Mojo the Twisted"),
-[8297]=C(56,56,4,"Magronos l'Inflexible","Magronos the Unyielding"),
-[8298]=C(54,54,4,"Akubar le Prophète","Akubar the Seer"),
-[8299]=C(52,52,4,"Ecorchebile","Spiteflayer"),
-[8300]=C(51,51,4,"Ravage","Ravage"),
-[8301]=C(53,53,4,"Clack le Ravageur","Clack the Reaver"),
-[8302]=C(49,49,4,"Oeil-de-mort","Deatheye"),
-[8303]=C(50,50,4,"Grunter","Grunter"),
-[8304]=C(57,57,4,"Dériseffroi","Dreadscorn"),
-[8675]=C(50,51,0,"Gangrebête","Felbeast"),
-[8716]=C(62,62,1,"Seigneur de l'effroi","Dreadlord"),
-[8717]=C(63,63,1,"Gangregarde d'élite","Felguard Elite"),
-[8718]=C(60,60,1,"Molosse de mana","Manahound"),
-[12396]=C(61,61,1,"Commandant de la Garde funeste","Doomguard Commander"),
-[12397]=C(63,63,3,"Seigneur Kazzak","Lord Kazzak"),
-[221740]=C(50,50,0,"Calefactus the Unleashed","Calefactus the Unleashed"),
-[223544]=C(45,48,0,"Fel Interloper","Fel Interloper"),
-[228414]=C(56,56,0,"Heliath","Heliath"),
-} end
+Z[1419] = [[
+5974	45	46	0	Ogre Cognepeur	Dreadmaul Ogre
+5975	46	47	0	Ogre-mage Cognepeur	Dreadmaul Ogre Mage
+5976	46	47	0	Brute Cognepeur	Dreadmaul Brute
+5977	53	54	0	Marteleur Cognepeur	Dreadmaul Mauler
+5978	54	55	0	Démoniste Cognepeur	Dreadmaul Warlock
+5979	45	47	0	Perdu décati	Wretched Lost One
+5981	51	53	0	Chercheur du portail	Portal Seeker
+5982	46	48	0	Pourfendeur noir	Black Slayer
+5983	49	50	0	Racleur-d'os	Bonepicker
+5984	45	46	0	Raillecroc affamée	Starving Snickerfang
+5985	49	50	0	Hyène Raillecroc	Snickerfang Hyena
+5988	50	51	0	Aiguillonneur scorpok	Scorpok Stinger
+5990	46	48	0	Basilic Rougepierre	Redstone Basilisk
+5991	51	52	0	Peau de cristal Rougepierre	Redstone Crystalhide
+5992	48	49	0	Sanglier cendré	Ashmane Boar
+5993	52	53	0	Sanglier infernal	Helboar
+5996	47	48	0	Mineur de Rempart-du-Néant	Nethergarde Miner	A
+5997	47	48	0	Ingénieur de Rempart-du-Néant	Nethergarde Engineer	A
+5998	46	48	0	Contremaître de Rempart-du-Néant	Nethergarde Foreman	A
+5999	49	49	0	Soldat de Rempart-du-Néant	Nethergarde Soldier	A
+6000	49	49	0	Clerc de Rempart-du-Néant	Nethergarde Cleric	A
+6001	48	48	0	Analyste de Rempart-du-Néant	Nethergarde Analyst	A
+6002	50	50	0	Guette-faille de Rempart-du-Néant	Nethergarde Riftwatcher	A
+6003	55	55	0	Officier de Rempart-du-Néant	Nethergarde Officer	A
+6004	51	52	0	Sectateur lige d'ombre	Shadowsworn Cultist
+6005	52	53	0	Nervi lige d'ombre	Shadowsworn Thug
+6006	52	53	0	Adepte lige d'ombre	Shadowsworn Adept
+6007	53	54	0	Massacreur lige d'ombre	Shadowsworn Enforcer
+6008	53	54	0	Démoniste lige d'ombre	Shadowsworn Warlock
+6009	54	55	0	Lige d'ombre tisseur d’effroi	Shadowsworn Dreadweaver
+6010	54	55	0	Gangrechien	Felhound
+6011	54	55	0	Gangregarde sentinelle	Felguard Sentry
+7664	60	60	1	Razelikh le Souilleur	Razelikh the Defiler
+7665	58	58	1	Grol le Destructeur	Grol the Destroyer
+7666	58	58	1	Archimage Allistarj	Archmage Allistarj
+7667	59	59	1	Dame Sevine	Lady Sevine
+7668	57	57	0	Serviteur de Razelikh	Servant of Razelikh
+7669	53	54	0	Serviteur de Grol	Servant of Grol
+7670	54	55	0	Serviteur d'Allistarj	Servant of Allistarj
+7671	55	56	0	Serviteur de Sevine	Servant of Sevine
+7728	55	55	1	Kirith le Damné	Kirith the Damned
+7734	60	60	1		Ilifar
+7735	60	60	1	Gangrénaire	Felcular
+7846	60	60	3	Teremus le Dévoreur	Teremus the Devourer
+7851	55	55	1	Elite de Rempart-du-Néant	Nethergarde Elite	A
+8296	48	48	4	Mojo le Tordu	Mojo the Twisted
+8297	56	56	4	Magronos l'Inflexible	Magronos the Unyielding
+8298	54	54	4	Akubar le Prophète	Akubar the Seer
+8299	52	52	4	Ecorchebile	Spiteflayer
+8300	51	51	4		Ravage
+8301	53	53	4	Clack le Ravageur	Clack the Reaver
+8302	49	49	4	Oeil-de-mort	Deatheye
+8303	50	50	4		Grunter
+8304	57	57	4	Dériseffroi	Dreadscorn
+8675	50	51	0	Gangrebête	Felbeast
+8716	62	62	1	Seigneur de l'effroi	Dreadlord
+8717	63	63	1	Gangregarde d'élite	Felguard Elite
+8718	60	60	1	Molosse de mana	Manahound
+12396	61	61	1	Commandant de la Garde funeste	Doomguard Commander
+12397	63	63	3	Seigneur Kazzak	Lord Kazzak
+221740	50	50	0		Calefactus the Unleashed
+223544	45	48	0		Fel Interloper
+228414	56	56	0		Heliath
+]]
 -- Tirisfal Glades
-Z[1420] = function() return {
-[1501]=C(1,1,0,"Zombie lunatique","Mindless Zombie"),
-[1502]=C(1,2,0,"Zombie décharné","Wretched Zombie"),
-[1504]=C(2,3,0,"Jeune Tisse-nuit","Young Night Web Spider"),
-[1505]=C(3,4,0,"Araignée Tisse-nuit","Night Web Spider"),
-[1506]=C(3,3,0,"Converti écarlate","Scarlet Convert"),
-[1507]=C(3,4,0,"Initié écarlate","Scarlet Initiate"),
-[1508]=C(1,1,0,"Jeune charognard","Young Scavenger"),
-[1509]=C(2,3,0,"Charognard pouilleux","Ragged Scavenger"),
-[1512]=C(1,2,0,"Chauve-souris du crépuscule","Duskbat"),
-[1513]=C(3,4,0,"Chauve-souris du crépuscule galeuse","Mangy Duskbat"),
-[1520]=C(6,7,0,"Soldat Cliquethorax","Rattlecage Soldier"),
-[1522]=C(7,8,0,"Ossomancien Sombroeil","Darkeye Bonecaster"),
-[1523]=C(8,9,0,"Soldat Squelette","Cracked Skull Soldier"),
-[1525]=C(5,6,0,"Mort pourrissant","Rotting Dead"),
-[1526]=C(6,7,0,"Cadavre décomposé","Ravaged Corpse"),
-[1527]=C(7,8,0,"Mort affamé","Hungering Dead"),
-[1528]=C(8,9,0,"Horreur titubante","Shambling Horror"),
-[1529]=C(9,10,0,"Horreur sanguinolente","Bleeding Horror"),
-[1530]=C(10,11,0,"Ancêtre pourrissant","Rotting Ancestor"),
-[1531]=C(6,7,4,"Ame égarée","Lost Soul"),
-[1532]=C(10,11,0,"Esprit vagabond","Wandering Spirit"),
-[1533]=C(8,9,4,"Esprit tourmenté","Tormented Spirit"),
-[1534]=C(9,10,0,"Ancêtre gémissante","Wailing Ancestor"),
-[1535]=C(6,7,0,"Guerrier écarlate","Scarlet Warrior"),
-[1536]=C(7,8,0,"Missionnaire écarlate","Scarlet Missionary"),
-[1537]=C(8,9,0,"Zélote écarlate","Scarlet Zealot"),
-[1538]=C(9,10,0,"Frère écarlate","Scarlet Friar"),
-[1539]=C(10,11,0,"Néophyte écarlate","Scarlet Neophyte"),
-[1540]=C(10,11,0,"Avant-garde écarlate","Scarlet Vanguard"),
-[1543]=C(7,8,0,"Bondisseur Aileron noir","Vile Fin Puddlejumper"),
-[1544]=C(8,9,0,"Oracle mineur Aileron noir","Vile Fin Minor Oracle"),
-[1545]=C(9,10,0,"Marche-boue Aileron noir","Vile Fin Muckdweller"),
-[1547]=C(5,6,0,"Sombredogue décrépit","Decrepit Darkhound"),
-[1548]=C(7,8,0,"Sombredogue maudit","Cursed Darkhound"),
-[1549]=C(9,10,0,"Sombredogue vorace","Ravenous Darkhound"),
-[1553]=C(6,7,0,"Grande chauve-souris du crépuscule","Greater Duskbat"),
-[1554]=C(8,9,0,"Chauve-souris du crépuscule vampirique","Vampiric Duskbat"),
-[1555]=C(9,10,0,"Tisse-nuit vicieuse","Vicious Night Web Spider"),
-[1654]=C(10,10,0,"Gregor Agamand","Gregor Agamand"),
-[1655]=C(10,10,0,"Nissa Agamand","Nissa Agamand"),
-[1656]=C(10,10,0,"Thurman Agamand","Thurman Agamand"),
-[1657]=C(9,9,0,"Devlin Agamand","Devlin Agamand"),
-[1658]=C(13,13,0,"Capitaine Dargol","Captain Dargol"),
-[1660]=C(8,8,0,"Garde du corps écarlate","Scarlet Bodyguard"),
-[1662]=C(9,9,0,"Capitaine Perrine","Captain Perrine"),
-[1664]=C(11,11,0,"Capitaine Vachon","Captain Vachon"),
-[1665]=C(12,12,0,"Capitaine Melrache","Captain Melrache"),
-[1667]=C(5,5,0,"Meven Korgal","Meven Korgal"),
-[1674]=C(6,7,0,"Gnoll Poil-Putride","Rot Hide Gnoll"),
-[1675]=C(7,8,0,"Bâtard Poil-Putride","Rot Hide Mongrel"),
-[1688]=C(5,5,0,"Matriarche Tisse-nuit","Night Web Matriarch"),
-[1736]=C(55,55,0,"Garde noir Randolph","Deathguard Randolph","H"),
-[1737]=C(55,55,0,"Garde noir Oliver","Deathguard Oliver","H"),
-[1739]=C(55,55,0,"Garde noir Phillip","Deathguard Phillip","H"),
-[1741]=C(55,55,0,"Garde noir Bartrand","Deathguard Bartrand","H"),
-[1753]=C(11,11,0,"Œil-de-ver","Maggot Eye"),
-[1765]=C(10,11,0,"Worg","Worg"),
-[1890]=C(2,3,0,"Squelette Cliquethorax","Rattlecage Skeleton"),
-[1910]=C(10,10,4,"Muad","Muad"),
-[1911]=C(12,12,4,"Deeb","Deeb"),
-[1916]=C(2,3,0,"Stephen Bhartec","Stephen Bhartec"),
-[1917]=C(2,3,0,"Daniel Ulfman","Daniel Ulfman"),
-[1918]=C(2,3,0,"Karrel Grayves","Karrel Grayves"),
-[1919]=C(5,5,0,"Samuel Fipps","Samuel Fipps"),
-[1934]=C(6,7,0,"Fermier de Tirisfal","Tirisfal Farmer"),
-[1935]=C(5,6,0,"Journalier de Tirisfal","Tirisfal Farmhand"),
-[1936]=C(8,8,4,"Fermier de Solliden","Farmer Solliden"),
-[1941]=C(6,7,0,"Profanateur Poil-Putride","Rot Hide Graverobber"),
-[1946]=C(12,12,0,"Lillith Nefara","Lillith Nefara"),
-[2307]=C(5,5,0,"Fossoyeur Caice","Caretaker Caice","H"),
-[2309]=C(5,5,0,"Thomas Arlento","Thomas Arlento","H"),
-[2310]=C(5,5,0,"Jamie Nore","Jamie Nore","H"),
-[2311]=C(5,5,0,"Doreen Beltis","Doreen Beltis","H"),
-[2314]=C(5,5,0,"Sahvan Bloodshadow","Sahvan Bloodshadow","H"),
-[2315]=C(5,5,0,"Maquell Ebonwood","Maquell Ebonwood","H"),
-[3617]=C(15,15,0,"Citoyen de Lordaeron","Lordaeron Citizen"),
-[4280]=C(29,30,1,"Sauveur écarlate","Scarlet Preserver"),
-[4281]=C(29,30,1,"Eclaireur écarlate","Scarlet Scout"),
-[4282]=C(29,30,1,"Magicien écarlate","Scarlet Magician"),
-[4283]=C(30,31,1,"Sentinelle écarlate","Scarlet Sentry"),
-[4284]=C(30,31,1,"Augure écarlate","Scarlet Augur"),
-[4285]=C(30,31,1,"Disciple écarlate","Scarlet Disciple"),
-[5435]=C(14,14,1,"Requin du sable","Sand Shark"),
-[6390]=C(11,11,0,"Ulag le Fendeur","Ulag the Cleaver"),
-[7980]=C(55,55,0,"Garde noir d'élite","Deathguard Elite","H"),
-[10356]=C(10,10,4,"Bayne","Bayne"),
-[10357]=C(11,11,4,"Ressan le Harceleur","Ressan the Needler"),
-[10358]=C(12,12,4,"Ombre de Fellicent","Fellicent's Shade"),
-[10359]=C(13,13,4,"Sri'skulk","Sri'skulk"),
-[10996]=C(58,59,1,"Héros déchu","Fallen Hero"),
-[12428]=C(7,7,0,"Garde noir Kel","Deathguard Kel","H"),
-[13158]=C(12,12,0,"Lieutenant Sanders","Lieutenant Sanders"),
-[16096]=C(55,55,1,"Cogneur de Gentepression","Steamwheedle Bruiser","H"),
-[165189]=C(7,30,0,"Cat","Cat"),
-[185317]=C(20,30,0,"Incubus","Incubus"),
-[208196]=C(7,7,0,"Gillgar","Gillgar"),
-[208919]=C(10,10,0,"Blueheart","Blueheart","H"),
-[246143]=C(3,3,0,"Frightened Paladin","Frightened Paladin","H"),
-[250282]=C(9,10,0,"Vile Fin Seer","Vile Fin Seer"),
-[250283]=C(9,11,0,"Vile Fin Attacker","Vile Fin Attacker"),
-[250539]=C(10,10,0,"Paladin Trainee","Paladin Trainee","H"),
-[250541]=C(10,10,0,"Paladin Trainee","Paladin Trainee","H"),
-[259433]=C(8,11,0,"Tarnished Zealot","Tarnished Zealot","H"),
-[259434]=C(8,11,0,"Tarnished Drudge","Tarnished Drudge","H"),
-[260101]=C(10,10,0,"Paladin Trainee","Paladin Trainee","H"),
-[260102]=C(55,55,1,"Bandarion Keep Paladin","Bandarion Keep Paladin","H"),
-[260396]=C(11,13,1,"Whispering Horror","Whispering Horror"),
-[260428]=C(9,12,0,"Shadowvale Lurcher","Shadowvale Lurcher"),
-[260430]=C(9,12,0,"Shadowvale Mystic","Shadowvale Mystic"),
-[260431]=C(8,12,0,"Shadowvale Lurcher","Shadowvale Lurcher"),
-[260432]=C(8,12,0,"Shadowvale Mystic","Shadowvale Mystic"),
-[267006]=C(11,12,0,"Dark Neophyte","Dark Neophyte"),
-[267323]=C(6,6,0,"Clarence Gillian","Clarence Gillian","H"),
-[268707]=C(1,20,0,"Prairie Wolf Pup","Prairie Wolf Pup"),
-[269729]=C(1,2,0,"Risen Warhorse","Risen Warhorse","H"),
-[269730]=C(1,2,0,"Risen Charger","Risen Charger","H"),
-[271080]=C(10,10,4,"Blightsculler","Blightsculler"),
-[271913]=C(1,1,0,"Plagued Cockroach","Plagued Cockroach"),
-[271961]=C(2,3,0,"Webbed Forsaken","Webbed Forsaken","H"),
-[271968]=C(2,3,0,"Forsaken Adventurer","Forsaken Adventurer","H"),
-[272101]=C(22,22,0,"Deathguard Lizabetha","Deathguard Lizabetha","H"),
-[274912]=C(55,55,0,"Relreo Emberlight","Relreo Emberlight","H"),
-[274916]=C(55,55,0,"Vigilant Deathguard","Vigilant Deathguard","H"),
-[275103]=C(55,55,0,"Deathguard Veteran","Deathguard Veteran","H"),
-[275437]=C(10,12,0,"Dark Enforcer","Dark Enforcer"),
-[276020]=C(13,13,1,"Riptear","Riptear"),
-[276061]=C(8,8,4,"Decrepit Harvester","Decrepit Harvester"),
-[276089]=C(11,11,4,"The Condemned One","The Condemned One"),
-[276110]=C(55,55,0,"Knight of Mourning","Knight of Mourning","H"),
-[277730]=C(8,9,0,"Rabid Forest Wolf","Rabid Forest Wolf"),
-[277882]=C(12,13,0,"Foothills Duskbat","Foothills Duskbat"),
-} end
+Z[1420] = [[
+1501	1	1	0	Zombie lunatique	Mindless Zombie
+1502	1	2	0	Zombie décharné	Wretched Zombie
+1504	2	3	0	Jeune Tisse-nuit	Young Night Web Spider
+1505	3	4	0	Araignée Tisse-nuit	Night Web Spider
+1506	3	3	0	Converti écarlate	Scarlet Convert
+1507	3	4	0	Initié écarlate	Scarlet Initiate
+1508	1	1	0	Jeune charognard	Young Scavenger
+1509	2	3	0	Charognard pouilleux	Ragged Scavenger
+1512	1	2	0	Chauve-souris du crépuscule	Duskbat
+1513	3	4	0	Chauve-souris du crépuscule galeuse	Mangy Duskbat
+1520	6	7	0	Soldat Cliquethorax	Rattlecage Soldier
+1522	7	8	0	Ossomancien Sombroeil	Darkeye Bonecaster
+1523	8	9	0	Soldat Squelette	Cracked Skull Soldier
+1525	5	6	0	Mort pourrissant	Rotting Dead
+1526	6	7	0	Cadavre décomposé	Ravaged Corpse
+1527	7	8	0	Mort affamé	Hungering Dead
+1528	8	9	0	Horreur titubante	Shambling Horror
+1529	9	10	0	Horreur sanguinolente	Bleeding Horror
+1530	10	11	0	Ancêtre pourrissant	Rotting Ancestor
+1531	6	7	4	Ame égarée	Lost Soul
+1532	10	11	0	Esprit vagabond	Wandering Spirit
+1533	8	9	4	Esprit tourmenté	Tormented Spirit
+1534	9	10	0	Ancêtre gémissante	Wailing Ancestor
+1535	6	7	0	Guerrier écarlate	Scarlet Warrior
+1536	7	8	0	Missionnaire écarlate	Scarlet Missionary
+1537	8	9	0	Zélote écarlate	Scarlet Zealot
+1538	9	10	0	Frère écarlate	Scarlet Friar
+1539	10	11	0	Néophyte écarlate	Scarlet Neophyte
+1540	10	11	0	Avant-garde écarlate	Scarlet Vanguard
+1543	7	8	0	Bondisseur Aileron noir	Vile Fin Puddlejumper
+1544	8	9	0	Oracle mineur Aileron noir	Vile Fin Minor Oracle
+1545	9	10	0	Marche-boue Aileron noir	Vile Fin Muckdweller
+1547	5	6	0	Sombredogue décrépit	Decrepit Darkhound
+1548	7	8	0	Sombredogue maudit	Cursed Darkhound
+1549	9	10	0	Sombredogue vorace	Ravenous Darkhound
+1553	6	7	0	Grande chauve-souris du crépuscule	Greater Duskbat
+1554	8	9	0	Chauve-souris du crépuscule vampirique	Vampiric Duskbat
+1555	9	10	0	Tisse-nuit vicieuse	Vicious Night Web Spider
+1654	10	10	0		Gregor Agamand
+1655	10	10	0		Nissa Agamand
+1656	10	10	0		Thurman Agamand
+1657	9	9	0		Devlin Agamand
+1658	13	13	0	Capitaine Dargol	Captain Dargol
+1660	8	8	0	Garde du corps écarlate	Scarlet Bodyguard
+1662	9	9	0	Capitaine Perrine	Captain Perrine
+1664	11	11	0	Capitaine Vachon	Captain Vachon
+1665	12	12	0	Capitaine Melrache	Captain Melrache
+1667	5	5	0		Meven Korgal
+1674	6	7	0	Gnoll Poil-Putride	Rot Hide Gnoll
+1675	7	8	0	Bâtard Poil-Putride	Rot Hide Mongrel
+1688	5	5	0	Matriarche Tisse-nuit	Night Web Matriarch
+1736	55	55	0	Garde noir Randolph	Deathguard Randolph	H
+1737	55	55	0	Garde noir Oliver	Deathguard Oliver	H
+1739	55	55	0	Garde noir Phillip	Deathguard Phillip	H
+1741	55	55	0	Garde noir Bartrand	Deathguard Bartrand	H
+1753	11	11	0	Œil-de-ver	Maggot Eye
+1765	10	11	0		Worg
+1890	2	3	0	Squelette Cliquethorax	Rattlecage Skeleton
+1910	10	10	4		Muad
+1911	12	12	4		Deeb
+1916	2	3	0		Stephen Bhartec
+1917	2	3	0		Daniel Ulfman
+1918	2	3	0		Karrel Grayves
+1919	5	5	0		Samuel Fipps
+1934	6	7	0	Fermier de Tirisfal	Tirisfal Farmer
+1935	5	6	0	Journalier de Tirisfal	Tirisfal Farmhand
+1936	8	8	4	Fermier de Solliden	Farmer Solliden
+1941	6	7	0	Profanateur Poil-Putride	Rot Hide Graverobber
+1946	12	12	0		Lillith Nefara
+2307	5	5	0	Fossoyeur Caice	Caretaker Caice	H
+2309	5	5	0		Thomas Arlento	H
+2310	5	5	0		Jamie Nore	H
+2311	5	5	0		Doreen Beltis	H
+2314	5	5	0		Sahvan Bloodshadow	H
+2315	5	5	0		Maquell Ebonwood	H
+3617	15	15	0	Citoyen de Lordaeron	Lordaeron Citizen
+4280	29	30	1	Sauveur écarlate	Scarlet Preserver
+4281	29	30	1	Eclaireur écarlate	Scarlet Scout
+4282	29	30	1	Magicien écarlate	Scarlet Magician
+4283	30	31	1	Sentinelle écarlate	Scarlet Sentry
+4284	30	31	1	Augure écarlate	Scarlet Augur
+4285	30	31	1	Disciple écarlate	Scarlet Disciple
+5435	14	14	1	Requin du sable	Sand Shark
+6390	11	11	0	Ulag le Fendeur	Ulag the Cleaver
+7980	55	55	0	Garde noir d'élite	Deathguard Elite	H
+10356	10	10	4		Bayne
+10357	11	11	4	Ressan le Harceleur	Ressan the Needler
+10358	12	12	4	Ombre de Fellicent	Fellicent's Shade
+10359	13	13	4		Sri'skulk
+10996	58	59	1	Héros déchu	Fallen Hero
+12428	7	7	0	Garde noir Kel	Deathguard Kel	H
+13158	12	12	0		Lieutenant Sanders
+16096	55	55	1	Cogneur de Gentepression	Steamwheedle Bruiser	H
+165189	7	30	0		Cat
+185317	20	30	0		Incubus
+208196	7	7	0		Gillgar
+208919	10	10	0		Blueheart	H
+246143	3	3	0		Frightened Paladin	H
+250282	9	10	0		Vile Fin Seer
+250283	9	11	0		Vile Fin Attacker
+250539	10	10	0		Paladin Trainee	H
+250541	10	10	0		Paladin Trainee	H
+259433	8	11	0		Tarnished Zealot	H
+259434	8	11	0		Tarnished Drudge	H
+260101	10	10	0		Paladin Trainee	H
+260102	55	55	1		Bandarion Keep Paladin	H
+260396	11	13	1		Whispering Horror
+260428	9	12	0		Shadowvale Lurcher
+260430	9	12	0		Shadowvale Mystic
+260431	8	12	0		Shadowvale Lurcher
+260432	8	12	0		Shadowvale Mystic
+267006	11	12	0		Dark Neophyte
+267323	6	6	0		Clarence Gillian	H
+268707	1	20	0		Prairie Wolf Pup
+269729	1	2	0		Risen Warhorse	H
+269730	1	2	0		Risen Charger	H
+271080	10	10	4		Blightsculler
+271913	1	1	0		Plagued Cockroach
+271961	2	3	0		Webbed Forsaken	H
+271968	2	3	0		Forsaken Adventurer	H
+272101	22	22	0		Deathguard Lizabetha	H
+274912	55	55	0		Relreo Emberlight	H
+274916	55	55	0		Vigilant Deathguard	H
+275103	55	55	0		Deathguard Veteran	H
+275437	10	12	0		Dark Enforcer
+276020	13	13	1		Riptear
+276061	8	8	4		Decrepit Harvester
+276089	11	11	4		The Condemned One
+276110	55	55	0		Knight of Mourning	H
+277730	8	9	0		Rabid Forest Wolf
+277882	12	13	0		Foothills Duskbat
+]]
 -- Silverpine Forest
-Z[1421] = function() return {
-[1765]=C(10,11,0,"Worg","Worg"),
-[1766]=C(11,12,0,"Worg chamarré","Mottled Worg"),
-[1767]=C(12,13,0,"Déchiqueteur Aileron noir","Vile Fin Shredder"),
-[1768]=C(13,14,0,"Chasse-marée Aileron noir","Vile Fin Tidehunter"),
-[1769]=C(10,11,0,"Poil-blanc Ragelune","Moonrage Whitescalp"),
-[1770]=C(11,12,0,"Coureur sombre Ragelune","Moonrage Darkrunner"),
-[1772]=C(11,12,0,"Coureur des champs Poil-Putride","Rot Hide Gladerunner"),
-[1773]=C(12,13,0,"Mystique Poil-Putride","Rot Hide Mystic"),
-[1778]=C(11,12,0,"Vieil ours féroce","Ferocious Grizzled Bear"),
-[1779]=C(12,13,0,"Glouton Ragelune","Moonrage Glutton"),
-[1780]=C(12,13,0,"Rôdeuse des sous-bois","Moss Stalker"),
-[1781]=C(13,14,0,"Rampant des brumes","Mist Creeper"),
-[1782]=C(13,14,0,"Ténébreux Ragelune","Moonrage Darksoul"),
-[1797]=C(12,13,0,"Vieil ours géant","Giant Grizzled Bear"),
-[1865]=C(12,13,0,"Ecumeur Ravenclaw","Ravenclaw Raider"),
-[1866]=C(11,12,0,"Esclave Ravenclaw","Ravenclaw Slave"),
-[1867]=C(13,14,0,"Apprenti de Dalaran","Dalaran Apprentice"),
-[1868]=C(13,14,0,"Serviteur Ravenclaw","Ravenclaw Servant"),
-[1869]=C(14,15,0,"Champion Ravenclaw","Ravenclaw Champion"),
-[1870]=C(15,16,0,"Main de Ravenclaw","Hand of Ravenclaw"),
-[1888]=C(18,19,0,"Gardien de Dalaran","Dalaran Watcher"),
-[1889]=C(19,20,0,"Sorcier de Dalaran","Dalaran Wizard"),
-[1891]=C(13,14,1,"Gardien de Bois-du-Bûcher","Pyrewood Watcher","A"),
-[1892]=C(13,14,1,"Gardien Ragelune","Moonrage Watcher"),
-[1893]=C(14,15,1,"Sentinelle Ragelune","Moonrage Sentry"),
-[1894]=C(14,15,1,"Sentinelle de Bois-du-Bûcher","Pyrewood Sentry","A"),
-[1895]=C(14,15,1,"Ancien de Bois-du-Bûcher","Pyrewood Elder","A"),
-[1896]=C(14,15,1,"Ancien Ragelune","Moonrage Elder"),
-[1908]=C(19,20,0,"Oracle Aileron noir","Vile Fin Oracle"),
-[1909]=C(18,19,0,"Rôdeur lacustre Aileron noir","Vile Fin Lakestalker"),
-[1912]=C(14,15,0,"Protecteur de Dalaran","Dalaran Protector"),
-[1913]=C(16,17,0,"Garde de Dalaran","Dalaran Warder"),
-[1914]=C(15,16,0,"Mage de Dalaran","Dalaran Mage"),
-[1915]=C(17,18,0,"Conjurateur de Dalaran","Dalaran Conjuror"),
-[1920]=C(21,21,4,"Copiste de Dalaran","Dalaran Spellscribe"),
-[1923]=C(16,17,0,"Flaire-sang worg","Bloodsnout Worg"),
-[1924]=C(15,16,0,"Hurle-sang Ragelune","Moonrage Bloodhowler"),
-[1939]=C(16,17,0,"Brute Poil-Putride","Rot Hide Brute"),
-[1940]=C(17,18,0,"Pestilentiel Poil-Putride","Rot Hide Plague Weaver"),
-[1942]=C(18,19,0,"Sauvage Poil-Putride","Rot Hide Savage"),
-[1943]=C(18,19,0,"Furieux Poil-Putride","Raging Rot Hide"),
-[1944]=C(22,22,4,"Cogneur Poil-Putride","Rot Hide Bruiser"),
-[1947]=C(24,24,1,"Thule Ravenclaw","Thule Ravenclaw"),
-[1948]=C(23,23,4,"Snarlmane","Snarlmane"),
-[1953]=C(15,16,0,"Furtif lacustre","Lake Skulker"),
-[1954]=C(16,16,0,"Ancien Furtif lacustre","Elder Lake Skulker"),
-[1955]=C(17,18,0,"Rampant lacustre","Lake Creeper"),
-[1956]=C(18,19,0,"Ancien Rampant lacustre","Elder Lake Creeper"),
-[1957]=C(16,17,0,"Rampeur des rives Aileron noir","Vile Fin Shorecreeper"),
-[1958]=C(17,18,0,"Maître des flots Aileron noir","Vile Fin Tidecaller"),
-[1971]=C(13,13,0,"Ivar l'Infect","Ivar the Foul"),
-[1972]=C(15,15,0,"Grimson le Pâle","Grimson the Pale"),
-[1973]=C(20,21,0,"Gardien Ravenclaw","Ravenclaw Guardian"),
-[1974]=C(19,20,0,"Manouvrier Ravenclaw","Ravenclaw Drudger"),
-[1983]=C(14,14,0,"Cinglenuit","Nightlash"),
-[2053]=C(18,19,0,"Réfugié hagard","Haggard Refugee","A"),
-[2054]=C(19,20,0,"Réfugié malade","Sickly Refugee","A"),
-[2060]=C(12,12,1,"Conseiller Smithers","Councilman Smithers"),
-[2061]=C(13,13,1,"Conseiller Thatcher","Councilman Thatcher"),
-[2062]=C(13,13,1,"Conseiller Hendricks","Councilman Hendricks"),
-[2063]=C(13,13,1,"Conseiller Wilhelm","Councilman Wilhelm"),
-[2064]=C(13,13,1,"Conseiller Hartin","Councilman Hartin"),
-[2065]=C(13,13,1,"Conseiller Cooper","Councilman Cooper"),
-[2066]=C(13,13,1,"Conseiller Higarth","Councilman Higarth"),
-[2067]=C(13,13,1,"Conseiller Brunswick","Councilman Brunswick"),
-[2068]=C(15,15,1,"Maire Morrison","Lord Mayor Morrison"),
-[2106]=C(16,16,1,"Apothicaire Berard","Apothecary Berard"),
-[2120]=C(22,22,0,"Archimage Ataeric","Archmage Ataeric"),
-[2173]=C(14,15,0,"Furie des récifs","Reef Frenzy"),
-[2283]=C(22,22,4,"Régent Ravenclaw","Ravenclaw Regent"),
-[2332]=C(21,21,0,"Valdred Moray","Valdred Moray","A"),
-[2529]=C(24,25,1,"Fils d'Arugal","Son of Arugal"),
-[3529]=C(14,15,1,"Armurier Ragelune","Moonrage Armorer"),
-[3531]=C(14,15,1,"Tailleur Ragelune","Moonrage Tailor"),
-[3533]=C(14,15,1,"Artisan du cuir Ragelune","Moonrage Leatherworker"),
-[5682]=C(20,20,0,"Dalin Forgewright","Dalin Forgewright","A"),
-[5894]=C(22,22,0,"Manifestation d'eau corrompue mineure","Corrupt Minor Manifestation of Water"),
-[5897]=C(19,19,0,"Esprit de l'eau corrompu","Corrupt Water Spirit"),
-[6033]=C(15,16,0,"Furie lacustre","Lake Frenzy"),
-[6570]=C(16,16,0,"Fenwick Thatros","Fenwick Thatros"),
-[12123]=C(21,22,1,"Requin des récifs","Reef Shark"),
-[12431]=C(13,13,4,"Gorefang","Gorefang"),
-[12432]=C(14,14,4,"Vieux Vile mâchoire","Old Vicejaw"),
-[12433]=C(15,15,4,"Krethis Shadowspinner","Krethis Shadowspinner"),
-[165189]=C(7,30,0,"Cat","Cat"),
-[185317]=C(20,30,0,"Incubus","Incubus"),
-[185333]=C(22,22,0,"Avelina Lilly","Avelina Lilly"),
-[203139]=C(24,25,1,"Son of Arugal","Son of Arugal"),
-[211146]=C(16,16,0,"Lost Adventurer","Lost Adventurer"),
-[212753]=C(20,20,1,"Tortured Soul","Tortured Soul"),
-[212763]=C(19,19,0,"Sadistic Fiend","Sadistic Fiend"),
-[248779]=C(30,30,0,"Garreth Stills","Garreth Stills","H"),
-[259897]=C(25,25,1,"Old Fire-Eye","Old Fire-Eye"),
-[268707]=C(1,20,0,"Prairie Wolf Pup","Prairie Wolf Pup"),
-[271368]=C(1,22,0,"Shadowgale Squirrel","Shadowgale Squirrel"),
-[277882]=C(12,13,0,"Foothills Duskbat","Foothills Duskbat"),
-} end
+Z[1421] = [[
+1765	10	11	0		Worg
+1766	11	12	0	Worg chamarré	Mottled Worg
+1767	12	13	0	Déchiqueteur Aileron noir	Vile Fin Shredder
+1768	13	14	0	Chasse-marée Aileron noir	Vile Fin Tidehunter
+1769	10	11	0	Poil-blanc Ragelune	Moonrage Whitescalp
+1770	11	12	0	Coureur sombre Ragelune	Moonrage Darkrunner
+1772	11	12	0	Coureur des champs Poil-Putride	Rot Hide Gladerunner
+1773	12	13	0	Mystique Poil-Putride	Rot Hide Mystic
+1778	11	12	0	Vieil ours féroce	Ferocious Grizzled Bear
+1779	12	13	0	Glouton Ragelune	Moonrage Glutton
+1780	12	13	0	Rôdeuse des sous-bois	Moss Stalker
+1781	13	14	0	Rampant des brumes	Mist Creeper
+1782	13	14	0	Ténébreux Ragelune	Moonrage Darksoul
+1797	12	13	0	Vieil ours géant	Giant Grizzled Bear
+1865	12	13	0	Ecumeur Ravenclaw	Ravenclaw Raider
+1866	11	12	0	Esclave Ravenclaw	Ravenclaw Slave
+1867	13	14	0	Apprenti de Dalaran	Dalaran Apprentice
+1868	13	14	0	Serviteur Ravenclaw	Ravenclaw Servant
+1869	14	15	0	Champion Ravenclaw	Ravenclaw Champion
+1870	15	16	0	Main de Ravenclaw	Hand of Ravenclaw
+1888	18	19	0	Gardien de Dalaran	Dalaran Watcher
+1889	19	20	0	Sorcier de Dalaran	Dalaran Wizard
+1891	13	14	1	Gardien de Bois-du-Bûcher	Pyrewood Watcher	A
+1892	13	14	1	Gardien Ragelune	Moonrage Watcher
+1893	14	15	1	Sentinelle Ragelune	Moonrage Sentry
+1894	14	15	1	Sentinelle de Bois-du-Bûcher	Pyrewood Sentry	A
+1895	14	15	1	Ancien de Bois-du-Bûcher	Pyrewood Elder	A
+1896	14	15	1	Ancien Ragelune	Moonrage Elder
+1908	19	20	0	Oracle Aileron noir	Vile Fin Oracle
+1909	18	19	0	Rôdeur lacustre Aileron noir	Vile Fin Lakestalker
+1912	14	15	0	Protecteur de Dalaran	Dalaran Protector
+1913	16	17	0	Garde de Dalaran	Dalaran Warder
+1914	15	16	0	Mage de Dalaran	Dalaran Mage
+1915	17	18	0	Conjurateur de Dalaran	Dalaran Conjuror
+1920	21	21	4	Copiste de Dalaran	Dalaran Spellscribe
+1923	16	17	0	Flaire-sang worg	Bloodsnout Worg
+1924	15	16	0	Hurle-sang Ragelune	Moonrage Bloodhowler
+1939	16	17	0	Brute Poil-Putride	Rot Hide Brute
+1940	17	18	0	Pestilentiel Poil-Putride	Rot Hide Plague Weaver
+1942	18	19	0	Sauvage Poil-Putride	Rot Hide Savage
+1943	18	19	0	Furieux Poil-Putride	Raging Rot Hide
+1944	22	22	4	Cogneur Poil-Putride	Rot Hide Bruiser
+1947	24	24	1		Thule Ravenclaw
+1948	23	23	4		Snarlmane
+1953	15	16	0	Furtif lacustre	Lake Skulker
+1954	16	16	0	Ancien Furtif lacustre	Elder Lake Skulker
+1955	17	18	0	Rampant lacustre	Lake Creeper
+1956	18	19	0	Ancien Rampant lacustre	Elder Lake Creeper
+1957	16	17	0	Rampeur des rives Aileron noir	Vile Fin Shorecreeper
+1958	17	18	0	Maître des flots Aileron noir	Vile Fin Tidecaller
+1971	13	13	0	Ivar l'Infect	Ivar the Foul
+1972	15	15	0	Grimson le Pâle	Grimson the Pale
+1973	20	21	0	Gardien Ravenclaw	Ravenclaw Guardian
+1974	19	20	0	Manouvrier Ravenclaw	Ravenclaw Drudger
+1983	14	14	0	Cinglenuit	Nightlash
+2053	18	19	0	Réfugié hagard	Haggard Refugee	A
+2054	19	20	0	Réfugié malade	Sickly Refugee	A
+2060	12	12	1	Conseiller Smithers	Councilman Smithers
+2061	13	13	1	Conseiller Thatcher	Councilman Thatcher
+2062	13	13	1	Conseiller Hendricks	Councilman Hendricks
+2063	13	13	1	Conseiller Wilhelm	Councilman Wilhelm
+2064	13	13	1	Conseiller Hartin	Councilman Hartin
+2065	13	13	1	Conseiller Cooper	Councilman Cooper
+2066	13	13	1	Conseiller Higarth	Councilman Higarth
+2067	13	13	1	Conseiller Brunswick	Councilman Brunswick
+2068	15	15	1	Maire Morrison	Lord Mayor Morrison
+2106	16	16	1	Apothicaire Berard	Apothecary Berard
+2120	22	22	0	Archimage Ataeric	Archmage Ataeric
+2173	14	15	0	Furie des récifs	Reef Frenzy
+2283	22	22	4	Régent Ravenclaw	Ravenclaw Regent
+2332	21	21	0		Valdred Moray	A
+2529	24	25	1	Fils d'Arugal	Son of Arugal
+3529	14	15	1	Armurier Ragelune	Moonrage Armorer
+3531	14	15	1	Tailleur Ragelune	Moonrage Tailor
+3533	14	15	1	Artisan du cuir Ragelune	Moonrage Leatherworker
+5682	20	20	0		Dalin Forgewright	A
+5894	22	22	0	Manifestation d'eau corrompue mineure	Corrupt Minor Manifestation of Water
+5897	19	19	0	Esprit de l'eau corrompu	Corrupt Water Spirit
+6033	15	16	0	Furie lacustre	Lake Frenzy
+6570	16	16	0		Fenwick Thatros
+12123	21	22	1	Requin des récifs	Reef Shark
+12431	13	13	4		Gorefang
+12432	14	14	4	Vieux Vile mâchoire	Old Vicejaw
+12433	15	15	4		Krethis Shadowspinner
+165189	7	30	0		Cat
+185317	20	30	0		Incubus
+185333	22	22	0		Avelina Lilly
+203139	24	25	1		Son of Arugal
+211146	16	16	0		Lost Adventurer
+212753	20	20	1		Tortured Soul
+212763	19	19	0		Sadistic Fiend
+248779	30	30	0		Garreth Stills	H
+259897	25	25	1		Old Fire-Eye
+268707	1	20	0		Prairie Wolf Pup
+271368	1	22	0		Shadowgale Squirrel
+277882	12	13	0		Foothills Duskbat
+]]
 -- Western Plaguelands
-Z[1422] = function() return {
-[1783]=C(50,51,0,"Ecorcheur Squelette","Skeletal Flayer"),
-[1784]=C(51,52,0,"Ensorceleur Squelette","Skeletal Sorcerer"),
-[1785]=C(52,54,0,"Terreur Squelette","Skeletal Terror"),
-[1787]=C(53,55,0,"Bourreau Squelette","Skeletal Executioner"),
-[1788]=C(56,57,1,"Chef de guerre Squelette","Skeletal Warlord"),
-[1789]=C(55,56,0,"Acolyte Squelette","Skeletal Acolyte"),
-[1791]=C(50,52,0,"Goule écumante","Slavering Ghoul"),
-[1793]=C(54,55,0,"Goule purulente","Rotting Ghoul"),
-[1794]=C(54,55,0,"Goule dévastée","Soulless Ghoul"),
-[1795]=C(55,56,0,"Goule incendiaire","Searing Ghoul"),
-[1796]=C(55,56,0,"Goule glaciale","Freezing Ghoul"),
-[1802]=C(56,58,0,"Ame en peine affamée","Hungering Wraith"),
-[1804]=C(56,57,0,"Morte gémissante","Wailing Death"),
-[1805]=C(56,57,1,"Golem de chair","Flesh Golem"),
-[1806]=C(54,55,0,"Gelée maléfique","Vile Slime"),
-[1808]=C(55,56,0,"Limon dévorant","Devouring Ooze"),
-[1809]=C(50,52,0,"Vautour putride","Carrion Vulture"),
-[1812]=C(55,56,0,"Béhémoth pourrissant","Rotting Behemoth"),
-[1813]=C(56,57,0,"Horreur décomposée","Decaying Horror"),
-[1815]=C(51,52,0,"Ours noir malade","Diseased Black Bear"),
-[1816]=C(55,56,0,"Grizzly malade","Diseased Grizzly"),
-[1817]=C(53,54,0,"Loup malade","Diseased Wolf"),
-[1821]=C(52,53,0,"Rôdeuse putride","Carrion Lurker"),
-[1822]=C(50,51,0,"Rôdeuse venimeuse des brumes","Venom Mist Lurker"),
-[1824]=C(54,55,0,"Rôdeuse pestilentielle","Plague Lurker"),
-[1826]=C(55,56,0,"Mage écarlate","Scarlet Mage"),
-[1827]=C(55,56,1,"Sentinelle écarlate","Scarlet Sentinel"),
-[1831]=C(52,53,0,"Chasseur écarlate","Scarlet Hunter"),
-[1832]=C(56,57,1,"Magus écarlate","Scarlet Magus"),
-[1833]=C(54,55,0,"Chevalier écarlate","Scarlet Knight"),
-[1834]=C(55,56,1,"Paladin écarlate","Scarlet Paladin"),
-[1835]=C(53,54,0,"Conjureur écarlate","Scarlet Invoker"),
-[1836]=C(56,58,1,"Cavalier écarlate","Scarlet Cavalier"),
-[1837]=C(60,60,4,"Juge écarlate","Scarlet Judge"),
-[1838]=C(61,61,2,"Inquisiteur écarlate","Scarlet Interrogator"),
-[1839]=C(63,63,2,"Grand prêtre écarlate","Scarlet High Clerist"),
-[1841]=C(60,60,2,"Bourreau écarlate","Scarlet Executioner"),
-[1842]=C(63,63,1,"Généralissime Taelan Fordring","Highlord Taelan Fordring"),
-[1843]=C(62,62,2,"Contremaître Jerris","Foreman Jerris"),
-[1844]=C(58,58,4,"Contremaître Marcrid","Foreman Marcrid"),
-[1845]=C(59,59,0,"Haut Protecteur Tarsen","High Protector Tarsen"),
-[1846]=C(61,61,1,"Haut Protecteur Lorik","High Protector Lorik"),
-[1847]=C(52,52,4,"Vilcrin","Foulmane"),
-[1848]=C(56,56,4,"Seigneur Maldazzar","Lord Maldazzar"),
-[1850]=C(58,58,2,"Putridius","Putridius"),
-[1851]=C(62,62,4,"La Bogue","The Husk"),
-[1852]=C(61,61,1,"Araj l'Invocateur","Araj the Summoner"),
-[1883]=C(55,57,0,"Ouvrier écarlate","Scarlet Worker"),
-[1884]=C(54,56,0,"Bûcheron écarlate","Scarlet Lumberjack"),
-[1885]=C(59,59,4,"Forgeron écarlate","Scarlet Smith"),
-[4472]=C(57,58,0,"Vision cauchemardesque","Haunting Vision"),
-[4474]=C(53,54,0,"Cadavre pourrissant","Rotting Cadaver"),
-[4475]=C(52,53,0,"Zombie corrompu","Blighted Zombie"),
-[4493]=C(56,57,0,"Vengeur écarlate","Scarlet Avenger"),
-[4494]=C(57,58,0,"Lieur de sort écarlate","Scarlet Spellbinder"),
-[10580]=C(54,56,0,"Zombie fétide","Fetid Zombie"),
-[10605]=C(52,54,0,"Médecin écarlate","Scarlet Medic"),
-[10608]=C(55,57,1,"Prêtre écarlate","Scarlet Priest"),
-[10717]=C(55,57,0,"Parasite temporel","Temporal Parasite"),
-[10801]=C(54,54,0,"Goule jacassante","Jabbering Ghoul"),
-[10816]=C(55,55,0,"Squelette errant","Wandering Skeleton"),
-[10836]=C(56,56,0,"Fermier Dalson","Farmer Dalson"),
-[10979]=C(52,53,0,"Chien écarlate","Scarlet Hound"),
-[10996]=C(58,59,1,"Héros déchu","Fallen Hero"),
-[11075]=C(53,53,0,"Seigneur du Chaudron Bilegueule","Cauldron Lord Bilemaw"),
-[11076]=C(56,56,0,"Seigneur du Chaudron Razarch","Cauldron Lord Razarch"),
-[11077]=C(55,55,0,"Seigneur du Chaudron Malvinious","Cauldron Lord Malvinious"),
-[11078]=C(58,58,0,"Seigneur du Chaudron Irâme","Cauldron Lord Soulwrath"),
-[11284]=C(58,59,1,"Ombre noire","Dark Shade"),
-[11611]=C(57,57,0,"Cavalier Durgen","Cavalier Durgen"),
-[11613]=C(56,56,0,"Veneur Radley","Huntsman Radley"),
-[11614]=C(54,54,0,"Sanguin","Bloodshot"),
-[11873]=C(60,60,0,"Domestique spectral","Spectral Attendant"),
-[12128]=C(60,60,1,"Elite cramoisie","Crimson Elite"),
-[12387]=C(56,57,0,"Grande gelée maléfique","Large Vile Slime"),
-[232912]=C(55,55,0,"Ada Darkhardt","Ada Darkhardt","A"),
-[262033]=C(60,60,0,"Suspicious Adventurer","Suspicious Adventurer"),
-} end
+Z[1422] = [[
+1783	50	51	0	Ecorcheur Squelette	Skeletal Flayer
+1784	51	52	0	Ensorceleur Squelette	Skeletal Sorcerer
+1785	52	54	0	Terreur Squelette	Skeletal Terror
+1787	53	55	0	Bourreau Squelette	Skeletal Executioner
+1788	56	57	1	Chef de guerre Squelette	Skeletal Warlord
+1789	55	56	0	Acolyte Squelette	Skeletal Acolyte
+1791	50	52	0	Goule écumante	Slavering Ghoul
+1793	54	55	0	Goule purulente	Rotting Ghoul
+1794	54	55	0	Goule dévastée	Soulless Ghoul
+1795	55	56	0	Goule incendiaire	Searing Ghoul
+1796	55	56	0	Goule glaciale	Freezing Ghoul
+1802	56	58	0	Ame en peine affamée	Hungering Wraith
+1804	56	57	0	Morte gémissante	Wailing Death
+1805	56	57	1	Golem de chair	Flesh Golem
+1806	54	55	0	Gelée maléfique	Vile Slime
+1808	55	56	0	Limon dévorant	Devouring Ooze
+1809	50	52	0	Vautour putride	Carrion Vulture
+1812	55	56	0	Béhémoth pourrissant	Rotting Behemoth
+1813	56	57	0	Horreur décomposée	Decaying Horror
+1815	51	52	0	Ours noir malade	Diseased Black Bear
+1816	55	56	0	Grizzly malade	Diseased Grizzly
+1817	53	54	0	Loup malade	Diseased Wolf
+1821	52	53	0	Rôdeuse putride	Carrion Lurker
+1822	50	51	0	Rôdeuse venimeuse des brumes	Venom Mist Lurker
+1824	54	55	0	Rôdeuse pestilentielle	Plague Lurker
+1826	55	56	0	Mage écarlate	Scarlet Mage
+1827	55	56	1	Sentinelle écarlate	Scarlet Sentinel
+1831	52	53	0	Chasseur écarlate	Scarlet Hunter
+1832	56	57	1	Magus écarlate	Scarlet Magus
+1833	54	55	0	Chevalier écarlate	Scarlet Knight
+1834	55	56	1	Paladin écarlate	Scarlet Paladin
+1835	53	54	0	Conjureur écarlate	Scarlet Invoker
+1836	56	58	1	Cavalier écarlate	Scarlet Cavalier
+1837	60	60	4	Juge écarlate	Scarlet Judge
+1838	61	61	2	Inquisiteur écarlate	Scarlet Interrogator
+1839	63	63	2	Grand prêtre écarlate	Scarlet High Clerist
+1841	60	60	2	Bourreau écarlate	Scarlet Executioner
+1842	63	63	1	Généralissime Taelan Fordring	Highlord Taelan Fordring
+1843	62	62	2	Contremaître Jerris	Foreman Jerris
+1844	58	58	4	Contremaître Marcrid	Foreman Marcrid
+1845	59	59	0	Haut Protecteur Tarsen	High Protector Tarsen
+1846	61	61	1	Haut Protecteur Lorik	High Protector Lorik
+1847	52	52	4	Vilcrin	Foulmane
+1848	56	56	4	Seigneur Maldazzar	Lord Maldazzar
+1850	58	58	2		Putridius
+1851	62	62	4	La Bogue	The Husk
+1852	61	61	1	Araj l'Invocateur	Araj the Summoner
+1883	55	57	0	Ouvrier écarlate	Scarlet Worker
+1884	54	56	0	Bûcheron écarlate	Scarlet Lumberjack
+1885	59	59	4	Forgeron écarlate	Scarlet Smith
+4472	57	58	0	Vision cauchemardesque	Haunting Vision
+4474	53	54	0	Cadavre pourrissant	Rotting Cadaver
+4475	52	53	0	Zombie corrompu	Blighted Zombie
+4493	56	57	0	Vengeur écarlate	Scarlet Avenger
+4494	57	58	0	Lieur de sort écarlate	Scarlet Spellbinder
+10580	54	56	0	Zombie fétide	Fetid Zombie
+10605	52	54	0	Médecin écarlate	Scarlet Medic
+10608	55	57	1	Prêtre écarlate	Scarlet Priest
+10717	55	57	0	Parasite temporel	Temporal Parasite
+10801	54	54	0	Goule jacassante	Jabbering Ghoul
+10816	55	55	0	Squelette errant	Wandering Skeleton
+10836	56	56	0	Fermier Dalson	Farmer Dalson
+10979	52	53	0	Chien écarlate	Scarlet Hound
+10996	58	59	1	Héros déchu	Fallen Hero
+11075	53	53	0	Seigneur du Chaudron Bilegueule	Cauldron Lord Bilemaw
+11076	56	56	0	Seigneur du Chaudron Razarch	Cauldron Lord Razarch
+11077	55	55	0	Seigneur du Chaudron Malvinious	Cauldron Lord Malvinious
+11078	58	58	0	Seigneur du Chaudron Irâme	Cauldron Lord Soulwrath
+11284	58	59	1	Ombre noire	Dark Shade
+11611	57	57	0		Cavalier Durgen
+11613	56	56	0	Veneur Radley	Huntsman Radley
+11614	54	54	0	Sanguin	Bloodshot
+11873	60	60	0	Domestique spectral	Spectral Attendant
+12128	60	60	1	Elite cramoisie	Crimson Elite
+12387	56	57	0	Grande gelée maléfique	Large Vile Slime
+232912	55	55	0		Ada Darkhardt	A
+262033	60	60	0		Suspicious Adventurer
+]]
 -- Eastern Plaguelands
-Z[1423] = function() return {
-[6547]=C(25,25,0,"Victime agonisante","Suffering Victim","H"),
-[8519]=C(54,55,0,"Fléau","Blighted Surge"),
-[8520]=C(55,56,0,"Ravageur de la peste","Plague Ravager"),
-[8521]=C(56,57,0,"Horreur corrompue","Blighted Horror"),
-[8522]=C(57,58,0,"Monstruosité de la peste","Plague Monstrosity"),
-[8523]=C(53,54,0,"Soldat du Fléau","Scourge Soldier"),
-[8524]=C(54,55,0,"Mage maudit","Cursed Mage"),
-[8525]=C(55,56,0,"Gardien du Fléau","Scourge Warder"),
-[8526]=C(56,57,0,"Magicien noir","Dark Caster"),
-[8527]=C(57,58,0,"Garde du Fléau","Scourge Guard"),
-[8528]=C(58,59,0,"Tisseur d'effroi","Dread Weaver"),
-[8529]=C(59,60,0,"Champion du Fléau","Scourge Champion"),
-[8530]=C(54,55,0,"Goule cannibale","Cannibal Ghoul"),
-[8531]=C(56,57,0,"Goule bredouillante","Gibbering Ghoul"),
-[8532]=C(57,59,0,"Ecorcheur maladif","Diseased Flayer"),
-[8534]=C(54,56,0,"Gargouille putride","Putrid Gargoyle"),
-[8535]=C(56,57,0,"Hurleuse putride","Putrid Shrieker"),
-[8538]=C(55,56,0,"Serviteur invisible","Unseen Servant"),
-[8539]=C(57,58,0,"Gardien aveugle","Eyeless Watcher"),
-[8540]=C(53,55,0,"Hurleuse déchirée","Torn Screamer"),
-[8541]=C(55,57,0,"Hurleuse haineuse","Hate Shrieker"),
-[8542]=C(57,59,0,"Chante-mort","Death Singer"),
-[8543]=C(57,58,0,"Horreur raccommodée","Stitched Horror"),
-[8544]=C(58,59,0,"Golem dégingandé","Gangled Golem"),
-[8545]=C(59,60,0,"Abomination","Abomination"),
-[8546]=C(59,59,0,"Adepte noir","Dark Adept"),
-[8547]=C(53,54,0,"Sectateur de la mort","Death Cultist"),
-[8548]=C(56,57,0,"Vil tuteur","Vile Tutor"),
-[8550]=C(59,60,0,"Ombremage","Shadowmage"),
-[8551]=C(55,56,0,"Invocateur des ténèbres","Dark Summoner"),
-[8553]=C(54,55,0,"Nécromancien","Necromancer"),
-[8555]=C(53,54,0,"Démon des cryptes","Crypt Fiend"),
-[8556]=C(55,56,0,"Marcheur des cryptes","Crypt Walker"),
-[8557]=C(57,58,0,"Horreur des cryptes","Crypt Horror"),
-[8558]=C(58,59,0,"Pourfendeur des cryptes","Crypt Slayer"),
-[8560]=C(57,58,0,"Eclaireur Mossflayer","Mossflayer Scout"),
-[8561]=C(58,59,0,"Chasseur des ténèbres Mossflayer","Mossflayer Shadowhunter"),
-[8562]=C(57,59,0,"Cannibale Mossflayer","Mossflayer Cannibal"),
-[8563]=C(58,59,0,"Bûcheron","Woodsman","A"),
-[8564]=C(59,60,0,"Forestier","Ranger","A"),
-[8565]=C(57,58,0,"Eclaireur","Pathstrider","A"),
-[8596]=C(53,54,0,"Chien pestiféré chétif","Plaguehound Runt"),
-[8597]=C(55,56,0,"Chien pestiféré","Plaguehound"),
-[8598]=C(57,58,0,"Chien pestiféré frénétique","Frenzied Plaguehound"),
-[8600]=C(53,55,0,"Chauve-souris pestiférée","Plaguebat"),
-[8601]=C(54,56,0,"Chauve-souris pestiférée nuisible","Noxious Plaguebat"),
-[8602]=C(56,58,0,"Chauve-souris pestiférée monstrueuse","Monstrous Plaguebat"),
-[8603]=C(54,55,0,"Larve putride","Carrion Grub"),
-[8605]=C(56,57,0,"Dévoreur putride","Carrion Devourer"),
-[8606]=C(55,56,0,"Pourriture vivante","Living Decay"),
-[8607]=C(54,55,0,"Vase pourrissante","Rotting Sludge"),
-[9447]=C(53,54,1,"Gardien écarlate","Scarlet Warder"),
-[9448]=C(56,57,1,"Prétorien écarlate","Scarlet Praetorian"),
-[9449]=C(54,55,1,"Clerc écarlate","Scarlet Cleric"),
-[9450]=C(55,56,1,"Vicaire écarlate","Scarlet Curate"),
-[9451]=C(55,57,1,"Archimage écarlate","Scarlet Archmage"),
-[9452]=C(53,55,1,"Enchanteur écarlate","Scarlet Enchanter"),
-[10698]=C(53,54,0,"Zombie invoqué","Summoned Zombie"),
-[10817]=C(55,55,4,"Duggan Wildhammer","Duggan Wildhammer","A"),
-[10821]=C(57,57,4,"Hed'mush le Pourrissant","Hed'mush the Rotting"),
-[10822]=C(58,58,4,"Seigneur de guerre Thresh'jin","Warlord Thresh'jin"),
-[10823]=C(59,59,4,"Zul'Brin Warpbranch","Zul'Brin Warpbranch"),
-[10824]=C(60,60,4,"Seigneur forestier Hawspear","Ranger Lord Hawkspear","A"),
-[10825]=C(56,56,4,"Gish l'Immobile","Gish the Unmoving"),
-[10826]=C(57,57,4,"Seigneur Sombrefaux","Lord Darkscythe"),
-[10827]=C(56,56,4,"Nécrorateur Selendre","Deathspeaker Selendre"),
-[10828]=C(59,59,2,"Grand général Abbendis","High General Abbendis"),
-[10946]=C(60,60,1,"Horgus le Ravageur","Horgus the Ravager"),
-[10996]=C(58,59,1,"Héros déchu","Fallen Hero"),
-[11288]=C(57,57,0,"Traître spectral","Spectral Betrayer"),
-[11290]=C(52,54,0,"Zombie Mossflayer","Mossflayer Zombie"),
-[11291]=C(53,55,0,"Non-vivant Mossflayer","Unliving Mossflayer"),
-[11620]=C(57,57,0,"Maraudeur spectral","Spectral Marauder"),
-[11621]=C(57,57,0,"Cadavre spectral","Spectral Corpse"),
-[11885]=C(58,59,1,"Chien chancreux","Blighthound","H"),
-[11886]=C(57,57,0,"Mercutio Filthgorger","Mercutio Filthgorger"),
-[11887]=C(54,55,0,"Pilleur de crypte","Crypt Robber"),
-[11896]=C(61,61,1,"Creusechair","Borelgore"),
-[11897]=C(60,60,1,"Crépuscaile","Duskwing"),
-[11898]=C(60,60,1,"Grand maître Valdelmar","Crusader Lord Valdelmar"),
-[12248]=C(60,60,0,"Infiltrateur Hameya","Infiltrator Hameya"),
-[12250]=C(54,55,0,"Zaeldarr le Banni","Zaeldarr the Outcast"),
-[12261]=C(57,58,0,"Mossflayer infecté","Infected Mossflayer"),
-[12262]=C(58,58,1,"Protecteur de la ziggourat","Ziggurat Protector"),
-[12263]=C(58,58,1,"Protecteur de la Boucherie","Slaughterhouse Protector"),
-[12322]=C(60,60,0,"Protecteur Quel'Lithien","Quel'Lithien Protector","A"),
-[12337]=C(60,60,1,"Messager cramoisi","Crimson Courier"),
-[12339]=C(61,61,1,"Demetria","Demetria"),
-[13118]=C(57,58,1,"Garde du corps cramoisi","Crimson Bodyguard"),
-[13279]=C(54,57,0,"Vague discordante","Discordant Surge"),
-[14564]=C(59,60,0,"Esprit de Val-Terreur","Terrordale Spirit"),
-[15162]=C(61,61,1,"Inquisiteur écarlate","Scarlet Inquisitor"),
-[15712]=C(60,60,0,"Tas de terre","Dirt Mound"),
-[16117]=C(60,60,0,"Pourceau pestiféré","Plagued Swine"),
-[16184]=C(60,60,1,"Surveillant nérubien","Nerubian Overseer"),
-} end
+Z[1423] = [[
+6547	25	25	0	Victime agonisante	Suffering Victim	H
+8519	54	55	0	Fléau	Blighted Surge
+8520	55	56	0	Ravageur de la peste	Plague Ravager
+8521	56	57	0	Horreur corrompue	Blighted Horror
+8522	57	58	0	Monstruosité de la peste	Plague Monstrosity
+8523	53	54	0	Soldat du Fléau	Scourge Soldier
+8524	54	55	0	Mage maudit	Cursed Mage
+8525	55	56	0	Gardien du Fléau	Scourge Warder
+8526	56	57	0	Magicien noir	Dark Caster
+8527	57	58	0	Garde du Fléau	Scourge Guard
+8528	58	59	0	Tisseur d'effroi	Dread Weaver
+8529	59	60	0	Champion du Fléau	Scourge Champion
+8530	54	55	0	Goule cannibale	Cannibal Ghoul
+8531	56	57	0	Goule bredouillante	Gibbering Ghoul
+8532	57	59	0	Ecorcheur maladif	Diseased Flayer
+8534	54	56	0	Gargouille putride	Putrid Gargoyle
+8535	56	57	0	Hurleuse putride	Putrid Shrieker
+8538	55	56	0	Serviteur invisible	Unseen Servant
+8539	57	58	0	Gardien aveugle	Eyeless Watcher
+8540	53	55	0	Hurleuse déchirée	Torn Screamer
+8541	55	57	0	Hurleuse haineuse	Hate Shrieker
+8542	57	59	0	Chante-mort	Death Singer
+8543	57	58	0	Horreur raccommodée	Stitched Horror
+8544	58	59	0	Golem dégingandé	Gangled Golem
+8545	59	60	0		Abomination
+8546	59	59	0	Adepte noir	Dark Adept
+8547	53	54	0	Sectateur de la mort	Death Cultist
+8548	56	57	0	Vil tuteur	Vile Tutor
+8550	59	60	0	Ombremage	Shadowmage
+8551	55	56	0	Invocateur des ténèbres	Dark Summoner
+8553	54	55	0	Nécromancien	Necromancer
+8555	53	54	0	Démon des cryptes	Crypt Fiend
+8556	55	56	0	Marcheur des cryptes	Crypt Walker
+8557	57	58	0	Horreur des cryptes	Crypt Horror
+8558	58	59	0	Pourfendeur des cryptes	Crypt Slayer
+8560	57	58	0	Eclaireur Mossflayer	Mossflayer Scout
+8561	58	59	0	Chasseur des ténèbres Mossflayer	Mossflayer Shadowhunter
+8562	57	59	0	Cannibale Mossflayer	Mossflayer Cannibal
+8563	58	59	0	Bûcheron	Woodsman	A
+8564	59	60	0	Forestier	Ranger	A
+8565	57	58	0	Eclaireur	Pathstrider	A
+8596	53	54	0	Chien pestiféré chétif	Plaguehound Runt
+8597	55	56	0	Chien pestiféré	Plaguehound
+8598	57	58	0	Chien pestiféré frénétique	Frenzied Plaguehound
+8600	53	55	0	Chauve-souris pestiférée	Plaguebat
+8601	54	56	0	Chauve-souris pestiférée nuisible	Noxious Plaguebat
+8602	56	58	0	Chauve-souris pestiférée monstrueuse	Monstrous Plaguebat
+8603	54	55	0	Larve putride	Carrion Grub
+8605	56	57	0	Dévoreur putride	Carrion Devourer
+8606	55	56	0	Pourriture vivante	Living Decay
+8607	54	55	0	Vase pourrissante	Rotting Sludge
+9447	53	54	1	Gardien écarlate	Scarlet Warder
+9448	56	57	1	Prétorien écarlate	Scarlet Praetorian
+9449	54	55	1	Clerc écarlate	Scarlet Cleric
+9450	55	56	1	Vicaire écarlate	Scarlet Curate
+9451	55	57	1	Archimage écarlate	Scarlet Archmage
+9452	53	55	1	Enchanteur écarlate	Scarlet Enchanter
+10698	53	54	0	Zombie invoqué	Summoned Zombie
+10817	55	55	4		Duggan Wildhammer	A
+10821	57	57	4	Hed'mush le Pourrissant	Hed'mush the Rotting
+10822	58	58	4	Seigneur de guerre Thresh'jin	Warlord Thresh'jin
+10823	59	59	4		Zul'Brin Warpbranch
+10824	60	60	4	Seigneur forestier Hawspear	Ranger Lord Hawkspear	A
+10825	56	56	4	Gish l'Immobile	Gish the Unmoving
+10826	57	57	4	Seigneur Sombrefaux	Lord Darkscythe
+10827	56	56	4	Nécrorateur Selendre	Deathspeaker Selendre
+10828	59	59	2	Grand général Abbendis	High General Abbendis
+10946	60	60	1	Horgus le Ravageur	Horgus the Ravager
+10996	58	59	1	Héros déchu	Fallen Hero
+11288	57	57	0	Traître spectral	Spectral Betrayer
+11290	52	54	0	Zombie Mossflayer	Mossflayer Zombie
+11291	53	55	0	Non-vivant Mossflayer	Unliving Mossflayer
+11620	57	57	0	Maraudeur spectral	Spectral Marauder
+11621	57	57	0	Cadavre spectral	Spectral Corpse
+11885	58	59	1	Chien chancreux	Blighthound	H
+11886	57	57	0		Mercutio Filthgorger
+11887	54	55	0	Pilleur de crypte	Crypt Robber
+11896	61	61	1	Creusechair	Borelgore
+11897	60	60	1	Crépuscaile	Duskwing
+11898	60	60	1	Grand maître Valdelmar	Crusader Lord Valdelmar
+12248	60	60	0	Infiltrateur Hameya	Infiltrator Hameya
+12250	54	55	0	Zaeldarr le Banni	Zaeldarr the Outcast
+12261	57	58	0	Mossflayer infecté	Infected Mossflayer
+12262	58	58	1	Protecteur de la ziggourat	Ziggurat Protector
+12263	58	58	1	Protecteur de la Boucherie	Slaughterhouse Protector
+12322	60	60	0	Protecteur Quel'Lithien	Quel'Lithien Protector	A
+12337	60	60	1	Messager cramoisi	Crimson Courier
+12339	61	61	1		Demetria
+13118	57	58	1	Garde du corps cramoisi	Crimson Bodyguard
+13279	54	57	0	Vague discordante	Discordant Surge
+14564	59	60	0	Esprit de Val-Terreur	Terrordale Spirit
+15162	61	61	1	Inquisiteur écarlate	Scarlet Inquisitor
+15712	60	60	0	Tas de terre	Dirt Mound
+16117	60	60	0	Pourceau pestiféré	Plagued Swine
+16184	60	60	1	Surveillant nérubien	Nerubian Overseer
+]]
 -- Hillsbrad Foothills
-Z[1424] = function() return {
-[232]=C(23,23,0,"Ray le fermier","Farmer Ray","A"),
-[2244]=C(21,22,0,"Mage de l'ombre du Syndicat","Syndicate Shadow Mage"),
-[2248]=C(30,31,0,"Yéti des grottes","Cave Yeti"),
-[2249]=C(31,32,0,"Yéti féroce","Ferocious Yeti"),
-[2260]=C(21,22,0,"Voleur du Syndicat","Syndicate Rogue"),
-[2261]=C(20,21,0,"Sentinelle du Syndicat","Syndicate Watchman"),
-[2266]=C(23,24,0,"Fermier d'Hillsbrad","Hillsbrad Farmer","A"),
-[2267]=C(24,25,0,"Paysan d'Hillsbrad","Hillsbrad Peasant","A"),
-[2268]=C(25,26,0,"Fantassin d'Hillsbrad","Hillsbrad Footman","A"),
-[2269]=C(26,27,0,"Mineur d'Hillsbrad","Hillsbrad Miner","A"),
-[2270]=C(27,28,0,"Sentinelle d'Hillsbrad","Hillsbrad Sentry","A"),
-[2275]=C(24,24,0,"Stanley enragé","Enraged Stanley"),
-[2304]=C(32,32,1,"Capitaine Ironhill","Captain Ironhill","A"),
-[2305]=C(30,30,0,"Contremaître Bonds","Foreman Bonds","A"),
-[2335]=C(30,30,0,"Magistrat Burnside","Magistrate Burnside","A"),
-[2344]=C(28,29,1,"Montagnard de Dun Garok","Dun Garok Mountaineer","A"),
-[2345]=C(29,30,1,"Fusilier de Dun Garok","Dun Garok Rifleman","A"),
-[2346]=C(29,30,1,"Prêtre de Dun Garok","Dun Garok Priest","A"),
-[2347]=C(40,40,0,"Gryphon sauvage","Wild Gryphon"),
-[2348]=C(26,27,0,"Ancienne Rampemousse","Elder Moss Creeper"),
-[2349]=C(24,25,0,"Rampemousse géante","Giant Moss Creeper"),
-[2350]=C(20,21,0,"Rampemousse forestière","Forest Moss Creeper"),
-[2351]=C(21,22,0,"Ours gris","Gray Bear"),
-[2354]=C(22,23,0,"Ours gris vicieux","Vicious Gray Bear"),
-[2356]=C(25,26,0,"Vieil ours gris","Elder Gray Bear"),
-[2360]=C(22,23,0,"Ouvrier agricole d'Hillsbrad","Hillsbrad Farmhand","A"),
-[2368]=C(28,29,0,"Rôdeur du rivage Daguéchine","Daggerspine Shorestalker"),
-[2369]=C(30,31,0,"Chasseur du rivage Daguéchine","Daggerspine Shorehunter"),
-[2370]=C(29,30,0,"Hurleuse Daguéchine","Daggerspine Screamer"),
-[2371]=C(31,32,0,"Sirène Daguéchine","Daggerspine Siren"),
-[2372]=C(26,27,0,"Gnoll Fangemufle","Mudsnout Gnoll"),
-[2373]=C(27,28,0,"Chaman Fangemufle","Mudsnout Shaman"),
-[2374]=C(28,29,0,"Marche-boue Aileron déchiré","Torn Fin Muckdweller"),
-[2375]=C(29,30,0,"Cours-la-côte Aileron déchiré","Torn Fin Coastrunner"),
-[2376]=C(30,31,0,"Oracle Aileron déchiré","Torn Fin Oracle"),
-[2377]=C(31,32,0,"Chasse-marée Aileron déchiré","Torn Fin Tidehunter"),
-[2384]=C(23,24,0,"Lion des montagnes affamé","Starving Mountain Lion"),
-[2385]=C(27,28,0,"Lion des montagnes farouche","Feral Mountain Lion"),
-[2386]=C(55,55,0,"Garde de Southshore","Southshore Guard","A"),
-[2387]=C(25,26,0,"Conseiller d'Hillsbrad","Hillsbrad Councilman","A"),
-[2392]=C(32,32,0,"Delia Verana","Delia Verana","H"),
-[2395]=C(32,32,0,"Vinna Wayne","Vinna Wayne","H"),
-[2396]=C(32,32,0,"Hans Zandin","Hans Zandin","H"),
-[2398]=C(32,32,0,"Tara Coldgaze","Tara Coldgaze","H"),
-[2400]=C(32,32,0,"Craig Hewitt","Craig Hewitt","H"),
-[2403]=C(24,24,0,"Getz le fermier","Farmer Getz","A"),
-[2406]=C(32,33,0,"Lion des montagnes","Mountain Lion"),
-[2408]=C(30,31,0,"Gueule d'acier","Snapjaw"),
-[2427]=C(24,24,0,"Geôlier Eston","Jailor Eston"),
-[2428]=C(24,24,0,"Geôlier Marlgen","Jailor Marlgen"),
-[2436]=C(25,25,0,"Kent le fermier","Farmer Kent","A"),
-[2448]=C(26,26,0,"Commis Horrace Whitesteed","Clerk Horrace Whitesteed","A"),
-[2449]=C(25,25,0,"Citoyen Wilkes","Citizen Wilkes","A"),
-[2450]=C(29,29,0,"Mineur Hackett","Miner Hackett","A"),
-[2451]=C(25,25,0,"Kalaba la fermière","Farmer Kalaba","A"),
-[2473]=C(40,40,0,"Granistad","Granistad","A"),
-[2474]=C(40,40,0,"Kurdros","Kurdros","A"),
-[2503]=C(27,28,0,"Contremaître d'Hillsbrad","Hillsbrad Foreman","A"),
-[5185]=C(31,31,1,"Squale-marteau","Hammerhead Shark"),
-[7068]=C(57,58,1,"Acolyte condamné","Condemned Acolyte"),
-[7069]=C(58,59,1,"Moine condamné","Condemned Monk"),
-[7070]=C(59,60,1,"Clerc condamné","Condemned Cleric"),
-[7071]=C(57,58,1,"Paladin maudit","Cursed Paladin"),
-[7072]=C(57,58,1,"Justicier maudit","Cursed Justicar"),
-[7075]=C(58,59,1,"Mage frémissant","Writhing Mage"),
-[7360]=C(28,30,0,"Soldat de Dun Garok","Dun Garok Soldier","A"),
-[14275]=C(28,28,2,"Tamra Stormpike","Tamra Stormpike","A"),
-[14276]=C(30,30,4,"Scargil","Scargil"),
-[14277]=C(33,33,4,"Dame Zephris","Lady Zephris"),
-[14278]=C(28,28,4,"Ro'Bark","Ro'Bark"),
-[14279]=C(24,24,4,"Insinueuse","Creepthess"),
-[14280]=C(27,27,4,"Gros Samras","Big Samras"),
-[32454]=C(28,28,0,"Dalaran Citizen","Dalaran Citizen","A"),
-[165189]=C(7,30,0,"Cat","Cat"),
-[185317]=C(20,30,0,"Incubus","Incubus"),
-[211951]=C(25,25,0,"Koartul","Koartul"),
-[214529]=C(50,50,0,"Brave Stonetorch","Brave Stonetorch","H"),
-[214530]=C(25,25,0,"Ardelle Dralta","Ardelle Dralta"),
-[246848]=C(55,55,0,"Kirin Tor Guard","Kirin Tor Guard","A"),
-[247264]=C(27,28,0,"Emissary Jacques","Emissary Jacques"),
-[251493]=C(55,55,1,"Captain McManus","Captain McManus"),
-[256359]=C(28,28,0,"Dalaran Wizard","Dalaran Wizard","A"),
-[261932]=C(24,24,0,"Gorgrash","Gorgrash"),
-[264850]=C(20,30,0,"Hawk","Hawk"),
-[266216]=C(24,24,0,"Lord Tomas","Lord Tomas"),
-[270438]=C(30,30,0,"Deathstalker Masoj","Deathstalker Masoj"),
-[274942]=C(40,40,0,"Bob McNaught","Bob McNaught"),
-[275089]=C(55,55,0,"Tarren Mill Elite","Tarren Mill Elite"),
-[275164]=C(30,55,1,"Arcane Sentry","Arcane Sentry","A"),
-[276316]=C(31,31,0,"Raul Sweete","Raul Sweete"),
-} end
+Z[1424] = [[
+232	23	23	0	Ray le fermier	Farmer Ray	A
+2244	21	22	0	Mage de l'ombre du Syndicat	Syndicate Shadow Mage
+2248	30	31	0	Yéti des grottes	Cave Yeti
+2249	31	32	0	Yéti féroce	Ferocious Yeti
+2260	21	22	0	Voleur du Syndicat	Syndicate Rogue
+2261	20	21	0	Sentinelle du Syndicat	Syndicate Watchman
+2266	23	24	0	Fermier d'Hillsbrad	Hillsbrad Farmer	A
+2267	24	25	0	Paysan d'Hillsbrad	Hillsbrad Peasant	A
+2268	25	26	0	Fantassin d'Hillsbrad	Hillsbrad Footman	A
+2269	26	27	0	Mineur d'Hillsbrad	Hillsbrad Miner	A
+2270	27	28	0	Sentinelle d'Hillsbrad	Hillsbrad Sentry	A
+2275	24	24	0	Stanley enragé	Enraged Stanley
+2304	32	32	1	Capitaine Ironhill	Captain Ironhill	A
+2305	30	30	0	Contremaître Bonds	Foreman Bonds	A
+2335	30	30	0	Magistrat Burnside	Magistrate Burnside	A
+2344	28	29	1	Montagnard de Dun Garok	Dun Garok Mountaineer	A
+2345	29	30	1	Fusilier de Dun Garok	Dun Garok Rifleman	A
+2346	29	30	1	Prêtre de Dun Garok	Dun Garok Priest	A
+2347	40	40	0	Gryphon sauvage	Wild Gryphon
+2348	26	27	0	Ancienne Rampemousse	Elder Moss Creeper
+2349	24	25	0	Rampemousse géante	Giant Moss Creeper
+2350	20	21	0	Rampemousse forestière	Forest Moss Creeper
+2351	21	22	0	Ours gris	Gray Bear
+2354	22	23	0	Ours gris vicieux	Vicious Gray Bear
+2356	25	26	0	Vieil ours gris	Elder Gray Bear
+2360	22	23	0	Ouvrier agricole d'Hillsbrad	Hillsbrad Farmhand	A
+2368	28	29	0	Rôdeur du rivage Daguéchine	Daggerspine Shorestalker
+2369	30	31	0	Chasseur du rivage Daguéchine	Daggerspine Shorehunter
+2370	29	30	0	Hurleuse Daguéchine	Daggerspine Screamer
+2371	31	32	0	Sirène Daguéchine	Daggerspine Siren
+2372	26	27	0	Gnoll Fangemufle	Mudsnout Gnoll
+2373	27	28	0	Chaman Fangemufle	Mudsnout Shaman
+2374	28	29	0	Marche-boue Aileron déchiré	Torn Fin Muckdweller
+2375	29	30	0	Cours-la-côte Aileron déchiré	Torn Fin Coastrunner
+2376	30	31	0	Oracle Aileron déchiré	Torn Fin Oracle
+2377	31	32	0	Chasse-marée Aileron déchiré	Torn Fin Tidehunter
+2384	23	24	0	Lion des montagnes affamé	Starving Mountain Lion
+2385	27	28	0	Lion des montagnes farouche	Feral Mountain Lion
+2386	55	55	0	Garde de Southshore	Southshore Guard	A
+2387	25	26	0	Conseiller d'Hillsbrad	Hillsbrad Councilman	A
+2392	32	32	0		Delia Verana	H
+2395	32	32	0		Vinna Wayne	H
+2396	32	32	0		Hans Zandin	H
+2398	32	32	0		Tara Coldgaze	H
+2400	32	32	0		Craig Hewitt	H
+2403	24	24	0	Getz le fermier	Farmer Getz	A
+2406	32	33	0	Lion des montagnes	Mountain Lion
+2408	30	31	0	Gueule d'acier	Snapjaw
+2427	24	24	0	Geôlier Eston	Jailor Eston
+2428	24	24	0	Geôlier Marlgen	Jailor Marlgen
+2436	25	25	0	Kent le fermier	Farmer Kent	A
+2448	26	26	0	Commis Horrace Whitesteed	Clerk Horrace Whitesteed	A
+2449	25	25	0	Citoyen Wilkes	Citizen Wilkes	A
+2450	29	29	0	Mineur Hackett	Miner Hackett	A
+2451	25	25	0	Kalaba la fermière	Farmer Kalaba	A
+2473	40	40	0		Granistad	A
+2474	40	40	0		Kurdros	A
+2503	27	28	0	Contremaître d'Hillsbrad	Hillsbrad Foreman	A
+5185	31	31	1	Squale-marteau	Hammerhead Shark
+7068	57	58	1	Acolyte condamné	Condemned Acolyte
+7069	58	59	1	Moine condamné	Condemned Monk
+7070	59	60	1	Clerc condamné	Condemned Cleric
+7071	57	58	1	Paladin maudit	Cursed Paladin
+7072	57	58	1	Justicier maudit	Cursed Justicar
+7075	58	59	1	Mage frémissant	Writhing Mage
+7360	28	30	0	Soldat de Dun Garok	Dun Garok Soldier	A
+14275	28	28	2		Tamra Stormpike	A
+14276	30	30	4		Scargil
+14277	33	33	4	Dame Zephris	Lady Zephris
+14278	28	28	4		Ro'Bark
+14279	24	24	4	Insinueuse	Creepthess
+14280	27	27	4	Gros Samras	Big Samras
+32454	28	28	0		Dalaran Citizen	A
+165189	7	30	0		Cat
+185317	20	30	0		Incubus
+211951	25	25	0		Koartul
+214529	50	50	0		Brave Stonetorch	H
+214530	25	25	0		Ardelle Dralta
+246848	55	55	0		Kirin Tor Guard	A
+247264	27	28	0		Emissary Jacques
+251493	55	55	1		Captain McManus
+256359	28	28	0		Dalaran Wizard	A
+261932	24	24	0		Gorgrash
+264850	20	30	0		Hawk
+266216	24	24	0		Lord Tomas
+270438	30	30	0		Deathstalker Masoj
+274942	40	40	0		Bob McNaught
+275089	55	55	0		Tarren Mill Elite
+275164	30	55	1		Arcane Sentry	A
+276316	31	31	0		Raul Sweete
+]]
 -- The Hinterlands
-Z[1425] = function() return {
-[2505]=C(49,50,0,"Gueule d'acier des mers","Saltwater Snapjaw"),
-[2639]=C(45,46,0,"Lanceur de haches Vilebranch","Vilebranch Axe Thrower"),
-[2640]=C(46,47,0,"Sorcier-docteur Vilebranch","Vilebranch Witch Doctor"),
-[2641]=C(46,47,1,"Chasseur de têtes Vilebranch","Vilebranch Headhunter"),
-[2642]=C(47,48,1,"Exhalombre Vilebranch","Vilebranch Shadowcaster"),
-[2643]=C(47,48,1,"Berserker Vilebranch","Vilebranch Berserker"),
-[2644]=C(48,49,1,"Ecorcheur Vilebranch","Vilebranch Hideskinner"),
-[2645]=C(48,49,1,"Chasseur des ombres Vilebranch","Vilebranch Shadow Hunter"),
-[2646]=C(49,50,1,"Sanguinaire Vilebranch","Vilebranch Blood Drinker"),
-[2647]=C(49,50,1,"Mangeur d’âmes Vilebranch","Vilebranch Soul Eater"),
-[2648]=C(50,51,1,"Garde Aman'zasi Vilebranch","Vilebranch Aman'zasi Guard"),
-[2649]=C(40,41,0,"Scalpeur Witherbark","Witherbark Scalper"),
-[2650]=C(41,42,0,"Zélote Witherbark","Witherbark Zealot"),
-[2651]=C(42,43,0,"Ecorcheur Witherbark","Witherbark Hideskinner"),
-[2652]=C(43,43,0,"Venimeux Witherbark","Witherbark Venomblood"),
-[2653]=C(44,45,0,"Sadique Witherbark","Witherbark Sadist"),
-[2654]=C(45,46,0,"Implorateur Witherbark","Witherbark Caller"),
-[2655]=C(46,47,0,"Limace verte","Green Sludge"),
-[2656]=C(47,48,0,"Limon de jade","Jade Ooze"),
-[2657]=C(40,42,0,"Bec-rasoir apprivoisé","Trained Razorbeak","A"),
-[2658]=C(43,45,0,"Gryphon Bec-rasoir","Razorbeak Gryphon","A"),
-[2659]=C(46,48,0,"Seigneur du ciel Bec-rasoir","Razorbeak Skylord","A"),
-[2680]=C(46,47,0,"Louveteau Vilebranch","Vilebranch Wolf Pup"),
-[2681]=C(50,51,1,"Loup d'attaque Vilebranch","Vilebranch Raiding Wolf"),
-[2686]=C(44,45,0,"Garde du clan Witherbark","Witherbark Broodguard"),
-[2691]=C(43,44,0,"Estafette du Haut-val","Highvale Outrunner","A"),
-[2692]=C(44,45,0,"Eclaireur du Haut-val","Highvale Scout","A"),
-[2693]=C(45,46,0,"Tireur d'élite du Haut-val","Highvale Marksman","A"),
-[2694]=C(46,47,0,"Forestier du Haut-val","Highvale Ranger","A"),
-[2923]=C(41,42,0,"Crins-d'argent galeux","Mangy Silvermane"),
-[2924]=C(43,44,0,"Loup Crins-d'argent","Silvermane Wolf"),
-[2925]=C(45,46,0,"Hurleur Crins-d'argent","Silvermane Howler"),
-[2926]=C(47,48,0,"Traqueur Crins-d'argent","Silvermane Stalker"),
-[2927]=C(42,43,0,"Chouettard vicieux","Vicious Owlbeast"),
-[2928]=C(44,45,0,"Chouettard primitif","Primitive Owlbeast"),
-[2929]=C(46,47,0,"Chouettard sauvage","Savage Owlbeast"),
-[4465]=C(45,46,1,"Guerrier Vilebranch","Vilebranch Warrior"),
-[4466]=C(46,47,0,"Scalpeur Vilebranch","Vilebranch Scalper"),
-[4467]=C(46,47,0,"Devin Vilebranch","Vilebranch Soothsayer"),
-[4468]=C(47,48,1,"Limace de jade","Jade Sludge"),
-[4469]=C(46,47,1,"Limon émeraude","Emerald Ooze"),
-[5718]=C(62,62,1,"Rothos","Rothos"),
-[7767]=C(45,46,0,"Chasseur corrompu Witherbark","Witherbark Felhunter"),
-[7768]=C(25,25,0,"Sanglant Witherbark","Witherbark Bloodling"),
-[7808]=C(46,46,0,"Chouettard maraudeur","Marauding Owlbeast"),
-[7809]=C(47,47,0,"Embusqué Vilebranch","Vilebranch Ambusher"),
-[7977]=C(48,48,1,"Gammerita","Gammerita"),
-[7995]=C(51,51,1,"Vile prêtresse Maléficia","Vile Priestess Hexx"),
-[7996]=C(50,50,1,"Qiaga la Gardienne","Qiaga the Keeper"),
-[8023]=C(5,5,0,"Bec-tranchant","Sharpbeak","A"),
-[8210]=C(44,44,4,"Trancheserre","Razortalon"),
-[8211]=C(42,42,4,"Vieux Saute-falaise","Old Cliff Jumper"),
-[8212]=C(49,49,4,"Le Jonc","The Reak"),
-[8213]=C(51,51,4,"Dos-de-fer","Ironback"),
-[8215]=C(50,50,2,"Grimungous","Grimungous"),
-[8216]=C(48,48,4,"Retherokk le Berserker","Retherokk the Berserker"),
-[8217]=C(52,52,2,"Mith'rethis l'Enchanteur","Mith'rethis the Enchanter"),
-[8218]=C(45,45,4,"Flétricoeur le Traqueur","Witherheart the Stalker"),
-[8219]=C(43,43,4,"Zul'arek Volaillaîne","Zul'arek Hatefowler"),
-[8636]=C(50,50,1,"Morta'gya la Gardienne","Morta'gya the Keeper"),
-[10802]=C(51,51,1,"Hitah'ya la Gardienne","Hitah'ya the Keeper"),
-[12124]=C(52,52,1,"Grand requin","Great Shark"),
-[12477]=C(62,62,1,"Gardien de Verdantis","Verdantine Boughguard"),
-[12478]=C(61,61,1,"Oracle de Verdantis","Verdantine Oracle"),
-[12479]=C(60,60,1,"Gardien sylvestre de Verdantis","Verdantine Tree Warder"),
-[12496]=C(62,62,1,"Cherche-rêve","Dreamtracker"),
-[14730]=C(55,55,0,"Gardien Revantusk","Revantusk Watcher","H"),
-[14734]=C(50,50,0,"Tambour Revantusk","Revantusk Drummer","H"),
-[14748]=C(49,49,0,"Kidnapper Vilebranch","Vilebranch Kidnapper"),
-[14887]=C(63,63,3,"Ysondre","Ysondre"),
-[14888]=C(63,63,3,"Léthon","Lethon"),
-[14889]=C(63,63,3,"Emeriss","Emeriss"),
-[14890]=C(63,63,3,"Taerar","Taerar"),
-[221315]=C(51,51,0,"Unstable Wisp","Unstable Wisp"),
-[221324]=C(51,51,0,"Grief-Crazed Gryphon","Grief-Crazed Gryphon"),
-[221325]=C(51,51,0,"Wyrmkin Starhunter","Wyrmkin Starhunter"),
-[221326]=C(51,51,0,"Wrath Whelp","Wrath Whelp"),
-[221328]=C(51,51,0,"Dreamwater Vicejaw","Dreamwater Vicejaw","H"),
-[221329]=C(51,51,0,"Dreamhunter Hydra","Dreamhunter Hydra"),
-[221330]=C(51,51,0,"Fallen Moonkin","Fallen Moonkin"),
-[221331]=C(9999,9999,0,"Florius","Florius"),
-[221333]=C(9999,9999,0,"Doomkin","Doomkin"),
-[221334]=C(9999,9999,0,"Ghamoo-Raja","Ghamoo-Raja"),
-[221356]=C(50,50,0,"Doomspark Starsworn","Doomspark Starsworn"),
-[221357]=C(50,50,0,"Stardust Imp","Stardust Imp"),
-[221360]=C(50,50,0,"Starkiller Hound","Starkiller Hound"),
-[222232]=C(46,47,0,"Corrupt Moderate Manifestation of Air","Corrupt Moderate Manifestation of Air","H"),
-[222407]=C(47,47,0,"Enraged Leywalker","Enraged Leywalker"),
-[222978]=C(50,50,0,"Green Sludge","Green Sludge"),
-[223591]=C(1,1,0,"Echo of a Lost Soul","Echo of a Lost Soul"),
-} end
+Z[1425] = [[
+2505	49	50	0	Gueule d'acier des mers	Saltwater Snapjaw
+2639	45	46	0	Lanceur de haches Vilebranch	Vilebranch Axe Thrower
+2640	46	47	0	Sorcier-docteur Vilebranch	Vilebranch Witch Doctor
+2641	46	47	1	Chasseur de têtes Vilebranch	Vilebranch Headhunter
+2642	47	48	1	Exhalombre Vilebranch	Vilebranch Shadowcaster
+2643	47	48	1	Berserker Vilebranch	Vilebranch Berserker
+2644	48	49	1	Ecorcheur Vilebranch	Vilebranch Hideskinner
+2645	48	49	1	Chasseur des ombres Vilebranch	Vilebranch Shadow Hunter
+2646	49	50	1	Sanguinaire Vilebranch	Vilebranch Blood Drinker
+2647	49	50	1	Mangeur d’âmes Vilebranch	Vilebranch Soul Eater
+2648	50	51	1	Garde Aman'zasi Vilebranch	Vilebranch Aman'zasi Guard
+2649	40	41	0	Scalpeur Witherbark	Witherbark Scalper
+2650	41	42	0	Zélote Witherbark	Witherbark Zealot
+2651	42	43	0	Ecorcheur Witherbark	Witherbark Hideskinner
+2652	43	43	0	Venimeux Witherbark	Witherbark Venomblood
+2653	44	45	0	Sadique Witherbark	Witherbark Sadist
+2654	45	46	0	Implorateur Witherbark	Witherbark Caller
+2655	46	47	0	Limace verte	Green Sludge
+2656	47	48	0	Limon de jade	Jade Ooze
+2657	40	42	0	Bec-rasoir apprivoisé	Trained Razorbeak	A
+2658	43	45	0	Gryphon Bec-rasoir	Razorbeak Gryphon	A
+2659	46	48	0	Seigneur du ciel Bec-rasoir	Razorbeak Skylord	A
+2680	46	47	0	Louveteau Vilebranch	Vilebranch Wolf Pup
+2681	50	51	1	Loup d'attaque Vilebranch	Vilebranch Raiding Wolf
+2686	44	45	0	Garde du clan Witherbark	Witherbark Broodguard
+2691	43	44	0	Estafette du Haut-val	Highvale Outrunner	A
+2692	44	45	0	Eclaireur du Haut-val	Highvale Scout	A
+2693	45	46	0	Tireur d'élite du Haut-val	Highvale Marksman	A
+2694	46	47	0	Forestier du Haut-val	Highvale Ranger	A
+2923	41	42	0	Crins-d'argent galeux	Mangy Silvermane
+2924	43	44	0	Loup Crins-d'argent	Silvermane Wolf
+2925	45	46	0	Hurleur Crins-d'argent	Silvermane Howler
+2926	47	48	0	Traqueur Crins-d'argent	Silvermane Stalker
+2927	42	43	0	Chouettard vicieux	Vicious Owlbeast
+2928	44	45	0	Chouettard primitif	Primitive Owlbeast
+2929	46	47	0	Chouettard sauvage	Savage Owlbeast
+4465	45	46	1	Guerrier Vilebranch	Vilebranch Warrior
+4466	46	47	0	Scalpeur Vilebranch	Vilebranch Scalper
+4467	46	47	0	Devin Vilebranch	Vilebranch Soothsayer
+4468	47	48	1	Limace de jade	Jade Sludge
+4469	46	47	1	Limon émeraude	Emerald Ooze
+5718	62	62	1		Rothos
+7767	45	46	0	Chasseur corrompu Witherbark	Witherbark Felhunter
+7768	25	25	0	Sanglant Witherbark	Witherbark Bloodling
+7808	46	46	0	Chouettard maraudeur	Marauding Owlbeast
+7809	47	47	0	Embusqué Vilebranch	Vilebranch Ambusher
+7977	48	48	1		Gammerita
+7995	51	51	1	Vile prêtresse Maléficia	Vile Priestess Hexx
+7996	50	50	1	Qiaga la Gardienne	Qiaga the Keeper
+8023	5	5	0	Bec-tranchant	Sharpbeak	A
+8210	44	44	4	Trancheserre	Razortalon
+8211	42	42	4	Vieux Saute-falaise	Old Cliff Jumper
+8212	49	49	4	Le Jonc	The Reak
+8213	51	51	4	Dos-de-fer	Ironback
+8215	50	50	2		Grimungous
+8216	48	48	4	Retherokk le Berserker	Retherokk the Berserker
+8217	52	52	2	Mith'rethis l'Enchanteur	Mith'rethis the Enchanter
+8218	45	45	4	Flétricoeur le Traqueur	Witherheart the Stalker
+8219	43	43	4	Zul'arek Volaillaîne	Zul'arek Hatefowler
+8636	50	50	1	Morta'gya la Gardienne	Morta'gya the Keeper
+10802	51	51	1	Hitah'ya la Gardienne	Hitah'ya the Keeper
+12124	52	52	1	Grand requin	Great Shark
+12477	62	62	1	Gardien de Verdantis	Verdantine Boughguard
+12478	61	61	1	Oracle de Verdantis	Verdantine Oracle
+12479	60	60	1	Gardien sylvestre de Verdantis	Verdantine Tree Warder
+12496	62	62	1	Cherche-rêve	Dreamtracker
+14730	55	55	0	Gardien Revantusk	Revantusk Watcher	H
+14734	50	50	0	Tambour Revantusk	Revantusk Drummer	H
+14748	49	49	0	Kidnapper Vilebranch	Vilebranch Kidnapper
+14887	63	63	3		Ysondre
+14888	63	63	3	Léthon	Lethon
+14889	63	63	3		Emeriss
+14890	63	63	3		Taerar
+221315	51	51	0		Unstable Wisp
+221324	51	51	0		Grief-Crazed Gryphon
+221325	51	51	0		Wyrmkin Starhunter
+221326	51	51	0		Wrath Whelp
+221328	51	51	0		Dreamwater Vicejaw	H
+221329	51	51	0		Dreamhunter Hydra
+221330	51	51	0		Fallen Moonkin
+221331	9999	9999	0		Florius
+221333	9999	9999	0		Doomkin
+221334	9999	9999	0		Ghamoo-Raja
+221356	50	50	0		Doomspark Starsworn
+221357	50	50	0		Stardust Imp
+221360	50	50	0		Starkiller Hound
+222232	46	47	0		Corrupt Moderate Manifestation of Air	H
+222407	47	47	0		Enraged Leywalker
+222978	50	50	0		Green Sludge
+223591	1	1	0		Echo of a Lost Soul
+]]
 -- Dun Morogh
-Z[1426] = function() return {
-[704]=C(2,2,0,"Loup des bois décharné","Ragged Timber Wolf"),
-[705]=C(1,1,0,"Jeune loup décharné","Ragged Young Wolf"),
-[706]=C(3,4,0,"Jeune troll Frostmane","Frostmane Troll Whelp"),
-[707]=C(1,2,0,"Trogg Mâcheroc","Rockjaw Trogg"),
-[708]=C(3,3,0,"Petit sanglier des rochers","Small Crag Boar"),
-[724]=C(2,2,0,"Trogg Mâcheroc forcené","Burly Rockjaw Trogg"),
-[808]=C(5,5,0,"Grik'nir le Froid","Grik'nir the Cold"),
-[853]=C(55,55,0,"Montagnard des Frigères","Coldridge Mountaineer","A"),
-[946]=C(3,4,0,"Novice Frostmane","Frostmane Novice"),
-[1115]=C(8,9,0,"Brise-crâne Mâcheroc","Rockjaw Skullthumper"),
-[1116]=C(9,10,0,"Embusqué Mâcheroc","Rockjaw Ambusher"),
-[1117]=C(9,10,0,"Briseur d’os Mâcheroc","Rockjaw Bonesnapper"),
-[1118]=C(11,12,0,"Brise-dos Mâcheroc","Rockjaw Backbreaker"),
-[1119]=C(12,12,4,"Martelléchine","Hammerspine"),
-[1120]=C(7,8,0,"Troll Frostmane","Frostmane Troll"),
-[1121]=C(8,9,0,"Marche-neige Frostmane","Frostmane Snowstrider"),
-[1122]=C(9,10,0,"Ecorcheur Frostmane","Frostmane Hideskinner"),
-[1123]=C(8,9,0,"Chasseur de têtes Frostmane","Frostmane Headhunter"),
-[1124]=C(9,10,0,"Exhalombre Frostmane","Frostmane Shadowcaster"),
-[1125]=C(5,6,0,"Sanglier des rochers","Crag Boar"),
-[1126]=C(6,7,0,"Grand sanglier des rochers","Large Crag Boar"),
-[1127]=C(7,8,0,"Ancien sanglier des rochers","Elder Crag Boar"),
-[1128]=C(5,6,0,"Jeune ours noir","Young Black Bear"),
-[1129]=C(6,6,0,"Ours noir","Black Bear"),
-[1130]=C(12,12,4,"Bjarn","Bjarn"),
-[1131]=C(7,8,0,"Loup blanc","Winter Wolf"),
-[1132]=C(10,10,4,"Grumeux","Timber"),
-[1133]=C(8,9,0,"Loup blanc affamé","Starving Winter Wolf"),
-[1134]=C(5,6,0,"Jeune wendigo","Young Wendigo"),
-[1135]=C(6,7,0,"Wendigo","Wendigo"),
-[1137]=C(9,9,4,"Edan le Hurleur","Edan the Howler"),
-[1138]=C(6,7,0,"Loup pisteur des neiges","Snow Tracker Wolf"),
-[1196]=C(7,8,0,"Ours Griffeglace","Ice Claw Bear"),
-[1199]=C(5,6,0,"Jeune Léopard des neiges","Juvenile Snow Leopard"),
-[1201]=C(7,8,0,"Léopard des neiges","Snow Leopard"),
-[1211]=C(8,10,0,"Gnome lépreux","Leper Gnome"),
-[1260]=C(11,11,4,"Grand-père Arctikus","Great Father Arctikus"),
-[1271]=C(11,11,1,"Vieux Barbeglace","Old Icebeard"),
-[1354]=C(3,3,0,"Apprenti Soren","Apprentice Soren","A"),
-[1388]=C(11,11,1,"Vagash","Vagash"),
-[1397]=C(8,9,0,"Prophète Frostmane","Frostmane Seer"),
-[1689]=C(9,10,0,"Sanglier des rochers balafré","Scarred Crag Boar"),
-[1718]=C(3,4,0,"Ecumeur Mâcheroc","Rockjaw Raider"),
-[1961]=C(11,11,0,"Griffe galeuse","Mangeclaw"),
-[6113]=C(11,11,0,"Vejrek","Vejrek"),
-[6123]=C(9,11,0,"Espion Sombrefer","Dark Iron Spy"),
-[6124]=C(11,11,0,"Capitaine Beld","Captain Beld"),
-[6208]=C(25,26,1,"Envahisseur des Basses-cavernes","Caverndeep Invader"),
-[6209]=C(26,26,1,"Pillard des Basses-Cavernes","Caverndeep Looter"),
-[6210]=C(24,25,1,"Pilleur des Basses-cavernes","Caverndeep Pillager"),
-[6213]=C(24,26,1,"Envahisseur irradié","Irradiated Invader"),
-[6221]=C(24,25,0,"Lépreux perturbé","Addled Leper"),
-[6231]=C(26,26,1,"Techbot","Techbot"),
-[6391]=C(29,30,1,"Guerrier du Hangar","Holdout Warrior","A"),
-[7732]=C(1,1,0,"Blatte mécanique","Dupe Bug"),
-[7843]=C(24,25,0,"Survivant de Gnomeregan","Gnomeregan Evacuee","A"),
-[8503]=C(11,11,4,"Gibblewilt","Gibblewilt"),
-[10803]=C(9,9,0,"Fusilier Wheeler","Rifleman Wheeler","A"),
-[10804]=C(9,9,0,"Fusilier Middlecamp","Rifleman Middlecamp","A"),
-[10805]=C(6,6,0,"Eclaireur Klemmy","Spotter Klemmy","A"),
-[12047]=C(55,55,0,"Montagnard Stormpike","Stormpike Mountaineer","A"),
-[12427]=C(7,7,0,"Montagnard Dolf","Mountaineer Dolf","A"),
-[13096]=C(56,56,0,"Explorateur de Froidemine","Coldmine Explorer","A"),
-[41938]=C(5,5,0,"Tremor Totem","Tremor Totem","A"),
-[165189]=C(7,30,0,"Cat","Cat"),
-[204070]=C(8,8,0,"Soboz","Soboz"),
-[208180]=C(7,8,0,"Razormane Poacher","Razormane Poacher"),
-[208752]=C(9,9,0,"Frozen Trogg","Frozen Trogg"),
-[208812]=C(8,8,0,"Jorul","Jorul"),
-[216665]=C(40,40,0,"Gnomeregan Evacuee","Gnomeregan Evacuee","A"),
-[260157]=C(9,10,0,"Elder Snow Leopard","Elder Snow Leopard"),
-[264937]=C(10,10,0,"Farsen's Totem","Farsen's Totem","A"),
-[269075]=C(6,6,0,"Snow Leopard Prowler","Snow Leopard Prowler"),
-[271486]=C(6,8,0,"Wendigo Shaman","Wendigo Shaman"),
-[271530]=C(7,8,0,"Elder Wendigo","Elder Wendigo"),
-[271587]=C(9,9,0,"Frosthowl","Frosthowl"),
-[274935]=C(55,55,0,"Ironforge Protector","Ironforge Protector"),
-[276003]=C(7,8,0,"Minor Ice Elemental","Minor Ice Elemental"),
-[276009]=C(8,8,0,"Avala","Avala"),
-[276080]=C(30,30,0,"Mountaineer Coalbeard","Mountaineer Coalbeard","A"),
-[276082]=C(30,30,0,"Mountaineer Sunhammer","Mountaineer Sunhammer","A"),
-[276083]=C(30,30,0,"Mountaineer Stoneanvil","Mountaineer Stoneanvil","A"),
-[276111]=C(10,10,4,"Ghostfang","Ghostfang"),
-[278166]=C(6,6,0,"Mountaineer Cornelius","Mountaineer Cornelius","A"),
-} end
+Z[1426] = [[
+704	2	2	0	Loup des bois décharné	Ragged Timber Wolf
+705	1	1	0	Jeune loup décharné	Ragged Young Wolf
+706	3	4	0	Jeune troll Frostmane	Frostmane Troll Whelp
+707	1	2	0	Trogg Mâcheroc	Rockjaw Trogg
+708	3	3	0	Petit sanglier des rochers	Small Crag Boar
+724	2	2	0	Trogg Mâcheroc forcené	Burly Rockjaw Trogg
+808	5	5	0	Grik'nir le Froid	Grik'nir the Cold
+853	55	55	0	Montagnard des Frigères	Coldridge Mountaineer	A
+946	3	4	0	Novice Frostmane	Frostmane Novice
+1115	8	9	0	Brise-crâne Mâcheroc	Rockjaw Skullthumper
+1116	9	10	0	Embusqué Mâcheroc	Rockjaw Ambusher
+1117	9	10	0	Briseur d’os Mâcheroc	Rockjaw Bonesnapper
+1118	11	12	0	Brise-dos Mâcheroc	Rockjaw Backbreaker
+1119	12	12	4	Martelléchine	Hammerspine
+1120	7	8	0	Troll Frostmane	Frostmane Troll
+1121	8	9	0	Marche-neige Frostmane	Frostmane Snowstrider
+1122	9	10	0	Ecorcheur Frostmane	Frostmane Hideskinner
+1123	8	9	0	Chasseur de têtes Frostmane	Frostmane Headhunter
+1124	9	10	0	Exhalombre Frostmane	Frostmane Shadowcaster
+1125	5	6	0	Sanglier des rochers	Crag Boar
+1126	6	7	0	Grand sanglier des rochers	Large Crag Boar
+1127	7	8	0	Ancien sanglier des rochers	Elder Crag Boar
+1128	5	6	0	Jeune ours noir	Young Black Bear
+1129	6	6	0	Ours noir	Black Bear
+1130	12	12	4		Bjarn
+1131	7	8	0	Loup blanc	Winter Wolf
+1132	10	10	4	Grumeux	Timber
+1133	8	9	0	Loup blanc affamé	Starving Winter Wolf
+1134	5	6	0	Jeune wendigo	Young Wendigo
+1135	6	7	0		Wendigo
+1137	9	9	4	Edan le Hurleur	Edan the Howler
+1138	6	7	0	Loup pisteur des neiges	Snow Tracker Wolf
+1196	7	8	0	Ours Griffeglace	Ice Claw Bear
+1199	5	6	0	Jeune Léopard des neiges	Juvenile Snow Leopard
+1201	7	8	0	Léopard des neiges	Snow Leopard
+1211	8	10	0	Gnome lépreux	Leper Gnome
+1260	11	11	4	Grand-père Arctikus	Great Father Arctikus
+1271	11	11	1	Vieux Barbeglace	Old Icebeard
+1354	3	3	0	Apprenti Soren	Apprentice Soren	A
+1388	11	11	1		Vagash
+1397	8	9	0	Prophète Frostmane	Frostmane Seer
+1689	9	10	0	Sanglier des rochers balafré	Scarred Crag Boar
+1718	3	4	0	Ecumeur Mâcheroc	Rockjaw Raider
+1961	11	11	0	Griffe galeuse	Mangeclaw
+6113	11	11	0		Vejrek
+6123	9	11	0	Espion Sombrefer	Dark Iron Spy
+6124	11	11	0	Capitaine Beld	Captain Beld
+6208	25	26	1	Envahisseur des Basses-cavernes	Caverndeep Invader
+6209	26	26	1	Pillard des Basses-Cavernes	Caverndeep Looter
+6210	24	25	1	Pilleur des Basses-cavernes	Caverndeep Pillager
+6213	24	26	1	Envahisseur irradié	Irradiated Invader
+6221	24	25	0	Lépreux perturbé	Addled Leper
+6231	26	26	1		Techbot
+6391	29	30	1	Guerrier du Hangar	Holdout Warrior	A
+7732	1	1	0	Blatte mécanique	Dupe Bug
+7843	24	25	0	Survivant de Gnomeregan	Gnomeregan Evacuee	A
+8503	11	11	4		Gibblewilt
+10803	9	9	0	Fusilier Wheeler	Rifleman Wheeler	A
+10804	9	9	0	Fusilier Middlecamp	Rifleman Middlecamp	A
+10805	6	6	0	Eclaireur Klemmy	Spotter Klemmy	A
+12047	55	55	0	Montagnard Stormpike	Stormpike Mountaineer	A
+12427	7	7	0	Montagnard Dolf	Mountaineer Dolf	A
+13096	56	56	0	Explorateur de Froidemine	Coldmine Explorer	A
+41938	5	5	0		Tremor Totem	A
+165189	7	30	0		Cat
+204070	8	8	0		Soboz
+208180	7	8	0		Razormane Poacher
+208752	9	9	0		Frozen Trogg
+208812	8	8	0		Jorul
+216665	40	40	0		Gnomeregan Evacuee	A
+260157	9	10	0		Elder Snow Leopard
+264937	10	10	0		Farsen's Totem	A
+269075	6	6	0		Snow Leopard Prowler
+271486	6	8	0		Wendigo Shaman
+271530	7	8	0		Elder Wendigo
+271587	9	9	0		Frosthowl
+274935	55	55	0		Ironforge Protector
+276003	7	8	0		Minor Ice Elemental
+276009	8	8	0		Avala
+276080	30	30	0		Mountaineer Coalbeard	A
+276082	30	30	0		Mountaineer Sunhammer	A
+276083	30	30	0		Mountaineer Stoneanvil	A
+276111	10	10	4		Ghostfang
+278166	6	6	0		Mountaineer Cornelius	A
+]]
 -- Searing Gorge
-Z[1427] = function() return {
-[5833]=C(48,48,1,"Margol l'Enragée","Margol the Rager"),
-[5839]=C(43,44,0,"Géologue Sombrefer","Dark Iron Geologist"),
-[5840]=C(46,47,0,"Forge-vapeur Sombrefer","Dark Iron Steamsmith"),
-[5844]=C(45,46,0,"Esclavagiste Sombrefer","Dark Iron Slaver"),
-[5846]=C(47,48,0,"Sous-chef Sombrefer","Dark Iron Taskmaster"),
-[5850]=C(45,47,0,"Elémentaire flamboyant","Blazing Elemental"),
-[5852]=C(47,49,0,"Elémentaire infernal","Inferno Elemental"),
-[5853]=C(45,47,0,"Golem de guerre","Tempered War Golem"),
-[5854]=C(47,49,0,"Golem de guerre lourd","Heavy War Golem"),
-[5855]=C(46,48,0,"Elémentaire de magma","Magma Elemental"),
-[5856]=C(43,45,0,"Araignée verrière","Glassweb Spider"),
-[5857]=C(45,47,0,"Araignée de lave incendiaire","Searing Lava Spider"),
-[5858]=C(47,49,0,"Grande araignée de lave","Greater Lava Spider"),
-[5860]=C(47,48,1,"Chaman noir du crépuscule","Twilight Dark Shaman"),
-[5861]=C(48,49,1,"Gardefeu du crépuscule","Twilight Fire Guard"),
-[5862]=C(49,50,1,"Géomancien du crépuscule","Twilight Geomancer"),
-[8277]=C(48,48,4,"Rekk'tilac","Rekk'tilac"),
-[8278]=C(50,50,4,"Fumar","Smoldar"),
-[8279]=C(46,46,4,"Golem de guerre défaillant","Faulty War Golem"),
-[8280]=C(47,47,4,"Shleipnarr","Shleipnarr"),
-[8281]=C(49,49,4,"Brûlar","Scald"),
-[8282]=C(51,51,2,"Généralissime Mastrogonde","Highlord Mastrogonde"),
-[8283]=C(50,50,4,"Maître des esclaves Blackheart","Slave Master Blackheart"),
-[8337]=C(42,45,0,"Trancheur Sombrefer","Dark Iron Steelshifter"),
-[8391]=C(52,52,1,"Lathoric le Noir","Lathoric the Black"),
-[8400]=C(52,52,1,"Obsidion","Obsidion"),
-[8419]=C(49,51,1,"Idolâtre du crépuscule","Twilight Idolater"),
-[8442]=C(47,50,0,"Braconnier Ombresoie","Shadowsilk Poacher"),
-[8444]=C(50,50,0,"Maître d'artisanat Kovic","Trade Master Kovic"),
-[8447]=C(48,48,1,"Clonk","Clunk"),
-[8504]=C(48,48,1,"Sentinelle Sombrefer","Dark Iron Sentry"),
-[8566]=C(47,48,0,"Guetteur Sombrefer","Dark Iron Lookout"),
-[8637]=C(44,45,0,"Garde Sombrefer","Dark Iron Watchman"),
-[8837]=C(47,49,0,"Eclabousseur des marais","Muck Splash"),
-[9318]=C(47,49,0,"Incendosaure","Incendosaur"),
-[14621]=C(50,50,1,"Surveillant Maltorius","Overseer Maltorius"),
-[15692]=C(42,45,0,"Kindnappeur Sombrefer","Dark Iron Kidnapper"),
-[222407]=C(47,47,0,"Enraged Leywalker","Enraged Leywalker"),
-[222546]=C(50,50,0,"Iodax the Obliterator","Iodax the Obliterator"),
-[222620]=C(47,48,0,"Corrupt Moderate Manifestation of Fire","Corrupt Moderate Manifestation of Fire","H"),
-[228718]=C(54,55,0,"Firelands Invader","Firelands Invader"),
-[228719]=C(56,57,0,"Firelands Drudge","Firelands Drudge"),
-[228720]=C(59,60,0,"Duke Searbrand","Duke Searbrand"),
-[228723]=C(56,60,0,"Obsidian Reaver","Obsidian Reaver"),
-[228724]=C(55,57,0,"Obsidian Surger","Obsidian Surger"),
-[228726]=C(55,56,0,"Flamebringer Elementalist","Flamebringer Elementalist"),
-[228727]=C(55,56,0,"Flamebringer Defender","Flamebringer Defender"),
-[228747]=C(55,56,0,"Flamebringer Stalker","Flamebringer Stalker"),
-} end
+Z[1427] = [[
+5833	48	48	1	Margol l'Enragée	Margol the Rager
+5839	43	44	0	Géologue Sombrefer	Dark Iron Geologist
+5840	46	47	0	Forge-vapeur Sombrefer	Dark Iron Steamsmith
+5844	45	46	0	Esclavagiste Sombrefer	Dark Iron Slaver
+5846	47	48	0	Sous-chef Sombrefer	Dark Iron Taskmaster
+5850	45	47	0	Elémentaire flamboyant	Blazing Elemental
+5852	47	49	0	Elémentaire infernal	Inferno Elemental
+5853	45	47	0	Golem de guerre	Tempered War Golem
+5854	47	49	0	Golem de guerre lourd	Heavy War Golem
+5855	46	48	0	Elémentaire de magma	Magma Elemental
+5856	43	45	0	Araignée verrière	Glassweb Spider
+5857	45	47	0	Araignée de lave incendiaire	Searing Lava Spider
+5858	47	49	0	Grande araignée de lave	Greater Lava Spider
+5860	47	48	1	Chaman noir du crépuscule	Twilight Dark Shaman
+5861	48	49	1	Gardefeu du crépuscule	Twilight Fire Guard
+5862	49	50	1	Géomancien du crépuscule	Twilight Geomancer
+8277	48	48	4		Rekk'tilac
+8278	50	50	4	Fumar	Smoldar
+8279	46	46	4	Golem de guerre défaillant	Faulty War Golem
+8280	47	47	4		Shleipnarr
+8281	49	49	4	Brûlar	Scald
+8282	51	51	2	Généralissime Mastrogonde	Highlord Mastrogonde
+8283	50	50	4	Maître des esclaves Blackheart	Slave Master Blackheart
+8337	42	45	0	Trancheur Sombrefer	Dark Iron Steelshifter
+8391	52	52	1	Lathoric le Noir	Lathoric the Black
+8400	52	52	1		Obsidion
+8419	49	51	1	Idolâtre du crépuscule	Twilight Idolater
+8442	47	50	0	Braconnier Ombresoie	Shadowsilk Poacher
+8444	50	50	0	Maître d'artisanat Kovic	Trade Master Kovic
+8447	48	48	1	Clonk	Clunk
+8504	48	48	1	Sentinelle Sombrefer	Dark Iron Sentry
+8566	47	48	0	Guetteur Sombrefer	Dark Iron Lookout
+8637	44	45	0	Garde Sombrefer	Dark Iron Watchman
+8837	47	49	0	Eclabousseur des marais	Muck Splash
+9318	47	49	0	Incendosaure	Incendosaur
+14621	50	50	1	Surveillant Maltorius	Overseer Maltorius
+15692	42	45	0	Kindnappeur Sombrefer	Dark Iron Kidnapper
+222407	47	47	0		Enraged Leywalker
+222546	50	50	0		Iodax the Obliterator
+222620	47	48	0		Corrupt Moderate Manifestation of Fire	H
+228718	54	55	0		Firelands Invader
+228719	56	57	0		Firelands Drudge
+228720	59	60	0		Duke Searbrand
+228723	56	60	0		Obsidian Reaver
+228724	55	57	0		Obsidian Surger
+228726	55	56	0		Flamebringer Elementalist
+228727	55	56	0		Flamebringer Defender
+228747	55	56	0		Flamebringer Stalker
+]]
 -- Burning Steppes
-Z[1428] = function() return {
-[7025]=C(55,56,0,"Soldat Blackrock","Blackrock Soldier"),
-[7026]=C(55,56,0,"Sorcier Blackrock","Blackrock Sorcerer"),
-[7027]=C(56,57,0,"Pourfendeur Blackrock","Blackrock Slayer"),
-[7028]=C(56,57,0,"Démoniste Blackrock","Blackrock Warlock"),
-[7029]=C(57,58,0,"Maître de guerre Blackrock","Blackrock Battlemaster"),
-[7031]=C(51,53,0,"Elémentaire d'obsidienne","Obsidian Elemental"),
-[7032]=C(55,57,0,"Grand élémentaire d'obsidienne","Greater Obsidian Elemental"),
-[7033]=C(50,51,0,"Ogre Brûlentrailles","Firegut Ogre"),
-[7034]=C(51,52,0,"Ogre-mage Brûlentrailles","Firegut Ogre Mage"),
-[7035]=C(52,53,0,"Brute Brûlentrailles","Firegut Brute"),
-[7036]=C(53,54,0,"Espion de Thaurissan","Thaurissan Spy"),
-[7037]=C(53,55,0,"Marchefeu de Thaurissan","Thaurissan Firewalker"),
-[7038]=C(54,55,0,"Agent de Thaurissan","Thaurissan Agent"),
-[7039]=C(53,55,0,"Ravageur de guerre","War Reaver"),
-[7040]=C(52,53,1,"Draconide noir","Black Dragonspawn"),
-[7041]=C(53,54,1,"Wyrmide noir","Black Wyrmkin"),
-[7042]=C(56,57,1,"Draconide Flammécaille","Flamescale Dragonspawn"),
-[7043]=C(57,58,1,"Wyrmide Flammécaille","Flamescale Wyrmkin"),
-[7044]=C(50,52,1,"Drake noir","Black Drake"),
-[7045]=C(53,55,1,"Drake brûlant","Scalding Drake"),
-[7046]=C(56,58,1,"Drake torride","Searscale Drake"),
-[7047]=C(51,52,0,"Rejeton noir","Black Broodling"),
-[7048]=C(53,54,0,"Rejeton brûlant","Scalding Broodling"),
-[7049]=C(55,56,0,"Rejeton Flammécaille","Flamescale Broodling"),
-[7055]=C(54,55,0,"Worg Blackrock","Blackrock Worg"),
-[8976]=C(60,60,2,"Hematos","Hematos"),
-[8977]=C(54,54,0,"Krom'Grul","Krom'Grul"),
-[8978]=C(57,57,4,"Thauris Balgarr","Thauris Balgarr"),
-[8979]=C(59,59,4,"Gruklash","Gruklash"),
-[8981]=C(56,56,4,"Ravageur défectueux","Malfunctioning Reaver"),
-[9176]=C(54,54,0,"Gor'tesh","Gor'tesh"),
-[9461]=C(54,54,1,"Drake noir frénétique","Frenzied Black Drake"),
-[9522]=C(56,56,1,"Embusqué Blackrock","Blackrock Ambusher"),
-[9602]=C(54,54,4,"Hahk'Zor","Hahk'Zor"),
-[9604]=C(54,54,4,"Gorgon'och","Gorgon'och"),
-[9690]=C(51,52,0,"Worg de braise","Ember Worg"),
-[9691]=C(52,53,0,"Scorpide dard-venin","Venomtip Scorpid"),
-[9694]=C(53,54,0,"Worg de braise écumant","Slavering Ember Worg"),
-[9695]=C(54,54,0,"Scorpide fouet-mortel","Deathlash Scorpid"),
-[9697]=C(55,56,0,"Worg de braise géant","Giant Ember Worg"),
-[9698]=C(56,57,0,"Scorpide queue-de-feu","Firetail Scorpid"),
-[9776]=C(52,53,0,"Flammide cracheur","Flamekin Spitter"),
-[9777]=C(51,52,0,"Fée Flammide","Flamekin Sprite"),
-[9778]=C(54,56,0,"Flammide incendiaire","Flamekin Torcher"),
-[9779]=C(54,56,0,"Flammide enragé","Flamekin Rager"),
-[10077]=C(53,53,4,"Gueule-du-trépas","Deathmaw"),
-[10078]=C(55,55,4,"Lueur terrifiante","Terrorspark"),
-[10119]=C(60,60,2,"Volchan","Volchan"),
-[14388]=C(50,51,1,"Drake noir insoumis","Rogue Black Drake"),
-[16043]=C(58,60,0,"Seigneur-magma Bokk","Magma Lord Bokk"),
-} end
+Z[1428] = [[
+7025	55	56	0	Soldat Blackrock	Blackrock Soldier
+7026	55	56	0	Sorcier Blackrock	Blackrock Sorcerer
+7027	56	57	0	Pourfendeur Blackrock	Blackrock Slayer
+7028	56	57	0	Démoniste Blackrock	Blackrock Warlock
+7029	57	58	0	Maître de guerre Blackrock	Blackrock Battlemaster
+7031	51	53	0	Elémentaire d'obsidienne	Obsidian Elemental
+7032	55	57	0	Grand élémentaire d'obsidienne	Greater Obsidian Elemental
+7033	50	51	0	Ogre Brûlentrailles	Firegut Ogre
+7034	51	52	0	Ogre-mage Brûlentrailles	Firegut Ogre Mage
+7035	52	53	0	Brute Brûlentrailles	Firegut Brute
+7036	53	54	0	Espion de Thaurissan	Thaurissan Spy
+7037	53	55	0	Marchefeu de Thaurissan	Thaurissan Firewalker
+7038	54	55	0	Agent de Thaurissan	Thaurissan Agent
+7039	53	55	0	Ravageur de guerre	War Reaver
+7040	52	53	1	Draconide noir	Black Dragonspawn
+7041	53	54	1	Wyrmide noir	Black Wyrmkin
+7042	56	57	1	Draconide Flammécaille	Flamescale Dragonspawn
+7043	57	58	1	Wyrmide Flammécaille	Flamescale Wyrmkin
+7044	50	52	1	Drake noir	Black Drake
+7045	53	55	1	Drake brûlant	Scalding Drake
+7046	56	58	1	Drake torride	Searscale Drake
+7047	51	52	0	Rejeton noir	Black Broodling
+7048	53	54	0	Rejeton brûlant	Scalding Broodling
+7049	55	56	0	Rejeton Flammécaille	Flamescale Broodling
+7055	54	55	0	Worg Blackrock	Blackrock Worg
+8976	60	60	2		Hematos
+8977	54	54	0		Krom'Grul
+8978	57	57	4		Thauris Balgarr
+8979	59	59	4		Gruklash
+8981	56	56	4	Ravageur défectueux	Malfunctioning Reaver
+9176	54	54	0		Gor'tesh
+9461	54	54	1	Drake noir frénétique	Frenzied Black Drake
+9522	56	56	1	Embusqué Blackrock	Blackrock Ambusher
+9602	54	54	4		Hahk'Zor
+9604	54	54	4		Gorgon'och
+9690	51	52	0	Worg de braise	Ember Worg
+9691	52	53	0	Scorpide dard-venin	Venomtip Scorpid
+9694	53	54	0	Worg de braise écumant	Slavering Ember Worg
+9695	54	54	0	Scorpide fouet-mortel	Deathlash Scorpid
+9697	55	56	0	Worg de braise géant	Giant Ember Worg
+9698	56	57	0	Scorpide queue-de-feu	Firetail Scorpid
+9776	52	53	0	Flammide cracheur	Flamekin Spitter
+9777	51	52	0	Fée Flammide	Flamekin Sprite
+9778	54	56	0	Flammide incendiaire	Flamekin Torcher
+9779	54	56	0	Flammide enragé	Flamekin Rager
+10077	53	53	4	Gueule-du-trépas	Deathmaw
+10078	55	55	4	Lueur terrifiante	Terrorspark
+10119	60	60	2		Volchan
+14388	50	51	1	Drake noir insoumis	Rogue Black Drake
+16043	58	60	0	Seigneur-magma Bokk	Magma Lord Bokk
+]]
 -- Elwynn Forest
-Z[1429] = function() return {
-[6]=C(1,2,0,"Vermine kobold","Kobold Vermin"),
-[30]=C(5,6,0,"Araignée forestière","Forest Spider"),
-[38]=C(3,4,0,"Nervi défias","Defias Thug"),
-[40]=C(6,7,0,"Mineur kobold","Kobold Miner"),
-[43]=C(7,9,0,"Araignée minière","Mine Spider"),
-[46]=C(9,10,0,"Fourrageur murloc","Murloc Forager"),
-[60]=C(8,8,0,"Ruklar le trappeur","Ruklar the Trapper"),
-[61]=C(11,11,4,"Thuros Doigts-agiles","Thuros Lightfingers"),
-[69]=C(2,2,0,"Loup des bois","Timber Wolf"),
-[79]=C(10,10,4,"Narg le Sous-chef","Narg the Taskmaster"),
-[80]=C(3,4,0,"Travailleur kobold","Kobold Laborer"),
-[94]=C(5,6,0,"Vide-gousset défias","Defias Cutpurse"),
-[97]=C(8,9,0,"Rivepatte chétif","Riverpaw Runt"),
-[99]=C(10,10,4,"Morgaine la rusée","Morgaine the Sly"),
-[100]=C(12,12,4,"Gruff Mord-vite","Gruff Swiftbite"),
-[103]=C(5,5,0,"Garrick Padfoot","Garrick Padfoot"),
-[113]=C(5,6,0,"Sanglier Brocheroc","Stonetusk Boar"),
-[116]=C(8,9,0,"Bandit défias","Defias Bandit"),
-[118]=C(9,10,0,"Rôdeur","Prowler"),
-[119]=C(10,11,0,"Longroin","Longsnout"),
-[257]=C(3,3,0,"Ouvrier kobold","Kobold Worker"),
-[285]=C(6,7,0,"Murloc","Murloc"),
-[299]=C(1,1,0,"Jeune loup","Young Wolf"),
-[327]=C(8,8,0,"Dent-d'or","Goldtooth"),
-[330]=C(9,9,0,"Princesse","Princess"),
-[390]=C(7,7,0,"Entourage porcin","Porcine Entourage"),
-[448]=C(11,11,1,"Lardeur","Hogger"),
-[471]=C(7,10,4,"Mère Croc","Mother Fang"),
-[472]=C(12,12,4,"Fenouillard","Fedfennel"),
-[473]=C(10,10,0,"Morgan le collecteur","Morgan the Collector"),
-[474]=C(9,10,0,"Sorcier-voleur défias","Defias Rogue Wizard"),
-[475]=C(5,6,0,"Tunnelier kobold","Kobold Tunneler"),
-[476]=C(7,8,0,"Géomancien kobold","Kobold Geomancer"),
-[478]=C(9,10,0,"Estafette Rivepatte","Riverpaw Outrunner"),
-[524]=C(7,8,0,"Sanglier Rochecuir","Rockhide Boar"),
-[525]=C(5,6,0,"Loup galeux","Mangy Wolf"),
-[583]=C(8,9,0,"Embusqué défias","Defias Ambusher"),
-[732]=C(9,10,0,"Rôdeur murloc","Murloc Lurker"),
-[735]=C(6,7,0,"Ruisselier murloc","Murloc Streamrunner"),
-[822]=C(8,9,0,"Jeune ours des forêts","Young Forest Bear"),
-[880]=C(8,8,0,"Erlan Drudgemoor","Erlan Drudgemoor"),
-[881]=C(9,9,0,"Surena Caledon","Surena Caledon"),
-[1642]=C(55,55,0,"Garde de Northshire","Northshire Guard","A"),
-[1922]=C(7,8,0,"Loup forestier gris","Gray Forest Wolf"),
-[1975]=C(8,8,0,"Bûcheron du Val d'est","Eastvale Lumberjack","A"),
-[2044]=C(25,26,0,"Esprit mélancolique","Forlorn Spirit"),
-[5917]=C(2,2,0,"Clara Charles","Clara Charles","A"),
-[6093]=C(11,11,0,"Jack Dent-Morte","Dead-Tooth Jack"),
-[6846]=C(10,10,0,"Maître des docks défias","Defias Dockmaster"),
-[6866]=C(10,10,0,"Garde du corps défias","Defias Bodyguard"),
-[6927]=C(8,9,0,"Portefaix défias","Defias Dockworker"),
-[11328]=C(7,7,0,"Paysan du Val d'est","Eastvale Peasant","A"),
-[11979]=C(25,25,0,"Kim Bridenbecker","Kim Bridenbecker","A"),
-[11994]=C(25,25,0,"Rob Bridenbecker","Rob Bridenbecker","A"),
-[12423]=C(7,7,0,"Garde Roberts","Guard Roberts","A"),
-[13159]=C(12,12,0,"James Clark","James Clark"),
-[14388]=C(50,51,1,"Drake noir insoumis","Rogue Black Drake"),
-[14390]=C(37,37,1,"Montagnard du corps expéditionnaire","Expeditionary Mountaineer","A"),
-[14393]=C(40,40,1,"Prêtre du corps expéditionnaire","Expeditionary Priest","A"),
-[165189]=C(7,30,0,"Cat","Cat"),
-[248278]=C(11,11,1,"Croaky","Croaky"),
-[248299]=C(12,12,1,"Elmpaw","Elmpaw"),
-[248362]=C(3,3,1,"Shinyfinder Narf","Shinyfinder Narf"),
-[248463]=C(6,7,0,"Rumbler","Rumbler"),
-[248464]=C(6,6,1,"Nimsy","Nimsy"),
-[248474]=C(7,7,1,"Geosculptor Yip","Geosculptor Yip"),
-[264850]=C(20,30,0,"Hawk","Hawk"),
-[267678]=C(1,1,0,"Pinto","Pinto"),
-[274838]=C(15,15,0,"Maximus Warwick","Maximus Warwick"),
-[274909]=C(5,5,0,"Eviatar Achitov","Eviatar Achitov","A"),
-[276180]=C(11,11,4,"Elder Finseer","Elder Finseer"),
-[276189]=C(10,10,4,"Matriarch Bristlefur","Matriarch Bristlefur"),
-} end
+Z[1429] = [[
+6	1	2	0	Vermine kobold	Kobold Vermin
+30	5	6	0	Araignée forestière	Forest Spider
+38	3	4	0	Nervi défias	Defias Thug
+40	6	7	0	Mineur kobold	Kobold Miner
+43	7	9	0	Araignée minière	Mine Spider
+46	9	10	0	Fourrageur murloc	Murloc Forager
+60	8	8	0	Ruklar le trappeur	Ruklar the Trapper
+61	11	11	4	Thuros Doigts-agiles	Thuros Lightfingers
+69	2	2	0	Loup des bois	Timber Wolf
+79	10	10	4	Narg le Sous-chef	Narg the Taskmaster
+80	3	4	0	Travailleur kobold	Kobold Laborer
+94	5	6	0	Vide-gousset défias	Defias Cutpurse
+97	8	9	0	Rivepatte chétif	Riverpaw Runt
+99	10	10	4	Morgaine la rusée	Morgaine the Sly
+100	12	12	4	Gruff Mord-vite	Gruff Swiftbite
+103	5	5	0		Garrick Padfoot
+113	5	6	0	Sanglier Brocheroc	Stonetusk Boar
+116	8	9	0	Bandit défias	Defias Bandit
+118	9	10	0	Rôdeur	Prowler
+119	10	11	0	Longroin	Longsnout
+257	3	3	0	Ouvrier kobold	Kobold Worker
+285	6	7	0		Murloc
+299	1	1	0	Jeune loup	Young Wolf
+327	8	8	0	Dent-d'or	Goldtooth
+330	9	9	0	Princesse	Princess
+390	7	7	0	Entourage porcin	Porcine Entourage
+448	11	11	1	Lardeur	Hogger
+471	7	10	4	Mère Croc	Mother Fang
+472	12	12	4	Fenouillard	Fedfennel
+473	10	10	0	Morgan le collecteur	Morgan the Collector
+474	9	10	0	Sorcier-voleur défias	Defias Rogue Wizard
+475	5	6	0	Tunnelier kobold	Kobold Tunneler
+476	7	8	0	Géomancien kobold	Kobold Geomancer
+478	9	10	0	Estafette Rivepatte	Riverpaw Outrunner
+524	7	8	0	Sanglier Rochecuir	Rockhide Boar
+525	5	6	0	Loup galeux	Mangy Wolf
+583	8	9	0	Embusqué défias	Defias Ambusher
+732	9	10	0	Rôdeur murloc	Murloc Lurker
+735	6	7	0	Ruisselier murloc	Murloc Streamrunner
+822	8	9	0	Jeune ours des forêts	Young Forest Bear
+880	8	8	0		Erlan Drudgemoor
+881	9	9	0		Surena Caledon
+1642	55	55	0	Garde de Northshire	Northshire Guard	A
+1922	7	8	0	Loup forestier gris	Gray Forest Wolf
+1975	8	8	0	Bûcheron du Val d'est	Eastvale Lumberjack	A
+2044	25	26	0	Esprit mélancolique	Forlorn Spirit
+5917	2	2	0		Clara Charles	A
+6093	11	11	0	Jack Dent-Morte	Dead-Tooth Jack
+6846	10	10	0	Maître des docks défias	Defias Dockmaster
+6866	10	10	0	Garde du corps défias	Defias Bodyguard
+6927	8	9	0	Portefaix défias	Defias Dockworker
+11328	7	7	0	Paysan du Val d'est	Eastvale Peasant	A
+11979	25	25	0		Kim Bridenbecker	A
+11994	25	25	0		Rob Bridenbecker	A
+12423	7	7	0	Garde Roberts	Guard Roberts	A
+13159	12	12	0		James Clark
+14388	50	51	1	Drake noir insoumis	Rogue Black Drake
+14390	37	37	1	Montagnard du corps expéditionnaire	Expeditionary Mountaineer	A
+14393	40	40	1	Prêtre du corps expéditionnaire	Expeditionary Priest	A
+165189	7	30	0		Cat
+248278	11	11	1		Croaky
+248299	12	12	1		Elmpaw
+248362	3	3	1		Shinyfinder Narf
+248463	6	7	0		Rumbler
+248464	6	6	1		Nimsy
+248474	7	7	1		Geosculptor Yip
+264850	20	30	0		Hawk
+267678	1	1	0		Pinto
+274838	15	15	0		Maximus Warwick
+274909	5	5	0		Eviatar Achitov	A
+276180	11	11	4		Elder Finseer
+276189	10	10	4		Matriarch Bristlefur
+]]
 -- Deadwind Pass
-Z[1430] = function() return {
-[7369]=C(55,56,0,"Brute de Deuillevent","Deadwind Brute"),
-[7370]=C(58,60,0,"Ame errante","Restless Shade"),
-[7371]=C(56,57,0,"Marteleur de Deuillevent","Deadwind Mauler"),
-[7372]=C(57,58,0,"Démoniste de Deuillevent","Deadwind Warlock"),
-[7376]=C(55,56,0,"Ombre céleste","Sky Shadow"),
-[7379]=C(55,57,0,"Ogre-mage de Deuillevent","Deadwind Ogre Mage"),
-[12377]=C(58,60,0,"Spectre gémissant","Wailing Spectre"),
-[12378]=C(59,60,0,"Ame damnée","Damned Soul"),
-[12379]=C(59,60,0,"Fossoyeur non-vivant","Unliving Caretaker"),
-[12380]=C(59,60,0,"Résident non vivant","Unliving Resident"),
-[165189]=C(7,30,0,"Cat","Cat"),
-[218931]=C(41,41,0,"Dark Rider","Dark Rider"),
-[276246]=C(60,60,1,"Mistmantle Prowler","Mistmantle Prowler"),
-} end
+Z[1430] = [[
+7369	55	56	0	Brute de Deuillevent	Deadwind Brute
+7370	58	60	0	Ame errante	Restless Shade
+7371	56	57	0	Marteleur de Deuillevent	Deadwind Mauler
+7372	57	58	0	Démoniste de Deuillevent	Deadwind Warlock
+7376	55	56	0	Ombre céleste	Sky Shadow
+7379	55	57	0	Ogre-mage de Deuillevent	Deadwind Ogre Mage
+12377	58	60	0	Spectre gémissant	Wailing Spectre
+12378	59	60	0	Ame damnée	Damned Soul
+12379	59	60	0	Fossoyeur non-vivant	Unliving Caretaker
+12380	59	60	0	Résident non vivant	Unliving Resident
+165189	7	30	0		Cat
+218931	41	41	0		Dark Rider
+276246	60	60	1		Mistmantle Prowler
+]]
 -- Duskwood
-Z[1431] = function() return {
-[3]=C(24,25,0,"Dévoreur","Flesh Eater"),
-[48]=C(21,22,0,"Guerrier squelette","Skeletal Warrior"),
-[202]=C(23,24,0,"Squelette infernal","Skeletal Horror"),
-[203]=C(22,23,0,"Mage squelette","Skeletal Mage"),
-[205]=C(28,29,0,"Messager Plaie-de-nuit","Nightbane Dark Runner"),
-[206]=C(29,30,0,"Croc noir Plaie-de-nuit","Nightbane Vile Fang"),
-[210]=C(26,27,0,"Mâcheur d'os","Bone Chewer"),
-[212]=C(29,30,0,"Guerrier Brisepoing","Splinter Fist Warrior"),
-[213]=C(19,20,0,"Loup redoutable affamé","Starving Dire Wolf"),
-[215]=C(24,25,0,"Cours-la-nuit défias","Defias Night Runner"),
-[217]=C(19,20,0,"Araignée Tisse-venin","Venom Web Spider"),
-[218]=C(24,25,0,"Pilleur de tombes","Grave Robber"),
-[314]=C(31,31,1,"Eliza","Eliza"),
-[315]=C(32,32,0,"Stalvan Mistmantle","Stalvan Mistmantle"),
-[325]=C(20,20,0,"Hogan Ference","Hogan Ference","A"),
-[468]=C(35,35,0,"Crieur public","Town Crier","A"),
-[503]=C(31,31,4,"Seigneur Malathrom","Lord Malathrom"),
-[507]=C(32,32,4,"Fenros","Fenros"),
-[511]=C(26,26,0,"Goule folle","Insane Ghoul"),
-[521]=C(23,23,4,"Lupos","Lupos"),
-[522]=C(35,35,1,"Mor'Ladim","Mor'Ladim"),
-[531]=C(24,25,0,"Démon squelette","Skeletal Fiend"),
-[533]=C(27,28,0,"Tisseur d'ombre Plaie-de-nuit","Nightbane Shadow Weaver"),
-[534]=C(34,34,4,"Nefaru","Nefaru"),
-[539]=C(18,19,0,"Araignée Tisse-venin pygmée","Pygmy Venom Web Spider"),
-[565]=C(20,21,0,"Loup redoutable enragé","Rabid Dire Wolf"),
-[569]=C(21,22,0,"Solitaire verte","Green Recluse"),
-[570]=C(28,29,0,"Mangeur de cervelle","Brain Eater"),
-[574]=C(27,27,4,"Naraxis","Naraxis"),
-[604]=C(27,28,0,"Répandeur de peste","Plague Spreader"),
-[628]=C(24,25,0,"Ravageur noir","Black Ravager"),
-[771]=C(32,32,4,"Commandant Gangretrombe","Commander Felstrom"),
-[785]=C(28,29,0,"Gardien squelette","Skeletal Warder"),
-[787]=C(26,27,0,"Soigneur squelette","Skeletal Healer"),
-[889]=C(25,26,0,"Ogre Brisepoing","Splinter Fist Ogre"),
-[891]=C(26,27,0,"Tisseur de flamme Brisepoing","Splinter Fist Fire Weaver"),
-[892]=C(27,28,0,"Sous-chef Brisepoing","Splinter Fist Taskmaster"),
-[898]=C(26,27,0,"Worgen Plaie-de-nuit","Nightbane Worgen"),
-[909]=C(25,26,0,"Lame nocturne défias","Defias Night Blade"),
-[910]=C(26,27,0,"Enchanteur défias","Defias Enchanter"),
-[920]=C(30,31,0,"Contaminé Plaie-de-nuit","Nightbane Tainted One"),
-[923]=C(23,24,0,"Jeune Ravageur noir","Young Black Ravager"),
-[930]=C(24,25,0,"Jeune veuve noire","Black Widow Hatchling"),
-[948]=C(25,26,0,"Pourri","Rotted One"),
-[949]=C(25,26,0,"Solitaire putride","Carrion Recluse"),
-[1110]=C(27,28,0,"Ecumeur squelette","Skeletal Raider"),
-[1200]=C(32,32,1,"Morbent Fel","Morbent Fel"),
-[1251]=C(28,29,0,"Incendiaire Brisepoing","Splinter Fist Firemonger"),
-[1258]=C(25,26,0,"Dogue Ravageur noir","Black Ravager Mastiff"),
-[1270]=C(29,30,0,"Cadavre fétide","Fetid Corpse"),
-[1487]=C(30,31,0,"Esclavagiste Brisepoing","Splinter Fist Enslaver"),
-[2112]=C(18,18,0,"Farrin Daris","Farrin Daris","A"),
-[2462]=C(25,25,0,"Ver mangeur de chair","Flesh Eating Worm"),
-[3094]=C(49,51,0,"Invisible","Unseen"),
-[6170]=C(32,32,0,"Videssac","Gutspill"),
-[7050]=C(22,22,0,"Pantin défias","Defias Drone"),
-[14887]=C(63,63,3,"Ysondre","Ysondre"),
-[14888]=C(63,63,3,"Léthon","Lethon"),
-[14889]=C(63,63,3,"Emeriss","Emeriss"),
-[14890]=C(63,63,3,"Taerar","Taerar"),
-[15625]=C(63,63,3,"Corrupteur du crépuscule","Twilight Corrupter"),
-[165189]=C(7,30,0,"Cat","Cat"),
-[185317]=C(20,30,0,"Incubus","Incubus"),
-[205153]=C(10,10,0,"Ada Gelhardt","Ada Gelhardt","A"),
-[218931]=C(41,41,0,"Dark Rider","Dark Rider"),
-[221168]=C(26,26,0,"Dire Wolf Alpha","Dire Wolf Alpha"),
-[221169]=C(26,26,0,"Black Widow Broodmother","Black Widow Broodmother"),
-[221170]=C(26,62,0,"Uprooted Gloomwood","Uprooted Gloomwood"),
-[221171]=C(26,26,0,"Nightmare Runner","Nightmare Runner"),
-[221172]=C(26,26,0,"Nightmare Weaver","Nightmare Weaver"),
-[221174]=C(26,26,0,"Deranged Ogre","Deranged Ogre"),
-[221175]=C(26,26,0,"Demented Fire Weaver","Demented Fire Weaver"),
-[221176]=C(26,26,0,"Nightterror Whelp","Nightterror Whelp"),
-[221200]=C(26,26,0,"Wyrmkin Terrorwalker","Wyrmkin Terrorwalker"),
-[221206]=C(9999,9999,0,"Vvarc' Zul","Vvarc' Zul"),
-[221207]=C(9999,9999,0,"Amokarok","Amokarok"),
-[221223]=C(26,26,0,"Duskblaze Shadowstalker","Duskblaze Shadowstalker"),
-[221227]=C(25,25,0,"Nightmare Hound","Nightmare Hound"),
-[223287]=C(27,27,0,"Fire Elemental","Fire Elemental"),
-[248278]=C(11,11,1,"Croaky","Croaky"),
-[248299]=C(12,12,1,"Elmpaw","Elmpaw"),
-[254695]=C(25,25,0,"Repair Bot","Repair Bot"),
-[259859]=C(38,38,0,"Wheatley","Wheatley"),
-[264551]=C(30,30,0,"Disturbed Ghoul","Disturbed Ghoul"),
-[264850]=C(20,30,0,"Hawk","Hawk"),
-[266449]=C(2,2,0,"Jeremy Heartweaver","Jeremy Heartweaver","A"),
-[271368]=C(1,22,0,"Shadowgale Squirrel","Shadowgale Squirrel"),
-[271636]=C(1,1,0,"Weevil K. Neevil","Weevil K. Neevil"),
-[272260]=C(24,24,0,"Lost Stalker","Lost Stalker"),
-[272273]=C(24,24,0,"Lost Watcher","Lost Watcher"),
-[272284]=C(24,24,0,"Lost Defender","Lost Defender"),
-[272291]=C(25,25,0,"Lost Knight","Lost Knight"),
-[276246]=C(60,60,1,"Mistmantle Prowler","Mistmantle Prowler"),
-[277645]=C(22,23,0,"Gray Fox","Gray Fox"),
-} end
+Z[1431] = [[
+3	24	25	0	Dévoreur	Flesh Eater
+48	21	22	0	Guerrier squelette	Skeletal Warrior
+202	23	24	0	Squelette infernal	Skeletal Horror
+203	22	23	0	Mage squelette	Skeletal Mage
+205	28	29	0	Messager Plaie-de-nuit	Nightbane Dark Runner
+206	29	30	0	Croc noir Plaie-de-nuit	Nightbane Vile Fang
+210	26	27	0	Mâcheur d'os	Bone Chewer
+212	29	30	0	Guerrier Brisepoing	Splinter Fist Warrior
+213	19	20	0	Loup redoutable affamé	Starving Dire Wolf
+215	24	25	0	Cours-la-nuit défias	Defias Night Runner
+217	19	20	0	Araignée Tisse-venin	Venom Web Spider
+218	24	25	0	Pilleur de tombes	Grave Robber
+314	31	31	1		Eliza
+315	32	32	0		Stalvan Mistmantle
+325	20	20	0		Hogan Ference	A
+468	35	35	0	Crieur public	Town Crier	A
+503	31	31	4	Seigneur Malathrom	Lord Malathrom
+507	32	32	4		Fenros
+511	26	26	0	Goule folle	Insane Ghoul
+521	23	23	4		Lupos
+522	35	35	1		Mor'Ladim
+531	24	25	0	Démon squelette	Skeletal Fiend
+533	27	28	0	Tisseur d'ombre Plaie-de-nuit	Nightbane Shadow Weaver
+534	34	34	4		Nefaru
+539	18	19	0	Araignée Tisse-venin pygmée	Pygmy Venom Web Spider
+565	20	21	0	Loup redoutable enragé	Rabid Dire Wolf
+569	21	22	0	Solitaire verte	Green Recluse
+570	28	29	0	Mangeur de cervelle	Brain Eater
+574	27	27	4		Naraxis
+604	27	28	0	Répandeur de peste	Plague Spreader
+628	24	25	0	Ravageur noir	Black Ravager
+771	32	32	4	Commandant Gangretrombe	Commander Felstrom
+785	28	29	0	Gardien squelette	Skeletal Warder
+787	26	27	0	Soigneur squelette	Skeletal Healer
+889	25	26	0	Ogre Brisepoing	Splinter Fist Ogre
+891	26	27	0	Tisseur de flamme Brisepoing	Splinter Fist Fire Weaver
+892	27	28	0	Sous-chef Brisepoing	Splinter Fist Taskmaster
+898	26	27	0	Worgen Plaie-de-nuit	Nightbane Worgen
+909	25	26	0	Lame nocturne défias	Defias Night Blade
+910	26	27	0	Enchanteur défias	Defias Enchanter
+920	30	31	0	Contaminé Plaie-de-nuit	Nightbane Tainted One
+923	23	24	0	Jeune Ravageur noir	Young Black Ravager
+930	24	25	0	Jeune veuve noire	Black Widow Hatchling
+948	25	26	0	Pourri	Rotted One
+949	25	26	0	Solitaire putride	Carrion Recluse
+1110	27	28	0	Ecumeur squelette	Skeletal Raider
+1200	32	32	1		Morbent Fel
+1251	28	29	0	Incendiaire Brisepoing	Splinter Fist Firemonger
+1258	25	26	0	Dogue Ravageur noir	Black Ravager Mastiff
+1270	29	30	0	Cadavre fétide	Fetid Corpse
+1487	30	31	0	Esclavagiste Brisepoing	Splinter Fist Enslaver
+2112	18	18	0		Farrin Daris	A
+2462	25	25	0	Ver mangeur de chair	Flesh Eating Worm
+3094	49	51	0	Invisible	Unseen
+6170	32	32	0	Videssac	Gutspill
+7050	22	22	0	Pantin défias	Defias Drone
+14887	63	63	3		Ysondre
+14888	63	63	3	Léthon	Lethon
+14889	63	63	3		Emeriss
+14890	63	63	3		Taerar
+15625	63	63	3	Corrupteur du crépuscule	Twilight Corrupter
+165189	7	30	0		Cat
+185317	20	30	0		Incubus
+205153	10	10	0		Ada Gelhardt	A
+218931	41	41	0		Dark Rider
+221168	26	26	0		Dire Wolf Alpha
+221169	26	26	0		Black Widow Broodmother
+221170	26	62	0		Uprooted Gloomwood
+221171	26	26	0		Nightmare Runner
+221172	26	26	0		Nightmare Weaver
+221174	26	26	0		Deranged Ogre
+221175	26	26	0		Demented Fire Weaver
+221176	26	26	0		Nightterror Whelp
+221200	26	26	0		Wyrmkin Terrorwalker
+221206	9999	9999	0		Vvarc' Zul
+221207	9999	9999	0		Amokarok
+221223	26	26	0		Duskblaze Shadowstalker
+221227	25	25	0		Nightmare Hound
+223287	27	27	0		Fire Elemental
+248278	11	11	1		Croaky
+248299	12	12	1		Elmpaw
+254695	25	25	0		Repair Bot
+259859	38	38	0		Wheatley
+264551	30	30	0		Disturbed Ghoul
+264850	20	30	0		Hawk
+266449	2	2	0		Jeremy Heartweaver	A
+271368	1	22	0		Shadowgale Squirrel
+271636	1	1	0		Weevil K. Neevil
+272260	24	24	0		Lost Stalker
+272273	24	24	0		Lost Watcher
+272284	24	24	0		Lost Defender
+272291	25	25	0		Lost Knight
+276246	60	60	1		Mistmantle Prowler
+277645	22	23	0		Gray Fox
+]]
 -- Loch Modan
-Z[1432] = function() return {
-[1155]=C(15,15,0,"Kelt Thomasin","Kelt Thomasin","A"),
-[1161]=C(11,12,0,"Trogg Brisepierre","Stonesplinter Trogg"),
-[1162]=C(11,12,0,"Eclaireur Brisepierre","Stonesplinter Scout"),
-[1163]=C(13,14,0,"Brise-crâne Brisepierre","Stonesplinter Skullthumper"),
-[1164]=C(15,16,0,"Briseur d’os Brisepierre","Stonesplinter Bonesnapper"),
-[1165]=C(17,18,0,"Géomancien Brisepierre","Stonesplinter Geomancer"),
-[1166]=C(13,14,0,"Prophète Brisepierre","Stonesplinter Seer"),
-[1167]=C(18,19,0,"Terrassier Brisepierre","Stonesplinter Digger"),
-[1169]=C(18,19,0,"Insurgé Sombrefer","Dark Iron Insurgent"),
-[1172]=C(10,11,0,"Vermine Rat des tunnels","Tunnel Rat Vermin"),
-[1173]=C(10,11,0,"Eclaireur Rat des tunnels","Tunnel Rat Scout"),
-[1174]=C(12,13,0,"Géomancien Rat des tunnels","Tunnel Rat Geomancer"),
-[1175]=C(12,13,0,"Terrassier Rat des tunnels","Tunnel Rat Digger"),
-[1176]=C(11,12,0,"Fourrageur Rat des tunnels","Tunnel Rat Forager"),
-[1177]=C(14,14,0,"Géomètre Rat des tunnels","Tunnel Rat Surveyor"),
-[1178]=C(18,19,1,"Ogre Mo'grosh","Mo'grosh Ogre"),
-[1179]=C(18,19,1,"Massacreur Mo'grosh","Mo'grosh Enforcer"),
-[1180]=C(19,20,1,"Brute Mo'grosh","Mo'grosh Brute"),
-[1181]=C(18,19,1,"Chaman Mo'grosh","Mo'grosh Shaman"),
-[1183]=C(19,20,1,"Mystique Mo'grosh","Mo'grosh Mystic"),
-[1184]=C(18,18,0,"Rôdeuse des falaises","Cliff Lurker"),
-[1185]=C(17,18,0,"Rôdeuse des bois","Wood Lurker"),
-[1186]=C(11,12,0,"Ancien ours noir","Elder Black Bear"),
-[1188]=C(13,14,0,"Vieil ours noir","Grizzled Black Bear"),
-[1189]=C(16,17,0,"Patriarche ours noir","Black Bear Patriarch"),
-[1190]=C(10,11,0,"Sanglier des montagnes","Mountain Boar"),
-[1191]=C(14,15,0,"Sanglier des montagnes galeux","Mangy Mountain Boar"),
-[1192]=C(16,17,0,"Ancien sanglier des montagnes","Elder Mountain Boar"),
-[1193]=C(12,13,0,"Furie du loch","Loch Frenzy"),
-[1194]=C(15,16,0,"Busard des montagnes","Mountain Buzzard"),
-[1195]=C(10,11,0,"Rôdeuse des forêts","Forest Lurker"),
-[1197]=C(15,16,0,"Chaman Brisepierre","Stonesplinter Shaman"),
-[1202]=C(11,11,0,"Kobold Rat des tunnels","Tunnel Rat Kobold"),
-[1205]=C(17,17,0,"Grawmug","Grawmug"),
-[1206]=C(16,16,0,"Grinceur","Gnasher"),
-[1207]=C(16,16,0,"Bagarreur","Brawler"),
-[1210]=C(22,22,1,"Chok'sul","Chok'sul"),
-[1222]=C(17,17,0,"Sapeur Sombrefer","Dark Iron Sapper"),
-[1224]=C(19,20,0,"Jeune Battrodon","Young Threshadon"),
-[1225]=C(20,20,1,"Vieux Noiraud","Ol' Sooty"),
-[1380]=C(10,10,0,"Saean","Saean","A"),
-[1393]=C(19,20,0,"Trogg berserk","Berserk Trogg"),
-[1398]=C(22,22,4,"Boss Galgosh","Boss Galgosh"),
-[1399]=C(21,21,4,"Magosh","Magosh"),
-[1425]=C(15,15,4,"Grizlak","Grizlak"),
-[1693]=C(14,15,0,"Crocilisque du loch","Loch Crocolisk"),
-[1981]=C(10,10,0,"Embusqué Sombrefer","Dark Iron Ambusher"),
-[2149]=C(14,14,0,"Ecumeur Sombrefer","Dark Iron Raider"),
-[2476]=C(22,22,4,"Grand crocilisque du loch","Large Loch Crocolisk"),
-[4851]=C(36,37,1,"Mange-roches Cavepierre","Stonevault Rockchewer"),
-[4856]=C(36,37,1,"Chasseur Cavepierre","Stonevault Cave Hunter"),
-[4872]=C(38,38,1,"Golem d’obsidienne","Obsidian Golem"),
-[5893]=C(12,12,0,"Manifestation de feu mineure","Minor Manifestation of Fire"),
-[14266]=C(19,19,4,"Shanda la Tisseuse","Shanda the Spinner"),
-[14267]=C(19,19,2,"Emogg le Broyeur","Emogg the Crusher"),
-[14268]=C(16,16,4,"Seigneur Condar","Lord Condar"),
-[165189]=C(7,30,0,"Cat","Cat"),
-[209958]=C(18,18,0,"Graix","Graix"),
-[269185]=C(15,17,0,"Headsplitter","Headsplitter"),
-[270693]=C(15,15,0,"Daggerfang","Daggerfang"),
-} end
+Z[1432] = [[
+1155	15	15	0		Kelt Thomasin	A
+1161	11	12	0	Trogg Brisepierre	Stonesplinter Trogg
+1162	11	12	0	Eclaireur Brisepierre	Stonesplinter Scout
+1163	13	14	0	Brise-crâne Brisepierre	Stonesplinter Skullthumper
+1164	15	16	0	Briseur d’os Brisepierre	Stonesplinter Bonesnapper
+1165	17	18	0	Géomancien Brisepierre	Stonesplinter Geomancer
+1166	13	14	0	Prophète Brisepierre	Stonesplinter Seer
+1167	18	19	0	Terrassier Brisepierre	Stonesplinter Digger
+1169	18	19	0	Insurgé Sombrefer	Dark Iron Insurgent
+1172	10	11	0	Vermine Rat des tunnels	Tunnel Rat Vermin
+1173	10	11	0	Eclaireur Rat des tunnels	Tunnel Rat Scout
+1174	12	13	0	Géomancien Rat des tunnels	Tunnel Rat Geomancer
+1175	12	13	0	Terrassier Rat des tunnels	Tunnel Rat Digger
+1176	11	12	0	Fourrageur Rat des tunnels	Tunnel Rat Forager
+1177	14	14	0	Géomètre Rat des tunnels	Tunnel Rat Surveyor
+1178	18	19	1	Ogre Mo'grosh	Mo'grosh Ogre
+1179	18	19	1	Massacreur Mo'grosh	Mo'grosh Enforcer
+1180	19	20	1	Brute Mo'grosh	Mo'grosh Brute
+1181	18	19	1	Chaman Mo'grosh	Mo'grosh Shaman
+1183	19	20	1	Mystique Mo'grosh	Mo'grosh Mystic
+1184	18	18	0	Rôdeuse des falaises	Cliff Lurker
+1185	17	18	0	Rôdeuse des bois	Wood Lurker
+1186	11	12	0	Ancien ours noir	Elder Black Bear
+1188	13	14	0	Vieil ours noir	Grizzled Black Bear
+1189	16	17	0	Patriarche ours noir	Black Bear Patriarch
+1190	10	11	0	Sanglier des montagnes	Mountain Boar
+1191	14	15	0	Sanglier des montagnes galeux	Mangy Mountain Boar
+1192	16	17	0	Ancien sanglier des montagnes	Elder Mountain Boar
+1193	12	13	0	Furie du loch	Loch Frenzy
+1194	15	16	0	Busard des montagnes	Mountain Buzzard
+1195	10	11	0	Rôdeuse des forêts	Forest Lurker
+1197	15	16	0	Chaman Brisepierre	Stonesplinter Shaman
+1202	11	11	0	Kobold Rat des tunnels	Tunnel Rat Kobold
+1205	17	17	0		Grawmug
+1206	16	16	0	Grinceur	Gnasher
+1207	16	16	0	Bagarreur	Brawler
+1210	22	22	1		Chok'sul
+1222	17	17	0	Sapeur Sombrefer	Dark Iron Sapper
+1224	19	20	0	Jeune Battrodon	Young Threshadon
+1225	20	20	1	Vieux Noiraud	Ol' Sooty
+1380	10	10	0		Saean	A
+1393	19	20	0	Trogg berserk	Berserk Trogg
+1398	22	22	4		Boss Galgosh
+1399	21	21	4		Magosh
+1425	15	15	4		Grizlak
+1693	14	15	0	Crocilisque du loch	Loch Crocolisk
+1981	10	10	0	Embusqué Sombrefer	Dark Iron Ambusher
+2149	14	14	0	Ecumeur Sombrefer	Dark Iron Raider
+2476	22	22	4	Grand crocilisque du loch	Large Loch Crocolisk
+4851	36	37	1	Mange-roches Cavepierre	Stonevault Rockchewer
+4856	36	37	1	Chasseur Cavepierre	Stonevault Cave Hunter
+4872	38	38	1	Golem d’obsidienne	Obsidian Golem
+5893	12	12	0	Manifestation de feu mineure	Minor Manifestation of Fire
+14266	19	19	4	Shanda la Tisseuse	Shanda the Spinner
+14267	19	19	2	Emogg le Broyeur	Emogg the Crusher
+14268	16	16	4	Seigneur Condar	Lord Condar
+165189	7	30	0		Cat
+209958	18	18	0		Graix
+269185	15	17	0		Headsplitter
+270693	15	15	0		Daggerfang
+]]
 -- Redridge Mountains
-Z[1433] = function() return {
-[334]=C(26,26,1,"Gath'Ilzogg","Gath'Ilzogg"),
-[335]=C(24,24,1,"Roussi","Singe"),
-[345]=C(24,24,0,"Fouailleventre","Bellygrub"),
-[397]=C(26,26,1,"Morganth","Morganth"),
-[422]=C(18,19,0,"Dévoreur murloc","Murloc Flesheater"),
-[423]=C(15,16,0,"Bâtard des Carmines","Redridge Mongrel"),
-[424]=C(16,17,0,"Braconnier des Carmines","Redridge Poacher"),
-[426]=C(17,18,0,"Brute des Carmines","Redridge Brute"),
-[428]=C(18,19,0,"Condor redoutable","Dire Condor"),
-[429]=C(25,26,0,"Tisseur d'ombre Sombrepoil","Shadowhide Darkweaver"),
-[430]=C(18,19,0,"Mystique des Carmines","Redridge Mystic"),
-[431]=C(25,26,0,"Pourfendeur Sombrepoil","Shadowhide Slayer"),
-[432]=C(23,24,0,"Brute Sombrepoil","Shadowhide Brute"),
-[433]=C(22,23,0,"Gnoll Sombrepoil","Shadowhide Gnoll"),
-[434]=C(21,22,0,"Gnoll Sombrepoil enragé","Rabid Shadowhide Gnoll"),
-[435]=C(24,25,0,"Champion Blackrock","Blackrock Champion"),
-[436]=C(22,23,1,"Exhalombre Blackrock","Blackrock Shadowcaster"),
-[437]=C(21,22,0,"Renégat Blackrock","Blackrock Renegade"),
-[440]=C(19,20,0,"Grunt Blackrock","Blackrock Grunt"),
-[441]=C(17,18,0,"Dragonnet noir","Black Dragon Whelp"),
-[442]=C(15,16,0,"Tarentule","Tarantula"),
-[445]=C(21,22,0,"Alpha des Carmines","Redridge Alpha"),
-[446]=C(19,20,0,"Cogneur des Carmines","Redridge Basher"),
-[485]=C(20,21,0,"Estafette Blackrock","Blackrock Outrunner"),
-[486]=C(24,24,1,"Tharil'zun","Tharil'zun"),
-[505]=C(19,20,0,"Grande tarentule","Greater Tarantula"),
-[518]=C(25,25,0,"Couineur","Yowler"),
-[544]=C(21,22,0,"Marcheur de l'ombre murloc","Murloc Nightcrawler"),
-[545]=C(19,20,0,"Maître des flots murloc","Murloc Tidecaller"),
-[547]=C(16,17,0,"Grand Broche-tripes","Great Goretusk"),
-[548]=C(17,18,0,"Maître des flots murloc mineur","Murloc Minor Tidecaller"),
-[568]=C(24,25,0,"Guerrier Sombrepoil","Shadowhide Warrior"),
-[578]=C(19,20,0,"Eclaireur murloc","Murloc Scout"),
-[579]=C(23,24,0,"Assassin Sombrepoil","Shadowhide Assassin"),
-[580]=C(20,21,0,"Manouvrier des Carmines","Redridge Drudger"),
-[584]=C(27,27,4,"Kazon","Kazon"),
-[615]=C(23,24,0,"Pisteur Blackrock","Blackrock Tracker"),
-[616]=C(23,23,4,"Cliqueteuse","Chatter"),
-[703]=C(26,26,0,"Lieutenant Fangore","Lieutenant Fangore"),
-[711]=C(24,24,0,"Ardo Crassepatte","Ardo Dirtpaw"),
-[712]=C(14,15,0,"Vandale des Carmines","Redridge Thrasher"),
-[819]=C(24,25,0,"Serviteur d’Ilgalar","Servant of Ilgalar"),
-[850]=C(5,5,0,"Erin","Erin","A"),
-[932]=C(35,35,0,"Garde Ashlock","Guard Ashlock","A"),
-[933]=C(35,35,0,"Garde Hiett","Guard Hiett","A"),
-[934]=C(36,36,0,"Garde Clarke","Guard Clarke","A"),
-[935]=C(35,35,0,"Garde Pearce","Guard Pearce","A"),
-[936]=C(35,35,0,"Garde Adams","Guard Adams","A"),
-[947]=C(26,26,4,"Rohh le silencieux","Rohh the Silent"),
-[1083]=C(16,17,0,"Guerrier des rivages murloc","Murloc Shorestriker"),
-[4064]=C(20,21,1,"Eclaireur Blackrock","Blackrock Scout"),
-[4065]=C(21,22,1,"Sentinelle Blackrock","Blackrock Sentry"),
-[4462]=C(23,24,1,"Chasseur Blackrock","Blackrock Hunter"),
-[4463]=C(22,23,0,"Invocateur Blackrock","Blackrock Summoner"),
-[4464]=C(24,25,1,"Gladiateur Blackrock","Blackrock Gladiator"),
-[14269]=C(21,21,4,"Aqualon le Chercheur","Seeker Aqualon"),
-[14270]=C(19,19,4,"Squiddic","Squiddic"),
-[14271]=C(17,17,4,"Chassecôtes","Ribchaser"),
-[14272]=C(18,18,4,"Grondefuse","Snarlflare"),
-[14273]=C(25,25,4,"Rochecoeur","Boulderheart"),
-[14357]=C(25,25,1,"Batteur lacustre","Lake Thresher"),
-[165189]=C(7,30,0,"Cat","Cat"),
-[185317]=C(20,30,0,"Incubus","Incubus"),
-[214519]=C(23,23,1,"Incinerator Gar'im","Incinerator Gar'im"),
-[256393]=C(60,60,0,"Pack Mule","Pack Mule","A"),
-[256399]=C(60,60,0,"Off-Duty Pack Mule","Off-Duty Pack Mule","A"),
-[256739]=C(60,60,0,"Crate of Blacksmithing Goods","Crate of Blacksmithing Goods"),
-[264850]=C(20,30,0,"Hawk","Hawk"),
-[271898]=C(18,19,0,"Greater Tarantula","Greater Tarantula"),
-} end
+Z[1433] = [[
+334	26	26	1		Gath'Ilzogg
+335	24	24	1	Roussi	Singe
+345	24	24	0	Fouailleventre	Bellygrub
+397	26	26	1		Morganth
+422	18	19	0	Dévoreur murloc	Murloc Flesheater
+423	15	16	0	Bâtard des Carmines	Redridge Mongrel
+424	16	17	0	Braconnier des Carmines	Redridge Poacher
+426	17	18	0	Brute des Carmines	Redridge Brute
+428	18	19	0	Condor redoutable	Dire Condor
+429	25	26	0	Tisseur d'ombre Sombrepoil	Shadowhide Darkweaver
+430	18	19	0	Mystique des Carmines	Redridge Mystic
+431	25	26	0	Pourfendeur Sombrepoil	Shadowhide Slayer
+432	23	24	0	Brute Sombrepoil	Shadowhide Brute
+433	22	23	0	Gnoll Sombrepoil	Shadowhide Gnoll
+434	21	22	0	Gnoll Sombrepoil enragé	Rabid Shadowhide Gnoll
+435	24	25	0	Champion Blackrock	Blackrock Champion
+436	22	23	1	Exhalombre Blackrock	Blackrock Shadowcaster
+437	21	22	0	Renégat Blackrock	Blackrock Renegade
+440	19	20	0	Grunt Blackrock	Blackrock Grunt
+441	17	18	0	Dragonnet noir	Black Dragon Whelp
+442	15	16	0	Tarentule	Tarantula
+445	21	22	0	Alpha des Carmines	Redridge Alpha
+446	19	20	0	Cogneur des Carmines	Redridge Basher
+485	20	21	0	Estafette Blackrock	Blackrock Outrunner
+486	24	24	1		Tharil'zun
+505	19	20	0	Grande tarentule	Greater Tarantula
+518	25	25	0	Couineur	Yowler
+544	21	22	0	Marcheur de l'ombre murloc	Murloc Nightcrawler
+545	19	20	0	Maître des flots murloc	Murloc Tidecaller
+547	16	17	0	Grand Broche-tripes	Great Goretusk
+548	17	18	0	Maître des flots murloc mineur	Murloc Minor Tidecaller
+568	24	25	0	Guerrier Sombrepoil	Shadowhide Warrior
+578	19	20	0	Eclaireur murloc	Murloc Scout
+579	23	24	0	Assassin Sombrepoil	Shadowhide Assassin
+580	20	21	0	Manouvrier des Carmines	Redridge Drudger
+584	27	27	4		Kazon
+615	23	24	0	Pisteur Blackrock	Blackrock Tracker
+616	23	23	4	Cliqueteuse	Chatter
+703	26	26	0		Lieutenant Fangore
+711	24	24	0	Ardo Crassepatte	Ardo Dirtpaw
+712	14	15	0	Vandale des Carmines	Redridge Thrasher
+819	24	25	0	Serviteur d’Ilgalar	Servant of Ilgalar
+850	5	5	0		Erin	A
+932	35	35	0	Garde Ashlock	Guard Ashlock	A
+933	35	35	0	Garde Hiett	Guard Hiett	A
+934	36	36	0	Garde Clarke	Guard Clarke	A
+935	35	35	0	Garde Pearce	Guard Pearce	A
+936	35	35	0	Garde Adams	Guard Adams	A
+947	26	26	4	Rohh le silencieux	Rohh the Silent
+1083	16	17	0	Guerrier des rivages murloc	Murloc Shorestriker
+4064	20	21	1	Eclaireur Blackrock	Blackrock Scout
+4065	21	22	1	Sentinelle Blackrock	Blackrock Sentry
+4462	23	24	1	Chasseur Blackrock	Blackrock Hunter
+4463	22	23	0	Invocateur Blackrock	Blackrock Summoner
+4464	24	25	1	Gladiateur Blackrock	Blackrock Gladiator
+14269	21	21	4	Aqualon le Chercheur	Seeker Aqualon
+14270	19	19	4		Squiddic
+14271	17	17	4	Chassecôtes	Ribchaser
+14272	18	18	4	Grondefuse	Snarlflare
+14273	25	25	4	Rochecoeur	Boulderheart
+14357	25	25	1	Batteur lacustre	Lake Thresher
+165189	7	30	0		Cat
+185317	20	30	0		Incubus
+214519	23	23	1		Incinerator Gar'im
+256393	60	60	0		Pack Mule	A
+256399	60	60	0		Off-Duty Pack Mule	A
+256739	60	60	0		Crate of Blacksmithing Goods
+264850	20	30	0		Hawk
+271898	18	19	0		Greater Tarantula
+]]
 -- Stranglethorn Vale
-Z[1434] = function() return {
-[587]=C(33,34,0,"Guerrier Bloodscalp","Bloodscalp Warrior"),
-[588]=C(34,35,0,"Eclaireur Bloodscalp","Bloodscalp Scout"),
-[595]=C(34,35,0,"Chasseur Bloodscalp","Bloodscalp Hunter"),
-[597]=C(36,37,0,"Berserker Bloodscalp","Bloodscalp Berserker"),
-[660]=C(37,37,0,"Sorcier-docteur Bloodscalp","Bloodscalp Witch Doctor"),
-[667]=C(39,40,0,"Guerrier Skullsplitter","Skullsplitter Warrior"),
-[669]=C(41,42,0,"Chasseur Skullsplitter","Skullsplitter Hunter"),
-[670]=C(41,42,0,"Sorcier-docteur Skullsplitter","Skullsplitter Witch Doctor"),
-[671]=C(36,37,0,"Chasseur de tête Bloodscalp","Bloodscalp Headhunter"),
-[672]=C(44,44,0,"Chasseur d’esprit Skullsplitter","Skullsplitter Spiritchaser"),
-[674]=C(40,41,0,"Carrier de la KapitalRisk","Venture Co. Strip Miner"),
-[675]=C(42,42,0,"Contremaître de la KapitalRisk","Venture Co. Foreman"),
-[676]=C(41,42,0,"Géomètre de la KapitalRisk","Venture Co. Surveyor"),
-[677]=C(40,41,0,"Bricoleur de la KapitalRisk","Venture Co. Tinkerer"),
-[678]=C(43,44,1,"Mutileur Mosh'Ogg","Mosh'Ogg Mauler"),
-[679]=C(43,44,1,"Chaman Mosh'Ogg","Mosh'Ogg Shaman"),
-[680]=C(45,45,1,"Seigneur Mosh'Ogg","Mosh'Ogg Lord"),
-[681]=C(30,31,0,"Jeune tigre de Strangleronce","Young Stranglethorn Tiger"),
-[682]=C(32,33,0,"Tigre de Strangleronce","Stranglethorn Tiger"),
-[683]=C(30,31,0,"Jeune panthère","Young Panther"),
-[684]=C(37,38,0,"Panthère Ombregueule","Shadowmaw Panther"),
-[685]=C(33,34,0,"Raptor de Strangleronce","Stranglethorn Raptor"),
-[686]=C(35,36,0,"Raptor flagellant","Lashtail Raptor"),
-[687]=C(40,41,0,"Traqueur de la jungle","Jungle Stalker"),
-[688]=C(31,32,0,"Basilic de pierre","Stone Maw Basilisk"),
-[689]=C(34,35,0,"Basilic de cristal","Crystal Spine Basilisk"),
-[690]=C(39,40,0,"Basilic Oeil-de-glace","Cold Eye Basilisk"),
-[691]=C(36,37,0,"Elémentaire d'eau mineur","Lesser Water Elemental"),
-[694]=C(33,34,0,"Lanceur de haches Bloodscalp","Bloodscalp Axe Thrower"),
-[696]=C(39,40,0,"Lanceur de haches Skullsplitter","Skullsplitter Axe Thrower"),
-[697]=C(33,34,0,"Chaman Bloodscalp","Bloodscalp Shaman"),
-[699]=C(34,35,0,"Belluaire Bloodscalp","Bloodscalp Beastmaster"),
-[701]=C(34,35,0,"Mystique Bloodscalp","Bloodscalp Mystic"),
-[702]=C(33,34,0,"Charognard Bloodscalp","Bloodscalp Scavenger"),
-[709]=C(41,42,1,"Combattant Mosh'Ogg","Mosh'Ogg Warmonger"),
-[710]=C(43,44,1,"Magicien Mosh'Ogg","Mosh'Ogg Spellcrafter"),
-[723]=C(44,44,2,"Boucher Mosh'Ogg","Mosh'Ogg Butcher"),
-[728]=C(40,40,1,"Bhag'thera","Bhag'thera"),
-[729]=C(37,37,0,"Sin'Dall","Sin'Dall"),
-[730]=C(43,43,1,"Téthis","Tethis"),
-[731]=C(43,43,1,"Roi Bangalash","King Bangalash"),
-[736]=C(32,33,0,"Panthère","Panther"),
-[754]=C(31,32,0,"Sentinelle rebelle","Rebel Watchman","A"),
-[756]=C(41,42,0,"Panthère Skullsplitter","Skullsplitter Panther"),
-[772]=C(37,38,0,"Tigresse de Strangleronce","Stranglethorn Tigress"),
-[780]=C(39,40,0,"Mystique Skullsplitter","Skullsplitter Mystic"),
-[781]=C(43,44,0,"Chasseur de têtes Skullsplitter","Skullsplitter Headhunter"),
-[782]=C(41,42,0,"Eclaireur Skullsplitter","Skullsplitter Scout"),
-[783]=C(43,44,0,"Berserker Skullsplitter","Skullsplitter Berserker"),
-[784]=C(41,42,0,"Belluaire Skullsplitter","Skullsplitter Beastmaster"),
-[813]=C(39,40,1,"Colonel Kurzen","Colonel Kurzen"),
-[814]=C(38,38,0,"Sergent Malthus","Sergeant Malthus"),
-[815]=C(35,35,0,"Herod la Paperasse","Bookie Herod"),
-[818]=C(47,47,1,"Mai'Zoth","Mai'Zoth"),
-[854]=C(36,37,0,"Jeune Traqueur de la jungle","Young Jungle Stalker"),
-[855]=C(30,31,0,"Jeune raptor de Strangleronce","Young Stranglethorn Raptor"),
-[856]=C(33,34,0,"Jeune raptor flagellant","Young Lashtail Raptor"),
-[871]=C(35,36,1,"Guerrier Selécaille","Saltscale Warrior"),
-[873]=C(36,37,1,"Oracle Selécaille","Saltscale Oracle"),
-[875]=C(37,37,1,"Seigneur des marées Selécaille","Saltscale Tide Lord"),
-[877]=C(35,36,1,"Fourrageur Selécaille","Saltscale Forager"),
-[879]=C(35,36,1,"Chasseur Selécaille","Saltscale Hunter"),
-[905]=C(31,32,0,"Trancheur frénétique","Sharptooth Frenzy"),
-[921]=C(34,35,0,"Bûcheron de la KapitalRisk","Venture Co. Lumberjack"),
-[937]=C(32,33,0,"Guerrier de la jungle de Kurzen","Kurzen Jungle Fighter"),
-[938]=C(33,35,0,"Commando de Kurzen","Kurzen Commando"),
-[939]=C(36,37,0,"Troupe d'élite de Kurzen","Kurzen Elite"),
-[940]=C(32,33,0,"Guérisseur de Kurzen","Kurzen Medicine Man"),
-[941]=C(34,35,0,"Réducteur de tête de Kurzen","Kurzen Headshrinker"),
-[942]=C(36,37,0,"Sorcier-docteur de Kurzen","Kurzen Witch Doctor"),
-[943]=C(34,34,0,"Fracasseur de Kurzen","Kurzen Wrangler"),
-[976]=C(32,33,0,"Tigre de guerre de Kurzen","Kurzen War Tiger"),
-[977]=C(32,33,0,"Panthère de guerre de Kurzen","Kurzen War Panther"),
-[978]=C(35,36,0,"Lieutenant de Kurzen","Kurzen Subchief"),
-[979]=C(36,38,0,"Chasseur des ombres de Kurzen","Kurzen Shadow Hunter"),
-[1059]=C(45,45,0,"Ana'thek le Cruel","Ana'thek the Cruel"),
-[1060]=C(44,44,1,"Mogh l'Immortel","Mogh the Undying"),
-[1061]=C(41,41,0,"Gan'zulah","Gan'zulah"),
-[1062]=C(40,40,0,"Nezzliok le Redoutable","Nezzliok the Dire"),
-[1064]=C(55,55,0,"Grunt de Grom'gol","Grom'gol Grunt","H"),
-[1085]=C(34,35,0,"Ancien tigre de Strangleronce","Elder Stranglethorn Tiger"),
-[1094]=C(34,35,0,"Mineur de la KapitalRisk","Venture Co. Miner"),
-[1095]=C(36,36,0,"Régisseur de la KapitalRisk","Venture Co. Workboss"),
-[1096]=C(34,36,0,"Géologue de la KapitalRisk","Venture Co. Geologist"),
-[1097]=C(34,35,0,"Mécanicien de la KapitalRisk","Venture Co. Mechanic"),
-[1108]=C(32,33,0,"Gorille de Valbrume","Mistvale Gorilla"),
-[1114]=C(37,38,0,"Foudroyeur de la Jungle","Jungle Thunderer"),
-[1142]=C(36,37,0,"Brute Mosh'Ogg","Mosh'Ogg Brute"),
-[1144]=C(36,37,0,"Sorcier-docteur Mosh'Ogg","Mosh'Ogg Witch Doctor"),
-[1150]=C(30,31,0,"Crocilisque des rivières","River Crocolisk"),
-[1151]=C(35,36,0,"Crocilisque marin","Saltwater Crocolisk"),
-[1152]=C(35,36,0,"Crocilisque Gueule d'acier","Snapjaw Crocolisk"),
-[1488]=C(43,44,0,"Zombie Zanzil","Zanzil Zombie"),
-[1489]=C(43,44,0,"Chasseur Zanzil","Zanzil Hunter"),
-[1490]=C(44,44,0,"Sorcier-docteur Zanzil","Zanzil Witch Doctor"),
-[1491]=C(44,44,0,"Naga Zanzil","Zanzil Naga"),
-[1492]=C(47,47,1,"Gorlash","Gorlash"),
-[1493]=C(50,50,1,"Mok'rash","Mok'rash"),
-[1494]=C(52,52,1,"Negolash","Negolash"),
-[1511]=C(41,42,0,"Dos argenté enragé","Enraged Silverback Gorilla"),
-[1514]=C(44,44,0,"Mokk le Sauvage","Mokk the Savage"),
-[1516]=C(43,43,0,"Konda","Konda"),
-[1550]=C(41,42,0,"Basilic flagelleur","Thrashtail Basilisk"),
-[1551]=C(43,44,0,"Basilic gueule de fer","Ironjaw Basilisk"),
-[1552]=C(45,45,4,"Ventrécaille","Scale Belly"),
-[1557]=C(40,41,0,"Ancien gorille de Valbrume","Elder Mistvale Gorilla"),
-[1558]=C(42,43,0,"Patriarche Dos argenté","Silverback Patriarch"),
-[1559]=C(51,51,1,"Roi Mukla","King Mukla"),
-[1561]=C(39,41,0,"Ecumeur de la Voile sanglante","Bloodsail Raider"),
-[1562]=C(39,41,0,"Mage de la Voile sanglante","Bloodsail Mage"),
-[1563]=C(41,43,0,"Bretteur de la Voile sanglante","Bloodsail Swashbuckler"),
-[1564]=C(41,43,0,"Démoniste de la Voile sanglante","Bloodsail Warlock"),
-[1565]=C(43,45,0,"Loup de mer de la Voile sanglante","Bloodsail Sea Dog"),
-[1653]=C(44,45,0,"Ancien magus de la Voile sanglante","Bloodsail Elder Magus"),
-[1713]=C(42,43,0,"Ancienne panthère Ombregueule","Elder Shadowmaw Panther"),
-[1907]=C(43,44,0,"Explorateur naga","Naga Explorer"),
-[2521]=C(50,50,0,"Gorille Crins-de-ciel","Skymane Gorilla"),
-[2522]=C(50,50,0,"Traqueur jaguero","Jaguero Stalker"),
-[2530]=C(41,41,0,"Yenniku","Yenniku"),
-[2534]=C(46,46,0,"Zanzil le Paria","Zanzil the Outcast"),
-[2535]=C(43,44,0,"Maury \"Pied bot\" Wilkins","Maury \"Club Foot\" Wilkins"),
-[2536]=C(43,44,0,"Jon-Jon le Corbeau","Jon-Jon the Crow"),
-[2537]=C(43,44,0,"Chucky \"Dix pouces\"","Chucky \"Ten Thumbs\""),
-[2541]=C(45,45,4,"Seigneur Sakrasis","Lord Sakrasis"),
-[2544]=C(40,41,0,"Clampant des sables du sud","Southern Sand Crawler"),
-[2545]=C(39,39,0,"Duncan \"le Beau garçon\"","\"Pretty Boy\" Duncan"),
-[2546]=C(48,48,0,"Amiral Firallon","Fleet Master Firallon"),
-[2547]=C(42,43,0,"Oeil de fer","Ironpatch"),
-[2548]=C(46,47,0,"Capitaine Keelhaul","Captain Keelhaul"),
-[2549]=C(41,43,0,"Garr Salthoof","Garr Salthoof"),
-[2550]=C(45,46,0,"Capitaine Stillwater","Captain Stillwater"),
-[2551]=C(43,43,0,"Brutus","Brutus"),
-[2635]=C(38,38,1,"Ancien crocilisque marin","Elder Saltwater Crocolisk"),
-[2676]=C(40,41,0,"Moissonneur compact","Compact Harvest Reaper"),
-[4260]=C(37,37,0,"Déchiqueteur de la KapitalRisk","Venture Co. Shredder"),
-[4457]=C(35,36,0,"Fourrageur Branchie-bistre","Murkgill Forager"),
-[4458]=C(35,36,0,"Chasseur Branchie-bistre","Murkgill Hunter"),
-[4459]=C(36,37,0,"Oracle Branchie-bistre","Murkgill Oracle"),
-[4460]=C(37,37,0,"Seigneur Branchie-bistre","Murkgill Lord"),
-[4461]=C(35,36,0,"Guerrier Branchie-bistre","Murkgill Warrior"),
-[4505]=C(43,44,0,"Matelot de la Voile sanglante","Bloodsail Deckhand"),
-[4506]=C(42,44,0,"Mousse de la Voile sanglante","Bloodsail Swabby"),
-[4723]=C(38,38,0,"Contremaître Cozzle","Foreman Cozzle"),
-[10928]=C(40,40,0,"Succube démoniaque","Succubus Minion"),
-[11346]=C(55,56,1,"Oracle Hakkari","Hakkari Oracle"),
-[11355]=C(54,55,1,"Guerrier Gurubashi","Gurubashi Warrior"),
-[11383]=C(57,57,1,"Grande prêtresse Hai'watna","High Priestess Hai'watna"),
-[14487]=C(37,37,4,"Gluggle","Gluggle"),
-[14488]=C(38,38,4,"Roloch","Roloch"),
-[14490]=C(44,44,4,"Rippa","Rippa"),
-[14491]=C(42,42,4,"Kurmokk","Kurmokk"),
-[16096]=C(55,55,1,"Cogneur de Gentepression","Steamwheedle Bruiser","H"),
-[165189]=C(7,30,0,"Cat","Cat"),
-[218229]=C(40,40,0,"Captain Aransas","Captain Aransas"),
-[223591]=C(1,1,0,"Echo of a Lost Soul","Echo of a Lost Soul"),
-[248809]=C(42,42,0,"Jenna","Jenna"),
-[262397]=C(36,38,0,"Brinescale Skirmisher","Brinescale Skirmisher"),
-[264850]=C(20,30,0,"Hawk","Hawk"),
-[267806]=C(50,50,0,"\"Flipfin\"","\"Flipfin\""),
-[269175]=C(36,38,0,"Carnivorous Weed","Carnivorous Weed"),
-[274931]=C(55,55,0,"Elril Everlight","Elril Everlight"),
-} end
+Z[1434] = [[
+587	33	34	0	Guerrier Bloodscalp	Bloodscalp Warrior
+588	34	35	0	Eclaireur Bloodscalp	Bloodscalp Scout
+595	34	35	0	Chasseur Bloodscalp	Bloodscalp Hunter
+597	36	37	0	Berserker Bloodscalp	Bloodscalp Berserker
+660	37	37	0	Sorcier-docteur Bloodscalp	Bloodscalp Witch Doctor
+667	39	40	0	Guerrier Skullsplitter	Skullsplitter Warrior
+669	41	42	0	Chasseur Skullsplitter	Skullsplitter Hunter
+670	41	42	0	Sorcier-docteur Skullsplitter	Skullsplitter Witch Doctor
+671	36	37	0	Chasseur de tête Bloodscalp	Bloodscalp Headhunter
+672	44	44	0	Chasseur d’esprit Skullsplitter	Skullsplitter Spiritchaser
+674	40	41	0	Carrier de la KapitalRisk	Venture Co. Strip Miner
+675	42	42	0	Contremaître de la KapitalRisk	Venture Co. Foreman
+676	41	42	0	Géomètre de la KapitalRisk	Venture Co. Surveyor
+677	40	41	0	Bricoleur de la KapitalRisk	Venture Co. Tinkerer
+678	43	44	1	Mutileur Mosh'Ogg	Mosh'Ogg Mauler
+679	43	44	1	Chaman Mosh'Ogg	Mosh'Ogg Shaman
+680	45	45	1	Seigneur Mosh'Ogg	Mosh'Ogg Lord
+681	30	31	0	Jeune tigre de Strangleronce	Young Stranglethorn Tiger
+682	32	33	0	Tigre de Strangleronce	Stranglethorn Tiger
+683	30	31	0	Jeune panthère	Young Panther
+684	37	38	0	Panthère Ombregueule	Shadowmaw Panther
+685	33	34	0	Raptor de Strangleronce	Stranglethorn Raptor
+686	35	36	0	Raptor flagellant	Lashtail Raptor
+687	40	41	0	Traqueur de la jungle	Jungle Stalker
+688	31	32	0	Basilic de pierre	Stone Maw Basilisk
+689	34	35	0	Basilic de cristal	Crystal Spine Basilisk
+690	39	40	0	Basilic Oeil-de-glace	Cold Eye Basilisk
+691	36	37	0	Elémentaire d'eau mineur	Lesser Water Elemental
+694	33	34	0	Lanceur de haches Bloodscalp	Bloodscalp Axe Thrower
+696	39	40	0	Lanceur de haches Skullsplitter	Skullsplitter Axe Thrower
+697	33	34	0	Chaman Bloodscalp	Bloodscalp Shaman
+699	34	35	0	Belluaire Bloodscalp	Bloodscalp Beastmaster
+701	34	35	0	Mystique Bloodscalp	Bloodscalp Mystic
+702	33	34	0	Charognard Bloodscalp	Bloodscalp Scavenger
+709	41	42	1	Combattant Mosh'Ogg	Mosh'Ogg Warmonger
+710	43	44	1	Magicien Mosh'Ogg	Mosh'Ogg Spellcrafter
+723	44	44	2	Boucher Mosh'Ogg	Mosh'Ogg Butcher
+728	40	40	1		Bhag'thera
+729	37	37	0		Sin'Dall
+730	43	43	1	Téthis	Tethis
+731	43	43	1	Roi Bangalash	King Bangalash
+736	32	33	0	Panthère	Panther
+754	31	32	0	Sentinelle rebelle	Rebel Watchman	A
+756	41	42	0	Panthère Skullsplitter	Skullsplitter Panther
+772	37	38	0	Tigresse de Strangleronce	Stranglethorn Tigress
+780	39	40	0	Mystique Skullsplitter	Skullsplitter Mystic
+781	43	44	0	Chasseur de têtes Skullsplitter	Skullsplitter Headhunter
+782	41	42	0	Eclaireur Skullsplitter	Skullsplitter Scout
+783	43	44	0	Berserker Skullsplitter	Skullsplitter Berserker
+784	41	42	0	Belluaire Skullsplitter	Skullsplitter Beastmaster
+813	39	40	1		Colonel Kurzen
+814	38	38	0	Sergent Malthus	Sergeant Malthus
+815	35	35	0	Herod la Paperasse	Bookie Herod
+818	47	47	1		Mai'Zoth
+854	36	37	0	Jeune Traqueur de la jungle	Young Jungle Stalker
+855	30	31	0	Jeune raptor de Strangleronce	Young Stranglethorn Raptor
+856	33	34	0	Jeune raptor flagellant	Young Lashtail Raptor
+871	35	36	1	Guerrier Selécaille	Saltscale Warrior
+873	36	37	1	Oracle Selécaille	Saltscale Oracle
+875	37	37	1	Seigneur des marées Selécaille	Saltscale Tide Lord
+877	35	36	1	Fourrageur Selécaille	Saltscale Forager
+879	35	36	1	Chasseur Selécaille	Saltscale Hunter
+905	31	32	0	Trancheur frénétique	Sharptooth Frenzy
+921	34	35	0	Bûcheron de la KapitalRisk	Venture Co. Lumberjack
+937	32	33	0	Guerrier de la jungle de Kurzen	Kurzen Jungle Fighter
+938	33	35	0	Commando de Kurzen	Kurzen Commando
+939	36	37	0	Troupe d'élite de Kurzen	Kurzen Elite
+940	32	33	0	Guérisseur de Kurzen	Kurzen Medicine Man
+941	34	35	0	Réducteur de tête de Kurzen	Kurzen Headshrinker
+942	36	37	0	Sorcier-docteur de Kurzen	Kurzen Witch Doctor
+943	34	34	0	Fracasseur de Kurzen	Kurzen Wrangler
+976	32	33	0	Tigre de guerre de Kurzen	Kurzen War Tiger
+977	32	33	0	Panthère de guerre de Kurzen	Kurzen War Panther
+978	35	36	0	Lieutenant de Kurzen	Kurzen Subchief
+979	36	38	0	Chasseur des ombres de Kurzen	Kurzen Shadow Hunter
+1059	45	45	0	Ana'thek le Cruel	Ana'thek the Cruel
+1060	44	44	1	Mogh l'Immortel	Mogh the Undying
+1061	41	41	0		Gan'zulah
+1062	40	40	0	Nezzliok le Redoutable	Nezzliok the Dire
+1064	55	55	0	Grunt de Grom'gol	Grom'gol Grunt	H
+1085	34	35	0	Ancien tigre de Strangleronce	Elder Stranglethorn Tiger
+1094	34	35	0	Mineur de la KapitalRisk	Venture Co. Miner
+1095	36	36	0	Régisseur de la KapitalRisk	Venture Co. Workboss
+1096	34	36	0	Géologue de la KapitalRisk	Venture Co. Geologist
+1097	34	35	0	Mécanicien de la KapitalRisk	Venture Co. Mechanic
+1108	32	33	0	Gorille de Valbrume	Mistvale Gorilla
+1114	37	38	0	Foudroyeur de la Jungle	Jungle Thunderer
+1142	36	37	0	Brute Mosh'Ogg	Mosh'Ogg Brute
+1144	36	37	0	Sorcier-docteur Mosh'Ogg	Mosh'Ogg Witch Doctor
+1150	30	31	0	Crocilisque des rivières	River Crocolisk
+1151	35	36	0	Crocilisque marin	Saltwater Crocolisk
+1152	35	36	0	Crocilisque Gueule d'acier	Snapjaw Crocolisk
+1488	43	44	0	Zombie Zanzil	Zanzil Zombie
+1489	43	44	0	Chasseur Zanzil	Zanzil Hunter
+1490	44	44	0	Sorcier-docteur Zanzil	Zanzil Witch Doctor
+1491	44	44	0	Naga Zanzil	Zanzil Naga
+1492	47	47	1		Gorlash
+1493	50	50	1		Mok'rash
+1494	52	52	1		Negolash
+1511	41	42	0	Dos argenté enragé	Enraged Silverback Gorilla
+1514	44	44	0	Mokk le Sauvage	Mokk the Savage
+1516	43	43	0		Konda
+1550	41	42	0	Basilic flagelleur	Thrashtail Basilisk
+1551	43	44	0	Basilic gueule de fer	Ironjaw Basilisk
+1552	45	45	4	Ventrécaille	Scale Belly
+1557	40	41	0	Ancien gorille de Valbrume	Elder Mistvale Gorilla
+1558	42	43	0	Patriarche Dos argenté	Silverback Patriarch
+1559	51	51	1	Roi Mukla	King Mukla
+1561	39	41	0	Ecumeur de la Voile sanglante	Bloodsail Raider
+1562	39	41	0	Mage de la Voile sanglante	Bloodsail Mage
+1563	41	43	0	Bretteur de la Voile sanglante	Bloodsail Swashbuckler
+1564	41	43	0	Démoniste de la Voile sanglante	Bloodsail Warlock
+1565	43	45	0	Loup de mer de la Voile sanglante	Bloodsail Sea Dog
+1653	44	45	0	Ancien magus de la Voile sanglante	Bloodsail Elder Magus
+1713	42	43	0	Ancienne panthère Ombregueule	Elder Shadowmaw Panther
+1907	43	44	0	Explorateur naga	Naga Explorer
+2521	50	50	0	Gorille Crins-de-ciel	Skymane Gorilla
+2522	50	50	0	Traqueur jaguero	Jaguero Stalker
+2530	41	41	0		Yenniku
+2534	46	46	0	Zanzil le Paria	Zanzil the Outcast
+2535	43	44	0	Maury "Pied bot" Wilkins	Maury "Club Foot" Wilkins
+2536	43	44	0	Jon-Jon le Corbeau	Jon-Jon the Crow
+2537	43	44	0	Chucky "Dix pouces"	Chucky "Ten Thumbs"
+2541	45	45	4	Seigneur Sakrasis	Lord Sakrasis
+2544	40	41	0	Clampant des sables du sud	Southern Sand Crawler
+2545	39	39	0	Duncan "le Beau garçon"	"Pretty Boy" Duncan
+2546	48	48	0	Amiral Firallon	Fleet Master Firallon
+2547	42	43	0	Oeil de fer	Ironpatch
+2548	46	47	0	Capitaine Keelhaul	Captain Keelhaul
+2549	41	43	0		Garr Salthoof
+2550	45	46	0	Capitaine Stillwater	Captain Stillwater
+2551	43	43	0		Brutus
+2635	38	38	1	Ancien crocilisque marin	Elder Saltwater Crocolisk
+2676	40	41	0	Moissonneur compact	Compact Harvest Reaper
+4260	37	37	0	Déchiqueteur de la KapitalRisk	Venture Co. Shredder
+4457	35	36	0	Fourrageur Branchie-bistre	Murkgill Forager
+4458	35	36	0	Chasseur Branchie-bistre	Murkgill Hunter
+4459	36	37	0	Oracle Branchie-bistre	Murkgill Oracle
+4460	37	37	0	Seigneur Branchie-bistre	Murkgill Lord
+4461	35	36	0	Guerrier Branchie-bistre	Murkgill Warrior
+4505	43	44	0	Matelot de la Voile sanglante	Bloodsail Deckhand
+4506	42	44	0	Mousse de la Voile sanglante	Bloodsail Swabby
+4723	38	38	0	Contremaître Cozzle	Foreman Cozzle
+10928	40	40	0	Succube démoniaque	Succubus Minion
+11346	55	56	1	Oracle Hakkari	Hakkari Oracle
+11355	54	55	1	Guerrier Gurubashi	Gurubashi Warrior
+11383	57	57	1	Grande prêtresse Hai'watna	High Priestess Hai'watna
+14487	37	37	4		Gluggle
+14488	38	38	4		Roloch
+14490	44	44	4		Rippa
+14491	42	42	4		Kurmokk
+16096	55	55	1	Cogneur de Gentepression	Steamwheedle Bruiser	H
+165189	7	30	0		Cat
+218229	40	40	0		Captain Aransas
+223591	1	1	0		Echo of a Lost Soul
+248809	42	42	0		Jenna
+262397	36	38	0		Brinescale Skirmisher
+264850	20	30	0		Hawk
+267806	50	50	0		"Flipfin"
+269175	36	38	0		Carnivorous Weed
+274931	55	55	0		Elril Everlight
+]]
 -- Swamp of Sorrows
-Z[1435] = function() return {
-[740]=C(34,35,0,"Jeune dragonnet","Adolescent Whelp"),
-[741]=C(35,36,0,"Dragonnet rêveur","Dreaming Whelp"),
-[742]=C(41,42,0,"Wyrmide vert","Green Wyrmkin"),
-[743]=C(42,43,0,"Marcherêve wyrmide","Wyrmkin Dreamwalker"),
-[744]=C(42,43,0,"Plaiedécaille vert","Green Scalebane"),
-[745]=C(43,44,0,"Capitaine Plaiedécaille","Scalebane Captain"),
-[746]=C(45,45,0,"Ancien draconien","Elder Dragonkin"),
-[747]=C(41,42,0,"Murloc des marais","Marsh Murloc"),
-[750]=C(42,43,0,"Cracheur des marais","Marsh Inkspewer"),
-[751]=C(43,44,0,"Dévoreur des marais","Marsh Flesheater"),
-[752]=C(44,45,0,"Oracle des marais","Marsh Oracle"),
-[755]=C(34,35,0,"Rôdeboue Perdu","Lost One Mudlurker"),
-[757]=C(35,36,0,"Pêcheur Perdu","Lost One Fisherman"),
-[759]=C(36,37,0,"Chasseur Perdu","Lost One Hunter"),
-[760]=C(36,37,0,"Marche-boue Perdu","Lost One Muckdweller"),
-[761]=C(37,38,0,"Prophète Perdu","Lost One Seer"),
-[762]=C(37,38,0,"Fouille-rivage Perdu","Lost One Riftseeker"),
-[763]=C(39,39,4,"Chef Perdu","Lost One Chieftain"),
-[764]=C(38,39,0,"Maraistreur","Swampwalker"),
-[765]=C(39,40,0,"Ancien Maraistreur","Swampwalker Elder"),
-[766]=C(40,41,0,"Horreur enchevêtrée","Tangled Horror"),
-[767]=C(36,37,0,"Jaguar du marécage","Swamp Jaguar"),
-[768]=C(39,40,0,"Panthère des ombres","Shadow Panther"),
-[769]=C(40,41,0,"Tarentule mortelle","Deathstrike Tarantula"),
-[858]=C(36,37,0,"Tisseuse des pleurs","Sorrow Spinner"),
-[861]=C(36,37,0,"Eclaireur de Stonard","Stonard Scout","H"),
-[862]=C(37,38,0,"Explorateur de Stonard","Stonard Explorer","H"),
-[863]=C(55,55,0,"Chasseur de Stonard","Stonard Hunter","H"),
-[864]=C(48,48,0,"Orc de Stonard","Stonard Orc","H"),
-[865]=C(50,51,0,"Pisteur de Stonard","Stonard Wayfinder","H"),
-[866]=C(56,56,0,"Grunt de Stonard","Stonard Grunt","H"),
-[867]=C(52,52,0,"Cartographe de Stonard","Stonard Cartographer","H"),
-[868]=C(53,53,0,"Chaman de Stonard","Stonard Shaman","H"),
-[922]=C(40,41,0,"Clampant des vases","Silt Crawler"),
-[950]=C(50,50,0,"Parleur des marécages","Swamp Talker"),
-[1081]=C(42,42,0,"Seigneur du bourbier","Mire Lord"),
-[1082]=C(38,39,0,"Crocilisque Dents-de-scie","Sawtooth Crocolisk"),
-[1084]=C(35,36,0,"Jeune crocilisque Dents-de-scie","Young Sawtooth Crocolisk"),
-[1087]=C(41,42,0,"Mordeur Dents-de-scie","Sawtooth Snapper"),
-[1088]=C(43,44,0,"Clampant monstrueux","Monstrous Crawler"),
-[1106]=C(37,37,4,"Cuisinier perdu","Lost One Cook"),
-[5261]=C(45,46,1,"Exalté atal'ai","Enthralled Atal'ai"),
-[5477]=C(39,39,0,"Noboru le Gourdin","Noboru the Cudgel"),
-[5546]=C(55,55,0,"Grunt Zuul","Grunt Zuul","H"),
-[5547]=C(55,55,0,"Grunt Tharlak","Grunt Tharlak","H"),
-[5622]=C(37,37,0,"Ongeku","Ongeku"),
-[9916]=C(46,46,0,"Jarquia","Jarquia"),
-[11198]=C(42,42,0,"Exilé draeneï","Draenei Exile"),
-[12900]=C(62,62,1,"Somnus","Somnus"),
-[14356]=C(38,40,0,"Nagescie frénétique","Sawfin Frenzy"),
-[14445]=C(45,45,2,"Seigneur-capitaine Wyrmak","Lord Captain Wyrmak"),
-[14446]=C(43,43,4,"Fingat","Fingat"),
-[14447]=C(43,43,4,"Gilmorian","Gilmorian"),
-[14448]=C(42,42,4,"Rougeronce","Molt Thorn"),
-[165189]=C(7,30,0,"Cat","Cat"),
-[218931]=C(41,41,0,"Dark Rider","Dark Rider"),
-[223591]=C(1,1,0,"Echo of a Lost Soul","Echo of a Lost Soul"),
-[271636]=C(1,1,0,"Weevil K. Neevil","Weevil K. Neevil"),
-[275088]=C(55,55,0,"Enraged Stonard Grunt","Enraged Stonard Grunt"),
-} end
+Z[1435] = [[
+740	34	35	0	Jeune dragonnet	Adolescent Whelp
+741	35	36	0	Dragonnet rêveur	Dreaming Whelp
+742	41	42	0	Wyrmide vert	Green Wyrmkin
+743	42	43	0	Marcherêve wyrmide	Wyrmkin Dreamwalker
+744	42	43	0	Plaiedécaille vert	Green Scalebane
+745	43	44	0	Capitaine Plaiedécaille	Scalebane Captain
+746	45	45	0	Ancien draconien	Elder Dragonkin
+747	41	42	0	Murloc des marais	Marsh Murloc
+750	42	43	0	Cracheur des marais	Marsh Inkspewer
+751	43	44	0	Dévoreur des marais	Marsh Flesheater
+752	44	45	0	Oracle des marais	Marsh Oracle
+755	34	35	0	Rôdeboue Perdu	Lost One Mudlurker
+757	35	36	0	Pêcheur Perdu	Lost One Fisherman
+759	36	37	0	Chasseur Perdu	Lost One Hunter
+760	36	37	0	Marche-boue Perdu	Lost One Muckdweller
+761	37	38	0	Prophète Perdu	Lost One Seer
+762	37	38	0	Fouille-rivage Perdu	Lost One Riftseeker
+763	39	39	4	Chef Perdu	Lost One Chieftain
+764	38	39	0	Maraistreur	Swampwalker
+765	39	40	0	Ancien Maraistreur	Swampwalker Elder
+766	40	41	0	Horreur enchevêtrée	Tangled Horror
+767	36	37	0	Jaguar du marécage	Swamp Jaguar
+768	39	40	0	Panthère des ombres	Shadow Panther
+769	40	41	0	Tarentule mortelle	Deathstrike Tarantula
+858	36	37	0	Tisseuse des pleurs	Sorrow Spinner
+861	36	37	0	Eclaireur de Stonard	Stonard Scout	H
+862	37	38	0	Explorateur de Stonard	Stonard Explorer	H
+863	55	55	0	Chasseur de Stonard	Stonard Hunter	H
+864	48	48	0	Orc de Stonard	Stonard Orc	H
+865	50	51	0	Pisteur de Stonard	Stonard Wayfinder	H
+866	56	56	0	Grunt de Stonard	Stonard Grunt	H
+867	52	52	0	Cartographe de Stonard	Stonard Cartographer	H
+868	53	53	0	Chaman de Stonard	Stonard Shaman	H
+922	40	41	0	Clampant des vases	Silt Crawler
+950	50	50	0	Parleur des marécages	Swamp Talker
+1081	42	42	0	Seigneur du bourbier	Mire Lord
+1082	38	39	0	Crocilisque Dents-de-scie	Sawtooth Crocolisk
+1084	35	36	0	Jeune crocilisque Dents-de-scie	Young Sawtooth Crocolisk
+1087	41	42	0	Mordeur Dents-de-scie	Sawtooth Snapper
+1088	43	44	0	Clampant monstrueux	Monstrous Crawler
+1106	37	37	4	Cuisinier perdu	Lost One Cook
+5261	45	46	1	Exalté atal'ai	Enthralled Atal'ai
+5477	39	39	0	Noboru le Gourdin	Noboru the Cudgel
+5546	55	55	0		Grunt Zuul	H
+5547	55	55	0		Grunt Tharlak	H
+5622	37	37	0		Ongeku
+9916	46	46	0		Jarquia
+11198	42	42	0	Exilé draeneï	Draenei Exile
+12900	62	62	1		Somnus
+14356	38	40	0	Nagescie frénétique	Sawfin Frenzy
+14445	45	45	2	Seigneur-capitaine Wyrmak	Lord Captain Wyrmak
+14446	43	43	4		Fingat
+14447	43	43	4		Gilmorian
+14448	42	42	4	Rougeronce	Molt Thorn
+165189	7	30	0		Cat
+218931	41	41	0		Dark Rider
+223591	1	1	0		Echo of a Lost Soul
+271636	1	1	0		Weevil K. Neevil
+275088	55	55	0		Enraged Stonard Grunt
+]]
 -- Westfall
-Z[1436] = function() return {
-[36]=C(11,12,0,"Golem des moissons","Harvest Golem"),
-[95]=C(11,12,0,"Contrebandier défias","Defias Smuggler"),
-[98]=C(17,18,0,"Sous-chef Rivepatte","Riverpaw Taskmaster"),
-[114]=C(14,15,0,"Gardien des moissons","Harvest Watcher"),
-[115]=C(17,18,0,"Moissonneur","Harvest Reaper"),
-[117]=C(11,12,0,"Gnoll Rivepatte","Riverpaw Gnoll"),
-[121]=C(15,16,0,"Eclaireur défias","Defias Pathstalker"),
-[122]=C(17,18,0,"Malandrin défias","Defias Highwayman"),
-[123]=C(13,14,0,"Bâtard Rivepatte","Riverpaw Mongrel"),
-[124]=C(15,16,0,"Brute Rivepatte","Riverpaw Brute"),
-[125]=C(19,19,0,"Surveillant Rivepatte","Riverpaw Overseer"),
-[126]=C(12,13,0,"Cours-la-côte murloc","Murloc Coastrunner"),
-[127]=C(18,19,0,"Chasse-marée murloc","Murloc Tidehunter"),
-[154]=C(16,17,0,"Grand déchireur","Greater Fleshripper"),
-[157]=C(14,15,0,"Broche-tripes","Goretusk"),
-[171]=C(15,16,0,"Guerrier murloc","Murloc Warrior"),
-[199]=C(10,11,0,"Jeune déchireur","Young Fleshripper"),
-[391]=C(20,20,0,"Vieux Troubloeil","Old Murk-Eye"),
-[449]=C(15,17,0,"Truand défias","Defias Knuckleduster"),
-[450]=C(18,19,0,"Mage renégat défias","Defias Renegade Mage"),
-[452]=C(16,17,0,"Bandit Rivepatte","Riverpaw Bandit"),
-[453]=C(18,19,0,"Mystique Rivepatte","Riverpaw Mystic"),
-[454]=C(12,13,0,"Jeune Broche-tripes","Young Goretusk"),
-[456]=C(12,14,0,"Oracle mineur murloc","Murloc Minor Oracle"),
-[458]=C(16,17,0,"Chasseur murloc","Murloc Hunter"),
-[462]=C(26,26,4,"Vultros","Vultros"),
-[480]=C(9,10,0,"Golem des moissons rouillé","Rusty Harvest Golem"),
-[481]=C(10,11,0,"Détrousseur défias","Defias Footpad"),
-[500]=C(12,13,0,"Eclaireur Rivepatte","Riverpaw Scout"),
-[501]=C(14,15,0,"Herboriste Rivepatte","Riverpaw Herbalist"),
-[502]=C(15,15,0,"Benny Blaanco","Benny Blaanco"),
-[504]=C(12,13,0,"Trappeur défias","Defias Trapper"),
-[506]=C(18,18,4,"Sergent Brashclaw","Sergeant Brashclaw"),
-[513]=C(14,15,0,"Lanceur de filet murloc","Murloc Netter"),
-[515]=C(11,12,0,"Ecumeur murloc","Murloc Raider"),
-[517]=C(16,18,0,"Oracle murloc","Murloc Oracle"),
-[519]=C(15,15,4,"Slark","Slark"),
-[520]=C(19,19,4,"Brack","Brack"),
-[547]=C(16,17,0,"Grand Broche-tripes","Great Goretusk"),
-[550]=C(14,15,0,"Messager défias","Defias Messenger"),
-[572]=C(19,19,4,"Leprithus","Leprithus"),
-[573]=C(20,20,4,"Découpeur 4000","Foe Reaper 4000"),
-[589]=C(14,15,0,"Pilleur défias","Defias Pillager"),
-[590]=C(13,14,0,"Pillard défias","Defias Looter"),
-[594]=C(15,16,1,"Malfrat défias","Defias Henchman"),
-[596]=C(18,18,2,"Noble manipulé","Brainwashed Noble"),
-[599]=C(18,18,2,"Marisa du'Paige","Marisa du'Paige"),
-[619]=C(15,16,1,"Invocateur défias","Defias Conjurer"),
-[623]=C(17,18,1,"Mineur squelette","Skeletal Miner"),
-[624]=C(17,18,1,"Excavateur mort-vivant","Undead Excavator"),
-[625]=C(17,18,1,"Dynamiteur mort-vivant","Undead Dynamiter"),
-[626]=C(20,20,1,"Contremaître Crispechardon","Foreman Thistlenettle"),
-[824]=C(15,16,0,"Terrassier défias","Defias Digger"),
-[830]=C(13,14,0,"Clampant des sables","Sand Crawler"),
-[831]=C(15,16,0,"Clampant des mers","Sea Crawler"),
-[832]=C(18,19,0,"Diable de poussière","Dust Devil"),
-[833]=C(11,12,0,"Chef de meute coyote","Coyote Packleader"),
-[834]=C(10,11,0,"Coyote","Coyote"),
-[842]=C(5,5,0,"Bûcheron","Lumberjack","A"),
-[846]=C(14,15,0,"Goule","Ghoul"),
-[1065]=C(13,13,0,"Chaman Rivepatte","Riverpaw Shaman"),
-[1109]=C(13,14,0,"Déchireur","Fleshripper"),
-[1216]=C(17,18,0,"Clampant du rivage","Shore Crawler"),
-[1236]=C(12,13,0,"Terrassier kobold","Kobold Digger"),
-[1424]=C(15,15,4,"Maître Terrassier","Master Digger"),
-[1426]=C(14,15,0,"Mineur Rivepatte","Riverpaw Miner"),
-[1725]=C(16,18,1,"Sentinelle défias","Defias Watchman"),
-[1726]=C(16,17,1,"Magicien défias","Defias Magician"),
-[1727]=C(16,17,0,"Ouvrier défias","Defias Worker"),
-[2044]=C(25,26,0,"Esprit mélancolique","Forlorn Spirit"),
-[6180]=C(17,18,0,"Ecumeur défias","Defias Raider"),
-[6670]=C(5,5,0,"Bûcheron de la marche de l'Ouest","Westfall Woodworker","A"),
-[7051]=C(23,24,0,"Pantin défias déformé","Malformed Defias Drone"),
-[7052]=C(23,23,0,"Patrouilleur défias","Defias Tower Patroller"),
-[7053]=C(26,26,1,"Klaven Mortwake","Klaven Mortwake"),
-[7056]=C(24,24,0,"Sentinelle défias de la tour","Defias Tower Sentry"),
-[7067]=C(22,22,0,"Pantin de la KapitalRisk","Venture Co. Drone"),
-[12123]=C(21,22,1,"Requin des récifs","Reef Shark"),
-[165189]=C(7,30,0,"Cat","Cat"),
-[210487]=C(20,20,0,"Horror of the Deep","Horror of the Deep"),
-[210549]=C(14,15,0,"Defias Scout","Defias Scout"),
-[254695]=C(25,25,0,"Repair Bot","Repair Bot"),
-[272310]=C(1,1,0,"Mocha","Mocha"),
-[272614]=C(1,1,0,"Cappy","Cappy"),
-[274081]=C(1,1,0,"Princess","Princess"),
-} end
+Z[1436] = [[
+36	11	12	0	Golem des moissons	Harvest Golem
+95	11	12	0	Contrebandier défias	Defias Smuggler
+98	17	18	0	Sous-chef Rivepatte	Riverpaw Taskmaster
+114	14	15	0	Gardien des moissons	Harvest Watcher
+115	17	18	0	Moissonneur	Harvest Reaper
+117	11	12	0	Gnoll Rivepatte	Riverpaw Gnoll
+121	15	16	0	Eclaireur défias	Defias Pathstalker
+122	17	18	0	Malandrin défias	Defias Highwayman
+123	13	14	0	Bâtard Rivepatte	Riverpaw Mongrel
+124	15	16	0	Brute Rivepatte	Riverpaw Brute
+125	19	19	0	Surveillant Rivepatte	Riverpaw Overseer
+126	12	13	0	Cours-la-côte murloc	Murloc Coastrunner
+127	18	19	0	Chasse-marée murloc	Murloc Tidehunter
+154	16	17	0	Grand déchireur	Greater Fleshripper
+157	14	15	0	Broche-tripes	Goretusk
+171	15	16	0	Guerrier murloc	Murloc Warrior
+199	10	11	0	Jeune déchireur	Young Fleshripper
+391	20	20	0	Vieux Troubloeil	Old Murk-Eye
+449	15	17	0	Truand défias	Defias Knuckleduster
+450	18	19	0	Mage renégat défias	Defias Renegade Mage
+452	16	17	0	Bandit Rivepatte	Riverpaw Bandit
+453	18	19	0	Mystique Rivepatte	Riverpaw Mystic
+454	12	13	0	Jeune Broche-tripes	Young Goretusk
+456	12	14	0	Oracle mineur murloc	Murloc Minor Oracle
+458	16	17	0	Chasseur murloc	Murloc Hunter
+462	26	26	4		Vultros
+480	9	10	0	Golem des moissons rouillé	Rusty Harvest Golem
+481	10	11	0	Détrousseur défias	Defias Footpad
+500	12	13	0	Eclaireur Rivepatte	Riverpaw Scout
+501	14	15	0	Herboriste Rivepatte	Riverpaw Herbalist
+502	15	15	0		Benny Blaanco
+504	12	13	0	Trappeur défias	Defias Trapper
+506	18	18	4	Sergent Brashclaw	Sergeant Brashclaw
+513	14	15	0	Lanceur de filet murloc	Murloc Netter
+515	11	12	0	Ecumeur murloc	Murloc Raider
+517	16	18	0	Oracle murloc	Murloc Oracle
+519	15	15	4		Slark
+520	19	19	4		Brack
+547	16	17	0	Grand Broche-tripes	Great Goretusk
+550	14	15	0	Messager défias	Defias Messenger
+572	19	19	4		Leprithus
+573	20	20	4	Découpeur 4000	Foe Reaper 4000
+589	14	15	0	Pilleur défias	Defias Pillager
+590	13	14	0	Pillard défias	Defias Looter
+594	15	16	1	Malfrat défias	Defias Henchman
+596	18	18	2	Noble manipulé	Brainwashed Noble
+599	18	18	2		Marisa du'Paige
+619	15	16	1	Invocateur défias	Defias Conjurer
+623	17	18	1	Mineur squelette	Skeletal Miner
+624	17	18	1	Excavateur mort-vivant	Undead Excavator
+625	17	18	1	Dynamiteur mort-vivant	Undead Dynamiter
+626	20	20	1	Contremaître Crispechardon	Foreman Thistlenettle
+824	15	16	0	Terrassier défias	Defias Digger
+830	13	14	0	Clampant des sables	Sand Crawler
+831	15	16	0	Clampant des mers	Sea Crawler
+832	18	19	0	Diable de poussière	Dust Devil
+833	11	12	0	Chef de meute coyote	Coyote Packleader
+834	10	11	0		Coyote
+842	5	5	0	Bûcheron	Lumberjack	A
+846	14	15	0	Goule	Ghoul
+1065	13	13	0	Chaman Rivepatte	Riverpaw Shaman
+1109	13	14	0	Déchireur	Fleshripper
+1216	17	18	0	Clampant du rivage	Shore Crawler
+1236	12	13	0	Terrassier kobold	Kobold Digger
+1424	15	15	4	Maître Terrassier	Master Digger
+1426	14	15	0	Mineur Rivepatte	Riverpaw Miner
+1725	16	18	1	Sentinelle défias	Defias Watchman
+1726	16	17	1	Magicien défias	Defias Magician
+1727	16	17	0	Ouvrier défias	Defias Worker
+2044	25	26	0	Esprit mélancolique	Forlorn Spirit
+6180	17	18	0	Ecumeur défias	Defias Raider
+6670	5	5	0	Bûcheron de la marche de l'Ouest	Westfall Woodworker	A
+7051	23	24	0	Pantin défias déformé	Malformed Defias Drone
+7052	23	23	0	Patrouilleur défias	Defias Tower Patroller
+7053	26	26	1		Klaven Mortwake
+7056	24	24	0	Sentinelle défias de la tour	Defias Tower Sentry
+7067	22	22	0	Pantin de la KapitalRisk	Venture Co. Drone
+12123	21	22	1	Requin des récifs	Reef Shark
+165189	7	30	0		Cat
+210487	20	20	0		Horror of the Deep
+210549	14	15	0		Defias Scout
+254695	25	25	0		Repair Bot
+272310	1	1	0		Mocha
+272614	1	1	0		Cappy
+274081	1	1	0		Princess
+]]
 -- Wetlands
-Z[1437] = function() return {
-[1007]=C(20,21,0,"Gnoll Poil-moussu","Mosshide Gnoll"),
-[1008]=C(21,22,0,"Bâtard Poil-moussu","Mosshide Mongrel"),
-[1009]=C(22,23,0,"Tisseur de brumes Poil-moussu","Mosshide Mistweaver"),
-[1010]=C(22,23,0,"Paludier Poil-moussu","Mosshide Fenrunner"),
-[1011]=C(23,24,0,"Trappeur Poil-moussu","Mosshide Trapper"),
-[1012]=C(24,25,0,"Brute Poil-moussu","Mosshide Brute"),
-[1013]=C(25,26,0,"Mystique Poil-moussu","Mosshide Mystic"),
-[1014]=C(27,27,0,"Alpha Poil-moussu","Mosshide Alpha"),
-[1015]=C(23,24,0,"Raptor des hautes-terres","Highland Raptor"),
-[1016]=C(24,25,0,"Flagellant des hautes-terres","Highland Lashtail"),
-[1017]=C(25,26,0,"Faucheur des hautes-terres","Highland Scytheclaw"),
-[1018]=C(27,28,0,"Tranchegueule des hautes-terres","Highland Razormaw"),
-[1019]=C(29,29,0,"Ancien tranchegueule","Elder Razormaw"),
-[1020]=C(22,23,0,"Raptor tacheté","Mottled Raptor"),
-[1021]=C(24,25,0,"Hurleur tacheté","Mottled Screecher"),
-[1022]=C(25,26,0,"Faucheur tacheté","Mottled Scytheclaw"),
-[1023]=C(26,27,0,"Tranchegueule tacheté","Mottled Razormaw"),
-[1024]=C(20,21,0,"Murloc Branchie-bleue","Bluegill Murloc"),
-[1025]=C(21,22,0,"Bondisseur Branchie-bleue","Bluegill Puddlejumper"),
-[1026]=C(22,23,0,"Fourrageur Branchie-bleue","Bluegill Forager"),
-[1027]=C(24,25,0,"Guerrier Branchie-bleue","Bluegill Warrior"),
-[1028]=C(23,24,0,"Marche-boue Branchie-bleue","Bluegill Muckdweller"),
-[1029]=C(25,26,0,"Oracle Branchie-bleue","Bluegill Oracle"),
-[1030]=C(20,21,0,"Gelée noire","Black Slime"),
-[1031]=C(24,25,0,"Limon cramoisi","Crimson Ooze"),
-[1032]=C(23,24,0,"Limon noir","Black Ooze"),
-[1033]=C(25,26,0,"Limon monstrueux","Monstrous Ooze"),
-[1034]=C(26,27,0,"Ecumeur Dragonmaw","Dragonmaw Raider"),
-[1035]=C(27,28,0,"Arpenteur Dragonmaw","Dragonmaw Swamprunner"),
-[1036]=C(28,29,0,"Centurion Dragonmaw","Dragonmaw Centurion"),
-[1037]=C(30,30,4,"Maître de guerre Dragonmaw","Dragonmaw Battlemaster"),
-[1038]=C(28,29,0,"Veilleur des ombres Dragonmaw","Dragonmaw Shadowwarder"),
-[1039]=C(20,26,0,"Créature des tourbières","Fen Dweller"),
-[1040]=C(24,25,0,"Rampant des tourbières","Fen Creeper"),
-[1041]=C(25,26,0,"Seigneur des tourbières","Fen Lord"),
-[1042]=C(23,24,0,"Dragonnet rouge","Red Whelp"),
-[1043]=C(24,25,0,"Dragonnet égaré","Lost Whelp"),
-[1044]=C(26,27,0,"Dragonnet crache-flammes","Flamesnorting Whelp"),
-[1045]=C(57,58,1,"Draconide rouge","Red Dragonspawn"),
-[1046]=C(58,59,1,"Wyrmide rouge","Red Wyrmkin"),
-[1047]=C(59,60,1,"Plaiedécaille rouge","Red Scalebane"),
-[1048]=C(60,61,1,"Lieutenant Plaiedécaille","Scalebane Lieutenant"),
-[1049]=C(61,62,1,"Wyrmide de braise","Wyrmkin Firebrand"),
-[1050]=C(61,62,1,"Garde royal Plaiedécaille","Scalebane Royal Guard"),
-[1051]=C(27,28,1,"Nain Sombrefer","Dark Iron Dwarf"),
-[1052]=C(28,29,1,"Saboteur Sombrefer","Dark Iron Saboteur"),
-[1053]=C(29,30,1,"Tunnelier Sombrefer","Dark Iron Tunneler"),
-[1054]=C(30,31,1,"Démolisseur Sombrefer","Dark Iron Demolitionist"),
-[1057]=C(27,27,0,"Gardien Dragonmaw","Dragonmaw Bonewarder"),
-[1069]=C(25,26,0,"Dragonnet cramoisi","Crimson Whelp"),
-[1111]=C(21,22,0,"Traqueuse sanguine","Leech Stalker"),
-[1112]=C(24,24,4,"Veuve sanguine","Leech Widow"),
-[1140]=C(31,31,4,"Matriarche tranchegueules","Razormaw Matriarch"),
-[1157]=C(26,27,0,"Marin maudit","Cursed Sailor"),
-[1158]=C(27,28,0,"Soldat de marine maudit","Cursed Marine"),
-[1159]=C(29,29,0,"Premier officier Snellig","First Mate Snellig"),
-[1160]=C(30,30,0,"Capitaine Halyndor","Captain Halyndor"),
-[1169]=C(18,19,0,"Insurgé Sombrefer","Dark Iron Insurgent"),
-[1259]=C(22,22,0,"Enfourneur","Gobbler"),
-[1353]=C(29,29,0,"Grondecroc","Sarltooth"),
-[1364]=C(34,34,1,"Balgaras le Crasseux","Balgaras the Foul"),
-[1400]=C(23,24,0,"Crocilisque des Paluns","Wetlands Crocolisk"),
-[1417]=C(21,22,0,"Jeune crocilisque des Paluns","Young Wetlands Crocolisk"),
-[1418]=C(28,29,0,"Ecumeur Branchie-bleue","Bluegill Raider"),
-[1434]=C(41,42,0,"Sentinelle de Menethil","Menethil Sentry","A"),
-[1445]=C(2,2,0,"Jesse Halloran","Jesse Halloran","A"),
-[1446]=C(2,2,0,"Regina Halloran","Regina Halloran","A"),
-[1447]=C(2,2,0,"Gimlok Rumdnul","Gimlok Rumdnul","A"),
-[2089]=C(25,26,0,"Crocilisque géant des Paluns","Giant Wetlands Crocolisk"),
-[2090]=C(23,23,4,"Ma'ruk Wyrmscale","Ma'ruk Wyrmscale"),
-[2091]=C(32,32,1,"Chef Nek'rosh","Chieftain Nek'rosh"),
-[2102]=C(20,21,0,"Grunt Dragonmaw","Dragonmaw Grunt"),
-[2103]=C(19,20,0,"Eclaireur Dragonmaw","Dragonmaw Scout"),
-[2108]=C(29,29,4,"Garneg Charskull","Garneg Charskull"),
-[4040]=C(21,22,0,"Traqueuse des grottes","Cave Stalker"),
-[5185]=C(31,31,1,"Squale-marteau","Hammerhead Shark"),
-[6523]=C(27,28,1,"Fusilier Sombrefer","Dark Iron Rifleman"),
-[12899]=C(62,62,1,"Axtroz","Axtroz"),
-[12998]=C(15,15,0,"Fermier Nain","Dwarven Farmer","A"),
-[14424]=C(25,25,4,"Bas-boueux","Mirelow"),
-[14425]=C(24,24,4,"Ronge-les-os","Gnawbone"),
-[14433]=C(30,30,4,"Bouillasseux","Sludginn"),
-[165189]=C(7,30,0,"Cat","Cat"),
-[185317]=C(20,30,0,"Incubus","Incubus"),
-[211965]=C(25,25,0,"Carrodin","Carrodin"),
-[258139]=C(40,40,0,"Frothrik Saegrund","Frothrik Saegrund"),
-[260803]=C(27,28,0,"Highland Spider","Highland Spider"),
-[260804]=C(28,29,1,"Highland Lurker","Highland Lurker"),
-[260808]=C(28,28,1,"Highland Horror","Highland Horror"),
-[264850]=C(20,30,0,"Hawk","Hawk"),
-[265346]=C(50,50,0,"Aurian Highgrove","Aurian Highgrove"),
-[265347]=C(50,50,0,"Bhalir Firebrew","Bhalir Firebrew"),
-[265348]=C(50,50,0,"Agriel Firebrew","Agriel Firebrew","A"),
-[270589]=C(31,32,1,"Nightveiled Rotheap","Nightveiled Rotheap"),
-[270844]=C(25,25,0,"Sylessa Duskwhisper","Sylessa Duskwhisper"),
-[270892]=C(32,32,1,"Goaz Warder","Goaz Warder"),
-[271012]=C(32,32,0,"Bassbeak","Bassbeak","A"),
-[271334]=C(25,26,0,"Maddened Rotclaw","Maddened Rotclaw"),
-[271336]=C(30,30,1,"Carnage","Carnage"),
-[271338]=C(32,32,1,"Ados","Ados"),
-[271346]=C(29,30,1,"Dragonmaw Infiltrator","Dragonmaw Infiltrator"),
-[271348]=C(29,30,1,"Dragonmaw Soulbinder","Dragonmaw Soulbinder"),
-[271351]=C(29,30,1,"Dragonmaw Reclaimer","Dragonmaw Reclaimer"),
-[271373]=C(34,34,1,"Subdued Dragonspawn","Subdued Dragonspawn"),
-[271458]=C(32,32,1,"Neru","Neru"),
-[271460]=C(32,32,1,"Modr","Modr"),
-[271462]=C(32,32,1,"Golm","Golm"),
-[271481]=C(28,28,1,"Captive Fire Elemental","Captive Fire Elemental"),
-[272914]=C(1,1,0,"Cat","Cat"),
-[272944]=C(1,1,0,"Dog","Dog"),
-} end
+Z[1437] = [[
+1007	20	21	0	Gnoll Poil-moussu	Mosshide Gnoll
+1008	21	22	0	Bâtard Poil-moussu	Mosshide Mongrel
+1009	22	23	0	Tisseur de brumes Poil-moussu	Mosshide Mistweaver
+1010	22	23	0	Paludier Poil-moussu	Mosshide Fenrunner
+1011	23	24	0	Trappeur Poil-moussu	Mosshide Trapper
+1012	24	25	0	Brute Poil-moussu	Mosshide Brute
+1013	25	26	0	Mystique Poil-moussu	Mosshide Mystic
+1014	27	27	0	Alpha Poil-moussu	Mosshide Alpha
+1015	23	24	0	Raptor des hautes-terres	Highland Raptor
+1016	24	25	0	Flagellant des hautes-terres	Highland Lashtail
+1017	25	26	0	Faucheur des hautes-terres	Highland Scytheclaw
+1018	27	28	0	Tranchegueule des hautes-terres	Highland Razormaw
+1019	29	29	0	Ancien tranchegueule	Elder Razormaw
+1020	22	23	0	Raptor tacheté	Mottled Raptor
+1021	24	25	0	Hurleur tacheté	Mottled Screecher
+1022	25	26	0	Faucheur tacheté	Mottled Scytheclaw
+1023	26	27	0	Tranchegueule tacheté	Mottled Razormaw
+1024	20	21	0	Murloc Branchie-bleue	Bluegill Murloc
+1025	21	22	0	Bondisseur Branchie-bleue	Bluegill Puddlejumper
+1026	22	23	0	Fourrageur Branchie-bleue	Bluegill Forager
+1027	24	25	0	Guerrier Branchie-bleue	Bluegill Warrior
+1028	23	24	0	Marche-boue Branchie-bleue	Bluegill Muckdweller
+1029	25	26	0	Oracle Branchie-bleue	Bluegill Oracle
+1030	20	21	0	Gelée noire	Black Slime
+1031	24	25	0	Limon cramoisi	Crimson Ooze
+1032	23	24	0	Limon noir	Black Ooze
+1033	25	26	0	Limon monstrueux	Monstrous Ooze
+1034	26	27	0	Ecumeur Dragonmaw	Dragonmaw Raider
+1035	27	28	0	Arpenteur Dragonmaw	Dragonmaw Swamprunner
+1036	28	29	0	Centurion Dragonmaw	Dragonmaw Centurion
+1037	30	30	4	Maître de guerre Dragonmaw	Dragonmaw Battlemaster
+1038	28	29	0	Veilleur des ombres Dragonmaw	Dragonmaw Shadowwarder
+1039	20	26	0	Créature des tourbières	Fen Dweller
+1040	24	25	0	Rampant des tourbières	Fen Creeper
+1041	25	26	0	Seigneur des tourbières	Fen Lord
+1042	23	24	0	Dragonnet rouge	Red Whelp
+1043	24	25	0	Dragonnet égaré	Lost Whelp
+1044	26	27	0	Dragonnet crache-flammes	Flamesnorting Whelp
+1045	57	58	1	Draconide rouge	Red Dragonspawn
+1046	58	59	1	Wyrmide rouge	Red Wyrmkin
+1047	59	60	1	Plaiedécaille rouge	Red Scalebane
+1048	60	61	1	Lieutenant Plaiedécaille	Scalebane Lieutenant
+1049	61	62	1	Wyrmide de braise	Wyrmkin Firebrand
+1050	61	62	1	Garde royal Plaiedécaille	Scalebane Royal Guard
+1051	27	28	1	Nain Sombrefer	Dark Iron Dwarf
+1052	28	29	1	Saboteur Sombrefer	Dark Iron Saboteur
+1053	29	30	1	Tunnelier Sombrefer	Dark Iron Tunneler
+1054	30	31	1	Démolisseur Sombrefer	Dark Iron Demolitionist
+1057	27	27	0	Gardien Dragonmaw	Dragonmaw Bonewarder
+1069	25	26	0	Dragonnet cramoisi	Crimson Whelp
+1111	21	22	0	Traqueuse sanguine	Leech Stalker
+1112	24	24	4	Veuve sanguine	Leech Widow
+1140	31	31	4	Matriarche tranchegueules	Razormaw Matriarch
+1157	26	27	0	Marin maudit	Cursed Sailor
+1158	27	28	0	Soldat de marine maudit	Cursed Marine
+1159	29	29	0	Premier officier Snellig	First Mate Snellig
+1160	30	30	0	Capitaine Halyndor	Captain Halyndor
+1169	18	19	0	Insurgé Sombrefer	Dark Iron Insurgent
+1259	22	22	0	Enfourneur	Gobbler
+1353	29	29	0	Grondecroc	Sarltooth
+1364	34	34	1	Balgaras le Crasseux	Balgaras the Foul
+1400	23	24	0	Crocilisque des Paluns	Wetlands Crocolisk
+1417	21	22	0	Jeune crocilisque des Paluns	Young Wetlands Crocolisk
+1418	28	29	0	Ecumeur Branchie-bleue	Bluegill Raider
+1434	41	42	0	Sentinelle de Menethil	Menethil Sentry	A
+1445	2	2	0		Jesse Halloran	A
+1446	2	2	0		Regina Halloran	A
+1447	2	2	0		Gimlok Rumdnul	A
+2089	25	26	0	Crocilisque géant des Paluns	Giant Wetlands Crocolisk
+2090	23	23	4		Ma'ruk Wyrmscale
+2091	32	32	1	Chef Nek'rosh	Chieftain Nek'rosh
+2102	20	21	0	Grunt Dragonmaw	Dragonmaw Grunt
+2103	19	20	0	Eclaireur Dragonmaw	Dragonmaw Scout
+2108	29	29	4		Garneg Charskull
+4040	21	22	0	Traqueuse des grottes	Cave Stalker
+5185	31	31	1	Squale-marteau	Hammerhead Shark
+6523	27	28	1	Fusilier Sombrefer	Dark Iron Rifleman
+12899	62	62	1		Axtroz
+12998	15	15	0	Fermier Nain	Dwarven Farmer	A
+14424	25	25	4	Bas-boueux	Mirelow
+14425	24	24	4	Ronge-les-os	Gnawbone
+14433	30	30	4	Bouillasseux	Sludginn
+165189	7	30	0		Cat
+185317	20	30	0		Incubus
+211965	25	25	0		Carrodin
+258139	40	40	0		Frothrik Saegrund
+260803	27	28	0		Highland Spider
+260804	28	29	1		Highland Lurker
+260808	28	28	1		Highland Horror
+264850	20	30	0		Hawk
+265346	50	50	0		Aurian Highgrove
+265347	50	50	0		Bhalir Firebrew
+265348	50	50	0		Agriel Firebrew	A
+270589	31	32	1		Nightveiled Rotheap
+270844	25	25	0		Sylessa Duskwhisper
+270892	32	32	1		Goaz Warder
+271012	32	32	0		Bassbeak	A
+271334	25	26	0		Maddened Rotclaw
+271336	30	30	1		Carnage
+271338	32	32	1		Ados
+271346	29	30	1		Dragonmaw Infiltrator
+271348	29	30	1		Dragonmaw Soulbinder
+271351	29	30	1		Dragonmaw Reclaimer
+271373	34	34	1		Subdued Dragonspawn
+271458	32	32	1		Neru
+271460	32	32	1		Modr
+271462	32	32	1		Golm
+271481	28	28	1		Captive Fire Elemental
+272914	1	1	0		Cat
+272944	1	1	0		Dog
+]]
 -- Teldrassil
-Z[1438] = function() return {
-[1984]=C(1,2,0,"Jeune sanglier des chardons","Young Thistle Boar"),
-[1985]=C(2,3,0,"Sanglier des chardons","Thistle Boar"),
-[1986]=C(3,4,0,"Araignée Tissebois","Webwood Spider"),
-[1988]=C(2,3,0,"Grell","Grell"),
-[1989]=C(3,4,0,"Grellide","Grellkin"),
-[1993]=C(10,10,0,"Patte-verte","Greenpaw"),
-[1994]=C(5,5,0,"Githyiss la Vile","Githyiss the Vile"),
-[1995]=C(5,6,0,"Hibou Strigid","Strigid Owl"),
-[1996]=C(7,8,0,"Hurleur Strigid","Strigid Screecher"),
-[1997]=C(8,9,0,"Chasseur Strigid","Strigid Hunter"),
-[1998]=C(5,6,0,"Rôdeuse Tissebois","Webwood Lurker"),
-[1999]=C(7,8,0,"Croc-venin Tissebois","Webwood Venomfang"),
-[2000]=C(8,9,0,"Tisse-soie Tissebois","Webwood Silkspinner"),
-[2001]=C(10,11,0,"Araignée Tissebois géante","Giant Webwood Spider"),
-[2002]=C(5,6,0,"Fée maudite","Rascal Sprite"),
-[2003]=C(5,6,0,"Fée des ombres","Shadow Sprite"),
-[2004]=C(6,7,0,"Fée sombre","Dark Sprite"),
-[2005]=C(7,7,0,"Grell vicieux","Vicious Grell"),
-[2006]=C(5,6,0,"Ursa Pin-tordu","Gnarlpine Ursa"),
-[2007]=C(5,6,0,"Jardinier Pin-tordu","Gnarlpine Gardener"),
-[2008]=C(6,7,0,"Guerrier Pin-tordu","Gnarlpine Warrior"),
-[2009]=C(7,8,0,"Chaman Pin-tordu","Gnarlpine Shaman"),
-[2010]=C(7,8,0,"Défenseur Pin-tordu","Gnarlpine Defender"),
-[2011]=C(8,9,0,"Augure Pin-tordu","Gnarlpine Augur"),
-[2012]=C(9,10,0,"Guide Pin-tordu","Gnarlpine Pathfinder"),
-[2013]=C(9,10,0,"Vengeur Pin-tordu","Gnarlpine Avenger"),
-[2014]=C(10,11,0,"Totémique Pin-tordu","Gnarlpine Totemic"),
-[2015]=C(8,9,0,"Harpie Plumesang","Bloodfeather Harpy"),
-[2017]=C(8,9,0,"Voleuse Plumesang","Bloodfeather Rogue"),
-[2018]=C(9,9,0,"Ensorceleuse Plumesang","Bloodfeather Sorceress"),
-[2019]=C(9,10,0,"Furie Plumesang","Bloodfeather Fury"),
-[2020]=C(9,10,0,"Sorcière du vent Plumesang","Bloodfeather Wind Witch"),
-[2021]=C(11,11,0,"Matriarche Plumesang","Bloodfeather Matriarch"),
-[2022]=C(5,6,0,"Sylvain","Timberling"),
-[2025]=C(7,8,0,"Ecorceur sylvain","Timberling Bark Ripper"),
-[2027]=C(8,9,0,"Piétineur sylvain","Timberling Trampler"),
-[2029]=C(9,10,0,"Boueux sylvain","Timberling Mire Beast"),
-[2030]=C(10,11,0,"Ancien sylvain","Elder Timberling"),
-[2031]=C(1,1,0,"Jeune sabre-de-nuit","Young Nightsaber"),
-[2032]=C(2,2,0,"Sabre-de-nuit galeux","Mangy Nightsaber"),
-[2033]=C(8,9,0,"Ancien sabre-de-nuit","Elder Nightsaber"),
-[2034]=C(10,11,0,"Sabre-de-nuit farouche","Feral Nightsaber"),
-[2038]=C(8,8,0,"Seigneur Melenas","Lord Melenas"),
-[2039]=C(12,12,0,"Ursal le Mutileur","Ursal the Mauler"),
-[2041]=C(60,60,0,"Ancien Protecteur","Ancient Protector","A"),
-[2042]=C(5,6,0,"Sabre-de-nuit sauvage","Nightsaber"),
-[2043]=C(7,8,0,"Rôdeur sabre-de-nuit","Nightsaber Stalker"),
-[2152]=C(6,7,0,"Embusqué Pin-tordu","Gnarlpine Ambusher"),
-[2162]=C(8,8,0,"Agal","Agal"),
-[2166]=C(9,9,1,"Froncechêne","Oakenscowl"),
-[3535]=C(13,13,4,"Noiremousse le Fétide","Blackmoss the Fetid"),
-[6128]=C(10,10,0,"Vorlus Vilehoof","Vorlus Vilehoof"),
-[6909]=C(12,12,0,"Sethir l’Ancien","Sethir the Ancient"),
-[6911]=C(8,9,0,"Serviteur de Sethir","Minion of Sethir"),
-[7234]=C(8,8,0,"Ferocitas le Mangeur de rêves","Ferocitas the Dream Eater"),
-[7235]=C(6,7,0,"Mystique Pin-tordu","Gnarlpine Mystic"),
-[7318]=C(10,10,0,"Grifferage","Rageclaw"),
-[7319]=C(12,12,0,"Dame Sathrah","Lady Sathrah"),
-[12160]=C(55,55,0,"Sentinelle de Sombrevallon","Shadowglen Sentinel","A"),
-[12429]=C(7,7,0,"Sentinelle Shaya","Sentinel Shaya","A"),
-[14428]=C(7,7,4,"Uruson","Uruson"),
-[14429]=C(11,11,4,"Grimmaw","Grimmaw"),
-[14430]=C(9,9,4,"Traqueur du crépuscule","Duskstalker"),
-[14431]=C(8,8,4,"Furie Shelda","Fury Shelda"),
-[14432]=C(6,6,4,"Threggil","Threggil"),
-[165189]=C(7,30,0,"Cat","Cat"),
-[209928]=C(8,8,0,"Mowgh","Mowgh"),
-[267287]=C(8,8,0,"Sylassa Moonglow","Sylassa Moonglow","A"),
-[272034]=C(10,10,0,"Hatescreech","Hatescreech"),
-[272044]=C(10,10,0,"Windmistress Gaedress","Windmistress Gaedress"),
-[272046]=C(12,12,0,"Witchmother Arysa","Witchmother Arysa"),
-[272096]=C(10,11,0,"Befouled Webwood","Befouled Webwood"),
-[272116]=C(12,12,1,"Xethorr the Wicked","Xethorr the Wicked"),
-[275703]=C(6,7,0,"Lasher Sproutling","Lasher Sproutling","A"),
-[275708]=C(9,10,0,"Blooming Lasher","Blooming Lasher","A"),
-[276099]=C(8,8,4,"Wrathvine","Wrathvine","A"),
-[276101]=C(10,10,4,"Nightscreech","Nightscreech","A"),
-} end
+Z[1438] = [[
+1984	1	2	0	Jeune sanglier des chardons	Young Thistle Boar
+1985	2	3	0	Sanglier des chardons	Thistle Boar
+1986	3	4	0	Araignée Tissebois	Webwood Spider
+1988	2	3	0		Grell
+1989	3	4	0	Grellide	Grellkin
+1993	10	10	0	Patte-verte	Greenpaw
+1994	5	5	0	Githyiss la Vile	Githyiss the Vile
+1995	5	6	0	Hibou Strigid	Strigid Owl
+1996	7	8	0	Hurleur Strigid	Strigid Screecher
+1997	8	9	0	Chasseur Strigid	Strigid Hunter
+1998	5	6	0	Rôdeuse Tissebois	Webwood Lurker
+1999	7	8	0	Croc-venin Tissebois	Webwood Venomfang
+2000	8	9	0	Tisse-soie Tissebois	Webwood Silkspinner
+2001	10	11	0	Araignée Tissebois géante	Giant Webwood Spider
+2002	5	6	0	Fée maudite	Rascal Sprite
+2003	5	6	0	Fée des ombres	Shadow Sprite
+2004	6	7	0	Fée sombre	Dark Sprite
+2005	7	7	0	Grell vicieux	Vicious Grell
+2006	5	6	0	Ursa Pin-tordu	Gnarlpine Ursa
+2007	5	6	0	Jardinier Pin-tordu	Gnarlpine Gardener
+2008	6	7	0	Guerrier Pin-tordu	Gnarlpine Warrior
+2009	7	8	0	Chaman Pin-tordu	Gnarlpine Shaman
+2010	7	8	0	Défenseur Pin-tordu	Gnarlpine Defender
+2011	8	9	0	Augure Pin-tordu	Gnarlpine Augur
+2012	9	10	0	Guide Pin-tordu	Gnarlpine Pathfinder
+2013	9	10	0	Vengeur Pin-tordu	Gnarlpine Avenger
+2014	10	11	0	Totémique Pin-tordu	Gnarlpine Totemic
+2015	8	9	0	Harpie Plumesang	Bloodfeather Harpy
+2017	8	9	0	Voleuse Plumesang	Bloodfeather Rogue
+2018	9	9	0	Ensorceleuse Plumesang	Bloodfeather Sorceress
+2019	9	10	0	Furie Plumesang	Bloodfeather Fury
+2020	9	10	0	Sorcière du vent Plumesang	Bloodfeather Wind Witch
+2021	11	11	0	Matriarche Plumesang	Bloodfeather Matriarch
+2022	5	6	0	Sylvain	Timberling
+2025	7	8	0	Ecorceur sylvain	Timberling Bark Ripper
+2027	8	9	0	Piétineur sylvain	Timberling Trampler
+2029	9	10	0	Boueux sylvain	Timberling Mire Beast
+2030	10	11	0	Ancien sylvain	Elder Timberling
+2031	1	1	0	Jeune sabre-de-nuit	Young Nightsaber
+2032	2	2	0	Sabre-de-nuit galeux	Mangy Nightsaber
+2033	8	9	0	Ancien sabre-de-nuit	Elder Nightsaber
+2034	10	11	0	Sabre-de-nuit farouche	Feral Nightsaber
+2038	8	8	0	Seigneur Melenas	Lord Melenas
+2039	12	12	0	Ursal le Mutileur	Ursal the Mauler
+2041	60	60	0	Ancien Protecteur	Ancient Protector	A
+2042	5	6	0	Sabre-de-nuit sauvage	Nightsaber
+2043	7	8	0	Rôdeur sabre-de-nuit	Nightsaber Stalker
+2152	6	7	0	Embusqué Pin-tordu	Gnarlpine Ambusher
+2162	8	8	0		Agal
+2166	9	9	1	Froncechêne	Oakenscowl
+3535	13	13	4	Noiremousse le Fétide	Blackmoss the Fetid
+6128	10	10	0		Vorlus Vilehoof
+6909	12	12	0	Sethir l’Ancien	Sethir the Ancient
+6911	8	9	0	Serviteur de Sethir	Minion of Sethir
+7234	8	8	0	Ferocitas le Mangeur de rêves	Ferocitas the Dream Eater
+7235	6	7	0	Mystique Pin-tordu	Gnarlpine Mystic
+7318	10	10	0	Grifferage	Rageclaw
+7319	12	12	0	Dame Sathrah	Lady Sathrah
+12160	55	55	0	Sentinelle de Sombrevallon	Shadowglen Sentinel	A
+12429	7	7	0	Sentinelle Shaya	Sentinel Shaya	A
+14428	7	7	4		Uruson
+14429	11	11	4		Grimmaw
+14430	9	9	4	Traqueur du crépuscule	Duskstalker
+14431	8	8	4	Furie Shelda	Fury Shelda
+14432	6	6	4		Threggil
+165189	7	30	0		Cat
+209928	8	8	0		Mowgh
+267287	8	8	0		Sylassa Moonglow	A
+272034	10	10	0		Hatescreech
+272044	10	10	0		Windmistress Gaedress
+272046	12	12	0		Witchmother Arysa
+272096	10	11	0		Befouled Webwood
+272116	12	12	1		Xethorr the Wicked
+275703	6	7	0		Lasher Sproutling	A
+275708	9	10	0		Blooming Lasher	A
+276099	8	8	4		Wrathvine	A
+276101	10	10	4		Nightscreech	A
+]]
 -- Darkshore
-Z[1439] = function() return {
-[2069]=C(14,15,0,"Traquelune","Moonstalker"),
-[2070]=C(16,17,0,"Traquelune chétif","Moonstalker Runt"),
-[2071]=C(19,20,0,"Matriarche traquelune","Moonstalker Matriarch"),
-[2156]=C(18,19,0,"Golem lézardé","Cracked Golem"),
-[2157]=C(19,20,0,"Béhémoth de pierre","Stone Behemoth"),
-[2158]=C(18,19,0,"Eclaireur des Gravières","Gravelflint Scout"),
-[2159]=C(19,20,0,"Briseur d’os des Gravières","Gravelflint Bonesnapper"),
-[2160]=C(21,21,0,"Géomancien des Gravières","Gravelflint Geomancer"),
-[2163]=C(11,12,0,"Ours des chardons","Thistle Bear"),
-[2164]=C(13,14,0,"Ours des chardons enragé","Rabid Thistle Bear"),
-[2165]=C(16,17,0,"Vieil ours des chardons","Grizzled Thistle Bear"),
-[2167]=C(12,13,0,"Guide Noirbois","Blackwood Pathfinder"),
-[2168]=C(16,17,0,"Guerrier Noirbois","Blackwood Warrior"),
-[2169]=C(17,18,0,"Totémique Noirbois","Blackwood Totemic"),
-[2170]=C(18,19,0,"Ursa Noirbois","Blackwood Ursa"),
-[2171]=C(19,20,0,"Chaman Noirbois","Blackwood Shaman"),
-[2172]=C(20,20,4,"Matriarche trotteuse","Strider Clutchmother"),
-[2174]=C(14,15,0,"Furie côtière","Coastal Frenzy"),
-[2175]=C(13,13,4,"Ombregriffe","Shadowclaw"),
-[2176]=C(10,11,0,"Bien-née maudite","Cursed Highborne"),
-[2177]=C(11,12,0,"Bien-né frémissant","Writhing Highborne"),
-[2178]=C(12,13,0,"Bien-née gémissante","Wailing Highborne"),
-[2179]=C(15,16,0,"Chevaucheur des vagues Tempécaille","Stormscale Wave Rider"),
-[2180]=C(16,17,0,"Sirène Tempécaille","Stormscale Siren"),
-[2181]=C(18,19,0,"Myrmidon Tempécaille","Stormscale Myrmidon"),
-[2182]=C(19,20,0,"Ensorceleuse Tempécaille","Stormscale Sorceress"),
-[2183]=C(20,21,0,"Guerrier Tempécaille","Stormscale Warrior"),
-[2184]=C(17,17,4,"Dame Moongazer","Lady Moongazer"),
-[2185]=C(12,14,0,"Batteur de Sombrivage","Darkshore Thresher"),
-[2186]=C(16,16,4,"Carnivous le Casseur","Carnivous the Breaker"),
-[2187]=C(16,18,0,"Ancien Batteur de Sombrivage","Elder Darkshore Thresher"),
-[2189]=C(10,11,0,"Fée vile","Vile Sprite"),
-[2190]=C(11,12,0,"Grell sauvage","Wild Grell"),
-[2191]=C(14,14,4,"Licillin","Licillin"),
-[2192]=C(19,19,4,"Flamboyeur Radison","Firecaller Radison"),
-[2201]=C(11,12,0,"Ecumeur Grisebrume","Greymist Raider"),
-[2202]=C(12,13,0,"Cours-la-côte Grisebrume","Greymist Coastrunner"),
-[2203]=C(13,14,0,"Prophète Grisebrume","Greymist Seer"),
-[2204]=C(14,15,0,"Pêcheur Grisebrume","Greymist Netter"),
-[2205]=C(15,16,0,"Guerrier Grisebrume","Greymist Warrior"),
-[2206]=C(16,17,0,"Chasseur Grisebrume","Greymist Hunter"),
-[2207]=C(18,19,0,"Oracle Grisebrume","Greymist Oracle"),
-[2208]=C(19,20,0,"Chasse-marée Grisebrume","Greymist Tidehunter"),
-[2212]=C(12,13,0,"Satyre Deth'ryll","Deth'ryll Satyr"),
-[2231]=C(9,10,0,"Clampant des marées pygmée","Pygmy Tide Crawler"),
-[2232]=C(13,14,0,"Clampant des marées","Tide Crawler"),
-[2233]=C(18,20,0,"Clampant des marées incrusté","Encrusted Tide Crawler"),
-[2234]=C(10,11,0,"Jeune clampant des récifs","Young Reef Crawler"),
-[2235]=C(15,17,0,"Clampant des récifs","Reef Crawler"),
-[2236]=C(20,21,0,"Clampant des récifs enragé","Raging Reef Crawler"),
-[2237]=C(17,18,0,"Géniteur traquelune","Moonstalker Sire"),
-[2321]=C(11,13,0,"Jeune trotteur des forêts","Foreststrider Fledgling"),
-[2322]=C(14,16,0,"Trotteur des forêts","Foreststrider"),
-[2323]=C(17,19,0,"Trotteur des forêts géant","Giant Foreststrider"),
-[2324]=C(13,14,0,"Messager du Vent Noirbois","Blackwood Windtalker"),
-[2336]=C(16,17,0,"Fanatique de la Rive noire","Dark Strand Fanatic"),
-[2337]=C(28,29,0,"Anéantisseur de la Rive noire","Dark Strand Voidcaller"),
-[2338]=C(16,17,0,"Disciple du crépuscule","Twilight Disciple"),
-[2339]=C(17,18,0,"Nervi du crépuscule","Twilight Thug"),
-[3619]=C(19,20,0,"Sabre-fantôme","Ghost Saber"),
-[3660]=C(31,31,0,"Athrikus Narassin","Athrikus Narassin"),
-[3662]=C(17,17,0,"Delmanis le Haï","Delmanis the Hated"),
-[3667]=C(16,16,0,"Anaya Dawnrunner","Anaya Dawnrunner"),
-[3695]=C(13,13,0,"Griffe-sinistre","Grimclaw","A"),
-[3898]=C(24,24,0,"Aligar le Tourmenteur","Aligar the Tormentor"),
-[3899]=C(24,24,0,"Balizar l’Ombrageux","Balizar the Umbrage"),
-[3900]=C(24,24,0,"Caedakar le Vicieux","Caedakar the Vicious"),
-[4788]=C(20,21,1,"Satyre Sans-racines","Fallenroot Satyr"),
-[4789]=C(21,22,1,"Voleur Sans-racines","Fallenroot Rogue"),
-[4803]=C(21,22,1,"Oracle de Brassenoire","Blackfathom Oracle"),
-[6133]=C(11,11,0,"Ombre d'Elura","Shade of Elura"),
-[6788]=C(18,19,0,"Mère de la tanière","Den Mother"),
-[6789]=C(9,10,0,"Jeune chardon","Thistle Cub"),
-[7015]=C(16,16,4,"Flagglemurk le Cruel","Flagglemurk the Cruel"),
-[7016]=C(22,22,4,"Dame Vespira","Lady Vespira"),
-[7017]=C(16,16,4,"Seigneur Salvassio","Lord Sinslayer"),
-[10157]=C(13,14,0,"Oracle sélénien","Moonkin Oracle"),
-[10158]=C(12,13,0,"Sélénien","Moonkin"),
-[10159]=C(11,12,0,"Jeune sélénien","Young Moonkin"),
-[10160]=C(12,14,0,"Sélénien enragé","Raging Moonkin"),
-[10323]=C(19,19,0,"Fondeboue","Murkdeep"),
-[10373]=C(19,19,0,"Xabraxxis","Xabraxxis"),
-[10919]=C(57,57,0,"Troll Shatterspear","Shatterspear Troll","H"),
-[11196]=C(56,56,0,"Tambour Shatterspear","Shatterspear Drummer","H"),
-[11714]=C(16,16,0,"Marosh le Sournois","Marosh the Devious"),
-[11817]=C(1,1,0,"Krah'ranik","Krah'ranik"),
-[11819]=C(1,1,0,"Jory Zaga","Jory Zaga"),
-[12123]=C(21,22,1,"Requin des récifs","Reef Shark"),
-[12299]=C(1,1,0,"Daim soigné","Cured Deer"),
-[12321]=C(15,15,0,"Toxicologue Tempécaille","Stormscale Toxicologist"),
-[165189]=C(7,30,0,"Cat","Cat"),
-[210451]=C(18,18,0,"Lady Sedorax","Lady Sedorax"),
-[264850]=C(20,30,0,"Hawk","Hawk"),
-[270196]=C(12,12,0,"Jai'vhanel","Jai'vhanel"),
-[270294]=C(21,21,1,"Baron Marinous","Baron Marinous"),
-[270298]=C(10,12,0,"Child of Jai'vhanel","Child of Jai'vhanel","A"),
-[271368]=C(1,22,0,"Shadowgale Squirrel","Shadowgale Squirrel"),
-[271903]=C(19,20,0,"Stormscale Beastmistress","Stormscale Beastmistress"),
-} end
+Z[1439] = [[
+2069	14	15	0	Traquelune	Moonstalker
+2070	16	17	0	Traquelune chétif	Moonstalker Runt
+2071	19	20	0	Matriarche traquelune	Moonstalker Matriarch
+2156	18	19	0	Golem lézardé	Cracked Golem
+2157	19	20	0	Béhémoth de pierre	Stone Behemoth
+2158	18	19	0	Eclaireur des Gravières	Gravelflint Scout
+2159	19	20	0	Briseur d’os des Gravières	Gravelflint Bonesnapper
+2160	21	21	0	Géomancien des Gravières	Gravelflint Geomancer
+2163	11	12	0	Ours des chardons	Thistle Bear
+2164	13	14	0	Ours des chardons enragé	Rabid Thistle Bear
+2165	16	17	0	Vieil ours des chardons	Grizzled Thistle Bear
+2167	12	13	0	Guide Noirbois	Blackwood Pathfinder
+2168	16	17	0	Guerrier Noirbois	Blackwood Warrior
+2169	17	18	0	Totémique Noirbois	Blackwood Totemic
+2170	18	19	0	Ursa Noirbois	Blackwood Ursa
+2171	19	20	0	Chaman Noirbois	Blackwood Shaman
+2172	20	20	4	Matriarche trotteuse	Strider Clutchmother
+2174	14	15	0	Furie côtière	Coastal Frenzy
+2175	13	13	4	Ombregriffe	Shadowclaw
+2176	10	11	0	Bien-née maudite	Cursed Highborne
+2177	11	12	0	Bien-né frémissant	Writhing Highborne
+2178	12	13	0	Bien-née gémissante	Wailing Highborne
+2179	15	16	0	Chevaucheur des vagues Tempécaille	Stormscale Wave Rider
+2180	16	17	0	Sirène Tempécaille	Stormscale Siren
+2181	18	19	0	Myrmidon Tempécaille	Stormscale Myrmidon
+2182	19	20	0	Ensorceleuse Tempécaille	Stormscale Sorceress
+2183	20	21	0	Guerrier Tempécaille	Stormscale Warrior
+2184	17	17	4	Dame Moongazer	Lady Moongazer
+2185	12	14	0	Batteur de Sombrivage	Darkshore Thresher
+2186	16	16	4	Carnivous le Casseur	Carnivous the Breaker
+2187	16	18	0	Ancien Batteur de Sombrivage	Elder Darkshore Thresher
+2189	10	11	0	Fée vile	Vile Sprite
+2190	11	12	0	Grell sauvage	Wild Grell
+2191	14	14	4		Licillin
+2192	19	19	4	Flamboyeur Radison	Firecaller Radison
+2201	11	12	0	Ecumeur Grisebrume	Greymist Raider
+2202	12	13	0	Cours-la-côte Grisebrume	Greymist Coastrunner
+2203	13	14	0	Prophète Grisebrume	Greymist Seer
+2204	14	15	0	Pêcheur Grisebrume	Greymist Netter
+2205	15	16	0	Guerrier Grisebrume	Greymist Warrior
+2206	16	17	0	Chasseur Grisebrume	Greymist Hunter
+2207	18	19	0	Oracle Grisebrume	Greymist Oracle
+2208	19	20	0	Chasse-marée Grisebrume	Greymist Tidehunter
+2212	12	13	0	Satyre Deth'ryll	Deth'ryll Satyr
+2231	9	10	0	Clampant des marées pygmée	Pygmy Tide Crawler
+2232	13	14	0	Clampant des marées	Tide Crawler
+2233	18	20	0	Clampant des marées incrusté	Encrusted Tide Crawler
+2234	10	11	0	Jeune clampant des récifs	Young Reef Crawler
+2235	15	17	0	Clampant des récifs	Reef Crawler
+2236	20	21	0	Clampant des récifs enragé	Raging Reef Crawler
+2237	17	18	0	Géniteur traquelune	Moonstalker Sire
+2321	11	13	0	Jeune trotteur des forêts	Foreststrider Fledgling
+2322	14	16	0	Trotteur des forêts	Foreststrider
+2323	17	19	0	Trotteur des forêts géant	Giant Foreststrider
+2324	13	14	0	Messager du Vent Noirbois	Blackwood Windtalker
+2336	16	17	0	Fanatique de la Rive noire	Dark Strand Fanatic
+2337	28	29	0	Anéantisseur de la Rive noire	Dark Strand Voidcaller
+2338	16	17	0	Disciple du crépuscule	Twilight Disciple
+2339	17	18	0	Nervi du crépuscule	Twilight Thug
+3619	19	20	0	Sabre-fantôme	Ghost Saber
+3660	31	31	0		Athrikus Narassin
+3662	17	17	0	Delmanis le Haï	Delmanis the Hated
+3667	16	16	0		Anaya Dawnrunner
+3695	13	13	0	Griffe-sinistre	Grimclaw	A
+3898	24	24	0	Aligar le Tourmenteur	Aligar the Tormentor
+3899	24	24	0	Balizar l’Ombrageux	Balizar the Umbrage
+3900	24	24	0	Caedakar le Vicieux	Caedakar the Vicious
+4788	20	21	1	Satyre Sans-racines	Fallenroot Satyr
+4789	21	22	1	Voleur Sans-racines	Fallenroot Rogue
+4803	21	22	1	Oracle de Brassenoire	Blackfathom Oracle
+6133	11	11	0	Ombre d'Elura	Shade of Elura
+6788	18	19	0	Mère de la tanière	Den Mother
+6789	9	10	0	Jeune chardon	Thistle Cub
+7015	16	16	4	Flagglemurk le Cruel	Flagglemurk the Cruel
+7016	22	22	4	Dame Vespira	Lady Vespira
+7017	16	16	4	Seigneur Salvassio	Lord Sinslayer
+10157	13	14	0	Oracle sélénien	Moonkin Oracle
+10158	12	13	0	Sélénien	Moonkin
+10159	11	12	0	Jeune sélénien	Young Moonkin
+10160	12	14	0	Sélénien enragé	Raging Moonkin
+10323	19	19	0	Fondeboue	Murkdeep
+10373	19	19	0		Xabraxxis
+10919	57	57	0	Troll Shatterspear	Shatterspear Troll	H
+11196	56	56	0	Tambour Shatterspear	Shatterspear Drummer	H
+11714	16	16	0	Marosh le Sournois	Marosh the Devious
+11817	1	1	0		Krah'ranik
+11819	1	1	0		Jory Zaga
+12123	21	22	1	Requin des récifs	Reef Shark
+12299	1	1	0	Daim soigné	Cured Deer
+12321	15	15	0	Toxicologue Tempécaille	Stormscale Toxicologist
+165189	7	30	0		Cat
+210451	18	18	0		Lady Sedorax
+264850	20	30	0		Hawk
+270196	12	12	0		Jai'vhanel
+270294	21	21	1		Baron Marinous
+270298	10	12	0		Child of Jai'vhanel	A
+271368	1	22	0		Shadowgale Squirrel
+271903	19	20	0		Stormscale Beastmistress
+]]
 -- Ashenvale
-Z[1440] = function() return {
-[3664]=C(24,24,0,"Ilkrud Magthrull","Ilkrud Magthrull"),
-[3696]=C(30,30,0,"Ran Dent-rouge","Ran Bloodtooth"),
-[3711]=C(20,21,0,"Myrmidon Irequeue","Wrathtail Myrmidon"),
-[3712]=C(19,20,0,"Rasoir Irequeue","Wrathtail Razortail"),
-[3713]=C(18,19,0,"Chevaucheur des vagues Irequeue","Wrathtail Wave Rider"),
-[3715]=C(19,20,0,"Sorcière des mers Irequeue","Wrathtail Sea Witch"),
-[3717]=C(18,19,0,"Ensorceleuse Irequeue","Wrathtail Sorceress"),
-[3721]=C(19,20,0,"Hydre Fouettebrume","Mystlash Hydra"),
-[3722]=C(23,23,0,"Ecorcheuse Fouettebrume","Mystlash Flayer"),
-[3725]=C(18,19,0,"Sectateur de la Rive noire","Dark Strand Cultist"),
-[3727]=C(20,21,0,"Massacreur de la Rive noire","Dark Strand Enforcer"),
-[3728]=C(18,19,0,"Adepte de la Rive noire","Dark Strand Adept"),
-[3730]=C(19,20,0,"Excavateur de la Rive noire","Dark Strand Excavator"),
-[3732]=C(18,19,0,"Chercheur Réprouvé","Forsaken Seeker","H"),
-[3733]=C(18,19,0,"Herboriste Réprouvé","Forsaken Herbalist","H"),
-[3734]=C(20,20,0,"Nervi Réprouvé","Forsaken Thug","H"),
-[3735]=C(22,22,4,"Apothicaire Falthis","Apothecary Falthis","H"),
-[3736]=C(23,23,0,"Assassin Mordenthal","Darkslayer Mordenthal","H"),
-[3737]=C(19,20,0,"Bondisseur Crache-sel","Saltspittle Puddlejumper"),
-[3739]=C(19,20,0,"Guerrier Crache-sel","Saltspittle Warrior"),
-[3740]=C(20,21,0,"Marche-boue Crache-sel","Saltspittle Muckdweller"),
-[3742]=C(20,21,0,"Oracle Crache-sel","Saltspittle Oracle"),
-[3743]=C(23,24,0,"Guerrier Vile-sylve","Foulweald Warrior"),
-[3745]=C(23,24,0,"Guide Vile-sylve","Foulweald Pathfinder"),
-[3746]=C(24,25,0,"Protecteur Vile-sylve","Foulweald Den Watcher"),
-[3748]=C(24,25,0,"Chaman Vile-sylve","Foulweald Shaman"),
-[3749]=C(24,25,0,"Ursa Vile-sylve","Foulweald Ursa"),
-[3750]=C(23,24,0,"Totémique Vile-sylve","Foulweald Totemic"),
-[3752]=C(29,30,0,"Voleur de Xavian","Xavian Rogue"),
-[3754]=C(28,29,0,"Traître de Xavian","Xavian Betrayer"),
-[3755]=C(28,29,0,"Lige de la corruption de Xavian","Xavian Felsworn"),
-[3757]=C(29,30,0,"Implorateur de l’enfer de Xavian","Xavian Hellcaller"),
-[3758]=C(25,26,0,"Satyre Gangremusc","Felmusk Satyr"),
-[3759]=C(26,27,0,"Voleur Gangremusc","Felmusk Rogue"),
-[3762]=C(25,26,0,"Lige de la corruption Gangremusc","Felmusk Felsworn"),
-[3763]=C(26,27,0,"Traqueur des ténèbres Gangremusc","Felmusk Shadowstalker"),
-[3765]=C(26,27,0,"Satyre Mornecoeur","Bleakheart Satyr"),
-[3767]=C(27,28,0,"Entourloupeur Mornecoeur","Bleakheart Trickster"),
-[3770]=C(27,28,0,"Traqueur des ténèbres Mornecoeur","Bleakheart Shadowstalker"),
-[3771]=C(26,27,0,"Invocateur infernal Mornecoeur","Bleakheart Hellcaller"),
-[3772]=C(23,24,0,"Gangregarde inférieur","Lesser Felguard"),
-[3773]=C(26,26,4,"Akkrilus","Akkrilus"),
-[3774]=C(22,23,0,"Gangretueur","Felslayer"),
-[3780]=C(21,23,0,"Mange-mousse Sombretaillis","Shadethicket Moss Eater"),
-[3781]=C(23,24,0,"Forme-bois Sombretaillis","Shadethicket Wood Shaper"),
-[3782]=C(25,26,0,"Bouge-pierre Sombretaillis","Shadethicket Stone Mover"),
-[3783]=C(22,23,0,"Invocateur de pluie Sombretaillis","Shadethicket Raincaller"),
-[3784]=C(26,27,0,"Arracheur Sombretaillis","Shadethicket Bark Ripper"),
-[3789]=C(28,29,0,"Déchireur Frayeloup","Terrowulf Fleshripper"),
-[3791]=C(29,30,0,"Tisseur des ombres Frayeloup","Terrowulf Shadow Weaver"),
-[3792]=C(32,32,4,"Chef de meute Frayeloup","Terrowulf Packlord"),
-[3797]=C(25,26,0,"Protecteur cénarien","Cenarion Protector","A"),
-[3799]=C(28,29,0,"Druide austère","Severed Druid"),
-[3801]=C(28,29,0,"Dormeur austère","Severed Sleeper"),
-[3802]=C(29,30,0,"Rêveur austère","Severed Dreamer"),
-[3803]=C(29,30,0,"Gardien austère","Severed Keeper"),
-[3804]=C(28,29,0,"Intrus Réprouvé","Forsaken Intruder","H"),
-[3806]=C(29,30,0,"Infiltrateur Réprouvé","Forsaken Infiltrator","H"),
-[3807]=C(29,30,0,"Assassin Réprouvé","Forsaken Assassin","H"),
-[3808]=C(28,29,0,"Traqueur noir Réprouvé","Forsaken Dark Stalker","H"),
-[3809]=C(21,22,0,"Ours d’Ashenvale","Ashenvale Bear"),
-[3810]=C(25,26,0,"Vieil ours d’Ashenvale","Elder Ashenvale Bear"),
-[3811]=C(29,30,0,"Ours d’Ashenvale géant","Giant Ashenvale Bear"),
-[3812]=C(19,20,0,"Clampant cliquetant","Clattering Crawler"),
-[3814]=C(20,21,0,"Clampant épineux","Spined Crawler"),
-[3815]=C(26,27,0,"Dragon frappeur","Blink Dragon"),
-[3816]=C(18,19,0,"Cerf sauvage","Wild Buck"),
-[3817]=C(22,23,0,"Cerf à corne noire","Shadowhorn Stag"),
-[3818]=C(26,27,0,"Vieux cerf à corne noire","Elder Shadowhorn Stag"),
-[3819]=C(20,21,0,"Traqueuse Ronce-sauvage","Wildthorn Stalker"),
-[3820]=C(24,25,0,"Crache-venin Ronce-sauvage","Wildthorn Venomspitter"),
-[3821]=C(28,29,0,"Rôdeuse Ronce-sauvage","Wildthorn Lurker"),
-[3823]=C(19,20,0,"Coureur Patte-fantôme","Ghostpaw Runner"),
-[3824]=C(23,24,0,"Hurleur Patte-fantôme","Ghostpaw Howler"),
-[3825]=C(27,28,0,"Alpha Patte-fantôme","Ghostpaw Alpha"),
-[3833]=C(26,27,0,"Redresseur de torts cénarien","Cenarion Vindicator","A"),
-[3834]=C(27,28,0,"Ancien fou","Crazed Ancient"),
-[3879]=C(21,21,0,"Assassin de la rive noire","Dark Strand Assassin"),
-[3888]=C(20,20,0,"Korra","Korra","A"),
-[3893]=C(23,23,0,"Eclaireur Réprouvé","Forsaken Scout","H"),
-[3897]=C(9,9,0,"Krolg","Krolg"),
-[3917]=C(23,25,0,"Elémentaire d’eau souillé","Befouled Water Elemental"),
-[3919]=C(26,27,0,"Ancien flétri","Withered Ancient"),
-[3921]=C(23,24,0,"Ursa Crin-de-Chardon","Thistlefur Ursa"),
-[3922]=C(23,24,0,"Totémique Crin-de-Chardon","Thistlefur Totemic"),
-[3923]=C(23,24,0,"Protecteur Crin-de-Chardon","Thistlefur Den Watcher"),
-[3924]=C(23,24,0,"Chaman Crin-de-Chardon","Thistlefur Shaman"),
-[3925]=C(23,24,0,"Vengeur Crin-de-Chardon","Thistlefur Avenger"),
-[3926]=C(23,24,0,"Guide Crin-de-Chardon","Thistlefur Pathfinder"),
-[3928]=C(20,22,0,"Gelée pourrissante","Rotting Slime"),
-[3931]=C(30,30,0,"Oracle Sombretaillis","Shadethicket Oracle"),
-[3932]=C(27,28,0,"Garde de Dent-rouge","Bloodtooth Guard"),
-[3940]=C(32,32,0,"Taneel Darkwood","Taneel Darkwood"),
-[3941]=C(32,32,0,"Uthil Mooncall","Uthil Mooncall"),
-[3942]=C(32,32,0,"Mavoris Cloudsbreak","Mavoris Cloudsbreak"),
-[3943]=C(22,22,0,"Ruuzel","Ruuzel"),
-[3944]=C(20,21,0,"Prêtresse Irequeue","Wrathtail Priestess"),
-[3987]=C(25,25,0,"Dal Griffesang","Dal Bloodclaw"),
-[4054]=C(24,25,0,"Soeur rieuse","Laughing Sister","A"),
-[4273]=C(29,29,0,"Gardien Ordanus","Keeper Ordanus","A"),
-[4619]=C(32,32,0,"Geltharis","Geltharis"),
-[4788]=C(20,21,1,"Satyre Sans-racines","Fallenroot Satyr"),
-[4802]=C(20,21,1,"Prêtresse des marées de Brassenoire","Blackfathom Tide Priestess"),
-[5314]=C(62,62,1,"Phantim","Phantim"),
-[6071]=C(29,30,0,"Molosse de la Légion","Legion Hound"),
-[6072]=C(34,34,0,"Diathorus le Chercheur","Diathorus the Seeker"),
-[6073]=C(29,30,0,"Infernal incendiaire","Searing Infernal"),
-[6087]=C(40,40,0,"Sentinelle d'Astranaar","Astranaar Sentinel","A"),
-[6115]=C(29,30,0,"Gangregarde","Felguard"),
-[10559]=C(22,22,4,"Dame Vespia","Lady Vespia"),
-[10639]=C(25,25,4,"Joufflu le croquant","Rorgish Jowl"),
-[10640]=C(27,27,4,"Chênepatte","Oakpaw"),
-[10641]=C(25,25,4,"Brise-branche","Branch Snapper"),
-[10642]=C(27,27,4,"Eck'alom","Eck'alom"),
-[10643]=C(23,23,4,"Moldaileron","Mugglefin"),
-[10644]=C(22,22,4,"Hurleur des brumes","Mist Howler"),
-[10647]=C(32,32,4,"Prince Raze","Prince Raze"),
-[11656]=C(26,27,0,"Péon de la Horde","Horde Peon","H"),
-[11680]=C(26,28,0,"Eclaireur de la Horde","Horde Scout","H"),
-[11681]=C(27,27,0,"Défricheur de la Horde","Horde Deforester","H"),
-[11682]=C(29,30,0,"Grunt de la Horde","Horde Grunt","H"),
-[11683]=C(28,29,0,"Chaman de la Horde","Horde Shaman","H"),
-[11684]=C(27,27,0,"Déchireur Warsong","Warsong Shredder","H"),
-[11697]=C(29,30,0,"Flagellante de Mannoroc","Mannoroc Lasher"),
-[12037]=C(31,31,4,"Ursol'lok","Ursol'lok"),
-[12123]=C(21,22,1,"Requin des récifs","Reef Shark"),
-[12474]=C(62,62,1,"Gardien Emeraldon","Emeraldon Boughguard"),
-[12475]=C(60,60,1,"Gardien sylvestre Emeraldon","Emeraldon Tree Warder"),
-[12476]=C(61,61,1,"Oracle Emeraldon","Emeraldon Oracle"),
-[12498]=C(62,62,1,"Traquerêve","Dreamstalker"),
-[12676]=C(31,31,0,"Serres-tranchantes","Sharptalon","A"),
-[12759]=C(27,27,0,"Maréen","Tideress"),
-[12856]=C(23,24,0,"Estafette d'Ashenvale","Ashenvale Outrunner","A"),
-[12859]=C(21,22,0,"Ecumeur de Bois-brisé","Splintertree Raider","H"),
-[12860]=C(24,24,0,"Duriel Moonfire","Duriel Moonfire","A"),
-[12896]=C(22,23,0,"Sentinelle d'Aile-argent","Silverwing Sentinel","A"),
-[12897]=C(21,22,0,"Guerrier d'Aile-argent","Silverwing Warrior","A"),
-[12903]=C(40,40,0,"Garde de Bois-brisé","Splintertree Guard","H"),
-[12918]=C(26,26,0,"Chef Murgut","Chief Murgut"),
-[12940]=C(22,22,0,"Vorsha la Flagellante","Vorsha the Lasher"),
-[14715]=C(55,55,1,"Soldat d'élite d'Aile-argent","Silverwing Elite","A"),
-[14887]=C(63,63,3,"Ysondre","Ysondre"),
-[14888]=C(63,63,3,"Léthon","Lethon"),
-[14889]=C(63,63,3,"Emeriss","Emeriss"),
-[14890]=C(63,63,3,"Taerar","Taerar"),
-[165189]=C(7,30,0,"Cat","Cat"),
-[185317]=C(20,30,0,"Incubus","Incubus"),
-[185403]=C(27,27,0,"Cyriden Farseeker","Cyriden Farseeker"),
-[185404]=C(27,27,0,"Relathor Moonsong","Relathor Moonsong"),
-[211956]=C(9999,9999,0,"Scarimous the Wandering","Scarimous the Wandering"),
-[212699]=C(25,25,0,"Silverwing Archer","Silverwing Archer","A"),
-[212703]=C(25,25,0,"Silverwing Dryad","Silverwing Dryad","A"),
-[212706]=C(25,25,0,"Silverwing Druid","Silverwing Druid","A"),
-[212727]=C(25,25,0,"Warsong Grunt","Warsong Grunt","H"),
-[212728]=C(25,25,0,"Warsong Raider","Warsong Raider","H"),
-[212729]=C(25,25,0,"Warsong Shaman","Warsong Shaman","H"),
-[216659]=C(25,25,0,"Fallenroot Satyr","Fallenroot Satyr"),
-[216661]=C(25,25,0,"Blackfathom Tide Priestess","Blackfathom Tide Priestess"),
-[216662]=C(25,25,0,"Blackfathom Oracle","Blackfathom Oracle"),
-[221230]=C(41,41,0,"Nightmare Grizzly","Nightmare Grizzly"),
-[221258]=C(41,41,0,"Dreamthorn Stalker","Dreamthorn Stalker"),
-[221259]=C(41,41,0,"Wyrmkin Nightstalker","Wyrmkin Nightstalker"),
-[221260]=C(41,41,0,"Terror Whelp","Terror Whelp"),
-[221261]=C(41,41,0,"Dreamfire Betrayer","Dreamfire Betrayer"),
-[221262]=C(41,41,0,"Dreamfire Hellcaller","Dreamfire Hellcaller"),
-[221263]=C(41,41,0,"Vengeful Ancient","Vengeful Ancient"),
-[221264]=C(41,41,0,"Dreamharvester","Dreamharvester"),
-[221265]=C(9999,9999,0,"Larsera","Larsera"),
-[221267]=C(9999,9999,0,"Shredder 9000","Shredder 9000"),
-[221282]=C(40,40,0,"Emberspark Dreamsworn","Emberspark Dreamsworn"),
-[221283]=C(40,40,0,"Dreampyre Imp","Dreampyre Imp"),
-[221292]=C(40,40,0,"Dreamhunter Hound","Dreamhunter Hound"),
-[222198]=C(9999,9999,0,"Nightmare Amalgamation","Nightmare Amalgamation"),
-[222409]=C(41,41,0,"Boss \"Gobb\" Goldnick","Boss \"Gobb\" Goldnick"),
-[222977]=C(42,42,0,"Phantim","Phantim"),
-[257315]=C(60,60,0,"Ash'alari","Ash'alari"),
-[257317]=C(22,22,0,"Grembly","Grembly"),
-[257322]=C(22,22,0,"Murache","Murache"),
-[264850]=C(20,30,0,"Hawk","Hawk"),
-[267214]=C(28,28,0,"Va'xug Firefure","Va'xug Firefure"),
-[271181]=C(24,27,0,"Eye of Kilrogg","Eye of Kilrogg"),
-[271915]=C(1,1,0,"Jungle Boa","Jungle Boa"),
-} end
+Z[1440] = [[
+3664	24	24	0		Ilkrud Magthrull
+3696	30	30	0	Ran Dent-rouge	Ran Bloodtooth
+3711	20	21	0	Myrmidon Irequeue	Wrathtail Myrmidon
+3712	19	20	0	Rasoir Irequeue	Wrathtail Razortail
+3713	18	19	0	Chevaucheur des vagues Irequeue	Wrathtail Wave Rider
+3715	19	20	0	Sorcière des mers Irequeue	Wrathtail Sea Witch
+3717	18	19	0	Ensorceleuse Irequeue	Wrathtail Sorceress
+3721	19	20	0	Hydre Fouettebrume	Mystlash Hydra
+3722	23	23	0	Ecorcheuse Fouettebrume	Mystlash Flayer
+3725	18	19	0	Sectateur de la Rive noire	Dark Strand Cultist
+3727	20	21	0	Massacreur de la Rive noire	Dark Strand Enforcer
+3728	18	19	0	Adepte de la Rive noire	Dark Strand Adept
+3730	19	20	0	Excavateur de la Rive noire	Dark Strand Excavator
+3732	18	19	0	Chercheur Réprouvé	Forsaken Seeker	H
+3733	18	19	0	Herboriste Réprouvé	Forsaken Herbalist	H
+3734	20	20	0	Nervi Réprouvé	Forsaken Thug	H
+3735	22	22	4	Apothicaire Falthis	Apothecary Falthis	H
+3736	23	23	0	Assassin Mordenthal	Darkslayer Mordenthal	H
+3737	19	20	0	Bondisseur Crache-sel	Saltspittle Puddlejumper
+3739	19	20	0	Guerrier Crache-sel	Saltspittle Warrior
+3740	20	21	0	Marche-boue Crache-sel	Saltspittle Muckdweller
+3742	20	21	0	Oracle Crache-sel	Saltspittle Oracle
+3743	23	24	0	Guerrier Vile-sylve	Foulweald Warrior
+3745	23	24	0	Guide Vile-sylve	Foulweald Pathfinder
+3746	24	25	0	Protecteur Vile-sylve	Foulweald Den Watcher
+3748	24	25	0	Chaman Vile-sylve	Foulweald Shaman
+3749	24	25	0	Ursa Vile-sylve	Foulweald Ursa
+3750	23	24	0	Totémique Vile-sylve	Foulweald Totemic
+3752	29	30	0	Voleur de Xavian	Xavian Rogue
+3754	28	29	0	Traître de Xavian	Xavian Betrayer
+3755	28	29	0	Lige de la corruption de Xavian	Xavian Felsworn
+3757	29	30	0	Implorateur de l’enfer de Xavian	Xavian Hellcaller
+3758	25	26	0	Satyre Gangremusc	Felmusk Satyr
+3759	26	27	0	Voleur Gangremusc	Felmusk Rogue
+3762	25	26	0	Lige de la corruption Gangremusc	Felmusk Felsworn
+3763	26	27	0	Traqueur des ténèbres Gangremusc	Felmusk Shadowstalker
+3765	26	27	0	Satyre Mornecoeur	Bleakheart Satyr
+3767	27	28	0	Entourloupeur Mornecoeur	Bleakheart Trickster
+3770	27	28	0	Traqueur des ténèbres Mornecoeur	Bleakheart Shadowstalker
+3771	26	27	0	Invocateur infernal Mornecoeur	Bleakheart Hellcaller
+3772	23	24	0	Gangregarde inférieur	Lesser Felguard
+3773	26	26	4		Akkrilus
+3774	22	23	0	Gangretueur	Felslayer
+3780	21	23	0	Mange-mousse Sombretaillis	Shadethicket Moss Eater
+3781	23	24	0	Forme-bois Sombretaillis	Shadethicket Wood Shaper
+3782	25	26	0	Bouge-pierre Sombretaillis	Shadethicket Stone Mover
+3783	22	23	0	Invocateur de pluie Sombretaillis	Shadethicket Raincaller
+3784	26	27	0	Arracheur Sombretaillis	Shadethicket Bark Ripper
+3789	28	29	0	Déchireur Frayeloup	Terrowulf Fleshripper
+3791	29	30	0	Tisseur des ombres Frayeloup	Terrowulf Shadow Weaver
+3792	32	32	4	Chef de meute Frayeloup	Terrowulf Packlord
+3797	25	26	0	Protecteur cénarien	Cenarion Protector	A
+3799	28	29	0	Druide austère	Severed Druid
+3801	28	29	0	Dormeur austère	Severed Sleeper
+3802	29	30	0	Rêveur austère	Severed Dreamer
+3803	29	30	0	Gardien austère	Severed Keeper
+3804	28	29	0	Intrus Réprouvé	Forsaken Intruder	H
+3806	29	30	0	Infiltrateur Réprouvé	Forsaken Infiltrator	H
+3807	29	30	0	Assassin Réprouvé	Forsaken Assassin	H
+3808	28	29	0	Traqueur noir Réprouvé	Forsaken Dark Stalker	H
+3809	21	22	0	Ours d’Ashenvale	Ashenvale Bear
+3810	25	26	0	Vieil ours d’Ashenvale	Elder Ashenvale Bear
+3811	29	30	0	Ours d’Ashenvale géant	Giant Ashenvale Bear
+3812	19	20	0	Clampant cliquetant	Clattering Crawler
+3814	20	21	0	Clampant épineux	Spined Crawler
+3815	26	27	0	Dragon frappeur	Blink Dragon
+3816	18	19	0	Cerf sauvage	Wild Buck
+3817	22	23	0	Cerf à corne noire	Shadowhorn Stag
+3818	26	27	0	Vieux cerf à corne noire	Elder Shadowhorn Stag
+3819	20	21	0	Traqueuse Ronce-sauvage	Wildthorn Stalker
+3820	24	25	0	Crache-venin Ronce-sauvage	Wildthorn Venomspitter
+3821	28	29	0	Rôdeuse Ronce-sauvage	Wildthorn Lurker
+3823	19	20	0	Coureur Patte-fantôme	Ghostpaw Runner
+3824	23	24	0	Hurleur Patte-fantôme	Ghostpaw Howler
+3825	27	28	0	Alpha Patte-fantôme	Ghostpaw Alpha
+3833	26	27	0	Redresseur de torts cénarien	Cenarion Vindicator	A
+3834	27	28	0	Ancien fou	Crazed Ancient
+3879	21	21	0	Assassin de la rive noire	Dark Strand Assassin
+3888	20	20	0		Korra	A
+3893	23	23	0	Eclaireur Réprouvé	Forsaken Scout	H
+3897	9	9	0		Krolg
+3917	23	25	0	Elémentaire d’eau souillé	Befouled Water Elemental
+3919	26	27	0	Ancien flétri	Withered Ancient
+3921	23	24	0	Ursa Crin-de-Chardon	Thistlefur Ursa
+3922	23	24	0	Totémique Crin-de-Chardon	Thistlefur Totemic
+3923	23	24	0	Protecteur Crin-de-Chardon	Thistlefur Den Watcher
+3924	23	24	0	Chaman Crin-de-Chardon	Thistlefur Shaman
+3925	23	24	0	Vengeur Crin-de-Chardon	Thistlefur Avenger
+3926	23	24	0	Guide Crin-de-Chardon	Thistlefur Pathfinder
+3928	20	22	0	Gelée pourrissante	Rotting Slime
+3931	30	30	0	Oracle Sombretaillis	Shadethicket Oracle
+3932	27	28	0	Garde de Dent-rouge	Bloodtooth Guard
+3940	32	32	0		Taneel Darkwood
+3941	32	32	0		Uthil Mooncall
+3942	32	32	0		Mavoris Cloudsbreak
+3943	22	22	0		Ruuzel
+3944	20	21	0	Prêtresse Irequeue	Wrathtail Priestess
+3987	25	25	0	Dal Griffesang	Dal Bloodclaw
+4054	24	25	0	Soeur rieuse	Laughing Sister	A
+4273	29	29	0	Gardien Ordanus	Keeper Ordanus	A
+4619	32	32	0		Geltharis
+4788	20	21	1	Satyre Sans-racines	Fallenroot Satyr
+4802	20	21	1	Prêtresse des marées de Brassenoire	Blackfathom Tide Priestess
+5314	62	62	1		Phantim
+6071	29	30	0	Molosse de la Légion	Legion Hound
+6072	34	34	0	Diathorus le Chercheur	Diathorus the Seeker
+6073	29	30	0	Infernal incendiaire	Searing Infernal
+6087	40	40	0	Sentinelle d'Astranaar	Astranaar Sentinel	A
+6115	29	30	0	Gangregarde	Felguard
+10559	22	22	4	Dame Vespia	Lady Vespia
+10639	25	25	4	Joufflu le croquant	Rorgish Jowl
+10640	27	27	4	Chênepatte	Oakpaw
+10641	25	25	4	Brise-branche	Branch Snapper
+10642	27	27	4		Eck'alom
+10643	23	23	4	Moldaileron	Mugglefin
+10644	22	22	4	Hurleur des brumes	Mist Howler
+10647	32	32	4		Prince Raze
+11656	26	27	0	Péon de la Horde	Horde Peon	H
+11680	26	28	0	Eclaireur de la Horde	Horde Scout	H
+11681	27	27	0	Défricheur de la Horde	Horde Deforester	H
+11682	29	30	0	Grunt de la Horde	Horde Grunt	H
+11683	28	29	0	Chaman de la Horde	Horde Shaman	H
+11684	27	27	0	Déchireur Warsong	Warsong Shredder	H
+11697	29	30	0	Flagellante de Mannoroc	Mannoroc Lasher
+12037	31	31	4		Ursol'lok
+12123	21	22	1	Requin des récifs	Reef Shark
+12474	62	62	1	Gardien Emeraldon	Emeraldon Boughguard
+12475	60	60	1	Gardien sylvestre Emeraldon	Emeraldon Tree Warder
+12476	61	61	1	Oracle Emeraldon	Emeraldon Oracle
+12498	62	62	1	Traquerêve	Dreamstalker
+12676	31	31	0	Serres-tranchantes	Sharptalon	A
+12759	27	27	0	Maréen	Tideress
+12856	23	24	0	Estafette d'Ashenvale	Ashenvale Outrunner	A
+12859	21	22	0	Ecumeur de Bois-brisé	Splintertree Raider	H
+12860	24	24	0		Duriel Moonfire	A
+12896	22	23	0	Sentinelle d'Aile-argent	Silverwing Sentinel	A
+12897	21	22	0	Guerrier d'Aile-argent	Silverwing Warrior	A
+12903	40	40	0	Garde de Bois-brisé	Splintertree Guard	H
+12918	26	26	0	Chef Murgut	Chief Murgut
+12940	22	22	0	Vorsha la Flagellante	Vorsha the Lasher
+14715	55	55	1	Soldat d'élite d'Aile-argent	Silverwing Elite	A
+14887	63	63	3		Ysondre
+14888	63	63	3	Léthon	Lethon
+14889	63	63	3		Emeriss
+14890	63	63	3		Taerar
+165189	7	30	0		Cat
+185317	20	30	0		Incubus
+185403	27	27	0		Cyriden Farseeker
+185404	27	27	0		Relathor Moonsong
+211956	9999	9999	0		Scarimous the Wandering
+212699	25	25	0		Silverwing Archer	A
+212703	25	25	0		Silverwing Dryad	A
+212706	25	25	0		Silverwing Druid	A
+212727	25	25	0		Warsong Grunt	H
+212728	25	25	0		Warsong Raider	H
+212729	25	25	0		Warsong Shaman	H
+216659	25	25	0		Fallenroot Satyr
+216661	25	25	0		Blackfathom Tide Priestess
+216662	25	25	0		Blackfathom Oracle
+221230	41	41	0		Nightmare Grizzly
+221258	41	41	0		Dreamthorn Stalker
+221259	41	41	0		Wyrmkin Nightstalker
+221260	41	41	0		Terror Whelp
+221261	41	41	0		Dreamfire Betrayer
+221262	41	41	0		Dreamfire Hellcaller
+221263	41	41	0		Vengeful Ancient
+221264	41	41	0		Dreamharvester
+221265	9999	9999	0		Larsera
+221267	9999	9999	0		Shredder 9000
+221282	40	40	0		Emberspark Dreamsworn
+221283	40	40	0		Dreampyre Imp
+221292	40	40	0		Dreamhunter Hound
+222198	9999	9999	0		Nightmare Amalgamation
+222409	41	41	0		Boss "Gobb" Goldnick
+222977	42	42	0		Phantim
+257315	60	60	0		Ash'alari
+257317	22	22	0		Grembly
+257322	22	22	0		Murache
+264850	20	30	0		Hawk
+267214	28	28	0		Va'xug Firefure
+271181	24	27	0		Eye of Kilrogg
+271915	1	1	0		Jungle Boa
+]]
 -- Thousand Needles
-Z[1441] = function() return {
-[4093]=C(25,26,0,"Querelleur galak","Galak Wrangler"),
-[4094]=C(24,25,0,"Eclaireur galak","Galak Scout"),
-[4095]=C(27,28,0,"Marteleur galak","Galak Mauler"),
-[4096]=C(24,25,0,"Chasse-vent galak","Galak Windchaser"),
-[4097]=C(26,27,0,"Légion-tempête galak","Galak Stormer"),
-[4099]=C(26,27,0,"Maraudeur galak","Galak Marauder"),
-[4100]=C(28,29,0,"Harpie hurlante","Screeching Harpy"),
-[4101]=C(29,30,0,"Volplume hurlante","Screeching Roguefeather"),
-[4104]=C(30,30,0,"Imploratrice céleste hurlante","Screeching Windcaller"),
-[4107]=C(28,29,0,"Wyverne de Haut-perchoir","Highperch Wyvern"),
-[4109]=C(28,29,0,"Concubine de Haut-perchoir","Highperch Consort"),
-[4110]=C(30,31,0,"Patriarche de Haut-perchoir","Highperch Patriarch"),
-[4111]=C(26,27,0,"Kobold Mufle-de-gravier","Gravelsnout Kobold"),
-[4112]=C(25,26,0,"Vermine Mufle-de-gravier","Gravelsnout Vermin"),
-[4113]=C(28,29,0,"Mineur Mufle-de-gravier","Gravelsnout Digger"),
-[4114]=C(27,28,0,"Fourrageur Mufle-de-gravier","Gravelsnout Forager"),
-[4116]=C(29,30,0,"Géomètre Mufle-de-gravier","Gravelsnout Surveyor"),
-[4117]=C(25,26,0,"Serpent-nuage","Cloud Serpent"),
-[4118]=C(26,28,0,"Serpent-nuage venimeux","Venomous Cloud Serpent"),
-[4119]=C(27,29,0,"Ancien serpent-nuage","Elder Cloud Serpent"),
-[4120]=C(28,29,0,"Eboulide fulminant","Thundering Boulderkin"),
-[4124]=C(27,28,0,"Puma des pointes","Needles Cougar"),
-[4126]=C(25,26,0,"Traqueur des combes","Crag Stalker"),
-[4130]=C(32,33,0,"Chercheur silithide","Silithid Searcher"),
-[4131]=C(34,35,0,"Envahisseur silithide","Silithid Invader"),
-[4132]=C(37,37,4,"Ravageur silithide","Silithid Ravager"),
-[4133]=C(33,34,0,"Bourdon silithide","Silithid Hive Drone"),
-[4139]=C(33,34,0,"Scorpide terrifiant","Scorpid Terror"),
-[4140]=C(31,32,0,"Scorpide ravageur","Scorpid Reaver"),
-[4142]=C(30,31,0,"Tortue nacrétoile","Sparkleshell Tortoise"),
-[4143]=C(34,35,0,"Mordeuse nacrétoile","Sparkleshell Snapper"),
-[4144]=C(32,33,0,"Tortue fouisseuse nacrétoile","Sparkleshell Borer"),
-[4147]=C(30,31,0,"Basilic du sel gemme","Saltstone Basilisk"),
-[4150]=C(34,35,0,"Contemplateur du sel gemme","Saltstone Gazer"),
-[4151]=C(32,33,0,"Peau de cristal du sel gemme","Saltstone Crystalhide"),
-[4154]=C(30,32,0,"Charognard des Salines","Salt Flats Scavenger"),
-[4158]=C(32,34,0,"Vautour des Salines","Salt Flats Vulture"),
-[4248]=C(26,27,0,"Hyène Pestepoil","Pesterhide Hyena"),
-[4249]=C(28,29,0,"Grogneuse Pestepoil","Pesterhide Snarler"),
-[4250]=C(24,24,0,"Chien de meute galak","Galak Packhound"),
-[4490]=C(31,31,0,"Grenka Hurlesang","Grenka Bloodscreech","A"),
-[4499]=C(30,30,1,"Rok'Alim le Marteleur","Rok'Alim the Pounder"),
-[4545]=C(35,35,0,"Nag'zehn","Nag'zehn","H"),
-[4546]=C(35,35,0,"Bor'zehn","Bor'zehn","H"),
-[4547]=C(35,35,0,"Tarkreu Shadowstalker","Tarkreu Shadowstalker","H"),
-[4548]=C(30,30,0,"Broie-l'acier","Steelsnap"),
-[5523]=C(29,29,0,"Kodo de guerre","War Party Kodo","H"),
-[5933]=C(31,31,4,"Achellios le Banni","Achellios the Banished"),
-[5934]=C(32,32,2,"Tranchecoeur","Heartrazor"),
-[5935]=C(37,37,2,"Ferregard l’Invincible","Ironeye the Invincible"),
-[5937]=C(35,35,2,"Dardeur","Vile Sting"),
-[6139]=C(29,29,0,"Planeur de Haut-perchoir","Highperch Soarer"),
-[7404]=C(30,30,0,"Garde des flammes galak","Galak Flame Guard"),
-[7872]=C(33,34,1,"Sectateur de la Tête de Mort","Death's Head Cultist"),
-[7874]=C(33,34,1,"Tisseur d'épines de Tranchebauge","Razorfen Thornweaver"),
-[9377]=C(33,34,0,"Vortex tourbillonnant","Swirling Vortex"),
-[9525]=C(45,45,0,"Brave de Librevent","Freewind Brave","H"),
-[10612]=C(45,45,0,"Garde Wachabe","Guard Wachabe","H"),
-[10617]=C(26,26,0,"Messager galak","Galak Messenger"),
-[10636]=C(30,30,0,"Kodo de bât","Pack Kodo","H"),
-[10720]=C(27,28,0,"Assassin galak","Galak Assassin"),
-[10756]=C(28,29,0,"Elémentaire brûlant","Scalding Elemental"),
-[10757]=C(27,28,0,"Elémentaire bouillonnant","Boiling Elemental"),
-[10758]=C(25,26,0,"Bandit du Totem sinistre","Grimtotem Bandit"),
-[10759]=C(26,27,0,"Marteleur du Totem sinistre","Grimtotem Stomper"),
-[10760]=C(25,27,0,"Géomancien du Totem sinistre","Grimtotem Geomancer"),
-[10761]=C(28,28,0,"Ravageur du Totem sinistre","Grimtotem Reaver"),
-[10896]=C(29,29,0,"Arnak Grimtotem","Arnak Grimtotem"),
-[10992]=C(30,30,1,"Panthère enragée","Enraged Panther"),
-[14426]=C(27,27,4,"Harb Foulmountain","Harb Foulmountain"),
-[14427]=C(28,28,4,"Gibblesnik","Gibblesnik"),
-[165189]=C(7,30,0,"Cat","Cat"),
-[216463]=C(38,38,1,"Ailgrha Splittusk","Ailgrha Splittusk"),
-[216474]=C(40,40,1,"Ravaging Tempest","Ravaging Tempest"),
-[217418]=C(28,28,0,"Zai'enki","Zai'enki"),
-[217669]=C(29,30,0,"Scorched Screeching Roguefeather","Scorched Screeching Roguefeather"),
-[217703]=C(28,28,0,"Singed Highperch Consort","Singed Highperch Consort"),
-[217711]=C(27,28,0,"Seared Needles Cougar","Seared Needles Cougar"),
-[218871]=C(37,37,0,"Death's Head Cultist","Death's Head Cultist"),
-[264850]=C(20,30,0,"Hawk","Hawk"),
-[270094]=C(30,30,1,"Stormheart","Stormheart"),
-} end
+Z[1441] = [[
+4093	25	26	0	Querelleur galak	Galak Wrangler
+4094	24	25	0	Eclaireur galak	Galak Scout
+4095	27	28	0	Marteleur galak	Galak Mauler
+4096	24	25	0	Chasse-vent galak	Galak Windchaser
+4097	26	27	0	Légion-tempête galak	Galak Stormer
+4099	26	27	0	Maraudeur galak	Galak Marauder
+4100	28	29	0	Harpie hurlante	Screeching Harpy
+4101	29	30	0	Volplume hurlante	Screeching Roguefeather
+4104	30	30	0	Imploratrice céleste hurlante	Screeching Windcaller
+4107	28	29	0	Wyverne de Haut-perchoir	Highperch Wyvern
+4109	28	29	0	Concubine de Haut-perchoir	Highperch Consort
+4110	30	31	0	Patriarche de Haut-perchoir	Highperch Patriarch
+4111	26	27	0	Kobold Mufle-de-gravier	Gravelsnout Kobold
+4112	25	26	0	Vermine Mufle-de-gravier	Gravelsnout Vermin
+4113	28	29	0	Mineur Mufle-de-gravier	Gravelsnout Digger
+4114	27	28	0	Fourrageur Mufle-de-gravier	Gravelsnout Forager
+4116	29	30	0	Géomètre Mufle-de-gravier	Gravelsnout Surveyor
+4117	25	26	0	Serpent-nuage	Cloud Serpent
+4118	26	28	0	Serpent-nuage venimeux	Venomous Cloud Serpent
+4119	27	29	0	Ancien serpent-nuage	Elder Cloud Serpent
+4120	28	29	0	Eboulide fulminant	Thundering Boulderkin
+4124	27	28	0	Puma des pointes	Needles Cougar
+4126	25	26	0	Traqueur des combes	Crag Stalker
+4130	32	33	0	Chercheur silithide	Silithid Searcher
+4131	34	35	0	Envahisseur silithide	Silithid Invader
+4132	37	37	4	Ravageur silithide	Silithid Ravager
+4133	33	34	0	Bourdon silithide	Silithid Hive Drone
+4139	33	34	0	Scorpide terrifiant	Scorpid Terror
+4140	31	32	0	Scorpide ravageur	Scorpid Reaver
+4142	30	31	0	Tortue nacrétoile	Sparkleshell Tortoise
+4143	34	35	0	Mordeuse nacrétoile	Sparkleshell Snapper
+4144	32	33	0	Tortue fouisseuse nacrétoile	Sparkleshell Borer
+4147	30	31	0	Basilic du sel gemme	Saltstone Basilisk
+4150	34	35	0	Contemplateur du sel gemme	Saltstone Gazer
+4151	32	33	0	Peau de cristal du sel gemme	Saltstone Crystalhide
+4154	30	32	0	Charognard des Salines	Salt Flats Scavenger
+4158	32	34	0	Vautour des Salines	Salt Flats Vulture
+4248	26	27	0	Hyène Pestepoil	Pesterhide Hyena
+4249	28	29	0	Grogneuse Pestepoil	Pesterhide Snarler
+4250	24	24	0	Chien de meute galak	Galak Packhound
+4490	31	31	0	Grenka Hurlesang	Grenka Bloodscreech	A
+4499	30	30	1	Rok'Alim le Marteleur	Rok'Alim the Pounder
+4545	35	35	0		Nag'zehn	H
+4546	35	35	0		Bor'zehn	H
+4547	35	35	0		Tarkreu Shadowstalker	H
+4548	30	30	0	Broie-l'acier	Steelsnap
+5523	29	29	0	Kodo de guerre	War Party Kodo	H
+5933	31	31	4	Achellios le Banni	Achellios the Banished
+5934	32	32	2	Tranchecoeur	Heartrazor
+5935	37	37	2	Ferregard l’Invincible	Ironeye the Invincible
+5937	35	35	2	Dardeur	Vile Sting
+6139	29	29	0	Planeur de Haut-perchoir	Highperch Soarer
+7404	30	30	0	Garde des flammes galak	Galak Flame Guard
+7872	33	34	1	Sectateur de la Tête de Mort	Death's Head Cultist
+7874	33	34	1	Tisseur d'épines de Tranchebauge	Razorfen Thornweaver
+9377	33	34	0	Vortex tourbillonnant	Swirling Vortex
+9525	45	45	0	Brave de Librevent	Freewind Brave	H
+10612	45	45	0	Garde Wachabe	Guard Wachabe	H
+10617	26	26	0	Messager galak	Galak Messenger
+10636	30	30	0	Kodo de bât	Pack Kodo	H
+10720	27	28	0	Assassin galak	Galak Assassin
+10756	28	29	0	Elémentaire brûlant	Scalding Elemental
+10757	27	28	0	Elémentaire bouillonnant	Boiling Elemental
+10758	25	26	0	Bandit du Totem sinistre	Grimtotem Bandit
+10759	26	27	0	Marteleur du Totem sinistre	Grimtotem Stomper
+10760	25	27	0	Géomancien du Totem sinistre	Grimtotem Geomancer
+10761	28	28	0	Ravageur du Totem sinistre	Grimtotem Reaver
+10896	29	29	0		Arnak Grimtotem
+10992	30	30	1	Panthère enragée	Enraged Panther
+14426	27	27	4		Harb Foulmountain
+14427	28	28	4		Gibblesnik
+165189	7	30	0		Cat
+216463	38	38	1		Ailgrha Splittusk
+216474	40	40	1		Ravaging Tempest
+217418	28	28	0		Zai'enki
+217669	29	30	0		Scorched Screeching Roguefeather
+217703	28	28	0		Singed Highperch Consort
+217711	27	28	0		Seared Needles Cougar
+218871	37	37	0		Death's Head Cultist
+264850	20	30	0		Hawk
+270094	30	30	1		Stormheart
+]]
 -- Stonetalon Mountains
-Z[1442] = function() return {
-[2676]=C(40,41,0,"Moissonneur compact","Compact Harvest Reaper"),
-[3988]=C(19,20,0,"Opérateur de la KapitalRisk","Venture Co. Operator"),
-[3989]=C(18,19,0,"Déboiseur de la KapitalRisk","Venture Co. Logger"),
-[3991]=C(19,20,0,"Défricheur de la KapitalRisk","Venture Co. Deforester"),
-[3992]=C(20,21,0,"Ingénieur de la KapitalRisk","Venture Co. Engineer"),
-[3993]=C(21,22,0,"Forgeur de machines de la KapitalRisk","Venture Co. Machine Smith"),
-[3998]=C(20,21,0,"Vermine des Cisailles","Windshear Vermin"),
-[3999]=C(21,22,0,"Terrassier des Cisailles","Windshear Digger"),
-[4001]=C(19,20,0,"Rat des tunnels des Cisailles","Windshear Tunnel Rat"),
-[4002]=C(23,23,0,"Tailleur de pierre des Cisailles","Windshear Stonecutter"),
-[4003]=C(20,21,0,"Géomancien des Cisailles","Windshear Geomancer"),
-[4004]=C(21,22,0,"Seigneur des Cisailles","Windshear Overlord"),
-[4005]=C(16,17,0,"Rampant des mousses profondes","Deepmoss Creeper"),
-[4006]=C(19,20,0,"Tisseuse des mousses profondes","Deepmoss Webspinner"),
-[4007]=C(17,18,0,"Venimeux des mousses profondes","Deepmoss Venomspitter"),
-[4008]=C(15,17,0,"Lézard-tempête des falaises","Cliff Stormer"),
-[4009]=C(18,19,0,"Lézard-tempête enragé des falaises","Raging Cliff Stormer"),
-[4011]=C(19,20,0,"Jeune Aile-fière","Young Pridewing"),
-[4012]=C(21,22,0,"Wyverne Aile-fière","Pridewing Wyvern"),
-[4013]=C(23,24,0,"Chasseresse céleste Aile-fière","Pridewing Skyhunter"),
-[4014]=C(22,23,0,"Concubine Aile-fière","Pridewing Consort"),
-[4015]=C(25,25,4,"Patriarche Aile-fière","Pridewing Patriarch"),
-[4016]=C(24,25,0,"Dragon-faë","Fey Dragon"),
-[4017]=C(26,27,0,"Dragon-faë rusé","Wily Fey Dragon"),
-[4018]=C(22,23,0,"Coursier à ramure","Antlered Courser"),
-[4019]=C(24,25,0,"Grand coursier","Great Courser"),
-[4020]=C(22,23,0,"Bête de sève","Sap Beast"),
-[4021]=C(24,25,0,"Bête de sève corrosive","Corrosive Sap Beast"),
-[4022]=C(23,24,0,"Harpie Rougefurie","Bloodfury Harpy"),
-[4023]=C(25,26,0,"Volplume Rougefurie","Bloodfury Roguefeather"),
-[4024]=C(25,26,0,"Tueuse Rougefurie","Bloodfury Slayer"),
-[4025]=C(23,24,0,"Embusquée Rougefurie","Bloodfury Ambusher"),
-[4026]=C(24,25,0,"Imploratrice céleste Rougefurie","Bloodfury Windcaller"),
-[4027]=C(26,27,0,"Sorcière des tempêtes Rougefurie","Bloodfury Storm Witch"),
-[4028]=C(25,26,0,"Ancien calciné","Charred Ancient"),
-[4029]=C(27,28,0,"Ancien noirci","Blackened Ancient"),
-[4030]=C(30,30,4,"Ancien vengeur","Vengeful Ancient"),
-[4031]=C(25,27,0,"Petite chimère","Fledgling Chimaera"),
-[4032]=C(23,25,0,"Jeune chimère","Young Chimaera"),
-[4034]=C(24,25,0,"Esprit rocheux enragé","Enraged Stone Spirit"),
-[4035]=C(26,27,0,"Esprit rocheux furieux","Furious Stone Spirit"),
-[4036]=C(23,24,0,"Esprit flamboyant insoumis","Rogue Flame Spirit"),
-[4037]=C(24,25,0,"Ravageur ardent","Burning Ravager"),
-[4038]=C(26,27,0,"Destructeur ardent","Burning Destroyer"),
-[4041]=C(27,28,0,"Basilic cramoisi","Scorched Basilisk"),
-[4042]=C(25,26,0,"Basilic flamboyant","Singed Basilisk"),
-[4044]=C(23,24,0,"Basilic noirci","Blackened Basilisk"),
-[4051]=C(23,24,0,"Botaniste cénarien","Cenarion Botanist","A"),
-[4053]=C(23,25,0,"Fille de Cénarius","Daughter of Cenarius","A"),
-[4057]=C(24,25,0,"Fils de Cénarius","Son of Cenarius","A"),
-[4066]=C(30,30,2,"Nal'taszar","Nal'taszar","A"),
-[4067]=C(23,24,0,"Coureur crépusculaire","Twilight Runner"),
-[4070]=C(20,21,0,"Bâtisseur de la KapitalRisk","Venture Co. Builder"),
-[4072]=C(20,20,0,"Prisonnier de Jin'Zil","Prisoner of Jin'Zil","A"),
-[4073]=C(23,23,0,"XT:4","XT:4"),
-[4074]=C(23,23,0,"XT:9","XT:9"),
-[4202]=C(27,27,0,"Gerenzo Wrenchwhistle","Gerenzo Wrenchwhistle"),
-[4263]=C(14,14,0,"Jeune des mousses profondes","Deepmoss Hatchling"),
-[4264]=C(22,22,0,"Matriarche des mousses profondes","Deepmoss Matriarch"),
-[5806]=C(22,25,0,"Tréant allié","Treant Ally","A"),
-[5915]=C(29,29,2,"Frère Ravenoak","Brother Ravenoak","A"),
-[5916]=C(27,27,2,"Sentinelle Amarassan","Sentinel Amarassan","A"),
-[5928]=C(27,27,2,"Ailes du désespoir","Sorrow Wing"),
-[5930]=C(28,28,2,"Sœur Riven","Sister Riven"),
-[5931]=C(24,24,2,"Contremaître Rigger","Foreman Rigger"),
-[5932]=C(22,22,2,"Sous-chef Fouettecroc","Taskmaster Whipfang"),
-[6141]=C(22,22,0,"Planeur Aile-fière","Pridewing Soarer"),
-[6167]=C(28,28,0,"Matriarche chimère","Chimaera Matriarch"),
-[11858]=C(18,18,0,"Grundig Darkcloud","Grundig Darkcloud"),
-[11910]=C(14,15,0,"Forban du Totem sinistre","Grimtotem Ruffian"),
-[11911]=C(14,15,0,"Mercenaire du Totem sinistre","Grimtotem Mercenary"),
-[11912]=C(15,16,0,"Brute du Totem sinistre","Grimtotem Brute"),
-[11913]=C(15,16,0,"Sorcier du Totem sinistre","Grimtotem Sorcerer"),
-[11914]=C(17,17,0,"Gorehoof le Noir","Gorehoof the Black"),
-[11915]=C(16,17,0,"Gardien des rochers de Gogger","Gogger Rock Keeper"),
-[11917]=C(16,17,0,"Géomancien de Gogger","Gogger Geomancer"),
-[11918]=C(17,18,0,"Cassepierre de Gogger","Gogger Stonepounder"),
-[11920]=C(20,20,1,"Goggeroc","Goggeroc"),
-[11921]=C(21,21,1,"Besseleth","Besseleth"),
-[12579]=C(26,26,1,"Déchiqueteuse Rougefurie","Bloodfury Ripper"),
-[165189]=C(7,30,0,"Cat","Cat"),
-[185317]=C(20,30,0,"Incubus","Incubus"),
-[210887]=C(19,20,0,"Unsuspecting Pridewing","Unsuspecting Pridewing"),
-[214129]=C(20,21,0,"Venture Co. Light Shredder","Venture Co. Light Shredder"),
-[264082]=C(30,30,1,"Broodmother Valraxx","Broodmother Valraxx"),
-[264850]=C(20,30,0,"Hawk","Hawk"),
-[268707]=C(1,20,0,"Prairie Wolf Pup","Prairie Wolf Pup"),
-[269138]=C(1,1,0,"White Riding Kodo","White Riding Kodo"),
-[269140]=C(1,1,0,"Brown Riding Kodo","Brown Riding Kodo"),
-[269141]=C(1,1,0,"Lavender Riding Kodo","Lavender Riding Kodo"),
-} end
+Z[1442] = [[
+2676	40	41	0	Moissonneur compact	Compact Harvest Reaper
+3988	19	20	0	Opérateur de la KapitalRisk	Venture Co. Operator
+3989	18	19	0	Déboiseur de la KapitalRisk	Venture Co. Logger
+3991	19	20	0	Défricheur de la KapitalRisk	Venture Co. Deforester
+3992	20	21	0	Ingénieur de la KapitalRisk	Venture Co. Engineer
+3993	21	22	0	Forgeur de machines de la KapitalRisk	Venture Co. Machine Smith
+3998	20	21	0	Vermine des Cisailles	Windshear Vermin
+3999	21	22	0	Terrassier des Cisailles	Windshear Digger
+4001	19	20	0	Rat des tunnels des Cisailles	Windshear Tunnel Rat
+4002	23	23	0	Tailleur de pierre des Cisailles	Windshear Stonecutter
+4003	20	21	0	Géomancien des Cisailles	Windshear Geomancer
+4004	21	22	0	Seigneur des Cisailles	Windshear Overlord
+4005	16	17	0	Rampant des mousses profondes	Deepmoss Creeper
+4006	19	20	0	Tisseuse des mousses profondes	Deepmoss Webspinner
+4007	17	18	0	Venimeux des mousses profondes	Deepmoss Venomspitter
+4008	15	17	0	Lézard-tempête des falaises	Cliff Stormer
+4009	18	19	0	Lézard-tempête enragé des falaises	Raging Cliff Stormer
+4011	19	20	0	Jeune Aile-fière	Young Pridewing
+4012	21	22	0	Wyverne Aile-fière	Pridewing Wyvern
+4013	23	24	0	Chasseresse céleste Aile-fière	Pridewing Skyhunter
+4014	22	23	0	Concubine Aile-fière	Pridewing Consort
+4015	25	25	4	Patriarche Aile-fière	Pridewing Patriarch
+4016	24	25	0	Dragon-faë	Fey Dragon
+4017	26	27	0	Dragon-faë rusé	Wily Fey Dragon
+4018	22	23	0	Coursier à ramure	Antlered Courser
+4019	24	25	0	Grand coursier	Great Courser
+4020	22	23	0	Bête de sève	Sap Beast
+4021	24	25	0	Bête de sève corrosive	Corrosive Sap Beast
+4022	23	24	0	Harpie Rougefurie	Bloodfury Harpy
+4023	25	26	0	Volplume Rougefurie	Bloodfury Roguefeather
+4024	25	26	0	Tueuse Rougefurie	Bloodfury Slayer
+4025	23	24	0	Embusquée Rougefurie	Bloodfury Ambusher
+4026	24	25	0	Imploratrice céleste Rougefurie	Bloodfury Windcaller
+4027	26	27	0	Sorcière des tempêtes Rougefurie	Bloodfury Storm Witch
+4028	25	26	0	Ancien calciné	Charred Ancient
+4029	27	28	0	Ancien noirci	Blackened Ancient
+4030	30	30	4	Ancien vengeur	Vengeful Ancient
+4031	25	27	0	Petite chimère	Fledgling Chimaera
+4032	23	25	0	Jeune chimère	Young Chimaera
+4034	24	25	0	Esprit rocheux enragé	Enraged Stone Spirit
+4035	26	27	0	Esprit rocheux furieux	Furious Stone Spirit
+4036	23	24	0	Esprit flamboyant insoumis	Rogue Flame Spirit
+4037	24	25	0	Ravageur ardent	Burning Ravager
+4038	26	27	0	Destructeur ardent	Burning Destroyer
+4041	27	28	0	Basilic cramoisi	Scorched Basilisk
+4042	25	26	0	Basilic flamboyant	Singed Basilisk
+4044	23	24	0	Basilic noirci	Blackened Basilisk
+4051	23	24	0	Botaniste cénarien	Cenarion Botanist	A
+4053	23	25	0	Fille de Cénarius	Daughter of Cenarius	A
+4057	24	25	0	Fils de Cénarius	Son of Cenarius	A
+4066	30	30	2		Nal'taszar	A
+4067	23	24	0	Coureur crépusculaire	Twilight Runner
+4070	20	21	0	Bâtisseur de la KapitalRisk	Venture Co. Builder
+4072	20	20	0	Prisonnier de Jin'Zil	Prisoner of Jin'Zil	A
+4073	23	23	0		XT:4
+4074	23	23	0		XT:9
+4202	27	27	0		Gerenzo Wrenchwhistle
+4263	14	14	0	Jeune des mousses profondes	Deepmoss Hatchling
+4264	22	22	0	Matriarche des mousses profondes	Deepmoss Matriarch
+5806	22	25	0	Tréant allié	Treant Ally	A
+5915	29	29	2	Frère Ravenoak	Brother Ravenoak	A
+5916	27	27	2	Sentinelle Amarassan	Sentinel Amarassan	A
+5928	27	27	2	Ailes du désespoir	Sorrow Wing
+5930	28	28	2	Sœur Riven	Sister Riven
+5931	24	24	2	Contremaître Rigger	Foreman Rigger
+5932	22	22	2	Sous-chef Fouettecroc	Taskmaster Whipfang
+6141	22	22	0	Planeur Aile-fière	Pridewing Soarer
+6167	28	28	0	Matriarche chimère	Chimaera Matriarch
+11858	18	18	0		Grundig Darkcloud
+11910	14	15	0	Forban du Totem sinistre	Grimtotem Ruffian
+11911	14	15	0	Mercenaire du Totem sinistre	Grimtotem Mercenary
+11912	15	16	0	Brute du Totem sinistre	Grimtotem Brute
+11913	15	16	0	Sorcier du Totem sinistre	Grimtotem Sorcerer
+11914	17	17	0	Gorehoof le Noir	Gorehoof the Black
+11915	16	17	0	Gardien des rochers de Gogger	Gogger Rock Keeper
+11917	16	17	0	Géomancien de Gogger	Gogger Geomancer
+11918	17	18	0	Cassepierre de Gogger	Gogger Stonepounder
+11920	20	20	1		Goggeroc
+11921	21	21	1		Besseleth
+12579	26	26	1	Déchiqueteuse Rougefurie	Bloodfury Ripper
+165189	7	30	0		Cat
+185317	20	30	0		Incubus
+210887	19	20	0		Unsuspecting Pridewing
+214129	20	21	0		Venture Co. Light Shredder
+264082	30	30	1		Broodmother Valraxx
+264850	20	30	0		Hawk
+268707	1	20	0		Prairie Wolf Pup
+269138	1	1	0		White Riding Kodo
+269140	1	1	0		Brown Riding Kodo
+269141	1	1	0		Lavender Riding Kodo
+]]
 -- Desolace
-Z[1443] = function() return {
-[4632]=C(30,31,0,"Centaure kolkar","Kolkar Centaur"),
-[4633]=C(30,31,0,"Eclaireur kolkar","Kolkar Scout"),
-[4634]=C(31,32,0,"Marteleur kolkar","Kolkar Mauler"),
-[4635]=C(31,32,0,"Chasse-vent kolkar","Kolkar Windchaser"),
-[4636]=C(32,33,0,"Seigneur de guerre kolkar","Kolkar Battle Lord"),
-[4637]=C(32,33,0,"Destructeur kolkar","Kolkar Destroyer"),
-[4638]=C(32,33,0,"Eclaireur magram","Magram Scout"),
-[4639]=C(32,33,0,"Estafette magram","Magram Outrunner"),
-[4640]=C(33,34,0,"Querelleur magram","Magram Wrangler"),
-[4641]=C(33,34,0,"Chasse-vent magram","Magram Windchaser"),
-[4642]=C(34,35,0,"Légion-tempête magram","Magram Stormer"),
-[4643]=C(34,35,0,"Coursier magram","Magram Pack Runner"),
-[4644]=C(35,36,0,"Maraudeur magram","Magram Marauder"),
-[4645]=C(35,36,0,"Marteleur magram","Magram Mauler"),
-[4646]=C(32,33,0,"Estafette gelkis","Gelkis Outrunner"),
-[4647]=C(32,33,0,"Eclaireur gelkis","Gelkis Scout"),
-[4648]=C(33,34,0,"Poinçonneur gelkis","Gelkis Stamper"),
-[4649]=C(33,34,0,"Chasse-vent gelkis","Gelkis Windchaser"),
-[4651]=C(34,35,0,"Implorateur de la terre gelkis","Gelkis Earthcaller"),
-[4652]=C(35,36,0,"Marteleur gelkis","Gelkis Mauler"),
-[4653]=C(35,36,0,"Maraudeur gelkis","Gelkis Marauder"),
-[4654]=C(37,38,0,"Eclaireur maraudine","Maraudine Scout"),
-[4655]=C(36,38,0,"Querelleur maraudine","Maraudine Wrangler"),
-[4656]=C(38,39,0,"Marteleur maraudine","Maraudine Mauler"),
-[4657]=C(38,39,0,"Chasse-vent maraudine","Maraudine Windchaser"),
-[4658]=C(39,40,0,"Légion-tempête maraudine","Maraudine Stormer"),
-[4659]=C(39,40,0,"Maraudeur maraudine","Maraudine Marauder"),
-[4660]=C(37,38,0,"Pattes-d'os maraudine","Maraudine Bonepaw"),
-[4661]=C(29,30,0,"Grondeur gelkis","Gelkis Rumbler"),
-[4662]=C(37,38,0,"Pattes-d'os magram","Magram Bonepaw"),
-[4663]=C(30,31,0,"Augure de la Lame ardente","Burning Blade Augur"),
-[4664]=C(30,31,0,"Ravageur de la Lame ardente","Burning Blade Reaver"),
-[4665]=C(31,32,0,"Adepte de la Lame ardente","Burning Blade Adept"),
-[4666]=C(31,32,0,"Lige de la corruption de la Lame ardente","Burning Blade Felsworn"),
-[4667]=C(32,33,0,"Ombremage de la Lame ardente","Burning Blade Shadowmage"),
-[4668]=C(38,39,0,"Invocateur de la Lame ardente","Burning Blade Summoner"),
-[4670]=C(31,32,0,"Voleur Fielfurie","Hatefury Rogue"),
-[4671]=C(31,32,0,"Entourloupeur Fielfurie","Hatefury Trickster"),
-[4672]=C(31,32,0,"Lige de la corruption Fielfurie","Hatefury Felsworn"),
-[4673]=C(32,33,0,"Traître Fielfurie","Hatefury Betrayer"),
-[4674]=C(32,33,0,"Traqueur des ténèbres Fielfurie","Hatefury Shadowstalker"),
-[4675]=C(32,33,0,"Implorateur de l’enfer Fielfurie","Hatefury Hellcaller"),
-[4676]=C(36,37,0,"Infernal mineur","Lesser Infernal"),
-[4677]=C(37,37,0,"Garde funeste","Doomwarder"),
-[4678]=C(37,38,0,"Mange-mana","Mana Eater"),
-[4679]=C(37,38,0,"Vierge du néant","Nether Maiden"),
-[4680]=C(38,38,0,"Capitaine de la Garde funeste","Doomwarder Captain"),
-[4681]=C(38,39,0,"Chasseur de mages","Mage Hunter"),
-[4682]=C(38,39,0,"Sœur du néant","Nether Sister"),
-[4684]=C(39,40,0,"Ensorceleuse du Néant","Nether Sorceress"),
-[4685]=C(39,40,0,"Chasseur Ley","Ley Hunter"),
-[4686]=C(38,39,1,"Géant Arpentefonds","Deepstrider Giant"),
-[4687]=C(39,40,1,"Chercheur Arpentefonds","Deepstrider Searcher"),
-[4688]=C(33,35,0,"Hyène Pattes-d'os","Bonepaw Hyena"),
-[4689]=C(30,32,0,"Pattes-d'os affamée","Starving Bonepaw"),
-[4690]=C(36,38,0,"Pattes-d'os enragée","Rabid Bonepaw"),
-[4692]=C(32,33,0,"Rapace de l'effroi","Dread Swoop"),
-[4693]=C(36,37,0,"Volant de l'effroi","Dread Flyer"),
-[4694]=C(39,40,0,"Déchiqueteur de l’effroi","Dread Ripper"),
-[4695]=C(35,37,0,"Horreur putride","Carrion Horror"),
-[4696]=C(30,31,0,"Scorpashi mordeur","Scorpashi Snapper"),
-[4697]=C(34,35,0,"Flagellant scorpashi","Scorpashi Lasher"),
-[4699]=C(38,39,0,"Empoisonneur scorpashi","Scorpashi Venomlash"),
-[4700]=C(34,35,0,"Vieux kodo","Aged Kodo"),
-[4701]=C(35,36,0,"Kodo mourant","Dying Kodo"),
-[4702]=C(36,37,0,"Ancien kodo","Ancient Kodo"),
-[4705]=C(39,40,0,"Invocateur de la Lame ardente","Burning Blade Invoker"),
-[4711]=C(32,33,0,"Naga Ondulame","Slitherblade Naga"),
-[4712]=C(32,33,0,"Sorcière Ondulame","Slitherblade Sorceress"),
-[4713]=C(33,34,0,"Guerrier Ondulame","Slitherblade Warrior"),
-[4714]=C(34,35,0,"Myrmidon Ondulame","Slitherblade Myrmidon"),
-[4715]=C(35,36,0,"Queue-rasoir Ondulame","Slitherblade Razortail"),
-[4716]=C(36,37,0,"Chasse-marée Ondulame","Slitherblade Tidehunter"),
-[4718]=C(34,35,0,"Oracle Ondulame","Slitherblade Oracle"),
-[4719]=C(35,36,0,"Sorcière des mers Ondulame","Slitherblade Sea Witch"),
-[4726]=C(33,34,0,"Lézard-tonnerre enragé","Raging Thunder Lizard"),
-[4727]=C(37,38,0,"Ancien lézard-tonnerre","Elder Thunder Lizard"),
-[4728]=C(31,32,0,"Basilic Mâchesable","Gritjaw Basilisk"),
-[4729]=C(35,36,0,"Basilic Mâchesable massif","Hulking Gritjaw Basilisk"),
-[5402]=C(42,42,1,"Khan Hratha","Khan Hratha"),
-[5600]=C(35,35,0,"Khan Dez'hepah","Khan Dez'hepah"),
-[5601]=C(37,42,0,"Khan Jehn","Khan Jehn"),
-[5602]=C(37,37,0,"Khan Shaka","Khan Shaka"),
-[5643]=C(36,36,0,"Tyranis Malem","Tyranis Malem"),
-[5760]=C(40,40,1,"Seigneur Azrethoc","Lord Azrethoc"),
-[5771]=C(40,40,0,"Jugkar Grim'rod","Jugkar Grim'rod"),
-[6069]=C(39,40,0,"Garde du khan maraudine","Maraudine Khan Guard"),
-[6070]=C(38,39,0,"Conseiller du khan maraudine","Maraudine Khan Advisor"),
-[8154]=C(48,48,0,"Brave de Rôdeur-fantôme","Ghost Walker Brave","H"),
-[11559]=C(39,40,0,"Nécromancien renégat","Outcast Necromancer"),
-[11560]=C(38,39,0,"Spectre magrami","Magrami Spectre"),
-[11561]=C(37,38,0,"Ravageur mort-vivant","Undead Ravager"),
-[11562]=C(33,34,0,"Rampant Claquesec","Drysnap Crawler"),
-[11563]=C(34,35,0,"Pinceur Claquesec","Drysnap Pincer"),
-[11576]=C(32,34,0,"Tourbillon éventreur","Whirlwind Ripper"),
-[11577]=C(35,37,0,"Tourbillon Marchetempête","Whirlwind Stormwalker"),
-[11578]=C(32,34,0,"Déchireur de tourbillon","Whirlwind Shredder"),
-[11685]=C(40,42,0,"Prêtre maraudine","Maraudine Priest"),
-[11686]=C(40,41,0,"Ecumeur fantomatique","Ghostly Raider"),
-[11687]=C(41,42,0,"Maraudeur fantomatique","Ghostly Marauder"),
-[11688]=C(43,43,4,"Centaure maudit","Cursed Centaur"),
-[11777]=C(40,41,1,"Grondeur Ombréclat","Shadowshard Rumbler"),
-[11778]=C(41,42,1,"Fracasseur Ombréclat","Shadowshard Smasher"),
-[11781]=C(40,41,1,"Ecraseur Ambréclat","Ambershard Crusher"),
-[11782]=C(42,43,1,"Destructeur Ambréclat","Ambershard Destroyer"),
-[11785]=C(40,41,1,"Basilic Oeil-d'ambre","Ambereye Basilisk"),
-[11786]=C(41,42,1,"Déchireur Oeil-d'ambre","Ambereye Reaver"),
-[11787]=C(40,41,1,"Fouisseur des rochers","Rock Borer"),
-[11788]=C(41,42,1,"Ver des rochers","Rock Worm"),
-[11876]=C(37,37,0,"Esprit démon","Demon Spirit"),
-[11937]=C(38,39,0,"Gardien du Portail démoniaque","Demon Portal Guardian"),
-[12347]=C(30,32,0,"Clampant des récifs enragé","Enraged Reef Crawler"),
-[12369]=C(38,38,0,"Seigneur Kragaru","Lord Kragaru"),
-[12976]=C(33,34,0,"Intercepteur kolkar","Kolkar Waylayer"),
-[12977]=C(34,35,0,"Embusqué kolkar","Kolkar Ambusher"),
-[13019]=C(33,33,0,"Prophète de la Lame ardente","Burning Blade Seer"),
-[13718]=C(41,41,1,"Le Prophète sans nom","The Nameless Prophet"),
-[13740]=C(43,43,1,"Magra","Magra"),
-[13741]=C(42,42,1,"Gelk","Gelk"),
-[13742]=C(43,43,1,"Kolk","Kolk"),
-[13836]=C(40,40,0,"Cavale de cauchemar de la Lame ardente","Burning Blade Nightmare"),
-[13837]=C(40,40,0,"Etalon capturé","Captured Stallion"),
-[14225]=C(33,33,4,"Prince Kellen","Prince Kellen"),
-[14226]=C(40,40,4,"Kaskk","Kaskk"),
-[14227]=C(37,37,4,"Hissperak","Hissperak"),
-[14228]=C(34,34,4,"Glousse","Giggler"),
-[14229]=C(35,35,4,"Ondulame maudit","Accursed Slitherblade"),
-[165189]=C(7,30,0,"Cat","Cat"),
-[185317]=C(20,30,0,"Incubus","Incubus"),
-[217392]=C(35,35,0,"Flameseer Dubelen","Flameseer Dubelen"),
-[217580]=C(38,38,0,"Seductress Ceeyna","Seductress Ceeyna"),
-[218249]=C(33,34,0,"Slitherblade Tide Priestess","Slitherblade Tide Priestess"),
-[218931]=C(41,41,0,"Dark Rider","Dark Rider"),
-[253066]=C(45,45,1,"Umarak","Umarak"),
-[253272]=C(43,43,0,"Magram Necromancer","Magram Necromancer"),
-[268705]=C(34,34,0,"Aka'rai","Aka'rai"),
-} end
+Z[1443] = [[
+4632	30	31	0	Centaure kolkar	Kolkar Centaur
+4633	30	31	0	Eclaireur kolkar	Kolkar Scout
+4634	31	32	0	Marteleur kolkar	Kolkar Mauler
+4635	31	32	0	Chasse-vent kolkar	Kolkar Windchaser
+4636	32	33	0	Seigneur de guerre kolkar	Kolkar Battle Lord
+4637	32	33	0	Destructeur kolkar	Kolkar Destroyer
+4638	32	33	0	Eclaireur magram	Magram Scout
+4639	32	33	0	Estafette magram	Magram Outrunner
+4640	33	34	0	Querelleur magram	Magram Wrangler
+4641	33	34	0	Chasse-vent magram	Magram Windchaser
+4642	34	35	0	Légion-tempête magram	Magram Stormer
+4643	34	35	0	Coursier magram	Magram Pack Runner
+4644	35	36	0	Maraudeur magram	Magram Marauder
+4645	35	36	0	Marteleur magram	Magram Mauler
+4646	32	33	0	Estafette gelkis	Gelkis Outrunner
+4647	32	33	0	Eclaireur gelkis	Gelkis Scout
+4648	33	34	0	Poinçonneur gelkis	Gelkis Stamper
+4649	33	34	0	Chasse-vent gelkis	Gelkis Windchaser
+4651	34	35	0	Implorateur de la terre gelkis	Gelkis Earthcaller
+4652	35	36	0	Marteleur gelkis	Gelkis Mauler
+4653	35	36	0	Maraudeur gelkis	Gelkis Marauder
+4654	37	38	0	Eclaireur maraudine	Maraudine Scout
+4655	36	38	0	Querelleur maraudine	Maraudine Wrangler
+4656	38	39	0	Marteleur maraudine	Maraudine Mauler
+4657	38	39	0	Chasse-vent maraudine	Maraudine Windchaser
+4658	39	40	0	Légion-tempête maraudine	Maraudine Stormer
+4659	39	40	0	Maraudeur maraudine	Maraudine Marauder
+4660	37	38	0	Pattes-d'os maraudine	Maraudine Bonepaw
+4661	29	30	0	Grondeur gelkis	Gelkis Rumbler
+4662	37	38	0	Pattes-d'os magram	Magram Bonepaw
+4663	30	31	0	Augure de la Lame ardente	Burning Blade Augur
+4664	30	31	0	Ravageur de la Lame ardente	Burning Blade Reaver
+4665	31	32	0	Adepte de la Lame ardente	Burning Blade Adept
+4666	31	32	0	Lige de la corruption de la Lame ardente	Burning Blade Felsworn
+4667	32	33	0	Ombremage de la Lame ardente	Burning Blade Shadowmage
+4668	38	39	0	Invocateur de la Lame ardente	Burning Blade Summoner
+4670	31	32	0	Voleur Fielfurie	Hatefury Rogue
+4671	31	32	0	Entourloupeur Fielfurie	Hatefury Trickster
+4672	31	32	0	Lige de la corruption Fielfurie	Hatefury Felsworn
+4673	32	33	0	Traître Fielfurie	Hatefury Betrayer
+4674	32	33	0	Traqueur des ténèbres Fielfurie	Hatefury Shadowstalker
+4675	32	33	0	Implorateur de l’enfer Fielfurie	Hatefury Hellcaller
+4676	36	37	0	Infernal mineur	Lesser Infernal
+4677	37	37	0	Garde funeste	Doomwarder
+4678	37	38	0	Mange-mana	Mana Eater
+4679	37	38	0	Vierge du néant	Nether Maiden
+4680	38	38	0	Capitaine de la Garde funeste	Doomwarder Captain
+4681	38	39	0	Chasseur de mages	Mage Hunter
+4682	38	39	0	Sœur du néant	Nether Sister
+4684	39	40	0	Ensorceleuse du Néant	Nether Sorceress
+4685	39	40	0	Chasseur Ley	Ley Hunter
+4686	38	39	1	Géant Arpentefonds	Deepstrider Giant
+4687	39	40	1	Chercheur Arpentefonds	Deepstrider Searcher
+4688	33	35	0	Hyène Pattes-d'os	Bonepaw Hyena
+4689	30	32	0	Pattes-d'os affamée	Starving Bonepaw
+4690	36	38	0	Pattes-d'os enragée	Rabid Bonepaw
+4692	32	33	0	Rapace de l'effroi	Dread Swoop
+4693	36	37	0	Volant de l'effroi	Dread Flyer
+4694	39	40	0	Déchiqueteur de l’effroi	Dread Ripper
+4695	35	37	0	Horreur putride	Carrion Horror
+4696	30	31	0	Scorpashi mordeur	Scorpashi Snapper
+4697	34	35	0	Flagellant scorpashi	Scorpashi Lasher
+4699	38	39	0	Empoisonneur scorpashi	Scorpashi Venomlash
+4700	34	35	0	Vieux kodo	Aged Kodo
+4701	35	36	0	Kodo mourant	Dying Kodo
+4702	36	37	0	Ancien kodo	Ancient Kodo
+4705	39	40	0	Invocateur de la Lame ardente	Burning Blade Invoker
+4711	32	33	0	Naga Ondulame	Slitherblade Naga
+4712	32	33	0	Sorcière Ondulame	Slitherblade Sorceress
+4713	33	34	0	Guerrier Ondulame	Slitherblade Warrior
+4714	34	35	0	Myrmidon Ondulame	Slitherblade Myrmidon
+4715	35	36	0	Queue-rasoir Ondulame	Slitherblade Razortail
+4716	36	37	0	Chasse-marée Ondulame	Slitherblade Tidehunter
+4718	34	35	0	Oracle Ondulame	Slitherblade Oracle
+4719	35	36	0	Sorcière des mers Ondulame	Slitherblade Sea Witch
+4726	33	34	0	Lézard-tonnerre enragé	Raging Thunder Lizard
+4727	37	38	0	Ancien lézard-tonnerre	Elder Thunder Lizard
+4728	31	32	0	Basilic Mâchesable	Gritjaw Basilisk
+4729	35	36	0	Basilic Mâchesable massif	Hulking Gritjaw Basilisk
+5402	42	42	1		Khan Hratha
+5600	35	35	0		Khan Dez'hepah
+5601	37	42	0		Khan Jehn
+5602	37	37	0		Khan Shaka
+5643	36	36	0		Tyranis Malem
+5760	40	40	1	Seigneur Azrethoc	Lord Azrethoc
+5771	40	40	0		Jugkar Grim'rod
+6069	39	40	0	Garde du khan maraudine	Maraudine Khan Guard
+6070	38	39	0	Conseiller du khan maraudine	Maraudine Khan Advisor
+8154	48	48	0	Brave de Rôdeur-fantôme	Ghost Walker Brave	H
+11559	39	40	0	Nécromancien renégat	Outcast Necromancer
+11560	38	39	0	Spectre magrami	Magrami Spectre
+11561	37	38	0	Ravageur mort-vivant	Undead Ravager
+11562	33	34	0	Rampant Claquesec	Drysnap Crawler
+11563	34	35	0	Pinceur Claquesec	Drysnap Pincer
+11576	32	34	0	Tourbillon éventreur	Whirlwind Ripper
+11577	35	37	0	Tourbillon Marchetempête	Whirlwind Stormwalker
+11578	32	34	0	Déchireur de tourbillon	Whirlwind Shredder
+11685	40	42	0	Prêtre maraudine	Maraudine Priest
+11686	40	41	0	Ecumeur fantomatique	Ghostly Raider
+11687	41	42	0	Maraudeur fantomatique	Ghostly Marauder
+11688	43	43	4	Centaure maudit	Cursed Centaur
+11777	40	41	1	Grondeur Ombréclat	Shadowshard Rumbler
+11778	41	42	1	Fracasseur Ombréclat	Shadowshard Smasher
+11781	40	41	1	Ecraseur Ambréclat	Ambershard Crusher
+11782	42	43	1	Destructeur Ambréclat	Ambershard Destroyer
+11785	40	41	1	Basilic Oeil-d'ambre	Ambereye Basilisk
+11786	41	42	1	Déchireur Oeil-d'ambre	Ambereye Reaver
+11787	40	41	1	Fouisseur des rochers	Rock Borer
+11788	41	42	1	Ver des rochers	Rock Worm
+11876	37	37	0	Esprit démon	Demon Spirit
+11937	38	39	0	Gardien du Portail démoniaque	Demon Portal Guardian
+12347	30	32	0	Clampant des récifs enragé	Enraged Reef Crawler
+12369	38	38	0	Seigneur Kragaru	Lord Kragaru
+12976	33	34	0	Intercepteur kolkar	Kolkar Waylayer
+12977	34	35	0	Embusqué kolkar	Kolkar Ambusher
+13019	33	33	0	Prophète de la Lame ardente	Burning Blade Seer
+13718	41	41	1	Le Prophète sans nom	The Nameless Prophet
+13740	43	43	1		Magra
+13741	42	42	1		Gelk
+13742	43	43	1		Kolk
+13836	40	40	0	Cavale de cauchemar de la Lame ardente	Burning Blade Nightmare
+13837	40	40	0	Etalon capturé	Captured Stallion
+14225	33	33	4		Prince Kellen
+14226	40	40	4		Kaskk
+14227	37	37	4		Hissperak
+14228	34	34	4	Glousse	Giggler
+14229	35	35	4	Ondulame maudit	Accursed Slitherblade
+165189	7	30	0		Cat
+185317	20	30	0		Incubus
+217392	35	35	0		Flameseer Dubelen
+217580	38	38	0		Seductress Ceeyna
+218249	33	34	0		Slitherblade Tide Priestess
+218931	41	41	0		Dark Rider
+253066	45	45	1		Umarak
+253272	43	43	0		Magram Necromancer
+268705	34	34	0		Aka'rai
+]]
 -- Feralas
-Z[1444] = function() return {
-[5229]=C(40,41,0,"Ogre Gordunni","Gordunni Ogre"),
-[5232]=C(42,43,0,"Brute Gordunni","Gordunni Brute"),
-[5234]=C(43,44,0,"Marteleur Gordunni","Gordunni Mauler"),
-[5236]=C(44,45,0,"Chaman Gordunni","Gordunni Shaman"),
-[5237]=C(41,42,0,"Ogre-mage Gordunni","Gordunni Ogre Mage"),
-[5238]=C(45,46,0,"Maître de guerre Gordunni","Gordunni Battlemaster"),
-[5239]=C(45,46,0,"Seigneur-mage Gordunni","Gordunni Mage-Lord"),
-[5240]=C(43,44,0,"Démoniste Gordunni","Gordunni Warlock"),
-[5241]=C(46,47,0,"Seigneur de guerre Gordunni","Gordunni Warlord"),
-[5244]=C(45,46,0,"Aiguillonneuse Zukk'ash","Zukk'ash Stinger"),
-[5245]=C(44,45,0,"Guêpe Zukk'ash","Zukk'ash Wasp"),
-[5246]=C(44,45,0,"Ouvrière Zukk'ash","Zukk'ash Worker"),
-[5247]=C(45,46,0,"Tunnelière Zukk'ash","Zukk'ash Tunneler"),
-[5249]=C(40,41,0,"Bâtard Griffebois","Woodpaw Mongrel"),
-[5251]=C(41,42,0,"Trappeur Griffebois","Woodpaw Trapper"),
-[5253]=C(41,42,0,"Brute Griffebois","Woodpaw Brute"),
-[5254]=C(42,43,0,"Mystique Griffebois","Woodpaw Mystic"),
-[5255]=C(42,43,0,"Ravageur Griffebois","Woodpaw Reaver"),
-[5258]=C(43,44,0,"Alpha Griffebois","Woodpaw Alpha"),
-[5260]=C(42,43,0,"Singe Groddoc","Groddoc Ape"),
-[5262]=C(49,50,0,"Foudroyeur Groddoc","Groddoc Thunderer"),
-[5268]=C(41,42,0,"Ours Ferpoil","Ironfur Bear"),
-[5272]=C(44,44,0,"Vieil ours Ferpoil","Grizzled Ironfur Bear"),
-[5274]=C(48,49,0,"Patriarche Ferpoil","Ironfur Patriarch"),
-[5276]=C(47,48,0,"Petit dragon féerique","Sprite Dragon"),
-[5278]=C(43,45,0,"Fée fléchetteuse","Sprite Darter","A"),
-[5286]=C(40,41,0,"Messager Longues-dents","Longtooth Runner"),
-[5287]=C(43,44,0,"Hurleur Longues-dents","Longtooth Howler"),
-[5288]=C(8,48,0,"Longues-dents enragé","Rabid Longtooth"),
-[5292]=C(43,44,0,"Yéti Griffe farouche","Feral Scar Yeti"),
-[5293]=C(45,46,0,"Griffe farouche massif","Hulking Feral Scar"),
-[5295]=C(44,45,0,"Enragé Griffe farouche","Enraged Feral Scar"),
-[5296]=C(46,47,0,"Yéti Griffe féroce","Rage Scar Yeti"),
-[5297]=C(48,49,0,"Ancien Griffe féroce","Elder Rage Scar"),
-[5299]=C(47,48,0,"Griffe féroce enragé","Ferocious Rage Scar"),
-[5300]=C(43,44,0,"Hippogryphe Aigreplume","Frayfeather Hippogryph"),
-[5304]=C(44,45,0,"Cerf ailé Aigreplume","Frayfeather Stagwing"),
-[5305]=C(45,46,0,"Tempêtueux Aigreplume","Frayfeather Skystormer"),
-[5306]=C(46,47,0,"Patriarche Aigreplume","Frayfeather Patriarch"),
-[5307]=C(41,43,0,"Hurleur des vallées","Vale Screecher"),
-[5308]=C(44,46,0,"Hurleur des vallées insoumis","Rogue Vale Screecher"),
-[5312]=C(62,62,1,"Lethlas","Lethlas"),
-[5317]=C(61,61,1,"Oracle Jademir","Jademir Oracle"),
-[5319]=C(60,60,1,"Gardien sylvestre Jademir","Jademir Tree Warder"),
-[5320]=C(62,62,1,"Gardien des marais Jademir","Jademir Boughguard"),
-[5327]=C(44,45,0,"Claque-pinces côtier","Coast Crawl Snapclaw"),
-[5328]=C(43,44,0,"Enfouisseur côtier","Coast Crawl Deepseer"),
-[5331]=C(42,43,0,"Guerrier Hainecrête","Hatecrest Warrior"),
-[5332]=C(41,42,0,"Chevaucheur des vagues Hainecrête","Hatecrest Wave Rider"),
-[5333]=C(44,45,0,"Garde-serpent Hainecrête","Hatecrest Serpent Guard"),
-[5334]=C(43,44,0,"Myrmidon Hainecrête","Hatecrest Myrmidon"),
-[5335]=C(41,42,0,"Hurleuse Hainecrête","Hatecrest Screamer"),
-[5336]=C(43,44,0,"Ensorceleuse Hainecrête","Hatecrest Sorceress"),
-[5337]=C(42,43,0,"Sirène Hainecrête","Hatecrest Siren"),
-[5343]=C(46,46,4,"Dame Szallah","Lady Szallah"),
-[5345]=C(45,45,4,"Tête-de-diamant","Diamond Head"),
-[5346]=C(48,48,4,"Rugissang le Traqueur","Bloodroar the Stalker"),
-[5347]=C(48,48,4,"Antilus le Planeur","Antilus the Soarer"),
-[5349]=C(49,49,4,"Arash-ethis","Arash-ethis"),
-[5350]=C(47,47,4,"Qirot","Qirot"),
-[5352]=C(43,43,4,"Vieux Grisebedaine","Old Grizzlegut"),
-[5354]=C(44,44,4,"Gnarl Frèrefeuilles","Gnarl Leafbrother"),
-[5356]=C(42,42,4,"Grogneur","Snarler"),
-[5357]=C(48,49,1,"Marcheur des terres","Land Walker"),
-[5358]=C(49,50,1,"Géant des falaises","Cliff Giant"),
-[5359]=C(48,49,1,"Marcheur des rivages","Shore Strider"),
-[5360]=C(47,49,1,"Marcheur des profondeurs","Deep Strider"),
-[5361]=C(47,48,1,"Marcheur des vagues","Wave Strider"),
-[5362]=C(48,49,0,"Harpie Ruissenord","Northspring Harpy"),
-[5363]=C(48,49,0,"Volplume Ruissenord","Northspring Roguefeather"),
-[5364]=C(49,50,0,"Pourfendeuse Ruissenord","Northspring Slayer"),
-[5366]=C(49,50,0,"Imploratrice céleste Ruissenord","Northspring Windcaller"),
-[5461]=C(48,49,0,"Elémentaire marin","Sea Elemental"),
-[5462]=C(47,48,0,"Embruns","Sea Spray"),
-[5881]=C(45,45,0,"Sycomore maudit","Cursed Sycamore"),
-[7584]=C(44,46,0,"Marcheur des bois errant","Wandering Forest Walker"),
-[7725]=C(42,43,0,"Ecumeur du Totem sinistre","Grimtotem Raider"),
-[7726]=C(41,42,0,"Naturaliste du Totem sinistre","Grimtotem Naturalist"),
-[7727]=C(43,44,0,"Chaman du Totem sinistre","Grimtotem Shaman"),
-[7848]=C(46,46,0,"Griffe farouche patibulaire","Lurking Feral Scar"),
-[7939]=C(55,55,0,"Sentinelle de Feathermoon","Feathermoon Sentinel","A"),
-[7997]=C(41,41,0,"Fée fléchetteuse capturée","Captured Sprite Darter","A"),
-[8075]=C(50,50,1,"Edana Hatetalon","Edana Hatetalon"),
-[8136]=C(47,47,0,"Seigneur Shalzaru","Lord Shalzaru"),
-[11440]=C(53,54,1,"Massacreur Gordok","Gordok Enforcer"),
-[11442]=C(53,54,1,"Marteleur Gordok","Gordok Mauler"),
-[11443]=C(52,53,1,"Ogre-mage Gordok","Gordok Ogre-Mage"),
-[11498]=C(58,58,2,"Bâlhafr l'Invaincu","Skarr the Unbreakable"),
-[12418]=C(52,53,0,"Hyène Gordok","Gordok Hyena"),
-[12497]=C(62,62,1,"Hurle-rêve","Dreamroarer"),
-[12800]=C(60,61,1,"Chimaerok","Chimaerok"),
-[12801]=C(60,62,1,"Chimaerok des arcanes","Arcane Chimaerok"),
-[12802]=C(61,62,1,"Dévoreur Chimaerok","Chimaerok Devourer"),
-[12803]=C(62,62,1,"Seigneur Lakmaeran","Lord Lakmaeran"),
-[14603]=C(48,49,0,"Marcheur des rivages zappé","Zapped Shore Strider"),
-[14604]=C(48,48,0,"Marcheur des terres zappé","Zapped Land Walker"),
-[14638]=C(47,48,0,"Marcheur des vagues zappé","Zapped Wave Strider"),
-[14639]=C(47,49,0,"Marcheur des profondeurs zappé","Zapped Deep Strider"),
-[14640]=C(49,49,0,"Géant des falaises zappé","Zapped Cliff Giant"),
-[14661]=C(47,47,0,"Fouet-cuisant","Stinglasher"),
-[14887]=C(63,63,3,"Ysondre","Ysondre"),
-[14888]=C(63,63,3,"Léthon","Lethon"),
-[14889]=C(63,63,3,"Emeriss","Emeriss"),
-[14890]=C(63,63,3,"Taerar","Taerar"),
-[211956]=C(9999,9999,0,"Scarimous the Wandering","Scarimous the Wandering"),
-[220930]=C(50,50,0,"Frix Xizzix","Frix Xizzix","A"),
-[221365]=C(51,51,0,"Deathpetal Lasher","Deathpetal Lasher"),
-[221367]=C(51,51,0,"Wyrmkin Berserker","Wyrmkin Berserker"),
-[221369]=C(51,51,0,"Frenzied Whelp","Frenzied Whelp"),
-[221370]=C(51,51,0,"Dreamspring Roguefeather","Dreamspring Roguefeather"),
-[221371]=C(49,50,0,"Dreamspring Stormcaller","Dreamspring Stormcaller"),
-[221375]=C(51,51,0,"Lost Daughter","Lost Daughter"),
-[221377]=C(51,51,0,"Vengeful Son","Vengeful Son"),
-[221391]=C(9999,9999,0,"Slirena","Slirena"),
-[221407]=C(50,50,0,"Dreamshadow Imp","Dreamshadow Imp"),
-[221935]=C(50,50,0,"Treant Avatar","Treant Avatar"),
-[222286]=C(43,43,0,"Namida Grimtotem","Namida Grimtotem"),
-[222407]=C(47,47,0,"Enraged Leywalker","Enraged Leywalker"),
-[222726]=C(46,46,0,"Tyrant of the Hive","Tyrant of the Hive"),
-[222799]=C(41,42,0,"Simmering Elemental","Simmering Elemental"),
-[222968]=C(52,52,0,"Lethlas","Lethlas"),
-[223544]=C(45,48,0,"Fel Interloper","Fel Interloper"),
-} end
+Z[1444] = [[
+5229	40	41	0	Ogre Gordunni	Gordunni Ogre
+5232	42	43	0	Brute Gordunni	Gordunni Brute
+5234	43	44	0	Marteleur Gordunni	Gordunni Mauler
+5236	44	45	0	Chaman Gordunni	Gordunni Shaman
+5237	41	42	0	Ogre-mage Gordunni	Gordunni Ogre Mage
+5238	45	46	0	Maître de guerre Gordunni	Gordunni Battlemaster
+5239	45	46	0	Seigneur-mage Gordunni	Gordunni Mage-Lord
+5240	43	44	0	Démoniste Gordunni	Gordunni Warlock
+5241	46	47	0	Seigneur de guerre Gordunni	Gordunni Warlord
+5244	45	46	0	Aiguillonneuse Zukk'ash	Zukk'ash Stinger
+5245	44	45	0	Guêpe Zukk'ash	Zukk'ash Wasp
+5246	44	45	0	Ouvrière Zukk'ash	Zukk'ash Worker
+5247	45	46	0	Tunnelière Zukk'ash	Zukk'ash Tunneler
+5249	40	41	0	Bâtard Griffebois	Woodpaw Mongrel
+5251	41	42	0	Trappeur Griffebois	Woodpaw Trapper
+5253	41	42	0	Brute Griffebois	Woodpaw Brute
+5254	42	43	0	Mystique Griffebois	Woodpaw Mystic
+5255	42	43	0	Ravageur Griffebois	Woodpaw Reaver
+5258	43	44	0	Alpha Griffebois	Woodpaw Alpha
+5260	42	43	0	Singe Groddoc	Groddoc Ape
+5262	49	50	0	Foudroyeur Groddoc	Groddoc Thunderer
+5268	41	42	0	Ours Ferpoil	Ironfur Bear
+5272	44	44	0	Vieil ours Ferpoil	Grizzled Ironfur Bear
+5274	48	49	0	Patriarche Ferpoil	Ironfur Patriarch
+5276	47	48	0	Petit dragon féerique	Sprite Dragon
+5278	43	45	0	Fée fléchetteuse	Sprite Darter	A
+5286	40	41	0	Messager Longues-dents	Longtooth Runner
+5287	43	44	0	Hurleur Longues-dents	Longtooth Howler
+5288	8	48	0	Longues-dents enragé	Rabid Longtooth
+5292	43	44	0	Yéti Griffe farouche	Feral Scar Yeti
+5293	45	46	0	Griffe farouche massif	Hulking Feral Scar
+5295	44	45	0	Enragé Griffe farouche	Enraged Feral Scar
+5296	46	47	0	Yéti Griffe féroce	Rage Scar Yeti
+5297	48	49	0	Ancien Griffe féroce	Elder Rage Scar
+5299	47	48	0	Griffe féroce enragé	Ferocious Rage Scar
+5300	43	44	0	Hippogryphe Aigreplume	Frayfeather Hippogryph
+5304	44	45	0	Cerf ailé Aigreplume	Frayfeather Stagwing
+5305	45	46	0	Tempêtueux Aigreplume	Frayfeather Skystormer
+5306	46	47	0	Patriarche Aigreplume	Frayfeather Patriarch
+5307	41	43	0	Hurleur des vallées	Vale Screecher
+5308	44	46	0	Hurleur des vallées insoumis	Rogue Vale Screecher
+5312	62	62	1		Lethlas
+5317	61	61	1	Oracle Jademir	Jademir Oracle
+5319	60	60	1	Gardien sylvestre Jademir	Jademir Tree Warder
+5320	62	62	1	Gardien des marais Jademir	Jademir Boughguard
+5327	44	45	0	Claque-pinces côtier	Coast Crawl Snapclaw
+5328	43	44	0	Enfouisseur côtier	Coast Crawl Deepseer
+5331	42	43	0	Guerrier Hainecrête	Hatecrest Warrior
+5332	41	42	0	Chevaucheur des vagues Hainecrête	Hatecrest Wave Rider
+5333	44	45	0	Garde-serpent Hainecrête	Hatecrest Serpent Guard
+5334	43	44	0	Myrmidon Hainecrête	Hatecrest Myrmidon
+5335	41	42	0	Hurleuse Hainecrête	Hatecrest Screamer
+5336	43	44	0	Ensorceleuse Hainecrête	Hatecrest Sorceress
+5337	42	43	0	Sirène Hainecrête	Hatecrest Siren
+5343	46	46	4	Dame Szallah	Lady Szallah
+5345	45	45	4	Tête-de-diamant	Diamond Head
+5346	48	48	4	Rugissang le Traqueur	Bloodroar the Stalker
+5347	48	48	4	Antilus le Planeur	Antilus the Soarer
+5349	49	49	4		Arash-ethis
+5350	47	47	4		Qirot
+5352	43	43	4	Vieux Grisebedaine	Old Grizzlegut
+5354	44	44	4	Gnarl Frèrefeuilles	Gnarl Leafbrother
+5356	42	42	4	Grogneur	Snarler
+5357	48	49	1	Marcheur des terres	Land Walker
+5358	49	50	1	Géant des falaises	Cliff Giant
+5359	48	49	1	Marcheur des rivages	Shore Strider
+5360	47	49	1	Marcheur des profondeurs	Deep Strider
+5361	47	48	1	Marcheur des vagues	Wave Strider
+5362	48	49	0	Harpie Ruissenord	Northspring Harpy
+5363	48	49	0	Volplume Ruissenord	Northspring Roguefeather
+5364	49	50	0	Pourfendeuse Ruissenord	Northspring Slayer
+5366	49	50	0	Imploratrice céleste Ruissenord	Northspring Windcaller
+5461	48	49	0	Elémentaire marin	Sea Elemental
+5462	47	48	0	Embruns	Sea Spray
+5881	45	45	0	Sycomore maudit	Cursed Sycamore
+7584	44	46	0	Marcheur des bois errant	Wandering Forest Walker
+7725	42	43	0	Ecumeur du Totem sinistre	Grimtotem Raider
+7726	41	42	0	Naturaliste du Totem sinistre	Grimtotem Naturalist
+7727	43	44	0	Chaman du Totem sinistre	Grimtotem Shaman
+7848	46	46	0	Griffe farouche patibulaire	Lurking Feral Scar
+7939	55	55	0	Sentinelle de Feathermoon	Feathermoon Sentinel	A
+7997	41	41	0	Fée fléchetteuse capturée	Captured Sprite Darter	A
+8075	50	50	1		Edana Hatetalon
+8136	47	47	0	Seigneur Shalzaru	Lord Shalzaru
+11440	53	54	1	Massacreur Gordok	Gordok Enforcer
+11442	53	54	1	Marteleur Gordok	Gordok Mauler
+11443	52	53	1	Ogre-mage Gordok	Gordok Ogre-Mage
+11498	58	58	2	Bâlhafr l'Invaincu	Skarr the Unbreakable
+12418	52	53	0	Hyène Gordok	Gordok Hyena
+12497	62	62	1	Hurle-rêve	Dreamroarer
+12800	60	61	1		Chimaerok
+12801	60	62	1	Chimaerok des arcanes	Arcane Chimaerok
+12802	61	62	1	Dévoreur Chimaerok	Chimaerok Devourer
+12803	62	62	1	Seigneur Lakmaeran	Lord Lakmaeran
+14603	48	49	0	Marcheur des rivages zappé	Zapped Shore Strider
+14604	48	48	0	Marcheur des terres zappé	Zapped Land Walker
+14638	47	48	0	Marcheur des vagues zappé	Zapped Wave Strider
+14639	47	49	0	Marcheur des profondeurs zappé	Zapped Deep Strider
+14640	49	49	0	Géant des falaises zappé	Zapped Cliff Giant
+14661	47	47	0	Fouet-cuisant	Stinglasher
+14887	63	63	3		Ysondre
+14888	63	63	3	Léthon	Lethon
+14889	63	63	3		Emeriss
+14890	63	63	3		Taerar
+211956	9999	9999	0		Scarimous the Wandering
+220930	50	50	0		Frix Xizzix	A
+221365	51	51	0		Deathpetal Lasher
+221367	51	51	0		Wyrmkin Berserker
+221369	51	51	0		Frenzied Whelp
+221370	51	51	0		Dreamspring Roguefeather
+221371	49	50	0		Dreamspring Stormcaller
+221375	51	51	0		Lost Daughter
+221377	51	51	0		Vengeful Son
+221391	9999	9999	0		Slirena
+221407	50	50	0		Dreamshadow Imp
+221935	50	50	0		Treant Avatar
+222286	43	43	0		Namida Grimtotem
+222407	47	47	0		Enraged Leywalker
+222726	46	46	0		Tyrant of the Hive
+222799	41	42	0		Simmering Elemental
+222968	52	52	0		Lethlas
+223544	45	48	0		Fel Interloper
+]]
 -- Dustwallow Marsh
-Z[1445] = function() return {
-[2937]=C(43,43,1,"Dagun le Vorace","Dagun the Ravenous"),
-[4323]=C(41,42,0,"Jeune incendiaire","Searing Hatchling"),
-[4324]=C(42,43,0,"Dragonnet incendiaire","Searing Whelp"),
-[4328]=C(43,44,0,"Plaiedécaille Crins-de-feu","Firemane Scalebane"),
-[4329]=C(41,42,0,"Eclaireur Crins-de-feu","Firemane Scout"),
-[4331]=C(42,43,0,"Queue-cendrée Crins-de-feu","Firemane Ash Tail"),
-[4334]=C(43,44,0,"Implorateur des flammes Crins-de-feu","Firemane Flamecaller"),
-[4339]=C(45,45,2,"Soufresang","Brimgore"),
-[4341]=C(35,36,0,"Crocilisque Sèchefange","Drywallow Crocolisk"),
-[4342]=C(36,37,0,"Vile Mâchoire Sèchefange","Drywallow Vicejaw"),
-[4343]=C(37,38,0,"Mordeur Sèchefange","Drywallow Snapper"),
-[4344]=C(38,39,0,"Crocilisque tacheté Sèchefange","Mottled Drywallow Crocolisk"),
-[4345]=C(40,41,0,"Crocs-lames Sèchefange","Drywallow Daggermaw"),
-[4346]=C(35,36,0,"Ecorcheur nuisible","Noxious Flayer"),
-[4347]=C(37,38,0,"Ravageur nuisible","Noxious Reaver"),
-[4348]=C(38,39,0,"Déchiqueteur nuisible","Noxious Shredder"),
-[4351]=C(35,36,0,"Raptor Rougefange","Bloodfen Raptor"),
-[4352]=C(36,37,0,"Hurleur Rougefange","Bloodfen Screecher"),
-[4355]=C(37,38,0,"Faucheur Rougefange","Bloodfen Scytheclaw"),
-[4356]=C(39,40,0,"Tranchegueule rougefange","Bloodfen Razormaw"),
-[4357]=C(40,41,0,"Flagellant Rougefange","Bloodfen Lashtail"),
-[4358]=C(35,36,0,"Bondisseur Aileron boueux","Mirefin Puddlejumper"),
-[4359]=C(35,36,0,"Murloc Aileron boueux","Mirefin Murloc"),
-[4360]=C(37,38,0,"Guerrier Aileron boueux","Mirefin Warrior"),
-[4361]=C(36,37,0,"Marche-boue Aileron boueux","Mirefin Muckdweller"),
-[4362]=C(36,37,0,"Cours-la-côte Aileron boueux","Mirefin Coastrunner"),
-[4363]=C(37,38,0,"Oracle Aileron boueux","Mirefin Oracle"),
-[4364]=C(59,60,1,"Guerrier Strashaz","Strashaz Warrior"),
-[4366]=C(59,61,1,"Garde-serpent Strashaz","Strashaz Serpent Guard"),
-[4368]=C(60,61,1,"Myrmidon Strashaz","Strashaz Myrmidon"),
-[4370]=C(60,61,1,"Sorcière de Strashaz","Strashaz Sorceress"),
-[4371]=C(59,60,1,"Sirène Strashaz","Strashaz Siren"),
-[4374]=C(59,61,1,"Hydre Strashaz","Strashaz Hydra"),
-[4376]=C(35,36,0,"Araignée de Sombrebrume","Darkmist Spider"),
-[4377]=C(37,38,0,"Rôdeuse de Sombrebrume","Darkmist Lurker"),
-[4378]=C(36,37,0,"Solitaire de Sombrebrume","Darkmist Recluse"),
-[4379]=C(38,39,0,"Tisseuse de Sombrebrume","Darkmist Silkspinner"),
-[4380]=C(40,40,4,"Veuve de Sombrebrume","Darkmist Widow"),
-[4382]=C(35,36,0,"Rampant Fane-liane","Withervine Creeper"),
-[4385]=C(38,39,0,"Rageur Fane-liane","Withervine Rager"),
-[4386]=C(36,36,0,"Arracheur Fane-liane","Withervine Bark Ripper"),
-[4387]=C(37,38,0,"Marche-bourbier Fane-liane","Withervine Mire Beast"),
-[4388]=C(40,41,0,"Jeune batteur des boues","Young Murk Thresher"),
-[4389]=C(41,43,0,"Batteur des boues","Murk Thresher"),
-[4390]=C(43,45,0,"Ancien batteur des boues","Elder Murk Thresher"),
-[4391]=C(37,39,0,"Limon des marais","Swamp Ooze"),
-[4392]=C(38,40,0,"Limon des marais corrosif","Corrosive Swamp Ooze"),
-[4393]=C(39,41,0,"Limon des marais acide","Acidic Swamp Ooze"),
-[4394]=C(39,40,1,"Limon des marais bouillonnant","Bubbling Swamp Ooze"),
-[4396]=C(36,37,0,"Tortue Rochefange","Mudrock Tortoise"),
-[4397]=C(37,38,0,"Epineuse Rochefange","Mudrock Spikeshell"),
-[4398]=C(39,40,0,"Creuseuse Rochefange","Mudrock Burrower"),
-[4399]=C(42,43,0,"Perceuse Rochefange","Mudrock Borer"),
-[4400]=C(41,42,0,"Gueule d’acier Rochefange","Mudrock Snapjaw"),
-[4401]=C(39,40,0,"Claqueur Bourbecoque","Muckshell Clacker"),
-[4402]=C(40,41,0,"Claque-pinces Bourbecoque","Muckshell Snapclaw"),
-[4403]=C(41,42,0,"Pinceur Bourbecoque","Muckshell Pincer"),
-[4404]=C(42,43,0,"Fouilleur Bourbecoque","Muckshell Scrabbler"),
-[4405]=C(43,44,0,"Pince-tranchante Bourbecoque","Muckshell Razorclaw"),
-[4412]=C(38,39,0,"Rampant Sombrecroc","Darkfang Creeper"),
-[4413]=C(35,36,0,"Araignée Sombrecroc","Darkfang Spider"),
-[4414]=C(37,38,0,"Crache-venin Sombrecroc","Darkfang Venomspitter"),
-[4415]=C(40,41,0,"Araignée Sombrecroc géante","Giant Darkfang Spider"),
-[4834]=C(35,36,0,"Infiltrateur de Theramore","Theramore Infiltrator","A"),
-[4841]=C(45,45,0,"Mortebourbe","Deadmire"),
-[4901]=C(2,2,0,"Sara Pierce","Sara Pierce","A"),
-[4902]=C(38,38,0,"Mikal Pierce","Mikal Pierce","A"),
-[4922]=C(50,50,0,"Garde Edward","Guard Edward","A"),
-[4923]=C(50,50,0,"Garde Jarad","Guard Jarad","A"),
-[4924]=C(55,55,0,"Maître de guerre Criton","Combat Master Criton","A"),
-[4950]=C(20,20,0,"Spot","Spot","A"),
-[4951]=C(50,50,0,"Garde de Theramore à l'entraînement","Theramore Practicing Guard","A"),
-[4979]=C(53,57,0,"Garde de Theramore","Theramore Guard","A"),
-[5044]=C(36,36,0,"Tirailleur de Theramore","Theramore Skirmisher","A"),
-[5045]=C(34,34,0,"Soldat Hallan","Private Hallan","A"),
-[5046]=C(37,37,0,"Lieutenant Caldwell","Lieutenant Caldwell","A"),
-[5057]=C(37,37,0,"Déserteur de Theramore","Theramore Deserter","A"),
-[5085]=C(38,38,0,"Garde de la halte de la Vigie","Sentry Point Guard","A"),
-[5086]=C(33,33,0,"Capitaine de la halte de la Vigie","Sentry Point Captain","A"),
-[5089]=C(38,38,0,"Balos Jacken","Balos Jacken"),
-[5090]=C(55,55,0,"Maître de Combat Szigeti","Combat Master Szigeti","A"),
-[5092]=C(50,50,0,"Garde Lana","Guard Lana","A"),
-[5093]=C(50,50,0,"Garde Narrisha","Guard Narrisha","A"),
-[5094]=C(50,50,0,"Garde Tark","Guard Tark","A"),
-[5184]=C(35,36,0,"Sentinelle de Theramore","Theramore Sentry","A"),
-[5199]=C(51,51,0,"Docteur Tamberlyn","Medic Tamberlyn","A"),
-[5200]=C(51,51,0,"Docteur Helaina","Medic Helaina","A"),
-[5434]=C(46,47,1,"Requin du corail","Coral Shark"),
-[6549]=C(40,40,1,"Démon de l'Orbe","Demon of the Orb"),
-[6550]=C(40,40,0,"Eruption de mana","Mana Surge"),
-[6732]=C(30,30,0,"Amie Pierce","Amie Pierce","A"),
-[10036]=C(55,55,0,"Massacreur de Mur-de-Fougères","Brackenwall Enforcer","H"),
-[10321]=C(61,61,1,"Brandeguerre","Emberstrife"),
-[12936]=C(44,44,0,"Soldat de l'Alliance grièvement blessé","Badly Injured Alliance Soldier","A"),
-[12937]=C(50,50,0,"Soldat de l'Alliance agonisant","Critically Injured Alliance Soldier","A"),
-[12938]=C(43,43,0,"Soldat de l'Alliance blessé","Injured Alliance Soldier","A"),
-[13277]=C(5,5,0,"Dahne Pierce","Dahne Pierce","A"),
-[14230]=C(38,38,4,"Pique-les-yeux","Burgle Eye"),
-[14231]=C(37,37,4,"Dorgoth le Vagabond","Drogoth the Roamer"),
-[14232]=C(38,38,4,"Flèche","Dart"),
-[14233]=C(39,39,4,"Arrachécaille","Ripscale"),
-[14234]=C(41,41,4,"Hayoc","Hayoc"),
-[14236]=C(44,44,4,"Seigneur Angler","Lord Angler"),
-[14237]=C(42,42,4,"Ver de limon","Oozeworm"),
-[15552]=C(63,63,1,"Docteur Weavil","Doctor Weavil"),
-[15591]=C(60,61,1,"Séide de Weavil","Minion of Weavil"),
-[16072]=C(62,62,1,"Seigneur-marées Rrurgaz","Tidelord Rrurgaz"),
-[165189]=C(7,30,0,"Cat","Cat"),
-[221575]=C(45,45,0,"Elrick","Elrick","A"),
-[269453]=C(55,55,1,"Theramore Elite","Theramore Elite","A"),
-} end
+Z[1445] = [[
+2937	43	43	1	Dagun le Vorace	Dagun the Ravenous
+4323	41	42	0	Jeune incendiaire	Searing Hatchling
+4324	42	43	0	Dragonnet incendiaire	Searing Whelp
+4328	43	44	0	Plaiedécaille Crins-de-feu	Firemane Scalebane
+4329	41	42	0	Eclaireur Crins-de-feu	Firemane Scout
+4331	42	43	0	Queue-cendrée Crins-de-feu	Firemane Ash Tail
+4334	43	44	0	Implorateur des flammes Crins-de-feu	Firemane Flamecaller
+4339	45	45	2	Soufresang	Brimgore
+4341	35	36	0	Crocilisque Sèchefange	Drywallow Crocolisk
+4342	36	37	0	Vile Mâchoire Sèchefange	Drywallow Vicejaw
+4343	37	38	0	Mordeur Sèchefange	Drywallow Snapper
+4344	38	39	0	Crocilisque tacheté Sèchefange	Mottled Drywallow Crocolisk
+4345	40	41	0	Crocs-lames Sèchefange	Drywallow Daggermaw
+4346	35	36	0	Ecorcheur nuisible	Noxious Flayer
+4347	37	38	0	Ravageur nuisible	Noxious Reaver
+4348	38	39	0	Déchiqueteur nuisible	Noxious Shredder
+4351	35	36	0	Raptor Rougefange	Bloodfen Raptor
+4352	36	37	0	Hurleur Rougefange	Bloodfen Screecher
+4355	37	38	0	Faucheur Rougefange	Bloodfen Scytheclaw
+4356	39	40	0	Tranchegueule rougefange	Bloodfen Razormaw
+4357	40	41	0	Flagellant Rougefange	Bloodfen Lashtail
+4358	35	36	0	Bondisseur Aileron boueux	Mirefin Puddlejumper
+4359	35	36	0	Murloc Aileron boueux	Mirefin Murloc
+4360	37	38	0	Guerrier Aileron boueux	Mirefin Warrior
+4361	36	37	0	Marche-boue Aileron boueux	Mirefin Muckdweller
+4362	36	37	0	Cours-la-côte Aileron boueux	Mirefin Coastrunner
+4363	37	38	0	Oracle Aileron boueux	Mirefin Oracle
+4364	59	60	1	Guerrier Strashaz	Strashaz Warrior
+4366	59	61	1	Garde-serpent Strashaz	Strashaz Serpent Guard
+4368	60	61	1	Myrmidon Strashaz	Strashaz Myrmidon
+4370	60	61	1	Sorcière de Strashaz	Strashaz Sorceress
+4371	59	60	1	Sirène Strashaz	Strashaz Siren
+4374	59	61	1	Hydre Strashaz	Strashaz Hydra
+4376	35	36	0	Araignée de Sombrebrume	Darkmist Spider
+4377	37	38	0	Rôdeuse de Sombrebrume	Darkmist Lurker
+4378	36	37	0	Solitaire de Sombrebrume	Darkmist Recluse
+4379	38	39	0	Tisseuse de Sombrebrume	Darkmist Silkspinner
+4380	40	40	4	Veuve de Sombrebrume	Darkmist Widow
+4382	35	36	0	Rampant Fane-liane	Withervine Creeper
+4385	38	39	0	Rageur Fane-liane	Withervine Rager
+4386	36	36	0	Arracheur Fane-liane	Withervine Bark Ripper
+4387	37	38	0	Marche-bourbier Fane-liane	Withervine Mire Beast
+4388	40	41	0	Jeune batteur des boues	Young Murk Thresher
+4389	41	43	0	Batteur des boues	Murk Thresher
+4390	43	45	0	Ancien batteur des boues	Elder Murk Thresher
+4391	37	39	0	Limon des marais	Swamp Ooze
+4392	38	40	0	Limon des marais corrosif	Corrosive Swamp Ooze
+4393	39	41	0	Limon des marais acide	Acidic Swamp Ooze
+4394	39	40	1	Limon des marais bouillonnant	Bubbling Swamp Ooze
+4396	36	37	0	Tortue Rochefange	Mudrock Tortoise
+4397	37	38	0	Epineuse Rochefange	Mudrock Spikeshell
+4398	39	40	0	Creuseuse Rochefange	Mudrock Burrower
+4399	42	43	0	Perceuse Rochefange	Mudrock Borer
+4400	41	42	0	Gueule d’acier Rochefange	Mudrock Snapjaw
+4401	39	40	0	Claqueur Bourbecoque	Muckshell Clacker
+4402	40	41	0	Claque-pinces Bourbecoque	Muckshell Snapclaw
+4403	41	42	0	Pinceur Bourbecoque	Muckshell Pincer
+4404	42	43	0	Fouilleur Bourbecoque	Muckshell Scrabbler
+4405	43	44	0	Pince-tranchante Bourbecoque	Muckshell Razorclaw
+4412	38	39	0	Rampant Sombrecroc	Darkfang Creeper
+4413	35	36	0	Araignée Sombrecroc	Darkfang Spider
+4414	37	38	0	Crache-venin Sombrecroc	Darkfang Venomspitter
+4415	40	41	0	Araignée Sombrecroc géante	Giant Darkfang Spider
+4834	35	36	0	Infiltrateur de Theramore	Theramore Infiltrator	A
+4841	45	45	0	Mortebourbe	Deadmire
+4901	2	2	0		Sara Pierce	A
+4902	38	38	0		Mikal Pierce	A
+4922	50	50	0	Garde Edward	Guard Edward	A
+4923	50	50	0	Garde Jarad	Guard Jarad	A
+4924	55	55	0	Maître de guerre Criton	Combat Master Criton	A
+4950	20	20	0		Spot	A
+4951	50	50	0	Garde de Theramore à l'entraînement	Theramore Practicing Guard	A
+4979	53	57	0	Garde de Theramore	Theramore Guard	A
+5044	36	36	0	Tirailleur de Theramore	Theramore Skirmisher	A
+5045	34	34	0	Soldat Hallan	Private Hallan	A
+5046	37	37	0		Lieutenant Caldwell	A
+5057	37	37	0	Déserteur de Theramore	Theramore Deserter	A
+5085	38	38	0	Garde de la halte de la Vigie	Sentry Point Guard	A
+5086	33	33	0	Capitaine de la halte de la Vigie	Sentry Point Captain	A
+5089	38	38	0		Balos Jacken
+5090	55	55	0	Maître de Combat Szigeti	Combat Master Szigeti	A
+5092	50	50	0	Garde Lana	Guard Lana	A
+5093	50	50	0	Garde Narrisha	Guard Narrisha	A
+5094	50	50	0	Garde Tark	Guard Tark	A
+5184	35	36	0	Sentinelle de Theramore	Theramore Sentry	A
+5199	51	51	0	Docteur Tamberlyn	Medic Tamberlyn	A
+5200	51	51	0	Docteur Helaina	Medic Helaina	A
+5434	46	47	1	Requin du corail	Coral Shark
+6549	40	40	1	Démon de l'Orbe	Demon of the Orb
+6550	40	40	0	Eruption de mana	Mana Surge
+6732	30	30	0		Amie Pierce	A
+10036	55	55	0	Massacreur de Mur-de-Fougères	Brackenwall Enforcer	H
+10321	61	61	1	Brandeguerre	Emberstrife
+12936	44	44	0	Soldat de l'Alliance grièvement blessé	Badly Injured Alliance Soldier	A
+12937	50	50	0	Soldat de l'Alliance agonisant	Critically Injured Alliance Soldier	A
+12938	43	43	0	Soldat de l'Alliance blessé	Injured Alliance Soldier	A
+13277	5	5	0		Dahne Pierce	A
+14230	38	38	4	Pique-les-yeux	Burgle Eye
+14231	37	37	4	Dorgoth le Vagabond	Drogoth the Roamer
+14232	38	38	4	Flèche	Dart
+14233	39	39	4	Arrachécaille	Ripscale
+14234	41	41	4		Hayoc
+14236	44	44	4	Seigneur Angler	Lord Angler
+14237	42	42	4	Ver de limon	Oozeworm
+15552	63	63	1	Docteur Weavil	Doctor Weavil
+15591	60	61	1	Séide de Weavil	Minion of Weavil
+16072	62	62	1	Seigneur-marées Rrurgaz	Tidelord Rrurgaz
+165189	7	30	0		Cat
+221575	45	45	0		Elrick	A
+269453	55	55	1		Theramore Elite	A
+]]
 -- Tanaris
-Z[1446] = function() return {
-[5419]=C(42,43,0,"Basilic Peau-de-verre","Glasshide Basilisk"),
-[5420]=C(45,46,0,"Contemplateur Peau-de-verre","Glasshide Gazer"),
-[5421]=C(48,49,0,"Pétrificateur Peau-de-verre","Glasshide Petrifier"),
-[5422]=C(40,41,0,"Scorpide chasseur","Scorpid Hunter"),
-[5423]=C(43,44,0,"Scorpide flagellant","Scorpid Tail Lasher"),
-[5424]=C(46,47,0,"Scorpide des sables","Scorpid Dunestalker"),
-[5425]=C(41,42,0,"Brûlepatte affamée","Starving Blisterpaw"),
-[5426]=C(44,45,0,"Hyène Brûlepatte","Blisterpaw Hyena"),
-[5427]=C(47,48,0,"Brûlepatte enragée","Rabid Blisterpaw"),
-[5428]=C(41,43,0,"Roc","Roc"),
-[5429]=C(43,45,0,"Roc de feu","Fire Roc"),
-[5430]=C(47,49,0,"Roc incendiaire","Searing Roc"),
-[5431]=C(48,50,0,"Glisseur","Surf Glider"),
-[5432]=C(48,50,1,"Glisseur géant","Giant Surf Glider"),
-[5441]=C(47,48,0,"Guêpe Hazzali","Hazzali Wasp"),
-[5450]=C(49,50,0,"Dard Hazzali","Hazzali Stinger"),
-[5451]=C(49,50,0,"Traînard Hazzali","Hazzali Swarmer"),
-[5452]=C(47,48,0,"Ouvrier Hazzali","Hazzali Worker"),
-[5453]=C(48,49,0,"Tunnelière Hazzali","Hazzali Tunneler"),
-[5454]=C(48,48,0,"Ravageur des sables Hazzali","Hazzali Sandreaver"),
-[5455]=C(47,48,0,"Guêpe Centipaar","Centipaar Wasp"),
-[5456]=C(48,49,0,"Dard Centipaar","Centipaar Stinger"),
-[5457]=C(49,50,0,"Traînard Centipaar","Centipaar Swarmer"),
-[5458]=C(48,49,0,"Ouvrier Centipaar","Centipaar Worker"),
-[5459]=C(47,48,0,"Tunnelière centipaar","Centipaar Tunneler"),
-[5460]=C(49,50,0,"Ravageur des sables Centipaar","Centipaar Sandreaver"),
-[5465]=C(45,47,0,"Ravageur des landes","Land Rager"),
-[5466]=C(48,49,1,"Marcheur des côtes","Coast Strider"),
-[5467]=C(47,47,1,"Etre des profondeurs","Deep Dweller"),
-[5469]=C(48,49,1,"Compresseur","Dune Smasher"),
-[5471]=C(45,46,0,"Ogre Cognedune","Dunemaul Ogre"),
-[5472]=C(46,47,0,"Massacreur Cognedune","Dunemaul Enforcer"),
-[5473]=C(46,47,0,"Ogre-mage Cognedune","Dunemaul Ogre Mage"),
-[5474]=C(46,48,0,"Brute Cognedune","Dunemaul Brute"),
-[5475]=C(47,48,0,"Démoniste Cognedune","Dunemaul Warlock"),
-[5481]=C(47,48,0,"Chardonnier collecteur de rosée","Thistleshrub Dew Collector"),
-[5485]=C(49,50,0,"Chardonnier taille-racine","Thistleshrub Rootshaper"),
-[5490]=C(48,49,0,"Chardonnier noueux","Gnarled Thistleshrub"),
-[5615]=C(43,44,0,"Voleur Bat-le-désert","Wastewander Rogue"),
-[5616]=C(40,41,0,"Larron Bat-le-désert","Wastewander Thief"),
-[5617]=C(41,43,0,"Mage de l'ombre Bat-le-désert","Wastewander Shadow Mage"),
-[5618]=C(41,42,0,"Bandit Bat-le-désert","Wastewander Bandit"),
-[5623]=C(44,45,0,"Assassin Bat-le-désert","Wastewander Assassin"),
-[5645]=C(42,43,1,"Dépeceur Sandfury","Sandfury Hideskinner"),
-[5646]=C(43,44,1,"Lanceur de haches Sandfury","Sandfury Axe Thrower"),
-[5647]=C(43,44,1,"Flamboyant Sandfury","Sandfury Firecaller"),
-[7805]=C(45,45,0,"Hors-la-loi Bat-le-désert","Wastewander Scofflaw"),
-[7847]=C(46,46,0,"Caliph Dard-de-scorpide","Caliph Scorpidsting"),
-[7855]=C(44,45,0,"Pirate des Mers du sud","Southsea Pirate"),
-[7856]=C(44,45,0,"Flibustier des Mers du sud","Southsea Freebooter"),
-[7857]=C(44,45,0,"Portefaix des Mers du sud","Southsea Dock Worker"),
-[7858]=C(44,45,0,"Bretteur des Mers du sud","Southsea Swashbuckler"),
-[7883]=C(45,45,0,"Andre Barbe-en-feu","Andre Firebeard"),
-[7899]=C(44,45,0,"Pirate chasseur de trésor","Treasure Hunting Pirate"),
-[7901]=C(44,45,0,"Bretteur chasseur de trésor","Treasure Hunting Swashbuckler"),
-[7902]=C(44,45,0,"Boucanier chasseur de trésor","Treasure Hunting Buccaneer"),
-[8199]=C(45,45,2,"Chef de guerre Krazzilak","Warleader Krazzilak"),
-[8200]=C(46,46,2,"Jin'Zallah Porte-sable","Jin'Zallah the Sandbringer"),
-[8201]=C(50,50,4,"Omgorn l'Egaré","Omgorn the Lost"),
-[8202]=C(48,48,4,"Cyclok le Fol","Cyclok the Mad"),
-[8203]=C(47,47,4,"Kregg Keelhaul","Kregg Keelhaul"),
-[8204]=C(50,50,4,"Soriid le Dévoreur","Soriid the Devourer"),
-[8205]=C(50,50,4,"Haarka le Féroce","Haarka the Ravenous"),
-[8207]=C(46,46,4,"Grand oiseau de feu","Greater Firebird"),
-[8208]=C(43,43,4,"Brûlepatte meurtrier","Murderous Blisterpaw"),
-[8667]=C(43,45,0,"Vortex violent","Gusting Vortex"),
-[8996]=C(47,47,0,"Sbire marcheur du Vide","Voidwalker Minion"),
-[9396]=C(41,43,0,"Marteleur terrestre","Ground Pounder"),
-[9397]=C(48,48,0,"Tempête vivante","Living Storm"),
-[9453]=C(54,54,0,"Aquementas","Aquementas"),
-[12046]=C(49,49,0,"Gor'marok le Ravageur","Gor'marok the Ravager"),
-[12124]=C(52,52,1,"Grand requin","Great Shark"),
-[14123]=C(42,43,0,"Mordeuse mâchoire d'acier","Steeljaw Snapper"),
-[15685]=C(45,45,0,"Kidnappeur des mers du Sud","Southsea Kidnapper"),
-[222625]=C(45,46,0,"Corrupt Moderate Manifestation of Earth","Corrupt Moderate Manifestation of Earth","H"),
-[223591]=C(1,1,0,"Echo of a Lost Soul","Echo of a Lost Soul"),
-[260405]=C(45,45,0,"Wharfmaster Steamfizzle","Wharfmaster Steamfizzle"),
-} end
+Z[1446] = [[
+5419	42	43	0	Basilic Peau-de-verre	Glasshide Basilisk
+5420	45	46	0	Contemplateur Peau-de-verre	Glasshide Gazer
+5421	48	49	0	Pétrificateur Peau-de-verre	Glasshide Petrifier
+5422	40	41	0	Scorpide chasseur	Scorpid Hunter
+5423	43	44	0	Scorpide flagellant	Scorpid Tail Lasher
+5424	46	47	0	Scorpide des sables	Scorpid Dunestalker
+5425	41	42	0	Brûlepatte affamée	Starving Blisterpaw
+5426	44	45	0	Hyène Brûlepatte	Blisterpaw Hyena
+5427	47	48	0	Brûlepatte enragée	Rabid Blisterpaw
+5428	41	43	0		Roc
+5429	43	45	0	Roc de feu	Fire Roc
+5430	47	49	0	Roc incendiaire	Searing Roc
+5431	48	50	0	Glisseur	Surf Glider
+5432	48	50	1	Glisseur géant	Giant Surf Glider
+5441	47	48	0	Guêpe Hazzali	Hazzali Wasp
+5450	49	50	0	Dard Hazzali	Hazzali Stinger
+5451	49	50	0	Traînard Hazzali	Hazzali Swarmer
+5452	47	48	0	Ouvrier Hazzali	Hazzali Worker
+5453	48	49	0	Tunnelière Hazzali	Hazzali Tunneler
+5454	48	48	0	Ravageur des sables Hazzali	Hazzali Sandreaver
+5455	47	48	0	Guêpe Centipaar	Centipaar Wasp
+5456	48	49	0	Dard Centipaar	Centipaar Stinger
+5457	49	50	0	Traînard Centipaar	Centipaar Swarmer
+5458	48	49	0	Ouvrier Centipaar	Centipaar Worker
+5459	47	48	0	Tunnelière centipaar	Centipaar Tunneler
+5460	49	50	0	Ravageur des sables Centipaar	Centipaar Sandreaver
+5465	45	47	0	Ravageur des landes	Land Rager
+5466	48	49	1	Marcheur des côtes	Coast Strider
+5467	47	47	1	Etre des profondeurs	Deep Dweller
+5469	48	49	1	Compresseur	Dune Smasher
+5471	45	46	0	Ogre Cognedune	Dunemaul Ogre
+5472	46	47	0	Massacreur Cognedune	Dunemaul Enforcer
+5473	46	47	0	Ogre-mage Cognedune	Dunemaul Ogre Mage
+5474	46	48	0	Brute Cognedune	Dunemaul Brute
+5475	47	48	0	Démoniste Cognedune	Dunemaul Warlock
+5481	47	48	0	Chardonnier collecteur de rosée	Thistleshrub Dew Collector
+5485	49	50	0	Chardonnier taille-racine	Thistleshrub Rootshaper
+5490	48	49	0	Chardonnier noueux	Gnarled Thistleshrub
+5615	43	44	0	Voleur Bat-le-désert	Wastewander Rogue
+5616	40	41	0	Larron Bat-le-désert	Wastewander Thief
+5617	41	43	0	Mage de l'ombre Bat-le-désert	Wastewander Shadow Mage
+5618	41	42	0	Bandit Bat-le-désert	Wastewander Bandit
+5623	44	45	0	Assassin Bat-le-désert	Wastewander Assassin
+5645	42	43	1	Dépeceur Sandfury	Sandfury Hideskinner
+5646	43	44	1	Lanceur de haches Sandfury	Sandfury Axe Thrower
+5647	43	44	1	Flamboyant Sandfury	Sandfury Firecaller
+7805	45	45	0	Hors-la-loi Bat-le-désert	Wastewander Scofflaw
+7847	46	46	0	Caliph Dard-de-scorpide	Caliph Scorpidsting
+7855	44	45	0	Pirate des Mers du sud	Southsea Pirate
+7856	44	45	0	Flibustier des Mers du sud	Southsea Freebooter
+7857	44	45	0	Portefaix des Mers du sud	Southsea Dock Worker
+7858	44	45	0	Bretteur des Mers du sud	Southsea Swashbuckler
+7883	45	45	0	Andre Barbe-en-feu	Andre Firebeard
+7899	44	45	0	Pirate chasseur de trésor	Treasure Hunting Pirate
+7901	44	45	0	Bretteur chasseur de trésor	Treasure Hunting Swashbuckler
+7902	44	45	0	Boucanier chasseur de trésor	Treasure Hunting Buccaneer
+8199	45	45	2	Chef de guerre Krazzilak	Warleader Krazzilak
+8200	46	46	2	Jin'Zallah Porte-sable	Jin'Zallah the Sandbringer
+8201	50	50	4	Omgorn l'Egaré	Omgorn the Lost
+8202	48	48	4	Cyclok le Fol	Cyclok the Mad
+8203	47	47	4		Kregg Keelhaul
+8204	50	50	4	Soriid le Dévoreur	Soriid the Devourer
+8205	50	50	4	Haarka le Féroce	Haarka the Ravenous
+8207	46	46	4	Grand oiseau de feu	Greater Firebird
+8208	43	43	4	Brûlepatte meurtrier	Murderous Blisterpaw
+8667	43	45	0	Vortex violent	Gusting Vortex
+8996	47	47	0	Sbire marcheur du Vide	Voidwalker Minion
+9396	41	43	0	Marteleur terrestre	Ground Pounder
+9397	48	48	0	Tempête vivante	Living Storm
+9453	54	54	0		Aquementas
+12046	49	49	0	Gor'marok le Ravageur	Gor'marok the Ravager
+12124	52	52	1	Grand requin	Great Shark
+14123	42	43	0	Mordeuse mâchoire d'acier	Steeljaw Snapper
+15685	45	45	0	Kidnappeur des mers du Sud	Southsea Kidnapper
+222625	45	46	0		Corrupt Moderate Manifestation of Earth	H
+223591	1	1	0		Echo of a Lost Soul
+260405	45	45	0		Wharfmaster Steamfizzle
+]]
 -- Azshara
-Z[1447] = function() return {
-[193]=C(50,51,1,"Draconide bleu","Blue Dragonspawn"),
-[6116]=C(45,46,0,"Apparition bien-née","Highborne Apparition"),
-[6117]=C(46,47,0,"Jeune liche bien-née","Highborne Lichling"),
-[6118]=C(48,48,4,"Fantôme de Varo'then","Varo'then's Ghost"),
-[6125]=C(45,46,0,"Satyre Haldarr","Haldarr Satyr"),
-[6126]=C(45,47,0,"Entourloupeur Haldarr","Haldarr Trickster"),
-[6127]=C(46,47,0,"Lige de la corruption Haldarr","Haldarr Felsworn"),
-[6129]=C(53,54,1,"Seigneur-mage draconique","Draconic Magelord"),
-[6130]=C(52,53,1,"Plaiedécaille bleu","Blue Scalebane"),
-[6131]=C(51,52,1,"Tisse-magie draconique","Draconic Mageweaver"),
-[6135]=C(53,54,0,"Claqueur Arkkoran","Arkkoran Clacker"),
-[6136]=C(53,54,0,"Habitant du bourbier Arkkoran","Arkkoran Muckdweller"),
-[6137]=C(54,55,0,"Pinceur Arkkoran","Arkkoran Pincer"),
-[6138]=C(54,55,0,"Oracle Arkkoran","Arkkoran Oracle"),
-[6140]=C(55,55,1,"Hetaera","Hetaera"),
-[6143]=C(53,54,1,"Servant d’Arkkoroc","Servant of Arkkoroc"),
-[6144]=C(54,55,1,"Fils d’Arkkoroc","Son of Arkkoroc"),
-[6146]=C(54,55,1,"Brise-falaises","Cliff Breaker"),
-[6147]=C(53,54,1,"Foudroyeur des falaises","Cliff Thunderer"),
-[6148]=C(52,53,1,"Marcheur des falaises","Cliff Walker"),
-[6184]=C(46,46,0,"Guide Grumegueule","Timbermaw Pathfinder"),
-[6185]=C(47,48,0,"Guerrier Grumegueule","Timbermaw Warrior"),
-[6186]=C(48,49,0,"Totémique Grumegueule","Timbermaw Totemic"),
-[6187]=C(47,47,0,"Protecteur Grumegueule","Timbermaw Den Watcher"),
-[6188]=C(50,51,0,"Chaman Grumegueule","Timbermaw Shaman"),
-[6189]=C(51,52,0,"Ursa Grumegueule","Timbermaw Ursa"),
-[6190]=C(46,47,0,"Guerrier Fouette-bile","Spitelash Warrior"),
-[6193]=C(47,48,0,"Hurleuse Fouette-bile","Spitelash Screamer"),
-[6194]=C(48,49,0,"Garde-serpent Fouette-bile","Spitelash Serpent Guard"),
-[6195]=C(50,52,0,"Sirène Fouette-bile","Spitelash Siren"),
-[6196]=C(50,51,0,"Myrmidon Fouette-bile","Spitelash Myrmidon"),
-[6198]=C(51,52,0,"Géomètre elfe de sang","Blood Elf Surveyor"),
-[6199]=C(52,53,0,"Vengeur elfe de sang","Blood Elf Reclaimer"),
-[6200]=C(51,52,0,"Satyre Legashi","Legashi Satyr"),
-[6201]=C(51,53,0,"Voleur Legashi","Legashi Rogue"),
-[6202]=C(52,53,0,"Prêtre noir Legashi","Legashi Hellcaller"),
-[6347]=C(51,51,0,"Jeune Vandale des flots","Young Wavethrasher"),
-[6348]=C(52,53,0,"Vandale des flots","Wavethrasher"),
-[6349]=C(53,54,0,"Grand Vandale des flots","Great Wavethrasher"),
-[6350]=C(54,55,0,"Pince-tranchante Makrinni","Makrinni Razorclaw"),
-[6351]=C(54,55,0,"Oracle de la baie des tempêtes","Storm Bay Oracle"),
-[6352]=C(53,54,0,"Rôdeuse corail","Coralshell Lurker"),
-[6369]=C(50,50,0,"Tortue corail","Coralshell Tortoise"),
-[6370]=C(52,53,0,"Fouilleur Makrinni","Makrinni Scrabbler"),
-[6371]=C(51,52,0,"Guerrier de la baie des tempêtes","Storm Bay Warrior"),
-[6372]=C(50,50,0,"Claque-pinces Makrinni","Makrinni Snapclaw"),
-[6375]=C(46,48,0,"Hippogryphe Tête-tonnerre","Thunderhead Hippogryph"),
-[6377]=C(48,50,0,"Cerf ailé Tête-tonnerre","Thunderhead Stagwing"),
-[6378]=C(50,51,0,"Tempêtueux Tête-tonnerre","Thunderhead Skystormer"),
-[6379]=C(52,54,0,"Patriarche Tête-tonnerre","Thunderhead Patriarch"),
-[6380]=C(52,54,0,"Concubine Tête-tonnerre","Thunderhead Consort"),
-[6646]=C(54,54,2,"Monnos l’Ancien","Monnos the Elder"),
-[6647]=C(52,52,4,"Magistère Hawkhelm","Magister Hawkhelm"),
-[6648]=C(50,50,4,"Antilos","Antilos"),
-[6649]=C(51,51,4,"Dame Sesspira","Lady Sesspira"),
-[6650]=C(51,51,4,"Général Crocdangoiffe","General Fangferror"),
-[6651]=C(50,50,4,"Portier Hurlerage","Gatekeeper Rageroar"),
-[6652]=C(52,52,4,"Maître Trouilleffroi","Master Feardred"),
-[7864]=C(48,50,0,"Bien-né survivant","Lingering Highborne"),
-[7885]=C(53,54,0,"Maître de guerre Fouette-bile","Spitelash Battlemaster"),
-[7886]=C(54,55,0,"Ensorceleuse Fouette-bile","Spitelash Enchantress"),
-[8408]=C(55,55,0,"Seigneur de guerre Krellian","Warlord Krellian"),
-[8409]=C(53,53,0,"Maître-caravanier Tset","Caravan Master Tset"),
-[8578]=C(55,55,0,"Magus Rimtori","Magus Rimtori"),
-[8660]=C(48,48,4,"L'Evalcharr","The Evalcharr"),
-[8759]=C(45,47,0,"Coureur Sabots-de-mousse","Mosshoof Runner"),
-[8760]=C(51,51,0,"Cerf Sabots-de-mousse","Mosshoof Stag"),
-[8761]=C(52,53,0,"Coursier Sabots-de-mousse","Mosshoof Courser"),
-[8762]=C(47,48,0,"Grumetoile solitaire","Timberweb Recluse"),
-[8763]=C(49,50,0,"Brumaile insoumis","Mistwing Rogue"),
-[8764]=C(52,53,0,"Ravageur Brumaile","Mistwing Ravager"),
-[8766]=C(52,53,0,"Limon forestier","Forest Ooze"),
-[11276]=C(44,44,0,"Sentinelle d'Azshara","Azshara Sentinel","A"),
-[12125]=C(54,54,1,"Requin mammouth","Mammoth Shark"),
-[13896]=C(52,52,2,"Barbe-d'écailles","Scalebeard"),
-[14462]=C(55,57,0,"Envahisseur grondant","Thundering Invader"),
-[14464]=C(58,58,1,"Avalanchion","Avalanchion"),
-[16479]=C(10,10,0,"Clone de métamorphose","Polymorph Clone"),
-[222407]=C(47,47,0,"Enraged Leywalker","Enraged Leywalker"),
-[223544]=C(45,48,0,"Fel Interloper","Fel Interloper"),
-[239822]=C(45,45,0,"Commander Truesong","Commander Truesong"),
-[240482]=C(45,45,0,"Berdun Cliffbrew","Berdun Cliffbrew"),
-} end
+Z[1447] = [[
+193	50	51	1	Draconide bleu	Blue Dragonspawn
+6116	45	46	0	Apparition bien-née	Highborne Apparition
+6117	46	47	0	Jeune liche bien-née	Highborne Lichling
+6118	48	48	4	Fantôme de Varo'then	Varo'then's Ghost
+6125	45	46	0	Satyre Haldarr	Haldarr Satyr
+6126	45	47	0	Entourloupeur Haldarr	Haldarr Trickster
+6127	46	47	0	Lige de la corruption Haldarr	Haldarr Felsworn
+6129	53	54	1	Seigneur-mage draconique	Draconic Magelord
+6130	52	53	1	Plaiedécaille bleu	Blue Scalebane
+6131	51	52	1	Tisse-magie draconique	Draconic Mageweaver
+6135	53	54	0	Claqueur Arkkoran	Arkkoran Clacker
+6136	53	54	0	Habitant du bourbier Arkkoran	Arkkoran Muckdweller
+6137	54	55	0	Pinceur Arkkoran	Arkkoran Pincer
+6138	54	55	0	Oracle Arkkoran	Arkkoran Oracle
+6140	55	55	1		Hetaera
+6143	53	54	1	Servant d’Arkkoroc	Servant of Arkkoroc
+6144	54	55	1	Fils d’Arkkoroc	Son of Arkkoroc
+6146	54	55	1	Brise-falaises	Cliff Breaker
+6147	53	54	1	Foudroyeur des falaises	Cliff Thunderer
+6148	52	53	1	Marcheur des falaises	Cliff Walker
+6184	46	46	0	Guide Grumegueule	Timbermaw Pathfinder
+6185	47	48	0	Guerrier Grumegueule	Timbermaw Warrior
+6186	48	49	0	Totémique Grumegueule	Timbermaw Totemic
+6187	47	47	0	Protecteur Grumegueule	Timbermaw Den Watcher
+6188	50	51	0	Chaman Grumegueule	Timbermaw Shaman
+6189	51	52	0	Ursa Grumegueule	Timbermaw Ursa
+6190	46	47	0	Guerrier Fouette-bile	Spitelash Warrior
+6193	47	48	0	Hurleuse Fouette-bile	Spitelash Screamer
+6194	48	49	0	Garde-serpent Fouette-bile	Spitelash Serpent Guard
+6195	50	52	0	Sirène Fouette-bile	Spitelash Siren
+6196	50	51	0	Myrmidon Fouette-bile	Spitelash Myrmidon
+6198	51	52	0	Géomètre elfe de sang	Blood Elf Surveyor
+6199	52	53	0	Vengeur elfe de sang	Blood Elf Reclaimer
+6200	51	52	0	Satyre Legashi	Legashi Satyr
+6201	51	53	0	Voleur Legashi	Legashi Rogue
+6202	52	53	0	Prêtre noir Legashi	Legashi Hellcaller
+6347	51	51	0	Jeune Vandale des flots	Young Wavethrasher
+6348	52	53	0	Vandale des flots	Wavethrasher
+6349	53	54	0	Grand Vandale des flots	Great Wavethrasher
+6350	54	55	0	Pince-tranchante Makrinni	Makrinni Razorclaw
+6351	54	55	0	Oracle de la baie des tempêtes	Storm Bay Oracle
+6352	53	54	0	Rôdeuse corail	Coralshell Lurker
+6369	50	50	0	Tortue corail	Coralshell Tortoise
+6370	52	53	0	Fouilleur Makrinni	Makrinni Scrabbler
+6371	51	52	0	Guerrier de la baie des tempêtes	Storm Bay Warrior
+6372	50	50	0	Claque-pinces Makrinni	Makrinni Snapclaw
+6375	46	48	0	Hippogryphe Tête-tonnerre	Thunderhead Hippogryph
+6377	48	50	0	Cerf ailé Tête-tonnerre	Thunderhead Stagwing
+6378	50	51	0	Tempêtueux Tête-tonnerre	Thunderhead Skystormer
+6379	52	54	0	Patriarche Tête-tonnerre	Thunderhead Patriarch
+6380	52	54	0	Concubine Tête-tonnerre	Thunderhead Consort
+6646	54	54	2	Monnos l’Ancien	Monnos the Elder
+6647	52	52	4	Magistère Hawkhelm	Magister Hawkhelm
+6648	50	50	4		Antilos
+6649	51	51	4	Dame Sesspira	Lady Sesspira
+6650	51	51	4	Général Crocdangoiffe	General Fangferror
+6651	50	50	4	Portier Hurlerage	Gatekeeper Rageroar
+6652	52	52	4	Maître Trouilleffroi	Master Feardred
+7864	48	50	0	Bien-né survivant	Lingering Highborne
+7885	53	54	0	Maître de guerre Fouette-bile	Spitelash Battlemaster
+7886	54	55	0	Ensorceleuse Fouette-bile	Spitelash Enchantress
+8408	55	55	0	Seigneur de guerre Krellian	Warlord Krellian
+8409	53	53	0	Maître-caravanier Tset	Caravan Master Tset
+8578	55	55	0		Magus Rimtori
+8660	48	48	4	L'Evalcharr	The Evalcharr
+8759	45	47	0	Coureur Sabots-de-mousse	Mosshoof Runner
+8760	51	51	0	Cerf Sabots-de-mousse	Mosshoof Stag
+8761	52	53	0	Coursier Sabots-de-mousse	Mosshoof Courser
+8762	47	48	0	Grumetoile solitaire	Timberweb Recluse
+8763	49	50	0	Brumaile insoumis	Mistwing Rogue
+8764	52	53	0	Ravageur Brumaile	Mistwing Ravager
+8766	52	53	0	Limon forestier	Forest Ooze
+11276	44	44	0	Sentinelle d'Azshara	Azshara Sentinel	A
+12125	54	54	1	Requin mammouth	Mammoth Shark
+13896	52	52	2	Barbe-d'écailles	Scalebeard
+14462	55	57	0	Envahisseur grondant	Thundering Invader
+14464	58	58	1		Avalanchion
+16479	10	10	0	Clone de métamorphose	Polymorph Clone
+222407	47	47	0		Enraged Leywalker
+223544	45	48	0		Fel Interloper
+239822	45	45	0		Commander Truesong
+240482	45	45	0		Berdun Cliffbrew
+]]
 -- Felwood
-Z[1448] = function() return {
-[7086]=C(49,50,0,"Limon maudit","Cursed Ooze"),
-[7092]=C(51,52,0,"Limon corrompu","Tainted Ooze"),
-[7093]=C(53,53,0,"Vil limon","Vile Ooze"),
-[7097]=C(48,49,0,"Chouette Bec-de-fer","Ironbeak Owl"),
-[7098]=C(52,53,0,"Hurleur Bec-de-fer","Ironbeak Screecher"),
-[7099]=C(50,51,0,"Chasseur Bec-de-fer","Ironbeak Hunter"),
-[7100]=C(52,53,0,"Ecorcheur Crochebois","Warpwood Moss Flayer"),
-[7101]=C(53,54,0,"Déchireur Crochebois","Warpwood Shredder"),
-[7104]=C(56,56,2,"Dessecus","Dessecus"),
-[7105]=C(49,50,0,"Satyre Jadefeu","Jadefire Satyr"),
-[7106]=C(50,51,0,"Voleur Jadefeu","Jadefire Rogue"),
-[7107]=C(52,53,0,"Entourloupeur Jadefeu","Jadefire Trickster"),
-[7108]=C(52,53,0,"Traître Jadefeu","Jadefire Betrayer"),
-[7109]=C(50,51,0,"Lige de la corruption Jadefeu","Jadefire Felsworn"),
-[7110]=C(51,52,0,"Traqueur des ombres Jadefeu","Jadefire Shadowstalker"),
-[7111]=C(53,54,0,"Implorateur de l'enfer Jadefeu","Jadefire Hellcaller"),
-[7112]=C(51,52,0,"Sectateur de Jaedenar","Jaedenar Cultist"),
-[7113]=C(50,51,0,"Gardien de Jaedenar","Jaedenar Guardian"),
-[7114]=C(52,53,0,"Massacreur de Jaedenar","Jaedenar Enforcer"),
-[7115]=C(51,52,0,"Adepte de Jaedenar","Jaedenar Adept"),
-[7118]=C(53,54,0,"Tisseur d'ombre de Jaedenar","Jaedenar Darkweaver"),
-[7120]=C(53,54,0,"Démoniste de Jaedenar","Jaedenar Warlock"),
-[7125]=C(50,51,0,"Molosse de Jaedenar","Jaedenar Hound"),
-[7126]=C(52,53,0,"Chasseur de Jaedenar","Jaedenar Hunter"),
-[7132]=C(53,54,0,"Horreur toxique","Toxic Horror"),
-[7135]=C(53,54,1,"Garde du corps infernal","Infernal Bodyguard"),
-[7136]=C(52,53,1,"Infernal Sentinelle","Infernal Sentry"),
-[7137]=C(56,56,2,"Immolatus","Immolatus"),
-[7138]=C(52,53,0,"Arbrefer errant","Irontree Wanderer"),
-[7139]=C(52,53,0,"Arbrefer marteleur","Irontree Stomper"),
-[7149]=C(55,56,0,"Protecteur flétri","Withered Protector"),
-[7153]=C(48,49,0,"Guerrier Mort-bois","Deadwood Warrior"),
-[7154]=C(48,49,0,"Jardinier Mort-bois","Deadwood Gardener"),
-[7155]=C(49,50,0,"Guide Mort-bois","Deadwood Pathfinder"),
-[7156]=C(53,54,0,"Protecteur Mort-bois","Deadwood Den Watcher"),
-[7157]=C(54,55,0,"Vengeur Mort-bois","Deadwood Avenger"),
-[7158]=C(53,54,0,"Chaman Mort-bois","Deadwood Shaman"),
-[8956]=C(47,48,0,"Ours de la griffe colérique","Angerclaw Bear"),
-[8957]=C(51,52,0,"Grizzly de la griffe colérique","Angerclaw Grizzly"),
-[8958]=C(49,50,0,"Mutilateur de la griffe colérique","Angerclaw Mauler"),
-[8959]=C(47,48,0,"Loup Gangrepatte","Felpaw Wolf"),
-[8960]=C(49,50,0,"Charognard Gangrepatte","Felpaw Scavenger"),
-[8961]=C(51,52,0,"Ravageur Gangrepatte","Felpaw Ravager"),
-[9454]=C(54,54,0,"Xavathras","Xavathras"),
-[9462]=C(56,56,0,"Chef de clan Saignegueule","Chieftain Bloodmaw"),
-[9464]=C(51,51,0,"Seigneur Ror","Overlord Ror"),
-[9516]=C(59,59,1,"Seigneur Banehollow","Lord Banehollow"),
-[9517]=C(57,57,0,"Seigneur des ténèbres Fel'dan","Shadow Lord Fel'dan"),
-[9518]=C(56,56,0,"Rakaiah","Rakaiah"),
-[9860]=C(54,54,0,"Salia","Salia"),
-[9861]=C(52,52,0,"Moora","Moora"),
-[9862]=C(55,55,0,"Légionnaire de Jaedenar","Jaedenar Legionnaire"),
-[9877]=C(55,55,0,"Prince Xavalis","Prince Xavalis"),
-[9878]=C(51,52,0,"Bête d'entropie","Entropic Beast"),
-[9879]=C(51,54,0,"Horreur d'entropie","Entropic Horror"),
-[10648]=C(55,55,0,"Xavaric","Xavaric"),
-[10916]=C(57,57,0,"Messager Tombe-hiver","Winterfall Runner"),
-[11516]=C(53,54,0,"Garde Grumegueule","Timbermaw Warder"),
-[11552]=C(52,54,0,"Mystique Grumegueule","Timbermaw Mystic"),
-[11553]=C(52,53,0,"Pliebois Grumegueule","Timbermaw Woodbender"),
-[11555]=C(55,55,0,"Gorn le Borgne","Gorn One Eye"),
-[11557]=C(55,55,0,"Meilosh","Meilosh"),
-[11558]=C(55,55,0,"Kernda","Kernda"),
-[14339]=C(49,49,4,"Hurlemort","Death Howl"),
-[14340]=C(54,54,4,"Alshirr Souffléau","Alshirr Banebreath"),
-[14342]=C(51,51,4,"Ragepatte","Ragepaw"),
-[14344]=C(50,50,4,"Mongress","Mongress"),
-[14345]=C(51,51,4,"L'Ongar","The Ongar"),
-[14467]=C(55,55,1,"Kroshius","Kroshius"),
-[14522]=C(54,54,0,"Ur'dan","Ur'dan"),
-[14523]=C(57,57,0,"Ulathek","Ulathek"),
-} end
+Z[1448] = [[
+7086	49	50	0	Limon maudit	Cursed Ooze
+7092	51	52	0	Limon corrompu	Tainted Ooze
+7093	53	53	0	Vil limon	Vile Ooze
+7097	48	49	0	Chouette Bec-de-fer	Ironbeak Owl
+7098	52	53	0	Hurleur Bec-de-fer	Ironbeak Screecher
+7099	50	51	0	Chasseur Bec-de-fer	Ironbeak Hunter
+7100	52	53	0	Ecorcheur Crochebois	Warpwood Moss Flayer
+7101	53	54	0	Déchireur Crochebois	Warpwood Shredder
+7104	56	56	2		Dessecus
+7105	49	50	0	Satyre Jadefeu	Jadefire Satyr
+7106	50	51	0	Voleur Jadefeu	Jadefire Rogue
+7107	52	53	0	Entourloupeur Jadefeu	Jadefire Trickster
+7108	52	53	0	Traître Jadefeu	Jadefire Betrayer
+7109	50	51	0	Lige de la corruption Jadefeu	Jadefire Felsworn
+7110	51	52	0	Traqueur des ombres Jadefeu	Jadefire Shadowstalker
+7111	53	54	0	Implorateur de l'enfer Jadefeu	Jadefire Hellcaller
+7112	51	52	0	Sectateur de Jaedenar	Jaedenar Cultist
+7113	50	51	0	Gardien de Jaedenar	Jaedenar Guardian
+7114	52	53	0	Massacreur de Jaedenar	Jaedenar Enforcer
+7115	51	52	0	Adepte de Jaedenar	Jaedenar Adept
+7118	53	54	0	Tisseur d'ombre de Jaedenar	Jaedenar Darkweaver
+7120	53	54	0	Démoniste de Jaedenar	Jaedenar Warlock
+7125	50	51	0	Molosse de Jaedenar	Jaedenar Hound
+7126	52	53	0	Chasseur de Jaedenar	Jaedenar Hunter
+7132	53	54	0	Horreur toxique	Toxic Horror
+7135	53	54	1	Garde du corps infernal	Infernal Bodyguard
+7136	52	53	1	Infernal Sentinelle	Infernal Sentry
+7137	56	56	2		Immolatus
+7138	52	53	0	Arbrefer errant	Irontree Wanderer
+7139	52	53	0	Arbrefer marteleur	Irontree Stomper
+7149	55	56	0	Protecteur flétri	Withered Protector
+7153	48	49	0	Guerrier Mort-bois	Deadwood Warrior
+7154	48	49	0	Jardinier Mort-bois	Deadwood Gardener
+7155	49	50	0	Guide Mort-bois	Deadwood Pathfinder
+7156	53	54	0	Protecteur Mort-bois	Deadwood Den Watcher
+7157	54	55	0	Vengeur Mort-bois	Deadwood Avenger
+7158	53	54	0	Chaman Mort-bois	Deadwood Shaman
+8956	47	48	0	Ours de la griffe colérique	Angerclaw Bear
+8957	51	52	0	Grizzly de la griffe colérique	Angerclaw Grizzly
+8958	49	50	0	Mutilateur de la griffe colérique	Angerclaw Mauler
+8959	47	48	0	Loup Gangrepatte	Felpaw Wolf
+8960	49	50	0	Charognard Gangrepatte	Felpaw Scavenger
+8961	51	52	0	Ravageur Gangrepatte	Felpaw Ravager
+9454	54	54	0		Xavathras
+9462	56	56	0	Chef de clan Saignegueule	Chieftain Bloodmaw
+9464	51	51	0	Seigneur Ror	Overlord Ror
+9516	59	59	1	Seigneur Banehollow	Lord Banehollow
+9517	57	57	0	Seigneur des ténèbres Fel'dan	Shadow Lord Fel'dan
+9518	56	56	0		Rakaiah
+9860	54	54	0		Salia
+9861	52	52	0		Moora
+9862	55	55	0	Légionnaire de Jaedenar	Jaedenar Legionnaire
+9877	55	55	0		Prince Xavalis
+9878	51	52	0	Bête d'entropie	Entropic Beast
+9879	51	54	0	Horreur d'entropie	Entropic Horror
+10648	55	55	0		Xavaric
+10916	57	57	0	Messager Tombe-hiver	Winterfall Runner
+11516	53	54	0	Garde Grumegueule	Timbermaw Warder
+11552	52	54	0	Mystique Grumegueule	Timbermaw Mystic
+11553	52	53	0	Pliebois Grumegueule	Timbermaw Woodbender
+11555	55	55	0	Gorn le Borgne	Gorn One Eye
+11557	55	55	0		Meilosh
+11558	55	55	0		Kernda
+14339	49	49	4	Hurlemort	Death Howl
+14340	54	54	4	Alshirr Souffléau	Alshirr Banebreath
+14342	51	51	4	Ragepatte	Ragepaw
+14344	50	50	4		Mongress
+14345	51	51	4	L'Ongar	The Ongar
+14467	55	55	1		Kroshius
+14522	54	54	0		Ur'dan
+14523	57	57	0		Ulathek
+]]
 -- Un'Goro Crater
-Z[1449] = function() return {
-[6498]=C(54,55,1,"Diablosaure","Devilsaur"),
-[6499]=C(54,56,1,"Diablosaure Cuiracier","Ironhide Devilsaur"),
-[6500]=C(54,55,1,"Diablosaure Rex","Tyrant Devilsaur"),
-[6501]=C(52,53,1,"Stégodon","Stegodon"),
-[6502]=C(52,54,1,"Stégodon cuirassé","Plated Stegodon"),
-[6503]=C(53,54,1,"Stégodon à pointes","Spiked Stegodon"),
-[6504]=C(54,55,1,"Stégodon Grondeterre","Thunderstomp Stegodon"),
-[6505]=C(48,49,0,"Ravasaure","Ravasaur"),
-[6506]=C(49,50,0,"Ravasaure coureur","Ravasaur Runner"),
-[6507]=C(49,50,0,"Ravasaure chasseur","Ravasaur Hunter"),
-[6508]=C(50,51,0,"Ravasaure peau-de-venin","Venomhide Ravasaur"),
-[6509]=C(48,49,0,"Flagellant Pétale-de-sang","Bloodpetal Lasher"),
-[6510]=C(51,52,0,"Ecorcheur Pétale-de-sang","Bloodpetal Flayer"),
-[6511]=C(49,50,0,"Batteur Pétale-de-sang","Bloodpetal Thresher"),
-[6512]=C(52,53,0,"Trappeur Pétale-de-sang","Bloodpetal Trapper"),
-[6513]=C(51,52,0,"Marteleur d'Un'Goro","Un'Goro Stomper"),
-[6514]=C(50,51,0,"Gorille d'Un'Goro","Un'Goro Gorilla"),
-[6516]=C(52,53,0,"Foudroyeur d'Un'Goro","Un'Goro Thunderer"),
-[6517]=C(50,51,0,"Bête du goudron","Tar Beast"),
-[6518]=C(52,54,0,"Rôdeur du goudron","Tar Lurker"),
-[6519]=C(53,54,0,"Seigneur du goudron","Tar Lord"),
-[6520]=C(53,54,0,"Elémentaire de brûlure","Scorching Elemental"),
-[6521]=C(54,55,0,"Brasier vivant","Living Blaze"),
-[6527]=C(51,52,0,"Rampeur du goudron","Tar Creeper"),
-[6551]=C(51,52,0,"Guêpe Gorishi","Gorishi Wasp"),
-[6552]=C(51,52,0,"Ouvrier Gorishi","Gorishi Worker"),
-[6553]=C(51,53,0,"Ravageur Gorishi","Gorishi Reaver"),
-[6554]=C(52,53,0,"Dard Gorishi","Gorishi Stinger"),
-[6555]=C(52,53,0,"Tunnelière Gorishi","Gorishi Tunneler"),
-[6556]=C(48,50,0,"Limon de mucus","Muculent Ooze"),
-[6557]=C(50,52,0,"Limon primitif","Primal Ooze"),
-[6559]=C(52,54,0,"Limon gluant","Glutinous Ooze"),
-[6560]=C(60,61,1,"Garde de pierre","Stone Guardian"),
-[6581]=C(50,50,4,"Matriarche ravasaure","Ravasaur Matriarch"),
-[6582]=C(54,54,4,"Matriarche Zavas","Clutchmother Zavas"),
-[6583]=C(57,57,2,"Gruff","Gruff"),
-[6584]=C(60,60,2,"Roi Mosh","King Mosh"),
-[6585]=C(53,53,4,"Uhk'loc","Uhk'loc"),
-[9157]=C(40,40,0,"Parasite Pétale-de-sang","Bloodpetal Pest","A"),
-[9162]=C(49,50,0,"Jeune dimeurtrodon","Young Diemetradon"),
-[9163]=C(51,52,0,"Dimeurtrodon","Diemetradon"),
-[9164]=C(53,55,0,"Ancien dimeurtrodon","Elder Diemetradon"),
-[9165]=C(48,50,0,"Petit pterreurdactyle","Fledgling Pterrordax"),
-[9166]=C(50,52,0,"Pterreurdactyle","Pterrordax"),
-[9167]=C(51,54,0,"Pterreurdactyle frénétique","Frenzied Pterrordax"),
-[9376]=C(56,56,1,"Blazerunner","Blazerunner"),
-[9477]=C(50,52,0,"Limon cloné","Cloned Ooze"),
-[9622]=C(55,55,0,"U'cha","U'cha"),
-[9683]=C(49,50,0,"Compagne de Lar'korwi","Lar'korwi Mate"),
-[9684]=C(56,56,0,"Lar'korwi","Lar'korwi"),
-[14460]=C(54,56,0,"Envahisseur flamboyant","Blazing Invader"),
-[14461]=C(58,58,1,"Baron Charr","Baron Charr"),
-} end
+Z[1449] = [[
+6498	54	55	1	Diablosaure	Devilsaur
+6499	54	56	1	Diablosaure Cuiracier	Ironhide Devilsaur
+6500	54	55	1	Diablosaure Rex	Tyrant Devilsaur
+6501	52	53	1	Stégodon	Stegodon
+6502	52	54	1	Stégodon cuirassé	Plated Stegodon
+6503	53	54	1	Stégodon à pointes	Spiked Stegodon
+6504	54	55	1	Stégodon Grondeterre	Thunderstomp Stegodon
+6505	48	49	0	Ravasaure	Ravasaur
+6506	49	50	0	Ravasaure coureur	Ravasaur Runner
+6507	49	50	0	Ravasaure chasseur	Ravasaur Hunter
+6508	50	51	0	Ravasaure peau-de-venin	Venomhide Ravasaur
+6509	48	49	0	Flagellant Pétale-de-sang	Bloodpetal Lasher
+6510	51	52	0	Ecorcheur Pétale-de-sang	Bloodpetal Flayer
+6511	49	50	0	Batteur Pétale-de-sang	Bloodpetal Thresher
+6512	52	53	0	Trappeur Pétale-de-sang	Bloodpetal Trapper
+6513	51	52	0	Marteleur d'Un'Goro	Un'Goro Stomper
+6514	50	51	0	Gorille d'Un'Goro	Un'Goro Gorilla
+6516	52	53	0	Foudroyeur d'Un'Goro	Un'Goro Thunderer
+6517	50	51	0	Bête du goudron	Tar Beast
+6518	52	54	0	Rôdeur du goudron	Tar Lurker
+6519	53	54	0	Seigneur du goudron	Tar Lord
+6520	53	54	0	Elémentaire de brûlure	Scorching Elemental
+6521	54	55	0	Brasier vivant	Living Blaze
+6527	51	52	0	Rampeur du goudron	Tar Creeper
+6551	51	52	0	Guêpe Gorishi	Gorishi Wasp
+6552	51	52	0	Ouvrier Gorishi	Gorishi Worker
+6553	51	53	0	Ravageur Gorishi	Gorishi Reaver
+6554	52	53	0	Dard Gorishi	Gorishi Stinger
+6555	52	53	0	Tunnelière Gorishi	Gorishi Tunneler
+6556	48	50	0	Limon de mucus	Muculent Ooze
+6557	50	52	0	Limon primitif	Primal Ooze
+6559	52	54	0	Limon gluant	Glutinous Ooze
+6560	60	61	1	Garde de pierre	Stone Guardian
+6581	50	50	4	Matriarche ravasaure	Ravasaur Matriarch
+6582	54	54	4	Matriarche Zavas	Clutchmother Zavas
+6583	57	57	2		Gruff
+6584	60	60	2	Roi Mosh	King Mosh
+6585	53	53	4		Uhk'loc
+9157	40	40	0	Parasite Pétale-de-sang	Bloodpetal Pest	A
+9162	49	50	0	Jeune dimeurtrodon	Young Diemetradon
+9163	51	52	0	Dimeurtrodon	Diemetradon
+9164	53	55	0	Ancien dimeurtrodon	Elder Diemetradon
+9165	48	50	0	Petit pterreurdactyle	Fledgling Pterrordax
+9166	50	52	0	Pterreurdactyle	Pterrordax
+9167	51	54	0	Pterreurdactyle frénétique	Frenzied Pterrordax
+9376	56	56	1		Blazerunner
+9477	50	52	0	Limon cloné	Cloned Ooze
+9622	55	55	0		U'cha
+9683	49	50	0	Compagne de Lar'korwi	Lar'korwi Mate
+9684	56	56	0		Lar'korwi
+14460	54	56	0	Envahisseur flamboyant	Blazing Invader
+14461	58	58	1		Baron Charr
+]]
 -- Moonglade
-Z[1450] = function() return {
-[11553]=C(52,53,0,"Pliebois Grumegueule","Timbermaw Woodbender"),
-[258912]=C(60,60,0,"Elaren Stargrove","Elaren Stargrove"),
-[271698]=C(23,23,0,"Restless Spirit","Restless Spirit"),
-} end
+Z[1450] = [[
+11553	52	53	0	Pliebois Grumegueule	Timbermaw Woodbender
+258912	60	60	0		Elaren Stargrove
+271698	23	23	0		Restless Spirit
+]]
 -- Silithus
-Z[1451] = function() return {
-[11698]=C(57,58,1,"Aiguillonneur de la Ruche'Ashi","Hive'Ashi Stinger"),
-[11721]=C(57,58,1,"Ouvrière de la Ruche'Ashi","Hive'Ashi Worker"),
-[11722]=C(58,59,1,"Défenseur de la Ruche'Ashi","Hive'Ashi Defender"),
-[11723]=C(58,59,1,"Traqueuse des sables de la Ruche'Ashi","Hive'Ashi Sandstalker"),
-[11724]=C(57,58,1,"Grouillante de la Ruche'Ashi","Hive'Ashi Swarmer"),
-[11725]=C(58,59,1,"Patrouilleuse de la Ruche'Zora","Hive'Zora Waywatcher"),
-[11726]=C(58,59,1,"Tunnelière de la Ruche'Zora","Hive'Zora Tunneler"),
-[11727]=C(57,59,0,"Guêpe de la Ruche'Zora","Hive'Zora Wasp"),
-[11728]=C(59,60,1,"Ravageuse de la Ruche'Zora","Hive'Zora Reaver"),
-[11729]=C(59,60,1,"Sœur de la Ruche'Zora","Hive'Zora Hive Sister"),
-[11730]=C(59,60,1,"Embusquée de la Ruche'Regal","Hive'Regal Ambusher"),
-[11731]=C(59,60,1,"Fouisseuse de la Ruche'Regal","Hive'Regal Burrower"),
-[11732]=C(59,60,1,"Crache-feu de la Ruche'Regal","Hive'Regal Spitfire"),
-[11733]=C(59,60,1,"Esclavagiste de la Ruche'Regal","Hive'Regal Slavemaker"),
-[11734]=C(59,61,1,"Seigneur de la Ruche'Regal","Hive'Regal Hive Lord"),
-[11735]=C(54,55,0,"Scorpide Cinglepierre","Stonelash Scorpid"),
-[11736]=C(56,56,0,"Pinceur Cinglepierre","Stonelash Pincer"),
-[11737]=C(57,58,0,"Ecorcheur Cinglepierre","Stonelash Flayer"),
-[11738]=C(55,56,0,"Glisseuse du sable","Sand Skitterer"),
-[11739]=C(57,59,0,"Traqueuse des rochers","Rock Stalker"),
-[11740]=C(55,56,0,"Frappeur térébrant","Dredge Striker"),
-[11741]=C(57,58,0,"Ecraseur térébrant","Dredge Crusher"),
-[11744]=C(55,57,0,"Tempétueux de poussière","Dust Stormer"),
-[11745]=C(57,59,0,"Guerrier cyclone","Cyclone Warrior"),
-[11746]=C(56,58,0,"Grondeur du désert","Desert Rumbler"),
-[11747]=C(58,59,0,"Enragé du désert","Desert Rager"),
-[11803]=C(60,60,0,"Gardien du crépuscule Exeter","Twilight Keeper Exeter"),
-[11804]=C(60,60,0,"Gardien du crépuscule Havunth","Twilight Keeper Havunth"),
-[11880]=C(57,59,0,"Vengeur du crépuscule","Twilight Avenger"),
-[11881]=C(58,60,0,"Géoseigneur du crépuscule","Twilight Geolord"),
-[11882]=C(59,60,0,"Invocateur des pierres du crépuscule","Twilight Stonecaller"),
-[11883]=C(59,60,0,"Maître du crépuscule","Twilight Master"),
-[12178]=C(55,56,0,"Druide torturé","Tortured Druid"),
-[12179]=C(56,57,0,"Sentinelle torturée","Tortured Sentinel"),
-[12199]=C(58,58,0,"Ombre d'Ambermoon","Shade of Ambermoon"),
-[13136]=C(57,58,0,"Bourdon de la Ruche'Ashi","Hive'Ashi Drone"),
-[13301]=C(56,57,0,"Embusquée de la Ruche'Ashi","Hive'Ashi Ambusher"),
-[14454]=C(60,60,1,"Le Déchirevent","The Windreaver"),
-[14455]=C(57,58,0,"Envahisseur tourbillonnant","Whirling Invader"),
-[14471]=C(61,61,2,"Setis","Setis"),
-[14472]=C(57,57,4,"Gretheer","Gretheer"),
-[14473]=C(60,60,2,"Lapress","Lapress"),
-[14474]=C(59,59,2,"Zora","Zora"),
-[14475]=C(57,57,2,"Rex Ashil","Rex Ashil"),
-[14476]=C(56,56,4,"Krellack","Krellack"),
-[14477]=C(58,58,4,"Grubthor","Grubthor"),
-[14478]=C(58,58,4,"Ouraganien","Huricanian"),
-[14479]=C(60,60,4,"Seigneur du crépuscule Everun","Twilight Lord Everun"),
-[14862]=C(63,63,3,"Emissaire Roman'khan","Emissary Roman'khan"),
-[15196]=C(59,59,1,"Poigne-de-mort","Deathclasp"),
-[15200]=C(60,60,0,"Gardienne du crépuscule Mayna","Twilight Keeper Mayna"),
-[15201]=C(60,60,0,"Flamme ravageuse du crépuscule","Twilight Flamereaver"),
-[15202]=C(61,61,0,"Vyral le Vil","Vyral the Vile"),
-[15203]=C(63,63,3,"Prince Skaldrenox","Prince Skaldrenox"),
-[15204]=C(63,63,3,"Haut maréchal Trombe","High Marshal Whirlaxis"),
-[15205]=C(63,63,3,"Baron Kazum","Baron Kazum"),
-[15206]=C(62,62,1,"Le duc des Cendres","The Duke of Cynders"),
-[15207]=C(62,62,1,"Le duc des Profondeurs","The Duke of Fathoms"),
-[15208]=C(62,62,1,"Le duc des Eclats","The Duke of Shards"),
-[15209]=C(60,60,1,"Templier cramoisi","Crimson Templar"),
-[15211]=C(60,60,1,"Templier d'azur","Azure Templar"),
-[15212]=C(60,60,1,"Templier chenu","Hoary Templar"),
-[15213]=C(59,61,0,"Suzerain du crépuscule","Twilight Overlord"),
-[15220]=C(62,62,1,"Le duc des Zéphyrs","The Duke of Zephyrs"),
-[15305]=C(63,63,3,"Seigneur Skwol","Lord Skwol"),
-[15307]=C(60,60,1,"Templier terrestre","Earthen Templar"),
-[15308]=C(60,60,1,"Prophète du crépuscule","Twilight Prophet"),
-[15441]=C(60,60,0,"Fusilier de la Brigade d'Ironforge","Ironforge Brigade Rifleman","A"),
-[15442]=C(60,60,1,"Fantassin de la Brigade d'Ironforge","Ironforge Brigade Footman","A"),
-[15541]=C(60,60,1,"Maraudeuse du crépuscule Morna","Twilight Marauder Morna"),
-[15542]=C(58,59,0,"Maraudeur du crépuscule","Twilight Marauder"),
-[15616]=C(60,60,1,"Grunt de la Légion d'Orgrimmar","Orgrimmar Legion Grunt","H"),
-[15617]=C(60,60,1,"Lanceur de haches de la Légion d'Orgrimmar","Orgrimmar Legion Axe Thrower","H"),
-[17068]=C(55,55,0,"Responsable-chef des réquisitions Enkles","Chief Expeditionary Requisitioner Enkles","A"),
-[17070]=C(55,55,0,"Apothicaire Quinard","Apothecary Quinard","H"),
-[17765]=C(60,60,1,"Sentinelle de silithyste, Alliance","Alliance Silithyst Sentinel","A"),
-[17766]=C(60,60,1,"Sentinelle de silithyste, Horde","Horde Silithyst Sentinel","H"),
-[227533]=C(56,58,0,"Astral Wraith","Astral Wraith"),
-[229200]=C(56,58,0,"Astral Wraith","Astral Wraith"),
-} end
+Z[1451] = [[
+11698	57	58	1	Aiguillonneur de la Ruche'Ashi	Hive'Ashi Stinger
+11721	57	58	1	Ouvrière de la Ruche'Ashi	Hive'Ashi Worker
+11722	58	59	1	Défenseur de la Ruche'Ashi	Hive'Ashi Defender
+11723	58	59	1	Traqueuse des sables de la Ruche'Ashi	Hive'Ashi Sandstalker
+11724	57	58	1	Grouillante de la Ruche'Ashi	Hive'Ashi Swarmer
+11725	58	59	1	Patrouilleuse de la Ruche'Zora	Hive'Zora Waywatcher
+11726	58	59	1	Tunnelière de la Ruche'Zora	Hive'Zora Tunneler
+11727	57	59	0	Guêpe de la Ruche'Zora	Hive'Zora Wasp
+11728	59	60	1	Ravageuse de la Ruche'Zora	Hive'Zora Reaver
+11729	59	60	1	Sœur de la Ruche'Zora	Hive'Zora Hive Sister
+11730	59	60	1	Embusquée de la Ruche'Regal	Hive'Regal Ambusher
+11731	59	60	1	Fouisseuse de la Ruche'Regal	Hive'Regal Burrower
+11732	59	60	1	Crache-feu de la Ruche'Regal	Hive'Regal Spitfire
+11733	59	60	1	Esclavagiste de la Ruche'Regal	Hive'Regal Slavemaker
+11734	59	61	1	Seigneur de la Ruche'Regal	Hive'Regal Hive Lord
+11735	54	55	0	Scorpide Cinglepierre	Stonelash Scorpid
+11736	56	56	0	Pinceur Cinglepierre	Stonelash Pincer
+11737	57	58	0	Ecorcheur Cinglepierre	Stonelash Flayer
+11738	55	56	0	Glisseuse du sable	Sand Skitterer
+11739	57	59	0	Traqueuse des rochers	Rock Stalker
+11740	55	56	0	Frappeur térébrant	Dredge Striker
+11741	57	58	0	Ecraseur térébrant	Dredge Crusher
+11744	55	57	0	Tempétueux de poussière	Dust Stormer
+11745	57	59	0	Guerrier cyclone	Cyclone Warrior
+11746	56	58	0	Grondeur du désert	Desert Rumbler
+11747	58	59	0	Enragé du désert	Desert Rager
+11803	60	60	0	Gardien du crépuscule Exeter	Twilight Keeper Exeter
+11804	60	60	0	Gardien du crépuscule Havunth	Twilight Keeper Havunth
+11880	57	59	0	Vengeur du crépuscule	Twilight Avenger
+11881	58	60	0	Géoseigneur du crépuscule	Twilight Geolord
+11882	59	60	0	Invocateur des pierres du crépuscule	Twilight Stonecaller
+11883	59	60	0	Maître du crépuscule	Twilight Master
+12178	55	56	0	Druide torturé	Tortured Druid
+12179	56	57	0	Sentinelle torturée	Tortured Sentinel
+12199	58	58	0	Ombre d'Ambermoon	Shade of Ambermoon
+13136	57	58	0	Bourdon de la Ruche'Ashi	Hive'Ashi Drone
+13301	56	57	0	Embusquée de la Ruche'Ashi	Hive'Ashi Ambusher
+14454	60	60	1	Le Déchirevent	The Windreaver
+14455	57	58	0	Envahisseur tourbillonnant	Whirling Invader
+14471	61	61	2		Setis
+14472	57	57	4		Gretheer
+14473	60	60	2		Lapress
+14474	59	59	2		Zora
+14475	57	57	2		Rex Ashil
+14476	56	56	4		Krellack
+14477	58	58	4		Grubthor
+14478	58	58	4	Ouraganien	Huricanian
+14479	60	60	4	Seigneur du crépuscule Everun	Twilight Lord Everun
+14862	63	63	3	Emissaire Roman'khan	Emissary Roman'khan
+15196	59	59	1	Poigne-de-mort	Deathclasp
+15200	60	60	0	Gardienne du crépuscule Mayna	Twilight Keeper Mayna
+15201	60	60	0	Flamme ravageuse du crépuscule	Twilight Flamereaver
+15202	61	61	0	Vyral le Vil	Vyral the Vile
+15203	63	63	3		Prince Skaldrenox
+15204	63	63	3	Haut maréchal Trombe	High Marshal Whirlaxis
+15205	63	63	3		Baron Kazum
+15206	62	62	1	Le duc des Cendres	The Duke of Cynders
+15207	62	62	1	Le duc des Profondeurs	The Duke of Fathoms
+15208	62	62	1	Le duc des Eclats	The Duke of Shards
+15209	60	60	1	Templier cramoisi	Crimson Templar
+15211	60	60	1	Templier d'azur	Azure Templar
+15212	60	60	1	Templier chenu	Hoary Templar
+15213	59	61	0	Suzerain du crépuscule	Twilight Overlord
+15220	62	62	1	Le duc des Zéphyrs	The Duke of Zephyrs
+15305	63	63	3	Seigneur Skwol	Lord Skwol
+15307	60	60	1	Templier terrestre	Earthen Templar
+15308	60	60	1	Prophète du crépuscule	Twilight Prophet
+15441	60	60	0	Fusilier de la Brigade d'Ironforge	Ironforge Brigade Rifleman	A
+15442	60	60	1	Fantassin de la Brigade d'Ironforge	Ironforge Brigade Footman	A
+15541	60	60	1	Maraudeuse du crépuscule Morna	Twilight Marauder Morna
+15542	58	59	0	Maraudeur du crépuscule	Twilight Marauder
+15616	60	60	1	Grunt de la Légion d'Orgrimmar	Orgrimmar Legion Grunt	H
+15617	60	60	1	Lanceur de haches de la Légion d'Orgrimmar	Orgrimmar Legion Axe Thrower	H
+17068	55	55	0	Responsable-chef des réquisitions Enkles	Chief Expeditionary Requisitioner Enkles	A
+17070	55	55	0	Apothicaire Quinard	Apothecary Quinard	H
+17765	60	60	1	Sentinelle de silithyste, Alliance	Alliance Silithyst Sentinel	A
+17766	60	60	1	Sentinelle de silithyste, Horde	Horde Silithyst Sentinel	H
+227533	56	58	0		Astral Wraith
+229200	56	58	0		Astral Wraith
+]]
 -- Winterspring
-Z[1452] = function() return {
-[7428]=C(59,60,1,"Géant Cognegivre","Frostmaul Giant"),
-[7429]=C(59,60,1,"Protecteur Cognegivre","Frostmaul Preserver"),
-[7430]=C(55,56,0,"Jeune sabre-de-givre","Frostsaber Cub"),
-[7431]=C(56,57,0,"Sabre-de-givre","Frostsaber"),
-[7432]=C(59,60,0,"Traqueur sabre-de-givre","Frostsaber Stalker"),
-[7433]=C(58,59,0,"Chasseresse sabre-de-givre","Frostsaber Huntress"),
-[7434]=C(59,60,0,"Guetteur sabre-de-givre","Frostsaber Pride Watcher"),
-[7435]=C(55,56,1,"Wyrmide cobalt","Cobalt Wyrmkin"),
-[7436]=C(56,57,1,"Plaiedécaille cobalt","Cobalt Scalebane"),
-[7437]=C(57,58,1,"Tisse-magie cobalt","Cobalt Mageweaver"),
-[7438]=C(57,58,0,"Ursa Tombe-hiver","Winterfall Ursa"),
-[7439]=C(56,57,0,"Chaman Tombe-hiver","Winterfall Shaman"),
-[7440]=C(55,56,0,"Protecteur Tombe-hiver","Winterfall Den Watcher"),
-[7441]=C(54,55,0,"Totémique Tombe-hiver","Winterfall Totemic"),
-[7442]=C(53,54,0,"Guide Tombe-hiver","Winterfall Pathfinder"),
-[7443]=C(54,56,0,"Marteleur Crocs acérés","Shardtooth Mauler"),
-[7444]=C(53,54,0,"Ours Crocs acérés","Shardtooth Bear"),
-[7445]=C(57,58,0,"Ancien Croc acéré","Elder Shardtooth"),
-[7446]=C(59,60,0,"Croc acéré enragé","Rabid Shardtooth"),
-[7447]=C(53,55,0,"Petite Noroît","Fledgling Chillwind"),
-[7448]=C(55,57,0,"Chimère Noroît","Chillwind Chimaera"),
-[7449]=C(57,59,0,"Ravageur Noroît","Chillwind Ravager"),
-[7450]=C(53,55,0,"Chouettard éreinté","Ragged Owlbeast"),
-[7451]=C(54,56,0,"Chouettard enragé","Raging Owlbeast"),
-[7452]=C(56,57,0,"Chouettard affolé","Crazed Owlbeast"),
-[7453]=C(57,58,0,"Chouettard lunaire","Moontouched Owlbeast"),
-[7454]=C(58,59,0,"Chouettard berserk","Berserk Owlbeast"),
-[7455]=C(55,56,0,"Chouette du Berceau-de-l'Hiver","Winterspring Owl"),
-[7456]=C(57,59,0,"Hurleur du Berceau-de-l'Hiver","Winterspring Screecher"),
-[7457]=C(53,55,0,"Chardon de glace insoumis","Rogue Ice Thistle"),
-[7458]=C(55,56,0,"Yéti Chardon de glace","Ice Thistle Yeti"),
-[7459]=C(56,57,0,"Matriarche Chardon de glace","Ice Thistle Matriarch"),
-[7460]=C(57,58,0,"Patriarche Chardon de glace","Ice Thistle Patriarch"),
-[7461]=C(57,60,1,"Initiée Hederine","Hederine Initiate"),
-[7462]=C(58,60,1,"Traque-mana Hederine","Hederine Manastalker"),
-[7463]=C(57,60,1,"Pourfendeur Hederine","Hederine Slayer"),
-[7523]=C(54,55,0,"Bien-né souffrant","Suffering Highborne"),
-[7524]=C(55,56,0,"Bien-née angoissée","Anguished Highborne"),
-[10196]=C(57,57,2,"Général Colbatann","General Colbatann"),
-[10197]=C(55,55,4,"Mezzir le hurleur","Mezzir the Howler"),
-[10198]=C(60,60,2,"Kashoch le ravageur","Kashoch the Reaver"),
-[10199]=C(59,59,4,"Grison Neigepatte","Grizzle Snowpaw"),
-[10200]=C(57,57,4,"Rak'shiri","Rak'shiri"),
-[10201]=C(61,61,2,"Dame Hederine","Lady Hederine"),
-[10202]=C(59,59,2,"Azurous","Azurous"),
-[10659]=C(54,55,0,"Dragonnet cobalt","Cobalt Whelp"),
-[10660]=C(55,56,0,"Rejeton de cobalt","Cobalt Broodling"),
-[10661]=C(54,56,0,"Dévoreur de sorts","Spell Eater"),
-[10662]=C(56,56,1,"Gueulesort","Spellmaw"),
-[10663]=C(58,58,1,"Griffemana","Manaclaw"),
-[10664]=C(60,60,1,"Clairvoyant","Scryer"),
-[10737]=C(60,60,1,"Shy-Rotam","Shy-Rotam"),
-[10738]=C(59,59,1,"Grand chef Tombe-hiver","High Chief Winterfall"),
-[10741]=C(60,60,1,"Sian-Rotam","Sian-Rotam"),
-[10806]=C(56,56,1,"Ursius","Ursius"),
-[10807]=C(58,58,1,"Brumeran","Brumeran"),
-[10916]=C(57,57,0,"Messager Tombe-hiver","Winterfall Runner"),
-[14457]=C(60,60,1,"Princesse Tempestria","Princess Tempestria"),
-[14458]=C(56,58,0,"Envahisseur aqueux","Watery Invader"),
-[15554]=C(61,61,1,"Numéro Deux","Number Two"),
-[228891]=C(53,53,0,"Enraged Shade","Enraged Shade"),
-[232399]=C(60,60,0,"Outcast Cryomancer","Outcast Cryomancer"),
-[232939]=C(60,60,0,"Felguard Elite","Felguard Elite"),
-[232940]=C(58,58,0,"Felhound Spellseeker","Felhound Spellseeker"),
-[249474]=C(56,56,0,"Rustleaf Fox","Rustleaf Fox","A"),
-[265577]=C(58,58,0,"Zippie Fizzbolt","Zippie Fizzbolt"),
-} end
+Z[1452] = [[
+7428	59	60	1	Géant Cognegivre	Frostmaul Giant
+7429	59	60	1	Protecteur Cognegivre	Frostmaul Preserver
+7430	55	56	0	Jeune sabre-de-givre	Frostsaber Cub
+7431	56	57	0	Sabre-de-givre	Frostsaber
+7432	59	60	0	Traqueur sabre-de-givre	Frostsaber Stalker
+7433	58	59	0	Chasseresse sabre-de-givre	Frostsaber Huntress
+7434	59	60	0	Guetteur sabre-de-givre	Frostsaber Pride Watcher
+7435	55	56	1	Wyrmide cobalt	Cobalt Wyrmkin
+7436	56	57	1	Plaiedécaille cobalt	Cobalt Scalebane
+7437	57	58	1	Tisse-magie cobalt	Cobalt Mageweaver
+7438	57	58	0	Ursa Tombe-hiver	Winterfall Ursa
+7439	56	57	0	Chaman Tombe-hiver	Winterfall Shaman
+7440	55	56	0	Protecteur Tombe-hiver	Winterfall Den Watcher
+7441	54	55	0	Totémique Tombe-hiver	Winterfall Totemic
+7442	53	54	0	Guide Tombe-hiver	Winterfall Pathfinder
+7443	54	56	0	Marteleur Crocs acérés	Shardtooth Mauler
+7444	53	54	0	Ours Crocs acérés	Shardtooth Bear
+7445	57	58	0	Ancien Croc acéré	Elder Shardtooth
+7446	59	60	0	Croc acéré enragé	Rabid Shardtooth
+7447	53	55	0	Petite Noroît	Fledgling Chillwind
+7448	55	57	0	Chimère Noroît	Chillwind Chimaera
+7449	57	59	0	Ravageur Noroît	Chillwind Ravager
+7450	53	55	0	Chouettard éreinté	Ragged Owlbeast
+7451	54	56	0	Chouettard enragé	Raging Owlbeast
+7452	56	57	0	Chouettard affolé	Crazed Owlbeast
+7453	57	58	0	Chouettard lunaire	Moontouched Owlbeast
+7454	58	59	0	Chouettard berserk	Berserk Owlbeast
+7455	55	56	0	Chouette du Berceau-de-l'Hiver	Winterspring Owl
+7456	57	59	0	Hurleur du Berceau-de-l'Hiver	Winterspring Screecher
+7457	53	55	0	Chardon de glace insoumis	Rogue Ice Thistle
+7458	55	56	0	Yéti Chardon de glace	Ice Thistle Yeti
+7459	56	57	0	Matriarche Chardon de glace	Ice Thistle Matriarch
+7460	57	58	0	Patriarche Chardon de glace	Ice Thistle Patriarch
+7461	57	60	1	Initiée Hederine	Hederine Initiate
+7462	58	60	1	Traque-mana Hederine	Hederine Manastalker
+7463	57	60	1	Pourfendeur Hederine	Hederine Slayer
+7523	54	55	0	Bien-né souffrant	Suffering Highborne
+7524	55	56	0	Bien-née angoissée	Anguished Highborne
+10196	57	57	2	Général Colbatann	General Colbatann
+10197	55	55	4	Mezzir le hurleur	Mezzir the Howler
+10198	60	60	2	Kashoch le ravageur	Kashoch the Reaver
+10199	59	59	4	Grison Neigepatte	Grizzle Snowpaw
+10200	57	57	4		Rak'shiri
+10201	61	61	2	Dame Hederine	Lady Hederine
+10202	59	59	2		Azurous
+10659	54	55	0	Dragonnet cobalt	Cobalt Whelp
+10660	55	56	0	Rejeton de cobalt	Cobalt Broodling
+10661	54	56	0	Dévoreur de sorts	Spell Eater
+10662	56	56	1	Gueulesort	Spellmaw
+10663	58	58	1	Griffemana	Manaclaw
+10664	60	60	1	Clairvoyant	Scryer
+10737	60	60	1		Shy-Rotam
+10738	59	59	1	Grand chef Tombe-hiver	High Chief Winterfall
+10741	60	60	1		Sian-Rotam
+10806	56	56	1		Ursius
+10807	58	58	1		Brumeran
+10916	57	57	0	Messager Tombe-hiver	Winterfall Runner
+14457	60	60	1	Princesse Tempestria	Princess Tempestria
+14458	56	58	0	Envahisseur aqueux	Watery Invader
+15554	61	61	1	Numéro Deux	Number Two
+228891	53	53	0		Enraged Shade
+232399	60	60	0		Outcast Cryomancer
+232939	60	60	0		Felguard Elite
+232940	58	58	0		Felhound Spellseeker
+249474	56	56	0		Rustleaf Fox	A
+265577	58	58	0		Zippie Fizzbolt
+]]
 -- Mount Hyjal
-Z[2482] = function() return {
-[40833]=C(60,60,0,"Tiala Whitemane","Tiala Whitemane","A"),
-[244511]=C(60,60,0,"Zet'gan","Zet'gan"),
-[244517]=C(60,60,0,"Sefira Everbright","Sefira Everbright"),
-[244525]=C(55,56,0,"Hyjal Bear","Hyjal Bear"),
-[248041]=C(57,57,0,"Hyjal Stag","Hyjal Stag"),
-[248366]=C(60,60,0,"Fraxinus","Fraxinus","A"),
-[248367]=C(60,60,0,"Hyacinth","Hyacinth"),
-[249052]=C(60,60,0,"Witherbeard","Witherbeard","A"),
-[249053]=C(55,55,0,"Hyjal Owl","Hyjal Owl"),
-[249228]=C(57,58,0,"Fleshflay Ravener","Fleshflay Ravener"),
-[249229]=C(58,59,0,"Felguard Sentinel","Felguard Sentinel"),
-[249474]=C(56,56,0,"Rustleaf Fox","Rustleaf Fox","A"),
-[249476]=C(1,1,0,"Skunk","Skunk"),
-[249490]=C(57,59,0,"Wildbreath Chimaerok","Wildbreath Chimaerok"),
-[249551]=C(60,60,0,"Blackthorne Cultist","Blackthorne Cultist"),
-[249968]=C(58,58,0,"Hnaz Blunderflame","Hnaz Blunderflame"),
-[251890]=C(60,60,0,"Tyrus Blackhorn","Tyrus Blackhorn"),
-[255683]=C(60,60,0,"Shalla'kal","Shalla'kal"),
-[256222]=C(60,60,0,"Ketharas","Ketharas","A"),
-[257753]=C(60,60,0,"Curious Crow","Curious Crow","A"),
-[260422]=C(56,57,0,"Ashen Acolyte","Ashen Acolyte"),
-[260822]=C(57,57,0,"Tainted Grovewalker","Tainted Grovewalker"),
-[264089]=C(60,60,0,"Eluneth","Eluneth"),
-[264333]=C(60,60,0,"Grimroot","Grimroot","A"),
-[264570]=C(60,60,0,"Blackthorne Adept","Blackthorne Adept"),
-[266802]=C(57,57,0,"Thark Gorax","Thark Gorax"),
-[266803]=C(54,54,0,"Quintus Wainworth","Quintus Wainworth","A"),
-[267113]=C(60,60,0,"Marrosis","Marrosis"),
-[267182]=C(60,60,0,"Ve'ho Manyhorns","Ve'ho Manyhorns"),
-[268044]=C(60,60,0,"Loren Ravenlock","Loren Ravenlock"),
-[275173]=C(60,60,0,"Blackthorne Outrunner","Blackthorne Outrunner"),
-} end
+Z[2482] = [[
+40833	60	60	0		Tiala Whitemane	A
+244511	60	60	0		Zet'gan
+244517	60	60	0		Sefira Everbright
+244525	55	56	0		Hyjal Bear
+248041	57	57	0		Hyjal Stag
+248366	60	60	0		Fraxinus	A
+248367	60	60	0		Hyacinth
+249052	60	60	0		Witherbeard	A
+249053	55	55	0		Hyjal Owl
+249228	57	58	0		Fleshflay Ravener
+249229	58	59	0		Felguard Sentinel
+249474	56	56	0		Rustleaf Fox	A
+249476	1	1	0		Skunk
+249490	57	59	0		Wildbreath Chimaerok
+249551	60	60	0		Blackthorne Cultist
+249968	58	58	0		Hnaz Blunderflame
+251890	60	60	0		Tyrus Blackhorn
+255683	60	60	0		Shalla'kal
+256222	60	60	0		Ketharas	A
+257753	60	60	0		Curious Crow	A
+260422	56	57	0		Ashen Acolyte
+260822	57	57	0		Tainted Grovewalker
+264089	60	60	0		Eluneth
+264333	60	60	0		Grimroot	A
+264570	60	60	0		Blackthorne Adept
+266802	57	57	0		Thark Gorax
+266803	54	54	0		Quintus Wainworth	A
+267113	60	60	0		Marrosis
+267182	60	60	0		Ve'ho Manyhorns
+268044	60	60	0		Loren Ravenlock
+275173	60	60	0		Blackthorne Outrunner
+]]
 -- Zephras Isle
-Z[2521] = function() return {
-[165189]=C(7,30,0,"Cat","Cat"),
-[250868]=C(6,6,0,"Vuldren","Vuldren"),
-[250874]=C(10,10,0,"Vuldren Alpha","Vuldren Alpha"),
-[250921]=C(7,8,0,"Forest Sprite","Forest Sprite"),
-[250926]=C(3,4,0,"Scrawny Ursera","Scrawny Ursera"),
-[250927]=C(10,11,0,"Shadowgale Ursera","Shadowgale Ursera"),
-[250936]=C(13,13,0,"Den'dralass","Den'dralass"),
-[250937]=C(4,4,0,"Ursera Scavenger","Ursera Scavenger"),
-[251115]=C(5,5,0,"Urs'anah","Urs'anah"),
-[251143]=C(2,3,0,"Roiling Winds","Roiling Winds"),
-[251145]=C(4,4,0,"Al'Aketh Brute","Al'Aketh Brute"),
-[251160]=C(2,3,0,"Al'Aketh Convert","Al'Aketh Convert"),
-[251169]=C(1,1,0,"Pesky Cirrusfly","Pesky Cirrusfly"),
-[251245]=C(5,6,0,"Prideclaw","Prideclaw"),
-[251261]=C(7,7,0,"Hippogryph Matriarch","Hippogryph Matriarch"),
-[251284]=C(6,7,0,"Hippogryph Protector","Hippogryph Protector"),
-[251291]=C(6,6,0,"Hippogryph Youth","Hippogryph Youth"),
-[251402]=C(2,2,0,"Cirrusfly Soldier","Cirrusfly Soldier"),
-[251404]=C(3,3,0,"Cirrusfly Queen","Cirrusfly Queen"),
-[251448]=C(4,4,0,"Al'Aketh Neophyte","Al'Aketh Neophyte"),
-[251451]=C(5,5,0,"Al'Aketh Ambusher","Al'Aketh Ambusher"),
-[251622]=C(8,9,0,"Flutterfly","Flutterfly"),
-[251676]=C(10,11,0,"Wind Hollow","Wind Hollow"),
-[251707]=C(8,9,0,"Ornery Galestrider","Ornery Galestrider"),
-[251918]=C(7,7,0,"Highlands Bandit","Highlands Bandit"),
-[252068]=C(7,8,0,"Al'Aketh Stormcaller","Al'Aketh Stormcaller"),
-[252077]=C(6,6,0,"Skypriest Aanders","Skypriest Aanders"),
-[252481]=C(7,8,0,"Wind Sprite","Wind Sprite"),
-[252664]=C(10,11,0,"Al'Aketh Stormchaser","Al'Aketh Stormchaser"),
-[252665]=C(10,11,0,"Al'Aketh Footsoldier","Al'Aketh Footsoldier"),
-[252762]=C(10,11,0,"Al'Aketh Guardian","Al'Aketh Guardian"),
-[252763]=C(10,10,0,"Al'Aketh Spiritcaller","Al'Aketh Spiritcaller"),
-[252764]=C(10,11,0,"Al'Aketh Skypriest","Al'Aketh Skypriest"),
-[252765]=C(10,10,0,"Al'Aketh Blademaster","Al'Aketh Blademaster"),
-[252767]=C(10,11,0,"Al'Aketh Honor Guard","Al'Aketh Honor Guard"),
-[252802]=C(8,9,0,"Hungry Bandit","Hungry Bandit"),
-[252820]=C(8,9,0,"Bandit Highwayman","Bandit Highwayman"),
-[252863]=C(8,8,0,"Ferauu the Bludgeon","Ferauu the Bludgeon"),
-[252875]=C(8,9,0,"Bandit Henchman","Bandit Henchman"),
-[253002]=C(10,10,0,"Fillion Flamebreeze","Fillion Flamebreeze","A"),
-[253195]=C(8,9,0,"Al'Aketh Preacher","Al'Aketh Preacher"),
-[253281]=C(10,10,0,"Fillion Flamebreeze","Fillion Flamebreeze","A"),
-[253282]=C(8,9,0,"Shriekling Fledgling","Shriekling Fledgling"),
-[253283]=C(9,9,0,"Shriekling Matriarch","Shriekling Matriarch"),
-[253306]=C(10,10,0,"Index Esoteria","Index Esoteria","A"),
-[253310]=C(8,8,0,"Windshaper Shaman","Windshaper Shaman"),
-[253511]=C(8,9,0,"Al'Aketh Pillager","Al'Aketh Pillager"),
-[253782]=C(8,10,0,"Al'Aketh Attacker","Al'Aketh Attacker"),
-[254294]=C(12,12,0,"High Order Mage","High Order Mage","A"),
-[254296]=C(12,12,0,"Windshaper Shaman","Windshaper Shaman","H"),
-[254589]=C(8,8,1,"Vulgara the Insatiable","Vulgara the Insatiable"),
-[254596]=C(9,10,0,"Al'Aketh Healer","Al'Aketh Healer"),
-[254626]=C(9,10,0,"Al'Aketh Assassin","Al'Aketh Assassin"),
-[255534]=C(7,7,0,"\"Badwind\" Bennic","\"Badwind\" Bennic"),
-[256028]=C(6,6,2,"The Lost One","The Lost One"),
-[256108]=C(10,10,0,"Shadowgale Shrieker","Shadowgale Shrieker"),
-[256249]=C(9999,9999,0,"High Priestess Lorthuna","High Priestess Lorthuna","H"),
-[256250]=C(9,9,0,"Living Storm","Living Storm","H"),
-[256252]=C(5,5,0,"Whispering Winds","Whispering Winds","H"),
-[256492]=C(10,10,4,"Fernfeather","Fernfeather"),
-[256618]=C(10,10,0,"Windshaper Shaman","Windshaper Shaman","H"),
-[256619]=C(10,10,0,"High Order Mage","High Order Mage","A"),
-[256996]=C(7,8,0,"Al'Aketh Warrior","Al'Aketh Warrior"),
-[257521]=C(5,6,0,"High Order Apprentice","High Order Apprentice","A"),
-[257532]=C(5,6,0,"Windshaper Novice Seer","Windshaper Novice Seer","H"),
-[257862]=C(9999,9999,1,"Earthen Ring Shaman","Earthen Ring Shaman","H"),
-[257866]=C(9999,9999,0,"Kirin Tor Mage","Kirin Tor Mage","A"),
-[258443]=C(10,10,0,"Ur'endra","Ur'endra"),
-[258458]=C(10,10,0,"Slain Fledgling","Slain Fledgling"),
-[259058]=C(10,10,0,"Windshaper Shaman","Windshaper Shaman","H"),
-[259060]=C(10,10,0,"High Order Mage","High Order Mage","A"),
-[259385]=C(13,13,4,"Tel'daeor the Stormspeaker","Tel'daeor the Stormspeaker"),
-[259388]=C(13,13,0,"Mystmane","Mystmane"),
-[259398]=C(11,11,4,"Galemender Delanea","Galemender Delanea"),
-[265675]=C(30,30,0,"High Order Mage","High Order Mage","A"),
-[265760]=C(60,60,0,"Swift Umber Galestrider","Swift Umber Galestrider","A"),
-[265761]=C(60,60,0,"Swift Stormy Galestrider","Swift Stormy Galestrider","A"),
-[265762]=C(60,60,0,"Swift Empyrean Galestrider","Swift Empyrean Galestrider"),
-[267305]=C(1,1,0,"Stormy Galestrider","Stormy Galestrider"),
-[268605]=C(10,10,0,"Kuramaa","Kuramaa"),
-[268763]=C(12,12,0,"Manifestation of Flames","Manifestation of Flames","H"),
-[270201]=C(8,10,0,"Al'Aketh Brawler","Al'Aketh Brawler"),
-[271368]=C(1,22,0,"Shadowgale Squirrel","Shadowgale Squirrel"),
-[271707]=C(8,8,0,"Juvenile Cloudrunner","Juvenile Cloudrunner"),
-[271710]=C(9,9,0,"Cloudrunner Matriarch","Cloudrunner Matriarch"),
-[271712]=C(6,6,0,"Cloudrunner","Cloudrunner"),
-[272049]=C(60,60,0,"Saeyleenan","Saeyleenan"),
-[273264]=C(12,12,0,"Talisara Valewind","Talisara Valewind"),
-[273967]=C(10,10,0,"High Order Messenger","High Order Messenger"),
-[273968]=C(10,10,0,"High Order Messenger","High Order Messenger"),
-[274844]=C(10,10,0,"Culli Springwind","Culli Springwind","A"),
-[274868]=C(10,10,0,"Gabbel Shattergale","Gabbel Shattergale","A"),
-[274907]=C(12,12,0,"Belarysa Moonveil","Belarysa Moonveil","H"),
-[274930]=C(12,12,0,"Lyvia Stormsinger","Lyvia Stormsinger","A"),
-[274934]=C(12,12,0,"Amandriel","Amandriel"),
-[276415]=C(9,10,0,"Windshaper Guardian","Windshaper Guardian","H"),
-[276416]=C(9,10,0,"Windshaper Elementalist","Windshaper Elementalist","H"),
-[277067]=C(11,11,0,"Vela El'wyth","Vela El'wyth"),
-[277410]=C(10,10,0,"Cereza Galeforce","Cereza Galeforce"),
-} end
+Z[2521] = [[
+165189	7	30	0		Cat
+250868	6	6	0		Vuldren
+250874	10	10	0		Vuldren Alpha
+250921	7	8	0		Forest Sprite
+250926	3	4	0		Scrawny Ursera
+250927	10	11	0		Shadowgale Ursera
+250936	13	13	0		Den'dralass
+250937	4	4	0		Ursera Scavenger
+251115	5	5	0		Urs'anah
+251143	2	3	0		Roiling Winds
+251145	4	4	0		Al'Aketh Brute
+251160	2	3	0		Al'Aketh Convert
+251169	1	1	0		Pesky Cirrusfly
+251245	5	6	0		Prideclaw
+251261	7	7	0		Hippogryph Matriarch
+251284	6	7	0		Hippogryph Protector
+251291	6	6	0		Hippogryph Youth
+251402	2	2	0		Cirrusfly Soldier
+251404	3	3	0		Cirrusfly Queen
+251448	4	4	0		Al'Aketh Neophyte
+251451	5	5	0		Al'Aketh Ambusher
+251622	8	9	0		Flutterfly
+251676	10	11	0		Wind Hollow
+251707	8	9	0		Ornery Galestrider
+251918	7	7	0		Highlands Bandit
+252068	7	8	0		Al'Aketh Stormcaller
+252077	6	6	0		Skypriest Aanders
+252481	7	8	0		Wind Sprite
+252664	10	11	0		Al'Aketh Stormchaser
+252665	10	11	0		Al'Aketh Footsoldier
+252762	10	11	0		Al'Aketh Guardian
+252763	10	10	0		Al'Aketh Spiritcaller
+252764	10	11	0		Al'Aketh Skypriest
+252765	10	10	0		Al'Aketh Blademaster
+252767	10	11	0		Al'Aketh Honor Guard
+252802	8	9	0		Hungry Bandit
+252820	8	9	0		Bandit Highwayman
+252863	8	8	0		Ferauu the Bludgeon
+252875	8	9	0		Bandit Henchman
+253002	10	10	0		Fillion Flamebreeze	A
+253195	8	9	0		Al'Aketh Preacher
+253281	10	10	0		Fillion Flamebreeze	A
+253282	8	9	0		Shriekling Fledgling
+253283	9	9	0		Shriekling Matriarch
+253306	10	10	0		Index Esoteria	A
+253310	8	8	0		Windshaper Shaman
+253511	8	9	0		Al'Aketh Pillager
+253782	8	10	0		Al'Aketh Attacker
+254294	12	12	0		High Order Mage	A
+254296	12	12	0		Windshaper Shaman	H
+254589	8	8	1		Vulgara the Insatiable
+254596	9	10	0		Al'Aketh Healer
+254626	9	10	0		Al'Aketh Assassin
+255534	7	7	0		"Badwind" Bennic
+256028	6	6	2		The Lost One
+256108	10	10	0		Shadowgale Shrieker
+256249	9999	9999	0		High Priestess Lorthuna	H
+256250	9	9	0		Living Storm	H
+256252	5	5	0		Whispering Winds	H
+256492	10	10	4		Fernfeather
+256618	10	10	0		Windshaper Shaman	H
+256619	10	10	0		High Order Mage	A
+256996	7	8	0		Al'Aketh Warrior
+257521	5	6	0		High Order Apprentice	A
+257532	5	6	0		Windshaper Novice Seer	H
+257862	9999	9999	1		Earthen Ring Shaman	H
+257866	9999	9999	0		Kirin Tor Mage	A
+258443	10	10	0		Ur'endra
+258458	10	10	0		Slain Fledgling
+259058	10	10	0		Windshaper Shaman	H
+259060	10	10	0		High Order Mage	A
+259385	13	13	4		Tel'daeor the Stormspeaker
+259388	13	13	0		Mystmane
+259398	11	11	4		Galemender Delanea
+265675	30	30	0		High Order Mage	A
+265760	60	60	0		Swift Umber Galestrider	A
+265761	60	60	0		Swift Stormy Galestrider	A
+265762	60	60	0		Swift Empyrean Galestrider
+267305	1	1	0		Stormy Galestrider
+268605	10	10	0		Kuramaa
+268763	12	12	0		Manifestation of Flames	H
+270201	8	10	0		Al'Aketh Brawler
+271368	1	22	0		Shadowgale Squirrel
+271707	8	8	0		Juvenile Cloudrunner
+271710	9	9	0		Cloudrunner Matriarch
+271712	6	6	0		Cloudrunner
+272049	60	60	0		Saeyleenan
+273264	12	12	0		Talisara Valewind
+273967	10	10	0		High Order Messenger
+273968	10	10	0		High Order Messenger
+274844	10	10	0		Culli Springwind	A
+274868	10	10	0		Gabbel Shattergale	A
+274907	12	12	0		Belarysa Moonveil	H
+274930	12	12	0		Lyvia Stormsinger	A
+274934	12	12	0		Amandriel
+276415	9	10	0		Windshaper Guardian	H
+276416	9	10	0		Windshaper Elementalist	H
+277067	11	11	0		Vela El'wyth
+277410	10	10	0		Cereza Galeforce
+]]
 -- Riverglades
-Z[2548] = function() return {
-[165189]=C(7,30,0,"Cat","Cat"),
-[255769]=C(37,38,0,"Redridge Brute","Redridge Brute"),
-[255772]=C(36,36,0,"Redridge Trapper","Redridge Trapper"),
-[255829]=C(50,50,1,"Clugfist","Clugfist"),
-[255894]=C(40,40,0,"Innkeeper Zizplink","Innkeeper Zizplink"),
-[255901]=C(37,37,0,"Sand Crawler","Sand Crawler"),
-[255996]=C(55,55,0,"Rog'mar Grunt","Rog'mar Grunt"),
-[256675]=C(38,38,0,"Innkeeper Toka","Innkeeper Toka"),
-[256728]=C(40,40,0,"Na'zok","Na'zok"),
-[256797]=C(42,42,0,"Twilight Corrupter","Twilight Corrupter"),
-[256798]=C(37,38,0,"Twilight Neophyte","Twilight Neophyte"),
-[256799]=C(44,44,0,"Twilight Champion","Twilight Champion"),
-[256952]=C(40,40,0,"Twilight Raider","Twilight Raider"),
-[257059]=C(45,45,1,"Chub'chob","Chub'chob"),
-[257079]=C(45,45,0,"Cavalry Scout Alturin","Cavalry Scout Alturin","A"),
-[257292]=C(50,50,0,"Brakkit","Brakkit"),
-[257294]=C(50,50,0,"Lizi Pinchwhistle","Lizi Pinchwhistle"),
-[257591]=C(55,55,0,"Ashe Amberhall","Ashe Amberhall","A"),
-[257595]=C(38,38,0,"Barracks Master Harlan","Barracks Master Harlan"),
-[257926]=C(39,39,0,"Farholde Scout Trainee","Farholde Scout Trainee"),
-[258331]=C(37,37,0,"Young Paletusk","Young Paletusk","A"),
-[258573]=C(36,36,0,"Mudfin Oracle","Mudfin Oracle"),
-[258588]=C(40,40,0,"Jumbo Crawfish","Jumbo Crawfish","A"),
-[258686]=C(46,46,0,"Farholde Lookout","Farholde Lookout","A"),
-[259046]=C(38,38,0,"Freshwater Crocolisk","Freshwater Crocolisk"),
-[259052]=C(38,39,0,"Rog'mar Poacher","Rog'mar Poacher","H"),
-[259056]=C(45,45,0,"Komuk","Komuk"),
-[259267]=C(36,36,0,"Plains Coyote","Plains Coyote"),
-[259269]=C(38,39,0,"High Plains Buzzard","High Plains Buzzard"),
-[259287]=C(41,41,0,"Melanie Sable","Melanie Sable"),
-[259859]=C(38,38,0,"Wheatley","Wheatley"),
-[259961]=C(45,45,0,"Wharfmaster Whizzbuzz","Wharfmaster Whizzbuzz"),
-[259962]=C(40,40,0,"Fimbo Greasemitz","Fimbo Greasemitz"),
-[260045]=C(40,40,0,"Sentry Woods","Sentry Woods"),
-[260060]=C(40,40,0,"Sentry Price","Sentry Price"),
-[260061]=C(55,55,0,"Lieutenant Maclan","Lieutenant Maclan"),
-[260066]=C(40,40,0,"Sentry Gellin","Sentry Gellin"),
-[260211]=C(42,42,1,"Scoutmaster Vargas","Scoutmaster Vargas"),
-[260231]=C(40,40,0,"Argo Brinewhistle","Argo Brinewhistle"),
-[260235]=C(42,42,0,"Trapclaw","Trapclaw"),
-[260343]=C(38,38,0,"Maka","Maka"),
-[260359]=C(41,41,0,"Sadi","Sadi","A"),
-[260561]=C(39,39,0,"Dina Mite","Dina Mite","A"),
-[260564]=C(39,39,0,"Rex Hardwire","Rex Hardwire"),
-[260568]=C(39,39,0,"Jazzle Cheapshot","Jazzle Cheapshot","A"),
-[260569]=C(39,39,0,"Shady Smuggler","Shady Smuggler","A"),
-[262037]=C(37,38,0,"Roosting Duskbat","Roosting Duskbat"),
-[263120]=C(40,40,0,"Gray Dawnbright","Gray Dawnbright"),
-[263307]=C(37,37,0,"Glade Viper","Glade Viper"),
-[263343]=C(38,38,0,"Low Plains Buzzard","Low Plains Buzzard"),
-[263348]=C(37,37,0,"Roving Tallstrider","Roving Tallstrider","A"),
-[263367]=C(40,40,0,"Sleebo Fizzlespout","Sleebo Fizzlespout"),
-[263369]=C(38,38,0,"G45-B4G","G45-B4G"),
-[263380]=C(42,42,0,"Ghostmaw","Ghostmaw"),
-[272228]=C(36,36,0,"Harvest Sentry","Harvest Sentry"),
-[272313]=C(39,40,0,"Brineshell Clacker","Brineshell Clacker"),
-} end
+Z[2548] = [[
+165189	7	30	0		Cat
+255769	37	38	0		Redridge Brute
+255772	36	36	0		Redridge Trapper
+255829	50	50	1		Clugfist
+255894	40	40	0		Innkeeper Zizplink
+255901	37	37	0		Sand Crawler
+255996	55	55	0		Rog'mar Grunt
+256675	38	38	0		Innkeeper Toka
+256728	40	40	0		Na'zok
+256797	42	42	0		Twilight Corrupter
+256798	37	38	0		Twilight Neophyte
+256799	44	44	0		Twilight Champion
+256952	40	40	0		Twilight Raider
+257059	45	45	1		Chub'chob
+257079	45	45	0		Cavalry Scout Alturin	A
+257292	50	50	0		Brakkit
+257294	50	50	0		Lizi Pinchwhistle
+257591	55	55	0		Ashe Amberhall	A
+257595	38	38	0		Barracks Master Harlan
+257926	39	39	0		Farholde Scout Trainee
+258331	37	37	0		Young Paletusk	A
+258573	36	36	0		Mudfin Oracle
+258588	40	40	0		Jumbo Crawfish	A
+258686	46	46	0		Farholde Lookout	A
+259046	38	38	0		Freshwater Crocolisk
+259052	38	39	0		Rog'mar Poacher	H
+259056	45	45	0		Komuk
+259267	36	36	0		Plains Coyote
+259269	38	39	0		High Plains Buzzard
+259287	41	41	0		Melanie Sable
+259859	38	38	0		Wheatley
+259961	45	45	0		Wharfmaster Whizzbuzz
+259962	40	40	0		Fimbo Greasemitz
+260045	40	40	0		Sentry Woods
+260060	40	40	0		Sentry Price
+260061	55	55	0		Lieutenant Maclan
+260066	40	40	0		Sentry Gellin
+260211	42	42	1		Scoutmaster Vargas
+260231	40	40	0		Argo Brinewhistle
+260235	42	42	0		Trapclaw
+260343	38	38	0		Maka
+260359	41	41	0		Sadi	A
+260561	39	39	0		Dina Mite	A
+260564	39	39	0		Rex Hardwire
+260568	39	39	0		Jazzle Cheapshot	A
+260569	39	39	0		Shady Smuggler	A
+262037	37	38	0		Roosting Duskbat
+263120	40	40	0		Gray Dawnbright
+263307	37	37	0		Glade Viper
+263343	38	38	0		Low Plains Buzzard
+263348	37	37	0		Roving Tallstrider	A
+263367	40	40	0		Sleebo Fizzlespout
+263369	38	38	0		G45-B4G
+263380	42	42	0		Ghostmaw
+272228	36	36	0		Harvest Sentry
+272313	39	40	0		Brineshell Clacker
+]]
 -- Shen'dralas
-Z[2652] = function() return {
-[253272]=C(43,43,0,"Magram Necromancer","Magram Necromancer"),
-} end
+Z[2652] = [[
+253272	43	43	0		Magram Necromancer
+]]
 
-ns.ZONE_CREATURES = ns.LazyZones(Z)
+ns.ZONE_CREATURES = ns.LazyZones(Z, Zone)
 
 if ns.Mark then ns.Mark("ZoneCreatures") end

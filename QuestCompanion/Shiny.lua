@@ -68,10 +68,6 @@ local FR = {
 	COMP_REQ_shiny         = "%d brillantes",
 	JRN_STAT_shiny         = "brillantes",
 	SHINY_MSG_UNLOCK       = "%d créatures brillantes ! Nouveau : %s.",
-	SHINY_CARD             = "Brillante !",
-	SHINY_PREV             = "Brillante, abattue le %s.",
-	SHINY_EVO              = "Brillantes : %d  ·  prochain cadeau à %d",
-	SHINY_EVO_DONE         = "Brillantes : %d  ·  tous leurs cadeaux sont à toi",
 	OPT_PAGE_DAILY         = "Au jour le jour",
 	OPT_DAILY_MARK         = "Étoile sur les brillantes",
 	OPT_DAILY_MARK_DESC    = "Une étoile au-dessus d'une créature brillante, si tu joues seul ou mènes le groupe, et si elle n'a pas déjà d'icône.",
@@ -86,10 +82,6 @@ local EN = {
 	COMP_REQ_shiny         = "%d shinies",
 	JRN_STAT_shiny         = "shinies",
 	SHINY_MSG_UNLOCK       = "%d shiny creatures! New: %s.",
-	SHINY_CARD             = "Shiny!",
-	SHINY_PREV             = "Shiny, defeated on %s.",
-	SHINY_EVO              = "Shinies: %d  ·  next gift at %d",
-	SHINY_EVO_DONE         = "Shinies: %d  ·  all their gifts are yours",
 	OPT_PAGE_DAILY         = "Day by day",
 	OPT_DAILY_MARK         = "Star on shinies",
 	OPT_DAILY_MARK_DESC    = "A star above a shiny creature, if you play solo or lead the group, and if it has no icon yet.",
@@ -117,24 +109,8 @@ local P = {
 		{ "%s brillant… je n'en reviens pas !", "A shiny %s… I can't believe it!" },
 	},
 }
-local LINES_FR, LINES_EN, POOLS = {}, {}, {}
-for name, lines in pairs(P) do
-	local keys = {}
-	for index, pair in ipairs(lines) do
-		local key = "COMP_SAY_" .. name .. (index > 1 and ("_" .. index) or "")
-		LINES_FR[key], LINES_EN[key] = pair[1], pair[2]
-		keys[index] = key
-	end
-	POOLS[name] = keys
-end
-ns.RegisterStrings(LINES_FR, LINES_EN)
-if type(ns.COMPANION_POOLS) == "table" then
-	for name, keys in pairs(POOLS) do ns.COMPANION_POOLS[name] = keys end
-end
-local shared = ns.COMPANION_LINE_STRINGS
-if type(shared) == "table" then
-	for key, text in pairs(LINES_FR) do shared.fr[key], shared.en[key] = text, LINES_EN[key] end
-end
+-- enregistrement commun (CompanionLines.lua) ; listes de clés en test seulement
+local POOLS = ns.RegisterCompanionLines(P)
 ns.SHINY_POOLS = POOLS
 
 if type(ns.COMPANION_FX) == "table" then
@@ -557,8 +533,9 @@ local function MarkFor(plate)
 		local pulse = 0.5 + 0.5 * math.sin(t * math.pi * 1.6)
 		self.glow:SetAlpha(0.25 + 0.5 * pulse)
 		self.glow:SetSize(size * (1.6 + 0.5 * pulse), size * (1.6 + 0.5 * pulse))
-		local c = { gold[1] + (light[1] - gold[1]) * pulse, gold[2] + (light[2] - gold[2]) * pulse, gold[3] + (light[3] - gold[3]) * pulse }
-		self.gem:SetVertexColor(c[1], c[2], c[3], 1)
+		-- trois nombres, pas de table neuve à chaque image (2.8.1)
+		self.gem:SetVertexColor(gold[1] + (light[1] - gold[1]) * pulse, gold[2] + (light[2] - gold[2]) * pulse,
+			gold[3] + (light[3] - gold[3]) * pulse, 1)
 	end)
 	frame:Hide()
 	ns.shinyPlateMarks[plate] = frame

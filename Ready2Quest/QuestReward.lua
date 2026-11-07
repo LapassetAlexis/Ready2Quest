@@ -47,7 +47,6 @@ local FR = {
 	OPT_REWARD_TOOLTIP   = "Montrer dans l'infobulle",
 	OPT_REWARD_SELL      = "Repli : la plus chère",
 	REWARD_FOR_YOU       = "Pour toi",
-	REWARD_TO_SELL       = "À vendre",
 	REWARD_SELL_PRICE    = "À vendre : %s",
 	REWARD_CHAT          = "Récompense conseillée : %s (%s)",
 	REWARD_WHY_SELL      = "rien ne t'améliore, elle vaut %s",
@@ -57,7 +56,6 @@ local FR = {
 	REWARD_TT_UPGRADE    = "Ready2Quest : amélioration",
 	REWARD_TT_UPGRADE_DELTA = "Ready2Quest : amélioration (%s)",
 	REWARD_ILVL          = "niveau d'objet %s",
-	REWARD_ARMOR         = "Armure",
 	REWARD_DPS           = "DPS",
 }
 local EN = {
@@ -67,7 +65,6 @@ local EN = {
 	OPT_REWARD_TOOLTIP   = "Show in the tooltip",
 	OPT_REWARD_SELL      = "Fallback: the priciest",
 	REWARD_FOR_YOU       = "For you",
-	REWARD_TO_SELL       = "To sell",
 	REWARD_SELL_PRICE    = "To sell: %s",
 	REWARD_CHAT          = "Suggested reward: %s (%s)",
 	REWARD_WHY_SELL      = "nothing upgrades you, it's worth %s",
@@ -77,7 +74,6 @@ local EN = {
 	REWARD_TT_UPGRADE    = "Ready2Quest: upgrade",
 	REWARD_TT_UPGRADE_DELTA = "Ready2Quest: upgrade (%s)",
 	REWARD_ILVL          = "item level %s",
-	REWARD_ARMOR         = "Armor",
 	REWARD_DPS           = "DPS",
 }
 ns.RegisterStrings(FR, EN)

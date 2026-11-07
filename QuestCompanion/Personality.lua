@@ -59,7 +59,6 @@ local FR = {
 	OPT_TRAIT_SOURCE_DESC_2 = "Il garde son caractère quelle que soit son apparence.",
 	OPT_TRAIT_PICK       = "Son caractère",
 	OPT_TRAIT_NOW        = "Aujourd'hui : %s. %s",
-	HOVER_TRAIT          = "%s",
 }
 local EN = {
 	TRAIT_curious        = "Curious",
@@ -102,7 +101,6 @@ local EN = {
 	OPT_TRAIT_SOURCE_DESC_2 = "It keeps its own character whatever its appearance.",
 	OPT_TRAIT_PICK       = "Its character",
 	OPT_TRAIT_NOW        = "Today: %s. %s",
-	HOVER_TRAIT          = "%s",
 }
 ns.RegisterStrings(FR, EN)
 if ns.KEEP_STRINGS then ns.PERSONALITY_STRINGS = { fr = FR, en = EN } end

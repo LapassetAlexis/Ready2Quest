@@ -99,7 +99,6 @@ local FR = {
 	INN_GIFT         = "À %d cartes pleines : %s.",
 	MIS_PERFECT      = "Jours aux trois missions : %d · à %d : %s.",
 	DAILY_MSG_UNLOCK = "Nouvelle apparence : %s !",
-	DAY_MISSIONS     = "Missions du jour",
 	DAY_GROUP_trait  = "Du compagnon",
 	DAY_GROUP_zone   = "Du jour",
 	DAY_GROUP_week   = "De la semaine",
@@ -151,7 +150,6 @@ local EN = {
 	INN_GIFT         = "At %d full cards: %s.",
 	MIS_PERFECT      = "Days with all three missions: %d · at %d: %s.",
 	DAILY_MSG_UNLOCK = "New appearance: %s!",
-	DAY_MISSIONS     = "Missions of the day",
 	DAY_GROUP_trait  = "From your companion",
 	DAY_GROUP_zone   = "Of the day",
 	DAY_GROUP_week   = "Of the week",
@@ -187,24 +185,8 @@ local P = {
 		{ "Carte pleine ! L'aubergiste m'offre un festin !", "Card full! The innkeeper treats me to a feast!" },
 	},
 }
-local LINES_FR, LINES_EN, POOLS = {}, {}, {}
-for name, lines in pairs(P) do
-	local keys = {}
-	for index, pair in ipairs(lines) do
-		local key = "COMP_SAY_" .. name .. (index > 1 and ("_" .. index) or "")
-		LINES_FR[key], LINES_EN[key] = pair[1], pair[2]
-		keys[index] = key
-	end
-	POOLS[name] = keys
-end
-ns.RegisterStrings(LINES_FR, LINES_EN)
-if type(ns.COMPANION_POOLS) == "table" then
-	for name, keys in pairs(POOLS) do ns.COMPANION_POOLS[name] = keys end
-end
-local shared = ns.COMPANION_LINE_STRINGS
-if type(shared) == "table" then
-	for key, text in pairs(LINES_FR) do shared.fr[key], shared.en[key] = text, LINES_EN[key] end
-end
+-- enregistrement commun (CompanionLines.lua) ; listes de clés en test seulement
+local POOLS = ns.RegisterCompanionLines(P)
 ns.DAILY_POOLS = POOLS
 
 ns.RegisterDefaults({ companionMissions = true })

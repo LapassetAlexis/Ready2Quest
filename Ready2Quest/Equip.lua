@@ -43,32 +43,6 @@ local EQUIP_LOC_SLOTS = {
 	INVTYPE_TABARD         = { 19 },
 }
 
-local STAT_LABELS = {
-	ITEM_MOD_STRENGTH_SHORT         = "Force",
-	ITEM_MOD_AGILITY_SHORT          = "Agilité",
-	ITEM_MOD_INTELLECT_SHORT        = "Intelligence",
-	ITEM_MOD_STAMINA_SHORT          = "Endurance",
-	ITEM_MOD_SPIRIT_SHORT           = "Esprit",
-	ITEM_MOD_ARMOR                  = "Armure",
-	ITEM_MOD_CRIT_RATING_SHORT      = "Score crit",
-	ITEM_MOD_HASTE_RATING_SHORT     = "Hâte",
-	ITEM_MOD_MASTERY_RATING_SHORT   = "Maîtrise",
-	ITEM_MOD_VERSATILITY            = "Polyvalence",
-	ITEM_MOD_DODGE_RATING_SHORT     = "Esquive",
-	ITEM_MOD_PARRY_RATING_SHORT     = "Parade",
-	ITEM_MOD_BLOCK_RATING_SHORT     = "Blocage",
-	ITEM_MOD_ATTACK_POWER           = "Puissance d'attaque",
-	ITEM_MOD_SPELL_POWER            = "Puissance des sorts",
-}
-
-local function StatLabel(key)
-	if STAT_LABELS[key] then return STAT_LABELS[key] end
-	if type(key) == "string" then
-		return (key:gsub("ITEM_MOD_", ""):gsub("_SHORT", ""):gsub("_", " "))
-	end
-	return tostring(key)
-end
-
 -- ---------------------------------------------------------------------------
 -- Lecture de l'équipement
 -- ---------------------------------------------------------------------------
@@ -79,14 +53,6 @@ local function ItemLinkForSlot(slot)
 	return nil
 end
 ns.ItemLinkForSlot = ItemLinkForSlot
-
-local function ItemTextureForSlot(slot)
-	if type(GetInventoryItemTexture) == "function" then
-		local ok, texture = pcall(GetInventoryItemTexture, "player", slot)
-		if ok then return texture end
-	end
-	return nil
-end
 
 local function ItemData(link)
 	if not link then return nil end

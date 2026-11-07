@@ -357,8 +357,22 @@ def build_quests(entities, fr, to_map, zones_wanted, hidden, events):
 # ---------------------------------------------------------------------------
 # Écriture
 # ---------------------------------------------------------------------------
-def lua_string(text):
-    return '"' + text.replace("\\", "\\\\").replace('"', '\\"').replace("\n", "\\n").replace("\r", "\\r") + '"'
+def compact_field(text):
+    """Champ d'une ligne compacte : ni tabulation, ni saut de ligne, jamais vide
+    (un champ vide veut dire « comme l'anglais » ou « absent »)."""
+    assert text and "\t" not in text and "\n" not in text and "\r" not in text, repr(text)
+    return text
+
+
+def long_string(rows):
+    """Chaîne longue Lua [=[ … ]=] : une ligne par entrée, terminée par un saut
+    de ligne (le premier saut après l'ouverture est ignoré par Lua)."""
+    body = "".join(row + "\n" for row in rows)
+    level = 0
+    while ("]" + "=" * level + "]") in body or body.endswith("]" + "=" * level):
+        level += 1
+    eq = "=" * level
+    return "[%s[\n%s]%s]" % (eq, body, eq)
 
 
 def header(filename, what, meta, flavor, layers):
@@ -400,11 +414,19 @@ def write_creatures(path, zones, meta, flavor, layers, names):
         "-- Créatures combattables en extérieur : ni bestioles, ni PNJ techniques, ni PNJ",
         "-- amicaux envers les deux factions, ni événements saisonniers (voir le script).",
         "",
-        "-- Chargement paresseux : une fonction par zone, construite à sa première lecture",
-        "-- (ns.LazyZones, Core.lua) ; parcourir avec ns.ZoneIds / ns.ZoneEach, pas pairs.",
+        "-- Chargement paresseux : une chaîne compacte par zone, lue en tables à sa",
+        "-- première lecture (ns.LazyZones, Core.lua) ; parcourir avec ns.ZoneIds /",
+        "-- ns.ZoneEach, pas pairs. Une ligne par créature, champs séparés par une",
+        "-- tabulation : npcID, niveau min, niveau max, rang, nom français (vide =",
+        "-- comme l'anglais), nom anglais, puis f s'il y en a un.",
         "",
-        "local function C(lo, hi, rank, fr, en, f)",
-        "\treturn { lvl = { lo, hi }, rank = rank, fr = fr, en = en, f = f }",
+        "local function Zone(text)",
+        "\tlocal zone = {}",
+        "\tfor npc, lo, hi, rank, fr, en, f in text:gmatch(\"(%d+)\\t(%-?%d+)\\t(%-?%d+)\\t(%-?%d+)\\t([^\\t\\n]*)\\t([^\\t\\n]*)\\t?([^\\t\\n]*)\\n\") do",
+        "\t\tzone[tonumber(npc)] = { lvl = { tonumber(lo), tonumber(hi) }, rank = tonumber(rank),",
+        "\t\t\tfr = fr ~= \"\" and fr or en, en = en, f = f ~= \"\" and f or nil }",
+        "\tend",
+        "\treturn zone",
         "end",
         "",
         "local Z = {}",
@@ -412,16 +434,17 @@ def write_creatures(path, zones, meta, flavor, layers, names):
     ]))
     for ui_map in sorted(zones):
         out.append("-- %s" % names[ui_map])
-        out.append("Z[%d] = function() return {" % ui_map)
+        rows = []
         for npc_id in sorted(zones[ui_map]):
             lo, hi, rank, fr, en, f = zones[ui_map][npc_id]
-            args = "%d,%d,%d,%s,%s" % (lo, hi, rank, lua_string(fr), lua_string(en))
+            fields = ["%d" % npc_id, "%d" % lo, "%d" % hi, "%d" % rank,
+                      "" if fr == en else compact_field(fr), compact_field(en)]
             if f:
-                args += ',"%s"' % f
-            out.append("[%d]=C(%s)," % (npc_id, args))
-        out.append("} end")
+                fields.append(compact_field(f))
+            rows.append("\t".join(fields))
+        out.append("Z[%d] = %s" % (ui_map, long_string(rows)))
     out.append("")
-    out.append("ns.ZONE_CREATURES = ns.LazyZones(Z)")
+    out.append("ns.ZONE_CREATURES = ns.LazyZones(Z, Zone)")
     out.append("")
     out.append('if ns.Mark then ns.Mark("ZoneCreatures") end')
     out.append("")
@@ -467,11 +490,24 @@ def write_quests(path, zones, meta, flavor, layers, names):
         "--   zone unique des donneurs. Exclues : quêtes cachées par Questie, d'événement",
         "--   saisonnier, répétables, journalières / hebdomadaires, de métier, JcJ (voir le script).",
         "",
-        "-- Chargement paresseux : une fonction par zone, construite à sa première lecture",
-        "-- (ns.LazyZones, Core.lua) ; parcourir avec ns.ZoneIds / ns.ZoneEach, pas pairs.",
+        "-- Chargement paresseux : une chaîne compacte par zone, lue en tables à sa",
+        "-- première lecture (ns.LazyZones, Core.lua) ; parcourir avec ns.ZoneIds /",
+        "-- ns.ZoneEach, pas pairs. Une ligne par quête, champs séparés par une",
+        "-- tabulation : questID, lvl, req, races, classes, nom français (vide =",
+        "-- comme l'anglais), nom anglais, puis ex (« id,id,… ») s'il y en a.",
         "",
-        "local function Q(lvl, req, races, classes, fr, en, ex)",
-        "\treturn { lvl = lvl, req = req, races = races, classes = classes, fr = fr or en, en = en, ex = ex }",
+        "local function Zone(text)",
+        "\tlocal zone = {}",
+        "\tfor qid, lvl, req, races, classes, fr, en, ex in text:gmatch(\"(%d+)\\t(%-?%d+)\\t(%-?%d+)\\t(%d+)\\t(%d+)\\t([^\\t\\n]*)\\t([^\\t\\n]*)\\t?([^\\t\\n]*)\\n\") do",
+        "\t\tlocal list",
+        "\t\tif ex ~= \"\" then",
+        "\t\t\tlist = {}",
+        "\t\t\tfor id in ex:gmatch(\"%d+\") do list[#list + 1] = tonumber(id) end",
+        "\t\tend",
+        "\t\tzone[tonumber(qid)] = { lvl = tonumber(lvl), req = tonumber(req), races = tonumber(races),",
+        "\t\t\tclasses = tonumber(classes), fr = fr ~= \"\" and fr or en, en = en, ex = list }",
+        "\tend",
+        "\treturn zone",
         "end",
         "",
         "local Z = {}",
@@ -479,17 +515,18 @@ def write_quests(path, zones, meta, flavor, layers, names):
     ]))
     for ui_map in sorted(zones):
         out.append("-- %s" % names[ui_map])
-        out.append("Z[%d] = function() return {" % ui_map)
+        rows = []
         for qid in sorted(zones[ui_map]):
             lvl, req, races, classes, fr, en, ex = zones[ui_map][qid]
-            args = "%d,%d,%d,%d,%s,%s" % (lvl, req, races, classes, "nil" if fr == en else lua_string(fr),
-                                         lua_string(en))
+            assert races >= 0 and classes >= 0 and all(int(i) > 0 for i in (ex or []))
+            fields = ["%d" % qid, "%d" % lvl, "%d" % req, "%d" % races, "%d" % classes,
+                      "" if fr == en else compact_field(fr), compact_field(en)]
             if ex:
-                args += ",{%s}" % ",".join(str(i) for i in ex)
-            out.append("[%d]=Q(%s)," % (qid, args))
-        out.append("} end")
+                fields.append(",".join(str(i) for i in ex))
+            rows.append("\t".join(fields))
+        out.append("Z[%d] = %s" % (ui_map, long_string(rows)))
     out.append("")
-    out.append("ns.ZONE_QUESTS = ns.LazyZones(Z)")
+    out.append("ns.ZONE_QUESTS = ns.LazyZones(Z, Zone)")
     out.append("")
     out.append('if ns.Mark then ns.Mark("ZoneQuests_%s") end' % flavor["name"])
     out.append("")

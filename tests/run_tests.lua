@@ -241,6 +241,8 @@ local function NewRegion(kind, name, parent)
 	end
 	function region:SetNormalFontObject() end
 	function region:SetDisabledFontObject() end
+	-- addon qui l'a créée (mesure de la mémoire après connexion, --memoire)
+	region.mockAddon = Mock.currentAddon
 	Mock.frames[#Mock.frames + 1] = region
 	return region
 end
@@ -597,6 +599,7 @@ local function LoadAddonFile(name)
 	local report = rawget(_G, "MEMORY_REPORT")
 	local before
 	if report then collectgarbage("collect"); collectgarbage("collect"); before = collectgarbage("count") end
+	Mock.currentAddon = name:match("^([^/]+)/")
 	local chunk, compileError = loadstring(source, "@" .. path)
 	assert(chunk, "erreur de compilation dans " .. path .. ":\n" .. tostring(compileError))
 	-- comme le client : chaque addon reçoit son nom et sa propre table privée
@@ -610,6 +613,7 @@ local function LoadAddonFile(name)
 		collectgarbage("collect"); collectgarbage("collect")
 		report[#report + 1] = { name = name, kb = collectgarbage("count") - before }
 	end
+	Mock.currentAddon = nil
 end
 
 -- La liste des fichiers vient du .toc, comme pour le client : un module
@@ -655,21 +659,10 @@ do
 	end
 end
 _G.TOC_FILES = tocFiles
--- mesure de la mémoire seule : tous les fichiers chargés, puis on s'arrête
+-- mesure de la mémoire seule : tous les fichiers chargés ; la connexion est
+-- jouée plus bas (après ResetWorld), puis on s'arrête
 if rawget(_G, "MEMORY_ONLY") then
 	for _, file in ipairs(Mock.moduleFiles) do LoadAddonFile(file) end
-	-- les hauts faits construisent leur catalogue à la première lecture (index
-	-- du moteur, quelques secondes après la connexion) : ce qu'il ajoute
-	local report = rawget(_G, "MEMORY_REPORT")
-	if report and QNS.FeatDefs then
-		collectgarbage("collect"); collectgarbage("collect")
-		local before = collectgarbage("count")
-		QNS:FeatDefs()
-		collectgarbage("collect"); collectgarbage("collect")
-		report[#report + 1] = { name = "Après connexion/QuestCompanion : catalogue des hauts faits construit",
-			kb = collectgarbage("count") - before }
-	end
-	return
 end
 
 ----------------------------------------------------------------------------
@@ -777,7 +770,96 @@ local function ResetWorld()
 end
 
 ----------------------------------------------------------------------------
--- 3 bis. Aperçu hors-jeu (tests/snapshot.py) : l'addon est chargé, on rend
+-- 3 bis. Mesure de la mémoire après connexion (--memoire) : chaque addon
+-- reçoit ADDON_LOADED, PLAYER_LOGIN, PLAYER_ENTERING_WORLD, ses minuteries et
+-- dix secondes d'OnUpdate (installation neuve, client français). Les régions
+-- de la maquette sont de grosses tables (une fermeture par méthode) : leur
+-- coût est retiré du total et leur nombre affiché à part (le vrai client les
+-- garde hors de la mémoire Lua).
+----------------------------------------------------------------------------
+if rawget(_G, "MEMORY_ONLY") then
+	local report = rawget(_G, "MEMORY_REPORT")
+	local function Collect() collectgarbage("collect"); collectgarbage("collect"); return collectgarbage("count") end
+	-- coût d'une région de la maquette
+	local before = Collect()
+	local probes = {}
+	for i = 1, 200 do probes[i] = NewRegion("Frame") end
+	local regionKb = (Collect() - before) / 200
+	for _ = 1, 200 do table.remove(Mock.frames) end
+	probes = nil
+	ResetWorld()
+	NS:DetectCapabilities()
+	-- minuteries rangées par addon (celui qui les pose)
+	local timers = {}
+	_G.C_Timer.After = function(_, fn)
+		local addon = Mock.currentAddon or "?"
+		timers[addon] = timers[addon] or {}
+		table.insert(timers[addon], fn)
+	end
+	local function ForAddon(addon, fn)
+		local previous = Mock.currentAddon
+		Mock.currentAddon = addon
+		fn()
+		Mock.currentAddon = previous
+	end
+	local function FireFor(addon, event, ...)
+		local args = { ... }
+		ForAddon(addon, function()
+			for _, frame in ipairs(Mock.frames) do
+				if frame.mockAddon == addon and frame.events and frame.events[event] and frame.script then
+					frame.script(frame, event, unpack(args))
+				end
+			end
+		end)
+	end
+	local function TimersFor(addon)
+		ForAddon(addon, function()
+			for _ = 1, 50 do
+				local list = timers[addon]
+				if not list or #list == 0 then break end
+				timers[addon] = {}
+				for _, fn in ipairs(list) do fn() end
+			end
+		end)
+	end
+	local function AdvanceFor(addon, seconds)
+		Mock.now = Mock.now + seconds
+		ForAddon(addon, function()
+			for _, frame in ipairs(Mock.frames) do
+				if frame.mockAddon == addon and frame.scripts and frame.scripts.OnUpdate then
+					frame.scripts.OnUpdate(frame, seconds)
+				end
+			end
+		end)
+	end
+	for _, addon in ipairs({ "Ready2Quest", "QuestCompanion" }) do
+		local regions = #Mock.frames
+		before = Collect()
+		FireFor(addon, "ADDON_LOADED", addon)
+		FireFor(addon, "PLAYER_LOGIN")
+		FireFor(addon, "PLAYER_ENTERING_WORLD", true, false)
+		for _ = 1, 20 do TimersFor(addon); AdvanceFor(addon, 0.5) end
+		TimersFor(addon)
+		local made = #Mock.frames - regions
+		local kb = Collect() - before - made * regionKb
+		if report then
+			report[#report + 1] = { name = "Après connexion/" .. addon .. " (" .. made .. " régions créées)", kb = kb }
+		end
+	end
+	-- les hauts faits construisent leur catalogue à la première lecture (index
+	-- du moteur, quelques secondes après la connexion) : ce qu'il ajoute s'il
+	-- n'est pas déjà construit
+	if report and QNS.FeatDefs then
+		before = Collect()
+		QNS:FeatDefs()
+		report[#report + 1] = { name = "Après connexion/QuestCompanion : catalogue des hauts faits (s'il manquait)",
+			kb = Collect() - before }
+	end
+	return
+end
+
+----------------------------------------------------------------------------
+-- 3 ter. Aperçu hors-jeu (tests/snapshot.py) : l'addon est chargé, on rend
 -- une scène de tests/snapshot.lua en HTML et on s'arrête là, sans les tests.
 ----------------------------------------------------------------------------
 if SNAPSHOT_SCENE then
@@ -1722,7 +1804,7 @@ ResetWorld()
 Say("\n== bootstrap et diagnostic ==")
 ResetWorld()
 Check("commande enregistrée par le bootstrap", type(SlashCmdList["SACETDEPART"]) == "function")
-Check("version exposée", NS.version == "1.29.4", NS.version)
+Check("version exposée", NS.version == "1.29.5", NS.version)
 
 local missingMods = {}
 for _, name in ipairs({ "Bootstrap", "Locales", "Compat", "Theme", "Core", "Buffs", "Reagents",
@@ -1743,7 +1825,7 @@ NS.HandleCommand = savedHandle
 Mock:Reset()
 NS:HandleCommand("diag")
 Check("/sd diag liste les modules", Mock:Output():find("modules :") ~= nil, Mock:Output())
-Check("/sd diag affiche la version", Mock:Output():find("1%.29%.4") ~= nil, Mock:Output())
+Check("/sd diag affiche la version", Mock:Output():find("1%.29%.5") ~= nil, Mock:Output())
 
 -- une erreur est enregistrée et affichée
 Mock:Reset()
