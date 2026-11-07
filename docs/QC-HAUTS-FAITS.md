@@ -1,6 +1,6 @@
 # QuestCompanion — Hauts faits (conception)
 
-Document de conception, **aucun code**. Base : branche `qc-sans-souvenirs` (QC 2.6.0 non publiée). Version cible proposée : QC 2.7.0.
+Document de conception. Base : branche `qc-sans-souvenirs` (QC 2.6.0 non publiée). Version cible : QC 2.7.0. Les questions ouvertes sont tranchées (§5.1 « Décisions ») ; le **lot A** (moteur, migration, page, bandeau) est fait dans `Feats.lua`, `FeatsData.lua` et `JournalFeats.lua` (voir `docs/TECHNIQUE.md`).
 
 WoW Forever n'a pas d'interface de hauts faits. QuestCompanion apporte la sienne : un **moteur de hauts faits** qui relie la ménagerie (captures, brillantes, sceaux) et le jeu lui-même (niveaux, or, donjons, raids, métiers, quêtes, réputations…), avec des **points**, des **titres** affichés sur la fiche de dresseur et des **récompenses** (cosmétiques, aides de capture). Les tampons actuels du carnet deviennent des hauts faits, sans rien perdre.
 
@@ -37,7 +37,8 @@ Trois fichiers neufs, déclarés dans le `.toc` après `GuildFeats.lua` (les cro
 ```
 
 - `id` : chaîne stable (`men_species_25`), clé de sauvegarde et de chaînes (`FEAT_men_species_25` pour le nom ; description générée).
-- `n` : **code numérique stable** (1 à 999, jamais réutilisé). C'est lui qui voyage dans les messages d'addon (chiffres seulement, comme les autres champs d'exploits de guilde).
+- `n` : **code numérique stable** (1 à 999, jamais réutilisé). C'est lui qui voyage dans les messages d'addon (chiffres seulement, comme les autres champs d'exploits de guilde). Fixé : `n` = rang de la ligne dans le catalogue du §2 (1 à 173, dans l'ordre des tableaux), contrôlé par les tests ; une ligne ajoutée plus tard prend 174 et suivants.
+- `scope` : `"account"` ou `"char"` (§1.3), écrit sur chaque ligne ; `pending = true` : détection pas encore vérifiée en jeu (§5.1, décision 4).
 - `cat` : catégorie (§1.4). `pts` : 5, 10, 25 ou 50.
 - `crit` : critère (types ci-dessous). `topics` : déduits du type de critère et de la source quand on peut ; sinon écrits.
 - Nom FR et EN dans les tables de chaînes ; **description générée** par un gabarit par source (`FEATD_species = "Capturer %d espèces"`), une phrase écrite à la main seulement pour les critères particuliers. Ainsi on ne stocke pas 2 × 150 descriptions.
@@ -97,40 +98,53 @@ Trois fichiers neufs, déclarés dans le `.toc` après `GuildFeats.lua` (les cro
 
 Toutes les statistiques employées sont listées en §2.13, chacune marquée ⚠️ « valeur à confirmer en jeu », sauf 107 ✅.
 
-### 1.3 Stockage
+### 1.3 Stockage et portée
 
-**Par personnage**, comme tout le reste de QC (captures, carnet, compagnon) et comme les statistiques du client. Dans `ns:CharData().feats` :
+**Règle (décision 1) : « collection = compte, performance = personnage ».** Chaque définition porte `scope = "account" | "char"`.
+
+- **Compte** (`QuestCompanionDB.feats`) : Ménagerie et Brillantes (agrégées sur tous les personnages : union des espèces capturées, des brillantes, des types et des paliers de chaque personnage), Grands hauts faits et paliers de points, Guilde et entraide, l'essentiel d'Insolite. Un titre gagné par un haut fait de compte sert sur tous les personnages ; ses cosmétiques sont débloqués sur chaque personnage à la connexion (les aides de capture, consommables, vont au seul personnage qui l'obtient).
+- **Personnage** (`CharData().feats`) : Personnage (niveaux, or, montures, morts), Donjons et raids, Métiers, Quêtes, réputations et honneur (`GetStatistic` est par personnage), Zones et sceaux, exploration (relevés du carnet), Au jour le jour (missions, rares, auberge).
+- Un palier de points (`points`) compte compte + personnage connecté ; un méta par catégorie compte les obtenus de la catégorie dans la portée de chacun.
+
+Les deux tables ont la même forme :
 
 ```lua
 feats = {
   v = 1,                      -- version du format (migration faite)
-  got = { [id] = { at, lvl, r } },  -- at = time(), lvl = niveau, r = true si rattrapé (pas de bandeau)
-  ctr = { [clé] = n },        -- compteurs d'événements tenus par nous (alt des stats, flags de streak)
-  set = { [clé] = { [k] = true } }, -- ensembles bornés (types emmenés, fiches vues : 10 max, familiers…)
+  got = { [id] = { at, lvl, r } },  -- at = time(), lvl = niveau, r = true si rattrapé ou migré (pas de bandeau)
+  ctr = { [clé] = n },        -- compteurs d'événements tenus par nous (alt des stats, streaks)
   flag = { [clé] = at },      -- faits ponctuels
+  -- personnage seulement (lot D) :
   title = 12,                 -- code du titre affiché ; nil = automatique ; 0 = aucun titre
   form = "auto",              -- forme des titres : auto (UnitSex) | m | f
   seen = 1730947200,          -- dernier passage de la page (pastille « nouveau »)
 }
 ```
 
-**Budget** : ~150 entrées obtenues au plus × ~60 octets ≈ 9 Ko par personnage dans la sauvegarde ; compteurs et ensembles < 2 Ko. En mémoire : définitions compactes (~150 lignes) + chaînes (~150 × 2 noms + ~40 gabarits) ≈ 40 Ko de source, < 120 Ko chargés. L'index des sujets et les caches sont construits à la demande, la page du carnet seulement à son ouverture.
+| Catégorie | Portée |
+|---|---|
+| Ménagerie, Brillantes, Guilde et entraide, Insolite, Grands hauts faits | compte |
+| Zones et sceaux, Au jour le jour, Personnage, Donjons et raids, Métiers, Quêtes, réputations et honneur | personnage |
+
+Une ligne peut déroger à la règle de sa catégorie en l'écrivant (`scope`), mais les tests du lot A vérifient qu'aucune ligne ne le fait pour l'instant.
+
+**Budget** : ~150 entrées obtenues au plus × ~60 octets ≈ 9 Ko dans la sauvegarde (réparties entre le compte et les personnages) ; compteurs et ensembles < 2 Ko. En mémoire : définitions compactes + chaînes ; l'index des sujets et les caches sont construits à la demande, la page du carnet seulement à son ouverture. Mesuré au lot A (36 lignes) : +75 Ko au chargement (`--memoire`), dont 51 Ko pour le moteur.
 
 ### 1.4 Catégories et points
 
-| Code | Catégorie (FR / EN) |
-|---|---|
-| `men` | Ménagerie / Menagerie |
-| `shiny` | Brillantes / Shinies |
-| `zone` | Zones et sceaux / Zones and Seals |
-| `day` | Au jour le jour / Day by Day |
-| `soc` | Guilde et entraide / Guild and Friends |
-| `char` | Personnage / Character |
-| `dng` | Donjons et raids / Dungeons and Raids |
-| `prof` | Métiers / Professions |
-| `quest` | Quêtes, réputations et honneur / Quests, Reputation and Honor |
-| `fun` | Insolite / Oddities |
-| `meta` | Grands hauts faits / Feats of Feats |
+| Code | Catégorie (FR / EN) | Portée |
+|---|---|---|
+| `men` | Ménagerie / Menagerie | compte |
+| `shiny` | Brillantes / Shinies | compte |
+| `zone` | Zones et sceaux / Zones and Seals | personnage |
+| `day` | Au jour le jour / Day by Day | personnage |
+| `soc` | Guilde et entraide / Guild and Friends | compte |
+| `char` | Personnage / Character | personnage |
+| `dng` | Donjons et raids / Dungeons and Raids | personnage |
+| `prof` | Métiers / Professions | personnage |
+| `quest` | Quêtes, réputations et honneur / Quests, Reputation and Honor | personnage |
+| `fun` | Insolite / Oddities | compte |
+| `meta` | Grands hauts faits / Feats of Feats | compte |
 
 **Points**, sur l'échelle de retail : **5** (premier pas, fait amusant), **10** (étape normale), **25** (gros objectif), **50** (sommet, méta). Total affiché sur la page, la fiche de dresseur et les bandeaux de guilde.
 
@@ -138,7 +152,8 @@ feats = {
 
 - `PLAYER_ENTERING_WORLD` + 3 s (hors combat, sinon à la sortie), une fois par session : on évalue **tous** les hauts faits non obtenus dont la source est `retro = true` (captures, relevés, sceaux, niveau, métiers, statistiques natives, réputations lisibles).
 - **Première passe** (`feats.v == nil`) : migration (§3) puis rattrapage, **en silence** (`r = true`, aucun bandeau, aucun exploit de guilde), puis **une seule ligne** de chat : « Hauts faits : 47 obtenus d'après ta progression (385 points). Ouvre le carnet pour les voir. »
-- **Passes suivantes** : ce qui est trouvé à la connexion (réputation montée pendant que l'addon était coupé, statistique qui a bougé) est attribué avec le bandeau normal, regroupé (§1.6).
+- **Passes suivantes** : ce qui est trouvé à la connexion (réputation montée pendant que l'addon était coupé, statistique qui a bougé) est attribué de la même façon : en silence, une ligne de chat récapitulative et **au plus un bandeau** (groupé dès 2). Fait au lot A.
+- Tant que le rattrapage de la connexion n'a pas eu lieu, les sujets touchés attendent (le carnet rattrape ses paliers de niveau à l'entrée dans le monde : ils ne doivent pas sortir en bandeaux un par un).
 - Les compteurs `retro = false` (danses, caresses depuis la 2.7…) démarrent à zéro, sauf quand une donnée existante sert d'amorce : `missionsDone`, `inn.total`, `daily.perfect`, `travel`, `ShinyData().count`, `CaptureData().count`, relevés du carnet, `GatheringData`.
 
 ### 1.6 Bandeau « Haut fait obtenu » et regroupement
@@ -234,7 +249,7 @@ Fenêtre 980 × 680 (contenu `INNER`), mise en page :
 
 ### 1.12 Réglages
 
-Page « Hauts faits » sous le compagnon (`OPT_GROUP_MODULES`) :
+Fait au lot A : une section « Hauts faits » dans la page **Carnet de voyage** (pas de page à part), avec `featToast`, `featChat`, `featSound`, `featStats`. Le reste (seuil de guilde, forme des titres) vient avec le lot D. Prévu à l'origine : page « Hauts faits » sous le compagnon (`OPT_GROUP_MODULES`) :
 
 | Clé | Défaut | Libellé |
 |---|---|---|
@@ -704,14 +719,16 @@ Au rattrapage, les aides sont données comme le reste ; avec les plafonds, un jo
 
 ## 5. Questions ouvertes et plan
 
-### 5.1 Questions ouvertes
+### 5.1 Décisions
 
-1. **Par personnage ou par compte ?** Je propose par personnage (comme les captures, le carnet et les statistiques du client). Veux-tu en plus quelques hauts faits « de compte » (par exemple le total de points de tous tes personnages sur la fiche) ?
-2. **Bandeau « Nouveau tampon »** : je propose de le supprimer (les relevés deviennent silencieux, les aides de capture qu'ils donnent restent). D'accord, ou tu veux garder un bandeau discret pour les capitales et donjons découverts ?
-3. **Titres genrés** : formes masculine et féminine selon le sexe du personnage, avec un réglage manuel qui l'emporte. Ça te va, ou tu préfères des formes neutres partout (plus courtes, mais « Maître des brillantes » pour tout le monde) ?
-4. **Hauts faits ⚠️ tant que le test en jeu n'est pas fait** (boss, réputations, monture rapide, stats autres que 107) : les afficher grisés « détection pas encore disponible », ou les cacher jusqu'à ce que `/qc hf diag` confirme la source ?
-5. **Annonces de guilde** : seuil par défaut à 25 points et hauts faits à titre. Trop bavard, pas assez ?
-6. **Cosmétiques de fiche de dresseur** (fonds et cadres visibles par les autres, nouveaux champs `cb` / `cf`) : on les fait dans ce chantier, ou on garde ce chantier aux titres et on les reporte ?
+Les recommandations par défaut sont toutes retenues (2026-11-07) :
+
+1. **Portée mixte** : « collection = compte, performance = personnage » (§1.3). Compte : Ménagerie, Brillantes (agrégées sur tous les personnages), Grands hauts faits et paliers de points, Guilde et entraide, l'essentiel d'Insolite ; les titres gagnés ainsi servent sur tous les personnages. Personnage : Personnage, Donjons et raids, Métiers, Quêtes/réputations/honneur, Zones et sceaux, exploration, missions. La page marque la portée de chaque ligne ; la fiche de dresseur montrera les points de compte et ceux du personnage (`ns:AchievementPoints("account" | "char")`, câblage au lot D).
+2. **Bandeau « Nouveau tampon » supprimé** : les tampons deviennent des relevés silencieux ; les aides de capture qu'ils donnent restent (`STAMP` toujours émis).
+3. **Titres genrés** (masculin / féminin selon `UnitSex`) avec réglage manuel prioritaire : lot D ; le modèle de données est prêt (`feats.form`, formes `m` / `f` / `en` / `enf` du registre `ns.FEAT_TITLES`).
+4. **Hauts faits ⚠️ affichés grisés** « détection bientôt disponible » (drapeau `pending` par ligne ; une statistique illisible sans repli est grisée de la même façon), jamais attribués tant que la détection n'est pas confirmée.
+5. **Annonces de guilde** : à partir de 25 points, ou si le haut fait donne un titre ; jamais en rattrapage. Le moteur émet `FEAT_EARNED` avec `announce` ; l'envoi est au lot D.
+6. **Cosmétiques de fiche de dresseur** (fonds et cadres, champs `cb` / `cf`) : reportés.
 
 ### 5.2 Plan d'implémentation (lots)
 

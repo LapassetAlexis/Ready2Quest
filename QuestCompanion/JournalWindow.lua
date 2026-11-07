@@ -347,7 +347,8 @@ local LIST_W = math.floor((INNER - (LIST_COLS - 1) * 12) / LIST_COLS)
 -- (ns.JOURNAL_PANES) ; Collection rejoint Compagnon
 -- 2.3.0 : « guide » (la ménagerie expliquée, JournalGuide.lua), en dernier
 -- 2.6.0 : plus de page « Souvenirs » (l'album est retiré)
-local SECTIONS = { "evolution", "menagerie", "day", "progress", "guide" }
+-- 2.7.0 : « feats » (Hauts faits, JournalFeats.lua) après la Ménagerie
+local SECTIONS = { "evolution", "menagerie", "feats", "day", "progress", "guide" }
 local MEN_STATES = { "all", "captured", "missing", "tokill", "shiny" }
 local MEN_RANKS = { "all", "normal", "elite", "rare", "boss" }
 local MEN_SORTS = { "no", "name", "level", "rank", "kills", "date" }
@@ -2067,8 +2068,12 @@ function ns:RefreshJournal()
 	frame.kind = section
 	frame.header.title:SetWidth(INNER - 100)
 	for key, item in pairs(frame.sections) do item:SetSelected(key == section) end
-	local counts = self:JournalCounts()
-	frame.subtitle:SetText(self:F("JRN_TOTAL", counts.total)
+	-- 2.7.0 : les points de hauts faits (compte + personnage) remplacent le
+	-- nombre de tampons (devenus des relevés silencieux)
+	local total
+	if self.FeatPoints then total = self:F("JRN_TOTAL_FEATS", (self:FeatPoints()))
+	else total = self:F("JRN_TOTAL", self:JournalCounts().total) end
+	frame.subtitle:SetText(total
 		.. (ModuleOn() and "" or ("|n" .. Theme.T_GREY .. L.MODULE_OFF .. "|r")))
 	for key, field in pairs(PANES) do
 		local pane = frame[field]

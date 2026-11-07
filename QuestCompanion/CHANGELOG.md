@@ -1,5 +1,17 @@
 # QuestCompanion
 
+## 2.7.0 — hauts faits
+
+- **Hauts faits** : QuestCompanion a maintenant ses hauts faits, avec des points. Une nouvelle page « Hauts faits » dans le carnet (juste après la Ménagerie) : les points de ton compte et de ton personnage, les catégories à gauche, la liste à droite avec la progression, la récompense, la date d'obtention et les filtres Tous / Obtenus / En cours. `/qc hf` l'ouvre.
+- **Compte ou personnage** : la collection est au compte, la performance au personnage. Ménagerie, brillantes et grands hauts faits valent pour tous tes personnages (les captures de tous tes personnages comptent ensemble) ; niveaux, zones, donjons et missions restent à chaque personnage. Chaque ligne le dit.
+- **Tes tampons deviennent des hauts faits** : au premier chargement, sans bruit, tes tampons (zones, villages, capitales, donjons, rares, paliers de niveau) donnent les hauts faits qu'ils méritent, à leur date. Ton carnet garde tous ses relevés. Une seule ligne dans le chat fait le compte, et un seul bandeau.
+- **Plus de bandeau « Nouveau tampon »** : les relevés de lieux se font en silence ; les aides de capture qu'ils donnent restent. À la place, un bandeau « Haut fait obtenu » (en style Azeroth : le bandeau des hauts faits, les points dans le bouclier), jamais en combat ni pendant la sourdine, et groupé quand plusieurs arrivent ensemble.
+- **Statistiques du jeu** : certains hauts faits lisent les statistiques de ton personnage (par exemple les créatures tuées), y compris tout ce que tu as fait avant d'installer l'addon. `/qc hf diag` dit ce qui est lisible sur ton client. Ce qui n'est pas encore vérifié en jeu est grisé « détection bientôt disponible ».
+- **Réglages** (page Carnet de voyage) : bandeau, ligne de chat, fanfare, lecture des statistiques. Le Guide en dit un mot.
+- Premier lot : une trentaine de hauts faits pour commencer ; le catalogue complet, les titres à choisir et les nouvelles récompenses suivent.
+
+*English:* QuestCompanion gets its own achievements, with points. A new "Achievements" journal page (after the Menagerie) shows account and character points, categories, progress, rewards, earned dates and All / Earned / In progress filters; `/qc hf` opens it. Collection achievements (menagerie, shinies, feats of feats) are account-wide, pooling all your characters' captures; performance ones (levels, zones, dungeons, missions) stay per character. Your journal stamps are silently converted into achievements with their original dates on first load (one chat summary, one banner); the stamps themselves are kept. The "New stamp" banner is gone (stamp capture aids remain), replaced by an "Achievement earned" banner (Azeroth achievement banner with points in the shield), held during combat and capture mute, grouped when several arrive. Some achievements read your character statistics, past included; `/qc hf diag` shows what your client can read, and unverified ones are greyed "detection coming soon". Settings on the Travel journal page. First batch of about thirty achievements; the full catalogue, selectable titles and new rewards come next.
+
 ## 2.6.0 — sans Souvenirs
 
 - **Les Souvenirs s'en vont** : plus d'album dans le carnet, plus de photos (captures d'écran), plus de question d'accord pour les photos, plus d'anniversaires ni de souvenirs racontés à voix haute. La page de réglages « Souvenirs » disparaît aussi. Le carnet garde cinq pages : Compagnon, Ménagerie, Missions, Exploration, Guide.
