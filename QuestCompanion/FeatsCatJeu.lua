@@ -501,7 +501,8 @@ ns.FeatCatalog(function()
 		-- Grands hauts faits qui dépendent des catégories du jeu
 		{ "meta_dungeons",   169, "meta", 50, A, crit = { "meta", { "dng_tier1", "dng_tier2", "dng_tier3", "dng_tier4" } },
 			desc = "FEATD_metaDungeons", reward = { title = 36 } },
-		{ "meta_hero",       170, "meta", 50, A, crit = { "list", "hero" }, reward = { title = 37 } },
+		-- cadre de fiche « Lauriers » en attente (cosmétiques de fiche reportés) : reward.soon
+		{ "meta_hero",       170, "meta", 50, A, crit = { "list", "hero" }, reward = { title = 37, soon = { "cardframe", "card_laurels" } } },
 	}) do ns.FeatAdd(row) end
 end)
 

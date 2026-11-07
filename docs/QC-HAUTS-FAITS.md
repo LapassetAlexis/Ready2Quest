@@ -582,6 +582,8 @@ Rien pour Ragnaros, Hakkar, Nefarian, Ossirian, C'Thun, Kel'Thuzad (pas de ligne
 | Grands hauts faits | 8 | 285 |
 | **Total** | **173** | **2810** |
 
+Hors numérotation : `fun_unlucky` (Insolite, 5 points, §2.10), soit 174 lignes et 2815 points implémentés (état : §6).
+
 Faisabilité : 126 ✅, 9 « ✅ (alt) / ⚠️ » (statistique d'abord, notre propre suivi sinon : sûrs dans tous les cas) et 38 ⚠️ (34 dépendent d'une statistique ou d'une rencontre de boss ; 4 d'une autre vérification : vitesse de monture, uiMapID des zones propres à Forever ×2, id de la dernière quête de Valthalak). Sans aucune statistique lisible, 135 hauts faits restent atteignables.
 
 ---
@@ -757,3 +759,43 @@ Ordre : A seul d'abord (il fixe les contrats : `ns:FeatTouch`, `ns:FeatFlag`, `n
 - Aperçus HTML (`tests/snapshot.lua`) : `qc-journal-feats`, `qc-journal-feats-titles`, `qc-feat-toast` (Azeroth et Sobre), `qc-feat-toast-many`, `qc-trainer-card-title`.
 
 **En jeu** (liste à cocher, avec `/qc hf diag`) : chaque statistique de §2.13 lisible et cohérente (comparer avec ce que le joueur sait : morts, quêtes) ; forme exacte des montants d'or [333] [334] ; `ENCOUNTER_END` reçu en donjon et en raid ; `UNIT_DIED` d'un boss en instance ; `GetUnitSpeed` sur monture rapide ; `C_Reputation` ou `GetFactionInfo` ; uiMapID de Riverglades, Mont Hyjal, Shen'dralas ; id de la dernière quête de Valthalak ; fanfare 12891 ; bandeau à points dans le bouclier ; titre et genre vus par un autre joueur (fiche et bandeau de guilde) avec une version 2.6 en face.
+
+## 6. État d'implémentation (2.7.0)
+
+Relevé du 2026-11-07, branche d'intégration des lots A à D (le lot E, cosmétiques, arrive à part).
+
+### 6.1 Implémentés
+
+- **174 lignes** : les 173 du catalogue numéroté (§2.1 à §2.11, codes `n` 1 à 173, tous présents, contrôlés par les tests) et `fun_unlucky` (code 174, Insolite, 5 points, titre T39 : le moteur refuse une ligne sans points). Total : **2815 points** (2810 + 5).
+- Comptes par catégorie conformes au §2.14 : Ménagerie 29, Brillantes 12, Zones et sceaux 23, Au jour le jour 14, Guilde et entraide 7, Personnage 21, Donjons et raids 21, Métiers 12, Quêtes, réputations et honneur 11, Insolite 15 (+ `fun_unlucky`), Grands hauts faits 8.
+- **Titres** : les 40 (§4.1), dans un seul registre (`FeatsTitles.lua`), chacun donné par exactement une ligne (`src`).
+- **Statistiques** lisibles sur Forever (§2.13, relevé en jeu) : les lignes qui n'attendaient que leur confirmation sont actives (`char_hearth_50`, `char_camp_25`, `char_gold_looted`, `char_epic`, `dng_runs_50`, `pvp_hk_100`, `fun_respec`) ; les zones propres à Forever sont connues (Mont Hyjal 2482, Riverglades 2548, Shen'dralas 2652) : `zone_visit_all` et `zone_forever_new` sont actifs.
+- **Annonces de guilde** : sorte `h` pour les hauts faits de 25 points ou plus, ou à titre ; un palier d'espèces de `TRAINER_RANKS` ne part qu'en sorte `r` (pas de doublon). `/qc hf diag` liste toutes les statistiques employées (lignes, boss, replis).
+
+### 6.2 En attente (grisés « détection bientôt disponible », 15)
+
+| Ligne | Ce qui manque |
+|---|---|
+| `char_mount_epic` | vitesse d'une monture rapide (`GetUnitSpeed`) à vérifier en jeu |
+| `char_food_500` | stats [346] / [347] |
+| `char_potions_100` | stats [345] / [922] / [923] / [811] |
+| `dng_raid_hyjal`, `dng_raid_barrow` | stats [63580], [63581] (raids propres à Forever, sans npcID ni rencontre connus) |
+| `prof_fish_250` | stat [1518] |
+| `quest_valthalak` | id de la dernière quête de la chaîne (`ns.FEAT_VALTHALAK_QUEST`) |
+| `pvp_bg_win`, `pvp_duel_10` | stats [840], [319] |
+| `fun_hogger_death`, `fun_critters_kill` | stats [594], [108] |
+| `fun_drown`, `fun_fall`, `fun_lava` | stats [112], [114], [115] |
+| `fun_unlucky` | les trois précédentes (méta des quatre morts) |
+
+Une ligne se libère en retirant son `pending` quand sa statistique est confirmée (`/qc hf diag`).
+
+### 6.3 Récompenses en attente
+
+- **Cosmétiques de fiche de dresseur** (fonds `cb` et cadres `cf`, décision 6 : reportés) : en `reward.soon`, jamais débloqués d'ici là : `men_species_500` (`card_census`), `zone_seal_ek` / `zone_seal_ka` (`card_crest_ek` / `card_crest_ka`), `meta_zones` (`card_atlas`), `meta_trainer` (`card_pantheon`), `meta_points_1500` (`card_renown`), `meta_hero` (`card_laurels`).
+- **Cosmétiques du compagnon** du lot E (`reward.soon`, résolus par `ns.FeatResolveSoon()` dès que le catalogue du compagnon les a) : cadres `feat_eight` (`men_types_master`), `feat_prism` (`meta_shiny`) ; fond `feat_atlas` (`zone_100_10`) ; ornements `feat_chain` (`men_boss_1`), `feat_goldstars` (`men_stars3_100`), `feat_prism_orn` (`shiny_3stars`), `feat_compass` (`day_travel_1000`), `feat_anniversary` (`day_days_365`). Déjà en `reward.cosmetic` (le lot E les dessine) : `feat_campfire` (`char_camp_25`), `feat_eye` (`dng_raid_aq40`), `feat_wildcrown` (`dng_raid_hyjal`).
+
+### 6.4 Écarts avec la conception
+
+- `fun_unlucky` n'est plus « caché, sans points » (§4.1) : ligne ordinaire de 5 points, hors numérotation.
+- La statistique 15027 (Bazzalan, Gouffre de Ragefeu) est lisible ; la table des boss garde les correspondances du §2.13.
+- Les paliers 2 à 4 de donjons comptent l'entrée (relevé) pour les donjons sans boss connu (Site de fouilles des Paluns, Cité engloutie, Bastion de Krol'dok, Blackmaw Hold), comme prévu au §2.7.

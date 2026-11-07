@@ -16,6 +16,12 @@ Une seule description, anglais d'abord puis français (règle des stores : l'ang
 
 For **WoW Forever** (1.60). English and French. Free, standalone (`/qc`), about 2 MB of memory. Pairs well with [Ready2Quest](https://www.curseforge.com/wow/addons/ready2quest).
 
+## New in 2.7: achievements and titles
+
+- **174 achievements, with points**: menagerie, shinies, zones and seals, day by day, guild, character, dungeons and raids (the last boss of each dungeon, Onyxia to Kel'Thuzad), professions, quests and reputation, oddities. Collection ones count for your whole account, performance ones for each character.
+- **Nothing to redo**: your journal stamps, milestones and character statistics award what you already did, silently, at login. A new Achievements page in the journal (`/qc hf`) and an "Achievement earned" banner.
+- **40 titles**: "Trainer Dyokrion", "Dyokrion the Tracker"…, masculine or feminine. Pick yours on your trainer card or with `/qc title`; your big achievements are announced to your guild with your title.
+
 ## New in 2.4
 
 - **Capture all**: when several creatures wait in your net, throw at all of them at once. A grid of face-down cards flips over in a wave, shinies revealed last.
@@ -56,7 +62,7 @@ For **WoW Forever** (1.60). English and French. Free, standalone (`/qc`), about 
 - **Prefilled zones**: creatures, gathering nodes and quests of every zone are known from your first visit (Forever islands and zones included). No other addon needed.
 - **Missions**: two of the day in your zone plus one from your companion's personality, three of the week (always a shiny hunt among them); they reward treats and capture aids. An inn loyalty card, too.
 - **Companion**: your creature up close, its numbers (captured, shinies, days together, missions done, distance travelled together), its needs and its look (appearances, frames, backgrounds, ornaments).
-- **Stamps** for every first, and an **on-screen tracker** with your closest goals.
+- **Achievements** (174, with points and 40 titles), **stamps** for every first (they feed your achievements), and an **on-screen tracker** with your closest goals.
 - **Light**: about 2 MB of memory.
 
 ![Missions of the day and week, pantry and capture aids](https://media.forgecdn.net/attachments/2155/839/qc-4-png.png)
@@ -65,7 +71,7 @@ For **WoW Forever** (1.60). English and French. Free, standalone (`/qc`), about 
 
 ## Commands
 
-`/qc` opens the journal (so does the minimap button, or a right-click on the companion), `/qc filet` throws the net, `/qc filet tout` captures everything waiting, `/qc capture` sums up your menagerie, `/qc fiche [name]` opens a trainer card, `/qc options` opens the settings, `/qc help` lists everything.
+`/qc` opens the journal (so does the minimap button, or a right-click on the companion), `/qc filet` throws the net, `/qc filet tout` captures everything waiting, `/qc capture` sums up your menagerie, `/qc fiche [name]` opens a trainer card, `/qc hf` your achievements, `/qc title` your titles, `/qc options` opens the settings, `/qc help` lists everything.
 
 ## Community
 
@@ -86,6 +92,12 @@ Free software, **GPL-3.0**. Zone data (creatures, gathering, quests) is generate
 ![Une brillante tente sa chance contre le filet](https://media.forgecdn.net/attachments/2161/225/f-gif.gif)
 
 Pour **WoW Forever** (1.60). En français et en anglais. Gratuit, autonome (`/qc`), environ 2 Mo de mémoire. Va très bien avec [Ready2Quest](https://www.curseforge.com/wow/addons/ready2quest).
+
+## Nouveau en 2.7 : hauts faits et titres
+
+- **174 hauts faits, avec des points** : ménagerie, brillantes, zones et sceaux, au jour le jour, guilde, personnage, donjons et raids (le dernier boss de chaque donjon, d'Onyxia à Kel'Thuzad), métiers, quêtes et réputations, insolite. Ceux de collection valent pour tout ton compte, ceux de performance pour chaque personnage.
+- **Rien à refaire** : tes tampons du carnet, tes paliers et les statistiques de ton personnage attribuent en silence, à la connexion, ce que tu as déjà fait. Une nouvelle page Hauts faits dans le carnet (`/qc hf`) et un bandeau « Haut fait obtenu ».
+- **40 titres** : « Dresseur Dyokrion », « Dyokrion le Traqueur »…, au masculin ou au féminin. Tu choisis le tien sur ta fiche de dresseur ou avec `/qc titre` ; tes gros hauts faits sont annoncés à ta guilde avec ton titre.
 
 ## Nouveau en 2.4
 
@@ -121,12 +133,12 @@ Pour **WoW Forever** (1.60). En français et en anglais. Gratuit, autonome (`/qc
 - **Zones préremplies** : créatures, points de récolte et quêtes de chaque zone sont connus dès ta première visite (îles et zones propres à Forever comprises). Aucun autre addon requis.
 - **Missions** : deux du jour dans ta zone et une de son caractère, trois de la semaine (dont toujours une chasse au brillant) ; elles rapportent friandises et aides de capture. Et une carte de fidélité des auberges.
 - **Compagnon** : ta créature en grand, ses chiffres (capturées, brillantes, jours ensemble, missions faites, distance parcourue ensemble), ses envies et son allure (apparences, cadres, fonds, ornements).
-- **Des tampons** pour chaque première fois, et un **suivi à l'écran** de tes objectifs les plus proches.
+- **Des hauts faits** (174, avec des points et 40 titres), **des tampons** pour chaque première fois (ils nourrissent tes hauts faits), et un **suivi à l'écran** de tes objectifs les plus proches.
 - **Léger** : environ 2 Mo de mémoire.
 
 ## Commandes
 
-`/qc` ouvre le carnet (comme le bouton de minicarte ou un clic droit sur le compagnon), `/qc filet` lance le filet, `/qc filet tout` capture tout ce qui attend, `/qc capture` résume ta ménagerie, `/qc fiche [nom]` ouvre une fiche de dresseur, `/qc options` ouvre les réglages, `/qc help` liste tout.
+`/qc` ouvre le carnet (comme le bouton de minicarte ou un clic droit sur le compagnon), `/qc filet` lance le filet, `/qc filet tout` capture tout ce qui attend, `/qc capture` résume ta ménagerie, `/qc fiche [nom]` ouvre une fiche de dresseur, `/qc hf` tes hauts faits, `/qc titre` tes titres, `/qc options` ouvre les réglages, `/qc help` liste tout.
 
 ## Communauté
 

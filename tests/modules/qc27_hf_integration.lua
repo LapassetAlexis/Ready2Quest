@@ -37,7 +37,7 @@ I.UNPENDED = { char_hearth_50 = true, char_gold_looted = true, char_epic = true,
 	pvp_hk_100 = true, fun_respec = true, zone_visit_all = true, zone_forever_new = true }
 
 -- before = true : le catalogue tel qu'avant l'intégration (ces lignes grisées,
--- sans « La poisse ») ; sinon tel quel
+-- sans « La poisse », « Héros d'Azeroth » sans cadre de fiche) ; sinon tel quel
 function I.Catalogue(before)
 	local defs = {}
 	for _, def in ipairs(NS:FeatDefs()) do
@@ -47,7 +47,10 @@ function I.Catalogue(before)
 	local lines = {}
 	for _, def in ipairs(defs) do
 		local pending = def.pending == true or (before and I.UNPENDED[def.id]) or false
-		lines[#lines + 1] = table.concat({ def.id, def.n, def.cat, def.pts, def.scope, I.Ser(def.crit), I.Ser(def.reward),
+		local reward = def.reward
+		-- cadre de fiche de « Héros d'Azeroth » mis en attente à l'intégration
+		if before and def.id == "meta_hero" then reward = { title = reward.title } end
+		lines[#lines + 1] = table.concat({ def.id, def.n, def.cat, def.pts, def.scope, I.Ser(def.crit), I.Ser(reward),
 			tostring(def.desc), tostring(pending), type(def.paid) }, "|")
 	end
 	return table.concat(lines, "\n"), #defs
@@ -63,7 +66,7 @@ do
 	text, count = I.Catalogue(false)
 	hash = I.Hash(text)
 	Check("[HF-I] catalogue actuel : 174 lignes (173 numérotées + « La poisse »), empreinte",
-		hash == "7237f858" and count == 174, "empreinte " .. hash .. " (" .. count .. " lignes)")
+		hash == "f98fd517" and count == 174, "empreinte " .. hash .. " (" .. count .. " lignes)")
 	local def = NS:FeatDef("men_species_10")
 	Check("[HF-I] définition compacte : lue par ses noms, champs absents à nil, écriture d'un champ connu",
 		getmetatable(def) == NS.FEAT_DEF_MT and def.id == "men_species_10" and def.n == 2 and def.pts == 10
@@ -146,6 +149,15 @@ do
 	for _, id in ipairs({ 334, 1524, 1519, 281, 1527, 1537 }) do if not set[id] then absent[#absent + 1] = tostring(id) end end
 	Check("[HF-I] /qc hf diag : chaque statistique d'une ligne, d'un boss ou d'un repli", #absent == 0 and set[107],
 		table.concat(absent, ", "))
+end
+
+-- 3 bis. Le Guide parle des titres des hauts faits
+do
+	local found = false
+	for _, block in ipairs(NS:JournalGuideBlocks("titles")) do
+		if block.text and block.text:find("/qc titre", 1, true) and block.text:find("40 titres", 1, true) then found = true end
+	end
+	Check("[HF-I] Guide : les 40 titres des hauts faits et /qc titre (section Titres)", found)
 end
 
 -- 4. Statistiques du client : formes relevées sur Forever ----------------------------------------------------
