@@ -72,5 +72,6 @@ TrainerCard.lua
 GuildFeats.lua
 AzerothStyle.lua
 FeatsData.lua
+FeatsCatJeu.lua
 Feats.lua
 JournalFeats.lua

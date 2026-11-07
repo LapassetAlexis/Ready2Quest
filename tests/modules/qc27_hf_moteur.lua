@@ -334,9 +334,13 @@ do
 	Mock:Reset()
 	NS:HandleCommand("hf diag")
 	local out = Mock:Output()
+	-- lignes « à vérifier » : celles du catalogue chargé (les lots en ajoutent)
+	local waiting = 0
+	for _, def in ipairs(NS:FeatDefs()) do if def.pending then waiting = waiting + 1 end end
 	Check("[HF] /qc hf diag : sonde lisible, chaque statistique avec sa valeur et sa forme brute",
 		out:find("lisibles (107 = 780)", 1, true) and out:find("stat 107 : 780 (brut « 780 »)", 1, true)
-		and out:find("stat 353 : 0 (brut « -- »)", 1, true) and out:find("en attente : 1", 1, true), out)
+		and out:find("stat 353 : 0 (brut « -- »)", 1, true) and waiting >= 1
+			and out:find("en attente : " .. waiting .. " ", 1, true), out)
 end
 
 -- 5. Rattrapage à la connexion, migration des tampons --------------------------------------------------------
