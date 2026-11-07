@@ -18,8 +18,8 @@ Scènes (Snap.scenes dans tests/snapshot.lua ; « list » les donne toutes) :
   r2q-bagspace, r2q-camp, r2q-gear-toast, r2q-portrait, r2q-edit-banner, r2q-notice,
   r2q-exit-alert ; infobulles et divers : r2q-pace, r2q-minimap-tooltip, r2q-reward,
   r2q-settings-canvas ; QuestCompanion : qc-journal-creature, qc-journal-menagerie,
-  qc-journal-day, qc-journal-progress, qc-journal-memories, qc-journal-guide, qc-companion,
-  qc-companion-hover, qc-tutorial, qc-pantry, qc-chest, qc-notify, qc-tracker, qc-photo, qc-tooltip.
+  qc-journal-day, qc-journal-progress, qc-journal-guide, qc-companion,
+  qc-companion-hover, qc-tutorial, qc-pantry, qc-chest, qc-notify, qc-tracker, qc-tooltip.
 Ne pas versionner les HTML produits.
 """
 import base64

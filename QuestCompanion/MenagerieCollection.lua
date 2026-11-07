@@ -6,8 +6,8 @@
 --     normale ; les boss du monde ne comptent pas) -> la zone est scellée pour
 --     toujours. Dans une zone scellée, les brillantes sont plus fréquentes
 --     (×SEAL_SHINY_MULT, enveloppe de ns:ShinyChance). Chaque biome a son
---     cadre (premier sceau du biome) et son paysage en fond (deuxième sceau),
---     aux couleurs des décors des souvenirs (Memories.lua).
+--     cadre (premier sceau du biome) et son fond (deuxième sceau : une
+--     texture de sol du client, BIOME_GROUND, appelée par FileDataID).
 --   * Complétion par type : des paliers d'espèces capturées par type de
 --     créature renforcent l'effet du compagnon de ce type
 --     (ns:MenagerieTypeBonus, lu par CompanionEffects.lua).
@@ -36,11 +36,44 @@ ns.TRAINER_RANKS = {
 	{ count = 250, key = "grandmaster", aids = { "sifflet", "sifflet" }, cosmetic = { kind = "bg", id = "grandmaster" } },
 }
 
--- biomes extérieurs (Memories.lua) ; une zone sans biome connu : forêt
+-- biomes extérieurs ; une zone sans biome connu : forêt
 local BIOMES = { "forest", "nightforest", "canyon", "savanna", "snow", "swamp", "desert", "blight", "jungle", "volcanic" }
 ns.MENAGERIE_BIOMES = BIOMES
--- liseré du cadre de chaque biome : { filet, filet intérieur }, tirés des
--- teintes des décors peints (sol, ciel)
+-- le biome de chaque zone extérieure (uiMapID) : son cadre et son paysage
+-- (repris de l'ancien album des souvenirs, retiré en 2.6.0)
+local ZONE_BIOME = {
+	-- Kalimdor
+	[1411] = "canyon", [1412] = "savanna", [1413] = "savanna", [1438] = "nightforest", [1439] = "nightforest",
+	[1440] = "nightforest", [1441] = "canyon", [1442] = "canyon", [1443] = "desert", [1444] = "jungle",
+	[1445] = "swamp", [1446] = "desert", [1447] = "nightforest", [1448] = "blight", [1449] = "jungle",
+	[1450] = "nightforest", [1451] = "desert", [1452] = "snow",
+	-- Royaumes de l'Est
+	[1416] = "snow", [1417] = "forest", [1418] = "canyon", [1419] = "volcanic", [1420] = "blight",
+	[1421] = "blight", [1422] = "blight", [1423] = "blight", [1424] = "forest", [1425] = "forest",
+	[1426] = "snow", [1427] = "volcanic", [1428] = "volcanic", [1429] = "forest", [1430] = "blight",
+	[1431] = "nightforest", [1432] = "forest", [1433] = "forest", [1434] = "jungle", [1435] = "swamp",
+	[1436] = "savanna", [1437] = "swamp",
+}
+ns.MENAGERIE_ZONE_BIOME = ZONE_BIOME
+-- fond de chaque biome (2.7.0) : une texture de sol du client (tileset des
+-- zones d'origine), appelée par FileDataID, jamais embarquée (wago.tools,
+-- listfile et casc). Assombrie par la teinte pour que le compagnon et son nom
+-- restent lisibles ; refusée par le client : aplat sombre (Companion.lua).
+local BIOME_GROUND = {
+	forest      = { 187124, { 0.78, 0.78, 0.74, 1 } },  -- tileset/elwynn/elwynnflowerbase
+	nightforest = { 188474, { 0.62, 0.66, 0.88, 1 } },  -- tileset/felwood/felwoodmoss
+	canyon      = { 186915, { 0.74, 0.70, 0.66, 1 } },  -- tileset/barrens/barrensbaserock
+	savanna     = { 186908, { 0.78, 0.74, 0.66, 1 } },  -- tileset/barrens/barrensbasegrassgold
+	snow        = { 189051, { 0.62, 0.68, 0.78, 1 } },  -- tileset/winterspring grove/winterspringsnowripple
+	swamp       = { 188851, { 0.66, 0.70, 0.60, 1 } },  -- tileset/swamp of sorrows/swampsorrowsroot01
+	desert      = { 188872, { 0.70, 0.64, 0.52, 1 } },  -- tileset/tanaris/tanarissandbase02
+	blight      = { 188688, { 0.72, 0.70, 0.66, 1 } },  -- tileset/plaguelands/plaguedearthcreep01
+	jungle      = { 188829, { 0.74, 0.78, 0.70, 1 } },  -- tileset/stranglethorn/stranglethornplants01
+	volcanic    = { 186959, { 0.78, 0.70, 0.66, 1 } },  -- tileset/burningstepps/burningsteppsrocklava
+}
+ns.MENAGERIE_BIOME_GROUND = BIOME_GROUND
+-- liseré du cadre de chaque biome : { filet, filet intérieur }, aux teintes
+-- du biome (sol, ciel)
 local BIOME_EDGE = {
 	forest      = { { 0.42, 0.70, 0.30, 1 }, { 0.20, 0.38, 0.14, 0.8 } },
 	nightforest = { { 0.62, 0.45, 0.85, 1 }, { 0.28, 0.18, 0.42, 0.8 } },
@@ -182,8 +215,7 @@ for _, biome in ipairs(BIOMES) do
 		backdrop = { file = TOOLTIP_BORDER, size = 14, color = { edge[1][1], edge[1][2], edge[1][3] } } } }
 	COSMETICS[#COSMETICS + 1] = { kind = "bg", def = { id = "seal_" .. biome, label = "COMP_BG_SEAL_" .. biome,
 		tier = 0, unlock = { seal = biome, count = 2 },
-		texture = (ns.MEMORY_SCENE_TEXTURE or ("Interface\\AddOns\\" .. tostring(ADDON or "QuestCompanion") .. "\\Textures\\scene_")) .. biome,
-		color = { 1, 1, 1, 1 }, coords = { 0.2, 0.8, 0.05, 0.95 } } }
+		texture = BIOME_GROUND[biome][1], color = BIOME_GROUND[biome][2], coords = { 0, 0.88, 0, 1 } } }
 	FR["COMP_FRAME_SEAL_" .. biome] = string.format(FR.COMP_FRAME_SEAL, FR["BIOME_" .. biome])
 	EN["COMP_FRAME_SEAL_" .. biome] = string.format(EN.COMP_FRAME_SEAL, EN["BIOME_" .. biome])
 	FR["COMP_BG_SEAL_" .. biome] = string.format(FR.COMP_BG_SEAL, FR["BIOME_" .. biome])
@@ -258,7 +290,7 @@ function ns:MenagerieCollectionData()
 end
 
 function ns:MenagerieZoneBiome(zoneID)
-	local biome = ns.MEMORY_ZONE_BIOME and ns.MEMORY_ZONE_BIOME[tonumber(zoneID) or zoneID]
+	local biome = ZONE_BIOME[tonumber(zoneID) or zoneID]
 	if biome and BIOME_EDGE[biome] then return biome end
 	return "forest"
 end
@@ -489,16 +521,26 @@ end
 function ns:MenagerieRankCheck(opts)
 	opts = opts or {}
 	if not ModuleOn() then return {} end
-	local ranks, count, gained = self:MenagerieCollectionData().ranks, self:MenagerieSpeciesCount(), {}
+	local coll = self:MenagerieCollectionData()
+	local ranks, count, gained = coll.ranks, self:MenagerieSpeciesCount(), {}
 	for _, rank in ipairs(ns.TRAINER_RANKS) do
 		if count >= rank.count and not ranks[rank.count] then
 			ranks[rank.count] = Now()
-			for _, id in ipairs(rank.aids or {}) do
-				if self.CaptureGrant then pcall(self.CaptureGrant, self, id, { quiet = true, silent = true }) end
+			-- 2.7 : aides, cosmétique et bandeau passent par le haut fait
+			-- men_species_<n> (FeatsCatMenagerie.lua) ; le palier reste noté
+			-- (date, annonce de guilde), marqué « payé par le haut fait »
+			local byFeat = self.FeatLegacyHandled and self:FeatLegacyHandled("men_species_" .. rank.count)
+			if byFeat then
+				coll.featRanks = type(coll.featRanks) == "table" and coll.featRanks or {}
+				coll.featRanks[rank.count] = true
+			else
+				for _, id in ipairs(rank.aids or {}) do
+					if self.CaptureGrant then pcall(self.CaptureGrant, self, id, { quiet = true, silent = true }) end
+				end
+				if rank.cosmetic then Unlock(self, rank.cosmetic.kind, rank.cosmetic.id) end
 			end
-			if rank.cosmetic then Unlock(self, rank.cosmetic.kind, rank.cosmetic.id) end
 			gained[#gained + 1] = rank
-			if not opts.quiet then
+			if not opts.quiet and not byFeat then
 				local title = L["TRAINER_" .. rank.key]
 				self:Print(self:F("MEN_RANK_MSG", rank.count, title, self:F("MEN_RANK_GIFT", self:TrainerRankGift(rank))))
 				if self.CompanionSay then self:CompanionSay("UNLOCK", { force = true, args = { title } }) end

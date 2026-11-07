@@ -1106,7 +1106,7 @@ local QC_MAPS = {
 }
 
 local QC_FRAMES = { "journalFrame", "companionFrame", "companionBubble", "companionHover", "chestFrame", "treatMenu",
-	"journalToast", "journalTracker", "photoPrompt" }
+	"journalToast", "journalTracker" }
 
 local function QCWorld(T)
 	local ns = T.QNS
@@ -1228,25 +1228,6 @@ Snap.scenes["qc-journal-menagerie"] = function(T)
 		ns.menagerieStatic = nil
 	end)
 	return frame, "QuestCompanion : carnet, page Ménagerie (Les Tarides, filtres et recherche)"
-end
-
-Snap.scenes["qc-journal-memories"] = function(T)
-	local frame = QCJournal(T, "memories", function(ns)
-		local data = ns:MemoryData()
-		local list = {
-			{ kind = "level", args = { 10 }, zone = "Durotar" },
-			{ kind = "capital", args = { "Orgrimmar" }, zone = "Orgrimmar", photo = "WoWScrnShot_110326_201455.jpg" },
-			{ kind = "stage", args = { "Brindille", "Jeune" }, zone = "Les Tarides", photo = "WoWScrnShot_110526_183012.jpg" },
-			{ kind = "flight", args = {}, zone = "La Croisée" },
-			{ kind = "dungeon", args = { "Cavernes des lamentations" }, zone = "Les Tarides" },
-			{ kind = "rare", args = { "Gesharahan" }, zone = "Les Tarides", photo = "WoWScrnShot_110626_224711.jpg" },
-			{ kind = "level", args = { 20 }, zone = "Les Tarides" },
-			{ kind = "anniv", args = { "1w" }, zone = "Les Tarides" },
-			{ kind = "deathSilly", args = { "Kodo des Tarides", 21 }, zone = "Les Tarides" },
-		}
-		for index, memory in ipairs(list) do memory.at = 1793000000 + index * 86400; data.memories[index] = memory end
-	end)
-	return frame, "QuestCompanion : carnet, page Souvenirs"
 end
 
 -- page Guide (2.3.0) : le sommaire à gauche, la section « Ton compagnon
@@ -1377,13 +1358,6 @@ Snap.scenes["qc-tracker"] = function(T)
 	tracker:ClearAllPoints()
 	tracker:SetPoint("CENTER", UIParent, "CENTER", 0, 0)
 	return tracker, "QuestCompanion : bloc « Carnet » à l'écran (objectifs suivis)"
-end
-
-Snap.scenes["qc-photo"] = function(T)
-	local ns = QCWorld(T)
-	ns:MemoryAsk({ kind = "level", args = { 20 } })
-	local prompt = ns.photoPrompt
-	return Centered(prompt), "QuestCompanion : demande d'accord pour les photos souvenirs"
 end
 
 Snap.scenes["qc-tooltip"] = function(T)

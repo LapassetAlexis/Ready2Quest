@@ -155,7 +155,7 @@ do
 	NS:MenagerieSealCheck(1412)
 	Check("[SEAL] deuxième sceau du biome : son paysage en fond", unlocked["bg:seal_savanna"] == true
 		and NS:MenagerieBiomeSeals("savanna") == 2)
-	Check("[SEAL] biome d'une zone (souvenirs), forêt par défaut", NS:MenagerieZoneBiome(1429) == "forest"
+	Check("[SEAL] biome d'une zone, forêt par défaut", NS:MenagerieZoneBiome(1429) == "forest"
 		and NS:MenagerieZoneBiome(99999) == "forest" and NS:MenagerieZoneBiome(1413) == "savanna")
 	-- condition lisible d'un cosmétique verrouillé
 	Check("[SEAL] condition : sceau d'une zone de ce biome", NS:CompanionLockText(NS:CompanionStyleDef("frame", "seal_forest"))

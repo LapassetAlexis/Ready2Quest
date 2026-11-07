@@ -233,9 +233,7 @@ Même langage, briques du lot 4 dans le socle :
 | › Zone                   | carte + onglets     | carte de progression (grand %, barre et paliers, coffre, liseré ambre si coffre) ; flèches de zone à gauche du [×] ; onglets soulignés (Quêtes estompé sans liste) et « Suivre à l'écran » à droite ; listes pleine largeur ; fiches du bestiaire 2 × 6 (portrait 3D, rang en étiquette et liseré, tampon losange plein si abattue, étoile et fond doré pour une brillante) à côté de l'aperçu ; pagination en bas |
 | › Jour                   | deux colonnes       | missions en cartes (liseré ambre, vert si faite, « Changer » au trait) ; carte des auberges en losanges ; garde-manger en tuiles |
 | › Collection             | grille 5 × 5        | puces des sortes ; objet porté : filet et liseré ambre ; pas encore gagné : verrou en pointillés avec sa condition (« Palier 2 », « 50 brillantes ») ; aperçu à droite |
-| › Souvenirs              | cartes de liste     | losange ambre plein si photo, date à droite, lieu et photo dessous |
 | Coffre de zone           | dialogue 480        | tuiles sur deux colonnes (sorte en étiquette, nom), hauteur au nombre d'objets, « Plus tard » dans le pied ; révélation une à une inchangée |
-| Photos souvenirs         | dialogue 420        | Oui (plein) / Non à droite, Plus tard à gauche ; [×] = plus tard ; repli sur la fenêtre du jeu sans les briques |
 | Compagnon à l'écran      | cadre discret       | cadre et fond gagnés inchangés ; plaque du nom (F_LABEL) et de l'humeur (MUTED clair) |
 | Bulle, tutoriel          | bulle 220           | « Passer » au trait, « Suivant » plein, sous le texte |
 | Fiche au survol          | bandeau 220         | nom F_TITLE, stade et humeur, envies en barres fines avec valeur, filet, aide pâle ; hauteur au contenu |
@@ -243,9 +241,9 @@ Même langage, briques du lot 4 dans le socle :
 | Nouveau tampon           | bandeau 280         | losange ambre, « NOUVEAU TAMPON · SORTE », nom en titre |
 | Bloc « Carnet »          | bandeau (vedette)   | objectif en vedette en bandeau à liseré ambre, les suivants en lignes fines |
 
-Aperçus : `qc-journal-creature|menagerie|day|progress|memories`, `qc-capture`, `qc-capture-shake|ok|fail`,
+Aperçus : `qc-journal-creature|menagerie|day|progress|guide`, `qc-capture`, `qc-capture-shake|ok|fail`,
 `qc-companion`, `qc-companion-hover`, `qc-tutorial`, `qc-pantry`, `qc-chest`,
-`qc-notify`, `qc-tracker`, `qc-photo`, `qc-tooltip`.
+`qc-notify`, `qc-tracker`, `qc-tooltip`.
 
 ## Règles
 

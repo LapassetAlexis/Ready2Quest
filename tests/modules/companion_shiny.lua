@@ -1,6 +1,6 @@
 -- Compagnon : créatures brillantes et ouverture de coffre animée (Shiny.lua).
 -- Tirage une fois par monstre (×3 élite ou rare), alerte et étoile (seul ou
--- chef, pas d'icône déjà posée, réglable), abattue : friandise, souvenir,
+-- chef, pas d'icône déjà posée, réglable), abattue : friandise,
 -- fiche dorée ; 5 / 15 / 30 : cadre, fond, aura ; coffre révélé objet par objet.
 local Check, Say, ResetWorld, NS, Mock = T.Check, T.Say, T.ResetWorld, T.QNS, T.Mock
 
@@ -158,9 +158,7 @@ do
 	Check("[SHINY] … une friandise", NS:TreatTotal() == 1 and NS:TreatCount("festin") == 0, NS:TreatTotal())
 	Check("[SHINY] … sa bulle", NS.companionBubbleKey == "SHINY_KILLED" and NS.companionBubbleText:find("Kodo brillant", 1, true),
 		NS.companionBubbleText)
-	local memory = NS:MemoryData().memories[#NS:MemoryData().memories]
-	Check("[SHINY] … un souvenir (avec photo permise)", memory and memory.kind == "shiny"
-		and NS:MemoryText(memory):find("Kodo brillant", 1, true) and NS.MEMORY_PHOTO_KINDS.shiny == true)
+	Check("[SHINY] … pas de souvenir (album retiré en 2.6.0)", NS:CompanionData().memories == nil)
 	Check("[SHINY] zone : une brillante", NS:ShinyZoneCount(1413) == 1)
 	SH.Roll(0)
 	local _, second = SH.See(3301)

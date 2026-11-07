@@ -97,7 +97,6 @@ local FR = {
 	CAPTURE_SRC            = "Capturé le %s",
 	OPT_DAILY_CAPTURE      = "Capturer les monstres abattus",
 	OPT_DAILY_CAPTURE_DESC = "Les monstres abattus qui valent le coup attendent 30 s après le combat : un filet sur le compagnon les capture (clic droit : la liste). Ils deviennent des apparences du compagnon.",
-	MEM_TXT_capture        = "Capturé : %s",
 	HELP_CAPTURE           = "/qc capture -- ta ménagerie et tes aides de capture",
 }
 local EN = {
@@ -134,14 +133,10 @@ local EN = {
 	CAPTURE_SRC            = "Captured on %s",
 	OPT_DAILY_CAPTURE      = "Capture defeated monsters",
 	OPT_DAILY_CAPTURE_DESC = "Defeated monsters worth catching wait 30 s after combat: a net on your companion captures them (right-click: the list). They become companion looks.",
-	MEM_TXT_capture        = "Captured: %s",
 	HELP_CAPTURE           = "/qc capture -- your menagerie and capture aids",
 }
 ns.RegisterStrings(FR, EN)
 if ns.KEEP_STRINGS then ns.CAPTURE_STRINGS = { fr = FR, en = EN } end
-if type(ns.MEMORY_STRINGS) == "table" then
-	ns.MEMORY_STRINGS.fr.MEM_TXT_capture, ns.MEMORY_STRINGS.en.MEM_TXT_capture = FR.MEM_TXT_capture, EN.MEM_TXT_capture
-end
 
 -- Répliques : même mécanique que les autres réservoirs (CompanionLines.lua).
 -- Ton voulu par les joueurs : un compagnon taquin, qui se moque gentiment.
@@ -773,9 +768,6 @@ function ns:CaptureResolve(rolling)
 		if not rolling.starsBefore then self:Print(self:F("CAPTURE_MSG_OK", target.name)) end
 		self:CompanionSay(target.shiny and "CAPTURE_SHINY" or "CAPTURE_OK", { force = true, args = { target.name } })
 		if self.CompanionFx then self:CompanionFx("bounce"); self:CompanionFx("hearts") end
-		if self.MemoryRecord then
-			self:MemoryRecord("capture", "capture:" .. tostring(target.npcID), { target.name }, { npc = target.npcID })
-		end
 		self:CompanionAdd("mood", 5)
 		if fresh and data.count % ns.CAPTURE_GIFT_EVERY == 0 then
 			-- besace de sifflets pleine : le message le dit (CaptureGrant)

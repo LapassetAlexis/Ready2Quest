@@ -23,6 +23,10 @@
 -- tout est créé une fois, rien n'est alloué à chaque image.
 -- Réglage : « Capture animée » (page « Au jour le jour »). Coupé, la petite
 -- fenêtre fait comme avant.
+-- Style Azeroth (2.5.1, AzerothStyle.lua) : la même scène dans le cadre en
+-- bois des hauts faits, la plaque « CAPTURE » et le nom en haut, et le
+-- verdict en bandeau de haut fait (bouclier d'or et éclat, ou gris) à la
+-- place du ruban ; le bandeau « Capturé ! » d'après n'est alors pas rejoué.
 local ADDON, ns = ...
 if ns.blocked then return end
 local L = ns.L
@@ -36,6 +40,12 @@ local STAGE_W, STAGE_H = 340, 386
 local SCENE, MODEL = 196, 180     -- la scène, et le modèle dedans
 local NET = 210                   -- le filet posé déborde un peu de la scène
 local RIBBON_W, RIBBON_H = 300, 75
+-- style Azeroth (2.5.1, maquette validée) : fenêtre en bois 360×504, plaque
+-- de titre en haut, la scène, les losanges des secousses, le bandeau de
+-- verdict, le pied (au-dessus du bois)
+local AZS = { w = 360, h = 504, plateW = 280, plateH = 92, plateY = -22, sceneY = -136,
+	verdictW = 330, verdictH = 107, verdictY = -352, footer = 24, dots = 12 }
+ns.CAPTURE_STAGE_AZEROTH = AZS
 local TRAIL, DUST, PUFFS, BURST, ROPES, MOTES = 6, 6, 4, 18, 8, 12
 
 -- Les textures de la scène (tools/gen_capture_assets.py)
@@ -182,13 +192,40 @@ local function PlayKit(name)
 end
 
 -- ---------------------------------------------------------------------------
--- Construction : tout est créé une fois, caché, puis posé image par image
+-- Construction : tout est créé une fois, caché, puis posé image par image.
+-- Une scène par style (2.5.1) : Sobre (le cadre du thème, le ruban) ou
+-- Azeroth (le cadre en bois, la plaque, le bandeau des hauts faits), créée à
+-- la demande et gardée (ns.captureStages[style]) ; ns.captureStage est celle
+-- du style courant. Le style change pendant la scène : elle finit telle
+-- quelle, le nouveau style vient à la suivante.
 -- ---------------------------------------------------------------------------
-function ns:EnsureCaptureStage()
-	if self.captureStage then return self.captureStage end
-	-- un nom global : Échap la referme (UISpecialFrames), comme les fenêtres du thème (2.3.0)
+local function StageStyle(self)
+	return (self.AzerothScenesOn and self:AzerothScenesOn()) and "azeroth" or "sobre"
+end
+
+-- Le cadre lui-même : Azeroth (bois, plaque, bandeau de verdict) ou Sobre
+local function StageWindow(self, az)
+	if az and self.AzerothCreateWindow then
+		local frame = self:AzerothCreateWindow(AZS.w, AZS.h, { strata = "DIALOG", name = "QuestCompanionCaptureStageAzeroth" })
+		if frame then return frame end
+	end
 	local frame = Theme.CreateToast(UIParent, STAGE_W, STAGE_H, { strata = "DIALOG", name = "QuestCompanionCaptureStage" })
+	if frame then frame.uiStyle = "sobre" end
+	return frame
+end
+
+function ns:EnsureCaptureStage()
+	local want = StageStyle(self)
+	local current = self.captureStage
+	if current and ((current.uiStyle or "sobre") == want or current:IsShown()) then return current end
+	self.captureStages = self.captureStages or {}
+	if current then self.captureStages[current.uiStyle or "sobre"] = current end
+	local kept = self.captureStages[want]
+	if kept then self.captureStage = kept; return kept end
+	-- un nom global : Échap la referme (UISpecialFrames), comme les fenêtres du thème (2.3.0)
+	local frame = StageWindow(self, want == "azeroth")
 	if not frame then return nil end
+	local az = frame.azeroth and true or false
 	frame:ClearAllPoints()
 	frame:SetPoint("CENTER", UIParent, "CENTER", 0, 60)
 	frame:EnableMouse(true)
@@ -207,28 +244,43 @@ function ns:EnsureCaptureStage()
 		if rolling and rolling.result then rolling.closeAt = Clock() end
 	end)
 	local level = frame:GetFrameLevel() or 1
+	local width = az and AZS.w or STAGE_W
 
-	-- filet haut à la couleur de la rareté, titre, l'aide choisie en badge
-	frame.topBar = Theme.Solid(frame, "BORDER", WHITE, 1)
-	frame.topBar:SetPoint("TOPLEFT", frame, "TOPLEFT", 1, -1)
-	frame.topBar:SetPoint("TOPRIGHT", frame, "TOPRIGHT", -1, -1)
-	frame.topBar:SetHeight(3)
-	frame.title = Theme.Text(frame, Theme.F_CAPS or Theme.F_SMALL, Theme.MUTED_LIGHT)
-	frame.title:SetPoint("TOP", frame, "TOP", 0, -12)
+	if az then
+		-- la plaque de titre : « CAPTURE » et le nom (or pour une brillante) ;
+		-- l'aide choisie en badge, à gauche sous la plaque
+		frame.plate = self:AzerothPlate(frame, AZS.plateW, AZS.plateH)
+		frame.plate:SetPoint("TOP", frame, "TOP", 0, AZS.plateY)
+		frame.title = frame.plate.title
+		frame.aidIcon = frame:CreateTexture(nil, "OVERLAY")
+		frame.aidIcon:SetSize(14, 14)
+		frame.aidIcon:SetTexCoord(0.08, 0.92, 0.08, 0.92)
+		frame.aidIcon:SetPoint("TOPLEFT", frame, "TOPLEFT", ns.AZEROTH_WOOD_PAD or 26, AZS.plateY - AZS.plateH - 2)
+		frame.aidText = Theme.Text(frame, Theme.F_CAPS or Theme.F_SMALL, Theme.GOLD)
+		frame.aidText:SetPoint("LEFT", frame.aidIcon, "RIGHT", 4, 0)
+	else
+		-- filet haut à la couleur de la rareté, titre, l'aide choisie en badge
+		frame.topBar = Theme.Solid(frame, "BORDER", WHITE, 1)
+		frame.topBar:SetPoint("TOPLEFT", frame, "TOPLEFT", 1, -1)
+		frame.topBar:SetPoint("TOPRIGHT", frame, "TOPRIGHT", -1, -1)
+		frame.topBar:SetHeight(3)
+		frame.title = Theme.Text(frame, Theme.F_CAPS or Theme.F_SMALL, Theme.MUTED_LIGHT)
+		frame.title:SetPoint("TOP", frame, "TOP", 0, -12)
+		frame.aidIcon = frame:CreateTexture(nil, "OVERLAY")
+		frame.aidIcon:SetSize(14, 14)
+		frame.aidIcon:SetTexCoord(0.08, 0.92, 0.08, 0.92)
+		frame.aidIcon:SetPoint("LEFT", frame.title, "RIGHT", 12, 0)
+		frame.aidText = Theme.Text(frame, Theme.F_CAPS or Theme.F_SMALL, Theme.GOLD)
+		frame.aidText:SetPoint("LEFT", frame.aidIcon, "RIGHT", 4, 0)
+	end
 	frame.title:SetText(Theme.Upper and Theme.Upper(L.CAPTURE_STAGE_TITLE) or L.CAPTURE_STAGE_TITLE)
-	frame.aidIcon = frame:CreateTexture(nil, "OVERLAY")
-	frame.aidIcon:SetSize(14, 14)
-	frame.aidIcon:SetTexCoord(0.08, 0.92, 0.08, 0.92)
-	frame.aidIcon:SetPoint("LEFT", frame.title, "RIGHT", 12, 0)
-	frame.aidText = Theme.Text(frame, Theme.F_CAPS or Theme.F_SMALL, Theme.GOLD)
-	frame.aidText:SetPoint("LEFT", frame.aidIcon, "RIGHT", 4, 0)
 
 	-- la scène : un carré centré où vit le modèle. Derrière lui, sur le cadre
 	-- lui-même (un cadre enfant passe toujours devant les textures de son
 	-- parent) : le fond de scène, les rayons et le halo
 	frame.scene = CreateFrame("Frame", nil, frame)
 	frame.scene:SetSize(SCENE, SCENE)
-	frame.scene:SetPoint("TOP", frame, "TOP", 0, -34)
+	frame.scene:SetPoint("TOP", frame, "TOP", 0, az and AZS.sceneY or -34)
 	-- la créature qui s'enfuit ne sort pas de la scène
 	Method(frame.scene, "SetClipsChildren", true)
 	frame.stageBg = Art(frame, "BACKGROUND", 2, ART.stage, nil, SCENE)
@@ -320,62 +372,96 @@ function ns:EnsureCaptureStage()
 	frame.flash = Art(frame.fxTop, "ARTWORK", 5, ART.halo, nil, 320, 320, "ADD")
 	frame.flash:SetPoint("CENTER", frame.scene, "CENTER", 0, 0)
 
-	-- le ruban (cadre à part : il surgit avec SetScale), son liseré, son texte,
-	-- et le reflet d'une brillante (dans un cadre qui rogne ses enfants)
-	frame.banner = CreateFrame("Frame", nil, frame)
-	frame.banner:SetSize(RIBBON_W, RIBBON_H)
-	frame.banner:SetPoint("CENTER", frame.scene, "BOTTOM", 0, -34)
-	frame.banner:SetFrameLevel(level + 13)
-	frame.ribbonPanel = Art(frame.banner, "ARTWORK", 0, ART.ribbon, COORDS.ribbonPanel)
-	frame.ribbonPanel:SetAllPoints(frame.banner)
-	frame.ribbonPanel:Show()
-	frame.ribbonTrim = Art(frame.banner, "ARTWORK", 1, ART.ribbon, COORDS.ribbonTrim)
-	frame.ribbonTrim:SetAllPoints(frame.banner)
-	frame.ribbonTrim:Show()
-	frame.sheenClip = CreateFrame("Frame", nil, frame.banner)
-	frame.sheenClip:SetSize(RIBBON_W * 0.6, 38)
-	frame.sheenClip:SetPoint("CENTER", frame.banner, "CENTER", 0, 0)
-	frame.sheenClip.clips = Method(frame.sheenClip, "SetClipsChildren", true) == true
-	frame.sheen = Art(frame.sheenClip, "ARTWORK", 0, ART.halo, nil, 60, 90, "ADD")
-	frame.sheen:SetVertexColor(1, 1, 1, 0.35)
-	frame.bannerText = Theme.Text(frame.banner, Theme.F_DISPLAY or Theme.F_TITLE, Theme.PARCHMENT)
-	frame.bannerText:SetPoint("CENTER", frame.banner, "CENTER", 0, 2)
-	frame.banner:Hide()
+	if az then
+		-- le verdict : le bandeau des hauts faits (il éclot depuis sa zone
+		-- fixe), « CAPTURÉ ! » ou « ÉCHAPPÉ… », le nom ou la phrase, les
+		-- étoiles du spécimen dedans, le bouclier d'or ou gris et son éclat
+		frame.banner = self:AzerothVerdict(frame, AZS.verdictW, AZS.verdictH)
+		frame.banner.area:SetPoint("TOP", frame, "TOP", 0, AZS.verdictY)
+		frame.banner.area:SetFrameLevel(level + 13)
+		frame.banner:SetFrameLevel(level + 13)
+		-- le nom, sur la plaque ; les losanges de rareté sous la plaque
+		frame.name = frame.plate.text
+		frame.pipAnchor = frame.plate
+	else
+		-- le ruban (cadre à part : il surgit avec SetScale), son liseré, son texte,
+		-- et le reflet d'une brillante (dans un cadre qui rogne ses enfants)
+		frame.banner = CreateFrame("Frame", nil, frame)
+		frame.banner:SetSize(RIBBON_W, RIBBON_H)
+		frame.banner:SetPoint("CENTER", frame.scene, "BOTTOM", 0, -34)
+		frame.banner:SetFrameLevel(level + 13)
+		frame.ribbonPanel = Art(frame.banner, "ARTWORK", 0, ART.ribbon, COORDS.ribbonPanel)
+		frame.ribbonPanel:SetAllPoints(frame.banner)
+		frame.ribbonPanel:Show()
+		frame.ribbonTrim = Art(frame.banner, "ARTWORK", 1, ART.ribbon, COORDS.ribbonTrim)
+		frame.ribbonTrim:SetAllPoints(frame.banner)
+		frame.ribbonTrim:Show()
+		frame.sheenClip = CreateFrame("Frame", nil, frame.banner)
+		frame.sheenClip:SetSize(RIBBON_W * 0.6, 38)
+		frame.sheenClip:SetPoint("CENTER", frame.banner, "CENTER", 0, 0)
+		frame.sheenClip.clips = Method(frame.sheenClip, "SetClipsChildren", true) == true
+		frame.sheen = Art(frame.sheenClip, "ARTWORK", 0, ART.halo, nil, 60, 90, "ADD")
+		frame.sheen:SetVertexColor(1, 1, 1, 0.35)
+		frame.bannerText = Theme.Text(frame.banner, Theme.F_DISPLAY or Theme.F_TITLE, Theme.PARCHMENT)
+		frame.bannerText:SetPoint("CENTER", frame.banner, "CENTER", 0, 2)
+		frame.banner:Hide()
 
-	-- sous le ruban : nom, losanges de rareté, étoiles du spécimen ; en bas,
-	-- les losanges des secousses et le pied
-	frame.name = Theme.Text(frame, Theme.F_HEADING or Theme.F_BODY, Theme.PARCHMENT)
-	frame.name:SetPoint("TOP", frame.banner, "BOTTOM", 0, -4)
-	frame.name:SetWidth(STAGE_W - 24)
-	frame.name:SetJustifyH("CENTER")
+		-- sous le ruban : nom, losanges de rareté, étoiles du spécimen ; en bas,
+		-- les losanges des secousses et le pied
+		frame.name = Theme.Text(frame, Theme.F_HEADING or Theme.F_BODY, Theme.PARCHMENT)
+		frame.name:SetPoint("TOP", frame.banner, "BOTTOM", 0, -4)
+		frame.name:SetWidth(STAGE_W - 24)
+		frame.name:SetJustifyH("CENTER")
+		frame.pipAnchor = frame.name
+	end
 	frame.pips = {}
 	for index = 1, 5 do
 		frame.pips[index] = Theme.CreateDiamond and Theme.CreateDiamond(frame, 9) or frame:CreateTexture(nil, "OVERLAY")
 	end
+	-- les étoiles du spécimen : sous le nom (Sobre), dans le bandeau (Azeroth)
+	local starHost = az and frame.banner or frame
 	frame.starSlots = {}
 	for index = 1, 3 do
-		local star = Art(frame, "OVERLAY", 1, ART.stars, COORDS.starEmpty, 18)
-		star:SetPoint("TOP", frame.name, "BOTTOM", (index - 2) * 20, -18)
+		local star = Art(starHost, "OVERLAY", 1, ART.stars, COORDS.starEmpty, 18)
+		if az then
+			star:SetPoint("TOP", frame.banner, "TOP", (index - 2) * 20, frame.banner.lineY)
+		else
+			star:SetPoint("TOP", frame.name, "BOTTOM", (index - 2) * 20, -18)
+		end
 		frame.starSlots[index] = star
 	end
-	frame.starSpark = Art(frame, "OVERLAY", 2, ART.sparks, COORDS.spark, 22, 22, "ADD")
+	frame.starSpark = Art(starHost, "OVERLAY", 2, ART.sparks, COORDS.spark, 22, 22, "ADD")
+	-- les losanges des secousses : en bas (Sobre), sous la scène, en or (Azeroth)
 	frame.shakeDots = {}
 	for index = 1, 3 do
-		local dot = Theme.CreateDiamond and Theme.CreateDiamond(frame, 10) or frame:CreateTexture(nil, "OVERLAY")
-		dot:SetPoint("BOTTOM", frame, "BOTTOM", (index - 2) * 14, 30)
+		local size = az and AZS.dots or 10
+		local dot = Theme.CreateDiamond and Theme.CreateDiamond(frame, size) or frame:CreateTexture(nil, "OVERLAY")
+		if az then
+			dot:SetPoint("TOP", frame.scene, "BOTTOM", (index - 2) * 18, -6)
+		else
+			dot:SetPoint("BOTTOM", frame, "BOTTOM", (index - 2) * 14, 30)
+		end
 		dot:Hide()
 		frame.shakeDots[index] = dot
 	end
+	if az then frame.dotOff, frame.dotOffAlpha = Theme.GOLD, 0.25 end
+	-- le pied : dans le cadre, au-dessus du bois (Azeroth)
 	frame.footer = Theme.Text(frame, Theme.F_SMALL, Theme.MUTED_LIGHT)
-	frame.footer:SetPoint("BOTTOM", frame, "BOTTOM", 0, 11)
-	frame.footer:SetWidth(STAGE_W - 24)
+	frame.footer:SetPoint("BOTTOM", frame, "BOTTOM", 0, az and AZS.footer or 11)
+	frame.footer:SetWidth(width - (az and 2 * (ns.AZEROTH_WOOD_PAD or 26) or 24))
 	frame.footer:SetJustifyH("CENTER")
+	if az and frame.footer.SetWordWrap then frame.footer:SetWordWrap(false) end
+	if az and ns.AZEROTH_COLORS then
+		local h = ns.AZEROTH_COLORS.hint
+		frame.footer:SetTextColor(h[1], h[2], h[3], 1)
+	end
 
 	frame:SetScript("OnUpdate", function()
 		local done, err = pcall(ns.CaptureStageUpdate, ns, Clock())
 		if not done and ns.RecordError then ns:RecordError("capture:stage", err) end
 	end)
 	frame:Hide()
+	self.captureStages[frame.uiStyle or "sobre"] = frame
 	self.captureStage = frame
 	return frame
 end
@@ -413,7 +499,14 @@ local function Rest(frame)
 	frame.net:Hide()
 	frame.netShadow:Hide()
 	frame.starSpark:Hide()
-	frame.sheen:Hide()
+	if frame.sheen then frame.sheen:Hide() end
+	if frame.banner.azeroth then
+		frame.banner.bling:Hide()
+		frame.banner.shine:Hide()
+		frame.banner.glow:SetAlpha(0)
+		frame.banner:SetShield(nil)
+		frame.banner.filled = nil
+	end
 	frame.banner:Hide()
 	frame.banner:SetScale(1)
 	frame.netFrame:SetScale(1)
@@ -433,8 +526,10 @@ function ns:CaptureShowStage(rolling)
 	frame.rolling = rolling
 	frame.rarity = rarity
 	frame.shiny = target.shiny and true or false
+	-- la scène Azeroth montre le verdict : pas de bandeau « Capturé ! » en double (AzerothStyle.lua)
+	rolling.sceneVerdict = frame.azeroth or nil
 	local c = rarity.color
-	frame.topBar:SetVertexColor(c[1], c[2], c[3], 1)
+	if frame.topBar then frame.topBar:SetVertexColor(c[1], c[2], c[3], 1) end
 	local shown = self:CaptureModelSetup(frame.model, target)
 	Creature(frame, 0, 0, 1, 0)
 	if shown then frame.fallback:Hide() else frame.fallback:Show() end
@@ -444,7 +539,7 @@ function ns:CaptureShowStage(rolling)
 	for _, def in ipairs(ns.CAPTURE_AIDS or {}) do if def.id == rolling.aid then aid = def end end
 	if aid then
 		frame.aidIcon:SetTexture(aid.icon)
-		frame.aidText:SetText("· " .. tostring(self:CaptureAidLabel(aid.id)))
+		frame.aidText:SetText((frame.azeroth and "" or "· ") .. tostring(self:CaptureAidLabel(aid.id)))
 		frame.aidIcon:Show()
 		frame.aidText:Show()
 	else
@@ -453,15 +548,21 @@ function ns:CaptureShowStage(rolling)
 	end
 	Rest(frame)
 	Tint(frame.halo, c, 0)
-	frame.bannerText:SetText("")
-	frame.name:SetText(target.shiny and self:F("CAPTURE_SHINY_TAG", target.name) or target.name)
-	frame.name:SetTextColor(c[1], c[2], c[3])
-	-- losanges de rareté, centrés sous le nom
+	local label = target.shiny and self:F("CAPTURE_SHINY_TAG", target.name) or target.name
+	if frame.plate then
+		-- sur la plaque : blanc, or pour une brillante, la police rapetisse
+		frame.plate:SetName(label, target.shiny)
+	else
+		frame.bannerText:SetText("")
+		frame.name:SetText(label)
+		frame.name:SetTextColor(c[1], c[2], c[3])
+	end
+	-- losanges de rareté, centrés sous le nom (sous la plaque en Azeroth)
 	local gap = 13
 	for index, pip in ipairs(frame.pips) do
 		pip:ClearAllPoints()
 		if index <= rarity.pips then
-			pip:SetPoint("TOP", frame.name, "BOTTOM", (index - (rarity.pips + 1) / 2) * gap, -6)
+			pip:SetPoint("TOP", frame.pipAnchor, "BOTTOM", (index - (rarity.pips + 1) / 2) * gap, frame.plate and 2 or -6)
 			pip:SetVertexColor(c[1], c[2], c[3], 1)
 			pip:Show()
 		else
@@ -585,8 +686,9 @@ local function StageShake(frame, since, t, rolling, c)
 	-- les secousses : un losange allumé par secousse commencée
 	local lit = math.min(rolling.done + 1, 3)
 	for index, dot in ipairs(frame.shakeDots) do
-		local col = index <= lit and Theme.GOLD or Theme.EDGE
-		dot:SetVertexColor(col[1], col[2], col[3], 1)
+		local on = index <= lit
+		local col = on and Theme.GOLD or (frame.dotOff or Theme.EDGE)
+		dot:SetVertexColor(col[1], col[2], col[3], on and 1 or (frame.dotOffAlpha or 1))
 		dot:Show()
 	end
 	frame.footer:SetText(L.CAPTURE_SHAKING)
@@ -601,6 +703,64 @@ local function Banner(frame, r, panel, trim, text, color)
 	frame.bannerText:SetText(text)
 	frame.bannerText:SetTextColor(color[1], color[2], color[3])
 	frame.banner:Show()
+end
+
+-- Azeroth : le bandeau des hauts faits surgit (même rebond), sa lueur, le
+-- bouclier (or ou gris) et son éclat ; une brillante : le reflet le traverse
+local function Verdict(frame, r, ok, rolling)
+	local banner = frame.banner
+	local colors = ns.AZEROTH_COLORS or {}
+	local pop = Clamp01(r / 0.3)
+	banner:SetScale(math.max(0.05, EaseBack(pop)))
+	if not banner.filled or banner.filled ~= (ok and "ok" or "fail") then
+		banner.filled = ok and "ok" or "fail"
+		local target = rolling.target
+		local title = ok and L.CAPTURE_GOT or L.CAPTURE_FLED
+		banner.title:SetText(ns.AzerothUpper and ns.AzerothUpper(title) or title)
+		if ok then
+			banner.text:SetText(target.name)
+			local c = target.shiny and (colors.shinyName or Theme.GOLD_LIGHT) or WHITE
+			banner.text:SetTextColor(c[1], c[2], c[3], 1)
+			banner.line:SetText("")
+			banner.line:Hide()
+		else
+			-- la phrase, en grand ; le nom est déjà sur la plaque
+			banner.text:SetText(L.CAPTURE_STAGE_FAIL)
+			local c = colors.fled or Theme.MUTED_LIGHT
+			banner.text:SetTextColor(c[1], c[2], c[3], 1)
+			banner.line:Hide()
+		end
+		banner:SetShield(ok and "gold" or "grey")
+		banner:Fit()
+	end
+	banner:Show()
+	-- la lueur derrière, à l'éclosion
+	local g = r - 0.1
+	banner.glow:SetAlpha(g < 0 and 0 or (g < 0.3 and 0.8 * g / 0.3 or 0.8 * Clamp01(1 - (g - 0.3) / 0.9)))
+	-- l'éclat sur le bouclier d'or
+	local b = (r - 0.35) / 1.2
+	if ok and b >= 0 and b <= 1 then
+		local size = 44 + 88 * Clamp01(b / 0.6)
+		banner.bling:SetSize(size, size)
+		banner.bling:SetAlpha(b < 0.25 and b / 0.25 or Clamp01(1 - (b - 0.25) / 0.6))
+		Rotate(banner.bling, 0.7 * b)
+		banner.bling:Show()
+	else
+		banner.bling:Hide()
+	end
+	-- le reflet d'une brillante, de gauche à droite, en boucle
+	if ok and frame.shiny then
+		local s = ((r - 0.4) % 2.2) / 1.3
+		if r >= 0.4 and s <= 1 then
+			Place(banner.shine, banner, -150 + 300 * s, 0)
+			banner.shine:SetAlpha(s < 0.35 and 0.9 * s / 0.35 or 0.9 * Clamp01(1 - (s - 0.35) / 0.65))
+			banner.shine:Show()
+		else
+			banner.shine:Hide()
+		end
+	else
+		banner.shine:Hide()
+	end
 end
 
 -- 4. Capturé : éclair, gerbe de rayons et d'étincelles, le filet se referme
@@ -668,9 +828,15 @@ local function StageOk(frame, r, rolling, c)
 			p:Hide()
 		end
 	end
-	Banner(frame, r, shiny and PANEL_SHINY or { c[1] * 0.42, c[2] * 0.42, c[3] * 0.42 }, col, L.CAPTURE_GOT, Theme.PARCHMENT)
+	if frame.banner.azeroth then
+		Verdict(frame, r, true, rolling)
+	else
+		Banner(frame, r, shiny and PANEL_SHINY or { c[1] * 0.42, c[2] * 0.42, c[3] * 0.42 }, col, L.CAPTURE_GOT, Theme.PARCHMENT)
+	end
 	-- le reflet balaie le ruban (si le client sait rogner ses enfants)
-	if shiny and frame.sheenClip.clips then
+	if not frame.sheen then
+		-- (Azeroth : le reflet du bandeau, ci-dessus)
+	elseif shiny and frame.sheenClip.clips then
 		Place(frame.sheen, frame.sheenClip, -170 + ((r * 200) % 400), 0)
 		frame.sheen:Show()
 	else
@@ -706,7 +872,7 @@ end
 
 -- Échappé : le filet bascule sur sa version déchirée et tombe, ses cordes
 -- volent, le monstre file sur le côté dans la poussière et s'efface
-local function StageFail(frame, r, c)
+local function StageFail(frame, r, c, rolling)
 	if not frame.played then frame.played = true; if not ns.CapturePlaySound then PlayKit("IG_QUEST_LOG_ABANDON_QUEST") end end
 	if not frame.torn then
 		frame.torn = true
@@ -719,7 +885,7 @@ local function StageFail(frame, r, c)
 	HideAll(frame.motes)
 	HideAll(frame.starSlots)
 	frame.starSpark:Hide()
-	frame.sheen:Hide()
+	if frame.sheen then frame.sheen:Hide() end
 	frame.netShadow:Hide()
 	-- un sursaut, puis la chute
 	local snap = r < 0.25 and 1 + 0.08 * math.sin(r / 0.25 * math.pi) or 1
@@ -748,7 +914,11 @@ local function StageFail(frame, r, c)
 	Tint(frame.halo, Theme.RED, 0.35 * (1 - Clamp01(r / 1.5)))
 	frame.halo:SetSize(200, 200)
 	frame.halo:Show()
-	Banner(frame, r, PANEL_FAIL, TRIM_FAIL, L.CAPTURE_FLED, Theme.RED)
+	if frame.banner.azeroth then
+		Verdict(frame, r, false, rolling)
+	else
+		Banner(frame, r, PANEL_FAIL, TRIM_FAIL, L.CAPTURE_FLED, Theme.RED)
+	end
 	HideAll(frame.shakeDots)
 	frame.footer:SetText(r > 1.2 and L.CAPTURE_STAGE_CLOSE or L.CAPTURE_STAGE_FAIL)
 end
@@ -781,7 +951,7 @@ function ns:CaptureStageUpdate(now)
 		StageOk(frame, r, rolling, c)
 		return "ok"
 	end
-	StageFail(frame, r, c)
+	StageFail(frame, r, c, rolling)
 	return "fail"
 end
 

@@ -300,57 +300,44 @@ do
 	Check("[JRN] personnage 60 à l'installation : 6 paliers", J.Ids("level") == "level:10,level:20,level:30,level:40,level:50,level:60", J.Ids("level"))
 end
 
--- 7. Bandeau, chat, combat, silence -----------------------------------------------
+-- 7. Relevés silencieux (2.7.0) : plus de bandeau ni de chat « Nouveau tampon » --
 do
-	Say("-- annonces")
+	Say("-- annonces (relevés silencieux)")
 	J.Reset(5)
+	NS:DB().journalChat = true
+	Mock:Reset()
 	J.Enter()
+	Check("[JRN] 2.7.0 : tampon gagné, STAMP émis (aides, compagnon)", NS:HasStamp("zone:1429") and #J.stamps >= 1, J.Fired())
+	Check("[JRN] 2.7.0 : aucun bandeau « Nouveau tampon »", #NS.journalToasts == 0
+		and not (NS.journalToast and NS.journalToast:IsShown() and (NS.journalToast.message or ""):find("Nouveau tampon", 1, true)))
+	Check("[JRN] 2.7.0 : aucune ligne de chat « Nouveau tampon », même chat du carnet allumé",
+		not Mock:Output():find("Nouveau tampon", 1, true), Mock:Output())
+	J.W.combat = true
+	J.Sub("Goldshire")
+	J.W.combat = false
+	Mock:Fire("PLAYER_REGEN_ENABLED")
+	Check("[JRN] 2.7.0 : sortie de combat, toujours rien", NS:HasStamp("subzone:87") and #NS.journalToasts == 0
+		and not Mock:Output():find("Goldshire", 1, true))
+	-- la file du carnet reste : un bandeau poussé à la main (sceau, titre) s'affiche
+	NS:DB().journalChat = false
+	NS:JournalNotify({ kind = "subzone", name = "Comté-du-Nord", id = "subzone:1" })
 	local toast = NS.journalToast
-	Check("[JRN] bandeau affiché au gain", toast and toast:IsShown() and toast.message == "Nouveau tampon : Forêt d'Elwynn",
-		toast and toast.message)
-	Check("[JRN] bandeau : le nom en grand", toast and toast.text.text == "Forêt d'Elwynn")
-	Check("[JRN] pas de chat par défaut", not Mock:Output():find("Nouveau tampon", 1, true))
+	Check("[JRN] la file des bandeaux du carnet marche toujours (sceaux, titres)", toast and toast:IsShown()
+		and toast.message == "Nouveau tampon : Comté-du-Nord", toast and toast.message)
 	Mock:Advance(5)
 	Check("[JRN] bandeau masqué après quelques secondes", not toast:IsShown())
-
-	-- en combat : rien, puis tout à la sortie
-	NS:DB().journalChat = true
+	-- rafale de bandeaux simples : groupée ; un bandeau « tout fait » (haut fait) passe à part
 	J.W.combat = true
-	Mock:Reset()
-	J.Sub("Goldshire")
-	Check("[JRN] en combat : tampon gagné…", NS:HasStamp("subzone:87"))
-	Check("[JRN] … mais ni bandeau ni chat", not toast:IsShown() and not Mock:Output():find("Goldshire", 1, true))
-	Mock:Advance(10)
-	Check("[JRN] toujours en combat : rien ne sort", not toast:IsShown())
+	for i = 1, 3 do NS:JournalToastPush({ kind = "seal", name = "Zone " .. i }) end
+	NS:JournalToastPush({ kind = "feat", title = "Haut fait obtenu", name = "Premier filet", points = 5 })
 	J.W.combat = false
 	Mock:Fire("PLAYER_REGEN_ENABLED")
-	Check("[JRN] sortie de combat : bandeau", toast:IsShown() and toast.message == "Nouveau tampon : Goldshire", toast.message)
-	Check("[JRN] sortie de combat : ligne de chat", Mock:Output():find("Nouveau tampon (Villages) : Goldshire.", 1, true), Mock:Output())
-
-	-- deux tampons : l'un après l'autre
+	Check("[JRN] rafale : les bandeaux simples groupés", toast.message == "3 nouveaux tampons" and #NS.journalToasts == 1, toast.message)
 	Mock:Advance(5)
-	J.Map(1436); J.Sub("Sentinel Hill")
-	Check("[JRN] deux tampons : le premier d'abord", toast.message == "Nouveau tampon : Marche de l'Ouest", toast.message)
+	Check("[JRN] … puis le haut fait, à part", toast:IsShown() and toast.message == "Premier filet" and #NS.journalToasts == 0, toast.message)
 	Mock:Advance(5)
-	Check("[JRN] puis le second", toast:IsShown() and toast.message == "Nouveau tampon : Sentinel Hill", toast.message)
-	Mock:Advance(5)
-
-	-- une rafale : un seul bandeau groupé
-	J.W.combat = true
-	J.Sub("Lakeshire"); J.Sub("Darkshire"); J.Sub("Goldshire"); J.Sub("Thelsamar")
-	J.W.combat = false
-	Mock:Fire("PLAYER_REGEN_ENABLED")
-	Check("[JRN] rafale : un bandeau groupé", toast.message == "3 nouveaux tampons" and #NS.journalToasts == 0, toast.message)
-	Mock:Advance(5)
-
-	-- silence
-	J.Reset(5)
-	NS:DB().journalToast, NS:DB().journalChat = false, false
-	Mock:Reset()
-	J.Enter(); J.Sub("Goldshire")
-	Check("[JRN] bandeau coupé : rien d'affiché", not (NS.journalToast and NS.journalToast:IsShown()) and #NS.journalToasts == 0)
-	Check("[JRN] chat coupé : rien dans le chat", not Mock:Output():find("tampon", 1, true))
-	Check("[JRN] silence : le tampon est gagné quand même, STAMP aussi", NS:HasStamp("subzone:87") and #J.stamps == 2, J.Fired())
+	NS:DB().journalToast = false
+	Check("[JRN] bandeaux du carnet coupés : rien en file", NS:JournalToastPush({ kind = "seal", name = "X" }) == false)
 end
 
 -- 8. Comptes (contrat) ------------------------------------------------------------
@@ -379,14 +366,13 @@ do
 	Check("[JRN] /r2q carnet ouvre le carnet", f and f:IsShown())
 	Check("[JRN] fenêtre Theme (titre)", f and f.title and f.title.text == "Carnet de voyage")
 	Check("[JRN] sections : Complétion (ex-Zones) et Compagnon", f.sections and f.sections.progress and f.sections.evolution)
-	Check("[JRN] total en sous-titre", f.subtitle.text:find("6 tampon", 1, true), f.subtitle.text)
+	Check("[JRN] 2.7.0 : points de hauts faits en sous-titre", f.subtitle.text:find("0 points de hauts faits", 1, true), f.subtitle.text)
 	Check("[JRN] ouvre sur la Créature, premier onglet", f.kind == "evolution")
-	-- un nouveau tampon rafraîchit la fenêtre ouverte (la ligne « parcours » du
-	-- Compagnon n'existe plus : on suit le total de tampons sous le titre)
+	-- un haut fait obtenu rafraîchit la fenêtre ouverte (les points sous le titre)
 	f.sections.evolution:Click()
 	local before = f.subtitle.text
-	J.Map(1436)
-	Check("[JRN] fenêtre ouverte : rafraîchie au gain", f.subtitle.text ~= before and f.subtitle.text:find("7 tampon", 1, true), f.subtitle.text)
+	NS:FeatAward("char_level_10", { silent = true })
+	Check("[JRN] fenêtre ouverte : rafraîchie au gain", f.subtitle.text ~= before and f.subtitle.text:find("5 points", 1, true), f.subtitle.text)
 	NS:HandleCommand("journal")
 	Check("[JRN] /r2q journal : referme", not f:IsShown())
 	NS:HandleCommand("carnet")
@@ -425,7 +411,11 @@ do
 		end
 	end)())
 	Check("[JRN] phrase d'explication", page and page.subText == NS.L.OPT_PAGE_JOURNAL_SUB)
-	Check("[JRN] bandeau, chat et suivi réglables", page and #page.rows == 5, page and #page.rows)
+	Check("[JRN] bandeau, chat, suivi et hauts faits réglables (forme des titres : lot D)", page and #page.rows == 10, page and (function()
+		local keys = {}
+		for _, card in ipairs(page.rows) do keys[#keys + 1] = tostring(card.def and card.def.key or card.key) end
+		return #page.rows .. " : " .. table.concat(keys, ", ")
+	end)())
 	local button = page and page.actionButtons and page.actionButtons.journal
 	Check("[JRN] bouton « Ouvrir le carnet »", button and button.text.text == "Ouvrir le carnet")
 	if button then button:Click() end

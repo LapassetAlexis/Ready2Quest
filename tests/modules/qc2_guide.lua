@@ -378,7 +378,7 @@ do
 	NS:ToggleJournal(true)
 	local f = NS.journalFrame
 	Check("[GUIDE] entrée « Guide » au menu, en dernier", f.sections.guide and f.sections.guide.text.text == NS.L.JRN_SEC_guide
-		and f.sections.guide.points[1].y < f.sections.memories.points[1].y)
+		and f.sections.guide.points[1].y < f.sections.progress.points[1].y)
 	NS:SelectJournalKind("guide")
 	local pane = f.guide
 	Check("[GUIDE] la page s'ouvre, titre et sous-titre", f.kind == "guide" and pane:IsShown()

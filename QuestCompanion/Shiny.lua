@@ -9,8 +9,7 @@
 -- Ménagerie la montre, capturée ou non. La créature le voit : bulle,
 -- « ! », étincelles, et une étoile au-dessus de sa tête (icône de cible, si tu
 -- joues seul ou mènes le groupe, et s'il n'en a pas déjà une).
---   * abattu : fiche dorée au bestiaire, une friandise (parfois un Festin), un
---     souvenir (avec photo si elle est permise) ;
+--   * abattu : fiche dorée au bestiaire, une friandise (parfois un Festin) ;
 --   * 5, 15 et 30 brillantes : un cadre, un fond et une aura qu'on ne trouve
 --     dans aucun coffre.
 -- Ouverture de coffre : les objets se révèlent un par un, la créature
@@ -69,7 +68,6 @@ local FR = {
 	COMP_REQ_shiny         = "%d brillantes",
 	JRN_STAT_shiny         = "brillantes",
 	SHINY_MSG_UNLOCK       = "%d créatures brillantes ! Nouveau : %s.",
-	MEM_TXT_shiny          = "Une créature brillante : %s !",
 	SHINY_CARD             = "Brillante !",
 	SHINY_PREV             = "Brillante, abattue le %s.",
 	SHINY_EVO              = "Brillantes : %d  ·  prochain cadeau à %d",
@@ -88,7 +86,6 @@ local EN = {
 	COMP_REQ_shiny         = "%d shinies",
 	JRN_STAT_shiny         = "shinies",
 	SHINY_MSG_UNLOCK       = "%d shiny creatures! New: %s.",
-	MEM_TXT_shiny          = "A shiny creature: %s!",
 	SHINY_CARD             = "Shiny!",
 	SHINY_PREV             = "Shiny, defeated on %s.",
 	SHINY_EVO              = "Shinies: %d  ·  next gift at %d",
@@ -108,10 +105,6 @@ if type(ns.COMPANION_STRINGS) == "table" then
 		ns.COMPANION_STRINGS.fr[key], ns.COMPANION_STRINGS.en[key] = FR[key], EN[key]
 	end
 end
-if type(ns.MEMORY_STRINGS) == "table" then
-	ns.MEMORY_STRINGS.fr.MEM_TXT_shiny, ns.MEMORY_STRINGS.en.MEM_TXT_shiny = FR.MEM_TXT_shiny, EN.MEM_TXT_shiny
-end
-if type(ns.MEMORY_PHOTO_KINDS) == "table" then ns.MEMORY_PHOTO_KINDS.shiny = true end
 
 local P = {
 	SHINY_SPOTTED = { -- %s = la créature
@@ -321,9 +314,6 @@ function ns:ShinyKill(guid, info)
 	if self.WeeklyEvent then pcall(self.WeeklyEvent, self, "shinyKill", 1) end
 	local kind = math.random() < ns.SHINY_FESTIN_CHANCE and "festin" or (self.TreatRandom and self:TreatRandom())
 	if kind and self.TreatGrant then self:TreatGrant(kind, { quiet = true }) end
-	if self.MemoryRecord then
-		self:MemoryRecord("shiny", "shiny:" .. shiny.count, { info.name }, { zone = info.zoneName, npc = info.npcID })
-	end
 	self:CompanionSay("SHINY_KILLED", { force = true, args = { info.name } })
 	if self.CompanionFx then self:CompanionFx("bounce"); self:CompanionFx("sparkle") end
 	self:ShinyCheckRewards()
@@ -339,7 +329,9 @@ function ns:ShinyCheckRewards()
 	local fresh = {}
 	for _, reward in ipairs(REWARDS) do
 		local key = reward.kind .. ":" .. reward.def.id
-		if count >= reward.count and not unlocked[key] then
+		-- 2.7 : le haut fait shiny_found_<n> donne la récompense (FeatsCatMenagerie.lua)
+		local byFeat = self.FeatLegacyHandled and self:FeatLegacyHandled("shiny_found_" .. reward.count)
+		if count >= reward.count and not unlocked[key] and not byFeat then
 			unlocked[key] = true
 			fresh[#fresh + 1] = reward
 			local label = L[reward.def.label]

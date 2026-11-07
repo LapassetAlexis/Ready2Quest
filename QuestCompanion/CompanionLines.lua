@@ -1001,35 +1001,6 @@ P.CHATTER_2 = { { "Je reste calme : mes conseils et les grands moments, c'est to
 P.CHATTER_3 = { { "Comme d'habitude, alors ! On papote ?", "Back to normal, then! Shall we chat?" } }
 P.CHATTER_4 = { { "Oh, j'ai le droit de bavarder ? J'ai plein de choses à te dire !", "Oh, I'm allowed to chat? I've got so much to tell you!" } }
 
--- Souvenirs (Memories.lua) : la photo, le rappel d'un souvenir, les anniversaires
-P.PHOTO = {
-	{ "Clic ! Celle-là, je la garde.", "Click! I'm keeping this one." },
-	{ "Clic ! Souris !", "Click! Smile!" },
-	{ "Clic ! Pour l'album.", "Click! For the album." },
-	{ "Clic ! Un souvenir de plus.", "Click! One more memory." },
-	{ "Clic ! Celle-là, avec ta tête de vainqueur. Rare.", "Click! That one, with your winner face. Rare." },
-	{ "Clic ! Tu as fermé les yeux. On la garde quand même.", "Click! You blinked. We're keeping it anyway." },
-	{ "Clic ! Pour prouver qu'un jour, tu n'étais pas perdu.", "Click! Proof that once, you weren't lost." },
-	{ "Clic ! Je l'appellerai « Le héros, de dos ».", "Click! I'll call it \"The hero, from behind\"." },
-	{ "Clic ! Elle ira entre ta plus belle chute et ton meilleur détour.", "Click! It goes between your best fall and your finest detour." },
-}
-P.RECALL = {  -- %s = le souvenir
-	{ "Tu te souviens ? %s", "Remember? %s" },
-	{ "Je repensais à ça : %s", "I was thinking about this: %s" },
-	{ "Ah, le bon vieux temps… %s", "Ah, the good old days… %s" },
-	{ "Dans mon album, j'aime bien celui-là : %s", "In my album, I like this one: %s" },
-	{ "Hihi, je repense à ça : %s", "Hehe, I keep thinking about this: %s" },
-	{ "Ça me fait encore rire : %s", "Still makes me laugh: %s" },
-	{ "Page préférée de l'album : %s", "Favourite page in the album: %s" },
-}
-P.ANNIV = {  -- %s = la durée (« une semaine »)
-	{ "Ça fait %s qu'on voyage ensemble !", "We've been travelling together for %s!" },
-	{ "Déjà %s ensemble ! Merci de m'emmener partout.", "Together for %s already! Thanks for taking me everywhere." },
-	{ "Voilà %s qu'on est ensemble, et tes chutes me font toujours rire.", "%s together now, and your falls still make me laugh." },
-	{ "Ça fait %s qu'on voyage ! Tu as presque appris à lire une carte.", "%s on the road together! You've nearly learned to read a map." },
-	{ "Joyeux anniversaire de voyage : %s ! Tu m'offres un biscuit ?", "Happy travel-versary: %s! Biscuit for me?" },
-}
-
 -- ---------------------------------------------------------------------------
 -- Clés et enregistrement
 -- ---------------------------------------------------------------------------

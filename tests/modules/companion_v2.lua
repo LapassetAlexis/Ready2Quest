@@ -123,7 +123,7 @@ local function Scene(name)
 		for _, ns in ipairs({ { NS, saved }, { QNS, savedQ } }) do
 			local target, copy = ns[1], ns[2]
 			for _, field in ipairs({ "journalFrame", "companionFrame", "companionBubble", "companionHover", "chestFrame",
-				"treatMenu", "journalToast", "journalTracker", "photoPrompt" }) do
+				"treatMenu", "journalToast", "journalTracker" }) do
 				if rawget(target, field) and rawget(target, field) ~= copy[field] then target[field]:Hide() end
 			end
 			for key in pairs(target) do if copy[key] == nil then target[key] = nil end end
@@ -169,7 +169,7 @@ do
 		-- carnet 1.5.0 : Zones, Zone (et son onglet Combat) et Collection sont
 		-- remplacées par la Complétion (et la Ménagerie / le Compagnon)
 		{ "qc-journal-creature", "evolution" }, { "qc-journal-progress", "progress" }, { "qc-journal-day", "day" },
-		{ "qc-journal-memories", "memories" }, { "qc-journal-menagerie", "menagerie" },
+		{ "qc-journal-menagerie", "menagerie" },
 	}
 	for _, spec in ipairs(journal) do
 		local name, kind = spec[1], spec[2]
@@ -195,7 +195,7 @@ do
 				tostring(lastPantry) .. " / " .. tostring(close and close.left))
 			-- cartes de la page : textes tenus, la dernière au-dessus de la pagination
 			local pane = ({ evolution = frame.evo, progress = frame.prog, day = frame.day,
-				memories = frame.mem, menagerie = frame.men })[kind]
+				menagerie = frame.men })[kind]
 			local lists = {}
 			for _, field in ipairs({ "tiles", "cards", "items", "rows", "missions", "slots", "needs", "facts", "lines",
 				"marks", "parts", "zones" }) do
@@ -268,8 +268,8 @@ do
 		restore()
 	end
 
-	-- fenêtres de module : coffre, question des photos
-	for _, name in ipairs({ "qc-chest", "qc-photo" }) do
+	-- fenêtre de module : le coffre
+	for _, name in ipairs({ "qc-chest" }) do
 		local dialog, done = Scene(name)
 		if not dialog then
 			Check("[CV2] " .. name .. " : construite", false, done)

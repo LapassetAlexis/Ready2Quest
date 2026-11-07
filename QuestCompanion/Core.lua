@@ -50,9 +50,9 @@ end
 -- coffres : db.chars) et la reprise depuis Ready2Quest restent.
 ns.COMMANDS["reset"] = function(self)
 	local db = self:DB()
-	local chars, migrated = db.chars, db.migratedFromR2Q
+	local chars, migrated, dropped = db.chars, db.migratedFromR2Q, db.memoriesDropped
 	db = self:ResetDB()
-	db.chars, db.migratedFromR2Q = chars or {}, migrated
+	db.chars, db.migratedFromR2Q, db.memoriesDropped = chars or {}, migrated, dropped
 	self:Print(L.MSG_RESET)
 	if self.RefreshOptions then self:RefreshOptions() end
 end
@@ -101,12 +101,57 @@ function ns:MigrateFromReady2Quest()
 		end
 	end
 	db.migratedFromR2Q = true
+	-- ce qui vient d'arriver de Ready2Quest passe aussi par le ménage des souvenirs
+	db.memoriesDropped = nil
 	if moved > 0 then self:Print(self:F("QC_MSG_MIGRATED", moved)) end
 	return moved
 end
 
+-- ---------------------------------------------------------------------------
+-- Ménage de la 2.6.0 : l'album des souvenirs est retiré
+-- ---------------------------------------------------------------------------
+-- Une fois, en silence : les données de l'album quittent la sauvegarde (elle
+-- maigrit d'autant). Le plus vieux souvenir recale d'abord « jours passés
+-- ensemble » (data.since) s'il n'était pas encore posé. Jamais d'erreur sur
+-- une vieille sauvegarde : tout est vérifié avant d'être lu.
+ns.MEMORY_DROPPED_KEYS = { "memories", "memoryKeys", "metAt", "sillyScore", "photoDay" }
+ns.MEMORY_DROPPED_SETTINGS = { "companionPhotos", "companionPhotosAsked", "companionRecall" }
+
+-- Renvoie le nombre de personnages nettoyés
+function ns:DropMemories()
+	local db = self:DB()
+	if db.memoriesDropped then return 0 end
+	for _, key in ipairs(ns.MEMORY_DROPPED_SETTINGS) do db[key] = nil end
+	local cleaned = 0
+	if type(db.chars) == "table" then
+		for _, char in pairs(db.chars) do
+			local data = type(char) == "table" and char.companion
+			if type(data) == "table" then
+				local found = false
+				if not tonumber(data.since) and type(data.memories) == "table" then
+					local oldest
+					for _, memory in ipairs(data.memories) do
+						local at = type(memory) == "table" and tonumber(memory.at)
+						if at and at > 0 and (not oldest or at < oldest) then oldest = at end
+					end
+					if not oldest and tonumber(data.metAt) and tonumber(data.metAt) > 0 then oldest = tonumber(data.metAt) end
+					data.since = oldest
+				end
+				for _, key in ipairs(ns.MEMORY_DROPPED_KEYS) do
+					if data[key] ~= nil then data[key], found = nil, true end
+				end
+				if found then cleaned = cleaned + 1 end
+			end
+		end
+	end
+	db.memoriesDropped = true
+	return cleaned
+end
+
 function ns:OnAddonLoaded()
 	self:MigrateFromReady2Quest()
+	local ok, err = pcall(self.DropMemories, self)
+	if not ok and self.RecordError then self:RecordError("memories:drop", err) end
 	-- réglette « Bavardage » : cran déduit des anciens réglages, une fois
 	if self.CompanionChatterLevel then self:CompanionChatterLevel() end
 end

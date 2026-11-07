@@ -82,8 +82,8 @@ do
 	local f = NS.journalFrame
 	f.sections.evolution:Click()
 	local evo = f.evo
-	Check("[CPAGE] le menu : cinq pages", f.sections.evolution and f.sections.menagerie and f.sections.day
-		and f.sections.memories and f.sections.zones == nil and f.sections.collection == nil)
+	Check("[CPAGE] le menu : sans Souvenirs ni Zones", f.sections.evolution and f.sections.menagerie and f.sections.day
+		and f.sections.memories == nil and f.sections.zones == nil and f.sections.collection == nil)
 	Check("[CPAGE] titre : son nom", f.header.title.text == NS:CompanionName(), f.header.title.text)
 	Check("[CPAGE] chiffres : captures, jours, missions, route", evo.stats.captures.value.text == "1"
 		and evo.stats.days.value.text == "12" and evo.stats.missions.value.text == "34"

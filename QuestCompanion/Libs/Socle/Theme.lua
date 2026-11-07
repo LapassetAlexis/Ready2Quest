@@ -1600,6 +1600,27 @@ function Theme.CreateIconButton(parent, size, texture, onClick, tip)
 	return button
 end
 
+-- Roue crantée : ouvre les réglages de l'addon depuis l'en-tête d'une fenêtre.
+-- L'icône « gear » du client (atlas) si elle existe, sinon l'icône d'objet
+-- classique des engrenages.
+Theme.GEAR_ICON = "Interface\\Icons\\INV_Misc_Gear_01"
+Theme.GEAR_ATLAS = "gear"
+local function AtlasExists(name)
+	local tex = rawget(_G, "C_Texture")
+	if type(tex) ~= "table" or type(tex.GetAtlasInfo) ~= "function" then return false end
+	local ok, info = pcall(tex.GetAtlasInfo, name)
+	return ok and info ~= nil
+end
+function Theme.CreateGearButton(parent, size, onClick, tip)
+	local button = Theme.CreateIconButton(parent, size or 22, Theme.GEAR_ICON, onClick, tip)
+	if AtlasExists(Theme.GEAR_ATLAS) and button.icon.SetAtlas then
+		local ok = pcall(button.icon.SetAtlas, button.icon, Theme.GEAR_ATLAS)
+		button.gearAtlas = ok or nil
+	end
+	if not button.gearAtlas and button.icon.SetTexCoord then button.icon:SetTexCoord(0.08, 0.92, 0.08, 0.92) end
+	return button
+end
+
 -- Losange de statut : la forme dit l'état autant que la couleur (lisible par
 -- un daltonien). Plein = à voir, au trait = bon ou neutre.
 Theme.STATUS = {

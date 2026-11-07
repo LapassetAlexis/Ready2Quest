@@ -653,6 +653,17 @@ _G.TOC_FILES = tocFiles
 -- mesure de la mémoire seule : tous les fichiers chargés, puis on s'arrête
 if rawget(_G, "MEMORY_ONLY") then
 	for _, file in ipairs(Mock.moduleFiles) do LoadAddonFile(file) end
+	-- les hauts faits construisent leur catalogue à la première lecture (index
+	-- du moteur, quelques secondes après la connexion) : ce qu'il ajoute
+	local report = rawget(_G, "MEMORY_REPORT")
+	if report and QNS.FeatDefs then
+		collectgarbage("collect"); collectgarbage("collect")
+		local before = collectgarbage("count")
+		QNS:FeatDefs()
+		collectgarbage("collect"); collectgarbage("collect")
+		report[#report + 1] = { name = "Après connexion/QuestCompanion : catalogue des hauts faits construit",
+			kb = collectgarbage("count") - before }
+	end
 	return
 end
 
@@ -1570,6 +1581,16 @@ do
 	Check("flèche : ne touche pas le « Parti de »", 1 + win.header.textLeft + win.subtitle:GetWidth() <= refreshLeft,
 		(1 + win.header.textLeft + win.subtitle:GetWidth()) .. " <= " .. refreshLeft)
 	Check("flèche : à gauche du [×]", select(2, refresh:GetPoint()) == win.close and select(1, refresh:GetPoint()) == "RIGHT")
+	-- roue crantée : les réglages, à gauche de la flèche
+	local gear = win.settingsButton
+	Check("roue : à gauche de la flèche", gear and select(2, gear:GetPoint()) == refresh and select(1, gear:GetPoint()) == "RIGHT")
+	local gearLeft = refreshLeft - 6 - gear:GetWidth()
+	Check("roue : ne touche pas le « Parti de »", 1 + win.header.textLeft + win.subtitle:GetWidth() <= gearLeft,
+		(1 + win.header.textLeft + win.subtitle:GetWidth()) .. " <= " .. gearLeft)
+	if NS.optionsFrame then NS.optionsFrame:Hide() end
+	gear:Click()
+	Check("roue : ouvre les réglages", NS.optionsFrame ~= nil and NS.optionsFrame:IsShown())
+	NS.optionsFrame:Hide()
 end
 
 -- 4.31 Bouton sans template Blizzard
@@ -1696,7 +1717,7 @@ ResetWorld()
 Say("\n== bootstrap et diagnostic ==")
 ResetWorld()
 Check("commande enregistrée par le bootstrap", type(SlashCmdList["SACETDEPART"]) == "function")
-Check("version exposée", NS.version == "1.29.3", NS.version)
+Check("version exposée", NS.version == "1.29.4", NS.version)
 
 local missingMods = {}
 for _, name in ipairs({ "Bootstrap", "Locales", "Compat", "Theme", "Core", "Buffs", "Reagents",
@@ -1717,7 +1738,7 @@ NS.HandleCommand = savedHandle
 Mock:Reset()
 NS:HandleCommand("diag")
 Check("/sd diag liste les modules", Mock:Output():find("modules :") ~= nil, Mock:Output())
-Check("/sd diag affiche la version", Mock:Output():find("1%.29%.3") ~= nil, Mock:Output())
+Check("/sd diag affiche la version", Mock:Output():find("1%.29%.4") ~= nil, Mock:Output())
 
 -- une erreur est enregistrée et affichée
 Mock:Reset()

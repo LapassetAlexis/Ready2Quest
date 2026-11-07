@@ -22,6 +22,11 @@
 -- (ou PARTY_KILL) seulement s'il était engagé. Rien de plus fin n'est fiable
 -- en Classic : le « tap » d'un cadavre n'est plus lisible après la mort.
 --
+-- 2.7.0 (hauts faits, Feats.lua) : les tampons deviennent des relevés
+-- silencieux. Ils se gagnent comme avant (STAMP part toujours : aides de
+-- capture, réactions du compagnon), mais sans bandeau ni ligne de chat ; les
+-- hauts faits de lieux, de donjons, de rares et de paliers les comptent.
+--
 -- Contrats avec le module parallèle « Compagnon » :
 --   ns:FireCallback("STAMP", { id, kind, name, new = true, level, date })
 --   ns:JournalCounts() -> { zone, subzone, dungeon, rare, level, capital, total }
@@ -49,8 +54,8 @@ local RARE_ENGAGED_MEMORY = 1800 -- engagé puis laissé (fuite, évitement) : o
 -- ---------------------------------------------------------------------------
 local FR = {
 	OPT_PAGE_JOURNAL      = "Carnet de voyage",
-	OPT_PAGE_JOURNAL_SUB  = "Des tampons gagnés en jouant : zones, villages, capitales, donjons, rares, paliers.",
-	OPT_JRN_TOAST         = "Bandeau « nouveau tampon »",
+	OPT_PAGE_JOURNAL_SUB  = "Ton carnet de voyage et tes hauts faits : zones, villages, capitales, donjons, rares, paliers.",
+	OPT_JRN_TOAST         = "Bandeaux du carnet (sceaux, titres de dresseur)",
 	OPT_JRN_CHAT          = "Ligne dans le chat",
 	OPT_ACTION_JOURNAL    = "Ouvrir le carnet",
 	JRN_TITLE             = "Carnet de voyage",
@@ -82,8 +87,8 @@ local FR = {
 }
 local EN = {
 	OPT_PAGE_JOURNAL      = "Travel journal",
-	OPT_PAGE_JOURNAL_SUB  = "Stamps earned by playing: zones, villages, capitals, dungeons, rares, milestones.",
-	OPT_JRN_TOAST         = "\"New stamp\" banner",
+	OPT_PAGE_JOURNAL_SUB  = "Your travel journal and achievements: zones, villages, capitals, dungeons, rares, milestones.",
+	OPT_JRN_TOAST         = "Journal banners (seals, trainer titles)",
 	OPT_JRN_CHAT          = "Chat line",
 	OPT_ACTION_JOURNAL    = "Open the journal",
 	JRN_TITLE             = "Travel journal",
@@ -128,6 +133,12 @@ if ns.AddOptionPage then
 		rows = {
 			{ key = "journalToast", label = "OPT_JRN_TOAST", kind = "bool" },
 			{ key = "journalChat",  label = "OPT_JRN_CHAT",  kind = "bool" },
+			-- hauts faits (Feats.lua : chaînes et défauts)
+			{ header = "OPT_SECTION_FEATS" },
+			{ key = "featToast",    label = "OPT_FEAT_TOAST", kind = "bool" },
+			{ key = "featChat",     label = "OPT_FEAT_CHAT",  kind = "bool" },
+			{ key = "featSound",    label = "OPT_FEAT_SOUND", kind = "bool" },
+			{ key = "featStats",    label = "OPT_FEAT_STATS", kind = "bool" },
 			-- suivi à l'écran (JournalTracker.lua : chaînes, défauts, action)
 			{ key = "journalTracker",       label = "OPT_JRN_TRACKER",        kind = "bool" },
 			{ key = "journalTrackerCombat", label = "OPT_JRN_TRACKER_COMBAT", kind = "bool" },
@@ -217,10 +228,10 @@ function ns:JournalEarn(kind, key, name, silent)
 	if silent then stamp.retro = true end
 	data.stamps[id] = stamp
 	if not silent then
-		-- une copie : le Compagnon ne doit pas pouvoir abîmer le carnet
+		-- une copie : le Compagnon ne doit pas pouvoir abîmer le carnet.
+		-- 2.7.0 : plus de bandeau « Nouveau tampon » (les hauts faits annoncent)
 		self:FireCallback("STAMP", { id = id, kind = kind, name = stamp.name, new = true,
 			level = stamp.level, date = stamp.date })
-		self:JournalNotify(stamp)
 	end
 	if self.journalFrame and self.journalFrame:IsShown() then self:RefreshJournal() end
 	return stamp
@@ -455,9 +466,13 @@ ns.journalToasts, ns.journalChats = {}, {}
 function ns:JournalKindLabel(kind) return L["JRN_TAB_" .. tostring(kind)] or tostring(kind) end
 
 -- Un bandeau sans tampon (sceau de zone, titre de dresseur : 2.5.0) : même
--- file, même réglage, pas de ligne de chat (ces gains ont déjà la leur)
+-- file, même réglage, pas de ligne de chat (ces gains ont déjà la leur).
+-- 2.7.0 : un haut fait (kind = "feat", Feats.lua) a son propre réglage et
+-- ses champs : title, name, icon, points (dans le bouclier), sub, onShow.
 function ns:JournalToastPush(entry)
-	if type(entry) ~= "table" or self:DB().journalToast == false then return false end
+	if type(entry) ~= "table" then return false end
+	local key = entry.kind == "feat" and "featToast" or "journalToast"
+	if self:DB()[key] == false then return false end
 	table.insert(self.journalToasts, entry)
 	self:JournalFlush()
 	return true
@@ -511,24 +526,68 @@ function ns:EnsureJournalToast()
 	return frame
 end
 
+-- Habillage d'un bandeau de haut fait (2.7.0) : icône de la catégorie dans
+-- le cadre, points dans le bouclier (Azeroth) ou à droite (Sobre), sous-ligne
+-- (nouveau titre). Les autres bandeaux reprennent le logo, sans points.
+local function ToastDecor(frame, entry)
+	if frame.icon and frame.icon.SetTexture then frame.icon:SetTexture((entry and entry.icon) or Theme.LOGO_SMALL) end
+	local points = entry and tonumber(entry.points)
+	if points and not frame.featPoints then
+		if frame.azeroth then
+			frame.featPoints = frame.banner:CreateFontString(nil, "OVERLAY", Theme.F_NUMBER)
+			frame.featPoints:SetPoint("CENTER", frame.shield, "CENTER", 0, 4)
+			if ns.AzerothFont then ns.AzerothFont(frame.featPoints, 16, "OUTLINE") end
+			frame.featPoints:SetTextColor(1, 1, 1, 1)
+		else
+			frame.featPoints = Theme.Text(frame, Theme.F_NUMBER, Theme.GOLD)
+			frame.featPoints:SetPoint("RIGHT", frame, "RIGHT", -12, 0)
+		end
+		frame.featPoints:SetJustifyH("CENTER")
+	end
+	if frame.featPoints then
+		frame.featPoints:SetText(points and tostring(points) or "")
+		if points then frame.featPoints:Show() else frame.featPoints:Hide() end
+	end
+	if frame.stars and frame.azeroth then frame.stars:SetText((entry and entry.sub) or "") end
+end
+ns.JournalToastDecor = ToastDecor
+
 function ns:ShowNextJournalToast()
 	local queue = self.journalToasts
 	if #queue == 0 then return nil end
 	local frame = self:EnsureJournalToast()
 	if not frame then self.journalToasts = {}; return nil end
-	if #queue >= TOAST_COLLAPSE then
+	-- les bandeaux « tout faits » (hauts faits, déjà regroupés par leur
+	-- moteur) passent un par un ; les autres se groupent en rafale
+	local plain = 0
+	for _, entry in ipairs(queue) do if not entry.title then plain = plain + 1 end end
+	local shown
+	if plain >= TOAST_COLLAPSE then
 		-- une rafale (première connexion) : un bandeau, pas six d'affilée
 		frame.title:SetText(Theme.Upper(L.JRN_TOAST_TITLE))
-		frame.text:SetText(self:F("JRN_TOAST_MANY", #queue))
-		frame.message = self:F("JRN_TOAST_MANY", #queue)
-		self.journalToasts = {}
+		frame.text:SetText(self:F("JRN_TOAST_MANY", plain))
+		frame.message = self:F("JRN_TOAST_MANY", plain)
+		local kept = {}
+		for _, entry in ipairs(queue) do if entry.title then kept[#kept + 1] = entry end end
+		self.journalToasts = kept
+		ToastDecor(frame, nil)
 	else
 		local stamp = table.remove(queue, 1)
-		frame.title:SetText(Theme.Upper(L.JRN_TOAST_TITLE) .. "  ·  " .. Theme.Upper(self:JournalKindLabel(stamp.kind)))
-		frame.text:SetText(stamp.name)
-		frame.message = self:F("JRN_TOAST", stamp.name)
+		if stamp.title then
+			frame.title:SetText(Theme.Upper(stamp.title))
+			frame.text:SetText(stamp.name or "")
+			frame.message = stamp.message or stamp.name
+		else
+			frame.title:SetText(Theme.Upper(L.JRN_TOAST_TITLE) .. "  ·  " .. Theme.Upper(self:JournalKindLabel(stamp.kind)))
+			frame.text:SetText(stamp.name)
+			frame.message = self:F("JRN_TOAST", stamp.name)
+		end
+		frame.entry = stamp
+		ToastDecor(frame, stamp)
+		shown = stamp
 	end
 	frame:Show()
+	if shown and type(shown.onShow) == "function" then pcall(shown.onShow, self, shown) end
 	if Theme.FadeIn then Theme.FadeIn(frame, 0.2) end
 	if self.StyleShown then self:StyleShown(frame, { shield = "gold", play = true }) end
 	self.journalToastHideAt = ns.Now() + TOAST_SECONDS
