@@ -162,6 +162,20 @@ function ns:CaptureRarity(target)
 	return RARITY[(target and target.class) or "normal"] or RARITY.normal
 end
 
+-- Le modèle 3D d'une créature capturable, cadré comme sur la scène : rend
+-- true s'il s'affiche (sinon il est caché, l'appelant montre son icône de
+-- repli). Partagé avec les scènes de « Tout capturer » (CaptureBatch.lua).
+function ns:CaptureModelSetup(model, target)
+	if not (model and target) then return false end
+	model:Show()
+	local shown = Method(model, "SetCreature", target.npcID)
+	Method(model, "SetCamDistanceScale", ns.CAPTURE_STAGE_CAM)
+	-- une brillante : sous sa lumière dorée (1.6.0)
+	if ns.ModelShinyLight then ns.ModelShinyLight(model, target.shiny) end
+	if not shown then model:Hide() end
+	return shown and true or false
+end
+
 local function PlayKit(name)
 	local kit, play = G("SOUNDKIT"), G("PlaySound")
 	if type(kit) == "table" and kit[name] and type(play) == "function" then pcall(play, kit[name]) end
@@ -421,15 +435,7 @@ function ns:CaptureShowStage(rolling)
 	frame.shiny = target.shiny and true or false
 	local c = rarity.color
 	frame.topBar:SetVertexColor(c[1], c[2], c[3], 1)
-	local shown = false
-	if frame.model then
-		frame.model:Show()
-		shown = Method(frame.model, "SetCreature", target.npcID)
-		Method(frame.model, "SetCamDistanceScale", ns.CAPTURE_STAGE_CAM)
-		-- une brillante : sous sa lumière dorée (1.6.0)
-		if ns.ModelShinyLight then ns.ModelShinyLight(frame.model, target.shiny) end
-		if not shown then frame.model:Hide() end
-	end
+	local shown = self:CaptureModelSetup(frame.model, target)
 	Creature(frame, 0, 0, 1, 0)
 	if shown then frame.fallback:Hide() else frame.fallback:Show() end
 	frame.hasModel = shown

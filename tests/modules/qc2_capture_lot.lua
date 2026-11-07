@@ -1,15 +1,16 @@
--- Compagnon : « Tout capturer » (QuestCompanion 2.4.0) : le filet sur toute
--- la file d'un coup. Les entrées (liste, bandeau, /qc filet tout), les
+-- Compagnon : « Tout capturer » (QuestCompanion 2.4.0, 2.5.0) : le filet sur
+-- toute la file d'un coup. Les entrées (liste, bandeau, /qc filet tout), les
 -- verdicts enregistrés d'emblée par le chemin d'un lancer seul, l'ordre de
--- la file, l'aide qui manque, la vague (les cartes gardées à la fin),
--- Arrêter, Échap, jamais en combat.
+-- la file, l'aide qui manque, la volée (scènes de capture en parallèle, les
+-- brillantes en dernier), Arrêter, Échap, jamais en combat ; le choix au
+-- clic sur le filet (2.5.0) et le compte à rebours en pause dès le clic.
 local Check, Say, ResetWorld, NS, Mock = T.Check, T.Say, T.ResetWorld, T.QNS, T.Mock
 
 local LOT = { saved = {}, random = math.random, units = {}, sounds = {} }
 local GLOBALS = { "UnitGUID", "UnitName", "UnitExists", "UnitIsPlayer", "UnitIsDead", "UnitPlayerControlled",
 	"UnitReaction", "UnitCanAttack", "UnitClassification", "UnitCreatureType", "UnitCreatureFamily", "UnitLevel",
 	"GetRaidTargetIndex", "SetRaidTarget", "IsInGroup", "UnitIsGroupLeader", "IsInInstance", "Screenshot", "C_Timer",
-	"InCombatLockdown", "UnitAffectingCombat", "PlaySound" }
+	"InCombatLockdown", "UnitAffectingCombat", "PlaySound", "IsShiftKeyDown", "IsControlKeyDown" }
 for _, name in ipairs(GLOBALS) do LOT.saved[name] = rawget(_G, name) end
 LOT.savedShiny = NS.SHINY_CHANCE
 local PLAYER = "Player-1-00000001"
@@ -43,6 +44,7 @@ end
 function LOT.Reset()
 	ResetWorld()
 	if NS.captureBatchFrame then NS.captureBatchFrame:Hide() end
+	if NS.captureChooser then NS.captureChooser:Hide() end
 	for _, field in ipairs({ "companionFrame", "companionBubble", "companionHover", "journalFrame", "capturePrompt",
 		"captureQueueList", "captureNetButton", "captureToast" }) do
 		if NS[field] then NS[field]:Hide() end
@@ -201,9 +203,9 @@ do
 	NS.CaptureResolve = resolve
 	local data = NS:CaptureData()
 	Check("[LOT] trois essais, chacun par ns:CaptureResolve", batch and batch.tried == 3 and resolved == 3, resolved)
-	Check("[LOT] enregistrés avant la moindre carte retournée", data.creatures[6200] and data.creatures[6201]
+	Check("[LOT] enregistrés avant le moindre filet posé", data.creatures[6200] and data.creatures[6201]
 		and data.creatures[6202] and data.tries == tries + 3 and NS.captureBatchFrame:IsShown()
-		and NS.captureBatchFrame.tiles[1].facing == "back")
+		and NS.captureBatchFrame.tiles[1].verdict == nil)
 	Check("[LOT] étoiles tirées par l'enveloppe de la file", data.creatures[6200].stars ~= nil and batch.results[1].stars ~= nil)
 	Check("[LOT] pendant le tirage : ni musique de réussite ni fanfare", Count(LOT.sounds, NS.CAPTURE_SOUNDS.ok) == 0
 		and Count(LOT.sounds, NS.CAPTURE_SOUNDS.shiny) == 0 and Count(LOT.sounds, NS.CAPTURE_SOUNDS.throw) == 1)
@@ -211,7 +213,7 @@ do
 	Check("[LOT] « Captures : 0 » au départ", NS.captureBatchFrame.counter:GetText() == NS:F("CAPTURE_BATCH_COUNT", 0))
 	Run(8)
 	restore()
-	Check("[LOT] fin de la scène : tout retourné, compteur à 3", batch.done and batch.revealed == 3
+	Check("[LOT] fin de la scène : tous les verdicts, compteur à 3", batch.done and batch.resolved == 3
 		and NS.captureBatchFrame.counter:GetText() == NS:F("CAPTURE_BATCH_COUNT", 3))
 	Check("[LOT] … puis le chat reçoit tout, et le bilan", Find(printed, "Loup A") and Find(printed, "Loup C")
 		and printed[#printed] == NS:F("CAPTURE_BATCH_SUMMARY", 3, 3), printed[#printed])
@@ -291,17 +293,17 @@ do
 	NS:CaptureBatchStop(true)
 end
 
--- 5. La vague : cartes gardées pour la fin ------------------------------------------------------
+-- 5. La volée : des scènes de capture en parallèle, les brillantes en dernier ----------------------
 do
-	Say("-- tout capturer : la vague")
+	Say("-- tout capturer : la volée")
 	LOT.Reset()
-	-- B : espèce déjà capturée (1 étoile) -> amélioration, pas gardée
+	-- B : espèce déjà capturée (1 étoile) -> amélioration
 	NS:CaptureData().creatures[6501] = { name = "Connu", class = "normal", normal = true, stars = 1, at = 1 }
 	NS:CaptureData().count = (NS:CaptureData().count or 0) + 1
-	LOT.SeeKill(6500, { name = "Nouveau rare", class = "rare" })     -- nouvelle espèce, capturée : dans la vague
+	LOT.SeeKill(6500, { name = "Nouveau rare", class = "rare" })     -- nouvelle espèce, capturée : avec la volée
 	LOT.SeeKill(6501, { name = "Connu" })
 	LOT.SeeKill(6502, { name = "Fuyard", class = "elite" })        -- échappée
-	LOT.SeeKill(6503, { name = "Nouveau" })                         -- nouvelle espèce, capturée : dans la vague
+	LOT.SeeKill(6503, { name = "Nouveau" })                         -- nouvelle espèce, capturée : avec la volée
 	LOT.OfferShiny(6504, "Brillant")                                -- brillante : la toute dernière
 	local chance = NS.CaptureChance
 	NS.CaptureChance = function(self, info, aid, ...)
@@ -309,45 +311,80 @@ do
 		return 0.95, false
 	end
 	LOT.Roll(0.5)
+	LOT.sounds = {}
 	local batch = NS:CaptureBatch()
 	NS.CaptureChance = chance
+	local frame = NS.captureBatchFrame
+	local n = #batch.cards
+	-- (les cases suivent l'ordre de la file : la brillante en tête de grille)
+	local byNpc = {}
+	for _, card in ipairs(batch.cards) do byNpc[card.result.target.npcID] = card end
+	local shinyCard = byNpc[6504]
+	-- la volée : tous les filets partent dans la fenêtre du décalage
+	local firstDrop, lastDrop, maxGap = math.huge, 0, 0
+	local drops = {}
+	for _, card in ipairs(batch.cards) do
+		firstDrop = math.min(firstDrop, card.dropAt); lastDrop = math.max(lastDrop, card.dropAt)
+		drops[#drops + 1] = card.dropAt
+	end
+	table.sort(drops)
+	for index = 2, #drops do maxGap = math.max(maxGap, drops[index] - drops[index - 1]) end
+	Check("[LOT] volée : tous les filets partent dans la fenêtre du décalage", n == 5 and lastDrop - firstDrop <= (n - 1) * NS.CAPTURE_BATCH_STAGGER + 1e-6
+		and maxGap >= 0.08 - 1e-6 and maxGap <= 0.15 + 1e-6 and firstDrop == NS.CAPTURE_BATCH_LEAD, lastDrop .. " / " .. maxGap)
+	-- chaque case montre les secousses de son tirage ; la brillante, au moins autant
+	local capsOk = true
+	for _, card in ipairs(batch.cards) do
+		if card.special then
+			if card.cap < card.result.shakes then capsOk = false end
+		elseif card.cap ~= card.result.shakes then capsOk = false end
+	end
+	Check("[LOT] secousses : celles du tirage (rolling.shakes) ; la brillante au moins autant", capsOk)
 	local order = {}
 	for _, card in ipairs(batch.order) do order[#order + 1] = card.result.target.npcID end
-	-- seules les brillantes sont gardées pour la fin (les espèces nouvelles restent dans la vague)
-	Check("[LOT] la vague d'abord (espèces nouvelles comprises), la brillante gardée pour la fin",
-		table.concat(order, ",") == "6500,6501,6502,6503,6504" and not batch.order[1].special and batch.order[5].special,
-		table.concat(order, ","))
-	local lastWave, firstSpecial = 0, math.huge
-	for _, card in ipairs(batch.order) do
-		if card.special then firstSpecial = math.min(firstSpecial, card.flipAt) else lastWave = math.max(lastWave, card.flipAt) end
+	Check("[LOT] la brillante tombe en dernier", order[#order] == 6504 and batch.order[#order].special
+		and not batch.order[1].special, table.concat(order, ","))
+	local lastOrdinary, shinyAt = 0, 0
+	for _, card in ipairs(batch.cards) do
+		if card.special then shinyAt = card.resultAt else lastOrdinary = math.max(lastOrdinary, card.resultAt) end
 	end
-	Check("[LOT] la vague tient en 1,5 s, les gardées après", lastWave <= NS.CAPTURE_BATCH_LEAD + NS.CAPTURE_BATCH_WAVE + 1e-6
-		and firstSpecial > lastWave + NS.CAPTURE_BATCH_FLIP, lastWave .. " / " .. firstSpecial)
-	-- pas à pas : une carte en train de tourner rétrécit, change de face à mi-course
-	LOT.sounds = {}
-	local first = batch.order[1]
-	Run(first.flipAt + NS.CAPTURE_BATCH_FLIP * 0.3, 0.01)
-	Check("[LOT] mi-retournement : la carte rétrécit, encore de dos", first.tile:GetWidth() < 96 and first.tile.facing == "back",
-		first.tile:GetWidth())
-	Run(NS.CAPTURE_BATCH_FLIP * 0.4, 0.01)
-	Check("[LOT] passé la moitié : la face", first.tile.facing == "front" and not first.revealed)
-	Run(NS.CAPTURE_BATCH_FLIP, 0.01)
-	Check("[LOT] retournée : pleine largeur", first.revealed and first.tile:GetWidth() == 96)
-	local seenSpecial = false
-	for _, card in ipairs(batch.order) do if card.special and card.faced then seenSpecial = true end end
-	Check("[LOT] les gardées attendent la fin de la vague", not seenSpecial)
-	-- jusqu'à juste avant la première gardée
-	Run(firstSpecial - 0.03 - (NS.Now() - batch.startedAt), 0.01)
-	local waveDone = true
-	for _, card in ipairs(batch.order) do if not card.special and not card.revealed then waveDone = false end end
-	Check("[LOT] la vague finie, toujours aucune gardée retournée", waveDone and not batch.order[5].faced)
-	Run(12, 0.01)
-	Check("[LOT] tout est retourné, la brillante en dernier", batch.done and batch.order[5].revealed
-		and batch.order[5].result.target.shiny)
-	Check("[LOT] gardée : la fanfare pour la brillante", Count(LOT.sounds, NS.CAPTURE_SOUNDS.shiny) == 1,
-		table.concat(LOT.sounds, ","))
-	Check("[LOT] la brillante : halo doré", batch.order[5].tile.halo:IsShown())
-	-- le bruit des cartes : pas plus d'un toutes les 0,06 s
+	Check("[LOT] … après une pause, en se débattant plus longtemps", shinyAt >= lastOrdinary + NS.CAPTURE_BATCH_PAUSE - 1e-6
+		and shinyCard.cap > shinyCard.result.shakes, lastOrdinary .. " / " .. shinyAt)
+	-- avant la volée : les créatures seules, aucun verdict
+	Check("[LOT] départ : créatures au repos, ni filet ni verdict", not frame.tiles[1].net:IsShown()
+		and frame.tiles[1].verdict == nil and frame.tiles[1].fallback:IsShown() and frame.tiles[1].stars:GetText() == "")
+	Check("[LOT] la brillante est dans la volée (même départ), pas à part", shinyCard.dropAt == NS.CAPTURE_BATCH_LEAD)
+	-- tous les filets posés avant le premier verdict : elles se jouent en même temps
+	Run(lastDrop + 0.05, 0.01)
+	local allNets, anyVerdict = true, false
+	for _, card in ipairs(batch.cards) do
+		if not card.tile.net:IsShown() then allNets = false end
+		if card.resolved then anyVerdict = true end
+	end
+	Check("[LOT] en même temps : les cinq filets posés, aucun verdict encore", allNets and not anyVerdict)
+	Check("[LOT] le filet qui tombe : la texture du filet, entière", frame.tiles[1].net.texture == NS.CAPTURE_ART.net
+		and frame.tiles[1].net.texCoord[2] == NS.CAPTURE_COORDS.netWhole[2])
+	-- jusqu'à juste avant la brillante : toutes les autres sont tombées
+	Run(shinyAt - 0.03 - (NS.Now() - batch.startedAt), 0.01)
+	local others = true
+	for _, card in ipairs(batch.cards) do if not card.special and not card.resolved then others = false end end
+	Check("[LOT] juste avant la brillante : toutes les autres ont leur verdict, elle se débat encore", others
+		and not shinyCard.resolved and shinyCard.tile.net:IsShown())
+	local fled = byNpc[6502]
+	Check("[LOT] échappée : filet déchiré, « échappée »", fled.result.target.npcID == 6502 and fled.tile.verdict == "fail"
+		and fled.tile.net.texCoord[1] == NS.CAPTURE_COORDS.netTorn[1] and fled.tile.stars:GetText() == NS.L.CAPTURE_BATCH_FLED)
+	Run(8, 0.01)
+	Check("[LOT] tout est tombé, la brillante en dernier", batch.done and batch.resolved == 5 and shinyCard.settled)
+	local shook = true
+	for _, card in ipairs(batch.cards) do if card.shook ~= card.cap then shook = false end end
+	Check("[LOT] chaque filet s'est secoué le nombre prévu", shook)
+	Check("[LOT] la brillante : fanfare (une), halo doré", Count(LOT.sounds, NS.CAPTURE_SOUNDS.shiny) == 1
+		and shinyCard.tile.halo:IsShown(), table.concat(LOT.sounds, ","))
+	local fresh = byNpc[6503]
+	Check("[LOT] l'échappée a filé (créature effacée), les prises restent", not fled.tile.fallback:IsShown()
+		and fresh.tile.fallback:IsShown() and not fresh.tile.net:IsShown())
+	Check("[LOT] capturée : étoiles et étiquette « Nouvelle »", fresh.tile.stars:IsShown()
+		and fresh.tile.tag:GetText() == (NS.Theme.Upper and NS.Theme.Upper(NS.L.CAPTURE_BATCH_NEW) or NS.L.CAPTURE_BATCH_NEW))
+	-- douze cases : grille 4 × 3, bruits de filet espacés, réussites groupées, modèles plafonnés
 	LOT.Reset()
 	for npc = 6510, 6521 do
 		NS:CaptureData().creatures[npc] = { name = "Connu " .. npc, class = "normal", normal = true, stars = 1, at = 1 }
@@ -355,25 +392,39 @@ do
 	end
 	LOT.Roll(0)
 	LOT.sounds = {}
-	local flipTimes = {}
+	local netTimes, okTimes = {}, {}
 	_G.PlaySound = function(id)
 		LOT.sounds[#LOT.sounds + 1] = id
-		if id == NS.CAPTURE_SOUNDS.flip then flipTimes[#flipTimes + 1] = NS.Now() end
+		if id == NS.CAPTURE_SOUNDS.net then netTimes[#netTimes + 1] = NS.Now() end
+		if id == NS.CAPTURE_SOUNDS.ok then okTimes[#okTimes + 1] = NS.Now() end
 		return true
 	end
 	batch = NS:CaptureBatch()
-	Check("[LOT] douze cartes : grille de 4 × 3", #batch.cards == 12 and select(2, NS:CaptureBatchGrid(12)) == 3
-		and NS.captureBatchFrame:GetWidth() >= 4 * 96)
-	Run(4, 0.005)
-	local flips = Count(LOT.sounds, NS.CAPTURE_SOUNDS.flip)
-	local minGap = math.huge
-	for index = 2, #flipTimes do minGap = math.min(minGap, flipTimes[index] - flipTimes[index - 1]) end
-	Check("[LOT] bruit de carte : au plus un toutes les 0,06 s", flips >= 2 and flips <= 12
-		and minGap >= NS.CAPTURE_BATCH_SOUND_GAP - 1e-6, flips .. " / " .. minGap)
-	Check("[LOT] diagonale : la première carte avant la dernière, la rangée pèse plus que la colonne",
-		batch.cards[1].flipAt < batch.cards[12].flipAt and batch.cards[2].flipAt < batch.cards[5].flipAt
-		and math.abs(batch.cards[12].flipAt - (NS.CAPTURE_BATCH_LEAD + NS.CAPTURE_BATCH_WAVE)) < 1e-6)
+	frame = NS.captureBatchFrame
+	Check("[LOT] douze cases : grille de 4 × 3", #batch.cards == 12 and select(2, NS:CaptureBatchGrid(12)) == 3
+		and frame:GetWidth() >= 4 * 104)
+	Check("[LOT] modèles 3D pour les 8 premières seulement", frame.tiles[8].model ~= nil and frame.tiles[9].model == nil
+		and frame.tiles[12].model == nil)
+	Run(6, 0.005)
+	local minGap, okGap = math.huge, math.huge
+	for index = 2, #netTimes do minGap = math.min(minGap, netTimes[index] - netTimes[index - 1]) end
+	for index = 2, #okTimes do okGap = math.min(okGap, okTimes[index] - okTimes[index - 1]) end
+	Check("[LOT] bruit de filet : au plus un toutes les 0,06 s", #netTimes >= 2 and minGap >= NS.CAPTURE_BATCH_SOUND_GAP - 1e-6,
+		#netTimes .. " / " .. minGap)
+	Check("[LOT] douze réussites : musiques groupées", #okTimes >= 1 and #okTimes < 12
+		and (#okTimes < 2 or okGap >= NS.CAPTURE_BATCH_OK_GAP - 1e-6), #okTimes .. " / " .. okGap)
+	Check("[LOT] douze verdicts, compteur à 12", batch.done and frame.counter:GetText() == NS:F("CAPTURE_BATCH_COUNT", 12))
 	LOT.Install()
+	-- les cases resservent : un lot plus petit garde les mêmes cadres
+	local first = frame.tiles[1]
+	frame:Hide()
+	LOT.SeeKill(6530, { name = "Petit A" })
+	LOT.SeeKill(6531, { name = "Petit B" })
+	batch = NS:CaptureBatch()
+	Check("[LOT] cases réutilisées, les autres cachées", frame.tiles[1] == first and #frame.tiles == 12
+		and frame.tiles[2]:IsShown() and not frame.tiles[3]:IsShown())
+	NS:CaptureBatchStop(true)
+	frame:Hide()
 end
 
 -- 6. Arrêter, Échap ---------------------------------------------------------------------------
@@ -389,16 +440,22 @@ do
 	local batch = NS:CaptureBatch()
 	local frame = NS.captureBatchFrame
 	Check("[LOT] « Arrêter » pendant la scène", frame.stop:GetText() == NS.L.CAPTURE_BATCH_STOP and frame.footer:GetText() == NS.L.CAPTURE_BATCH_RUNNING)
-	Mock:Advance(0.1)
+	Run(NS.CAPTURE_BATCH_LEAD + 0.2)
 	frame.stop:Click()
 	local all = true
-	for _, card in ipairs(batch.cards) do if not (card.revealed and card.tile.facing == "front" and card.tile:GetWidth() == 96) then all = false end end
-	Check("[LOT] Arrêter : toutes les cartes retournées d'un coup", all and batch.done and batch.revealed == 3)
+	for _, card in ipairs(batch.cards) do
+		if not (card.resolved and card.settled and not card.tile.net:IsShown() and card.tile.verdict == "ok") then all = false end
+	end
+	Check("[LOT] Arrêter : tous les verdicts d'un coup, filets rangés", all and batch.done and batch.resolved == 3)
 	Check("[LOT] … compteur à jour, fanfare une fois, résultats déjà là", frame.counter:GetText() == NS:F("CAPTURE_BATCH_COUNT", 3)
 		and Count(LOT.sounds, NS.CAPTURE_SOUNDS.shiny) == 1 and NS:CaptureData().creatures[6602].shiny == true)
 	restore()
 	Check("[LOT] … et le bilan dans le chat", printed[#printed] == NS:F("CAPTURE_BATCH_SUMMARY_SHINY", 3, 3, 1), printed[#printed])
 	Check("[LOT] le bouton ferme ensuite", frame.stop:GetText() == NS.L.CAPTURE_BATCH_CLOSE)
+	-- figé : l'horloge ne rejoue rien
+	local shook = batch.cards[1].shook
+	Run(3)
+	Check("[LOT] après Arrêter : plus rien ne bouge", batch.cards[1].shook == shook and not batch.cards[1].tile.net:IsShown())
 	frame.stop:Click()
 	Check("[LOT] fermé", not frame:IsShown())
 	-- Échap : la scène est inscrite sous son nom ; cachée, tout se termine
@@ -414,7 +471,7 @@ do
 	frame:GetScript("OnHide")(frame)
 	restore()
 	Check("[LOT] Échap : fermé, lot terminé sans bruit, messages livrés", not frame:IsShown() and batch.done
-		and batch.revealed == 2 and Count(LOT.sounds, NS.CAPTURE_SOUNDS.ok) == 0
+		and batch.resolved == 2 and Count(LOT.sounds, NS.CAPTURE_SOUNDS.ok) == 0
 		and printed[#printed] == NS:F("CAPTURE_BATCH_SUMMARY", 2, 2), printed[#printed])
 	-- le × aussi
 	LOT.SeeKill(6620, { name = "Chacal C" })
@@ -423,12 +480,15 @@ do
 	frame.close:Click()
 	frame:GetScript("OnHide")(frame)
 	Check("[LOT] × : fermé, lot terminé", not frame:IsShown() and batch.done)
-	-- capture animée coupée : tout se montre d'emblée
+	-- capture animée coupée : les verdicts d'emblée, sans animation
 	NS:DB().companionCaptureAnim = false
 	LOT.SeeKill(6630, { name = "Chacal E" })
 	LOT.SeeKill(6631, { name = "Chacal F" })
 	batch = NS:CaptureBatch()
-	Check("[LOT] capture animée coupée : tout retourné d'emblée", batch.done and batch.revealed == 2 and frame:IsShown())
+	local settled = true
+	for _, card in ipairs(batch.cards) do if not (card.settled and card.shook == 0 and not card.tile.net:IsShown()) then settled = false end end
+	Check("[LOT] capture animée coupée : les verdicts d'emblée, sans filet ni secousse", batch.done and batch.resolved == 2
+		and settled and frame:IsShown())
 	NS:DB().companionCaptureAnim = true
 	frame:Hide()
 end
@@ -492,6 +552,263 @@ do
 	NS:DB().companionCapture = true
 	Check("[LOT] capture coupée : rien", batch == nil and why == "off")
 	NS.captureBatchFrame:Hide()
+end
+
+-- 8. Le choix au clic sur le filet (2.5.0) -----------------------------------------------------
+-- le lancer seul en cours va jusqu'au bout (scène refermée)
+function LOT.Settle()
+	for _ = 1, 14 do Mock:Advance(1); NS:CaptureTick(NS.Now()) end
+	NS:CaptureState().rolling = nil
+	if NS.captureStage then NS.captureStage:Hide(); NS.captureStage.rolling = nil end
+	NS:CaptureTick(NS.Now())
+end
+do
+	Say("-- tout capturer : le choix au clic sur le filet")
+	LOT.Reset()
+	LOT.Roll(0)
+	-- un seul candidat : le clic capture directement, comme avant
+	LOT.SeeKill(6800, { name = "Seul" })
+	NS.captureNetButton:Click("LeftButton")
+	Check("[LOT] un candidat : le clic capture directement", NS:CaptureState().rolling ~= nil
+		and NS:CaptureState().rolling.target.npcID == 6800 and not (NS.captureChooser and NS.captureChooser:IsShown()))
+	LOT.Settle()
+	-- deux candidats : le choix, près du filet, rien ne part
+	LOT.SeeKill(6801, { name = "Raptor élite", class = "elite" })
+	LOT.SeeKill(6802, { name = "Raptor" })
+	local net = NS.captureNetButton
+	net:Click("LeftButton")
+	local chooser = NS.captureChooser
+	Check("[LOT] deux candidats : le choix s'ouvre, rien ne part", chooser and chooser:IsShown()
+		and NS:CaptureState().rolling == nil and #NS:CaptureQueue() == 2 and not (NS.captureBatch and not NS.captureBatch.done))
+	Check("[LOT] choix : ancré au-dessus du filet", chooser.lastPoint and chooser.lastPoint.relTo == net
+		and chooser.lastPoint.point == "BOTTOM" and chooser.lastPoint.relPoint == "TOP")
+	Check("[LOT] choix : « Capturer : le meilleur » et « Tout capturer (2) »",
+		chooser.single:GetText() == NS:F("CAPTURE_CHOOSE_ONE", "Raptor élite") and chooser.all:GetText() == NS:F("CAPTURE_CHOOSE_ALL", 2),
+		chooser.single:GetText() .. " / " .. chooser.all:GetText())
+	Check("[LOT] choix : panneau du thème (bandeau), nommé", chooser.chrome == "toast"
+		and chooser:GetName() == "QuestCompanionCaptureChooser" and chooser.strata == "DIALOG")
+	local registered = false
+	for _, name in ipairs(UISpecialFrames) do if name == "QuestCompanionCaptureChooser" then registered = true end end
+	Check("[LOT] choix : Échap le referme (UISpecialFrames)", registered)
+	Check("[LOT] choix : les boutons tiennent dans le panneau", chooser.single:GetWidth() + (chooser.contentLeft or 14) + 10
+		<= chooser:GetWidth() + 1e-6 and chooser.all.lastPoint.y < chooser.single.lastPoint.y - chooser.single:GetHeight())
+	-- un second clic sur le filet le referme
+	net:Click("LeftButton")
+	Check("[LOT] second clic sur le filet : le choix se referme, rien ne part", not chooser:IsShown()
+		and NS:CaptureState().rolling == nil and #NS:CaptureQueue() == 2)
+	-- « Capturer : … » : le meilleur seul
+	net:Click("LeftButton")
+	chooser.single:Click()
+	Check("[LOT] « Capturer : … » : le meilleur part seul, le choix se ferme", not chooser:IsShown()
+		and NS:CaptureState().rolling and NS:CaptureState().rolling.target.npcID == 6801 and #NS:CaptureQueue() == 1)
+	LOT.Settle()
+	-- « Tout capturer (N) »
+	LOT.SeeKill(6803, { name = "Raptor B" })
+	net:Click("LeftButton")
+	Check("[LOT] le choix revient avec le nouveau venu", chooser:IsShown() and chooser.all:GetText() == NS:F("CAPTURE_CHOOSE_ALL", 2))
+	chooser.all:Click()
+	Check("[LOT] « Tout capturer » : tout part, le choix se ferme", not chooser:IsShown() and NS.captureBatch
+		and NS.captureBatch.tried == 2 and #NS:CaptureQueue() == 0)
+	NS:CaptureBatchStop(true)
+	NS.captureBatchFrame:Hide()
+	-- une brillante en tête : marquée sur le bouton
+	LOT.SeeKill(6804, { name = "Raptor C" })
+	LOT.OfferShiny(6805, "Raptor doré")
+	net:Click("LeftButton")
+	Check("[LOT] brillante en tête : « Capturer : Raptor doré (brillant) »",
+		chooser.single:GetText() == NS:F("CAPTURE_CHOOSE_ONE", NS:F("CAPTURE_SHINY_TAG", "Raptor doré")), chooser.single:GetText())
+	-- clic droit, choix ouvert : le choix se ferme, la liste s'ouvre
+	net:Click("RightButton")
+	Check("[LOT] clic droit : la liste, le choix fermé", not chooser:IsShown() and NS.captureQueueList:IsShown())
+	NS:CaptureHideQueueList()
+	-- Maj+clic : le meilleur tout de suite
+	_G.IsShiftKeyDown = function() return true end
+	net:Click("LeftButton")
+	_G.IsShiftKeyDown = nil
+	Check("[LOT] Maj+clic : le meilleur tout de suite, sans le choix", not chooser:IsShown()
+		and NS:CaptureState().rolling and NS:CaptureState().rolling.target.npcID == 6805)
+	LOT.Settle()
+	-- Ctrl+clic : tout tout de suite
+	LOT.SeeKill(6806, { name = "Raptor D" })
+	_G.IsControlKeyDown = function() return true end
+	net:Click("LeftButton")
+	_G.IsControlKeyDown = nil
+	Check("[LOT] Ctrl+clic : tout tout de suite", not chooser:IsShown() and NS.captureBatch.tried == 2 and #NS:CaptureQueue() == 0)
+	NS:CaptureBatchStop(true)
+	NS.captureBatchFrame:Hide()
+	-- il se referme seul : file sous deux, combat, Échap, clic ailleurs
+	LOT.SeeKill(6807, { name = "Raptor E" })
+	LOT.SeeKill(6808, { name = "Raptor F" })
+	net:Click("LeftButton")
+	NS:CaptureQueueRemove(NS:CaptureQueue()[1])
+	Check("[LOT] file retombée à un : le choix se referme", not chooser:IsShown())
+	LOT.SeeKill(6809, { name = "Raptor G" })
+	net:Click("LeftButton")
+	Check("[LOT] (rouvert)", chooser:IsShown())
+	LOT.combat = true
+	Mock:Fire("PLAYER_REGEN_DISABLED")
+	Check("[LOT] le combat commence : le choix se referme", not chooser:IsShown())
+	LOT.combat = false
+	net:Click("LeftButton")
+	LOT.combat = true
+	Mock:Advance(0.2)
+	Check("[LOT] en combat (relevé) : le choix se referme aussi", not chooser:IsShown())
+	net:Click("LeftButton")
+	Check("[LOT] en combat : pas de choix (le filet seul, comme avant)", not chooser:IsShown())
+	LOT.combat = false
+	LOT.Settle()
+	LOT.SeeKill(6810, { name = "Raptor H" })
+	LOT.SeeKill(6811, { name = "Raptor I" })
+	net:Click("LeftButton")
+	chooser:Hide()
+	Check("[LOT] Échap : refermé, rien ne part", not chooser:IsShown() and NS:CaptureState().rolling == nil)
+	net:Click("LeftButton")
+	Mock:Fire("GLOBAL_MOUSE_DOWN", "LeftButton")
+	Check("[LOT] clic ailleurs : refermé", not chooser:IsShown() and NS:CaptureState().rolling == nil)
+	-- l'infobulle du filet dit le choix et ses raccourcis
+	local lines = {}
+	local saved = rawget(_G, "GameTooltip")
+	_G.GameTooltip = { SetOwner = function() end, AddLine = function(_, text) lines[#lines + 1] = text end, Show = function() end,
+		Hide = function() end, AddDoubleLine = function(_, text) lines[#lines + 1] = text end }
+	net:GetScript("OnEnter")(net)
+	_G.GameTooltip = saved
+	local all = table.concat(lines, "\n")
+	local count = #NS:CaptureQueue()
+	Check("[LOT] infobulle : clic = choisir, Maj+clic, Ctrl+clic", all:find(NS.L.CAPTURE_Q_CLICK_CHOOSE:sub(1, 8), 1, true) ~= nil
+		and all:find(NS:F("CAPTURE_Q_CTRL", count), 1, true) ~= nil and all:find(NS.L.CAPTURE_Q_SHIFT:sub(1, 8), 1, true) ~= nil, all)
+	-- le bandeau : son clic ouvre le même choix (près du filet) ; « Tout capturer » reste
+	NS:CaptureToastShow()
+	local toast = NS.captureToast
+	Check("[LOT] bandeau à deux candidats : « Clic : choisir »", toast:IsShown() and toast.all:IsShown()
+		and toast.hint:GetText():find(NS.L.CAPTURE_TOAST_HINT_CHOOSE, 1, true) ~= nil, toast.hint:GetText())
+	local _, _, _, _, hintY = toast.hint:GetPoint(1)
+	Check("[LOT] bandeau : l'aide toujours sur sa ligne (y=-57)", hintY == -57)
+	toast.button:Click("LeftButton")
+	Check("[LOT] clic sur le bandeau : le choix, près du filet ; bandeau effacé, rien ne part", chooser:IsShown()
+		and chooser.lastPoint.relTo == net and not toast:IsShown() and NS:CaptureState().rolling == nil and #NS:CaptureQueue() == count)
+	chooser.single:Click()
+	Check("[LOT] … puis « Capturer : … » : le meilleur", NS:CaptureState().rolling ~= nil and #NS:CaptureQueue() == count - 1)
+	LOT.Settle()
+	-- textes fr et en du choix
+	local missing = {}
+	for key in pairs(NS.CAPTURE_BATCH_STRINGS.fr) do
+		if not NS.CAPTURE_BATCH_STRINGS.en[key] then missing[#missing + 1] = key end
+	end
+	Check("[LOT] choix : textes fr et en", #missing == 0, table.concat(missing, ", "))
+end
+
+-- 8b. Le tutoriel de la ménagerie avance quel que soit le bouton choisi ------------------------
+do
+	Say("-- tout capturer : le choix et le tutoriel")
+	LOT.Reset()
+	LOT.Roll(0)
+	local calls = {}
+	local advance = NS.CompanionSequenceAdvance
+	NS.CompanionSequenceAdvance = function(self, tag) calls[#calls + 1] = tag end
+	LOT.SeeKill(6820, { name = "Tuto A" })
+	LOT.SeeKill(6821, { name = "Tuto B" })
+	NS.captureNetButton:Click("LeftButton")
+	local opened = #calls
+	NS.captureChooser.single:Click()
+	local single = table.concat(calls, ",")
+	LOT.Settle()
+	calls = {}
+	LOT.SeeKill(6822, { name = "Tuto C" })
+	NS.captureNetButton:Click("LeftButton")
+	NS.captureChooser.all:Click()
+	NS:CaptureBatchStop(true)
+	NS.CompanionSequenceAdvance = advance
+	Check("[LOT] tutoriel : ouvrir le choix n'avance rien", opened == 0)
+	Check("[LOT] tutoriel : « Capturer : … » avance « net »", single:find("net", 1, true) == 1, single)
+	Check("[LOT] tutoriel : « Tout capturer » avance « net » puis « stage »", calls[1] == "net" and calls[#calls] == "stage",
+		table.concat(calls, ","))
+	NS.captureBatchFrame:Hide()
+end
+
+-- 9. Le compte à rebours en pause dès le clic ----------------------------------------------------
+do
+	Say("-- tout capturer : le compte à rebours en pause")
+	LOT.Reset()
+	LOT.Roll(0)
+	LOT.SeeKill(6900, { name = "Lynx élite", class = "elite" })
+	LOT.SeeKill(6901, { name = "Lynx" })
+	Mock:Advance(5); NS:CaptureTick(NS.Now())
+	local other = NS:CaptureQueue()[2]
+	local left0 = other.expires - NS.Now()
+	Check("[LOT] le compte tourne avant le clic", left0 > 24 and left0 < 26 and not NS:CaptureQueuePaused(), left0)
+	NS.captureNetButton:Click("LeftButton")
+	Check("[LOT] clic sur le filet : le compte s'arrête", NS:CaptureQueuePaused())
+	for _ = 1, 8 do Mock:Advance(5); NS:CaptureTick(NS.Now()) end
+	Check("[LOT] 40 s plus tard, choix ouvert : les deux attendent toujours", #NS:CaptureQueue() == 2 and NS.captureChooser:IsShown())
+	NS:CaptureShowQueueList()
+	Check("[LOT] la liste montre un temps figé", NS.captureQueueList.rows[2].detail:GetText():find(NS:F("CAPTURE_Q_LEFT", math.ceil(left0)), 1, true) ~= nil,
+		NS.captureQueueList.rows[2].detail:GetText())
+	-- (la liste ouverte referme le choix ? non : on rouvre au besoin)
+	if not NS.captureChooser:IsShown() then NS.captureNetButton:Click("LeftButton") end
+	NS:CaptureHideQueueList()
+	-- un nouveau venu pendant la pause garde ses 30 s pour la reprise
+	LOT.SeeKill(6902, { name = "Lynx B" })
+	local newcomer
+	for _, c in ipairs(NS:CaptureQueue()) do if c.npcID == 6902 then newcomer = c end end
+	Check("[LOT] nouveau venu pendant la pause : ses 30 s gardées", newcomer and math.abs(newcomer.expires - NS:CaptureQueueClock() - NS.CAPTURE_QUEUE_TIME) < 1e-6)
+	NS:CaptureQueueRemove(newcomer)
+	-- choix abandonné : le compte reprend avec le temps qui restait
+	NS:CaptureChooserHide()
+	Check("[LOT] choix refermé sans choisir : le compte reprend…", not NS:CaptureQueuePaused())
+	Check("[LOT] … avec le temps qui restait (pas 30 s)", math.abs((other.expires - NS.Now()) - left0) < 0.01, other.expires - NS.Now())
+	Mock:Advance(3); NS:CaptureTick(NS.Now())
+	Check("[LOT] … et il redescend", math.abs((other.expires - NS.Now()) - (left0 - 3)) < 0.01)
+	-- abandon par Échap (OnHide seul) : pareil
+	local before = other.expires - NS.Now()
+	NS.captureNetButton:Click("LeftButton")
+	Mock:Advance(10)
+	NS.captureChooser:Hide()
+	NS.captureChooser:GetScript("OnHide")(NS.captureChooser)
+	Check("[LOT] Échap sur le choix : reprise au même temps", not NS:CaptureQueuePaused()
+		and math.abs((other.expires - NS.Now()) - before) < 0.01)
+	-- capture du meilleur : l'autre attend toute la scène, puis reprend
+	before = other.expires - NS.Now()
+	NS.captureNetButton:Click("LeftButton")
+	NS.captureChooser.single:Click()
+	Check("[LOT] lancer seul : le compte reste en pause", NS:CaptureQueuePaused() and NS:CaptureState().rolling ~= nil)
+	local ended
+	for _ = 1, 40 do
+		Mock:Advance(0.5); NS:CaptureTick(NS.Now())
+		if not ended and NS:CaptureState().rolling == nil then ended = NS.Now() end
+	end
+	Check("[LOT] la scène finie : l'autre est toujours là, le compte a repris", ended and #NS:CaptureQueue() == 1
+		and not NS:CaptureQueuePaused())
+	local expected = before - (NS.Now() - ended)
+	Check("[LOT] … avec le temps qui restait au clic", math.abs((other.expires - NS.Now()) - expected) < 0.11,
+		(other.expires - NS.Now()) .. " / " .. expected)
+	-- « Tout capturer » qui en laisse (aide qui manque) : pause jusqu'à la fin de la scène
+	LOT.Reset()
+	LOT.Roll(0)
+	for npc = 6910, 6913 do LOT.SeeKill(npc, { name = "Bête " .. npc }) end
+	NS:CaptureData().items.lasso = 2
+	NS:CaptureState().aid = "lasso"
+	local rest = NS:CaptureQueue()[4]
+	before = rest.expires - NS.Now()
+	NS.captureNetButton:Click("LeftButton")
+	NS.captureChooser.all:Click()
+	local batch = NS.captureBatch
+	Check("[LOT] lot en cours : pause, deux restent", NS:CaptureQueuePaused() and batch.short and #NS:CaptureQueue() == 2)
+	Run(1)
+	NS:CaptureTick(NS.Now())
+	Check("[LOT] pendant la scène : toujours en pause", NS:CaptureQueuePaused() and not batch.done)
+	local doneAt
+	for _ = 1, 600 do
+		Run(0.02, 0.02)
+		if batch.done then doneAt = NS.Now(); break end
+	end
+	NS:CaptureTick(NS.Now())
+	Check("[LOT] la scène finie : reprise avec le temps qui restait", doneAt and not NS:CaptureQueuePaused()
+		and math.abs((rest.expires - NS.Now()) - before) < 0.01, rest.expires - NS.Now())
+	Run(2)
+	Check("[LOT] … puis il redescend", math.abs((rest.expires - NS.Now()) - (before - 2)) < 0.03)
+	NS:CaptureBatchStop(true)
+	NS.captureBatchFrame:Hide()
+	NS:CaptureState().aid = nil
 end
 
 for _, name in ipairs(GLOBALS) do _G[name] = LOT.saved[name] end

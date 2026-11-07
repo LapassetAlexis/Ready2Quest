@@ -205,7 +205,11 @@ do
 	local hooked
 	local resolve = NS.CaptureResolve
 	NS.CaptureResolve = function(self, rolling) hooked = rolling.target; return resolve(self, rolling) end
+	-- trois candidats : le clic propose le choix (2.5.0) ; « Capturer : … » = le meilleur
 	Q.Net():Click("LeftButton")
+	Check("[QC2CAP] clic à trois candidats : le choix, rien ne part encore", NS.captureChooser
+		and NS.captureChooser:IsShown() and NS:CaptureState().rolling == nil)
+	NS.captureChooser.single:Click()
 	Check("[QC2CAP] clic : le filet part sur le meilleur (élite)", NS:CaptureState().rolling
 		and NS:CaptureState().rolling.target.npcID == 4401)
 	Check("[QC2CAP] … sorti de la file, compteur 2", #NS:CaptureQueue() == 2 and Q.Net().count:GetText() == "2")
