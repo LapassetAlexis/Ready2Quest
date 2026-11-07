@@ -39,7 +39,7 @@ Copie le dossier de chaque addon voulu dans `World of Warcraft/<client>/Interfac
 - [Notes techniques et historique des versions](docs/TECHNIQUE.md).
 - Zones sûres : `tools/gen_hubs.py` (lieux connus par leur sous-zone, `Libs/Socle/Hubs.lua`) et `tools/gen_places.py` (camps repérés par leurs PNJ de service, `Libs/Socle/Places.lua`), depuis `data/`. Donjons : `tools/gen_dungeons.py`.
 - **Notre base de données** (`data/`) : PNJ, objets, quêtes et zones de Forever (et d'Era, gardées pour les outils), importés une fois de [Questie](https://github.com/Questie/QuestieDB) puis corrigés et complétés ici. Les tables de zone de QuestCompanion en sont générées par `tools/gen_zone_data.py`. Voir [docs/DONNEES.md](docs/DONNEES.md).
-- Logos des pages et icône de QuestCompanion : `tools/gen_store_logos.py`. Paysages peints des sceaux de zone : `tools/gen_seal_scenes.py`.
+- Logos des pages et icône de QuestCompanion : `tools/gen_store_logos.py`. Les fonds des sceaux de zone et les cosmétiques des hauts faits utilisent des textures du jeu, appelées par leur identifiant (rien n'est embarqué).
 
 ## Licence
 
