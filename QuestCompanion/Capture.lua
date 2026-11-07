@@ -679,6 +679,23 @@ function ns:CaptureOffer(guid, entry, shiny)
 	return state.pending
 end
 
+-- Le tirage d'un essai sur `target` : l'aide dépensée (sinon l'essai se fait
+-- sans), la chance, le verdict et les secousses ; un essai de plus compté.
+-- Partagé par le lancer (ci-dessous) et la capture en lot (CaptureBatch.lua).
+-- Renvoie le lancer { target, success, shakes, done, aid, chance }, que
+-- ns:CaptureResolve tranche ensuite.
+function ns:CaptureRoll(target, aid)
+	if aid and not self:CaptureSpend(aid) then aid = nil end
+	local chance, sure = self:CaptureChance(target, aid)
+	local success = sure or math.random() < chance
+	-- comme un filet qui se débat : trois secousses pour une prise, une à
+	-- trois avant de céder pour un échec
+	local shakes = success and 3 or math.random(1, 3)
+	local data = self:CaptureData()
+	data.tries = data.tries + 1
+	return { target = target, success = success, shakes = shakes, done = 0, aid = aid, chance = chance }
+end
+
 -- Un essai. Renvoie true si le filet est lancé.
 function ns:CaptureThrow()
 	local state = self:CaptureState()
@@ -689,22 +706,14 @@ function ns:CaptureThrow()
 		self:CaptureHidePrompt()
 		return false
 	end
-	local aid = state.aid
-	if aid and not self:CaptureSpend(aid) then aid = nil end
-	local chance, sure = self:CaptureChance(pending, aid)
-	local success = sure or math.random() < chance
-	-- comme un filet qui se débat : trois secousses pour une prise, une à
-	-- trois avant de céder pour un échec
-	local shakes = success and 3 or math.random(1, 3)
-	local data = self:CaptureData()
-	data.tries = data.tries + 1
+	local rolling = self:CaptureRoll(pending, state.aid)
 	state.pending = nil
 	-- scène animée (CaptureStage.lua) : le lancer du filet passe avant les secousses
 	local staged = self.CaptureStageOn and self:CaptureStageOn() or false
 	local now = Clock()
-	state.rolling = { target = pending, success = success, shakes = shakes, done = 0, start = now,
-		staged = staged or nil, nextAt = now + (staged and ns.CAPTURE_THROW_TIME or 0) + ns.CAPTURE_SHAKE_STEP,
-		aid = aid, chance = chance }
+	rolling.start, rolling.staged = now, staged or nil
+	rolling.nextAt = now + (staged and ns.CAPTURE_THROW_TIME or 0) + ns.CAPTURE_SHAKE_STEP
+	state.rolling = rolling
 	if staged then
 		self:CaptureHidePrompt()
 		self:CaptureShowStage(state.rolling)
