@@ -1,5 +1,15 @@
 # QuestCompanion
 
+## 2.5.1 — les fenêtres de capture en style Azeroth
+
+- **Scène de capture** : en style Azeroth, la scène prend le cadre en bois des hauts faits, sur un fond sombre et chaud. En haut, une plaque dorée « CAPTURE » avec le nom de la créature (en or pour une brillante). Au centre, le modèle et notre filet, qui tombe, se secoue et tient ou se déchire comme avant ; les secousses s'allument en losanges dorés. En bas, le verdict devient un bandeau de haut fait : « CAPTURÉ ! », le nom, les étoiles, un bouclier d'or et son éclat ; ou « ÉCHAPPÉ… », une phrase et un bouclier gris. « Clic ou Échap pour fermer » reste dans le cadre, au-dessus du bois.
+- **Plus de « Capturé ! » en double** : quand la scène Azeroth a montré le verdict, le court bandeau « Capturé ! » ne revient pas après elle. Il reste pour la capture sans animation, pour la scène fermée avant le verdict, pour le style Sobre et pour « Tout capturer » (la plus belle prise du lot).
+- **Le choix au filet** : un petit panneau en bois à côté du filet, du côté où il y a la place, toujours dans l'écran. Il montre le filet dans son cadre doré, « N CRÉATURES DANS LE FILET » et deux boutons dorés : « Capturer : … » (brillante, chance dessous) et « Tout capturer (N) » (ce que coûte chaque essai), puis les raccourcis.
+- **Tout capturer** : grande fenêtre en bois, plaque « TOUT CAPTURER » / « Captures : N », l'aide et Arrêter / Fermer dessous. Chaque créature apparaît dans le cadre d'icône doré des hauts faits. La volée de filets est la même ; au verdict, un bouclier d'or ou gris s'affiche au coin, avec les étoiles ou « échappée ». La brillante tombe toujours en dernier, avec sa lueur dorée.
+- **Sobre et repli** : en style Sobre, ces fenêtres ne changent pas. Si le client n'a pas le cadre en bois, elles restent en Sobre, et les bandeaux gardent le style Azeroth. Un changement de style pendant une scène s'applique à la suivante.
+
+*English:* the capture windows get the Azeroth look: achievement wood frame, title plate, achievement-banner verdict (gold or grey shield, bling), golden buttons in the net chooser (placed beside the net, kept on screen), achievement icon frames and shields in Capture all. The "Captured!" toast no longer repeats a verdict the Azeroth scene already showed. Plain style unchanged; falls back to Plain if the wood atlases are missing.
+
 ## 2.5.0 — le style Azeroth
 
 - **Style Azeroth** (nouveau, par défaut) : les bandeaux prennent l'allure des hauts faits du jeu : le bandeau doré à volutes, l'icône dans son cadre doré, le titre en petites capitales sur le parchemin, le nom en grand au centre, un bouclier à droite (gris : pas encore à toi ; or : gagné). Ils éclosent comme un haut fait : lueur, reflet, éclat sur le bouclier. Les textures sont celles du client ; s'il ne les a pas, le style Sobre s'affiche à la place, sans erreur.

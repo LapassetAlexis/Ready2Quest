@@ -19,6 +19,11 @@
 -- compagnon est rhabillé sur place.
 -- Aussi ici : le bandeau de résultat « Capturé ! » (les deux styles), et les
 -- bandeaux des sceaux de zone et des titres de dresseur (file du carnet).
+-- 2.5.1 : les fenêtres de capture (scène d'un lancer seul, choix au filet,
+-- volée de « Tout capturer ») ont aussi leur habit Azeroth : cadre en bois
+-- des hauts faits, plaque de titre, bandeau de verdict, boutons dorés
+-- (dessinés). Il leur faut en plus le bois (ns:AzerothScenesOn) ; sans lui,
+-- elles restent en Sobre. Construites par CaptureStage.lua et CaptureBatch.lua.
 local ADDON, ns = ...
 if ns.blocked then return end
 local L = ns.L
@@ -41,6 +46,24 @@ ns.AZEROTH_ATLAS = {
 }
 -- celles sans lesquelles le style ne tient pas (le reste est décoratif)
 ns.AZEROTH_REQUIRED = { "bg", "bgGuild", "plate", "frame", "frameRound", "shield" }
+-- le cadre en bois des hauts faits (fenêtres de capture, 2.5.1) : coins
+-- 64×64, bords 64×64 répétés (« _ » : en largeur, « ! » : en hauteur)
+ns.AZEROTH_WOOD = {
+	tl     = "achievement-wood-nineslice-cornertopleft",
+	tr     = "achievement-wood-nineslice-cornertopright",
+	bl     = "achievement-wood-nineslice-cornerbottomleft",
+	br     = "achievement-wood-nineslice-cornerbottomright",
+	top    = "_achievement-wood-nineslice-edgetop",
+	bottom = "_achievement-wood-nineslice-edgebottom",
+	left   = "!achievement-wood-nineslice-edgeleft",
+	right  = "!achievement-wood-nineslice-edgeright",
+}
+ns.AZEROTH_WOOD_KEYS = { "tl", "tr", "bl", "br", "top", "bottom", "left", "right" }
+-- les fenêtres de capture demandent aussi ceux-là (bandeau, plaque, cadre d'icône, bouclier)
+ns.AZEROTH_SCENE_REQUIRED = { "bg", "plate", "frame", "shield" }
+-- géométrie du bois : pièce de 64 px, qui déborde de 8 px du cadre ; le bois
+-- visible mord 16 px dans le cadre ; le contenu commence à 26 px du bord
+ns.AZEROTH_WOOD_SIZE, ns.AZEROTH_WOOD_OUT, ns.AZEROTH_WOOD_INSET, ns.AZEROTH_WOOD_PAD = 64, 8, 16, 26
 -- police des hauts faits (Friz Quadrata, celle du client)
 ns.AZEROTH_FONT = "Fonts\\FRIZQT__.TTF"
 -- géométrie du bandeau (maquette validée : 310×101 à l'échelle 1,25) et de
@@ -121,20 +144,44 @@ local function Clamp01(x) if x < 0 then return 0 elseif x > 1 then return 1 end 
 -- ---------------------------------------------------------------------------
 -- Les atlas sont-ils dans ce client ? Gardé tant que l'API ne change pas
 -- (refresh : redemander)
-local atlasCache = {}
+local atlasCache, sceneCache = {}, {}
+local function AtlasMissing(api, name)
+	local done, info = pcall(api.GetAtlasInfo, name)
+	info = done and ns.Plain and ns.Plain(info) or (done and info or nil)
+	return info == nil or info == false
+end
 function ns:AzerothAtlasOK(refresh)
 	local api = G("C_Texture")
+	if refresh then sceneCache.checked = nil end
 	if not refresh and atlasCache.checked and atlasCache.api == api then return atlasCache.ok end
 	local ok = type(api) == "table" and type(api.GetAtlasInfo) == "function"
 	if ok then
 		for _, key in ipairs(ns.AZEROTH_REQUIRED) do
-			local done, info = pcall(api.GetAtlasInfo, AZ[key])
-			info = done and ns.Plain and ns.Plain(info) or (done and info or nil)
-			if info == nil or info == false then ok = false; break end
+			if AtlasMissing(api, AZ[key]) then ok = false; break end
 		end
 	end
 	atlasCache.checked, atlasCache.api, atlasCache.ok = true, api, ok and true or false
 	return atlasCache.ok
+end
+
+-- Les fenêtres de capture (2.5.1) demandent en plus le cadre en bois : s'il
+-- manque, elles restent en Sobre (les bandeaux, eux, gardent Azeroth)
+function ns:AzerothSceneAtlasOK(refresh)
+	local api = G("C_Texture")
+	if not refresh and sceneCache.checked and sceneCache.api == api then return sceneCache.ok end
+	local ok = type(api) == "table" and type(api.GetAtlasInfo) == "function"
+	if ok then
+		for _, key in ipairs(ns.AZEROTH_SCENE_REQUIRED) do
+			if AtlasMissing(api, AZ[key]) then ok = false; break end
+		end
+	end
+	if ok then
+		for _, key in ipairs(ns.AZEROTH_WOOD_KEYS) do
+			if AtlasMissing(api, ns.AZEROTH_WOOD[key]) then ok = false; break end
+		end
+	end
+	sceneCache.checked, sceneCache.api, sceneCache.ok = true, api, ok and true or false
+	return sceneCache.ok
 end
 
 -- Le choix du joueur (réglage), valide
@@ -150,6 +197,8 @@ function ns:UIStyle()
 	return "sobre"
 end
 function ns:AzerothOn() return self:UIStyle() == "azeroth" end
+-- Style des fenêtres de capture : Azeroth si le style l'est et que le bois est là
+function ns:AzerothScenesOn() return self:AzerothOn() and self:AzerothSceneAtlasOK() end
 
 function ns:UIStyleChoices()
 	local list = {}
@@ -334,6 +383,39 @@ local function Play(frame, opts)
 	return true
 end
 
+-- Un atlas précis est-il dans ce client ? (gardé tant que l'API ne change pas)
+local oneCache = {}
+function ns.AzerothHasAtlas(name)
+	local api = G("C_Texture")
+	if oneCache.api ~= api then oneCache = { api = api } end
+	if oneCache[name] == nil then
+		oneCache[name] = type(api) == "table" and type(api.GetAtlasInfo) == "function" and not AtlasMissing(api, name)
+	end
+	return oneCache[name]
+end
+
+-- Un bouclier : "gold" (or), "grey" (gris ; pas de gris dans ce client : le
+-- doré, désaturé), sinon caché. Rend le genre posé (ou nil).
+function ns.AzerothShield(tex, kind)
+	if not tex then return nil end
+	if kind == "gold" or kind == "grey" then
+		local done = false
+		if kind == "gold" or ns.AzerothHasAtlas(AZ.shieldGrey) then
+			done = Atlas(tex, kind == "gold" and AZ.shield or AZ.shieldGrey)
+		end
+		if not done and kind == "grey" then
+			Atlas(tex, AZ.shield)
+			if tex.SetDesaturated then pcall(tex.SetDesaturated, tex, true) end
+		elseif tex.SetDesaturated then
+			pcall(tex.SetDesaturated, tex, false)
+		end
+		tex:Show()
+		return kind
+	end
+	tex:Hide()
+	return nil
+end
+
 -- Crée un bandeau Azeroth. opts : name, strata, guild (fond de guilde),
 -- round (cadre rond à volutes), strip (bande sombre dessous : infos et
 -- boutons). Champs : .banner (les textures dorées), .icon, .title, .text
@@ -455,23 +537,7 @@ function ns:AzerothCreateBanner(opts)
 	end
 
 	function frame:SetAccent(color) self.accentColor = color end
-	function frame:SetShield(kind)
-		if kind == "gold" or kind == "grey" then
-			local done = Atlas(self.shield, kind == "gold" and AZ.shield or AZ.shieldGrey)
-			-- pas de bouclier gris dans ce client : le doré, désaturé
-			if not done and kind == "grey" then
-				Atlas(self.shield, AZ.shield)
-				if self.shield.SetDesaturated then pcall(self.shield.SetDesaturated, self.shield, true) end
-			elseif self.shield.SetDesaturated then
-				pcall(self.shield.SetDesaturated, self.shield, false)
-			end
-			self.shieldKind = kind
-			self.shield:Show()
-		else
-			self.shieldKind = nil
-			self.shield:Hide()
-		end
-	end
+	function frame:SetShield(kind) self.shieldKind = ns.AzerothShield(self.shield, kind) end
 	function frame:Fit()
 		ns.AzerothFit(self.title, LAY.titleW, LAY.titleMax, LAY.titleMin)
 		return ns.AzerothFit(self.text, self.nameWidth, LAY.nameMax, LAY.nameMin)
@@ -498,9 +564,285 @@ function ns:StyleShown(frame, opts)
 end
 
 -- ---------------------------------------------------------------------------
+-- Les fenêtres de capture (2.5.1) : cadre en bois, plaque de titre, bandeau
+-- de verdict, boutons dorés. Utilisés par CaptureStage.lua (la scène d'un
+-- lancer seul) et CaptureBatch.lua (le choix au filet, la volée) quand
+-- ns:AzerothScenesOn() ; sinon ces fenêtres gardent leur style Sobre.
+-- ---------------------------------------------------------------------------
+local WOOD_BG = { 0.11, 0.086, 0.06 }      -- fond sombre et chaud (#1c160f)
+local WOOD_DEEP = { 0.07, 0.055, 0.035 }   -- bas du fond (#120e09)
+local WOOD_WARM = { 0.23, 0.18, 0.12 }     -- haut du fond (#3a2e1f)
+ns.AZEROTH_COLORS = { ink = INK, shinyName = SHINY_NAME, star = STAR_GOLD, flavour = { 0.85, 0.82, 0.75 },
+	fled = { 0.8, 0.75, 0.66 }, caption = { 0.91, 0.77, 0.42 }, hint = { 0.61, 0.56, 0.47 } }
+ns.AzerothFont, ns.AzerothAtlas = AzFont, Atlas
+-- Capitales sûres : seules les lettres a-z et les accents passent en
+-- capitales (string.upper d'un client réglé autrement casserait « … »)
+function ns.AzerothUpper(text)
+	text = tostring(text or ""):gsub("[a-z]", string.upper)
+	if Theme.Upper then text = text:gsub("[\195\197][\128-\191]", Theme.Upper) end
+	return text
+end
+
+-- Le cadre en bois autour de `frame` : huit pièces (coins débordant de
+-- AZEROTH_WOOD_OUT px, bords répétés entre eux) sur un fond sombre et chaud
+-- (aplat, dégradé, halo doux au tiers haut). Rend la table des pièces.
+function ns:AzerothWood(frame)
+	local S, O = ns.AZEROTH_WOOD_SIZE, ns.AZEROTH_WOOD_OUT
+	frame.woodBg = Theme.Solid(frame, "BACKGROUND", WOOD_BG, 0.97)
+	frame.woodBg:SetPoint("TOPLEFT", frame, "TOPLEFT", 4, -4)
+	frame.woodBg:SetPoint("BOTTOMRIGHT", frame, "BOTTOMRIGHT", -4, 4)
+	frame.woodShade = frame:CreateTexture(nil, "BACKGROUND", nil, 1)
+	frame.woodShade:SetTexture(Theme.SOLID)
+	frame.woodShade:SetPoint("TOPLEFT", frame.woodBg, "TOPLEFT", 0, 0)
+	frame.woodShade:SetPoint("BOTTOMRIGHT", frame.woodBg, "BOTTOMRIGHT", 0, 0)
+	if Theme.Gradient then Theme.Gradient(frame.woodShade, "VERTICAL", WOOD_DEEP, 0.6, WOOD_WARM, 0.35) end
+	local art = ns.CAPTURE_ART
+	if art and art.halo then
+		frame.woodGlow = frame:CreateTexture(nil, "BACKGROUND", nil, 2)
+		frame.woodGlow:SetTexture(art.halo)
+		frame.woodGlow:SetVertexColor(0.55, 0.42, 0.24, 0.35)
+		frame.woodGlow:SetPoint("TOPLEFT", frame, "TOPLEFT", 10, -10)
+		frame.woodGlow:SetPoint("BOTTOMRIGHT", frame, "BOTTOMRIGHT", -10, 10)
+	end
+	local wood = {}
+	local function Piece(key)
+		local tex = frame:CreateTexture(nil, "BORDER", nil, 1)
+		tex:SetSize(S, S)
+		Atlas(tex, ns.AZEROTH_WOOD[key])
+		wood[key] = tex
+		return tex
+	end
+	Piece("tl"):SetPoint("TOPLEFT", frame, "TOPLEFT", -O, O)
+	Piece("tr"):SetPoint("TOPRIGHT", frame, "TOPRIGHT", O, O)
+	Piece("bl"):SetPoint("BOTTOMLEFT", frame, "BOTTOMLEFT", -O, -O)
+	Piece("br"):SetPoint("BOTTOMRIGHT", frame, "BOTTOMRIGHT", O, -O)
+	local top, bottom, left, right = Piece("top"), Piece("bottom"), Piece("left"), Piece("right")
+	top:SetPoint("TOPLEFT", wood.tl, "TOPRIGHT", 0, 0)
+	top:SetPoint("TOPRIGHT", wood.tr, "TOPLEFT", 0, 0)
+	bottom:SetPoint("BOTTOMLEFT", wood.bl, "BOTTOMRIGHT", 0, 0)
+	bottom:SetPoint("BOTTOMRIGHT", wood.br, "BOTTOMLEFT", 0, 0)
+	left:SetPoint("TOPLEFT", wood.tl, "BOTTOMLEFT", 0, 0)
+	left:SetPoint("BOTTOMLEFT", wood.bl, "TOPLEFT", 0, 0)
+	right:SetPoint("TOPRIGHT", wood.tr, "BOTTOMRIGHT", 0, 0)
+	right:SetPoint("BOTTOMRIGHT", wood.br, "TOPRIGHT", 0, 0)
+	Method(top, "SetHorizTile", true)
+	Method(bottom, "SetHorizTile", true)
+	Method(left, "SetVertTile", true)
+	Method(right, "SetVertTile", true)
+	frame.wood = wood
+	return wood
+end
+
+-- Une fenêtre en bois : mêmes réglages que Theme.CreateToast (strate,
+-- gardée à l'écran bois compris, déplaçable). opts : name, strata.
+function ns:AzerothCreateWindow(width, height, opts)
+	opts = opts or {}
+	local ok, frame = pcall(CreateFrame, "Frame", opts.name, UIParent)
+	if not ok or not frame then return nil end
+	frame:SetSize(width, height)
+	frame:SetFrameStrata(opts.strata or "DIALOG")
+	frame:SetClampedToScreen(true)
+	local o = ns.AZEROTH_WOOD_OUT
+	Method(frame, "SetClampRectInsets", -o, o, o, -o)
+	frame.clampInset = o
+	frame:EnableMouse(false)
+	frame:SetMovable(true)
+	if frame.RegisterForDrag then frame:RegisterForDrag("LeftButton") end
+	if frame.StartMoving then frame:SetScript("OnDragStart", frame.StartMoving) end
+	if frame.StopMovingOrSizing then frame:SetScript("OnDragStop", frame.StopMovingOrSizing) end
+	frame.uiStyle, frame.azeroth, frame.chrome = "azeroth", true, "wood"
+	frame.contentLeft, frame.contentTop = ns.AZEROTH_WOOD_PAD, 0
+	self:AzerothWood(frame)
+	return frame
+end
+
+-- La plaque de titre (fond « mini » des hauts faits) : .title en petites
+-- capitales brunes, .text (le nom) en grand dessous ; plate:Fit() rapetisse
+-- le nom pour qu'il tienne. Un cadre : il passe devant les effets du parent.
+function ns:AzerothPlate(parent, width, height)
+	local plate = CreateFrame("Frame", nil, parent)
+	plate:SetSize(width, height)
+	plate:SetFrameLevel((parent:GetFrameLevel() or 1) + 14)
+	plate.bg = plate:CreateTexture(nil, "ARTWORK")
+	plate.bg:SetAllPoints(plate)
+	Atlas(plate.bg, AZ.plate)
+	plate.nameW = width - 60
+	plate.title = plate:CreateFontString(nil, "OVERLAY", Theme.F_CAPS)
+	plate.title:SetPoint("TOP", plate, "TOP", 0, -math.floor(height * 0.2))
+	plate.title:SetJustifyH("CENTER")
+	AzFont(plate.title, 11)
+	plate.title:SetTextColor(INK[1], INK[2], INK[3], 1)
+	if Theme.NoShadow then Theme.NoShadow(plate.title) end
+	plate.title:SetWidth(plate.nameW)
+	if plate.title.SetWordWrap then plate.title:SetWordWrap(false) end
+	plate.text = plate:CreateFontString(nil, "OVERLAY", Theme.F_TITLE)
+	plate.text:SetPoint("TOP", plate, "TOP", 0, -math.floor(height * 0.39))
+	plate.text:SetJustifyH("CENTER")
+	AzFont(plate.text, 17)
+	plate.text:SetTextColor(1, 1, 1, 1)
+	if plate.text.SetShadowColor then plate.text:SetShadowColor(0, 0, 0, 1) end
+	if plate.text.SetShadowOffset then plate.text:SetShadowOffset(1, -2) end
+	plate.text:SetWidth(plate.nameW)
+	if plate.text.SetWordWrap then plate.text:SetWordWrap(false) end
+	function plate:SetName(text, shiny)
+		self.text:SetText(text or "")
+		local c = shiny and SHINY_NAME or { 1, 1, 1 }
+		self.text:SetTextColor(c[1], c[2], c[3], 1)
+		return ns.AzerothFit(self.text, self.nameW, 17, 10)
+	end
+	return plate
+end
+
+-- Le bandeau de verdict des scènes : fond des hauts faits sans icône, .title
+-- (petites capitales), .text (le nom), .line (ligne de dessous), .shield
+-- (banner:SetShield), .bling, .glow, .shine. Posé dans une zone fixe
+-- (banner.area, c'est elle qu'on ancre) : il éclot depuis son centre.
+function ns:AzerothVerdict(parent, width, height)
+	local area = CreateFrame("Frame", nil, parent)
+	area:SetSize(width, height)
+	local banner = CreateFrame("Frame", nil, area)
+	banner:SetSize(width, height)
+	banner:SetPoint("CENTER", area, "CENTER", 0, 0)
+	banner.area, banner.azeroth = area, true
+	local k = height / LAY.h
+	banner.glow = banner:CreateTexture(nil, "BACKGROUND", nil, -1)
+	banner.glow:SetSize(width * 1.34, height * 1.6)
+	banner.glow:SetPoint("CENTER", banner, "CENTER", 0, 0)
+	Atlas(banner.glow, AZ.glow)
+	if banner.glow.SetBlendMode then banner.glow:SetBlendMode("ADD") end
+	banner.glow:SetAlpha(0)
+	banner.bg = banner:CreateTexture(nil, "BACKGROUND")
+	banner.bg:SetAllPoints(banner)
+	Atlas(banner.bg, AZ.bg)
+	banner.nameW = width - 100
+	banner.title = banner:CreateFontString(nil, "OVERLAY", Theme.F_CAPS)
+	banner.title:SetPoint("TOP", banner, "TOP", 2, math.floor(LAY.titleY * k))
+	banner.title:SetJustifyH("CENTER")
+	AzFont(banner.title, 11)
+	banner.title:SetTextColor(INK[1], INK[2], INK[3], 1)
+	if Theme.NoShadow then Theme.NoShadow(banner.title) end
+	banner.title:SetWidth(width - 60)
+	if banner.title.SetWordWrap then banner.title:SetWordWrap(false) end
+	banner.text = banner:CreateFontString(nil, "OVERLAY", Theme.F_TITLE)
+	banner.text:SetPoint("TOP", banner, "TOP", 2, math.floor(LAY.nameY * k))
+	banner.text:SetJustifyH("CENTER")
+	AzFont(banner.text, 20)
+	banner.text:SetTextColor(1, 1, 1, 1)
+	if banner.text.SetShadowColor then banner.text:SetShadowColor(0, 0, 0, 1) end
+	if banner.text.SetShadowOffset then banner.text:SetShadowOffset(1, -2) end
+	banner.text:SetWidth(banner.nameW)
+	if banner.text.SetWordWrap then banner.text:SetWordWrap(false) end
+	banner.lineY = math.floor(LAY.starsY * k) + 2
+	banner.line = banner:CreateFontString(nil, "OVERLAY", Theme.F_SMALL)
+	banner.line:SetPoint("TOP", banner, "TOP", 0, banner.lineY)
+	banner.line:SetJustifyH("CENTER")
+	banner.line:SetWidth(banner.nameW)
+	if banner.line.SetWordWrap then banner.line:SetWordWrap(false) end
+	banner.shield = banner:CreateTexture(nil, "ARTWORK", nil, 2)
+	banner.shield:SetSize(58, 52)
+	banner.shield:SetPoint("TOPRIGHT", banner, "TOPRIGHT", 6, -26)
+	banner.shield:Hide()
+	banner.bling = banner:CreateTexture(nil, "OVERLAY", nil, 2)
+	banner.bling:SetSize(100, 100)
+	banner.bling:SetPoint("CENTER", banner.shield, "CENTER", 0, 0)
+	Atlas(banner.bling, AZ.bling)
+	if banner.bling.SetBlendMode then banner.bling:SetBlendMode("ADD") end
+	banner.bling:Hide()
+	banner.shine = banner:CreateTexture(nil, "OVERLAY", nil, 1)
+	banner.shine:SetSize(60, height * 0.8)
+	Atlas(banner.shine, AZ.shine)
+	if banner.shine.SetBlendMode then banner.shine:SetBlendMode("ADD") end
+	banner.shine:Hide()
+	function banner:SetShield(kind) self.shieldKind = ns.AzerothShield(self.shield, kind) end
+	function banner:Fit()
+		ns.AzerothFit(self.title, width - 60, 11, 9)
+		return ns.AzerothFit(self.text, self.nameW, 20, 11)
+	end
+	banner:Hide()
+	return banner
+end
+
+-- Le bouton doré des fenêtres de capture (dessiné : dégradé brun-or, liseré
+-- d'or de 2 px, reflet clair en haut ; aucune texture de bouton du jeu).
+-- kind : "gold" (principal) ou "dark" (secondaire, plus sombre). Champs
+-- .text, .sub (ligne de dessous, button:SetSub) ; SetText/GetText.
+local BUTTON_SKINS = {
+	gold = { top = { 0.48, 0.29, 0.07 }, bottom = { 0.29, 0.165, 0.03 }, edge = { 0.85, 0.66, 0.27 } },
+	dark = { top = { 0.235, 0.19, 0.133 }, bottom = { 0.133, 0.10, 0.067 }, edge = { 0.54, 0.415, 0.17 } },
+}
+ns.AZEROTH_BUTTON_SKINS = BUTTON_SKINS
+local BUTTON_TEXT, BUTTON_SUB = { 1, 0.95, 0.81 }, { 0.9, 0.83, 0.64 }
+
+local function ButtonLayout(button)
+	local sub = button.sub:IsShown()
+	button.text:ClearAllPoints()
+	button.text:SetPoint("CENTER", button, "CENTER", 0, sub and 6 or 0)
+end
+
+function ns:AzerothButton(parent, width, height, label, onClick, kind)
+	local skin = BUTTON_SKINS[kind] or BUTTON_SKINS.gold
+	local button = CreateFrame("Button", nil, parent)
+	button:SetSize(width, height)
+	button.azeroth, button.style, button.skin = true, BUTTON_SKINS[kind] and kind or "gold", skin
+	button.bg = button:CreateTexture(nil, "BACKGROUND")
+	button.bg:SetTexture(Theme.SOLID)
+	button.bg:SetAllPoints(button)
+	if Theme.Gradient then Theme.Gradient(button.bg, "VERTICAL", skin.bottom, 1, skin.top, 1) end
+	button.inner = button:CreateTexture(nil, "BACKGROUND", nil, 1)
+	button.inner:SetPoint("TOPLEFT", button, "TOPLEFT", 1, -1)
+	button.inner:SetPoint("BOTTOMRIGHT", button, "BOTTOMRIGHT", -1, 1)
+	button.inner:SetAlpha(0)
+	button.border = Theme.Border(button, skin.edge, 1, "BORDER")
+	button.border2 = Theme.Border(button, skin.edge, 0.8, "BORDER", button.inner)
+	button.gloss = Theme.Solid(button, "ARTWORK", { 1, 0.86, 0.59 }, 0.35)
+	button.gloss:SetPoint("TOPLEFT", button, "TOPLEFT", 2, -2)
+	button.gloss:SetPoint("TOPRIGHT", button, "TOPRIGHT", -2, -2)
+	button.gloss:SetHeight(1)
+	button.hover = Theme.Solid(button, "ARTWORK", { 1, 0.85, 0.5 }, 0.12)
+	button.hover:SetPoint("TOPLEFT", button, "TOPLEFT", 2, -2)
+	button.hover:SetPoint("BOTTOMRIGHT", button, "BOTTOMRIGHT", -2, 2)
+	if button.hover.SetBlendMode then button.hover:SetBlendMode("ADD") end
+	button.hover:Hide()
+	button.text = button:CreateFontString(nil, "OVERLAY", Theme.F_LABEL)
+	AzFont(button.text, height >= 34 and 13 or 11)
+	button.text:SetTextColor(BUTTON_TEXT[1], BUTTON_TEXT[2], BUTTON_TEXT[3], 1)
+	if button.text.SetShadowColor then button.text:SetShadowColor(0, 0, 0, 1) end
+	if button.text.SetShadowOffset then button.text:SetShadowOffset(1, -1) end
+	button.text:SetWidth(width - 12)
+	if button.text.SetWordWrap then button.text:SetWordWrap(false) end
+	button.text:SetText(label or "")
+	button.sub = button:CreateFontString(nil, "OVERLAY", Theme.F_SMALL)
+	button.sub:SetPoint("CENTER", button, "CENTER", 0, -8)
+	button.sub:SetTextColor(BUTTON_SUB[1], BUTTON_SUB[2], BUTTON_SUB[3], 1)
+	button.sub:SetWidth(width - 12)
+	if button.sub.SetWordWrap then button.sub:SetWordWrap(false) end
+	button.sub:Hide()
+	ButtonLayout(button)
+	function button:SetText(text) self.text:SetText(text) end
+	function button:GetText() return self.text:GetText() end
+	function button:SetSub(text)
+		self.sub:SetText(text or "")
+		if text and text ~= "" then self.sub:Show() else self.sub:Hide() end
+		ButtonLayout(self)
+	end
+	button:SetScript("OnEnter", function(b)
+		b.hover:Show()
+		b.border:SetColor(1, 0.85, 0.5, 1)
+	end)
+	button:SetScript("OnLeave", function(b)
+		b.hover:Hide()
+		local e = b.skin.edge
+		b.border:SetColor(e[1], e[2], e[3], 1)
+	end)
+	if onClick then button:SetScript("OnClick", onClick) end
+	return button
+end
+
+-- ---------------------------------------------------------------------------
 -- Le bandeau de résultat : « Capturé ! » / « Brillant capturé ! »
--- Montré quand la scène de capture se referme (lancer seul) ou quand la
--- volée de « Tout capturer » est fermée (la plus belle prise du lot) ; jamais
+-- Montré quand la scène de capture se referme (lancer seul, sauf scène
+-- Azeroth : elle a déjà son bandeau de verdict) ou quand la volée de « Tout
+-- capturer » est fermée (la plus belle prise du lot) ; jamais
 -- en combat (il attend la fin, CAPTURE_RESULT_STALE s au plus), rien en
 -- sourdine ; CAPTURE_RESULT_SECONDS s d'affichage.
 -- ---------------------------------------------------------------------------
@@ -608,14 +950,24 @@ function ns:CaptureResultTick(now)
 	return self:CaptureResultShow(pending) ~= nil
 end
 
--- Lancer seul : le verdict retenu, montré quand la scène se referme
+-- Lancer seul : le verdict retenu, montré quand la scène se referme. Sauf
+-- si la scène elle-même l'affiche déjà (2.5.1 : la scène Azeroth a son
+-- bandeau « Capturé ! », bouclier et éclat compris) : pas de doublon. La
+-- scène refermée avant le verdict (Échap) : le bandeau, pour ne rien rater.
+local function SceneShowsVerdict(self, rolling)
+	if not rolling.sceneVerdict then return false end
+	local stage = self.captureStage
+	return stage ~= nil and stage:IsShown() and stage.rolling == rolling
+end
+ns.CaptureSceneShowsVerdict = SceneShowsVerdict
 do
 	local base = ns.CaptureResolve
 	if base then
 		function ns:CaptureResolve(rolling, ...)
 			local result = base(self, rolling, ...)
 			local target = rolling and rolling.target
-			if target and rolling.success and not rolling.batch and not self.captureBatchResolving then
+			if target and rolling.success and not rolling.batch and not self.captureBatchResolving
+				and not SceneShowsVerdict(self, rolling) then
 				self:CaptureResultQueue({ name = target.name, shiny = target.shiny and true or false, stars = rolling.stars })
 			end
 			return result

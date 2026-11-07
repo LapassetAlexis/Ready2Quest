@@ -33,7 +33,9 @@
 -- créées à la demande et resservent d'un lot à l'autre ; modèles 3D pour
 -- les CAPTURE_BATCH_MODELS premières seulement (icône au-delà). Nos
 -- textures (Textures/, celles de la scène d'un lancer seul) et les aplats
--- du thème, jamais d'art de Blizzard.
+-- du thème ; en style Azeroth (2.5.1), le choix et la volée prennent le
+-- cadre en bois, la plaque et les cadres d'icône des hauts faits (atlas du
+-- client, désignés par leur nom, jamais embarqués).
 local ADDON, ns = ...
 if ns.blocked then return end
 local L = ns.L
@@ -61,6 +63,17 @@ local SCENE_H, MODEL, NET = 88, 84, 92
 local PAD, HEAD, FOOT, MIN_W = 16, 44, 48, 340
 local ROPES, BURST = 3, 6
 local CHOOSER_W = 248
+-- style Azeroth (2.5.1, maquette validée) : fenêtre en bois, plaque de titre,
+-- cases avec la créature dans le cadre d'icône doré des hauts faits
+local AZB = { tileW = 132, tileH = 148, gapX = 14, gapY = 16, ring = 96, window = 72, model = 76, net = 104,
+	pad = 30, head = 150, foot = 50, minW = 440, plateW = 330, plateH = 92, plateY = -22, rowY = -118,
+	stopW = 104, stopH = 22, shieldW = 40, shieldH = 36 }
+ns.CAPTURE_BATCH_AZEROTH = AZB
+-- le choix au filet, en bois : le glyphe du filet dans son cadre, la légende,
+-- deux boutons dorés (avec leur ligne de dessous), les raccourcis
+local AZC = { w = 300, h = 252, ring = 44, glyph = 28, ringY = -22, captionY = -70, buttonH = 44,
+	oneY = -90, allY = -142, hintY = -194, gap = 14 }
+ns.CAPTURE_CHOOSER_AZEROTH = AZC
 local RANK_ORDER = { trivial = 0, minus = 0, normal = 1, elite = 2, rare = 3, rareelite = 4, worldboss = 5 }
 
 local FR = {
@@ -89,6 +102,12 @@ local FR = {
 	CAPTURE_Q_SHIFT        = "Maj+clic : capturer %s tout de suite",
 	CAPTURE_Q_CTRL         = "Ctrl+clic : tout capturer (%d) tout de suite",
 	CAPTURE_TOAST_HINT_CHOOSE = "Clic : choisir · clic droit : la liste",
+	CAPTURE_BATCH_AID      = "Aide : %s",
+	CAPTURE_CHOOSE_COUNT   = "%d créatures dans le filet",
+	CAPTURE_CHOOSE_SHINY   = "brillante",
+	CAPTURE_CHOOSE_ALL_AID = "chaque essai coûte : %s",
+	CAPTURE_CHOOSE_ALL_FREE = "un lancer pour chacune",
+	CAPTURE_CHOOSE_KEYS    = "Maj+clic : la meilleure · Ctrl+clic : tout · Échap : fermer",
 }
 local EN = {
 	CAPTURE_BATCH_ACTION   = "Capture all",
@@ -116,6 +135,12 @@ local EN = {
 	CAPTURE_Q_SHIFT        = "Shift-click: capture %s right away",
 	CAPTURE_Q_CTRL         = "Ctrl-click: capture all (%d) right away",
 	CAPTURE_TOAST_HINT_CHOOSE = "Click: choose · right-click: the list",
+	CAPTURE_BATCH_AID      = "Aid: %s",
+	CAPTURE_CHOOSE_COUNT   = "%d creatures in the net",
+	CAPTURE_CHOOSE_SHINY   = "shiny",
+	CAPTURE_CHOOSE_ALL_AID = "each try uses: %s",
+	CAPTURE_CHOOSE_ALL_FREE = "one throw for each",
+	CAPTURE_CHOOSE_KEYS    = "Shift-click: the best · Ctrl-click: all · Escape: close",
 }
 ns.RegisterStrings(FR, EN)
 if ns.KEEP_STRINGS then ns.CAPTURE_BATCH_STRINGS = { fr = FR, en = EN } end
@@ -141,6 +166,23 @@ local function Tint(region, c, alpha) if region and c then region:SetVertexColor
 local function Method(obj, name, ...)
 	if obj and type(obj[name]) == "function" then return pcall(obj[name], obj, ...) end
 	return false
+end
+local function Upper(text) return Theme.Upper and Theme.Upper(text) or text end
+-- Style des fenêtres de capture (2.5.1) : Azeroth (bois) ou Sobre
+local function SceneStyle(self)
+	return (self.AzerothScenesOn and self:AzerothScenesOn()) and "azeroth" or "sobre"
+end
+-- Une fenêtre par style, gardée (cache[style]) : rend celle du style voulu
+-- déjà construite, ou nil (à construire). Celle du style d'avant reste à
+-- l'écran tant qu'elle y est (le nouveau style vient à la prochaine).
+local function Reuse(self, field, cacheField, want)
+	local current = self[field]
+	if current and ((current.uiStyle or "sobre") == want or current:IsShown()) then return current end
+	self[cacheField] = self[cacheField] or {}
+	if current then self[cacheField][current.uiStyle or "sobre"] = current end
+	local kept = self[cacheField][want]
+	if kept then self[field] = kept end
+	return kept
 end
 
 -- Pendant le tirage, les verdicts ne font pas de bruit : la scène joue les
@@ -351,7 +393,84 @@ local function Texture(parent, layer, sub, file, coords, w, h, blend)
 	return tex
 end
 
-local function CreateTile(parent)
+-- Azeroth : la créature dans le cadre d'icône doré (le cadre devant le
+-- modèle), le bouclier du verdict au coin, le nom en Friz (or pour une
+-- brillante), les étoiles ou « échappée », l'étiquette dessous
+local AZ_IDLE, AZ_FLED_NAME = { 0.9, 0.86, 0.78 }, { 0.7, 0.66, 0.6 }
+local function CreateTileAzeroth(parent)
+	local art, coords = Art(), Coords()
+	local blank = "Interface\\Buttons\\WHITE8X8"
+	local tile = CreateFrame("Frame", nil, parent)
+	tile:SetSize(AZB.tileW, AZB.tileH)
+	tile.az = true
+	tile.netSize, tile.sceneH, tile.haloSize, tile.modelSize, tile.flee = AZB.net, AZB.window, AZB.ring + 12, AZB.model, 36
+	local level = tile:GetFrameLevel() or 1
+	-- la fenêtre du cadre d'icône : la scène, qui rogne
+	tile.scene = CreateFrame("Frame", nil, tile)
+	tile.scene:SetSize(AZB.window, AZB.window)
+	tile.scene:SetPoint("TOP", tile, "TOP", 0, -2 - (AZB.ring - AZB.window) / 2)
+	Method(tile.scene, "SetClipsChildren", true)
+	tile.bg = Theme.Solid(tile, "BACKGROUND", { 0.05, 0.04, 0.03 }, 1)
+	tile.bg:SetAllPoints(tile.scene)
+	tile.halo = Texture(tile, "ARTWORK", 2, art.halo or blank, nil, tile.haloSize, tile.haloSize, "ADD")
+	tile.halo:SetPoint("CENTER", tile.scene, "CENTER", 0, 0)
+	tile.fallback = tile.scene:CreateTexture(nil, "ARTWORK")
+	tile.fallback:SetSize(52, 52)
+	tile.fallback:SetTexture("Interface\\Icons\\Ability_Hunter_BeastTaming")
+	tile.fallback:Hide()
+	-- le cadre doré, devant le modèle (un cadre enfant passe devant le 3D)
+	tile.ringFrame = CreateFrame("Frame", nil, tile)
+	tile.ringFrame:SetAllPoints(tile)
+	tile.ringFrame:SetFrameLevel(level + 4)
+	tile.ring = tile.ringFrame:CreateTexture(nil, "ARTWORK")
+	tile.ring:SetSize(AZB.ring, AZB.ring)
+	tile.ring:SetPoint("TOP", tile, "TOP", 0, -2)
+	if ns.AzerothAtlas then ns.AzerothAtlas(tile.ring, ns.AZEROTH_ATLAS and ns.AZEROTH_ATLAS.frame) end
+	-- au-dessus : le filet, son ombre, ses cordes, les étincelles, l'éclair, le bouclier
+	tile.fx = CreateFrame("Frame", nil, tile)
+	tile.fx:SetAllPoints(tile.scene)
+	tile.fx:SetFrameLevel(level + 6)
+	tile.shadow = Texture(tile.fx, "ARTWORK", 0, art.net or blank, coords.netWhole, AZB.net)
+	tile.net = Texture(tile.fx, "ARTWORK", 1, art.net or blank, coords.netWhole, AZB.net)
+	tile.ropes = {}
+	for index = 1, ROPES do
+		local p = Texture(tile.fx, "ARTWORK", 2, art.rope or blank, nil, 22 + index * 5, 5)
+		p.vx, p.vy, p.spin, p.rot0 = (index - 2) * 45, 50 + index * 18, (index - 2) * 2.2 + 0.8, index * 0.9
+		tile.ropes[index] = p
+	end
+	tile.burst = {}
+	for index = 1, BURST do
+		local kind = (index % 2 == 0) and coords.spark or coords.star4
+		local p = Texture(tile.fx, "ARTWORK", 3, art.sparks or blank, kind, 11, 11, "ADD")
+		p.angle = (index / BURST) * math.pi * 2 + 0.3
+		p.reach = 40 + (index % 3) * 6
+		tile.burst[index] = p
+	end
+	tile.dust = Texture(tile.fx, "ARTWORK", 2, art.sparks or blank, coords.ring, 44, 13, "ADD")
+	tile.flash = Texture(tile.fx, "ARTWORK", 4, art.halo or blank, nil, 120, 120, "ADD")
+	tile.flash:SetPoint("CENTER", tile.scene, "CENTER", 0, 0)
+	tile.shield = tile.fx:CreateTexture(nil, "OVERLAY")
+	tile.shield:SetSize(AZB.shieldW, AZB.shieldH)
+	tile.shield:SetPoint("TOPRIGHT", tile, "TOPRIGHT", -4, 4)
+	tile.shield:Hide()
+	-- sous le cadre : le nom, les étoiles (ou « échappée »), l'étiquette
+	tile.name = tile:CreateFontString(nil, "OVERLAY", Theme.F_LABEL or Theme.F_SMALL)
+	tile.name:SetPoint("TOP", tile, "TOP", 0, -AZB.ring - 4)
+	tile.name:SetWidth(AZB.tileW - 6)
+	tile.name:SetJustifyH("CENTER")
+	if ns.AzerothFont then ns.AzerothFont(tile.name, 12) end
+	if tile.name.SetShadowColor then tile.name:SetShadowColor(0, 0, 0, 1); tile.name:SetShadowOffset(1, -1) end
+	if tile.name.SetWordWrap then tile.name:SetWordWrap(false) end
+	tile.stars = Theme.Text(tile, Theme.F_SMALL, Theme.PARCHMENT)
+	tile.stars:SetPoint("TOP", tile.name, "BOTTOM", 0, -3)
+	tile.stars:SetJustifyH("CENTER")
+	tile.tag = Theme.Text(tile, Theme.F_CAPS or Theme.F_SMALL, Theme.GOLD)
+	tile.tag:SetPoint("TOP", tile.stars, "BOTTOM", 0, -2)
+	return tile
+end
+
+local function CreateTile(parent, az)
+	if az then return CreateTileAzeroth(parent) end
 	local art, coords = Art(), Coords()
 	local tile = CreateFrame("Frame", nil, parent)
 	tile:SetSize(TILE_W, TILE_H)
@@ -418,7 +537,7 @@ local function TileModel(tile)
 	if tile.model then return tile.model end
 	local ok, model = pcall(CreateFrame, "PlayerModel", nil, tile.scene)
 	if not (ok and model) then return nil end
-	model:SetSize(MODEL, MODEL)
+	model:SetSize(tile.modelSize or MODEL, tile.modelSize or MODEL)
 	model:SetPoint("CENTER", tile.scene, "CENTER", 0, 0)
 	tile.model = model
 	return model
@@ -447,9 +566,14 @@ end
 -- Avant la volée : la créature seule, son nom ; rien n'est dit du verdict
 local function ApplyIdle(self, tile, result)
 	tile.verdict = nil
-	Tint(tile.bg, Theme.NAV or Theme.WINDOW, 1)
-	if tile.edge and tile.edge.SetColor then local c = Theme.GOLD_SOFT or Theme.GOLD; tile.edge:SetColor(c[1], c[2], c[3], 1) end
-	tile.bar:Hide()
+	if tile.az then
+		tile.shieldKind = ns.AzerothShield and ns.AzerothShield(tile.shield, nil) or nil
+		tile.shield:Hide()
+	else
+		Tint(tile.bg, Theme.NAV or Theme.WINDOW, 1)
+		if tile.edge and tile.edge.SetColor then local c = Theme.GOLD_SOFT or Theme.GOLD; tile.edge:SetColor(c[1], c[2], c[3], 1) end
+		tile.bar:Hide()
+	end
 	tile.halo:Hide()
 	tile.net:Hide()
 	tile.shadow:Hide()
@@ -460,8 +584,9 @@ local function ApplyIdle(self, tile, result)
 	Quiet(tile)
 	local target = result.target
 	tile.name:SetText(target.shiny and self:F("CAPTURE_SHINY_TAG", target.name) or target.name)
-	local m = Theme.MUTED_LIGHT or Theme.PARCHMENT
+	local m = tile.az and AZ_IDLE or Theme.MUTED_LIGHT or Theme.PARCHMENT
 	tile.name:SetTextColor(m[1], m[2], m[3])
+	if tile.az and ns.AzerothFit then ns.AzerothFit(tile.name, AZB.tileW - 6, 12, 9) end
 	tile.stars:SetText("")
 	tile.stars:Hide()
 	tile.tag:SetText("")
@@ -470,7 +595,37 @@ end
 
 -- Le verdict de `result` dans les textes de la case (au moment où le filet
 -- tient ou se déchire) ; les étoiles se montrent un peu après
+local function ApplyVerdictAzeroth(self, tile, result)
+	local target = result.target
+	local colors = ns.AZEROTH_COLORS or {}
+	tile.name:SetText(target.name)
+	if result.success then
+		tile.verdict = "ok"
+		local c = target.shiny and (colors.shinyName or Theme.GOLD_LIGHT) or { 1, 1, 1 }
+		tile.name:SetTextColor(c[1], c[2], c[3])
+		tile.stars:SetText(self:CaptureStarsText(result.stars or 1, 14))
+		tile.stars:SetTextColor(1, 1, 1)
+		local tag = target.shiny and L.CAPTURE_BATCH_SHINY or (result.fresh and L.CAPTURE_BATCH_NEW)
+			or (result.before and result.better and L.CAPTURE_BATCH_BETTER) or ""
+		tile.tag:SetText(Upper(tag))
+		local tc = target.shiny and (colors.shinyName or Theme.GOLD_LIGHT) or Theme.GOLD
+		tile.tag:SetTextColor(tc[1], tc[2], tc[3])
+		tile.shieldKind = ns.AzerothShield and ns.AzerothShield(tile.shield, "gold") or nil
+	else
+		tile.verdict = "fail"
+		tile.name:SetTextColor(AZ_FLED_NAME[1], AZ_FLED_NAME[2], AZ_FLED_NAME[3])
+		tile.stars:SetText(L.CAPTURE_BATCH_FLED)
+		local f = colors.fled or Theme.MUTED_LIGHT
+		tile.stars:SetTextColor(f[1], f[2], f[3])
+		tile.tag:SetText("")
+		Coord(tile.net, Coords().netTorn)
+		tile.shieldKind = ns.AzerothShield and ns.AzerothShield(tile.shield, "grey") or nil
+	end
+	if ns.AzerothFit then ns.AzerothFit(tile.name, AZB.tileW - 6, 12, 9) end
+end
+
 local function ApplyVerdict(self, tile, result)
+	if tile.az then return ApplyVerdictAzeroth(self, tile, result) end
 	local target = result.target
 	if result.success then
 		tile.verdict = "ok"
@@ -517,7 +672,7 @@ local function ApplyFinal(self, card)
 		Creature(tile, 0, 0, 1, 0)
 		if result.target.shiny then
 			Tint(tile.halo, Theme.GOLD_LIGHT or Theme.GOLD, 0.5)
-			tile.halo:SetSize(104, 104)
+			tile.halo:SetSize(tile.haloSize or 104, tile.haloSize or 104)
 			tile.halo:Show()
 		else
 			tile.halo:Hide()
@@ -561,7 +716,7 @@ local function DrawShake(self, batch, card, since, now)
 		end
 	end
 	local lift = 34 * (1 - EaseOut(drape))
-	local size = NET * math.max(0.05, 0.6 + 0.4 * EaseBack(drape) - squeeze)
+	local size = (tile.netSize or NET) * math.max(0.05, 0.6 + 0.4 * EaseBack(drape) - squeeze)
 	Place(tile.net, tile.scene, wobble * 0.4, lift)
 	tile.net:SetSize(size, size)
 	Rotate(tile.net, wobble * 0.015)
@@ -579,7 +734,7 @@ local function DrawShake(self, batch, card, since, now)
 	if u < 1 then
 		local w = 40 + 50 * EaseOut(u)
 		tile.dust:SetSize(w, w * 0.3)
-		Place(tile.dust, tile.scene, 0, -SCENE_H / 2 + 12)
+		Place(tile.dust, tile.scene, 0, -(tile.sceneH or SCENE_H) / 2 + 12)
 		Tint(tile.dust, DUST_COLOR, 1)
 		Fade(tile.dust, 0.45 * (1 - u))
 	else
@@ -588,7 +743,8 @@ local function DrawShake(self, batch, card, since, now)
 	-- le halo pulse, de plus en plus vite
 	local c = card.color
 	Tint(tile.halo, c, 0.25 + 0.15 * math.abs(math.sin(now * (3 + card.shook * 1.5))))
-	tile.halo:SetSize(96, 96)
+	local halo = (tile.haloSize or 104) - 8
+	tile.halo:SetSize(halo, halo)
 	tile.halo:Show()
 end
 
@@ -602,7 +758,7 @@ local function DrawVerdict(card, r)
 		Tint(tile.flash, WHITE, 1)
 		Fade(tile.flash, 0.9 - r / 0.35)
 		-- le filet se referme sur elle et s'efface dans l'éclair
-		local size = NET * (1 - 0.45 * EaseOut(r / 0.5))
+		local size = (tile.netSize or NET) * (1 - 0.45 * EaseOut(r / 0.5))
 		Place(tile.net, tile.scene, 0, 0)
 		tile.net:SetSize(size, size)
 		Rotate(tile.net, 0)
@@ -622,7 +778,7 @@ local function DrawVerdict(card, r)
 			end
 		end
 		Tint(tile.halo, col, 0.3 + 0.5 * math.max(0, 1 - r / 1.0))
-		tile.halo:SetSize(104, 104)
+		tile.halo:SetSize(tile.haloSize or 104, tile.haloSize or 104)
 		tile.halo:Show()
 		if r >= 0.35 then tile.stars:Show() end
 	else
@@ -640,19 +796,30 @@ local function DrawVerdict(card, r)
 		end
 		-- la fuite, de profil, qui s'efface
 		local run = EaseOut(r / 0.8)
-		Creature(tile, run * 50, 0, 1 - Clamp01(run * 1.3), -math.pi / 2)
+		Creature(tile, run * (tile.flee or 50), 0, 1 - Clamp01(run * 1.3), -math.pi / 2)
 		Tint(tile.halo, Theme.RED, 0.3 * (1 - Clamp01(r / 1.0)))
 		tile.halo:Show()
 		if r >= 0.35 then tile.stars:Show() end
 	end
 end
 
+-- Une volée par style (2.5.1, comme la scène d'un lancer seul) : Sobre ou
+-- Azeroth (bois, plaque « TOUT CAPTURER », cadres d'icône), gardées
+-- (ns.captureBatchFrames[style]) ; leurs cases resservent d'un lot à l'autre
 function ns:EnsureCaptureBatchFrame()
-	if self.captureBatchFrame then return self.captureBatchFrame end
+	local want = SceneStyle(self)
+	local kept = Reuse(self, "captureBatchFrame", "captureBatchFrames", want)
+	if kept then return kept end
 	if not (Theme and Theme.CreateToast) then return nil end
 	-- un nom global : Échap la referme (UISpecialFrames), comme la scène d'un lancer seul
-	local frame = Theme.CreateToast(UIParent, MIN_W, 300, { strata = "DIALOG", name = "QuestCompanionCaptureBatch", accent = Theme.GOLD })
-	if not frame then return nil end
+	local frame = want == "azeroth" and self.AzerothCreateWindow
+		and self:AzerothCreateWindow(AZB.minW, 300, { strata = "DIALOG", name = "QuestCompanionCaptureBatchAzeroth" }) or nil
+	if not frame then
+		frame = Theme.CreateToast(UIParent, MIN_W, 300, { strata = "DIALOG", name = "QuestCompanionCaptureBatch", accent = Theme.GOLD })
+		if not frame then return nil end
+		frame.uiStyle = "sobre"
+	end
+	local az = frame.azeroth and true or false
 	frame:ClearAllPoints()
 	frame:SetPoint("CENTER", UIParent, "CENTER", 0, 60)
 	frame:EnableMouse(true)
@@ -668,51 +835,85 @@ function ns:EnsureCaptureBatchFrame()
 			tile.hasModel = nil
 		end
 	end)
-	local left = frame.contentLeft or PAD
-	frame.title = Theme.Text(frame, Theme.F_CAPS or Theme.F_SMALL, Theme.MUTED_LIGHT)
-	frame.title:SetPoint("TOPLEFT", frame, "TOPLEFT", left, -12)
-	frame.title:SetText(Theme.Upper and Theme.Upper(L.CAPTURE_BATCH_TITLE) or L.CAPTURE_BATCH_TITLE)
-	frame.counter = Theme.Text(frame, Theme.F_TITLE or Theme.F_LABEL, Theme.PARCHMENT)
-	frame.counter:SetPoint("TOPLEFT", frame, "TOPLEFT", left, -24)
-	if Theme.CreateCloseButton then
-		frame.close = Theme.CreateCloseButton(frame, 18)
-		frame.close:SetPoint("TOPRIGHT", frame, "TOPRIGHT", -8, -8)
-	end
-	-- l'aide utilisée, en badge sous le ×
-	frame.aidIcon = frame:CreateTexture(nil, "OVERLAY")
-	frame.aidIcon:SetSize(14, 14)
-	frame.aidIcon:SetTexCoord(0.08, 0.92, 0.08, 0.92)
-	frame.aidText = Theme.Text(frame, Theme.F_SMALL, Theme.GOLD)
-	frame.aidText:SetPoint("TOPRIGHT", frame, "TOPRIGHT", -12, -30)
-	frame.aidText:SetJustifyH("RIGHT")
-	frame.aidIcon:SetPoint("RIGHT", frame.aidText, "LEFT", -4, 0)
-	frame.grid = CreateFrame("Frame", nil, frame)
-	frame.grid:SetPoint("TOPLEFT", frame, "TOPLEFT", 0, -HEAD)
-	frame.grid:SetPoint("TOPRIGHT", frame, "TOPRIGHT", 0, -HEAD)
-	frame.grid:SetHeight(TILE_H)
 	frame.tiles = {}
-	frame.stop = Theme.CreateButton(frame, "auto", Theme.DIALOG_BUTTON_HEIGHT or 28, L.CAPTURE_BATCH_STOP, function()
+	local stopClick = function()
 		local batch = ns.captureBatch
 		if batch and not batch.done then ns:CaptureBatchStop() else frame:Hide() end
-	end)
-	frame.stop:SetPoint("BOTTOMRIGHT", frame, "BOTTOMRIGHT", -12, 10)
-	frame.footer = Theme.Text(frame, Theme.F_SMALL, Theme.MUTED)
-	frame.footer:SetPoint("BOTTOMLEFT", frame, "BOTTOMLEFT", left, 18)
-	frame.footer:SetJustifyH("LEFT")
-	if frame.footer.SetWordWrap then frame.footer:SetWordWrap(false) end
+	end
+	if az then
+		-- la plaque : « TOUT CAPTURER », « Captures : N » ; dessous, l'aide à
+		-- gauche et Arrêter / Fermer à droite ; la grille ; le pied
+		frame.plate = self:AzerothPlate(frame, AZB.plateW, AZB.plateH)
+		frame.plate:SetPoint("TOP", frame, "TOP", 0, AZB.plateY)
+		frame.title, frame.counter = frame.plate.title, frame.plate.text
+		frame.title:SetText(Upper(L.CAPTURE_BATCH_TITLE))
+		frame.aidIcon = frame:CreateTexture(nil, "OVERLAY")
+		frame.aidIcon:SetSize(14, 14)
+		frame.aidIcon:SetTexCoord(0.08, 0.92, 0.08, 0.92)
+		frame.aidIcon:SetPoint("TOPLEFT", frame, "TOPLEFT", AZB.pad, AZB.rowY - 4)
+		local colors = ns.AZEROTH_COLORS or {}
+		frame.aidText = Theme.Text(frame, Theme.F_SMALL, colors.flavour or Theme.PARCHMENT)
+		frame.aidText:SetPoint("LEFT", frame.aidIcon, "RIGHT", 4, 0)
+		frame.aidText:SetJustifyH("LEFT")
+		if frame.aidText.SetWordWrap then frame.aidText:SetWordWrap(false) end
+		frame.stop = self:AzerothButton(frame, AZB.stopW, AZB.stopH, L.CAPTURE_BATCH_STOP, stopClick, "dark")
+		frame.stop:SetPoint("TOPRIGHT", frame, "TOPRIGHT", -AZB.pad, AZB.rowY)
+		frame.grid = CreateFrame("Frame", nil, frame)
+		frame.grid:SetPoint("TOPLEFT", frame, "TOPLEFT", 0, -AZB.head)
+		frame.grid:SetPoint("TOPRIGHT", frame, "TOPRIGHT", 0, -AZB.head)
+		frame.grid:SetHeight(AZB.tileH)
+		frame.footer = Theme.Text(frame, Theme.F_SMALL, colors.hint or Theme.MUTED)
+		frame.footer:SetPoint("BOTTOMLEFT", frame, "BOTTOMLEFT", AZB.pad, 24)
+		frame.footer:SetJustifyH("LEFT")
+		if frame.footer.SetWordWrap then frame.footer:SetWordWrap(false) end
+	else
+		local left = frame.contentLeft or PAD
+		frame.title = Theme.Text(frame, Theme.F_CAPS or Theme.F_SMALL, Theme.MUTED_LIGHT)
+		frame.title:SetPoint("TOPLEFT", frame, "TOPLEFT", left, -12)
+		frame.title:SetText(Theme.Upper and Theme.Upper(L.CAPTURE_BATCH_TITLE) or L.CAPTURE_BATCH_TITLE)
+		frame.counter = Theme.Text(frame, Theme.F_TITLE or Theme.F_LABEL, Theme.PARCHMENT)
+		frame.counter:SetPoint("TOPLEFT", frame, "TOPLEFT", left, -24)
+		if Theme.CreateCloseButton then
+			frame.close = Theme.CreateCloseButton(frame, 18)
+			frame.close:SetPoint("TOPRIGHT", frame, "TOPRIGHT", -8, -8)
+		end
+		-- l'aide utilisée, en badge sous le ×
+		frame.aidIcon = frame:CreateTexture(nil, "OVERLAY")
+		frame.aidIcon:SetSize(14, 14)
+		frame.aidIcon:SetTexCoord(0.08, 0.92, 0.08, 0.92)
+		frame.aidText = Theme.Text(frame, Theme.F_SMALL, Theme.GOLD)
+		frame.aidText:SetPoint("TOPRIGHT", frame, "TOPRIGHT", -12, -30)
+		frame.aidText:SetJustifyH("RIGHT")
+		frame.aidIcon:SetPoint("RIGHT", frame.aidText, "LEFT", -4, 0)
+		frame.grid = CreateFrame("Frame", nil, frame)
+		frame.grid:SetPoint("TOPLEFT", frame, "TOPLEFT", 0, -HEAD)
+		frame.grid:SetPoint("TOPRIGHT", frame, "TOPRIGHT", 0, -HEAD)
+		frame.grid:SetHeight(TILE_H)
+		frame.stop = Theme.CreateButton(frame, "auto", Theme.DIALOG_BUTTON_HEIGHT or 28, L.CAPTURE_BATCH_STOP, stopClick)
+		frame.stop:SetPoint("BOTTOMRIGHT", frame, "BOTTOMRIGHT", -12, 10)
+		frame.footer = Theme.Text(frame, Theme.F_SMALL, Theme.MUTED)
+		frame.footer:SetPoint("BOTTOMLEFT", frame, "BOTTOMLEFT", left, 18)
+		frame.footer:SetJustifyH("LEFT")
+		if frame.footer.SetWordWrap then frame.footer:SetWordWrap(false) end
+	end
 	frame:SetScript("OnUpdate", function(f)
 		if not f:IsShown() then return end
 		local done, err = pcall(ns.CaptureBatchUpdate, ns, Clock())
 		if not done and ns.RecordError then ns:RecordError("capture:batch:scene", err) end
 	end)
 	frame:Hide()
+	self.captureBatchFrames = self.captureBatchFrames or {}
+	self.captureBatchFrames[frame.uiStyle or "sobre"] = frame
 	self.captureBatchFrame = frame
 	return frame
 end
 
--- Taille de la grille pour `n` cases : colonnes, rangées
-function ns:CaptureBatchGrid(n)
-	local cols = math.max(1, math.min(n, ns.CAPTURE_BATCH_COLS))
+-- Taille de la grille pour `n` cases : colonnes, rangées. Azeroth (cases
+-- plus grandes) : 5 ou 6 cases en deux rangées de 3
+function ns:CaptureBatchGrid(n, az)
+	local most = ns.CAPTURE_BATCH_COLS
+	if az and (n == 5 or n == 6) then most = 3 end
+	local cols = math.max(1, math.min(n, most))
 	return cols, math.max(1, math.ceil(n / cols))
 end
 
@@ -770,20 +971,27 @@ function ns:CaptureBatchShow(batch)
 	local frame = self:EnsureCaptureBatchFrame()
 	if not (frame and batch) then return nil end
 	local n = #batch.results
-	local cols, rows = self:CaptureBatchGrid(n)
-	local gridW = cols * TILE_W + (cols - 1) * TILE_GAP
-	local gridH = rows * TILE_H + (rows - 1) * TILE_GAP
-	frame:SetSize(math.max(MIN_W, gridW + 2 * PAD), HEAD + gridH + FOOT)
+	local az = frame.azeroth and true or false
+	local tileW, tileH = az and AZB.tileW or TILE_W, az and AZB.tileH or TILE_H
+	local gapX, gapY = az and AZB.gapX or TILE_GAP, az and AZB.gapY or TILE_GAP
+	local cols, rows = self:CaptureBatchGrid(n, az)
+	local gridW = cols * tileW + (cols - 1) * gapX
+	local gridH = rows * tileH + (rows - 1) * gapY
+	if az then
+		frame:SetSize(math.max(AZB.minW, gridW + 2 * AZB.pad), AZB.head + gridH + AZB.foot)
+	else
+		frame:SetSize(math.max(MIN_W, gridW + 2 * PAD), HEAD + gridH + FOOT)
+	end
 	frame.grid:SetHeight(gridH)
 	batch.cards = {}
 	for index = 1, math.max(n, #frame.tiles) do
 		local tile = frame.tiles[index]
 		if index <= n then
 			-- créée à la demande, gardée pour les lots suivants
-			if not tile then tile = CreateTile(frame.grid); frame.tiles[index] = tile end
+			if not tile then tile = CreateTile(frame.grid, az); frame.tiles[index] = tile end
 			local col, row = (index - 1) % cols, math.floor((index - 1) / cols)
 			tile:ClearAllPoints()
-			tile:SetPoint("TOPLEFT", frame.grid, "TOP", -gridW / 2 + col * (TILE_W + TILE_GAP), -row * (TILE_H + TILE_GAP))
+			tile:SetPoint("TOPLEFT", frame.grid, "TOP", -gridW / 2 + col * (tileW + gapX), -row * (tileH + gapY))
 			local result = batch.results[index]
 			-- le modèle 3D pour les premières cases, l'icône au-delà
 			local model = index <= ns.CAPTURE_BATCH_MODELS and TileModel(tile) or nil
@@ -809,7 +1017,8 @@ function ns:CaptureBatchShow(batch)
 	for _, def in ipairs(ns.CAPTURE_AIDS or {}) do if def.id == batch.aid then aid = def end end
 	if aid then
 		frame.aidIcon:SetTexture(aid.icon)
-		frame.aidText:SetText(tostring(self:CaptureAidLabel(aid.id)))
+		local label = tostring(self:CaptureAidLabel(aid.id))
+		frame.aidText:SetText(az and self:F("CAPTURE_BATCH_AID", label) or label)
 		frame.aidIcon:Show(); frame.aidText:Show()
 	else
 		frame.aidIcon:Hide(); frame.aidText:Hide()
@@ -941,32 +1150,90 @@ local function Over(frame)
 	return ok and over and true or false
 end
 
-function ns:EnsureCaptureChooser()
-	if self.captureChooser then return self.captureChooser end
-	if not (Theme and Theme.CreateToast) then return nil end
-	local frame = Theme.CreateToast(UIParent, CHOOSER_W, 112, { strata = "DIALOG", name = "QuestCompanionCaptureChooser", accent = Theme.GOLD })
-	if not frame then return nil end
-	frame:EnableMouse(true)
-	if frame.border and frame.border.SetColor then local c = Theme.GOLD_SOFT or Theme.GOLD; frame.border:SetColor(c[1], c[2], c[3], 1) end
-	if Theme.RegisterEscapeClose then pcall(Theme.RegisterEscapeClose, frame) end
-	local left = frame.contentLeft or 14
-	local width = CHOOSER_W - left - 10
-	frame.title = Theme.Text(frame, Theme.F_CAPS or Theme.F_SMALL, Theme.MUTED_LIGHT)
-	frame.title:SetPoint("TOPLEFT", frame, "TOPLEFT", left, -9)
-	frame.title:SetText(Theme.Upper and Theme.Upper(L.CAPTURE_CHOOSE_TITLE) or L.CAPTURE_CHOOSE_TITLE)
-	frame.single = Theme.CreateButton(frame, width, 26, "", function()
+-- Azeroth (2.5.1) : petit panneau en bois, le glyphe du filet dans son cadre
+-- d'icône, « N CRÉATURES DANS LE FILET », deux boutons dorés (le meilleur,
+-- avec brillante et chance dessous ; tout, plus sombre, avec ce que coûte
+-- chaque essai), les raccourcis. Mêmes champs (.single, .all, .hint, .title).
+local function BuildChooserAzeroth(self, frame)
+	local bw = AZC.w - 2 * (ns.AZEROTH_WOOD_PAD or 26)
+	local colors = ns.AZEROTH_COLORS or {}
+	frame.ring = frame:CreateTexture(nil, "ARTWORK", nil, 1)
+	frame.ring:SetSize(AZC.ring, AZC.ring)
+	frame.ring:SetPoint("TOP", frame, "TOP", 0, AZC.ringY)
+	if ns.AzerothAtlas then ns.AzerothAtlas(frame.ring, ns.AZEROTH_ATLAS and ns.AZEROTH_ATLAS.frame) end
+	frame.glyph = frame:CreateTexture(nil, "ARTWORK", nil, 0)
+	frame.glyph:SetSize(AZC.glyph, AZC.glyph)
+	frame.glyph:SetPoint("CENTER", frame.ring, "CENTER", 0, 0)
+	local art = ns.CAPTURE_ART
+	frame.glyph:SetTexture(art and art.icon or Theme.LOGO_SMALL)
+	local g = Theme.GOLD_LIGHT or Theme.GOLD
+	frame.glyph:SetVertexColor(g[1], g[2], g[3], 1)
+	frame.title = Theme.Text(frame, Theme.F_CAPS or Theme.F_SMALL, colors.caption or Theme.GOLD)
+	frame.title:SetPoint("TOP", frame, "TOP", 0, AZC.captionY)
+	frame.title:SetWidth(bw)
+	frame.title:SetJustifyH("CENTER")
+	if ns.AzerothFont then ns.AzerothFont(frame.title, 11) end
+	if frame.title.SetWordWrap then frame.title:SetWordWrap(false) end
+	frame.single = self:AzerothButton(frame, bw, AZC.buttonH, "", function()
 		ns:CaptureChooserHide()
 		ns:CaptureThrow()
-	end, "normal")
-	frame.single:SetPoint("TOPLEFT", frame, "TOPLEFT", left, -26)
-	frame.all = Theme.CreateButton(frame, width, 26, "", function()
+	end, "gold")
+	frame.single:SetPoint("TOP", frame, "TOP", 0, AZC.oneY)
+	frame.all = self:AzerothButton(frame, bw, AZC.buttonH, "", function()
 		ns:CaptureChooserHide()
 		ns:CaptureBatch()
-	end, "primary")
-	frame.all:SetPoint("TOPLEFT", frame, "TOPLEFT", left, -58)
-	for _, button in ipairs({ frame.single, frame.all }) do
-		button.text:SetWidth(width - 12)
-		if button.text.SetWordWrap then button.text:SetWordWrap(false) end
+	end, "dark")
+	frame.all:SetPoint("TOP", frame, "TOP", 0, AZC.allY)
+	frame.hint = Theme.Text(frame, Theme.F_SMALL, colors.hint or Theme.MUTED)
+	frame.hint:SetPoint("TOP", frame, "TOP", 0, AZC.hintY)
+	frame.hint:SetWidth(bw)
+	frame.hint:SetJustifyH("CENTER")
+	frame.hint:SetText(L.CAPTURE_CHOOSE_KEYS)
+end
+
+function ns:EnsureCaptureChooser()
+	local want = SceneStyle(self)
+	local kept = Reuse(self, "captureChooser", "captureChoosers", want)
+	if kept then return kept end
+	if not (Theme and Theme.CreateToast) then return nil end
+	local frame = want == "azeroth" and self.AzerothCreateWindow
+		and self:AzerothCreateWindow(AZC.w, AZC.h, { strata = "DIALOG", name = "QuestCompanionCaptureChooserAzeroth" }) or nil
+	if frame then
+		frame:EnableMouse(true)
+		if Theme.RegisterEscapeClose then pcall(Theme.RegisterEscapeClose, frame) end
+		BuildChooserAzeroth(self, frame)
+	else
+		frame = Theme.CreateToast(UIParent, CHOOSER_W, 112, { strata = "DIALOG", name = "QuestCompanionCaptureChooser", accent = Theme.GOLD })
+		if not frame then return nil end
+		frame.uiStyle = "sobre"
+		frame:EnableMouse(true)
+		if frame.border and frame.border.SetColor then local c = Theme.GOLD_SOFT or Theme.GOLD; frame.border:SetColor(c[1], c[2], c[3], 1) end
+		if Theme.RegisterEscapeClose then pcall(Theme.RegisterEscapeClose, frame) end
+		local left = frame.contentLeft or 14
+		local width = CHOOSER_W - left - 10
+		frame.title = Theme.Text(frame, Theme.F_CAPS or Theme.F_SMALL, Theme.MUTED_LIGHT)
+		frame.title:SetPoint("TOPLEFT", frame, "TOPLEFT", left, -9)
+		frame.title:SetText(Theme.Upper and Theme.Upper(L.CAPTURE_CHOOSE_TITLE) or L.CAPTURE_CHOOSE_TITLE)
+		frame.single = Theme.CreateButton(frame, width, 26, "", function()
+			ns:CaptureChooserHide()
+			ns:CaptureThrow()
+		end, "normal")
+		frame.single:SetPoint("TOPLEFT", frame, "TOPLEFT", left, -26)
+		frame.all = Theme.CreateButton(frame, width, 26, "", function()
+			ns:CaptureChooserHide()
+			ns:CaptureBatch()
+		end, "primary")
+		frame.all:SetPoint("TOPLEFT", frame, "TOPLEFT", left, -58)
+		for _, button in ipairs({ frame.single, frame.all }) do
+			button.text:SetWidth(width - 12)
+			if button.text.SetWordWrap then button.text:SetWordWrap(false) end
+		end
+		frame.hint = Theme.Text(frame, Theme.F_SMALL, Theme.MUTED)
+		frame.hint:SetPoint("TOPLEFT", frame, "TOPLEFT", left, -92)
+		frame.hint:SetWidth(width)
+		frame.hint:SetJustifyH("LEFT")
+		if frame.hint.SetWordWrap then frame.hint:SetWordWrap(false) end
+		frame.hint:SetText(L.CAPTURE_CHOOSE_PAUSED)
 	end
 	frame.all:HookScript("OnEnter", function(b)
 		local tooltip = Tooltip()
@@ -977,12 +1244,6 @@ function ns:EnsureCaptureChooser()
 		tooltip:Show()
 	end)
 	frame.all:HookScript("OnLeave", function() local t = Tooltip(); if t and t.Hide then t:Hide() end end)
-	frame.hint = Theme.Text(frame, Theme.F_SMALL, Theme.MUTED)
-	frame.hint:SetPoint("TOPLEFT", frame, "TOPLEFT", left, -92)
-	frame.hint:SetWidth(width)
-	frame.hint:SetJustifyH("LEFT")
-	if frame.hint.SetWordWrap then frame.hint:SetWordWrap(false) end
-	frame.hint:SetText(L.CAPTURE_CHOOSE_PAUSED)
 	-- refermé (par n'importe quel chemin) : le compte à rebours reprend,
 	-- sauf si un lancer vient de prendre le relais
 	frame:SetScript("OnHide", function() Release(ns, "chooser") end)
@@ -1003,6 +1264,8 @@ function ns:EnsureCaptureChooser()
 		ns:CaptureChooserRefresh()
 	end)
 	frame:Hide()
+	self.captureChoosers = self.captureChoosers or {}
+	self.captureChoosers[frame.uiStyle or "sobre"] = frame
 	self.captureChooser = frame
 	return frame
 end
@@ -1021,11 +1284,41 @@ function ns:CaptureChooserRefresh()
 	local name = best.shiny and self:F("CAPTURE_SHINY_TAG", best.name) or best.name
 	frame.single:SetText(self:F("CAPTURE_CHOOSE_ONE", name))
 	frame.all:SetText(self:F("CAPTURE_CHOOSE_ALL", #queue))
-	local c = best.shiny and (Theme.GOLD_LIGHT or Theme.GOLD) or (Theme.LABEL or Theme.PARCHMENT)
-	frame.single.text:SetTextColor(c[1], c[2], c[3])
+	if frame.azeroth then
+		-- la légende, et sous chaque bouton : brillante et chance ; ce que coûte chaque essai
+		local colors = ns.AZEROTH_COLORS or {}
+		frame.title:SetText(Upper(self:F("CAPTURE_CHOOSE_COUNT", #queue)))
+		local aid = self:CaptureState().aid
+		local chance, sure = self:CaptureChance(best, aid)
+		local odds = sure and L.CAPTURE_TOAST_SURE or self:F("CAPTURE_TOAST_CHANCE", math.floor((chance or 0) * 100 + 0.5 + 1e-9))
+		frame.single:SetSub(best.shiny and (L.CAPTURE_CHOOSE_SHINY .. " · " .. odds) or odds)
+		frame.all:SetSub(aid and self:F("CAPTURE_CHOOSE_ALL_AID", self:CaptureAidLabel(aid)) or L.CAPTURE_CHOOSE_ALL_FREE)
+		local c = best.shiny and (colors.shinyName or Theme.GOLD_LIGHT) or { 1, 0.95, 0.81 }
+		frame.single.text:SetTextColor(c[1], c[2], c[3])
+	else
+		local c = best.shiny and (Theme.GOLD_LIGHT or Theme.GOLD) or (Theme.LABEL or Theme.PARCHMENT)
+		frame.single.text:SetTextColor(c[1], c[2], c[3])
+	end
 	frame.best = best
 	return true
 end
+
+-- Le côté du filet où poser le choix : "left" si le filet est dans la moitié
+-- droite de l'écran, "right" sinon
+local function ChooserSide(net)
+	local ok, x = pcall(net.GetCenter, net)
+	local okS, scale = pcall(net.GetEffectiveScale, net)
+	local parent = G("UIParent")
+	local okW, width, okP, pscale = false, nil, false, nil
+	if parent and parent.GetWidth then okW, width = pcall(parent.GetWidth, parent) end
+	if parent and parent.GetEffectiveScale then okP, pscale = pcall(parent.GetEffectiveScale, parent) end
+	x, width = ok and tonumber(x), okW and tonumber(width)
+	if not (x and width) then return "right" end
+	x = x * ((okS and tonumber(scale)) or 1)
+	width = width * ((okP and tonumber(pscale)) or 1)
+	return x > width / 2 and "left" or "right"
+end
+ns.CaptureChooserSide = ChooserSide
 
 function ns:CaptureChooserShow()
 	if not self:CaptureBatchOffered() or InCombat() then return nil end
@@ -1035,7 +1328,17 @@ function ns:CaptureChooserShow()
 	self:CaptureHideQueueList()
 	frame:ClearAllPoints()
 	local net = self.captureNetButton
-	if net and net:IsShown() then
+	if net and net:IsShown() and frame.azeroth then
+		-- à côté du filet, du côté où il y a la place : à gauche s'il est dans
+		-- la moitié droite de l'écran, à droite sinon (gardé à l'écran, bois compris)
+		local side = ChooserSide(net)
+		frame.side = side
+		if side == "left" then
+			frame:SetPoint("RIGHT", net, "LEFT", -AZC.gap, 0)
+		else
+			frame:SetPoint("LEFT", net, "RIGHT", AZC.gap, 0)
+		end
+	elseif net and net:IsShown() then
 		frame:SetPoint("BOTTOM", net, "TOP", 0, 8)
 	else
 		frame:SetPoint("CENTER", UIParent, "CENTER", 0, -100)
