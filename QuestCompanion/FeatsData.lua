@@ -119,24 +119,8 @@ function ns.FeatAdd(def)
 	return def
 end
 
--- ---------------------------------------------------------------------------
--- Titres (registre ; rendu, choix et genre : lot D). Un titre est gagné si
--- son haut fait l'est : rien à stocker. Formes : m (masculin), f (féminin,
--- absente = épicène), en (anglais), enf (anglais féminin si besoin).
--- ---------------------------------------------------------------------------
-ns.FEAT_TITLES = {
-	[1]  = { m = "Apprenti dresseur %s", f = "Apprentie dresseuse %s", en = "Apprentice Trainer %s" },
-	[2]  = { m = "Dresseur %s", f = "Dresseuse %s", en = "Trainer %s" },
-	[3]  = { m = "Dresseur confirmé %s", f = "Dresseuse confirmée %s", en = "Seasoned Trainer %s" },
-	[4]  = { m = "Maître dresseur %s", f = "Maîtresse dresseuse %s", en = "Master Trainer %s" },
-	[5]  = { m = "Grand maître dresseur %s", f = "Grande maîtresse dresseuse %s", en = "Grand Master Trainer %s" },
-	[17] = { m = "Ambassadeur %s", f = "Ambassadrice %s", en = "Ambassador %s" },
-	[19] = { m = "%s le Traqueur", f = "%s la Traqueuse", en = "%s the Tracker" },
-	[21] = { m = "%s l'Aventurier", f = "%s l'Aventurière", en = "%s the Adventurer" },
-	[24] = { m = "%s l'Explorateur des abîmes", f = "%s l'Exploratrice des abîmes", en = "%s the Deepdelver" },
-	[35] = { m = "%s, Seigneur de la ménagerie", f = "%s, Dame de la ménagerie", en = "%s, Lord of the Menagerie",
-		enf = "%s, Lady of the Menagerie" },
-}
+-- Titres : registre des 40 titres dans FeatsTitles.lua (lot D) ; une ligne
+-- y renvoie par reward.title = code.
 
 -- ---------------------------------------------------------------------------
 -- Chaînes : noms (FEAT_<id>), descriptions (FEATD_*), catégories (FEATC_*)

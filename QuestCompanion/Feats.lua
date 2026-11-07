@@ -25,7 +25,7 @@
 --   ns:FeatFlag(clé, scope) / ns:FeatCount(clé, delta, scope) / ns:FeatCountReset(clé, scope)
 --   ns:FeatGrant(def)    récompenses (aides, cosmétiques, apparence ; titre = rien à stocker)
 --   ns:FeatPoints(scope) = ns:AchievementPoints(scope) ("account" | "char" | nil = les deux)
---   ns:FeatTitlesEarned() codes des titres gagnés (registre ns.FEAT_TITLES, rendu : lot D)
+--   ns:FeatTitlesEarned() codes des titres gagnés (registre ns.FEAT_TITLES : FeatsTitles.lua)
 --   ns:FireCallback("FEAT_EARNED", info) à chaque obtention ; info.announce = vrai
 --     pour les annonces de guilde (≥ 25 points ou titre, jamais en rattrapage)
 local ADDON, ns = ...
@@ -703,46 +703,9 @@ function ns:FeatSyncAccountRewards()
 end
 
 -- ---------------------------------------------------------------------------
--- Titres (registre seulement ; choix, genre et fiche : lot D)
+-- Titres : registre, rendu, genre et choix dans FeatsTitles.lua (lot D) :
+-- ns:FeatTitleText, ns:FeatTitleGender, ns:FeatTitlesEarned, ns:FeatTitleCode
 -- ---------------------------------------------------------------------------
-local function English()
-	local locale = Call(G("GetLocale")) or "frFR"
-	return not (locale == "frFR" or locale == "fr")
-end
-
-function ns:FeatTitleGender()
-	local form = self:FeatStore("char").form
-	if form == "m" or form == "f" then return form end
-	return Call(G("UnitSex"), "player") == 3 and "f" or "m"
-end
-
--- Texte d'un titre : avec le nom (« Dyokrion le Traqueur »), ou nu (sans
--- nom : « Traqueur »), dans la langue du client et la forme choisie
-function ns:FeatTitleText(code, name, gender)
-	local title = ns.FEAT_TITLES and ns.FEAT_TITLES[tonumber(code) or code]
-	if type(title) ~= "table" then return nil end
-	gender = gender or self:FeatTitleGender()
-	local fmt
-	if English() then fmt = (gender == "f" and title.enf) or title.en
-	else fmt = (gender == "f" and title.f) or title.m end
-	fmt = fmt or title.m or title.en
-	if type(fmt) ~= "string" then return nil end
-	if name then return (fmt:gsub("%%s", function() return tostring(name) end)) end
-	local bare = fmt:gsub("%%s", ""):gsub("^%s*,%s*", ""):gsub("^%s+", ""):gsub("%s+$", "")
-	bare = bare:gsub("^[Ll]e ", ""):gsub("^[Ll]a ", ""):gsub("^[Ll]'", ""):gsub("^[Tt]he ", "")
-	return (bare:gsub("^%l", string.upper))
-end
-
--- Codes des titres gagnés (un titre est gagné si son haut fait l'est)
-function ns:FeatTitlesEarned()
-	local codes = {}
-	for _, def in ipairs(Index().list) do
-		local code = type(def.reward) == "table" and def.reward.title
-		if code and self:FeatGot(def) then codes[#codes + 1] = code end
-	end
-	table.sort(codes)
-	return codes
-end
 
 -- ---------------------------------------------------------------------------
 -- Textes d'un haut fait

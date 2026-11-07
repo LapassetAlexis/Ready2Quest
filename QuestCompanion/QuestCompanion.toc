@@ -74,3 +74,4 @@ AzerothStyle.lua
 FeatsData.lua
 Feats.lua
 JournalFeats.lua
+FeatsTitles.lua

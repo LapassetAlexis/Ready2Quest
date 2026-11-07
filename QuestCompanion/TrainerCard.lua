@@ -20,6 +20,13 @@
 --   E  exploit annoncé à la guilde (GuildFeats.lua)
 -- La fiche est une liste « clé=valeur » séparée par « ; », les listes par
 -- « , » ; les caractères réservés sont échappés en %XX. Pas de bibliothèque.
+-- Titres et hauts faits (2.7.0, champs facultatifs, ignorés des versions
+-- d'avant) : ti = code du titre affiché (1 à 255, registre ns.FEAT_TITLES),
+-- tg = forme « m » ou « f », ap / aq = points de hauts faits du compte et du
+-- personnage, ac = hauts faits obtenus. Le champ t (titre déjà rendu, nu,
+-- dans la langue de l'expéditeur) reste envoyé pour les versions d'avant ;
+-- le destinataire rend ti dans sa langue, et retombe sur t si le code lui
+-- est inconnu.
 --
 -- Envoi : file d'attente avec limite de débit (seau de 6 messages, un de plus
 -- par seconde), jamais en combat ni pendant un verrou de messagerie (moteur
@@ -78,6 +85,9 @@ local FR = {
 	TRAINER_ON             = "oui",
 	TRAINER_OFF            = "non",
 	TRAINER_MSG_UNKNOWN    = "%s n'est pas connu comme dresseur QuestCompanion : demande envoyée quand même.",
+	TRAINER_FEATS          = "Hauts faits : %d · %d points",
+	TRAINER_FEATS_SPLIT    = "Hauts faits : %d · %d points (compte %d, perso %d)",
+	TRAINER_TITLE_FORM     = "Forme",
 	OPT_DAILY_TRAINER      = "Partager ma fiche de dresseur",
 	HELP_TRAINER           = "/qc fiche [nom] — ta fiche de dresseur, ou celle d'un autre joueur",
 }
@@ -122,6 +132,9 @@ local EN = {
 	TRAINER_ON             = "on",
 	TRAINER_OFF            = "off",
 	TRAINER_MSG_UNKNOWN    = "%s is not known as a QuestCompanion trainer: request sent anyway.",
+	TRAINER_FEATS          = "Achievements: %d · %d points",
+	TRAINER_FEATS_SPLIT    = "Achievements: %d · %d points (account %d, character %d)",
+	TRAINER_TITLE_FORM     = "Form",
 	OPT_DAILY_TRAINER      = "Share my trainer card",
 	HELP_TRAINER           = "/qc fiche [name] — your trainer card, or another player's",
 }
@@ -417,6 +430,11 @@ local function SafeText(value, max)
 	if value == "" then return nil end
 	return value
 end
+-- des chiffres seulement, maxLen au plus (« 12a », « -3 », « 1e3 » refusés)
+local function Digits(value, maxLen)
+	if type(value) ~= "string" or #value < 1 or #value > maxLen or not value:find("^%d+$") then return nil end
+	return tonumber(value)
+end
 local function Int(value, lo, hi)
 	local n = tonumber(value)
 	if not n then return nil end
@@ -491,6 +509,22 @@ function ns:TrainerOwnCard()
 	if self.TrainerTitle then
 		local ok, title = pcall(self.TrainerTitle, self)
 		if ok and type(title) == "string" and title ~= "" then card.title = title end
+	end
+	-- titre des hauts faits (FeatsTitles.lua) : code et forme ; le texte nu
+	-- (champ t) suit, pour les versions d'avant
+	if self.FeatTitleCode then
+		local ok, code = pcall(self.FeatTitleCode, self)
+		if ok and code then
+			card.titleCode, card.gender = code, Call(self.FeatTitleGender, self) or "m"
+			card.title = Call(self.FeatTitleText, self, code, nil, card.gender) or card.title
+		end
+	end
+	if self.FeatPoints then
+		local account, count = Call(self.FeatPoints, self, "account")
+		local char, charCount = Call(self.FeatPoints, self, "char")
+		if account and char then
+			card.feats = { account = account, char = char, count = (count or 0) + (charCount or 0) }
+		end
 	end
 	local capture = self.CaptureData and self:CaptureData() or { creatures = {} }
 	-- première capture : la date figée (lot 1 : capture.firstAt, firstAt par
@@ -569,6 +603,8 @@ end
 function ns:TrainerSerializeCard(card)
 	local f = { p = card.proto or ns.TRAINER_PROTO, n = card.name, t = card.title, f = card.first,
 		sp = card.species, st = card.total, sy = card.shinies, sr = card.shinySeen, se = card.seals }
+	if card.titleCode then f.ti, f.tg = card.titleCode, card.gender == "f" and "f" or "m" end
+	if card.feats then f.ap, f.aq, f.ac = card.feats.account, card.feats.char, card.feats.count end
 	local comp = card.companion
 	if comp then
 		f.cl, f.cn, f.cd, f.cr = comp.name, comp.npc, comp.display, comp.class
@@ -642,6 +678,16 @@ function ns:TrainerParseCard(text)
 		local key, count = item:match("^(%w+):(%d+)$")
 		if key then card.badges[key] = Int(count, 0, 10000) end
 	end
+	-- titre : un code connu ici (sinon le texte t), forme m ou f
+	local code = Digits(f.ti, 3)
+	if code and code >= 1 and code <= (ns.FEAT_TITLE_MAX or 255) and type(ns.FEAT_TITLES) == "table"
+		and ns.FEAT_TITLES[code] then
+		card.titleCode = code
+		card.gender = f.tg == "f" and "f" or "m"
+	end
+	-- points : les trois champs, tous lisibles, ou rien
+	local account, char, count = Digits(f.ap, 5), Digits(f.aq, 5), Digits(f.ac, 3)
+	if account and char and count then card.feats = { account = account, char = char, count = count } end
 	return card
 end
 
@@ -716,6 +762,11 @@ local function OwnCardKey(self)
 	if self.CompanionEffects then
 		local ok, fx = pcall(self.CompanionEffects, self)
 		if ok and type(fx) == "table" then parts[#parts + 1] = tostring(fx.active) .. ":" .. tostring(fx.strength) end
+	end
+	if self.FeatTitleCode then
+		local ok, code = pcall(self.FeatTitleCode, self)
+		parts[#parts + 1] = tostring(ok and code) .. ":" .. tostring(Call(self.FeatTitleGender, self))
+			.. ":" .. tostring(Call(self.FeatPoints, self, nil))
 	end
 	return table.concat(parts, "|")
 end
@@ -1040,7 +1091,9 @@ function ns:TrainerTooltipLine(tooltip, data)
 	if not name or not self:TrainerIsHolder(name) then return false end
 	local text = L.TRAINER_TOOLTIP
 	local card = self:TrainerCard(name)
-	if card and card.title then text = text .. " · " .. card.title end
+	local title = card and card.titleCode and self.FeatTitleText and self:FeatTitleText(card.titleCode, nil, card.gender)
+	title = title or (card and card.title)
+	if title then text = text .. " · " .. title end
 	tooltip:AddLine(text, Theme.GOLD[1], Theme.GOLD[2], Theme.GOLD[3])
 	if data == nil and type(tooltip.Show) == "function" then pcall(tooltip.Show, tooltip) end
 	return true
@@ -1151,6 +1204,12 @@ function ns:EnsureTrainerWindow()
 	local content = frame.content
 	frame.header = Theme.CreatePageHeader(content, WIN_W - 2, { compact = true })
 	frame.header:SetPoint("TOPLEFT", content, "TOPLEFT", 0, 0)
+	-- à droite de l'en-tête (ma fiche) : le choix du titre
+	frame.titlePicker = Theme.CreateDropdown(content, 220, function(value)
+		if ns.FeatTitlePick then ns:FeatTitlePick(value) end
+	end, { listWidth = 300, maxRows = 12 })
+	frame.titlePicker:SetPoint("TOPRIGHT", content, "TOPRIGHT", -PAD, -22)
+	frame.titlePicker:Hide()
 
 	-- message à la place de la fiche (demande en cours, rien reçu, refus)
 	frame.status = Theme.Text(content, Theme.F_TITLE, Theme.PARCHMENT)
@@ -1222,6 +1281,16 @@ function ns:EnsureTrainerWindow()
 	frame.shareLabel = Line(foot, Theme.F_LABEL, Theme.LABEL)
 	frame.shareLabel:SetPoint("LEFT", frame.shareToggle, "RIGHT", 8, 0)
 	frame.shareLabel:SetText(L.TRAINER_SHARE)
+	-- forme des titres (ma fiche) : automatique, masculin, féminin
+	frame.formLabel = Line(foot, Theme.F_LABEL, Theme.LABEL)
+	frame.formLabel:SetPoint("LEFT", frame.shareLabel, "RIGHT", 24, 0)
+	frame.formLabel:SetText(L.TRAINER_TITLE_FORM)
+	frame.formPicker = Theme.CreateDropdown(foot, 120, function(value)
+		if ns.FeatSetTitleForm then ns:FeatSetTitleForm(value) end
+	end, { listWidth = 140 })
+	frame.formPicker:SetPoint("LEFT", frame.formLabel, "RIGHT", 8, 0)
+	-- au pied de la fenêtre : la liste s'ouvre vers le haut
+	frame.formPicker:SetScript("OnClick", function(picker) if picker:IsOpen() then picker:Close() else picker:Open(true) end end)
 	frame.received = Line(foot, Theme.F_SMALL, Theme.MUTED)
 	frame.received:SetPoint("LEFT", foot, "LEFT", PAD, 0)
 	frame.closeButton = Theme.CreateButton(foot, "auto", 28, L.OPT_CLOSE, function() frame:Hide() end, "accent")
@@ -1281,10 +1350,45 @@ local function PaintTile(self, tile, item, own)
 	end
 end
 
+-- « Hauts faits : 64 · 615 points (compte 400, perso 215) », ou vide (aucun point)
+function ns:TrainerCardFeatsText(card)
+	local feats = card.feats
+	if type(feats) ~= "table" then return "" end
+	local account, char = tonumber(feats.account) or 0, tonumber(feats.char) or 0
+	local count = tonumber(feats.count) or 0
+	if account + char <= 0 then return "" end
+	if account > 0 and char > 0 then return self:F("TRAINER_FEATS_SPLIT", count, account + char, account, char) end
+	return self:F("TRAINER_FEATS", count, account + char)
+end
+
+-- Nom et titre de l'en-tête : un code connu ici est rendu dans ma langue et
+-- à la bonne place (« Dresseur Dyokrion », « Dyokrion, Maître des
+-- brillantes ») ; sinon le nom, et le texte reçu en sous-titre. Les points
+-- de hauts faits suivent en sous-titre.
+function ns:TrainerCardHeading(card, name)
+	local titled = card.titleCode and self.FeatTitleText and self:FeatTitleText(card.titleCode, name, card.gender)
+	local heading, subtitle = name, card.title
+	if titled then heading, subtitle = titled, nil end
+	local feats = self:TrainerCardFeatsText(card)
+	if feats ~= "" then subtitle = subtitle and (subtitle .. "  ·  " .. feats) or feats end
+	return heading, subtitle or L.TRAINER_DEFAULT_TITLE
+end
+
 local function PaintCard(self, frame, card, own)
 	-- le nom vient de l'expéditeur réel, jamais du champ `n` reçu (usurpation)
-	frame.header:SetTitle(self:TrainerShortName(own and card.name or card.sender or frame.viewing))
-	frame.header:SetSubtitle(card.title or L.TRAINER_DEFAULT_TITLE)
+	local name = self:TrainerShortName(own and card.name or card.sender or frame.viewing)
+	local heading, subtitle = self:TrainerCardHeading(card, name)
+	frame.header:SetTitle(heading)
+	frame.header:SetSubtitle(subtitle)
+	if own and self.FeatTitleOptions then
+		frame.titlePicker:SetOptions(self:FeatTitleOptions(name))
+		frame.titlePicker:SetValue(self:FeatTitleOptionValue())
+		frame.titlePicker:Show()
+		frame.formPicker:SetOptions(self:FeatTitleFormChoices())
+		frame.formPicker:SetValue(self:FeatTitleForm())
+	else
+		frame.titlePicker:Hide()
+	end
 	local comp = card.companion
 	if comp then
 		local shown = ShowModel(frame.model, comp.display, comp.npc, comp.shiny, comp.mascot and 1.6 or 2.4)
@@ -1347,9 +1451,11 @@ function ns:TrainerRefreshWindow()
 		frame.shareToggle:SetChecked(self:TrainerSharing())
 		frame.shareToggle:Show(); frame.shareLabel:Show()
 		frame.received:Hide(); frame.retryButton:Hide()
+		if self.FeatTitleForm then frame.formLabel:Show(); frame.formPicker:Show() end
 	else
 		frame.shareToggle:Hide(); frame.shareLabel:Hide()
 		frame.received:Show(); frame.retryButton:Show()
+		frame.formLabel:Hide(); frame.formPicker:Hide()
 	end
 	local card, age
 	if own then
@@ -1372,6 +1478,7 @@ function ns:TrainerRefreshWindow()
 		frame.body:Hide()
 		frame.header:SetTitle(who)
 		frame.header:SetSubtitle(L.TRAINER_TITLE)
+		frame.titlePicker:Hide()
 		frame.received:SetText("")
 		if status == "refused" then
 			frame.status:SetText(self:F("TRAINER_REFUSED", who))

@@ -8,6 +8,8 @@
 --      (pas chaque loup commun)
 --   z  un sceau de zone (100 % des espèces de la zone)
 --   r  un palier d'espèces (10, 25, 50, 100, 250) et son titre de dresseur
+--   h  un haut fait (2.7.0) : 25 points ou plus, ou un titre (FEAT_EARNED
+--      avec announce, jamais en rattrapage) ; les paliers d'espèces gardent r
 --
 -- Protocole : sur le préfixe de la fiche de dresseur (TrainerCard.lua), par
 -- sa file d'attente (débit limité, rien en combat ni pendant un verrou de
@@ -19,6 +21,13 @@
 --     étoiles 0 à 3
 --     rang    normal, elite, rare, rareelite, worldboss, ou « - »
 --     autres  exploits regroupés avec celui-ci (0 à 99)
+-- 2.7.0 : sorte h = E~1~h~<code n du haut fait>~0~0~-~<autres>, et deux
+-- champs ajoutés à toutes les sortes quand l'expéditeur affiche un titre :
+--   …~<autres>~<code du titre>~<forme m|f>
+-- Les versions d'avant rejettent la sorte h (sorte inconnue) et ignorent les
+-- champs 9 et 10 ; le destinataire rend le titre dans sa langue, et un code
+-- de titre inconnu chez lui laisse le nom seul. Un haut fait inconnu chez
+-- lui : le message est ignoré.
 -- Rien d'autre ne voyage : pas de nom de créature ni de zone. Le
 -- destinataire refait tout depuis SES données (tables de zone livrées,
 -- carnet, ménagerie) ; un identifiant inconnu chez lui : le message est
@@ -60,8 +69,12 @@ local FR = {
 	GFEAT_MORE         = "et %d autres exploits",
 	GFEAT_HINT         = "Clic : sa fiche de dresseur",
 	GFEAT_CHAT         = "Guilde — %s %s",
+	GFEAT_ACH          = "%s a obtenu le haut fait « %s » (+%d) !",
+	GFEAT_ACH_SUB      = "Haut fait · %s",
+	GFEAT_ACH_TITLE    = "%s a gagné le titre « %s » !",
+	GFEAT_ACH_TITLE_SUB = "Haut fait « %s » (+%d)",
 	OPT_DAILY_GFEAT_SEND      = "Annoncer mes exploits à la guilde",
-	OPT_DAILY_GFEAT_SEND_DESC = "Brillantes, élites et rares capturés, sceaux de zone et titres de dresseur : les membres de ta guilde qui ont QuestCompanion les voient passer. Rien n'est envoyé si tu ne partages pas ta fiche de dresseur.",
+	OPT_DAILY_GFEAT_SEND_DESC = "Brillantes, élites et rares capturés, sceaux de zone, titres et gros hauts faits : les membres de ta guilde qui ont QuestCompanion les voient passer. Rien n'est envoyé si tu ne partages pas ta fiche de dresseur.",
 	OPT_DAILY_GFEAT_SHOW      = "Voir les exploits de la guilde",
 	OPT_DAILY_GFEAT_SHOW_DESC = "Un bandeau quand un membre de ta guilde qui a QuestCompanion réussit un bel exploit. Clic : sa fiche de dresseur.",
 	GFEAT_SHOW_all     = "Tous",
@@ -84,8 +97,12 @@ local EN = {
 	GFEAT_MORE         = "and %d more feats",
 	GFEAT_HINT         = "Click: their trainer card",
 	GFEAT_CHAT         = "Guild — %s %s",
+	GFEAT_ACH          = "%s earned the achievement \"%s\" (+%d)!",
+	GFEAT_ACH_SUB      = "Achievement · %s",
+	GFEAT_ACH_TITLE    = "%s earned the title \"%s\"!",
+	GFEAT_ACH_TITLE_SUB = "Achievement \"%s\" (+%d)",
 	OPT_DAILY_GFEAT_SEND      = "Announce my feats to the guild",
-	OPT_DAILY_GFEAT_SEND_DESC = "Shinies, elites and rares captured, zone seals and trainer titles: your guildmates who run QuestCompanion see them. Nothing is sent if you do not share your trainer card.",
+	OPT_DAILY_GFEAT_SEND_DESC = "Shinies, elites and rares captured, zone seals, titles and big achievements: your guildmates who run QuestCompanion see them. Nothing is sent if you do not share your trainer card.",
 	OPT_DAILY_GFEAT_SHOW      = "Show guild feats",
 	OPT_DAILY_GFEAT_SHOW_DESC = "A banner when a guildmate who runs QuestCompanion pulls off a fine feat. Click: their trainer card.",
 	GFEAT_SHOW_all     = "All",
@@ -119,7 +136,7 @@ ns.GFEAT_PROBE_FRESH = 600         -- s : détenteur vu récemment, pas resondé
 local NOTABLE = { elite = true, rare = true, rareelite = true, worldboss = true }
 ns.GFEAT_NOTABLE = NOTABLE
 local CLASS_RANK = { trivial = 0, minus = 0, normal = 1, elite = 2, rare = 3, rareelite = 4, worldboss = 5 }
-local KINDS = { s = true, n = true, z = true, r = true }
+local KINDS = { s = true, n = true, z = true, r = true, h = true }
 -- rang Questie (tables de zone) -> classification (comme Bestiary.lua)
 local RANK_CLASS = ns.BESTIARY_RANK_CLASS or { [1] = "elite", [2] = "rareelite", [3] = "worldboss", [4] = "rare" }
 local TOAST_W, TOAST_H, TOAST_ICON = 340, 84, 34
@@ -227,6 +244,8 @@ function ns.GuildFeatScore(feat)
 	if feat.kind == "s" then return 1000 + stars * 10 + rank end
 	if feat.kind == "r" then return 800 + (tonumber(feat.id) or 0) / 1000 end
 	if feat.kind == "z" then return 700 end
+	-- haut fait : entre le sceau et le palier (une méta à 50 points passe devant un palier)
+	if feat.kind == "h" then return 750 + math.max(0, math.min(50, tonumber(feat.pts) or 0)) end
 	if feat.kind == "n" then return 100 + rank * 10 + stars end
 	return 0
 end
@@ -250,15 +269,30 @@ function ns:GuildFeatNote(feat)
 	return true
 end
 
--- Le message d'un exploit
-function ns:GuildFeatMessage(feat, more)
+-- Le message d'un exploit ; titleCode / gender : le titre que j'affiche
+-- (champs 9 et 10, seulement si j'en ai un)
+function ns:GuildFeatMessage(feat, more, titleCode, gender)
 	local function N(v, lo, hi)
 		v = math.floor(tonumber(v) or 0)
 		return math.max(lo, math.min(hi, v))
 	end
 	local class = CLASS_RANK[feat.class or ""] and feat.class or "-"
-	return { feat.kind, N(feat.id, 0, 9999999), N(feat.zone, 0, 9999999), N(feat.stars, 0, 3), class,
+	local parts = { feat.kind, N(feat.id, 0, 9999999), N(feat.zone, 0, 9999999), N(feat.stars, 0, 3), class,
 		N(more, 0, ns.GFEAT_MORE_MAX) }
+	titleCode = tonumber(titleCode)
+	if titleCode and titleCode >= 1 and titleCode <= (ns.FEAT_TITLE_MAX or 255) then
+		parts[#parts + 1] = math.floor(titleCode)
+		parts[#parts + 1] = gender == "f" and "f" or "m"
+	end
+	return parts
+end
+
+-- Mon titre affiché (code, forme), ou nil
+local function MyTitle(self)
+	if not self.FeatTitleCode then return nil end
+	local code = Call(self.FeatTitleCode, self)
+	if not code then return nil end
+	return code, Call(self.FeatTitleGender, self) or "m"
 end
 
 -- Appelé par l'horloge : l'annonce part quand la série est finie, l'écart
@@ -275,11 +309,33 @@ function ns:GuildFeatsFlush(now)
 	if state.lastSent and now >= state.lastSent and now - state.lastSent < ns.GFEAT_GAP then return false end
 	if self.TrainerBlocked and self:TrainerBlocked() then return false end
 	if not self.TrainerSend then return false end
-	local parts = self:GuildFeatMessage(out.feat, out.count - 1)
+	local parts = self:GuildFeatMessage(out.feat, out.count - 1, MyTitle(self))
 	local queued = self:TrainerSend(ns.GFEAT_KIND, "GUILD", nil, unpack(parts))
 	state.out = nil
 	if queued then state.lastSent = now end
 	return queued and true or false
+end
+
+-- Un haut fait obtenu (Feats.lua, FEAT_EARNED) : annoncé si le moteur le dit
+-- (25 points ou plus, ou un titre ; jamais en rattrapage). Les paliers
+-- d'espèces du dresseur partent déjà en sorte r (MenagerieRankCheck).
+function ns:GuildFeatsOnFeat(info)
+	if type(info) ~= "table" or not info.announce or info.retro then return false end
+	local def = self.FeatDef and self:FeatDef(info.id)
+	if type(def) ~= "table" or not tonumber(def.n) then return false end
+	local crit = def.crit or {}
+	if crit[1] == "count" and crit[2] == "species" then
+		for _, rank in ipairs(ns.TRAINER_RANKS or {}) do
+			if rank.count == tonumber(crit[3]) then return false end
+		end
+	end
+	return self:GuildFeatNote({ kind = "h", id = tonumber(def.n), zone = 0, stars = 0, pts = tonumber(def.pts) or 0 })
+end
+if ns.RegisterCallback then
+	ns:RegisterCallback("FEAT_EARNED", function(_, info)
+		local ok, err = pcall(ns.GuildFeatsOnFeat, ns, info)
+		if not ok and ns.RecordError then ns:RecordError("guildfeats:feat", err) end
+	end)
 end
 
 -- Une capture réussie : brillante, ou espèce nouvelle notable.
@@ -365,7 +421,7 @@ local function Digits(value, maxLen)
 	return tonumber(value)
 end
 
--- texte -> exploit { kind, id, zone, stars, class, more, proto }, ou nil
+-- texte -> exploit { kind, id, zone, stars, class, more, proto[, ti, tg] }, ou nil
 function ns:GuildFeatParse(text)
 	if type(text) ~= "string" or #text > (ns.TRAINER_MAX_MSG or 255) then return nil end
 	local fields = {}
@@ -382,8 +438,17 @@ function ns:GuildFeatParse(text)
 	local class = fields[7]
 	if not (id and zone and stars and more) or id < 1 or stars > 3 then return nil end
 	if class ~= "-" and not CLASS_RANK[class or ""] then return nil end
-	return { proto = proto, kind = kind, id = id, zone = zone, stars = stars, class = class ~= "-" and class or nil,
+	-- haut fait : ni zone, ni étoiles, ni rang ; un code de catalogue (1 à 999)
+	if kind == "h" and (zone ~= 0 or stars ~= 0 or class ~= "-" or id > 999) then return nil end
+	local feat = { proto = proto, kind = kind, id = id, zone = zone, stars = stars, class = class ~= "-" and class or nil,
 		more = math.min(more, ns.GFEAT_MORE_MAX) }
+	-- titre de l'expéditeur (champs 9 et 10) : un code illisible ou inconnu
+	-- ici est ignoré, pas le message
+	local ti = Digits(fields[9], 3)
+	if ti and ti >= 1 and ti <= (ns.FEAT_TITLE_MAX or 255) and type(ns.FEAT_TITLES) == "table" and ns.FEAT_TITLES[ti] then
+		feat.ti, feat.tg = ti, fields[10] == "f" and "f" or "m"
+	end
+	return feat
 end
 
 -- Nos données sur une créature : tables livrées de la zone, carnet, ménagerie
@@ -433,6 +498,8 @@ function ns:GuildFeatDescribe(feat, sender)
 	if type(feat) ~= "table" then return nil end
 	local who = SafeName(self.TrainerShortName and self:TrainerShortName(sender) or sender, 64)
 	if not who then return nil end
+	-- le nom désarmé, puis le titre rendu ici (« Dyokrion, Maître des brillantes, »)
+	if feat.ti and self.FeatTitleWho then who = self:FeatTitleWho(who, feat.ti, feat.tg, true) end
 	local info = { kind = feat.kind, stars = feat.stars, more = feat.more }
 	if feat.kind == "s" or feat.kind == "n" then
 		local name, class = CreatureInfo(self, feat.id, feat.zone)
@@ -459,11 +526,31 @@ function ns:GuildFeatDescribe(feat, sender)
 		local found
 		for _, rank in ipairs(ns.TRAINER_RANKS or {}) do if rank.count == feat.id then found = rank end end
 		if not found then return nil end
-		local title = L["TRAINER_" .. found.key]
+		local code = ns.FEAT_RANK_TITLES and ns.FEAT_RANK_TITLES[found.key]
+		local title = code and self.FeatTitleText and self:FeatTitleText(code, nil, feat.tg or "m")
+		title = title or L["TRAINER_" .. found.key]
 		if type(title) ~= "string" or title == "TRAINER_" .. found.key then title = found.key end
 		info.line = self:F("GFEAT_RANK", who, found.count)
 		info.sub = self:F("GFEAT_RANK_SUB", title)
 		info.stars = nil
+	elseif feat.kind == "h" then
+		local def = self.FeatDefByCode and self:FeatDefByCode(feat.id)
+		if type(def) ~= "table" or def.pending then return nil end
+		local name = self:FeatName(def)
+		if type(name) ~= "string" or name == "" or name == "FEAT_" .. tostring(def.id) then return nil end
+		local pts = tonumber(def.pts) or 0
+		local code = type(def.reward) == "table" and tonumber(def.reward.title)
+		local title = code and self:FeatTitleText(code, nil, feat.tg or "m")
+		if title then
+			info.line = self:F("GFEAT_ACH_TITLE", who, title)
+			info.sub = self:F("GFEAT_ACH_TITLE_SUB", name, pts)
+		else
+			info.line = self:F("GFEAT_ACH", who, name, pts)
+			info.sub = self:F("GFEAT_ACH_SUB", L["FEATC_" .. tostring(def.cat)] or tostring(def.cat))
+		end
+		info.stars, info.points, info.icon = nil, pts, self:FeatIcon(def)
+		feat.pts = pts
+		info.big = (title ~= nil) or pts >= (ns.FEAT_GUILD_MIN or 25)
 	else
 		return nil
 	end
@@ -578,6 +665,8 @@ local function PlayFeatSound(self, shiny)
 	return true
 end
 
+local GuildFeatDecor
+
 -- Le bandeau : liseré doré, glyphe du filet, « GUILDE », la ligne, la créature
 function ns:EnsureGuildFeatToast()
 	if self.guildFeatToast then return self.guildFeatToast end
@@ -666,6 +755,36 @@ function ns:GuildFeatsHideToast()
 	if self.guildFeatToast then self.guildFeatToast:Hide() end
 end
 
+-- Icône et points d'un bandeau : un haut fait montre l'icône de sa catégorie
+-- et ses points (bouclier en Azeroth, à droite en Sobre) ; les autres
+-- exploits retrouvent le glyphe du filet
+GuildFeatDecor = function(self, frame, info, feat)
+	if feat then
+		if info.icon then frame.icon:SetTexture(info.icon); frame.icon:SetVertexColor(1, 1, 1, 1) end
+	else
+		local art = ns.CAPTURE_ART
+		frame.icon:SetTexture(frame.ownGlyph and art and art.icon or Theme.LOGO_SMALL)
+		if frame.ownGlyph and frame.azeroth then frame.icon:SetVertexColor(Theme.GOLD_LIGHT[1], Theme.GOLD_LIGHT[2], Theme.GOLD_LIGHT[3], 1) end
+	end
+	local points = feat and tonumber(info.points) or nil
+	if points and not frame.featPoints then
+		if frame.azeroth and frame.banner and frame.shield then
+			frame.featPoints = frame.banner:CreateFontString(nil, "OVERLAY", Theme.F_NUMBER)
+			frame.featPoints:SetPoint("CENTER", frame.shield, "CENTER", 0, 4)
+			if ns.AzerothFont then ns.AzerothFont(frame.featPoints, 16, "OUTLINE") end
+			frame.featPoints:SetTextColor(1, 1, 1, 1)
+		else
+			frame.featPoints = Theme.Text(frame, Theme.F_NUMBER, Theme.GOLD)
+			frame.featPoints:SetPoint("RIGHT", frame, "RIGHT", -12, 0)
+		end
+		frame.featPoints:SetJustifyH("CENTER")
+	end
+	if frame.featPoints then
+		frame.featPoints:SetText(points and tostring(points) or "")
+		if points then frame.featPoints:Show() else frame.featPoints:Hide() end
+	end
+end
+
 function ns:GuildFeatsShowToast(item)
 	local frame = self:EnsureGuildFeatToast()
 	if not frame then return nil end
@@ -677,11 +796,16 @@ function ns:GuildFeatsShowToast(item)
 	frame.hint:SetText(more and (more .. "  ·  " .. L.GFEAT_HINT) or L.GFEAT_HINT)
 	local accent = info.shiny and (Theme.GOLD_LIGHT or Theme.GOLD) or Theme.GOLD
 	if frame.SetAccent then frame:SetAccent(accent) end
-	if frame.ownGlyph and not frame.azeroth then frame.icon:SetVertexColor(accent[1], accent[2], accent[3], 1) end
+	local feat = info.kind == "h"
+	GuildFeatDecor(self, frame, info, feat)
+	if frame.ownGlyph and not frame.azeroth and not feat then frame.icon:SetVertexColor(accent[1], accent[2], accent[3], 1) end
 	state.showing, state.hideAt = item, Clock() + ns.GFEAT_TOAST_SECONDS
 	frame:Show()
 	if Theme.FadeIn then pcall(Theme.FadeIn, frame, 0.2) end
-	if self.StyleShown then self:StyleShown(frame, { shiny = info.shiny, play = true }) end
+	-- haut fait : bandeau des hauts faits (points dans le bouclier d'or) ; un
+	-- titre ou un gros haut fait : ailes et éclat (Azeroth seulement)
+	if self.StyleShown then self:StyleShown(frame, { shiny = info.shiny, play = true, shield = feat and "gold" or nil }) end
+	if feat and info.big and frame.azeroth and self.AzerothRewardFX then pcall(self.AzerothRewardFX, self, frame) end
 	PlayFeatSound(self, info.shiny)
 	return frame
 end
