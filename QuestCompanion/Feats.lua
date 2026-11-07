@@ -19,7 +19,7 @@
 --
 -- Contrats pour les lots suivants :
 --   ns.FEAT_SOURCES[nom] = { get = function(self, scope) -> n end, topics = { … },
---                            retro = true|false, dateOf = function(self, n) -> ok, at, lvl end }
+--                            retro = false (pas de rattrapage ; absent = oui), dateOf = function(self, n) -> ok, at, lvl end }
 --   ns.FEAT_LISTS[nom]   = { items = function(self) -> { "kind:clé" | { source, n } } end, topics = { … } }
 --   ns:FeatTouch(sujet)  un crochet signale un sujet ; évaluation groupée 0,5 s plus tard
 --   ns:FeatFlag(clé, scope) / ns:FeatCount(clé, delta, scope) / ns:FeatCountReset(clé, scope)
@@ -188,17 +188,13 @@ end
 -- ---------------------------------------------------------------------------
 local index
 
-local function Normalize(def)
-	if def.id then return def end
-	def.id, def.n, def.cat, def.pts, def.scope = def[1], def[2], def[3], def[4], def[5]
-	return def
-end
 
 local CRIT_TOPICS = {
 	stat = { "stat", "kill", "death", "quest", "money", "level" },
 	flag = { "flag" }, streak = { "flag" }, meta = { "feat" }, points = { "feat" },
 }
 
+local topicLists = {}
 local function TopicsOf(def)
 	if def.topics then return def.topics end
 	local crit, set = def.crit or {}, {}
@@ -220,23 +216,27 @@ local function TopicsOf(def)
 	local out = {}
 	for t in pairs(set) do out[#out + 1] = t end
 	table.sort(out)
-	return out
+	-- listes identiques partagées (la plupart des lignes ont les mêmes sujets)
+	local key = table.concat(out, ",")
+	if not topicLists[key] then topicLists[key] = out end
+	return topicLists[key]
 end
 
 local function Index()
+	-- catalogue construit à la première lecture (FeatsData.lua)
+	if ns.FeatLoadCatalog then ns.FeatLoadCatalog() end
 	if index and not ns.featIndexDirty and index.count == #ns.FEAT_DEFS then return index end
-	index = { byId = {}, list = {}, byTopic = {}, cats = {}, catList = {}, count = #ns.FEAT_DEFS }
+	index = { byId = {}, list = {}, cats = {}, catList = {}, count = #ns.FEAT_DEFS }
 	for _, cat in ipairs(ns.FEAT_CATEGORIES or {}) do index.cats[cat.id] = cat end
-	for _, def in ipairs(ns.FEAT_DEFS) do
-		Normalize(def)
+	for position, def in ipairs(ns.FEAT_DEFS) do
+		if ns.FeatCompact then
+			def = ns.FeatCompact(def)
+			ns.FEAT_DEFS[position] = def
+		end
 		if def.id and not index.byId[def.id] then
 			index.byId[def.id] = def
 			index.list[#index.list + 1] = def
 			def.topicList = TopicsOf(def)
-			for _, topic in ipairs(def.topicList) do
-				index.byTopic[topic] = index.byTopic[topic] or {}
-				index.byTopic[topic][def.id] = true
-			end
 		end
 	end
 	-- catégories qui ont au moins une ligne, dans l'ordre de FEAT_CATEGORIES
@@ -349,7 +349,7 @@ end
 -- Une source « n-ième relevé d'une sorte » (compte + date pour la migration)
 local function StampSource(kind, filter, topics)
 	return {
-		topics = topics or { "place" }, retro = true,
+		topics = topics or ns.FeatTopics("place"),
 		get = function(self) return #StampList(self, kind, filter) end,
 		dateOf = function(self, n)
 			local list = StampList(self, kind, filter)
@@ -367,7 +367,7 @@ ns.FEAT_SOURCES = ns.FEAT_SOURCES or {}
 local SOURCES = ns.FEAT_SOURCES
 
 SOURCES.species = {
-	topics = { "capture", "seal" }, retro = true,
+	topics = ns.FeatTopics("capture", "seal"),
 	get = function(self, scope) return Cached("species:" .. tostring(scope), function() return CaptureCount(self, scope, false) end) end,
 	-- date d'un palier d'espèces déjà payé (collection.ranks, le plus ancien du compte)
 	dateOf = function(self, n)
@@ -383,15 +383,15 @@ SOURCES.species = {
 	end,
 }
 SOURCES.shinyCap = {
-	topics = { "capture", "shiny" }, retro = true,
+	topics = ns.FeatTopics("capture", "shiny"),
 	get = function(self, scope) return Cached("shinyCap:" .. tostring(scope), function() return CaptureCount(self, scope, true) end) end,
 }
 SOURCES.seals = {
-	topics = { "seal", "capture" }, retro = true,
+	topics = ns.FeatTopics("seal", "capture"),
 	get = function(self) return self.MenagerieSeals and #self:MenagerieSeals() or 0 end,
 }
 SOURCES.level = {
-	topics = { "level", "place" }, retro = true,
+	topics = ns.FeatTopics("level", "place"),
 	get = function(self)
 		local level = Level()
 		if level then return level end
@@ -413,12 +413,12 @@ SOURCES.placeDungeon = StampSource("dungeon")
 SOURCES.placeRare = StampSource("rare")
 SOURCES.capitalEnemy = StampSource("capital", function(self, id) return EnemyCapital(self, id) end)
 SOURCES.missions = {
-	topics = { "mission" }, retro = true,
+	topics = ns.FeatTopics("mission"),
 	get = function(self) return math.floor(tonumber(self:CompanionData().missionsDone) or 0) end,
 }
 -- repli de la statistique 107 : les abattus du bestiaire (ce personnage)
 SOURCES.bestiaryKills = {
-	topics = { "kill" }, retro = true,
+	topics = ns.FeatTopics("kill"),
 	get = function(self)
 		return Cached("bestiaryKills", function()
 			local total = 0
@@ -437,7 +437,7 @@ SOURCES.bestiaryKills = {
 -- Listes cochées : chaque élément est un relevé ("kind:clé") ou { source, n }
 ns.FEAT_LISTS = ns.FEAT_LISTS or {}
 ns.FEAT_LISTS.capitals = {
-	topics = { "place" },
+	topics = ns.FeatTopics("place"),
 	items = function()
 		local items = {}
 		for i, areaID in ipairs(ns.FEAT_CAPITALS or {}) do items[i] = "capital:" .. areaID end
@@ -445,7 +445,7 @@ ns.FEAT_LISTS.capitals = {
 	end,
 }
 ns.FEAT_LISTS.dungeons = {
-	topics = { "place" },
+	topics = ns.FeatTopics("place"),
 	items = function(self)
 		local items = {}
 		for key in pairs(self.DUNGEONS or {}) do items[#items + 1] = "dungeon:" .. tostring(key) end
@@ -768,10 +768,15 @@ end
 -- ---------------------------------------------------------------------------
 ns.featPending = ns.featPending or {}
 
-local engine            -- cadre de l'horloge (créé à la demande)
+local Tick
+local function EngineClock()
+	local fine, err = pcall(Tick)
+	if not fine and ns.RecordError then ns:RecordError("feats:tick", err) end
+end
+-- horloge du moteur sur le cadre partagé des hauts faits (FeatsData.lua)
 local function Wake()
-	if ns.featsDormant or not engine then return end
-	engine:SetScript("OnUpdate", engine.tick)
+	if ns.featsDormant or not ns.FeatClock then return end
+	ns.FeatClock("engine", EngineClock)
 end
 
 local function PlayFanfare(self)
@@ -951,7 +956,7 @@ local function MigrateScope(self, scope, out)
 		if def.scope == scope and not def.pending and not self:FeatGot(def) then
 			local ok, done, at, lvl = pcall(DateOf, self, def)
 			if ok and done then
-				if self:FeatAward(def, { silent = true, retro = true, at = at, lvl = lvl }) then out[#out + 1] = def end
+				if self:FeatAward(def, { silent = true, at = at, lvl = lvl }) then out[#out + 1] = def end
 			end
 		end
 	end
@@ -982,7 +987,7 @@ end
 
 -- Tout ce qui est déjà acquis, sans bandeau un par un
 function ns:FeatRetroScan()
-	return self:FeatEvaluate(nil, { silent = true, retro = true, retroOnly = true })
+	return self:FeatEvaluate(nil, { silent = true, retroOnly = true })
 end
 
 -- À la connexion (3 s après, hors combat, une fois par session) : migration,
@@ -1108,7 +1113,7 @@ Hook("BestiaryOnKill", "kill")                 -- victime comptée (repli de la 
 -- ---------------------------------------------------------------------------
 -- Horloge et événements
 -- ---------------------------------------------------------------------------
-local function Tick()
+function Tick()
 	local now = Now()
 	if ns.featLoginAt and now >= ns.featLoginAt then
 		ns.featLoginAt = nil
@@ -1128,7 +1133,7 @@ local function Tick()
 		local ok, err = pcall(ns.FeatFlush, ns)
 		if not ok and ns.RecordError then ns:RecordError("feats:flush", err) end
 	end
-	if not (ns.featLoginAt or ns.featEvalAt or #ns.featPending > 0) and engine then engine:SetScript("OnUpdate", nil) end
+	if not (ns.featLoginAt or ns.featEvalAt or #ns.featPending > 0) and ns.FeatClock then ns.FeatClock("engine", nil) end
 end
 
 local HANDLERS = {
@@ -1144,23 +1149,8 @@ local HANDLERS = {
 	PLAYER_REGEN_ENABLED = function() if #ns.featPending > 0 or ns.featLoginAt then Wake() end end,
 }
 
-do
-	local ok, frame = pcall(CreateFrame, "Frame")
-	if ok and frame then
-		engine = frame
-		engine.tick = function()
-			local fine, err = pcall(Tick)
-			if not fine and ns.RecordError then ns:RecordError("feats:tick", err) end
-		end
-		if ns.RegisterHandlers then ns.RegisterHandlers(frame, HANDLERS)
-		else for event in pairs(HANDLERS) do frame:RegisterEvent(event) end end
-		frame:SetScript("OnEvent", function(_, event, ...)
-			local fine, err = pcall(HANDLERS[event], ...)
-			if not fine and ns.RecordError then ns:RecordError("feats:" .. tostring(event), err) end
-		end)
-		ns.featEventFrame = frame
-	end
-end
+-- événements sur le cadre partagé des hauts faits (FeatsData.lua)
+if ns.FeatListen then ns.FeatListen(HANDLERS) end
 -- pour les tests : une horloge du moteur, à la main
 function ns:FeatTick() Tick() end
 

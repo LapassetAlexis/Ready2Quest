@@ -30,9 +30,16 @@
 -- (stat), FEATD_list_<nom>, FEATD_points, FEATD_meta_cat, FEATD_meta_ids,
 -- FEATD_flag_<clé>, FEATD_streak_<clé> ; def.desc force une clé.
 --
--- Lots B et C : ajouter leurs lignes avec ns.FeatAdd({ ... }) (ou directement
--- dans FEAT_DEFS) et leurs chaînes avec ns.RegisterStrings, dans ce fichier
--- ou un fichier chargé après lui. Le moteur reconstruit ses index au besoin.
+-- Lots B et C : leurs lignes passent par ns.FeatCatalog(function() ... end)
+-- (fichier chargé après celui-ci), leurs chaînes par ns.RegisterStrings.
+--
+-- Mémoire (2.7.0) : les lignes littérales ne sont pas construites au
+-- chargement. Chaque fichier de catalogue confie une fonction à
+-- ns.FeatCatalog ; le moteur l'appelle à la première lecture du catalogue
+-- (ns.FeatLoadCatalog, depuis l'index de Feats.lua), puis la lâche. Chaque
+-- ligne devient alors une définition compacte (ns.FeatCompact) : un tableau
+-- positionnel de 12 cases, lu par ses noms (def.id, def.crit…) grâce à une
+-- métatable partagée. Mêmes champs, mêmes valeurs qu'une table à clés.
 local ADDON, ns = ...
 if ns.blocked then return end
 
@@ -58,61 +65,209 @@ local CAPITALS = { 1519, 1537, 1657, 1637, 1638, 1497 }
 ns.FEAT_CAPITALS = CAPITALS
 
 -- ---------------------------------------------------------------------------
--- Catalogue, lot A : les tampons convertis et quelques hauts faits par sorte
--- de critère (le reste du catalogue arrive avec les lots B et C)
+-- Définitions compactes : 12 cases, lues par leur nom (champ absent = false
+-- dans sa case, rendu nil à la lecture). Un champ hors de cette liste reste
+-- une clé ordinaire de la table.
 -- ---------------------------------------------------------------------------
-ns.FEAT_DEFS = {
-	-- Ménagerie (compte : union des captures de tous tes personnages)
-	{ "men_first",        1, "men", 5,  "account", crit = { "count", "species", 1 },   reward = { aids = { appat = 1 } } },
-	-- paliers d'espèces (men_species_*) : FeatsCatMenagerie.lua (lot B), avec
-	-- les aides et cosmétiques déplacés de TRAINER_RANKS
-	-- Brillantes (compte)
-	{ "shiny_cap_1",     35, "shiny", 10, "account", crit = { "count", "shinyCap", 1 }, reward = { aids = { lasso = 1 } } },
-	-- Zones et sceaux (personnage)
-	{ "zone_seal_1",     42, "zone", 10, "char", crit = { "count", "seals", 1 },        reward = { aids = { lasso = 1 } } },
-	{ "zone_visit_10",   48, "zone", 5,  "char", crit = { "count", "placeZone", 10 },   reward = { aids = { appat = 1 } } },
-	{ "zone_visit_25",   49, "zone", 10, "char", crit = { "count", "placeZone", 25 },   reward = { aids = { lasso = 1 } } },
-	{ "zone_villages_10", 52, "zone", 5, "char", crit = { "count", "placeSubzone", 10 } },
-	{ "zone_villages_25", 53, "zone", 10, "char", crit = { "count", "placeSubzone", 25 } },
-	{ "zone_capitals",   54, "zone", 10, "char", crit = { "list", "capitals" },         reward = { title = 17 } },
-	{ "zone_capital_enemy", 55, "zone", 10, "char", crit = { "count", "capitalEnemy", 1 } },
-	-- Au jour le jour (personnage)
-	{ "day_mission_1",   65, "day", 5,  "char", crit = { "count", "missions", 1 } },
-	{ "day_rare_1",      71, "day", 5,  "char", crit = { "count", "placeRare", 1 } },
-	{ "day_rare_10",     72, "day", 10, "char", crit = { "count", "placeRare", 10 },    reward = { aids = { lasso = 1 } } },
-	{ "day_rare_50",     73, "day", 25, "char", crit = { "count", "placeRare", 50 },    reward = { title = 19 } },
-	-- Personnage
-	{ "char_level_10",   86, "char", 5,  "char", crit = { "count", "level", 10 } },
-	{ "char_level_20",   87, "char", 5,  "char", crit = { "count", "level", 20 } },
-	{ "char_level_30",   88, "char", 10, "char", crit = { "count", "level", 30 } },
-	{ "char_level_40",   89, "char", 10, "char", crit = { "count", "level", 40 } },
-	{ "char_level_50",   90, "char", 10, "char", crit = { "count", "level", 50 } },
-	{ "char_level_60",   91, "char", 25, "char", crit = { "count", "level", 60 },       reward = { title = 21 } },
-	-- statistique du client 107 (« créatures tuées », vérifiée en jeu : 780) ;
-	-- repli : les abattus du bestiaire
-	{ "char_kills_1000", 99, "char", 10, "char", crit = { "stat", { 107 }, 1000, alt = "bestiaryKills" }, desc = "FEATD_kills" },
-	{ "char_kills_10000", 100, "char", 25, "char", crit = { "stat", { 107 }, 10000, alt = "bestiaryKills" }, desc = "FEATD_kills" },
-	-- statistique 353 pas encore vérifiée en jeu : grisée
-	{ "char_hearth_50",  98, "char", 10, "char", crit = { "stat", { 353 }, 50 }, desc = "FEATD_hearth", pending = true },
-	-- Donjons (personnage)
-	{ "dng_visit_1",    107, "dng", 5,  "char", crit = { "count", "placeDungeon", 1 },  reward = { aids = { lasso = 1 } } },
-	{ "dng_visit_10",   108, "dng", 10, "char", crit = { "count", "placeDungeon", 10 }, reward = { aids = { sifflet = 1 } } },
-	{ "dng_visit_20",   109, "dng", 25, "char", crit = { "count", "placeDungeon", 20 } },
-	{ "dng_visit_all",  110, "dng", 50, "char", crit = { "list", "dungeons" },          reward = { title = 24 } },
-	-- Grands hauts faits (compte)
-	{ "meta_menagerie", 166, "meta", 50, "account", crit = { "meta", "men", 20 },       reward = { title = 35 } },
-	{ "meta_points_500", 171, "meta", 10, "account", crit = { "points", 500 } },
-	{ "meta_points_1500", 172, "meta", 25, "account", crit = { "points", 1500 } },
+local FIELDS = { id = 1, n = 2, cat = 3, pts = 4, scope = 5, crit = 6, reward = 7, desc = 8, pending = 9,
+	paid = 10, topicList = 11, icon = 12 }
+ns.FEAT_DEF_FIELDS = FIELDS
+local DEF_MT = {
+	__index = function(def, key)
+		local slot = FIELDS[key]
+		if not slot then return nil end
+		local value = rawget(def, slot)
+		if value == false then return nil end
+		return value
+	end,
+	__newindex = function(def, key, value)
+		local slot = FIELDS[key]
+		if slot then
+			if value == nil then value = false end
+			rawset(def, slot, value)
+		else
+			rawset(def, key, value)
+		end
+	end,
 }
+ns.FEAT_DEF_MT = DEF_MT
 
--- Ajout d'une ligne par un autre lot (le moteur reconstruit ses index)
-function ns.FeatAdd(def)
-	def.id, def.n, def.cat, def.pts, def.scope = def.id or def[1], def.n or def[2], def.cat or def[3],
-		def.pts or def[4], def.scope or def[5]
+-- Une ligne (positionnelle { id, n, cat, pts, scope, crit = … } ou à clés)
+-- -> définition compacte ; une définition déjà compacte est rendue telle quelle
+function ns.FeatCompact(row)
+	if getmetatable(row) == DEF_MT then return row end
+	local id, n, cat, pts, scope = row.id, row.n, row.cat, row.pts, row.scope
+	if id == nil then id = row[1] end
+	if n == nil then n = row[2] end
+	if cat == nil then cat = row[3] end
+	if pts == nil then pts = row[4] end
+	if scope == nil then scope = row[5] end
+	local def = { id or false, n or false, cat or false, pts or false, scope or false, row.crit or false,
+		row.reward or false, row.desc or false, row.pending or false, row.paid or false, row.topicList or false,
+		row.icon or false }
+	for key, value in pairs(row) do
+		if type(key) ~= "number" and not FIELDS[key] then def[key] = value end
+	end
+	return setmetatable(def, DEF_MT)
+end
+
+-- Listes de sujets des sources et des listes, partagées (lecture seule)
+local topicSets = {}
+function ns.FeatTopics(...)
+	local key = table.concat({ ... }, ",")
+	if not topicSets[key] then topicSets[key] = { ... } end
+	return topicSets[key]
+end
+
+-- ---------------------------------------------------------------------------
+-- Catalogue : fonctions de construction, appelées à la première lecture
+-- ---------------------------------------------------------------------------
+ns.FEAT_DEFS = {}
+local builders = {}
+
+-- Un fichier de catalogue confie ses lignes (build appelle ns.FeatAdd)
+function ns.FeatCatalog(build)
+	builders[#builders + 1] = build
+	ns.featIndexDirty = true
+end
+
+-- Construit ce qui attend, dans l'ordre de chargement des fichiers ; rend
+-- true si quelque chose a été ajouté
+function ns.FeatLoadCatalog()
+	if #builders == 0 then return false end
+	local list = builders
+	builders = {}
+	for _, build in ipairs(list) do
+		local ok, err = pcall(build)
+		if not ok then
+			if rawget(_G, "ADDON_TESTING") then error(err, 0) end
+			if ns.RecordError then ns:RecordError("feats:catalog", err) end
+		end
+	end
+	ns.featIndexDirty = true
+	return true
+end
+
+-- Ajout d'une ligne (le moteur reconstruit ses index) ; une ligne ajoutée
+-- hors catalogue (tests) vient après tout le catalogue
+function ns.FeatAdd(row)
+	ns.FeatLoadCatalog()
+	local def = ns.FeatCompact(row)
 	table.insert(ns.FEAT_DEFS, def)
 	ns.featIndexDirty = true
 	return def
 end
+
+-- ---------------------------------------------------------------------------
+-- Un seul cadre pour tous les hauts faits (moteur, ménagerie, jeu) :
+--   * ns.FeatListen(handlers) / ns.FeatUnlisten(handlers) : une table
+--     { ÉVÉNEMENT = function(...) } abonnée ou désabonnée (plusieurs tables
+--     peuvent écouter le même événement, appelées dans l'ordre d'abonnement) ;
+--   * ns.FeatClock(clé, fn) : fn(elapsed) à chaque image tant qu'elle est
+--     posée (nil : la retire ; plus d'horloge : plus d'OnUpdate).
+-- ---------------------------------------------------------------------------
+local sets, clocks, hub = {}, {}, nil
+
+local function HubUpdate(_, elapsed)
+	for key, fn in pairs(clocks) do
+		local ok, err = pcall(fn, elapsed)
+		if not ok and ns.RecordError then ns:RecordError("feats:clock:" .. tostring(key), err) end
+	end
+end
+
+local function HubEvent(_, event, ...)
+	for _, handlers in ipairs(sets) do
+		local fn = handlers[event]
+		if fn then
+			local ok, err = pcall(fn, ...)
+			if not ok and ns.RecordError then ns:RecordError("feats:" .. tostring(event), err) end
+		end
+	end
+end
+
+do
+	local ok, frame = pcall(CreateFrame, "Frame")
+	if ok and frame then
+		hub = frame
+		frame:SetScript("OnEvent", HubEvent)
+		ns.featEventFrame = frame
+	end
+end
+
+function ns.FeatListen(handlers)
+	for _, set in ipairs(sets) do if set == handlers then return end end
+	sets[#sets + 1] = handlers
+	if not hub then return end
+	if ns.RegisterHandlers then ns.RegisterHandlers(hub, handlers)
+	else for event in pairs(handlers) do pcall(hub.RegisterEvent, hub, event) end end
+end
+
+function ns.FeatUnlisten(handlers)
+	for index = #sets, 1, -1 do if sets[index] == handlers then table.remove(sets, index) end end
+	if not hub then return end
+	for event in pairs(handlers) do
+		local used = false
+		for _, set in ipairs(sets) do if set[event] then used = true end end
+		if not used then pcall(hub.UnregisterEvent, hub, event) end
+	end
+end
+
+function ns.FeatClock(key, fn)
+	if clocks[key] == fn then return end
+	clocks[key] = fn
+	if not hub then return end
+	hub:SetScript("OnUpdate", next(clocks) and HubUpdate or nil)
+end
+
+-- ---------------------------------------------------------------------------
+-- Catalogue, lot A : les tampons convertis et quelques hauts faits par sorte
+-- de critère (le reste du catalogue : FeatsCatMenagerie.lua, FeatsCatJeu.lua)
+-- ---------------------------------------------------------------------------
+ns.FeatCatalog(function()
+	for _, row in ipairs({
+		-- Ménagerie (compte : union des captures de tous tes personnages)
+		{ "men_first",        1, "men", 5,  "account", crit = { "count", "species", 1 },   reward = { aids = { appat = 1 } } },
+		-- paliers d'espèces (men_species_*) : FeatsCatMenagerie.lua (lot B), avec
+		-- les aides et cosmétiques déplacés de TRAINER_RANKS
+		-- Brillantes (compte)
+		{ "shiny_cap_1",     35, "shiny", 10, "account", crit = { "count", "shinyCap", 1 }, reward = { aids = { lasso = 1 } } },
+		-- Zones et sceaux (personnage)
+		{ "zone_seal_1",     42, "zone", 10, "char", crit = { "count", "seals", 1 },        reward = { aids = { lasso = 1 } } },
+		{ "zone_visit_10",   48, "zone", 5,  "char", crit = { "count", "placeZone", 10 },   reward = { aids = { appat = 1 } } },
+		{ "zone_visit_25",   49, "zone", 10, "char", crit = { "count", "placeZone", 25 },   reward = { aids = { lasso = 1 } } },
+		{ "zone_villages_10", 52, "zone", 5, "char", crit = { "count", "placeSubzone", 10 } },
+		{ "zone_villages_25", 53, "zone", 10, "char", crit = { "count", "placeSubzone", 25 } },
+		{ "zone_capitals",   54, "zone", 10, "char", crit = { "list", "capitals" },         reward = { title = 17 } },
+		{ "zone_capital_enemy", 55, "zone", 10, "char", crit = { "count", "capitalEnemy", 1 } },
+		-- Au jour le jour (personnage)
+		{ "day_mission_1",   65, "day", 5,  "char", crit = { "count", "missions", 1 } },
+		{ "day_rare_1",      71, "day", 5,  "char", crit = { "count", "placeRare", 1 } },
+		{ "day_rare_10",     72, "day", 10, "char", crit = { "count", "placeRare", 10 },    reward = { aids = { lasso = 1 } } },
+		{ "day_rare_50",     73, "day", 25, "char", crit = { "count", "placeRare", 50 },    reward = { title = 19 } },
+		-- Personnage
+		{ "char_level_10",   86, "char", 5,  "char", crit = { "count", "level", 10 } },
+		{ "char_level_20",   87, "char", 5,  "char", crit = { "count", "level", 20 } },
+		{ "char_level_30",   88, "char", 10, "char", crit = { "count", "level", 30 } },
+		{ "char_level_40",   89, "char", 10, "char", crit = { "count", "level", 40 } },
+		{ "char_level_50",   90, "char", 10, "char", crit = { "count", "level", 50 } },
+		{ "char_level_60",   91, "char", 25, "char", crit = { "count", "level", 60 },       reward = { title = 21 } },
+		-- statistique du client 107 (« créatures tuées », vérifiée en jeu : 780) ;
+		-- repli : les abattus du bestiaire
+		{ "char_kills_1000", 99, "char", 10, "char", crit = { "stat", { 107 }, 1000, alt = "bestiaryKills" }, desc = "FEATD_kills" },
+		{ "char_kills_10000", 100, "char", 25, "char", crit = { "stat", { 107 }, 10000, alt = "bestiaryKills" }, desc = "FEATD_kills" },
+		-- statistique 353 pas encore vérifiée en jeu : grisée
+		{ "char_hearth_50",  98, "char", 10, "char", crit = { "stat", { 353 }, 50 }, desc = "FEATD_hearth", pending = true },
+		-- Donjons (personnage)
+		{ "dng_visit_1",    107, "dng", 5,  "char", crit = { "count", "placeDungeon", 1 },  reward = { aids = { lasso = 1 } } },
+		{ "dng_visit_10",   108, "dng", 10, "char", crit = { "count", "placeDungeon", 10 }, reward = { aids = { sifflet = 1 } } },
+		{ "dng_visit_20",   109, "dng", 25, "char", crit = { "count", "placeDungeon", 20 } },
+		{ "dng_visit_all",  110, "dng", 50, "char", crit = { "list", "dungeons" },          reward = { title = 24 } },
+		-- Grands hauts faits (compte)
+		{ "meta_menagerie", 166, "meta", 50, "account", crit = { "meta", "men", 20 },       reward = { title = 35 } },
+		{ "meta_points_500", 171, "meta", 10, "account", crit = { "points", 500 } },
+		{ "meta_points_1500", 172, "meta", 25, "account", crit = { "points", 1500 } },
+	}) do ns.FeatAdd(row) end
+end)
 
 -- Titres : registre des 40 titres dans FeatsTitles.lua (lot D) ; une ligne
 -- y renvoie par reward.title = code.

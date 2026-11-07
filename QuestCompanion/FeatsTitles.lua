@@ -28,7 +28,7 @@ local ADDON, ns = ...
 if ns.blocked then return end
 local L = ns.L
 
-ns.FEAT_TITLES = {
+local TITLES = {
 	[1]  = { pos = "pre", src = "men_species_10",  m = "Apprenti dresseur %s", f = "Apprentie dresseuse %s", en = "Apprentice Trainer %s" },
 	[2]  = { pos = "pre", src = "men_species_25",  m = "Dresseur %s", f = "Dresseuse %s", en = "Trainer %s" },
 	[3]  = { pos = "pre", src = "men_species_50",  m = "Dresseur confirmé %s", f = "Dresseuse confirmée %s", en = "Seasoned Trainer %s" },
@@ -73,6 +73,27 @@ ns.FEAT_TITLES = {
 	[39] = { pos = "suf", src = "fun_unlucky",     m = "%s le Malchanceux", f = "%s la Malchanceuse", en = "%s the Unlucky" },
 	[40] = { pos = "suf", src = "men_bad_luck",    m = "%s, Bredouille", en = "%s the Empty-Handed" },
 }
+
+-- Mémoire : chaque titre devient un tableau de 6 cases (pos, src, m, f, en,
+-- enf) lu par ses noms (title.m…) ; seules les formes de la langue du client
+-- sont gardées (toutes en mode test, ns.KEEP_STRINGS, pour la parité)
+do
+	local FIELDS = { pos = 1, src = 2, m = 3, f = 4, en = 5, enf = 6 }
+	local MT = { __index = function(title, key)
+		local slot = FIELDS[key]
+		local value = slot and rawget(title, slot)
+		if value == false then return nil end
+		return value
+	end }
+	local locale = (rawget(_G, "GetLocale") and GetLocale()) or "frFR"
+	local french = locale == "frFR" or locale == "fr"
+	local keepFr, keepEn = french or ns.KEEP_STRINGS, not french or ns.KEEP_STRINGS
+	ns.FEAT_TITLES = {}
+	for code, t in pairs(TITLES) do
+		ns.FEAT_TITLES[code] = setmetatable({ t.pos or false, t.src or false, keepFr and t.m or false,
+			keepFr and t.f or false, keepEn and t.en or false, keepEn and t.enf or false }, MT)
+	end
+end
 ns.FEAT_TITLE_MAX = 255
 ns.FEAT_TITLE_FORMS = { "auto", "m", "f" }
 -- titre automatique : palier d'espèces (TRAINER_RANKS, MenagerieCollection.lua) -> code
