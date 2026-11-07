@@ -1,8 +1,8 @@
 ## Interface: 16001
 ## Interface-Camelot: 16001
 ## Title: |cffe8a54bQuest|r|cff5b8fd6Companion|r
-## Notes: A little travel companion and its journal: zone completion, reward chests, evolution.
-## Notes-frFR: Compagnon de route et carnet de voyage : complétion de zone, coffres, évolution.
+## Notes: Catch the monsters you defeat: stars, shinies, a hunting companion, zone seals, trainer titles and card, guild feats. Plus a travel journal.
+## Notes-frFR: Capture les monstres que tu abats : étoiles, brillantes, compagnon de chasse, sceaux de zone, titres et fiche de dresseur, exploits de guilde. Et un carnet de voyage.
 ## Version: 2.4.0
 ## X-License: GPL-3.0
 ## Author: Tristabeau

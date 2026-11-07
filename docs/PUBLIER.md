@@ -90,7 +90,7 @@ git tag qc-v1.0.0    # QuestCompanion
 git push origin v1.26.0 qc-v1.0.0
 ```
 
-Un tag qui contient `beta` ou `alpha` (`v1.27.0-beta1`) part comme fichier bêta ou alpha.
+**Publier en Release** (depuis QuestCompanion 2.4.0 et Ready2Quest 1.29.3) : tague sans suffixe (`qc-v2.4.0`, `v1.29.3`). L'application CurseForge ne transmet les fichiers bêta qu'aux joueurs qui ont choisi de les recevoir : une version bêta n'atteint presque personne. Un tag qui contient `beta` ou `alpha` (`v1.27.0-beta1`) part comme fichier bêta ou alpha : à réserver à un essai auprès de quelques testeurs.
 
 **Ordre la première fois** : publie Ready2Quest 1.26.0 **avant** QuestCompanion 1.0.0. Un QuestCompanion installé avec un Ready2Quest 1.25, qui contient encore le compagnon, s'efface avec un message pour éviter deux compagnons ; il faut donc que la 1.26.0 soit disponible.
 
