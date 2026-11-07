@@ -60,7 +60,8 @@ do
 	-- v1.1.0 : plus un cadre et un fond des brillantes (Shiny.lua)
 	-- v1.2.0 : plus 4 cadres et 11 fonds tirés des images du jeu
 	-- QC 2.0 : plus un cadre et un fond par biome (sceaux) et ceux des titres (MenagerieCollection.lua)
-	Check("[COSM] 25 cadres, 33 fonds", #NS.COMPANION_FRAMES == 25 and #NS.COMPANION_BACKGROUNDS == 33, #NS.COMPANION_FRAMES .. "/" .. #NS.COMPANION_BACKGROUNDS)
+	-- QC 2.7 : plus 2 cadres et 2 fonds des hauts faits (FeatsCosmetics.lua)
+	Check("[COSM] 27 cadres, 35 fonds", #NS.COMPANION_FRAMES == 27 and #NS.COMPANION_BACKGROUNDS == 35, #NS.COMPANION_FRAMES .. "/" .. #NS.COMPANION_BACKGROUNDS)
 	local displays, okDisplay = {}, true
 	for _, def in ipairs(NS.COMPANION_APPEARANCES) do
 		if type(def.display) ~= "number" or def.display <= 0 or displays[def.display] then okDisplay = false end

@@ -165,8 +165,10 @@ do
 		return toc:find("FeatsData.lua\nFeatsCatMenagerie.lua\n", 1, true) ~= nil
 			and toc:find("FeatsCatMenagerie.lua\n[%w_\n.]-Feats.lua\n") ~= nil
 	end)())
+	-- lot E : les cosmétiques du compagnon existent (FeatsCosmetics.lua) ; la fiche de dresseur attend encore
 	Check("[HF-B] cosmétiques pas encore fabriqués : en attente (reward.soon), pas de déblocage fantôme",
-		NS:FeatDef("men_boss_1").reward.cosmetic == nil and NS:FeatDef("men_boss_1").reward.soon[2] == "feat_chain")
+		NS:FeatDef("men_boss_1").reward.cosmetic[2] == "feat_chain" and NS:FeatDef("men_boss_1").reward.soon == nil
+		and NS:FeatDef("men_species_500").reward.cosmetic == nil and NS:FeatDef("men_species_500").reward.soon[2] == "card_census")
 end
 
 -- 2. Une obtention par sorte de critère --------------------------------------------------------------------
