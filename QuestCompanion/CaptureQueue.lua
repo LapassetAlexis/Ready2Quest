@@ -45,7 +45,7 @@ ns.CAPTURE_NET_SIZE = NET_SIZE
 ns.CAPTURE_NET_GAP = 8            -- px entre le cadre du compagnon et le filet
 ns.CAPTURE_NET_PULSE = 4          -- s de battement doré à l'arrivée d'un candidat
 ns.CAPTURE_TOAST_SECONDS = 5      -- s d'affichage du bandeau « Capture possible »
-local TOAST_W, TOAST_H, TOAST_ICON = 340, 102, 34
+local TOAST_W, TOAST_H, TOAST_ICON = 384, 102, 34
 ns.CAPTURE_MUTE_CHOICES = { 5, 15, 30, 60 }   -- minutes de sourdine proposées par le bandeau
 -- Sons (2.2.0) : des kits du client, par numéro (SoundKitConstants.lua de
 -- l'interface de Blizzard ; les numéros sont les mêmes sur tous les clients) :
