@@ -493,6 +493,7 @@ do
 	Check("[COMP] autre bouton : rien", not NS.journalFrame:IsShown() and C.Needs().mood == 66)
 	NS.JournalCounts = nil
 	Check("[COMP] survol : le clic droit est annoncé", NS.L.COMP_HOVER_HINT:find("clic droit : carnet", 1, true) ~= nil)
+	Check("[COMP] survol : changer de compagnon est expliqué (2.9.0)", NS.L.COMP_HOVER_HINT:find("Change de compagnon", 1, true) ~= nil)
 	-- une caresse réveille
 	local data = NS:CompanionData()
 	data.sleepy, data.sleepyLeft = true, 300
