@@ -39,6 +39,7 @@ Checks.lua
 UI.lua
 Notice.lua
 Camp.lua
+Professions.lua
 Expedition.lua
 Dungeon.lua
 QuestReward.lua
