@@ -424,8 +424,15 @@ do
 	CZ.keys.Y = nil
 	Check("[CZ] une seule tentative : retiré ensuite, jamais remis", NS:BindingDefaultTry() == "done" and CZ.keys.Y == nil)
 	CZ.Binds({ Y = "TOGGLEACHIEVEMENT" })
-	Check("[CZ] Y déjà pris : rien ne change, rien dans le chat", NS:BindingDefaultTry() == "taken"
-		and CZ.keys.Y == "TOGGLEACHIEVEMENT" and CZ.saves == 0 and Mock:Output() == "" and NS:CharData().featsKeyTried)
+	Check("[CZ] Y sur les hauts faits de Blizzard (vides sur Forever) : remplacé", NS:BindingDefaultTry() == "bound"
+		and CZ.keys.Y == "QUESTCOMPANION_FEATS" and CZ.saves == 1)
+	CZ.Binds({ Y = "TOGGLEACHIEVEMENT" })
+	NS:CharData().featsKeyTried = true
+	Check("[CZ] ancienne tentative (2.8.2, Y laissé) : refaite une fois", NS:BindingDefaultTry() == "bound"
+		and CZ.keys.Y == "QUESTCOMPANION_FEATS" and NS:CharData().featsKeyTried == 2)
+	CZ.Binds({ Y = "TOGGLEAUTORUN" })
+	Check("[CZ] Y pris par une autre action : rien ne change, rien dans le chat", NS:BindingDefaultTry() == "taken"
+		and CZ.keys.Y == "TOGGLEAUTORUN" and CZ.saves == 0 and Mock:Output() == "" and NS:CharData().featsKeyTried)
 	CZ.Binds()
 	CZ.combat = true
 	Check("[CZ] en combat : reporté", NS:BindingDefaultTry() == "combat" and CZ.keys.Y == nil and not NS:CharData().featsKeyTried)

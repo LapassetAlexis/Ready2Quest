@@ -1,5 +1,10 @@
 # QuestCompanion
 
+## 2.8.3 — correctif
+
+- **Fini la fenêtre « QuestCompanion a été bloqué »** : quand une créature brillante était repérée, l'addon posait de lui-même une étoile de raid au-dessus d'elle. Sur Forever, cette action est réservée au joueur : le jeu bloquait l'addon et affichait sa fenêtre d'avertissement, souvent au moment où tu changeais d'arme ou mangeais. L'étoile de raid n'est plus posée ; l'alerte du compagnon, le message et l'étoile sur la barre de nom restent. L'option « Étoile sur les brillantes » disparaît.
+- **La touche Y ouvre enfin les hauts faits** : sur Forever, Y était déjà attribuée aux hauts faits de Blizzard (vides), et l'addon renonçait. Y passe maintenant aux hauts faits de QuestCompanion, une fois, si elle n'est prise par rien d'autre ; à modifier dans Raccourcis ou les options.
+
 ## 2.8.2 — style Azeroth plus lisible
 
 - **Bulle du compagnon lisible** : elle s'affiche enfin sur un parchemin clair. Le fond utilisé jusqu'ici était la boîte sombre et translucide des dialogues du jeu, qui assombrissait tout ; la bulle prend maintenant le parchemin des hauts faits, avec un liseré brun et un texte brun très foncé. Nouvelle commande `/qc debug bulle` : elle affiche l'état de la bulle (textures, couches, transparence) à joindre à un retour.

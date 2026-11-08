@@ -59,6 +59,11 @@ if ns.KEEP_STRINGS then ns.BINDINGS_STRINGS = { fr = FR, en = EN } end
 
 ns.BINDINGS = { feats = "QUESTCOMPANION_FEATS", journal = "QUESTCOMPANION_JOURNAL" }
 ns.BINDING_DEFAULT_KEY = "Y"
+-- Y déjà posé sur ces actions du jeu compte comme libre : sur Forever, Y ouvre
+-- les hauts faits de Blizzard, vides (2.8.3)
+ns.BINDING_REPLACEABLE = { TOGGLEACHIEVEMENT = true }
+-- 2 : tentative faite avec la règle 2.8.3 (true = ancienne tentative, refaite une fois)
+local TRIED = 2
 local B = ns.BINDINGS
 local LABEL = { feats = "BIND_FEATS", journal = "BIND_JOURNAL" }
 -- touches seules qui ne font qu'ajouter un modificateur
@@ -120,16 +125,18 @@ end
 -- ---------------------------------------------------------------------------
 function ns:BindingDefaultTry()
 	local char = self:CharData()
-	if char.featsKeyTried then return "done" end
+	if char.featsKeyTried == TRIED then return "done" end
 	if InCombat() then
 		self.bindingDeferred = true
 		return "combat"
 	end
 	self.bindingDeferred = nil
 	if type(G("GetBindingAction")) ~= "function" or type(G("SetBinding")) ~= "function" then return "noapi" end
-	char.featsKeyTried = true
+	char.featsKeyTried = TRIED
 	local key = ns.BINDING_DEFAULT_KEY
-	if Action(key) ~= "" then return "taken" end
+	local current = Action(key)
+	if current == B.feats then return "bound" end
+	if current ~= "" and not ns.BINDING_REPLACEABLE[current] then return "taken" end
 	if Call(G("SetBinding"), key, B.feats) == false then return "refused" end
 	Save()
 	self:Print(self:F("BIND_DEFAULT_MSG", key))
