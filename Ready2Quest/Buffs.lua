@@ -128,6 +128,49 @@ local function ExclusiveGroup(family)
 end
 ns.BuffExclusiveGroup = ExclusiveGroup
 
+-- ---------------------------------------------------------------------------
+-- Buffs de classe (1.30.1) : qui peut les donner. Un buff de classe n'est
+-- réclamé que si ta classe ou une classe de ton groupe le pose ; les autres
+-- (élixirs, parchemins, objets, auras de monde) seulement sur le personnage
+-- qui les a appris (la liste des buffs suivis est commune au compte).
+-- Noms normalisés (BuffFamily), frFR et enUS.
+-- ---------------------------------------------------------------------------
+local GROUP_CLASS = {
+	["blessing"] = "PALADIN", ["paladin-aura"] = "PALADIN", ["seal"] = "PALADIN",
+	["mage-armor"] = "MAGE", ["mage-magic"] = "MAGE",
+	["warlock-armor"] = "WARLOCK", ["shaman-shield"] = "SHAMAN",
+	["warrior-shout"] = "WARRIOR", ["hunter-aspect"] = "HUNTER",
+	["priest-inner"] = "PRIEST", ["druid-form"] = "DRUID",
+}
+local CLASS_BUFF_NAMES = {
+	PRIEST = { "mot de pouvoir : robustesse", "power word: fortitude", "esprit divin", "divine spirit",
+		"protection contre l'ombre", "shadow protection", "gardien de peur", "garde de peur", "fear ward",
+		"mot de pouvoir : bouclier", "power word: shield", "rénovation", "renew" },
+	MAGE = { "intelligence des arcanes", "arcane intellect", "protection contre le feu", "fire ward",
+		"protection contre le givre", "frost ward", "bouclier de mana", "mana shield" },
+	DRUID = { "marque du fauve", "mark of the wild", "épines", "thorns", "augure de clarté", "omen of clarity",
+		"récupération", "rejuvenation" },
+	WARLOCK = { "respiration interminable", "unending breath", "détection de l'invisibilité",
+		"detect invisibility", "détection de l'invisibilité inférieure", "detect lesser invisibility" },
+	HUNTER = { "aura de précision", "trueshot aura" },
+	SHAMAN = { "marche sur l'eau", "water walking", "respiration aquatique", "water breathing" },
+	WARRIOR = { "cri de démoralisation" },
+}
+local CLASS_BY_NAME = {}
+for classFile, names in pairs(CLASS_BUFF_NAMES) do
+	for _, name in ipairs(names) do CLASS_BY_NAME[name] = classFile end
+end
+ns.BUFF_CLASS_NAMES = CLASS_BUFF_NAMES
+
+-- La classe qui pose ce buff (nom normalisé), ou nil s'il n'est pas de classe
+local function BuffClass(family)
+	if type(family) ~= "string" then return nil end
+	if CLASS_BY_NAME[family] then return CLASS_BY_NAME[family] end
+	local group = ExclusiveGroup(family)
+	return group and GROUP_CLASS[group] or nil
+end
+ns.BuffClass = BuffClass
+
 -- Un buff suivi qui n'a pas été vu depuis 7 jours n'est plus réclamé : buff
 -- mondial ponctuel, ancien groupe, talent abandonné…
 local FORGET_AFTER = 7 * 24 * 3600
@@ -237,6 +280,11 @@ local function Plain(v) return ns.Plain and ns.Plain(v) or v end
 -- Note le lanceur d'une aura sur la fiche du buff : self, ou sa classe
 local function NoteCaster(entry, aura)
 	if type(entry) ~= "table" or type(aura) ~= "table" then return end
+	-- 1.30.1 : le personnage qui l'a eu (buffs hors classe : réclamés là seulement)
+	if ns.CharKey then
+		entry.chars = type(entry.chars) == "table" and entry.chars or {}
+		entry.chars[ns:CharKey()] = true
+	end
 	local src = Plain(aura.sourceUnit)
 	if Plain(aura.isFromPlayerOrPlayerPet) == true or src == "player" or src == "pet" or src == "vehicle" then
 		entry.self, entry.casterClass = true, nil
@@ -279,11 +327,15 @@ end
 
 -- Ce buff peut-il t'être donné maintenant ?
 function ns:BuffAvailable(spellId, entry, classes, grouped)
-	if entry.self then return true end
+	-- 1.30.1 : un buff de classe ne vient que de cette classe (toi ou ton groupe)
+	local cls = BuffClass(BuffFamily(entry.name))
+	if cls then return classes[cls] == true end
 	if KnowsSpell(spellId) then return true end
-	if entry.casterClass then return classes[entry.casterClass] == true end
-	-- appris avant 1.30.0, lanceur inconnu : en groupe comme avant, seul non
-	return grouped == true
+	-- hors classe (élixir, parchemin, objet…) : seulement sur le personnage qui
+	-- l'a eu ; appris d'un joueur dont on connaît la classe : si elle est là
+	if entry.casterClass and not entry.self then return classes[entry.casterClass] == true end
+	local mine = type(entry.chars) == "table" and ns.CharKey and entry.chars[ns:CharKey()] == true
+	return mine == true
 end
 
 -- Retourne : manquants (table), suivis (nombre), illisibles (nombre)
