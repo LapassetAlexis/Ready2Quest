@@ -234,6 +234,7 @@ do
 	Mock.world.auras[WELCOME] = nil
 	Mock:Advance(60)
 	Check("[CAMP] seuil passé sans buff : invitation", FrameText() == NS.L.CAMP_TIMER_HINT, FrameText())
+	Check("[CAMP] bandeau : icône du feu de camp", NS.campFrame and NS.campFrame.icon ~= nil and NS.CAMP_ICON:find("Spell_Fire_Fire", 1, true) ~= nil)
 
 	-- les buffs tombent
 	Mock.world.auras[BENEFITS] = { spellId = BENEFITS, expirationTime = Mock.now + 3600 }

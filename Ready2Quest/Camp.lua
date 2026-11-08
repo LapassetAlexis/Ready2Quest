@@ -384,6 +384,8 @@ local function Clock(seconds)
 	return string.format("%d:%02d", math.floor(seconds / 60), seconds % 60)
 end
 
+ns.CAMP_ICON = "Interface\\Icons\\Spell_Fire_Fire"
+
 -- bandeau (Theme.CreateToast) : liseré ambre, le décompte au centre
 function ns:EnsureCampFrame()
 	if self.campFrame then return self.campFrame end
@@ -391,7 +393,15 @@ function ns:EnsureCampFrame()
 	local frame = Theme.CreateToast(UIParent, 300, 28)
 	if not frame then return nil end
 	frame.text = Theme.Text(frame, Theme.F_LABEL, Theme.LABEL)
-	frame.text:SetPoint("CENTER", frame, "CENTER", Theme.TOAST_ACCENT / 2, 0)
+	frame.text:SetPoint("CENTER", frame, "CENTER", Theme.TOAST_ACCENT / 2 + 11, 0)
+	-- l'icône du feu de camp, à gauche du texte (1.29.6)
+	if frame.CreateTexture then
+		frame.icon = frame:CreateTexture(nil, "ARTWORK")
+		frame.icon:SetTexture(ns.CAMP_ICON)
+		frame.icon:SetSize(18, 18)
+		frame.icon:SetPoint("RIGHT", frame.text, "LEFT", -5, 0)
+		if frame.icon.SetTexCoord then frame.icon:SetTexCoord(0.08, 0.92, 0.08, 0.92) end
+	end
 	if self.RestorePoint then self:RestorePoint(frame, "campPoint", { point = "TOP", x = 0, y = -150 }) end
 	frame:Hide()
 	self.campFrame = frame

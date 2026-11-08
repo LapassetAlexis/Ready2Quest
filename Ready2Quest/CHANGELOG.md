@@ -2,7 +2,7 @@
 
 ## 1.29.6
 
-- **Bandeau du camp plus clair** : une fois le délai passé sans buff, il dit « Buffs du feu de camp : assieds-toi ou fabrique ici » au lieu d'un « Au camp : assieds-toi ou fabrique » peu parlant. Bandeau un peu plus large.
+- **Bandeau du camp plus clair** : une fois le délai passé sans buff, il dit « Buffs du feu de camp : assieds-toi ou fabrique ici » au lieu d'un « Au camp : assieds-toi ou fabrique » peu parlant, avec l'icône du feu de camp. Bandeau un peu plus large.
 
 ## 1.29.5
 
