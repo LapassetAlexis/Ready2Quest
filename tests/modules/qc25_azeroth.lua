@@ -148,7 +148,7 @@ do
 	local toast = NS.captureToast
 	Check("[AZ] bandeau Azeroth : fond des hauts faits, cadre carré, bouclier gris", toast and toast:IsShown() and toast.azeroth
 		and toast.bg.atlas == "ui-achievement-alert-background" and toast.iconFrame.atlas == "ui-achievement-iconframe"
-		and toast.shield:IsShown() and toast.shieldKind == "grey" and toast.shield.atlas == "ui-achievement-shield-desaturated")
+		and toast.shield:IsShown() and toast.shieldKind == "grey" and toast.shield.atlas == "ui-achievement-shield-1-desaturated")
 	Check("[AZ] titre en capitales sur le parchemin, nom au centre", toast.title:GetText() == "CAPTURE POSSIBLE"
 		and toast.text:GetText() == "Loup A" and toast.title:GetParent() == toast.banner and toast.text:GetParent() == toast.banner
 		and toast.title.justifyH == "CENTER" and toast.text.justifyH == "CENTER")

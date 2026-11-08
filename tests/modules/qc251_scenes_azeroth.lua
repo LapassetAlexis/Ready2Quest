@@ -212,13 +212,13 @@ do
 	local banner = stage.banner
 	Check("[AZS] échappée : « ÉCHAPPÉ… », la phrase, bouclier gris", rolling.result == "fail" and banner:IsShown()
 		and banner.title:GetText() == "ÉCHAPPÉ…" and banner.text:GetText() == NS.L.CAPTURE_STAGE_FAIL
-		and banner.shieldKind == "grey" and banner.shield.atlas == "ui-achievement-shield-desaturated"
+		and banner.shieldKind == "grey" and banner.shield.atlas == "ui-achievement-shield-1-desaturated"
 		and not banner.bling:IsShown(), banner.title:GetText())
 	Check("[AZS] échappée : notre filet déchiré", stage.torn == true and stage.net.texCoord[1] == NS.CAPTURE_COORDS.netTorn[1])
 	stage.scripts.OnMouseUp(stage)
 	SZ.Close(5)
 	-- pas de bouclier gris dans ce client : le doré, désaturé
-	SZ.Reset({ ["ui-achievement-shield-desaturated"] = true })
+	SZ.Reset({ ["ui-achievement-shield-1-desaturated"] = true })
 	SZ.SeeKill(8201, { name = "Fuyard" })
 	SZ.Roll(0.99)
 	NS.CaptureChance = (function(base) SZ.chance = base; return function() return 0, false end end)(NS.CaptureChance)

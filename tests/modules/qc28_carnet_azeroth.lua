@@ -360,18 +360,17 @@ do
 	Say("-- verdict azeroth : portrait et niveau")
 	CZ.Reset()
 	local banner = NS:AzerothVerdict(UIParent, 330, 107)
-	Check("[CZ] verdict : cadre d'icône à gauche (au-dessus du modèle)", banner.iconFrame and banner.iconFrame.atlas == NS.AZEROTH_ATLAS.frame
-		and banner.portraitRing.level > banner.portrait.level)
+	-- 2.9.0 : portrait fixe (icône du type), plus de modèle 3D
+	Check("[CZ] verdict : cadre d'icône à gauche (au-dessus du portrait)", banner.iconFrame and banner.iconFrame.atlas == NS.AZEROTH_ATLAS.frame
+		and banner.portraitRing.level > (banner.GetFrameLevel and banner:GetFrameLevel() or 0))
 	banner:SetShield("gold")
 	banner:SetCreature({ npcID = 7001, type = "Bête", level = 12 })
-	Check("[CZ] verdict : pas de modèle -> icône du type", not banner.portraitShown and banner.portraitIcon:IsShown()
+	Check("[CZ] verdict : l'icône du type", not banner.portraitShown and banner.portraitIcon:IsShown()
 		and banner.portraitIcon.texture == NS.MENAGERIE_TYPE_ICONS["Bête"])
-	local calls = {}
-	banner.portrait.SetCreature = function(_, npc) calls.npc = npc; return true end
-	banner.portrait.SetPortraitZoom = function(_, z) calls.zoom = z end
-	banner:SetCreature({ npcID = 7001, type = "Bête" })
-	Check("[CZ] verdict : modèle en portrait (zoom 1)", banner.portraitShown and calls.npc == 7001 and calls.zoom == 1
-		and banner.portrait:IsShown() and not banner.portraitIcon:IsShown())
+	banner:SetCreature({ npcID = 7001, type = "Inconnu" })
+	Check("[CZ] verdict : type inconnu -> icône de repli", banner.portraitIcon.texture == NS.AZEROTH_PORTRAIT_ICON)
+	banner:SetCreature(nil)
+	Check("[CZ] verdict : sans créature, cadre vide", not banner.portraitIcon:IsShown())
 	banner:SetLevel(12)
 	Check("[CZ] verdict : le niveau dans le bouclier", banner.levelText:GetText() == "12" and banner.levelText:IsShown()
 		and select(2, banner.levelText:GetPoint()) == banner.shield)
