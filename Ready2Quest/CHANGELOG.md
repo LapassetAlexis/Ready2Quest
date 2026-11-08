@@ -1,5 +1,14 @@
 # Journal des modifications
 
+## 1.30.0
+
+- **Buffs réclamés seulement si on peut te les donner** : un buff appris d'un autre joueur (un cri de guerrier reçu en groupe) n'est réclamé que si sa classe est dans ton groupe ; ceux que tu poses toi-même le sont toujours.
+- **Aggro en avertissement** : la marque passe au rouge 5 m avant la portée estimée (« danger, trop près »), à l'ambre jusqu'à 12 m au-delà.
+- **Métiers au plafond** : nouveau contrôle du Check avant le départ quand un métier est bloqué à 75, 150 ou 225 (passe voir ton entraîneur). Merci Lex !
+- **Quêtes de voyage** (« va voir untel », sans objectif) : elles ne comptent plus comme « prêtes à rendre » dans le Check. Merci Lex !
+
+*English:* buffs are only requested when you or your group can cast them; the aggro marker turns red 5 yards before the estimated range ("danger, too close"); new pre-departure check for professions stuck at their rank cap; travel quests (no objectives) no longer count as "ready to turn in".
+
 ## 1.29.6
 
 - **Bandeau du camp plus clair** : une fois le délai passé sans buff, il dit « Buffs du feu de camp : assieds-toi ou fabrique ici » au lieu d'un « Au camp : assieds-toi ou fabrique » peu parlant, avec l'icône du feu de camp. Bandeau un peu plus large.

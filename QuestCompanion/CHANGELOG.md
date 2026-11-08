@@ -1,5 +1,20 @@
 # QuestCompanion
 
+## 2.9.0 — vos retours : collection au compte, captures plus faciles, « Créatures »
+
+- **Collection commune à tous tes personnages** : tes captures sont maintenant partagées par tout le compte. À la mise à jour, chaque personnage y verse la sienne : les deux versions de chaque espèce, les meilleures étoiles, les dates les plus anciennes, et les aides de capture additionnées (dans la limite de la besace). Chaque personnage garde son compagnon. Merci Deklatis !
+- **Captures plus faciles** : chances relevées (normal 50 %, élite 25 %, rare 15 %, rare élite 10 %, boss 4 %), pénalité de niveau adoucie, et chaque échec d'affilée rend le filet un peu plus sûr (+5 points, jusqu'à +25).
+- **Recaptures réglables** : une espèce déjà capturée ne revient plus sans fin dans le filet pour gagner des étoiles. Par rareté, choisis combien d'essais par espèce (2 par défaut pour les communes, sans limite pour les élites et les rares).
+- **La Ménagerie devient « Créatures »** : page du carnet, catégorie de hauts faits, guide, répliques ; « ta collection » pour ce que tu as capturé.
+- **Bandeau « Capture possible »** : 3 secondes, plus prolongé à chaque monstre abattu en pleine mêlée, gardé tant que la souris est dessus.
+- **Plusieurs monstres sur toi** : le cadre du compagnon clignote en rouge.
+- **Compagnon cadré en buste** par défaut : il débordait de son petit cadre.
+- Le survol du compagnon dit comment en changer ; Tout capturer n'affiche plus de bouclier vide sur une échappée.
+- **Lisibilité Azeroth** : textes centrés dans leurs rangées, boucliers de points à la bonne taille et chiffres centrés (hauts faits, fiche), « faite » des missions en vert sombre lisible, bloc « Ses effets » et intertitres de la fiche de dresseur à l'encre mesurée ; à la capture, un portrait fixe (l'icône du type) remplace la tête 3D qui montrait parfois une patte.
+- **Carnet à l'écran** plus large et lisible : libellés entiers, voile sombre sous chaque ligne, « Exploration : <zone> ».
+
+*English:* account-wide collection (each character's captures merged once; your companion stays per character, thanks Deklatis); easier captures (normal 50%, elite 25%, rare 15%, rare elite 10%, boss 4%, softer level penalty, +5 points per failure in a row up to +25); per-rarity recapture limits; the Menagerie is now "Creatures"; 3-second "Capture possible" banner that no longer stays up during big fights; companion frame blinks red when several monsters target you; companion framed as a bust by default; readability fixes in the Azeroth style (centered texts, point shields, mission "done" label, effects block, trainer card headers, fixed portrait in the capture scene); wider, more readable on-screen tracker.
+
 ## 2.8.3 — correctif
 
 - **Fini la fenêtre « QuestCompanion a été bloqué »** : quand une créature brillante était repérée, l'addon posait de lui-même une étoile de raid au-dessus d'elle. Sur Forever, cette action est réservée au joueur : le jeu bloquait l'addon et affichait sa fenêtre d'avertissement, souvent au moment où tu changeais d'arme ou mangeais. L'étoile de raid n'est plus posée ; l'alerte du compagnon, le message et l'étoile sur la barre de nom restent. L'option « Étoile sur les brillantes » disparaît.
