@@ -219,17 +219,17 @@ do
 	local banner = NS:AzerothVerdict(UIParent, 330, 107)
 	local anchor = banner.portraitAnchor
 	local size = anchor:GetWidth()
-	local tl, br = Point(banner.portrait, "TOPLEFT"), Point(banner.portrait, "BOTTOMRIGHT")
+	-- 2.9.0 : plus de modèle 3D, le portrait fixe (icône du type) dans le trou
+	local tl, br = Point(banner.portraitIcon, "TOPLEFT"), Point(banner.portraitIcon, "BOTTOMRIGHT")
 	local cx, cy = (tl.x + br.x) / 2, (tl.y + br.y) / 2
 	Check("[RT] tête : dans le trou du cadre d'icône, centrée", tl.relTo == anchor and br.relTo == anchor
 		and math.abs(cx - size / 2) <= 1 and math.abs(cy + size / 2) <= 1
 		and tl.x >= size * NS.AZEROTH_ICON_HOLE.l - 0.5 and br.x <= size * NS.AZEROTH_ICON_HOLE.r + 0.5,
 		string.format("centre %.1f,%.1f taille %s", cx, cy, size))
-	Check("[RT] icône de repli : même trou", Point(banner.portraitIcon, "TOPLEFT").x == tl.x and Point(banner.portraitIcon, "BOTTOMRIGHT").y == br.y)
-	banner.portrait.SetCreature = function() return true end
+	Check("[RT] portrait fixe : pas de modèle 3D", banner.portrait == nil)
 	banner:SetCreature({ npcID = 7001, type = "Bête" })
-	Check("[RT] tête : cadrage portrait reposé au chargement", type(banner.portrait.framing) == "function"
-		and banner.portrait.hooks and banner.portrait.hooks.OnModelLoaded ~= nil)
+	Check("[RT] portrait fixe : l'icône du type, montrée", banner.portraitIcon:IsShown()
+		and banner.portraitIcon.texture == NS.MENAGERIE_TYPE_ICONS["Bête"])
 	banner:SetShield("gold")
 	banner:SetLevel(12)
 	local lp = Point(banner.levelText, "CENTER")
@@ -297,12 +297,12 @@ do
 	local mrow = men.items[1]
 	mrow.entry = { known = true, class = "elite", npc = 1 }
 	NS.CARNET_PAGE_POSTS.menagerie(NS, f)
-	Check("[RT] Ménagerie : ligne connue voilée, n° et type à l'encre, nom à sa rareté (sombre)", mrow.azVeil and mrow.azVeil:IsShown()
+	Check("[RT] Créatures : ligne connue voilée, n° et type à l'encre, nom à sa rareté (sombre)", mrow.azVeil and mrow.azVeil:IsShown()
 		and Same(mrow.no.textColor, INK[NS.AZEROTH_CONTRAST["men.no"][1]]) and Same(mrow.label.textColor, INK.rElite)
 		and Same(mrow.detail.textColor, INK[NS.AZEROTH_CONTRAST["men.detail"][1]]))
 	mrow.entry = { known = false, npc = 2 }
 	NS.CARNET_PAGE_POSTS.menagerie(NS, f)
-	Check("[RT] Ménagerie : jamais croisée, texte clair", Same(mrow.label.textColor, INK.light) and not mrow.azVeil:IsShown())
+	Check("[RT] Créatures : jamais croisée, texte clair", Same(mrow.label.textColor, INK.light) and not mrow.azVeil:IsShown())
 	local strip = men.collection
 	Check("[RT] sceau : bloc voilé (titre, détail, dresseur lisibles)", strip and strip.azVeil and strip.azVeil:IsShown()
 		and Same(strip.title.textColor, INK.ink) and Same(strip.trainer.textColor, INK.amber))

@@ -63,6 +63,9 @@ local function EachCompanion(self, fn)
 	for key, char in pairs(db.chars) do
 		if type(char) == "table" and type(char.companion) == "table" then fn(char.companion, key, char) end
 	end
+	-- 2.9.0 : la collection du compte (QuestCompanionDB.capture), vue comme
+	-- un compagnon de plus qui n'a que ses captures
+	if type(db.capture) == "table" then fn({ capture = db.capture }, "@account", nil) end
 end
 
 local function Sub(t, key) return type(t) == "table" and type(t[key]) == "table" and t[key] or nil end
@@ -795,7 +798,7 @@ local FR = {
 	FEAT_men_batch_5     = "Coup de filet",
 	FEAT_men_bad_luck    = "Il s'est encore échappé",
 	FEAT_men_level_gap   = "David contre Goliath",
-	FEAT_men_companion_types = "Tour de la ménagerie",
+	FEAT_men_companion_types = "Tour de la collection",
 	FEAT_men_companion_boss = "Garde du corps",
 	FEAT_shiny_seen_1    = "Un éclat dans l'herbe",
 	FEAT_shiny_found_5   = "Œil de pie",
@@ -935,7 +938,7 @@ local EN = {
 	FEAT_men_batch_5     = "Big Haul",
 	FEAT_men_bad_luck    = "Got Away Again",
 	FEAT_men_level_gap   = "David and Goliath",
-	FEAT_men_companion_types = "Menagerie Tour",
+	FEAT_men_companion_types = "Collection Tour",
 	FEAT_men_companion_boss = "Bodyguard",
 	FEAT_shiny_seen_1    = "A Glint in the Grass",
 	FEAT_shiny_found_5   = "Magpie Eye",

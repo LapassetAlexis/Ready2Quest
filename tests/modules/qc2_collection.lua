@@ -244,7 +244,7 @@ do
 		== "100 espèces capturées")
 	Check("[RANK] cinq paliers : 10, 25, 50, 100, 250", #NS.TRAINER_RANKS == 5 and NS.TRAINER_RANKS[5].count == 250
 		and NS.L["TRAINER_" .. NS.TRAINER_RANKS[5].key] == "Grand maître dresseur")
-	Check("[RANK] ce que rapporte un palier", NS:TrainerRankGift(NS.TRAINER_RANKS[3]):find("Enclos de la ménagerie", 1, true) ~= nil,
+	Check("[RANK] ce que rapporte un palier", NS:TrainerRankGift(NS.TRAINER_RANKS[3]):find("Enclos des créatures", 1, true) ~= nil,
 		NS:TrainerRankGift(NS.TRAINER_RANKS[3]))
 end
 
@@ -257,7 +257,7 @@ do
 	local sealed, types, ranks = NS:MenagerieCollectionCatchUp()
 	Check("[CATCH] une fois : sceaux, types et titres posés en silence", sealed == 1 and types == 1 and ranks == 1
 		and NS:MenagerieSealed(1413) and NS:MenagerieCollectionData().init == true)
-	Check("[CATCH] un seul message de résumé", Mock:Output():find("Ménagerie : 1 sceaux", 1, true) ~= nil
+	Check("[CATCH] un seul message de résumé", Mock:Output():find("Créatures : 1 sceaux", 1, true) ~= nil
 		and not Mock:Output():find("Sceau de Les Tarides", 1, true))
 	Check("[CATCH] pas deux fois", NS:MenagerieCollectionCatchUp() == nil)
 	CC.Reset()
@@ -312,7 +312,7 @@ do
 	local f = NS.journalFrame
 	NS:OpenMenagerieZone(1413)
 	local strip = f.men.collection
-	Check("[UI] bandeau de la collection dans la Ménagerie", strip ~= nil and strip:IsShown())
+	Check("[UI] bandeau de la collection dans la page Créatures", strip ~= nil and strip:IsShown())
 	Check("[UI] sceau de la zone choisie et sa progression", strip.title.text == "Sceau de Les Tarides : 1/3 espèces"
 		and strip.bar:IsShown(), strip.title.text)
 	Check("[UI] ce que donne le sceau", strip.detail.text:find("Sceau : savane", 1, true) and strip.detail.text:find("×1,5", 1, true),
@@ -331,7 +331,7 @@ do
 	Check("[UI] bandeau au-dessus de la pagination", select(5, strip:GetPoint()) - strip:GetHeight() > NS.JournalUI.PAGER_Y)
 	CC.Caught(102); CC.Caught(103)
 	NS:RefreshJournal()
-	Check("[UI] zone complète : scellée en ouvrant la Ménagerie", NS:MenagerieSealed(1413)
+	Check("[UI] zone complète : scellée en ouvrant la Créatures", NS:MenagerieSealed(1413)
 		and strip.title.text == "Les Tarides scellée" and strip.accent:IsShown(), strip.title.text)
 	f.menZone = "all"
 	NS:RefreshJournal()

@@ -449,7 +449,8 @@ _G.C_UnitAuras = {
 		if not spellId then return nil end
 		local aura = Mock.world.auras[spellId]
 		if not aura then return nil end
-		return { spellId = spellId, duration = aura.duration or 0, name = aura.name }
+		return { spellId = spellId, duration = aura.duration or 0, name = aura.name, sourceUnit = aura.sourceUnit,
+			isFromPlayerOrPlayerPet = aura.isFromPlayerOrPlayerPet }
 	end,
 	GetPlayerAuraBySpellID = function(spellId)
 		if Mock.secretAuras then error("attempt to read a secret value") end
@@ -1021,7 +1022,7 @@ Check("détail durabilité = 10%", duraResult and duraResult.detail:find("10") ~
 -- 4.7 Apprentissage et contrôle des buffs
 Say("\n== buffs ==")
 ResetWorld()
-Mock.world.auras = { [1459] = { name = "Intelligence des arcanes", duration = 3600 } }
+Mock.world.auras = { [1459] = { name = "Intelligence des arcanes", duration = 3600, sourceUnit = "player" } }
 Mock.world.auraOrder = { 1459 }
 Mock:Fire("UNIT_AURA", "player")
 Check("buff appris depuis l'aura", NS:DB().buffs[1459] ~= nil)
@@ -1810,7 +1811,7 @@ ResetWorld()
 Say("\n== bootstrap et diagnostic ==")
 ResetWorld()
 Check("commande enregistrée par le bootstrap", type(SlashCmdList["SACETDEPART"]) == "function")
-Check("version exposée", NS.version == "1.29.6", NS.version)
+Check("version exposée", NS.version == "1.30.0", NS.version)
 
 local missingMods = {}
 for _, name in ipairs({ "Bootstrap", "Locales", "Compat", "Theme", "Core", "Buffs", "Reagents",
@@ -1831,7 +1832,7 @@ NS.HandleCommand = savedHandle
 Mock:Reset()
 NS:HandleCommand("diag")
 Check("/sd diag liste les modules", Mock:Output():find("modules :") ~= nil, Mock:Output())
-Check("/sd diag affiche la version", Mock:Output():find("1%.29%.6") ~= nil, Mock:Output())
+Check("/sd diag affiche la version", Mock:Output():find("1%.30%.0") ~= nil, Mock:Output())
 
 -- une erreur est enregistrée et affichée
 Mock:Reset()
@@ -2762,7 +2763,7 @@ Check("liste vide : message affiché", safeList.empty.text ~= "", safeList.empty
 
 -- Liste des buffs suivis : bascule et retrait
 ResetWorld()
-NS:DB().buffs[1459] = { name = "Intelligence des arcanes", duration = 1800, enabled = true }
+NS:DB().buffs[1459] = { name = "Intelligence des arcanes", duration = 1800, enabled = true, self = true }
 NS:DB().buffs[1126] = { name = "Marque du fauve", duration = 1800, enabled = true }
 NS.optionsFrame = nil
 NS:ToggleOptions()
@@ -3498,9 +3499,9 @@ Check("[6] Don du fauve = Marque du fauve", NS.BuffFamily("Don du fauve") == NS.
 
 -- [6b] buffs exclusifs (toutes classes) : un seul réclamé, satisfait par n'importe lequel
 ResetWorld()
-NS:DB().buffs[19740] = { name = "Bénédiction de puissance", duration = 600, enabled = true, learned = true, lastSeen = 100 }
-NS:DB().buffs[19742] = { name = "Bénédiction de sagesse", duration = 600, enabled = true, learned = true, lastSeen = 200 }
-NS:DB().buffs[25898] = { name = "Bénédiction supérieure des rois", duration = 1800, enabled = true, learned = true, lastSeen = 50 }
+NS:DB().buffs[19740] = { name = "Bénédiction de puissance", duration = 600, enabled = true, learned = true, lastSeen = 100, self = true }
+NS:DB().buffs[19742] = { name = "Bénédiction de sagesse", duration = 600, enabled = true, learned = true, lastSeen = 200, self = true }
+NS:DB().buffs[25898] = { name = "Bénédiction supérieure des rois", duration = 1800, enabled = true, learned = true, lastSeen = 50, self = true }
 Mock.world.auras = { [19740] = { name = "Bénédiction de puissance", duration = 600 } }
 Mock.world.auraOrder = { 19740 }
 NS:RunChecklist("manual")
@@ -3533,7 +3534,7 @@ end
 ResetWorld()
 local savedByID = C_UnitAuras.GetPlayerAuraBySpellID
 C_UnitAuras.GetPlayerAuraBySpellID = nil
-NS:DB().buffs[1459] = { name = "Intelligence des arcanes", duration = 1800, enabled = true }
+NS:DB().buffs[1459] = { name = "Intelligence des arcanes", duration = 1800, enabled = true, self = true }
 NS:RunChecklist("manual")
 Check("[7] sans API par spellID : buff absent = manquant", Result("buffs").ok == false
 	and Result("buffs").detail:find("Intelligence") ~= nil, Result("buffs").detail)

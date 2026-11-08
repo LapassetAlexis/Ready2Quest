@@ -136,9 +136,11 @@ do
 
 	local V = NS.AggroVerdict
 	Check("[AGGRO] 10-15 m pour 17 : rouge", V(17, 10, 15) == "red")
-	Check("[AGGRO] 15-20 m pour 17 : ambre (peut-être dedans)", V(17, 15, 20) == "amber")
-	Check("[AGGRO] 20-25 m pour 17 : ambre (moins de 5 m de marge)", V(17, 20, 25) == "amber")
-	Check("[AGGRO] 25-30 m pour 17 : vert", V(17, 25, 30) == "green")
+	-- 1.30.0 : le rouge prévient 5 m avant la portée, l'ambre jusqu'à 12 m au-delà
+	Check("[AGGRO] 15-20 m pour 17 : rouge (à moins de 5 m du bord, on prévient)", V(17, 15, 20) == "red")
+	Check("[AGGRO] 20-25 m pour 17 : ambre", V(17, 20, 25) == "amber")
+	Check("[AGGRO] 25-30 m pour 17 : ambre (moins de 12 m de marge)", V(17, 25, 30) == "amber")
+	Check("[AGGRO] 30-35 m pour 17 : vert", V(17, 30, 35) == "green")
 	Check("[AGGRO] moins de 5 m : rouge", V(5, 0, 5) == "red")
 	Check("[AGGRO] au-delà de 80 m : vert", V(45, 80, nil) == "green")
 	Check("[AGGRO] sans mesure : pas de verdict", V(20, nil, nil) == nil)
@@ -211,23 +213,23 @@ do
 	A.W.shift = true
 	NS:AggroOnTooltip(GameTooltip, {})
 	Check("[AGGRO] ligne : portée, distance, verdict",
-		A.Tip():find("Aggro ~20 m · tu es à 20-25 m · à la limite", 1, true) ~= nil, A.Tip())
-	Check("[AGGRO] couleur ambre", GameTooltip.styled[1].color[1] == NS.Theme.ORANGE[1])
+		A.Tip():find("Aggro ~20 m · tu es à 20-25 m · danger, trop près", 1, true) ~= nil, A.Tip())   -- 1.30.0 : on prévient avant
+	Check("[AGGRO] couleur rouge (5 m avant la portée)", GameTooltip.styled[1].color[1] == NS.Theme.RED[1])
 	Check("[AGGRO] mention d'estimation", A.Tip():find("Estimation", 1, true) ~= nil)
 
 	GameTooltip:ClearLines()
 	A.Mob("mouseover", 20, 12)
 	NS:AggroOnTooltip(GameTooltip, {})
 	Check("[AGGRO] 12 m d'un monstre de même niveau : dans sa portée, rouge",
-		A.Tip():find("dans sa portée", 1, true) ~= nil and GameTooltip.styled[1].color[1] == NS.Theme.RED[1], A.Tip())
+		A.Tip():find("danger, trop près", 1, true) ~= nil and GameTooltip.styled[1].color[1] == NS.Theme.RED[1], A.Tip())
 
 	GameTooltip:ClearLines()
 	A.W.level = 30
 	A.Mob("mouseover", 20, 22)     -- 10 niveaux de moins : portée 10
 	NS:AggroOnTooltip(GameTooltip, {})
-	Check("[AGGRO] monstre bien plus faible : hors de portée, vert",
-		A.Tip():find("Aggro ~10 m", 1, true) ~= nil and A.Tip():find("hors de portée", 1, true) ~= nil
-		and GameTooltip.styled[1].color[1] == NS.Theme.GREEN[1], A.Tip())
+	Check("[AGGRO] monstre bien plus faible : à la limite, ambre (marge de 12 m)",
+		A.Tip():find("Aggro ~10 m", 1, true) ~= nil and A.Tip():find("à la limite", 1, true) ~= nil
+		and GameTooltip.styled[1].color[1] == NS.Theme.ORANGE[1], A.Tip())
 	A.W.level = 20
 
 	GameTooltip:ClearLines()
@@ -263,7 +265,7 @@ do
 	Say("-- aggro : anneaux")
 	A.Reset()
 	A.Mob("nameplate1", 20, 12)                       -- rouge
-	A.Mob("nameplate2", 20, 22)                       -- ambre
+	A.Mob("nameplate2", 20, 28)                       -- ambre (1.30.0 : 22 m est déjà rouge)
 	A.Mob("nameplate3", 20, 60)                       -- vert
 	A.Mob("nameplate4", 20, 12, { reaction = 4 })     -- neutre : pas d'anneau
 	for i = 1, 4 do A.Plate("nameplate" .. i) end

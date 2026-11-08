@@ -35,10 +35,10 @@ local FR = {
 	JRN_PROG_TIP_craft     = "Les ressources de ta compétence qui poussent ici. Clic : leur liste.",
 	JRN_PROG_TIP_quests    = "Les quêtes de la zone que ton personnage peut faire. Clic : leur liste.",
 	JRN_PROG_NA            = "Rien à suivre ici pour toi.",
-	JRN_PROG_BESTIARY      = "Bestiaire : %d/%d abattues · détail dans la Ménagerie",
-	JRN_PROG_BESTIARY_NAMED = "Bestiaire : %d/%d abattues (nommés %d/%d) · détail dans la Ménagerie",
+	JRN_PROG_BESTIARY      = "Bestiaire : %d/%d abattues · détail dans la page Créatures",
+	JRN_PROG_BESTIARY_NAMED = "Bestiaire : %d/%d abattues (nommés %d/%d) · détail dans la page Créatures",
 	JRN_PROG_BESTIARY_NONE = "Bestiaire : aucune créature connue ici pour l'instant.",
-	JRN_PROG_MEN_OPEN      = "Ménagerie",
+	JRN_PROG_MEN_OPEN      = "Créatures",
 }
 local EN = {
 	JRN_SEC_progress       = "Exploration",
@@ -60,10 +60,10 @@ local EN = {
 	JRN_PROG_TIP_craft     = "The resources of your skill that grow here. Click: their list.",
 	JRN_PROG_TIP_quests    = "The zone's quests your character can do. Click: their list.",
 	JRN_PROG_NA            = "Nothing to track here for you.",
-	JRN_PROG_BESTIARY      = "Bestiary: %d/%d defeated · details in the Menagerie",
-	JRN_PROG_BESTIARY_NAMED = "Bestiary: %d/%d defeated (named %d/%d) · details in the Menagerie",
+	JRN_PROG_BESTIARY      = "Bestiary: %d/%d defeated · details on the Creatures page",
+	JRN_PROG_BESTIARY_NAMED = "Bestiary: %d/%d defeated (named %d/%d) · details on the Creatures page",
 	JRN_PROG_BESTIARY_NONE = "Bestiary: no known creature here yet.",
-	JRN_PROG_MEN_OPEN      = "Menagerie",
+	JRN_PROG_MEN_OPEN      = "Creatures",
 }
 ns.RegisterStrings(FR, EN)
 if ns.KEEP_STRINGS then ns.JOURNAL_PROGRESS_STRINGS = { fr = FR, en = EN } end

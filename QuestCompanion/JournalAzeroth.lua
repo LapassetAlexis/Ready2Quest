@@ -72,8 +72,12 @@ local T = {
 	pbarM     = { file = 235405, c = C(9, 215, 1, 24, 256, 32) },
 	pbarR     = { file = 235405, c = C(215, 223, 1, 24, 256, 32) },
 	iconFrame = { file = 130656, c = { 0, 0.5625, 0, 0.5625 } },
-	shieldBig = { file = 130665, c = { 0.17, 0.83, 0.2, 0.8 } },
-	tiny      = { file = 235415 },
+	-- 2.9.0 : recadrés sur le dessin (mesuré : 130665, 128×128, bouclier de
+	-- 29 à 99 en largeur, de 39 à 90 en hauteur, écu de 49 à 79 et de 46 à
+	-- 82 ; 235415, 32×32, petit bouclier de 0 à 20 et de 0 à 18) : posés en
+	-- entier, ils sortaient trop petits et décentrés de leur nombre
+	shieldBig = { file = 130665, c = C(29, 99, 39, 90, 128, 128) },     -- 70×51
+	tiny      = { file = 235415, c = C(0, 20, 0, 18, 32, 32) },         -- 20×18
 	shadow    = { file = 130654, c = C(0, 92, 0, 128, 128, 128) },
 	tsuL      = { file = 130668, c = C(6, 32, 0, 26, 64, 32) },       -- filigrane : coins
 	tsuR      = { file = 130668, c = C(32, 58, 0, 26, 64, 32) },
@@ -104,6 +108,15 @@ local INK_SOFT = INKS.inkSoft
 local INK_MUTED = INKS.inkMuted           -- #3d260f
 local AMBER = INKS.amber                  -- l'ambre du thème sur parchemin (#521f00)
 local GOLD_HEAD = { 0.97, 0.85, 0.47 }    -- titres dorés ombrés (#f8d877)
+-- 2.9.0 : le grand bouclier des points (en-tête des hauts faits) : taille,
+-- décalage du nombre, taille de police selon le nombre de chiffres
+local SHIELD_BIG = { w = 60, h = 44, y = 2, font = { 14, 14, 12, 10 } }
+ns.CARNET_SHIELD_BIG = SHIELD_BIG
+local PLATE_COUNT = { x = 12, y = 1 }     -- 2.9.0 : nombre de la case des points
+-- 2.9.0 : Exploration, textes centrés : marge haute des cartes de part, du
+-- liseré de leur barre (le cadre de la barre déborde de 3 px), des rangées
+ns.CARNET_PROGRESS_LAYOUT = { partTop = 4, barEdge = 3, rowPad = 2 }
+ns.CARNET_PLATE_COUNT = PLATE_COUNT
 local GOLD_TEXT = { 1, 0.84, 0.42 }       -- texte des boutons, de la plaque
 local LIGHT = { 0.93, 0.89, 0.80 }        -- texte clair sur fond sombre
 local LIGHT_SOFT = { 0.89, 0.82, 0.66 }
@@ -132,6 +145,21 @@ local function Shadow(fs)
 end
 local function NoShadow(fs) if Theme.NoShadow then Theme.NoShadow(fs) end end
 local function Paint(fs, c, a) fs:SetTextColor(c[1], c[2], c[3], a or 1) end
+-- 2.9.0 : l'encre d'un rôle mesuré (ns.AZEROTH_CONTRAST), le code et la table d'accord
+local function RoleInk(role)
+	local entry = ns.AZEROTH_CONTRAST and ns.AZEROTH_CONTRAST[role]
+	return entry and ns.AZEROTH_INK[entry[1]] or nil
+end
+-- 2.9.0 : un texte posé sur toute la hauteur de sa zone (haut ET bas),
+-- centré verticalement : side "LEFT" ou "RIGHT", x depuis ce bord, de topY
+-- (depuis le haut de `top`) à bottomY (depuis le point `bottomPoint` de `bottom`)
+local function SpanV(fs, side, top, x, topY, bottom, bottomPoint, bottomY)
+	if not fs then return end
+	fs:ClearAllPoints()
+	fs:SetPoint("TOP" .. side, top, "TOP" .. side, x, topY)
+	fs:SetPoint("BOTTOM" .. side, bottom, bottomPoint, x, bottomY)
+	if fs.SetJustifyV then fs:SetJustifyV("MIDDLE") end
+end
 local function HideAll(list) for _, side in ipairs(SIDES) do if list and list[side] then list[side]:Hide() end end end
 local function Has(list, pred) for _, v in ipairs(list or {}) do if pred(v) then return true end end return false end
 local function Level(frame) return (frame and frame.GetFrameLevel and frame:GetFrameLevel()) or 1 end
@@ -329,6 +357,14 @@ local SKIN = {}
 
 function SKIN.Text(fs, frame, reg) reg.texts[#reg.texts + 1] = fs end
 
+-- 2.9.0 : les intertitres (Theme.CreateSection) n'étaient pas relevés (leurs
+-- textes naissent hors de Theme.Text) : gris clair du thème sur le
+-- parchemin (fiche de dresseur, page Compagnon). Relevés ici, peints à
+-- chaque passage (Recolor) selon leur fond ; Strip (bande sombre) garde la main.
+function SKIN.CreateSection(section, frame, reg)
+	reg.sections = reg.sections or {}
+	reg.sections[#reg.sections + 1] = section
+end
 function SKIN.CreateTile(tile) TileStyle(tile, "light") end
 
 function SKIN.CreateListRow(row)
@@ -544,7 +580,7 @@ function SKIN.CreatePageHeader(header, frame)
 end
 
 local WRAP = { "Text", "CreateTile", "CreateListRow", "CreateBar", "CreateChips", "CreateButton", "CreateDropdown",
-	"CreateSearchBox", "CreateTag", "CreateNavItem", "CreatePageHeader" }
+	"CreateSearchBox", "CreateTag", "CreateNavItem", "CreatePageHeader", "CreateSection" }
 ns.CARNET_WRAPPED = WRAP
 
 -- Relève les briques créées pendant fn(...) dans reg.new (puis SkinNew)
@@ -644,12 +680,24 @@ function ns.CarnetInk(fs)
 	return false
 end
 
+-- 2.9.0 : un intertitre sur parchemin : encres « section.label » / « section.detail »
+local function InkSection(section, frame)
+	local label, detail = section.label, section.detail
+	if not label or label.azKeep or Dark(label, frame) then return false end
+	Paint(label, RoleInk("section.label")); NoShadow(label)
+	if detail then Paint(detail, RoleInk("section.detail")); NoShadow(detail) end
+	return true
+end
+
 local function Recolor(frame)
 	local reg = frame.azReg
 	if not reg then return 0 end
 	local count = 0
 	for _, fs in ipairs(reg.texts) do
 		if not fs.azKeep and not Dark(fs, frame) and ns.CarnetInk(fs) then count = count + 1 end
+	end
+	for _, section in ipairs(reg.sections or {}) do
+		if InkSection(section, frame) then count = count + 1 end
 	end
 	return count
 end
@@ -705,6 +753,7 @@ local function Plate(frame, over, title)
 	plate.title:SetPoint("TOPLEFT", plate, "TOPLEFT", 258, -50)
 	plate.title:SetSize(232, 20)
 	plate.title:SetJustifyH("CENTER")
+	if plate.title.SetJustifyV then plate.title:SetJustifyV("MIDDLE") end   -- 2.9.0
 	AzFont(plate.title, 15)
 	Paint(plate.title, GOLD_TEXT)
 	Shadow(plate.title)
@@ -714,14 +763,20 @@ local function Plate(frame, over, title)
 	if plate.box then
 		plate.box:SetSize(129, 34)
 		plate.box:SetPoint("TOPLEFT", plate, "TOPLEFT", 60, -44)
+		-- 2.9.0 : le groupe « bouclier + nombre » centré dans la case (le
+		-- nombre décalé de la moitié du bouclier et de son écart, 20 + 4) et
+		-- sur le creux sombre de la case (lignes 11 à 21 sur 34 : 1 px plus
+		-- haut que le milieu, mesuré sur 235402)
 		plate.count = plate:CreateFontString(nil, "OVERLAY", Theme.F_LABEL)
-		plate.count:SetPoint("CENTER", plate.box, "CENTER", 10, 0)
+		plate.count:SetPoint("CENTER", plate.box, "CENTER", PLATE_COUNT.x, PLATE_COUNT.y)
+		plate.count:SetJustifyH("CENTER")
+		if plate.count.SetJustifyV then plate.count:SetJustifyV("MIDDLE") end
 		Paint(plate.count, { 0.95, 0.87, 0.66 })
 		Shadow(plate.count)
 		plate.count:SetText("")
 		plate.icon = NewTex(plate, "OVERLAY", 0, T.tiny)
 		if plate.icon then
-			plate.icon:SetSize(18, 18)
+			plate.icon:SetSize(20, 18)
 			plate.icon:SetPoint("RIGHT", plate.count, "LEFT", -4, 0)
 		end
 	end
@@ -1104,12 +1159,18 @@ function PAGE.feats(self, frame)
 	local ui, content = ns.JournalUI, frame.content
 	local shield = NewTex(pane, "ARTWORK", 0, T.shieldBig)
 	if shield and ui then
-		shield:SetSize(52, 44)
-		ui.At(shield, content, 0, ui.TOP + 6)
-		ui.At(pane.totals, content, 60, ui.TOP - 2)
-		ui.At(pane.count, content, 60, ui.TOP - 19)
+		-- 2.9.0 : au rapport du dessin recadré (70×51), écu de 26×31 ; le
+		-- nombre au centre visuel de l'écu (partie large en haut : 3 px plus
+		-- haut que le milieu, moins 1 px pour des chiffres sans jambage),
+		-- en plus petit à 3 ou 4 chiffres (l'écu fait 26 px de large)
+		shield:SetSize(SHIELD_BIG.w, SHIELD_BIG.h)
+		ui.At(shield, content, 0, ui.TOP + 4)
+		ui.At(pane.totals, content, SHIELD_BIG.w + 6, ui.TOP - 2)
+		ui.At(pane.count, content, SHIELD_BIG.w + 6, ui.TOP - 19)
 		pane.azShieldText = pane:CreateFontString(nil, "OVERLAY", Theme.F_NUMBER)
-		pane.azShieldText:SetPoint("CENTER", shield, "CENTER", 0, 2)
+		pane.azShieldText:SetPoint("CENTER", shield, "CENTER", 0, SHIELD_BIG.y)
+		pane.azShieldText:SetJustifyH("CENTER")
+		if pane.azShieldText.SetJustifyV then pane.azShieldText:SetJustifyV("MIDDLE") end
 		AzFont(pane.azShieldText, 14, "OUTLINE")
 		Paint(pane.azShieldText, { 1, 1, 1 })
 		pane.azShield = shield
@@ -1141,7 +1202,10 @@ function POST.feats(self, frame)
 			end
 		end
 	end
-	if pane.azShieldText and self.FeatPoints then pane.azShieldText:SetText(tostring((self:FeatPoints()))) end
+	if pane.azShieldText and self.FeatPoints then
+		pane.azShieldText:SetText(tostring((self:FeatPoints())))
+		AzFont(pane.azShieldText, SHIELD_BIG.font[math.min(4, #(pane.azShieldText:GetText() or ""))] or 14, "OUTLINE")
+	end
 end
 
 function PAGE.day(self, frame)
@@ -1180,6 +1244,14 @@ function PAGE.progress(self, frame)
 	if pane.name then GoldTitle(pane.name, 15, true) end
 	for _, tile in ipairs(pane.parts or {}) do
 		if TileStyle(tile, "dark") then Selectable(tile) end
+		-- 2.9.0 : libellé et compte centrés entre le haut de la carte et le
+		-- liseré de la barre (3 px au-dessus d'elle), plus collés au bord
+		if tile.bar then
+			local barY = select(5, tile.bar:GetPoint()) or -32
+			local G = ns.CARNET_PROGRESS_LAYOUT
+			SpanV(tile.label, "LEFT", tile, 12, -G.partTop, tile, "TOPLEFT", barY + G.barEdge)
+			SpanV(tile.count, "RIGHT", tile, -12, -G.partTop, tile, "TOPRIGHT", barY + G.barEdge)
+		end
 	end
 	for _, tile in ipairs(pane.marks or {}) do
 		TileStyle(tile, "grey")
@@ -1187,9 +1259,27 @@ function PAGE.progress(self, frame)
 	end
 end
 
+-- 2.9.0 : une rangée de zone : nom, « ici » et pourcentage centrés sur la
+-- bande au-dessus de la barre ; sans barre (zone pas encore vue), sur toute
+-- la rangée. Avant : posés à 4-5 px du haut, ils touchaient le liseré.
+local function ZoneRowText(row)
+	local G = ns.CARNET_PROGRESS_LAYOUT
+	local barShown = row.bar and row.bar:IsShown()
+	local barY = row.bar and select(5, row.bar:GetPoint()) or -20
+	local bottom, bottomY = row, G.rowPad
+	local leftPoint, rightPoint = "BOTTOMLEFT", "BOTTOMRIGHT"
+	if barShown then leftPoint, rightPoint, bottomY = "TOPLEFT", "TOPRIGHT", barY end
+	row.azBarShown = barShown and true or false
+	SpanV(row.name, "LEFT", row, 10, -G.rowPad, bottom, leftPoint, bottomY)
+	SpanV(row.percent, "RIGHT", row, -8, -G.rowPad, bottom, rightPoint, bottomY)
+	SpanV(row.here, "RIGHT", row, -8 - 36 - 4, -G.rowPad, bottom, rightPoint, bottomY)
+end
+ns.CarnetZoneRowText = ZoneRowText
+
 function POST.progress(self, frame)
 	local pane = frame.prog
 	if not pane then return end
+	for _, row in ipairs(pane.zones or {}) do ZoneRowText(row) end
 	for _, tile in ipairs(pane.marks or {}) do
 		if TileStyle(tile, tile.reached and "gold" or "grey") then
 			Paint(tile.label, tile.reached and GOLD_HEAD or { 0.86, 0.82, 0.74 })
@@ -1351,6 +1441,37 @@ do
 	end
 end
 
+-- 2.9.0 : le bloc « Ses effets » de la page Compagnon. Son horloge
+-- (CompanionEffects.lua, chaque seconde) repeint les lignes aux couleurs
+-- claires du thème, hors du passage du carnet : sur parchemin, ça restait
+-- gris clair et orange pâle. Repeintes ici après elle, aux encres mesurées
+-- (« effects.* ») : actifs, l'encre ; en attente, l'encre douce.
+do
+	local refreshPane = ns.CompanionEffectsRefreshPane
+	if refreshPane then
+		function ns:CompanionEffectsRefreshPane(pane, ...)
+			local a, b = refreshPane(self, pane, ...)
+			local frame = self.journalFrame
+			if pane and frame and frame.azeroth and frame.evo == pane and pane.effHunt then
+				local effects = self.CompanionEffects and self:CompanionEffects()
+				local active = effects and effects.active and true or false
+				local roles = active and { effHunt = "effects.line", effComfort = "effects.line", effState = "effects.state" }
+					or { effHunt = "effects.linePending", effComfort = "effects.linePending", effState = "effects.statePending" }
+				for field, role in pairs(roles) do
+					local fs = pane[field]
+					local ink = RoleInk(role)
+					if fs and ink then
+						Paint(fs, ink)
+						NoShadow(fs)
+						fs.azKeep = true
+					end
+				end
+			end
+			return a, b
+		end
+	end
+end
+
 -- ---------------------------------------------------------------------------
 -- La fiche de dresseur Azeroth : même cadre, portrait dans le cadre à
 -- volutes sur le fond des Talking Heads, chiffres sur les bandes des
@@ -1410,7 +1531,7 @@ local function SkinTrainer(self, frame, reg)
 	for _, card in ipairs(frame.featCards or {}) do
 		card.azRing = Ring(card, card.icon, 44)
 		if card.mark and SetTex(card.mark, T.tiny) then
-			card.mark:SetSize(18, 18)
+			card.mark:SetSize(20, 18)   -- 2.9.0 : le dessin recadré, à sa taille
 			card.mark:SetVertexColor(1, 1, 1, 1)
 			card.azShield = true
 		end

@@ -116,7 +116,7 @@ do
 	Check("[MIS] zone toute faite, capture coupée : gens à qui parler et ennemis", DY.Kinds() == "talks,kills,pets", DY.Kinds())
 	NS:DB().companionCapture = true
 	NS:MissionDraw(9800)
-	Check("[MIS] … capture allumée : une capture (ménagerie), partout faisable", DY.Kinds() == "captures,talks,pets", DY.Kinds())
+	Check("[MIS] … capture allumée : une capture (créatures), partout faisable", DY.Kinds() == "captures,talks,pets", DY.Kinds())
 
 	DY.Reset()
 	DY.First()
@@ -285,7 +285,7 @@ do
 	-- dans la zone : pas d'autre mission de ménagerie), mission 2 = exploration
 	local before = daily.missions[2].kind
 	Check("[MIS] mission du caractère : pas changeable", NS:MissionReroll(3) == false)
-	Check("[MIS] ménagerie sans autre choix : pas changeable", NS:MissionReroll(1) == false and not daily.rerolled)
+	Check("[MIS] créatures sans autre choix : pas changeable", NS:MissionReroll(1) == false and not daily.rerolled)
 	Check("[MIS] une mission d'exploration changée", NS:MissionReroll(2) == true and daily.missions[2].kind ~= before
 		and daily.missions[2].kind ~= daily.missions[1].kind and daily.missions[2].have == 0)
 	Check("[MIS] une seule fois par jour", NS:MissionReroll(2) == false and daily.rerolled == true)

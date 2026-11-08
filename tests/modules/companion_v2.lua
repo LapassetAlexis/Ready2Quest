@@ -213,7 +213,7 @@ do
 						local label, detail = Rect(row.label), Rect(row.detail)
 						local glyphs = Snap.MeasureText(row.detail)
 						local clear = label.left + label.width <= detail.left + detail.width - glyphs - 4
-						Check("[CV2] Ménagerie : « " .. row.label.text .. " » s'arrête avant son type", clear,
+						Check("[CV2] Créatures : « " .. row.label.text .. " » s'arrête avant son type", clear,
 							tostring(label.left + label.width) .. " / " .. tostring(detail.left + detail.width - glyphs))
 						if clear then ignore[Snap.Label(row.label) .. " / " .. Snap.Label(row.detail)] = true end
 					end
@@ -250,7 +250,7 @@ do
 		for _, cell in ipairs(men.items) do
 			if cell:IsShown() then local r = Rect(cell); right = math.max(right, r.left + r.width) end
 		end
-		Check("[CV2] Ménagerie : cases à gauche de l'aperçu", right > 0 and right <= preview.left - 8,
+		Check("[CV2] Créatures : cases à gauche de l'aperçu", right > 0 and right <= preview.left - 8,
 			tostring(right) .. " / " .. tostring(preview.left))
 		restore()
 	end

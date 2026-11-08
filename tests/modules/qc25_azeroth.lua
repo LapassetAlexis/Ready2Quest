@@ -148,13 +148,13 @@ do
 	local toast = NS.captureToast
 	Check("[AZ] bandeau Azeroth : fond des hauts faits, cadre carré, bouclier gris", toast and toast:IsShown() and toast.azeroth
 		and toast.bg.atlas == "ui-achievement-alert-background" and toast.iconFrame.atlas == "ui-achievement-iconframe"
-		and toast.shield:IsShown() and toast.shieldKind == "grey" and toast.shield.atlas == "ui-achievement-shield-desaturated")
+		and toast.shield:IsShown() and toast.shieldKind == "grey" and toast.shield.atlas == "ui-achievement-shield-1-desaturated")
 	Check("[AZ] titre en capitales sur le parchemin, nom au centre", toast.title:GetText() == "CAPTURE POSSIBLE"
 		and toast.text:GetText() == "Loup A" and toast.title:GetParent() == toast.banner and toast.text:GetParent() == toast.banner
 		and toast.title.justifyH == "CENTER" and toast.text.justifyH == "CENTER")
 	Check("[AZ] glyphe du filet dans le cadre", toast.icon:GetParent() == toast.banner and toast.icon.lastPoint.relTo == toast.iconFrame)
 	Check("[AZ] infos et aide dans la bande sombre", toast.strip and toast.info.lastPoint.relTo == toast.strip
-		and toast.hint.lastPoint.relTo == toast.strip and toast.info:GetText():find("30", 1, true) ~= nil)
+		and toast.hint.lastPoint.relTo == toast.strip and toast.info:GetText():find("50", 1, true) ~= nil)
 	Check("[AZ] hauteur : bandeau + bande - recouvrement", toast:GetHeight() == LAY.h + LAY.strip - LAY.overlap
 		and toast:GetWidth() == LAY.w, toast:GetHeight())
 	-- géométrie depuis le haut du cadre (y négatifs)
@@ -181,7 +181,7 @@ do
 	Check("[AZ] apparition : le bandeau éclot", toast.animating and toast.banner.scripts.OnUpdate ~= nil
 		and (toast.banner.frameScale or 1) < 1)
 	Mock:Advance(1)
-	Mock:Advance(2)
+	Mock:Advance(1.5)   -- avant les 3 s d'affichage (2.9.0)
 	Check("[AZ] … puis se fige (plus d'horloge)", not toast.animating and toast.banner.scripts.OnUpdate == nil
 		and toast.banner.frameScale == 1 and toast.glow.alpha == 0)
 	Check("[AZ] clic sur le bandeau : même geste que le filet", toast.button and toast.button.scripts.OnClick ~= nil)

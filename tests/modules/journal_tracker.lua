@@ -207,7 +207,7 @@ do
 	Check("[TRK] secondaires : losange en trait, mini-barre, progression grisée", not second.featured
 		and second.diamond.texture == NS.Theme.DIAMOND_LINE and second.bar.height == 3
 		and math.abs(second.bar.ratio - 27 / 30) < 1e-6 and second.progress.textColor[1] == NS.Theme.MUTED[1])
-	Check("[TRK] hauteur : titre + vedette + secondaires", tracker.height == 18 + 40 + 4 + 3 * 16, tracker.height)
+	Check("[TRK] hauteur : titre + vedette + secondaires", tracker.height == 18 + 40 + 4 + 3 * 18, tracker.height)   -- 2.9.0 : lignes de 18
 
 	-- survol : quoi faire, avec des noms
 	local tip = _G.GameTooltip
@@ -269,7 +269,7 @@ do
 	tracker.lines[1]:Click("RightButton")
 	Check("[TRK] trois masqués : trois lignes, sans eux", not tracker.lines[4]:IsShown() and tracker.lines[3]:IsShown()
 		and not K.Lines():find("Lanterne", 1, true), K.Lines())
-	Check("[TRK] hauteur suit le nombre de lignes", tracker.height == 18 + 40 + 4 + 2 * 16, tracker.height)
+	Check("[TRK] hauteur suit le nombre de lignes", tracker.height == 18 + 40 + 4 + 2 * 18, tracker.height)
 	NS:JournalDismiss(second, false)
 	NS:JournalDismiss(third, false)
 	Check("[TRK] remis : de retour dans le suivi", tracker.lines[4]:IsShown() and not NS:JournalData().dismissed[second])
@@ -332,7 +332,7 @@ do
 	Check("[ZONE] part en panne ignorée", done and #done.parts == 2)
 	Check("[ZONE] autre zone : seules les parts qui s'appliquent", NS:ZoneCompletion(1429) == nil)
 	local goal = K.Find(NS:JournalObjectives(), "zone:1413")
-	Check("[ZONE] objectif « Exploration de Les Tarides », en pourcentage", goal and goal.label == "Exploration de Les Tarides"
+	Check("[ZONE] objectif « Exploration : Les Tarides », en pourcentage", goal and goal.label == "Exploration : Les Tarides"
 		and goal.progress == "29 %", goal and (goal.label .. " " .. goal.progress))
 	local hint = goal and table.concat(goal.hint, " | ") or ""
 	Check("[ZONE] survol : chaque part, puis la plus simple à finir", hint:find("Villages : 1/3", 1, true)
@@ -341,7 +341,7 @@ do
 	-- le suivi : la complétion remplace ses parts
 	NS:RefreshJournalTracker()
 	local lines = K.Lines()
-	Check("[ZONE] suivi : complétion affichée, villages de la zone absorbés", lines:find("Exploration de Les Tarides", 1, true)
+	Check("[ZONE] suivi : complétion affichée, villages de la zone absorbés", lines:find("Exploration : Les Tarides", 1, true)
 		and not lines:find("Villages de Les Tarides", 1, true), lines)
 	Check("[ZONE] onglet Objectifs : les villages restent", K.Find(NS:JournalObjectives(), "villages:1413") ~= nil)
 	NS:JournalDismiss("zone:1413", true)
@@ -509,7 +509,7 @@ do
 		and prog:IsShown() and not f.evo:IsShown())
 	Check("[WIN] titre : la zone, marquée « ici », et ses niveaux", prog.name.text == "Les Tarides (ici)"
 		and prog.levels.text == "niveaux 10-25", prog.name.text .. " / " .. prog.levels.text)
-	Check("[WIN] menu : Compagnon, Ménagerie, Missions, Complétion (plus de Souvenirs)", f.sections.progress and f.sections.menagerie
+	Check("[WIN] menu : Compagnon, Créatures, Missions, Complétion (plus de Souvenirs)", f.sections.progress and f.sections.menagerie
 		and f.sections.evolution and f.sections.memories == nil and f.sections.day and f.sections.collection == nil
 		and f.sections.evolution.text.text == "Compagnon")
 	Check("[WIN] la Complétion allume son entrée du menu", f.sections.progress.selected and not f.sections.evolution.selected)
@@ -533,7 +533,7 @@ do
 		and prog.items[3].text.text == "The Crossroads" and prog.items[3].status.texture == NS.Theme.DIAMOND, prog.items[3].text.text)
 	Check("[WIN] une seule activité suivie : pas de pourcentage, on dit pourquoi", prog.percent.text == "—"
 		and prog.nopct:IsShown() and prog.nopct.text == NS.L.JRN_ZONE_NOPCT, prog.percent.text)
-	Check("[WIN] combat : renvoie à la Ménagerie", prog.toMen:IsShown() and prog.bestiary:IsShown())
+	Check("[WIN] combat : renvoie à la Créatures", prog.toMen:IsShown() and prog.bestiary:IsShown())
 	parts.craft:Click()
 	Check("[WIN] métiers sans métier : message", prog.empty.text:find(NS.L.JRN_ACT_EMPTY_craft, 1, true) == 1, prog.empty.text)
 	parts.quests:Click()
@@ -561,10 +561,10 @@ do
 	Check("[WIN] coffre annoncé avec son palier", prog.marks[4].gift.text:find("palier 1", 1, true), prog.marks[4].gift.text)
 	Check("[WIN] combat : la ligne du bestiaire (abattues, nommés)", prog.bestiary.text:find("Bestiaire : 4/42", 1, true)
 		and prog.bestiary.text:find("nommés 0/1", 1, true), prog.bestiary.text)
-	Check("[WIN] combat : pas de fiches ici, le bouton vers la Ménagerie", prog.toMen:IsShown())
+	Check("[WIN] combat : pas de fiches ici, le bouton vers la Créatures", prog.toMen:IsShown())
 	prog.toMen:Click()
 	local men = f.men
-	Check("[WIN] Ménagerie ouverte sur la zone", f.kind == "menagerie" and men:IsShown() and f.menZone == 1413
+	Check("[WIN] Créatures ouverte sur la zone", f.kind == "menagerie" and men:IsShown() and f.menZone == 1413
 		and men.zone:GetValue() == 1413)
 	local list = NS:MenagerieList({ zone = 1413 })
 	local chief, bee
@@ -572,8 +572,8 @@ do
 		if entry.npc == 2000 then chief = entry end
 		if entry.npc == 2001 then bee = entry end
 	end
-	Check("[WIN] Ménagerie : les espèces apprises de la zone", chief and chief.known and chief.class == "elite")
-	Check("[WIN] Ménagerie : jamais croisée = inconnue", bee and not bee.known)
+	Check("[WIN] Créatures : les espèces apprises de la zone", chief and chief.known and chief.class == "elite")
+	Check("[WIN] Créatures : jamais croisée = inconnue", bee and not bee.known)
 	local beeCell
 	for _, cell in ipairs(men.items) do if cell.entry and cell.entry.npc == 2001 then beeCell = cell end end
 	if not beeCell then
@@ -651,7 +651,7 @@ do
 	NS:RefreshJournal()
 	Check("[WATCH] zone d'ici : cochée d'office", prog.watch.checked == true and prog.watchLabel.text == "Suivre à l'écran")
 	NS:RefreshJournalTracker()
-	Check("[WATCH] suivi : la complétion d'ici affichée", K.Lines():find("Exploration de Les Tarides", 1, true), K.Lines())
+	Check("[WATCH] suivi : la complétion d'ici affichée", K.Lines():find("Exploration : Les Tarides", 1, true), K.Lines())
 	prog.watch:Click()
 	Check("[WATCH] décochée : retenue", NS:JournalData().watch[1413] == false and prog.watch.checked == false)
 	Check("[WATCH] décochée : la zone et ses parts quittent le suivi", not K.Lines():find("Les Tarides", 1, true), K.Lines())
@@ -659,7 +659,7 @@ do
 	NS:JournalDismiss("zone:1413", true)
 	NS:JournalDismiss("villages:1413", true)
 	prog.watch:Click()
-	Check("[WATCH] recochée : de retour", K.Lines():find("Exploration de Les Tarides", 1, true), K.Lines())
+	Check("[WATCH] recochée : de retour", K.Lines():find("Exploration : Les Tarides", 1, true), K.Lines())
 	Check("[WATCH] recochée : les objectifs masqués avant sont réactivés", not NS:JournalData().dismissed["zone:1413"]
 		and not NS:JournalData().dismissed["villages:1413"])
 	-- une autre zone : cochée à la main
@@ -669,7 +669,7 @@ do
 	Check("[WATCH] autre zone non cochée : absente du suivi", not K.Lines():find("Elwynn", 1, true), K.Lines())
 	prog.watch:Click()
 	Check("[WATCH] autre zone cochée : dans le suivi, même avec une seule activité", NS:JournalIsWatched(1429)
-		and K.Lines():find("Exploration de Forêt d'Elwynn", 1, true), K.Lines())
+		and K.Lines():find("Exploration : Forêt d'Elwynn", 1, true), K.Lines())
 	prog.watch.scripts.OnEnter(prog.watch)
 	Check("[WATCH] survol : explication", table.concat(_G.GameTooltip.lines or {}, " "):find("bloc", 1, true) ~= nil)
 	prog.watch.scripts.OnLeave(prog.watch)

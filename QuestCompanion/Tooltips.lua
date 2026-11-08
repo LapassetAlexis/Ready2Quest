@@ -16,7 +16,7 @@ local Theme = ns.Theme
 
 local FR = {
 	BST_TOOLTIP        = "Bestiaire : %s",
-	MEN_TOOLTIP        = "Ménagerie : %s",
+	MEN_TOOLTIP        = "Créatures : %s",
 	MEN_TIP_CAUGHT     = "capturé",
 	MEN_TIP_SHINY_CAUGHT = "capturée",
 	MEN_TIP_TODO       = "à capturer · %d %%",
@@ -24,7 +24,7 @@ local FR = {
 }
 local EN = {
 	BST_TOOLTIP        = "Bestiary: %s",
-	MEN_TOOLTIP        = "Menagerie: %s",
+	MEN_TOOLTIP        = "Creatures: %s",
 	MEN_TIP_CAUGHT     = "captured",
 	MEN_TIP_SHINY_CAUGHT = "captured",
 	MEN_TIP_TODO       = "to capture · %d%%",

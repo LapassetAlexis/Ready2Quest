@@ -27,7 +27,7 @@ local BAR_W = 130
 
 local FR = {
 	JRN_SEC_feats       = "Hauts faits",
-	JRN_SUB_feats       = "Tes exploits, en jouant : ménagerie, zones, donjons, niveaux… Les hauts faits de compte valent pour tous tes personnages.",
+	JRN_SUB_feats       = "Tes exploits, en jouant : créatures, zones, donjons, niveaux… Les hauts faits de compte valent pour tous tes personnages.",
 	FEAT_FILTER_all     = "Tous",
 	FEAT_FILTER_got     = "Obtenus",
 	FEAT_FILTER_open    = "En cours",
@@ -42,7 +42,7 @@ local FR = {
 }
 local EN = {
 	JRN_SEC_feats       = "Achievements",
-	JRN_SUB_feats       = "Your feats, earned by playing: menagerie, zones, dungeons, levels… Account achievements count for all your characters.",
+	JRN_SUB_feats       = "Your feats, earned by playing: collection, zones, dungeons, levels… Account achievements count for all your characters.",
 	FEAT_FILTER_all     = "All",
 	FEAT_FILTER_got     = "Earned",
 	FEAT_FILTER_open    = "In progress",
@@ -156,14 +156,18 @@ local function BuildRow(pane, width)
 	row.date:SetWidth(BAR_W + 50)
 	-- les points : bouclier des hauts faits (Azeroth) ou losange (Sobre)
 	row.shield = row:CreateTexture(nil, "ARTWORK")
-	row.shield:SetSize(46, 41)
-	row.shield:SetPoint("RIGHT", row, "RIGHT", -8, 0)
+	-- 2.9.0 : un peu plus grand (écu de 23×29 : deux chiffres y tiennent),
+	-- au rapport de l'atlas (63×56)
+	local shieldSize = ns.AZEROTH_SHIELD_SIZE and ns.AZEROTH_SHIELD_SIZE.row or { 52, 46 }
+	row.shield:SetSize(shieldSize[1], shieldSize[2])
+	row.shield:SetPoint("RIGHT", row, "RIGHT", -6, 0)
 	row.shield:Hide()
 	row.diamond = Theme.CreateDiamond(row, 30, false)
 	row.diamond:SetPoint("RIGHT", row, "RIGHT", -16, 0)
 	row.pts = Theme.Text(row, Theme.F_NUMBER, Theme.PARCHMENT)
 	row.pts:SetPoint("CENTER", row.diamond, "CENTER", 0, 0)
 	row.pts:SetJustifyH("CENTER")
+	if row.pts.SetJustifyV then row.pts:SetJustifyV("MIDDLE") end
 	row.onEnter = function(r) ns:JournalFeatsTip(r) end
 	row.onLeave = function() local tip = rawget(_G, "GameTooltip"); if tip and tip.Hide then tip:Hide() end end
 	return row

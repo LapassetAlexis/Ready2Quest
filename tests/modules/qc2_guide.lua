@@ -194,7 +194,7 @@ do
 	Check("[GUIDE] fin du combat : la même bulle revient", NS.companionBubbleLine == line and G.Key() == "TUTO_MENAGERIE", NS.companionBubbleLine)
 	for _ = 1, 3 do NS.companionBubble.nextButton:Click() end
 	Check("[GUIDE] dernière bulle : le renvoi au Guide", NS.companionBubbleLine == POOLS.TUTO_MENAGERIE[#POOLS.TUTO_MENAGERIE]
-		and G.Text():find("tuto menagerie", 1, true) ~= nil and not NS:CompanionData().tutoMenagerieDone)
+		and G.Text():find("tuto collection", 1, true) ~= nil and not NS:CompanionData().tutoMenagerieDone)
 	Mock:Advance(RULES.tutoStep)
 	Check("[GUIDE] fini : vu pour ce personnage, bulle fermée", NS:CompanionData().tutoMenagerieDone == true
 		and not NS:CompanionTutorialActive() and G.Key() == nil)
@@ -245,7 +245,7 @@ do
 	G.SeeKill(5203, { name = "Kodo" })
 	NS.companionBubble.skipButton:Click()
 	Check("[GUIDE] « Passer » : fini, vu, message du chat", NS:CompanionData().tutoMenagerieDone == true
-		and not NS:CompanionTutorialActive() and Mock:Output():find("tuto menagerie", 1, true) ~= nil)
+		and not NS:CompanionTutorialActive() and Mock:Output():find("tuto collection", 1, true) ~= nil)
 	-- capture coupée
 	G.Reset()
 	NS:DB().companionCapture = false
@@ -254,7 +254,7 @@ do
 	Check("[GUIDE] capture coupée : rien, drapeau à faux", not NS:CompanionTutorialActive()
 		and not NS:CompanionData().tutoMenagerieDone and G.Key() ~= "TUTO_MENAGERIE_START")
 	Mock:Reset()
-	NS:HandleCommand("compagnon tuto menagerie")
+	NS:HandleCommand("compagnon tuto collection")
 	Check("[GUIDE] … à la demande : le chat dit pourquoi", not NS:CompanionTutorialActive()
 		and Mock:Output():find(NS.L.COMP_MSG_TUTO_MEN_OFF, 1, true) ~= nil)
 	-- muet
@@ -273,13 +273,13 @@ do
 	Check("[GUIDE] nouveau personnage : le tutoriel de base", G.Key() == "TUTO" and NS:CompanionTutorialActive())
 	Check("[GUIDE] sa dernière bulle annonce le filet", NS.L[POOLS.TUTO[#POOLS.TUTO]]:find("filet", 1, true) ~= nil)
 	G.SeeKill(5401, { name = "Sanglier" })
-	Check("[GUIDE] un monstre pendant le tutoriel de base : il continue, la ménagerie attendra", G.Key() == "TUTO")
+	Check("[GUIDE] un monstre pendant le tutoriel de base : il continue, la collection attendra", G.Key() == "TUTO")
 	for _ = 1, #POOLS.TUTO do NS.companionBubble.nextButton:Click() end
 	Check("[GUIDE] tutoriel de base fini : rien n'enchaîne", NS:CompanionData().tutoDone == true and not NS:CompanionTutorialActive())
 	Mock:Advance(90)
 	Check("[GUIDE] … et rien ne part à vide", not NS:CompanionTutorialActive() and G.Key() ~= "TUTO_MENAGERIE_START")
 	G.SeeKill(5402, { name = "Loup" })
-	Check("[GUIDE] occasion suivante : le tutoriel de la ménagerie, guidé", NS:CompanionTutorialActive()
+	Check("[GUIDE] occasion suivante : le tutoriel des créatures, guidé", NS:CompanionTutorialActive()
 		and G.Key() == "TUTO_MENAGERIE_START" and NS:CompanionSequenceWaits("net"), G.Key())
 	NS:CompanionSkipTutorial()
 end
@@ -290,27 +290,27 @@ do
 	G.Reset()
 	NS:CompanionData().tutoMenagerieDone = true
 	Mock:Reset()
-	NS:HandleCommand("compagnon tuto menagerie")
-	Check("[GUIDE] /qc compagnon tuto menagerie : l'intro, sans attendre de capture", NS:CompanionTutorialActive()
+	NS:HandleCommand("compagnon tuto collection")
+	Check("[GUIDE] /qc compagnon tuto collection : l'intro, sans attendre de capture", NS:CompanionTutorialActive()
 		and G.Key() == "TUTO_MENAGERIE_INTRO" and not NS:CompanionSequenceWaits("net"), G.Key())
 	Mock:Advance(RULES.tutoStep)
 	Check("[GUIDE] … l'étape passe au temps", G.Key() == "TUTO_MENAGERIE" and NS.companionBubbleLine == POOLS.TUTO_MENAGERIE[1])
 	NS:HandleCommand("compagnon tuto passer")
-	Check("[GUIDE] … « passer » : fini, message de la ménagerie", not NS:CompanionTutorialActive()
+	Check("[GUIDE] … « passer » : fini, message de la collection", not NS:CompanionTutorialActive()
 		and Mock:Output():find(NS.L.COMP_MSG_TUTO_MEN_SKIPPED, 1, true) ~= nil)
 	NS:HandleCommand("compagnon tuto")
 	Check("[GUIDE] /qc compagnon tuto : toujours le tutoriel de base", G.Key() == "TUTO")
 	NS:HandleCommand("compagnon tuto passer")
-	Check("[GUIDE] l'aide de la commande nomme « menagerie »", NS.L.HELP_COMPANION:find("menagerie", 1, true) ~= nil)
+	Check("[GUIDE] l'aide de la commande nomme « collection »", NS.L.HELP_COMPANION:find("collection", 1, true) ~= nil)
 	-- rejeu jusqu'au bout : le carnet ne s'ouvre pas tout seul
-	NS:HandleCommand("compagnon tuto menagerie")
+	NS:HandleCommand("compagnon tuto collection")
 	for _ = 1, #POOLS.TUTO_MENAGERIE + 1 do Mock:Advance(RULES.tutoStep) end
 	Check("[GUIDE] rejeu fini : pas de carnet ouvert", not NS:CompanionTutorialActive()
 		and not (NS.journalFrame and NS.journalFrame:IsShown()))
 	-- en combat : il attend la fin du combat
 	G.combat = true
 	Mock:Reset()
-	NS:HandleCommand("compagnon tuto menagerie")
+	NS:HandleCommand("compagnon tuto collection")
 	Check("[GUIDE] rejeu en combat : après le combat", not NS:CompanionTutorialActive()
 		and Mock:Output():find(NS.L.COMP_MSG_TUTO_COMBAT, 1, true) ~= nil)
 	G.combat = false
@@ -465,7 +465,7 @@ do
 	NS:JournalGuidePick("settings")
 	Check("[GUIDE] Réglages : sons, cadrage (Portrait, Buste, En pied), commandes", pane.paras[1].text:find(NS.L.OPT_DAILY_CAPTURE_SOUND, 1, true)
 		and pane.paras[2].text:find(NS.L.OPT_COMP_FRAMING, 1, true) and pane.paras[2].text:find(NS.L.COMP_FRAMING_pied, 1, true)
-		and pane.paras[3].text:find("/qc compagnon tuto menagerie", 1, true) and pane.paras[3].text:find("sourdine", 1, true)
+		and pane.paras[3].text:find("/qc compagnon tuto collection", 1, true) and pane.paras[3].text:find("sourdine", 1, true)
 		and pane.paras[4].text:find(NS.L.GUIDE_REPLAY, 1, true), pane.paras[2].text)
 	Check("[GUIDE] anciens noms de page : inchangés", (function() NS:SelectJournalKind("collection"); return f.kind == "evolution" end)())
 	NS:SelectJournalKind("guide")

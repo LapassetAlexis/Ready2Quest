@@ -22,7 +22,7 @@ function MS.Reset()
 	_G.date = function(format) if format == "%Y-%m-%d" then return MS.day or "2026-11-05" end return "05/11/2026" end
 	math.random = MS.random
 	local data = NS:CompanionData()
-	data.tutoDone, data.weekly, data.capture = true, nil, nil
+	NS:DB().capture, NS.captureMergedChar = nil, nil; data.tutoDone, data.weekly, data.capture = true, nil, nil
 	NS:TreatData().treatsInit = true
 	NS:CompanionUpdateVisibility()
 end
@@ -131,7 +131,7 @@ end
 
 -- 4. Ménagerie ----------------------------------------------------------------------------------
 do
-	Say("-- missions : ménagerie")
+	Say("-- missions : créatures")
 	MS.Reset()
 	-- une petite table livrée de test : deux zones, une espèce partagée, une
 	-- amicale envers la Horde (exclue pour un Horde)

@@ -87,7 +87,7 @@ do
 	Say("-- brillantes : deux versions par espèce")
 	SV.Reset()
 	local data = NS:CompanionData()
-	data.capture = { creatures = {
+	NS:DB().capture, NS.captureMergedChar = nil, nil; data.capture = { creatures = {
 		[11] = { name = "Ancien brillant", at = 500, shiny = true },
 		[12] = { name = "Ancien normal", at = 300 },
 	}, count = 2 }
@@ -152,7 +152,7 @@ do
 	local list = NS:MenagerieList({ zone = "all", state = "shiny" })
 	local found
 	for _, item in ipairs(list) do if item.npc == 3200 then found = item end end
-	Check("[SHV] Ménagerie, filtre « Brillantes » : la reconnue y est", found and found.shinySeen ~= nil and not found.shiny)
+	Check("[SHV] Créatures, filtre « Brillantes » : la reconnue y est", found and found.shinySeen ~= nil and not found.shiny)
 	NS.SHINY_CHANCE = 1 / 150
 	Check("[SHV] chasse : 1/150 sans abattu", math.abs(NS:ShinyChance("normal", 0) - 1 / 150) < 1e-9)
 	Check("[SHV] chasse : 1/40 après 50 abattus de l'espèce", math.abs(NS:ShinyChance("normal", 50) - 1 / 40) < 1e-9)
@@ -208,7 +208,7 @@ end
 
 -- 6. Ménagerie : marques, fiche normale / brillante, équiper -------------------------------------------
 do
-	Say("-- brillantes : Ménagerie")
+	Say("-- brillantes : Créatures")
 	SV.Reset()
 	NS:CaptureData().creatures[3400] = { name = "Lion", class = "normal", normal = true, at = 100, shiny = true, shinyAt = 200 }
 	NS:CaptureData().count = 1

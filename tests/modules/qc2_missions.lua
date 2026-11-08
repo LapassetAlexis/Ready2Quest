@@ -21,7 +21,7 @@ function QM.Reset()
 		NS[field] = nil
 	end
 	NS.companionRT = nil
-	Mock.world.maps[9900] = { mapID = 9900, name = "Val ménagerie", parentMapID = 1414, mapType = 3 }
+	Mock.world.maps[9900] = { mapID = 9900, name = "Val créatures", parentMapID = 1414, mapType = 3 }
 	Mock.world.maps[9901] = { mapID = 9901, name = "Val voisin", parentMapID = 1414, mapType = 3 }
 	Mock.world.mapID, Mock.world.level = 9900, 20
 	QM.now = 1000000
@@ -73,7 +73,7 @@ do
 	Check("[QM] zone : 3 espèces nouvelles, 1 nommé, 1 Bête, 1 Mort-vivant", t.new == 3 and t.named == 1
 		and t.types.beast == 1 and t.types.undead == 1 and t.types.humanoid == nil)
 	local m = NS:MissionMenagerieDraw(9900)
-	Check("[QM] ménagerie : espèce nouvelle de la zone", m.kind == "capNew" and m.zoneID == 9900 and m.need == 1
+	Check("[QM] créatures : espèce nouvelle de la zone", m.kind == "capNew" and m.zoneID == 9900 and m.need == 1
 		and m.source == "zone" and m.cat == "menagerie")
 	m = NS:MissionMenagerieDraw(9900, { { kind = "capNew" } })
 	Check("[QM] … sinon un élite ou un rare", m.kind == "capNamed" and m.need == 1)
@@ -93,9 +93,9 @@ do
 	local creatures = NS:CaptureData().creatures
 	for _, npc in ipairs({ 5001, 5002, 5003 }) do creatures[npc] = { name = "x", class = "normal", normal = true } end
 	Check("[QM] tout capturé ici : « captures »", NS:MissionMenagerieDraw(9900).kind == "captures")
-	NS:CompanionData().capture = nil
+	NS:DB().capture, NS.captureMergedChar = nil, nil; NS:CompanionData().capture = nil
 	NS:DB().companionCapture = false
-	Check("[QM] capture coupée : pas de mission de ménagerie", NS:MissionMenagerieDraw(9900) == nil)
+	Check("[QM] capture coupée : pas de mission de capture", NS:MissionMenagerieDraw(9900) == nil)
 	NS:MissionDraw(9900)
 	local daily = NS:DailyData()
 	Check("[QM] capture coupée : deux missions quand même, aucune de capture", #daily.missions == 3
@@ -103,13 +103,13 @@ do
 	NS:DB().companionCapture = true
 	NS:MissionDraw(9900)
 	daily = NS:DailyData()
-	Check("[QM] le jour : ménagerie, exploration, caractère", daily.missions[1].kind == "capNew"
+	Check("[QM] le jour : créatures, exploration, caractère", daily.missions[1].kind == "capNew"
 		and not NS:MissionIsMenagerie(daily.missions[2]) and daily.missions[3].source == "trait")
 	local explore = {}
 	for _, kind in ipairs(NS.DAILY_ZONE_MISSIONS) do explore[kind] = true end
 	Check("[QM] plus de missions « abattre des espèces » au tirage", not explore.species and not explore.named
 		and explore.gather and explore.quests and explore.village and explore.percent)
-	Check("[QM] changer la ménagerie : une autre de ménagerie", NS:MissionReroll(1) == true
+	Check("[QM] changer la collection : une autre de créatures", NS:MissionReroll(1) == true
 		and daily.missions[1].kind == "capNamed" and daily.rerolled)
 end
 
@@ -118,20 +118,20 @@ do
 	Say("-- qc2 missions : libellés")
 	QM.Reset()
 	Check("[QM] libellé : espèce nouvelle", NS:MissionLabel({ kind = "capNew", need = 1, zoneID = 9900 })
-		== "Capture une espèce jamais capturée (Val ménagerie)")
+		== "Capture une espèce jamais capturée (Val créatures)")
 	Check("[QM] libellé : élite ou rare", NS:MissionLabel({ kind = "capNamed", need = 1, zoneID = 9900 })
-		== "Capture un élite ou un rare (Val ménagerie)")
+		== "Capture un élite ou un rare (Val créatures)")
 	Check("[QM] libellé : type, pluriel", NS:MissionLabel({ kind = "capType", need = 2, ctype = "undead", zoneID = 9900 })
-		== "Capture 2 Morts-vivants (Val ménagerie)", NS:MissionLabel({ kind = "capType", need = 2, ctype = "undead", zoneID = 9900 }))
+		== "Capture 2 Morts-vivants (Val créatures)", NS:MissionLabel({ kind = "capType", need = 2, ctype = "undead", zoneID = 9900 }))
 	Check("[QM] libellé : type, singulier", NS:MissionLabel({ kind = "capType", need = 1, ctype = "beast", zoneID = 9900 })
-		== "Capture 1 Bête (Val ménagerie)")
+		== "Capture 1 Bête (Val créatures)")
 	Check("[QM] libellé : semaine par type", NS:WeeklyLabel({ kind = "typeCapture", need = 2, ctype = "undead" })
 		== "Emmène un Mort-vivant et capture 2 Morts-vivants", NS:WeeklyLabel({ kind = "typeCapture", need = 2, ctype = "undead" }))
 	Check("[QM] anciens libellés intacts", NS:WeeklyLabel({ kind = "captures", need = 6 }) == "Capture 6 créatures"
 		and NS:MissionLabel({ kind = "captures", need = 2 }) == "Capture 2 créatures")
 	Check("[QM] source d'une mission sans zone : la zone du tirage", (function()
 		NS:DailyData().zoneID = 9900
-		return NS:MissionSource({ kind = "captures", source = "zone" }) == "mission de Val ménagerie"
+		return NS:MissionSource({ kind = "captures", source = "zone" }) == "mission de Val créatures"
 	end)())
 	local S = NS.MISSIONS_MENAGERIE_STRINGS
 	local missing = {}
@@ -162,7 +162,7 @@ do
 	Check("[QM] capture ratée : rien", m[1].have == 0 and m[2].have == 0)
 	QM.Capture(5001, "normal", "Bête", 9901)
 	Check("[QM] autre zone : rien", m[1].have == 0 and m[2].have == 0)
-	NS:CompanionData().capture.creatures[5001] = nil
+	NS:CaptureData().creatures[5001] = nil
 	QM.Capture(5003, "normal", "Mort-vivant", 9900)
 	Check("[QM] espèce nouvelle ici : faite ; un autre type ne compte pas", m[1].done and m[2].have == 0)
 	m[1].done, m[1].have = nil, 0
@@ -179,7 +179,7 @@ do
 		{ kind = "species", zoneID = 9900, need = 3, have = 0, source = "zone", start = 0 } }
 	QM.Capture(5006, "normal", "Undead", 9901)
 	Check("[QM] ancienne mission « captures » : comptée", daily.missions[1].have == 1)
-	Check("[QM] ancienne mission « species » : lisible, de ménagerie ou non", NS:MissionLabel(daily.missions[2]):find("Abats", 1, true) ~= nil
+	Check("[QM] ancienne mission « species » : lisible, de créatures ou non", NS:MissionLabel(daily.missions[2]):find("Abats", 1, true) ~= nil
 		and NS:MissionIsMenagerie(daily.missions[1]) and not NS:MissionIsMenagerie(daily.missions[2]))
 end
 

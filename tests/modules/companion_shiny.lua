@@ -222,7 +222,7 @@ do
 	NS:OpenMenagerieZone(9800)
 	local card
 	for _, c in ipairs(f.men.items) do if c.entry and c.entry.npc == 3500 then card = c end end
-	Check("[SHINY] Ménagerie : étoile de la brillante abattue", card and card.star:IsShown())
+	Check("[SHINY] Créatures : étoile de la brillante abattue", card and card.star:IsShown())
 	card.scripts.OnEnter(card)
 	local said = {}
 	for _, line in ipairs(f.men.preview.lines) do said[#said + 1] = line.text or "" end

@@ -134,7 +134,7 @@ Une ligne peut déroger à la règle de sa catégorie en l'écrivant (`scope`), 
 
 | Code | Catégorie (FR / EN) | Portée |
 |---|---|---|
-| `men` | Ménagerie / Menagerie | compte |
+| `men` | Créatures / Creatures | compte |
 | `shiny` | Brillantes / Shinies | compte |
 | `zone` | Zones et sceaux / Zones and Seals | personnage |
 | `day` | Au jour le jour / Day by Day | personnage |
@@ -268,13 +268,13 @@ L'ancien réglage `journalToast` reste (il gouverne la même file de bandeaux) ;
 
 Colonnes : identifiant stable, nom FR, nom EN, condition, détection (source exacte), faisabilité, points, récompense. « relevés » = la table des anciens tampons (`journal.stamps`, §3). Les codes numériques `n` sont attribués dans l'ordre des tableaux à l'écriture de `FeatsData.lua`, puis figés.
 
-### 2.1 Ménagerie (`men`) — 29 hauts faits
+### 2.1 Créatures (`men`) — 29 hauts faits
 
 | id | FR | EN | Condition | Détection | F | Pts | Récompense |
 |---|---|---|---|---|---|---|---|
 | `men_first` | Premier filet | First Net | Capturer 1 espèce | `ns:MenagerieSpeciesCount()` | ✅ | 5 | Appât ×1 |
-| `men_species_10` | Petite ménagerie | A Little Menagerie | Capturer 10 espèces | idem | ✅ | 10 | titre T1 ; Appât ×1, Lasso ×1 (ex-`TRAINER_RANKS`) |
-| `men_species_25` | Ménagerie bien garnie | Well-Stocked Menagerie | 25 espèces | idem | ✅ | 10 | titre T2 ; cadre `trainer` |
+| `men_species_10` | Petite collection | A Little Collection | Capturer 10 espèces | idem | ✅ | 10 | titre T1 ; Appât ×1, Lasso ×1 (ex-`TRAINER_RANKS`) |
+| `men_species_25` | Collection bien garnie | Well-Stocked Collection | 25 espèces | idem | ✅ | 10 | titre T2 ; cadre `trainer` |
 | `men_species_50` | Enclos animés | Busy Pens | 50 espèces | idem | ✅ | 10 | titre T3 ; Sifflet ×1 ; fond `menagerie` |
 | `men_species_100` | Cent pensionnaires | A Hundred Lodgers | 100 espèces | idem | ✅ | 25 | titre T4 ; Sifflet ×1 ; cadre `master` |
 | `men_species_250` | L'arche d'Azeroth | Azeroth's Ark | 250 espèces | idem | ✅ | 50 | titre T5 ; Sifflet ×2 ; fond `grandmaster` |
@@ -299,7 +299,7 @@ Colonnes : identifiant stable, nom FR, nom EN, condition, détection (source exa
 | `men_batch_5` | Coup de filet | Big Haul | 5 créatures prises en une volée « Tout capturer » | enveloppe de `CaptureBatchFlush` (réussites ≥ 5) | ✅ | 10 | — |
 | `men_bad_luck` | Il s'est encore échappé | Got Away Again | 10 captures ratées de suite | `streak` dans l'enveloppe de `CaptureResolve` | ✅ | 5 | Appât ×3 (lot de consolation) |
 | `men_level_gap` | David contre Goliath | David and Goliath | Capturer une créature d'au moins 5 niveaux de plus que toi | `rolling.target.level` − `UnitLevel` à la résolution | ✅ | 10 | — |
-| `men_companion_types` | Tour de la ménagerie | Menagerie Tour | Emmener un compagnon de chacun des 8 types (effet actif) | `ns:CompanionEffects()` (`active`, `typeKey`) → `set.ctypes` | ✅ | 10 | — |
+| `men_companion_types` | Tour de la collection | Collection Tour | Emmener un compagnon de chacun des 8 types (effet actif) | `ns:CompanionEffects()` (`active`, `typeKey`) → `set.ctypes` | ✅ | 10 | — |
 | `men_companion_boss` | Garde du corps | Bodyguard | Emmener un boss du monde capturé (effet actif) | idem, `class == "worldboss"` | ✅ | 10 | — |
 
 ### 2.2 Brillantes (`shiny`) — 12
@@ -493,7 +493,7 @@ Hors numérotation (après les 173) : `fun_unlucky` (code 174) — La poisse / R
 
 | id | FR | EN | Condition | Détection | F | Pts | Récompense |
 |---|---|---|---|---|---|---|---|
-| `meta_menagerie` | Maître des lieux | Master of the House | 20 hauts faits de Ménagerie | `meta` (cat `men`, 20) | ✅ | 50 | titre T35 |
+| `meta_menagerie` | Maître des lieux | Master of the House | 20 hauts faits de Créatures | `meta` (cat `men`, 20) | ✅ | 50 | titre T35 |
 | `meta_shiny` | Tout ce qui brille | All That Glitters | 10 hauts faits de Brillantes | `meta` (cat `shiny`, 10) | ✅ | 25 | cadre `feat_prism` |
 | `meta_zones` | Sceaux et chemins | Seals and Roads | 15 hauts faits de Zones et sceaux | `meta` (cat `zone`, 15) | ✅ | 25 | fond de fiche `card_atlas` |
 | `meta_dungeons` | Terreur des cachots | Dread of the Dungeons | Les 4 paliers de donjons | `meta` (`dng_tier1`…`dng_tier4`) | ⚠️ | 50 | titre T36 |
@@ -662,7 +662,7 @@ Retour en 2.6 possible : la 2.6 relit `journal.stamps` intact et ignore `feats`.
 | T32 | `fun_hogger_capture` | %s, Dompteur de Lardeur | %s, Dompteuse de Lardeur | %s, Hogger's Handler | S |
 | T33 | `fun_murlocs` | %s, Ami des murlocs | %s, Amie des murlocs | %s, Friend of Murlocs | S |
 | T34 | `fun_night_owl` | %s le Noctambule | %s la Noctambule | %s the Night Owl | S |
-| T35 | `meta_menagerie` | %s, Seigneur de la ménagerie | %s, Dame de la ménagerie | %s, Lord of the Menagerie / %s, Lady of the Menagerie | S |
+| T35 | `meta_menagerie` | %s, Seigneur des créatures | %s, Dame des créatures | %s, Lord of the Creatures / %s, Lady of the Creatures | S |
 | T36 | `meta_dungeons` | %s, Terreur des cachots | — | %s, Dread of the Dungeons | S |
 | T37 | `meta_hero` | %s, Héros d'Azeroth | %s, Héroïne d'Azeroth | %s, Hero of Azeroth / %s, Heroine of Azeroth | S |
 | T38 | `meta_trainer` | %s le Légendaire | %s la Légendaire | %s the Legendary | S |

@@ -97,7 +97,7 @@ end
 do
 	Say("-- qc2 capture : étoiles")
 	Q.Reset()
-	NS:CompanionData().capture = { creatures = {
+	NS:DB().capture, NS.captureMergedChar = nil, nil; NS:CompanionData().capture = { creatures = {
 		[11] = { name = "Ancien", at = 100, normal = true },
 		[12] = { name = "Ancien brillant", at = 200, normal = false, shiny = true, shinyAt = 200 },
 	}, count = 2 }
@@ -233,7 +233,7 @@ do
 	NS:CaptureGrant("lasso", { quiet = true, silent = true })
 	list.aids[2]:Click()
 	Check("[QC2CAP] … choisir une aide dans la liste", NS:CaptureState().aid == "lasso"
-		and list.rows[1].detail:GetText():find("75", 1, true) ~= nil, list.rows[1].detail:GetText())
+		and list.rows[1].detail:GetText():find("95", 1, true) ~= nil, list.rows[1].detail:GetText())
 	local pick = list.rows[2].candidate
 	list.rows[2]:Click()
 	Check("[QC2CAP] clic sur une ligne : ce candidat-là, avec l'aide", NS:CaptureState().rolling
@@ -349,7 +349,7 @@ end
 
 -- 7. Ménagerie : ligne et fiche ------------------------------------------------------------------------------
 do
-	Say("-- qc2 capture : Ménagerie")
+	Say("-- qc2 capture : Créatures")
 	Q.Reset()
 	NS:CaptureData().creatures[4700] = { name = "Lion", class = "normal", normal = true, at = 100, stars = 2 }
 	NS:CaptureData().count = 1
@@ -357,7 +357,7 @@ do
 	NS:BestiaryData()[1413] = { [4700] = { name = "Lion", seen = true, killed = 2, class = "normal", type = "Bête" } }
 	local item
 	for _, e in ipairs(NS:MenagerieList({ zone = "all", state = "captured" })) do if e.npc == 4700 then item = e end end
-	Check("[QC2CAP] MenagerieList : étoiles de l'espèce", item and item.stars == 2 and item.shinyStars == nil)
+	Check("[QC2CAP] CreaturesList : étoiles de l'espèce", item and item.stars == 2 and item.shinyStars == nil)
 	NS:DB().journalTracker = false
 	NS:ToggleJournal(true)
 	local f = NS.journalFrame
@@ -429,8 +429,10 @@ do
 	Check("[QC2CAP] bandeau « Capture possible » montré, nom de la créature", toast and toast:IsShown()
 		and toast.title:GetText() == NS.Theme.Upper(NS.L.CAPTURE_TOAST_TITLE) and toast.text:GetText() == "Raptor"
 		and toast.hint:GetText() == NS.L.CAPTURE_TOAST_HINT and NS.captureToastHideAt ~= nil, toast and toast.text:GetText())
+	local hideAt = NS.captureToastHideAt
 	Q.SeeKill(4401, { name = "Raptor B" })
 	Check("[QC2CAP] un deuxième : « et 1 de plus »", toast.hint:GetText():find("et 1 de plus", 1, true) ~= nil, toast.hint:GetText())
+	Check("[QC2CAP] … sans prolonger le bandeau (mêlée, 2.9.0)", NS.captureToastHideAt == hideAt)
 	Mock:Advance(NS.CAPTURE_TOAST_SECONDS + 1); NS:CaptureTick(NS.Now())
 	Check("[QC2CAP] bandeau : s'efface seul au bout de " .. NS.CAPTURE_TOAST_SECONDS .. " s", not toast:IsShown() and NS.captureToastHideAt == nil)
 	net.scripts.OnUpdate(net)
@@ -496,7 +498,7 @@ end
 do
 	Say("-- qc2 capture : coût des lectures")
 	Q.Reset()
-	NS:CompanionData().capture = { creatures = { [21] = { name = "Ancienne brillante", at = 5, shiny = true } }, count = 1 }
+	NS:DB().capture, NS.captureMergedChar = nil, nil; NS:CompanionData().capture = { creatures = { [21] = { name = "Ancienne brillante", at = 5, shiny = true } }, count = 1 }
 	local data = NS:CaptureData()
 	Check("[QC2CAP] migration 1.6.0 faite une fois, repère posé", data.creatures[21].normal == false and data.pairN == 1)
 	data.creatures[22] = { name = "Sans version", at = 6 }
@@ -510,7 +512,7 @@ do
 	NS.CaptureStars = function(...) calls = calls + 1; return stars(...) end
 	NS:MenagerieList({ zone = "all" })
 	NS.CaptureStars = stars
-	Check("[QC2CAP] MenagerieList : étoiles sans CaptureStars par espèce", calls == 0, calls)
+	Check("[QC2CAP] CreaturesList : étoiles sans CaptureStars par espèce", calls == 0, calls)
 	-- horloge : le tri ne se refait pas dix fois par seconde
 	Q.Reset()
 	Q.SeeKill(4900, { name = "Lièvre" })
@@ -546,7 +548,7 @@ do
 	local capture = NS:CaptureData()
 	local entry = capture.creatures[4950]
 	local first = entry.firstAt
-	Check("[QC2CAP] première capture : date gardée (espèce et ménagerie)", first ~= nil and first == entry.at
+	Check("[QC2CAP] première capture : date gardée (espèce et créatures)", first ~= nil and first == entry.at
 		and capture.firstAt == first)
 	NS:CaptureGrant("sifflet", { quiet = true, silent = true })
 	NS:CaptureToggleAid("sifflet")

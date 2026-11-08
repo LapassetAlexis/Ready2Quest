@@ -619,7 +619,10 @@ local function ApplyVerdictAzeroth(self, tile, result)
 		tile.stars:SetTextColor(f[1], f[2], f[3])
 		tile.tag:SetText("")
 		Coord(tile.net, Coords().netTorn)
-		tile.shieldKind = ns.AzerothShield and ns.AzerothShield(tile.shield, "grey") or nil
+		-- 2.9.0 : plus de bouclier gris sur une échappée (un bouclier sombre et vide,
+		-- qui ne disait rien) ; l'or reste réservé aux prises
+		tile.shieldKind = nil
+		tile.shield:Hide()
 	end
 	if ns.AzerothFit then ns.AzerothFit(tile.name, AZB.tileW - 6, 12, 9) end
 end

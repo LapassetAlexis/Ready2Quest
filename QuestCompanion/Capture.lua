@@ -10,7 +10,7 @@
 --   * un clic = un essai, un seul par monstre. Le compagnon secoue le filet
 --     (une, deux, trois secousses) puis c'est gagné… ou il s'échappe, et le
 --     compagnon se moque gentiment ;
---   * la chance dépend du rang (normal 30 %, élite 15 %, rare 8 %, rare élite
+--   * la chance dépend du rang (normal 50 %, élite 25 %, rare 15 %, rare élite
 --     5 %, boss 2 %) et de l'écart de niveau (plus haut que toi : plus dur) ;
 --   * aides (pas des balles : des objets de dresseur), gagnées au hasard des
 --     complétions du carnet (tampons, paliers de zone, brillantes) :
@@ -29,13 +29,18 @@ ns.CAPTURE_WINDOW = 12            -- s pour tenter sa chance après le coup fata
 ns.CAPTURE_SHAKE_STEP = 0.55      -- s entre deux secousses du filet
 ns.CAPTURE_MAX = 0.95             -- jamais tout à fait sûr sans Sifflet
 ns.CAPTURE_GIFT_EVERY = 10        -- un Sifflet offert toutes les 10 captures
+-- 2.9.0 : chances relevées (« je n'attrape jamais rien ») ; avant :
+-- 0,40 / 0,30 / 0,15 / 0,08 / 0,05 / 0,02
 ns.CAPTURE_RATES = {
-	trivial = 0.40, minus = 0.40, normal = 0.30, elite = 0.15,
-	rare = 0.08, rareelite = 0.05, worldboss = 0.02,
+	trivial = 0.60, minus = 0.60, normal = 0.50, elite = 0.25,
+	rare = 0.15, rareelite = 0.10, worldboss = 0.04,
 }
--- écart de niveau : -6 % par niveau au-dessus de toi (plancher ×0,35),
+-- écart de niveau : -4 % par niveau au-dessus de toi (plancher ×0,5),
 -- +3 % par niveau en dessous (plafond ×1,5)
-ns.CAPTURE_LEVEL_STEP = { above = 0.06, below = 0.03, floor = 0.35, ceil = 1.5 }
+ns.CAPTURE_LEVEL_STEP = { above = 0.04, below = 0.03, floor = 0.5, ceil = 1.5 }
+-- filet qui s'use la malchance : +5 points par échec d'affilée (jusqu'à +25),
+-- remis à zéro à la prochaine prise (2.9.0)
+ns.CAPTURE_PITY = { step = 0.05, max = 5 }
 
 local AIDS = {
 	{ id = "appat",   mult = 1.5, cap = 10, icon = "Interface\\Icons\\INV_Misc_Food_14" },
@@ -79,13 +84,13 @@ local FR = {
 	CAPTURE_SHAKING        = "Le filet bouge…",
 	CAPTURE_GOT            = "Capturé !",
 	CAPTURE_FLED           = "Échappé…",
-	CAPTURE_MSG_OK         = "%s capturé ! Il rejoint ta ménagerie (apparences du compagnon).",
+	CAPTURE_MSG_OK         = "%s capturé ! Il rejoint ta collection (apparences du compagnon).",
 	CAPTURE_MSG_FAIL       = "%s s'est échappé.",
 	CAPTURE_MSG_ITEM       = "Tu trouves : %s (%d en poche).",
 	CAPTURE_MSG_FULL       = "%s : ta besace en est pleine.",
 	CAPTURE_MSG_GIFT       = "%d captures ! Ton compagnon t'offre un %s.",
-	CAPTURE_MSG_SUMMARY    = "Ménagerie : %d créatures capturées (%d essais). Aides : %s.",
-	CAPTURE_MSG_EMPTY      = "Ménagerie vide pour l'instant : abats un monstre, puis clique sur le filet du compagnon.",
+	CAPTURE_MSG_SUMMARY    = "Créatures : %d capturées (%d essais). Aides : %s.",
+	CAPTURE_MSG_EMPTY      = "Collection vide pour l'instant : abats un monstre, puis clique sur le filet du compagnon.",
 	CAPTURE_RANK_normal    = "Normal",
 	CAPTURE_RANK_trivial   = "Insignifiant",
 	CAPTURE_RANK_minus     = "Insignifiant",
@@ -97,7 +102,7 @@ local FR = {
 	CAPTURE_SRC            = "Capturé le %s",
 	OPT_DAILY_CAPTURE      = "Capturer les monstres abattus",
 	OPT_DAILY_CAPTURE_DESC = "Les monstres abattus qui valent le coup attendent 30 s après le combat : un filet sur le compagnon les capture (clic droit : la liste). Ils deviennent des apparences du compagnon.",
-	HELP_CAPTURE           = "/qc capture -- ta ménagerie et tes aides de capture",
+	HELP_CAPTURE           = "/qc capture -- ta collection et tes aides de capture",
 }
 local EN = {
 	CAPTURE_aid_appat      = "Tasty bait",
@@ -115,13 +120,13 @@ local EN = {
 	CAPTURE_SHAKING        = "The net is moving…",
 	CAPTURE_GOT            = "Captured!",
 	CAPTURE_FLED           = "Got away…",
-	CAPTURE_MSG_OK         = "%s captured! It joins your menagerie (companion looks).",
+	CAPTURE_MSG_OK         = "%s captured! It joins your collection (companion looks).",
 	CAPTURE_MSG_FAIL       = "%s got away.",
 	CAPTURE_MSG_ITEM       = "You find: %s (%d in your pack).",
 	CAPTURE_MSG_FULL       = "%s: your pack is full of them.",
 	CAPTURE_MSG_GIFT       = "%d captures! Your companion gives you a %s.",
-	CAPTURE_MSG_SUMMARY    = "Menagerie: %d creatures captured (%d tries). Aids: %s.",
-	CAPTURE_MSG_EMPTY      = "Your menagerie is empty: defeat a monster, then click the net on your companion.",
+	CAPTURE_MSG_SUMMARY    = "Creatures: %d creatures captured (%d tries). Aids: %s.",
+	CAPTURE_MSG_EMPTY      = "Your collection is empty: defeat a monster, then click the net on your companion.",
 	CAPTURE_RANK_normal    = "Normal",
 	CAPTURE_RANK_trivial   = "Trivial",
 	CAPTURE_RANK_minus     = "Trivial",
@@ -133,7 +138,7 @@ local EN = {
 	CAPTURE_SRC            = "Captured on %s",
 	OPT_DAILY_CAPTURE      = "Capture defeated monsters",
 	OPT_DAILY_CAPTURE_DESC = "Defeated monsters worth catching wait 30 s after combat: a net on your companion captures them (right-click: the list). They become companion looks.",
-	HELP_CAPTURE           = "/qc capture -- your menagerie and capture aids",
+	HELP_CAPTURE           = "/qc capture -- your collection and capture aids",
 }
 ns.RegisterStrings(FR, EN)
 if ns.KEEP_STRINGS then ns.CAPTURE_STRINGS = { fr = FR, en = EN } end
@@ -146,13 +151,13 @@ local P = {
 		{ "Vite, %s ne bouge plus : c'est le moment !", "Quick, %s isn't moving: now's our chance!" },
 		{ "%s ferait un super compagnon… enfin, presque aussi bien que moi.", "%s would make a great companion… almost as good as me." },
 		{ "Tu le laisses là, %s ? Moi je dis : filet !", "You're leaving %s there? I say: net!" },
-		{ "%s, dans ma ménagerie ? Clique, clique !", "%s, in my menagerie? Click, click!" },
+		{ "%s, dans ma collection ? Clique, clique !", "%s, in my collection? Click, click!" },
 		{ "On tente %s ? Promis, je partage ma gamelle.", "Try for %s? I promise I'll share my bowl." },
 	},
 	CAPTURE_OK = {   -- %s = la créature
 		{ "%s est à nous ! Bienvenue dans la bande !", "%s is ours! Welcome to the crew!" },
 		{ "Capturé ! %s, je te préviens : la place près du feu est à moi.", "Captured! %s, fair warning: the spot by the fire is mine." },
-		{ "Et hop, %s dans la ménagerie. Quel talent… le mien, surtout.", "And there, %s in the menagerie. Such talent… mostly mine." },
+		{ "Et hop, %s dans la collection. Quel talent… le mien, surtout.", "And there, %s in the collection. Such talent… mostly mine." },
 		{ "%s capturé ! Tu vois, quand tu m'écoutes…", "%s captured! See what happens when you listen to me…" },
 		{ "Un %s tout neuf ! Je lui apprends les bonnes manières.", "A brand-new %s! I'll teach it some manners." },
 		{ "Gagné ! %s fait déjà les yeux doux à mes friandises.", "Got it! %s is already eyeing my treats." },
@@ -174,7 +179,7 @@ local P = {
 	},
 	CAPTURE_SHINY = {   -- %s = la créature
 		{ "Un %s BRILLANT capturé ! Je pleure. De joie. Un peu de jalousie.", "A SHINY %s captured! I'm crying. With joy. And a bit of envy." },
-		{ "%s brillant dans la ménagerie… tu vas le mettre en vitrine ?", "A shiny %s in the menagerie… putting it on display?" },
+		{ "%s brillant dans la collection… tu vas le mettre en vitrine ?", "A shiny %s in the collection… putting it on display?" },
 	},
 }
 -- enregistrement commun (CompanionLines.lua) ; listes de clés en test seulement
@@ -205,9 +210,117 @@ local function Enabled() return ModuleOn() and ns:DB().companionCapture ~= false
 -- ---------------------------------------------------------------------------
 -- Données (par personnage, avec le compagnon)
 -- ---------------------------------------------------------------------------
+-- ---------------------------------------------------------------------------
+-- Collection au compte (2.9.0, idée de Deklatis) : une seule table de capture
+-- pour tous tes personnages, QuestCompanionDB.capture. Chaque personnage y
+-- verse une fois sa collection d'avant (char.companion.capture, gardée telle
+-- quelle) : les deux versions de chaque espèce, les meilleures étoiles, les
+-- dates les plus anciennes ; les aides s'additionnent, dans la limite de la
+-- besace. Le compagnon choisi reste propre à chaque personnage.
+-- ---------------------------------------------------------------------------
+local function Earliest(a, b)
+	a, b = tonumber(a), tonumber(b)
+	if a and b then return math.min(a, b) end
+	return a or b
+end
+local function Best(a, b)
+	a, b = tonumber(a), tonumber(b)
+	if a and b then return math.max(a, b) end
+	return a or b
+end
+
+-- fiche d'avant 1.6.0 (sans `normal`) : la brillante était la seule version
+local function Legacy(entry)
+	if entry.normal == nil then
+		entry.normal = not entry.shiny
+		if entry.shiny and not entry.shinyAt then entry.shinyAt = entry.at end
+	end
+	return entry
+end
+
+local function MergeEntry(into, from)
+	Legacy(into)
+	local hasN = (into.normal ~= false) or (from.normal ~= false)
+	local hasS = (into.shiny == true) or (from.shiny == true)
+	for k, v in pairs(from) do if into[k] == nil then into[k] = v end end
+	into.normal, into.shiny = hasN, hasS or nil
+	into.at = Earliest(into.at, from.at)
+	into.shinyAt = Earliest(into.shinyAt, from.shinyAt)
+	into.stars = Best(into.stars, from.stars)
+	into.shinyStars = Best(into.shinyStars, from.shinyStars)
+end
+
+-- verse la collection `old` (celle d'un personnage) dans le compte
+function ns.CaptureMergeInto(account, old)
+	if type(old) ~= "table" then return 0 end
+	local added = 0
+	for npcID, entry in pairs(type(old.creatures) == "table" and old.creatures or {}) do
+		if type(entry) == "table" then
+			local key = tonumber(npcID) or npcID
+			local mine = account.creatures[key]
+			if mine == nil then
+				mine = {}
+				for k, v in pairs(entry) do mine[k] = v end
+				account.creatures[key] = Legacy(mine)
+				added = added + 1
+			else
+				local copy = {}
+				for k, v in pairs(entry) do copy[k] = v end
+				MergeEntry(mine, Legacy(copy))
+			end
+		end
+	end
+	for _, aid in ipairs(AIDS) do
+		local have = tonumber(account.items[aid.id]) or 0
+		local more = tonumber(type(old.items) == "table" and old.items[aid.id]) or 0
+		account.items[aid.id] = math.min(aid.cap, math.max(0, math.floor(have + more)))
+	end
+	account.tries = (tonumber(account.tries) or 0) + (tonumber(old.tries) or 0)
+	return added
+end
+
+local function CountSpecies(creatures)
+	local n = 0
+	for _, entry in pairs(creatures) do if type(entry) == "table" then n = n + 1 end end
+	return n
+end
+
+-- La table du compte ; à sa création, tous les personnages connus y versent
+-- leur collection ; un personnage jamais vu y verse la sienne à son arrivée
+function ns:CaptureAccount()
+	local db = self:DB()
+	local account = db.capture
+	if type(account) ~= "table" then
+		account = { creatures = {}, items = {}, count = 0, tries = 0, mergedFrom = {} }
+		db.capture = account
+		for key, char in pairs(type(db.chars) == "table" and db.chars or {}) do
+			local old = type(char) == "table" and type(char.companion) == "table" and char.companion.capture
+			if type(old) == "table" then ns.CaptureMergeInto(account, old) end
+			account.mergedFrom[key] = true
+		end
+		account.count = CountSpecies(account.creatures)
+	end
+	account.creatures = type(account.creatures) == "table" and account.creatures or {}
+	account.items = type(account.items) == "table" and account.items or {}
+	account.mergedFrom = type(account.mergedFrom) == "table" and account.mergedFrom or {}
+	if not self.captureMergedChar then
+		self.captureMergedChar = true
+		local key = self:CharKey()
+		if not account.mergedFrom[key] then
+			account.mergedFrom[key] = true
+			local char = self:CharData()
+			local old = type(char.companion) == "table" and char.companion.capture
+			if type(old) == "table" then
+				ns.CaptureMergeInto(account, old)
+				account.count = CountSpecies(account.creatures)
+			end
+		end
+	end
+	return account
+end
+
 function ns:CaptureData()
-	local data = self:CompanionData()
-	local capture = type(data.capture) == "table" and data.capture or {}
+	local capture = self:CaptureAccount()
 	capture.creatures = type(capture.creatures) == "table" and capture.creatures or {}
 	capture.items = type(capture.items) == "table" and capture.items or {}
 	for _, aid in ipairs(AIDS) do
@@ -231,7 +344,6 @@ function ns:CaptureData()
 		end
 		capture.pairN = capture.count
 	end
-	data.capture = capture
 	return capture
 end
 
@@ -681,11 +793,21 @@ end
 function ns:CaptureRoll(target, aid)
 	if aid and not self:CaptureSpend(aid) then aid = nil end
 	local chance, sure = self:CaptureChance(target, aid)
+	local data = self:CaptureData()
+	-- une espèce déjà à toi (cette version) : un essai de recapture compté (2.9.0)
+	local owned = target and data.creatures[tonumber(target.npcID) or target.npcID]
+	if type(owned) == "table" and (target.shiny and owned.shiny or (not target.shiny and owned.normal ~= false)) then
+		if target.shiny then owned.shinyRetries = (tonumber(owned.shinyRetries) or 0) + 1
+		else owned.retries = (tonumber(owned.retries) or 0) + 1 end
+	end
+	-- malchance : chaque échec d'affilée rend le filet un peu plus sûr
+	local streak = math.min(ns.CAPTURE_PITY.max, tonumber(data.missStreak) or 0)
+	if not sure and streak > 0 then chance = math.min(ns.CAPTURE_MAX, chance + ns.CAPTURE_PITY.step * streak) end
 	local success = sure or math.random() < chance
+	data.missStreak = success and 0 or (streak + 1)
 	-- comme un filet qui se débat : trois secousses pour une prise, une à
 	-- trois avant de céder pour un échec
 	local shakes = success and 3 or math.random(1, 3)
-	local data = self:CaptureData()
 	data.tries = data.tries + 1
 	return { target = target, success = success, shakes = shakes, done = 0, aid = aid, chance = chance }
 end

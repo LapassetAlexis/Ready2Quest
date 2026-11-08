@@ -47,7 +47,7 @@ local NET_SIZE = 44
 ns.CAPTURE_NET_SIZE = NET_SIZE
 ns.CAPTURE_NET_GAP = 8            -- px entre le cadre du compagnon et le filet
 ns.CAPTURE_NET_PULSE = 4          -- s de battement doré à l'arrivée d'un candidat
-ns.CAPTURE_TOAST_SECONDS = 5      -- s d'affichage du bandeau « Capture possible »
+ns.CAPTURE_TOAST_SECONDS = 3      -- s d'affichage du bandeau « Capture possible » (2.9.0 : 5 -> 3)
 local TOAST_W, TOAST_H, TOAST_ICON = 384, 102, 34
 ns.CAPTURE_MUTE_CHOICES = { 5, 15, 30, 60 }   -- minutes de sourdine proposées par le bandeau
 -- Sons (2.2.0) : des kits du client, par numéro (SoundKitConstants.lua de
@@ -72,7 +72,7 @@ local FR = {
 	CAPTURE_Q_LEFT         = "%d s",
 	CAPTURE_Q_CLICK        = "Clic : capturer %s",
 	CAPTURE_Q_RIGHT        = "Clic droit : la liste (choisir, aides, tout ignorer)",
-	CAPTURE_Q_NOTHING      = "Rien à capturer pour l'instant : abats un monstre qui manque à ta ménagerie.",
+	CAPTURE_Q_NOTHING      = "Rien à capturer pour l'instant : abats un monstre qui manque à ta collection.",
 	CAPTURE_Q_IGNORE       = "Tout ignorer",
 	CAPTURE_Q_EMPTY        = "Rien à capturer pour l'instant.",
 	CAPTURE_Q_LIST_HINT    = "Clic sur une ligne : la capturer. L'aide choisie sert au prochain essai.",
@@ -100,6 +100,13 @@ local FR = {
 	OPT_DAILY_CAPTURE_SOUND_DESC = "Un carillon quand une capture est possible, une petite musique quand elle réussit (fanfare pour une brillante).",
 	OPT_DAILY_CAPTURE_TOAST = "Bandeau « Capture possible »",
 	OPT_DAILY_CAPTURE_TOAST_DESC = "Un bandeau dès qu'un monstre abattu peut être capturé (après le combat). Clic dessus : le filet.",
+	OPT_RETRY_common       = "Recaptures : communes",
+	OPT_RETRY_elite        = "Recaptures : élites",
+	OPT_RETRY_rare         = "Recaptures : rares",
+	OPT_RETRY_DESC         = "Une espèce déjà capturée revient dans le filet pour gagner des étoiles : combien d'essais par espèce, avant de ne plus la proposer.",
+	OPT_RETRY_0            = "jamais",
+	OPT_RETRY_N            = "%d essai(s)",
+	OPT_RETRY_5            = "sans limite",
 	CAPTURE_STARS_LABEL    = "Qualité : %s",
 	CAPTURE_MSG_STARS      = "%s : %s.",
 	CAPTURE_MSG_STARS_BEST = "%s : %s, ton meilleur spécimen !",
@@ -117,7 +124,7 @@ local EN = {
 	CAPTURE_Q_LEFT         = "%ds",
 	CAPTURE_Q_CLICK        = "Click: capture %s",
 	CAPTURE_Q_RIGHT        = "Right-click: the list (pick, aids, ignore all)",
-	CAPTURE_Q_NOTHING      = "Nothing to capture right now: defeat a monster your menagerie is missing.",
+	CAPTURE_Q_NOTHING      = "Nothing to capture right now: defeat a monster your collection is missing.",
 	CAPTURE_Q_IGNORE       = "Ignore all",
 	CAPTURE_Q_EMPTY        = "Nothing to capture right now.",
 	CAPTURE_Q_LIST_HINT    = "Click a line to capture it. The chosen aid is used on the next try.",
@@ -145,6 +152,13 @@ local EN = {
 	OPT_DAILY_CAPTURE_SOUND_DESC = "A chime when a capture is possible, a little tune when it succeeds (a fanfare for a shiny).",
 	OPT_DAILY_CAPTURE_TOAST = "\"Capture possible\" banner",
 	OPT_DAILY_CAPTURE_TOAST_DESC = "A banner as soon as a defeated monster can be captured (after combat). Click it: the net.",
+	OPT_RETRY_common       = "Recaptures: common",
+	OPT_RETRY_elite        = "Recaptures: elites",
+	OPT_RETRY_rare         = "Recaptures: rares",
+	OPT_RETRY_DESC         = "A species you already have comes back in the net to earn stars: how many tries per species before it stops being offered.",
+	OPT_RETRY_0            = "never",
+	OPT_RETRY_N            = "%d tr(ies)",
+	OPT_RETRY_5            = "no limit",
 	CAPTURE_STARS_LABEL    = "Quality: %s",
 	CAPTURE_MSG_STARS      = "%s: %s.",
 	CAPTURE_MSG_STARS_BEST = "%s: %s, your best specimen!",
@@ -155,13 +169,45 @@ local EN = {
 ns.RegisterStrings(FR, EN)
 if ns.KEEP_STRINGS then ns.CAPTURE_QUEUE_STRINGS = { fr = FR, en = EN } end
 
-ns.RegisterDefaults({ companionCaptureToast = true, companionCaptureSound = true })
+ns.RegisterDefaults({ companionCaptureToast = true, companionCaptureSound = true,
+	-- 2.9.0 : recaptures (gagner des étoiles) par espèce, selon la rareté ;
+	-- 5 = sans limite. Les communes ne reviennent plus sans fin dans le filet
+	companionRetryCommon = 2, companionRetryElite = 5, companionRetryRare = 5 })
+-- rang -> groupe de réglage
+ns.CAPTURE_RETRY_GROUP = { trivial = "Common", minus = "Common", normal = "Common", elite = "Elite",
+	rare = "Rare", rareelite = "Rare", worldboss = "Rare" }
+ns.CAPTURE_RETRY_UNLIMITED = 5
+
+-- Essais de recapture encore permis pour ce candidat (nil : sans limite)
+function ns:CaptureRetryLeft(candidate)
+	local group = ns.CAPTURE_RETRY_GROUP[candidate and candidate.class or "normal"] or "Common"
+	local max = tonumber(self:DB()["companionRetry" .. group])
+	if not max or max >= ns.CAPTURE_RETRY_UNLIMITED then return nil end
+	local entry = self:CaptureData().creatures[tonumber(candidate.npcID) or candidate.npcID]
+	local used = type(entry) == "table" and tonumber(candidate.shiny and entry.shinyRetries or entry.retries) or 0
+	return math.max(0, max - used)
+end
 if type(ns.DAILY_OPTION_ROWS) == "table" then
 	local present, presentSound, at = false, false, 1
 	for index, row in ipairs(ns.DAILY_OPTION_ROWS) do
 		if row.key == "companionCaptureToast" then present = true end
 		if row.key == "companionCaptureSound" then presentSound = true end
 		if row.key == "companionCapture" or row.key == "companionCaptureAnim" then at = index + 1 end
+	end
+	local hasRetry = false
+	for _, row in ipairs(ns.DAILY_OPTION_ROWS) do if row.key == "companionRetryCommon" then hasRetry = true end end
+	if not hasRetry then
+		for _, group in ipairs({ "Common", "Elite", "Rare" }) do
+			ns.DAILY_OPTION_ROWS[#ns.DAILY_OPTION_ROWS + 1] = { key = "companionRetry" .. group,
+				label = "OPT_RETRY_" .. group:lower(), kind = "number", min = 0, max = 5, step = 1,
+				display = function(value)
+					value = tonumber(value) or 0
+					if value <= 0 then return L.OPT_RETRY_0 end
+					if value >= ns.CAPTURE_RETRY_UNLIMITED then return L.OPT_RETRY_5 end
+					return ns:F("OPT_RETRY_N", value)
+				end,
+				describe = function() return L.OPT_RETRY_DESC end }
+		end
 	end
 	if not present then
 		table.insert(ns.DAILY_OPTION_ROWS, at, { key = "companionCaptureToast", label = "OPT_DAILY_CAPTURE_TOAST", kind = "bool",
@@ -310,7 +356,12 @@ end
 function ns:CaptureQueueReason(candidate)
 	local stars = self:CaptureStars(candidate.npcID, candidate.shiny and true or false)
 	if not stars then return candidate.shiny and "shiny" or "new" end
-	if stars < ns.CAPTURE_STAR_MAX then return "stars" end
+	if stars < ns.CAPTURE_STAR_MAX then
+		-- 2.9.0 : plus d'essais permis pour cette espèce (réglage par rareté)
+		local left = self.CaptureRetryLeft and self:CaptureRetryLeft(candidate)
+		if left == 0 then return nil end
+		return "stars"
+	end
 	return nil
 end
 
@@ -681,7 +732,12 @@ do
 		if not (queue and #queue > 0) then return end
 		now = now or Clock()
 		local changed = false
-		if self.captureToastHideAt and now >= self.captureToastHideAt then self:CaptureToastHide() end
+		if self.captureToastHideAt and now >= self.captureToastHideAt then
+			-- souris dessus : il attend qu'on la retire
+			local toast = self.captureToast
+			local over = toast and toast.IsMouseOver and Call(toast.IsMouseOver, toast)
+			if over then self.captureToastHideAt = now + 1 else self:CaptureToastHide() end
+		end
 		if not InCombat() and self:CaptureQueueStartTimers(now) then
 			changed = true
 			-- fin du combat : ceux qui attendaient sont annoncés, et c'est
@@ -1207,7 +1263,9 @@ function ns:CaptureToastShow()
 		frame.chimedFor = best.serial
 		self:CapturePlaySound("ready")
 	end
-	self.captureToastHideAt = Clock() + ns.CAPTURE_TOAST_SECONDS
+	-- un nouveau monstre abattu ne le prolonge plus (2.9.0) : en pleine mêlée
+	-- il restait affiché sans fin ; seule une nouvelle apparition relance le délai
+	if fresh or not self.captureToastHideAt then self.captureToastHideAt = Clock() + ns.CAPTURE_TOAST_SECONDS end
 	return frame
 end
 

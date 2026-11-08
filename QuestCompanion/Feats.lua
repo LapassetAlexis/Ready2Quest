@@ -320,6 +320,16 @@ local function CaptureCount(self, scope, shinyOnly)
 		return self.MenagerieSpeciesCount and self:MenagerieSpeciesCount() or 0
 	end
 	local seen, count = {}, 0
+	-- 2.9.0 : la collection du compte d'abord (QuestCompanionDB.capture), puis
+	-- les anciennes collections par personnage pas encore versées
+	local db = self.DB and self:DB()
+	local account = db and type(db.capture) == "table" and type(db.capture.creatures) == "table" and db.capture.creatures
+	for npcID, entry in pairs(account or {}) do
+		if type(entry) == "table" and (not shinyOnly or entry.shiny == true) then
+			local key = tonumber(npcID) or npcID
+			if not seen[key] then seen[key], count = true, count + 1 end
+		end
+	end
 	EachCompanion(self, function(data)
 		local capture = type(data.capture) == "table" and data.capture or nil
 		local creatures = capture and type(capture.creatures) == "table" and capture.creatures or nil

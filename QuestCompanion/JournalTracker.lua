@@ -30,7 +30,8 @@ local Theme = ns.Theme
 
 -- un objectif mis en avant (carte avec sa barre) + trois secondaires
 local TRACKER_MAX = 4
-local TRACKER_WIDTH, TITLE_H, LINE_H = 240, 18, 16
+-- 2.9.0 : plus large (les libellés étaient coupés), lignes un peu plus hautes
+local TRACKER_WIDTH, TITLE_H, LINE_H = 280, 18, 18
 local FEATURED_H, FEATURED_GAP = 40, 4
 local MINI_BAR_W = 44
 local HINT_NAMES = 6        -- noms listés au survol, au-delà « … et N autres »
@@ -79,7 +80,7 @@ local FR = {
 	JRN_HINT_DUNGEONS      = "Entre dans l'un de ces donjons (l'entrée suffit) :",
 	JRN_HINT_LEVEL         = "Encore %d niveau(x). Quêtes et monstres de ton niveau.",
 	JRN_HINT_XP            = "XP avant le prochain niveau : %d",
-	JRN_GOAL_ZONE          = "Exploration de %s",
+	JRN_GOAL_ZONE          = "Exploration : %s",
 	JRN_GOAL_REACH_LEVEL   = "Atteins le niveau %d",
 	JRN_GOAL_HAPPY         = "Rends %s heureux pour évoluer",
 	JRN_REWARD             = "Récompense : %s",
@@ -889,6 +890,13 @@ local function BuildLine(frame, index)
 		line.progress:SetPoint("BOTTOMRIGHT", line, "BOTTOMRIGHT", -10, 6)
 		line.progress:SetWidth(72)
 	else
+		-- 2.9.0 : un voile sombre sous chaque ligne, lisible sur n'importe quel décor
+		local shade = Theme.WINDOW or { 0.05, 0.04, 0.03 }
+		line.shade = line:CreateTexture(nil, "BACKGROUND")
+		line.shade:SetTexture(Theme.SOLID or "Interface\\Buttons\\WHITE8X8")
+		line.shade:SetPoint("TOPLEFT", line, "TOPLEFT", 4, -1)
+		line.shade:SetPoint("BOTTOMRIGHT", line, "BOTTOMRIGHT", 0, 1)
+		line.shade:SetVertexColor(shade[1], shade[2], shade[3], 0.55)
 		line.diamond:SetPoint("LEFT", line, "LEFT", 12, 0)
 		line.text:SetPoint("LEFT", line, "LEFT", 24, 0)
 		line.text:SetWidth(TRACKER_WIDTH - 24 - MINI_BAR_W - 52)

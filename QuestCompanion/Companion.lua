@@ -273,7 +273,7 @@ local FR = {
 	COMP_REQ_total         = "%d tampons",
 	COMP_REQ_inn           = "%d cartes d'auberge pleines",
 	COMP_REQ_missions      = "%d jours aux trois missions",
-	COMP_HOVER_HINT        = "Clic : un câlin · Maj + clic : friandises · clic droit : carnet · glisser : déplacer",
+	COMP_HOVER_HINT        = "Clic : un câlin · Maj + clic : friandises · clic droit : carnet · glisser : déplacer\nChange de compagnon : toute créature capturée au filet, page Compagnon du carnet",
 	OPT_COMP_TUTO          = "Rejouer le tutoriel",
 	COMP_PREVIEW_LINE      = "%s  ·  %s",
 	COMP_TUTO_NEXT         = "Suivant",
@@ -298,8 +298,8 @@ local FR = {
 	COMP_MSG_TUTO_MUTED    = "Bulles du compagnon coupées (Bavardage : Muet) : remonte la réglette, ou /qc compagnon muet, pour voir le tutoriel.",
 	COMP_MSG_TUTO_COMBAT   = "Le tutoriel du compagnon commencera après le combat.",
 	COMP_MSG_TUTO_SKIPPED  = "Tutoriel du compagnon passé (/qc compagnon tuto pour le revoir).",
-	COMP_MSG_TUTO_MEN_SKIPPED = "Tutoriel de la ménagerie passé (/qc compagnon tuto menagerie pour le revoir).",
-	COMP_MSG_TUTO_MEN_OFF  = "La capture est coupée (réglages, page Au jour le jour) : rallume-la pour le tutoriel de la ménagerie.",
+	COMP_MSG_TUTO_MEN_SKIPPED = "Tutoriel des créatures passé (/qc compagnon tuto collection pour le revoir).",
+	COMP_MSG_TUTO_MEN_OFF  = "La capture est coupée (réglages, page Au jour le jour) : rallume-la pour le tutoriel des créatures.",
 	COMP_MSG_UNLOCK_APP    = "Compagnon : nouvelle apparence débloquée, %s. Choisis-la dans les réglages.",
 	COMP_MSG_UNLOCK_ORN    = "Compagnon : nouvel ornement débloqué, %s.",
 	COMP_MSG_EVOLVE        = "Compagnon : %s devient %s !",
@@ -312,7 +312,7 @@ local FR = {
 	COMP_MSG_APPEARANCE    = "Apparence : %s.",
 	COMP_MSG_MUTE          = "Bulles du compagnon : %s.",
 	COMP_MSG_FALLBACK      = "Modèle 3D indisponible sur ce client : la boussole le remplace.",
-	HELP_COMPANION         = "/qc compagnon [nom <nom> | caresse | apparence | muet | tuto [menagerie | passer] | anim] — ton compagnon de route",
+	HELP_COMPANION         = "/qc compagnon [nom <nom> | caresse | apparence | muet | tuto [collection | passer] | anim] — ton compagnon de route",
 }
 local EN = {
 	OPT_PAGE_COMPANION_MAIN = "Companion",
@@ -448,7 +448,7 @@ local EN = {
 	COMP_REQ_total         = "%d stamps",
 	COMP_REQ_inn           = "%d full inn cards",
 	COMP_REQ_missions      = "%d days with all three missions",
-	COMP_HOVER_HINT        = "Click: a cuddle · Shift + click: treats · right-click: journal · drag: move",
+	COMP_HOVER_HINT        = "Click: a cuddle · Shift + click: treats · right-click: journal · drag: move\nSwitch companion: any creature caught with the net, journal's Companion page",
 	OPT_COMP_TUTO          = "Replay the tutorial",
 	COMP_PREVIEW_LINE      = "%s  ·  %s",
 	COMP_TUTO_NEXT         = "Next",
@@ -471,8 +471,8 @@ local EN = {
 	COMP_MSG_TUTO_MUTED    = "Companion bubbles are off (Chattiness: Silent): raise the slider, or /qc compagnon muet, to see the tutorial.",
 	COMP_MSG_TUTO_COMBAT   = "The companion tutorial will start after combat.",
 	COMP_MSG_TUTO_SKIPPED  = "Companion tutorial skipped (/qc compagnon tuto to see it again).",
-	COMP_MSG_TUTO_MEN_SKIPPED = "Menagerie tutorial skipped (/qc compagnon tuto menagerie to see it again).",
-	COMP_MSG_TUTO_MEN_OFF  = "Capture is off (settings, Day by day page): turn it back on for the menagerie tutorial.",
+	COMP_MSG_TUTO_MEN_SKIPPED = "Creatures tutorial skipped (/qc compagnon tuto collection to see it again).",
+	COMP_MSG_TUTO_MEN_OFF  = "Capture is off (settings, Day by day page): turn it back on for the creatures tutorial.",
 	COMP_MSG_UNLOCK_APP    = "Companion: new appearance unlocked, %s. Pick it in the settings.",
 	COMP_MSG_UNLOCK_ORN    = "Companion: new ornament unlocked, %s.",
 	COMP_MSG_EVOLVE        = "Companion: %s becomes %s!",
@@ -495,7 +495,7 @@ ns.RegisterDefaults({
 	companionShow       = true,
 	companionPoint      = { point = "CENTER", x = 330, y = -170 },
 	companionSize       = 2,      -- réglette « Taille » : 1 petit, 2 moyen, 3 grand, 4 très grand
-	companionFraming    = "portrait",   -- cadrage du modèle : portrait (tête), buste, pied (2.2.0)
+	companionFraming    = "buste",      -- cadrage du modèle : portrait (tête), buste, pied (2.2.0 ; buste par défaut en 2.9.0)
 	companionOrnRibbon  = true,
 	companionOrnLantern = true,
 	companionOrnMedal   = true,
@@ -1890,9 +1890,16 @@ ns.COMPANION_FRAMINGS = { "portrait", "buste", "pied" }
 ns.COMPANION_FRAMING_ZOOM = { portrait = 1, buste = 0.55, pied = 0 }
 
 function ns:CompanionFraming()
-	local framing = self:DB().companionFraming
+	local db = self:DB()
+	-- 2.9.0 : l'ancien défaut « portrait » faisait déborder la créature de son
+	-- petit cadre ; repassé une fois en « buste » (rechoisissable dans les réglages)
+	if not db.companionFramingV29 then
+		db.companionFramingV29 = true
+		if db.companionFraming == "portrait" then db.companionFraming = "buste" end
+	end
+	local framing = db.companionFraming
 	if ns.COMPANION_FRAMING_ZOOM[framing] then return framing end
-	return "portrait"
+	return "buste"   -- 2.9.0 : « portrait » serrait trop, la créature débordait du petit cadre
 end
 
 function ns:CompanionFramingChoices()
@@ -3085,7 +3092,8 @@ function ns:CompanionCommand(rest)
 		if what == "passer" or what == "skip" or what == "stop" then return self:CompanionSkipTutorial() end
 		self:CompanionUpdateVisibility()
 		-- « tuto menagerie » : le tutoriel de la ménagerie (2.3.0), rejoué au temps
-		if what == "menagerie" or what == "ménagerie" or what == "capture" then return self:CompanionStartMenagerieTutorial() end
+		if what == "menagerie" or what == "ménagerie" or what == "capture" or what == "collection"
+			or what == "creatures" or what == "créatures" then return self:CompanionStartMenagerieTutorial() end
 		return self:CompanionStartTutorial(true)
 	end
 	self:CompanionCheckUnlocks()

@@ -329,7 +329,7 @@ do
 	-- espèce apprise par notre carnet (absente des tables livrées) : connue
 	GF.Caught(7777, { name = "Bête|cffff0000 piégée", class = "rareelite", zoneID = 1450 })
 	info = NS:GuildFeatDescribe(NS:GuildFeatParse("E~1~n~7777~1450~1~-~0"), "Bob-Royaume")
-	Check("[GLD] créature de notre ménagerie : nom désarmé", info and info.line == "Bob a capturé un rare élite !"
+	Check("[GLD] créature de notre créatures : nom désarmé", info and info.line == "Bob a capturé un rare élite !"
 		and info.name:find("||c", 1, true) ~= nil, info and info.name)
 	Check("[GLD] nom de l'expéditeur : sans le royaume s'il est le nôtre, désarmé", (function()
 		local a = NS:GuildFeatDescribe(NS:GuildFeatParse("E~1~s~3098~1411~1~-~0"), "Ève-AutreRoyaume")

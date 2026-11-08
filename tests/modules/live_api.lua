@@ -254,7 +254,7 @@ do
 		and type(GameTooltip.hooks and GameTooltip.hooks.OnTooltipSetUnit) == "function")
 	LA.HoverUnit(LA.Guid(5001))
 	GameTooltip.hooks.OnTooltipSetUnit(GameTooltip)
-	Check("[TT] repli : rare de la zone « à capturer · 8 % · rare »", LA.Lines():find("Ménagerie : à capturer · 8 %", 1, true)
+	Check("[TT] repli : rare de la zone « à capturer · 15 % · rare »", LA.Lines():find("Créatures : à capturer · 15 %", 1, true)
 		and LA.Lines():find("rare", 1, true), LA.Lines())
 
 	-- moteur récent : TooltipDataProcessor, le GUID dans data.guid
@@ -266,21 +266,21 @@ do
 	GameTooltip:ClearLines()
 	GameTooltip.GetUnit = nil
 	LA.PostCall(2, GameTooltip, { guid = LA.Guid(5002) })
-	Check("[TT] processeur : loup normal « à capturer · 30 % », sans rang", LA.Lines() == "Ménagerie : à capturer · 30 %", LA.Lines())
+	Check("[TT] processeur : loup normal « à capturer · 50 % », sans rang", LA.Lines() == "Créatures : à capturer · 50 %", LA.Lines())
 	QNS:CaptureData().creatures[5002] = { name = "Loup des plaines", class = "normal" }
 	GameTooltip:ClearLines()
 	LA.PostCall(2, GameTooltip, { guid = LA.Guid(5002) })
-	Check("[TT] capturé : « Ménagerie : capturé »", LA.Lines() == "Ménagerie : capturé", LA.Lines())
+	Check("[TT] capturé : « Créatures : capturé »", LA.Lines() == "Créatures : capturé", LA.Lines())
 	-- 1.6.0 : la brillante repérée sous la souris parle de SA version
 	QNS:ShinyState().live[LA.Guid(5002)] = { npcID = 5002, zoneID = ZONE, name = "Loup des plaines" }
 	GameTooltip:ClearLines()
 	LA.PostCall(2, GameTooltip, { guid = LA.Guid(5002) })
 	Check("[TT] brillante, normale déjà capturée : « BRILLANTE · à capturer »",
-		LA.Lines() == "Ménagerie : BRILLANTE · à capturer · 30 %", LA.Lines())
+		LA.Lines() == "Créatures : BRILLANTE · à capturer · 50 %", LA.Lines())
 	QNS:CaptureData().creatures[5002].shiny = true
 	GameTooltip:ClearLines()
 	LA.PostCall(2, GameTooltip, { guid = LA.Guid(5002) })
-	Check("[TT] brillante capturée", LA.Lines() == "Ménagerie : BRILLANTE · capturée", LA.Lines())
+	Check("[TT] brillante capturée", LA.Lines() == "Créatures : BRILLANTE · capturée", LA.Lines())
 	QNS:ShinyState().live[LA.Guid(5002)] = nil
 	QNS:CaptureData().creatures[5002] = nil
 	-- capture coupée : la ligne du bestiaire d'avant

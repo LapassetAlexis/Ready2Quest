@@ -121,7 +121,7 @@ do
 	end
 	Check("[HF] chaînes : mêmes clés en français et en anglais", #parity == 0, table.concat(parity, ", "))
 	Check("[HF] titres : rendu nu et avec le nom, genre", NS:FeatTitleText(19, nil, "m") == "Traqueur"
-		and NS:FeatTitleText(19, nil, "f") == "Traqueuse" and NS:FeatTitleText(35, nil, "m") == "Seigneur de la ménagerie"
+		and NS:FeatTitleText(19, nil, "f") == "Traqueuse" and NS:FeatTitleText(35, nil, "m") == "Seigneur des créatures"
 		and NS:FeatTitleText(2, "Dyokrion", "m") == "Dresseur Dyokrion" and NS:FeatTitleText(21, nil, "f") == "Aventurière",
 		tostring(NS:FeatTitleText(21, nil, "f")))
 	Check("[HF] .toc : données, moteur et page après les crochets existants", (function()
@@ -141,6 +141,8 @@ do
 		[101] = { name = "Zhévra", normal = true }, [102] = { name = "Brillant", normal = false, shiny = true },
 		[103] = "abîmée" } } } }
 	db.chars["Vide-Royaume"] = 7
+	-- 2.9.0 : collection au compte, recréée ici en versant les deux personnages
+	db.capture, NS.captureMergedChar = nil, nil
 	local mine = NS:CaptureData().creatures
 	mine[101] = { name = "Zhévra", normal = true }
 	mine[104] = { name = "Loup", normal = true }
@@ -149,7 +151,7 @@ do
 	local cur = NS:FeatProgress("men_first")
 	local sp = NS.FEAT_SOURCES.species
 	Check("[HF] espèces de compte : union des captures de tous les personnages (101, 102, 104)",
-		sp.get(NS, "account") == 3 and sp.get(NS, "char") == 2 and cur == 1, tostring(sp.get(NS, "account")))
+		sp.get(NS, "account") == 3 and sp.get(NS, "char") == 3 and cur == 1, tostring(sp.get(NS, "account")))   -- 2.9.0 : la collection est au compte, le personnage la voit entière
 	NS:FeatCacheReset()
 	Check("[HF] brillantes de compte : union aussi", NS.FEAT_SOURCES.shinyCap.get(NS, "account") == 1)
 	Check("[HF] FeatAward : compte dans db.feats, personnage dans CharData().feats",
@@ -507,13 +509,13 @@ do
 	local pane = f and f.feats
 	Check("[HF] /qc hf : le carnet s'ouvre sur la page Hauts faits", f and f:IsShown() and f.kind == "feats"
 		and pane and pane:IsShown() and f.header.title.text == NS.L.JRN_SEC_feats and f.sections.feats ~= nil)
-	Check("[HF] nav : « Hauts faits » juste après la Ménagerie", f.sections.feats and f.sections.menagerie
+	Check("[HF] nav : « Hauts faits » juste après la Créatures", f.sections.feats and f.sections.menagerie
 		and select(5, f.sections.feats:GetPoint(1)) < select(5, f.sections.menagerie:GetPoint(1)))
 	Check("[HF] sous-titre du carnet : les points", f.subtitle.text:find("15 points de hauts faits", 1, true), f.subtitle.text)
 	Check("[HF] totaux : compte et personnage", pane.totals.text == "Compte : 5 points · Personnage : 10 points"
 		and pane.count.text:find("3 / " .. #NS:FeatDefs(), 1, true), pane.totals.text)
 	Check("[HF] catégories : « Toutes » puis une par catégorie, avec obtenus et points", #pane.cats == 1 + #NS:FeatCategories()
-		and pane.cats[1].label.text == "Toutes" and pane.cats[2].label.text == "Ménagerie"
+		and pane.cats[1].label.text == "Toutes" and pane.cats[2].label.text == "Créatures"
 		and pane.cats[2].value.text == "1/" .. select(2, NS:FeatCategoryStats("men")) .. " · 5", pane.cats[2].value.text)
 	local first = pane.rows[1]
 	Check("[HF] liste : non obtenus d'abord, barre de progression", first:IsShown() and first.entry and not first.entry.got)

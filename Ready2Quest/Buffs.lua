@@ -205,8 +205,9 @@ function ns:ScanBuffs()
 		local family = BuffFamily(aura.name)
 		if family and known[family] then
 			-- déjà suivi sous un autre rang ou en version de groupe : on note
-			-- juste qu'il a été vu
+			-- juste qu'il a été vu (et par qui)
 			known[family].lastSeen = stamp
+			ns.BuffNoteCaster(known[family], aura)
 		elseif type(spellId) == "number" and spellId > 0
 			and type(duration) == "number" and duration >= MIN_DURATION
 			and not (family and IGNORED_FAMILIES[family])
@@ -219,10 +220,70 @@ function ns:ScanBuffs()
 				learned  = true,
 				lastSeen = stamp,
 			}
+			ns.BuffNoteCaster(db.buffs[spellId], aura)
 			if family then known[family] = db.buffs[spellId] end
 			count = count + 1
 		end
 	end
+end
+
+-- ---------------------------------------------------------------------------
+-- Qui peut le donner (1.30.0) : un buff appris d'un autre joueur (un cri de
+-- guerrier reçu en groupe) n'est réclamé que si sa classe est là. Un buff que
+-- tu poses toi-même (sort, nourriture, parchemin, élixir) l'est toujours.
+-- ---------------------------------------------------------------------------
+local function Plain(v) return ns.Plain and ns.Plain(v) or v end
+
+-- Note le lanceur d'une aura sur la fiche du buff : self, ou sa classe
+local function NoteCaster(entry, aura)
+	if type(entry) ~= "table" or type(aura) ~= "table" then return end
+	local src = Plain(aura.sourceUnit)
+	if Plain(aura.isFromPlayerOrPlayerPet) == true or src == "player" or src == "pet" or src == "vehicle" then
+		entry.self, entry.casterClass = true, nil
+		return
+	end
+	if entry.self or type(src) ~= "string" or type(UnitClass) ~= "function" then return end
+	local ok, _, classFile = pcall(UnitClass, src)
+	if ok and type(Plain(classFile)) == "string" then entry.casterClass = Plain(classFile) end
+end
+ns.BuffNoteCaster = NoteCaster
+
+-- Les classes présentes : toi et ton groupe (ou raid)
+function ns:BuffGroupClasses()
+	local classes = {}
+	local function Add(unit)
+		if type(UnitClass) ~= "function" then return end
+		local ok, _, classFile = pcall(UnitClass, unit)
+		classFile = ok and Plain(classFile)
+		if type(classFile) == "string" then classes[classFile] = true end
+	end
+	Add("player")
+	local n = type(GetNumGroupMembers) == "function" and tonumber(Plain(GetNumGroupMembers())) or 0
+	local raid = type(IsInRaid) == "function" and Plain(IsInRaid()) == true
+	for i = 1, (raid and math.min(n, 40) or math.min(math.max(n - 1, 0), 4)) do
+		Add((raid and "raid" or "party") .. i)
+	end
+	return classes, n > 1
+end
+
+local function KnowsSpell(spellId)
+	for _, name in ipairs({ "IsPlayerSpell", "IsSpellKnown" }) do
+		local fn = rawget(_G, name)
+		if type(fn) == "function" then
+			local ok, known = pcall(fn, spellId)
+			if ok and Plain(known) == true then return true end
+		end
+	end
+	return false
+end
+
+-- Ce buff peut-il t'être donné maintenant ?
+function ns:BuffAvailable(spellId, entry, classes, grouped)
+	if entry.self then return true end
+	if KnowsSpell(spellId) then return true end
+	if entry.casterClass then return classes[entry.casterClass] == true end
+	-- appris avant 1.30.0, lanceur inconnu : en groupe comme avant, seul non
+	return grouped == true
 end
 
 -- Retourne : manquants (table), suivis (nombre), illisibles (nombre)
@@ -233,6 +294,7 @@ function ns:EvaluateBuffs()
 	local hasByID = C_UnitAuras and type(C_UnitAuras.GetPlayerAuraBySpellID) == "function"
 	local families = CurrentFamilies()
 	local seen = {}
+	local classes, grouped = self:BuffGroupClasses()
 
 	-- Groupe exclusif : on ne réclame que le dernier vu (la bénédiction que
 	-- le paladin pose d'habitude), pas la première trouvée au hasard.
@@ -259,7 +321,8 @@ function ns:EvaluateBuffs()
 		end
 		local stale = now and entry.learned and type(entry.lastSeen) == "number"
 			and (now - entry.lastSeen) > FORGET_AFTER
-		if entry.enabled ~= false and not skip and not stale and not seen[family] then
+		if entry.enabled ~= false and not skip and not stale and not seen[family]
+			and self:BuffAvailable(spellId, entry, classes, grouped) then
 			seen[family] = true
 			watched = watched + 1
 			local active = families[family] == true

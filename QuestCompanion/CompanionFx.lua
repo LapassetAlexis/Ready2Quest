@@ -364,4 +364,78 @@ if ok and frame then
 	ns.companionFxFrame = frame
 end
 
+-- ---------------------------------------------------------------------------
+-- 2.9.0 (idée d'Enimag) : plusieurs monstres sur toi, le cadre du compagnon
+-- clignote en rouge. Compté sur les barres de nom : un ennemi dont la cible
+-- est toi. Valeurs secrètes ou API absente : rien ne clignote.
+-- ---------------------------------------------------------------------------
+ns.COMPANION_AGGRO_MIN = 2          -- monstres sur toi pour clignoter
+ns.COMPANION_AGGRO_POLL = 0.5       -- s entre deux comptes
+ns.COMPANION_AGGRO_TEXTURE = "Interface\\Buttons\\UI-ActionButton-Border"
+if ns.RegisterDefaults then ns.RegisterDefaults({ companionAggroBlink = true }) end
+
+local function Plain(v) return ns.Plain and ns.Plain(v) or v end
+local function SafeCall(fn, ...)
+	if type(fn) ~= "function" then return nil end
+	local ok, a = pcall(fn, ...)
+	if ok then return Plain(a) end
+	return nil
+end
+
+function ns:CompanionAggroCount()
+	local api = rawget(_G, "C_NamePlate")
+	if type(api) ~= "table" or type(api.GetNamePlates) ~= "function" then return 0 end
+	local ok, plates = pcall(api.GetNamePlates)
+	if not ok or type(plates) ~= "table" then return 0 end
+	local count = 0
+	for _, plate in ipairs(plates) do
+		local unit = type(plate) == "table" and Plain(plate.namePlateUnitToken)
+		if type(unit) == "string" and SafeCall(rawget(_G, "UnitCanAttack"), "player", unit) == true
+			and SafeCall(rawget(_G, "UnitIsDead"), unit) ~= true
+			and SafeCall(rawget(_G, "UnitIsUnit"), unit .. "target", "player") == true then
+			count = count + 1
+		end
+	end
+	return count
+end
+
+function ns:CompanionAggroUpdate(now)
+	local frame = self.companionFrame
+	if not frame then return false end
+	now = now or Clock()
+	local state = State(self)
+	if not state.aggroAt or now < state.aggroAt or now - state.aggroAt >= ns.COMPANION_AGGRO_POLL then
+		state.aggroAt = now
+		local on = self:DB().companionAggroBlink ~= false and (frame.IsShown and frame:IsShown())
+			and self:CompanionAggroCount() >= ns.COMPANION_AGGRO_MIN
+		state.aggroOn = on and true or false
+	end
+	if state.aggroOn then
+		if not frame.danger then
+			frame.danger = frame:CreateTexture(nil, "OVERLAY")
+			frame.danger:SetTexture(ns.COMPANION_AGGRO_TEXTURE)
+			if frame.danger.SetBlendMode then frame.danger:SetBlendMode("ADD") end
+			frame.danger:SetPoint("TOPLEFT", frame, "TOPLEFT", -14, 14)
+			frame.danger:SetPoint("BOTTOMRIGHT", frame, "BOTTOMRIGHT", 14, -14)
+			frame.danger:SetVertexColor(1, 0.12, 0.08, 1)
+		end
+		-- battement : deux par seconde
+		frame.danger:SetAlpha(0.35 + 0.65 * math.abs(math.sin(now * math.pi * 2)))
+		frame.danger:Show()
+	elseif frame.danger then
+		frame.danger:Hide()
+	end
+	return state.aggroOn
+end
+
+do
+	local ok, ticker = pcall(CreateFrame, "Frame")
+	if ok and ticker then
+		ticker:SetScript("OnUpdate", function()
+			if ns.companionFrame then pcall(ns.CompanionAggroUpdate, ns) end
+		end)
+		ns.companionAggroTicker = ticker
+	end
+end
+
 if ns.Mark then ns.Mark("CompanionFx") end

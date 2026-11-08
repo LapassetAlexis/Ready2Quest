@@ -45,7 +45,11 @@ ns.AZEROTH_ATLAS = {
 	frame      = "ui-achievement-iconframe",
 	frameRound = "ui-achievement-guild-iconframe",
 	shield     = "ui-achievement-shield-1",
-	shieldGrey = "ui-achievement-shield-desaturated",
+	-- 2.9.0 : le gris de même gabarit que le doré (62×56, mesuré sur l'atlas
+	-- 4035524) ; « ui-achievement-shield-desaturated » est une pièce de
+	-- 128×128 où l'écu n'occupe que le milieu : posé à la taille du doré, il
+	-- sortait minuscule (lignes pas encore obtenues, scène « Échappé… »)
+	shieldGrey = "ui-achievement-shield-1-desaturated",
 }
 -- celles sans lesquelles le style ne tient pas (le reste est décoratif)
 ns.AZEROTH_REQUIRED = { "bg", "bgGuild", "plate", "frame", "frameRound", "shield" }
@@ -77,6 +81,9 @@ ns.AZEROTH_LAYOUT = {
 	titleY = -28, titleW = 252, nameY = -50, nameW = 260, nameWide = 290, starsY = -82,
 	nameMax = 20, nameMin = 11, titleMax = 12, titleMin = 9,
 }
+-- 2.9.0 : tailles des boucliers (même rapport que l'atlas, 63×56) : bandeau
+-- de verdict des scènes, lignes du carnet des hauts faits
+ns.AZEROTH_SHIELD_SIZE = { verdict = { 63, 56 }, row = { 52, 46 } }
 ns.CAPTURE_RESULT_SECONDS = 3.5   -- s d'affichage du bandeau « Capturé ! »
 ns.CAPTURE_RESULT_STALE = 30      -- s d'attente au plus (combat) avant de l'oublier
 local AZ = ns.AZEROTH_ATLAS
@@ -130,6 +137,7 @@ ns.AZEROTH_CONTRAST = {
 	["feat.name"] = { "white", 0.0725, 4.5, 12 },   -- clair, fond 0.072 (moy. 0.035) : 8.57:1
 	["feat.desc"] = { "ink", 0.3678, 4.5, 11 },   -- sombre, fond 0.368 (moy. 0.419) : 7.50:1
 	["feat.reward"] = { "reward", 0.3326, 4.5, 11 },   -- sombre, fond 0.333 (moy. 0.413) : 4.87:1
+	["mission.done"] = { "green", 0.3326, 4.5, 11 },   -- sombre, « faite » des missions, fond des lignes 0.333 : 4.88:1 (2.9.0)
 	["feat.date"] = { "inkMuted", 0.4149, 4.5, 11 },   -- sombre, fond 0.415 (moy. 0.449) : 6.25:1
 	["feat.count"] = { "inkMuted", 0.4137, 4.5, 11 },   -- sombre, fond 0.414 (moy. 0.443) : 6.24:1
 	["feat.scopeAccount"] = { "tagBlue", 0.0140, 4.5, 10 },   -- clair, fond 0.014 (moy. 0.008) : 4.96:1
@@ -185,6 +193,12 @@ ns.AZEROTH_CONTRAST = {
 	["cplate.mood"] = { "ink", 0.2763, 4.5, 10 },   -- sombre, fond 0.276 (moy. 0.373) : 5.85:1
 	["splate.title"] = { "ink", 0.3363, 4.5, 11 },   -- sombre, fond 0.336 (moy. 0.405) : 6.93:1
 	["splate.name"] = { "white", 0.0252, 3.0, 17 },   -- clair, fond 0.025 (moy. 0.021) : 13.97:1
+	["section.label"] = { "head", 0.2935, 4.5, 10 },   -- sombre, fond 0.293 (moy. 0.376) : 4.65:1 (2.9.0, intertitres (Theme.CreateSection) sur parchemin voilé, pire décile de toute la page (journal 758×678, fiche 778×578, ombre de gauche comprise) ; fiche : 0.336 au pire sous ses intertitres)
+	["section.detail"] = { "inkSoft", 0.2935, 4.5, 10 },   -- sombre, fond 0.293 (moy. 0.376) : 5.49:1 (2.9.0, leur détail entre parenthèses, même fond)
+	["effects.line"] = { "ink", 0.3217, 4.5, 11 },   -- sombre, fond 0.322 (moy. 0.355) : 6.67:1 (2.9.0, « Ses effets » (page Compagnon), lignes chasse/confort, effets actifs)
+	["effects.linePending"] = { "inkSoft", 0.3217, 4.5, 11 },   -- sombre, fond 0.322 (moy. 0.355) : 5.94:1 (2.9.0, les mêmes, effets en attente)
+	["effects.state"] = { "ink", 0.3036, 4.5, 11 },   -- sombre, fond 0.304 (moy. 0.336) : 6.34:1 (2.9.0, ligne force/envies/état (bas du bloc, le plus sombre), actifs)
+	["effects.statePending"] = { "inkSoft", 0.3036, 4.5, 11 },   -- sombre, fond 0.304 (moy. 0.336) : 5.65:1 (2.9.0, la même, en attente / module coupé)
 }
 -- Luminance relative WCAG 2.x d'une couleur (0..1)
 local function Lin(c) if c <= 0.03928 then return c / 12.92 end return ((c + 0.055) / 1.055) ^ 2.4 end
@@ -881,8 +895,10 @@ function ns:AzerothVerdict(parent, width, height)
 	banner.line:SetWidth(banner.nameW)
 	if banner.line.SetWordWrap then banner.line:SetWordWrap(false) end
 	banner.shield = banner:CreateTexture(nil, "ARTWORK", nil, 2)
-	banner.shield:SetSize(58, 52)
-	banner.shield:SetPoint("TOPRIGHT", banner, "TOPRIGHT", 6, -26)
+	-- 2.9.0 : à la taille de l'atlas (63×56, écu de 28×35) : à 58×52, et
+	-- surtout avec l'ancien gris de 128×128, il sortait trop petit
+	banner.shield:SetSize(ns.AZEROTH_SHIELD_SIZE.verdict[1], ns.AZEROTH_SHIELD_SIZE.verdict[2])
+	banner.shield:SetPoint("TOPRIGHT", banner, "TOPRIGHT", 8, -24)
 	banner.shield:Hide()
 	banner.bling = banner:CreateTexture(nil, "OVERLAY", nil, 2)
 	banner.bling:SetSize(100, 100)
@@ -910,11 +926,16 @@ function ns:AzerothVerdict(parent, width, height)
 	return banner
 end
 
--- Le cadre d'icône des hauts faits avec, dedans, la tête d'une créature :
--- modèle 3D cadré en portrait (SetPortraitZoom), icône de son type en repli.
+-- Le cadre d'icône des hauts faits avec, dedans, le portrait fixe d'une
+-- créature : l'icône de son type (ns.MENAGERIE_TYPE_ICONS, Interface\Icons).
 -- host:SetCreature(target) (nil : vide), host:SetLevel(n) écrit le niveau
--- dans le bouclier (host.shield). Le modèle est un cadre : le cadre d'icône
--- passe au-dessus dans un cadre à lui. size : côté du cadre d'icône.
+-- dans le bouclier (host.shield). Le cadre d'icône passe au-dessus, dans un
+-- cadre à lui. size : côté du cadre d'icône.
+-- 2.9.0 : plus de modèle 3D. Le zoom « portrait » (SetPortraitZoom) vise le
+-- point d'attache de la tête du modèle ; sur bien des créatures il manque ou
+-- est mal placé, et le cadre montrait une patte. Le vrai portrait 2D du jeu
+-- (SetPortraitTexture) demande une unité, qui n'existe plus après la mort.
+-- L'icône du type, elle, s'affiche toujours, sans chargement ni caméra.
 ns.AZEROTH_PORTRAIT_ICON = "Interface\\Icons\\Ability_Hunter_BeastTaming"
 -- 2.8.2 : l'ouverture du cadre d'icône (ui-achievement-iconframe, 74×74 :
 -- trou transparent de 17 à 57, mesuré sur la texture) et le centre visuel
@@ -941,6 +962,8 @@ function ns.AzerothShieldCenter(fs, shield)
 	local y = math.floor(h * face.y + 0.5) + face.digits
 	fs:ClearAllPoints()
 	fs:SetPoint("CENTER", shield, "CENTER", x, y)
+	if fs.SetJustifyH then fs:SetJustifyH("CENTER") end
+	if fs.SetJustifyV then fs:SetJustifyV("MIDDLE") end
 	return x, y
 end
 
@@ -950,21 +973,13 @@ function ns.AzerothPortraitSlot(host, size, x, y)
 	anchor:SetSize(size, size)
 	anchor:SetPoint("TOPLEFT", host, "TOPLEFT", x, y)
 	host.portraitAnchor = anchor
-	local ok, model = pcall(CreateFrame, "PlayerModel", nil, host)
-	if ok and model then
-		InHole(model, anchor, size, ns.AZEROTH_ICON_HOLE)
-		model:SetFrameLevel(level + 1)
-		model:Hide()
-		if ns.ModelKeepFraming then ns.ModelKeepFraming(model) end
-		host.portrait = model
-	end
 	host.portraitIcon = host:CreateTexture(nil, "ARTWORK", nil, 1)
 	InHole(host.portraitIcon, anchor, size, ns.AZEROTH_ICON_HOLE)
 	host.portraitIcon:SetTexCoord(0.08, 0.92, 0.08, 0.92)
 	host.portraitIcon:Hide()
 	local ring = CreateFrame("Frame", nil, host)
 	ring:SetAllPoints(anchor)
-	ring:SetFrameLevel(level + 3)
+	ring:SetFrameLevel(level + 2)
 	ring:EnableMouse(false)
 	host.portraitRing = ring
 	host.iconFrame = ring:CreateTexture(nil, "ARTWORK")
@@ -980,37 +995,17 @@ function ns.AzerothPortraitSlot(host, size, x, y)
 	host.levelText:SetText("")
 	host.levelText:Hide()
 	function host:SetCreature(target)
-		local model, icon = self.portrait, self.portraitIcon
+		local icon = self.portraitIcon
 		self.portraitNpc = target and tonumber(target.npcID or target.npc) or nil
-		local shown = false
-		if model and self.portraitNpc then
-			model:Show()
-			shown = Method(model, "SetCreature", self.portraitNpc) and true or false
-			if shown then
-				-- reposé à la fin du chargement (ns.ModelKeepFraming) : posé
-				-- trop tôt, le client l'ignorait et la tête sortait du cadre
-				model.framing = function(m)
-					Method(m, "SetPortraitZoom", 1)
-					Method(m, "SetCamDistanceScale", 1)
-					Method(m, "SetPosition", 0, 0, 0)
-				end
-				model.framing(model)
-				if ns.ModelShinyLight then ns.ModelShinyLight(model, target.shiny) end
-			else
-				model:Hide()
-			end
-		elseif model then
-			model:Hide()
-		end
-		self.portraitShown = shown
-		if target and not shown then
+		self.portraitShown = false
+		if target then
 			local types = ns.MENAGERIE_TYPE_ICONS
 			icon:SetTexture((types and types[target.type or ""]) or ns.AZEROTH_PORTRAIT_ICON)
 			icon:Show()
 		else
 			icon:Hide()
 		end
-		return shown
+		return target and true or false
 	end
 	function host:SetLevel(value)
 		local n = tonumber(value)
