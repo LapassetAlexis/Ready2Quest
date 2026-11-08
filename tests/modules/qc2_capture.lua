@@ -429,8 +429,10 @@ do
 	Check("[QC2CAP] bandeau « Capture possible » montré, nom de la créature", toast and toast:IsShown()
 		and toast.title:GetText() == NS.Theme.Upper(NS.L.CAPTURE_TOAST_TITLE) and toast.text:GetText() == "Raptor"
 		and toast.hint:GetText() == NS.L.CAPTURE_TOAST_HINT and NS.captureToastHideAt ~= nil, toast and toast.text:GetText())
+	local hideAt = NS.captureToastHideAt
 	Q.SeeKill(4401, { name = "Raptor B" })
 	Check("[QC2CAP] un deuxième : « et 1 de plus »", toast.hint:GetText():find("et 1 de plus", 1, true) ~= nil, toast.hint:GetText())
+	Check("[QC2CAP] … sans prolonger le bandeau (mêlée, 2.9.0)", NS.captureToastHideAt == hideAt)
 	Mock:Advance(NS.CAPTURE_TOAST_SECONDS + 1); NS:CaptureTick(NS.Now())
 	Check("[QC2CAP] bandeau : s'efface seul au bout de " .. NS.CAPTURE_TOAST_SECONDS .. " s", not toast:IsShown() and NS.captureToastHideAt == nil)
 	net.scripts.OnUpdate(net)

@@ -181,7 +181,7 @@ do
 	Check("[AZ] apparition : le bandeau éclot", toast.animating and toast.banner.scripts.OnUpdate ~= nil
 		and (toast.banner.frameScale or 1) < 1)
 	Mock:Advance(1)
-	Mock:Advance(2)
+	Mock:Advance(1.5)   -- avant les 3 s d'affichage (2.9.0)
 	Check("[AZ] … puis se fige (plus d'horloge)", not toast.animating and toast.banner.scripts.OnUpdate == nil
 		and toast.banner.frameScale == 1 and toast.glow.alpha == 0)
 	Check("[AZ] clic sur le bandeau : même geste que le filet", toast.button and toast.button.scripts.OnClick ~= nil)

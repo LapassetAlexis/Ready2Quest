@@ -47,7 +47,7 @@ local NET_SIZE = 44
 ns.CAPTURE_NET_SIZE = NET_SIZE
 ns.CAPTURE_NET_GAP = 8            -- px entre le cadre du compagnon et le filet
 ns.CAPTURE_NET_PULSE = 4          -- s de battement doré à l'arrivée d'un candidat
-ns.CAPTURE_TOAST_SECONDS = 5      -- s d'affichage du bandeau « Capture possible »
+ns.CAPTURE_TOAST_SECONDS = 3      -- s d'affichage du bandeau « Capture possible » (2.9.0 : 5 -> 3)
 local TOAST_W, TOAST_H, TOAST_ICON = 384, 102, 34
 ns.CAPTURE_MUTE_CHOICES = { 5, 15, 30, 60 }   -- minutes de sourdine proposées par le bandeau
 -- Sons (2.2.0) : des kits du client, par numéro (SoundKitConstants.lua de
@@ -681,7 +681,12 @@ do
 		if not (queue and #queue > 0) then return end
 		now = now or Clock()
 		local changed = false
-		if self.captureToastHideAt and now >= self.captureToastHideAt then self:CaptureToastHide() end
+		if self.captureToastHideAt and now >= self.captureToastHideAt then
+			-- souris dessus : il attend qu'on la retire
+			local toast = self.captureToast
+			local over = toast and toast.IsMouseOver and Call(toast.IsMouseOver, toast)
+			if over then self.captureToastHideAt = now + 1 else self:CaptureToastHide() end
+		end
 		if not InCombat() and self:CaptureQueueStartTimers(now) then
 			changed = true
 			-- fin du combat : ceux qui attendaient sont annoncés, et c'est
@@ -1207,7 +1212,9 @@ function ns:CaptureToastShow()
 		frame.chimedFor = best.serial
 		self:CapturePlaySound("ready")
 	end
-	self.captureToastHideAt = Clock() + ns.CAPTURE_TOAST_SECONDS
+	-- un nouveau monstre abattu ne le prolonge plus (2.9.0) : en pleine mêlée
+	-- il restait affiché sans fin ; seule une nouvelle apparition relance le délai
+	if fresh or not self.captureToastHideAt then self.captureToastHideAt = Clock() + ns.CAPTURE_TOAST_SECONDS end
 	return frame
 end
 
