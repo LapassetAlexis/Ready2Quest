@@ -423,9 +423,9 @@ local function AuraByIndex(index)
 	if type(UnitAura) == "function" then
 		-- name, icon, count, dispelType, duration, expirationTime, source,
 		-- isStealable, nameplateShowPersonal, spellId : le spellId est le 10e
-		local ok, name, _, _, _, duration, _, _, _, _, spellId = pcall(UnitAura, "player", index, "HELPFUL")
+		local ok, name, _, _, _, duration, _, source, _, _, spellId = pcall(UnitAura, "player", index, "HELPFUL")
 		if ok and name then
-			return { name = name, duration = duration, spellId = spellId }
+			return { name = name, duration = duration, spellId = spellId, sourceUnit = source }
 		end
 	end
 	return nil

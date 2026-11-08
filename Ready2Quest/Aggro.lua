@@ -32,7 +32,11 @@ local Theme = ns.Theme
 local AGGRO_BASE   = 20     -- yards, à niveau égal
 local AGGRO_MIN    = 5
 local AGGRO_MAX    = 45
-local AGGRO_MARGIN = 5      -- ambre : jusqu'à 5 m au-delà de la portée
+-- 1.30.0 : un avertissement, pas un constat : le rouge s'allume quelques
+-- mètres AVANT la portée estimée (AGGRO_WARN), l'ambre plus loin encore
+local AGGRO_WARN   = 5      -- rouge : dès 5 m avant d'entrer dans la portée
+local AGGRO_MARGIN = 12     -- ambre : jusqu'à 12 m au-delà de la portée
+ns.AGGRO_WARN, ns.AGGRO_MARGIN = AGGRO_WARN, AGGRO_MARGIN
 local SKULL_GAP    = 10     -- niveau « ?? » : au moins dix niveaux de plus
 ns.AGGRO_TICK = 0.2
 ns.AGGRO_RING_SIZE = 96
@@ -65,7 +69,7 @@ local FR = {
 	AGGRO_DIST_BAND      = "tu es à %s-%s %s",
 	AGGRO_DIST_BELOW     = "tu es à moins de %s %s",
 	AGGRO_DIST_BEYOND    = "tu es à plus de %s %s",
-	AGGRO_VERDICT_red    = "dans sa portée",
+	AGGRO_VERDICT_red    = "danger, trop près",
 	AGGRO_VERDICT_amber  = "à la limite",
 	AGGRO_VERDICT_green  = "hors de portée",
 	AGGRO_NEUTRAL        = "Aggro : neutre, n'attaque pas",
@@ -98,7 +102,7 @@ local EN = {
 	AGGRO_DIST_BAND      = "you are %s-%s %s away",
 	AGGRO_DIST_BELOW     = "you are within %s %s",
 	AGGRO_DIST_BEYOND    = "you are over %s %s away",
-	AGGRO_VERDICT_red    = "in range",
+	AGGRO_VERDICT_red    = "danger, too close",
 	AGGRO_VERDICT_amber  = "borderline",
 	AGGRO_VERDICT_green  = "out of range",
 	AGGRO_NEUTRAL        = "Aggro: neutral, won't attack",
@@ -236,13 +240,14 @@ function ns.AggroRadius(playerLevel, mobLevel)
 end
 
 -- Verdict d'une fourchette de distance [low, high] (high nil : au-delà de
--- la dernière mesure) : "red" sûrement dans la portée, "amber" à moins de
--- AGGRO_MARGIN au-delà, "green" plus loin ; nil sans mesure.
+-- la dernière mesure) : "red" dans la portée ou à moins de AGGRO_WARN de son
+-- bord (1.30.0 : on prévient avant), "amber" à moins de AGGRO_MARGIN au-delà,
+-- "green" plus loin ; nil sans mesure.
 function ns.AggroVerdict(radius, low, high)
 	radius, low, high = Num(radius), Num(low), Num(high)
 	if not radius or (not low and not high) then return nil end
 	low = low or 0
-	if high and high <= radius then return "red" end
+	if high and high <= radius + AGGRO_WARN then return "red" end
 	if low < radius + AGGRO_MARGIN then return "amber" end
 	return "green"
 end
