@@ -256,6 +256,10 @@ SPECIAL_REPEATABLE = 1
 SORT_EVENT = {-404, -402, -378, -376, -375, -374, -370, -369, -366, -364, -41, -22, -21, -1000}
 SORT_PROFESSION = {-398, -377, -373, -371, -324, -304, -264, -201, -182, -181, -121, -101, -24}
 SORT_PVP = {-25, -368, -365, -241}
+# Catégories de classe (QuestSort de Questie) -> masque requiredClasses,
+# bit = 2^(classID-1) : guerrier 1, paladin 2, chasseur 3, voleur 4,
+# prêtre 5, chaman 7, mage 8, démoniste 9, druide 11
+CLASS_SORT_MASK = {-81: 1, -141: 2, -261: 4, -162: 8, -262: 16, -82: 64, -161: 128, -61: 256, -263: 1024}
 
 
 def bit_set(mask, bit):
@@ -338,6 +342,10 @@ def build_quests(entities, fr, to_map, zones_wanted, hidden, events):
         req = row.get(qk["requiredLevel"])
         races = row.get(qk["requiredRaces"])
         classes = row.get(qk["requiredClasses"])
+        # quête rangée dans une catégorie de classe (zoneOrSort < 0) sans
+        # requiredClasses : la catégorie dit la classe (ex. 93797, mage)
+        if not (_num(classes) and int(classes) > 0) and _num(sort) and int(sort) in CLASS_SORT_MASK:
+            classes = CLASS_SORT_MASK[int(sort)]
         ex = set()
         for field in ("exclusiveTo",):
             for other in (row.get(qk[field]) or {}).values() if isinstance(row.get(qk[field]), dict) else ():

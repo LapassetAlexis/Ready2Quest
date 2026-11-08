@@ -176,6 +176,9 @@ do
 		and Q.FOREVER[1411][4641].races == 178 + 2 ^ 33)
 	Check("[ZQ] Forever : Île de Zephras (2521), « Coming of Age » (92460)", Q.FOREVER[2521]
 		and Q.FOREVER[2521][92460] and Q.FOREVER[2521][92460].en == "Coming of Age")
+	-- catégorie de classe de Questie (zoneOrSort -161) sans requiredClasses : la classe en vient (2.8.3)
+	Check("[ZQ] Forever, Zephras : « Boughs in the Wind » (93797) réservée aux mages (128)", Q.FOREVER[2521]
+		and Q.FOREVER[2521][93797] and Q.FOREVER[2521][93797].classes == 128)
 	Check("[ZQ] exclusives réelles : éclats de gangrechien / d'infernal (4962 <-> 4963)", Q.FOREVER[1413][4962].ex[1] == 4963
 		and Q.FOREVER[1413][4963].ex[1] == 4962 and Q.FOREVER[1413][4962].classes == 256)
 	-- exclues en amont : cachée, répétable, métier, événement, JcJ

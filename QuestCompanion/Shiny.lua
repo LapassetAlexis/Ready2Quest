@@ -69,8 +69,6 @@ local FR = {
 	JRN_STAT_shiny         = "brillantes",
 	SHINY_MSG_UNLOCK       = "%d créatures brillantes ! Nouveau : %s.",
 	OPT_PAGE_DAILY         = "Au jour le jour",
-	OPT_DAILY_MARK         = "Étoile sur les brillantes",
-	OPT_DAILY_MARK_DESC    = "Une étoile au-dessus d'une créature brillante, si tu joues seul ou mènes le groupe, et si elle n'a pas déjà d'icône.",
 	OPT_DAILY_PLATE        = "Losange doré sur la barre de nom des brillantes",
 	OPT_DAILY_PLATE_DESC   = "Au-dessus du nom d'une créature brillante repérée : il scintille tant qu'elle est en vie. Seul ou en groupe.",
 	OPT_DAILY_CHEST        = "Ouverture animée des coffres",
@@ -83,8 +81,6 @@ local EN = {
 	JRN_STAT_shiny         = "shinies",
 	SHINY_MSG_UNLOCK       = "%d shiny creatures! New: %s.",
 	OPT_PAGE_DAILY         = "Day by day",
-	OPT_DAILY_MARK         = "Star on shinies",
-	OPT_DAILY_MARK_DESC    = "A star above a shiny creature, if you play solo or lead the group, and if it has no icon yet.",
 	OPT_DAILY_PLATE        = "Gold diamond on shiny nameplates",
 	OPT_DAILY_PLATE_DESC   = "Above the name of a spotted shiny creature: it sparkles while it lives. Solo or in a group.",
 	OPT_DAILY_CHEST        = "Animated chest opening",
@@ -227,17 +223,12 @@ function ns:ShinyRoll(unit, entry)
 	return chance > 0 and math.random() < chance
 end
 
--- Étoile au-dessus : seul ou chef du groupe, et pas d'icône déjà posée
+-- Étoile au-dessus : plus jamais posée d'office. SetRaidTarget est protégé
+-- sur Forever : appelé hors d'un clic du joueur, le jeu bloque l'addon
+-- (fenêtre « QuestCompanion a été bloqué », 2.8.3). L'alerte du compagnon,
+-- le chat et l'éclat suffisent ; la touche reste aux marques du joueur.
 function ns:ShinyMark(unit)
-	if self:DB().companionShinyMark == false then return false end
-	-- une icône déjà posée, ou une valeur secrète (Forever) : on n'y touche pas
-	local icon = Call(G("GetRaidTargetIndex"), unit)
-	if icon ~= nil and ns.Plain(icon) == nil then return false end
-	if ns.Plain(icon) then return false end
-	if Call(G("IsInGroup")) and not Call(G("UnitIsGroupLeader"), "player") then return false end
-	if type(G("SetRaidTarget")) ~= "function" then return false end
-	Call(G("SetRaidTarget"), unit, ns.SHINY_MARK)
-	return true
+	return false
 end
 
 function ns:ShinySpot(unit, guid, entry, species)
@@ -444,8 +435,6 @@ end
 -- Réglages : page « Au jour le jour »
 -- ---------------------------------------------------------------------------
 ns.DAILY_OPTION_ROWS = {
-	{ key = "companionShinyMark", label = "OPT_DAILY_MARK", kind = "bool",
-		describe = function() return L.OPT_DAILY_MARK_DESC end },
 	{ key = "companionShinyPlate", label = "OPT_DAILY_PLATE", kind = "bool",
 		describe = function() return L.OPT_DAILY_PLATE_DESC end,
 		onChange = function() ns:ShinyPlatesRefresh() end },

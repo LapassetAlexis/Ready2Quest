@@ -149,7 +149,7 @@ local STRINGS_FR = {
 	ADV_CAMPOBJ = "Ton objet de camp n'est pas prêt : à fabriquer, ou en recharge.",
 	CAMP_TIMER = "Au camp : buffs dans %s",
 	CAMP_TIMER_EST = "Au camp : buffs dans ~%s",
-	CAMP_TIMER_HINT = "Au camp : assieds-toi ou fabrique",
+	CAMP_TIMER_HINT = "Buffs du feu de camp : assieds-toi ou fabrique ici",
 	CAMP_TIMER_ACTIVE = "Buffs du camp actifs",
 	CAMP_DEPART_BUFFS = "Buffs du camp : encore %d min.",
 }
@@ -169,7 +169,7 @@ local STRINGS_EN = {
 	ADV_CAMPOBJ = "Your camp object isn't ready: craft one, or wait for its cooldown.",
 	CAMP_TIMER = "At camp: buffs in %s",
 	CAMP_TIMER_EST = "At camp: buffs in ~%s",
-	CAMP_TIMER_HINT = "At camp: sit down or craft",
+	CAMP_TIMER_HINT = "Campfire buffs: sit down or craft here",
 	CAMP_TIMER_ACTIVE = "Camp buffs active",
 	CAMP_DEPART_BUFFS = "Camp buffs: %d min left.",
 }
@@ -384,14 +384,24 @@ local function Clock(seconds)
 	return string.format("%d:%02d", math.floor(seconds / 60), seconds % 60)
 end
 
+ns.CAMP_ICON = "Interface\\Icons\\Spell_Fire_Fire"
+
 -- bandeau (Theme.CreateToast) : liseré ambre, le décompte au centre
 function ns:EnsureCampFrame()
 	if self.campFrame then return self.campFrame end
 	if not (Theme and Theme.CreateToast) then return nil end
-	local frame = Theme.CreateToast(UIParent, 230, 28)
+	local frame = Theme.CreateToast(UIParent, 300, 28)
 	if not frame then return nil end
 	frame.text = Theme.Text(frame, Theme.F_LABEL, Theme.LABEL)
-	frame.text:SetPoint("CENTER", frame, "CENTER", Theme.TOAST_ACCENT / 2, 0)
+	frame.text:SetPoint("CENTER", frame, "CENTER", Theme.TOAST_ACCENT / 2 + 11, 0)
+	-- l'icône du feu de camp, à gauche du texte (1.29.6)
+	if frame.CreateTexture then
+		frame.icon = frame:CreateTexture(nil, "ARTWORK")
+		frame.icon:SetTexture(ns.CAMP_ICON)
+		frame.icon:SetSize(18, 18)
+		frame.icon:SetPoint("RIGHT", frame.text, "LEFT", -5, 0)
+		if frame.icon.SetTexCoord then frame.icon:SetTexCoord(0.08, 0.92, 0.08, 0.92) end
+	end
 	if self.RestorePoint then self:RestorePoint(frame, "campPoint", { point = "TOP", x = 0, y = -150 }) end
 	frame:Hide()
 	self.campFrame = frame

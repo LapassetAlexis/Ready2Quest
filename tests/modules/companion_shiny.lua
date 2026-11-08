@@ -125,22 +125,15 @@ do
 	Check("[SHINY] … la créature l'annonce", NS.companionBubbleKey == "SHINY_SPOTTED"
 		and NS.companionBubbleText:find("Loup des plaines", 1, true), NS.companionBubbleText)
 	Check("[SHINY] … le « ! »", NS.companionFrame.alert and NS.companionFrame.alert:IsShown())
-	Check("[SHINY] … une étoile au-dessus (seul)", SH.units.target.icon == NS.SHINY_MARK and live.marked == true)
-	SH.Quiet()
-	SH.units.target = nil
-	SH.group, SH.leader = true, false
-	local _, other = SH.See(3201)
-	Check("[SHINY] en groupe sans être chef : pas d'étoile", SH.units.target.icon == nil and NS:ShinyState().live[other].marked == false)
-	SH.leader = true
+	-- SetRaidTarget est protégé sur Forever : jamais appelé d'office (2.8.3)
+	Check("[SHINY] … aucune marque de raid posée (fonction protégée)", SH.units.target.icon == nil
+		and live.marked == false and (SH.marked or 0) == 0)
+	SH.group, SH.leader = true, true
 	local _, lead = SH.See(3202)
-	Check("[SHINY] chef du groupe : l'étoile", SH.units.target.icon == NS.SHINY_MARK)
-	SH.group = false
-	local _, marked = SH.See(3203, { icon = 8 })
-	Check("[SHINY] déjà une icône : on n'y touche pas", SH.units.target.icon == 8 and NS:ShinyState().live[marked].marked == false)
-	NS:DB().companionShinyMark = false
-	SH.See(3204)
-	Check("[SHINY] réglage coupé : pas d'étoile", SH.units.target.icon == nil)
-	NS:DB().companionShinyMark = true
+	Check("[SHINY] chef du groupe : toujours aucune marque", SH.units.target.icon == nil and (SH.marked or 0) == 0)
+	SH.group, SH.leader = false, false
+	local src = io.open((ADDON_ROOT or ".") .. "/QuestCompanion/Shiny.lua"):read("*a")
+	Check("[SHINY] le code n'appelle plus SetRaidTarget", not src:find('"SetRaidTarget"', 1, true))
 end
 
 -- 3. Abattue -----------------------------------------------------------------------------------------

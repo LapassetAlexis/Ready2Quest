@@ -3,7 +3,7 @@
 -- FICHIER GÉNÉRÉ par tools/gen_zone_data.py, ne pas éditer à la main :
 -- corrige data/forever/ et relance le script (voir docs/DONNEES.md).
 -- Source : notre base data/forever/, importée de Questie/QuestieDB
---   (commit c5de61ab7c629132a772cccddf7f604ac48cecf9, data/Forever ; Questie 12.4.0) le 2026-11-04. Générée le 2026-11-04.
+--   (commit c5de61ab7c629132a772cccddf7f604ac48cecf9, data/Forever ; Questie 12.4.0) le 2026-11-04. Générée le 2026-11-08.
 -- Couches appliquées : brut -> legacy (corrections Era héritées) -> delta-base générée -> traces -> corrections Forever.
 -- Licence : GPL-3.0 (https://www.gnu.org/licenses/gpl-3.0.html), comme la
 --   base de Questie dont ces données dérivent ; voir NOTICE.md.

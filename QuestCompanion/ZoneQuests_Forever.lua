@@ -3,7 +3,7 @@
 -- FICHIER GÉNÉRÉ par tools/gen_zone_data.py, ne pas éditer à la main :
 -- corrige data/forever/ et relance le script (voir docs/DONNEES.md).
 -- Source : notre base data/forever/, importée de Questie/QuestieDB
---   (commit c5de61ab7c629132a772cccddf7f604ac48cecf9, data/Forever ; Questie 12.4.0) le 2026-11-04. Générée le 2026-11-04.
+--   (commit c5de61ab7c629132a772cccddf7f604ac48cecf9, data/Forever ; Questie 12.4.0) le 2026-11-04. Générée le 2026-11-08.
 -- Couches appliquées : brut -> legacy (corrections Era héritées) -> delta-base générée -> traces -> corrections Forever -> liste noire et événements de Questie 12.4.0.
 -- Licence : GPL-3.0 (https://www.gnu.org/licenses/gpl-3.0.html), comme la
 --   base de Questie dont ces données dérivent ; voir NOTICE.md.
@@ -2623,16 +2623,16 @@ Z[1450] = [[
 8735	60	60	0	0	La corruption du Cauchemar	The Nightmare's Corruption	8736
 8736	60	60	0	0	Le Cauchemar se manifeste	The Nightmare Manifests	8741
 8741	60	60	0	0	Le retour du champion	The Champion Returns
-98341	20	20	12884901888	0		The Great Windborne Cat Spirit
+98341	20	20	12884901888	1024		The Great Windborne Cat Spirit
 98342	20	20	32	1024		The Great Cat Spirit
 98362	20	20	8589934624	1024		To Thunder Bluff
 98394	20	20	8	1024		The Great Cat Spirit
 98396	20	20	8	1024		The Great Cat Spirit
 98397	20	20	4294967304	1024		To Darnassus
-98404	20	20	12884901888	0		The Great Windborne Cat Spirit
+98404	20	20	12884901888	1024		The Great Windborne Cat Spirit
 98405	20	20	32	1024		The Great Cat Spirit
 98731	20	20	8	1024		Blessings of the Great Cat Spirit
-98738	20	20	12884901888	0		Blessings of the Great Windborne Cat Spirit
+98738	20	20	12884901888	1024		Blessings of the Great Windborne Cat Spirit
 98739	20	20	32	1024		Blessings of the Great Cat Spirit
 ]]
 -- Silithus
@@ -2826,7 +2826,7 @@ Z[2521] = [[
 93740	11	6	8589934770	0		Blood for Blood
 93746	9	4	8589934770	0		A Firm Response
 93791	10	10	4294967373	128		Speak with Belann	93797
-93797	10	10	4294967373	0		Boughs in the Wind
+93797	10	10	4294967373	128		Boughs in the Wind
 93835	12	7	4294967373	0		Confront Lorthuna	94369
 93836	12	7	8589934770	0		The Fate of Zephras	93090
 93926	8	5	0	0		The Western Watch	93927

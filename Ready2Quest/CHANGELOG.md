@@ -1,5 +1,9 @@
 # Journal des modifications
 
+## 1.29.6
+
+- **Bandeau du camp plus clair** : une fois le délai passé sans buff, il dit « Buffs du feu de camp : assieds-toi ou fabrique ici » au lieu d'un « Au camp : assieds-toi ou fabrique » peu parlant, avec l'icône du feu de camp. Bandeau un peu plus large.
+
 ## 1.29.5
 
 - **Ménage** : des textes jamais affichés (anciennes sections de réglages, emplacements d'équipement) et deux aides inutilisées sont retirés. Socle commun : les textes peuvent venir d'une source calculée (utilisé par Quest Companion pour alléger ses répliques). Rien ne change à l'écran ni dans ta sauvegarde.
