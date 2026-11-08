@@ -130,6 +130,7 @@ ns.AZEROTH_CONTRAST = {
 	["feat.name"] = { "white", 0.0725, 4.5, 12 },   -- clair, fond 0.072 (moy. 0.035) : 8.57:1
 	["feat.desc"] = { "ink", 0.3678, 4.5, 11 },   -- sombre, fond 0.368 (moy. 0.419) : 7.50:1
 	["feat.reward"] = { "reward", 0.3326, 4.5, 11 },   -- sombre, fond 0.333 (moy. 0.413) : 4.87:1
+	["mission.done"] = { "green", 0.3326, 4.5, 11 },   -- sombre, « faite » des missions, fond des lignes 0.333 : 4.88:1 (2.9.0)
 	["feat.date"] = { "inkMuted", 0.4149, 4.5, 11 },   -- sombre, fond 0.415 (moy. 0.449) : 6.25:1
 	["feat.count"] = { "inkMuted", 0.4137, 4.5, 11 },   -- sombre, fond 0.414 (moy. 0.443) : 6.24:1
 	["feat.scopeAccount"] = { "tagBlue", 0.0140, 4.5, 10 },   -- clair, fond 0.014 (moy. 0.008) : 4.96:1

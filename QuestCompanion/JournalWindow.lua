@@ -1894,8 +1894,13 @@ local function MissionRow(self, row, mission, label, reward)
 	row.mission = mission
 	row.label:SetText(label)
 	row.source:SetText(reward or "")
-	row.count:SetText(mission.done and (Theme.T_GREEN .. L.MIS_DONE .. "|r")
-		or string.format("%d/%d", mission.have or 0, mission.need))
+	-- 2.9.0 : la couleur passe par le texte, pas par un code dans la chaîne,
+	-- pour que le style Azeroth la remplace par son vert sombre mesuré
+	-- (le vert clair était illisible sur le parchemin)
+	row.count:SetText(mission.done and L.MIS_DONE or string.format("%d/%d", mission.have or 0, mission.need))
+	local cc = mission.done and Theme.GREEN or Theme.PARCHMENT
+	row.count:SetTextColor(cc[1], cc[2], cc[3])
+	if ns.CarnetInk and self.journalFrame and self.journalFrame.azeroth then pcall(ns.CarnetInk, row.count) end
 	row.bar:SetValue((mission.have or 0) / mission.need)
 	local c = mission.done and Theme.GREEN or (row.group == "week" and Theme.BLUE or Theme.GOLD)
 	row.bar:SetColor(c[1], c[2], c[3], 1)
