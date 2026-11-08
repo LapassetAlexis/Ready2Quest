@@ -339,7 +339,7 @@ do
 	Check("[AZS] prise : bouclier d'or au coin, étoiles", ok and ok.shield:IsShown() and ok.shieldKind == "gold"
 		and ok.shield.atlas == "ui-achievement-shield-1" and ok.shield.lastPoint.point == "TOPRIGHT"
 		and (ok.stars:GetText() or ""):find("|T", 1, true) ~= nil)
-	Check("[AZS] échappée : bouclier gris, « échappée »", fled and fled.shieldKind == "grey" and fled.stars:GetText() == NS.L.CAPTURE_BATCH_FLED)
+	Check("[AZS] échappée : pas de bouclier (2.9.0), « échappée »", fled and fled.shieldKind == nil and not fled.shield:IsShown() and fled.stars:GetText() == NS.L.CAPTURE_BATCH_FLED)
 	Check("[AZS] brillante : nom en or, lueur dorée", shinyTile and shinyTile.name.textColor[3] < 0.6 and shinyTile.halo:IsShown()
 		and shinyTile.tag:GetText() == "BRILLANTE")
 	Check("[AZS] volée finie : Fermer, « Captures : 5 »", frame.stop:GetText() == NS.L.CAPTURE_BATCH_CLOSE
