@@ -794,6 +794,12 @@ function ns:CaptureRoll(target, aid)
 	if aid and not self:CaptureSpend(aid) then aid = nil end
 	local chance, sure = self:CaptureChance(target, aid)
 	local data = self:CaptureData()
+	-- une espèce déjà à toi (cette version) : un essai de recapture compté (2.9.0)
+	local owned = target and data.creatures[tonumber(target.npcID) or target.npcID]
+	if type(owned) == "table" and (target.shiny and owned.shiny or (not target.shiny and owned.normal ~= false)) then
+		if target.shiny then owned.shinyRetries = (tonumber(owned.shinyRetries) or 0) + 1
+		else owned.retries = (tonumber(owned.retries) or 0) + 1 end
+	end
 	-- malchance : chaque échec d'affilée rend le filet un peu plus sûr
 	local streak = math.min(ns.CAPTURE_PITY.max, tonumber(data.missStreak) or 0)
 	if not sure and streak > 0 then chance = math.min(ns.CAPTURE_MAX, chance + ns.CAPTURE_PITY.step * streak) end
