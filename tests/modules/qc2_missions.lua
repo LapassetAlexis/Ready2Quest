@@ -93,7 +93,7 @@ do
 	local creatures = NS:CaptureData().creatures
 	for _, npc in ipairs({ 5001, 5002, 5003 }) do creatures[npc] = { name = "x", class = "normal", normal = true } end
 	Check("[QM] tout capturé ici : « captures »", NS:MissionMenagerieDraw(9900).kind == "captures")
-	NS:CompanionData().capture = nil
+	NS:DB().capture, NS.captureMergedChar = nil, nil; NS:CompanionData().capture = nil
 	NS:DB().companionCapture = false
 	Check("[QM] capture coupée : pas de mission de ménagerie", NS:MissionMenagerieDraw(9900) == nil)
 	NS:MissionDraw(9900)
@@ -162,7 +162,7 @@ do
 	Check("[QM] capture ratée : rien", m[1].have == 0 and m[2].have == 0)
 	QM.Capture(5001, "normal", "Bête", 9901)
 	Check("[QM] autre zone : rien", m[1].have == 0 and m[2].have == 0)
-	NS:CompanionData().capture.creatures[5001] = nil
+	NS:CaptureData().creatures[5001] = nil
 	QM.Capture(5003, "normal", "Mort-vivant", 9900)
 	Check("[QM] espèce nouvelle ici : faite ; un autre type ne compte pas", m[1].done and m[2].have == 0)
 	m[1].done, m[1].have = nil, 0

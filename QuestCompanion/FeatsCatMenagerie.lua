@@ -63,6 +63,9 @@ local function EachCompanion(self, fn)
 	for key, char in pairs(db.chars) do
 		if type(char) == "table" and type(char.companion) == "table" then fn(char.companion, key, char) end
 	end
+	-- 2.9.0 : la collection du compte (QuestCompanionDB.capture), vue comme
+	-- un compagnon de plus qui n'a que ses captures
+	if type(db.capture) == "table" then fn({ capture = db.capture }, "@account", nil) end
 end
 
 local function Sub(t, key) return type(t) == "table" and type(t[key]) == "table" and t[key] or nil end

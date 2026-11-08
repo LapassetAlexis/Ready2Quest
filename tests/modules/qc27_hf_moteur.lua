@@ -141,6 +141,8 @@ do
 		[101] = { name = "Zhévra", normal = true }, [102] = { name = "Brillant", normal = false, shiny = true },
 		[103] = "abîmée" } } } }
 	db.chars["Vide-Royaume"] = 7
+	-- 2.9.0 : collection au compte, recréée ici en versant les deux personnages
+	db.capture, NS.captureMergedChar = nil, nil
 	local mine = NS:CaptureData().creatures
 	mine[101] = { name = "Zhévra", normal = true }
 	mine[104] = { name = "Loup", normal = true }
@@ -149,7 +151,7 @@ do
 	local cur = NS:FeatProgress("men_first")
 	local sp = NS.FEAT_SOURCES.species
 	Check("[HF] espèces de compte : union des captures de tous les personnages (101, 102, 104)",
-		sp.get(NS, "account") == 3 and sp.get(NS, "char") == 2 and cur == 1, tostring(sp.get(NS, "account")))
+		sp.get(NS, "account") == 3 and sp.get(NS, "char") == 3 and cur == 1, tostring(sp.get(NS, "account")))   -- 2.9.0 : la collection est au compte, le personnage la voit entière
 	NS:FeatCacheReset()
 	Check("[HF] brillantes de compte : union aussi", NS.FEAT_SOURCES.shinyCap.get(NS, "account") == 1)
 	Check("[HF] FeatAward : compte dans db.feats, personnage dans CharData().feats",

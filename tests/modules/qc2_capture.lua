@@ -97,7 +97,7 @@ end
 do
 	Say("-- qc2 capture : étoiles")
 	Q.Reset()
-	NS:CompanionData().capture = { creatures = {
+	NS:DB().capture, NS.captureMergedChar = nil, nil; NS:CompanionData().capture = { creatures = {
 		[11] = { name = "Ancien", at = 100, normal = true },
 		[12] = { name = "Ancien brillant", at = 200, normal = false, shiny = true, shinyAt = 200 },
 	}, count = 2 }
@@ -498,7 +498,7 @@ end
 do
 	Say("-- qc2 capture : coût des lectures")
 	Q.Reset()
-	NS:CompanionData().capture = { creatures = { [21] = { name = "Ancienne brillante", at = 5, shiny = true } }, count = 1 }
+	NS:DB().capture, NS.captureMergedChar = nil, nil; NS:CompanionData().capture = { creatures = { [21] = { name = "Ancienne brillante", at = 5, shiny = true } }, count = 1 }
 	local data = NS:CaptureData()
 	Check("[QC2CAP] migration 1.6.0 faite une fois, repère posé", data.creatures[21].normal == false and data.pairN == 1)
 	data.creatures[22] = { name = "Sans version", at = 6 }

@@ -17,7 +17,7 @@ function MV.Reset()
 	Mock.world.maps[1413] = { mapID = 1413, name = "Les Tarides", parentMapID = 1414, mapType = 3 }
 	Mock.world.mapID, Mock.world.level = 1413, 20
 	local data = NS:CompanionData()
-	data.tutoDone, data.capture = true, nil
+	NS:DB().capture, NS.captureMergedChar = nil, nil; data.tutoDone, data.capture = true, nil
 	NS:TreatData().treatsInit = true
 	NS:CompanionUpdateVisibility()
 end

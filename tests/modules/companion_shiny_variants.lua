@@ -87,7 +87,7 @@ do
 	Say("-- brillantes : deux versions par espèce")
 	SV.Reset()
 	local data = NS:CompanionData()
-	data.capture = { creatures = {
+	NS:DB().capture, NS.captureMergedChar = nil, nil; data.capture = { creatures = {
 		[11] = { name = "Ancien brillant", at = 500, shiny = true },
 		[12] = { name = "Ancien normal", at = 300 },
 	}, count = 2 }

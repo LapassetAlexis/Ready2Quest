@@ -419,6 +419,8 @@ do
 			[5] = { name = "Rare E", normal = true, class = "rare", stars = 3 },
 			[6] = { name = "Partagé", normal = true, class = "rare" } } },
 		shiny = { count = 3, seen = { [1] = 1 }, zones = { [1411] = {} } } } }
+	-- 2.9.0 : collection au compte, recréée en versant l'autre personnage
+	db.capture, NS.captureMergedChar = nil, nil
 	local c = Creatures()
 	for i = 6, 10 do c[i] = { name = "Rare " .. i, normal = true, class = "rare" } end
 	NS:CaptureData().serial = 1

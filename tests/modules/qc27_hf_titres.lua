@@ -242,7 +242,12 @@ do
 	-- un autre personnage : les titres de compte le suivent, pas ceux du personnage
 	TT.name = "Autre"
 	earned = NS:FeatTitlesEarned()
-	Check("[TIT] autre personnage : le titre de compte seulement", #earned == 1 and earned[1] == 35 and NS:FeatTitleCode() == nil)
+	local list = {}
+	for i, v in ipairs(earned) do list[i] = tostring(v) end
+	-- 2.9.0 : la collection est au compte, le titre de palier de dresseur (1) la suit
+	Check("[TIT] autre personnage : titres de compte et palier de la collection, pas ceux du personnage", #earned == 2
+		and earned[1] == 1 and earned[2] == 35 and NS:FeatTitleCode() == 1,
+		table.concat(list, ",") .. " code=" .. tostring(NS:FeatTitleCode()))
 	Check("[TIT] … qui peut le choisir", NS:FeatSetTitle(35) and NS:FeatTitleCode() == 35)
 	Check("[TIT] … mais pas le titre de personnage d'un autre", not NS:FeatSetTitle(19))
 	TT.name = nil

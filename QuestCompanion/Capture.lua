@@ -210,9 +210,117 @@ local function Enabled() return ModuleOn() and ns:DB().companionCapture ~= false
 -- ---------------------------------------------------------------------------
 -- Données (par personnage, avec le compagnon)
 -- ---------------------------------------------------------------------------
+-- ---------------------------------------------------------------------------
+-- Collection au compte (2.9.0, idée de Deklatis) : une seule table de capture
+-- pour tous tes personnages, QuestCompanionDB.capture. Chaque personnage y
+-- verse une fois sa collection d'avant (char.companion.capture, gardée telle
+-- quelle) : les deux versions de chaque espèce, les meilleures étoiles, les
+-- dates les plus anciennes ; les aides s'additionnent, dans la limite de la
+-- besace. Le compagnon choisi reste propre à chaque personnage.
+-- ---------------------------------------------------------------------------
+local function Earliest(a, b)
+	a, b = tonumber(a), tonumber(b)
+	if a and b then return math.min(a, b) end
+	return a or b
+end
+local function Best(a, b)
+	a, b = tonumber(a), tonumber(b)
+	if a and b then return math.max(a, b) end
+	return a or b
+end
+
+-- fiche d'avant 1.6.0 (sans `normal`) : la brillante était la seule version
+local function Legacy(entry)
+	if entry.normal == nil then
+		entry.normal = not entry.shiny
+		if entry.shiny and not entry.shinyAt then entry.shinyAt = entry.at end
+	end
+	return entry
+end
+
+local function MergeEntry(into, from)
+	Legacy(into)
+	local hasN = (into.normal ~= false) or (from.normal ~= false)
+	local hasS = (into.shiny == true) or (from.shiny == true)
+	for k, v in pairs(from) do if into[k] == nil then into[k] = v end end
+	into.normal, into.shiny = hasN, hasS or nil
+	into.at = Earliest(into.at, from.at)
+	into.shinyAt = Earliest(into.shinyAt, from.shinyAt)
+	into.stars = Best(into.stars, from.stars)
+	into.shinyStars = Best(into.shinyStars, from.shinyStars)
+end
+
+-- verse la collection `old` (celle d'un personnage) dans le compte
+function ns.CaptureMergeInto(account, old)
+	if type(old) ~= "table" then return 0 end
+	local added = 0
+	for npcID, entry in pairs(type(old.creatures) == "table" and old.creatures or {}) do
+		if type(entry) == "table" then
+			local key = tonumber(npcID) or npcID
+			local mine = account.creatures[key]
+			if mine == nil then
+				mine = {}
+				for k, v in pairs(entry) do mine[k] = v end
+				account.creatures[key] = Legacy(mine)
+				added = added + 1
+			else
+				local copy = {}
+				for k, v in pairs(entry) do copy[k] = v end
+				MergeEntry(mine, Legacy(copy))
+			end
+		end
+	end
+	for _, aid in ipairs(AIDS) do
+		local have = tonumber(account.items[aid.id]) or 0
+		local more = tonumber(type(old.items) == "table" and old.items[aid.id]) or 0
+		account.items[aid.id] = math.min(aid.cap, math.max(0, math.floor(have + more)))
+	end
+	account.tries = (tonumber(account.tries) or 0) + (tonumber(old.tries) or 0)
+	return added
+end
+
+local function CountSpecies(creatures)
+	local n = 0
+	for _, entry in pairs(creatures) do if type(entry) == "table" then n = n + 1 end end
+	return n
+end
+
+-- La table du compte ; à sa création, tous les personnages connus y versent
+-- leur collection ; un personnage jamais vu y verse la sienne à son arrivée
+function ns:CaptureAccount()
+	local db = self:DB()
+	local account = db.capture
+	if type(account) ~= "table" then
+		account = { creatures = {}, items = {}, count = 0, tries = 0, mergedFrom = {} }
+		db.capture = account
+		for key, char in pairs(type(db.chars) == "table" and db.chars or {}) do
+			local old = type(char) == "table" and type(char.companion) == "table" and char.companion.capture
+			if type(old) == "table" then ns.CaptureMergeInto(account, old) end
+			account.mergedFrom[key] = true
+		end
+		account.count = CountSpecies(account.creatures)
+	end
+	account.creatures = type(account.creatures) == "table" and account.creatures or {}
+	account.items = type(account.items) == "table" and account.items or {}
+	account.mergedFrom = type(account.mergedFrom) == "table" and account.mergedFrom or {}
+	if not self.captureMergedChar then
+		self.captureMergedChar = true
+		local key = self:CharKey()
+		if not account.mergedFrom[key] then
+			account.mergedFrom[key] = true
+			local char = self:CharData()
+			local old = type(char.companion) == "table" and char.companion.capture
+			if type(old) == "table" then
+				ns.CaptureMergeInto(account, old)
+				account.count = CountSpecies(account.creatures)
+			end
+		end
+	end
+	return account
+end
+
 function ns:CaptureData()
-	local data = self:CompanionData()
-	local capture = type(data.capture) == "table" and data.capture or {}
+	local capture = self:CaptureAccount()
 	capture.creatures = type(capture.creatures) == "table" and capture.creatures or {}
 	capture.items = type(capture.items) == "table" and capture.items or {}
 	for _, aid in ipairs(AIDS) do
@@ -236,7 +344,6 @@ function ns:CaptureData()
 		end
 		capture.pairN = capture.count
 	end
-	data.capture = capture
 	return capture
 end
 
