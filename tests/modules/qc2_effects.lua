@@ -222,11 +222,11 @@ do
 	EF.Add(5201, "Humanoïde", "rare")
 	EF.Take("cap:5201")
 	local function Pct(info) return math.floor(NS:CaptureChance(info, nil, 20) * 100 + 0.5 + 1e-9) end
-	Check("[EFF] Humanoïde rare : capture des Humanoïdes ×1,2 (30 % -> 36 %)",
-		Pct({ class = "normal", level = 20, type = "Humanoïde" }) == 36)
-	Check("[EFF] … pas sur une Bête", Pct({ class = "normal", level = 20, type = "Bête" }) == 30)
+	Check("[EFF] Humanoïde rare : capture des Humanoïdes ×1,2 (50 % -> 60 %)",
+		Pct({ class = "normal", level = 20, type = "Humanoïde" }) == 60)
+	Check("[EFF] … pas sur une Bête", Pct({ class = "normal", level = 20, type = "Bête" }) == 50)
 	Check("[EFF] chance de base gardée à part", math.floor(NS:CaptureChanceBase({ class = "normal", level = 20, type = "Humanoïde" },
-		nil, 20) * 100 + 0.5) == 30)
+		nil, 20) * 100 + 0.5) == 50)
 	local chance, sure = NS:CaptureChance({ class = "normal", type = "Humanoïde" }, "sifflet")
 	Check("[EFF] sifflet : toujours assuré, rien à ajouter", chance == 1 and sure == true)
 	Check("[EFF] plafond de 95 % tenu", Pct({ class = "normal", level = 1, type = "Humanoïde" }) <= 95
@@ -234,13 +234,13 @@ do
 	-- Démon : élites et rares
 	EF.Add(5202, "Démon", "elite")
 	EF.Take("cap:5202")
-	Check("[EFF] Démon élite : élites ×1,18 (15 % -> 18 %)", Pct({ class = "elite", level = 20, type = "Bête" }) == 18)
-	Check("[EFF] … pas sur un normal", Pct({ class = "normal", level = 20, type = "Bête" }) == 30)
+	Check("[EFF] Démon élite : élites ×1,18 (25 % -> 30 %)", Pct({ class = "elite", level = 20, type = "Bête" }) == 30)
+	Check("[EFF] … pas sur un normal", Pct({ class = "normal", level = 20, type = "Bête" }) == 50)
 	-- Bête : repérage, et capture en plus sur les Bêtes pas encore capturées
 	EF.Add(5203, "Bête", "normal")
 	EF.Take("cap:5203")
-	Check("[EFF] Bête : +5 % sur une Bête pas encore capturée", Pct({ class = "normal", level = 20, type = "Bête", npcID = 6001 }) == 32)
-	Check("[EFF] … rien sur une espèce déjà capturée", Pct({ class = "normal", level = 20, type = "Bête", npcID = 5203 }) == 30)
+	Check("[EFF] Bête : +5 % sur une Bête pas encore capturée", Pct({ class = "normal", level = 20, type = "Bête", npcID = 6001 }) == 53)
+	Check("[EFF] … rien sur une espèce déjà capturée", Pct({ class = "normal", level = 20, type = "Bête", npcID = 5203 }) == 50)
 	-- Mort-vivant : brillant des Morts-vivants
 	NS.SHINY_CHANCE = 1 / 150
 	EF.Add(5204, "Mort-vivant", "rare")
@@ -472,10 +472,10 @@ do
 	-- infobulle : la chance avec le bonus
 	NS:BestiaryData()[1413] = { [7301] = { name = "Bandit", class = "normal", type = "Humanoïde", seen = true, level = 20 } }
 	local text = NS:BestiaryTooltipLine(EF.Guid(7301), 20)
-	Check("[EFF] infobulle : « à capturer · 35 % (+5) »", text == "Ménagerie : à capturer · 35 % (+5)", text)
+	Check("[EFF] infobulle : « à capturer · 58 % (+8) »", text == "Ménagerie : à capturer · 58 % (+8)", text)
 	NS:BestiaryData()[1413][7302] = { name = "Loup", class = "normal", type = "Bête", seen = true, level = 20 }
 	text = NS:BestiaryTooltipLine(EF.Guid(7302), 20)
-	Check("[EFF] infobulle : sans bonus, comme avant", text == "Ménagerie : à capturer · 30 %", text)
+	Check("[EFF] infobulle : sans bonus, comme avant", text == "Ménagerie : à capturer · 50 %", text)
 end
 
 -- 10. Patte sur les barres de nom (repérage) -----------------------------------------------------------------

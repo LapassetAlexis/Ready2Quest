@@ -109,8 +109,8 @@ do
 	FI.Reset()
 	FI.SeeKill(5100, { name = "Raptor" })
 	local toast = NS.captureToast
-	Check("[FI] espèce jamais capturée : « Jamais capturée · 30 % de chance », en doré", toast and toast:IsShown()
-		and toast.info:GetText() == NS.L.CAPTURE_TOAST_NEW .. " · " .. NS:F("CAPTURE_TOAST_CHANCE", 30)
+	Check("[FI] espèce jamais capturée : « Jamais capturée · 50 % de chance », en doré", toast and toast:IsShown()
+		and toast.info:GetText() == NS.L.CAPTURE_TOAST_NEW .. " · " .. NS:F("CAPTURE_TOAST_CHANCE", 50)
 		and toast.info.textColor[1] == NS.Theme.GOLD[1], toast and toast.info:GetText())
 	Check("[FI] bandeau plus grand : boutons Ignorer et Sourdine, par-dessus le clic", toast.ignore and toast.mute
 		and toast.ignore:IsShown() and toast.mute:IsShown() and toast.height >= 80)

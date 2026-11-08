@@ -111,20 +111,37 @@ do
 	Say("-- capture : chance")
 	CP.Reset()
 	local function Pct(info, aid, level) return math.floor(NS:CaptureChance(info, aid, level) * 100 + 0.5 + 1e-9) end
-	Check("[CAP] normal, même niveau : 30 %", Pct({ class = "normal", level = 20 }, nil, 20) == 30)
-	Check("[CAP] élite 15 %, rare 8 %, rare élite 5 %, boss 2 %",
-		Pct({ class = "elite", level = 20 }, nil, 20) == 15 and Pct({ class = "rare", level = 20 }, nil, 20) == 8
-		and Pct({ class = "rareelite", level = 20 }, nil, 20) == 5 and Pct({ class = "worldboss", level = 20 }, nil, 20) == 2)
-	Check("[CAP] 5 niveaux au-dessus : ×0,7", Pct({ class = "normal", level = 25 }, nil, 20) == 21)
-	Check("[CAP] très au-dessus : plancher ×0,35", Pct({ class = "normal", level = 60 }, nil, 20) == 11)
-	Check("[CAP] en dessous : +3 % par niveau, plafond ×1,5", Pct({ class = "normal", level = 15 }, nil, 20) == 35
-		and Pct({ class = "normal", level = 1 }, nil, 60) == 45)
-	Check("[CAP] appât ×1,5, lasso ×2,5", Pct({ class = "normal", level = 20 }, "appat", 20) == 45
-		and Pct({ class = "normal", level = 20 }, "lasso", 20) == 75)
+	Check("[CAP] normal, même niveau : 50 %", Pct({ class = "normal", level = 20 }, nil, 20) == 50)
+	Check("[CAP] élite 25 %, rare 15 %, rare élite 10 %, boss 4 %",
+		Pct({ class = "elite", level = 20 }, nil, 20) == 25 and Pct({ class = "rare", level = 20 }, nil, 20) == 15
+		and Pct({ class = "rareelite", level = 20 }, nil, 20) == 10 and Pct({ class = "worldboss", level = 20 }, nil, 20) == 4)
+	Check("[CAP] 5 niveaux au-dessus : ×0,8", Pct({ class = "normal", level = 25 }, nil, 20) == 40)
+	Check("[CAP] très au-dessus : plancher ×0,5", Pct({ class = "normal", level = 60 }, nil, 20) == 25)
+	Check("[CAP] en dessous : +3 % par niveau, plafond ×1,5", Pct({ class = "normal", level = 15 }, nil, 20) == 58
+		and Pct({ class = "normal", level = 1 }, nil, 60) == 75)
+	Check("[CAP] appât ×1,5, lasso ×2,5 (plafonné)", Pct({ class = "normal", level = 20 }, "appat", 20) == 75
+		and Pct({ class = "elite", level = 20 }, "lasso", 20) == 63)
 	Check("[CAP] plafond 95 % sans sifflet", Pct({ class = "normal", level = 1 }, "lasso", 60) == 95)
 	local chance, sure = NS:CaptureChance({ class = "worldboss", level = 63 }, "sifflet", 20)
 	Check("[CAP] sifflet : assurée, même un boss", chance == 1 and sure == true)
-	Check("[CAP] rang inconnu : comme un normal", Pct({ class = "??", level = 20 }, nil, 20) == 30)
+	Check("[CAP] rang inconnu : comme un normal", Pct({ class = "??", level = 20 }, nil, 20) == 50)
+	-- malchance : +5 points par échec d'affilée, jusqu'à +25, remis à zéro par une prise
+	local data = NS:CaptureData()
+	local rnd = math.random
+	data.missStreak = 0
+	math.random = function(a) if a then return a end return 0.99 end
+	local r1 = NS:CaptureRoll({ class = "normal", level = 20 })
+	local r2 = NS:CaptureRoll({ class = "normal", level = 20 })
+	Check("[CAP] malchance : un échec rend le suivant plus sûr (+5)", r1.success == false and data.missStreak == 2
+		and math.floor(r2.chance * 100 + 0.5) == math.floor(r1.chance * 100 + 0.5) + 5)
+	data.missStreak = 9
+	local r3 = NS:CaptureRoll({ class = "normal", level = 20 })
+	Check("[CAP] malchance plafonnée à +25", math.floor(r3.chance * 100 + 0.5) <= math.floor(r1.chance * 100 + 0.5) + 25)
+	math.random = function(a) if a then return a end return 0 end
+	NS:CaptureRoll({ class = "normal", level = 20 })
+	Check("[CAP] une prise remet la malchance à zéro", data.missStreak == 0)
+	math.random = rnd
+	data.missStreak = 0
 end
 
 -- 2. Le coup fatal : dans la file du filet (2.0 : plus de fenêtre automatique) ----------------------
@@ -140,7 +157,7 @@ do
 		and NS.companionFrame.captureNet:IsShown() and NS.companionFrame.captureNet.count:GetText() == "1")
 	Check("[CAP] … le compagnon pousse à tenter", NS.companionBubbleKey == "CAPTURE_PROMPT"
 		and NS.companionBubbleText:find("Loup des plaines", 1, true) ~= nil, NS.companionBubbleText)
-	Check("[CAP] … chance affichée (normal, 1 niveau dessous)", NS:CaptureQueueLine(queue[1]):find("31", 1, true) ~= nil,
+	Check("[CAP] … chance affichée (normal, 1 niveau dessous)", NS:CaptureQueueLine(queue[1]):find("52", 1, true) ~= nil,
 		NS:CaptureQueueLine(queue[1]))
 	Mock:Advance(NS.CAPTURE_QUEUE_TIME + 1)
 	NS:CaptureTick(NS.Now())
@@ -210,7 +227,7 @@ do
 	Check("[CAP] plafond : 10 appâts", items.appat == 10 and NS:CaptureGrant("appat", { quiet = true }) == "full")
 	CP.SeeKill(3300, { name = "Raptor", class = "elite", level = 20 })
 	Check("[CAP] choisir l'appât", NS:CaptureToggleAid("appat") == "appat"
-		and NS:CaptureQueueLine(NS:CaptureQueueBest()):find("23", 1, true) ~= nil, NS:CaptureQueueLine(NS:CaptureQueueBest()))
+		and NS:CaptureQueueLine(NS:CaptureQueueBest()):find("38", 1, true) ~= nil, NS:CaptureQueueLine(NS:CaptureQueueBest()))
 	Check("[CAP] sans sifflet en poche : pas choisissable", NS:CaptureToggleAid("sifflet") == "appat")
 	Check("[CAP] reclic : reposé", NS:CaptureToggleAid("appat") == nil)
 	NS:CaptureToggleAid("appat")

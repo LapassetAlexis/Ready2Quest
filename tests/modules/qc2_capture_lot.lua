@@ -224,7 +224,7 @@ do
 	LOT.Reset()
 	LOT.SeeKill(6210, { name = "Ours élite", class = "elite" })
 	LOT.SeeKill(6211, { name = "Ours" })
-	LOT.Roll(0.2)   -- 20 % : le normal (30 %) passe, l'élite (15 %) s'échappe
+	LOT.Roll(0.4)   -- 40 % : le normal (50 %) passe, l'élite (25 %) s'échappe
 	batch = NS:CaptureBatch()
 	NS:CaptureBatchStop(true)
 	local tiles = NS.captureBatchFrame.tiles

@@ -10,7 +10,7 @@
 --   * un clic = un essai, un seul par monstre. Le compagnon secoue le filet
 --     (une, deux, trois secousses) puis c'est gagné… ou il s'échappe, et le
 --     compagnon se moque gentiment ;
---   * la chance dépend du rang (normal 30 %, élite 15 %, rare 8 %, rare élite
+--   * la chance dépend du rang (normal 50 %, élite 25 %, rare 15 %, rare élite
 --     5 %, boss 2 %) et de l'écart de niveau (plus haut que toi : plus dur) ;
 --   * aides (pas des balles : des objets de dresseur), gagnées au hasard des
 --     complétions du carnet (tampons, paliers de zone, brillantes) :
@@ -29,13 +29,18 @@ ns.CAPTURE_WINDOW = 12            -- s pour tenter sa chance après le coup fata
 ns.CAPTURE_SHAKE_STEP = 0.55      -- s entre deux secousses du filet
 ns.CAPTURE_MAX = 0.95             -- jamais tout à fait sûr sans Sifflet
 ns.CAPTURE_GIFT_EVERY = 10        -- un Sifflet offert toutes les 10 captures
+-- 2.9.0 : chances relevées (« je n'attrape jamais rien ») ; avant :
+-- 0,40 / 0,30 / 0,15 / 0,08 / 0,05 / 0,02
 ns.CAPTURE_RATES = {
-	trivial = 0.40, minus = 0.40, normal = 0.30, elite = 0.15,
-	rare = 0.08, rareelite = 0.05, worldboss = 0.02,
+	trivial = 0.60, minus = 0.60, normal = 0.50, elite = 0.25,
+	rare = 0.15, rareelite = 0.10, worldboss = 0.04,
 }
--- écart de niveau : -6 % par niveau au-dessus de toi (plancher ×0,35),
+-- écart de niveau : -4 % par niveau au-dessus de toi (plancher ×0,5),
 -- +3 % par niveau en dessous (plafond ×1,5)
-ns.CAPTURE_LEVEL_STEP = { above = 0.06, below = 0.03, floor = 0.35, ceil = 1.5 }
+ns.CAPTURE_LEVEL_STEP = { above = 0.04, below = 0.03, floor = 0.5, ceil = 1.5 }
+-- filet qui s'use la malchance : +5 points par échec d'affilée (jusqu'à +25),
+-- remis à zéro à la prochaine prise (2.9.0)
+ns.CAPTURE_PITY = { step = 0.05, max = 5 }
 
 local AIDS = {
 	{ id = "appat",   mult = 1.5, cap = 10, icon = "Interface\\Icons\\INV_Misc_Food_14" },
@@ -681,11 +686,15 @@ end
 function ns:CaptureRoll(target, aid)
 	if aid and not self:CaptureSpend(aid) then aid = nil end
 	local chance, sure = self:CaptureChance(target, aid)
+	local data = self:CaptureData()
+	-- malchance : chaque échec d'affilée rend le filet un peu plus sûr
+	local streak = math.min(ns.CAPTURE_PITY.max, tonumber(data.missStreak) or 0)
+	if not sure and streak > 0 then chance = math.min(ns.CAPTURE_MAX, chance + ns.CAPTURE_PITY.step * streak) end
 	local success = sure or math.random() < chance
+	data.missStreak = success and 0 or (streak + 1)
 	-- comme un filet qui se débat : trois secousses pour une prise, une à
 	-- trois avant de céder pour un échec
 	local shakes = success and 3 or math.random(1, 3)
-	local data = self:CaptureData()
 	data.tries = data.tries + 1
 	return { target = target, success = success, shakes = shakes, done = 0, aid = aid, chance = chance }
 end

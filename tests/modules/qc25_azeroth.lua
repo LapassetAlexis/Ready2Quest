@@ -154,7 +154,7 @@ do
 		and toast.title.justifyH == "CENTER" and toast.text.justifyH == "CENTER")
 	Check("[AZ] glyphe du filet dans le cadre", toast.icon:GetParent() == toast.banner and toast.icon.lastPoint.relTo == toast.iconFrame)
 	Check("[AZ] infos et aide dans la bande sombre", toast.strip and toast.info.lastPoint.relTo == toast.strip
-		and toast.hint.lastPoint.relTo == toast.strip and toast.info:GetText():find("30", 1, true) ~= nil)
+		and toast.hint.lastPoint.relTo == toast.strip and toast.info:GetText():find("50", 1, true) ~= nil)
 	Check("[AZ] hauteur : bandeau + bande - recouvrement", toast:GetHeight() == LAY.h + LAY.strip - LAY.overlap
 		and toast:GetWidth() == LAY.w, toast:GetHeight())
 	-- géométrie depuis le haut du cadre (y négatifs)

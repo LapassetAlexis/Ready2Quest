@@ -233,7 +233,7 @@ do
 	NS:CaptureGrant("lasso", { quiet = true, silent = true })
 	list.aids[2]:Click()
 	Check("[QC2CAP] … choisir une aide dans la liste", NS:CaptureState().aid == "lasso"
-		and list.rows[1].detail:GetText():find("75", 1, true) ~= nil, list.rows[1].detail:GetText())
+		and list.rows[1].detail:GetText():find("95", 1, true) ~= nil, list.rows[1].detail:GetText())
 	local pick = list.rows[2].candidate
 	list.rows[2]:Click()
 	Check("[QC2CAP] clic sur une ligne : ce candidat-là, avec l'aide", NS:CaptureState().rolling
