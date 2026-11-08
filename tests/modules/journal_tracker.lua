@@ -207,7 +207,7 @@ do
 	Check("[TRK] secondaires : losange en trait, mini-barre, progression grisée", not second.featured
 		and second.diamond.texture == NS.Theme.DIAMOND_LINE and second.bar.height == 3
 		and math.abs(second.bar.ratio - 27 / 30) < 1e-6 and second.progress.textColor[1] == NS.Theme.MUTED[1])
-	Check("[TRK] hauteur : titre + vedette + secondaires", tracker.height == 18 + 40 + 4 + 3 * 16, tracker.height)
+	Check("[TRK] hauteur : titre + vedette + secondaires", tracker.height == 18 + 40 + 4 + 3 * 18, tracker.height)   -- 2.9.0 : lignes de 18
 
 	-- survol : quoi faire, avec des noms
 	local tip = _G.GameTooltip
@@ -269,7 +269,7 @@ do
 	tracker.lines[1]:Click("RightButton")
 	Check("[TRK] trois masqués : trois lignes, sans eux", not tracker.lines[4]:IsShown() and tracker.lines[3]:IsShown()
 		and not K.Lines():find("Lanterne", 1, true), K.Lines())
-	Check("[TRK] hauteur suit le nombre de lignes", tracker.height == 18 + 40 + 4 + 2 * 16, tracker.height)
+	Check("[TRK] hauteur suit le nombre de lignes", tracker.height == 18 + 40 + 4 + 2 * 18, tracker.height)
 	NS:JournalDismiss(second, false)
 	NS:JournalDismiss(third, false)
 	Check("[TRK] remis : de retour dans le suivi", tracker.lines[4]:IsShown() and not NS:JournalData().dismissed[second])
@@ -332,7 +332,7 @@ do
 	Check("[ZONE] part en panne ignorée", done and #done.parts == 2)
 	Check("[ZONE] autre zone : seules les parts qui s'appliquent", NS:ZoneCompletion(1429) == nil)
 	local goal = K.Find(NS:JournalObjectives(), "zone:1413")
-	Check("[ZONE] objectif « Exploration de Les Tarides », en pourcentage", goal and goal.label == "Exploration de Les Tarides"
+	Check("[ZONE] objectif « Exploration : Les Tarides », en pourcentage", goal and goal.label == "Exploration : Les Tarides"
 		and goal.progress == "29 %", goal and (goal.label .. " " .. goal.progress))
 	local hint = goal and table.concat(goal.hint, " | ") or ""
 	Check("[ZONE] survol : chaque part, puis la plus simple à finir", hint:find("Villages : 1/3", 1, true)
@@ -341,7 +341,7 @@ do
 	-- le suivi : la complétion remplace ses parts
 	NS:RefreshJournalTracker()
 	local lines = K.Lines()
-	Check("[ZONE] suivi : complétion affichée, villages de la zone absorbés", lines:find("Exploration de Les Tarides", 1, true)
+	Check("[ZONE] suivi : complétion affichée, villages de la zone absorbés", lines:find("Exploration : Les Tarides", 1, true)
 		and not lines:find("Villages de Les Tarides", 1, true), lines)
 	Check("[ZONE] onglet Objectifs : les villages restent", K.Find(NS:JournalObjectives(), "villages:1413") ~= nil)
 	NS:JournalDismiss("zone:1413", true)
@@ -651,7 +651,7 @@ do
 	NS:RefreshJournal()
 	Check("[WATCH] zone d'ici : cochée d'office", prog.watch.checked == true and prog.watchLabel.text == "Suivre à l'écran")
 	NS:RefreshJournalTracker()
-	Check("[WATCH] suivi : la complétion d'ici affichée", K.Lines():find("Exploration de Les Tarides", 1, true), K.Lines())
+	Check("[WATCH] suivi : la complétion d'ici affichée", K.Lines():find("Exploration : Les Tarides", 1, true), K.Lines())
 	prog.watch:Click()
 	Check("[WATCH] décochée : retenue", NS:JournalData().watch[1413] == false and prog.watch.checked == false)
 	Check("[WATCH] décochée : la zone et ses parts quittent le suivi", not K.Lines():find("Les Tarides", 1, true), K.Lines())
@@ -659,7 +659,7 @@ do
 	NS:JournalDismiss("zone:1413", true)
 	NS:JournalDismiss("villages:1413", true)
 	prog.watch:Click()
-	Check("[WATCH] recochée : de retour", K.Lines():find("Exploration de Les Tarides", 1, true), K.Lines())
+	Check("[WATCH] recochée : de retour", K.Lines():find("Exploration : Les Tarides", 1, true), K.Lines())
 	Check("[WATCH] recochée : les objectifs masqués avant sont réactivés", not NS:JournalData().dismissed["zone:1413"]
 		and not NS:JournalData().dismissed["villages:1413"])
 	-- une autre zone : cochée à la main
@@ -669,7 +669,7 @@ do
 	Check("[WATCH] autre zone non cochée : absente du suivi", not K.Lines():find("Elwynn", 1, true), K.Lines())
 	prog.watch:Click()
 	Check("[WATCH] autre zone cochée : dans le suivi, même avec une seule activité", NS:JournalIsWatched(1429)
-		and K.Lines():find("Exploration de Forêt d'Elwynn", 1, true), K.Lines())
+		and K.Lines():find("Exploration : Forêt d'Elwynn", 1, true), K.Lines())
 	prog.watch.scripts.OnEnter(prog.watch)
 	Check("[WATCH] survol : explication", table.concat(_G.GameTooltip.lines or {}, " "):find("bloc", 1, true) ~= nil)
 	prog.watch.scripts.OnLeave(prog.watch)

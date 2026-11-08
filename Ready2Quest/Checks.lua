@@ -46,6 +46,14 @@ local function Add(def) ns.checks[#ns.checks + 1] = def end
 -- (fichier chargé après Checks.lua dans le .toc)
 ns.AddCheck = Add
 
+-- Quête « fil d'Ariane » / de voyage : aucun objectif à remplir, il suffit
+-- d'aller voir quelqu'un (1.30.0). Objectifs illisibles : on ne présume rien.
+function ns.QuestIsTravel(questID)
+	if not (C_QuestLog and type(C_QuestLog.GetQuestObjectives) == "function") then return false end
+	local ok, objectives = pcall(C_QuestLog.GetQuestObjectives, questID)
+	return ok and type(objectives) == "table" and #objectives == 0
+end
+
 Add{
 	id = "bags",
 	icon = "Interface\\Icons\\INV_Misc_Bag_10",
@@ -207,16 +215,19 @@ Add{
 	advice = "ADV_QUESTS",
 	label = function() return L.CHK_QUESTS end,
 	run = function(db)
-		local ready = 0
+		local ready, travel = 0, 0
 
 		if C_QuestLog and type(C_QuestLog.GetNumQuestLogEntries) == "function" then
 			local ok, total = pcall(C_QuestLog.GetNumQuestLogEntries)
 			if not ok or type(total) ~= "number" then return true, L.CHK_QUESTS_GOOD, 100 end
 			for i = 1, total do
 				local okInfo, info = pcall(C_QuestLog.GetInfo, i)
-				if okInfo and type(info) == "table" and info.questID then
+				if okInfo and type(info) == "table" and info.questID and not info.isHeader then
 					local okReady, isReady = pcall(C_QuestLog.ReadyForTurnIn, info.questID)
-					if okReady and isReady == true then ready = ready + 1 end
+					if okReady and isReady == true then
+						if ns.QuestIsTravel and ns.QuestIsTravel(info.questID) then travel = travel + 1
+						else ready = ready + 1 end
+					end
 				end
 			end
 		else
@@ -225,6 +236,9 @@ Add{
 		if ready > 0 then
 			return false, ns:F("CHK_QUESTS_DETAIL", ready), 70
 		end
+		-- 1.30.0 (idée de Lex) : une quête de voyage (sans objectif, « va voir
+		-- untel ») est « prête » dès qu'on la prend : citée, pas reprochée
+		if travel > 0 then return true, ns:F("CHK_QUESTS_TRAVEL", travel), 100 end
 		return true, L.CHK_QUESTS_GOOD, 100
 	end,
 }
