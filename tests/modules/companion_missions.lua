@@ -131,7 +131,7 @@ end
 
 -- 4. Ménagerie ----------------------------------------------------------------------------------
 do
-	Say("-- missions : ménagerie")
+	Say("-- missions : créatures")
 	MS.Reset()
 	-- une petite table livrée de test : deux zones, une espèce partagée, une
 	-- amicale envers la Horde (exclue pour un Horde)

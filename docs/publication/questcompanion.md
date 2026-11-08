@@ -5,12 +5,12 @@ Summary EN (obligatoire en anglais sur CurseForge, 256 caractères max, ici 205)
 Catégories : Companions (principale), Quests & Leveling (additionnelle). Si Companions n'existe pas : Miscellaneous (principale).
 Licence : GPLv3. Logo : docs/publication/logo_questcompanion.png.
 Relation : Optional Dependency -> Ready2Quest (facultatif).
-Captures à prendre en jeu : le compagnon et une bulle, la scène de capture (filet), la page Ménagerie (avec une brillante), la page Compagnon, la page Exploration, la page Missions, le coffre de zone ouvert.
+Captures à prendre en jeu : le compagnon et une bulle, la scène de capture (filet), la page Créatures (avec une brillante), la page Compagnon, la page Exploration, la page Missions, le coffre de zone ouvert.
 Une seule description, anglais d'abord puis français (règle des stores : l'anglais en premier). Coller le tout.
 -->
-# Quest Companion – Creature Menagerie
+# Quest Companion – Creatures & Achievements
 
-**Capture the monsters you defeat and build your menagerie.** Every creature of WoW Forever can be caught, with 1 to 3 stars and rare **shiny** versions. Take one along as your hunting companion, seal every zone, earn trainer titles and show off your trainer card to your guild. A little travel companion and its journal come along for the ride.
+**Capture the monsters you defeat and build your collection.** Every creature of WoW Forever can be caught, with 1 to 3 stars and rare **shiny** versions. Take one along as your hunting companion, seal every zone, earn trainer titles and show off your trainer card to your guild. A little travel companion and its journal come along for the ride.
 
 ![A shiny creature tries its luck against the net](https://media.forgecdn.net/attachments/2161/225/f-gif.gif)
 
@@ -22,7 +22,7 @@ For **WoW Forever** (1.60). English and French. Free, standalone (`/qc`), about 
 
 ## New in 2.7: achievements and titles
 
-- **174 achievements, with points**: menagerie, shinies, zones and seals, day by day, guild, character, dungeons and raids (the last boss of each dungeon, Onyxia to Kel'Thuzad), professions, quests and reputation, oddities. Collection ones count for your whole account, performance ones for each character.
+- **174 achievements, with points**: collection, shinies, zones and seals, day by day, guild, character, dungeons and raids (the last boss of each dungeon, Onyxia to Kel'Thuzad), professions, quests and reputation, oddities. Collection ones count for your whole account, performance ones for each character.
 - **Nothing to redo**: your journal stamps, milestones and character statistics award what you already did, silently, at login. A new Achievements page in the journal (`/qc hf`) and an "Achievement earned" banner.
 - **40 titles**: "Trainer Dyokrion", "Dyokrion the Tracker"…, masculine or feminine. Pick yours on your trainer card or with `/qc title`; your big achievements are announced to your guild with your title.
 
@@ -30,18 +30,18 @@ For **WoW Forever** (1.60). English and French. Free, standalone (`/qc`), about 
 
 - **Capture all**: when several creatures wait in your net, throw at all of them at once: a volley of nets drops on every creature, each one shakes and holds or tears, shinies last.
 - **Guild feats**: when a guildmate who runs Quest Companion catches a shiny, an elite, a rare or a boss, seals a zone or earns a title, you get a "GUILD" banner. Click it to open their trainer card. Nothing is posted in chat.
-- **Bestiary-style Menagerie**: undiscovered species stay hidden ("???") until you meet them, with type filters (Beast, Undead, Demon…) and a sort by kills.
+- **Bestiary-style Creatures page**: undiscovered species stay hidden ("???") until you meet them, with type filters (Beast, Undead, Demon…) and a sort by kills.
 
-## Your menagerie
+## Your collection
 
 - **Capture what you defeat**: a net button appears next to your companion when something can be caught, with a "Capture possible" banner. One click, one try: the net drops, shakes once, twice, three times… and it's yours, or it tears and the creature runs off. A whole pack? They queue up for 30 seconds, or use **Capture all**.
 - **Stars and shinies**: each specimen has 1 to 3 stars (recapture for a better one). Any monster can be **shiny** (1 in 150 at first, up to 1 in 40 the more of a species you defeat, better for elites and rares). A gold diamond sparkles over its nameplate and your companion calls it out.
-- **About 3,500 creatures** per faction in the Menagerie, numbered like a creature index, hidden until you meet them, coloured by rarity, each with a 3D card. **Capture aids** (bait, lasso, tamer's whistle) improve your odds.
+- **About 3,500 creatures** per faction on the Creatures page, numbered like a creature index, hidden until you meet them, coloured by rarity, each with a 3D card. **Capture aids** (bait, lasso, tamer's whistle) improve your odds.
 - **Your companion hunts with you**: the creature you take along gives a hunt effect and a comfort effect tied to its type (Beast, Humanoid, Undead, Elemental, Dragonkin, Demon, Giant, Mechanical), stronger for elites, rares, shinies and starred specimens.
 - **Seals, titles, trainer card**: catch every species of a zone to seal it, earn trainer titles at 10/25/50/100/250 species, and show your trainer card (title, companion, a showcase of 3) to other players who have the addon, from the right-click menu.
 - **A guided first capture**: your companion walks you through it, and the journal's Guide page explains everything.
 
-![The Menagerie: every creature, numbered, hidden until you meet it](https://media.forgecdn.net/attachments/2155/840/qc-3-png.png)
+![The Creatures: every creature, numbered, hidden until you meet it](https://media.forgecdn.net/attachments/2155/840/qc-3-png.png)
 
 ## The travel companion
 
@@ -75,7 +75,7 @@ For **WoW Forever** (1.60). English and French. Free, standalone (`/qc`), about 
 
 ## Commands
 
-`/qc` opens the journal (so does the minimap button, or a right-click on the companion), `/qc filet` throws the net, `/qc filet tout` captures everything waiting, `/qc capture` sums up your menagerie, `/qc fiche [name]` opens a trainer card, `/qc hf` your achievements, `/qc title` your titles, `/qc options` opens the settings, `/qc help` lists everything.
+`/qc` opens the journal (so does the minimap button, or a right-click on the companion), `/qc filet` throws the net, `/qc filet tout` captures everything waiting, `/qc capture` sums up your collection, `/qc fiche [name]` opens a trainer card, `/qc hf` your achievements, `/qc title` your titles, `/qc options` opens the settings, `/qc help` lists everything.
 
 ## Community
 
@@ -89,9 +89,9 @@ Free software, **GPL-3.0**. Zone data (creatures, gathering, quests) is generate
 
 ---
 
-# Quest Companion – Ménagerie de créatures (français)
+# Quest Companion – Créatures et hauts faits (français)
 
-**Capture les monstres que tu abats et remplis ta ménagerie.** Toutes les créatures de WoW Forever se capturent, avec 1 à 3 étoiles et de rares versions **brillantes**. Emmène-en une comme compagnon de chasse, scelle chaque zone, gagne des titres de dresseur et montre ta fiche à ta guilde. Un petit compagnon de route et son carnet de voyage t'accompagnent.
+**Capture les monstres que tu abats et remplis ta collection.** Toutes les créatures de WoW Forever se capturent, avec 1 à 3 étoiles et de rares versions **brillantes**. Emmène-en une comme compagnon de chasse, scelle chaque zone, gagne des titres de dresseur et montre ta fiche à ta guilde. Un petit compagnon de route et son carnet de voyage t'accompagnent.
 
 ![Une brillante tente sa chance contre le filet](https://media.forgecdn.net/attachments/2161/225/f-gif.gif)
 
@@ -103,7 +103,7 @@ Pour **WoW Forever** (1.60). En français et en anglais. Gratuit, autonome (`/qc
 
 ## Nouveau en 2.7 : hauts faits et titres
 
-- **174 hauts faits, avec des points** : ménagerie, brillantes, zones et sceaux, au jour le jour, guilde, personnage, donjons et raids (le dernier boss de chaque donjon, d'Onyxia à Kel'Thuzad), métiers, quêtes et réputations, insolite. Ceux de collection valent pour tout ton compte, ceux de performance pour chaque personnage.
+- **174 hauts faits, avec des points** : créatures, brillantes, zones et sceaux, au jour le jour, guilde, personnage, donjons et raids (le dernier boss de chaque donjon, d'Onyxia à Kel'Thuzad), métiers, quêtes et réputations, insolite. Ceux de collection valent pour tout ton compte, ceux de performance pour chaque personnage.
 - **Rien à refaire** : tes tampons du carnet, tes paliers et les statistiques de ton personnage attribuent en silence, à la connexion, ce que tu as déjà fait. Une nouvelle page Hauts faits dans le carnet (`/qc hf`) et un bandeau « Haut fait obtenu ».
 - **40 titres** : « Dresseur Dyokrion », « Dyokrion le Traqueur »…, au masculin ou au féminin. Tu choisis le tien sur ta fiche de dresseur ou avec `/qc titre` ; tes gros hauts faits sont annoncés à ta guilde avec ton titre.
 
@@ -111,13 +111,13 @@ Pour **WoW Forever** (1.60). En français et en anglais. Gratuit, autonome (`/qc
 
 - **Tout capturer** : quand plusieurs créatures attendent dans ton filet, lance-le sur toutes d'un coup : une volée de filets tombe sur chacune, qui tient ou se déchire, les brillantes en dernier.
 - **Exploits de la guilde** : quand un membre de ta guilde qui a Quest Companion capture une brillante, une élite, un rare ou un boss, scelle une zone ou gagne un titre, un bandeau « GUILDE » te l'annonce. Un clic ouvre sa fiche de dresseur. Rien n'est écrit dans le chat.
-- **Ménagerie façon bestiaire** : une espèce jamais croisée reste cachée (« ??? »), avec des filtres par type (Bête, Mort-vivant, Démon…) et un tri par abattues.
+- **Page Créatures façon bestiaire** : une espèce jamais croisée reste cachée (« ??? »), avec des filtres par type (Bête, Mort-vivant, Démon…) et un tri par abattues.
 
-## Ta ménagerie
+## Ta collection
 
 - **Capture ce que tu abats** : un bouton filet apparaît à côté de ton compagnon quand une créature peut être capturée, avec un bandeau « Capture possible ». Un clic, un essai : le filet tombe, bouge une fois, deux fois, trois fois… et elle est à toi, ou il se déchire et elle s'enfuit. Un pack entier ? Les créatures attendent 30 secondes dans la file, ou utilise **Tout capturer**.
 - **Étoiles et brillantes** : chaque spécimen a 1 à 3 étoiles (recapture pour un meilleur). N'importe quel monstre peut être **brillant** (1 chance sur 150 au départ, jusqu'à 1 sur 40 plus tu abats de son espèce, mieux pour un élite ou un rare). Un losange doré scintille sur sa barre de nom et ton compagnon te prévient.
-- **Environ 3 500 créatures** par faction dans la Ménagerie, numérotées comme un index, cachées tant que tu ne les as pas croisées, à la couleur de leur rareté, chacune avec sa fiche en 3D. Des **aides de capture** (appât, lasso, sifflet du dompteur) améliorent tes chances.
+- **Environ 3 500 créatures** par faction dans la page Créatures, numérotées comme un index, cachées tant que tu ne les as pas croisées, à la couleur de leur rareté, chacune avec sa fiche en 3D. Des **aides de capture** (appât, lasso, sifflet du dompteur) améliorent tes chances.
 - **Ton compagnon chasse avec toi** : la créature que tu emmènes donne un effet de chasse et un effet de confort liés à son type (Bête, Humanoïde, Mort-vivant, Élémentaire, Draconien, Démon, Géant, Mécanique), plus forts pour un élite, un rare, une brillante ou un spécimen étoilé.
 - **Sceaux, titres, fiche de dresseur** : capture toutes les espèces d'une zone pour la sceller, gagne des titres de dresseur à 10/25/50/100/250 espèces, et montre ta fiche (titre, compagnon, vitrine de 3) aux autres joueurs qui ont l'addon, depuis le menu du clic droit.
 - **Une première capture guidée** : ton compagnon t'accompagne, et la page Guide du carnet explique tout.
@@ -146,7 +146,7 @@ Pour **WoW Forever** (1.60). En français et en anglais. Gratuit, autonome (`/qc
 
 ## Commandes
 
-`/qc` ouvre le carnet (comme le bouton de minicarte ou un clic droit sur le compagnon), `/qc filet` lance le filet, `/qc filet tout` capture tout ce qui attend, `/qc capture` résume ta ménagerie, `/qc fiche [nom]` ouvre une fiche de dresseur, `/qc hf` tes hauts faits, `/qc titre` tes titres, `/qc options` ouvre les réglages, `/qc help` liste tout.
+`/qc` ouvre le carnet (comme le bouton de minicarte ou un clic droit sur le compagnon), `/qc filet` lance le filet, `/qc filet tout` capture tout ce qui attend, `/qc capture` résume ta collection, `/qc fiche [nom]` ouvre une fiche de dresseur, `/qc hf` tes hauts faits, `/qc titre` tes titres, `/qc options` ouvre les réglages, `/qc help` liste tout.
 
 ## Communauté
 

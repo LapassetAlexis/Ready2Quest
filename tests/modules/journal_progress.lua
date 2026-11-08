@@ -212,10 +212,10 @@ do
 	local expected = string.format("Bestiaire : %d/%d abattues (nommés %d/%d)", counts.killed, counts.seen,
 		counts.namedKilled, counts.namedSeen)
 	Check("[PROG] une ligne : abattues et nommés", pane.bestiary.text:find(expected, 1, true) == 1
-		and pane.bestiary.text:find("Ménagerie", 1, true), pane.bestiary.text)
-	Check("[PROG] bouton Ménagerie", pane.toMen:IsShown() and pane.toMen.text.text == "Ménagerie")
+		and pane.bestiary.text:find("Créatures", 1, true), pane.bestiary.text)
+	Check("[PROG] bouton Créatures", pane.toMen:IsShown() and pane.toMen.text.text == "Créatures")
 	pane.toMen:Click()
-	Check("[PROG] clic : la Ménagerie sur cette zone", f.kind == "menagerie" and f.menZone == 1413 and not pane:IsShown())
+	Check("[PROG] clic : la Créatures sur cette zone", f.kind == "menagerie" and f.menZone == 1413 and not pane:IsShown())
 	NS:SelectJournalKind("progress")
 	Check("[PROG] retour : même zone", f.kind == "progress" and f.zoneID == 1413)
 end

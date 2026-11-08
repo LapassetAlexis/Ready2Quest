@@ -109,7 +109,7 @@ local FR = {
 	DAY_GIVE         = "Donner",
 	JRN_SEC_day      = "Missions",
 	OPT_DAILY_MISSIONS = "Missions du jour",
-	OPT_DAILY_MISSIONS_DESC = "Chaque jour une mission de ménagerie, une d'exploration et une de son caractère, dans le carnet (onglet Missions) et le bloc à l'écran.",
+	OPT_DAILY_MISSIONS_DESC = "Chaque jour une mission de capture, une d'exploration et une de son caractère, dans le carnet (onglet Missions) et le bloc à l'écran.",
 }
 local EN = {
 	MIS_species      = "Defeat %d species never defeated (%s)",
@@ -160,7 +160,7 @@ local EN = {
 	DAY_GIVE         = "Give",
 	JRN_SEC_day      = "Missions",
 	OPT_DAILY_MISSIONS = "Missions of the day",
-	OPT_DAILY_MISSIONS_DESC = "Every day a menagerie mission, an exploration mission and one from its character, in the journal (Missions tab) and the on-screen block.",
+	OPT_DAILY_MISSIONS_DESC = "Every day a capture mission, an exploration mission and one from its character, in the journal (Missions tab) and the on-screen block.",
 }
 ns.RegisterStrings(FR, EN)
 if ns.KEEP_STRINGS then ns.DAILY_STRINGS = { fr = FR, en = EN } end

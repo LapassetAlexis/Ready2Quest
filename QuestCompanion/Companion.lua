@@ -298,8 +298,8 @@ local FR = {
 	COMP_MSG_TUTO_MUTED    = "Bulles du compagnon coupées (Bavardage : Muet) : remonte la réglette, ou /qc compagnon muet, pour voir le tutoriel.",
 	COMP_MSG_TUTO_COMBAT   = "Le tutoriel du compagnon commencera après le combat.",
 	COMP_MSG_TUTO_SKIPPED  = "Tutoriel du compagnon passé (/qc compagnon tuto pour le revoir).",
-	COMP_MSG_TUTO_MEN_SKIPPED = "Tutoriel de la ménagerie passé (/qc compagnon tuto menagerie pour le revoir).",
-	COMP_MSG_TUTO_MEN_OFF  = "La capture est coupée (réglages, page Au jour le jour) : rallume-la pour le tutoriel de la ménagerie.",
+	COMP_MSG_TUTO_MEN_SKIPPED = "Tutoriel des créatures passé (/qc compagnon tuto collection pour le revoir).",
+	COMP_MSG_TUTO_MEN_OFF  = "La capture est coupée (réglages, page Au jour le jour) : rallume-la pour le tutoriel des créatures.",
 	COMP_MSG_UNLOCK_APP    = "Compagnon : nouvelle apparence débloquée, %s. Choisis-la dans les réglages.",
 	COMP_MSG_UNLOCK_ORN    = "Compagnon : nouvel ornement débloqué, %s.",
 	COMP_MSG_EVOLVE        = "Compagnon : %s devient %s !",
@@ -312,7 +312,7 @@ local FR = {
 	COMP_MSG_APPEARANCE    = "Apparence : %s.",
 	COMP_MSG_MUTE          = "Bulles du compagnon : %s.",
 	COMP_MSG_FALLBACK      = "Modèle 3D indisponible sur ce client : la boussole le remplace.",
-	HELP_COMPANION         = "/qc compagnon [nom <nom> | caresse | apparence | muet | tuto [menagerie | passer] | anim] — ton compagnon de route",
+	HELP_COMPANION         = "/qc compagnon [nom <nom> | caresse | apparence | muet | tuto [collection | passer] | anim] — ton compagnon de route",
 }
 local EN = {
 	OPT_PAGE_COMPANION_MAIN = "Companion",
@@ -471,8 +471,8 @@ local EN = {
 	COMP_MSG_TUTO_MUTED    = "Companion bubbles are off (Chattiness: Silent): raise the slider, or /qc compagnon muet, to see the tutorial.",
 	COMP_MSG_TUTO_COMBAT   = "The companion tutorial will start after combat.",
 	COMP_MSG_TUTO_SKIPPED  = "Companion tutorial skipped (/qc compagnon tuto to see it again).",
-	COMP_MSG_TUTO_MEN_SKIPPED = "Menagerie tutorial skipped (/qc compagnon tuto menagerie to see it again).",
-	COMP_MSG_TUTO_MEN_OFF  = "Capture is off (settings, Day by day page): turn it back on for the menagerie tutorial.",
+	COMP_MSG_TUTO_MEN_SKIPPED = "Creatures tutorial skipped (/qc compagnon tuto collection to see it again).",
+	COMP_MSG_TUTO_MEN_OFF  = "Capture is off (settings, Day by day page): turn it back on for the creatures tutorial.",
 	COMP_MSG_UNLOCK_APP    = "Companion: new appearance unlocked, %s. Pick it in the settings.",
 	COMP_MSG_UNLOCK_ORN    = "Companion: new ornament unlocked, %s.",
 	COMP_MSG_EVOLVE        = "Companion: %s becomes %s!",
@@ -3092,7 +3092,8 @@ function ns:CompanionCommand(rest)
 		if what == "passer" or what == "skip" or what == "stop" then return self:CompanionSkipTutorial() end
 		self:CompanionUpdateVisibility()
 		-- « tuto menagerie » : le tutoriel de la ménagerie (2.3.0), rejoué au temps
-		if what == "menagerie" or what == "ménagerie" or what == "capture" then return self:CompanionStartMenagerieTutorial() end
+		if what == "menagerie" or what == "ménagerie" or what == "capture" or what == "collection"
+			or what == "creatures" or what == "créatures" then return self:CompanionStartMenagerieTutorial() end
 		return self:CompanionStartTutorial(true)
 	end
 	self:CompanionCheckUnlocks()

@@ -188,7 +188,7 @@ do
 	CP.Settle()
 	local data = NS:CaptureData()
 	local kodo = data.creatures[3200]
-	Check("[CAP] réussite : dans la ménagerie", kodo and kodo.name == "Kodo" and kodo.zoneID == 1413 and data.count == 1)
+	Check("[CAP] réussite : dans la collection", kodo and kodo.name == "Kodo" and kodo.zoneID == 1413 and data.count == 1)
 	Check("[CAP] … annoncée dans le chat", Mock:Output():find("Kodo capturé", 1, true) ~= nil, Mock:Output())
 	Check("[CAP] … le compagnon s'en réjouit", NS.companionBubbleKey == "CAPTURE_OK")
 	Check("[CAP] … essai compté, fenêtre refermée", data.tries == 1 and not NS.capturePrompt:IsShown()
@@ -207,7 +207,7 @@ do
 	NS:CaptureThrow()
 	Mock:Reset()
 	CP.Settle()
-	Check("[CAP] échec : pas dans la ménagerie", data.creatures[3201] == nil and data.count == 1 and data.tries == 2)
+	Check("[CAP] échec : pas dans la collection", data.creatures[3201] == nil and data.count == 1 and data.tries == 2)
 	Check("[CAP] … le compagnon se moque", NS.companionBubbleKey == "CAPTURE_FAIL"
 		and NS.companionBubbleText:find("Hyène", 1, true) ~= nil, NS.companionBubbleText)
 	Check("[CAP] … dit dans le chat", Mock:Output():find("Hyène s'est échappé", 1, true) ~= nil, Mock:Output())
@@ -318,10 +318,10 @@ do
 	Check("[CAP] le modèle de la créature (SetCreature)", model and model.creature == 3500, model and tostring(model.creature))
 	local coll
 	for _, entry in ipairs(NS:JournalCollection("app")) do if entry.def.id == "cap:3500" then coll = entry end end
-	Check("[CAP] pas dans la Collection (elle vit dans la Ménagerie)", coll == nil)
+	Check("[CAP] pas dans la Collection (elle vit dans la page Créatures)", coll == nil)
 	local men
 	for _, entry in ipairs(NS:MenagerieList({ zone = "all", state = "captured" })) do if entry.npc == 3500 then men = entry end end
-	Check("[CAP] dans la Ménagerie, capturée", men ~= nil and men.captured and men.known)
+	Check("[CAP] dans la page Créatures, capturée", men ~= nil and men.captured and men.known)
 	-- dix captures : un sifflet offert
 	local data = NS:CaptureData()
 	for npc = 3501, 3509 do
@@ -338,7 +338,7 @@ do
 	CP.Reset()
 	Mock:Reset()
 	NS.EXTRA_COMMANDS["capture"](NS)
-	Check("[CAP] /qc capture : ménagerie vide expliquée", Mock:Output():find("Ménagerie", 1, true) ~= nil, Mock:Output())
+	Check("[CAP] /qc capture : créatures vide expliquée", Mock:Output():find("Créatures", 1, true) ~= nil, Mock:Output())
 	local missing = {}
 	for key in pairs(NS.CAPTURE_STRINGS.fr) do if not NS.CAPTURE_STRINGS.en[key] then missing[#missing + 1] = key end end
 	Check("[CAP] textes fr et en", #missing == 0, table.concat(missing, ", "))

@@ -181,8 +181,8 @@ do
 		tostring(R(26, nil, "m")))
 	Check("[TIT] forme épicène : la même pour les deux", R(18, "Ana", "f") == "Ana l'Infatigable" and R(28, "Ana", "f") == "Chef Ana")
 	TT.locale = "enUS"
-	Check("[TIT] anglais : Lady / Heroine selon la forme, sinon une seule forme", R(35, "Dyo", "f") == "Dyo, Lady of the Menagerie"
-		and R(35, "Dyo", "m") == "Dyo, Lord of the Menagerie" and R(37, nil, "f") == "Heroine of Azeroth"
+	Check("[TIT] anglais : Lady / Heroine selon la forme, sinon une seule forme", R(35, "Dyo", "f") == "Dyo, Lady of the Creatures"
+		and R(35, "Dyo", "m") == "Dyo, Lord of the Creatures" and R(37, nil, "f") == "Heroine of Azeroth"
 		and R(12, nil, "f") == "Shiny Hunter" and R(2, "Dyo", "f") == "Trainer Dyo")
 	TT.locale = "frFR"
 	Check("[TIT] code inconnu : nil, le nom seul", R(999, "Dyo") == nil and R("x") == nil and NS:FeatTitleWho("Dyo", 999) == "Dyo"
@@ -237,7 +237,7 @@ do
 	local options = NS:FeatTitleOptions("Testeur")
 	Check("[TIT] sélecteur : Automatique, Aucun, puis les titres rendus avec le nom", #options == 5 and options[1].value == "auto"
 		and options[1].label:find("Apprenti dresseur", 1, true) and options[2].value == "none"
-		and options[4].label == "Testeur le Traqueur" and options[5].label == "Testeur, Seigneur de la ménagerie",
+		and options[4].label == "Testeur le Traqueur" and options[5].label == "Testeur, Seigneur des créatures",
 		options[4] and options[4].label)
 	-- un autre personnage : les titres de compte le suivent, pas ceux du personnage
 	TT.name = "Autre"
@@ -275,18 +275,18 @@ do
 	NS:HandleCommand("titre")
 	local out = Mock:Output()
 	Check("[TIT] /qc titre : le titre affiché et la liste numérotée", out:find("Titre affiché : Apprenti dresseur", 1, true)
-		and out:find("19 — Traqueur", 1, true) and out:find("35 — Seigneur de la ménagerie", 1, true), out)
+		and out:find("19 — Traqueur", 1, true) and out:find("35 — Seigneur des créatures", 1, true), out)
 	NS:HandleCommand("titre traqueur")
 	Check("[TIT] /qc titre traqueur (casse libre)", NS:FeatTitleCode() == 19)
 	NS:HandleCommand("titre 35")
 	Check("[TIT] /qc titre 35", NS:FeatTitleCode() == 35)
 	NS:HandleCommand("titre aucun")
 	Check("[TIT] /qc titre aucun", NS:FeatTitleCode() == nil and NS:FeatTitleChoice() == 0)
-	NS:HandleCommand("titre seigneur de la menagerie")
+	NS:HandleCommand("titre seigneur des creatures")
 	Check("[TIT] sans les accents", NS:FeatTitleCode() == 35)
 	NS:HandleCommand("titre auto")
 	Check("[TIT] /qc titre auto", NS:FeatTitleChoice() == nil and NS:FeatTitleCode() == 1)
-	NS:HandleCommand("titre Dame de la ménagerie")
+	NS:HandleCommand("titre Dame des créatures")
 	Check("[TIT] la forme féminine est reconnue aussi", NS:FeatTitleCode() == 35)
 	NS:HandleCommand("title the tracker")
 	Check("[TIT] /qc title, nom anglais", NS:FeatTitleCode() == 19)
@@ -321,9 +321,9 @@ do
 	f.titlePicker:Choose("1")
 	Check("[TIT] préfixe : « Apprenti dresseur Testeur »", NS:FeatTitleCode() == 1 and f.header.title.text == "Apprenti dresseur Testeur")
 	f.titlePicker:Choose("35")
-	Check("[TIT] suffixe apposé : « Testeur, Seigneur de la ménagerie »", f.header.title.text == "Testeur, Seigneur de la ménagerie")
+	Check("[TIT] suffixe apposé : « Testeur, Seigneur des créatures »", f.header.title.text == "Testeur, Seigneur des créatures")
 	f.formPicker:Choose("f")
-	Check("[TIT] forme féminine choisie sur la fiche", NS:FeatTitleForm() == "f" and f.header.title.text == "Testeur, Dame de la ménagerie")
+	Check("[TIT] forme féminine choisie sur la fiche", NS:FeatTitleForm() == "f" and f.header.title.text == "Testeur, Dame des créatures")
 	f.titlePicker:Choose("none")
 	Check("[TIT] aucun titre : le nom seul", f.header.title.text == "Testeur" and NS:FeatTitleCode() == nil)
 	-- une autre fiche : pas de sélecteur
@@ -355,17 +355,17 @@ do
 	local text = NS:TrainerSerializeCard(NS:TrainerOwnCard())
 	local raw = NS.TrainerDecode(text)
 	Check("[TIT] fiche envoyée : ti, tg, ap, aq, ac, et le texte t pour les versions d'avant", raw.ti == "35" and raw.tg == "f"
-		and raw.ap == "50" and raw.aq == "25" and raw.ac == "2" and NS.TrainerUnescape(raw.t) == "Dame de la ménagerie", text)
+		and raw.ap == "50" and raw.aq == "25" and raw.ac == "2" and NS.TrainerUnescape(raw.t) == "Dame des créatures", text)
 	local back = NS:TrainerParseCard(text)
 	Check("[TIT] nouveau → nouveau : code, forme, points relus", back.titleCode == 35 and back.gender == "f"
-		and back.feats.account == 50 and back.feats.char == 25 and back.feats.count == 2 and back.title == "Dame de la ménagerie")
+		and back.feats.account == 50 and back.feats.char == 25 and back.feats.count == 2 and back.title == "Dame des créatures")
 	TT.locale = "enUS"
 	Check("[TIT] le destinataire rend le titre dans SA langue, à la forme reçue", NS:TrainerCardHeading(back, "Bob")
-		== "Bob, Lady of the Menagerie")
+		== "Bob, Lady of the Creatures")
 	TT.locale = "frFR"
 	-- nouveau → ancien : une version d'avant ne lit que ce qu'elle connaît (t)
 	Check("[TIT] nouveau → ancien : t reste lisible, nu, dans la langue de l'expéditeur",
-		NS.TrainerUnescape(raw.t) == "Dame de la ménagerie" and raw.n ~= nil)
+		NS.TrainerUnescape(raw.t) == "Dame des créatures" and raw.n ~= nil)
 	-- ancien → nouveau : pas de ti, le texte t en sous-titre
 	local old = NS:TrainerParseCard("p=1;n=Bob-Royaume;t=Ma%C3%AEtre des b%C3%AAtes;sp=3")
 	local heading, subtitle = NS:TrainerCardHeading(old, "Bob")
@@ -393,8 +393,8 @@ do
 	for _, msg in ipairs(answer) do NS:TrainerOnAddonMessage(msg.prefix, msg.text, "WHISPER", "Bob-Royaume") end
 	local card = NS:TrainerCard("Bob")
 	local f = NS:TrainerOpen("Bob")
-	Check("[TIT] échange complet : en-tête « Bob, Dame de la ménagerie », points", card and card.titleCode == 35
-		and f.header.title.text == "Bob, Dame de la ménagerie" and f.header.subtitle.text:find("75 points", 1, true) ~= nil,
+	Check("[TIT] échange complet : en-tête « Bob, Dame des créatures », points", card and card.titleCode == 35
+		and f.header.title.text == "Bob, Dame des créatures" and f.header.subtitle.text:find("75 points", 1, true) ~= nil,
 		f.header.title.text)
 	f:Hide()
 	NS:FeatSetTitleForm("auto")

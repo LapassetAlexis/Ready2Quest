@@ -802,10 +802,10 @@ P.TUTO = {
 --   5 : effets après %d min
 -- ---------------------------------------------------------------------------
 P.TUTO_MENAGERIE_START = {
-	{ "Un monstre qui manque à ma ménagerie ! Clique sur le filet, là, à côté de moi : je le capture.", "A monster missing from my menagerie! Click the net, right there next to me: I'll capture it." },
+	{ "Un monstre qui manque à ma collection ! Clique sur le filet, là, à côté de moi : je le capture.", "A monster missing from my collection! Click the net, right there next to me: I'll capture it." },
 }
 P.TUTO_MENAGERIE_OK = {
-	{ "Voilà ! Elle rejoint ma ménagerie (page Ménagerie du carnet, /qc).", "There! It joins my menagerie (Menagerie page of the journal, /qc)." },
+	{ "Voilà ! Elle rejoint ma collection (page Créatures du carnet, /qc).", "There! It joins my collection (Creatures page of the journal, /qc)." },
 }
 P.TUTO_MENAGERIE_FAIL = {
 	{ "Il s'est échappé, ça arrive ! Au prochain, retente.", "It got away, it happens! Try again on the next one." },
@@ -814,20 +814,20 @@ P.TUTO_MENAGERIE_LATE = {
 	{ "Trop tard, il est parti… la prochaine fois !", "Too late, it's gone… next time!" },
 }
 P.TUTO_MENAGERIE_INTRO = {
-	{ "On révise la ménagerie ? Tu vois le filet, à côté de moi : un monstre abattu qui manque à ta ménagerie y tombe.", "Menagerie refresher? See the net next to me: a defeated monster missing from your menagerie lands in it." },
+	{ "On révise la capture ? Tu vois le filet, à côté de moi : un monstre abattu qui manque à ta collection y tombe.", "Capture refresher? See the net next to me: a defeated monster missing from your collection lands in it." },
 }
 P.TUTO_MENAGERIE = {
 	{ "Le filet garde un monstre %d s après le combat. Clic : je capture le meilleur ; clic droit : la liste. Le bandeau te prévient.", "The net keeps a monster %d s after the fight. Click: I capture the best one; right-click: the list. The banner lets you know." },
 	{ "Chaque capture vaut 1 à 3 étoiles (3 étoiles : %d %% de chance). Recapture pour tenter mieux : je garde le meilleur.", "Each capture is worth 1 to 3 stars (3 stars: a %d%% chance). Recapture to try for better: I keep the best one." },
 	{ "Les brillantes ! 1 chance sur %d au départ, jusqu'à 1 sur %d après %d abattus de la même espèce. Insiste, ça paie.", "Shinies! 1 chance in %d to start, up to 1 in %d after %d kills of the same species. Keep at it, it pays off." },
 	{ "Un losange doré sur une barre de nom : une brillante ! Deux versions par espèce à capturer. Et brillant, je suis tout doré.", "A gold diamond on a nameplate: a shiny! Two versions per species to capture. And as a shiny, I'm all golden." },
-	{ "Emmène-la : clic sur elle dans la Ménagerie. Selon son type, elle t'aide à chasser et me rend la vie douce, après %d min.", "Take it along: click it in the Menagerie. By its type, it helps you hunt and makes my life sweet, after %d min." },
+	{ "Emmène-la : clic sur elle dans la page Créatures. Selon son type, elle t'aide à chasser et me rend la vie douce, après %d min.", "Take it along: click it on the Creatures page. By its type, it helps you hunt and makes my life sweet, after %d min." },
 	{ "Changer se confirme. Mes envies à %d %% ou plus : effets entiers, alors nourris-moi ! Une mascotte reste le compagnon de cœur.", "Switching asks first. My needs at %d%% or more: full effects, so feed me! A mascot stays the companion of the heart." },
 	{ "Capture toutes les espèces d'une zone : elle est scellée ! Un cadre, puis un fond à ses couleurs, et +%d %% de brillantes là-bas.", "Capture every species of a zone: it gets sealed! A frame, then a background in its colours, and +%d%% shinies there." },
 	{ "Par type, des paliers renforcent mes effets. À %d espèces, ton premier titre de dresseur ; à %d, le dernier. Ça claque.", "Per type, milestones strengthen my effects. At %d species, your first trainer title; at %d, the last one. Fancy." },
-	{ "Chaque jour, une mission de ménagerie ; chaque semaine, une chasse au brillant et des missions par type. Friandises et aides !", "Every day, a menagerie mission; every week, a shiny hunt and missions by type. Treats and aids as rewards!" },
+	{ "Chaque jour, une mission de capture ; chaque semaine, une chasse au brillant et des missions par type. Friandises et aides !", "Every day, a capture mission; every week, a shiny hunt and missions by type. Treats and aids as rewards!" },
 	{ "Ta fiche de dresseur : /qc fiche. Ton titre, moi en 3D, une vitrine de 3 créatures. Clic droit sur un autre dresseur : la sienne.", "Your trainer card: /qc fiche. Your title, me in 3D, a showcase of 3 creatures. Right-click another trainer: theirs." },
-	{ "Tout est écrit dans le carnet, page Guide (/qc). Pour me réentendre : /qc compagnon tuto menagerie. Allez, à la chasse !", "It's all in the journal, Guide page (/qc). To hear me again: /qc compagnon tuto menagerie. Now, off to the hunt!" },
+	{ "Tout est écrit dans le carnet, page Guide (/qc). Pour me réentendre : /qc compagnon tuto collection. Allez, à la chasse !", "It's all in the journal, Guide page (/qc). To hear me again: /qc compagnon tuto collection. Now, off to the hunt!" },
 }
 
 -- ---------------------------------------------------------------------------

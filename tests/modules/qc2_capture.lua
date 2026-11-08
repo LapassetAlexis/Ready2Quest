@@ -349,7 +349,7 @@ end
 
 -- 7. Ménagerie : ligne et fiche ------------------------------------------------------------------------------
 do
-	Say("-- qc2 capture : Ménagerie")
+	Say("-- qc2 capture : Créatures")
 	Q.Reset()
 	NS:CaptureData().creatures[4700] = { name = "Lion", class = "normal", normal = true, at = 100, stars = 2 }
 	NS:CaptureData().count = 1
@@ -357,7 +357,7 @@ do
 	NS:BestiaryData()[1413] = { [4700] = { name = "Lion", seen = true, killed = 2, class = "normal", type = "Bête" } }
 	local item
 	for _, e in ipairs(NS:MenagerieList({ zone = "all", state = "captured" })) do if e.npc == 4700 then item = e end end
-	Check("[QC2CAP] MenagerieList : étoiles de l'espèce", item and item.stars == 2 and item.shinyStars == nil)
+	Check("[QC2CAP] CreaturesList : étoiles de l'espèce", item and item.stars == 2 and item.shinyStars == nil)
 	NS:DB().journalTracker = false
 	NS:ToggleJournal(true)
 	local f = NS.journalFrame
@@ -512,7 +512,7 @@ do
 	NS.CaptureStars = function(...) calls = calls + 1; return stars(...) end
 	NS:MenagerieList({ zone = "all" })
 	NS.CaptureStars = stars
-	Check("[QC2CAP] MenagerieList : étoiles sans CaptureStars par espèce", calls == 0, calls)
+	Check("[QC2CAP] CreaturesList : étoiles sans CaptureStars par espèce", calls == 0, calls)
 	-- horloge : le tri ne se refait pas dix fois par seconde
 	Q.Reset()
 	Q.SeeKill(4900, { name = "Lièvre" })
@@ -548,7 +548,7 @@ do
 	local capture = NS:CaptureData()
 	local entry = capture.creatures[4950]
 	local first = entry.firstAt
-	Check("[QC2CAP] première capture : date gardée (espèce et ménagerie)", first ~= nil and first == entry.at
+	Check("[QC2CAP] première capture : date gardée (espèce et créatures)", first ~= nil and first == entry.at
 		and capture.firstAt == first)
 	NS:CaptureGrant("sifflet", { quiet = true, silent = true })
 	NS:CaptureToggleAid("sifflet")

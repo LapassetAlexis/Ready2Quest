@@ -123,9 +123,9 @@ do
 		#bad == 0, table.concat(bad, ", "))
 	local off = {}
 	for cat, n in pairs(WHOLE) do if counts[cat] ~= n or expected[cat] ~= n then off[#off + 1] = cat end end
-	Check("[HF-B] comptes par catégorie : Ménagerie 29, Brillantes 12, Zones 23, Jour 14, Guilde 7", #off == 0,
+	Check("[HF-B] comptes par catégorie : Créatures 29, Brillantes 12, Zones 23, Jour 14, Guilde 7", #off == 0,
 		table.concat(off, ", "))
-	Check("[HF-B] Insolite : les 8 lignes de la ménagerie et du compagnon ; grands hauts faits : 6",
+	Check("[HF-B] Insolite : les 8 lignes de la collection et du compagnon ; grands hauts faits : 6",
 		counts.fun == 8 and counts.meta == 6)
 	local fewer = 0
 	for _, id in ipairs(NS.FEAT_MENAGERIE_IDS) do if NS:FeatDef(id) then fewer = fewer + 1 end end
@@ -329,7 +329,7 @@ do
 	Check("[HF-B] compagnons emmenés : 7 types sur 8, pas encore", not Got("men_companion_types"))
 	store.ctypes.mechanical = true
 	Eval()
-	Check("[HF-B] … le huitième : « Tour de la ménagerie »", Got("men_companion_types"))
+	Check("[HF-B] … le huitième : « Tour de la collection »", Got("men_companion_types"))
 	-- relevés du carnet : deux continents datés le même jour (migration)
 	HM.Reset()
 	local journal = NS:CharData().journal or {}
@@ -382,7 +382,7 @@ do
 		#gained == 1 and coll.ranks[50] ~= nil and coll.featRanks[50] == true and Aid("sifflet") == sifflet
 		and not NS:CompanionData().unlocked["bg:menagerie"] and not Mock:Output():find("espèces capturées : te voilà", 1, true))
 	Eval()
-	Check("[HF-B] … « Enclos animés » paie : un sifflet et le fond de la ménagerie", Got("men_species_50")
+	Check("[HF-B] … « Enclos animés » paie : un sifflet et le fond de la collection", Got("men_species_50")
 		and Aid("sifflet") == sifflet + 1 and NS:CompanionData().unlocked["bg:menagerie"] == true)
 	NS:FeatCacheReset()
 	Eval()

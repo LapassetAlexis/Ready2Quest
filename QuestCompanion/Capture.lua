@@ -84,13 +84,13 @@ local FR = {
 	CAPTURE_SHAKING        = "Le filet bouge…",
 	CAPTURE_GOT            = "Capturé !",
 	CAPTURE_FLED           = "Échappé…",
-	CAPTURE_MSG_OK         = "%s capturé ! Il rejoint ta ménagerie (apparences du compagnon).",
+	CAPTURE_MSG_OK         = "%s capturé ! Il rejoint ta collection (apparences du compagnon).",
 	CAPTURE_MSG_FAIL       = "%s s'est échappé.",
 	CAPTURE_MSG_ITEM       = "Tu trouves : %s (%d en poche).",
 	CAPTURE_MSG_FULL       = "%s : ta besace en est pleine.",
 	CAPTURE_MSG_GIFT       = "%d captures ! Ton compagnon t'offre un %s.",
-	CAPTURE_MSG_SUMMARY    = "Ménagerie : %d créatures capturées (%d essais). Aides : %s.",
-	CAPTURE_MSG_EMPTY      = "Ménagerie vide pour l'instant : abats un monstre, puis clique sur le filet du compagnon.",
+	CAPTURE_MSG_SUMMARY    = "Créatures : %d capturées (%d essais). Aides : %s.",
+	CAPTURE_MSG_EMPTY      = "Collection vide pour l'instant : abats un monstre, puis clique sur le filet du compagnon.",
 	CAPTURE_RANK_normal    = "Normal",
 	CAPTURE_RANK_trivial   = "Insignifiant",
 	CAPTURE_RANK_minus     = "Insignifiant",
@@ -102,7 +102,7 @@ local FR = {
 	CAPTURE_SRC            = "Capturé le %s",
 	OPT_DAILY_CAPTURE      = "Capturer les monstres abattus",
 	OPT_DAILY_CAPTURE_DESC = "Les monstres abattus qui valent le coup attendent 30 s après le combat : un filet sur le compagnon les capture (clic droit : la liste). Ils deviennent des apparences du compagnon.",
-	HELP_CAPTURE           = "/qc capture -- ta ménagerie et tes aides de capture",
+	HELP_CAPTURE           = "/qc capture -- ta collection et tes aides de capture",
 }
 local EN = {
 	CAPTURE_aid_appat      = "Tasty bait",
@@ -120,13 +120,13 @@ local EN = {
 	CAPTURE_SHAKING        = "The net is moving…",
 	CAPTURE_GOT            = "Captured!",
 	CAPTURE_FLED           = "Got away…",
-	CAPTURE_MSG_OK         = "%s captured! It joins your menagerie (companion looks).",
+	CAPTURE_MSG_OK         = "%s captured! It joins your collection (companion looks).",
 	CAPTURE_MSG_FAIL       = "%s got away.",
 	CAPTURE_MSG_ITEM       = "You find: %s (%d in your pack).",
 	CAPTURE_MSG_FULL       = "%s: your pack is full of them.",
 	CAPTURE_MSG_GIFT       = "%d captures! Your companion gives you a %s.",
-	CAPTURE_MSG_SUMMARY    = "Menagerie: %d creatures captured (%d tries). Aids: %s.",
-	CAPTURE_MSG_EMPTY      = "Your menagerie is empty: defeat a monster, then click the net on your companion.",
+	CAPTURE_MSG_SUMMARY    = "Creatures: %d creatures captured (%d tries). Aids: %s.",
+	CAPTURE_MSG_EMPTY      = "Your collection is empty: defeat a monster, then click the net on your companion.",
 	CAPTURE_RANK_normal    = "Normal",
 	CAPTURE_RANK_trivial   = "Trivial",
 	CAPTURE_RANK_minus     = "Trivial",
@@ -138,7 +138,7 @@ local EN = {
 	CAPTURE_SRC            = "Captured on %s",
 	OPT_DAILY_CAPTURE      = "Capture defeated monsters",
 	OPT_DAILY_CAPTURE_DESC = "Defeated monsters worth catching wait 30 s after combat: a net on your companion captures them (right-click: the list). They become companion looks.",
-	HELP_CAPTURE           = "/qc capture -- your menagerie and capture aids",
+	HELP_CAPTURE           = "/qc capture -- your collection and capture aids",
 }
 ns.RegisterStrings(FR, EN)
 if ns.KEEP_STRINGS then ns.CAPTURE_STRINGS = { fr = FR, en = EN } end
@@ -151,13 +151,13 @@ local P = {
 		{ "Vite, %s ne bouge plus : c'est le moment !", "Quick, %s isn't moving: now's our chance!" },
 		{ "%s ferait un super compagnon… enfin, presque aussi bien que moi.", "%s would make a great companion… almost as good as me." },
 		{ "Tu le laisses là, %s ? Moi je dis : filet !", "You're leaving %s there? I say: net!" },
-		{ "%s, dans ma ménagerie ? Clique, clique !", "%s, in my menagerie? Click, click!" },
+		{ "%s, dans ma collection ? Clique, clique !", "%s, in my collection? Click, click!" },
 		{ "On tente %s ? Promis, je partage ma gamelle.", "Try for %s? I promise I'll share my bowl." },
 	},
 	CAPTURE_OK = {   -- %s = la créature
 		{ "%s est à nous ! Bienvenue dans la bande !", "%s is ours! Welcome to the crew!" },
 		{ "Capturé ! %s, je te préviens : la place près du feu est à moi.", "Captured! %s, fair warning: the spot by the fire is mine." },
-		{ "Et hop, %s dans la ménagerie. Quel talent… le mien, surtout.", "And there, %s in the menagerie. Such talent… mostly mine." },
+		{ "Et hop, %s dans la collection. Quel talent… le mien, surtout.", "And there, %s in the collection. Such talent… mostly mine." },
 		{ "%s capturé ! Tu vois, quand tu m'écoutes…", "%s captured! See what happens when you listen to me…" },
 		{ "Un %s tout neuf ! Je lui apprends les bonnes manières.", "A brand-new %s! I'll teach it some manners." },
 		{ "Gagné ! %s fait déjà les yeux doux à mes friandises.", "Got it! %s is already eyeing my treats." },
@@ -179,7 +179,7 @@ local P = {
 	},
 	CAPTURE_SHINY = {   -- %s = la créature
 		{ "Un %s BRILLANT capturé ! Je pleure. De joie. Un peu de jalousie.", "A SHINY %s captured! I'm crying. With joy. And a bit of envy." },
-		{ "%s brillant dans la ménagerie… tu vas le mettre en vitrine ?", "A shiny %s in the menagerie… putting it on display?" },
+		{ "%s brillant dans la collection… tu vas le mettre en vitrine ?", "A shiny %s in the collection… putting it on display?" },
 	},
 }
 -- enregistrement commun (CompanionLines.lua) ; listes de clés en test seulement

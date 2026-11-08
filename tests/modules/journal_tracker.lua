@@ -509,7 +509,7 @@ do
 		and prog:IsShown() and not f.evo:IsShown())
 	Check("[WIN] titre : la zone, marquée « ici », et ses niveaux", prog.name.text == "Les Tarides (ici)"
 		and prog.levels.text == "niveaux 10-25", prog.name.text .. " / " .. prog.levels.text)
-	Check("[WIN] menu : Compagnon, Ménagerie, Missions, Complétion (plus de Souvenirs)", f.sections.progress and f.sections.menagerie
+	Check("[WIN] menu : Compagnon, Créatures, Missions, Complétion (plus de Souvenirs)", f.sections.progress and f.sections.menagerie
 		and f.sections.evolution and f.sections.memories == nil and f.sections.day and f.sections.collection == nil
 		and f.sections.evolution.text.text == "Compagnon")
 	Check("[WIN] la Complétion allume son entrée du menu", f.sections.progress.selected and not f.sections.evolution.selected)
@@ -533,7 +533,7 @@ do
 		and prog.items[3].text.text == "The Crossroads" and prog.items[3].status.texture == NS.Theme.DIAMOND, prog.items[3].text.text)
 	Check("[WIN] une seule activité suivie : pas de pourcentage, on dit pourquoi", prog.percent.text == "—"
 		and prog.nopct:IsShown() and prog.nopct.text == NS.L.JRN_ZONE_NOPCT, prog.percent.text)
-	Check("[WIN] combat : renvoie à la Ménagerie", prog.toMen:IsShown() and prog.bestiary:IsShown())
+	Check("[WIN] combat : renvoie à la Créatures", prog.toMen:IsShown() and prog.bestiary:IsShown())
 	parts.craft:Click()
 	Check("[WIN] métiers sans métier : message", prog.empty.text:find(NS.L.JRN_ACT_EMPTY_craft, 1, true) == 1, prog.empty.text)
 	parts.quests:Click()
@@ -561,10 +561,10 @@ do
 	Check("[WIN] coffre annoncé avec son palier", prog.marks[4].gift.text:find("palier 1", 1, true), prog.marks[4].gift.text)
 	Check("[WIN] combat : la ligne du bestiaire (abattues, nommés)", prog.bestiary.text:find("Bestiaire : 4/42", 1, true)
 		and prog.bestiary.text:find("nommés 0/1", 1, true), prog.bestiary.text)
-	Check("[WIN] combat : pas de fiches ici, le bouton vers la Ménagerie", prog.toMen:IsShown())
+	Check("[WIN] combat : pas de fiches ici, le bouton vers la Créatures", prog.toMen:IsShown())
 	prog.toMen:Click()
 	local men = f.men
-	Check("[WIN] Ménagerie ouverte sur la zone", f.kind == "menagerie" and men:IsShown() and f.menZone == 1413
+	Check("[WIN] Créatures ouverte sur la zone", f.kind == "menagerie" and men:IsShown() and f.menZone == 1413
 		and men.zone:GetValue() == 1413)
 	local list = NS:MenagerieList({ zone = 1413 })
 	local chief, bee
@@ -572,8 +572,8 @@ do
 		if entry.npc == 2000 then chief = entry end
 		if entry.npc == 2001 then bee = entry end
 	end
-	Check("[WIN] Ménagerie : les espèces apprises de la zone", chief and chief.known and chief.class == "elite")
-	Check("[WIN] Ménagerie : jamais croisée = inconnue", bee and not bee.known)
+	Check("[WIN] Créatures : les espèces apprises de la zone", chief and chief.known and chief.class == "elite")
+	Check("[WIN] Créatures : jamais croisée = inconnue", bee and not bee.known)
 	local beeCell
 	for _, cell in ipairs(men.items) do if cell.entry and cell.entry.npc == 2001 then beeCell = cell end end
 	if not beeCell then

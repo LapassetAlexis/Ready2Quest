@@ -472,10 +472,10 @@ do
 	-- infobulle : la chance avec le bonus
 	NS:BestiaryData()[1413] = { [7301] = { name = "Bandit", class = "normal", type = "Humanoïde", seen = true, level = 20 } }
 	local text = NS:BestiaryTooltipLine(EF.Guid(7301), 20)
-	Check("[EFF] infobulle : « à capturer · 58 % (+8) »", text == "Ménagerie : à capturer · 58 % (+8)", text)
+	Check("[EFF] infobulle : « à capturer · 58 % (+8) »", text == "Créatures : à capturer · 58 % (+8)", text)
 	NS:BestiaryData()[1413][7302] = { name = "Loup", class = "normal", type = "Bête", seen = true, level = 20 }
 	text = NS:BestiaryTooltipLine(EF.Guid(7302), 20)
-	Check("[EFF] infobulle : sans bonus, comme avant", text == "Ménagerie : à capturer · 50 %", text)
+	Check("[EFF] infobulle : sans bonus, comme avant", text == "Créatures : à capturer · 50 %", text)
 end
 
 -- 10. Patte sur les barres de nom (repérage) -----------------------------------------------------------------

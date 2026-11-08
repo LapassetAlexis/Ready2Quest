@@ -27,7 +27,7 @@ local BAR_W = 130
 
 local FR = {
 	JRN_SEC_feats       = "Hauts faits",
-	JRN_SUB_feats       = "Tes exploits, en jouant : ménagerie, zones, donjons, niveaux… Les hauts faits de compte valent pour tous tes personnages.",
+	JRN_SUB_feats       = "Tes exploits, en jouant : créatures, zones, donjons, niveaux… Les hauts faits de compte valent pour tous tes personnages.",
 	FEAT_FILTER_all     = "Tous",
 	FEAT_FILTER_got     = "Obtenus",
 	FEAT_FILTER_open    = "En cours",
@@ -42,7 +42,7 @@ local FR = {
 }
 local EN = {
 	JRN_SEC_feats       = "Achievements",
-	JRN_SUB_feats       = "Your feats, earned by playing: menagerie, zones, dungeons, levels… Account achievements count for all your characters.",
+	JRN_SUB_feats       = "Your feats, earned by playing: collection, zones, dungeons, levels… Account achievements count for all your characters.",
 	FEAT_FILTER_all     = "All",
 	FEAT_FILTER_got     = "Earned",
 	FEAT_FILTER_open    = "In progress",

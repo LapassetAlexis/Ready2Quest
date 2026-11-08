@@ -138,10 +138,10 @@ do
 	Open("menagerie")
 	local men = f.men
 	local row = men.items[1]
-	Check("[CZ] Ménagerie : lignes sur le fond des hauts faits", row.azBg and (row.azBg.texture == 235397 or row.azBg.texture == 130660))
-	Check("[CZ] Ménagerie : fiche (barre de nom grise 130667, fond du portrait, encadré bois)", men.preview.azTitle
+	Check("[CZ] Créatures : lignes sur le fond des hauts faits", row.azBg and (row.azBg.texture == 235397 or row.azBg.texture == 130660))
+	Check("[CZ] Créatures : fiche (barre de nom grise 130667, fond du portrait, encadré bois)", men.preview.azTitle
 		and men.preview.azTitle.texture == 130667 and men.preview.stage.texture == 1111217 and men.preview.azWoodBorder)
-	Check("[CZ] Ménagerie : puces d'état sur le fond des catégories, surbrillance de l'état choisi",
+	Check("[CZ] Créatures : puces d'état sur le fond des catégories, surbrillance de l'état choisi",
 		men.states.all.azBg and men.states.all.azBg.texture == 130652 and men.states.all.azHl:IsShown()
 		and not men.states.captured.azHl:IsShown())
 	men.stateRow:Select("captured")

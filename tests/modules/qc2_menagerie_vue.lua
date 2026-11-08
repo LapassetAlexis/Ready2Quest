@@ -43,7 +43,7 @@ local function Shown(pane)
 end
 
 do
-	Say("-- QC 2.4 ménagerie : paliers, recherche, types")
+	Say("-- QC 2.4 créatures : paliers, recherche, types")
 	MV.Reset()
 	local savedTable, savedFaction = rawget(NS, "ZONE_CREATURES"), NS.BestiaryFaction
 	local savedShiny = NS.ShinyKnown

@@ -297,12 +297,12 @@ do
 	local mrow = men.items[1]
 	mrow.entry = { known = true, class = "elite", npc = 1 }
 	NS.CARNET_PAGE_POSTS.menagerie(NS, f)
-	Check("[RT] Ménagerie : ligne connue voilée, n° et type à l'encre, nom à sa rareté (sombre)", mrow.azVeil and mrow.azVeil:IsShown()
+	Check("[RT] Créatures : ligne connue voilée, n° et type à l'encre, nom à sa rareté (sombre)", mrow.azVeil and mrow.azVeil:IsShown()
 		and Same(mrow.no.textColor, INK[NS.AZEROTH_CONTRAST["men.no"][1]]) and Same(mrow.label.textColor, INK.rElite)
 		and Same(mrow.detail.textColor, INK[NS.AZEROTH_CONTRAST["men.detail"][1]]))
 	mrow.entry = { known = false, npc = 2 }
 	NS.CARNET_PAGE_POSTS.menagerie(NS, f)
-	Check("[RT] Ménagerie : jamais croisée, texte clair", Same(mrow.label.textColor, INK.light) and not mrow.azVeil:IsShown())
+	Check("[RT] Créatures : jamais croisée, texte clair", Same(mrow.label.textColor, INK.light) and not mrow.azVeil:IsShown())
 	local strip = men.collection
 	Check("[RT] sceau : bloc voilé (titre, détail, dresseur lisibles)", strip and strip.azVeil and strip.azVeil:IsShown()
 		and Same(strip.title.textColor, INK.ink) and Same(strip.trainer.textColor, INK.amber))
