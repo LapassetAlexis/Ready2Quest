@@ -16,6 +16,11 @@ Une seule description, anglais d'abord puis français (règle des stores : l'ang
 
 For **WoW Forever** (1.60). English and French. Free, standalone (`/qc`), about 2 MB of memory. Pairs well with [Ready2Quest](https://www.curseforge.com/wow/addons/ready2quest).
 
+## New in 2.9: account-wide collection, easier captures
+- **Account-wide collection**: your captures are shared by all your characters (best stars, shinies, capture aids); each character keeps its own companion.
+- **Easier captures**: normal 50%, elite 25%, rare 15%, and every failure in a row makes the net a bit surer. Recapture limits per rarity, so common creatures stop coming back endlessly.
+- The Menagerie is now **Creatures**; the companion frame blinks red when several monsters target you; many readability fixes.
+
 ## New in 2.8: the journal in the Azeroth style
 
 - The travel journal and the trainer card now look like the game's achievement frame: wood, parchment, header plate, shields, green progress bars. Your trainer card shows a showcase of 3 achievements, and the **Y** key opens your achievements (if it was free).
@@ -96,6 +101,11 @@ Free software, **GPL-3.0**. Zone data (creatures, gathering, quests) is generate
 ![Une brillante tente sa chance contre le filet](https://media.forgecdn.net/attachments/2161/225/f-gif.gif)
 
 Pour **WoW Forever** (1.60). En français et en anglais. Gratuit, autonome (`/qc`), environ 2 Mo de mémoire. Va très bien avec [Ready2Quest](https://www.curseforge.com/wow/addons/ready2quest).
+
+## Nouveau en 2.9 : collection au compte, captures plus faciles
+- **Collection commune à tous tes personnages** : tes captures sont partagées par le compte (meilleures étoiles, brillantes, aides de capture) ; chaque personnage garde son compagnon.
+- **Captures plus faciles** : normal 50 %, élite 25 %, rare 15 %, et chaque échec d'affilée rend le filet un peu plus sûr. Recaptures réglables par rareté : les communes ne reviennent plus sans fin.
+- La Ménagerie devient **Créatures** ; le cadre du compagnon clignote en rouge quand plusieurs monstres sont sur toi ; nombreuses retouches de lisibilité.
 
 ## Nouveau en 2.8 : le carnet en style Azeroth
 
