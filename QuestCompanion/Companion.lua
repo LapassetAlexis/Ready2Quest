@@ -495,7 +495,7 @@ ns.RegisterDefaults({
 	companionShow       = true,
 	companionPoint      = { point = "CENTER", x = 330, y = -170 },
 	companionSize       = 2,      -- réglette « Taille » : 1 petit, 2 moyen, 3 grand, 4 très grand
-	companionFraming    = "portrait",   -- cadrage du modèle : portrait (tête), buste, pied (2.2.0)
+	companionFraming    = "buste",      -- cadrage du modèle : portrait (tête), buste, pied (2.2.0 ; buste par défaut en 2.9.0)
 	companionOrnRibbon  = true,
 	companionOrnLantern = true,
 	companionOrnMedal   = true,
@@ -1890,9 +1890,16 @@ ns.COMPANION_FRAMINGS = { "portrait", "buste", "pied" }
 ns.COMPANION_FRAMING_ZOOM = { portrait = 1, buste = 0.55, pied = 0 }
 
 function ns:CompanionFraming()
-	local framing = self:DB().companionFraming
+	local db = self:DB()
+	-- 2.9.0 : l'ancien défaut « portrait » faisait déborder la créature de son
+	-- petit cadre ; repassé une fois en « buste » (rechoisissable dans les réglages)
+	if not db.companionFramingV29 then
+		db.companionFramingV29 = true
+		if db.companionFraming == "portrait" then db.companionFraming = "buste" end
+	end
+	local framing = db.companionFraming
 	if ns.COMPANION_FRAMING_ZOOM[framing] then return framing end
-	return "portrait"
+	return "buste"   -- 2.9.0 : « portrait » serrait trop, la créature débordait du petit cadre
 end
 
 function ns:CompanionFramingChoices()

@@ -259,7 +259,12 @@ do
 	FI.Reset()
 	local frame = NS:EnsureCompanionFrame()
 	local model = frame and frame.model
-	Check("[FI] cadrage par défaut : portrait", NS:CompanionFraming() == "portrait")
+	Check("[FI] cadrage par défaut : buste (2.9.0, la créature tient dans son cadre)", NS:CompanionFraming() == "buste")
+	NS:DB().companionFramingV29 = nil
+	NS:DB().companionFraming = "portrait"
+	Check("[FI] ancien défaut « portrait » : repassé une fois en buste", NS:CompanionFraming() == "buste")
+	NS:DB().companionFraming = "portrait"
+	Check("[FI] … puis un « portrait » choisi est gardé", NS:CompanionFraming() == "portrait")
 	if model then
 		NS:CompanionApplyModel()
 		Check("[FI] portrait : caméra « portrait » à fond, distance 1, échelle du stade gardée", model.portrait == 1 and model.cam == 1
