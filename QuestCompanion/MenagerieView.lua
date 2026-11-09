@@ -103,6 +103,8 @@ function ns:MenagerieSetType(key)
 	if key == "all" or key == frame.menType then key = nil end
 	frame.menType = key
 	frame.menOffset = 0
+	-- 2.11.0 : le type tient au /reload (journalState)
+	if self.JournalRemember then self:JournalRemember("menType", key) end
 	self:RefreshJournal()
 end
 

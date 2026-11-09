@@ -216,8 +216,11 @@ do
 	-- 1.5.1 : nom ou « ??? » à la couleur de la rareté, liseré vert si capturée,
 	-- plus de colonnes de marques (tampon, pastille)
 	local elite = NS.CAPTURE_RARITY[unknown.entry.class or "normal"].color
-	Check("[MEN] inconnue : « ??? » à la couleur de sa rareté", unknown.entry.class ~= "normal"
-		and unknown.label.textColor[1] == elite[1] and unknown.label.textColor[2] == elite[2] and unknown.label.textColor[3] == elite[3])
+	-- 2.11.0 (fiche 08) : une inconnue ne montre plus sa rareté, ni ne pâlit
+	local muted = NS.Theme.MUTED_LIGHT
+	Check("[MEN] inconnue : « ??? » en gris clair, opaque", unknown.entry.class ~= "normal" and elite ~= nil
+		and unknown.label.textColor[1] == muted[1] and unknown.label.textColor[2] == muted[2] and unknown.label.textColor[3] == muted[3]
+		and (unknown.label.alpha or 1) == 1)
 	Check("[MEN] capturée : liseré vert à gauche", kodo.caught:IsShown() and kodo.caught.width == 3
 		and kodo.caught.vertex[2] == NS.Theme.GREEN[2] and not unknown.caught:IsShown())
 	Check("[MEN] plus de tampon ni de pastille dans la ligne", kodo.stamp == nil)
@@ -233,6 +236,7 @@ do
 	Check("[MEN] zone « toutes »", f.menZone == "all" and pane.count.text == "2 capturées · brillantes : 1 · 3 croisées · 5 en tout", pane.count.text)
 	pane.search:SetText("kodo")
 	if pane.search.scripts and pane.search.scripts.OnTextChanged then pane.search.scripts.OnTextChanged(pane.search) end
+	Mock:RunTimers()   -- 2.11.0 : la recherche attend la fin de la frappe
 	Check("[MEN] recherche dans la page", f.menSearch == "kodo" and pane.items[1].entry and pane.items[1].entry.npc == 3201
 		and not pane.items[2]:IsShown())
 	pane.search:SetText("")

@@ -336,6 +336,54 @@ local SECTIONS = { "evolution", "menagerie", "feats", "day", "progress", "guide"
 local MEN_STATES = { "all", "captured", "missing", "tokill", "shiny" }
 local MEN_RANKS = { "all", "normal", "elite", "rare", "boss" }
 local MEN_SORTS = { "no", "name", "level", "rank", "kills", "date" }
+
+-- 2.11.0 : l'état du carnet tient au /reload (QuestCompanionDB.journalState,
+-- au niveau du compte comme journalTab) : filtres de la page Créatures, part,
+-- filtre et quête choisie d'Exploration. Chaque valeur est vérifiée contre sa
+-- liste : une valeur d'une autre version est ignorée. La zone de la page
+-- Créatures repart sur « ici », sauf « toutes les zones » ; la recherche
+-- tapée n'est pas retenue. OpenMenagerieZone ne mémorise rien.
+local STATE_VALID = {
+	menRank = MEN_RANKS, menSort = MEN_SORTS, menState = MEN_STATES,
+	progPart = { "explore", "craft", "quests" }, progFilter = { "mine", "seen", "all" },
+}
+local function Valid(list, value)
+	for _, v in ipairs(list or {}) do if v == value then return true end end
+	return false
+end
+ns.JOURNAL_STATE_VALID = STATE_VALID
+function ns:JournalRemember(key, value)
+	local db = self:DB()
+	if type(db.journalState) ~= "table" then db.journalState = {} end
+	db.journalState[key] = value
+end
+function ns:JournalRestoreState(frame)
+	local state = self:DB().journalState
+	if not (frame and type(state) == "table") then return end
+	for key, list in pairs(STATE_VALID) do
+		if Valid(list, state[key]) then frame[key] = state[key] end
+	end
+	local icons = ns.MENAGERIE_TYPE_ICONS
+	if type(state.menType) == "string" and icons and icons[state.menType] then frame.menType = state.menType end
+	if state.menZoneAll == true then frame.menZone = "all" end
+	if tonumber(state.progQuest) then frame.progQuest = tonumber(state.progQuest) end
+end
+
+-- 2.11.0 : une recherche attend la fin de la frappe : un seul rafraîchissement
+-- 0,25 s après la dernière touche (sans C_Timer : tout de suite)
+ns.JOURNAL_SEARCH_DELAY = 0.25
+local soonToken = {}
+function ns:JournalSoon(key)
+	local timer = rawget(_G, "C_Timer")
+	if type(timer) ~= "table" or type(timer.After) ~= "function" then return self:RefreshJournal() end
+	soonToken[key] = (soonToken[key] or 0) + 1
+	local mine = soonToken[key]
+	timer.After(ns.JOURNAL_SEARCH_DELAY, function()
+		if soonToken[key] ~= mine then return end
+		local frame = ns.journalFrame
+		if frame and frame.IsShown and frame:IsShown() then ns:RefreshJournal() end
+	end)
+end
 local MEN_ROW_H = 30
 local COLL_KINDS = { "app", "orn", "frame", "bg" }
 local MARKS = { 25, 50, 75, 100 }
@@ -421,7 +469,15 @@ local FR2 = {
 	JRN_EVO_STAT_captures  = "capturées",
 	JRN_EVO_STAT_shiny     = "brillantes",
 	JRN_EVO_STAT_days      = "jours ensemble",
-	JRN_EVO_STAT_missions  = "missions faites",
+	JRN_EVO_STAT_missions  = "missions",           -- 2.11.0 : plus court, tient sur la plaque
+	JRN_EVO_STAT_km        = "parcourus",
+	-- 2.11.0 : colonne de navigation en tableau de bord
+	JRN_NAVSUM_COMPANION_TIP = "Ton compagnon : clic pour sa page.",
+	JRN_NAVSUM_ZONE_TIP    = "La zone où tu es : clic pour son exploration.",
+	JRN_NAVSUM_ZONE_NONE   = "Zone sans exploration",
+	JRN_NAVSUM_DAY         = "Jour",
+	JRN_NAVSUM_WEEK        = "Semaine",
+	JRN_NAVSUM_MISSIONS_TIP = "Missions du jour et de la semaine : clic pour la page Missions.",
 	JRN_EVO_LOOKS          = "Son allure",
 	JRN_EVO_LOOKS_COUNT    = "%d apparences",
 	JRN_EVO_FRAME          = "Cadre",
@@ -501,7 +557,14 @@ local EN2 = {
 	JRN_EVO_STAT_captures  = "captured",
 	JRN_EVO_STAT_shiny     = "shinies",
 	JRN_EVO_STAT_days      = "days together",
-	JRN_EVO_STAT_missions  = "missions done",
+	JRN_EVO_STAT_missions  = "missions",
+	JRN_EVO_STAT_km        = "travelled",
+	JRN_NAVSUM_COMPANION_TIP = "Your companion: click for its page.",
+	JRN_NAVSUM_ZONE_TIP    = "The zone you are in: click for its exploration.",
+	JRN_NAVSUM_ZONE_NONE   = "No exploration here",
+	JRN_NAVSUM_DAY         = "Day",
+	JRN_NAVSUM_WEEK        = "Week",
+	JRN_NAVSUM_MISSIONS_TIP = "Daily and weekly missions: click for the Missions page.",
 	JRN_EVO_LOOKS          = "Its look",
 	JRN_EVO_LOOKS_COUNT    = "%d looks",
 	JRN_EVO_FRAME          = "Frame",
@@ -734,7 +797,11 @@ local function PreviewSet(p, title, lines, opts)
 	PreviewLayout(p)
 	if p.model then
 		p.model.creature, p.model.display = nil, nil
-		if opts.creature then
+		-- 2.11.0 : un seul chargeur de modèles, profil « preview » (Companion.lua)
+		if (opts.creature or opts.display) and ns.ShowModel then
+			ns.ShowModel(p.model, { display = opts.display, npc = opts.creature, shiny = opts.shiny }, "preview")
+			p.model.creature, p.model.display = opts.creature, opts.display
+		elseif opts.creature then
 			if p.model.SetCreature then pcall(p.model.SetCreature, p.model, opts.creature) end
 			p.model.creature = opts.creature
 			if ns.ModelShinyLight then ns.ModelShinyLight(p.model, opts.shiny) end
@@ -743,6 +810,8 @@ local function PreviewSet(p, title, lines, opts)
 			if p.model.SetDisplayInfo then pcall(p.model.SetDisplayInfo, p.model, opts.display) end
 			p.model.display = opts.display
 			p.model:Show()
+		elseif ns.ModelForget then
+			ns.ModelForget(p.model)
 		else
 			if p.model.ClearModel then pcall(p.model.ClearModel, p.model) end
 			p.model:Hide()
@@ -802,7 +871,10 @@ local HERO_H, EVO_ROW, EVO_STEP = 176, 30, 34
 local PORTRAIT = 148
 -- caméra rapprochée : le compagnon remplit le grand cadre du héros
 local PORTRAIT_ZOOM = 0.65
-local STAT_H = 54
+-- 2.11.0 : plaques plus hautes, chiffre et libellé centrés ensemble
+local STAT_H = 58
+local STAT_VALUE_Y, STAT_LABEL_Y = 8, -11
+ns.JOURNAL_STAT_LAYOUT = { h = STAT_H, valueY = STAT_VALUE_Y, labelY = STAT_LABEL_Y }
 local LOOK_COUNT, LOOK_W, LOOK_H = 5, 52, 66
 local STATS = { "captures", "shiny", "days", "missions", "km" }
 
@@ -869,11 +941,13 @@ local function BuildEvolution(self, frame, content)
 		local tile = Theme.CreateTile(pane, statW, STAT_H, { kind = "Frame" })
 		At(tile, content, (index - 1) * (statW + 8), statY)
 		tile.value = Text(tile, Theme.F_TITLE, Theme.PARCHMENT, statW - 8)
-		tile.value:SetPoint("TOP", tile, "TOP", 0, -9)
+		tile.value:SetPoint("CENTER", tile, "CENTER", 0, STAT_VALUE_Y)
 		tile.value:SetJustifyH("CENTER")
+		if tile.value.SetWordWrap then tile.value:SetWordWrap(false) end
 		tile.label = Text(tile, Theme.F_SMALL, Theme.MUTED, statW - 8)
-		tile.label:SetPoint("TOP", tile, "TOP", 0, -33)
+		tile.label:SetPoint("CENTER", tile, "CENTER", 0, STAT_LABEL_Y)
 		tile.label:SetJustifyH("CENTER")
+		if tile.label.SetWordWrap then tile.label:SetWordWrap(false) end
 		tile.key = key
 		pane.stats[key] = tile
 	end
@@ -986,6 +1060,53 @@ local TYPE_ICONS = {
 local MEN_DEFAULT_ICON = "Interface\\Icons\\Ability_Hunter_BeastTaming"
 ns.MENAGERIE_TYPE_ICONS = TYPE_ICONS
 
+-- 2.11.0 : les étoiles d'une ligne de Créatures : l'étoile dorée du jeu
+-- (atlas « auctionhouse-icon-favorite », vérifié en jeu), posée sur sa propre
+-- silhouette brun sombre 2 px plus grande (le cerne qui la détache du
+-- parchemin) ; vides : désaturées, brun grisé. Construites une fois.
+ns.MEN_STAR = { atlas = "auctionhouse-icon-favorite", size = 12, step = 12, outline = 2,
+	full = { 1, 0.80, 0.20 }, empty = { 0.62, 0.55, 0.43 }, edge = { 0.23, 0.13, 0.02 }, edgeEmpty = 0.45 }
+local function StarTex(row, layer, sub, size)
+	local tex = row:CreateTexture(nil, layer, nil, sub)
+	tex:SetSize(size, size)
+	local ok = ns.AzerothAtlas and ns.AzerothAtlas(tex, ns.MEN_STAR.atlas)
+	if not ok then
+		ok = pcall(tex.SetAtlas, tex, ns.MEN_STAR.atlas)
+		if not ok and ns.CAPTURE_STAR_ICON then tex:SetTexture(ns.CAPTURE_STAR_ICON) end
+	end
+	tex:Hide()
+	return tex
+end
+local function BuildStars(row)
+	local S = ns.MEN_STAR
+	row.stars = {}
+	for index = 1, (ns.CAPTURE_STAR_MAX or 3) do
+		local edge = StarTex(row, "ARTWORK", 1, S.size + S.outline)
+		local star = StarTex(row, "ARTWORK", 2, S.size)
+		star:SetPoint("LEFT", row, "RIGHT", -150 + (index - 1) * S.step, 0)
+		edge:SetPoint("CENTER", star, "CENTER", 0, 0)
+		row.stars[index] = { star = star, edge = edge }
+	end
+end
+-- n étoiles pleines (nil : aucune affichée)
+function ns.MenagerieRowStars(row, count)
+	local S = ns.MEN_STAR
+	for index, pair in ipairs(row.stars or {}) do
+		if count then
+			local full = index <= count
+			local c = full and S.full or S.empty
+			if pair.star.SetDesaturated then pair.star:SetDesaturated(not full) end
+			pair.star:SetVertexColor(c[1], c[2], c[3], 1)
+			if pair.edge.SetDesaturated then pair.edge:SetDesaturated(true) end
+			pair.edge:SetVertexColor(S.edge[1], S.edge[2], S.edge[3], full and 1 or S.edgeEmpty)
+			pair.star.full = full
+			pair.star:Show(); pair.edge:Show()
+		else
+			pair.star:Hide(); pair.edge:Hide()
+		end
+	end
+end
+
 local function BuildMenagerie(self, frame, content)
 	local pane = CreateFrame("Frame", nil, content)
 	pane:SetAllPoints()
@@ -994,15 +1115,19 @@ local function BuildMenagerie(self, frame, content)
 	frame.menRank, frame.menSort, frame.menSearch = frame.menRank or "all", frame.menSort or "no", frame.menSearch or ""
 	local function Changed() frame.menOffset = 0; ns:RefreshJournal() end
 	-- 1re rangée : zone, rareté, tri
-	pane.zone = Theme.CreateDropdown(pane, 200, function(value) frame.menZone = value; Changed() end,
+	pane.zone = Theme.CreateDropdown(pane, 200, function(value)
+		frame.menZone = value
+		ns:JournalRemember("menZoneAll", value == "all" or nil)
+		Changed()
+	end,
 		{ listWidth = 260, maxRows = 14 })
 	At(pane.zone, content, 0, TOP)
-	pane.rank = Theme.CreateDropdown(pane, 124, function(value) frame.menRank = value; Changed() end)
+	pane.rank = Theme.CreateDropdown(pane, 124, function(value) frame.menRank = value; ns:JournalRemember("menRank", value); Changed() end)
 	At(pane.rank, content, 210, TOP)
 	local ranks = {}
 	for _, key in ipairs(MEN_RANKS) do ranks[#ranks + 1] = { value = key, label = L["JRN_MEN_RANK_" .. key] } end
 	pane.rank:SetOptions(ranks)
-	pane.sort = Theme.CreateDropdown(pane, GRID_W - 344, function(value) frame.menSort = value; Changed() end)
+	pane.sort = Theme.CreateDropdown(pane, GRID_W - 344, function(value) frame.menSort = value; ns:JournalRemember("menSort", value); Changed() end)
 	At(pane.sort, content, 344, TOP)
 	local sorts = {}
 	for _, key in ipairs(MEN_SORTS) do sorts[#sorts + 1] = { value = key, label = L["JRN_MEN_SORT_" .. key] } end
@@ -1014,6 +1139,7 @@ local function BuildMenagerie(self, frame, content)
 	local rowY = TOP - 32
 	pane.stateRow, pane.states = Chips(pane, MEN_STATES, "JRN_MEN_", function(key)
 		frame.menState = key
+		ns:JournalRemember("menState", key)
 		Changed()
 	end)
 	At(pane.stateRow, content, 0, rowY)
@@ -1022,8 +1148,14 @@ local function BuildMenagerie(self, frame, content)
 	local searchW = math.max(120, INNER - (pane.stateRow.used or 300) - 12)
 	pane.search = Theme.CreateSearchBox(pane, searchW, L.JRN_MEN_SEARCH, function(text)
 		frame.menSearch = text or ""
-		Changed()
+		frame.menOffset = 0
+		-- 2.11.0 : vidée : tout de suite ; sinon à la fin de la frappe
+		if frame.menSearch == "" then ns:RefreshJournal() else ns:JournalSoon("menSearch") end
 	end)
+	-- Entrée : la recherche part sans attendre
+	if pane.search.HookScript then
+		pane.search:HookScript("OnEnterPressed", function() ns:JournalSoon("menSearch"); ns:RefreshJournal() end)
+	end
 	pane.search:SetPoint("TOPRIGHT", content, "TOPLEFT", PAD + INNER, rowY)
 	-- 3e rangée (2.4) : boutons de type, « Tous » (MenagerieView.lua)
 	local typeH = 0
@@ -1055,7 +1187,10 @@ local function BuildMenagerie(self, frame, content)
 		-- l'étoile d'une brillante ; capturée : liseré vert à gauche (1.5.1)
 		row.detail:ClearAllPoints()
 		row.detail:SetPoint("RIGHT", row, "RIGHT", -30, 0)
-		row.detail:SetWidth(120)
+		-- 2.11.0 : les étoiles à gauche du type (textures, plus de texte)
+		row.detail:SetWidth(150 - 30 - 3 * ns.MEN_STAR.step - 4)
+		if row.detail.SetJustifyH then row.detail:SetJustifyH("RIGHT") end
+		BuildStars(row)
 		row.star = Theme.CreateDiamond(row, 8)
 		row.star:SetPoint("RIGHT", row, "RIGHT", -12, 0)
 		row.star:SetVertexColor(Theme.GOLD_LIGHT[1], Theme.GOLD_LIGHT[2], Theme.GOLD_LIGHT[3], 1)
@@ -1094,6 +1229,40 @@ local function BuildMenagerie(self, frame, content)
 	end)
 	pane.preview.variant:SetPoint("TOPRIGHT", pane.preview, "TOPRIGHT", -6, -6)
 	pane.preview.variant:Hide()
+	-- 2.11.0 : « Localiser » : repère sur la carte, là où l'espèce apparaît
+	pane.preview.locate = Theme.CreateButton(pane.preview, "auto", 20, L.JRN_LOCATE or "Localiser", function()
+		ns:JournalMenagerieLocate()
+	end, "accent")
+	pane.preview.locate:SetPoint("TOPLEFT", pane.preview, "TOPLEFT", 6, -6)
+	pane.preview.locate:SetScript("OnEnter", function(owner) Tip(owner, L.JRN_LOCATE, { L.JRN_LOCATE_TIP_creature }) end)
+	pane.preview.locate:SetScript("OnLeave", HideTip)
+	pane.preview.locate:Hide()
+end
+
+-- 2.11.0 : le point d'une espèce dans sa zone (ns:ZonePoint), ou nil
+local function CreaturePoint(self, entry)
+	if not (entry and entry.npc and entry.zoneID and self.ZonePoint) then return nil end
+	return self:ZonePoint("creature", entry.zoneID, entry.npc)
+end
+local function PreviewLocate(self, preview, entry)
+	local button = preview and preview.locate
+	if not button then return end
+	local x = CreaturePoint(self, entry)
+	if x and self.MapPinAvailable and self:MapPinAvailable(entry.zoneID) then
+		button:SetText(self:MapPinActive("creature:" .. entry.npc) and L.JRN_LOCATE_OFF or L.JRN_LOCATE)
+		button:Show()
+	else
+		button:Hide()
+	end
+end
+function ns:JournalMenagerieLocate()
+	local preview = self.journalFrame and self.journalFrame.men and self.journalFrame.men.preview
+	local entry = preview and preview.entry
+	local x, y = CreaturePoint(self, entry)
+	if not x then return false end
+	local set = self:MapPinToggle("creature:" .. entry.npc, entry.zoneID, x, y)
+	PreviewLocate(self, preview, entry)
+	return set
 end
 
 -- Missions (2.9.1 : refonte d'après la maquette validée). En haut, une bande
@@ -1112,8 +1281,12 @@ end
 -- au rafraîchissement, sauf les pointillés d'un encart qui grandit).
 local MIS = {
 	leftW = 420, gap = 16,                         -- colonne des missions, écart avec la droite
-	sumH = 42, sumGap = 12, sumColGap = 10,       -- bande résumé
-	sumCount = 100,                               -- compte + pastilles, à droite d'une plaque
+	-- 2.11.0 : plaques plus hautes ; ligne 1 titre + compte, détail sur deux
+	-- lignes au besoin, pastilles en bas (plus par-dessus le texte)
+	sumH = 56, sumGap = 8, sumColGap = 10,        -- bande résumé
+	sumCount = 40,                                -- compte, à droite de la ligne 1
+	sumTop = 5, sumDetailY = -21, sumDetailH = 24, sumPipY = 5,
+	rightGroupH = 22,                             -- intertitres de droite (la bande a grandi)
 	cardH = 68, cardGap = 8, cardVGap = 6,        -- cartes : hauteur, écarts
 	groupH = 24, groupGap = 8,                    -- intertitre, écart après un groupe
 	icon = 30, textX = 52, pad = 8, countW = 44,  -- dans une carte
@@ -1411,17 +1584,26 @@ local function BuildDay(self, frame, content)
 		plaque.icon:SetPoint("LEFT", plaque, "LEFT", 9, 0)
 		plaque.icon:SetTexture(SUMMARY_ICON[id])
 		-- libellé à gauche, compte calé à droite avant les pastilles
-		plaque.label = Text(plaque, Theme.F_LABEL, Theme.GOLD, MIS.sumW - 44 - MIS.sumCount - 4)
-		plaque.label:SetPoint("TOPLEFT", plaque, "TOPLEFT", 44, -6)
+		plaque.label = Text(plaque, Theme.F_LABEL, Theme.GOLD, MIS.sumW - 44 - MIS.sumCount - MIS.pad - 4)
+		plaque.label:SetPoint("TOPLEFT", plaque, "TOPLEFT", 44, -MIS.sumTop)
 		if plaque.label.SetWordWrap then plaque.label:SetWordWrap(false) end
 		plaque.label:SetText(L["SUM_" .. id])
-		plaque.count = Text(plaque, Theme.F_NUMBER, Theme.PARCHMENT, 36)
-		plaque.count:SetPoint("TOPRIGHT", plaque, "TOPRIGHT", -(MIS.sumCount - 36), -6)
+		plaque.count = Text(plaque, Theme.F_NUMBER, Theme.PARCHMENT, MIS.sumCount)
+		plaque.count:SetPoint("TOPRIGHT", plaque, "TOPRIGHT", -MIS.pad, -MIS.sumTop)
 		plaque.count:SetJustifyH("RIGHT")
 		plaque.detail = Text(plaque, Theme.F_SMALL, Theme.MUTED_LIGHT, MIS.sumW - 44 - MIS.pad)
-		plaque.detail:SetPoint("TOPLEFT", plaque, "TOPLEFT", 44, -23)
-		if plaque.detail.SetWordWrap then plaque.detail:SetWordWrap(false) end
-		plaque.pips = Pips(plaque, id == "trait" and 1 or 3, plaque, -MIS.pad, -11)
+		plaque.detail:SetPoint("TOPLEFT", plaque, "TOPLEFT", 44, MIS.sumDetailY)
+		if plaque.detail.SetWordWrap then plaque.detail:SetWordWrap(true) end
+		if plaque.detail.SetMaxLines then pcall(plaque.detail.SetMaxLines, plaque.detail, 2) end
+		if plaque.detail.SetHeight then plaque.detail:SetHeight(MIS.sumDetailH) end
+		if plaque.detail.SetJustifyV then plaque.detail:SetJustifyV("TOP") end
+		-- pastilles en bas, à gauche sous le détail
+		local count = id == "trait" and 1 or 3
+		plaque.pips = Pips(plaque, count, plaque, 0, 0)
+		for index, pip in ipairs(plaque.pips) do
+			pip:ClearAllPoints()
+			pip:SetPoint("BOTTOMLEFT", plaque, "BOTTOMLEFT", 44 + (index - 1) * 17, MIS.sumPipY)
+		end
 		plaque.tipLines = {}
 		if plaque.EnableMouse then plaque:EnableMouse(true) end
 		plaque.onEnter = function(p) Tip(p, L["SUM_" .. p.id], p.tipLines, "below") end
@@ -1627,7 +1809,7 @@ local function LayoutDay(pane, content)
 	local rightX, w = MIS.rightX, MIS.rightW - 20
 	y = TOP - MIS.sumH - MIS.sumGap
 	At(pane.innTitle, content, rightX, y)
-	y = y - MIS.groupH
+	y = y - MIS.rightGroupH
 	local inner = 48 + Theme.TextHeight(pane.innTotal, w, Theme.F_LABEL) + 4
 	for _, fs in ipairs({ pane.innHint, pane.innGift, pane.perfect }) do
 		local h = Theme.TextHeight(fs, w, Theme.F_SMALL)
@@ -1639,7 +1821,7 @@ local function LayoutDay(pane, content)
 	At(pane.innPanel, content, rightX, y)
 	y = y - inner - 4 - MIS.groupGap
 	At(pane.pantryTitle, content, rightX, y)
-	y = y - MIS.groupH
+	y = y - MIS.rightGroupH
 	local hint = Theme.TextHeight(pane.pantryHint, w, Theme.F_SMALL)
 	local cellsY = 8 + hint + 4
 	for _, slot in ipairs(pane.slots) do
@@ -1650,7 +1832,7 @@ local function LayoutDay(pane, content)
 	At(pane.pantryPanel, content, rightX, y)
 	y = y - cellsY - MIS.cellH - 4 - MIS.groupGap
 	At(pane.aidTitle, content, rightX, y)
-	y = y - MIS.groupH
+	y = y - MIS.rightGroupH
 	local tallest = MIS.aidIcon + 4
 	for _, tile in ipairs(pane.aids) do
 		local h = 16 + Theme.TextHeight(tile.name, MIS.aidW - 32, Theme.F_SMALL)
@@ -1764,6 +1946,7 @@ function ns:EnsureJournalWindow()
 	frame.kind, frame.activity, frame.offset = "evolution", "explore", 0
 	frame.zoneFilter, frame.zoneSort, frame.zoneOffset = "all", "lvl", 0
 	frame.questFilter, frame.collKind = "all", "app"
+	self:JournalRestoreState(frame)
 	local content, nav = frame.content, frame.nav
 
 	-- navigation : marque, une entrée par page, le total du carnet en bas
@@ -1790,6 +1973,9 @@ function ns:EnsureJournalWindow()
 	end
 	frame.subtitle = Text(nav, Theme.F_SMALL, Theme.MUTED_LIGHT, NAV_W - 36)
 	frame.subtitle:SetPoint("BOTTOMLEFT", nav, "BOTTOMLEFT", 18, 18)
+	-- 2.11.0 : sous les entrées, trois blocs qui résument (fiche 14)
+	frame.navY = y
+	self:JournalNavSummaryBuild(frame)
 
 	-- en-tête de page : titre et sous-titre de la page choisie
 	frame.header = Theme.CreatePageHeader(content, CONTENT_W)
@@ -1960,7 +2146,11 @@ local function PaintLook(cell, def, worn)
 	-- le modèle n'est rechargé que s'il change (sinon l'animation repart à
 	-- chaque rafraîchissement)
 	local key = tostring(def.display) .. ":" .. tostring(def.npc) .. (def.shiny and ":s" or "")
-	if cell.model and cell.lookKey ~= key then
+	if cell.model and ns.ShowModel then
+		-- 2.11.0 : chargeur unique, profil « cell » (ne recharge pas un modèle affiché)
+		cell.lookKey = key
+		ns.ShowModel(cell.model, { display = def.display, npc = def.npc, shiny = def.shiny }, "cell")
+	elseif cell.model and cell.lookKey ~= key then
 		cell.lookKey = key
 		local shown = false
 		if def.display and cell.model.SetDisplayInfo then shown = pcall(cell.model.SetDisplayInfo, cell.model, def.display) end
@@ -2034,7 +2224,7 @@ local function RefreshEvolution(self, frame)
 	}
 	for key, tile in pairs(pane.stats) do
 		tile.value:SetText(tostring(values[key]))
-		tile.label:SetText(key == "km" and L.TRAVEL_LABEL or L["JRN_EVO_STAT_" .. key])
+		tile.label:SetText(L["JRN_EVO_STAT_" .. key])
 	end
 
 	local happyMin = ns.COMPANION_HAPPY_MIN or 70
@@ -2153,6 +2343,7 @@ function ns:JournalPreviewMenagerie(entry, keep)
 		lines[#lines + 1] = L.JRN_MEN_NEVER
 		PreviewSet(frame.men.preview, L.JRN_MEN_UNKNOWN, lines, {})
 		frame.men.preview.entry = entry
+		PreviewLocate(self, frame.men.preview, entry)
 		return
 	end
 	local rank = L["CAPTURE_RANK_" .. tostring(entry.class or "normal")]
@@ -2203,6 +2394,7 @@ function ns:JournalPreviewMenagerie(entry, keep)
 	local title = shinyView and self:F("CAPTURE_SHINY_TAG", entry.name) or entry.name
 	PreviewSet(preview, title, lines, { creature = entry.npc, shiny = shinyView })
 	preview.entry = entry
+	PreviewLocate(self, preview, entry)
 end
 
 -- Clic : une créature capturée devient le compagnon
@@ -2323,16 +2515,20 @@ local function RefreshMenagerie(self, frame)
 			row.icon:SetAlpha(entry.captured and 1 or (entry.known and 0.5 or 0.3))
 			row.no:SetText(self:F("JRN_MEN_NO", entry.no))
 			row.label:SetText(entry.known and entry.name or L.JRN_MEN_UNKNOWN)
-			local lc = RarityColor(entry)
+			-- 2.11.0 (fiche 08) : une espèce inconnue n'est plus délavée (alpha 1) ;
+			-- son nom prend le gris clair du thème (7,75:1 sur FIELD), pas sa rareté
+			local lc = entry.known and RarityColor(entry) or Theme.MUTED_LIGHT
 			row.label:SetTextColor(lc[1], lc[2], lc[3])
-			row.label:SetAlpha(entry.known and 1 or 0.75)
+			row.label:SetAlpha(1)
 			-- 2.4 : une espèce jamais croisée est verrouillée, case sombre
 			if entry.known then row:SetAlt(row.alt) else row.bg:SetVertexColor(Theme.FIELD[1], Theme.FIELD[2], Theme.FIELD[3], 1) end
 			-- 2.0 : les étoiles du meilleur spécimen (CaptureQueue.lua), avant le type
-			local stars = entry.captured and self.CaptureStarsText and self:CaptureStarsText(entry.stars or entry.shinyStars, 10) or ""
+			-- 2.11.0 : étoiles dessinées (ns.MenagerieRowStars), le type seul en texte
+			local stars = entry.captured and tonumber(entry.stars or entry.shinyStars) or nil
+			ns.MenagerieRowStars(row, stars)
 			-- verrouillée : pas de type, seulement la zone où la chercher (toutes zones)
 			local hint = (not entry.known and frame.menZone == "all" and entry.zoneID) and ZoneName(self, entry.zoneID) or ""
-			row.detail:SetText(entry.known and (stars ~= "" and (stars .. " ") or "") .. (entry.type or "") or hint)
+			row.detail:SetText(entry.known and (entry.type or "") or hint)
 			-- liseré vert : la version normale capturée ; losange doré : la
 			-- brillante, plein si capturée, au trait si seulement reconnue
 			if entry.captured and entry.normal ~= false then row.caught:Show() else row.caught:Hide() end
@@ -2360,7 +2556,10 @@ local function RefreshMenagerie(self, frame)
 	local still = false
 	for _, entry in ipairs(list) do if shown and entry.npc == shown.npc then still = true end end
 	if list[1] and not still then self:JournalPreviewMenagerie(list[1])
-	elseif not list[1] then PreviewSet(pane.preview, "", {}, {}); pane.preview.entry = nil end
+	elseif not list[1] then
+		PreviewSet(pane.preview, "", {}, {}); pane.preview.entry = nil
+		if pane.preview.locate then pane.preview.locate:Hide() end
+	end
 end
 
 -- 2.9.1 : une carte de mission remplie (titre, zone, barre, compte, gains, état)
@@ -2561,6 +2760,155 @@ local function RefreshPantry(self, frame)
 	end
 end
 
+-- ---------------------------------------------------------------------------
+-- 2.11.0 : la colonne de navigation sert de tableau de bord (fiche 14) :
+-- compagnon (nom, humeur, quatre envies), zone où l'on est (%), missions du
+-- jour et de la semaine (losanges pleins = faites). Chaque bloc mène à sa
+-- page. Construit une fois ; rafraîchi avec le carnet (pas à la molette).
+-- ---------------------------------------------------------------------------
+local NAVSUM = { w = NAV_W - 36, x = 18, gap = 16, row = 14, labelW = 66, bar = 2, block = 10 }
+ns.JOURNAL_NAVSUM = NAVSUM
+local NEED_KEYS = { "hunger", "energy", "mood", "curiosity" }
+local function NavBlock(box, height, onClick, tipKey)
+	local b = CreateFrame("Button", nil, box)
+	b:SetSize(NAVSUM.w, height)
+	b:SetScript("OnClick", onClick)
+	b:SetScript("OnEnter", function(owner) Tip(owner, L[tipKey], {}) end)
+	b:SetScript("OnLeave", HideTip)
+	b.rule = Theme.Solid(b, "BORDER", Theme.EDGE_SOFT, 1)
+	b.rule:SetPoint("TOPLEFT", b, "TOPLEFT", 0, 0)
+	b.rule:SetSize(NAVSUM.w, 1)
+	return b
+end
+function ns:JournalNavSummaryBuild(frame)
+	if frame.navSummary or not frame.nav then return frame.navSummary end
+	local W, R = NAVSUM.w, NAVSUM.row
+	local box = CreateFrame("Frame", nil, frame.nav)
+	box:SetSize(W, 10)
+	box:SetPoint("TOPLEFT", frame.nav, "TOPLEFT", NAVSUM.x, (frame.navY or -280) - NAVSUM.gap)
+	-- compagnon
+	local petH = 6 + R + 4 + #NEED_KEYS * R
+	local pet = NavBlock(box, petH, function() ns:SelectJournalKind("evolution") end, "JRN_NAVSUM_COMPANION_TIP")
+	pet:SetPoint("TOPLEFT", box, "TOPLEFT", 0, 0)
+	pet.name = Text(pet, Theme.F_LABEL, Theme.LABEL, W)
+	pet.name:SetPoint("TOPLEFT", pet, "TOPLEFT", 0, -6)
+	if pet.name.SetWordWrap then pet.name:SetWordWrap(false) end
+	pet.needs = {}
+	for index, key in ipairs(NEED_KEYS) do
+		local y = -6 - R - 4 - (index - 1) * R
+		local row = { key = key }
+		row.label = Text(pet, Theme.F_SMALL, Theme.MUTED_LIGHT, NAVSUM.labelW)
+		row.label:SetPoint("TOPLEFT", pet, "TOPLEFT", 0, y)
+		row.label:SetText(L["COMP_NEED_" .. key] or key)
+		row.bar = Theme.CreateBar(pet, W - NAVSUM.labelW, NAVSUM.bar)
+		row.bar:SetPoint("TOPLEFT", pet, "TOPLEFT", NAVSUM.labelW, y - 5)
+		pet.needs[index] = row
+	end
+	box.pet = pet
+	-- zone
+	local zone = NavBlock(box, 6 + R + 8, function()
+		local here = ns.JournalZone and ns:JournalZone()
+		if here and ns.OpenJournalZone then ns:OpenJournalZone(here) else ns:SelectJournalKind("progress") end
+	end, "JRN_NAVSUM_ZONE_TIP")
+	zone:SetPoint("TOPLEFT", pet, "BOTTOMLEFT", 0, -NAVSUM.block)
+	zone.name = Text(zone, Theme.F_LABEL, Theme.LABEL, W - 44)
+	zone.name:SetPoint("TOPLEFT", zone, "TOPLEFT", 0, -6)
+	if zone.name.SetWordWrap then zone.name:SetWordWrap(false) end
+	zone.percent = Text(zone, Theme.F_SMALL, Theme.PARCHMENT, 40)
+	zone.percent:SetPoint("TOPRIGHT", zone, "TOPRIGHT", 0, -7)
+	zone.percent:SetJustifyH("RIGHT")
+	zone.bar = Theme.CreateBar(zone, W, NAVSUM.bar)
+	zone.bar:SetPoint("TOPLEFT", zone, "TOPLEFT", 0, -6 - R - 3)
+	box.zone = zone
+	-- missions
+	local mis = NavBlock(box, 6 + 2 * R + 2, function() ns:SelectJournalKind("day") end, "JRN_NAVSUM_MISSIONS_TIP")
+	mis:SetPoint("TOPLEFT", zone, "BOTTOMLEFT", 0, -NAVSUM.block)
+	mis.rows = {}
+	for index, key in ipairs({ "day", "week" }) do
+		local y = -6 - (index - 1) * (R + 2)
+		local row = { key = key, pips = {} }
+		row.label = Text(mis, Theme.F_SMALL, Theme.MUTED_LIGHT, NAVSUM.labelW)
+		row.label:SetPoint("TOPLEFT", mis, "TOPLEFT", 0, y)
+		row.label:SetText(L[key == "day" and "JRN_NAVSUM_DAY" or "JRN_NAVSUM_WEEK"])
+		for p = 1, 3 do
+			local d = Theme.CreateDiamond(mis, 9, true)
+			d:SetPoint("TOPLEFT", mis, "TOPLEFT", NAVSUM.labelW + (p - 1) * 14, y - 2)
+			row.pips[p] = d
+		end
+		row.left = Text(mis, Theme.F_SMALL, Theme.MUTED_LIGHT, 60)
+		row.left:SetPoint("TOPRIGHT", mis, "TOPRIGHT", 0, y)
+		row.left:SetJustifyH("RIGHT")
+		mis.rows[index] = row
+	end
+	box.missions = mis
+	box:SetHeight(petH + 2 * NAVSUM.block + zone:GetHeight() + mis:GetHeight())
+	frame.navSummary = box
+	return box
+end
+
+local function NavMissions(row, list)
+	for index, pip in ipairs(row.pips) do
+		local mission = list and list[index]
+		Theme.SetStatus(pip, mission and (mission.done and "warn" or "item") or nil)
+	end
+end
+function ns:JournalNavSummaryRefresh(frame)
+	local box = frame and frame.navSummary
+	if not box then return end
+	local on = ModuleOn()
+	-- compagnon
+	if on and self.CompanionData then
+		local data = self:CompanionData()
+		local mood = self.CompanionMood and L["COMP_MOOD_" .. tostring(self:CompanionMood())]
+		box.pet.name:SetText((self.CompanionName and self:CompanionName() or "") .. (mood and (" · " .. mood) or ""))
+		local happy = ns.COMPANION_HAPPY_MIN or 70
+		for _, row in ipairs(box.pet.needs) do
+			local value = tonumber(data.needs and data.needs[row.key]) or 0
+			row.bar:SetValue(math.max(0, math.min(1, value / 100)))
+			local c = value >= happy and Theme.GOLD or Theme.MUTED_LIGHT
+			row.bar:SetColor(c[1], c[2], c[3], 1)
+			row.value = value
+		end
+		box.pet:Show()
+	else
+		box.pet:Hide()
+	end
+	-- zone : ZoneCompletion seulement si la zone a changé ou au rafraîchissement complet
+	local here = self.JournalZone and self:JournalZone()
+	local cache = box.zone
+	if not frame.scrollOnly or cache.zoneID ~= here then
+		cache.zoneID = here
+		local done = here and self.ZoneCompletion and self:ZoneCompletion(here)
+		cache.done = (done and #(done.parts or {}) >= 2) and done or nil
+	end
+	local info = here and self.MapInfo and self:MapInfo(here)
+	if cache.done then
+		cache.name:SetText(info and info.name or tostring(here))
+		cache.percent:SetText(self:F("JRN_ZONE_PERCENT", cache.done.percent))
+		cache.bar:SetValue(cache.done.ratio or (cache.done.percent / 100))
+		local c = cache.done.percent >= 100 and Theme.GOLD or Theme.MUTED_LIGHT
+		cache.bar:SetColor(c[1], c[2], c[3], 1)
+		cache.bar:Show()
+	else
+		cache.name:SetText(info and info.name or L.JRN_NAVSUM_ZONE_NONE)
+		cache.percent:SetText("")
+		cache.bar:Hide()
+	end
+	-- missions
+	local mis = box.missions
+	if self.DailyData and self.DailyMissionsOn and self:DailyMissionsOn() then
+		local daily = self:DailyData()
+		NavMissions(mis.rows[1], daily.day == self:DailyToday() and daily.missions or nil)
+		local weekly = self.WeeklyCurrent and self:WeeklyCurrent()
+		NavMissions(mis.rows[2], weekly and weekly.missions or nil)
+		mis.rows[1].left:SetText("")
+		mis.rows[2].left:SetText(weekly and self.WeeklyEndsText and tostring(self:WeeklyEndsText() or "") or "")
+		mis:Show()
+	else
+		mis:Hide()
+	end
+end
+
 local PANES = { day = "day", evolution = "evo", menagerie = "men" }
 function ns:RefreshJournal()
 	local frame = self.journalFrame
@@ -2589,6 +2937,10 @@ function ns:RefreshJournal()
 	end
 	RefreshPantry(self, frame)
 	DayNavLabel(self, frame)
+	do
+		local ok, err = pcall(self.JournalNavSummaryRefresh, self, frame)
+		if not ok and self.RecordError then self:RecordError("journal:navsum", err) end
+	end
 	if ns.JOURNAL_PANES[section] then
 		local def = ns.JOURNAL_PANES[section]
 		frame.header:SetTitle(def.title and L[def.title] or "")

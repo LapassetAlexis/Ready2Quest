@@ -79,7 +79,8 @@ do
 	Say("-- 2.9.1 missions : gabarit")
 	Check("[M291] colonnes : missions 420, droite 274 (écart 16), cartes demies de 206", MIS.leftW == 420
 		and MIS.rightW == 274 and MIS.rightX == 436 and MIS.half == 206, MIS.rightW .. " / " .. MIS.half)
-	Check("[M291] bande résumé : trois plaques de 230 × 42", MIS.sumW == 230 and MIS.sumH == 42)
+	-- 2.11.0 : plaques plus hautes (détail sur deux lignes, pastilles en bas)
+	Check("[M291] bande résumé : trois plaques de 230 × 56", MIS.sumW == 230 and MIS.sumH == 56)
 	Check("[M291] icônes des sortes : filet, quêtes, lieux, récolte, repas, brillante, combat",
 		NS.MissionKindIcon("captures"):find("Spell_Nature_Web", 1, true) and NS.MissionKindIcon("turnins"):find("INV_Misc_Book_09", 1, true)
 		and NS.MissionKindIcon("places"):find("INV_Misc_Map_01", 1, true) and NS.MissionKindIcon("gather"):find("Trade_Mining", 1, true)

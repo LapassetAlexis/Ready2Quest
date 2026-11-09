@@ -116,8 +116,10 @@ do
 		and locked.icon.texture == "Interface\\Icons\\INV_Misc_QuestionMark"
 		and locked.bg.vertex and locked.bg.vertex[1] == NS.Theme.FIELD[1] and locked.detail.text == "")
 	local rare = NS.CAPTURE_RARITY.rare.color
-	Check("[MV] verrouillée : « ??? » garde la couleur de sa rareté", locked and locked.label.textColor[1] == rare[1]
-		and locked.label.textColor[2] == rare[2])
+	-- 2.11.0 (fiche 08) : la rareté d'une espèce jamais croisée n'est plus dite
+	local muted = NS.Theme.MUTED_LIGHT
+	Check("[MV] verrouillée : « ??? » en gris clair, pas sa rareté", locked and rare and locked.label.textColor[1] == muted[1]
+		and locked.label.textColor[2] == muted[2])
 	Check("[MV] croisée : son nom et son type", seen and seen.label.text == "Raptor tranchant" and seen.detail.text == "Bête")
 	Check("[MV] capturée : liseré vert, pas les autres", caught and caught.caught:IsShown() and not seen.caught:IsShown()
 		and not locked.caught:IsShown())
@@ -177,10 +179,12 @@ do
 	Check("[MV] filtre actif écrit en clair", types.summary.text == "Bête : 1 capturées / 2 croisées", types.summary.text)
 	pane.search:SetText("raptor")
 	if pane.search.scripts and pane.search.scripts.OnTextChanged then pane.search.scripts.OnTextChanged(pane.search) end
+	Mock:RunTimers()   -- 2.11.0 : recherche à la fin de la frappe
 	shown = Shown(pane)
 	Check("[MV] recherche + type dans la page", #shown == 1 and shown[1] == 3202, table.concat(shown, ","))
 	pane.search:SetText("esprit")
 	if pane.search.scripts and pane.search.scripts.OnTextChanged then pane.search.scripts.OnTextChanged(pane.search) end
+	Mock:RunTimers()   -- 2.11.0 : recherche à la fin de la frappe
 	Check("[MV] recherche d'une inconnue dans la page : rien", #Shown(pane) == 0)
 	pane.search:SetText("")
 	if pane.search.scripts and pane.search.scripts.OnTextChanged then pane.search.scripts.OnTextChanged(pane.search) end
