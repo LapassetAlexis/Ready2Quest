@@ -1,5 +1,14 @@
 # QuestCompanion
 
+## 2.9.1 — page Missions refaite, retours sur la 2.9
+
+- **Page Missions refaite** : une bande résumé en haut (compagnon, jour, semaine, avec leurs pastilles et le bonus des 3), chaque mission en carte avec l'icône de son type, sa zone, une vraie barre et ses récompenses en icônes ; une mission faite porte un tampon « ✓ Faite » ; « Changer » devient un petit bouton ↻ ; les bonus des 3 missions dans un encart ; carte d'auberge, garde-manger et besace plus compacts.
+- **Tout capturer** : l'écu d'une prise affiche ses étoiles, et l'icône du type remplace le modèle 3D mal cadré.
+- **Exploration › Quêtes** : noms demandés au jeu dans ta langue quand il les connaît (quêtes propres à Forever) ; lignes de quêtes, zones pas encore vues et compteurs « 1-9 / 60 » à l'encre lisible (contraste mesuré).
+- **Roue des réglages** : la roue grise du jeu, sans carré doré, plus claire au survol.
+
+*English:* Missions page redesigned (summary band, mission cards with type icon, progress and reward icons, "Done" stamp, small ↻ change button, bonus callouts, compact right column); "Capture all" shields now show the stars and tiles use the creature type icon; quest names requested from the client in your language when available, readable quest rows, unseen zones and page counters; game-style grey settings cog.
+
 ## 2.9.0 — vos retours : collection au compte, captures plus faciles, « Créatures »
 
 - **Collection commune à tous tes personnages** : tes captures sont maintenant partagées par tout le compte. À la mise à jour, chaque personnage y verse la sienne : les deux versions de chaque espèce, les meilleures étoiles, les dates les plus anciennes, et les aides de capture additionnées (dans la limite de la besace). Chaque personnage garde son compagnon. Merci Deklatis !

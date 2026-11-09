@@ -1096,130 +1096,436 @@ local function BuildMenagerie(self, frame, content)
 	pane.preview.variant:Hide()
 end
 
--- Missions : à gauche, celles du compagnon, du jour et de la semaine (avec
--- leur récompense) ; à droite, carte des auberges, garde-manger et besace de
--- capture (Daily.lua, Weekly.lua, Treats.lua, Capture.lua)
-local MISSION_H, MISSION_STEP, GROUP_H = 52, 58, 26
+-- Missions (2.9.1 : refonte d'après la maquette validée). En haut, une bande
+-- résumé : trois plaques sombres (compagnon, jour, semaine) avec leur compte,
+-- leurs pastilles et le bonus des 3. À gauche, les missions en CARTES sur
+-- deux colonnes (une carte seule, ou la dernière d'un nombre impair, prend
+-- toute la largeur) : icône de sa sorte dans un cadre, titre, zone, vraie
+-- barre et compte, gains en icônes d'objet (et en clair sur une carte
+-- large) ; faite : carte vert clair et tampon « Faite » ; « Changer » devient
+-- un petit bouton ↻ dans le coin de la carte du jour ; le bonus des 3 est un
+-- encart cadeau en pointillés sous chaque groupe ; la zone du jour et le
+-- décompte de la semaine sont des étiquettes à côté des intertitres. À
+-- droite, plus compacts : carte des auberges en 7 tampons ronds, garde-manger
+-- (compte, Donner), besace de capture (Daily.lua, Weekly.lua, Treats.lua,
+-- Capture.lua). Tout est construit une fois puis réutilisé (pas de création
+-- au rafraîchissement, sauf les pointillés d'un encart qui grandit).
+local MIS = {
+	leftW = 420, gap = 16,                         -- colonne des missions, écart avec la droite
+	sumH = 42, sumGap = 12, sumColGap = 10,       -- bande résumé
+	sumCount = 100,                               -- compte + pastilles, à droite d'une plaque
+	cardH = 68, cardGap = 8, cardVGap = 6,        -- cartes : hauteur, écarts
+	groupH = 24, groupGap = 8,                    -- intertitre, écart après un groupe
+	icon = 30, textX = 52, pad = 8, countW = 44,  -- dans une carte
+	swap = 22, reward = 14, calloutMin = 30,
+	dash = 10, dashGap = 6,                       -- pointillés des encarts
+	stamp = 20, stampStep = 37, cellGap = 4, cellH = 84, aidIcon = 24,
+}
+MIS.rightX = MIS.leftW + MIS.gap                                        -- 436
+MIS.rightW = INNER - MIS.rightX                                         -- 274
+MIS.half = math.floor((MIS.leftW - MIS.cardGap) / 2)                    -- 206
+MIS.sumW = math.floor((INNER - 2 * MIS.sumColGap) / 3)                  -- 230
+ns.JOURNAL_MISSIONS_LAYOUT = MIS
 -- rangées : 1 = compagnon (mission 3 du jour), 2-3 = jour (missions 1-2),
 -- 4-6 = semaine
 local MISSION_GROUPS = {
 	{ id = "trait", rows = { { daily = 3 } } },
-	{ id = "zone",  rows = { { daily = 1 }, { daily = 2 } } },
-	{ id = "week",  rows = { { weekly = 1 }, { weekly = 2 }, { weekly = 3 } } },
+	{ id = "zone",  rows = { { daily = 1 }, { daily = 2 } }, bonus = "allDaily" },
+	{ id = "week",  rows = { { weekly = 1 }, { weekly = 2 }, { weekly = 3 } }, bonus = "allWeekly" },
 }
-local AID_TILE_H = 64
+-- 2.9.1 : l'icône d'une sorte de mission (icônes d'objet et de sort du client)
+local ICON_DIR = "Interface\\Icons\\"
+local KIND_ICON = {
+	captures = "Spell_Nature_Web", captureNamed = "Spell_Nature_Web", capNew = "Spell_Nature_Web",
+	capNamed = "Spell_Nature_Web", capType = "Spell_Nature_Web", typeCapture = "Spell_Nature_Web",
+	shinyKill = "INV_Misc_Gem_Pearl_04", shinyCapture = "INV_Misc_Gem_Pearl_04",
+	quests = "INV_Misc_Book_09", turnins = "INV_Misc_Book_09",
+	village = "INV_Misc_Map_01", places = "INV_Misc_Map_01", percent = "INV_Misc_Map_01",
+	gather = "Trade_Mining", meals = "Spell_Misc_Food",
+	kills = "INV_Sword_04", species = "INV_Sword_04", nightKills = "Ability_Stealth",
+	elites = "INV_Misc_Head_Dragon_01", named = "INV_Misc_Head_Dragon_01",
+	rest = "Spell_Nature_Sleep", pets = "Ability_Hunter_MendPet", talks = "INV_Letter_15",
+	calm = "Spell_Holy_DevotionAura", gold = "INV_Misc_Coin_01",
+	dailies = "INV_Misc_PocketWatch_01", stamps = "INV_Scroll_03",
+}
+for kind, name in pairs(KIND_ICON) do KIND_ICON[kind] = ICON_DIR .. name end
+local KIND_ICON_DEFAULT = ICON_DIR .. "INV_Misc_QuestionMark"
+ns.MISSION_KIND_ICONS = KIND_ICON
+function ns.MissionKindIcon(kind) return KIND_ICON[kind or ""] or KIND_ICON_DEFAULT end
+-- plaques du résumé, tampons de la carte des auberges (pierre de foyer :
+-- l'auberge ; le 7e, le Festin promis)
+local SUMMARY_ICON = { trait = ICON_DIR .. "Ability_Hunter_BeastTaming", zone = ICON_DIR .. "INV_Misc_PocketWatch_01",
+	week = ICON_DIR .. "Spell_Nature_TimeStop" }
+local INN_STAMP_ICON = ICON_DIR .. "INV_Misc_Rune_01"
+local INN_GIFT_ICON = ICON_DIR .. "INV_Misc_Food_15"
+ns.MISSION_SUMMARY_ICONS, ns.INN_STAMP_ICONS = SUMMARY_ICON, { stamp = INN_STAMP_ICON, gift = INN_GIFT_ICON }
+-- couleurs de l'habit Sobre (l'habit Azeroth pose les siennes, mesurées)
+local MIS_COLORS = {
+	tint = { 0.44, 0.81, 0.48, 0.10 },             -- carte faite
+	stamp = { 0.12, 0.37, 0.12 },                  -- tampon « Faite » (texte blanc : 7,81:1)
+	chipZone = { 0.165, 0.31, 0.54 }, chipTrait = { 0.42, 0.29, 0.10 },   -- étiquettes (blanc : 8,13 / 8,02)
+	callout = { 0.91, 0.65, 0.29, 0.06 }, dash = { 0.73, 0.47, 0.17, 0.9 },
+	pipOn = { 0.91, 0.65, 0.29 }, pipOff = { 0.227, 0.259, 0.290 },
+}
+ns.MISSION_COLORS = MIS_COLORS
+local REROLL_TIP = {}
+
+local function AidIcon(id)
+	for _, def in ipairs(ns.CAPTURE_AIDS or {}) do if def.id == id then return def.icon end end
+	return KIND_ICON_DEFAULT
+end
+local function AidCap(id)
+	for _, def in ipairs(ns.CAPTURE_AIDS or {}) do if def.id == id then return def.cap end end
+	return 0
+end
+
+-- les icônes de ce que rapporte une mission (ns.MISSION_REWARDS[scope]) :
+-- friandise (celle de l'envie la plus basse, ou le Festin), aide de capture
+local function RewardIcons(self, scope)
+	local def = ns.MISSION_REWARDS and ns.MISSION_REWARDS[scope]
+	if not def then return nil, nil end
+	local treat = def.treat
+	if treat == "need" then treat = self.TreatForLowestNeed and self:TreatForLowestNeed() or "bonbon" end
+	if treat == "draw" then treat = "bonbon" end
+	local treatIcon = treat and ns.TREAT_ICONS and ns.TREAT_ICONS[treat]
+	local aidIcon
+	if def.aid and self:DB().companionCapture ~= false then
+		aidIcon = def.aid == "draw" and KIND_ICON_DEFAULT or AidIcon(def.aid)
+	end
+	return treatIcon, aidIcon
+end
+ns.MissionRewardIcons = RewardIcons
+
+-- le bonus en bref : « Festin + Lasso tressé »
+local function RewardShort(self, scope)
+	local def = ns.MISSION_REWARDS and ns.MISSION_REWARDS[scope]
+	if not def then return "" end
+	local treat = def.treat == "festin" and self:TreatLabel("festin") or (def.treat and L.MIS_REWARD_TREAT)
+	local aid = def.aid and self:DB().companionCapture ~= false
+		and (def.aid == "draw" and L.MIS_REWARD_AID or self:CaptureAidLabel(def.aid))
+	if treat and aid then return treat .. " + " .. aid end
+	return treat or aid or ""
+end
+
+-- titre et zone d'une mission : « Capture 2 Démons (Durotar) » ->
+-- « Capture 2 Démons » et « Durotar » ; sans zone : « N'importe où »
+local function MissionZone(self, mission)
+	local info = mission.zoneID and self.MapInfo and self:MapInfo(mission.zoneID)
+	return info and info.name or nil
+end
+local function SplitLabel(label, zone)
+	if zone then
+		local suffix = " (" .. zone .. ")"
+		if #label > #suffix and label:sub(-#suffix) == suffix then return label:sub(1, -#suffix - 1) end
+	end
+	return label
+end
+
+local function Pips(parent, count, anchor, x, y)
+	local pips = {}
+	for index = 1, count do
+		local pip = Theme.Solid(parent, "ARTWORK", MIS_COLORS.pipOff, 1)
+		pip:SetSize(14, 5)
+		pip:SetPoint("TOPRIGHT", anchor, "TOPRIGHT", x - (count - index) * 17, y)
+		pips[index] = pip
+	end
+	return pips
+end
+
+-- une étiquette à côté d'un intertitre (zone du jour, caractère, décompte)
+local function GroupChip(pane, section, color)
+	local chip = CreateFrame("Frame", nil, section)
+	chip:SetSize(40, 15)
+	chip:SetPoint("LEFT", section.label, "RIGHT", 8, 0)
+	chip.bg = Theme.Solid(chip, "BACKGROUND", color, 1)
+	chip.bg:SetAllPoints()
+	chip.text = Text(chip, Theme.F_CAPS, { 1, 1, 1 })
+	chip.text:SetPoint("CENTER", chip, "CENTER", 0, 0)
+	chip.azSurface = "dark"
+	function chip:SetChip(text)
+		if not text or text == "" then self.text:SetText(""); self:Hide(); return end
+		self.text:SetText(text)
+		self:SetWidth(math.ceil(Theme.TextWidth(pane, text, Theme.F_CAPS)) + 12)
+		self:Show()
+	end
+	chip:Hide()
+	return chip
+end
+
+-- une carte de mission (taille posée à la mise en page : demie ou large)
+local function MissionCard(self, pane, slot, group)
+	local card = Theme.CreateTile(pane, MIS.half, MIS.cardH, { kind = "Frame" })
+	card.slot, card.group, card.cardW = slot, group.id, MIS.half
+	card.tint = card:CreateTexture(nil, "BACKGROUND", nil, 3)
+	card.tint:SetTexture(Theme.SOLID)
+	card.tint:SetAllPoints(card)
+	card.tint:SetVertexColor(MIS_COLORS.tint[1], MIS_COLORS.tint[2], MIS_COLORS.tint[3], MIS_COLORS.tint[4])
+	card.tint:Hide()
+	card.icon = card:CreateTexture(nil, "ARTWORK")
+	card.icon:SetSize(MIS.icon, MIS.icon)
+	card.icon:SetPoint("TOPLEFT", card, "TOPLEFT", 10, -10)
+	card.iconEdge = Theme.Border(card, Theme.GOLD_SOFT, 1, "OVERLAY", card.icon)
+	card.label = Text(card, Theme.F_LABEL, Theme.LABEL, MIS.half - MIS.textX - MIS.pad)
+	if card.label.SetWordWrap then card.label:SetWordWrap(false) end
+	if card.label.SetJustifyV then card.label:SetJustifyV("TOP") end
+	card.zone = Text(card, Theme.F_SMALL, Theme.MUTED, MIS.half - MIS.textX - MIS.pad)
+	card.zone:SetPoint("TOPLEFT", card, "TOPLEFT", MIS.textX, -22)
+	if card.zone.SetWordWrap then card.zone:SetWordWrap(false) end
+	card.bar = Theme.CreateBar(card, MIS.half - MIS.textX - MIS.pad - MIS.countW - 4, 3)
+	card.bar:SetPoint("TOPLEFT", card, "TOPLEFT", MIS.textX, -41)
+	card.count = Text(card, Theme.F_NUMBER, Theme.PARCHMENT, MIS.countW)
+	card.count:SetPoint("TOPRIGHT", card, "TOPRIGHT", -MIS.pad, -37)
+	card.count:SetJustifyH("RIGHT")
+	card.rewards = {}
+	for index = 1, 2 do
+		local icon = card:CreateTexture(nil, "ARTWORK")
+		icon:SetSize(MIS.reward, MIS.reward)
+		icon:SetPoint("TOPLEFT", card, "TOPLEFT", MIS.textX + (index - 1) * (MIS.reward + 4), -52)
+		card.rewards[index] = icon
+	end
+	-- ce que rapporte la mission, en clair : seulement sur une carte large
+	card.source = Text(card, Theme.F_SMALL, Theme.MUTED, MIS.leftW - MIS.textX - 2 * (MIS.reward + 4) - MIS.pad)
+	card.source:SetPoint("TOPLEFT", card, "TOPLEFT", MIS.textX + 2 * (MIS.reward + 4) + 2, -52)
+	if card.source.SetWordWrap then card.source:SetWordWrap(false) end
+	-- tampon « Faite » en haut à droite (vert sombre, texte blanc)
+	card.stamp = CreateFrame("Frame", nil, card)
+	card.stamp:SetHeight(16)
+	card.stamp:SetPoint("TOPRIGHT", card, "TOPRIGHT", -6, -6)
+	card.stamp.bg = Theme.Solid(card.stamp, "BACKGROUND", MIS_COLORS.stamp, 1)
+	card.stamp.bg:SetAllPoints()
+	card.stamp.check = card.stamp:CreateTexture(nil, "ARTWORK")
+	card.stamp.check:SetSize(10, 10)
+	card.stamp.check:SetPoint("LEFT", card.stamp, "LEFT", 4, 0)
+	local checked, result = pcall(card.stamp.check.SetAtlas, card.stamp.check, "Tracker-Check")
+	if not checked or result == false then card.stamp.check:SetTexture("Interface\\RaidFrame\\ReadyCheck-Ready") end
+	card.stamp.text = Text(card.stamp, Theme.F_CAPS, { 1, 1, 1 })
+	card.stamp.text:SetPoint("LEFT", card.stamp.check, "RIGHT", 3, 0)
+	card.stamp.text:SetText(L.MIS_STAMP)
+	card.stamp:SetWidth(math.ceil(Theme.TextWidth(pane, L.MIS_STAMP, Theme.F_CAPS)) + 22)
+	card.stamp.azSurface = "dark"
+	card.stamp:Hide()
+	if slot.daily and group.id == "zone" then
+		-- 2.9.1 : « Changer » devient un petit bouton ↻ (même action, une fois par jour)
+		local button = CreateFrame("Button", nil, card)
+		button:SetSize(MIS.swap, MIS.swap)
+		button:SetPoint("TOPRIGHT", card, "TOPRIGHT", -5, -5)
+		button.bg = Theme.Solid(button, "BACKGROUND", Theme.NAV, 1)
+		button.bg:SetSize(MIS.swap - 6, MIS.swap - 6)
+		button.bg:SetPoint("CENTER", button, "CENTER", 0, 0)
+		button.border = Theme.Border(button, Theme.EDGE, 1)
+		button.icon = button:CreateTexture(nil, "ARTWORK")
+		button.icon:SetSize(MIS.swap - 6, MIS.swap - 6)
+		button.icon:SetPoint("CENTER", button, "CENTER", 0, 0)
+		button.icon:SetTexture(Theme.REFRESH)
+		button:SetScript("OnClick", function() ns:MissionReroll(slot.daily) end)
+		button:SetScript("OnEnter", function(b)
+			b.border:SetColor(Theme.GOLD[1], Theme.GOLD[2], Theme.GOLD[3], 1)
+			REROLL_TIP[1] = L.MIS_REROLL_TIP
+			Tip(b, L.MIS_REROLL, REROLL_TIP)
+		end)
+		button:SetScript("OnLeave", function(b)
+			b.border:SetColor(Theme.EDGE[1], Theme.EDGE[2], Theme.EDGE[3], 1)
+			HideTip()
+		end)
+		card.reroll = button
+	end
+	card.tipLines = {}
+	if card.EnableMouse then card:EnableMouse(true) end
+	card.onEnter = function(c)
+		if c.mission and c.fullLabel then Tip(c, c.fullLabel, c.tipLines, "row") end
+	end
+	card.onLeave = HideTip
+	return card
+end
+
+-- l'encart cadeau des 3 : fond doré pâle, pointillés, icônes du bonus
+local function Callout(pane, scope)
+	local box = CreateFrame("Frame", nil, pane)
+	box:SetSize(MIS.leftW, MIS.calloutMin)
+	box.scope, box.dashes, box.dashColor = scope, {}, MIS_COLORS.dash
+	box.bg = box:CreateTexture(nil, "BACKGROUND", nil, 1)
+	box.bg:SetTexture(Theme.SOLID)
+	box.bg:SetAllPoints(box)
+	local c = MIS_COLORS.callout
+	box.bg:SetVertexColor(c[1], c[2], c[3], c[4])
+	box.icons = {}
+	for index = 1, 2 do
+		local icon = box:CreateTexture(nil, "ARTWORK")
+		icon:SetSize(16, 16)
+		icon:SetPoint("LEFT", box, "LEFT", 10 + (index - 1) * 19, 0)
+		box.icons[index] = icon
+	end
+	box.text = Text(box, Theme.F_SMALL, Theme.MUTED_LIGHT, MIS.leftW - 58)
+	box.text:SetPoint("TOPLEFT", box, "TOPLEFT", 50, -8)
+	if box.text.SetWordWrap then box.text:SetWordWrap(true) end
+	return box
+end
+
+-- les pointillés d'un encart (réutilisés ; créés seulement s'il en manque)
+local function Dashes(box, width, height)
+	local used = 0
+	local function Dash(x, y, w, h)
+		used = used + 1
+		local dash = box.dashes[used]
+		if not dash then
+			dash = box:CreateTexture(nil, "BORDER")
+			dash:SetTexture(Theme.SOLID)
+			box.dashes[used] = dash
+		end
+		local c = box.dashColor
+		dash:SetVertexColor(c[1], c[2], c[3], c[4] or 1)
+		dash:ClearAllPoints()
+		dash:SetPoint("TOPLEFT", box, "TOPLEFT", x, y)
+		dash:SetSize(w, h)
+		dash:Show()
+	end
+	local step = MIS.dash + MIS.dashGap
+	for x = 0, width - 1, step do
+		local w = math.min(MIS.dash, width - x)
+		Dash(x, 0, w, 1)
+		Dash(x, -(height - 1), w, 1)
+	end
+	for y = step, height - 2, step do
+		local h = math.min(MIS.dash, height - 1 - y)
+		Dash(0, -y, 1, h)
+		Dash(width - 1, -y, 1, h)
+	end
+	for index = used + 1, #box.dashes do box.dashes[index]:Hide() end
+end
+ns.JournalCalloutDashes = Dashes
 
 local function BuildDay(self, frame, content)
 	local pane = CreateFrame("Frame", nil, content)
 	pane:SetAllPoints()
 	frame.day = pane
-	local rightX = HALF + COL_GAP
-	pane.missions, pane.groups = {}, {}
-	local y = TOP
+	local rightX, rightW = MIS.rightX, MIS.rightW
+
+	-- bande résumé
+	pane.summary = {}
+	for index, id in ipairs({ "trait", "zone", "week" }) do
+		local plaque = Theme.CreateTile(pane, MIS.sumW, MIS.sumH, { kind = "Frame" })
+		At(plaque, content, (index - 1) * (MIS.sumW + MIS.sumColGap), TOP)
+		plaque.id = id
+		plaque.icon = plaque:CreateTexture(nil, "ARTWORK")
+		plaque.icon:SetSize(26, 26)
+		plaque.icon:SetPoint("LEFT", plaque, "LEFT", 9, 0)
+		plaque.icon:SetTexture(SUMMARY_ICON[id])
+		-- libellé à gauche, compte calé à droite avant les pastilles
+		plaque.label = Text(plaque, Theme.F_LABEL, Theme.GOLD, MIS.sumW - 44 - MIS.sumCount - 4)
+		plaque.label:SetPoint("TOPLEFT", plaque, "TOPLEFT", 44, -6)
+		if plaque.label.SetWordWrap then plaque.label:SetWordWrap(false) end
+		plaque.label:SetText(L["SUM_" .. id])
+		plaque.count = Text(plaque, Theme.F_NUMBER, Theme.PARCHMENT, 36)
+		plaque.count:SetPoint("TOPRIGHT", plaque, "TOPRIGHT", -(MIS.sumCount - 36), -6)
+		plaque.count:SetJustifyH("RIGHT")
+		plaque.detail = Text(plaque, Theme.F_SMALL, Theme.MUTED_LIGHT, MIS.sumW - 44 - MIS.pad)
+		plaque.detail:SetPoint("TOPLEFT", plaque, "TOPLEFT", 44, -23)
+		if plaque.detail.SetWordWrap then plaque.detail:SetWordWrap(false) end
+		plaque.pips = Pips(plaque, id == "trait" and 1 or 3, plaque, -MIS.pad, -11)
+		plaque.tipLines = {}
+		if plaque.EnableMouse then plaque:EnableMouse(true) end
+		plaque.onEnter = function(p) Tip(p, L["SUM_" .. p.id], p.tipLines, "below") end
+		plaque.onLeave = HideTip
+		pane.summary[id] = plaque
+		pane.summary[index] = plaque
+	end
+
+	-- missions : intertitres, étiquettes, cartes, encarts
+	pane.missions, pane.groups, pane.chips, pane.callouts, pane.groupCards = {}, {}, {}, {}, {}
 	for _, group in ipairs(MISSION_GROUPS) do
 		local title = Theme.CreateSection(pane, L["DAY_GROUP_" .. group.id])
-		title:SetWidth(HALF)
-		At(title, content, 0, y)
+		title:SetWidth(MIS.leftW)
 		pane.groups[group.id] = title
-		y = y - GROUP_H
+		pane.chips[group.id] = GroupChip(pane, title, group.id == "trait" and MIS_COLORS.chipTrait or MIS_COLORS.chipZone)
+		local cards = {}
 		for _, slot in ipairs(group.rows) do
-			local row = Theme.CreateTile(pane, HALF, MISSION_H, { kind = "Frame" })
-			At(row, content, 0, y)
-			row.slot, row.group = slot, group.id
-			if slot.daily and group.id == "zone" then
-				row.reroll = Theme.CreateButton(row, "auto", 18, L.MIS_REROLL, function() ns:MissionReroll(slot.daily) end)
-				row.reroll:SetPoint("TOPRIGHT", row, "TOPRIGHT", -12, -26)
-				row.reroll:SetScript("OnEnter", function(b) Tip(b, L.MIS_REROLL, { L.MIS_REROLL_TIP }) end)
-				row.reroll:SetScript("OnLeave", HideTip)
-			end
-			local textW = HALF - 14 - 12 - 70 - 10
-			row.label = Text(row, Theme.F_LABEL, Theme.LABEL, textW)
-			row.label:SetPoint("TOPLEFT", row, "TOPLEFT", 14, -8)
-			if row.label.SetWordWrap then row.label:SetWordWrap(false) end
-			row.source = Text(row, Theme.F_SMALL, Theme.MUTED, textW)
-			row.source:SetPoint("TOPLEFT", row, "TOPLEFT", 14, -25)
-			if row.source.SetWordWrap then row.source:SetWordWrap(false) end
-			row.count = Text(row, Theme.F_NUMBER, Theme.PARCHMENT, 70)
-			row.count:SetPoint("TOPRIGHT", row, "TOPRIGHT", -12, -8)
-			row.count:SetJustifyH("RIGHT")
-			row.bar = Theme.CreateBar(row, HALF - 28, 3)
-			row.bar:SetPoint("BOTTOMLEFT", row, "BOTTOMLEFT", 14, 7)
-			pane.missions[#pane.missions + 1] = row
-			y = y - MISSION_STEP
+			local card = MissionCard(self, pane, slot, group)
+			cards[#cards + 1] = card
+			pane.missions[#pane.missions + 1] = card
 		end
-		y = y - 4
+		pane.groupCards[group.id] = cards
+		if group.bonus then pane.callouts[group.id] = Callout(pane, group.bonus) end
 	end
-	pane.missionsHint = Text(pane, Theme.F_SMALL, Theme.MUTED_LIGHT, HALF)
-	if pane.missionsHint.SetWordWrap then pane.missionsHint:SetWordWrap(true) end
-	pane.weekHint = Text(pane, Theme.F_SMALL, Theme.MUTED_LIGHT, HALF)
-	if pane.weekHint.SetWordWrap then pane.weekHint:SetWordWrap(true) end
-	pane.perfect = Text(pane, Theme.F_SMALL, Theme.MUTED, HALF)
-	if pane.perfect.SetWordWrap then pane.perfect:SetWordWrap(true) end
-	pane.hintTop = y + 2
+	pane.missionsHint = pane.callouts.zone.text
+	pane.weekHint = pane.callouts.week.text
 
+	-- carte des auberges : 7 tampons ronds, compte, règle, cadeaux
 	pane.innTitle = Theme.CreateSection(pane, L.INN_TITLE)
-	pane.innTitle:SetWidth(HALF)
-	At(pane.innTitle, content, rightX, TOP)
+	pane.innTitle:SetWidth(rightW)
+	pane.innPanel = Theme.CreateTile(pane, rightW, 120, { kind = "Frame" })
 	pane.stamps = {}
-	local size, gap = 26, math.floor((HALF - 7 * 26) / 6)
-	for index = 1, 7 do
-		local stamp = pane:CreateTexture(nil, "ARTWORK")
-		stamp:SetSize(size, size)
-		At(stamp, content, rightX + (index - 1) * (size + gap), TOP - 28)
-		stamp:SetTexture(Theme.DIAMOND_LINE)
+	for index = 1, ns.INN_CARD or 7 do
+		local stamp = pane.innPanel:CreateTexture(nil, "ARTWORK")
+		stamp:SetSize(MIS.stamp, MIS.stamp)
+		local cx = MIS.pad + 18 + (index - 1) * MIS.stampStep
+		stamp:SetPoint("CENTER", pane.innPanel, "TOPLEFT", cx, -26)
+		stamp:SetTexture(index == (ns.INN_CARD or 7) and INN_GIFT_ICON or INN_STAMP_ICON)
 		pane.stamps[index] = stamp
 	end
-	pane.innTotal = Text(pane, Theme.F_LABEL, Theme.LABEL, HALF)
-	At(pane.innTotal, content, rightX, TOP - 28 - size - 10)
-	pane.innHint = Text(pane, Theme.F_SMALL, Theme.MUTED_LIGHT, HALF)
+	local innTextW = rightW - 20
+	pane.innTotal = Text(pane.innPanel, Theme.F_LABEL, Theme.LABEL, innTextW)
+	pane.innTotal:SetPoint("TOPLEFT", pane.innPanel, "TOPLEFT", 10, -48)
+	pane.innHint = Text(pane.innPanel, Theme.F_SMALL, Theme.MUTED_LIGHT, innTextW)
 	if pane.innHint.SetWordWrap then pane.innHint:SetWordWrap(true) end
-	pane.innGift = Text(pane, Theme.F_SMALL, Theme.MUTED, HALF)
+	pane.innGift = Text(pane.innPanel, Theme.F_SMALL, Theme.MUTED, innTextW)
 	if pane.innGift.SetWordWrap then pane.innGift:SetWordWrap(true) end
-	pane.innTop = TOP - 28 - size - 10 - 20
+	pane.perfect = Text(pane.innPanel, Theme.F_SMALL, Theme.MUTED, innTextW)
+	if pane.perfect.SetWordWrap then pane.perfect:SetWordWrap(true) end
 
+	-- garde-manger : une case par friandise (icône, compte, Donner)
 	pane.pantryTitle = Theme.CreateSection(pane, L.DAY_PANTRY)
-	pane.pantryTitle:SetWidth(HALF)
-	pane.pantryHint = Text(pane, Theme.F_SMALL, Theme.MUTED, HALF)
+	pane.pantryTitle:SetWidth(rightW)
+	pane.pantryPanel = Theme.CreateTile(pane, rightW, 120, { kind = "Frame" })
+	pane.pantryHint = Text(pane.pantryPanel, Theme.F_SMALL, Theme.MUTED, innTextW)
+	pane.pantryHint:SetPoint("TOPLEFT", pane.pantryPanel, "TOPLEFT", 10, -8)
 	if pane.pantryHint.SetWordWrap then pane.pantryHint:SetWordWrap(true) end
 	pane.slots = {}
 	local count = #(ns.TREAT_KINDS or {})
-	local slotW = count > 0 and math.floor((HALF - (count - 1) * 8) / count) or HALF
+	local cellW = count > 0 and math.floor((rightW - 2 * MIS.pad - (count - 1) * MIS.cellGap) / count) or rightW
+	MIS.cellW = cellW
 	for index, kind in ipairs(ns.TREAT_KINDS or {}) do
-		local slot = Theme.CreateTile(pane, slotW, 112, { kind = "Frame" })
-		slot.kind, slot.slotX = kind, rightX + (index - 1) * (slotW + 8)
+		local slot = CreateFrame("Frame", nil, pane.pantryPanel)
+		slot:SetSize(cellW, MIS.cellH)
+		slot.kind, slot.slotX = kind, MIS.pad + (index - 1) * (cellW + MIS.cellGap)
 		slot.icon = slot:CreateTexture(nil, "ARTWORK")
 		slot.icon:SetSize(28, 28)
-		slot.icon:SetPoint("TOP", slot, "TOP", 0, -8)
+		slot.icon:SetPoint("TOP", slot, "TOP", 0, -6)
 		slot.icon:SetTexture(ns.TREAT_ICONS[kind])
-		slot.count = Text(slot, Theme.F_LABEL, Theme.PARCHMENT, slotW - 8)
-		slot.count:SetPoint("TOP", slot, "TOP", 0, -40)
+		slot.count = Text(slot, Theme.F_LABEL, Theme.PARCHMENT, cellW)
+		slot.count:SetPoint("TOP", slot, "TOP", 0, -45)
 		slot.count:SetJustifyH("CENTER")
-		slot.name = Text(slot, Theme.F_SMALL, Theme.MUTED_LIGHT, slotW - 8)
-		slot.name:SetPoint("TOP", slot, "TOP", 0, -56)
-		slot.name:SetJustifyH("CENTER")
-		if slot.name.SetWordWrap then slot.name:SetWordWrap(true) end
-		slot.give = Theme.CreateButton(slot, slotW - 12, 20, L.DAY_GIVE, function() ns:TreatGive(kind); ns:RefreshJournal() end)
-		slot.give:SetPoint("BOTTOM", slot, "BOTTOM", 0, 6)
+		slot.give = Theme.CreateButton(slot, cellW - 2, 18, L.DAY_GIVE, function() ns:TreatGive(kind); ns:RefreshJournal() end)
+		slot.give:SetPoint("BOTTOM", slot, "BOTTOM", 0, 2)
+		if slot.give.text and slot.give.text.SetFontObject then slot.give.text:SetFontObject(Theme.F_SMALL) end
+		if slot.EnableMouse then slot:EnableMouse(true) end
+		slot:SetScript("OnEnter", function(s)
+			Tip(s, ns:TreatLabel(s.kind), { L["TREAT_DESC_" .. s.kind], ns:F("TREAT_COUNT", ns:TreatCount(s.kind), ns:TreatCap(s.kind)) })
+		end)
+		slot:SetScript("OnLeave", HideTip)
 		pane.slots[index] = slot
 	end
 
 	-- besace de capture : les trois aides et leur nombre
 	pane.aidTitle = Theme.CreateSection(pane, L.DAY_AIDS)
-	pane.aidTitle:SetWidth(HALF)
+	pane.aidTitle:SetWidth(rightW)
+	pane.aidPanel = Theme.CreateTile(pane, rightW, 60, { kind = "Frame" })
 	pane.aids = {}
 	local aids = ns.CAPTURE_AIDS or {}
-	local aidW = #aids > 0 and math.floor((HALF - (#aids - 1) * 8) / #aids) or HALF
+	local aidW = #aids > 0 and math.floor((rightW - 2 * MIS.pad - (#aids - 1) * MIS.cellGap) / #aids) or rightW
+	MIS.aidW = aidW
 	for index, aid in ipairs(aids) do
-		local tile = Theme.CreateTile(pane, aidW, AID_TILE_H, { kind = "Frame" })
-		tile.aid, tile.slotX = aid.id, rightX + (index - 1) * (aidW + 8)
+		local tile = CreateFrame("Frame", nil, pane.aidPanel)
+		tile:SetSize(aidW, 40)
+		tile.aid, tile.slotX = aid.id, MIS.pad + (index - 1) * (aidW + MIS.cellGap)
+		tile:SetPoint("TOPLEFT", pane.aidPanel, "TOPLEFT", tile.slotX, -MIS.pad)
 		tile.icon = tile:CreateTexture(nil, "ARTWORK")
-		tile.icon:SetSize(28, 28)
-		tile.icon:SetPoint("LEFT", tile, "LEFT", 10, 0)
+		tile.icon:SetSize(MIS.aidIcon, MIS.aidIcon)
+		tile.icon:SetPoint("TOPLEFT", tile, "TOPLEFT", 2, -2)
 		tile.icon:SetTexture(aid.icon)
-		tile.count = Text(tile, Theme.F_LABEL, Theme.PARCHMENT, aidW - 50)
-		tile.count:SetPoint("TOPLEFT", tile, "TOPLEFT", 46, -12)
-		tile.name = Text(tile, Theme.F_SMALL, Theme.MUTED_LIGHT, aidW - 50)
-		tile.name:SetPoint("TOPLEFT", tile, "TOPLEFT", 46, -30)
+		tile.count = Text(tile, Theme.F_LABEL, Theme.PARCHMENT, aidW - 32)
+		tile.count:SetPoint("TOPLEFT", tile, "TOPLEFT", 32, 0)
+		tile.name = Text(tile, Theme.F_SMALL, Theme.MUTED_LIGHT, aidW - 32)
+		tile.name:SetPoint("TOPLEFT", tile, "TOPLEFT", 32, -16)
 		if tile.name.SetWordWrap then tile.name:SetWordWrap(true) end
 		if tile.EnableMouse then tile:EnableMouse(true) end
 		tile:SetScript("OnEnter", function(t)
@@ -1230,34 +1536,130 @@ local function BuildDay(self, frame, content)
 	end
 end
 
--- empile la colonne de droite des Missions (textes de longueur variable)
+-- taille et contenu d'une carte selon sa largeur et son état
+local function SizeCard(card, width)
+	if card.cardW ~= width then
+		card:SetWidth(width)
+		card.cardW = width
+		card.bar:SetWidth(width - MIS.textX - MIS.pad - MIS.countW - 4)
+	end
+	card.label:ClearAllPoints()
+	if card.empty then
+		card.label:SetPoint("TOPLEFT", card, "TOPLEFT", 12, -10)
+		card.label:SetWidth(width - 24)
+		card.label:SetHeight(MIS.cardH - 20)
+		if card.label.SetWordWrap then card.label:SetWordWrap(true) end
+		if card.label.SetMaxLines then pcall(card.label.SetMaxLines, card.label, 3) end
+		card.source:Hide()
+		return
+	end
+	card.label:SetPoint("TOPLEFT", card, "TOPLEFT", MIS.textX, -7)
+	-- le titre s'arrête avant le tampon « Faite » ou le bouton ↻ ; faite sur
+	-- une demie carte : le titre peut tenir sur deux lignes, à la place de la
+	-- zone (elle reste dans l'infobulle)
+	local right = MIS.pad
+	if card.stamp:IsShown() then right = card.stamp:GetWidth() + 10
+	elseif card.reroll and card.reroll:IsShown() then right = MIS.swap + 9 end
+	local twoLines = card.stamp:IsShown() and width < MIS.leftW
+	if card.label.SetWordWrap then card.label:SetWordWrap(twoLines) end
+	if card.label.SetMaxLines then pcall(card.label.SetMaxLines, card.label, twoLines and 2 or 1) end
+	card.label:SetHeight(twoLines and 30 or 15)   -- borne aussi sans SetMaxLines : pas sur la barre
+	if twoLines then card.zone:Hide() else card.zone:Show() end
+	card.label:SetWidth(width - MIS.textX - right)
+	-- la zone passe sous le tampon, pas sous le bouton ↻ (plus haut)
+	card.zone:SetWidth(width - MIS.textX - (card.reroll and card.reroll:IsShown() and right or MIS.pad))
+	-- le gain en clair, s'il y a la place (carte large)
+	if width >= MIS.leftW and (card.source:GetText() or "") ~= "" then card.source:Show() else card.source:Hide() end
+end
+ns.JournalSizeMissionCard = SizeCard
+
+-- place un groupe : intertitre, cartes (deux par rangée ; seule ou dernière
+-- d'un nombre impair : toute la largeur), encart ; rend le y suivant
+local function PlaceGroup(pane, content, id, y)
+	At(pane.groups[id], content, 0, y)
+	y = y - MIS.groupH
+	local cards, shown = pane.groupCards[id], 0
+	for _, card in ipairs(cards) do if card:IsShown() then shown = shown + 1 end end
+	local col, index = 0, 0
+	for _, card in ipairs(cards) do
+		if card:IsShown() then
+			index = index + 1
+			local wide = shown == 1 or (index == shown and shown % 2 == 1)
+			card.wide = wide
+			if wide then
+				if col == 1 then y = y - MIS.cardH - MIS.cardVGap; col = 0 end
+				SizeCard(card, MIS.leftW)
+				At(card, content, 0, y)
+				y = y - MIS.cardH - MIS.cardVGap
+			else
+				SizeCard(card, MIS.half)
+				At(card, content, col * (MIS.half + MIS.cardGap), y)
+				if col == 1 then y = y - MIS.cardH - MIS.cardVGap; col = 0 else col = 1 end
+			end
+		end
+	end
+	if col == 1 then y = y - MIS.cardH - MIS.cardVGap end
+	local box = pane.callouts[id]
+	if box and box:IsShown() then
+		local textH = Theme.TextHeight(box.text, MIS.leftW - 58, Theme.F_SMALL)
+		local h = math.max(MIS.calloutMin, math.ceil(textH) + 16)
+		if box.boxH ~= h then
+			box:SetHeight(h)
+			box.boxH = h
+			Dashes(box, MIS.leftW, h)
+		end
+		box.text:ClearAllPoints()
+		box.text:SetPoint("TOPLEFT", box, "TOPLEFT", 50, -math.floor((h - textH) / 2))
+		At(box, content, 0, y)
+		y = y - h
+	else
+		y = y + MIS.cardVGap
+	end
+	return y - MIS.groupGap
+end
+
+-- met en page les Missions (textes de longueur variable)
 local function LayoutDay(pane, content)
-	local rightX = HALF + COL_GAP
-	local y = pane.innTop
-	At(pane.innHint, content, rightX, y)
-	y = y - Theme.TextHeight(pane.innHint, HALF, Theme.F_SMALL) - 4
-	At(pane.innGift, content, rightX, y)
-	local gift = Theme.TextHeight(pane.innGift, HALF, Theme.F_SMALL)
-	y = y - gift - (gift > 0 and 4 or 0)
-	-- les jours aux trois missions : ici, la colonne de gauche est pleine
-	At(pane.perfect, content, rightX, y)
-	local perfect = Theme.TextHeight(pane.perfect, HALF, Theme.F_SMALL)
-	y = y - perfect - 14
+	local y = TOP - MIS.sumH - MIS.sumGap
+	for _, group in ipairs(MISSION_GROUPS) do y = PlaceGroup(pane, content, group.id, y) end
+	pane.missionsBottom = y + MIS.groupGap
+	-- colonne de droite
+	local rightX, w = MIS.rightX, MIS.rightW - 20
+	y = TOP - MIS.sumH - MIS.sumGap
+	At(pane.innTitle, content, rightX, y)
+	y = y - MIS.groupH
+	local inner = 48 + Theme.TextHeight(pane.innTotal, w, Theme.F_LABEL) + 4
+	for _, fs in ipairs({ pane.innHint, pane.innGift, pane.perfect }) do
+		local h = Theme.TextHeight(fs, w, Theme.F_SMALL)
+		fs:ClearAllPoints()
+		fs:SetPoint("TOPLEFT", pane.innPanel, "TOPLEFT", 10, -inner)
+		if h > 0 then inner = inner + h + 4 end
+	end
+	pane.innPanel:SetHeight(inner + 4)
+	At(pane.innPanel, content, rightX, y)
+	y = y - inner - 4 - MIS.groupGap
 	At(pane.pantryTitle, content, rightX, y)
-	y = y - 22
-	At(pane.pantryHint, content, rightX, y)
-	y = y - Theme.TextHeight(pane.pantryHint, HALF, Theme.F_SMALL) - 8
-	for _, slot in ipairs(pane.slots) do At(slot, content, slot.slotX, y) end
-	y = y - 112 - 16
+	y = y - MIS.groupH
+	local hint = Theme.TextHeight(pane.pantryHint, w, Theme.F_SMALL)
+	local cellsY = 8 + hint + 4
+	for _, slot in ipairs(pane.slots) do
+		slot:ClearAllPoints()
+		slot:SetPoint("TOPLEFT", pane.pantryPanel, "TOPLEFT", slot.slotX, -cellsY)
+	end
+	pane.pantryPanel:SetHeight(cellsY + MIS.cellH + 4)
+	At(pane.pantryPanel, content, rightX, y)
+	y = y - cellsY - MIS.cellH - 4 - MIS.groupGap
 	At(pane.aidTitle, content, rightX, y)
-	y = y - 24
-	for _, tile in ipairs(pane.aids) do At(tile, content, tile.slotX, y) end
-	pane.pantryBottom = y - AID_TILE_H
-	-- colonne de gauche : les aides des missions, puis les jours parfaits
-	local left = pane.hintTop
-	At(pane.missionsHint, content, 0, left)
-	left = left - Theme.TextHeight(pane.missionsHint, HALF, Theme.F_SMALL) - 4
-	At(pane.weekHint, content, 0, left)
+	y = y - MIS.groupH
+	local tallest = MIS.aidIcon + 4
+	for _, tile in ipairs(pane.aids) do
+		local h = 16 + Theme.TextHeight(tile.name, MIS.aidW - 32, Theme.F_SMALL)
+		if h > tallest then tallest = h end
+	end
+	for _, tile in ipairs(pane.aids) do tile:SetHeight(tallest) end
+	pane.aidPanel:SetHeight(tallest + 2 * MIS.pad)
+	At(pane.aidPanel, content, rightX, y)
+	pane.pantryBottom = y - tallest - 2 * MIS.pad
 end
 
 -- Garde-manger dans le pied : un clic donne la friandise
@@ -1293,6 +1695,60 @@ local function BuildPantry(self, frame)
 		frame.pantry[kind] = button
 		x = x + 30 + 8
 	end
+end
+
+-- 2.9.1 : la roue crantée du carnet, comme celle du journal de quêtes du
+-- client (et des addons qui la reprennent) : une roue grise, sans cadre doré,
+-- désaturée et estompée au repos, plus claire au survol. Atlas du client
+-- (UiTextureAtlasMember du build 1.60.1) : « questlog-icon-setting » (15×16),
+-- sinon « gm-icon-settings » (40×40), sinon le fichier UI-OptionsButton.
+ns.JOURNAL_COG = { atlases = { "questlog-icon-setting", "gm-icon-settings" },
+	file = "Interface\\Buttons\\UI-OptionsButton", size = 16,
+	rest = { 0.78, 0.78, 0.78, 0.85 }, hover = { 1, 1, 1, 1 } }
+local function CogPaint(button, hot)
+	local icon, cog = button.icon, ns.JOURNAL_COG
+	local c = hot and cog.hover or cog.rest
+	if icon.SetDesaturated then pcall(icon.SetDesaturated, icon, true) end
+	icon:SetVertexColor(c[1], c[2], c[3])
+	icon:SetAlpha(c[4])
+	button.cogHot = hot and true or false
+end
+function ns.JournalCogSkin(button)
+	if not (button and button.icon) then return nil end
+	local icon, cog = button.icon, ns.JOURNAL_COG
+	local has = ns.AzerothHasAtlas or function() return false end
+	local chosen
+	for _, name in ipairs(cog.atlases) do
+		if has(name) and ns.AzerothAtlas and ns.AzerothAtlas(icon, name) then chosen = name; break end
+	end
+	if not chosen then
+		icon:SetTexture(cog.file)
+		if icon.SetTexCoord then icon:SetTexCoord(0, 1, 0, 1) end
+		chosen = cog.file
+	end
+	icon:ClearAllPoints()
+	icon:SetPoint("CENTER", button, "CENTER", 0, 0)
+	icon:SetSize(cog.size, cog.size)
+	-- pas de carré au trait autour (la référence n'en a pas)
+	if button.border then
+		for _, side in ipairs({ "top", "bottom", "left", "right" }) do
+			local edge = button.border[side]
+			if edge and edge.Hide then edge:Hide() end
+		end
+		button.border.SetColor = function() end
+	end
+	button.cogTexture = chosen
+	local enter, leave = button:GetScript("OnEnter"), button:GetScript("OnLeave")
+	button:SetScript("OnEnter", function(self, ...)
+		if enter then enter(self, ...) end
+		CogPaint(self, true)
+	end)
+	button:SetScript("OnLeave", function(self, ...)
+		if leave then leave(self, ...) end
+		CogPaint(self, false)
+	end)
+	CogPaint(button, false)
+	return chosen
 end
 
 function ns:EnsureJournalWindow()
@@ -1355,6 +1811,7 @@ function ns:EnsureJournalWindow()
 	if Theme.CreateGearButton and frame.close then
 		frame.settingsButton = Theme.CreateGearButton(frame, 22, function() ns:ToggleOptions() end, L.JRN_SETTINGS_TIP)
 		frame.settingsButton:SetPoint("RIGHT", frame.close, "LEFT", -8, 0)
+		ns.JournalCogSkin(frame.settingsButton)
 		frame.settingsButton:Show()
 		if frame.settingsButton.SetFrameLevel and frame.close.GetFrameLevel then
 			frame.settingsButton:SetFrameLevel(tonumber(frame.close:GetFrameLevel()) or 20)
@@ -1890,23 +2347,65 @@ local function RefreshMenagerie(self, frame)
 	elseif not list[1] then PreviewSet(pane.preview, "", {}, {}); pane.preview.entry = nil end
 end
 
-local function MissionRow(self, row, mission, label, reward)
-	row.mission = mission
-	row.label:SetText(label)
-	row.source:SetText(reward or "")
-	-- 2.9.0 : la couleur passe par le texte, pas par un code dans la chaîne,
-	-- pour que le style Azeroth la remplace par son vert sombre mesuré
-	-- (le vert clair était illisible sur le parchemin)
-	row.count:SetText(mission.done and L.MIS_DONE or string.format("%d/%d", mission.have or 0, mission.need))
+-- 2.9.1 : une carte de mission remplie (titre, zone, barre, compte, gains, état)
+local function MissionRow(self, row, mission, label, scope)
+	row.mission, row.empty, row.fullLabel = mission, nil, label
+	local zone = MissionZone(self, mission)
+	row.label:SetText(SplitLabel(label, zone))
+	row.zone:SetText(zone or L.MIS_ANYWHERE)
+	local reward = self.MissionRewardText and self:MissionRewardText(scope) or ""
+	row.source:SetText(reward)
+	row.icon:SetTexture(ns.MissionKindIcon(mission.kind))
+	row.icon:Show()
+	if row.icon.SetDesaturated then row.icon:SetDesaturated(false) end
+	for _, edge in pairs(row.iconEdge) do if type(edge) == "table" and edge.Show and not row.azNoEdge then edge:Show() end end
+	local treat, aid = RewardIcons(self, scope)
+	row.rewards[1]:SetTexture(treat); if treat then row.rewards[1]:Show() else row.rewards[1]:Hide() end
+	row.rewards[2]:SetTexture(aid); if aid then row.rewards[2]:Show() else row.rewards[2]:Hide() end
+	row.zone:Show()
+	row.count:SetText(string.format("%d/%d", mission.have or 0, mission.need))
 	local cc = mission.done and Theme.GREEN or Theme.PARCHMENT
 	row.count:SetTextColor(cc[1], cc[2], cc[3])
-	if ns.CarnetInk and self.journalFrame and self.journalFrame.azeroth then pcall(ns.CarnetInk, row.count) end
 	row.bar:SetValue((mission.have or 0) / mission.need)
 	local c = mission.done and Theme.GREEN or (row.group == "week" and Theme.BLUE or Theme.GOLD)
 	row.bar:SetColor(c[1], c[2], c[3], 1)
 	row.bar:Show()
-	row:SetAccent(c)
+	-- 2.9.1 : plus de liseré de couleur (la carte faite a son voile et son tampon)
+	row:SetAccent(nil)
+	if mission.done then row.tint:Show(); row.stamp:Show() else row.tint:Hide(); row.stamp:Hide() end
+	local lines = row.tipLines
+	lines[1] = zone or L.MIS_ANYWHERE
+	lines[2] = reward ~= "" and reward or nil
 	row:Show()
+end
+
+-- une carte vide : le groupe n'a pas de mission (une seule carte l'explique)
+local function EmptyRow(row, text)
+	row.mission, row.empty, row.fullLabel = nil, true, nil
+	row.label:SetText(text)
+	row.zone:SetText(""); row.zone:Hide()
+	row.source:SetText("")
+	row.count:SetText("")
+	row.bar:Hide()
+	row.icon:Hide()
+	for _, edge in pairs(row.iconEdge) do if type(edge) == "table" and edge.Hide then edge:Hide() end end
+	row.rewards[1]:Hide(); row.rewards[2]:Hide()
+	row.tint:Hide(); row.stamp:Hide()
+	if row.reroll then row.reroll:Hide() end
+	row:SetAccent(nil)
+end
+
+-- une plaque du résumé : compte, pastilles, détail (et son infobulle)
+local function SummaryPlaque(plaque, done, total, detail)
+	plaque.count:SetText(total > 0 and string.format("%d/%d", done, total) or "-")
+	for index, pip in ipairs(plaque.pips) do
+		local c = index <= done and MIS_COLORS.pipOn or MIS_COLORS.pipOff
+		pip:SetVertexColor(c[1], c[2], c[3], 1)
+		pip.on = index <= done
+		if index <= math.max(total, 1) then pip:Show() else pip:Hide() end
+	end
+	plaque.detail:SetText(detail or "")
+	plaque.tipLines[1] = detail
 end
 
 local function RefreshDay(self, frame)
@@ -1919,52 +2418,83 @@ local function RefreshDay(self, frame)
 	local weekly = on and self.WeeklyCurrent and self:WeeklyCurrent() or nil
 	local trait = self.CompanionTrait and self:CompanionTrait()
 	local traitLabel = trait and self.PersonaLabel and self:PersonaLabel(trait)
-	pane.groups.trait:SetText(L.DAY_GROUP_trait, traitLabel)
-	pane.groups.week:SetText(L.DAY_GROUP_week, weekly and self.WeeklyEndsText and self:WeeklyEndsText() or nil)
+	local ends = weekly and self.WeeklyEndsText and self:WeeklyEndsText() or nil
+	local zoneInfo = daily.zoneID and self.MapInfo and self:MapInfo(daily.zoneID)
+	pane.chips.trait:SetChip(traitLabel)
+	pane.chips.zone:SetChip(on and today and zoneInfo and zoneInfo.name or nil)
+	pane.chips.week:SetChip(ends and self:F("SUM_LEFT", ends) or nil)
 	local firstEmpty = {}
 	for _, row in ipairs(pane.missions) do
-		local mission, label, reward
+		local mission, label, scope
 		if row.slot.daily and on and today then
 			mission = daily.missions[row.slot.daily]
 			if mission then
 				label = self:MissionLabel(mission)
-				reward = self.MissionRewardText and self:MissionRewardText(mission.source == "trait" and "trait" or "zone")
+				scope = mission.source == "trait" and "trait" or "zone"
 			end
 		elseif row.slot.weekly and weekly then
 			mission = weekly.missions[row.slot.weekly]
 			if mission then
 				label = self:WeeklyLabel(mission)
-				reward = self.MissionRewardText and self:MissionRewardText("weekly")
+				scope = "weekly"
 			end
 		end
 		if mission then
-			MissionRow(self, row, mission, label, reward)
+			MissionRow(self, row, mission, label, scope)
 			if row.reroll then
 				if not mission.done and not daily.rerolled then row.reroll:Show() else row.reroll:Hide() end
 			end
-			row.bar:SetWidth(row.reroll and row.reroll:IsShown() and (HALF - 28 - row.reroll:GetWidth() - 8) or (HALF - 28))
 		else
-			-- un groupe vide : une seule rangée qui explique
+			-- un groupe vide : une seule carte qui explique
 			local empty = not firstEmpty[row.group]
 			firstEmpty[row.group] = true
-			row.mission = nil
-			row.label:SetText(empty and (on and L.MIS_NONE or L.MIS_OFF) or "")
-			row.source:SetText("")
-			row.count:SetText("")
-			row.bar:Hide()
-			if row.reroll then row.reroll:Hide() end
-			row:SetAccent(nil)
+			EmptyRow(row, empty and (on and L.MIS_NONE or L.MIS_OFF) or "")
 			if empty then row:Show() else row:Hide() end
 		end
 	end
-	pane.missionsHint:SetText(on and today and (daily.allDone and L.MIS_RENEW or L.MIS_ALL_BONUS) or "")
-	pane.weekHint:SetText(weekly and (weekly.allDone and L.WK_ALL_DONE or L.WK_ALL_BONUS) or "")
+	-- encarts des 3 : le bonus (ou « nouvelles missions demain »)
+	local box = pane.callouts.zone
+	box.text:SetText(on and today and (daily.allDone and L.MIS_RENEW or L.MIS_ALL_BONUS) or "")
+	if box.text:GetText() ~= "" then box:Show() else box:Hide() end
+	local week = pane.callouts.week
+	week.text:SetText(weekly and (weekly.allDone and L.WK_ALL_DONE or L.WK_ALL_BONUS) or "")
+	if week.text:GetText() ~= "" then week:Show() else week:Hide() end
+	for _, b in ipairs({ box, week }) do
+		local treat, aid = RewardIcons(self, b.scope)
+		b.icons[1]:SetTexture(treat); if treat then b.icons[1]:Show() else b.icons[1]:Hide() end
+		b.icons[2]:SetTexture(aid); if aid then b.icons[2]:Show() else b.icons[2]:Hide() end
+	end
+	-- bande résumé : compagnon, jour (les 3 du jour, compagnon compris), semaine
+	local traitDone, traitTotal, dayDone, dayTotal, weekDone, weekTotal = 0, 0, 0, 0, 0, 0
+	if on and today then
+		for _, mission in ipairs(daily.missions) do
+			dayTotal = dayTotal + 1
+			if mission.done then dayDone = dayDone + 1 end
+			if mission.source == "trait" then
+				traitTotal = traitTotal + 1
+				if mission.done then traitDone = traitDone + 1 end
+			end
+		end
+	end
+	for _, mission in ipairs(weekly and weekly.missions or {}) do
+		weekTotal = weekTotal + 1
+		if mission.done then weekDone = weekDone + 1 end
+	end
+	local sum = pane.summary
+	SummaryPlaque(sum.trait, traitDone, traitTotal,
+		not on and L.MIS_OFF or (traitLabel and self:F("SUM_TRAIT", traitLabel) or L.SUM_TRAIT_NONE))
+	SummaryPlaque(sum.zone, dayDone, dayTotal, not on and L.MIS_OFF or (dayTotal == 0 and L.MIS_NONE)
+		or (daily.allDone and L.SUM_DONE or self:F("SUM_BONUS", RewardShort(self, "allDaily"))))
+	local weekDetail = weekly and (weekly.allDone and L.SUM_DONE
+		or (ends and self:F("SUM_WEEK", ends, RewardShort(self, "allWeekly")) or self:F("SUM_BONUS", RewardShort(self, "allWeekly"))))
+	SummaryPlaque(sum.week, weekDone, weekTotal, weekDetail or (not on and L.MIS_OFF) or "")
+	-- carte des auberges
+	local size = #pane.stamps
 	for index, stamp in ipairs(pane.stamps) do
 		local got = index <= inn.card
-		stamp:SetTexture(got and Theme.DIAMOND or Theme.DIAMOND_LINE)
-		local c = got and Theme.GOLD or Theme.MUTED
-		stamp:SetVertexColor(c[1], c[2], c[3], 1)
 		stamp.got = got
+		if stamp.SetDesaturated then stamp:SetDesaturated(not got) end
+		stamp:SetAlpha(got and 1 or (index == size and 0.7 or 0.35))
 	end
 	pane.innTotal:SetText(self:F("INN_TOTAL", inn.total, inn.full or 0))
 	local chicken = self.CompanionAppearanceDef and self:CompanionAppearanceDef(ns.INN_APPEARANCE or "")
@@ -1976,19 +2506,14 @@ local function RefreshDay(self, frame)
 	for _, slot in ipairs(pane.slots) do
 		local count = self:TreatCount(slot.kind)
 		slot.count:SetText(self:F("TREAT_COUNT", count, self:TreatCap(slot.kind)))
-		slot.name:SetText(self:TreatLabel(slot.kind))
 		if slot.icon.SetDesaturated then slot.icon:SetDesaturated(count == 0) end
 		if count > 0 then slot.give:Show() else slot.give:Hide() end
-		slot:SetAccent(count > 0 and Theme.GOLD or nil)
 	end
 	for _, tile in ipairs(pane.aids) do
 		local count = self.CaptureAidCount and self:CaptureAidCount(tile.aid) or 0
-		local cap
-		for _, def in ipairs(ns.CAPTURE_AIDS or {}) do if def.id == tile.aid then cap = def.cap end end
-		tile.count:SetText(self:F("TREAT_COUNT", count, cap or 0))
+		tile.count:SetText(self:F("TREAT_COUNT", count, AidCap(tile.aid)))
 		tile.name:SetText(self:CaptureAidLabel(tile.aid))
 		if tile.icon.SetDesaturated then tile.icon:SetDesaturated(count == 0) end
-		tile:SetAccent(count > 0 and Theme.GOLD or nil)
 	end
 	LayoutDay(pane, frame.content)
 end

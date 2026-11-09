@@ -1199,6 +1199,24 @@ Snap.scenes["qc-journal-day"] = function(T)
 	return frame, "QuestCompanion : carnet, page Missions"
 end
 
+-- 2.9.1 : la même page Missions, habit Azeroth (atlas du client simulés)
+Snap.scenes["qc-journal-day-azeroth"] = function(T)
+	if T.Mock and T.Mock.InstallAtlas then T.Mock.InstallAtlas(true) end
+	local frame = QCJournal(T, "day", function(ns)
+		ns.uiStyleCache = {}
+		ns:AzerothAtlasOK(true)
+		ns:DB().companionStyle = "azeroth"
+		ns:DailyPoll()
+		local daily, inn = ns:DailyData()
+		if daily.missions[1] then daily.missions[1].have = math.max(1, math.floor(daily.missions[1].need / 2)) end
+		if daily.missions[2] then daily.missions[2].have, daily.missions[2].done = daily.missions[2].need, true end
+		inn.card, inn.total, inn.full = 4, 11, 1
+		local weekly = ns.WeeklyCurrent and ns:WeeklyCurrent()
+		if weekly and weekly.missions[2] then weekly.missions[2].have, weekly.missions[2].done = weekly.missions[2].need, true end
+	end)
+	return frame, "QuestCompanion : carnet, page Missions (Azeroth)"
+end
+
 Snap.scenes["qc-journal-menagerie"] = function(T)
 	local frame = QCJournal(T, "menagerie", function(ns)
 		-- les Tarides de la table livrée : quelques espèces croisées, abattues,

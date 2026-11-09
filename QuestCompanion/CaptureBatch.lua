@@ -414,9 +414,16 @@ local function CreateTileAzeroth(parent)
 	tile.bg:SetAllPoints(tile.scene)
 	tile.halo = Texture(tile, "ARTWORK", 2, art.halo or blank, nil, tile.haloSize, tile.haloSize, "ADD")
 	tile.halo:SetPoint("CENTER", tile.scene, "CENTER", 0, 0)
+	-- 2.9.1 : la créature est l'icône fixe de son type (ns.MENAGERIE_TYPE_ICONS),
+	-- comme la scène de capture depuis 2.9.0 : le modèle 3D se cadrait mal (le
+	-- zoom visait une tête absente, la case ne montrait que le corps ou les
+	-- pattes). L'icône remplit le trou du cadre doré (ns.AZEROTH_ICON_HOLE), centrée.
+	local hole = ns.AZEROTH_ICON_HOLE or { l = 17 / 74, r = 57 / 74 }
+	tile.iconSize = math.floor(AZB.ring * (hole.r - hole.l) + 0.5)
 	tile.fallback = tile.scene:CreateTexture(nil, "ARTWORK")
-	tile.fallback:SetSize(52, 52)
-	tile.fallback:SetTexture("Interface\\Icons\\Ability_Hunter_BeastTaming")
+	tile.fallback:SetSize(tile.iconSize, tile.iconSize)
+	tile.fallback:SetTexture(ns.AZEROTH_PORTRAIT_ICON or "Interface\\Icons\\Ability_Hunter_BeastTaming")
+	tile.fallback:SetTexCoord(0.08, 0.92, 0.08, 0.92)
 	tile.fallback:Hide()
 	-- le cadre doré, devant le modèle (un cadre enfant passe devant le 3D)
 	tile.ringFrame = CreateFrame("Frame", nil, tile)
@@ -453,6 +460,15 @@ local function CreateTileAzeroth(parent)
 	tile.shield:SetSize(AZB.shieldW, AZB.shieldH)
 	tile.shield:SetPoint("TOPRIGHT", tile, "TOPRIGHT", -4, 4)
 	tile.shield:Hide()
+	-- 2.9.1 : l'écu n'est plus vide : il porte le nombre d'étoiles obtenues,
+	-- centré comme les points des hauts faits (ns.AzerothShieldCenter)
+	tile.shieldText = tile.fx:CreateFontString(nil, "OVERLAY", Theme.F_NUMBER or Theme.F_TITLE or Theme.F_SMALL)
+	if ns.AzerothFont then ns.AzerothFont(tile.shieldText, 13, "OUTLINE") end
+	tile.shieldText:SetTextColor(1, 1, 1, 1)
+	if tile.shieldText.SetShadowColor then tile.shieldText:SetShadowColor(0, 0, 0, 1); tile.shieldText:SetShadowOffset(1, -1) end
+	if ns.AzerothShieldCenter then ns.AzerothShieldCenter(tile.shieldText, tile.shield) end
+	tile.shieldText:SetText("")
+	tile.shieldText:Hide()
 	-- sous le cadre : le nom, les étoiles (ou « échappée »), l'étiquette
 	tile.name = tile:CreateFontString(nil, "OVERLAY", Theme.F_LABEL or Theme.F_SMALL)
 	tile.name:SetPoint("TOP", tile, "TOP", 0, -AZB.ring - 4)
@@ -569,6 +585,8 @@ local function ApplyIdle(self, tile, result)
 	if tile.az then
 		tile.shieldKind = ns.AzerothShield and ns.AzerothShield(tile.shield, nil) or nil
 		tile.shield:Hide()
+		tile.shieldText:SetText("")
+		tile.shieldText:Hide()
 	else
 		Tint(tile.bg, Theme.NAV or Theme.WINDOW, 1)
 		if tile.edge and tile.edge.SetColor then local c = Theme.GOLD_SOFT or Theme.GOLD; tile.edge:SetColor(c[1], c[2], c[3], 1) end
@@ -611,6 +629,11 @@ local function ApplyVerdictAzeroth(self, tile, result)
 		local tc = target.shiny and (colors.shinyName or Theme.GOLD_LIGHT) or Theme.GOLD
 		tile.tag:SetTextColor(tc[1], tc[2], tc[3])
 		tile.shieldKind = ns.AzerothShield and ns.AzerothShield(tile.shield, "gold") or nil
+		if tile.shieldKind then
+			if ns.AzerothShieldCenter then ns.AzerothShieldCenter(tile.shieldText, tile.shield) end
+			tile.shieldText:SetText(tostring(math.max(1, math.floor(tonumber(result.stars) or 1))))
+			tile.shieldText:Show()
+		end
 	else
 		tile.verdict = "fail"
 		tile.name:SetTextColor(AZ_FLED_NAME[1], AZ_FLED_NAME[2], AZ_FLED_NAME[3])
@@ -623,6 +646,8 @@ local function ApplyVerdictAzeroth(self, tile, result)
 		-- qui ne disait rien) ; l'or reste réservé aux prises
 		tile.shieldKind = nil
 		tile.shield:Hide()
+		tile.shieldText:SetText("")
+		tile.shieldText:Hide()
 	end
 	if ns.AzerothFit then ns.AzerothFit(tile.name, AZB.tileW - 6, 12, 9) end
 end
@@ -996,8 +1021,14 @@ function ns:CaptureBatchShow(batch)
 			tile:ClearAllPoints()
 			tile:SetPoint("TOPLEFT", frame.grid, "TOP", -gridW / 2 + col * (tileW + gapX), -row * (tileH + gapY))
 			local result = batch.results[index]
-			-- le modèle 3D pour les premières cases, l'icône au-delà
-			local model = index <= ns.CAPTURE_BATCH_MODELS and TileModel(tile) or nil
+			-- le modèle 3D pour les premières cases, l'icône au-delà ; 2.9.1 : en
+			-- Azeroth, toujours l'icône du type (cadrage fixe, voir CreateTileAzeroth)
+			if tile.az then
+				local types = ns.MENAGERIE_TYPE_ICONS
+				tile.fallback:SetTexture((types and types[batch.results[index].target.type or ""]) or ns.AZEROTH_PORTRAIT_ICON
+					or "Interface\\Icons\\Ability_Hunter_BeastTaming")
+			end
+			local model = not tile.az and index <= ns.CAPTURE_BATCH_MODELS and TileModel(tile) or nil
 			if tile.model and not model then tile.model:Hide() end
 			tile.hasModel = model and self:CaptureModelSetup(model, result.target) or nil
 			if tile.hasModel then tile.fallback:Hide() end
