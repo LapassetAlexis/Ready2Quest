@@ -256,18 +256,24 @@ if ok and frame then
 		local done, err = pcall(ns.NotifyQuest, ns, questID)
 		if not done and ns.RecordError then ns:RecordError("notify:quest", err) end
 	end)
-	-- l'éclat pulse image par image ; les annonces en attente (écart de
-	-- NOTIFY_GAP s) se regardent cinq fois par seconde
-	local flush = ns.Throttle(ns.NOTIFY_TICK, function()
-		local done, err = pcall(ns.NotifyFlush, ns, Clock())
-		if not done and ns.RecordError then ns:RecordError("notify:flush", err) end
-	end)
-	frame:SetScript("OnUpdate", function(f, elapsed)
-		local done, err = pcall(ns.GlowUpdate, ns, Clock())
-		if not done and ns.RecordError then ns:RecordError("notify:glow", err) end
-		flush(f, elapsed)
-	end)
 	ns.notifyEventFrame = frame
 end
+-- les annonces en attente (écart de NOTIFY_GAP s) se regardent cinq fois par
+-- seconde ; l'éclat pulse image par image, seulement pendant qu'il luit.
+-- 2.11.2 (fiche 25) : les deux sur l'horloge de l'addon (plus d'OnUpdate
+-- permanent) ; l'éclat est posé quand une bulle s'ouvre (NotifyGlowArm)
+ns.Every("notify", ns.NOTIFY_TICK, function()
+	local done, err = pcall(ns.NotifyFlush, ns, Clock())
+	if not done and ns.RecordError then ns:RecordError("notify:flush", err) end
+end)
+local function GlowTick()
+	local done, alpha = pcall(ns.GlowUpdate, ns, Clock())
+	if not done then
+		if ns.RecordError then ns:RecordError("notify:glow", alpha) end
+		return false
+	end
+	return (tonumber(alpha) or 0) > 0
+end
+function ns:NotifyGlowArm() ns.Every("notify:glow", 0, GlowTick) end
 
 if ns.Mark then ns.Mark("Notify") end

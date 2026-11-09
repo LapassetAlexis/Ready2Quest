@@ -949,14 +949,11 @@ function ns:CompanionEffectsTick()
 end
 
 do
-	local ok, frame = pcall(CreateFrame, "Frame")
-	if ok and frame and ns.Throttle then
-		frame:SetScript("OnUpdate", ns.Throttle(ns.EFFECT_TICK, function()
-			local done, err = pcall(ns.CompanionEffectsTick, ns)
-			if not done and ns.RecordError then ns:RecordError("effects:tick", err) end
-		end))
-		ns.effectEventFrame = frame
-	end
+	-- 2.11.2 (fiche 25) : sur l'horloge de l'addon (plus d'OnUpdate permanent)
+	ns.Every("effects", ns.EFFECT_TICK, function()
+		local done, err = pcall(ns.CompanionEffectsTick, ns)
+		if not done and ns.RecordError then ns:RecordError("effects:tick", err) end
+	end)
 end
 
 if ns.Mark then ns.Mark("CompanionEffects") end

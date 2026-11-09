@@ -1156,14 +1156,11 @@ end
 -- ---------------------------------------------------------------------------
 ns.CAPTURE_TICK = 0.1
 do
-	local ok, frame = pcall(CreateFrame, "Frame")
-	if ok and frame and ns.Throttle then
-		frame:SetScript("OnUpdate", ns.Throttle(ns.CAPTURE_TICK, function()
-			local done, err = pcall(ns.CaptureTick, ns, Clock())
-			if not done and ns.RecordError then ns:RecordError("capture:tick", err) end
-		end))
-		ns.captureEventFrame = frame
-	end
+	-- 2.11.2 (fiche 25) : sur l'horloge de l'addon (plus d'OnUpdate permanent)
+	ns.Every("capture", ns.CAPTURE_TICK, function()
+		local done, err = pcall(ns.CaptureTick, ns, Clock())
+		if not done and ns.RecordError then ns:RecordError("capture:tick", err) end
+	end)
 end
 
 if ns.Mark then ns.Mark("Capture") end

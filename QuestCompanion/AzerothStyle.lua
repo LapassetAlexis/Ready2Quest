@@ -2647,6 +2647,7 @@ function ns:AzerothDebugBubble()
 		bubble:SetText(L.AZ_DEBUG_SAMPLE)
 		bubble:Show()
 		self.companionBubbleUntil = Clock() + 8
+		if self.NotifyGlowArm then self:NotifyGlowArm() end
 	end
 	lines[#lines + 1] = self:F("AZ_DEBUG_HEAD", bubble.azBubble and "azeroth" or "sobre",
 		bubble:IsShown() and L.AZ_DEBUG_SHOWN or L.AZ_DEBUG_HIDDEN, Num(Get(bubble, "GetAlpha")),

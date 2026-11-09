@@ -674,7 +674,9 @@ if ok and frame then
 		local done, err = pcall(ns.MissionEvent, ns, "turnins", 1, Here(ns))
 		if not done and ns.RecordError then ns:RecordError("daily:quest", err) end
 	end)
-	frame:SetScript("OnUpdate", function()
+	-- 2.11.2 (fiche 25) : regardé dix fois par seconde sur l'horloge de
+	-- l'addon (l'échéance reste ns.dailyPollAt), plus d'OnUpdate permanent
+	ns.Every("daily", ns.CLOCK_POLL, function()
 		local now = Clock()
 		if not ns.DAILY_AUTO or (ns.dailyPollAt or 0) > now then return end
 		ns.dailyPollAt = now + ns.MISSION_POLL

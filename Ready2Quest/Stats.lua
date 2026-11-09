@@ -671,6 +671,7 @@ function ns:ShowGearToast(rows, texture, preview)
 	frame:SetAlpha(1)
 
 	self.toastHideAt = (ns.Now and ns:Now() or 0) + TOAST_SECONDS
+	if self.ArmToastFade then self:ArmToastFade() end
 end
 
 -- Aperçu du résumé (bouton « Simuler un changement » des réglages) : un faux
@@ -1200,15 +1201,12 @@ end
 
 function ns:InitPlayerFrameHooks()
 	self:HookPortraitFrames()
-	if not self.portraitPoller and type(CreateFrame) == "function" then
-		local ok, poller = pcall(CreateFrame, "Frame")
-		if ok and poller then
-			poller:SetScript("OnUpdate", ns.Throttle(self.PORTRAIT_POLL, function()
-				local okPoll, err = pcall(ns.PortraitPoll, ns)
-				if not okPoll and ns.RecordError then ns:RecordError("portrait:poll", err) end
-			end))
-			self.portraitPoller = poller
-		end
+	-- 1.32.2 (fiche 25) : la sonde tourne sur l'horloge de l'addon
+	if not self.portraitPoller then
+		self.portraitPoller = ns.Every("portrait", self.PORTRAIT_POLL, function()
+			local okPoll, err = pcall(ns.PortraitPoll, ns)
+			if not okPoll and ns.RecordError then ns:RecordError("portrait:poll", err) end
+		end) and "portrait" or nil
 	end
 	-- les interfaces complètes créent leurs cadres après l'entrée en jeu
 	if not self.portraitRetried and type(C_Timer) == "table" and type(C_Timer.After) == "function" then

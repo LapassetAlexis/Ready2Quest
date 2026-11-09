@@ -452,17 +452,14 @@ end
 -- étincelles toutes les 1,5 s)
 -- ---------------------------------------------------------------------------
 ns.SHINY_TICK = 0.1
-local ok, frame = pcall(CreateFrame, "Frame")
-if ok and frame then
-	frame:SetScript("OnUpdate", ns.Throttle(ns.SHINY_TICK, function()
-		local now = Clock()
-		local done, err = pcall(ns.ChestRevealStep, ns, now)
-		if not done and ns.RecordError then ns:RecordError("shiny:chest", err) end
-		done, err = pcall(ns.ShinyAuraTick, ns, now)
-		if not done and ns.RecordError then ns:RecordError("shiny:aura", err) end
-	end))
-	ns.shinyEventFrame = frame
-end
+-- 2.11.2 (fiche 25) : sur l'horloge de l'addon (plus d'OnUpdate permanent)
+ns.Every("shiny", ns.SHINY_TICK, function()
+	local now = Clock()
+	local done, err = pcall(ns.ChestRevealStep, ns, now)
+	if not done and ns.RecordError then ns:RecordError("shiny:chest", err) end
+	done, err = pcall(ns.ShinyAuraTick, ns, now)
+	if not done and ns.RecordError then ns:RecordError("shiny:aura", err) end
+end)
 
 -- ---------------------------------------------------------------------------
 -- Repère sur la barre de nom (1.6.0) : un losange doré qui scintille au-dessus

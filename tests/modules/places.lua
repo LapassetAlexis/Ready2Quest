@@ -123,7 +123,7 @@ do
 	NS:Evaluate("login")
 	Check("[PLC] connexion dans le lieu : en zone sûre", NS.inSafe == true and NS.safeReason == "place")
 
-	Mock:Advance(0)                      -- une vérification, toujours au village
+	Mock:Advance(NS.EXIT_TICK)           -- une vérification, toujours au village (1.32.2 : horloge à 0,1 s)
 	Mock.world.px = 42.4 + 12            -- on s'éloigne, sans changer de sous-zone
 	Mock:Advance(0.5)
 	Check("[PLC] vérification espacée : rien avant 1,5 s", NS.inSafe == true)

@@ -469,14 +469,14 @@ function ns:CompanionAggroUpdate(now)
 	return state.aggroOn
 end
 
-do
-	local ok, ticker = pcall(CreateFrame, "Frame")
-	if ok and ticker then
-		ticker:SetScript("OnUpdate", function()
-			if ns.companionFrame then pcall(ns.CompanionAggroUpdate, ns) end
-		end)
-		ns.companionAggroTicker = ticker
-	end
-end
+-- 2.11.2 (fiche 25) : sur l'horloge de l'addon, à cadence variable : chaque
+-- image pendant le battement rouge, quatre fois par seconde au repos (le
+-- compte des monstres reste espacé de COMPANION_AGGRO_POLL)
+local AGGRO_REST = 0.25
+ns.Every("companion:aggro", AGGRO_REST, function()
+	if not ns.companionFrame then return AGGRO_REST end
+	local ok, on = pcall(ns.CompanionAggroUpdate, ns)
+	return (ok and on) and 0 or AGGRO_REST
+end)
 
 if ns.Mark then ns.Mark("CompanionFx") end
