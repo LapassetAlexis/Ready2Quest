@@ -717,7 +717,11 @@ ns.EXTRA_COMMANDS["jeter-toujours"] = ListCommand(ns.BagSpaceToggleDiscard)
 -- ---------------------------------------------------------------------------
 local function ListText(list)
 	local names = {}
-	for _, name in pairs(list) do names[#names + 1] = tostring(name) end
+	-- une ancienne entrée sans nom (`true`, posée par « Ignorer » du butin
+	-- avant 1.33.2) affiche le nom de l'objet, pas « true »
+	for itemID, name in pairs(list) do
+		names[#names + 1] = type(name) == "string" and name or DisplayName(itemID)
+	end
 	if #names == 0 then return Theme.T_GREY .. L.OPT_BAGSPACE_EMPTY .. "|r" end
 	table.sort(names)
 	local shown = {}

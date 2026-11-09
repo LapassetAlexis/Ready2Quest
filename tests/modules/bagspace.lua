@@ -411,6 +411,9 @@ do
 	local notes = page and page.notes or {}
 	Check("[BAG] page : construite, avec les listes", notes.bagspaceKeep ~= nil and notes.bagspaceDiscard ~= nil)
 	Check("[BAG] page : liste « toujours garder » affichée", notes.bagspaceKeep.text.text:find("Os brisé", 1, true) ~= nil, notes.bagspaceKeep.text.text)
+	NS:DB().bagspaceKeep[GREY] = true
+	Check("[BAG] page : ancienne entrée `true` affichée par son nom", NS:BagSpaceListText("bagspaceKeep"):find("true", 1, true) == nil, NS:BagSpaceListText("bagspaceKeep"))
+	NS:DB().bagspaceKeep[GREY] = "Os brisé"
 	Check("[BAG] page : « toujours jeter » vide", notes.bagspaceDiscard.text.text:find("(vide)", 1, true) ~= nil)
 	Check("[BAG] page : confirmation toujours, sans interrupteur", notes.bagspaceConfirm.text.text:find("toujours", 1, true) ~= nil)
 	NS:HandleCommand("jeter-toujours " .. B.Link(CLOTH))

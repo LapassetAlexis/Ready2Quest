@@ -141,7 +141,7 @@ do
 	LR.Reset()
 	Mock:Fire("LOOT_OPENED")
 	NS.lootRoomFrame.rows[1].ignore:Click()
-	Check("[LOOT] ignorer : toujours gardé, plus proposé", NS:DB().bagspaceKeep[GREY] == true
+	Check("[LOOT] ignorer : toujours gardé, plus proposé", type(NS:DB().bagspaceKeep[GREY]) == "string"
 		and NS.lootRoom.rows[1].itemID ~= GREY)
 	-- prix de l'hôtel des ventes
 	LR.Reset()

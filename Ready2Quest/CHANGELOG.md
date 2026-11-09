@@ -1,5 +1,11 @@
 # Journal des modifications
 
+## 1.33.2
+
+- **Sac plein** : les objets mis de côté avec « Ignorer » dans Place au butin s'affichaient « true » dans la liste « Toujours garder » ; ils s'affichent maintenant par leur nom.
+
+*English:* items set aside with "Ignore" in Loot room showed as "true" in the Full bags "Always keep" list; they now show their name.
+
 ## 1.33.1
 
 - **Aggro** : le style « anneau » est retiré ; il reste la pastille (par défaut) et le trait. Si tu avais choisi l'anneau, la pastille le remplace.

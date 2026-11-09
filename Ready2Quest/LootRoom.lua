@@ -383,7 +383,9 @@ function ns:LootRoomIgnore(row)
 	if not row then return false end
 	local db = self:DB()
 	if type(db.bagspaceKeep) ~= "table" then db.bagspaceKeep = {} end
-	db.bagspaceKeep[row.itemID] = true
+	-- la liste « toujours garder » de Sac plein garde le nom affiché
+	local name = type(row.link) == "string" and row.link:match("%[(.-)%]") or nil
+	db.bagspaceKeep[row.itemID] = name or ("#" .. tostring(row.itemID))
 	self:Print(self:F("LOOTROOM_IGNORED", tostring(row.link)))
 	self:LootRoomRefresh()
 	return true
