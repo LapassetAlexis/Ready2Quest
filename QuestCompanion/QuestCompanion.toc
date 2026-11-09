@@ -33,6 +33,7 @@ Core.lua
 CreatureTypes.lua
 CompanionData.lua
 CompanionLines.lua
+CompanionVoices.lua
 Companion.lua
 CompanionFx.lua
 CompanionTravel.lua
@@ -82,4 +83,6 @@ FeatsTitles.lua
 JournalAzeroth.lua
 MusicData.lua
 Jukebox.lua
+LoreData.lua
+CompanionLore.lua
 Bindings.lua
