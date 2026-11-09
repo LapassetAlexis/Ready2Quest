@@ -80,4 +80,6 @@ FeatsCosmetics.lua
 JournalFeats.lua
 FeatsTitles.lua
 JournalAzeroth.lua
+MusicData.lua
+Jukebox.lua
 Bindings.lua

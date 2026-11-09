@@ -135,6 +135,13 @@ def check_generated():
         if hubs.getvalue() != open(os.path.join(socle, "Hubs.lua"), encoding="utf-8").read():
             problems.append("Ready2Quest/Libs/Socle/Hubs.lua ne correspond plus à data/ "
                             "(python3 -I tools/gen_hubs.py > Ready2Quest/Libs/Socle/Hubs.lua)")
+        # 2.12.0 : catalogue du Juke-box (data/forever/music.json)
+        import gen_music
+        music = os.path.join(out, "MusicData.lua")
+        with contextlib.redirect_stderr(io.StringIO()):
+            gen_music.build(music)
+        if open(music, encoding="utf-8").read() != open(os.path.join(ROOT, "QuestCompanion", "MusicData.lua"), encoding="utf-8").read():
+            problems.append("QuestCompanion/MusicData.lua ne correspond plus à data/forever/music.json (python3 -I tools/gen_music.py)")
     finally:
         shutil.rmtree(out, ignore_errors=True)
     return problems
