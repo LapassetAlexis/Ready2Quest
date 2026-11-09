@@ -1,5 +1,11 @@
 # Journal des modifications
 
+## 1.30.1
+
+- **Buffs selon la classe qui les donne** : une table des buffs de chaque classe (paladin, prêtre, mage, druide, guerrier, démoniste, chaman, chasseur) ; un buff de classe n'est réclamé que si ta classe ou une classe de ton groupe le pose. Les autres (élixirs, parchemins, objets) seulement sur le personnage qui les a eus : un autre personnage ne se voit plus réclamer la bénédiction de ton paladin.
+
+*English:* buffs are requested by the class that casts them (per-class table; class buffs only if your class or a group member's class can cast them; other buffs only on the character that had them).
+
 ## 1.30.0
 
 - **Buffs réclamés seulement si on peut te les donner** : un buff appris d'un autre joueur (un cri de guerrier reçu en groupe) n'est réclamé que si sa classe est dans ton groupe ; ceux que tu poses toi-même le sont toujours.
