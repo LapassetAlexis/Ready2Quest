@@ -146,7 +146,7 @@ function ns:ReagentSummary()
 	end
 
 	if #blocked == 0 then
-		return true, self:F("CHK_REAGENTS_OK", #entries)
+		return true, self:FP("CHK_REAGENTS_OK", #entries)
 	end
 
 	local first = blocked[1]

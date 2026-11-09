@@ -15,7 +15,7 @@
 -- python3 tools/sync_socle.py.
 local ADDON, ns = ...
 
-ns.PLACE_DATA = {
+ns.PLACE_DATA = ns.SocleData("PLACE_DATA", function() return {
 	forever = {
 		scale = {
 			[1411] = { 52.875, 35.25 },
@@ -120,6 +120,6 @@ ns.PLACE_DATA = {
 			[2548] = { { 64.3, 83.1, 72, "A", 56 }, { 78.2, 52.8, 114, "A", 56 } },
 		},
 	},
-}
+} end)
 
 if ns.Mark then ns.Mark("Places") end

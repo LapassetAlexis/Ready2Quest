@@ -565,7 +565,8 @@ function ns:ShowExpeditionReport(report)
 				row.value:SetText(line.value)
 			else
 				row.status:Show()
-				row.status:SetTexture(line.filled and Theme.DIAMOND or Theme.DIAMOND_LINE)
+				-- R2Q 1.32.0 : losange du client si l'atlas est là (repli : fichier du socle)
+				Theme.SetDiamond(row.status, not line.filled)
 				local c = line.color or Theme.GOLD
 				row.status:SetVertexColor(c[1], c[2], c[3], 1)
 				row.status.state = line.filled and "filled" or "line"

@@ -84,6 +84,9 @@ def check_socle():
     sys.path.insert(0, os.path.join(ROOT, "tools"))
     import sync_socle
     problems = []
+    # socle 2.11.0 : l'empreinte écrite dans Base.lua suit le contenu
+    if sync_socle.stale_id():
+        problems.append("empreinte du socle périmée (python3 -I tools/sync_socle.py)")
     for target in sync_socle.TARGETS:
         for rel in sync_socle.differences(sync_socle.SOURCE, target):
             problems.append("%s : %s diffère de Ready2Quest/Libs/Socle (python3 tools/sync_socle.py)"

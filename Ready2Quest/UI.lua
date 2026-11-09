@@ -134,11 +134,16 @@ function ns:EnsureWindow()
 	frame.checksHeader = Theme.CreateSection(frame, L.PANEL_PREPARATION)
 	frame.checksHeader:SetWidth(inner)
 	frame.rows = {}
-	for index = 1, rowCount do
+	-- 1.32.0 : une ligne de plus, celle du repli des points en ordre
+	for index = 1, rowCount + 1 do
 		-- 1.31.0 : un bouton, pour le survol et l'infobulle (aucun clic)
 		local row = Theme.CreateListRow(frame, inner, ROW_CARD, { status = 9, detail = true, kind = "Button" })
 		row:SetScript("OnEnter", RowTooltip)
 		row:SetScript("OnLeave", RowLeave)
+		-- 1.32.0 : la ligne de repli plie ou déplie les points en ordre
+		row:SetScript("OnClick", function(self)
+			if self.result and self.result.fold then ns:ToggleDiagFold() end
+		end)
 		row:SetIndex(index)
 		row.name = row.text
 		row.name:SetWidth(NAME_WIDTH)
@@ -285,27 +290,61 @@ end
 -- modules en ordre, puis ceux que le joueur a coupés. Les modules sans objet
 -- (inactifs : pas de composant pour un guerrier, réparation jamais mesurée…)
 -- sont masqués : une ligne grise « sans objet » ne dit rien.
-function ns:DisplayOrder(results)
-	local failed, ok, off = {}, {}, {}
+-- R2Q 1.32.0 (hiérarchie) :
+--   * une ligne info en échec (repos) reste avec les manques, en bleu ;
+--   * durabilité et réparation toutes deux OK : une seule ligne (détails
+--     réunis par « · »), la note n'est pas touchée ;
+--   * `fold` : dès 4 lignes en ordre (OK et coupées), elles sont repliées en
+--     une ligne « N points en ordre · Afficher » ; dépliées, une dernière
+--     ligne « Masquer » les replie. Rend la liste et le nombre replié.
+ns.DIAG_FOLD_MIN = 4
+function ns:DisplayOrder(results, fold)
+	local failed, ok, off, byId = {}, {}, {}, {}
 	for index, result in ipairs(results or {}) do
 		result._order = index
+		result.shownDetail = nil
+		if result.id then byId[result.id] = result end
 		if result.disabled then
 			if not result.inactive then off[#off + 1] = result end
-		elseif result.ok or result.info then
+		elseif result.ok then
 			ok[#ok + 1] = result
 		else
 			failed[#failed + 1] = result
 		end
 	end
+	local dura, repair = byId.durability, byId.repair
+	if dura and repair and dura.ok and repair.ok and not dura.disabled and not repair.disabled then
+		dura.shownDetail = tostring(dura.detail or "") .. " · " .. tostring(repair.detail or "")
+		for i, r in ipairs(ok) do if r == repair then table.remove(ok, i); break end end
+	end
 	table.sort(failed, function(a, b)
-		if a.weight ~= b.weight then return a.weight > b.weight end
+		if a.weight ~= b.weight then return (a.weight or 0) > (b.weight or 0) end
 		return a._order < b._order
 	end)
-	local list = {}
-	for _, group in ipairs({ failed, ok, off }) do
+	local list, folded = {}, 0
+	for _, result in ipairs(failed) do list[#list + 1] = result end
+	local quiet = #ok + #off
+	if fold ~= nil and quiet >= ns.DIAG_FOLD_MIN then
+		if fold then
+			folded = quiet
+			list[#list + 1] = { fold = true, count = quiet, label = self:FP("CHK_OK_FOLDED", quiet) }
+			return list, folded
+		end
+	end
+	for _, group in ipairs({ ok, off }) do
 		for _, result in ipairs(group) do list[#list + 1] = result end
 	end
-	return list
+	if fold == false and quiet >= ns.DIAG_FOLD_MIN then
+		list[#list + 1] = { fold = true, unfold = true, count = quiet, label = L.CHK_OK_UNFOLD }
+	end
+	return list, folded
+end
+
+-- Plie ou déplie les points en ordre (choix mémorisé) et redessine
+function ns:ToggleDiagFold()
+	local db = self:DB()
+	db.diagFoldOk = not (db.diagFoldOk ~= false)
+	if self.window and self.window:IsShown() then self:ShowWindow(self.lastResults) end
 end
 
 -- ---------------------------------------------------------------------------
@@ -340,13 +379,13 @@ function ns:ShowWindow(results)
 
 	-- check manuel : pas de « Parti de », le sous-titre dit ce qu'est la fenêtre
 	frame.departed:SetText(self:DepartedShort() or L.PANEL_SUBTITLE)
-	local ordered = self:DisplayOrder(results)
+	local ordered = self:DisplayOrder(results, self:DB().diagFoldOk ~= false)
 	self:LayoutWindow(frame, #ordered, false)
 
 	-- 1.31.0 : colonne des noms à la mesure du plus long libellé affiché
 	local nameWidth = NAME_MIN
 	for i = 1, #ordered do
-		local label = ordered[i] and ordered[i].label
+		local label = ordered[i] and not ordered[i].fold and ordered[i].label
 		if label then nameWidth = math.max(nameWidth, Theme.TextWidth(frame, label, Theme.F_BODY) + 8) end
 	end
 	nameWidth = math.min(NAME_MAX, math.ceil(nameWidth))
@@ -359,21 +398,36 @@ function ns:ShowWindow(results)
 		row.detail:SetWidth(detailWidth)
 		row.result = result
 		row.cut = result ~= nil and Theme.TextWidth(frame, result.detail, Theme.F_BODY) > detailWidth or false
-		if result and result.disabled then
-			-- Module coupé par le joueur : grisé, en bas, hors calcul de la note
+		if result and result.fold then
+			-- 1.32.0 : ligne de repli (« 9 points en ordre · Afficher » / « Masquer »)
 			row.name:SetText(result.label)
-			row.name:SetTextColor(Theme.MUTED[1], Theme.MUTED[2], Theme.MUTED[3])
+			row.name:SetTextColor(Theme.MUTED_LIGHT[1], Theme.MUTED_LIGHT[2], Theme.MUTED_LIGHT[3])
+			Theme.SetStatus(row.status, "ok")
+			row.detail:SetText("")
+			row.cut = false
+			row.name:SetWidth((frame.innerWidth or WIDTH) - row.textLeft - 24)
+		elseif result and result.disabled then
+			-- Module coupé par le joueur : en retrait, en bas, hors calcul de la
+			-- note (1.32.0 : MUTED_LIGHT, lisible ≥ 4,5:1 sur ROW et ROW_ALT)
+			row.name:SetText(result.label)
+			row.name:SetTextColor(Theme.MUTED_LIGHT[1], Theme.MUTED_LIGHT[2], Theme.MUTED_LIGHT[3])
 			Theme.SetStatus(row.status, "off")
 			row.detail:SetText(tostring(result.detail or L.MODULE_OFF))
-			row.detail:SetTextColor(Theme.MUTED[1], Theme.MUTED[2], Theme.MUTED[3])
+			row.detail:SetTextColor(Theme.MUTED_LIGHT[1], Theme.MUTED_LIGHT[2], Theme.MUTED_LIGHT[3])
 		elseif result then
 			row.name:SetText(result.label)
 			row.name:SetTextColor(Theme.TEXT[1], Theme.TEXT[2], Theme.TEXT[3])
-			row.detail:SetText(tostring(result.detail or ""))
+			row.detail:SetText(tostring(result.shownDetail or result.detail or ""))
 
-			if result.ok or result.info then
+			if result.ok then
+				-- 1.32.0 : point en ordre en retrait (nom et détail MUTED_LIGHT)
 				Theme.SetStatus(row.status, result.info and "info" or "ok")
+				row.name:SetTextColor(Theme.MUTED_LIGHT[1], Theme.MUTED_LIGHT[2], Theme.MUTED_LIGHT[3])
 				row.detail:SetTextColor(Theme.MUTED_LIGHT[1], Theme.MUTED_LIGHT[2], Theme.MUTED_LIGHT[3])
+			elseif result.info then
+				-- information en échec (repos) : avec les manques, en bleu
+				local c = Theme.SetStatus(row.status, "info")
+				row.detail:SetTextColor(c[1], c[2], c[3])
 			else
 				-- rouge = échec qui pèse (poids >= 10 : vivres, sacs, durabilité,
 				-- réactifs…). Un petit module (gris, quêtes) reste ambre : 2 objets

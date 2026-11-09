@@ -12,6 +12,103 @@ local ADDON, ns = ...
 
 local APP = ns.APP or { id = ADDON or "?", version = "?", slash = {}, coreFiles = {} }
 ns.APP = APP
+
+-- ===========================================================================
+-- socle 2.11.0 : socle chargé une fois quand les deux addons sont installés
+-- ===========================================================================
+-- Chaque fichier du socle (hors Base.lua) enveloppe son corps dans une
+-- fabrique : ns.SocleFile(nom, fabrique)(ADDON, ns). Le premier addon
+-- l'enregistre ; le second, si son socle a EXACTEMENT la même empreinte,
+-- exécute la fabrique déjà compilée avec SON nom et SON ns (sa copie compilée
+-- est libérée). Tout ce que la fabrique crée (Theme, L, sauvegarde, polices,
+-- cadres) reste propre à chaque addon. Les données en lecture seule (HUBS,
+-- PLACE_DATA, DUNGEONS…) sont partagées telles quelles (ns.SocleData).
+-- Empreinte différente : chacun sa copie, comme avant.
+-- socle:empreinte (écrit par tools/sync_socle.py, ne pas éditer)
+local SOCLE_ID = "b82d9b2a"
+-- /socle:empreinte
+local REGISTRY = rawget(_G, "ReadyToQuestSocle")
+if type(REGISTRY) ~= "table" then
+	REGISTRY = {}
+	_G.ReadyToQuestSocle = REGISTRY
+end
+ns.SOCLE_ID = SOCLE_ID
+
+function ns.SocleFile(name, factory)
+	local key = name .. "@" .. SOCLE_ID
+	local known = REGISTRY[key]
+	if type(known) == "function" then
+		ns.socleShared = true
+		return known
+	end
+	REGISTRY[key] = factory
+	return factory
+end
+
+function ns.SocleData(name, build)
+	local key = "data:" .. name .. "@" .. SOCLE_ID
+	local known = REGISTRY[key]
+	if known == nil then
+		known = build()
+		REGISTRY[key] = known
+	else
+		ns.socleShared = true
+	end
+	return known
+end
+
+-- ---------------------------------------------------------------------------
+-- socle 2.11.0 : coordination légère entre Ready2Quest et QuestCompanion.
+-- ns.Shared est la MÊME table pour les deux addons (_G.ReadyToQuestSocle.shared) :
+--   Shared.addons[id] = { id, version, socle }   (chaque addon s'y inscrit)
+--   Shared.Has(id)              -> l'entrée de cet addon s'il est chargé, sinon nil
+--   Shared.Claim(sujet, id, on) -> id prend (on ~= false) ou rend un sujet
+--   Shared.Owner(sujet)         -> id de l'addon qui tient le sujet, ou nil
+--   Shared.Defers(sujet, id)    -> vrai si un AUTRE addon tient le sujet : id se tait
+--   Shared.Set(sujet, valeur) / Shared.Get(sujet) : état publié sur un sujet
+-- Sujet utilisé : "aggro" (Ready2Quest le tient quand son module d'aggro est
+-- actif ; l'alerte « plusieurs monstres sur toi » du compagnon de
+-- QuestCompanion se tait alors : Shared.Defers("aggro", "QuestCompanion")).
+-- Les fonctions sont posées une fois (version 1) ; une version plus récente
+-- les remplace sans toucher aux données.
+-- ---------------------------------------------------------------------------
+local SHARED_VERSION = 1
+local Shared = REGISTRY.shared
+if type(Shared) ~= "table" then
+	Shared = { addons = {}, owners = {}, state = {} }
+	REGISTRY.shared = Shared
+end
+if (tonumber(Shared.version) or 0) < SHARED_VERSION then
+	Shared.version = SHARED_VERSION
+	function Shared.Has(id)
+		return Shared.addons[id]
+	end
+	function Shared.Claim(topic, id, on)
+		if on == false then
+			if Shared.owners[topic] == id then Shared.owners[topic] = nil end
+		else
+			Shared.owners[topic] = id
+		end
+	end
+	function Shared.Owner(topic)
+		return Shared.owners[topic]
+	end
+	function Shared.Defers(topic, id)
+		local owner = Shared.owners[topic]
+		return owner ~= nil and owner ~= id and Shared.addons[owner] ~= nil
+	end
+	function Shared.Set(topic, value) Shared.state[topic] = value end
+	function Shared.Get(topic) return Shared.state[topic] end
+end
+Shared.addons[APP.id] = { id = APP.id, version = APP.version, socle = SOCLE_ID }
+ns.Shared = Shared
+-- l'autre addon du projet, s'il est chargé (son entrée), sinon nil
+function ns.OtherAddon()
+	for id, entry in pairs(Shared.addons) do
+		if id ~= APP.id then return entry end
+	end
+	return nil
+end
 ns.version = APP.version
 ns.Loaded = {}
 ns.loadOrder = {}

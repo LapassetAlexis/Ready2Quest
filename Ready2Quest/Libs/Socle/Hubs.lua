@@ -8,7 +8,7 @@
 -- python3 tools/sync_socle.py.
 local ADDON, ns = ...
 
-ns.HUBS = {
+ns.HUBS = ns.SocleData("HUBS", function() return {
 	[1657] = { faction = "A", kind = "capital", name = "Darnassus" },
 	[1537] = { faction = "A", kind = "capital", name = "Ironforge" },
 	[1519] = { faction = "A", kind = "capital", name = "Stormwind City" },
@@ -110,6 +110,6 @@ ns.HUBS = {
 	[1446] = { faction = "N", kind = "hub", name = "Thorium Point" },
 	[16638] = { faction = "N", kind = "town", name = "Valanaar" },
 	[16628] = { faction = "N", kind = "hub", name = "Valanaar Skydocks" },
-}
+} end)
 
 if ns.Mark then ns.Mark("Hubs") end

@@ -11,6 +11,11 @@
 -- Fichier du socle commun (Libs/Socle), identique dans Ready2Quest et
 -- QuestCompanion : ne le modifier que dans Ready2Quest/Libs/Socle, puis
 -- python3 tools/sync_socle.py.
+-- socle 2.11.0 : corps du fichier dans une fabrique, compilée une fois quand
+-- les deux addons ont le même socle (Base.lua, ns.SocleFile). Rien de propre
+-- à l'addon au niveau du fichier : tout passe par ADDON et ns, ci-dessous.
+local SOCLE_ADDON, SOCLE_NS = ...
+;(SOCLE_NS.SocleFile or function(_, factory) return factory end)("Commands", function(...)
 local ADDON, ns = ...
 local L = ns.L
 
@@ -86,9 +91,15 @@ COMMANDS["module"] = function(self, rest)
 	if self.RefreshOptions then self:RefreshOptions() end
 end
 
+-- socle 2.11.0 : « Socle : partagé (empreinte) » ou « propre »
+function ns:SocleDiagLine()
+	return "  " .. self:F("DIAG_SOCLE", ns.socleShared and L.DIAG_SOCLE_SHARED or L.DIAG_SOCLE_OWN, tostring(ns.SOCLE_ID or "?"))
+end
+
 COMMANDS["diag"] = function(self)
 	self:Print(L.MSG_DIAG_HEADER .. " v" .. tostring(ns.version or "?"))
 	if self.PrintCapabilities then self:PrintCapabilities() end
+	self:Print(self:SocleDiagLine())
 	local loaded, missing = {}, {}
 	for _, name in ipairs(ns.APP.coreFiles or {}) do
 		if ns.Loaded and ns.Loaded[name] then loaded[#loaded + 1] = name else missing[#missing + 1] = name end
@@ -121,3 +132,4 @@ function ns:HandleCommand(input)
 end
 
 if ns.Mark then ns.Mark("Commands") end
+end)(SOCLE_ADDON, SOCLE_NS)

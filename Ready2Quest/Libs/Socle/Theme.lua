@@ -21,6 +21,11 @@
 -- Fichier du socle commun (Libs/Socle), identique dans Ready2Quest et
 -- QuestCompanion : ne le modifier que dans Ready2Quest/Libs/Socle, puis
 -- python3 tools/sync_socle.py.
+-- socle 2.11.0 : corps du fichier dans une fabrique, compilée une fois quand
+-- les deux addons ont le même socle (Base.lua, ns.SocleFile). Rien de propre
+-- à l'addon au niveau du fichier : tout passe par ADDON et ns, ci-dessous.
+local SOCLE_ADDON, SOCLE_NS = ...
+;(SOCLE_NS.SocleFile or function(_, factory) return factory end)("Theme", function(...)
 local ADDON, ns = ...
 
 local Theme = {}
@@ -39,7 +44,9 @@ Theme.GOLD_SOFT = { 0.73, 0.47, 0.17 }   -- ambre sombre #b9782c (sections)
 Theme.GOLD_DIM  = { 0.17, 0.19, 0.22 }   -- filets #2a3138
 Theme.PARCHMENT = { 0.95, 0.91, 0.83 }   -- titres #f1e8d4
 Theme.TEXT      = { 0.85, 0.83, 0.78 }   -- texte courant #d9d4c7
-Theme.MUTED     = { 0.49, 0.51, 0.54 }   -- texte secondaire #7d8389
+-- socle 2.11.0 : MUTED éclairci d'un cran (#7d8389 -> #91969e) : 4,20:1 sur
+-- ROW_ALT avant, 5,49 après ; ≥ 4,5 aussi sur les fonds survolés (n° 7)
+Theme.MUTED     = { 0.57, 0.59, 0.62 }   -- texte secondaire #91969e
 Theme.MUTED_LIGHT = { 0.64, 0.66, 0.68 } -- « MUTED clair » #a3a8ad (sous-titre, sections)
 Theme.INK       = { 0.06, 0.07, 0.09 }
 Theme.SURFACE   = { 0.075, 0.09, 0.105 } -- fond des fenêtres #13171b
@@ -66,10 +73,80 @@ Theme.FIELD     = { 0.063, 0.078, 0.094 } -- champ, liste, recherche #101418
 Theme.EDGE      = { 0.227, 0.259, 0.290 } -- bord de fenêtre, bouton en contour #3a424a
 Theme.EDGE_SOFT = { 0.165, 0.192, 0.220 } -- filets, séparations #2a3138
 Theme.LABEL     = { 0.902, 0.882, 0.835 } -- libellé de carte #e6e1d5
+Theme.WHITE     = { 1, 1, 1 }
+
+-- socle 2.11.0 : états des contrôles (docs/UI.md, « États »)
+Theme.HOVER_ALPHA = 0.06   -- voile blanc d'une carte ou d'une ligne survolée (1,18 × la luminance du fond)
+Theme.DIM_ALPHA   = 0.45   -- élément inactif (bouton désactivé, carte d'un module coupé)
+Theme.PRESS_SHADE = 0.10   -- bouton plein enfoncé : part d'encre mêlée au fond (0,15 de la fiche
+                           -- faisait tomber l'encre à 4,41:1 sur le bleu ; 0,10 : 4,81)
+
+-- socle 2.11.0 : contraste mesuré (formule WCAG 2.x), partagé par les deux
+-- addons et par les tests (tests/modules/socle_211.lua, socle_contrast).
+-- Theme.Luminance({ r, g, b }) : luminance relative ; Theme.Contrast(a, b) :
+-- rapport de contraste entre deux couleurs { r, g, b } (1 à 21).
+local function Channel(value)
+	value = tonumber(value) or 0
+	if value <= 0.03928 then return value / 12.92 end
+	return ((value + 0.055) / 1.055) ^ 2.4
+end
+function Theme.Luminance(color)
+	return 0.2126 * Channel(color[1]) + 0.7152 * Channel(color[2]) + 0.0722 * Channel(color[3])
+end
+-- `b` : une couleur, ou directement une luminance (nombre)
+function Theme.Contrast(a, b)
+	local la = Theme.Luminance(a)
+	local lb = type(b) == "table" and Theme.Luminance(b) or (tonumber(b) or 0)
+	if la < lb then la, lb = lb, la end
+	return (la + 0.05) / (lb + 0.05)
+end
+-- couleur vue quand un aplat `color` à `alpha` couvre `base` (mélange sRGB,
+-- comme le moteur) : survols, voiles, boutons enfoncés
+function Theme.Over(base, color, alpha)
+	alpha = tonumber(alpha) or 0
+	return { base[1] + (color[1] - base[1]) * alpha, base[2] + (color[2] - base[2]) * alpha,
+		base[3] + (color[3] - base[3]) * alpha }
+end
+
+-- socle 2.11.0 : rareté d'une créature, un seul jeton (docs/UI.md). La
+-- convention des qualités d'objet du jeu (élite = bleu « rare », rare =
+-- violet « épique », boss = orange « légendaire »), éclaircie pour du texte
+-- sur fond sombre. Mesures (WCAG) : élite 6,33 / rare 6,31 sur ROW, 5,99 /
+-- 5,98 sur ROW_ALT ; toutes ≥ 4,5 sur ROW, ROW_ALT, WINDOW, NAV, FIELD.
+-- Sur parchemin, les encres sombres r* (QuestCompanion, AZEROTH_INK) sont
+-- choisies par la même clé, Theme.RankKey.
+-- API stable : Theme.RANK[clé], Theme.RANK_KEYS[classification du jeu],
+-- Theme.RankKey(classification), Theme.RankColor(classification, brillante).
+Theme.RANK = {
+	trivial = { 0.62, 0.62, 0.62 },
+	normal  = Theme.PARCHMENT,
+	elite   = { 0.40, 0.62, 0.95 },   -- #669ef2
+	rare    = { 0.75, 0.50, 1.00 },   -- #bf80ff
+	boss    = { 1.00, 0.50, 0.00 },   -- #ff8000
+	shiny   = Theme.GOLD_LIGHT,       -- #f6c77d
+}
+-- classification renvoyée par UnitClassification -> clé de Theme.RANK
+Theme.RANK_KEYS = { trivial = "trivial", minus = "trivial", normal = "normal", elite = "elite",
+	rare = "rare", rareelite = "rare", worldboss = "boss", boss = "boss" }
+
+function Theme.RankKey(class)
+	return Theme.RANK_KEYS[class or "normal"] or "normal"
+end
+
+function Theme.RankColor(class, shiny)
+	if shiny then return Theme.RANK.shiny end
+	return Theme.RANK[Theme.RankKey(class)]
+end
+
+-- code couleur « |cffrrggbb » d'une couleur { r, g, b } (texte coloré)
+function Theme.Hex(color)
+	local function Byte(v) return math.floor(math.max(0, math.min(1, tonumber(v) or 0)) * 255 + 0.5) end
+	return string.format("|cff%02x%02x%02x", Byte(color[1]), Byte(color[2]), Byte(color[3]))
+end
 
 Theme.T_GOLD      = "|cffe8a54b"
 Theme.T_PARCHMENT = "|cfff1e8d4"
-Theme.T_GREY      = "|cff7d8389"
+Theme.T_GREY      = "|cff91969e"
 Theme.T_GREEN     = "|cff6fcf7a"
 Theme.T_RED       = "|cffe2604f"
 Theme.T_ORANGE    = "|cffe8a54b"
@@ -90,6 +167,66 @@ Theme.CHEVRON       = SOCLE_MEDIA .. "chevron"          -- chevron des listes d�
 -- les clients Era 1.15.9 et Forever 1.60.1 (listes de fichiers wago.tools).
 -- Elle est jaune : on la désature au repos plutôt que de la teinter.
 Theme.REFRESH       = "Interface\\Buttons\\UI-RefreshButton"
+
+-- socle 2.11.0 : pictos du client par référence (atlas vérifiés en jeu sur
+-- Forever 1.60, 2026-11-09), jamais embarqués. Chaque rôle essaie ses atlas
+-- dans l'ordre, après une vérification à l'exécution (C_Texture.GetAtlasInfo
+-- connaît le nom ET SetAtlas l'accepte) ; sinon le fichier du socle (repli).
+-- Theme.PaintClient(tex, rôle) rend le nom de l'atlas posé, ou "fallback".
+-- `tint` : l'atlas est désaturé pour prendre la teinte du jeton (statuts).
+Theme.CLIENT_ART = {
+	diamond     = { atlases = { "activities-complete-diamond", "genericwidgetbar-marker-diamond" }, fallback = Theme.DIAMOND, tint = true },
+	diamondLine = { atlases = { "activities-incomplete-diamond" }, fallback = Theme.DIAMOND_LINE, tint = true },
+	chevron     = { atlases = { "friendslist-categorybutton-arrow-down" }, fallback = Theme.CHEVRON },
+	gear        = { atlases = { "questlog-icon-setting", "gm-icon-settings" }, fallback = "Interface\\Buttons\\UI-OptionsButton" },
+	checkbox    = { atlases = { "checkbox-minimal" } },
+	checkmark   = { atlases = { "checkmark-minimal" } },
+	partial     = { atlases = { "common-checkbox-partial" } },
+}
+-- atlas connu du client : réponse gardée (une seule question par nom)
+-- (la réponse est oubliée si la table C_Texture change : banc de tests)
+local atlasKnown, atlasApi = {}, nil
+function Theme.HasAtlas(name)
+	local api = rawget(_G, "C_Texture")
+	if api ~= atlasApi then atlasApi = api; Theme.ResetAtlasCache() end
+	local known = atlasKnown[name]
+	if known ~= nil then return known end
+	if type(api) ~= "table" or type(api.GetAtlasInfo) ~= "function" then return false end
+	local ok, info = pcall(api.GetAtlasInfo, name)
+	known = (ok and info ~= nil) and true or false
+	atlasKnown[name] = known
+	return known
+end
+-- oublie les réponses gardées (tests : C_Texture posé ou retiré)
+function Theme.ResetAtlasCache() for name in pairs(atlasKnown) do atlasKnown[name] = nil end end
+
+function Theme.PaintClient(tex, role)
+	local spec = type(role) == "table" and role or Theme.CLIENT_ART[role]
+	if not (tex and spec) then return nil end
+	if tex.SetAtlas then
+		for _, name in ipairs(spec.atlases or {}) do
+			if Theme.HasAtlas(name) then
+				local ok, result = pcall(tex.SetAtlas, tex, name)
+				if ok and result ~= false then
+					if tex.SetDesaturated then tex:SetDesaturated(spec.tint and true or false) end
+					tex.clientSource = name
+					return name
+				end
+			end
+		end
+	end
+	if not spec.fallback then tex.clientSource = nil; return nil end
+	tex:SetTexture(spec.fallback)
+	if tex.SetTexCoord then tex:SetTexCoord(0, 1, 0, 1) end
+	if tex.SetDesaturated then tex:SetDesaturated(false) end
+	tex.clientSource = "fallback"
+	return "fallback"
+end
+
+-- Losange de statut ou de puce : plein (à voir) ou au trait (bon, neutre)
+function Theme.SetDiamond(tex, outline)
+	return Theme.PaintClient(tex, outline and "diamondLine" or "diamond")
+end
 
 -- Polices ------------------------------------------------------------------------
 -- Inter, réduite aux caractères latins (accents, guillemets, flèches, ▲ ▼ ×
@@ -173,6 +310,9 @@ Theme.F_CAPS    = Theme.fonts.CAPS.name
 Theme.F_NUMBER  = Theme.fonts.NUMBER.name
 -- ancien nom (GameFontHighlight) : texte courant
 Theme.F_NORMAL  = Theme.F_BODY
+-- socle 2.11.0 : vraie flèche « → » si Inter est chargée (la police du jeu
+-- de repli ne l'a pas : « -> »)
+Theme.ARROW = (Theme.fonts.BODY and Theme.fonts.BODY.inter) and "→" or "->"
 
 local function Clamp(value, minimum, maximum)
 	if value < minimum then return minimum end
@@ -574,12 +714,8 @@ function Theme.CreateNavItem(parent, width)
 	item.badge:Hide()
 
 	-- interrupteur de module : rond ouvert, ambre si actif, gris si coupé
-	item.power = CreateFrame("Button", nil, item)
-	item.power:SetSize(16, 16)
+	item.power = Theme.CreatePowerButton(item, 16)
 	item.power:SetPoint("RIGHT", item, "RIGHT", -12, 0)
-	item.power.icon = item.power:CreateTexture(nil, "ARTWORK")
-	item.power.icon:SetTexture(Theme.POWER)
-	item.power.icon:SetAllPoints()
 	item.power:SetScript("OnClick", function()
 		if item.onPower then item.onPower(item, not item.moduleOn) end
 	end)
@@ -616,8 +752,7 @@ function Theme.CreateNavItem(parent, width)
 		else
 			self.moduleOn = (state == true or state == "on")
 			self.power:Show()
-			local c = self.moduleOn and Theme.GOLD or Theme.MUTED
-			self.power.icon:SetVertexColor(c[1], c[2], c[3], 1)
+			Theme.SetPowerState(self.power, self.moduleOn)
 		end
 		PlaceBadge(self)
 		Paint(self)
@@ -808,6 +943,27 @@ end
 -- Carte de réglage : fond ROW (ROW_ALT une rangée sur deux), libellé à
 -- gauche, zone .control à droite pour le contrôle (aligné à droite)
 -- ---------------------------------------------------------------------------
+-- socle 2.11.0 : voile de survol d'une carte ou d'une ligne, blanc à
+-- Theme.HOVER_ALPHA, plus un filet EDGE (comme les tuiles) qui suit le voile :
+-- hover:Show() / hover:Hide() montrent ou cachent les deux.
+function Theme.CreateHover(frame)
+	local hover = Solid(frame, "BORDER", Theme.WHITE, Theme.HOVER_ALPHA)
+	hover:SetAllPoints()
+	local edge = Border(frame, Theme.EDGE, 1, "BORDER")
+	hover.edge = edge
+	local show, hide = hover.Show, hover.Hide
+	hover.Show = function(self)
+		show(self)
+		for _, side in ipairs({ "top", "bottom", "left", "right" }) do edge[side]:Show() end
+	end
+	hover.Hide = function(self)
+		hide(self)
+		for _, side in ipairs({ "top", "bottom", "left", "right" }) do edge[side]:Hide() end
+	end
+	hover:Hide()
+	return hover
+end
+
 -- `kind` = "Button" : carte cliquable (interrupteur, action), éclairée au survol
 Theme.CARD_HEIGHT = 38
 function Theme.CreateSettingCard(parent, width, height, kind)
@@ -816,9 +972,7 @@ function Theme.CreateSettingCard(parent, width, height, kind)
 	card:SetSize(width, height)
 	card.bg = Solid(card, "BACKGROUND", Theme.ROW, 1)
 	card.bg:SetAllPoints()
-	card.hover = Solid(card, "BORDER", { 1, 1, 1 }, 0.025)
-	card.hover:SetAllPoints()
-	card.hover:Hide()
+	card.hover = Theme.CreateHover(card)
 	if kind == "Button" then
 		card:SetScript("OnEnter", function(self) self.hover:Show() end)
 		card:SetScript("OnLeave", function(self) self.hover:Hide() end)
@@ -876,16 +1030,51 @@ end
 --   nil / "normal" / "outline" : contour EDGE, texte clair, fond transparent ;
 --   "accent"    : contour ambre, texte ambre, fond ambre à 7 % ;
 --   "primary"   : plein ambre, encre sombre SANS ombre ;
---   "adventure" : plein bleu de nuit, texte blanc.
+--   "adventure" : plein bleu de nuit, encre sombre SANS ombre (socle 2.11.0 :
+--                 le blanc tombait à 3,31:1, 2,60 au survol ; l'encre tient
+--                 5,67 au repos, 6,69 au survol).
 -- Au survol, le contour (ou le fond, pour les boutons pleins) s'éclaire.
+-- socle 2.11.0 : enfoncé (libellé décalé de 1, -1 ; fond plein assombri,
+-- contour ambre sombre) et désactivé (DIM_ALPHA, texte MUTED, sans survol).
+-- Theme.BUTTON_STYLES est exposé (tests de contraste).
 -- ---------------------------------------------------------------------------
 local BUTTON_STYLES = {
 	outline   = { bg = Theme.WINDOW, bgAlpha = 0, edge = Theme.EDGE, text = Theme.LABEL, hoverEdge = Theme.GOLD },
 	accent    = { bg = Theme.GOLD, bgAlpha = 0.07, hoverAlpha = 0.14, edge = Theme.GOLD, text = Theme.GOLD },
 	primary   = { bg = Theme.GOLD, bgAlpha = 1, hoverBg = Theme.GOLD_LIGHT, edge = Theme.GOLD, text = Theme.INK, filled = true },
-	adventure = { bg = Theme.BLUE, bgAlpha = 1, hoverBg = { 0.45, 0.64, 0.89 }, edge = Theme.BLUE, text = { 1, 1, 1 }, filled = true },
+	adventure = { bg = Theme.BLUE, bgAlpha = 1, hoverBg = Theme.Over(Theme.BLUE, Theme.WHITE, 0.12), edge = Theme.BLUE,
+		text = Theme.INK, filled = true },
 }
 BUTTON_STYLES.normal = BUTTON_STYLES.outline
+Theme.BUTTON_STYLES = BUTTON_STYLES
+
+-- bouton actif ? (sans IsEnabled : toujours actif)
+local function ButtonEnabled(button)
+	if not button.IsEnabled then return true end
+	local ok, on = pcall(button.IsEnabled, button)
+	return not ok or (on ~= false and on ~= nil and on ~= 0)
+end
+-- repos (ou aspect désactivé)
+local function ButtonRest(self)
+	local s = self.spec
+	self.text:ClearAllPoints()
+	self.text:SetPoint("CENTER", 0, 0)
+	if not ButtonEnabled(self) then
+		self:SetAlpha(Theme.DIM_ALPHA)
+		local bg = s.filled and Theme.CONTROL or s.bg
+		self.bg:SetVertexColor(bg[1], bg[2], bg[3], s.filled and 1 or s.bgAlpha)
+		self.border:SetColor(Theme.EDGE[1], Theme.EDGE[2], Theme.EDGE[3], 1)
+		SetColor(self.text, Theme.MUTED)
+		self.disabledLook = true
+		return
+	end
+	self.disabledLook = nil
+	self:SetAlpha(1)
+	SetColor(self.text, s.text)
+	self.bg:SetVertexColor(s.bg[1], s.bg[2], s.bg[3], s.bgAlpha)
+	self.border:SetColor(s.edge[1], s.edge[2], s.edge[3], 1)
+end
+Theme.ButtonRest = ButtonRest
 
 -- Largeur d'un texte dans un rôle de police : une sonde cachée par parent,
 -- réutilisée. Sans mesure possible, 7 px par octet (repli large).
@@ -933,30 +1122,71 @@ function Theme.CreateButton(parent, width, height, label, onClick, style)
 	button.text = Text(button, Theme.F_LABEL, spec.text)
 	button.text:SetPoint("CENTER", 0, 0)
 	button.text:SetText(label)
-	if button.style == "adventure" then
-		-- texte blanc sur le bleu, ombre légère (texte clair : l'ombre aide)
-		if button.text.SetShadowOffset then
-			button.text:SetShadowColor(0, 0, 0, 0.5)
-			button.text:SetShadowOffset(1, -1)
-		end
-	elseif button.style == "primary" then
-		-- encre sur l'ambre, SANS l'ombre noire de la police
+	if spec.filled then
+		-- encre sur l'ambre ou le bleu, SANS l'ombre noire de la police
 		Theme.NoShadow(button.text)
 	end
 	button.SetText = function(self, text) self.text:SetText(text) end
 	button.GetText = function(self) return self.text:GetText() end
 
 	button:SetScript("OnEnter", function(self)
+		if not ButtonEnabled(self) then
+			-- désactivé : pas de survol, mais l'infobulle qui dit pourquoi
+			local tooltip = rawget(_G, "GameTooltip")
+			if self.disabledTip and type(tooltip) == "table" and tooltip.SetOwner then
+				tooltip:SetOwner(self, "ANCHOR_TOP")
+				Theme.TooltipLine(tooltip, self.disabledTip, Theme.PARCHMENT)
+				tooltip:Show()
+			end
+			return
+		end
 		local s = self.spec
 		if s.hoverBg then self.bg:SetVertexColor(s.hoverBg[1], s.hoverBg[2], s.hoverBg[3], 1) end
 		if s.hoverAlpha then self.bg:SetVertexColor(s.bg[1], s.bg[2], s.bg[3], s.hoverAlpha) end
 		if s.hoverEdge then self.border:SetColor(s.hoverEdge[1], s.hoverEdge[2], s.hoverEdge[3], 1) end
 	end)
 	button:SetScript("OnLeave", function(self)
-		local s = self.spec
-		self.bg:SetVertexColor(s.bg[1], s.bg[2], s.bg[3], s.bgAlpha)
-		self.border:SetColor(s.edge[1], s.edge[2], s.edge[3], 1)
+		ButtonRest(self)
+		local tooltip = rawget(_G, "GameTooltip")
+		if self.disabledTip and type(tooltip) == "table" and tooltip.Hide and tooltip.GetOwner
+			and tooltip:GetOwner() == self then tooltip:Hide() end
 	end)
+	button:SetScript("OnHide", ButtonRest)
+	-- appui : libellé enfoncé d'un pixel, fond plein assombri ou contour ambre sombre
+	button:SetScript("OnMouseDown", function(self, mouse)
+		if (mouse and mouse ~= "LeftButton") or not ButtonEnabled(self) then return end
+		local s = self.spec
+		self.pressed = true
+		self.text:ClearAllPoints()
+		self.text:SetPoint("CENTER", 1, -1)
+		if s.filled then
+			local c = Theme.Over(s.bg, Theme.INK, Theme.PRESS_SHADE)
+			self.bg:SetVertexColor(c[1], c[2], c[3], 1)
+		else
+			self.border:SetColor(Theme.GOLD_SOFT[1], Theme.GOLD_SOFT[2], Theme.GOLD_SOFT[3], 1)
+		end
+	end)
+	button:SetScript("OnMouseUp", function(self)
+		self.pressed = nil
+		local over = false
+		if self.IsMouseOver then
+			local ok, value = pcall(self.IsMouseOver, self)
+			over = ok and value and true or false
+		end
+		ButtonRest(self)
+		if over then self:GetScript("OnEnter")(self) end
+	end)
+	-- Disable / Enable / SetEnabled : l'aspect suit (méthodes de l'instance
+	-- enveloppées ; ce bouton n'est pas un cadre protégé)
+	for _, method in ipairs({ "Disable", "Enable", "SetEnabled" }) do
+		local original = button[method]
+		if type(original) == "function" then
+			button[method] = function(self, ...)
+				original(self, ...)
+				ButtonRest(self)
+			end
+		end
+	end
 	if onClick then button:SetScript("OnClick", onClick) end
 	return button
 end
@@ -967,6 +1197,59 @@ end
 -- ---------------------------------------------------------------------------
 -- `kind` = "Button" pour un interrupteur cliquable à lui seul (navigation) ;
 -- `width`/`height` : 32 x 15 par défaut.
+-- socle 2.11.0 : case à cocher du client (atlas « checkbox-minimal », vérifié
+-- en jeu sur Forever ; coche « checkmark-minimal », partiel
+-- « common-checkbox-partial ») si le client les connaît. Sinon l'interrupteur
+-- dessiné d'avant (piste et curseur) : la piste, le curseur et le contour
+-- restent tenus à jour dans les deux cas (mêmes champs, mêmes tests).
+Theme.CHECKBOX_SIZE = 18
+-- coche d'une case : l'atlas du client, sinon un carré ambre plein
+local function PaintCheck(tex, size)
+	if Theme.PaintClient(tex, "checkmark") then
+		tex:SetVertexColor(1, 1, 1, 1)
+		tex:SetSize(size, size)
+	else
+		tex:SetTexture(Theme.SOLID)
+		tex:SetVertexColor(Theme.GOLD[1], Theme.GOLD[2], Theme.GOLD[3], 1)
+		tex:SetSize(math.floor(size / 2), math.floor(size / 2))
+	end
+end
+-- Habille `frame` d'une case du client (rend vrai) ; faux si l'atlas manque
+function Theme.ApplyCheckbox(frame, size)
+	local box = frame.box or frame:CreateTexture(nil, "ARTWORK")
+	if not Theme.PaintClient(box, "checkbox") then
+		if frame.box then frame.box:Hide() end
+		return false
+	end
+	frame.box = box
+	box:SetAllPoints()
+	box:Show()
+	frame.check = frame.check or frame:CreateTexture(nil, "OVERLAY")
+	frame.check:SetPoint("CENTER", frame, "CENTER", 0, 0)
+	PaintCheck(frame.check, size)
+	frame.check:Hide()
+	frame.partialMark = frame.partialMark or frame:CreateTexture(nil, "OVERLAY")
+	frame.partialMark:SetPoint("CENTER", frame, "CENTER", 0, 0)
+	if Theme.PaintClient(frame.partialMark, "partial") then
+		frame.partialMark:SetSize(size, size)
+	else
+		frame.partialMark:SetTexture(Theme.SOLID)
+		frame.partialMark:SetVertexColor(Theme.MUTED_LIGHT[1], Theme.MUTED_LIGHT[2], Theme.MUTED_LIGHT[3], 1)
+		frame.partialMark:SetSize(math.floor(size / 2), 2)
+	end
+	frame.partialMark:Hide()
+	frame.checkbox = true
+	return true
+end
+-- état d'une case : true (cochée), false (vide), "partial"
+function Theme.SetCheckboxState(frame, state)
+	if not frame.checkbox then return end
+	if state == true then frame.check:Show() else frame.check:Hide() end
+	if state == "partial" then frame.partialMark:Show() else frame.partialMark:Hide() end
+	local c = (state == false) and Theme.MUTED_LIGHT or Theme.WHITE
+	frame.box:SetVertexColor(c[1], c[2], c[3], 1)
+end
+
 function Theme.CreateToggle(parent, width, height, kind)
 	local toggle = CreateFrame(kind or "Frame", nil, parent)
 	width, height = width or 32, height or 15
@@ -976,6 +1259,15 @@ function Theme.CreateToggle(parent, width, height, kind)
 	toggle.edge = Border(toggle, Theme.GOLD, 0)
 	toggle.knob = Solid(toggle, "ARTWORK", Theme.MUTED, 1)
 	toggle.knob:SetSize(height - 4, height - 4)
+	-- case du client : la case remplace la piste (carré, aligné à droite)
+	if Theme.ApplyCheckbox(toggle, Theme.CHECKBOX_SIZE) then
+		toggle:SetSize(Theme.CHECKBOX_SIZE, Theme.CHECKBOX_SIZE)
+		toggle.track:Hide()
+		toggle.knob:Hide()
+		for _, side in ipairs({ "top", "bottom", "left", "right" }) do
+			if toggle.edge[side] then toggle.edge[side]:Hide() end
+		end
+	end
 
 	-- partiel : une partie seulement des modules est active (contour ambre,
 	-- curseur gris au centre)
@@ -985,7 +1277,8 @@ function Theme.CreateToggle(parent, width, height, kind)
 		self.knob:SetPoint("CENTER", self, "CENTER", 0, 0)
 		self.knob:SetVertexColor(Theme.MUTED_LIGHT[1], Theme.MUTED_LIGHT[2], Theme.MUTED_LIGHT[3], 1)
 		self.track:SetVertexColor(Theme.CONTROL[1], Theme.CONTROL[2], Theme.CONTROL[3], 1)
-		self.edge:SetColor(Theme.GOLD[1], Theme.GOLD[2], Theme.GOLD[3], 1)
+		self.edge:SetColor(Theme.GOLD[1], Theme.GOLD[2], Theme.GOLD[3], self.checkbox and 0 or 1)
+		Theme.SetCheckboxState(self, "partial")
 	end
 
 	function toggle:SetChecked(on)
@@ -1003,10 +1296,33 @@ function Theme.CreateToggle(parent, width, height, kind)
 			self.track:SetVertexColor(Theme.CONTROL[1], Theme.CONTROL[2], Theme.CONTROL[3], 1)
 			self.edge:SetColor(0, 0, 0, 0)
 		end
+		Theme.SetCheckboxState(self, self.checked)
 	end
 	function toggle:GetChecked() return self.checked == true end
 	toggle:SetChecked(false)
 	return toggle
+end
+
+-- Interrupteur de module (navigation des réglages) : case du client si
+-- l'atlas est là (socle 2.11.0), sinon le rond « marche/arrêt » du socle
+-- (interrupteur.tga, repli). `button.icon` porte la teinte ambre/grise.
+function Theme.CreatePowerButton(parent, size)
+	local button = CreateFrame("Button", nil, parent)
+	size = size or 16
+	button:SetSize(size, size)
+	button.icon = button:CreateTexture(nil, "ARTWORK")
+	button.icon:SetAllPoints()
+	if Theme.ApplyCheckbox(button, size) then
+		button.icon:Hide()
+	else
+		button.icon:SetTexture(Theme.POWER)
+	end
+	return button
+end
+function Theme.SetPowerState(button, on)
+	local c = on and Theme.GOLD or Theme.MUTED
+	button.icon:SetVertexColor(c[1], c[2], c[3], 1)
+	Theme.SetCheckboxState(button, on and true or false)
 end
 
 -- ---------------------------------------------------------------------------
@@ -1160,7 +1476,7 @@ function Theme.CreateDropdown(parent, width, onSelect, opts)
 	dropdown.text:SetJustifyH("LEFT")
 	if dropdown.text.SetWordWrap then dropdown.text:SetWordWrap(false) end
 	dropdown.chevron = dropdown:CreateTexture(nil, "ARTWORK")
-	dropdown.chevron:SetTexture(Theme.CHEVRON)
+	Theme.PaintClient(dropdown.chevron, "chevron")
 	dropdown.chevron:SetSize(12, 12)
 	dropdown.chevron:SetPoint("RIGHT", dropdown, "RIGHT", -6, 0)
 	dropdown.chevron:SetVertexColor(Theme.MUTED_LIGHT[1], Theme.MUTED_LIGHT[2], Theme.MUTED_LIGHT[3], 1)
@@ -1404,8 +1720,105 @@ function Theme.FadeIn(frame, duration)
 		alpha:SetDuration(duration or 0.15)
 		frame.fadeIn = group
 	end
+	-- socle 2.11.0 : une disparition en cours est interrompue
+	if frame.fadeOut then frame.fadeOut:Stop(); frame.fadeOutPending = nil end
 	frame.fadeIn:Stop()
 	frame.fadeIn:Play()
+	return true
+end
+
+-- socle 2.11.0 : pulsations et fondu de sortie en AnimationGroup (n° 24),
+-- sans OnUpdate Lua. Vérifié en jeu sur Forever : AnimationGroup:SetLooping,
+-- Alpha:SetSmoothing, Scale:SetScaleFrom existent (Scale:SetFromScale NON).
+-- Sans l'API, l'effet devient statique (aucune boucle de secours).
+-- Demi-périodes (s), reprises des sinus d'avant.
+Theme.PULSE = { alert = 0.5, shiny = 0.62, net = 0.52, arrival = 0.63, talk = 0.33, notice = 0.6 }
+
+-- Pulsation aller-retour d'une région : créée une fois (region.pulse),
+-- spec = { from, to, period, scale } ; rend le groupe, ou nil
+function Theme.Pulse(region, spec)
+	if not region then return nil end
+	if region.pulse ~= nil then return region.pulse or nil end
+	region.pulse = false
+	spec = spec or {}
+	if not region.CreateAnimationGroup then return nil end
+	local ok, group = pcall(region.CreateAnimationGroup, region)
+	if not ok or not group or not group.SetLooping or not group.CreateAnimation then return nil end
+	group:SetLooping("BOUNCE")
+	local alpha = group:CreateAnimation("Alpha")
+	if not (alpha and alpha.SetFromAlpha) then return nil end
+	alpha:SetFromAlpha(spec.from or 1)
+	alpha:SetToAlpha(spec.to or 0.45)
+	alpha:SetDuration(spec.period or Theme.PULSE.alert)
+	if alpha.SetSmoothing then alpha:SetSmoothing("IN_OUT") end
+	if spec.scale then
+		local scale = group:CreateAnimation("Scale")
+		if scale and scale.SetScaleFrom then
+			scale:SetScaleFrom(1, 1)
+			scale:SetScaleTo(spec.scale, spec.scale)
+			scale:SetDuration(spec.period or Theme.PULSE.alert)
+			if scale.SetSmoothing then scale:SetSmoothing("IN_OUT") end
+		end
+	end
+	region.pulse = group
+	return group
+end
+
+-- Joue (on) ou arrête la pulsation ; à l'arrêt, l'alpha posé revient
+-- (l'animation ne touche pas l'alpha de la région). Rend vrai si animé.
+function Theme.PulseOn(region, on, spec)
+	if not region then return false end
+	local group = on and Theme.Pulse(region, spec) or (region.pulse or nil)
+	if not group then return false end
+	if on then
+		local playing = group.IsPlaying and group:IsPlaying()
+		if not playing then group:Play() end
+		region.pulsing = true
+	else
+		group:Stop()
+		region.pulsing = nil
+	end
+	return true
+end
+
+-- Disparition : fondu (0,2 s), puis Hide et onDone ; sans API, Hide tout
+-- de suite. Theme.FadeIn interrompt un fondu de sortie en cours.
+function Theme.FadeOut(frame, duration, onDone)
+	if not (frame and frame.IsShown and frame:IsShown()) then
+		if onDone then onDone() end
+		return false
+	end
+	if frame.fadeIn then frame.fadeIn:Stop() end
+	if frame.fadeOut == nil then
+		frame.fadeOut = false
+		if frame.CreateAnimationGroup then
+			local ok, group = pcall(frame.CreateAnimationGroup, frame)
+			local alpha = ok and group and group.CreateAnimation and group:CreateAnimation("Alpha")
+			if alpha and alpha.SetFromAlpha and group.SetScript then
+				alpha:SetFromAlpha(1)
+				alpha:SetToAlpha(0)
+				alpha:SetDuration(duration or 0.2)
+				group:SetScript("OnFinished", function()
+					if not frame.fadeOutPending then return end
+					frame.fadeOutPending = nil
+					frame:Hide()
+					local done = frame.onFaded
+					frame.onFaded = nil
+					if done then done() end
+				end)
+				frame.fadeOut = group
+			end
+		end
+	end
+	if not frame.fadeOut then
+		frame:Hide()
+		if onDone then onDone() end
+		return false
+	end
+	frame.onFaded = onDone
+	frame.fadeOutPending = true
+	frame.fadeOut:Stop()
+	frame.fadeOut:Play()
 	return true
 end
 
@@ -1471,7 +1884,7 @@ end
 -- Losange de statut / puce : plein (échec, alerte, puce) ou au trait (OK)
 function Theme.CreateDiamond(parent, size, outline)
 	local tex = parent:CreateTexture(nil, "OVERLAY")
-	tex:SetTexture(outline and Theme.DIAMOND_LINE or Theme.DIAMOND)
+	Theme.SetDiamond(tex, outline)
 	tex:SetSize(size or 10, size or 10)
 	return tex
 end
@@ -1601,23 +2014,49 @@ function Theme.CreateIconButton(parent, size, texture, onClick, tip)
 end
 
 -- Roue crantée : ouvre les réglages de l'addon depuis l'en-tête d'une fenêtre.
--- L'icône « gear » du client (atlas) si elle existe, sinon l'icône d'objet
--- classique des engrenages.
-Theme.GEAR_ICON = "Interface\\Icons\\INV_Misc_Gear_01"
-Theme.GEAR_ATLAS = "gear"
-local function AtlasExists(name)
-	local tex = rawget(_G, "C_Texture")
-	if type(tex) ~= "table" or type(tex.GetAtlasInfo) ~= "function" then return false end
-	local ok, info = pcall(tex.GetAtlasInfo, name)
-	return ok and info ~= nil
+-- socle 2.11.0 : la petite roue grise du journal de quêtes du client (atlas
+-- « questlog-icon-setting », vérifié en jeu sur Forever ; puis
+-- « gm-icon-settings »), sinon le fichier UI-OptionsButton désaturé ; sans
+-- carré au trait, grise au repos, plus claire au survol (comme le carnet de
+-- QuestCompanion 2.9.1). Plus de « pièce jaune » (INV_Misc_Gear_01).
+Theme.GEAR = { size = 16, rest = { 0.78, 0.78, 0.78, 0.85 }, hover = { 1, 1, 1, 1 } }
+local function GearLook(button, hot)
+	local c = hot and Theme.GEAR.hover or Theme.GEAR.rest
+	if button.icon.SetDesaturated then button.icon:SetDesaturated(true) end
+	button.icon:SetVertexColor(c[1], c[2], c[3])
+	button.icon:SetAlpha(c[4])
+	button.gearHot = hot and true or false
 end
 function Theme.CreateGearButton(parent, size, onClick, tip)
-	local button = Theme.CreateIconButton(parent, size or 22, Theme.GEAR_ICON, onClick, tip)
-	if AtlasExists(Theme.GEAR_ATLAS) and button.icon.SetAtlas then
-		local ok = pcall(button.icon.SetAtlas, button.icon, Theme.GEAR_ATLAS)
-		button.gearAtlas = ok or nil
-	end
-	if not button.gearAtlas and button.icon.SetTexCoord then button.icon:SetTexCoord(0.08, 0.92, 0.08, 0.92) end
+	local button = CreateFrame("Button", nil, parent)
+	size = size or 22
+	button:SetSize(size, size)
+	-- pas de carré au trait : contour gardé (champ attendu par les habillages
+	-- existants, ns.JournalCogSkin), caché
+	button.border = Border(button, Theme.EDGE, 0)
+	for _, side in ipairs({ "top", "bottom", "left", "right" }) do button.border[side]:Hide() end
+	button.border.SetColor = function() end
+	button.icon = button:CreateTexture(nil, "OVERLAY")
+	button.icon:SetPoint("CENTER", button, "CENTER", 0, 0)
+	button.gearSource = Theme.PaintClient(button.icon, "gear")
+	button.gearAtlas = button.gearSource ~= "fallback" and button.gearSource or nil
+	button.icon:SetSize(Theme.GEAR.size, Theme.GEAR.size)
+	GearLook(button, false)
+	button:SetScript("OnEnter", function(self)
+		GearLook(self, true)
+		local tooltip = rawget(_G, "GameTooltip")
+		if tip and type(tooltip) == "table" and tooltip.SetOwner then
+			tooltip:SetOwner(self, "ANCHOR_BOTTOM")
+			Theme.TooltipLine(tooltip, tip, Theme.PARCHMENT)
+			tooltip:Show()
+		end
+	end)
+	button:SetScript("OnLeave", function(self)
+		GearLook(self, false)
+		local tooltip = rawget(_G, "GameTooltip")
+		if tip and type(tooltip) == "table" and tooltip.Hide then tooltip:Hide() end
+	end)
+	if onClick then button:SetScript("OnClick", onClick) end
 	return button
 end
 
@@ -1641,7 +2080,7 @@ function Theme.SetStatus(diamond, state)
 		return nil
 	end
 	local c = Theme[spec.color]
-	diamond:SetTexture(spec.outline and Theme.DIAMOND_LINE or Theme.DIAMOND)
+	Theme.SetDiamond(diamond, spec.outline)
 	diamond:SetVertexColor(c[1], c[2], c[3], 1)
 	diamond:Show()
 	return c
@@ -1663,9 +2102,7 @@ function Theme.CreateListRow(parent, width, height, opts)
 	row:SetSize(width, height)
 	row.bg = Solid(row, "BACKGROUND", Theme.ROW, 1)
 	row.bg:SetAllPoints()
-	row.hover = Solid(row, "BORDER", { 1, 1, 1 }, 0.025)
-	row.hover:SetAllPoints()
-	row.hover:Hide()
+	row.hover = Theme.CreateHover(row)
 	if opts.kind == "Button" then
 		row:SetScript("OnEnter", function(self) self.hover:Show() end)
 		row:SetScript("OnLeave", function(self) self.hover:Hide() end)
@@ -2010,8 +2447,15 @@ function Theme.CreatePager(parent, onStep)
 	pager.down:SetPoint("RIGHT", pager, "RIGHT", 0, 0)
 	pager.up = Theme.CreateIconButton(pager, Theme.PAGER_HEIGHT, Theme.CHEVRON, function() if onStep then onStep(1) end end)
 	pager.up:SetPoint("RIGHT", pager.down, "LEFT", -6, 0)
-	-- le chevron pointe vers le bas : retourné pour « haut »
-	if pager.up.icon.SetTexCoord then pager.up.icon:SetTexCoord(0, 1, 1, 0) end
+	-- le chevron pointe vers le bas : retourné pour « haut » (socle 2.11.0 :
+	-- flèche du client si l'atlas est là, tournée d'un demi-tour ; sinon le
+	-- fichier du socle, retourné par ses coordonnées)
+	for _, button in ipairs({ pager.down, pager.up }) do Theme.PaintClient(button.icon, "chevron") end
+	if pager.up.icon.clientSource ~= "fallback" and pager.up.icon.SetRotation then
+		pager.up.icon:SetRotation(math.pi)
+	elseif pager.up.icon.SetTexCoord then
+		pager.up.icon:SetTexCoord(0, 1, 1, 0)
+	end
 	pager.position = Text(pager, Theme.F_SMALL, Theme.MUTED_LIGHT)
 	pager.position:SetPoint("RIGHT", pager.up, "LEFT", -10, 0)
 	pager.position:SetJustifyH("RIGHT")
@@ -2101,3 +2545,4 @@ function Theme.TooltipPair(tooltip, label, value)
 end
 
 if ns.Mark then ns.Mark("Theme") end
+end)(SOCLE_ADDON, SOCLE_NS)

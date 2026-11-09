@@ -31,6 +31,7 @@ local DEFAULTS = {
 	exitDelay           = 6,      -- secondes hors zone sûre avant l'alerte (0..15)
 	popupScore          = 85,     -- fenêtre seulement sous cette note (100 = toujours)
 	departureEnabled    = true,   -- module « Check avant le départ »
+	diagFoldOk          = true,   -- 1.32.0 : lignes « en ordre » repliées dans « Avant le départ »
 	autoSellGray        = true,   -- vend les objets gris à l'ouverture d'un marchand
 	autoRepair          = true,   -- répare tout chez un marchand qui répare
 	-- Zones sûres (schéma 2, v1.18.0) :
@@ -542,7 +543,7 @@ function ns:CheckBagPressure()
 	if self.bagAlerted then return end
 
 	self.bagAlerted = true
-	self:Print(self:F("MSG_BAG_PRESSURE", free))
+	self:Print(self:FP("MSG_BAG_PRESSURE", free))
 end
 
 -- ---------------------------------------------------------------------------
@@ -778,7 +779,7 @@ local COMMANDS = {
 		local n = tonumber(value)
 		if not n then return self:Print(L.MSG_UNKNOWN_CMD) end
 		db.bagFreeThreshold = math.floor(n)
-		self:Print(self:F("MSG_THRESHOLD", db.bagFreeThreshold))
+		self:Print(self:FP("MSG_THRESHOLD", db.bagFreeThreshold))
 	end,
 	["popup"] = function(self, value)
 		local db = self:DB()
@@ -951,6 +952,8 @@ local COMMANDS = {
 	["diag"] = function(self)
 		self:Print(L.MSG_DIAG_HEADER .. " v" .. tostring(ns.version or "?"))
 		if self.PrintCapabilities then self:PrintCapabilities() end
+		-- 1.32.0 : socle partagé avec QuestCompanion, ou propre
+		if self.SocleDiagLine then self:Print(self:SocleDiagLine()) end
 
 		-- État du chargement des fichiers
 		local loaded, missing = {}, {}

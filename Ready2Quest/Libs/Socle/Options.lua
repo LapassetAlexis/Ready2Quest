@@ -12,6 +12,11 @@
 -- python3 tools/sync_socle.py. Chaque addon déclare ses pages
 -- (ns.AddOptionPage), ses listes (ns.OPTION_LISTS), ses actions
 -- (ns.OPTION_ACTIONS) et le bouton principal du pied (ns.OPTIONS_MAIN).
+-- socle 2.11.0 : corps du fichier dans une fabrique, compilée une fois quand
+-- les deux addons ont le même socle (Base.lua, ns.SocleFile). Rien de propre
+-- à l'addon au niveau du fichier : tout passe par ADDON et ns, ci-dessous.
+local SOCLE_ADDON, SOCLE_NS = ...
+;(SOCLE_NS.SocleFile or function(_, factory) return factory end)("Options", function(...)
 local ADDON, ns = ...
 local L = ns.L
 local Theme = ns.Theme
@@ -803,7 +808,16 @@ function ns:RefreshOptions()
 	local grown = false
 	for _, card in ipairs(frame.rows or {}) do
 		if card.Refresh and card:Refresh(db) then grown = true end
+		-- socle 2.11.0 : carte d'un module coupé estompée, mais modifiable
+		-- (la carte de module elle-même est l'interrupteur : jamais estompée)
+		if not card.isModule and card.SetAlpha then
+			local key = self:OptionsPageModuleKey(card.pageId)
+			local off = key ~= nil and db[key] == false
+			card.dimmed = off or nil
+			card:SetAlpha(off and Theme.DIM_ALPHA or 1)
+		end
 	end
+	self:RefreshModuleOffBanner()
 	for _, block in ipairs(frame.notes or {}) do
 		if type(block.source) == "function" and block:Refresh() then grown = true end
 	end
@@ -1041,12 +1055,8 @@ local function NavHeader(frame, text, def)
 	header.label:SetPoint("BOTTOMLEFT", header, "BOTTOMLEFT", 18, 8)
 	header.label:SetWidth(NAV_WIDTH - 18 - 40)
 	if header.label.SetWordWrap then header.label:SetWordWrap(false) end
-	header.power = CreateFrame("Button", nil, header)
-	header.power:SetSize(16, 16)
+	header.power = Theme.CreatePowerButton(header, 16)
 	header.power:SetPoint("BOTTOMRIGHT", header, "BOTTOMRIGHT", -12, 4)
-	header.power.icon = header.power:CreateTexture(nil, "ARTWORK")
-	header.power.icon:SetTexture(Theme.POWER)
-	header.power.icon:SetAllPoints()
 	header.power:Hide()
 	function header:SetModuleState(state)
 		local c = Theme.GOLD
@@ -1057,7 +1067,7 @@ local function NavHeader(frame, text, def)
 			self.moduleOn = (state == true or state == "on")
 			self.power:Show()
 			c = self.moduleOn and Theme.GOLD or Theme.MUTED
-			self.power.icon:SetVertexColor(c[1], c[2], c[3], 1)
+			Theme.SetPowerState(self.power, self.moduleOn)
 		end
 		self.label:SetTextColor(c[1], c[2], c[3], 1)
 	end
@@ -1227,6 +1237,12 @@ function ns:EnsureOptions()
 	if frame.header.title.SetWordWrap then frame.header.title:SetWordWrap(false) end
 	frame.header.subtitle:SetWidth(INNER)
 	if frame.header.subtitle.SetWordWrap then frame.header.subtitle:SetWordWrap(false) end
+	-- socle 2.11.0 : « Rallumer » d'un module coupé, à droite de la phrase
+	frame.offBanner = Theme.CreateButton(frame.header, "auto", 22, L.OPT_PAGE_OFF_ON, function(button)
+		if button.key then ns:ToggleModuleKey(button.key) end
+	end, "outline")
+	frame.offBanner:SetPoint("TOPRIGHT", frame.header, "TOPRIGHT", -MARGIN, -55)
+	frame.offBanner:Hide()
 
 	frame.tabs = Theme.CreateTabs(content, function(id) ns:SelectOptionsPage(id) end)
 	frame.tabs:SetPoint("TOPLEFT", content, "TOPLEFT", MARGIN, TABS_TOP)
@@ -1398,6 +1414,49 @@ local function DefOf(frame, id)
 	return PageDef(id) or frame.tabDefs[id]
 end
 
+-- socle 2.11.0 : clé de réglage du module d'une page (une page à onglets suit
+-- sa page parente), nil si la page n'a pas d'interrupteur
+function ns:OptionsPageModuleKey(pageId)
+	local frame = self.optionsFrame
+	if not (frame and pageId) then return nil end
+	local def = DefOf(frame, pageId)
+	if def and def.tabOf then def = PageDef(def.tabOf) or def end
+	if not def then return nil end
+	if def.power == nil and def.parent then
+		-- sous-page sans clé propre : celle de son groupe
+		local own = ModuleKey(def)
+		if own then return own end
+		local parent = PageDef(def.parent)
+		return parent and ModuleKey(parent) or nil
+	end
+	return ModuleKey(def)
+end
+
+-- Bandeau « module coupé » : dans l'en-tête, à la place de la phrase de la
+-- page (pas de relayout de la page), avec un bouton « Rallumer »
+function ns:RefreshModuleOffBanner()
+	local frame = self.optionsFrame
+	local banner = frame and frame.offBanner
+	if not banner then return end
+	local key = self:OptionsPageModuleKey(frame.currentPage)
+	local off = key ~= nil and not frame.searching and self:DB()[key] == false
+	banner.key = off and key or nil
+	if off then
+		banner.showing = true
+		frame.header:SetSubtitle(L.OPT_PAGE_OFF)
+		frame.header.subtitle:SetTextColor(Theme.GOLD[1], Theme.GOLD[2], Theme.GOLD[3], 1)
+		frame.header.subtitle:SetWidth(INNER - (banner:GetWidth() or 0) - 12)
+		banner:Show()
+	elseif banner.showing then
+		-- la phrase de la page revient (la recherche pose la sienne elle-même)
+		banner.showing = nil
+		if not frame.searching then frame.header:SetSubtitle(frame.pageSubtitle or "") end
+		frame.header.subtitle:SetTextColor(Theme.MUTED_LIGHT[1], Theme.MUTED_LIGHT[2], Theme.MUTED_LIGHT[3], 1)
+		frame.header.subtitle:SetWidth(INNER)
+		banner:Hide()
+	end
+end
+
 function ns:SelectOptionsPage(id)
 	local frame = self.optionsFrame
 	if not frame then return end
@@ -1432,7 +1491,8 @@ function ns:SelectOptionsPage(id)
 	-- en-tête : le titre de la page choisie, sa phrase (sinon celle de son groupe)
 	local parent = owner.parent and PageDef(owner.parent)
 	frame.header:SetTitle(L[owner.title] or owner.title)
-	frame.header:SetSubtitle(Declared(owner.title .. "_SUB") or (parent and Declared(parent.title .. "_SUB")) or "")
+	frame.pageSubtitle = Declared(owner.title .. "_SUB") or (parent and Declared(parent.title .. "_SUB")) or ""
+	frame.header:SetSubtitle(frame.pageSubtitle)
 
 	if owner.tabs then
 		local tabs = {}
@@ -1743,3 +1803,4 @@ end
 _G[ns.APP.id .. "Options"] = function() ns:ToggleOptions() end
 
 ns.Mark("Options")
+end)(SOCLE_ADDON, SOCLE_NS)

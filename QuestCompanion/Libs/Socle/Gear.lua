@@ -13,6 +13,11 @@
 -- Fichier du socle commun (Libs/Socle), identique dans Ready2Quest et
 -- QuestCompanion : ne le modifier que dans Ready2Quest/Libs/Socle, puis
 -- python3 tools/sync_socle.py.
+-- socle 2.11.0 : corps du fichier dans une fabrique, compilée une fois quand
+-- les deux addons ont le même socle (Base.lua, ns.SocleFile). Rien de propre
+-- à l'addon au niveau du fichier : tout passe par ADDON et ns, ci-dessous.
+local SOCLE_ADDON, SOCLE_NS = ...
+;(SOCLE_NS.SocleFile or function(_, factory) return factory end)("Gear", function(...)
 local ADDON, ns = ...
 
 -- ---------------------------------------------------------------------------
@@ -172,3 +177,4 @@ end
 ns.HearthCooldown = HearthCooldown
 
 if ns.Mark then ns.Mark("Gear") end
+end)(SOCLE_ADDON, SOCLE_NS)

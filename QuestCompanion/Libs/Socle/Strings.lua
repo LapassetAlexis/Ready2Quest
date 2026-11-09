@@ -8,6 +8,11 @@
 -- Fichier du socle commun (Libs/Socle), identique dans Ready2Quest et
 -- QuestCompanion : ne le modifier que dans Ready2Quest/Libs/Socle, puis
 -- python3 tools/sync_socle.py.
+-- socle 2.11.0 : corps du fichier dans une fabrique, compilée une fois quand
+-- les deux addons ont le même socle (Base.lua, ns.SocleFile). Rien de propre
+-- à l'addon au niveau du fichier : tout passe par ADDON et ns, ci-dessous.
+local SOCLE_ADDON, SOCLE_NS = ...
+;(SOCLE_NS.SocleFile or function(_, factory) return factory end)("Strings", function(...)
 local ADDON, ns = ...
 
 local frFR, enUS = {}, {}
@@ -98,6 +103,24 @@ function ns:F(key, ...)
 	return fmt
 end
 
+-- socle 2.11.0 : pluriel accordé. CLE_ZERO (facultatif), CLE_ONE, CLE_MANY ;
+-- repli sur CLE si les variantes manquent (migration progressive).
+-- Français : 0 et 1 au singulier ; anglais : 1 seulement.
+function ns:FP(key, n, ...)
+	n = tonumber(n) or 0
+	local L = ns.L
+	local function Has(k) local text = L[k]; return type(text) == "string" and text ~= k end
+	local pick = key
+	if n == 0 and Has(key .. "_ZERO") then
+		pick = key .. "_ZERO"
+	elseif Has(key .. "_ONE") and Has(key .. "_MANY") then
+		local one
+		if ns.STRINGS_FRENCH then one = n <= 1 and n >= -1 else one = n == 1 end
+		pick = key .. (one and "_ONE" or "_MANY")
+	end
+	return self:F(pick, n, ...)
+end
+
 function ns:Print(...)
 	local parts = {}
 	for i = 1, select("#", ...) do
@@ -145,6 +168,12 @@ ns.RegisterStrings({
 	OPT_BTN_REPLAY      = "Rejouer",
 	OPT_VERSION_LINE    = "v%s  ·  %s",
 	OPT_NAV_POWER_TIP   = "Active ou coupe tous les modules de cette page.",
+	-- socle 2.11.0 : page d'un module coupé
+	OPT_PAGE_OFF        = "Module coupé : ces réglages s'appliqueront quand tu le rallumeras.",
+	OPT_PAGE_OFF_ON     = "Rallumer",
+	DIAG_SOCLE          = "Socle : %s (%s)",
+	DIAG_SOCLE_SHARED   = "partagé",
+	DIAG_SOCLE_OWN      = "propre",
 	OPT_EDIT_BUTTON     = "Déplacer les cadres",
 	OPT_EDIT_MODE       = "Mode édition des cadres",
 	OPT_EDIT_HINT       = "Fais glisser les cadres pour les placer.",
@@ -204,6 +233,11 @@ ns.RegisterStrings({
 	OPT_BTN_REPLAY      = "Replay",
 	OPT_VERSION_LINE    = "v%s  ·  %s",
 	OPT_NAV_POWER_TIP   = "Turns every module of this page on or off.",
+	OPT_PAGE_OFF        = "Module off: these settings will apply once you turn it back on.",
+	OPT_PAGE_OFF_ON     = "Turn on",
+	DIAG_SOCLE          = "Shared core: %s (%s)",
+	DIAG_SOCLE_SHARED   = "shared",
+	DIAG_SOCLE_OWN      = "own copy",
 	OPT_EDIT_BUTTON     = "Move the frames",
 	OPT_EDIT_MODE       = "Frame edit mode",
 	OPT_EDIT_HINT       = "Drag the frames to place them.",
@@ -234,3 +268,4 @@ ns.RegisterStrings({
 })
 
 if ns.Mark then ns.Mark("Strings") end
+end)(SOCLE_ADDON, SOCLE_NS)

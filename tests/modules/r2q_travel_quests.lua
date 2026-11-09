@@ -14,11 +14,11 @@ do
 	NS:RunChecklist("manual")
 	local r = Result("quests")
 	Check("[TRAVEL] seule une quête de voyage : rien à reprocher, elle est citée", r and r.ok == true
-		and r.detail == NS:F("CHK_QUESTS_TRAVEL", 1), r and r.detail)
+		and r.detail == NS:FP("CHK_QUESTS_TRAVEL", 1), r and r.detail)
 	Mock.world.quests = { { questID = 21, title = "Va voir Sven", ready = true }, { questID = 22, title = "Loups", ready = true } }
 	NS:RunChecklist("manual")
 	r = Result("quests")
-	Check("[TRAVEL] une vraie quête prête : comptée seule", r and r.ok == false and r.detail == NS:F("CHK_QUESTS_DETAIL", 1),
+	Check("[TRAVEL] une vraie quête prête : comptée seule", r and r.ok == false and r.detail == NS:FP("CHK_QUESTS_DETAIL", 1),
 		r and r.detail)
 	C_QuestLog.GetQuestObjectives = nil
 	Check("[TRAVEL] objectifs illisibles : on ne présume rien", NS.QuestIsTravel(21) == false)

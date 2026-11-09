@@ -94,7 +94,7 @@ def main(directory):
     out.append("-- python3 tools/sync_socle.py.")
     out.append("local ADDON, ns = ...")
     out.append("")
-    out.append("ns.DUNGEONS = {")
+    out.append('ns.DUNGEONS = ns.SocleData("DUNGEONS", function() return {')
     for key, map_name, fo_range, entrance_names in DUNGEONS:
         m = maps.get(map_name)
         map_id = int(m["ID"]) if m else None
@@ -123,15 +123,15 @@ def main(directory):
         fields.append(f"fo = {{ {fo_range[0]}, {fo_range[1]} }}")
         if entrances: fields.append("entrances = { " + ", ".join(str(i) for i in entrances) + " }")
         out.append(f"\t{key} = {{ " + ", ".join(fields) + " },")
-    out.append("}")
+    out.append("} end)")
     out.append("")
     out.append("-- Plans avancés de Forever par donjon : aucune source fiable publiée au")
     out.append("-- 2026-11-03 (voir tools/gen_dungeons.py). Vide plutôt que faux.")
-    out.append("ns.DUNGEON_BLUEPRINTS = {")
+    out.append('ns.DUNGEON_BLUEPRINTS = ns.SocleData("DUNGEON_BLUEPRINTS", function() return {')
     for key, items in sorted(BLUEPRINTS.items()):
         rows = ", ".join("{ prof = %s, item = %d, name = %s }" % (lua_str(i["prof"]), i["item"], lua_str(i["name"])) for i in items)
         out.append(f"\t{key} = {{ {rows} }},")
-    out.append("}")
+    out.append("} end)")
     out.append("")
     out.append('if ns.Mark then ns.Mark("DungeonData") end')
     print("\n".join(out))
