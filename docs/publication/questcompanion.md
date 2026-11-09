@@ -16,6 +16,9 @@ Une seule description, anglais d'abord puis français (règle des stores : l'ang
 
 For **WoW Forever** (1.60). English and French. Free, standalone (`/qc`), about 2 MB of memory. Pairs well with [Ready2Quest](https://www.curseforge.com/wow/addons/ready2quest).
 
+## New in 2.12: the Jukebox
+- **Jukebox** in the journal: the game's own music on demand — zones, capitals, dungeons, raids, taverns, new Forever zones and themes (434 tracks), with search, favourites, playlists and shuffle. `/qc juke`.
+
 ## New in 2.11: a clearer journal, Locate on the map
 - **Locate**: one click puts a pin on the world map for a quest giver or a creature.
 - **Journal**: a dashboard on the left (your companion, the current zone, today's missions), zones filtered for your character with a search, gold stars and texts that fit everywhere.
@@ -106,6 +109,9 @@ Free software, **GPL-3.0**. Zone data (creatures, gathering, quests) is generate
 ![Une brillante tente sa chance contre le filet](https://media.forgecdn.net/attachments/2161/225/f-gif.gif)
 
 Pour **WoW Forever** (1.60). En français et en anglais. Gratuit, autonome (`/qc`), environ 2 Mo de mémoire. Va très bien avec [Ready2Quest](https://www.curseforge.com/wow/addons/ready2quest).
+
+## Nouveau en 2.12 : le Juke-box
+- **Juke-box** dans le carnet : les musiques du jeu à la demande — zones, capitales, donjons, raids, tavernes, nouvelles zones de Forever et thèmes (434 morceaux), avec recherche, favoris, listes et lecture au hasard. `/qc juke`.
 
 ## Nouveau en 2.11 : un carnet plus clair, Localiser sur la carte
 - **Localiser** : un clic pose un repère sur la carte du monde pour le donneur d'une quête ou une créature.
