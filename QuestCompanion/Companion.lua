@@ -1186,7 +1186,8 @@ function ns:CompanionSay(pool, opts)
 	for _, family in ipairs(families) do
 		if rt.cool[family] and now < rt.cool[family] then return false, "busy" end
 	end
-	local lineKey = opts.line or self:CompanionPick(pool, opts.args)
+	-- 2.13.0 : la voix du type de la créature (CompanionVoices.lua)
+	local lineKey = opts.line or (self.CompanionVoicePick or self.CompanionPick)(self, pool, opts.args)
 	if not lineKey then return false, "busy" end
 	-- la bulle part du cadre : il doit être affiché
 	if not self:CompanionUpdateVisibility() then return false, "off" end
@@ -1248,7 +1249,9 @@ function ns:CompanionCombatNote(pool, opts)
 		c = { kills = 0, fresh = 0, net = 0, dead = {} }
 		rt.combat = c
 	end
-	if pool == "KILL" then c.kills = c.kills + 1
+	if pool == "KILL" then
+		c.kills = c.kills + 1
+		c.killName = opts and opts.args and opts.args[1] or nil   -- 2.13.0 : pour la voix (« %s : hors service »)
 	elseif FRESH_POOLS[pool] then c.fresh = c.fresh + 1
 	elseif pool == "CAPTURE_PROMPT" then c.net = c.net + 1
 	elseif DEAD_POOLS[pool] then
@@ -1280,7 +1283,7 @@ function ns:CompanionCombatSummary()
 	if c.kills >= 2 and c.net > 0 then return self:CompanionSay("COMBAT_SUM_NET", { args = { c.kills, c.net } }) end
 	if c.kills >= 2 and c.fresh > 0 then return self:CompanionSay("COMBAT_SUM_NEW", { args = { c.kills } }) end
 	if c.kills >= 2 then return self:CompanionSay("COMBAT_SUM", { args = { c.kills }, cd = "kill" }) end
-	if c.kills == 1 then return self:CompanionSay("KILL", { cd = "kill" }) end
+	if c.kills == 1 then return self:CompanionSay("KILL", { cd = "kill", args = c.killName and { c.killName } or nil }) end
 	return false
 end
 
@@ -3060,6 +3063,10 @@ function ns:CompanionOnZone(newArea)
 		if self.InInstance and self:InInstance() and (not rt.lastDungeon or now - rt.lastDungeon >= CURIOSITY.dungeonGap) then
 			rt.lastDungeon = now
 			self:CompanionAdd("curiosity", CURIOSITY.dungeon)
+			-- 2.13.0 : un mot en entrant (CompanionLines DUNGEON, et la voix)
+			local instance = Call(rawget(_G, "GetInstanceInfo"))
+			if type(instance) ~= "string" or instance == "" then instance = nil end
+			self:CompanionSay("DUNGEON", { args = instance and { instance } or nil, cd = "place" })
 		end
 		self:CompanionCheckPlace()
 		return
@@ -3109,30 +3116,33 @@ end
 
 -- Monstre tué par le joueur : PARTY_KILL du journal de combat, ou message
 -- d'XP d'un monstre. Les deux arrivent pour la même mort : un seul compte.
-function ns:CompanionOnKill()
+-- 2.13.0 : `name` = la victime (journal de combat), quand on la connaît
+function ns:CompanionOnKill(name)
 	local rt, now = RT(), Clock()
 	if rt.lastKill and now - rt.lastKill < 2 then return false end
 	rt.lastKill = now
 	self:CompanionAdd("mood", 1)
 	self:CompanionEliteKilled()
-	return (self:CompanionSay("KILL", { cd = "kill" }))
+	if ns.Plain then name = ns.Plain(name) end
+	if type(name) ~= "string" or name == "" then name = nil end
+	return (self:CompanionSay("KILL", { cd = "kill", args = name and { name } or nil }))
 end
 
 function ns:CompanionOnCombatLog(...)
-	local subevent, sourceGUID
+	local subevent, sourceGUID, destName
 	local fn = rawget(_G, "CombatLogGetCurrentEventInfo")
 	if type(fn) == "function" then
-		local ok, _, sub, _, source = pcall(fn)
+		local ok, _, sub, _, source, _, _, _, _, dest = pcall(fn)
 		if not ok then return end
-		subevent, sourceGUID = sub, source
+		subevent, sourceGUID, destName = sub, source, dest
 	else
-		local _, sub, _, source = ...      -- très anciens clients : charge utile passée à l'événement
-		subevent, sourceGUID = sub, source
+		local _, sub, _, source, _, _, _, _, dest = ...      -- très anciens clients : charge utile passée à l'événement
+		subevent, sourceGUID, destName = sub, source, dest
 	end
 	-- filtre bon marché d'abord : cet événement tombe des dizaines de fois par seconde
 	if subevent ~= "PARTY_KILL" or not sourceGUID then return end
 	if sourceGUID ~= Call(rawget(_G, "UnitGUID"), "player") then return end
-	self:CompanionOnKill()
+	self:CompanionOnKill(destName)
 end
 
 function ns:CompanionOnCombatXP(message)

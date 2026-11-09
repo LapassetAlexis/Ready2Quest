@@ -33,6 +33,7 @@ Core.lua
 CreatureTypes.lua
 CompanionData.lua
 CompanionLines.lua
+CompanionVoices.lua
 Companion.lua
 CompanionFx.lua
 CompanionTravel.lua
