@@ -204,7 +204,7 @@ do
 	Check("[MORT] chat : rien à la mort même", Mock:Output() == "", Mock:Output())
 	D.Release({ 0.5, 0.5 }, { 0.675, 0.5 })
 	local out = Mock:Output()
-	Check("[MORT] chat : une ligne à la libération", out:find("Après la mort — Cours : 175 m, ~20 s · Guérisseur : -2 po 50 pa de réparation, 10 min de faiblesse → cours", 1, true) ~= nil, out)
+	Check("[MORT] chat : une ligne à la libération", out:find("Après la mort — Cours : 175 m, ~20 s · Guérisseur : -2 po 50 pa de réparation, 10 min de faiblesse · conseil : cours", 1, true) ~= nil, out)
 	Check("[MORT] chat : pas de fenêtre", not D.Shown())
 	Mock:Reset()
 	Mock:Advance(3)
@@ -233,7 +233,7 @@ do
 	Check("[MORT] chaque clé dans les deux langues", #missing == 0, table.concat(missing, ","))
 	Check("[MORT] anglais : yards", string.format(S.en.DEATH_RUN_SHORT, 175, "20 s") == "175 yd, ~20 s")
 	Check("[MORT] anglais : ligne de chat", string.format(S.en.DEATH_CHAT, "175 yd, ~20 s", "-2g 50s in repairs, 10 min of sickness", "run")
-		== "After death — Run: 175 yd, ~20 s · Healer: -2g 50s in repairs, 10 min of sickness → run")
+		== "After death — Run: 175 yd, ~20 s · Healer: -2g 50s in repairs, 10 min of sickness · advice: run")
 	Check("[MORT] anglais : inconnue", S.en.DEATH_RUN_UNKNOWN == "distance unknown")
 	Check("[MORT] page de réglages : sous-titre", NS.L.OPT_PAGE_DEATH_SUB ~= "OPT_PAGE_DEATH_SUB")
 end

@@ -312,9 +312,10 @@ Theme.F_CAPS    = Theme.fonts.CAPS.name
 Theme.F_NUMBER  = Theme.fonts.NUMBER.name
 -- ancien nom (GameFontHighlight) : texte courant
 Theme.F_NORMAL  = Theme.F_BODY
--- socle 2.11.0 : vraie flèche « → » si Inter est chargée (la police du jeu
--- de repli ne l'a pas : « -> »)
-Theme.ARROW = (Theme.fonts.BODY and Theme.fonts.BODY.inter) and "→" or "->"
+-- socle 2.11.0 : vraie flèche « → » si Inter est chargée ; socle 1.32.2 :
+-- la police réellement utilisée n'a pas toujours la flèche (carré « glyphe
+-- manquant » en jeu). Toujours de l'ASCII ; dans une phrase, préférer des mots.
+Theme.ARROW = "->"
 
 local function Clamp(value, minimum, maximum)
 	if value < minimum then return minimum end

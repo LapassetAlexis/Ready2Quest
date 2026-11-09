@@ -203,6 +203,108 @@ local function SelfOnly(family)
 end
 ns.BuffSelfOnly = SelfOnly
 
+-- ---------------------------------------------------------------------------
+-- 1.32.2 : réclamé par défaut, ou à activer. On réclamait « Force » (un
+-- parchemin) et « Fureur vertueuse » (la posture de tank du paladin). Règle :
+--   * buff de classe (BuffClass) : réclamé par défaut (puis BuffAvailability
+--     dit si ta classe ou ton groupe peut le donner) ;
+--   * posture du moment (TOGGLE_*) : Fureur vertueuse, camouflage, formes,
+--     aspects, sceaux, auras de paladin, présences, postures… : pas par défaut ;
+--   * consommable (CONSUMABLE_*) : parchemins, élixirs, flacons, potions…, ou
+--     buff que tu t'es posé sans connaître le sort (il vient d'un objet) : pas
+--     par défaut ;
+--   * le reste (objets, auras de monde…) : pas par défaut.
+-- Le joueur active ou coupe n'importe lequel dans la liste des buffs
+-- (entry.userSet : son choix l'emporte sur la règle).
+-- ---------------------------------------------------------------------------
+local TOGGLE_GROUPS = {
+	["druid-form"] = true, ["hunter-aspect"] = true, ["seal"] = true, ["paladin-aura"] = true,
+}
+local TOGGLE_NAMES = {}
+for _, name in ipairs({ "fureur vertueuse", "righteous fury", "camouflage", "stealth", "rôder", "prowl",
+	"forme d'ombre", "shadowform", "loup fantôme", "ghost wolf", "posture de combat", "posture défensive",
+	"posture berserker", "battle stance", "defensive stance", "berserker stance", "présence de sang",
+	"présence de givre", "présence impie", "blood presence", "frost presence", "unholy presence",
+	"forme de voyage", "travel form", "forme aquatique", "aquatic form" }) do
+	TOGGLE_NAMES[name] = true
+end
+-- Noms exacts (BuffFamily) des buffs de parchemins et d'élixirs courants
+local CONSUMABLE_NAMES = {}
+for _, name in ipairs({ "force", "strength", "agilité", "agility", "intelligence", "intellect", "esprit", "spirit",
+	"endurance", "stamina", "protection", "armure", "armor", "agilité supérieure", "greater agility",
+	"intelligence supérieure", "greater intellect", "armure supérieure", "greater armor", "santé ii", "health ii",
+	"rage des âges", "rage of ages", "frappe du scorpok", "strike of the scorpok", "esprit de zanza",
+	"spirit of zanza", "don d'arthas", "gift of arthas", "eau-de-feu de grumegueule", "winterfall firewater" }) do
+	CONSUMABLE_NAMES[name] = true
+end
+-- (ns.AsciiLower ne baisse pas « É » : les deux formes)
+local CONSUMABLE_PREFIXES = { "élixir", "Élixir", "elixir", "flacon", "flask", "potion", "philtre", "juju", "parchemin", "scroll" }
+
+local function IsToggle(family)
+	if type(family) ~= "string" then return false end
+	if TOGGLE_NAMES[family] then return true end
+	local group = ExclusiveGroup(family)
+	return group ~= nil and TOGGLE_GROUPS[group] == true
+end
+ns.BuffIsToggle = IsToggle
+
+local function IsConsumableName(family)
+	if type(family) ~= "string" then return false end
+	if CONSUMABLE_NAMES[family] then return true end
+	for _, prefix in ipairs(CONSUMABLE_PREFIXES) do
+		if family:sub(1, #prefix) == prefix then return true end
+	end
+	return false
+end
+
+-- Nature d'un buff suivi : "class", "toggle", "consumable" ou "other"
+local KnowsSpell
+local function BuffKind(spellId, entry)
+	local family = BuffFamily(type(entry) == "table" and entry.name)
+	if IsToggle(family) then return "toggle" end
+	if IsConsumableName(family) then return "consumable" end
+	if BuffClass(family) then return "class" end
+	-- posé par toi, sans que tu connaisses le sort : il vient d'un objet
+	if type(entry) == "table" and entry.self == true and KnowsSpell and not KnowsSpell(spellId) then
+		return "consumable"
+	end
+	return "other"
+end
+ns.BuffKind = BuffKind
+
+-- Réclamé ? Le choix du joueur, sinon la règle (buffs de classe seulement)
+local function BuffEnabled(entry, spellId)
+	if type(entry) ~= "table" then return false end
+	if entry.userSet then return entry.enabled ~= false end
+	return BuffKind(spellId, entry) == "class"
+end
+ns.BuffEnabled = BuffEnabled
+
+-- Le joueur bascule un buff : son choix est retenu
+function ns:BuffToggle(spellId)
+	local entry = self:DB().buffs[spellId]
+	if not entry then return nil end
+	entry.enabled = not BuffEnabled(entry, spellId)
+	entry.userSet = true
+	return entry.enabled
+end
+
+-- Migration (schéma 2, 1.32.2) : jusqu'ici, tout buff appris était réclamé
+-- (enabled = true) et seul « coupé » (enabled = false) venait du joueur.
+-- Coupé : choix gardé ; le reste suit la nouvelle règle.
+local BUFFS_SCHEMA = 2
+function ns:MigrateBuffs(db)
+	db = db or self:DB()
+	if (tonumber(db.buffsSchema) or 1) >= BUFFS_SCHEMA then return false end
+	for _, entry in pairs(type(db.buffs) == "table" and db.buffs or {}) do
+		if type(entry) == "table" and not entry.userSet then
+			if entry.enabled == false then entry.userSet = true else entry.enabled = nil end
+		end
+	end
+	db.buffsSchema = BUFFS_SCHEMA
+	return true
+end
+
 -- Un buff suivi qui n'a pas été vu depuis 7 jours n'est plus réclamé : buff
 -- mondial ponctuel, ancien groupe, talent abandonné…
 local FORGET_AFTER = 7 * 24 * 3600
@@ -240,12 +342,13 @@ end
 -- Liste triée des buffs suivis (utilisée par /sd buffs et /sd buff <n>)
 function ns:TrackedBuffs()
 	local db = self:DB()
+	self:MigrateBuffs(db)
 	local list = {}
 	for spellId, entry in pairs(db.buffs) do
 		list[#list + 1] = {
 			spellId = spellId,
 			name    = entry.name,
-			enabled = entry.enabled ~= false,
+			enabled = BuffEnabled(entry, spellId),
 			entry   = entry,
 		}
 	end
@@ -298,8 +401,7 @@ function ns:ScanBuffs()
 			db.buffs[spellId] = {
 				name     = tostring(aura.name or ("spell:" .. spellId)),
 				duration = duration,
-				enabled  = true,
-				learned  = true,
+				learned  = true,     -- 1.32.2 : réclamé selon BuffEnabled
 				lastSeen = stamp,
 			}
 			ns.BuffNoteCaster(db.buffs[spellId], aura)
@@ -360,7 +462,7 @@ function ns:BuffGroupClasses()
 	return classes, n > 1, others
 end
 
-local function KnowsSpell(spellId)
+function KnowsSpell(spellId)
 	for _, name in ipairs({ "IsPlayerSpell", "IsSpellKnown" }) do
 		local fn = rawget(_G, name)
 		if type(fn) == "function" then
@@ -464,6 +566,7 @@ end
 -- Retourne : manquants (table), suivis (nombre), illisibles (nombre)
 function ns:EvaluateBuffs()
 	local db = self:DB()
+	self:MigrateBuffs(db)
 	local missing, unknown, watched = {}, 0, 0
 	local now = WallClock()
 	local hasByID = C_UnitAuras and type(C_UnitAuras.GetPlayerAuraBySpellID) == "function"
@@ -475,7 +578,7 @@ function ns:EvaluateBuffs()
 	-- le paladin pose d'habitude), pas la première trouvée au hasard.
 	local groupPick = {}
 	for spellId, entry in pairs(db.buffs) do
-		local group = entry.enabled ~= false and ExclusiveGroup(BuffFamily(entry.name))
+		local group = BuffEnabled(entry, spellId) and ExclusiveGroup(BuffFamily(entry.name))
 		if group then
 			local best = groupPick[group]
 			local seenAt = type(entry.lastSeen) == "number" and entry.lastSeen or 0
@@ -496,7 +599,7 @@ function ns:EvaluateBuffs()
 		end
 		local stale = now and entry.learned and type(entry.lastSeen) == "number"
 			and (now - entry.lastSeen) > FORGET_AFTER
-		if entry.enabled ~= false and not skip and not stale and not seen[family]
+		if BuffEnabled(entry, spellId) and not skip and not stale and not seen[family]
 			and self:BuffAvailable(spellId, entry, classes, grouped, others) then
 			seen[family] = true
 			watched = watched + 1

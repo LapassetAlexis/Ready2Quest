@@ -10,6 +10,9 @@
 --     de quête, de clé, de pierre de foyer, de composant de classe ou de
 --     recette suivie, ni de dernière nourriture ; la liste « toujours garder »
 --     est celle de [Ignorer] ;
+--   * 1.32.2 : ni outil de métier, ni objet de camp, ni composant d'un
+--     métier connu, ni recette, caisse ou bandage (LootRoomKeepReason) ; la
+--     liste entière défile à la molette ;
 --   * un objet qui vaut plus que le butin reste proposé, mais en gris ;
 --   * confirmation (réglable) pour un objet vert ou mieux : un clic de trop
 --     dans un combat de butin arrive vite. Gris et blancs partent au clic.
@@ -44,6 +47,7 @@ local FR = {
 	LOOTROOM_BTN_DELETE    = "Jeter",
 	LOOTROOM_BTN_IGNORE    = "Ignorer",
 	LOOTROOM_HINT          = "Jeter : détruit l'objet et ramasse le butin. Ignorer : ne plus jamais le proposer.",
+	LOOTROOM_HINT_SCROLL   = "Molette : objets %d à %d sur %d. Jeter détruit, Ignorer ne propose plus.",
 	LOOTROOM_CONFIRM       = "Détruire %s ×%d ?\nC'est définitif.",
 	LOOTROOM_YES           = "Détruire",
 	LOOTROOM_NO            = "Annuler",
@@ -70,6 +74,7 @@ local EN = {
 	LOOTROOM_BTN_DELETE    = "Drop",
 	LOOTROOM_BTN_IGNORE    = "Ignore",
 	LOOTROOM_HINT          = "Drop: destroys the item and picks up the loot. Ignore: never offer it again.",
+	LOOTROOM_HINT_SCROLL   = "Wheel: items %d to %d of %d. Drop destroys, Ignore never offers again.",
 	LOOTROOM_CONFIRM       = "Destroy %s ×%d?\nThis cannot be undone.",
 	LOOTROOM_YES           = "Destroy",
 	LOOTROOM_NO            = "Cancel",
@@ -209,17 +214,128 @@ function ns:LootRoomLoot()
 	return list
 end
 
--- Les objets des sacs à proposer, les moins chers d'abord (choix de Sac plein)
+-- ---------------------------------------------------------------------------
+-- 1.32.2 : objets jamais proposés. « Sac plein » proposait des outils de
+-- métier, des objets de camp, des composants : tout ce que le joueur garde.
+-- Règles par données, dans l'ordre (la première qui protège l'emporte) :
+--   1. outils de métier (pioche, marteau, couteau à dépecer, canne à pêche,
+--      clé plate, bâtonnets runiques…) : par numéro, puis par nom FR/EN ;
+--   2. objets de camp Forever : kits de feu de camp et objets de camp
+--      (Camp.lua, ns.CAMP_DATA) ;
+--   3. composants : classe « Composant » (5) toujours ; « Artisanat » (7)
+--      si le personnage connaît un métier qui s'en sert (sous-classe →
+--      métiers ; sous-classe générique : n'importe quel métier ; fenêtre de
+--      compétences illisible : protégé par prudence) ;
+--   4. recettes (9), objets de quête (12) et clés (13) ;
+--   5. objets qui s'ouvrent (caisse, coffret : « hasLoot » du sac, ou le nom) ;
+--   6. consommables dont les vérifications ont besoin : bandages et
+--      trousses de soins (la dernière nourriture reste gardée par Sac plein).
+-- Un objet de la liste « toujours jeter » de Sac plein passe quand même.
+-- ---------------------------------------------------------------------------
+local KEEP_TOOLS = {
+	[2901] = true, [756] = true, [778] = true, [1819] = true, [1959] = true, [9465] = true, [20723] = true,  -- pioches
+	[5956] = true,                                                                                       -- marteau de forgeron
+	[7005] = true, [12709] = true, [19901] = true,                                                       -- couteaux à dépecer
+	[6256] = true, [6365] = true, [6366] = true, [6367] = true, [12225] = true, [19022] = true, [19970] = true, -- cannes à pêche
+	[6219] = true, [10498] = true,                                                                       -- clé plate, micro-ajusteur
+	[6218] = true, [6339] = true, [11130] = true, [11145] = true, [16207] = true,                         -- bâtonnets runiques
+	[9149] = true, [4471] = true,                                                                        -- pierre philosophale, briquet
+}
+-- repli par nom (objets Forever aux numéros inconnus), minuscules (ns.AsciiLower)
+local KEEP_TOOL_NAMES = { "pioche de mineur", "mining pick", "marteau de forgeron", "blacksmith hammer",
+	"couteau à dépecer", "skinning knife", "canne à pêche", "fishing pole", "clé plate", "arclight spanner",
+	"bâtonnet runique", "runed copper rod", "runed silver rod", "runed golden rod", "runed truesilver rod",
+	"runed arcanite rod" }
+local CLASS_CONSUMABLE, CLASS_REAGENT, CLASS_TRADEGOODS, CLASS_RECIPE, CLASS_QUEST, CLASS_KEY = 0, 5, 7, 9, 12, 13
+local SUBCLASS_BANDAGE = 7
+-- Artisanat : sous-classe → métiers qui s'en servent (numéros de compétence)
+local TRADE_SKILLS = {
+	[1] = { 202 }, [2] = { 202 }, [3] = { 202 },              -- pièces, explosifs, appareils : ingénierie
+	[5] = { 197, 129 },                                       -- tissu : couture, secourisme
+	[6] = { 165 },                                            -- cuir : travail du cuir
+	[7] = { 164, 202, 186 },                                  -- métal et pierre : forge, ingénierie, minage
+	[8] = { 185 },                                            -- viande : cuisine
+	[9] = { 171, 182 },                                       -- herbes : alchimie, herboristerie
+	[10] = { 164, 165, 197, 171, 202, 333 },                  -- élémentaire
+	[12] = { 333 },                                           -- enchantement
+}
+local OPENABLE_NAMES = { "caisse", "crate", "coffret", "lockbox", "sacoche de", "satchel" }
+local CARE_NAMES = { "bandage", "trousse de premiers soins", "first aid kit", "trousse de soins" }
+
+local function NameHas(name, words)
+	if type(name) ~= "string" then return false end
+	local low = ns.AsciiLower(name)
+	for _, word in ipairs(words) do
+		if low:find(word, 1, true) then return true end
+	end
+	return false
+end
+
+local function ItemKind(itemID)
+	local fn = (C_Item and C_Item.GetItemInfoInstant) or Global("GetItemInfoInstant")
+	local _, _, _, _, _, classID, subClassID = Call(fn, itemID)
+	return tonumber(classID), tonumber(subClassID)
+end
+
+-- Contexte d'un passage : métiers connus, objets de camp
+function ns:LootRoomKeepContext()
+	local ctx = { camp = {}, skills = {}, anySkill = false, skillsKnown = false }
+	local data = ns.CAMP_DATA or {}
+	for _, list in ipairs({ data.kits or {}, data.objects or {} }) do
+		for _, entry in ipairs(list) do ctx.camp[entry.item] = true end
+	end
+	if self.CampSkillRanks then
+		local ranks, readable = self:CampSkillRanks()
+		ctx.skillsKnown = readable == true
+		for skill in pairs(ranks or {}) do ctx.skills[skill] = true; ctx.anySkill = true end
+	end
+	return ctx
+end
+
+-- Pourquoi garder cet objet ("tool", "camp", "trade", "recipe", "quest",
+-- "open", "care"), ou nil s'il peut être proposé
+function ns:LootRoomKeepReason(candidate, ctx)
+	ctx = ctx or self:LootRoomKeepContext()
+	local itemID = candidate.itemID
+	local name = ns.ItemInfo(itemID)
+	if type(name) ~= "string" and type(candidate.link) == "string" then name = candidate.link:match("%[(.-)%]") end
+	if KEEP_TOOLS[itemID] or NameHas(name, KEEP_TOOL_NAMES) then return "tool" end
+	if ctx.camp[itemID] then return "camp" end
+	local classID, subClassID = ItemKind(itemID)
+	if classID == CLASS_REAGENT then return "trade" end
+	if classID == CLASS_TRADEGOODS then
+		if not ctx.skillsKnown then return "trade" end
+		local skills = TRADE_SKILLS[subClassID or 0]
+		if not skills then
+			if ctx.anySkill then return "trade" end
+		else
+			for _, skill in ipairs(skills) do
+				if ctx.skills[skill] then return "trade" end
+			end
+		end
+	end
+	if classID == CLASS_RECIPE then return "recipe" end
+	if classID == CLASS_QUEST or classID == CLASS_KEY then return "quest" end
+	local info = Call(ContainerFn("GetContainerItemInfo"), candidate.bag, candidate.slot)
+	if (type(info) == "table" and info.hasLoot == true) or NameHas(name, OPENABLE_NAMES) then return "open" end
+	if (classID == CLASS_CONSUMABLE and subClassID == SUBCLASS_BANDAGE) or NameHas(name, CARE_NAMES) then return "care" end
+	return nil
+end
+
+-- Les objets des sacs à proposer, les moins chers d'abord (choix de Sac plein).
+-- 1.32.2 : tous les candidats (la fenêtre défile), objets gardés exclus.
 function ns:LootRoomRows(target)
 	local rows = {}
 	if not self.BagSpaceCandidates then return rows end
+	local ctx = self:LootRoomKeepContext()
 	for _, candidate in ipairs(self:BagSpaceCandidates()) do
-		if #rows >= ns.LOOTROOM_ROWS then break end
-		local auction = self:LootRoomAuction(candidate.link, candidate.count)
-		local value = math.max(candidate.value or 0, auction or 0)
-		rows[#rows + 1] = { bag = candidate.bag, slot = candidate.slot, itemID = candidate.itemID, link = candidate.link,
-			count = candidate.count, quality = candidate.quality, vendor = candidate.value or 0, auction = auction,
-			value = value, dearer = target ~= nil and not target.quest and value >= target.value }
+		if candidate.forced or not self:LootRoomKeepReason(candidate, ctx) then
+			local auction = self:LootRoomAuction(candidate.link, candidate.count)
+			local value = math.max(candidate.value or 0, auction or 0)
+			rows[#rows + 1] = { bag = candidate.bag, slot = candidate.slot, itemID = candidate.itemID, link = candidate.link,
+				count = candidate.count, quality = candidate.quality, vendor = candidate.value or 0, auction = auction,
+				value = value, dearer = target ~= nil and not target.quest and value >= target.value }
+		end
 	end
 	return rows
 end
@@ -359,9 +475,25 @@ function ns:EnsureLootRoom()
 			if data then Tooltip(h, data.link, data.dearer and L.LOOTROOM_DEARER or nil) end
 		end)
 		row.tipZone:SetScript("OnLeave", HideTip)
+		-- 1.32.2 : la molette fait défiler la liste, où que soit la souris
+		for _, part in ipairs({ row, row.tipZone }) do
+			if part.EnableMouseWheel then part:EnableMouseWheel(true) end
+			part:SetScript("OnMouseWheel", function(_, delta) ns:LootRoomScroll(delta) end)
+		end
 		row:Hide()
 		frame.rows[index] = row
 	end
+	if frame.EnableMouseWheel then frame:EnableMouseWheel(true) end
+	frame:SetScript("OnMouseWheel", function(_, delta) ns:LootRoomScroll(delta) end)
+	-- 1.32.2 : glissière dans la marge droite (fond de ligne, curseur or)
+	frame.track = Theme.Solid(frame, "ARTWORK", Theme.ROW, 1)
+	frame.track:SetPoint("TOPLEFT", frame, "TOPLEFT", pad + inner + 3, rowsTop)
+	frame.track:SetSize(3, ns.LOOTROOM_ROWS * ROW_H - (ROW_H - ROW_CARD))
+	frame.thumb = Theme.Solid(frame, "OVERLAY", Theme.GOLD, 1)
+	frame.thumb:SetWidth(3)
+	frame.rowsTop = rowsTop
+	frame.track:Hide()
+	frame.thumb:Hide()
 	frame.empty = Theme.Text(frame, Theme.F_BODY, Theme.MUTED_LIGHT)
 	frame.empty:SetPoint("TOPLEFT", frame, "TOPLEFT", pad + 12, rowsTop - 6)
 	frame.empty:SetWidth(inner - 24)
@@ -393,8 +525,13 @@ function ns:LootRoomRefresh()
 		frame.target:SetText(L.LOOTROOM_NO_TARGET)
 		frame.targetIcon:Hide()
 	end
+	-- 1.32.2 : fenêtre de ns.LOOTROOM_ROWS lignes sur la liste entière
+	local visible = ns.LOOTROOM_ROWS
+	local offset = math.max(0, math.min(tonumber(self.lootRoomOffset) or 0, #rows - visible))
+	self.lootRoomOffset = offset
+	self.lootRoom.offset = offset
 	for index, row in ipairs(frame.rows) do
-		local data = rows[index]
+		local data = rows[offset + index]
 		row.data = data
 		if data then
 			local item = ItemData(data.itemID) or {}
@@ -412,9 +549,30 @@ function ns:LootRoomRefresh()
 		end
 	end
 	frame.empty:SetText(#rows == 0 and L.LOOTROOM_EMPTY or "")
+	local scrollable = #rows > visible
+	if scrollable then
+		frame.hint:SetText(self:F("LOOTROOM_HINT_SCROLL", offset + 1, offset + visible, #rows))
+		local trackH = visible * ROW_H - (ROW_H - ROW_CARD)
+		local thumbH = math.max(12, trackH * visible / #rows)
+		frame.thumb:SetHeight(thumbH)
+		frame.thumb:ClearAllPoints()
+		frame.thumb:SetPoint("TOPLEFT", frame.track, "TOPLEFT", 0, -(trackH - thumbH) * offset / (#rows - visible))
+		frame.track:Show()
+		frame.thumb:Show()
+	else
+		frame.hint:SetText(L.LOOTROOM_HINT)
+		frame.track:Hide()
+		frame.thumb:Hide()
+	end
 	-- la fenêtre suit la liste : pas de cartes vides sous la dernière
 	frame:SetHeight(LootRoomHeight(math.min(#rows, ns.LOOTROOM_ROWS)))
 	return self.lootRoom
+end
+
+-- 1.32.2 : défilement d'une ligne par cran de molette
+function ns:LootRoomScroll(delta)
+	self.lootRoomOffset = (tonumber(self.lootRoomOffset) or 0) - (tonumber(delta) or 0)
+	return self:LootRoomRefresh()
 end
 
 -- Ouvre la fenêtre ; `manual` : même sans butin bloqué
@@ -423,6 +581,7 @@ function ns:LootRoomOpen(manual)
 	local frame = self:EnsureLootRoom()
 	if not frame then return nil end
 	if not manual and #self:LootRoomLoot() == 0 then return nil end
+	if not frame:IsShown() then self.lootRoomOffset = 0 end
 	frame:Show()
 	self:LootRoomRefresh()
 	return frame

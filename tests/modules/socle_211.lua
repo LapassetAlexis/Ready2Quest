@@ -364,7 +364,8 @@ do
 		end
 	end
 	Check("[S211] lignes du Check : ni « (s) » ni « -> », chaque _ONE a son _MANY", #bad == 0, table.concat(bad, ", "))
-	Check("[S211] flèche : « → » si Inter, sinon « -> »", Theme.ARROW == (Theme.fonts.BODY.inter and "→" or "->"))
+	-- 1.32.2 : flèche toujours en ASCII (glyphe absent de la police en jeu)
+	Check("[S211] flèche : ASCII « -> »", Theme.ARROW == "->")
 end
 
 -- 8. « Avant le départ » hiérarchisé (n° 16, R2Q 1.32.0) ----------------------------------------------------
