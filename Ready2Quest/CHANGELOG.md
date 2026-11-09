@@ -1,5 +1,15 @@
 # Journal des modifications
 
+## 1.31.0
+
+- **Aggro : nouveau mode « Danger seul », par défaut.** Sans toucher au clavier, seule la marque rouge s'affiche quand un monstre est sur le point de t'aggro ; Maj montre tout. Si tu étais réglé sur Maj, tu passes une fois à « Danger seul » (Maj reste disponible dans les réglages). Les barres de nom ennemies doivent être affichées (touche V).
+- **Le rouge s'allume plus tôt** : on prévient dès que tu peux être à moins de 5 m de la portée, d'après les distances que le jeu sait mesurer sur Forever. `/r2q diag` liste les paliers de distance qui répondent.
+- **Buffs** : un buff personnel d'une autre classe (Feu intérieur, armures, boucliers…) ou un sort non appris n'est plus réclamé ; les réglages disent pourquoi un buff n'est pas réclamé ici.
+- **Avant le départ** : plus de texte coupé, le survol montre le texte entier et la liste complète des buffs manquants ; « Rangs de sorts » remplace « Sorts des barres à jour ».
+- **Plus léger** : auras et statistiques du joueur seul écoutées, lieu sûr gardé sans recalcul.
+
+*English:* aggro: new default "Danger only" mode — without any key only the red mark shows when a monster is about to aggro you, Shift shows everything (Shift users are moved once; enemy nameplates must be on, V); red lights up earlier, based on the distances the game can measure on Forever, and `/r2q diag` lists the answering range steps; another class's self-buffs and unlearned spells are no longer asked, the settings say why; before leaving: no more cut text, hover shows full text and every missing buff; lighter event handling.
+
 ## 1.30.1
 
 - **Buffs selon la classe qui les donne** : une table des buffs de chaque classe (paladin, prêtre, mage, druide, guerrier, démoniste, chaman, chasseur) ; un buff de classe n'est réclamé que si ta classe ou une classe de ton groupe le pose. Les autres (élixirs, parchemins, objets) seulement sur le personnage qui les a eus : un autre personnage ne se voit plus réclamer la bénédiction de ton paladin.

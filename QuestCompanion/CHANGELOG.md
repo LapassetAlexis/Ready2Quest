@@ -1,5 +1,16 @@
 # QuestCompanion
 
+## 2.10.0 — un compagnon discret en combat, des captures qui attendent la fin du combat
+
+- **Compagnon discret en combat** : plus de bulles pendant un pack (sauf brillante ou rare repéré), il s'estompe et te résume le combat après. Option pour le masquer en donjon et en raid. L'alerte « plusieurs monstres sur toi » a son réglage (par défaut : seul, hors instance).
+- **Raccourcis** : afficher / masquer le compagnon, lancer le filet (menu Raccourcis du jeu) ; `/qc compagnon cacher|montrer`. Le compagnon se déplace désormais avec Alt + glisser (réglable : libre, Alt, verrouillé).
+- **Filet** : il ne se lance plus en combat (un message, l'infobulle dit « Après le combat ») ; une scène de capture ou « Tout capturer » se ferme dès l'aggro, le verdict arrive dans le chat. Dans la liste du filet, une croix pour ne plus proposer une espèce (sauf en brillante), « Tout reproposer » dans Au jour le jour.
+- **Suivi à l'écran** : masquer une mission ne vaut que pour elle, ce jour-là ; le titre compte les objectifs masqués, un clic droit sur le titre (ou le bouton des réglages) les réaffiche ; un clic sur une ligne mène à sa page sans refermer le carnet ; noms de zone en entier.
+- **Échap** ferme toujours le carnet et la fiche de dresseur, quel que soit le style.
+- **Plus léger** : auras du joueur seul écoutées, messages de butin et d'XP lus sans déchets, conseils examinés une fois par rafale, molette du carnet qui ne recalcule plus toute la page, moins de travail en combat.
+
+*English:* the companion keeps quiet in combat (no bubbles except a shiny or rare spotted, fades, sums up the fight afterwards), option to hide it in dungeons and raids, a setting for the "several monsters on you" alert; key bindings to show/hide the companion and throw the net, `/qc companion hide|show`, Alt + drag to move (free/Alt/locked); the net no longer fires in combat and capture scenes close on aggro (result in chat); a cross in the net list to stop offering a species; tracker: hiding a mission only hides it that day, right-click the title to show hidden goals again, clicking a line opens its page; Escape always closes the journal and trainer card; lighter: player-only aura events, garbage-free loot/XP parsing, batched advice checks, journal scrolling without full recompute.
+
 ## 2.9.1 — page Missions refaite, retours sur la 2.9
 
 - **Page Missions refaite** : une bande résumé en haut (compagnon, jour, semaine, avec leurs pastilles et le bonus des 3), chaque mission en carte avec l'icône de son type, sa zone, une vraie barre et ses récompenses en icônes ; une mission faite porte un tampon « ✓ Faite » ; « Changer » devient un petit bouton ↻ ; les bonus des 3 missions dans un encart ; carte d'auberge, garde-manger et besace plus compacts.
