@@ -80,6 +80,9 @@ ns.AZEROTH_LAYOUT = {
 	infoY = -16, hintY = -32, rowH = 18, rowBottom = 7,
 	titleY = -28, titleW = 252, nameY = -50, nameW = 260, nameWide = 290, starsY = -82,
 	nameMax = 20, nameMin = 11, titleMax = 12, titleMin = 9,
+	-- 2.11.1 : bandeau de guilde, nom sur deux lignes au besoin (en dessous
+	-- de nameWrap px sur une ligne) ; nom et sous-ligne remontés/descendus
+	nameWrap = 15, nameY2 = -43, starsY2 = -84, subMax = 12, subMin = 9,
 }
 -- 2.9.0 : tailles des boucliers (même rapport que l'atlas, 63×56) : bandeau
 -- de verdict des scènes, lignes du carnet des hauts faits
@@ -550,6 +553,30 @@ function ns.AzerothFit(fs, width, maxSize, minSize)
 	return size, Measure(fs) <= width
 end
 
+-- 2.11.1 : comme AzerothFit, mais un texte qui ne tient sur une ligne
+-- qu'en dessous de `wrapSize` passe sur `lines` lignes (coupure aux mots du
+-- client), la police rapetissée jusqu'à ce que le total tienne (marge de
+-- 10 % pour les coupures). Rend la taille, si le texte tient, et le nombre
+-- de lignes.
+function ns.AzerothFitWrap(fs, width, maxSize, wrapSize, minSize, lines)
+	if not fs then return nil end
+	lines = lines or 2
+	if fs.SetMaxLines then pcall(fs.SetMaxLines, fs, 1) end
+	local size, fits = ns.AzerothFit(fs, width, maxSize, wrapSize)
+	if fits then fs.fitLines = 1; return size, true, 1 end
+	size = wrapSize
+	while true do
+		AzFont(fs, size)
+		if Measure(fs) <= width * lines * 0.9 or size <= minSize then break end
+		size = size - 1
+	end
+	fs:SetWidth(width)
+	if fs.SetWordWrap then fs:SetWordWrap(true) end
+	if fs.SetMaxLines then pcall(fs.SetMaxLines, fs, lines) end
+	fs.fitSize, fs.fitLines = size, lines
+	return size, Measure(fs) <= width * lines * 0.9, lines
+end
+
 -- L'apparition : éclosion (0,6 → 1,05 → 1), lueur, reflet qui traverse le
 -- bandeau, éclat sur le bouclier. Une horloge OnUpdate le temps de
 -- l'animation (2,4 s), retirée ensuite ; rien d'alloué à chaque image.
@@ -775,9 +802,21 @@ function ns:AzerothCreateBanner(opts)
 
 	function frame:SetAccent(color) self.accentColor = color end
 	function frame:SetShield(kind) self.shieldKind = ns.AzerothShield(self.shield, kind) end
+	frame.wrapName = opts.guild and true or nil
 	function frame:Fit()
 		ns.AzerothFit(self.title, LAY.titleW, LAY.titleMax, LAY.titleMin)
-		return ns.AzerothFit(self.text, self.nameWidth, LAY.nameMax, LAY.nameMin)
+		if not self.wrapName then return ns.AzerothFit(self.text, self.nameWidth, LAY.nameMax, LAY.nameMin) end
+		-- 2.11.1 : bandeau de guilde (« Dresseur confirmé Dyokrion… a
+		-- capturé… » était coupé) : la ligne passe sur deux lignes, remontée,
+		-- la sous-ligne descendue et ajustée à sa largeur
+		local size, fits, lines = ns.AzerothFitWrap(self.text, self.nameWidth, LAY.nameMax, LAY.nameWrap, LAY.nameMin, 2)
+		local two = lines == 2
+		self.text:ClearAllPoints()
+		self.text:SetPoint("TOP", self.banner, "TOP", 10, two and LAY.nameY2 or LAY.nameY)
+		self.stars:ClearAllPoints()
+		self.stars:SetPoint("TOP", self.banner, "TOP", 10, two and LAY.starsY2 or LAY.starsY)
+		ns.AzerothFit(self.stars, self.nameWidth, LAY.subMax, LAY.subMin)
+		return size, fits
 	end
 	function frame:Play(o) return Play(self, o) end
 	frame:Hide()

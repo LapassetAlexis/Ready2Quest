@@ -1314,7 +1314,16 @@ function ns:CompanionApplyContext()
 		self.companionFrame:SetAlpha(alpha)
 		-- B7 (2.11.0) : le modèle 3D ne suit pas l'alpha du cadre ; estompé
 		-- aussi (SetModelAlpha), rendu à 1 en fin de combat
-		if self.companionFrame.model then ns.ModelSetAlpha(self.companionFrame.model, alpha) end
+		local model = self.companionFrame.model
+		if model then
+			ns.ModelSetAlpha(model, alpha)
+			-- 2.11.1 : revenu à 1 après une estompe : modèle rechargé (rendu
+			-- opaque et lumière neufs ; hors combat, rien de protégé)
+			if model.alphaDirty then
+				model.alphaDirty, model.modelKey = nil, nil
+				self:CompanionApplyModel()
+			end
+		end
 	end
 	if net then net:SetAlpha(alpha) end
 	return alpha
@@ -1789,12 +1798,22 @@ end
 -- Opacité du modèle (B7, 2.11.0) : un PlayerModel ne suit pas l'alpha de son
 -- cadre ; SetModelAlpha l'estompe vraiment. Gardée sur le modèle et reposée
 -- avec le cadrage (un rechargement la remet à 1).
+-- 2.11.1 : SetModelAlpha n'est appelé que si l'opacité change. En 2.11.0,
+-- chaque affichage du compagnon posait SetModelAlpha(1) et une estompe de
+-- combat laissait le modèle dans le rendu translucide du client : créature
+-- sombre, presque noire sur le fond du cadre. Revenu à 1, le modèle est
+-- rechargé (model.alphaDirty, voir CompanionApplyContext) : rendu et lumière
+-- neufs.
 function ns.ModelSetAlpha(model, alpha)
 	if not model then return nil end
 	alpha = tonumber(alpha) or 1
 	model.contextAlpha = alpha
+	local was = model.appliedAlpha or 1
+	if alpha == was then return alpha end
 	local done = ModelCall(model, "SetModelAlpha", alpha)
 	if not done then ModelCall(model, "SetAlpha", alpha) end
+	model.appliedAlpha = alpha
+	if alpha >= 1 and was < 1 then model.alphaDirty = true end
 	return alpha
 end
 
@@ -1808,13 +1827,21 @@ function ns.ShowModel(model, opts, profile)
 	local zoom = tonumber(opts.zoom) or p.zoom or 0
 	if not opts.display then zoom = 0 end        -- créature sauvage : jamais de zoom « tête »
 	local cam = tonumber(opts.cam) or p.cam or 1
-	local scale, y = opts.scale, p.y or 0
+	local scale, y = opts.scale, tonumber(opts.y) or p.y or 0
+	model.lightShiny = opts.shiny and true or false
 	model.framing = function(m)
 		if scale then ModelCall(m, "SetModelScale", scale) end
 		ModelCall(m, "SetCamDistanceScale", cam)
 		ModelCall(m, "SetPortraitZoom", zoom)
 		ModelCall(m, "SetPosition", 0, 0, y)
-		if m.contextAlpha and m.contextAlpha < 1 then ModelCall(m, "SetModelAlpha", m.contextAlpha) end
+		if m.contextAlpha and m.contextAlpha < 1 then
+			ModelCall(m, "SetModelAlpha", m.contextAlpha)
+			m.appliedAlpha = m.contextAlpha
+		end
+		-- 2.11.1 : la lumière est reposée avec la caméra (un réglage posé
+		-- avant la fin du chargement est perdu : modèle sans lumière, noir)
+		m.shinyLit = nil
+		ns.ModelShinyLight(m, m.lightShiny)
 	end
 	model.framingZoom, model.framingCam, model.modelProfile = zoom, cam, profile or "stage"
 	ns.ModelKeepFraming(model)
@@ -1829,9 +1856,10 @@ function ns.ShowModel(model, opts, profile)
 	if opts.display then shown = ModelCall(model, "SetDisplayInfo", opts.display) end
 	if not shown and opts.npc then shown = ModelCall(model, "SetCreature", opts.npc) end
 	model.modelKey, model.modelShown = key, shown and true or false
+	-- un modèle rechargé repart opaque (le client remet son opacité à 1)
+	model.appliedAlpha, model.alphaDirty = nil, nil
 	if shown then
 		model.framing(model)
-		ns.ModelShinyLight(model, opts.shiny)
 		model:Show()
 	else
 		ModelCall(model, "ClearModel")
@@ -2370,6 +2398,42 @@ function ns:CompanionSetFraming(id)
 	return id
 end
 
+-- 2.11.1 : taille d'une créature capturée dans le cadre. En 2.11.0, toutes
+-- à 2,4 (CamDistanceScale) : trop petites, et un grand modèle (dragon) vu de
+-- trop près (la caméra du modèle est réglée pour sa taille réelle). Distance
+-- par type (noms FR et EN, entry.type de la fiche de capture), surcharge
+-- par espèce ([npcID]) ou par apparence (["d" .. displayID]) : { cam, y }
+-- (y : SetPosition vertical). Le cadrage du réglage la multiplie.
+ns.COMPANION_MODEL_TYPE_CAM = {
+	default = 1.6,
+	["Bestiole"] = 1.2, Critter = 1.2,
+	["Bête"] = 1.5, Beast = 1.5,
+	["Humanoïde"] = 1.5, Humanoid = 1.5,
+	["Mort-vivant"] = 1.5, Undead = 1.5,
+	["Mécanique"] = 1.7, Mechanical = 1.7,
+	["Démon"] = 1.8, Demon = 1.8,
+	["Élémentaire"] = 1.8, Elemental = 1.8,
+	["Géant"] = 2.4, Giant = 2.4,
+	["Draconien"] = 2.8, Dragonkin = 2.8,
+}
+ns.COMPANION_MODEL_OVERRIDES = {}
+ns.COMPANION_FRAMING_CAM = { portrait = 0.75, buste = 0.88, pied = 1 }
+
+function ns:CompanionModelCam(app, framing)
+	app = app or {}
+	local over = ns.COMPANION_MODEL_OVERRIDES
+	local spec = (app.display and over["d" .. tostring(app.display)]) or (app.npc and over[tonumber(app.npc)]) or nil
+	local cam, y = spec and tonumber(spec.cam), spec and tonumber(spec.y)
+	if not cam then
+		local entry = app.npc and self.CaptureData and self:CaptureData().creatures[tonumber(app.npc)]
+		local kind = app.type or (type(entry) == "table" and entry.type) or nil
+		local types = ns.COMPANION_MODEL_TYPE_CAM
+		cam = (kind and types[kind]) or types.default
+	end
+	local factor = ns.COMPANION_FRAMING_CAM[framing or self:CompanionFraming()] or 1
+	return cam * factor, y
+end
+
 function ns:CompanionApplyModel()
 	local frame = self.companionFrame
 	if not frame then return end
@@ -2381,11 +2445,15 @@ function ns:CompanionApplyModel()
 	-- l'échelle du stade (faite pour les mascottes). Le zoom « portrait » du
 	-- réglage (2.2.0) ne vaut que pour une mascotte (display) : ShowModel
 	-- l'ignore pour une créature sauvage (npc seul).
-	local zoom = ns.COMPANION_FRAMING_ZOOM[self:CompanionFraming()] or 0
+	local framing = self:CompanionFraming()
+	local zoom = ns.COMPANION_FRAMING_ZOOM[framing] or 0
 	if not app.display then zoom = 0 end
-	local distance = zoom > 0 and 1 or (app.captured and (ns.CAPTURE_CAM_DISTANCE or 2.4) or 1.6)
+	local distance, y = zoom > 0 and 1 or 1.6, nil
+	-- 2.11.1 : créature capturée, distance selon son type (et son espèce),
+	-- rapprochée par le cadrage (portrait, buste, pied)
+	if app.captured then distance, y = self:CompanionModelCam(app, framing) end
 	local shown = model and ns.ShowModel(model, { display = app.display, npc = app.npc, shiny = app.shiny,
-		zoom = zoom, cam = distance, scale = app.captured and 1 or stageDef.scale }, "companion") or false
+		zoom = zoom, cam = distance, y = y, scale = app.captured and 1 or stageDef.scale }, "companion") or false
 	frame.usesFallback = not shown
 	frame.displayID = shown and app.display or nil
 	if shown then
@@ -3340,6 +3408,21 @@ end
 -- table, moteur de Forever) ou historique (une liste) ; la lumière d'origine
 -- est lue une fois (GetLight) et remise quand la version n'est plus brillante.
 local SHINY_AMBIENT, SHINY_DIFFUSE = { 1.0, 0.82, 0.38 }, { 1.0, 0.9, 0.55 }
+-- 2.11.1 : la lumière blanche des modèles (proche de celle du client)
+ns.MODEL_LIGHT = { ambient = 0.8, diffuse = 1.0, point = { -1, 1, -1 } }
+function ns.ModelDefaultLight(model)
+	if not (model and type(model.SetLight) == "function") then return false end
+	local L0, p = ns.MODEL_LIGHT, ns.MODEL_LIGHT.point
+	local vec, color = rawget(_G, "CreateVector3D"), rawget(_G, "CreateColor")
+	if type(vec) == "function" and type(color) == "function" then
+		if pcall(model.SetLight, model, true, {
+			omnidirectional = false, point = vec(p[1], p[2], p[3]),
+			ambientIntensity = L0.ambient, ambientColor = color(1, 1, 1),
+			diffuseIntensity = L0.diffuse, diffuseColor = color(1, 1, 1),
+		}) then return true end
+	end
+	return pcall(model.SetLight, model, true, false, p[1], p[2], p[3], L0.ambient, 1, 1, 1, L0.diffuse, 1, 1, 1) and true or false
+end
 function ns.ModelShinyLight(model, on)
 	if not (model and type(model.SetLight) == "function") then return false end
 	on = on and true or false
@@ -3362,10 +3445,12 @@ function ns.ModelShinyLight(model, on)
 			ok = pcall(model.SetLight, model, true, false, -1, 1, -1, 1.1, SHINY_AMBIENT[1], SHINY_AMBIENT[2],
 				SHINY_AMBIENT[3], 1.0, SHINY_DIFFUSE[1], SHINY_DIFFUSE[2], SHINY_DIFFUSE[3])
 		end
-	elseif model.baseLight then
+	elseif model.baseLight and model.baseLight[1] == true then
 		ok = pcall(model.SetLight, model, unpack(model.baseLight))
 	else
-		ok = true
+		-- 2.11.1 : lumière d'origine éteinte ou illisible (lue avant la fin du
+		-- chargement) : la lumière blanche par défaut, jamais un modèle noir
+		ok = ns.ModelDefaultLight(model)
 	end
 	if ok then model.shinyLit = on end
 	return ok

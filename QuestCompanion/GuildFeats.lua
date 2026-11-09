@@ -498,6 +498,7 @@ function ns:GuildFeatDescribe(feat, sender)
 	if type(feat) ~= "table" then return nil end
 	local who = SafeName(self.TrainerShortName and self:TrainerShortName(sender) or sender, 64)
 	if not who then return nil end
+	local plainWho = who
 	-- le nom désarmé, puis le titre rendu ici (« Dyokrion, Maître des brillantes, »)
 	if feat.ti and self.FeatTitleWho then who = self:FeatTitleWho(who, feat.ti, feat.tg, true) end
 	local info = { kind = feat.kind, stars = feat.stars, more = feat.more }
@@ -530,7 +531,10 @@ function ns:GuildFeatDescribe(feat, sender)
 		local title = code and self.FeatTitleText and self:FeatTitleText(code, nil, feat.tg or "m")
 		title = title or L["TRAINER_" .. found.key]
 		if type(title) ~= "string" or title == "TRAINER_" .. found.key then title = found.key end
-		info.line = self:F("GFEAT_RANK", who, found.count)
+		-- 2.11.1 : porte-t-il déjà ce nouveau titre ? le nom seul (« Dresseur
+		-- confirmé Dyokrion… a capturé… » le disait deux fois et débordait)
+		local same = who ~= plainWho and type(title) == "string" and who:find(title, 1, true) ~= nil
+		info.line = self:F("GFEAT_RANK", same and plainWho or who, found.count)
 		info.sub = self:F("GFEAT_RANK_SUB", title)
 		info.stars = nil
 	elseif feat.kind == "h" then

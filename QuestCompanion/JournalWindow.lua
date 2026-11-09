@@ -874,7 +874,35 @@ local PORTRAIT_ZOOM = 0.65
 -- 2.11.0 : plaques plus hautes, chiffre et libellé centrés ensemble
 local STAT_H = 58
 local STAT_VALUE_Y, STAT_LABEL_Y = 8, -11
-ns.JOURNAL_STAT_LAYOUT = { h = STAT_H, valueY = STAT_VALUE_Y, labelY = STAT_LABEL_Y }
+ns.JOURNAL_STAT_LAYOUT = { h = STAT_H, valueY = STAT_VALUE_Y, labelY = STAT_LABEL_Y, gap = 6, glyph = 0.8 }
+
+-- 2.11.1 (B1, suite) : le chiffre et le libellé forment un groupe centré
+-- sur la plaque. En 2.11.0, +8 et −11 du centre les collaient aux bords
+-- (chiffre en haut, libellé en bas). Hauteurs lues sur la police posée
+-- (GetFont), sinon celles du thème, ramenées à la hauteur des glyphes
+-- (glyph : chiffres et minuscules, sans l'interligne de la ligne) ; le fond
+-- des plaques a un biseau : écart serré (6 px entre les glyphes, les lignes
+-- de texte se touchent sans se chevaucher). Rappelée quand le
+-- style change de police.
+local function FontHeight(fs, fallback)
+	local ok, _, size = false, nil, nil
+	if fs and fs.GetFont then ok, _, size = pcall(fs.GetFont, fs) end
+	size = ok and tonumber(size) or nil
+	return (size and size > 0) and size or fallback
+end
+function ns.JournalStatCenter(tile)
+	if not (tile and tile.value and tile.label) then return nil end
+	local S = ns.JOURNAL_STAT_LAYOUT
+	local hv, hl = FontHeight(tile.value, 16) * S.glyph, FontHeight(tile.label, 11) * S.glyph
+	local half = (hv + S.gap + hl) / 2
+	local vy, ly = math.floor(half - hv / 2 + 0.5), -math.floor(half - hl / 2 + 0.5)
+	tile.value:ClearAllPoints()
+	tile.value:SetPoint("CENTER", tile, "CENTER", 0, vy)
+	tile.label:ClearAllPoints()
+	tile.label:SetPoint("CENTER", tile, "CENTER", 0, ly)
+	tile.valueY, tile.labelY = vy, ly
+	return vy, ly
+end
 local LOOK_COUNT, LOOK_W, LOOK_H = 5, 52, 66
 local STATS = { "captures", "shiny", "days", "missions", "km" }
 
@@ -949,6 +977,7 @@ local function BuildEvolution(self, frame, content)
 		tile.label:SetJustifyH("CENTER")
 		if tile.label.SetWordWrap then tile.label:SetWordWrap(false) end
 		tile.key = key
+		ns.JournalStatCenter(tile)
 		pane.stats[key] = tile
 	end
 
@@ -2845,7 +2874,35 @@ function ns:JournalNavSummaryBuild(frame)
 	box.missions = mis
 	box:SetHeight(petH + 2 * NAVSUM.block + zone:GetHeight() + mis:GetHeight())
 	frame.navSummary = box
+	ns.JournalNavSummaryFit(box, W)
 	return box
+end
+
+-- 2.11.1 : largeur des blocs, barres et textes du résumé, bornée à la
+-- largeur intérieure de la colonne (en Azeroth, 196 − 2 × 12 : avant, les
+-- barres, « 73 % » et « 1 j » dépassaient à droite). Rappelée par le skin.
+function ns.JournalNavSummaryFit(box, w)
+	if not box then return nil end
+	w = math.floor(tonumber(w) or NAVSUM.w)
+	box.fitW = w
+	box:SetWidth(w)
+	local barW = math.max(20, w - NAVSUM.labelW)
+	for _, block in ipairs({ box.pet, box.zone, box.missions }) do
+		block:SetWidth(w)
+		if block.rule then block.rule:SetWidth(w) end
+	end
+	box.pet.name:SetWidth(w)
+	for _, row in ipairs(box.pet.needs) do
+		row.bar:SetWidth(barW)
+		if row.bar.ratio then row.bar:SetValue(row.bar.ratio) end
+	end
+	box.zone.name:SetWidth(w - 44)
+	box.zone.bar:SetWidth(w)
+	if box.zone.bar.ratio then box.zone.bar:SetValue(box.zone.bar.ratio) end
+	-- reste de la semaine : à droite des losanges, sans les chevaucher
+	local leftW = math.max(24, w - NAVSUM.labelW - 3 * 14)
+	for _, row in ipairs(box.missions.rows) do row.left:SetWidth(leftW) end
+	return w
 end
 
 local function NavMissions(row, list)
