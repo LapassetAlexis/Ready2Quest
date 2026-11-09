@@ -448,7 +448,7 @@ Add{
 	label = function() return L.CHK_SPELLS end,
 	run = function()
 		local trained = tonumber(ns:CharData().trainerLevel) or 0
-		return false, ns:F("CHK_SPELLS_DETAIL", trained, (ns.Theme and ns.Theme.ARROW) or "->", PlayerLevel()), 50
+		return false, ns:F("CHK_SPELLS_DETAIL", trained, PlayerLevel()), 50
 	end,
 }
 

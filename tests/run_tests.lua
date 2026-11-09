@@ -3764,7 +3764,7 @@ Mock.world.level = 10
 Mock:Fire("PLAYER_ENTERING_WORLD", true, false)
 Mock.world.level = 12
 NS:RunChecklist("manual")
-Check("[UX7] sorts : détail court (<= 38)", #Result("spells").detail <= 38 and (Result("spells").detail:find("10 %-> 12") ~= nil or Result("spells").detail:find("10 → 12", 1, true) ~= nil),
+Check("[UX7] sorts : détail court (<= 38)", #Result("spells").detail <= 38 and Result("spells").detail:find("10 à 12", 1, true) ~= nil,
 	Result("spells").detail)
 
 -- [9] vente auto : prévenu une seule fois

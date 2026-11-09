@@ -51,6 +51,8 @@ ns.RegisterDefaults(DEFAULTS)
 -- lecture, purge des zones sûres de l'ancien schéma.
 function ns:OnDBReady(db)
 	self:MigrateSafeZones(db)
+	-- 1.32.2 : buffs réclamés par défaut (Buffs.lua, schéma 2)
+	if type(self.MigrateBuffs) == "function" then self:MigrateBuffs(db) end
 end
 
 -- Schéma 1 (jusqu'à v1.17) : db.safe[mapID]. Sur Era, un mapID est une zone
@@ -770,8 +772,9 @@ local COMMANDS = {
 		local list = TrackedList(self)
 		local index = tonumber(indexText)
 		if not index or not list[index] then return self:Print(L.MSG_UNKNOWN_CMD) end
+		-- 1.32.2 : bascule la fiche enregistrée (pas la copie de la liste), choix retenu
 		local entry = list[index]
-		entry.enabled = not entry.enabled
+		entry.enabled = self.BuffToggle and self:BuffToggle(entry.spellId) or false
 		self:Print(self:F("MSG_BUFF_TOGGLED", index, entry.enabled and "ON" or "off"))
 	end,
 	["seuil"] = function(self, value)
