@@ -82,4 +82,6 @@ FeatsTitles.lua
 JournalAzeroth.lua
 MusicData.lua
 Jukebox.lua
+LoreData.lua
+CompanionLore.lua
 Bindings.lua

@@ -142,6 +142,12 @@ def check_generated():
             gen_music.build(music)
         if open(music, encoding="utf-8").read() != open(os.path.join(ROOT, "QuestCompanion", "MusicData.lua"), encoding="utf-8").read():
             problems.append("QuestCompanion/MusicData.lua ne correspond plus à data/forever/music.json (python3 -I tools/gen_music.py)")
+        # 2.13.0 : histoire des lieux (data/forever/lore/lore.json)
+        import gen_lore
+        lore = os.path.join(out, "LoreData.lua")
+        gen_lore.build(lore)
+        if open(lore, encoding="utf-8").read() != open(os.path.join(ROOT, "QuestCompanion", "LoreData.lua"), encoding="utf-8").read():
+            problems.append("QuestCompanion/LoreData.lua ne correspond plus à data/forever/lore/lore.json (python3 -I tools/gen_lore.py)")
     finally:
         shutil.rmtree(out, ignore_errors=True)
     return problems
