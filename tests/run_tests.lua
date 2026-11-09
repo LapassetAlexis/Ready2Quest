@@ -22,6 +22,9 @@ function Mock:Log(text) self.output[#self.output + 1] = tostring(text) end
 function Mock:Output() return table.concat(self.output, "\n") end
 function Mock:Reset() self.output = {} end
 function Mock:Fire(event, ...)
+	-- 2.11.1 / 1.32.1 : un événement = une nouvelle image pour les caches
+	-- « par image » (ns:AtCamp), l'horloge de la maquette ne bougeant pas
+	if self.OnNewFrame then self.OnNewFrame() end
 	for _, frame in ipairs(self.frames) do
 		local filter = frame.unitFilter and frame.unitFilter[event]
 		if frame.events and frame.events[event] and frame.script
@@ -605,6 +608,7 @@ local NS = {}
 -- QuestCompanion : addon autonome, avec sa propre table privée (son namespace)
 -- et sa copie du socle commun. Les tests de ses modules la reçoivent en T.QNS.
 local QNS = {}
+Mock.OnNewFrame = function() NS.atCampAt = nil; QNS.atCampAt = nil end
 local function LoadAddonFile(name)
 	local path = ROOT .. "/" .. name
 	-- mesure de la mémoire (python3 tests/run_tests.py --memoire) : ce que

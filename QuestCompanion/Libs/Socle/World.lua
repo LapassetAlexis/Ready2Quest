@@ -181,13 +181,24 @@ end
 -- lit par numéro de sort, valable dans toutes les langues. Un camp est une
 -- zone de départ temporaire : on n'en apprend jamais l'emplacement.
 ns.CAMP_AURAS = { 1283391 }    -- Campfire Nearby (Forever 1.60.1)
-function ns:AtCamp()
+local function ReadCamp(self)
 	if not (C_UnitAuras and type(C_UnitAuras.GetPlayerAuraBySpellID) == "function") then return false end
 	for _, spellID in ipairs(self.CAMP_AURAS) do
 		local ok, aura = pcall(C_UnitAuras.GetPlayerAuraBySpellID, spellID)
 		if ok and aura then return true end
 	end
 	return false
+end
+-- 2.11.1 / 1.32.1 : un UNIT_AURA du joueur le demandait trois fois (Core,
+-- cadre du camp, zone sûre ; compagnon et conseils côté QC). Une lecture du
+-- client par image et par addon : GetTime() ne bouge pas pendant une image.
+-- ns.atCampAt = nil force la relecture (tests qui changent l'aura sans avancer).
+function ns:AtCamp()
+	local now = type(GetTime) == "function" and GetTime() or nil
+	if now and self.atCampAt == now then return self.atCampValue end
+	local atCamp = ReadCamp(self)
+	self.atCampAt, self.atCampValue = now, atCamp
+	return atCamp
 end
 
 
