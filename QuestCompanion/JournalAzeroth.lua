@@ -1593,6 +1593,59 @@ function POST.guide(self, frame)
 	end
 end
 
+-- 2.12.0 : Juke-box. Pistes sur le parchemin des statistiques voilé comme le
+-- guide ; chaque piste est une ligne claire de 504×24 (fond des hauts faits,
+-- voile 0,40), la mesure des quêtes d'Exploration (juke.* = quest.*) ; les
+-- vues à gauche en tuiles sombres sélectionnables, le titre sur la bande.
+function PAGE.juke(self, frame)
+	local pane = frame.juke
+	if not pane then return end
+	for _, tile in ipairs(pane.cats or {}) do
+		if TileStyle(tile, "dark") then Selectable(tile) end
+	end
+	for _, row in ipairs(pane.rows or {}) do TileStyle(row, "light") end
+	local ui, content = ns.JournalUI, frame.content
+	if not ui then return end
+	local page = NewTex(pane, "BACKGROUND", 1, T.stats)
+	if page then
+		local x0, x1 = ui.PAD + pane.RX - 12, ui.PAD + ui.INNER + 8
+		local y0, y1 = ui.TOP + 10, ui.PAGER_Y - 28
+		page:SetPoint("TOPLEFT", content, "TOPLEFT", x0, y0)
+		page:SetPoint("BOTTOMRIGHT", content, "TOPLEFT", x1, y1)
+		Cover(page, T.stats, x1 - x0, y0 - y1)
+		pane.azPage, pane.azVeil = page, ns.AzerothVeil(pane, page, "guide", 2)
+	end
+	local G = ns.CARNET_GUIDE_LAYOUT
+	pane.azBand = NewTex(pane, "ARTWORK", 0, T.statHead)
+	if pane.azBand then
+		pane.azBand:SetPoint("TOPLEFT", content, "TOPLEFT", ui.PAD + pane.RX - 6, ui.TOP + G.bandUp)
+		pane.azBand:SetSize(pane.RW + 12, G.bandH)
+	end
+	if pane.title then
+		GoldTitle(pane.title, 18, not pane.azBand)
+		if pane.azBand then
+			pane.title:ClearAllPoints()
+			pane.title:SetPoint("LEFT", pane.azBand, "LEFT", 10, 0)
+		end
+	end
+end
+
+function POST.juke(self, frame)
+	local pane = frame.juke
+	if not pane then return end
+	for _, row in ipairs(pane.rows or {}) do
+		if row.azStyle == "light" and row.track then
+			RolePaint(row.text, row.missing and "juke.missing" or (row.playing and "juke.playing" or "juke.name"))
+			RolePaint(row.detail, "juke.detail")
+			RolePaint(row.add.label, "juke.detail")
+		end
+	end
+	RolePaint(pane.now, "juke.now")
+	RolePaint(pane.hintLine, "juke.hint")
+	RolePaint(pane.empty, "juke.now")
+	InkPager(pane.pager)
+end
+
 -- ---------------------------------------------------------------------------
 -- Construction et rafraîchissement du carnet Azeroth
 -- ---------------------------------------------------------------------------
@@ -1902,7 +1955,8 @@ end
 -- ---------------------------------------------------------------------------
 local JOURNAL_STATE = { "kind", "activity", "offset", "zoneFilter", "zoneSort", "zoneOffset", "questFilter", "collKind",
 	"menZone", "menState", "menRank", "menSort", "menSearch", "menType", "menOffset", "featsCat", "featsOffset",
-	"zoneID", "zonePicked", "progPart", "progOffset", "progItemOffset", "guideSection", "guideOffset", "lookOffset" }
+	"zoneID", "zonePicked", "progPart", "progOffset", "progItemOffset", "guideSection", "guideOffset", "lookOffset",
+	"jukeView", "jukeOffset", "jukeSearch" }   -- 2.12.0 : Juke-box
 
 function ns:CarnetRestyle()
 	local want = self:JournalStyle()

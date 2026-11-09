@@ -1,0 +1,4146 @@
+{
+"source": "wago.tools (tables du client, fichiers CASC)",
+"build": "1.60.1.70753",
+"imported": "2026-11-09",
+"tracks": [
+{
+"id": 8180778,
+"set": "Zone-Forest",
+"origin": "zone",
+"areas": [
+12,
+36,
+38,
+44,
+47,
+267,
+293,
+308,
+16029,
+16113,
+16118,
+16144,
+16147,
+16510,
+16772
+],
+"title": "Day Forest 01",
+"dur": 56.8
+},
+{
+"id": 8180780,
+"set": "Zone-Forest",
+"origin": "zone",
+"areas": [
+12,
+36,
+38,
+44,
+47,
+267,
+293,
+308,
+16029,
+16113,
+16118,
+16144,
+16147,
+16510,
+16772
+],
+"title": "Day Forest 02",
+"dur": 73.0
+},
+{
+"id": 8180782,
+"set": "Zone-Forest",
+"origin": "zone",
+"areas": [
+12,
+36,
+38,
+44,
+47,
+267,
+293,
+308,
+16029,
+16113,
+16118,
+16144,
+16147,
+16510,
+16772
+],
+"title": "Day Forest 03",
+"dur": 65.5
+},
+{
+"id": 8180772,
+"set": "Zone-EvilForest",
+"origin": "zone",
+"areas": [
+10,
+22,
+41,
+85,
+130,
+170,
+209,
+16114,
+16119,
+16148
+],
+"title": "Day Evil Forest 01",
+"dur": 71.8
+},
+{
+"id": 8180776,
+"set": "Zone-EvilForest",
+"origin": "zone",
+"areas": [
+10,
+22,
+41,
+85,
+130,
+170,
+209,
+16114,
+16119,
+16148
+],
+"title": "Day Evil Forest 03",
+"dur": 71.8
+},
+{
+"id": 8180758,
+"set": "Zone-EvilForest",
+"origin": "zone",
+"areas": [
+10,
+22,
+41,
+85,
+130,
+170,
+209,
+16114,
+16119,
+16148
+],
+"title": "Night Evil Forest 01",
+"dur": 58.6
+},
+{
+"id": 8180774,
+"set": "Zone-EvilForest",
+"origin": "zone",
+"areas": [
+10,
+22,
+41,
+85,
+130,
+170,
+209,
+16114,
+16119,
+16148
+],
+"title": "Day Evil Forest 02",
+"dur": 73.7
+},
+{
+"id": 8180760,
+"set": "Zone-EvilForest",
+"origin": "zone",
+"areas": [
+10,
+22,
+41,
+85,
+130,
+170,
+209,
+16114,
+16119,
+16148
+],
+"title": "Night Evil Forest 02",
+"dur": 76.0
+},
+{
+"id": 8180762,
+"set": "Zone-EvilForest",
+"origin": "zone",
+"areas": [
+10,
+22,
+41,
+85,
+130,
+170,
+209,
+16114,
+16119,
+16148
+],
+"title": "Night Evil Forest 03",
+"dur": 71.7
+},
+{
+"id": 8181259,
+"set": "Zone-Jungle",
+"origin": "zone",
+"areas": [
+33,
+330,
+357,
+1477,
+1977,
+16018,
+16117
+],
+"title": "Day Jungle 01",
+"dur": 46.1
+},
+{
+"id": 8181261,
+"set": "Zone-Jungle",
+"origin": "zone",
+"areas": [
+33,
+330,
+357,
+1477,
+1977,
+16018,
+16117
+],
+"title": "Day Jungle 02",
+"dur": 99.5
+},
+{
+"id": 8181263,
+"set": "Zone-Jungle",
+"origin": "zone",
+"areas": [
+33,
+330,
+357,
+1477,
+1977,
+16018,
+16117
+],
+"title": "Day Jungle 03",
+"dur": 48.4
+},
+{
+"id": 8181265,
+"set": "Zone-Jungle",
+"origin": "zone",
+"areas": [
+33,
+330,
+357,
+1477,
+1977,
+16018,
+16117
+],
+"title": "Night Jungle 01",
+"dur": 54.3
+},
+{
+"id": 8181267,
+"set": "Zone-Jungle",
+"origin": "zone",
+"areas": [
+33,
+330,
+357,
+1477,
+1977,
+16018,
+16117
+],
+"title": "Night Jungle 02",
+"dur": 53.2
+},
+{
+"id": 8181269,
+"set": "Zone-Jungle",
+"origin": "zone",
+"areas": [
+33,
+330,
+357,
+1477,
+1977,
+16018,
+16117
+],
+"title": "Night Jungle 03",
+"dur": 87.6
+},
+{
+"id": 8181055,
+"set": "Zone-BarrenDry",
+"origin": "zone",
+"areas": [
+3,
+4,
+17,
+406,
+1637,
+2100,
+16017,
+16115
+],
+"title": "Night Barren Dry 01",
+"dur": 67.4
+},
+{
+"id": 8181057,
+"set": "Zone-BarrenDry",
+"origin": "zone",
+"areas": [
+3,
+4,
+17,
+406,
+1637,
+2100,
+16017,
+16115
+],
+"title": "Night Barren Dry 02",
+"dur": 42.4
+},
+{
+"id": 8181051,
+"set": "Zone-BarrenDry",
+"origin": "zone",
+"areas": [
+3,
+4,
+17,
+406,
+1637,
+2100,
+16017,
+16115
+],
+"title": "Dry Barren Dry 02",
+"dur": 61.9
+},
+{
+"id": 8181053,
+"set": "Zone-BarrenDry",
+"origin": "zone",
+"areas": [
+3,
+4,
+17,
+406,
+1637,
+2100,
+16017,
+16115,
+2159,
+15531,
+15532,
+15825
+],
+"title": "Dry Barren Dry 03",
+"dur": 55.4
+},
+{
+"id": 8181059,
+"set": "Zone-BarrenDry",
+"origin": "zone",
+"areas": [
+3,
+4,
+17,
+406,
+1637,
+2100,
+16017,
+16115
+],
+"title": "Night Barren Dry 03",
+"dur": 47.4
+},
+{
+"id": 8181049,
+"set": "Zone-BarrenDry",
+"origin": "zone",
+"areas": [
+3,
+4,
+17,
+406,
+1637,
+2100,
+16017,
+16115
+],
+"title": "Dry Barren Dry 01",
+"dur": 65.0
+},
+{
+"id": 8181287,
+"set": "Zone-Mountain",
+"origin": "zone",
+"areas": [
+1,
+21,
+45,
+618
+],
+"title": "Day Mountain 01",
+"dur": 120.3
+},
+{
+"id": 8181289,
+"set": "Zone-Mountain",
+"origin": "zone",
+"areas": [
+1,
+21,
+45,
+618
+],
+"title": "Day Mountain 02",
+"dur": 67.2
+},
+{
+"id": 8181291,
+"set": "Zone-Mountain",
+"origin": "zone",
+"areas": [
+1,
+21,
+45,
+618
+],
+"title": "Day Mountain 03",
+"dur": 78.8
+},
+{
+"id": 8181297,
+"set": "Zone-Mountain",
+"origin": "zone",
+"areas": [
+1,
+21,
+45,
+618
+],
+"title": "Night Mountain 03",
+"dur": 70.9
+},
+{
+"id": 8181299,
+"set": "Zone-Mountain",
+"origin": "zone",
+"areas": [
+1,
+21,
+45,
+618
+],
+"title": "Night Mountain 04",
+"dur": 62.7
+},
+{
+"id": 8181293,
+"set": "Zone-Mountain",
+"origin": "zone",
+"areas": [
+1,
+21,
+45,
+618
+],
+"title": "Night Mountain 01",
+"dur": 63.4
+},
+{
+"id": 8181295,
+"set": "Zone-Mountain",
+"origin": "zone",
+"areas": [
+1,
+21,
+45,
+618
+],
+"title": "Night Mountain 02",
+"dur": 64.4
+},
+{
+"id": 8181309,
+"set": "Zone-Plains",
+"origin": "zone",
+"areas": [
+14,
+40,
+206,
+207,
+214,
+215,
+332,
+377,
+400,
+16149
+],
+"title": "Night Plains 01",
+"dur": 59.4
+},
+{
+"id": 8181307,
+"set": "Zone-Plains",
+"origin": "zone",
+"areas": [
+14,
+40,
+206,
+207,
+214,
+215,
+332,
+377,
+400,
+16149
+],
+"title": "Day Plains 02",
+"dur": 76.8
+},
+{
+"id": 8181311,
+"set": "Zone-Plains",
+"origin": "zone",
+"areas": [
+14,
+40,
+206,
+207,
+214,
+215,
+332,
+377,
+400,
+16149
+],
+"title": "Night Plains 02",
+"dur": 69.5
+},
+{
+"id": 8181305,
+"set": "Zone-Plains",
+"origin": "zone",
+"areas": [
+14,
+40,
+206,
+207,
+214,
+215,
+332,
+377,
+400,
+16149
+],
+"title": "Day Plains 01",
+"dur": 54.0
+},
+{
+"id": 8181275,
+"set": "Zone-Volcanic",
+"origin": "zone",
+"areas": [
+25,
+46,
+51,
+16508
+],
+"title": "Day Volcanic 01",
+"dur": 72.9
+},
+{
+"id": 8181277,
+"set": "Zone-Volcanic",
+"origin": "zone",
+"areas": [
+25,
+46,
+51,
+16508
+],
+"title": "Day Volcanic 02",
+"dur": 86.7
+},
+{
+"id": 8181279,
+"set": "Zone-Volcanic",
+"origin": "zone",
+"areas": [
+25,
+46,
+51,
+16508
+],
+"title": "Night Volcanic 01",
+"dur": 76.0
+},
+{
+"id": 8181281,
+"set": "Zone-Volcanic",
+"origin": "zone",
+"areas": [
+25,
+46,
+51,
+16508
+],
+"title": "Night Volcanic 02",
+"dur": 63.7
+},
+{
+"id": 8180792,
+"set": "Zone-EnchantedForest",
+"origin": "zone",
+"areas": [
+141,
+331,
+495,
+2557,
+16169
+],
+"title": "Enchanted Forest 05",
+"dur": 72.2
+},
+{
+"id": 8180784,
+"set": "Zone-EnchantedForest",
+"origin": "zone",
+"areas": [
+141,
+331,
+495,
+2557,
+16169
+],
+"title": "Enchanted Forest 01",
+"dur": 50.2
+},
+{
+"id": 8180790,
+"set": "Zone-EnchantedForest",
+"origin": "zone",
+"areas": [
+141,
+331,
+495,
+2557,
+16169
+],
+"title": "Enchanted Forest 04",
+"dur": 60.8
+},
+{
+"id": 8180786,
+"set": "Zone-EnchantedForest",
+"origin": "zone",
+"areas": [
+141,
+331,
+495,
+2557,
+16169
+],
+"title": "Enchanted Forest 02",
+"dur": 66.1
+},
+{
+"id": 8180788,
+"set": "Zone-EnchantedForest",
+"origin": "zone",
+"areas": [
+141,
+331,
+495,
+2557,
+16169
+],
+"title": "Enchanted Forest 03",
+"dur": 235.2
+},
+{
+"id": 8180884,
+"set": "Moment-ValleyofHeros",
+"origin": "zone",
+"areas": [],
+"title": "Stormwind Intro Moment",
+"dur": 68.2
+},
+{
+"id": 8180874,
+"set": "Zone-Stormwind",
+"origin": "zone",
+"areas": [
+1519,
+16509
+],
+"title": "Stormwind 05 Zone",
+"dur": 61.3
+},
+{
+"id": 8180876,
+"set": "Zone-Stormwind",
+"origin": "zone",
+"areas": [
+1519,
+16509
+],
+"title": "Stormwind 06 Zone",
+"dur": 54.1
+},
+{
+"id": 8180878,
+"set": "Zone-Stormwind",
+"origin": "zone",
+"areas": [
+1519,
+16509
+],
+"title": "Stormwind 07 Zone",
+"dur": 87.9
+},
+{
+"id": 8180880,
+"set": "Zone-Stormwind",
+"origin": "zone",
+"areas": [
+1519,
+16509
+],
+"title": "Stormwind 08 Zone",
+"dur": 77.3
+},
+{
+"id": 8180866,
+"set": "Zone-Stormwind",
+"origin": "zone",
+"areas": [
+1519,
+16509
+],
+"title": "Stormwind 01 Moment",
+"dur": 56.0
+},
+{
+"id": 8180870,
+"set": "Zone-Stormwind",
+"origin": "zone",
+"areas": [
+1519,
+16509
+],
+"title": "Stormwind 03 Moment",
+"dur": 70.4
+},
+{
+"id": 8180872,
+"set": "Zone-Stormwind",
+"origin": "zone",
+"areas": [
+1519,
+16509
+],
+"title": "Stormwind 04 Zone",
+"dur": 63.5
+},
+{
+"id": 8180868,
+"set": "Zone-Stormwind",
+"origin": "zone",
+"areas": [
+1519,
+16509
+],
+"title": "Stormwind 02 Moment",
+"dur": 36.9
+},
+{
+"id": 8181037,
+"set": "Zone-Orgrimmar",
+"origin": "zone",
+"areas": [],
+"title": "Orgrimmar 02 Zone",
+"dur": 62.5
+},
+{
+"id": 8181033,
+"set": "Zone-Orgrimmar",
+"origin": "zone",
+"areas": [],
+"title": "Orgrimmar 01 Zone",
+"dur": 69.8
+},
+{
+"id": 8181313,
+"set": "Zone-Haunted",
+"origin": "zone",
+"areas": [
+2057,
+15828
+],
+"title": "Haunted 01",
+"dur": 63.0
+},
+{
+"id": 8181039,
+"set": "Moment-Orgrimmar Intro",
+"origin": "zone",
+"areas": [],
+"title": "Orgrimmar Intro Moment",
+"dur": 40.6
+},
+{
+"id": 8181321,
+"set": "GhostMusic (DONOTRENAME)",
+"origin": "zone",
+"areas": [],
+"title": "Ghost Music 03",
+"dur": 62.3
+},
+{
+"id": 8180750,
+"set": "Moment-Darnassus Intro",
+"origin": "zone",
+"areas": [],
+"title": "Darnassus Intro",
+"dur": 41.6
+},
+{
+"id": 8180752,
+"set": "Zone-Darnassus",
+"origin": "zone",
+"areas": [
+1657,
+15938
+],
+"title": "Darnassus Walking 1",
+"dur": 85.6
+},
+{
+"id": 8180754,
+"set": "Zone-Darnassus",
+"origin": "zone",
+"areas": [
+1657,
+15938
+],
+"title": "Darnassus Walking 2",
+"dur": 69.8
+},
+{
+"id": 8180756,
+"set": "Zone-Darnassus",
+"origin": "zone",
+"areas": [
+1657,
+15938
+],
+"title": "Darnassus Walking 3",
+"dur": 67.7
+},
+{
+"id": 8181323,
+"set": "Moment-DruidGrove",
+"origin": "zone",
+"areas": [],
+"title": "Druid Grove",
+"dur": 45.5
+},
+{
+"id": 8181301,
+"set": "Moment-Sacred01",
+"origin": "zone",
+"areas": [],
+"title": "Sacred 01",
+"dur": 16.4
+},
+{
+"id": 8181335,
+"set": "Moment-Swamp01",
+"origin": "zone",
+"areas": [],
+"title": "Swamp 01",
+"dur": 28.7
+},
+{
+"id": 8180983,
+"set": "Zone-TavernAlliance",
+"origin": "zone",
+"areas": [],
+"title": "Tavern Alliance 01",
+"dur": 48.2
+},
+{
+"id": 8180985,
+"set": "Zone-TavernAlliance",
+"origin": "zone",
+"areas": [],
+"title": "Tavern Alliance 02",
+"dur": 51.8
+},
+{
+"id": 8181319,
+"set": "Moment-Angelic01",
+"origin": "zone",
+"areas": [],
+"title": "Angelic 01",
+"dur": 48.4
+},
+{
+"id": 8181127,
+"set": "Zone-Desert",
+"origin": "zone",
+"areas": [
+405,
+440,
+719,
+1176,
+1377,
+3478,
+16532
+],
+"title": "Day Desert 01",
+"dur": 64.7
+},
+{
+"id": 8181129,
+"set": "Zone-Desert",
+"origin": "zone",
+"areas": [
+405,
+440,
+719,
+1176,
+1377,
+3478,
+16532
+],
+"title": "Day Desert 02",
+"dur": 81.9
+},
+{
+"id": 8181131,
+"set": "Zone-Desert",
+"origin": "zone",
+"areas": [
+405,
+440,
+719,
+1176,
+1377,
+3478,
+16532
+],
+"title": "Day Desert 03",
+"dur": 54.1
+},
+{
+"id": 8181133,
+"set": "Zone-Desert",
+"origin": "zone",
+"areas": [
+405,
+440,
+719,
+1176,
+1377,
+3478,
+16532
+],
+"title": "Night Desert 01",
+"dur": 77.0
+},
+{
+"id": 8181135,
+"set": "Zone-Desert",
+"origin": "zone",
+"areas": [
+405,
+440,
+719,
+1176,
+1377,
+3478,
+16532
+],
+"title": "Night Desert 02",
+"dur": 62.1
+},
+{
+"id": 8181137,
+"set": "Zone-Desert",
+"origin": "zone",
+"areas": [
+405,
+440,
+719,
+1176,
+1377,
+3478,
+16532
+],
+"title": "Night Desert 03",
+"dur": 55.3
+},
+{
+"id": 8181333,
+"set": "Moment-Spooky01",
+"origin": "zone",
+"areas": [],
+"title": "Spooky 01 Moment",
+"dur": 26.2
+},
+{
+"id": 8181031,
+"set": "Moment-Orgrimmar01",
+"origin": "zone",
+"areas": [],
+"title": "Orgrimmar 01 Moment",
+"dur": 69.0
+},
+{
+"id": 8181003,
+"set": "Zone-Undercity",
+"origin": "zone",
+"areas": [
+16611
+],
+"title": "Undercity 01 Zone",
+"dur": 67.5
+},
+{
+"id": 8181005,
+"set": "Zone-Undercity",
+"origin": "zone",
+"areas": [
+16611
+],
+"title": "Undercity 02 Zone",
+"dur": 87.3
+},
+{
+"id": 8181007,
+"set": "Zone-Undercity",
+"origin": "zone",
+"areas": [
+16611
+],
+"title": "Undercity 03 Zone",
+"dur": 74.6
+},
+{
+"id": 8181315,
+"set": "Moment-Haunted02",
+"origin": "zone",
+"areas": [],
+"title": "Haunted 02",
+"dur": 59.7
+},
+{
+"id": 8180987,
+"set": "Zone-TavernHorde",
+"origin": "zone",
+"areas": [],
+"title": "Tavern Horde 01",
+"dur": 48.8
+},
+{
+"id": 8180989,
+"set": "Zone-TavernHorde",
+"origin": "zone",
+"areas": [],
+"title": "Tavern Horde 02",
+"dur": 40.4
+},
+{
+"id": 8181337,
+"set": "Moment-WarriorTerrace",
+"origin": "zone",
+"areas": [],
+"title": "Warrior Terrace",
+"dur": 55.0
+},
+{
+"id": 8180991,
+"set": "Zone-TavernHorde01",
+"origin": "zone",
+"areas": [],
+"title": "Tavern Horde 03",
+"dur": 47.8
+},
+{
+"id": 8180764,
+"set": "Zone-DarkForest",
+"origin": "zone",
+"areas": [
+148,
+493
+],
+"title": "Night Forest 01",
+"dur": 51.8
+},
+{
+"id": 8180766,
+"set": "Zone-DarkForest",
+"origin": "zone",
+"areas": [
+148,
+493
+],
+"title": "Night Forest 02",
+"dur": 44.2
+},
+{
+"id": 8180768,
+"set": "Zone-DarkForest",
+"origin": "zone",
+"areas": [
+148,
+493
+],
+"title": "Night Forest 03",
+"dur": 61.7
+},
+{
+"id": 8180770,
+"set": "Zone-DarkForest",
+"origin": "zone",
+"areas": [
+148,
+493
+],
+"title": "Night Forest 04",
+"dur": 54.1
+},
+{
+"id": 8180738,
+"set": "Zone-CursedLand Felwood",
+"origin": "zone",
+"areas": [
+361,
+15475,
+15809,
+2597
+],
+"title": "Cursed Land 01",
+"dur": 56.2
+},
+{
+"id": 8180742,
+"set": "Zone-CursedLand Felwood",
+"origin": "zone",
+"areas": [
+361,
+15475,
+15809,
+2597
+],
+"title": "Cursed Land 03",
+"dur": 65.3
+},
+{
+"id": 8180740,
+"set": "Zone-CursedLandFelwoodFurbolg",
+"origin": "zone",
+"areas": [
+2597
+],
+"title": "Cursed Land 02",
+"dur": 57.4
+},
+{
+"id": 8180957,
+"set": "Zone-Magic",
+"origin": "zone",
+"areas": [],
+"title": "Magic 01 Zone 2",
+"dur": 40.3
+},
+{
+"id": 8180955,
+"set": "Zone-Magic",
+"origin": "zone",
+"areas": [],
+"title": "Magic 01 Zone 1",
+"dur": 34.3
+},
+{
+"id": 8180953,
+"set": "Moment-Magic",
+"origin": "zone",
+"areas": [
+457
+],
+"title": "Magic 01 Moment",
+"dur": 65.6
+},
+{
+"id": 8180937,
+"set": "Zone-Mystery",
+"origin": "zone",
+"areas": [
+1581,
+16919
+],
+"title": "Mystery 03 Zone",
+"dur": 60.7
+},
+{
+"id": 8180939,
+"set": "Zone-Mystery",
+"origin": "zone",
+"areas": [
+1581
+],
+"title": "Mystery 04 Zone",
+"dur": 64.8
+},
+{
+"id": 8180951,
+"set": "Zone-Mystery",
+"origin": "zone",
+"areas": [
+1581
+],
+"title": "Mystery 10 Zone",
+"dur": 63.4
+},
+{
+"id": 8180941,
+"set": "Zone-Mystery",
+"origin": "zone",
+"areas": [
+1581
+],
+"title": "Mystery 05 Zone",
+"dur": 82.5
+},
+{
+"id": 8180935,
+"set": "Zone-Mystery",
+"origin": "zone",
+"areas": [
+1581,
+16919
+],
+"title": "Mystery 02 Zone",
+"dur": 53.9
+},
+{
+"id": 8180943,
+"set": "Zone-Mystery",
+"origin": "zone",
+"areas": [
+1581
+],
+"title": "Mystery 06 Zone",
+"dur": 66.2
+},
+{
+"id": 8180945,
+"set": "Zone-Mystery",
+"origin": "zone",
+"areas": [
+1581
+],
+"title": "Mystery 07 Zone",
+"dur": 83.5
+},
+{
+"id": 8180947,
+"set": "Zone-Mystery",
+"origin": "zone",
+"areas": [
+1581
+],
+"title": "Mystery 08 Zone",
+"dur": 84.0
+},
+{
+"id": 8180949,
+"set": "Zone-Mystery",
+"origin": "zone",
+"areas": [
+1581,
+16919
+],
+"title": "Mystery 09 Zone",
+"dur": 82.1
+},
+{
+"id": 8180933,
+"set": "Zone-Mystery",
+"origin": "zone",
+"areas": [
+1581,
+16919
+],
+"title": "Mystery 01 Zone",
+"dur": 62.5
+},
+{
+"id": 8180744,
+"set": "Zone-Plaguelands",
+"origin": "zone",
+"areas": [
+16,
+28,
+139,
+796,
+16003,
+16028,
+2597
+],
+"title": "Cursed Land 04",
+"dur": 79.5
+},
+{
+"id": 8180746,
+"set": "Zone-Plaguelands",
+"origin": "zone",
+"areas": [
+16,
+28,
+139,
+796,
+16003,
+16028,
+2597
+],
+"title": "Cursed Land 05",
+"dur": 82.9
+},
+{
+"id": 8180748,
+"set": "Zone-Plaguelands",
+"origin": "zone",
+"areas": [
+16,
+28,
+139,
+796,
+16003,
+16028,
+2597
+],
+"title": "Cursed Land 06",
+"dur": 73.9
+},
+{
+"id": 8181325,
+"set": "Moment-Gloomy01",
+"origin": "zone",
+"areas": [],
+"title": "Gloomy 01",
+"dur": 37.5
+},
+{
+"id": 8181327,
+"set": "Moment-Gloomy02",
+"origin": "zone",
+"areas": [],
+"title": "Gloomy 02",
+"dur": 40.6
+},
+{
+"id": 8181303,
+"set": "Moment-Sacred02",
+"origin": "zone",
+"areas": [],
+"title": "Sacred 02",
+"dur": 20.5
+},
+{
+"id": 8180899,
+"set": "Moment-Battle01",
+"origin": "zone",
+"areas": [],
+"title": "Battle 01",
+"dur": 48.6
+},
+{
+"id": 8180903,
+"set": "Moment-Battle03",
+"origin": "zone",
+"areas": [],
+"title": "Battle 03",
+"dur": 27.9
+},
+{
+"id": 8180905,
+"set": "Moment-Battle04",
+"origin": "zone",
+"areas": [],
+"title": "Battle 04",
+"dur": 36.7
+},
+{
+"id": 8181009,
+"set": "Zone - Undercity Intro",
+"origin": "zone",
+"areas": [],
+"title": "Undercity Intro Moment",
+"dur": 28.9
+},
+{
+"id": 8181035,
+"set": "Moment-Orgrimmar02",
+"origin": "zone",
+"areas": [],
+"title": "Orgrimmar 02 Moment",
+"dur": 62.5
+},
+{
+"id": 8180907,
+"set": "Moment-Battle05",
+"origin": "zone",
+"areas": [],
+"title": "Battle 05",
+"dur": 45.4
+},
+{
+"id": 8180901,
+"set": "Moment-Battle02",
+"origin": "zone",
+"areas": [],
+"title": "Battle 02",
+"dur": 63.2
+},
+{
+"id": 8180909,
+"set": "Moment-Battle06",
+"origin": "zone",
+"areas": [
+3358
+],
+"title": "Battle 06",
+"dur": 63.3
+},
+{
+"id": 8180993,
+"set": "Zone-Bone Party",
+"origin": "zone",
+"areas": [],
+"title": "Undead Dance",
+"dur": 26.8
+},
+{
+"id": 8181011,
+"set": "Zone-Soggy Swamp",
+"origin": "zone",
+"areas": [
+8,
+490,
+16116,
+11,
+15
+],
+"title": "Soggy Place Zone 01",
+"dur": 100.5
+},
+{
+"id": 8181015,
+"set": "Zone-Soggy Swamp",
+"origin": "zone",
+"areas": [
+8,
+490,
+16116,
+11,
+15
+],
+"title": "Soggy Place Zone 03",
+"dur": 90.1
+},
+{
+"id": 8181017,
+"set": "Zone-Soggy Swamp",
+"origin": "zone",
+"areas": [
+8,
+490,
+16116,
+11,
+15
+],
+"title": "Soggy Place Zone 04",
+"dur": 89.3
+},
+{
+"id": 8180882,
+"set": "Moment-StormwindSouthSeas",
+"origin": "zone",
+"areas": [],
+"title": "Stormwind High Seas Moment",
+"dur": 134.8
+},
+{
+"id": 8180995,
+"set": "Zone-Thunderbluff Intro",
+"origin": "zone",
+"areas": [],
+"title": "Thunderbluff Intro",
+"dur": 46.0
+},
+{
+"id": 8180997,
+"set": "Zone-Thunderbluff",
+"origin": "zone",
+"areas": [
+151,
+1638
+],
+"title": "Thunderbluff Walking 01",
+"dur": 113.1
+},
+{
+"id": 8180999,
+"set": "Zone-Thunderbluff",
+"origin": "zone",
+"areas": [
+151,
+1638
+],
+"title": "Thunderbluff Walking 02",
+"dur": 114.7
+},
+{
+"id": 8181001,
+"set": "Zone-Thunderbluff",
+"origin": "zone",
+"areas": [
+151,
+1638
+],
+"title": "Thunderbluff Walking 03",
+"dur": 120.4
+},
+{
+"id": 8181013,
+"set": "Zone-Soggy",
+"origin": "zone",
+"areas": [
+11,
+15
+],
+"title": "Soggy Place Zone 02",
+"dur": 97.6
+},
+{
+"id": 8181019,
+"set": "Zone-Soggy",
+"origin": "zone",
+"areas": [
+11,
+15
+],
+"title": "Soggy Place Zone 05",
+"dur": 70.7
+},
+{
+"id": 53200,
+"set": "Zone-Crossroads",
+"origin": "zone",
+"areas": [],
+"path": "sound/music/citymusic/orgrimmar/orgrimmar02-zone.mp3",
+"dur": 62.3
+},
+{
+"id": 8181317,
+"set": "Zone-TinkerTown Intro",
+"origin": "zone",
+"areas": [],
+"title": "Tinkertown Intro Moment",
+"dur": 53.1
+},
+{
+"id": 8180963,
+"set": "Zone-Ironforge Intro",
+"origin": "zone",
+"areas": [],
+"title": "Iron Forge Intro",
+"dur": 86.1
+},
+{
+"id": 8180965,
+"set": "Zone-Ironforge",
+"origin": "zone",
+"areas": [],
+"title": "Iron Forge Walking 01",
+"dur": 118.7
+},
+{
+"id": 53194,
+"set": "Zone-Ironforge",
+"origin": "zone",
+"areas": [],
+"path": "sound/music/citymusic/ironforge/ironforge walking 03 (glenn).mp3",
+"dur": 81.2
+},
+{
+"id": 8180971,
+"set": "Zone-Ironforge",
+"origin": "zone",
+"areas": [],
+"title": "Iron Forge Walking 04",
+"dur": 71.0
+},
+{
+"id": 8180967,
+"set": "Moment-KingsTheme",
+"origin": "zone",
+"areas": [],
+"title": "Iron Forge Walking 02",
+"dur": 49.8
+},
+{
+"id": 8181329,
+"set": "Zone-Gnomeragon",
+"origin": "zone",
+"areas": [],
+"title": "Gnomeragon 01 Zone",
+"dur": 65.8
+},
+{
+"id": 8181331,
+"set": "Zone-Gnomeragon",
+"origin": "zone",
+"areas": [],
+"title": "Gnomeragon 02 Zone",
+"dur": 65.8
+},
+{
+"id": 8181023,
+"set": "PVP_BAttleGrounds",
+"origin": "zone",
+"areas": [
+3277,
+16603,
+16606
+],
+"title": "PvP 2",
+"dur": 52.8
+},
+{
+"id": 8181021,
+"set": "PVP_BAttleGrounds",
+"origin": "zone",
+"areas": [
+3277,
+16603,
+16606
+],
+"title": "PvP 1",
+"dur": 47.3
+},
+{
+"id": 8181025,
+"set": "PVP_BAttleGrounds",
+"origin": "zone",
+"areas": [
+3277,
+16603,
+16606
+],
+"title": "PvP 3",
+"dur": 36.6
+},
+{
+"id": 8181027,
+"set": "PVP_BAttleGrounds",
+"origin": "zone",
+"areas": [
+3277,
+16603,
+16606
+],
+"title": "PvP 4",
+"dur": 61.9
+},
+{
+"id": 8181029,
+"set": "PVP_BAttleGrounds",
+"origin": "zone",
+"areas": [
+3277,
+16603,
+16606
+],
+"title": "PvP 5",
+"dur": 62.0
+},
+{
+"id": 53257,
+"set": "Darkmoon_Faire_Music",
+"origin": "zone",
+"areas": [],
+"path": "sound/music/worldevents/darkmoonfaire_2.mp3",
+"title": "DMFaire_2",
+"dur": 74.1
+},
+{
+"id": 8181341,
+"set": "Moment - ZulGurub",
+"origin": "zone",
+"areas": [],
+"title": "Zul'Gurub Voodoo",
+"dur": 85.1
+},
+{
+"id": 53239,
+"set": "Moment - AhnQiraj Intro 1",
+"origin": "zone",
+"areas": [],
+"path": "sound/music/musical moments/mystery/ahnqirajintro1.mp3",
+"title": "Ahn Qiraj Theme",
+"dur": 143.6
+},
+{
+"id": 8176626,
+"set": "AhnQirajExteriorWalking",
+"origin": "zone",
+"areas": [
+3428,
+3429
+],
+"title": "Ahn'Qiraj Exterior Walking 1",
+"dur": 68.5
+},
+{
+"id": 8176628,
+"set": "AhnQirajExteriorWalking",
+"origin": "zone",
+"areas": [
+3428,
+3429
+],
+"title": "Ahn'Qiraj Exterior Walking 2",
+"dur": 84.8
+},
+{
+"id": 8176630,
+"set": "AhnQirajExteriorWalking",
+"origin": "zone",
+"areas": [
+3428,
+3429
+],
+"title": "Ahn'Qiraj Exterior Walking 3",
+"dur": 58.8
+},
+{
+"id": 8176632,
+"set": "AhnQirajExteriorWalking",
+"origin": "zone",
+"areas": [
+3428,
+3429
+],
+"title": "Ahn'Qiraj Exterior Walking 4",
+"dur": 60.5
+},
+{
+"id": 8176671,
+"set": "AhnQirajWalking",
+"origin": "zone",
+"areas": [],
+"title": "Ahn'Qiraj Interior 1",
+"dur": 53.3
+},
+{
+"id": 8176673,
+"set": "AhnQirajWalking",
+"origin": "zone",
+"areas": [],
+"title": "Ahn'Qiraj Interior 2",
+"dur": 82.7
+},
+{
+"id": 8176675,
+"set": "AhnQirajWalking",
+"origin": "zone",
+"areas": [],
+"title": "Ahn'Qiraj Interior 3",
+"dur": 67.8
+},
+{
+"id": 8176683,
+"set": "Intro - AhnQirajInterior",
+"origin": "zone",
+"areas": [],
+"title": "Ahn'Qiraj Interior Intro Main",
+"dur": 69.5
+},
+{
+"id": 8176685,
+"set": "",
+"origin": "zone",
+"areas": [],
+"title": "Ahn'Qiraj King Room",
+"dur": 73.5
+},
+{
+"id": 8176689,
+"set": "AhnQirajTriangleRoom",
+"origin": "zone",
+"areas": [],
+"title": "Ahn'Qiraj Triangle Room 1",
+"dur": 23.7
+},
+{
+"id": 8176691,
+"set": "AhnQirajTriangleRoom",
+"origin": "zone",
+"areas": [],
+"title": "Ahn'Qiraj Triangle Room 2",
+"dur": 17.9
+},
+{
+"id": 8176693,
+"set": "AhnQirajTriangleRoom",
+"origin": "zone",
+"areas": [],
+"title": "Ahn'Qiraj Triangle Room 3",
+"dur": 16.2
+},
+{
+"id": 8176695,
+"set": "AhnQirajTriangleRoom",
+"origin": "zone",
+"areas": [],
+"title": "Ahn'Qiraj Triangle Room 4",
+"dur": 20.3
+},
+{
+"id": 8176697,
+"set": "AhnQirajTriangleRoom",
+"origin": "zone",
+"areas": [],
+"title": "Ahn'Qiraj Triangle Room 5",
+"dur": 31.8
+},
+{
+"id": 8176699,
+"set": "AhnQirajTriangleRoom",
+"origin": "zone",
+"areas": [],
+"title": "Ahn'Qiraj Triangle Room 6",
+"dur": 20.7
+},
+{
+"id": 8176701,
+"set": "AhnQirajTriangleRoom",
+"origin": "zone",
+"areas": [],
+"title": "Ahn'Qiraj Triangle Room 7",
+"dur": 19.1
+},
+{
+"id": 8176681,
+"set": "AhnQirajInteriorCenterRoom",
+"origin": "zone",
+"areas": [],
+"title": "Ahn'Qiraj Interior Center Room 1",
+"dur": 70.0
+},
+{
+"id": 8180911,
+"set": "Zone - Naxxramas",
+"origin": "zone",
+"areas": [],
+"title": "Naxxramas Walking 01",
+"dur": 102.1
+},
+{
+"id": 8180913,
+"set": "Zone - Naxxramas",
+"origin": "zone",
+"areas": [],
+"title": "Naxxramas Walking 02",
+"dur": 72.3
+},
+{
+"id": 8180915,
+"set": "Zone - Naxxramas",
+"origin": "zone",
+"areas": [],
+"title": "Naxxramas Walking 03",
+"dur": 88.8
+},
+{
+"id": 8180917,
+"set": "Zone - Naxxramas",
+"origin": "zone",
+"areas": [],
+"title": "Naxxramas Walking 04",
+"dur": 82.9
+},
+{
+"id": 8180919,
+"set": "Zone - Naxxramas",
+"origin": "zone",
+"areas": [],
+"title": "Naxxramas Walking 05",
+"dur": 99.8
+},
+{
+"id": 8180921,
+"set": "Zone - Naxxramas",
+"origin": "zone",
+"areas": [],
+"title": "Naxxramas Walking 06",
+"dur": 99.5
+},
+{
+"id": 53591,
+"set": "Zone-NaxxramasAbominationBoss",
+"origin": "zone",
+"areas": [],
+"path": "sound/music/zonemusic/naxxramas/naxxramasabominationboss1.mp3",
+"title": "AbominationBoss1",
+"dur": 61.4
+},
+{
+"id": 53592,
+"set": "Zone-NaxxramasAbominationBoss",
+"origin": "zone",
+"areas": [],
+"path": "sound/music/zonemusic/naxxramas/naxxramasabominationboss2.mp3",
+"title": "AbominationBoss2",
+"dur": 67.1
+},
+{
+"id": 53593,
+"set": "Zone-NaxxramasAbominationBoss",
+"origin": "zone",
+"areas": [],
+"path": "sound/music/zonemusic/naxxramas/naxxramasabominationwing1.mp3",
+"title": "AbominationWing1",
+"dur": 61.3
+},
+{
+"id": 53594,
+"set": "Zone-NaxxramasAbomination",
+"origin": "zone",
+"areas": [],
+"path": "sound/music/zonemusic/naxxramas/naxxramasabominationwing2.mp3",
+"title": "AbominationWing2",
+"dur": 66.7
+},
+{
+"id": 53595,
+"set": "Zone-NaxxramasAbomination",
+"origin": "zone",
+"areas": [],
+"path": "sound/music/zonemusic/naxxramas/naxxramasabominationwing3.mp3",
+"title": "AbominationWing3",
+"dur": 61.3
+},
+{
+"id": 53596,
+"set": "Zone-NaxxramasFrostwyrm",
+"origin": "zone",
+"areas": [],
+"path": "sound/music/zonemusic/naxxramas/naxxramasfrostwyrm1.mp3",
+"title": "Frostwyrm1",
+"dur": 57.9
+},
+{
+"id": 53597,
+"set": "Zone-NaxxramasFrostwyrm",
+"origin": "zone",
+"areas": [],
+"path": "sound/music/zonemusic/naxxramas/naxxramasfrostwyrm2.mp3",
+"title": "Frostwyrm2",
+"dur": 81.8
+},
+{
+"id": 53598,
+"set": "Zone-NaxxramasFrostwyrm",
+"origin": "zone",
+"areas": [],
+"path": "sound/music/zonemusic/naxxramas/naxxramasfrostwyrm3.mp3",
+"title": "Frostwyrm3",
+"dur": 61.8
+},
+{
+"id": 53599,
+"set": "Zone-NaxxramasFrostwyrm",
+"origin": "zone",
+"areas": [],
+"path": "sound/music/zonemusic/naxxramas/naxxramasfrostwyrm4.mp3",
+"title": "Frostwyrm4",
+"dur": 60.1
+},
+{
+"id": 53602,
+"set": "Zone-NaxxramasKelthuzad",
+"origin": "zone",
+"areas": [],
+"path": "sound/music/zonemusic/naxxramas/naxxramaskelthuzad1.mp3",
+"title": "KelThuzad1A",
+"dur": 94.7
+},
+{
+"id": 53603,
+"set": "Zone-NaxxramasKelthuzad",
+"origin": "zone",
+"areas": [],
+"path": "sound/music/zonemusic/naxxramas/naxxramaskelthuzad2.mp3",
+"title": "KelThuzad2A",
+"dur": 97.2
+},
+{
+"id": 53604,
+"set": "Zone-NaxxramasKelthuzad",
+"origin": "zone",
+"areas": [],
+"path": "sound/music/zonemusic/naxxramas/naxxramaskelthuzad3.mp3",
+"title": "KelThuzad3A",
+"dur": 75.7
+},
+{
+"id": 53605,
+"set": "Zone-NaxxramasPlagueBoss",
+"origin": "zone",
+"areas": [],
+"path": "sound/music/zonemusic/naxxramas/naxxramasplagueboss1.mp3",
+"title": "PlagueBoss1",
+"dur": 87.0
+},
+{
+"id": 53606,
+"set": "Zone-NaxxramasPlagueBoss",
+"origin": "zone",
+"areas": [],
+"path": "sound/music/zonemusic/naxxramas/naxxramasplaguewing1.mp3",
+"title": "PlagueWing1",
+"dur": 87.8
+},
+{
+"id": 53607,
+"set": "Zone-NaxxramasPlagueBoss",
+"origin": "zone",
+"areas": [],
+"path": "sound/music/zonemusic/naxxramas/naxxramasplaguewing2.mp3",
+"title": "PlagueWing2",
+"dur": 71.8
+},
+{
+"id": 53608,
+"set": "Zone-NaxxramasPlague",
+"origin": "zone",
+"areas": [],
+"path": "sound/music/zonemusic/naxxramas/naxxramasplaguewing3.mp3",
+"title": "PlagueWing3",
+"dur": 76.7
+},
+{
+"id": 53609,
+"set": "Zone-NaxxramasSpiderBoss",
+"origin": "zone",
+"areas": [],
+"path": "sound/music/zonemusic/naxxramas/naxxramasspiderboss1.mp3",
+"title": "SpiderBoss1",
+"dur": 60.2
+},
+{
+"id": 53613,
+"set": "Zone-NaxxramasSpiderBoss",
+"origin": "zone",
+"areas": [],
+"path": "sound/music/zonemusic/naxxramas/naxxramasspiderwing3.mp3",
+"title": "SpiderWing3",
+"dur": 47.0
+},
+{
+"id": 53610,
+"set": "Zone-NaxxramasSpiderBoss",
+"origin": "zone",
+"areas": [],
+"path": "sound/music/zonemusic/naxxramas/naxxramasspiderboss2.mp3",
+"title": "SpiderBoss2",
+"dur": 64.0
+},
+{
+"id": 53611,
+"set": "Zone-NaxxramasSpider",
+"origin": "zone",
+"areas": [],
+"path": "sound/music/zonemusic/naxxramas/naxxramasspiderwing1.mp3",
+"title": "SpiderWing1",
+"dur": 88.6
+},
+{
+"id": 53612,
+"set": "Zone-NaxxramasSpider",
+"origin": "zone",
+"areas": [],
+"path": "sound/music/zonemusic/naxxramas/naxxramasspiderwing2.mp3",
+"title": "SpiderWing2",
+"dur": 67.5
+},
+{
+"id": 8286132,
+"set": "Zone-BoneWastesUni",
+"origin": "zone",
+"areas": [
+16651
+],
+"title": "Terrokar Bone Wastes Walking 1",
+"dur": 65.3
+},
+{
+"id": 8286134,
+"set": "Zone-BoneWastesUni",
+"origin": "zone",
+"areas": [
+16651
+],
+"title": "Terrokar Bone Wastes Walking 2",
+"dur": 63.2
+},
+{
+"id": 8286136,
+"set": "Zone-BoneWastesUni",
+"origin": "zone",
+"areas": [
+16651
+],
+"title": "Terrokar Bone Wastes Walking 3",
+"dur": 56.5
+},
+{
+"id": 8286138,
+"set": "Zone-BoneWastesUni",
+"origin": "zone",
+"areas": [
+16651
+],
+"title": "Terrokar Bone Wastes Walking 4",
+"dur": 189.7
+},
+{
+"id": 8285919,
+"set": "Zone-HyjalPastBaseWalk",
+"origin": "zone",
+"areas": [],
+"title": "HyjalExtWalk1Uni",
+"dur": 69.6
+},
+{
+"id": 8285921,
+"set": "Zone-HyjalPastBaseWalk",
+"origin": "zone",
+"areas": [],
+"title": "HyjalExtWalk2Uni",
+"dur": 48.1
+},
+{
+"id": 8285923,
+"set": "Zone-HyjalPastBaseWalk",
+"origin": "zone",
+"areas": [],
+"title": "HyjalExtWalk3Uni",
+"dur": 45.4
+},
+{
+"id": 8285925,
+"set": "Zone-HyjalPastBaseWalk",
+"origin": "zone",
+"areas": [],
+"title": "HyjalExtWalk4Uni",
+"dur": 85.3
+},
+{
+"id": 8285927,
+"set": "Zone-HyjalPastBaseWalk",
+"origin": "zone",
+"areas": [],
+"title": "HyjalExtWalk5Uni",
+"dur": 47.2
+},
+{
+"id": 8285929,
+"set": "Zone-HyjalPastBaseWalk",
+"origin": "zone",
+"areas": [],
+"title": "HyjalExtWalk6Uni",
+"dur": 46.2
+},
+{
+"id": 8285931,
+"set": "Zone-HyjalPastBaseWalk",
+"origin": "zone",
+"areas": [],
+"title": "HyjalExtWalk11Uni",
+"dur": 49.9
+},
+{
+"id": 8285933,
+"set": "Zone-HyjalPastBaseWalk",
+"origin": "zone",
+"areas": [],
+"title": "HyjalExtWalk12Uni",
+"dur": 67.7
+},
+{
+"id": 6653571,
+"set": "1.15.6 - Dungeon - Karazhan Crypts - General - Walk",
+"origin": "zone",
+"areas": [],
+"title": "Karzhan Crypts",
+"dur": 185.9
+},
+{
+"id": 6653573,
+"set": "1.15.6 - Dungeon - Karazhan Crypts - General - Walk",
+"origin": "zone",
+"areas": [],
+"title": "Karzhan Crypts",
+"dur": 181.9
+},
+{
+"id": 6653575,
+"set": "1.15.6 - Dungeon - Karazhan Crypts - General - Walk",
+"origin": "zone",
+"areas": [],
+"title": "Karzhan Crypts",
+"dur": 161.5
+},
+{
+"id": 53240,
+"set": "1.15.7 - Raid - Scarlet Enclave - General - Walk",
+"origin": "zone",
+"areas": [
+16236
+],
+"path": "sound/music/musical moments/mystery/mystery01-zone.mp3",
+"dur": 60.8
+},
+{
+"id": 53241,
+"set": "1.15.7 - Raid - Scarlet Enclave - General - Walk",
+"origin": "zone",
+"areas": [
+16236
+],
+"path": "sound/music/musical moments/mystery/mystery02-zone.mp3",
+"dur": 53.6
+},
+{
+"id": 53242,
+"set": "1.15.7 - Raid - Scarlet Enclave - General - Walk",
+"origin": "zone",
+"areas": [
+16236
+],
+"path": "sound/music/musical moments/mystery/mystery03-zone.mp3",
+"title": "mystery03-zone",
+"dur": 60.9
+},
+{
+"id": 6865484,
+"set": "1.15.7 - Raid - Scarlet Enclave - General - Walk",
+"origin": "zone",
+"areas": [
+16236
+],
+"dur": 140.5
+},
+{
+"id": 6865486,
+"set": "1.15.7 - Raid - Scarlet Enclave - General - Walk",
+"origin": "zone",
+"areas": [
+16236
+],
+"dur": 140.5
+},
+{
+"id": 53243,
+"set": "1.15.7 - Raid - Scarlet Enclave - New Avalon - Walk",
+"origin": "zone",
+"areas": [],
+"path": "sound/music/musical moments/mystery/mystery04-zone.mp3",
+"title": "mystery04-zone",
+"dur": 64.5
+},
+{
+"id": 53244,
+"set": "1.15.7 - Raid - Scarlet Enclave - New Avalon - Walk",
+"origin": "zone",
+"areas": [],
+"path": "sound/music/musical moments/mystery/mystery05-zone.mp3",
+"title": "mystery05-zone",
+"dur": 81.8
+},
+{
+"id": 53245,
+"set": "1.15.7 - Raid - Scarlet Enclave - New Avalon - Walk",
+"origin": "zone",
+"areas": [],
+"path": "sound/music/musical moments/mystery/mystery06-zone.mp3",
+"title": "mystery06-zone",
+"dur": 65.4
+},
+{
+"id": 6865468,
+"set": "1.15.7 - Raid - Scarlet Enclave - New Avalon - Walk",
+"origin": "zone",
+"areas": [],
+"dur": 213.5
+},
+{
+"id": 6865470,
+"set": "1.15.7 - Raid - Scarlet Enclave - New Avalon - Walk",
+"origin": "zone",
+"areas": [],
+"dur": 133.6
+},
+{
+"id": 6865472,
+"set": "1.15.7 - Raid - Scarlet Enclave - New Avalon - Walk",
+"origin": "zone",
+"areas": [],
+"dur": 133.7
+},
+{
+"id": 53246,
+"set": "1.15.7 - Raid - Scarlet Enclave - Chapel - Walk 1",
+"origin": "zone",
+"areas": [],
+"path": "sound/music/musical moments/mystery/mystery07-zone.mp3",
+"title": "mystery07-zone",
+"dur": 83.3
+},
+{
+"id": 53247,
+"set": "1.15.7 - Raid - Scarlet Enclave - Chapel - Walk 1",
+"origin": "zone",
+"areas": [],
+"path": "sound/music/musical moments/mystery/mystery08-zone.mp3",
+"title": "mystery08-zone",
+"dur": 83.3
+},
+{
+"id": 6861009,
+"set": "1.15.7 - Raid - Scarlet Enclave - Chapel - Walk 1",
+"origin": "zone",
+"areas": [],
+"title": "Scarlet Monastery 1H",
+"dur": 83.2
+},
+{
+"id": 6861011,
+"set": "1.15.7 - Raid - Scarlet Enclave - Chapel - Walk 1",
+"origin": "zone",
+"areas": [],
+"title": "Scarlet Monastery 2H",
+"dur": 54.2
+},
+{
+"id": 6861013,
+"set": "1.15.7 - Raid - Scarlet Enclave - Chapel - Walk 1",
+"origin": "zone",
+"areas": [],
+"title": "Scarlet Monastery 3H",
+"dur": 117.8
+},
+{
+"id": 53249,
+"set": "1.15.7 - Raid - Scarlet Enclave - Chapel - Walk 1",
+"origin": "zone",
+"areas": [],
+"path": "sound/music/musical moments/mystery/mystery10-zone.mp3",
+"title": "mystery10-zone",
+"dur": 62.5
+},
+{
+"id": 6865498,
+"set": "1.15.7 - Raid - Scarlet Enclave - Epilogue",
+"origin": "zone",
+"areas": [],
+"title": "Ebon Hold 2",
+"dur": 78.8
+},
+{
+"id": 6865500,
+"set": "1.15.7 - Raid - Scarlet Enclave - Epilogue",
+"origin": "zone",
+"areas": [],
+"title": "Ebon Hold 3",
+"dur": 82.1
+},
+{
+"id": 6865488,
+"set": "1.15.7 - Raid - Scarlet Enclave - Boss - Battle",
+"origin": "zone",
+"areas": [],
+"title": "Assault 4",
+"dur": 67.3
+},
+{
+"id": 6865490,
+"set": "1.15.7 - Raid - Scarlet Enclave - Boss - Battle",
+"origin": "zone",
+"areas": [],
+"title": "Assault 5",
+"dur": 117.5
+},
+{
+"id": 6865492,
+"set": "1.15.7 - Raid - Scarlet Enclave - Boss - Battle",
+"origin": "zone",
+"areas": [],
+"title": "Assault 6",
+"dur": 93.6
+},
+{
+"id": 6865494,
+"set": "1.15.7 - Raid - Scarlet Enclave - Boss - Battle",
+"origin": "zone",
+"areas": [],
+"title": "Assault 7",
+"dur": 96.0
+},
+{
+"id": 6865474,
+"set": "1.15.7 - Raid - Scarlet Enclave - Boss - Battle",
+"origin": "zone",
+"areas": [],
+"dur": 76.2
+},
+{
+"id": 6865476,
+"set": "1.15.7 - Raid - Scarlet Enclave - Boss - Battle",
+"origin": "zone",
+"areas": [],
+"dur": 76.2
+},
+{
+"id": 6865478,
+"set": "1.15.7 - Raid - Scarlet Enclave - Boss - Battle",
+"origin": "zone",
+"areas": [],
+"dur": 76.2
+},
+{
+"id": 6865480,
+"set": "1.15.7 - Raid - Scarlet Enclave - Boss - Battle",
+"origin": "zone",
+"areas": [],
+"dur": 76.2
+},
+{
+"id": 6865482,
+"set": "1.15.7 - Raid - Scarlet Enclave - Boss - Battle",
+"origin": "zone",
+"areas": [],
+"dur": 76.2
+},
+{
+"id": 8285938,
+"set": "1.60 Dungeon - Ruins of Dalaran",
+"origin": "zone",
+"areas": [
+16544,
+16560
+],
+"title": "Dalaran 1",
+"dur": 67.6
+},
+{
+"id": 8285940,
+"set": "1.60 Dungeon - Ruins of Dalaran",
+"origin": "zone",
+"areas": [
+16544,
+16560
+],
+"title": "Dalaran 2",
+"dur": 42.9
+},
+{
+"id": 8285942,
+"set": "1.60 Dungeon - Ruins of Dalaran",
+"origin": "zone",
+"areas": [
+16544,
+16560
+],
+"title": "Dalaran 3",
+"dur": 70.2
+},
+{
+"id": 8285944,
+"set": "1.60 Dungeon - Ruins of Dalaran",
+"origin": "zone",
+"areas": [
+16544,
+16560
+],
+"title": "Dalaran 4",
+"dur": 88.9
+},
+{
+"id": 575699,
+"set": "1.60.0 - Zephras Isle Finale",
+"origin": "zone",
+"areas": [],
+"path": "sound/music/cataclysm/mus_43_twilightshammer_uu02.mp3",
+"title": "Twilight_Hammer_Intro_V2",
+"dur": 55.0
+},
+{
+"id": 441744,
+"set": "Zone-Zephras(REPLACEME)",
+"origin": "zone",
+"areas": [
+16593
+],
+"path": "sound/music/cataclysm/mus_skywall_gu01.mp3",
+"title": "MUS_Skywall01",
+"dur": 159.3
+},
+{
+"id": 441753,
+"set": "Zone-Zephras(REPLACEME)",
+"origin": "zone",
+"areas": [
+16593
+],
+"path": "sound/music/cataclysm/mus_skywall_gu10.mp3",
+"title": "MUS_Skywall10",
+"dur": 109.9
+},
+{
+"id": 8286116,
+"set": "1.60 Dungeon - The Shaper's Terrace",
+"origin": "zone",
+"areas": [],
+"title": "Sholazar Walk Day 04",
+"dur": 112.0
+},
+{
+"id": 8286118,
+"set": "1.60 Dungeon - The Shaper's Terrace",
+"origin": "zone",
+"areas": [],
+"title": "Sholazar Walk Day 05",
+"dur": 123.1
+},
+{
+"id": 8286120,
+"set": "1.60 Dungeon - The Shaper's Terrace",
+"origin": "zone",
+"areas": [],
+"title": "Sholazar Walk Day 06",
+"dur": 142.3
+},
+{
+"id": 8286122,
+"set": "1.60 Dungeon - The Shaper's Terrace",
+"origin": "zone",
+"areas": [],
+"title": "Sholazar Walk Night 01",
+"dur": 115.2
+},
+{
+"id": 8286124,
+"set": "1.60 Dungeon - The Shaper's Terrace",
+"origin": "zone",
+"areas": [],
+"title": "Sholazar Walk Night 02",
+"dur": 137.6
+},
+{
+"id": 8286126,
+"set": "1.60 Dungeon - The Shaper's Terrace",
+"origin": "zone",
+"areas": [],
+"title": "Sholazar Walk Night 03",
+"dur": 131.9
+},
+{
+"id": 8286128,
+"set": "1.60 Dungeon - The Shaper's Terrace",
+"origin": "zone",
+"areas": [],
+"title": "Sholazar Walk Night 04",
+"dur": 91.7
+},
+{
+"id": 8286130,
+"set": "1.60 Dungeon - The Shaper's Terrace",
+"origin": "zone",
+"areas": [],
+"title": "Sholazar Walk Night 05",
+"dur": 99.5
+},
+{
+"id": 8158714,
+"set": "MUS_C60_Riverglades_General",
+"origin": "zone",
+"areas": [
+16591
+],
+"title": "Riverglades General A",
+"dur": 57.1
+},
+{
+"id": 8158716,
+"set": "MUS_C60_Riverglades_General",
+"origin": "zone",
+"areas": [
+16591
+],
+"title": "Riverglades General B",
+"dur": 47.4
+},
+{
+"id": 8158718,
+"set": "MUS_C60_Riverglades_General",
+"origin": "zone",
+"areas": [
+16591
+],
+"title": "Riverglades General C",
+"dur": 62.8
+},
+{
+"id": 8173715,
+"set": "MUS_C60_Riverglades_General",
+"origin": "zone",
+"areas": [
+16591
+],
+"title": "Riverglades General D",
+"dur": 61.8
+},
+{
+"id": 8173717,
+"set": "MUS_C60_Riverglades_General",
+"origin": "zone",
+"areas": [
+16591
+],
+"title": "Riverglades General E",
+"dur": 68.4
+},
+{
+"id": 8158708,
+"set": "MUS_C60_Riverglades_FarholdeKeep",
+"origin": "zone",
+"areas": [],
+"title": "Farholde Keep A",
+"dur": 75.0
+},
+{
+"id": 8158710,
+"set": "MUS_C60_Riverglades_FarholdeKeep",
+"origin": "zone",
+"areas": [],
+"title": "Farholde Keep B",
+"dur": 82.9
+},
+{
+"id": 8269352,
+"set": "MUS_C60_Riverglades_FarholdeKeep",
+"origin": "zone",
+"areas": [],
+"title": "Farholde Keep C",
+"dur": 57.6
+},
+{
+"id": 8269354,
+"set": "MUS_C60_Riverglades_FarholdeKeep",
+"origin": "zone",
+"areas": [],
+"title": "Farholde Keep D",
+"dur": 74.1
+},
+{
+"id": 8158702,
+"set": "MUS_C60_Riverglades_EastwindShore",
+"origin": "zone",
+"areas": [],
+"title": "Eastwind Shore A",
+"dur": 85.8
+},
+{
+"id": 8158704,
+"set": "MUS_C60_Riverglades_EastwindShore",
+"origin": "zone",
+"areas": [],
+"title": "Eastwind Shore B",
+"dur": 84.0
+},
+{
+"id": 8158706,
+"set": "MUS_C60_Riverglades_EastwindShore",
+"origin": "zone",
+"areas": [],
+"title": "Eastwind Shore C",
+"dur": 100.3
+},
+{
+"id": 8158732,
+"set": "MUS_C60_Riverglades_WheelersGrange",
+"origin": "zone",
+"areas": [],
+"title": "Wheeler's Grange A",
+"dur": 80.0
+},
+{
+"id": 8158734,
+"set": "MUS_C60_Riverglades_WheelersGrange",
+"origin": "zone",
+"areas": [],
+"title": "Wheeler's Grange B",
+"dur": 64.2
+},
+{
+"id": 8158736,
+"set": "MUS_C60_Riverglades_WheelersGrange",
+"origin": "zone",
+"areas": [],
+"title": "Wheeler's Grange C",
+"dur": 77.8
+},
+{
+"id": 8175596,
+"set": "MUS_C60_Zephras_Valanaar",
+"origin": "zone",
+"areas": [],
+"title": "Valanaar A",
+"dur": 54.2
+},
+{
+"id": 8175598,
+"set": "MUS_C60_Zephras_Valanaar",
+"origin": "zone",
+"areas": [],
+"title": "Valanaar B",
+"dur": 52.6
+},
+{
+"id": 8175600,
+"set": "MUS_C60_Zephras_Valanaar",
+"origin": "zone",
+"areas": [],
+"title": "Valanaar C",
+"dur": 32.2
+},
+{
+"id": 8158742,
+"set": "MUS_C60_Zephras_ShadowgaleForest",
+"origin": "zone",
+"areas": [],
+"title": "Shadowgale Forest A",
+"dur": 67.9
+},
+{
+"id": 8158744,
+"set": "MUS_C60_Zephras_ShadowgaleForest",
+"origin": "zone",
+"areas": [],
+"title": "Shadowgale Forest B",
+"dur": 67.0
+},
+{
+"id": 8246682,
+"set": "MUS_C60_Zephras_ShadowgaleForest",
+"origin": "zone",
+"areas": [],
+"title": "Shadowgale Forest C",
+"dur": 73.9
+},
+{
+"id": 8158750,
+"set": "MUS_C60_Zephras_ShrineofAkir",
+"origin": "zone",
+"areas": [],
+"title": "Shrine of A'kir A",
+"dur": 64.0
+},
+{
+"id": 8158752,
+"set": "MUS_C60_Zephras_ShrineofAkir",
+"origin": "zone",
+"areas": [],
+"title": "Shrine of A'kir B",
+"dur": 64.0
+},
+{
+"id": 8246688,
+"set": "MUS_C60_Zephras_ShrineofAkir",
+"origin": "zone",
+"areas": [],
+"title": "Shrine of Akir C",
+"dur": 53.1
+},
+{
+"id": 8246690,
+"set": "MUS_C60_Zephras_ShrineofAkir",
+"origin": "zone",
+"areas": [],
+"title": "Shrine of Akir D",
+"dur": 64.1
+},
+{
+"id": 8158670,
+"set": "MUS_C60_Hyjal_General",
+"origin": "zone",
+"areas": [
+616,
+16004
+],
+"title": "Hyjal General A",
+"dur": 48.9
+},
+{
+"id": 8158672,
+"set": "MUS_C60_Hyjal_General",
+"origin": "zone",
+"areas": [
+616,
+16004
+],
+"title": "Hyjal General B",
+"dur": 50.7
+},
+{
+"id": 8158674,
+"set": "MUS_C60_Hyjal_General",
+"origin": "zone",
+"areas": [
+616,
+16004
+],
+"title": "Hyjal General C",
+"dur": 61.9
+},
+{
+"id": 8173713,
+"set": "MUS_C60_Hyjal_General",
+"origin": "zone",
+"areas": [
+616,
+16004
+],
+"title": "Hyjal General D",
+"dur": 54.0
+},
+{
+"id": 8158676,
+"set": "MUS_C60_Hyjal_MourningsRest",
+"origin": "zone",
+"areas": [
+16611
+],
+"title": "Mourning's Rest A",
+"dur": 52.2
+},
+{
+"id": 8158678,
+"set": "MUS_C60_Hyjal_MourningsRest",
+"origin": "zone",
+"areas": [
+16611
+],
+"title": "Mourning's Rest B",
+"dur": 51.0
+},
+{
+"id": 8158680,
+"set": "MUS_C60_Hyjal_MourningsRest",
+"origin": "zone",
+"areas": [
+16611
+],
+"title": "Mourning's Rest C",
+"dur": 67.2
+},
+{
+"id": 8158682,
+"set": "MUS_C60_Hyjal_SummitofEternity",
+"origin": "zone",
+"areas": [],
+"title": "Summit of Eternity A",
+"dur": 50.2
+},
+{
+"id": 8158684,
+"set": "MUS_C60_Hyjal_SummitofEternity",
+"origin": "zone",
+"areas": [],
+"title": "Summit of Eternity B",
+"dur": 39.3
+},
+{
+"id": 8282581,
+"set": "MUS_C60_Hyjal_SummitofEternity",
+"origin": "zone",
+"areas": [],
+"title": "Summit of Eternity C",
+"dur": 51.1
+},
+{
+"id": 8269360,
+"set": "MUS_C60_Hyjal_TaintedFoothills",
+"origin": "zone",
+"areas": [],
+"title": "Tainted Foothills A",
+"dur": 76.0
+},
+{
+"id": 8269362,
+"set": "MUS_C60_Hyjal_TaintedFoothills",
+"origin": "zone",
+"areas": [],
+"title": "Tainted Foothills B",
+"dur": 55.8
+},
+{
+"id": 8269364,
+"set": "MUS_C60_Hyjal_TaintedFoothills",
+"origin": "zone",
+"areas": [],
+"title": "Tainted Foothills C",
+"dur": 59.0
+},
+{
+"id": 8158694,
+"set": "MUS_C60_Riverglades_Bolderok",
+"origin": "zone",
+"areas": [],
+"title": "Bolder'ok A",
+"dur": 64.4
+},
+{
+"id": 8158696,
+"set": "MUS_C60_Riverglades_Bolderok",
+"origin": "zone",
+"areas": [],
+"title": "Bolder'ok B",
+"dur": 49.8
+},
+{
+"id": 8158698,
+"set": "MUS_C60_Riverglades_Bolderok",
+"origin": "zone",
+"areas": [],
+"title": "Bolder'ok C",
+"dur": 63.2
+},
+{
+"id": 8158700,
+"set": "MUS_C60_Riverglades_Bolderok",
+"origin": "zone",
+"areas": [],
+"title": "Bolder'ok D",
+"dur": 42.5
+},
+{
+"id": 8158720,
+"set": "MUS_C60_Riverglades_RogmarOutpost",
+"origin": "zone",
+"areas": [],
+"title": "Rog'mar Outpost A",
+"dur": 65.0
+},
+{
+"id": 8158722,
+"set": "MUS_C60_Riverglades_RogmarOutpost",
+"origin": "zone",
+"areas": [],
+"title": "Rog'mar Outpost B",
+"dur": 66.1
+},
+{
+"id": 8158724,
+"set": "MUS_C60_Riverglades_RogmarOutpost",
+"origin": "zone",
+"areas": [],
+"title": "Rog'mar Outpost C",
+"dur": 48.2
+},
+{
+"id": 8158726,
+"set": "MUS_C60_Riverglades_RogmarOutpost",
+"origin": "zone",
+"areas": [],
+"title": "Rog'mar Outpost D",
+"dur": 40.2
+},
+{
+"id": 8158728,
+"set": "MUS_C60_Riverglades_TwilightsShroud",
+"origin": "zone",
+"areas": [],
+"title": "Twilight's Shroud A",
+"dur": 67.5
+},
+{
+"id": 8158730,
+"set": "MUS_C60_Riverglades_TwilightsShroud",
+"origin": "zone",
+"areas": [],
+"title": "Twilight's Shroud B",
+"dur": 65.5
+},
+{
+"id": 8269366,
+"set": "MUS_C60_Riverglades_TwilightsShroud",
+"origin": "zone",
+"areas": [],
+"title": "Twilight's Shroud C",
+"dur": 69.6
+},
+{
+"id": 8269368,
+"set": "MUS_C60_Riverglades_TwilightsShroud",
+"origin": "zone",
+"areas": [],
+"title": "Twilight's Shroud D",
+"dur": 53.1
+},
+{
+"id": 8158738,
+"set": "MUS_C60_Zephras_GustberryLowlands",
+"origin": "zone",
+"areas": [],
+"title": "Gustberry Lowlands A",
+"dur": 73.9
+},
+{
+"id": 8158740,
+"set": "MUS_C60_Zephras_GustberryLowlands",
+"origin": "zone",
+"areas": [],
+"title": "Gustberry Lowlands B",
+"dur": 76.6
+},
+{
+"id": 8246678,
+"set": "MUS_C60_Zephras_GustberryLowlands",
+"origin": "zone",
+"areas": [],
+"title": "Gustberry Lowlands C",
+"dur": 57.7
+},
+{
+"id": 8246680,
+"set": "MUS_C60_Zephras_GustberryLowlands",
+"origin": "zone",
+"areas": [],
+"title": "Gustberry Lowlands D",
+"dur": 71.9
+},
+{
+"id": 8158746,
+"set": "MUS_C60_Zephras_Shendar",
+"origin": "zone",
+"areas": [],
+"title": "Shendar Hub A",
+"dur": 72.8
+},
+{
+"id": 8158748,
+"set": "MUS_C60_Zephras_Shendar",
+"origin": "zone",
+"areas": [],
+"title": "Shendar Hub B",
+"dur": 68.5
+},
+{
+"id": 8246684,
+"set": "MUS_C60_Zephras_Shendar",
+"origin": "zone",
+"areas": [],
+"title": "Shendar Hub C",
+"dur": 68.5
+},
+{
+"id": 8246686,
+"set": "MUS_C60_Zephras_Shendar",
+"origin": "zone",
+"areas": [],
+"title": "Shendar Hub D",
+"dur": 53.8
+},
+{
+"id": 8158754,
+"set": "MUS_C60_Zephras_ThendalVillage",
+"origin": "zone",
+"areas": [],
+"title": "Thendal Village A",
+"dur": 72.0
+},
+{
+"id": 8158756,
+"set": "MUS_C60_Zephras_ThendalVillage",
+"origin": "zone",
+"areas": [],
+"title": "Thendal Village B",
+"dur": 76.9
+},
+{
+"id": 8246692,
+"set": "MUS_C60_Zephras_ThendalVillage",
+"origin": "zone",
+"areas": [],
+"title": "Thendal Village C",
+"dur": 47.4
+},
+{
+"id": 8246694,
+"set": "MUS_C60_Zephras_ThendalVillage",
+"origin": "zone",
+"areas": [],
+"title": "Thendal Village D",
+"dur": 76.9
+},
+{
+"id": 8173719,
+"set": "MUS_C60_Riverglades_Sunnyglade",
+"origin": "zone",
+"areas": [],
+"title": "Sunnyglade A",
+"dur": 79.2
+},
+{
+"id": 8173721,
+"set": "MUS_C60_Riverglades_Sunnyglade",
+"origin": "zone",
+"areas": [],
+"title": "Sunnyglade B",
+"dur": 64.6
+},
+{
+"id": 8173723,
+"set": "MUS_C60_Riverglades_Sunnyglade",
+"origin": "zone",
+"areas": [],
+"title": "Sunnyglade C",
+"dur": 55.4
+},
+{
+"id": 8173701,
+"set": "MUS_C60_Hyjal_CradleOfTranquility",
+"origin": "zone",
+"areas": [],
+"title": "Cradle of Tranquility A",
+"dur": 46.8
+},
+{
+"id": 8173703,
+"set": "MUS_C60_Hyjal_CradleOfTranquility",
+"origin": "zone",
+"areas": [],
+"title": "Cradle of Tranquility B",
+"dur": 71.7
+},
+{
+"id": 8175594,
+"set": "MUS_C60_Hyjal_CradleOfTranquility",
+"origin": "zone",
+"areas": [],
+"title": "Cradle of Tranquility C",
+"dur": 68.3
+},
+{
+"id": 8173707,
+"set": "MUS_C60_Hyjal_FelbloodScar",
+"origin": "zone",
+"areas": [],
+"title": "Felblood Scar A",
+"dur": 54.0
+},
+{
+"id": 8269356,
+"set": "MUS_C60_Hyjal_FelbloodScar",
+"origin": "zone",
+"areas": [],
+"title": "Felblood Scar B",
+"dur": 53.2
+},
+{
+"id": 8269358,
+"set": "MUS_C60_Hyjal_FelbloodScar",
+"origin": "zone",
+"areas": [],
+"title": "Felblood Scar C",
+"dur": 63.0
+},
+{
+"id": 8190628,
+"set": "MUS_C60_Hyjal_MalornesRetreat",
+"origin": "zone",
+"areas": [],
+"title": "Marlorne's Retreat A",
+"dur": 64.3
+},
+{
+"id": 8190630,
+"set": "MUS_C60_Hyjal_MalornesRetreat",
+"origin": "zone",
+"areas": [],
+"title": "Marlorne's Retreat B",
+"dur": 64.0
+},
+{
+"id": 8190632,
+"set": "MUS_C60_Hyjal_MalornesRetreat",
+"origin": "zone",
+"areas": [],
+"title": "Marlorne's Retreat C",
+"dur": 57.4
+},
+{
+"id": 8190634,
+"set": "MUS_C60_Hyjal_MalornesRetreat",
+"origin": "zone",
+"areas": [],
+"title": "Marlorne's Retreat D",
+"dur": 42.7
+},
+{
+"id": 8190636,
+"set": "MUS_C60_Hyjal_MalornesRetreat",
+"origin": "zone",
+"areas": [],
+"title": "Marlorne's Retreat E",
+"dur": 51.8
+},
+{
+"id": 8190638,
+"set": "MUS_C60_Hyjal_MalornesRetreat",
+"origin": "zone",
+"areas": [],
+"title": "Marlorne's Retreat F",
+"dur": 51.8
+},
+{
+"id": 8195263,
+"set": "Zone-DwavesTavern",
+"origin": "zone",
+"areas": [],
+"title": "Dwarves Tavern 1A",
+"dur": 79.5
+},
+{
+"id": 8195265,
+"set": "Zone-DwavesTavern",
+"origin": "zone",
+"areas": [],
+"title": "Dwarves Tavern 1B",
+"dur": 82.4
+},
+{
+"id": 8195267,
+"set": "Zone-DwavesTavern",
+"origin": "zone",
+"areas": [],
+"title": "Dwarves Tavern 2A",
+"dur": 86.3
+},
+{
+"id": 8195269,
+"set": "Zone-DwavesTavern",
+"origin": "zone",
+"areas": [],
+"title": "Dwarves Tavern 2B",
+"dur": 90.7
+},
+{
+"id": 8195271,
+"set": "Zone-DwavesTavern",
+"origin": "zone",
+"areas": [],
+"title": "Dwarves Tavern 3",
+"dur": 103.4
+},
+{
+"id": 8180975,
+"set": "Zone-HumanTavern",
+"origin": "zone",
+"areas": [],
+"title": "Human Tavern 1A",
+"dur": 93.0
+},
+{
+"id": 8180977,
+"set": "Zone-HumanTavern",
+"origin": "zone",
+"areas": [],
+"title": "Human Tavern 1B",
+"dur": 79.1
+},
+{
+"id": 8180979,
+"set": "Zone-HumanTavern",
+"origin": "zone",
+"areas": [],
+"title": "Human Tavern 2A",
+"dur": 86.2
+},
+{
+"id": 8180981,
+"set": "Zone-HumanTavern",
+"origin": "zone",
+"areas": [],
+"title": "Human Tavern 2B",
+"dur": 81.3
+},
+{
+"id": 8195285,
+"set": "Zone-PirateTavern",
+"origin": "zone",
+"areas": [],
+"title": "Pirate Tavern 1A",
+"dur": 82.7
+},
+{
+"id": 8195287,
+"set": "Zone-PirateTavern",
+"origin": "zone",
+"areas": [],
+"title": "Pirate Tavern 1B",
+"dur": 80.9
+},
+{
+"id": 8195289,
+"set": "Zone-PirateTavern",
+"origin": "zone",
+"areas": [],
+"title": "Pirate Tavern 2A",
+"dur": 83.1
+},
+{
+"id": 8195291,
+"set": "Zone-PirateTavern",
+"origin": "zone",
+"areas": [],
+"title": "Pirate Tavern 2B",
+"dur": 80.3
+},
+{
+"id": 8195293,
+"set": "Zone-PirateTavern",
+"origin": "zone",
+"areas": [],
+"title": "Pirate Tavern 3A",
+"dur": 88.4
+},
+{
+"id": 8195295,
+"set": "Zone-PirateTavern",
+"origin": "zone",
+"areas": [],
+"title": "Pirate Tavern 3B",
+"dur": 84.0
+},
+{
+"id": 8180923,
+"set": "Zone-UndeadTavern",
+"origin": "zone",
+"areas": [],
+"title": "Undead Tavern 1A",
+"dur": 91.9
+},
+{
+"id": 8180925,
+"set": "Zone-UndeadTavern",
+"origin": "zone",
+"areas": [],
+"title": "Undead Tavern 1B",
+"dur": 87.5
+},
+{
+"id": 8180927,
+"set": "Zone-UndeadTavern",
+"origin": "zone",
+"areas": [],
+"title": "Undead Tavern 2",
+"dur": 123.5
+},
+{
+"id": 8180929,
+"set": "Zone-UndeadTavern",
+"origin": "zone",
+"areas": [],
+"title": "Undead Tavern 3A",
+"dur": 81.9
+},
+{
+"id": 8180931,
+"set": "Zone-UndeadTavern",
+"origin": "zone",
+"areas": [],
+"title": "Undead Tavern 3B",
+"dur": 94.0
+},
+{
+"id": 8195273,
+"set": "Zone-OrcRestArea",
+"origin": "zone",
+"areas": [],
+"title": "Orc Rest Area 1A",
+"dur": 98.9
+},
+{
+"id": 8195275,
+"set": "Zone-OrcRestArea",
+"origin": "zone",
+"areas": [],
+"title": "Orc Rest Area 1B",
+"dur": 91.3
+},
+{
+"id": 8195277,
+"set": "Zone-OrcRestArea",
+"origin": "zone",
+"areas": [],
+"title": "Orc Rest Area 2A",
+"dur": 86.7
+},
+{
+"id": 8195279,
+"set": "Zone-OrcRestArea",
+"origin": "zone",
+"areas": [],
+"title": "Orc Rest Area 2B",
+"dur": 85.8
+},
+{
+"id": 8195281,
+"set": "Zone-OrcRestArea",
+"origin": "zone",
+"areas": [],
+"title": "Orc Rest Area 3A",
+"dur": 85.4
+},
+{
+"id": 8195283,
+"set": "Zone-OrcRestArea",
+"origin": "zone",
+"areas": [],
+"title": "Orc Rest Area 3B",
+"dur": 81.3
+},
+{
+"id": 8197333,
+"set": "MUS_C60_Hyjal_Elderwild",
+"origin": "zone",
+"areas": [],
+"title": "Elderwild A",
+"dur": 72.2
+},
+{
+"id": 8197335,
+"set": "MUS_C60_Hyjal_Elderwild",
+"origin": "zone",
+"areas": [],
+"title": "Elderwild B",
+"dur": 72.2
+},
+{
+"id": 8197337,
+"set": "MUS_C60_Hyjal_Elderwild",
+"origin": "zone",
+"areas": [],
+"title": "Elderwild C",
+"dur": 72.2
+},
+{
+"id": 8198465,
+"set": "MUS_C60_Hyjal_Daegun",
+"origin": "zone",
+"areas": [],
+"title": "Dae'gun A",
+"dur": 66.0
+},
+{
+"id": 8198467,
+"set": "MUS_C60_Hyjal_Daegun",
+"origin": "zone",
+"areas": [],
+"title": "Dae'gun B",
+"dur": 66.0
+},
+{
+"id": 8269348,
+"set": "MUS_C60_Hyjal_Daegun",
+"origin": "zone",
+"areas": [],
+"title": "Daegun C",
+"dur": 53.5
+},
+{
+"id": 8269350,
+"set": "MUS_C60_Hyjal_Daegun",
+"origin": "zone",
+"areas": [],
+"title": "Daegun D",
+"dur": 63.5
+},
+{
+"id": 8200682,
+"set": "MUS_C60_DrownedCity_TrollGeneral",
+"origin": "zone",
+"areas": [],
+"dur": 17.6
+},
+{
+"id": 8200684,
+"set": "MUS_C60_DrownedCity_TrollGeneral",
+"origin": "zone",
+"areas": [],
+"dur": 79.3
+},
+{
+"id": 8200686,
+"set": "MUS_C60_DrownedCity_TrollGeneral",
+"origin": "zone",
+"areas": [],
+"dur": 87.3
+},
+{
+"id": 8200688,
+"set": "MUS_C60_DrownedCity_TrollGeneral",
+"origin": "zone",
+"areas": [],
+"dur": 53.0
+},
+{
+"id": 8200690,
+"set": "MUS_C60_DrownedCity_TrollGeneral",
+"origin": "zone",
+"areas": [],
+"dur": 113.7
+},
+{
+"id": 8200692,
+"set": "MUS_C60_DrownedCity_TrollGeneral",
+"origin": "zone",
+"areas": [],
+"dur": 74.4
+},
+{
+"id": 8200694,
+"set": "MUS_C60_DrownedCity_TrollGeneral",
+"origin": "zone",
+"areas": [],
+"dur": 108.6
+},
+{
+"id": 8200696,
+"set": "MUS_C60_DrownedCity_TrollGeneral",
+"origin": "zone",
+"areas": [],
+"dur": 70.4
+},
+{
+"id": 8200674,
+"set": "MUS_C60_DrownedCity_PirateGeneral",
+"origin": "zone",
+"areas": [],
+"dur": 78.0
+},
+{
+"id": 8200676,
+"set": "MUS_C60_DrownedCity_PirateGeneral",
+"origin": "zone",
+"areas": [],
+"dur": 92.8
+},
+{
+"id": 8200678,
+"set": "MUS_C60_DrownedCity_PirateGeneral",
+"origin": "zone",
+"areas": [],
+"dur": 90.9
+},
+{
+"id": 8200680,
+"set": "MUS_C60_DrownedCity_PirateGeneral",
+"origin": "zone",
+"areas": [],
+"dur": 102.1
+},
+{
+"id": 8200668,
+"set": "MUS_C60_DrownedCity_PirateGeneral",
+"origin": "zone",
+"areas": [],
+"title": "Stereo Out",
+"dur": 107.8
+},
+{
+"id": 8200670,
+"set": "MUS_C60_DrownedCity_PirateGeneral",
+"origin": "zone",
+"areas": [],
+"title": "Stereo Out",
+"dur": 125.3
+},
+{
+"id": 8200672,
+"set": "MUS_C60_DrownedCity_PirateGeneral",
+"origin": "zone",
+"areas": [],
+"title": "Stereo Out",
+"dur": 125.3
+},
+{
+"id": 8200652,
+"set": "MUS_C60_DrownedCity_NagaGeneral",
+"origin": "zone",
+"areas": [],
+"dur": 103.1
+},
+{
+"id": 8200654,
+"set": "MUS_C60_DrownedCity_NagaGeneral",
+"origin": "zone",
+"areas": [],
+"dur": 74.0
+},
+{
+"id": 8200656,
+"set": "MUS_C60_DrownedCity_NagaGeneral",
+"origin": "zone",
+"areas": [],
+"dur": 149.9
+},
+{
+"id": 8200658,
+"set": "MUS_C60_DrownedCity_NagaGeneral",
+"origin": "zone",
+"areas": [],
+"dur": 73.4
+},
+{
+"id": 8200660,
+"set": "MUS_C60_DrownedCity_NagaGeneral",
+"origin": "zone",
+"areas": [],
+"dur": 98.7
+},
+{
+"id": 8200662,
+"set": "MUS_C60_DrownedCity_NagaGeneral",
+"origin": "zone",
+"areas": [],
+"title": "Stereo Out",
+"dur": 154.3
+},
+{
+"id": 8200664,
+"set": "MUS_C60_DrownedCity_NagaGeneral",
+"origin": "zone",
+"areas": [],
+"title": "Stereo Out",
+"dur": 154.3
+},
+{
+"id": 8200666,
+"set": "MUS_C60_DrownedCity_NagaGeneral",
+"origin": "zone",
+"areas": [],
+"title": "Stereo Out",
+"dur": 69.1
+},
+{
+"id": 8200642,
+"set": "MUS_C60_DrownedCity_Boss",
+"origin": "zone",
+"areas": [],
+"dur": 136.2
+},
+{
+"id": 8200644,
+"set": "MUS_C60_DrownedCity_Boss",
+"origin": "zone",
+"areas": [],
+"dur": 40.6
+},
+{
+"id": 8200646,
+"set": "MUS_C60_DrownedCity_Boss",
+"origin": "zone",
+"areas": [],
+"dur": 92.3
+},
+{
+"id": 8200648,
+"set": "MUS_C60_DrownedCity_Boss",
+"origin": "zone",
+"areas": [],
+"dur": 79.7
+},
+{
+"id": 8204579,
+"set": "MUS_C60_Riverglades_PowderfusePort",
+"origin": "zone",
+"areas": [],
+"title": "Goblin 11",
+"dur": 45.8
+},
+{
+"id": 8204581,
+"set": "MUS_C60_Riverglades_PowderfusePort",
+"origin": "zone",
+"areas": [],
+"title": "Goblin 13",
+"dur": 47.5
+},
+{
+"id": 8204583,
+"set": "MUS_C60_Riverglades_PowderfusePort",
+"origin": "zone",
+"areas": [],
+"title": "Goblin 15",
+"dur": 47.1
+},
+{
+"id": 8204585,
+"set": "MUS_C60_Riverglades_PowderfusePort",
+"origin": "zone",
+"areas": [],
+"title": "Goblin 18",
+"dur": 85.1
+},
+{
+"id": 8204587,
+"set": "MUS_C60_Riverglades_PowderfusePort",
+"origin": "zone",
+"areas": [],
+"title": "Goblin 30",
+"dur": 18.3
+},
+{
+"id": 8204589,
+"set": "MUS_C60_Riverglades_PowderfusePort",
+"origin": "zone",
+"areas": [],
+"title": "Goblin 33",
+"dur": 15.8
+},
+{
+"id": 8270371,
+"set": "1.60 Dungeon - General - Forest",
+"origin": "zone",
+"areas": [],
+"title": "Dungeons Forest A",
+"dur": 65.7
+},
+{
+"id": 8270373,
+"set": "1.60 Dungeon - General - Forest",
+"origin": "zone",
+"areas": [],
+"title": "Dungeons Forest B",
+"dur": 64.4
+},
+{
+"id": 8270375,
+"set": "1.60 Dungeon - General - Forest",
+"origin": "zone",
+"areas": [],
+"title": "Dungeons Forest C",
+"dur": 53.7
+},
+{
+"id": 8270377,
+"set": "1.60 Dungeon - General - Forest",
+"origin": "zone",
+"areas": [],
+"title": "Dungeons Forest D",
+"dur": 59.7
+},
+{
+"id": 8270379,
+"set": "1.60 Dungeon - General - Wetlands",
+"origin": "zone",
+"areas": [
+16732
+],
+"title": "Dungeons Wetlands A",
+"dur": 65.8
+},
+{
+"id": 8270381,
+"set": "1.60 Dungeon - General - Wetlands",
+"origin": "zone",
+"areas": [
+16732
+],
+"title": "Dungeons Wetlands B",
+"dur": 61.5
+},
+{
+"id": 8270383,
+"set": "1.60 Dungeon - General - Wetlands",
+"origin": "zone",
+"areas": [
+16732
+],
+"title": "Dungeons Wetlands C",
+"dur": 63.2
+},
+{
+"id": 8270385,
+"set": "1.60 Dungeon - General - Wetlands",
+"origin": "zone",
+"areas": [
+16732
+],
+"title": "Dungeons Wetlands D",
+"dur": 61.5
+},
+{
+"id": 8270576,
+"set": "1.60 Dungeon - General - Spiders",
+"origin": "zone",
+"areas": [],
+"title": "Nerubian Nest C",
+"dur": 125.6
+},
+{
+"id": 8270578,
+"set": "1.60 Dungeon - General - Spiders",
+"origin": "zone",
+"areas": [],
+"title": "Nerubian Nest E",
+"dur": 129.2
+},
+{
+"id": 8270580,
+"set": "1.60 Dungeon - General - Spiders",
+"origin": "zone",
+"areas": [],
+"title": "Silken Path A",
+"dur": 194.4
+},
+{
+"id": 8270582,
+"set": "1.60 Dungeon - General - Spiders",
+"origin": "zone",
+"areas": [],
+"title": "Silken Path E",
+"dur": 180.0
+},
+{
+"id": 8270584,
+"set": "1.60 Dungeon - General - Spiders",
+"origin": "zone",
+"areas": [],
+"title": "Weaver's Lair C",
+"dur": 135.9
+},
+{
+"id": 8280452,
+"set": "1.60 Dungeon - General - Alpine",
+"origin": "zone",
+"areas": [],
+"title": "Dungeons Alpine A",
+"dur": 76.8
+},
+{
+"id": 8280454,
+"set": "1.60 Dungeon - General - Alpine",
+"origin": "zone",
+"areas": [],
+"title": "Dungeons Alpine B",
+"dur": 58.1
+},
+{
+"id": 8280456,
+"set": "1.60 Dungeon - General - Alpine",
+"origin": "zone",
+"areas": [],
+"title": "Dungeons Alpine C",
+"dur": 64.0
+},
+{
+"id": 8280458,
+"set": "1.60 Dungeon - General - Alpine",
+"origin": "zone",
+"areas": [],
+"title": "Dungeons Alpine D",
+"dur": 59.5
+},
+{
+"id": 8280857,
+"set": "1.60 Dungeon - General - Battle Boss",
+"origin": "zone",
+"areas": [],
+"title": "Dungeons Battle Boss A",
+"dur": 66.5
+},
+{
+"id": 8280873,
+"set": "1.60 Dungeon - General - Battle Boss",
+"origin": "zone",
+"areas": [],
+"title": "Dungeons Battle Boss C",
+"dur": 65.3
+},
+{
+"id": 8284574,
+"set": "1.60 Dungeon - General - Battle Boss",
+"origin": "zone",
+"areas": [],
+"title": "Dungeons Battle Boss B",
+"dur": 65.0
+},
+{
+"id": 8284576,
+"set": "1.60 Dungeon - General - Battle Boss",
+"origin": "zone",
+"areas": [],
+"title": "Dungeons Battle Boss D",
+"dur": 59.0
+},
+{
+"id": 8280849,
+"set": "1.60 Dungeon - General - Horror",
+"origin": "zone",
+"areas": [],
+"title": "Dungeons Horror A",
+"dur": 69.1
+},
+{
+"id": 8280851,
+"set": "1.60 Dungeon - General - Horror",
+"origin": "zone",
+"areas": [],
+"title": "Dungeons Horror B",
+"dur": 61.6
+},
+{
+"id": 8280853,
+"set": "1.60 Dungeon - General - Horror",
+"origin": "zone",
+"areas": [],
+"title": "Dungeons Horror C",
+"dur": 84.4
+},
+{
+"id": 8280855,
+"set": "1.60 Dungeon - General - Horror",
+"origin": "zone",
+"areas": [],
+"title": "Dungeons Horror D",
+"dur": 61.7
+},
+{
+"id": 8281552,
+"set": "1.60 Dungeon - General - UndergroundPercussive",
+"origin": "zone",
+"areas": [],
+"title": "Dungeons Underground Percussive A",
+"dur": 63.3
+},
+{
+"id": 8281554,
+"set": "1.60 Dungeon - General - UndergroundPercussive",
+"origin": "zone",
+"areas": [],
+"title": "Dungeons Underground Percussive B",
+"dur": 53.9
+},
+{
+"id": 8281556,
+"set": "1.60 Dungeon - General - UndergroundPercussive",
+"origin": "zone",
+"areas": [],
+"title": "Dungeons Underground Percussive C",
+"dur": 64.6
+},
+{
+"id": 8281558,
+"set": "1.60 Dungeon - General - UndergroundPercussive",
+"origin": "zone",
+"areas": [],
+"title": "Dungeons Underground Percussive D",
+"dur": 83.6
+},
+{
+"id": 8281865,
+"set": "MUS_C60_Hyjal_ShrineofAviana",
+"origin": "zone",
+"areas": [],
+"title": "Shrine of Aviana C",
+"dur": 75.8
+},
+{
+"id": 8281867,
+"set": "MUS_C60_Hyjal_ShrineofAviana",
+"origin": "zone",
+"areas": [],
+"title": "Shrine of Aviana D",
+"dur": 51.0
+},
+{
+"id": 8282397,
+"set": "MUS_C60_Hyjal_ShrineofAviana",
+"origin": "zone",
+"areas": [],
+"title": "Shrine of Aviana A",
+"dur": 90.6
+},
+{
+"id": 8282399,
+"set": "MUS_C60_Hyjal_ShrineofAviana",
+"origin": "zone",
+"areas": [],
+"title": "Shrine of Aviana B",
+"dur": 70.6
+},
+{
+"id": 8284598,
+"set": "1.60 Dungeon - General - Ruins",
+"origin": "zone",
+"areas": [],
+"title": "Dungeons Ruins A",
+"dur": 65.5
+},
+{
+"id": 8284600,
+"set": "1.60 Dungeon - General - Ruins",
+"origin": "zone",
+"areas": [],
+"title": "Dungeons Ruins B",
+"dur": 72.0
+},
+{
+"id": 8284602,
+"set": "1.60 Dungeon - General - Ruins",
+"origin": "zone",
+"areas": [],
+"title": "Dungeons Ruins C",
+"dur": 64.0
+},
+{
+"id": 8284604,
+"set": "1.60 Dungeon - General - Ruins",
+"origin": "zone",
+"areas": [],
+"title": "Dungeons Ruins D",
+"dur": 59.0
+},
+{
+"id": 8451330,
+"set": "1.60 Dungeon - Dalaran City Sewer",
+"origin": "zone",
+"areas": [],
+"title": "Dalaran Sewer 1",
+"dur": 66.9
+},
+{
+"id": 8451332,
+"set": "1.60 Dungeon - Dalaran City Sewer",
+"origin": "zone",
+"areas": [],
+"title": "Dalaran Sewer 2",
+"dur": 101.7
+},
+{
+"id": 8451334,
+"set": "1.60 Dungeon - Dalaran City Sewer",
+"origin": "zone",
+"areas": [],
+"title": "Dalaran Sewer 3",
+"dur": 72.3
+},
+{
+"id": 8451336,
+"set": "1.60 Dungeon - Dalaran City Sewer",
+"origin": "zone",
+"areas": [],
+"title": "Dalaran Sewer 4",
+"dur": 65.0
+},
+{
+"id": 8451379,
+"set": "1.60 Dungeon - Dalaran City Spire",
+"origin": "zone",
+"areas": [],
+"title": "Dalaran Spire",
+"dur": 91.9
+},
+{
+"id": 8285946,
+"set": "Intro-DalaranCity",
+"origin": "intro",
+"areas": [],
+"title": "Dalaran Intro",
+"dur": 68.7
+},
+{
+"id": 8173705,
+"set": "MUS_C60_Riverglades_FarholdeKeep_Intro",
+"origin": "intro",
+"areas": [],
+"title": "Farholde Keep Intro",
+"dur": 61.4
+},
+{
+"id": 8158686,
+"set": "MUS_C60_Hyjal_SummitofEternity_Intro",
+"origin": "intro",
+"areas": [],
+"title": "Summit of Eternity Intro",
+"dur": 55.5
+},
+{
+"id": 8175602,
+"set": "MUS_C60_Zephras_Valanaar_Intro",
+"origin": "intro",
+"areas": [],
+"title": "Valanaar Intro",
+"dur": 52.6
+},
+{
+"id": 8200650,
+"set": "MUS_C60_DrownedCity_Boss_Intro",
+"origin": "intro",
+"areas": [],
+"dur": 117.0
+},
+{
+"id": 53223,
+"set": "Login",
+"origin": "login",
+"areas": [],
+"path": "sound/music/gluescreenmusic/wow_main_theme.mp3",
+"dur": 161.3
+}
+]
+}

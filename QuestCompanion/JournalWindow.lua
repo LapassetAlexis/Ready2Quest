@@ -332,7 +332,8 @@ local LIST_W = math.floor((INNER - (LIST_COLS - 1) * 12) / LIST_COLS)
 -- 2.3.0 : « guide » (la ménagerie expliquée, JournalGuide.lua), en dernier
 -- 2.6.0 : plus de page « Souvenirs » (l'album est retiré)
 -- 2.7.0 : « feats » (Hauts faits, JournalFeats.lua) après la Ménagerie
-local SECTIONS = { "evolution", "menagerie", "feats", "day", "progress", "guide" }
+-- 2.12.0 : « juke » (Juke-box, Jukebox.lua) avant le guide
+local SECTIONS = { "evolution", "menagerie", "feats", "day", "progress", "juke", "guide" }
 local MEN_STATES = { "all", "captured", "missing", "tokill", "shiny" }
 local MEN_RANKS = { "all", "normal", "elite", "rare", "boss" }
 local MEN_SORTS = { "no", "name", "level", "rank", "kills", "date" }

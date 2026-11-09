@@ -223,6 +223,14 @@ ns.AZEROTH_CONTRAST = {
 	["quest.nameDone"] = { "inkMuted", 0.3250, 4.5, 12 },   -- sombre, fond 0.325 (moy. 0.423) : 5.04:1 (faite, ou verrouillée)
 	["quest.detail"] = { "inkMuted", 0.4213, 4.5, 11 },   -- sombre, fond 0.421 (moy. 0.452) : 6.34:1 (« niveau n »)
 	["quest.detailDone"] = { "green", 0.4213, 4.5, 11 },   -- sombre, fond 0.421 (moy. 0.452) : 6.01:1 (« faite »)
+	-- 2.12.0 : Juke-box. Pistes : même ligne claire que les quêtes (504×24, nom de x 28 à 350, durée dans les
+	-- 154 px de droite) ; « en cours », aide et page vide : parchemin des statistiques au voile du guide
+	["juke.name"] = { "ink", 0.3250, 4.5, 12 },   -- sombre, fond 0.325 (moy. 0.423) : 6.73:1 (comme quest.name)
+	["juke.playing"] = { "amber", 0.3250, 4.5, 12 },   -- sombre, même fond : 4.85:1 (la piste qui joue)
+	["juke.missing"] = { "inkMuted", 0.3250, 4.5, 12 },   -- sombre, même fond : 5.04:1 (absente du client)
+	["juke.detail"] = { "inkMuted", 0.4213, 4.5, 11 },   -- sombre, fond 0.421 (moy. 0.452) : 6.34:1 (durée, « + »)
+	["juke.now"] = { "inkSoft", 0.3300, 4.5, 12 },   -- sombre, fond 0.330 (moy. 0.453) : 6.08:1 (comme guide.text)
+	["juke.hint"] = { "red", 0.3300, 4.5, 11 },   -- sombre, même fond : 4.89:1 (musique coupée)
 	["zone.label"] = { "navText", 0.0455, 4.5, 12 },   -- clair, fond 0.046 (moy. 0.016) : 7.41:1 (zone vue)
 	["zone.unseen"] = { "zoneDim", 0.0455, 4.5, 12 },   -- clair, fond 0.046 (moy. 0.016) : 5.41:1 (zone pas encore vue, rangée opaque)
 	-- 2.9.1 : page Missions en cartes. Cartes : fond 235397 en Cover sur 206×68 (demie) ou 420×68 (large),
