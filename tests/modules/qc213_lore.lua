@@ -219,7 +219,16 @@ end
 -- 2.13.0 : noms des lieux du client français dans les textes français
 do
 	local src = io.open((ADDON_ROOT or ".") .. "/QuestCompanion/LoreData.lua"):read("*a")
-	local fr = src:match("local FR = %[%[(.-)%]%]") or ""
+	local block = src:match("local FR = %[%[(.-)%]%]") or ""
+	-- texte seul : la dernière colonne est la page source du wiki (en anglais)
+	local parts = {}
+	for line in block:gmatch("[^\n]+") do
+		-- Z : zone, texte, source ; S : zone, noms du client (gardés pour la recherche), texte, source
+		local text = (line:sub(1, 1) == "S" and line:match("^S\t[^\t]+\t[^\t]*\t(.*)\t[^\t]*$"))
+			or line:match("^Z\t[^\t]+\t(.*)\t[^\t]*$") or ""
+		parts[#parts + 1] = text
+	end
+	local fr = table.concat(parts, "\n")
 	local en_left = {}
 	for _, name in ipairs({ "Goldshire", "Northshire", "Stormwind", "Ironforge", "Undercity", "Westfall", "Hillsbrad", "Darkshire" }) do
 		if fr:find(name, 1, true) then en_left[#en_left + 1] = name end
