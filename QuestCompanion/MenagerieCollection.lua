@@ -722,7 +722,9 @@ function ns:MenagerieCollectionRefresh(pane, zone)
 	local strip = pane and pane.collection
 	if not strip then return end
 	local zoneID = tonumber(zone)
-	if zoneID then self:MenagerieSealCheck(zoneID) end
+	-- (molette : rien n'a changé depuis le dernier contrôle du sceau)
+	local scrolling = self.journalFrame and self.journalFrame.scrollOnly
+	if zoneID and not scrolling then self:MenagerieSealCheck(zoneID) end
 	local edge = BIOME_EDGE[zoneID and self:MenagerieZoneBiome(zoneID) or "forest"][1]
 	local sealed = zoneID and self:MenagerieSealed(zoneID)
 	if not zoneID then

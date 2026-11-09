@@ -1873,7 +1873,13 @@ function ns:ScrollJournal(delta)
 	else
 		frame.offset = (frame.offset or 0) - delta * (frame.step or 1)
 	end
-	self:RefreshJournal()
+	-- un cran de molette ne change aucune donnée : les pages reprennent la
+	-- liste de leur dernier rafraîchissement complet (frame.scrollOnly) au
+	-- lieu de tout recalculer (Progression : toutes les zones du jeu)
+	frame.scrollOnly = true
+	local ok, err = pcall(self.RefreshJournal, self)
+	frame.scrollOnly = nil
+	if not ok then error(err, 0) end
 end
 
 -- ---------------------------------------------------------------------------
@@ -2274,13 +2280,20 @@ local function RefreshMenagerie(self, frame)
 	local pane = frame.men
 	frame.header:SetTitle(L.JRN_SEC_menagerie)
 	frame.header:SetSubtitle(L.JRN_SUB_menagerie)
-	pane.zone:SetOptions(MenagerieZoneOptions(self))
-	pane.zone:SetValue(frame.menZone or "here")
-	pane.rank:SetValue(frame.menRank or "all")
-	pane.sort:SetValue(frame.menSort or "no")
-	pane.stateRow:Select(frame.menState or "all", true)
-	local list, stats = self:MenagerieList({ zone = self:MenagerieZoneValue(frame.menZone or "here"),
-		state = frame.menState, rank = frame.menRank, search = frame.menSearch, sort = frame.menSort, ctype = frame.menType })
+	local list, stats
+	if frame.scrollOnly and pane.lastList then
+		-- molette : mêmes filtres, même liste ; seule la page change
+		list, stats = pane.lastList, pane.lastStats
+	else
+		pane.zone:SetOptions(MenagerieZoneOptions(self))
+		pane.zone:SetValue(frame.menZone or "here")
+		pane.rank:SetValue(frame.menRank or "all")
+		pane.sort:SetValue(frame.menSort or "no")
+		pane.stateRow:Select(frame.menState or "all", true)
+		list, stats = self:MenagerieList({ zone = self:MenagerieZoneValue(frame.menZone or "here"),
+			state = frame.menState, rank = frame.menRank, search = frame.menSearch, sort = frame.menSort, ctype = frame.menType })
+		pane.lastList, pane.lastStats = list, stats
+	end
 	-- boutons de type : sélection et comptes (MenagerieView.lua)
 	if pane.types and self.MenagerieViewRefresh then
 		local ok, err = pcall(self.MenagerieViewRefresh, self, pane, frame, stats)
@@ -2555,11 +2568,14 @@ function ns:RefreshJournal()
 	for key, item in pairs(frame.sections) do item:SetSelected(key == section) end
 	-- 2.7.0 : les points de hauts faits (compte + personnage) remplacent le
 	-- nombre de tampons (devenus des relevés silencieux)
-	local total
-	if self.FeatPoints then total = self:F("JRN_TOTAL_FEATS", (self:FeatPoints()))
-	else total = self:F("JRN_TOTAL", self:JournalCounts().total) end
-	frame.subtitle:SetText(total
-		.. (ModuleOn() and "" or ("|n" .. Theme.T_GREY .. L.MODULE_OFF .. "|r")))
+	-- (molette : le total n'a pas bougé, pas de nouveau passage sur les hauts faits)
+	if not frame.scrollOnly then
+		local total
+		if self.FeatPoints then total = self:F("JRN_TOTAL_FEATS", (self:FeatPoints()))
+		else total = self:F("JRN_TOTAL", self:JournalCounts().total) end
+		frame.subtitle:SetText(total
+			.. (ModuleOn() and "" or ("|n" .. Theme.T_GREY .. L.MODULE_OFF .. "|r")))
+	end
 	for key, field in pairs(PANES) do
 		local pane = frame[field]
 		if pane then if key == section then pane:Show() else pane:Hide() end end

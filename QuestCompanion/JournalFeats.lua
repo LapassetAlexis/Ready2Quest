@@ -294,18 +294,24 @@ local function Refresh(self, frame, ui)
 	if not pane then return end
 	local cat = frame.featsCat or "all"
 	local filter = Filter(self)
-	local account, char = self:FeatPoints("account"), self:FeatPoints("char")
-	pane.totals:SetText(self:F("FEAT_TOTALS", account, char))
-	local got, total = self:FeatCategoryStats("all")
-	pane.count:SetText(self:F("FEAT_COUNT", got, total))
-	pane.filters:Select(filter, true)
-	for _, row in ipairs(pane.cats) do
-		local g, t, pts = self:FeatCategoryStats(row.cat)
-		row.value:SetText(self:F("FEAT_CAT_VALUE", g, t, pts))
-		row:SetSelected(row.cat == cat)
+	local rows
+	if frame.scrollOnly and pane.list then
+		-- molette : totaux, catégories et lignes inchangés ; seule la page bouge
+		rows = pane.list
+	else
+		local account, char = self:FeatPoints("account"), self:FeatPoints("char")
+		pane.totals:SetText(self:F("FEAT_TOTALS", account, char))
+		local got, total = self:FeatCategoryStats("all")
+		pane.count:SetText(self:F("FEAT_COUNT", got, total))
+		pane.filters:Select(filter, true)
+		for _, row in ipairs(pane.cats) do
+			local g, t, pts = self:FeatCategoryStats(row.cat)
+			row.value:SetText(self:F("FEAT_CAT_VALUE", g, t, pts))
+			row:SetSelected(row.cat == cat)
+		end
+		rows = self:FeatRows(cat, filter)
+		pane.list = rows
 	end
-	local rows = self:FeatRows(cat, filter)
-	pane.list = rows
 	local maxOffset = math.max(0, #rows - pane.perPage)
 	local offset = math.max(0, math.min(tonumber(frame.featsOffset) or 0, maxOffset))
 	frame.featsOffset = offset
