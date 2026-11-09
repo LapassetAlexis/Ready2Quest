@@ -139,7 +139,10 @@ Add{
 			local text = table.concat(shown, ", ")
 			if #missing > 2 then text = text .. " +" .. (#missing - 2) end
 			local score = math.max(0, 100 - (#missing * 25))
-			return false, ns:F("CHK_BUFFS_MISSING", text), score
+			-- 1.31.0 : la liste complète pour l'infobulle de la ligne
+			local tip = { title = L.DIAG_TIP_MISSING }
+			for i = 1, #missing do tip[i] = missing[i] end
+			return false, ns:F("CHK_BUFFS_MISSING", text), score, nil, tip
 		end
 		return true, L.CHK_BUFFS_GOOD, 100
 	end,

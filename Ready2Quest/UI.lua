@@ -11,7 +11,10 @@ local unpack = unpack or table.unpack   -- Lua 5.1 (client) / 5.4+
 local WIDTH       = 480
 local ROW_HEIGHT  = 24     -- carte de 22 + 2 d'écart
 local ROW_CARD    = 22
-local NAME_WIDTH  = 128    -- colonne des noms de module
+local NAME_WIDTH  = 128    -- colonne des noms de module (à la création)
+-- 1.31.0 : la colonne des noms prend la largeur du plus long libellé affiché,
+-- bornée ; le détail prend le reste, coupé par le client (plus à 46 octets)
+local NAME_MIN, NAME_MAX = 110, 170
 local MAX_ADVICE  = 3
 local ADVICE_STEP = 18     -- interligne des conseils
 local SCORE_CARD  = 78     -- bloc note
@@ -20,9 +23,8 @@ local GAP         = 14     -- entre deux blocs
 local ADVICE_PAD  = 10     -- marge haute et basse du bloc conseils
 local FOOTER      = 52     -- pied : bouton (28) centré
 local BUTTON_HEIGHT = 28
-local DETAIL_TITLE = 46   -- longueur max du texte de détail (évite le débordement)
 
--- Coupe à `limit` octets sans jamais couper un caractère UTF-8 en deux (é, â…
+-- Coupe à `limit` octets (1.31.0 : plus utilisé par la fenêtre, gardé pour le chat) sans jamais couper un caractère UTF-8 en deux (é, â…
 -- font deux octets) : un octet de continuation (0x80-0xBF) ne peut pas
 -- commencer la partie retirée. « ... » en ASCII : « … » n'est pas garanti
 -- dans la police des cadres sur Era.
@@ -38,6 +40,34 @@ local function Truncate(text, limit)
 	return text:sub(1, cut) .. "..."
 end
 ns.Truncate = Truncate
+
+-- 1.31.0 : infobulle d'une ligne coupée, en échec ou porteuse d'une liste
+-- (buffs manquants) : libellé, texte entier, liste, conseil
+local function RowTooltip(row)
+	if row.hover then row.hover:Show() end
+	local r = row.result
+	local tooltip = rawget(_G, "GameTooltip")
+	if not r or type(tooltip) ~= "table" then return end
+	local failed = not r.ok and not r.disabled and not r.info
+	if not row.cut and not failed and not r.tip then return end
+	tooltip:SetOwner(row, "ANCHOR_RIGHT")
+	if type(tooltip.ClearLines) == "function" then tooltip:ClearLines() end
+	Theme.TooltipTitle(tooltip, r.label)
+	if r.detail and r.detail ~= "" then Theme.TooltipLine(tooltip, r.detail, Theme.TEXT, true) end
+	if r.tip then
+		if r.tip.title then Theme.TooltipHint(tooltip, r.tip.title) end
+		for _, line in ipairs(r.tip) do Theme.TooltipLine(tooltip, "  " .. tostring(line), Theme.TEXT) end
+	end
+	if failed and r.advice and L[r.advice] then Theme.TooltipHint(tooltip, L[r.advice], true) end
+	tooltip:Show()
+end
+
+local function RowLeave(row)
+	if row.hover then row.hover:Hide() end
+	local tooltip = rawget(_G, "GameTooltip")
+	if type(tooltip) ~= "table" then return end
+	if type(tooltip.GetOwner) ~= "function" or tooltip:GetOwner() == row then tooltip:Hide() end
+end
 
 -- verdict de la couleur de la note (barème unique, Theme.ScoreColor)
 local function VerdictText(self)
@@ -105,7 +135,10 @@ function ns:EnsureWindow()
 	frame.checksHeader:SetWidth(inner)
 	frame.rows = {}
 	for index = 1, rowCount do
-		local row = Theme.CreateListRow(frame, inner, ROW_CARD, { status = 9, detail = true })
+		-- 1.31.0 : un bouton, pour le survol et l'infobulle (aucun clic)
+		local row = Theme.CreateListRow(frame, inner, ROW_CARD, { status = 9, detail = true, kind = "Button" })
+		row:SetScript("OnEnter", RowTooltip)
+		row:SetScript("OnLeave", RowLeave)
 		row:SetIndex(index)
 		row.name = row.text
 		row.name:SetWidth(NAME_WIDTH)
@@ -310,8 +343,22 @@ function ns:ShowWindow(results)
 	local ordered = self:DisplayOrder(results)
 	self:LayoutWindow(frame, #ordered, false)
 
+	-- 1.31.0 : colonne des noms à la mesure du plus long libellé affiché
+	local nameWidth = NAME_MIN
+	for i = 1, #ordered do
+		local label = ordered[i] and ordered[i].label
+		if label then nameWidth = math.max(nameWidth, Theme.TextWidth(frame, label, Theme.F_BODY) + 8) end
+	end
+	nameWidth = math.min(NAME_MAX, math.ceil(nameWidth))
+	frame.nameWidth = nameWidth
+
 	for index, row in ipairs(frame.rows or {}) do
 		local result = ordered[index]
+		local detailWidth = (frame.innerWidth or WIDTH) - row.textLeft - nameWidth - 24
+		row.name:SetWidth(nameWidth)
+		row.detail:SetWidth(detailWidth)
+		row.result = result
+		row.cut = result ~= nil and Theme.TextWidth(frame, result.detail, Theme.F_BODY) > detailWidth or false
 		if result and result.disabled then
 			-- Module coupé par le joueur : grisé, en bas, hors calcul de la note
 			row.name:SetText(result.label)
@@ -322,7 +369,7 @@ function ns:ShowWindow(results)
 		elseif result then
 			row.name:SetText(result.label)
 			row.name:SetTextColor(Theme.TEXT[1], Theme.TEXT[2], Theme.TEXT[3])
-			row.detail:SetText(Truncate(result.detail, DETAIL_TITLE))
+			row.detail:SetText(tostring(result.detail or ""))
 
 			if result.ok or result.info then
 				Theme.SetStatus(row.status, result.info and "info" or "ok")

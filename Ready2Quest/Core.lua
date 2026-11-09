@@ -405,8 +405,9 @@ function ns:RunChecklist(trigger)
 			}
 		else
 			-- run -> ok, détail, points (0-100), bloquant : un échec bloquant
-			-- plafonne la note à SCORE_CAP_BLOCKING (« Pas prêt »)
-			local okRun, okState, detail, score, blocking = pcall(def.run, db)
+			-- plafonne la note à SCORE_CAP_BLOCKING (« Pas prêt ») ; 1.31.0 :
+			-- tip, liste de lignes pour l'infobulle de la ligne (buffs manquants)
+			local okRun, okState, detail, score, blocking, tip = pcall(def.run, db)
 			if not okRun then
 				self:RecordError("check:" .. tostring(def.id), okState)
 			end
@@ -431,6 +432,7 @@ function ns:RunChecklist(trigger)
 					weight = weight,
 					advice = adviceKey,
 					blocking = (okState ~= true and blocking) and true or nil,
+					tip    = type(tip) == "table" and tip or nil,
 				}
 
 				totalWeight = totalWeight + weight

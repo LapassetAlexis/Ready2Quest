@@ -181,6 +181,28 @@ local function BuffClass(family)
 end
 ns.BuffClass = BuffClass
 
+-- 1.31.0 : buffs qu'une classe ne pose que sur elle-même (Feu intérieur,
+-- armures, boucliers, aspects, sceaux, formes, Augure de clarté…) : réclamés
+-- seulement au personnage de cette classe, et s'il connaît le sort. Clés
+-- écrites comme BuffFamily les produit (ns.AsciiLower garde les accents).
+local SELF_ONLY_GROUPS = {
+	["priest-inner"] = true, ["mage-armor"] = true, ["warlock-armor"] = true,
+	["shaman-shield"] = true, ["hunter-aspect"] = true, ["seal"] = true, ["druid-form"] = true,
+}
+local SELF_ONLY_NAMES = {
+	["augure de clarté"] = true, ["omen of clarity"] = true,
+	["bouclier de mana"] = true, ["mana shield"] = true,
+	["protection contre le feu"] = true, ["fire ward"] = true,
+	["protection contre le givre"] = true, ["frost ward"] = true,
+}
+local function SelfOnly(family)
+	if type(family) ~= "string" then return false end
+	if SELF_ONLY_NAMES[family] then return true end
+	local group = ExclusiveGroup(family)
+	return group ~= nil and SELF_ONLY_GROUPS[group] == true
+end
+ns.BuffSelfOnly = SelfOnly
+
 -- Un buff suivi qui n'a pas été vu depuis 7 jours n'est plus réclamé : buff
 -- mondial ponctuel, ancien groupe, talent abandonné…
 local FORGET_AFTER = 7 * 24 * 3600
@@ -313,22 +335,29 @@ local function NoteCaster(entry, aura)
 end
 ns.BuffNoteCaster = NoteCaster
 
--- Les classes présentes : toi et ton groupe (ou raid)
+-- Les classes présentes : toi et ton groupe (ou raid) ; 1.31.0 : en
+-- troisième, celles des AUTRES membres seulement (sans toi)
 function ns:BuffGroupClasses()
-	local classes = {}
-	local function Add(unit)
+	local classes, others = {}, {}
+	local function Add(unit, other)
 		if type(UnitClass) ~= "function" then return end
 		local ok, _, classFile = pcall(UnitClass, unit)
 		classFile = ok and Plain(classFile)
-		if type(classFile) == "string" then classes[classFile] = true end
+		if type(classFile) == "string" then
+			classes[classFile] = true
+			if other then others[classFile] = true end
+		end
 	end
 	Add("player")
 	local n = type(GetNumGroupMembers) == "function" and tonumber(Plain(GetNumGroupMembers())) or 0
 	local raid = type(IsInRaid) == "function" and Plain(IsInRaid()) == true
 	for i = 1, (raid and math.min(n, 40) or math.min(math.max(n - 1, 0), 4)) do
-		Add((raid and "raid" or "party") .. i)
+		local unit = (raid and "raid" or "party") .. i
+		-- en raid, le joueur est aussi un « raidN »
+		local isPlayer = raid and type(UnitIsUnit) == "function" and Plain(select(2, pcall(UnitIsUnit, unit, "player"))) == true
+		Add(unit, not isPlayer)
 	end
-	return classes, n > 1
+	return classes, n > 1, others
 end
 
 local function KnowsSpell(spellId)
@@ -342,17 +371,94 @@ local function KnowsSpell(spellId)
 	return false
 end
 
--- Ce buff peut-il t'être donné maintenant ?
-function ns:BuffAvailable(spellId, entry, classes, grouped)
-	-- 1.30.1 : un buff de classe ne vient que de cette classe (toi ou ton groupe)
-	local cls = BuffClass(BuffFamily(entry.name))
-	if cls then return classes[cls] == true end
+-- 1.31.0 : sort connu, cherché par son nom (la recherche par nom ne trouve
+-- que les sorts du grimoire). nil : le client ne sait pas répondre.
+local function KnowsByName(name)
+	local api = rawget(_G, "C_Spell")
+	local fn = (type(api) == "table" and type(api.GetSpellInfo) == "function" and api.GetSpellInfo)
+		or rawget(_G, "GetSpellInfo")
+	if type(fn) ~= "function" or type(name) ~= "string" then return nil end
+	local ok, info = pcall(fn, name)
+	if not ok then return nil end
+	return Plain(info) ~= nil
+end
+
+local function SeenHere(entry)
+	return type(entry.chars) == "table" and ns.CharKey ~= nil and entry.chars[ns:CharKey()] == true
+end
+
+-- Ce personnage connaît-il ce buff de classe ? Par l'identifiant, puis par
+-- le nom (version de groupe et version simple) ; sans API par nom : posé par
+-- toi, sur ce personnage (ou fiche d'avant la 1.30.1, sans personnages)
+local function KnowsBuff(spellId, entry, family)
 	if KnowsSpell(spellId) then return true end
+	local byName = KnowsByName(entry.name)
+	if byName ~= true and family then
+		local byFamily = KnowsByName(family)
+		if byFamily ~= nil then byName = byFamily or byName or false end
+	end
+	if byName == nil then return entry.self == true and (type(entry.chars) ~= "table" or SeenHere(entry)) end
+	return byName
+end
+
+local function PlayerClass()
+	local fn = ns.PlayerClassToken
+	return type(fn) == "function" and Plain(fn()) or nil
+end
+
+-- Ce buff peut-il t'être donné maintenant ? ok, raison ("here", "self",
+-- "class", "unknown", "other") et classe en cause. others : classes des
+-- autres membres du groupe (BuffGroupClasses, troisième résultat).
+function ns:BuffAvailability(spellId, entry, classes, grouped, others)
+	classes, others = classes or {}, others or {}
+	local family = BuffFamily(entry.name)
+	-- 1.30.1 : un buff de classe ne vient que de cette classe (toi ou ton groupe)
+	local cls = BuffClass(family)
+	if cls then
+		local mine = PlayerClass() == cls
+		-- 1.31.0 : buff personnel : seulement au personnage de cette classe
+		if SelfOnly(family) then
+			if not mine then return false, "self", cls end
+			if KnowsBuff(spellId, entry, family) then return true, "here", cls end
+			return false, "unknown", cls
+		end
+		if others[cls] then return true, "here", cls end      -- un autre peut te le donner
+		if mine then
+			-- 1.31.0 : ta classe, mais sort pas connu (talent, rang) : pas ici
+			if KnowsBuff(spellId, entry, family) then return true, "here", cls end
+			return false, "unknown", cls
+		end
+		-- classes sans détail des autres (appel ancien) : la règle de la 1.30.1
+		if classes[cls] then return true, "here", cls end
+		return false, "class", cls
+	end
+	if KnowsSpell(spellId) then return true, "here" end
 	-- hors classe (élixir, parchemin, objet…) : seulement sur le personnage qui
 	-- l'a eu ; appris d'un joueur dont on connaît la classe : si elle est là
-	if entry.casterClass and not entry.self then return classes[entry.casterClass] == true end
-	local mine = type(entry.chars) == "table" and ns.CharKey and entry.chars[ns:CharKey()] == true
-	return mine == true
+	if entry.casterClass and not entry.self then
+		local here = classes[entry.casterClass] == true
+		return here, here and "here" or "class", entry.casterClass
+	end
+	if SeenHere(entry) then return true, "here" end
+	return false, "other"
+end
+
+function ns:BuffAvailable(spellId, entry, classes, grouped, others)
+	return (self:BuffAvailability(spellId, entry, classes, grouped, others))
+end
+
+-- Nom de classe dans la langue du client (minuscule en français : « aucun
+-- prêtre dans le groupe »)
+function ns:ClassName(classFile)
+	if type(classFile) ~= "string" then return "?" end
+	local names = rawget(_G, "LOCALIZED_CLASS_NAMES_MALE")
+	local name = type(names) == "table" and Plain(names[classFile])
+	if type(name) ~= "string" or name == "" then name = L["CLASS_" .. classFile] or classFile end
+	local getLocale = rawget(_G, "GetLocale")
+	if type(getLocale) == "function" and Plain(getLocale()) == "frFR" then
+		name = name:gsub("^%u", string.lower)
+	end
+	return name
 end
 
 -- Retourne : manquants (table), suivis (nombre), illisibles (nombre)
@@ -363,7 +469,7 @@ function ns:EvaluateBuffs()
 	local hasByID = C_UnitAuras and type(C_UnitAuras.GetPlayerAuraBySpellID) == "function"
 	local families = CurrentFamilies()
 	local seen = {}
-	local classes, grouped = self:BuffGroupClasses()
+	local classes, grouped, others = self:BuffGroupClasses()
 
 	-- Groupe exclusif : on ne réclame que le dernier vu (la bénédiction que
 	-- le paladin pose d'habitude), pas la première trouvée au hasard.
@@ -391,7 +497,7 @@ function ns:EvaluateBuffs()
 		local stale = now and entry.learned and type(entry.lastSeen) == "number"
 			and (now - entry.lastSeen) > FORGET_AFTER
 		if entry.enabled ~= false and not skip and not stale and not seen[family]
-			and self:BuffAvailable(spellId, entry, classes, grouped) then
+			and self:BuffAvailable(spellId, entry, classes, grouped, others) then
 			seen[family] = true
 			watched = watched + 1
 			local active = families[family] == true

@@ -62,4 +62,107 @@ do
 	_G.UnitClass = realClass
 end
 
+-- 1.31.0 : buffs personnels de classe et sorts non appris
+do
+	T.Say("-- R2Q : buffs personnels et sorts non appris")
+	ResetWorld()
+	local savedSpell, savedCSpell, realClass = rawget(_G, "GetSpellInfo"), rawget(_G, "C_Spell"), _G.UnitClass
+	local playerClass, book = "WARRIOR", {}
+	_G.C_Spell = nil
+	_G.GetSpellInfo = function(name) if book[name] then return name, nil, 1 end return nil end
+	_G.UnitClass = function(unit)
+		if unit == "player" then return playerClass, playerClass, 1 end
+		local c = group[unit]
+		if c then return c, c, 1 end
+	end
+	local function Avail(id, entry)
+		local classes, grouped, others = NS:BuffGroupClasses()
+		return NS:BuffAvailability(id, entry, classes, grouped, others)
+	end
+	local innerFire = { name = "Feu intérieur", self = true }
+	local fortitude = { name = "Mot de pouvoir : Robustesse" }
+	group = { party1 = "PRIEST", party2 = "PALADIN" }
+	local ok, why = Avail(588, innerFire)
+	Check("[BUFFC] guerrier groupé avec un prêtre : pas de Feu intérieur (buff personnel)", ok == false and why == "self", why)
+	Check("[BUFFC] … mais Robustesse réclamée", (Avail(1243, fortitude)) == true)
+	local _, _, others = NS:BuffGroupClasses()
+	Check("[BUFFC] classes des autres membres, sans toi", others.PRIEST and others.PALADIN and not others.WARRIOR)
+
+	group, playerClass = {}, "MAGE"
+	local frost = { name = "Armure de givre", self = true }
+	ok, why = Avail(168, frost)
+	Check("[BUFFC] mage seul, sort absent du grimoire : non appris", ok == false and why == "unknown", why)
+	book["Armure de givre"] = true
+	Check("[BUFFC] mage seul, sort connu : réclamé", (Avail(168, frost)) == true)
+
+	playerClass = "DRUID"
+	local omen = { name = "Augure de clarté", self = true }
+	ok, why = Avail(16864, omen)
+	Check("[BUFFC] druide sans le talent : Augure de clarté pas réclamé", ok == false and why == "unknown", why)
+	book["Augure de clarté"] = true
+	Check("[BUFFC] druide avec le talent : réclamé", (Avail(16864, omen)) == true)
+	Check("[BUFFC] buff personnel, clé avec accent", NS.BuffSelfOnly("augure de clarté") == true
+		and NS.BuffSelfOnly(NS.BuffFamily("Feu intérieur")) == true and NS.BuffSelfOnly("aspect du faucon") == true
+		and NS.BuffSelfOnly("mot de pouvoir : robustesse") == false)
+
+	playerClass = "PRIEST"
+	local spirit = { name = "Esprit divin" }
+	group = { party1 = "PRIEST" }
+	Check("[BUFFC] prêtre sans Esprit divin, un autre prêtre là : réclamé", (Avail(14752, spirit)) == true)
+	group = {}
+	ok, why = Avail(14752, spirit)
+	Check("[BUFFC] … seul : non appris", ok == false and why == "unknown", why)
+	-- version de groupe apprise, version simple connue : cherchée par la famille
+	book["mot de pouvoir : robustesse"] = true
+	Check("[BUFFC] Prière de robustesse apprise, Robustesse connue : réclamé",
+		(Avail(21562, { name = "Prière de robustesse" })) == true)
+
+	playerClass = "PALADIN"
+	ok, why = Avail(6673, { name = "Cri de guerre", casterClass = "WARRIOR" })
+	Check("[BUFFC] paladin seul : Cri de guerre toujours refusé", ok == false and why == "class", why)
+	ok, why = Avail(17538, { name = "Élixir de la mangouste", chars = { ["Autre-Royaume"] = true } })
+	Check("[BUFFC] élixir d'un autre personnage : raison « autre personnage »", ok == false and why == "other", why)
+
+	-- liste des réglages : chaque buff dit pourquoi
+	playerClass, group = "WARRIOR", { party1 = "PRIEST" }
+	NS:DB().buffs = { [588] = { name = "Feu intérieur", self = true, enabled = true },
+		[1243] = { name = "Mot de pouvoir : Robustesse", enabled = true },
+		[6673] = { name = "Cri de guerre", enabled = true } }
+	book["Cri de guerre"] = true
+	local values = {}
+	for _, item in ipairs(NS.OPTION_LISTS.buffs.items()) do values[item.text] = item.value end
+	Check("[BUFFC] réglages : Feu intérieur « buff personnel de prêtre »",
+		tostring(values["Feu intérieur"]):find("pas ici : buff personnel de prêtre", 1, true) ~= nil, values["Feu intérieur"])
+	Check("[BUFFC] réglages : Robustesse « réclamé ici »", tostring(values["Mot de pouvoir : Robustesse"]):find("OUI", 1, true) ~= nil
+		and tostring(values["Mot de pouvoir : Robustesse"]):find("réclamé ici", 1, true) ~= nil, values["Mot de pouvoir : Robustesse"])
+	Check("[BUFFC] réglages : Cri de guerre connu du guerrier, réclamé", tostring(values["Cri de guerre"]):find("réclamé ici", 1, true) ~= nil)
+	group = {}
+	playerClass = "PALADIN"
+	values = {}
+	for _, item in ipairs(NS.OPTION_LISTS.buffs.items()) do values[item.text] = item.value end
+	Check("[BUFFC] réglages : aucun guerrier dans le groupe", tostring(values["Cri de guerre"]):find("aucun guerrier dans le groupe", 1, true) ~= nil,
+		values["Cri de guerre"])
+	-- nom de classe : celui du client s'il existe, en minuscule en français
+	_G.LOCALIZED_CLASS_NAMES_MALE = { PRIEST = "Prêtre" }
+	Check("[BUFFC] nom de classe du client", NS:ClassName("PRIEST") == "prêtre" and NS:ClassName("MAGE") == "mage")
+	_G.LOCALIZED_CLASS_NAMES_MALE = nil
+	-- couleur de la raison : contraste mesuré sur la carte la plus claire
+	local function Lum(c)
+		local t = {}
+		for i = 1, 3 do local v = c[i]; t[i] = v <= 0.03928 and v / 12.92 or ((v + 0.055) / 1.055) ^ 2.4 end
+		return 0.2126 * t[1] + 0.7152 * t[2] + 0.0722 * t[3]
+	end
+	local ratio = (Lum(NS.BUFF_WHY_COLOR) + 0.05) / (Lum(NS.Theme.ROW_ALT) + 0.05)
+	Check("[BUFFC] raison lisible (≥ 4,5:1 sur ROW_ALT)", ratio >= 4.5, ratio)
+	-- chaînes FR / EN
+	local missing = {}
+	for _, key in ipairs({ "BUFF_WHY_HERE", "BUFF_WHY_SELF", "BUFF_WHY_CLASS", "BUFF_WHY_UNKNOWN", "BUFF_WHY_OTHER",
+		"DIAG_TIP_MISSING", "CLASS_PRIEST", "CLASS_WARLOCK" }) do
+		if type(NS.L[key]) ~= "string" then missing[#missing + 1] = key end
+	end
+	Check("[BUFFC] chaînes des raisons", #missing == 0, table.concat(missing, ","))
+	_G.GetSpellInfo, _G.C_Spell, _G.UnitClass = savedSpell, savedCSpell, realClass
+	group = {}
+end
+
 for k, v in pairs(saved) do _G[k] = v end
