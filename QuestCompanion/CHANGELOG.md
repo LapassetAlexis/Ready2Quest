@@ -1,5 +1,11 @@
 # QuestCompanion
 
+## 2.12.1 — plus léger
+
+- **Plus léger** : les images de la capture (rayons, halo, étincelles, étoiles, bannière, vignette, icône du filet) et les losanges viennent tous du jeu ; seuls notre filet et les logos restent livrés (environ 570 Ko de moins à télécharger).
+
+*English:* capture art (rays, glow, sparks, stars, banner, vignette, net icon) and diamonds now all come from the game; only our net and the logos ship with the addon (≈ 570 KB smaller download).
+
 ## 2.12.0 — le Juke-box
 
 - **Nouveau : Juke-box dans le carnet.** Les musiques du jeu à écouter à la demande : zones, capitales, donjons, raids, tavernes, nouvelles zones de Forever et thèmes (434 morceaux). Recherche, favoris, trois listes, lecture dans l'ordre ou au hasard ; la musique de la zone reprend à l'arrêt. `/qc juke`, `/qc juke stop`, `/qc juke test`. La musique doit être activée dans les options de son.

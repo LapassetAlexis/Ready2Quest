@@ -1,5 +1,12 @@
 # Journal des modifications
 
+## 1.33.1
+
+- **Aggro** : le style « anneau » est retiré ; il reste la pastille (par défaut) et le trait. Si tu avais choisi l'anneau, la pastille le remplace.
+- **Plus léger** : flèches du bilan et losanges viennent du jeu (environ 195 Ko de moins à télécharger).
+
+*English:* the "ring" aggro mark style is gone — diamond (default) and line remain, ring users switch to the diamond; stats arrows and diamonds now use the game's art (≈ 195 KB smaller download).
+
 ## 1.33.0
 
 - **Place au butin** ne propose plus les outils de métier, les objets et kits de camp, les composants de tes métiers, les recettes, les caisses à ouvrir ni les bandages ; la liste défile à la molette.
