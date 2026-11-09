@@ -58,13 +58,23 @@ local IGNORED_SPELLS = {
 }
 ns.IGNORED_BUFF_SPELLS = IGNORED_SPELLS
 
+-- Gardée par nom : ScanBuffs la demande pour chaque aura et chaque buff
+-- suivi toutes les 2 s (UNIT_AURA), chaque calcul fait plusieurs chaînes.
+-- Les noms de buffs sont en nombre fini ; vidée au-delà de FAMILY_CACHE_MAX.
+local familyCache, familyCount = {}, 0
+local FAMILY_CACHE_MAX = 512
 local function BuffFamily(name)
 	if type(name) ~= "string" then return nil end
+	local cached = familyCache[name]
+	if cached then return cached end
 	local key = ns.AsciiLower(name)
 	key = FAMILY_ALIASES[key] or key
 	for _, pair in ipairs(GROUP_PREFIXES) do
 		if key:sub(1, #pair[1]) == pair[1] then key = pair[2] .. key:sub(#pair[1] + 1) end
 	end
+	if familyCount >= FAMILY_CACHE_MAX then familyCache, familyCount = {}, 0 end
+	familyCache[name] = key
+	familyCount = familyCount + 1
 	return key
 end
 ns.BuffFamily = BuffFamily
@@ -231,7 +241,14 @@ function ns:ScanBuffs()
 	if self.lastBuffScan and (now - self.lastBuffScan) < 2 then return end
 	self.lastBuffScan = now
 
-	local count, known = 0, {}
+	-- table de travail réutilisée d'un passage à l'autre
+	local count, known = 0, self.buffScanKnown
+	if known then
+		for k in pairs(known) do known[k] = nil end
+	else
+		known = {}
+		self.buffScanKnown = known
+	end
 	for _, entry in pairs(db.buffs) do
 		count = count + 1
 		local family = BuffFamily(entry.name)

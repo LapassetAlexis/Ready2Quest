@@ -78,9 +78,13 @@ ns.L = L
 -- casse l'UTF-8 ; %s y reconnaît 0xA0 (fin de « à »). On ne touche donc
 -- qu'aux lettres A-Z et aux espaces ASCII, et l'espace insécable devient une
 -- espace normale.
+-- Table de correspondance A-Z -> a-z faite une fois : gsub avec une table
+-- n'alloue pas de fermeture à chaque appel (chemins fréquents : buffs, noms).
+local ASCII_LOWER = {}
+for byte = 65, 90 do ASCII_LOWER[string.char(byte)] = string.char(byte + 32) end
 function ns.AsciiLower(text)
 	if type(text) ~= "string" then return text end
-	text = text:gsub("[A-Z]", function(c) return string.char(c:byte() + 32) end)
+	text = text:gsub("[A-Z]", ASCII_LOWER)
 	text = text:gsub("\194\160", " "):gsub("[ \t\r\n]+", " "):gsub("^ ", ""):gsub(" $", "")
 	return text
 end

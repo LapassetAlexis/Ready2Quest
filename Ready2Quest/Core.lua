@@ -307,12 +307,16 @@ function ns:Evaluate(trigger)
 
 	if safe then
 		self.pendingExit = nil
-		self.lastSafePlace = {
-			name = (entry and entry.name) or self:CurrentSubZone()
-				or ((self:MapInfo(self:CurrentMap()) or {}).name) or "?",
-			source = (entry and entry.source) or reason,
-			kind = entry and entry.kind or nil,
-		}
+		-- même lieu qu'au passage précédent (vérification toutes les
+		-- PLACE_CHECK s sur une carte à lieux repérés) : on garde la table
+		local name = (entry and entry.name) or self:CurrentSubZone()
+			or ((self:MapInfo(self:CurrentMap()) or {}).name) or "?"
+		local source = (entry and entry.source) or reason
+		local kind = entry and entry.kind or nil
+		local last = self.lastSafePlace
+		if not (last and last.name == name and last.source == source and last.kind == kind) then
+			self.lastSafePlace = { name = name, source = source, kind = kind }
+		end
 		-- retour en zone sûre après un départ confirmé (Retour d'expédition)
 		if self.departed then
 			self.departed = nil

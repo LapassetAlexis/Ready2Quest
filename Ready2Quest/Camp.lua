@@ -439,7 +439,11 @@ function ns:UpdateCampFrame(now)
 	end
 	local frame = self:EnsureCampFrame()
 	if not frame then return end
-	frame.text:SetText(text)
+	-- quatre fois par seconde : on ne repose le texte que s'il a changé
+	if frame.campText ~= text then
+		frame.campText = text
+		frame.text:SetText(text)
+	end
 	frame:Show()
 end
 

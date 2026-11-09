@@ -40,16 +40,26 @@ function ns:MapInfo(mapID)
 end
 
 -- Chaîne carte courante -> parents (une zone est "sûre" si elle ou un parent l'est)
+-- La hiérarchie des cartes ne change pas en jeu : la chaîne est gardée par
+-- carte (lue toutes les PLACE_CHECK secondes, R2Q Core.lua). Gardée seulement
+-- complète (la dernière carte a ses infos) : une carte dont le client n'a pas
+-- encore les infos sera relue. Chaîne partagée : ne pas la modifier.
+local mapChains = {}
+ns.mapChainCache = mapChains
 function ns:MapChain(mapID)
-	local chain, guard = {}, 0
+	local cached = mapID and mapChains[mapID]
+	if cached then return cached end
+	local first = mapID
+	local chain, guard, complete = {}, 0, false
 	while mapID and guard < 12 do
 		chain[#chain + 1] = mapID
 		local info = self:MapInfo(mapID)
 		local parent = info and info.parentMapID
-		if not parent or parent == 0 or parent == mapID then break end
+		if not parent or parent == 0 or parent == mapID then complete = info ~= nil; break end
 		mapID = parent
 		guard = guard + 1
 	end
+	if complete and first then mapChains[first] = chain end
 	return chain
 end
 
@@ -137,7 +147,9 @@ function ns:KnownHub()
 		local ok, text = pcall(zoneFn)
 		if ok and type(text) == "string" and text ~= "" then zone = text end
 	end
-	for _, name in ipairs({ subzone or false, zone or false }) do
+	-- sous-zone puis zone, sans table temporaire (appelé à chaque évaluation)
+	for pass = 1, 2 do
+		local name = (pass == 1 and subzone) or (pass == 2 and zone) or nil
 		if name and index[name] then
 			for _, entry in ipairs(index[name]) do
 				-- la zone ne compte que pour une capitale (« Hurlevent »), pas pour
