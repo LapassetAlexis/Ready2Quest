@@ -50,7 +50,7 @@ local function PaintNetIcon(tex)
 	return ART ~= nil and (source == "own" or NET_ICON == ART.icon)
 end
 ns.CapturePaintNetIcon = PaintNetIcon
-local ICON_GAME_SHINY, ICON_GAME_REST = { 1, 0.85, 0.4 }, { 1, 1, 1 }
+local ICON_GAME_SHINY, ICON_GAME_REST = { 1, 0.85, 0.4 }, Theme.WHITE   -- 2.11.2 : le blanc du socle
 -- Le filet (2.1.0) : un vrai bouton de 44 px, à côté du compagnon (pas sur
 -- son portrait, où il passait inaperçu), qui suit sa taille et bat en doré
 -- quand un candidat arrive ; et un bandeau « Capture possible ».
@@ -336,9 +336,12 @@ function ns:CaptureRollStars()
 	return #odds
 end
 
--- Texte des étoiles (pleines dorées, vides grises), pour le chat et les fiches
+-- Texte des étoiles (pleines dorées, vides grises), pour le chat et les fiches.
+-- 2.11.2 : teintes 0-255 du |T nommées (proches de GOLD_LIGHT et d'un gris
+-- plus sombre que MUTED, sans en être : gardées telles quelles)
+local STAR_CHAT_FULL, STAR_CHAT_EMPTY = { 246, 199, 125 }, { 120, 126, 132 }
 local function StarIcon(full, size)
-	local c = full and { 246, 199, 125 } or { 120, 126, 132 }
+	local c = full and STAR_CHAT_FULL or STAR_CHAT_EMPTY
 	if ART and ns.CAPTURE_STAR_ICON == ART.stars then
 		-- notre feuille 128x64 : l'étoile pleine à gauche, la vide à droite
 		local x = full and 0 or 64
@@ -954,7 +957,7 @@ function ns:EnsureCaptureNet()
 	-- 2.3.1 : lisible sur n'importe quel sol (sable, neige, pierre claire). Une
 	-- ombre portée sombre autour, une plaque d'encre opaque derrière le glyphe,
 	-- un double liseré (sombre dehors, doré dedans).
-	button.shadow = Theme.Solid(button, "BACKGROUND", { 0, 0, 0 }, 0.55)
+	button.shadow = Theme.Solid(button, "BACKGROUND", Theme.SHADOW, 0.55)
 	button.shadow:SetPoint("TOPLEFT", button, "TOPLEFT", -4, 4)
 	button.shadow:SetPoint("BOTTOMRIGHT", button, "BOTTOMRIGHT", 4, -4)
 	if button.shadow.SetDrawLayer then button.shadow:SetDrawLayer("BACKGROUND", -8) end
@@ -968,13 +971,13 @@ function ns:EnsureCaptureNet()
 	button.plate:SetPoint("BOTTOMRIGHT", button, "BOTTOMRIGHT", -1, 1)
 	if button.plate.SetDrawLayer then button.plate:SetDrawLayer("BACKGROUND", 4) end
 	button.ring = Theme.Border(button, Theme.GOLD, 1, "BORDER", button.plate)
-	if button.border and button.border.SetColor then button.border:SetColor(0, 0, 0, 1) end
+	if button.border and button.border.SetColor then button.border:SetColor(Theme.SHADOW[1], Theme.SHADOW[2], Theme.SHADOW[3], 1) end
 	-- le compteur : pastille dorée sur le coin, texte sombre (se voit partout)
 	button.countBack = Theme.Solid(button, "ARTWORK", Theme.GOLD, 1)
 	button.countBack:SetSize(18, 16)
 	button.countBack:SetPoint("CENTER", button, "TOPRIGHT", -2, -2)
 	if button.countBack.SetDrawLayer then button.countBack:SetDrawLayer("OVERLAY", 6) end
-	button.countEdge = Theme.Border(button, { 0, 0, 0 }, 1, "OVERLAY", button.countBack)
+	button.countEdge = Theme.Border(button, Theme.SHADOW, 1, "OVERLAY", button.countBack)
 	button.count = Theme.Text(button, Theme.F_LABEL, Theme.INK)
 	if button.count.SetDrawLayer then button.count:SetDrawLayer("OVERLAY", 7) end
 	button.count:SetPoint("CENTER", button.countBack, "CENTER", 0, 0)
@@ -1031,7 +1034,7 @@ function ns:CaptureStyleNet()
 	local c = (button.shiny or button.hover) and Theme.GOLD_LIGHT or Theme.GOLD
 	-- liseré doré dedans, noir dehors : contraste sur sol clair comme sombre
 	if button.ring and button.ring.SetColor then button.ring:SetColor(c[1], c[2], c[3], 1) end
-	if button.border and button.border.SetColor then button.border:SetColor(0, 0, 0, 1) end
+	if button.border and button.border.SetColor then button.border:SetColor(Theme.SHADOW[1], Theme.SHADOW[2], Theme.SHADOW[3], 1) end
 	if button.countBack and button.countBack.SetVertexColor then
 		local cc = button.shiny and Theme.GOLD_LIGHT or Theme.GOLD
 		button.countBack:SetVertexColor(cc[1], cc[2], cc[3], 1)

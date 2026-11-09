@@ -138,11 +138,15 @@ end
 local function InCombat()
 	return Call(Global("InCombatLockdown")) == true
 end
+-- 1.32.2 (fiche 25) : les deux échéances (vérification, liserés) sont posées
+-- sur l'horloge de l'addon (ns.Soon) au lieu d'un OnUpdate permanent
+local ArmDue
 -- Liserés à revoir dans `delay` secondes (la plus proche échéance l'emporte)
 local function MarkSoon(delay)
 	local at = ns.Now() + delay
 	local due = ns.spellRanksMarkDueAt
 	if not due or due > at then ns.spellRanksMarkDueAt = at end
+	ArmDue()
 end
 
 local function C(name)
@@ -554,22 +558,32 @@ if ok and eventFrame then
 	eventFrame:SetScript("OnEvent", function(_, event, ...)
 		local done, err = pcall(HANDLERS[event], ...)
 		if not done and ns.RecordError then ns:RecordError("spellranks:" .. tostring(event), err) end
+		ArmDue()
 	end)
-	eventFrame:SetScript("OnUpdate", function()
-		local now = ns.Now()
-		local due = ns.spellRanksDueAt
-		if due and now >= due then
-			ns.spellRanksDueAt = nil
-			local done, err = pcall(ns.SpellRanksCheck, ns)
-			if not done and ns.RecordError then ns:RecordError("spellranks:check", err) end
-		end
-		local mark = ns.spellRanksMarkDueAt
-		if mark and now >= mark then
-			ns.spellRanksMarkDueAt = nil
-			local done, err = pcall(ns.SpellRanksMark, ns)
-			if not done and ns.RecordError then ns:RecordError("spellranks:mark", err) end
-		end
-	end)
+end
+-- Les échéances arrivées ; celle qui reste (posée pendant le passage) est reposée
+local function DueRun()
+	local now = ns.Now()
+	local due = ns.spellRanksDueAt
+	if due and now >= due then
+		ns.spellRanksDueAt = nil
+		local done, err = pcall(ns.SpellRanksCheck, ns)
+		if not done and ns.RecordError then ns:RecordError("spellranks:check", err) end
+	end
+	local mark = ns.spellRanksMarkDueAt
+	if mark and now >= mark then
+		ns.spellRanksMarkDueAt = nil
+		local done, err = pcall(ns.SpellRanksMark, ns)
+		if not done and ns.RecordError then ns:RecordError("spellranks:mark", err) end
+	end
+	ArmDue()
+end
+function ArmDue()
+	local due, mark = ns.spellRanksDueAt, ns.spellRanksMarkDueAt
+	local at = (due and mark and math.min(due, mark)) or due or mark
+	if at and ns.Soon then ns.Soon("spellranks", math.max(0, at - ns.Now()), DueRun) end
+end
+if ok and eventFrame then
 	ns.spellRanksEventFrame = eventFrame
 end
 

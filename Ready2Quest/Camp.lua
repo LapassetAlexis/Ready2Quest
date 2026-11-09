@@ -479,10 +479,11 @@ frame:SetScript("OnEvent", function(_, event, unit)
 	if not ok and ns.RecordError then ns:RecordError("camp:" .. event, err) end
 end)
 -- le décompte avance sans événement : rafraîchi quatre fois par seconde
-frame:SetScript("OnUpdate", ns.Throttle(TICK, function()
+-- (1.32.2, fiche 25 : sur l'horloge de l'addon, plus d'OnUpdate permanent)
+ns.Every("camp", TICK, function()
 	local ok, err = pcall(ns.UpdateCampFrame, ns)
 	if not ok and ns.RecordError then ns:RecordError("camp:tick", err) end
-end))
+end)
 ns.campEventFrame = frame
 
 if ns.Mark then ns.Mark("Camp") end

@@ -91,8 +91,8 @@ ns.CAPTURE_RESULT_SECONDS = 3.5   -- s d'affichage du bandeau « Capturé ! »
 ns.CAPTURE_RESULT_STALE = 30      -- s d'attente au plus (combat) avant de l'oublier
 local AZ = ns.AZEROTH_ATLAS
 local LAY = ns.AZEROTH_LAYOUT
+-- 2.11.2 : #ffe27a exact, gardé (Theme.SHINY l'arrondit à 0,89 / 0,48)
 local SHINY_NAME = { 1, 0.886, 0.478 }    -- nom d'une brillante (#ffe27a)
-local STAR_GOLD = { 1, 0.84, 0.29 }
 
 -- ---------------------------------------------------------------------------
 -- Encres et voiles (2.8.2) : lisibilité mesurée
@@ -139,6 +139,41 @@ ns.AZEROTH_INK = {
 	fieldText = Theme.LABEL,                 -- texte d'une liste déroulante / recherche
 	-- 2.11.0 : ombre posée sous un texte clair sur un fond variable (icône, bande dorée)
 	shade = { 0.10, 0.06, 0.02 },
+	-- 2.11.2 (fiche 28) : teintes jusque-là locales (AzerothStyle, carnet
+	-- Azeroth), valeurs inchangées. Le bois du carnet (woodNight) n'est pas
+	-- celui des fenêtres de capture (woodBg) : deux fonds différents, gardés.
+	woodBg = { 0.11, 0.086, 0.06 },          -- fond sombre et chaud (#1c160f)
+	woodDeep = { 0.07, 0.055, 0.035 },       -- bas du fond (#120e09)
+	woodWarm = { 0.23, 0.18, 0.12 },         -- haut du fond (#3a2e1f)
+	woodGlow = { 0.55, 0.42, 0.24 },         -- halo du bois (alpha 0,35)
+	woodNight = { 0.10, 0.07, 0.04 },        -- fond du carnet Azeroth
+	fx = { 1, 0.80, 0.38 },                  -- teinte des lueurs blanches (« Aguerri ! »)
+	fxText = { 1, 0.86, 0.45 },              -- texte « Aguerri ! »
+	bubbleEdge = { 0.24, 0.14, 0.05 },       -- liseré de la bulle
+	goldText = { 1, 0.84, 0.42 },            -- texte des boutons, de la plaque (carnet)
+	lightSoft = { 0.89, 0.82, 0.66 },        -- (même valeur que statLabel)
+	catGold = { 1, 0.76, 0.25 },             -- surbrillance des catégories
+	barGreen = { 0.10, 0.62, 0.10 }, barOrange = { 0.80, 0.33, 0.08 }, barGold = { 0.78, 0.56, 0.12 },
+	edgeDark = { 0.106, 0.063, 0.024 },      -- liseré sombre des lignes du carnet
+	catVeil = { 0.23, 0.13, 0.03 },          -- voile brun d'une catégorie (alpha 0,14)
+	barBg = { 0.07, 0.04, 0.01 },            -- fond d'une barre du carnet
+	fieldBg = { 0.12, 0.07, 0.03 },          -- fond d'un champ du carnet
+	dim = { 0.5, 0.5, 0.5 },                 -- texture estompée (carnet)
+	ptsGrey = { 0.85, 0.85, 0.85 },          -- points d'un haut fait pas obtenu (carnet)
+	bandLift = 1.25,                         -- éclaircissement d'une bande sur deux (pas une encre)
+}
+-- 2.11.2 (fiche 28) : toutes les palettes de boutons Azeroth en une table.
+-- gold / dark : boutons dessinés des fenêtres de capture ; red / brown :
+-- boutons du carnet. Le bord brun du carnet (0,42) et celui de « dark »
+-- (0,415) diffèrent d'un cheveu : gardés tels quels (aucune teinte ne change).
+ns.AZEROTH_BUTTONS = {
+	gold = { top = { 0.48, 0.29, 0.07 }, bottom = { 0.29, 0.165, 0.03 }, edge = { 0.85, 0.66, 0.27 } },
+	dark = { top = { 0.235, 0.19, 0.133 }, bottom = { 0.133, 0.10, 0.067 }, edge = { 0.54, 0.415, 0.17 } },
+	red = { top = { 0.56, 0.12, 0.05 }, bottom = { 0.30, 0.05, 0.01 }, edge = { 0.77, 0.60, 0.27 } },
+	brown = { top = { 0.20, 0.12, 0.05 }, bottom = { 0.09, 0.05, 0.02 }, edge = { 0.54, 0.42, 0.17 } },
+	text = { 1, 0.95, 0.81 }, sub = { 0.9, 0.83, 0.64 },     -- texte et sous-ligne (capture)
+	gloss = { 1, 0.86, 0.59 }, hover = { 1, 0.85, 0.5 },     -- reflet (alpha 0,35), survol (0,12, ADD)
+	outer = { 0.08, 0.03, 0 },                               -- liseré extérieur (carnet)
 }
 -- 2.9.1 : page Missions, habit Azeroth : voile vert d'une carte faite, aplat
 -- et pointillés de l'encart des 3, tampon « Faite », étiquettes, pastilles
@@ -751,9 +786,8 @@ function ns:AzerothCreateBanner(opts)
 	frame.text:SetPoint("TOP", banner, "TOP", opts.guild and 10 or 2, LAY.nameY)
 	frame.text:SetJustifyH("CENTER")
 	AzFont(frame.text, LAY.nameMax)
-	frame.text:SetTextColor(1, 1, 1, 1)
-	if frame.text.SetShadowColor then frame.text:SetShadowColor(0, 0, 0, 1) end
-	if frame.text.SetShadowOffset then frame.text:SetShadowOffset(1, -2) end
+	frame.text:SetTextColor(INKS.white[1], INKS.white[2], INKS.white[3], 1)
+	Theme.TextShadow(frame.text, nil, -2)
 	frame.text:SetWidth(frame.nameWidth)
 	if frame.text.SetWordWrap then frame.text:SetWordWrap(false) end
 	frame.stars = banner:CreateFontString(nil, "OVERLAY", Theme.F_SMALL)
@@ -761,7 +795,7 @@ function ns:AzerothCreateBanner(opts)
 	frame.stars:SetJustifyH("CENTER")
 	frame.stars:SetWidth(frame.nameWidth)
 	if frame.stars.SetWordWrap then frame.stars:SetWordWrap(false) end
-	frame.stars:SetTextColor(STAR_GOLD[1], STAR_GOLD[2], STAR_GOLD[3], 1)
+	frame.stars:SetTextColor(INKS.star[1], INKS.star[2], INKS.star[3], 1)
 
 	-- bouclier à droite, et l'éclat qui le traverse ; le reflet du bandeau
 	frame.shield = banner:CreateTexture(nil, "ARTWORK", nil, 2)
@@ -829,7 +863,7 @@ end
 function ns:StyleShown(frame, opts)
 	if not (frame and frame.azeroth) then return false end
 	opts = opts or {}
-	local c = opts.shiny and SHINY_NAME or { 1, 1, 1 }
+	local c = opts.shiny and SHINY_NAME or INKS.white
 	frame.text:SetTextColor(c[1], c[2], c[3], 1)
 	frame:SetShield(opts.shield)
 	frame:Fit()
@@ -845,10 +879,8 @@ end
 -- lancer seul) et CaptureBatch.lua (le choix au filet, la volée) quand
 -- ns:AzerothScenesOn() ; sinon ces fenêtres gardent leur style Sobre.
 -- ---------------------------------------------------------------------------
-local WOOD_BG = { 0.11, 0.086, 0.06 }      -- fond sombre et chaud (#1c160f)
-local WOOD_DEEP = { 0.07, 0.055, 0.035 }   -- bas du fond (#120e09)
-local WOOD_WARM = { 0.23, 0.18, 0.12 }     -- haut du fond (#3a2e1f)
-ns.AZEROTH_COLORS = { ink = INK, shinyName = SHINY_NAME, star = STAR_GOLD, flavour = { 0.85, 0.82, 0.75 },
+local WOOD_BG, WOOD_DEEP, WOOD_WARM = INKS.woodBg, INKS.woodDeep, INKS.woodWarm   -- 2.11.2 : encres
+ns.AZEROTH_COLORS = { ink = INK, shinyName = SHINY_NAME, star = INKS.star, flavour = { 0.85, 0.82, 0.75 },
 	fled = { 0.8, 0.75, 0.66 }, caption = { 0.91, 0.77, 0.42 }, hint = { 0.61, 0.56, 0.47 } }
 ns.AzerothFont, ns.AzerothAtlas = AzFont, Atlas
 -- Capitales sûres : seules les lettres a-z et les accents passent en
@@ -876,7 +908,7 @@ function ns:AzerothWood(frame)
 	if art and art.halo then
 		frame.woodGlow = frame:CreateTexture(nil, "BACKGROUND", nil, 2)
 		frame.woodGlow:SetTexture(art.halo)
-		frame.woodGlow:SetVertexColor(0.55, 0.42, 0.24, 0.35)
+		frame.woodGlow:SetVertexColor(INKS.woodGlow[1], INKS.woodGlow[2], INKS.woodGlow[3], 0.35)
 		frame.woodGlow:SetPoint("TOPLEFT", frame, "TOPLEFT", 10, -10)
 		frame.woodGlow:SetPoint("BOTTOMRIGHT", frame, "BOTTOMRIGHT", -10, 10)
 	end
@@ -956,14 +988,13 @@ function ns:AzerothPlate(parent, width, height)
 	plate.text:SetPoint("TOP", plate, "TOP", 0, -math.floor(height * 0.39))
 	plate.text:SetJustifyH("CENTER")
 	AzFont(plate.text, 17)
-	plate.text:SetTextColor(1, 1, 1, 1)
-	if plate.text.SetShadowColor then plate.text:SetShadowColor(0, 0, 0, 1) end
-	if plate.text.SetShadowOffset then plate.text:SetShadowOffset(1, -2) end
+	plate.text:SetTextColor(INKS.white[1], INKS.white[2], INKS.white[3], 1)
+	Theme.TextShadow(plate.text, nil, -2)
 	plate.text:SetWidth(plate.nameW)
 	if plate.text.SetWordWrap then plate.text:SetWordWrap(false) end
 	function plate:SetName(text, shiny)
 		self.text:SetText(text or "")
-		local c = shiny and SHINY_NAME or { 1, 1, 1 }
+		local c = shiny and SHINY_NAME or INKS.white
 		self.text:SetTextColor(c[1], c[2], c[3], 1)
 		return ns.AzerothFit(self.text, self.nameW, 17, 10)
 	end
@@ -1005,9 +1036,8 @@ function ns:AzerothVerdict(parent, width, height)
 	banner.text:SetPoint("TOP", banner, "TOP", 2, math.floor(LAY.nameY * k))
 	banner.text:SetJustifyH("CENTER")
 	AzFont(banner.text, 20)
-	banner.text:SetTextColor(1, 1, 1, 1)
-	if banner.text.SetShadowColor then banner.text:SetShadowColor(0, 0, 0, 1) end
-	if banner.text.SetShadowOffset then banner.text:SetShadowOffset(1, -2) end
+	banner.text:SetTextColor(INKS.white[1], INKS.white[2], INKS.white[3], 1)
+	Theme.TextShadow(banner.text, nil, -2)
 	banner.text:SetWidth(banner.nameW)
 	if banner.text.SetWordWrap then banner.text:SetWordWrap(false) end
 	banner.lineY = math.floor(LAY.starsY * k) + 2
@@ -1111,9 +1141,8 @@ function ns.AzerothPortraitSlot(host, size, x, y)
 	host.levelText = host:CreateFontString(nil, "OVERLAY", Theme.F_NUMBER or Theme.F_TITLE)
 	host.levelText:SetJustifyH("CENTER")
 	AzFont(host.levelText, 15, "OUTLINE")
-	host.levelText:SetTextColor(1, 1, 1, 1)
-	if host.levelText.SetShadowColor then host.levelText:SetShadowColor(0, 0, 0, 1) end
-	if host.levelText.SetShadowOffset then host.levelText:SetShadowOffset(1, -1) end
+	host.levelText:SetTextColor(INKS.white[1], INKS.white[2], INKS.white[3], 1)
+	Theme.TextShadow(host.levelText)
 	host.levelText:SetText("")
 	host.levelText:Hide()
 	function host:SetCreature(target)
@@ -1154,12 +1183,10 @@ end
 -- d'or de 2 px, reflet clair en haut ; aucune texture de bouton du jeu).
 -- kind : "gold" (principal) ou "dark" (secondaire, plus sombre). Champs
 -- .text, .sub (ligne de dessous, button:SetSub) ; SetText/GetText.
-local BUTTON_SKINS = {
-	gold = { top = { 0.48, 0.29, 0.07 }, bottom = { 0.29, 0.165, 0.03 }, edge = { 0.85, 0.66, 0.27 } },
-	dark = { top = { 0.235, 0.19, 0.133 }, bottom = { 0.133, 0.10, 0.067 }, edge = { 0.54, 0.415, 0.17 } },
-}
+local BUTTONS = ns.AZEROTH_BUTTONS          -- 2.11.2 : palette unique
+local BUTTON_SKINS = { gold = BUTTONS.gold, dark = BUTTONS.dark }
 ns.AZEROTH_BUTTON_SKINS = BUTTON_SKINS
-local BUTTON_TEXT, BUTTON_SUB = { 1, 0.95, 0.81 }, { 0.9, 0.83, 0.64 }
+local BUTTON_TEXT, BUTTON_SUB = BUTTONS.text, BUTTONS.sub
 
 local function ButtonLayout(button)
 	local sub = button.sub:IsShown()
@@ -1182,11 +1209,11 @@ function ns:AzerothButton(parent, width, height, label, onClick, kind)
 	button.inner:SetAlpha(0)
 	button.border = Theme.Border(button, skin.edge, 1, "BORDER")
 	button.border2 = Theme.Border(button, skin.edge, 0.8, "BORDER", button.inner)
-	button.gloss = Theme.Solid(button, "ARTWORK", { 1, 0.86, 0.59 }, 0.35)
+	button.gloss = Theme.Solid(button, "ARTWORK", BUTTONS.gloss, 0.35)
 	button.gloss:SetPoint("TOPLEFT", button, "TOPLEFT", 2, -2)
 	button.gloss:SetPoint("TOPRIGHT", button, "TOPRIGHT", -2, -2)
 	button.gloss:SetHeight(1)
-	button.hover = Theme.Solid(button, "ARTWORK", { 1, 0.85, 0.5 }, 0.12)
+	button.hover = Theme.Solid(button, "ARTWORK", BUTTONS.hover, 0.12)
 	button.hover:SetPoint("TOPLEFT", button, "TOPLEFT", 2, -2)
 	button.hover:SetPoint("BOTTOMRIGHT", button, "BOTTOMRIGHT", -2, 2)
 	if button.hover.SetBlendMode then button.hover:SetBlendMode("ADD") end
@@ -1194,8 +1221,7 @@ function ns:AzerothButton(parent, width, height, label, onClick, kind)
 	button.text = button:CreateFontString(nil, "OVERLAY", Theme.F_LABEL)
 	AzFont(button.text, height >= 34 and 13 or 11)
 	button.text:SetTextColor(BUTTON_TEXT[1], BUTTON_TEXT[2], BUTTON_TEXT[3], 1)
-	if button.text.SetShadowColor then button.text:SetShadowColor(0, 0, 0, 1) end
-	if button.text.SetShadowOffset then button.text:SetShadowOffset(1, -1) end
+	Theme.TextShadow(button.text)
 	button.text:SetWidth(width - 12)
 	if button.text.SetWordWrap then button.text:SetWordWrap(false) end
 	button.text:SetText(label or "")
@@ -1215,7 +1241,7 @@ function ns:AzerothButton(parent, width, height, label, onClick, kind)
 	end
 	button:SetScript("OnEnter", function(b)
 		b.hover:Show()
-		b.border:SetColor(1, 0.85, 0.5, 1)
+		b.border:SetColor(BUTTONS.hover[1], BUTTONS.hover[2], BUTTONS.hover[3], 1)
 	end)
 	button:SetScript("OnLeave", function(b)
 		b.hover:Hide()
@@ -1571,9 +1597,8 @@ function ns:CompanionApplyUIStyle()
 		if frame.name then
 			frame.name:ClearAllPoints()
 			frame.name:SetPoint("CENTER", skin.plate, "BOTTOM", 0, PLATE_NAME_Y)
-			frame.name:SetTextColor(1, 1, 1, 1)
-			if frame.name.SetShadowColor then frame.name:SetShadowColor(0, 0, 0, 1) end
-			if frame.name.SetShadowOffset then frame.name:SetShadowOffset(1, -1) end
+			frame.name:SetTextColor(INKS.white[1], INKS.white[2], INKS.white[3], 1)
+			Theme.TextShadow(frame.name)
 		end
 		if frame.mood then
 			frame.mood:ClearAllPoints()
@@ -1597,7 +1622,7 @@ function ns:CompanionApplyUIStyle()
 		if frame.mood then frame.mood:ClearAllPoints(); frame.mood:SetPoint("BOTTOM", frame, "BOTTOM", 0, 6) end
 		-- 2.11.0 : humeur au gris clair du texte (≥ 4,5:1 sur la plaque 80 % mesurée par l'agent du compagnon)
 		if frame.mood then frame.mood:SetTextColor(Theme.TEXT[1], Theme.TEXT[2], Theme.TEXT[3], 1) end
-		if frame.mood and frame.mood.SetShadowColor then frame.mood:SetShadowColor(0, 0, 0, 0.6); frame.mood:SetShadowOffset(1, -1) end
+		if frame.mood then Theme.TextShadow(frame.mood, 0.6) end
 		EdgesShown(frame, true)
 	end
 	frame.uiStyle = az and "azeroth" or "sobre"
@@ -1666,8 +1691,8 @@ ns.AZEROTH_FX = {
 	bubbleBottom = 18, bubbleMin = 64, sheenTime = 0.9,
 }
 local FXC = ns.AZEROTH_FX
-local FX_GOLD = { 1, 0.80, 0.38 }          -- teinte des lueurs blanches
-local FX_TEXT = { 1, 0.86, 0.45 }          -- « Aguerri ! »
+local FX_GOLD = INKS.fx                    -- teinte des lueurs blanches (2.11.2 : encre)
+local FX_TEXT = INKS.fxText                -- « Aguerri ! »
 -- éclats autour du cadre : position (fraction du cadre depuis son coin
 -- haut gauche) et décalage dans le cycle
 local SPARKS = { { 0.0, 0.13, 0 }, { 1.06, 0.2, 0.5 }, { 0.58, -0.03, 1.0 }, { 1.15, 0.67, 1.3 } }
@@ -1849,7 +1874,7 @@ local function BubbleSkin(bubble)
 		skin.bg:SetAlpha(1)
 	end
 	skin.veil = ns.AzerothVeil(bubble, bubble, "bubble", 2)
-	skin.edge = Theme.Border and Theme.Border(bubble, { 0.24, 0.14, 0.05 }, 1, "BORDER") or nil
+	skin.edge = Theme.Border and Theme.Border(bubble, INKS.bubbleEdge, 1, "BORDER") or nil
 	skin.name = bubble:CreateFontString(nil, "OVERLAY", Theme.F_CAPS)
 	skin.name:SetPoint("TOPLEFT", bubble, "TOPLEFT", FXC.bubbleLeft, FXC.bubbleNameY)
 	AzFont(skin.name, 10)
@@ -2180,8 +2205,7 @@ local function LevelParts(frame)
 	group.text:SetPoint("CENTER", group, "CENTER", 0, 0)
 	AzFont(group.text, FXC.levelFont)
 	group.text:SetTextColor(FX_TEXT[1], FX_TEXT[2], FX_TEXT[3], 1)
-	if group.text.SetShadowColor then group.text:SetShadowColor(0, 0, 0, 1) end
-	if group.text.SetShadowOffset then group.text:SetShadowOffset(1, -1) end
+	Theme.TextShadow(group.text)
 	if group.text.SetWordWrap then group.text:SetWordWrap(false) end
 	if HasFx("filigree") then
 		group.left = group:CreateTexture(nil, "ARTWORK")
@@ -2623,6 +2647,7 @@ function ns:AzerothDebugBubble()
 		bubble:SetText(L.AZ_DEBUG_SAMPLE)
 		bubble:Show()
 		self.companionBubbleUntil = Clock() + 8
+		if self.NotifyGlowArm then self:NotifyGlowArm() end
 	end
 	lines[#lines + 1] = self:F("AZ_DEBUG_HEAD", bubble.azBubble and "azeroth" or "sobre",
 		bubble:IsShown() and L.AZ_DEBUG_SHOWN or L.AZ_DEBUG_HIDDEN, Num(Get(bubble, "GetAlpha")),

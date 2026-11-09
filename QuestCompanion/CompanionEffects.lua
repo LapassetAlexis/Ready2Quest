@@ -822,7 +822,7 @@ local function PawFor(plate)
 	frame.back = frame:CreateTexture(nil, "ARTWORK")
 	frame.back:SetTexture(Theme.SOLID or "Interface\\Buttons\\WHITE8X8")
 	frame.back:SetAllPoints()
-	frame.back:SetVertexColor(0, 0, 0, 0.8)
+	Theme.Shade(frame.back, Theme.SHADE.strong)
 	frame.icon = frame:CreateTexture(nil, "OVERLAY")
 	frame.icon:SetTexture(ns.EFFECT_PAW)
 	frame.icon:SetSize(size, size)
@@ -949,14 +949,11 @@ function ns:CompanionEffectsTick()
 end
 
 do
-	local ok, frame = pcall(CreateFrame, "Frame")
-	if ok and frame and ns.Throttle then
-		frame:SetScript("OnUpdate", ns.Throttle(ns.EFFECT_TICK, function()
-			local done, err = pcall(ns.CompanionEffectsTick, ns)
-			if not done and ns.RecordError then ns:RecordError("effects:tick", err) end
-		end))
-		ns.effectEventFrame = frame
-	end
+	-- 2.11.2 (fiche 25) : sur l'horloge de l'addon (plus d'OnUpdate permanent)
+	ns.Every("effects", ns.EFFECT_TICK, function()
+		local done, err = pcall(ns.CompanionEffectsTick, ns)
+		if not done and ns.RecordError then ns:RecordError("effects:tick", err) end
+	end)
 end
 
 if ns.Mark then ns.Mark("CompanionEffects") end

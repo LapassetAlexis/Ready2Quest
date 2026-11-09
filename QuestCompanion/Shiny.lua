@@ -452,17 +452,14 @@ end
 -- étincelles toutes les 1,5 s)
 -- ---------------------------------------------------------------------------
 ns.SHINY_TICK = 0.1
-local ok, frame = pcall(CreateFrame, "Frame")
-if ok and frame then
-	frame:SetScript("OnUpdate", ns.Throttle(ns.SHINY_TICK, function()
-		local now = Clock()
-		local done, err = pcall(ns.ChestRevealStep, ns, now)
-		if not done and ns.RecordError then ns:RecordError("shiny:chest", err) end
-		done, err = pcall(ns.ShinyAuraTick, ns, now)
-		if not done and ns.RecordError then ns:RecordError("shiny:aura", err) end
-	end))
-	ns.shinyEventFrame = frame
-end
+-- 2.11.2 (fiche 25) : sur l'horloge de l'addon (plus d'OnUpdate permanent)
+ns.Every("shiny", ns.SHINY_TICK, function()
+	local now = Clock()
+	local done, err = pcall(ns.ChestRevealStep, ns, now)
+	if not done and ns.RecordError then ns:RecordError("shiny:chest", err) end
+	done, err = pcall(ns.ShinyAuraTick, ns, now)
+	if not done and ns.RecordError then ns:RecordError("shiny:aura", err) end
+end)
 
 -- ---------------------------------------------------------------------------
 -- Repère sur la barre de nom (1.6.0) : un losange doré qui scintille au-dessus
@@ -510,7 +507,7 @@ local function MarkFor(plate)
 	frame.back:SetTexture(Theme.DIAMOND)
 	frame.back:SetSize(size + 4, size + 4)
 	frame.back:SetPoint("CENTER", frame, "CENTER", 0, 0)
-	frame.back:SetVertexColor(0, 0, 0, 0.8)
+	Theme.Shade(frame.back, Theme.SHADE.strong)
 	frame.gem = frame:CreateTexture(nil, "OVERLAY")
 	frame.gem:SetTexture(Theme.DIAMOND)
 	frame.gem:SetSize(size, size)

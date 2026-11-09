@@ -1031,23 +1031,24 @@ local frame = CreateFrame("Frame")
 frame:SetScript("OnEvent", function(_, event, ...)
 	ns:OnEvent(event, ...)
 end)
--- sortie en attente : pas besoin de chaque image, dix fois par seconde
+-- 1.32.2 (fiche 25) : plus d'OnUpdate permanent, l'horloge de l'addon.
+-- Sortie en attente : pas besoin de chaque image, dix fois par seconde.
+-- Lieux repérés par leurs PNJ (Places.lua) : y entrer ou en sortir ne
+-- change pas forcément de sous-zone, aucun événement ne le dit. On regarde
+-- au même pas (CheckPlaceMove s'espace lui-même, toutes les PLACE_CHECK s).
 ns.EXIT_TICK = 0.1
-local watchExit = ns.Throttle(ns.EXIT_TICK, function()
+ns.Every("core:exit", ns.EXIT_TICK, function()
 	if ns.pendingExit then ns:UpdatePendingExit(ns:Now()) end
-end)
-frame:SetScript("OnUpdate", function(f, elapsed)
-	-- fondu du résumé éphémère, image par image
-	if ns.toastHideAt and ns.UpdateToast then
-		ns:UpdateToast(ns:Now())
-	end
-	-- sortie de zone sûre en attente de confirmation
-	watchExit(f, elapsed)
-	-- lieux repérés par leurs PNJ (Places.lua) : y entrer ou en sortir ne
-	-- change pas forcément de sous-zone, aucun événement ne le dit. On regarde
-	-- (CheckPlaceMove s'espace lui-même, toutes les PLACE_CHECK secondes).
 	ns:CheckPlaceMove(ns:Now())
 end)
+-- fondu du résumé éphémère, image par image, seulement pendant qu'il est
+-- affiché (la tâche se retire quand il n'y a plus rien à fondre)
+local function ToastFade()
+	if not ns.toastHideAt or not ns.UpdateToast then return false end
+	ns:UpdateToast(ns:Now())
+	return ns.toastHideAt ~= nil
+end
+function ns:ArmToastFade() ns.Every("core:toast", 0, ToastFade) end
 ns:RegisterEvents(frame)
 
 ns.eventFrame = frame

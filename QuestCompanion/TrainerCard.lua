@@ -1933,10 +1933,11 @@ do
 			local done, err = pcall(ns.TrainerOnEvent, ns, event, ...)
 			if not done and ns.RecordError then ns:RecordError("trainer:" .. tostring(event), err) end
 		end)
-		frame:SetScript("OnUpdate", ns.Throttle(ns.TRAINER_TICK, function(_, elapsed)
+		-- 2.11.2 (fiche 25) : sur l'horloge de l'addon (plus d'OnUpdate permanent)
+		ns.Every("trainer", ns.TRAINER_TICK, function(elapsed)
 			local done, err = pcall(ns.TrainerPump, ns, elapsed)
 			if not done and ns.RecordError then ns:RecordError("trainer:pump", err) end
-		end))
+		end)
 		ns.trainerEventFrame = frame
 	end
 end

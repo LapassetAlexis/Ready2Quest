@@ -1214,6 +1214,7 @@ function ns:CompanionSay(pool, opts)
 	self.companionBubbleKey, self.companionBubbleText, self.companionBubbleLine = pool, text, lineKey
 	self.companionBubblePrio = prio
 	self.companionBubbleUntil = now + (opts.duration or BUBBLE_TIME)
+	if self.NotifyGlowArm then self:NotifyGlowArm() end   -- 2.11.2 : l'éclat du liseré
 	local tuto = category == "tuto"
 	-- la bulle prend la hauteur du texte, plus la rangée de boutons du tutoriel
 	bubble:SetText(text, tuto and (Theme.DIALOG_BUTTON_HEIGHT or 28) or 0)
@@ -3745,13 +3746,25 @@ events:SetScript("OnEvent", function(_, event, ...)
 end)
 
 -- Horloge : besoins toutes les TICK s, fin de bulle, fin d'animation,
--- léger balancement du modèle
+-- léger balancement du modèle.
+-- 2.11.2 (fiche 25) : échéances et besoins sur l'horloge de l'addon (dix fois
+-- par seconde) ; seul le balancement reste image par image, posé sur le cadre
+-- d'événements tant que le modèle est affiché, retiré sinon (plus d'OnUpdate
+-- permanent quand le compagnon est caché)
 local pending, sway = 0, 0
-events:SetScript("OnUpdate", function(_, delta)
+local function SwayModel()
+	local frame = ns.companionFrame
+	return frame and frame.model and not frame.usesFallback and frame:IsShown() and ModuleOn() and frame or nil
+end
+local function Sway(f, delta)
+	local frame = SwayModel()
+	if not frame then f:SetScript("OnUpdate", nil); f.swaying = nil; return end
+	sway = sway + math.min(tonumber(delta) or 0, MAX_STEP)
+	Method(frame.model, "SetRotation", 0.35 * math.sin(sway * 0.5))
+end
+ns.Every("companion", ns.CLOCK_POLL, function(step)
 	if not ModuleOn() then return end
-	delta = math.min(tonumber(delta) or 0, MAX_STEP)
-	pending = pending + delta
-	sway = sway + delta
+	pending = pending + math.min(tonumber(step) or 0, MAX_STEP)
 	local now = Clock()
 	if ns.companionBubbleUntil and now >= ns.companionBubbleUntil then ns:CompanionHideBubble() end
 	if ns.companionAnimUntil and now >= ns.companionAnimUntil then ns:CompanionAnimate() end
@@ -3761,9 +3774,9 @@ events:SetScript("OnUpdate", function(_, delta)
 		local ok, err = pcall(ns.CompanionSequenceStep, ns)
 		if not ok and ns.RecordError then ns:RecordError("companion:sequence", err) end
 	end
-	local frame = ns.companionFrame
-	if frame and frame.model and not frame.usesFallback and frame:IsShown() then
-		Method(frame.model, "SetRotation", 0.35 * math.sin(sway * 0.5))
+	if not events.swaying and SwayModel() then
+		events.swaying = true
+		events:SetScript("OnUpdate", Sway)
 	end
 	if pending < TICK then return end
 	local step = pending

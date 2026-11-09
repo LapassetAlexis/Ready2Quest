@@ -62,7 +62,7 @@ end
 -- PLACE_DATA, DUNGEONS…) sont partagées telles quelles (ns.SocleData).
 -- Empreinte différente : chacun sa copie, comme avant.
 -- socle:empreinte (écrit par tools/sync_socle.py, ne pas éditer)
-local SOCLE_ID = "c8a5e7a9"
+local SOCLE_ID = "1039f91f"
 -- /socle:empreinte
 local REGISTRY = rawget(_G, "ReadyToQuestSocle")
 if type(REGISTRY) ~= "table" then
@@ -173,6 +173,131 @@ function ns.Throttle(interval, fn)
 		pending = 0
 		return fn(frame, step, ...)
 	end
+end
+
+-- socle 2.11.2 / 1.32.2 (fiche 25) : l'horloge de l'addon. Un seul cadre,
+-- caché quand rien n'est posé, une seule fonction OnUpdate qui cumule le
+-- temps des images (aucun appel au client) et sort aussitôt tant que la
+-- prochaine échéance n'est pas atteinte. Elle remplace les OnUpdate
+-- permanents des vérifications espacées ; les animations gardent le leur,
+-- posé le temps qu'elles jouent. Une horloge par addon (ce fichier n'est
+-- pas partagé entre les deux socles).
+--   ns.Every(clé, période, fn) : fn(écoulé) toutes les `période` s (0 : à
+--     chaque image) ; écoulé = temps depuis son dernier passage, comme
+--     ns.Throttle. fn rend false : la tâche se retire d'elle-même ; fn rend
+--     un nombre : prochain passage dans ce nombre de secondes (cadence
+--     variable : chaque image pendant une animation, espacée au repos).
+--   ns.Soon(clé, délai, fn) : une fois, dans `délai` s (avancée si elle était
+--     déjà posée plus tard).
+--   ns.Cancel(clé) ; ns.ClockJobs() : nombre de tâches et leurs clés.
+-- Chaque passage est protégé (pcall) : une erreur est notée une fois
+-- (« clock:clé »), les autres tâches tournent.
+ns.CLOCK_POLL = 0.1   -- pas des vérifications à échéance (l'échéance reste la leur)
+local clockJobs, clockOrder = {}, {}
+local clockNow, clockNext, clockTicking, clockDirty = 0, math.huge, false, false
+local clockFrame
+
+local function ClockCompact()
+	for i = #clockOrder, 1, -1 do
+		if not clockJobs[clockOrder[i]] then table.remove(clockOrder, i) end
+	end
+	clockDirty = false
+end
+
+local function ClockReschedule()
+	local soonest = math.huge
+	for i = 1, #clockOrder do
+		local job = clockJobs[clockOrder[i]]
+		if job and job.at < soonest then soonest = job.at end
+	end
+	clockNext = soonest
+	if clockFrame then
+		if soonest < math.huge then clockFrame:Show() else clockFrame:Hide() end
+	end
+end
+
+local function ClockTick(_, elapsed)
+	clockNow = clockNow + (elapsed or 0)   -- le client donne toujours un nombre
+	if clockNow < clockNext then return end
+	clockTicking = true
+	local now = clockNow
+	for i = 1, #clockOrder do
+		local key = clockOrder[i]
+		local job = clockJobs[key]
+		if job and now >= job.at then
+			local step = now - job.last
+			job.last = now
+			if job.period then job.at = now + job.period else clockJobs[key] = nil; clockDirty = true end
+			local ok, keep = pcall(job.fn, step)
+			if not ok then
+				ns:RecordError("clock:" .. tostring(key), keep)
+			elseif keep == false and clockJobs[key] == job then
+				clockJobs[key] = nil
+				clockDirty = true
+			elseif type(keep) == "number" and job.period and clockJobs[key] == job and job.last == now then
+				job.at = now + math.max(0, keep)
+			end
+		end
+	end
+	clockTicking = false
+	if clockDirty then ClockCompact() end
+	ClockReschedule()
+end
+
+local function Clock()
+	if clockFrame == nil then
+		local ok, frame = pcall(CreateFrame, "Frame")
+		clockFrame = (ok and frame) or false
+		if clockFrame then
+			clockFrame:SetScript("OnUpdate", ClockTick)
+			clockFrame:Hide()
+			ns.clockFrame = clockFrame
+		end
+	end
+	return clockFrame
+end
+
+local function ClockPut(key, period, delay, fn)
+	if not Clock() or type(fn) ~= "function" then return false end
+	local job = clockJobs[key]
+	if not job then
+		local listed = false
+		for i = 1, #clockOrder do if clockOrder[i] == key then listed = true; break end end
+		if not listed then clockOrder[#clockOrder + 1] = key end
+		job = {}
+		clockJobs[key] = job
+	end
+	job.fn, job.period, job.last = fn, period, clockNow
+	job.at = clockNow + delay
+	if not clockTicking then ClockReschedule() elseif job.at < clockNext then clockNext = job.at end
+	return true
+end
+
+function ns.Every(key, period, fn)
+	period = math.max(0, tonumber(period) or 0)
+	return ClockPut(key, period, period, fn)
+end
+
+function ns.Soon(key, delay, fn)
+	delay = math.max(0, tonumber(delay) or 0)
+	local job = clockJobs[key]
+	if job and not job.period and job.at <= clockNow + delay then
+		job.fn = fn or job.fn
+		return true
+	end
+	return ClockPut(key, nil, delay, fn or (job and job.fn))
+end
+
+function ns.Cancel(key)
+	if not clockJobs[key] then return end
+	clockJobs[key] = nil
+	clockDirty = true
+	if not clockTicking then ClockCompact(); ClockReschedule() end
+end
+
+function ns.ClockJobs()
+	if clockDirty and not clockTicking then ClockCompact() end
+	return #clockOrder, clockOrder
 end
 
 -- Résultat de build() gardé tant que les globales du client nommées dans

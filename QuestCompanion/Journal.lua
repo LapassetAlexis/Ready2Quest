@@ -603,12 +603,14 @@ function ns:ShowNextJournalToast()
 	if Theme.FadeIn then Theme.FadeIn(frame, 0.2) end
 	if self.StyleShown then self:StyleShown(frame, { shield = "gold", play = true }) end
 	self.journalToastHideAt = ns.Now() + TOAST_SECONDS
+	self:JournalToastArm()
 	return frame
 end
 
 -- File d'attente : rien ne s'affiche en combat ; tout part à la sortie
 -- (PLAYER_REGEN_ENABLED), puis un bandeau à la fois.
 function ns:JournalFlush()
+	self:JournalToastArm()
 	if InCombat() then return end
 	for _, stamp in ipairs(self.journalChats) do
 		self:Print(self:F("JRN_CHAT", self:JournalKindLabel(stamp.kind), stamp.name))
@@ -781,17 +783,23 @@ eventFrame:SetScript("OnEvent", function(_, event, ...)
 	if not ok and ns.RecordError then ns:RecordError("journal:" .. tostring(event), err) end
 end)
 -- protégé : une erreur sur un bandeau en file se répéterait à chaque image ;
--- on le retire de la file (la suite passe) et on note l'erreur une fois
-eventFrame:SetScript("OnUpdate", function()
-	if ns.journalToastHideAt or #ns.journalToasts > 0 then
-		local ok, err = pcall(ns.UpdateJournalToast, ns, ns.Now())
-		if not ok then
-			if #ns.journalToasts > 0 then table.remove(ns.journalToasts, 1) end
-			ns.journalToastHideAt = nil
-			if ns.RecordError then ns:RecordError("journal:toast", err) end
-		end
+-- on le retire de la file (la suite passe) et on note l'erreur une fois.
+-- 2.11.2 (fiche 25) : sur l'horloge de l'addon, posée quand un bandeau entre
+-- en file ou s'affiche, retirée quand il n'y a plus rien (plus d'OnUpdate
+-- permanent)
+local function JournalToastTick()
+	if not (ns.journalToastHideAt or #ns.journalToasts > 0) then return false end
+	local ok, err = pcall(ns.UpdateJournalToast, ns, ns.Now())
+	if not ok then
+		if #ns.journalToasts > 0 then table.remove(ns.journalToasts, 1) end
+		ns.journalToastHideAt = nil
+		if ns.RecordError then ns:RecordError("journal:toast", err) end
 	end
-end)
+	return (ns.journalToastHideAt or #ns.journalToasts > 0) and true or false
+end
+function ns:JournalToastArm()
+	if self.journalToastHideAt or #self.journalToasts > 0 then ns.Every("journal:toast", 0, JournalToastTick) end
+end
 ns.journalEventFrame = eventFrame
 
 if ns.Mark then ns.Mark("Journal") end
