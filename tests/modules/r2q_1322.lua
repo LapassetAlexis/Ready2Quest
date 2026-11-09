@@ -122,7 +122,7 @@ do
 	NS:LootRoomScroll(-20)
 	Check("[1322] butée en bas", NS.lootRoom.offset == 4 and frame.rows[8].data.itemID == 991012)
 	frame.rows[8].ignore:Click()
-	Check("[1322] ignorer une ligne défilée : la bonne", NS:DB().bagspaceKeep[991012] == true and #NS.lootRoom.rows == 11
+	Check("[1322] ignorer une ligne défilée : la bonne", type(NS:DB().bagspaceKeep[991012]) == "string" and #NS.lootRoom.rows == 11
 		and NS.lootRoom.offset == 3)
 	NS:LootRoomScroll(20)
 	Check("[1322] butée en haut", NS.lootRoom.offset == 0)
