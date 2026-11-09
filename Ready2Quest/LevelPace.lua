@@ -54,6 +54,7 @@ local FR = {
 	OPT_MIN_UNIT_PACE    = "min",
 	HELP_PACE            = "/r2q xp -- rythme de leveling : XP/h, temps avant le prochain niveau",
 	PACE_TITLE           = "Rythme de leveling",
+	PACE_ROW             = "%s : %s",   -- 1.32.0 : espace française avant les deux-points
 	PACE_ROW_RATE        = "XP/h",
 	PACE_RATE            = "%s (session) · %s (%d min)",
 	PACE_RATE_NONE       = "pas encore assez de données",
@@ -84,6 +85,7 @@ local EN = {
 	OPT_MIN_UNIT_PACE    = "min",
 	HELP_PACE            = "/r2q xp -- leveling pace: XP/h, time to next level",
 	PACE_TITLE           = "Leveling pace",
+	PACE_ROW             = "%s: %s",
 	PACE_ROW_RATE        = "XP/h",
 	PACE_RATE            = "%s (session) · %s (%d min)",
 	PACE_RATE_NONE       = "not enough data yet",
@@ -429,7 +431,7 @@ function ns:PrintPace()
 	self:Print(Gold(L.PACE_TITLE))
 	for _, line in ipairs(self:PaceLines(card)) do
 		if line.text then print("   " .. Grey(line.text))
-		else print("   " .. Gold(line.label) .. " : " .. line.value) end
+		else print("   " .. self:F("PACE_ROW", Gold(line.label), tostring(line.value))) end
 	end
 end
 

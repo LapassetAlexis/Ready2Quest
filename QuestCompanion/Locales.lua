@@ -5,14 +5,16 @@
 -- (Libs/Socle/Strings.lua) ; ceux-ci les complètent ou les remplacent.
 local ADDON, ns = ...
 if ns.blocked then return end
+-- 2.11.0 (fiche 28) : codes couleur du socle (Base.lua, chargé avant)
+local TC = ns.TC
 
 local frFR = {
 	ADDON_NAME           = "QuestCompanion",
-	TAG                  = "|cffe8a54b[Quest|r|cff5b8fd6Companion|r|cffe8a54b]|r",
+	TAG                  = TC.GOLD .. "[Quest|r" .. TC.BLUE .. "Companion|r" .. TC.GOLD .. "]|r",
 	HELP_TITLE           = "Commandes : /qc ou /questcompanion, au choix.",
 	MSG_UNKNOWN_CMD      = "Commande inconnue. Tape /qc help pour l'aide.",
 	MSG_MODULE_UNKNOWN   = "Module inconnu. Essaie /qc modules.",
-	MSG_MODULES_HINT     = "|cff888888/qc module compagnon on|off|r",
+	MSG_MODULES_HINT     = TC.GREY .. "/qc module compagnon on|off|r",
 	MINIMAP_LEFT         = "Clic gauche : ouvrir le carnet",
 	OPT_PAGE_GENERAL_SUB = "L'addon et son bouton de minicarte.",
 	QC_OPEN_JOURNAL      = "Ouvrir le carnet",
@@ -30,11 +32,11 @@ local frFR = {
 
 local enUS = {
 	ADDON_NAME           = "QuestCompanion",
-	TAG                  = "|cffe8a54b[Quest|r|cff5b8fd6Companion|r|cffe8a54b]|r",
+	TAG                  = TC.GOLD .. "[Quest|r" .. TC.BLUE .. "Companion|r" .. TC.GOLD .. "]|r",
 	HELP_TITLE           = "Commands: /qc or /questcompanion, your pick.",
 	MSG_UNKNOWN_CMD      = "Unknown command. Type /qc help for help.",
 	MSG_MODULE_UNKNOWN   = "Unknown module. Try /qc modules.",
-	MSG_MODULES_HINT     = "|cff888888/qc module compagnon on|off|r",
+	MSG_MODULES_HINT     = TC.GREY .. "/qc module compagnon on|off|r",
 	MINIMAP_LEFT         = "Left click: open the journal",
 	OPT_PAGE_GENERAL_SUB = "The addon and its minimap button.",
 	QC_OPEN_JOURNAL      = "Open the journal",

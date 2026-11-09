@@ -120,8 +120,8 @@ ns.AZEROTH_INK = {
 	light = { 0.93, 0.89, 0.80 },            -- texte clair sur fond sombre (lignes pas encore obtenues)
 	rewardLight = { 0.62, 0.92, 0.52 },
 	white = { 1, 1, 1 }, barGrey = { 0.91, 0.89, 0.83 }, goldHead = { 0.97, 0.85, 0.47 },
-	star = { 1, 0.84, 0.29 }, tagBlue = { 0.357, 0.561, 0.839 }, tagGrey = { 0.64, 0.66, 0.68 },
-	navText = { 0.85, 0.83, 0.78 }, navSel = { 0.95, 0.91, 0.83 },
+	star = { 1, 0.84, 0.29 }, tagBlue = Theme.BLUE, tagGrey = Theme.MUTED_LIGHT,   -- 2.11.0 : jetons du socle (mêmes valeurs)
+	navText = Theme.TEXT, navSel = Theme.PARCHMENT,
 	zoneDim = { 0.74, 0.71, 0.66 },          -- 2.9.1 : zone pas encore vue (Exploration), sur le fond des catégories
 	stripLabel = { 0.95, 0.84, 0.54 }, stripDetail = { 0.84, 0.77, 0.60 },
 	markGold = { 0.97, 0.85, 0.47 }, markGrey = { 0.86, 0.82, 0.74 },
@@ -133,7 +133,7 @@ ns.AZEROTH_INK = {
 	statLabel = { 0.89, 0.82, 0.66 },        -- libellé des plaques de chiffres (page Compagnon)
 	plateCount = { 0.95, 0.87, 0.66 },       -- nombre de la case des points (plaque d'en-tête)
 	giftGold = { 1, 0.95, 0.78 }, giftGrey = { 0.80, 0.76, 0.68 },   -- cadeau des paliers d'Exploration
-	fieldText = { 0.902, 0.882, 0.835 },     -- texte d'une liste déroulante / recherche (Theme.LABEL)
+	fieldText = Theme.LABEL,                 -- texte d'une liste déroulante / recherche
 	-- 2.11.0 : ombre posée sous un texte clair sur un fond variable (icône, bande dorée)
 	shade = { 0.10, 0.06, 0.02 },
 }
@@ -756,7 +756,7 @@ function ns:AzerothCreateBanner(opts)
 
 	-- la bande sombre (liseré doré), glissée sous le bas du bandeau
 	if opts.strip then
-		frame.strip = Theme.Solid(frame, "BACKGROUND", Theme.WINDOW or { 0.06, 0.05, 0.04 }, 0.94)
+		frame.strip = Theme.Solid(frame, "BACKGROUND", Theme.WINDOW, 0.94)
 		frame.strip:SetSize(LAY.stripW, stripH)
 		frame.strip:SetPoint("TOP", area, "BOTTOM", 0, LAY.overlap)
 		frame.stripEdge = Theme.Border(frame, Theme.GOLD_SOFT, 0.9, "BORDER", frame.strip)

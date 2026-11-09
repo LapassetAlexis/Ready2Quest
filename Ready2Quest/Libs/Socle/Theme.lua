@@ -144,15 +144,17 @@ function Theme.Hex(color)
 	return string.format("|cff%02x%02x%02x", Byte(color[1]), Byte(color[2]), Byte(color[3]))
 end
 
-Theme.T_GOLD      = "|cffe8a54b"
-Theme.T_PARCHMENT = "|cfff1e8d4"
-Theme.T_GREY      = "|cff91969e"
-Theme.T_GREEN     = "|cff6fcf7a"
-Theme.T_RED       = "|cffe2604f"
-Theme.T_ORANGE    = "|cffe8a54b"
-Theme.T_ORANGE_DEEP = "|cffed7833"
-Theme.T_WHITE     = "|cffffffff"
-Theme.T_BLUE      = "|cff5b8fd6"
+-- 2.11.0 / 1.32.0 (fiche 28) : alias des codes déclarés une fois dans Base.lua (ns.TC)
+local TC = ns.TC or setmetatable({}, { __index = function() return "" end })   -- hors Base.lua (tests) : sans couleur
+Theme.T_GOLD      = TC.GOLD
+Theme.T_PARCHMENT = TC.PARCHMENT
+Theme.T_GREY      = TC.GREY
+Theme.T_GREEN     = TC.GREEN
+Theme.T_RED       = TC.RED
+Theme.T_ORANGE    = TC.ORANGE
+Theme.T_ORANGE_DEEP = TC.ORANGE_DEEP
+Theme.T_WHITE     = TC.WHITE
+Theme.T_BLUE      = TC.BLUE
 
 Theme.BG_DARK  = "Interface\\DialogFrame\\UI-DialogBox-Background-Dark"
 Theme.BG_LIGHT = "Interface\\DialogFrame\\UI-DialogBox-Background"

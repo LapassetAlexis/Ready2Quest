@@ -649,7 +649,10 @@ local function RefreshItems(self, frame, pane, zoneID, part, quests, seen)
 			line.status:SetVertexColor(c[1], c[2], c[3], 1)
 			line.text:SetText(tostring(item.name or ""))
 			Paint(line.text, item.done and Theme.PARCHMENT or (item.locked and Theme.MUTED or Theme.TEXT))
-			line.detail:SetText(Theme.T_GREY .. tostring(item.detail or "") .. "|r")
+			-- 2.11.0 (fiche 28) : le gris posé sur la ligne, pas dans le texte (un
+			-- code |c passait devant l'encre du carnet Azeroth)
+			line.detail:SetText(tostring(item.detail or ""))
+			Paint(line.detail, Theme.MUTED)
 			line:SetAlt(line.rowAlt)
 			line:Show()
 		end

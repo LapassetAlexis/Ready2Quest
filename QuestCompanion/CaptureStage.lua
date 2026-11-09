@@ -252,7 +252,7 @@ end
 
 function ns:CaptureRarity(target)
 	if target and target.shiny then
-		local gold = Theme.GOLD_LIGHT or { 0.96, 0.78, 0.49 }
+		local gold = Theme.GOLD_LIGHT
 		return { color = gold, text = gold, pips = (RARITY[target.class] or RARITY.normal).pips }
 	end
 	return RARITY[(target and target.class) or "normal"] or RARITY.normal

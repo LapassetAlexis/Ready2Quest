@@ -1333,12 +1333,14 @@ local INN_STAMP_ICON = ICON_DIR .. "INV_Misc_Rune_01"
 local INN_GIFT_ICON = ICON_DIR .. "INV_Misc_Food_15"
 ns.MISSION_SUMMARY_ICONS, ns.INN_STAMP_ICONS = SUMMARY_ICON, { stamp = INN_STAMP_ICON, gift = INN_GIFT_ICON }
 -- couleurs de l'habit Sobre (l'habit Azeroth pose les siennes, mesurées)
+-- 2.11.0 (fiche 28) : les teintes du thème lues dans le jeton (mêmes valeurs)
+local function Tint(c, alpha) return { c[1], c[2], c[3], alpha } end
 local MIS_COLORS = {
-	tint = { 0.44, 0.81, 0.48, 0.10 },             -- carte faite
+	tint = Tint(Theme.GREEN, 0.10),                -- carte faite
 	stamp = { 0.12, 0.37, 0.12 },                  -- tampon « Faite » (texte blanc : 7,81:1)
 	chipZone = { 0.165, 0.31, 0.54 }, chipTrait = { 0.42, 0.29, 0.10 },   -- étiquettes (blanc : 8,13 / 8,02)
-	callout = { 0.91, 0.65, 0.29, 0.06 }, dash = { 0.73, 0.47, 0.17, 0.9 },
-	pipOn = { 0.91, 0.65, 0.29 }, pipOff = { 0.227, 0.259, 0.290 },
+	callout = Tint(Theme.GOLD, 0.06), dash = Tint(Theme.GOLD_SOFT, 0.9),
+	pipOn = Theme.GOLD, pipOff = Theme.EDGE,
 }
 ns.MISSION_COLORS = MIS_COLORS
 local REROLL_TIP = {}
@@ -2541,7 +2543,7 @@ local function RefreshMenagerie(self, frame)
 			local worn = current == ("cap:" .. entry.npc) or current == ("cap:" .. entry.npc .. ":s")
 			local picked = shown and shown.npc == entry.npc
 			if picked or worn then row.mark:Show() else row.mark:Hide() end
-			local mc = worn and Theme.GOLD or { 1, 1, 1 }
+			local mc = worn and Theme.GOLD or Theme.WHITE
 			row.mark:SetVertexColor(mc[1], mc[2], mc[3], worn and 0.12 or 0.05)
 			row:Show()
 		else

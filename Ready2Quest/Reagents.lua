@@ -168,16 +168,16 @@ function ns:PrintReagents()
 	local entries = self:ReagentStatus()
 	if #entries == 0 then
 		self:Print(L.CHK_REAGENTS_NONE)
-		self:Print("  Coche l'étoile d'une recette dans ta fenêtre de métier.")
+		self:Print("  " .. L.CHK_REAGENTS_HOWTO)
 		return
 	end
 
 	for _, entry in ipairs(entries) do
-		local state = entry.craftable > 0 and ("fabricable x" .. entry.craftable) or "bloquée"
-		self:Print(string.format("  %s |cff888888(%s)|r", entry.name, state))
+		-- 1.32.0 (fiche 28) : textes traduits, gris du thème
+		local state = entry.craftable > 0 and self:F("REAGENT_CRAFTABLE", entry.craftable) or L.REAGENT_BLOCKED
+		self:Print(string.format("  %s %s(%s)|r", entry.name, ns.Theme.T_GREY, state))
 		for _, gap in ipairs(entry.missing) do
-			self:Print(string.format("     manque %d %s |cff888888(%d/%d)|r",
-				gap.deficit, gap.name, gap.have, gap.need))
+			self:Print("     " .. self:F("REAGENT_MISSING_ROW", gap.deficit, gap.name, ns.Theme.T_GREY, gap.have, gap.need))
 		end
 	end
 end

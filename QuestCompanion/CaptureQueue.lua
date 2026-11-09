@@ -963,7 +963,7 @@ function ns:EnsureCaptureNet()
 	button.glow:SetPoint("TOPLEFT", button, "TOPLEFT", -3, 3)
 	button.glow:SetPoint("BOTTOMRIGHT", button, "BOTTOMRIGHT", 3, -3)
 	if button.glow.SetDrawLayer then button.glow:SetDrawLayer("BACKGROUND", 0) end
-	button.plate = Theme.Solid(button, "BACKGROUND", Theme.INK or { 0.06, 0.07, 0.09 }, 0.94)
+	button.plate = Theme.Solid(button, "BACKGROUND", Theme.INK, 0.94)
 	button.plate:SetPoint("TOPLEFT", button, "TOPLEFT", 1, -1)
 	button.plate:SetPoint("BOTTOMRIGHT", button, "BOTTOMRIGHT", -1, 1)
 	if button.plate.SetDrawLayer then button.plate:SetDrawLayer("BACKGROUND", 4) end
@@ -975,7 +975,7 @@ function ns:EnsureCaptureNet()
 	button.countBack:SetPoint("CENTER", button, "TOPRIGHT", -2, -2)
 	if button.countBack.SetDrawLayer then button.countBack:SetDrawLayer("OVERLAY", 6) end
 	button.countEdge = Theme.Border(button, { 0, 0, 0 }, 1, "OVERLAY", button.countBack)
-	button.count = Theme.Text(button, Theme.F_LABEL, Theme.INK or { 0, 0, 0 })
+	button.count = Theme.Text(button, Theme.F_LABEL, Theme.INK)
 	if button.count.SetDrawLayer then button.count:SetDrawLayer("OVERLAY", 7) end
 	button.count:SetPoint("CENTER", button.countBack, "CENTER", 0, 0)
 	button.count:SetJustifyH("CENTER")

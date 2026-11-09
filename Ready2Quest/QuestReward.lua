@@ -577,7 +577,7 @@ function ns:RewardAddTooltip(tooltip, index, link)
 	end
 	local line = self:RewardTooltipLine(choice, result)
 	if not line or type(tooltip) ~= "table" or type(tooltip.AddLine) ~= "function" then return end
-	local c = Theme and Theme.GOLD or { 0.91, 0.65, 0.29 }
+	local c = Theme.GOLD   -- 1.32.0 (fiche 28) : plus de repli recopié
 	pcall(tooltip.AddLine, tooltip, line, c[1], c[2], c[3], true)
 	if type(tooltip.Show) == "function" then pcall(tooltip.Show, tooltip) end   -- recalcule la taille
 end
@@ -647,7 +647,7 @@ function ns:RewardOnItemTooltip(tooltip)
 	if not ok then return false end
 	local line = self:RewardItemUpgradeLine(link)
 	if not line then return false end
-	local c = Theme and Theme.GREEN or { 0.44, 0.81, 0.48 }
+	local c = Theme.GREEN
 	tooltip:AddLine(line, c[1], c[2], c[3])
 	return true
 end

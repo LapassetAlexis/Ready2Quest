@@ -292,24 +292,27 @@ function ns:ClientFlavour()
 	-- Repli sur les capacités si GetBuildInfo est absent
 	local caps = ns.Caps
 	if caps.crafting and caps.questlogNamespaced then return "Forever" end
-	if caps.auramodern then return "moderne (non identifié)" end
-	return "inconnu"
+	if caps.auramodern then return (ns.L and ns.L.MSG_CLIENT_MODERN) or "modern" end
+	return (ns.L and ns.L.MSG_CLIENT_UNKNOWN) or "unknown"
 end
 
+-- 2.11.0 / 1.32.0 (fiche 28) : couleurs du thème (Compat passe avant Theme.lua :
+-- lues à l'appel, quand tout est chargé)
 function ns:PrintCapabilities()
+	local Theme = ns.Theme
 	local info = self:BuildInfo()
 	local build = ""
 	if info then
-		build = string.format(" |cff8c8c8c(build %s, interface %s)|r",
+		build = string.format(" " .. Theme.T_GREY .. "(build %s, interface %s)|r",
 			tostring(info.version or "?"), tostring(info.toc or "?"))
 	end
-	self:Print("client = |cffffd100" .. self:ClientFlavour() .. "|r" .. build)
+	self:Print("client = " .. Theme.T_GOLD .. self:ClientFlavour() .. "|r" .. build)
 	local keys = {}
 	for key in pairs(ns.Caps) do keys[#keys + 1] = key end
 	table.sort(keys)
 	for _, key in ipairs(keys) do
 		local value = ns.Caps[key]
-		local color = value and "|cff1eff00" or "|cffff2020"
+		local color = value and Theme.T_GREEN or Theme.T_RED
 		self:Print(string.format("  %-18s %s%s|r", key, color, tostring(value)))
 	end
 end

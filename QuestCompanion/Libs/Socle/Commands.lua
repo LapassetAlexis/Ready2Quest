@@ -71,7 +71,7 @@ COMMANDS["modules"] = function(self)
 	self:Print(L.MSG_MODULES_HEADER)
 	for _, module in ipairs(self.MODULES) do
 		local on = db[module.key] ~= false
-		local state = on and (ns.Theme.T_GREEN .. L.MODULE_ON .. "|r") or ("|cffff2020" .. L.MODULE_OFF .. "|r")
+		local state = on and (ns.Theme.T_GREEN .. L.MODULE_ON .. "|r") or (ns.Theme.T_RED .. L.MODULE_OFF .. "|r")
 		self:Print(self:F("MSG_MODULE_ROW", module.id, state .. "  " .. tostring(L[module.label] or module.id)))
 	end
 	self:Print(L.MSG_MODULES_HINT)
@@ -96,6 +96,18 @@ function ns:SocleDiagLine()
 	return "  " .. self:F("DIAG_SOCLE", ns.socleShared and L.DIAG_SOCLE_SHARED or L.DIAG_SOCLE_OWN, tostring(ns.SOCLE_ID or "?"))
 end
 
+-- 2.11.0 / 1.32.0 : lignes communes du diagnostic (reprises par Ready2Quest, Core.lua)
+function ns:DiagModulesLines(loaded, missing)
+	local Theme = ns.Theme
+	self:Print(self:F("MSG_DIAG_MODULES", Theme.T_GREEN, #loaded, #loaded + #missing))
+	if #missing > 0 then self:Print("  " .. Theme.T_RED .. L.MSG_DIAG_MISSING .. "|r " .. table.concat(missing, ", ")) end
+end
+function ns:DiagErrorLines()
+	for _, entry in ipairs(ns.errors or {}) do
+		self:Print("  " .. ns.Theme.T_RED .. L.MSG_DIAG_ERROR .. "|r " .. self:F("MSG_DIAG_WHERE", tostring(entry.where), tostring(entry.message)))
+	end
+end
+
 COMMANDS["diag"] = function(self)
 	self:Print(L.MSG_DIAG_HEADER .. " v" .. tostring(ns.version or "?"))
 	if self.PrintCapabilities then self:PrintCapabilities() end
@@ -104,11 +116,9 @@ COMMANDS["diag"] = function(self)
 	for _, name in ipairs(ns.APP.coreFiles or {}) do
 		if ns.Loaded and ns.Loaded[name] then loaded[#loaded + 1] = name else missing[#missing + 1] = name end
 	end
-	self:Print(string.format("  modules : " .. ns.Theme.T_GREEN .. "%d/%d|r chargés", #loaded, #loaded + #missing))
-	if #missing > 0 then self:Print("  |cffff2020non chargés :|r " .. table.concat(missing, ", ")) end
-	for _, entry in ipairs(ns.errors or {}) do
-		self:Print("  |cffff2020erreur|r " .. tostring(entry.where) .. " : " .. tostring(entry.message))
-	end
+	-- 2.11.0 / 1.32.0 (fiche 28) : lignes traduites, couleurs du thème
+	self:DiagModulesLines(loaded, missing)
+	self:DiagErrorLines()
 	if self.DiagExtra then self:DiagExtra() end
 end
 
