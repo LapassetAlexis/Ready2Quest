@@ -31,6 +31,7 @@ local DEFAULTS = {
 	exitDelay           = 6,      -- secondes hors zone sûre avant l'alerte (0..15)
 	popupScore          = 85,     -- fenêtre seulement sous cette note (100 = toujours)
 	departureEnabled    = true,   -- module « Check avant le départ »
+	diagFoldOk          = true,   -- 1.32.0 : lignes « en ordre » repliées dans « Avant le départ »
 	autoSellGray        = true,   -- vend les objets gris à l'ouverture d'un marchand
 	autoRepair          = true,   -- répare tout chez un marchand qui répare
 	-- Zones sûres (schéma 2, v1.18.0) :
@@ -542,7 +543,7 @@ function ns:CheckBagPressure()
 	if self.bagAlerted then return end
 
 	self.bagAlerted = true
-	self:Print(self:F("MSG_BAG_PRESSURE", free))
+	self:Print(self:FP("MSG_BAG_PRESSURE", free))
 end
 
 -- ---------------------------------------------------------------------------
@@ -778,7 +779,7 @@ local COMMANDS = {
 		local n = tonumber(value)
 		if not n then return self:Print(L.MSG_UNKNOWN_CMD) end
 		db.bagFreeThreshold = math.floor(n)
-		self:Print(self:F("MSG_THRESHOLD", db.bagFreeThreshold))
+		self:Print(self:FP("MSG_THRESHOLD", db.bagFreeThreshold))
 	end,
 	["popup"] = function(self, value)
 		local db = self:DB()
@@ -879,7 +880,7 @@ local COMMANDS = {
 		self:Print(L.MSG_MODULES_HEADER)
 		for _, module in ipairs(self.MODULES) do
 			local on = db[module.key] ~= false
-			local state = on and (ns.Theme.T_GREEN .. L.MODULE_ON .. "|r") or ("|cffff2020" .. L.MODULE_OFF .. "|r")
+			local state = on and (ns.Theme.T_GREEN .. L.MODULE_ON .. "|r") or (ns.Theme.T_RED .. L.MODULE_OFF .. "|r")
 			self:Print(self:F("MSG_MODULE_ROW", module.id, state .. "  " .. tostring(L[module.label] or module.id)))
 		end
 		self:Print(L.MSG_MODULES_HINT)
@@ -910,7 +911,7 @@ local COMMANDS = {
 			local label = def.label
 			if type(label) == "function" then label = label() end
 			local on = self:IsModuleEnabled(def.id)
-			local state = on and (ns.Theme.T_GREEN .. L.MODULE_ON .. "|r") or ("|cffff2020" .. L.MODULE_OFF .. "|r")
+			local state = on and (ns.Theme.T_GREEN .. L.MODULE_ON .. "|r") or (ns.Theme.T_RED .. L.MODULE_OFF .. "|r")
 			self:Print(self:F("MSG_MODULE_ROW", tostring(def.id), state .. "  " .. tostring(label)))
 		end
 	end,
@@ -951,26 +952,20 @@ local COMMANDS = {
 	["diag"] = function(self)
 		self:Print(L.MSG_DIAG_HEADER .. " v" .. tostring(ns.version or "?"))
 		if self.PrintCapabilities then self:PrintCapabilities() end
+		-- 1.32.0 : socle partagé avec QuestCompanion, ou propre
+		if self.SocleDiagLine then self:Print(self:SocleDiagLine()) end
 
 		-- État du chargement des fichiers
 		local loaded, missing = {}, {}
-		for _, name in ipairs({ "Bootstrap", "Locales", "Compat", "Hubs", "Theme", "Core", "Buffs",
-			"Reagents", "Merchant", "Equip", "Stats", "Minimap", "Checks", "Options", "UI" }) do
+		-- 1.32.0 (fiche 28) : la liste de Config.lua et les lignes traduites du socle
+		for _, name in ipairs(ns.APP.coreFiles or {}) do
 			if ns.Loaded and ns.Loaded[name] then loaded[#loaded + 1] = name else missing[#missing + 1] = name end
 		end
-		self:Print(string.format("  modules : " .. ns.Theme.T_GREEN .. "%d/%d|r chargés",
-			#loaded, #loaded + #missing))
-		if #missing > 0 then
-			self:Print("  |cffff2020non chargés :|r " .. table.concat(missing, ", "))
-		end
+		self:DiagModulesLines(loaded, missing)
 		if self.unsupportedEvents and #self.unsupportedEvents > 0 then
-			self:Print("  |cffff8c1aévénements non supportés :|r " .. table.concat(self.unsupportedEvents, ", "))
+			self:Print("  " .. ns.Theme.T_ORANGE_DEEP .. L.MSG_DIAG_UNSUPPORTED .. "|r " .. table.concat(self.unsupportedEvents, ", "))
 		end
-		if ns.errors and #ns.errors > 0 then
-			for _, entry in ipairs(ns.errors) do
-				self:Print("  |cffff2020erreur|r " .. tostring(entry.where) .. " : " .. tostring(entry.message))
-			end
-		end
+		self:DiagErrorLines()
 		local mapID = self:CurrentMap()
 		local info = self:MapInfo(mapID)
 		self:Print(self:F("MSG_DIAG_MAP", tostring(mapID), tostring(info and info.parentMapID), tostring(info and info.name)))

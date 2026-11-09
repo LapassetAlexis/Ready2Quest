@@ -53,6 +53,18 @@ ns.AGGRO_BAR_W, ns.AGGRO_BAR_H, ns.AGGRO_BAR_Y = 70, 3, 10   -- trait sous la ba
 -- anneau livré avec l'addon (Textures/aggro_ring.tga) : présent à coup sûr
 ns.AGGRO_RING_TEXTURE = ns.Theme.MEDIA .. "Textures\\aggro_ring"
 ns.AGGRO_RING_FALLBACK = "Interface\\CharacterFrame\\TempPortraitAlphaMask"
+-- 1.32.0 (fiche 12) : l'anneau du client d'abord, par référence (atlas
+-- vérifié en jeu sur Forever le 9/11/2026), grisé pour prendre la teinte
+-- (vert, ambre, rouge) ; notre fichier reste le repli s'il manque
+ns.AGGRO_RING_ATLAS = "BonusChest-CircleGlow"
+local function AtlasKnown(name)
+	local api = rawget(_G, "C_Texture")
+	if type(api) ~= "table" or type(api.GetAtlasInfo) ~= "function" then return false end
+	local ok, info = pcall(api.GetAtlasInfo, name)
+	if ok and ns.Plain then info = ns.Plain(info) end
+	return ok and info ~= nil and info ~= false
+end
+ns.AggroAtlasKnown = AtlasKnown
 
 -- ---------------------------------------------------------------------------
 -- Chaînes, réglages, page d'options, module
@@ -561,9 +573,17 @@ local function RingFor(plate)
 	end
 	local texture = frame:CreateTexture(nil, "BACKGROUND")
 	texture:SetAllPoints(frame)
-	-- anneau livré avec l'addon ; si le client le refuse, un disque translucide
-	local okSet, set = pcall(texture.SetTexture, texture, ns.AGGRO_RING_TEXTURE)
-	if not okSet or set == false then texture:SetTexture(ns.AGGRO_RING_FALLBACK); frame.fallback = true end
+	-- 1.32.0 : l'anneau du client ; sinon celui livré avec l'addon ; si le
+	-- client le refuse aussi, un disque translucide
+	local okAtlas, atlas = false, nil
+	if texture.SetAtlas and AtlasKnown(ns.AGGRO_RING_ATLAS) then okAtlas, atlas = pcall(texture.SetAtlas, texture, ns.AGGRO_RING_ATLAS) end
+	if okAtlas and atlas ~= false then
+		frame.clientRing = true
+		if texture.SetDesaturated then texture:SetDesaturated(true) end
+	else
+		local okSet, set = pcall(texture.SetTexture, texture, ns.AGGRO_RING_TEXTURE)
+		if not okSet or set == false then texture:SetTexture(ns.AGGRO_RING_FALLBACK); frame.fallback = true end
+	end
 	if texture.SetBlendMode then pcall(texture.SetBlendMode, texture, "ADD") end
 	frame.ringTexture = texture
 	-- pastille : un losange à gauche de la barre, avec un liseré sombre
@@ -591,6 +611,18 @@ function ns:AggroHideRing(unit)
 	local plate = self.aggroPlates[unit]
 	local ring = plate and self.aggroRings[plate]
 	if ring then ring:Hide(); ring.verdict = nil end
+end
+
+-- 1.32.0 (fiche 26) : les deux add-ons installés, une seule alerte rouge à
+-- la fois. QuestCompanion lit ceci (_G.Ready2Quest) : tant qu'un anneau
+-- rouge est posé ici, son cadre ne clignote pas en plus. Sans Ready2Quest,
+-- ou module coupé, QuestCompanion garde son alerte.
+function ns:AggroDangerShown()
+	if not (self.aggroRings and self:AggroOn()) then return false end
+	for _, ring in pairs(self.aggroRings) do
+		if ring.verdict == "red" and ring.IsShown and ring:IsShown() then return true end
+	end
+	return false
 end
 
 function ns:AggroHideAll()

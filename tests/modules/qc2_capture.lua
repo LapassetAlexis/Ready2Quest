@@ -365,8 +365,9 @@ do
 	f.sections.menagerie:Click()
 	local row
 	for _, cell in ipairs(f.men.items) do if cell.entry and cell.entry.npc == 4700 then row = cell end end
-	Check("[QC2CAP] ligne : les étoiles avant le type", row and select(2, row.detail:GetText():gsub("|T", "")) == 3
-		and row.detail:GetText():find("Bête", 1, true) ~= nil, row and row.detail:GetText())
+	-- 2.11.0 : étoiles dessinées (atlas du jeu) à gauche du type, plus en texte
+	Check("[QC2CAP] ligne : les étoiles avant le type", row and row.stars and #row.stars == 3 and row.stars[1].star:IsShown()
+		and row.detail:GetText() == "Bête", row and row.detail:GetText())
 	row.scripts.OnEnter(row)
 	local text = {}
 	for _, line in ipairs(f.men.preview.lines) do text[#text + 1] = line:GetText() or "" end

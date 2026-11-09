@@ -406,7 +406,7 @@ do
 	GF.Tick(NS.GFEAT_TOAST_SECONDS)
 	local second = NS:GuildFeatsShowing()
 	Check("[GLD] fini : le suivant", second and second ~= showing and second.feat.kind == "n" and f.info.text:find("Griffe-sanglante", 1, true)
-		and f.info.text:find("|cffa336ed", 1, true) ~= nil, f.info.text)
+		and f.info.text:find(NS.Theme.Hex(NS.Theme.RANK.rare), 1, true) ~= nil, f.info.text)   -- 2.11.0 : jeton Theme.RANK (texte éclairci)
 	-- son limité : deux bandeaux à moins d'une seconde
 	local sounds = #GF.sounds
 	NS:GuildFeatsShowToast({ key = "x", sender = "Xan-Royaume", feat = { kind = "s" }, score = 1000, at = Mock.now,

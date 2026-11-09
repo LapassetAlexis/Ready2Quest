@@ -149,6 +149,29 @@ def gathering_item_ids(path):
     return {int(i) for i in re.findall(r"^\s*\[(\d+)\]\s*=\s*R\(", text, re.M)}
 
 
+def spawn_point(spawns, to_map, ui_map, central=False):
+    """2.11.0 : un point d'apparition dans la zone ui_map, en millièmes de la
+    carte (x, y entiers 0-999), ou None. central : le point le plus proche du
+    centre des apparitions (une créature), sinon le premier (un donneur)."""
+    points = []
+    for area, coords in (spawns or {}).items():
+        if to_map(area) != ui_map or not isinstance(coords, dict):
+            continue
+        for xy in coords.values():
+            if isinstance(xy, dict) and _num(xy.get(1)) and _num(xy.get(2)):
+                x, y = float(xy[1]), float(xy[2])
+                if 0 <= x <= 100 and 0 <= y <= 100:
+                    points.append((x, y))
+    if not points:
+        return None
+    if central and len(points) > 1:
+        cx = sum(p[0] for p in points) / len(points)
+        cy = sum(p[1] for p in points) / len(points)
+        points.sort(key=lambda p: (p[0] - cx) ** 2 + (p[1] - cy) ** 2)
+    x, y = points[0]
+    return min(999, int(round(x * 10))), min(999, int(round(y * 10)))
+
+
 def spawn_zones(spawns, to_map, zones):
     out = set()
     for area in (spawns or {}):
@@ -218,7 +241,7 @@ def build_creatures(entities, fr, to_map, zones_wanted):
         entry = (int(lo), int(hi), int(row.get(keys["rank"]) or 0), fr_name(fr, npc_id, en), en,
                  friendly if friendly in ("A", "H") else None)
         for ui_map in where:
-            zones.setdefault(ui_map, {})[npc_id] = entry
+            zones.setdefault(ui_map, {})[npc_id] = entry + (spawn_point(row.get(keys["spawns"]), to_map, ui_map, True),)
     return zones, reasons
 
 
@@ -287,6 +310,22 @@ def quest_starter_zone(row, qk, npcs, objects, to_map, zones_wanted):
                     return None  # donneur (aussi) hors des zones extérieures
                 where.add(ui_map)
     return next(iter(where)) if len(where) == 1 else None
+
+
+def quest_giver_point(row, qk, npcs, objects, to_map, ui_map):
+    """2.11.0 : où prendre la quête dans sa zone : premier donneur (PNJ, puis
+    objet) qui apparaît dans ui_map, son premier point ; None sinon."""
+    started = row.get(qk["startedBy"])
+    if not isinstance(started, dict):
+        return None
+    for slot, (data, keys) in ((1, npcs), (2, objects)):
+        ids = started.get(slot)
+        for entity_id in (ids.values() if isinstance(ids, dict) else ()):
+            entity = data.get(entity_id)
+            point = entity and spawn_point(entity.get(keys["spawns"]), to_map, ui_map)
+            if point:
+                return point
+    return None
 
 
 def build_quests(entities, fr, to_map, zones_wanted, hidden, events):
@@ -358,7 +397,8 @@ def build_quests(entities, fr, to_map, zones_wanted, hidden, events):
         entry = (int(level) if _num(level) else 0, int(req) if _num(req) else 0,
                  int(races) if _num(races) else 0, int(classes) if _num(classes) else 0,
                  fr_name(fr, qid, name), name, tuple(sorted(ex)))
-        zones.setdefault(ui_map, {})[qid] = entry
+        zones.setdefault(ui_map, {})[qid] = entry + (quest_giver_point(row, qk, entities["npc"], entities["object"],
+                                                                       to_map, ui_map),)
     return zones, reasons, via_starter
 
 
@@ -412,6 +452,28 @@ def write(path, text):
         handle.write(text)
 
 
+def positions(table, what, zones, names):
+    """2.11.0 : les points du bouton « Localiser », une chaîne par zone jamais
+    lue en tables : « id<TAB>xxxyyy » par ligne (millièmes de la carte, sur
+    trois chiffres), cherchée à la demande (ns:ZonePoint, ZoneQuests.lua)."""
+    out = [
+        "-- ns.%s[uiMapID] = chaîne : une ligne « %s<TAB>xxxyyy » (x, y en millièmes" % (table, what),
+        "-- de la carte de la zone) ; lue par ns:ZonePoint (ZoneQuests.lua), jamais découpée.",
+        "local P = {}",
+    ]
+    for ui_map in sorted(zones):
+        rows = []
+        for entity_id in sorted(zones[ui_map]):
+            point = zones[ui_map][entity_id][-1]
+            if point:
+                rows.append("%d\t%03d%03d" % (entity_id, point[0], point[1]))
+        if rows:
+            out.append("P[%d] = %s -- %s" % (ui_map, long_string(rows), names[ui_map]))
+    out.append("ns.%s = P" % table)
+    out.append("")
+    return out
+
+
 def write_creatures(path, zones, meta, flavor, layers, names):
     out = [header(os.path.basename(path), "créatures de chaque zone, préremplies", meta, flavor, layers)]
     out.append("\n".join([
@@ -444,7 +506,7 @@ def write_creatures(path, zones, meta, flavor, layers, names):
         out.append("-- %s" % names[ui_map])
         rows = []
         for npc_id in sorted(zones[ui_map]):
-            lo, hi, rank, fr, en, f = zones[ui_map][npc_id]
+            lo, hi, rank, fr, en, f, _point = zones[ui_map][npc_id]
             fields = ["%d" % npc_id, "%d" % lo, "%d" % hi, "%d" % rank,
                       "" if fr == en else compact_field(fr), compact_field(en)]
             if f:
@@ -454,6 +516,7 @@ def write_creatures(path, zones, meta, flavor, layers, names):
     out.append("")
     out.append("ns.ZONE_CREATURES = ns.LazyZones(Z, Zone)")
     out.append("")
+    out.extend(positions("ZONE_CREATURE_POS", "npcID", zones, names))
     out.append('if ns.Mark then ns.Mark("ZoneCreatures") end')
     out.append("")
     write(path, "\n".join(out))
@@ -525,7 +588,7 @@ def write_quests(path, zones, meta, flavor, layers, names):
         out.append("-- %s" % names[ui_map])
         rows = []
         for qid in sorted(zones[ui_map]):
-            lvl, req, races, classes, fr, en, ex = zones[ui_map][qid]
+            lvl, req, races, classes, fr, en, ex, _point = zones[ui_map][qid]
             assert races >= 0 and classes >= 0 and all(int(i) > 0 for i in (ex or []))
             fields = ["%d" % qid, "%d" % lvl, "%d" % req, "%d" % races, "%d" % classes,
                       "" if fr == en else compact_field(fr), compact_field(en)]
@@ -536,6 +599,7 @@ def write_quests(path, zones, meta, flavor, layers, names):
     out.append("")
     out.append("ns.ZONE_QUESTS = ns.LazyZones(Z, Zone)")
     out.append("")
+    out.extend(positions("ZONE_QUEST_POS", "questID", zones, names))
     out.append('if ns.Mark then ns.Mark("ZoneQuests_%s") end' % flavor["name"])
     out.append("")
     write(path, "\n".join(out))

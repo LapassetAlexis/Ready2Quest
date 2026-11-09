@@ -1320,30 +1320,18 @@ local function NewModel(parent, w, h)
 	return model
 end
 
--- un modèle : displayID d'abord (mascotte), sinon la créature (npcID)
-local function ShowModel(model, display, npc, shiny, distance)
+-- un modèle : displayID d'abord (mascotte), sinon la créature (npcID).
+-- 2.11.0 : un seul cadrage (ns.ShowModel, profils « card » et « cardTile ») :
+-- la caméra est reposée après le chargement (avant, elle était perdue et la
+-- distance 2,4 rapetissait toute créature capturée). Même modèle déjà
+-- affiché depuis l'ouverture de la fiche : pas rechargé (epoch =
+-- ns.trainerOpened, rechargé à chaque ouverture).
+local function ShowModel(model, display, npc, shiny, profile, cam)
 	if not model then return false end
-	-- même modèle déjà affiché depuis l'ouverture de la fiche : on ne le
-	-- recharge pas (chaque rafraîchissement relançait SetCreature, et son
-	-- animation, sur chaque tuile). Rechargé à chaque ouverture (ns.trainerOpened).
-	if (npc or display) and model.npc == npc and model.display == display and model.shiny == (shiny or false)
-		and model.distance == distance and model.opened == ns.trainerOpened and model:IsShown() then
-		return true
-	end
-	local shown = false
-	if display and type(model.SetDisplayInfo) == "function" then shown = pcall(model.SetDisplayInfo, model, display) end
-	if not shown and npc and type(model.SetCreature) == "function" then shown = pcall(model.SetCreature, model, npc) end
-	if shown then
-		if distance and type(model.SetCamDistanceScale) == "function" then pcall(model.SetCamDistanceScale, model, distance) end
-		if ns.ModelShinyLight then ns.ModelShinyLight(model, shiny) end
-		model.npc, model.display, model.shiny, model.distance = npc, display, shiny or false, distance
-		model.opened = ns.trainerOpened
-		model:Show()
-	else
-		if type(model.ClearModel) == "function" then pcall(model.ClearModel, model) end
-		model.npc, model.display, model.shiny, model.distance = nil, nil, nil, nil
-		model:Hide()
-	end
+	if not (npc or display) then ns.ModelForget(model); model.npc, model.display, model.shiny = nil, nil, nil; return false end
+	local shown = ns.ShowModel(model, { display = display, npc = npc, shiny = shiny, cam = cam, epoch = ns.trainerOpened },
+		profile or "card")
+	model.npc, model.display, model.shiny = npc, display, shiny or false
 	return shown
 end
 
@@ -1595,7 +1583,7 @@ local function PaintTile(self, tile, item, own)
 		tile.detail:SetText(table.concat(parts, " · "))
 		tile.stars:SetText(item.stars and self:F("TRAINER_STARS", item.stars) or "")
 		tile:SetAccent(item.shiny and Theme.GOLD_LIGHT or Theme.GOLD)
-		ShowModel(tile.model, nil, item.npc, item.shiny, 1.8)
+		ShowModel(tile.model, nil, item.npc, item.shiny, "cardTile")
 	else
 		tile.name:SetText(L.TRAINER_SHOWCASE_EMPTY)
 		tile.detail:SetText("")
@@ -1715,13 +1703,21 @@ local function PaintCard(self, frame, card, own)
 	end
 	local comp = card.companion
 	if comp then
-		local shown = ShowModel(frame.model, comp.display, comp.npc, comp.shiny, comp.mascot and 1.6 or 2.4)
-		if shown then frame.fallback:Hide() else frame.fallback:Show() end
+		local shown = ShowModel(frame.model, comp.display, comp.npc, comp.shiny, "card", comp.mascot and 1.6 or nil)
+		if shown then
+			frame.fallback:Hide()
+		else
+			-- 2.11.0 : sans modèle, le portrait 2D de la créature (ou l'icône de son type)
+			ns:CreaturePortrait(frame.fallback, { display = comp.display, npcID = comp.npc, type = comp.type })
+			frame.fallback:Show()
+		end
 		frame.compName:SetText(comp.name or "?")
 		frame.rankTag:SetTag(comp.mascot and L.TRAINER_MASCOT or ClassLabel(comp.class) or "", Theme.BLUE)
 		frame.shinyTag:SetTag(comp.shiny and L.TRAINER_SHINY or "", Theme.GOLD_LIGHT)
 	else
 		ShowModel(frame.model, nil, nil)
+		frame.fallback:SetTexture(Theme.LOGO_SMALL)
+		if frame.fallback.SetTexCoord then frame.fallback:SetTexCoord(0, 1, 0, 1) end
 		frame.fallback:Show()
 		frame.compName:SetText("")
 		frame.rankTag:SetTag("")

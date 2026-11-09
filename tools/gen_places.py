@@ -166,7 +166,7 @@ def main(out_path=OUT):
         "-- python3 tools/sync_socle.py.",
         "local ADDON, ns = ...",
         "",
-        "ns.PLACE_DATA = {",
+        'ns.PLACE_DATA = ns.SocleData("PLACE_DATA", function() return {',
     ]
     summary = []
     for client in ("forever",):
@@ -178,7 +178,7 @@ def main(out_path=OUT):
         strong = sum(1 for v in places.values() for p in v if p[4] & 7)
         summary.append("%s : %d lieux sur %d cartes (%d avec auberge, vol ou banque)" % (client, total, len(places),
                                                                                      strong))
-    out.append("}")
+    out.append("} end)")
     out.append("")
     out.append('if ns.Mark then ns.Mark("Places") end')
     with open(out_path, "w", encoding="utf-8", newline="\n") as handle:

@@ -50,6 +50,8 @@ ns.CAPTURE_BATCH_SPECIAL_GAP = 0.85 -- s entre deux brillantes…
 ns.CAPTURE_BATCH_SPECIAL_SPAN = 3   -- … resserré pour qu'elles tiennent toutes en 3 s environ
 ns.CAPTURE_BATCH_SPECIAL_MIN = 0.35 -- (jamais moins de 0,35 s : chacune a son moment)
 ns.CAPTURE_BATCH_SETTLE = 1.2       -- s d'animation d'un verdict (puis la case se fige)
+ns.CAPTURE_FLED_ALPHA = 0.45       -- 2.11.0 : opacité du portrait d'une créature échappée (grisé)
+ns.CAPTURE_FLED_NET_ALPHA = 0.85   -- … et du filet déchiré posé dessus
 ns.CAPTURE_BATCH_SOUND_GAP = 0.06   -- s au moins entre deux bruits de filet (chute, secousse)
 ns.CAPTURE_BATCH_OK_GAP = 0.4       -- s au moins entre deux musiques de réussite (groupées)
 ns.CAPTURE_BATCH_COLS = 4
@@ -356,7 +358,6 @@ end
 -- tient (éclair, étincelles, il se referme et s'efface, la créature tourne
 -- sur elle-même, ses étoiles) ou se déchire (il tombe, ses cordes volent, la
 -- créature file sur le côté et s'efface).
-local function Art() return ns.CAPTURE_ART or {} end
 local function Coords() return ns.CAPTURE_COORDS or {} end
 local WHITE = { 1, 1, 1 }
 local DUST_COLOR = { 0.62, 0.57, 0.48 }
@@ -372,7 +373,8 @@ local function Place(region, anchor, x, y)
 	region:SetPoint("CENTER", anchor, "CENTER", x, y)
 end
 local function Rotate(tex, radians) if tex.SetRotation then pcall(tex.SetRotation, tex, radians) end end
-local function Coord(tex, c) if c then tex:SetTexCoord(c[1], c[2], c[3], c[4]) end end
+-- une image du client (atlas, 2.11.0) garde sa découpe : seules les nôtres en ont une
+local function Coord(tex, c) if c and not tex.clientArt then tex:SetTexCoord(c[1], c[2], c[3], c[4]) end end
 -- opacité et visibilité d'un coup : à 0, la région est cachée
 local function Fade(region, alpha)
 	if alpha <= 0 then region:Hide(); return end
@@ -381,10 +383,10 @@ local function Fade(region, alpha)
 end
 local function HideAll(list) for _, region in ipairs(list) do region:Hide() end end
 local function Step() return ns.CAPTURE_SHAKE_STEP or 0.55 end
-local function Texture(parent, layer, sub, file, coords, w, h, blend)
+-- 2.11.0 : `role` de ns.CAPTURE_CLIENT_ART (image du client, notre fichier en repli)
+local function Texture(parent, layer, sub, role, coords, w, h, blend)
 	local tex = parent:CreateTexture(nil, layer, nil, sub)
-	tex:SetTexture(file)
-	Coord(tex, coords)
+	if not (ns.CaptureArtPaint and ns.CaptureArtPaint(tex, role, coords)) then tex:SetTexture("Interface\\Buttons\\WHITE8X8") end
 	tex:SetSize(w, h or w)
 	if blend and tex.SetBlendMode then pcall(tex.SetBlendMode, tex, blend) end
 	tex:Hide()
@@ -396,8 +398,7 @@ end
 -- brillante), les étoiles ou « échappée », l'étiquette dessous
 local AZ_IDLE, AZ_FLED_NAME = { 0.9, 0.86, 0.78 }, { 0.7, 0.66, 0.6 }
 local function CreateTileAzeroth(parent)
-	local art, coords = Art(), Coords()
-	local blank = "Interface\\Buttons\\WHITE8X8"
+	local coords = Coords()
 	local tile = CreateFrame("Frame", nil, parent)
 	tile:SetSize(AZB.tileW, AZB.tileH)
 	tile.az = true
@@ -410,7 +411,7 @@ local function CreateTileAzeroth(parent)
 	Method(tile.scene, "SetClipsChildren", true)
 	tile.bg = Theme.Solid(tile, "BACKGROUND", { 0.05, 0.04, 0.03 }, 1)
 	tile.bg:SetAllPoints(tile.scene)
-	tile.halo = Texture(tile, "ARTWORK", 2, art.halo or blank, nil, tile.haloSize, tile.haloSize, "ADD")
+	tile.halo = Texture(tile, "ARTWORK", 2, "halo", nil, tile.haloSize, tile.haloSize, "ADD")
 	tile.halo:SetPoint("CENTER", tile.scene, "CENTER", 0, 0)
 	-- 2.9.1 : la créature est l'icône fixe de son type (ns.MENAGERIE_TYPE_ICONS),
 	-- comme la scène de capture depuis 2.9.0 : le modèle 3D se cadrait mal (le
@@ -435,24 +436,24 @@ local function CreateTileAzeroth(parent)
 	tile.fx = CreateFrame("Frame", nil, tile)
 	tile.fx:SetAllPoints(tile.scene)
 	tile.fx:SetFrameLevel(level + 6)
-	tile.shadow = Texture(tile.fx, "ARTWORK", 0, art.net or blank, coords.netWhole, AZB.net)
-	tile.net = Texture(tile.fx, "ARTWORK", 1, art.net or blank, coords.netWhole, AZB.net)
+	tile.shadow = Texture(tile.fx, "ARTWORK", 0, "net", coords.netWhole, AZB.net)
+	tile.net = Texture(tile.fx, "ARTWORK", 1, "net", coords.netWhole, AZB.net)
 	tile.ropes = {}
 	for index = 1, ROPES do
-		local p = Texture(tile.fx, "ARTWORK", 2, art.rope or blank, nil, 22 + index * 5, 5)
+		local p = Texture(tile.fx, "ARTWORK", 2, "rope", nil, 22 + index * 5, 5)
 		p.vx, p.vy, p.spin, p.rot0 = (index - 2) * 45, 50 + index * 18, (index - 2) * 2.2 + 0.8, index * 0.9
 		tile.ropes[index] = p
 	end
 	tile.burst = {}
 	for index = 1, BURST do
 		local kind = (index % 2 == 0) and coords.spark or coords.star4
-		local p = Texture(tile.fx, "ARTWORK", 3, art.sparks or blank, kind, 11, 11, "ADD")
+		local p = Texture(tile.fx, "ARTWORK", 3, "sparks", kind, 11, 11, "ADD")
 		p.angle = (index / BURST) * math.pi * 2 + 0.3
 		p.reach = 40 + (index % 3) * 6
 		tile.burst[index] = p
 	end
-	tile.dust = Texture(tile.fx, "ARTWORK", 2, art.sparks or blank, coords.ring, 44, 13, "ADD")
-	tile.flash = Texture(tile.fx, "ARTWORK", 4, art.halo or blank, nil, 120, 120, "ADD")
+	tile.dust = Texture(tile.fx, "ARTWORK", 2, "dust", coords.ring, 44, 13, "ADD")
+	tile.flash = Texture(tile.fx, "ARTWORK", 4, "halo", nil, 120, 120, "ADD")
 	tile.flash:SetPoint("CENTER", tile.scene, "CENTER", 0, 0)
 	tile.shield = tile.fx:CreateTexture(nil, "OVERLAY")
 	tile.shield:SetSize(AZB.shieldW, AZB.shieldH)
@@ -485,7 +486,7 @@ end
 
 local function CreateTile(parent, az)
 	if az then return CreateTileAzeroth(parent) end
-	local art, coords = Art(), Coords()
+	local coords = Coords()
 	local tile = CreateFrame("Frame", nil, parent)
 	tile:SetSize(TILE_W, TILE_H)
 	tile.bg = Theme.Solid(tile, "BACKGROUND", Theme.NAV or Theme.WINDOW, 1)
@@ -502,7 +503,7 @@ local function CreateTile(parent, az)
 	tile.scene:SetPoint("TOP", tile, "TOP", 0, -6)
 	Method(tile.scene, "SetClipsChildren", true)
 	-- derrière le modèle (sur la case elle-même) : le halo de rareté
-	tile.halo = Texture(tile, "ARTWORK", 2, art.halo or "Interface\\Buttons\\WHITE8X8", nil, 104, 104, "ADD")
+	tile.halo = Texture(tile, "ARTWORK", 2, "halo", nil, 104, 104, "ADD")
 	tile.halo:SetPoint("CENTER", tile.scene, "CENTER", 0, 0)
 	tile.fallback = tile.scene:CreateTexture(nil, "ARTWORK")
 	tile.fallback:SetSize(44, 44)
@@ -513,24 +514,24 @@ local function CreateTile(parent, az)
 	tile.fx = CreateFrame("Frame", nil, tile)
 	tile.fx:SetAllPoints(tile.scene)
 	tile.fx:SetFrameLevel((tile:GetFrameLevel() or 1) + 6)
-	tile.shadow = Texture(tile.fx, "ARTWORK", 0, art.net or "Interface\\Buttons\\WHITE8X8", coords.netWhole, NET)
-	tile.net = Texture(tile.fx, "ARTWORK", 1, art.net or "Interface\\Buttons\\WHITE8X8", coords.netWhole, NET)
+	tile.shadow = Texture(tile.fx, "ARTWORK", 0, "net", coords.netWhole, NET)
+	tile.net = Texture(tile.fx, "ARTWORK", 1, "net", coords.netWhole, NET)
 	tile.ropes = {}
 	for index = 1, ROPES do
-		local p = Texture(tile.fx, "ARTWORK", 2, art.rope or "Interface\\Buttons\\WHITE8X8", nil, 20 + index * 5, 5)
+		local p = Texture(tile.fx, "ARTWORK", 2, "rope", nil, 20 + index * 5, 5)
 		p.vx, p.vy, p.spin, p.rot0 = (index - 2) * 45, 50 + index * 18, (index - 2) * 2.2 + 0.8, index * 0.9
 		tile.ropes[index] = p
 	end
 	tile.burst = {}
 	for index = 1, BURST do
 		local kind = (index % 2 == 0) and coords.spark or coords.star4
-		local p = Texture(tile.fx, "ARTWORK", 3, art.sparks or "Interface\\Buttons\\WHITE8X8", kind, 10, 10, "ADD")
+		local p = Texture(tile.fx, "ARTWORK", 3, "sparks", kind, 10, 10, "ADD")
 		p.angle = (index / BURST) * math.pi * 2 + 0.3
 		p.reach = 34 + (index % 3) * 6
 		tile.burst[index] = p
 	end
-	tile.dust = Texture(tile.fx, "ARTWORK", 2, art.sparks or "Interface\\Buttons\\WHITE8X8", coords.ring, 40, 12, "ADD")
-	tile.flash = Texture(tile.fx, "ARTWORK", 4, art.halo or "Interface\\Buttons\\WHITE8X8", nil, 110, 110, "ADD")
+	tile.dust = Texture(tile.fx, "ARTWORK", 2, "dust", coords.ring, 40, 12, "ADD")
+	tile.flash = Texture(tile.fx, "ARTWORK", 4, "halo", nil, 110, 110, "ADD")
 	tile.flash:SetPoint("CENTER", tile.scene, "CENTER", 0, 0)
 	tile.tag = Theme.Text(tile.fx, Theme.F_CAPS or Theme.F_SMALL, Theme.GOLD)
 	tile.tag:SetPoint("TOP", tile, "TOP", 0, -8)
@@ -580,6 +581,8 @@ end
 -- Avant la volée : la créature seule, son nom ; rien n'est dit du verdict
 local function ApplyIdle(self, tile, result)
 	tile.verdict = nil
+	-- 2.11.0 : une case échappée du lot d'avant reprend ses couleurs
+	if tile.fallback.SetDesaturated then tile.fallback:SetDesaturated(false) end
 	if tile.az then
 		tile.shieldKind = ns.AzerothShield and ns.AzerothShield(tile.shield, nil) or nil
 		tile.shield:Hide()
@@ -662,7 +665,9 @@ local function ApplyVerdict(self, tile, result)
 		tile.bar:Show()
 		Tint(tile.bar, c, 1)
 		tile.name:SetText(target.name)
-		tile.name:SetTextColor(c[1], c[2], c[3])
+		-- 2.11.0 : le nom prend la variante claire du rang (lisible en Sobre)
+		local ink = rarity.text or c
+		tile.name:SetTextColor(ink[1], ink[2], ink[3])
 		tile.stars:SetText(self:CaptureStarsText(result.stars or 1, 14))
 		tile.stars:SetTextColor(1, 1, 1)
 		local tag = target.shiny and L.CAPTURE_BATCH_SHINY or (result.fresh and L.CAPTURE_BATCH_NEW)
@@ -704,8 +709,18 @@ local function ApplyFinal(self, card)
 			tile.halo:Hide()
 		end
 	else
-		-- elle a filé
-		Creature(tile, 0, 0, 0, 0)
+		-- elle a filé. 2.11.0 (fiche 10) : plus de case noire vide ; son
+		-- portrait (ou son icône) reste, grisé et à 45 %, sous le filet déchiré
+		if tile.model then tile.model:Hide() end
+		tile.hasModel = nil
+		Place(tile.fallback, tile.scene, 0, 0)
+		if tile.fallback.SetDesaturated then tile.fallback:SetDesaturated(true) end
+		Fade(tile.fallback, ns.CAPTURE_FLED_ALPHA)
+		Coord(tile.net, Coords().netTorn)
+		Place(tile.net, tile.scene, 0, 0)
+		tile.net:SetSize(tile.netSize or NET, tile.netSize or NET)
+		Rotate(tile.net, -0.12)
+		Fade(tile.net, ns.CAPTURE_FLED_NET_ALPHA)
 		tile.halo:Hide()
 	end
 end
@@ -857,7 +872,7 @@ function ns:EnsureCaptureBatchFrame()
 		local batch = ns.captureBatch
 		if batch and not batch.done then ns:CaptureBatchStop(true) end
 		for _, tile in ipairs(frame.tiles) do
-			if tile.model then Method(tile.model, "ClearModel"); tile.model:Hide() end
+			if tile.model then ns.ModelForget(tile.model) end
 			tile.hasModel = nil
 		end
 	end)
@@ -1030,11 +1045,9 @@ function ns:CaptureBatchShow(batch)
 			local result = batch.results[index]
 			-- le modèle 3D pour les premières cases, l'icône au-delà ; 2.9.1 : en
 			-- Azeroth, toujours l'icône du type (cadrage fixe, voir CreateTileAzeroth)
-			if tile.az then
-				local types = ns.MENAGERIE_TYPE_ICONS
-				tile.fallback:SetTexture((types and types[batch.results[index].target.type or ""]) or ns.AZEROTH_PORTRAIT_ICON
-					or "Interface\\Icons\\Ability_Hunter_BeastTaming")
-			end
+			-- 2.11.0 : le repli (et la case échappée) montre le portrait 2D de
+			-- la créature si son displayID est connu, sinon l'icône de son type
+			self:CreaturePortrait(tile.fallback, result.target)
 			local model = not tile.az and index <= ns.CAPTURE_BATCH_MODELS and TileModel(tile) or nil
 			if tile.model and not model then tile.model:Hide() end
 			tile.hasModel = model and self:CaptureModelSetup(model, result.target) or nil
@@ -1045,7 +1058,7 @@ function ns:CaptureBatchShow(batch)
 			tile:Show()
 			batch.cards[index] = card
 		elseif tile then
-			if tile.model then Method(tile.model, "ClearModel"); tile.model:Hide() end
+			if tile.model then ns.ModelForget(tile.model) end
 			tile.hasModel = nil
 			tile:Hide()
 		end
@@ -1205,10 +1218,12 @@ local function BuildChooserAzeroth(self, frame)
 	frame.glyph = frame:CreateTexture(nil, "ARTWORK", nil, 0)
 	frame.glyph:SetSize(AZC.glyph, AZC.glyph)
 	frame.glyph:SetPoint("CENTER", frame.ring, "CENTER", 0, 0)
-	local art = ns.CAPTURE_ART
-	frame.glyph:SetTexture(art and art.icon or Theme.LOGO_SMALL)
-	local g = Theme.GOLD_LIGHT or Theme.GOLD
-	frame.glyph:SetVertexColor(g[1], g[2], g[3], 1)
+	-- 2.11.0 : l'icône du filet du jeu (INV_Misc_Net_01), sinon notre glyphe blanc teinté d'or
+	if not (ns.CaptureArtPaint and ns.CaptureArtPaint(frame.glyph, "icon")) then frame.glyph:SetTexture(Theme.LOGO_SMALL) end
+	if not frame.glyph.clientArt then
+		local g = Theme.GOLD_LIGHT or Theme.GOLD
+		frame.glyph:SetVertexColor(g[1], g[2], g[3], 1)
+	end
 	frame.title = Theme.Text(frame, Theme.F_CAPS or Theme.F_SMALL, colors.caption or Theme.GOLD)
 	frame.title:SetPoint("TOP", frame, "TOP", 0, AZC.captionY)
 	frame.title:SetWidth(bw)

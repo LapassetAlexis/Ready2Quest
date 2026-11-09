@@ -73,6 +73,8 @@ P.Stamp("zone", 1429, "Forêt d'Elwynn")
 NS:ToggleJournal(true)
 local f = NS.journalFrame
 local pane = f.prog
+-- 2.11.0 : le filtre par défaut est « Pour moi » ; ces cas parcourent toutes les zones
+f.progFilter = "all"
 do
 	Say("-- carnet : Complétion, ouverture")
 	Check("[PROG] page construite", pane ~= nil and pane.card ~= nil and #pane.zones > 10 and #pane.items > 5)

@@ -115,11 +115,11 @@ def main():
     out.append("-- python3 tools/sync_socle.py.")
     out.append("local ADDON, ns = ...")
     out.append("")
-    out.append("ns.HUBS = {")
+    out.append('ns.HUBS = ns.SocleData("HUBS", function() return {')
     for area_id, name, faction, kind in entries:
         esc = name.replace('"', '\\"')
         out.append(f'\t[{area_id}] = {{ faction = "{faction}", kind = "{kind}", name = "{esc}" }},')
-    out.append("}")
+    out.append("} end)")
     out.append("")
     out.append("if ns.Mark then ns.Mark(\"Hubs\") end")
     print("\n".join(out))

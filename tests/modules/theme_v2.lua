@@ -282,8 +282,9 @@ do
 		and SameColor(primary.text.textColor, Theme.INK) and (primary.text.shadowOffset or {})[1] == 0
 		and (primary.text.shadow or {})[4] == 0)
 	local adv = Theme.CreateButton(win.content, 100, 28, "Partir", nil, "adventure")
-	Check("[TH2] aventure : bleu, texte blanc", SameColor(adv.bg.vertex, Theme.BLUE) and adv.text.textColor[1] == 1
-		and adv.text.textColor[2] == 1 and adv.text.textColor[3] == 1)
+	-- socle 2.11.0 : encre sombre sans ombre (le blanc tombait à 3,31:1)
+	Check("[TH2] aventure : bleu, encre INK sans ombre", SameColor(adv.bg.vertex, Theme.BLUE)
+		and SameColor(adv.text.textColor, Theme.INK) and (adv.text.shadow or {})[4] == 0)
 	local outline = Theme.CreateButton(win.content, 100, 28, "Réinitialiser", nil, "outline")
 	Check("[TH2] contour : filet EDGE, fond transparent, texte clair", SameColor(outline.border.top.vertex, Theme.EDGE)
 		and outline.bg.vertex[4] == 0 and SameColor(outline.text.textColor, Theme.LABEL))

@@ -119,10 +119,8 @@ end
 
 -- 1.31.0 : la raison en gris clair (MUTED_LIGHT #a3a8ad : 6,8:1 sur la
 -- carte la plus claire #1b2127 ; le gris d'OFF n'y fait que 4,2:1)
-local function Hex(c)
-	local f = math.floor
-	return string.format("|cff%02x%02x%02x", f(c[1] * 255 + 0.5), f(c[2] * 255 + 0.5), f(c[3] * 255 + 0.5))
-end
+-- 1.32.0 (fiche 28) : code couleur du socle (Theme.Hex)
+local function Hex(c) return Theme.Hex(c) end
 ns.BUFF_WHY_COLOR = Theme.MUTED_LIGHT
 
 local function BuffItems()

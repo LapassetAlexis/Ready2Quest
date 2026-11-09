@@ -53,6 +53,9 @@ local FR = {
 	BST_COUNT           = "Bestiaire : %d / %d espèces abattues",
 	BST_COUNT_NAMED     = "Nommés : %d / %d abattus",
 	BST_LEVEL           = "niv. %s",
+	-- 2.11.0 (fiche 28) : ligne de /qc diag traduite
+	BESTIARY_DIAG = "  bestiaire : %s, journal de combat %d, coups %d, PARTY_KILL %d, UNIT_DIED %d, victimes comptées %d (dont %d par l'XP)",
+	BESTIARY_DIAG_CLOG = "journal de combat",
 }
 local EN = {
 	JRN_PART_bestiary   = "Bestiary",
@@ -66,6 +69,8 @@ local EN = {
 	BST_COUNT           = "Bestiary: %d / %d species defeated",
 	BST_COUNT_NAMED     = "Named foes: %d / %d defeated",
 	BST_LEVEL           = "lvl %s",
+	BESTIARY_DIAG = "  bestiary: %s, combat log %d, hits %d, PARTY_KILL %d, UNIT_DIED %d, kills counted %d (%d from XP)",
+	BESTIARY_DIAG_CLOG = "combat log",
 }
 ns.RegisterStrings(FR, EN)
 if ns.KEEP_STRINGS then ns.BESTIARY_STRINGS = { fr = FR, en = EN } end
@@ -364,6 +369,8 @@ function ns:BestiarySeeUnit(unit)
 	if type(name) == "string" and name ~= "" then species.name = name end
 	species.name = species.name or tostring(npcID)
 	species.type = creatureType or species.type
+	-- 2.11.0 : son displayID, une fois au compte (portrait 2D, Companion.lua)
+	if self.ModelLearnDisplay then pcall(self.ModelLearnDisplay, self, unit, npcID) end
 	local family = Call("UnitCreatureFamily", unit)
 	if type(family) == "string" and family ~= "" then species.family = family end
 	local class = Call("UnitClassification", unit)
@@ -623,8 +630,8 @@ do
 	function ns:DiagExtra(...)
 		if previous then previous(self, ...) end
 		local st = ns.bestiaryStats
-		self:Print(string.format("  bestiaire : %s, journal de combat %d, coups %d, PARTY_KILL %d, UNIT_DIED %d, victimes comptées %d (dont %d par l'XP)",
-			st.combatLog and "journal de combat" or "PARTY_KILL/UNIT_DIED",
+		self:Print(self:F("BESTIARY_DIAG",
+			st.combatLog and L.BESTIARY_DIAG_CLOG or "PARTY_KILL/UNIT_DIED",
 			st.events, st.hits, st.partyKills, st.died, st.kills, st.xpKills))
 	end
 end

@@ -945,7 +945,7 @@ local function BuildLine(frame, index)
 		line.progress:SetWidth(72)
 	else
 		-- 2.9.0 : un voile sombre sous chaque ligne, lisible sur n'importe quel décor
-		local shade = Theme.WINDOW or { 0.05, 0.04, 0.03 }
+		local shade = Theme.WINDOW
 		line.shade = line:CreateTexture(nil, "BACKGROUND")
 		line.shade:SetTexture(Theme.SOLID or "Interface\\Buttons\\WHITE8X8")
 		line.shade:SetPoint("TOPLEFT", line, "TOPLEFT", 4, -1)

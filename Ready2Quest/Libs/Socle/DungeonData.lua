@@ -9,7 +9,7 @@
 -- python3 tools/sync_socle.py.
 local ADDON, ns = ...
 
-ns.DUNGEONS = {
+ns.DUNGEONS = ns.SocleData("DUNGEONS", function() return {
 	rfc = { map = 389, area = 2437, name = "Ragefire Chasm", fo = { 13, 18 } },
 	wc = { map = 43, area = 718, name = "Wailing Caverns", fo = { 15, 24 } },
 	dm = { map = 36, area = 1581, name = "Deadmines", fo = { 17, 26 } },
@@ -38,11 +38,11 @@ ns.DUNGEONS = {
 	alcaz = { name = "Alcaz Prison", fo = { 48, 53 } },
 	blackmaw = { name = "Blackmaw Hold", fo = { 55, 60 }, entrances = { 1216 } },
 	shaper = { name = "Shaper's Terrace", fo = { 58, 60 }, entrances = { 16985 } },
-}
+} end)
 
 -- Plans avancés de Forever par donjon : aucune source fiable publiée au
 -- 2026-11-03 (voir tools/gen_dungeons.py). Vide plutôt que faux.
-ns.DUNGEON_BLUEPRINTS = {
-}
+ns.DUNGEON_BLUEPRINTS = ns.SocleData("DUNGEON_BLUEPRINTS", function() return {
+} end)
 
 if ns.Mark then ns.Mark("DungeonData") end

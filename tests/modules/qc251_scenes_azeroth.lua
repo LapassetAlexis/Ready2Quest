@@ -262,7 +262,9 @@ do
 		and chooser.wood and chooser.wood.tr.atlas == WOOD.tr
 		and Has(_G.UISpecialFrames, "QuestCompanionCaptureChooserAzeroth"))
 	Check("[AZS] choix : le glyphe du filet dans le cadre d'icône", chooser.ring.atlas == "ui-achievement-iconframe"
-		and chooser.glyph.texture == NS.CAPTURE_ART.icon and chooser.glyph.lastPoint.relTo == chooser.ring)
+		-- 2.11.0 : l'icône du filet du jeu (INV_Misc_Net_01), la nôtre en repli
+		and (chooser.glyph.texture == NS.CAPTURE_CLIENT_ART.icon.file or chooser.glyph.texture == NS.CAPTURE_ART.icon)
+		and chooser.glyph.lastPoint.relTo == chooser.ring)
 	Check("[AZS] choix : « 2 CRÉATURES DANS LE FILET »", chooser.title:GetText() == "2 CRÉATURES DANS LE FILET", chooser.title:GetText())
 	local one, all = chooser.single, chooser.all
 	Check("[AZS] choix : deux boutons dorés (principal, secondaire plus sombre)", one.azeroth and all.azeroth

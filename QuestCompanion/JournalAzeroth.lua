@@ -150,6 +150,43 @@ local function RoleInk(role)
 	local entry = ns.AZEROTH_CONTRAST and ns.AZEROTH_CONTRAST[role]
 	return entry and ns.AZEROTH_INK[entry[1]] or nil
 end
+-- 2.9.1 : une encre de rôle, sans ombre (texte sombre) ou avec (texte clair) ;
+-- 2.11.0 (fiche 08) : le texte garde son rôle (fs.azRole) et n'est jamais estompé
+local function RolePaint(fs, role, shadow)
+	if not fs then return end
+	local ink = RoleInk(role)
+	if not ink then
+		ns.carnetInkMisses = ns.carnetInkMisses or {}
+		ns.carnetInkMisses[#ns.carnetInkMisses + 1] = "role:" .. tostring(role)
+		return
+	end
+	fs:SetTextColor(ink[1], ink[2], ink[3], 1)
+	if shadow then
+		if fs.SetShadowColor then fs:SetShadowColor(0, 0, 0, 1) end
+		if fs.SetShadowOffset then fs:SetShadowOffset(1, -1) end
+	elseif Theme.NoShadow then
+		Theme.NoShadow(fs)
+	end
+	if fs.SetAlpha then fs:SetAlpha(1) end
+	fs.azRole, fs.azKeep = role, true
+end
+ns.CarnetRolePaint = RolePaint
+-- 2.11.0 : une ombre unie sous un texte clair posé sur un fond variable
+local function ShadeUnder(host, fs, alpha, pad)
+	local shade = host.azShade
+	if not shade then
+		shade = host:CreateTexture(nil, "ARTWORK", nil, 6)
+		shade:SetTexture(Theme.SOLID)
+		host.azShade = shade
+	end
+	local c = INKS.shade
+	shade:SetVertexColor(c[1], c[2], c[3], alpha)
+	shade:ClearAllPoints()
+	shade:SetPoint("TOPLEFT", fs, "TOPLEFT", -(pad or 2), pad or 1)
+	shade:SetPoint("BOTTOMRIGHT", fs, "BOTTOMRIGHT", pad or 2, -(pad or 1))
+	shade:Show()
+	return shade
+end
 -- 2.9.0 : un texte posé sur toute la hauteur de sa zone (haut ET bas),
 -- centré verticalement : side "LEFT" ou "RIGHT", x depuis ce bord, de topY
 -- (depuis le haut de `top`) à bottomY (depuis le point `bottomPoint` de `bottom`)
@@ -469,6 +506,15 @@ end
 
 local function Field(box)
 	if box.bg then box.bg:SetVertexColor(0.12, 0.07, 0.03, 1) end
+	-- 2.11.0 : le texte du champ, rôle mesuré sur l'aplat
+	for _, key in ipairs({ "text", "label", "value" }) do
+		local fs = box[key]
+		if type(fs) == "table" and fs.SetTextColor then RolePaint(fs, "field.text") end
+	end
+	if box.SetTextColor and box.GetObjectType and box:GetObjectType() == "EditBox" then
+		local c = RoleInk("field.text")
+		box:SetTextColor(c[1], c[2], c[3], 1)
+	end
 	if box.border and box.border.SetColor then box.border:SetColor(0.54, 0.42, 0.17, 1) end
 	if box.chevron then box.chevron:SetVertexColor(GOLD_TEXT[1], GOLD_TEXT[2], GOLD_TEXT[3], 1) end
 	box.azSurface = "dark"
@@ -595,7 +641,11 @@ local function CaptureRun(reg, fn, ...)
 			saved[name] = orig
 			Theme[name] = function(...)
 				local widget = orig(...)
-				if type(widget) == "table" then reg.new[#reg.new + 1] = { widget, name } end
+				if type(widget) == "table" then
+					reg.new[#reg.new + 1] = { widget, name }
+					-- 2.11.0 (fiche 08) : un texte note le jeton qui l'a peint
+					if name == "Text" then widget.themeInk = select(3, ...) end
+				end
 				return widget
 			end
 		end
@@ -660,21 +710,51 @@ local function Dark(fs, stop)
 	return fs.azCtx == "dark"
 end
 
+-- 2.11.0 (fiche 08) : chaque jeton du thème -> son rôle mesuré sur le
+-- parchemin (page.*), par identité de table
+local TOKEN_ROLE
+local function TokenRoles()
+	if TOKEN_ROLE then return TOKEN_ROLE end
+	TOKEN_ROLE = {}
+	local function Add(token, role) if token then TOKEN_ROLE[token] = role end end
+	Add(Theme.PARCHMENT, "page.ink"); Add(Theme.LABEL, "page.ink"); Add(Theme.TEXT, "page.inkSoft")
+	Add(Theme.MUTED_LIGHT, "page.inkSoft"); Add(Theme.MUTED, "page.inkMuted"); Add(Theme.GREY, "page.grey")
+	Add(Theme.GOLD, "page.amber"); Add(Theme.GOLD_LIGHT, "page.amber"); Add(Theme.GOLD_SOFT, "page.amber")
+	Add(Theme.GREEN, "page.green"); Add(Theme.BLUE, "page.blue"); Add(Theme.RED, "page.red")
+	Add(Theme.ORANGE_DEEP, "page.orange")
+	return TOKEN_ROLE
+end
+ns.CarnetTokenRoles = TokenRoles
+
+-- Le rôle d'un texte : le jeton noté à sa création s'il le porte encore,
+-- sinon le jeton reconnu à sa couleur (un module l'a repeint)
+local function InkRole(fs, r, g, b)
+	local roles = TokenRoles()
+	local token = fs.themeInk
+	if token and roles[token] and Near(r, g, b, token) then return roles[token] end
+	for _, pair in ipairs(Remaps()) do
+		if Near(r, g, b, pair[1]) then return roles[pair[1]] end
+	end
+	return nil
+end
+
 function ns.CarnetInk(fs)
-	local r, g, b, a = fs:GetTextColor()
+	local r, g, b = fs:GetTextColor()
 	r, g, b = tonumber(r), tonumber(g), tonumber(b)
 	if not (r and g and b) then return false end
-	for _, pair in ipairs(Remaps()) do
-		if Near(r, g, b, pair[1]) then
-			Paint(fs, pair[2], a)
-			NoShadow(fs)
-			return true
-		end
+	local role = InkRole(fs, r, g, b)
+	if role then
+		RolePaint(fs, role, false)
+		return true
 	end
 	if 0.3 * r + 0.59 * g + 0.11 * b > 0.5 then
-		-- une couleur claire inconnue : assombrie (blanc -> #282321, 4,7:1)
-		fs:SetTextColor(0.04 + r * 0.12, 0.03 + g * 0.11, 0.02 + b * 0.11, a or 1)
-		NoShadow(fs)
+		-- une couleur claire inconnue : plus de repli silencieux, l'encre du
+		-- texte courant (mesurée) ; notée dans ns.carnetInkMisses (testée)
+		ns.carnetInkMisses = ns.carnetInkMisses or {}
+		if #ns.carnetInkMisses < 50 then
+			ns.carnetInkMisses[#ns.carnetInkMisses + 1] = "fallback:" .. tostring(fs.GetText and fs:GetText())
+		end
+		RolePaint(fs, "page.ink", false)
 		return true
 	end
 	return false
@@ -771,8 +851,7 @@ local function Plate(frame, over, title)
 		plate.count:SetPoint("CENTER", plate.box, "CENTER", PLATE_COUNT.x, PLATE_COUNT.y)
 		plate.count:SetJustifyH("CENTER")
 		if plate.count.SetJustifyV then plate.count:SetJustifyV("MIDDLE") end
-		Paint(plate.count, { 0.95, 0.87, 0.66 })
-		Shadow(plate.count)
+		RolePaint(plate.count, "plate.count", true)   -- 2.11.0 : rôle déclaré (fiche 08)
 		plate.count:SetText("")
 		plate.icon = NewTex(plate, "OVERLAY", 0, T.tiny)
 		if plate.icon then
@@ -961,9 +1040,9 @@ local function JournalNav(self, frame)
 				button.azRing = NewTex(button, "OVERLAY", 0, T.iconFrame)
 				if button.azRing then button.azRing:SetAllPoints(button) end
 				if button.count then
-					Paint(button.count, { 1, 1, 1 })
-					Shadow(button.count)
-					button.count.azKeep = true
+					-- 2.11.0 : une ombre sous le chiffre, le fond (l'icône) ne décide plus
+					RolePaint(button.count, "pantry.count", true)
+					ShadeUnder(button, button.count, 0.75, 1)
 				end
 				index = index + 1
 			end
@@ -974,6 +1053,30 @@ local function JournalNav(self, frame)
 		frame.subtitle:ClearAllPoints()
 		frame.subtitle:SetPoint("BOTTOMLEFT", nav, "BOTTOMLEFT", 12, 72)
 		frame.subtitle:SetWidth(LAY.nav - 24)
+	end
+	-- 2.11.0 (fiche 14) : les blocs résumé sous les entrées, encres mesurées
+	-- sur le parchemin de la colonne (navSum.*)
+	local box = frame.navSummary
+	if box then
+		box:ClearAllPoints()
+		box:SetPoint("TOPLEFT", nav, "TOPLEFT", LAY.navPad, LAY.navTop - #items * LAY.navStep - 14)
+		if nav.azSurface == "light" then
+			RolePaint(box.pet.name, "navSum.name")
+			for _, row in ipairs(box.pet.needs or {}) do
+				RolePaint(row.label, "navSum.label")
+				if row.bar then row.bar.azPaint = ns.CarnetNeedPaint end
+			end
+			RolePaint(box.zone.name, "navSum.name")
+			RolePaint(box.zone.percent, "navSum.value")
+			for _, row in ipairs(box.missions.rows or {}) do
+				RolePaint(row.label, "navSum.label")
+				RolePaint(row.left, "navSum.value")
+			end
+			for _, block in ipairs({ box.pet, box.zone, box.missions }) do
+				local c = ns.AZEROTH_MISSION.rule
+				if block.rule then block.rule:SetVertexColor(c[1], c[2], c[3], 0.6) end
+			end
+		end
 	end
 end
 
@@ -1001,33 +1104,33 @@ local function RoundRing(host, region, size, layer)
 	return ring
 end
 
--- 2.9.1 : une encre de rôle, sans ombre (texte sombre) ou avec (texte clair)
-local function RolePaint(fs, role, shadow)
-	if not fs then return end
-	Paint(fs, RoleInk(role))
-	if shadow then Shadow(fs) else NoShadow(fs) end
-	fs.azKeep = true
-end
 
 
+-- 2.11.0 (B4) : intertitre de la page Missions à l'encre sombre sur le
+-- parchemin, un filet brun dessous (avant : bande dégradée sombre, texte
+-- clair peu lisible) ; l'étiquette (caractère, zone) reste un aplat sombre
 local function Strip(section)
-	local strip = NewTex(section, "BACKGROUND", 1, T.recent)
-	if not strip then return nil end
-	strip:SetPoint("LEFT", section, "LEFT", 0, 0)
-	strip:SetSize(tonumber(section:GetWidth()) or 300, 23)
-	section.azStrip, section.azSurface = strip, "dark"
+	local rule = section.azRule
+	if not rule then
+		rule = section:CreateTexture(nil, "ARTWORK", nil, 1)
+		rule:SetTexture(Theme.SOLID)
+		section.azRule = rule
+	end
+	local c = ns.AZEROTH_MISSION.rule
+	rule:SetVertexColor(c[1], c[2], c[3], 1)
+	rule:ClearAllPoints()
+	rule:SetPoint("BOTTOMLEFT", section, "BOTTOMLEFT", 0, 1)
+	rule:SetSize(tonumber(section:GetWidth()) or 300, 2)
+	rule:Show()
+	if section.rule then for _, seg in ipairs(section.rule.segments or { section.rule }) do if seg.Hide then seg:Hide() end end end
+	section.azStrip, section.azSurface = rule, "light"
 	if section.label then
 		section.label:ClearAllPoints()
-		section.label:SetPoint("LEFT", section, "LEFT", 10, 0)
-		Paint(section.label, { 0.95, 0.84, 0.54 })
-		Shadow(section.label)
-		section.label.azKeep = true
+		section.label:SetPoint("LEFT", section, "LEFT", 2, 0)
+		RolePaint(section.label, "mheader.label")
 	end
-	if section.detail then
-		Paint(section.detail, { 0.84, 0.77, 0.60 })
-		section.detail.azKeep = true
-	end
-	return strip
+	if section.detail then RolePaint(section.detail, "mheader.detail") end
+	return rule
 end
 
 -- Titre doré ombré sur fond sombre ; sur parchemin (light) : encre
@@ -1078,9 +1181,10 @@ function PAGE.evolution(self, frame)
 	for _, tile in pairs(pane.stats or {}) do
 		if TileStyle(tile, "dark") then
 			HideAll(tile.border)
+			-- 2.11.0 (B1) : chiffre et libellé centrés ensemble, encres mesurées
 			GoldTitle(tile.value, 16)
-			Paint(tile.label, LIGHT_SOFT)
-			tile.label.azKeep = true
+			RolePaint(tile.value, "stat.value", true)
+			RolePaint(tile.label, "stat.label", true)
 		end
 	end
 	for _, row in ipairs(pane.needs or {}) do
@@ -1111,9 +1215,7 @@ function PAGE.menagerie(self, frame)
 		p.title:ClearAllPoints()
 		p.title:SetPoint("CENTER", p.azTitle, "CENTER", 0, 0)
 		p.title:SetJustifyH("CENTER")
-		Paint(p.title, { 1, 1, 1 })
-		Shadow(p.title)
-		p.title.azKeep = true
+		RolePaint(p.title, "preview.title", true)
 	end
 	WoodBorder(p)
 end
@@ -1144,7 +1246,7 @@ function POST.menagerie(self, frame)
 				-- jamais croisée : parchemin désaturé, texte clair ombré (5,4:1)
 				TileStyle(row, "parchd")
 				for _, fs in ipairs({ row.label, row.no, row.detail }) do
-					if fs then Paint(fs, LIGHT); Shadow(fs) end
+					if fs then Paint(fs, LIGHT); Shadow(fs); fs:SetAlpha(1) end
 				end
 			end
 			for _, fs in ipairs({ row.label, row.no, row.detail }) do if fs then fs.azKeep = true end end
@@ -1203,7 +1305,7 @@ function PAGE.feats(self, frame)
 		pane.azShieldText:SetJustifyH("CENTER")
 		if pane.azShieldText.SetJustifyV then pane.azShieldText:SetJustifyV("MIDDLE") end
 		AzFont(pane.azShieldText, 14, "OUTLINE")
-		Paint(pane.azShieldText, { 1, 1, 1 })
+		RolePaint(pane.azShieldText, "shield.count", true)
 		pane.azShield = shield
 	end
 end
@@ -1412,9 +1514,11 @@ function POST.progress(self, frame)
 	for _, row in ipairs(pane.zones or {}) do ZoneRowText(row); ZoneRowInk(row) end
 	for _, tile in ipairs(pane.marks or {}) do
 		if TileStyle(tile, tile.reached and "gold" or "grey") then
-			Paint(tile.label, tile.reached and GOLD_HEAD or { 0.86, 0.82, 0.74 })
-			Paint(tile.gift, tile.reached and { 1, 0.95, 0.78 } or { 0.80, 0.76, 0.68 })
-			Shadow(tile.label)
+			-- 2.11.0 (fiche 08) : encres lues dans la table ; le cadeau sur une
+			-- ombre (la bande dorée est trop claire sous lui : 3,7:1 sans)
+			RolePaint(tile.label, tile.reached and "mark.gold" or "mark.grey", true)
+			RolePaint(tile.gift, tile.reached and "mark.giftGold" or "mark.giftGrey", true)
+			ShadeUnder(tile, tile.gift, 0.45, 2)
 		end
 	end
 	for _, line in ipairs(pane.items or {}) do
@@ -1526,6 +1630,76 @@ local function Stash(self, field, frame, style)
 	self.uiStyleCache[field] = self.uiStyleCache[field] or {}
 	self.uiStyleCache[field][style] = frame
 end
+-- ---------------------------------------------------------------------------
+-- 2.11.0 (B8) : les confirmations du carnet au style Azeroth : parchemin,
+-- encadré en bois, encres mesurées (dialog.*), bouton principal rouge. La
+-- fenêtre (CompanionEffects.lua) est construite une fois par style, comme le
+-- carnet : la Sobre reste telle quelle, l'Azeroth naît sous la relève.
+-- ---------------------------------------------------------------------------
+local function SkinDialog(self, frame, reg)
+	if frame.content then frame.content.azSurface = "light" end
+	SkinNew(frame, reg)
+	local page = NewTex(frame, "BACKGROUND", 1, T.parchH)
+	if not page then return false end
+	page:SetAllPoints(frame)
+	local function Fit() Cover(page, T.parchH, frame:GetWidth(), frame:GetHeight()) end
+	Fit()
+	if frame.HookScript then frame:HookScript("OnShow", Fit) end
+	frame.azBg, frame.azSurface = page, "light"
+	frame.azVeil = ns.AzerothVeil(frame, frame, "page", 2)
+	if frame.bg then frame.bg:Hide() end
+	HideAll(frame.border)
+	if frame.footer then
+		if frame.footer.bg then frame.footer.bg:Hide() end
+		if frame.footer.line then
+			local c = ns.AZEROTH_MISSION.rule
+			frame.footer.line:SetVertexColor(c[1], c[2], c[3], 0.8)
+		end
+		frame.footer.azSurface = "light"
+	end
+	WoodBorder(frame, 6)
+	local header = frame.header
+	if header then
+		RolePaint(header.title, "dialog.title")
+		RolePaint(header.subtitle, "dialog.sub")
+	end
+	RolePaint(frame.text, "dialog.text")
+	frame.azDialog = true
+	return true
+end
+ns.CarnetSkinDialog = SkinDialog
+
+do
+	local ensure = ns.EnsureEffectsConfirm
+	if ensure then
+		function ns:EnsureEffectsConfirm(...)
+			local style = self:JournalStyle()
+			self.effectsConfirmByStyle = self.effectsConfirmByStyle or {}
+			local cache = self.effectsConfirmByStyle
+			local current = self.effectsConfirm
+			if current and not current.uiStyle then current.uiStyle = "sobre"; cache.sobre = current end
+			-- une question en cours garde sa fenêtre
+			if current and (current.uiStyle == style or (current.IsShown and current:IsShown())) then return current end
+			if cache[style] then self.effectsConfirm = cache[style]; return cache[style] end
+			self.effectsConfirm = nil
+			local frame
+			if style == "azeroth" then
+				local reg = NewReg()
+				frame = CaptureRun(reg, ensure, self, ...)
+				if frame then
+					local ok, err = pcall(SkinDialog, self, frame, reg)
+					if not ok and self.RecordError then self:RecordError("carnet:dialog", err) end
+				end
+			else
+				frame = ensure(self, ...)
+			end
+			if frame then frame.uiStyle = style; cache[style] = frame end
+			self.effectsConfirm = frame
+			return frame
+		end
+	end
+end
+
 local function Cached(self, field, style)
 	local slot = self.uiStyleCache and self.uiStyleCache[field]
 	local frame = slot and slot[style]
@@ -1542,6 +1716,8 @@ do
 			local cached = Cached(self, "journalFrame", style)
 			if cached then
 				self.journalFrame = cached
+				-- 2.11.0 (fiche 27) : suit les choix faits dans l'autre style
+				if self.JournalRestoreState then self:JournalRestoreState(cached) end
 				return cached
 			end
 			if style ~= "azeroth" then

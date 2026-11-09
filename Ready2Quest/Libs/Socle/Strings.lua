@@ -8,6 +8,11 @@
 -- Fichier du socle commun (Libs/Socle), identique dans Ready2Quest et
 -- QuestCompanion : ne le modifier que dans Ready2Quest/Libs/Socle, puis
 -- python3 tools/sync_socle.py.
+-- socle 2.11.0 : corps du fichier dans une fabrique, compilée une fois quand
+-- les deux addons ont le même socle (Base.lua, ns.SocleFile). Rien de propre
+-- à l'addon au niveau du fichier : tout passe par ADDON et ns, ci-dessous.
+local SOCLE_ADDON, SOCLE_NS = ...
+;(SOCLE_NS.SocleFile or function(_, factory) return factory end)("Strings", function(...)
 local ADDON, ns = ...
 
 local frFR, enUS = {}, {}
@@ -98,6 +103,24 @@ function ns:F(key, ...)
 	return fmt
 end
 
+-- socle 2.11.0 : pluriel accordé. CLE_ZERO (facultatif), CLE_ONE, CLE_MANY ;
+-- repli sur CLE si les variantes manquent (migration progressive).
+-- Français : 0 et 1 au singulier ; anglais : 1 seulement.
+function ns:FP(key, n, ...)
+	n = tonumber(n) or 0
+	local L = ns.L
+	local function Has(k) local text = L[k]; return type(text) == "string" and text ~= k end
+	local pick = key
+	if n == 0 and Has(key .. "_ZERO") then
+		pick = key .. "_ZERO"
+	elseif Has(key .. "_ONE") and Has(key .. "_MANY") then
+		local one
+		if ns.STRINGS_FRENCH then one = n <= 1 and n >= -1 else one = n == 1 end
+		pick = key .. (one and "_ONE" or "_MANY")
+	end
+	return self:F(pick, n, ...)
+end
+
 function ns:Print(...)
 	local parts = {}
 	for i = 1, select("#", ...) do
@@ -113,6 +136,7 @@ end
 -- ---------------------------------------------------------------------------
 local APP = ns.APP or {}
 local SLASH = (APP.slash and APP.slash[#APP.slash]) or "/?"
+local TC = ns.TC or setmetatable({}, { __index = function() return "" end })   -- hors Base.lua (tests) : sans couleur
 ns.RegisterStrings({
 	OPT_TITLE           = "Réglages",
 	OPT_HINT            = "Clique une ligne pour changer la valeur.",
@@ -145,6 +169,12 @@ ns.RegisterStrings({
 	OPT_BTN_REPLAY      = "Rejouer",
 	OPT_VERSION_LINE    = "v%s  ·  %s",
 	OPT_NAV_POWER_TIP   = "Active ou coupe tous les modules de cette page.",
+	-- socle 2.11.0 : page d'un module coupé
+	OPT_PAGE_OFF        = "Module coupé : ces réglages s'appliqueront quand tu le rallumeras.",
+	OPT_PAGE_OFF_ON     = "Rallumer",
+	DIAG_SOCLE          = "Socle : %s (%s)",
+	DIAG_SOCLE_SHARED   = "partagé",
+	DIAG_SOCLE_OWN      = "propre",
 	OPT_EDIT_BUTTON     = "Déplacer les cadres",
 	OPT_EDIT_MODE       = "Mode édition des cadres",
 	OPT_EDIT_HINT       = "Fais glisser les cadres pour les placer.",
@@ -157,17 +187,25 @@ ns.RegisterStrings({
 	MSG_MODULE_SET      = "Module %s : %s",
 	MSG_RESET           = "Réglages réinitialisés.",
 	MSG_DIAG_HEADER     = "Diagnostic :",
+	-- 2.11.0 / 1.32.0 (fiche 28) : diagnostic traduit
+	MSG_DIAG_MODULES    = "  modules : %s%d/%d|r chargés",
+	MSG_DIAG_MISSING    = "non chargés :",
+	MSG_DIAG_ERROR      = "erreur",
+	MSG_DIAG_WHERE      = "%s : %s",
+	MSG_DIAG_UNSUPPORTED = "événements non supportés :",
+	MSG_CLIENT_MODERN   = "moderne (non identifié)",
+	MSG_CLIENT_UNKNOWN  = "inconnu",
 	MSG_MINIMAP_ON      = "Bouton de minicarte affiché.",
 	MSG_MINIMAP_OFF     = "Bouton de minicarte masqué.",
 	MSG_MINIMAP_POS     = "Bouton de minicarte : angle %d°.",
 	MINIMAP_RIGHT       = "Clic droit : réglages",
 	MINIMAP_DRAG        = "Glisse pour déplacer autour de la minicarte",
 	ADDON_NAME         = tostring(APP.id),
-	TAG                = "|cffe8a54b[" .. tostring(APP.id) .. "]|r",
+	TAG                = TC.GOLD .. "[" .. tostring(APP.id) .. "]|r",
 	HELP_TITLE         = "Commandes : " .. SLASH .. ".",
 	MSG_UNKNOWN_CMD    = "Commande inconnue. Tape " .. SLASH .. " help pour l'aide.",
 	MSG_MODULE_UNKNOWN = "Module inconnu. Essaie " .. SLASH .. " modules.",
-	MSG_MODULES_HINT   = "|cff888888" .. SLASH .. " module <id> on|off|r",
+	MSG_MODULES_HINT   = TC.GREY .. SLASH .. " module <id> on|off|r",
 	MINIMAP_LEFT       = "Clic gauche : ouvrir",
 	SETTINGS_VERSION   = "Version %s",
 	SETTINGS_HINT      = "Les réglages de l'addon ont leur propre fenêtre.",
@@ -204,6 +242,11 @@ ns.RegisterStrings({
 	OPT_BTN_REPLAY      = "Replay",
 	OPT_VERSION_LINE    = "v%s  ·  %s",
 	OPT_NAV_POWER_TIP   = "Turns every module of this page on or off.",
+	OPT_PAGE_OFF        = "Module off: these settings will apply once you turn it back on.",
+	OPT_PAGE_OFF_ON     = "Turn on",
+	DIAG_SOCLE          = "Shared core: %s (%s)",
+	DIAG_SOCLE_SHARED   = "shared",
+	DIAG_SOCLE_OWN      = "own copy",
 	OPT_EDIT_BUTTON     = "Move the frames",
 	OPT_EDIT_MODE       = "Frame edit mode",
 	OPT_EDIT_HINT       = "Drag the frames to place them.",
@@ -216,17 +259,24 @@ ns.RegisterStrings({
 	MSG_MODULE_SET      = "Module %s: %s",
 	MSG_RESET           = "Settings reset.",
 	MSG_DIAG_HEADER     = "Diagnostics:",
+	MSG_DIAG_MODULES    = "  modules: %s%d/%d|r loaded",
+	MSG_DIAG_MISSING    = "not loaded:",
+	MSG_DIAG_ERROR      = "error",
+	MSG_DIAG_WHERE      = "%s: %s",
+	MSG_DIAG_UNSUPPORTED = "unsupported events:",
+	MSG_CLIENT_MODERN   = "modern (unidentified)",
+	MSG_CLIENT_UNKNOWN  = "unknown",
 	MSG_MINIMAP_ON      = "Minimap button shown.",
 	MSG_MINIMAP_OFF     = "Minimap button hidden.",
 	MSG_MINIMAP_POS     = "Minimap button: angle %d°.",
 	MINIMAP_RIGHT       = "Right click: settings",
 	MINIMAP_DRAG        = "Drag to move around the minimap",
 	ADDON_NAME         = tostring(APP.id),
-	TAG                = "|cffe8a54b[" .. tostring(APP.id) .. "]|r",
+	TAG                = TC.GOLD .. "[" .. tostring(APP.id) .. "]|r",
 	HELP_TITLE         = "Commands: " .. SLASH .. ".",
 	MSG_UNKNOWN_CMD    = "Unknown command. Type " .. SLASH .. " help for help.",
 	MSG_MODULE_UNKNOWN = "Unknown module. Try " .. SLASH .. " modules.",
-	MSG_MODULES_HINT   = "|cff888888" .. SLASH .. " module <id> on|off|r",
+	MSG_MODULES_HINT   = TC.GREY .. SLASH .. " module <id> on|off|r",
 	MINIMAP_LEFT       = "Left click: open",
 	SETTINGS_VERSION   = "Version %s",
 	SETTINGS_HINT      = "The addon's settings have their own window.",
@@ -234,3 +284,4 @@ ns.RegisterStrings({
 })
 
 if ns.Mark then ns.Mark("Strings") end
+end)(SOCLE_ADDON, SOCLE_NS)

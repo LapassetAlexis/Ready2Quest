@@ -120,8 +120,8 @@ ns.AZEROTH_INK = {
 	light = { 0.93, 0.89, 0.80 },            -- texte clair sur fond sombre (lignes pas encore obtenues)
 	rewardLight = { 0.62, 0.92, 0.52 },
 	white = { 1, 1, 1 }, barGrey = { 0.91, 0.89, 0.83 }, goldHead = { 0.97, 0.85, 0.47 },
-	star = { 1, 0.84, 0.29 }, tagBlue = { 0.357, 0.561, 0.839 }, tagGrey = { 0.64, 0.66, 0.68 },
-	navText = { 0.85, 0.83, 0.78 }, navSel = { 0.95, 0.91, 0.83 },
+	star = { 1, 0.84, 0.29 }, tagBlue = Theme.BLUE, tagGrey = Theme.MUTED_LIGHT,   -- 2.11.0 : jetons du socle (mêmes valeurs)
+	navText = Theme.TEXT, navSel = Theme.PARCHMENT,
 	zoneDim = { 0.74, 0.71, 0.66 },          -- 2.9.1 : zone pas encore vue (Exploration), sur le fond des catégories
 	stripLabel = { 0.95, 0.84, 0.54 }, stripDetail = { 0.84, 0.77, 0.60 },
 	markGold = { 0.97, 0.85, 0.47 }, markGrey = { 0.86, 0.82, 0.74 },
@@ -129,12 +129,21 @@ ns.AZEROTH_INK = {
 	rTrivial = { 0.24, 0.22, 0.20 }, rElite = { 0.00, 0.18, 0.45 }, rRare = { 0.32, 0.06, 0.48 },
 	rBoss = { 0.40, 0.15, 0.00 }, rShiny = { 0.28, 0.15, 0.00 },
 	tagShade = { 0.10, 0.06, 0.02, 0.92 },   -- sous la bande de l'étiquette (Compte / Perso)
+	-- 2.11.0 : encres jusque-là écrites en dur (fiche 08), et le texte des champs
+	statLabel = { 0.89, 0.82, 0.66 },        -- libellé des plaques de chiffres (page Compagnon)
+	plateCount = { 0.95, 0.87, 0.66 },       -- nombre de la case des points (plaque d'en-tête)
+	giftGold = { 1, 0.95, 0.78 }, giftGrey = { 0.80, 0.76, 0.68 },   -- cadeau des paliers d'Exploration
+	fieldText = Theme.LABEL,                 -- texte d'une liste déroulante / recherche
+	-- 2.11.0 : ombre posée sous un texte clair sur un fond variable (icône, bande dorée)
+	shade = { 0.10, 0.06, 0.02 },
 }
 -- 2.9.1 : page Missions, habit Azeroth : voile vert d'une carte faite, aplat
 -- et pointillés de l'encart des 3, tampon « Faite », étiquettes, pastilles
 ns.AZEROTH_MISSION = {
 	tint = { 0.62, 0.85, 0.45, 0.22 }, callout = { 0.97, 0.90, 0.72, 0.5 }, dash = { 0.65, 0.52, 0.25, 1 },
-	stamp = { 0.12, 0.37, 0.12 }, chipZone = { 0.165, 0.31, 0.54 }, chipTrait = { 0.42, 0.29, 0.10 },
+	-- 2.11.0 : étiquette du caractère plus sombre (#5a3a14), filet des intertitres
+	stamp = { 0.12, 0.37, 0.12 }, chipZone = { 0.165, 0.31, 0.54 }, chipTrait = { 0.353, 0.227, 0.078 },
+	rule = { 0.54, 0.35, 0.16 },
 	pipOn = { 0.97, 0.85, 0.47 }, pipOff = { 0.35, 0.27, 0.16 },
 }
 -- rôle -> { encre, luminance du pire fond mesurée, seuil, taille (px) } ;
@@ -230,12 +239,12 @@ ns.AZEROTH_CONTRAST = {
 	-- aplats unis (luminance exacte de la couleur du fond) : tampon « Faite », étiquettes des intertitres
 	["mission.stamp"] = { "white", 0.0845, 4.5, 10 },   -- clair, fond uni #1f5e1f (ns.AZEROTH_MISSION.stamp) : 7.81:1
 	["chip.zone"] = { "white", 0.0792, 4.5, 10 },   -- clair, fond uni #2a4f8a (chipZone : zone du jour, décompte) : 8.13:1
-	["chip.trait"] = { "white", 0.0810, 4.5, 10 },   -- clair, fond uni #6b4a1a (chipTrait : caractère) : 8.02:1
-	-- bande résumé : fond des catégories 130652 (découpe 167×29) étiré sur 230×42, opaque ; ligne 1 x 44-222
-	-- y 5-20 (le haut, plus clair), ligne 2 y 21-36 ; pire = les 10 % les plus clairs
-	["summary.label"] = { "goldHead", 0.1025, 4.5, 12 },   -- clair, fond 0.103 (moy. 0.023) : 4.96:1
-	["summary.count"] = { "white", 0.1025, 4.5, 12 },   -- clair, fond 0.103 (moy. 0.023) : 6.89:1
-	["summary.detail"] = { "light", 0.0221, 4.5, 11 },   -- clair, fond 0.022 (moy. 0.014) : 11.41:1
+	["chip.trait"] = { "white", 0.0524, 4.5, 10 },   -- clair, fond uni #5a3a14 (chipTrait : caractère, 2.11.0) : 10.25:1
+	-- bande résumé (2.11.0 : 230×56) : fond des catégories 130652 (découpe 167×29) étiré, opaque ; ligne 1
+	-- x 44-222 y 5-20 (titre et compte), détail y 21-45 (deux lignes) ; pire = les 10 % les plus clairs
+	["summary.label"] = { "goldHead", 0.0801, 4.5, 12 },   -- clair, fond 0.080 (moy. 0.033) : 5.82:1
+	["summary.count"] = { "white", 0.0801, 4.5, 12 },   -- clair, fond 0.080 (moy. 0.033) : 8.07:1
+	["summary.detail"] = { "light", 0.0288, 4.5, 11 },   -- clair, fond 0.029 (moy. 0.012) : 10.44:1
 	-- encart des 3 : page 130661 (758×678, voile 0,35, ombre de gauche) sous un aplat crème
 	-- (ns.AZEROTH_MISSION.callout, alpha 0,5), texte de x 74 à 436, y 350 à 620 (les deux encarts)
 	["bonus.text"] = { "ink", 0.5371, 4.5, 11 },   -- sombre, fond 0.537 (moy. 0.573) : 10.53:1
@@ -246,6 +255,33 @@ ns.AZEROTH_CONTRAST = {
 	["panel.muted"] = { "inkMuted", 0.3220, 4.5, 11 },   -- sombre, fond 0.322 (moy. 0.424) : 5.00:1 (cadeaux, jours aux trois missions, aide)
 	-- compteur des pagers (« 1-9 / 60 ») sur la page : bas droit de la page (x 324-734, y 560-600), le plus sombre
 	["pager.position"] = { "inkSoft", 0.3105, 4.5, 11 },   -- sombre, fond 0.311 (moy. 0.342) : 5.76:1
+	-- 2.11.0 : mesures (scratchpad meas/b211.py : textures du client, mêmes découpes et voiles)
+	-- B1 : plaques des chiffres de la page Compagnon, fond des catégories 167×29 étiré sur 135×58, opaque ;
+	-- chiffre y 12-30, libellé y 33-46 (centrés ensemble)
+	["stat.value"] = { "goldHead", 0.0193, 3.0, 16 },   -- clair, fond 0.019 (moy. 0.009) : 10.92:1
+	["stat.label"] = { "statLabel", 0.0561, 4.5, 11 },   -- clair, fond 0.056 (moy. 0.015) : 6.58:1
+	-- B4 : intertitres de la page Missions à l'encre sur le parchemin (plus de bande sombre) : mêmes encres
+	-- et même fond que section.* (pire décile de toute la page)
+	["mheader.label"] = { "head", 0.2935, 4.5, 10 },   -- sombre, fond 0.293 (moy. 0.376) : 4.65:1
+	["mheader.detail"] = { "inkSoft", 0.2935, 4.5, 10 },   -- sombre, fond 0.293 (moy. 0.376) : 5.49:1
+	-- fiche 08 : textes peints à la main, désormais rôles déclarés
+	["plate.count"] = { "plateCount", 0.1053, 4.5, 12 },   -- clair, case des points 235402 (129×34), x 40-120 y 8-26 : 5.08:1
+	["preview.title"] = { "white", 0.0517, 4.5, 12 },   -- clair, bande titleGrey 130667 (194×20) : 10.32:1
+	["shield.count"] = { "white", 0.1405, 4.5, 12 },   -- clair, écu 130665 (60×44), centre 30×14 : 5.51:1
+	["pantry.count"] = { "white", 0.0731, 4.5, 11 },   -- clair, ombre shade 0,75 sous le chiffre, pire icône blanche : 8.53:1
+	["mark.giftGold"] = { "giftGold", 0.0710, 4.5, 11 },   -- clair, bande dorée 452109 + ombre shade 0,45 (x 10-102, y 24-50) : 7.77:1
+	["mark.giftGrey"] = { "giftGrey", 0.0135, 4.5, 11 },   -- clair, bande grise 452109 + ombre shade 0,45 : 9.35:1
+	-- fiche 13 : liste déroulante et recherche (Field : aplat uni 0.12/0.07/0.03)
+	["field.text"] = { "fieldText", 0.0073, 4.5, 12 },   -- clair, fond uni : 14.04:1
+	-- fiche 14 : colonne de gauche, blocs résumé : parchV 130662 (Cover 196×678, voile nav 0,45), bande
+	-- y 230-450, x 12-184 ; pire = les 10 % les plus sombres
+	["navSum.name"] = { "ink", 0.4479, 4.5, 12 },   -- sombre, fond 0.448 (moy. 0.478) : 8.93:1
+	["navSum.label"] = { "inkSoft", 0.4479, 4.5, 11 },   -- sombre, fond 0.448 (moy. 0.478) : 7.96:1
+	["navSum.value"] = { "inkSoft", 0.4479, 4.5, 11 },   -- sombre, fond 0.448 (moy. 0.478) : 7.96:1
+	-- B8 : dialogue de confirmation au parchemin (130661 en Cover 420×260, voile page 0,35, ombre de gauche)
+	["dialog.title"] = { "title", 0.2682, 3.0, 19 },   -- sombre, fond 0.268 (moy. 0.366) : 3.74:1
+	["dialog.sub"] = { "inkSoft", 0.2682, 4.5, 11 },   -- sombre, fond 0.268 (moy. 0.366) : 5.09:1
+	["dialog.text"] = { "ink", 0.2682, 4.5, 12 },   -- sombre, fond 0.268 (moy. 0.366) : 5.71:1
 }
 -- Luminance relative WCAG 2.x d'une couleur (0..1)
 local function Lin(c) if c <= 0.03928 then return c / 12.92 end return ((c + 0.055) / 1.055) ^ 2.4 end
@@ -720,7 +756,7 @@ function ns:AzerothCreateBanner(opts)
 
 	-- la bande sombre (liseré doré), glissée sous le bas du bandeau
 	if opts.strip then
-		frame.strip = Theme.Solid(frame, "BACKGROUND", Theme.WINDOW or { 0.06, 0.05, 0.04 }, 0.94)
+		frame.strip = Theme.Solid(frame, "BACKGROUND", Theme.WINDOW, 0.94)
 		frame.strip:SetSize(LAY.stripW, stripH)
 		frame.strip:SetPoint("TOP", area, "BOTTOM", 0, LAY.overlap)
 		frame.stripEdge = Theme.Border(frame, Theme.GOLD_SOFT, 0.9, "BORDER", frame.strip)
@@ -1046,8 +1082,13 @@ function ns.AzerothPortraitSlot(host, size, x, y)
 		self.portraitNpc = target and tonumber(target.npcID or target.npc) or nil
 		self.portraitShown = false
 		if target then
-			local types = ns.MENAGERIE_TYPE_ICONS
-			icon:SetTexture((types and types[target.type or ""]) or ns.AZEROTH_PORTRAIT_ICON)
+			-- 2.11.0 : le vrai portrait 2D si son displayID est connu, sinon l'icône du type
+			if ns.CreaturePortrait then
+				ns:CreaturePortrait(icon, target)
+			else
+				local types = ns.MENAGERIE_TYPE_ICONS
+				icon:SetTexture((types and types[target.type or ""]) or ns.AZEROTH_PORTRAIT_ICON)
+			end
 			icon:Show()
 		else
 			icon:Hide()
@@ -1515,7 +1556,8 @@ function ns:CompanionApplyUIStyle()
 			frame.name:SetTextColor(Theme.PARCHMENT[1], Theme.PARCHMENT[2], Theme.PARCHMENT[3], 1)
 		end
 		if frame.mood then frame.mood:ClearAllPoints(); frame.mood:SetPoint("BOTTOM", frame, "BOTTOM", 0, 6) end
-		if frame.mood then frame.mood:SetTextColor(Theme.MUTED_LIGHT[1], Theme.MUTED_LIGHT[2], Theme.MUTED_LIGHT[3], 1) end
+		-- 2.11.0 : humeur au gris clair du texte (≥ 4,5:1 sur la plaque 80 % mesurée par l'agent du compagnon)
+		if frame.mood then frame.mood:SetTextColor(Theme.TEXT[1], Theme.TEXT[2], Theme.TEXT[3], 1) end
 		if frame.mood and frame.mood.SetShadowColor then frame.mood:SetShadowColor(0, 0, 0, 0.6); frame.mood:SetShadowOffset(1, -1) end
 		EdgesShown(frame, true)
 	end

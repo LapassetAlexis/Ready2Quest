@@ -39,6 +39,17 @@ local FR = {
 	JRN_PROG_BESTIARY_NAMED = "Bestiaire : %d/%d abattues (nommés %d/%d) · détail dans la page Créatures",
 	JRN_PROG_BESTIARY_NONE = "Bestiaire : aucune créature connue ici pour l'instant.",
 	JRN_PROG_MEN_OPEN      = "Créatures",
+	-- 2.11.0 : filtre et recherche de la liste des zones, « Localiser »
+	JRN_PROG_FILTER_mine   = "Pour moi",
+	JRN_PROG_FILTER_seen   = "Commencées",
+	JRN_PROG_FILTER_all    = "Toutes",
+	JRN_PROG_FILTER_TIP    = "Pour moi : la zone où tu es, celles que tu as commencées et celles de ton niveau, sans les zones de départ de l'autre faction.",
+	JRN_PROG_FILTER_EMPTY  = "Aucune zone pour ce filtre. Choisis « Toutes ».",
+	JRN_PROG_SEARCH        = "Zone…",
+	JRN_LOCATE             = "Localiser",
+	JRN_LOCATE_OFF         = "Effacer",
+	JRN_LOCATE_TIP_quest   = "Pose un repère sur la carte du monde, là où se prend la quête. Un 2e clic l'enlève.",
+	JRN_LOCATE_TIP_creature = "Pose un repère sur la carte du monde, là où elle apparaît. Un 2e clic l'enlève.",
 }
 local EN = {
 	JRN_SEC_progress       = "Exploration",
@@ -64,6 +75,16 @@ local EN = {
 	JRN_PROG_BESTIARY_NAMED = "Bestiary: %d/%d defeated (named %d/%d) · details on the Creatures page",
 	JRN_PROG_BESTIARY_NONE = "Bestiary: no known creature here yet.",
 	JRN_PROG_MEN_OPEN      = "Creatures",
+	JRN_PROG_FILTER_mine   = "For me",
+	JRN_PROG_FILTER_seen   = "Started",
+	JRN_PROG_FILTER_all    = "All",
+	JRN_PROG_FILTER_TIP    = "For me: where you are, the zones you started and the ones at your level, without the other faction's starting zones.",
+	JRN_PROG_FILTER_EMPTY  = "No zone for this filter. Pick \"All\".",
+	JRN_PROG_SEARCH        = "Zone…",
+	JRN_LOCATE             = "Locate",
+	JRN_LOCATE_OFF         = "Clear",
+	JRN_LOCATE_TIP_quest   = "Sets a pin on the world map where the quest is picked up. Click again to remove it.",
+	JRN_LOCATE_TIP_creature = "Sets a pin on the world map where it spawns. Click again to remove it.",
 }
 ns.RegisterStrings(FR, EN)
 if ns.KEEP_STRINGS then ns.JOURNAL_PROGRESS_STRINGS = { fr = FR, en = EN } end
@@ -82,6 +103,42 @@ local PART_H, PART_GAP = 50, 8
 local ITEM_H, ITEM_STEP, DETAIL_W = 24, 26, 150
 local BAR_X, BAR_Y, TILES_Y = 16, -62, -74
 local NAME_X = 104
+-- 2.11.0 : rangée du filtre au-dessus des zones (liste déroulante + recherche)
+local FILTER_H, FILTER_GAP, FILTER_W = 22, 8, 98
+ns.JOURNAL_PROG_FILTERS = { "mine", "seen", "all" }
+-- zones de départ (et voisines) d'une faction : exclues de « Pour moi » pour
+-- l'autre faction ; les autres zones (contestées, propres à Forever) jamais
+local ZONE_HOME_FACTION = {
+	[1429] = "A", [1426] = "A", [1438] = "A", [1436] = "A", [1432] = "A", [1439] = "A", [1433] = "A", [1431] = "A",
+	[1411] = "H", [1412] = "H", [1420] = "H", [1413] = "H", [1421] = "H",
+}
+function ns:ZoneFactionOf(zoneID) return ZONE_HOME_FACTION[tonumber(zoneID) or 0] end
+
+-- 2.11.0 : une zone passe-t-elle le filtre (et la recherche, en minuscules) ?
+local function KeepZone(self, zone, filter, needle, level, faction)
+	if needle and needle ~= "" and not string.find(string.lower(zone.name or ""), needle, 1, true) then return false end
+	if filter == "seen" then return zone.seen == true end
+	if filter ~= "mine" then return true end
+	if zone.here or (zone.seen and (zone.percent or 0) < 100) then return true end
+	local home = self:ZoneFactionOf(zone.id)
+	if home and faction and home ~= faction then return false end
+	return zone.lo ~= 99 and zone.hi >= level - 2 and zone.lo <= level + 4
+end
+function ns:JournalFilterZones(list, filter, search)
+	local out = {}
+	local level = tonumber(self.PlayerLevel and self:PlayerLevel()) or 1
+	local unitLevel = rawget(_G, "UnitLevel")
+	if type(unitLevel) == "function" then
+		local ok, value = pcall(unitLevel, "player")
+		if ok and tonumber(value) then level = tonumber(value) end
+	end
+	local faction = self.PlayerFaction and self:PlayerFaction()
+	local needle = search and string.lower(search) or nil
+	for _, zone in ipairs(list or {}) do
+		if KeepZone(self, zone, filter or "mine", needle, level, faction) then out[#out + 1] = zone end
+	end
+	return out
+end
 
 local function ZoneName(self, zoneID)
 	local info = self.MapInfo and self:MapInfo(zoneID)
@@ -175,12 +232,40 @@ local function Build(self, frame, content, ui)
 	pane:SetAllPoints()
 	frame.prog = pane
 
+	-- 2.11.0 : filtre (Pour moi / Commencées / Toutes) et recherche, mémorisés
+	pane.zoneFilter = Theme.CreateDropdown(pane, FILTER_W, function(value)
+		frame.progFilter, frame.progOffset = value, 0
+		if ns.JournalRemember then ns:JournalRemember("progFilter", value) end
+		ns:RefreshJournal()
+	end)
+	At(pane.zoneFilter, content, 0, TOP)
+	local filters = {}
+	for _, key in ipairs(ns.JOURNAL_PROG_FILTERS) do filters[#filters + 1] = { value = key, label = L["JRN_PROG_FILTER_" .. key] } end
+	pane.zoneFilter:SetOptions(filters)
+	pane.zoneFilter:SetValue(frame.progFilter or "mine")
+	if pane.zoneFilter.HookScript then
+		pane.zoneFilter:HookScript("OnEnter", function(owner) Tip(owner, L["JRN_PROG_FILTER_mine"], { L.JRN_PROG_FILTER_TIP }) end)
+		pane.zoneFilter:HookScript("OnLeave", HideTip)
+	end
+	-- recherche : la liste se filtre 0,25 s après la dernière touche
+	pane.zoneSearch = Theme.CreateSearchBox(pane, LIST_W - FILTER_W - FILTER_GAP, L.JRN_PROG_SEARCH, function(text)
+		frame.progSearch, frame.progOffset = text or "", 0
+		if ns.JournalSoon then ns:JournalSoon("progSearch") else ns:RefreshJournal() end
+	end)
+	pane.zoneSearch:SetHeight(FILTER_H)
+	At(pane.zoneSearch, content, FILTER_W + FILTER_GAP, TOP)
+	local zoneTop = TOP - FILTER_H - FILTER_GAP
+	pane.zoneEmpty = Text(pane, Theme.F_SMALL, Theme.MUTED_LIGHT, LIST_W - 8)
+	At(pane.zoneEmpty, content, 4, zoneTop - 6)
+	if pane.zoneEmpty.SetWordWrap then pane.zoneEmpty:SetWordWrap(true) end
+	pane.zoneEmpty:SetText(L.JRN_PROG_FILTER_EMPTY)
+	pane.zoneEmpty:Hide()
 	-- colonne de gauche : les zones, une rangée chacune
-	pane.zoneRows = math.floor((TOP - PAGER_Y + ZROW_STEP - ZROW_H - 6) / ZROW_STEP)
+	pane.zoneRows = math.floor((zoneTop - PAGER_Y + ZROW_STEP - ZROW_H - 6) / ZROW_STEP)
 	pane.zones = {}
 	for index = 1, pane.zoneRows do
 		local row = Theme.CreateTile(pane, LIST_W, ZROW_H)
-		At(row, content, 0, TOP - (index - 1) * ZROW_STEP)
+		At(row, content, 0, zoneTop - (index - 1) * ZROW_STEP)
 		row.rowFill = index % 2 == 0 and Theme.ROW_ALT or Theme.ROW
 		row:SetFill(row.rowFill)
 		row.name = NoWrap(Text(row, Theme.F_BODY, Theme.LABEL, LIST_W - 60))
@@ -319,15 +404,22 @@ local function Build(self, frame, content, ui)
 	local itemRows = math.floor((itemsTop - PAGER_Y - 12 + ITEM_STEP - ITEM_H) / ITEM_STEP)
 	pane.items = {}
 	for index = 1, itemRows do
-		local line = Theme.CreateListRow(pane, RW, ITEM_H, { status = 9, detail = true })
+		local line = Theme.CreateListRow(pane, RW, ITEM_H, { kind = "Button", status = 9, detail = true })
 		At(line, content, RX, itemsTop - (index - 1) * ITEM_STEP)
 		line:SetIndex(index)
 		line.rowAlt = line.alt
 		line.detail:SetWidth(DETAIL_W)
 		line.text:SetWidth(RW - line.textLeft - DETAIL_W - 12 - 8)
+		-- 2.11.0 : clic = la quête choisie (son bouton « Localiser »)
+		line:SetScript("OnClick", function(l) ns:JournalProgressSelect(l.item) end)
 		line:Hide()
 		pane.items[index] = line
 	end
+	-- 2.11.0 : « Localiser », un seul bouton posé sur la ligne choisie
+	pane.locate = Theme.CreateButton(pane, "auto", ITEM_H - 4, L.JRN_LOCATE, function() ns:JournalProgressLocate() end, "accent")
+	pane.locate:SetScript("OnEnter", function(owner) Tip(owner, L.JRN_LOCATE, { L.JRN_LOCATE_TIP_quest }) end)
+	pane.locate:SetScript("OnLeave", HideTip)
+	pane.locate:Hide()
 	-- zone où glisse la molette pour la liste (le reste fait défiler les zones)
 	pane.itemArea = CreateFrame("Frame", nil, pane)
 	At(pane.itemArea, content, RX, headY)
@@ -362,7 +454,40 @@ function ns:JournalProgressPart(part)
 	local frame = self.journalFrame
 	if not frame then return end
 	frame.progPart, frame.progItemOffset = part, 0
+	-- 2.11.0 : la part choisie tient au /reload (journalState)
+	if self.JournalRemember then self:JournalRemember("progPart", part) end
 	self:RefreshJournal()
+end
+
+-- 2.11.0 : une quête choisie dans la liste (2e clic : plus de choix)
+function ns:JournalProgressSelect(item)
+	local frame = self.journalFrame
+	if not (frame and type(item) == "table" and not item.header and tonumber(item.id)) then return end
+	local id = tonumber(item.id)
+	frame.progQuest = frame.progQuest ~= id and id or nil
+	if self.JournalRemember then self:JournalRemember("progQuest", frame.progQuest) end
+	frame.scrollOnly = true
+	local ok, err = pcall(self.RefreshJournal, self)
+	frame.scrollOnly = nil
+	if not ok then error(err, 0) end
+end
+
+-- Le point de la quête choisie (son donneur), ou nil
+function ns:JournalQuestPoint(zoneID, questID)
+	if not (zoneID and questID and self.ZonePoint) then return nil end
+	return self:ZonePoint("quest", zoneID, questID)
+end
+
+-- 2.11.0 : « Localiser » : repère sur la carte du monde (2e clic : retiré)
+function ns:JournalProgressLocate()
+	local frame = self.journalFrame
+	local zoneID, questID = frame and frame.progZone, frame and frame.progQuest
+	local x, y = self:JournalQuestPoint(zoneID, questID)
+	if not x then return false end
+	local set = self:MapPinToggle("quest:" .. questID, zoneID, x, y)
+	local pane = frame.prog
+	if pane and pane.locate then pane.locate:SetText(set and L.JRN_LOCATE_OFF or L.JRN_LOCATE) end
+	return set
 end
 
 local function Scroll(self, frame, delta)
@@ -431,7 +556,10 @@ local function ShowRight(pane, on)
 		if on then region:Show() else region:Hide() end
 	end
 	for _, tile in ipairs(pane.parts) do if on then tile:Show() else tile:Hide() end end
-	if not on then for _, line in ipairs(pane.items) do line:Hide() end end
+	if not on then
+		for _, line in ipairs(pane.items) do line:Hide() end
+		if pane.locate then pane.locate:Hide() end
+	end
 end
 
 local function RefreshCard(self, frame, pane, zoneID, here, done)
@@ -521,10 +649,34 @@ local function RefreshItems(self, frame, pane, zoneID, part, quests, seen)
 			line.status:SetVertexColor(c[1], c[2], c[3], 1)
 			line.text:SetText(tostring(item.name or ""))
 			Paint(line.text, item.done and Theme.PARCHMENT or (item.locked and Theme.MUTED or Theme.TEXT))
-			line.detail:SetText(Theme.T_GREY .. tostring(item.detail or "") .. "|r")
+			-- 2.11.0 (fiche 28) : le gris posé sur la ligne, pas dans le texte (un
+			-- code |c passait devant l'encre du carnet Azeroth)
+			line.detail:SetText(tostring(item.detail or ""))
+			Paint(line.detail, Theme.MUTED)
 			line:SetAlt(line.rowAlt)
 			line:Show()
 		end
+	end
+	-- 2.11.0 : la ligne choisie porte « Localiser » (si la quête a un point
+	-- connu et que le client sait poser un repère)
+	local chosen
+	for _, line in ipairs(pane.items) do
+		local item = line.item
+		local on = item and not item.header and frame.progQuest ~= nil and tonumber(item.id) == frame.progQuest
+		line.chosen = on or nil
+		if line.SetSelected then line:SetSelected(on and true or false) end
+		if on then chosen = line end
+	end
+	local locate = pane.locate
+	local x = chosen and self:JournalQuestPoint(zoneID, frame.progQuest)
+	if locate and x and self.MapPinAvailable and self:MapPinAvailable(zoneID) then
+		locate:ClearAllPoints()
+		locate:SetPoint("RIGHT", chosen, "RIGHT", -4, 0)
+		locate:SetText(self:MapPinActive("quest:" .. frame.progQuest) and L.JRN_LOCATE_OFF or L.JRN_LOCATE)
+		if locate.SetFrameLevel and chosen.GetFrameLevel then locate:SetFrameLevel(chosen:GetFrameLevel() + 3) end
+		locate:Show()
+	elseif locate then
+		locate:Hide()
 	end
 	local empty = ""
 	if #rows == 0 then
@@ -564,14 +716,21 @@ local function Refresh(self, frame, ui)
 	if not pane then return end
 	local here = self.JournalZone and self:JournalZone()
 	-- molette : la liste des zones du dernier rafraîchissement complet
-	local list = frame.scrollOnly and pane.zoneList or self:JournalAllZones("all", "lvl")
+	-- 2.11.0 : toutes les zones (rafraîchissement complet), puis le filtre et
+	-- la recherche sur cette liste en cache (molette, frappe : rien recalculé)
+	local all = (frame.scrollOnly and pane.zoneAll) or self:JournalAllZones("all", "lvl")
+	pane.zoneAll = all
+	local filter = frame.progFilter or "mine"
+	local list = self:JournalFilterZones(all, filter, frame.progSearch)
 	pane.zoneList = list
+	if pane.zoneFilter and pane.zoneFilter:GetValue() ~= filter then pane.zoneFilter:SetValue(filter) end
+	if #list == 0 then pane.zoneEmpty:Show() else pane.zoneEmpty:Hide() end
 	-- par défaut la zone où tu es (sinon la première visitée) ; un choix tient
 	-- jusqu'à la fermeture du carnet (ToggleJournal oublie zonePicked)
 	if not frame.zonePicked or not frame.zoneID then
 		frame.zoneID = here
 		if not frame.zoneID then
-			for _, zone in ipairs(list) do if zone.seen then frame.zoneID = zone.id; break end end
+			for _, zone in ipairs(all) do if zone.seen then frame.zoneID = zone.id; break end end
 		end
 	end
 	local zoneID = frame.zoneID
@@ -587,7 +746,7 @@ local function Refresh(self, frame, ui)
 	pane.none:Hide()
 	ShowRight(pane, true)
 	local seen = zoneID == here
-	for _, zone in ipairs(list) do if zone.id == zoneID and zone.seen then seen = true end end
+	for _, zone in ipairs(all) do if zone.id == zoneID and zone.seen then seen = true end end
 	local parts, done = self:JournalProgressParts(zoneID)
 	RefreshCard(self, frame, pane, zoneID, here, done)
 	local part, quests = RefreshParts(self, frame, pane, zoneID, parts)

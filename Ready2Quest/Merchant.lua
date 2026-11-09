@@ -140,7 +140,7 @@ function ns:RunAutoSell()
 	end
 	self.sellRun = nil
 	if run.count > 0 then
-		self:Print(self:F("MSG_SOLD", run.count, self:FormatMoney(run.value)))
+		self:Print(self:FP("MSG_SOLD", run.count, self:FormatMoney(run.value)))
 	end
 end
 
@@ -183,7 +183,7 @@ end
 function ns:OnMerchantClosed()
 	self.merchantOpen = false
 	if self.sellRun and self.sellRun.count > 0 then
-		self:Print(self:F("MSG_SOLD", self.sellRun.count, self:FormatMoney(self.sellRun.value)))
+		self:Print(self:FP("MSG_SOLD", self.sellRun.count, self:FormatMoney(self.sellRun.value)))
 	end
 	self.sellRun = nil
 end

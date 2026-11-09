@@ -557,16 +557,11 @@ function ns:GuildFeatDescribe(feat, sender)
 	return info
 end
 
--- Couleur de rareté (CaptureStage.lua), en code |c
+-- Couleur de rareté, en code |c. 2.11.0 (fiche 28) : le jeton du socle
+-- (Theme.RANK, éclairci pour du texte sur fond sombre : le bandeau et sa bande
+-- de la ligne sont sombres) au lieu de la couleur de marque de la capture
 local function RarityHex(class, shiny)
-	local color
-	if shiny then color = Theme and (Theme.GOLD_LIGHT or Theme.GOLD) end
-	if not color then
-		local rarity = ns.CAPTURE_RARITY and ns.CAPTURE_RARITY[class or "normal"]
-		color = rarity and rarity.color or { 0.95, 0.95, 0.95 }
-	end
-	return string.format("|cff%02x%02x%02x", math.floor(color[1] * 255 + 0.5), math.floor(color[2] * 255 + 0.5),
-		math.floor(color[3] * 255 + 0.5))
+	return Theme.Hex(Theme.RankColor(class, shiny))
 end
 
 -- La sous-ligne : la créature en couleur de rareté et ses étoiles, ou le texte

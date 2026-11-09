@@ -417,6 +417,84 @@ function ns.ZoneQuestsFlush(f)
 	end
 end
 ns.ZoneQuestDataLoaded = QuestDataLoaded
+-- ---------------------------------------------------------------------------
+-- 2.11.0 : « Localiser » : un repère sur la carte du monde
+-- ---------------------------------------------------------------------------
+-- Où trouver une quête (son donneur) ou une créature dans une zone : point
+-- tiré des tables générées (ns.ZONE_QUEST_POS, ns.ZONE_CREATURE_POS, une
+-- chaîne par zone, cherchée sans être découpée). Rend x, y (0..1) ou nil.
+local POS_TABLE = { quest = "ZONE_QUEST_POS", creature = "ZONE_CREATURE_POS" }
+function ns:ZonePoint(kind, zoneID, id)
+	local all = POS_TABLE[kind] and rawget(ns, POS_TABLE[kind])
+	local text = type(all) == "table" and all[tonumber(zoneID) or 0]
+	id = tonumber(id)
+	if type(text) ~= "string" or not id then return nil end
+	local key = string.format("%d\t", id)
+	local x, y = text:match("^" .. key .. "(%d%d%d)(%d%d%d)")
+	if not x then x, y = text:match("\n" .. key .. "(%d%d%d)(%d%d%d)") end
+	if not x then return nil end
+	return tonumber(x) / 1000, tonumber(y) / 1000
+end
+
+-- L'API du repère (Forever 2026-11-09 : présente, CanSetUserWaypointOnMap
+-- vrai) ; tout passe par pcall, rien sans elle
+local function PinApi()
+	local map, point = rawget(_G, "C_Map"), rawget(_G, "UiMapPoint")
+	if type(map) ~= "table" or type(point) ~= "table" then return nil end
+	if type(map.SetUserWaypoint) ~= "function" or type(map.ClearUserWaypoint) ~= "function"
+		or type(point.CreateFromCoordinates) ~= "function" then return nil end
+	return map, point
+end
+
+-- Un repère est-il posable sur cette zone ?
+function ns:MapPinAvailable(zoneID)
+	local map = PinApi()
+	if not (map and tonumber(zoneID)) then return false end
+	if type(map.CanSetUserWaypointOnMap) == "function" then
+		local ok, can = pcall(map.CanSetUserWaypointOnMap, tonumber(zoneID))
+		if ok and can == false then return false end
+	end
+	return true
+end
+
+-- Le repère posé par le carnet (clé : "quest:123", "creature:456")
+function ns:MapPinKey() return self.mapPin and self.mapPin.key or nil end
+
+-- Vrai si le repère du carnet est toujours celui du jeu
+function ns:MapPinActive(key)
+	local pin = self.mapPin
+	if not pin or (key and pin.key ~= key) then return false end
+	local map = PinApi()
+	if map and type(map.HasUserWaypoint) == "function" then
+		local ok, has = pcall(map.HasUserWaypoint)
+		if ok and has == false then self.mapPin = nil; return false end
+	end
+	return true
+end
+
+-- Pose (ou retire, au 2e clic sur le même) le repère ; rend true si posé
+function ns:MapPinToggle(key, zoneID, x, y)
+	local map, point = PinApi()
+	if not map then return false end
+	if self:MapPinActive(key) then
+		pcall(map.ClearUserWaypoint)
+		self.mapPin = nil
+		return false
+	end
+	if not (tonumber(zoneID) and tonumber(x) and tonumber(y)) then return false end
+	local okPoint, where = pcall(point.CreateFromCoordinates, tonumber(zoneID), tonumber(x), tonumber(y))
+	if not (okPoint and where) or not pcall(map.SetUserWaypoint, where) then
+		if self.RecordError then self:RecordError("mappin:set", tostring(key)) end
+		return false
+	end
+	local track = rawget(_G, "C_SuperTrack")
+	if type(track) == "table" and type(track.SetSuperTrackedUserWaypoint) == "function" then
+		pcall(track.SetSuperTrackedUserWaypoint, true)
+	end
+	self.mapPin = { key = key, zoneID = tonumber(zoneID), x = x, y = y }
+	return true
+end
+
 local HANDLERS = { QUEST_TURNED_IN = Forget, QUEST_LOG_UPDATE = Forget, PLAYER_REGEN_ENABLED = AfterCombat,
 	QUESTLINE_UPDATE = QuestLinesUpdated, QUEST_DATA_LOAD_RESULT = QuestDataLoaded }
 

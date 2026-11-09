@@ -63,7 +63,7 @@ Add{
 	run = function(db)
 		local free = FreeBagSlots()
 		local threshold = db.bagFreeThreshold or 4
-		local detail = ns:F("CHK_BAGS_DETAIL", free)
+		local detail = ns:FP("CHK_BAGS_DETAIL", free)
 		local score = Ratio(free, math.max(1, threshold))
 		return free > threshold, detail, score
 	end,
@@ -81,7 +81,7 @@ Add{
 		local count = CountQuality(0)
 		local score = math.max(0, 100 - (count * 25))
 		if count >= (db.grayItemThreshold or 1) then
-			return false, ns:F("CHK_GRAY_DETAIL", count), score
+			return false, ns:FP("CHK_GRAY_DETAIL", count), score
 		end
 		return true, L.CHK_GRAY_GOOD, score
 	end,
@@ -98,7 +98,7 @@ Add{
 		local count = CountConsumables("food")
 		local threshold = db.vivresThreshold or 1
 		local score = Ratio(count, threshold)
-		return count >= threshold, ns:F("CHK_VIVRES_DETAIL", count), score
+		return count >= threshold, ns:FP("CHK_VIVRES_DETAIL", count), score
 	end,
 }
 
@@ -113,9 +113,9 @@ Add{
 		local minimum = db.potionsThreshold or 0
 		local count = CountConsumables("combat")
 		if minimum <= 0 then
-			return true, ns:F("CHK_POTIONS_DETAIL", count), 100
+			return true, ns:FP("CHK_POTIONS_DETAIL", count), 100
 		end
-		return count >= minimum, ns:F("CHK_POTIONS_DETAIL", count), Ratio(count, minimum)
+		return count >= minimum, ns:FP("CHK_POTIONS_DETAIL", count), Ratio(count, minimum)
 	end,
 }
 
@@ -160,7 +160,21 @@ Add{
 	run = function(db)
 		if type(GetXPExhaustion) ~= "function" then return true, L.CHK_REST_NA, 100 end
 		local ok, rested = pcall(GetXPExhaustion)
-		if not ok or type(rested) ~= "number" then return true, L.CHK_REST_NA, 100 end
+		if not ok then return true, L.CHK_REST_NA, 100 end
+		-- R2Q 1.32.0 : GetXPExhaustion rend nil quand le joueur n'a aucun repos
+		-- d'avance (pas « sans objet ») ; « sans objet » reste pour l'API absente
+		-- et le niveau maximum
+		if rested == nil then
+			if type(UnitLevel) == "function" and type(GetMaxPlayerLevel) == "function" then
+				local okLevel, level = pcall(UnitLevel, "player")
+				local okMax, maxLevel = pcall(GetMaxPlayerLevel)
+				if okLevel and okMax and tonumber(level) and tonumber(maxLevel) and level >= maxLevel then
+					return true, L.CHK_REST_NA, 100
+				end
+			end
+			return false, L.CHK_REST_NONE, 0
+		end
+		if type(rested) ~= "number" then return true, L.CHK_REST_NA, 100 end
 
 		local maxXP
 		if type(UnitXPMax) == "function" then
@@ -237,11 +251,11 @@ Add{
 			return true, L.CHK_QUESTS_GOOD, 100
 		end
 		if ready > 0 then
-			return false, ns:F("CHK_QUESTS_DETAIL", ready), 70
+			return false, ns:FP("CHK_QUESTS_DETAIL", ready), 70
 		end
 		-- 1.30.0 (idée de Lex) : une quête de voyage (sans objectif, « va voir
 		-- untel ») est « prête » dès qu'on la prend : citée, pas reprochée
-		if travel > 0 then return true, ns:F("CHK_QUESTS_TRAVEL", travel), 100 end
+		if travel > 0 then return true, ns:FP("CHK_QUESTS_TRAVEL", travel), 100 end
 		return true, L.CHK_QUESTS_GOOD, 100
 	end,
 }
@@ -434,7 +448,7 @@ Add{
 	label = function() return L.CHK_SPELLS end,
 	run = function()
 		local trained = tonumber(ns:CharData().trainerLevel) or 0
-		return false, ns:F("CHK_SPELLS_DETAIL", trained, PlayerLevel()), 50
+		return false, ns:F("CHK_SPELLS_DETAIL", trained, (ns.Theme and ns.Theme.ARROW) or "->", PlayerLevel()), 50
 	end,
 }
 

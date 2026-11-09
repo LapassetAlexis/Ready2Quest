@@ -380,7 +380,9 @@ do
 	Check("[LOT] la brillante : fanfare (une), halo doré", Count(LOT.sounds, NS.CAPTURE_SOUNDS.shiny) == 1
 		and shinyCard.tile.halo:IsShown(), table.concat(LOT.sounds, ","))
 	local fresh = byNpc[6503]
-	Check("[LOT] l'échappée a filé (créature effacée), les prises restent", not fled.tile.fallback:IsShown()
+	-- 2.11.0 (fiche 10) : l'échappée reste visible, grisée, sous le filet déchiré
+	Check("[LOT] l'échappée a filé (grisée sous le filet déchiré), les prises restent", fled.tile.fallback:IsShown()
+		and fled.tile.fallback:GetAlpha() == NS.CAPTURE_FLED_ALPHA and fled.tile.net:IsShown()
 		and fresh.tile.fallback:IsShown() and not fresh.tile.net:IsShown())
 	Check("[LOT] capturée : étoiles et étiquette « Nouvelle »", fresh.tile.stars:IsShown()
 		and fresh.tile.tag:GetText() == (NS.Theme.Upper and NS.Theme.Upper(NS.L.CAPTURE_BATCH_NEW) or NS.L.CAPTURE_BATCH_NEW))

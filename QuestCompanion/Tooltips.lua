@@ -40,10 +40,8 @@ local function Call(fn, ...)
 	return nil
 end
 
-local function Hex(c)
-	return string.format("|cff%02x%02x%02x", math.floor(c[1] * 255 + 0.5), math.floor(c[2] * 255 + 0.5),
-		math.floor(c[3] * 255 + 0.5))
-end
+-- 2.11.0 (fiche 28) : le code couleur vient du socle (Theme.Hex)
+local function Hex(c) return Theme.Hex(c) end
 
 -- GUID de l'unité survolée : data.guid (moteur récent), sinon
 -- tooltip:GetUnit() ; second retour : son niveau, si on le lit

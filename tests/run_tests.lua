@@ -607,16 +607,17 @@ local NS = {}
 local QNS = {}
 local function LoadAddonFile(name)
 	local path = ROOT .. "/" .. name
+	-- mesure de la mémoire (python3 tests/run_tests.py --memoire) : ce que
+	-- chaque fichier laisse en mémoire Lua une fois chargé (code compilé
+	-- compris, après ramassage). Socle 2.11.0 : relevée AVANT la lecture du
+	-- texte source (sinon chaque ligne était diminuée de la taille du fichier)
+	local report = rawget(_G, "MEMORY_REPORT")
+	local before
+	if report then collectgarbage("collect"); collectgarbage("collect"); before = collectgarbage("count") end
 	local handle, err = io.open(path, "r")
 	assert(handle, "ouverture impossible: " .. path .. " (" .. tostring(err) .. ")")
 	local source = handle:read("*a")
 	handle:close()
-	-- mesure de la mémoire (python3 tests/run_tests.py --memoire) : ce que
-	-- chaque fichier laisse en mémoire Lua une fois chargé (code compilé
-	-- compris, après ramassage)
-	local report = rawget(_G, "MEMORY_REPORT")
-	local before
-	if report then collectgarbage("collect"); collectgarbage("collect"); before = collectgarbage("count") end
 	Mock.currentAddon = name:match("^([^/]+)/")
 	local chunk, compileError = loadstring(source, "@" .. path)
 	assert(chunk, "erreur de compilation dans " .. path .. ":\n" .. tostring(compileError))
@@ -1524,7 +1525,8 @@ ResetWorld()
 NS:RunChecklist("manual")
 Check("fenêtre créée", NS.window ~= nil)
 Check("fenêtre affichée", NS.window and NS.window.shown == true)
-Check("13 lignes de modules", NS.window and #NS.window.rows == 13)
+-- 1.32.0 : 13 lignes de modules, plus celle du repli des points en ordre
+Check("13 lignes de modules (+ repli)", NS.window and #NS.window.rows == 14)
 Check("score affiché", NS.window and NS.window.scoreValue.text:find(tostring(NS.score)) ~= nil,
 	NS.window and NS.window.scoreValue.text)
 Check("barre de score remplie", NS.window and NS.window.scoreBar.fill.width > 0,
@@ -1646,7 +1648,8 @@ do
 	local point = adv:GetPoint()
 	Check("pied : bouton centré", point == "BOTTOM", point)
 	local c = adv.text.textColor or {}
-	Check("pied : texte clair, lisible sur le bleu", (c[1] or 0) > 0.9 and (c[2] or 0) > 0.9 and (c[3] or 0) > 0.9)
+	-- socle 2.11.0 : encre sombre (le blanc tombait à 3,31:1 sur le bleu)
+	Check("pied : texte sombre, lisible sur le bleu (≥ 4,5:1)", NS.Theme.Contrast({ c[1] or 1, c[2] or 1, c[3] or 1 }, NS.Theme.BLUE) >= 4.5)
 	-- boutons ambre pleins : encre sombre sans ombre noire. « Terminé » des
 	-- réglages est en contour ambre (docs/UI.md, pied)
 	local done = NS:EnsureOptions().closeButton
@@ -1823,7 +1826,7 @@ ResetWorld()
 Say("\n== bootstrap et diagnostic ==")
 ResetWorld()
 Check("commande enregistrée par le bootstrap", type(SlashCmdList["SACETDEPART"]) == "function")
-Check("version exposée", NS.version == "1.31.0", NS.version)
+Check("version exposée", NS.version == "1.32.0", NS.version)
 
 local missingMods = {}
 for _, name in ipairs({ "Bootstrap", "Locales", "Compat", "Theme", "Core", "Buffs", "Reagents",
@@ -1844,7 +1847,7 @@ NS.HandleCommand = savedHandle
 Mock:Reset()
 NS:HandleCommand("diag")
 Check("/sd diag liste les modules", Mock:Output():find("modules :") ~= nil, Mock:Output())
-Check("/sd diag affiche la version", Mock:Output():find("1%.31%.0") ~= nil, Mock:Output())
+Check("/sd diag affiche la version", Mock:Output():find("1%.32%.0") ~= nil, Mock:Output())
 
 -- une erreur est enregistrée et affichée
 Mock:Reset()
@@ -3342,7 +3345,7 @@ Check("seconde passe : les 15 gris vendus", #(Mock.world.sold or {}) == 15, #(Mo
 Check("gris sans prix gardé", Mock.world.bags[1].items[1] ~= nil)
 Check("objet blanc gardé", Mock.world.bags[1].items[2] ~= nil)
 Check("gris « sans valeur » gardé", Mock.world.bags[1].items[3] ~= nil)
-Check("récap chat : 15 objets, 7 pa 50 pc", Mock:Output():find("15 objet%(s%) gris vendu%(s%) : 7 pa 50 pc") ~= nil, Mock:Output())
+Check("récap chat : 15 objets, 7 pa 50 pc", Mock:Output():find("15 objets gris vendus : 7 pa 50 pc") ~= nil, Mock:Output())
 Mock:Fire("MERCHANT_CLOSED")
 
 Mock.world.sold = nil
@@ -3718,6 +3721,7 @@ Check("[UX4] aucun libellé de module en double", #dup == 0, table.concat(dup, "
 ResetWorld()
 NS:SetModuleEnabled("quests", false)
 Mock.world.durability = { [5] = { 5, 100 } }
+NS:DB().diagFoldOk = false   -- 1.32.0 : liste dépliée (le repli a ses tests, r2q_132.lua)
 NS.window = nil
 NS:RunChecklist("manual")
 local shown = {}
@@ -3726,7 +3730,8 @@ local shownText = table.concat(shown, ", ")
 Check("[UX5] modules sans objet masqués", not shownText:find("Réparation") and not shownText:find("Sorts")
 	and not shownText:find("Réactifs"), shownText)
 Check("[UX5] échec le plus lourd en tête (vivres, 20)", shown[1] == "Vivres", shownText)
-Check("[UX5] module coupé par le joueur : en bas, grisé", shown[#shown] == "Quêtes", shownText)
+Check("[UX5] module coupé par le joueur : en bas, grisé", shown[#shown - 1] == "Quêtes"
+	and shown[#shown] == NS.L.CHK_OK_UNFOLD, shownText)
 Check("[UX5] fenêtre plus courte que 13 lignes", NS.window.height < NS:WindowHeight(13, false), NS.window.height)
 -- v1.20.0 : la forme porte le statut (losange plein = à voir, au trait = OK)
 local firstStatus = NS.window.rows[1].status
@@ -3755,7 +3760,7 @@ Mock.world.level = 10
 Mock:Fire("PLAYER_ENTERING_WORLD", true, false)
 Mock.world.level = 12
 NS:RunChecklist("manual")
-Check("[UX7] sorts : détail court (<= 38)", #Result("spells").detail <= 38 and Result("spells").detail:find("10 %-> 12") ~= nil,
+Check("[UX7] sorts : détail court (<= 38)", #Result("spells").detail <= 38 and (Result("spells").detail:find("10 %-> 12") ~= nil or Result("spells").detail:find("10 → 12", 1, true) ~= nil),
 	Result("spells").detail)
 
 -- [9] vente auto : prévenu une seule fois

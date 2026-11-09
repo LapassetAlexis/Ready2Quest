@@ -244,6 +244,50 @@ local TOAST_LINE_MIDDLE = -TOAST_TEXT_HEIGHT / 2
 local ARROW_DOWN = ns.Theme.MEDIA .. "Textures\\fleche_baisse"
 local ARROW_UP   = ns.Theme.MEDIA .. "Textures\\fleche_hausse"
 local ARROW_SIZE = 10           -- cote de la fleche, en unites 1920
+-- 1.32.0 (fiche 12) : la flèche verte des sacs du client d'abord, par
+-- référence (atlas vérifié en jeu sur Forever le 9/11/2026) : grisée puis
+-- teintée (GREEN, RED : les jetons mesurés) ; la baisse est la même,
+-- retournée (découpe inversée de l'atlas, sinon rotation d'un demi-tour).
+-- Nos fichiers restent le repli si l'atlas manque.
+ns.STATS_ARROW_ATLAS = "bags-greenarrow"
+local function ArrowAtlas()
+	local api = rawget(_G, "C_Texture")
+	if type(api) ~= "table" or type(api.GetAtlasInfo) ~= "function" then return nil end
+	local ok, info = pcall(api.GetAtlasInfo, ns.STATS_ARROW_ATLAS)
+	if ok and ns.Plain then info = ns.Plain(info) end
+	return (ok and type(info) == "table") and info or nil
+end
+-- Pose la flèche sur `tex` ; rend "client" ou "own"
+function ns.StatsPaintArrow(tex, up)
+	if not tex then return nil end
+	local info = tex.SetAtlas and ArrowAtlas()
+	if info then
+		local file = info.file or info.filename
+		local l, r, t, b = tonumber(info.leftTexCoord), tonumber(info.rightTexCoord), tonumber(info.topTexCoord), tonumber(info.bottomTexCoord)
+		local done = false
+		if not up and file and l and r and t and b then
+			done = pcall(tex.SetTexture, tex, file)
+			if done then tex:SetTexCoord(l, r, b, t) end           -- haut et bas échangés
+			if done and tex.SetRotation then pcall(tex.SetRotation, tex, 0) end
+		end
+		if not done then
+			local ok, result = pcall(tex.SetAtlas, tex, ns.STATS_ARROW_ATLAS)
+			done = ok and result ~= false
+			if done and tex.SetRotation then pcall(tex.SetRotation, tex, up and 0 or math.pi) end
+		end
+		if done then
+			if tex.SetDesaturated then tex:SetDesaturated(true) end
+			tex.clientArrow = true
+			return "client"
+		end
+	end
+	tex.clientArrow = nil
+	tex:SetTexture(up and ARROW_UP or ARROW_DOWN)
+	if tex.SetTexCoord then tex:SetTexCoord(0, 1, 0, 1) end
+	if tex.SetRotation then pcall(tex.SetRotation, tex, 0) end
+	if tex.SetDesaturated then tex:SetDesaturated(false) end
+	return "own"
+end
 -- fond du bandeau autour du cadre (gauche, haut, droite, bas), en unités
 -- 1920 : le contenu (titre à -6, ligne jusqu'à -44) y tient avec sa marge
 local TOAST_PLATE = { 14, 8, 12, 50 }
@@ -530,7 +574,7 @@ function ns:ToastText(rows)
 				row.label:SetTextColor(Theme.GREY[1], Theme.GREY[2], Theme.GREY[3])
 			else
 				row.value:SetText(tostring(entry.value or ""))
-				row.arrow:SetTexture(entry.improved and ARROW_UP or ARROW_DOWN)
+				ns.StatsPaintArrow(row.arrow, entry.improved and true or false)
 				if entry.improved then
 					row.value:SetTextColor(Theme.GREEN[1], Theme.GREEN[2], Theme.GREEN[3])
 					row.arrow:SetVertexColor(Theme.GREEN[1], Theme.GREEN[2], Theme.GREEN[3])

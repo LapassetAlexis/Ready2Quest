@@ -9,6 +9,11 @@
 -- python3 tools/sync_socle.py. Clic gauche : ns:DefaultCommand() de l'addon ;
 -- clic droit : ses réglages ; lignes propres à l'addon dans l'infobulle :
 -- ns:MinimapTooltip(GameTooltip).
+-- socle 2.11.0 : corps du fichier dans une fabrique, compilée une fois quand
+-- les deux addons ont le même socle (Base.lua, ns.SocleFile). Rien de propre
+-- à l'addon au niveau du fichier : tout passe par ADDON et ns, ci-dessous.
+local SOCLE_ADDON, SOCLE_NS = ...
+;(SOCLE_NS.SocleFile or function(_, factory) return factory end)("Minimap", function(...)
 local ADDON, ns = ...
 local L = ns.L
 local Theme = ns.Theme
@@ -319,3 +324,4 @@ do
 end
 
 ns.Mark("Minimap")
+end)(SOCLE_ADDON, SOCLE_NS)

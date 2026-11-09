@@ -8,7 +8,7 @@ local ADDON, ns = ...
 
 ns.APP = {
 	id = "QuestCompanion",
-	version = "2.10.0",
+	version = "2.11.0",
 	-- nom dans l'en-tête des réglages
 	brand = "Quest|cff5b8fd6Companion|r",
 	-- sauvegarde (## SavedVariables)
@@ -28,7 +28,12 @@ local r2q = rawget(_G, "Ready2Quest")
 if type(r2q) == "table" and type(r2q.Loaded) == "table" and r2q.Loaded.Companion then
 	ns.blocked = "old-ready2quest"
 	if type(print) == "function" then
-		print("|cffe8a54bQuestCompanion|r — ce Ready2Quest (" .. tostring(r2q.version)
-			.. ") contient déjà le compagnon : mets Ready2Quest à jour (1.26.0 ou plus), puis /reload.")
+		-- 2.11.0 (fiche 28) : en anglais hors client français (Config.lua passe
+		-- avant le socle : ni ns.L ni ns.TC ; l'or de la marque, écrit ici)
+		local french = type(GetLocale) == "function" and GetLocale() == "frFR"
+		local text = french
+			and "— ce Ready2Quest (%s) contient déjà le compagnon : mets Ready2Quest à jour (1.26.0 ou plus), puis /reload."
+			or "— this Ready2Quest (%s) already contains the companion: update Ready2Quest (1.26.0 or later), then /reload."
+		print("|cffe8a54bQuestCompanion|r " .. string.format(text, tostring(r2q.version)))
 	end
 end
