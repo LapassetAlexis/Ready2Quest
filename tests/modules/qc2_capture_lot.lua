@@ -654,7 +654,8 @@ do
 	Mock:Advance(0.2)
 	Check("[LOT] en combat (relevé) : le choix se referme aussi", not chooser:IsShown())
 	net:Click("LeftButton")
-	Check("[LOT] en combat : pas de choix (le filet seul, comme avant)", not chooser:IsShown())
+	Check("[LOT] en combat : pas de choix, et le filet ne part pas (2.10.0)", not chooser:IsShown()
+		and NS:CaptureState().rolling == nil)
 	LOT.combat = false
 	LOT.Settle()
 	LOT.SeeKill(6810, { name = "Raptor H" })
@@ -809,6 +810,87 @@ do
 	NS:CaptureBatchStop(true)
 	NS.captureBatchFrame:Hide()
 	NS:CaptureState().aid = nil
+end
+
+-- 10. 2.10.0 : la capture ne se joue pas en combat -------------------------------------------
+do
+	Say("-- capture hors combat : refus, scènes fermées à l'aggro")
+	LOT.Reset()
+	LOT.SeeKill(6900, { name = "Loup A" })
+	local net = NS.companionFrame and NS.companionFrame.captureNet
+	LOT.combat = true
+	local printed, restore = LOT.Collect()
+	LOT.sounds = {}
+	local r1 = NS:CaptureNetClick("LeftButton")
+	Mock:Advance(1)
+	NS:CaptureNetClick("LeftButton")
+	restore()
+	Check("[LOT] combat, un candidat : clic refusé, rien ne s'ouvre, le candidat reste", r1 == false
+		and NS:CaptureState().rolling == nil and not (NS.captureStage and NS.captureStage:IsShown())
+		and #NS:CaptureQueue() == 1)
+	Check("[LOT] … deux clics en 1 s : un seul message, le son d'échec", #printed == 1
+		and printed[1] == NS.L.CAPTURE_BATCH_COMBAT and Count(LOT.sounds, NS.CAPTURE_SOUNDS.fail) == 1, #printed)
+	LOT.SeeKill(6901, { name = "Loup B" })
+	LOT.combat = true
+	printed, restore = LOT.Collect()
+	Mock:Advance(6)
+	local r2 = NS:CaptureNetClick("LeftButton")
+	local r3 = NS:CaptureThrow(NS:CaptureQueue()[1].guid)
+	restore()
+	Check("[LOT] combat, deux candidats (et ligne de la liste) : refusé, ni choix ni lancer", r2 == false and r3 == false
+		and NS:CaptureState().rolling == nil and not (NS.captureChooser and NS.captureChooser:IsShown())
+		and #NS:CaptureQueue() == 2 and #printed == 1, #printed)
+	NS:CaptureNetClick("RightButton")
+	Check("[LOT] combat : le clic droit ouvre toujours la liste", NS.captureQueueList and NS.captureQueueList:IsShown())
+	NS:CaptureHideQueueList()
+	-- l'infobulle du filet le dit
+	local lines = {}
+	local tip = { SetOwner = function() end, Show = function() end, Hide = function() end,
+		AddLine = function(_, text) lines[#lines + 1] = tostring(text) end,
+		AddDoubleLine = function(_, text) lines[#lines + 1] = tostring(text) end }
+	local savedTip = rawget(_G, "GameTooltip")
+	_G.GameTooltip = tip
+	if net and net:GetScript("OnEnter") then net:GetScript("OnEnter")(net) end
+	_G.GameTooltip = savedTip
+	Check("[LOT] combat : l'infobulle dit « Après le combat »", Find(lines, NS.L.CAPTURE_Q_COMBAT)
+		and not Find(lines, NS:F("CAPTURE_Q_CLICK_CHOOSE", "Loup")), table.concat(lines, " | "))
+	LOT.combat = false
+
+	-- une scène ouverte, l'aggro arrive : elle se ferme, le verdict vient dans le chat
+	NS:CaptureData().creatures[6900] = { normal = true, name = "Loup A", stars = 1, at = 1 }
+	LOT.Roll(0)
+	NS:CaptureThrow(NS:CaptureQueue()[1].guid)
+	local rolling = NS:CaptureState().rolling
+	local stage = NS.captureStage
+	Check("[LOT] hors combat : la scène se joue", rolling and stage and stage:IsShown())
+	printed, restore = LOT.Collect()
+	LOT.combat = true
+	Mock:Fire("PLAYER_REGEN_DISABLED")
+	Check("[LOT] aggro : la scène se ferme, le lancer continue", not stage:IsShown() and NS:CaptureState().rolling == rolling
+		and Find(printed, NS.L.CAPTURE_STAGE_COMBAT))
+	for _ = 1, 30 do Mock.now = Mock.now + 0.5; NS:CaptureTick(NS.Now()) end
+	restore()
+	local target = rolling.target
+	Check("[LOT] … verdict en données et dans le chat (recapture comprise)", rolling.result ~= nil
+		and NS:CaptureState().rolling == nil and not stage:IsShown()
+		and (rolling.result ~= "ok" or NS:CaptureData().creatures[target.npcID] ~= nil)
+		and Find(printed, target.name) and #printed >= 2, table.concat(printed, " | "))
+	LOT.combat = false
+
+	-- « Tout capturer » ouvert puis combat : figé et fermé
+	LOT.Reset()
+	LOT.SeeKill(6910, { name = "Rat A" })
+	LOT.SeeKill(6911, { name = "Rat B" })
+	LOT.Roll(0)
+	local batch = NS:CaptureBatch()
+	local frame = NS.captureBatchFrame
+	Check("[LOT] tout capturer : la fenêtre est ouverte", batch and frame and frame:IsShown())
+	Run(0.3)
+	LOT.combat = true
+	Mock:Fire("PLAYER_REGEN_DISABLED")
+	Check("[LOT] aggro : « Tout capturer » se fige et se ferme", not frame:IsShown() and batch.done == true
+		and NS:CaptureData().creatures[6910] ~= nil and NS:CaptureData().creatures[6911] ~= nil)
+	LOT.combat = false
 end
 
 for _, name in ipairs(GLOBALS) do _G[name] = LOT.saved[name] end

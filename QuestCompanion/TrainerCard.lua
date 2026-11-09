@@ -1077,8 +1077,11 @@ end
 
 -- prefix, texte, canal, expéditeur : les arguments de CHAT_MSG_ADDON
 function ns:TrainerOnAddonMessage(prefix, text, channel, sender)
-	prefix, text, channel, sender = Plain(prefix), Plain(text), Plain(channel), Plain(sender)
-	if prefix ~= ns.TRAINER_PREFIX or type(text) ~= "string" or type(sender) ~= "string" then return false end
+	-- le préfixe d'abord : en groupe, les messages des autres addons sont légion
+	prefix = Plain(prefix)
+	if prefix ~= ns.TRAINER_PREFIX then return false end
+	text, channel, sender = Plain(text), Plain(channel), Plain(sender)
+	if type(text) ~= "string" or type(sender) ~= "string" then return false end
 	sender = self:TrainerFullName(sender)
 	local key = sender and self:TrainerKey(sender)
 	if not key or IsMe(self, key) then return false end
@@ -1320,17 +1323,25 @@ end
 -- un modèle : displayID d'abord (mascotte), sinon la créature (npcID)
 local function ShowModel(model, display, npc, shiny, distance)
 	if not model then return false end
+	-- même modèle déjà affiché depuis l'ouverture de la fiche : on ne le
+	-- recharge pas (chaque rafraîchissement relançait SetCreature, et son
+	-- animation, sur chaque tuile). Rechargé à chaque ouverture (ns.trainerOpened).
+	if (npc or display) and model.npc == npc and model.display == display and model.shiny == (shiny or false)
+		and model.distance == distance and model.opened == ns.trainerOpened and model:IsShown() then
+		return true
+	end
 	local shown = false
 	if display and type(model.SetDisplayInfo) == "function" then shown = pcall(model.SetDisplayInfo, model, display) end
 	if not shown and npc and type(model.SetCreature) == "function" then shown = pcall(model.SetCreature, model, npc) end
 	if shown then
 		if distance and type(model.SetCamDistanceScale) == "function" then pcall(model.SetCamDistanceScale, model, distance) end
 		if ns.ModelShinyLight then ns.ModelShinyLight(model, shiny) end
-		model.npc, model.display = npc, display
+		model.npc, model.display, model.shiny, model.distance = npc, display, shiny or false, distance
+		model.opened = ns.trainerOpened
 		model:Show()
 	else
 		if type(model.ClearModel) == "function" then pcall(model.ClearModel, model) end
-		model.npc, model.display = nil, nil
+		model.npc, model.display, model.shiny, model.distance = nil, nil, nil, nil
 		model:Hide()
 	end
 	return shown
@@ -1425,8 +1436,11 @@ end
 function ns:EnsureTrainerWindow()
 	if self.trainerFrame then return self.trainerFrame end
 	if not (Theme and Theme.CreateWindow) then return nil end
-	local frame = Theme.CreateWindow(UIParent, WIN_W, WIN_H, { name = "QuestCompanionTrainerFrame", footer = FOOT_H,
-		strata = "FULLSCREEN" })
+	-- 2.10.0 : un nom global par style, sinon Échap vise la fenêtre de l'autre style restée en cache
+	local style = (self.JournalStyle and self:JournalStyle()) or "sobre"
+	local frame = Theme.CreateWindow(UIParent, WIN_W, WIN_H, {
+		name = style == "azeroth" and "QuestCompanionTrainerFrameAzeroth" or "QuestCompanionTrainerFrame",
+		footer = FOOT_H, strata = "FULLSCREEN" })
 	if not frame then return nil end
 	frame.chrome = "trainer"
 	-- pas une fenêtre exclusive : ma fiche s'ouvre par-dessus le carnet (strate plus haute)
@@ -1823,6 +1837,7 @@ function ns:TrainerOpen(name)
 		end
 	end
 	frame:Show()
+	ns.trainerOpened = (ns.trainerOpened or 0) + 1      -- modèles rechargés (ShowModel)
 	self:TrainerRefreshWindow()
 	return frame
 end

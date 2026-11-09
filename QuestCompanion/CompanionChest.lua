@@ -120,7 +120,10 @@ function ns:ZoneLevelRange(zoneID)
 	local live = self.MapLevelRange and self:MapLevelRange(zoneID)
 	if live then return live end
 	if computedLevels[zoneID] ~= nil then return computedLevels[zoneID] or nil end
-	local creatures = type(ns.ZONE_CREATURES) == "table" and ns.ZONE_CREATURES[zoneID]
+	-- lecture sans garder la zone construite (la page Progression passe par
+	-- toutes les zones du jeu : ns.ZONE_CREATURES[zoneID] les garderait toutes)
+	local creatures = ns.ZonePeek and ns.ZonePeek(ns.ZONE_CREATURES, zoneID)
+		or (type(ns.ZONE_CREATURES) == "table" and ns.ZONE_CREATURES[zoneID])
 	local lows, highs = {}, {}
 	for _, entry in pairs(type(creatures) == "table" and creatures or {}) do
 		local lvl = type(entry) == "table" and entry.lvl

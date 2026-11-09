@@ -40,16 +40,26 @@ function ns:MapInfo(mapID)
 end
 
 -- Chaîne carte courante -> parents (une zone est "sûre" si elle ou un parent l'est)
+-- La hiérarchie des cartes ne change pas en jeu : la chaîne est gardée par
+-- carte (lue toutes les PLACE_CHECK secondes, R2Q Core.lua). Gardée seulement
+-- complète (la dernière carte a ses infos) : une carte dont le client n'a pas
+-- encore les infos sera relue. Chaîne partagée : ne pas la modifier.
+local mapChains = {}
+ns.mapChainCache = mapChains
 function ns:MapChain(mapID)
-	local chain, guard = {}, 0
+	local cached = mapID and mapChains[mapID]
+	if cached then return cached end
+	local first = mapID
+	local chain, guard, complete = {}, 0, false
 	while mapID and guard < 12 do
 		chain[#chain + 1] = mapID
 		local info = self:MapInfo(mapID)
 		local parent = info and info.parentMapID
-		if not parent or parent == 0 or parent == mapID then break end
+		if not parent or parent == 0 or parent == mapID then complete = info ~= nil; break end
 		mapID = parent
 		guard = guard + 1
 	end
+	if complete and first then mapChains[first] = chain end
 	return chain
 end
 
@@ -137,7 +147,9 @@ function ns:KnownHub()
 		local ok, text = pcall(zoneFn)
 		if ok and type(text) == "string" and text ~= "" then zone = text end
 	end
-	for _, name in ipairs({ subzone or false, zone or false }) do
+	-- sous-zone puis zone, sans table temporaire (appelé à chaque évaluation)
+	for pass = 1, 2 do
+		local name = (pass == 1 and subzone) or (pass == 2 and zone) or nil
 		if name and index[name] then
 			for _, entry in ipairs(index[name]) do
 				-- la zone ne compte que pour une capitale (« Hurlevent »), pas pour
@@ -559,16 +571,22 @@ local function BuildPatterns(globals, fallback)
 	return list
 end
 
+-- Motifs gardés (ns.MemoGlobals) : reconstruits seulement si une chaîne du
+-- client change, pas à chaque message
+local KillPatterns = ns.MemoGlobals(KILL_GLOBALS, function() return BuildPatterns(KILL_GLOBALS, KILL_FALLBACK) end)
+local UnnamedPatterns = ns.MemoGlobals(UNNAMED_GLOBALS, function() return BuildPatterns(UNNAMED_GLOBALS, UNNAMED_FALLBACK) end)
+
 -- Renvoie xp, nommé (true = un monstre identifié) ; nil si le message n'est pas un gain d'XP
+-- (la capture de l'XP est prise par son rang, sans table de captures)
 function ns:ParseCombatXP(message)
 	if type(message) ~= "string" then return nil end
-	for _, entry in ipairs(BuildPatterns(KILL_GLOBALS, KILL_FALLBACK)) do
-		local captures = { message:match(entry.pattern) }
-		if #captures > 0 then return tonumber(captures[entry.capture]), true end
+	for _, entry in ipairs(KillPatterns()) do
+		local value = select(entry.capture, message:match(entry.pattern))
+		if value ~= nil then return tonumber(value), true end
 	end
-	for _, entry in ipairs(BuildPatterns(UNNAMED_GLOBALS, UNNAMED_FALLBACK)) do
-		local captures = { message:match(entry.pattern) }
-		if #captures > 0 then return tonumber(captures[entry.capture]), false end
+	for _, entry in ipairs(UnnamedPatterns()) do
+		local value = select(entry.capture, message:match(entry.pattern))
+		if value ~= nil then return tonumber(value), false end
 	end
 	return nil
 end
@@ -600,7 +618,7 @@ local function LootFormatToPattern(format)
 	return "^" .. pattern .. "$"
 end
 
-local function LootPatterns()
+local function BuildLootPatterns()
 	local patterns = {}
 	for _, name in ipairs(LOOT_GLOBALS) do
 		local format = rawget(_G, name)
@@ -611,6 +629,8 @@ local function LootPatterns()
 	end
 	return patterns
 end
+-- gardés tant que les chaînes du client ne changent pas (ns.MemoGlobals)
+local LootPatterns = ns.MemoGlobals(LOOT_GLOBALS, BuildLootPatterns)
 ns.LootPatterns = LootPatterns
 ns.ExpeditionLootPatterns = LootPatterns   -- ancien nom
 

@@ -225,6 +225,75 @@ do
 	Check("[CZ] repli : sans erreur", ok, errs)
 end
 
+-- 3 bis. 2.10.0 : Échap ferme le carnet et la fiche après des allers-retours de style ------------
+-- Le client ferme à Échap le cadre _G[nom] : la DERNIÈRE frame créée sous ce nom.
+local function EscapeClose()
+	for _, name in ipairs(UISpecialFrames) do
+		local last
+		for _, region in ipairs(Mock.frames) do
+			if region.GetName and region:GetName() == name then last = region end
+		end
+		if last and last:IsShown() then last:Hide() end
+	end
+end
+local function Count(name)
+	local n = 0
+	for _, existing in ipairs(UISpecialFrames) do if existing == name then n = n + 1 end end
+	return n
+end
+do
+	Say("-- Échap : un nom global par style (carnet, fiche)")
+	CZ.Reset("sobre")
+	local first = #Mock.frames + 1      -- le garde-fou ne regarde que les fenêtres de ce scénario
+	local f = Open("feats")
+	EscapeClose()
+	Check("[CZ] Échap : carnet Sobre fermé", f and not f:IsShown() and f:GetName() == "QuestCompanionJournalFrame")
+	Mock.InstallAtlas(true)
+	NS:AzerothAtlasOK(true)
+	NS:SetUIStyle("azeroth")
+	local g = Open("feats")
+	Check("[CZ] … Azeroth : son propre nom", g and g ~= f and g:GetName() == "QuestCompanionJournalFrameAzeroth")
+	EscapeClose()
+	Check("[CZ] … Échap : carnet Azeroth fermé", not g:IsShown())
+	NS:SetUIStyle("sobre")
+	local h = Open("feats")
+	Check("[CZ] … retour en Sobre : le carnet gardé revient", h == f and h:IsShown())
+	EscapeClose()
+	Check("[CZ] … Échap : carnet Sobre fermé après l'aller-retour", not h:IsShown())
+	-- fiche de dresseur
+	local t1 = NS:TrainerOpen(nil)
+	EscapeClose()
+	Check("[CZ] Échap : fiche Sobre fermée", t1 and not t1:IsShown() and t1:GetName() == "QuestCompanionTrainerFrame")
+	NS:SetUIStyle("azeroth")
+	local t2 = NS:TrainerOpen(nil)
+	Check("[CZ] … fiche Azeroth : son propre nom", t2 and t2 ~= t1 and t2:GetName() == "QuestCompanionTrainerFrameAzeroth")
+	EscapeClose()
+	Check("[CZ] … Échap : fiche Azeroth fermée", not t2:IsShown())
+	NS:SetUIStyle("sobre")
+	local t3 = NS:TrainerOpen(nil)
+	Check("[CZ] … retour en Sobre : la fiche gardée revient", t3 == t1 and t3:IsShown())
+	EscapeClose()
+	Check("[CZ] … Échap : fiche Sobre fermée après l'aller-retour", not t3:IsShown())
+	Check("[CZ] les quatre noms sont dans UISpecialFrames, une fois chacun", Count("QuestCompanionJournalFrame") == 1
+		and Count("QuestCompanionJournalFrameAzeroth") == 1 and Count("QuestCompanionTrainerFrame") == 1
+		and Count("QuestCompanionTrainerFrameAzeroth") == 1)
+	-- garde-fou : aucun nom d'Échap porté par deux fenêtres vivantes (les tests précédents
+	-- reconstruisent les fenêtres sans détruire les anciennes : on part de ce scénario)
+	local owner, shared = {}, {}
+	for _, name in ipairs(UISpecialFrames) do owner[name] = false end
+	for index = first, #Mock.frames do
+		local region = Mock.frames[index]
+		local name = region.GetName and region:GetName()
+		if name and owner[name] ~= nil then
+			if owner[name] and owner[name] ~= region then shared[#shared + 1] = name end
+			owner[name] = region
+		end
+	end
+	Check("[CZ] garde-fou : aucun nom d'Échap partagé par deux fenêtres", #shared == 0, table.concat(shared, ", "))
+	local ok, errs = NoErrors()
+	Check("[CZ] Échap : sans erreur", ok, errs)
+end
+
 -- 4. Fiche de dresseur ------------------------------------------------------------------------------
 function CZ.Trainer(style)
 	CZ.Reset(style)

@@ -820,6 +820,8 @@ function ns:GuildFeatsToastTick(now)
 		if state.hideAt and now < state.hideAt then return false end
 		self:GuildFeatsHideToast()
 	end
+	-- file vide (le cas courant, cinq fois par seconde) : rien à allouer
+	if #state.toasts == 0 then return false end
 	local queue, kept = state.toasts, {}
 	for _, item in ipairs(queue) do
 		if now >= item.at and now - item.at <= ns.GFEAT_TOAST_STALE then kept[#kept + 1] = item end

@@ -411,7 +411,7 @@ do
 		end
 	end)())
 	Check("[JRN] phrase d'explication", page and page.subText == NS.L.OPT_PAGE_JOURNAL_SUB)
-	Check("[JRN] bandeau, chat, suivi et hauts faits réglables (forme des titres : lot D ; raccourcis : 2.8.0)", page and #page.rows == 12, page and (function()
+	Check("[JRN] bandeau, chat, suivi et hauts faits réglables (forme des titres : lot D ; raccourcis : 2.8.0 ; réafficher : 2.10.0)", page and #page.rows == 13, page and (function()
 		local keys = {}
 		for _, card in ipairs(page.rows) do keys[#keys + 1] = tostring(card.def and card.def.key or card.key) end
 		return #page.rows .. " : " .. table.concat(keys, ", ")

@@ -52,7 +52,9 @@ local FR = {
 	SR_PREVIEW_OK           = "Meilleur rang",
 	SR_PREVIEW_ON           = "Sur tes barres, un liseré rouge entoure le sort à mettre à jour.",
 	SR_PREVIEW_OFF          = "Liseré coupé : l'icône et le chat te préviennent quand même.",
-	CHK_SPELLRANKS          = "Sorts des barres à jour",
+	-- 1.31.0 : un nom et non un état (« à jour » contredisait l'échec)
+	CHK_SPELLRANKS          = "Rangs de sorts",
+	CHK_SPELLRANKS_GOOD     = "tous au meilleur rang",
 	CHK_SPELLRANKS_DETAIL   = "%d sort(s) à un rang inférieur sur tes barres",
 	ADV_SPELLRANKS          = "Mets à jour les sorts de tes barres (/r2q sorts).",
 	HELP_SPELLRANKS         = "/r2q sorts — les sorts de tes barres qui ont un meilleur rang",
@@ -82,7 +84,8 @@ local EN = {
 	SR_PREVIEW_OK           = "Best rank",
 	SR_PREVIEW_ON           = "On your bars, a red outline surrounds the spell to update.",
 	SR_PREVIEW_OFF          = "Outline off: the icon and the chat still tell you.",
-	CHK_SPELLRANKS          = "Bar spells up to date",
+	CHK_SPELLRANKS          = "Spell ranks",
+	CHK_SPELLRANKS_GOOD     = "all at best rank",
 	CHK_SPELLRANKS_DETAIL   = "%d spell(s) at a lower rank on your bars",
 	ADV_SPELLRANKS          = "Update the spells on your bars (/r2q sorts).",
 	HELP_SPELLRANKS         = "/r2q sorts — the spells on your bars that have a higher rank",
@@ -398,7 +401,7 @@ if ns.AddCheck then
 		label = function() return L.CHK_SPELLRANKS end,
 		run = function()
 			local count = #ns:SpellRankScan()
-			if count == 0 then return true, nil, 100 end
+			if count == 0 then return true, L.CHK_SPELLRANKS_GOOD, 100 end
 			return false, ns:F("CHK_SPELLRANKS_DETAIL", count), 50
 		end,
 	}

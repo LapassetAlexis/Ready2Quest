@@ -563,7 +563,9 @@ local function Refresh(self, frame, ui)
 	local pane = frame.prog
 	if not pane then return end
 	local here = self.JournalZone and self:JournalZone()
-	local list = self:JournalAllZones("all", "lvl")
+	-- molette : la liste des zones du dernier rafraîchissement complet
+	local list = frame.scrollOnly and pane.zoneList or self:JournalAllZones("all", "lvl")
+	pane.zoneList = list
 	-- par défaut la zone où tu es (sinon la première visitée) ; un choix tient
 	-- jusqu'à la fermeture du carnet (ToggleJournal oublie zonePicked)
 	if not frame.zonePicked or not frame.zoneID then

@@ -140,17 +140,22 @@ end
 -- Drapeaux d'affiliation façon journal de combat (1 = moi ou mon familier,
 -- 2 = groupe, 4 = raid) d'après un GUID : les événements autonomes n'en
 -- donnent pas. nil pour un inconnu ou un GUID secret.
+-- Jetons d'unité faits une fois (appelé à chaque mort vue : pas de
+-- concaténation ni de fermeture par appel)
+local PARTY_UNITS, RAID_UNITS = {}, {}
+for i = 1, 4 do PARTY_UNITS[#PARTY_UNITS + 1] = "party" .. i; PARTY_UNITS[#PARTY_UNITS + 1] = "partypet" .. i end
+for i = 1, 40 do RAID_UNITS[i] = "raid" .. i end
+local function SameGUID(unitGUID, unit, guid)
+	local ok, other = pcall(unitGUID, unit)
+	return ok and ns.Plain(other) == guid
+end
 function ns.GroupFlags(guid)
 	guid = ns.Plain(guid)
 	local unitGUID = rawget(_G, "UnitGUID")
 	if type(guid) ~= "string" or type(unitGUID) ~= "function" then return nil end
-	local function Is(unit)
-		local ok, other = pcall(unitGUID, unit)
-		return ok and ns.Plain(other) == guid
-	end
-	if Is("player") or Is("pet") then return 1 end
-	for i = 1, 4 do if Is("party" .. i) or Is("partypet" .. i) then return 2 end end
-	for i = 1, 40 do if Is("raid" .. i) then return 4 end end
+	if SameGUID(unitGUID, "player", guid) or SameGUID(unitGUID, "pet", guid) then return 1 end
+	for i = 1, #PARTY_UNITS do if SameGUID(unitGUID, PARTY_UNITS[i], guid) then return 2 end end
+	for i = 1, #RAID_UNITS do if SameGUID(unitGUID, RAID_UNITS[i], guid) then return 4 end end
 	return nil
 end
 
@@ -158,6 +163,19 @@ end
 -- s'il est ouvert ; sinon (ou s'il refuse) PARTY_KILL et UNIT_DIED prennent
 -- le relais, jamais les deux (une mort ne compte qu'une fois). Un événement
 -- inconnu du client ne bloque pas les autres. Rend true si le journal est écouté.
+-- Événements d'unité que les deux addons ne lisent que pour le joueur : le
+-- client les envoie aussi pour la cible, le groupe, le raid et chaque barre
+-- de vie (des centaines par seconde en combat). RegisterUnitEvent les filtre
+-- côté client ; repli sur RegisterEvent (les gestionnaires gardent leur test
+-- unit == "player"). Un gestionnaire ajouté ici ne voit plus que le joueur.
+ns.PLAYER_UNIT_EVENTS = { UNIT_AURA = true, UNIT_STATS = true }
+function ns.RegisterGameEvent(frame, event)
+	if ns.PLAYER_UNIT_EVENTS[event] and type(frame.RegisterUnitEvent) == "function" then
+		if pcall(frame.RegisterUnitEvent, frame, event, "player") then return true end
+	end
+	return pcall(frame.RegisterEvent, frame, event) and true or false
+end
+
 local CLEU = "COMBAT_LOG_EVENT_UNFILTERED"
 local STANDALONE = { PARTY_KILL = true, UNIT_DIED = true }
 function ns.RegisterHandlers(frame, handlers)
@@ -167,7 +185,7 @@ function ns.RegisterHandlers(frame, handlers)
 	end
 	for event in pairs(handlers) do
 		if event ~= CLEU and not (STANDALONE[event] and logOpen) then
-			pcall(frame.RegisterEvent, frame, event)
+			ns.RegisterGameEvent(frame, event)
 		end
 	end
 	return logOpen

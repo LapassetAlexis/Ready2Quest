@@ -1,5 +1,9 @@
 # Ready2Quest — notes techniques et historique
 
+## Audit de performance (après QC 2.9.1 / R2Q 1.30.1)
+
+Détail, mesures, risques et vérifications en jeu : `docs/AUDIT-PERF.md`. À retenir pour la suite : `ns.RegisterGameEvent` (socle, `Compat.lua`) abonne `UNIT_AURA` / `UNIT_STATS` au joueur seulement (`RegisterUnitEvent`) ; `ns.MemoGlobals` (socle, `Base.lua`) garde un calcul tant que des globales du client ne changent pas ; `ns:MapChain` rend une chaîne gardée et partagée (ne pas la modifier) ; `frame.scrollOnly` (carnet, pendant `ScrollJournal`) : une page reprend sa liste du dernier rafraîchissement complet ; `RecordError` bornée à `ns.ERRORS_MAX`. Tests `[PERF]` : `tests/modules/qc30_perf.lua`.
+
 ## QuestCompanion 2.8.2 — retours en jeu sur le style Azeroth (lisibilité, placement)
 
 - **Contraste mesuré** (`ns.AZEROTH_INK`, `ns.AZEROTH_CONTRAST`, `AzerothStyle.lua`) : pour chaque rôle de texte (60 : bulle, lignes de hauts faits, catégories, Ménagerie, sceau, pages, guide, tuiles, bandes, bandeaux, plaques), le fond réel sous la zone du texte est recomposé hors jeu (textures du client par FileDataID via wago.tools, même découpe/recadrage, couleur, voile, atlas 4035524 avec ses coordonnées UiTextureAtlasMember) ; on garde la luminance moyenne et le pire décile (10 % les plus sombres pour un texte sombre, les plus clairs pour un texte clair). Seuils WCAG 2.x : 4,5:1, 3:1 pour 16 px et plus ; ombre non comptée. Les fonds des hauts faits sont des tons moyens (pire décile 0,12 à 0,15) : même le noir n'y tient pas 4,5:1, d'où un voile crème (`ns.AzerothVeil`, alphas : bulle 0,40, page 0,35, colonne 0,45, tuiles claires 0,40, guide 0,50, bandes de titre 0,50). Le test `[RT]` recalcule chaque ratio depuis la table. Rapport visuel produit au moment de la mesure (`contrast_report.png`, hors dépôt).

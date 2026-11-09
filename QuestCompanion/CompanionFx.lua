@@ -372,7 +372,10 @@ end
 ns.COMPANION_AGGRO_MIN = 2          -- monstres sur toi pour clignoter
 ns.COMPANION_AGGRO_POLL = 0.5       -- s entre deux comptes
 ns.COMPANION_AGGRO_TEXTURE = "Interface\\Buttons\\UI-ActionButton-Border"
-if ns.RegisterDefaults then ns.RegisterDefaults({ companionAggroBlink = true }) end
+-- 2.10.0 : trois crans, « solo » (seul, hors instance : le défaut, un tank
+-- ne le voit plus clignoter sans arrêt), « always », « off » ; les anciennes
+-- valeurs restent lues (true = solo, false = off)
+if ns.RegisterDefaults then ns.RegisterDefaults({ companionAggroBlink = "solo" }) end
 
 local function Plain(v) return ns.Plain and ns.Plain(v) or v end
 local function SafeCall(fn, ...)
@@ -381,6 +384,14 @@ local function SafeCall(fn, ...)
 	if ok then return Plain(a) end
 	return nil
 end
+
+-- « nameplate3 » -> « nameplate3target », fait une fois par jeton (le compte
+-- passe deux fois par seconde sur chaque barre)
+local TARGET_OF = setmetatable({}, { __index = function(t, unit)
+	local token = unit .. "target"
+	t[unit] = token
+	return token
+end })
 
 function ns:CompanionAggroCount()
 	local api = rawget(_G, "C_NamePlate")
@@ -392,11 +403,28 @@ function ns:CompanionAggroCount()
 		local unit = type(plate) == "table" and Plain(plate.namePlateUnitToken)
 		if type(unit) == "string" and SafeCall(rawget(_G, "UnitCanAttack"), "player", unit) == true
 			and SafeCall(rawget(_G, "UnitIsDead"), unit) ~= true
-			and SafeCall(rawget(_G, "UnitIsUnit"), unit .. "target", "player") == true then
+			and SafeCall(rawget(_G, "UnitIsUnit"), TARGET_OF[unit], "player") == true then
 			count = count + 1
 		end
 	end
 	return count
+end
+
+function ns:CompanionAggroMode()
+	local mode = self:DB().companionAggroBlink
+	if mode == false or mode == "off" then return "off" end
+	if mode == "always" then return "always" end
+	return "solo"
+end
+
+-- Le cran « Seul, hors instance » évite de deviner le rôle de tank (mal exposé
+-- par l'API classique)
+function ns:CompanionAggroAllowed()
+	local mode = self:CompanionAggroMode()
+	if mode == "off" then return false end
+	if mode == "always" then return true end
+	if SafeCall(rawget(_G, "IsInInstance")) then return false end
+	return SafeCall(rawget(_G, "IsInGroup")) ~= true
 end
 
 function ns:CompanionAggroUpdate(now)
@@ -406,7 +434,7 @@ function ns:CompanionAggroUpdate(now)
 	local state = State(self)
 	if not state.aggroAt or now < state.aggroAt or now - state.aggroAt >= ns.COMPANION_AGGRO_POLL then
 		state.aggroAt = now
-		local on = self:DB().companionAggroBlink ~= false and (frame.IsShown and frame:IsShown())
+		local on = self:CompanionAggroAllowed() and (frame.IsShown and frame:IsShown())
 			and self:CompanionAggroCount() >= ns.COMPANION_AGGRO_MIN
 		state.aggroOn = on and true or false
 	end
@@ -422,8 +450,8 @@ function ns:CompanionAggroUpdate(now)
 		-- battement : deux par seconde
 		frame.danger:SetAlpha(0.35 + 0.65 * math.abs(math.sin(now * math.pi * 2)))
 		frame.danger:Show()
-	elseif frame.danger then
-		frame.danger:Hide()
+	elseif frame.danger and frame.danger:IsShown() then
+		frame.danger:Hide()      -- chaque image au repos : seulement s'il est affiché
 	end
 	return state.aggroOn
 end

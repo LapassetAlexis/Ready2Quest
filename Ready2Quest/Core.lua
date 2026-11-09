@@ -307,12 +307,16 @@ function ns:Evaluate(trigger)
 
 	if safe then
 		self.pendingExit = nil
-		self.lastSafePlace = {
-			name = (entry and entry.name) or self:CurrentSubZone()
-				or ((self:MapInfo(self:CurrentMap()) or {}).name) or "?",
-			source = (entry and entry.source) or reason,
-			kind = entry and entry.kind or nil,
-		}
+		-- même lieu qu'au passage précédent (vérification toutes les
+		-- PLACE_CHECK s sur une carte à lieux repérés) : on garde la table
+		local name = (entry and entry.name) or self:CurrentSubZone()
+			or ((self:MapInfo(self:CurrentMap()) or {}).name) or "?"
+		local source = (entry and entry.source) or reason
+		local kind = entry and entry.kind or nil
+		local last = self.lastSafePlace
+		if not (last and last.name == name and last.source == source and last.kind == kind) then
+			self.lastSafePlace = { name = name, source = source, kind = kind }
+		end
 		-- retour en zone sûre après un départ confirmé (Retour d'expédition)
 		if self.departed then
 			self.departed = nil
@@ -401,8 +405,9 @@ function ns:RunChecklist(trigger)
 			}
 		else
 			-- run -> ok, détail, points (0-100), bloquant : un échec bloquant
-			-- plafonne la note à SCORE_CAP_BLOCKING (« Pas prêt »)
-			local okRun, okState, detail, score, blocking = pcall(def.run, db)
+			-- plafonne la note à SCORE_CAP_BLOCKING (« Pas prêt ») ; 1.31.0 :
+			-- tip, liste de lignes pour l'infobulle de la ligne (buffs manquants)
+			local okRun, okState, detail, score, blocking, tip = pcall(def.run, db)
 			if not okRun then
 				self:RecordError("check:" .. tostring(def.id), okState)
 			end
@@ -427,6 +432,7 @@ function ns:RunChecklist(trigger)
 					weight = weight,
 					advice = adviceKey,
 					blocking = (okState ~= true and blocking) and true or nil,
+					tip    = type(tip) == "table" and tip or nil,
 				}
 
 				totalWeight = totalWeight + weight
@@ -1012,7 +1018,8 @@ function ns:RegisterEvents(target)
 		end
 
 		if available then
-			local ok = pcall(target.RegisterEvent, target, event)
+			-- UNIT_AURA : le joueur seulement (ns.RegisterGameEvent, Compat.lua)
+			local ok = ns.RegisterGameEvent(target, event)
 			if not ok then skipped[#skipped + 1] = event end
 		end
 	end

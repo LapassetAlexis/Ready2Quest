@@ -243,6 +243,18 @@ function ns:EnsureCaptureStage()
 		f.rolling = nil
 		if rolling and rolling.result then rolling.closeAt = Clock() end
 	end)
+	-- 2.10.0 : le combat commence, la scène se ferme (OnHide ci-dessus) ; le
+	-- lancer a déjà tiré son issue et se résout en arrière-plan, son verdict
+	-- arrive dans le chat (Capture.lua, CaptureQueue.lua)
+	pcall(frame.RegisterEvent, frame, "PLAYER_REGEN_DISABLED")
+	frame:SetScript("OnEvent", function(f, event)
+		if event ~= "PLAYER_REGEN_DISABLED" or not f:IsShown() then return end
+		local rolling = ns.captureState and ns.captureState.rolling
+		f:Hide()
+		if ns.CaptureHidePrompt then ns:CaptureHidePrompt() end
+		-- verdict pas encore tombé : il viendra dans le chat
+		if rolling and not rolling.result then ns:Print(ns.L.CAPTURE_STAGE_COMBAT) end
+	end)
 	local level = frame:GetFrameLevel() or 1
 	local width = az and AZS.w or STAGE_W
 

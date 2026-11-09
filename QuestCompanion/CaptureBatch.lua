@@ -92,7 +92,6 @@ local FR = {
 	CAPTURE_BATCH_SUMMARY  = "Tout capturer : %d capturées sur %d essais.",
 	CAPTURE_BATCH_SUMMARY_SHINY = "Tout capturer : %d capturées sur %d essais, dont %d brillantes !",
 	CAPTURE_BATCH_SHORT    = "Plus assez de %s : %d essais sur %d, les autres restent dans le filet.",
-	CAPTURE_BATCH_COMBAT   = "Pas de capture en combat : le filet attend la fin du combat.",
 	CAPTURE_BATCH_BUSY     = "Un filet est déjà lancé : attends son verdict.",
 	CAPTURE_CHOOSE_TITLE   = "Le filet",
 	CAPTURE_CHOOSE_ONE     = "Capturer : %s",
@@ -125,7 +124,6 @@ local EN = {
 	CAPTURE_BATCH_SUMMARY  = "Capture all: %d captured out of %d tries.",
 	CAPTURE_BATCH_SUMMARY_SHINY = "Capture all: %d captured out of %d tries, %d of them shiny!",
 	CAPTURE_BATCH_SHORT    = "Out of %s: %d tries out of %d, the others stay in the net.",
-	CAPTURE_BATCH_COMBAT   = "No capturing in combat: the net waits for the fight to end.",
 	CAPTURE_BATCH_BUSY     = "A net is already out: wait for its verdict.",
 	CAPTURE_CHOOSE_TITLE   = "The net",
 	CAPTURE_CHOOSE_ONE     = "Capture: %s",
@@ -863,6 +861,15 @@ function ns:EnsureCaptureBatchFrame()
 			tile.hasModel = nil
 		end
 	end)
+	-- 2.10.0 : le combat commence, tous les verdicts se figent (comme
+	-- « Arrêter ») et la fenêtre se ferme ; rien ne se rouvre après le combat
+	pcall(frame.RegisterEvent, frame, "PLAYER_REGEN_DISABLED")
+	frame:SetScript("OnEvent", function(f, event)
+		if event ~= "PLAYER_REGEN_DISABLED" or not f:IsShown() then return end
+		local batch = ns.captureBatch
+		if batch and not batch.done then ns:CaptureBatchStop(true) end
+		f:Hide()
+	end)
 	frame.tiles = {}
 	local stopClick = function()
 		local batch = ns.captureBatch
@@ -1295,7 +1302,9 @@ function ns:EnsureCaptureChooser()
 		local now = Clock()
 		if f.checkedAt and now - f.checkedAt < 0.1 and now >= f.checkedAt then return end
 		f.checkedAt = now
-		ns:CaptureChooserRefresh()
+		-- protégé : dix fois par seconde, une erreur inonderait le journal
+		local ok, err = pcall(ns.CaptureChooserRefresh, ns)
+		if not ok and ns.RecordError then ns:RecordError("capture:chooser", err) end
 	end)
 	frame:Hide()
 	self.captureChoosers = self.captureChoosers or {}
@@ -1394,8 +1403,8 @@ end
 
 -- Le clic sur le filet : à deux candidats ou plus, le choix ; Maj+clic, le
 -- meilleur tout de suite ; Ctrl+clic, tout tout de suite ; un second clic
--- (choix ouvert) le referme. Un seul candidat, un filet déjà en l'air, en
--- combat : comme avant (le meilleur).
+-- (choix ouvert) le referme. Un seul candidat, un filet déjà en l'air : comme
+-- avant (le meilleur). En combat (2.10.0) : refusé, plus de lancer seul.
 do
 	local base = ns.CaptureNetClick
 	if base then
@@ -1407,7 +1416,8 @@ do
 				return base(self, mouse, ...)
 			end
 			if open then self:CaptureChooserHide(); return nil end
-			if not self:CaptureBatchOffered() or InCombat() or Busy(self) then return base(self, mouse, ...) end
+			if InCombat() then return self:CaptureRefuseCombat() end
+			if not self:CaptureBatchOffered() or Busy(self) then return base(self, mouse, ...) end
 			if Key("IsControlKeyDown") then return self:CaptureBatch() end
 			if Key("IsShiftKeyDown") then return base(self, mouse, ...) end
 			return self:CaptureChooserShow()

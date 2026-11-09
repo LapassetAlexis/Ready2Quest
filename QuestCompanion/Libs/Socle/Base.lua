@@ -41,11 +41,35 @@ function ns.Throttle(interval, fn)
 	end
 end
 
+-- Résultat de build() gardé tant que les globales du client nommées dans
+-- names gardent leur valeur (motifs de messages : lus à chaque ligne de
+-- butin ou d'XP, reconstruits seulement si une chaîne du client change).
+function ns.MemoGlobals(names, build)
+	local values, result = {}, nil
+	return function()
+		local fresh = result ~= nil
+		for i = 1, #names do
+			local value = rawget(_G, names[i])
+			if values[i] ~= value then values[i] = value; fresh = false end
+		end
+		if not fresh then result = build() end
+		return result
+	end
+end
+
 -- Journalisation d'erreur, appelable depuis n'importe quel fichier
+-- Bornée à ERRORS_MAX erreurs distinctes : une erreur au texte variable (GUID,
+-- nombre) répétée à chaque image ne fait pas grossir la liste ni défiler le
+-- chat sans fin ; les suivantes sont seulement comptées (ns.errorsDropped).
+ns.ERRORS_MAX = 50
 function ns:RecordError(where, message)
 	message = tostring(message)
 	for _, entry in ipairs(self.errors) do
 		if entry.where == where and entry.message == message then return end
+	end
+	if #self.errors >= ns.ERRORS_MAX then
+		self.errorsDropped = (self.errorsDropped or 0) + 1
+		return
 	end
 	self.errors[#self.errors + 1] = { where = where, message = message }
 	if type(print) == "function" then

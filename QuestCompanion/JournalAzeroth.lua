@@ -1706,7 +1706,11 @@ do
 	if refresh then
 		function ns:TrainerRefreshWindow(...)
 			local frame = self.trainerFrame
-			if not (frame and frame.azeroth and frame.azReg) then return refresh(self, ...) end
+			-- fiche fermée : le vrai rafraîchissement ne fait rien, l'habillage
+			-- non plus (un changement de titre ou de vitrine l'appelle quand même)
+			if not (frame and frame.azeroth and frame.azReg) or not frame:IsShown() then
+				return refresh(self, ...)
+			end
 			local a, b = CaptureRun(frame.azReg, refresh, self, ...)
 			SkinNew(frame, frame.azReg)
 			local ok, err = pcall(PostTrainer, self, frame)

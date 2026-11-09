@@ -345,14 +345,26 @@ local function RoundIcon(parent, path, layer)
 	return tex
 end
 
-local function PaintPrism(frame, holder)
+local PaintPrism
+-- OnUpdate partagé (une seule fonction, posée sans fermeture neuve)
+local function PrismUpdate(h)
+	local now = Now()
+	if h.prismAt and now - h.prismAt < SPIN_STEP then return end
+	h.prismAt = now
+	PaintPrism(h.prismFrame, h)
+end
+
+function PaintPrism(frame, holder)
 	local t = Now() * SPIN_HZ
 	if Azeroth(frame) then
 		if holder.halo then holder.halo:SetVertexColor(Hue(t)) end
 		return
 	end
 	-- un côté par quart de tour : le filet entier passe par l'arc-en-ciel
-	for index, edge in ipairs({ frame.top, frame.rightEdge, frame.bottom, frame.leftEdge }) do
+	-- (les quatre côtés lus sans table neuve : vingt fois par seconde)
+	for index = 1, 4 do
+		local edge = (index == 1 and frame.top) or (index == 2 and frame.rightEdge)
+			or (index == 3 and frame.bottom) or frame.leftEdge
 		if edge and edge.SetVertexColor then
 			local r, g, b = Hue(t + (index - 1) * 0.25)
 			edge:SetVertexColor(r, g, b, 1)
@@ -409,12 +421,13 @@ function ns:FeatApplyFrameDeco()
 			if az then holder.halo:Show() else holder.halo:Hide() end
 		end
 		holder.prismAt = nil
-		holder:SetScript("OnUpdate", function(h)
-			local now = Now()
-			if h.prismAt and now - h.prismAt < SPIN_STEP then return end
-			h.prismAt = now
-			PaintPrism(frame, h)
-		end)
+		holder.prismFrame = frame
+		-- Azeroth sans halo du client : rien ne tourne, pas d'OnUpdate
+		if az and not holder.halo then
+			holder:SetScript("OnUpdate", nil)
+		else
+			holder:SetScript("OnUpdate", PrismUpdate)
+		end
 		PaintPrism(frame, holder)
 	else
 		if holder.halo then holder.halo:Hide() end

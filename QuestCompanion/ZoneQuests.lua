@@ -367,12 +367,16 @@ end
 -- ---------------------------------------------------------------------------
 -- Événements : le statut « faite » change, la table non
 -- ---------------------------------------------------------------------------
+-- QUEST_LOG_UPDATE arrive en rafales : une table neuve seulement si
+-- l'ancienne a servi
 local function Forget()
-	state.live = {}
+	if next(state.live) then state.live = {} end
 	if InCombat() then
 		state.dirty = true
 	else
-		state.done, state.lists, state.dirty = {}, {}, false
+		if next(state.done) then state.done = {} end
+		if next(state.lists) then state.lists = {} end
+		state.dirty = false
 	end
 end
 local function AfterCombat()
@@ -394,7 +398,23 @@ local function QuestDataLoaded(questID, success)
 	if not ClientTitle(id, false) then return end
 	state.lists = {}
 	local frame = ns.journalFrame
-	if frame and frame.IsShown and frame:IsShown() and ns.RefreshJournal and not InCombat() then ns:RefreshJournal() end
+	if frame and frame.IsShown and frame:IsShown() and ns.RefreshJournal and not InCombat() then
+		-- les titres arrivent en rafale (un événement par quête demandée) : un
+		-- seul rafraîchissement, à l'image suivante (ns.zoneQuestsEventFrame)
+		state.refreshSoon = true
+		if ns.zoneQuestsEventFrame then ns.zoneQuestsEventFrame:SetScript("OnUpdate", ns.ZoneQuestsFlush) end
+	end
+end
+-- rafraîchissement regroupé : une fois, puis l'OnUpdate se retire
+function ns.ZoneQuestsFlush(f)
+	if f then f:SetScript("OnUpdate", nil) end
+	if not state.refreshSoon then return end
+	state.refreshSoon = nil
+	local frame = ns.journalFrame
+	if frame and frame.IsShown and frame:IsShown() and ns.RefreshJournal and not InCombat() then
+		local ok, err = pcall(ns.RefreshJournal, ns)
+		if not ok and ns.RecordError then ns:RecordError("zonequests:refresh", err) end
+	end
 end
 ns.ZoneQuestDataLoaded = QuestDataLoaded
 local HANDLERS = { QUEST_TURNED_IN = Forget, QUEST_LOG_UPDATE = Forget, PLAYER_REGEN_ENABLED = AfterCombat,

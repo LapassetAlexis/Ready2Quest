@@ -589,24 +589,32 @@ local function Refresh(self, frame, ui)
 		Paint(row.label, on and Theme.PARCHMENT or Theme.LABEL)
 	end
 	pane.title:SetText(L["GUIDE_SEC_" .. section])
-	local blocks = self:JournalGuideBlocks(section, pane.cols)
-	local heights = {}
-	for index, block in ipairs(blocks) do heights[index] = MeasureBlock(pane, block) end
-	-- combien de blocs tiennent depuis `start` (au moins un)
-	local function Fit(start)
-		local y, count = 0, 0
-		for index = start + 1, #blocks do
-			local h = heights[index] + GapBefore(blocks, index, count == 0)
-			if count > 0 and y + h > pane.areaH then break end
-			y, count = y + h, count + 1
+	-- molette : blocs, hauteurs mesurées et dernière page de la même section
+	-- sont repris (chaque mesure pose un texte et le mesure)
+	local layout = pane.layout
+	if not (frame.scrollOnly and layout and layout.section == section) then
+		local blocks = self:JournalGuideBlocks(section, pane.cols)
+		local heights = {}
+		for index, block in ipairs(blocks) do heights[index] = MeasureBlock(pane, block) end
+		-- combien de blocs tiennent depuis `start` (au moins un)
+		local function Fit(start)
+			local y, count = 0, 0
+			for index = start + 1, #blocks do
+				local h = heights[index] + GapBefore(blocks, index, count == 0)
+				if count > 0 and y + h > pane.areaH then break end
+				y, count = y + h, count + 1
+			end
+			return count
 		end
-		return count
+		-- la dernière page : la plus petite position d'où tout le reste tient
+		local maxOffset = 0
+		for start = 0, math.max(0, #blocks - 1) do
+			if Fit(start) >= #blocks - start then maxOffset = start; break end
+		end
+		layout = { section = section, blocks = blocks, heights = heights, maxOffset = maxOffset }
+		pane.layout = layout
 	end
-	-- la dernière page : la plus petite position d'où tout le reste tient
-	local maxOffset = 0
-	for start = 0, math.max(0, #blocks - 1) do
-		if Fit(start) >= #blocks - start then maxOffset = start; break end
-	end
+	local blocks, heights, maxOffset = layout.blocks, layout.heights, layout.maxOffset
 	local offset = math.max(0, math.min(tonumber(frame.guideOffset) or 0, maxOffset))
 	frame.guideOffset = offset
 	HideAll(pane)

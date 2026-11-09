@@ -7,4 +7,10 @@
 	<Binding name="QUESTCOMPANION_JOURNAL" category="ADDONS">
 		QuestCompanion_ToggleJournal()
 	</Binding>
+	<Binding name="QUESTCOMPANION_TOGGLE" category="ADDONS">
+		QuestCompanion_ToggleCompanion()
+	</Binding>
+	<Binding name="QUESTCOMPANION_NET" category="ADDONS">
+		QuestCompanion_ThrowNet()
+	</Binding>
 </Bindings>

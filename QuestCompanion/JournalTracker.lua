@@ -33,7 +33,6 @@ local TRACKER_MAX = 4
 -- 2.9.0 : plus large (les libellés étaient coupés), lignes un peu plus hautes
 local TRACKER_WIDTH, TITLE_H, LINE_H = 280, 18, 18
 local FEATURED_H, FEATURED_GAP = 40, 4
-local MINI_BAR_W = 44
 local HINT_NAMES = 6        -- noms listés au survol, au-delà « … et N autres »
 -- Ordre d'essai : Era d'abord (QuestWatchFrame), puis le client moderne de
 -- Forever (le cadre global, puis le seul bloc des quêtes)
@@ -63,7 +62,17 @@ local FR = {
 	JRN_STAT_level         = "niveau",
 	JRN_STAT_total         = "tampons",
 	JRN_HINT_TODO          = "Pour avancer :",
-	JRN_HINT_CLICK         = "Clic : ouvrir le carnet · clic droit : masquer",
+	JRN_HINT_CLICK         = "Clic : ouvrir sa page · clic droit : masquer (aujourd'hui pour une mission)",
+	-- 2.10.0 : ce qui est masqué se voit (titre) et se réaffiche (clic droit, réglages)
+	JRN_TRK_HIDDEN_ONE_SHORT  = "1 masqué",
+	JRN_TRK_HIDDEN_MANY_SHORT = "%d masqués",
+	JRN_TRK_TIP_TITLE      = "Suivi du carnet",
+	JRN_TRK_TIP_CLICK      = "Clic : replier ou déplier · glisser : déplacer",
+	JRN_TRK_TIP_RESTORE    = "Clic droit : réafficher les objectifs masqués",
+	JRN_TRK_RESTORED_ONE   = "1 objectif réaffiché.",
+	JRN_TRK_RESTORED_MANY  = "%d objectifs réaffichés.",
+	OPT_JRN_TRACKER_RESTORE = "Réafficher les objectifs masqués",
+	OPT_RESTORE            = "Réafficher",
 	JRN_HINT_MORE          = "… et %d autres",
 	JRN_HINT_app           = "Débloque une nouvelle apparence pour ton compagnon.",
 	JRN_HINT_orn           = "Débloque un nouvel ornement pour le cadre du compagnon.",
@@ -114,7 +123,16 @@ local EN = {
 	JRN_STAT_level         = "level",
 	JRN_STAT_total         = "stamps",
 	JRN_HINT_TODO          = "To make progress:",
-	JRN_HINT_CLICK         = "Click: open the journal · right-click: hide",
+	JRN_HINT_CLICK         = "Click: open its page · right-click: hide (today only for a mission)",
+	JRN_TRK_HIDDEN_ONE_SHORT  = "1 hidden",
+	JRN_TRK_HIDDEN_MANY_SHORT = "%d hidden",
+	JRN_TRK_TIP_TITLE      = "Journal tracker",
+	JRN_TRK_TIP_CLICK      = "Click: collapse or expand · drag: move",
+	JRN_TRK_TIP_RESTORE    = "Right-click: show hidden objectives again",
+	JRN_TRK_RESTORED_ONE   = "1 objective shown again.",
+	JRN_TRK_RESTORED_MANY  = "%d objectives shown again.",
+	OPT_JRN_TRACKER_RESTORE = "Show hidden objectives again",
+	OPT_RESTORE            = "Show",
 	JRN_HINT_MORE          = "… and %d more",
 	JRN_HINT_app           = "Unlocks a new look for your companion.",
 	JRN_HINT_orn           = "Unlocks a new ornament for your companion's frame.",
@@ -554,6 +572,9 @@ local function ZoneGoal(self, zoneID, zoneName, minParts)
 	if not goal then return nil end
 	goal.progress = self:F("JRN_ZONE_PCT", done.percent)
 	goal.zoneCompletion, goal.zoneID = true, zoneID
+	-- 2.10.0 : en ligne secondaire, le nom de la zone seul (la carte en vedette
+	-- et l'infobulle gardent le libellé complet)
+	goal.brief = zoneName and tostring(zoneName) or nil
 	local hint = { L.JRN_ZONE_PARTS }
 	local easiest
 	for _, part in ipairs(done.parts) do
@@ -667,16 +688,41 @@ function ns:JournalTrackerObjectives()
 		end
 		return nil
 	end
-	local shown = {}
+	local shown, dismissed = {}, 0
 	for _, goal in ipairs(all) do
 		local partZone = ZoneOf(goal)
 		local zoneID = goal.zoneCompletion and goal.id:match("^zone:(%d+)$") or partZone
-		local hidden = goal.dismissed
-			or (zoneID and not self:JournalIsWatched(tonumber(zoneID)))
-			or (partZone and zonesShown[partZone])
+		local unwatched = zoneID and not self:JournalIsWatched(tonumber(zoneID))
+		local hidden = goal.dismissed or unwatched or (partZone and zonesShown[partZone])
 		if not hidden and #shown < TRACKER_MAX then shown[#shown + 1] = goal end
+		-- 2.10.0 : les masqués d'un clic droit (une zone décochée se recoche ailleurs)
+		if goal.dismissed and not unwatched then dismissed = dismissed + 1 end
 	end
-	return shown
+	return shown, dismissed
+end
+
+-- 2.10.0 : objectifs actuels masqués d'un clic droit (les clés périmées ne
+-- comptent pas, ni les zones décochées : « Suivre à l'écran » les rend)
+function ns:JournalHiddenCount()
+	local _, count = self:JournalTrackerObjectives()
+	return count
+end
+
+-- 2.10.0 : réaffiche tous les objectifs actuels masqués ; les autres clés
+-- restent (elles ne gênent pas, celles des missions sont purgées chaque jour)
+function ns:JournalRestoreDismissed()
+	local dismissed = self:JournalData().dismissed
+	if type(dismissed) ~= "table" then return 0 end
+	local count = 0
+	for _, goal in ipairs(self:JournalObjectives()) do
+		if dismissed[goal.id] then dismissed[goal.id] = nil; count = count + 1 end
+	end
+	if count > 0 then
+		self:Print(count == 1 and L.JRN_TRK_RESTORED_ONE or self:F("JRN_TRK_RESTORED_MANY", count))
+		self:RefreshJournalTracker()
+		if self.journalFrame and self.journalFrame:IsShown() and self.RefreshJournal then self:RefreshJournal() end
+	end
+	return count
 end
 
 -- Les objectifs en lignes { name, earned, goal, detail } (l'ancien onglet
@@ -800,16 +846,24 @@ local function StopDrag()
 end
 
 -- Clic sur un objectif : le compagnon (stade, bonheur) ouvre l'Évolution ;
--- le reste ouvre la Complétion de la zone où tu es. Déjà ouvert : fermé.
+-- une mission, la page du jour ; le reste, la Complétion (de sa zone s'il
+-- en a une). 2.10.0 : le carnet ne se ferme que s'il montre déjà cette
+-- page (même zone) ; sinon il y va.
 function ns:OpenJournalFor(goal)
 	if type(self.ToggleJournal) ~= "function" then return nil end
-	local current = self.journalFrame
-	if current and current:IsShown() then current:Hide(); return current end
-	local frame = self:ToggleJournal(true)
 	local evolution = goal and (goal.kind == "stage" or goal.source == "companion")
-	if frame and self.SelectJournalKind then self:SelectJournalKind(evolution and "evolution" or "completion") end
+	local kind = (goal and goal.page) or (evolution and "evolution") or "progress"
+	local zoneID = not evolution and kind == "progress" and goal and tonumber(goal.zoneID) or nil
+	local current = self.journalFrame
+	if current and current:IsShown() then
+		local same = current.kind == kind or (kind == "progress" and current.kind == "completion")
+		if same and (not zoneID or tonumber(current.zoneID) == zoneID) then current:Hide(); return current end
+	end
+	local frame = self:ToggleJournal(true)
+	if not frame then return nil end
 	-- un objectif de zone ouvre cette zone
-	if frame and not evolution and goal and goal.zoneID and self.SelectJournalZone then self:SelectJournalZone(goal.zoneID) end
+	if zoneID and self.SelectJournalZone then self:SelectJournalZone(zoneID)
+	elseif self.SelectJournalKind then self:SelectJournalKind(kind == "progress" and "completion" or kind) end
 	return frame
 end
 
@@ -899,10 +953,9 @@ local function BuildLine(frame, index)
 		line.shade:SetVertexColor(shade[1], shade[2], shade[3], 0.55)
 		line.diamond:SetPoint("LEFT", line, "LEFT", 12, 0)
 		line.text:SetPoint("LEFT", line, "LEFT", 24, 0)
-		line.text:SetWidth(TRACKER_WIDTH - 24 - MINI_BAR_W - 52)
+		-- 2.10.0 : plus de mini-barre (le compte suffit) : le libellé gagne sa place
+		line.text:SetWidth(TRACKER_WIDTH - 24 - 52)
 		line.text:SetTextColor(Theme.TEXT[1], Theme.TEXT[2], Theme.TEXT[3])
-		line.bar = Theme.CreateBar(line, MINI_BAR_W, 3)
-		line.bar:SetPoint("RIGHT", line, "RIGHT", -46, 0)
 		line.progress:SetPoint("RIGHT", line, "RIGHT", -8, 0)
 		line.progress:SetWidth(38)
 	end
@@ -929,9 +982,27 @@ function ns:EnsureJournalTracker()
 	local title = CreateFrame("Button", nil, frame)
 	title:SetSize(TRACKER_WIDTH, TITLE_H)
 	title:SetPoint("TOPRIGHT", frame, "TOPRIGHT", 0, 0)
-	if title.RegisterForClicks then title:RegisterForClicks("LeftButtonUp") end
+	-- 2.10.0 : clic droit = réafficher les objectifs masqués ; l'infobulle dit les trois gestes
+	if title.RegisterForClicks then title:RegisterForClicks("LeftButtonUp", "RightButtonUp") end
 	if title.RegisterForDrag then title:RegisterForDrag("LeftButton") end
-	title:SetScript("OnClick", function() ns:ToggleJournalTrackerCollapsed() end)
+	title:SetScript("OnClick", function(_, button)
+		if button == "RightButton" then
+			HideTooltip()
+			return ns:JournalRestoreDismissed()
+		end
+		ns:ToggleJournalTrackerCollapsed()
+	end)
+	title:SetScript("OnEnter", function(self)
+		local tip = rawget(_G, "GameTooltip")
+		if type(tip) ~= "table" then return end
+		pcall(tip.SetOwner, tip, self, "ANCHOR_LEFT")
+		if tip.ClearLines then tip:ClearLines() end
+		tip:AddLine(L.JRN_TRK_TIP_TITLE, Theme.GOLD[1], Theme.GOLD[2], Theme.GOLD[3])
+		tip:AddLine(L.JRN_TRK_TIP_CLICK, Theme.MUTED_LIGHT[1], Theme.MUTED_LIGHT[2], Theme.MUTED_LIGHT[3])
+		tip:AddLine(L.JRN_TRK_TIP_RESTORE, Theme.MUTED_LIGHT[1], Theme.MUTED_LIGHT[2], Theme.MUTED_LIGHT[3])
+		tip:Show()
+	end)
+	title:SetScript("OnLeave", HideTooltip)
 	title:SetScript("OnDragStart", StartDrag)
 	title:SetScript("OnDragStop", StopDrag)
 	title.text = Theme.Text(title, Theme.F_HEADING, Theme.GOLD)
@@ -952,14 +1023,16 @@ function ns:EnsureJournalTracker()
 end
 
 -- Visible si : module allumé, suivi allumé, pas en combat (si réglé), et au
--- moins un objectif. Un titre seul, sans rien à suivre, ne serait que du bruit.
+-- moins un objectif. Un titre seul, sans rien à suivre, ne serait que du bruit,
+-- sauf s'il reste des masqués (2.10.0) : il sert à les réafficher.
 function ns:RefreshJournalTracker()
 	local db = self:DB()
 	local frame = self.journalTracker
 	local wanted = ModuleOn() and db.journalTracker ~= false
 		and not (db.journalTrackerCombat ~= false and InCombat())
-	local goals = wanted and self:JournalTrackerObjectives() or {}
-	if #goals == 0 then
+	local goals, hidden = {}, 0
+	if wanted then goals, hidden = self:JournalTrackerObjectives() end
+	if #goals == 0 and hidden == 0 then
 		if frame then frame:Hide() end
 		return frame
 	end
@@ -968,8 +1041,12 @@ function ns:RefreshJournalTracker()
 	if frame.anchoredTo ~= "saved" then self:PlaceJournalTracker() end
 
 	local collapsed = db.journalTrackerCollapsed == true
-	frame.goals, frame.collapsed = goals, collapsed
-	frame.title.text:SetText(collapsed and self:F("JRN_TRK_TITLE_COUNT", #goals) or L.JRN_TRK_TITLE)
+	frame.goals, frame.collapsed, frame.hidden = goals, collapsed, hidden
+	local heading = (collapsed and #goals > 0) and self:F("JRN_TRK_TITLE_COUNT", #goals) or L.JRN_TRK_TITLE
+	if hidden > 0 then
+		heading = heading .. " · " .. (hidden == 1 and L.JRN_TRK_HIDDEN_ONE_SHORT or self:F("JRN_TRK_HIDDEN_MANY_SHORT", hidden))
+	end
+	frame.title.text:SetText(heading)
 	frame.title.state:SetText(collapsed and "+" or "-")
 	local shown = 0
 	for index, line in ipairs(frame.lines) do
@@ -980,10 +1057,10 @@ function ns:RefreshJournalTracker()
 				line.text:SetText(goal.short or goal.label)
 				line.progress:SetText(goal.progress .. (goal.unit and (" " .. goal.unit) or ""))
 			else
-				line.text:SetText(goal.label)
+				line.text:SetText(goal.brief or goal.label)
 				line.progress:SetText(goal.progress)
 			end
-			line.bar:SetValue(goal.have / goal.need)
+			if line.bar then line.bar:SetValue(goal.have / goal.need) end
 			line:Show()
 			shown = shown + 1
 		else
@@ -1004,6 +1081,7 @@ do
 	local previous = ns.RunOptionAction
 	function ns:RunOptionAction(key, ...)
 		if key == "journalTrackerReset" then return self:ResetJournalTracker() end
+		if key == "journalTrackerRestore" then return self:JournalRestoreDismissed() end
 		if previous then return previous(self, key, ...) end
 	end
 end
@@ -1053,7 +1131,16 @@ local HANDLERS = {
 		ns.journalLevelHint = nil
 		if not ok then error(err, 0) end
 	end,
-	PLAYER_REGEN_DISABLED = function() ns.journalTrackerCombat = true; ns:RefreshJournalTracker() end,
+	-- entrée en combat : si le suivi se cache en combat, on le cache sans tout
+	-- recalculer (coffre, friandises, missions, sceau : rien n'a changé)
+	PLAYER_REGEN_DISABLED = function()
+		ns.journalTrackerCombat = true
+		if ns:DB().journalTrackerCombat ~= false then
+			if ns.journalTracker then ns.journalTracker:Hide() end
+			return
+		end
+		ns:RefreshJournalTracker()
+	end,
 	PLAYER_REGEN_ENABLED  = function() ns.journalTrackerCombat = false; ns:RefreshJournalTracker() end,
 }
 

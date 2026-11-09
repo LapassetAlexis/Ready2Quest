@@ -23,7 +23,9 @@ function Mock:Output() return table.concat(self.output, "\n") end
 function Mock:Reset() self.output = {} end
 function Mock:Fire(event, ...)
 	for _, frame in ipairs(self.frames) do
-		if frame.events and frame.events[event] and frame.script then
+		local filter = frame.unitFilter and frame.unitFilter[event]
+		if frame.events and frame.events[event] and frame.script
+			and not (filter and not filter[(...)]) then
 			frame.script(frame, event, ...)
 		end
 	end
@@ -53,8 +55,17 @@ local function NewRegion(kind, name, parent)
 		end
 		self.events[event] = true
 	end
+	-- comme le client : l'événement d'unité n'arrive que pour les unités dites
+	function region:RegisterUnitEvent(event, ...)
+		self:RegisterEvent(event)
+		self.unitFilter = self.unitFilter or {}
+		local units = {}
+		for i = 1, select("#", ...) do units[(select(i, ...))] = true end
+		self.unitFilter[event] = units
+	end
 	function region:UnregisterEvent(event)
 		self.events[event] = nil
+		if self.unitFilter then self.unitFilter[event] = nil end
 	end
 	function region:SetScript(script, fn)
 		self.scripts[script] = fn
@@ -1812,7 +1823,7 @@ ResetWorld()
 Say("\n== bootstrap et diagnostic ==")
 ResetWorld()
 Check("commande enregistrée par le bootstrap", type(SlashCmdList["SACETDEPART"]) == "function")
-Check("version exposée", NS.version == "1.30.1", NS.version)
+Check("version exposée", NS.version == "1.31.0", NS.version)
 
 local missingMods = {}
 for _, name in ipairs({ "Bootstrap", "Locales", "Compat", "Theme", "Core", "Buffs", "Reagents",
@@ -1833,7 +1844,7 @@ NS.HandleCommand = savedHandle
 Mock:Reset()
 NS:HandleCommand("diag")
 Check("/sd diag liste les modules", Mock:Output():find("modules :") ~= nil, Mock:Output())
-Check("/sd diag affiche la version", Mock:Output():find("1%.30%.1") ~= nil, Mock:Output())
+Check("/sd diag affiche la version", Mock:Output():find("1%.31%.0") ~= nil, Mock:Output())
 
 -- une erreur est enregistrée et affichée
 Mock:Reset()
