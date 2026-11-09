@@ -61,6 +61,7 @@ Daily.lua
 Weekly.lua
 MissionsMenagerie.lua
 CaptureBatch.lua
+CaptureSkip.lua
 Notify.lua
 LiveRares.lua
 Tooltips.lua

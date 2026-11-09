@@ -77,6 +77,17 @@ local NAME_MAX = 24
 
 -- Priorités des bulles : une bulle n'efface jamais une bulle plus importante
 local PRIORITY = { chatter = 0, tip = 1, need = 2, reaction = 3, advice = 4, tuto = 5, event = 6 }
+-- 2.10.0 : en combat, seules passent les bulles qui demandent d'agir tout de
+-- suite (une brillante, un rare repéré) ; le reste est compté et résumé après
+-- (et le Peureux qui s'alarme de ta vie sous 60 %, une fois par combat :
+-- c'est une alerte, et sa seule réplique de combat, Personality.lua)
+local COMBAT_PASS = { SHINY_SPOTTED = true, RARE_LIVE = true, NOTICE__fearful = true }
+ns.COMPANION_COMBAT_PASS = COMBAT_PASS
+ns.COMPANION_COMBAT_ALPHA = 0.35     -- opacité du cadre et du filet en combat
+ns.COMPANION_SUMMARY_DELAY = 1.5     -- s entre la fin du combat et le résumé
+ns.COMPANION_FIGHT_GRACE = 1         -- s où le drapeau d'entrée en combat suffit (les API suivent)
+ns.COMPANION_MOVES = { "free", "alt", "locked" }
+ns.COMPANION_AGGRO_MODES = { "solo", "always", "off" }
 
 -- Réglette « Bavardage » (db.companionChatter, 0 à 4) : ce qu'il dit, et à
 -- quel rythme. `allow` = catégories permises (nil = toutes) ; `important` =
@@ -274,6 +285,24 @@ local FR = {
 	COMP_REQ_inn           = "%d cartes d'auberge pleines",
 	COMP_REQ_missions      = "%d jours aux trois missions",
 	COMP_HOVER_HINT        = "Clic : un câlin · Maj + clic : friandises · clic droit : carnet · glisser : déplacer\nChange de compagnon : toute créature capturée au filet, page Compagnon du carnet",
+	-- 2.10.0 : compagnon discret en combat, masqué en donjon, alerte d'aggro réglable, déplacement verrouillé
+	OPT_COMP_COMBAT_FADE   = "Estomper en combat",
+	OPT_COMP_COMBAT_FADE_DESC = "Le compagnon se fait discret pendant un combat et te raconte tout après.",
+	OPT_COMP_HIDE_INSTANCE = "Masquer en donjon et en raid",
+	OPT_COMP_HIDE_INSTANCE_DESC = "Le compagnon et son filet reviennent à la sortie.",
+	OPT_COMP_AGGRO         = "Alerte « plusieurs monstres sur toi »",
+	OPT_COMP_AGGRO_DESC    = "Le cadre du compagnon clignote en rouge quand deux monstres ou plus te visent.",
+	COMP_AGGRO_solo        = "Seul, hors instance",
+	COMP_AGGRO_always      = "Toujours",
+	COMP_AGGRO_off         = "Jamais",
+	OPT_COMP_MOVE          = "Déplacer le compagnon",
+	OPT_COMP_MOVE_DESC     = "Pour ne plus le déplacer en voulant le caresser.",
+	COMP_MOVE_free         = "En le glissant",
+	COMP_MOVE_alt          = "Alt + glisser",
+	COMP_MOVE_locked       = "Verrouillé",
+	COMP_HOVER_HINT_alt    = "Clic : un câlin · Maj + clic : friandises · clic droit : carnet · Alt + glisser : déplacer\nChange de compagnon : toute créature capturée au filet, page Compagnon du carnet",
+	COMP_HOVER_HINT_locked = "Clic : un câlin · Maj + clic : friandises · clic droit : carnet\nChange de compagnon : toute créature capturée au filet, page Compagnon du carnet",
+	COMP_MSG_SHOWN         = "Compagnon : %s.",
 	OPT_COMP_TUTO          = "Rejouer le tutoriel",
 	COMP_PREVIEW_LINE      = "%s  ·  %s",
 	COMP_TUTO_NEXT         = "Suivant",
@@ -312,7 +341,7 @@ local FR = {
 	COMP_MSG_APPEARANCE    = "Apparence : %s.",
 	COMP_MSG_MUTE          = "Bulles du compagnon : %s.",
 	COMP_MSG_FALLBACK      = "Modèle 3D indisponible sur ce client : la boussole le remplace.",
-	HELP_COMPANION         = "/qc compagnon [nom <nom> | caresse | apparence | muet | tuto [collection | passer] | anim] — ton compagnon de route",
+	HELP_COMPANION         = "/qc compagnon [nom <nom> | caresse | apparence | muet | cacher | montrer | tuto [collection | passer] | anim] — ton compagnon de route",
 }
 local EN = {
 	OPT_PAGE_COMPANION_MAIN = "Companion",
@@ -483,9 +512,26 @@ local EN = {
 	COMP_MSG_NAME_BAD      = "Give it a name: /qc compagnon nom <name>",
 	COMP_MSG_OFF           = "The companion is off (/qc module compagnon on).",
 	COMP_MSG_APPEARANCE    = "Appearance: %s.",
+	OPT_COMP_COMBAT_FADE   = "Fade in combat",
+	OPT_COMP_COMBAT_FADE_DESC = "Your companion keeps quiet during a fight and tells you everything afterwards.",
+	OPT_COMP_HIDE_INSTANCE = "Hide in dungeons and raids",
+	OPT_COMP_HIDE_INSTANCE_DESC = "The companion and its net come back when you leave.",
+	OPT_COMP_AGGRO         = "“Several monsters on you” alert",
+	OPT_COMP_AGGRO_DESC    = "The companion's frame flashes red when two or more monsters target you.",
+	COMP_AGGRO_solo        = "Solo, outside instances",
+	COMP_AGGRO_always      = "Always",
+	COMP_AGGRO_off         = "Never",
+	OPT_COMP_MOVE          = "Moving the companion",
+	OPT_COMP_MOVE_DESC     = "So you no longer move it when you meant to pet it.",
+	COMP_MOVE_free         = "By dragging",
+	COMP_MOVE_alt          = "Alt + drag",
+	COMP_MOVE_locked       = "Locked",
+	COMP_HOVER_HINT_alt    = "Click: a cuddle · Shift + click: treats · right-click: journal · Alt + drag: move\nSwitch companion: any creature caught with the net, journal's Companion page",
+	COMP_HOVER_HINT_locked = "Click: a cuddle · Shift + click: treats · right-click: journal\nSwitch companion: any creature caught with the net, journal's Companion page",
+	COMP_MSG_SHOWN         = "Companion: %s.",
 	COMP_MSG_MUTE          = "Companion bubbles: %s.",
 	COMP_MSG_FALLBACK      = "3D model unavailable on this client: the compass stands in.",
-	HELP_COMPANION         = "/qc compagnon [nom <name> | caresse | apparence | muet | tuto | anim] — your road companion",
+	HELP_COMPANION         = "/qc compagnon [nom <name> | caresse | apparence | muet | hide | show | tuto | anim] — your road companion",
 }
 ns.RegisterStrings(FR, EN)
 if ns.KEEP_STRINGS then ns.COMPANION_STRINGS = { fr = FR, en = EN } end   -- exposé aux tests (parité fr/en)
@@ -504,6 +550,10 @@ ns.RegisterDefaults({
 	companionOrnPennant = true,
 	companionOrnCrystal = true,
 	companionOrnCrown   = true,
+	-- 2.10.0 : discret en combat, masqué en donjon (au choix), glisser avec Alt
+	companionCombatFade   = true,
+	companionHideInstance = false,
+	companionMove         = "alt",
 })
 
 -- Un seul module « Compagnon de route » : le carnet de voyage le fait évoluer.
@@ -517,6 +567,23 @@ ns.AddOptionPage({
 	preview = function(self, container) return self:CompanionPreview(container) end,
 	rows = {
 		{ key = "companionShow",       label = "OPT_COMP_SHOW",       kind = "bool" },
+		-- 2.10.0 : discret en combat, masqué en donjon, alerte d'aggro, déplacement
+		{ key = "companionCombatFade", label = "OPT_COMP_COMBAT_FADE", kind = "bool",
+			describe = function() return L.OPT_COMP_COMBAT_FADE_DESC end,
+			onChange = function() ns:CompanionApplyContext() end },
+		{ key = "companionHideInstance", label = "OPT_COMP_HIDE_INSTANCE", kind = "bool",
+			describe = function() return L.OPT_COMP_HIDE_INSTANCE_DESC end,
+			onChange = function() ns:CompanionUpdateVisibility(); if ns.CaptureQueueRefresh then ns:CaptureQueueRefresh() end end },
+		{ key = "companionAggroBlink", label = "OPT_COMP_AGGRO",      kind = "action",
+			choices = function() return ns:CompanionModeChoices(ns.COMPANION_AGGRO_MODES, "COMP_AGGRO_") end,
+			current = function() return ns.CompanionAggroMode and ns:CompanionAggroMode() or "solo" end,
+			describe = function() return L.OPT_COMP_AGGRO_DESC end,
+			choose = function(id) ns:CompanionSetMode("companionAggroBlink", ns.COMPANION_AGGRO_MODES, id) end },
+		{ key = "companionMove",       label = "OPT_COMP_MOVE",       kind = "action",
+			choices = function() return ns:CompanionModeChoices(ns.COMPANION_MOVES, "COMP_MOVE_") end,
+			current = function() return ns:CompanionMoveMode() end,
+			describe = function() return L.OPT_COMP_MOVE_DESC end,
+			choose = function(id) ns:CompanionSetMode("companionMove", ns.COMPANION_MOVES, id) end },
 		-- réglette « Bavardage » : le nom du cran, une phrase dessous, le détail
 		-- au survol, et le compagnon qui confirme
 		{ key = "companionSize",       label = "OPT_COMP_SIZE",       kind = "number", min = 1, max = 4, step = 1,
@@ -600,7 +667,16 @@ local function PlayerLevel() return tonumber((Call(rawget(_G, "UnitLevel"), "pla
 local function Clamp(v, lo, hi) if v < lo then return lo end if v > hi then return hi end return v end
 -- Combat : verrou de l'interface OU drapeau de l'unité (les deux existent
 -- sur les deux clients, l'un peut manquer sur un client modifié)
+-- 2.10.0 : PLAYER_REGEN_DISABLED pose ns.companionFighting (l'heure) : sur
+-- cet événement, InCombatLockdown() vaut encore faux. Le drapeau ne vaut que
+-- quelques secondes (les API prennent le relais) : jamais bloqué si la fin du
+-- combat n'arrive pas (module coupé pendant le combat)
 local function InCombat()
+	local fighting = ns.companionFighting
+	if fighting then
+		local since = Clock() - fighting
+		if since >= 0 and since < ns.COMPANION_FIGHT_GRACE then return true end
+	end
 	if Call(rawget(_G, "InCombatLockdown")) then return true end
 	return Call(rawget(_G, "UnitAffectingCombat"), "player") and true or false
 end
@@ -1072,6 +1148,12 @@ function ns:CompanionSay(pool, opts)
 	if not ModuleOn() then return false, "off" end
 	local db = self:DB()
 	if db.companionShow == false then return false, "off" end
+	-- 2.10.0 : en combat, rien ne s'ouvre (sauf COMBAT_PASS) : c'est noté et
+	-- résumé après le combat (CompanionCombatSummary)
+	if not opts.seq and not COMBAT_PASS[pool] and InCombat() then
+		self:CompanionCombatNote(pool, opts)
+		return false, "combat"
+	end
 	local level = CHATTER[self:CompanionChatterLevel()]
 	local rt, now = RT(), Clock()
 	local category = opts.category or CategoryOf(pool)
@@ -1140,6 +1222,167 @@ function ns:CompanionHideBubble()
 	self.companionBubbleUntil = nil
 	self.companionBubblePrio = nil
 	if self.companionBubble then self.companionBubble:Hide() end
+end
+
+-- ---------------------------------------------------------------------------
+-- 2.10.0 : compagnon discret en combat. Ce qui aurait été dit est compté
+-- (rt.combat : des compteurs et quelques noms, jamais plus), puis résumé en
+-- une bulle après le combat ; un grand moment (évolution, niveau…) est gardé
+-- et dit à la place du résumé.
+-- ---------------------------------------------------------------------------
+local FRESH_POOLS = { STAMP = true, FOUND = true, FOUND_MANY = true }
+local DEAD_POOLS = { GROUP_DEAD = true, GROUP_HEALER_DEAD = true }
+function ns:CompanionCombatNote(pool, opts)
+	local rt = RT()
+	local c = rt.combat
+	if not c then
+		c = { kills = 0, fresh = 0, net = 0, dead = {} }
+		rt.combat = c
+	end
+	if pool == "KILL" then c.kills = c.kills + 1
+	elseif FRESH_POOLS[pool] then c.fresh = c.fresh + 1
+	elseif pool == "CAPTURE_PROMPT" then c.net = c.net + 1
+	elseif DEAD_POOLS[pool] then
+		local name = opts and opts.args and opts.args[1]
+		if name and #c.dead < 3 then c.dead[#c.dead + 1] = name end
+	else
+		local prio = PRIORITY[(opts and opts.category) or CategoryOf(pool)] or 0
+		if prio >= PRIORITY.event and (not c.best or prio > c.best.prio) then
+			c.best = { pool = pool, opts = opts, prio = prio }
+		end
+	end
+	return c
+end
+
+-- La bulle d'après combat : au plus une. Renvoie ce que dit CompanionSay.
+function ns:CompanionCombatSummary()
+	local rt = RT()
+	local c = rt.combat
+	if not c or InCombat() then return false end
+	rt.combat = nil
+	if c.best then return self:CompanionSay(c.best.pool, c.best.opts) end
+	-- les entrées du carnet en attente : comptées ici (pas de FOUND_MANY juste après)
+	local notify = self.notifyState
+	if notify and (tonumber(notify.pending) or 0) > 0 then
+		c.fresh = c.fresh + notify.pending
+		notify.pending = 0
+	end
+	if c.dead[1] then return self:CompanionSay("COMBAT_SUM_DEAD", { force = true, args = { c.dead[1] } }) end
+	if c.kills >= 2 and c.net > 0 then return self:CompanionSay("COMBAT_SUM_NET", { args = { c.kills, c.net } }) end
+	if c.kills >= 2 and c.fresh > 0 then return self:CompanionSay("COMBAT_SUM_NEW", { args = { c.kills } }) end
+	if c.kills >= 2 then return self:CompanionSay("COMBAT_SUM", { args = { c.kills }, cd = "kill" }) end
+	if c.kills == 1 then return self:CompanionSay("KILL", { cd = "kill" }) end
+	return false
+end
+
+-- Donjon ou raid, avec le réglage « Masquer en donjon et en raid »
+local function InstanceHidden(db)
+	if not db.companionHideInstance then return false end
+	local inside, kind = Call(rawget(_G, "IsInInstance"))
+	if not inside then return false end
+	-- type inconnu (client ancien) : une instance de groupe quand même
+	return kind == nil or kind == "party" or kind == "raid"
+end
+function ns:CompanionInstanceHidden() return InstanceHidden(self:DB()) end
+
+-- Opacité du cadre et du filet (le filet est un enfant de UIParent : il ne
+-- suit pas l'alpha du cadre). Cadre non protégé : permis en combat.
+function ns:CompanionContextAlpha()
+	local db = self:DB()
+	return (db.companionCombatFade ~= false and InCombat()) and ns.COMPANION_COMBAT_ALPHA or 1
+end
+function ns:CompanionApplyContext()
+	local db = self:DB()
+	local net = self.captureNetButton
+	if InstanceHidden(db) then
+		if self.companionFrame then self.companionFrame:Hide() end
+		self:CompanionHideBubble()
+		self:CompanionHideHover()
+		if net then net:Hide() end
+		return "hidden"
+	end
+	local alpha = self:CompanionContextAlpha()
+	if self.companionFrame then self.companionFrame:SetAlpha(alpha) end
+	if net then net:SetAlpha(alpha) end
+	return alpha
+end
+
+-- Le filet après chaque mise à jour de la file (crochet de CaptureQueueRefresh)
+function ns:CompanionNetContext(button)
+	if not button then return end
+	if ModuleOn() and InstanceHidden(self:DB()) then button:Hide(); return end
+	button:SetAlpha(self:CompanionContextAlpha())
+end
+
+-- Fin de combat : opacité rendue, résumé un peu après (PARTY_KILL du dernier
+-- monstre peut arriver après PLAYER_REGEN_ENABLED)
+function ns:CompanionCombatEnded()
+	self.companionFighting = nil
+	self:CompanionApplyContext()
+	local timer = rawget(_G, "C_Timer")
+	if timer and type(timer.After) == "function" then
+		timer.After(ns.COMPANION_SUMMARY_DELAY, function()
+			local ok, err = pcall(ns.CompanionCombatSummary, ns)
+			if not ok and ns.RecordError then ns:RecordError("companion:summary", err) end
+		end)
+	else
+		self:CompanionCombatSummary()
+	end
+end
+
+-- Choix à crans (alerte d'aggro, déplacement) : listes des réglages
+function ns:CompanionModeChoices(modes, prefix)
+	local list = {}
+	for _, id in ipairs(modes or {}) do list[#list + 1] = { value = id, label = L[prefix .. id] } end
+	return list
+end
+function ns:CompanionSetMode(key, modes, id)
+	local known = false
+	for _, mode in ipairs(modes or {}) do if mode == id then known = true end end
+	if not known then return nil end
+	self:DB()[key] = id
+	if self.RefreshOptions then pcall(self.RefreshOptions, self) end
+	return id
+end
+
+-- 2.10.0 : déplacer le compagnon, en glissant (« free »), avec Alt (« alt »,
+-- le défaut : un glisser simple ne fait rien) ou jamais (« locked »)
+function ns:CompanionMoveMode()
+	local mode = self:DB().companionMove
+	if mode == "free" or mode == "locked" then return mode end
+	return "alt"
+end
+function ns:CompanionMoveAllowed()
+	local mode = self:CompanionMoveMode()
+	if mode == "free" then return true end
+	if mode == "locked" then return false end
+	return Call(rawget(_G, "IsAltKeyDown")) and true or false
+end
+function ns:CompanionHoverHint()
+	local mode = self:CompanionMoveMode()
+	if mode == "free" then return L.COMP_HOVER_HINT end
+	return L["COMP_HOVER_HINT_" .. mode]
+end
+
+-- Entrée ou sortie d'une instance : le compagnon et le filet suivent le réglage
+function ns:CompanionInstanceChanged()
+	local hidden = InstanceHidden(self:DB())
+	if hidden == (self.companionInstanceHidden or false) and not hidden then return false end
+	self.companionInstanceHidden = hidden
+	self:CompanionUpdateVisibility()
+	if self.CaptureQueueRefresh then pcall(self.CaptureQueueRefresh, self) end
+	return true
+end
+
+-- Afficher / masquer (raccourci, /qc compagnon cacher|montrer)
+function ns:CompanionToggleShown()
+	local db = self:DB()
+	db.companionShow = db.companionShow == false
+	self:CompanionUpdateVisibility()
+	if self.CaptureQueueRefresh then pcall(self.CaptureQueueRefresh, self) end
+	if self.RefreshOptions then pcall(self.RefreshOptions, self) end
+	self:Print(self:F("COMP_MSG_SHOWN", db.companionShow and L.MODULE_ON or L.MODULE_OFF))
+	return db.companionShow
 end
 
 -- ---------------------------------------------------------------------------
@@ -1660,6 +1903,12 @@ function ns:EnsureCompanionFrame()
 	if not frame then return nil end
 	frame:EnableMouse(true)
 	if self.RestorePoint then self:RestorePoint(frame, "companionPoint", { point = "CENTER", x = 330, y = -170 }) end
+	-- 2.10.0 : le glisser du socle (Theme.CreateDiscreet) suit le réglage
+	-- « Déplacer le compagnon » ; l'OnDragStop de RestorePoint enregistre la
+	-- position (sans glisser réel, il réécrit la même)
+	frame:SetScript("OnDragStart", function(f)
+		if ns:CompanionMoveAllowed() and f.StartMoving then f:StartMoving() end
+	end)
 	-- la position mémorisée est en unités du cadre à sa taille : on pose
 	-- l'échelle avant tout recalage
 	if frame.SetScale then frame:SetScale(ns.COMPANION_SIZES[self:CompanionSizeLevel()]) end
@@ -1875,6 +2124,7 @@ end
 function ns:CompanionShowHover()
 	local hover = self:EnsureCompanionHover()
 	if not hover then return end
+	if hover.hint then hover.hint:SetText(self:CompanionHoverHint()) end
 	self:CompanionRefreshHover()
 	hover:Show()
 end
@@ -2149,8 +2399,10 @@ end
 -- Affiche ou cache selon le module et le réglage « Afficher »
 function ns:CompanionUpdateVisibility()
 	local db = self:DB()
-	if not ModuleOn() or db.companionShow == false then
+	if not ModuleOn() or db.companionShow == false or InstanceHidden(db) then
 		if self.companionFrame then self.companionFrame:Hide() end
+		-- en donjon (réglage) : le filet se cache aussi ; il revient à la sortie
+		if self.captureNetButton and ModuleOn() and InstanceHidden(db) then self.captureNetButton:Hide() end
 		self:CompanionHideBubble()
 		self:CompanionHideHover()
 		return false
@@ -2160,6 +2412,7 @@ function ns:CompanionUpdateVisibility()
 	self:CompanionApplyOrnaments()
 	self:CompanionRefreshLabels()
 	frame:Show()
+	self:CompanionApplyContext()
 	return true
 end
 
@@ -3086,6 +3339,12 @@ function ns:CompanionCommand(rest)
 	elseif sub == "apparence" or sub == "look" then
 		local def = self:CompanionCycleAppearance()
 		return self:Print(self:F("COMP_MSG_APPEARANCE", L[def.label]))
+	elseif sub == "cacher" or sub == "hide" or sub == "montrer" or sub == "afficher" or sub == "show" then
+		-- 2.10.0 : idempotent (cacher deux fois ne le remontre pas)
+		local want = not (sub == "cacher" or sub == "hide")
+		if (self:DB().companionShow ~= false) ~= want then self:CompanionToggleShown()
+		else self:Print(self:F("COMP_MSG_SHOWN", want and L.MODULE_ON or L.MODULE_OFF)) end
+		return
 	elseif sub == "muet" or sub == "mute" then
 		-- sourdine : réglette à 0, en retenant le cran d'avant pour y revenir
 		local db = self:DB()
@@ -3136,6 +3395,7 @@ local HANDLERS = {
 			ns:CompanionOnZone(true)
 		end
 		ns:CompanionCheckAuras()
+		ns:CompanionInstanceChanged()
 	end,
 	PLAYER_LOGOUT          = function() ns:CompanionData().lastSeen = Wall() end,
 	PLAYER_LEVEL_UP        = function(level) ns:CompanionOnLevel(level) end,
@@ -3159,8 +3419,15 @@ local HANDLERS = {
 	QUEST_DETAIL           = function() ns:CompanionOnNpc("quest") end,
 	CONFIRM_BINDER         = function() ns:CompanionOnNpc("innkeeper") end,
 	-- tutoriel : suspendu en combat, (re)lancé à la sortie
-	PLAYER_REGEN_DISABLED  = function() ns:CompanionPauseTutorial() end,
+	-- 2.10.0 : discret en combat (bulle fermée, cadre et filet estompés)
+	PLAYER_REGEN_DISABLED  = function()
+		ns.companionFighting = Clock()
+		ns:CompanionPauseTutorial()
+		ns:CompanionHideBubble()
+		ns:CompanionApplyContext()
+	end,
 	PLAYER_REGEN_ENABLED   = function()
+		ns:CompanionCombatEnded()
 		local rt = ns.companionRT
 		if rt and rt.tutoPending then ns:CompanionStartTutorial(false) end
 		if rt and rt.tutoMenageriePending then ns:CompanionStartMenagerieTutorial() end
@@ -3171,7 +3438,7 @@ local HANDLERS = {
 		ns:CompanionSay("QUEST")
 	end,
 	CHAT_MSG_LOOT          = function(message) ns:CompanionOnLoot(message) end,
-	ZONE_CHANGED_NEW_AREA  = function() ns:CompanionOnZone(true) end,
+	ZONE_CHANGED_NEW_AREA  = function() ns:CompanionInstanceChanged(); ns:CompanionOnZone(true) end,
 	ZONE_CHANGED           = function() ns:CompanionOnZone(false) end,
 	ZONE_CHANGED_INDOORS   = function() ns:CompanionOnZone(false) end,
 	UNIT_AURA              = function(unit) if unit == "player" then ns:CompanionCheckAuras() end end,

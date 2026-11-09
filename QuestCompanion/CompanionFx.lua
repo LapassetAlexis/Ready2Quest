@@ -372,7 +372,10 @@ end
 ns.COMPANION_AGGRO_MIN = 2          -- monstres sur toi pour clignoter
 ns.COMPANION_AGGRO_POLL = 0.5       -- s entre deux comptes
 ns.COMPANION_AGGRO_TEXTURE = "Interface\\Buttons\\UI-ActionButton-Border"
-if ns.RegisterDefaults then ns.RegisterDefaults({ companionAggroBlink = true }) end
+-- 2.10.0 : trois crans, « solo » (seul, hors instance : le défaut, un tank
+-- ne le voit plus clignoter sans arrêt), « always », « off » ; les anciennes
+-- valeurs restent lues (true = solo, false = off)
+if ns.RegisterDefaults then ns.RegisterDefaults({ companionAggroBlink = "solo" }) end
 
 local function Plain(v) return ns.Plain and ns.Plain(v) or v end
 local function SafeCall(fn, ...)
@@ -407,6 +410,23 @@ function ns:CompanionAggroCount()
 	return count
 end
 
+function ns:CompanionAggroMode()
+	local mode = self:DB().companionAggroBlink
+	if mode == false or mode == "off" then return "off" end
+	if mode == "always" then return "always" end
+	return "solo"
+end
+
+-- Le cran « Seul, hors instance » évite de deviner le rôle de tank (mal exposé
+-- par l'API classique)
+function ns:CompanionAggroAllowed()
+	local mode = self:CompanionAggroMode()
+	if mode == "off" then return false end
+	if mode == "always" then return true end
+	if SafeCall(rawget(_G, "IsInInstance")) then return false end
+	return SafeCall(rawget(_G, "IsInGroup")) ~= true
+end
+
 function ns:CompanionAggroUpdate(now)
 	local frame = self.companionFrame
 	if not frame then return false end
@@ -414,7 +434,7 @@ function ns:CompanionAggroUpdate(now)
 	local state = State(self)
 	if not state.aggroAt or now < state.aggroAt or now - state.aggroAt >= ns.COMPANION_AGGRO_POLL then
 		state.aggroAt = now
-		local on = self:DB().companionAggroBlink ~= false and (frame.IsShown and frame:IsShown())
+		local on = self:CompanionAggroAllowed() and (frame.IsShown and frame:IsShown())
 			and self:CompanionAggroCount() >= ns.COMPANION_AGGRO_MIN
 		state.aggroOn = on and true or false
 	end

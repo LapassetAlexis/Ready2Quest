@@ -703,6 +703,23 @@ P.TIP = {
 	{ "Astuce : Maj + clic sur une quête du journal pour la suivre à l'écran.", "Tip: Shift + click a quest in the log to track it on screen." },
 }
 
+-- 2.10.0 : résumé d'après combat (Companion.lua, CompanionCombatSummary) ;
+-- les formes à %d ne servent que pour 2 adversaires ou plus
+P.COMBAT_SUM = {   -- %d = adversaires vaincus
+	{ "Ouf ! %d adversaires au tapis.", "Phew! %d foes down." },
+	{ "%d adversaires au tapis. Tu reprends ton souffle ?", "%d foes down. Catching your breath?" },
+	{ "Et de %d ! Je les ai tous comptés, bien caché derrière toi.", "That's %d! I counted every one, safely behind you." },
+}
+P.COMBAT_SUM_NEW = {   -- %d = adversaires vaincus
+	{ "%d adversaires au tapis, et du nouveau pour le carnet !", "%d foes down, and something new for the journal!" },
+}
+P.COMBAT_SUM_NET = {   -- %d = adversaires vaincus, %d = créatures à capturer
+	{ "%d au tapis. Le filet t'attend : %d à capturer.", "%d down. The net is waiting: %d to capture." },
+}
+P.COMBAT_SUM_DEAD = {   -- %s = le membre du groupe tombé
+	{ "%s n'a pas tenu jusqu'au bout. On l'aide à se relever ?", "%s didn't make it to the end. Help them back up?" },
+}
+
 -- ---------------------------------------------------------------------------
 -- Petites conversations (clic sur le compagnon) : 2 ou 3 bulles d'affilée
 -- ---------------------------------------------------------------------------
