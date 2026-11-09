@@ -318,6 +318,8 @@ local function Prune(now)
 	end
 end
 
+ns.BESTIARY_RESEE = 2
+
 -- Une créature repérée (cible, survol, plaque de nom). Renvoie l'espèce
 -- retenue, nil si la créature n'entre pas au bestiaire.
 function ns:BestiarySeeUnit(unit)
@@ -339,11 +341,20 @@ function ns:BestiarySeeUnit(unit)
 
 	local now = ns.Now()
 	local entry = self.bestiaryUnits[guid] or {}
+	-- même créature revue dans les BESTIARY_RESEE s (barre de vie qui
+	-- reparaît en tournant la caméra, survol répété) : sa fiche est déjà à
+	-- jour, on ne relit pas nom, famille, classe et niveau
+	local book = self:BestiaryData()
+	local known = entry.seen and entry.zoneID == zoneID and now >= entry.seen
+		and now - entry.seen < ns.BESTIARY_RESEE and book[zoneID] and book[zoneID][npcID]
+	if known then
+		entry.seen = now
+		return known
+	end
 	entry.zoneID, entry.npcID, entry.seen = zoneID, npcID, now
 	self.bestiaryUnits[guid] = entry
 	Prune(now)
 
-	local book = self:BestiaryData()
 	book[zoneID] = book[zoneID] or {}
 	local species = book[zoneID][npcID]
 	local new = species == nil

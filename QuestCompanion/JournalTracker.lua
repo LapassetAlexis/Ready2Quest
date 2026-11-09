@@ -1053,7 +1053,16 @@ local HANDLERS = {
 		ns.journalLevelHint = nil
 		if not ok then error(err, 0) end
 	end,
-	PLAYER_REGEN_DISABLED = function() ns.journalTrackerCombat = true; ns:RefreshJournalTracker() end,
+	-- entrée en combat : si le suivi se cache en combat, on le cache sans tout
+	-- recalculer (coffre, friandises, missions, sceau : rien n'a changé)
+	PLAYER_REGEN_DISABLED = function()
+		ns.journalTrackerCombat = true
+		if ns:DB().journalTrackerCombat ~= false then
+			if ns.journalTracker then ns.journalTracker:Hide() end
+			return
+		end
+		ns:RefreshJournalTracker()
+	end,
 	PLAYER_REGEN_ENABLED  = function() ns.journalTrackerCombat = false; ns:RefreshJournalTracker() end,
 }
 
