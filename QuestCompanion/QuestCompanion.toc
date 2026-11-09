@@ -85,4 +85,5 @@ MusicData.lua
 Jukebox.lua
 LoreData.lua
 CompanionLore.lua
+CompanionJokes.lua
 Bindings.lua

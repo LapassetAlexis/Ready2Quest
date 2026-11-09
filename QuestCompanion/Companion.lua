@@ -107,6 +107,7 @@ local POOL_CATEGORY = {
 	EVOLVE = "event", UNLOCK = "event", READY = "event", CHEST = "event", TUTO = "tuto", TUTO_MENAGERIE = "tuto",
 	TIP = "tip", GOAL = "tip", GOAL_STAGE = "tip",
 	IDLE = "chatter", NIGHT = "chatter",
+	JOKE = "chatter",     -- 2.13.0 : les blagues au repos (CompanionJokes.lua)
 	LEVEL = "event",      -- un grand moment : dit dès le cran Calme, comme promis
 	NEED_hunger = "need", NEED_energy = "need", NEED_mood = "need", NEED_curiosity = "need",
 }
@@ -1147,6 +1148,8 @@ end
 --   args     : arguments du texte
 --   seq      : étape d'une séquence (conversation, tutoriel)
 --   duration : durée d'affichage
+--   asked    : demandé par le joueur (/qc blague) : passe la réglette, et
+--              en combat, refusé sans être noté (2.13.0)
 --   important: conseil de route important (élite, vie, munitions, vivres) :
 --              seul ce qui passe au cran « Discret »
 -- Jamais outre la sourdine ni une bulle plus importante encore affichée.
@@ -1159,6 +1162,8 @@ function ns:CompanionSay(pool, opts)
 	-- 2.10.0 : en combat, rien ne s'ouvre (sauf COMBAT_PASS) : c'est noté et
 	-- résumé après le combat (CompanionCombatSummary)
 	if not opts.seq and not COMBAT_PASS[pool] and InCombat() then
+		-- 2.13.0 : une demande du joueur (/qc blague) n'est pas notée : on le lui dit
+		if opts.asked then return false, "combat" end
 		self:CompanionCombatNote(pool, opts)
 		return false, "combat"
 	end
@@ -1167,7 +1172,8 @@ function ns:CompanionSay(pool, opts)
 	local category = opts.category or CategoryOf(pool)
 	local prio = PRIORITY[category] or PRIORITY.reaction
 	-- réglette « Bavardage » : ce que ce cran laisse dire
-	if level.allow and not level.allow[category] then return false, "off" end
+	-- (2.13.0 : `asked`, une demande du joueur, passe outre la réglette)
+	if level.allow and not level.allow[category] and not opts.asked then return false, "off" end
 	if level.important and category == "advice" and not opts.important then return false, "off" end
 	if category == "advice" and not opts.force and rt.lastAdvice and now - rt.lastAdvice < (level.advice or 120) then
 		return false, "busy"
@@ -2896,7 +2902,9 @@ function ns:CompanionTryIdle(seconds)
 	if not Call(rawget(_G, "IsResting")) then rt.restIdle = 0; return false end
 	rt.restIdle = (rt.restIdle or 0) + (tonumber(seconds) or 0)
 	if rt.restIdle < IDLE_REST then return false end
-	if not self:CompanionSay("IDLE", { cd = "idle" }) then return false end
+	-- 2.13.0 : parfois une blague à la place (CompanionJokes.lua)
+	local pool = self.CompanionIdlePool and self:CompanionIdlePool() or "IDLE"
+	if not self:CompanionSay(pool, { cd = "idle" }) then return false end
 	rt.restIdle = 0
 	return true
 end
