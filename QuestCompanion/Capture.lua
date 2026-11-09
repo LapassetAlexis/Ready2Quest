@@ -1053,10 +1053,16 @@ function ns:CaptureShowPrompt()
 	if not frame then return nil end
 	local target = self:CaptureState().pending
 	if target and frame.model then
-		frame.model:Show()
-		local shown = pcall(frame.model.SetCreature, frame.model, target.npcID)
-		if shown and frame.model.SetPortraitZoom then pcall(frame.model.SetPortraitZoom, frame.model, 0.6) end
-		if shown then frame.icon:Hide() else frame.icon:Show(); frame.model:Hide() end
+		-- 2.11.0 : un seul cadrage (ns.ShowModel, profil « prompt ») ; plus de
+		-- zoom « portrait » sur une créature sauvage (il visait la patte)
+		local shown = ns.ShowModel(frame.model, { npc = target.npcID, display = target.display, shiny = target.shiny }, "prompt")
+		if shown then
+			frame.icon:Hide()
+		else
+			-- 2.11.0 : le portrait 2D de la créature, sinon l'icône de son type
+			self:CreaturePortrait(frame.icon, target)
+			frame.icon:Show(); frame.model:Hide()
+		end
 	end
 	self:CaptureRefreshPrompt()
 	frame:Show()

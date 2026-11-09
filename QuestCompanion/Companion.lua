@@ -1310,7 +1310,12 @@ function ns:CompanionApplyContext()
 		return "hidden"
 	end
 	local alpha = self:CompanionContextAlpha()
-	if self.companionFrame then self.companionFrame:SetAlpha(alpha) end
+	if self.companionFrame then
+		self.companionFrame:SetAlpha(alpha)
+		-- B7 (2.11.0) : le modèle 3D ne suit pas l'alpha du cadre ; estompé
+		-- aussi (SetModelAlpha), rendu à 1 en fin de combat
+		if self.companionFrame.model then ns.ModelSetAlpha(self.companionFrame.model, alpha) end
+	end
 	if net then net:SetAlpha(alpha) end
 	return alpha
 end
@@ -1754,6 +1759,175 @@ function ns.ModelKeepFraming(model)
 	end
 	return model
 end
+-- 2.11.0 (fiche 10) : un seul cadrage pour tous les modèles 3D de l'add-on.
+-- Avant, huit appels posaient sept réglages, souvent avant la fin du
+-- chargement (perdus). ns.ShowModel charge display d'abord, sinon npc, ne
+-- recharge pas un modèle déjà affiché (clé display:npc:shiny:epoch), pose la
+-- caméra à chaque OnModelLoaded et OnShow (ns.ModelKeepFraming) et lit un
+-- profil nommé. Le zoom « portrait » (SetPortraitZoom) vise le point
+-- d'attache de la tête, absent ou mal placé sur beaucoup de créatures
+-- sauvages (la « patte » en gros plan) : il reste réservé aux mascottes
+-- (display vérifiés, CompanionData.lua), jamais pour un npc seul.
+-- cam : SetCamDistanceScale ; y : SetPosition vertical. Valeurs de départ,
+-- à régler en jeu (rat, loup, kodo) avec /qc compagnon anim.
+ns.MODEL_PROFILES = {
+	companion = { cam = 1.6 },              -- cadre du compagnon (zoom : réglage companionFraming)
+	portrait  = { cam = 1.6 },              -- aperçu des réglages, page Créature (cam : box.camScale)
+	stage     = { cam = 1.2, y = 0 },       -- scène de capture et cases de « Tout capturer »
+	prompt    = { cam = 1.0 },              -- petite fenêtre de capture (sans scène)
+	preview   = { cam = 1.1 },              -- aperçu du carnet (JournalWindow)
+	cell      = { cam = 1.2 },              -- cellules de la collection (JournalWindow)
+	card      = { cam = 1.0 },              -- fiche de dresseur : la créature remplit ses 206 px
+	cardTile  = { cam = 1.1 },              -- vitrine de la fiche de dresseur
+}
+
+local function ModelCall(obj, name, ...)
+	if obj and type(obj[name]) == "function" then return pcall(obj[name], obj, ...) end
+	return false
+end
+
+-- Opacité du modèle (B7, 2.11.0) : un PlayerModel ne suit pas l'alpha de son
+-- cadre ; SetModelAlpha l'estompe vraiment. Gardée sur le modèle et reposée
+-- avec le cadrage (un rechargement la remet à 1).
+function ns.ModelSetAlpha(model, alpha)
+	if not model then return nil end
+	alpha = tonumber(alpha) or 1
+	model.contextAlpha = alpha
+	local done = ModelCall(model, "SetModelAlpha", alpha)
+	if not done then ModelCall(model, "SetAlpha", alpha) end
+	return alpha
+end
+
+-- Affiche une créature dans `model` : opts = { display, npc, shiny, zoom,
+-- cam, scale, epoch } ; rend true si elle s'affiche (sinon le modèle est
+-- caché : l'appelant montre son repli).
+function ns.ShowModel(model, opts, profile)
+	if not model then return false end
+	opts = opts or {}
+	local p = ns.MODEL_PROFILES[profile or "stage"] or ns.MODEL_PROFILES.stage
+	local zoom = tonumber(opts.zoom) or p.zoom or 0
+	if not opts.display then zoom = 0 end        -- créature sauvage : jamais de zoom « tête »
+	local cam = tonumber(opts.cam) or p.cam or 1
+	local scale, y = opts.scale, p.y or 0
+	model.framing = function(m)
+		if scale then ModelCall(m, "SetModelScale", scale) end
+		ModelCall(m, "SetCamDistanceScale", cam)
+		ModelCall(m, "SetPortraitZoom", zoom)
+		ModelCall(m, "SetPosition", 0, 0, y)
+		if m.contextAlpha and m.contextAlpha < 1 then ModelCall(m, "SetModelAlpha", m.contextAlpha) end
+	end
+	model.framingZoom, model.framingCam, model.modelProfile = zoom, cam, profile or "stage"
+	ns.ModelKeepFraming(model)
+	local key = tostring(opts.display) .. ":" .. tostring(opts.npc) .. ":" .. (opts.shiny and "s" or "")
+		.. ":" .. tostring(opts.epoch)
+	if model.modelKey == key and model.modelShown then
+		model.framing(model)
+		model:Show()
+		return true
+	end
+	local shown = false
+	if opts.display then shown = ModelCall(model, "SetDisplayInfo", opts.display) end
+	if not shown and opts.npc then shown = ModelCall(model, "SetCreature", opts.npc) end
+	model.modelKey, model.modelShown = key, shown and true or false
+	if shown then
+		model.framing(model)
+		ns.ModelShinyLight(model, opts.shiny)
+		model:Show()
+	else
+		ModelCall(model, "ClearModel")
+		model:Hide()
+	end
+	return shown and true or false
+end
+
+-- Oublie le modèle affiché (le prochain ShowModel recharge)
+function ns.ModelForget(model)
+	if not model then return end
+	model.modelKey, model.modelShown = nil, nil
+	ModelCall(model, "ClearModel")
+	if model.Hide then model:Hide() end
+end
+
+-- Portrait 2D (2.11.0) : SetPortraitTextureFromCreatureDisplayID existe sur
+-- Forever (vérifié en jeu le 9/11/2026). Il faut le displayID de l'espèce :
+-- lu une fois, quand elle est vue vivante (BestiarySeeUnit), par un modèle
+-- sonde (SetUnit puis GetDisplayInfo), gardé au compte
+-- (db.capture.display[npcID]). Jamais en combat, au plus une lecture par
+-- seconde.
+ns.MODEL_LEARN_GAP = 1
+local function ProbeRead(m)
+	local npcID = m and m.learnNpc
+	if not npcID then return nil end
+	local ok, id = ModelCall(m, "GetDisplayInfo")
+	id = ok and tonumber(id) or nil
+	if id and id > 0 then
+		local account = ns.CaptureAccount and ns:CaptureAccount()
+		if account then
+			account.display = type(account.display) == "table" and account.display or {}
+			account.display[npcID] = id
+		end
+		m.learnNpc = nil
+		return id
+	end
+	return nil
+end
+function ns:ModelLearnDisplay(unit, npcID)
+	npcID = tonumber(npcID)
+	if not (unit and npcID) or not self.CaptureAccount then return nil end
+	local fighting = rawget(_G, "InCombatLockdown")
+	if self.companionFighting or (type(fighting) == "function" and fighting()) then return nil end
+	local account = self:CaptureAccount()
+	if type(account.display) == "table" and account.display[npcID] then return account.display[npcID] end
+	local now = (ns.Now and ns.Now()) or 0
+	if self.modelLearnAt and now - self.modelLearnAt < ns.MODEL_LEARN_GAP then return nil end
+	self.modelLearnAt = now
+	local probe = self.modelLearnProbe          -- une seule sonde (gardée sur ns : /qc diag, tests)
+	if probe == nil then
+		local ok, made = pcall(CreateFrame, "PlayerModel", nil, UIParent)
+		if not (ok and made) then self.modelLearnProbe = false; return nil end
+		probe = made
+		self.modelLearnProbe = probe
+		probe:SetSize(1, 1)
+		probe:SetPoint("TOPLEFT", UIParent, "BOTTOMLEFT", -50, -50)   -- hors de l'écran
+		ModelCall(probe, "SetAlpha", 0)
+		if probe.SetScript then pcall(probe.SetScript, probe, "OnModelLoaded", ProbeRead) end
+	end
+	if not probe or type(probe.SetUnit) ~= "function" or type(probe.GetDisplayInfo) ~= "function" then return nil end
+	probe.learnNpc = npcID
+	ModelCall(probe, "SetUnit", unit)
+	return ProbeRead(probe)                       -- souvent lisible tout de suite
+end
+
+-- Le displayID connu d'une créature (candidat, fiche ou compte)
+function ns:CreatureDisplay(target)
+	if type(target) ~= "table" then return nil end
+	if tonumber(target.display) then return tonumber(target.display) end
+	local account = self.CaptureAccount and self:CaptureAccount()
+	local known = account and type(account.display) == "table" and account.display[tonumber(target.npcID or target.npc) or -1]
+	return tonumber(known)
+end
+
+-- Peint le portrait 2D rond de la créature sur `tex` ; sinon l'icône de son
+-- type (ns.MENAGERIE_TYPE_ICONS), sinon l'icône des familiers. Rend
+-- "portrait" ou "icon".
+ns.CREATURE_PORTRAIT_ICON = "Interface\\Icons\\Ability_Hunter_BeastTaming"
+function ns:CreaturePortrait(tex, target)
+	if not tex then return nil end
+	local id = self:CreatureDisplay(target)
+	local fn = rawget(_G, "SetPortraitTextureFromCreatureDisplayID")
+	if tex.SetDesaturated then tex:SetDesaturated(false) end
+	if id and type(fn) == "function" and pcall(fn, tex, id) then
+		if tex.SetTexCoord then tex:SetTexCoord(0, 1, 0, 1) end
+		tex.portraitKind = "portrait"
+		return "portrait"
+	end
+	local types = ns.MENAGERIE_TYPE_ICONS
+	tex:SetTexture((types and target and types[target.type or ""]) or ns.AZEROTH_PORTRAIT_ICON or ns.CREATURE_PORTRAIT_ICON)
+	if tex.SetTexCoord then tex:SetTexCoord(0.08, 0.92, 0.08, 0.92) end
+	tex.portraitKind = "icon"
+	return "icon"
+end
+
 -- Taille du cadre (réglette « Taille », db.companionSize 1 à 4) : échelle du
 -- cadre ; la bulle et l'infobulle gardent leur taille (lisibles) et le suivent.
 ns.COMPANION_SIZES = { 0.8, 1.0, 1.3, 1.6 }
@@ -1904,7 +2078,21 @@ local function BuildOrnaments(frame)
 	return orn
 end
 
+-- 2.11.0 : crochet isolé sur le changement de style (AzerothStyle.lua) :
+-- la bande du Sobre suit (cachée en Azeroth, l'humeur en TEXT au retour)
+local function HookUIStyle()
+	local apply = ns.CompanionApplyUIStyle
+	if type(apply) ~= "function" or ns.companionPlateHooked == apply then return end
+	local wrapped = function(self, ...)
+		local style = apply(self, ...)
+		self:CompanionApplySobrePlate()
+		return style
+	end
+	ns.CompanionApplyUIStyle, ns.companionPlateHooked = wrapped, wrapped
+end
+
 function ns:EnsureCompanionFrame()
+	HookUIStyle()
 	if self.companionFrame then return self.companionFrame end
 	if not (Theme and Theme.CreateDiscreet) then return nil end
 	local frame = Theme.CreateDiscreet(UIParent, FRAME_W, FRAME_H)
@@ -1951,7 +2139,15 @@ function ns:EnsureCompanionFrame()
 	frame.name:SetWidth(FRAME_W - 8)
 	frame.name:SetJustifyH("CENTER")
 	if frame.name.SetWordWrap then frame.name:SetWordWrap(false) end
-	frame.mood = Theme.Text(frame, Theme.F_SMALL, Theme.MUTED_LIGHT)
+	-- 2.11.0 (fiche 09) : en Sobre, une bande sombre (noir à 80 %) porte le
+	-- nom et l'humeur, quel que soit le fond gagné (papier à lettres clair,
+	-- neige) ; l'humeur passe en TEXT : 8,5:1 même sur un sol blanc (avant :
+	-- MUTED_LIGHT sur le voile 0,66, 3,0:1). Cachée en Azeroth (sa plaque).
+	frame.plate = Theme.Solid(frame, "BORDER", Theme.INK, ns.CompanionPlateAlpha())
+	frame.plate:SetPoint("BOTTOMLEFT", frame, "BOTTOMLEFT", 1, 1)
+	frame.plate:SetPoint("BOTTOMRIGHT", frame, "BOTTOMRIGHT", -1, 1)
+	frame.plate:SetHeight(ns.COMPANION_PLATE_H)
+	frame.mood = Theme.Text(frame, Theme.F_SMALL, Theme.TEXT)
 	frame.mood:SetPoint("BOTTOM", frame, "BOTTOM", 0, 6)
 	frame.mood:SetWidth(FRAME_W - 8)
 	frame.mood:SetJustifyH("CENTER")
@@ -2179,36 +2375,22 @@ function ns:CompanionApplyModel()
 	if not frame then return end
 	local app = self:CompanionCurrentAppearance()
 	local stageDef = ns.COMPANION_STAGES[self:CompanionStage()] or ns.COMPANION_STAGES[1]
-	local model, shown = frame.model, false
-	if model then
-		if app.display and type(model.SetDisplayInfo) == "function" then
-			shown = pcall(model.SetDisplayInfo, model, app.display)
-		end
-		if not shown and app.npc and type(model.SetCreature) == "function" then
-			shown = pcall(model.SetCreature, model, app.npc)
-		end
-	end
+	local model = frame.model
+	-- 2.11.0 : un seul cadrage (ns.ShowModel, profil « companion »). Créature
+	-- capturée : taille réelle (un ours, un géant…), cadrée de plus loin, sans
+	-- l'échelle du stade (faite pour les mascottes). Le zoom « portrait » du
+	-- réglage (2.2.0) ne vaut que pour une mascotte (display) : ShowModel
+	-- l'ignore pour une créature sauvage (npc seul).
+	local zoom = ns.COMPANION_FRAMING_ZOOM[self:CompanionFraming()] or 0
+	if not app.display then zoom = 0 end
+	local distance = zoom > 0 and 1 or (app.captured and (ns.CAPTURE_CAM_DISTANCE or 2.4) or 1.6)
+	local shown = model and ns.ShowModel(model, { display = app.display, npc = app.npc, shiny = app.shiny,
+		zoom = zoom, cam = distance, scale = app.captured and 1 or stageDef.scale }, "companion") or false
 	frame.usesFallback = not shown
 	frame.displayID = shown and app.display or nil
 	if shown then
-		-- créature capturée : un modèle de taille réelle (un ours, un géant…),
-		-- cadré de plus loin et sans l'échelle du stade, faite pour les mascottes
-		-- cadrage (réglage, 2.2.0) : en pied comme avant, ou la caméra
-		-- « portrait » du client (buste, tête) — la créature remplit son cadre,
-		-- qu'elle soit une mascotte ou une bête de taille réelle
-		local zoom = ns.COMPANION_FRAMING_ZOOM[self:CompanionFraming()] or 0
-		local scale = app.captured and 1 or stageDef.scale
-		local distance = zoom > 0 and 1 or (app.captured and (ns.CAPTURE_CAM_DISTANCE or 2.4) or 1.6)
-		model.framing = function(m)
-			Method(m, "SetModelScale", scale)
-			Method(m, "SetCamDistanceScale", distance)
-			Method(m, "SetPortraitZoom", zoom)
-			Method(m, "SetPosition", 0, 0, 0)
-		end
-		model.framing(model)
-		model.framingZoom = zoom
-		ns.ModelShinyLight(model, app.shiny)
-		model:Show()
+		-- B7 : le modèle suit l'opacité du contexte (estompé en combat)
+		ns.ModelSetAlpha(model, self:CompanionContextAlpha())
 		frame.fallback:Hide()
 	else
 		if model and model.Hide then model:Hide() end
@@ -2248,6 +2430,26 @@ function ns:CompanionRefreshLabels()
 	if not frame then return end
 	frame.name:SetText(self:CompanionName())
 	frame.mood:SetText(tostring(L["COMP_MOOD_" .. self:CompanionMood()]))
+	self:CompanionApplySobrePlate()
+end
+
+-- 2.11.0 (fiche 09) : la bande sombre du Sobre et l'humeur en TEXT ; en
+-- Azeroth, la plaque du style porte le texte (bande cachée). Rappelée au
+-- retour en Sobre (CompanionApplyFrame, appelé par CompanionApplyUIStyle).
+ns.COMPANION_PLATE_H = 34
+ns.COMPANION_PLATE_ALPHA = 0.80           -- repli de Theme.PLATE_ALPHA (socle)
+function ns.CompanionPlateAlpha()
+	return tonumber(Theme.PLATE_ALPHA) or ns.COMPANION_PLATE_ALPHA
+end
+function ns:CompanionApplySobrePlate()
+	local frame = self.companionFrame
+	if not (frame and frame.plate) then return nil end
+	local az = frame.uiStyle == "azeroth" or (frame.uiStyle == nil and self.AzerothOn and self:AzerothOn())
+	if az then frame.plate:Hide(); return "azeroth" end
+	frame.plate:Show()
+	local t = Theme.TEXT
+	if frame.mood and frame.mood.SetTextColor then frame.mood:SetTextColor(t[1], t[2], t[3], 1) end
+	return "sobre"
 end
 
 function ns:CompanionApplyOrnaments()
@@ -2338,6 +2540,7 @@ function ns:CompanionApplyFrame()
 	end
 	frame.frameStyle = def.id
 	frame.frameBackdrop = applied
+	self:CompanionApplySobrePlate()
 	return def
 end
 
@@ -3232,18 +3435,9 @@ function ns:CompanionPortrait(parent, size, zoom)
 		end
 		if self.border then if applied then self.border:Show() else self.border:Hide() end end
 		-- la créature : son modèle, sinon la boussole
-		local shown = false
-		if self.model then
-			if app.display and type(self.model.SetDisplayInfo) == "function" then shown = pcall(self.model.SetDisplayInfo, self.model, app.display) end
-			if not shown and app.npc and type(self.model.SetCreature) == "function" then shown = pcall(self.model.SetCreature, self.model, app.npc) end
-			if shown then
-				Method(self.model, "SetCamDistanceScale", self.camScale)
-				ns.ModelShinyLight(self.model, app.shiny)
-				self.model:Show()
-			else
-				self.model:Hide()
-			end
-		end
+		-- 2.11.0 : un seul cadrage (ns.ShowModel, profil « portrait »)
+		local shown = self.model and ns.ShowModel(self.model, { display = app.display, npc = app.npc, shiny = app.shiny,
+			cam = self.camScale }, "portrait") or false
 		if shown then self.fallback:Hide() else self.fallback:Show() end
 		self.usesFallback = not shown
 		return app, frameDef, bgDef

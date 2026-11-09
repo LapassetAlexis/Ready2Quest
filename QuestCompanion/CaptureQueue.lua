@@ -39,6 +39,17 @@ ns.CAPTURE_STAR_ODDS = { 60, 30, 10 }
 local ART = ns.CAPTURE_ART
 ns.CAPTURE_STAR_ICON = ART and ART.stars or "Interface\\TargetingFrame\\UI-RaidTargetingIcon_1"
 local NET_ICON = ART and ART.icon or "Interface\\Icons\\Spell_Nature_Web"
+-- 2.11.0 (fiche 12) : le glyphe du filet est l'icône du jeu INV_Misc_Net_01
+-- si elle se peint (ns.CaptureArtPaint, rôle « icon ») ; sinon le nôtre,
+-- blanc et teinté. Rend true si c'est notre glyphe (à teinter).
+local function PaintNetIcon(tex)
+	if not tex then return false end
+	local source = ns.CaptureArtPaint and ns.CaptureArtPaint(tex, "icon")
+	if not source then tex:SetTexture(NET_ICON) end
+	if source == "client" then return false end
+	return ART ~= nil and (source == "own" or NET_ICON == ART.icon)
+end
+ns.CapturePaintNetIcon = PaintNetIcon
 local ICON_GAME_SHINY, ICON_GAME_REST = { 1, 0.85, 0.4 }, { 1, 1, 1 }
 -- Le filet (2.1.0) : un vrai bouton de 44 px, à côté du compagnon (pas sur
 -- son portrait, où il passait inaperçu), qui suit sa taille et bat en doré
@@ -938,6 +949,7 @@ function ns:EnsureCaptureNet()
 	if self.captureNetButton then self:CapturePlaceNet(); return self.captureNetButton end
 	local button = Theme.CreateIconButton(UIParent, NET_SIZE, NET_ICON)
 	self.captureNetButton = button
+	if button.icon then button.ownGlyph = PaintNetIcon(button.icon) end
 	if button.RegisterForClicks then button:RegisterForClicks("LeftButtonUp", "RightButtonUp") end
 	-- 2.3.1 : lisible sur n'importe quel sol (sable, neige, pierre claire). Une
 	-- ombre portée sombre autour, une plaque d'encre opaque derrière le glyphe,
@@ -1028,7 +1040,8 @@ function ns:CaptureStyleNet()
 	if button.glow.SetVertexColor then button.glow:SetVertexColor(g[1], g[2], g[3], 1) end
 	-- notre glyphe blanc prend sa couleur : ambre au repos, or si brillante
 	-- ou au survol (l'icône du jeu, en repli, reste en couleurs)
-	local ours = ART and NET_ICON == ART.icon
+	local ours = button.ownGlyph
+	if ours == nil then ours = ART and NET_ICON == ART.icon end
 	local tint = button.shiny and (ours and Theme.GOLD_LIGHT or ICON_GAME_SHINY)
 		or (ours and (button.hover and Theme.GOLD_LIGHT or Theme.GOLD) or ICON_GAME_REST)
 	button.icon:SetVertexColor(tint[1], tint[2], tint[3], 1)
@@ -1090,8 +1103,7 @@ function ns:EnsureCaptureToast()
 	if cached then self.captureToast = cached; return cached end
 	local frame = self.AzerothOn and self:AzerothOn() and self:AzerothCreateBanner({ strata = "HIGH", strip = true })
 	if frame then
-		frame.icon:SetTexture(NET_ICON)
-		frame.ownGlyph = ART and NET_ICON == ART.icon
+		frame.ownGlyph = PaintNetIcon(frame.icon)
 		if frame.ownGlyph then frame.icon:SetVertexColor(Theme.GOLD_LIGHT[1], Theme.GOLD_LIGHT[2], Theme.GOLD_LIGHT[3], 1)
 		else frame.icon:SetTexCoord(0.08, 0.92, 0.08, 0.92) end
 	elseif not (Theme and Theme.CreateToast) then
@@ -1114,8 +1126,7 @@ function ns:CaptureToastSobre()
 	frame.uiStyle = "sobre"
 	local left = frame.contentLeft or 14
 	frame.icon = frame:CreateTexture(nil, "ARTWORK")
-	frame.icon:SetTexture(NET_ICON)
-	frame.ownGlyph = ART and NET_ICON == ART.icon
+	frame.ownGlyph = PaintNetIcon(frame.icon)
 	if frame.ownGlyph then
 		frame.icon:SetVertexColor(Theme.GOLD[1], Theme.GOLD[2], Theme.GOLD[3], 1)
 	else

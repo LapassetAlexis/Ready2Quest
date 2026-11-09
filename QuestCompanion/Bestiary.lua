@@ -364,6 +364,8 @@ function ns:BestiarySeeUnit(unit)
 	if type(name) == "string" and name ~= "" then species.name = name end
 	species.name = species.name or tostring(npcID)
 	species.type = creatureType or species.type
+	-- 2.11.0 : son displayID, une fois au compte (portrait 2D, Companion.lua)
+	if self.ModelLearnDisplay then pcall(self.ModelLearnDisplay, self, unit, npcID) end
 	local family = Call("UnitCreatureFamily", unit)
 	if type(family) == "string" and family ~= "" then species.family = family end
 	local class = Call("UnitClassification", unit)

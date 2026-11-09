@@ -71,6 +71,69 @@ local COORDS = {
 	dot = { 0, 0.25, 0, 1 }, star4 = { 0.25, 0.5, 0, 1 }, spark = { 0.5, 0.75, 0, 1 }, ring = { 0.75, 1, 0, 1 },
 }
 ns.CAPTURE_COORDS = COORDS
+
+-- 2.11.0 : les images de la scène viennent du client, par référence (atlas
+-- vérifiés en jeu sur Forever le 9/11/2026). Le filet, ses cordes et le
+-- paquet restent les nôtres (décision du 7/11 et du 9/11 : pas d'équivalent).
+-- own : notre fichier de repli (ART), si l'atlas manque au client.
+-- desaturate : l'atlas est grisé pour prendre la teinte posée (rareté, or).
+ns.CAPTURE_CLIENT_ART = {
+	rays   = { atlas = "ArtifactsFX-StarBurst", own = "rays", desaturate = true },
+	halo   = { atlas = "ChallengeMode-SoftYellowGlow", own = "halo", desaturate = true },
+	sparks = { atlas = "Artifacts-Anim-Sparks", own = "sparks", desaturate = true },
+	-- l'anneau de poussière : une lueur douce aplatie
+	dust   = { atlas = "ChallengeMode-SoftYellowGlow", own = "sparks", desaturate = true },
+	stars  = { atlas = "auctionhouse-icon-favorite", own = "stars" },
+	-- pas « Bonus-ToastBanner » : il peint un écusson bleu sur Forever
+	ribbon = { atlas = "BossBanner-BgBanner-Mid", own = "ribbon", desaturate = true },
+	stage  = { atlas = "charactercreate-vignette-sides", own = "stage" },
+	stageTop    = { atlas = "charactercreate-vignette-top" },
+	stageBottom = { atlas = "charactercreate-vignette-bottom" },
+	-- glyphe du filet : l'icône du jeu, si elle se peint (sinon la nôtre)
+	icon   = { file = "Interface\\Icons\\INV_Misc_Net_01", own = "icon" },
+}
+
+-- Un atlas est-il connu du client ? (C_Texture.GetAtlasInfo ; lu une fois)
+local atlasKnown = { api = false }
+function ns.CaptureAtlasKnown(name)
+	local api = rawget(_G, "C_Texture")
+	if atlasKnown.api ~= api then atlasKnown = { api = api } end
+	if atlasKnown[name] == nil then
+		local ok, info = false, nil
+		if type(api) == "table" and type(api.GetAtlasInfo) == "function" then ok, info = pcall(api.GetAtlasInfo, name) end
+		if ok and ns.Plain then info = ns.Plain(info) end
+		atlasKnown[name] = (ok and info ~= nil and info ~= false) and true or false
+	end
+	return atlasKnown[name]
+end
+
+-- Peint le rôle `role` sur `tex` : l'image du client si elle est là, sinon
+-- notre fichier (découpe `coords`). Rend "client" ou "own" ; tex.clientArt
+-- dit laquelle (Coord ne touche pas à la découpe d'un atlas).
+function ns.CaptureArtPaint(tex, role, coords)
+	if not tex then return nil end
+	local spec = ns.CAPTURE_CLIENT_ART[role]
+	local done = false
+	if spec and spec.atlas and tex.SetAtlas and ns.CaptureAtlasKnown(spec.atlas) then
+		local ok, result = pcall(tex.SetAtlas, tex, spec.atlas)
+		done = ok and result ~= false
+	elseif spec and spec.file then
+		local ok, result = pcall(tex.SetTexture, tex, spec.file)
+		done = ok and result ~= false and (not tex.GetTexture or tex:GetTexture() ~= nil)
+		if done and tex.SetTexCoord then tex:SetTexCoord(0.08, 0.92, 0.08, 0.92) end
+	end
+	if done then
+		tex.clientArt = true
+		if tex.SetDesaturated then tex:SetDesaturated(spec.desaturate and true or false) end
+		return "client"
+	end
+	tex.clientArt = nil
+	local own = ART[(spec and spec.own) or role]
+	if not own then return nil end
+	tex:SetTexture(own)
+	if coords and tex.SetTexCoord then tex:SetTexCoord(coords[1], coords[2], coords[3], coords[4]) end
+	return "own"
+end
 local WHITE = { 1, 1, 1 }
 local STAR_GREY = { 0.47, 0.50, 0.52 }
 local DUST_COLOR = { 0.62, 0.57, 0.48 }
@@ -79,15 +142,35 @@ local PANEL_FAIL, TRIM_FAIL = { 0.20, 0.23, 0.26 }, { 0.47, 0.35, 0.34 }
 local BURST_KINDS = { "star4", "spark", "dot" }
 local BURST_SIZES = { 14, 18, 10 }
 
--- Rareté : couleur et nombre de losanges
+-- Rareté : couleur et nombre de losanges. 2.11.0 (fiche 09) : deux couleurs
+-- par rang, lues dans le jeton du socle Theme.RANK s'il existe : `color`
+-- (= mark, couleur de qualité du jeu : losanges, filets, halo ; ≥ 3:1) et
+-- `text` (variante claire pour le nom sur fond sombre ; ≥ 4,5:1 sur ROW,
+-- ROW_ALT, FIELD, WINDOW, mesuré dans le socle). Repli : valeurs de la fiche 09.
+local RANK_FALLBACK = {
+	trivial   = { text = { 0.62, 0.62, 0.62 }, mark = { 0.62, 0.62, 0.62 } },
+	normal    = { text = { 0.95, 0.95, 0.95 }, mark = { 0.95, 0.95, 0.95 } },
+	elite     = { text = { 0.30, 0.62, 0.98 }, mark = { 0.00, 0.44, 0.87 } },
+	rare      = { text = { 0.78, 0.50, 1.00 }, mark = { 0.64, 0.21, 0.93 } },
+	worldboss = { text = { 1.00, 0.50, 0.00 }, mark = { 1.00, 0.50, 0.00 } },
+}
+RANK_FALLBACK.minus, RANK_FALLBACK.rareelite = RANK_FALLBACK.trivial, RANK_FALLBACK.rare
+ns.CAPTURE_RANK_FALLBACK = RANK_FALLBACK
+-- Le jeton du socle (fiche 21) est une couleur de texte par rang
+-- (Theme.RANK[Theme.RankKey(classe)]) : elle donne `text` ; la marque reste
+-- la couleur de qualité du jeu
+local function Rank(id, pips)
+	local r = RANK_FALLBACK[id]
+	local text = r.text
+	if type(Theme.RANK) == "table" and type(Theme.RankKey) == "function" then
+		local token = Theme.RANK[Theme.RankKey(id)]
+		if type(token) == "table" and tonumber(token[1]) then text = token end
+	end
+	return { color = r.mark, text = text, pips = pips }
+end
 local RARITY = {
-	trivial   = { color = { 0.62, 0.62, 0.62 }, pips = 1 },
-	minus     = { color = { 0.62, 0.62, 0.62 }, pips = 1 },
-	normal    = { color = { 0.95, 0.95, 0.95 }, pips = 1 },
-	elite     = { color = { 0.00, 0.44, 0.87 }, pips = 2 },
-	rare      = { color = { 0.64, 0.21, 0.93 }, pips = 3 },
-	rareelite = { color = { 0.64, 0.21, 0.93 }, pips = 4 },
-	worldboss = { color = { 1.00, 0.50, 0.00 }, pips = 5 },
+	trivial = Rank("trivial", 1), minus = Rank("minus", 1), normal = Rank("normal", 1), elite = Rank("elite", 2),
+	rare = Rank("rare", 3), rareelite = Rank("rareelite", 4), worldboss = Rank("worldboss", 5),
 }
 ns.CAPTURE_RARITY = RARITY
 
@@ -140,7 +223,8 @@ local function EaseBack(x)
 	local k = 1.7
 	return 1 + (k + 1) * (x - 1) ^ 3 + k * (x - 1) ^ 2
 end
-local function Coord(tex, c) tex:SetTexCoord(c[1], c[2], c[3], c[4]) end
+-- une image du client (atlas) garde sa découpe : seules les nôtres en ont une
+local function Coord(tex, c) if not tex.clientArt then tex:SetTexCoord(c[1], c[2], c[3], c[4]) end end
 local function Tint(tex, c, alpha) tex:SetVertexColor(c[1], c[2], c[3], alpha or 1) end
 local function Rotate(tex, radians) if tex.SetRotation then pcall(tex.SetRotation, tex, radians) end end
 -- opacité et visibilité d'un coup : à 0, la région est cachée
@@ -149,11 +233,12 @@ local function Fade(region, alpha)
 	region:SetAlpha(math.min(1, alpha))
 	region:Show()
 end
--- une texture d'art de la scène : fichier, calque, découpe, taille, fusion
-local function Art(parent, layer, sub, file, coords, w, h, blend)
+-- une texture d'art de la scène : rôle (ns.CAPTURE_ART), calque, découpe
+-- de notre fichier, taille, fusion. 2.11.0 : l'image du client d'abord
+-- (ns.CaptureArtPaint), notre fichier en repli
+local function Art(parent, layer, sub, role, coords, w, h, blend)
 	local tex = parent:CreateTexture(nil, layer, nil, sub)
-	tex:SetTexture(file)
-	if coords then Coord(tex, coords) end
+	ns.CaptureArtPaint(tex, role, coords)
 	if w then tex:SetSize(w, h or w) end
 	if blend and tex.SetBlendMode then pcall(tex.SetBlendMode, tex, blend) end
 	tex:Hide()
@@ -167,7 +252,8 @@ end
 
 function ns:CaptureRarity(target)
 	if target and target.shiny then
-		return { color = Theme.GOLD_LIGHT or { 0.96, 0.78, 0.49 }, pips = (RARITY[target.class] or RARITY.normal).pips }
+		local gold = Theme.GOLD_LIGHT or { 0.96, 0.78, 0.49 }
+		return { color = gold, text = gold, pips = (RARITY[target.class] or RARITY.normal).pips }
 	end
 	return RARITY[(target and target.class) or "normal"] or RARITY.normal
 end
@@ -177,13 +263,10 @@ end
 -- repli). Partagé avec les scènes de « Tout capturer » (CaptureBatch.lua).
 function ns:CaptureModelSetup(model, target)
 	if not (model and target) then return false end
-	model:Show()
-	local shown = Method(model, "SetCreature", target.npcID)
-	Method(model, "SetCamDistanceScale", ns.CAPTURE_STAGE_CAM)
-	-- une brillante : sous sa lumière dorée (1.6.0)
-	if ns.ModelShinyLight then ns.ModelShinyLight(model, target.shiny) end
-	if not shown then model:Hide() end
-	return shown and true or false
+	-- 2.11.0 : un seul cadrage (ns.ShowModel, profil « stage ») : la caméra
+	-- est reposée après le chargement ; une brillante, sous sa lumière dorée
+	ns.MODEL_PROFILES.stage.cam = ns.CAPTURE_STAGE_CAM
+	return ns.ShowModel(model, { npc = target.npcID, display = target.display, shiny = target.shiny }, "stage")
 end
 
 local function PlayKit(name)
@@ -295,12 +378,21 @@ function ns:EnsureCaptureStage()
 	frame.scene:SetPoint("TOP", frame, "TOP", 0, az and AZS.sceneY or -34)
 	-- la créature qui s'enfuit ne sort pas de la scène
 	Method(frame.scene, "SetClipsChildren", true)
-	frame.stageBg = Art(frame, "BACKGROUND", 2, ART.stage, nil, SCENE)
+	frame.stageBg = Art(frame, "BACKGROUND", 2, "stage", nil, SCENE)
 	frame.stageBg:SetPoint("CENTER", frame.scene, "CENTER", 0, 0)
 	frame.stageBg:Show()
-	frame.rays = Art(frame, "ARTWORK", 0, ART.rays, nil, 300, 300, "ADD")
-	frame.rays2 = Art(frame, "ARTWORK", 1, ART.rays, nil, 240, 240, "ADD")
-	frame.halo = Art(frame, "ARTWORK", 2, ART.halo, nil, 220, 220, "ADD")
+	-- 2.11.0 : la vignette du client a trois pièces (côtés, haut, bas)
+	if frame.stageBg.clientArt then
+		frame.stageTop = Art(frame, "BACKGROUND", 3, "stageTop", nil, SCENE, SCENE * 0.3)
+		frame.stageTop:SetPoint("TOP", frame.scene, "TOP", 0, 0)
+		frame.stageBottom = Art(frame, "BACKGROUND", 3, "stageBottom", nil, SCENE, SCENE * 0.3)
+		frame.stageBottom:SetPoint("BOTTOM", frame.scene, "BOTTOM", 0, 0)
+		if frame.stageTop.clientArt then frame.stageTop:Show() end
+		if frame.stageBottom.clientArt then frame.stageBottom:Show() end
+	end
+	frame.rays = Art(frame, "ARTWORK", 0, "rays", nil, 300, 300, "ADD")
+	frame.rays2 = Art(frame, "ARTWORK", 1, "rays", nil, 240, 240, "ADD")
+	frame.halo = Art(frame, "ARTWORK", 2, "halo", nil, 220, 220, "ADD")
 	for _, tex in ipairs({ frame.rays, frame.rays2, frame.halo }) do
 		tex:SetPoint("CENTER", frame.scene, "CENTER", 0, 0)
 	end
@@ -322,40 +414,40 @@ function ns:EnsureCaptureStage()
 	frame.fx = CreateFrame("Frame", nil, frame)
 	frame.fx:SetAllPoints(frame.scene)
 	frame.fx:SetFrameLevel(level + 10)
-	frame.dust = Art(frame.fx, "ARTWORK", 0, ART.sparks, COORDS.ring, 60, 20, "ADD")
+	frame.dust = Art(frame.fx, "ARTWORK", 0, "dust", COORDS.ring, 60, 20, "ADD")
 	frame.dusts = {}
 	for index = 1, DUST do
-		local p = Art(frame.fx, "ARTWORK", 1, ART.sparks, COORDS.dot, 10, 10, "ADD")
+		local p = Art(frame.fx, "ARTWORK", 1, "sparks", COORDS.dot, 10, 10, "ADD")
 		p.angle = (index / DUST) * math.pi * 2 + 0.4
 		p.reach = 60 + (index % 3) * 8
 		frame.dusts[index] = p
 	end
 	frame.puffs = {}
 	for index = 1, PUFFS do
-		frame.puffs[index] = Art(frame.fx, "ARTWORK", 1, ART.sparks, COORDS.ring, 24, 24, "ADD")
+		frame.puffs[index] = Art(frame.fx, "ARTWORK", 1, "dust", COORDS.ring, 24, 24, "ADD")
 	end
 	frame.netFrame = CreateFrame("Frame", nil, frame.fx)
 	frame.netFrame:SetSize(NET, NET)
 	frame.netFrame:SetPoint("CENTER", frame.scene, "CENTER", 0, 0)
 	frame.netFrame:SetFrameLevel(level + 11)
-	frame.netShadow = Art(frame.netFrame, "ARTWORK", 0, ART.net, COORDS.netWhole, NET)
+	frame.netShadow = Art(frame.netFrame, "ARTWORK", 0, "net", COORDS.netWhole, NET)
 	frame.netShadow:SetVertexColor(0, 0, 0, 0.45)
-	frame.net = Art(frame.netFrame, "ARTWORK", 1, ART.net, COORDS.netWhole, NET)
+	frame.net = Art(frame.netFrame, "ARTWORK", 1, "net", COORDS.netWhole, NET)
 	frame.net:SetPoint("CENTER", frame.netFrame, "CENTER", 0, 0)
 	frame.fxTop = CreateFrame("Frame", nil, frame)
 	frame.fxTop:SetAllPoints(frame.scene)
 	frame.fxTop:SetFrameLevel(level + 12)
-	frame.bundle = Art(frame.fxTop, "ARTWORK", 3, ART.bundle, nil, 52)
+	frame.bundle = Art(frame.fxTop, "ARTWORK", 3, "bundle", nil, 52)
 	frame.trail = {}
 	for index = 1, TRAIL do
-		local p = Art(frame.fxTop, "ARTWORK", 2, ART.sparks, COORDS.dot, 22 - 2 * index, 22 - 2 * index, "ADD")
+		local p = Art(frame.fxTop, "ARTWORK", 2, "sparks", COORDS.dot, 22 - 2 * index, 22 - 2 * index, "ADD")
 		p.lag = 0.06 * index
 		p.fade = 0.55 * (1 - index / TRAIL)
 		frame.trail[index] = p
 	end
 	frame.ropes = {}
 	for index = 1, ROPES do
-		local p = Art(frame.fxTop, "ARTWORK", 2, ART.rope, nil, 36 + (index * 11) % 25, 7)
+		local p = Art(frame.fxTop, "ARTWORK", 2, "rope", nil, 36 + (index * 11) % 25, 7)
 		p.vx = ((index * 37) % 11 - 5) * 30
 		p.vy = 80 + (index * 17) % 5 * 35
 		p.spin = ((index * 13) % 7 - 3) * 1.6
@@ -366,7 +458,7 @@ function ns:EnsureCaptureStage()
 	for index = 1, BURST do
 		local kind = BURST_KINDS[index % 3 + 1]
 		local size = BURST_SIZES[index % 3 + 1]
-		local p = Art(frame.fxTop, "ARTWORK", 4, ART.sparks, COORDS[kind], size, size, "ADD")
+		local p = Art(frame.fxTop, "ARTWORK", 4, "sparks", COORDS[kind], size, size, "ADD")
 		p.angle = (index / BURST) * math.pi * 2 + (index % 2) * 0.2
 		p.reach = 95 + (index % 3) * 20
 		p.spin = ((index * 7) % 5 - 2) * 1.5
@@ -375,13 +467,13 @@ function ns:EnsureCaptureStage()
 	frame.motes = {}
 	for index = 1, MOTES do
 		local size = 8 + (index % 3) * 3
-		local p = Art(frame.fxTop, "ARTWORK", 1, ART.sparks, COORDS.dot, size, size, "ADD")
+		local p = Art(frame.fxTop, "ARTWORK", 1, "sparks", COORDS.dot, size, size, "ADD")
 		p.x = ((index * 53) % 21 - 10) * 10
 		p.phase = index * 0.7
 		p.speed = 14 + (index % 4) * 5
 		frame.motes[index] = p
 	end
-	frame.flash = Art(frame.fxTop, "ARTWORK", 5, ART.halo, nil, 320, 320, "ADD")
+	frame.flash = Art(frame.fxTop, "ARTWORK", 5, "halo", nil, 320, 320, "ADD")
 	frame.flash:SetPoint("CENTER", frame.scene, "CENTER", 0, 0)
 
 	if az then
@@ -402,17 +494,18 @@ function ns:EnsureCaptureStage()
 		frame.banner:SetSize(RIBBON_W, RIBBON_H)
 		frame.banner:SetPoint("CENTER", frame.scene, "BOTTOM", 0, -34)
 		frame.banner:SetFrameLevel(level + 13)
-		frame.ribbonPanel = Art(frame.banner, "ARTWORK", 0, ART.ribbon, COORDS.ribbonPanel)
+		frame.ribbonPanel = Art(frame.banner, "ARTWORK", 0, "ribbon", COORDS.ribbonPanel)
 		frame.ribbonPanel:SetAllPoints(frame.banner)
 		frame.ribbonPanel:Show()
-		frame.ribbonTrim = Art(frame.banner, "ARTWORK", 1, ART.ribbon, COORDS.ribbonTrim)
+		frame.ribbonTrim = Art(frame.banner, "ARTWORK", 1, "ribbon", COORDS.ribbonTrim)
 		frame.ribbonTrim:SetAllPoints(frame.banner)
-		frame.ribbonTrim:Show()
+		-- 2.11.0 : la bannière du client a son propre bord : pas de liseré à nous
+		if frame.ribbonPanel.clientArt then frame.ribbonTrim:Hide() else frame.ribbonTrim:Show() end
 		frame.sheenClip = CreateFrame("Frame", nil, frame.banner)
 		frame.sheenClip:SetSize(RIBBON_W * 0.6, 38)
 		frame.sheenClip:SetPoint("CENTER", frame.banner, "CENTER", 0, 0)
 		frame.sheenClip.clips = Method(frame.sheenClip, "SetClipsChildren", true) == true
-		frame.sheen = Art(frame.sheenClip, "ARTWORK", 0, ART.halo, nil, 60, 90, "ADD")
+		frame.sheen = Art(frame.sheenClip, "ARTWORK", 0, "halo", nil, 60, 90, "ADD")
 		frame.sheen:SetVertexColor(1, 1, 1, 0.35)
 		frame.bannerText = Theme.Text(frame.banner, Theme.F_DISPLAY or Theme.F_TITLE, Theme.PARCHMENT)
 		frame.bannerText:SetPoint("CENTER", frame.banner, "CENTER", 0, 2)
@@ -434,7 +527,7 @@ function ns:EnsureCaptureStage()
 	local starHost = az and frame.banner or frame
 	frame.starSlots = {}
 	for index = 1, 3 do
-		local star = Art(starHost, "OVERLAY", 1, ART.stars, COORDS.starEmpty, 18)
+		local star = Art(starHost, "OVERLAY", 1, "stars", COORDS.starEmpty, 18)
 		if az then
 			star:SetPoint("TOP", frame.banner, "TOP", (index - 2) * 20, frame.banner.lineY)
 		else
@@ -442,7 +535,7 @@ function ns:EnsureCaptureStage()
 		end
 		frame.starSlots[index] = star
 	end
-	frame.starSpark = Art(starHost, "OVERLAY", 2, ART.sparks, COORDS.spark, 22, 22, "ADD")
+	frame.starSpark = Art(starHost, "OVERLAY", 2, "sparks", COORDS.spark, 22, 22, "ADD")
 	-- les losanges des secousses : en bas (Sobre), sous la scène, en or (Azeroth)
 	frame.shakeDots = {}
 	for index = 1, 3 do
@@ -544,6 +637,8 @@ function ns:CaptureShowStage(rolling)
 	local c = rarity.color
 	if frame.topBar then frame.topBar:SetVertexColor(c[1], c[2], c[3], 1) end
 	local shown = self:CaptureModelSetup(frame.model, target)
+	-- 2.11.0 : sans modèle, le portrait 2D de la créature (ou l'icône de son type)
+	if not shown then self:CreaturePortrait(frame.fallback, target) end
 	Creature(frame, 0, 0, 1, 0)
 	if shown then frame.fallback:Hide() else frame.fallback:Show() end
 	frame.hasModel = shown
@@ -568,7 +663,9 @@ function ns:CaptureShowStage(rolling)
 	else
 		frame.bannerText:SetText("")
 		frame.name:SetText(label)
-		frame.name:SetTextColor(c[1], c[2], c[3])
+		-- 2.11.0 : le nom prend la variante claire du rang (lisible en Sobre)
+		local ink = rarity.text or c
+		frame.name:SetTextColor(ink[1], ink[2], ink[3])
 	end
 	-- losanges de rareté, centrés sous le nom (sous la plaque en Azeroth)
 	local gap = 13
@@ -868,6 +965,8 @@ local function StageOk(frame, r, rolling, c)
 			star:SetSize(size, size)
 			local full = index <= stars
 			Coord(star, full and COORDS.starFull or COORDS.starEmpty)
+			-- 2.11.0 : l'étoile du client, grisée quand elle est vide
+			if star.clientArt and star.SetDesaturated then star:SetDesaturated(not full) end
 			Tint(star, full and Theme.GOLD_LIGHT or STAR_GREY, 1)
 			star:Show()
 			if full and index == stars and q < 1.2 then

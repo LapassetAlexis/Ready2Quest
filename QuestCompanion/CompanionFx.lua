@@ -419,9 +419,20 @@ end
 
 -- Le cran « Seul, hors instance » évite de deviner le rôle de tank (mal exposé
 -- par l'API classique)
+-- 2.11.0 (fiche 26) : Ready2Quest installé et son anneau rouge déjà posé
+-- sur une barre de nom : pas de deuxième alerte rouge ici (une seule à la
+-- fois). Sans Ready2Quest (ou son module coupé), rien ne change.
+function ns:CompanionAggroDeferred()
+	local other = rawget(_G, "Ready2Quest")
+	if type(other) ~= "table" or other == ns or type(other.AggroDangerShown) ~= "function" then return false end
+	local ok, shown = pcall(other.AggroDangerShown, other)
+	return ok and shown == true
+end
+
 function ns:CompanionAggroAllowed()
 	local mode = self:CompanionAggroMode()
 	if mode == "off" then return false end
+	if self:CompanionAggroDeferred() then return false end
 	if mode == "always" then return true end
 	if SafeCall(rawget(_G, "IsInInstance")) then return false end
 	return SafeCall(rawget(_G, "IsInGroup")) ~= true
