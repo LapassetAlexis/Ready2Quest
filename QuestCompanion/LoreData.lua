@@ -32,12 +32,12 @@ Z	1420	Le ciel des clairières de Tirisfal est d'un vert maladif depuis des ann�
 Z	1421	La forêt des Pins argentés, ou simplement les Pins argentés, est un bois vaste et ancien qui longe la côte ouest escarpée de Lordaeron.	Silverpine_Forest_(Classic)
 Z	1422	C'étaient autrefois les plus belles terres agricoles du nord de Lordaeron, boisées et verdoyantes, qui remplissaient les greniers du royaume depuis Andorhal et étaient gouvernées depuis le…	Western_Plaguelands_(Classic)
 Z	1423	Cette terre était autrefois cultivée : les villages de la Sylve de l'Est s'y dispersaient autour de Stratholme, deuxième cité de Lordaeron. Il n'en reste rien.	Eastern_Plaguelands_(Classic)
-Z	1424	Le sol d'Hillsbrad est riche et ses collines sont vertes, et les voyageurs disent que c'est à cela que ressemblait tout Lordaeron avant l'arrivée de la peste.	Hillsbrad_Foothills_(Classic)
+Z	1424	Le sol de Hautebrande est riche et ses collines sont vertes, et les voyageurs disent que c'est à cela que ressemblait tout Lordaeron avant l'arrivée de la peste.	Hillsbrad_Foothills_(Classic)
 Z	1425	Après la guerre des Trois clans, les nains Marteau-hardi abandonnèrent leurs tunnels de Grim Batol et vinrent vers le nord, bâtissant leurs demeures à l'air libre, au Nid-de-l'Aigle.	Hinterlands_(Classic)
 Z	1426	La neige recouvre profondément Dun Morogh, enclavé de toutes parts par les montagnes de Khaz Modan, et ses cols sont sans cesse surveillés par les troupes naines.	Dun_Morogh_(Classic)
 Z	1427	C'était autrefois une terre verdoyante, qui faisait partie des Carmines, jusqu'à ce que le sol lui-même soit éventré il y a plus de deux cent trente ans.	Searing_Gorge_(Classic)
 Z	1428	Le ciel des Steppes ardentes ne perd jamais sa teinte rouge, éclairé par les éruptions sporadiques du mont Blackrock, et le sol ne refroidit jamais.	Burning_Steppes_(Classic)
-Z	1429	Lorsque les orcs vinrent pendant la première guerre, des milliers d'entre eux traversèrent Elwynn pour encercler Stormwind, la coupant de tout sauf de la mer.	Elwynn_Forest_(Classic)
+Z	1429	Lorsque les orcs vinrent pendant la première guerre, des milliers d'entre eux traversèrent Elwynn pour encercler Hurlevent, la coupant de tout sauf de la mer.	Elwynn_Forest_(Classic)
 Z	1431	Un manteau de nuit surnaturelle recouvre le bois de la Pénombre, et il ne s'est jamais levé.	Duskwood_(Classic)
 Z	1432	Les eaux du Loch Modan reposent dans un écrin de pierre grise, retenues par le barrage de Formepierre, un ouvrage d'ingénierie naine qu'aucune autre construction d'Azeroth n'a jamais égalé.	Loch_Modan_(Classic)
 Z	1433	Les Carmines s'étendent à l'est de la forêt d'Elwynn, au nord-est du bois de la Pénombre et au sud des Steppes ardentes.	Redridge_Mountains_(Classic)
@@ -60,12 +60,12 @@ Z	1449	Le cratère d'Un'Goro s'étend, enclavé entre trois déserts, telle une 
 Z	1450	Reflet-de-Lune repose dans un cercle de montagnes, vallée cachée où la forêt n'a jamais connu la corruption.	Moonglade
 Z	1451	Le désert s'étend à l'extrémité sud-ouest de Kalimdor, étendue de roches brisées et de sable que l'on atteint par la large piste venant d'Un'Goro.	Silithus_(Classic)
 Z	1452	La neige s'étend, intacte, sur Berceau-de-l'Hiver, dont la beauté demeure inaltérée même là où les démons ont envahi les confins du sud.	Winterspring_(Classic)
-Z	1453	Stormwind se releva en pierre blanche après que la Horde orque l'eut incendiée, rebâtie par la guilde des Maçons sous le règne du jeune roi Varian.	Stormwind_City
+Z	1453	Hurlevent se releva en pierre blanche après que la Horde orque l'eut incendiée, rebâtie par la guilde des Maçons sous le règne du jeune roi Varian.	Stormwind_City
 Z	1454	Orgrimmar s'éleva dans les années qui suivirent le mont Hyjal, lorsque le chef de guerre Thrall mena son peuple jusqu'à une côte désolée de Kalimdor.	Orgrimmar
-Z	1455	Ironforge est la capitale des nains, creusée dans les profondeurs de la montagne d'Ironforge, au nord de Dun Morogh, terre ancestrale des nains et l'une des plus anciennes cités d'Azeroth.	Ironforge
-Z	1456	Thunder Bluff se dresse sur quatre plateaux balayés par les vents au-dessus des prairies de Mulgore, accessible seulement par des ascenseurs de corde et de bois de facture taurène, ou par…	Thunder_Bluff
+Z	1455	Forgefer est la capitale des nains, creusée dans les profondeurs de la montagne de Forgefer, au nord de Dun Morogh, terre ancestrale des nains et l'une des plus anciennes cités d'Azeroth.	Ironforge
+Z	1456	Les Pitons-du-Tonnerre se dresse sur quatre plateaux balayés par les vents au-dessus des prairies de Mulgore, accessible seulement par des ascenseurs de corde et de bois de facture…	Thunder_Bluff
 Z	1457	Les elfes de la nuit bâtirent Darnassus après la troisième guerre, lorsque leur longue immortalité les eut abandonnés.	Darnassus
-Z	1458	Bien avant que les Réprouvés ne se l'approprient, l'Undercity avait un nom et une fonction.	Undercity
+Z	1458	Bien avant que les Réprouvés ne se l'approprient, Fossoyeuse avait un nom et une fonction.	Undercity
 S	1411	Baie de Bladefist	Les eaux à l'est de Durotar portent le nom de Kargath Bladefist, en hommage à l'ancien chef du clan de la Main brisée.	Bladefist_Bay
 S	1411	Convent de la Lame ardente	Les montagnes qui ferment le nord de la vallée des Épreuves ne recelaient autrefois rien de pire que la pierre et l'ombre.	Burning_Blade_Coven
 S	1411	L'Antre	Dans la vallée des Épreuves, les jeunes orcs établissent leur premier camp dans une grotte appelée l'Antre.	The_Den
@@ -73,21 +73,21 @@ S	1411	Combe des Kolkar	La combe des Kolkar est une gorge escarpée du sud de Du
 S	1411	Tranchecolline	Tranchecolline se dresse là où se rejoignent les routes de Durotar.	Razor_Hill
 S	1411	Vallée des épreuves	La vallée des Épreuves s'étend, enclavée, au sud de Durotar, une cuvette de terre brûlée où chaque jeune orc commence la vie que la Horde a tracée pour lui.	Valley_of_Trials
 S	1412	Site de fouilles de Bael'Dun	L'expédition de Bael'dun creusa sa carrière dans la lisière ouest de Mulgore, enfonçant ses pioches dans le flanc de la montagne.	Bael'dun_Digsite
-S	1412	Sabot-de-Sang|Village Bloodhoof	Le village Bloodhoof se trouve au bord des eaux du lac Taureau-de-pierre, dans les plaines de Mulgore, et porte le nom de la tribu qui y vit.	Bloodhoof_Village
+S	1412	Sabot-de-Sang|Village Bloodhoof	Le village Sabot-de-Sang se trouve au bord des eaux du lac Taureau-de-pierre, dans les plaines de Mulgore, et porte le nom de la tribu qui y vit.	Bloodhoof_Village
 S	1412	Ravin de Roncelame	Le ravin de Roncelame entaille la lisière nord-est de la mesa de Nuage rouge ; c'est le repaire des hurans Dos-hirsute.	Brambleblade_Ravine
 S	1412	camp narache	Le camp Narache se trouve à la lisière nord de la mesa de Nuage rouge, un petit cercle de tentes appartenant à la tribu Hawkwind, au sud de Mulgore.	Camp_Narache
 S	1412	Mine de la KapitalRisk	La mine s'enfonce profondément dans les falaises de l'est de Mulgore, avec trois accès : l'entrée principale à pied, une paroi rocheuse et un petit camp de bûcherons au-delà.	Venture_Co._Mine
 S	1412	Puits Sabot-d’Hiver|Puits Winterhoof	Le puits Winterhoof se trouve en bordure des plaines vallonnées, au sud de Mulgore.	Winterhoof_Water_Well
 S	1413	camp taurajo	Le camp Taurajo se trouve dans les Tarides, près du col de montagne qui mène à Mulgore.	Camp_Taurajo
-S	1413	La Croisée	La Croisée se trouve là où les routes se rejoignent : la piste nord-sud qui descend de la route de l'or, et la longue voie est-ouest qui va de Ratchet jusqu'aux Serres-Rocheuses.	Crossroads
+S	1413	La Croisée	La Croisée se trouve là où les routes se rejoignent : la piste nord-sud qui descend de la route de l'or, et la longue voie est-ouest qui va de Cabestan jusqu'aux Serres-Rocheuses.	Crossroads
 S	1413	Oasis luxuriante	L'eau s'accumule là où la Grande Fissure s'abaisse, et les bêtes sauvages descendent à travers les arbres pour s'y abreuver.	Lushwater_Oasis
-S	1413	ratchet	Ratchet se trouve sur la côte est des Tarides, une ville portuaire gobeline qui commerce activement avec Baie-du-Butin et le baron Revilgaz, de l'autre côté de la mer.	Ratchet
+S	1413	ratchet	Cabestan se trouve sur la côte est des Tarides, une ville portuaire gobeline qui commerce activement avec Baie-du-Butin et le baron Revilgaz, de l'autre côté de la mer.	Ratchet
 S	1413	L'oasis stagnante	L'oasis stagnante est une étendue d'eau verte et immobile entre la Côte des marchands et la route de l'or.	Stagnant_Oasis
 S	1413	Cavernes des lamentations	Les cavernes des Lamentations tiennent leur nom du son même des lieux : la vapeur qui jaillit des fissures de la roche, portée à travers les ténèbres en longs cris lugubres.	Wailing_Caverns
 S	1416	dalaran	Dalaran s'éleva comme une cité de mages, fondée après les guerres des Trolls par les sorciers de l'empire d'Arathor, et devint une nation à part entière.	Dalaran
-S	1416	Promontoire de Gavin	Le promontoire de Gavin est la dernière des quatre collines d'Hillsbrad, et la mieux gardée.	Gavin's_Naze
+S	1416	Promontoire de Gavin	Le promontoire de Gavin est la dernière des quatre collines de Hautebrande, et la mieux gardée.	Gavin's_Naze
 S	1416	Caverne stérile	Dans les montagnes d'Alterac, une caverne abrite des yétis des montagnes, et l'on trouve souvent Skhowl juste devant son entrée.	Growless_Cave
-S	1416	L'Avancée	L'Avancée est l'un des doigts de terre qui s'étendent à travers Hillsbrad.	Headland
+S	1416	L'Avancée	L'Avancée est l'un des doigts de terre qui s'étendent à travers Hautebrande.	Headland
 S	1416	Lac Lordamere	Le lac Lordamere s'étend à l'ombre des royaumes qui peuplaient jadis ses rives.	Lordamere_Lake
 S	1416	Manoir de Ravenholdt	Le manoir de Ravenholdt se tient à l'écart du monde, et c'est voulu.	Ravenholdt_Manor
 S	1417	Roche’gor	Au nord du donjon de Stromgarde, la colline de Boulder'gor s'élève, accidentée et rugueuse.	Boulder'gor
@@ -132,12 +132,12 @@ S	1423	stratholme	La ruine de Stratholme commença par du grain. Des cargaisons 
 S	1423	Val-Terreur	Val-Terreur se trouve à la lisière de Pestebois, ses rues vidées et livrées au Fléau et aux animaux pestiférés.	Terrordale
 S	1423	La Thondroril	La Thondroril sépare les Maleterres de l'ouest et de l'est.	Thondroril_River
 S	1423	zulmashar	Zul'Mashar était jadis la capitale de la tribu Mossflayer, des trolls des forêts du nord-est des Maleterres de l'est.	Zul'Mashar
-S	1424	Colline de Darrow	La colline de Darrow se trouve au nord des contreforts d'Hillsbrad, au pied de l'Avancée.	Darrow_Hill
-S	1424	dun garok	Dun Garok se dresse dans les collines des contreforts d'Hillsbrad, un fort nain sous le commandement du capitaine Ironhill.	Dun_Garok
-S	1424	Rivage oriental	Le Rivage oriental longe la côte sud-est des contreforts d'Hillsbrad, et son pendant s'étend plus à l'ouest sur ce même littoral.	Eastern_Strand
-S	1424	Ile de la purification	Une spirale de pierre s'élève au sud du rivage d'Hillsbrad, couronnée d'un cimetière et des restes brisés d'une tour d'observation.	Purgation_Isle
+S	1424	Colline de Darrow	La colline de Darrow se trouve au nord des contreforts de Hautebrande, au pied de l'Avancée.	Darrow_Hill
+S	1424	dun garok	Dun Garok se dresse dans les collines des contreforts de Hautebrande, un fort nain sous le commandement du capitaine Ironhill.	Dun_Garok
+S	1424	Donjon de Durnholde|Donjon de Fort-de-Durn	Le donjon de Durnholde se dresse, brisé, à l'est de Moulin-de-Tarren, ses casernes et sa tour de mage effondrées sur elles-mêmes, son arène silencieuse.	Durnholde_Keep
+S	1424	Rivage oriental	Le Rivage oriental longe la côte sud-est des contreforts de Hautebrande, et son pendant s'étend plus à l'ouest sur ce même littoral.	Eastern_Strand
 S	1424	Moulin-de-Tarren	Moulin-de-Tarren était jadis une simple ville de Lordaeron, au milieu des prairies au pied des montagnes d'Alterac.	Tarren_Mill
-S	1424	Rivage occidental	Le Rivage occidental se trouve sur la côte sud-ouest des contreforts d'Hillsbrad.	Western_Strand
+S	1424	Rivage occidental	Le Rivage occidental se trouve sur la côte sud-ouest des contreforts de Hautebrande.	Western_Strand
 S	1425	Nid-de-l'Aigle	Les nains Marteau-hardi n'ont pas choisi les Hinterlands en premier.	Aerie_Peak
 S	1425	Escarpement de Bogen	L'escarpement de Bogen est une grotte au sud-ouest des Hinterlands.	Bogen's_Ledge
 S	1425	Taudis de Featherbeard	Près du Nid-de-l'Aigle se dresse une petite maison qui appartenait jadis à un certain Featherbeard. Elle n'abrite ni garnison ni trésor.	Featherbeard's_Hovel
@@ -153,7 +153,7 @@ S	1426	Distillerie Thunderbrew	La distillerie Thunderbrew se dresse à Kharanos,
 S	1427	Caverne de Noircharbon	La caverne de Noircharbon est scellée près du mont Blackrock, sa pierre sombre silencieuse et coupée du monde extérieur.	Blackchar_Cave
 S	1427	Mont Blackrock|Mont Rochenoire	Le mont Blackrock n'est pas né d'un feu ordinaire.	Blackrock_Mountain
 S	1427	Crête de Guet-du-feu	La crête de Guet-du-feu est le principal camp des nains Sombrefer dans la gorge des Vents brûlants, dominant la grande excavation du Chaudron.	Firewatch_Ridge
-S	1427	Site de fouilles de Crasseboue|Site de fouilles de Grimesilt	Des nains d'Ironforge creusaient jadis ici, jusqu'à ce que les nains Sombrefer viennent s'emparer du site. Il reste aux mains des Sombrefer.	Grimesilt_Dig_Site
+S	1427	Site de fouilles de Crasseboue|Site de fouilles de Grimesilt	Des nains de Forgefer creusaient jadis ici, jusqu'à ce que les nains Sombrefer viennent s'emparer du site. Il reste aux mains des Sombrefer.	Grimesilt_Dig_Site
 S	1427	La Mer de braises	La Mer de braises s'étend, plate et dégagée, dans le sud de la gorge des Vents brûlants, juste au nord du mont Blackrock. Rien n'y pousse.	Sea_of_Cinders
 S	1427	Halte du Thorium	Dans le nord calciné de la gorge des Vents brûlants se dresse la Halte du Thorium, une petite ville neutre tenue par la Confrérie du Thorium, peuplée surtout de nains Sombrefer fidèles à…	Thorium_Point
 S	1428	Mont Blackrock|Mont Rochenoire	Le mont Blackrock n'est pas né d'un feu ordinaire.	Blackrock_Mountain
@@ -162,14 +162,14 @@ S	1428	Draco’dar	Les collines de Draco'dar sont noircies et calcinées, livré
 S	1428	Corniche des flammes	La Corniche des flammes se dresse sur un affleurement dénudé des Steppes ardentes, accessible seulement par un pont grossier.	Flame_Crest
 S	1428	Veille de Morgan	La Veille de Morgan gît en ruine dans le sud-est des Steppes ardentes, ses maisons réduites en cendres et sa tour de mage effondrée en décombres.	Morgan's_Vigil
 S	1428	Ruines de Thaurissan	Jadis, ces étendues de cendres des Steppes ardentes étaient verdoyantes, et la cité qui s'y dressait portait le nom de son fondateur : la cité de Thaurissan, capitale du clan Sombrefer…	Ruins_of_Thaurissan
-S	1429	Mine de la Crête aux échos|Mine de la crête aux échos	Les tunnels de la Mine de la crête aux échos s'étendent dans le nord-ouest de la vallée de Northshire.	Echo_Ridge_Mine
-S	1429	Comté-de-l’Or	Goldshire se trouve au cœur de la forêt d'Elwynn, ses champs en vue de Northshire, ses routes menant vers Stormwind, la Marche de l'Ouest et les Carmines.	Goldshire
+S	1429	Mine de la Crête aux échos|Mine de la crête aux échos	Les tunnels de la Mine de la crête aux échos s'étendent dans le nord-ouest de la vallée de Comté-du-Nord.	Echo_Ridge_Mine
+S	1429	Comté-de-l’Or	Comté-de-l'Or se trouve au cœur de la forêt d'Elwynn, ses champs en vue de Comté-du-Nord, ses routes menant vers Hurlevent, la Marche de l'Ouest et les Carmines.	Goldshire
 S	1429	Le Débarcadère de Jerod|Le débarcadère de Jerod	Le Débarcadère de Jerod est un ponton sur la rive de la forêt d'Elwynn, au bord de la rivière Nazfériti.	Jerod's_Landing
-S	1429	Abbaye de Comté-du-Nord|Abbaye de Northshire	L'abbaye de Northshire repose dans la vallée qui porte son nom, sur les contreforts de la forêt d'Elwynn, son grand hall, sa salle d'armes et son aile de bibliothèque se dressant là où les…	Northshire_Abbey
-S	1429	Vallée de Comté-du-Nord|Vallée de Northshire	La vallée de Northshire est fermée de tous côtés sauf un, ses montagnes infranchissables, son unique passage vers le sud barré par d'épais murs de pierre et une porte gardée.	Northshire_Valley
+S	1429	Abbaye de Comté-du-Nord|Abbaye de Northshire	L'abbaye de Comté-du-Nord repose dans la vallée qui porte son nom, sur les contreforts de la forêt d'Elwynn, son grand hall, sa salle d'armes et son aile de bibliothèque se dressant là où…	Northshire_Abbey
+S	1429	Vallée de Comté-du-Nord|Vallée de Northshire	La vallée de Comté-du-Nord est fermée de tous côtés sauf un, ses montagnes infranchissables, son unique passage vers le sud barré par d'épais murs de pierre et une porte gardée.	Northshire_Valley
 S	1429	Vignes de Northshire|Vignoble de Comté-du-Nord	Les vignes s'étendent à l'est de l'abbaye, jadis entretenues pour leur récolte avant que la Confrérie défias ne s'empare de la terre.	Northshire_Vineyards
-S	1431	Bosquet de Clairbois	Le Bosquet de Clairbois se trouve juste à l'ouest de Darkshire, ses quelques bâtiments depuis longtemps tombés en ruine.	Brightwood_Grove
-S	1431	Sombre-Comté	Darkshire n'a pas toujours porté ce nom. Il s'éleva il y a longtemps sous le nom de Grand Hamlet, un petit bourg forestier qui grandit à mesure que les habitants de Stormwind se…	Darkshire
+S	1431	Bosquet de Clairbois	Le Bosquet de Clairbois se trouve juste à l'ouest de Sombre-Comté, ses quelques bâtiments depuis longtemps tombés en ruine.	Brightwood_Grove
+S	1431	Sombre-Comté	Sombre-Comté n'a pas toujours porté ce nom. Il s'éleva il y a longtemps sous le nom de Grand Hamlet, un petit bourg forestier qui grandit à mesure que les habitants de Hurlevent se…	Darkshire
 S	1431	Colline-aux-Corbeaux	Les maisons de Colline-aux-Corbeaux sont vides, dans l'ouest du Bois de la Pénombre, livrées à la pourriture et à l'obscurité.	Raven_Hill
 S	1431	Cimetière de Colline-aux-Corbeaux	Le Cimetière de Colline-aux-Corbeaux s'étend au nord du bourg dont il tire son nom, ayant largement dépassé ses anciennes limites depuis que la corruption s'est emparée du Bois de la…	Raven_Hill_Cemetery
 S	1431	Destin de Roland	Le Destin de Roland est une mine du sud-est du Bois de la Pénombre, à l'est du Verger pourri.	Roland's_Doom
@@ -180,11 +180,11 @@ S	1432	Vallée des Brisepierre	La Vallée des Brisepierre s'enfonce parmi les mo
 S	1432	Barrage de Formepierre	Le Barrage de Formepierre s'élève à l'est du col de Dun Algaz, le long de la lisière nord du Loch Modan.	Stonewrought_Dam
 S	1432	Auberge de la Fortebière	L'Auberge de la Fortebière se trouve à Thelsamar, son âtre rarement froid.	Stoutlager_Inn
 S	1432	thelsamar	Thelsamar se trouve sur la rive ouest du Loch Modan, au nord de la Falaise de Vieillegriffe et au nord-est de la Vallée des Brisepierre.	Thelsamar
-S	1433	Scierie d'Alther	La scierie au nord-est de Lakeshire est vide, sa roue arrêtée depuis longtemps.	Alther's_Mill
+S	1433	Scierie d'Alther	La scierie au nord-est de Comté-du-Lac est vide, sa roue arrêtée depuis longtemps.	Alther's_Mill
 S	1433	Comté-du-Lac	Le Lac placide s'étend, immobile et froid, sous les pics des Carmines, et le bourg sur sa rive a plus d'une fois versé son sang pour cette terre.	Lakeshire
 S	1433	Camp des Etripeurs	Les orcs Blackrock tiennent un camp dans le nord-ouest des Carmines, tout près du chemin qui mène aux Steppes ardentes.	Render's_Camp
 S	1433	Cavernes de Rethban	Les Cavernes de Rethban s'enfoncent profondément dans le nord-ouest des Carmines.	Rethban_Caverns
-S	1433	Donjon de Guet-de-pierre	Le Donjon de Guet-de-pierre appartenait jadis aux humains de Lakeshire, chargé de veiller sur les Carmines.	Stonewatch_Keep
+S	1433	Donjon de Guet-de-pierre	Le Donjon de Guet-de-pierre appartenait jadis aux humains de Comté-du-Lac, chargé de veiller sur les Carmines.	Stonewatch_Keep
 S	1433	Tour d'Ilgalar	La Tour d'Ilgalar s'élève dans l'est des Carmines.	Tower_of_Ilgalar
 S	1434	Baie-du-Butin	Baie-du-Butin se niche dans un lagon bleu à la pointe sud de la vallée de Strangleronce, et l'on y entre à pied par les mâchoires blanchies d'un requin géant.	Booty_Bay
 S	1434	Campement Grom'gol	Le Campement Grom'gol se dresse, fortifié, sur la côte sud-ouest de Strangleronce, ses palissades élevées contre les trolls de la jungle de la côte, contre les nagas surgissant du ressac…	Grom'gol_Base_Camp
@@ -299,15 +299,15 @@ S	1452	Long-guet	Long-guet se dresse au croisement des routes commerciales du Be
 S	1452	Gorge du Blanc murmure	La Gorge du Blanc murmure entaille le sud du Berceau-de-l'Hiver, son fond et ses crêtes jonchés de ruines des elfes de la nuit.	Frostwhisper_Gorge
 S	1452	Lac Kel'Theril	Les eaux gelées du lac Kel'Theril reposent, immobiles, au cœur du Berceau-de-l'Hiver, entourées des ruines qui partagent son nom.	Lake_Kel'Theril
 S	1452	Poste des Grumegueules	Le Poste des Grumegueules porte un nom qui ne lui convient plus.	Timbermaw_Post
-S	1453	Hall des Champions	Dans le sud de la Vieille ville, à la Cité de Stormwind, se dresse le Hall des Champions, où logent les officiers de l'Alliance, à l'écart au sein de la vieille cité, comme il sied à leur…	Champions'_Hall
+S	1453	Hall des Champions	Dans le sud de la Vieille ville, à la Cité de Hurlevent, se dresse le Hall des Champions, où logent les officiers de l'Alliance, à l'écart au sein de la vieille cité, comme il sied à leur…	Champions'_Hall
 S	1453	Tram des profondeurs	Ce n'est pas par goût du confort que le roi Magni Bronzebeard fit construire le Tram des profondeurs.	Deeprun_Tram
-S	1453	Vallée des Héros|Vallée des héros	Un pont de pierre pâle mène chaque voyageur par-dessus les douves, devant la porte sud de Stormwind, jusqu'à une vallée verdoyante bordée de statues élevées autant par chagrin que par…	Valley_of_Heroes
+S	1453	Vallée des Héros|Vallée des héros	Un pont de pierre pâle mène chaque voyageur par-dessus les douves, devant la porte sud de Hurlevent, jusqu'à une vallée verdoyante bordée de statues élevées autant par chagrin que par…	Valley_of_Heroes
 S	1454	Hall des Légendes	Le Hall des Légendes se dresse dans la vallée de la Force, à Orgrimmar : ce sont les casernes où les officiers de la Horde tiennent conseil.	Hall_of_Legends
 S	1454	Gouffre de Ragefeu	Sous Orgrimmar, la terre s'ouvre sur un gouffre ardent, aux tunnels encombrés de lave et de fumée.	Ragefire_Chasm
 S	1455	Tram des profondeurs	Ce n'est pas par goût du confort que le roi Magni Bronzebeard fit construire le Tram des profondeurs.	Deeprun_Tram
-S	1455	Portes d'Ironforge|Portes de Forgefer	Les Portes d'Ironforge s'élèvent là où la grande rampe de Dun Morogh monte à la rencontre de la montagne, visibles à des lieues à travers les neiges bien avant qu'un voyageur ne les…	Gates_of_Ironforge
+S	1455	Portes d'Ironforge|Portes de Forgefer	Les Portes de Forgefer s'élèvent là où la grande rampe de Dun Morogh monte à la rencontre de la montagne, visibles à des lieues à travers les neiges bien avant qu'un voyageur ne les…	Gates_of_Ironforge
 S	1456	Cime des Anciens	La Cime des Anciens se dresse à l'est du plateau central, et l'on y accède par des ponts de corde depuis la cime haute et la cime du milieu.	Elder_Rise
-S	1456	Cime des chasseurs	La cime sud de Thunder Bluff appartient à ceux qui combattent et à ceux qui chassent.	Hunter_Rise
+S	1456	Cime des chasseurs	La cime sud de Les Pitons-du-Tonnerre appartient à ceux qui combattent et à ceux qui chassent.	Hunter_Rise
 S	1456	Les Bassins de la Vision	Sous le sommet de la Cime des Esprits, un tunnel débouche sur une eau sombre et immobile, connue sous le nom de Bassins de la vision.	Pools_of_Vision
 S	1456	spirit rise	La Cime des Esprits se dresse au nord-ouest du plateau central, vouée à l'étude chamanique chez les taurens. La tribu Skychaser y fait autorité.	Spirit_Rise
 S	1457	Enclave cénarienne	L'Enclave cénarienne s'étend au nord-ouest de Darnassus, un bosquet circulaire où chênes et frênes s'élèvent plus haut que les salles de pierre du reste de la cité.	Cenarion_Enclave
@@ -433,8 +433,8 @@ S	1423	thondroril river	Tirion Fordring, one of the first paladins of the Silver
 S	1423	zulmashar	The Mossflayers, a small tribe of forest trolls, once ruled from Zul'Mashar.	Zul'Mashar
 S	1424	darrow hill	Darrow Hill lies in the northern Hillsbrad Foothills, beneath the Headland.	Darrow_Hill
 S	1424	dun garok	Dwarves hold this keep in the southeastern hills, under Captain Ironhill. They guard the humans of Hillsbrad and watch over the Azurelode Mine.	Dun_Garok
+S	1424	durnholde keep	In the Second War, Orgrim Doomhammer himself raided Durnholde Keep to free the troll warlord Zul'jin from its cells.	Durnholde_Keep
 S	1424	eastern strand	The Eastern Strand runs along the southeastern coast of the Hillsbrad Foothills, its counterpart lying further west along the same shore.	Eastern_Strand
-S	1424	purgation isle	A towering spiral of rock rises from the water south of the Hillsbrad shore, with a cemetery on its top and the ruins of a scout tower.	Purgation_Isle
 S	1424	tarren mill	Early in the Second War, high elven archers from Silvermoon came south to see the orc threat. They were ambushed in the grasslands near Tarren Mill and taken to a nearby prison camp.	Tarren_Mill
 S	1424	western strand	The Western Strand lies on the southwest coast of Hillsbrad Foothills. Torn Fin murlocs have raised small camps along its shore, and Andy Murgole patrols the area.	Western_Strand
 S	1425	aerie peak	The Wildhammers went home to Grim Batol after the War of the Three Hammers and found the fortress tainted by the death of Modgud. They could not live there.	Aerie_Peak

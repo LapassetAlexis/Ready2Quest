@@ -179,6 +179,71 @@ def notable_names():
     return names
 
 
+# 2.13.0 : le texte français de Spoken garde souvent les noms anglais des lieux
+# (« Goldshire », « Stormwind ») alors que le client français dit Comté-de-l'Or,
+# Hurlevent. On les remplace par le nom du client : (1) d'après les alias
+# français de Spoken (variante anglaise -> nom français officiel), (2) d'après
+# une courte table de noms sûrs pour les mots seuls (« Stormwind » sans « Cité »).
+FR_CORE = {
+    "Stormwind": "Hurlevent", "Northshire": "Comté-du-Nord", "Goldshire": "Comté-de-l'Or",
+    "Ironforge": "Forgefer", "Undercity": "Fossoyeuse", "Thunder Bluff": "Les Pitons-du-Tonnerre",
+    "Booty Bay": "Baie-du-Butin", "Southshore": "Austrivage", "Tarren Mill": "Moulin-de-Tarren",
+    "Ratchet": "Cabestan", "Crossroads": "la Croisée", "Lakeshire": "Comté-du-Lac",
+    "Sentinel Hill": "colline des Sentinelles", "Silverpine": "Pins-Argentés", "Hillsbrad": "Hautebrande",
+    "Stranglethorn": "Strangleronce", "Ashenvale": "Orneval", "Darkshore": "Sombrivage",
+    "Westfall": "la Marche de l'Ouest", "Redridge": "les Carmines", "Duskwood": "le Bois de la Pénombre",
+    "Wetlands": "les Paluns", "Badlands": "les Terres ingrates", "Felwood": "Gangrebois",
+    "Winterspring": "Berceau-de-l'Hiver", "Moonglade": "Reflet-de-Lune", "Razor Hill": "Tranchecolline",
+    "Elwynn Forest": "la forêt d'Elwynn", "Dustwallow": "Âprefange", "Stonetalon": "Serres-Rocheuses",
+    "Defias": "Défias", "Bloodhoof": "Sabot-de-Sang", "Thousand Needles": "Mille pointes",
+    "Darkshire": "Sombre-Comté",
+}
+_WORD = "A-Za-zÀ-ÖØ-öø-ÿ'’"
+
+
+def fr_replacements(aliases, key_names_en):
+    """Paires (variante, nom français) : alias de Spoken + mots seuls sûrs."""
+    by_key = {}
+    for client, key in aliases.items():
+        by_key.setdefault(key, set()).add(client.replace("’", "'"))
+    pairs = {}
+    for key, names in by_key.items():
+        en_words = set(normalise(n) for n in key_names_en.get(key, ())) | {key}
+        def englishish(n):
+            return any(w and w in normalise(n) for w in key.split() if len(w) > 3)
+        official = [n for n in names if not englishish(n)]
+        if len(official) != 1:
+            continue
+        for n in names:
+            if n != official[0] and englishish(n):
+                pairs[n] = official[0]
+    for en, fr in FR_CORE.items():
+        pairs.setdefault(en, fr)
+    return sorted(pairs.items(), key=lambda kv: -len(kv[0]))
+
+
+_LETTERS = "A-Za-zÀ-ÖØ-öø-ÿ"
+
+
+def _elide(article, official):
+    """« d' » / « l' » devant le nom français : élision gardée devant une voyelle,
+    « de » devant une consonne, article supprimé quand le nom n'en prend pas."""
+    if official[:1].lower() in "aeiouyàâéèêîôû":   # h aspiré : « de Hautebrande », « de Hurlevent »
+        return article + official
+    if article.lower() == "d'":
+        return ("De " if article[0] == "D" else "de ") + official
+    return official[0].upper() + official[1:] if article[0] == "L" else official
+
+
+def fr_fix(text, pairs):
+    for variant, official in pairs:
+        if variant not in text:
+            continue
+        pattern = r"(?<![%s])([dDlL]['’])?%s(?![%s])" % (_LETTERS, re.escape(variant), _WORD)
+        text = re.sub(pattern, lambda m: _elide(m.group(1).replace("’", "'"), official) if m.group(1) else official, text)
+    return text
+
+
 def snapshot(texts):
     zones_fr = lua_tables(texts["frFR/Zones.lua"])["zones"]
     zones_en = lua_tables(texts["enUS/Zones.lua"])["zones"]
@@ -191,6 +256,15 @@ def snapshot(texts):
     renamed = forever.get("ForeverNames", {})
     known = our_zones()
     notable = notable_names()
+    key_names_en = {}
+    for _mid, en in zones_en.items():
+        if isinstance(en, dict) and en.get("name"):
+            key_names_en.setdefault(normalise(en["name"]), set()).add(en["name"])
+    for _z, entries in subs_en.items():
+        for key, en in entries.items():
+            if isinstance(en, dict) and en.get("name"):
+                key_names_en.setdefault(key, set()).add(en["name"])
+    pairs = fr_replacements(aliases, key_names_en)
     fr_names = {}
     for client, key in aliases.items():
         fr_names.setdefault(key, set()).add(client)
@@ -203,7 +277,7 @@ def snapshot(texts):
         fr, en = zones_fr.get(mid), zones_en.get(mid)
         if not (fr and en and fr.get("source") and fr.get("short") and en.get("short")):
             continue
-        zones[str(mid)] = {"name": en["name"], "fr": cut(fr["short"]), "en": cut(en["short"]), "src": slug(fr["source"])}
+        zones[str(mid)] = {"name": en["name"], "fr": cut(fr_fix(fr["short"], pairs)), "en": cut(en["short"]), "src": slug(fr["source"])}
 
     # sous-zones : rangées sous la zone où le client les place (AreaZones)
     candidates = {}
@@ -219,7 +293,7 @@ def snapshot(texts):
             for home in homes:
                 if home not in known:
                     continue
-                entry = {"key": key, "fr": cut(fr["short"]), "en": cut(en["short"]), "src": slug(en["source"]),
+                entry = {"key": key, "fr": cut(fr_fix(fr["short"], pairs)), "en": cut(en["short"]), "src": slug(en["source"]),
                          "names_fr": sorted(fr_names.get(key, ())), "names_en": sorted(en_names.get(key, ()))}
                 candidates.setdefault(str(home), []).append(entry)
     subzones = {}

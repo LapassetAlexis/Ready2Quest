@@ -215,3 +215,15 @@ do
 	Check("[LORE] en combat : jamais", NS:CompanionLoreIdle(NS.LORE_LIMITS.idle) == false)
 	X.Done()
 end
+
+-- 2.13.0 : noms des lieux du client français dans les textes français
+do
+	local src = io.open((ADDON_ROOT or ".") .. "/QuestCompanion/LoreData.lua"):read("*a")
+	local fr = src:match("local FR = %[%[(.-)%]%]") or ""
+	local en_left = {}
+	for _, name in ipairs({ "Goldshire", "Northshire", "Stormwind", "Ironforge", "Undercity", "Westfall", "Hillsbrad", "Darkshire" }) do
+		if fr:find(name, 1, true) then en_left[#en_left + 1] = name end
+	end
+	T.Check("[LORE] texte français : plus de noms anglais des lieux (Comté-de-l'Or, Hurlevent…)", #en_left == 0
+		and fr:find("Hurlevent", 1, true) ~= nil and fr:find("de Hautebrande", 1, true) ~= nil, table.concat(en_left, ","))
+end

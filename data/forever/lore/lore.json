@@ -79,7 +79,7 @@
    },
    {
     "en": "Drums made in Bloodhoof Village are unlike any others, and the village is known for the craft.",
-    "fr": "Le village Bloodhoof se trouve au bord des eaux du lac Taureau-de-pierre, dans les plaines de Mulgore, et porte le nom de la tribu qui y vit.",
+    "fr": "Le village Sabot-de-Sang se trouve au bord des eaux du lac Taureau-de-pierre, dans les plaines de Mulgore, et porte le nom de la tribu qui y vit.",
     "key": "bloodhoof village",
     "names_en": [],
     "names_fr": [
@@ -139,7 +139,7 @@
    },
    {
     "en": "Two roads cross here, the Gold Road running north and south and the road that runs from Ratchet to the Stonetalon Mountains.",
-    "fr": "La Croisée se trouve là où les routes se rejoignent : la piste nord-sud qui descend de la route de l'or, et la longue voie est-ouest qui va de Ratchet jusqu'aux Serres-Rocheuses.",
+    "fr": "La Croisée se trouve là où les routes se rejoignent : la piste nord-sud qui descend de la route de l'or, et la longue voie est-ouest qui va de Cabestan jusqu'aux Serres-Rocheuses.",
     "key": "crossroads",
     "names_en": [],
     "names_fr": [
@@ -159,7 +159,7 @@
    },
    {
     "en": "Gazlowe was paid well by Warchief Thrall for the help he and his workers gave in raising Orgrimmar after the Third War.",
-    "fr": "Ratchet se trouve sur la côte est des Tarides, une ville portuaire gobeline qui commerce activement avec Baie-du-Butin et le baron Revilgaz, de l'autre côté de la mer.",
+    "fr": "Cabestan se trouve sur la côte est des Tarides, une ville portuaire gobeline qui commerce activement avec Baie-du-Butin et le baron Revilgaz, de l'autre côté de la mer.",
     "key": "ratchet",
     "names_en": [],
     "names_fr": [],
@@ -197,7 +197,7 @@
    },
    {
     "en": "Mountain lions roam this hill, and the rare Araga is sometimes among them.",
-    "fr": "Le promontoire de Gavin est la dernière des quatre collines d'Hillsbrad, et la mieux gardée.",
+    "fr": "Le promontoire de Gavin est la dernière des quatre collines de Hautebrande, et la mieux gardée.",
     "key": "gavins naze",
     "names_en": [],
     "names_fr": [
@@ -217,7 +217,7 @@
    },
    {
     "en": "A mountain lion with a slight mane and a striped tail rests on the cliffside of the Headland. She is Araga, and no other cat in the hills looks like her.",
-    "fr": "L'Avancée est l'un des doigts de terre qui s'étendent à travers Hillsbrad.",
+    "fr": "L'Avancée est l'un des doigts de terre qui s'étendent à travers Hautebrande.",
     "key": "headland",
     "names_en": [],
     "names_fr": [
@@ -665,7 +665,7 @@
   "1424": [
    {
     "en": "Darrow Hill lies in the northern Hillsbrad Foothills, beneath the Headland.",
-    "fr": "La colline de Darrow se trouve au nord des contreforts d'Hillsbrad, au pied de l'Avancée.",
+    "fr": "La colline de Darrow se trouve au nord des contreforts de Hautebrande, au pied de l'Avancée.",
     "key": "darrow hill",
     "names_en": [],
     "names_fr": [
@@ -675,31 +675,32 @@
    },
    {
     "en": "Dwarves hold this keep in the southeastern hills, under Captain Ironhill. They guard the humans of Hillsbrad and watch over the Azurelode Mine.",
-    "fr": "Dun Garok se dresse dans les collines des contreforts d'Hillsbrad, un fort nain sous le commandement du capitaine Ironhill.",
+    "fr": "Dun Garok se dresse dans les collines des contreforts de Hautebrande, un fort nain sous le commandement du capitaine Ironhill.",
     "key": "dun garok",
     "names_en": [],
     "names_fr": [],
     "src": "Dun_Garok"
    },
    {
+    "en": "In the Second War, Orgrim Doomhammer himself raided Durnholde Keep to free the troll warlord Zul'jin from its cells.",
+    "fr": "Le donjon de Durnholde se dresse, brisé, à l'est de Moulin-de-Tarren, ses casernes et sa tour de mage effondrées sur elles-mêmes, son arène silencieuse.",
+    "key": "durnholde keep",
+    "names_en": [],
+    "names_fr": [
+     "Donjon de Durnholde",
+     "Donjon de Fort-de-Durn"
+    ],
+    "src": "Durnholde_Keep"
+   },
+   {
     "en": "The Eastern Strand runs along the southeastern coast of the Hillsbrad Foothills, its counterpart lying further west along the same shore.",
-    "fr": "Le Rivage oriental longe la côte sud-est des contreforts d'Hillsbrad, et son pendant s'étend plus à l'ouest sur ce même littoral.",
+    "fr": "Le Rivage oriental longe la côte sud-est des contreforts de Hautebrande, et son pendant s'étend plus à l'ouest sur ce même littoral.",
     "key": "eastern strand",
     "names_en": [],
     "names_fr": [
      "Rivage oriental"
     ],
     "src": "Eastern_Strand"
-   },
-   {
-    "en": "A towering spiral of rock rises from the water south of the Hillsbrad shore, with a cemetery on its top and the ruins of a scout tower.",
-    "fr": "Une spirale de pierre s'élève au sud du rivage d'Hillsbrad, couronnée d'un cimetière et des restes brisés d'une tour d'observation.",
-    "key": "purgation isle",
-    "names_en": [],
-    "names_fr": [
-     "Ile de la purification"
-    ],
-    "src": "Purgation_Isle"
    },
    {
     "en": "Early in the Second War, high elven archers from Silvermoon came south to see the orc threat. They were ambushed in the grasslands near Tarren Mill and taken to a nearby prison camp.",
@@ -713,7 +714,7 @@
    },
    {
     "en": "The Western Strand lies on the southwest coast of Hillsbrad Foothills. Torn Fin murlocs have raised small camps along its shore, and Andy Murgole patrols the area.",
-    "fr": "Le Rivage occidental se trouve sur la côte sud-ouest des contreforts d'Hillsbrad.",
+    "fr": "Le Rivage occidental se trouve sur la côte sud-ouest des contreforts de Hautebrande.",
     "key": "western strand",
     "names_en": [],
     "names_fr": [
@@ -877,7 +878,7 @@
    },
    {
     "en": "Dwarves from Ironforge once dug at the Grimesilt Dig Site. The Dark Iron dwarves took it over and hold it still.",
-    "fr": "Des nains d'Ironforge creusaient jadis ici, jusqu'à ce que les nains Sombrefer viennent s'emparer du site. Il reste aux mains des Sombrefer.",
+    "fr": "Des nains de Forgefer creusaient jadis ici, jusqu'à ce que les nains Sombrefer viennent s'emparer du site. Il reste aux mains des Sombrefer.",
     "key": "grimesilt dig site",
     "names_en": [],
     "names_fr": [
@@ -974,7 +975,7 @@
   "1429": [
    {
     "en": "Marshal McBride keeps sending men into Echo Ridge Mine, in the northwest of Northshire Valley, to thin the kobolds that have taken over its tunnels.",
-    "fr": "Les tunnels de la Mine de la crête aux échos s'étendent dans le nord-ouest de la vallée de Northshire.",
+    "fr": "Les tunnels de la Mine de la crête aux échos s'étendent dans le nord-ouest de la vallée de Comté-du-Nord.",
     "key": "echo ridge mine",
     "names_en": [],
     "names_fr": [
@@ -985,7 +986,7 @@
    },
    {
     "en": "Goldshire stands at the center of Elwynn Forest, one of the small towns that grew up around Stormwind.",
-    "fr": "Goldshire se trouve au cœur de la forêt d'Elwynn, ses champs en vue de Northshire, ses routes menant vers Stormwind, la Marche de l'Ouest et les Carmines.",
+    "fr": "Comté-de-l'Or se trouve au cœur de la forêt d'Elwynn, ses champs en vue de Comté-du-Nord, ses routes menant vers Hurlevent, la Marche de l'Ouest et les Carmines.",
     "key": "goldshire",
     "names_en": [],
     "names_fr": [
@@ -1006,7 +1007,7 @@
    },
    {
     "en": "Centuries ago, clerics of the Church of the Holy Light came south from Lordaeron and founded the Holy Order of Northshire Clerics at this abbey.",
-    "fr": "L'abbaye de Northshire repose dans la vallée qui porte son nom, sur les contreforts de la forêt d'Elwynn, son grand hall, sa salle d'armes et son aile de bibliothèque se dressant là où les…",
+    "fr": "L'abbaye de Comté-du-Nord repose dans la vallée qui porte son nom, sur les contreforts de la forêt d'Elwynn, son grand hall, sa salle d'armes et son aile de bibliothèque se dressant là où…",
     "key": "northshire abbey",
     "names_en": [],
     "names_fr": [
@@ -1017,7 +1018,7 @@
    },
    {
     "en": "Impenetrable mountains close in Northshire Valley on every side but one. A pass leads out to the south, protected by thick stone walls and a guarded gate.",
-    "fr": "La vallée de Northshire est fermée de tous côtés sauf un, ses montagnes infranchissables, son unique passage vers le sud barré par d'épais murs de pierre et une porte gardée.",
+    "fr": "La vallée de Comté-du-Nord est fermée de tous côtés sauf un, ses montagnes infranchissables, son unique passage vers le sud barré par d'épais murs de pierre et une porte gardée.",
     "key": "northshire valley",
     "names_en": [],
     "names_fr": [
@@ -1041,7 +1042,7 @@
   "1431": [
    {
     "en": "The few buildings that stood at the edge of Brightwood Grove lie in ruins, and Nightbane worgen prowl its dark fields.",
-    "fr": "Le Bosquet de Clairbois se trouve juste à l'ouest de Darkshire, ses quelques bâtiments depuis longtemps tombés en ruine.",
+    "fr": "Le Bosquet de Clairbois se trouve juste à l'ouest de Sombre-Comté, ses quelques bâtiments depuis longtemps tombés en ruine.",
     "key": "brightwood grove",
     "names_en": [],
     "names_fr": [
@@ -1051,7 +1052,7 @@
    },
    {
     "en": "Darkshire was once a quaint little woodland village called Grand Hamlet, in the forest of Brightwood. Then the darkness came, and the woods turned into a dangerous, thorny blight.",
-    "fr": "Darkshire n'a pas toujours porté ce nom. Il s'éleva il y a longtemps sous le nom de Grand Hamlet, un petit bourg forestier qui grandit à mesure que les habitants de Stormwind se…",
+    "fr": "Sombre-Comté n'a pas toujours porté ce nom. Il s'éleva il y a longtemps sous le nom de Grand Hamlet, un petit bourg forestier qui grandit à mesure que les habitants de Hurlevent se…",
     "key": "darkshire",
     "names_en": [],
     "names_fr": [
@@ -1161,7 +1162,7 @@
   "1433": [
    {
     "en": "The lumber mill northeast of Lakeshire is abandoned.",
-    "fr": "La scierie au nord-est de Lakeshire est vide, sa roue arrêtée depuis longtemps.",
+    "fr": "La scierie au nord-est de Comté-du-Lac est vide, sa roue arrêtée depuis longtemps.",
     "key": "althers mill",
     "names_en": [],
     "names_fr": [
@@ -1201,7 +1202,7 @@
    },
    {
     "en": "Gath'Ilzogg, a warlord of the Blackrock clan, holds Stonewatch Keep with his trusted lieutenant Tharil'zun.",
-    "fr": "Le Donjon de Guet-de-pierre appartenait jadis aux humains de Lakeshire, chargé de veiller sur les Carmines.",
+    "fr": "Le Donjon de Guet-de-pierre appartenait jadis aux humains de Comté-du-Lac, chargé de veiller sur les Carmines.",
     "key": "stonewatch keep",
     "names_en": [],
     "names_fr": [
@@ -2363,7 +2364,7 @@
   "1453": [
    {
     "en": "In the south of Old Town, the officers of the Alliance keep their barracks in the Champions' Hall.",
-    "fr": "Dans le sud de la Vieille ville, à la Cité de Stormwind, se dresse le Hall des Champions, où logent les officiers de l'Alliance, à l'écart au sein de la vieille cité, comme il sied à leur…",
+    "fr": "Dans le sud de la Vieille ville, à la Cité de Hurlevent, se dresse le Hall des Champions, où logent les officiers de l'Alliance, à l'écart au sein de la vieille cité, comme il sied à leur…",
     "key": "champions hall",
     "names_en": [],
     "names_fr": [
@@ -2383,7 +2384,7 @@
    },
    {
     "en": "A stone bridge crosses the moat before Stormwind's gate and leads into a lush green valley. Five great statues stand along the road.",
-    "fr": "Un pont de pierre pâle mène chaque voyageur par-dessus les douves, devant la porte sud de Stormwind, jusqu'à une vallée verdoyante bordée de statues élevées autant par chagrin que par…",
+    "fr": "Un pont de pierre pâle mène chaque voyageur par-dessus les douves, devant la porte sud de Hurlevent, jusqu'à une vallée verdoyante bordée de statues élevées autant par chagrin que par…",
     "key": "valley of heroes",
     "names_en": [],
     "names_fr": [
@@ -2428,7 +2429,7 @@
    },
    {
     "en": "The Gates of Ironforge rise where the great ramp of central Dun Morogh climbs to meet the mountain, a grand sight visible for miles across the snow.",
-    "fr": "Les Portes d'Ironforge s'élèvent là où la grande rampe de Dun Morogh monte à la rencontre de la montagne, visibles à des lieues à travers les neiges bien avant qu'un voyageur ne les…",
+    "fr": "Les Portes de Forgefer s'élèvent là où la grande rampe de Dun Morogh monte à la rencontre de la montagne, visibles à des lieues à travers les neiges bien avant qu'un voyageur ne les…",
     "key": "gates of ironforge",
     "names_en": [],
     "names_fr": [
@@ -2451,7 +2452,7 @@
    },
    {
     "en": "The southern rise of Thunder Bluff belongs to those who hunt and fight.",
-    "fr": "La cime sud de Thunder Bluff appartient à ceux qui combattent et à ceux qui chassent.",
+    "fr": "La cime sud de Les Pitons-du-Tonnerre appartient à ceux qui combattent et à ceux qui chassent.",
     "key": "hunter rise",
     "names_en": [],
     "names_fr": [
@@ -2624,7 +2625,7 @@
   },
   "1424": {
    "en": "Most of Lordaeron has been twisted by the Scourge, but the Hillsbrad Foothills still look as the kingdom once did. The hills are green, the meadows fertile and the soil rich.",
-   "fr": "Le sol d'Hillsbrad est riche et ses collines sont vertes, et les voyageurs disent que c'est à cela que ressemblait tout Lordaeron avant l'arrivée de la peste.",
+   "fr": "Le sol de Hautebrande est riche et ses collines sont vertes, et les voyageurs disent que c'est à cela que ressemblait tout Lordaeron avant l'arrivée de la peste.",
    "name": "Hillsbrad Foothills",
    "src": "Hillsbrad_Foothills_(Classic)"
   },
@@ -2654,7 +2655,7 @@
   },
   "1429": {
    "en": "In the First War, thousands of orcs marched through Elwynn Forest and closed around Stormwind, leaving the sea as the only way out.",
-   "fr": "Lorsque les orcs vinrent pendant la première guerre, des milliers d'entre eux traversèrent Elwynn pour encercler Stormwind, la coupant de tout sauf de la mer.",
+   "fr": "Lorsque les orcs vinrent pendant la première guerre, des milliers d'entre eux traversèrent Elwynn pour encercler Hurlevent, la coupant de tout sauf de la mer.",
    "name": "Elwynn Forest",
    "src": "Elwynn_Forest_(Classic)"
   },
@@ -2792,7 +2793,7 @@
   },
   "1453": {
    "en": "Orcs of the Horde burned Stormwind in the First War. After the Second War its people came home to the ruins, and the Stonemasons' Guild rebuilt the city in white stone.",
-   "fr": "Stormwind se releva en pierre blanche après que la Horde orque l'eut incendiée, rebâtie par la guilde des Maçons sous le règne du jeune roi Varian.",
+   "fr": "Hurlevent se releva en pierre blanche après que la Horde orque l'eut incendiée, rebâtie par la guilde des Maçons sous le règne du jeune roi Varian.",
    "name": "Stormwind City",
    "src": "Stormwind_City"
   },
@@ -2804,13 +2805,13 @@
   },
   "1455": {
    "en": "The first dwarves walked out of Uldaman and went west to the mountains of Dun Morogh.",
-   "fr": "Ironforge est la capitale des nains, creusée dans les profondeurs de la montagne d'Ironforge, au nord de Dun Morogh, terre ancestrale des nains et l'une des plus anciennes cités d'Azeroth.",
+   "fr": "Forgefer est la capitale des nains, creusée dans les profondeurs de la montagne de Forgefer, au nord de Dun Morogh, terre ancestrale des nains et l'une des plus anciennes cités d'Azeroth.",
    "name": "Ironforge",
    "src": "Ironforge"
   },
   "1456": {
    "en": "For countless generations the tauren wandered, and the centaur hunted them across the plains. Then Warchief Thrall and the Horde came to Kalimdor.",
-   "fr": "Thunder Bluff se dresse sur quatre plateaux balayés par les vents au-dessus des prairies de Mulgore, accessible seulement par des ascenseurs de corde et de bois de facture taurène, ou par…",
+   "fr": "Les Pitons-du-Tonnerre se dresse sur quatre plateaux balayés par les vents au-dessus des prairies de Mulgore, accessible seulement par des ascenseurs de corde et de bois de facture…",
    "name": "Thunder Bluff",
    "src": "Thunder_Bluff"
   },
@@ -2822,7 +2823,7 @@
   },
   "1458": {
    "en": "The Undercity was old before the Forsaken claimed it.",
-   "fr": "Bien avant que les Réprouvés ne se l'approprient, l'Undercity avait un nom et une fonction.",
+   "fr": "Bien avant que les Réprouvés ne se l'approprient, Fossoyeuse avait un nom et une fonction.",
    "name": "Undercity",
    "src": "Undercity"
   }
