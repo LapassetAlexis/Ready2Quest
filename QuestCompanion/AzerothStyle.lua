@@ -122,6 +122,7 @@ ns.AZEROTH_INK = {
 	white = { 1, 1, 1 }, barGrey = { 0.91, 0.89, 0.83 }, goldHead = { 0.97, 0.85, 0.47 },
 	star = { 1, 0.84, 0.29 }, tagBlue = { 0.357, 0.561, 0.839 }, tagGrey = { 0.64, 0.66, 0.68 },
 	navText = { 0.85, 0.83, 0.78 }, navSel = { 0.95, 0.91, 0.83 },
+	zoneDim = { 0.74, 0.71, 0.66 },          -- 2.9.1 : zone pas encore vue (Exploration), sur le fond des catégories
 	stripLabel = { 0.95, 0.84, 0.54 }, stripDetail = { 0.84, 0.77, 0.60 },
 	markGold = { 0.97, 0.85, 0.47 }, markGrey = { 0.86, 0.82, 0.74 },
 	-- rareté du nom dans la Ménagerie, sur la ligne claire
@@ -199,6 +200,15 @@ ns.AZEROTH_CONTRAST = {
 	["effects.linePending"] = { "inkSoft", 0.3217, 4.5, 11 },   -- sombre, fond 0.322 (moy. 0.355) : 5.94:1 (2.9.0, les mêmes, effets en attente)
 	["effects.state"] = { "ink", 0.3036, 4.5, 11 },   -- sombre, fond 0.304 (moy. 0.336) : 6.34:1 (2.9.0, ligne force/envies/état (bas du bloc, le plus sombre), actifs)
 	["effects.statePending"] = { "inkSoft", 0.3036, 4.5, 11 },   -- sombre, fond 0.304 (moy. 0.336) : 5.65:1 (2.9.0, la même, en attente / module coupé)
+	-- 2.9.1 : Exploration, liste des quêtes d'une zone (lignes « light » : fond 235397 en Cover sur 504×24,
+	-- voile crème 0,40 ; nom de x 28 à 342, détail sur les 154 px de droite) et liste des zones (fond des
+	-- catégories 130652, découpe 167×29 étirée sur 190×26, rangée opaque)
+	["quest.name"] = { "ink", 0.3250, 4.5, 12 },   -- sombre, fond 0.325 (moy. 0.423) : 6.73:1 (quête à faire)
+	["quest.nameDone"] = { "inkMuted", 0.3250, 4.5, 12 },   -- sombre, fond 0.325 (moy. 0.423) : 5.04:1 (faite, ou verrouillée)
+	["quest.detail"] = { "inkMuted", 0.4213, 4.5, 11 },   -- sombre, fond 0.421 (moy. 0.452) : 6.34:1 (« niveau n »)
+	["quest.detailDone"] = { "green", 0.4213, 4.5, 11 },   -- sombre, fond 0.421 (moy. 0.452) : 6.01:1 (« faite »)
+	["zone.label"] = { "navText", 0.0455, 4.5, 12 },   -- clair, fond 0.046 (moy. 0.016) : 7.41:1 (zone vue)
+	["zone.unseen"] = { "zoneDim", 0.0455, 4.5, 12 },   -- clair, fond 0.046 (moy. 0.016) : 5.41:1 (zone pas encore vue, rangée opaque)
 }
 -- Luminance relative WCAG 2.x d'une couleur (0..1)
 local function Lin(c) if c <= 0.03928 then return c / 12.92 end return ((c + 0.055) / 1.055) ^ 2.4 end

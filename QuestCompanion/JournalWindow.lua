@@ -1295,6 +1295,60 @@ local function BuildPantry(self, frame)
 	end
 end
 
+-- 2.9.1 : la roue crantée du carnet, comme celle du journal de quêtes du
+-- client (et des addons qui la reprennent) : une roue grise, sans cadre doré,
+-- désaturée et estompée au repos, plus claire au survol. Atlas du client
+-- (UiTextureAtlasMember du build 1.60.1) : « questlog-icon-setting » (15×16),
+-- sinon « gm-icon-settings » (40×40), sinon le fichier UI-OptionsButton.
+ns.JOURNAL_COG = { atlases = { "questlog-icon-setting", "gm-icon-settings" },
+	file = "Interface\\Buttons\\UI-OptionsButton", size = 16,
+	rest = { 0.78, 0.78, 0.78, 0.85 }, hover = { 1, 1, 1, 1 } }
+local function CogPaint(button, hot)
+	local icon, cog = button.icon, ns.JOURNAL_COG
+	local c = hot and cog.hover or cog.rest
+	if icon.SetDesaturated then pcall(icon.SetDesaturated, icon, true) end
+	icon:SetVertexColor(c[1], c[2], c[3])
+	icon:SetAlpha(c[4])
+	button.cogHot = hot and true or false
+end
+function ns.JournalCogSkin(button)
+	if not (button and button.icon) then return nil end
+	local icon, cog = button.icon, ns.JOURNAL_COG
+	local has = ns.AzerothHasAtlas or function() return false end
+	local chosen
+	for _, name in ipairs(cog.atlases) do
+		if has(name) and ns.AzerothAtlas and ns.AzerothAtlas(icon, name) then chosen = name; break end
+	end
+	if not chosen then
+		icon:SetTexture(cog.file)
+		if icon.SetTexCoord then icon:SetTexCoord(0, 1, 0, 1) end
+		chosen = cog.file
+	end
+	icon:ClearAllPoints()
+	icon:SetPoint("CENTER", button, "CENTER", 0, 0)
+	icon:SetSize(cog.size, cog.size)
+	-- pas de carré au trait autour (la référence n'en a pas)
+	if button.border then
+		for _, side in ipairs({ "top", "bottom", "left", "right" }) do
+			local edge = button.border[side]
+			if edge and edge.Hide then edge:Hide() end
+		end
+		button.border.SetColor = function() end
+	end
+	button.cogTexture = chosen
+	local enter, leave = button:GetScript("OnEnter"), button:GetScript("OnLeave")
+	button:SetScript("OnEnter", function(self, ...)
+		if enter then enter(self, ...) end
+		CogPaint(self, true)
+	end)
+	button:SetScript("OnLeave", function(self, ...)
+		if leave then leave(self, ...) end
+		CogPaint(self, false)
+	end)
+	CogPaint(button, false)
+	return chosen
+end
+
 function ns:EnsureJournalWindow()
 	if self.journalFrame then return self.journalFrame end
 	if not Theme or not Theme.CreateWindow then return nil end
@@ -1355,6 +1409,7 @@ function ns:EnsureJournalWindow()
 	if Theme.CreateGearButton and frame.close then
 		frame.settingsButton = Theme.CreateGearButton(frame, 22, function() ns:ToggleOptions() end, L.JRN_SETTINGS_TIP)
 		frame.settingsButton:SetPoint("RIGHT", frame.close, "LEFT", -8, 0)
+		ns.JournalCogSkin(frame.settingsButton)
 		frame.settingsButton:Show()
 		if frame.settingsButton.SetFrameLevel and frame.close.GetFrameLevel then
 			frame.settingsButton:SetFrameLevel(tonumber(frame.close:GetFrameLevel()) or 20)

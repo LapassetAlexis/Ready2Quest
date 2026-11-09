@@ -1276,10 +1276,40 @@ local function ZoneRowText(row)
 end
 ns.CarnetZoneRowText = ZoneRowText
 
+-- 2.9.1 : les textes d'une rangée de zone, à l'encre mesurée (rôles zone.*).
+-- Avant : une zone pas encore vue était estompée (alpha 0,55) : fond sombre
+-- et texte clair à moitié transparents sur le parchemin, illisibles. La rangée
+-- reste opaque, le gris « zoneDim » dit qu'elle n'est pas encore vue.
+local function ZoneRowInk(row)
+	local zone = row.zone
+	if not zone or row.azStyle ~= "dark" then return false end
+	row:SetAlpha(1)
+	if row.selected then return true end
+	local ink = RoleInk(zone.seen and "zone.label" or "zone.unseen")
+	Paint(row.name, ink); Shadow(row.name)
+	if row.percent and not (zone.seen and zone.percent == 100) then Paint(row.percent, ink); Shadow(row.percent) end
+	return true
+end
+ns.CarnetZoneRowInk = ZoneRowInk
+
+-- 2.9.1 : une ligne de quête (fond clair voilé), à l'encre mesurée (rôles
+-- quest.*). Le carnet repasse les encres (Recolor) AVANT de poser le fond des
+-- lignes : à la première ouverture, la ligne passait pour sombre et gardait
+-- le texte clair du thème. Le détail perd son code couleur gris (|cff…).
+local function QuestLineInk(line, item)
+	if line.azStyle ~= "light" then return false end
+	local done = item.done or item.locked
+	Paint(line.text, RoleInk(done and "quest.nameDone" or "quest.name")); NoShadow(line.text)
+	line.detail:SetText(tostring(item.detail or ""))
+	Paint(line.detail, RoleInk(item.done and "quest.detailDone" or "quest.detail")); NoShadow(line.detail)
+	return true
+end
+ns.CarnetQuestLineInk = QuestLineInk
+
 function POST.progress(self, frame)
 	local pane = frame.prog
 	if not pane then return end
-	for _, row in ipairs(pane.zones or {}) do ZoneRowText(row) end
+	for _, row in ipairs(pane.zones or {}) do ZoneRowText(row); ZoneRowInk(row) end
 	for _, tile in ipairs(pane.marks or {}) do
 		if TileStyle(tile, tile.reached and "gold" or "grey") then
 			Paint(tile.label, tile.reached and GOLD_HEAD or { 0.86, 0.82, 0.74 })
@@ -1294,6 +1324,7 @@ function POST.progress(self, frame)
 				if TileStyle(line, "stathead") then Paint(line.text, GOLD_HEAD); Shadow(line.text) end
 			else
 				TileStyle(line, "light")
+				QuestLineInk(line, item)
 			end
 		end
 	end

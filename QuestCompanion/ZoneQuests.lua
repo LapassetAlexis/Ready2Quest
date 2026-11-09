@@ -131,6 +131,34 @@ end
 -- ---------------------------------------------------------------------------
 ns.zoneQuests = ns.zoneQuests or { done = {}, lists = {}, builds = 0, dirty = false, live = {}, requested = {} }
 local state = ns.zoneQuests
+-- 2.9.1 : titres traduits par le client (questID -> titre), demandes en cours
+state.titles = state.titles or {}
+state.asked = state.asked or {}
+
+-- 2.9.1 : le titre de la quête dans la langue du client. Les quêtes propres à
+-- Forever n'ont qu'un nom anglais dans nos données : le carnet mélangeait
+-- anglais et français. C_QuestLog.GetTitleForQuestID rend nil tant que la
+-- quête n'est pas en cache ; on demande alors son chargement (une fois par
+-- quête, RequestLoadQuestByID) et QUEST_DATA_LOAD_RESULT reconstruit la
+-- liste. Jamais bloquant : sans réponse, notre nom fr/en reste affiché.
+local function ClientTitle(id, ask)
+	local cached = state.titles[id]
+	if cached then return cached end
+	local log = rawget(_G, "C_QuestLog")
+	if type(log) ~= "table" then return nil end
+	local title = Call(log.GetTitleForQuestID, id)
+	title = ns.Plain and ns.Plain(title) or title
+	if type(title) == "string" and title ~= "" then
+		state.titles[id] = title
+		return title
+	end
+	if ask and not state.asked[id] and type(log.RequestLoadQuestByID) == "function" then
+		state.asked[id] = true
+		pcall(log.RequestLoadQuestByID, id)
+	end
+	return nil
+end
+ns.ZoneQuestClientTitle = ClientTitle
 
 local function Completed(id)
 	local log = rawget(_G, "C_QuestLog")
@@ -181,7 +209,10 @@ local function Build(self, zone, race, class, french)
 		if type(quest) == "table" and Eligible(quest, race, class) then
 			local done = self:ZoneQuestDone(id)
 			if done or not Closed(self, quest) then
-				local name = (french and quest.fr) or quest.en or quest.fr
+				-- 2.9.1 : le titre du client d'abord (sa langue) ; la demande de
+				-- chargement seulement quand notre nom n'est pas dans cette langue
+				local name = ClientTitle(id, french and not quest.fr)
+					or (french and quest.fr) or quest.en or quest.fr
 				name = (type(name) == "string" and name ~= "") and name or tostring(id)
 				list[#list + 1] = { id = id, name = name, done = done, level = Level(quest) }
 			end
@@ -354,8 +385,20 @@ local function QuestLinesUpdated()
 	local frame = ns.journalFrame
 	if frame and frame.IsShown and frame:IsShown() and ns.RefreshJournal then ns:RefreshJournal() end
 end
+-- 2.9.1 : un titre demandé est arrivé : les listes se reconstruisent (au
+-- prochain affichage), le carnet ouvert se rafraîchit
+local function QuestDataLoaded(questID, success)
+	local id = tonumber(questID)
+	if not (id and state.asked[id]) then return end
+	if success == false then return end
+	if not ClientTitle(id, false) then return end
+	state.lists = {}
+	local frame = ns.journalFrame
+	if frame and frame.IsShown and frame:IsShown() and ns.RefreshJournal and not InCombat() then ns:RefreshJournal() end
+end
+ns.ZoneQuestDataLoaded = QuestDataLoaded
 local HANDLERS = { QUEST_TURNED_IN = Forget, QUEST_LOG_UPDATE = Forget, PLAYER_REGEN_ENABLED = AfterCombat,
-	QUESTLINE_UPDATE = QuestLinesUpdated }
+	QUESTLINE_UPDATE = QuestLinesUpdated, QUEST_DATA_LOAD_RESULT = QuestDataLoaded }
 
 local eventFrame = CreateFrame("Frame")
 for event in pairs(HANDLERS) do pcall(eventFrame.RegisterEvent, eventFrame, event) end

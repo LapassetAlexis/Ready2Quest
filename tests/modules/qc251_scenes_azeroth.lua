@@ -323,9 +323,10 @@ do
 		and frame:GetWidth() == math.max(AZB.minW, 3 * AZB.tileW + 2 * AZB.gapX + 2 * AZB.pad)
 		and frame:GetHeight() == AZB.head + 2 * AZB.tileH + AZB.gapY + AZB.foot, frame:GetWidth() .. "x" .. frame:GetHeight())
 	local tile = frame.tiles[1]
-	Check("[AZS] case : la créature dans le cadre d'icône doré, devant le modèle", tile.az and tile.ring.atlas == "ui-achievement-iconframe"
-		and tile.ringFrame.level > (tile.model and tile.model.level or 0) and tile.fx.level > tile.ringFrame.level
-		and tile.model and tile.model:GetParent() == tile.scene and tile.scene.clipsChildren == true)
+	-- 2.9.1 : l'icône fixe du type remplace le modèle 3D (mal cadré)
+	Check("[AZS] case : la créature dans le cadre d'icône doré, devant l'icône", tile.az and tile.ring.atlas == "ui-achievement-iconframe"
+		and tile.fx.level > tile.ringFrame.level and tile.model == nil
+		and tile.fallback:GetParent() == tile.scene and tile.scene.clipsChildren == true)
 	Check("[AZS] case : pas de bouclier avant le verdict", not tile.shield:IsShown())
 	Check("[AZS] la brillante tombe en dernier", batch.order[#batch.order].result.target.shiny == true)
 	NS:CaptureBatchStop(true)
