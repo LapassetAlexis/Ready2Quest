@@ -1,5 +1,14 @@
 # QuestCompanion
 
+## 2.11.1 — correctif
+
+- **Compagnon** : le modèle 3D est de nouveau éclairé (il restait sombre après un combat) et cadré selon le type de créature (bestioles plus près, dragons et géants plus loin).
+- **Bandeau de guilde** : une ligne longue passe sur deux lignes au lieu d'être coupée, sans répéter le titre.
+- **Carnet** : le résumé de la colonne de gauche reste dans son cadre, les chiffres des plaques sont centrés, « Changer de compagnon ? » s'ouvre au-dessus du carnet (Échap la ferme d'abord).
+- **Plus léger** : l'infobulle d'une créature ne lit plus que son espèce (environ 25 fois moins de mémoire par survol).
+
+*English:* the companion's 3D model is lit again (it stayed dark after combat) and framed by creature type; long guild banner lines wrap instead of being cut; the journal's left-column summary stays inside its frame, stat plates are centred, "Change companion?" opens above the journal (Escape closes it first); creature tooltips read only their own species (≈25× less memory per hover).
+
 ## 2.11.0 — un carnet plus lisible, la capture aux couleurs du jeu
 
 - **Carnet** : chiffres de la page Compagnon et résumé des Missions qui tiennent dans leurs plaques ; étoiles dorées bien visibles dans Créatures ; intertitres des Missions à l'encre ; colonne de gauche en tableau de bord (ton compagnon et ses envies, la zone actuelle, les missions du jour et de la semaine) ; liste des zones filtrée (Pour moi, Commencées, Toutes) avec une recherche ; le carnet retient ses filtres au /reload.
