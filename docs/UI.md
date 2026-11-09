@@ -1,9 +1,22 @@
 # Interface : système de design (refonte 2026-11)
 
+État décrit : socle 2.11.0, Ready2Quest 1.32.0, QuestCompanion 2.11.0. Cette
+page dit ce que fait le code aujourd'hui ; l'historique des versions est dans
+`docs/TECHNIQUE.md` et les CHANGELOG.
+
 Référence de style commune à Ready2Quest et QuestCompanion. Tout passe par le
 socle (`Ready2Quest/Libs/Socle/Theme.lua`, recopié dans QuestCompanion par
-`tools/sync_socle.py`) : une fenêtre ne fabrique jamais ses propres couleurs,
-polices ou contrôles.
+`tools/sync_socle.py`, jamais modifié dans la copie) : une fenêtre ne fabrique
+jamais ses propres couleurs, polices ou contrôles.
+
+Socle chargé une fois : quand les deux addons sont installés avec un socle de
+même empreinte (`SOCLE_ID`, écrite par `sync_socle.py`), le second réutilise
+les fabriques compilées du premier (`ns.SocleFile`) avec son propre `ns` :
+`Theme`, chaînes, polices et cadres restent propres à chaque addon ; seules
+les données en lecture seule (lieux, donjons) sont partagées (`ns.SocleData`).
+`ns.Shared` coordonne les deux addons (ex. le sujet « aggro » : quand l'anneau
+d'aggro de Ready2Quest est actif, l'alerte du compagnon se tait). `/r2q diag`
+et `/qc diag` disent « Socle : partagé » ou « propre ».
 
 Inspiration : les addons « premium » récents (fenêtre large, navigation à
 gauche, en-tête à grand titre, réglages en cartes sur deux colonnes). On garde
@@ -13,7 +26,9 @@ boussole et le dragonnet.
 ## Police
 
 **Inter** (licence OFL, `Libs/Socle/Media/Inter-*.ttf`, réduite aux caractères
-latins). Trois graisses : Regular, SemiBold, Bold. Plus d'Alegreya.
+latins). Trois graisses : Regular, SemiBold, Bold. Le style Azeroth de
+QuestCompanion pose en plus Friz Quadrata, la police du client
+(`ns.AZEROTH_FONT`), sur ses bandeaux, plaques et titres.
 
 Objets de police créés par le socle (un jeu par addon, noms préfixés par
 `ns.APP.id`), avec repli sur les polices du jeu si le fichier est refusé :
@@ -27,6 +42,10 @@ Objets de police créés par le socle (un jeu par addon, noms préfixés par
 | `F_BODY`        | Regular  | 12     | texte courant                           |
 | `F_SMALL`       | Regular  | 11     | détail, valeurs, aide                   |
 | `F_CAPS`        | SemiBold | 10     | titres de section EN CAPITALES          |
+| `F_NUMBER`      | Bold     | 12     | chiffres posés sur une icône, compteurs |
+
+`Theme.ARROW` : vraie flèche « → » si Inter est chargée, « -> » avec la police
+de repli du jeu (elle n'a pas le glyphe).
 
 Aucun texte sombre avec l'ombre noire de la police (illisible) ; texte clair
 sur fond coloré plein.
@@ -34,7 +53,7 @@ sur fond coloré plein.
 ## Palette
 
 Les jetons existants restent (`GOLD` = ambre #e8a54b, `BLUE` #5b8fd6,
-`PARCHMENT`, `TEXT`, `MUTED`, `GREEN`, `RED`, `ORANGE_DEEP`). Ajouts :
+`PARCHMENT`, `TEXT`, `MUTED` #91969e, `GREEN`, `RED`, `ORANGE_DEEP`). Ajouts :
 
 | Jeton          | Valeur   | Rôle                                      |
 |----------------|----------|-------------------------------------------|
@@ -46,6 +65,34 @@ Les jetons existants restent (`GOLD` = ambre #e8a54b, `BLUE` #5b8fd6,
 | `EDGE`         | #3a424a  | bord de fenêtre, bouton en contour        |
 | `EDGE_SOFT`    | #2a3138  | filets, séparations                       |
 | `LABEL`        | #e6e1d5  | libellé de carte                          |
+| `MUTED_LIGHT`  | #a3a8ad  | « MUTED clair » : sous-titres, sections, détails |
+| `GOLD_LIGHT`   | #f6c77d  | ambre clair : cœur du filet lumineux, brillantes |
+| `CONTROL`      | #2a3036  | piste, bouton au repos                    |
+| `WHITE`        | #ffffff  | texte sur bandeau, remise à blanc         |
+
+Codes de texte pour les chaînes colorées (chat, infobulles) : `ns.TC.GOLD`,
+`PARCHMENT`, `GREY`, `GREEN`, `RED`, `ORANGE`, `ORANGE_DEEP`, `WHITE`, `BLUE`,
+déclarés une seule fois dans `Libs/Socle/Base.lua` (premier fichier du socle :
+`Strings.lua`, `Locales.lua` et les messages de démarrage s'en servent) ;
+`Theme.T_*` en sont des alias. `Theme.Hex(couleur)` donne le code d'un jeton.
+Plus aucun `|cff…` écrit à la main dans les fichiers nettoyés
+(`tests/modules/socle_textes.lua` le vérifie).
+
+**Rareté** : un seul jeton, `Theme.RANK` (trivial gris, normal PARCHMENT,
+élite #669ef2, rare #bf80ff, boss #ff8000, brillante GOLD_LIGHT : la
+convention des qualités d'objet du jeu, éclaircie pour du texte, ≥ 4,5:1 sur
+tous les fonds sombres). `Theme.RankKey(classification)` et
+`Theme.RankColor(classification, brillante)` ; sur parchemin, le style Azeroth
+choisit par la même clé ses encres sombres (`rElite`, `rRare`…).
+
+**Contraste** : `Theme.Luminance`, `Theme.Contrast(a, b)` (WCAG 2.x) et
+`Theme.Over(fond, couleur, alpha)` (couleur vue sous un voile) sont dans le
+socle ; les tests s'en servent pour mesurer chaque couple texte / fond.
+
+**États** : survol = voile blanc à `Theme.HOVER_ALPHA` (6 %) ; inactif =
+`DIM_ALPHA` (45 % : bouton désactivé, carte ou page d'un module coupé, avec
+« Rallumer » en tête de page) ; bouton plein enfoncé = encre mêlée au fond à
+`PRESS_SHADE` (10 %), libellé décalé de 1, -1.
 
 ## Fenêtre type
 
@@ -66,7 +113,8 @@ Les jetons existants restent (`GOLD` = ambre #e8a54b, `BLUE` #5b8fd6,
 └──────────────┴──────────────────────────────────────────────┘
 ```
 
-- Réglages : environ 980 × 680. Navigation 220 de large.
+- Réglages : environ 980 × 680. Navigation 220 de large. (Le carnet de
+  QuestCompanion a la même taille en Sobre ; en Azeroth, voir plus bas.)
 - En-tête : grand titre, sous-titre, filet ambre dégradé (transparent → ambre →
   ambre clair → transparent) avec un léger halo ; lueur ambre très discrète
   dans le coin haut de l'en-tête.
@@ -87,14 +135,41 @@ Les jetons existants restent (`GOLD` = ambre #e8a54b, `BLUE` #5b8fd6,
     une petite case à droite ;
   - liste déroulante : case FIELD bordée EDGE, texte + chevron ; une seule liste
     ouverte à la fois (en ouvrir une referme l'autre, `Theme.openDropdown`) ;
+  - case à cocher : celle du client (atlas `checkbox-minimal`, coche
+    `checkmark-minimal`, partiel `common-checkbox-partial`, 18 px) si le
+    client les connaît, sinon l'interrupteur dessiné ;
   - nuancier : carré 15 bordé ;
-  - roue crantée : ouvre des réglages fins ;
+  - roue crantée (`Theme.CreateGearButton`) : la roue grise du journal de
+    quêtes du client (atlas `questlog-icon-setting`, puis `gm-icon-settings`,
+    sinon `UI-OptionsButton` désaturé), sans cadre, grise au repos
+    (`Theme.GEAR.rest`), plus claire au survol ; ouvre les réglages ;
+  - recherche (`Theme.CreateSearchBox`) : champ FIELD, texte indicatif MUTED,
+    Échap et Entrée rendent le clavier ;
   - verrou : case en pointillés « 30 brillantes » pour ce qui n'est pas gagné.
+- Pictos du client, par référence : `Theme.CLIENT_ART` donne pour chaque rôle
+  (`diamond`, `diamondLine`, `chevron`, `gear`, `checkbox`, `checkmark`,
+  `partial`) une liste d'atlas vérifiés en jeu et un fichier de repli ;
+  `Theme.PaintClient(texture, rôle)` pose le premier atlas que le client
+  connaît (`C_Texture.GetAtlasInfo`, réponse gardée), sinon le repli
+  (`tex.clientSource` dit lequel). `Theme.SetDiamond` passe par là.
 - Pied : fond NAV, filet au-dessus ; boutons secondaires en contour (EDGE,
   texte clair) à gauche, bouton principal en contour ambre (texte ambre, fond
   ambre à 7 %) à droite.
-- Bouton plein ambre (`primary`) : encre sombre SANS ombre. Bouton bleu
-  (`adventure`) : texte blanc.
+- Boutons (`Theme.BUTTON_STYLES`) : `outline` (= `normal`, au trait EDGE,
+  ambre au survol), `accent` (contour ambre, fond ambre à 7 %), `primary`
+  (plein ambre, encre sombre), `adventure` (plein bleu, encre sombre : le blanc
+  ne tenait que 3,31:1 ; l'encre tient 5,67 au repos, 6,69 au survol). Les
+  boutons pleins n'ont PAS l'ombre de la police. Désactivé : `DIM_ALPHA`,
+  texte MUTED, sans survol.
+- Fenêtres : `Theme.CreateWindow` inscrit le nom de la fenêtre dans
+  `UISpecialFrames` (`Theme.RegisterEscapeClose`) : une fenêtre sans nom ne se
+  ferme pas à Échap.
+- Animations sans `OnUpdate` Lua (AnimationGroup du client) :
+  `Theme.FadeIn` / `Theme.FadeOut` (une disparition en cours est
+  interrompue par une apparition), `Theme.Pulse` / `Theme.PulseOn` (aller-retour
+  d'alpha et d'échelle) ; demi-périodes nommées dans `Theme.PULSE` (`alert`,
+  `shiny`, `net`, `arrival`, `talk`, `notice`). Sans l'API, l'effet reste
+  statique.
 
 ## Fenêtre de réglages (`Libs/Socle/Options.lua`)
 
@@ -176,17 +251,21 @@ Toutes les autres fenêtres et cadres suivent le même langage, à leur taille
   (`Theme.ButtonWidth`, 16 de chaque côté, 72 au moins).
 - Infobulles du jeu : `Theme.TooltipTitle` (ambre), `TooltipLine` (texte),
   `TooltipHint` (MUTED clair), `TooltipPair` (libellé / valeur PARCHMENT).
+- Autres briques : `Theme.CreateDropdown(parent, w, onSelect, { listWidth,
+  maxRows })` (10 lignes visibles par défaut, le reste à la molette),
+  `CreateNavItem` (`:SetBadge(texte)`), `CreateIcon(parent, taille, texture,
+  qualité)`, `CreateDiamond`, `CreateBar`, `CreateSection`.
 
 | Fenêtre / cadre          | Brique         | En bref |
 |--------------------------|----------------|---------|
-| Avant le départ          | dialogue 480   | « Parti de … » en sous-titre, flèche à gauche du [×] ; bloc note (chiffre `F_DISPLAY`, tampon du verdict teinté, barre ambre) ; section Préparation, cartes à losange, détail à droite ; Conseils dans un bloc à liseré ambre ; pied : « Partir à l'aventure » bleu centré |
+| Avant le départ          | dialogue 480   | « Parti de … » en sous-titre, flèche à gauche du [×] ; bloc note (chiffre `F_DISPLAY`, tampon du verdict teinté, barre ambre) ; section Préparation, cartes à losange, détail à droite : les manques d'abord, puis, dès 4 points en ordre, une ligne « N points en ordre · Afficher » qui les déplie (en retrait, MUTED clair) ; durabilité et réparation en une ligne si toutes deux OK ; Conseils dans un bloc à liseré ambre ; pied : « Partir à l'aventure » bleu centré |
 | Avant le donjon          | dialogue 420   | niveau en carte, sections (quêtes, plans, préparation), cartes à losange, « Fermer » en accent |
 | Retour d'expédition      | dialogue 420   | durée `F_DISPLAY` dans un bloc, cartes nom / valeur, objets notables sous le compte du butin |
 | Après la mort            | dialogue 400   | corps, guérisseur, verdict en cartes ; note et règle en texte pâle sur deux lignes |
 | Place au butin           | dialogue 480   | butin bloqué dans une carte à liseré ambre ; cartes icône, nom, prix, « Jeter » (plein) / « Ignorer » ; aide dans le pied ; hauteur au nombre de lignes |
 | Rangs de sorts           | dialogue 520   | cartes icône, sort, case ; « Mettre à jour » (accent) / « Ignorer » ; « Tout mettre à jour » plein dans le pied |
 | Sac plein                | bandeau 380    | liseré orange, suggestion, « Jeter » plein, « Autre », « Garder toujours » |
-| Kit de camp              | bandeau 230    | décompte centré |
+| Kit de camp              | bandeau 300 × 28 | décompte centré |
 | Résumé de stuff          | `SkinToast`    | même mise en page (titre espacé, filet, une ligne), fond autour, suit le libellé |
 | Stats du portrait        | bandeau 206    | liseré à la couleur de la classe, classe et niveau d'objet, filet, valeurs à droite |
 | Mode déplacement         | bandeau 460    | titre et aide à gauche, « Terminer le déplacement » plein à droite |
@@ -194,8 +273,12 @@ Toutes les autres fenêtres et cadres suivent le même langage, à leur taille
 | Bonne récompense         | —              | filet ambre 1 px et fond ambre à 12 %, étiquette `F_LABEL` ambre |
 | Page Échap > AddOns      | grand en-tête  | nom en `F_DISPLAY`, version, filet ; bouton en accent |
 
-Aperçus : `python3 tests/snapshot.py r2q-check|r2q-dungeon|… <sortie.html>`
-(une scène par fenêtre, `list` les donne toutes). Les infobulles du jeu y
+Aperçus : `python3 tests/snapshot.py <scène> <sortie.html>` (`list` les donne
+toutes) : `r2q-check`, `r2q-dungeon`, `r2q-expedition`, `r2q-death`,
+`r2q-lootroom`, `r2q-spellranks`, `r2q-bagspace`, `r2q-camp`, `r2q-gear-toast`,
+`r2q-portrait`, `r2q-pace`, `r2q-reward`, `r2q-notice`, `r2q-exit-alert`,
+`r2q-edit-banner`, `r2q-minimap-tooltip`, `r2q-options`, `r2q-options-nav`,
+`r2q-options-bags`, `r2q-options-spellranks`, `r2q-settings-canvas`. Les infobulles du jeu y
 sont dessinées à l'approche (`Snap.Tooltip`, police du jeu).
 
 ## Carnet et compagnon (QuestCompanion)
@@ -227,29 +310,105 @@ Même langage, briques du lot 4 dans le socle :
 
 | Fenêtre / cadre          | Brique              | En bref |
 |--------------------------|---------------------|---------|
-| Carnet de voyage         | fenêtre 980 × 680   | navigation 220 (marque, « Carnet », une entrée par page, pastille bleue des missions sur Jour, total des tampons en bas) ; grand en-tête par page (titre, sous-titre : zone et niveaux, étape, total des zones) ; pied : garde-manger à gauche, « Fermer » en accent |
-| › Créature               | cartes              | portrait dans son cadre et son fond gagnés (`CompanionPortrait`), étapes en losanges, prochaine étape ; envies en cartes (barre fine, valeur ambre si comblée) ; « comment ça marche » numéroté ; parcours en cartes à losange, « Ouvrir le coffre » plein |
-| › Zones                  | liste 2 × 12        | puces continent et tri ; carte par zone : nom, niveaux, état, %, barre fine ; liseré bleu « ici », ambre à 100 % ; jamais visitée estompée, sans barre |
-| › Zone                   | carte + onglets     | carte de progression (grand %, barre et paliers, coffre, liseré ambre si coffre) ; flèches de zone à gauche du [×] ; onglets soulignés (Quêtes estompé sans liste) et « Suivre à l'écran » à droite ; listes pleine largeur ; fiches du bestiaire 2 × 6 (portrait 3D, rang en étiquette et liseré, tampon losange plein si abattue, étoile et fond doré pour une brillante) à côté de l'aperçu ; pagination en bas |
-| › Jour                   | deux colonnes       | missions en cartes (liseré ambre, vert si faite, « Changer » au trait) ; carte des auberges en losanges ; garde-manger en tuiles |
-| › Collection             | grille 5 × 5        | puces des sortes ; objet porté : filet et liseré ambre ; pas encore gagné : verrou en pointillés avec sa condition (« Palier 2 », « 50 brillantes ») ; aperçu à droite |
-| Coffre de zone           | dialogue 480        | tuiles sur deux colonnes (sorte en étiquette, nom), hauteur au nombre d'objets, « Plus tard » dans le pied ; révélation une à une inchangée |
-| Compagnon à l'écran      | cadre discret       | cadre et fond gagnés inchangés ; plaque du nom (F_LABEL) et de l'humeur (MUTED clair) |
+| Carnet de voyage         | fenêtre 980 × 680   | navigation 220 : marque, groupe « Carnet », six entrées (Compagnon, Créatures, Hauts faits, Missions, Exploration, Guide), pastille bleue sur Missions (missions ouvertes du jour et de la semaine) ; dessous, le **tableau de bord** : compagnon (nom, humeur, quatre envies en barres fines), zone où l'on est (%), missions du jour et de la semaine en losanges (pleins = faites), chaque bloc mène à sa page ; points de hauts faits en bas. Grand en-tête (titre et phrase fixe `JRN_SUB_<page>`), roue crantée à gauche du [×]. Pied : garde-manger à gauche, « Ma fiche de dresseur » et « Fermer » (accent) à droite. Filtres de Créatures et d'Exploration gardés au /reload (`QuestCompanionDB.journalState`, la recherche tapée exceptée) |
+| › Compagnon              | cartes              | héros (portrait dans son cadre et son fond gagnés, nom, caractère, étapes en losanges, dernière bulle) ; cinq chiffres en plaques (chiffre et libellé centrés) ; envies en barres fines ; « Ses effets » ; allure : apparences, cadres, fonds, ornements (verrou en pointillés tant que pas gagné) ; changer de compagnon demande confirmation (dialogue 420) |
+| › Créatures              | liste + fiche       | rangée 1 : zone, rareté, tri (listes déroulantes), compte ; rangée 2 : puces d'état (Toutes, Capturées, À capturer, À abattre, Brillantes) et recherche (appliquée à la fin de la frappe) ; rangée 3 : boutons de type et « Tous » ; liste façon Pokédex (numéro, icône, nom à la couleur de sa rareté, type, étoiles dorées du client cernées de brun, liseré vert si capturée) ; fiche à droite (modèle 3D, « Localiser ») ; bandeau des sceaux sous la liste ; pagination |
+| › Hauts faits            | liste paginée       | en haut : points (compte et personnage), nombre obtenu, filtres Tous / Obtenus / En cours ; à gauche « Toutes » puis les catégories ; à droite : icône, nom, marque Compte / Perso, description, barre, points, récompense, date |
+| › Missions               | bande + cartes      | bande résumé de trois plaques (compagnon, jour, semaine) ; missions en cartes sur deux colonnes (icône de la sorte prise au client, titre, zone, barre, compte, gains) ; faite : voile vert et tampon « Faite » ; ↻ « Changer » une fois par jour ; bonus des 3 en encart pointillé ; à droite : auberges (7 tampons), garde-manger, besace de capture. Teintes Sobre : `ns.MISSION_COLORS` (jetons du thème) ; Azeroth : `ns.AZEROTH_MISSION` |
+| › Exploration            | colonne + carte     | à gauche, filtre des zones (Pour moi, Commencées, Toutes) et recherche « Zone… », puis les zones (nom, « ici », %, filet doré à 100 %, jamais visitées estompées), pagination ; à droite, carte de la zone (grand %, niveaux, « Suivre à l'écran », barre, paliers et leurs gains, « Ouvrir le coffre »), trois cartes de part (Lieux, Métiers, Quêtes) qui choisissent la liste du dessous ; une quête choisie a son bouton « Localiser » ; ligne du sceau et bouton « Créatures » |
+| › Guide                  | sommaire + texte    | sommaire en tuiles à gauche, « Revoir le tutoriel » en bas ; texte de la section par blocs, paginé ; chiffres lus dans les constantes des modules |
+| Fiche de dresseur        | fenêtre 780 × 580   | au-dessus du carnet ; compagnon en 3D, vitrine de trois créatures, chiffres, sceaux, barres de hauts faits par catégorie |
+| Coffre de zone           | dialogue 480        | tuiles sur deux colonnes (sorte en étiquette, nom), hauteur au nombre d'objets, « Plus tard » dans le pied |
+| Scène de capture         | bandeau 340 × 386 (Azeroth 360 × 504) | modèle de la créature, étoiles, filet lancé, verdict ; créature échappée grisée sous le filet déchiré ; Échap la ferme |
+| Capture possible         | bandeau 384 × 102 (Azeroth 388 × 126) | icône, nom, étoiles, aide ; reste affiché tant que la souris est dessus |
+| Liste de capture         | bandeau 300         | six lignes de 24 |
+| Tout capturer            | bandeau (340 au moins) | tuiles des créatures (modèle 3D, nom, étoiles) ; choix du filet : bandeau 248 |
+| Résultat de capture      | bandeau 300 × 66    | verdict |
+| Haut fait obtenu         | bandeau 280 × 50    | losange ambre, titre, nom ; regroupe plusieurs hauts faits |
+| Haut fait de guilde      | bandeau 340 × 84    | icône, membre, haut fait, créature à la couleur `Theme.RANK` |
+| Compagnon à l'écran      | cadre discret       | cadre et fond gagnés ; plaque du nom (F_LABEL) et de l'humeur (MUTED clair, sur bande sombre) ; modèle estompé en combat |
 | Bulle, tutoriel          | bulle 220           | « Passer » au trait, « Suivant » plein, sous le texte |
 | Fiche au survol          | bandeau 220         | nom F_TITLE, stade et humeur, envies en barres fines avec valeur, filet, aide pâle ; hauteur au contenu |
 | Garde-manger (Maj+clic)  | bandeau             | titre en capitales, cases 34 au filet EDGE (ambre au survol), infobulle du thème |
-| Nouveau tampon           | bandeau 280         | losange ambre, « NOUVEAU TAMPON · SORTE », nom en titre |
-| Bloc « Carnet »          | bandeau (vedette)   | objectif en vedette en bandeau à liseré ambre, les suivants en lignes fines |
+| Bloc « Carnet »          | 280 de large        | quatre objectifs au plus : le premier en carte (liseré ambre, barre), les suivants en lignes fines sur voile sombre ; titre : clic = replier, glisser = déplacer ; clic sur une ligne : sa page ; clic droit : masquer ; caché en combat par défaut |
 
-Aperçus : `qc-journal-creature|menagerie|day|progress|guide`, `qc-capture`, `qc-capture-shake|ok|fail`,
-`qc-companion`, `qc-companion-hover`, `qc-tutorial`, `qc-pantry`, `qc-chest`,
-`qc-notify`, `qc-tracker`, `qc-tooltip`.
+**Modèles 3D** : un seul cadrage, `ns.ShowModel` (charge le `display`
+d'abord, sinon le `npc` ; ne recharge pas un modèle déjà affiché ; repose la
+caméra à chaque `OnModelLoaded` / `OnShow`) avec des profils nommés
+(`ns.MODEL_PROFILES` : `companion`, `portrait`, `stage`, `prompt`, `preview`,
+`cell`, `card`, `cardTile`). Le zoom « portrait » est réservé aux mascottes
+vérifiées. Faute de modèle : portrait 2D par displayID appris, sinon l'icône
+du type de créature.
+
+**Images de la capture** : rayons, halo, étincelles, étoiles, bannière,
+vignette et icône du filet viennent du client (`ns.CAPTURE_CLIENT_ART`,
+atlas vérifiés en jeu), avec nos fichiers en repli ; le filet, ses cordes et
+le paquet restent les nôtres (pas d'équivalent dans le client). Une seule
+alerte rouge à l'écran : avec Ready2Quest, son anneau d'aggro ; le compagnon
+ne clignote pas en même temps.
+
+Aperçus : `qc-journal-creature|menagerie|day|day-azeroth|progress|guide`,
+`qc-capture`, `qc-capture-shake|ok|fail`, `qc-capture-toast`, `qc-companion`,
+`qc-companion-hover`, `qc-tutorial`, `qc-pantry`, `qc-chest`, `qc-notify`,
+`qc-tracker`, `qc-tooltip`, `qc-options-companion`, `qc-options-ornaments`.
+Pas encore d'aperçu des Hauts faits, d'Exploration en Azeroth ni de la fiche
+de dresseur.
+
+## Style Azeroth (QuestCompanion)
+
+Réglage « Style de l'interface » : Sobre (le langage ci-dessus) ou Azeroth
+(doré). Azeroth habille le même contenu, il ne le reconstruit pas
+(`AzerothStyle.lua` pour les bandeaux et la capture, `JournalAzeroth.lua`
+pour le carnet).
+
+- Matières : bois `achievement-wood-nineslice-*`, parchemin, bandeaux et
+  boucliers du client, par atlas ou FileDataID ; aucune image embarquée.
+  Police Friz Quadrata (`ns.AZEROTH_FONT`).
+- Repli : un élément dont l'atlas ou le fichier est refusé reste en Sobre ;
+  si le bois manque, les fenêtres passent en Sobre (les bandeaux gardent
+  Azeroth) ; une colonne qui n'a pas pu être habillée entière repasse en
+  Sobre (jamais de texte clair sur parchemin).
+- Encres : texte sombre sur parchemin, texte clair sur bois et bandes ;
+  couleurs prises dans `ns.AZEROTH_INK` (certaines sont les jetons du socle :
+  `tagBlue` = `BLUE`, `navText` = `TEXT`…), jamais en dur. Le carnet repasse
+  les encres (`Recolor`) avant de poser le fond des lignes ; un texte qui
+  porterait un code `|c…` passerait devant l'encre : les couleurs se posent
+  sur la ligne (`SetTextColor`), pas dans le texte.
+- Contraste mesuré : chaque texte posé sur une matière du client a un rôle
+  dans `ns.AZEROTH_CONTRAST` (encre, luminance du pire fond mesurée, seuil,
+  taille) ; `RolePaint` / `RoleInk` posent l'encre d'un rôle, et
+  `tests/modules/qc282_retours.lua` recalcule chaque ratio.
+- Changement de style à chaud : la fenêtre affichée est remplacée par celle de
+  l'autre style (état recopié) ; l'ancienne est mise de côté
+  (`ns.uiStyleCache`) et resservira au retour. Une fenêtre qui existe dans
+  les deux styles a un nom global par style (sinon Échap vise la mauvaise).
+- Carnet en Azeroth (`ns.CARNET_LAYOUT`) : colonne de 196 sur parchemin,
+  entrées sur bandes sombres, plaque de titre de 706 × 100 qui déborde de 46
+  au-dessus, bois de 16 de chaque côté autour d'un contenu de même taille ;
+  le garde-manger descend en bas de la colonne. Confirmations (changer de
+  compagnon) au même habit.
+- Bandeaux (`ns:AzerothCreateBanner`, `ns.AZEROTH_LAYOUT` 388 × 126) :
+  bande claire du titre (encre sombre), nom en blanc ombré, étoiles dorées ;
+  avec `strip`, une bande sombre dessous pour les infos et les boutons.
 
 ## Règles
 
 - Aucune couleur, police ou taille en dur dans un module : jetons et briques
-  du socle.
+  du socle (`Theme.*`, `ns.TC`), `ns.AZEROTH_INK` pour le style Azeroth. Les
+  données (cosmétiques, effets) portent leurs propres teintes.
+- Contraste mesuré, pas estimé : ≥ 4,5:1 pour le corps de texte, ≥ 3:1 pour
+  les titres, sur le vrai fond (texture comprise). Un texte sur une matière du
+  client a son rôle dans `ns.AZEROTH_CONTRAST`.
+- Textures du client uniquement, par référence (atlas, FileDataID,
+  `Interface\\…`), avec un repli quand l'atlas manque ; jamais d'image
+  générée ni embarquée (exceptions historiques : les fichiers de repli du
+  socle et le filet de capture).
+- Tout texte affiché existe en français et en anglais (`ns.RegisterStrings`,
+  `Locales.lua` ; table bilingue de `Base.lua` pour les messages d'avant
+  `Strings.lua`). Pluriels : `ns:FP(clé, n, …)`.
+- Une fenêtre a un nom global unique (un par style si elle en a deux), pour
+  qu'Échap la ferme.
 - Les briques acceptent les clients sans `SetFont` réussi, sans
-  `SetGradient`, etc. (repli silencieux).
+  `SetGradient`, sans AnimationGroup, etc. (repli silencieux).
 - Une fenêtre se reconstruit avec les briques ; les modules déclarent toujours
   leurs pages avec `ns.AddOptionPage` (rien à réécrire côté module).
