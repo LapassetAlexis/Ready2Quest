@@ -16,6 +16,11 @@ Une seule description, anglais d'abord puis français (règle des stores : l'ang
 
 For **WoW Forever** (1.60). English and French. Free, standalone (`/qc`), about 2 MB of memory. Pairs well with [Ready2Quest](https://www.curseforge.com/wow/addons/ready2quest).
 
+## New in 2.11: a clearer journal, Locate on the map
+- **Locate**: one click puts a pin on the world map for a quest giver or a creature.
+- **Journal**: a dashboard on the left (your companion, the current zone, today's missions), zones filtered for your character with a search, gold stars and texts that fit everywhere.
+- **Capture** in the game's own art, real 2D portraits, better-framed 3D models; with Ready2Quest the shared core loads only once.
+
 ## New in 2.9: account-wide collection, easier captures
 - **Account-wide collection**: your captures are shared by all your characters (best stars, shinies, capture aids); each character keeps its own companion.
 - **Easier captures**: normal 50%, elite 25%, rare 15%, and every failure in a row makes the net a bit surer. Recapture limits per rarity, so common creatures stop coming back endlessly.
@@ -101,6 +106,11 @@ Free software, **GPL-3.0**. Zone data (creatures, gathering, quests) is generate
 ![Une brillante tente sa chance contre le filet](https://media.forgecdn.net/attachments/2161/225/f-gif.gif)
 
 Pour **WoW Forever** (1.60). En français et en anglais. Gratuit, autonome (`/qc`), environ 2 Mo de mémoire. Va très bien avec [Ready2Quest](https://www.curseforge.com/wow/addons/ready2quest).
+
+## Nouveau en 2.11 : un carnet plus clair, Localiser sur la carte
+- **Localiser** : un clic pose un repère sur la carte du monde pour le donneur d'une quête ou une créature.
+- **Carnet** : un tableau de bord à gauche (ton compagnon, la zone actuelle, les missions du jour), les zones filtrées pour ton personnage avec une recherche, des étoiles dorées et des textes qui tiennent partout.
+- **Capture** aux couleurs du jeu, vrais portraits 2D, modèles 3D mieux cadrés ; avec Ready2Quest, le socle commun n'est chargé qu'une fois.
 
 ## Nouveau en 2.9 : collection au compte, captures plus faciles
 - **Collection commune à tous tes personnages** : tes captures sont partagées par le compte (meilleures étoiles, brillantes, aides de capture) ; chaque personnage garde son compagnon.
