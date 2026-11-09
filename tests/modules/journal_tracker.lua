@@ -202,11 +202,12 @@ do
 	Check("[TRK] vedette : bandeau du thème (fond WINDOW, liseré ambre), losange plein, grande barre", line.featured
 		and line.chrome == "toast" and line.bg.vertex[1] == NS.Theme.WINDOW[1] and line.accent:IsShown()
 		and line.accent.vertex[1] == NS.Theme.GOLD[1] and line.diamond.texture == NS.Theme.DIAMOND
-		and line.bar.height > second.bar.height
+		and line.bar.height == 4
 		and math.abs(line.bar.ratio - 18 / 25) < 1e-6, line.bar and line.bar.ratio)
-	Check("[TRK] secondaires : losange en trait, mini-barre, progression grisée", not second.featured
-		and second.diamond.texture == NS.Theme.DIAMOND_LINE and second.bar.height == 3
-		and math.abs(second.bar.ratio - 27 / 30) < 1e-6 and second.progress.textColor[1] == NS.Theme.MUTED[1])
+	-- 2.10.0 : plus de mini-barre sur les secondaires (le compte suffit)
+	Check("[TRK] secondaires : losange en trait, sans mini-barre, progression grisée", not second.featured
+		and second.diamond.texture == NS.Theme.DIAMOND_LINE and second.bar == nil
+		and second.progress.textColor[1] == NS.Theme.MUTED[1])
 	Check("[TRK] hauteur : titre + vedette + secondaires", tracker.height == 18 + 40 + 4 + 3 * 18, tracker.height)   -- 2.9.0 : lignes de 18
 
 	-- survol : quoi faire, avec des noms
@@ -277,11 +278,47 @@ do
 	-- repli
 	tracker.title:Click()
 	Check("[TRK] clic sur le titre : replié", NS:DB().journalTrackerCollapsed == true and K.Lines() == ""
-		and tracker.title.text.text == "Carnet (4)" and tracker.height == 18, tracker.title.text.text)
+		and tracker.title.text.text == "Carnet (4) · 1 masqué" and tracker.height == 18, tracker.title.text.text)
 	Mock:Fire("ZONE_CHANGED")
 	Check("[TRK] replié : le reste au rafraîchissement", K.Lines() == "" and tracker:IsShown())
 	tracker.title:Click()
 	Check("[TRK] second clic : déplié", NS:DB().journalTrackerCollapsed == false and tracker.lines[4]:IsShown())
+
+	-- 2.10.0 : les masqués se voient au titre et se réaffichent d'un clic droit
+	local hidden = NS:JournalHiddenCount()
+	Check("[TRK] masqués : comptés, le titre le dit", hidden == 1 and tracker.title.text.text == "Carnet · 1 masqué",
+		tracker.title.text.text)
+	local tipLines = {}
+	local savedTip = rawget(_G, "GameTooltip")
+	_G.GameTooltip = { SetOwner = function() end, ClearLines = function() end, Show = function() end, Hide = function() end,
+		AddLine = function(_, text) tipLines[#tipLines + 1] = text end }
+	tracker.title:GetScript("OnEnter")(tracker.title)
+	_G.GameTooltip = savedTip
+	Check("[TRK] infobulle du titre : les trois gestes", tipLines[1] == NS.L.JRN_TRK_TIP_TITLE
+		and tipLines[2] == NS.L.JRN_TRK_TIP_CLICK and tipLines[3] == NS.L.JRN_TRK_TIP_RESTORE)
+	tracker.lines[1]:Click("RightButton")
+	Check("[TRK] deux masqués : pluriel", tracker.title.text.text == "Carnet · 2 masqués", tracker.title.text.text)
+	local printed, oldPrint = {}, NS.Print
+	NS.Print = function(_, msg) printed[#printed + 1] = msg end
+	tracker.title:Click("RightButton")
+	NS.Print = oldPrint
+	Check("[TRK] clic droit sur le titre : tout revient, le chat le dit", NS:JournalHiddenCount() == 0
+		and tracker.title.text.text == "Carnet" and printed[1] == "2 objectifs réaffichés."
+		and NS:DB().journalTrackerCollapsed == false, printed[1])
+	-- tout masqué : le titre reste, seul
+	for _ = 1, 20 do
+		if not tracker.lines[1]:IsShown() then break end
+		tracker.lines[1]:Click("RightButton")
+	end
+	local all = NS:JournalHiddenCount()
+	Check("[TRK] tout masqué : le titre seul reste, avec le compte", tracker:IsShown() and not tracker.lines[1]:IsShown()
+		and tracker.height == 18 and tracker.title.text.text == "Carnet · " .. all .. " masqués", tracker.title.text.text)
+	NS:RunOptionAction("journalTrackerRestore")
+	Check("[TRK] réglage « Réafficher » : tout revient", NS:JournalHiddenCount() == 0 and tracker.lines[4]:IsShown())
+	-- lignes secondaires : plus de mini-barre, libellé plus large
+	local l2 = tracker.lines[2]
+	Check("[TRK] ligne secondaire : sans mini-barre, texte 204 px", l2.bar == nil and l2.text:GetWidth() == 204
+		and tracker.lines[1].bar ~= nil, l2.text:GetWidth())
 
 	-- combat
 	Mock:Fire("PLAYER_REGEN_DISABLED")
@@ -341,8 +378,12 @@ do
 	-- le suivi : la complétion remplace ses parts
 	NS:RefreshJournalTracker()
 	local lines = K.Lines()
-	Check("[ZONE] suivi : complétion affichée, villages de la zone absorbés", lines:find("Exploration : Les Tarides", 1, true)
-		and not lines:find("Villages de Les Tarides", 1, true), lines)
+	-- 2.10.0 : en ligne secondaire, le nom de la zone seul (la vedette garde le libellé complet)
+	local zoneLine
+	for _, l in ipairs(NS.journalTracker.lines) do if l.goal and l.goal.id == "zone:1413" then zoneLine = l end end
+	Check("[ZONE] suivi : complétion affichée, villages de la zone absorbés", zoneLine
+		and zoneLine.text.text == (zoneLine.featured and "Exploration : Les Tarides" or "Les Tarides")
+		and goal.brief == "Les Tarides" and not lines:find("Villages de Les Tarides", 1, true), lines)
 	Check("[ZONE] onglet Objectifs : les villages restent", K.Find(NS:JournalObjectives(), "villages:1413") ~= nil)
 	NS:JournalDismiss("zone:1413", true)
 	Check("[ZONE] complétion masquée : ses parts reviennent dans le suivi", K.Lines():find("Villages de Les Tarides", 1, true), K.Lines())
@@ -651,7 +692,7 @@ do
 	NS:RefreshJournal()
 	Check("[WATCH] zone d'ici : cochée d'office", prog.watch.checked == true and prog.watchLabel.text == "Suivre à l'écran")
 	NS:RefreshJournalTracker()
-	Check("[WATCH] suivi : la complétion d'ici affichée", K.Lines():find("Exploration : Les Tarides", 1, true), K.Lines())
+	Check("[WATCH] suivi : la complétion d'ici affichée", K.Lines():find("Les Tarides 29 %", 1, true), K.Lines())
 	prog.watch:Click()
 	Check("[WATCH] décochée : retenue", NS:JournalData().watch[1413] == false and prog.watch.checked == false)
 	Check("[WATCH] décochée : la zone et ses parts quittent le suivi", not K.Lines():find("Les Tarides", 1, true), K.Lines())
@@ -659,7 +700,7 @@ do
 	NS:JournalDismiss("zone:1413", true)
 	NS:JournalDismiss("villages:1413", true)
 	prog.watch:Click()
-	Check("[WATCH] recochée : de retour", K.Lines():find("Exploration : Les Tarides", 1, true), K.Lines())
+	Check("[WATCH] recochée : de retour", K.Lines():find("Les Tarides 29 %", 1, true), K.Lines())
 	Check("[WATCH] recochée : les objectifs masqués avant sont réactivés", not NS:JournalData().dismissed["zone:1413"]
 		and not NS:JournalData().dismissed["villages:1413"])
 	-- une autre zone : cochée à la main

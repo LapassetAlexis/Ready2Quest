@@ -703,21 +703,45 @@ do
 end
 
 -- Objectifs : les missions du jour dans le bloc « Carnet »
+-- 2.10.0 : la clé porte le jour et la mission (sorte, type de créature), plus
+-- l'emplacement seul : masquer ne vaut que pour cette mission, ce jour-là ;
+-- une mission changée (« Changer ») ou celle du lendemain réapparaît
+local MISSION_KEY = "mission:%s:%d:%s"
+function ns:MissionGoalKey(day, index, mission)
+	local what = tostring(mission and mission.kind)
+	if mission and mission.ctype then what = what .. "/" .. tostring(mission.ctype) end
+	return string.format(MISSION_KEY, tostring(day), index, what)
+end
+-- Purge (une fois par jour et par session) : les anciennes clés « mission:N »
+-- (migration) et celles des jours passés (les dates ISO se comparent en texte)
+local purgedDay
+function ns:MissionPurgeDismissed(today)
+	if purgedDay == today then return end
+	purgedDay = today
+	local dismissed = self:JournalData().dismissed
+	if type(dismissed) ~= "table" then return end
+	for key in pairs(dismissed) do
+		local day = type(key) == "string" and key:match("^mission:(%d%d%d%d%-%d%d%-%d%d):")
+		if type(key) == "string" and (key:match("^mission:%d+$") or (day and day < today)) then dismissed[key] = nil end
+	end
+end
+function ns:MissionPurgeReset() purgedDay = nil end
+
 if ns.RegisterGoalSource then
 	ns.RegisterGoalSource(function(self, list)
 		if not self:DailyMissionsOn() then return end
 		local daily = self:DailyData()
 		if daily.day ~= self:DailyToday() then return end
+		self:MissionPurgeDismissed(daily.day)
 		for index, mission in ipairs(daily.missions) do
 			if not mission.done then
-				local goal = ns.JournalGoal("mission:" .. index, self:MissionLabel(mission), mission.have or 0, mission.need,
-					nil, "mission")
+				local goal = ns.JournalGoal(self:MissionGoalKey(daily.day, index, mission), self:MissionLabel(mission),
+					mission.have or 0, mission.need, nil, "mission")
 				if goal then
 					goal.hint = { self:MissionSource(mission), L.MIS_GOAL_HINT }
-					goal.onClick = function()
-						if ns.ToggleJournal then ns:ToggleJournal(true) end
-						if ns.SelectJournalKind then ns:SelectJournalKind("day") end
-					end
+					-- la page du jour ; déjà affichée : le clic referme (OpenJournalFor)
+					goal.page = "day"
+					goal.onClick = function() return ns:OpenJournalFor(goal) end
 					list[#list + 1] = goal
 				end
 			end

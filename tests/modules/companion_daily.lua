@@ -336,11 +336,48 @@ do
 	f:Hide()
 	-- objectifs dans le bloc à l'écran
 	local found
-	for _, goal in ipairs(NS:JournalObjectives()) do if goal.id == "mission:3" then found = goal end end
+	for _, goal in ipairs(NS:JournalObjectives()) do if goal.id:find("^mission:.-:3:") then found = goal end end
 	Check("[DAYW] objectif : la mission du jour", found and found.label == "Fais-moi 3 caresses" and found.progress == "0/3")
+	-- 2.10.0 : la clé porte le jour et la sorte de mission, plus l'emplacement seul
+	local today = NS:DailyData().day
+	Check("[DAYW] clé de mission : jour, emplacement, sorte", found and found.id == "mission:" .. today .. ":3:"
+		.. tostring(NS:DailyData().missions[3].kind), found and found.id)
 	found.onClick()
 	Check("[DAYW] clic sur l'objectif : onglet Jour", f:IsShown() and f.kind == "day")
+	found.onClick()
+	Check("[DAYW] … déjà sur le Jour : le clic referme", not f:IsShown())
+	NS:ToggleJournal(true)
+	NS:SelectJournalKind("evolution")
+	found.onClick()
+	Check("[DAYW] … ouvert ailleurs : il va au Jour, reste ouvert", f:IsShown() and f.kind == "day")
 	f:Hide()
+	-- masquer : cette mission, ce jour ; le lendemain et après « Changer », elle revient
+	local dismissed = NS:JournalData().dismissed or {}
+	NS:JournalData().dismissed = dismissed
+	NS:JournalDismiss(found.id, true)
+	local function Listed(id)
+		for _, goal in ipairs(NS:JournalTrackerObjectives()) do if goal.id == id then return true end end
+		return false
+	end
+	Check("[DAYW] mission masquée : hors du suivi, comptée", not Listed(found.id) and NS:JournalHiddenCount() >= 1)
+	local m3 = NS:DailyData().missions[3]
+	Check("[DAYW] … le lendemain, une autre clé", NS:MissionGoalKey("2099-01-01", 3, m3) ~= found.id)
+	local m1 = NS:DailyData().missions[1]
+	local id1 = NS:MissionGoalKey(today, 1, m1)
+	NS:JournalDismiss(id1, true)
+	if NS:MissionReroll(1) then
+		local id1b = NS:MissionGoalKey(today, 1, NS:DailyData().missions[1])
+		Check("[DAYW] … « Changer » : la nouvelle mission revient", id1b ~= id1 and Listed(id1b), id1b)
+	end
+	-- purge : anciennes clés (« mission:2 ») et jours passés ; la clé du jour reste
+	dismissed["mission:2"] = true
+	dismissed["mission:2000-01-01:1:kills"] = true
+	NS:MissionPurgeReset()
+	NS:JournalObjectives()
+	Check("[DAYW] purge : ancien format et jours passés supprimés, le jour gardé", dismissed["mission:2"] == nil
+		and dismissed["mission:2000-01-01:1:kills"] == nil and dismissed[found.id] == true)
+	NS:JournalRestoreDismissed()
+	Check("[DAYW] réafficher : plus aucun masqué", NS:JournalHiddenCount() == 0 and dismissed[found.id] == nil)
 	-- réglage coupé
 	NS:DB().companionMissions = false
 	Check("[DAYW] missions coupées : rien ne compte", NS:MissionEvent("pets", 1) == false)

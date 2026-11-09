@@ -71,6 +71,10 @@ local FR = {
 	CAPTURE_Q_WAIT         = "après le combat",
 	CAPTURE_Q_LEFT         = "%d s",
 	CAPTURE_Q_CLICK        = "Clic : capturer %s",
+	-- 2.10.0 : pas de capture en combat (déplacée de CaptureBatch.lua, chargé après)
+	CAPTURE_BATCH_COMBAT   = "Pas de capture en combat : le filet attend la fin du combat.",
+	CAPTURE_Q_COMBAT       = "Après le combat : le filet attend.",
+	CAPTURE_STAGE_COMBAT   = "Combat : la capture continue, le résultat arrive dans le chat.",
 	CAPTURE_Q_RIGHT        = "Clic droit : la liste (choisir, aides, tout ignorer)",
 	CAPTURE_Q_NOTHING      = "Rien à capturer pour l'instant : abats un monstre qui manque à ta collection.",
 	CAPTURE_Q_IGNORE       = "Tout ignorer",
@@ -123,6 +127,9 @@ local EN = {
 	CAPTURE_Q_WAIT         = "after combat",
 	CAPTURE_Q_LEFT         = "%ds",
 	CAPTURE_Q_CLICK        = "Click: capture %s",
+	CAPTURE_BATCH_COMBAT   = "No capturing in combat: the net waits for the fight to end.",
+	CAPTURE_Q_COMBAT       = "After the fight: the net is waiting.",
+	CAPTURE_STAGE_COMBAT   = "Combat: the capture goes on, the result will show in chat.",
 	CAPTURE_Q_RIGHT        = "Right-click: the list (pick, aids, ignore all)",
 	CAPTURE_Q_NOTHING      = "Nothing to capture right now: defeat a monster your collection is missing.",
 	CAPTURE_Q_IGNORE       = "Ignore all",
@@ -242,6 +249,19 @@ end
 local function InCombat()
 	if Call(G("InCombatLockdown")) then return true end
 	return Call(G("UnitAffectingCombat"), "player") and true or false
+end
+-- 2.10.0 : en combat, le filet ne se lance pas (rien ne s'ouvre au milieu de
+-- l'écran) : un message court, au plus toutes les 5 s, et le son d'échec
+ns.CAPTURE_COMBAT_MSG_GAP = 5
+function ns:CaptureRefuseCombat()
+	local now = Clock()
+	local state = self:CaptureState()
+	if not state.combatMsgAt or now - state.combatMsgAt >= ns.CAPTURE_COMBAT_MSG_GAP or now < state.combatMsgAt then
+		state.combatMsgAt = now
+		self:Print(L.CAPTURE_BATCH_COMBAT)
+		self:CapturePlaySound("fail")
+	end
+	return false
 end
 local function Enabled()
 	local on = ns.CompanionOn and ns.CompanionOn() or false
@@ -583,6 +603,8 @@ end
 do
 	local base = ns.CaptureThrow
 	function ns:CaptureThrow(guid)
+		-- 2.10.0 : la liste, le bandeau, le raccourci passent tous par ici
+		if InCombat() then return self:CaptureRefuseCombat() end
 		local state = self:CaptureState()
 		-- la liste se referme dès qu'on lance (ou qu'on essaie de lancer)
 		self:CaptureHideQueueList()
@@ -798,8 +820,11 @@ local function ShowNetTooltip(button)
 	if best then
 		local name = best.shiny and ns:F("CAPTURE_SHINY_TAG", best.name) or best.name
 		Theme.TooltipLine(tooltip, ns:CaptureQueueLine(best), Theme.PARCHMENT)
+		-- 2.10.0 : en combat, le clic ne lance rien : l'infobulle le dit
+		if InCombat() then
+			Theme.TooltipLine(tooltip, L.CAPTURE_Q_COMBAT, Theme.MUTED_LIGHT)
 		-- deux candidats ou plus : le choix et ses raccourcis (CaptureBatch.lua)
-		if not (ns.CaptureNetClickLines and ns:CaptureNetClickLines(tooltip, queue, name)) then
+		elseif not (ns.CaptureNetClickLines and ns:CaptureNetClickLines(tooltip, queue, name)) then
 			Theme.TooltipLine(tooltip, ns:F("CAPTURE_Q_CLICK", name), Theme.MUTED_LIGHT)
 		end
 	end
@@ -975,9 +1000,11 @@ function ns:EnsureCaptureNet()
 end
 
 -- Le clic sur le filet (et sur le bandeau) : clic droit, la liste ; clic, le
--- meilleur candidat. CaptureBatch.lua y ajoute le choix à deux candidats.
+-- meilleur candidat (en combat, refusé : 2.10.0). CaptureBatch.lua y ajoute
+-- le choix à deux candidats.
 function ns:CaptureNetClick(mouse)
 	if mouse == "RightButton" then return self:CaptureToggleQueueList() end
+	if InCombat() then return self:CaptureRefuseCombat() end
 	return self:CaptureThrow()
 end
 

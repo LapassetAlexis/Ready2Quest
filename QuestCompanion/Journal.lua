@@ -143,6 +143,7 @@ if ns.AddOptionPage then
 			{ key = "journalTracker",       label = "OPT_JRN_TRACKER",        kind = "bool" },
 			{ key = "journalTrackerCombat", label = "OPT_JRN_TRACKER_COMBAT", kind = "bool" },
 			{ key = "journalTrackerReset",  label = "OPT_JRN_TRACKER_RESET",  kind = "action", button = "OPT_RESET" },
+			{ key = "journalTrackerRestore", label = "OPT_JRN_TRACKER_RESTORE", kind = "action", button = "OPT_RESTORE" },
 		},
 		-- bouton construit par Options.lua (L.OPT_ACTION_JOURNAL), action
 		-- traitée par le relais de RunOptionAction plus bas

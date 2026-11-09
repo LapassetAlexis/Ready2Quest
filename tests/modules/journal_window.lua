@@ -158,6 +158,16 @@ do
 	f:Hide()
 	NS:OpenJournalFor({ id = "zone:1411", zoneID = 1411, source = "journal" })
 	Check("[JRNW] objectif de zone : sa zone s'ouvre", f:IsShown() and f.kind == "progress" and f.zoneID == 1411)
+	-- 2.10.0 : le clic ne referme que si la page cible est déjà là
+	NS:OpenJournalFor({ id = "zone:1411", zoneID = 1411, source = "journal" })
+	Check("[JRNW] … même page, même zone : le clic referme", not f:IsShown())
+	NS:ToggleJournal(true)
+	NS:SelectJournalKind("menagerie")
+	NS:OpenJournalFor({ id = "zone:1411", zoneID = 1411, source = "journal" })
+	Check("[JRNW] … ouvert sur une autre page : il y va, reste ouvert", f:IsShown() and f.kind == "progress"
+		and f.zoneID == 1411, f.kind)
+	NS:OpenJournalFor({ id = "zone:1413", zoneID = 1413, source = "journal" })
+	Check("[JRNW] … même page, autre zone : il change de zone", f:IsShown() and f.zoneID == 1413, f.zoneID)
 	f:Hide()
 	NS:OpenJournalFor({ id = "stage", kind = "stage", source = "companion" })
 	Check("[JRNW] objectif du compagnon : Créature", f:IsShown() and f.kind == "evolution")

@@ -1436,8 +1436,11 @@ end
 function ns:EnsureTrainerWindow()
 	if self.trainerFrame then return self.trainerFrame end
 	if not (Theme and Theme.CreateWindow) then return nil end
-	local frame = Theme.CreateWindow(UIParent, WIN_W, WIN_H, { name = "QuestCompanionTrainerFrame", footer = FOOT_H,
-		strata = "FULLSCREEN" })
+	-- 2.10.0 : un nom global par style, sinon Échap vise la fenêtre de l'autre style restée en cache
+	local style = (self.JournalStyle and self:JournalStyle()) or "sobre"
+	local frame = Theme.CreateWindow(UIParent, WIN_W, WIN_H, {
+		name = style == "azeroth" and "QuestCompanionTrainerFrameAzeroth" or "QuestCompanionTrainerFrame",
+		footer = FOOT_H, strata = "FULLSCREEN" })
 	if not frame then return nil end
 	frame.chrome = "trainer"
 	-- pas une fenêtre exclusive : ma fiche s'ouvre par-dessus le carnet (strate plus haute)
