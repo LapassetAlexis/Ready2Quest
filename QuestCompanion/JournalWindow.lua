@@ -332,7 +332,8 @@ local LIST_W = math.floor((INNER - (LIST_COLS - 1) * 12) / LIST_COLS)
 -- 2.3.0 : « guide » (la ménagerie expliquée, JournalGuide.lua), en dernier
 -- 2.6.0 : plus de page « Souvenirs » (l'album est retiré)
 -- 2.7.0 : « feats » (Hauts faits, JournalFeats.lua) après la Ménagerie
-local SECTIONS = { "evolution", "menagerie", "feats", "day", "progress", "guide" }
+-- 2.12.0 : « juke » (Juke-box, Jukebox.lua) avant le guide
+local SECTIONS = { "evolution", "menagerie", "feats", "day", "progress", "juke", "guide" }
 local MEN_STATES = { "all", "captured", "missing", "tokill", "shiny" }
 local MEN_RANKS = { "all", "normal", "elite", "rare", "boss" }
 local MEN_SORTS = { "no", "name", "level", "rank", "kills", "date" }
@@ -397,7 +398,7 @@ local RANK_COLOR = {
 	elite = { 0.79, 0.80, 0.82 }, rareelite = { 0.29, 0.56, 0.88 }, rare = { 0.29, 0.56, 0.88 }, worldboss = Theme.GOLD,
 }
 ns.BESTIARY_RANK_COLOR = RANK_COLOR      -- repris par l'infobulle des créatures (Tooltips.lua)
-local SHINY_COLOR = { 1.0, 0.89, 0.48 }  -- fiche d'une brillante abattue
+local SHINY_COLOR = Theme.SHINY           -- fiche d'une brillante abattue (2.11.2 : jeton du socle, même valeur)
 local APP_ICON = "Interface\\Icons\\Ability_Hunter_BeastCall"
 local ORN_ICON = "Interface\\Icons\\INV_Misc_Gem_Amethyst_02"
 local LOCK_ICON = "Interface\\Icons\\INV_Misc_QuestionMark"
@@ -1443,7 +1444,7 @@ local function GroupChip(pane, section, color)
 	chip:SetPoint("LEFT", section.label, "RIGHT", 8, 0)
 	chip.bg = Theme.Solid(chip, "BACKGROUND", color, 1)
 	chip.bg:SetAllPoints()
-	chip.text = Text(chip, Theme.F_CAPS, { 1, 1, 1 })
+	chip.text = Text(chip, Theme.F_CAPS, Theme.WHITE)
 	chip.text:SetPoint("CENTER", chip, "CENTER", 0, 0)
 	chip.azSurface = "dark"
 	function chip:SetChip(text)
@@ -1502,7 +1503,7 @@ local function MissionCard(self, pane, slot, group)
 	card.stamp.check:SetPoint("LEFT", card.stamp, "LEFT", 4, 0)
 	local checked, result = pcall(card.stamp.check.SetAtlas, card.stamp.check, "Tracker-Check")
 	if not checked or result == false then card.stamp.check:SetTexture("Interface\\RaidFrame\\ReadyCheck-Ready") end
-	card.stamp.text = Text(card.stamp, Theme.F_CAPS, { 1, 1, 1 })
+	card.stamp.text = Text(card.stamp, Theme.F_CAPS, Theme.WHITE)
 	card.stamp.text:SetPoint("LEFT", card.stamp.check, "RIGHT", 3, 0)
 	card.stamp.text:SetText(L.MIS_STAMP)
 	card.stamp:SetWidth(math.ceil(Theme.TextWidth(pane, L.MIS_STAMP, Theme.F_CAPS)) + 22)

@@ -359,8 +359,8 @@ end
 -- sur elle-même, ses étoiles) ou se déchire (il tombe, ses cordes volent, la
 -- créature file sur le côté et s'efface).
 local function Coords() return ns.CAPTURE_COORDS or {} end
-local WHITE = { 1, 1, 1 }
-local DUST_COLOR = { 0.62, 0.57, 0.48 }
+local FXC = ns.CAPTURE_FX_COLORS   -- 2.11.2 : teintes de CaptureStage.lua (mêmes valeurs)
+local WHITE, DUST_COLOR = FXC.white, FXC.dust
 local function Clamp01(x) return math.max(0, math.min(1, x)) end
 local function EaseOut(x) x = Clamp01(x); return 1 - (1 - x) * (1 - x) end
 local function EaseBack(x)
@@ -396,7 +396,7 @@ end
 -- Azeroth : la créature dans le cadre d'icône doré (le cadre devant le
 -- modèle), le bouclier du verdict au coin, le nom en Friz (or pour une
 -- brillante), les étoiles ou « échappée », l'étiquette dessous
-local AZ_IDLE, AZ_FLED_NAME = { 0.9, 0.86, 0.78 }, { 0.7, 0.66, 0.6 }
+local AZ_IDLE, AZ_FLED_NAME = FXC.idle, FXC.fledName
 local function CreateTileAzeroth(parent)
 	local coords = Coords()
 	local tile = CreateFrame("Frame", nil, parent)
@@ -409,7 +409,7 @@ local function CreateTileAzeroth(parent)
 	tile.scene:SetSize(AZB.window, AZB.window)
 	tile.scene:SetPoint("TOP", tile, "TOP", 0, -2 - (AZB.ring - AZB.window) / 2)
 	Method(tile.scene, "SetClipsChildren", true)
-	tile.bg = Theme.Solid(tile, "BACKGROUND", { 0.05, 0.04, 0.03 }, 1)
+	tile.bg = Theme.Solid(tile, "BACKGROUND", FXC.tileBg, 1)
 	tile.bg:SetAllPoints(tile.scene)
 	tile.halo = Texture(tile, "ARTWORK", 2, "halo", nil, tile.haloSize, tile.haloSize, "ADD")
 	tile.halo:SetPoint("CENTER", tile.scene, "CENTER", 0, 0)
@@ -463,8 +463,8 @@ local function CreateTileAzeroth(parent)
 	-- centré comme les points des hauts faits (ns.AzerothShieldCenter)
 	tile.shieldText = tile.fx:CreateFontString(nil, "OVERLAY", Theme.F_NUMBER or Theme.F_TITLE or Theme.F_SMALL)
 	if ns.AzerothFont then ns.AzerothFont(tile.shieldText, 13, "OUTLINE") end
-	tile.shieldText:SetTextColor(1, 1, 1, 1)
-	if tile.shieldText.SetShadowColor then tile.shieldText:SetShadowColor(0, 0, 0, 1); tile.shieldText:SetShadowOffset(1, -1) end
+	tile.shieldText:SetTextColor(WHITE[1], WHITE[2], WHITE[3], 1)
+	Theme.TextShadow(tile.shieldText)
 	if ns.AzerothShieldCenter then ns.AzerothShieldCenter(tile.shieldText, tile.shield) end
 	tile.shieldText:SetText("")
 	tile.shieldText:Hide()
@@ -474,7 +474,7 @@ local function CreateTileAzeroth(parent)
 	tile.name:SetWidth(AZB.tileW - 6)
 	tile.name:SetJustifyH("CENTER")
 	if ns.AzerothFont then ns.AzerothFont(tile.name, 12) end
-	if tile.name.SetShadowColor then tile.name:SetShadowColor(0, 0, 0, 1); tile.name:SetShadowOffset(1, -1) end
+	Theme.TextShadow(tile.name)
 	if tile.name.SetWordWrap then tile.name:SetWordWrap(false) end
 	tile.stars = Theme.Text(tile, Theme.F_SMALL, Theme.PARCHMENT)
 	tile.stars:SetPoint("TOP", tile.name, "BOTTOM", 0, -3)
@@ -620,10 +620,10 @@ local function ApplyVerdictAzeroth(self, tile, result)
 	tile.name:SetText(target.name)
 	if result.success then
 		tile.verdict = "ok"
-		local c = target.shiny and (colors.shinyName or Theme.GOLD_LIGHT) or { 1, 1, 1 }
+		local c = target.shiny and (colors.shinyName or Theme.GOLD_LIGHT) or WHITE
 		tile.name:SetTextColor(c[1], c[2], c[3])
 		tile.stars:SetText(self:CaptureStarsText(result.stars or 1, 14))
-		tile.stars:SetTextColor(1, 1, 1)
+		tile.stars:SetTextColor(WHITE[1], WHITE[2], WHITE[3])
 		local tag = target.shiny and L.CAPTURE_BATCH_SHINY or (result.fresh and L.CAPTURE_BATCH_NEW)
 			or (result.before and result.better and L.CAPTURE_BATCH_BETTER) or ""
 		tile.tag:SetText(Upper(tag))
@@ -669,7 +669,7 @@ local function ApplyVerdict(self, tile, result)
 		local ink = rarity.text or c
 		tile.name:SetTextColor(ink[1], ink[2], ink[3])
 		tile.stars:SetText(self:CaptureStarsText(result.stars or 1, 14))
-		tile.stars:SetTextColor(1, 1, 1)
+		tile.stars:SetTextColor(WHITE[1], WHITE[2], WHITE[3])
 		local tag = target.shiny and L.CAPTURE_BATCH_SHINY or (result.fresh and L.CAPTURE_BATCH_NEW)
 			or (result.before and result.better and L.CAPTURE_BATCH_BETTER) or ""
 		tile.tag:SetText(Theme.Upper and Theme.Upper(tag) or tag)
@@ -765,7 +765,7 @@ local function DrawShake(self, batch, card, since, now)
 	Place(tile.shadow, tile.scene, wobble * 0.4 + 3, -6)
 	tile.shadow:SetSize(size, size)
 	Rotate(tile.shadow, wobble * 0.015)
-	tile.shadow:SetVertexColor(0, 0, 0, 0.2 + 0.2 * drape)
+	Theme.Shade(tile.shadow, 0.2 + 0.2 * drape)
 	tile.shadow:Show()
 	Creature(tile, wobble, 0, 0.85, wobble * 0.06)
 	-- éclair bref et poussière à l'impact
@@ -1351,7 +1351,7 @@ function ns:CaptureChooserRefresh()
 		local odds = sure and L.CAPTURE_TOAST_SURE or self:F("CAPTURE_TOAST_CHANCE", math.floor((chance or 0) * 100 + 0.5 + 1e-9))
 		frame.single:SetSub(best.shiny and (L.CAPTURE_CHOOSE_SHINY .. " · " .. odds) or odds)
 		frame.all:SetSub(aid and self:F("CAPTURE_CHOOSE_ALL_AID", self:CaptureAidLabel(aid)) or L.CAPTURE_CHOOSE_ALL_FREE)
-		local c = best.shiny and (colors.shinyName or Theme.GOLD_LIGHT) or { 1, 0.95, 0.81 }
+		local c = best.shiny and (colors.shinyName or Theme.GOLD_LIGHT) or ns.AZEROTH_BUTTONS.text
 		frame.single.text:SetTextColor(c[1], c[2], c[3])
 	else
 		local c = best.shiny and (Theme.GOLD_LIGHT or Theme.GOLD) or (Theme.LABEL or Theme.PARCHMENT)

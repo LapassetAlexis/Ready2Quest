@@ -77,7 +77,7 @@ local FR = {
 	DEATH_VERDICT_HEALER = "Guérisseur : la course est plus longue que la faiblesse.",
 	DEATH_VERDICT_NONE   = "À toi de voir : distance inconnue.",
 	DEATH_RULE           = "Règle : cours si la course dure moins que la faiblesse, sauf si des monstres gardent ton corps.",
-	DEATH_CHAT           = "Après la mort — Cours : %s · Guérisseur : %s → %s",
+	DEATH_CHAT           = "Après la mort — Cours : %s · Guérisseur : %s · conseil : %s",
 	DEATH_CHAT_RUN       = "cours",
 	DEATH_CHAT_HEALER    = "guérisseur",
 	DEATH_CHAT_NONE      = "à toi de voir",
@@ -108,7 +108,7 @@ local EN = {
 	DEATH_VERDICT_HEALER = "Healer: the run takes longer than the sickness.",
 	DEATH_VERDICT_NONE   = "Your call: distance unknown.",
 	DEATH_RULE           = "Rule: run if the run is shorter than the sickness, unless mobs guard your corpse.",
-	DEATH_CHAT           = "After death — Run: %s · Healer: %s → %s",
+	DEATH_CHAT           = "After death — Run: %s · Healer: %s · advice: %s",
 	DEATH_CHAT_RUN       = "run",
 	DEATH_CHAT_HEALER    = "healer",
 	DEATH_CHAT_NONE      = "your call",
@@ -475,12 +475,13 @@ events:SetScript("OnEvent", function(_, event)
 end)
 -- la distance baisse pendant la course : recalcul chaque seconde, seulement
 -- quand la fenêtre est ouverte sur un fantôme
-events:SetScript("OnUpdate", ns.Throttle(REFRESH, function()
+-- (1.32.2, fiche 25 : sur l'horloge de l'addon, plus d'OnUpdate permanent)
+ns.Every("death", REFRESH, function()
 	local frame = ns.deathFrame
 	if not (frame and frame:IsShown() and ns.deathAdvice and ns.deathAdvice.ghost) then return end
 	local ok, err = pcall(ns.EvaluateDeath, ns, false)
 	if not ok and ns.RecordError then ns:RecordError("death:refresh", err) end
-end))
+end)
 ns.deathEvents = events
 
 if ns.Mark then ns.Mark("Death") end

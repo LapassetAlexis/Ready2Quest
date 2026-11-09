@@ -1,5 +1,13 @@
 # QuestCompanion
 
+## 2.12.0 — le Juke-box
+
+- **Nouveau : Juke-box dans le carnet.** Les musiques du jeu à écouter à la demande : zones, capitales, donjons, raids, tavernes, nouvelles zones de Forever et thèmes (434 morceaux). Recherche, favoris, trois listes, lecture dans l'ordre ou au hasard ; la musique de la zone reprend à l'arrêt. `/qc juke`, `/qc juke stop`, `/qc juke test`. La musique doit être activée dans les options de son.
+- **Plus léger** : les vérifications régulières passent par une seule horloge (environ 70 % d'appels en moins à chaque image quand rien n'est dû).
+- **Code** : couleurs du style Azeroth et des scènes de capture réunies dans leurs palettes, sans changement visible.
+
+*English:* new Jukebox in the journal — the game's music on demand (zones, capitals, dungeons, raids, taverns, new Forever zones, themes; 434 tracks) with search, favourites, three playlists, in-order or shuffle play, zone music back when you stop (`/qc juke`, `stop`, `test`; music must be enabled in sound options); periodic checks share a single clock (≈70 % fewer calls per frame when nothing is due); Azeroth and capture colours gathered in palettes, no visible change.
+
 ## 2.11.1 — correctif
 
 - **Compagnon** : le modèle 3D est de nouveau éclairé (il restait sombre après un combat) et cadré selon le type de créature (bestioles plus près, dragons et géants plus loin).

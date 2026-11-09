@@ -224,7 +224,9 @@ if ok and frame then
 		local done, err = pcall(ns.GroupEvaluate, ns)
 		if not done then ns:RecordError("group:event", err) end
 	end)
-	frame:SetScript("OnUpdate", function()
+	-- 2.11.2 (fiche 25) : regardé dix fois par seconde sur l'horloge de
+	-- l'addon (l'échéance reste ns.groupNextAt), plus d'OnUpdate permanent
+	ns.Every("group", ns.CLOCK_POLL, function()
 		local now = ns.Now()
 		if (ns.groupNextAt or 0) > now then return end
 		ns.groupNextAt = now + ns.GROUP_POLL

@@ -1830,7 +1830,7 @@ ResetWorld()
 Say("\n== bootstrap et diagnostic ==")
 ResetWorld()
 Check("commande enregistrée par le bootstrap", type(SlashCmdList["SACETDEPART"]) == "function")
-Check("version exposée", NS.version == "1.32.1", NS.version)
+Check("version exposée", NS.version == "1.33.0", NS.version)
 
 local missingMods = {}
 for _, name in ipairs({ "Bootstrap", "Locales", "Compat", "Theme", "Core", "Buffs", "Reagents",
@@ -1851,7 +1851,7 @@ NS.HandleCommand = savedHandle
 Mock:Reset()
 NS:HandleCommand("diag")
 Check("/sd diag liste les modules", Mock:Output():find("modules :") ~= nil, Mock:Output())
-Check("/sd diag affiche la version", Mock:Output():find("1%.32%.1") ~= nil, Mock:Output())
+Check("/sd diag affiche la version", Mock:Output():find("1%.33%.0") ~= nil, Mock:Output())
 
 -- une erreur est enregistrée et affichée
 Mock:Reset()
@@ -3764,7 +3764,7 @@ Mock.world.level = 10
 Mock:Fire("PLAYER_ENTERING_WORLD", true, false)
 Mock.world.level = 12
 NS:RunChecklist("manual")
-Check("[UX7] sorts : détail court (<= 38)", #Result("spells").detail <= 38 and (Result("spells").detail:find("10 %-> 12") ~= nil or Result("spells").detail:find("10 → 12", 1, true) ~= nil),
+Check("[UX7] sorts : détail court (<= 38)", #Result("spells").detail <= 38 and Result("spells").detail:find("10 à 12", 1, true) ~= nil,
 	Result("spells").detail)
 
 -- [9] vente auto : prévenu une seule fois

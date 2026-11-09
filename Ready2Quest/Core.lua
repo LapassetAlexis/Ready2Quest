@@ -51,6 +51,8 @@ ns.RegisterDefaults(DEFAULTS)
 -- lecture, purge des zones sûres de l'ancien schéma.
 function ns:OnDBReady(db)
 	self:MigrateSafeZones(db)
+	-- 1.32.2 : buffs réclamés par défaut (Buffs.lua, schéma 2)
+	if type(self.MigrateBuffs) == "function" then self:MigrateBuffs(db) end
 end
 
 -- Schéma 1 (jusqu'à v1.17) : db.safe[mapID]. Sur Era, un mapID est une zone
@@ -770,8 +772,9 @@ local COMMANDS = {
 		local list = TrackedList(self)
 		local index = tonumber(indexText)
 		if not index or not list[index] then return self:Print(L.MSG_UNKNOWN_CMD) end
+		-- 1.32.2 : bascule la fiche enregistrée (pas la copie de la liste), choix retenu
 		local entry = list[index]
-		entry.enabled = not entry.enabled
+		entry.enabled = self.BuffToggle and self:BuffToggle(entry.spellId) or false
 		self:Print(self:F("MSG_BUFF_TOGGLED", index, entry.enabled and "ON" or "off"))
 	end,
 	["seuil"] = function(self, value)
@@ -1031,23 +1034,24 @@ local frame = CreateFrame("Frame")
 frame:SetScript("OnEvent", function(_, event, ...)
 	ns:OnEvent(event, ...)
 end)
--- sortie en attente : pas besoin de chaque image, dix fois par seconde
+-- 1.32.2 (fiche 25) : plus d'OnUpdate permanent, l'horloge de l'addon.
+-- Sortie en attente : pas besoin de chaque image, dix fois par seconde.
+-- Lieux repérés par leurs PNJ (Places.lua) : y entrer ou en sortir ne
+-- change pas forcément de sous-zone, aucun événement ne le dit. On regarde
+-- au même pas (CheckPlaceMove s'espace lui-même, toutes les PLACE_CHECK s).
 ns.EXIT_TICK = 0.1
-local watchExit = ns.Throttle(ns.EXIT_TICK, function()
+ns.Every("core:exit", ns.EXIT_TICK, function()
 	if ns.pendingExit then ns:UpdatePendingExit(ns:Now()) end
-end)
-frame:SetScript("OnUpdate", function(f, elapsed)
-	-- fondu du résumé éphémère, image par image
-	if ns.toastHideAt and ns.UpdateToast then
-		ns:UpdateToast(ns:Now())
-	end
-	-- sortie de zone sûre en attente de confirmation
-	watchExit(f, elapsed)
-	-- lieux repérés par leurs PNJ (Places.lua) : y entrer ou en sortir ne
-	-- change pas forcément de sous-zone, aucun événement ne le dit. On regarde
-	-- (CheckPlaceMove s'espace lui-même, toutes les PLACE_CHECK secondes).
 	ns:CheckPlaceMove(ns:Now())
 end)
+-- fondu du résumé éphémère, image par image, seulement pendant qu'il est
+-- affiché (la tâche se retire quand il n'y a plus rien à fondre)
+local function ToastFade()
+	if not ns.toastHideAt or not ns.UpdateToast then return false end
+	ns:UpdateToast(ns:Now())
+	return ns.toastHideAt ~= nil
+end
+function ns:ArmToastFade() ns.Every("core:toast", 0, ToastFade) end
 ns:RegisterEvents(frame)
 
 ns.eventFrame = frame

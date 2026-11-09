@@ -591,7 +591,7 @@ local function RingFor(plate)
 	frame.dotBack:SetTexture(Theme.DIAMOND)
 	frame.dotBack:SetSize(ns.AGGRO_DOT_SIZE + 4, ns.AGGRO_DOT_SIZE + 4)
 	frame.dotBack:SetPoint("RIGHT", plate, "LEFT", ns.AGGRO_DOT_INSET, 0)
-	frame.dotBack:SetVertexColor(0, 0, 0, 0.8)
+	Theme.Shade(frame.dotBack, Theme.SHADE.strong)
 	frame.dot = frame:CreateTexture(nil, "OVERLAY")
 	frame.dot:SetTexture(Theme.DIAMOND)
 	frame.dot:SetSize(ns.AGGRO_DOT_SIZE, ns.AGGRO_DOT_SIZE)
@@ -767,10 +767,11 @@ eventFrame:SetScript("OnEvent", function(_, event, ...)
 end)
 -- rafraîchissement hors combat (le joueur bouge) ; 1.31.0 : en « danger
 -- seul », aussi sans touche, mesure coupée au-delà du seuil du rouge
-eventFrame:SetScript("OnUpdate", ns.Throttle(ns.AGGRO_TICK, function()
+-- (1.32.2, fiche 25 : sur l'horloge de l'addon, plus d'OnUpdate permanent)
+ns.Every("aggro", ns.AGGRO_TICK, function()
 	local ok, err = pcall(ns.AggroTick, ns)
 	if not ok and ns.RecordError then ns:RecordError("aggro:tick", err) end
-end))
+end)
 ns.aggroEventFrame = eventFrame
 
 if ns.Mark then ns.Mark("Aggro") end

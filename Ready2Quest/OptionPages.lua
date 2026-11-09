@@ -132,13 +132,17 @@ local function BuffItems()
 		-- 1.31.0 : réclamé ici, ou pourquoi pas (buff personnel, classe absente…)
 		local _, reason, cls = ns:BuffAvailability(spellId, entry.entry, classes, grouped, others)
 		local because = ns:F("BUFF_WHY_" .. string.upper(reason or "other"), ns:ClassName(cls))
+		-- 1.32.2 : pas réclamé par défaut (consommable, posture…) : à activer
+		local kind = ns.BuffKind and ns.BuffKind(spellId, entry.entry)
+		if not entry.entry.userSet and kind and kind ~= "class" then
+			because = L["BUFF_WHY_OPTIN_" .. string.upper(kind)] or because
+		end
 		items[#items + 1] = {
 			key = spellId,
 			text = tostring(entry.name or spellId),
 			value = OnOff(entry.enabled) .. why .. " · " .. because .. "|r",
 			onToggle = function()
-				local stored = ns:DB().buffs[spellId]
-				if stored then stored.enabled = (stored.enabled == false) end
+				ns:BuffToggle(spellId)
 			end,
 			action = L.OPT_REMOVE,
 			onAction = function() ns:DB().buffs[spellId] = nil end,

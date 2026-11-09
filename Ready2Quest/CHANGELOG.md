@@ -1,5 +1,14 @@
 # Journal des modifications
 
+## 1.33.0
+
+- **Place au butin** ne propose plus les outils de métier, les objets et kits de camp, les composants de tes métiers, les recettes, les caisses à ouvrir ni les bandages ; la liste défile à la molette.
+- **Buffs** : seuls les buffs de classe (toi ou ton groupe) sont réclamés par défaut ; parchemins, élixirs et postures (Fureur vertueuse, formes, aspects…) sont à activer dans la liste des buffs, qui dit pourquoi chacun est réclamé ou non.
+- **Lisibilité** : « niv. 18 à 20 » au lieu d'une flèche illisible (plus de carré vide).
+- **Plus léger** : camp, aggro, portrait, sortie de zone sûre et sorts sur une seule horloge.
+
+*English:* "Room for loot" no longer offers profession tools, camp objects and kits, reagents for your professions, recipes, openable crates or bandages, and the list scrolls; only class buffs (yours or your group's) are asked by default — scrolls, elixirs and stances (Righteous Fury, forms, aspects…) can be turned on in the buff list; "lvl 18 to 20" instead of an unreadable arrow; periodic checks on a single clock.
+
 ## 1.32.1
 
 - **Plus léger** : la présence d'un feu de camp n'est plus lue qu'une fois par image au lieu de trois.

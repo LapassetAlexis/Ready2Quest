@@ -107,7 +107,7 @@ local INK = INKS.inkSoft                  -- texte du thème sur parchemin (#2b1
 local INK_SOFT = INKS.inkSoft
 local INK_MUTED = INKS.inkMuted           -- #3d260f
 local AMBER = INKS.amber                  -- l'ambre du thème sur parchemin (#521f00)
-local GOLD_HEAD = { 0.97, 0.85, 0.47 }    -- titres dorés ombrés (#f8d877)
+local GOLD_HEAD = INKS.goldHead           -- titres dorés ombrés (#f8d877)
 -- 2.9.0 : le grand bouclier des points (en-tête des hauts faits) : taille,
 -- décalage du nombre, taille de police selon le nombre de chiffres
 local SHIELD_BIG = { w = 60, h = 44, y = 2, font = { 14, 14, 12, 10 } }
@@ -117,15 +117,14 @@ local PLATE_COUNT = { x = 12, y = 1 }     -- 2.9.0 : nombre de la case des point
 -- liseré de leur barre (le cadre de la barre déborde de 3 px), des rangées
 ns.CARNET_PROGRESS_LAYOUT = { partTop = 4, barEdge = 3, rowPad = 2 }
 ns.CARNET_PLATE_COUNT = PLATE_COUNT
-local GOLD_TEXT = { 1, 0.84, 0.42 }       -- texte des boutons, de la plaque
-local LIGHT = { 0.93, 0.89, 0.80 }        -- texte clair sur fond sombre
-local LIGHT_SOFT = { 0.89, 0.82, 0.66 }
-local WOOD_BG = { 0.10, 0.07, 0.04 }
-local CAT_GOLD = { 1, 0.76, 0.25 }        -- teinte de la surbrillance des catégories
-local BAR_GREEN = { 0.10, 0.62, 0.10 }
-local BAR_ORANGE = { 0.80, 0.33, 0.08 }
-local BAR_GOLD = { 0.78, 0.56, 0.12 }
-local EDGE_DARK = { 0.106, 0.063, 0.024 }
+-- 2.11.2 (fiche 28) : encres lues dans ns.AZEROTH_INK (mêmes valeurs)
+local GOLD_TEXT = INKS.goldText           -- texte des boutons, de la plaque
+local LIGHT = INKS.light                  -- texte clair sur fond sombre
+local LIGHT_SOFT = INKS.lightSoft
+local WOOD_BG = INKS.woodNight
+local CAT_GOLD = INKS.catGold             -- teinte de la surbrillance des catégories
+local BAR_GREEN, BAR_ORANGE, BAR_GOLD = INKS.barGreen, INKS.barOrange, INKS.barGold
+local EDGE_DARK = INKS.edgeDark
 ns.CARNET_COLORS = { ink = INK, inkSoft = INK_SOFT, amber = AMBER, gold = GOLD_HEAD, light = LIGHT,
 	catGold = CAT_GOLD, green = BAR_GREEN, orange = BAR_ORANGE, barGold = BAR_GOLD }
 local STATUS_BAR = "Interface\\TargetingFrame\\UI-StatusBar"
@@ -139,10 +138,7 @@ local function Method(obj, name, ...)
 end
 local SetTex = ns.AzerothFileTexture
 local function AzFont(fs, size, flags) if ns.AzerothFont then return ns.AzerothFont(fs, size, flags) end end
-local function Shadow(fs)
-	if fs.SetShadowColor then fs:SetShadowColor(0, 0, 0, 1) end
-	if fs.SetShadowOffset then fs:SetShadowOffset(1, -1) end
-end
+local function Shadow(fs) Theme.TextShadow(fs) end
 local function NoShadow(fs) if Theme.NoShadow then Theme.NoShadow(fs) end end
 local function Paint(fs, c, a) fs:SetTextColor(c[1], c[2], c[3], a or 1) end
 -- 2.9.0 : l'encre d'un rôle mesuré (ns.AZEROTH_CONTRAST), le code et la table d'accord
@@ -162,8 +158,7 @@ local function RolePaint(fs, role, shadow)
 	end
 	fs:SetTextColor(ink[1], ink[2], ink[3], 1)
 	if shadow then
-		if fs.SetShadowColor then fs:SetShadowColor(0, 0, 0, 1) end
-		if fs.SetShadowOffset then fs:SetShadowOffset(1, -1) end
+		Theme.TextShadow(fs)
 	elseif Theme.NoShadow then
 		Theme.NoShadow(fs)
 	end
@@ -329,7 +324,7 @@ local function TileStyle(tile, style)
 	if style == "band" then
 		bg:SetTexture(Theme.SOLID)
 		bg:SetTexCoord(0, 1, 0, 1)
-		bg:SetVertexColor(0.23, 0.13, 0.03, 0.14)
+		bg:SetVertexColor(INKS.catVeil[1], INKS.catVeil[2], INKS.catVeil[3], 0.14)
 		ok = true
 	else
 		local spec = STYLE_SPEC[style]
@@ -420,7 +415,7 @@ function SKIN.CreateBar(bar)
 	local h = tonumber(bar:GetHeight()) or 4
 	local newH = h >= 6 and 14 or (h >= 4 and 10 or (h >= 3 and 8 or 4))
 	bar:SetHeight(newH)
-	bar.bg:SetVertexColor(0.07, 0.04, 0.01, 1)
+	bar.bg:SetVertexColor(INKS.barBg[1], INKS.barBg[2], INKS.barBg[3], 1)
 	SetTex(bar.fill, { file = STATUS_BAR })
 	function bar:SetColor() BarPaint(self) end
 	BarPaint(bar)
@@ -478,10 +473,8 @@ end
 
 -- Boutons : rouge des fenêtres du jeu (principal), brun (secondaire),
 -- liseré d'or dedans, texte doré ombré (dessinés : pas de texture de bouton)
-local BUTTONS = {
-	red   = { top = { 0.56, 0.12, 0.05 }, bottom = { 0.30, 0.05, 0.01 }, edge = { 0.77, 0.60, 0.27 } },
-	brown = { top = { 0.20, 0.12, 0.05 }, bottom = { 0.09, 0.05, 0.02 }, edge = { 0.54, 0.42, 0.17 } },
-}
+local AZB = ns.AZEROTH_BUTTONS            -- 2.11.2 : palette unique (AzerothStyle.lua)
+local BUTTONS = { red = AZB.red, brown = AZB.brown }
 ns.CARNET_BUTTONS = BUTTONS
 function SKIN.CreateButton(button)
 	local skin = (button.style == "primary" or button.style == "accent") and BUTTONS.red or BUTTONS.brown
@@ -492,7 +485,7 @@ function SKIN.CreateButton(button)
 	if Theme.Gradient then Theme.Gradient(fill, "VERTICAL", skin.bottom, 1, skin.top, 1) end
 	fill:Show()
 	button.azFill = fill
-	button.azOuter = Theme.Border(button, { 0.08, 0.03, 0 }, 1, "BORDER")
+	button.azOuter = Theme.Border(button, AZB.outer, 1, "BORDER")
 	button.azInner = Theme.Border(button, skin.edge, 0.85, "BORDER", fill)
 	if button.bg then button.bg:Hide() end
 	HideAll(button.border)
@@ -505,7 +498,7 @@ function SKIN.CreateButton(button)
 end
 
 local function Field(box)
-	if box.bg then box.bg:SetVertexColor(0.12, 0.07, 0.03, 1) end
+	if box.bg then box.bg:SetVertexColor(INKS.fieldBg[1], INKS.fieldBg[2], INKS.fieldBg[3], 1) end
 	-- 2.11.0 : le texte du champ, rôle mesuré sur l'aplat
 	for _, key in ipairs({ "text", "label", "value" }) do
 		local fs = box[key]
@@ -515,7 +508,7 @@ local function Field(box)
 		local c = RoleInk("field.text")
 		box:SetTextColor(c[1], c[2], c[3], 1)
 	end
-	if box.border and box.border.SetColor then box.border:SetColor(0.54, 0.42, 0.17, 1) end
+	if box.border and box.border.SetColor then box.border:SetColor(AZB.brown.edge[1], AZB.brown.edge[2], AZB.brown.edge[3], 1) end
 	if box.chevron then box.chevron:SetVertexColor(GOLD_TEXT[1], GOLD_TEXT[2], GOLD_TEXT[3], 1) end
 	box.azSurface = "dark"
 end
@@ -528,7 +521,7 @@ function SKIN.CreateTag(tag)
 	local bg = NewTex(tag, "BACKGROUND", 1, T.reward)
 	if not bg then return end
 	bg:SetAllPoints(tag)
-	bg:SetVertexColor(0.5, 0.5, 0.5, 1)
+	bg:SetVertexColor(INKS.dim[1], INKS.dim[2], INKS.dim[3], 1)
 	if tag.bg then
 		local c = INKS.tagShade
 		tag.bg:SetTexture(Theme.SOLID)
@@ -1322,7 +1315,7 @@ function POST.feats(self, frame)
 		if entry then
 			TileStyle(row, entry.got and "light" or "parchd")
 			if row.azTitle then SetTex(row.azTitle, entry.got and T.titleGold or T.titleGrey) end
-			if row.pts then Paint(row.pts, entry.got and { 1, 1, 1 } or { 0.85, 0.85, 0.85 }) end
+			if row.pts then Paint(row.pts, entry.got and INKS.white or INKS.ptsGrey) end
 			if row.name and row.azTitle then Paint(row.name, entry.got and INKS.white or INKS.barGrey) end
 			-- 2.8.2 : une encre par rôle (AZEROTH_CONTRAST feat.* / featOpen.*) :
 			-- obtenu, ligne claire voilée ; pas encore, parchemin sombre
@@ -1597,6 +1590,59 @@ function POST.guide(self, frame)
 	end
 end
 
+-- 2.12.0 : Juke-box. Pistes sur le parchemin des statistiques voilé comme le
+-- guide ; chaque piste est une ligne claire de 504×24 (fond des hauts faits,
+-- voile 0,40), la mesure des quêtes d'Exploration (juke.* = quest.*) ; les
+-- vues à gauche en tuiles sombres sélectionnables, le titre sur la bande.
+function PAGE.juke(self, frame)
+	local pane = frame.juke
+	if not pane then return end
+	for _, tile in ipairs(pane.cats or {}) do
+		if TileStyle(tile, "dark") then Selectable(tile) end
+	end
+	for _, row in ipairs(pane.rows or {}) do TileStyle(row, "light") end
+	local ui, content = ns.JournalUI, frame.content
+	if not ui then return end
+	local page = NewTex(pane, "BACKGROUND", 1, T.stats)
+	if page then
+		local x0, x1 = ui.PAD + pane.RX - 12, ui.PAD + ui.INNER + 8
+		local y0, y1 = ui.TOP + 10, ui.PAGER_Y - 28
+		page:SetPoint("TOPLEFT", content, "TOPLEFT", x0, y0)
+		page:SetPoint("BOTTOMRIGHT", content, "TOPLEFT", x1, y1)
+		Cover(page, T.stats, x1 - x0, y0 - y1)
+		pane.azPage, pane.azVeil = page, ns.AzerothVeil(pane, page, "guide", 2)
+	end
+	local G = ns.CARNET_GUIDE_LAYOUT
+	pane.azBand = NewTex(pane, "ARTWORK", 0, T.statHead)
+	if pane.azBand then
+		pane.azBand:SetPoint("TOPLEFT", content, "TOPLEFT", ui.PAD + pane.RX - 6, ui.TOP + G.bandUp)
+		pane.azBand:SetSize(pane.RW + 12, G.bandH)
+	end
+	if pane.title then
+		GoldTitle(pane.title, 18, not pane.azBand)
+		if pane.azBand then
+			pane.title:ClearAllPoints()
+			pane.title:SetPoint("LEFT", pane.azBand, "LEFT", 10, 0)
+		end
+	end
+end
+
+function POST.juke(self, frame)
+	local pane = frame.juke
+	if not pane then return end
+	for _, row in ipairs(pane.rows or {}) do
+		if row.azStyle == "light" and row.track then
+			RolePaint(row.text, row.missing and "juke.missing" or (row.playing and "juke.playing" or "juke.name"))
+			RolePaint(row.detail, "juke.detail")
+			RolePaint(row.add.label, "juke.detail")
+		end
+	end
+	RolePaint(pane.now, "juke.now")
+	RolePaint(pane.hintLine, "juke.hint")
+	RolePaint(pane.empty, "juke.now")
+	InkPager(pane.pager)
+end
+
 -- ---------------------------------------------------------------------------
 -- Construction et rafraîchissement du carnet Azeroth
 -- ---------------------------------------------------------------------------
@@ -1831,7 +1877,7 @@ local function SkinTrainer(self, frame, reg)
 			if band then
 				band:SetPoint("TOPLEFT", line, "TOPLEFT", -8, 3)
 				band:SetSize((ns.TRAINER_LAYOUT and 304 or 300) + 14, 17)
-				if index % 2 == 1 then band:SetVertexColor(1.25, 1.25, 1.25, 1) end
+				if index % 2 == 1 then band:SetVertexColor(INKS.bandLift, INKS.bandLift, INKS.bandLift, 1) end
 				Paint(line, LIGHT)
 				Shadow(line)
 				line.azKeep = true
@@ -1906,7 +1952,8 @@ end
 -- ---------------------------------------------------------------------------
 local JOURNAL_STATE = { "kind", "activity", "offset", "zoneFilter", "zoneSort", "zoneOffset", "questFilter", "collKind",
 	"menZone", "menState", "menRank", "menSort", "menSearch", "menType", "menOffset", "featsCat", "featsOffset",
-	"zoneID", "zonePicked", "progPart", "progOffset", "progItemOffset", "guideSection", "guideOffset", "lookOffset" }
+	"zoneID", "zonePicked", "progPart", "progOffset", "progItemOffset", "guideSection", "guideOffset", "lookOffset",
+	"jukeView", "jukeOffset", "jukeSearch" }   -- 2.12.0 : Juke-box
 
 function ns:CarnetRestyle()
 	local want = self:JournalStyle()

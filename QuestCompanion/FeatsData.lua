@@ -175,17 +175,12 @@ end
 --   * ns.FeatListen(handlers) / ns.FeatUnlisten(handlers) : une table
 --     { ÉVÉNEMENT = function(...) } abonnée ou désabonnée (plusieurs tables
 --     peuvent écouter le même événement, appelées dans l'ordre d'abonnement) ;
---   * ns.FeatClock(clé, fn) : fn(elapsed) à chaque image tant qu'elle est
---     posée (nil : la retire ; plus d'horloge : plus d'OnUpdate).
+--   * ns.FeatClock(clé, fn, période) : fn(elapsed) à chaque image (ou toutes
+--     les `période` s) tant qu'elle est posée (nil : la retire).
+--     2.11.2 (fiche 25) : façade de l'horloge de l'addon (ns.Every, clé
+--     « feats:<clé> ») ; plus d'OnUpdate sur le cadre des hauts faits.
 -- ---------------------------------------------------------------------------
 local sets, clocks, hub = {}, {}, nil
-
-local function HubUpdate(_, elapsed)
-	for key, fn in pairs(clocks) do
-		local ok, err = pcall(fn, elapsed)
-		if not ok and ns.RecordError then ns:RecordError("feats:clock:" .. tostring(key), err) end
-	end
-end
 
 local function HubEvent(_, event, ...)
 	for _, handlers in ipairs(sets) do
@@ -224,11 +219,14 @@ function ns.FeatUnlisten(handlers)
 	end
 end
 
-function ns.FeatClock(key, fn)
+function ns.FeatClock(key, fn, period)
 	if clocks[key] == fn then return end
 	clocks[key] = fn
-	if not hub then return end
-	hub:SetScript("OnUpdate", next(clocks) and HubUpdate or nil)
+	if not fn then ns.Cancel("feats:" .. tostring(key)); return end
+	ns.Every("feats:" .. tostring(key), period or 0, function(elapsed)
+		local ok, err = pcall(fn, elapsed)
+		if not ok and ns.RecordError then ns:RecordError("feats:clock:" .. tostring(key), err) end
+	end)
 end
 
 -- ---------------------------------------------------------------------------

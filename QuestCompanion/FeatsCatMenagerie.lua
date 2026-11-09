@@ -707,10 +707,8 @@ end
 do
 	local function Continent() ns:FeatNoteContinent() end
 	ns.FeatListen({ ZONE_CHANGED_NEW_AREA = Continent, PLAYER_ENTERING_WORLD = Continent })
-	if ns.Throttle then
-		local minute = ns.Throttle(60, function() if Awake() then ns:FeatTouch("minute") end end)
-		ns.FeatClock("minute", function(elapsed) minute(nil, elapsed) end)
-	end
+	-- 2.11.2 (fiche 25) : une échéance d'une minute sur l'horloge de l'addon
+	ns.FeatClock("minute", function() if Awake() then ns:FeatTouch("minute") end end, 60)
 end
 
 -- ---------------------------------------------------------------------------

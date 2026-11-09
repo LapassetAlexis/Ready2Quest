@@ -275,8 +275,10 @@ if ok and frame then
 		local done, err = pcall(HANDLERS[event], ...)
 		if not done then ns:RecordError("advice:" .. event, err) end
 	end)
-	-- examen régulier : ce qui change sans événement (foyer, munitions…)
-	frame:SetScript("OnUpdate", function()
+	-- examen régulier : ce qui change sans événement (foyer, munitions…).
+	-- 2.11.2 (fiche 25) : regardé dix fois par seconde sur l'horloge de
+	-- l'addon (l'échéance reste ns.adviceNextAt), plus d'OnUpdate permanent
+	ns.Every("advice", ns.CLOCK_POLL, function()
 		local now = ns.Now()
 		if (ns.adviceNextAt or 0) > now then return end
 		ns.adviceNextAt = now + ns.ADVICE_POLL

@@ -216,51 +216,55 @@ do
 	Check("[THR] une seconde à 60 images : au plus 5 passages", #runs - 2 <= 5 and #runs - 2 >= 4, #runs - 2)
 
 	-- Boucles réelles : au plus un passage par intervalle, à 60 images/s
-	-- (un premier grand écart vide le cumul laissé par les tests précédents)
+	-- (un premier grand écart vide le cumul laissé par les tests précédents).
+	-- 2.11.2 / 1.32.2 (fiche 25) : elles tournent sur l'horloge de chaque
+	-- addon (ns.clockFrame), plus sur leurs cadres d'événements
+	local function Tick(clock, seconds) clock.scripts.OnUpdate(clock, seconds) end
 
-	-- R2Q : sortie en attente dix fois par seconde, lieux à chaque image
+	-- R2Q : sortie en attente et lieux dix fois par seconde
 	local exitCalls, placeCalls = 0, 0
 	local update, place, pending = NS.UpdatePendingExit, NS.CheckPlaceMove, NS.pendingExit
 	NS.UpdatePendingExit = function() exitCalls = exitCalls + 1 end
 	NS.CheckPlaceMove = function() placeCalls = placeCalls + 1 end
 	NS.pendingExit = { at = 0 }
-	NS.eventFrame.scripts.OnUpdate(NS.eventFrame, 1)
+	Tick(NS.clockFrame, 1)
 	exitCalls, placeCalls = 0, 0
-	for _ = 1, 60 do NS.eventFrame.scripts.OnUpdate(NS.eventFrame, 1 / 60) end
+	for _ = 1, 60 do Tick(NS.clockFrame, 1 / 60) end
 	Check("[THR] R2Q sortie en attente : au plus 10 par seconde", exitCalls >= 8 and exitCalls <= 10, exitCalls)
-	Check("[THR] R2Q lieux : regardés à chaque image (espacés par eux-mêmes)", placeCalls == 60, placeCalls)
+	Check("[THR] R2Q lieux : au même pas (espacés par eux-mêmes)", placeCalls == exitCalls, placeCalls)
 	Check("[THR] R2Q intervalle de la sortie", NS.EXIT_TICK == 0.1)
 	NS.UpdatePendingExit, NS.CheckPlaceMove, NS.pendingExit = update, place, pending
 
 	-- R2Q : camp (0,25 s)
 	local campCalls, camp = 0, NS.UpdateCampFrame
 	NS.UpdateCampFrame = function() campCalls = campCalls + 1 end
-	NS.campEventFrame.scripts.OnUpdate(NS.campEventFrame, 1)
+	Tick(NS.clockFrame, 1)
 	campCalls = 0
-	for _ = 1, 60 do NS.campEventFrame.scripts.OnUpdate(NS.campEventFrame, 1 / 60) end
+	for _ = 1, 60 do Tick(NS.clockFrame, 1 / 60) end
 	Check("[THR] R2Q camp : au plus 4 par seconde", campCalls >= 3 and campCalls <= 4, campCalls)
 	NS.UpdateCampFrame = camp
 
-	-- QC : brillants (0,1 s), annonces (0,2 s)
+	-- QC : brillants (0,1 s), annonces (0,2 s), éclat (chaque image, tant qu'il luit)
 	local counts = { shiny = 0, aura = 0, flush = 0, glow = 0 }
 	local saved = { QNS.ChestRevealStep, QNS.ShinyAuraTick, QNS.NotifyFlush, QNS.GlowUpdate }
+	local glowing = 0.5
 	QNS.ChestRevealStep = function() counts.shiny = counts.shiny + 1 end
 	QNS.ShinyAuraTick = function() counts.aura = counts.aura + 1 end
 	QNS.NotifyFlush = function() counts.flush = counts.flush + 1 end
-	QNS.GlowUpdate = function() counts.glow = counts.glow + 1 end
-	for _, frame in ipairs({ QNS.shinyEventFrame, QNS.notifyEventFrame }) do
-		frame.scripts.OnUpdate(frame, 1)
-	end
+	QNS.GlowUpdate = function() counts.glow = counts.glow + 1; return glowing end
+	QNS:NotifyGlowArm()
+	Tick(QNS.clockFrame, 1)
 	for key in pairs(counts) do counts[key] = 0 end
-	for _ = 1, 60 do
-		for _, frame in ipairs({ QNS.shinyEventFrame, QNS.notifyEventFrame }) do
-			frame.scripts.OnUpdate(frame, 1 / 60)
-		end
-	end
+	for _ = 1, 60 do Tick(QNS.clockFrame, 1 / 60) end
 	Check("[THR] QC coffre et aura : au plus 10 par seconde", counts.shiny >= 8 and counts.shiny <= 10
 		and counts.aura == counts.shiny, counts.shiny)
 	Check("[THR] QC annonces en attente : au plus 5 par seconde", counts.flush >= 4 and counts.flush <= 5, counts.flush)
-	Check("[THR] QC éclat du liseré : à chaque image", counts.glow == 60, counts.glow)
+	Check("[THR] QC éclat du liseré : à chaque image tant qu'il luit", counts.glow == 60, counts.glow)
+	glowing = 0
+	Tick(QNS.clockFrame, 1 / 60)
+	counts.glow = 0
+	for _ = 1, 10 do Tick(QNS.clockFrame, 1 / 60) end
+	Check("[THR] QC éclat éteint : la tâche se retire", counts.glow == 0, counts.glow)
 	QNS.ChestRevealStep, QNS.ShinyAuraTick, QNS.NotifyFlush, QNS.GlowUpdate = saved[1], saved[2], saved[3], saved[4]
 
 	-- éclat éteint et déjà caché : on ne touche plus aux bords

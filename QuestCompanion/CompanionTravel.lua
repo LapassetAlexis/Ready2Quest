@@ -110,14 +110,11 @@ function ns:TravelText(meters)
 end
 
 do
-	local ok, frame = pcall(CreateFrame, "Frame")
-	if ok and frame and ns.Throttle then
-		frame:SetScript("OnUpdate", ns.Throttle(ns.TRAVEL_STEP, function()
-			local done, err = pcall(ns.TravelSample, ns, (ns.Now and ns.Now()) or 0)
-			if not done and ns.RecordError then ns:RecordError("travel", err) end
-		end))
-		ns.travelFrame = frame
-	end
+	-- 2.11.2 (fiche 25) : sur l'horloge de l'addon (plus d'OnUpdate permanent)
+	ns.Every("travel", ns.TRAVEL_STEP, function()
+		local done, err = pcall(ns.TravelSample, ns, (ns.Now and ns.Now()) or 0)
+		if not done and ns.RecordError then ns:RecordError("travel", err) end
+	end)
 end
 
 if ns.Mark then ns.Mark("CompanionTravel") end

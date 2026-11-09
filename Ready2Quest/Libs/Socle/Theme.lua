@@ -74,6 +74,11 @@ Theme.EDGE      = { 0.227, 0.259, 0.290 } -- bord de fenêtre, bouton en contour
 Theme.EDGE_SOFT = { 0.165, 0.192, 0.220 } -- filets, séparations #2a3138
 Theme.LABEL     = { 0.902, 0.882, 0.835 } -- libellé de carte #e6e1d5
 Theme.WHITE     = { 1, 1, 1 }
+-- socle 2.11.2 / 1.32.2 (fiche 28) : ombre noire et ses voiles, or d'une
+-- brillante (#ffe27a arrondi, déjà la valeur du carnet et des effets)
+Theme.SHADOW    = { 0, 0, 0 }
+Theme.SHADE     = { soft = 0.25, mid = 0.45, veil = 0.66, strong = 0.8 }
+Theme.SHINY     = { 1, 0.89, 0.48 }
 
 -- socle 2.11.0 : états des contrôles (docs/UI.md, « États »)
 Theme.HOVER_ALPHA = 0.06   -- voile blanc d'une carte ou d'une ligne survolée (1,18 × la luminance du fond)
@@ -312,9 +317,10 @@ Theme.F_CAPS    = Theme.fonts.CAPS.name
 Theme.F_NUMBER  = Theme.fonts.NUMBER.name
 -- ancien nom (GameFontHighlight) : texte courant
 Theme.F_NORMAL  = Theme.F_BODY
--- socle 2.11.0 : vraie flèche « → » si Inter est chargée (la police du jeu
--- de repli ne l'a pas : « -> »)
-Theme.ARROW = (Theme.fonts.BODY and Theme.fonts.BODY.inter) and "→" or "->"
+-- socle 2.11.0 : vraie flèche « → » si Inter est chargée ; socle 1.32.2 :
+-- la police réellement utilisée n'a pas toujours la flèche (carré « glyphe
+-- manquant » en jeu). Toujours de l'ASCII ; dans une phrase, préférer des mots.
+Theme.ARROW = "->"
 
 local function Clamp(value, minimum, maximum)
 	if value < minimum then return minimum end
@@ -341,6 +347,22 @@ function Theme.NoShadow(fontString)
 	if not fontString then return end
 	if fontString.SetShadowOffset then fontString:SetShadowOffset(0, 0) end
 	if fontString.SetShadowColor then fontString:SetShadowColor(0, 0, 0, 0) end
+end
+
+-- socle 2.11.2 / 1.32.2 (fiche 28) : ombre noire d'un texte clair, décalée de
+-- (1, dy) (dy : -1 par défaut, -2 sous les grands titres), opaque par défaut
+function Theme.TextShadow(fontString, alpha, dy)
+	if not fontString then return end
+	if fontString.SetShadowColor then fontString:SetShadowColor(0, 0, 0, alpha or 1) end
+	if fontString.SetShadowOffset then fontString:SetShadowOffset(1, dy or -1) end
+end
+
+-- Teinte noire d'une texture (liseré, ombre portée), au voile alpha
+-- (Theme.SHADE.strong par défaut)
+function Theme.Shade(texture, alpha)
+	if texture and texture.SetVertexColor then
+		texture:SetVertexColor(Theme.SHADOW[1], Theme.SHADOW[2], Theme.SHADOW[3], alpha or Theme.SHADE.strong)
+	end
 end
 
 -- Capitales des titres de section : string.upper ignore les lettres
