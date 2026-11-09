@@ -440,10 +440,7 @@ function ns:EnsureToast()
 
 	-- ombre portée sur chaque texte : la ligne reste lisible par-dessus le décor
 	local function AddShadow(fontString)
-		if fontString.SetShadowColor then
-			fontString:SetShadowColor(0, 0, 0, 1)
-			fontString:SetShadowOffset(1, -1)
-		end
+		Theme.TextShadow(fontString)
 	end
 	AddShadow(frame.title)
 

@@ -17,6 +17,8 @@ local ADDON, ns = ...
 if ns.blocked then return end
 local L = ns.L
 local Theme = ns.Theme
+-- 2.11.2 : liseré « danger » (plus vif que Theme.RED, gardé tel quel)
+local DANGER_EDGE = { 1, 0.12, 0.08 }
 
 local FR = {
 	COMP_ANIM_TEST       = "Animation %d/%d : %s. Si rien ne bouge : /qc compagnon anim non %s",
@@ -51,7 +53,7 @@ local FX = {
 	hearts = { duration = 1.6, count = 4, color = { 1.0, 0.45, 0.65 } },
 	crumbs = { duration = 1.2, count = 5, color = { 0.78, 0.58, 0.32 } },
 	alert  = { duration = 2.0 },
-	zzz    = { duration = 2.4, count = 2 },
+	zzz    = { duration = 2.4, count = 2, color = { 0.75, 0.82, 0.95 } },   -- 2.11.2 : teinte des « Zz » (donnée)
 }
 ns.COMPANION_FX = FX
 
@@ -124,7 +126,7 @@ function ns:CompanionFx(kind)
 			if other.Hide then other:Hide() end
 			if kind == "zzz" then
 				p.text:SetText(index == 1 and "z" or "Z")
-				p.text:SetTextColor(0.75, 0.82, 0.95)
+				p.text:SetTextColor(def.color[1], def.color[2], def.color[3])
 			elseif def.color and p.dot.SetVertexColor then
 				p.dot:SetVertexColor(def.color[1], def.color[2], def.color[3], 1)
 			end
@@ -456,7 +458,7 @@ function ns:CompanionAggroUpdate(now)
 			if frame.danger.SetBlendMode then frame.danger:SetBlendMode("ADD") end
 			frame.danger:SetPoint("TOPLEFT", frame, "TOPLEFT", -14, 14)
 			frame.danger:SetPoint("BOTTOMRIGHT", frame, "BOTTOMRIGHT", 14, -14)
-			frame.danger:SetVertexColor(1, 0.12, 0.08, 1)
+			frame.danger:SetVertexColor(DANGER_EDGE[1], DANGER_EDGE[2], DANGER_EDGE[3], 1)
 		end
 		-- battement : deux par seconde
 		frame.danger:SetAlpha(0.35 + 0.65 * math.abs(math.sin(now * math.pi * 2)))

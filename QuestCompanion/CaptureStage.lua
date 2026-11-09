@@ -134,10 +134,17 @@ function ns.CaptureArtPaint(tex, role, coords)
 	if coords and tex.SetTexCoord then tex:SetTexCoord(coords[1], coords[2], coords[3], coords[4]) end
 	return "own"
 end
-local WHITE = { 1, 1, 1 }
-local STAR_GREY = { 0.47, 0.50, 0.52 }
-local DUST_COLOR = { 0.62, 0.57, 0.48 }
-local PANEL_SHINY = { 0.47, 0.31, 0.09 }
+-- 2.11.2 : teintes des scènes de capture, partagées avec « Tout capturer »
+-- (CaptureBatch.lua, chargé après) ; noms et fond de case de la scène groupée
+-- gardés tels quels (idle diffère d'AZEROTH_COLORS.flavour, fledName de .fled,
+-- tileBg d'AZEROTH_INK.woodDeep : aucune teinte ne change)
+ns.CAPTURE_FX_COLORS = {
+	white = Theme.WHITE, starGrey = { 0.47, 0.50, 0.52 }, dust = { 0.62, 0.57, 0.48 },
+	panelShiny = { 0.47, 0.31, 0.09 },
+	idle = { 0.9, 0.86, 0.78 }, fledName = { 0.7, 0.66, 0.6 }, tileBg = { 0.05, 0.04, 0.03 },
+}
+local FXC = ns.CAPTURE_FX_COLORS
+local WHITE, STAR_GREY, DUST_COLOR, PANEL_SHINY = FXC.white, FXC.starGrey, FXC.dust, FXC.panelShiny
 local PANEL_FAIL, TRIM_FAIL = { 0.20, 0.23, 0.26 }, { 0.47, 0.35, 0.34 }
 local BURST_KINDS = { "star4", "spark", "dot" }
 local BURST_SIZES = { 14, 18, 10 }
@@ -431,7 +438,7 @@ function ns:EnsureCaptureStage()
 	frame.netFrame:SetPoint("CENTER", frame.scene, "CENTER", 0, 0)
 	frame.netFrame:SetFrameLevel(level + 11)
 	frame.netShadow = Art(frame.netFrame, "ARTWORK", 0, "net", COORDS.netWhole, NET)
-	frame.netShadow:SetVertexColor(0, 0, 0, 0.45)
+	Theme.Shade(frame.netShadow, Theme.SHADE.mid)
 	frame.net = Art(frame.netFrame, "ARTWORK", 1, "net", COORDS.netWhole, NET)
 	frame.net:SetPoint("CENTER", frame.netFrame, "CENTER", 0, 0)
 	frame.fxTop = CreateFrame("Frame", nil, frame)
@@ -506,7 +513,7 @@ function ns:EnsureCaptureStage()
 		frame.sheenClip:SetPoint("CENTER", frame.banner, "CENTER", 0, 0)
 		frame.sheenClip.clips = Method(frame.sheenClip, "SetClipsChildren", true) == true
 		frame.sheen = Art(frame.sheenClip, "ARTWORK", 0, "halo", nil, 60, 90, "ADD")
-		frame.sheen:SetVertexColor(1, 1, 1, 0.35)
+		frame.sheen:SetVertexColor(WHITE[1], WHITE[2], WHITE[3], 0.35)
 		frame.bannerText = Theme.Text(frame.banner, Theme.F_DISPLAY or Theme.F_TITLE, Theme.PARCHMENT)
 		frame.bannerText:SetPoint("CENTER", frame.banner, "CENTER", 0, 2)
 		frame.banner:Hide()
@@ -761,7 +768,7 @@ local function StageShake(frame, since, t, rolling, c)
 	-- l'ombre reste au sol pendant que le filet tombe, puis se recolle à lui
 	Place(frame.netShadow, frame.netFrame, 4, -8 - lift)
 	frame.netShadow:SetSize(NET * (1 + 0.003 * lift), NET * (1 + 0.003 * lift))
-	frame.netShadow:SetVertexColor(0, 0, 0, 0.25 + 0.2 * drape)
+	Theme.Shade(frame.netShadow, Theme.SHADE.soft + 0.2 * drape)
 	frame.netShadow:Show()
 	-- la créature se débat dessous
 	Creature(frame, wobble, 0, 0.85, wobble * 0.06)
@@ -912,7 +919,7 @@ local function StageOk(frame, r, rolling, c)
 	Fade(frame.net, netAlpha)
 	Place(frame.netShadow, frame.netFrame, 4, -8)
 	frame.netShadow:SetSize(NET, NET)
-	frame.netShadow:SetVertexColor(0, 0, 0, 0.45)
+	Theme.Shade(frame.netShadow, Theme.SHADE.mid)
 	Fade(frame.netShadow, netAlpha)
 	-- un tour sur elle-même, qui ralentit
 	Creature(frame, 0, 0, 1, EaseOut(r / 1.2) * math.pi * 2)
