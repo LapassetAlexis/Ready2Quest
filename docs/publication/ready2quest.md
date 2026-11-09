@@ -26,7 +26,7 @@ Each one can be switched on or off in one click (`/r2q options`).
 - **Camp kit** *(Forever)*: your campfire kit and camp item ready, and a countdown for camp buffs.
 - **Gear summary**: a short toast with the stats you gained or lost when you swap an item.
 - **Portrait stats**: hover your portrait to see your main stats, picked for your class and spec.
-- **Aggro range**: hold Shift out of combat and each hostile nameplate gets a small diamond (or a line, or a ring): red inside its estimated aggro radius, amber close, green safe; its tooltip gives the radius, your distance and the verdict.
+- **Aggro range**: by default (**Danger only**) a red mark warns you, without any key, as soon as a monster is about to aggro you; hold Shift out of combat and each hostile nameplate gets a small diamond (or a line, or a ring): red inside its estimated aggro radius, amber close, green safe; its tooltip gives the radius, your distance and the verdict.
 
 ![Gear summary when you swap an item](https://media.forgecdn.net/attachments/2147/117/r2q-2-png.png)
 
@@ -77,7 +77,7 @@ Chacun s'active ou se coupe d'un clic (`/r2q options`).
 - **Kit de camp** *(Forever)* : ton kit de feu de camp et ton objet de camp prêts, et le compte à rebours des buffs au camp.
 - **Résumé de stuff** : un petit résumé éphémère des stats gagnées ou perdues quand tu changes d'objet.
 - **Stats du portrait** : survole ton portrait pour voir tes stats principales, choisies selon ta classe et ta spécialisation.
-- **Portée d'aggro** : maintiens Maj hors combat et chaque barre de nom hostile reçoit un petit losange (ou un trait, ou un anneau) : rouge dans son rayon d'aggro estimé, ambre tout près, vert tranquille ; son infobulle donne le rayon, ta distance et le verdict.
+- **Portée d'aggro** : par défaut (**Danger seul**), une marque rouge te prévient, sans toucher au clavier, dès qu'un monstre est sur le point de t'aggro ; maintiens Maj hors combat et chaque barre de nom hostile reçoit un petit losange (ou un trait, ou un anneau) : rouge dans son rayon d'aggro estimé, ambre tout près, vert tranquille ; son infobulle donne le rayon, ta distance et le verdict.
 
 ## Confort
 
