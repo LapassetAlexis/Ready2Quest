@@ -13,10 +13,10 @@
 --     Forever change son art ;
 --   * chaque brique tolère un client sans SetFont réussi, sans SetGradient,
 --     etc. : repli silencieux sur un aplat.
--- Textures : celles du socle (Libs/Socle/Media : losange.tga,
--- losange_trait.tga, interrupteur.tga, chevron.tga, police Inter ;
--- tools/gen_socle_media.py) et le logo de chaque addon (Textures/logo.tga,
--- logo_petit.tga). Tout le reste n'utilise que Interface\Buttons\WHITE8X8, teinté.
+-- Textures : la police Inter du socle (Libs/Socle/Media) et le logo de
+-- chaque addon (Textures/logo.tga, logo_petit.tga). Socle 2.12.1 : plus
+-- aucune image du socle ; pictos du client par référence (Theme.CLIENT_ART),
+-- aplats en Interface\Buttons\WHITE8X8, teinté.
 --
 -- Fichier du socle commun (Libs/Socle), identique dans Ready2Quest et
 -- QuestCompanion : ne le modifier que dans Ready2Quest/Libs/Socle, puis
@@ -166,10 +166,12 @@ Theme.BG_LIGHT = "Interface\\DialogFrame\\UI-DialogBox-Background"
 Theme.SOLID    = "Interface\\Buttons\\WHITE8X8"
 Theme.LOGO          = MEDIA .. "Textures\\logo"         -- logo de l'addon (boussole R2Q, dragonnet QC)
 Theme.LOGO_SMALL    = MEDIA .. "Textures\\logo_petit"   -- petites tailles : bandeaux, minicarte
-Theme.DIAMOND       = SOCLE_MEDIA .. "losange"
-Theme.DIAMOND_LINE  = SOCLE_MEDIA .. "losange_trait"
-Theme.POWER         = SOCLE_MEDIA .. "interrupteur"     -- rond ouvert « marche/arrêt »
-Theme.CHEVRON       = SOCLE_MEDIA .. "chevron"          -- chevron des listes déroulantes
+-- socle 2.12.1 : la coche du client (fichier), repli de la case « checkmark-minimal »
+-- et de l'interrupteur de module quand l'atlas de la case manque
+Theme.CHECK_FILE    = "Interface\\Buttons\\UI-CheckBox-Check"
+Theme.POWER         = Theme.CHECK_FILE
+-- losange du client en repli (le marqueur de raid « losange », grisé, teinté)
+Theme.DIAMOND_FILE  = "Interface\\TargetingFrame\\UI-RaidTargetingIcon_3"
 -- Flèche de rafraîchissement : l'icône du jeu (fichier 851904), présente dans
 -- les clients Era 1.15.9 et Forever 1.60.1 (listes de fichiers wago.tools).
 -- Elle est jaune : on la désature au repos plutôt que de la teinter.
@@ -178,16 +180,18 @@ Theme.REFRESH       = "Interface\\Buttons\\UI-RefreshButton"
 -- socle 2.11.0 : pictos du client par référence (atlas vérifiés en jeu sur
 -- Forever 1.60, 2026-11-09), jamais embarqués. Chaque rôle essaie ses atlas
 -- dans l'ordre, après une vérification à l'exécution (C_Texture.GetAtlasInfo
--- connaît le nom ET SetAtlas l'accepte) ; sinon le fichier du socle (repli).
+-- connaît le nom ET SetAtlas l'accepte) ; sinon un fichier du client (repli),
+-- jamais un fichier à nous (socle 2.12.1 : les images du socle sont parties).
 -- Theme.PaintClient(tex, rôle) rend le nom de l'atlas posé, ou "fallback".
--- `tint` : l'atlas est désaturé pour prendre la teinte du jeton (statuts).
+-- `tint` : l'image est désaturée pour prendre la teinte du jeton (statuts).
 Theme.CLIENT_ART = {
-	diamond     = { atlases = { "activities-complete-diamond", "genericwidgetbar-marker-diamond" }, fallback = Theme.DIAMOND, tint = true },
-	diamondLine = { atlases = { "activities-incomplete-diamond" }, fallback = Theme.DIAMOND_LINE, tint = true },
-	chevron     = { atlases = { "friendslist-categorybutton-arrow-down" }, fallback = Theme.CHEVRON },
+	diamond     = { atlases = { "activities-complete-diamond", "genericwidgetbar-marker-diamond" }, fallback = Theme.DIAMOND_FILE, tint = true },
+	diamondLine = { atlases = { "activities-incomplete-diamond" }, fallback = Theme.DIAMOND_FILE, tint = true },
+	chevron     = { atlases = { "friendslist-categorybutton-arrow-down" } },
 	gear        = { atlases = { "questlog-icon-setting", "gm-icon-settings" }, fallback = "Interface\\Buttons\\UI-OptionsButton" },
 	checkbox    = { atlases = { "checkbox-minimal" } },
-	checkmark   = { atlases = { "checkmark-minimal" } },
+	-- « checkmark-minimal » pas encore vu en jeu : la coche du client en repli
+	checkmark   = { atlases = { "checkmark-minimal" }, fallback = Theme.CHECK_FILE },
 	partial     = { atlases = { "common-checkbox-partial" } },
 }
 -- atlas connu du client : réponse gardée (une seule question par nom)
@@ -210,6 +214,8 @@ function Theme.ResetAtlasCache() for name in pairs(atlasKnown) do atlasKnown[nam
 function Theme.PaintClient(tex, role)
 	local spec = type(role) == "table" and role or Theme.CLIENT_ART[role]
 	if not (tex and spec) then return nil end
+	-- socle 2.12.1 : le rôle posé, lisible (losange plein ou au trait)
+	tex.clientRole = type(role) == "string" and role or nil
 	if tex.SetAtlas then
 		for _, name in ipairs(spec.atlases or {}) do
 			if Theme.HasAtlas(name) then
@@ -225,7 +231,8 @@ function Theme.PaintClient(tex, role)
 	if not spec.fallback then tex.clientSource = nil; return nil end
 	tex:SetTexture(spec.fallback)
 	if tex.SetTexCoord then tex:SetTexCoord(0, 1, 0, 1) end
-	if tex.SetDesaturated then tex:SetDesaturated(false) end
+	-- `fallbackTint` : seul le fichier de repli est grisé (socle 2.12.1)
+	if tex.SetDesaturated then tex:SetDesaturated((spec.tint or spec.fallbackTint) and true or false) end
 	tex.clientSource = "fallback"
 	return "fallback"
 end
@@ -1328,8 +1335,8 @@ function Theme.CreateToggle(parent, width, height, kind)
 end
 
 -- Interrupteur de module (navigation des réglages) : case du client si
--- l'atlas est là (socle 2.11.0), sinon le rond « marche/arrêt » du socle
--- (interrupteur.tga, repli). `button.icon` porte la teinte ambre/grise.
+-- l'atlas est là (socle 2.11.0), sinon la coche du client (socle 2.12.1,
+-- Theme.POWER). `button.icon` porte la teinte ambre/grise.
 function Theme.CreatePowerButton(parent, size)
 	local button = CreateFrame("Button", nil, parent)
 	size = size or 16
@@ -2467,18 +2474,15 @@ Theme.PAGER_HEIGHT = 22
 function Theme.CreatePager(parent, onStep)
 	local pager = CreateFrame("Frame", nil, parent)
 	pager:SetSize(200, Theme.PAGER_HEIGHT)
-	pager.down = Theme.CreateIconButton(pager, Theme.PAGER_HEIGHT, Theme.CHEVRON, function() if onStep then onStep(-1) end end)
+	pager.down = Theme.CreateIconButton(pager, Theme.PAGER_HEIGHT, nil, function() if onStep then onStep(-1) end end)
 	pager.down:SetPoint("RIGHT", pager, "RIGHT", 0, 0)
-	pager.up = Theme.CreateIconButton(pager, Theme.PAGER_HEIGHT, Theme.CHEVRON, function() if onStep then onStep(1) end end)
+	pager.up = Theme.CreateIconButton(pager, Theme.PAGER_HEIGHT, nil, function() if onStep then onStep(1) end end)
 	pager.up:SetPoint("RIGHT", pager.down, "LEFT", -6, 0)
 	-- le chevron pointe vers le bas : retourné pour « haut » (socle 2.11.0 :
-	-- flèche du client si l'atlas est là, tournée d'un demi-tour ; sinon le
-	-- fichier du socle, retourné par ses coordonnées)
+	-- flèche du client, tournée d'un demi-tour ; 2.12.1 : plus de repli)
 	for _, button in ipairs({ pager.down, pager.up }) do Theme.PaintClient(button.icon, "chevron") end
-	if pager.up.icon.clientSource ~= "fallback" and pager.up.icon.SetRotation then
+	if pager.up.icon.clientSource and pager.up.icon.SetRotation then
 		pager.up.icon:SetRotation(math.pi)
-	elseif pager.up.icon.SetTexCoord then
-		pager.up.icon:SetTexCoord(0, 1, 1, 0)
 	end
 	pager.position = Text(pager, Theme.F_SMALL, Theme.MUTED_LIGHT)
 	pager.position:SetPoint("RIGHT", pager.up, "LEFT", -10, 0)
@@ -2521,12 +2525,12 @@ function Theme.CreateBubble(parent, width, opts)
 	-- pointe : un losange EDGE (sa moitié haute sous le fond), un losange
 	-- WINDOW plus petit par-dessus, qui efface le filet du bas à cet endroit
 	bubble.tailEdge = bubble:CreateTexture(nil, "BACKGROUND", nil, -8)
-	bubble.tailEdge:SetTexture(Theme.DIAMOND)
+	Theme.SetDiamond(bubble.tailEdge)
 	bubble.tailEdge:SetVertexColor(Theme.EDGE[1], Theme.EDGE[2], Theme.EDGE[3], 1)
 	bubble.tailEdge:SetSize(14, 14)
 	bubble.tailEdge:SetPoint("CENTER", bubble, "BOTTOM", 0, 0)
 	bubble.tail = bubble:CreateTexture(nil, "ARTWORK")
-	bubble.tail:SetTexture(Theme.DIAMOND)
+	Theme.SetDiamond(bubble.tail)
 	bubble.tail:SetVertexColor(Theme.WINDOW[1], Theme.WINDOW[2], Theme.WINDOW[3], 1)
 	bubble.tail:SetSize(12, 12)
 	bubble.tail:SetPoint("CENTER", bubble, "BOTTOM", 0, 1)

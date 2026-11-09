@@ -3,7 +3,7 @@
 ## Title: |cffe8a54bQuest|r|cff5b8fd6Companion|r
 ## Notes: Catch the monsters you defeat: stars, shinies, a hunting companion, zone seals, trainer titles and card, guild feats. Plus a travel journal.
 ## Notes-frFR: Capture les monstres que tu abats : étoiles, brillantes, compagnon de chasse, sceaux de zone, titres et fiche de dresseur, exploits de guilde. Et un carnet de voyage.
-## Version: 2.12.0
+## Version: 2.13.0
 ## X-License: GPL-3.0
 ## Author: Tristabeau
 ## X-Website: https://github.com/LapassetAlexis/Ready2Quest
@@ -33,6 +33,7 @@ Core.lua
 CreatureTypes.lua
 CompanionData.lua
 CompanionLines.lua
+CompanionVoices.lua
 Companion.lua
 CompanionFx.lua
 CompanionTravel.lua
@@ -82,4 +83,7 @@ FeatsTitles.lua
 JournalAzeroth.lua
 MusicData.lua
 Jukebox.lua
+LoreData.lua
+CompanionLore.lua
+CompanionJokes.lua
 Bindings.lua

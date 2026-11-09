@@ -81,8 +81,8 @@ do
 	local wrong = {}
 	for state, spec in pairs(states) do
 		Theme.SetStatus(d, state)
-		local texture = spec[2] and Theme.DIAMOND_LINE or Theme.DIAMOND
-		if not (d.state == state and d.texture == texture and SameColor(d.vertex, spec[1]) and d:IsShown()) then
+		local role = spec[2] and "diamondLine" or "diamond"
+		if not (d.state == state and d.clientRole == role and SameColor(d.vertex, spec[1]) and d:IsShown()) then
 			wrong[#wrong + 1] = state
 		end
 	end

@@ -731,7 +731,7 @@ function ns:MenagerieCollectionRefresh(pane, zone)
 		strip.title:SetText(self:F("MEN_COLL_SEALS", #self:MenagerieSeals()))
 		strip.detail:SetText(L.MEN_COLL_SEALS_TIP)
 		strip.bar:Hide()
-		strip.seal:SetTexture(Theme.DIAMOND_LINE)
+		Theme.SetDiamond(strip.seal, true)
 		strip.seal:SetVertexColor(Theme.GOLD[1], Theme.GOLD[2], Theme.GOLD[3], 1)
 		strip:SetAccent(nil)
 	else
@@ -758,7 +758,7 @@ function ns:MenagerieCollectionRefresh(pane, zone)
 		else
 			strip.bar:Hide()
 		end
-		strip.seal:SetTexture(sealed and Theme.DIAMOND or Theme.DIAMOND_LINE)
+		Theme.SetDiamond(strip.seal, not sealed)
 		local c = sealed and Theme.GOLD or edge
 		strip.seal:SetVertexColor(c[1], c[2], c[3], 1)
 		strip:SetAccent(sealed and Theme.GOLD or nil)

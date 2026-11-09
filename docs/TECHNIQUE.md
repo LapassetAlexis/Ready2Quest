@@ -1,5 +1,13 @@
 # Ready2Quest — notes techniques et historique
 
+## QuestCompanion 2.12.1 / Ready2Quest 1.33.1 — plus d'images à nous (sauf le filet et les logos)
+
+- **Supprimées** : `QuestCompanion/Textures/` `rayons`, `particules`, `ruban`, `vignette`, `halo`, `etoiles`, `filet_icone` ; `Ready2Quest/Textures/` `aggro_ring`, `fleche_hausse`, `fleche_baisse` ; socle `Media/` `losange`, `losange_trait`, `chevron`, `interrupteur` (et `tools/gen_socle_media.py`). `tools/gen_capture_assets.py` n'écrit plus que `filet`, `corde`, `paquet` (les autres peintres ne servent qu'aux maquettes `--apercu`). Restent embarqués : le filet, ses cordes, le paquet, les deux logos de chaque addon et les polices Inter. `tests/run_tests.py` refuse toute autre image sous `Ready2Quest/` ou `QuestCompanion/`.
+- **Capture** : `ns.CAPTURE_ART` ne garde que `net`, `bundle`, `rope`. `ns.CaptureArtPaint` rend `"own"` pour ces trois rôles, `"client"` pour les autres, ou `nil` (texture vide) si l'atlas manque : plus de repli à nous. Glyphe du filet : `Interface\Icons\INV_Misc_Net_01`, puis `Spell_Nature_Web` (`ns.CapturePaintNetGlyph`, en couleurs ; les bandeaux de capture et d'exploit de guilde s'en servent). Lueur du bois Azeroth : rôle `halo` (atlas `ChallengeMode-SoftYellowGlow`).
+- **Étoiles du chat** (`ns:CaptureStarsText`) : balises d'atlas `|A:auctionhouse-icon-favorite:t:t|a` (pleine) et `|A:auctionhouse-icon-favorite-off:t:t|a` (vide, présente dans UiTextureAtlasMember 1.60.1.70753) ; plus de `|T` découpé.
+- **Socle** : `Theme.DIAMOND`, `DIAMOND_LINE`, `CHEVRON` retirés ; tous les losanges passent par `Theme.SetDiamond` (atlas, repli sur le marqueur de raid losange du client, grisé et teinté). `tex.clientRole` dit le rôle posé. Coche : `checkmark-minimal`, repli `Interface\Buttons\UI-CheckBox-Check` (`Theme.CHECK_FILE`, aussi `Theme.POWER` pour l'interrupteur de module sans case du client). Chevron de pagination : atlas seul, tourné d'un demi-tour pour « haut ».
+- **Ready2Quest** : style « anneau » de la marque d'aggro retiré (code, choix, textes FR/EN). Migration paresseuse une fois (`aggroStyleSchema = 2`) : `aggroStyle = "ring"` devient `"dot"`. Flèches des stats : atlas `bags-greenarrow` seul (sans atlas, pas de flèche).
+
 ## Audit de performance (après QC 2.9.1 / R2Q 1.30.1)
 
 Détail, mesures, risques et vérifications en jeu : `docs/AUDIT-PERF.md`. À retenir pour la suite : `ns.RegisterGameEvent` (socle, `Compat.lua`) abonne `UNIT_AURA` / `UNIT_STATS` au joueur seulement (`RegisterUnitEvent`) ; `ns.MemoGlobals` (socle, `Base.lua`) garde un calcul tant que des globales du client ne changent pas ; `ns:MapChain` rend une chaîne gardée et partagée (ne pas la modifier) ; `frame.scrollOnly` (carnet, pendant `ScrollJournal`) : une page reprend sa liste du dernier rafraîchissement complet ; `RecordError` bornée à `ns.ERRORS_MAX`. Tests `[PERF]` : `tests/modules/qc30_perf.lua`.
@@ -977,7 +985,7 @@ Depuis la v1.20.0, l'addon a sa propre identité. Il ne cherche plus à ressembl
 | Mouvement | fondu de 0,15 s à l'ouverture (`AnimationGroup`), note qui compte jusqu'à sa valeur en 0,45 s |
 | Voix | « Sac bouclé, 92/100. Parti de Long-guet. », « Presque prêt », « Pas prêt » |
 
-Textures propres : `logo.tga` (boussole 64×64), `losange.tga` et `losange_trait.tga` (16×16, blancs, teintés en jeu). Elles sont générées en code, et tout le reste est `Interface\Buttons\WHITE8X8` teinté. Si le client refuse la police, l'addon garde `GameFont` sans erreur.
+Textures propres : `logo.tga` (boussole 64×64), `losange.tga` et `losange_trait.tga` (16×16, blancs, teintés en jeu ; retirés en 1.33.1 au profit des atlas du client). Elles sont générées en code, et tout le reste est `Interface\Buttons\WHITE8X8` teinté. Si le client refuse la police, l'addon garde `GameFont` sans erreur.
 
 ---
 
@@ -1565,7 +1573,7 @@ Le gain final est modeste à l'œil — 8 px sur la colonne, 74 px sur la largeu
 
 Les trois tentatives précédentes avaient toutes échoué pour la même raison : je cherchais un **caractère** qui s'affiche. Or la police du client s'arrête à `0xCA`, et aucune flèche — ni `▼`, ni `λ`, ni `v` — n'avait la forme voulue. `v` et `^` s'affichaient, mais ce sont des lettres, pas des flèches.
 
-La solution est de ne plus passer par du texte. Deux textures sont livrées avec l'addon :
+La solution est de ne plus passer par du texte. Deux textures sont livrées avec l'addon (remplacées en 1.32.0 par l'atlas `bags-greenarrow` du client, supprimées en 1.33.1) :
 
 | Fichier | Sens | Taille |
 |---|---|---|

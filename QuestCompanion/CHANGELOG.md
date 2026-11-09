@@ -1,5 +1,14 @@
 # QuestCompanion
 
+## 2.13.0 — le compagnon prend la parole
+
+- **Une voix par type de créature** : ta créature capturée parle selon ce qu'elle est (bête, mort-vivant, démon, élémentaire, draconien, mécanique, géant, humanoïde, bestiole), avec des centaines de nouvelles répliques, et son caractère colore le ton. Il dit aussi un mot en entrant dans un donjon.
+- **L'histoire des lieux** : une phrase à ta première arrivée dans une zone ou un lieu notable (villes, donjons…), parfois au repos ; jamais en combat, suit la réglette Bavardage. Réglage « Le compagnon raconte l'histoire des lieux ». Textes de Warcraft Wiki (CC BY-SA 4.0), choisis et traduits par Spoken de Rusty Key ; le compagnon se tait si Spoken Places est chargé.
+- **Des blagues** : ton compagnon raconte parfois une blague au repos, à la place d'un bavardage (plus de 80 blagues, dont six par voix de créature) ; jamais en combat, suit la réglette Bavardage, réglage « Le compagnon raconte des blagues ». Demande-en une quand tu veux : /qc blague.
+- **Plus léger** : les images de la capture (rayons, halo, étincelles, étoiles, bannière, vignette, icône du filet) et les losanges viennent tous du jeu ; seuls notre filet et les logos restent livrés (environ 570 Ko de moins à télécharger).
+
+*English:* your companion now has a voice — a captured creature speaks according to its type (beast, undead, demon, elemental, dragonkin, mechanical, giant, humanoid, critter), its personality colouring the tone, and it says a word when you enter a dungeon; it also tells the story of places (one line on your first arrival in a zone or notable place, sometimes while resting; never in combat; setting "Companion tells the story of places"; text from Warcraft Wiki, CC BY-SA 4.0, selected and translated by Spoken by Rusty Key; silent when Spoken Places is loaded); it tells jokes too, sometimes while resting instead of small talk (over 80, six per creature voice; never in combat; setting "Companion tells jokes"), or on demand with /qc joke; capture art and diamonds now all come from the game, only our net and the logos ship with the addon (≈ 570 KB smaller download).
+
 ## 2.12.0 — le Juke-box
 
 - **Nouveau : Juke-box dans le carnet.** Les musiques du jeu à écouter à la demande : zones, capitales, donjons, raids, tavernes, nouvelles zones de Forever et thèmes (434 morceaux). Recherche, favoris, trois listes, lecture dans l'ordre ou au hasard ; la musique de la zone reprend à l'arrêt. `/qc juke`, `/qc juke stop`, `/qc juke test`. La musique doit être activée dans les options de son.

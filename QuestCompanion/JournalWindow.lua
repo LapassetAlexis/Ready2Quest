@@ -2216,7 +2216,7 @@ local function RefreshEvolution(self, frame)
 	pane.look:SetText(self:F("JRN_EVO_STAGE", app and tostring(L[app.label]) or name, stageLabel, stage, #stages))
 	for index, step in ipairs(pane.steps) do
 		local reached = index <= stage
-		step:SetTexture(reached and Theme.DIAMOND or Theme.DIAMOND_LINE)
+		Theme.SetDiamond(step, not reached)
 		local c = reached and Theme.GOLD or Theme.MUTED
 		step:SetVertexColor(c[1], c[2], c[3], 1)
 	end
@@ -2565,7 +2565,7 @@ local function RefreshMenagerie(self, frame)
 			-- brillante, plein si capturée, au trait si seulement reconnue
 			if entry.captured and entry.normal ~= false then row.caught:Show() else row.caught:Hide() end
 			if entry.shiny or entry.shinySeen then
-				row.star:SetTexture(entry.shiny and Theme.DIAMOND or Theme.DIAMOND_LINE)
+				Theme.SetDiamond(row.star, not entry.shiny)
 				row.star:Show()
 			else
 				row.star:Hide()

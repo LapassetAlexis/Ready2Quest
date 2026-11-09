@@ -54,8 +54,8 @@ do
 		not QC_TOC:find("## Dependencies", 1, true) and not QC_TOC:find("## RequiredDeps", 1, true)
 		and QC_TOC:find("\n## OptionalDeps: Ready2Quest\n", 1, true) ~= nil)
 	Check("[QC] .toc : sa sauvegarde QuestCompanionDB", QC_TOC:find("\n## SavedVariables: QuestCompanionDB\n", 1, true) ~= nil)
-	Check("[QC] versions : QC 2.12.0, R2Q 1.33.0, comme leurs namespaces", QC_TOC:find("\n## Version: 2.12.0\n", 1, true)
-		and R2Q_TOC:find("\n## Version: 1.33.0\n", 1, true) and QNS.version == "2.12.0" and NS.version == "1.33.0")
+	Check("[QC] versions : QC 2.13.0, R2Q 1.33.1, comme leurs namespaces", QC_TOC:find("\n## Version: 2.13.0\n", 1, true)
+		and R2Q_TOC:find("\n## Version: 1.33.1\n", 1, true) and QNS.version == "2.13.0" and NS.version == "1.33.1")
 	for _, addon in ipairs({ { "Ready2Quest", R2Q_TOC }, { "QuestCompanion", QC_TOC } }) do
 		local files = QCT.TocFiles(addon[2])
 		Check("[QC] " .. addon[1] .. " : Config.lua puis le socle en tête", files[1] == "Config.lua"
@@ -81,8 +81,8 @@ end
 do
 	Say("-- deux addons : socle")
 	local files = { "Base.lua", "Strings.lua", "Compat.lua", "Hubs.lua", "DungeonData.lua", "Theme.lua", "Store.lua",
-		"World.lua", "Commands.lua", "Options.lua", "Minimap.lua", "Media/losange.tga", "Media/losange_trait.tga",
-		"Media/Inter-Regular.ttf", "Media/Inter-SemiBold.ttf", "Media/Inter-Bold.ttf", "Media/interrupteur.tga", "Media/chevron.tga" }
+		"World.lua", "Commands.lua", "Options.lua", "Minimap.lua",
+		"Media/Inter-Regular.ttf", "Media/Inter-SemiBold.ttf", "Media/Inter-Bold.ttf", "Media/Inter-OFL.txt" }
 	local diff = {}
 	for _, file in ipairs(files) do
 		local a, b = QCT.Read("Ready2Quest/Libs/Socle/" .. file), QCT.Read("QuestCompanion/Libs/Socle/" .. file)
@@ -164,8 +164,8 @@ do
 	Check("[QC] clic droit : les réglages de QC", QNS.optionsFrame:IsShown() and not (NS.optionsFrame and NS.optionsFrame:IsShown()))
 	QNS.optionsFrame:Hide()
 	Check("[QC] le socle trouve ses médias dans chaque addon",
-		QNS.Theme.DIAMOND == "Interface\\AddOns\\QuestCompanion\\Libs\\Socle\\Media\\losange"
-		and NS.Theme.DIAMOND == "Interface\\AddOns\\Ready2Quest\\Libs\\Socle\\Media\\losange")
+		QNS.Theme.FONT_REGULAR == "Interface\\AddOns\\QuestCompanion\\Libs\\Socle\\Media\\Inter-Regular.ttf"
+		and NS.Theme.FONT_REGULAR == "Interface\\AddOns\\Ready2Quest\\Libs\\Socle\\Media\\Inter-Regular.ttf")
 end
 
 -- 5. Reprise depuis Ready2Quest 1.25 -----------------------------------------------------

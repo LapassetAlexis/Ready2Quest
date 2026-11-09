@@ -79,10 +79,12 @@ local FR = {
 	GUIDE_SEC_settings     = "Réglages et commandes",
 	GUIDE_settings_1       = "Page Au jour le jour : %s (tout coupe, infobulle comprise) · %s · %s · %s · %s · %s · %s.",
 	GUIDE_settings_2       = "Page Compagnon de route : %s (%s), pour que la créature remplisse son cadre à l'écran, même une bête capturée de taille réelle ; la réglette %s (Muet coupe aussi les tutoriels).",
-	GUIDE_settings_3       = "Commandes : /qc filet (capture le meilleur candidat), /qc filet tout (tout capturer), /qc filet sourdine [min|off], /qc capture (ta collection et tes aides), /qc fiche [nom] (fiche de dresseur), /qc compagnon tuto collection (revoir ce tutoriel), /qc compagnon tuto (le tutoriel de base).",
+	GUIDE_settings_3       = "Commandes : /qc filet (capture le meilleur candidat), /qc filet tout (tout capturer), /qc filet sourdine [min|off], /qc capture (ta collection et tes aides), /qc fiche [nom] (fiche de dresseur), /qc compagnon tuto collection (revoir ce tutoriel), /qc compagnon tuto (le tutoriel de base), /qc blague (une blague du compagnon).",
 	GUIDE_settings_4       = "Le tutoriel des créatures se joue une fois par personnage, à ta première occasion de capture : ton compagnon te guide jusqu'au clic sur le filet, laisse la scène se jouer, puis t'explique le reste. Jamais en combat, jamais si la capture est coupée. Le bouton « %s », en bas à gauche, le rejoue.",
 	GUIDE_settings_5       = "Style de l'interface (page Compagnon de route) : %s ou %s, bandeaux, carnet et fiche compris. /qc style azeroth|sobre.",
 	GUIDE_settings_6       = "Hauts faits (page du carnet) : /qc hf l'ouvre, /qc hf diag dit quelles statistiques du client sont lisibles ; ce qui attend encore sa vérification est grisé. Les hauts faits de collection valent pour tout ton compte, ceux de performance pour ce personnage. /qc titre choisit ton titre. Touche Y (si elle était libre) : les hauts faits. Bandeau, chat, fanfare, forme des titres et raccourcis : page Carnet de voyage.",
+	-- 2.13.0 : crédits de l'histoire des lieux (LoreData.lua, CompanionLore.lua)
+	GUIDE_settings_7       = "Histoire des lieux (réglage « %s ») : textes de Warcraft Wiki (warcraft.wiki.gg), licence CC BY-SA 4.0, choisis et traduits par Spoken de Rusty Key (github.com/rusty-key/spoken-wow). Merci à eux !",
 }
 local EN = {
 	JRN_SEC_guide          = "Guide",
@@ -143,10 +145,11 @@ local EN = {
 	GUIDE_SEC_settings     = "Settings and commands",
 	GUIDE_settings_1       = "Day by day page: %s (turns everything off, tooltip included) · %s · %s · %s · %s · %s · %s.",
 	GUIDE_settings_2       = "Road companion page: %s (%s), so the creature fills its on-screen frame, even a life-size captured beast; the %s slider (Silent also turns the tutorials off).",
-	GUIDE_settings_3       = "Commands: /qc filet (captures the best candidate), /qc filet tout (capture all), /qc filet sourdine [min|off], /qc capture (your collection and aids), /qc fiche [name] (trainer card), /qc compagnon tuto collection (replay this tutorial), /qc compagnon tuto (the base tutorial).",
+	GUIDE_settings_3       = "Commands: /qc filet (captures the best candidate), /qc filet tout (capture all), /qc filet sourdine [min|off], /qc capture (your collection and aids), /qc fiche [name] (trainer card), /qc compagnon tuto collection (replay this tutorial), /qc compagnon tuto (the base tutorial), /qc joke (a joke from your companion).",
 	GUIDE_settings_4       = "The creatures tutorial plays once per character, at your first capture opportunity: your companion guides you to the click on the net, lets the scene play, then explains the rest. Never in combat, never when capture is off. The \"%s\" button, bottom left, replays it.",
 	GUIDE_settings_5       = "Interface style (Road companion page): %s or %s, banners, journal and card included. /qc style azeroth|sobre.",
 	GUIDE_settings_6       = "Achievements (journal page): /qc hf opens it, /qc hf diag tells which client statistics are readable; what still awaits verification is greyed out. Collection achievements count for your whole account, performance ones for this character. /qc title picks your title. Y key (if it was free): achievements. Banner, chat, fanfare, title form and key bindings: Travel journal page.",
+	GUIDE_settings_7       = "Story of places (\"%s\" setting): text from Warcraft Wiki (warcraft.wiki.gg), CC BY-SA 4.0 licence, selected and translated by Spoken by Rusty Key (github.com/rusty-key/spoken-wow). Thanks to them!",
 }
 ns.RegisterStrings(FR, EN)
 if ns.KEEP_STRINGS then ns.GUIDE_STRINGS = { fr = FR, en = EN } end
@@ -349,6 +352,7 @@ function BUILD.settings(self)
 		P(self:F("GUIDE_settings_4", L.GUIDE_REPLAY)),
 		P(self:F("GUIDE_settings_5", L.UI_STYLE_azeroth, L.UI_STYLE_sobre)),
 		P(L.GUIDE_settings_6),
+		P(self:F("GUIDE_settings_7", L.OPT_COMP_LORE)),
 	}
 end
 

@@ -305,6 +305,13 @@ P.CITY = {    -- %s = nom de la capitale (facultatif dans le texte)
 	{ "Bienvenue à %s. Évite de sauter du pont, ce n'est pas un raccourci.", "Welcome to %s. Don't jump off the bridge, it's not a shortcut." },
 	{ "Une grande ville ! Parfait pour vendre tes trésors gris à prix d'or. Non.", "A big city! Perfect for selling your grey treasures for a fortune. No." },
 }
+-- 2.13.0 : entrée en donjon ou en raid (%s = nom de l'instance, facultatif)
+P.DUNGEON = {
+	{ "%s… Ça sent le renfermé et les ennuis.", "%s… Smells of damp and trouble." },
+	{ "Un donjon ! Reste derrière moi. Enfin, devant. Plutôt devant.", "A dungeon! Stay behind me. Well, in front. Mostly in front." },
+	{ "On entre ? Bon. Je compte les sorties, au cas où.", "Going in? Right. I'm counting the exits, just in case." },
+	{ "%s. J'ai entendu des histoires. Aucune ne finit bien.", "%s. I've heard stories. None of them end well." },
+}
 P.VILLAGE = { -- %s = nom du village
 	{ "Un village ! Ça sent le pain et le foin.", "A village! Smells of bread and hay." },
 	{ "%s : coin tranquille, j'aime bien.", "%s: quiet spot, I like it." },

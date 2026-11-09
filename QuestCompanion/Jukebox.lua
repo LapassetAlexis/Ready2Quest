@@ -130,13 +130,14 @@ if ns.KEEP_STRINGS then ns.JUKE_STRINGS = { fr = FR, en = EN } end
 -- 2.12.0 : pictos du client (UiTextureAtlasMember 1.60.1.70753 : CGuy_Play
 -- 32×32, CGuy_Stop, streamcinematic-playbutton 43×43, auctionhouse-icon-favorite
 -- et -off 40×36, voicechat-icon-speaker 32×32), vérifiés à l'exécution
--- (Theme.PaintClient) ; sinon un fichier du client ou le losange du socle
+-- (Theme.PaintClient) ; sinon un fichier du client (2.12.1 : l'étoile des
+-- marqueurs de raid pour les favoris)
 ns.JUKE_ART = {
 	play    = { atlases = { "CGuy_Play", "streamcinematic-playbutton" }, fallback = "Interface\\Buttons\\UI-SpellbookIcon-NextPage-Up" },
 	stop    = { atlases = { "CGuy_Stop" }, fallback = "Interface\\Buttons\\UI-GroupLoot-Pass-Up" },
 	speaker = { atlases = { "voicechat-icon-speaker", "chatframe-button-icon-speaker-on" }, fallback = "Interface\\Buttons\\UI-SpellbookIcon-NextPage-Up" },
-	fav     = { atlases = { "auctionhouse-icon-favorite" }, fallback = Theme.DIAMOND },
-	favOff  = { atlases = { "auctionhouse-icon-favorite-off" }, fallback = Theme.DIAMOND_LINE },
+	fav     = { atlases = { "auctionhouse-icon-favorite" }, fallback = "Interface\\TargetingFrame\\UI-RaidTargetingIcon_1" },
+	favOff  = { atlases = { "auctionhouse-icon-favorite-off" }, fallback = "Interface\\TargetingFrame\\UI-RaidTargetingIcon_1", fallbackTint = true },
 }
 ns.JUKE_LISTS = 3                 -- listes personnelles
 ns.JUKE_GAP = 1                   -- s entre deux pistes d'une liste

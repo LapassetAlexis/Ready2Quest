@@ -262,8 +262,8 @@ do
 		and chooser.wood and chooser.wood.tr.atlas == WOOD.tr
 		and Has(_G.UISpecialFrames, "QuestCompanionCaptureChooserAzeroth"))
 	Check("[AZS] choix : le glyphe du filet dans le cadre d'icône", chooser.ring.atlas == "ui-achievement-iconframe"
-		-- 2.11.0 : l'icône du filet du jeu (INV_Misc_Net_01), la nôtre en repli
-		and (chooser.glyph.texture == NS.CAPTURE_CLIENT_ART.icon.file or chooser.glyph.texture == NS.CAPTURE_ART.icon)
+		-- 2.11.0 : l'icône du filet du jeu (INV_Misc_Net_01) ; 2.12.1 : plus de glyphe à nous
+		and chooser.glyph.texture == NS.CAPTURE_CLIENT_ART.icon.files[1]
 		and chooser.glyph.lastPoint.relTo == chooser.ring)
 	Check("[AZS] choix : « 2 CRÉATURES DANS LE FILET »", chooser.title:GetText() == "2 CRÉATURES DANS LE FILET", chooser.title:GetText())
 	local one, all = chooser.single, chooser.all
@@ -341,7 +341,7 @@ do
 	end
 	Check("[AZS] prise : bouclier d'or au coin, étoiles", ok and ok.shield:IsShown() and ok.shieldKind == "gold"
 		and ok.shield.atlas == "ui-achievement-shield-1" and ok.shield.lastPoint.point == "TOPRIGHT"
-		and (ok.stars:GetText() or ""):find("|T", 1, true) ~= nil)
+		and (ok.stars:GetText() or ""):find("|A:auctionhouse-icon-favorite:", 1, true) ~= nil)
 	Check("[AZS] échappée : pas de bouclier (2.9.0), « échappée »", fled and fled.shieldKind == nil and not fled.shield:IsShown() and fled.stars:GetText() == NS.L.CAPTURE_BATCH_FLED)
 	Check("[AZS] brillante : nom en or, lueur dorée", shinyTile and shinyTile.name.textColor[3] < 0.6 and shinyTile.halo:IsShown()
 		and shinyTile.tag:GetText() == "BRILLANTE")

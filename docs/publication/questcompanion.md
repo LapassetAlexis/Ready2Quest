@@ -16,6 +16,11 @@ Une seule description, anglais d'abord puis français (règle des stores : l'ang
 
 For **WoW Forever** (1.60). English and French. Free, standalone (`/qc`), about 2 MB of memory. Pairs well with [Ready2Quest](https://www.curseforge.com/wow/addons/ready2quest).
 
+## New in 2.13: your companion speaks up
+- **A voice per creature type**: your captured creature talks like what it is (beast, undead, demon, elemental, dragonkin, mechanical, giant, humanoid, critter), its personality colouring the tone, with jokes now and then (`/qc joke`).
+- **The story of places**: one line of lore on your first arrival in a zone or a notable place. Lore text from [Warcraft Wiki](https://warcraft.wiki.gg) (CC BY-SA 4.0), selected and translated by [Spoken](https://github.com/rusty-key/spoken-wow) by Rusty Key — thanks!
+- Lighter download: capture art now comes from the game itself.
+
 ## New in 2.12: the Jukebox
 - **Jukebox** in the journal: the game's own music on demand — zones, capitals, dungeons, raids, taverns, new Forever zones and themes (434 tracks), with search, favourites, playlists and shuffle. `/qc juke`.
 
@@ -109,6 +114,11 @@ Free software, **GPL-3.0**. Zone data (creatures, gathering, quests) is generate
 ![Une brillante tente sa chance contre le filet](https://media.forgecdn.net/attachments/2161/225/f-gif.gif)
 
 Pour **WoW Forever** (1.60). En français et en anglais. Gratuit, autonome (`/qc`), environ 2 Mo de mémoire. Va très bien avec [Ready2Quest](https://www.curseforge.com/wow/addons/ready2quest).
+
+## Nouveau en 2.13 : le compagnon prend la parole
+- **Une voix par type de créature** : ta créature capturée parle selon ce qu'elle est (bête, mort-vivant, démon, élémentaire, draconien, mécanique, géant, humanoïde, bestiole), son caractère colore le ton, et elle glisse des blagues de temps en temps (`/qc blague`).
+- **L'histoire des lieux** : une phrase d'histoire à ta première arrivée dans une zone ou un lieu notable. Textes de [Warcraft Wiki](https://warcraft.wiki.gg) (CC BY-SA 4.0), choisis et traduits par [Spoken](https://github.com/rusty-key/spoken-wow) de Rusty Key — merci à eux !
+- Téléchargement plus léger : les images de la capture viennent du jeu.
 
 ## Nouveau en 2.12 : le Juke-box
 - **Juke-box** dans le carnet : les musiques du jeu à la demande — zones, capitales, donjons, raids, tavernes, nouvelles zones de Forever et thèmes (434 morceaux), avec recherche, favoris, listes et lecture au hasard. `/qc juke`.

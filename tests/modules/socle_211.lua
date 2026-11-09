@@ -168,7 +168,9 @@ do
 	local parent = CreateFrame("Frame", nil, UIParent)
 	Mock.InstallAtlas(nil)
 	local d = Theme.CreateDiamond(parent, 10, false)
-	Check("[S211] sans C_Texture : losange du socle", d.texture == Theme.DIAMOND and d.clientSource == "fallback")
+	-- socle 2.12.1 : le repli est un fichier du client (marqueur de raid losange), grisé
+	Check("[S211] sans C_Texture : losange du client en repli", d.texture == Theme.DIAMOND_FILE and d.clientSource == "fallback"
+		and Theme.DIAMOND_FILE:find("^Interface\\") ~= nil and Theme.DIAMOND == nil)
 	Mock.InstallAtlas(true)
 	d = Theme.CreateDiamond(parent, 10, false)
 	local line = Theme.CreateDiamond(parent, 10, true)

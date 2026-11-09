@@ -75,7 +75,21 @@ def check_packages():
             problems.append("%s : « %s » n'est pas ignoré, il partirait dans le zip de %s" % (pkgmeta, entry, addon))
         if addon in ignored:
             problems.append("%s : le dossier %s lui-même est ignoré" % (pkgmeta, addon))
+    # 2.12.1 / 1.33.1 : plus aucune image à nous hors du filet et des logos ;
+    # le reste vient du client, par référence (polices .ttf permises)
+    for f in tracked:
+        if f.split("/")[0] in ("Ready2Quest", "QuestCompanion") and os.path.exists(os.path.join(ROOT, f)) \
+                and os.path.splitext(f)[1].lower() in IMAGE_EXTS and f not in ALLOWED_IMAGES:
+            problems.append("image non autorisée : %s (n'embarquer que le filet et les logos)" % f)
     return problems
+
+
+IMAGE_EXTS = {".tga", ".blp", ".png", ".jpg", ".jpeg", ".bmp", ".gif", ".dds", ".webp", ".svg"}
+ALLOWED_IMAGES = {
+    "QuestCompanion/Textures/filet.tga", "QuestCompanion/Textures/corde.tga", "QuestCompanion/Textures/paquet.tga",
+    "QuestCompanion/Textures/logo.tga", "QuestCompanion/Textures/logo_petit.tga",
+    "Ready2Quest/Textures/logo.tga", "Ready2Quest/Textures/logo_petit.tga",
+}
 
 
 def check_socle():
@@ -142,6 +156,12 @@ def check_generated():
             gen_music.build(music)
         if open(music, encoding="utf-8").read() != open(os.path.join(ROOT, "QuestCompanion", "MusicData.lua"), encoding="utf-8").read():
             problems.append("QuestCompanion/MusicData.lua ne correspond plus à data/forever/music.json (python3 -I tools/gen_music.py)")
+        # 2.13.0 : histoire des lieux (data/forever/lore/lore.json)
+        import gen_lore
+        lore = os.path.join(out, "LoreData.lua")
+        gen_lore.build(lore)
+        if open(lore, encoding="utf-8").read() != open(os.path.join(ROOT, "QuestCompanion", "LoreData.lua"), encoding="utf-8").read():
+            problems.append("QuestCompanion/LoreData.lua ne correspond plus à data/forever/lore/lore.json (python3 -I tools/gen_lore.py)")
     finally:
         shutil.rmtree(out, ignore_errors=True)
     return problems

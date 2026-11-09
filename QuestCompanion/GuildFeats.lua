@@ -667,20 +667,21 @@ end
 local GuildFeatDecor
 
 -- Le bandeau : liseré doré, glyphe du filet, « GUILDE », la ligne, la créature
+-- 2.12.1 : le glyphe du filet est l'icône du jeu (ns.CapturePaintNetGlyph)
+local function Glyph(tex)
+	if ns.CapturePaintNetGlyph then ns.CapturePaintNetGlyph(tex) else tex:SetTexture(Theme.LOGO_SMALL) end
+end
 function ns:EnsureGuildFeatToast()
 	if self.guildFeatToast then return self.guildFeatToast end
 	-- style de l'interface (2.5.0, AzerothStyle.lua)
 	local cached = self.StyleCached and self:StyleCached("guildFeatToast")
 	if cached then self.guildFeatToast = cached; return cached end
-	local art = ns.CAPTURE_ART
 	-- Azeroth : variante « guilde » du bandeau, cadre rond à volutes ; la
 	-- sous-ligne (créature, étoiles) sous le nom, l'aide en infobulle seulement
 	local frame = self.AzerothOn and self:AzerothOn()
 		and self:AzerothCreateBanner({ strata = "HIGH", guild = true, round = true, name = "QuestCompanionGuildFeatAzeroth" })
 	if frame then
-		frame.ownGlyph = art and art.icon and true or false
-		frame.icon:SetTexture(frame.ownGlyph and art.icon or Theme.LOGO_SMALL)
-		if frame.ownGlyph then frame.icon:SetVertexColor(Theme.GOLD_LIGHT[1], Theme.GOLD_LIGHT[2], Theme.GOLD_LIGHT[3], 1) end
+		Glyph(frame.icon)
 		frame.info = frame.stars
 		frame.hint = frame.banner:CreateFontString(nil, "OVERLAY", Theme.F_SMALL)
 		frame.hint:Hide()
@@ -717,9 +718,7 @@ function ns:GuildFeatToastSobre(art)
 	frame.uiStyle = "sobre"
 	local left = frame.contentLeft or 14
 	frame.icon = frame:CreateTexture(nil, "ARTWORK")
-	frame.ownGlyph = art and art.icon and true or false
-	frame.icon:SetTexture(frame.ownGlyph and art.icon or "Interface\\AddOns\\QuestCompanion\\Textures\\logo_petit")
-	if frame.ownGlyph then frame.icon:SetVertexColor(Theme.GOLD[1], Theme.GOLD[2], Theme.GOLD[3], 1) end
+	Glyph(frame.icon)
 	frame.icon:SetSize(TOAST_ICON, TOAST_ICON)
 	frame.icon:SetPoint("LEFT", frame, "LEFT", left, 0)
 	local textLeft = left + TOAST_ICON + 10
@@ -761,9 +760,7 @@ GuildFeatDecor = function(self, frame, info, feat)
 	if feat then
 		if info.icon then frame.icon:SetTexture(info.icon); frame.icon:SetVertexColor(1, 1, 1, 1) end
 	else
-		local art = ns.CAPTURE_ART
-		frame.icon:SetTexture(frame.ownGlyph and art and art.icon or Theme.LOGO_SMALL)
-		if frame.ownGlyph and frame.azeroth then frame.icon:SetVertexColor(Theme.GOLD_LIGHT[1], Theme.GOLD_LIGHT[2], Theme.GOLD_LIGHT[3], 1) end
+		Glyph(frame.icon)
 	end
 	local points = feat and tonumber(info.points) or nil
 	if points and not frame.featPoints then

@@ -64,8 +64,13 @@ do
 	Check("[CV2] pagination : une page, rien", pager.position.text == "" and not pager.up:IsShown() and not pager.down:IsShown())
 	pager.down:Click(); pager.up:Click()
 	Check("[CV2] pagination : bas = -1, haut = 1 (comme la molette)", steps[1] == -1 and steps[2] == 1)
-	Check("[CV2] pagination : chevron du haut retourné", pager.up.icon.texCoord and pager.up.icon.texCoord[3] == 1
-		and pager.up.icon.texCoord[4] == 0)
+	-- 2.12.1 : le chevron du client seulement, tourné d'un demi-tour pour « haut »
+	Check("[CV2] pagination : sans atlas, pas d'image à nous", pager.up.icon.texture == nil and pager.up.icon.clientSource == nil)
+	Mock.InstallAtlas(true)
+	local turned = Theme.CreatePager(UIParent, function() end)
+	Check("[CV2] pagination : chevron du haut retourné", turned.up.icon.clientSource ~= nil
+		and turned.up.icon.rotation == math.pi and turned.down.icon.rotation ~= math.pi)
+	Mock.InstallAtlas(nil)
 
 	local short = Theme.CreateBubble(UIParent, 200)
 	short:SetText("Salut !")

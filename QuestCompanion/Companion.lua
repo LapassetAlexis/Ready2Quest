@@ -107,6 +107,7 @@ local POOL_CATEGORY = {
 	EVOLVE = "event", UNLOCK = "event", READY = "event", CHEST = "event", TUTO = "tuto", TUTO_MENAGERIE = "tuto",
 	TIP = "tip", GOAL = "tip", GOAL_STAGE = "tip",
 	IDLE = "chatter", NIGHT = "chatter",
+	JOKE = "chatter",     -- 2.13.0 : les blagues au repos (CompanionJokes.lua)
 	LEVEL = "event",      -- un grand moment : dit dès le cran Calme, comme promis
 	NEED_hunger = "need", NEED_energy = "need", NEED_mood = "need", NEED_curiosity = "need",
 }
@@ -1147,6 +1148,8 @@ end
 --   args     : arguments du texte
 --   seq      : étape d'une séquence (conversation, tutoriel)
 --   duration : durée d'affichage
+--   asked    : demandé par le joueur (/qc blague) : passe la réglette, et
+--              en combat, refusé sans être noté (2.13.0)
 --   important: conseil de route important (élite, vie, munitions, vivres) :
 --              seul ce qui passe au cran « Discret »
 -- Jamais outre la sourdine ni une bulle plus importante encore affichée.
@@ -1159,6 +1162,8 @@ function ns:CompanionSay(pool, opts)
 	-- 2.10.0 : en combat, rien ne s'ouvre (sauf COMBAT_PASS) : c'est noté et
 	-- résumé après le combat (CompanionCombatSummary)
 	if not opts.seq and not COMBAT_PASS[pool] and InCombat() then
+		-- 2.13.0 : une demande du joueur (/qc blague) n'est pas notée : on le lui dit
+		if opts.asked then return false, "combat" end
 		self:CompanionCombatNote(pool, opts)
 		return false, "combat"
 	end
@@ -1167,7 +1172,8 @@ function ns:CompanionSay(pool, opts)
 	local category = opts.category or CategoryOf(pool)
 	local prio = PRIORITY[category] or PRIORITY.reaction
 	-- réglette « Bavardage » : ce que ce cran laisse dire
-	if level.allow and not level.allow[category] then return false, "off" end
+	-- (2.13.0 : `asked`, une demande du joueur, passe outre la réglette)
+	if level.allow and not level.allow[category] and not opts.asked then return false, "off" end
 	if level.important and category == "advice" and not opts.important then return false, "off" end
 	if category == "advice" and not opts.force and rt.lastAdvice and now - rt.lastAdvice < (level.advice or 120) then
 		return false, "busy"
@@ -1186,7 +1192,8 @@ function ns:CompanionSay(pool, opts)
 	for _, family in ipairs(families) do
 		if rt.cool[family] and now < rt.cool[family] then return false, "busy" end
 	end
-	local lineKey = opts.line or self:CompanionPick(pool, opts.args)
+	-- 2.13.0 : la voix du type de la créature (CompanionVoices.lua)
+	local lineKey = opts.line or (self.CompanionVoicePick or self.CompanionPick)(self, pool, opts.args)
 	if not lineKey then return false, "busy" end
 	-- la bulle part du cadre : il doit être affiché
 	if not self:CompanionUpdateVisibility() then return false, "off" end
@@ -1248,7 +1255,9 @@ function ns:CompanionCombatNote(pool, opts)
 		c = { kills = 0, fresh = 0, net = 0, dead = {} }
 		rt.combat = c
 	end
-	if pool == "KILL" then c.kills = c.kills + 1
+	if pool == "KILL" then
+		c.kills = c.kills + 1
+		c.killName = opts and opts.args and opts.args[1] or nil   -- 2.13.0 : pour la voix (« %s : hors service »)
 	elseif FRESH_POOLS[pool] then c.fresh = c.fresh + 1
 	elseif pool == "CAPTURE_PROMPT" then c.net = c.net + 1
 	elseif DEAD_POOLS[pool] then
@@ -1280,7 +1289,7 @@ function ns:CompanionCombatSummary()
 	if c.kills >= 2 and c.net > 0 then return self:CompanionSay("COMBAT_SUM_NET", { args = { c.kills, c.net } }) end
 	if c.kills >= 2 and c.fresh > 0 then return self:CompanionSay("COMBAT_SUM_NEW", { args = { c.kills } }) end
 	if c.kills >= 2 then return self:CompanionSay("COMBAT_SUM", { args = { c.kills }, cd = "kill" }) end
-	if c.kills == 1 then return self:CompanionSay("KILL", { cd = "kill" }) end
+	if c.kills == 1 then return self:CompanionSay("KILL", { cd = "kill", args = c.killName and { c.killName } or nil }) end
 	return false
 end
 
@@ -2893,7 +2902,9 @@ function ns:CompanionTryIdle(seconds)
 	if not Call(rawget(_G, "IsResting")) then rt.restIdle = 0; return false end
 	rt.restIdle = (rt.restIdle or 0) + (tonumber(seconds) or 0)
 	if rt.restIdle < IDLE_REST then return false end
-	if not self:CompanionSay("IDLE", { cd = "idle" }) then return false end
+	-- 2.13.0 : parfois une blague à la place (CompanionJokes.lua)
+	local pool = self.CompanionIdlePool and self:CompanionIdlePool() or "IDLE"
+	if not self:CompanionSay(pool, { cd = "idle" }) then return false end
 	rt.restIdle = 0
 	return true
 end
@@ -3060,6 +3071,10 @@ function ns:CompanionOnZone(newArea)
 		if self.InInstance and self:InInstance() and (not rt.lastDungeon or now - rt.lastDungeon >= CURIOSITY.dungeonGap) then
 			rt.lastDungeon = now
 			self:CompanionAdd("curiosity", CURIOSITY.dungeon)
+			-- 2.13.0 : un mot en entrant (CompanionLines DUNGEON, et la voix)
+			local instance = Call(rawget(_G, "GetInstanceInfo"))
+			if type(instance) ~= "string" or instance == "" then instance = nil end
+			self:CompanionSay("DUNGEON", { args = instance and { instance } or nil, cd = "place" })
 		end
 		self:CompanionCheckPlace()
 		return
@@ -3109,30 +3124,33 @@ end
 
 -- Monstre tué par le joueur : PARTY_KILL du journal de combat, ou message
 -- d'XP d'un monstre. Les deux arrivent pour la même mort : un seul compte.
-function ns:CompanionOnKill()
+-- 2.13.0 : `name` = la victime (journal de combat), quand on la connaît
+function ns:CompanionOnKill(name)
 	local rt, now = RT(), Clock()
 	if rt.lastKill and now - rt.lastKill < 2 then return false end
 	rt.lastKill = now
 	self:CompanionAdd("mood", 1)
 	self:CompanionEliteKilled()
-	return (self:CompanionSay("KILL", { cd = "kill" }))
+	if ns.Plain then name = ns.Plain(name) end
+	if type(name) ~= "string" or name == "" then name = nil end
+	return (self:CompanionSay("KILL", { cd = "kill", args = name and { name } or nil }))
 end
 
 function ns:CompanionOnCombatLog(...)
-	local subevent, sourceGUID
+	local subevent, sourceGUID, destName
 	local fn = rawget(_G, "CombatLogGetCurrentEventInfo")
 	if type(fn) == "function" then
-		local ok, _, sub, _, source = pcall(fn)
+		local ok, _, sub, _, source, _, _, _, _, dest = pcall(fn)
 		if not ok then return end
-		subevent, sourceGUID = sub, source
+		subevent, sourceGUID, destName = sub, source, dest
 	else
-		local _, sub, _, source = ...      -- très anciens clients : charge utile passée à l'événement
-		subevent, sourceGUID = sub, source
+		local _, sub, _, source, _, _, _, _, dest = ...      -- très anciens clients : charge utile passée à l'événement
+		subevent, sourceGUID, destName = sub, source, dest
 	end
 	-- filtre bon marché d'abord : cet événement tombe des dizaines de fois par seconde
 	if subevent ~= "PARTY_KILL" or not sourceGUID then return end
 	if sourceGUID ~= Call(rawget(_G, "UnitGUID"), "player") then return end
-	self:CompanionOnKill()
+	self:CompanionOnKill(destName)
 end
 
 function ns:CompanionOnCombatXP(message)

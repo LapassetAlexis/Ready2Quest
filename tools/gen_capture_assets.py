@@ -10,16 +10,11 @@ deux, écrites dans QuestCompanion/Textures/ :
   paquet.tga       64x64    le filet roulé en boule, lancé en tournant.
   corde.tga        128x16   un bout de corde effiloché : les morceaux qui volent
                             quand le filet se déchire.
-  halo.tga         128x128  halo doux blanc (ADD, teinté à la rareté).
-  rayons.tga       256x256  gerbe de rayons blancs (ADD, teintée, tournée).
-  particules.tga   128x32   quatre sprites 32x32 blancs : point doux, étoile à
-                            quatre branches, étincelle à six, anneau (poussière).
-  etoiles.tga      128x64   l'étoile du spécimen, pleine (gauche) et vide (droite),
-                            blanche : teintée or ou gris.
-  ruban.tga        256x128  le ruban de la bannière : panneau ombré (haut, blanc,
-                            teinté sombre) et liseré (bas, blanc, teinté à la rareté).
-  vignette.tga     128x128  fond de scène : vignettage d'encre et sol.
-  filet_icone.tga  32x32    glyphe blanc du bouton filet (teinté ambre / or).
+
+2.12.1 : seuls ces trois fichiers sont écrits et livrés. Les autres images de
+la scène (halo, rayons, particules, étoiles, ruban, vignette, glyphe du filet)
+sont celles du client (atlas, CaptureStage.lua) ; leurs peintres ne servent
+plus qu'aux maquettes PNG de --apercu.
 
 Rendu : champs de distance numpy (cordes cylindriques, torsade, nœuds), puis
 Pillow pour les ombres, le rééchantillonnage et les aperçus. Sortie déterministe
@@ -983,6 +978,9 @@ def paint_filet_icone(scale=8):
 # ---------------------------------------------------------------------------
 # Tout peindre
 # ---------------------------------------------------------------------------
+SHIPPED = ("filet", "paquet", "corde")   # 2.12.1 : les seuls TGA livrés
+
+
 def paint_all():
     return {
         "filet": paint_filet(),
@@ -1354,6 +1352,8 @@ def main():
     os.makedirs(args.sortie, exist_ok=True)
     total = 0
     for name, image in tex.items():
+        if name not in SHIPPED:
+            continue
         path = os.path.join(args.sortie, name + ".tga")
         write_tga(path, image)
         total += os.path.getsize(path)

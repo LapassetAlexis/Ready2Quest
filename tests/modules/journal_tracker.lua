@@ -201,12 +201,12 @@ do
 	local line, second = tracker.lines[1], tracker.lines[2]
 	Check("[TRK] vedette : bandeau du thème (fond WINDOW, liseré ambre), losange plein, grande barre", line.featured
 		and line.chrome == "toast" and line.bg.vertex[1] == NS.Theme.WINDOW[1] and line.accent:IsShown()
-		and line.accent.vertex[1] == NS.Theme.GOLD[1] and line.diamond.texture == NS.Theme.DIAMOND
+		and line.accent.vertex[1] == NS.Theme.GOLD[1] and line.diamond.clientRole == "diamond"
 		and line.bar.height == 4
 		and math.abs(line.bar.ratio - 18 / 25) < 1e-6, line.bar and line.bar.ratio)
 	-- 2.10.0 : plus de mini-barre sur les secondaires (le compte suffit)
 	Check("[TRK] secondaires : losange en trait, sans mini-barre, progression grisée", not second.featured
-		and second.diamond.texture == NS.Theme.DIAMOND_LINE and second.bar == nil
+		and second.diamond.clientRole == "diamondLine" and second.bar == nil
 		and second.progress.textColor[1] == NS.Theme.MUTED[1])
 	Check("[TRK] hauteur : titre + vedette + secondaires", tracker.height == 18 + 40 + 4 + 3 * 18, tracker.height)   -- 2.9.0 : lignes de 18
 
@@ -569,9 +569,9 @@ do
 	Check("[WIN] part active : Exploration", parts.explore.selected and not parts.quests.selected)
 	Check("[WIN] exploration : titre de part « Villages : 1/3 »", prog.head.text == "Villages : 1/3", prog.head.text)
 	Check("[WIN] à visiter d'abord, en trait", prog.items[1].item and not prog.items[1].item.done
-		and prog.items[1].status.texture == NS.Theme.DIAMOND_LINE and prog.items[1].detail.text:find("à visiter", 1, true))
+		and prog.items[1].status.clientRole == "diamondLine" and prog.items[1].detail.text:find("à visiter", 1, true))
 	Check("[WIN] visité ensuite, losange plein", prog.items[3].item and prog.items[3].item.done
-		and prog.items[3].text.text == "The Crossroads" and prog.items[3].status.texture == NS.Theme.DIAMOND, prog.items[3].text.text)
+		and prog.items[3].text.text == "The Crossroads" and prog.items[3].status.clientRole == "diamond", prog.items[3].text.text)
 	Check("[WIN] une seule activité suivie : pas de pourcentage, on dit pourquoi", prog.percent.text == "—"
 		and prog.nopct:IsShown() and prog.nopct.text == NS.L.JRN_ZONE_NOPCT, prog.percent.text)
 	Check("[WIN] combat : renvoie à la Créatures", prog.toMen:IsShown() and prog.bestiary:IsShown())

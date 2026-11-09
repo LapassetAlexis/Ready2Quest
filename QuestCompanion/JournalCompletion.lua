@@ -644,7 +644,7 @@ local function RefreshItems(self, frame, pane, zoneID, part, quests, seen)
 			line:Show()
 		else
 			line.status:Show()
-			line.status:SetTexture(item.done and Theme.DIAMOND or Theme.DIAMOND_LINE)
+			Theme.SetDiamond(line.status, not item.done)
 			local c = item.done and Theme.GOLD or Theme.MUTED
 			line.status:SetVertexColor(c[1], c[2], c[3], 1)
 			line.text:SetText(tostring(item.name or ""))
