@@ -1,10 +1,12 @@
 # QuestCompanion
 
-## 2.12.1 — plus léger
+## 2.13.0 — le compagnon prend la parole
 
+- **Une voix par type de créature** : ta créature capturée parle selon ce qu'elle est (bête, mort-vivant, démon, élémentaire, draconien, mécanique, géant, humanoïde, bestiole), avec des centaines de nouvelles répliques, et son caractère colore le ton. Il dit aussi un mot en entrant dans un donjon.
+- **L'histoire des lieux** : une phrase à ta première arrivée dans une zone ou un lieu notable (villes, donjons…), parfois au repos ; jamais en combat, suit la réglette Bavardage. Réglage « Le compagnon raconte l'histoire des lieux ». Textes de Warcraft Wiki (CC BY-SA 4.0), choisis et traduits par Spoken de Rusty Key ; le compagnon se tait si Spoken Places est chargé.
 - **Plus léger** : les images de la capture (rayons, halo, étincelles, étoiles, bannière, vignette, icône du filet) et les losanges viennent tous du jeu ; seuls notre filet et les logos restent livrés (environ 570 Ko de moins à télécharger).
 
-*English:* capture art (rays, glow, sparks, stars, banner, vignette, net icon) and diamonds now all come from the game; only our net and the logos ship with the addon (≈ 570 KB smaller download).
+*English:* your companion now has a voice — a captured creature speaks according to its type (beast, undead, demon, elemental, dragonkin, mechanical, giant, humanoid, critter), its personality colouring the tone, and it says a word when you enter a dungeon; it also tells the story of places (one line on your first arrival in a zone or notable place, sometimes while resting; never in combat; setting "Companion tells the story of places"; text from Warcraft Wiki, CC BY-SA 4.0, selected and translated by Spoken by Rusty Key; silent when Spoken Places is loaded); capture art and diamonds now all come from the game, only our net and the logos ship with the addon (≈ 570 KB smaller download).
 
 ## 2.12.0 — le Juke-box
 
