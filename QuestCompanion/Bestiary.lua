@@ -196,6 +196,31 @@ end
 -- Toutes les espèces d'une zone : la table (filtrée par ta faction) UNION ce
 -- que tu as appris. npcID -> { name, class, type, lvl, level, seen, killed,
 -- static }. Une espèce apprise garde son nom du client et son type.
+-- 2.11.1 : les deux règles (espèce de la table, fusion avec l'appris) sont
+-- partagées par BestiarySpecies (toute la zone) et BestiarySpeciesOne (une
+-- espèce, pour l'infobulle) : une seule façon de fusionner.
+local function StaticSpecies(self, npcID, entry, faction)
+	if type(entry) ~= "table" or not ForYou(entry, faction) then return nil end
+	return { name = self:BestiaryStaticName(entry) or tostring(npcID),
+		class = RANK_CLASS[tonumber(entry.rank) or 0], lvl = entry.lvl,
+		seen = false, killed = 0, static = true }
+end
+
+local function MergeLearned(merged, learned, entry, npcID)
+	merged = merged or {}
+	merged.name = learned.name or merged.name or tostring(npcID)
+	merged.type, merged.family, merged.level = learned.type, learned.family, learned.level
+	merged.class = learned.class or merged.class
+	if type(entry) == "table" then
+		merged.lvl, merged.static = entry.lvl, true
+		-- le rang de la table l'emporte sur « normal » (mob vu de loin)
+		merged.class = RANK_CLASS[tonumber(entry.rank) or 0] or merged.class
+	end
+	merged.seen = learned.seen == true
+	merged.killed = tonumber(learned.killed) or 0
+	return merged
+end
+
 function ns:BestiarySpecies(zoneID)
 	local list = {}
 	if not zoneID then return list end
@@ -203,31 +228,33 @@ function ns:BestiarySpecies(zoneID)
 	if static then
 		local faction = self:BestiaryFaction()
 		for npcID, entry in pairs(static) do
-			if type(entry) == "table" and ForYou(entry, faction) then
-				list[npcID] = { name = self:BestiaryStaticName(entry) or tostring(npcID),
-					class = RANK_CLASS[tonumber(entry.rank) or 0], lvl = entry.lvl,
-					seen = false, killed = 0, static = true }
-			end
+			list[npcID] = StaticSpecies(self, npcID, entry, faction)
 		end
 	end
 	for npcID, learned in pairs(self:BestiaryZone(zoneID) or {}) do
 		if type(learned) == "table" then
-			local merged = list[npcID] or {}
-			local entry = static and static[npcID]
-			merged.name = learned.name or merged.name or tostring(npcID)
-			merged.type, merged.family, merged.level = learned.type, learned.family, learned.level
-			merged.class = learned.class or merged.class
-			if type(entry) == "table" then
-				merged.lvl, merged.static = entry.lvl, true
-				-- le rang de la table l'emporte sur « normal » (mob vu de loin)
-				merged.class = RANK_CLASS[tonumber(entry.rank) or 0] or merged.class
-			end
-			merged.seen = learned.seen == true
-			merged.killed = tonumber(learned.killed) or 0
-			list[npcID] = merged
+			list[npcID] = MergeLearned(list[npcID], learned, static and static[npcID], npcID)
 		end
 	end
 	return list
+end
+
+-- 2.11.1 : BestiarySpecies(zoneID)[npcID] sans bâtir toute la zone (jusqu'à
+-- 208 espèces) : l'infobulle d'unité, à chaque survol, n'en lit qu'une.
+function ns:BestiarySpeciesOne(zoneID, npcID)
+	if not (zoneID and npcID) then return nil end
+	local static = self:BestiaryStaticZone(zoneID)
+	local entry = static and static[npcID]
+	local species
+	if type(entry) == "table" then
+		species = StaticSpecies(self, npcID, entry, self:BestiaryFaction())
+	end
+	local zone = self:BestiaryZone(zoneID)
+	local learned = type(zone) == "table" and zone[npcID]
+	if type(learned) == "table" then
+		species = MergeLearned(species, learned, entry, npcID)
+	end
+	return species
 end
 
 function ns:BestiaryIsNamed(species)

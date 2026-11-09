@@ -68,7 +68,8 @@ function ns:BestiaryTooltipLine(guid, level)
 	if not npcID then return nil end
 	local zoneID = self.JournalZone and self:JournalZone()
 	if not zoneID then return nil end
-	local species = self:BestiarySpecies(zoneID)[npcID]
+	-- 2.11.1 : une seule espèce lue, plus toute la zone (même fusion, même filtre de faction)
+	local species = self:BestiarySpeciesOne(zoneID, npcID)
 	if type(species) ~= "table" then return nil end
 	local killed = tonumber(species.killed) or 0
 	local class = species.class

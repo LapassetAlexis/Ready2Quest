@@ -1060,6 +1060,8 @@ local function JournalNav(self, frame)
 	if box then
 		box:ClearAllPoints()
 		box:SetPoint("TOPLEFT", nav, "TOPLEFT", LAY.navPad, LAY.navTop - #items * LAY.navStep - 14)
+		-- 2.11.1 : largeur intérieure de la colonne (marge égale des deux côtés)
+		if ns.JournalNavSummaryFit then ns.JournalNavSummaryFit(box, LAY.nav - 2 * LAY.navPad) end
 		if nav.azSurface == "light" then
 			RolePaint(box.pet.name, "navSum.name")
 			for _, row in ipairs(box.pet.needs or {}) do
@@ -1185,6 +1187,8 @@ function PAGE.evolution(self, frame)
 			GoldTitle(tile.value, 16)
 			RolePaint(tile.value, "stat.value", true)
 			RolePaint(tile.label, "stat.label", true)
+			-- 2.11.1 : groupe recentré avec la police du style
+			if ns.JournalStatCenter then ns.JournalStatCenter(tile) end
 		end
 	end
 	for _, row in ipairs(pane.needs or {}) do

@@ -24,6 +24,11 @@ local ADDON, ns = ...
 if ns.blocked then return end
 local L = ns.L
 local Theme = ns.Theme
+-- combat (fonctions protégées interdites) : InCombatLockdown du client
+local function InCombat()
+	local fn = rawget(_G, "InCombatLockdown")
+	return type(fn) == "function" and fn() and true or false
+end
 
 ns.EFFECT_DELAY = 120             -- s (temps réel) avant que les effets d'un nouveau compagnon s'activent
 ns.EFFECT_NEED_OK = 50            -- une envie à ce niveau ou plus : comblée pour les effets
@@ -627,9 +632,51 @@ function ns:EnsureEffectsConfirm()
 	frame.ok = frame:AddFooterButton(L.EFF_CONFIRM_OK, function() ns:CompanionConfirmAnswer(true) end, "primary")
 	frame.cancel = frame:AddFooterButton(L.EFF_CONFIRM_CANCEL, function() ns:CompanionConfirmAnswer(false) end, "outline")
 	if frame.close then frame.close:SetScript("OnClick", function() ns:CompanionConfirmAnswer(false) end) end
+	-- 2.11.1 : au-dessus du carnet (même strate DIALOG avant : le carnet,
+	-- relevé au clic, la recouvrait) ; Échap la ferme seule, le carnet reste
+	frame:SetFrameStrata(ns.EFF_CONFIRM_STRATA)
+	if frame.SetToplevel then pcall(frame.SetToplevel, frame, true) end
+	frame:SetScript("OnKeyDown", function(f, key)
+		local esc = key == "ESCAPE"
+		if f.SetPropagateKeyboardInput and not InCombat() then pcall(f.SetPropagateKeyboardInput, f, not esc) end
+		if esc then ns:CompanionConfirmAnswer(false) end
+	end)
 	frame:Hide()
 	self.effectsConfirm = frame
 	return frame
+end
+
+-- 2.11.1 : place la confirmation au centre du carnet ouvert (sous sa barre
+-- de titre : la fenêtre fait ~250 px, le carnet ~700), un cran au-dessus de
+-- lui, clavier pris hors combat seulement (SetPropagateKeyboardInput est
+-- réservé hors combat) ; le carnet fermé ferme la question (réponse non).
+ns.EFF_CONFIRM_STRATA = "FULLSCREEN_DIALOG"
+ns.EFF_CONFIRM_LEVEL_UP = 50
+function ns:EffectsConfirmPlace(frame)
+	if not frame then return nil end
+	local journal = self.journalFrame
+	frame:SetFrameStrata(ns.EFF_CONFIRM_STRATA)
+	frame:ClearAllPoints()
+	local anchored = journal and journal.IsShown and journal:IsShown()
+	if anchored then
+		frame:SetPoint("CENTER", journal, "CENTER", 0, 0)
+		local level = (journal.GetFrameLevel and tonumber(journal:GetFrameLevel()) or 1) + ns.EFF_CONFIRM_LEVEL_UP
+		if frame.SetFrameLevel then frame:SetFrameLevel(level) end
+		if not journal.qcConfirmHooked and journal.HookScript then
+			journal.qcConfirmHooked = true
+			journal:HookScript("OnHide", function()
+				local dialog = ns.effectsConfirm
+				if dialog and dialog.pending and dialog:IsShown() then ns:CompanionConfirmAnswer(false) end
+			end)
+		end
+	else
+		frame:SetPoint("TOP", UIParent, "TOP", 0, -160)
+	end
+	if frame.Raise then frame:Raise() end
+	local keys = not InCombat()
+	if frame.EnableKeyboard then pcall(frame.EnableKeyboard, frame, keys) end
+	if keys and frame.SetPropagateKeyboardInput then pcall(frame.SetPropagateKeyboardInput, frame, true) end
+	return anchored and "journal" or "screen"
 end
 
 -- Texte de la comparaison : aujourd'hui, puis avec le nouveau
@@ -669,6 +716,7 @@ function ns:CompanionAskAppearance(id, onDone)
 	frame.text:SetText(self:CompanionConfirmText(def))
 	local h = Theme.TextHeight and Theme.TextHeight(frame.text, frame.innerWidth, Theme.F_BODY) or 120
 	frame:SetHeight(math.ceil(-frame.contentTop + 18 + h + 22 + (Theme.DIALOG_FOOTER or 56)))
+	self:EffectsConfirmPlace(frame)
 	frame:Show()
 	if Theme.FadeIn then pcall(Theme.FadeIn, frame, 0.15) end
 	return "ask"

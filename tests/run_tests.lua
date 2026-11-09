@@ -22,6 +22,9 @@ function Mock:Log(text) self.output[#self.output + 1] = tostring(text) end
 function Mock:Output() return table.concat(self.output, "\n") end
 function Mock:Reset() self.output = {} end
 function Mock:Fire(event, ...)
+	-- 2.11.1 / 1.32.1 : un événement = une nouvelle image pour les caches
+	-- « par image » (ns:AtCamp), l'horloge de la maquette ne bougeant pas
+	if self.OnNewFrame then self.OnNewFrame() end
 	for _, frame in ipairs(self.frames) do
 		local filter = frame.unitFilter and frame.unitFilter[event]
 		if frame.events and frame.events[event] and frame.script
@@ -605,6 +608,7 @@ local NS = {}
 -- QuestCompanion : addon autonome, avec sa propre table privée (son namespace)
 -- et sa copie du socle commun. Les tests de ses modules la reçoivent en T.QNS.
 local QNS = {}
+Mock.OnNewFrame = function() NS.atCampAt = nil; QNS.atCampAt = nil end
 local function LoadAddonFile(name)
 	local path = ROOT .. "/" .. name
 	-- mesure de la mémoire (python3 tests/run_tests.py --memoire) : ce que
@@ -1826,7 +1830,7 @@ ResetWorld()
 Say("\n== bootstrap et diagnostic ==")
 ResetWorld()
 Check("commande enregistrée par le bootstrap", type(SlashCmdList["SACETDEPART"]) == "function")
-Check("version exposée", NS.version == "1.32.0", NS.version)
+Check("version exposée", NS.version == "1.32.1", NS.version)
 
 local missingMods = {}
 for _, name in ipairs({ "Bootstrap", "Locales", "Compat", "Theme", "Core", "Buffs", "Reagents",
@@ -1847,7 +1851,7 @@ NS.HandleCommand = savedHandle
 Mock:Reset()
 NS:HandleCommand("diag")
 Check("/sd diag liste les modules", Mock:Output():find("modules :") ~= nil, Mock:Output())
-Check("/sd diag affiche la version", Mock:Output():find("1%.32%.0") ~= nil, Mock:Output())
+Check("/sd diag affiche la version", Mock:Output():find("1%.32%.1") ~= nil, Mock:Output())
 
 -- une erreur est enregistrée et affichée
 Mock:Reset()

@@ -1,5 +1,11 @@
 # Journal des modifications
 
+## 1.32.1
+
+- **Plus léger** : la présence d'un feu de camp n'est plus lue qu'une fois par image au lieu de trois.
+
+*English:* campfire presence is read once per frame instead of three times.
+
 ## 1.32.0
 
 - **Avant le départ** met les manques en avant : les points en ordre sont repliés en une ligne (« Afficher » pour les voir), pluriels accordés, vraie flèche, durabilité et réparation fusionnées, « aucun repos d'avance » au lieu de « sans objet ». Le bouton « Partir à l'aventure » est lisible.

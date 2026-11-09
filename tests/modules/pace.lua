@@ -258,10 +258,12 @@ do
 	Check("[PACE] /r2q xp : pas de camp hors Forever", not P.Has(out, "Au camp"), out)
 	-- au camp (Forever)
 	Mock.world.auras[1283391] = { name = "Campfire Nearby" }
+	NS.atCampAt = nil   -- 1.32.1 : AtCamp lu une fois par image, la maquette ne bouge pas l'horloge
 	Mock:Reset()
 	NS:HandleCommand("xp")
 	Check("[PACE] au camp : information de la tente", P.Has(Mock:Output(), "tente de camp"), Mock:Output())
 	Mock.world.auras[1283391] = nil
+	NS.atCampAt = nil
 	Mock:Reset()
 	NS:HandleCommand("inconnue")
 	Check("[PACE] commande inconnue toujours signalée", P.Has(Mock:Output(), "Commande inconnue"))
