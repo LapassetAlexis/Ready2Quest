@@ -304,7 +304,15 @@ local ok, frame = pcall(CreateFrame, "Frame")
 if ok and frame then
 	pcall(frame.RegisterEvent, frame, "PLAYER_LOGIN")
 	pcall(frame.RegisterEvent, frame, "PLAYER_REGEN_ENABLED")
+	pcall(frame.RegisterEvent, frame, "PLAYER_REGEN_DISABLED")
 	frame:SetScript("OnEvent", function(_, event)
+		-- entrée en combat : la fenêtre de saisie lâche le clavier (sinon elle
+		-- avalerait les touches du combat)
+		if event == "PLAYER_REGEN_DISABLED" then
+			local shown = ns.bindingCapture and ns.bindingCapture:IsShown()
+			if shown then pcall(ns.BindingCaptureStop, ns) end
+			return
+		end
 		if event == "PLAYER_REGEN_ENABLED" and not ns.bindingDeferred then return end
 		local done, err = pcall(ns.BindingDefaultTry, ns)
 		if not done and ns.RecordError then ns:RecordError("bindings:default", err) end
