@@ -164,7 +164,9 @@ do
 	local day = f.day
 	Check("[CZ] Missions : bandeaux de section (235408), texte doré", day.innTitle.azStrip and day.innTitle.azStrip.texture == 235408
 		and day.innTitle.label.azKeep and day.groups.zone.azStrip ~= nil)
-	Check("[CZ] Missions : tampons en petits boucliers (235415)", day.stamps[1].texture == 235415)
+	-- 2.9.1 : la carte des auberges en 7 tampons ronds (anneau des hauts faits)
+	Check("[CZ] Missions : tampons ronds (anneau des hauts faits)", day.stamps[1].azRing
+		and day.stamps[1].azRing.atlas == NS.AZEROTH_ATLAS.frameRound and #day.stamps == 7)
 	Check("[CZ] Missions : missions sur le fond des hauts faits", day.missions[1].azBg.texture == 235397)
 
 	Open("progress")

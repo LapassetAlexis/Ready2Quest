@@ -980,6 +980,36 @@ end
 local PAGE, POST = {}, {}
 ns.CARNET_PAGE_SKINS, ns.CARNET_PAGE_POSTS = PAGE, POST
 
+-- 2.9.1 : le compteur d'un pager (« 1-9 / 60 ») : créé par la brique du
+-- thème hors de la relève (texte local), il restait gris clair sur le
+-- parchemin ; encre mesurée « pager.position »
+local function InkPager(pager)
+	local fs = pager and pager.position
+	if not fs then return end
+	Paint(fs, RoleInk("pager.position")); NoShadow(fs)
+	fs.azKeep = true
+end
+ns.CarnetInkPager = InkPager
+
+-- 2.9.1 : un anneau rond des hauts faits (atlas du client) autour de `region`
+local function RoundRing(host, region, size, layer)
+	local ring = host:CreateTexture(nil, layer or "OVERLAY")
+	if not (ns.AzerothAtlas and ns.AzerothAtlas(ring, ns.AZEROTH_ATLAS.frameRound)) then ring:Hide(); return nil end
+	ring:SetSize(size, size)
+	ring:SetPoint("CENTER", region, "CENTER", 1, 0)
+	ring:Show()
+	return ring
+end
+
+-- 2.9.1 : une encre de rôle, sans ombre (texte sombre) ou avec (texte clair)
+local function RolePaint(fs, role, shadow)
+	if not fs then return end
+	Paint(fs, RoleInk(role))
+	if shadow then Shadow(fs) else NoShadow(fs) end
+	fs.azKeep = true
+end
+
+
 local function Strip(section)
 	local strip = NewTex(section, "BACKGROUND", 1, T.recent)
 	if not strip then return nil end
@@ -1065,6 +1095,7 @@ end
 
 function PAGE.menagerie(self, frame)
 	local pane = frame.men
+	if pane then InkPager(pane.pager) end
 	if not (pane and pane.preview) then return end
 	local p = pane.preview
 	TileStyle(p, "light")
@@ -1211,29 +1242,98 @@ end
 function PAGE.day(self, frame)
 	local pane = frame.day
 	if not pane then return end
+	local M = ns.AZEROTH_MISSION
 	local sections = { pane.innTitle, pane.pantryTitle, pane.aidTitle }
 	for _, group in pairs(pane.groups or {}) do sections[#sections + 1] = group end
 	for _, section in ipairs(sections) do Strip(section) end
 	for _, slot in ipairs(pane.slots or {}) do slot.azRing = Ring(slot, slot.icon, 40) end
-	for _, tile in ipairs(pane.aids or {}) do tile.azRing = Ring(tile, tile.icon, 40) end
+	for _, tile in ipairs(pane.aids or {}) do tile.azRing = Ring(tile, tile.icon, 34) end
+	-- cartes : icône dans le cadre des hauts faits, voile vert pour une faite,
+	-- bouton ↻ dans l'anneau rond
+	for _, card in ipairs(pane.missions or {}) do
+		card.azRing = Ring(card, card.icon, 42)
+		if card.azRing then
+			HideAll(card.iconEdge)
+			card.azNoEdge = true
+		end
+		if card.tint then card.tint:SetVertexColor(M.tint[1], M.tint[2], M.tint[3], M.tint[4]) end
+		if card.stamp and card.stamp.bg then card.stamp.bg:SetVertexColor(M.stamp[1], M.stamp[2], M.stamp[3], 1) end
+		local button = card.reroll
+		if button then
+			button.azRing = RoundRing(button, button, 30)
+			if button.azRing then HideAll(button.border) end
+		end
+	end
+	-- bande résumé : plaques sombres (fond des catégories), icône cerclée
+	for _, plaque in ipairs(pane.summary or {}) do
+		if TileStyle(plaque, "dark") then HideAll(plaque.border) end
+		plaque.azRing = Ring(plaque, plaque.icon, 36)
+	end
+	for id, chip in pairs(pane.chips or {}) do
+		local c = id == "trait" and M.chipTrait or M.chipZone
+		chip.bg:SetVertexColor(c[1], c[2], c[3], 1)
+	end
+	-- encarts des 3 : aplat crème, pointillés bruns
+	for _, box in pairs(pane.callouts or {}) do
+		box.bg:SetVertexColor(M.callout[1], M.callout[2], M.callout[3], M.callout[4])
+		box.dashColor = M.dash
+		for _, dash in ipairs(box.dashes) do dash:SetVertexColor(M.dash[1], M.dash[2], M.dash[3], M.dash[4]) end
+		box.azSurface = "light"
+	end
+	-- carte des auberges : chaque tampon dans un anneau rond
+	for _, stamp in ipairs(pane.stamps or {}) do
+		stamp.azRing = RoundRing(pane.innPanel, stamp, 36)
+	end
 end
 
 function POST.day(self, frame)
 	local pane = frame.day
 	if not pane then return end
-	-- carte des auberges : un petit bouclier par tampon (gris : pas encore)
-	for _, stamp in ipairs(pane.stamps or {}) do
-		if SetTex(stamp, T.tiny) then
-			stamp:SetVertexColor(1, 1, 1, 1)
-			Desaturate(stamp, not stamp.got)
-			stamp:SetAlpha(stamp.got and 1 or 0.6)
+	local M = ns.AZEROTH_MISSION
+	for _, card in ipairs(pane.missions or {}) do
+		-- la taille a pu changer (demie / large) : le fond recadré
+		if card.azBg and card.azStyle == "light" and card.azCoverW ~= card.cardW then
+			Cover(card.azBg, T.achBg, card:GetWidth(), card:GetHeight())
+			card.azCoverW = card.cardW
 		end
+		local p = card.mission and card.mission.done and "mcardDone." or "mcard."
+		RolePaint(card.label, p .. "title")
+		RolePaint(card.zone, p .. "zone")
+		RolePaint(card.count, p .. "count")
+		RolePaint(card.source, p .. "reward")
+		if card.stamp then RolePaint(card.stamp.text, "mission.stamp") end
+		if card.azRing and card.icon then
+			if card.icon:IsShown() then card.azRing:Show() else card.azRing:Hide() end
+		end
+	end
+	for _, plaque in ipairs(pane.summary or {}) do
+		RolePaint(plaque.label, "summary.label", true)
+		RolePaint(plaque.count, "summary.count", true)
+		RolePaint(plaque.detail, "summary.detail", true)
+		for _, pip in ipairs(plaque.pips or {}) do
+			local c = pip.on and M.pipOn or M.pipOff
+			pip:SetVertexColor(c[1], c[2], c[3], 1)
+		end
+	end
+	for id, chip in pairs(pane.chips or {}) do RolePaint(chip.text, id == "trait" and "chip.trait" or "chip.zone") end
+	for _, box in pairs(pane.callouts or {}) do RolePaint(box.text, "bonus.text") end
+	RolePaint(pane.innTotal, "panel.text")
+	RolePaint(pane.innHint, "panel.soft")
+	RolePaint(pane.innGift, "panel.muted")
+	RolePaint(pane.perfect, "panel.muted")
+	RolePaint(pane.pantryHint, "panel.muted")
+	for _, slot in ipairs(pane.slots or {}) do RolePaint(slot.count, "panel.text") end
+	for _, tile in ipairs(pane.aids or {}) do
+		RolePaint(tile.count, "panel.text")
+		RolePaint(tile.name, "panel.soft")
 	end
 end
 
 function PAGE.progress(self, frame)
 	local pane = frame.prog
 	if not pane then return end
+	InkPager(pane.zonePager)
+	InkPager(pane.listPager)
 	for _, row in ipairs(pane.zones or {}) do
 		if TileStyle(row, "dark") then Selectable(row) end
 	end

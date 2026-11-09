@@ -130,6 +130,13 @@ ns.AZEROTH_INK = {
 	rBoss = { 0.40, 0.15, 0.00 }, rShiny = { 0.28, 0.15, 0.00 },
 	tagShade = { 0.10, 0.06, 0.02, 0.92 },   -- sous la bande de l'étiquette (Compte / Perso)
 }
+-- 2.9.1 : page Missions, habit Azeroth : voile vert d'une carte faite, aplat
+-- et pointillés de l'encart des 3, tampon « Faite », étiquettes, pastilles
+ns.AZEROTH_MISSION = {
+	tint = { 0.62, 0.85, 0.45, 0.22 }, callout = { 0.97, 0.90, 0.72, 0.5 }, dash = { 0.65, 0.52, 0.25, 1 },
+	stamp = { 0.12, 0.37, 0.12 }, chipZone = { 0.165, 0.31, 0.54 }, chipTrait = { 0.42, 0.29, 0.10 },
+	pipOn = { 0.97, 0.85, 0.47 }, pipOff = { 0.35, 0.27, 0.16 },
+}
 -- rôle -> { encre, luminance du pire fond mesurée, seuil, taille (px) } ;
 -- commentaire : texte sombre/clair, pire fond, fond moyen, contraste obtenu
 ns.AZEROTH_CONTRAST = {
@@ -209,6 +216,36 @@ ns.AZEROTH_CONTRAST = {
 	["quest.detailDone"] = { "green", 0.4213, 4.5, 11 },   -- sombre, fond 0.421 (moy. 0.452) : 6.01:1 (« faite »)
 	["zone.label"] = { "navText", 0.0455, 4.5, 12 },   -- clair, fond 0.046 (moy. 0.016) : 7.41:1 (zone vue)
 	["zone.unseen"] = { "zoneDim", 0.0455, 4.5, 12 },   -- clair, fond 0.046 (moy. 0.016) : 5.41:1 (zone pas encore vue, rangée opaque)
+	-- 2.9.1 : page Missions en cartes. Cartes : fond 235397 en Cover sur 206×68 (demie) ou 420×68 (large),
+	-- voile crème 0,40 ; pire des deux tailles par zone de texte (titre x 52, y 6-21 ; zone y 21-35 ; compte,
+	-- 44 px de droite, y 37-52 ; gain en clair y 52-66). Faite : voile vert (ns.AZEROTH_MISSION.tint) en plus.
+	["mcard.title"] = { "ink", 0.3929, 4.5, 12 },   -- sombre, fond 0.393 (moy. 0.445) : 7.94:1 (titre, et message d'un groupe vide)
+	["mcard.zone"] = { "inkMuted", 0.3853, 4.5, 11 },   -- sombre, fond 0.385 (moy. 0.442) : 5.85:1
+	["mcard.count"] = { "ink", 0.4146, 4.5, 12 },   -- sombre, fond 0.415 (moy. 0.441) : 8.33:1
+	["mcard.reward"] = { "inkSoft", 0.4113, 4.5, 11 },   -- sombre, fond 0.411 (moy. 0.446) : 7.37:1 (gain en clair, carte large)
+	["mcardDone.title"] = { "ink", 0.4200, 4.5, 12 },   -- sombre, fond 0.420 (moy. 0.466) : 8.43:1 (carte faite, voile vert ; titre sur deux lignes, y 6-35)
+	["mcardDone.zone"] = { "inkMuted", 0.4200, 4.5, 11 },   -- sombre, fond 0.420 (moy. 0.466) : 6.32:1
+	["mcardDone.count"] = { "ink", 0.4438, 4.5, 12 },   -- sombre, fond 0.444 (moy. 0.465) : 8.86:1
+	["mcardDone.reward"] = { "inkSoft", 0.4411, 4.5, 11 },   -- sombre, fond 0.441 (moy. 0.469) : 7.85:1
+	-- aplats unis (luminance exacte de la couleur du fond) : tampon « Faite », étiquettes des intertitres
+	["mission.stamp"] = { "white", 0.0845, 4.5, 10 },   -- clair, fond uni #1f5e1f (ns.AZEROTH_MISSION.stamp) : 7.81:1
+	["chip.zone"] = { "white", 0.0792, 4.5, 10 },   -- clair, fond uni #2a4f8a (chipZone : zone du jour, décompte) : 8.13:1
+	["chip.trait"] = { "white", 0.0810, 4.5, 10 },   -- clair, fond uni #6b4a1a (chipTrait : caractère) : 8.02:1
+	-- bande résumé : fond des catégories 130652 (découpe 167×29) étiré sur 230×42, opaque ; ligne 1 x 44-222
+	-- y 5-20 (le haut, plus clair), ligne 2 y 21-36 ; pire = les 10 % les plus clairs
+	["summary.label"] = { "goldHead", 0.1025, 4.5, 12 },   -- clair, fond 0.103 (moy. 0.023) : 4.96:1
+	["summary.count"] = { "white", 0.1025, 4.5, 12 },   -- clair, fond 0.103 (moy. 0.023) : 6.89:1
+	["summary.detail"] = { "light", 0.0221, 4.5, 11 },   -- clair, fond 0.022 (moy. 0.014) : 11.41:1
+	-- encart des 3 : page 130661 (758×678, voile 0,35, ombre de gauche) sous un aplat crème
+	-- (ns.AZEROTH_MISSION.callout, alpha 0,5), texte de x 74 à 436, y 350 à 620 (les deux encarts)
+	["bonus.text"] = { "ink", 0.5371, 4.5, 11 },   -- sombre, fond 0.537 (moy. 0.573) : 10.53:1
+	-- colonne de droite : tuiles « light » de 274 px de large (carte des auberges 140-176 de haut,
+	-- garde-manger 114, besace 60-74) ; pire des tailles, marges de 6 px exclues
+	["panel.text"] = { "ink", 0.3220, 4.5, 12 },   -- sombre, fond 0.322 (moy. 0.424) : 6.67:1 (comptes, tampons en tout)
+	["panel.soft"] = { "inkSoft", 0.3220, 4.5, 11 },   -- sombre, fond 0.322 (moy. 0.424) : 5.95:1 (règle de la carte, nom des aides)
+	["panel.muted"] = { "inkMuted", 0.3220, 4.5, 11 },   -- sombre, fond 0.322 (moy. 0.424) : 5.00:1 (cadeaux, jours aux trois missions, aide)
+	-- compteur des pagers (« 1-9 / 60 ») sur la page : bas droit de la page (x 324-734, y 560-600), le plus sombre
+	["pager.position"] = { "inkSoft", 0.3105, 4.5, 11 },   -- sombre, fond 0.311 (moy. 0.342) : 5.76:1
 }
 -- Luminance relative WCAG 2.x d'une couleur (0..1)
 local function Lin(c) if c <= 0.03928 then return c / 12.92 end return ((c + 0.055) / 1.055) ^ 2.4 end
