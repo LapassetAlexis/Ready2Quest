@@ -34,20 +34,20 @@ ns.CAPTURE_STAR_MAX = 3
 -- capture sur dix en moyenne, de quoi donner envie de recapturer sans
 -- en faire une corvée.
 ns.CAPTURE_STAR_ODDS = { 60, 30, 10 }
--- les étoiles et le glyphe du filet : nos textures (CaptureStage.lua,
--- tools/gen_capture_assets.py), sinon celles du jeu
-local ART = ns.CAPTURE_ART
-ns.CAPTURE_STAR_ICON = ART and ART.stars or "Interface\\TargetingFrame\\UI-RaidTargetingIcon_1"
-local NET_ICON = ART and ART.icon or "Interface\\Icons\\Spell_Nature_Web"
+-- 2.12.1 : les étoiles et le glyphe du filet viennent du client. Étoiles :
+-- l'atlas « auctionhouse-icon-favorite » (pleine) et sa variante « -off »
+-- (vide) ; en texture simple, l'étoile des marqueurs de raid en repli.
+ns.CAPTURE_STAR_ATLAS = { full = "auctionhouse-icon-favorite", empty = "auctionhouse-icon-favorite-off" }
+ns.CAPTURE_STAR_ICON = "Interface\\TargetingFrame\\UI-RaidTargetingIcon_1"
+local NET_ICON = "Interface\\Icons\\Spell_Nature_Web"
 -- 2.11.0 (fiche 12) : le glyphe du filet est l'icône du jeu INV_Misc_Net_01
--- si elle se peint (ns.CaptureArtPaint, rôle « icon ») ; sinon le nôtre,
--- blanc et teinté. Rend true si c'est notre glyphe (à teinter).
+-- (ns.CaptureArtPaint, rôle « icon »), en couleurs. Rend toujours false
+-- (2.12.1 : plus de glyphe à nous à teinter).
 local function PaintNetIcon(tex)
 	if not tex then return false end
 	local source = ns.CaptureArtPaint and ns.CaptureArtPaint(tex, "icon")
 	if not source then tex:SetTexture(NET_ICON) end
-	if source == "client" then return false end
-	return ART ~= nil and (source == "own" or NET_ICON == ART.icon)
+	return false
 end
 ns.CapturePaintNetIcon = PaintNetIcon
 local ICON_GAME_SHINY, ICON_GAME_REST = { 1, 0.85, 0.4 }, Theme.WHITE   -- 2.11.2 : le blanc du socle
@@ -336,18 +336,11 @@ function ns:CaptureRollStars()
 	return #odds
 end
 
--- Texte des étoiles (pleines dorées, vides grises), pour le chat et les fiches.
--- 2.11.2 : teintes 0-255 du |T nommées (proches de GOLD_LIGHT et d'un gris
--- plus sombre que MUTED, sans en être : gardées telles quelles)
-local STAR_CHAT_FULL, STAR_CHAT_EMPTY = { 246, 199, 125 }, { 120, 126, 132 }
+-- Texte des étoiles, pour le chat et les fiches. 2.12.1 : balises d'atlas
+-- du client (|A), l'étoile dorée pleine, sa variante grise « -off » vide
 local function StarIcon(full, size)
-	local c = full and STAR_CHAT_FULL or STAR_CHAT_EMPTY
-	if ART and ns.CAPTURE_STAR_ICON == ART.stars then
-		-- notre feuille 128x64 : l'étoile pleine à gauche, la vide à droite
-		local x = full and 0 or 64
-		return string.format("|T%s:%d:%d:0:0:128:64:%d:%d:0:64:%d:%d:%d|t", ns.CAPTURE_STAR_ICON, size, size, x, x + 64, c[1], c[2], c[3])
-	end
-	return string.format("|T%s:%d:%d:0:0:16:16:0:16:0:16:%d:%d:%d|t", ns.CAPTURE_STAR_ICON, size, size, c[1], c[2], c[3])
+	local atlas = full and ns.CAPTURE_STAR_ATLAS.full or ns.CAPTURE_STAR_ATLAS.empty
+	return string.format("|A:%s:%d:%d|a", atlas, size, size)
 end
 function ns:CaptureStarsText(stars, size)
 	stars = tonumber(stars)
@@ -1044,7 +1037,6 @@ function ns:CaptureStyleNet()
 	-- notre glyphe blanc prend sa couleur : ambre au repos, or si brillante
 	-- ou au survol (l'icône du jeu, en repli, reste en couleurs)
 	local ours = button.ownGlyph
-	if ours == nil then ours = ART and NET_ICON == ART.icon end
 	local tint = button.shiny and (ours and Theme.GOLD_LIGHT or ICON_GAME_SHINY)
 		or (ours and (button.hover and Theme.GOLD_LIGHT or Theme.GOLD) or ICON_GAME_REST)
 	button.icon:SetVertexColor(tint[1], tint[2], tint[3], 1)

@@ -81,8 +81,8 @@ end
 do
 	Say("-- deux addons : socle")
 	local files = { "Base.lua", "Strings.lua", "Compat.lua", "Hubs.lua", "DungeonData.lua", "Theme.lua", "Store.lua",
-		"World.lua", "Commands.lua", "Options.lua", "Minimap.lua", "Media/losange.tga", "Media/losange_trait.tga",
-		"Media/Inter-Regular.ttf", "Media/Inter-SemiBold.ttf", "Media/Inter-Bold.ttf", "Media/interrupteur.tga", "Media/chevron.tga" }
+		"World.lua", "Commands.lua", "Options.lua", "Minimap.lua",
+		"Media/Inter-Regular.ttf", "Media/Inter-SemiBold.ttf", "Media/Inter-Bold.ttf", "Media/Inter-OFL.txt" }
 	local diff = {}
 	for _, file in ipairs(files) do
 		local a, b = QCT.Read("Ready2Quest/Libs/Socle/" .. file), QCT.Read("QuestCompanion/Libs/Socle/" .. file)
@@ -164,8 +164,8 @@ do
 	Check("[QC] clic droit : les réglages de QC", QNS.optionsFrame:IsShown() and not (NS.optionsFrame and NS.optionsFrame:IsShown()))
 	QNS.optionsFrame:Hide()
 	Check("[QC] le socle trouve ses médias dans chaque addon",
-		QNS.Theme.DIAMOND == "Interface\\AddOns\\QuestCompanion\\Libs\\Socle\\Media\\losange"
-		and NS.Theme.DIAMOND == "Interface\\AddOns\\Ready2Quest\\Libs\\Socle\\Media\\losange")
+		QNS.Theme.FONT_REGULAR == "Interface\\AddOns\\QuestCompanion\\Libs\\Socle\\Media\\Inter-Regular.ttf"
+		and NS.Theme.FONT_REGULAR == "Interface\\AddOns\\Ready2Quest\\Libs\\Socle\\Media\\Inter-Regular.ttf")
 end
 
 -- 5. Reprise depuis Ready2Quest 1.25 -----------------------------------------------------

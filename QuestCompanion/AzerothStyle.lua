@@ -912,10 +912,10 @@ function ns:AzerothWood(frame)
 	frame.woodShade:SetPoint("TOPLEFT", frame.woodBg, "TOPLEFT", 0, 0)
 	frame.woodShade:SetPoint("BOTTOMRIGHT", frame.woodBg, "BOTTOMRIGHT", 0, 0)
 	if Theme.Gradient then Theme.Gradient(frame.woodShade, "VERTICAL", WOOD_DEEP, 0.6, WOOD_WARM, 0.35) end
-	local art = ns.CAPTURE_ART
-	if art and art.halo then
+	-- 2.12.1 : la lueur douce du client (rôle « halo » de la capture)
+	if ns.CaptureArtPaint then
 		frame.woodGlow = frame:CreateTexture(nil, "BACKGROUND", nil, 2)
-		frame.woodGlow:SetTexture(art.halo)
+		ns.CaptureArtPaint(frame.woodGlow, "halo")
 		frame.woodGlow:SetVertexColor(INKS.woodGlow[1], INKS.woodGlow[2], INKS.woodGlow[3], 0.35)
 		frame.woodGlow:SetPoint("TOPLEFT", frame, "TOPLEFT", 10, -10)
 		frame.woodGlow:SetPoint("BOTTOMRIGHT", frame, "BOTTOMRIGHT", -10, 10)
@@ -1272,14 +1272,15 @@ function ns:EnsureCaptureResult()
 	if self.captureResult then return self.captureResult end
 	local cached = self:StyleCached("captureResult")
 	if cached then self.captureResult = cached; return cached end
-	local art = ns.CAPTURE_ART
-	local glyph = art and art.icon or Theme.LOGO_SMALL
+	-- 2.12.1 : le glyphe du filet est l'icône du jeu (ns.CapturePaintNetGlyph)
+	local function Glyph(tex)
+		if ns.CapturePaintNetGlyph then ns.CapturePaintNetGlyph(tex) else tex:SetTexture(Theme.LOGO_SMALL) end
+	end
 	local frame
 	if self:AzerothOn() then
 		frame = self:AzerothCreateBanner({ strata = "HIGH", name = "QuestCompanionCaptureResultAzeroth" })
 		if not frame then return nil end
-		frame.icon:SetTexture(glyph)
-		if art and art.icon then frame.icon:SetVertexColor(Theme.GOLD_LIGHT[1], Theme.GOLD_LIGHT[2], Theme.GOLD_LIGHT[3], 1) end
+		Glyph(frame.icon)
 	else
 		if not (Theme and Theme.CreateToast) then return nil end
 		frame = Theme.CreateToast(UIParent, 300, 66, { strata = "HIGH", accent = Theme.GOLD, name = "QuestCompanionCaptureResult" })
@@ -1287,8 +1288,7 @@ function ns:EnsureCaptureResult()
 		frame.uiStyle = "sobre"
 		local left = frame.contentLeft or 14
 		frame.icon = frame:CreateTexture(nil, "ARTWORK")
-		frame.icon:SetTexture(glyph)
-		if art and art.icon then frame.icon:SetVertexColor(Theme.GOLD[1], Theme.GOLD[2], Theme.GOLD[3], 1) end
+		Glyph(frame.icon)
 		frame.icon:SetSize(34, 34)
 		frame.icon:SetPoint("LEFT", frame, "LEFT", left, 0)
 		local textLeft, textW = left + 44, 300 - left - 44 - 12
@@ -2630,7 +2630,7 @@ function ns.AzerothRegionLine(name, region)
 		tostring(layer or "?") .. "/" .. tostring(sub or 0), "alpha=" .. Num(Get(region, "GetAlpha")),
 		"rgba=" .. Num(r) .. "," .. Num(g) .. "," .. Num(b) .. "," .. Num(a) }
 	if not isText then
-		parts[#parts + 1] = "tex=" .. tostring(Get(region, "GetTexture"))
+		parts[#parts + 1] = "tex=" .. tostring((Get(region, "GetTexture")))
 		local c = { Get(region, "GetTexCoord") }
 		if #c >= 4 then parts[#parts + 1] = "coord=" .. Num(c[1]) .. "," .. Num(c[2]) .. "," .. Num(c[3]) .. "," .. Num(c[4]) end
 	elseif region.GetText then

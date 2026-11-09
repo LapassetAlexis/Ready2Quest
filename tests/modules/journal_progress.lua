@@ -134,9 +134,9 @@ do
 	Check("[PROG] en-tête de la liste : la part", pane.head.text == "Villages : 1/3", pane.head.text)
 	local first, last = pane.items[1], pane.items[3]
 	Check("[PROG] à faire d'abord, au trait", first.item and not first.item.done and first:IsShown()
-		and first.status.texture == NS.Theme.DIAMOND_LINE and first.detail.text:find("à visiter", 1, true))
+		and first.status.clientRole == "diamondLine" and first.detail.text:find("à visiter", 1, true))
 	Check("[PROG] fait ensuite, losange plein", last.item and last.item.done and last.text.text == "The Crossroads"
-		and last.status.texture == NS.Theme.DIAMOND, last.text.text)
+		and last.status.clientRole == "diamond", last.text.text)
 	Check("[PROG] rien d'autre, pas de pagination", not pane.items[4]:IsShown() and pane.listPager.position.text == ""
 		and pane.empty.text == "")
 	quests:Click()

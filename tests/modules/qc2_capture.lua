@@ -117,7 +117,7 @@ do
 	for _, w in ipairs(NS.CAPTURE_STAR_ODDS) do total = total + w end
 	Check("[QC2CAP] probabilités : 3 étoiles la plus rare, total 100", total == 100
 		and NS.CAPTURE_STAR_ODDS[3] < NS.CAPTURE_STAR_ODDS[2] and NS.CAPTURE_STAR_ODDS[2] < NS.CAPTURE_STAR_ODDS[1])
-	local _, icons = NS:CaptureStarsText(2):gsub("|T", "")
+	local _, icons = NS:CaptureStarsText(2):gsub("|A:", "")
 	Check("[QC2CAP] texte : trois étoiles (pleines et vides)", icons == 3 and NS:CaptureStarsText(nil) == "")
 end
 
@@ -191,7 +191,7 @@ do
 	Check("[QC2CAP] … et il scintille", (Q.Net().glow.alpha or 0) > 0)
 	local stars = NS:CaptureQueue()[4]
 	Check("[QC2CAP] amélioration : raison « stars », étoiles actuelles", stars.reason == "stars" and stars.have == 1
-		and NS:CaptureQueueLine(stars):find("|T", 1, true) ~= nil)
+		and NS:CaptureQueueLine(stars):find("|A:auctionhouse-icon-favorite", 1, true) ~= nil)
 end
 
 -- 4. Clic : le meilleur ; clic droit : la liste ------------------------------------------------------------
@@ -338,10 +338,11 @@ do
 	Check("[QC2CAP] … affichées une à une sous la rareté (la troisième après 0,8 s), pleines",
 		NS:CaptureStageUpdate(rolling.resultAt + 0.5) == "ok" and stage.starSlots[1]:IsShown() and not stage.starSlots[3]:IsShown()
 		and NS:CaptureStageUpdate(rolling.resultAt + 1.0) == "ok" and stage.starSlots[3]:IsShown()
-		and stage.starSlots[3].texCoord[1] == 0 and stage.starSlots[3].texCoord[2] == 0.5 and stage.starSpark:IsShown())
-	Check("[QC2CAP] … le texte des étoiles découpe notre feuille (pleine à gauche, vide à droite)",
-		NS:CaptureStarsText(2, 12):find(":0:0:128:64:0:64:0:64:", 1, true) ~= nil
-		and NS:CaptureStarsText(2, 12):find(":0:0:128:64:64:128:0:64:", 1, true) ~= nil)
+		and stage.starSpark:IsShown())
+	-- 2.12.1 : balises d'atlas du client, l'étoile pleine puis la variante « -off »
+	Check("[QC2CAP] … le texte des étoiles : atlas du client (pleine, vide « -off »)",
+		NS:CaptureStarsText(2, 12) == "|A:auctionhouse-icon-favorite:12:12|a|A:auctionhouse-icon-favorite:12:12|a"
+			.. "|A:auctionhouse-icon-favorite-off:12:12|a", NS:CaptureStarsText(2, 12))
 	stage:GetScript("OnMouseUp")(stage)
 	NS:CaptureTick(NS.Now())
 	NS:DB().companionCaptureAnim = false
@@ -373,7 +374,7 @@ do
 	for _, line in ipairs(f.men.preview.lines) do text[#text + 1] = line:GetText() or "" end
 	local joined = table.concat(text, "\n")
 	Check("[QC2CAP] fiche : la qualité du spécimen (avec la date, ou seule)", (joined:find("Capturée le", 1, true) ~= nil
-		or joined:find("Qualité", 1, true) ~= nil) and select(2, joined:gsub("|T", "")) == 3, joined)
+		or joined:find("Qualité", 1, true) ~= nil) and select(2, joined:gsub("|A:auctionhouse%-icon%-favorite", "")) == 3, joined)
 	f:Hide()
 end
 

@@ -201,8 +201,9 @@ do
 	ResetWorld()
 	local tex = UIParent:CreateTexture()
 	Mock.InstallAtlas(nil)
-	Check("[M211] sans atlas : notre fichier (repli)", QNS.CaptureArtPaint(tex, "rays") == "own"
-		and tex.texture == QNS.CAPTURE_ART.rays and not tex.clientArt)
+	-- 2.12.1 : plus de repli à nous (images supprimées)
+	Check("[M211] sans atlas : texture vide, aucune image à nous", QNS.CaptureArtPaint(tex, "rays") == nil
+		and tex.texture == nil and not tex.clientArt and QNS.CAPTURE_ART.rays == nil)
 	Mock.InstallAtlas(true)
 	local expect = { rays = "ArtifactsFX-StarBurst", halo = "ChallengeMode-SoftYellowGlow", sparks = "Artifacts-Anim-Sparks",
 		stars = "auctionhouse-icon-favorite", ribbon = "BossBanner-BgBanner-Mid", stage = "charactercreate-vignette-sides" }
@@ -216,19 +217,23 @@ do
 	Check("[M211] le filet, ses cordes et le paquet restent les nôtres", QNS.CaptureArtPaint(tex, "net") == "own"
 		and QNS.CaptureArtPaint(tex, "rope") == "own" and QNS.CaptureArtPaint(tex, "bundle") == "own")
 	Mock.InstallAtlas({ ["ArtifactsFX-StarBurst"] = true })
-	Check("[M211] atlas manquant : repli sur notre fichier", QNS.CaptureArtPaint(tex, "rays") == "own"
-		and tex.texture == QNS.CAPTURE_ART.rays)
+	Check("[M211] atlas manquant : texture vide", QNS.CaptureArtPaint(tex, "rays") == nil and tex.texture == nil)
 	local icon = UIParent:CreateTexture()
+	local netFile, webFile = QNS.CAPTURE_CLIENT_ART.icon.files[1], QNS.CAPTURE_CLIENT_ART.icon.files[2]
 	Check("[M211] glyphe du filet : l'icône du jeu INV_Misc_Net_01", QNS.CaptureArtPaint(icon, "icon") == "client"
-		and icon.texture == QNS.CAPTURE_CLIENT_ART.icon.file)
-	Mock.world.textureRefused = { [QNS.CAPTURE_CLIENT_ART.icon.file] = true }
-	Check("[M211] icône refusée : notre glyphe", QNS.CaptureArtPaint(icon, "icon") == "own" and icon.texture == QNS.CAPTURE_ART.icon)
+		and icon.texture == netFile and netFile:find("INV_Misc_Net_01", 1, true) ~= nil)
+	Mock.world.textureRefused = { [netFile] = true }
+	Check("[M211] icône refusée : une autre icône du jeu", QNS.CaptureArtPaint(icon, "icon") == "client"
+		and icon.texture == webFile and webFile:find("^Interface\\Icons\\") ~= nil)
+	Mock.world.textureRefused = { [netFile] = true, [webFile] = true }
+	Check("[M211] aucune icône : vide, jamais un fichier à nous", QNS.CaptureArtPaint(icon, "icon") == nil and icon.texture == nil)
 	Mock.world.textureRefused = nil
 
 	-- Ready2Quest : flèches du toast et anneau d'aggro
 	local arrow = UIParent:CreateTexture()
 	Mock.InstallAtlas(nil)
-	Check("[M211] R2Q flèche : sans atlas, notre fichier", RNS.StatsPaintArrow(arrow, true) == "own" and not arrow.clientArrow)
+	Check("[M211] R2Q flèche : sans atlas, vide (1.33.1)", RNS.StatsPaintArrow(arrow, true) == nil and not arrow.clientArrow
+		and arrow.texture == nil)
 	Mock.InstallAtlas(true)
 	Check("[M211] R2Q flèche hausse : bags-greenarrow", RNS.StatsPaintArrow(arrow, true) == "client"
 		and arrow.atlas == RNS.STATS_ARROW_ATLAS)
@@ -240,7 +245,7 @@ do
 	local c = down.texCoord or {}
 	Check("[M211] R2Q flèche baisse : la même, retournée (découpe inversée)", down.texture == 555 and c[3] == 0.4 and c[4] == 0.3,
 		tostring(c[3]) .. "/" .. tostring(c[4]))
-	Check("[M211] R2Q anneau d'aggro : BonusChest-CircleGlow connu", RNS.AggroAtlasKnown(RNS.AGGRO_RING_ATLAS) == true)
+	Check("[M211] R2Q anneau d'aggro retiré (1.33.1)", RNS.AGGRO_RING_ATLAS == nil and RNS.AGGRO_RING_TEXTURE == nil)
 	Mock.InstallAtlas(nil)
 end
 

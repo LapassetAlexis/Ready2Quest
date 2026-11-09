@@ -54,43 +54,36 @@ local ART = {
 	net = TEX .. "filet",            -- 512x256 : entier (gauche), déchiré (droite)
 	bundle = TEX .. "paquet",        -- le filet roulé en boule
 	rope = TEX .. "corde",           -- un bout de corde (déchirure)
-	halo = TEX .. "halo",            -- halo doux (ADD, teinté)
-	rays = TEX .. "rayons",          -- gerbe de rayons (ADD, teintée, tournée)
-	sparks = TEX .. "particules",    -- point doux, étoile 4, étincelle 6, anneau
-	stars = TEX .. "etoiles",        -- étoile du spécimen : pleine, vide
-	ribbon = TEX .. "ruban",         -- panneau (haut), liseré (bas)
-	stage = TEX .. "vignette",       -- fond de scène : projecteur, sol
-	icon = TEX .. "filet_icone",     -- glyphe du bouton filet (CaptureQueue.lua)
+	-- 2.12.1 : les autres images (halo, rayons, particules, étoiles, ruban,
+	-- vignette, glyphe du filet) sont celles du client (ns.CAPTURE_CLIENT_ART)
 }
 ns.CAPTURE_ART = ART
 -- découpes des feuilles de sprites (SetTexCoord : gauche, droite, haut, bas)
 local COORDS = {
 	netWhole = { 0, 0.5, 0, 1 }, netTorn = { 0.5, 1, 0, 1 },
-	starFull = { 0, 0.5, 0, 1 }, starEmpty = { 0.5, 1, 0, 1 },
-	ribbonPanel = { 0, 1, 0, 0.5 }, ribbonTrim = { 0, 1, 0.5, 1 },
-	dot = { 0, 0.25, 0, 1 }, star4 = { 0.25, 0.5, 0, 1 }, spark = { 0.5, 0.75, 0, 1 }, ring = { 0.75, 1, 0, 1 },
 }
 ns.CAPTURE_COORDS = COORDS
 
 -- 2.11.0 : les images de la scène viennent du client, par référence (atlas
 -- vérifiés en jeu sur Forever le 9/11/2026). Le filet, ses cordes et le
 -- paquet restent les nôtres (décision du 7/11 et du 9/11 : pas d'équivalent).
--- own : notre fichier de repli (ART), si l'atlas manque au client.
+-- 2.12.1 : plus de fichier de repli à nous ; un atlas absent laisse la
+-- texture vide. files : icônes du client essayées dans l'ordre.
 -- desaturate : l'atlas est grisé pour prendre la teinte posée (rareté, or).
 ns.CAPTURE_CLIENT_ART = {
-	rays   = { atlas = "ArtifactsFX-StarBurst", own = "rays", desaturate = true },
-	halo   = { atlas = "ChallengeMode-SoftYellowGlow", own = "halo", desaturate = true },
-	sparks = { atlas = "Artifacts-Anim-Sparks", own = "sparks", desaturate = true },
+	rays   = { atlas = "ArtifactsFX-StarBurst", desaturate = true },
+	halo   = { atlas = "ChallengeMode-SoftYellowGlow", desaturate = true },
+	sparks = { atlas = "Artifacts-Anim-Sparks", desaturate = true },
 	-- l'anneau de poussière : une lueur douce aplatie
-	dust   = { atlas = "ChallengeMode-SoftYellowGlow", own = "sparks", desaturate = true },
-	stars  = { atlas = "auctionhouse-icon-favorite", own = "stars" },
+	dust   = { atlas = "ChallengeMode-SoftYellowGlow", desaturate = true },
+	stars  = { atlas = "auctionhouse-icon-favorite" },
 	-- pas « Bonus-ToastBanner » : il peint un écusson bleu sur Forever
-	ribbon = { atlas = "BossBanner-BgBanner-Mid", own = "ribbon", desaturate = true },
-	stage  = { atlas = "charactercreate-vignette-sides", own = "stage" },
+	ribbon = { atlas = "BossBanner-BgBanner-Mid", desaturate = true },
+	stage  = { atlas = "charactercreate-vignette-sides" },
 	stageTop    = { atlas = "charactercreate-vignette-top" },
 	stageBottom = { atlas = "charactercreate-vignette-bottom" },
-	-- glyphe du filet : l'icône du jeu, si elle se peint (sinon la nôtre)
-	icon   = { file = "Interface\\Icons\\INV_Misc_Net_01", own = "icon" },
+	-- glyphe du filet : l'icône du jeu ; 2.12.1 : repli sur une autre icône du jeu
+	icon   = { files = { "Interface\\Icons\\INV_Misc_Net_01", "Interface\\Icons\\Spell_Nature_Web" } },
 }
 
 -- Un atlas est-il connu du client ? (C_Texture.GetAtlasInfo ; lu une fois)
@@ -107,32 +100,47 @@ function ns.CaptureAtlasKnown(name)
 	return atlasKnown[name]
 end
 
--- Peint le rôle `role` sur `tex` : l'image du client si elle est là, sinon
--- notre fichier (découpe `coords`). Rend "client" ou "own" ; tex.clientArt
--- dit laquelle (Coord ne touche pas à la découpe d'un atlas).
+-- Peint le rôle `role` sur `tex`. Le filet, ses cordes et le paquet : nos
+-- fichiers (découpe `coords`), rend "own". Le reste : l'image du client,
+-- rend "client" (tex.clientArt : Coord ne touche pas à la découpe d'un
+-- atlas) ; 2.12.1 : sans repli à nous, rend nil si le client ne l'a pas.
 function ns.CaptureArtPaint(tex, role, coords)
 	if not tex then return nil end
 	local spec = ns.CAPTURE_CLIENT_ART[role]
+	if not spec then
+		tex.clientArt = nil
+		local own = ART[role]
+		if not own then return nil end
+		tex:SetTexture(own)
+		if coords and tex.SetTexCoord then tex:SetTexCoord(coords[1], coords[2], coords[3], coords[4]) end
+		return "own"
+	end
 	local done = false
-	if spec and spec.atlas and tex.SetAtlas and ns.CaptureAtlasKnown(spec.atlas) then
+	if spec.atlas and tex.SetAtlas and ns.CaptureAtlasKnown(spec.atlas) then
 		local ok, result = pcall(tex.SetAtlas, tex, spec.atlas)
 		done = ok and result ~= false
-	elseif spec and spec.file then
-		local ok, result = pcall(tex.SetTexture, tex, spec.file)
+	end
+	for _, file in ipairs(spec.files or {}) do
+		if done then break end
+		local ok, result = pcall(tex.SetTexture, tex, file)
 		done = ok and result ~= false and (not tex.GetTexture or tex:GetTexture() ~= nil)
 		if done and tex.SetTexCoord then tex:SetTexCoord(0.08, 0.92, 0.08, 0.92) end
 	end
-	if done then
-		tex.clientArt = true
-		if tex.SetDesaturated then tex:SetDesaturated(spec.desaturate and true or false) end
-		return "client"
+	if not done then
+		tex.clientArt = nil
+		if tex.SetTexture then tex:SetTexture(nil) end
+		return nil
 	end
-	tex.clientArt = nil
-	local own = ART[(spec and spec.own) or role]
-	if not own then return nil end
-	tex:SetTexture(own)
-	if coords and tex.SetTexCoord then tex:SetTexCoord(coords[1], coords[2], coords[3], coords[4]) end
-	return "own"
+	tex.clientArt = true
+	if tex.SetDesaturated then tex:SetDesaturated(spec.desaturate and true or false) end
+	return "client"
+end
+-- 2.12.1 : le glyphe du filet des bandeaux et du bouton (icône du jeu, en
+-- couleurs) ; le petit logo de l'addon si aucune icône ne se peint
+function ns.CapturePaintNetGlyph(tex)
+	if not tex then return end
+	if not ns.CaptureArtPaint(tex, "icon") then tex:SetTexture(Theme.LOGO_SMALL) end
+	if tex.SetVertexColor then tex:SetVertexColor(1, 1, 1, 1) end
 end
 -- 2.11.2 : teintes des scènes de capture, partagées avec « Tout capturer »
 -- (CaptureBatch.lua, chargé après) ; noms et fond de case de la scène groupée
@@ -231,7 +239,7 @@ local function EaseBack(x)
 	return 1 + (k + 1) * (x - 1) ^ 3 + k * (x - 1) ^ 2
 end
 -- une image du client (atlas) garde sa découpe : seules les nôtres en ont une
-local function Coord(tex, c) if not tex.clientArt then tex:SetTexCoord(c[1], c[2], c[3], c[4]) end end
+local function Coord(tex, c) if c and not tex.clientArt then tex:SetTexCoord(c[1], c[2], c[3], c[4]) end end
 local function Tint(tex, c, alpha) tex:SetVertexColor(c[1], c[2], c[3], alpha or 1) end
 local function Rotate(tex, radians) if tex.SetRotation then pcall(tex.SetRotation, tex, radians) end end
 -- opacité et visibilité d'un coup : à 0, la région est cachée
@@ -240,9 +248,8 @@ local function Fade(region, alpha)
 	region:SetAlpha(math.min(1, alpha))
 	region:Show()
 end
--- une texture d'art de la scène : rôle (ns.CAPTURE_ART), calque, découpe
--- de notre fichier, taille, fusion. 2.11.0 : l'image du client d'abord
--- (ns.CaptureArtPaint), notre fichier en repli
+-- une texture d'art de la scène : rôle (ns.CaptureArtPaint), calque, découpe
+-- de notre fichier (filet seulement), taille, fusion
 local function Art(parent, layer, sub, role, coords, w, h, blend)
 	local tex = parent:CreateTexture(nil, layer, nil, sub)
 	ns.CaptureArtPaint(tex, role, coords)
@@ -421,17 +428,17 @@ function ns:EnsureCaptureStage()
 	frame.fx = CreateFrame("Frame", nil, frame)
 	frame.fx:SetAllPoints(frame.scene)
 	frame.fx:SetFrameLevel(level + 10)
-	frame.dust = Art(frame.fx, "ARTWORK", 0, "dust", COORDS.ring, 60, 20, "ADD")
+	frame.dust = Art(frame.fx, "ARTWORK", 0, "dust", nil, 60, 20, "ADD")
 	frame.dusts = {}
 	for index = 1, DUST do
-		local p = Art(frame.fx, "ARTWORK", 1, "sparks", COORDS.dot, 10, 10, "ADD")
+		local p = Art(frame.fx, "ARTWORK", 1, "sparks", nil, 10, 10, "ADD")
 		p.angle = (index / DUST) * math.pi * 2 + 0.4
 		p.reach = 60 + (index % 3) * 8
 		frame.dusts[index] = p
 	end
 	frame.puffs = {}
 	for index = 1, PUFFS do
-		frame.puffs[index] = Art(frame.fx, "ARTWORK", 1, "dust", COORDS.ring, 24, 24, "ADD")
+		frame.puffs[index] = Art(frame.fx, "ARTWORK", 1, "dust", nil, 24, 24, "ADD")
 	end
 	frame.netFrame = CreateFrame("Frame", nil, frame.fx)
 	frame.netFrame:SetSize(NET, NET)
@@ -447,7 +454,7 @@ function ns:EnsureCaptureStage()
 	frame.bundle = Art(frame.fxTop, "ARTWORK", 3, "bundle", nil, 52)
 	frame.trail = {}
 	for index = 1, TRAIL do
-		local p = Art(frame.fxTop, "ARTWORK", 2, "sparks", COORDS.dot, 22 - 2 * index, 22 - 2 * index, "ADD")
+		local p = Art(frame.fxTop, "ARTWORK", 2, "sparks", nil, 22 - 2 * index, 22 - 2 * index, "ADD")
 		p.lag = 0.06 * index
 		p.fade = 0.55 * (1 - index / TRAIL)
 		frame.trail[index] = p
@@ -474,7 +481,7 @@ function ns:EnsureCaptureStage()
 	frame.motes = {}
 	for index = 1, MOTES do
 		local size = 8 + (index % 3) * 3
-		local p = Art(frame.fxTop, "ARTWORK", 1, "sparks", COORDS.dot, size, size, "ADD")
+		local p = Art(frame.fxTop, "ARTWORK", 1, "sparks", nil, size, size, "ADD")
 		p.x = ((index * 53) % 21 - 10) * 10
 		p.phase = index * 0.7
 		p.speed = 14 + (index % 4) * 5
@@ -501,10 +508,10 @@ function ns:EnsureCaptureStage()
 		frame.banner:SetSize(RIBBON_W, RIBBON_H)
 		frame.banner:SetPoint("CENTER", frame.scene, "BOTTOM", 0, -34)
 		frame.banner:SetFrameLevel(level + 13)
-		frame.ribbonPanel = Art(frame.banner, "ARTWORK", 0, "ribbon", COORDS.ribbonPanel)
+		frame.ribbonPanel = Art(frame.banner, "ARTWORK", 0, "ribbon", nil)
 		frame.ribbonPanel:SetAllPoints(frame.banner)
 		frame.ribbonPanel:Show()
-		frame.ribbonTrim = Art(frame.banner, "ARTWORK", 1, "ribbon", COORDS.ribbonTrim)
+		frame.ribbonTrim = Art(frame.banner, "ARTWORK", 1, "ribbon", nil)
 		frame.ribbonTrim:SetAllPoints(frame.banner)
 		-- 2.11.0 : la bannière du client a son propre bord : pas de liseré à nous
 		if frame.ribbonPanel.clientArt then frame.ribbonTrim:Hide() else frame.ribbonTrim:Show() end
@@ -534,7 +541,7 @@ function ns:EnsureCaptureStage()
 	local starHost = az and frame.banner or frame
 	frame.starSlots = {}
 	for index = 1, 3 do
-		local star = Art(starHost, "OVERLAY", 1, "stars", COORDS.starEmpty, 18)
+		local star = Art(starHost, "OVERLAY", 1, "stars", nil, 18)
 		if az then
 			star:SetPoint("TOP", frame.banner, "TOP", (index - 2) * 20, frame.banner.lineY)
 		else
@@ -542,7 +549,7 @@ function ns:EnsureCaptureStage()
 		end
 		frame.starSlots[index] = star
 	end
-	frame.starSpark = Art(starHost, "OVERLAY", 2, "sparks", COORDS.spark, 22, 22, "ADD")
+	frame.starSpark = Art(starHost, "OVERLAY", 2, "sparks", nil, 22, 22, "ADD")
 	-- les losanges des secousses : en bas (Sobre), sous la scène, en or (Azeroth)
 	frame.shakeDots = {}
 	for index = 1, 3 do
@@ -971,7 +978,6 @@ local function StageOk(frame, r, rolling, c)
 			local size = 18 * (1 + 0.6 * (1 - EaseOut(q)))
 			star:SetSize(size, size)
 			local full = index <= stars
-			Coord(star, full and COORDS.starFull or COORDS.starEmpty)
 			-- 2.11.0 : l'étoile du client, grisée quand elle est vide
 			if star.clientArt and star.SetDesaturated then star:SetDesaturated(not full) end
 			Tint(star, full and Theme.GOLD_LIGHT or STAR_GREY, 1)

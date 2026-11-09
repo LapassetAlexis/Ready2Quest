@@ -383,10 +383,10 @@ local function Fade(region, alpha)
 end
 local function HideAll(list) for _, region in ipairs(list) do region:Hide() end end
 local function Step() return ns.CAPTURE_SHAKE_STEP or 0.55 end
--- 2.11.0 : `role` de ns.CAPTURE_CLIENT_ART (image du client, notre fichier en repli)
+-- 2.11.0 : `role` de ns.CaptureArtPaint (2.12.1 : image du client, vide si absente)
 local function Texture(parent, layer, sub, role, coords, w, h, blend)
 	local tex = parent:CreateTexture(nil, layer, nil, sub)
-	if not (ns.CaptureArtPaint and ns.CaptureArtPaint(tex, role, coords)) then tex:SetTexture("Interface\\Buttons\\WHITE8X8") end
+	if ns.CaptureArtPaint then ns.CaptureArtPaint(tex, role, coords) end
 	tex:SetSize(w, h or w)
 	if blend and tex.SetBlendMode then pcall(tex.SetBlendMode, tex, blend) end
 	tex:Hide()
@@ -446,13 +446,12 @@ local function CreateTileAzeroth(parent)
 	end
 	tile.burst = {}
 	for index = 1, BURST do
-		local kind = (index % 2 == 0) and coords.spark or coords.star4
-		local p = Texture(tile.fx, "ARTWORK", 3, "sparks", kind, 11, 11, "ADD")
+		local p = Texture(tile.fx, "ARTWORK", 3, "sparks", nil, 11, 11, "ADD")
 		p.angle = (index / BURST) * math.pi * 2 + 0.3
 		p.reach = 40 + (index % 3) * 6
 		tile.burst[index] = p
 	end
-	tile.dust = Texture(tile.fx, "ARTWORK", 2, "dust", coords.ring, 44, 13, "ADD")
+	tile.dust = Texture(tile.fx, "ARTWORK", 2, "dust", nil, 44, 13, "ADD")
 	tile.flash = Texture(tile.fx, "ARTWORK", 4, "halo", nil, 120, 120, "ADD")
 	tile.flash:SetPoint("CENTER", tile.scene, "CENTER", 0, 0)
 	tile.shield = tile.fx:CreateTexture(nil, "OVERLAY")
@@ -524,13 +523,12 @@ local function CreateTile(parent, az)
 	end
 	tile.burst = {}
 	for index = 1, BURST do
-		local kind = (index % 2 == 0) and coords.spark or coords.star4
-		local p = Texture(tile.fx, "ARTWORK", 3, "sparks", kind, 10, 10, "ADD")
+		local p = Texture(tile.fx, "ARTWORK", 3, "sparks", nil, 10, 10, "ADD")
 		p.angle = (index / BURST) * math.pi * 2 + 0.3
 		p.reach = 34 + (index % 3) * 6
 		tile.burst[index] = p
 	end
-	tile.dust = Texture(tile.fx, "ARTWORK", 2, "dust", coords.ring, 40, 12, "ADD")
+	tile.dust = Texture(tile.fx, "ARTWORK", 2, "dust", nil, 40, 12, "ADD")
 	tile.flash = Texture(tile.fx, "ARTWORK", 4, "halo", nil, 110, 110, "ADD")
 	tile.flash:SetPoint("CENTER", tile.scene, "CENTER", 0, 0)
 	tile.tag = Theme.Text(tile.fx, Theme.F_CAPS or Theme.F_SMALL, Theme.GOLD)

@@ -10,17 +10,17 @@
 --   * une marque colorée sur la barre de nom de chaque PNJ hostile visible :
 --     rouge = dans sa portée, ambre = à moins de 5 m de plus, vert =
 --     tranquille. En « Danger seul », sans touche, seul le rouge s'affiche (un
---     avertissement, pas un tableau) ; Maj tenue montre tout. Trois styles (réglage « Marque ») : pastille (un losange à
+--     avertissement, pas un tableau) ; Maj tenue montre tout. Deux styles (réglage « Marque ») : pastille (un losange à
 --     gauche de la barre, qui bat quand c'est rouge ; par défaut depuis la
---     1.29.1), trait (une ligne fine sous la barre) ou anneau (le grand halo
---     d'avant). La marque est accrochée au cadre de base de la barre de nom
+--     1.29.1) ou trait (une ligne fine sous la barre). 1.33.1 : l'anneau (le
+--     grand halo d'avant) est retiré, ses réglages passent à la pastille. La marque est accrochée au cadre de base de la barre de nom
 --     (C_NamePlate), pas à son habillage : elle suit aussi les barres d'un
 --     addon (EllesmereUI, Plater…).
 --
 -- Portée (règles classiques, estimation) : 20 m à niveau égal, 1 m de moins
 -- par niveau du joueur au-dessus du monstre, 1 m de plus par niveau en
 -- dessous, bornée à [5, 45]. Un neutre (réaction ≥ 4), une bestiole ou un
--- joueur n'a pas d'anneau.
+-- joueur n'a pas de marque.
 --
 -- Distance : aucune position pour une unité hostile. Hors combat, on teste
 -- la portée d'objets dont on connaît la portée (C_Item.IsItemInRange, même
@@ -29,7 +29,7 @@
 -- (9/11) : seuls 5, 20, 28 (interaction), 30 et 35 m répondent ; les objets
 -- de 10, 15, 25 et 45 m rendent nil (pas en cache : on les précharge à la
 -- connexion, au cas où). Tout est sous pcall : le client
--- peut refuser. Sans réponse, l'infobulle ne donne que la portée, sans anneau.
+-- peut refuser. Sans réponse, l'infobulle ne donne que la portée, sans marque.
 local ADDON, ns = ...
 local L = ns.L
 local Theme = ns.Theme
@@ -46,25 +46,9 @@ local AGGRO_MARGIN = 12     -- ambre : jusqu'à 12 m au-delà de la portée
 ns.AGGRO_WARN, ns.AGGRO_MARGIN = AGGRO_WARN, AGGRO_MARGIN
 local SKULL_GAP    = 10     -- niveau « ?? » : au moins dix niveaux de plus
 ns.AGGRO_TICK = 0.2
-ns.AGGRO_RING_SIZE = 96
 ns.AGGRO_DOT_SIZE = 16          -- pastille (losange)
 ns.AGGRO_DOT_INSET = 14         -- bord droit de la pastille, depuis le bord gauche de la barre : tout près du nom
 ns.AGGRO_BAR_W, ns.AGGRO_BAR_H, ns.AGGRO_BAR_Y = 70, 3, 10   -- trait sous la barre
--- anneau livré avec l'addon (Textures/aggro_ring.tga) : présent à coup sûr
-ns.AGGRO_RING_TEXTURE = ns.Theme.MEDIA .. "Textures\\aggro_ring"
-ns.AGGRO_RING_FALLBACK = "Interface\\CharacterFrame\\TempPortraitAlphaMask"
--- 1.32.0 (fiche 12) : l'anneau du client d'abord, par référence (atlas
--- vérifié en jeu sur Forever le 9/11/2026), grisé pour prendre la teinte
--- (vert, ambre, rouge) ; notre fichier reste le repli s'il manque
-ns.AGGRO_RING_ATLAS = "BonusChest-CircleGlow"
-local function AtlasKnown(name)
-	local api = rawget(_G, "C_Texture")
-	if type(api) ~= "table" or type(api.GetAtlasInfo) ~= "function" then return false end
-	local ok, info = pcall(api.GetAtlasInfo, name)
-	if ok and ns.Plain then info = ns.Plain(info) end
-	return ok and info ~= nil and info ~= false
-end
-ns.AggroAtlasKnown = AtlasKnown
 
 -- ---------------------------------------------------------------------------
 -- Chaînes, réglages, page d'options, module
@@ -77,7 +61,6 @@ local FR = {
 	OPT_AGGRO_STYLE      = "Marque",
 	AGGRO_STYLE_dot      = "Pastille (discrète)",
 	AGGRO_STYLE_bar      = "Trait sous la barre",
-	AGGRO_STYLE_ring     = "Anneau (grand halo)",
 	AGGRO_KEY_alert      = "Danger seul (tout avec Maj)",
 	AGGRO_KEY_shift      = "Maj",
 	AGGRO_KEY_ctrl       = "Ctrl",
@@ -95,7 +78,7 @@ local FR = {
 	AGGRO_NEUTRAL        = "Aggro : neutre, n'attaque pas",
 	AGGRO_ESTIMATE       = "Estimation : %s %s à niveau égal, ±1 par niveau d'écart.",
 	MSG_DIAG_AGGRO_OFF   = "  aggro : module désactivé",
-	MSG_DIAG_AGGRO       = "  aggro : touche %s, %s, %d barre(s) de nom, %d anneau(x) ; portée mesurée : %s",
+	MSG_DIAG_AGGRO       = "  aggro : touche %s, %s, %d barre(s) de nom, %d marque(s) ; portée mesurée : %s",
 	MSG_DIAG_AGGRO_ON    = "actif",
 	MSG_DIAG_AGGRO_IDLE  = "en veille",
 	MSG_DIAG_AGGRO_ALERT = "danger seul",
@@ -114,7 +97,6 @@ local EN = {
 	OPT_AGGRO_STYLE      = "Mark",
 	AGGRO_STYLE_dot      = "Dot (subtle)",
 	AGGRO_STYLE_bar      = "Line under the bar",
-	AGGRO_STYLE_ring     = "Ring (big glow)",
 	AGGRO_KEY_alert      = "Danger only (all with Shift)",
 	AGGRO_KEY_shift      = "Shift",
 	AGGRO_KEY_ctrl       = "Ctrl",
@@ -132,7 +114,7 @@ local EN = {
 	AGGRO_NEUTRAL        = "Aggro: neutral, won't attack",
 	AGGRO_ESTIMATE       = "Estimate: %s %s at equal level, ±1 per level of difference.",
 	MSG_DIAG_AGGRO_OFF   = "  aggro: module disabled",
-	MSG_DIAG_AGGRO       = "  aggro: key %s, %s, %d nameplate(s), %d ring(s); range measured: %s",
+	MSG_DIAG_AGGRO       = "  aggro: key %s, %s, %d nameplate(s), %d mark(s); range measured: %s",
 	MSG_DIAG_AGGRO_ON    = "active",
 	MSG_DIAG_AGGRO_IDLE  = "idle",
 	MSG_DIAG_AGGRO_ALERT = "danger only",
@@ -152,9 +134,9 @@ ns.RegisterDefaults({
 	aggroKey     = "alert",   -- alert (1.31.0, danger seul), shift, ctrl, alt ou always
 	aggroTooltip = true,
 	aggroRings   = true,
-	aggroStyle   = "dot",     -- dot, bar ou ring
+	aggroStyle   = "dot",     -- dot ou bar (1.33.1 : ring migré vers dot)
 })
-ns.AGGRO_STYLES = { "dot", "bar", "ring" }
+ns.AGGRO_STYLES = { "dot", "bar" }
 
 ns.AGGRO_KEYS = { "alert", "shift", "ctrl", "alt", "always" }
 -- 1.31.0 : « danger seul » : le rouge sans touche, Maj montre tout
@@ -221,8 +203,14 @@ function ns:AggroSetKey(value)
 	self:AggroRefresh()
 end
 
+-- 1.33.1 : migration une seule fois : l'anneau retiré devient la pastille
 function ns:AggroStyle()
-	local style = self:DB().aggroStyle
+	local db = self:DB()
+	if db.aggroStyleSchema ~= 2 then
+		if db.aggroStyle == "ring" then db.aggroStyle = "dot" end
+		db.aggroStyleSchema = 2
+	end
+	local style = db.aggroStyle
 	for _, key in ipairs(self.AGGRO_STYLES) do if key == style then return style end end
 	return "dot"
 end
@@ -541,10 +529,10 @@ function ns:AggroRefreshTooltip()
 end
 
 -- ---------------------------------------------------------------------------
--- Anneaux sur les barres de nom
+-- Marques sur les barres de nom
 -- ---------------------------------------------------------------------------
 ns.aggroPlates = ns.aggroPlates or {}   -- unité -> cadre de base de la barre
-ns.aggroRings = ns.aggroRings or {}     -- cadre de base -> anneau
+ns.aggroRings = ns.aggroRings or {}     -- cadre de base -> marque (nom historique)
 
 local function PlateForUnit(unit)
 	local api = rawget(_G, "C_NamePlate")
@@ -564,36 +552,22 @@ local function RingFor(plate)
 	if ring then return ring end
 	local ok, frame = pcall(CreateFrame, "Frame", nil, plate)
 	if not ok or not frame then return nil end
-	local size = ns.AGGRO_RING_SIZE
-	frame:SetSize(size, size)
+	-- pastille et trait se tiennent à la barre : le cadre n'est qu'un porteur,
+	-- au-dessus de la barre (1.33.1 : plus d'anneau dessous)
+	frame:SetSize(1, 1)
 	frame:SetPoint("CENTER", plate, "CENTER", 0, 0)
 	if frame.SetFrameLevel and plate.GetFrameLevel then
 		frame.plateLevel = tonumber(plate:GetFrameLevel()) or 1
-		pcall(frame.SetFrameLevel, frame, math.max(0, frame.plateLevel - 1))
+		pcall(frame.SetFrameLevel, frame, frame.plateLevel + 5)
 	end
-	local texture = frame:CreateTexture(nil, "BACKGROUND")
-	texture:SetAllPoints(frame)
-	-- 1.32.0 : l'anneau du client ; sinon celui livré avec l'addon ; si le
-	-- client le refuse aussi, un disque translucide
-	local okAtlas, atlas = false, nil
-	if texture.SetAtlas and AtlasKnown(ns.AGGRO_RING_ATLAS) then okAtlas, atlas = pcall(texture.SetAtlas, texture, ns.AGGRO_RING_ATLAS) end
-	if okAtlas and atlas ~= false then
-		frame.clientRing = true
-		if texture.SetDesaturated then texture:SetDesaturated(true) end
-	else
-		local okSet, set = pcall(texture.SetTexture, texture, ns.AGGRO_RING_TEXTURE)
-		if not okSet or set == false then texture:SetTexture(ns.AGGRO_RING_FALLBACK); frame.fallback = true end
-	end
-	if texture.SetBlendMode then pcall(texture.SetBlendMode, texture, "ADD") end
-	frame.ringTexture = texture
 	-- pastille : un losange à gauche de la barre, avec un liseré sombre
 	frame.dotBack = frame:CreateTexture(nil, "ARTWORK")
-	frame.dotBack:SetTexture(Theme.DIAMOND)
+	Theme.SetDiamond(frame.dotBack)
 	frame.dotBack:SetSize(ns.AGGRO_DOT_SIZE + 4, ns.AGGRO_DOT_SIZE + 4)
 	frame.dotBack:SetPoint("RIGHT", plate, "LEFT", ns.AGGRO_DOT_INSET, 0)
 	Theme.Shade(frame.dotBack, Theme.SHADE.strong)
 	frame.dot = frame:CreateTexture(nil, "OVERLAY")
-	frame.dot:SetTexture(Theme.DIAMOND)
+	Theme.SetDiamond(frame.dot)
 	frame.dot:SetSize(ns.AGGRO_DOT_SIZE, ns.AGGRO_DOT_SIZE)
 	frame.dot:SetPoint("CENTER", frame.dotBack, "CENTER", 0, 0)
 	-- trait : une ligne fine sous la barre
@@ -601,7 +575,7 @@ local function RingFor(plate)
 	frame.bar:SetTexture(Theme.SOLID or "Interface\\Buttons\\WHITE8X8")
 	frame.bar:SetSize(ns.AGGRO_BAR_W, ns.AGGRO_BAR_H)
 	frame.bar:SetPoint("TOP", plate, "BOTTOM", 0, ns.AGGRO_BAR_Y)
-	frame.texture = texture
+	frame.texture = frame.dot
 	frame:Hide()
 	ns.aggroRings[plate] = frame
 	return frame
@@ -614,7 +588,7 @@ function ns:AggroHideRing(unit)
 end
 
 -- 1.32.0 (fiche 26) : les deux add-ons installés, une seule alerte rouge à
--- la fois. QuestCompanion lit ceci (_G.Ready2Quest) : tant qu'un anneau
+-- la fois. QuestCompanion lit ceci (_G.Ready2Quest) : tant qu'une marque
 -- rouge est posé ici, son cadre ne clignote pas en plus. Sans Ready2Quest,
 -- ou module coupé, QuestCompanion garde son alerte.
 function ns:AggroDangerShown()
@@ -629,7 +603,7 @@ function ns:AggroHideAll()
 	for _, ring in pairs(self.aggroRings) do ring:Hide(); ring.verdict = nil end
 end
 
--- Pose (ou retire) l'anneau d'une unité ; rend le verdict affiché ou nil
+-- Pose (ou retire) la marque d'une unité ; rend le verdict affiché ou nil
 function ns:AggroUpdatePlate(unit)
 	local plate = self.aggroPlates[unit] or PlateForUnit(unit)
 	if not plate then return nil end
@@ -652,22 +626,12 @@ function ns:AggroUpdatePlate(unit)
 	local style = self:AggroStyle()
 	if ring.style ~= style then
 		ring.style = style
-		-- l'anneau occupe tout le cadre ; pastille et trait se tiennent à la barre
-		local isRing = style == "ring"
-		ring:SetSize(isRing and ns.AGGRO_RING_SIZE or 1, isRing and ns.AGGRO_RING_SIZE or 1)
-		if isRing then ring.ringTexture:Show() else ring.ringTexture:Hide() end
 		if style == "dot" then ring.dot:Show(); ring.dotBack:Show() else ring.dot:Hide(); ring.dotBack:Hide() end
 		if style == "bar" then ring.bar:Show() else ring.bar:Hide() end
-		-- l'anneau passe sous la barre ; pastille et trait au-dessus d'elle
-		if ring.SetFrameLevel and ring.plateLevel then
-			pcall(ring.SetFrameLevel, ring, math.max(0, ring.plateLevel + (isRing and -1 or 5)))
-		end
 	end
-	ring.texture = (style == "dot" and ring.dot) or (style == "bar" and ring.bar) or ring.ringTexture
+	ring.texture = (style == "bar" and ring.bar) or ring.dot
 	ring.texture:SetVertexColor(color[1], color[2], color[3])
-	if style == "ring" then
-		ring:SetAlpha(verdict == "green" and 0.45 or (ring.fallback and 0.35 or 0.9))
-	elseif verdict == "red" then
+	if verdict == "red" then
 		-- rouge : la marque bat (un battement par seconde, au rythme du tick)
 		local now = (ns.Now and ns.Now()) or 0
 		ring:SetAlpha(0.6 + 0.4 * math.abs(math.sin(now * math.pi)))

@@ -1536,7 +1536,7 @@ Check("score affiché", NS.window and NS.window.scoreValue.text:find(tostring(NS
 Check("barre de score remplie", NS.window and NS.window.scoreBar.fill.width > 0,
 	NS.window and NS.window.scoreBar.fill.width)
 Check("détail du premier module", NS.window.rows[1].detail.text ~= "", NS.window.rows[1].detail.text)
-Check("losange de statut posé", NS.window.rows[1].status and tostring(NS.window.rows[1].status.texture):find("losange") ~= nil,
+Check("losange de statut posé", NS.window.rows[1].status and NS.window.rows[1].status.clientRole ~= nil,
 	NS.window.rows[1].status and NS.window.rows[1].status.texture)
 Check("verdict affiché à côté de la note", NS.window.verdict and NS.window.verdict.text ~= "",
 	NS.window.verdict and NS.window.verdict.text)
@@ -3019,9 +3019,9 @@ Check("valeur sans glyphe de flèche", shown ~= nil and shown:match("^[%+%-]?[%d
 Check("valeur en ASCII pur",
 	shown ~= nil and shown:byte(#shown) < 128, shown and shown:byte(#shown))
 Check("flèche : texture créée", panel.rows[1].arrow ~= nil)
-Check("flèche : texture de hausse",
-	panel.rows[1].arrow.texture ~= nil
-		and panel.rows[1].arrow.texture:find("fleche_hausse") ~= nil,
+-- 1.33.1 : plus de fichier à nous ; sans atlas (banc), pas de flèche
+Check("flèche : sans atlas, aucune image à nous",
+	panel.rows[1].arrow.texture == nil and not panel.rows[1].arrow.clientArrow,
 	panel.rows[1].arrow.texture)
 Check("flèche : teintée comme la valeur",
 	panel.rows[1].arrow.vertex ~= nil
@@ -3740,13 +3740,13 @@ Check("[UX5] fenêtre plus courte que 13 lignes", NS.window.height < NS:WindowHe
 -- v1.20.0 : la forme porte le statut (losange plein = à voir, au trait = OK)
 local firstStatus = NS.window.rows[1].status
 Check("[UX10] échec : losange plein", firstStatus.state == "bad" or firstStatus.state == "warn", firstStatus.state)
-Check("[UX10] échec : texture pleine, pas au trait", tostring(firstStatus.texture):find("losange_trait") == nil,
+Check("[UX10] échec : texture pleine, pas au trait", firstStatus.clientRole == "diamond",
 	firstStatus.texture)
 local okStatus
 for i = 1, NS.window.visibleRows do
 	if NS.window.rows[i].status.state == "ok" then okStatus = NS.window.rows[i].status end
 end
-Check("[UX10] OK : losange au trait", okStatus and tostring(okStatus.texture):find("losange_trait") ~= nil)
+Check("[UX10] OK : losange au trait", okStatus and okStatus.clientRole == "diamondLine")
 NS:SetModuleEnabled("quests", true)
 
 -- [6] repos : information, sans poids ni conseil
@@ -3808,7 +3808,7 @@ Check("[ID] animation : la note monte", mid ~= nil and mid > 0 and mid < target,
 Mock:Advance(1)
 Check("[ID] animation : termine sur la valeur exacte", tonumber(w.scoreValue.text) == target and w.animStart == nil,
 	w.scoreValue.text)
-Check("[ID] puces de conseil : losanges ambre", w.adviceBullets[1] and tostring(w.adviceBullets[1].texture):find("losange") ~= nil)
+Check("[ID] puces de conseil : losanges ambre", w.adviceBullets[1] and w.adviceBullets[1].clientRole == "diamond")
 Check("[ID] préfixe du chat ambre, « 2 » bleu", NS.L.TAG:find("|cffe8a54b", 1, true) ~= nil and NS.L.TAG:find("|cff5b8fd62", 1, true) ~= nil, NS.L.TAG)
 
 NS.optionsFrame = nil

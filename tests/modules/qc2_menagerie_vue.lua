@@ -124,7 +124,7 @@ do
 	Check("[MV] capturée : liseré vert, pas les autres", caught and caught.caught:IsShown() and not seen.caught:IsShown()
 		and not locked.caught:IsShown())
 	Check("[MV] brillante reconnue sans capture : losange au trait", seen.star:IsShown()
-		and seen.star.texture == NS.Theme.DIAMOND_LINE)
+		and seen.star.clientRole == "diamondLine")
 	locked.hooks.OnEnter(locked)
 	local p = pane.preview
 	local text = Lines(p)

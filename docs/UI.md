@@ -14,8 +14,8 @@ même empreinte (`SOCLE_ID`, écrite par `sync_socle.py`), le second réutilise
 les fabriques compilées du premier (`ns.SocleFile`) avec son propre `ns` :
 `Theme`, chaînes, polices et cadres restent propres à chaque addon ; seules
 les données en lecture seule (lieux, donjons) sont partagées (`ns.SocleData`).
-`ns.Shared` coordonne les deux addons (ex. le sujet « aggro » : quand l'anneau
-d'aggro de Ready2Quest est actif, l'alerte du compagnon se tait). `/r2q diag`
+`ns.Shared` coordonne les deux addons (ex. le sujet « aggro » : quand la marque
+d'aggro de Ready2Quest est active, l'alerte du compagnon se tait). `/r2q diag`
 et `/qc diag` disent « Socle : partagé » ou « propre ».
 
 Inspiration : les addons « premium » récents (fenêtre large, navigation à
@@ -136,8 +136,9 @@ socle ; les tests s'en servent pour mesurer chaque couple texte / fond.
   - liste déroulante : case FIELD bordée EDGE, texte + chevron ; une seule liste
     ouverte à la fois (en ouvrir une referme l'autre, `Theme.openDropdown`) ;
   - case à cocher : celle du client (atlas `checkbox-minimal`, coche
-    `checkmark-minimal`, partiel `common-checkbox-partial`, 18 px) si le
-    client les connaît, sinon l'interrupteur dessiné ;
+    `checkmark-minimal`, repli sur le fichier du client
+    `Interface\Buttons\UI-CheckBox-Check`, partiel `common-checkbox-partial`,
+    18 px) si le client les connaît, sinon l'interrupteur dessiné ;
   - nuancier : carré 15 bordé ;
   - roue crantée (`Theme.CreateGearButton`) : la roue grise du journal de
     quêtes du client (atlas `questlog-icon-setting`, puis `gm-icon-settings`,
@@ -342,9 +343,13 @@ du type de créature.
 
 **Images de la capture** : rayons, halo, étincelles, étoiles, bannière,
 vignette et icône du filet viennent du client (`ns.CAPTURE_CLIENT_ART`,
-atlas vérifiés en jeu), avec nos fichiers en repli ; le filet, ses cordes et
-le paquet restent les nôtres (pas d'équivalent dans le client). Une seule
-alerte rouge à l'écran : avec Ready2Quest, son anneau d'aggro ; le compagnon
+atlas vérifiés en jeu), sans repli à nous depuis la 2.12.1 (atlas absent :
+texture vide ; icône du filet : `INV_Misc_Net_01`, puis `Spell_Nature_Web`) ;
+le filet, ses cordes et le paquet restent les nôtres (pas d'équivalent dans le
+client). Étoiles du chat : balises `|A:auctionhouse-icon-favorite:…|a` (pleine)
+et `|A:auctionhouse-icon-favorite-off:…|a` (vide). Images embarquées : le filet
+(`filet`, `corde`, `paquet`) et les logos seulement, un test le garde. Une seule
+alerte rouge à l'écran : avec Ready2Quest, sa marque d'aggro ; le compagnon
 ne clignote pas en même temps.
 
 Aperçus : `qc-journal-creature|menagerie|day|day-azeroth|progress|guide`,

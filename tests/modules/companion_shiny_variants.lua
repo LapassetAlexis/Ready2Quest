@@ -222,7 +222,7 @@ do
 	local pane, row = f.men, nil
 	for _, cell in ipairs(pane.items) do if cell.entry and cell.entry.npc == 3400 then row = cell end end
 	Check("[SHV] ligne : liseré vert (normale) et losange doré plein (brillante capturée)", row and row.caught:IsShown()
-		and row.star:IsShown() and row.star.texture == NS.Theme.DIAMOND)
+		and row.star:IsShown() and row.star.clientRole == "diamond")
 	Check("[SHV] puce « Brillantes »", pane.states.shiny ~= nil and pane.states.shiny.text and pane.states.shiny.text.text == "Brillantes"
 		or pane.states.shiny ~= nil)
 	row.scripts.OnEnter(row)

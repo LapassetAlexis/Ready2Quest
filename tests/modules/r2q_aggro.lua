@@ -384,10 +384,10 @@ do
 	Check("[AGGRO] anneau accroché au cadre de base de la barre", A.Ring("nameplate1"):GetParent() == A.W.plates.nameplate1
 		and A.Ring("nameplate1").lastPoint and A.Ring("nameplate1").lastPoint.relTo == A.W.plates.nameplate1)
 
-	-- style par défaut : la pastille (losange à gauche), pas le grand anneau
+	-- style par défaut : la pastille (losange du client à gauche) ; 1.33.1 : plus d'anneau
 	local r1 = A.Ring("nameplate1")
-	Check("[AGGRO] marque par défaut : pastille, anneau caché", NS:AggroStyle() == "dot" and r1.dot:IsShown()
-		and not r1.ringTexture:IsShown() and not r1.bar:IsShown() and r1.texture == r1.dot)
+	Check("[AGGRO] marque par défaut : pastille (losange du client)", NS:AggroStyle() == "dot" and r1.dot:IsShown()
+		and r1.ringTexture == nil and not r1.bar:IsShown() and r1.texture == r1.dot and r1.dot.clientRole == "diamond")
 	Check("[AGGRO] pastille : 16 px, rentrée vers le nom", NS.AGGRO_DOT_SIZE == 16 and r1.dot.width == 16
 		and r1.dotBack.lastPoint.x == NS.AGGRO_DOT_INSET and NS.AGGRO_DOT_INSET > 2)
 	Check("[AGGRO] pastille : à gauche de la barre, au-dessus d'elle", r1.dotBack.lastPoint and r1.dotBack.lastPoint.relTo == A.W.plates.nameplate1
@@ -396,11 +396,21 @@ do
 	Check("[AGGRO] style trait : une ligne sous la barre, à la couleur", r1.bar:IsShown() and not r1.dot:IsShown()
 		and r1.texture == r1.bar and r1.bar.vertex[1] == NS.Theme.RED[1])
 	NS:AggroSetStyle("ring")
-	Check("[AGGRO] style anneau : l'ancien halo", r1.ringTexture:IsShown() and not r1.bar:IsShown()
-		and r1.width == NS.AGGRO_RING_SIZE)
+	Check("[AGGRO] style anneau retiré (1.33.1) : refusé", NS:AggroStyle() == "bar" and r1.bar:IsShown())
 	NS:AggroSetStyle("nimportequoi")
-	Check("[AGGRO] style inconnu : refusé", NS:AggroStyle() == "ring")
-	Check("[AGGRO] trois styles proposés", #NS:AggroStyleChoices() == 3)
+	Check("[AGGRO] style inconnu : refusé", NS:AggroStyle() == "bar")
+	local choices = NS:AggroStyleChoices()
+	Check("[AGGRO] deux styles proposés : pastille, trait", #choices == 2 and choices[1].value == "dot" and choices[2].value == "bar")
+	Check("[AGGRO] plus de texte « anneau » (FR/EN)", NS.AGGRO_STRINGS.fr.AGGRO_STYLE_ring == nil
+		and NS.AGGRO_STRINGS.en.AGGRO_STYLE_ring == nil)
+	-- 1.33.1 : migration une seule fois, l'anneau sauvegardé devient la pastille
+	local db = NS:DB()
+	db.aggroStyle, db.aggroStyleSchema = "ring", nil
+	Check("[AGGRO] migration : anneau -> pastille", NS:AggroStyle() == "dot" and db.aggroStyle == "dot" and db.aggroStyleSchema == 2)
+	db.aggroStyle = "bar"
+	Check("[AGGRO] migration faite : le trait choisi ensuite reste", NS:AggroStyle() == "bar" and db.aggroStyle == "bar")
+	db.aggroStyle, db.aggroStyleSchema = "bar", nil
+	Check("[AGGRO] migration : le trait gardé tel quel", NS:AggroStyle() == "bar" and db.aggroStyleSchema == 2)
 	NS:AggroSetStyle("dot")
 
 	-- le joueur s'approche : le verdict suit au passage suivant
@@ -500,9 +510,9 @@ do
 	Mock:Advance(NS.AGGRO_TICK)
 	Check("[AGGRO] barres existantes reprises (GetNamePlates)", A.RingShown("nameplate7"))
 	local line = NS:AggroDiagLine()
-	Check("[AGGRO] diag : touche, état, barres, anneaux", line:find("touche Maj", 1, true) ~= nil
+	Check("[AGGRO] diag : touche, état, barres, marques", line:find("touche Maj", 1, true) ~= nil
 		and line:find("actif", 1, true) ~= nil and line:find("1 barre", 1, true) ~= nil
-		and line:find("1 anneau", 1, true) ~= nil and line:find("oui", 1, true) ~= nil, line)
+		and line:find("1 marque", 1, true) ~= nil and line:find("oui", 1, true) ~= nil, line)
 	Mock:Reset()
 	NS:HandleCommand("diag")
 	Check("[AGGRO] /r2q diag dit l'état de l'aggro", Mock:Output():find("aggro :", 1, true) ~= nil)
