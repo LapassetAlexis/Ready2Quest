@@ -222,6 +222,10 @@ function ns:AdviceSeeUnit(unit)
 	local guid = Call(rawget(_G, "UnitGUID"), unit) or tostring(Call(rawget(_G, "UnitName"), unit))
 	local state = self:AdviceState()
 	if state.elites[guid] then return false end
+	-- bornée : une longue session croise des milliers d'élites ; au-delà de
+	-- ADVICE_ELITES_MAX, on repart d'une liste vide
+	state.eliteCount = (state.eliteCount or 0) + 1
+	if state.eliteCount > ns.ADVICE_ELITES_MAX then state.elites, state.eliteCount = {}, 1 end
 	state.elites[guid] = true
 	state.elite = { guid = guid, name = Call(rawget(_G, "UnitName"), unit) or "?",
 		rare = class == "rare" or class == "rareelite" }
@@ -232,6 +236,16 @@ end
 -- ---------------------------------------------------------------------------
 -- Événements
 -- ---------------------------------------------------------------------------
+-- Événements en rafales (QUEST_LOG_UPDATE plusieurs fois par butin ou
+-- objectif, sacs, zones) : ils avancent l'examen régulier à ADVICE_SOON au
+-- lieu d'examiner tout à chaque fois. Une rafale = un seul examen.
+ns.ADVICE_SOON = 0.3
+ns.ADVICE_ELITES_MAX = 500
+local function Soon()
+	local at = ns.Now() + ns.ADVICE_SOON
+	if (ns.adviceNextAt or 0) > at then ns.adviceNextAt = at end
+end
+
 local HANDLERS = {
 	PLAYER_TARGET_CHANGED = function() ns:AdviceSeeUnit("target") end,
 	UPDATE_MOUSEOVER_UNIT = function() ns:AdviceSeeUnit("mouseover") end,
@@ -246,11 +260,11 @@ local HANDLERS = {
 		end
 		ns:AdviceEvaluate()
 	end,
-	BAG_UPDATE_DELAYED = function() ns:AdviceEvaluate() end,
-	UPDATE_INVENTORY_DURABILITY = function() ns:AdviceEvaluate() end,
-	QUEST_LOG_UPDATE = function() ns:AdviceEvaluate() end,
-	ZONE_CHANGED = function() ns:AdviceEvaluate() end,
-	ZONE_CHANGED_NEW_AREA = function() ns:AdviceEvaluate() end,
+	BAG_UPDATE_DELAYED = Soon,
+	UPDATE_INVENTORY_DURABILITY = Soon,
+	QUEST_LOG_UPDATE = Soon,
+	ZONE_CHANGED = Soon,
+	ZONE_CHANGED_NEW_AREA = Soon,
 }
 ns.ADVICE_HANDLERS = HANDLERS
 

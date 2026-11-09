@@ -1016,7 +1016,8 @@ function ns:RegisterEvents(target)
 		end
 
 		if available then
-			local ok = pcall(target.RegisterEvent, target, event)
+			-- UNIT_AURA : le joueur seulement (ns.RegisterGameEvent, Compat.lua)
+			local ok = ns.RegisterGameEvent(target, event)
 			if not ok then skipped[#skipped + 1] = event end
 		end
 	end

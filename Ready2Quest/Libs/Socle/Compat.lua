@@ -163,6 +163,19 @@ end
 -- s'il est ouvert ; sinon (ou s'il refuse) PARTY_KILL et UNIT_DIED prennent
 -- le relais, jamais les deux (une mort ne compte qu'une fois). Un événement
 -- inconnu du client ne bloque pas les autres. Rend true si le journal est écouté.
+-- Événements d'unité que les deux addons ne lisent que pour le joueur : le
+-- client les envoie aussi pour la cible, le groupe, le raid et chaque barre
+-- de vie (des centaines par seconde en combat). RegisterUnitEvent les filtre
+-- côté client ; repli sur RegisterEvent (les gestionnaires gardent leur test
+-- unit == "player"). Un gestionnaire ajouté ici ne voit plus que le joueur.
+ns.PLAYER_UNIT_EVENTS = { UNIT_AURA = true, UNIT_STATS = true }
+function ns.RegisterGameEvent(frame, event)
+	if ns.PLAYER_UNIT_EVENTS[event] and type(frame.RegisterUnitEvent) == "function" then
+		if pcall(frame.RegisterUnitEvent, frame, event, "player") then return true end
+	end
+	return pcall(frame.RegisterEvent, frame, event) and true or false
+end
+
 local CLEU = "COMBAT_LOG_EVENT_UNFILTERED"
 local STANDALONE = { PARTY_KILL = true, UNIT_DIED = true }
 function ns.RegisterHandlers(frame, handlers)
@@ -172,7 +185,7 @@ function ns.RegisterHandlers(frame, handlers)
 	end
 	for event in pairs(handlers) do
 		if event ~= CLEU and not (STANDALONE[event] and logOpen) then
-			pcall(frame.RegisterEvent, frame, event)
+			ns.RegisterGameEvent(frame, event)
 		end
 	end
 	return logOpen

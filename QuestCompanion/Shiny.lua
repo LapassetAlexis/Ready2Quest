@@ -573,7 +573,12 @@ do
 	local plateFrame = CreateFrame("Frame")
 	local PLATE_EVENTS = {
 		NAME_PLATE_UNIT_ADDED = function(unit)
-			if type(unit) == "string" then ns.shinyPlates[unit] = nil; ns:ShinyPlateUpdate(unit) end
+			if type(unit) ~= "string" then return end
+			ns.shinyPlates[unit] = nil
+			-- aucune brillante en vie (le cas courant) : rien à marquer ;
+			-- ShinyPlatesRefresh relit toutes les barres quand une apparaît
+			if not next(ns:ShinyState().live) then return end
+			ns:ShinyPlateUpdate(unit)
 		end,
 		NAME_PLATE_UNIT_REMOVED = function(unit)
 			local plate = type(unit) == "string" and ns.shinyPlates[unit]

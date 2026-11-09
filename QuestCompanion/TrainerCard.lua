@@ -1077,8 +1077,11 @@ end
 
 -- prefix, texte, canal, expéditeur : les arguments de CHAT_MSG_ADDON
 function ns:TrainerOnAddonMessage(prefix, text, channel, sender)
-	prefix, text, channel, sender = Plain(prefix), Plain(text), Plain(channel), Plain(sender)
-	if prefix ~= ns.TRAINER_PREFIX or type(text) ~= "string" or type(sender) ~= "string" then return false end
+	-- le préfixe d'abord : en groupe, les messages des autres addons sont légion
+	prefix = Plain(prefix)
+	if prefix ~= ns.TRAINER_PREFIX then return false end
+	text, channel, sender = Plain(text), Plain(channel), Plain(sender)
+	if type(text) ~= "string" or type(sender) ~= "string" then return false end
 	sender = self:TrainerFullName(sender)
 	local key = sender and self:TrainerKey(sender)
 	if not key or IsMe(self, key) then return false end

@@ -571,16 +571,22 @@ local function BuildPatterns(globals, fallback)
 	return list
 end
 
+-- Motifs gardés (ns.MemoGlobals) : reconstruits seulement si une chaîne du
+-- client change, pas à chaque message
+local KillPatterns = ns.MemoGlobals(KILL_GLOBALS, function() return BuildPatterns(KILL_GLOBALS, KILL_FALLBACK) end)
+local UnnamedPatterns = ns.MemoGlobals(UNNAMED_GLOBALS, function() return BuildPatterns(UNNAMED_GLOBALS, UNNAMED_FALLBACK) end)
+
 -- Renvoie xp, nommé (true = un monstre identifié) ; nil si le message n'est pas un gain d'XP
+-- (la capture de l'XP est prise par son rang, sans table de captures)
 function ns:ParseCombatXP(message)
 	if type(message) ~= "string" then return nil end
-	for _, entry in ipairs(BuildPatterns(KILL_GLOBALS, KILL_FALLBACK)) do
-		local captures = { message:match(entry.pattern) }
-		if #captures > 0 then return tonumber(captures[entry.capture]), true end
+	for _, entry in ipairs(KillPatterns()) do
+		local value = select(entry.capture, message:match(entry.pattern))
+		if value ~= nil then return tonumber(value), true end
 	end
-	for _, entry in ipairs(BuildPatterns(UNNAMED_GLOBALS, UNNAMED_FALLBACK)) do
-		local captures = { message:match(entry.pattern) }
-		if #captures > 0 then return tonumber(captures[entry.capture]), false end
+	for _, entry in ipairs(UnnamedPatterns()) do
+		local value = select(entry.capture, message:match(entry.pattern))
+		if value ~= nil then return tonumber(value), false end
 	end
 	return nil
 end
@@ -612,7 +618,7 @@ local function LootFormatToPattern(format)
 	return "^" .. pattern .. "$"
 end
 
-local function LootPatterns()
+local function BuildLootPatterns()
 	local patterns = {}
 	for _, name in ipairs(LOOT_GLOBALS) do
 		local format = rawget(_G, name)
@@ -623,6 +629,8 @@ local function LootPatterns()
 	end
 	return patterns
 end
+-- gardés tant que les chaînes du client ne changent pas (ns.MemoGlobals)
+local LootPatterns = ns.MemoGlobals(LOOT_GLOBALS, BuildLootPatterns)
 ns.LootPatterns = LootPatterns
 ns.ExpeditionLootPatterns = LootPatterns   -- ancien nom
 

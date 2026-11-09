@@ -1326,7 +1326,7 @@ end
 do
 	local ok, statsFrame = pcall(CreateFrame, "Frame")
 	if ok and statsFrame then
-		pcall(statsFrame.RegisterEvent, statsFrame, "UNIT_STATS")
+		ns.RegisterGameEvent(statsFrame, "UNIT_STATS")      -- le joueur seulement
 		pcall(statsFrame.RegisterEvent, statsFrame, "PLAYER_AVG_ITEM_LEVEL_UPDATE")
 		statsFrame:SetScript("OnEvent", function(_, event, unit)
 			if event == "PLAYER_AVG_ITEM_LEVEL_UPDATE" then unit = "player" end

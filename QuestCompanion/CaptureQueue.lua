@@ -955,7 +955,11 @@ function ns:EnsureCaptureNet()
 	button:SetScript("OnUpdate", function(b)
 		local now = Clock()
 		-- le tutoriel de la ménagerie attend le clic sur le filet : il bat tant que l'étape attend
-		if ns.CompanionSequenceWaits and ns:CompanionSequenceWaits("net") then b.pulseUntil = now + ns.CAPTURE_NET_PULSE end
+		-- (protégé : appelé à chaque image)
+		if ns.CompanionSequenceWaits then
+			local ok, waits = pcall(ns.CompanionSequenceWaits, ns, "net")
+			if ok and waits then b.pulseUntil = now + ns.CAPTURE_NET_PULSE end
+		end
 		if b.shiny then
 			b.glow:SetAlpha(0.20 + 0.35 * math.abs(math.sin(now * 3)))
 		elseif b.pulseUntil and now < b.pulseUntil then

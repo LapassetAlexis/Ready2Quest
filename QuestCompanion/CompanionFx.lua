@@ -382,6 +382,14 @@ local function SafeCall(fn, ...)
 	return nil
 end
 
+-- « nameplate3 » -> « nameplate3target », fait une fois par jeton (le compte
+-- passe deux fois par seconde sur chaque barre)
+local TARGET_OF = setmetatable({}, { __index = function(t, unit)
+	local token = unit .. "target"
+	t[unit] = token
+	return token
+end })
+
 function ns:CompanionAggroCount()
 	local api = rawget(_G, "C_NamePlate")
 	if type(api) ~= "table" or type(api.GetNamePlates) ~= "function" then return 0 end
@@ -392,7 +400,7 @@ function ns:CompanionAggroCount()
 		local unit = type(plate) == "table" and Plain(plate.namePlateUnitToken)
 		if type(unit) == "string" and SafeCall(rawget(_G, "UnitCanAttack"), "player", unit) == true
 			and SafeCall(rawget(_G, "UnitIsDead"), unit) ~= true
-			and SafeCall(rawget(_G, "UnitIsUnit"), unit .. "target", "player") == true then
+			and SafeCall(rawget(_G, "UnitIsUnit"), TARGET_OF[unit], "player") == true then
 			count = count + 1
 		end
 	end
@@ -422,8 +430,8 @@ function ns:CompanionAggroUpdate(now)
 		-- battement : deux par seconde
 		frame.danger:SetAlpha(0.35 + 0.65 * math.abs(math.sin(now * math.pi * 2)))
 		frame.danger:Show()
-	elseif frame.danger then
-		frame.danger:Hide()
+	elseif frame.danger and frame.danger:IsShown() then
+		frame.danger:Hide()      -- chaque image au repos : seulement s'il est affiché
 	end
 	return state.aggroOn
 end

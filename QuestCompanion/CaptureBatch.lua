@@ -1295,7 +1295,9 @@ function ns:EnsureCaptureChooser()
 		local now = Clock()
 		if f.checkedAt and now - f.checkedAt < 0.1 and now >= f.checkedAt then return end
 		f.checkedAt = now
-		ns:CaptureChooserRefresh()
+		-- protégé : dix fois par seconde, une erreur inonderait le journal
+		local ok, err = pcall(ns.CaptureChooserRefresh, ns)
+		if not ok and ns.RecordError then ns:RecordError("capture:chooser", err) end
 	end)
 	frame:Hide()
 	self.captureChoosers = self.captureChoosers or {}

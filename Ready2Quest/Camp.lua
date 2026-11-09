@@ -471,7 +471,7 @@ end
 local TICK = 0.25
 local frame = CreateFrame("Frame")
 for _, event in ipairs({ "UNIT_AURA", "PLAYER_ENTERING_WORLD" }) do
-	pcall(frame.RegisterEvent, frame, event)
+	ns.RegisterGameEvent(frame, event)      -- UNIT_AURA : le joueur seulement
 end
 frame:SetScript("OnEvent", function(_, event, unit)
 	if event == "UNIT_AURA" and unit ~= "player" then return end

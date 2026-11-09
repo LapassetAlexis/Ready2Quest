@@ -246,16 +246,25 @@ local CONTINENT_TYPE = (Enum and Enum.UIMapType and Enum.UIMapType.Continent) or
 -- Zone sous le joueur : la première carte de type « Zone » en remontant les
 -- parents (une sous-carte de quartier ou de grotte remonte à sa zone). Un
 -- client sans mapType : la carte elle-même. Jamais en instance.
+-- Lue à chaque créature vue (bestiaire), chaque butin, chaque rafraîchissement
+-- du suivi : la zone trouvée pour une carte est gardée (hiérarchie fixe), son
+-- nom relu (une seule carte au lieu de toute la chaîne).
+local zoneOfMap = {}
 function ns:JournalZone()
 	if self:InInstance() then return nil end
 	local mapID = self:CurrentMap()
 	if not mapID then return nil end
+	local known = zoneOfMap[mapID]
+	if known then
+		local info = self:MapInfo(known)
+		if info and info.mapType == ZONE_TYPE then return known, info.name end
+	end
 	local typed = false
 	for _, id in ipairs(self:MapChain(mapID)) do
 		local info = self:MapInfo(id)
 		local mapType = info and info.mapType
 		if mapType ~= nil then typed = true end
-		if mapType == ZONE_TYPE then return id, info.name end
+		if mapType == ZONE_TYPE then zoneOfMap[mapID] = id; return id, info.name end
 		if mapType ~= nil and mapType <= CONTINENT_TYPE then break end
 	end
 	if typed then return nil end
@@ -770,8 +779,17 @@ eventFrame:SetScript("OnEvent", function(_, event, ...)
 	local ok, err = pcall(HANDLERS[event], ...)
 	if not ok and ns.RecordError then ns:RecordError("journal:" .. tostring(event), err) end
 end)
+-- protégé : une erreur sur un bandeau en file se répéterait à chaque image ;
+-- on le retire de la file (la suite passe) et on note l'erreur une fois
 eventFrame:SetScript("OnUpdate", function()
-	if ns.journalToastHideAt or #ns.journalToasts > 0 then ns:UpdateJournalToast(ns.Now()) end
+	if ns.journalToastHideAt or #ns.journalToasts > 0 then
+		local ok, err = pcall(ns.UpdateJournalToast, ns, ns.Now())
+		if not ok then
+			if #ns.journalToasts > 0 then table.remove(ns.journalToasts, 1) end
+			ns.journalToastHideAt = nil
+			if ns.RecordError then ns:RecordError("journal:toast", err) end
+		end
+	end
 end)
 ns.journalEventFrame = eventFrame
 

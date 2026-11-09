@@ -314,7 +314,7 @@ local function FormatToPattern(format)
 	return "^" .. pattern .. "$"
 end
 
-local function LootPatterns()
+local function BuildLootPatterns()
 	local patterns = {}
 	for _, name in ipairs(LOOT_GLOBALS) do
 		local format = rawget(_G, name)
@@ -324,6 +324,9 @@ local function LootPatterns()
 	for _, format in ipairs(LOOT_FALLBACK) do patterns[#patterns + 1] = FormatToPattern(format) end
 	return patterns
 end
+-- gardés tant que les chaînes du client ne changent pas (chaque ligne de
+-- butin, celles du groupe comprises, passe par ici)
+local LootPatterns = ns.MemoGlobals and ns.MemoGlobals(LOOT_GLOBALS, BuildLootPatterns) or BuildLootPatterns
 
 -- itemID, quantité si le message est un butin du joueur, sinon nil
 function ns:GatheringParseLoot(message)

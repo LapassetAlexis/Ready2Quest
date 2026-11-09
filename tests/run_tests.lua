@@ -23,7 +23,9 @@ function Mock:Output() return table.concat(self.output, "\n") end
 function Mock:Reset() self.output = {} end
 function Mock:Fire(event, ...)
 	for _, frame in ipairs(self.frames) do
-		if frame.events and frame.events[event] and frame.script then
+		local filter = frame.unitFilter and frame.unitFilter[event]
+		if frame.events and frame.events[event] and frame.script
+			and not (filter and not filter[(...)]) then
 			frame.script(frame, event, ...)
 		end
 	end
@@ -53,8 +55,17 @@ local function NewRegion(kind, name, parent)
 		end
 		self.events[event] = true
 	end
+	-- comme le client : l'événement d'unité n'arrive que pour les unités dites
+	function region:RegisterUnitEvent(event, ...)
+		self:RegisterEvent(event)
+		self.unitFilter = self.unitFilter or {}
+		local units = {}
+		for i = 1, select("#", ...) do units[(select(i, ...))] = true end
+		self.unitFilter[event] = units
+	end
 	function region:UnregisterEvent(event)
 		self.events[event] = nil
+		if self.unitFilter then self.unitFilter[event] = nil end
 	end
 	function region:SetScript(script, fn)
 		self.scripts[script] = fn

@@ -2174,6 +2174,18 @@ local EAT_AURAS = {
 local DRINK_AURAS = { ["drink"] = true, ["boisson"] = true }
 local FED_AURAS = { ["well fed"] = true, ["bien nourri"] = true, ["repu"] = true }
 
+-- Noms d'auras en minuscules, gardés (chaque changement d'aura du joueur relit
+-- jusqu'à 40 auras ; les noms sont en nombre fini, liste vidée au-delà de 512)
+local lowerNames, lowerCount = {}, 0
+local function LowerName(name)
+	local lower = lowerNames[name]
+	if lower then return lower end
+	lower = ns.AsciiLower(name)
+	if lowerCount >= 512 then lowerNames, lowerCount = {}, 0 end
+	lowerNames[name], lowerCount = lower, lowerCount + 1
+	return lower
+end
+
 -- Renvoie mange-ou-boit ?, bien nourri ?, boit seulement ?
 function ns:CompanionAuraState()
 	local eating, fed, drinking = false, false, false
@@ -2182,7 +2194,7 @@ function ns:CompanionAuraState()
 	for index = 1, 40 do
 		local aura = read(index)
 		if not aura then break end
-		local name = type(aura.name) == "string" and self.AsciiLower(aura.name) or nil
+		local name = type(aura.name) == "string" and LowerName(aura.name) or nil
 		if name and EAT_AURAS[name] then eating = true end
 		if name and DRINK_AURAS[name] then drinking = true end
 		if name and FED_AURAS[name] then fed = true end

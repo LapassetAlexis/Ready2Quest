@@ -367,12 +367,16 @@ end
 -- ---------------------------------------------------------------------------
 -- Événements : le statut « faite » change, la table non
 -- ---------------------------------------------------------------------------
+-- QUEST_LOG_UPDATE arrive en rafales : une table neuve seulement si
+-- l'ancienne a servi
 local function Forget()
-	state.live = {}
+	if next(state.live) then state.live = {} end
 	if InCombat() then
 		state.dirty = true
 	else
-		state.done, state.lists, state.dirty = {}, {}, false
+		if next(state.done) then state.done = {} end
+		if next(state.lists) then state.lists = {} end
+		state.dirty = false
 	end
 end
 local function AfterCombat()
