@@ -1,5 +1,14 @@
 # Journal des modifications
 
+## 1.32.0
+
+- **Avant le départ** met les manques en avant : les points en ordre sont repliés en une ligne (« Afficher » pour les voir), pluriels accordés, vraie flèche, durabilité et réparation fusionnées, « aucun repos d'avance » au lieu de « sans objet ». Le bouton « Partir à l'aventure » est lisible.
+- **Réglages** : survol, appui et état désactivé visibles ; un module coupé estompe ses réglages et propose « Rallumer ».
+- **Aux couleurs du jeu** : cases à cocher, losanges, chevrons, roue des réglages, anneau d'aggro et flèches du bilan viennent du client (nos images restent en secours).
+- **Avec QuestCompanion** : le socle commun n'est chargé qu'une fois (environ 300 Ko de moins), et une seule alerte rouge d'aggro à la fois.
+
+*English:* "Before you go" puts missing items first (checks in order folded, proper plurals, real arrow, merged durability/repair, "no rested XP"); readable "Set out" button; visible hover/press/disabled states, a disabled module dims its settings and offers "Turn on"; checkboxes, diamonds, chevrons, gear, aggro ring and stats arrows use the game's own art (our images as fallback); with QuestCompanion the shared core loads once (≈ 300 KB saved) and only one red aggro alert shows at a time.
+
 ## 1.31.0
 
 - **Aggro : nouveau mode « Danger seul », par défaut.** Sans toucher au clavier, seule la marque rouge s'affiche quand un monstre est sur le point de t'aggro ; Maj montre tout. Si tu étais réglé sur Maj, tu passes une fois à « Danger seul » (Maj reste disponible dans les réglages). Les barres de nom ennemies doivent être affichées (touche V).

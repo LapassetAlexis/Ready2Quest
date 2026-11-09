@@ -1,5 +1,18 @@
 # QuestCompanion
 
+## 2.11.0 — un carnet plus lisible, la capture aux couleurs du jeu
+
+- **Carnet** : chiffres de la page Compagnon et résumé des Missions qui tiennent dans leurs plaques ; étoiles dorées bien visibles dans Créatures ; intertitres des Missions à l'encre ; colonne de gauche en tableau de bord (ton compagnon et ses envies, la zone actuelle, les missions du jour et de la semaine) ; liste des zones filtrée (Pour moi, Commencées, Toutes) avec une recherche ; le carnet retient ses filtres au /reload.
+- **Localiser** : un bouton pose un repère sur la carte du monde pour une quête (son donneur) ou une créature ; un second clic l'efface.
+- **Changer de compagnon** : la confirmation est au style Azeroth.
+- **Modèles 3D** mieux cadrés partout (fini la patte en gros plan, créature lisible sur la fiche de dresseur) ; vrai portrait 2D d'une créature déjà croisée ; une créature échappée reste visible, grisée sous le filet déchiré.
+- **En combat**, le compagnon s'estompe vraiment, modèle compris. Avec Ready2Quest, il ne clignote plus quand l'anneau rouge d'aggro est déjà là.
+- **Capture aux couleurs du jeu** : rayons, halo, étincelles, étoiles, bannière et vignette viennent du client (notre filet reste).
+- **Lisibilité** : humeur du compagnon lisible sur tous les fonds en Sobre, noms élite et rare plus clairs, une seule couleur de rareté partout, cases à cocher, losanges, chevrons et roue du jeu, survol et boutons enfoncés visibles.
+- **Plus léger avec Ready2Quest** : le socle commun n'est chargé qu'une fois (environ 300 Ko de moins).
+
+*English:* readable journal (Companion stats and Missions summary fit their plates, clear gold stars in Creatures, inked headers, left column as a dashboard, zone filter For me/Started/All with search, filters kept across /reload); Locate button (world-map pin) for a quest or a creature; Azeroth-style companion switch confirmation; better-framed 3D models, real 2D portraits of creatures you have met, escaped creatures stay visible; the companion truly fades in combat and no longer blinks when Ready2Quest already shows the red aggro ring; capture scene uses the game's own art (our net stays); clearer mood, rarity colours, game checkboxes/diamonds/chevrons/gear, visible hover and press states; shared core loaded once alongside Ready2Quest (≈ 300 KB saved).
+
 ## 2.10.0 — un compagnon discret en combat, des captures qui attendent la fin du combat
 
 - **Compagnon discret en combat** : plus de bulles pendant un pack (sauf brillante ou rare repéré), il s'estompe et te résume le combat après. Option pour le masquer en donjon et en raid. L'alerte « plusieurs monstres sur toi » a son réglage (par défaut : seul, hors instance).
