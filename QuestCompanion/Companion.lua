@@ -157,6 +157,8 @@ local FR = {
 	OPT_PAGE_COMPANION     = "Compagnon de route",
 	OPT_PAGE_COMPANION_SUB = "Une petite créature qui voyage avec toi et réagit à ton aventure.",
 	OPT_COMP_SHOW          = "Afficher le compagnon",
+	OPT_COMP_NET_SHOW      = "Afficher le filet de capture",
+	OPT_COMP_NET_SHOW_DESC = "Le bouton filet à côté du compagnon, réglable à part. Masqué : les créatures à capturer attendent dans la file (raccourci « Lancer le filet » ou /qc filet).",
 	OPT_COMP_SIZE          = "Taille",
 	COMP_SIZE_1            = "Petit",
 	COMP_SIZE_2            = "Moyen",
@@ -351,6 +353,8 @@ local EN = {
 	OPT_PAGE_COMPANION     = "Road companion",
 	OPT_PAGE_COMPANION_SUB = "A little creature that travels with you and reacts to your adventure.",
 	OPT_COMP_SHOW          = "Show the companion",
+	OPT_COMP_NET_SHOW      = "Show the capture net",
+	OPT_COMP_NET_SHOW_DESC = "The net button next to the companion, set apart from it. Hidden: creatures to capture wait in the queue (\"Throw the net\" key binding or /qc filet).",
 	OPT_COMP_SIZE          = "Size",
 	COMP_SIZE_1            = "Small",
 	COMP_SIZE_2            = "Medium",
@@ -539,6 +543,7 @@ if ns.KEEP_STRINGS then ns.COMPANION_STRINGS = { fr = FR, en = EN } end   -- exp
 ns.RegisterDefaults({
 	companionEnabled    = true,
 	companionShow       = true,
+	companionNetShow    = true,     -- 2.10.0 : le bouton filet, réglable à part du compagnon
 	companionPoint      = { point = "CENTER", x = 330, y = -170 },
 	companionSize       = 2,      -- réglette « Taille » : 1 petit, 2 moyen, 3 grand, 4 très grand
 	companionFraming    = "buste",      -- cadrage du modèle : portrait (tête), buste, pied (2.2.0 ; buste par défaut en 2.9.0)
@@ -567,6 +572,9 @@ ns.AddOptionPage({
 	preview = function(self, container) return self:CompanionPreview(container) end,
 	rows = {
 		{ key = "companionShow",       label = "OPT_COMP_SHOW",       kind = "bool" },
+		{ key = "companionNetShow",    label = "OPT_COMP_NET_SHOW",   kind = "bool",
+			describe = function() return L.OPT_COMP_NET_SHOW_DESC end,
+			onChange = function() if ns.CaptureQueueRefresh then pcall(ns.CaptureQueueRefresh, ns) end end },
 		-- 2.10.0 : discret en combat, masqué en donjon, alerte d'aggro, déplacement
 		{ key = "companionCombatFade", label = "OPT_COMP_COMBAT_FADE", kind = "bool",
 			describe = function() return L.OPT_COMP_COMBAT_FADE_DESC end,

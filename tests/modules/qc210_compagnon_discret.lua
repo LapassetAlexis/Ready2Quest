@@ -334,3 +334,26 @@ do
 	NS:CaptureQueueClear()
 	D.Done()
 end
+
+-- 2.10.0 : « Afficher le filet », réglage indépendant du compagnon
+do
+	T.Say("-- qc210 : filet affiché à part")
+	local NS = T.QNS
+	local rows = 0
+	for _, page in ipairs(NS.OPTION_PAGES or {}) do
+		for _, row in ipairs(page.rows or {}) do if row.key == "companionNetShow" then rows = rows + 1 end end
+	end
+	T.Check("[NETSHOW] réglage présent, filet affiché par défaut", rows == 1 and NS:DB().companionNetShow ~= false
+		and NS.L.OPT_COMP_NET_SHOW ~= nil)
+	local queue = NS:CaptureQueueState()
+	queue[#queue + 1] = { npcID = 99901, name = "Test", class = "normal", serial = 99901, at = NS.Now and NS.Now() or 0 }
+	NS:DB().companionNetShow = false
+	NS:CaptureQueueRefresh()
+	local net = NS.captureNetButton
+	T.Check("[NETSHOW] masqué : pas de bouton, le candidat reste dans la file", (not net or not net:IsShown()) and #NS:CaptureQueueState() >= 1)
+	NS:DB().companionNetShow = true
+	NS:CaptureQueueRefresh()
+	T.Check("[NETSHOW] réaffiché : le bouton revient", NS.captureNetButton ~= nil and NS.captureNetButton:IsShown())
+	table.remove(queue)
+	NS:CaptureQueueRefresh()
+end

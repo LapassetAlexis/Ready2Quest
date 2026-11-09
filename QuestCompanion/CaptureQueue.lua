@@ -1043,7 +1043,9 @@ function ns:CaptureQueueRefresh()
 		local button = self.captureNetButton or (count > 0 and self:EnsureCaptureNet())
 		if button then
 			self:CapturePlaceNet()
-			if count > 0 then
+			-- 2.10.0 : réglage « Afficher le filet », indépendant du compagnon ;
+			-- masqué, les candidats attendent dans la file (raccourci, /qc filet)
+			if count > 0 and self:DB().companionNetShow ~= false then
 				button.count:SetText(tostring(count))
 				button.shiny = self:CaptureQueueHasShiny()
 				-- un candidat de plus : le filet bat quelques secondes
