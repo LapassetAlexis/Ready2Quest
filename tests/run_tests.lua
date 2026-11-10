@@ -222,11 +222,16 @@ local function NewRegion(kind, name, parent)
 			function anim:SetFromAlpha(v) self.from = v end
 			function anim:SetToAlpha(v) self.to = v end
 			function anim:SetDuration(v) self.duration = v end
+			-- QC 2.14.0 (bêta 6) : neige du cadre (translation, attente, lissage)
+			function anim:SetOffset(x, y) self.offset = { x, y } end
+			function anim:SetStartDelay(v) self.startDelay = v end
+			function anim:SetSmoothing(v) self.smoothing = v end
 			self.animations[#self.animations + 1] = anim
 			return anim
 		end
-		function group:Play() self.plays = self.plays + 1 end
-		function group:Stop() end
+		function group:Play() self.plays = self.plays + 1; self.playing = true end
+		function group:Stop() self.playing = false end
+		function group:IsPlaying() return self.playing == true end
 		self.animGroups = (self.animGroups or 0) + 1
 		return group
 	end

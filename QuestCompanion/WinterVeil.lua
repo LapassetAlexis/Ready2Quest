@@ -6,7 +6,8 @@
 --     flocons discrets sur le parchemin (sous les textes), un cadeau et le
 --     renne des hauts faits de part et d'autre du titre « Carnet de voyage » ;
 --   * le cadre du compagnon : une guirlande en 3D (modèle du client, sans
---     fond) le long du haut de l'anneau, deux petits flocons ;
+--     fond) le long du haut de l'anneau, des flocons aux coins et une neige
+--     qui tombe doucement (bêta 6), l'anneau givré (réglage « Cadre givré ») ;
 --   * la capture : le filet devient une boule de neige (icône du bouton,
 --     bandeaux), et la scène lance une boule de neige qui éclate en flocons
 --     sur la créature au lieu du filet, « Tout capturer » aussi (une boule
@@ -60,19 +61,26 @@ ns.WINTER_VEIL_ROUND_MASK = "Interface\\CharacterFrame\\TempPortraitAlphaMask"
 -- (couche BORDER, comme les flocons) : sous leurs textes, sans souris.
 -- 2.14.0 (bêta 4) : la bande de la colonne commençait après son intitulé
 -- (« CARNET ») : un trou à gauche, une guirlande qui paraissait décentrée
--- (25.png). Elle court désormais sur toute la colonne : mêmes marges aux
--- deux bouts du carnet (lightsCurl, à gauche de la colonne comme à droite de
--- la page, où la volute la recouvre en partie), coupée au joint seulement
--- (lightsJoint côté colonne, la volute côté page). L'intitulé de la colonne,
--- qu'elle couvrirait, est caché tant que la guirlande est là (rendu sans
--- elle) : le titre de la fenêtre dit déjà « Carnet de voyage ».
+-- (25.png). Elle court désormais sur toute la colonne. L'intitulé de la
+-- colonne, qu'elle couvrirait, est caché tant que la guirlande est là (rendu
+-- sans elle) : le titre de la fenêtre dit déjà « Carnet de voyage ».
+-- 2.14.0 (bêta 5) : deux bandes coupées au joint et sous les volutes
+-- laissaient un trou d'une cinquantaine de px autour du poteau de métal
+-- entre la colonne et la page, et la fin de la page nue (29.png). Une seule
+-- bande désormais, d'un bord intérieur du bois à l'autre (début de la
+-- colonne → fin de la page), à lightsEdge px de chaque bout, pendue au bas
+-- de la barre de métal : elle passe par-dessus le poteau du joint et les
+-- volutes (posée sur le décor, au-dessus du calque du bois et du métal ;
+-- rien d'autre dans ses 28 px que l'intitulé caché).
 ns.WINTER_VEIL_JOURNAL = {
-	lightsH = 28, lightsJoint = 14, lightsCurl = 30,
+	lightsH = 28, lightsEdge = 8,
 	iconSize = 18, iconGap = 6,
+	-- 2.14.0 (bêta 5) : les flocons sous la bande (haut de la page, haut de
+	-- la colonne) seraient recouverts : descendus sous elle, sur la page
 	flakes = {
-		{ on = "content", point = "TOPRIGHT", x = -34, y = -16, size = 30, alpha = 0.42 },
-		{ on = "content", point = "TOPRIGHT", x = -76, y = -34, size = 16, alpha = 0.36 },
-		{ on = "nav", point = "TOPRIGHT", x = -10, y = -15, size = 14, alpha = 0.38 },
+		{ on = "content", point = "TOPRIGHT", x = -34, y = -46, size = 30, alpha = 0.42 },
+		{ on = "content", point = "TOPRIGHT", x = -76, y = -62, size = 16, alpha = 0.36 },
+		{ on = "content", point = "TOPRIGHT", x = -118, y = -44, size = 14, alpha = 0.38 },
 	},
 }
 -- le cadre du compagnon : la guirlande 3D (bande au ras du haut de l'anneau ;
@@ -96,20 +104,70 @@ ns.WINTER_VEIL_JOURNAL = {
 -- le milieu des fils sur le bord doré du haut (y : centre des modèles,
 -- depuis le haut du cadre). 199603 (trois guirlandes) écartée : la même
 -- taille de bulbe, mais trois fois plus large que le cadre.
+-- 2.14.0 (bêta 5) : en bêta 4, des bulbes de ~4 px (27.png), deux fois plus
+-- petits que prévu. Chaque brin avait un cadre de modèle à peine plus large
+-- que lui (52×30) : la caméra du client cadre alors la guirlande sur la
+-- largeur du cadre, plus sur sa hauteur, et l'unité h / cam ne tient plus
+-- (bêta 2, 118×34, et bêta 3, 108×40, mesurées sur la hauteur : 3,8 h / cam
+-- px par brin). Le cadre de chaque brin garde donc au moins fit × h de large
+-- (les cadres se chevauchent, sans fond : rien ne se voit) et la hauteur
+-- règle la taille. Bulbes de 11,5 px (≈ 12,5 px à l'écran à l'échelle 1,1
+-- du joueur), entre les ~4 px de la bêta 4 et les ~18 px de la bêta 3 ; les
+-- deux brins (~118 px) couvrent la plaque du nom (112 px), centrés, le
+-- milieu des fils sur le bord doré du haut (y = 0).
 -- Réglage en jeu : /qc noel cadre <bulbe> <x> <y> <brins> <cap> (session).
+-- 2.14.0 (bêta 6) : « une seule guirlande de cette taille, centrée » (31.png) :
+-- un seul brin (~59 px), mêmes bulbes de 11,5 px, au milieu du cadre (x = 0),
+-- le milieu du fil sur le bord doré du haut (y = 0).
+-- 2.14.0 (bêta 7) : en bêta 6 (34.png, échelle 1,1), le milieu du fil
+-- flottait ~4 px au-dessus du bord doré du haut, les bulbes pendaient
+-- surtout au-dessus de lui. Descendue de 9 px (y = -9) : le milieu du fil
+-- sur le milieu du bord doré, les bulbes qui pendent sur son bord et juste
+-- dans l'ouverture.
+-- Les flocons : en bêta 5, deux flocons de 11 et 14 px à 0,65-0,75 posés sur
+-- l'or de l'anneau ne se voyaient pas (« Tu devais pas mettre des flocons
+-- aussi ? »). Quatre flocons fixes aux coins du cadre, hors de l'anneau
+-- (x, y depuis le haut du cadre, centre), plus grands et presque opaques ;
+-- et une neige qui tombe doucement autour (snow) : quelques petits flocons
+-- qui descendent du haut de l'anneau jusqu'à la plaque, chacun en boucle
+-- (groupe d'animations du client : translation + fondus, sans OnUpdate),
+-- décalés dans le temps. x : départ depuis le centre du cadre, dx : dérive,
+-- fall : chute (px), time : durée d'une chute (s), delay : attente avant.
 ns.WINTER_VEIL_COMPANION = {
-	model = 199600, swags = 2, bulb = 8.5, x = 0, y = -2, h = 30, facing = 0,
+	model = 199600, swags = 1, bulb = 11.5, x = 0, y = -9, h = 30, facing = 0, fit = 3.5,
 	span = 3.75, wireTop = 0.8, sag = 0.07, drop = 0.65, bulbH = 0.73,
 	flakes = {
-		{ x = -44, y = -6, size = 14, alpha = 0.75 },
-		{ x = 46, y = -26, size = 11, alpha = 0.65 },
+		{ x = -60, y = -14, size = 20, alpha = 0.95 },
+		{ x = 60, y = -20, size = 16, alpha = 0.9 },
+		{ x = -60, y = -66, size = 15, alpha = 0.9 },
+		{ x = 60, y = -60, size = 19, alpha = 0.95 },
+	},
+	snow = {
+		top = 4, fall = 78, alpha = 0.85, fadeIn = 0.2, fadeOut = 0.3,
+		{ x = -58, dx = 5, size = 9, time = 6.0, delay = 0 },
+		{ x = -34, dx = -4, size = 7, time = 7.2, delay = 2.4 },
+		{ x = 6, dx = 6, size = 8, time = 6.6, delay = 1.2 },
+		{ x = 36, dx = -5, size = 7, time = 7.8, delay = 3.6 },
+		{ x = 60, dx = 4, size = 9, time = 5.6, delay = 4.8 },
 	},
 }
 ns.WINTER_VEIL_COMPANION_DEFAULT = {}
 for key, value in pairs(ns.WINTER_VEIL_COMPANION) do ns.WINTER_VEIL_COMPANION_DEFAULT[key] = value end
+-- 2.14.0 (bêta 6) : le cadre givré (pas de cadre de Noël dans le client).
+-- 2.14.0 (bêta 7) : c'est désormais l'allure Azeroth du cadre « Givre »
+-- (AZEROTH_RING_TINTS.frost dans AzerothStyle.lua : anneau désaturé teinté
+-- argent-bleu, halo Relic-Frost-TraitGlowRing en ADD). Pendant la saison
+-- (ou /qc noel on), le cadre Givre est offert à tous (WINTER_VEIL_GIFT) ;
+-- réglage « Cadre givré » coché : l'allure Givre l'emporte sur le cadre
+-- choisi tant que le décor est là ; décoché : le cadre choisi garde sa teinte.
+ns.WINTER_VEIL_GIFT = "frost"
 -- l'or visible du cadre Azeroth (21.png, en px du cadre) : haut du bord doré,
 -- haut de l'ouverture (depuis le haut du cadre), largeur
-ns.WINTER_VEIL_RING_GOLD = { top = 2, inner = -6, w = 91 }
+-- 2.14.0 (bêta 7) : remesuré sur 34.png (échelle 1,1, le bas du bord doré
+-- = haut de l'ouverture, 16,6 px sous le haut du cadre) : le bord doré du
+-- haut va de -5 à -17 (l'atlas a une marge transparente au-dessus), pas de
+-- +2 à -6 comme estimé en bêta 4.
+ns.WINTER_VEIL_RING_GOLD = { top = -5, inner = -17, w = 91 }
 -- la scène de capture : la boule de neige (taille, tours en vol), son
 -- éclatement en flocons (nombre, durée, portée, taille)
 -- 2.14.0 (bêta 3) : un peu plus soigné, mêmes durées. La boule ralentit un
@@ -141,6 +199,11 @@ local FR = {
 	WINTER_VEIL_STAGE_FLY   = "La boule de neige vole…",
 	WINTER_VEIL_STAGE_SHAKE = "Sous la neige, ça remue…",
 	-- 2.14.0 (bêta 4) : réglage en jeu de la guirlande du cadre
+	-- 2.14.0 (bêta 6) : le cadre givré
+	OPT_WINTER_VEIL_FROST      = "Cadre givré (Voile d'hiver)",
+	-- 2.14.0 (bêta 7) : l'allure du cadre Givre, offert pendant la saison
+	OPT_WINTER_VEIL_FROST_DESC = "Pendant le décor du Voile d'hiver, l'anneau du portrait prend l'allure du cadre Givre (argent givré, halo glacé), quel que soit le cadre choisi. Décoché : le cadre choisi garde sa couleur. Le cadre Givre est offert à tous pendant le Voile d'hiver.",
+	WINTER_VEIL_FROST_GIFT     = "Voile d'hiver",
 	WINTER_VEIL_TUNE_LIGHTS = "Guirlande du cadre : bulbe %s px, x %s, y %s, %s brin(s), cap %s (largeur %.0f px, caméra %.2f). Régler : /qc noel cadre <bulbe> <x> <y> <brins> <cap> (- garde une valeur, defaut remet tout).",
 }
 local EN = {
@@ -157,6 +220,9 @@ local EN = {
 	HELP_NOEL               = "/qc noel auto|on|off — Winter Veil decorations (lights, snowflakes, snowball)",
 	WINTER_VEIL_STAGE_FLY   = "The snowball is flying…",
 	WINTER_VEIL_STAGE_SHAKE = "Something stirs under the snow…",
+	OPT_WINTER_VEIL_FROST      = "Frosted frame (Winter Veil)",
+	OPT_WINTER_VEIL_FROST_DESC = "While the Winter Veil decorations show, the portrait ring takes the Frost frame's look (frosty silver, icy glow), whatever frame you chose. Unchecked: your chosen frame keeps its colour. The Frost frame is free for everyone during Winter Veil.",
+	WINTER_VEIL_FROST_GIFT     = "Winter Veil",
 	WINTER_VEIL_TUNE_LIGHTS = "Frame lights: bulb %s px, x %s, y %s, %s strand(s), facing %s (width %.0f px, camera %.2f). Tune: /qc noel frame <bulb> <x> <y> <strands> <facing> (- keeps a value, default resets all).",
 }
 ns.RegisterStrings(FR, EN)
@@ -286,27 +352,8 @@ local function BuildJournalDecor(frame)
 	d:SetAllPoints(frame)
 	d:SetFrameLevel((over:GetFrameLevel() or 1) + 2)
 	d:EnableMouse(false)
-	-- la guirlande : des tuiles de 104×36 ramenées à la hauteur de la bande,
-	-- la dernière recoupée ; une bande sur la colonne, une sur la page,
-	-- pendues sous le métal, qui laissent le joint et les volutes libres
-	d.lights, d.bands = {}, {}
-	for _, band in ipairs(ns.WinterVeilJournalBands(frame)) do
-		local host, h = band.host, J.lightsH
-		local tileW = math.floor(A.lights.w * h / A.lights.h + 0.5)
-		local x = band.x0
-		while x < band.x1 do
-			local w = math.min(tileW, band.x1 - x)
-			local tex = NewFile(host, "BORDER", 6, A.lights)
-			if not tex then break end
-			tex:SetSize(w, h)
-			tex:SetPoint("TOPLEFT", host, "TOPLEFT", x, 0)
-			local c = A.lights.c
-			tex:SetTexCoord(c[1], c[1] + (c[2] - c[1]) * w / tileW, c[3], c[4])
-			d.lights[#d.lights + 1] = tex
-			x = x + w
-		end
-		d.bands[#d.bands + 1] = band
-	end
+	-- la guirlande : posée (et reposée) par LayJournalLights
+	d.lights = {}
 	-- le cadeau et le renne, de part et d'autre du titre (placés à chaque rafraîchissement)
 	d.present = NewFile(d, "OVERLAY", 1, A.present)
 	d.reindeer = NewFile(d, "OVERLAY", 1, A.reindeer)
@@ -329,6 +376,39 @@ local function BuildJournalDecor(frame)
 	return d
 end
 
+-- 2.14.0 (bêta 5) : la guirlande, une seule bande de tuiles de 104×36
+-- ramenées à la hauteur de la bande, la dernière recoupée ; sur le décor
+-- (au-dessus du bois, du métal, du poteau du joint et des volutes), ancrée
+-- au cadre. Reposée à chaque rafraîchissement (la fenêtre peut changer de
+-- largeur) : les tuiles sont réutilisées, celles en trop cachées.
+local function LayJournalLights(frame, d)
+	local J, A = ns.WINTER_VEIL_JOURNAL, ns.WINTER_VEIL_ART
+	local band = ns.WinterVeilJournalBand(frame)
+	local h = J.lightsH
+	local tileW = math.floor(A.lights.w * h / A.lights.h + 0.5)
+	local c = A.lights.c
+	local x, count = band.x0, 0
+	while x < band.x1 do
+		local w = math.min(tileW, band.x1 - x)
+		count = count + 1
+		local tex = d.lights[count]
+		if not tex then
+			tex = NewFile(d, "ARTWORK", 1, A.lights)
+			if not tex then count = count - 1; break end
+			d.lights[count] = tex
+		end
+		tex:SetSize(w, h)
+		tex:ClearAllPoints()
+		tex:SetPoint("TOPLEFT", frame, "TOPLEFT", x, band.y)
+		tex:SetTexCoord(c[1], c[1] + (c[2] - c[1]) * w / tileW, c[3], c[4])
+		tex:Show()
+		x = x + w
+	end
+	for index = count + 1, #d.lights do d.lights[index]:Hide() end
+	d.band, d.lightsCount = band, count
+	return count
+end
+
 -- Le cadeau à gauche du titre, le renne à droite, sans toucher au texte
 local function PlaceTitleIcons(frame, d)
 	local title = frame.azPlate and frame.azPlate.title
@@ -344,21 +424,14 @@ local function PlaceTitleIcons(frame, d)
 	return off
 end
 
--- Les bandes de la guirlande, en coordonnées de leur hôte (colonne, page) :
--- { host, x0, x1 }. Sans colonne : la page seule.
-function ns.WinterVeilJournalBands(frame)
+-- 2.14.0 (bêta 5) : la bande de la guirlande, en coordonnées du cadre :
+-- { x0, x1, y }. D'un bord intérieur du bois à l'autre (début de la colonne,
+-- ou de la page sans colonne, → fin de la page), à lightsEdge px de chaque
+-- bout ; y : le bas de la barre de métal (le haut de la colonne et de la page).
+function ns.WinterVeilJournalBand(frame)
 	local lay, J = ns.CARNET_LAYOUT, ns.WINTER_VEIL_JOURNAL
-	local bands = {}
-	local nav, content = frame.nav, frame.content
-	if nav then
-		-- 2.14.0 (bêta 4) : toute la colonne (son intitulé est caché)
-		bands[#bands + 1] = { host = nav, x0 = J.lightsCurl, x1 = (tonumber(nav:GetWidth()) or lay.nav) - J.lightsJoint }
-	end
-	if content then
-		local cw = tonumber(content:GetWidth()) or 0
-		bands[#bands + 1] = { host = content, x0 = J.lightsCurl, x1 = cw - J.lightsCurl }
-	end
-	return bands
+	local W = frame.azSize and tonumber(frame.azSize[1]) or tonumber(frame:GetWidth()) or 0
+	return { x0 = lay.wood + J.lightsEdge, x1 = W - lay.wood - J.lightsEdge, y = -lay.band }
 end
 
 -- Montre ou cache le décor d'un carnet Azeroth ; rend s'il est montré
@@ -382,7 +455,7 @@ function ns:WinterVeilJournal(frame)
 	-- l'intitulé de la colonne, sous la guirlande : caché (rendu sans elle)
 	if frame.navGroup then frame.navGroup:Hide(); d.navLabelHidden = true end
 	for _, tex in ipairs(d.flakes) do tex:Show() end
-	for _, tex in ipairs(d.lights) do tex:Show() end
+	LayJournalLights(frame, d)
 	PlaceTitleIcons(frame, d)
 	return true
 end
@@ -401,9 +474,12 @@ function ns.WinterVeilLightsBox()
 	local swag = C.span * unit
 	local centers = {}
 	for index = 1, n do centers[index] = C.x + (index - (n + 1) / 2) * swag end
+	-- 2.14.0 (bêta 5) : largeur du cadre d'un brin (frameW), assez large pour
+	-- que la caméra du client le cadre sur la hauteur (fit × h)
+	local frameW = math.max(math.floor(swag + C.bulb + 0.5), math.floor((tonumber(C.fit) or 0) * C.h + 0.5))
 	return { unit = unit, cam = C.h / unit, swag = swag, w = n * swag, left = C.x - n * swag / 2, right = C.x + n * swag / 2,
 		wire = C.y + C.wireTop * unit, mid = C.y + C.sag * unit, bottom = C.y - C.drop * unit,
-		bulb = C.bulbH * unit, centers = centers, count = n }
+		bulb = C.bulbH * unit, centers = centers, count = n, frameW = frameW }
 end
 
 local function LightsFraming(m)
@@ -437,7 +513,7 @@ local function PlaceSwags(frame, d)
 		end
 		if model then
 			if index <= box.count then
-				model:SetSize(math.floor(box.swag + 8.5), C.h)
+				model:SetSize(box.frameW, C.h)
 				model:ClearAllPoints()
 				model:SetPoint("CENTER", frame, "TOP", box.centers[index], C.y)
 				if model.wvModel ~= C.model then
@@ -454,26 +530,259 @@ local function PlaceSwags(frame, d)
 	return box
 end
 
+-- 2.14.0 (bêta 6) : la neige qui tombe. Un flocon par groupe d'animations
+-- du client (pas d'OnUpdate) : une translation (chute + dérive) et deux
+-- fondus (apparition, disparition), en boucle ; l'attente (delay) décale les
+-- flocons. Au repos le flocon est transparent (alpha 0) : seule l'animation
+-- le montre. Sans animations dans le client : pas de neige qui tombe.
+local function SnowAnim(tex, spec, S)
+	if type(tex.CreateAnimationGroup) ~= "function" then return nil end
+	local ok, group = pcall(tex.CreateAnimationGroup, tex)
+	if not (ok and group) then return nil end
+	Method(group, "SetLooping", "REPEAT")
+	local delay = tonumber(spec.delay) or 0
+	local fall = group:CreateAnimation("Translation")
+	Method(fall, "SetOffset", spec.dx or 0, -S.fall)
+	Method(fall, "SetDuration", spec.time)
+	Method(fall, "SetStartDelay", delay)
+	Method(fall, "SetSmoothing", "NONE")
+	local fadeIn = group:CreateAnimation("Alpha")
+	Method(fadeIn, "SetFromAlpha", 0)
+	Method(fadeIn, "SetToAlpha", S.alpha)
+	Method(fadeIn, "SetDuration", spec.time * S.fadeIn)
+	Method(fadeIn, "SetStartDelay", delay)
+	local fadeOut = group:CreateAnimation("Alpha")
+	Method(fadeOut, "SetFromAlpha", S.alpha)
+	Method(fadeOut, "SetToAlpha", 0)
+	Method(fadeOut, "SetDuration", spec.time * S.fadeOut)
+	Method(fadeOut, "SetStartDelay", delay + spec.time * (1 - S.fadeOut))
+	group.fall, group.fadeIn, group.fadeOut = fall, fadeIn, fadeOut
+	return group
+end
+
+local function BuildSnow(frame, d)
+	local S, A = ns.WINTER_VEIL_COMPANION.snow, ns.WINTER_VEIL_ART
+	d.snow = {}
+	for index, spec in ipairs(S) do
+		local tex = NewFile(d, "OVERLAY", 3, A.flake)
+		if tex then
+			tex:SetSize(spec.size, spec.size)
+			tex:SetPoint("CENTER", frame, "TOP", spec.x, S.top)
+			tex:SetAlpha(0)
+			tex.wvAnim = SnowAnim(tex, spec, S)
+			tex:Hide()
+			d.snow[index] = tex
+		end
+	end
+end
+
+-- La neige tombe (true) ou s'arrête (false) ; rend l'état posé
+local function SnowFalling(d, on)
+	on = on and true or false
+	for _, tex in ipairs(d.snow or {}) do
+		local group = tex.wvAnim
+		if on and group then
+			tex:Show()
+			local playing = false
+			if type(group.IsPlaying) == "function" then
+				local ok, value = pcall(group.IsPlaying, group)
+				playing = ok and value and true or false
+			end
+			if not playing then Method(group, "Play") end
+		else
+			if group then Method(group, "Stop") end
+			tex:Hide()
+		end
+	end
+	d.snowing = on
+	return on
+end
+
 local function BuildCompanionDecor(frame, skin)
 	local C, A = ns.WINTER_VEIL_COMPANION, ns.WINTER_VEIL_ART
-	local ringX = (ns.AZEROTH_RING and ns.AZEROTH_RING.x) or 0
 	local d = CreateFrame("Frame", nil, skin)
 	d:SetAllPoints(frame)
 	d:SetFrameLevel((skin:GetFrameLevel() or 1) + 2)
 	d:EnableMouse(false)
 	d.swags = {}
 	d.flakes = {}
+	-- 2.14.0 (bêta 6) : aux coins du cadre, depuis son centre (plus sur l'anneau)
 	for index, spec in ipairs(C.flakes) do
 		local tex = NewFile(d, "OVERLAY", 2, A.flake)
 		if tex then
 			tex:SetSize(spec.size, spec.size)
-			tex:SetPoint("CENTER", frame, "TOP", ringX + spec.x, spec.y)
+			tex:SetPoint("CENTER", frame, "TOP", spec.x, spec.y)
 			tex:SetAlpha(spec.alpha)
 			d.flakes[index] = tex
 		end
 	end
+	BuildSnow(frame, d)
 	frame.wvDecor = d
 	return d
+end
+
+-- ---------------------------------------------------------------------------
+-- 2.14.0 (bêta 6) : le cadre givré ; bêta 7 : le cadre Givre offert (WINTER_VEIL_GIFT)
+-- ---------------------------------------------------------------------------
+ns.RegisterDefaults({ winterVeilFrost = true })
+function ns:WinterVeilFrostOn() return self:DB().winterVeilFrost ~= false end
+
+-- 2.14.0 (bêta 7) : le cadre Givre offert pendant la saison (date du
+-- Voile d'hiver, ou /qc noel on), à tous, en Sobre comme en Azeroth ; hors
+-- saison il redevient verrouillé, sauf s'il a été gagné au coffre.
+function ns:WinterVeilGiftOn()
+	return self:WinterVeilChoice() == "on" or SeasonNow()
+end
+
+local function GiftDef()
+	for _, def in ipairs(ns.COMPANION_FRAMES or {}) do
+		if def.id == ns.WINTER_VEIL_GIFT then return def end
+	end
+	return nil
+end
+
+do
+	local isUnlocked = ns.CompanionIsUnlocked
+	-- Givre gagné pour de bon (coffre), saison mise à part
+	function ns:WinterVeilGiftEarned()
+		local def = GiftDef()
+		return def ~= nil and isUnlocked(self, "frame", def) == true
+	end
+	function ns:CompanionIsUnlocked(kind, def, ...)
+		if kind == "frame" and def and def.id == ns.WINTER_VEIL_GIFT and self:WinterVeilGiftOn() then return true end
+		return isUnlocked(self, kind, def, ...)
+	end
+
+	-- Givre choisi grâce à la saison : le cadre d'avant est gardé, pour y
+	-- revenir quand la saison finit (Givre pas gagné)
+	local setStyle = ns.CompanionSetStyle
+	function ns:CompanionSetStyle(kind, id, ...)
+		local data = self:CompanionData()
+		local before = data.frameStyle
+		local def = setStyle(self, kind, id, ...)
+		if def and kind == "frame" then
+			if def.id ~= ns.WINTER_VEIL_GIFT then
+				data.frameBeforeGift = nil
+			elseif before ~= def.id and not self:WinterVeilGiftEarned() then
+				data.frameBeforeGift = before
+			end
+		end
+		return def
+	end
+
+	-- La saison finie, Givre pas gagné : retour au cadre d'avant (s'il est
+	-- toujours là), sinon au premier (comme tout cadre verrouillé)
+	local currentStyle = ns.CompanionCurrentStyle
+	function ns:CompanionCurrentStyle(kind, ...)
+		if kind == "frame" then
+			local data = self:CompanionData()
+			if data.frameStyle == ns.WINTER_VEIL_GIFT then
+				local gift = GiftDef()
+				if gift and not self:CompanionIsUnlocked("frame", gift) then
+					local back = data.frameBeforeGift and self:CompanionStyleDef("frame", data.frameBeforeGift)
+					data.frameStyle = (back and self:CompanionIsUnlocked("frame", back)) and back.id or nil
+					data.frameBeforeGift = nil
+				elseif data.frameBeforeGift and self:WinterVeilGiftEarned() then
+					data.frameBeforeGift = nil
+				end
+			end
+		end
+		return currentStyle(self, kind, ...)
+	end
+
+	-- la liste des cadres : Givre offert, marqué « Voile d'hiver »
+	local choices = ns.CompanionChoices
+	if choices then
+		function ns:CompanionChoices(kind, ...)
+			local list = choices(self, kind, ...)
+			if kind == "frame" and type(list) == "table" and self:WinterVeilGiftOn() and not self:WinterVeilGiftEarned() then
+				for _, entry in ipairs(list) do
+					if entry.value == ns.WINTER_VEIL_GIFT and not entry.disabled then entry.hint = L.WINTER_VEIL_FROST_GIFT end
+				end
+			end
+			return list
+		end
+	end
+
+	-- l'allure de l'anneau : pendant le décor, réglage « Cadre givré »
+	-- coché, celle de Givre, quel que soit le cadre choisi (le cadre passé
+	-- en paramètre, lui, garde la sienne)
+	local ringLook = ns.AzerothRingLook
+	if ringLook then
+		function ns:AzerothRingLook(def, ...)
+			if def == nil and self:WinterVeilActive() and self:WinterVeilFrostOn() then
+				local gift = GiftDef()
+				if gift then return ringLook(self, gift, ...) end
+			end
+			return ringLook(self, def, ...)
+		end
+	end
+end
+
+-- L'anneau repeint (cadre du compagnon et carnet) : la saison, le décor ou
+-- le réglage ont changé
+local function PaintRings(self)
+	if self.CompanionPaintRing then self:CompanionPaintRing() end
+	if self.CarnetPaintRing then self:CarnetPaintRing() end
+end
+
+-- 2.14.0 (bêta 5) : le cadre « nu ». En mode voyage, interface cachée
+-- (26.png), l'habit du cadre (anneau, plaque) ne se voit plus, mais un
+-- modèle 3D ne suit pas l'opacité de ses parents (B7, 2.11.0) : la guirlande
+-- flottait au-dessus du compagnon. Elle se cache dès que l'habit ne se voit
+-- plus (caché, ou opacité effective sous WINTER_VEIL_BARE_ALPHA), et revient
+-- avec lui ; relu toutes les WINTER_VEIL_BARE_STEP s (ns:WinterVeilWatch).
+ns.WINTER_VEIL_BARE_ALPHA = 0.1
+ns.WINTER_VEIL_BARE_STEP = 0.25
+
+-- Opacité effective d'une région (celle du client, sinon le produit des
+-- opacités de ses parents)
+local function EffectiveAlpha(region)
+	if type(region.GetEffectiveAlpha) == "function" then
+		local ok, alpha = pcall(region.GetEffectiveAlpha, region)
+		if ok and tonumber(alpha) then return tonumber(alpha) end
+	end
+	local alpha, node, depth = 1, region, 0
+	while node and depth < 20 do
+		if type(node.GetAlpha) == "function" then
+			local ok, a = pcall(node.GetAlpha, node)
+			if ok and tonumber(a) then alpha = alpha * tonumber(a) end
+		end
+		node = type(node.GetParent) == "function" and node:GetParent() or nil
+		depth = depth + 1
+	end
+	return alpha
+end
+
+local function Hidden(region)
+	if not region then return false end
+	if type(region.IsShown) == "function" and not region:IsShown() then return true end
+	if type(region.IsVisible) == "function" then
+		local ok, visible = pcall(region.IsVisible, region)
+		if ok and visible == false then return true end
+	end
+	return false
+end
+
+-- L'habit du cadre (anneau, plaque) ne se voit pas ?
+function ns:WinterVeilCompanionBare(frame)
+	frame = frame or self.companionFrame
+	local skin = frame and frame.azSkin
+	if not skin or Hidden(frame) or Hidden(skin) then return true end
+	return EffectiveAlpha(skin) < ns.WINTER_VEIL_BARE_ALPHA
+end
+
+local function ShowParts(d, shown)
+	for _, tex in pairs(d.flakes or {}) do if shown then tex:Show() else tex:Hide() end end
+	if not shown then for _, model in ipairs(d.swags or {}) do model:Hide() end end
+end
+
+-- 2.14.0 (bêta 6) : le compagnon estompé en combat (opacité de contexte < 1) :
+-- la neige s'arrête (rien ne bouge autour du cadre pendant le combat)
+local function Calm(self)
+	if not self.CompanionContextAlpha then return true end
+	local ok, alpha = pcall(self.CompanionContextAlpha, self)
+	return not (ok and tonumber(alpha) and tonumber(alpha) < 1)
 end
 
 -- Montre ou cache le décor du compagnon ; rend s'il est montré
@@ -487,14 +796,68 @@ function ns:WinterVeilCompanion()
 		if d then
 			d:Hide()
 			for _, model in ipairs(d.swags or {}) do model:Hide() end
+			SnowFalling(d, false)
+			d.bare, d.calm = nil, nil
 		end
+		PaintRings(self)
 		return false
 	end
 	d = d or BuildCompanionDecor(frame, skin)
 	d:Show()
+	-- 2.14.0 (bêta 5) : habit invisible (mode voyage) : ni guirlande ni flocons
+	local bare = self:WinterVeilCompanionBare(frame)
+	d.bare = bare
+	-- 2.14.0 (bêta 6) : le givre suit le réglage ; le halo, l'habit
+	-- 2.14.0 (bêta 7) : l'allure du cadre Givre (AzerothRingLook), le halo
+	-- sur l'habit (caché avec lui)
+	PaintRings(self)
+	if bare then
+		if not d.swags[1] then PlaceSwags(frame, d) end
+		ShowParts(d, false)
+		SnowFalling(d, false)
+		d.calm = nil
+		return false
+	end
+	ShowParts(d, true)
 	PlaceSwags(frame, d)
+	d.calm = Calm(self)
+	SnowFalling(d, d.calm)
 	return true
 end
+
+-- 2.14.0 (bêta 5) : l'habit a disparu (ou est revenu) depuis le dernier
+-- passage : le décor suit. Rien n'est refait tant que rien ne change. Rend
+-- true quand le décor a été repris.
+-- 2.14.0 (bêta 6) : le combat aussi (la neige s'arrête, puis reprend).
+function ns:WinterVeilWatch()
+	local frame = self.companionFrame
+	local d = frame and frame.wvDecor
+	if not (d and d:IsShown()) then return false end
+	local bare = self:WinterVeilCompanionBare(frame)
+	if (d.bare and true or false) == bare then
+		if bare then return false end
+		local calm = Calm(self)
+		if (d.calm and true or false) == calm then return false end
+		d.calm = calm
+		SnowFalling(d, calm)
+		return true
+	end
+	self:WinterVeilCompanion()
+	return true
+end
+
+-- 2.14.0 (bêta 7) : la saison commence ou finit en jeu : Givre offert ou
+-- repris (relu chaque minute, comme la saison)
+ns.Every("noel:givre", 60, function()
+	if ns.winterVeilGift == nil or (ns:WinterVeilGiftOn() and true or false) == ns.winterVeilGift then return end
+	local ok, err = pcall(ns.WinterVeilApply, ns)
+	if not ok and ns.RecordError then ns:RecordError("noel:givre", err) end
+end)
+
+ns.Every("noel:cadre", ns.WINTER_VEIL_BARE_STEP, function()
+	local ok, err = pcall(ns.WinterVeilWatch, ns)
+	if not ok and ns.RecordError then ns:RecordError("noel:cadre", err) end
+end)
 
 -- 2.14.0 (bêta 4) : réglage en jeu de la guirlande du cadre (pour la
 -- session) : /qc noel cadre <bulbe px> <x> <y> <brins> <cap> ; un « - »
@@ -849,6 +1212,13 @@ function ns:WinterVeilApply()
 	if self.WinterCompanionsForget then self:WinterCompanionsForget() end
 	local active = self:WinterVeilActive() and true or false
 	self.winterVeilShown = active
+	-- 2.14.0 (bêta 7) : Givre offert ou repris : le cadre porté est revu
+	-- (retour au cadre d'avant la saison), anneau compris
+	self.winterVeilGift = self:WinterVeilGiftOn() and true or false
+	if self.companionFrame and self.CompanionApplyFrame then
+		local ok, err = pcall(self.CompanionApplyFrame, self)
+		if not ok and self.RecordError then self:RecordError("noel:givre", err) end
+	end
 	for _, step in ipairs({ "WinterVeilCompanion", "WinterVeilJournal", "WinterVeilRepaintGlyphs" }) do
 		local ok, err = pcall(self[step], self)
 		if not ok and self.RecordError then self:RecordError("noel:" .. step, err) end
@@ -917,6 +1287,21 @@ do
 					describe = function() return L.OPT_WINTER_VEIL_DESC end,
 					tooltip = function() if not (ns.AzerothOn and ns:AzerothOn()) then return L.OPT_WINTER_VEIL_SOBRE end end,
 					choose = function(id) ns:SetWinterVeil(id) end })
+			end
+			-- 2.14.0 (bêta 6) : le cadre givré, juste sous le décor
+			local frost, after = false, nil
+			for index, row in ipairs(page.rows) do
+				if row.key == "winterVeilFrost" then frost = true end
+				if row.key == "winterVeil" then after = index end
+			end
+			if not frost and after then
+				table.insert(page.rows, after + 1, { key = "winterVeilFrost", label = "OPT_WINTER_VEIL_FROST", kind = "bool",
+					describe = function() return L.OPT_WINTER_VEIL_FROST_DESC end,
+					tooltip = function() if not (ns.AzerothOn and ns:AzerothOn()) then return L.OPT_WINTER_VEIL_SOBRE end end,
+					onChange = function()
+						local ok, err = pcall(ns.WinterVeilCompanion, ns)
+						if not ok and ns.RecordError then ns:RecordError("noel:givre", err) end
+					end })
 			end
 		end
 	end

@@ -338,13 +338,29 @@ end
 -- type. Rechargé seulement quand l'apparence ou sa façon de la montrer
 -- changent (lookKey). Rend "portrait", "model" ou "icon".
 local function CanPortrait() return type(G("SetPortraitTextureFromCreatureDisplayID")) == "function" end
+-- 2.14.0 (bêta 6) : les vignettes de saison prennent aussi le portrait 2D
+-- (ns:WinterPortraitDisplay, WinterCompanions.lua : Metzen par l'affichage du
+-- Renne de l'Hiver, les deux autres par leur displayID appris) ; portrait
+-- refusé par le client : le petit modèle 3D d'avant.
+local function SeasonDisplay(self, def)
+	return self.WinterPortraitDisplay and self:WinterPortraitDisplay(def.npc) or nil
+end
 local function PaintLook(self, tile, def, m)
 	local display = def.display
-	if not display and def.npc and not tile.seasonal and self.ModelKnownDisplay then display = self:ModelKnownDisplay(def.npc) end
-	local want3d = tile.seasonal or (def.npc ~= nil and not (display and CanPortrait()))
-	local key = def.id .. (want3d and ":m" or ":p")
+	if tile.seasonal then
+		display = SeasonDisplay(self, def)
+	elseif not display and def.npc and self.ModelKnownDisplay then
+		display = self:ModelKnownDisplay(def.npc)
+	end
+	local want3d = def.npc ~= nil and not (display and CanPortrait())
+	local key = def.id .. (want3d and ":m" or ":p") .. tostring(tile.seasonal and display or "")
 	if tile.lookKey ~= key then
 		tile.lookKey, tile.look = key, nil
+		if not want3d and tile.seasonal then
+			if tile.model and ns.ModelForget then ns.ModelForget(tile.model) end
+			local look = self.CreaturePortrait and self:CreaturePortrait(tile.portrait, { display = display, npc = def.npc, type = m.typeText })
+			if look == "portrait" then tile.look = "portrait" else want3d = true end
+		end
 		if want3d then
 			local model = TileModel(tile)
 			local cam, y, facing
@@ -356,7 +372,7 @@ local function PaintLook(self, tile, def, m)
 				tile.look = "model"
 			end
 		end
-		if tile.look ~= "model" then
+		if tile.look ~= "model" and tile.look ~= "portrait" then
 			if tile.model and ns.ModelForget then ns.ModelForget(tile.model) end
 			tile.look = self.CreaturePortrait and self:CreaturePortrait(tile.portrait,
 				{ display = display, npc = def.npc, type = m.typeText }) or "icon"
@@ -755,6 +771,10 @@ function ns:AllureRefresh()
 				if def.npc and not def.display and seen == (pass == 1) then learnList[#learnList + 1] = def.npc end
 			end
 		end
+		-- 2.14.0 (bêta 6) : les compagnons de saison en dernier (leur portrait 2D)
+		if seasonOn and self.WinterPortraitToLearn then
+			for _, npc in ipairs(self:WinterPortraitToLearn()) do learnList[#learnList + 1] = npc end
+		end
 		self:ModelLearnCreatures(learnList)
 	end
 	frame.mineTitle:SetText(L.ALLURE_MINE, self:F("ALLURE_COUNT", #grid + #season, total))
@@ -811,6 +831,12 @@ function ns:AllureBuildCard(pane, content, x, y, width, height)
 		model:SetSize(56, height - 8)
 		card.model = model
 	end
+	-- 2.14.0 (bêta 6) : le portrait 2D rond d'un compagnon de saison
+	local side = math.min(56, height - 8)
+	card.portrait = card:CreateTexture(nil, "ARTWORK", nil, 1)
+	card.portrait:SetSize(side, side)
+	card.portrait:SetPoint("CENTER", card, "LEFT", 6 + 28, 0)
+	card.portrait:Hide()
 	pane.lookChoose = Theme.CreateButton(card, "auto", 24, L.ALLURE_CHOOSE, function() ns:AllureOpen() end, "primary")
 	pane.lookChoose:SetPoint("RIGHT", card, "RIGHT", -10, 0)
 	local textX = 70
@@ -844,6 +870,21 @@ function ns:AllureRefreshCard(pane)
 	pane.lookDetail:SetText(self:AllureKindText(def) .. "  ·  " .. self:F("ALLURE_CARD_COUNT", count))
 	local rarity = def.captured and ns.CAPTURE_RARITY and ns.CAPTURE_RARITY[def.class or "normal"]
 	card:SetAccent(def.shiny and Theme.GOLD_LIGHT or (rarity and rarity.color) or Theme.GOLD)
+	-- 2.14.0 (bêta 6) : compagnon de saison au displayID connu : le portrait 2D
+	local display = def.seasonal and CanPortrait() and SeasonDisplay(self, def) or nil
+	if display and card.portrait and self.CreaturePortrait
+		and self:CreaturePortrait(card.portrait, { display = display, npc = def.npc }) == "portrait" then
+		card.portrait:Show()
+		card.look = "portrait"
+		if card.model then
+			if ns.ModelForget then ns.ModelForget(card.model) end
+			card.model:Hide()
+		end
+		return
+	end
+	if card.portrait then card.portrait:Hide() end
+	card.look = "model"
+	if card.model then card.model:Show() end
 	if card.model and ns.ShowModel then
 		-- 2.14.0 (bêta 3) : une créature (capturée, de saison) cadrée comme
 		-- dans le cadre du compagnon (Metzen : de loin)
