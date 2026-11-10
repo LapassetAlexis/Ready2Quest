@@ -98,12 +98,13 @@ do
 	Check("[CPAGE] cadre puis fond : la liste du cadre se referme", evo.bgStyle:IsOpen() and not evo.frameStyle:IsOpen())
 	evo.bgStyle:Click()
 	Check("[CPAGE] envies : quatre lignes", #evo.needs == 4 and evo.needs[1].value.text:find("%%") ~= nil)
+	-- 2.14.0 : plus de carrousel ; « Choisir… » ouvre le panneau (CompanionAllure.lua)
+	evo.lookChoose:Click()
 	local captured
-	for _, cell in ipairs(evo.looks) do if cell.def and cell.def.id == "cap:7001" then captured = cell end end
 	for _ = 1, 10 do
+		for _, tile in ipairs(NS.allurePanel.tiles) do if tile.def and tile.def.id == "cap:7001" and tile:IsShown() then captured = tile end end
 		if captured then break end
-		NS:CompanionLooksScroll(1)
-		for _, cell in ipairs(evo.looks) do if cell.def and cell.def.id == "cap:7001" then captured = cell end end
+		NS:AllureScroll(1)
 	end
 	Check("[CPAGE] allure : la créature capturée parmi les apparences", captured ~= nil)
 	-- une créature capturée garde son nom ; la mascotte, le sien (1.5.2)
@@ -122,6 +123,7 @@ do
 	Check("[CPAGE] cadre et fond : deux listes", #evo.frameStyle.options > 0 and #evo.bgStyle.options > 0)
 	Check("[CPAGE] anciennes pages redirigées : Collection -> Compagnon",
 		(function() NS:SelectJournalKind("collection"); return f.kind == "evolution" end)())
+	NS:AllureClose()
 	f:Hide()
 	-- jours ensemble sans date : depuis aujourd'hui
 	NS:CompanionData().since = nil

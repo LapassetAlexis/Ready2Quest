@@ -1952,7 +1952,7 @@ end
 -- ---------------------------------------------------------------------------
 local JOURNAL_STATE = { "kind", "activity", "offset", "zoneFilter", "zoneSort", "zoneOffset", "questFilter", "collKind",
 	"menZone", "menState", "menRank", "menSort", "menSearch", "menType", "menOffset", "featsCat", "featsOffset",
-	"zoneID", "zonePicked", "progPart", "progOffset", "progItemOffset", "guideSection", "guideOffset", "lookOffset",
+	"zoneID", "zonePicked", "progPart", "progOffset", "progItemOffset", "guideSection", "guideOffset",
 	"jukeView", "jukeOffset", "jukeSearch" }   -- 2.12.0 : Juke-box
 
 function ns:CarnetRestyle()

@@ -328,6 +328,15 @@ ns.AZEROTH_CONTRAST = {
 	["dialog.title"] = { "title", 0.2682, 3.0, 19 },   -- sombre, fond 0.268 (moy. 0.366) : 3.74:1
 	["dialog.sub"] = { "inkSoft", 0.2682, 4.5, 11 },   -- sombre, fond 0.268 (moy. 0.366) : 5.09:1
 	["dialog.text"] = { "ink", 0.2682, 4.5, 12 },   -- sombre, fond 0.268 (moy. 0.366) : 5.71:1
+	-- 2.14.0 : panneau « Choisir son allure » (CompanionAllure.lua), habillé comme la confirmation
+	-- (même parchemin 130661 en Cover, même voile page 0,35) : textes posés sur le parchemin au fond
+	-- de dialog.* ; vignettes au fond des tuiles claires (235397 + voile light 0,40), celui de tile.*
+	["allure.section"] = { "inkSoft", 0.2682, 4.5, 10 },   -- sombre, fond 0.268 (moy. 0.366) : 5.09:1 (intertitres)
+	["allure.hint"] = { "inkSoft", 0.2682, 4.5, 10 },   -- sombre, même fond : 5.09:1 (« 12 sur 76 », position)
+	["allure.text"] = { "ink", 0.2682, 4.5, 12 },   -- sombre, même fond : 5.71:1 (« Aucune apparence… »)
+	["allure.name"] = { "ink", 0.3252, 4.5, 11 },   -- sombre, fond 0.325 (moy. 0.425) : 6.73:1 (nom d'une vignette)
+	["allure.locked"] = { "inkMuted", 0.3252, 4.5, 11 },   -- sombre, même fond : 5.05:1 (mascotte pas encore gagnée)
+	["allure.shiny"] = { "rShiny", 0.3252, 4.5, 11 },   -- sombre, même fond : 4.84:1 (version brillante)
 }
 -- Luminance relative WCAG 2.x d'une couleur (0..1)
 local function Lin(c) if c <= 0.03928 then return c / 12.92 end return ((c + 0.055) / 1.055) ^ 2.4 end
