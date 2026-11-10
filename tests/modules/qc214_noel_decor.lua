@@ -756,6 +756,8 @@ do
 	local painted, missing = true, {}
 	for _, def in ipairs(NS.COMPANION_FRAMES) do
 		data.unlocked["frame:" .. def.id] = true
+		-- 3.0.0 : les cadres de l'Échoppe se débloquent à l'achat (au compte)
+		if def.unlock and def.unlock.shop and NS.ShopCosmeticGrant then NS:ShopCosmeticGrant(def.unlock.shop) end
 		local set = NS:CompanionSetStyle("frame", def.id)
 		local look = TINTS[def.id]
 		if not look and def.id:find("^seal_") then look = { def.edge[1], def.edge[2], def.edge[3], desat = true } end
