@@ -1740,7 +1740,10 @@ end
 -- filet. La même teinte pour le grand portrait de la page Créature.
 -- ---------------------------------------------------------------------------
 ns.AZEROTH_RING_TINTS = {
-	sparkle    = { glow = { 1.0, 0.84, 0.40 } },              -- Étincelant : or vif, halo doré
+	-- 2.14.1 : Ardoise (le cadre de départ) en gris ardoise, Étincelant plus
+	-- clair : hors Givre, les trois premiers cadres se ressemblaient (tous or)
+	slate      = { 0.66, 0.70, 0.78, desat = true },           -- Ardoise : gris ardoise
+	sparkle    = { 1.0, 0.95, 0.72, glow = { 1.0, 0.84, 0.40 } }, -- Étincelant : or clair, halo doré
 	master     = { 1.0, 0.84, 0.52 },                          -- Insigne du maître : or soutenu
 	copper     = { 1.0, 0.60, 0.40 },                          -- Cuivre
 	oak        = { 0.76, 0.54, 0.32, desat = true },           -- Chêne : brun chaud
