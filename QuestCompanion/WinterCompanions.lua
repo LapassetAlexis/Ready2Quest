@@ -93,7 +93,9 @@ for _, def in ipairs(ns.WINTER_COMPANIONS) do BY_ID[def.id], BY_KEY[def.seasonal
 -- 1 : la caméra du client, celle de la sonde ; le cadrage « portrait » ou
 -- « buste » ne fait que la rapprocher. /qc noel metzen diag dit ce que le
 -- client a chargé (vignette, cadre du compagnon).
-ns.WINTER_METZEN_CAM = 1
+-- 2.14.1 : 0,6 réglé en jeu (/qc noel metzen 0.6, 10/11) : à 1, le renne d'hiver
+-- (modèle réduit) restait minuscule dans le cadre du compagnon
+ns.WINTER_METZEN_CAM = 0.6
 ns.WINTER_METZEN_LOOK = 15706
 if type(ns.MODEL_NPC_LOOK) == "table" then ns.MODEL_NPC_LOOK[15664] = ns.WINTER_METZEN_LOOK end
 -- 2.14.0 (bêta 6) : la vignette de Metzen enfin visible, mais minuscule et

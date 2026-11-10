@@ -3,10 +3,11 @@
 ## 2.14.1
 
 - **Guirlande du compagnon** posée sur le bord doré du cadre (réglée en jeu).
+- **Metzen** plus grand dans le cadre du compagnon.
 - **Cadre givré** : un cadre que tu choisis pendant le Voile d'hiver s'affiche, au lieu de l'allure Givre imposée.
 - **Cadres en style Azeroth** : Ardoise colore l'anneau en gris ardoise, Étincelant en or clair (les premiers cadres se ressemblaient tous).
 
-*English:* the companion's Christmas lights now sit on the frame's gold border; a frame you pick during Winter Veil now shows instead of the forced Frost look; in the Azeroth style Slate now tints the ring slate grey and Sparkling a lighter gold.
+*English:* the companion's Christmas lights now sit on the frame's gold border; Metzen is bigger in the companion frame; a frame you pick during Winter Veil now shows instead of the forced Frost look; in the Azeroth style Slate now tints the ring slate grey and Sparkling a lighter gold.
 
 ## 2.14.0 — le Voile d'hiver
 
