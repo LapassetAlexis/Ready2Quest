@@ -114,6 +114,10 @@ SEASONAL_FACTIONS = {1555}
 # PNJ masqués par Questie sur Forever (Expansions.Current = Era, l'énumération
 # de Questie pour les clients classiques ; retirés du jeu ou d'événements passés)
 QUESTIE_NPC_BLACKLIST = {8001, 13151, 13153, 13154, 13319, 13320, 13377, 13446, 13449, 15799}
+# Forever : créatures qu'on ne peut ni tuer ni capturer, relevées en jeu
+FOREVER_NPC_EXCLUDE = {
+    250921: "Forest Sprite (île de Zephras) : 13 000 PV, disparaît dès qu'on l'attaque (Deklatis, 2026-11-10)",
+}
 
 # ---------------------------------------------------------------------------
 # Récolte : nom de l'objet du monde -> itemID de GatheringData.lua
@@ -194,6 +198,8 @@ def creature_reason(npc_id, row, keys):
         return "sans nom"
     if npc_id in QUESTIE_NPC_BLACKLIST:
         return "liste noire Questie"
+    if npc_id in FOREVER_NPC_EXCLUDE:
+        return "intouchable (Forever)"
     if TECHNICAL.search(name):
         return "technique"
     if SEASONAL.search(name) or SEASONAL.search(sub_name) or faction in SEASONAL_FACTIONS:
