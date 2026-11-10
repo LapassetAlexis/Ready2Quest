@@ -270,7 +270,20 @@ do
 	QNS:CaptureData().creatures[5002] = { name = "Loup des plaines", class = "normal" }
 	GameTooltip:ClearLines()
 	LA.PostCall(2, GameTooltip, { guid = LA.Guid(5002) })
-	Check("[TT] capturé : « Créatures : capturé »", LA.Lines() == "Créatures : capturé", LA.Lines())
+	-- 2.14.0 : ses étoiles et si le filet la proposera encore
+	Check("[TT] capturé, 1 étoile : « encore des étoiles à gagner »", LA.Lines():find("^Créatures : capturé ") ~= nil
+		and LA.Lines():find("encore des étoiles à gagner", 1, true) ~= nil, LA.Lines())
+	QNS:CaptureData().creatures[5002].stars = 3
+	GameTooltip:ClearLines()
+	LA.PostCall(2, GameTooltip, { guid = LA.Guid(5002) })
+	Check("[TT] capturé, 3 étoiles : « complète, plus proposée »", LA.Lines():find("complète, plus proposée", 1, true) ~= nil, LA.Lines())
+	QNS:CaptureData().creatures[5002].stars = 1
+	local savedRetry = QNS:DB().companionRetryCommon
+	QNS:DB().companionRetryCommon = 0
+	GameTooltip:ClearLines()
+	LA.PostCall(2, GameTooltip, { guid = LA.Guid(5002) })
+	Check("[TT] capturé, plus d'essais : le dit", LA.Lines():find("plus d'essais", 1, true) ~= nil, LA.Lines())
+	QNS:DB().companionRetryCommon = savedRetry
 	-- 1.6.0 : la brillante repérée sous la souris parle de SA version
 	QNS:ShinyState().live[LA.Guid(5002)] = { npcID = 5002, zoneID = ZONE, name = "Loup des plaines" }
 	GameTooltip:ClearLines()
@@ -280,7 +293,7 @@ do
 	QNS:CaptureData().creatures[5002].shiny = true
 	GameTooltip:ClearLines()
 	LA.PostCall(2, GameTooltip, { guid = LA.Guid(5002) })
-	Check("[TT] brillante capturée", LA.Lines() == "Créatures : BRILLANTE · capturée", LA.Lines())
+	Check("[TT] brillante capturée", LA.Lines():find("^Créatures : BRILLANTE · capturée ") ~= nil, LA.Lines())
 	QNS:ShinyState().live[LA.Guid(5002)] = nil
 	QNS:CaptureData().creatures[5002] = nil
 	-- capture coupée : la ligne du bestiaire d'avant
