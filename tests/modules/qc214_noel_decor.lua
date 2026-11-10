@@ -348,7 +348,16 @@ do
 	Check("[WV3] vol : la boule rapetisse en s'éloignant, tourne un peu", early > late and late >= S.size * S.scaleTo - 0.01
 		and ball.rotation ~= nil and ball.rotation <= math.pi * S.spin)
 	Check("[WV3] vol : une traîne de petits flocons derrière elle", trail == S.trail and S.trailSize < S.size / 2)
+	-- 2.14.0 (bêta 3) : sur la carte de parchemin, la boule arrive sur la créature (centre de la scène)
+	Check("[WV3] pied : « La boule de neige vole… »", stage.footer:GetText() == NS.L.WINTER_VEIL_STAGE_FLY
+		and NS.WINTER_VEIL_STRINGS.en.WINTER_VEIL_STAGE_FLY ~= nil)
+	NS:CaptureStageUpdate(start + NS.CAPTURE_THROW_TIME * 0.999)
+	local hit, body = ball.lastPoint, stage.model.lastPoint
+	Check("[WV3] carte de parchemin : la boule finit sa course sur la créature", stage.chrome == "card"
+		and hit.relTo == stage.scene and math.abs(hit.x) < 2 and math.abs(hit.y) < 2
+		and body.relTo == stage.scene and body.x == 0 and body.y == 0, hit.x .. "," .. hit.y)
 	NS:CaptureStageUpdate(start + NS.CAPTURE_THROW_TIME + S.burst * 0.1)
+	Check("[WV3] pied après l'impact : « Sous la neige, ça remue… »", stage.footer:GetText() == NS.L.WINTER_VEIL_STAGE_SHAKE)
 	local puff = stage.wvPuff
 	Check("[WV3] impact : une bouffée de neige (boule additive, arrondie) qui grandit", Shown(puff) and puff.blendMode == "ADD"
 		and puff.masks ~= nil and puff:GetWidth() > S.size * S.scaleTo)

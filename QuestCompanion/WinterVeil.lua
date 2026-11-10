@@ -115,6 +115,9 @@ local FR = {
 	WINTER_VEIL_MSG         = "Décor du Voile d'hiver : %s.",
 	WINTER_VEIL_MSG_SOBRE   = "Décor du Voile d'hiver : %s. Il ne se voit qu'avec le style Azeroth (/qc style azeroth).",
 	HELP_NOEL               = "/qc noel auto|on|off — décor du Voile d'hiver (guirlandes, flocons, boule de neige)",
+	-- 2.14.0 (bêta 3) : le pied de la scène de capture (au lieu de « Le filet bouge… »)
+	WINTER_VEIL_STAGE_FLY   = "La boule de neige vole…",
+	WINTER_VEIL_STAGE_SHAKE = "Sous la neige, ça remue…",
 }
 local EN = {
 	OPT_WINTER_VEIL         = "Winter Veil decorations",
@@ -128,6 +131,8 @@ local EN = {
 	WINTER_VEIL_MSG         = "Winter Veil decorations: %s.",
 	WINTER_VEIL_MSG_SOBRE   = "Winter Veil decorations: %s. They only show with the Azeroth style (/qc style azeroth).",
 	HELP_NOEL               = "/qc noel auto|on|off — Winter Veil decorations (lights, snowflakes, snowball)",
+	WINTER_VEIL_STAGE_FLY   = "The snowball is flying…",
+	WINTER_VEIL_STAGE_SHAKE = "Something stirs under the snow…",
 }
 ns.RegisterStrings(FR, EN)
 if ns.KEEP_STRINGS then ns.WINTER_VEIL_STRINGS = { fr = FR, en = EN } end
@@ -580,6 +585,10 @@ function ns:WinterVeilStage(frame, now)
 	local t = (now or Clock()) - (rolling.start or now or 0)
 	local throw = ns.CAPTURE_THROW_TIME or 0.7
 	local p = t / throw
+	-- 2.14.0 (bêta 3) : le pied parle de la boule de neige, pas du filet
+	if frame.footer and not rolling.result then
+		frame.footer:SetText(t < throw and L.WINTER_VEIL_STAGE_FLY or L.WINTER_VEIL_STAGE_SHAKE)
+	end
 	if t < throw then
 		local g = Glide(p)
 		local x, y = Arc(g)

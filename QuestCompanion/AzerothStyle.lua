@@ -337,6 +337,13 @@ ns.AZEROTH_CONTRAST = {
 	["allure.name"] = { "ink", 0.3252, 4.5, 11 },   -- sombre, fond 0.325 (moy. 0.425) : 6.73:1 (nom d'une vignette)
 	["allure.locked"] = { "inkMuted", 0.3252, 4.5, 11 },   -- sombre, même fond : 5.05:1 (mascotte pas encore gagnée)
 	["allure.shiny"] = { "rShiny", 0.3252, 4.5, 11 },   -- sombre, même fond : 4.84:1 (version brillante)
+	-- 2.14.0 (bêta 3) : carte de la scène de capture (ns:AzerothCreateCard, 340×418) : parchemin 130661 en
+	-- Cover, voile page 0,35, sans ombre de gauche (scratchpad meas/card214.py). Ligne de chance x 80-260,
+	-- y 320-334 ; nombres des aides x 125-250, y 349-363 ; pied x 16-324, y 393-406 (le bas, le plus sombre :
+	-- inkSoft n'y tient que 4,47:1, d'où l'encre courante). Plaque : splate.* ; verdict : verdict.*
+	["stage.chance"] = { "ink", 0.3665, 4.5, 12 },   -- sombre, fond 0.367 (moy. 0.399) : 7.47:1
+	["stage.aidCount"] = { "inkSoft", 0.3210, 4.5, 11 },   -- sombre, fond 0.321 (moy. 0.359) : 5.93:1
+	["stage.status"] = { "ink", 0.2297, 4.5, 11 },   -- sombre, fond 0.230 (moy. 0.254) : 5.02:1
 }
 -- Luminance relative WCAG 2.x d'une couleur (0..1)
 local function Lin(c) if c <= 0.03928 then return c / 12.92 end return ((c + 0.055) / 1.055) ^ 2.4 end
@@ -958,26 +965,92 @@ function ns:AzerothWood(frame)
 	return wood
 end
 
--- Une fenêtre en bois : mêmes réglages que Theme.CreateToast (strate,
--- gardée à l'écran bois compris, déplaçable). opts : name, strata.
-function ns:AzerothCreateWindow(width, height, opts)
+-- Une fenêtre des scènes : mêmes réglages que Theme.CreateToast (strate,
+-- gardée à l'écran, déplaçable), sans habit. opts : name, strata.
+local function SceneWindow(width, height, opts, inset)
 	opts = opts or {}
 	local ok, frame = pcall(CreateFrame, "Frame", opts.name, UIParent)
 	if not ok or not frame then return nil end
 	frame:SetSize(width, height)
 	frame:SetFrameStrata(opts.strata or "DIALOG")
 	frame:SetClampedToScreen(true)
-	local o = ns.AZEROTH_WOOD_OUT
-	Method(frame, "SetClampRectInsets", -o, o, o, -o)
-	frame.clampInset = o
+	Method(frame, "SetClampRectInsets", -inset, inset, inset, -inset)
+	frame.clampInset = inset
 	frame:EnableMouse(false)
 	frame:SetMovable(true)
 	if frame.RegisterForDrag then frame:RegisterForDrag("LeftButton") end
 	if frame.StartMoving then frame:SetScript("OnDragStart", frame.StartMoving) end
 	if frame.StopMovingOrSizing then frame:SetScript("OnDragStop", frame.StopMovingOrSizing) end
-	frame.uiStyle, frame.azeroth, frame.chrome = "azeroth", true, "wood"
+	frame.uiStyle, frame.azeroth = "azeroth", true
+	return frame
+end
+
+-- Une fenêtre en bois (gardée à l'écran bois compris). opts : name, strata.
+function ns:AzerothCreateWindow(width, height, opts)
+	local frame = SceneWindow(width, height, opts, ns.AZEROTH_WOOD_OUT)
+	if not frame then return nil end
+	frame.chrome = "wood"
 	frame.contentLeft, frame.contentTop = ns.AZEROTH_WOOD_PAD, 0
 	self:AzerothWood(frame)
+	return frame
+end
+
+-- 2.14.0 (bêta 3) : la carte de la scène de capture (maquette A validée le
+-- 10/11/2026), plus compacte que la fenêtre en bois : le parchemin des
+-- hauts faits (130661, recadré sans déformer) sous le voile « page », sur
+-- un aplat parchemin (le repli si le client refuse le fichier) ; l'encadré
+-- fin en bois des confirmations du carnet (130672, ns.CarnetWoodBorder,
+-- JournalAzeroth.lua ; repli : un liseré brun uni) et un filet d'or à
+-- l'intérieur. out : débord de l'encadré ; gold : retrait du filet d'or ;
+-- pad : marge des textes.
+ns.AZEROTH_CARD = { parch = { file = 130661, w = 512, h = 256 }, out = 6, edge = 4, gold = 8, goldAlpha = 0.8, pad = 16 }
+function ns:AzerothCreateCard(width, height, opts)
+	local K = ns.AZEROTH_CARD
+	local frame = SceneWindow(width, height, opts, K.out)
+	if not frame then return nil end
+	frame.chrome = "card"
+	frame.contentLeft, frame.contentTop = K.pad, 0
+	frame.cardBack = Theme.Solid(frame, "BACKGROUND", ns.AZEROTH_PARCH_SOLID, 1)
+	frame.cardBack:SetAllPoints(frame)
+	frame.cardParch = frame:CreateTexture(nil, "BACKGROUND", nil, 1)
+	frame.cardParch:SetAllPoints(frame)
+	if ns.AzerothFileTexture(frame.cardParch, K.parch) then
+		ns.AzerothCover(frame.cardParch, K.parch, width, height)
+		frame.cardParch:Show()
+	else
+		frame.cardParch:Hide()
+	end
+	frame.cardVeil = ns.AzerothVeil(frame, frame, "page", 2)
+	local border = ns.CarnetWoodBorder and ns.CarnetWoodBorder(frame, K.out)
+	if not border then
+		-- les quatre bords : coin de départ, coin d'arrivée, épaisseur en largeur ?
+		local edges = { { "TOPLEFT", "TOPRIGHT" }, { "BOTTOMLEFT", "BOTTOMRIGHT" },
+			{ "TOPLEFT", "BOTTOMLEFT", true }, { "TOPRIGHT", "BOTTOMRIGHT", true } }
+		border = {}
+		for index, edge in ipairs(edges) do
+			local tex = Theme.Solid(frame, "BORDER", INKS.woodBg, 1)
+			tex:SetPoint(edge[1], frame, edge[1], 0, 0)
+			tex:SetPoint(edge[2], frame, edge[2], 0, 0)
+			if edge[3] then tex:SetWidth(K.edge) else tex:SetHeight(K.edge) end
+			border[index] = tex
+		end
+		frame.cardEdges = border
+	end
+	frame.cardBorder = border
+	-- le filet d'or, à l'intérieur de l'encadré
+	local gold, g = ns.AZEROTH_BUTTONS.gold.edge, K.gold
+	frame.cardGold = {}
+	local function Line(p1, x1, y1, p2, x2, y2, w, h)
+		local tex = Theme.Solid(frame, "BORDER", gold, K.goldAlpha)
+		tex:SetPoint(p1, frame, p1, x1, y1)
+		tex:SetPoint(p2, frame, p2, x2, y2)
+		if w then tex:SetWidth(w) else tex:SetHeight(h) end
+		frame.cardGold[#frame.cardGold + 1] = tex
+	end
+	Line("TOPLEFT", g, -g, "TOPRIGHT", -g, -g, nil, 1)
+	Line("BOTTOMLEFT", g, g, "BOTTOMRIGHT", -g, g, nil, 1)
+	Line("TOPLEFT", g, -g, "BOTTOMLEFT", g, g, 1, nil)
+	Line("TOPRIGHT", -g, -g, "BOTTOMRIGHT", -g, g, 1, nil)
 	return frame
 end
 

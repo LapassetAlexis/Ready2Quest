@@ -294,6 +294,8 @@ local function WoodBorder(target, out)
 	target.azWoodBorder = host
 	return host
 end
+-- 2.14.0 (bêta 3) : aussi l'encadré de la carte de capture (ns:AzerothCreateCard)
+ns.CarnetWoodBorder = WoodBorder
 
 -- ---------------------------------------------------------------------------
 -- Les fonds des tuiles et des lignes

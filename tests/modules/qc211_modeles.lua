@@ -206,13 +206,13 @@ do
 		and tex.texture == nil and not tex.clientArt and QNS.CAPTURE_ART.rays == nil)
 	Mock.InstallAtlas(true)
 	local expect = { rays = "ArtifactsFX-StarBurst", halo = "ChallengeMode-SoftYellowGlow", sparks = "Artifacts-Anim-Sparks",
-		stars = "auctionhouse-icon-favorite", ribbon = "BossBanner-BgBanner-Mid", stage = "charactercreate-vignette-sides" }
+		stars = "auctionhouse-icon-favorite", ribbon = "BossBanner-BgBanner-Mid", ground = "ChallengeMode-SoftYellowGlow" }
 	local ok, got = true, {}
 	for role, atlas in pairs(expect) do
 		local t = UIParent:CreateTexture()
 		if QNS.CaptureArtPaint(t, role) ~= "client" or t.atlas ~= atlas or not t.clientArt then ok = false; got[#got + 1] = role end
 	end
-	Check("[M211] atlas du client : rayons, halo, étincelles, étoiles, bannière, vignette", ok, table.concat(got, ","))
+	Check("[M211] atlas du client : rayons, halo, étincelles, étoiles, bannière, ombre au sol", ok, table.concat(got, ","))
 	Check("[M211] pas de « Bonus-ToastBanner » (écusson bleu sur Forever)", QNS.CAPTURE_CLIENT_ART.ribbon.atlas ~= "Bonus-ToastBanner")
 	Check("[M211] le filet, ses cordes et le paquet restent les nôtres", QNS.CaptureArtPaint(tex, "net") == "own"
 		and QNS.CaptureArtPaint(tex, "rope") == "own" and QNS.CaptureArtPaint(tex, "bundle") == "own")
