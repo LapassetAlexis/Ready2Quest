@@ -699,8 +699,10 @@ do
 	NS:AzerothAtlasOK(true)
 	NS:CompanionUpdateVisibility()
 	frame = NS.companionFrame
-	Check("[WV6] premier halo absent : le second atlas (anneau kyrian)", frame.wvGlow and frame.wvGlow.atlas
-		== "covenantchoice-offering-ability-ring-kyrian" and Shown(frame.wvGlow), tostring(frame.wvGlow and frame.wvGlow.atlas))
+	-- (vérifié en jeu : l'anneau Kyrian est doré, il n'est plus un repli)
+	Check("[WV6] halo de glace absent : pas d'anneau Kyrian en repli", frame.wvGlow == false
+		and NS.WINTER_VEIL_FROST.glows[1] == "Relic-Frost-TraitGlowRing" and #NS.WINTER_VEIL_FROST.glows == 1,
+		tostring(frame.wvGlow and frame.wvGlow.atlas))
 	WV.Done()
 	WV.Reset(nil, "on")
 	Mock.InstallAtlas({ ["Relic-Frost-TraitGlowRing"] = true, ["covenantchoice-offering-ability-ring-kyrian"] = true })

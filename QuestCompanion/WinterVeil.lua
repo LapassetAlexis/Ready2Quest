@@ -156,7 +156,9 @@ for key, value in pairs(ns.WINTER_VEIL_COMPANION) do ns.WINTER_VEIL_COMPANION_DE
 -- couleurs d'origine reviennent. Réglage « Cadre givré (Voile d'hiver) ».
 ns.WINTER_VEIL_FROST = {
 	tint = { 0.78, 0.88, 1.0 },
-	glows = { "Relic-Frost-TraitGlowRing", "covenantchoice-offering-ability-ring-kyrian" },
+	-- vérifié en jeu le 10/11 : l'anneau de glace des reliques (fond noir :
+	-- fusion ADD) ; l'anneau Kyrian est doré, pas givré : écarté
+	glows = { "Relic-Frost-TraitGlowRing" },
 	glowSize = 138, glowAlpha = 0.8, glowColor = { 0.75, 0.9, 1.0 },
 }
 -- l'or visible du cadre Azeroth (21.png, en px du cadre) : haut du bord doré,
@@ -636,6 +638,8 @@ local function FrostGlow(frame)
 		frame.wvGlow = false
 		return nil
 	end
+	-- la texture a un fond noir : en fusion additive, le noir disparaît
+	if tex.SetBlendMode then pcall(tex.SetBlendMode, tex, "ADD") end
 	local ring = ns.AZEROTH_RING or {}
 	tex:SetSize(F.glowSize, F.glowSize)
 	tex:SetPoint("CENTER", frame, "TOP", 0, ring.y or -45)
