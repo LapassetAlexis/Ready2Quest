@@ -106,7 +106,9 @@ if type(ns.MODEL_NPC_LOOK) == "table" then ns.MODEL_NPC_LOOK[15664] = ns.WINTER_
 -- comme les créatures capturées) : en 3D tant qu'il n'est pas connu. Sans
 -- l'API du portrait (ou s'il échoue) : le petit modèle 3D d'avant.
 -- /qc noel metzen 2d [display] | 3d : réglage en jeu (session).
-ns.WINTER_PORTRAIT_DISPLAY = { [15664] = 15904 }
+-- 2.14.0 (bêta 6) : le Petit bonhomme de neige 15671 (table Creature du client),
+-- Grand-père Hiver 13369 (lu en jeu le 10/11, GetDisplayInfo)
+ns.WINTER_PORTRAIT_DISPLAY = { [15664] = 15904, [15710] = 15671, [13444] = 13369 }
 ns.WINTER_PORTRAITS_ON = true
 function ns:WinterPortraitDisplay(npc)
 	npc = tonumber(npc)

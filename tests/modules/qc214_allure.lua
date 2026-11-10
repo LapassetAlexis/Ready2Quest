@@ -195,8 +195,9 @@ do
 		and panel.seasonTiles[1].def.id == "winter:gfw" and panel.seasonTiles[3].def.id == "winter:snowman"
 		and select(2, panel.seasonTitle:GetPoint()) == panel and panel.seasonTitle.lastPoint.y > panel.mineTitle.lastPoint.y)
 	Check("[ALLURE] en saison : pas dans la grille (seulement en tête)", not Index(Shown(panel), "winter:gfw"))
-	Check("[ALLURE] saison : petits modèles 3D (trois seulement)", panel.seasonTiles[1].model ~= nil
-		and panel.seasonTiles[1].seasonal and panel.seasonTiles[1].lookKey == "winter:gfw:m")
+	-- bêta 6 : les trois en portrait 2D (numéros de modèle connus)
+	Check("[ALLURE] saison : les trois en vignette de saison", panel.seasonTiles[1].seasonal
+		and panel.seasonTiles[1].def.id == "winter:gfw")
 	A.Done()
 end
 
@@ -730,17 +731,11 @@ do
 		tostring(tM and tM.look) .. " / " .. tostring(tM and tM.portrait.portraitID))
 	Check("[ALLURE6] Metzen : la taille d'une vignette (portrait de la grille)", tM.portrait:GetWidth() == NS.ALLURE_PORTRAIT
 		and tM.portrait.vertex[1] == 1)
-	Check("[ALLURE6] Grand-père Hiver et le bonhomme sans displayID appris : petit modèle 3D d'avant",
-		tG.look == "model" and tG.model:IsShown() and tS.look == "model" and tG.model.creature == 13444)
-	local queue = NS:ModelLearnQueue()
-	Check("[ALLURE6] leur displayID s'apprend en fond, après les créatures de la grille",
-		#queue >= 2 and queue[#queue - 1] == 13444 and queue[#queue] == 15710, table.concat(queue, ","))
-	local account = NS:CaptureAccount()
-	account.display[13444], account.display[15710] = 13369, 15691
-	NS:AllureRefresh()
-	Check("[ALLURE6] appris : Grand-père Hiver et le bonhomme en portrait 2D aussi (les trois pareils)",
-		tG.look == "portrait" and tG.portrait.portraitID == 13369 and tS.look == "portrait" and tS.portrait.portraitID == 15691
-		and not tG.model:IsShown() and tM.look == "portrait")
+	-- bêta 6 : numéros lus en jeu / dans le client : les trois en portrait 2D d'emblée
+	Check("[ALLURE6] Grand-père Hiver (13369) et le bonhomme (15671) en portrait 2D aussi (les trois pareils)",
+		tG.look == "portrait" and tG.portrait.portraitID == 13369 and tS.look == "portrait" and tS.portrait.portraitID == 15671
+		and not (tG.model and tG.model:IsShown()) and tM.look == "portrait",
+		tostring(tG.look) .. "/" .. tostring(tG.portrait.portraitID) .. " " .. tostring(tS.look) .. "/" .. tostring(tS.portrait.portraitID))
 	-- la carte « Son allure » : Metzen porté
 	tM:Click()
 	if NS.effectsConfirm and NS.effectsConfirm:IsShown() then NS:CompanionConfirmAnswer(true) end
@@ -782,7 +777,7 @@ do
 	Check("[ALLURE6] diag : dit ce que montrent les vignettes", lines[1]:find("15904", 1, true) ~= nil, lines[1])
 	local fr, en = NS.L.WINTER_METZEN_LOOK, NS.L.WINTER_METZEN_2D
 	Check("[ALLURE6] textes du réglage", fr ~= nil and en ~= nil and NS.L.WINTER_METZEN_3D ~= nil)
-	account.display[13444], account.display[15710] = nil, nil
+	do local account = NS:CaptureAccount(); account.display[13444], account.display[15710] = nil, nil end
 	NS.Print = print0
 	UninstallModels()
 	A.Done()
