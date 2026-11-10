@@ -161,6 +161,21 @@ do
 		and lights.lastPoint.relTo == frame and lights.lastPoint.relPoint == "TOP"
 		and lights.lastPoint.y == NS.WINTER_VEIL_COMPANION.y and lights:GetWidth() == NS.WINTER_VEIL_COMPANION.w,
 		lights and tostring(lights.kind))
+	-- bêta 3 : la guirlande tient dans la largeur de l'anneau, le fil au ras de son haut, les bulbes sur son bord
+	local C, ring = NS.WINTER_VEIL_COMPANION, NS.AZEROTH_RING
+	local box = NS.WinterVeilLightsBox()
+	local ringTop = ring.y + ring.h / 2
+	local holeTop = ringTop - ring.h * NS.AZEROTH_RING_HOLE.t
+	Check("[WV3] guirlande : cadre du modèle pas plus large que l'anneau", C.w <= ring.w, C.w .. " / " .. ring.w)
+	Check("[WV3] guirlande : largeur rendue dans le cadre du modèle et l'anneau (les trois quarts au moins)",
+		box.w <= C.w and box.w <= ring.w and box.w >= 0.75 * ring.w, string.format("%.1f", box.w))
+	Check("[WV3] guirlande : le fil au ras du haut de l'anneau (± 4 px), plus au-dessus du cadre",
+		math.abs(box.wire - ringTop) <= 4, string.format("%.1f / %d", box.wire, ringTop))
+	Check("[WV3] guirlande : bulbes pendus sur le bord doré, sans couvrir l'ouverture",
+		box.bottom < ringTop and box.bottom >= holeTop - 1, string.format("%.1f / %.1f", box.bottom, holeTop))
+	Check("[WV3] guirlande : bulbes plus petits (≈ 12 px au lieu de 16)", 16 * (C.h / C.cam) / 34 <= 13)
+	Check("[WV3] guirlande : la boîte du modèle contient le fil et les bulbes", box.wire <= C.y + C.h / 2
+		and box.bottom >= C.y - C.h / 2)
 	Check("[WV] guirlande au-dessus de l'anneau (habit), sous le calque des effets",
 		lights and lights:GetFrameLevel() > frame.azSkin:GetFrameLevel() and lights:GetFrameLevel() < frame:GetFrameLevel() + 8)
 	-- le client charge le modèle : SetModel(199600), cadrage posé
@@ -203,17 +218,35 @@ do
 	local d = f and f.wvDecor
 	local ok, errs = NoErrors()
 	Check("[WV] carnet Azeroth : décor montré, sans erreur", f and f.azeroth and d and Shown(d) and ok, errs)
-	local inner = f:GetWidth() - 2 * LAY.wood
-	local total, good = 0, #d.lights > 0
+	-- bêta 3 : deux bandes, colonne et page, qui laissent le joint et les volutes libres
+	local J = NS.WINTER_VEIL_JOURNAL
+	Check("[WV3] guirlande plus grande : bande de 24 à 30 px", J.lightsH >= 24 and J.lightsH <= 30)
+	local per, good = {}, #d.lights > 0
 	for _, tex in ipairs(d.lights) do
-		total = total + tex:GetWidth()
-		if tex.texture ~= 235484 or tex:GetHeight() ~= NS.WINTER_VEIL_JOURNAL.lightsH then good = false end
+		local host = tex.lastPoint.relTo
+		local w = per[host] or { total = 0, min = math.huge, max = -math.huge }
+		w.total = w.total + tex:GetWidth()
+		w.min = math.min(w.min, tex.lastPoint.x)
+		w.max = math.max(w.max, tex.lastPoint.x + tex:GetWidth())
+		per[host] = w
+		if tex.texture ~= 235484 or tex:GetHeight() ~= J.lightsH or tex.lastPoint.y ~= 0 or tex.lastPoint.point ~= "TOPLEFT"
+			or tex.drawLayer ~= "BORDER" or tex:GetParent() ~= host then good = false end
 	end
+	Check("[WV3] guirlande (235484) : deux bandes, sur la colonne et sur la page, pendues sous le métal, sous les textes",
+		good and per[f.nav] ~= nil and per[f.content] ~= nil)
+	local navW, cw = f.nav:GetWidth(), f.content:GetWidth()
+	local nb, pb = per[f.nav], per[f.content]
+	local label = f.navGroup
+	local labelRight = label.lastPoint.x + label:GetStringWidth()
+	Check("[WV3] colonne : de son intitulé (laissé sur le parchemin nu) au joint, sans le toucher",
+		nb.min >= labelRight + J.lightsGap - 0.5 and nb.min >= J.lightsInset and nb.min < navW / 2
+		and math.abs(nb.max - (navW - J.lightsJoint)) < 0.01 and math.abs(nb.total - (nb.max - nb.min)) < 0.01
+		and navW - nb.max + LAY.gap / 2 >= 13, string.format("%.1f..%.1f / %d (intitulé %.1f)", nb.min, nb.max, navW, labelRight))
+	Check("[WV3] page : entre les volutes, loin du joint", math.abs(pb.min - J.lightsCurl) < 0.01
+		and math.abs(pb.max - (cw - J.lightsCurl)) < 0.01 and math.abs(pb.total - (pb.max - pb.min)) < 0.01
+		and pb.min + LAY.gap / 2 >= 13, string.format("%.1f..%.1f / %d", pb.min, pb.max, cw))
 	local first = d.lights[1]
-	Check("[WV] guirlande (235484) répétée d'un bord du bois à l'autre", good and math.abs(total - inner) < 0.01,
-		tostring(total) .. " / " .. tostring(inner))
-	Check("[WV] … sous la plaque (bande et métal), découpe du haut (104×36 sur 128)", first.lastPoint.y == -LAY.band
-		and first.lastPoint.x == LAY.wood and first.texCoord[3] == 0 and math.abs(first.texCoord[4] - 36 / 128) < 1e-9
+	Check("[WV] … découpe du haut (104×36 sur 128)", first.texCoord[3] == 0 and math.abs(first.texCoord[4] - 36 / 128) < 1e-9
 		and math.abs(first.texCoord[2] - 104 / 128) < 1e-9)
 	local title = f.azPlate.title
 	local half = title:GetStringWidth() / 2
@@ -231,9 +264,10 @@ do
 	Check("[WV] le décor ne prend pas la souris", d.mouseEnabled == false)
 	-- jamais : caché sans rouvrir
 	NS:SetWinterVeil("off")
-	Check("[WV] jamais : décor du carnet caché tout de suite", not Shown(d) and not Shown(d.flakes[1]))
+	Check("[WV] jamais : décor du carnet caché tout de suite", not Shown(d) and not Shown(d.flakes[1])
+		and not Shown(d.lights[1]) and not Shown(d.lights[#d.lights]))
 	NS:SetWinterVeil("on")
-	Check("[WV] toujours : il revient", Shown(d) and Shown(d.flakes[1]))
+	Check("[WV] toujours : il revient", Shown(d) and Shown(d.flakes[1]) and Shown(d.lights[1]))
 	-- automatique hors saison, au rafraîchissement
 	NS:DB().winterVeil = "auto"
 	WV.now = JUL1
@@ -268,12 +302,59 @@ do
 	Check("[WV] glyphe des bandeaux : boule de neige", glyph.texture == 132387)
 
 	-- la scène : la boule vole, puis éclate en flocons ; filet et paquet cachés
+	-- (bêta 3 : un client qui sait masquer, pour voir la boule arrondie)
 	local start = Mock.now
+	local masks = {}
+	local mockCreateFrame = _G.CreateFrame
+	_G.CreateFrame = function(...)
+		local made = mockCreateFrame(...)
+		function made:CreateMaskTexture()
+			local mask = self:CreateTexture(nil, "ARTWORK")
+			function mask:SetTexture(file, h, v) self.texture, self.wrap = file, { h, v } end
+			masks[#masks + 1] = mask
+			return mask
+		end
+		local base = made.CreateTexture
+		function made:CreateTexture(...)
+			local tex = base(self, ...)
+			function tex:AddMaskTexture(mask) self.masks = self.masks or {}; self.masks[#self.masks + 1] = mask end
+			return tex
+		end
+		return made
+	end
+	NS.captureStages, NS.captureStage = nil, nil
 	local stage = NS:CaptureShowStage({ target = { name = "Raptor", class = "normal", npcID = 7100 }, start = start, done = 0 })
+	_G.CreateFrame = mockCreateFrame
 	local ok = stage ~= nil
 	NS:CaptureStageUpdate(start + NS.CAPTURE_THROW_TIME / 2)
 	Check("[WV] scène : la boule de neige en vol (132387), pas de paquet ni de filet", ok and Shown(stage.wvBall)
 		and stage.wvBall.texture == 132387 and not Shown(stage.bundle) and not Shown(stage.net) and not Shown(stage.netShadow))
+	local ball, B = stage.wvBall, ART.ball
+	local mask = ball.masks and ball.masks[1]
+	Check("[WV3] boule lancée : découpée autour de la boule (plus les coins sombres de l'icône)", ball.texCoord[1] == B.c[1]
+		and ball.texCoord[2] == B.c[2] and ball.texCoord[3] == B.c[3] and ball.texCoord[4] == B.c[4]
+		and B.c[2] - B.c[1] <= 0.6 and math.abs((B.c[2] - B.c[1]) - (B.c[4] - B.c[3])) < 1e-9)
+	Check("[WV3] boule lancée : arrondie par le masque rond du client, qui la suit", mask ~= nil
+		and mask.texture == "Interface\\CharacterFrame\\TempPortraitAlphaMask" and mask.allPoints == ball)
+	local S = NS.WINTER_VEIL_SNOWBALL
+	local early = (function()
+		NS:CaptureStageUpdate(start + NS.CAPTURE_THROW_TIME * 0.1)
+		return ball:GetWidth()
+	end)()
+	NS:CaptureStageUpdate(start + NS.CAPTURE_THROW_TIME * 0.9)
+	local late = ball:GetWidth()
+	local trail = 0
+	for _, tex in ipairs(stage.wvTrail) do if Shown(tex) and tex.texture == 236121 then trail = trail + 1 end end
+	Check("[WV3] vol : la boule rapetisse en s'éloignant, tourne un peu", early > late and late >= S.size * S.scaleTo - 0.01
+		and ball.rotation ~= nil and ball.rotation <= math.pi * S.spin)
+	Check("[WV3] vol : une traîne de petits flocons derrière elle", trail == S.trail and S.trailSize < S.size / 2)
+	NS:CaptureStageUpdate(start + NS.CAPTURE_THROW_TIME + S.burst * 0.1)
+	local puff = stage.wvPuff
+	Check("[WV3] impact : une bouffée de neige (boule additive, arrondie) qui grandit", Shown(puff) and puff.blendMode == "ADD"
+		and puff.masks ~= nil and puff:GetWidth() > S.size * S.scaleTo)
+	local trailGone = true
+	for _, tex in ipairs(stage.wvTrail) do if Shown(tex) then trailGone = false end end
+	Check("[WV3] impact : la traîne disparaît", trailGone)
 	NS:CaptureStageUpdate(start + NS.CAPTURE_THROW_TIME + NS.WINTER_VEIL_SNOWBALL.burst / 2)
 	local flakes = stage.wvFlakes
 	local burst = #flakes == NS.WINTER_VEIL_SNOWBALL.flakes
@@ -283,7 +364,7 @@ do
 	NS:CaptureStageUpdate(start + NS.CAPTURE_THROW_TIME + NS.WINTER_VEIL_SNOWBALL.burst + 0.5)
 	local gone = true
 	for _, tex in ipairs(flakes) do if Shown(tex) then gone = false end end
-	Check("[WV] puis les flocons disparaissent", gone)
+	Check("[WV] puis les flocons disparaissent", gone and not Shown(stage.wvPuff))
 	NS:CaptureHideStage()
 
 	-- hors décor : le filet revient dans la scène
@@ -327,6 +408,8 @@ do
 	NS:CaptureBatchUpdate(batch.startedAt + first.dropAt + drape / 2)
 	Check("[WV] volée : la boule de neige (132387) tombe sur la case, pas de filet", Shown(first.tile.wvBall)
 		and first.tile.wvBall.texture == 132387 and NetsHidden(batch))
+	Check("[WV3] volée : la boule découpée autour d'elle aussi", first.tile.wvBall.texCoord[1] == ART.ball.c[1]
+		and first.tile.wvBall.texCoord[4] == ART.ball.c[4])
 	NS:CaptureBatchUpdate(batch.startedAt + first.dropAt + drape + NS.WINTER_VEIL_SNOWBALL.burst / 2)
 	local burst = #first.tile.wvFlakes == NS.WINTER_VEIL_SNOWBALL.tileFlakes
 	for _, tex in ipairs(first.tile.wvFlakes) do if not Shown(tex) or tex.texture ~= 236121 then burst = false end end

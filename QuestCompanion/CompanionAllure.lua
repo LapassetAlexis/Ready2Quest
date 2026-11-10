@@ -22,9 +22,19 @@
 --     l'apparence elle-même : le compagnon prend la lumière dorée (Companion.lua,
 --     ModelShinyLight), comme partout ailleurs.
 -- Vignettes : portraits 2D (SetPortraitTextureFromCreatureDisplayID par
--- ns:CreaturePortrait, l'icône du type sinon), jamais des dizaines de modèles
--- 3D ; la grille garde 8 × ALLURE_ROWS_MAX tuiles construites une fois et
--- repeintes au défilement (aucune création par rafraîchissement).
+-- ns:CreaturePortrait) quand le displayID de l'espèce est connu ; la grille
+-- garde 8 × ALLURE_ROWS_MAX tuiles construites une fois et repeintes au
+-- défilement (aucune création par rafraîchissement).
+-- 2.14.0 (bêta 3) : presque toutes les créatures capturées n'avaient pas de
+-- displayID appris : la même icône de type (le loup des bêtes) partout. Une
+-- vignette sans displayID montre désormais la créature elle-même dans un
+-- petit modèle 3D (SetCreature) : un modèle par tuile, créé à son premier
+-- besoin et réutilisé au défilement (au plus 8 × ALLURE_ROWS_MAX), cadré
+-- comme dans le cadre du compagnon (CompanionModelCam, cadrage « pied »).
+-- En fond, les displayID manquants s'apprennent (ns:ModelLearnCreatures,
+-- Companion.lua : les vignettes visibles d'abord, ≈ 3 par seconde, jamais en
+-- combat) : la fois suivante, le portrait 2D. L'icône du type ne reste que
+-- si le client ne sait montrer ni l'un ni l'autre.
 -- Deux habits : Sobre (socle) et Azeroth (parchemin des confirmations,
 -- JournalAzeroth.lua : ns.CarnetSkinDialog, encres mesurées « allure.* »).
 -- Un panneau par style, construit à la première ouverture ; changer de style
@@ -192,7 +202,7 @@ end
 -- "t:<type>", "shiny", "fav" ; search : texte tapé. Les deux tables sont
 -- réutilisées d'un appel à l'autre.
 -- ---------------------------------------------------------------------------
-local seasonList, gridList, typesSeen = {}, {}, {}
+local seasonList, gridList, typesSeen, learnList = {}, {}, {}, {}
 local function Wipe(t) for key in pairs(t) do t[key] = nil end end
 local function Rank(self, def, m)
 	if m.kind == "mascot" then return self:CompanionIsUnlocked("app", def) and 1 or 3 end
@@ -263,18 +273,25 @@ local function Badge(tile, layer, size)
 	return tex
 end
 
-local function NewTile(frame, parent, withModel)
+-- Le petit modèle d'une tuile : créé à son premier besoin, gardé ensuite
+local function TileModel(tile)
+	if tile.model then return tile.model end
+	if tile.noModel then return nil end
+	local ok, model = pcall(CreateFrame, "PlayerModel", nil, tile)
+	if not (ok and model) then tile.noModel = true; return nil end
+	model:SetPoint("TOP", tile, "TOP", 0, -5)
+	model:SetSize(ns.ALLURE_TILE_W - 6, ns.ALLURE_PORTRAIT)
+	if model.EnableMouse then model:EnableMouse(false) end
+	tile.model = model
+	return model
+end
+
+local function NewTile(frame, parent, seasonal)
 	local TW, TH, P = ns.ALLURE_TILE_W, ns.ALLURE_TILE_H, ns.ALLURE_PORTRAIT
 	local tile = Theme.CreateTile(parent, TW, TH, { accent = "top" })
 	if tile.RegisterForClicks then tile:RegisterForClicks("LeftButtonUp") end
-	if withModel then
-		local ok, model = pcall(CreateFrame, "PlayerModel", nil, tile)
-		if ok and model then
-			model:SetPoint("TOP", tile, "TOP", 0, -5)
-			model:SetSize(TW - 6, P)
-			tile.model = model
-		end
-	end
+	tile.seasonal = seasonal and true or false
+	if seasonal then TileModel(tile) end
 	tile.portrait = tile:CreateTexture(nil, "ARTWORK", nil, 1)
 	tile.portrait:SetSize(P, P)
 	tile.portrait:SetPoint("TOP", tile, "TOP", 0, -6)
@@ -311,6 +328,38 @@ local function ShowRing(tile, on, frame)
 	end
 end
 
+-- Ce que montre une tuile : le portrait 2D (displayID connu, client qui
+-- sait le peindre), sinon le petit modèle de la créature, sinon l'icône du
+-- type. Rechargé seulement quand l'apparence ou sa façon de la montrer
+-- changent (lookKey). Rend "portrait", "model" ou "icon".
+local function CanPortrait() return type(G("SetPortraitTextureFromCreatureDisplayID")) == "function" end
+local function PaintLook(self, tile, def, m)
+	local display = def.display
+	if not display and def.npc and not tile.seasonal and self.ModelKnownDisplay then display = self:ModelKnownDisplay(def.npc) end
+	local want3d = tile.seasonal or (def.npc ~= nil and not (display and CanPortrait()))
+	local key = def.id .. (want3d and ":m" or ":p")
+	if tile.lookKey ~= key then
+		tile.lookKey, tile.look = key, nil
+		if want3d then
+			local model = TileModel(tile)
+			local cam, y, facing
+			if self.CompanionModelCam then
+				cam, y, facing = self:CompanionModelCam({ npc = def.npc, type = m.typeText }, "pied")
+			end
+			if model and ns.ShowModel and ns.ShowModel(model, { npc = def.npc, shiny = def.shiny,
+				cam = cam, y = y, facing = facing }, "tile") then
+				tile.look = "model"
+			end
+		end
+		if tile.look ~= "model" then
+			if tile.model and ns.ModelForget then ns.ModelForget(tile.model) end
+			tile.look = self.CreaturePortrait and self:CreaturePortrait(tile.portrait,
+				{ display = display, npc = def.npc, type = m.typeText }) or "icon"
+		end
+	end
+	return tile.look
+end
+
 local function PaintTile(self, tile, def, current)
 	local frame = tile.frame
 	tile.def = def
@@ -322,19 +371,12 @@ local function PaintTile(self, tile, def, current)
 	local locked = not self:CompanionIsUnlocked("app", def)
 	tile.locked = locked
 	tile.label:SetText(m.kind == "capture" and m.base or m.name)
-	-- portrait (rechargé seulement s'il change)
-	local key = def.id
-	if tile.model then
+	-- portrait, modèle ou icône (rechargé seulement s'il change)
+	if PaintLook(self, tile, def, m) == "model" then
 		tile.portrait:Hide()
-		if tile.lookKey ~= key and ns.ShowModel then
-			tile.lookKey = key
-			ns.ShowModel(tile.model, { display = def.display, npc = def.npc, shiny = def.shiny }, "cell")
-		end
+		tile.model:Show()
 	else
-		if tile.lookKey ~= key and self.CreaturePortrait then
-			tile.lookKey = key
-			self:CreaturePortrait(tile.portrait, { display = def.display, npc = def.npc, type = m.typeText })
-		end
+		if tile.model then tile.model:Hide() end
 		local tint = def.shiny and Theme.SHINY or Theme.WHITE
 		tile.portrait:SetVertexColor(tint[1], tint[2], tint[3], 1)
 		if tile.portrait.SetDesaturated then tile.portrait:SetDesaturated(locked) end
@@ -547,6 +589,8 @@ end
 function ns:AllureClose()
 	local frame = self.allurePanel
 	HideTip()
+	-- l'apprentissage des displayID s'arrête avec le panneau
+	if self.ModelLearnStop then self:ModelLearnStop() end
 	if frame and frame:IsShown() then
 		if frame.searchBox and frame.searchBox.ClearFocus then frame.searchBox:ClearFocus() end
 		frame:Hide()
@@ -674,6 +718,18 @@ function ns:AllureRefresh()
 		end
 	end
 	frame.pager:Update(frame.offset, rows, totalRows, frame.maxOffset)
+	-- les displayID manquants, appris en fond : les vignettes visibles d'abord
+	if self.ModelLearnCreatures then
+		Wipe(learnList)
+		local last = first + rows * cols
+		for pass = 1, 2 do
+			for index, def in ipairs(grid) do
+				local seen = index > first and index <= last
+				if def.npc and not def.display and seen == (pass == 1) then learnList[#learnList + 1] = def.npc end
+			end
+		end
+		self:ModelLearnCreatures(learnList)
+	end
 	frame.mineTitle:SetText(L.ALLURE_MINE, self:F("ALLURE_COUNT", #grid + #season, total))
 	if #grid == 0 then
 		frame.empty:SetText(frame.filter == "fav" and (frame.search or "") == "" and L.ALLURE_EMPTY_FAV or L.ALLURE_EMPTY)
@@ -762,7 +818,14 @@ function ns:AllureRefreshCard(pane)
 	local rarity = def.captured and ns.CAPTURE_RARITY and ns.CAPTURE_RARITY[def.class or "normal"]
 	card:SetAccent(def.shiny and Theme.GOLD_LIGHT or (rarity and rarity.color) or Theme.GOLD)
 	if card.model and ns.ShowModel then
-		ns.ShowModel(card.model, { display = def.display, npc = def.npc, shiny = def.shiny }, "cell")
+		-- 2.14.0 (bêta 3) : une créature (capturée, de saison) cadrée comme
+		-- dans le cadre du compagnon (Metzen : de loin)
+		local cam, y, facing
+		if (def.captured or def.seasonal) and self.CompanionModelCam then
+			cam, y, facing = self:CompanionModelCam({ npc = def.npc, type = m.typeText }, "pied")
+		end
+		ns.ShowModel(card.model, { display = def.display, npc = def.npc, shiny = def.shiny,
+			cam = cam, y = y, facing = facing }, "cell")
 	end
 end
 

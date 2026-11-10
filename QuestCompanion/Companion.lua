@@ -1797,6 +1797,9 @@ ns.MODEL_PROFILES = {
 	cell      = { cam = 1.2 },              -- cellules de la collection (JournalWindow)
 	card      = { cam = 1.0 },              -- fiche de dresseur : la créature remplit ses 206 px
 	cardTile  = { cam = 1.1 },              -- vitrine de la fiche de dresseur
+	-- 2.14.0 (bêta 3) : vignette du choix d'allure (créature sans displayID
+	-- appris) ; la distance vient de CompanionModelCam (type, espèce)
+	tile      = { cam = 1.5 },
 }
 
 local function ModelCall(obj, name, ...)
@@ -1837,12 +1840,15 @@ function ns.ShowModel(model, opts, profile)
 	if not opts.display then zoom = 0 end        -- créature sauvage : jamais de zoom « tête »
 	local cam = tonumber(opts.cam) or p.cam or 1
 	local scale, y = opts.scale, tonumber(opts.y) or p.y or 0
+	-- 2.14.0 (bêta 3) : cap (SetFacing), seulement s'il est demandé
+	local facing = tonumber(opts.facing)
 	model.lightShiny = opts.shiny and true or false
 	model.framing = function(m)
 		if scale then ModelCall(m, "SetModelScale", scale) end
 		ModelCall(m, "SetCamDistanceScale", cam)
 		ModelCall(m, "SetPortraitZoom", zoom)
 		ModelCall(m, "SetPosition", 0, 0, y)
+		if facing then ModelCall(m, "SetFacing", facing) end
 		if m.contextAlpha and m.contextAlpha < 1 then
 			ModelCall(m, "SetModelAlpha", m.contextAlpha)
 			m.appliedAlpha = m.contextAlpha
@@ -1933,6 +1939,95 @@ function ns:ModelLearnDisplay(unit, npcID)
 	probe.learnNpc = npcID
 	ModelCall(probe, "SetUnit", unit)
 	return ProbeRead(probe)                       -- souvent lisible tout de suite
+end
+
+-- 2.14.0 (bêta 3) : apprendre le displayID d'une espèce capturée sans la
+-- revoir vivante (le choix d'allure n'avait presque que des icônes de type,
+-- toutes pareilles). Une sonde à part (pas celle des unités : deux
+-- chargements croisés liraient le mauvais modèle), cachée hors de l'écran :
+-- ClearModel, SetCreature(pnj), puis GetDisplayInfo une fois chargé
+-- (OnModelLoaded) ou tout de suite si le client l'a déjà. File d'attente
+-- remplacée à chaque appel (les vignettes visibles d'abord), au plus une
+-- lecture tous les MODEL_LEARN_CREATURE_GAP s, jamais en combat (reprise
+-- MODEL_LEARN_COMBAT_WAIT s plus tard). Gardé au compte comme les autres
+-- (db.capture.display) : le portrait 2D sert ensuite partout.
+ns.MODEL_LEARN_CREATURE_GAP = 0.35   -- ≈ 3 lectures par seconde au plus
+ns.MODEL_LEARN_COMBAT_WAIT = 2
+local learnQueue, learnSeen = {}, {}
+local function Fighting()
+	local fn = rawget(_G, "InCombatLockdown")
+	return ns.companionFighting or (type(fn) == "function" and fn()) and true or false
+end
+local function CreatureProbe()
+	local probe = ns.modelLearnCreatureProbe
+	if probe ~= nil then return probe or nil end
+	local ok, made = pcall(CreateFrame, "PlayerModel", nil, UIParent)
+	if not (ok and made) then ns.modelLearnCreatureProbe = false; return nil end
+	probe = made
+	ns.modelLearnCreatureProbe = probe
+	probe:SetSize(1, 1)
+	probe:SetPoint("TOPLEFT", UIParent, "BOTTOMLEFT", -50, -50)
+	ModelCall(probe, "SetAlpha", 0)
+	if probe.SetScript then pcall(probe.SetScript, probe, "OnModelLoaded", ProbeRead) end
+	return probe
+end
+function ns:ModelKnownDisplay(npcID)
+	local account = self.CaptureAccount and self:CaptureAccount()
+	local known = account and type(account.display) == "table" and account.display[tonumber(npcID) or -1]
+	return tonumber(known)
+end
+-- La file : une liste de pnj (rangée par l'appelant) ; rend sa longueur
+function ns:ModelLearnCreatures(list)
+	for i = #learnQueue, 1, -1 do learnQueue[i] = nil end
+	for key in pairs(learnSeen) do learnSeen[key] = nil end
+	for _, npc in ipairs(list or {}) do
+		npc = tonumber(npc)
+		if npc and not learnSeen[npc] and not self:ModelKnownDisplay(npc) then
+			learnSeen[npc] = true
+			learnQueue[#learnQueue + 1] = npc
+		end
+	end
+	if #learnQueue > 0 and not self.modelLearnPending then self:ModelLearnPump() end
+	return #learnQueue
+end
+function ns:ModelLearnQueue() return learnQueue end
+function ns:ModelLearnStop()
+	for i = #learnQueue, 1, -1 do learnQueue[i] = nil end
+end
+-- Une lecture, puis la suivante plus tard (C_Timer) ; rend le pnj lancé
+function ns:ModelLearnPump()
+	self.modelLearnPending = nil
+	if #learnQueue == 0 then return nil end
+	local timer = rawget(_G, "C_Timer")
+	local function Later(delay)
+		if type(timer) == "table" and type(timer.After) == "function" then
+			self.modelLearnPending = true
+			timer.After(delay, function() ns:ModelLearnPump() end)
+		end
+	end
+	if Fighting() then Later(ns.MODEL_LEARN_COMBAT_WAIT); return nil end
+	local now = (ns.Now and ns.Now()) or 0
+	local since = now - (self.modelLearnCreatureAt or -1e9)
+	if since < ns.MODEL_LEARN_CREATURE_GAP then Later(ns.MODEL_LEARN_CREATURE_GAP - since); return nil end
+	local npc = table.remove(learnQueue, 1)
+	while npc and self:ModelKnownDisplay(npc) do npc = table.remove(learnQueue, 1) end
+	if not npc then return nil end
+	local probe = CreatureProbe()
+	if not (probe and type(probe.SetCreature) == "function" and type(probe.GetDisplayInfo) == "function") then
+		self:ModelLearnStop()
+		return nil
+	end
+	self.modelLearnCreatureAt = now
+	local _, before = ModelCall(probe, "GetDisplayInfo")
+	ModelCall(probe, "ClearModel")
+	probe.learnNpc = npc
+	ModelCall(probe, "SetCreature", npc)
+	-- lecture immédiate : seulement si ce n'est pas l'ancien modèle resté
+	local ok, id = ModelCall(probe, "GetDisplayInfo")
+	id = ok and tonumber(id) or nil
+	if id and id > 0 and id ~= tonumber(before) then ProbeRead(probe) end
+	if #learnQueue > 0 then Later(ns.MODEL_LEARN_CREATURE_GAP) end
+	return npc
 end
 
 -- Le displayID connu d'une créature (candidat, fiche ou compte)
@@ -2440,7 +2535,7 @@ function ns:CompanionModelCam(app, framing)
 		cam = (kind and types[kind]) or types.default
 	end
 	local factor = ns.COMPANION_FRAMING_CAM[framing or self:CompanionFraming()] or 1
-	return cam * factor, y
+	return cam * factor, y, spec and tonumber(spec.facing) or nil
 end
 
 function ns:CompanionApplyModel()
@@ -2457,14 +2552,14 @@ function ns:CompanionApplyModel()
 	local framing = self:CompanionFraming()
 	local zoom = ns.COMPANION_FRAMING_ZOOM[framing] or 0
 	if not app.display then zoom = 0 end
-	local distance, y = zoom > 0 and 1 or 1.6, nil
+	local distance, y, facing = zoom > 0 and 1 or 1.6, nil, nil
 	-- 2.11.1 : créature capturée, distance selon son type (et son espèce),
 	-- rapprochée par le cadrage (portrait, buste, pied)
 	-- 2.14.0 : un compagnon de saison (créature du jeu, SetCreature) aussi
 	local real = app.captured or app.seasonal
-	if real then distance, y = self:CompanionModelCam(app, framing) end
+	if real then distance, y, facing = self:CompanionModelCam(app, framing) end
 	local shown = model and ns.ShowModel(model, { display = app.display, npc = app.npc, shiny = app.shiny,
-		zoom = zoom, cam = distance, y = y, scale = real and 1 or stageDef.scale }, "companion") or false
+		zoom = zoom, cam = distance, y = y, facing = facing, scale = real and 1 or stageDef.scale }, "companion") or false
 	frame.usesFallback = not shown
 	frame.displayID = shown and app.display or nil
 	if shown then

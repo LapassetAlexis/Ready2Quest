@@ -67,9 +67,15 @@ for _, def in ipairs(ns.WINTER_COMPANIONS) do BY_ID[def.id], BY_KEY[def.seasonal
 -- Valeurs de départ, à régler en jeu : Grand-père Hiver a une taille
 -- d'humanoïde, le renne celle d'un grand cerf, le bonhomme de neige celle
 -- d'une mascotte.
+-- 2.14.0 (bêta 3) : les mêmes valeurs cadrent les petits modèles du choix
+-- d'allure (CompanionAllure.lua, distance de CompanionModelCam au cadrage
+-- « pied »). Metzen : la caméra du client le prend de tout près (la tête
+-- remplit 140 px à 1, le reste hors champ ; à 1,2 dans une vignette, un
+-- bout de bois seulement) : de beaucoup plus loin.
+ns.WINTER_METZEN_CAM = 3.6
 if type(ns.COMPANION_MODEL_OVERRIDES) == "table" then
 	ns.COMPANION_MODEL_OVERRIDES[13444] = { cam = 1.5 }
-	ns.COMPANION_MODEL_OVERRIDES[15664] = { cam = 2.0 }
+	ns.COMPANION_MODEL_OVERRIDES[15664] = { cam = ns.WINTER_METZEN_CAM }
 	ns.COMPANION_MODEL_OVERRIDES[15710] = { cam = 1.2 }
 end
 

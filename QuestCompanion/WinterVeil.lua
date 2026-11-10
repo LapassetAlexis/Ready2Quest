@@ -40,11 +40,27 @@ ns.WINTER_VEIL_ART = {
 	present  = { file = 133202, c = { 0.08, 0.92, 0.08, 0.92 } },
 	reindeer = { file = 236707, c = { 0.08, 0.92, 0.08, 0.92 } },
 	snowball = { file = 132387, c = { 0.08, 0.92, 0.08, 0.92 } },
+	-- 2.14.0 (bêta 3) : la boule seule (mesurée sur l'icône 64×64 : centre à
+	-- 44 % × 41 %, rayon 28 %), pour celle qu'on lance : découpée au carré
+	-- autour d'elle et arrondie par le masque rond du client, plus de coins
+	-- sombres
+	ball     = { file = 132387, c = { 0.16, 0.72, 0.13, 0.69 } },
 }
+-- le masque rond du client (déjà utilisé par AzerothStyle.lua, FeatsCosmetics.lua)
+ns.WINTER_VEIL_ROUND_MASK = "Interface\\CharacterFrame\\TempPortraitAlphaMask"
 -- le carnet : hauteur de la guirlande (sous le métal de la plaque), icônes
 -- du titre, flocons (ancre, décalage, côté, opacité), sur la page ou la colonne
+-- 2.14.0 (bêta 3) : la guirlande était trop fine (14 px, bulbes de 4 px) et
+-- passait sous le joint de métal entre la colonne et la page. Deux bandes
+-- de 28 px (bulbes ≈ 13 px), chacune pendue au bas de la barre de métal,
+-- l'une sur la colonne, l'autre sur la page : elles s'arrêtent avant le
+-- joint (lightsJoint) et avant les volutes des coins de la page
+-- (lightsCurl), à lightsInset du bois ; sur la colonne, après son intitulé
+-- (lightsGap), qui garde son parchemin nu. Posées sur la colonne et la page
+-- (couche BORDER, comme les flocons) : sous leurs textes, sans souris.
 ns.WINTER_VEIL_JOURNAL = {
-	lightsH = 14, iconSize = 18, iconGap = 6,
+	lightsH = 28, lightsInset = 6, lightsJoint = 14, lightsCurl = 30, lightsGap = 10,
+	iconSize = 18, iconGap = 6,
 	flakes = {
 		{ on = "content", point = "TOPRIGHT", x = -34, y = -16, size = 30, alpha = 0.42 },
 		{ on = "content", point = "TOPRIGHT", x = -76, y = -34, size = 16, alpha = 0.36 },
@@ -52,10 +68,21 @@ ns.WINTER_VEIL_JOURNAL = {
 	},
 }
 -- le cadre du compagnon : la guirlande 3D (bande au ras du haut de l'anneau ;
--- caméra à régler en jeu : cam, position, cap) et ses deux flocons
+-- caméra à régler en jeu : cam, position, cap) et ses deux flocons.
+-- 2.14.0 (bêta 3) : en bêta 2 (118×34, cam 1, centre 6 px au-dessus du
+-- cadre), elle faisait ~130 px de large, des bulbes de ~16 px qui pendaient
+-- hors de l'anneau à gauche et à droite, le fil ~20 px au-dessus du cadre.
+-- Mesures de la capture : la largeur rendue vaut span × h / cam, le fil est
+-- wire × h / cam au-dessus du centre du modèle, le bas des bulbes drop × h /
+-- cam en dessous. Désormais 108×40 (la largeur de l'anneau), cam 1,6 : une
+-- guirlande d'environ 96 px, bulbes d'environ 12 px, le fil au ras du haut
+-- de l'anneau (centre 9 px sous le haut du cadre), les bulbes pendus sur le
+-- bord doré. 199603 (trois guirlandes) écartée : à cette largeur, des
+-- bulbes de 4 px.
 ns.WINTER_VEIL_COMPANION = {
-	model = 199600, w = 118, h = 34, y = 6,
-	cam = 1, pos = { 0, 0, 0 }, facing = 0,
+	model = 199600, w = 108, h = 40, y = -9,
+	cam = 1.6, pos = { 0, 0, 0 }, facing = 0,
+	span = 3.82, wire = 0.62, drop = 0.26,
 	flakes = {
 		{ x = -44, y = -6, size = 14, alpha = 0.75 },
 		{ x = 46, y = -26, size = 11, alpha = 0.65 },
@@ -63,9 +90,18 @@ ns.WINTER_VEIL_COMPANION = {
 }
 -- la scène de capture : la boule de neige (taille, tours en vol), son
 -- éclatement en flocons (nombre, durée, portée, taille)
-ns.WINTER_VEIL_SNOWBALL = { size = 34, spin = 3, flakes = 10, burst = 0.6, reach = 70, flakeSize = 15,
+-- 2.14.0 (bêta 3) : un peu plus soigné, mêmes durées. La boule ralentit un
+-- peu en fin de course (ease), rapetisse en s'éloignant (scaleFrom →
+-- scaleTo), tourne d'un demi-tour (spin, en demi-tours) ; une traîne de
+-- petits flocons la suit (trail, trailGap : écart en part du vol) ; à
+-- l'arrivée, une bouffée de neige (la boule, en lumière additive, qui
+-- grandit et s'efface : puffScale, puffTime en part de burst) et les
+-- flocons qui s'écartent en retombant un peu (fall px).
+ns.WINTER_VEIL_SNOWBALL = { size = 30, spin = 1, flakes = 10, burst = 0.6, reach = 70, flakeSize = 15,
+	ease = 0.25, scaleFrom = 1.25, scaleTo = 0.9, trail = 4, trailGap = 0.07, trailSize = 9,
+	puffScale = 2.4, puffTime = 0.6, fall = 14,
 	-- « Tout capturer » : la boule d'une case, ses flocons
-	tileSize = 22, tileFlakes = 6, tileReach = 30, tileFlakeSize = 11 }
+	tileSize = 20, tileFlakes = 6, tileReach = 30, tileFlakeSize = 11 }
 
 local FR = {
 	OPT_WINTER_VEIL         = "Décor du Voile d'hiver",
@@ -214,29 +250,32 @@ end
 -- Le carnet : guirlande sous la plaque, icônes du titre, flocons
 -- ---------------------------------------------------------------------------
 local function BuildJournalDecor(frame)
-	local lay, J, A = ns.CARNET_LAYOUT, ns.WINTER_VEIL_JOURNAL, ns.WINTER_VEIL_ART
+	local J, A = ns.WINTER_VEIL_JOURNAL, ns.WINTER_VEIL_ART
 	local over = frame.azOver
 	local d = CreateFrame("Frame", nil, over)
 	d:SetAllPoints(frame)
 	d:SetFrameLevel((over:GetFrameLevel() or 1) + 2)
 	d:EnableMouse(false)
 	-- la guirlande : des tuiles de 104×36 ramenées à la hauteur de la bande,
-	-- la dernière recoupée, d'un bord du bois à l'autre, sous le métal
-	local width = (tonumber(frame:GetWidth()) or 0) - 2 * lay.wood
-	local h = J.lightsH
-	local tileW = math.floor(A.lights.w * h / A.lights.h + 0.5)
-	d.lights = {}
-	local x = 0
-	while x < width do
-		local w = math.min(tileW, width - x)
-		local tex = NewFile(d, "ARTWORK", 3, A.lights)
-		if not tex then break end
-		tex:SetSize(w, h)
-		tex:SetPoint("TOPLEFT", frame, "TOPLEFT", lay.wood + x, -lay.band)
-		local c = A.lights.c
-		tex:SetTexCoord(c[1], c[1] + (c[2] - c[1]) * w / tileW, c[3], c[4])
-		d.lights[#d.lights + 1] = tex
-		x = x + w
+	-- la dernière recoupée ; une bande sur la colonne, une sur la page,
+	-- pendues sous le métal, qui laissent le joint et les volutes libres
+	d.lights, d.bands = {}, {}
+	for _, band in ipairs(ns.WinterVeilJournalBands(frame)) do
+		local host, h = band.host, J.lightsH
+		local tileW = math.floor(A.lights.w * h / A.lights.h + 0.5)
+		local x = band.x0
+		while x < band.x1 do
+			local w = math.min(tileW, band.x1 - x)
+			local tex = NewFile(host, "BORDER", 6, A.lights)
+			if not tex then break end
+			tex:SetSize(w, h)
+			tex:SetPoint("TOPLEFT", host, "TOPLEFT", x, 0)
+			local c = A.lights.c
+			tex:SetTexCoord(c[1], c[1] + (c[2] - c[1]) * w / tileW, c[3], c[4])
+			d.lights[#d.lights + 1] = tex
+			x = x + w
+		end
+		d.bands[#d.bands + 1] = band
 	end
 	-- le cadeau et le renne, de part et d'autre du titre (placés à chaque rafraîchissement)
 	d.present = NewFile(d, "OVERLAY", 1, A.present)
@@ -275,6 +314,29 @@ local function PlaceTitleIcons(frame, d)
 	return off
 end
 
+-- Les bandes de la guirlande, en coordonnées de leur hôte (colonne, page) :
+-- { host, x0, x1 }. Sans colonne : la page seule.
+function ns.WinterVeilJournalBands(frame)
+	local lay, J = ns.CARNET_LAYOUT, ns.WINTER_VEIL_JOURNAL
+	local bands = {}
+	local nav, content = frame.nav, frame.content
+	if nav then
+		-- l'intitulé de la colonne (« Carnet », 12 px sous le métal) reste
+		-- sur le parchemin nu : la bande commence après lui
+		local x0, label = J.lightsInset, frame.navGroup
+		if label and label.GetPoint then
+			local ok, _, _, _, lx = pcall(label.GetPoint, label)
+			x0 = math.max(x0, math.floor((ok and tonumber(lx) or 0) + Measure(label) + J.lightsGap + 0.5))
+		end
+		bands[#bands + 1] = { host = nav, x0 = x0, x1 = (tonumber(nav:GetWidth()) or lay.nav) - J.lightsJoint }
+	end
+	if content then
+		local cw = tonumber(content:GetWidth()) or 0
+		bands[#bands + 1] = { host = content, x0 = J.lightsCurl, x1 = cw - J.lightsCurl }
+	end
+	return bands
+end
+
 -- Montre ou cache le décor d'un carnet Azeroth ; rend s'il est montré
 function ns:WinterVeilJournal(frame)
 	frame = frame or self.journalFrame
@@ -285,12 +347,14 @@ function ns:WinterVeilJournal(frame)
 		if d then
 			d:Hide()
 			for _, tex in ipairs(d.flakes) do tex:Hide() end
+			for _, tex in ipairs(d.lights) do tex:Hide() end
 		end
 		return false
 	end
 	d = d or BuildJournalDecor(frame)
 	d:Show()
 	for _, tex in ipairs(d.flakes) do tex:Show() end
+	for _, tex in ipairs(d.lights) do tex:Show() end
 	PlaceTitleIcons(frame, d)
 	return true
 end
@@ -303,6 +367,17 @@ local function LightsFraming(m)
 	Method(m, "SetCamDistanceScale", C.cam)
 	Method(m, "SetPosition", C.pos[1], C.pos[2], C.pos[3])
 	Method(m, "SetFacing", C.facing)
+end
+
+-- 2.14.0 (bêta 3) : l'emprise estimée de la guirlande (mesures de
+-- WINTER_VEIL_COMPANION), depuis le haut du cadre, x depuis le centre de
+-- l'anneau : { w, left, right, wire, bottom } (tests : dans la largeur de
+-- l'anneau, le fil au ras de son haut, les bulbes sur son bord doré)
+function ns.WinterVeilLightsBox()
+	local C = ns.WINTER_VEIL_COMPANION
+	local unit = C.h / C.cam
+	local w = C.span * unit
+	return { w = w, left = -w / 2, right = w / 2, wire = C.y + C.wire * unit, bottom = C.y - C.drop * unit }
 end
 
 local function BuildCompanionDecor(frame, skin)
@@ -409,24 +484,57 @@ local function Arc(p)
 	return -120 + 120 * p, -150 + 150 * p + 70 * math.sin(math.pi * p)
 end
 
+-- 2.14.0 (bêta 3) : la boule ronde. Avant, l'icône entière volait, coins
+-- sombres compris. Découpée autour de la boule (ART.ball) et arrondie par le
+-- masque rond du client (sur un client sans masque : la découpe seule, déjà
+-- presque toute blanche). Le masque suit la boule (ancré sur elle).
+local function RoundBall(host, sub, size, spec)
+	local tex = host:CreateTexture(nil, "ARTWORK", nil, sub)
+	SetFile(tex, spec or ns.WINTER_VEIL_ART.ball)
+	tex:SetSize(size, size)
+	if host.CreateMaskTexture then
+		local ok, mask = pcall(host.CreateMaskTexture, host)
+		if ok and mask then
+			pcall(mask.SetTexture, mask, ns.WINTER_VEIL_ROUND_MASK, "CLAMPTOBLACKADDITIVE", "CLAMPTOBLACKADDITIVE")
+			mask:SetAllPoints(tex)
+			if Method(tex, "AddMaskTexture", mask) then tex.wvMask = mask end
+		end
+	end
+	tex:Hide()
+	return tex
+end
+
+local function Flake(host, sub, size)
+	local tex = host:CreateTexture(nil, "ARTWORK", nil, sub)
+	SetFile(tex, ns.WINTER_VEIL_ART.flake)
+	tex:SetSize(size, size)
+	tex:Hide()
+	return tex
+end
+
 local function StageSnow(frame)
 	if frame.wvBall then return frame end
-	local S, A = ns.WINTER_VEIL_SNOWBALL, ns.WINTER_VEIL_ART
+	local S = ns.WINTER_VEIL_SNOWBALL
 	local host = frame.fxTop or frame
-	frame.wvBall = host:CreateTexture(nil, "ARTWORK", nil, 5)
-	SetFile(frame.wvBall, A.snowball)
-	frame.wvBall:SetSize(S.size, S.size)
-	frame.wvBall:Hide()
+	frame.wvBall = RoundBall(host, 5, S.size)
+	-- la bouffée de l'impact : la même boule, en lumière additive
+	frame.wvPuff = RoundBall(host, 4, S.size)
+	Method(frame.wvPuff, "SetBlendMode", "ADD")
+	-- la traîne : quelques petits flocons derrière la boule
+	frame.wvTrail = {}
+	for index = 1, S.trail do
+		local tex = Flake(host, 4, S.trailSize)
+		tex.lag = index * S.trailGap
+		tex.size = S.trailSize * (1 - 0.15 * (index - 1))
+		tex.alpha = 0.75 * (1 - (index - 1) / (S.trail + 1))
+		frame.wvTrail[index] = tex
+	end
 	frame.wvFlakes = {}
 	for index = 1, S.flakes do
-		local tex = host:CreateTexture(nil, "ARTWORK", nil, 6)
-		SetFile(tex, A.flake)
-		local size = S.flakeSize - (index % 3) * 3
-		tex:SetSize(size, size)
+		local tex = Flake(host, 6, S.flakeSize - (index % 3) * 3)
 		tex.angle = (index / S.flakes) * math.pi * 2 + (index % 2) * 0.3
 		tex.reach = S.reach * (0.7 + 0.15 * (index % 3))
 		tex.spin = ((index * 5) % 7 - 3) * 0.8
-		tex:Hide()
 		frame.wvFlakes[index] = tex
 	end
 	return frame
@@ -437,10 +545,20 @@ local function Put(region, anchor, x, y)
 	region:SetPoint("CENTER", anchor, "CENTER", x, y)
 end
 
+-- Le vol, adouci : un peu plus lent à l'arrivée
+local function Glide(p)
+	local S = ns.WINTER_VEIL_SNOWBALL
+	p = Clamp01(p)
+	return p * (1 + S.ease - S.ease * p)
+end
+
+local function HideAll(list) for _, tex in ipairs(list or {}) do tex:Hide() end end
+
 -- Une image de la scène : par-dessus celle de CaptureStage.lua (rien de sa
 -- logique ne change). Le paquet, le filet, son ombre et ses cordes cachés ;
--- la boule de neige suit l'arc du paquet, éclate à l'arrivée en flocons qui
--- s'écartent en tournant et s'effacent.
+-- la boule de neige suit l'arc du paquet (adouci), rapetisse et tourne un
+-- peu, suivie de sa traîne de flocons ; à l'arrivée, une bouffée de neige
+-- et des flocons qui s'écartent en tournant, retombent un peu et s'effacent.
 function ns:WinterVeilStage(frame, now)
 	frame = frame or self.captureStage
 	if not frame then return nil end
@@ -448,7 +566,9 @@ function ns:WinterVeilStage(frame, now)
 	if not (rolling and self:WinterVeilActive()) then
 		if frame.wvBall then
 			frame.wvBall:Hide()
-			for _, tex in ipairs(frame.wvFlakes) do tex:Hide() end
+			frame.wvPuff:Hide()
+			HideAll(frame.wvTrail)
+			HideAll(frame.wvFlakes)
 		end
 		return false
 	end
@@ -459,11 +579,14 @@ function ns:WinterVeilStage(frame, now)
 	local scene = frame.scene or frame
 	local t = (now or Clock()) - (rolling.start or now or 0)
 	local throw = ns.CAPTURE_THROW_TIME or 0.7
+	local p = t / throw
 	if t < throw then
-		local p = Clamp01(t / throw)
-		local x, y = Arc(p)
+		local g = Glide(p)
+		local x, y = Arc(g)
+		local size = S.size * (S.scaleFrom + (S.scaleTo - S.scaleFrom) * g)
 		Put(frame.wvBall, scene, x, y)
-		Method(frame.wvBall, "SetRotation", p * math.pi * S.spin)
+		frame.wvBall:SetSize(size, size)
+		Method(frame.wvBall, "SetRotation", g * math.pi * S.spin)
 		frame.wvBall:SetAlpha(1)
 		frame.wvBall:Show()
 		for _, spark in ipairs(frame.trail or {}) do
@@ -472,11 +595,36 @@ function ns:WinterVeilStage(frame, now)
 	else
 		frame.wvBall:Hide()
 	end
+	-- la traîne : là où était la boule un peu plus tôt (jusqu'à l'impact)
+	for _, tex in ipairs(frame.wvTrail) do
+		local back = p - tex.lag
+		if back > 0 and p < 1 then
+			local x, y = Arc(Glide(back))
+			Put(tex, scene, x, y)
+			tex:SetSize(tex.size, tex.size)
+			Method(tex, "SetRotation", back * 4)
+			tex:SetAlpha(tex.alpha)
+			tex:Show()
+		else
+			tex:Hide()
+		end
+	end
 	local q = (t - throw) / S.burst
+	-- la bouffée de neige, au point d'impact
+	local f = q / S.puffTime
+	if f >= 0 and f < 1 then
+		local size = S.size * S.scaleTo * (1 + (S.puffScale - 1) * EaseOut(f))
+		Put(frame.wvPuff, scene, 0, 0)
+		frame.wvPuff:SetSize(size, size)
+		frame.wvPuff:SetAlpha(0.7 * (1 - f))
+		frame.wvPuff:Show()
+	else
+		frame.wvPuff:Hide()
+	end
 	for _, tex in ipairs(frame.wvFlakes) do
 		if q >= 0 and q < 1 then
 			local r = tex.reach * EaseOut(q)
-			Put(tex, scene, math.cos(tex.angle) * r, math.sin(tex.angle) * r + 10)
+			Put(tex, scene, math.cos(tex.angle) * r, math.sin(tex.angle) * r + 10 - S.fall * q * q)
 			Method(tex, "SetRotation", tex.spin * q)
 			tex:SetAlpha(0.9 * (1 - q))
 			tex:Show()
@@ -511,22 +659,15 @@ end
 -- ---------------------------------------------------------------------------
 local function TileSnow(tile)
 	if tile.wvBall then return tile end
-	local S, A = ns.WINTER_VEIL_SNOWBALL, ns.WINTER_VEIL_ART
+	local S = ns.WINTER_VEIL_SNOWBALL
 	local host = tile.fx or tile
-	tile.wvBall = host:CreateTexture(nil, "ARTWORK", nil, 5)
-	SetFile(tile.wvBall, A.snowball)
-	tile.wvBall:SetSize(S.tileSize, S.tileSize)
-	tile.wvBall:Hide()
+	tile.wvBall = RoundBall(host, 5, S.tileSize)
 	tile.wvFlakes = {}
 	for index = 1, S.tileFlakes do
-		local tex = host:CreateTexture(nil, "ARTWORK", nil, 6)
-		SetFile(tex, A.flake)
-		local size = S.tileFlakeSize - (index % 2) * 3
-		tex:SetSize(size, size)
+		local tex = Flake(host, 6, S.tileFlakeSize - (index % 2) * 3)
 		tex.angle = (index / S.tileFlakes) * math.pi * 2 + 0.4
 		tex.reach = S.tileReach * (0.75 + 0.25 * (index % 2))
 		tex.spin = ((index * 5) % 7 - 3) * 0.8
-		tex:Hide()
 		tile.wvFlakes[index] = tex
 	end
 	return tile
@@ -535,7 +676,7 @@ end
 local function TileSnowHide(tile)
 	if not tile.wvBall then return end
 	tile.wvBall:Hide()
-	for _, tex in ipairs(tile.wvFlakes) do tex:Hide() end
+	HideAll(tile.wvFlakes)
 end
 
 -- Une case à l'instant `t` (depuis le début de la volée)
@@ -548,8 +689,10 @@ local function TileSnowDraw(tile, card, t)
 	local drape = ns.CAPTURE_BATCH_DRAPE or 0.3
 	local since = t - (tonumber(card.dropAt) or 0)
 	if since >= 0 and since < drape and not card.settled then
-		local p = Clamp01(since / drape)
+		local p = Glide(since / drape)
+		local size = S.tileSize * (S.scaleFrom + (S.scaleTo - S.scaleFrom) * p)
 		Put(tile.wvBall, scene, -S.tileReach * (1 - p), S.tileReach * 1.4 * (1 - p) * (1 - p))
+		tile.wvBall:SetSize(size, size)
 		Method(tile.wvBall, "SetRotation", p * math.pi * S.spin)
 		tile.wvBall:SetAlpha(1)
 		tile.wvBall:Show()
@@ -560,7 +703,7 @@ local function TileSnowDraw(tile, card, t)
 	for _, tex in ipairs(tile.wvFlakes) do
 		if q >= 0 and q < 1 and not card.settled then
 			local r = tex.reach * EaseOut(q)
-			Put(tex, scene, math.cos(tex.angle) * r, math.sin(tex.angle) * r + 4)
+			Put(tex, scene, math.cos(tex.angle) * r, math.sin(tex.angle) * r + 4 - S.fall * 0.5 * q * q)
 			Method(tex, "SetRotation", tex.spin * q)
 			tex:SetAlpha(0.9 * (1 - q))
 			tex:Show()

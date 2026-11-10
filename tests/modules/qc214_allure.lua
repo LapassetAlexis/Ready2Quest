@@ -161,12 +161,16 @@ do
 		if def.captured then lastCapture = i end
 	end
 	Check("[ALLURE] mascottes pas gagnées : après les captures", lockedAt and lastCapture and lockedAt > lastCapture)
-	-- portraits 2D, pas de modèles 3D dans la grille
-	local models = 0
-	for _, tile in ipairs(panel.tiles) do if tile.model then models = models + 1 end end
-	Check("[ALLURE] grille : portraits 2D (aucun modèle 3D)", models == 0 and #panel.tiles == NS.ALLURE_COLS * NS.ALLURE_ROWS_MAX)
+	-- displayID connu : portrait 2D, pas de modèle 3D (bêta 3 : modèle sinon, section 7)
+	Check("[ALLURE] grille : tuiles construites une fois", #panel.tiles == NS.ALLURE_COLS * NS.ALLURE_ROWS_MAX)
 	local tKodo = TileOf(panel, "cap:7001")
-	Check("[ALLURE] portrait 2D : le displayID appris de l'espèce", tKodo.portrait.portraitID == 1001 and tKodo.portrait.portraitKind == "portrait")
+	Check("[ALLURE] portrait 2D : le displayID appris de l'espèce, sans modèle 3D", tKodo.portrait.portraitID == 1001
+		and tKodo.portrait.portraitKind == "portrait" and tKodo.model == nil)
+	-- ni displayID ni modèle que le client sache charger (simulacre sans SetCreature) : l'icône du type
+	local tFire = TileOf(panel, "cap:7003")
+	Check("[ALLURE] ni displayID ni modèle : l'icône de son type", tFire.look == "icon"
+		and tFire.portrait.texture == NS.MENAGERIE_TYPE_ICONS["Élémentaire"] and tFire.portrait:IsShown(),
+		tostring(tFire.look) .. " " .. tostring(tFire.portrait.texture))
 	local before = #A.portraits
 	NS:AllureRefresh()
 	Check("[ALLURE] rafraîchir : portraits pas repeints", #A.portraits == before)
@@ -192,7 +196,7 @@ do
 		and select(2, panel.seasonTitle:GetPoint()) == panel and panel.seasonTitle.lastPoint.y > panel.mineTitle.lastPoint.y)
 	Check("[ALLURE] en saison : pas dans la grille (seulement en tête)", not Index(Shown(panel), "winter:gfw"))
 	Check("[ALLURE] saison : petits modèles 3D (trois seulement)", panel.seasonTiles[1].model ~= nil
-		and panel.seasonTiles[1].model.modelKey ~= nil)
+		and panel.seasonTiles[1].seasonal and panel.seasonTiles[1].lookKey == "winter:gfw:m")
 	A.Done()
 end
 
@@ -411,4 +415,148 @@ do
 	for key in pairs(fr) do if en[key] == nil then missing[#missing + 1] = key end end
 	for key in pairs(en) do if fr[key] == nil then missing[#missing + 1] = key end end
 	Check("[ALLURE] textes FR/EN au complet", #missing == 0, table.concat(missing, ", "))
+end
+
+-- 7. Bêta 3 : chaque vignette montre sa créature -------------------------------------------------------
+-- Un PlayerModel simulé qui sait charger une créature (SetCreature) et dire
+-- son displayID (GetDisplayInfo) : tout de suite, ou après OnModelLoaded
+-- (A.lazy).
+local DISPLAYS = { [7003] = 5003, [7004] = 5004 }
+for n = 1, 12 do DISPLAYS[7100 + n] = 5100 + n end
+local function InstallModels()
+	A.models, A.lazy = {}, false
+	A.createFrame = _G.CreateFrame
+	_G.CreateFrame = function(kind, ...)
+		local frame = A.createFrame(kind, ...)
+		if kind == "PlayerModel" then
+			A.models[#A.models + 1] = frame
+			frame.loads = 0
+			function frame:SetCreature(id) self.creature, self.display, self.loaded = id, nil, not A.lazy; self.loads = self.loads + 1 end
+			function frame:SetDisplayInfo(id) self.display, self.creature, self.loaded = id, nil, true; self.loads = self.loads + 1 end
+			function frame:GetDisplayInfo()
+				if not self.loaded then return 0 end
+				return self.display or DISPLAYS[self.creature or -1] or 0
+			end
+			function frame:ClearModel() self.creature, self.display, self.loaded = nil, nil, false end
+			function frame:SetCamDistanceScale(v) self.cam = v end
+			function frame:SetPosition(_, _, z) self.posZ = z end
+			function frame:SetPortraitZoom(v) self.zoom = v end
+		end
+		return frame
+	end
+	NS.modelLearnCreatureProbe, NS.modelLearnCreatureAt, NS.modelLearnPending = nil, nil, nil
+end
+local function UninstallModels()
+	_G.CreateFrame = A.createFrame
+	NS:ModelLearnStop()
+	NS.modelLearnCreatureProbe, NS.modelLearnCreatureAt, NS.modelLearnPending = nil, nil, nil
+end
+local function GridModels(panel)
+	local n = 0
+	for _, tile in ipairs(panel.tiles) do if tile.model then n = n + 1 end end
+	return n
+end
+
+do
+	Say("-- 2.14.0 (bêta 3) : une vignette par créature")
+	A.Reset("sobre", true)
+	InstallModels()
+	local panel = Open()
+	local probe = NS.modelLearnCreatureProbe
+	-- displayID connu : le portrait 2D ; sinon la créature elle-même, en petit modèle
+	local tKodo, tZebra = TileOf(panel, "cap:7001"), TileOf(panel, "cap:7101")
+	Check("[ALLURE3] displayID connu : portrait 2D, pas de modèle", tKodo.look == "portrait" and tKodo.model == nil
+		and tKodo.portrait:IsShown())
+	-- la première espèce sans displayID a pu l'apprendre à l'ouverture : on regarde les suivantes
+	local creatures, distinct, models, portraitsOnly = {}, 0, 0, true
+	for _, tile in ipairs(panel.tiles) do
+		local def = tile.def
+		if def and def.captured and tile:IsShown() and tile.look == "model" then
+			models = models + 1
+			local npc = tile.model.creature
+			if npc == def.npc and not creatures[npc] then creatures[npc] = true; distinct = distinct + 1 end
+			if tile.portrait:IsShown() or not tile.model:IsShown() then portraitsOnly = false end
+		end
+	end
+	Check("[ALLURE3] sans displayID : sa créature en 3D (SetCreature), une par tuile, pas un repli commun",
+		models >= 10 and distinct == models and portraitsOnly, models .. " / " .. distinct)
+	local tFire = TileOf(panel, "cap:7003")
+	Check("[ALLURE3] modèle cadré comme le compagnon (distance du type, cadrage « pied »)", tFire.look == "model"
+		and math.abs(tFire.model.cam - NS.COMPANION_MODEL_TYPE_CAM["Élémentaire"]) < 1e-9 and tFire.model.zoom == 0,
+		tostring(tFire.model and tFire.model.cam))
+	Check("[ALLURE3] modèle sans souris (le clic reste à la tuile)", tFire.model.mouseEnabled == false)
+	-- Metzen : de loin, la même distance dans la vignette, la carte et le cadre du compagnon
+	local tMetzen = TileOf(panel, "winter:metzen")
+	Check("[ALLURE3] Metzen : vignette cadrée de loin (caméra du client trop près)", tMetzen.model.creature == 15664
+		and tMetzen.model.cam == NS.WINTER_METZEN_CAM and NS.WINTER_METZEN_CAM >= 3, tostring(tMetzen.model.cam))
+	Check("[ALLURE3] Metzen : même valeur pour le cadre du compagnon", NS:CompanionModelCam({ npc = 15664 }, "pied")
+		== NS.WINTER_METZEN_CAM and NS.COMPANION_MODEL_OVERRIDES[15664].cam == NS.WINTER_METZEN_CAM)
+	Check("[ALLURE3] Grand-père Hiver et le bonhomme de neige : inchangés", TileOf(panel, "winter:gfw").model.cam == 1.5
+		and TileOf(panel, "winter:snowman").model.cam == 1.2)
+	-- la mise en réserve : un modèle par tuile au plus, réutilisé au défilement
+	local before = #A.models
+	local visible = panel.rows * NS.ALLURE_COLS
+	Check("[ALLURE3] modèles : seulement les tuiles visibles qui en ont besoin", GridModels(panel) <= visible)
+	local first = panel.tiles[1]
+	local firstModel = first.model
+	for _ = 1, 5 do NS:AllureScroll(1) end
+	for _ = 1, 5 do NS:AllureScroll(-1) end
+	NS:AllureScroll(1)
+	Check("[ALLURE3] défilement : modèles réutilisés, pas recréés", #A.models - before <= visible
+		and (firstModel == nil or first.model == firstModel), #A.models .. " / " .. before)
+	local made = #A.models
+	for _ = 1, 3 do NS:AllureScroll(1); NS:AllureScroll(-1) end
+	Check("[ALLURE3] aller-retour : aucun modèle de plus", #A.models == made)
+	NS:AllureScroll(-10)
+
+	-- l'apprentissage des displayID : en fond, les visibles d'abord
+	local account = NS:CaptureAccount()
+	Check("[ALLURE3] apprentissage : une sonde à part (pas celle des unités)", probe ~= nil and probe ~= NS.modelLearnProbe
+		and probe.alpha == 0)
+	local learnedFirst = probe.creature
+	Check("[ALLURE3] première lecture tout de suite, une espèce visible sans displayID",
+		learnedFirst ~= nil and account.display[learnedFirst] == DISPLAYS[learnedFirst], tostring(learnedFirst))
+	local queued = #NS:ModelLearnQueue()
+	local loads = probe.loads
+	NS:ModelLearnPump()
+	Check("[ALLURE3] au plus une lecture tous les MODEL_LEARN_CREATURE_GAP s", probe.loads == loads
+		and #NS:ModelLearnQueue() == queued and NS.MODEL_LEARN_CREATURE_GAP >= 0.25)
+	Mock.now = Mock.now + NS.MODEL_LEARN_CREATURE_GAP
+	A.fight = true
+	_G.InCombatLockdown = function() return A.fight end
+	local timers = #A.timers
+	NS:ModelLearnPump()
+	Check("[ALLURE3] jamais en combat (reprise plus tard)", probe.loads == loads and #NS:ModelLearnQueue() == queued
+		and NS.modelLearnPending == true and #A.timers == timers + 1)
+	A.fight = false
+	A.lazy = true
+	local npc = NS:ModelLearnPump()
+	Check("[ALLURE3] hors combat : la suivante", npc ~= nil and probe.loads == loads + 1 and probe.creature == npc
+		and #NS:ModelLearnQueue() == queued - 1)
+	Check("[ALLURE3] pas encore chargée : rien de gardé (pas l'ancien modèle)", account.display[npc] == nil)
+	probe.loaded = true
+	probe.scripts.OnModelLoaded(probe)
+	Check("[ALLURE3] chargée (OnModelLoaded) : son displayID gardé au compte", account.display[npc] == DISPLAYS[npc])
+	A.lazy = false
+	-- tout le reste, au rythme des minuteries
+	for _ = 1, 40 do
+		Mock.now = Mock.now + NS.MODEL_LEARN_CREATURE_GAP
+		A.Fire()
+	end
+	local all = true
+	for id in pairs(DISPLAYS) do if account.display[id] ~= DISPLAYS[id] then all = false end end
+	Check("[ALLURE3] toutes les espèces capturées apprises, file vide", all and #NS:ModelLearnQueue() == 0)
+	-- la fois suivante : le portrait 2D, le modèle rangé
+	NS:AllureClose()
+	NS:AllureOpen()
+	tZebra = TileOf(panel, "cap:7101")
+	Check("[ALLURE3] displayID appris : portrait 2D la fois suivante", tZebra.look == "portrait"
+		and tZebra.portrait.portraitID == 5101 and tZebra.portrait:IsShown() and (tZebra.model == nil or not tZebra.model:IsShown()))
+	-- fermer le panneau arrête la file
+	NS:CaptureAccount().display[7112] = nil
+	NS:AllureRefresh()
+	NS:AllureClose()
+	Check("[ALLURE3] panneau fermé : plus rien à apprendre", #NS:ModelLearnQueue() == 0)
+	UninstallModels()
+	A.Done()
 end
