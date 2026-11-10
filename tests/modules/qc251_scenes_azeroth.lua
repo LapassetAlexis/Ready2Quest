@@ -88,6 +88,9 @@ function SZ.Reset(atlas)
 	NS:DB().captureMuteUntil = nil
 	NS:DB().companionCaptureSound = true
 	NS:DB().companionCaptureToast = true
+	-- 2.14.0 : sans le décor du Voile d'hiver (l'horloge des tests tombe le
+	-- 1er janvier 1970, en saison) : le filet garde son glyphe
+	NS:DB().winterVeil = "off"
 	NS:CompanionUpdateVisibility()
 end
 function SZ.Roll(value)
@@ -494,5 +497,6 @@ do
 	math.random = SZ.random
 	NS.SHINY_CHANCE = SZ.savedShiny
 	NS:DB().companionCaptureAnim, NS:DB().companionStyle = SZ.savedAnim, SZ.savedStyle
+	NS:DB().winterVeil = nil
 	ResetWorld()
 end
