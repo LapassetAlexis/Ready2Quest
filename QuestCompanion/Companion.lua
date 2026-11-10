@@ -1882,6 +1882,8 @@ function ns.ShowModel(model, opts, profile)
 	if opts.display then shown = ModelCall(model, "SetDisplayInfo", opts.display) end
 	if not shown and npc then shown = ModelCall(model, "SetCreature", npc) end
 	model.modelKey, model.modelShown = key, shown and true or false
+	-- 2.14.0 (bêta 5) : ce qui a été demandé au client (/qc noel metzen diag)
+	model.modelNpc, model.modelDisplay = npc, opts.display
 	-- un modèle rechargé repart opaque (le client remet son opacité à 1)
 	model.appliedAlpha, model.alphaDirty = nil, nil
 	if shown then

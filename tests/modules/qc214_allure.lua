@@ -504,11 +504,84 @@ do
 	Check("[ALLURE4] /qc noel metzen 2,5 15664 : distance et modèle réglés, vignette rechargée",
 		NS.WINTER_METZEN_CAM == 2.5 and tuned.model.creature == 15664 and tuned.model.cam == 2.5
 		and NS:CompanionModelCam({ npc = 15664 }, "pied") == 2.5, tostring(tuned.model.creature) .. " / " .. tostring(tuned.model.cam))
-	NS:WinterVeilCommand("metzen 1.4 15706")
+	NS:WinterVeilCommand("metzen 1 15706")
 	NS:AllureRefresh()
-	Check("[ALLURE4] /qc noel metzen 1.4 15706 : retour au Renne de l'Hiver", TileOf(panel, "winter:metzen").model.creature == 15706
-		and NS.WINTER_METZEN_CAM == 1.4)
+	Check("[ALLURE4] /qc noel metzen 1 15706 : retour au Renne de l'Hiver", TileOf(panel, "winter:metzen").model.creature == 15706
+		and NS.WINTER_METZEN_CAM == 1)
 	NS.Print = print0
+	-- bêta 5 (28.png) : les appels exacts de la vignette de Metzen. Un displayID
+	-- appris pour 15664 (le grand Metzen) ne passe pas devant.
+	do
+		local account = NS:CaptureAccount()
+		account.display = type(account.display) == "table" and account.display or {}
+		account.display[15664] = 15902
+		local tile = TileOf(panel, "winter:metzen")
+		local model = tile.model
+		local calls = {}
+		local function Spy(name)
+			local base = model[name]
+			model[name] = function(m, ...)
+				calls[#calls + 1] = { name = name, args = { ... } }
+				return base(m, ...)
+			end
+		end
+		for _, name in ipairs({ "SetCreature", "SetDisplayInfo", "SetCamDistanceScale", "SetPortraitZoom", "SetPosition" }) do Spy(name) end
+		model.SetModelScale = function(_, v) calls[#calls + 1] = { name = "SetModelScale", args = { v } } end
+		tile.lookKey, model.modelKey, model.modelShown = nil, nil, nil
+		NS:AllureRefresh()
+		local seen = {}
+		for _, call in ipairs(calls) do seen[call.name] = seen[call.name] or call.args end
+		Check("[ALLURE5] Metzen : la vignette charge SetCreature(15706), jamais un display (ni 15902 appris)",
+			seen.SetCreature and seen.SetCreature[1] == 15706 and seen.SetDisplayInfo == nil and model.display == nil
+			and model.modelNpc == 15706 and model.modelDisplay == nil, tostring(seen.SetCreature and seen.SetCreature[1]))
+		Check("[ALLURE5] Metzen : caméra du client (distance 1, ce renne disparaît dès qu'elle recule), zoom 0, position 0",
+			NS.WINTER_METZEN_CAM == 1 and seen.SetCamDistanceScale and seen.SetCamDistanceScale[1] == 1
+			and seen.SetPortraitZoom and seen.SetPortraitZoom[1] == 0
+			and seen.SetPosition and seen.SetPosition[1] == 0 and seen.SetPosition[2] == 0 and seen.SetPosition[3] == 0
+			and seen.SetModelScale == nil, tostring(seen.SetCamDistanceScale and seen.SetCamDistanceScale[1]))
+		Check("[ALLURE5] Metzen : modèle montré, portrait caché, taille de la vignette", tile.look == "model"
+			and model:IsShown() and not tile.portrait:IsShown() and model:GetWidth() == NS.ALLURE_TILE_W - 6
+			and model:GetHeight() == NS.ALLURE_PORTRAIT)
+		-- la caméra reposée au chargement (OnModelLoaded) : toujours 1
+		model.cam = nil
+		local loaded = model.hooks and model.hooks.OnModelLoaded
+		if loaded then loaded(model) end
+		Check("[ALLURE5] Metzen : chargement du modèle, la même caméra reposée", loaded ~= nil and model.cam == 1)
+		Check("[ALLURE5] cadre du compagnon (Metzen porté) : même distance, quel que soit le cadrage, jamais plus loin que 1",
+			NS:CompanionModelCam({ npc = 15664 }, "pied") == 1 and NS:CompanionModelCam({ npc = 15664 }, "portrait") <= 1
+			and NS:CompanionModelCam({ npc = 15664 }, "buste") <= 1)
+		-- /qc noel metzen diag : vignette et cadre du compagnon
+		local printed = {}
+		NS.Print = function(_, text) printed[#printed + 1] = text end
+		NS:WinterVeilCommand("metzen diag")
+		NS.Print = print0
+		local all = table.concat(printed, "\n")
+		Check("[ALLURE5] /qc noel metzen diag : pnj, display, caméra, chargé, taille de la vignette et du compagnon",
+			#printed == 3 and printed[1]:find("15706", 1, true) ~= nil
+			and printed[2]:find(NS.L.WINTER_METZEN_DIAG_TILE, 1, true) ~= nil and printed[2]:find("pnj 15706", 1, true) ~= nil
+			and printed[2]:find("52 × 46", 1, true) ~= nil and printed[2]:find("caméra 1", 1, true) ~= nil
+			and printed[3]:find(NS.L.WINTER_METZEN_DIAG_COMP, 1, true) ~= nil, all)
+		-- le cadre du compagnon qui porte Metzen : les mêmes appels
+		-- un cadre neuf, créé avec le PlayerModel simulé (SetCreature, caméra lue)
+		if NS.companionFrame then NS.companionFrame:Hide() end
+		NS.companionFrame = nil
+		local frame = NS:EnsureCompanionFrame()
+		local cm = frame and frame.model
+		NS:CompanionSetAppearance("winter:metzen")
+		Check("[ALLURE5] cadre du compagnon : Metzen chargé par SetCreature(15706), sans display, distance ≤ 1",
+			cm and cm.creature == 15706 and cm.display == nil and cm.modelNpc == 15706 and cm.cam and cm.cam <= 1
+			and not frame.usesFallback, tostring(cm and cm.creature) .. " / " .. tostring(cm and cm.cam))
+		printed = {}
+		NS.Print = function(_, text) printed[#printed + 1] = text end
+		NS:WinterMetzenDiag()
+		NS.Print = print0
+		Check("[ALLURE5] diag : la ligne du cadre du compagnon quand il porte Metzen", printed[3] ~= nil
+			and printed[3]:find("pnj 15706", 1, true) ~= nil, tostring(printed[3]))
+		Check("[ALLURE5] diag : textes FR et EN", NS.L.WINTER_METZEN_DIAG_ROW ~= nil and NS.L.WINTER_METZEN_DIAG_HEAD ~= nil)
+		account.display[15664] = nil
+		if NS.companionFrame then NS.companionFrame:Hide() end
+		NS.companionFrame = nil
+	end
 	Check("[ALLURE3] Grand-père Hiver et le bonhomme de neige : inchangés", TileOf(panel, "winter:gfw").model.cam == 1.5
 		and TileOf(panel, "winter:snowman").model.cam == 1.2)
 	-- la mise en réserve : un modèle par tuile au plus, réutilisé au défilement

@@ -175,9 +175,15 @@ do
 		and d.lights == swags[1] and math.abs(swags[2].lastPoint.x - swags[1].lastPoint.x - box.swag) < 1e-6)
 	Check("[WV4] guirlande : centrée sur le cadre (x = 0, pas le décalage de l'anneau)", C.x == 0
 		and math.abs(sum / #swags) < 1e-6 and math.abs(box.left + box.right) < 1e-6, string.format("%.2f", sum))
-	Check("[WV4] guirlande : toute la largeur de l'or visible (90 à 100 %), sans déborder de plus de 4 px",
-		box.w >= 0.9 * G.w and box.w <= G.w + 8, string.format("%.1f / %d", box.w, G.w))
-	Check("[WV4] guirlande : bulbes d'environ 8 px (7 à 9,5)", box.bulb >= 7 and box.bulb <= 9.5, string.format("%.1f", box.bulb))
+	-- bêta 5 (27.png) : bulbes de ~4 px en bêta 4 ; taille moyenne, les deux brins sur toute la plaque
+	local plateW = frame:GetWidth() + 8
+	Check("[WV5] guirlande : les deux brins couvrent la largeur du cadre (plaque du nom ± 8 px), plus que l'or",
+		box.w > G.w and box.w >= plateW - 8 and box.w <= plateW + 8, string.format("%.1f / %d", box.w, plateW))
+	Check("[WV5] guirlande : bulbes moyens (11 à 13 px ; ~4 en bêta 4, ~18 en bêta 3)", box.bulb >= 11 and box.bulb <= 13,
+		string.format("%.1f", box.bulb))
+	Check("[WV5] guirlande : cadre de chaque brin assez large pour que la caméra le cadre sur sa hauteur (≥ fit × h)",
+		C.fit >= 3 and lights:GetWidth() == box.frameW and box.frameW >= C.fit * C.h - 0.5 and box.frameW >= box.swag
+		and d.swags[2]:GetWidth() == box.frameW, string.format("%s / %s", tostring(lights:GetWidth()), tostring(box.frameW)))
 	Check("[WV4] guirlande : le milieu des fils posé sur le bord doré du haut",
 		box.mid <= G.top and box.mid >= G.inner, string.format("%.1f (%d..%d)", box.mid, G.inner, G.top))
 	Check("[WV4] guirlande : bouts accrochés au-dessus du cadre, bulbes juste sous l'or (≤ 5 px dans l'ouverture)",
@@ -213,13 +219,54 @@ do
 		and C.x == 0 and Shown(d.swags[2]) and not Shown(d.swags[3]))
 	printed = {}
 	NS:WinterVeilCommand("cadre")
-	Check("[WV4] /qc noel cadre sans valeur : les valeurs actuelles, rien ne change", #printed == 1 and C.bulb == 8.5)
+	Check("[WV4] /qc noel cadre sans valeur : les valeurs actuelles, rien ne change", #printed == 1
+		and C.bulb == NS.WINTER_VEIL_COMPANION_DEFAULT.bulb and C.bulb == 11.5)
 	NS.Print = print0
 	Check("[WV] deux flocons (236121) près du cadre", #d.flakes == 2 and d.flakes[1].texture == ART.flake.file
 		and d.flakes[2].texture == 236121 and d.flakes[1].alpha < 1)
 	local gift = false
 	for _, child in ipairs(d.mockChildren or {}) do if child.texture == 133202 then gift = true end end
 	Check("[WV] pas de cadeau à côté du compagnon", not gift)
+	-- bêta 5 (26.png) : mode voyage, interface cachée : l'habit du cadre ne se
+	-- voit plus (opacité effective nulle), les modèles 3D, eux, si : la
+	-- guirlande et les flocons se cachent avec l'habit, et reviennent avec lui
+	local function DecorOn()
+		if not (Shown(d.flakes[1]) and Shown(d.flakes[2])) then return false end
+		for index = 1, C.swags do if not Shown(d.swags[index]) then return false end end
+		return true
+	end
+	local function DecorOff()
+		for _, tex in ipairs(d.flakes) do if Shown(tex) then return false end end
+		for _, model in ipairs(d.swags) do if Shown(model) then return false end end
+		return true
+	end
+	Check("[WV5] habit visible : guirlande et flocons là, rien à reprendre", DecorOn() and NS:WinterVeilWatch() == false
+		and d.bare == false)
+	UIParent:SetAlpha(0)
+	Check("[WV5] interface cachée (opacité 0) : l'habit est nu", NS:WinterVeilCompanionBare(frame) == true)
+	Check("[WV5] … le guet le voit : guirlande 3D et flocons cachés, décor gardé", NS:WinterVeilWatch() == true
+		and DecorOff() and Shown(d) and d.bare == true)
+	Check("[WV5] … et ne refait rien tant que rien ne change", NS:WinterVeilWatch() == false and DecorOff())
+	NS:WinterVeilCompanion()
+	Check("[WV5] … un rafraîchissement du compagnon ne les remontre pas", DecorOff())
+	UIParent:SetAlpha(1)
+	Check("[WV5] interface revenue : guirlande et flocons reviennent", NS:WinterVeilWatch() == true and DecorOn())
+	-- l'opacité du client (GetEffectiveAlpha) quand il la donne ; le combat (0,35) n'est pas « nu »
+	frame.azSkin.GetEffectiveAlpha = function() return NS.COMPANION_COMBAT_ALPHA end
+	Check("[WV5] combat estompé (0,35) : la guirlande reste", NS:WinterVeilWatch() == false and DecorOn())
+	frame.azSkin.GetEffectiveAlpha = function() return 0 end
+	Check("[WV5] GetEffectiveAlpha à 0 : cachée", NS:WinterVeilWatch() == true and DecorOff())
+	frame.azSkin.GetEffectiveAlpha = nil
+	NS:WinterVeilWatch()
+	-- l'habit caché (cadre d'un autre style, interface masquée) : cachée aussi
+	frame.azSkin:Hide()
+	Check("[WV5] habit caché : guirlande cachée", NS:WinterVeilWatch() == true and DecorOff())
+	frame.azSkin:Show()
+	Check("[WV5] habit remontré : elle revient", NS:WinterVeilWatch() == true and DecorOn())
+	local everyOk = false
+	local count, order = NS.ClockJobs()
+	for index = 1, count do if order[index] == "noel:cadre" then everyOk = true end end
+	Check("[WV5] le guet tourne sur l'horloge de l'addon (noel:cadre, 0,25 s)", everyOk and NS.WINTER_VEIL_BARE_STEP == 0.25)
 	-- jamais : caché tout de suite
 	NS:SetWinterVeil("off")
 	Check("[WV] jamais : décor du compagnon caché sans /reload", not Shown(d) and not Shown(lights))
@@ -249,33 +296,46 @@ do
 	local d = f and f.wvDecor
 	local ok, errs = NoErrors()
 	Check("[WV] carnet Azeroth : décor montré, sans erreur", f and f.azeroth and d and Shown(d) and ok, errs)
-	-- bêta 3 : deux bandes, colonne et page, qui laissent le joint et les volutes libres
+	-- bêta 5 (29.png) : une seule bande, d'un bord intérieur du bois à l'autre, par-dessus le joint
 	local J = NS.WINTER_VEIL_JOURNAL
 	Check("[WV3] guirlande plus grande : bande de 24 à 30 px", J.lightsH >= 24 and J.lightsH <= 30)
-	local per, good = {}, #d.lights > 0
+	local min, max, total, good, shown = math.huge, -math.huge, 0, #d.lights > 0, 0
+	local xs = {}
 	for _, tex in ipairs(d.lights) do
-		local host = tex.lastPoint.relTo
-		local w = per[host] or { total = 0, min = math.huge, max = -math.huge }
-		w.total = w.total + tex:GetWidth()
-		w.min = math.min(w.min, tex.lastPoint.x)
-		w.max = math.max(w.max, tex.lastPoint.x + tex:GetWidth())
-		per[host] = w
-		if tex.texture ~= 235484 or tex:GetHeight() ~= J.lightsH or tex.lastPoint.y ~= 0 or tex.lastPoint.point ~= "TOPLEFT"
-			or tex.drawLayer ~= "BORDER" or tex:GetParent() ~= host then good = false end
+		if Shown(tex) then
+			shown = shown + 1
+			total = total + tex:GetWidth()
+			min = math.min(min, tex.lastPoint.x)
+			max = math.max(max, tex.lastPoint.x + tex:GetWidth())
+			xs[#xs + 1] = { x = tex.lastPoint.x, w = tex:GetWidth() }
+			if tex.texture ~= 235484 or tex:GetHeight() ~= J.lightsH or tex.lastPoint.y ~= -LAY.band
+				or tex.lastPoint.point ~= "TOPLEFT" or tex.lastPoint.relTo ~= f or tex:GetParent() ~= d then good = false end
+		end
 	end
-	Check("[WV3] guirlande (235484) : deux bandes, sur la colonne et sur la page, pendues sous le métal, sous les textes",
-		good and per[f.nav] ~= nil and per[f.content] ~= nil)
-	local navW, cw = f.nav:GetWidth(), f.content:GetWidth()
-	local nb, pb = per[f.nav], per[f.content]
-	-- bêta 4 : toute la colonne, mêmes marges aux deux bouts du carnet, coupée au joint
-	Check("[WV4] colonne : toute sa largeur, de la marge au joint (plus de trou après « CARNET »)",
-		math.abs(nb.min - J.lightsCurl) < 0.01 and math.abs(nb.max - (navW - J.lightsJoint)) < 0.01
-		and math.abs(nb.total - (nb.max - nb.min)) < 0.01 and navW - nb.max + LAY.gap / 2 >= 13,
-		string.format("%.1f..%.1f / %d", nb.min, nb.max, navW))
-	Check("[WV4] page : entre les volutes, loin du joint", math.abs(pb.min - J.lightsCurl) < 0.01
-		and math.abs(pb.max - (cw - J.lightsCurl)) < 0.01 and math.abs(pb.total - (pb.max - pb.min)) < 0.01
-		and pb.min + LAY.gap / 2 >= 13, string.format("%.1f..%.1f / %d", pb.min, pb.max, cw))
-	Check("[WV4] marges symétriques : bord gauche de la colonne = bord droit de la page", math.abs(nb.min - (cw - pb.max)) < 0.01)
+	table.sort(xs, function(a, b) return a.x < b.x end)
+	local continuous = #xs > 0
+	for index = 2, #xs do if math.abs(xs[index].x - (xs[index - 1].x + xs[index - 1].w)) > 0.01 then continuous = false end end
+	local W = f:GetWidth()
+	Check("[WV5] guirlande (235484) : une seule bande sur le décor, ancrée au cadre, pendue au bas de la barre de métal",
+		good and shown == #d.lights and d:GetFrameLevel() > f.azOver:GetFrameLevel())
+	Check("[WV5] bande continue, sans trou (joint compris)", continuous and math.abs(total - (max - min)) < 0.01)
+	local jointX = LAY.wood + LAY.nav + LAY.gap / 2
+	Check("[WV5] d'un bord intérieur du bois à l'autre, marges égales de 6 à 10 px, par-dessus le poteau du joint",
+		math.abs(min - (LAY.wood + J.lightsEdge)) < 0.01 and math.abs((W - LAY.wood) - max - J.lightsEdge) < 0.01
+		and J.lightsEdge >= 6 and J.lightsEdge <= 10 and min < jointX - 20 and max > jointX + 20
+		and math.abs((min - LAY.wood) - ((W - LAY.wood) - max)) < 0.01, string.format("%.1f..%.1f / %d", min, max, W))
+	Check("[WV5] du début de la colonne à la fin de la page", min - LAY.wood <= 10
+		and (f.nav:GetWidth() + LAY.gap + f.content:GetWidth()) - (max - LAY.wood) <= 10)
+	-- reposée au rafraîchissement : même nombre de tuiles, rien de recréé
+	local before = #d.lights
+	NS:WinterVeilJournal(f)
+	Check("[WV5] rafraîchie : les mêmes tuiles reposées", #d.lights == before and d.lightsCount == before)
+	-- les flocons restent visibles sous la bande (pas dans ses 28 px)
+	local flakesBelow = true
+	for _, tex in ipairs(d.flakes) do
+		if tex.lastPoint.y + tex.wvSpec.size / 2 > -J.lightsH then flakesBelow = false end
+	end
+	Check("[WV5] les flocons sous la bande, pas recouverts", flakesBelow)
 	Check("[WV4] l'intitulé « CARNET », sous la guirlande, est caché", not f.navGroup:IsShown())
 	local first = d.lights[1]
 	Check("[WV] … découpe du haut (104×36 sur 128)", first.texCoord[3] == 0 and math.abs(first.texCoord[4] - 36 / 128) < 1e-9

@@ -60,19 +60,26 @@ ns.WINTER_VEIL_ROUND_MASK = "Interface\\CharacterFrame\\TempPortraitAlphaMask"
 -- (couche BORDER, comme les flocons) : sous leurs textes, sans souris.
 -- 2.14.0 (bêta 4) : la bande de la colonne commençait après son intitulé
 -- (« CARNET ») : un trou à gauche, une guirlande qui paraissait décentrée
--- (25.png). Elle court désormais sur toute la colonne : mêmes marges aux
--- deux bouts du carnet (lightsCurl, à gauche de la colonne comme à droite de
--- la page, où la volute la recouvre en partie), coupée au joint seulement
--- (lightsJoint côté colonne, la volute côté page). L'intitulé de la colonne,
--- qu'elle couvrirait, est caché tant que la guirlande est là (rendu sans
--- elle) : le titre de la fenêtre dit déjà « Carnet de voyage ».
+-- (25.png). Elle court désormais sur toute la colonne. L'intitulé de la
+-- colonne, qu'elle couvrirait, est caché tant que la guirlande est là (rendu
+-- sans elle) : le titre de la fenêtre dit déjà « Carnet de voyage ».
+-- 2.14.0 (bêta 5) : deux bandes coupées au joint et sous les volutes
+-- laissaient un trou d'une cinquantaine de px autour du poteau de métal
+-- entre la colonne et la page, et la fin de la page nue (29.png). Une seule
+-- bande désormais, d'un bord intérieur du bois à l'autre (début de la
+-- colonne → fin de la page), à lightsEdge px de chaque bout, pendue au bas
+-- de la barre de métal : elle passe par-dessus le poteau du joint et les
+-- volutes (posée sur le décor, au-dessus du calque du bois et du métal ;
+-- rien d'autre dans ses 28 px que l'intitulé caché).
 ns.WINTER_VEIL_JOURNAL = {
-	lightsH = 28, lightsJoint = 14, lightsCurl = 30,
+	lightsH = 28, lightsEdge = 8,
 	iconSize = 18, iconGap = 6,
+	-- 2.14.0 (bêta 5) : les flocons sous la bande (haut de la page, haut de
+	-- la colonne) seraient recouverts : descendus sous elle, sur la page
 	flakes = {
-		{ on = "content", point = "TOPRIGHT", x = -34, y = -16, size = 30, alpha = 0.42 },
-		{ on = "content", point = "TOPRIGHT", x = -76, y = -34, size = 16, alpha = 0.36 },
-		{ on = "nav", point = "TOPRIGHT", x = -10, y = -15, size = 14, alpha = 0.38 },
+		{ on = "content", point = "TOPRIGHT", x = -34, y = -46, size = 30, alpha = 0.42 },
+		{ on = "content", point = "TOPRIGHT", x = -76, y = -62, size = 16, alpha = 0.36 },
+		{ on = "content", point = "TOPRIGHT", x = -118, y = -44, size = 14, alpha = 0.38 },
 	},
 }
 -- le cadre du compagnon : la guirlande 3D (bande au ras du haut de l'anneau ;
@@ -96,13 +103,25 @@ ns.WINTER_VEIL_JOURNAL = {
 -- le milieu des fils sur le bord doré du haut (y : centre des modèles,
 -- depuis le haut du cadre). 199603 (trois guirlandes) écartée : la même
 -- taille de bulbe, mais trois fois plus large que le cadre.
+-- 2.14.0 (bêta 5) : en bêta 4, des bulbes de ~4 px (27.png), deux fois plus
+-- petits que prévu. Chaque brin avait un cadre de modèle à peine plus large
+-- que lui (52×30) : la caméra du client cadre alors la guirlande sur la
+-- largeur du cadre, plus sur sa hauteur, et l'unité h / cam ne tient plus
+-- (bêta 2, 118×34, et bêta 3, 108×40, mesurées sur la hauteur : 3,8 h / cam
+-- px par brin). Le cadre de chaque brin garde donc au moins fit × h de large
+-- (les cadres se chevauchent, sans fond : rien ne se voit) et la hauteur
+-- règle la taille. Bulbes de 11,5 px (≈ 12,5 px à l'écran à l'échelle 1,1
+-- du joueur), entre les ~4 px de la bêta 4 et les ~18 px de la bêta 3 ; les
+-- deux brins (~118 px) couvrent la plaque du nom (112 px), centrés, le
+-- milieu des fils sur le bord doré du haut (y = 0).
 -- Réglage en jeu : /qc noel cadre <bulbe> <x> <y> <brins> <cap> (session).
 ns.WINTER_VEIL_COMPANION = {
-	model = 199600, swags = 2, bulb = 8.5, x = 0, y = -2, h = 30, facing = 0,
+	model = 199600, swags = 2, bulb = 11.5, x = 0, y = 0, h = 30, facing = 0, fit = 3.5,
 	span = 3.75, wireTop = 0.8, sag = 0.07, drop = 0.65, bulbH = 0.73,
+	-- 2.14.0 (bêta 5) : le flocon de gauche descendu sous la guirlande élargie
 	flakes = {
-		{ x = -44, y = -6, size = 14, alpha = 0.75 },
-		{ x = 46, y = -26, size = 11, alpha = 0.65 },
+		{ x = -48, y = -50, size = 14, alpha = 0.75 },
+		{ x = 50, y = -28, size = 11, alpha = 0.65 },
 	},
 }
 ns.WINTER_VEIL_COMPANION_DEFAULT = {}
@@ -286,27 +305,8 @@ local function BuildJournalDecor(frame)
 	d:SetAllPoints(frame)
 	d:SetFrameLevel((over:GetFrameLevel() or 1) + 2)
 	d:EnableMouse(false)
-	-- la guirlande : des tuiles de 104×36 ramenées à la hauteur de la bande,
-	-- la dernière recoupée ; une bande sur la colonne, une sur la page,
-	-- pendues sous le métal, qui laissent le joint et les volutes libres
-	d.lights, d.bands = {}, {}
-	for _, band in ipairs(ns.WinterVeilJournalBands(frame)) do
-		local host, h = band.host, J.lightsH
-		local tileW = math.floor(A.lights.w * h / A.lights.h + 0.5)
-		local x = band.x0
-		while x < band.x1 do
-			local w = math.min(tileW, band.x1 - x)
-			local tex = NewFile(host, "BORDER", 6, A.lights)
-			if not tex then break end
-			tex:SetSize(w, h)
-			tex:SetPoint("TOPLEFT", host, "TOPLEFT", x, 0)
-			local c = A.lights.c
-			tex:SetTexCoord(c[1], c[1] + (c[2] - c[1]) * w / tileW, c[3], c[4])
-			d.lights[#d.lights + 1] = tex
-			x = x + w
-		end
-		d.bands[#d.bands + 1] = band
-	end
+	-- la guirlande : posée (et reposée) par LayJournalLights
+	d.lights = {}
 	-- le cadeau et le renne, de part et d'autre du titre (placés à chaque rafraîchissement)
 	d.present = NewFile(d, "OVERLAY", 1, A.present)
 	d.reindeer = NewFile(d, "OVERLAY", 1, A.reindeer)
@@ -329,6 +329,39 @@ local function BuildJournalDecor(frame)
 	return d
 end
 
+-- 2.14.0 (bêta 5) : la guirlande, une seule bande de tuiles de 104×36
+-- ramenées à la hauteur de la bande, la dernière recoupée ; sur le décor
+-- (au-dessus du bois, du métal, du poteau du joint et des volutes), ancrée
+-- au cadre. Reposée à chaque rafraîchissement (la fenêtre peut changer de
+-- largeur) : les tuiles sont réutilisées, celles en trop cachées.
+local function LayJournalLights(frame, d)
+	local J, A = ns.WINTER_VEIL_JOURNAL, ns.WINTER_VEIL_ART
+	local band = ns.WinterVeilJournalBand(frame)
+	local h = J.lightsH
+	local tileW = math.floor(A.lights.w * h / A.lights.h + 0.5)
+	local c = A.lights.c
+	local x, count = band.x0, 0
+	while x < band.x1 do
+		local w = math.min(tileW, band.x1 - x)
+		count = count + 1
+		local tex = d.lights[count]
+		if not tex then
+			tex = NewFile(d, "ARTWORK", 1, A.lights)
+			if not tex then count = count - 1; break end
+			d.lights[count] = tex
+		end
+		tex:SetSize(w, h)
+		tex:ClearAllPoints()
+		tex:SetPoint("TOPLEFT", frame, "TOPLEFT", x, band.y)
+		tex:SetTexCoord(c[1], c[1] + (c[2] - c[1]) * w / tileW, c[3], c[4])
+		tex:Show()
+		x = x + w
+	end
+	for index = count + 1, #d.lights do d.lights[index]:Hide() end
+	d.band, d.lightsCount = band, count
+	return count
+end
+
 -- Le cadeau à gauche du titre, le renne à droite, sans toucher au texte
 local function PlaceTitleIcons(frame, d)
 	local title = frame.azPlate and frame.azPlate.title
@@ -344,21 +377,14 @@ local function PlaceTitleIcons(frame, d)
 	return off
 end
 
--- Les bandes de la guirlande, en coordonnées de leur hôte (colonne, page) :
--- { host, x0, x1 }. Sans colonne : la page seule.
-function ns.WinterVeilJournalBands(frame)
+-- 2.14.0 (bêta 5) : la bande de la guirlande, en coordonnées du cadre :
+-- { x0, x1, y }. D'un bord intérieur du bois à l'autre (début de la colonne,
+-- ou de la page sans colonne, → fin de la page), à lightsEdge px de chaque
+-- bout ; y : le bas de la barre de métal (le haut de la colonne et de la page).
+function ns.WinterVeilJournalBand(frame)
 	local lay, J = ns.CARNET_LAYOUT, ns.WINTER_VEIL_JOURNAL
-	local bands = {}
-	local nav, content = frame.nav, frame.content
-	if nav then
-		-- 2.14.0 (bêta 4) : toute la colonne (son intitulé est caché)
-		bands[#bands + 1] = { host = nav, x0 = J.lightsCurl, x1 = (tonumber(nav:GetWidth()) or lay.nav) - J.lightsJoint }
-	end
-	if content then
-		local cw = tonumber(content:GetWidth()) or 0
-		bands[#bands + 1] = { host = content, x0 = J.lightsCurl, x1 = cw - J.lightsCurl }
-	end
-	return bands
+	local W = frame.azSize and tonumber(frame.azSize[1]) or tonumber(frame:GetWidth()) or 0
+	return { x0 = lay.wood + J.lightsEdge, x1 = W - lay.wood - J.lightsEdge, y = -lay.band }
 end
 
 -- Montre ou cache le décor d'un carnet Azeroth ; rend s'il est montré
@@ -382,7 +408,7 @@ function ns:WinterVeilJournal(frame)
 	-- l'intitulé de la colonne, sous la guirlande : caché (rendu sans elle)
 	if frame.navGroup then frame.navGroup:Hide(); d.navLabelHidden = true end
 	for _, tex in ipairs(d.flakes) do tex:Show() end
-	for _, tex in ipairs(d.lights) do tex:Show() end
+	LayJournalLights(frame, d)
 	PlaceTitleIcons(frame, d)
 	return true
 end
@@ -401,9 +427,12 @@ function ns.WinterVeilLightsBox()
 	local swag = C.span * unit
 	local centers = {}
 	for index = 1, n do centers[index] = C.x + (index - (n + 1) / 2) * swag end
+	-- 2.14.0 (bêta 5) : largeur du cadre d'un brin (frameW), assez large pour
+	-- que la caméra du client le cadre sur la hauteur (fit × h)
+	local frameW = math.max(math.floor(swag + C.bulb + 0.5), math.floor((tonumber(C.fit) or 0) * C.h + 0.5))
 	return { unit = unit, cam = C.h / unit, swag = swag, w = n * swag, left = C.x - n * swag / 2, right = C.x + n * swag / 2,
 		wire = C.y + C.wireTop * unit, mid = C.y + C.sag * unit, bottom = C.y - C.drop * unit,
-		bulb = C.bulbH * unit, centers = centers, count = n }
+		bulb = C.bulbH * unit, centers = centers, count = n, frameW = frameW }
 end
 
 local function LightsFraming(m)
@@ -437,7 +466,7 @@ local function PlaceSwags(frame, d)
 		end
 		if model then
 			if index <= box.count then
-				model:SetSize(math.floor(box.swag + 8.5), C.h)
+				model:SetSize(box.frameW, C.h)
 				model:ClearAllPoints()
 				model:SetPoint("CENTER", frame, "TOP", box.centers[index], C.y)
 				if model.wvModel ~= C.model then
@@ -476,6 +505,57 @@ local function BuildCompanionDecor(frame, skin)
 	return d
 end
 
+-- 2.14.0 (bêta 5) : le cadre « nu ». En mode voyage, interface cachée
+-- (26.png), l'habit du cadre (anneau, plaque) ne se voit plus, mais un
+-- modèle 3D ne suit pas l'opacité de ses parents (B7, 2.11.0) : la guirlande
+-- flottait au-dessus du compagnon. Elle se cache dès que l'habit ne se voit
+-- plus (caché, ou opacité effective sous WINTER_VEIL_BARE_ALPHA), et revient
+-- avec lui ; relu toutes les WINTER_VEIL_BARE_STEP s (ns:WinterVeilWatch).
+ns.WINTER_VEIL_BARE_ALPHA = 0.1
+ns.WINTER_VEIL_BARE_STEP = 0.25
+
+-- Opacité effective d'une région (celle du client, sinon le produit des
+-- opacités de ses parents)
+local function EffectiveAlpha(region)
+	if type(region.GetEffectiveAlpha) == "function" then
+		local ok, alpha = pcall(region.GetEffectiveAlpha, region)
+		if ok and tonumber(alpha) then return tonumber(alpha) end
+	end
+	local alpha, node, depth = 1, region, 0
+	while node and depth < 20 do
+		if type(node.GetAlpha) == "function" then
+			local ok, a = pcall(node.GetAlpha, node)
+			if ok and tonumber(a) then alpha = alpha * tonumber(a) end
+		end
+		node = type(node.GetParent) == "function" and node:GetParent() or nil
+		depth = depth + 1
+	end
+	return alpha
+end
+
+local function Hidden(region)
+	if not region then return false end
+	if type(region.IsShown) == "function" and not region:IsShown() then return true end
+	if type(region.IsVisible) == "function" then
+		local ok, visible = pcall(region.IsVisible, region)
+		if ok and visible == false then return true end
+	end
+	return false
+end
+
+-- L'habit du cadre (anneau, plaque) ne se voit pas ?
+function ns:WinterVeilCompanionBare(frame)
+	frame = frame or self.companionFrame
+	local skin = frame and frame.azSkin
+	if not skin or Hidden(frame) or Hidden(skin) then return true end
+	return EffectiveAlpha(skin) < ns.WINTER_VEIL_BARE_ALPHA
+end
+
+local function ShowParts(d, shown)
+	for _, tex in pairs(d.flakes or {}) do if shown then tex:Show() else tex:Hide() end end
+	if not shown then for _, model in ipairs(d.swags or {}) do model:Hide() end end
+end
+
 -- Montre ou cache le décor du compagnon ; rend s'il est montré
 function ns:WinterVeilCompanion()
 	local frame = self.companionFrame
@@ -487,14 +567,42 @@ function ns:WinterVeilCompanion()
 		if d then
 			d:Hide()
 			for _, model in ipairs(d.swags or {}) do model:Hide() end
+			d.bare = nil
 		end
 		return false
 	end
 	d = d or BuildCompanionDecor(frame, skin)
 	d:Show()
+	-- 2.14.0 (bêta 5) : habit invisible (mode voyage) : ni guirlande ni flocons
+	local bare = self:WinterVeilCompanionBare(frame)
+	d.bare = bare
+	if bare then
+		if not d.swags[1] then PlaceSwags(frame, d) end
+		ShowParts(d, false)
+		return false
+	end
+	ShowParts(d, true)
 	PlaceSwags(frame, d)
 	return true
 end
+
+-- 2.14.0 (bêta 5) : l'habit a disparu (ou est revenu) depuis le dernier
+-- passage : le décor suit. Rien n'est refait tant que rien ne change. Rend
+-- true quand le décor a été repris.
+function ns:WinterVeilWatch()
+	local frame = self.companionFrame
+	local d = frame and frame.wvDecor
+	if not (d and d:IsShown()) then return false end
+	local bare = self:WinterVeilCompanionBare(frame)
+	if (d.bare and true or false) == bare then return false end
+	self:WinterVeilCompanion()
+	return true
+end
+
+ns.Every("noel:cadre", ns.WINTER_VEIL_BARE_STEP, function()
+	local ok, err = pcall(ns.WinterVeilWatch, ns)
+	if not ok and ns.RecordError then ns:RecordError("noel:cadre", err) end
+end)
 
 -- 2.14.0 (bêta 4) : réglage en jeu de la guirlande du cadre (pour la
 -- session) : /qc noel cadre <bulbe px> <x> <y> <brins> <cap> ; un « - »

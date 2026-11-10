@@ -80,7 +80,20 @@ for _, def in ipairs(ns.WINTER_COMPANIONS) do BY_ID[def.id], BY_KEY[def.seasonal
 -- 07.png), cadré comme les autres (ns.MODEL_NPC_LOOK, Companion.lua) ; il
 -- reste Metzen partout ailleurs (nom, voix, effets). Réglage en jeu :
 -- /qc noel metzen <distance> [pnj] (15664 pour réessayer le sien).
-ns.WINTER_METZEN_CAM = 1.4
+-- 2.14.0 (bêta 5) : vignette toujours vide avec le Renne de l'Hiver à 1,4
+-- (28.png), alors que la sonde en jeu (SetCreature(15706), caméra par défaut)
+-- le montrait. Les appels de la vignette sont les mêmes que pour Grand-père
+-- Hiver et le bonhomme de neige (SetCreature, SetCamDistanceScale,
+-- SetPortraitZoom(0), SetPosition(0, 0, 0)) ; pas de displayID appris qui
+-- passerait devant (une vignette de saison n'en lit pas, le compagnon de
+-- saison n'en porte pas). Seule la distance diffère : ce renne (modèle 2233,
+-- les deux affichages 15902 et 15904) disparaît dès que la caméra recule
+-- (Metzen à 3,6 : rien ; à 1,2 : un bois ; le Renne de l'Hiver à 1 : visible,
+-- à 1,4 : rien), sans doute le plan lointain de la caméra du modèle. Distance
+-- 1 : la caméra du client, celle de la sonde ; le cadrage « portrait » ou
+-- « buste » ne fait que la rapprocher. /qc noel metzen diag dit ce que le
+-- client a chargé (vignette, cadre du compagnon).
+ns.WINTER_METZEN_CAM = 1
 ns.WINTER_METZEN_LOOK = 15706
 if type(ns.MODEL_NPC_LOOK) == "table" then ns.MODEL_NPC_LOOK[15664] = ns.WINTER_METZEN_LOOK end
 if type(ns.COMPANION_MODEL_OVERRIDES) == "table" then
@@ -120,7 +133,15 @@ ns.RegisterStrings({
 	WINTER_MSG_BYE      = "%s repart vers le Nord : ton compagnon habituel reprend sa place.",
 	WINTER_MSG_SACK     = "La hotte de Grand-père Hiver : %s pour toi aujourd'hui.",
 	OPT_COMP_WINTER_VISIT      = "Visite surprise de Grand-père Hiver",
-	WINTER_METZEN_TUNE  = "Metzen : distance %s, modèle du pnj %s. Régler : /qc noel metzen <distance> [pnj] (15664 : son modèle, 15706 : le Renne de l'Hiver).",
+	WINTER_METZEN_TUNE  = "Metzen : distance %s, modèle du pnj %s. Régler : /qc noel metzen <distance> [pnj] (15664 : son modèle, 15706 : le Renne de l'Hiver) ; /qc noel metzen diag : ce que le client montre.",
+	-- 2.14.0 (bêta 5) : /qc noel metzen diag
+	WINTER_METZEN_DIAG_HEAD = "Metzen (pnj 15664, montré par le pnj %s, distance %s) :",
+	WINTER_METZEN_DIAG_ROW  = "  %s : pnj %s, display demandé %s, display du client %s, caméra %s (lue %s), zoom %s, position %s, échelle %s, chargé %s, montré %s, visible %s, opacité %s, taille %s × %s",
+	WINTER_METZEN_DIAG_NONE = "  %s : pas de modèle (%s)",
+	WINTER_METZEN_DIAG_TILE = "vignette « Son allure »",
+	WINTER_METZEN_DIAG_COMP = "cadre du compagnon",
+	WINTER_METZEN_DIAG_WHY_TILE = "ouvre Son allure → Choisir…, en saison",
+	WINTER_METZEN_DIAG_WHY_COMP = "Metzen n'est pas le compagnon porté",
 	OPT_COMP_WINTER_VISIT_DESC = "Pendant le Voile d'hiver (15 décembre - 2 janvier), il passe parfois dire bonjour dans un coin de l'écran : une fois par session au plus, jamais en combat ni en donjon. Un clic le renvoie.",
 }, {
 	WINTER_COMP_gfw     = "Greatfather Winter",
@@ -129,7 +150,14 @@ ns.RegisterStrings({
 	WINTER_MSG_BYE      = "%s heads back north: your usual companion takes its place again.",
 	WINTER_MSG_SACK     = "Greatfather Winter's sack: %s for you today.",
 	OPT_COMP_WINTER_VISIT      = "Surprise visit from Greatfather Winter",
-	WINTER_METZEN_TUNE  = "Metzen: distance %s, model of npc %s. Tune: /qc noel metzen <distance> [npc] (15664: his own model, 15706: the Winter Reindeer).",
+	WINTER_METZEN_TUNE  = "Metzen: distance %s, model of npc %s. Tune: /qc noel metzen <distance> [npc] (15664: his own model, 15706: the Winter Reindeer); /qc noel metzen diag: what the client shows.",
+	WINTER_METZEN_DIAG_HEAD = "Metzen (npc 15664, shown with npc %s, distance %s):",
+	WINTER_METZEN_DIAG_ROW  = "  %s: npc %s, requested display %s, client display %s, camera %s (read %s), zoom %s, position %s, scale %s, loaded %s, shown %s, visible %s, alpha %s, size %s × %s",
+	WINTER_METZEN_DIAG_NONE = "  %s: no model (%s)",
+	WINTER_METZEN_DIAG_TILE = "\"Appearance\" tile",
+	WINTER_METZEN_DIAG_COMP = "companion frame",
+	WINTER_METZEN_DIAG_WHY_TILE = "open Appearance → Choose…, in season",
+	WINTER_METZEN_DIAG_WHY_COMP = "Metzen is not the companion you wear",
 	OPT_COMP_WINTER_VISIT_DESC = "During Winter Veil (December 15 - January 2), he sometimes drops by in a corner of the screen: once per session at most, never in combat or in a dungeon. A click sends him off.",
 })
 
@@ -896,6 +924,7 @@ end)
 -- modèle le montre. Rend la distance, le pnj montré.
 function ns:WinterMetzenTune(rest)
 	local cam, npc = tostring(rest or ""):match("^%s*(%S*)%s*(%S*)")
+	if (cam or ""):lower() == "diag" then return self:WinterMetzenDiag() end
 	cam, npc = tonumber((cam or ""):gsub(",", ".") .. ""), tonumber(npc)
 	if cam and cam > 0 then
 		ns.WINTER_METZEN_CAM = cam
@@ -917,6 +946,44 @@ function ns:WinterMetzenTune(rest)
 	end
 	if self.Print then self:Print(self:F("WINTER_METZEN_TUNE", ns.WINTER_METZEN_CAM, shown)) end
 	return ns.WINTER_METZEN_CAM, shown
+end
+
+-- 2.14.0 (bêta 5) : /qc noel metzen diag : pour la vignette de Metzen
+-- (Son allure → Choisir…) et le cadre du compagnon (s'il porte Metzen), ce
+-- qui a été demandé au client (pnj, display, distance) et ce qu'il en dit
+-- (display chargé, caméra lue, chargé, visible, taille). Rend les lignes.
+local function Read(model, name)
+	if type(model[name]) ~= "function" then return "-" end
+	local ok, a, b, c = pcall(model[name], model)
+	if not ok then return "!" end
+	if b ~= nil then return string.format("%s,%s,%s", tostring(a), tostring(b), tostring(c)) end
+	return tostring(a)
+end
+local function DiagRow(self, label, model, why)
+	if not model then return self:F("WINTER_METZEN_DIAG_NONE", label, why) end
+	local loaded = Read(model, "GetModelFileID")
+	if loaded == "-" then loaded = tostring(model.modelShown) end
+	return self:F("WINTER_METZEN_DIAG_ROW", label, tostring(model.modelNpc), tostring(model.modelDisplay),
+		Read(model, "GetDisplayInfo"), tostring(model.framingCam), Read(model, "GetCamDistanceScale"),
+		tostring(model.framingZoom), Read(model, "GetPosition"), Read(model, "GetModelScale"), loaded,
+		Read(model, "IsShown"), Read(model, "IsVisible"), Read(model, "GetEffectiveAlpha"),
+		string.format("%.0f", tonumber(model:GetWidth()) or 0), string.format("%.0f", tonumber(model:GetHeight()) or 0))
+end
+function ns:WinterMetzenDiag()
+	local lines = {}
+	local shown = (type(ns.MODEL_NPC_LOOK) == "table" and ns.MODEL_NPC_LOOK[15664]) or 15664
+	lines[1] = self:F("WINTER_METZEN_DIAG_HEAD", shown, ns.WINTER_METZEN_CAM)
+	local tileModel
+	local panel = self.allurePanel
+	for _, tile in ipairs(panel and panel.seasonTiles or {}) do
+		if tile.def and tile.def.id == "winter:metzen" then tileModel = tile.model end
+	end
+	lines[2] = DiagRow(self, L.WINTER_METZEN_DIAG_TILE, tileModel, L.WINTER_METZEN_DIAG_WHY_TILE)
+	local frame = self.companionFrame
+	local wearing = self.CompanionWinterKey and self:CompanionWinterKey() == "metzen"
+	lines[3] = DiagRow(self, L.WINTER_METZEN_DIAG_COMP, wearing and frame and frame.model or nil, L.WINTER_METZEN_DIAG_WHY_COMP)
+	if self.Print then for _, line in ipairs(lines) do self:Print(line) end end
+	return lines
 end
 
 if ns.Mark then ns.Mark("WinterCompanions") end
