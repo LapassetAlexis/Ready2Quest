@@ -1449,7 +1449,7 @@ Check("RefreshOptions sans panneau ne plante pas", true)
 NS:HandleCommand("options")
 Check("panneau créé", NS.optionsFrame ~= nil)
 Check("panneau affiché", NS.optionsFrame and NS.optionsFrame.shown == true)
-Check("31 lignes (17 réglages + 1 action + 13 contrôles)", NS.optionsFrame and #NS.optionsFrame.rows == 31, NS.optionsFrame and #NS.optionsFrame.rows)
+Check("32 lignes (17 réglages + 2 actions + 13 contrôles)", NS.optionsFrame and #NS.optionsFrame.rows == 32, NS.optionsFrame and #NS.optionsFrame.rows)
 
 local boolRow
 for _, row in ipairs(NS.optionsFrame.rows) do
@@ -1942,7 +1942,7 @@ for _, row in ipairs(NS.optionsFrame.rows) do
 	if row.def and row.def.key == "showMinimap" then minimapRow = row end
 end
 Check("ligne dédiée dans les réglages", minimapRow ~= nil)
-Check("31 lignes au total", NS.optionsFrame and #NS.optionsFrame.rows == 31, #NS.optionsFrame.rows)
+Check("32 lignes au total", NS.optionsFrame and #NS.optionsFrame.rows == 32, #NS.optionsFrame.rows)
 if minimapRow then minimapRow:Click() end
 Check("décocher masque le bouton", lancer.shown == false)
 if minimapRow then minimapRow:Click() end
@@ -3162,7 +3162,7 @@ Check("sans templates : même fenêtre", fallback.chrome == "window", fallback.c
 Mock.world.noButtonTemplate = false
 Mock.world.fontRefused = false
 Check("repli toujours titré", fallback.header ~= nil and tostring(fallback.header.title.text) ~= "")
-Check("repli toujours complet", fallback.rows ~= nil and #fallback.rows == 31,
+Check("repli toujours complet", fallback.rows ~= nil and #fallback.rows == 32,
 	fallback.rows and #fallback.rows)
 Mock.world.noBackdropTemplate = false
 

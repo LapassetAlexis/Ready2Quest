@@ -149,7 +149,7 @@ do
 	local Kind = NS.BuffKind
 	Check("[1322] parchemins : consommables", Kind(1, { name = "Force" }) == "consumable" and Kind(1, { name = "Agility" }) == "consumable"
 		and Kind(1, { name = "Esprit" }) == "consumable" and Kind(1, { name = "Élixir de la mangouste" }) == "consumable")
-	Check("[1322] postures : Fureur vertueuse, aura, sceau, aspect, forme, camouflage", Kind(1, { name = "Fureur vertueuse" }) == "toggle"
+	Check("[1322] postures : aura, sceau, aspect, forme, camouflage ; Fureur vertueuse : rôle (1.33.3)", Kind(1, { name = "Fureur vertueuse" }) == "role"
 		and Kind(1, { name = "Aura de dévotion" }) == "toggle" and Kind(1, { name = "Sceau de piété" }) == "toggle"
 		and Kind(1, { name = "Aspect du faucon" }) == "toggle" and Kind(1, { name = "Forme d'ours" }) == "toggle"
 		and Kind(1, { name = "Stealth" }) == "toggle")
@@ -185,7 +185,7 @@ do
 	local items = NS.OPTION_LISTS.buffs.items()
 	local fury
 	for _, item in ipairs(items) do if item.text == "Fureur vertueuse" then fury = item end end
-	Check("[1322] réglages : raison « posture du moment »", fury and fury.value:find(NS.L.BUFF_WHY_OPTIN_TOGGLE, 1, true) ~= nil,
+	Check("[1322] réglages : raison « buff de tank » (1.33.3)", fury and fury.value:find(NS:F("BUFF_WHY_ROLE", NS.L.BUFF_ROLE_DAMAGER), 1, true) ~= nil,
 		fury and fury.value)
 	fury.onToggle()
 	Check("[1322] réglages : bascule retenue", db.buffs[102].userSet == true and E(db.buffs[102], 102))
