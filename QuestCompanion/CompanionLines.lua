@@ -842,7 +842,7 @@ P.TUTO_MENAGERIE_INTRO = {
 }
 P.TUTO_MENAGERIE = {
 	{ "Le filet garde un monstre %d s après le combat. Clic : je capture le meilleur ; clic droit : la liste. Le bandeau te prévient.", "The net keeps a monster %d s after the fight. Click: I capture the best one; right-click: the list. The banner lets you know." },
-	{ "Chaque capture vaut 1 à 3 étoiles (3 étoiles : %d %% de chance). Recapture pour tenter mieux : je garde le meilleur.", "Each capture is worth 1 to 3 stars (3 stars: a %d%% chance). Recapture to try for better: I keep the best one." },
+	{ "Chaque monstre abattu a sa qualité : 1 à 3 étoiles (3 : %d %% de chance). Déjà capturé, il revient s'il bat le tien.", "Every defeated monster has a quality: 1 to 3 stars (3: a %d%% chance). Already caught, it returns if it beats yours." },
 	{ "Les brillantes ! 1 chance sur %d au départ, jusqu'à 1 sur %d après %d abattus de la même espèce. Insiste, ça paie.", "Shinies! 1 chance in %d to start, up to 1 in %d after %d kills of the same species. Keep at it, it pays off." },
 	{ "Un losange doré sur une barre de nom : une brillante ! Deux versions par espèce à capturer. Et brillant, je suis tout doré.", "A gold diamond on a nameplate: a shiny! Two versions per species to capture. And as a shiny, I'm all golden." },
 	{ "Emmène-la : clic sur elle dans la page Créatures. Selon son type, elle t'aide à chasser et me rend la vie douce, après %d min.", "Take it along: click it on the Creatures page. By its type, it helps you hunt and makes my life sweet, after %d min." },

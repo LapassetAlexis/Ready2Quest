@@ -7,6 +7,7 @@
 local Check, Say, ResetWorld, NS, Mock = T.Check, T.Say, T.ResetWorld, T.QNS, T.Mock
 
 local LOT = { saved = {}, random = math.random, units = {}, sounds = {} }
+LOT.rollQuality = NS.CaptureRollQuality   -- 2.15.0 : rendue à la fin du module
 local GLOBALS = { "UnitGUID", "UnitName", "UnitExists", "UnitIsPlayer", "UnitIsDead", "UnitPlayerControlled",
 	"UnitReaction", "UnitCanAttack", "UnitClassification", "UnitCreatureType", "UnitCreatureFamily", "UnitLevel",
 	"GetRaidTargetIndex", "SetRaidTarget", "IsInGroup", "UnitIsGroupLeader", "IsInInstance", "Screenshot", "C_Timer",
@@ -43,6 +44,10 @@ function LOT.Install()
 end
 function LOT.Reset()
 	ResetWorld()
+	-- 2.15.0 : qualité tirée au coup fatal figée à 1 étoile (sauf LOT.quality) :
+	-- les chances attendues restent celles du rang
+	LOT.quality = nil
+	NS.CaptureRollQuality = function() return LOT.quality or 1 end
 	if NS.captureBatchFrame then NS.captureBatchFrame:Hide() end
 	if NS.captureChooser then NS.captureChooser:Hide() end
 	for _, field in ipairs({ "companionFrame", "companionBubble", "companionHover", "journalFrame", "capturePrompt",
@@ -257,10 +262,9 @@ do
 	LOT.SeeKill(6310, { name = "Kodo", spawn = "0000000001" })
 	LOT.SeeKill(6310, { name = "Kodo", spawn = "0000000002" })
 	LOT.Roll(0)
-	local stars = NS.CaptureRollStars   -- 3 étoiles du premier coup
-	NS.CaptureRollStars = function() return 3 end
+	-- 3 étoiles du premier coup (2.15.0 : qualité portée par le candidat)
+	for _, c in ipairs(NS:CaptureQueueState()) do c.stars = 3 end
 	batch = NS:CaptureBatch()
-	NS.CaptureRollStars = stars
 	Check("[LOT] même espèce déjà à 3 étoiles dans le lot : la seconde sort sans essai", batch.tried == 1
 		and #NS:CaptureQueue() == 0, batch.tried)
 	NS:CaptureBatchStop(true)
@@ -298,6 +302,7 @@ do
 	Say("-- tout capturer : la volée")
 	LOT.Reset()
 	-- B : espèce déjà capturée (1 étoile) -> amélioration
+	LOT.quality = 2   -- 2.15.0 : les espèces connues reviennent pour un meilleur spécimen
 	NS:CaptureData().creatures[6501] = { name = "Connu", class = "normal", normal = true, stars = 1, at = 1 }
 	NS:CaptureData().count = (NS:CaptureData().count or 0) + 1
 	LOT.SeeKill(6500, { name = "Nouveau rare", class = "rare" })     -- nouvelle espèce, capturée : avec la volée
@@ -388,6 +393,7 @@ do
 		and fresh.tile.tag:GetText() == (NS.Theme.Upper and NS.Theme.Upper(NS.L.CAPTURE_BATCH_NEW) or NS.L.CAPTURE_BATCH_NEW))
 	-- douze cases : grille 4 × 3, bruits de filet espacés, réussites groupées, modèles plafonnés
 	LOT.Reset()
+	LOT.quality = 2   -- 2.15.0 : meilleurs que les spécimens connus
 	for npc = 6510, 6521 do
 		NS:CaptureData().creatures[npc] = { name = "Connu " .. npc, class = "normal", normal = true, stars = 1, at = 1 }
 		LOT.SeeKill(npc, { name = "Connu " .. npc })
@@ -901,3 +907,4 @@ NS.SHINY_CHANCE = LOT.savedShiny
 NS:DB().captureMuteUntil = nil
 NS.captureBatch = nil
 ResetWorld()
+NS.CaptureRollQuality = LOT.rollQuality

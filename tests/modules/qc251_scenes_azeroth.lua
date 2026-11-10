@@ -8,6 +8,7 @@
 local Check, Say, ResetWorld, NS, Mock = T.Check, T.Say, T.ResetWorld, T.QNS, T.Mock
 
 local SZ = { saved = {}, random = math.random, units = {}, sounds = {} }
+SZ.rollQuality = NS.CaptureRollQuality   -- 2.15.0 : rendue à la fin du module
 local GLOBALS = { "UnitGUID", "UnitName", "UnitExists", "UnitIsPlayer", "UnitIsDead", "UnitPlayerControlled",
 	"UnitReaction", "UnitCanAttack", "UnitClassification", "UnitCreatureType", "UnitCreatureFamily", "UnitLevel",
 	"GetRaidTargetIndex", "SetRaidTarget", "IsInGroup", "UnitIsGroupLeader", "IsInInstance", "Screenshot", "C_Timer",
@@ -61,6 +62,10 @@ local function HideScenes()
 end
 function SZ.Reset(atlas)
 	ResetWorld()
+	-- 2.15.0 : qualité tirée au coup fatal figée à 1 étoile (sauf SZ.quality) :
+	-- les chances attendues restent celles du rang
+	SZ.quality = nil
+	NS.CaptureRollQuality = function() return SZ.quality or 1 end
 	HideScenes()
 	for _, field in ipairs(FIELDS) do
 		if NS[field] then NS[field]:Hide() end
@@ -578,3 +583,4 @@ do
 	NS:DB().winterVeil = nil
 	ResetWorld()
 end
+NS.CaptureRollQuality = SZ.rollQuality

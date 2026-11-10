@@ -3,30 +3,20 @@
 local Check, Say, ResetWorld, NS = T.Check, T.Say, T.ResetWorld, T.QNS
 
 do
-	Say("-- qc29 : recaptures par rareté")
+	-- 2.15.0 : plus de limites de recapture ; le filet ne revient que pour un
+	-- meilleur spécimen (qualité tirée au coup fatal), voir qc215_specimens.lua
+	Say("-- qc29 : recaptures par rareté (retirées en 2.15.0)")
 	ResetWorld()
 	NS:DB().capture, NS.captureMergedChar = nil, nil
 	local data = NS:CaptureData()
 	data.creatures[7001] = { name = "Harpie", normal = true, stars = 1, class = "normal" }
-	data.creatures[7002] = { name = "Ours élite", normal = true, stars = 1, class = "elite" }
-	local common = { npcID = 7001, class = "normal" }
-	local elite = { npcID = 7002, class = "elite" }
-	Check("[RETRY] commune à 1 étoile : proposée (2 essais par défaut)", NS:CaptureQueueReason(common) == "stars"
-		and NS:CaptureRetryLeft(common) == 2)
-	local rnd = math.random
-	math.random = function(a) if a then return a end return 0.999 end
-	NS:CaptureRoll(common); NS:CaptureRoll(common)
-	math.random = rnd
-	Check("[RETRY] deux essais comptés : la commune n'est plus proposée", data.creatures[7001].retries == 2
-		and NS:CaptureQueueReason(common) == nil)
-	Check("[RETRY] élite : sans limite par défaut", NS:CaptureRetryLeft(elite) == nil and NS:CaptureQueueReason(elite) == "stars")
-	NS:DB().companionRetryElite = 0
-	Check("[RETRY] réglé à « jamais » : plus proposée", NS:CaptureQueueReason(elite) == nil)
-	NS:DB().companionRetryElite = 5
+	Check("[RETRY] plus de CaptureRetryLeft", NS.CaptureRetryLeft == nil)
+	Check("[RETRY] même qualité : plus proposée", NS:CaptureQueueReason({ npcID = 7001, class = "normal", stars = 1 }) == nil)
+	Check("[RETRY] meilleure qualité : proposée", NS:CaptureQueueReason({ npcID = 7001, class = "normal", stars = 2 }) == "stars")
 	Check("[RETRY] une espèce nouvelle reste toujours proposée", NS:CaptureQueueReason({ npcID = 7999, class = "normal" }) == "new")
 	local rows = 0
 	for _, row in ipairs(NS.DAILY_OPTION_ROWS or {}) do if tostring(row.key):find("^companionRetry") then rows = rows + 1 end end
-	Check("[RETRY] trois réglages (communes, élites, rares)", rows == 3)
+	Check("[RETRY] plus de réglages Recaptures", rows == 0)
 	NS:DB().capture, NS.captureMergedChar = nil, nil
 end
 

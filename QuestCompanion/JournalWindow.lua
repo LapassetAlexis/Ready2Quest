@@ -2182,7 +2182,8 @@ local function RefreshEvolution(self, frame)
 
 	-- chiffres
 	local values = {
-		captures = self.CaptureData and self:CaptureData().count or 0,
+		-- 2.15.0 : les captures réussies (spécimens), plus les espèces
+		captures = self.CaptureCaughtCount and self:CaptureCaughtCount() or (self.CaptureData and self:CaptureData().count or 0),
 		shiny = self.ShinyData and self:ShinyData().count or 0,
 		days = self:CompanionDaysTogether(),
 		missions = math.floor(tonumber(data.missionsDone) or 0),

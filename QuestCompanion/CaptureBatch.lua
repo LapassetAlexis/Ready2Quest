@@ -278,6 +278,9 @@ function ns:CaptureBatch()
 			-- espèce, déjà à 3 étoiles) : il sort du filet sans essai
 			if not self:CaptureQueueReason(candidate) then
 				self:CaptureQueueRemove(candidate)
+			-- 2.15.0 : Réserve pleine et il irait en Réserve : il reste au filet
+			elseif self.CaptureRefuseBlocked and self:CaptureRefuseBlocked(candidate) then
+				batch.blocked = (batch.blocked or 0) + 1
 			else
 				-- l'aide manque : les suivants restent dans le filet
 				if aid and self:CaptureAidCount(aid) <= 0 then batch.short = true; break end

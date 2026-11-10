@@ -54,6 +54,7 @@ Personality.lua
 Treats.lua
 Shiny.lua
 Capture.lua
+CaptureSpecimens.lua
 CaptureStage.lua
 CaptureQueue.lua
 CompanionEffects.lua

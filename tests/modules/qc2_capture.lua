@@ -6,6 +6,7 @@
 local Check, Say, ResetWorld, NS, Mock = T.Check, T.Say, T.ResetWorld, T.QNS, T.Mock
 
 local Q = { saved = {}, random = math.random, units = {} }
+Q.rollQuality = NS.CaptureRollQuality   -- 2.15.0 : rendue à la fin du module
 local GLOBALS = { "UnitGUID", "UnitName", "UnitExists", "UnitIsPlayer", "UnitIsDead", "UnitPlayerControlled",
 	"UnitReaction", "UnitCanAttack", "UnitClassification", "UnitCreatureType", "UnitCreatureFamily", "UnitLevel",
 	"GetRaidTargetIndex", "SetRaidTarget", "IsInGroup", "UnitIsGroupLeader", "IsInInstance", "Screenshot", "C_Timer",
@@ -44,6 +45,10 @@ function Q.Install()
 end
 function Q.Reset()
 	ResetWorld()
+	-- 2.15.0 : qualité tirée au coup fatal figée à 1 étoile (sauf Q.quality) :
+	-- les chances attendues restent celles du rang
+	Q.quality = nil
+	NS.CaptureRollQuality = function() return Q.quality or 1 end
 	for _, field in ipairs({ "companionFrame", "companionBubble", "companionHover", "journalFrame", "capturePrompt", "captureQueueList", "captureNetButton", "captureToast" }) do
 		if NS[field] then NS[field]:Hide() end
 		NS[field] = nil
@@ -109,10 +114,11 @@ do
 		and NS:CaptureStars(999, false) == nil)
 	data.creatures[11].stars = 7
 	Check("[QC2CAP] CaptureStars : borné à 3", NS:CaptureStars(11) == 3)
-	Q.Roll(0); local a = NS:CaptureRollStars()
-	Q.Roll(0.7); local b = NS:CaptureRollStars()
-	Q.Roll(0.95); local c = NS:CaptureRollStars()
-	Check("[QC2CAP] tirage 60 / 30 / 10 : 1, 2, 3 étoiles", a == 1 and b == 2 and c == 3)
+	-- 2.15.0 : tirée au coup fatal (CaptureRollQuality), 65 / 28 / 7 sur un monstre ordinaire
+	Q.Roll(0); local a = Q.rollQuality(NS, "normal")
+	Q.Roll(0.7); local b = Q.rollQuality(NS, "normal")
+	Q.Roll(0.95); local c = Q.rollQuality(NS, "normal")
+	Check("[QC2CAP] tirage 65 / 28 / 7 : 1, 2, 3 étoiles", a == 1 and b == 2 and c == 3)
 	local total = 0
 	for _, w in ipairs(NS.CAPTURE_STAR_ODDS) do total = total + w end
 	Check("[QC2CAP] probabilités : 3 étoiles la plus rare, total 100", total == 100
@@ -171,6 +177,7 @@ do
 	creatures[4302] = { name = "Deux", class = "normal", normal = true, at = 1, stars = 2 }
 	Q.SeeKill(4300, { name = "Trois" })
 	Check("[QC2CAP] déjà à 3 étoiles : pas dans la file", #NS:CaptureQueue() == 0)
+	Q.quality = 3   -- 2.15.0 : des spécimens à 3 étoiles, meilleurs que les tiens
 	Q.SeeKill(4302, { name = "Deux" })
 	Q.SeeKill(4301, { name = "Une" })
 	Q.SeeKill(4303, { name = "Nouveau" })
@@ -283,6 +290,7 @@ do
 	-- une meilleure (sifflet : capture assurée, tirage haut = 3 étoiles)
 	NS:CaptureGrant("sifflet", { quiet = true, silent = true })
 	NS:CaptureToggleAid("sifflet")
+	Q.quality = 3   -- 2.15.0 : qualité tirée au coup fatal
 	Q.SeeKill(4500, { name = "Cerf", spawn = "A2" })
 	Check("[QC2CAP] recapture proposée (amélioration)", NS:CaptureQueueBest() and NS:CaptureQueueBest().reason == "stars")
 	Q.Roll(0.97)
@@ -295,27 +303,30 @@ do
 	Check("[QC2CAP] … « meilleur spécimen » dans le chat", Mock:Output():find("meilleur spécimen", 1, true) ~= nil, Mock:Output())
 	Q.SeeKill(4500, { name = "Cerf", spawn = "A3" })
 	Check("[QC2CAP] à 3 étoiles : plus proposée", #NS:CaptureQueue() == 0)
-	-- une moins bonne : la meilleure reste, avec sa date
-	entry.stars = 2
+	-- une moins bonne (proposée en mode chasse, 2.15.0) : la meilleure reste, avec sa date
 	local kept = entry.at
+	Q.quality = 1
+	NS:HuntStart(nil)
 	Q.SeeKill(4500, { name = "Cerf", spawn = "A4" })
 	Q.Roll(0)
 	Mock:Reset()
 	Mock:Advance(5)
 	NS:CaptureThrow()
 	Q.Settle()
-	Check("[QC2CAP] moins bonne : la meilleure reste, sa date aussi", entry.stars == 2 and entry.at == kept)
-	Check("[QC2CAP] … dit dans le chat", Mock:Output():find("2 étoiles reste", 1, true) ~= nil, Mock:Output())
+	NS:HuntStop()
+	Check("[QC2CAP] moins bonne : la meilleure reste, sa date aussi", entry.stars == 3 and entry.at == kept)
+	Check("[QC2CAP] … dit dans le chat (rangée en Réserve)", Mock:Output():find("3 étoiles reste", 1, true) ~= nil, Mock:Output())
 	-- version brillante : ses propres étoiles
 	NS.SHINY_CHANCE = 1
 	Q.Roll(0.7)
+	Q.quality = 2
 	Q.SeeKill(4500, { name = "Cerf", spawn = "A5" })
 	NS.SHINY_CHANCE = 0
 	NS:CaptureGrant("sifflet", { quiet = true, silent = true })
 	NS:CaptureToggleAid("sifflet")
 	NS:CaptureThrow()
 	Q.Settle()
-	Check("[QC2CAP] brillante : ses étoiles à part", entry.shiny and entry.shinyStars == 2 and entry.stars == 2
+	Check("[QC2CAP] brillante : ses étoiles à part", entry.shiny and entry.shinyStars == 2 and entry.stars == 3
 		and NS:CaptureStars(4500, true) == 2)
 end
 
@@ -324,6 +335,7 @@ do
 	Say("-- qc2 capture : scène")
 	Q.Reset()
 	NS:DB().companionCaptureAnim = true
+	Q.quality = 3   -- 2.15.0 : qualité tirée au coup fatal
 	Q.SeeKill(4600, { name = "Ours gris", class = "rare" })
 	Q.Roll(0.95)
 	NS:CaptureGrant("sifflet", { quiet = true, silent = true })
@@ -555,6 +567,7 @@ do
 	NS:CaptureGrant("sifflet", { quiet = true, silent = true })
 	NS:CaptureToggleAid("sifflet")
 	Mock:Advance(500)
+	Q.quality = 3   -- 2.15.0 : qualité tirée au coup fatal
 	Q.SeeKill(4950, { name = "Biche", spawn = "B2" })
 	Q.Roll(0.97)
 	NS:CaptureThrow()
@@ -577,3 +590,4 @@ do
 end
 
 Q.Done()
+NS.CaptureRollQuality = Q.rollQuality

@@ -16,9 +16,10 @@
 --     Deux candidats ou plus : le clic propose le choix (CaptureBatch.lua) ;
 --   * le compte à rebours s'arrête dès le clic (filet, bandeau) : rien ne
 --     s'efface pendant qu'on choisit ni pendant la scène (ns:CaptureQueueHold).
--- Étoiles : chaque capture tire une qualité de 1 à 3 étoiles (3 la plus
--- rare, CAPTURE_STAR_ODDS). On peut recapturer pour tenter mieux : le
--- meilleur spécimen est gardé (entry.stars, entry.shinyStars).
+-- Étoiles : 2.15.0, la qualité (1 à 3 étoiles) est tirée AU COUP FATAL selon
+-- le rang (CaptureSpecimens.lua, CAPTURE_QUALITY_ODDS) et portée par le
+-- candidat (candidate.stars) ; chaque capture devient un spécimen (Codex ou
+-- Réserve). Le filet ne vient plus que si ça vaut le coup (CaptureQueueReason).
 -- Le déroulé d'un essai reste celui de Capture.lua (CaptureThrow, CaptureTick,
 -- CaptureResolve) : ce fichier choisit la cible et habille le reste.
 -- Réglage : page « Au jour le jour » (« Capturer les monstres abattus »).
@@ -30,10 +31,8 @@ local Theme = ns.Theme
 ns.CAPTURE_QUEUE_TIME = 30        -- s par candidat, à partir de la fin du combat
 ns.CAPTURE_QUEUE_MAX = 12         -- au-delà, les moins intéressants sortent
 ns.CAPTURE_STAR_MAX = 3
--- tirage de la qualité (en %) : 1, 2, 3 étoiles. Trois étoiles : une
--- capture sur dix en moyenne, de quoi donner envie de recapturer sans
--- en faire une corvée.
-ns.CAPTURE_STAR_ODDS = { 60, 30, 10 }
+-- (2.15.0 : les chances de qualité sont dans CaptureSpecimens.lua,
+-- CAPTURE_QUALITY_ODDS ; ns.CAPTURE_STAR_ODDS y reste, celles d'un monstre ordinaire)
 -- 2.12.1 : les étoiles et le glyphe du filet viennent du client. Étoiles :
 -- l'atlas « auctionhouse-icon-favorite » (pleine) et sa variante « -off »
 -- (vide) ; en texture simple, l'étoile des marqueurs de raid en repli.
@@ -115,17 +114,10 @@ local FR = {
 	OPT_DAILY_CAPTURE_SOUND_DESC = "Un carillon quand une capture est possible, une petite musique quand elle réussit (fanfare pour une brillante).",
 	OPT_DAILY_CAPTURE_TOAST = "Bandeau « Capture possible »",
 	OPT_DAILY_CAPTURE_TOAST_DESC = "Un bandeau dès qu'un monstre abattu peut être capturé (après le combat). Clic dessus : le filet.",
-	OPT_RETRY_common       = "Recaptures : communes",
-	OPT_RETRY_elite        = "Recaptures : élites",
-	OPT_RETRY_rare         = "Recaptures : rares",
-	OPT_RETRY_DESC         = "Une espèce déjà capturée revient dans le filet pour gagner des étoiles : combien d'essais par espèce, avant de ne plus la proposer.",
-	OPT_RETRY_0            = "jamais",
-	OPT_RETRY_N            = "%d essai(s)",
-	OPT_RETRY_5            = "sans limite",
 	CAPTURE_STARS_LABEL    = "Qualité : %s",
 	CAPTURE_MSG_STARS      = "%s : %s.",
-	CAPTURE_MSG_STARS_BEST = "%s : %s, ton meilleur spécimen !",
-	CAPTURE_MSG_STARS_KEPT = "%s : %s. Ton spécimen à %d étoiles reste.",
+	CAPTURE_MSG_STARS_BEST = "%s : %s, ton meilleur spécimen ! Il entre au Codex, l'ancien passe en Réserve.",
+	CAPTURE_MSG_STARS_KEPT = "%s : %s, rangé dans ta Réserve. Ton spécimen à %d étoiles reste au Codex.",
 	CAPTURE_STAGE_BEST     = "Meilleur spécimen !",
 	CAPTURE_STAGE_KEPT     = "Le tien garde ses %d étoiles",
 }
@@ -170,62 +162,26 @@ local EN = {
 	OPT_DAILY_CAPTURE_SOUND_DESC = "A chime when a capture is possible, a little tune when it succeeds (a fanfare for a shiny).",
 	OPT_DAILY_CAPTURE_TOAST = "\"Capture possible\" banner",
 	OPT_DAILY_CAPTURE_TOAST_DESC = "A banner as soon as a defeated monster can be captured (after combat). Click it: the net.",
-	OPT_RETRY_common       = "Recaptures: common",
-	OPT_RETRY_elite        = "Recaptures: elites",
-	OPT_RETRY_rare         = "Recaptures: rares",
-	OPT_RETRY_DESC         = "A species you already have comes back in the net to earn stars: how many tries per species before it stops being offered.",
-	OPT_RETRY_0            = "never",
-	OPT_RETRY_N            = "%d tr(ies)",
-	OPT_RETRY_5            = "no limit",
 	CAPTURE_STARS_LABEL    = "Quality: %s",
 	CAPTURE_MSG_STARS      = "%s: %s.",
-	CAPTURE_MSG_STARS_BEST = "%s: %s, your best specimen!",
-	CAPTURE_MSG_STARS_KEPT = "%s: %s. Your %d-star specimen stays.",
+	CAPTURE_MSG_STARS_BEST = "%s: %s, your best specimen! It enters the Codex, the old one goes to the Reserve.",
+	CAPTURE_MSG_STARS_KEPT = "%s: %s, stored in your Reserve. Your %d-star specimen stays in the Codex.",
 	CAPTURE_STAGE_BEST     = "Best specimen yet!",
 	CAPTURE_STAGE_KEPT     = "Yours keeps its %d stars",
 }
 ns.RegisterStrings(FR, EN)
 if ns.KEEP_STRINGS then ns.CAPTURE_QUEUE_STRINGS = { fr = FR, en = EN } end
 
-ns.RegisterDefaults({ companionCaptureToast = true, companionCaptureSound = true,
-	-- 2.9.0 : recaptures (gagner des étoiles) par espèce, selon la rareté ;
-	-- 5 = sans limite. Les communes ne reviennent plus sans fin dans le filet
-	companionRetryCommon = 2, companionRetryElite = 5, companionRetryRare = 5 })
--- rang -> groupe de réglage
-ns.CAPTURE_RETRY_GROUP = { trivial = "Common", minus = "Common", normal = "Common", elite = "Elite",
-	rare = "Rare", rareelite = "Rare", worldboss = "Rare" }
-ns.CAPTURE_RETRY_UNLIMITED = 5
-
--- Essais de recapture encore permis pour ce candidat (nil : sans limite)
-function ns:CaptureRetryLeft(candidate)
-	local group = ns.CAPTURE_RETRY_GROUP[candidate and candidate.class or "normal"] or "Common"
-	local max = tonumber(self:DB()["companionRetry" .. group])
-	if not max or max >= ns.CAPTURE_RETRY_UNLIMITED then return nil end
-	local entry = self:CaptureData().creatures[tonumber(candidate.npcID) or candidate.npcID]
-	local used = type(entry) == "table" and tonumber(candidate.shiny and entry.shinyRetries or entry.retries) or 0
-	return math.max(0, max - used)
-end
+-- 2.15.0 : plus de réglages « Recaptures » (communes, élites, rares) : le
+-- filet ne revient que pour mieux (CaptureQueueReason). Les valeurs gardées
+-- (companionRetry*) restent dans la sauvegarde, ignorées.
+ns.RegisterDefaults({ companionCaptureToast = true, companionCaptureSound = true })
 if type(ns.DAILY_OPTION_ROWS) == "table" then
 	local present, presentSound, at = false, false, 1
 	for index, row in ipairs(ns.DAILY_OPTION_ROWS) do
 		if row.key == "companionCaptureToast" then present = true end
 		if row.key == "companionCaptureSound" then presentSound = true end
 		if row.key == "companionCapture" or row.key == "companionCaptureAnim" then at = index + 1 end
-	end
-	local hasRetry = false
-	for _, row in ipairs(ns.DAILY_OPTION_ROWS) do if row.key == "companionRetryCommon" then hasRetry = true end end
-	if not hasRetry then
-		for _, group in ipairs({ "Common", "Elite", "Rare" }) do
-			ns.DAILY_OPTION_ROWS[#ns.DAILY_OPTION_ROWS + 1] = { key = "companionRetry" .. group,
-				label = "OPT_RETRY_" .. group:lower(), kind = "number", min = 0, max = 5, step = 1,
-				display = function(value)
-					value = tonumber(value) or 0
-					if value <= 0 then return L.OPT_RETRY_0 end
-					if value >= ns.CAPTURE_RETRY_UNLIMITED then return L.OPT_RETRY_5 end
-					return ns:F("OPT_RETRY_N", value)
-				end,
-				describe = function() return L.OPT_RETRY_DESC end }
-		end
 	end
 	if not present then
 		table.insert(ns.DAILY_OPTION_ROWS, at, { key = "companionCaptureToast", label = "OPT_DAILY_CAPTURE_TOAST", kind = "bool",
@@ -278,6 +234,24 @@ local function Enabled()
 	local on = ns.CompanionOn and ns.CompanionOn() or false
 	return on and ns:DB().companionCapture ~= false
 end
+
+-- 2.15.0 : un candidat bloqué (Réserve pleine, ns:CaptureBlockedReason) :
+-- un message (au plus toutes les 5 s) et le son d'échec. Rend true si refusé.
+function ns:CaptureRefuseBlocked(candidate)
+	local why = self.CaptureBlockedReason and self:CaptureBlockedReason(candidate)
+	if not why then return false end
+	local now = Clock()
+	local state = self:CaptureState()
+	if not state.blockedMsgAt or now - state.blockedMsgAt >= ns.CAPTURE_COMBAT_MSG_GAP or now < state.blockedMsgAt then
+		state.blockedMsgAt = now
+		if why == "reserveFull" then
+			self:Print(self:F("CAPTURE_MSG_RESERVE_FULL", self:SpecimenReserveCount(), self:ReserveCapacity(),
+				candidate.name or tostring(candidate.npcID)))
+		end
+		self:CapturePlaySound("fail")
+	end
+	return true
+end
 local function Tooltip() local t = G("GameTooltip"); if type(t) == "table" and t.SetOwner then return t end end
 
 -- ---------------------------------------------------------------------------
@@ -324,17 +298,8 @@ function ns:CaptureStars(npcID, shiny)
 	return EntryStars(self:CaptureData().creatures[tonumber(npcID) or npcID], shiny)
 end
 
--- La qualité d'une capture : 1, 2 ou 3 étoiles (CAPTURE_STAR_ODDS)
-function ns:CaptureRollStars()
-	local odds, total = ns.CAPTURE_STAR_ODDS, 0
-	for _, weight in ipairs(odds) do total = total + weight end
-	local roll = math.random() * total
-	for stars, weight in ipairs(odds) do
-		roll = roll - weight
-		if roll < 0 then return stars end
-	end
-	return #odds
-end
+-- (2.15.0 : plus de tirage après la capture ; la qualité est celle du
+-- candidat, tirée au coup fatal par ns:CaptureRollQuality)
 
 -- Texte des étoiles, pour le chat et les fiches. 2.12.1 : balises d'atlas
 -- du client (|A), l'étoile dorée pleine, sa variante grise « -off » vide
@@ -379,26 +344,34 @@ function ns:CaptureQueueState()
 	return state.queue
 end
 
--- Pourquoi ce monstre vaut le coup : "shiny", "new", "stars", ou nil
+-- Pourquoi ce monstre vaut le coup (2.15.0) : "shiny" (toujours), "new"
+-- (version pas encore au Codex), "stars" (sa qualité, tirée au coup fatal,
+-- bat ta meilleure de cette version), "pinned" (espèce épinglée), "hunt"
+-- (abattu en mode chasse, ou chasse en cours) ; nil : le filet se tait.
 function ns:CaptureQueueReason(candidate)
-	local stars = self:CaptureStars(candidate.npcID, candidate.shiny and true or false)
-	if not stars then return candidate.shiny and "shiny" or "new" end
-	if stars < ns.CAPTURE_STAR_MAX then
-		-- 2.9.0 : plus d'essais permis pour cette espèce (réglage par rareté)
-		local left = self.CaptureRetryLeft and self:CaptureRetryLeft(candidate)
-		if left == 0 then return nil end
-		return "stars"
-	end
+	if candidate.shiny then return "shiny" end
+	local stars = self:CaptureStars(candidate.npcID, false)
+	if not stars then return "new" end
+	if (tonumber(candidate.stars) or 0) > stars then return "stars" end
+	if self.HuntPinned and self:HuntPinned(candidate.npcID) then return "pinned" end
+	if candidate.hunt or (self.HuntActive and self:HuntActive()) then return "hunt" end
 	return nil
 end
 
--- brillante > espèce nouvelle > plus rare > amélioration d'étoiles ; puis
--- celui dont le temps file le plus vite
+-- rang des raisons, pour le tri (la brillante passe avant tout)
+local REASON_RANK = { new = 3, stars = 2, pinned = 1, hunt = 0 }
+ns.CAPTURE_REASON_RANK = REASON_RANK
+
+-- brillante > espèce nouvelle > meilleur spécimen > épinglée > chasse ;
+-- puis la plus belle qualité, le plus rare ; puis celui dont le temps file
+-- le plus vite
 local function Better(a, b)
 	local sa, sb = a.shiny and 1 or 0, b.shiny and 1 or 0
 	if sa ~= sb then return sa > sb end
-	local na, nb = a.reason ~= "stars" and 1 or 0, b.reason ~= "stars" and 1 or 0
+	local na, nb = REASON_RANK[a.reason] or 0, REASON_RANK[b.reason] or 0
 	if na ~= nb then return na > nb end
+	local qa, qb = tonumber(a.stars) or 1, tonumber(b.stars) or 1
+	if qa ~= qb then return qa > qb end
 	local ra, rb = RANK_ORDER[a.class] or 1, RANK_ORDER[b.class] or 1
 	if ra ~= rb then return ra > rb end
 	local ca, cb = a.have or 0, b.have or 0
@@ -553,6 +526,10 @@ function ns:CaptureOffer(guid, entry, shiny)
 		class = species.class or "normal", level = species.level, type = species.type,
 		family = species.family, shiny = shiny and true or nil, serial = state.queueSerial,
 	}
+	-- 2.15.0 : la qualité se tire ici, au coup fatal (selon le rang) ; abattu
+	-- en mode chasse, il reste proposé jusqu'au bout de son temps
+	candidate.stars = self.CaptureRollQuality and self:CaptureRollQuality(candidate.class) or 1
+	if self.HuntActive and self:HuntActive() then candidate.hunt = true end
 	candidate.reason = self:CaptureQueueReason(candidate)
 	if not candidate.reason then return nil end
 	-- en plein combat, le compte attend la fin du combat
@@ -563,8 +540,12 @@ function ns:CaptureOffer(guid, entry, shiny)
 	local still = false
 	for _, c in ipairs(queue) do if c == candidate then still = true end end
 	if not still then return nil end
-	-- le compagnon le signale pour une nouveauté (pas pour chaque amélioration)
-	if candidate.reason ~= "stars" then self:CompanionSay("CAPTURE_PROMPT", { args = { candidate.name } }) end
+	-- le compagnon remarque un 3 étoiles ou une brillante (2.15.0) ; sinon il
+	-- signale une nouveauté (pas chaque amélioration, ni chaque proie en chasse)
+	if not (self.CaptureGreatLine and self:CaptureGreatLine(candidate)) and candidate.reason == "new"
+		and not (candidate.shiny or tonumber(candidate.stars) == 3) then
+		self:CompanionSay("CAPTURE_PROMPT", { args = { candidate.name } })
+	end
 	self:CaptureQueueRefresh()
 	-- et le bandeau « Capture possible » ; en combat, il attend la fin du combat
 	if not InCombat() then
@@ -636,6 +617,8 @@ do
 				picked = queue[1]
 			end
 			if not picked then return false end
+			-- 2.15.0 : Réserve pleine et il irait en Réserve : refusé, il reste au filet
+			if self.CaptureRefuseBlocked and self:CaptureRefuseBlocked(picked) then return false end
 			-- le tutoriel de la ménagerie attendait ce geste (avant que la
 			-- file ne se vide : le filet part, ce n'est pas « trop tard »)
 			if self.CompanionSequenceAdvance then pcall(self.CompanionSequenceAdvance, self, "net") end
@@ -709,8 +692,11 @@ do
 		-- recapture meilleure remplace `at`, elles ne bougent plus
 		local oldFirst = EarliestAt(old)
 		if not tonumber(capture.firstAt) then capture.firstAt = ns:CaptureEarliestAt() end
-		rolling.stars = rolling.stars or self:CaptureRollStars()
+		-- 2.15.0 : la qualité du candidat (tirée au coup fatal), plus de tirage ici
+		rolling.stars = math.max(1, math.min(ns.CAPTURE_STAR_MAX, math.floor(tonumber(rolling.stars or target.stars) or 1)))
 		rolling.starsBefore = before
+		-- la fiche d'avant a sa référence au Codex avant que le spécimen n'arrive
+		if self.SpecimenReconcile then self:SpecimenReconcile(target.npcID) end
 		local result = base(self, rolling)
 		local entry = self:CaptureData().creatures[target.npcID]
 		if entry then
@@ -719,6 +705,15 @@ do
 			local better = before == nil or rolling.stars > before
 			local best = math.max(before or 0, rolling.stars)
 			if shiny then entry.shinyStars = best else entry.stars = best end
+			-- 2.15.0 : le spécimen (Codex s'il est le meilleur, sinon Réserve),
+			-- et une capture de plus de l'espèce aujourd'hui (méfiance)
+			if self.SpecimenAdd then
+				local id, place = self:SpecimenAdd({ npc = target.npcID, stars = rolling.stars, shiny = shiny,
+					zone = target.zoneID, at = Call(G("time")), by = ns.Plain and ns.Plain(Call(G("UnitName"), "player")) or nil,
+					origin = "capture", name = target.name })
+				rolling.specimen, rolling.place = id, place
+			end
+			if self.CaptureWaryNote then self:CaptureWaryNote(target.npcID) end
 			-- pas mieux : la date reste celle du spécimen gardé
 			if not better and oldAt then
 				if shiny then entry.shinyAt = oldAt else entry.at = oldAt end
@@ -751,6 +746,8 @@ do
 	local base = ns.CaptureTick
 	function ns:CaptureTick(now)
 		local before = self.captureState and self.captureState.rolling
+		-- 2.15.0 : la fin du mode chasse (minuté) est annoncée ici
+		if self.HuntCheck then self:HuntCheck() end
 		base(self, now)
 		local state = self.captureState
 		-- la scène (ou la petite fenêtre) vient de se refermer sur son verdict :
@@ -1260,7 +1257,8 @@ function ns:CaptureToastInfo(candidate)
 			owned = owned ~= "" and (owned .. " · " .. tag) or tag
 		end
 		parts[#parts + 1] = self:F("CAPTURE_TOAST_OWNED", owned)
-		if candidate.reason == "stars" then parts[#parts + 1] = L.CAPTURE_TOAST_BETTER end
+		if candidate.reason == "stars" then parts[#parts + 1] = L.CAPTURE_TOAST_BETTER
+		elseif candidate.reason == "pinned" or candidate.reason == "hunt" then parts[#parts + 1] = L["CAPTURE_Q_REASON_" .. candidate.reason] end
 	else
 		parts[#parts + 1] = L.CAPTURE_TOAST_NEW
 	end
@@ -1332,6 +1330,8 @@ function ns:CaptureQueueLine(candidate, now)
 	else
 		parts[1] = L["CAPTURE_Q_REASON_" .. reason]
 	end
+	-- 2.15.0 : la qualité du spécimen (tirée au coup fatal)
+	if candidate.stars then parts[#parts + 1] = self:CaptureStarsText(candidate.stars, 10) end
 	local state = self:CaptureState()
 	local chance, sure = self:CaptureChance(candidate, state.aid)
 	parts[#parts + 1] = sure and self:F("CAPTURE_SURE", L["CAPTURE_RANK_" .. tostring(candidate.class)])

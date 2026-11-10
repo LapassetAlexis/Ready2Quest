@@ -902,11 +902,15 @@ do
 	D.Calm()
 	C.Quiet()
 	Mock.world.resting = true
+	-- (les blagues tirées au hasard prendraient la place du mot : coupées ici)
+	local jokes = NS:DB().companionJokes
+	NS:DB().companionJokes = false
 	C.Play(4)
 	Check("[COMP] 4 min au repos : rien encore", NS.companionLastBubble == nil)
 	C.Play(1)
 	Check("[COMP] 5 min au repos : un mot", C.Key() == "IDLE" and C.InPool("IDLE"), C.Key())
 	Check("[COMP] puis le repos continue sans bavarder", D.Count("IDLE", 10) == 0)
+	NS:DB().companionJokes = jokes
 	Mock.world.resting = false
 	D.Reset(11)
 	C.Login()

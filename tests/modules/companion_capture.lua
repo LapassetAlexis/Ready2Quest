@@ -5,6 +5,7 @@
 local Check, Say, ResetWorld, NS, Mock = T.Check, T.Say, T.ResetWorld, T.QNS, T.Mock
 
 local CP = { saved = {}, random = math.random, units = {} }
+CP.rollQuality = NS.CaptureRollQuality   -- 2.15.0 : rendue à la fin du module
 local GLOBALS = { "UnitGUID", "UnitName", "UnitExists", "UnitIsPlayer", "UnitIsDead", "UnitPlayerControlled",
 	"UnitReaction", "UnitCanAttack", "UnitClassification", "UnitCreatureType", "UnitCreatureFamily", "UnitLevel",
 	"GetRaidTargetIndex", "SetRaidTarget", "IsInGroup", "UnitIsGroupLeader", "IsInInstance", "Screenshot", "C_Timer" }
@@ -47,6 +48,10 @@ function CP.Quiet()
 end
 function CP.Reset()
 	ResetWorld()
+	-- 2.15.0 : qualité tirée au coup fatal figée à 1 étoile (sauf CP.quality) :
+	-- les chances attendues restent celles du rang
+	CP.quality = nil
+	NS.CaptureRollQuality = function() return CP.quality or 1 end
 	for _, field in ipairs({ "companionFrame", "companionBubble", "companionHover", "journalFrame", "capturePrompt", "captureQueueList", "captureNetButton", "captureToast" }) do
 		if NS[field] then NS[field]:Hide() end
 		NS[field] = nil
@@ -194,6 +199,7 @@ do
 	Check("[CAP] … essai compté, fenêtre refermée", data.tries == 1 and not NS.capturePrompt:IsShown()
 		and NS:CaptureState().rolling == nil)
 	CP.Quiet()
+	CP.quality = 2   -- 2.15.0 : un spécimen meilleur que le tien
 	CP.SeeKill(3200, { name = "Kodo", spawn = "00002B" })
 	local again = NS:CaptureQueue()[1]
 	Check("[CAP] espèce déjà capturée (1 étoile) : proposée pour un meilleur spécimen", again and again.npcID == 3200
@@ -442,3 +448,4 @@ do
 end
 
 CP.Done()
+NS.CaptureRollQuality = CP.rollQuality

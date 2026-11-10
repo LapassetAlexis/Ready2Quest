@@ -5,6 +5,7 @@
 local Check, Say, ResetWorld, NS, Mock = T.Check, T.Say, T.ResetWorld, T.QNS, T.Mock
 
 local FI = { saved = {}, random = math.random, units = {}, sounds = {}, savedCreateFrame = _G.CreateFrame }
+FI.rollQuality = NS.CaptureRollQuality   -- 2.15.0 : rendue à la fin du module
 -- un faux modèle 3D qui retient ce qu'on lui demande (comme companion_fx.lua)
 function FI.InstallModel()
 	_G.CreateFrame = function(kind, ...)
@@ -57,6 +58,10 @@ function FI.Install()
 end
 function FI.Reset()
 	ResetWorld()
+	-- 2.15.0 : qualité tirée au coup fatal figée à 1 étoile (sauf FI.quality) : les chances
+	-- attendues restent celles du rang
+	FI.quality = nil
+	NS.CaptureRollQuality = function() return FI.quality or 1 end
 	for _, field in ipairs({ "companionFrame", "companionBubble", "companionHover", "journalFrame", "capturePrompt",
 		"captureQueueList", "captureNetButton", "captureToast" }) do
 		if NS[field] then NS[field]:Hide() end
@@ -120,6 +125,7 @@ do
 	FI.Settle()
 	NS:CaptureData().creatures[5100].stars = 2
 	NS:CaptureData().serial = (NS:CaptureData().serial or 0) + 1
+	FI.quality = 3   -- 2.15.0 : un spécimen meilleur que le tien revient au filet
 	FI.SeeKill(5100, { name = "Raptor", spawn = "0000000002" })
 	Check("[FI] déjà capturée : ses étoiles et « peut faire mieux »", toast:IsShown()
 		and toast.info:GetText():find(NS.L.CAPTURE_TOAST_BETTER, 1, true) ~= nil
@@ -322,3 +328,4 @@ math.random = FI.random
 NS.SHINY_CHANCE = FI.savedShiny
 NS:DB().captureMuteUntil = nil
 ResetWorld()
+NS.CaptureRollQuality = FI.rollQuality
