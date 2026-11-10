@@ -613,6 +613,8 @@ end
 -- Tout appliquer (réglage, commande, style, saison)
 -- ---------------------------------------------------------------------------
 function ns:WinterVeilApply()
+	-- 2.14.0 (bêta 2) : la saison des compagnons (WinterCompanions.lua) suit le réglage
+	if self.WinterCompanionsForget then self:WinterCompanionsForget() end
 	local active = self:WinterVeilActive() and true or false
 	self.winterVeilShown = active
 	for _, step in ipairs({ "WinterVeilCompanion", "WinterVeilJournal", "WinterVeilRepaintGlyphs" }) do

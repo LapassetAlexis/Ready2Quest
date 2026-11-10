@@ -449,6 +449,10 @@ local function Season()
 	if seasonAt and now >= seasonAt and now - seasonAt < ns.WINTER_SEASON_TTL then return seasonOn end
 	local fn = ns.WinterVeilSeason
 	seasonOn = type(fn) == "function" and Call(fn, ns) and true or false
+	-- 2.14.0 (bêta 2) : « /qc noel on » (Toujours) ouvre aussi les compagnons
+	-- de saison hors des dates : sans ça, on ne pouvait pas les essayer
+	local choice = ns.WinterVeilChoice
+	if not seasonOn and type(choice) == "function" and Call(choice, ns) == "on" then seasonOn = true end
 	seasonAt = now
 	return seasonOn
 end
