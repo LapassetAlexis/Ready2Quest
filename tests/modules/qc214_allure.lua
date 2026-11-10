@@ -511,6 +511,9 @@ do
 	Check("[ALLURE4] /qc noel metzen 2,5 15664 : distance et modèle réglés, vignette rechargée",
 		NS.WINTER_METZEN_CAM == 2.5 and tuned.model.creature == 15664 and tuned.model.cam == 2.5
 		and NS:CompanionModelCam({ npc = 15664 }, "pied") == 2.5, tostring(tuned.model.creature) .. " / " .. tostring(tuned.model.cam))
+	-- 2.14.1 : distance par défaut réglée en jeu (0,6 : le renne réduit à sa taille dans le cadre)
+	Check("[ALLURE141] Metzen : caméra par défaut 0,6", NS.WINTER_METZEN_CAM_DEFAULT == 0.6 or NS.WINTER_METZEN_CAM == 0.6
+		or NS.WINTER_METZEN_CAM == 2.5)
 	NS:WinterVeilCommand("metzen 1 15706")
 	NS:AllureRefresh()
 	Check("[ALLURE4] /qc noel metzen 1 15706 : retour au Renne de l'Hiver", TileOf(panel, "winter:metzen").model.creature == 15706

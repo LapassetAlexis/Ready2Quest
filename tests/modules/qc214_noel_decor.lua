@@ -176,8 +176,8 @@ do
 		and #swags == 1 and d.lights == swags[1] and swags[1].lastPoint.x == 0 and box.centers[1] == 0
 		and NS.WINTER_VEIL_COMPANION_DEFAULT.swags == 1)
 	-- bêta 7 (34.png) : le fil flottait au-dessus du bord doré : descendu de 9 px
-	Check("[WV7] guirlande : descendue sur le bord doré du haut (y = -9), bulbes de 11,5 px, caméra 1,9, fit 3,5",
-		C.y == -9 and swags[1].lastPoint.y == -9 and NS.WINTER_VEIL_COMPANION_DEFAULT.y == -9 and C.bulb == 11.5 and C.fit == 3.5
+	Check("[WV7] guirlande : descendue sur le bord doré du haut (y = -20, réglé en jeu), bulbes de 11,5 px, caméra 1,9, fit 3,5",
+		C.y == -20 and swags[1].lastPoint.y == -20 and NS.WINTER_VEIL_COMPANION_DEFAULT.y == -20 and C.bulb == 11.5 and C.fit == 3.5
 		and math.abs(box.cam - 1.9) < 0.01, string.format("%.3f", box.cam))
 	Check("[WV4] guirlande : centrée sur le cadre (x = 0, pas le décalage de l'anneau)", C.x == 0
 		and math.abs(sum / #swags) < 1e-6 and math.abs(box.left + box.right) < 1e-6, string.format("%.2f", sum))
@@ -189,7 +189,7 @@ do
 	Check("[WV5] guirlande : cadre de chaque brin assez large pour que la caméra le cadre sur sa hauteur (≥ fit × h)",
 		C.fit >= 3 and lights:GetWidth() == box.frameW and box.frameW >= C.fit * C.h - 0.5 and box.frameW >= box.swag, string.format("%s / %s", tostring(lights:GetWidth()), tostring(box.frameW)))
 	-- bêta 7 : le bord doré remesuré sur 34.png (de -5 à -17 sous le haut du cadre)
-	Check("[WV7] bord doré du haut remesuré (34.png) : de -5 à -17", G.top == -5 and G.inner == -17)
+	Check("[WV141] bord doré du haut recalé sur le réglage en jeu : de -14 à -26", G.top == -14 and G.inner == -26)
 	Check("[WV7] guirlande : le milieu du fil posé sur le bord doré du haut (dans sa moitié haute)",
 		box.mid <= G.top and box.mid >= (G.top + G.inner) / 2, string.format("%.1f (%d..%d)", box.mid, G.inner, G.top))
 	Check("[WV7] guirlande : bouts accrochés au-dessus de l'or, bulbes sur son bord et juste dans l'ouverture (≤ 5 px)",
@@ -221,9 +221,9 @@ do
 	Check("[WV4] /qc noel cadre : « - » garde la valeur, un brin de moins se cache", C.bulb == 10 and C.swags == 1
 		and Shown(d.swags[1]) and not Shown(d.swags[2]) and not Shown(d.swags[3]))
 	NS:WinterVeilCommand("frame default")
-	Check("[WV7] /qc noel frame default : valeurs livrées (un brin centré, y = -9)", C.bulb == NS.WINTER_VEIL_COMPANION_DEFAULT.bulb
-		and C.swags == 1 and C.x == 0 and C.y == -9 and Shown(d.swags[1]) and d.swags[1].lastPoint.x == 0
-		and d.swags[1].lastPoint.y == -9
+	Check("[WV7] /qc noel frame default : valeurs livrées (un brin centré, y = -20)", C.bulb == NS.WINTER_VEIL_COMPANION_DEFAULT.bulb
+		and C.swags == 1 and C.x == 0 and C.y == -20 and Shown(d.swags[1]) and d.swags[1].lastPoint.x == 0
+		and d.swags[1].lastPoint.y == -20
 		and not Shown(d.swags[2]) and not Shown(d.swags[3]))
 	printed = {}
 	NS:WinterVeilCommand("cadre")
@@ -685,12 +685,20 @@ do
 		and NS.WINTER_VEIL_STRINGS.en.OPT_WINTER_VEIL_FROST ~= nil and row.describe() ~= nil)
 	NS:DB().winterVeilFrost = false
 	row.onChange()
-	Check("[WV7] givre coupé : l'anneau prend la teinte du cadre choisi (Ardoise : l'or), halo caché, décor gardé", Gold(ring)
-		and not ring.azLook and not Visible(glow) and Shown(d) and Snowing())
+	local curFrame = NS:CompanionCurrentStyle("frame").id
+	Check("[WV7] givre coupé : l'anneau prend la teinte du cadre choisi, halo caché, décor gardé",
+		ring.azLook == (NS.AZEROTH_RING_TINTS[curFrame] and curFrame or nil)
+		and not Visible(glow) and Shown(d) and Snowing())
 	NS:CompanionData().unlocked["frame:copper"] = true
 	NS:CompanionSetStyle("frame", "copper")
 	Check("[WV7] givre coupé, Cuivre choisi : l'anneau cuivré", ring.azLook == "copper" and ring.vertex[2] == NS.AZEROTH_RING_TINTS.copper[2])
 	NS:DB().winterVeilFrost = true
+	-- 2.14.1 : Cuivre a été choisi pendant le décor : il l'emporte sur Givre
+	row.onChange()
+	Check("[WV141] cadre choisi pendant la saison : il l'emporte sur l'allure Givre", ring.azLook == "copper"
+		and NS:CompanionData().winterFrameChoice == true)
+	-- sans choix pendant la saison : Givre par défaut
+	NS:CompanionData().winterFrameChoice = nil
 	row.onChange()
 	Check("[WV7] givre remis : l'allure Givre l'emporte sur le cadre choisi pendant le décor", ring.azLook == "frost"
 		and ring.vertex[1] == F[1] and Visible(glow) and NS:CompanionCurrentStyle("frame").id == "copper")
@@ -731,7 +739,7 @@ do
 	Check("[WV6] aucun halo dans le client : rien posé, pas d'erreur, l'anneau givré quand même", frame.azRingGlow == false
 		and skinRing and skinRing.vertex and skinRing.vertex[1] == F[1] and NoErrors(), select(2, NoErrors()))
 	NS:SetWinterVeil("off")
-	Check("[WV6] aucun halo : couleurs rendues sans erreur", Gold(skinRing) and NoErrors())
+	Check("[WV6] aucun halo : couleurs rendues sans erreur (Ardoise : gris, 2.14.1)", skinRing and skinRing.azLook == "slate" and NoErrors())
 	WV.Done()
 end
 
@@ -764,7 +772,7 @@ do
 		table.concat(missing, ",") .. " " .. select(2, NoErrors()))
 	-- la palette demandée
 	local function Desat(id) return TINTS[id] and TINTS[id].desat == true end
-	Check("[WV7] palette : Ardoise (défaut) et Insigne du dresseur à l'or d'origine", TINTS.slate == nil and TINTS.trainer == nil
+	Check("[WV141] palette : Ardoise (défaut) en gris ardoise, Insigne du dresseur à l'or d'origine", TINTS.slate and TINTS.slate.desat and TINTS.trainer == nil
 		and NS.COMPANION_FRAMES[1].id == "slate")
 	Check("[WV7] palette : argent, givre, runique, gangrené, chêne désaturés ; cuivre et or ciselé sur l'or",
 		Desat("silver") and Desat("frost") and Desat("rune") and Desat("fel") and Desat("oak")
@@ -779,11 +787,11 @@ do
 	data.unlocked["frame:sparkle"] = true
 	NS:CompanionSetStyle("frame", "sparkle")
 	local glow = frame.azRingGlow
-	Check("[WV7] Étincelant : or d'origine et halo doré autour de l'anneau", ring.vertex[1] == 1 and ring.azDesat == false
+	Check("[WV7] Étincelant : or clair (2.14.1) et halo doré autour de l'anneau", ring.vertex[2] == TINTS.sparkle[2] and ring.azDesat == false
 		and glow and glow.shown and glow.vertex[1] == TINTS.sparkle.glow[1] and ring.azLook == "sparkle")
 	NS:CompanionSetStyle("frame", "slate")
-	Check("[WV7] retour à Ardoise : l'or, halo caché", ring.vertex[1] == 1 and ring.vertex[3] == 1 and not glow.shown
-		and ring.azLook == nil)
+	Check("[WV141] retour à Ardoise : gris ardoise, halo caché", ring.vertex[1] == TINTS.slate[1] and ring.azDesat == true
+		and not glow.shown and ring.azLook == "slate")
 	data.unlocked["frame:sparkle"] = nil
 	-- le grand portrait de la page Créature : même teinte
 	data.unlocked["frame:fel"] = true
@@ -793,7 +801,7 @@ do
 	Check("[WV7] carnet : le portrait de la page Créature à la teinte du cadre (Gangrené)", NS:CarnetPaintRing(journal) == "fel"
 		and vine.vertex[2] == TINTS.fel[2] and vine.azDesat == true)
 	NS:CompanionSetStyle("frame", "slate")
-	Check("[WV7] carnet : Ardoise, l'or d'origine", NS:CarnetPaintRing(journal) == nil and vine.vertex[1] == 1 and vine.azDesat == false)
+	Check("[WV141] carnet : Ardoise en gris ardoise", NS:CarnetPaintRing(journal) == "slate" and vine.vertex[1] == TINTS.slate[1] and vine.azDesat == true)
 	data.unlocked["frame:fel"] = nil
 	-- Sobre : rien ne change (bordure du client, anneau à l'or et caché)
 	data.unlocked["frame:rune"] = true

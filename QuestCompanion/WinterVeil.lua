@@ -121,7 +121,8 @@ ns.WINTER_VEIL_JOURNAL = {
 -- le milieu du fil sur le bord doré du haut (y = 0).
 -- 2.14.0 (bêta 7) : en bêta 6 (34.png, échelle 1,1), le milieu du fil
 -- flottait ~4 px au-dessus du bord doré du haut, les bulbes pendaient
--- surtout au-dessus de lui. Descendue de 9 px (y = -9) : le milieu du fil
+-- surtout au-dessus de lui. 2.14.1 : y = -20, réglé en jeu par l'utilisateur
+-- (/qc noel cadre - - -20, 10/11 ; -9 ne suffisait pas). Avant : le milieu du fil
 -- sur le milieu du bord doré, les bulbes qui pendent sur son bord et juste
 -- dans l'ouverture.
 -- Les flocons : en bêta 5, deux flocons de 11 et 14 px à 0,65-0,75 posés sur
@@ -134,7 +135,7 @@ ns.WINTER_VEIL_JOURNAL = {
 -- décalés dans le temps. x : départ depuis le centre du cadre, dx : dérive,
 -- fall : chute (px), time : durée d'une chute (s), delay : attente avant.
 ns.WINTER_VEIL_COMPANION = {
-	model = 199600, swags = 1, bulb = 11.5, x = 0, y = -9, h = 30, facing = 0, fit = 3.5,
+	model = 199600, swags = 1, bulb = 11.5, x = 0, y = -20, h = 30, facing = 0, fit = 3.5,
 	span = 3.75, wireTop = 0.8, sag = 0.07, drop = 0.65, bulbH = 0.73,
 	flakes = {
 		{ x = -60, y = -14, size = 20, alpha = 0.95 },
@@ -167,7 +168,9 @@ ns.WINTER_VEIL_GIFT = "frost"
 -- = haut de l'ouverture, 16,6 px sous le haut du cadre) : le bord doré du
 -- haut va de -5 à -17 (l'atlas a une marge transparente au-dessus), pas de
 -- +2 à -6 comme estimé en bêta 4.
-ns.WINTER_VEIL_RING_GOLD = { top = -5, inner = -17, w = 91 }
+-- 2.14.1 : recalé sur le réglage en jeu (y = -20 posé sur l'or, 10/11) :
+-- les mesures faites sur captures (-5..-17) plaçaient l'or trop haut
+ns.WINTER_VEIL_RING_GOLD = { top = -14, inner = -26, w = 91 }
 -- la scène de capture : la boule de neige (taille, tours en vol), son
 -- éclatement en flocons (nombre, durée, portée, taille)
 -- 2.14.0 (bêta 3) : un peu plus soigné, mêmes durées. La boule ralentit un
@@ -202,7 +205,7 @@ local FR = {
 	-- 2.14.0 (bêta 6) : le cadre givré
 	OPT_WINTER_VEIL_FROST      = "Cadre givré (Voile d'hiver)",
 	-- 2.14.0 (bêta 7) : l'allure du cadre Givre, offert pendant la saison
-	OPT_WINTER_VEIL_FROST_DESC = "Pendant le décor du Voile d'hiver, l'anneau du portrait prend l'allure du cadre Givre (argent givré, halo glacé), quel que soit le cadre choisi. Décoché : le cadre choisi garde sa couleur. Le cadre Givre est offert à tous pendant le Voile d'hiver.",
+	OPT_WINTER_VEIL_FROST_DESC = "Pendant le décor du Voile d'hiver, l'anneau du portrait prend l'allure du cadre Givre (argent givré, halo glacé), tant que tu ne choisis pas un autre cadre. Décoché : le cadre choisi garde sa couleur. Le cadre Givre est offert à tous pendant le Voile d'hiver.",
 	WINTER_VEIL_FROST_GIFT     = "Voile d'hiver",
 	WINTER_VEIL_TUNE_LIGHTS = "Guirlande du cadre : bulbe %s px, x %s, y %s, %s brin(s), cap %s (largeur %.0f px, caméra %.2f). Régler : /qc noel cadre <bulbe> <x> <y> <brins> <cap> (- garde une valeur, defaut remet tout).",
 }
@@ -221,7 +224,7 @@ local EN = {
 	WINTER_VEIL_STAGE_FLY   = "The snowball is flying…",
 	WINTER_VEIL_STAGE_SHAKE = "Something stirs under the snow…",
 	OPT_WINTER_VEIL_FROST      = "Frosted frame (Winter Veil)",
-	OPT_WINTER_VEIL_FROST_DESC = "While the Winter Veil decorations show, the portrait ring takes the Frost frame's look (frosty silver, icy glow), whatever frame you chose. Unchecked: your chosen frame keeps its colour. The Frost frame is free for everyone during Winter Veil.",
+	OPT_WINTER_VEIL_FROST_DESC = "While the Winter Veil decorations show, the portrait ring takes the Frost frame's look (frosty silver, icy glow) until you pick another frame. Unchecked: your chosen frame keeps its colour. The Frost frame is free for everyone during Winter Veil.",
 	WINTER_VEIL_FROST_GIFT     = "Winter Veil",
 	WINTER_VEIL_TUNE_LIGHTS = "Frame lights: bulb %s px, x %s, y %s, %s strand(s), facing %s (width %.0f px, camera %.2f). Tune: /qc noel frame <bulb> <x> <y> <strands> <facing> (- keeps a value, default resets all).",
 }
@@ -660,6 +663,8 @@ do
 		local data = self:CompanionData()
 		local before = data.frameStyle
 		local def = setStyle(self, kind, id, ...)
+		-- 2.14.1 : choisi pendant le décor : ce cadre-là s'affiche (plus Givre imposé)
+		if def and kind == "frame" and self:WinterVeilActive() then data.winterFrameChoice = true end
 		if def and kind == "frame" then
 			if def.id ~= ns.WINTER_VEIL_GIFT then
 				data.frameBeforeGift = nil
@@ -676,6 +681,9 @@ do
 	function ns:CompanionCurrentStyle(kind, ...)
 		if kind == "frame" then
 			local data = self:CompanionData()
+			-- 2.14.1 : décor parti (fin de saison, réglage) : la prochaine saison
+			-- repart avec Givre par défaut
+			if data.winterFrameChoice and not self:WinterVeilActive() then data.winterFrameChoice = nil end
 			if data.frameStyle == ns.WINTER_VEIL_GIFT then
 				local gift = GiftDef()
 				if gift and not self:CompanionIsUnlocked("frame", gift) then
@@ -710,7 +718,9 @@ do
 	local ringLook = ns.AzerothRingLook
 	if ringLook then
 		function ns:AzerothRingLook(def, ...)
-			if def == nil and self:WinterVeilActive() and self:WinterVeilFrostOn() then
+			-- 2.14.1 : un cadre choisi pendant la saison l'emporte sur Givre
+			if def == nil and self:WinterVeilActive() and self:WinterVeilFrostOn()
+				and not self:CompanionData().winterFrameChoice then
 				local gift = GiftDef()
 				if gift then return ringLook(self, gift, ...) end
 			end
