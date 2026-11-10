@@ -554,6 +554,9 @@ ns.FeatCatalog(function()
 		{ "fun_critter",        157, "fun", 5,  A, crit = { "count", "critter", 1 } },
 		{ "fun_night_owl",      163, "fun", 5,  A, crit = { "flag", "nightOwl" }, reward = { title = 34 } },
 		{ "fun_birthday",       164, "fun", 10, A, crit = { "count", "birthday", 1 } },
+		-- 2.14.0 : souvenir du Voile d'hiver (hors numérotation, code 175) ; le
+		-- drapeau ne se pose qu'en saison (WinterCompanions.lua), le haut fait reste
+		{ "fun_winter_veil",    175, "fun", 10, A, crit = { "flag", "winterVeil" } },
 		-- Grands hauts faits
 		{ "meta_shiny",   167, "meta", 25, A, crit = { "meta", "shiny", 10 }, reward = { soon = { "frame", "feat_prism" } } },
 		{ "meta_zones",   168, "meta", 25, A, crit = { "meta", "zone", 15 },  reward = { soon = { "cardbg", "card_atlas" } } },
@@ -773,6 +776,7 @@ local FR = {
 	FEATD_murlocs        = "Capturer %d murlocs différents",
 	FEATD_critter        = "Capturer une bestiole",
 	FEATD_flag_nightOwl  = "Capturer une créature entre 2 h et 5 h du matin",
+	FEATD_flag_winterVeil = "Pendant le Voile d'hiver, voyager une heure avec un compagnon de saison ou capturer 10 créatures avec lui",
 	FEATD_birthday       = "Jouer le jour anniversaire de ta rencontre avec le compagnon",
 	FEATD_list_trainerMeta = "Obtenir « Maître des lieux », « Tout ce qui brille », « Sceaux et chemins » et 1000 points",
 	FEAT_men_species_500 = "Le grand recensement",
@@ -850,6 +854,7 @@ local FR = {
 	FEAT_fun_critter     = "Petite bête",
 	FEAT_fun_night_owl   = "Oiseau de nuit",
 	FEAT_fun_birthday    = "Joyeux anniversaire",
+	FEAT_fun_winter_veil = "Joyeux Voile d'hiver",
 	FEAT_meta_shiny      = "Tout ce qui brille",
 	FEAT_meta_zones      = "Sceaux et chemins",
 	FEAT_meta_trainer    = "Dresseur de légende",
@@ -913,6 +918,7 @@ local EN = {
 	FEATD_murlocs        = "Capture %d different murlocs",
 	FEATD_critter        = "Capture a critter",
 	FEATD_flag_nightOwl  = "Capture a creature between 2 and 5 a.m.",
+	FEATD_flag_winterVeil = "During Winter Veil, travel for an hour with a seasonal companion or capture 10 creatures with it",
 	FEATD_birthday       = "Play on the anniversary of meeting your companion",
 	FEATD_list_trainerMeta = "Earn \"Master of the House\", \"All That Glitters\", \"Seals and Roads\" and 1000 points",
 	FEAT_men_species_500 = "The Great Census",
@@ -990,6 +996,7 @@ local EN = {
 	FEAT_fun_critter     = "Little Critter",
 	FEAT_fun_night_owl   = "Night Owl",
 	FEAT_fun_birthday    = "Happy Birthday",
+	FEAT_fun_winter_veil = "Merry Winter Veil",
 	FEAT_meta_shiny      = "All That Glitters",
 	FEAT_meta_zones      = "Seals and Roads",
 	FEAT_meta_trainer    = "Legendary Trainer",

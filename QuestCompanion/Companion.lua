@@ -981,10 +981,9 @@ function ns:CompanionCycleAppearance()
 	for index, def in ipairs(list) do
 		if def.id == current.id then nextDef = list[(index % #list) + 1] end
 	end
-	self:CompanionData().appearance = nextDef.id
-	self:CompanionApplyModel()
-	if self.RefreshOptions then self:RefreshOptions() end
-	return nextDef
+	-- 2.14.0 : par CompanionSetAppearance (un compagnon de saison se choisit
+	-- sans remplacer l'apparence habituelle, WinterCompanions.lua)
+	return self:CompanionSetAppearance(nextDef.id) or nextDef
 end
 
 -- Choix direct (liste des réglages) ; refusé (nil) si verrouillé
@@ -2461,9 +2460,11 @@ function ns:CompanionApplyModel()
 	local distance, y = zoom > 0 and 1 or 1.6, nil
 	-- 2.11.1 : créature capturée, distance selon son type (et son espèce),
 	-- rapprochée par le cadrage (portrait, buste, pied)
-	if app.captured then distance, y = self:CompanionModelCam(app, framing) end
+	-- 2.14.0 : un compagnon de saison (créature du jeu, SetCreature) aussi
+	local real = app.captured or app.seasonal
+	if real then distance, y = self:CompanionModelCam(app, framing) end
 	local shown = model and ns.ShowModel(model, { display = app.display, npc = app.npc, shiny = app.shiny,
-		zoom = zoom, cam = distance, y = y, scale = app.captured and 1 or stageDef.scale }, "companion") or false
+		zoom = zoom, cam = distance, y = y, scale = real and 1 or stageDef.scale }, "companion") or false
 	frame.usesFallback = not shown
 	frame.displayID = shown and app.display or nil
 	if shown then

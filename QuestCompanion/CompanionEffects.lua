@@ -52,6 +52,11 @@ ns.EFFECT_NAMED = { elite = true, rare = true, rareelite = true, worldboss = tru
 --   decay     : l'envie `need` (ou toutes) baisse v moins vite
 --   rest      : au repos, l'énergie remonte v plus vite
 --   pet       : une caresse remonte le moral v en plus
+-- 2.14.0 (compagnons du Voile d'hiver, WinterCompanions.lua) :
+--   sack         : « La hotte », un cadeau par jour (valeur sans objet)
+--   nightCapture : la nuit (heure du jeu), capture ×(1 + v) sur tout
+--   cold         : en zone froide, les envies baissent v moins vite (en
+--                  zone chaude, le moral baisse plus vite : il fond)
 local EFFECTS = {
 	-- chasse
 	spot             = { kind = "spot",      type = "beast",      base = 0.05, cap = 0.25 },
@@ -74,6 +79,13 @@ local EFFECTS = {
 	rest_energy      = { kind = "rest",                           base = 0.15, cap = 0.60 },
 	-- mascottes : la force est l'étape d'évolution (1 à 5)
 	mascot_decay     = { kind = "decay",     base = 0.04, cap = 0.20 },
+	-- 2.14.0 : compagnons du Voile d'hiver, force = l'étape (comme les mascottes)
+	winter_treat     = { kind = "treatZone",                      base = 0.10, cap = 0.50 },
+	winter_sack      = { kind = "sack",                           base = 0.50, cap = 1.00 },
+	winter_energy    = { kind = "decay",     need = "energy",     base = 0.08, cap = 0.40 },
+	winter_nose      = { kind = "nightCapture",                   base = 0.03, cap = 0.15 },
+	winter_pet       = { kind = "pet",                            base = 0.25, cap = 1.00 },
+	winter_cold      = { kind = "cold",                           base = 0.06, cap = 0.30 },
 }
 for id, def in pairs(EFFECTS) do def.id = id end
 ns.COMPANION_EFFECTS = EFFECTS
@@ -92,6 +104,14 @@ local TYPE_EFFECTS = {
 local MASCOT_EFFECTS = { hunt = "capture_all", comfort = "mascot_decay" }
 ns.COMPANION_TYPE_EFFECTS = TYPE_EFFECTS
 ns.COMPANION_MASCOT_EFFECTS = MASCOT_EFFECTS
+-- 2.14.0 : les compagnons de saison (clé = def.seasonal, WinterCompanions.lua) :
+-- un effet tiré d'une sorte existante, et leur particularité
+local WINTER_EFFECTS = {
+	gfw     = { hunt = "winter_treat",  comfort = "winter_sack" },
+	metzen  = { hunt = "winter_energy", comfort = "winter_nose" },
+	snowman = { hunt = "winter_pet",    comfort = "winter_cold" },
+}
+ns.COMPANION_WINTER_EFFECTS = WINTER_EFFECTS
 
 local FR = {
 	EFF_HUNT               = "Chasse : %s",
@@ -114,8 +134,17 @@ local FR = {
 	EFF_decay_all          = "les envies baissent %d %% moins vite",
 	EFF_rest_energy        = "au repos, l'énergie remonte %d %% plus vite",
 	EFF_mascot_decay       = "les envies baissent %d %% moins vite",
+	EFF_winter_treat       = "%d %% de chance d'une friandise en plus à chaque palier de zone",
+	EFF_winter_sack        = "« La hotte » : un cadeau par jour (friandise ou aide de capture)",
+	EFF_winter_energy      = "l'énergie baisse %d %% moins vite",
+	EFF_winter_nose        = "« Le nez qui brille » : capture +%d %% la nuit (20 h - 6 h)",
+	EFF_winter_pet         = "une caresse remonte le moral de %d %% en plus",
+	EFF_winter_cold        = "« Il aime le froid » : envies %d %% plus lentes au froid, il fond au chaud",
+	EFF_SEASON             = "Saison : %s",
+	EFF_QUIRK              = "Particularité : %s",
 	EFF_SECTION            = "Ses effets",
 	EFF_SECTION_MASCOT     = "Ses effets (mascotte, grandit avec l'étape)",
+	EFF_SECTION_WINTER     = "Ses effets (Voile d'hiver, grandit avec l'étape)",
 	EFF_STRENGTH           = "Force ×%s · envies %d/4 : %d %%",
 	EFF_ACTIVE             = "Actifs",
 	EFF_PENDING            = "Actifs dans %s",
@@ -159,8 +188,17 @@ local EN = {
 	EFF_decay_all          = "needs drop %d%% slower",
 	EFF_rest_energy        = "while resting, energy comes back %d%% faster",
 	EFF_mascot_decay       = "needs drop %d%% slower",
+	EFF_winter_treat       = "%d%% chance of an extra treat at each zone milestone",
+	EFF_winter_sack        = "\"The sack\": one gift a day (a treat or a capture aid)",
+	EFF_winter_energy      = "energy drops %d%% slower",
+	EFF_winter_nose        = "\"Glowing nose\": capture +%d%% at night (8 p.m. - 6 a.m.)",
+	EFF_winter_pet         = "petting raises mood %d%% more",
+	EFF_winter_cold        = "\"Loves the cold\": needs drop %d%% slower in the cold, melts in the heat",
+	EFF_SEASON             = "Season: %s",
+	EFF_QUIRK              = "Quirk: %s",
 	EFF_SECTION            = "Its effects",
 	EFF_SECTION_MASCOT     = "Its effects (mascot, grows with the stage)",
+	EFF_SECTION_WINTER     = "Its effects (Winter Veil, grows with the stage)",
 	EFF_STRENGTH           = "Strength ×%s · needs %d/4: %d%%",
 	EFF_ACTIVE             = "Active",
 	EFF_PENDING            = "Active in %s",
@@ -249,7 +287,13 @@ function ns:CompanionEffectsFor(spec, opts)
 	local result = {}
 	local npc = tonumber(spec.npc)
 	local typeKey, strength, pair
-	if npc then
+	-- 2.14.0 : compagnon de saison (Voile d'hiver) : ses deux effets, la force de l'étape
+	local seasonal = spec.seasonal and WINTER_EFFECTS[spec.seasonal]
+	if seasonal then
+		pair = seasonal
+		strength = self.CompanionStage and tonumber(self:CompanionStage()) or 1
+		result.seasonal, result.npc = spec.seasonal, npc
+	elseif npc then
 		local entry = CaptureEntry(self, npc) or {}
 		local class = spec.class or entry.class or "normal"
 		typeKey = self.CreatureTypeKey and self:CreatureTypeKey(spec.type or entry.type) or nil
@@ -294,7 +338,10 @@ ns.CompanionEffectKey = EffectKey
 
 -- Le compagnon porté, sans passer par le catalogue (appelé souvent : pas de
 -- liste reconstruite) : { id, npc, shiny, captured } ou { id } (mascotte)
+-- 2.14.0 : un compagnon de saison choisi passe devant (sa def, WinterCompanions.lua)
 local function CurrentSpec(self)
+	local seasonal = self.CompanionWinterSpec and self:CompanionWinterSpec()
+	if seasonal then return seasonal end
 	local id = tostring(self:CompanionData().appearance or "")
 	local npc, suffix = id:match("^cap:(%d+)(.*)$")
 	npc = tonumber(npc)
@@ -382,10 +429,16 @@ local function ActiveOf(self, kind)
 	end
 	return found[1] and found or nil
 end
+-- 2.14.0 : lu par les particularités des compagnons de saison (WinterCompanions.lua)
+function ns:CompanionEffectActive(kind) return ActiveOf(self, kind) end
 
 -- Les deux lignes « Chasse : … / Confort : … »
 function ns:CompanionEffectsText(effects)
 	if type(effects) ~= "table" then return {} end
+	-- 2.14.0 : compagnon de saison, « Saison : … / Particularité : … »
+	if effects.seasonal then
+		return { self:F("EFF_SEASON", effects.hunt.label), self:F("EFF_QUIRK", effects.comfort.label) }
+	end
 	return { self:F("EFF_HUNT", effects.hunt.label), self:F("EFF_COMFORT", effects.comfort.label) }
 end
 
@@ -762,7 +815,7 @@ function ns:CompanionEffectsRefreshPane(pane)
 	if not (pane and pane.effHunt) then return end
 	local effects = self:CompanionEffects()
 	if not effects then return end
-	local title = effects.mascot and L.EFF_SECTION_MASCOT or L.EFF_SECTION
+	local title = (effects.seasonal and L.EFF_SECTION_WINTER) or (effects.mascot and L.EFF_SECTION_MASCOT) or L.EFF_SECTION
 	local label, detail = tostring(title):match("^(.-)%s*%((.*)%)%s*$")
 	pane.effTitle:SetText(label or title, detail)
 	local lines = self:CompanionEffectsText(effects)
