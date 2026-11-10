@@ -1,5 +1,17 @@
 # QuestCompanion
 
+## 3.0.0 — chaque capture est unique
+
+- **Des spécimens** : chaque capture est un spécimen à part, avec sa qualité (1 à 3 étoiles), brillant ou non, et son origine (qui, où, quand). Ton meilleur spécimen de chaque espèce va au **Codex** ; les autres rejoignent ta **Réserve**. Ta collection est reprise telle quelle (rien n'est perdu).
+- **La qualité se tire au moment du kill** et se voit avant de lancer : 7 % de 3 étoiles sur un monstre normal, 15 % sur un élite, 25 % sur un rare, quel que soit son niveau. Un beau spécimen se capture plus difficilement (×0,8 pour 2 étoiles, ×0,6 pour 3).
+- **Le filet ne vient que si ça vaut le coup** : espèce nouvelle, brillante, spécimen meilleur que le tien, ou espèce épinglée. Fini les réglages « Recaptures ».
+- **La carte de préparation** : un clic sur le filet ouvre la carte ; choisis ton aide (la chance se met à jour, l'aide conseillée est mise en avant), puis **Lancer** ou **Passer**. Maj+clic ou le raccourci lancent directement ; réglage « Lancer directement au clic ».
+- **Le mode chasse** (clic droit sur le compagnon, /qc chasse ou un raccourci) : chaque monstre au filet, pour 5, 15, 30 min, 1 h ou jusqu'à l'arrêt. Une espèce trop chassée devient méfiante.
+- **À compléter** : dans Créatures, les espèces sans 3 étoiles, une épingle pour ta liste de chasse et un bouton **Localiser** ; dans Exploration, le nombre à compléter par zone.
+- **La Réserve et les paillettes** : une nouvelle page du carnet pour tes spécimens (Mettre au Codex, Relâcher, Localiser). Relâcher rend des paillettes (1, 3, 8 ou 20), gagnées aussi aux missions et aux paliers de zone, à dépenser à l'**Échoppe du dresseur** (aides, places de Réserve, cadre et fond pailletés).
+
+*English:* every capture is now a unique specimen (quality 1–3 stars, shiny, origin); your best per species goes to the Codex, the rest to your Reserve (your collection carries over intact). Quality is rolled at the kill and shown before you throw (7% three stars on normal mobs, 15% elites, 25% rares, any level); better specimens are harder to catch. The net only appears when it's worth it (new species, shiny, better specimen, pinned species) — the Recapture sliders are gone. A preparation card lets you pick an aid with live odds, then Throw or Skip (Shift+click or the key throws directly). Hunt mode (right-click the companion, /qc hunt, or a key) offers every kill for a chosen time; over-hunted species grow wary. "To complete" filter, pins and Locate in Creatures, per-zone counts in Exploration. The new Reserve page (set to Codex, release, locate) and glitter: release specimens, complete missions and zone milestones, then spend it at the Trainer's Shop (aids, reserve slots, a glitter frame and background).
+
 ## 2.14.1
 
 - **Guirlande du compagnon** posée sur le bord doré du cadre (réglée en jeu).

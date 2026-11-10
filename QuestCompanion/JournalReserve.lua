@@ -75,7 +75,7 @@ local FR = {
 	RES_EMPTY_FILTER     = "Aucun spécimen ne correspond à ce filtre.",
 	RES_PICK             = "Choisis un spécimen dans la grille.",
 	RES_BY               = "Capturé par %s",
-	RES_BY_MIGRATION     = "Avant la 2.15",
+	RES_BY_MIGRATION     = "Avant la 3.0",
 	RES_BETTER           = "Meilleur que ton spécimen du Codex (%s)",
 	RES_CODEX_REF        = "Au Codex : %s",
 	RES_VALUE            = "Relâcher : +%d paillettes",
@@ -132,7 +132,7 @@ local EN = {
 	RES_EMPTY_FILTER     = "No specimen matches this filter.",
 	RES_PICK             = "Pick a specimen in the grid.",
 	RES_BY               = "Captured by %s",
-	RES_BY_MIGRATION     = "Before 2.15",
+	RES_BY_MIGRATION     = "Before 3.0",
 	RES_BETTER           = "Better than your Codex specimen (%s)",
 	RES_CODEX_REF        = "In the Codex: %s",
 	RES_VALUE            = "Release: +%d glitter",
@@ -421,7 +421,7 @@ local function ZoneName(self, zoneID)
 	return info and info.name or nil
 end
 
--- « Capturé par X · zone · date » (« Avant la 2.15 » pour la migration)
+-- « Capturé par X · zone · date » (« Avant la 3.0 » pour la migration)
 function ns:SpecimenOriginText(spec)
 	if type(spec) ~= "table" then return "" end
 	local parts = {}

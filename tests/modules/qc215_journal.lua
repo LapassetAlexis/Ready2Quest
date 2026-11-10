@@ -325,7 +325,7 @@ for _, style in ipairs({ "sobre", "azeroth" }) do
 		and not TileOf(rv, ids.better))
 	lines = {}
 	for _, line in ipairs(p.lines) do lines[#lines + 1] = line:GetText() or "" end
-	Check("[J215] " .. style .. " : spécimen migré : « Avant la 2.15 »", table.concat(lines, "\n"):find("Avant la 2.15", 1, true) ~= nil)
+	Check("[J215] " .. style .. " : spécimen migré : « Avant la 3.0 »", table.concat(lines, "\n"):find("Avant la 3.0", 1, true) ~= nil)
 	-- Relâcher : confirmation dans la page
 	TileOf(rv, ids.low):GetScript("OnClick")(TileOf(rv, ids.low))
 	Check("[J215] " .. style .. " : Relâcher (+1)", rv.release.qcEnabled == true and (rv.release:GetText() or ""):find("+1", 1, true) ~= nil)
