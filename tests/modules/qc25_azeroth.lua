@@ -44,8 +44,11 @@ function AZT.Install()
 end
 local FIELDS = { "companionFrame", "companionBubble", "companionHover", "journalFrame", "capturePrompt",
 	"captureQueueList", "captureNetButton", "captureToast", "captureResult", "guildFeatToast", "journalToast" }
+-- 3.0.0 : qualité tirée au kill : fixée à 1★ (chances attendues stables)
+AZT.rollQuality = AZT.rollQuality or NS.CaptureRollQuality
 function AZT.Reset(atlas)
 	ResetWorld()
+	NS.CaptureRollQuality = function() return 1 end
 	if NS.captureBatchFrame then NS.captureBatchFrame:Hide() end
 	if NS.captureChooser then NS.captureChooser:Hide() end
 	for _, field in ipairs(FIELDS) do
@@ -466,5 +469,6 @@ do
 	_G.CreateFrame = AZT.savedCreateFrame
 	math.random = AZT.random
 	NS.SHINY_CHANCE = AZT.savedShiny
+	if AZT.rollQuality then NS.CaptureRollQuality = AZT.rollQuality end
 	ResetWorld()
 end
