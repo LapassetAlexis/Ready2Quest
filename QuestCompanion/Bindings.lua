@@ -129,7 +129,10 @@ end
 function ns:BindingThrowNet()
 	if not (self.CaptureThrow and self.CaptureQueuePrune) then return false end
 	if InCombat() or Call(G("UnitAffectingCombat"), "player") then self:Print(L.BIND_NET_COMBAT); return false end
+	-- 2.15.0 : la carte de préparation ouverte : son candidat, avec l'aide choisie
+	if self.CapturePrepShown and self:CapturePrepShown() then return self:CapturePrepLaunch() and true or false end
 	if #self:CaptureQueuePrune() == 0 then self:Print(L.CAPTURE_Q_NOTHING); return false end
+	-- sinon tout de suite (pas de carte), avec l'aide déjà choisie
 	return self:CaptureThrow() and true or false
 end
 

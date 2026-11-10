@@ -57,6 +57,8 @@ local NET_SIZE = 44
 ns.CAPTURE_NET_SIZE = NET_SIZE
 ns.CAPTURE_NET_GAP = 8            -- px entre le cadre du compagnon et le filet
 ns.CAPTURE_NET_PULSE = 4          -- s de battement doré à l'arrivée d'un candidat
+-- 2.15.0 : pastille de qualité (étoiles) au bas du filet : taille, centre (y depuis le bas)
+ns.CAPTURE_NET_BADGE = { w = 40, h = 13, y = -2, star = 10 }
 ns.CAPTURE_TOAST_SECONDS = 3      -- s d'affichage du bandeau « Capture possible » (2.9.0 : 5 -> 3)
 local TOAST_W, TOAST_H, TOAST_ICON = 384, 102, 34
 ns.CAPTURE_MUTE_CHOICES = { 5, 15, 30, 60 }   -- minutes de sourdine proposées par le bandeau
@@ -93,7 +95,7 @@ local FR = {
 	CAPTURE_Q_AID          = "Aide : %s",
 	CAPTURE_TOAST_TITLE    = "Capture possible",
 	CAPTURE_TOAST_MORE     = "et %d de plus",
-	CAPTURE_TOAST_HINT     = "Clic : capturer · clic droit : la liste",
+	CAPTURE_TOAST_HINT     = "Clic : préparer · Maj+clic : lancer · clic droit : la liste",
 	CAPTURE_TOAST_NEW      = "Jamais capturée",
 	CAPTURE_TOAST_OWNED    = "Déjà capturée %s",
 	CAPTURE_TOAST_OWNED_SHINY = "brillante %s",
@@ -120,6 +122,16 @@ local FR = {
 	CAPTURE_MSG_STARS_KEPT = "%s : %s, rangé dans ta Réserve. Ton spécimen à %d étoiles reste au Codex.",
 	CAPTURE_STAGE_BEST     = "Meilleur spécimen !",
 	CAPTURE_STAGE_KEPT     = "Le tien garde ses %d étoiles",
+	-- 2.15.0 : pourquoi le filet le propose (infobulle, liste), en court
+	CAPTURE_Q_TAG_new      = "nouvelle",
+	CAPTURE_Q_TAG_shiny    = "brillante",
+	CAPTURE_Q_TAG_stars    = "meilleure que la tienne %s",
+	CAPTURE_Q_TAG_pinned   = "épinglée",
+	CAPTURE_Q_TAG_hunt     = "chasse",
+	CAPTURE_Q_CLICK_PREP   = "Clic : préparer la capture de %s (aides, Lancer, Passer)",
+	CAPTURE_Q_SHIFT_DIRECT = "Maj+clic ou raccourci : lancer tout de suite",
+	OPT_DAILY_CAPTURE_DIRECT = "Lancer directement au clic",
+	OPT_DAILY_CAPTURE_DIRECT_DESC = "Le clic sur le filet lance tout de suite (l'aide choisie dans la liste sert), sans la carte de préparation. Maj+clic lance toujours tout de suite.",
 }
 local EN = {
 	CAPTURE_Q_TITLE        = "To capture",
@@ -141,7 +153,7 @@ local EN = {
 	CAPTURE_Q_AID          = "Aid: %s",
 	CAPTURE_TOAST_TITLE    = "Capture possible",
 	CAPTURE_TOAST_MORE     = "and %d more",
-	CAPTURE_TOAST_HINT     = "Click: capture · right-click: the list",
+	CAPTURE_TOAST_HINT     = "Click: prepare · Shift-click: throw · right-click: the list",
 	CAPTURE_TOAST_NEW      = "Never captured",
 	CAPTURE_TOAST_OWNED    = "Already captured %s",
 	CAPTURE_TOAST_OWNED_SHINY = "shiny %s",
@@ -168,6 +180,15 @@ local EN = {
 	CAPTURE_MSG_STARS_KEPT = "%s: %s, stored in your Reserve. Your %d-star specimen stays in the Codex.",
 	CAPTURE_STAGE_BEST     = "Best specimen yet!",
 	CAPTURE_STAGE_KEPT     = "Yours keeps its %d stars",
+	CAPTURE_Q_TAG_new      = "new",
+	CAPTURE_Q_TAG_shiny    = "shiny",
+	CAPTURE_Q_TAG_stars    = "better than yours %s",
+	CAPTURE_Q_TAG_pinned   = "pinned",
+	CAPTURE_Q_TAG_hunt     = "hunt",
+	CAPTURE_Q_CLICK_PREP   = "Click: prepare to capture %s (aids, Throw, Skip)",
+	CAPTURE_Q_SHIFT_DIRECT = "Shift-click or key: throw right away",
+	OPT_DAILY_CAPTURE_DIRECT = "Throw right away on click",
+	OPT_DAILY_CAPTURE_DIRECT_DESC = "Clicking the net throws right away (with the aid chosen in the list), without the preparation card. Shift-click always throws right away.",
 }
 ns.RegisterStrings(FR, EN)
 if ns.KEEP_STRINGS then ns.CAPTURE_QUEUE_STRINGS = { fr = FR, en = EN } end
@@ -175,13 +196,20 @@ if ns.KEEP_STRINGS then ns.CAPTURE_QUEUE_STRINGS = { fr = FR, en = EN } end
 -- 2.15.0 : plus de réglages « Recaptures » (communes, élites, rares) : le
 -- filet ne revient que pour mieux (CaptureQueueReason). Les valeurs gardées
 -- (companionRetry*) restent dans la sauvegarde, ignorées.
-ns.RegisterDefaults({ companionCaptureToast = true, companionCaptureSound = true })
+-- 2.15.0 : « Lancer directement au clic » (coupé : le clic ouvre la carte de préparation)
+ns.RegisterDefaults({ companionCaptureToast = true, companionCaptureSound = true, companionCaptureDirect = false })
 if type(ns.DAILY_OPTION_ROWS) == "table" then
-	local present, presentSound, at = false, false, 1
+	local present, presentSound, presentDirect, at = false, false, false, 1
 	for index, row in ipairs(ns.DAILY_OPTION_ROWS) do
 		if row.key == "companionCaptureToast" then present = true end
 		if row.key == "companionCaptureSound" then presentSound = true end
+		if row.key == "companionCaptureDirect" then presentDirect = true end
 		if row.key == "companionCapture" or row.key == "companionCaptureAnim" then at = index + 1 end
+	end
+	if not presentDirect then
+		table.insert(ns.DAILY_OPTION_ROWS, at, { key = "companionCaptureDirect", label = "OPT_DAILY_CAPTURE_DIRECT", kind = "bool",
+			describe = function() return L.OPT_DAILY_CAPTURE_DIRECT_DESC end })
+		at = at + 1
 	end
 	if not present then
 		table.insert(ns.DAILY_OPTION_ROWS, at, { key = "companionCaptureToast", label = "OPT_DAILY_CAPTURE_TOAST", kind = "bool",
@@ -832,7 +860,12 @@ local function ShowNetTooltip(button)
 			Theme.TooltipLine(tooltip, L.CAPTURE_Q_COMBAT, Theme.MUTED_LIGHT)
 		-- deux candidats ou plus : le choix et ses raccourcis (CaptureBatch.lua)
 		elseif not (ns.CaptureNetClickLines and ns:CaptureNetClickLines(tooltip, queue, name)) then
-			Theme.TooltipLine(tooltip, ns:F("CAPTURE_Q_CLICK", name), Theme.MUTED_LIGHT)
+			if ns:DB().companionCaptureDirect == true then
+				Theme.TooltipLine(tooltip, ns:F("CAPTURE_Q_CLICK", name), Theme.MUTED_LIGHT)
+			else
+				Theme.TooltipLine(tooltip, ns:F("CAPTURE_Q_CLICK_PREP", name), Theme.MUTED_LIGHT)
+				Theme.TooltipLine(tooltip, L.CAPTURE_Q_SHIFT_DIRECT, Theme.MUTED_LIGHT)
+			end
 		end
 	end
 	local aid = ns:CaptureState().aid
@@ -975,6 +1008,18 @@ function ns:EnsureCaptureNet()
 	if button.count.SetDrawLayer then button.count:SetDrawLayer("OVERLAY", 7) end
 	button.count:SetPoint("CENTER", button.countBack, "CENTER", 0, 0)
 	button.count:SetJustifyH("CENTER")
+	-- 2.15.0 : la qualité du meilleur candidat (étoiles du client), sur une
+	-- pastille d'encre au bas du filet ; une brillante garde son halo doré
+	button.badgeBack = Theme.Solid(button, "ARTWORK", Theme.INK, 0.92)
+	button.badgeBack:SetSize(ns.CAPTURE_NET_BADGE.w, ns.CAPTURE_NET_BADGE.h)
+	button.badgeBack:SetPoint("CENTER", button, "BOTTOM", 0, ns.CAPTURE_NET_BADGE.y)
+	if button.badgeBack.SetDrawLayer then button.badgeBack:SetDrawLayer("OVERLAY", 5) end
+	button.badgeEdge = Theme.Border(button, Theme.GOLD, 1, "OVERLAY", button.badgeBack)
+	button.badge = Theme.Text(button, Theme.F_SMALL, Theme.WHITE)
+	if button.badge.SetDrawLayer then button.badge:SetDrawLayer("OVERLAY", 7) end
+	button.badge:SetPoint("CENTER", button.badgeBack, "CENTER", 0, 0)
+	button.badgeBack:Hide(); button.badge:Hide()
+	if button.badgeEdge and button.badgeEdge.Hide then button.badgeEdge:Hide() end
 	button:SetScript("OnClick", function(_, mouse) ns:CaptureNetClick(mouse) end)
 	button:SetScript("OnEnter", function(b) b.hover = true; ns:CaptureStyleNet(); ShowNetTooltip(b) end)
 	button:SetScript("OnLeave", function(b)
@@ -1010,9 +1055,30 @@ end
 -- Le clic sur le filet (et sur le bandeau) : clic droit, la liste ; clic, le
 -- meilleur candidat (en combat, refusé : 2.10.0). CaptureBatch.lua y ajoute
 -- le choix à deux candidats.
+-- 2.15.0 : le clic ouvre la carte de préparation (CaptureStage.lua) ;
+-- Maj+clic, ou le réglage « Lancer directement au clic » : le filet part tout
+-- de suite (avec l'aide déjà choisie). Carte déjà ouverte : un clic la ferme.
+function ns:CaptureDirectOn()
+	if self:DB().companionCaptureDirect == true then return true end
+	-- le tutoriel de la ménagerie attend le lancer du filet : il part tout de suite
+	if self.CompanionSequenceWaits then
+		local ok, waits = pcall(self.CompanionSequenceWaits, self, "net")
+		if ok and waits then return true end
+	end
+	return Call(G("IsShiftKeyDown")) and true or false
+end
+
 function ns:CaptureNetClick(mouse)
-	if mouse == "RightButton" then return self:CaptureToggleQueueList() end
+	if mouse == "RightButton" then
+		if self.CapturePrepClose then self:CapturePrepClose() end
+		return self:CaptureToggleQueueList()
+	end
+	if self.CapturePrepShown and self:CapturePrepShown() then self:CapturePrepClose(); return nil end
 	if InCombat() then return self:CaptureRefuseCombat() end
+	if self:CaptureDirectOn() or not self.CapturePrepOpen then return self:CaptureThrow() end
+	local frame = self:CapturePrepOpen()
+	if frame then return frame end
+	-- pas de carte possible (thème absent) : comme avant
 	return self:CaptureThrow()
 end
 
@@ -1056,6 +1122,7 @@ function ns:CaptureQueueRefresh()
 			if count > 0 and self:DB().companionNetShow ~= false then
 				button.count:SetText(tostring(count))
 				button.shiny = self:CaptureQueueHasShiny()
+				self:CaptureNetBadge(button, queue[1])
 				-- un candidat de plus : le filet bat quelques secondes
 				if count > (button.lastCount or 0) then button.pulseUntil = Clock() + ns.CAPTURE_NET_PULSE end
 				button.lastCount = count
@@ -1073,7 +1140,32 @@ function ns:CaptureQueueRefresh()
 	-- filet vide (temps écoulé, Ignorer, Tout ignorer) alors que le tutoriel de
 	-- la ménagerie attendait le clic : « Trop tard… », il reviendra (Companion.lua)
 	if count == 0 and self.CompanionSequenceAbort then pcall(self.CompanionSequenceAbort, self, "net") end
+	-- 2.15.0 : la carte de préparation suit la file (CaptureStage.lua)
+	if self.CapturePrepCheck then self:CapturePrepCheck() end
 	return count
+end
+
+-- 2.15.0 : la pastille de qualité du filet (étoiles du meilleur candidat) ;
+-- le texte n'est refait que si les étoiles changent
+function ns:CaptureNetBadge(button, best)
+	button = button or self.captureNetButton
+	if not (button and button.badge) then return nil end
+	local stars = best and tonumber(best.stars)
+	if not stars then
+		button.badgeStars = nil
+		button.badge:Hide(); button.badgeBack:Hide()
+		if button.badgeEdge and button.badgeEdge.Hide then button.badgeEdge:Hide() end
+		return nil
+	end
+	if button.badgeStars ~= stars then
+		button.badgeStars = stars
+		button.badge:SetText(self:CaptureStarsText(stars, ns.CAPTURE_NET_BADGE.star))
+	end
+	local edge = (best.shiny or stars >= 3) and Theme.GOLD_LIGHT or Theme.GOLD
+	if button.badgeEdge and button.badgeEdge.SetColor then button.badgeEdge:SetColor(edge[1], edge[2], edge[3], 1) end
+	button.badge:Show(); button.badgeBack:Show()
+	if button.badgeEdge and button.badgeEdge.Show then button.badgeEdge:Show() end
+	return stars
 end
 
 -- ---------------------------------------------------------------------------
@@ -1321,17 +1413,21 @@ end
 -- ---------------------------------------------------------------------------
 -- La liste (clic droit sur le filet)
 -- ---------------------------------------------------------------------------
--- « Kodo · Pas encore capturée · 30 % · 24 s »
-function ns:CaptureQueueLine(candidate, now)
+-- 2.15.0 : « nouvelle », « brillante », « meilleure que la tienne ★☆☆ »,
+-- « épinglée », « chasse »
+function ns:CaptureQueueTag(candidate)
 	local reason = candidate.reason or "new"
+	if reason == "stars" then return self:F("CAPTURE_Q_TAG_stars", self:CaptureStarsText(candidate.have, 10)) end
+	return L["CAPTURE_Q_TAG_" .. reason] or tostring(reason)
+end
+
+-- « ★★★ · nouvelle · Normal · 30 % · 24 s »
+function ns:CaptureQueueLine(candidate, now)
 	local parts = {}
-	if reason == "stars" then
-		parts[1] = self:F("CAPTURE_Q_REASON_stars", self:CaptureStarsText(candidate.have, 10))
-	else
-		parts[1] = L["CAPTURE_Q_REASON_" .. reason]
-	end
-	-- 2.15.0 : la qualité du spécimen (tirée au coup fatal)
-	if candidate.stars then parts[#parts + 1] = self:CaptureStarsText(candidate.stars, 10) end
+	-- 2.15.0 : la qualité du spécimen (tirée au coup fatal), puis pourquoi
+	-- le filet le propose, en court (« nouvelle », « meilleure que la tienne ★ »…)
+	if candidate.stars then parts[1] = self:CaptureStarsText(candidate.stars, 10) end
+	parts[#parts + 1] = self:CaptureQueueTag(candidate)
 	local state = self:CaptureState()
 	local chance, sure = self:CaptureChance(candidate, state.aid)
 	parts[#parts + 1] = sure and self:F("CAPTURE_SURE", L["CAPTURE_RANK_" .. tostring(candidate.class)])

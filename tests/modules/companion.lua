@@ -488,13 +488,16 @@ do
 	if NS.journalFrame then NS.journalFrame:Hide() end
 	NS:DB().journalTab = "evolution"
 	NS.JournalCounts = C.savedJournal
+	-- 2.15.0 : clic droit = un petit menu (carnet, mode chasse) ; « Carnet de voyage » ouvre le carnet
 	NS.companionFrame.scripts.OnMouseDown(NS.companionFrame)
 	NS.companionFrame.scripts.OnMouseUp(NS.companionFrame, "RightButton")
-	Check("[COMP] clic droit : carnet ouvert sur son dernier onglet, sans caresse", NS.journalFrame and NS.journalFrame:IsShown()
-		and NS.journalFrame.kind == "evolution" and C.Needs().mood == 66)
-	NS.companionFrame.scripts.OnMouseDown(NS.companionFrame)
-	NS.companionFrame.scripts.OnMouseUp(NS.companionFrame, "RightButton")
-	Check("[COMP] second clic droit : carnet refermé", not NS.journalFrame:IsShown())
+	Check("[COMP] clic droit : le menu, sans caresse", NS.companionMenu and NS.companionMenu:IsShown() and C.Needs().mood == 66)
+	NS.companionMenu.journal:Click()
+	Check("[COMP] menu « Carnet de voyage » : carnet ouvert sur son dernier onglet", NS.journalFrame and NS.journalFrame:IsShown()
+		and NS.journalFrame.kind == "evolution" and not NS.companionMenu:IsShown())
+	NS:CompanionMenuShow()
+	NS.companionMenu.journal:Click()
+	Check("[COMP] de nouveau : carnet refermé", not NS.journalFrame:IsShown())
 	NS.companionFrame.scripts.OnMouseUp(NS.companionFrame, "MiddleButton")
 	Check("[COMP] autre bouton : rien", not NS.journalFrame:IsShown() and C.Needs().mood == 66)
 	NS.JournalCounts = nil

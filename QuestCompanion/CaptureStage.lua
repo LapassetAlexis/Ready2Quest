@@ -348,7 +348,7 @@ end
 -- 2.14.0 (bêta 3) : l'encre d'un rôle mesuré (ns.AZEROTH_CONTRAST,
 -- AzerothStyle.lua) sur un texte posé sur le parchemin, sans ombre
 local function RoleInk(fs, role)
-	local entry = ns.AZEROTH_CONTRAST and ns.AZEROTH_CONTRAST[role]
+	local entry = (ns.AZEROTH_CONTRAST and ns.AZEROTH_CONTRAST[role]) or (ns.CAPTURE_PREP_CONTRAST and ns.CAPTURE_PREP_CONTRAST[role])
 	local ink = entry and ns.AZEROTH_INK and ns.AZEROTH_INK[entry[1]]
 	if not ink then return false end
 	fs:SetTextColor(ink[1], ink[2], ink[3], 1)
@@ -441,6 +441,9 @@ function ns:EnsureCaptureStage()
 		local rolling = ns.captureState and ns.captureState.rolling
 		f.rolling = nil
 		if rolling and rolling.result then rolling.closeAt = Clock() end
+		-- 2.15.0 : la carte de préparation refermée (Échap, combat) : le
+		-- candidat reste au filet, son compte à rebours reprend
+		if f.prep or f.prepOn then ns.CapturePrepClear(f) end
 	end)
 	-- 2.10.0 : le combat commence, la scène se ferme (OnHide ci-dessus) ; le
 	-- lancer a déjà tiré son issue et se résout en arrière-plan, son verdict
@@ -753,16 +756,12 @@ function ns:CaptureStageDetails(frame, rolling)
 	return text
 end
 
-function ns:CaptureShowStage(rolling)
-	local frame = self:EnsureCaptureStage()
-	if not (frame and rolling) then return nil end
-	local target = rolling.target
+-- L'en-tête de la carte (lancer comme préparation) : rareté, modèle ou
+-- portrait, « CAPTURE · <RANG> » (2.15.0 : « · NIV. n » en préparation), le nom
+local function StageHeader(self, frame, target, withLevel)
 	local rarity = self:CaptureRarity(target)
-	frame.rolling = rolling
 	frame.rarity = rarity
 	frame.shiny = target.shiny and true or false
-	-- la scène Azeroth montre le verdict : pas de bandeau « Capturé ! » en double (AzerothStyle.lua)
-	rolling.sceneVerdict = frame.azeroth or nil
 	local c = rarity.color
 	if frame.topBar then frame.topBar:SetVertexColor(c[1], c[2], c[3], 1) end
 	local shown = self:CaptureModelSetup(frame.model, target)
@@ -777,6 +776,7 @@ function ns:CaptureShowStage(rolling)
 	-- 2.14.0 (bêta 3) : « CAPTURE · <RANG> » (le rang remplace les losanges)
 	local rank = L["CAPTURE_RANK_" .. tostring(target.class or "normal")] or L.CAPTURE_RANK_normal
 	local title = L.CAPTURE_STAGE_TITLE .. " · " .. tostring(rank or "")
+	if withLevel and tonumber(target.level) then title = title .. " · " .. self:F("CAPTURE_PREP_LEVEL", tonumber(target.level)) end
 	frame.title:SetText(ns.AzerothUpper and ns.AzerothUpper(title) or (Theme.Upper and Theme.Upper(title)) or title)
 	if frame.plate then
 		-- sur la plaque : blanc, or pour une brillante, la police rapetisse
@@ -789,11 +789,26 @@ function ns:CaptureShowStage(rolling)
 		local ink = rarity.text or c
 		frame.name:SetTextColor(ink[1], ink[2], ink[3])
 	end
+	return rarity
+end
+
+function ns:CaptureShowStage(rolling)
+	local frame = self:EnsureCaptureStage()
+	if not (frame and rolling) then return nil end
+	-- 2.15.0 : la carte quitte sa préparation (même carte, le lancer y prend place)
+	if frame.prep or frame.prepOn then ns.CapturePrepClear(frame) end
+	local target = rolling.target
+	frame.rolling = rolling
+	-- la scène Azeroth montre le verdict : pas de bandeau « Capturé ! » en double (AzerothStyle.lua)
+	rolling.sceneVerdict = frame.azeroth or nil
+	StageHeader(self, frame, target)
 	self:CaptureStageDetails(frame, rolling)
 	frame.footer:SetText(L.CAPTURE_SHAKING)
 	frame.played = nil
+	-- (venue de la préparation : déjà à l'écran, pas de nouveau fondu)
+	local fresh = not frame:IsShown()
 	frame:Show()
-	if Theme.FadeIn then pcall(Theme.FadeIn, frame) end
+	if fresh and Theme.FadeIn then pcall(Theme.FadeIn, frame) end
 	self:CaptureStageUpdate(Clock())
 	return frame
 end
@@ -1179,6 +1194,512 @@ function ns:CaptureStageUpdate(now)
 	end
 	StageFail(frame, r, c, rolling)
 	return "fail"
+end
+
+-- ---------------------------------------------------------------------------
+-- 2.15.0 : la carte de PRÉPARATION (maquette capture215, écran 2). Le clic
+-- sur le filet (ou le bandeau) n'envoie plus le filet : la carte compacte
+-- s'ouvre sur le candidat, en préparation :
+--   * en haut : « CAPTURE · <RANG> · NIV. n » et le nom (plaque ou titre) ;
+--   * la créature et son ombre, puis sa qualité (tirée au coup fatal) :
+--     « ★★★ Spécimen exceptionnel » (« · brillant » pour une brillante) ;
+--   * « Chance 30 % » et, une aide choisie, l'écart en vert : « → 45 % avec
+--     l'Appât » (malchance comprise, comme au lancer) ;
+--   * les trois aides, cliquables (choisie : en couleurs, liseré d'or ; à 0 :
+--     grisée, inactive ; infobulle : effet et nombre) ; sur un 3 étoiles ou
+--     une brillante, la meilleure aide en poche est mise en avant
+--     (« Conseillé : Sifflet (capture assurée) ») ;
+--   * Lancer (la scène d'avant, avec l'aide choisie) et Passer (le candidat
+--     sort du filet, la carte passe au suivant ou se ferme ; clic droit :
+--     « Ne plus proposer cette espèce », CaptureSkip.lua) ;
+--   * Échap ferme sans rien retirer : le compte à rebours, en pause tant que
+--     la carte est ouverte (prise « prep »), reprend.
+-- Réserve pleine (ns:CaptureBlockedReason) : le message sur la carte, Lancer
+-- grisé, Passer reste. L'aide choisie est celle de la file (state.aid) :
+-- Maj+clic et le raccourci lancent tout de suite avec elle.
+-- Réglage « Lancer directement au clic » (CaptureQueue.lua) : comme avant.
+-- La carte grandit de CAPTURE_PREP.extra pendant la préparation (le
+-- parchemin est recadré à sa nouvelle hauteur) ; encres mesurées sur le
+-- parchemin à 340×456 (scratchpad meas/card215.py), rôles stage.prep*.
+-- ---------------------------------------------------------------------------
+ns.CAPTURE_PREP = { qualityY = -3, legendY = -80, buttonsY = -98, buttonH = 28, buttonW = 128, gap = 14,
+	extra = { azeroth = 38, sobre = 40 }, starSize = 13 }
+local PREP = ns.CAPTURE_PREP
+-- l'aide conseillée sur un 3 étoiles ou une brillante : la plus forte en poche
+ns.CAPTURE_PREP_ADVICE_ORDER = { "sifflet", "lasso", "appat" }
+-- rôle -> { encre, luminance du pire fond mesurée, seuil, taille (px) } ;
+-- versés dans ns.AZEROTH_CONTRAST (défini plus tard, AzerothStyle.lua) par
+-- ns.CapturePrepContrastMerge. Carte 340×456 (parchemin 130661 en Cover,
+-- voile page 0,35) : qualité x 60-280 y 296-312, chance x 40-300 y 320-334,
+-- légende x 20-320 y 372-386, pied x 16-324 y 430-444.
+ns.CAPTURE_PREP_CONTRAST = {
+	["stage.prepQuality"] = { "title", 0.3918, 4.5, 12 },        -- 3 étoiles, fond 0.392 (moy. 0.416) : 5.19:1
+	["stage.prepQualityShiny"] = { "rShiny", 0.3918, 4.5, 12 },  -- brillante, même fond : 5.70:1
+	["stage.prepQualityPlain"] = { "inkSoft", 0.3918, 4.5, 12 }, -- 1 ou 2 étoiles, même fond : 6.47:1
+	["stage.prepChance"] = { "ink", 0.3700, 4.5, 12 },           -- fond 0.370 (moy. 0.407) : 7.53:1
+	["stage.prepDelta"] = { "green", 0.3700, 4.5, 12 },          -- « → 45 % avec l'Appât », même fond : 5.36:1
+	["stage.prepLegend"] = { "inkMuted", 0.3270, 4.5, 11 },      -- fond 0.327 (moy. 0.368) : 5.07:1
+	["stage.prepBlocked"] = { "red", 0.3270, 4.5, 11 },          -- Réserve pleine, même fond : 4.85:1
+	["stage.prepHint"] = { "ink", 0.2283, 4.5, 11 },             -- pied, fond 0.228 (moy. 0.251) : 4.99:1
+}
+function ns.CapturePrepContrastMerge()
+	local table_ = ns.AZEROTH_CONTRAST
+	if type(table_) ~= "table" then return false end
+	for role, entry in pairs(ns.CAPTURE_PREP_CONTRAST) do
+		if table_[role] == nil then table_[role] = entry end
+	end
+	return true
+end
+-- Sobre : sur le fond du socle (Theme.WINDOW), contrastes mesurés dans le test
+ns.CAPTURE_PREP_SOBRE = { quality = Theme.GOLD, qualityShiny = Theme.GOLD_LIGHT, qualityPlain = Theme.LABEL,
+	chance = Theme.LABEL, delta = Theme.GREEN, legend = Theme.MUTED_LIGHT, blocked = Theme.RED, hint = Theme.MUTED_LIGHT }
+
+local PREP_FR = {
+	CAPTURE_PREP_Q1        = "Spécimen commun",
+	CAPTURE_PREP_Q2        = "Beau spécimen",
+	CAPTURE_PREP_Q3        = "Spécimen exceptionnel",
+	CAPTURE_PREP_SHINY     = "%s · brillant",
+	CAPTURE_PREP_LEVEL     = "Niv. %d",
+	CAPTURE_PREP_DELTA     = "→ %d %% %s",
+	CAPTURE_PREP_DELTA_SURE = "→ capture assurée %s",
+	CAPTURE_PREP_WITH_appat   = "avec l'Appât",
+	CAPTURE_PREP_WITH_lasso   = "avec le Lasso",
+	CAPTURE_PREP_WITH_sifflet = "avec le Sifflet",
+	CAPTURE_PREP_SHORT_appat   = "Appât ×1,5",
+	CAPTURE_PREP_SHORT_lasso   = "Lasso ×2,5",
+	CAPTURE_PREP_SHORT_sifflet = "Sifflet : capture assurée",
+	CAPTURE_PREP_ADVICE    = "Conseillé : %s",
+	CAPTURE_PREP_ADVICE_appat   = "Appât (×1,5)",
+	CAPTURE_PREP_ADVICE_lasso   = "Lasso (×2,5)",
+	CAPTURE_PREP_ADVICE_sifflet = "Sifflet (capture assurée)",
+	CAPTURE_PREP_LAUNCH    = "Lancer",
+	CAPTURE_PREP_PASS      = "Passer",
+	CAPTURE_PREP_LAUNCH_TIP = "Lance le filet, avec l'aide choisie s'il y en a une.",
+	CAPTURE_PREP_PASS_TIP  = "Retire ce monstre du filet et passe au suivant.",
+	CAPTURE_PREP_PASS_RIGHT = "Clic droit : ne plus proposer cette espèce",
+	CAPTURE_PREP_AID_TOGGLE = "Clic : choisir pour ce lancer (re-clic : aucune aide)",
+	CAPTURE_PREP_HINT      = "Échap : plus tard (il reste %d s)",
+	CAPTURE_PREP_HINT_LATER = "Échap : plus tard",
+	CAPTURE_PREP_BLOCKED   = "Réserve pleine (%d/%d) : relâche un spécimen pour capturer.",
+}
+local PREP_EN = {
+	CAPTURE_PREP_Q1        = "Common specimen",
+	CAPTURE_PREP_Q2        = "Fine specimen",
+	CAPTURE_PREP_Q3        = "Exceptional specimen",
+	CAPTURE_PREP_SHINY     = "%s · shiny",
+	CAPTURE_PREP_LEVEL     = "Lvl %d",
+	CAPTURE_PREP_DELTA     = "→ %d%% %s",
+	CAPTURE_PREP_DELTA_SURE = "→ guaranteed %s",
+	CAPTURE_PREP_WITH_appat   = "with the Bait",
+	CAPTURE_PREP_WITH_lasso   = "with the Lasso",
+	CAPTURE_PREP_WITH_sifflet = "with the Whistle",
+	CAPTURE_PREP_SHORT_appat   = "Bait ×1.5",
+	CAPTURE_PREP_SHORT_lasso   = "Lasso ×2.5",
+	CAPTURE_PREP_SHORT_sifflet = "Whistle: guaranteed",
+	CAPTURE_PREP_ADVICE    = "Advised: %s",
+	CAPTURE_PREP_ADVICE_appat   = "Bait (×1.5)",
+	CAPTURE_PREP_ADVICE_lasso   = "Lasso (×2.5)",
+	CAPTURE_PREP_ADVICE_sifflet = "Whistle (guaranteed capture)",
+	CAPTURE_PREP_LAUNCH    = "Throw",
+	CAPTURE_PREP_PASS      = "Skip",
+	CAPTURE_PREP_LAUNCH_TIP = "Throws the net, with the chosen aid if there is one.",
+	CAPTURE_PREP_PASS_TIP  = "Removes this monster from the net and moves to the next one.",
+	CAPTURE_PREP_PASS_RIGHT = "Right-click: stop offering this species",
+	CAPTURE_PREP_AID_TOGGLE = "Click: use it for this throw (click again: no aid)",
+	CAPTURE_PREP_HINT      = "Escape: later (%ds left)",
+	CAPTURE_PREP_HINT_LATER = "Escape: later",
+	CAPTURE_PREP_BLOCKED   = "Reserve full (%d/%d): release a specimen to capture.",
+}
+ns.RegisterStrings(PREP_FR, PREP_EN)
+if ns.KEEP_STRINGS then ns.CAPTURE_PREP_STRINGS = { fr = PREP_FR, en = PREP_EN } end
+
+-- la prise « prep » de la pause du compte à rebours (CaptureQueue.lua) :
+-- tenue tant que la carte est ouverte en préparation
+ns.CAPTURE_HOLD_CHECKS = ns.CAPTURE_HOLD_CHECKS or {}
+ns.CAPTURE_HOLD_CHECKS.prep = function(self)
+	local frame = self.captureStage
+	return frame ~= nil and frame.prep ~= nil and frame:IsShown() and true or false
+end
+
+local function InCombat()
+	local lockdown, affecting = G("InCombatLockdown"), G("UnitAffectingCombat")
+	if type(lockdown) == "function" then
+		local ok, value = pcall(lockdown)
+		if ok and value then return true end
+	end
+	if type(affecting) == "function" then
+		local ok, value = pcall(affecting, "player")
+		if ok and value then return true end
+	end
+	return false
+end
+-- actif ou non (le client a Enable/Disable ; .off le dit partout)
+local function SetOn(button, on)
+	button.off = not on or nil
+	if on then
+		if button.Enable then button:Enable() end
+	elseif button.Disable then
+		button:Disable()
+	end
+end
+local function Pct(chance) return math.floor((chance or 0) * 100 + 0.5 + 1e-9) end
+local function Tooltip() local t = G("GameTooltip"); if type(t) == "table" and t.SetOwner then return t end end
+local function HideTip() local t = Tooltip(); if t and t.Hide then t:Hide() end end
+local function Ink(fs, az, role, sobre)
+	if az and RoleInk(fs, role) then return end
+	fs:SetTextColor(sobre[1], sobre[2], sobre[3], 1)
+end
+
+-- « ★★★ Spécimen exceptionnel » (« · brillant »)
+function ns:CaptureQualityText(stars, shiny, size)
+	stars = math.max(1, math.min(3, math.floor(tonumber(stars) or 1)))
+	local text = (self.CaptureStarsText and self:CaptureStarsText(stars, size or PREP.starSize) or "") .. " " .. L["CAPTURE_PREP_Q" .. stars]
+	if shiny then text = self:F("CAPTURE_PREP_SHINY", text) end
+	return text
+end
+
+-- La chance du lancer, comme ns:CaptureRoll la calculera (malchance comprise)
+function ns:CapturePrepChance(candidate, aid)
+	local chance, sure = self:CaptureChance(candidate, aid)
+	if sure then return 1, true end
+	local pity = ns.CAPTURE_PITY
+	local streak = pity and math.min(pity.max, tonumber(self:CaptureData().missStreak) or 0) or 0
+	if streak > 0 then chance = math.min(ns.CAPTURE_MAX or 1, chance + pity.step * streak) end
+	return chance, chance >= 1
+end
+
+-- L'aide conseillée (un 3 étoiles ou une brillante) : la plus forte en poche, ou nil
+function ns:CapturePrepAdvice(candidate)
+	if type(candidate) ~= "table" or not (candidate.shiny or tonumber(candidate.stars) == 3) then return nil end
+	for _, id in ipairs(ns.CAPTURE_PREP_ADVICE_ORDER) do
+		if self:CaptureAidCount(id) > 0 then return id end
+	end
+	return nil
+end
+
+-- La carte est-elle ouverte en préparation ? Rend son candidat.
+function ns:CapturePrepShown()
+	local frame = self.captureStage
+	if frame and frame.prep and frame:IsShown() then return frame.prep end
+	return nil
+end
+
+local function AidTip(button)
+	local tooltip = Tooltip()
+	if not tooltip then return end
+	local id = button.aid
+	local count = ns:CaptureAidCount(id)
+	tooltip:SetOwner(button, "ANCHOR_TOP")
+	Theme.TooltipLine(tooltip, ns:CaptureAidLabel(id), Theme.PARCHMENT)
+	Theme.TooltipLine(tooltip, L["CAPTURE_AID_DESC_" .. id], Theme.TEXT)
+	Theme.TooltipLine(tooltip, count > 0 and ns:F("CAPTURE_AID_HINT", count) or L.CAPTURE_AID_NONE, Theme.MUTED_LIGHT)
+	if count > 0 then Theme.TooltipLine(tooltip, L.CAPTURE_PREP_AID_TOGGLE, Theme.MUTED_LIGHT) end
+	tooltip:Show()
+end
+
+local function ButtonTip(button)
+	local tooltip = Tooltip()
+	if not (tooltip and button.tip) then return end
+	tooltip:SetOwner(button, "ANCHOR_TOP")
+	Theme.TooltipLine(tooltip, button.tip, Theme.PARCHMENT)
+	if button.tip2 then Theme.TooltipLine(tooltip, button.tip2, Theme.MUTED_LIGHT) end
+	tooltip:Show()
+end
+
+-- Ce qui n'existe qu'en préparation : la qualité, les aides cliquables (et
+-- la lueur de l'aide conseillée), la légende, Lancer et Passer. Créé une
+-- fois par carte, à la première préparation.
+local function BuildPrep(self, frame)
+	if frame.prepBuilt then return frame end
+	frame.prepBuilt = true
+	local az = frame.azeroth and true or false
+	local details = frame.details
+	frame.quality = Theme.Text(details, Theme.F_BODY or Theme.F_SMALL, Theme.LABEL)
+	frame.quality:SetPoint("TOP", details, "TOP", 0, PREP.qualityY)
+	frame.quality:SetJustifyH("CENTER")
+	if frame.quality.SetWordWrap then frame.quality:SetWordWrap(false) end
+	if az and ns.AzerothFont then ns.AzerothFont(frame.quality, 12) end
+	frame.quality:Hide()
+	frame.legend = Theme.Text(details, Theme.F_SMALL, Theme.MUTED_LIGHT)
+	frame.legend:SetPoint("TOP", details, "TOP", 0, PREP.legendY)
+	frame.legend:SetWidth((az and AZS.w or SBS.w) - 32)
+	frame.legend:SetJustifyH("CENTER")
+	if frame.legend.SetWordWrap then frame.legend:SetWordWrap(false) end
+	frame.legend:Hide()
+	local lay = az and AZS or SBS
+	for _, cell in ipairs(frame.aidCells or {}) do
+		cell.glow = Theme.Solid(details, "BACKGROUND", Theme.GOLD_LIGHT, 0.55)
+		cell.glow:SetSize(lay.aid + 8, lay.aid + 8)
+		cell.glow:SetPoint("CENTER", cell.edge, "CENTER", 0, 0)
+		cell.glow:Hide()
+		local button = CreateFrame("Button", nil, details)
+		button:SetSize(lay.aid + 4, lay.aid + 4)
+		button:SetPoint("CENTER", cell.edge, "CENTER", 0, 0)
+		button:SetFrameLevel((details:GetFrameLevel() or 1) + 2)
+		button.aid = cell.id
+		button:SetScript("OnClick", function(b) ns:CapturePrepToggleAid(b.aid) end)
+		button:SetScript("OnEnter", AidTip)
+		button:SetScript("OnLeave", HideTip)
+		button:Hide()
+		cell.button = button
+	end
+	local w, h = PREP.buttonW, PREP.buttonH
+	local function Launch() ns:CapturePrepLaunch() end
+	local function Pass(_, mouse) ns:CapturePrepPass(mouse == "RightButton") end
+	if az and self.AzerothButton then
+		frame.launch = self:AzerothButton(frame, w, h, L.CAPTURE_PREP_LAUNCH, Launch, "gold")
+		frame.pass = self:AzerothButton(frame, w, h, L.CAPTURE_PREP_PASS, Pass, "dark")
+	else
+		frame.launch = Theme.CreateButton(frame, w, h, L.CAPTURE_PREP_LAUNCH, Launch, "primary")
+		frame.pass = Theme.CreateButton(frame, w, h, L.CAPTURE_PREP_PASS, Pass, "normal")
+	end
+	frame.launch:SetPoint("TOPRIGHT", details, "TOP", -PREP.gap / 2, PREP.buttonsY)
+	frame.pass:SetPoint("TOPLEFT", details, "TOP", PREP.gap / 2, PREP.buttonsY)
+	if frame.pass.RegisterForClicks then frame.pass:RegisterForClicks("LeftButtonUp", "RightButtonUp") end
+	frame.launch.tip, frame.pass.tip, frame.pass.tip2 = L.CAPTURE_PREP_LAUNCH_TIP, L.CAPTURE_PREP_PASS_TIP, L.CAPTURE_PREP_PASS_RIGHT
+	for _, button in ipairs({ frame.launch, frame.pass }) do
+		button:SetFrameLevel((frame:GetFrameLevel() or 1) + 14)
+		button:HookScript("OnEnter", ButtonTip)
+		button:HookScript("OnLeave", HideTip)
+		button:Hide()
+	end
+	return frame
+end
+
+-- Hauteur de la carte (et parchemin recadré à sa mesure, en Azeroth)
+local function CardHeight(frame, height)
+	frame:SetHeight(height)
+	if frame.cardParch and ns.AzerothCover and ns.AZEROTH_CARD then
+		pcall(ns.AzerothCover, frame.cardParch, ns.AZEROTH_CARD.parch, frame.azeroth and AZS.w or STAGE_W, height)
+	end
+end
+
+-- La carte quitte la préparation (lancer, Échap, Passer sans suivant) :
+-- ses éléments cachés, sa taille rendue, la prise « prep » lâchée
+function ns.CapturePrepClear(frame)
+	if not frame then return end
+	local was = frame.prep ~= nil
+	frame.prep, frame.prepOn = nil, nil
+	if frame.prepBuilt then
+		frame.quality:Hide()
+		frame.legend:Hide()
+		frame.launch:Hide()
+		frame.pass:Hide()
+		for _, cell in ipairs(frame.aidCells or {}) do
+			cell.glow:Hide()
+			cell.button:Hide()
+		end
+	end
+	local az = frame.azeroth and true or false
+	CardHeight(frame, az and AZS.h or STAGE_H)
+	if az then RoleInk(frame.footer, "stage.status") end
+	if az then RoleInk(frame.info, "stage.chance") end
+	if was and ns.CaptureQueueRelease then ns:CaptureQueueRelease("prep") end
+end
+
+-- Textes, aides et boutons à jour (choix d'une aide, file qui bouge)
+function ns:CapturePrepRefresh()
+	local frame = self.captureStage
+	local candidate = frame and frame.prep
+	if not (candidate and frame:IsShown()) then return nil end
+	local az = frame.azeroth and true or false
+	local sobre = ns.CAPTURE_PREP_SOBRE
+	local state = self:CaptureState()
+	if state.aid and self:CaptureAidCount(state.aid) <= 0 then state.aid = nil end
+	local aid = state.aid
+	local stars = math.max(1, math.min(3, math.floor(tonumber(candidate.stars) or 1)))
+	frame.quality:SetText(self:CaptureQualityText(stars, candidate.shiny))
+	if candidate.shiny then Ink(frame.quality, az, "stage.prepQualityShiny", sobre.qualityShiny)
+	elseif stars == 3 then Ink(frame.quality, az, "stage.prepQuality", sobre.quality)
+	else Ink(frame.quality, az, "stage.prepQualityPlain", sobre.qualityPlain) end
+	frame.quality:Show()
+	-- la chance, et l'écart avec l'aide choisie
+	local chance, sure = self:CapturePrepChance(candidate, nil)
+	local text = sure and L.CAPTURE_STAGE_SURE or self:F("CAPTURE_STAGE_CHANCE", Pct(chance))
+	if aid then
+		local withAid, aidSure = self:CapturePrepChance(candidate, aid)
+		local with = L["CAPTURE_PREP_WITH_" .. aid]
+		local delta = aidSure and self:F("CAPTURE_PREP_DELTA_SURE", with) or self:F("CAPTURE_PREP_DELTA", Pct(withAid), with)
+		local deltaInk = az and ns.AZEROTH_INK and ns.AZEROTH_INK[ns.CAPTURE_PREP_CONTRAST["stage.prepDelta"][1]] or sobre.delta
+		text = text .. "  " .. Theme.Hex(deltaInk) .. delta .. "|r"
+	end
+	frame.info:SetText(text)
+	Ink(frame.info, az, "stage.prepChance", sobre.chance)
+	-- les aides : choisie en couleurs (liseré d'or), conseillée en lueur, à 0 grisée
+	local advice = self:CapturePrepAdvice(candidate)
+	for _, cell in ipairs(frame.aidCells or {}) do
+		local count = self:CaptureAidCount(cell.id)
+		local chosen = cell.id == aid
+		cell.count:SetText(count > 0 and tostring(count) or "")
+		if cell.icon.SetDesaturated then cell.icon:SetDesaturated(not chosen) end
+		cell.icon:SetAlpha(chosen and 1 or (count > 0 and 0.7 or 0.3))
+		local edge = chosen and Theme.GOLD or (advice == cell.id and Theme.GOLD_LIGHT or Theme.EDGE)
+		cell.edge:SetVertexColor(edge[1], edge[2], edge[3], 1)
+		cell.chosen, cell.advised = chosen, advice == cell.id
+		if advice == cell.id and not chosen then cell.glow:Show() else cell.glow:Hide() end
+		SetOn(cell.button, count > 0 or chosen)
+		cell.button:Show()
+	end
+	-- la légende : Réserve pleine, l'aide conseillée, ou ce que fait chaque aide
+	local blocked = self.CaptureBlockedReason and self:CaptureBlockedReason(candidate)
+	if blocked == "reserveFull" then
+		frame.legend:SetText(self:F("CAPTURE_PREP_BLOCKED", self:SpecimenReserveCount(), self:ReserveCapacity()))
+		Ink(frame.legend, az, "stage.prepBlocked", sobre.blocked)
+	elseif advice then
+		frame.legend:SetText(self:F("CAPTURE_PREP_ADVICE", L["CAPTURE_PREP_ADVICE_" .. advice]))
+		Ink(frame.legend, az, "stage.prepQuality", sobre.quality)
+	else
+		frame.legend:SetText(L.CAPTURE_PREP_SHORT_appat .. " · " .. L.CAPTURE_PREP_SHORT_lasso .. " · " .. L.CAPTURE_PREP_SHORT_sifflet)
+		Ink(frame.legend, az, "stage.prepLegend", sobre.legend)
+	end
+	frame.legend:Show()
+	frame.prepBlocked = blocked
+	SetOn(frame.launch, not blocked)
+	frame.launch:SetAlpha(blocked and 0.5 or 1)
+	frame.launch:Show()
+	frame.pass:Show()
+	-- le pied : Échap, et le temps qui lui restera (en pause tant qu'on prépare)
+	local left = candidate.expires and self.CaptureQueueClock
+		and math.max(0, math.ceil(candidate.expires - self:CaptureQueueClock()))
+	frame.footer:SetText(left and self:F("CAPTURE_PREP_HINT", left) or L.CAPTURE_PREP_HINT_LATER)
+	Ink(frame.footer, az, "stage.prepHint", sobre.hint)
+	return text
+end
+
+-- Ouvre la carte en préparation sur `candidate` (table de la file ou guid ;
+-- nil : le meilleur). Rend la carte, ou nil (rien à préparer, combat, filet
+-- déjà en l'air).
+function ns:CapturePrepOpen(candidate)
+	if InCombat() then
+		if self.CaptureRefuseCombat then self:CaptureRefuseCombat() end
+		return nil
+	end
+	local state = self:CaptureState()
+	-- le verdict du lancer précédent est encore à l'écran : on le referme
+	if state.rolling and state.rolling.result then
+		state.rolling.closeAt = Clock()
+		self:CaptureTick(Clock())
+	end
+	if state.rolling then return nil end
+	local queue = self:CaptureQueuePrune()
+	local picked
+	if candidate ~= nil then
+		for _, c in ipairs(queue) do
+			if c == candidate or c.guid == candidate then picked = c end
+		end
+	end
+	picked = picked or queue[1]
+	if not picked then return nil end
+	if ns.CapturePrepContrastMerge then ns.CapturePrepContrastMerge() end
+	local frame = self:EnsureCaptureStage()
+	if not frame then return nil end
+	self:CaptureHideQueueList()
+	if self.CaptureChooserHide then self:CaptureChooserHide() end
+	if self.CaptureToastHide then self:CaptureToastHide() end
+	BuildPrep(self, frame)
+	local fresh = not frame:IsShown()
+	frame.rolling = nil
+	frame.prep, frame.prepOn = picked, true
+	local az = frame.azeroth and true or false
+	CardHeight(frame, (az and AZS.h or STAGE_H) + (az and PREP.extra.azeroth or PREP.extra.sobre))
+	StageHeader(self, frame, picked, true)
+	frame.details:Show()
+	frame:Show()
+	if fresh and Theme.FadeIn then pcall(Theme.FadeIn, frame) end
+	-- dès l'ouverture, le temps de la file s'arrête (Échap : il reprend)
+	if self.CaptureQueueHold then self:CaptureQueueHold("prep") end
+	self:CapturePrepRefresh()
+	return frame
+end
+
+-- Une aide choisie (ou reposée) depuis la carte : la chance suit
+function ns:CapturePrepToggleAid(id)
+	if not self:CapturePrepShown() then return nil end
+	local aid = self:CaptureToggleAid(id)
+	self:CapturePrepRefresh()
+	return aid
+end
+
+-- Lancer : la scène d'avant, sur ce candidat, avec l'aide choisie. Rend true
+-- si le filet est parti.
+function ns:CapturePrepLaunch()
+	local frame = self.captureStage
+	local candidate = self:CapturePrepShown()
+	if not candidate then return false end
+	if self.CaptureRefuseBlocked and self:CaptureRefuseBlocked(candidate) then
+		self:CapturePrepRefresh()
+		return false
+	end
+	frame.prepBusy = true
+	local ok, thrown = pcall(self.CaptureThrow, self, candidate)
+	frame.prepBusy = nil
+	if not ok then
+		if self.RecordError then self:RecordError("capture:prep", thrown) end
+		thrown = false
+	end
+	if not thrown then
+		self:CapturePrepCheck()
+		return false
+	end
+	-- sans la scène animée (réglage) : la petite fenêtre prend le relais
+	if frame.prep then
+		ns.CapturePrepClear(frame)
+		frame:Hide()
+	end
+	return true
+end
+
+-- Passer : le candidat sort du filet (clic droit : l'espèce n'est plus
+-- proposée) ; la carte passe au suivant, ou se ferme. Rend le suivant.
+function ns:CapturePrepPass(skipSpecies)
+	local frame = self.captureStage
+	local candidate = self:CapturePrepShown()
+	if not candidate then return nil end
+	frame.prepBusy = true
+	if skipSpecies and self.CaptureSkipSpecies then self:CaptureSkipSpecies(candidate.npcID, candidate.name) end
+	self:CaptureQueueRemove(candidate)
+	frame.prepBusy = nil
+	local nextOne = self:CaptureQueuePrune()[1]
+	if nextOne then
+		self:CapturePrepOpen(nextOne)
+		return nextOne
+	end
+	self:CapturePrepClose()
+	return nil
+end
+
+-- Fermer sans rien retirer (comme Échap)
+function ns:CapturePrepClose()
+	local frame = self.captureStage
+	if not (frame and frame.prep) then return false end
+	ns.CapturePrepClear(frame)
+	frame:Hide()
+	return true
+end
+
+-- La file a bougé (CaptureQueue.lua, CaptureQueueRefresh) : le candidat parti
+-- (capturé ailleurs, plus d'intérêt), la carte passe au suivant ou se ferme ;
+-- un filet en l'air (Maj+clic, raccourci) : elle se ferme ; sinon, à jour.
+function ns:CapturePrepCheck()
+	local frame = self.captureStage
+	local candidate = frame and frame.prep
+	if not candidate or frame.prepBusy then return nil end
+	if not frame:IsShown() then ns.CapturePrepClear(frame); return nil end
+	local state = self.captureState
+	if state and state.rolling then
+		if frame.rolling == nil then ns.CapturePrepClear(frame); frame:Hide() end
+		return nil
+	end
+	local queue = self:CaptureQueueState()
+	for _, c in ipairs(queue) do
+		if c == candidate then return self:CapturePrepRefresh() end
+	end
+	if queue[1] then
+		self:CapturePrepOpen(queue[1])
+		return "next"
+	end
+	self:CapturePrepClose()
+	return nil
 end
 
 if ns.Mark then ns.Mark("CaptureStage") end

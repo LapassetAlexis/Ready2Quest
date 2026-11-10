@@ -287,7 +287,7 @@ local FR = {
 	COMP_REQ_total         = "%d tampons",
 	COMP_REQ_inn           = "%d cartes d'auberge pleines",
 	COMP_REQ_missions      = "%d jours aux trois missions",
-	COMP_HOVER_HINT        = "Clic : un câlin · Maj + clic : friandises · clic droit : carnet · glisser : déplacer\nChange de compagnon : toute créature capturée au filet, page Compagnon du carnet",
+	COMP_HOVER_HINT        = "Clic : un câlin · Maj + clic : friandises · clic droit : carnet et chasse · glisser : déplacer\nChange de compagnon : toute créature capturée au filet, page Compagnon du carnet",
 	-- 2.10.0 : compagnon discret en combat, masqué en donjon, alerte d'aggro réglable, déplacement verrouillé
 	OPT_COMP_COMBAT_FADE   = "Estomper en combat",
 	OPT_COMP_COMBAT_FADE_DESC = "Le compagnon se fait discret pendant un combat et te raconte tout après.",
@@ -303,8 +303,8 @@ local FR = {
 	COMP_MOVE_free         = "En le glissant",
 	COMP_MOVE_alt          = "Alt + glisser",
 	COMP_MOVE_locked       = "Verrouillé",
-	COMP_HOVER_HINT_alt    = "Clic : un câlin · Maj + clic : friandises · clic droit : carnet · Alt + glisser : déplacer\nChange de compagnon : toute créature capturée au filet, page Compagnon du carnet",
-	COMP_HOVER_HINT_locked = "Clic : un câlin · Maj + clic : friandises · clic droit : carnet\nChange de compagnon : toute créature capturée au filet, page Compagnon du carnet",
+	COMP_HOVER_HINT_alt    = "Clic : un câlin · Maj + clic : friandises · clic droit : carnet et chasse · Alt + glisser : déplacer\nChange de compagnon : toute créature capturée au filet, page Compagnon du carnet",
+	COMP_HOVER_HINT_locked = "Clic : un câlin · Maj + clic : friandises · clic droit : carnet et chasse\nChange de compagnon : toute créature capturée au filet, page Compagnon du carnet",
 	COMP_MSG_SHOWN         = "Compagnon : %s.",
 	OPT_COMP_TUTO          = "Rejouer le tutoriel",
 	COMP_PREVIEW_LINE      = "%s  ·  %s",
@@ -482,7 +482,7 @@ local EN = {
 	COMP_REQ_total         = "%d stamps",
 	COMP_REQ_inn           = "%d full inn cards",
 	COMP_REQ_missions      = "%d days with all three missions",
-	COMP_HOVER_HINT        = "Click: a cuddle · Shift + click: treats · right-click: journal · drag: move\nSwitch companion: any creature caught with the net, journal's Companion page",
+	COMP_HOVER_HINT        = "Click: a cuddle · Shift + click: treats · right-click: journal and hunt · drag: move\nSwitch companion: any creature caught with the net, journal's Companion page",
 	OPT_COMP_TUTO          = "Replay the tutorial",
 	COMP_PREVIEW_LINE      = "%s  ·  %s",
 	COMP_TUTO_NEXT         = "Next",
@@ -531,8 +531,8 @@ local EN = {
 	COMP_MOVE_free         = "By dragging",
 	COMP_MOVE_alt          = "Alt + drag",
 	COMP_MOVE_locked       = "Locked",
-	COMP_HOVER_HINT_alt    = "Click: a cuddle · Shift + click: treats · right-click: journal · Alt + drag: move\nSwitch companion: any creature caught with the net, journal's Companion page",
-	COMP_HOVER_HINT_locked = "Click: a cuddle · Shift + click: treats · right-click: journal\nSwitch companion: any creature caught with the net, journal's Companion page",
+	COMP_HOVER_HINT_alt    = "Click: a cuddle · Shift + click: treats · right-click: journal and hunt · Alt + drag: move\nSwitch companion: any creature caught with the net, journal's Companion page",
+	COMP_HOVER_HINT_locked = "Click: a cuddle · Shift + click: treats · right-click: journal and hunt\nSwitch companion: any creature caught with the net, journal's Companion page",
 	COMP_MSG_SHOWN         = "Companion: %s.",
 	COMP_MSG_MUTE          = "Companion bubbles: %s.",
 	COMP_MSG_FALLBACK      = "3D model unavailable on this client: the compass stands in.",
@@ -2307,8 +2307,8 @@ function ns:EnsureCompanionFrame()
 		if button and button ~= "LeftButton" and button ~= "RightButton" then return end
 		local x, y = Call(rawget(_G, "GetCursorPosition"))
 		if f.downX and x and (math.abs(x - f.downX) > 4 or math.abs((y or 0) - (f.downY or 0)) > 4) then return end
-		-- clic droit : son carnet de voyage, ouvert sur les objectifs
-		if button == "RightButton" then return ns:CompanionOpenJournal() end
+		-- clic droit : un petit menu (2.15.0) : son carnet de voyage, le mode chasse
+		if button == "RightButton" then return ns:CompanionMenuToggle() end
 		ns:CompanionPet()
 	end)
 	frame:SetScript("OnEnter", function() ns:CompanionShowHover() end)
@@ -2319,6 +2319,243 @@ function ns:EnsureCompanionFrame()
 	self:CompanionApplyOrnaments()
 	return frame
 end
+
+-- ---------------------------------------------------------------------------
+-- 2.15.0 : le menu du clic droit et l'indicateur du mode chasse (maquette
+-- capture215, écran 3). Clic droit sur la créature : un petit menu, comme la
+-- rangée de sourdine du bandeau de capture : « Carnet de voyage » (le geste
+-- d'avant), puis « Mode chasse » : 5 min, 15 min, 30 min, 1 h (ns.HUNT_CHOICES),
+-- « Jusqu'à ce que je l'arrête », « Arrêter la chasse » (actif seulement en
+-- chasse), « Annuler ». Échap, un clic ailleurs ou un second clic droit le
+-- referment. Pendant la chasse : l'icône de la chasse (client, 132212) et le
+-- temps restant en haut à gauche du cadre, à jour au fil des minutes (horloge
+-- de l'addon, COMPANION_HUNT_BADGE.refresh), caché en vol (griffon) comme le
+-- reste du décor ; au survol, « Mode chasse : encore 12 min ».
+-- ---------------------------------------------------------------------------
+local MENU_FR = {
+	COMP_MENU_JOURNAL   = "Carnet de voyage",
+	COMP_MENU_HUNT_STOP = "Arrêter la chasse",
+	COMP_MENU_CANCEL    = "Annuler",
+	COMP_MENU_HUNT_OFF  = "Chaque monstre abattu au filet, pour la durée choisie.",
+	COMP_MENU_HUNT_ON   = "En cours : encore %s.",
+	COMP_MENU_HUNT_ON_STOP = "En cours, jusqu'à ce que tu l'arrêtes.",
+	COMP_MENU_MIN       = "%d min",
+	COMP_MENU_HOUR      = "1 h",
+	COMP_HUNT_TIP       = "Mode chasse : encore %s",
+	COMP_HUNT_TIP_ON    = "Mode chasse : jusqu'à ce que tu l'arrêtes",
+	COMP_HUNT_TIP_HINT  = "Clic droit sur le compagnon : l'arrêter",
+}
+local MENU_EN = {
+	COMP_MENU_JOURNAL   = "Travel journal",
+	COMP_MENU_HUNT_STOP = "Stop hunting",
+	COMP_MENU_CANCEL    = "Cancel",
+	COMP_MENU_HUNT_OFF  = "Every defeated monster in the net, for the time you pick.",
+	COMP_MENU_HUNT_ON   = "On: %s left.",
+	COMP_MENU_HUNT_ON_STOP = "On, until you stop it.",
+	COMP_MENU_MIN       = "%d min",
+	COMP_MENU_HOUR      = "1 h",
+	COMP_HUNT_TIP       = "Hunt mode: %s left",
+	COMP_HUNT_TIP_ON    = "Hunt mode: until you stop it",
+	COMP_HUNT_TIP_HINT  = "Right-click the companion: stop it",
+}
+ns.RegisterStrings(MENU_FR, MENU_EN)
+if ns.KEEP_STRINGS then ns.COMPANION_MENU_STRINGS = { fr = MENU_FR, en = MENU_EN } end
+
+ns.COMPANION_MENU = { w = 216, pad = 12, row = 22, gap = 4 }
+ns.COMPANION_HUNT_BADGE = { icon = "Interface\\Icons\\Ability_Hunter_SniperShot", size = 14, h = 18, x = 4, y = -4, refresh = 15 }
+
+-- actif ou non (le client a Enable/Disable ; .off le dit partout)
+local function SetOn(button, on)
+	button.off = not on or nil
+	if on then
+		if button.Enable then button:Enable() end
+	elseif button.Disable then
+		button:Disable()
+	end
+end
+local function MenuOver(frame)
+	if not (frame and frame.IsMouseOver) then return false end
+	local ok, over = pcall(frame.IsMouseOver, frame)
+	return ok and over and true or false
+end
+
+function ns:EnsureCompanionMenu()
+	if self.companionMenu then return self.companionMenu end
+	if not (Theme and Theme.CreateToast and Theme.CreateButton) then return nil end
+	local M = ns.COMPANION_MENU
+	local frame = Theme.CreateToast(UIParent, M.w, 100, { strata = "DIALOG", name = "QuestCompanionCompanionMenu", accent = Theme.GOLD })
+	if not frame then return nil end
+	frame:EnableMouse(true)
+	if Theme.RegisterEscapeClose then pcall(Theme.RegisterEscapeClose, frame) end
+	local left = frame.contentLeft or M.pad
+	local width = M.w - left - M.pad
+	local y = -M.pad
+	frame.journal = Theme.CreateButton(frame, width, M.row, L.COMP_MENU_JOURNAL, function()
+		ns:CompanionMenuHide()
+		ns:CompanionOpenJournal()
+	end, "normal")
+	frame.journal:SetPoint("TOPLEFT", frame, "TOPLEFT", left, y)
+	y = y - M.row - 10
+	frame.huntTitle = Theme.Text(frame, Theme.F_CAPS or Theme.F_SMALL, Theme.GOLD)
+	frame.huntTitle:SetPoint("TOPLEFT", frame, "TOPLEFT", left, y)
+	frame.huntTitle:SetText(Theme.Upper and Theme.Upper(L.HUNT_TITLE or "") or (L.HUNT_TITLE or ""))
+	y = y - 15
+	frame.huntStatus = Theme.Text(frame, Theme.F_SMALL, Theme.MUTED_LIGHT)
+	frame.huntStatus:SetPoint("TOPLEFT", frame, "TOPLEFT", left, y)
+	frame.huntStatus:SetWidth(width)
+	frame.huntStatus:SetJustifyH("LEFT")
+	if frame.huntStatus.SetWordWrap then frame.huntStatus:SetWordWrap(true) end
+	y = y - 28
+	frame.durations = {}
+	local choices = ns.HUNT_CHOICES or { 5, 15, 30, 60 }
+	local w = math.floor((width - (#choices - 1) * M.gap) / #choices)
+	for index, minutes in ipairs(choices) do
+		local label = minutes >= 60 and L.COMP_MENU_HOUR or ns:F("COMP_MENU_MIN", minutes)
+		local button = Theme.CreateButton(frame, w, M.row, label, function()
+			ns:CompanionMenuHide()
+			if ns.HuntStart then ns:HuntStart(minutes) end
+		end, "accent")
+		button:SetPoint("TOPLEFT", frame, "TOPLEFT", left + (index - 1) * (w + M.gap), y)
+		button.minutes = minutes
+		frame.durations[index] = button
+	end
+	y = y - M.row - M.gap
+	frame.untilStop = Theme.CreateButton(frame, width, M.row, L.HUNT_UNTIL_STOP or "", function()
+		ns:CompanionMenuHide()
+		if ns.HuntStart then ns:HuntStart(nil) end
+	end, "accent")
+	frame.untilStop:SetPoint("TOPLEFT", frame, "TOPLEFT", left, y)
+	y = y - M.row - M.gap
+	frame.stop = Theme.CreateButton(frame, width, M.row, L.COMP_MENU_HUNT_STOP, function()
+		ns:CompanionMenuHide()
+		if ns.HuntStop then ns:HuntStop() end
+	end, "normal")
+	frame.stop:SetPoint("TOPLEFT", frame, "TOPLEFT", left, y)
+	y = y - M.row - M.gap
+	frame.cancel = Theme.CreateButton(frame, width, M.row, L.COMP_MENU_CANCEL, function() ns:CompanionMenuHide() end, "outline")
+	frame.cancel:SetPoint("TOPLEFT", frame, "TOPLEFT", left, y)
+	y = y - M.row
+	frame:SetHeight(-y + M.pad)
+	-- un clic ailleurs (hors du menu et du compagnon), le combat : on referme
+	pcall(frame.RegisterEvent, frame, "PLAYER_REGEN_DISABLED")
+	pcall(frame.RegisterEvent, frame, "GLOBAL_MOUSE_DOWN")
+	frame:SetScript("OnEvent", function(f, event)
+		if not f:IsShown() then return end
+		if event == "GLOBAL_MOUSE_DOWN" and (MenuOver(f) or MenuOver(ns.companionFrame)) then return end
+		ns:CompanionMenuHide()
+	end)
+	frame:Hide()
+	self.companionMenu = frame
+	return frame
+end
+
+function ns:CompanionMenuRefresh()
+	local frame = self.companionMenu
+	if not frame then return nil end
+	local left = self.HuntRemaining and self:HuntRemaining()
+	if not left then
+		frame.huntStatus:SetText(L.COMP_MENU_HUNT_OFF)
+		SetOn(frame.stop, false)
+	elseif left < 0 then
+		frame.huntStatus:SetText(L.COMP_MENU_HUNT_ON_STOP)
+		SetOn(frame.stop, true)
+	else
+		frame.huntStatus:SetText(self:F("COMP_MENU_HUNT_ON", self:HuntText() or ""))
+		SetOn(frame.stop, true)
+	end
+	return left
+end
+
+function ns:CompanionMenuShow()
+	local frame = self:EnsureCompanionMenu()
+	if not frame then return self:CompanionOpenJournal() end
+	local anchor = self.companionFrame
+	frame:ClearAllPoints()
+	if anchor then frame:SetPoint("BOTTOM", anchor, "TOP", 0, 8) else frame:SetPoint("CENTER", UIParent, "CENTER", 0, 0) end
+	self:CompanionHideHover()
+	self:CompanionMenuRefresh()
+	frame:Show()
+	if Theme.FadeIn then pcall(Theme.FadeIn, frame, 0.12) end
+	return frame
+end
+
+function ns:CompanionMenuHide()
+	if self.companionMenu then self.companionMenu:Hide() end
+end
+
+function ns:CompanionMenuToggle()
+	local frame = self.companionMenu
+	if frame and frame:IsShown() then self:CompanionMenuHide(); return nil end
+	return self:CompanionMenuShow()
+end
+
+-- L'indicateur de chasse sur le cadre : rend true s'il est montré
+local function HuntBadgeTip(badge)
+	local tooltip = rawget(_G, "GameTooltip")
+	if not (type(tooltip) == "table" and tooltip.SetOwner) then return end
+	tooltip:SetOwner(badge, "ANCHOR_TOP")
+	local left = ns.HuntRemaining and ns:HuntRemaining()
+	local line = (left and left >= 0) and ns:F("COMP_HUNT_TIP", ns:HuntText() or "") or L.COMP_HUNT_TIP_ON
+	Theme.TooltipLine(tooltip, line, Theme.GOLD)
+	Theme.TooltipLine(tooltip, L.COMP_HUNT_TIP_HINT, Theme.MUTED_LIGHT)
+	tooltip:Show()
+end
+
+function ns:CompanionHuntBadge()
+	local frame = self.companionFrame
+	if not frame then return false end
+	local badge = frame.huntBadge
+	local left = ModuleOn() and self.HuntRemaining and self:HuntRemaining()
+	-- en vol (griffon) : rangé, comme le reste du décor
+	local flying = Call(rawget(_G, "UnitOnTaxi"), "player") == true
+	if not left or flying then
+		if badge then badge:Hide() end
+		return false
+	end
+	local B = ns.COMPANION_HUNT_BADGE
+	if not badge then
+		badge = CreateFrame("Frame", nil, frame)
+		badge:SetHeight(B.h)
+		badge:SetPoint("TOPLEFT", frame, "TOPLEFT", B.x, B.y)
+		badge:SetFrameLevel((frame:GetFrameLevel() or 1) + 6)
+		badge.bg = Theme.Solid(badge, "BACKGROUND", Theme.INK, 0.85)
+		badge.bg:SetAllPoints(badge)
+		badge.edge = Theme.Border(badge, Theme.GOLD, 1, "BORDER")
+		badge.icon = badge:CreateTexture(nil, "ARTWORK")
+		badge.icon:SetSize(B.size, B.size)
+		badge.icon:SetPoint("LEFT", badge, "LEFT", 2, 0)
+		badge.icon:SetTexture(B.icon)
+		badge.icon:SetTexCoord(0.08, 0.92, 0.08, 0.92)
+		badge.text = Theme.Text(badge, Theme.F_SMALL, Theme.GOLD_LIGHT)
+		badge.text:SetPoint("LEFT", badge.icon, "RIGHT", 3, 0)
+		if badge.EnableMouse then badge:EnableMouse(true) end
+		badge:SetScript("OnEnter", HuntBadgeTip)
+		badge:SetScript("OnLeave", function()
+			local tooltip = rawget(_G, "GameTooltip")
+			if type(tooltip) == "table" and tooltip.Hide then tooltip:Hide() end
+		end)
+		frame.huntBadge = badge
+	end
+	-- jusqu'à l'arrêt : l'icône seule ; minutée : le temps restant
+	local text = left >= 0 and (self:HuntText() or "") or ""
+	if badge.label ~= text then
+		badge.label = text
+		badge.text:SetText(text)
+		local w = text ~= "" and (Theme.TextWidth and tonumber(Theme.TextWidth(badge, text, Theme.F_SMALL)) or 30) or 0
+		badge:SetWidth(B.size + 4 + (text ~= "" and (w + 6) or 0))
+	end
+	badge:Show()
+	return true
+end
+
+ns:RegisterCallback("HUNT", function(self)
+	self:CompanionHuntBadge()
+	if self.companionMenu and self.companionMenu:IsShown() then self:CompanionMenuRefresh() end
+end)
+ns.Every("companionHunt", ns.COMPANION_HUNT_BADGE.refresh, function()
+	local ok, err = pcall(ns.CompanionHuntBadge, ns)
+	if not ok and ns.RecordError then ns:RecordError("companion:hunt", err) end
+end)
 
 -- Clic droit sur la créature : le carnet, sur son dernier onglet. Déjà
 -- ouvert : on le ferme.

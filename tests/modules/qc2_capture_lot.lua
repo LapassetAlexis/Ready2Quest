@@ -68,6 +68,9 @@ function LOT.Reset()
 	NS:CompanionData().tutoDone = true
 	NS:TreatData().treatsInit = true
 	NS:DB().companionCaptureAnim = true
+	-- 2.15.0 : ces scénarios jouent le lancer d'un clic (réglage « Lancer directement au clic ») ;
+	-- la carte de préparation a les siens (qc215_preparation.lua)
+	NS:DB().companionCaptureDirect = true
 	NS:DB().captureMuteUntil = nil
 	NS:DB().companionCaptureSound = true
 	NS:DB().companionCaptureToast = true

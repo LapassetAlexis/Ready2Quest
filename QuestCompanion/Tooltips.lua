@@ -4,7 +4,8 @@
 -- ménagerie (1.5.3) : « capturé » (vert, doré si brillant) ou « à capturer »
 -- avec ta chance du moment, et son rang si c'est un nommé (rare, élite…).
 -- Capture coupée dans les réglages : la ligne du bestiaire d'avant
--- (« à abattre » ou « abattu (n) »). Mêmes libellés et couleurs que le carnet
+-- (« à abattre » ou « abattu (n) »). 2.15.0 : en mode chasse, une ligne
+-- de méfiance sous celle-ci (ns:BestiaryTooltipWary). Mêmes libellés et couleurs que le carnet
 -- (JournalWindow.lua). Une créature hors bestiaire (amicale, bestiole, en
 -- instance) : rien.
 -- Accroche commune du socle (ns:HookTooltip, Libs/Socle/Compat.lua) :
@@ -132,10 +133,29 @@ function ns:BestiaryTooltipLine(guid, level)
 	return text, color
 end
 
+-- 2.15.0 : en mode chasse, la méfiance de l'espèce survolée : « Méfiant ·
+-- 2 capture(s) aujourd'hui (−30 %) » (CaptureSpecimens.lua, ns:CaptureWariness) ;
+-- nil hors chasse, ou sans capture de l'espèce aujourd'hui
+function ns:BestiaryTooltipWary(guid)
+	if not (self.CaptureWariness and self.HuntActive and self:HuntActive()) then return nil end
+	if self:DB().companionCapture == false or not (ns.CompanionOn and ns.CompanionOn()) then return nil end
+	local npcID = ns.BestiaryNpcID and ns.BestiaryNpcID(guid)
+	if not npcID then return nil end
+	local factor, count = self:CaptureWariness(npcID)
+	if not count or count <= 0 then return nil end
+	return self:F("CAPTURE_WARY", count, math.floor((1 - factor) * 100 + 0.5 + 1e-9))
+end
+
 function ns:BestiaryOnTooltip(tooltip, data)
-	local text, color = self:BestiaryTooltipLine(HoveredGUID(tooltip, data))
+	local guid, level = HoveredGUID(tooltip, data)
+	local text, color = self:BestiaryTooltipLine(guid, level)
 	if not text then return false end
 	tooltip:AddLine(text, color[1], color[2], color[3])
+	local wary = self:BestiaryTooltipWary(guid)
+	if wary then
+		local c = Theme.ORANGE or Theme.GOLD
+		tooltip:AddLine(wary, c[1], c[2], c[3])
+	end
 	-- accroche OnTooltipSetUnit (pas de data) : le cadre reprend sa taille
 	if data == nil and type(tooltip.Show) == "function" then pcall(tooltip.Show, tooltip) end
 	return true

@@ -66,6 +66,9 @@ function Q.Reset()
 	NS:CompanionData().tutoDone = true
 	NS:TreatData().treatsInit = true
 	NS:DB().companionCaptureAnim = false
+	-- 2.15.0 : ces scénarios jouent le lancer d'un clic (réglage « Lancer directement au clic ») ;
+	-- la carte de préparation a les siens (qc215_preparation.lua)
+	NS:DB().companionCaptureDirect = true
 	if NS.captureStage then NS.captureStage:Hide(); NS.captureStage.rolling = nil end
 	NS:CompanionUpdateVisibility()
 end
@@ -235,7 +238,7 @@ do
 	Check("[QC2CAP] clic droit : la liste, une ligne par candidat", list and list:IsShown() and list.rows[1]:IsShown()
 		and list.rows[2]:IsShown() and not list.rows[3]:IsShown())
 	Check("[QC2CAP] … nom, raison, chance, temps", list.rows[1].text:GetText():find("Ours", 1, true)
-		and list.rows[1].detail:GetText():find(NS.L.CAPTURE_Q_REASON_new, 1, true)
+		and list.rows[1].detail:GetText():find(NS.L.CAPTURE_Q_TAG_new, 1, true)   -- 2.15.0 : raison en court
 		and list.rows[1].detail:GetText():find("%d+ s") ~= nil, list.rows[1].detail:GetText())
 	NS:CaptureGrant("lasso", { quiet = true, silent = true })
 	list.aids[2]:Click()
