@@ -2509,6 +2509,8 @@ function ns:CompanionRefreshLabels()
 	frame.name:SetText(self:CompanionName())
 	frame.mood:SetText(tostring(L["COMP_MOOD_" .. self:CompanionMood()]))
 	self:CompanionApplySobrePlate()
+	-- 2.13.1 : le rabat de l'humeur (Azeroth) suit le mot et sa teinte
+	if self.CompanionApplyMoodTab then self:CompanionApplyMoodTab() end
 end
 
 -- 2.11.0 (fiche 09) : la bande sombre du Sobre et l'humeur en TEXT ; en

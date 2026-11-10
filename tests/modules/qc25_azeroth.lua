@@ -370,7 +370,7 @@ do
 	local skin = frame and frame.azSkin
 	Check("[AZ] compagnon : anneau à volutes et plaque dorée", skin and skin:IsShown() and frame.uiStyle == "azeroth"
 		and skin.ring.atlas == "ui-achievement-guild-iconframe" and skin.plate.atlas == "ui-achievement-alert-background-mini")
-	Check("[AZ] compagnon : nom et humeur sur la plaque, nom blanc", frame.name:GetParent() == skin and frame.mood:GetParent() == skin
+	Check("[AZ] compagnon : nom sur la plaque, humeur dans son rabat, nom blanc", frame.name:GetParent() == skin and frame.mood:GetParent() == skin.moodTab
 		and frame.name.textColor[1] == 1 and frame.name.textColor[3] == 1)
 	do
 		-- 2.6.0 : le nom au milieu de la bande sombre, l'humeur dans la bande claire, centrés sur la plaque
@@ -379,9 +379,37 @@ do
 		local mp, mrel, mrp, mx, my = frame.mood:GetPoint(1)
 		Check("[AZ] compagnon : nom centré dans la bande sombre de la plaque", np == "CENTER" and nrel == skin.plate and nrp == "BOTTOM"
 			and nx == 0 and ny == P.nameY and ny < P.height * 0.7, tostring(np) .. " " .. tostring(ny))
-		Check("[AZ] compagnon : humeur dans la bande claire, au-dessus du nom", mp == "CENTER" and mrel == skin.plate and mx == 0
-			and my == P.moodY and my > P.height * 0.7, tostring(my))
+		-- 2.13.1 : l'humeur quitte la bande claire (cachée par le cadre gagné) : rabat sous la plaque
+		Check("[AZ] compagnon : humeur centrée dans son rabat, sous la plaque", mp == "CENTER" and mrel == skin.moodTab and mx == 0,
+			tostring(mp) .. " " .. tostring(mx))
 		Check("[AZ] compagnon : plaque à la hauteur des deux lignes", skin.plate:GetHeight() == P.height)
+		-- 2.13.1 : rabat de l'humeur, teinté selon l'humeur, encre lisible
+		local tab, T = skin.moodTab, NS.AZEROTH_MOOD_TAB
+		local tp, trel, trp, tx, ty = tab:GetPoint(1)
+		Check("[AZ] humeur : rabat accroché sous la plaque, glissé dessous", tp == "TOP" and trel == skin.plate and trp == "BOTTOM"
+			and tx == 0 and ty == T.tuck and tab:GetFrameLevel() < skin:GetFrameLevel())
+		Check("[AZ] humeur : deux losanges du jeu", #tab.diamonds == 2)
+		local function Lum(c)
+			local function ch(v) return v <= 0.03928 and v / 12.92 or ((v + 0.055) / 1.055) ^ 2.4 end
+			return 0.2126 * ch(c[1]) + 0.7152 * ch(c[2]) + 0.0722 * ch(c[3])
+		end
+		local worst, worstMood = 99, nil
+		for _, mood in ipairs({ "radiant", "happy", "dreamy", "sleepy" }) do
+			local c = T[mood]
+			local ratio = (Lum(c.fill) + 0.05) / (Lum(c.ink) + 0.05)
+			if ratio < worst then worst, worstMood = ratio, mood end
+		end
+		Check("[AZ] humeur : encre ≥ 7:1 sur chaque teinte", worst >= 7, string.format("%s %.2f", tostring(worstMood), worst))
+		local data = NS:CompanionData()
+		data.sleepy = true
+		NS:CompanionRefreshLabels()
+		Check("[AZ] humeur : somnolent → rabat gris, encre grise", tab.mood == "sleepy" and frame.mood.textColor[1] == T.sleepy.ink[1])
+		data.sleepy = nil
+		for _, key in ipairs({ "hunger", "energy", "mood", "curiosity" }) do data.needs[key] = 90 end
+		NS:CompanionRefreshLabels()
+		Check("[AZ] humeur : radieux → rabat vert pâle", tab.mood == "radiant" and frame.mood:GetText() == NS.L.COMP_MOOD_radiant)
+		Check("[AZ] humeur : rabat à la largeur du mot", tab:GetWidth() >= 2 * T.pad)
+		Check("[AZ] humeur : bande claire sans voile", not skin.moodBand or skin.moodBand.mockHidden == true or not skin.moodBand:IsShown())
 	end
 	Check("[AZ] compagnon : liseré rectangulaire caché", frame.top.mockHidden and frame.leftEdge.mockHidden)
 	Check("[AZ] compagnon : l'habillage ne prend pas la souris (caresse, survol)", not skin.mouseEnabled
@@ -409,6 +437,8 @@ do
 	Check("[AZ] Sobre : cadre d'avant (liseré, nom sur le cadre)", not skin:IsShown() and frame.uiStyle == "sobre"
 		and frame.name:GetParent() == frame and not frame.top.mockHidden
 		and select(2, frame.name:GetPoint(1)) == frame and select(5, frame.name:GetPoint(1)) == 19)
+	Check("[AZ] Sobre : l'humeur revient sur le cadre (hors du rabat)", frame.mood:GetParent() == frame
+		and select(2, frame.mood:GetPoint(1)) == frame)
 	NS:SetUIStyle("azeroth")
 	Check("[AZ] Azeroth de nouveau : rhabillé sur place", skin:IsShown() and frame.name:GetParent() == skin and frame.top.mockHidden)
 	-- page Guide : le réglage y est cité

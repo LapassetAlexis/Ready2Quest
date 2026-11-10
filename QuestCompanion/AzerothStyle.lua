@@ -1506,17 +1506,36 @@ local PLATE_H = 42
 local PLATE_NAME_Y = 16   -- centre du nom, depuis le bas de la plaque
 local PLATE_MOOD_Y = 35   -- centre de l'humeur, depuis le bas de la plaque
 ns.AZEROTH_COMPANION_PLATE = { height = PLATE_H, nameY = PLATE_NAME_Y, moodY = PLATE_MOOD_Y }
+-- 2.13.1 : l'humeur quitte la bande claire de la plaque (le cadre gagné passe
+-- par-dessus : « radieux » ne se lisait plus). Elle va dans un rabat de
+-- parchemin glissé sous la plaque, teinté selon l'humeur, entre deux losanges
+-- du jeu. Encre sur teinte : ≥ 7:1 (tests qc2131_humeur.lua).
+local MOOD_TAB_H, MOOD_TAB_TUCK, MOOD_TAB_PAD = 16, 3, 15
+ns.AZEROTH_MOOD_TAB = {
+	h = MOOD_TAB_H, tuck = MOOD_TAB_TUCK, pad = MOOD_TAB_PAD,
+	edge = { 0.69, 0.52, 0.21 },
+	-- humeur : teinte du rabat, encre du mot
+	radiant = { fill = { 0.84, 0.88, 0.67 }, ink = { 0.15, 0.23, 0.07 } },
+	happy   = { fill = { 0.89, 0.82, 0.65 }, ink = { 0.25, 0.15, 0.06 } },
+	dreamy  = { fill = { 0.83, 0.82, 0.91 }, ink = { 0.20, 0.16, 0.36 } },
+	sleepy  = { fill = { 0.80, 0.80, 0.78 }, ink = { 0.20, 0.20, 0.20 } },
+}
 -- 2.8.2 : l'ouverture du cadre (ui-achievement-guild-iconframe, 78×75 dans
 -- l'atlas : le trou transparent va de 16 à 58 en largeur, de 17 à 57 en
 -- hauteur, mesuré sur la texture du client). Le modèle 3D y est posé, à 1 px
 -- du bord : avant, il gardait le rectangle Sobre (96×82), plus large que
 -- l'ouverture, et la créature débordait sous les volutes et à côté.
 ns.AZEROTH_RING_HOLE = { l = 16 / 78, r = 58 / 78, t = 17 / 75, b = 57 / 75 }
+-- 2.13.1 : l'ouverture n'est pas au milieu de la texture (16 px à gauche,
+-- 20 à droite) : centré sur sa texture, le cadre paraissait décalé de ~3 px
+-- vers la gauche par rapport à la plaque du nom. On centre l'ouverture.
+local RING_X = math.floor(RING_W * (0.5 - (ns.AZEROTH_RING_HOLE.l + ns.AZEROTH_RING_HOLE.r) / 2) + 0.5)
+ns.AZEROTH_RING.x = RING_X
 
 -- Place du modèle dans le cadre Azeroth (depuis le coin haut gauche du cadre)
 function ns.AzerothCompanionModelBase(frameW)
 	local hole = ns.AZEROTH_RING_HOLE
-	local left = (frameW or 104) / 2 - RING_W / 2          -- bord gauche de l'anneau
+	local left = (frameW or 104) / 2 - RING_W / 2 + RING_X -- bord gauche de l'anneau
 	local top = RING_Y + RING_H / 2                          -- bord haut de l'anneau (au-dessus du cadre)
 	local x0 = math.ceil(left + RING_W * hole.l) + 1
 	local x1 = math.floor(left + RING_W * hole.r) - 1
@@ -1531,7 +1550,7 @@ local function BuildCompanionSkin(frame)
 	skin:SetFrameLevel((frame:GetFrameLevel() or 1) + 4)
 	skin.ring = skin:CreateTexture(nil, "ARTWORK")
 	skin.ring:SetSize(RING_W, RING_H)
-	skin.ring:SetPoint("CENTER", frame, "TOP", 0, RING_Y)
+	skin.ring:SetPoint("CENTER", frame, "TOP", RING_X, RING_Y)
 	Atlas(skin.ring, AZ.frameRound)
 	local w = (frame:GetWidth() or 104) + 8
 	skin.plate = skin:CreateTexture(nil, "BACKGROUND")
@@ -1540,6 +1559,34 @@ local function BuildCompanionSkin(frame)
 	Atlas(skin.plate, AZ.plate)
 	-- 2.8.2 : la bande claire de la plaque éclaircie sous l'humeur (5,9:1)
 	skin.moodBand = ns.AzerothVeil(skin, skin.plate, "strip", 1, ns.AZEROTH_TITLE_BAND.plate)
+	-- 2.13.1 : le rabat de l'humeur, sous la plaque (couche plus basse)
+	local tab = CreateFrame("Frame", nil, skin)
+	tab:SetSize(60, MOOD_TAB_H)
+	tab:SetPoint("TOP", skin.plate, "BOTTOM", 0, MOOD_TAB_TUCK)
+	tab:SetFrameLevel(math.max(0, (skin:GetFrameLevel() or 1) - 1))
+	local T = ns.AZEROTH_MOOD_TAB
+	tab.fill = Theme.Solid(tab, "BACKGROUND", T.happy.fill, 1)
+	tab.fill:SetAllPoints(tab)
+	tab.edges = {}
+	for _, side in ipairs({ "LEFT", "RIGHT", "BOTTOM" }) do
+		local e = Theme.Solid(tab, "BORDER", T.edge, 1)
+		if side == "BOTTOM" then
+			e:SetPoint("BOTTOMLEFT", tab, "BOTTOMLEFT", 0, 0); e:SetPoint("BOTTOMRIGHT", tab, "BOTTOMRIGHT", 0, 0); e:SetHeight(1)
+		else
+			e:SetPoint("TOP" .. side, tab, "TOP" .. side, 0, 0); e:SetPoint("BOTTOM" .. side, tab, "BOTTOM" .. side, 0, 0); e:SetWidth(1)
+		end
+		tab.edges[#tab.edges + 1] = e
+	end
+	tab.diamonds = {}
+	for i, side in ipairs({ "LEFT", "RIGHT" }) do
+		local d = tab:CreateTexture(nil, "ARTWORK")
+		d:SetSize(7, 7)
+		d:SetPoint("CENTER", tab, side, (i == 1) and 7 or -7, -MOOD_TAB_TUCK / 2)
+		if Theme.PaintClient then Theme.PaintClient(d, "diamond") end
+		d:SetVertexColor(T.edge[1], T.edge[2], T.edge[3], 1)
+		tab.diamonds[i] = d
+	end
+	skin.moodTab = tab
 	-- le fond gagné, en disque sous l'anneau (masque du client, s'il existe)
 	if frame.CreateMaskTexture then
 		local ok, mask = pcall(frame.CreateMaskTexture, frame)
@@ -1582,6 +1629,21 @@ local function EdgesShown(frame, shown)
 	end
 end
 
+-- 2.13.1 : teinte du rabat et encre du mot selon l'humeur ; largeur au mot
+function ns:CompanionApplyMoodTab()
+	local frame = self.companionFrame
+	local tab = frame and frame.azSkin and frame.azSkin.moodTab
+	if not (tab and frame.mood) then return nil end
+	local mood = self.CompanionMood and self:CompanionMood() or "happy"
+	local T = ns.AZEROTH_MOOD_TAB
+	local c = T[mood] or T.happy
+	tab.fill:SetVertexColor(c.fill[1], c.fill[2], c.fill[3], 1)
+	frame.mood:SetTextColor(c.ink[1], c.ink[2], c.ink[3], 1)
+	tab:SetWidth(math.floor(Measure(frame.mood) + 2 * T.pad + 0.5))
+	tab.mood = mood
+	return mood
+end
+
 function ns:CompanionApplyUIStyle()
 	local frame = self.companionFrame
 	if not frame then return nil end
@@ -1609,11 +1671,15 @@ function ns:CompanionApplyUIStyle()
 			Theme.TextShadow(frame.name)
 		end
 		if frame.mood then
+			-- 2.13.1 : dans le rabat, sous la plaque
+			if frame.mood.SetParent then frame.mood:SetParent(skin.moodTab) end
 			frame.mood:ClearAllPoints()
-			frame.mood:SetPoint("CENTER", skin.plate, "BOTTOM", 0, PLATE_MOOD_Y)
-			frame.mood:SetTextColor(INK[1], INK[2], INK[3], 1)
+			frame.mood:SetPoint("CENTER", skin.moodTab, "CENTER", 0, -MOOD_TAB_TUCK / 2)
 			if Theme.NoShadow then Theme.NoShadow(frame.mood) end
 		end
+		-- la bande claire n'a plus de texte : pas de voile
+		if skin.moodBand and skin.moodBand.Hide then skin.moodBand:Hide() end
+		self:CompanionApplyMoodTab()
 	elseif frame.uiStyle == "azeroth" then
 		if skin then skin:Hide() end
 		Masked(frame, false)
@@ -1627,7 +1693,10 @@ function ns:CompanionApplyUIStyle()
 			frame.name:ClearAllPoints(); frame.name:SetPoint("BOTTOM", frame, "BOTTOM", 0, 19)
 			frame.name:SetTextColor(Theme.PARCHMENT[1], Theme.PARCHMENT[2], Theme.PARCHMENT[3], 1)
 		end
-		if frame.mood then frame.mood:ClearAllPoints(); frame.mood:SetPoint("BOTTOM", frame, "BOTTOM", 0, 6) end
+		if frame.mood then
+			if frame.mood.SetParent then frame.mood:SetParent(frame) end
+			frame.mood:ClearAllPoints(); frame.mood:SetPoint("BOTTOM", frame, "BOTTOM", 0, 6)
+		end
 		-- 2.11.0 : humeur au gris clair du texte (≥ 4,5:1 sur la plaque 80 % mesurée par l'agent du compagnon)
 		if frame.mood then frame.mood:SetTextColor(Theme.TEXT[1], Theme.TEXT[2], Theme.TEXT[3], 1) end
 		if frame.mood then Theme.TextShadow(frame.mood, 0.6) end
