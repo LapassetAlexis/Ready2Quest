@@ -1,7 +1,7 @@
 <!--
 Fiche de la page QuestCompanion sur CurseForge et Wago (à copier à la main, voir docs/PUBLIER.md).
 Summary EN (obligatoire en anglais sur CurseForge, 256 caractères max, ici 205) :
-  Catch the monsters you defeat in WoW Forever: 1-3 star specimens, rare shinies, 174 achievements and 40 titles, a companion that hunts with you, zone seals and a trainer card shared with your guild. FR/EN.
+  Catch the monsters you defeat in WoW Forever: 1-3 star specimens, rare shinies, 175 achievements and 40 titles, a companion that hunts with you, zone seals and a trainer card shared with your guild. FR/EN.
 Catégories : Companions (principale), Quests & Leveling (additionnelle). Si Companions n'existe pas : Miscellaneous (principale).
 Licence : GPLv3. Logo : docs/publication/logo_questcompanion.png.
 Relation : Optional Dependency -> Ready2Quest (facultatif).
@@ -15,6 +15,11 @@ Une seule description, anglais d'abord puis français (règle des stores : l'ang
 ![A shiny creature tries its luck against the net](https://media.forgecdn.net/attachments/2161/225/f-gif.gif)
 
 For **WoW Forever** (1.60). English and French. Free, standalone (`/qc`), about 2 MB of memory. Pairs well with [Ready2Quest](https://www.curseforge.com/wow/addons/ready2quest).
+
+## New in 2.14: Winter Veil
+- **Winter Veil season** (Azeroth style, Dec 15 – Jan 2): festive lights and falling snow on the journal and the companion, a frosted frame, and the net turns into a **snowball**. `/qc noel` to force it on or off.
+- **Three seasonal companions**: Greatfather Winter (a gift a day), Metzen the reindeer (glowing nose at night) and the Tiny Snowman (loves the cold, melts in the heat), each with its own voice. A surprise visit from Greatfather Winter and a "Merry Winter Veil" achievement.
+- **New appearance picker**: search, filters, shiny or normal side by side, favourites. **New capture card**, creature tooltips with stars, and in the Azeroth style your chosen frame now colours the portrait ring.
 
 ## New in 2.13: your companion speaks up
 - **A voice per creature type**: your captured creature talks like what it is (beast, undead, demon, elemental, dragonkin, mechanical, giant, humanoid, critter), its personality colouring the tone, with jokes now and then (`/qc joke`).
@@ -40,7 +45,7 @@ For **WoW Forever** (1.60). English and French. Free, standalone (`/qc`), about 
 
 ## New in 2.7: achievements and titles
 
-- **174 achievements, with points**: collection, shinies, zones and seals, day by day, guild, character, dungeons and raids (the last boss of each dungeon, Onyxia to Kel'Thuzad), professions, quests and reputation, oddities. Collection ones count for your whole account, performance ones for each character.
+- **175 achievements, with points**: collection, shinies, zones and seals, day by day, guild, character, dungeons and raids (the last boss of each dungeon, Onyxia to Kel'Thuzad), professions, quests and reputation, oddities. Collection ones count for your whole account, performance ones for each character.
 - **Nothing to redo**: your journal stamps, milestones and character statistics award what you already did, silently, at login. A new Achievements page in the journal (`/qc hf`) and an "Achievement earned" banner.
 - **40 titles**: "Trainer Dyokrion", "Dyokrion the Tracker"…, masculine or feminine. Pick yours on your trainer card or with `/qc title`; your big achievements are announced to your guild with your title.
 
@@ -115,6 +120,11 @@ Free software, **GPL-3.0**. Zone data (creatures, gathering, quests) is generate
 
 Pour **WoW Forever** (1.60). En français et en anglais. Gratuit, autonome (`/qc`), environ 2 Mo de mémoire. Va très bien avec [Ready2Quest](https://www.curseforge.com/wow/addons/ready2quest).
 
+## Nouveau en 2.14 : le Voile d'hiver
+- **La saison du Voile d'hiver** (style Azeroth, du 15 décembre au 2 janvier) : guirlandes et neige qui tombe sur le carnet et le compagnon, un cadre givré, et le filet devient une **boule de neige**. `/qc noel` pour le forcer ou le couper.
+- **Trois compagnons de saison** : Grand-père Hiver (un cadeau par jour), Metzen le renne (le nez qui brille la nuit) et le petit bonhomme de neige (il aime le froid, il fond au chaud), chacun avec sa voix. Une visite surprise de Grand-père Hiver et un haut fait « Joyeux Voile d'hiver ».
+- **Nouveau choix d'apparence** : recherche, filtres, brillante à côté de la normale, favoris. **Nouvelle carte de capture**, infobulles des créatures avec les étoiles, et en style Azeroth le cadre choisi colore l'anneau du portrait.
+
 ## Nouveau en 2.13 : le compagnon prend la parole
 - **Une voix par type de créature** : ta créature capturée parle selon ce qu'elle est (bête, mort-vivant, démon, élémentaire, draconien, mécanique, géant, humanoïde, bestiole), son caractère colore le ton, et elle glisse des blagues de temps en temps (`/qc blague`).
 - **L'histoire des lieux** : une phrase d'histoire à ta première arrivée dans une zone ou un lieu notable. Textes de [Warcraft Wiki](https://warcraft.wiki.gg) (CC BY-SA 4.0), choisis et traduits par [Spoken](https://github.com/rusty-key/spoken-wow) de Rusty Key — merci à eux !
@@ -139,7 +149,7 @@ Pour **WoW Forever** (1.60). En français et en anglais. Gratuit, autonome (`/qc
 
 ## Nouveau en 2.7 : hauts faits et titres
 
-- **174 hauts faits, avec des points** : créatures, brillantes, zones et sceaux, au jour le jour, guilde, personnage, donjons et raids (le dernier boss de chaque donjon, d'Onyxia à Kel'Thuzad), métiers, quêtes et réputations, insolite. Ceux de collection valent pour tout ton compte, ceux de performance pour chaque personnage.
+- **175 hauts faits, avec des points** : créatures, brillantes, zones et sceaux, au jour le jour, guilde, personnage, donjons et raids (le dernier boss de chaque donjon, d'Onyxia à Kel'Thuzad), métiers, quêtes et réputations, insolite. Ceux de collection valent pour tout ton compte, ceux de performance pour chaque personnage.
 - **Rien à refaire** : tes tampons du carnet, tes paliers et les statistiques de ton personnage attribuent en silence, à la connexion, ce que tu as déjà fait. Une nouvelle page Hauts faits dans le carnet (`/qc hf`) et un bandeau « Haut fait obtenu ».
 - **40 titres** : « Dresseur Dyokrion », « Dyokrion le Traqueur »…, au masculin ou au féminin. Tu choisis le tien sur ta fiche de dresseur ou avec `/qc titre` ; tes gros hauts faits sont annoncés à ta guilde avec ton titre.
 
