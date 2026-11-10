@@ -81,9 +81,11 @@ FeatsCosmetics.lua
 JournalFeats.lua
 FeatsTitles.lua
 JournalAzeroth.lua
+WinterVeil.lua
 MusicData.lua
 Jukebox.lua
 LoreData.lua
 CompanionLore.lua
 CompanionJokes.lua
+WinterCompanions.lua
 Bindings.lua

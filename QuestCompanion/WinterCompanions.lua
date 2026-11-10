@@ -1,0 +1,3 @@
+-- WinterCompanions.lua -- compagnons de saison du Voile d'hiver (QuestCompanion 2.14.0)
+local ADDON, ns = ...
+if ns.blocked then return end

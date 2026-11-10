@@ -1,0 +1,3 @@
+-- WinterVeil.lua -- thème du Voile d'hiver (QuestCompanion 2.14.0) : décor, saison, boule de neige
+local ADDON, ns = ...
+if ns.blocked then return end
