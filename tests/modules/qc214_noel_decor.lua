@@ -156,34 +156,65 @@ do
 	Check("[WV] compagnon Azeroth : décor montré, sans erreur", d and Shown(d) and frame.uiStyle == "azeroth" and NoErrors(),
 		select(2, NoErrors()))
 	local lights = d and d.lights
-	Check("[WV] guirlande 3D : modèle sans souris, au ras du haut de l'anneau", lights and Shown(lights)
-		and lights.mouseEnabled == false and lights.kind == "PlayerModel"
-		and lights.lastPoint.relTo == frame and lights.lastPoint.relPoint == "TOP"
-		and lights.lastPoint.y == NS.WINTER_VEIL_COMPANION.y and lights:GetWidth() == NS.WINTER_VEIL_COMPANION.w,
-		lights and tostring(lights.kind))
-	-- bêta 3 : la guirlande tient dans la largeur de l'anneau, le fil au ras de son haut, les bulbes sur son bord
 	local C, ring = NS.WINTER_VEIL_COMPANION, NS.AZEROTH_RING
 	local box = NS.WinterVeilLightsBox()
-	local ringTop = ring.y + ring.h / 2
-	local holeTop = ringTop - ring.h * NS.AZEROTH_RING_HOLE.t
-	Check("[WV3] guirlande : cadre du modèle pas plus large que l'anneau", C.w <= ring.w, C.w .. " / " .. ring.w)
-	Check("[WV3] guirlande : largeur rendue dans le cadre du modèle et l'anneau (les trois quarts au moins)",
-		box.w <= C.w and box.w <= ring.w and box.w >= 0.75 * ring.w, string.format("%.1f", box.w))
-	Check("[WV3] guirlande : le fil au ras du haut de l'anneau (± 4 px), plus au-dessus du cadre",
-		math.abs(box.wire - ringTop) <= 4, string.format("%.1f / %d", box.wire, ringTop))
-	Check("[WV3] guirlande : bulbes pendus sur le bord doré, sans couvrir l'ouverture",
-		box.bottom < ringTop and box.bottom >= holeTop - 1, string.format("%.1f / %.1f", box.bottom, holeTop))
-	Check("[WV3] guirlande : bulbes plus petits (≈ 12 px au lieu de 16)", 16 * (C.h / C.cam) / 34 <= 13)
-	Check("[WV3] guirlande : la boîte du modèle contient le fil et les bulbes", box.wire <= C.y + C.h / 2
-		and box.bottom >= C.y - C.h / 2)
+	Check("[WV] guirlande 3D : modèles sans souris, sur le haut du cadre", lights and Shown(lights)
+		and lights.mouseEnabled == false and lights.kind == "PlayerModel"
+		and lights.lastPoint.relTo == frame and lights.lastPoint.relPoint == "TOP"
+		and lights.lastPoint.y == C.y and lights:GetHeight() == C.h,
+		lights and tostring(lights.kind))
+	-- bêta 4 : deux brins, centrés sur le cadre (plus sur l'anneau décalé), toute la largeur de l'or
+	local G = NS.WINTER_VEIL_RING_GOLD
+	local swags = d.swags or {}
+	local placed, sum = #swags == C.swags, 0
+	for index, model in ipairs(swags) do
+		sum = sum + model.lastPoint.x
+		if not Shown(model) or math.abs(model.lastPoint.x - box.centers[index]) > 1e-6 then placed = false end
+	end
+	Check("[WV4] guirlande : deux brins côte à côte (festons), le premier est d.lights", C.swags == 2 and placed
+		and d.lights == swags[1] and math.abs(swags[2].lastPoint.x - swags[1].lastPoint.x - box.swag) < 1e-6)
+	Check("[WV4] guirlande : centrée sur le cadre (x = 0, pas le décalage de l'anneau)", C.x == 0
+		and math.abs(sum / #swags) < 1e-6 and math.abs(box.left + box.right) < 1e-6, string.format("%.2f", sum))
+	Check("[WV4] guirlande : toute la largeur de l'or visible (90 à 100 %), sans déborder de plus de 4 px",
+		box.w >= 0.9 * G.w and box.w <= G.w + 8, string.format("%.1f / %d", box.w, G.w))
+	Check("[WV4] guirlande : bulbes d'environ 8 px (7 à 9,5)", box.bulb >= 7 and box.bulb <= 9.5, string.format("%.1f", box.bulb))
+	Check("[WV4] guirlande : le milieu des fils posé sur le bord doré du haut",
+		box.mid <= G.top and box.mid >= G.inner, string.format("%.1f (%d..%d)", box.mid, G.inner, G.top))
+	Check("[WV4] guirlande : bouts accrochés au-dessus du cadre, bulbes juste sous l'or (≤ 5 px dans l'ouverture)",
+		box.wire > G.top and box.bottom < G.inner and box.bottom >= G.inner - 5, string.format("%.1f / %.1f", box.wire, box.bottom))
+	Check("[WV4] guirlande : caméra déduite de la taille de bulbe", math.abs(box.cam - C.h * C.bulbH / C.bulb) < 1e-9
+		and box.cam > 1)
 	Check("[WV] guirlande au-dessus de l'anneau (habit), sous le calque des effets",
 		lights and lights:GetFrameLevel() > frame.azSkin:GetFrameLevel() and lights:GetFrameLevel() < frame:GetFrameLevel() + 8)
 	-- le client charge le modèle : SetModel(199600), cadrage posé
-	lights.SetModel = function(m, id) m.loaded = id end
-	lights.SetCamDistanceScale = function(m, v) m.cam = v end
+	for _, model in ipairs(d.swags) do
+		model.SetModel = function(m, id) m.loaded = id end
+		model.SetCamDistanceScale = function(m, v) m.cam = v end
+		model.wvModel = nil
+	end
 	NS:WinterVeilCompanion()
 	Check("[WV] guirlande : modèle 199600 chargé, caméra posée", lights.loaded == 199600 and lights.wvModel == 199600
-		and lights.cam == NS.WINTER_VEIL_COMPANION.cam)
+		and d.swags[2].loaded == 199600 and math.abs(lights.cam - NS.WinterVeilLightsBox().cam) < 1e-9)
+	-- bêta 4 : le réglage en jeu (/qc noel cadre <bulbe> <x> <y> <brins> <cap>)
+	local printed = {}
+	local print0 = NS.Print
+	NS.Print = function(_, text) printed[#printed + 1] = text end
+	NS:WinterVeilCommand("cadre 10 -3 1 3 0.2")
+	local tuned = NS.WinterVeilLightsBox()
+	Check("[WV4] /qc noel cadre : valeurs posées et réappliquées tout de suite", C.bulb == 10 and C.x == -3 and C.y == 1
+		and C.swags == 3 and C.facing == 0.2 and #d.swags == 3 and Shown(d.swags[3])
+		and math.abs(d.swags[1].lastPoint.x - tuned.centers[1]) < 1e-6 and d.swags[1].lastPoint.y == 1
+		and math.abs(lights.cam - tuned.cam) < 1e-9 and printed[1] and printed[1]:find("10", 1, true) ~= nil, printed[1])
+	NS:WinterVeilCommand("cadre - - - 1")
+	Check("[WV4] /qc noel cadre : « - » garde la valeur, un brin de moins se cache", C.bulb == 10 and C.swags == 1
+		and Shown(d.swags[1]) and not Shown(d.swags[2]) and not Shown(d.swags[3]))
+	NS:WinterVeilCommand("frame default")
+	Check("[WV4] /qc noel frame default : valeurs livrées", C.bulb == NS.WINTER_VEIL_COMPANION_DEFAULT.bulb and C.swags == 2
+		and C.x == 0 and Shown(d.swags[2]) and not Shown(d.swags[3]))
+	printed = {}
+	NS:WinterVeilCommand("cadre")
+	Check("[WV4] /qc noel cadre sans valeur : les valeurs actuelles, rien ne change", #printed == 1 and C.bulb == 8.5)
+	NS.Print = print0
 	Check("[WV] deux flocons (236121) près du cadre", #d.flakes == 2 and d.flakes[1].texture == ART.flake.file
 		and d.flakes[2].texture == 236121 and d.flakes[1].alpha < 1)
 	local gift = false
@@ -236,15 +267,16 @@ do
 		good and per[f.nav] ~= nil and per[f.content] ~= nil)
 	local navW, cw = f.nav:GetWidth(), f.content:GetWidth()
 	local nb, pb = per[f.nav], per[f.content]
-	local label = f.navGroup
-	local labelRight = label.lastPoint.x + label:GetStringWidth()
-	Check("[WV3] colonne : de son intitulé (laissé sur le parchemin nu) au joint, sans le toucher",
-		nb.min >= labelRight + J.lightsGap - 0.5 and nb.min >= J.lightsInset and nb.min < navW / 2
-		and math.abs(nb.max - (navW - J.lightsJoint)) < 0.01 and math.abs(nb.total - (nb.max - nb.min)) < 0.01
-		and navW - nb.max + LAY.gap / 2 >= 13, string.format("%.1f..%.1f / %d (intitulé %.1f)", nb.min, nb.max, navW, labelRight))
-	Check("[WV3] page : entre les volutes, loin du joint", math.abs(pb.min - J.lightsCurl) < 0.01
+	-- bêta 4 : toute la colonne, mêmes marges aux deux bouts du carnet, coupée au joint
+	Check("[WV4] colonne : toute sa largeur, de la marge au joint (plus de trou après « CARNET »)",
+		math.abs(nb.min - J.lightsCurl) < 0.01 and math.abs(nb.max - (navW - J.lightsJoint)) < 0.01
+		and math.abs(nb.total - (nb.max - nb.min)) < 0.01 and navW - nb.max + LAY.gap / 2 >= 13,
+		string.format("%.1f..%.1f / %d", nb.min, nb.max, navW))
+	Check("[WV4] page : entre les volutes, loin du joint", math.abs(pb.min - J.lightsCurl) < 0.01
 		and math.abs(pb.max - (cw - J.lightsCurl)) < 0.01 and math.abs(pb.total - (pb.max - pb.min)) < 0.01
 		and pb.min + LAY.gap / 2 >= 13, string.format("%.1f..%.1f / %d", pb.min, pb.max, cw))
+	Check("[WV4] marges symétriques : bord gauche de la colonne = bord droit de la page", math.abs(nb.min - (cw - pb.max)) < 0.01)
+	Check("[WV4] l'intitulé « CARNET », sous la guirlande, est caché", not f.navGroup:IsShown())
 	local first = d.lights[1]
 	Check("[WV] … découpe du haut (104×36 sur 128)", first.texCoord[3] == 0 and math.abs(first.texCoord[4] - 36 / 128) < 1e-9
 		and math.abs(first.texCoord[2] - 104 / 128) < 1e-9)
@@ -266,6 +298,7 @@ do
 	NS:SetWinterVeil("off")
 	Check("[WV] jamais : décor du carnet caché tout de suite", not Shown(d) and not Shown(d.flakes[1])
 		and not Shown(d.lights[1]) and not Shown(d.lights[#d.lights]))
+	Check("[WV4] jamais : l'intitulé « CARNET » revient", f.navGroup:IsShown())
 	NS:SetWinterVeil("on")
 	Check("[WV] toujours : il revient", Shown(d) and Shown(d.flakes[1]) and Shown(d.lights[1]))
 	-- automatique hors saison, au rafraîchissement

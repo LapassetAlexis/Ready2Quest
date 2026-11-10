@@ -168,7 +168,8 @@ local function Meta(self, def)
 		m.kind = "capture"
 		local data = self.CaptureData and self:CaptureData()
 		local entry = data and data.creatures and data.creatures[def.npc]
-		m.base = tostring(entry and entry.name or name)
+		-- 2.14.0 (bêta 4) : le nom, pas le numéro (CreatureName, Bestiary.lua)
+		m.base = tostring(entry and self.CreatureName and self:CreatureName(def.npc, entry) or entry and entry.name or name)
 		m.typeText = entry and entry.type or nil
 		m.typeKey = (entry and self.CreatureTypeKey and self:CreatureTypeKey(entry.type)) or nil
 		m.baseFold = Fold(m.base)

@@ -58,8 +58,16 @@ ns.WINTER_VEIL_ROUND_MASK = "Interface\\CharacterFrame\\TempPortraitAlphaMask"
 -- (lightsCurl), à lightsInset du bois ; sur la colonne, après son intitulé
 -- (lightsGap), qui garde son parchemin nu. Posées sur la colonne et la page
 -- (couche BORDER, comme les flocons) : sous leurs textes, sans souris.
+-- 2.14.0 (bêta 4) : la bande de la colonne commençait après son intitulé
+-- (« CARNET ») : un trou à gauche, une guirlande qui paraissait décentrée
+-- (25.png). Elle court désormais sur toute la colonne : mêmes marges aux
+-- deux bouts du carnet (lightsCurl, à gauche de la colonne comme à droite de
+-- la page, où la volute la recouvre en partie), coupée au joint seulement
+-- (lightsJoint côté colonne, la volute côté page). L'intitulé de la colonne,
+-- qu'elle couvrirait, est caché tant que la guirlande est là (rendu sans
+-- elle) : le titre de la fenêtre dit déjà « Carnet de voyage ».
 ns.WINTER_VEIL_JOURNAL = {
-	lightsH = 28, lightsInset = 6, lightsJoint = 14, lightsCurl = 30, lightsGap = 10,
+	lightsH = 28, lightsJoint = 14, lightsCurl = 30,
 	iconSize = 18, iconGap = 6,
 	flakes = {
 		{ on = "content", point = "TOPRIGHT", x = -34, y = -16, size = 30, alpha = 0.42 },
@@ -72,22 +80,36 @@ ns.WINTER_VEIL_JOURNAL = {
 -- 2.14.0 (bêta 3) : en bêta 2 (118×34, cam 1, centre 6 px au-dessus du
 -- cadre), elle faisait ~130 px de large, des bulbes de ~16 px qui pendaient
 -- hors de l'anneau à gauche et à droite, le fil ~20 px au-dessus du cadre.
--- Mesures de la capture : la largeur rendue vaut span × h / cam, le fil est
--- wire × h / cam au-dessus du centre du modèle, le bas des bulbes drop × h /
--- cam en dessous. Désormais 108×40 (la largeur de l'anneau), cam 1,6 : une
--- guirlande d'environ 96 px, bulbes d'environ 12 px, le fil au ras du haut
--- de l'anneau (centre 9 px sous le haut du cadre), les bulbes pendus sur le
--- bord doré. 199603 (trois guirlandes) écartée : à cette largeur, des
--- bulbes de 4 px.
+-- 2.14.0 (bêta 4) : en bêta 3 (108×40, cam 1,6, sur le centre de l'anneau),
+-- capture 21.png (échelle 1,1 mesurée sur la plaque du nom, 112 px) : la
+-- guirlande était 3 px à droite (l'anneau est décalé de RING_X pour centrer
+-- son ouverture, mais l'or visible, lui, est centré sur le cadre), son fil en
+-- V (bouts 20 px au-dessus du centre du modèle, milieu au centre), des
+-- bulbes de ~18 px qui pendaient dans l'ouverture, le jaune fondu dans l'or.
+-- Mesures en unités du modèle (unité = h / cam, en px) : un brin fait
+-- span = 3,75 de large, ses bouts sont wireTop = 0,8 au-dessus du centre, le
+-- milieu du fil sag = 0,07, le bas des bulbes drop = 0,65 en dessous, un
+-- bulbe bulbH = 0,73 de haut. Désormais deux brins côte à côte (swags), en
+-- festons accrochés aux coins et au milieu du cadre, des bulbes de ~8,5 px
+-- (bulb, en px) : un brin de ~44 px, les deux de ~87 px (l'or visible fait
+-- ~91 px) ; centrés sur le cadre (x depuis son centre, plus sur l'anneau),
+-- le milieu des fils sur le bord doré du haut (y : centre des modèles,
+-- depuis le haut du cadre). 199603 (trois guirlandes) écartée : la même
+-- taille de bulbe, mais trois fois plus large que le cadre.
+-- Réglage en jeu : /qc noel cadre <bulbe> <x> <y> <brins> <cap> (session).
 ns.WINTER_VEIL_COMPANION = {
-	model = 199600, w = 108, h = 40, y = -9,
-	cam = 1.6, pos = { 0, 0, 0 }, facing = 0,
-	span = 3.82, wire = 0.62, drop = 0.26,
+	model = 199600, swags = 2, bulb = 8.5, x = 0, y = -2, h = 30, facing = 0,
+	span = 3.75, wireTop = 0.8, sag = 0.07, drop = 0.65, bulbH = 0.73,
 	flakes = {
 		{ x = -44, y = -6, size = 14, alpha = 0.75 },
 		{ x = 46, y = -26, size = 11, alpha = 0.65 },
 	},
 }
+ns.WINTER_VEIL_COMPANION_DEFAULT = {}
+for key, value in pairs(ns.WINTER_VEIL_COMPANION) do ns.WINTER_VEIL_COMPANION_DEFAULT[key] = value end
+-- l'or visible du cadre Azeroth (21.png, en px du cadre) : haut du bord doré,
+-- haut de l'ouverture (depuis le haut du cadre), largeur
+ns.WINTER_VEIL_RING_GOLD = { top = 2, inner = -6, w = 91 }
 -- la scène de capture : la boule de neige (taille, tours en vol), son
 -- éclatement en flocons (nombre, durée, portée, taille)
 -- 2.14.0 (bêta 3) : un peu plus soigné, mêmes durées. La boule ralentit un
@@ -111,13 +133,15 @@ local FR = {
 	WINTER_VEIL_auto_HINT   = "du 15 décembre au 2 janvier",
 	WINTER_VEIL_on          = "Toujours",
 	WINTER_VEIL_off         = "Jamais",
-	WINTER_VEIL_USAGE       = "/qc noel auto|on|off (actuel : %s)",
+	WINTER_VEIL_USAGE       = "/qc noel auto|on|off (actuel : %s). Réglages en jeu : /qc noel cadre, /qc noel metzen",
 	WINTER_VEIL_MSG         = "Décor du Voile d'hiver : %s.",
 	WINTER_VEIL_MSG_SOBRE   = "Décor du Voile d'hiver : %s. Il ne se voit qu'avec le style Azeroth (/qc style azeroth).",
 	HELP_NOEL               = "/qc noel auto|on|off — décor du Voile d'hiver (guirlandes, flocons, boule de neige)",
 	-- 2.14.0 (bêta 3) : le pied de la scène de capture (au lieu de « Le filet bouge… »)
 	WINTER_VEIL_STAGE_FLY   = "La boule de neige vole…",
 	WINTER_VEIL_STAGE_SHAKE = "Sous la neige, ça remue…",
+	-- 2.14.0 (bêta 4) : réglage en jeu de la guirlande du cadre
+	WINTER_VEIL_TUNE_LIGHTS = "Guirlande du cadre : bulbe %s px, x %s, y %s, %s brin(s), cap %s (largeur %.0f px, caméra %.2f). Régler : /qc noel cadre <bulbe> <x> <y> <brins> <cap> (- garde une valeur, defaut remet tout).",
 }
 local EN = {
 	OPT_WINTER_VEIL         = "Winter Veil decorations",
@@ -127,12 +151,13 @@ local EN = {
 	WINTER_VEIL_auto_HINT   = "December 15 to January 2",
 	WINTER_VEIL_on          = "Always",
 	WINTER_VEIL_off         = "Never",
-	WINTER_VEIL_USAGE       = "/qc noel auto|on|off (current: %s)",
+	WINTER_VEIL_USAGE       = "/qc noel auto|on|off (current: %s). Live tuning: /qc noel frame, /qc noel metzen",
 	WINTER_VEIL_MSG         = "Winter Veil decorations: %s.",
 	WINTER_VEIL_MSG_SOBRE   = "Winter Veil decorations: %s. They only show with the Azeroth style (/qc style azeroth).",
 	HELP_NOEL               = "/qc noel auto|on|off — Winter Veil decorations (lights, snowflakes, snowball)",
 	WINTER_VEIL_STAGE_FLY   = "The snowball is flying…",
 	WINTER_VEIL_STAGE_SHAKE = "Something stirs under the snow…",
+	WINTER_VEIL_TUNE_LIGHTS = "Frame lights: bulb %s px, x %s, y %s, %s strand(s), facing %s (width %.0f px, camera %.2f). Tune: /qc noel frame <bulb> <x> <y> <strands> <facing> (- keeps a value, default resets all).",
 }
 ns.RegisterStrings(FR, EN)
 if ns.KEEP_STRINGS then ns.WINTER_VEIL_STRINGS = { fr = FR, en = EN } end
@@ -326,14 +351,8 @@ function ns.WinterVeilJournalBands(frame)
 	local bands = {}
 	local nav, content = frame.nav, frame.content
 	if nav then
-		-- l'intitulé de la colonne (« Carnet », 12 px sous le métal) reste
-		-- sur le parchemin nu : la bande commence après lui
-		local x0, label = J.lightsInset, frame.navGroup
-		if label and label.GetPoint then
-			local ok, _, _, _, lx = pcall(label.GetPoint, label)
-			x0 = math.max(x0, math.floor((ok and tonumber(lx) or 0) + Measure(label) + J.lightsGap + 0.5))
-		end
-		bands[#bands + 1] = { host = nav, x0 = x0, x1 = (tonumber(nav:GetWidth()) or lay.nav) - J.lightsJoint }
+		-- 2.14.0 (bêta 4) : toute la colonne (son intitulé est caché)
+		bands[#bands + 1] = { host = nav, x0 = J.lightsCurl, x1 = (tonumber(nav:GetWidth()) or lay.nav) - J.lightsJoint }
 	end
 	if content then
 		local cw = tonumber(content:GetWidth()) or 0
@@ -353,11 +372,15 @@ function ns:WinterVeilJournal(frame)
 			d:Hide()
 			for _, tex in ipairs(d.flakes) do tex:Hide() end
 			for _, tex in ipairs(d.lights) do tex:Hide() end
+			if d.navLabelHidden and frame.navGroup then frame.navGroup:Show() end
+			d.navLabelHidden = nil
 		end
 		return false
 	end
 	d = d or BuildJournalDecor(frame)
 	d:Show()
+	-- l'intitulé de la colonne, sous la guirlande : caché (rendu sans elle)
+	if frame.navGroup then frame.navGroup:Hide(); d.navLabelHidden = true end
 	for _, tex in ipairs(d.flakes) do tex:Show() end
 	for _, tex in ipairs(d.lights) do tex:Show() end
 	PlaceTitleIcons(frame, d)
@@ -367,22 +390,68 @@ end
 -- ---------------------------------------------------------------------------
 -- Le cadre du compagnon : guirlande 3D au ras du haut de l'anneau, flocons
 -- ---------------------------------------------------------------------------
-local function LightsFraming(m)
-	local C = ns.WINTER_VEIL_COMPANION
-	Method(m, "SetCamDistanceScale", C.cam)
-	Method(m, "SetPosition", C.pos[1], C.pos[2], C.pos[3])
-	Method(m, "SetFacing", C.facing)
-end
-
--- 2.14.0 (bêta 3) : l'emprise estimée de la guirlande (mesures de
--- WINTER_VEIL_COMPANION), depuis le haut du cadre, x depuis le centre de
--- l'anneau : { w, left, right, wire, bottom } (tests : dans la largeur de
--- l'anneau, le fil au ras de son haut, les bulbes sur son bord doré)
+-- 2.14.0 (bêta 4) : l'emprise de la guirlande (mesures de
+-- WINTER_VEIL_COMPANION), y depuis le haut du cadre, x depuis son centre :
+-- { unit, cam, swag (largeur d'un brin), w, left, right, wire (bouts du
+-- fil), mid (milieu d'un fil), bottom (bas des bulbes), bulb, centers }
 function ns.WinterVeilLightsBox()
 	local C = ns.WINTER_VEIL_COMPANION
-	local unit = C.h / C.cam
-	local w = C.span * unit
-	return { w = w, left = -w / 2, right = w / 2, wire = C.y + C.wire * unit, bottom = C.y - C.drop * unit }
+	local unit = (tonumber(C.bulb) or 8) / C.bulbH
+	local n = math.max(1, math.min(3, math.floor(tonumber(C.swags) or 1)))
+	local swag = C.span * unit
+	local centers = {}
+	for index = 1, n do centers[index] = C.x + (index - (n + 1) / 2) * swag end
+	return { unit = unit, cam = C.h / unit, swag = swag, w = n * swag, left = C.x - n * swag / 2, right = C.x + n * swag / 2,
+		wire = C.y + C.wireTop * unit, mid = C.y + C.sag * unit, bottom = C.y - C.drop * unit,
+		bulb = C.bulbH * unit, centers = centers, count = n }
+end
+
+local function LightsFraming(m)
+	local C = ns.WINTER_VEIL_COMPANION
+	Method(m, "SetCamDistanceScale", ns.WinterVeilLightsBox().cam)
+	Method(m, "SetPosition", 0, 0, 0)
+	Method(m, "SetFacing", tonumber(C.facing) or 0)
+end
+
+-- Un brin : un modèle du client, sans fond, sans souris, par-dessus l'anneau
+local function NewSwag(d)
+	local ok, model = pcall(CreateFrame, "PlayerModel", nil, d)
+	if not (ok and model) then return nil end
+	model:SetFrameLevel((d:GetFrameLevel() or 1) + 1)
+	model:EnableMouse(false)
+	Method(model, "SetKeepModelOnHide", true)
+	model.framing = LightsFraming
+	if ns.ModelKeepFraming then ns.ModelKeepFraming(model) end
+	return model
+end
+
+-- Les brins à leur place (créés au besoin, les autres cachés)
+local function PlaceSwags(frame, d)
+	local C, box = ns.WINTER_VEIL_COMPANION, ns.WinterVeilLightsBox()
+	d.swags = d.swags or {}
+	for index = 1, math.max(box.count, #d.swags) do
+		local model = d.swags[index]
+		if index <= box.count then
+			model = model or NewSwag(d)
+			d.swags[index] = model
+		end
+		if model then
+			if index <= box.count then
+				model:SetSize(math.floor(box.swag + 8.5), C.h)
+				model:ClearAllPoints()
+				model:SetPoint("CENTER", frame, "TOP", box.centers[index], C.y)
+				if model.wvModel ~= C.model then
+					if Method(model, "SetModel", C.model) then model.wvModel = C.model end
+				end
+				model:Show()
+				LightsFraming(model)
+			else
+				model:Hide()
+			end
+		end
+	end
+	d.lights = d.swags[1]
+	return box
 end
 
 local function BuildCompanionDecor(frame, skin)
@@ -392,18 +461,7 @@ local function BuildCompanionDecor(frame, skin)
 	d:SetAllPoints(frame)
 	d:SetFrameLevel((skin:GetFrameLevel() or 1) + 2)
 	d:EnableMouse(false)
-	-- la guirlande : un modèle du client, sans fond, sans souris, par-dessus l'anneau
-	local ok, model = pcall(CreateFrame, "PlayerModel", nil, d)
-	if ok and model then
-		model:SetSize(C.w, C.h)
-		model:SetPoint("CENTER", frame, "TOP", ringX, C.y)
-		model:SetFrameLevel((d:GetFrameLevel() or 1) + 1)
-		model:EnableMouse(false)
-		Method(model, "SetKeepModelOnHide", true)
-		model.framing = LightsFraming
-		if ns.ModelKeepFraming then ns.ModelKeepFraming(model) end
-		d.lights = model
-	end
+	d.swags = {}
 	d.flakes = {}
 	for index, spec in ipairs(C.flakes) do
 		local tex = NewFile(d, "OVERLAY", 2, A.flake)
@@ -428,21 +486,43 @@ function ns:WinterVeilCompanion()
 	if not on then
 		if d then
 			d:Hide()
-			if d.lights then d.lights:Hide() end
+			for _, model in ipairs(d.swags or {}) do model:Hide() end
 		end
 		return false
 	end
 	d = d or BuildCompanionDecor(frame, skin)
 	d:Show()
-	local model = d.lights
-	if model then
-		if not model.wvModel then
-			if Method(model, "SetModel", ns.WINTER_VEIL_COMPANION.model) then model.wvModel = ns.WINTER_VEIL_COMPANION.model end
-		end
-		model:Show()
-		LightsFraming(model)
-	end
+	PlaceSwags(frame, d)
 	return true
+end
+
+-- 2.14.0 (bêta 4) : réglage en jeu de la guirlande du cadre (pour la
+-- session) : /qc noel cadre <bulbe px> <x> <y> <brins> <cap> ; un « - »
+-- garde la valeur ; « defaut » remet les valeurs livrées ; sans rien : les
+-- valeurs actuelles. Rend la table réglée (nil si rien n'a changé).
+local TUNE_KEYS = { "bulb", "x", "y", "swags", "facing" }
+local RESET_WORDS = { defaut = true, ["défaut"] = true, default = true, reset = true }
+function ns:WinterVeilTuneLights(rest)
+	local C = ns.WINTER_VEIL_COMPANION
+	local words = {}
+	for word in tostring(rest or ""):gmatch("%S+") do words[#words + 1] = (word:gsub(",", ".")) end
+	local changed = false
+	if RESET_WORDS[(words[1] or ""):lower()] then
+		for key, value in pairs(ns.WINTER_VEIL_COMPANION_DEFAULT) do C[key] = value end
+		changed = true
+	else
+		for index, key in ipairs(TUNE_KEYS) do
+			local value = tonumber(words[index])
+			if value then C[key] = value; changed = true end
+		end
+	end
+	if C.swags then C.swags = math.max(1, math.min(3, math.floor(C.swags))) end
+	if changed then pcall(self.WinterVeilCompanion, self) end
+	local box = ns.WinterVeilLightsBox()
+	if self.Print then
+		self:Print(self:F("WINTER_VEIL_TUNE_LIGHTS", C.bulb, C.x, C.y, C.swags, C.facing, box.w, box.cam))
+	end
+	return changed and C or nil
 end
 
 -- ---------------------------------------------------------------------------
@@ -843,7 +923,11 @@ do
 end
 
 function ns:WinterVeilCommand(rest)
-	local word = (tostring(rest or ""):match("^%s*(%S*)") or ""):lower()
+	local word, more = tostring(rest or ""):match("^%s*(%S*)%s*(.-)%s*$")
+	word = (word or ""):lower()
+	-- 2.14.0 (bêta 4) : réglages en jeu (guirlande du cadre, Metzen)
+	if word == "cadre" or word == "frame" then return self:WinterVeilTuneLights(more) end
+	if word == "metzen" and self.WinterMetzenTune then return self:WinterMetzenTune(more) end
 	local mode = word ~= "" and self:SetWinterVeil(word) or nil
 	if not mode then
 		self:Print(self:F("WINTER_VEIL_USAGE", L["WINTER_VEIL_" .. self:WinterVeilChoice()]))

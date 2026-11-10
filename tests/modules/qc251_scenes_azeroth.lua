@@ -211,6 +211,18 @@ do
 	Check("[AZS] les étoiles du spécimen dans le bandeau", stage.starSlots[1]:GetParent() == banner
 		and stage.starSlots[1]:IsShown())
 	Check("[AZS] l'ancien ruban n'existe pas ici", stage.ribbonPanel == nil and stage.sheen == nil)
+	-- 2.14.0 (bêta 4) : le bandeau réduit (24.png : il couvrait tout le bas de la carte)
+	local vs = AZS.verdictScale
+	local vw, vh = AZS.verdictW * vs, AZS.verdictH * vs
+	local centerY = -AZS.verdictY + AZS.verdictH / 2          -- depuis le haut de la carte
+	Check("[AZS4] verdict réduit (≈ 82 %), posé au repos à cette échelle", vs >= 0.75 and vs <= 0.9
+		and math.abs(banner:GetScale() - vs) < 1e-6, tostring(banner:GetScale()))
+	Check("[AZS4] verdict : dans la carte, ≥ 30 px de marge de chaque côté", vw <= AZS.w - 60, string.format("%.0f / %d", vw, AZS.w))
+	Check("[AZS4] verdict : au-dessus du pied, sous la scène (marges en hauteur)",
+		centerY + vh / 2 <= AZS.h - NS.AZEROTH_CARD.gold - 24 and centerY - vh / 2 >= -AZS.sceneY + 196 - 10,
+		string.format("%.0f..%.0f", centerY - vh / 2, centerY + vh / 2))
+	Check("[AZS4] éclair blanc plus petit et moins fort", stage.flash:GetWidth() == NS.CAPTURE_FLASH.size
+		and NS.CAPTURE_FLASH.size <= 240 and NS.CAPTURE_FLASH.ok < 1)
 	-- 2.14.0 (bêta 3) : le bandeau se pose sur la chance et les aides (cachées), sous l'ombre
 	local sceneBottom = -AZS.sceneY + 196
 	Check("[AZC14] verdict posé sur la chance et les aides, qui se cachent", not stage.details:IsShown()

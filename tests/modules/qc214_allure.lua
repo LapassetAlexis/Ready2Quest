@@ -487,10 +487,28 @@ do
 	Check("[ALLURE3] modèle sans souris (le clic reste à la tuile)", tFire.model.mouseEnabled == false)
 	-- Metzen : de loin, la même distance dans la vignette, la carte et le cadre du compagnon
 	local tMetzen = TileOf(panel, "winter:metzen")
-	Check("[ALLURE3] Metzen : vignette cadrée de loin (caméra du client trop près)", tMetzen.model.creature == 15664
-		and tMetzen.model.cam == NS.WINTER_METZEN_CAM and NS.WINTER_METZEN_CAM >= 3, tostring(tMetzen.model.cam))
-	Check("[ALLURE3] Metzen : même valeur pour le cadre du compagnon", NS:CompanionModelCam({ npc = 15664 }, "pied")
-		== NS.WINTER_METZEN_CAM and NS.COMPANION_MODEL_OVERRIDES[15664].cam == NS.WINTER_METZEN_CAM)
+	-- bêta 4 : Metzen montré sous le modèle du Renne de l'Hiver (15706), cadré comme les autres
+	Check("[ALLURE4] Metzen : la vignette montre un modèle (Renne de l'Hiver, 15706), cadré comme les autres",
+		tMetzen.look == "model" and tMetzen.model.creature == NS.WINTER_METZEN_LOOK and NS.WINTER_METZEN_LOOK == 15706
+		and tMetzen.model:IsShown() and tMetzen.model.cam == NS.WINTER_METZEN_CAM and NS.WINTER_METZEN_CAM <= 2,
+		tostring(tMetzen.model.creature) .. " / " .. tostring(tMetzen.model.cam))
+	Check("[ALLURE4] Metzen : même valeur pour le cadre du compagnon", NS:CompanionModelCam({ npc = 15664 }, "pied")
+		== NS.WINTER_METZEN_CAM and NS.COMPANION_MODEL_OVERRIDES[15664].cam == NS.WINTER_METZEN_CAM
+		and NS.MODEL_NPC_LOOK[15664] == 15706)
+	-- bêta 4 : /qc noel metzen <distance> [pnj] : réglage en jeu, la vignette se recharge
+	local print0 = NS.Print
+	NS.Print = function() end
+	NS:WinterVeilCommand("metzen 2,5 15664")
+	NS:AllureRefresh()
+	local tuned = TileOf(panel, "winter:metzen")
+	Check("[ALLURE4] /qc noel metzen 2,5 15664 : distance et modèle réglés, vignette rechargée",
+		NS.WINTER_METZEN_CAM == 2.5 and tuned.model.creature == 15664 and tuned.model.cam == 2.5
+		and NS:CompanionModelCam({ npc = 15664 }, "pied") == 2.5, tostring(tuned.model.creature) .. " / " .. tostring(tuned.model.cam))
+	NS:WinterVeilCommand("metzen 1.4 15706")
+	NS:AllureRefresh()
+	Check("[ALLURE4] /qc noel metzen 1.4 15706 : retour au Renne de l'Hiver", TileOf(panel, "winter:metzen").model.creature == 15706
+		and NS.WINTER_METZEN_CAM == 1.4)
+	NS.Print = print0
 	Check("[ALLURE3] Grand-père Hiver et le bonhomme de neige : inchangés", TileOf(panel, "winter:gfw").model.cam == 1.5
 		and TileOf(panel, "winter:snowman").model.cam == 1.2)
 	-- la mise en réserve : un modèle par tuile au plus, réutilisé au défilement
@@ -559,4 +577,58 @@ do
 	Check("[ALLURE3] panneau fermé : plus rien à apprendre", #NS:ModelLearnQueue() == 0)
 	UninstallModels()
 	A.Done()
+end
+
+-- 2.14.0 (bêta 4) : des noms, pas des numéros (23.png : « 3632 ») ---------------------------------------
+do
+	Say("-- allure (bêta 4) : le nom d'une créature capturée sans nom gardé")
+	local savedZones = rawget(NS, "ZONE_CREATURES")
+	NS.ZONE_CREATURES = NS.LazyZones({ [1413] = function()
+		return { [3632] = { lvl = { 15, 16 }, rank = 1, fr = "Rampant déviant", en = "Deviate Creeper" } }
+	end })
+	NS.CreatureNameForget()
+	A.Reset("azeroth")
+	local capture = NS:CaptureData()
+	capture.creatures[3632] = { name = "3632", class = "elite", type = "Bête", normal = true, at = 30 }
+	capture.creatures[9999] = { class = "normal", type = "Bête", normal = true, at = 31 }
+	capture.count, capture.serial = capture.count + 2, capture.serial + 1
+	NS.captureAppCache = nil
+	-- le carnet connaît 9999 sous son nom (une autre zone)
+	NS:BestiaryData()[1411] = { [9999] = { name = "Sanglier du carnet", seen = true, killed = 1 } }
+	local static = { ["Rampant déviant"] = true, ["Deviate Creeper"] = true }
+	Check("[NOMS4] numéro rangé, nom de la table livrée (toutes zones)", static[NS:CreatureName(3632, { name = "3632" })] == true)
+	Check("[NOMS4] le nom du carnet d'abord (une autre zone)", NS:CreatureName(9999, {}) == "Sanglier du carnet")
+	Check("[NOMS4] un vrai nom de fiche reste", NS:CreatureName(3632, { name = "Rampant" }) == "Rampant")
+	Check("[NOMS4] rien nulle part : le numéro en dernier recours", NS:CreatureName(123456, {}) == "123456")
+	local panel = Open()
+	local tile = TileOf(panel, "cap:3632")
+	if not tile then
+		Type(panel, "deviant")
+		tile = TileOf(panel, "cap:3632")
+	end
+	if not tile then
+		Type(panel, "creeper")
+		tile = TileOf(panel, "cap:3632")
+	end
+	local label = tile and tile.label:GetText()
+	Check("[NOMS4] vignette : le nom, pas « 3632 »", label ~= nil and static[label] == true, tostring(label))
+	Check("[NOMS4] nom rendu à la fiche de capture", static[capture.creatures[3632].name] == true
+		and capture.creatures[9999].name == "Sanglier du carnet")
+	local meta = tile and NS:AllureMeta(tile.def)
+	Check("[NOMS4] infobulle : le nom en titre (libellé de l'apparence)", meta ~= nil and static[meta.name] == true,
+		tostring(meta and meta.name))
+	-- la plaque du compagnon, sous cette allure
+	NS:CompanionData().appearance = "cap:3632"
+	Check("[NOMS4] plaque du compagnon : le nom", static[NS:CompanionName()] == true, tostring(NS:CompanionName()))
+	-- la page Créatures (vue du Pokédex)
+	NS.menagerieStatic = nil
+	local list = NS:MenagerieList({})
+	local found
+	for _, item in ipairs(list or {}) do if item.npc == 3632 then found = item.name end end
+	Check("[NOMS4] page Créatures : le nom", static[found] == true, tostring(found))
+	NS:BestiaryData()[1411] = nil
+	A.Done()
+	NS.ZONE_CREATURES = savedZones
+	NS.CreatureNameForget()
+	NS.menagerieStatic = nil
 end

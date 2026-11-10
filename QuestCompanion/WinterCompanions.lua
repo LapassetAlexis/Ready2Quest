@@ -72,7 +72,17 @@ for _, def in ipairs(ns.WINTER_COMPANIONS) do BY_ID[def.id], BY_KEY[def.seasonal
 -- « pied »). Metzen : la caméra du client le prend de tout près (la tête
 -- remplit 140 px à 1, le reste hors champ ; à 1,2 dans une vignette, un
 -- bout de bois seulement) : de beaucoup plus loin.
-ns.WINTER_METZEN_CAM = 3.6
+-- 2.14.0 (bêta 4) : à 3,6, la vignette restait vide (22.png). Le modèle de
+-- Metzen (15664) est le renne du client à l'échelle 1 (CreatureModelData
+-- 2233 ; le Renne de l'Hiver, 15706, est le même renne à l'échelle 0,2) : la
+-- caméra du client ne s'y règle pas (de près : la tête, de loin : rien). Il
+-- prend donc l'allure du Renne de l'Hiver (15706, affiché en entier en jeu,
+-- 07.png), cadré comme les autres (ns.MODEL_NPC_LOOK, Companion.lua) ; il
+-- reste Metzen partout ailleurs (nom, voix, effets). Réglage en jeu :
+-- /qc noel metzen <distance> [pnj] (15664 pour réessayer le sien).
+ns.WINTER_METZEN_CAM = 1.4
+ns.WINTER_METZEN_LOOK = 15706
+if type(ns.MODEL_NPC_LOOK) == "table" then ns.MODEL_NPC_LOOK[15664] = ns.WINTER_METZEN_LOOK end
 if type(ns.COMPANION_MODEL_OVERRIDES) == "table" then
 	ns.COMPANION_MODEL_OVERRIDES[13444] = { cam = 1.5 }
 	ns.COMPANION_MODEL_OVERRIDES[15664] = { cam = ns.WINTER_METZEN_CAM }
@@ -110,6 +120,7 @@ ns.RegisterStrings({
 	WINTER_MSG_BYE      = "%s repart vers le Nord : ton compagnon habituel reprend sa place.",
 	WINTER_MSG_SACK     = "La hotte de Grand-père Hiver : %s pour toi aujourd'hui.",
 	OPT_COMP_WINTER_VISIT      = "Visite surprise de Grand-père Hiver",
+	WINTER_METZEN_TUNE  = "Metzen : distance %s, modèle du pnj %s. Régler : /qc noel metzen <distance> [pnj] (15664 : son modèle, 15706 : le Renne de l'Hiver).",
 	OPT_COMP_WINTER_VISIT_DESC = "Pendant le Voile d'hiver (15 décembre - 2 janvier), il passe parfois dire bonjour dans un coin de l'écran : une fois par session au plus, jamais en combat ni en donjon. Un clic le renvoie.",
 }, {
 	WINTER_COMP_gfw     = "Greatfather Winter",
@@ -118,6 +129,7 @@ ns.RegisterStrings({
 	WINTER_MSG_BYE      = "%s heads back north: your usual companion takes its place again.",
 	WINTER_MSG_SACK     = "Greatfather Winter's sack: %s for you today.",
 	OPT_COMP_WINTER_VISIT      = "Surprise visit from Greatfather Winter",
+	WINTER_METZEN_TUNE  = "Metzen: distance %s, model of npc %s. Tune: /qc noel metzen <distance> [npc] (15664: his own model, 15706: the Winter Reindeer).",
 	OPT_COMP_WINTER_VISIT_DESC = "During Winter Veil (December 15 - January 2), he sometimes drops by in a corner of the screen: once per session at most, never in combat or in a dungeon. A click sends him off.",
 })
 
@@ -878,5 +890,33 @@ ns.Every("winterCompanions", ns.WINTER_TICK, function()
 	if ok then ok, err = pcall(ns.WinterVisitTick, ns) end
 	if not ok and ns.RecordError then ns:RecordError("winter:tick", err) end
 end)
+
+-- 2.14.0 (bêta 4) : réglage en jeu de Metzen (pour la session) : distance de
+-- caméra (cadre du compagnon, vignette, carte « Son allure ») et pnj dont le
+-- modèle le montre. Rend la distance, le pnj montré.
+function ns:WinterMetzenTune(rest)
+	local cam, npc = tostring(rest or ""):match("^%s*(%S*)%s*(%S*)")
+	cam, npc = tonumber((cam or ""):gsub(",", ".") .. ""), tonumber(npc)
+	if cam and cam > 0 then
+		ns.WINTER_METZEN_CAM = cam
+		if type(ns.COMPANION_MODEL_OVERRIDES) == "table" then ns.COMPANION_MODEL_OVERRIDES[15664] = { cam = cam } end
+	end
+	if npc and npc > 0 and type(ns.MODEL_NPC_LOOK) == "table" then
+		ns.MODEL_NPC_LOOK[15664] = npc ~= 15664 and npc or nil
+	end
+	local shown = (type(ns.MODEL_NPC_LOOK) == "table" and ns.MODEL_NPC_LOOK[15664]) or 15664
+	if cam or npc then
+		-- tout ce qui le montre se recharge : le cadre, les vignettes, la carte
+		local frame = self.companionFrame
+		if frame and frame.model and ns.ModelForget then ns.ModelForget(frame.model) end
+		if self.CompanionApplyModel then pcall(self.CompanionApplyModel, self) end
+		local panel = self.allurePanel
+		for _, tile in ipairs(panel and panel.seasonTiles or {}) do tile.lookKey = nil end
+		if panel and panel.IsShown and panel:IsShown() and self.AllureRefresh then pcall(self.AllureRefresh, self) end
+		if self.RefreshJournal and self.journalFrame and self.journalFrame:IsShown() then pcall(self.RefreshJournal, self) end
+	end
+	if self.Print then self:Print(self:F("WINTER_METZEN_TUNE", ns.WINTER_METZEN_CAM, shown)) end
+	return ns.WINTER_METZEN_CAM, shown
+end
 
 if ns.Mark then ns.Mark("WinterCompanions") end

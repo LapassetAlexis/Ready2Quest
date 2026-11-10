@@ -722,7 +722,7 @@ function ns:TrainerOwnCard()
 		local entry = npc and capture.creatures and capture.creatures[npc]
 		if npc and type(entry) == "table" and self:CaptureHas(npc, shiny) then
 			card.showcase[slot] = { npc = npc, shiny = shiny, class = entry.class, typeKey = TypeKey(self, entry.type),
-				stars = Stars(self, npc, shiny), name = entry.name }
+				stars = Stars(self, npc, shiny), name = self.CreatureName and self:CreatureName(npc, entry) or entry.name }
 		end
 	end
 	return card
@@ -1573,7 +1573,10 @@ end
 
 local function PaintTile(self, tile, item, own)
 	if item then
-		local name = item.name or ("#" .. tostring(item.npc))
+		local name = item.name
+		-- 2.14.0 (bêta 4) : une vitrine reçue avec un numéro : le nom connu ici
+		if not ns.CreatureNameGood(name, item.npc) and item.npc and self.CreatureName then name = self:CreatureName(item.npc) end
+		name = name or ("#" .. tostring(item.npc))
 		tile.name:SetText(item.shiny and self:F("CAPTURE_SHINY_TAG", name) or name)
 		local parts = {}
 		local rank = ClassLabel(item.class)

@@ -734,6 +734,11 @@ function ns:CompanionName()
 		local ok, capture = pcall(self.CaptureData, self)
 		local entry = ok and type(capture) == "table" and type(capture.creatures) == "table"
 			and (capture.creatures[npc] or capture.creatures[tostring(npc)])
+		-- 2.14.0 (bêta 4) : le nom, pas le numéro (CreatureName, Bestiary.lua)
+		if type(entry) == "table" and self.CreatureName then
+			local found = self:CreatureName(npc, entry)
+			if ns.CreatureNameGood(found, npc) then return found end
+		end
 		if type(entry) == "table" and type(entry.name) == "string" and entry.name ~= "" then return entry.name end
 	end
 	return self:CompanionOwnName()
@@ -1807,6 +1812,10 @@ local function ModelCall(obj, name, ...)
 	return false
 end
 
+-- 2.14.0 (bêta 4) : le modèle montré pour une créature quand le sien ne se
+-- cadre pas (pnj → pnj montré à sa place) ; rempli par WinterCompanions.lua
+ns.MODEL_NPC_LOOK = ns.MODEL_NPC_LOOK or {}
+
 -- Opacité du modèle (B7, 2.11.0) : un PlayerModel ne suit pas l'alpha de son
 -- cadre ; SetModelAlpha l'estompe vraiment. Gardée sur le modèle et reposée
 -- avec le cadrage (un rechargement la remet à 1).
@@ -1860,7 +1869,9 @@ function ns.ShowModel(model, opts, profile)
 	end
 	model.framingZoom, model.framingCam, model.modelProfile = zoom, cam, profile or "stage"
 	ns.ModelKeepFraming(model)
-	local key = tostring(opts.display) .. ":" .. tostring(opts.npc) .. ":" .. (opts.shiny and "s" or "")
+	local npc = opts.npc
+	if npc and ns.MODEL_NPC_LOOK[tonumber(npc) or -1] then npc = ns.MODEL_NPC_LOOK[tonumber(npc)] end
+	local key = tostring(opts.display) .. ":" .. tostring(npc) .. ":" .. (opts.shiny and "s" or "")
 		.. ":" .. tostring(opts.epoch)
 	if model.modelKey == key and model.modelShown then
 		model.framing(model)
@@ -1869,7 +1880,7 @@ function ns.ShowModel(model, opts, profile)
 	end
 	local shown = false
 	if opts.display then shown = ModelCall(model, "SetDisplayInfo", opts.display) end
-	if not shown and opts.npc then shown = ModelCall(model, "SetCreature", opts.npc) end
+	if not shown and npc then shown = ModelCall(model, "SetCreature", npc) end
 	model.modelKey, model.modelShown = key, shown and true or false
 	-- un modèle rechargé repart opaque (le client remet son opacité à 1)
 	model.appliedAlpha, model.alphaDirty = nil, nil

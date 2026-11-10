@@ -63,7 +63,15 @@ local RIBBON_W, RIBBON_H = 300, 75
 local AZS = { w = 340, h = 418, plateW = 280, plateH = 92, plateY = -10, sceneY = -98,
 	verdictW = 324, verdictH = 105, verdictY = -286, footer = 12, dots = 12, dotsY = -2,
 	infoY = -26, aidsY = -50, aid = 24, aidStep = 52 }
+-- 2.14.0 (bêta 4) : le bandeau de verdict, trop grand sur la carte de 340 px
+-- (24.png : il couvrait tout le bas, bord à bord). Même dessin, réduit
+-- (verdictScale, appliqué par SetScale : textes, bouclier, éclat compris) :
+-- ≈ 266×86, 37 px de marge de chaque côté, centré dans sa zone.
+AZS.verdictScale = 0.82
 ns.CAPTURE_STAGE_AZEROTH = AZS
+-- 2.14.0 (bêta 4) : l'éclair blanc (impact, capture), moins grand et moins
+-- fort : 320 px et opacité 1 avant
+ns.CAPTURE_FLASH = { size = 220, ok = 0.7, impact = 0.55 }
 -- l'ombre au sol, sous les pattes : ovale doux du client, teinté sombre
 ns.CAPTURE_STAGE_SHADOW = { y = -72, w = 132, h = 30, alpha = { azeroth = 0.55, sobre = 0.7 } }
 local SHADOW = ns.CAPTURE_STAGE_SHADOW
@@ -568,7 +576,7 @@ function ns:EnsureCaptureStage()
 		p.speed = 14 + (index % 4) * 5
 		frame.motes[index] = p
 	end
-	frame.flash = Art(frame.fxTop, "ARTWORK", 5, "halo", nil, 320, 320, "ADD")
+	frame.flash = Art(frame.fxTop, "ARTWORK", 5, "halo", nil, ns.CAPTURE_FLASH.size, ns.CAPTURE_FLASH.size, "ADD")
 	frame.flash:SetPoint("CENTER", frame.scene, "CENTER", 0, 0)
 
 	if az then
@@ -577,6 +585,7 @@ function ns:EnsureCaptureStage()
 		-- « ÉCHAPPÉ… », le nom ou la phrase, les étoiles du spécimen dedans,
 		-- le bouclier d'or ou gris et son éclat
 		frame.banner = self:AzerothVerdict(frame, AZS.verdictW, AZS.verdictH)
+		frame.banner.azScale = AZS.verdictScale
 		frame.banner.area:SetPoint("TOP", frame, "TOP", 0, AZS.verdictY)
 		frame.banner.area:SetFrameLevel(level + 13)
 		frame.banner:SetFrameLevel(level + 13)
@@ -698,7 +707,7 @@ local function Rest(frame)
 		frame.banner.filled = nil
 	end
 	frame.banner:Hide()
-	frame.banner:SetScale(1)
+	frame.banner:SetScale(frame.banner.azScale or 1)
 	frame.netFrame:SetScale(1)
 	Place(frame.netFrame, frame.scene, 0, 0)
 	Coord(frame.net, COORDS.netWhole)
@@ -868,7 +877,7 @@ local function StageShake(frame, since, t, rolling, c)
 	Creature(frame, wobble, 0, 0.85, wobble * 0.06)
 	-- éclair bref et poussière à l'impact
 	Tint(frame.flash, WHITE, 1)
-	Fade(frame.flash, 0.7 - since * 3)
+	Fade(frame.flash, ns.CAPTURE_FLASH.impact - since * 3)
 	local u = since / 0.6
 	if u < 1 then
 		local w = 60 + 110 * EaseOut(u)
@@ -921,7 +930,7 @@ local function Verdict(frame, r, ok, rolling)
 	local banner = frame.banner
 	local colors = ns.AZEROTH_COLORS or {}
 	local pop = Clamp01(r / 0.3)
-	banner:SetScale(math.max(0.05, EaseBack(pop)))
+	banner:SetScale(math.max(0.05, EaseBack(pop)) * (banner.azScale or 1))
 	if not banner.filled or banner.filled ~= (ok and "ok" or "fail") then
 		banner.filled = ok and "ok" or "fail"
 		local target = rolling.target
@@ -983,7 +992,7 @@ local function StageOk(frame, r, rolling, c)
 	local col = shiny and Theme.GOLD_LIGHT or c
 	if not frame.played then frame.played = true; if not ns.CapturePlaySound then PlayKit("UI_EPICLOOT_TOAST") end end
 	Tint(frame.flash, WHITE, 1)
-	Fade(frame.flash, 1 - r / 0.4)
+	Fade(frame.flash, ns.CAPTURE_FLASH.ok * (1 - r / 0.4))
 	-- les rayons grandissent, tournent, puis s'effacent
 	local grow = 0.4 + 0.7 * EaseOut(r / 0.5)
 	local life = math.min(1, r / 0.15) * (1 - Clamp01((r - 1.3) / 1.6))
