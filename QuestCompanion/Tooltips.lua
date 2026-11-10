@@ -21,6 +21,10 @@ local FR = {
 	MEN_TIP_SHINY_CAUGHT = "capturée",
 	MEN_TIP_TODO       = "à capturer · %d %%",
 	MEN_TIP_SHINY      = "BRILLANTE · %s",
+	-- 2.14.0 : où en est l'espèce (3 étoiles : plus proposée au filet)
+	MEN_TIP_FULL       = "%s %s · complète, plus proposée",
+	MEN_TIP_MORE       = "%s %s · encore des étoiles à gagner",
+	MEN_TIP_NOTRY      = "%s %s · plus d'essais (réglage Recaptures)",
 }
 local EN = {
 	BST_TOOLTIP        = "Bestiary: %s",
@@ -29,6 +33,9 @@ local EN = {
 	MEN_TIP_SHINY_CAUGHT = "captured",
 	MEN_TIP_TODO       = "to capture · %d%%",
 	MEN_TIP_SHINY      = "SHINY · %s",
+	MEN_TIP_FULL       = "%s %s · complete, no longer offered",
+	MEN_TIP_MORE       = "%s %s · more stars to earn",
+	MEN_TIP_NOTRY      = "%s %s · no tries left (Recaptures setting)",
 }
 ns.RegisterStrings(FR, EN)
 if ns.KEEP_STRINGS then ns.TOOLTIP_STRINGS = { fr = FR, en = EN } end
@@ -84,6 +91,20 @@ function ns:BestiaryTooltipLine(guid, level)
 		if has then
 			status = live and L.MEN_TIP_SHINY_CAUGHT or L.MEN_TIP_CAUGHT
 			color = live and (Theme.GOLD_LIGHT or Theme.GOLD) or Theme.GREEN
+			-- 2.14.0 : ses étoiles, et si le filet la proposera encore (une
+			-- espèce à 3 étoiles ne revient plus : « je ne capture plus rien »)
+			local stars = self.CaptureStars and self:CaptureStars(npcID, live and true or false)
+			if stars and self.CaptureStarsText then
+				local starText = self:CaptureStarsText(stars, 12)
+				local key = "MEN_TIP_MORE"
+				if stars >= (ns.CAPTURE_STAR_MAX or 3) then
+					key = "MEN_TIP_FULL"
+				elseif self.CaptureRetryLeft and self:CaptureRetryLeft({ class = class or "normal", npcID = npcID,
+					shiny = live and true or nil }) == 0 then
+					key = "MEN_TIP_NOTRY"
+				end
+				status = self:F(key, status, starText)
+			end
 		else
 			-- type et espèce : les effets du compagnon (CompanionEffects.lua) en tiennent compte
 			local info = { class = class or "normal", level = level or species.level, type = species.type, npcID = npcID,

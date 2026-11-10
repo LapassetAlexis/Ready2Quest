@@ -7,8 +7,14 @@ local Check, Say, ResetWorld, NS, Mock = T.Check, T.Say, T.ResetWorld, T.QNS, T.
 local C = {
 	savedCreateFrame = _G.CreateFrame,
 	savedJournal = rawget(NS, "JournalCounts"),
+	savedSeason = rawget(NS, "WinterVeilSeason"),
 	models = {},
 }
+-- 2.14.0 : l'horloge du banc (time() = 1000, le 1er janvier 1970) tombe en
+-- plein Voile d'hiver ; ces tests sont hors saison (compagnons de saison :
+-- qc214_noel_compagnons.lua)
+NS.WinterVeilSeason = function() return false end
+if NS.WinterCompanionsForget then NS:WinterCompanionsForget() end
 
 -- Le mock ne connaît pas les cadres de modèle : on les fabrique ici, en
 -- enregistrant les appels (affichage, échelle, animation).
@@ -1265,4 +1271,6 @@ NS.hubIndex = nil
 
 C.RemoveModelAPI()
 NS.JournalCounts = C.savedJournal
+NS.WinterVeilSeason = C.savedSeason
+if NS.WinterCompanionsForget then NS:WinterCompanionsForget() end
 if NS.companionFrame then NS.companionFrame:Hide() end

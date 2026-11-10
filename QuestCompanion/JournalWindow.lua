@@ -485,7 +485,6 @@ local FR2 = {
 	JRN_EVO_BG             = "Fond",
 	JRN_EVO_ORNS           = "Ornements",
 	JRN_EVO_ORN_NONE       = "Pas encore d'ornement : les coffres de zone en donnent.",
-	JRN_EVO_LOOK_TIP       = "Clic : la porter. Les mascottes viennent des coffres et des cartes, les autres de la page Créatures.",
 	JRN_EVO_QUIET          = "…",
 	JRN_NAV_GROUP          = "Carnet",
 	JRN_SUB_day            = "Missions du compagnon, du jour et de la semaine : de quoi nourrir ta créature et capturer.",
@@ -572,7 +571,6 @@ local EN2 = {
 	JRN_EVO_BG             = "Background",
 	JRN_EVO_ORNS           = "Ornaments",
 	JRN_EVO_ORN_NONE       = "No ornament yet: zone chests give some.",
-	JRN_EVO_LOOK_TIP       = "Click: wear it. Mascots come from chests and cards, the rest from the Creatures page.",
 	JRN_EVO_QUIET          = "…",
 	JRN_NAV_GROUP          = "Journal",
 	JRN_SUB_day            = "Companion, daily and weekly missions: food for your creature and capture aids.",
@@ -904,7 +902,7 @@ function ns.JournalStatCenter(tile)
 	tile.valueY, tile.labelY = vy, ly
 	return vy, ly
 end
-local LOOK_COUNT, LOOK_W, LOOK_H = 5, 52, 66
+local LOOK_H = 66
 local STATS = { "captures", "shiny", "days", "missions", "km" }
 
 local function BuildEvolution(self, frame, content)
@@ -1009,41 +1007,9 @@ local function BuildEvolution(self, frame, content)
 	pane.looksTitle = Theme.CreateSection(pane, L.JRN_EVO_LOOKS)
 	pane.looksTitle:SetWidth(HALF)
 	At(pane.looksTitle, content, rx, colY)
-	-- apparences : une rangée de vignettes 3D, chevrons pour défiler
-	pane.looks = {}
-	local arrows = 22
-	local lookGap = math.floor((HALF - 2 * arrows - 8 - LOOK_COUNT * LOOK_W) / (LOOK_COUNT - 1))
-	pane.lookPrev = Theme.CreateButton(pane, arrows, LOOK_H, "<", function() ns:CompanionLooksScroll(-1) end)
-	At(pane.lookPrev, content, rx, colY - 26)
-	pane.lookNext = Theme.CreateButton(pane, arrows, LOOK_H, ">", function() ns:CompanionLooksScroll(1) end)
-	At(pane.lookNext, content, rx + HALF - arrows, colY - 26)
-	for index = 1, LOOK_COUNT do
-		local cell = Theme.CreateTile(pane, LOOK_W, LOOK_H, { accent = "top" })
-		At(cell, content, rx + arrows + 4 + (index - 1) * (LOOK_W + lookGap), colY - 26)
-		local okModel, model = pcall(CreateFrame, "PlayerModel", nil, cell)
-		if okModel and model then
-			model:SetPoint("TOPLEFT", cell, "TOPLEFT", 2, -2)
-			model:SetSize(LOOK_W - 4, LOOK_H - 20)
-			cell.model = model
-		end
-		cell.label = Text(cell, Theme.F_SMALL, Theme.MUTED_LIGHT, LOOK_W - 4)
-		cell.label:SetPoint("BOTTOM", cell, "BOTTOM", 0, 4)
-		cell.label:SetJustifyH("CENTER")
-		if cell.label.SetWordWrap then cell.label:SetWordWrap(false) end
-		cell.onEnter = function(c) if c.def then Tip(c, L[c.def.label] or c.def.label, { L.JRN_EVO_LOOK_TIP }) end end
-		cell:SetScript("OnLeave", HideTip)
-		cell:SetScript("OnClick", function(c)
-			if not c.def then return end
-			local function Done()
-				if ns.CompanionApplyModel then pcall(ns.CompanionApplyModel, ns) end
-				ns:RefreshJournal()
-			end
-			-- confirmation qui compare les effets (CompanionEffects.lua)
-			if ns.CompanionAskAppearance then ns:CompanionAskAppearance(c.def.id, Done)
-			elseif ns:CompanionSetAppearance(c.def.id) then Done() end
-		end)
-		pane.looks[index] = cell
-	end
+	-- 2.14.0 : l'apparence portée et « Choisir… » (le choix dans un panneau,
+	-- CompanionAllure.lua) ; plus de rangée de vignettes à faire défiler
+	if self.AllureBuildCard then self:AllureBuildCard(pane, content, rx, colY - 26, HALF, LOOK_H) end
 	-- cadre et fond : deux listes ; ornements : des bascules
 	local ddY = colY - 26 - LOOK_H - 12
 	local ddW = math.floor((HALF - 10) / 2)
@@ -2164,38 +2130,6 @@ function ns:CompanionDaysTogether()
 	return math.max(1, math.floor((now - since) / 86400) + 1)
 end
 
--- Vignettes d'apparence : défilement d'une à la fois
-function ns:CompanionLooksScroll(delta)
-	local frame = self.journalFrame
-	if not frame then return end
-	frame.lookOffset = (frame.lookOffset or 0) + (tonumber(delta) or 0)
-	self:RefreshJournal()
-end
-
-local function PaintLook(cell, def, worn)
-	cell.def = def
-	cell.label:SetText(L[def.label] or def.label)
-	-- le modèle n'est rechargé que s'il change (sinon l'animation repart à
-	-- chaque rafraîchissement)
-	local key = tostring(def.display) .. ":" .. tostring(def.npc) .. (def.shiny and ":s" or "")
-	if cell.model and ns.ShowModel then
-		-- 2.11.0 : chargeur unique, profil « cell » (ne recharge pas un modèle affiché)
-		cell.lookKey = key
-		ns.ShowModel(cell.model, { display = def.display, npc = def.npc, shiny = def.shiny }, "cell")
-	elseif cell.model and cell.lookKey ~= key then
-		cell.lookKey = key
-		local shown = false
-		if def.display and cell.model.SetDisplayInfo then shown = pcall(cell.model.SetDisplayInfo, cell.model, def.display) end
-		if not shown and def.npc and cell.model.SetCreature then shown = pcall(cell.model.SetCreature, cell.model, def.npc) end
-		if shown and ns.ModelShinyLight then ns.ModelShinyLight(cell.model, def.shiny) end
-		if shown then cell.model:Show() else cell.model:Hide() end
-	end
-	local rarity = def.captured and ns.CAPTURE_RARITY and ns.CAPTURE_RARITY[def.class or "normal"]
-	cell:SetAccent(worn and Theme.GOLD or (def.shiny and Theme.GOLD_LIGHT) or (rarity and rarity.color) or nil)
-	cell:SetSelected(worn)
-	cell:Show()
-end
-
 local function RefreshEvolution(self, frame)
 	local pane = frame.evo
 	local content = frame.content
@@ -2208,6 +2142,8 @@ local function RefreshEvolution(self, frame)
 	pane.stage:SetText(L.JRN_SUB_companion)
 	local hero = pane.hero
 	if hero.portrait and hero.portrait.Refresh then hero.portrait:Refresh(self) end
+	-- 2.14.0 (bêta 7) : en Azeroth, l'anneau du portrait à la teinte du cadre choisi
+	if self.CarnetPaintRing then self:CarnetPaintRing(frame) end
 	pane.name:SetText(name)
 	local trait = self.CompanionTrait and self:CompanionTrait()
 	local traitLabel = trait and self.PersonaLabel and self:PersonaLabel(trait)
@@ -2275,18 +2211,7 @@ local function RefreshEvolution(self, frame)
 	-- allure : les apparences portables (mascottes gagnées, puis la ménagerie)
 	local looks = self.CompanionUnlockedAppearances and self:CompanionUnlockedAppearances() or {}
 	SectionText(pane.looksTitle, L.JRN_EVO_LOOKS .. " (" .. self:F("JRN_EVO_LOOKS_COUNT", #looks) .. ")")
-	local maxOffset = math.max(0, #looks - LOOK_COUNT)
-	if frame.lookOffset == nil then
-		-- la première fois : la portée en vue
-		for index, def in ipairs(looks) do if app and def.id == app.id then frame.lookOffset = index - 1 end end
-	end
-	frame.lookOffset = math.max(0, math.min(frame.lookOffset or 0, maxOffset))
-	for index, cell in ipairs(pane.looks) do
-		local def = looks[index + frame.lookOffset]
-		if def then PaintLook(cell, def, app and def.id == app.id) else cell.def = nil; cell:Hide() end
-	end
-	if frame.lookOffset > 0 then pane.lookPrev:Show() else pane.lookPrev:Hide() end
-	if frame.lookOffset < maxOffset then pane.lookNext:Show() else pane.lookNext:Hide() end
+	if self.AllureRefreshCard then self:AllureRefreshCard(pane) end
 	if self.CompanionChoices then
 		pane.frameStyle:SetOptions(self:CompanionChoices("frame"))
 		pane.frameStyle:SetValue(self:CompanionCurrentStyle("frame").id)

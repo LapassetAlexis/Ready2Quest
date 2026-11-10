@@ -206,18 +206,20 @@ do
 		and tex.texture == nil and not tex.clientArt and QNS.CAPTURE_ART.rays == nil)
 	Mock.InstallAtlas(true)
 	local expect = { rays = "ArtifactsFX-StarBurst", halo = "ChallengeMode-SoftYellowGlow", sparks = "Artifacts-Anim-Sparks",
-		stars = "auctionhouse-icon-favorite", ribbon = "BossBanner-BgBanner-Mid", stage = "charactercreate-vignette-sides" }
+		stars = "auctionhouse-icon-favorite", ribbon = "BossBanner-BgBanner-Mid", ground = "ChallengeMode-SoftYellowGlow" }
 	local ok, got = true, {}
 	for role, atlas in pairs(expect) do
 		local t = UIParent:CreateTexture()
 		if QNS.CaptureArtPaint(t, role) ~= "client" or t.atlas ~= atlas or not t.clientArt then ok = false; got[#got + 1] = role end
 	end
-	Check("[M211] atlas du client : rayons, halo, étincelles, étoiles, bannière, vignette", ok, table.concat(got, ","))
+	Check("[M211] atlas du client : rayons, halo, étincelles, étoiles, bannière, ombre au sol", ok, table.concat(got, ","))
 	Check("[M211] pas de « Bonus-ToastBanner » (écusson bleu sur Forever)", QNS.CAPTURE_CLIENT_ART.ribbon.atlas ~= "Bonus-ToastBanner")
 	Check("[M211] le filet, ses cordes et le paquet restent les nôtres", QNS.CaptureArtPaint(tex, "net") == "own"
 		and QNS.CaptureArtPaint(tex, "rope") == "own" and QNS.CaptureArtPaint(tex, "bundle") == "own")
 	Mock.InstallAtlas({ ["ArtifactsFX-StarBurst"] = true })
 	Check("[M211] atlas manquant : texture vide", QNS.CaptureArtPaint(tex, "rays") == nil and tex.texture == nil)
+	-- 2.14.0 : hors décor du Voile d'hiver (l'horloge des tests tombe le 1er janvier 1970)
+	QNS:DB().winterVeil = "off"
 	local icon = UIParent:CreateTexture()
 	local netFile, webFile = QNS.CAPTURE_CLIENT_ART.icon.files[1], QNS.CAPTURE_CLIENT_ART.icon.files[2]
 	Check("[M211] glyphe du filet : l'icône du jeu INV_Misc_Net_01", QNS.CaptureArtPaint(icon, "icon") == "client"
@@ -228,6 +230,7 @@ do
 	Mock.world.textureRefused = { [netFile] = true, [webFile] = true }
 	Check("[M211] aucune icône : vide, jamais un fichier à nous", QNS.CaptureArtPaint(icon, "icon") == nil and icon.texture == nil)
 	Mock.world.textureRefused = nil
+	QNS:DB().winterVeil = nil
 
 	-- Ready2Quest : flèches du toast et anneau d'aggro
 	local arrow = UIParent:CreateTexture()

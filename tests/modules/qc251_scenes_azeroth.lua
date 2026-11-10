@@ -88,6 +88,9 @@ function SZ.Reset(atlas)
 	NS:DB().captureMuteUntil = nil
 	NS:DB().companionCaptureSound = true
 	NS:DB().companionCaptureToast = true
+	-- 2.14.0 : sans le décor du Voile d'hiver (l'horloge des tests tombe le
+	-- 1er janvier 1970, en saison) : le filet garde son glyphe
+	NS:DB().winterVeil = "off"
 	NS:CompanionUpdateVisibility()
 end
 function SZ.Roll(value)
@@ -142,22 +145,51 @@ do
 		and Has(_G.UISpecialFrames, "QuestCompanionCaptureStageAzeroth") and stage:GetWidth() == AZS.w and stage:GetHeight() == AZS.h,
 		stage and table.concat({ tostring(stage:IsShown()), tostring(stage.azeroth), tostring(stage:GetName()),
 		tostring(Has(_G.UISpecialFrames, "QuestCompanionCaptureStageAzeroth")), tostring(stage:GetWidth()), tostring(stage:GetHeight()) }, ","))
-	local wood = stage.wood
-	local pieces = 0
-	for _, key in ipairs(NS.AZEROTH_WOOD_KEYS) do
-		if wood[key] and wood[key].atlas == WOOD[key] then pieces = pieces + 1 end
+	-- 2.14.0 (bêta 3) : carte compacte de parchemin (maquette A), plus le grand cadre en bois sombre
+	local K = NS.AZEROTH_CARD
+	Check("[AZC14] carte compacte : plus petite que l'ancienne fenêtre (360×504)", AZS.w <= 340 and AZS.h <= 420
+		and AZS.w * AZS.h < 360 * 504 * 0.8, AZS.w .. "×" .. AZS.h)
+	Check("[AZC14] parchemin des hauts faits (130661) recadré, voile « page », aplat dessous", stage.chrome == "card"
+		and stage.cardParch.texture == 130661 and stage.cardParch:IsShown() and stage.cardParch.texCoord[2] < 1
+		and stage.cardVeil.azVeilKey == "page" and stage.cardBack ~= nil)
+	local border, pieces = stage.cardBorder, 0
+	for _, tex in pairs(border and border.pieces or {}) do if tex.texture == 130672 then pieces = pieces + 1 end end
+	Check("[AZC14] encadré fin en bois (130672, huit morceaux) et filet d'or dedans", pieces == 8 and border == stage.azWoodBorder
+		and #stage.cardGold == 4 and stage.cardGold[1].lastPoint.y == -K.gold, pieces)
+	Check("[AZC14] plus de fond sombre ni de grand bois", stage.wood == nil and stage.woodBg == nil and not stage.accent and not stage.topBar)
+	Check("[AZS] gardée à l'écran, encadré compris", stage.clampInset == K.out)
+	Check("[AZC14] pas de boîte noire (vignette) derrière la créature", stage.stageBg == nil and stage.stageTop == nil
+		and stage.stageBottom == nil and NS.CAPTURE_CLIENT_ART.stage == nil)
+	local ground, SH = stage.ground, NS.CAPTURE_STAGE_SHADOW
+	Check("[AZC14] ombre au sol : lueur douce du client, grisée, sombre, peu opaque, sous les pattes",
+		ground and ground.atlas == "ChallengeMode-SoftYellowGlow" and ground.drawLayer == "BORDER"
+		and ground.vertex[1] < 0.2 and ground.vertex[4] <= 0.6 and ground.vertex[4] > 0.2
+		and ground.lastPoint.relTo == stage.scene and ground.lastPoint.y == SH.y and SH.y < -SH.h
+		and ground.width > ground.height * 3, ground and ground.atlas)
+	local info = stage.info
+	Check("[AZC14] « Chance 50 % » puis les étoiles à gagner (étoiles du client)", info and stage.details:IsShown()
+		and info:GetText():find("^Chance 50 %%") ~= nil
+		and select(2, info:GetText():gsub("auctionhouse%-icon%-favorite%-off", "")) == 3, info and info:GetText())
+	local ink = NS.AZEROTH_INK[NS.AZEROTH_CONTRAST["stage.chance"][1]]
+	Check("[AZC14] chance à l'encre mesurée", info.azRole == "stage.chance" and info.textColor[1] == ink[1])
+	local cells, icons = stage.aidCells, 0
+	for index, cell in ipairs(cells) do
+		if cell.icon.texture == NS.CAPTURE_AIDS[index].icon and cell.edge:GetParent() == stage.details then icons = icons + 1 end
 	end
-	Check("[AZS] cadre en bois : huit pièces des hauts faits", pieces == 8, pieces)
-	Check("[AZS] coins 64×64 qui débordent de 8 px", wood.tl.width == 64 and wood.tl.height == 64
-		and wood.tl.lastPoint.point == "TOPLEFT" and wood.tl.lastPoint.x == -8 and wood.tl.lastPoint.y == 8
-		and wood.br.lastPoint.x == 8 and wood.br.lastPoint.y == -8)
-	Check("[AZS] bords répétés entre les coins", wood.top.points[1].relTo == wood.tl and wood.top.points[2].relTo == wood.tr
-		and wood.left.points[1].relTo == wood.tl and wood.left.points[2].relTo == wood.bl)
-	Check("[AZS] fond sombre et chaud, pas l'aplat du thème", stage.woodBg and stage.woodShade and not stage.accent and not stage.topBar)
-	Check("[AZS] gardée à l'écran, bois compris", stage.clampInset == NS.AZEROTH_WOOD_OUT)
+	Check("[AZC14] les aides du joueur sous la chance (trois cases), aucune choisie : grisées", icons == 3 and #cells == 3
+		and cells[1].icon.alpha < 1 and not cells[1].chosen and stage.details.lastPoint.relTo == stage.scene, icons)
+	Check("[AZC14] pied « Le filet bouge… » à l'encre mesurée", stage.footer:GetText() == NS.L.CAPTURE_SHAKING
+		and stage.footer.azRole == "stage.status")
+	-- pendant le lancer et les secousses : pas de halo derrière la créature
+	local r0 = NS.captureState.rolling
+	NS:CaptureStageUpdate(r0.start + NS.CAPTURE_THROW_TIME * 0.5)
+	local throwHalo = stage.halo:IsShown()
+	NS:CaptureStageUpdate(r0.start + NS.CAPTURE_THROW_TIME + 0.5)
+	Check("[AZC14] pas de halo blanc pendant le lancer ni les secousses", not throwHalo and not stage.halo:IsShown()
+		and stage.ground:IsShown() and stage.details:IsShown())
 	local plate = stage.plate
-	Check("[AZS] plaque de titre : « CAPTURE » et le nom", plate and plate.bg.atlas == "ui-achievement-alert-background-mini"
-		and plate.title:GetText() == "CAPTURE" and plate.text:GetText() == "Grand trotteur"
+	Check("[AZS] plaque de titre : « CAPTURE · NORMAL » et le nom", plate and plate.bg.atlas == "ui-achievement-alert-background-mini"
+		and plate.title:GetText() == "CAPTURE · NORMAL" and plate.text:GetText() == "Grand trotteur"
 		and plate:GetWidth() == AZS.plateW and plate.lastPoint.relTo == stage and plate.text.textColor[3] == 1)
 	Check("[AZS] le modèle et notre filet dans la scène", stage.model and stage.model:GetParent() == stage.scene
 		and stage.net.texture == NS.CAPTURE_ART.net)
@@ -179,13 +211,30 @@ do
 	Check("[AZS] les étoiles du spécimen dans le bandeau", stage.starSlots[1]:GetParent() == banner
 		and stage.starSlots[1]:IsShown())
 	Check("[AZS] l'ancien ruban n'existe pas ici", stage.ribbonPanel == nil and stage.sheen == nil)
-	-- le pied : dans le cadre, au-dessus du bois, sous le bandeau
+	-- 2.14.0 (bêta 4) : le bandeau réduit (24.png : il couvrait tout le bas de la carte)
+	local vs = AZS.verdictScale
+	local vw, vh = AZS.verdictW * vs, AZS.verdictH * vs
+	local centerY = -AZS.verdictY + AZS.verdictH / 2          -- depuis le haut de la carte
+	Check("[AZS4] verdict réduit (≈ 82 %), posé au repos à cette échelle", vs >= 0.75 and vs <= 0.9
+		and math.abs(banner:GetScale() - vs) < 1e-6, tostring(banner:GetScale()))
+	Check("[AZS4] verdict : dans la carte, ≥ 30 px de marge de chaque côté", vw <= AZS.w - 60, string.format("%.0f / %d", vw, AZS.w))
+	Check("[AZS4] verdict : au-dessus du pied, sous la scène (marges en hauteur)",
+		centerY + vh / 2 <= AZS.h - NS.AZEROTH_CARD.gold - 24 and centerY - vh / 2 >= -AZS.sceneY + 196 - 10,
+		string.format("%.0f..%.0f", centerY - vh / 2, centerY + vh / 2))
+	Check("[AZS4] éclair blanc plus petit et moins fort", stage.flash:GetWidth() == NS.CAPTURE_FLASH.size
+		and NS.CAPTURE_FLASH.size <= 240 and NS.CAPTURE_FLASH.ok < 1)
+	-- 2.14.0 (bêta 3) : le bandeau se pose sur la chance et les aides (cachées), sous l'ombre
+	local sceneBottom = -AZS.sceneY + 196
+	Check("[AZC14] verdict posé sur la chance et les aides, qui se cachent", not stage.details:IsShown()
+		and -AZS.verdictY < sceneBottom and -AZS.verdictY > -AZS.sceneY + 98 - NS.CAPTURE_STAGE_SHADOW.y + NS.CAPTURE_STAGE_SHADOW.h / 2
+		and -AZS.verdictY + AZS.verdictH >= sceneBottom + 26 - AZS.aidsY, AZS.verdictY)
+	-- le pied : dans la carte, au-dessus de l'encadré, sous le bandeau
 	local footerBottom = Y(stage.footer)
 	local verdictBottom = AZS.h + AZS.verdictY - AZS.verdictH   -- depuis le bas du cadre
-	Check("[AZS] pied au-dessus du bois", stage.footer.lastPoint.point == "BOTTOM" and stage.footer.lastPoint.relTo == stage
-		and footerBottom >= NS.AZEROTH_WOOD_INSET + 4, footerBottom)
+	Check("[AZS] pied au-dessus de l'encadré et du filet d'or", stage.footer.lastPoint.point == "BOTTOM" and stage.footer.lastPoint.relTo == stage
+		and footerBottom >= NS.AZEROTH_CARD.gold + 2, footerBottom)
 	Check("[AZS] pied sous le bandeau, sans le toucher", footerBottom + 14 <= verdictBottom, footerBottom .. " / " .. verdictBottom)
-	Check("[AZS] pied pas plus large que l'intérieur du bois", stage.footer.width <= AZS.w - 2 * NS.AZEROTH_WOOD_INSET)
+	Check("[AZS] pied pas plus large que l'intérieur de la carte", stage.footer.width <= AZS.w - 2 * NS.AZEROTH_CARD.pad)
 	NS:CaptureStageUpdate(rolling.resultAt + 1.5)
 	Check("[AZS] « Clic ou Échap pour fermer »", stage.footer:GetText() == NS.L.CAPTURE_STAGE_CLOSE)
 	-- un clic ferme ; ensuite, pas de bandeau « Capturé ! » en double
@@ -215,6 +264,26 @@ do
 		and banner.shieldKind == "grey" and banner.shield.atlas == "ui-achievement-shield-1-desaturated"
 		and not banner.bling:IsShown(), banner.title:GetText())
 	Check("[AZS] échappée : notre filet déchiré", stage.torn == true and stage.net.texCoord[1] == NS.CAPTURE_COORDS.netTorn[1])
+	-- 2.14.0 (bêta 3) : l'ombre au sol suit la fuite et s'efface avec la créature
+	local fleeShadow = stage.ground
+	Check("[AZC14] échappée : l'ombre suit la créature qui file et pâlit", fleeShadow.lastPoint.x > 20
+		and fleeShadow.lastPoint.y == NS.CAPTURE_STAGE_SHADOW.y and fleeShadow.vertex[4] < NS.CAPTURE_STAGE_SHADOW.alpha.azeroth,
+		fleeShadow.lastPoint.x)
+	-- les aides : celle du lancer allumée (liseré d'or), le nombre en poche ; les étoiles du spécimen pris
+	NS:CaptureData().items.lasso = 2
+	NS:CaptureData().creatures[8299] = { stars = 2, at = 1 }
+	NS:CaptureStageDetails(stage, { target = { npcID = 8299, name = "Pris" }, aid = "lasso", chance = 0.8 })
+	local lasso, bait = stage.aidCells[2], stage.aidCells[1]
+	local stars = stage.info:GetText()
+	Check("[AZC14] aide du lancer allumée, liseré d'or, nombre en poche ; les autres grisées", lasso.id == "lasso" and lasso.chosen
+		and lasso.icon.alpha == 1 and lasso.edge.vertex[1] == NS.Theme.GOLD[1] and lasso.count:GetText() == "2"
+		and not bait.chosen and bait.icon.alpha < 1 and lasso.count.azRole == "stage.aidCount")
+	Check("[AZC14] chance du lancer (aide comprise), étoiles du spécimen pleines, les autres à gagner",
+		stars:find("^Chance 80 %%") ~= nil and select(2, stars:gsub("favorite:14", "")) == 2
+		and select(2, stars:gsub("favorite%-off:14", "")) == 1, stars)
+	NS:CaptureStageDetails(stage, { target = { npcID = 8298, name = "Sûr" }, aid = "sifflet", chance = 1 })
+	Check("[AZC14] Sifflet : « Capture assurée »", stage.info:GetText():find(NS.L.CAPTURE_STAGE_SURE, 1, true) == 1)
+	NS:CaptureData().creatures[8299] = nil
 	stage.scripts.OnMouseUp(stage)
 	SZ.Close(5)
 	-- pas de bouclier gris dans ce client : le doré, désaturé
@@ -404,9 +473,21 @@ do
 	SZ.Roll(0)
 	NS:CaptureThrow()
 	local stage = NS.captureStage
-	Check("[AZS] Sobre : la scène d'avant (340×386, ruban, pied à 11)", stage and not stage.azeroth and stage:GetWidth() == 340
-		and stage:GetHeight() == 386 and stage.ribbonPanel and stage.topBar and Y(stage.footer) == 11
+	local SBS = NS.CAPTURE_STAGE_SOBRE
+	Check("[AZS] Sobre : la carte compacte (340×366, ruban, pied à 11)", stage and not stage.azeroth and stage:GetWidth() == 340
+		and stage:GetHeight() == SBS.h and SBS.h < 386 and stage.ribbonPanel and stage.topBar and Y(stage.footer) == 11
 		and stage.name:GetParent() == stage and not stage.plate)
+	-- 2.14.0 (bêta 3) : même disposition que la carte Azeroth, sur le fond sombre du socle
+	Check("[AZC14] Sobre : « CAPTURE · NORMAL », le nom dessous, la scène sans boîte noire, son ombre",
+		stage.title:GetText() == "CAPTURE · NORMAL" and stage.name:GetText() == "Raptor" and stage.name.lastPoint.y == SBS.nameY
+		and stage.stageBg == nil and stage.ground and stage.ground.vertex[1] == NS.Theme.SHADOW[1]
+		and stage.cardParch == nil, stage.title:GetText())
+	Check("[AZC14] Sobre : chance, étoiles et aides sous la scène, pied « Le filet bouge… »",
+		stage.info:GetText():find("^Chance 50 %%") ~= nil and #stage.aidCells == 3 and stage.details:IsShown()
+		and stage.details.lastPoint.relTo == stage.scene and stage.footer:GetText() == NS.L.CAPTURE_SHAKING
+		and stage.info.azRole == nil, stage.info:GetText())
+	Check("[AZC14] Sobre : le ruban se pose sur la chance et les aides", stage.banner.lastPoint.relTo == stage.scene
+		and stage.banner.lastPoint.y == SBS.ribbonY and stage.starSlots[1].lastPoint.relTo == stage.banner)
 	local rolling = SZ.UntilVerdict()
 	Check("[AZS] Sobre : le verdict n'est pas montré par la scène, « Capturé ! » attend sa fermeture",
 		not rolling.sceneVerdict and NS.captureResultPending ~= nil)
@@ -494,5 +575,6 @@ do
 	math.random = SZ.random
 	NS.SHINY_CHANCE = SZ.savedShiny
 	NS:DB().companionCaptureAnim, NS:DB().companionStyle = SZ.savedAnim, SZ.savedStyle
+	NS:DB().winterVeil = nil
 	ResetWorld()
 end

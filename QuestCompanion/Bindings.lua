@@ -40,8 +40,8 @@ local FR = {
 	BIND_TOGGLE       = "Afficher / masquer le compagnon",
 	BIND_NET          = "Lancer le filet",
 	BIND_NET_COMBAT   = "Pas pendant un combat : le filet attend la fin du combat.",
-	OPT_BIND_TOGGLE   = "Raccourci : afficher / masquer",
-	OPT_BIND_NET      = "Raccourci : lancer le filet",
+	OPT_BIND_TOGGLE   = "Raccourci du compagnon",
+	OPT_BIND_NET      = "Raccourci du filet",
 }
 local EN = {
 	BIND_HEADER       = "QuestCompanion",
@@ -64,8 +64,8 @@ local EN = {
 	BIND_TOGGLE       = "Show / hide the companion",
 	BIND_NET          = "Throw the net",
 	BIND_NET_COMBAT   = "Not in combat: the net waits until the fight is over.",
-	OPT_BIND_TOGGLE   = "Key: show / hide",
-	OPT_BIND_NET      = "Key: throw the net",
+	OPT_BIND_TOGGLE   = "Companion key",
+	OPT_BIND_NET      = "Net key",
 }
 ns.RegisterStrings(FR, EN)
 if ns.KEEP_STRINGS then ns.BINDINGS_STRINGS = { fr = FR, en = EN } end

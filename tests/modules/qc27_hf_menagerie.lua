@@ -129,7 +129,8 @@ do
 		counts.fun == 8 and counts.meta == 6)
 	local fewer = 0
 	for _, id in ipairs(NS.FEAT_MENAGERIE_IDS) do if NS:FeatDef(id) then fewer = fewer + 1 end end
-	Check("[HF-B] lignes du lot : 83, sans doublon avec les lignes de départ", #NS.FEAT_MENAGERIE_IDS == 83 and fewer == 83)
+	-- 2.14.0 : + « Joyeux Voile d'hiver » (fun_winter_veil, hors du document de départ)
+	Check("[HF-B] lignes du lot : 84, sans doublon avec les lignes de départ", #NS.FEAT_MENAGERIE_IDS == 84 and fewer == 84)
 	-- récompenses déplacées : mêmes aides et cosmétiques qu'avant
 	local same = true
 	for _, rank in ipairs(NS.TRAINER_RANKS) do

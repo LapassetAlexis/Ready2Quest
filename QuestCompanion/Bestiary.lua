@@ -257,6 +257,78 @@ function ns:BestiarySpeciesOne(zoneID, npcID)
 	return species
 end
 
+-- ---------------------------------------------------------------------------
+-- 2.14.0 (bêta 4) : le nom d'une créature, jamais son numéro quand un nom
+-- existe. Une espèce vue sans nom (journal de combat, vignette de la
+-- minicarte) gardait « 3632 » comme nom ; capturée, son numéro s'affichait
+-- (choix d'allure, infobulle, fiche, plaque du compagnon). Dans l'ordre : le
+-- nom de la fiche (`record`, sauf un numéro), celui du carnet (toutes zones),
+-- celui de la table livrée (index pnj → zone bâti une fois, au premier nom
+-- manquant), celui du client (C_TooltipInfo, s'il le connaît) ; le numéro en
+-- dernier recours. Un nom trouvé est rendu à la fiche (`record.name`).
+-- ---------------------------------------------------------------------------
+local nameCache, staticIndex = {}, nil
+function ns.CreatureNameGood(name, npcID)
+	if type(name) ~= "string" then return false end
+	name = name:gsub("^%s+", ""):gsub("%s+$", "")
+	if name == "" or name == tostring(npcID) or name:match("^#?%d+$") then return false end
+	return true
+end
+local Good = ns.CreatureNameGood
+
+-- La zone de la table livrée où vit chaque pnj (bâti une fois, puis gardé)
+local function StaticIndex()
+	if staticIndex then return staticIndex end
+	staticIndex = {}
+	local all = rawget(ns, "ZONE_CREATURES")
+	if type(all) == "table" and ns.ZoneEach then
+		ns.ZoneEach(all, function(zoneID, zone)
+			for npcID in pairs(type(zone) == "table" and zone or {}) do
+				local npc = tonumber(npcID)
+				if npc and not staticIndex[npc] then staticIndex[npc] = zoneID end
+			end
+		end)
+	end
+	return staticIndex
+end
+function ns.CreatureNameForget() nameCache, staticIndex = {}, nil end
+
+local function StaticName(self, npc)
+	local zoneID = StaticIndex()[npc]
+	local zone = zoneID and ns.ZonePeek and ns.ZonePeek(rawget(ns, "ZONE_CREATURES"), zoneID)
+	local entry = type(zone) == "table" and zone[npc]
+	return type(entry) == "table" and self:BestiaryStaticName(entry) or nil
+end
+
+local function ClientName(npc)
+	local tips = rawget(_G, "C_TooltipInfo")
+	if type(tips) ~= "table" or type(tips.GetHyperlink) ~= "function" then return nil end
+	local ok, data = pcall(tips.GetHyperlink, "unit:Creature-0-0-0-0-" .. tostring(npc) .. "-0")
+	local line = ok and type(data) == "table" and type(data.lines) == "table" and data.lines[1]
+	local text = type(line) == "table" and line.leftText or nil
+	return Good(text, npc) and text or nil
+end
+
+function ns:CreatureName(npcID, record)
+	local npc = tonumber(npcID)
+	local own = type(record) == "table" and record.name or nil
+	if Good(own, npc or npcID) then return own end
+	if not npc then return tostring(npcID or "?") end
+	local name = nameCache[npc]
+	if not name then
+		local book = self.BestiaryData and self:BestiaryData() or {}
+		for _, zone in pairs(book) do
+			local species = type(zone) == "table" and (zone[npc] or zone[tostring(npc)])
+			if type(species) == "table" and Good(species.name, npc) then name = species.name; break end
+		end
+		name = name or StaticName(self, npc) or ClientName(npc)
+		if name then nameCache[npc] = name end
+	end
+	if not name then return tostring(npc) end
+	if type(record) == "table" then record.name = name end
+	return name
+end
+
 function ns:BestiaryIsNamed(species)
 	return type(species) == "table" and NAMED[species.class or ""] == true
 end
@@ -394,7 +466,10 @@ function ns:BestiarySeeUnit(unit)
 	species.seen = true
 	local name = Call("UnitName", unit)
 	if type(name) == "string" and name ~= "" then species.name = name end
-	species.name = species.name or tostring(npcID)
+	-- 2.14.0 (bêta 4) : sans nom lu, celui de la table livrée plutôt que le numéro
+	if not ns.CreatureNameGood(species.name, npcID) then
+		species.name = self:BestiaryStaticName((self:BestiaryStaticZone(zoneID) or {})[npcID]) or species.name or tostring(npcID)
+	end
 	species.type = creatureType or species.type
 	-- 2.11.0 : son displayID, une fois au compte (portrait 2D, Companion.lua)
 	if self.ModelLearnDisplay then pcall(self.ModelLearnDisplay, self, unit, npcID) end
@@ -430,7 +505,10 @@ function ns:BestiarySeeGUID(guid, name, class)
 	species = species or { killed = 0 }
 	species.seen = true
 	if type(name) == "string" and name ~= "" then species.name = name end
-	species.name = species.name or tostring(npcID)
+	-- 2.14.0 (bêta 4) : sans nom lu, celui de la table livrée plutôt que le numéro
+	if not ns.CreatureNameGood(species.name, npcID) then
+		species.name = self:BestiaryStaticName((self:BestiaryStaticZone(zoneID) or {})[npcID]) or species.name or tostring(npcID)
+	end
 	-- un rang lu sur la créature elle-même (cible, survol) l'emporte
 	if type(class) == "string" and (species.class == nil or species.class == "normal") then species.class = class end
 	book[zoneID][npcID] = species

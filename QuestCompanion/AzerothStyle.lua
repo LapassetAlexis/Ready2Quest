@@ -328,6 +328,22 @@ ns.AZEROTH_CONTRAST = {
 	["dialog.title"] = { "title", 0.2682, 3.0, 19 },   -- sombre, fond 0.268 (moy. 0.366) : 3.74:1
 	["dialog.sub"] = { "inkSoft", 0.2682, 4.5, 11 },   -- sombre, fond 0.268 (moy. 0.366) : 5.09:1
 	["dialog.text"] = { "ink", 0.2682, 4.5, 12 },   -- sombre, fond 0.268 (moy. 0.366) : 5.71:1
+	-- 2.14.0 : panneau « Choisir son allure » (CompanionAllure.lua), habillé comme la confirmation
+	-- (même parchemin 130661 en Cover, même voile page 0,35) : textes posés sur le parchemin au fond
+	-- de dialog.* ; vignettes au fond des tuiles claires (235397 + voile light 0,40), celui de tile.*
+	["allure.section"] = { "inkSoft", 0.2682, 4.5, 10 },   -- sombre, fond 0.268 (moy. 0.366) : 5.09:1 (intertitres)
+	["allure.hint"] = { "inkSoft", 0.2682, 4.5, 10 },   -- sombre, même fond : 5.09:1 (« 12 sur 76 », position)
+	["allure.text"] = { "ink", 0.2682, 4.5, 12 },   -- sombre, même fond : 5.71:1 (« Aucune apparence… »)
+	["allure.name"] = { "ink", 0.3252, 4.5, 11 },   -- sombre, fond 0.325 (moy. 0.425) : 6.73:1 (nom d'une vignette)
+	["allure.locked"] = { "inkMuted", 0.3252, 4.5, 11 },   -- sombre, même fond : 5.05:1 (mascotte pas encore gagnée)
+	["allure.shiny"] = { "rShiny", 0.3252, 4.5, 11 },   -- sombre, même fond : 4.84:1 (version brillante)
+	-- 2.14.0 (bêta 3) : carte de la scène de capture (ns:AzerothCreateCard, 340×418) : parchemin 130661 en
+	-- Cover, voile page 0,35, sans ombre de gauche (scratchpad meas/card214.py). Ligne de chance x 80-260,
+	-- y 320-334 ; nombres des aides x 125-250, y 349-363 ; pied x 16-324, y 393-406 (le bas, le plus sombre :
+	-- inkSoft n'y tient que 4,47:1, d'où l'encre courante). Plaque : splate.* ; verdict : verdict.*
+	["stage.chance"] = { "ink", 0.3665, 4.5, 12 },   -- sombre, fond 0.367 (moy. 0.399) : 7.47:1
+	["stage.aidCount"] = { "inkSoft", 0.3210, 4.5, 11 },   -- sombre, fond 0.321 (moy. 0.359) : 5.93:1
+	["stage.status"] = { "ink", 0.2297, 4.5, 11 },   -- sombre, fond 0.230 (moy. 0.254) : 5.02:1
 }
 -- Luminance relative WCAG 2.x d'une couleur (0..1)
 local function Lin(c) if c <= 0.03928 then return c / 12.92 end return ((c + 0.055) / 1.055) ^ 2.4 end
@@ -949,26 +965,92 @@ function ns:AzerothWood(frame)
 	return wood
 end
 
--- Une fenêtre en bois : mêmes réglages que Theme.CreateToast (strate,
--- gardée à l'écran bois compris, déplaçable). opts : name, strata.
-function ns:AzerothCreateWindow(width, height, opts)
+-- Une fenêtre des scènes : mêmes réglages que Theme.CreateToast (strate,
+-- gardée à l'écran, déplaçable), sans habit. opts : name, strata.
+local function SceneWindow(width, height, opts, inset)
 	opts = opts or {}
 	local ok, frame = pcall(CreateFrame, "Frame", opts.name, UIParent)
 	if not ok or not frame then return nil end
 	frame:SetSize(width, height)
 	frame:SetFrameStrata(opts.strata or "DIALOG")
 	frame:SetClampedToScreen(true)
-	local o = ns.AZEROTH_WOOD_OUT
-	Method(frame, "SetClampRectInsets", -o, o, o, -o)
-	frame.clampInset = o
+	Method(frame, "SetClampRectInsets", -inset, inset, inset, -inset)
+	frame.clampInset = inset
 	frame:EnableMouse(false)
 	frame:SetMovable(true)
 	if frame.RegisterForDrag then frame:RegisterForDrag("LeftButton") end
 	if frame.StartMoving then frame:SetScript("OnDragStart", frame.StartMoving) end
 	if frame.StopMovingOrSizing then frame:SetScript("OnDragStop", frame.StopMovingOrSizing) end
-	frame.uiStyle, frame.azeroth, frame.chrome = "azeroth", true, "wood"
+	frame.uiStyle, frame.azeroth = "azeroth", true
+	return frame
+end
+
+-- Une fenêtre en bois (gardée à l'écran bois compris). opts : name, strata.
+function ns:AzerothCreateWindow(width, height, opts)
+	local frame = SceneWindow(width, height, opts, ns.AZEROTH_WOOD_OUT)
+	if not frame then return nil end
+	frame.chrome = "wood"
 	frame.contentLeft, frame.contentTop = ns.AZEROTH_WOOD_PAD, 0
 	self:AzerothWood(frame)
+	return frame
+end
+
+-- 2.14.0 (bêta 3) : la carte de la scène de capture (maquette A validée le
+-- 10/11/2026), plus compacte que la fenêtre en bois : le parchemin des
+-- hauts faits (130661, recadré sans déformer) sous le voile « page », sur
+-- un aplat parchemin (le repli si le client refuse le fichier) ; l'encadré
+-- fin en bois des confirmations du carnet (130672, ns.CarnetWoodBorder,
+-- JournalAzeroth.lua ; repli : un liseré brun uni) et un filet d'or à
+-- l'intérieur. out : débord de l'encadré ; gold : retrait du filet d'or ;
+-- pad : marge des textes.
+ns.AZEROTH_CARD = { parch = { file = 130661, w = 512, h = 256 }, out = 6, edge = 4, gold = 8, goldAlpha = 0.8, pad = 16 }
+function ns:AzerothCreateCard(width, height, opts)
+	local K = ns.AZEROTH_CARD
+	local frame = SceneWindow(width, height, opts, K.out)
+	if not frame then return nil end
+	frame.chrome = "card"
+	frame.contentLeft, frame.contentTop = K.pad, 0
+	frame.cardBack = Theme.Solid(frame, "BACKGROUND", ns.AZEROTH_PARCH_SOLID, 1)
+	frame.cardBack:SetAllPoints(frame)
+	frame.cardParch = frame:CreateTexture(nil, "BACKGROUND", nil, 1)
+	frame.cardParch:SetAllPoints(frame)
+	if ns.AzerothFileTexture(frame.cardParch, K.parch) then
+		ns.AzerothCover(frame.cardParch, K.parch, width, height)
+		frame.cardParch:Show()
+	else
+		frame.cardParch:Hide()
+	end
+	frame.cardVeil = ns.AzerothVeil(frame, frame, "page", 2)
+	local border = ns.CarnetWoodBorder and ns.CarnetWoodBorder(frame, K.out)
+	if not border then
+		-- les quatre bords : coin de départ, coin d'arrivée, épaisseur en largeur ?
+		local edges = { { "TOPLEFT", "TOPRIGHT" }, { "BOTTOMLEFT", "BOTTOMRIGHT" },
+			{ "TOPLEFT", "BOTTOMLEFT", true }, { "TOPRIGHT", "BOTTOMRIGHT", true } }
+		border = {}
+		for index, edge in ipairs(edges) do
+			local tex = Theme.Solid(frame, "BORDER", INKS.woodBg, 1)
+			tex:SetPoint(edge[1], frame, edge[1], 0, 0)
+			tex:SetPoint(edge[2], frame, edge[2], 0, 0)
+			if edge[3] then tex:SetWidth(K.edge) else tex:SetHeight(K.edge) end
+			border[index] = tex
+		end
+		frame.cardEdges = border
+	end
+	frame.cardBorder = border
+	-- le filet d'or, à l'intérieur de l'encadré
+	local gold, g = ns.AZEROTH_BUTTONS.gold.edge, K.gold
+	frame.cardGold = {}
+	local function Line(p1, x1, y1, p2, x2, y2, w, h)
+		local tex = Theme.Solid(frame, "BORDER", gold, K.goldAlpha)
+		tex:SetPoint(p1, frame, p1, x1, y1)
+		tex:SetPoint(p2, frame, p2, x2, y2)
+		if w then tex:SetWidth(w) else tex:SetHeight(h) end
+		frame.cardGold[#frame.cardGold + 1] = tex
+	end
+	Line("TOPLEFT", g, -g, "TOPRIGHT", -g, -g, nil, 1)
+	Line("BOTTOMLEFT", g, g, "BOTTOMRIGHT", -g, g, nil, 1)
+	Line("TOPLEFT", g, -g, "BOTTOMLEFT", g, g, 1, nil)
+	Line("TOPRIGHT", -g, -g, "BOTTOMRIGHT", -g, g, 1, nil)
 	return frame
 end
 
@@ -1644,6 +1726,131 @@ function ns:CompanionApplyMoodTab()
 	return mood
 end
 
+-- ---------------------------------------------------------------------------
+-- 2.14.0 (bêta 7) : le cadre gagné colore l'anneau. En Azeroth, la bordure
+-- du cadre choisi (Sobre) est cachée sous l'anneau doré
+-- (ui-achievement-guild-iconframe) : choisir « Ardoise », « Cuivre » ou
+-- « Givre » ne changeait rien à l'écran (35 à 38.png). Chaque cadre donne
+-- désormais sa teinte à l'anneau (couleur de sommet sur l'or ; désaturé
+-- d'abord pour l'argent, l'ardoise, le bleu, le vert), dans la palette de
+-- sa bordure Sobre ; `glow` : un halo du client en fusion additive autour
+-- de l'anneau, teinté (Givre : glacé ; Étincelant : doré). Absent de la
+-- table : l'or d'origine (Ardoise, le cadre par défaut de tous ; Insigne du
+-- dresseur, déjà doré). Sceaux de biome : désaturés, à la couleur de leur
+-- filet. La même teinte pour le grand portrait de la page Créature.
+-- ---------------------------------------------------------------------------
+ns.AZEROTH_RING_TINTS = {
+	sparkle    = { glow = { 1.0, 0.84, 0.40 } },              -- Étincelant : or vif, halo doré
+	master     = { 1.0, 0.84, 0.52 },                          -- Insigne du maître : or soutenu
+	copper     = { 1.0, 0.60, 0.40 },                          -- Cuivre
+	oak        = { 0.76, 0.54, 0.32, desat = true },           -- Chêne : brun chaud
+	silver     = { 0.90, 0.92, 0.96, desat = true },           -- Argent
+	frost      = { 0.78, 0.88, 1.0, desat = true, glow = { 0.75, 0.90, 1.0 } }, -- Givre : argent-bleu, halo glacé
+	rune       = { 0.62, 0.58, 1.0, desat = true },            -- Runique : bleu-violet
+	fel        = { 0.52, 1.0, 0.32, desat = true },            -- Gangrené : vert gangrène
+	gilded     = { 1.0, 0.80, 0.45 },                          -- Or ciselé : or riche
+	stone      = { 0.70, 0.70, 0.74, desat = true },           -- Pierre
+	toast      = { 0.60, 0.76, 1.0, desat = true },            -- Messager : bleu
+	glue       = { 0.96, 0.86, 0.68 },                         -- Portail : or pâle
+	carved     = { 0.88, 0.70, 0.50 },                         -- Sculpté : bois doré
+	feat_eight = { 1.0, 0.80, 0.45 },                          -- Huit familles : or riche (icônes autour)
+	feat_prism = { 1.0, 1.0, 1.0, desat = true },              -- Prismatique : nacre (halo arc-en-ciel)
+}
+-- le halo (fond noir : fusion ADD) ; le premier atlas présent du client
+-- (vérifié en jeu le 10/11 : l'anneau de glace des reliques)
+ns.AZEROTH_RING_GLOW = { atlases = { "Relic-Frost-TraitGlowRing" }, size = 138, alpha = 0.8 }
+
+-- L'allure de l'anneau pour un cadre (`def`, sinon le cadre porté) :
+-- { r, g, b, desat, glow } ou nil (l'or d'origine), et l'id du cadre
+function ns:AzerothRingLook(def)
+	def = def or (self.CompanionCurrentStyle and self:CompanionCurrentStyle("frame"))
+	local id = def and def.id
+	if not id then return nil, nil end
+	local look = ns.AZEROTH_RING_TINTS[id]
+	if not look and type(id) == "string" and id:find("^seal_") and type(def.edge) == "table" then
+		look = { def.edge[1], def.edge[2], def.edge[3], desat = true }
+	end
+	return look, id
+end
+
+-- Teinte (et désaturation) d'une texture de l'anneau ; sans allure : l'or
+function ns.AzerothPaintRing(tex, look)
+	if not tex then return nil end
+	local desat = (look and look.desat) and true or false
+	if tex.SetDesaturated then pcall(tex.SetDesaturated, tex, desat) end
+	tex.azDesat = desat
+	local r, g, b = 1, 1, 1
+	if look and look[1] then r, g, b = look[1], look[2], look[3] end
+	tex:SetVertexColor(r, g, b, 1)
+	return desat
+end
+
+-- Le halo autour de l'anneau : sur un cadre enfant de l'habit (caché avec
+-- lui, mode voyage compris), au niveau du cadre, sous le modèle (+ 1)
+local function RingGlow(frame, skin)
+	if frame.azRingGlow ~= nil then return frame.azRingGlow or nil end
+	local G = ns.AZEROTH_RING_GLOW
+	local holder = CreateFrame("Frame", nil, skin)
+	holder:SetAllPoints(frame)
+	holder:SetFrameLevel(frame:GetFrameLevel() or 1)
+	holder:EnableMouse(false)
+	local tex = holder:CreateTexture(nil, "BACKGROUND", nil, -8)
+	local placed
+	for _, name in ipairs(G.atlases) do
+		if ns.AzerothHasAtlas(name) and Atlas(tex, name) then placed = name; break end
+	end
+	if not placed then
+		tex:Hide()
+		holder:Hide()
+		frame.azRingGlow = false
+		return nil
+	end
+	if tex.SetBlendMode then pcall(tex.SetBlendMode, tex, "ADD") end
+	tex:SetSize(G.size, G.size)
+	tex:SetPoint("CENTER", frame, "TOP", 0, RING_Y)
+	tex:SetAlpha(G.alpha)
+	tex.azAtlas = placed
+	tex.holder = holder
+	tex:Hide()
+	frame.azRingGlow = tex
+	return tex
+end
+
+-- L'anneau du compagnon à l'allure du cadre porté (Azeroth) ; rend l'id
+-- du cadre dont l'allure est posée (nil : l'or d'origine)
+function ns:CompanionPaintRing()
+	local frame = self.companionFrame
+	local skin = frame and frame.azSkin
+	if not (skin and skin.ring) then return nil end
+	local look, id
+	if frame.uiStyle == "azeroth" then look, id = self:AzerothRingLook() end
+	ns.AzerothPaintRing(skin.ring, look)
+	skin.ring.azLook = look and id or nil
+	local glow = look and look.glow
+	local tex = glow and RingGlow(frame, skin) or frame.azRingGlow or nil
+	if tex then
+		if glow then
+			tex:SetVertexColor(glow[1], glow[2], glow[3], 1)
+			tex.holder:Show()
+			tex:Show()
+		else
+			tex:Hide()
+		end
+	end
+	return skin.ring.azLook
+end
+
+-- Le grand portrait de la page Créature (même anneau, étiré au carré)
+function ns:CarnetPaintRing(frame)
+	frame = frame or self.journalFrame
+	local vine = frame and frame.evo and frame.evo.azVine
+	if not vine then return nil end
+	local look, id = self:AzerothRingLook()
+	ns.AzerothPaintRing(vine, look)
+	vine.azLook = look and id or nil
+	return vine.azLook
+end
+
 function ns:CompanionApplyUIStyle()
 	local frame = self.companionFrame
 	if not frame then return nil end
@@ -1705,6 +1912,8 @@ function ns:CompanionApplyUIStyle()
 	frame.uiStyle = az and "azeroth" or "sobre"
 	-- le cadre gagné (bordure du client) revient en Sobre
 	if not az and self.CompanionApplyFrame then self:CompanionApplyFrame() end
+	-- 2.14.0 (bêta 7) : en Azeroth, sa teinte sur l'anneau (l'or en Sobre)
+	self:CompanionPaintRing()
 	return frame.uiStyle
 end
 
@@ -1725,6 +1934,9 @@ do
 			local a, b = apply(self, ...)
 			local frame = self.companionFrame
 			if frame and frame.uiStyle == "azeroth" then EdgesShown(frame, false) end
+			-- 2.14.0 (bêta 7) : le cadre choisi colore l'anneau (cadre et carnet)
+			pcall(self.CompanionPaintRing, self)
+			pcall(self.CarnetPaintRing, self)
 			return a, b
 		end
 	end

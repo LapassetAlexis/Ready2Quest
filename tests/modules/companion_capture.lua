@@ -360,14 +360,16 @@ do
 	Check("[CAPFX] clic : la scène remplace la petite fenêtre", NS:CaptureThrow() == true
 		and NS.captureStage and NS.captureStage:IsShown() and not (NS.capturePrompt and NS.capturePrompt:IsShown()))
 	local stage, rolling = NS.captureStage, NS:CaptureState().rolling
-	Check("[CAPFX] rareté : rare = violet, trois losanges", stage.rarity == NS.CAPTURE_RARITY.rare
-		and stage.pips[3]:IsShown() and not stage.pips[4]:IsShown())
-	Check("[CAPFX] le nom à la couleur de la rareté", stage.name:GetText() == "Ours gris")
+	-- 2.14.0 (bêta 3) : le rang dans le titre (plus de losanges de rareté)
+	Check("[CAPFX] rareté : rare = violet, « CAPTURE · RARE » en titre", stage.rarity == NS.CAPTURE_RARITY.rare
+		and stage.pips == nil and stage.title:GetText() == "CAPTURE · RARE", stage.title:GetText())
+	Check("[CAPFX] le nom à la couleur de la rareté", stage.name:GetText() == "Ours gris"
+		and stage.name.textColor[1] == NS.CAPTURE_RARITY.rare.text[1])
 	local art = NS.CAPTURE_ART
 	Check("[CAPFX] nos textures (Textures/, tools/gen_capture_assets.py) : filet, paquet, halo, rayons, ruban, étoiles, fond",
 		stage.net.texture == art.net and stage.bundle.texture == art.bundle and stage.halo.texture == art.halo
 		and stage.rays.texture == art.rays and stage.ribbonPanel.texture == art.ribbon and stage.starSlots[1].texture == art.stars
-		and stage.stageBg.texture == art.stage and stage.ropes[1].texture == art.rope)
+		and stage.stageBg == nil and stage.ropes[1].texture == art.rope)
 	Check("[CAPFX] halo, rayons, éclair et étincelles en fusion additive, pas le filet", stage.halo.blendMode == "ADD"
 		and stage.rays.blendMode == "ADD" and stage.flash.blendMode == "ADD" and stage.burst[1].blendMode == "ADD"
 		and stage.net.blendMode == nil)

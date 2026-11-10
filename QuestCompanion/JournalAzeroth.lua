@@ -294,6 +294,8 @@ local function WoodBorder(target, out)
 	target.azWoodBorder = host
 	return host
 end
+-- 2.14.0 (bêta 3) : aussi l'encadré de la carte de capture (ns:AzerothCreateCard)
+ns.CarnetWoodBorder = WoodBorder
 
 -- ---------------------------------------------------------------------------
 -- Les fonds des tuiles et des lignes
@@ -1169,6 +1171,8 @@ function PAGE.evolution(self, frame)
 			vine:SetAllPoints(ring)
 			if ns.AzerothAtlas and ns.AzerothAtlas(vine, ns.AZEROTH_ATLAS.frameRound) then vine:Show() else ring:Hide() end
 			pane.azVine = vine
+			-- 2.14.0 (bêta 7) : à la teinte du cadre choisi
+			if self.CarnetPaintRing then self:CarnetPaintRing(frame) end
 		end
 	end
 	if pane.name then GoldTitle(pane.name, 19, true) end
@@ -1952,7 +1956,7 @@ end
 -- ---------------------------------------------------------------------------
 local JOURNAL_STATE = { "kind", "activity", "offset", "zoneFilter", "zoneSort", "zoneOffset", "questFilter", "collKind",
 	"menZone", "menState", "menRank", "menSort", "menSearch", "menType", "menOffset", "featsCat", "featsOffset",
-	"zoneID", "zonePicked", "progPart", "progOffset", "progItemOffset", "guideSection", "guideOffset", "lookOffset",
+	"zoneID", "zonePicked", "progPart", "progOffset", "progItemOffset", "guideSection", "guideOffset",
 	"jukeView", "jukeOffset", "jukeSearch" }   -- 2.12.0 : Juke-box
 
 function ns:CarnetRestyle()

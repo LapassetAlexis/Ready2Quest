@@ -489,6 +489,8 @@ Boss de référence : celui qui a une statistique de victoires dans le DB2 de Fo
 
 Hors numérotation (après les 173) : `fun_unlucky` (code 174) — La poisse / Rotten Luck — mourir une fois, noyé, d'une chute et dans le feu ou la lave : `meta` (`char_deaths_1`, `fun_drown`, `fun_fall`, `fun_lava`), compte, 5 points, titre T39. ⚠️ tant que les stats [112], [114] et [115] ne sont pas confirmées (le moteur refuse une ligne sans points : elle en vaut 5).
 
+Hors numérotation : `fun_winter_veil` (code 175) — Joyeux Voile d'hiver / Merry Winter Veil — une heure ou 10 captures avec un compagnon de saison, pendant le Voile d'hiver : `flag` `winterVeil`, compte, 10 points.
+
 ### 2.11 Grands hauts faits (`meta`) — 8
 
 | id | FR | EN | Condition | Détection | F | Pts | Récompense |
@@ -582,7 +584,7 @@ Rien pour Ragnaros, Hakkar, Nefarian, Ossirian, C'Thun, Kel'Thuzad (pas de ligne
 | Grands hauts faits | 8 | 285 |
 | **Total** | **173** | **2810** |
 
-Hors numérotation : `fun_unlucky` (Insolite, 5 points, §2.10), soit 174 lignes et 2815 points implémentés (état : §6).
+Hors numérotation : `fun_unlucky` (Insolite, 5 points, §2.10) et `fun_winter_veil` (Insolite, 10 points, saisonnier), soit 175 lignes et 2825 points implémentés (état : §6).
 
 Faisabilité : 126 ✅, 9 « ✅ (alt) / ⚠️ » (statistique d'abord, notre propre suivi sinon : sûrs dans tous les cas) et 38 ⚠️ (34 dépendent d'une statistique ou d'une rencontre de boss ; 4 d'une autre vérification : vitesse de monture, uiMapID des zones propres à Forever ×2, id de la dernière quête de Valthalak). Sans aucune statistique lisible, 135 hauts faits restent atteignables.
 

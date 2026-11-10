@@ -519,7 +519,8 @@ function ns:CaptureAppearances()
 	local list = {}
 	-- une apparence par version capturée : « cap:<npc> » et « cap:<npc>:s »
 	for npcID, entry in pairs(data.creatures) do
-		local name = tostring(entry.name or npcID)
+		-- 2.14.0 (bêta 4) : jamais le numéro quand un nom existe (rendu à la fiche)
+		local name = self.CreatureName and self:CreatureName(npcID, entry) or tostring(entry.name or npcID)
 		if entry.normal ~= false then
 			list[#list + 1] = { id = "cap:" .. tostring(npcID), npc = tonumber(npcID), label = name,
 				captured = true, class = entry.class, at = entry.at }
@@ -668,7 +669,7 @@ function ns:MenagerieList(opts)
 		local npc = tonumber(npcID)
 		if npc then
 			local item = Item(npc, catalog.byNpc[npc])
-			item.name = item.name or known.name
+			item.name = item.name or (self.CreatureName and self:CreatureName(npc, known)) or known.name
 			item.class = item.class or known.class
 			item.type = item.type or known.type
 			item.level = item.level or tonumber(known.level)
@@ -701,7 +702,7 @@ function ns:MenagerieList(opts)
 	local stats = { total = 0, known = 0, captured = 0, killed = 0, shinySeen = 0, shinies = 0, types = {} }
 	local list = {}
 	for _, item in pairs(view) do
-		item.name = item.name or tostring(item.npc)
+		item.name = item.name or (self.CreatureName and self:CreatureName(item.npc)) or tostring(item.npc)
 		item.class = item.class or "normal"
 		local here = zone == "all"
 		if not here then
@@ -771,7 +772,10 @@ function ns:CaptureOffer(guid, entry, shiny)
 	if self:CaptureHas(npcID, shiny and true or false) then return nil end
 	local book = self.BestiaryData and self:BestiaryData()
 	local species = book and book[entry.zoneID] and book[entry.zoneID][entry.npcID] or {}
-	local name = species.name or (shiny and shiny.name) or tostring(npcID)
+	-- 2.14.0 (bêta 4) : sans nom lu, celui du carnet, de la table livrée ou du client
+	local name = species.name
+	if not ns.CreatureNameGood(name, npcID) and type(shiny) == "table" then name = shiny.name end
+	name = self:CreatureName(npcID, { name = name })
 	state.pending = {
 		guid = guid, npcID = npcID, zoneID = entry.zoneID, name = name,
 		class = species.class or "normal", level = species.level, type = species.type,

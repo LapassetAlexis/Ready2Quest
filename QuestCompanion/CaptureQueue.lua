@@ -544,9 +544,12 @@ function ns:CaptureOffer(guid, entry, shiny)
 	local species = book and book[entry.zoneID] and book[entry.zoneID][entry.npcID] or {}
 	local state = self:CaptureState()
 	state.queueSerial = (state.queueSerial or 0) + 1
+	-- 2.14.0 (bêta 4) : sans nom lu, celui du carnet, de la table livrée ou du client
+	local name = species.name
+	if not ns.CreatureNameGood(name, npcID) and type(shiny) == "table" then name = shiny.name end
 	local candidate = {
 		guid = guid, npcID = npcID, zoneID = entry.zoneID,
-		name = species.name or (type(shiny) == "table" and shiny.name) or tostring(npcID),
+		name = self:CreatureName(npcID, { name = name }),
 		class = species.class or "normal", level = species.level, type = species.type,
 		family = species.family, shiny = shiny and true or nil, serial = state.queueSerial,
 	}

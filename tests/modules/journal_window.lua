@@ -46,16 +46,21 @@ do
 	local apps = NS:JournalCollection("app")
 	Check("[COLL] apparences : tout le catalogue", #apps == #NS.COMPANION_APPEARANCES)
 	Check("[COLL] dragonnet vert : équipé", W.Find(apps, "whelp_green").equipped and not W.Find(apps, "owl").owned)
+	-- 2.14.0 : les apparences dans le panneau « Choisir… » (CompanionAllure.lua)
+	evo.lookChoose:Click()
 	local function Look(id)
-		for _, cell in ipairs(evo.looks) do if cell:IsShown() and cell.def and cell.def.id == id then return cell end end
+		for _, cell in ipairs(NS.allurePanel.tiles) do if cell:IsShown() and cell.def and cell.def.id == id then return cell end end
 	end
-	local green, frog = Look("whelp_green"), Look("frog")
-	Check("[COLL] allure : les apparences possédées seulement, la portée en or", green and frog and Look("owl") == nil
-		and green.selected and green.accent:IsShown() and green.accent.vertex[1] == NS.Theme.GOLD[1])
+	local green, frog, owl = Look("whelp_green"), Look("frog"), Look("owl")
+	Check("[COLL] allure : la portée en or, les verrouillées grisées", green and frog and owl and owl.locked
+		and not frog.locked and green.selected and green.accent:IsShown() and green.accent.vertex[1] == NS.Theme.GOLD[1])
 	Check("[COLL] clic sur un verrouillé : rien", NS:CompanionSetAppearance("owl") == nil and data.appearance == "whelp_green")
+	owl:Click()
+	Check("[COLL] clic sur sa vignette grisée : rien", data.appearance == "whelp_green")
 	frog:Click()
 	Check("[COLL] clic sur la rainette : équipée", data.appearance == "frog" and W.Find(NS:JournalCollection("app"), "frog").equipped
 		and Look("frog").selected)
+	NS:AllureClose()
 
 	Check("[COLL] cadres : la liste les propose", evo.frameStyle.value ~= nil)
 	evo.frameStyle:Choose("copper")
