@@ -298,6 +298,69 @@ do
 	WV.Done()
 end
 
+-- 5 bis. « Tout capturer » : une boule de neige par case ------------------------------------------------
+do
+	Say("-- voile d'hiver : tout capturer")
+	local function Batch()
+		local results = {
+			{ target = { name = "Raptor", class = "normal", npcID = 7100 }, success = true, shakes = 3, stars = 1 },
+			{ target = { name = "Loup", class = "normal", npcID = 7101 }, success = false, shakes = 1 },
+		}
+		local batch = { results = results, messages = {}, tried = 0 }
+		NS.captureBatch = batch
+		NS:CaptureBatchShow(batch)
+		return batch
+	end
+	local function NetsHidden(batch)
+		for _, card in ipairs(batch.cards) do
+			local tile = card.tile
+			if Shown(tile.net) or Shown(tile.shadow) then return false end
+			for _, rope in ipairs(tile.ropes) do if Shown(rope) then return false end end
+		end
+		return true
+	end
+	WV.Reset(nil, "on")
+	NS:DB().companionCaptureAnim = true
+	local batch = Batch()
+	local first = batch.cards[1]
+	local drape = NS.CAPTURE_BATCH_DRAPE
+	NS:CaptureBatchUpdate(batch.startedAt + first.dropAt + drape / 2)
+	Check("[WV] volée : la boule de neige (132387) tombe sur la case, pas de filet", Shown(first.tile.wvBall)
+		and first.tile.wvBall.texture == 132387 and NetsHidden(batch))
+	NS:CaptureBatchUpdate(batch.startedAt + first.dropAt + drape + NS.WINTER_VEIL_SNOWBALL.burst / 2)
+	local burst = #first.tile.wvFlakes == NS.WINTER_VEIL_SNOWBALL.tileFlakes
+	for _, tex in ipairs(first.tile.wvFlakes) do if not Shown(tex) or tex.texture ~= 236121 then burst = false end end
+	Check("[WV] volée : elle éclate en flocons, le filet reste caché (secousses)", burst and not Shown(first.tile.wvBall)
+		and NetsHidden(batch))
+	NS:CaptureBatchStop(true)
+	local quiet = true
+	for _, card in ipairs(batch.cards) do
+		if Shown(card.tile.wvBall) then quiet = false end
+		for _, tex in ipairs(card.tile.wvFlakes or {}) do if Shown(tex) then quiet = false end end
+	end
+	Check("[WV] volée arrêtée : verdicts figés, ni filet (même déchiré) ni neige qui reste", batch.done and quiet
+		and NetsHidden(batch))
+	local ok, errs = NoErrors()
+	Check("[WV] volée : sans erreur", ok, errs)
+	if NS.captureBatchFrame then NS.captureBatchFrame:Hide() end
+	NS.captureBatch = nil
+
+	-- hors décor : le filet revient
+	NS:SetWinterVeil("off")
+	batch = Batch()
+	first = batch.cards[1]
+	NS:CaptureBatchUpdate(batch.startedAt + first.dropAt + drape / 2)
+	Check("[WV] volée hors décor : le filet tombe, pas de boule de neige", Shown(first.tile.net)
+		and not Shown(first.tile.wvBall))
+	NS:CaptureBatchStop(true)
+	local fled = batch.cards[2].tile
+	Check("[WV] volée hors décor : filet déchiré sur l'échappée", Shown(fled.net))
+	if NS.captureBatchFrame then NS.captureBatchFrame:Hide() end
+	NS.captureBatch = nil
+	NS.captureBatchFrame, NS.captureBatchFrames = nil, nil
+	WV.Done()
+end
+
 -- 6. Images du client seulement ----------------------------------------------------------------------------
 do
 	Say("-- voile d'hiver : images du client")

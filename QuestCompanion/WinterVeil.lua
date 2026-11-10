@@ -9,7 +9,8 @@
 --     fond) le long du haut de l'anneau, deux petits flocons ;
 --   * la capture : le filet devient une boule de neige (icône du bouton,
 --     bandeaux), et la scène lance une boule de neige qui éclate en flocons
---     sur la créature au lieu du filet. La logique de capture ne change pas.
+--     sur la créature au lieu du filet, « Tout capturer » aussi (une boule
+--     par case). La logique de capture ne change pas.
 -- Écartés à la maquette : sapin en vitrine, cadeaux ou chaussettes près du
 -- garde-manger ou du compagnon.
 -- Quand : réglage « Décor du Voile d'hiver » (page Compagnon de route, sous
@@ -62,7 +63,9 @@ ns.WINTER_VEIL_COMPANION = {
 }
 -- la scène de capture : la boule de neige (taille, tours en vol), son
 -- éclatement en flocons (nombre, durée, portée, taille)
-ns.WINTER_VEIL_SNOWBALL = { size = 34, spin = 3, flakes = 10, burst = 0.6, reach = 70, flakeSize = 15 }
+ns.WINTER_VEIL_SNOWBALL = { size = 34, spin = 3, flakes = 10, burst = 0.6, reach = 70, flakeSize = 15,
+	-- « Tout capturer » : la boule d'une case, ses flocons
+	tileSize = 22, tileFlakes = 6, tileReach = 30, tileFlakeSize = 11 }
 
 local FR = {
 	OPT_WINTER_VEIL         = "Décor du Voile d'hiver",
@@ -494,6 +497,114 @@ do
 				if not ok and self.RecordError then self:RecordError("noel:scene", err) end
 			end
 			return phase
+		end
+	end
+end
+
+-- ---------------------------------------------------------------------------
+-- « Tout capturer » (CaptureBatch.lua) : même chose, case par case. Au lieu
+-- du filet qui tombe, une boule de neige tombe en biais sur la créature
+-- pendant la pose (CAPTURE_BATCH_DRAPE), puis éclate en flocons. Le filet,
+-- son ombre et ses cordes restent cachés, jusqu'au filet déchiré posé sur
+-- une échappée (la case garde son portrait grisé). Le déroulé (secousses,
+-- verdicts, sons) ne change pas.
+-- ---------------------------------------------------------------------------
+local function TileSnow(tile)
+	if tile.wvBall then return tile end
+	local S, A = ns.WINTER_VEIL_SNOWBALL, ns.WINTER_VEIL_ART
+	local host = tile.fx or tile
+	tile.wvBall = host:CreateTexture(nil, "ARTWORK", nil, 5)
+	SetFile(tile.wvBall, A.snowball)
+	tile.wvBall:SetSize(S.tileSize, S.tileSize)
+	tile.wvBall:Hide()
+	tile.wvFlakes = {}
+	for index = 1, S.tileFlakes do
+		local tex = host:CreateTexture(nil, "ARTWORK", nil, 6)
+		SetFile(tex, A.flake)
+		local size = S.tileFlakeSize - (index % 2) * 3
+		tex:SetSize(size, size)
+		tex.angle = (index / S.tileFlakes) * math.pi * 2 + 0.4
+		tex.reach = S.tileReach * (0.75 + 0.25 * (index % 2))
+		tex.spin = ((index * 5) % 7 - 3) * 0.8
+		tex:Hide()
+		tile.wvFlakes[index] = tex
+	end
+	return tile
+end
+
+local function TileSnowHide(tile)
+	if not tile.wvBall then return end
+	tile.wvBall:Hide()
+	for _, tex in ipairs(tile.wvFlakes) do tex:Hide() end
+end
+
+-- Une case à l'instant `t` (depuis le début de la volée)
+local function TileSnowDraw(tile, card, t)
+	TileSnow(tile)
+	local S = ns.WINTER_VEIL_SNOWBALL
+	for _, region in ipairs({ tile.net, tile.shadow }) do if region then region:Hide() end end
+	for _, rope in ipairs(tile.ropes or {}) do rope:Hide() end
+	local scene = tile.scene or tile
+	local drape = ns.CAPTURE_BATCH_DRAPE or 0.3
+	local since = t - (tonumber(card.dropAt) or 0)
+	if since >= 0 and since < drape and not card.settled then
+		local p = Clamp01(since / drape)
+		Put(tile.wvBall, scene, -S.tileReach * (1 - p), S.tileReach * 1.4 * (1 - p) * (1 - p))
+		Method(tile.wvBall, "SetRotation", p * math.pi * S.spin)
+		tile.wvBall:SetAlpha(1)
+		tile.wvBall:Show()
+	else
+		tile.wvBall:Hide()
+	end
+	local q = (since - drape) / S.burst
+	for _, tex in ipairs(tile.wvFlakes) do
+		if q >= 0 and q < 1 and not card.settled then
+			local r = tex.reach * EaseOut(q)
+			Put(tex, scene, math.cos(tex.angle) * r, math.sin(tex.angle) * r + 4)
+			Method(tex, "SetRotation", tex.spin * q)
+			tex:SetAlpha(0.9 * (1 - q))
+			tex:Show()
+		else
+			tex:Hide()
+		end
+	end
+end
+
+-- Toutes les cases de la volée en cours ; rend s'il y a de la neige
+function ns:WinterVeilBatch(now)
+	local batch = self.captureBatch
+	if not (batch and batch.cards) then return nil end
+	local on = self:WinterVeilActive()
+	local t = (now or Clock()) - (batch.startedAt or now or 0)
+	for _, card in ipairs(batch.cards) do
+		local tile = card.tile
+		if tile then
+			if on then TileSnowDraw(tile, card, t) else TileSnowHide(tile) end
+		end
+	end
+	return on and true or false
+end
+
+do
+	local function Snow(self, now)
+		local ok, err = pcall(self.WinterVeilBatch, self, now)
+		if not ok and self.RecordError then self:RecordError("noel:volee", err) end
+	end
+	local update = ns.CaptureBatchUpdate
+	if update then
+		function ns:CaptureBatchUpdate(now, ...)
+			local a = update(self, now, ...)
+			Snow(self, now)
+			return a
+		end
+	end
+	-- « Arrêter » (et capture animée coupée) : les cases se figent d'un coup
+	local stop = ns.CaptureBatchStop
+	if stop then
+		function ns:CaptureBatchStop(...)
+			local a = stop(self, ...)
+			Snow(self, Clock())
+			return a
 		end
 	end
 end
