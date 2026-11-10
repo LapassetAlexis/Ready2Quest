@@ -171,19 +171,22 @@ do
 		sum = sum + model.lastPoint.x
 		if not Shown(model) or math.abs(model.lastPoint.x - box.centers[index]) > 1e-6 then placed = false end
 	end
-	Check("[WV4] guirlande : deux brins côte à côte (festons), le premier est d.lights", C.swags == 2 and placed
-		and d.lights == swags[1] and math.abs(swags[2].lastPoint.x - swags[1].lastPoint.x - box.swag) < 1e-6)
+	-- bêta 6 (31.png) : « une seule guirlande de cette taille, centrée »
+	Check("[WV6] guirlande : un seul brin, centré sur le cadre (x = 0), d.lights", C.swags == 1 and placed
+		and #swags == 1 and d.lights == swags[1] and swags[1].lastPoint.x == 0 and box.centers[1] == 0
+		and NS.WINTER_VEIL_COMPANION_DEFAULT.swags == 1)
+	Check("[WV6] guirlande : le fil sur le bord doré du haut (y = 0), bulbes de 11,5 px, caméra 1,9, fit 3,5",
+		C.y == 0 and swags[1].lastPoint.y == 0 and C.bulb == 11.5 and C.fit == 3.5
+		and math.abs(box.cam - 1.9) < 0.01, string.format("%.3f", box.cam))
 	Check("[WV4] guirlande : centrée sur le cadre (x = 0, pas le décalage de l'anneau)", C.x == 0
 		and math.abs(sum / #swags) < 1e-6 and math.abs(box.left + box.right) < 1e-6, string.format("%.2f", sum))
-	-- bêta 5 (27.png) : bulbes de ~4 px en bêta 4 ; taille moyenne, les deux brins sur toute la plaque
-	local plateW = frame:GetWidth() + 8
-	Check("[WV5] guirlande : les deux brins couvrent la largeur du cadre (plaque du nom ± 8 px), plus que l'or",
-		box.w > G.w and box.w >= plateW - 8 and box.w <= plateW + 8, string.format("%.1f / %d", box.w, plateW))
+	-- bêta 6 : un brin d'une soixantaine de px, au milieu de l'or (91 px)
+	Check("[WV6] guirlande : un brin plus étroit que l'or, centré (bords symétriques)",
+		box.w > 50 and box.w < G.w and math.abs(box.left + box.right) < 1e-6, string.format("%.1f", box.w))
 	Check("[WV5] guirlande : bulbes moyens (11 à 13 px ; ~4 en bêta 4, ~18 en bêta 3)", box.bulb >= 11 and box.bulb <= 13,
 		string.format("%.1f", box.bulb))
 	Check("[WV5] guirlande : cadre de chaque brin assez large pour que la caméra le cadre sur sa hauteur (≥ fit × h)",
-		C.fit >= 3 and lights:GetWidth() == box.frameW and box.frameW >= C.fit * C.h - 0.5 and box.frameW >= box.swag
-		and d.swags[2]:GetWidth() == box.frameW, string.format("%s / %s", tostring(lights:GetWidth()), tostring(box.frameW)))
+		C.fit >= 3 and lights:GetWidth() == box.frameW and box.frameW >= C.fit * C.h - 0.5 and box.frameW >= box.swag, string.format("%s / %s", tostring(lights:GetWidth()), tostring(box.frameW)))
 	Check("[WV4] guirlande : le milieu des fils posé sur le bord doré du haut",
 		box.mid <= G.top and box.mid >= G.inner, string.format("%.1f (%d..%d)", box.mid, G.inner, G.top))
 	Check("[WV4] guirlande : bouts accrochés au-dessus du cadre, bulbes juste sous l'or (≤ 5 px dans l'ouverture)",
@@ -200,7 +203,7 @@ do
 	end
 	NS:WinterVeilCompanion()
 	Check("[WV] guirlande : modèle 199600 chargé, caméra posée", lights.loaded == 199600 and lights.wvModel == 199600
-		and d.swags[2].loaded == 199600 and math.abs(lights.cam - NS.WinterVeilLightsBox().cam) < 1e-9)
+		and math.abs(lights.cam - NS.WinterVeilLightsBox().cam) < 1e-9)
 	-- bêta 4 : le réglage en jeu (/qc noel cadre <bulbe> <x> <y> <brins> <cap>)
 	local printed = {}
 	local print0 = NS.Print
@@ -215,15 +218,24 @@ do
 	Check("[WV4] /qc noel cadre : « - » garde la valeur, un brin de moins se cache", C.bulb == 10 and C.swags == 1
 		and Shown(d.swags[1]) and not Shown(d.swags[2]) and not Shown(d.swags[3]))
 	NS:WinterVeilCommand("frame default")
-	Check("[WV4] /qc noel frame default : valeurs livrées", C.bulb == NS.WINTER_VEIL_COMPANION_DEFAULT.bulb and C.swags == 2
-		and C.x == 0 and Shown(d.swags[2]) and not Shown(d.swags[3]))
+	Check("[WV6] /qc noel frame default : valeurs livrées (un brin centré)", C.bulb == NS.WINTER_VEIL_COMPANION_DEFAULT.bulb
+		and C.swags == 1 and C.x == 0 and Shown(d.swags[1]) and d.swags[1].lastPoint.x == 0
+		and not Shown(d.swags[2]) and not Shown(d.swags[3]))
 	printed = {}
 	NS:WinterVeilCommand("cadre")
 	Check("[WV4] /qc noel cadre sans valeur : les valeurs actuelles, rien ne change", #printed == 1
 		and C.bulb == NS.WINTER_VEIL_COMPANION_DEFAULT.bulb and C.bulb == 11.5)
 	NS.Print = print0
-	Check("[WV] deux flocons (236121) près du cadre", #d.flakes == 2 and d.flakes[1].texture == ART.flake.file
-		and d.flakes[2].texture == 236121 and d.flakes[1].alpha < 1)
+	-- bêta 6 : « Tu devais pas mettre des flocons aussi ? » : quatre flocons aux coins, bien visibles
+	local corners, visible = {}, true
+	for index, tex in ipairs(d.flakes) do
+		local spec = C.flakes[index]
+		if tex.texture ~= ART.flake.file or tex.alpha < 0.85 or tex.width < 15 or not Shown(tex)
+			or tex.lastPoint.relTo ~= frame or tex.lastPoint.x ~= spec.x then visible = false end
+		corners[(spec.x < 0 and "G" or "D") .. (spec.y > -40 and "H" or "B")] = true
+	end
+	Check("[WV6] quatre flocons fixes (236121) aux coins du cadre, hors de l'anneau, grands et presque opaques",
+		#d.flakes == 4 and visible and corners.GH and corners.DH and corners.GB and corners.DB)
 	local gift = false
 	for _, child in ipairs(d.mockChildren or {}) do if child.texture == 133202 then gift = true end end
 	Check("[WV] pas de cadeau à côté du compagnon", not gift)
@@ -543,6 +555,163 @@ do
 	if NS.captureBatchFrame then NS.captureBatchFrame:Hide() end
 	NS.captureBatch = nil
 	NS.captureBatchFrame, NS.captureBatchFrames = nil, nil
+	WV.Done()
+end
+
+-- 5 bis. Bêta 6 : la neige qui tombe et le cadre givré --------------------------------------------------
+do
+	Say("-- voile d'hiver (bêta 6) : neige qui tombe, cadre givré")
+	WV.Reset(nil, "on")
+	-- le client sait boucler un groupe d'animations (SetLooping) : posé sur
+	-- les textures des cadres créés ici (le banc de base ne l'a pas : socle_211)
+	local createFrame = _G.CreateFrame
+	_G.CreateFrame = function(...)
+		local made = createFrame(...)
+		local create = made.CreateTexture
+		if create then
+			made.CreateTexture = function(self, ...)
+				local tex = create(self, ...)
+				local group = tex.CreateAnimationGroup
+				tex.CreateAnimationGroup = function(t)
+					local g = group(t)
+					function g:SetLooping(v) self.looping = v end
+					return g
+				end
+				return tex
+			end
+		end
+		return made
+	end
+	NS:CompanionUpdateVisibility()
+	_G.CreateFrame = createFrame
+	local frame = NS.companionFrame
+	local d = frame and frame.wvDecor
+	local S = NS.WINTER_VEIL_COMPANION.snow
+	local function Snowing()
+		if #d.snow == 0 then return false end
+		for _, tex in ipairs(d.snow) do
+			if not (Shown(tex) and tex.wvAnim and tex.wvAnim.playing) then return false end
+		end
+		return d.snowing == true
+	end
+	local function SnowStopped()
+		for _, tex in ipairs(d.snow) do
+			if Shown(tex) or (tex.wvAnim and tex.wvAnim.playing) then return false end
+		end
+		return d.snowing == false
+	end
+	Check("[WV6] neige : 4 à 6 petits flocons (236121) qui tombent autour du cadre, sans erreur",
+		d and #d.snow >= 4 and #d.snow <= 6 and Snowing() and NoErrors(), select(2, NoErrors()))
+	local anims, delays, distinct = true, {}, 0
+	for index, tex in ipairs(d.snow) do
+		local g, spec = tex.wvAnim, S[index]
+		if not (g and g.looping == "REPEAT" and tex.texture == ART.flake.file and tex.alpha == 0 and tex.width <= 10
+			and tex.lastPoint.relTo == frame and tex.lastPoint.x == spec.x and tex.lastPoint.y == S.top
+			and g.fall.kind == "Translation" and g.fall.offset[1] == spec.dx and g.fall.offset[2] == -S.fall
+			and g.fall.duration == spec.time and g.fall.startDelay == spec.delay
+			and g.fadeIn.kind == "Alpha" and g.fadeIn.from == 0 and g.fadeIn.to == S.alpha and g.fadeIn.startDelay == spec.delay
+			and g.fadeOut.kind == "Alpha" and g.fadeOut.from == S.alpha and g.fadeOut.to == 0
+			and math.abs(g.fadeOut.startDelay + g.fadeOut.duration - spec.delay - spec.time) < 1e-9) then anims = false end
+		if not delays[spec.delay] then delays[spec.delay] = true; distinct = distinct + 1 end
+	end
+	Check("[WV6] neige : chaque flocon en boucle (translation vers le bas + fondus), transparent au repos", anims)
+	Check("[WV6] neige : décalée dans le temps (attentes toutes différentes), lente (≥ 5 s par chute)",
+		distinct == #d.snow and S[1].time >= 5 and S.fall >= 60)
+	Check("[WV6] neige : sans OnUpdate (animations du client seulement)", not (d.scripts and d.scripts.OnUpdate)
+		and not (d.hooks and d.hooks.OnUpdate))
+	local plays = d.snow[1].wvAnim.plays
+	NS:WinterVeilCompanion()
+	Check("[WV6] neige : un rafraîchissement ne la relance pas", d.snow[1].wvAnim.plays == plays and Snowing())
+	-- combat : le compagnon s'estompe, la neige s'arrête ; les flocons fixes restent
+	_G.InCombatLockdown = function() return true end
+	Check("[WV6] combat (compagnon estompé) : la neige s'arrête, flocons fixes et guirlande gardés",
+		NS:WinterVeilWatch() == true and SnowStopped() and Shown(d.flakes[1]) and Shown(d.swags[1]))
+	Check("[WV6] combat : rien de refait tant que rien ne change", NS:WinterVeilWatch() == false and SnowStopped())
+	NS:DB().companionCombatFade = false
+	Check("[WV6] combat sans estompe (réglage coupé) : la neige tombe", NS:WinterVeilWatch() == true and Snowing())
+	NS:DB().companionCombatFade = nil
+	NS:WinterVeilWatch()
+	_G.InCombatLockdown = function() return false end
+	NS.companionFighting = nil
+	Check("[WV6] fin du combat : la neige reprend", NS:WinterVeilWatch() == true and Snowing())
+	-- mode voyage (habit invisible) : cachée, puis revenue
+	UIParent:SetAlpha(0)
+	Check("[WV6] mode voyage : neige cachée", NS:WinterVeilWatch() == true and SnowStopped())
+	UIParent:SetAlpha(1)
+	Check("[WV6] interface revenue : la neige retombe", NS:WinterVeilWatch() == true and Snowing())
+
+	-- le cadre givré
+	local ring = frame.azSkin.ring
+	local F = NS.WINTER_VEIL_FROST
+	local glow = frame.wvGlow
+	Check("[WV6] givre : réglage par défaut actif", NS:WinterVeilFrostOn() == true and NS:DB().winterVeilFrost ~= false)
+	Check("[WV6] givre : l'anneau du portrait teinté argent-bleu", ring.vertex and ring.vertex[1] == F.tint[1]
+		and ring.vertex[2] == F.tint[2] and ring.vertex[3] == F.tint[3] and ring.wvFrost == true,
+		ring.vertex and table.concat(ring.vertex, ","))
+	Check("[WV6] givre : halo glacé du client (premier atlas présent) derrière l'anneau, sous le modèle",
+		glow and Shown(glow) and glow.atlas == "Relic-Frost-TraitGlowRing" and glow.drawLayer == "BACKGROUND"
+		and glow:GetParent() == frame and glow.lastPoint.relTo == frame and glow.width > NS.AZEROTH_RING.w,
+		tostring(glow and glow.atlas))
+	-- le réglage (page Compagnon de route, juste sous le décor)
+	local row, at, decorAt
+	for _, page in ipairs(NS.OPTION_PAGES or {}) do
+		if page.id == "companionMain" then
+			for index, r in ipairs(page.rows) do
+				if r.key == "winterVeilFrost" then row, at = r, index end
+				if r.key == "winterVeil" then decorAt = index end
+			end
+		end
+	end
+	Check("[WV6] réglage « Cadre givré (Voile d'hiver) » : case à cocher sous le décor du Voile d'hiver",
+		row and row.kind == "bool" and at == decorAt + 1 and NS.L[row.label] == "Cadre givré (Voile d'hiver)"
+		and NS.WINTER_VEIL_STRINGS.en.OPT_WINTER_VEIL_FROST ~= nil and row.describe() ~= nil)
+	NS:DB().winterVeilFrost = false
+	row.onChange()
+	Check("[WV6] givre coupé : couleurs d'origine exactes, halo caché, décor gardé", ring.vertex[1] == 1 and ring.vertex[2] == 1
+		and ring.vertex[3] == 1 and ring.vertex[4] == 1 and not ring.wvFrost and not Shown(glow) and Shown(d) and Snowing())
+	NS:DB().winterVeilFrost = true
+	row.onChange()
+	Check("[WV6] givre remis : teinte et halo", ring.vertex[1] == F.tint[1] and Shown(glow))
+	-- mode voyage : le halo (sur le cadre, pas l'habit) se cache avec l'habit
+	frame.azSkin:Hide()
+	NS:WinterVeilWatch()
+	Check("[WV6] habit caché : halo caché aussi", not Shown(glow))
+	frame.azSkin:Show()
+	NS:WinterVeilWatch()
+	Check("[WV6] habit revenu : halo revenu", Shown(glow))
+	-- hors décor : tout revient
+	NS:SetUIStyle("sobre")
+	Check("[WV6] Sobre : anneau rendu à ses couleurs, halo et neige cachés", ring.vertex[1] == 1 and ring.vertex[3] == 1
+		and not Shown(glow) and SnowStopped())
+	NS:SetUIStyle("azeroth")
+	Check("[WV6] retour en Azeroth : givre et neige revenus", ring.vertex[1] == F.tint[1] and Shown(glow) and Snowing())
+	NS:SetWinterVeil("off")
+	Check("[WV6] jamais : anneau d'origine, halo et neige cachés", ring.vertex[1] == 1 and not Shown(glow) and SnowStopped())
+	NS:SetWinterVeil("auto")
+	WV.now = JUL1
+	NS:CompanionUpdateVisibility()
+	Check("[WV6] hors saison : anneau d'origine", ring.vertex[1] == 1 and not Shown(glow) and SnowStopped())
+	WV.Done()
+
+	-- atlas du halo absents : le second, puis rien (sans erreur, la teinte reste)
+	WV.Reset(nil, "on")
+	Mock.InstallAtlas({ ["Relic-Frost-TraitGlowRing"] = true })
+	NS:AzerothAtlasOK(true)
+	NS:CompanionUpdateVisibility()
+	frame = NS.companionFrame
+	Check("[WV6] premier halo absent : le second atlas (anneau kyrian)", frame.wvGlow and frame.wvGlow.atlas
+		== "covenantchoice-offering-ability-ring-kyrian" and Shown(frame.wvGlow), tostring(frame.wvGlow and frame.wvGlow.atlas))
+	WV.Done()
+	WV.Reset(nil, "on")
+	Mock.InstallAtlas({ ["Relic-Frost-TraitGlowRing"] = true, ["covenantchoice-offering-ability-ring-kyrian"] = true })
+	NS:AzerothAtlasOK(true)
+	NS:CompanionUpdateVisibility()
+	frame = NS.companionFrame
+	local skinRing = frame.azSkin and frame.azSkin.ring
+	Check("[WV6] aucun halo dans le client : rien posé, pas d'erreur, l'anneau givré quand même", frame.wvGlow == false
+		and skinRing and skinRing.vertex and skinRing.vertex[1] == F.tint[1] and NoErrors(), select(2, NoErrors()))
+	NS:WinterVeilFrost(false)
+	Check("[WV6] aucun halo : couleurs rendues sans erreur", skinRing.vertex[1] == 1 and NoErrors())
 	WV.Done()
 end
 

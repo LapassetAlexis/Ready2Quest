@@ -96,6 +96,35 @@ for _, def in ipairs(ns.WINTER_COMPANIONS) do BY_ID[def.id], BY_KEY[def.seasonal
 ns.WINTER_METZEN_CAM = 1
 ns.WINTER_METZEN_LOOK = 15706
 if type(ns.MODEL_NPC_LOOK) == "table" then ns.MODEL_NPC_LOOK[15664] = ns.WINTER_METZEN_LOOK end
+-- 2.14.0 (bêta 6) : la vignette de Metzen enfin visible, mais minuscule et
+-- coupée (30.png : les pattes du renne seulement). Les vignettes de saison
+-- (choix d'allure, carte « Son allure ») prennent le portrait 2D rond du
+-- client (SetPortraitTextureFromCreatureDisplayID, vu en jeu en 2.11) :
+-- Metzen par l'affichage du Renne de l'Hiver (15904, échelle 0,2 ; 15902 :
+-- le même renne, modèle 2233, à l'échelle 1) ; Grand-père Hiver et le
+-- bonhomme de neige par leur displayID appris en fond (ns:ModelLearnCreatures,
+-- comme les créatures capturées) : en 3D tant qu'il n'est pas connu. Sans
+-- l'API du portrait (ou s'il échoue) : le petit modèle 3D d'avant.
+-- /qc noel metzen 2d [display] | 3d : réglage en jeu (session).
+ns.WINTER_PORTRAIT_DISPLAY = { [15664] = 15904 }
+ns.WINTER_PORTRAITS_ON = true
+function ns:WinterPortraitDisplay(npc)
+	npc = tonumber(npc)
+	if not (npc and ns.WINTER_PORTRAITS_ON) then return nil end
+	local fixed = ns.WINTER_PORTRAIT_DISPLAY[npc]
+	if fixed then return fixed end
+	return self.ModelKnownDisplay and self:ModelKnownDisplay(npc) or nil
+end
+-- les pnj de saison dont le displayID reste à apprendre (pour le portrait)
+function ns:WinterPortraitToLearn()
+	local list = {}
+	for _, def in ipairs(ns.WINTER_COMPANIONS) do
+		if not ns.WINTER_PORTRAIT_DISPLAY[def.npc] and not (self.ModelKnownDisplay and self:ModelKnownDisplay(def.npc)) then
+			list[#list + 1] = def.npc
+		end
+	end
+	return list
+end
 if type(ns.COMPANION_MODEL_OVERRIDES) == "table" then
 	ns.COMPANION_MODEL_OVERRIDES[13444] = { cam = 1.5 }
 	ns.COMPANION_MODEL_OVERRIDES[15664] = { cam = ns.WINTER_METZEN_CAM }
@@ -135,7 +164,11 @@ ns.RegisterStrings({
 	OPT_COMP_WINTER_VISIT      = "Visite surprise de Grand-père Hiver",
 	WINTER_METZEN_TUNE  = "Metzen : distance %s, modèle du pnj %s. Régler : /qc noel metzen <distance> [pnj] (15664 : son modèle, 15706 : le Renne de l'Hiver) ; /qc noel metzen diag : ce que le client montre.",
 	-- 2.14.0 (bêta 5) : /qc noel metzen diag
-	WINTER_METZEN_DIAG_HEAD = "Metzen (pnj 15664, montré par le pnj %s, distance %s) :",
+	WINTER_METZEN_DIAG_HEAD = "Metzen (pnj 15664, montré par le pnj %s, distance %s ; vignettes : %s) :",
+	-- 2.14.0 (bêta 6) : portrait 2D des vignettes de saison
+	WINTER_METZEN_2D    = "portrait 2D, display %s",
+	WINTER_METZEN_3D    = "modèle 3D",
+	WINTER_METZEN_LOOK  = "Vignettes de saison : %s. Régler : /qc noel metzen 2d [display] (15904 : le Renne de l'Hiver, 15902 : le grand renne) ou /qc noel metzen 3d.",
 	WINTER_METZEN_DIAG_ROW  = "  %s : pnj %s, display demandé %s, display du client %s, caméra %s (lue %s), zoom %s, position %s, échelle %s, chargé %s, montré %s, visible %s, opacité %s, taille %s × %s",
 	WINTER_METZEN_DIAG_NONE = "  %s : pas de modèle (%s)",
 	WINTER_METZEN_DIAG_TILE = "vignette « Son allure »",
@@ -151,7 +184,10 @@ ns.RegisterStrings({
 	WINTER_MSG_SACK     = "Greatfather Winter's sack: %s for you today.",
 	OPT_COMP_WINTER_VISIT      = "Surprise visit from Greatfather Winter",
 	WINTER_METZEN_TUNE  = "Metzen: distance %s, model of npc %s. Tune: /qc noel metzen <distance> [npc] (15664: his own model, 15706: the Winter Reindeer); /qc noel metzen diag: what the client shows.",
-	WINTER_METZEN_DIAG_HEAD = "Metzen (npc 15664, shown with npc %s, distance %s):",
+	WINTER_METZEN_DIAG_HEAD = "Metzen (npc 15664, shown with npc %s, distance %s; tiles: %s):",
+	WINTER_METZEN_2D    = "2D portrait, display %s",
+	WINTER_METZEN_3D    = "3D model",
+	WINTER_METZEN_LOOK  = "Seasonal tiles: %s. Tune: /qc noel metzen 2d [display] (15904: the Winter Reindeer, 15902: the big reindeer) or /qc noel metzen 3d.",
 	WINTER_METZEN_DIAG_ROW  = "  %s: npc %s, requested display %s, client display %s, camera %s (read %s), zoom %s, position %s, scale %s, loaded %s, shown %s, visible %s, alpha %s, size %s × %s",
 	WINTER_METZEN_DIAG_NONE = "  %s: no model (%s)",
 	WINTER_METZEN_DIAG_TILE = "\"Appearance\" tile",
@@ -922,9 +958,41 @@ end)
 -- 2.14.0 (bêta 4) : réglage en jeu de Metzen (pour la session) : distance de
 -- caméra (cadre du compagnon, vignette, carte « Son allure ») et pnj dont le
 -- modèle le montre. Rend la distance, le pnj montré.
+-- Ce que montrent les vignettes de saison (texte de /qc noel metzen)
+function ns:WinterPortraitText()
+	local display = self:WinterPortraitDisplay(15664)
+	return display and self:F("WINTER_METZEN_2D", display) or L.WINTER_METZEN_3D
+end
+-- Tout ce qui montre un compagnon de saison se recharge : le cadre, les
+-- vignettes, la carte
+local function ReloadLooks(self)
+	local frame = self.companionFrame
+	if frame and frame.model and ns.ModelForget then ns.ModelForget(frame.model) end
+	if self.CompanionApplyModel then pcall(self.CompanionApplyModel, self) end
+	local panel = self.allurePanel
+	for _, tile in ipairs(panel and panel.seasonTiles or {}) do tile.lookKey = nil end
+	if panel and panel.IsShown and panel:IsShown() and self.AllureRefresh then pcall(self.AllureRefresh, self) end
+	if self.RefreshJournal and self.journalFrame and self.journalFrame:IsShown() then pcall(self.RefreshJournal, self) end
+end
+-- 2.14.0 (bêta 6) : /qc noel metzen 2d [display] | 3d ; rend le display du
+-- portrait de Metzen (nil en 3D)
+function ns:WinterMetzenLook(mode, display)
+	if mode == "3d" then
+		ns.WINTER_PORTRAITS_ON = false
+	else
+		ns.WINTER_PORTRAITS_ON = true
+		display = tonumber(display)
+		if display and display > 0 then ns.WINTER_PORTRAIT_DISPLAY[15664] = display end
+	end
+	ReloadLooks(self)
+	if self.Print then self:Print(self:F("WINTER_METZEN_LOOK", self:WinterPortraitText())) end
+	return self:WinterPortraitDisplay(15664)
+end
+
 function ns:WinterMetzenTune(rest)
 	local cam, npc = tostring(rest or ""):match("^%s*(%S*)%s*(%S*)")
 	if (cam or ""):lower() == "diag" then return self:WinterMetzenDiag() end
+	if (cam or ""):lower() == "2d" or (cam or ""):lower() == "3d" then return self:WinterMetzenLook(cam:lower(), npc) end
 	cam, npc = tonumber((cam or ""):gsub(",", ".") .. ""), tonumber(npc)
 	if cam and cam > 0 then
 		ns.WINTER_METZEN_CAM = cam
@@ -934,16 +1002,7 @@ function ns:WinterMetzenTune(rest)
 		ns.MODEL_NPC_LOOK[15664] = npc ~= 15664 and npc or nil
 	end
 	local shown = (type(ns.MODEL_NPC_LOOK) == "table" and ns.MODEL_NPC_LOOK[15664]) or 15664
-	if cam or npc then
-		-- tout ce qui le montre se recharge : le cadre, les vignettes, la carte
-		local frame = self.companionFrame
-		if frame and frame.model and ns.ModelForget then ns.ModelForget(frame.model) end
-		if self.CompanionApplyModel then pcall(self.CompanionApplyModel, self) end
-		local panel = self.allurePanel
-		for _, tile in ipairs(panel and panel.seasonTiles or {}) do tile.lookKey = nil end
-		if panel and panel.IsShown and panel:IsShown() and self.AllureRefresh then pcall(self.AllureRefresh, self) end
-		if self.RefreshJournal and self.journalFrame and self.journalFrame:IsShown() then pcall(self.RefreshJournal, self) end
-	end
+	if cam or npc then ReloadLooks(self) end
 	if self.Print then self:Print(self:F("WINTER_METZEN_TUNE", ns.WINTER_METZEN_CAM, shown)) end
 	return ns.WINTER_METZEN_CAM, shown
 end
@@ -972,7 +1031,7 @@ end
 function ns:WinterMetzenDiag()
 	local lines = {}
 	local shown = (type(ns.MODEL_NPC_LOOK) == "table" and ns.MODEL_NPC_LOOK[15664]) or 15664
-	lines[1] = self:F("WINTER_METZEN_DIAG_HEAD", shown, ns.WINTER_METZEN_CAM)
+	lines[1] = self:F("WINTER_METZEN_DIAG_HEAD", shown, ns.WINTER_METZEN_CAM, self:WinterPortraitText())
 	local tileModel
 	local panel = self.allurePanel
 	for _, tile in ipairs(panel and panel.seasonTiles or {}) do

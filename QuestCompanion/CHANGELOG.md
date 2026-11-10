@@ -3,6 +3,7 @@
 ## 2.14.0 — le Voile d'hiver
 
 - **Décor de saison** (style Azeroth) du 15 décembre au 2 janvier : guirlande lumineuse et flocons dans le carnet, guirlande en 3D sur le cadre du compagnon. Réglage « Décor du Voile d'hiver » (automatique, toujours, jamais) ou /qc noel.
+- **Cadre givré** : pendant le décor, l'anneau du portrait du compagnon prend une teinte argent givré et un halo glacé. Réglage « Cadre givré (Voile d'hiver) ».
 - **Boule de neige** : pendant la saison, le filet devient une boule de neige qui éclate en flocons, en capture comme dans « Tout capturer ».
 - **Trois compagnons de saison** à choisir dans « Son allure » sans perdre ton compagnon : Grand-père Hiver (un cadeau par jour), Metzen le renne (le nez qui brille la nuit), le petit bonhomme de neige (il aime le froid, il fond au chaud), chacun avec sa voix.
 - **Visite surprise** de Grand-père Hiver, une fois par session (réglable), et un haut fait « Joyeux Voile d'hiver ».
@@ -11,7 +12,7 @@
 - **Nouvelle scène de capture** : une carte compacte (parchemin en Azeroth, sombre en Sobre) : la créature posée avec son ombre, la chance et les étoiles à gagner, tes aides, l'état du lancer.
 - **Noms des créatures** : une créature vue sans son nom ne s'affiche plus par un numéro (vignettes, carnet, fiche de dresseur, file de capture).
 
-*English:* Winter Veil season (Azeroth style, Dec 15 – Jan 2): festive lights and snowflakes in the journal and 3D lights on the companion frame (setting or /qc noel); the net becomes a snowball that bursts into snowflakes; three seasonal companions in "Appearance" (Greatfather Winter's daily gift, Metzen's glowing nose at night, the Tiny Snowman who loves the cold and melts in the heat), each with its own voice; a surprise visit from Greatfather Winter and a "Merry Winter Veil" achievement; a new appearance picker (search, filters, scrolling grid, shiny or normal side by side, favourites with Shift+click, follows your UI style); creature tooltips show the species' stars and whether the net will still offer it; a new compact capture card (creature with its shadow, chance and stars to earn, your aids, throw status); creatures seen without a name no longer show as a number.
+*English:* Winter Veil season (Azeroth style, Dec 15 – Jan 2): festive lights and snowflakes in the journal and 3D lights on the companion frame (setting or /qc noel); a frosted companion frame (silver ring, icy glow; setting "Frosted frame (Winter Veil)"); the net becomes a snowball that bursts into snowflakes; three seasonal companions in "Appearance" (Greatfather Winter's daily gift, Metzen's glowing nose at night, the Tiny Snowman who loves the cold and melts in the heat), each with its own voice; a surprise visit from Greatfather Winter and a "Merry Winter Veil" achievement; a new appearance picker (search, filters, scrolling grid, shiny or normal side by side, favourites with Shift+click, follows your UI style); creature tooltips show the species' stars and whether the net will still offer it; a new compact capture card (creature with its shadow, chance and stars to earn, your aids, throw status); creatures seen without a name no longer show as a number.
 
 ## 2.13.1
 

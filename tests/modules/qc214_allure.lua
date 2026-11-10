@@ -485,6 +485,12 @@ do
 		and math.abs(tFire.model.cam - NS.COMPANION_MODEL_TYPE_CAM["Élémentaire"]) < 1e-9 and tFire.model.zoom == 0,
 		tostring(tFire.model and tFire.model.cam))
 	Check("[ALLURE3] modèle sans souris (le clic reste à la tuile)", tFire.model.mouseEnabled == false)
+	-- bêta 6 : les vignettes de saison en portrait 2D par défaut ; les
+	-- vérifications du modèle 3D (bêtas 4 et 5, son repli) en mode 3d
+	local printQuiet = NS.Print
+	NS.Print = function() end
+	NS:WinterVeilCommand("metzen 3d")
+	NS.Print = printQuiet
 	-- Metzen : de loin, la même distance dans la vignette, la carte et le cadre du compagnon
 	local tMetzen = TileOf(panel, "winter:metzen")
 	-- bêta 4 : Metzen montré sous le modèle du Renne de l'Hiver (15706), cadré comme les autres
@@ -584,6 +590,9 @@ do
 	end
 	Check("[ALLURE3] Grand-père Hiver et le bonhomme de neige : inchangés", TileOf(panel, "winter:gfw").model.cam == 1.5
 		and TileOf(panel, "winter:snowman").model.cam == 1.2)
+	NS.Print = function() end
+	NS:WinterVeilCommand("metzen 2d")
+	NS.Print = printQuiet
 	-- la mise en réserve : un modèle par tuile au plus, réutilisé au défilement
 	local before = #A.models
 	local visible = panel.rows * NS.ALLURE_COLS
@@ -704,4 +713,77 @@ do
 	NS.ZONE_CREATURES = savedZones
 	NS.CreatureNameForget()
 	NS.menagerieStatic = nil
+end
+
+-- 2.14.0 (bêta 6) : portraits 2D des compagnons de saison (30.png : Metzen minuscule, coupé) -----------
+do
+	Say("-- allure (bêta 6) : portraits 2D des compagnons de saison")
+	A.Reset("azeroth", true)
+	InstallModels()
+	local print0 = NS.Print
+	NS.Print = function() end
+	local panel, evo = Open()
+	local tM, tG, tS = TileOf(panel, "winter:metzen"), TileOf(panel, "winter:gfw"), TileOf(panel, "winter:snowman")
+	Check("[ALLURE6] Metzen : portrait 2D rond du Renne de l'Hiver (display 15904), modèle 3D caché",
+		tM and tM.look == "portrait" and tM.portrait.portraitID == 15904 and tM.portrait:IsShown()
+		and not (tM.model and tM.model:IsShown()) and NS.WINTER_PORTRAIT_DISPLAY[15664] == 15904,
+		tostring(tM and tM.look) .. " / " .. tostring(tM and tM.portrait.portraitID))
+	Check("[ALLURE6] Metzen : la taille d'une vignette (portrait de la grille)", tM.portrait:GetWidth() == NS.ALLURE_PORTRAIT
+		and tM.portrait.vertex[1] == 1)
+	Check("[ALLURE6] Grand-père Hiver et le bonhomme sans displayID appris : petit modèle 3D d'avant",
+		tG.look == "model" and tG.model:IsShown() and tS.look == "model" and tG.model.creature == 13444)
+	local queue = NS:ModelLearnQueue()
+	Check("[ALLURE6] leur displayID s'apprend en fond, après les créatures de la grille",
+		#queue >= 2 and queue[#queue - 1] == 13444 and queue[#queue] == 15710, table.concat(queue, ","))
+	local account = NS:CaptureAccount()
+	account.display[13444], account.display[15710] = 13369, 15691
+	NS:AllureRefresh()
+	Check("[ALLURE6] appris : Grand-père Hiver et le bonhomme en portrait 2D aussi (les trois pareils)",
+		tG.look == "portrait" and tG.portrait.portraitID == 13369 and tS.look == "portrait" and tS.portrait.portraitID == 15691
+		and not tG.model:IsShown() and tM.look == "portrait")
+	-- la carte « Son allure » : Metzen porté
+	tM:Click()
+	if NS.effectsConfirm and NS.effectsConfirm:IsShown() then NS:CompanionConfirmAnswer(true) end
+	NS:AllureRefreshCard(evo)
+	local card = evo.lookCard
+	Check("[ALLURE6] carte « Son allure » : Metzen en portrait 2D (15904), le petit modèle caché",
+		NS:CompanionCurrentAppearance().id == "winter:metzen" and card.look == "portrait" and card.portrait:IsShown()
+		and card.portrait.portraitID == 15904 and not card.model:IsShown(), tostring(card.look))
+	-- /qc noel metzen 2d 15902 : un autre affichage
+	NS:WinterVeilCommand("metzen 2d 15902")
+	NS:AllureRefreshCard(evo)
+	Check("[ALLURE6] /qc noel metzen 2d 15902 : vignette et carte rechargées", TileOf(panel, "winter:metzen").portrait.portraitID == 15902
+		and card.portrait.portraitID == 15902)
+	NS:WinterVeilCommand("metzen 2d 15904")
+	-- repli : le client refuse le portrait (erreur) : le modèle 3D d'avant
+	_G.SetPortraitTextureFromCreatureDisplayID = function() error("portrait refusé") end
+	for _, tile in ipairs(panel.seasonTiles) do tile.lookKey = nil end
+	NS:AllureRefresh()
+	tM = TileOf(panel, "winter:metzen")
+	Check("[ALLURE6] portrait refusé : Metzen revient au modèle 3D (Renne de l'Hiver, 15706)", tM.look == "model"
+		and tM.model:IsShown() and tM.model.creature == 15706 and not tM.portrait:IsShown(), tostring(tM.look))
+	NS:AllureRefreshCard(evo)
+	Check("[ALLURE6] portrait refusé : la carte aussi (modèle)", card.look == "model" and not card.portrait:IsShown())
+	-- sans l'API du portrait : 3D
+	_G.SetPortraitTextureFromCreatureDisplayID = nil
+	NS:AllureRefresh()
+	NS:AllureRefreshCard(evo)
+	Check("[ALLURE6] client sans portrait 2D : modèle 3D (vignette et carte)", TileOf(panel, "winter:metzen").look == "model"
+		and card.look == "model")
+	-- /qc noel metzen 3d : le modèle même avec l'API ; 2d : le portrait revient
+	_G.SetPortraitTextureFromCreatureDisplayID = function(tex, id) tex.portraitID = id end
+	NS:WinterVeilCommand("metzen 3d")
+	Check("[ALLURE6] /qc noel metzen 3d : modèle 3D", TileOf(panel, "winter:metzen").look == "model"
+		and NS:WinterPortraitDisplay(15664) == nil)
+	NS:WinterVeilCommand("metzen 2d")
+	Check("[ALLURE6] /qc noel metzen 2d : portrait revenu", TileOf(panel, "winter:metzen").look == "portrait"
+		and NS.WINTER_PORTRAITS_ON == true)
+	local lines = NS:WinterMetzenDiag()
+	Check("[ALLURE6] diag : dit ce que montrent les vignettes", lines[1]:find("15904", 1, true) ~= nil, lines[1])
+	local fr, en = NS.L.WINTER_METZEN_LOOK, NS.L.WINTER_METZEN_2D
+	Check("[ALLURE6] textes du réglage", fr ~= nil and en ~= nil and NS.L.WINTER_METZEN_3D ~= nil)
+	account.display[13444], account.display[15710] = nil, nil
+	NS.Print = print0
+	UninstallModels()
+	A.Done()
 end
