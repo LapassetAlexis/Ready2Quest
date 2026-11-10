@@ -265,8 +265,8 @@ function ns:CaptureBatch()
 	Hold(self, "batch")
 	local aid = state.aid
 	if aid and self:CaptureAidCount(aid) <= 0 then aid, state.aid = nil, nil end
-	-- le tutoriel de la ménagerie attendait le filet (avant que la file ne se vide)
-	if self.CompanionSequenceAdvance then pcall(self.CompanionSequenceAdvance, self, "net") end
+	-- 3.0.0 : le filet part (visite guidée, GuidedTour.lua)
+	if self.TourSignal then pcall(self.TourSignal, self, "throw") end
 	self:CaptureToastHide()
 	self:CapturePlaySound("throw")
 
@@ -351,8 +351,8 @@ function ns:CaptureBatchFlush(batch)
 			self:CompanionSay("CAPTURE_FAIL", { force = true, args = { last and last.target.name or "" } })
 		end
 	end
-	-- la scène est « refermée » pour le tutoriel de la ménagerie (Companion.lua)
-	if self.CompanionSequenceAdvance then pcall(self.CompanionSequenceAdvance, self, "stage", { ok = got > 0 }) end
+	-- la scène est « refermée » : la visite guidée passe au verdict (GuidedTour.lua)
+	if self.TourSignal then pcall(self.TourSignal, self, "result", got > 0) end
 end
 
 

@@ -2,8 +2,9 @@
 --
 -- La ménagerie expliquée, pour qui a raté le tutoriel ou veut les chiffres :
 --   * à gauche, le sommaire (une tuile par section, clic = la section) et,
---     en bas, le bouton « Revoir le tutoriel » (le tutoriel de la ménagerie
---     en bulles, Companion.lua) ;
+--     en bas, les boutons « Tuto des captures » et « Tuto du carnet »
+--     (3.0.0 : les visites guidées, GuidedTour.lua ; le tutoriel de la
+--     ménagerie en bulles, 2.3.0, est retiré) ;
 --   * à droite, le titre de la section et son texte, par blocs (paragraphes,
 --     sous-titres, rangées d'une table), paginés quand ils ne tiennent pas
 --     dans la page : la molette avance d'un bloc, les chevrons d'une page.
@@ -23,8 +24,10 @@ ns.GUIDE_SECTIONS = SECTIONS
 local FR = {
 	JRN_SEC_guide          = "Guide",
 	JRN_SUB_guide          = "La capture expliquée : filet, étoiles, brillantes, compagnon, sceaux, titres, missions, fiche.",
-	GUIDE_REPLAY           = "Revoir le tutoriel",
-	GUIDE_REPLAY_TIP       = "Ton compagnon rejoue le tutoriel des créatures en bulles ; le carnet se ferme pour le laisser parler.",
+	GUIDE_REPLAY           = "Tuto des captures",
+	GUIDE_REPLAY_TIP       = "Revoir le tutoriel des premières captures : il t'accompagne à ta prochaine occasion de capture (tout de suite si le filet attend).",
+	GUIDE_REPLAY_JOURNAL   = "Tuto du carnet",
+	GUIDE_REPLAY_JOURNAL_TIP = "Revoir la visite du carnet, onglet par onglet.",
 	GUIDE_MORE             = "Suite : molette ou chevrons",
 	GUIDE_LIST_AND         = "%s et %s",
 	GUIDE_CAP              = "%s (au plus %d %%)",
@@ -79,8 +82,8 @@ local FR = {
 	GUIDE_SEC_settings     = "Réglages et commandes",
 	GUIDE_settings_1       = "Page Au jour le jour : %s (tout coupe, infobulle comprise) · %s · %s · %s · %s · %s · %s.",
 	GUIDE_settings_2       = "Page Compagnon de route : %s (%s), pour que la créature remplisse son cadre à l'écran, même une bête capturée de taille réelle ; la réglette %s (Muet coupe aussi les tutoriels).",
-	GUIDE_settings_3       = "Commandes : /qc filet (capture le meilleur candidat), /qc filet tout (tout capturer), /qc filet sourdine [min|off], /qc capture (ta collection et tes aides), /qc fiche [nom] (fiche de dresseur), /qc compagnon tuto collection (revoir ce tutoriel), /qc compagnon tuto (le tutoriel de base), /qc blague (une blague du compagnon).",
-	GUIDE_settings_4       = "Le tutoriel des créatures se joue une fois par personnage, à ta première occasion de capture : ton compagnon te guide jusqu'au clic sur le filet, laisse la scène se jouer, puis t'explique le reste. Jamais en combat, jamais si la capture est coupée. Le bouton « %s », en bas à gauche, le rejoue.",
+	GUIDE_settings_3       = "Commandes : /qc filet (capture le meilleur candidat), /qc filet tout (tout capturer), /qc filet sourdine [min|off], /qc capture (ta collection et tes aides), /qc fiche [nom] (fiche de dresseur), /qc tuto [capture|carnet|reset] (les tutoriels guidés), /qc compagnon tuto (le tutoriel de base du compagnon), /qc blague (une blague du compagnon).",
+	GUIDE_settings_4       = "Deux tutoriels guidés, une fois par compte : les premières captures (à ta première occasion de capture, du filet au verdict) et le carnet (à sa première ouverture, onglet par onglet). Jamais en combat ; Échap ou « Passer le tutoriel » les arrêtent. Les boutons « %s » et « %s », en bas à gauche, les rejouent. Sur le compagnon : clic droit, le carnet ; Maj + clic droit, le mode chasse.",
 	GUIDE_settings_5       = "Style de l'interface (page Compagnon de route) : %s ou %s, bandeaux, carnet et fiche compris. /qc style azeroth|sobre.",
 	GUIDE_settings_6       = "Hauts faits (page du carnet) : /qc hf l'ouvre, /qc hf diag dit quelles statistiques du client sont lisibles ; ce qui attend encore sa vérification est grisé. Les hauts faits de collection valent pour tout ton compte, ceux de performance pour ce personnage. /qc titre choisit ton titre. Touche Y (si elle était libre) : les hauts faits. Bandeau, chat, fanfare, forme des titres et raccourcis : page Carnet de voyage.",
 	-- 2.13.0 : crédits de l'histoire des lieux (LoreData.lua, CompanionLore.lua)
@@ -89,8 +92,10 @@ local FR = {
 local EN = {
 	JRN_SEC_guide          = "Guide",
 	JRN_SUB_guide          = "Capture explained: net, stars, shinies, companion, seals, titles, missions, card.",
-	GUIDE_REPLAY           = "Replay the tutorial",
-	GUIDE_REPLAY_TIP       = "Your companion replays the creatures tutorial in bubbles; the journal closes to let it talk.",
+	GUIDE_REPLAY           = "Captures tour",
+	GUIDE_REPLAY_TIP       = "Replay the first-captures tutorial: it walks you through your next capture opportunity (right away if the net is waiting).",
+	GUIDE_REPLAY_JOURNAL   = "Journal tour",
+	GUIDE_REPLAY_JOURNAL_TIP = "Replay the journal tour, tab by tab.",
 	GUIDE_MORE             = "More: mouse wheel or chevrons",
 	GUIDE_LIST_AND         = "%s and %s",
 	GUIDE_CAP              = "%s (up to %d%%)",
@@ -145,8 +150,8 @@ local EN = {
 	GUIDE_SEC_settings     = "Settings and commands",
 	GUIDE_settings_1       = "Day by day page: %s (turns everything off, tooltip included) · %s · %s · %s · %s · %s · %s.",
 	GUIDE_settings_2       = "Road companion page: %s (%s), so the creature fills its on-screen frame, even a life-size captured beast; the %s slider (Silent also turns the tutorials off).",
-	GUIDE_settings_3       = "Commands: /qc filet (captures the best candidate), /qc filet tout (capture all), /qc filet sourdine [min|off], /qc capture (your collection and aids), /qc fiche [name] (trainer card), /qc compagnon tuto collection (replay this tutorial), /qc compagnon tuto (the base tutorial), /qc joke (a joke from your companion).",
-	GUIDE_settings_4       = "The creatures tutorial plays once per character, at your first capture opportunity: your companion guides you to the click on the net, lets the scene play, then explains the rest. Never in combat, never when capture is off. The \"%s\" button, bottom left, replays it.",
+	GUIDE_settings_3       = "Commands: /qc filet (captures the best candidate), /qc filet tout (capture all), /qc filet sourdine [min|off], /qc capture (your collection and aids), /qc fiche [name] (trainer card), /qc tuto [capture|carnet|reset] (the guided tutorials), /qc compagnon tuto (the companion's base tutorial), /qc joke (a joke from your companion).",
+	GUIDE_settings_4       = "Two guided tutorials, once per account: first captures (at your first capture opportunity, from the net to the verdict) and the journal (when you first open it, tab by tab). Never in combat; Escape or \"Skip tutorial\" stops them. The \"%s\" and \"%s\" buttons, bottom left, replay them. On the companion: right-click, the journal; Shift + right-click, hunt mode.",
 	GUIDE_settings_5       = "Interface style (Road companion page): %s or %s, banners, journal and card included. /qc style azeroth|sobre.",
 	GUIDE_settings_6       = "Achievements (journal page): /qc hf opens it, /qc hf diag tells which client statistics are readable; what still awaits verification is greyed out. Collection achievements count for your whole account, performance ones for this character. /qc title picks your title. Y key (if it was free): achievements. Banner, chat, fanfare, title form and key bindings: Travel journal page.",
 	GUIDE_settings_7       = "Story of places (\"%s\" setting): text from Warcraft Wiki (warcraft.wiki.gg), CC BY-SA 4.0 licence, selected and translated by Spoken by Rusty Key (github.com/rusty-key/spoken-wow). Thanks to them!",
@@ -349,7 +354,7 @@ function BUILD.settings(self)
 			L.OPT_DAILY_EFFECT_PLATE, L.OPT_DAILY_PLATE, L.OPT_DAILY_TRAINER)),
 		P(self:F("GUIDE_settings_2", L.OPT_COMP_FRAMING, table.concat(framings, ", "), L.OPT_COMP_CHATTER)),
 		P(L.GUIDE_settings_3),
-		P(self:F("GUIDE_settings_4", L.GUIDE_REPLAY)),
+		P(self:F("GUIDE_settings_4", L.GUIDE_REPLAY, L.GUIDE_REPLAY_JOURNAL)),
 		P(self:F("GUIDE_settings_5", L.UI_STYLE_azeroth, L.UI_STYLE_sobre)),
 		P(L.GUIDE_settings_6),
 		P(self:F("GUIDE_settings_7", L.OPT_COMP_LORE)),
@@ -402,12 +407,19 @@ local function Build(self, frame, content, ui)
 		pane.rows[index] = row
 	end
 
-	-- le bouton « Revoir le tutoriel », en bas de la colonne du sommaire
-	pane.replay = Theme.CreateButton(pane, "auto", Theme.PAGER_HEIGHT, L.GUIDE_REPLAY, function() ns:JournalGuideReplay() end, "accent")
-	At(pane.replay, content, 0, PAGER_Y)
-	if pane.replay.HookScript then
-		pane.replay:HookScript("OnEnter", function(b) Tip(b, L.GUIDE_REPLAY, { L.GUIDE_REPLAY_TIP }, "above") end)
-		pane.replay:HookScript("OnLeave", HideTip)
+	-- 3.0.0 : les deux boutons des visites guidées, en bas de la colonne du
+	-- sommaire (les premières captures au-dessus, le carnet en bas)
+	pane.replay = Theme.CreateButton(pane, "auto", Theme.PAGER_HEIGHT, L.GUIDE_REPLAY, function() ns:JournalGuideReplay("capture") end, "accent")
+	At(pane.replay, content, 0, PAGER_Y + (Theme.PAGER_HEIGHT or 24) + 6)
+	pane.replayJournal = Theme.CreateButton(pane, "auto", Theme.PAGER_HEIGHT, L.GUIDE_REPLAY_JOURNAL,
+		function() ns:JournalGuideReplay("journal") end, "accent")
+	At(pane.replayJournal, content, 0, PAGER_Y)
+	for _, pair in ipairs({ { pane.replay, "GUIDE_REPLAY" }, { pane.replayJournal, "GUIDE_REPLAY_JOURNAL" } }) do
+		local button, key = pair[1], pair[2]
+		if button.HookScript then
+			button:HookScript("OnEnter", function(b) Tip(b, L[key], { L[key .. "_TIP"] }, "above") end)
+			button:HookScript("OnLeave", HideTip)
+		end
 	end
 
 	-- à droite : le titre de la section, les blocs, la pagination
@@ -558,7 +570,7 @@ local function Scroll(self, frame, delta)
 	frame.guideOffset = (tonumber(frame.guideOffset) or 0) - (tonumber(delta) or 0)
 end
 
--- Ouvre le carnet sur la page Guide (fin du tutoriel de la ménagerie, Companion.lua)
+-- Ouvre le carnet sur la page Guide (une section au choix)
 function ns:OpenJournalGuide(section)
 	if not self.ToggleJournal then return nil end
 	local frame = self:ToggleJournal(true)
@@ -568,13 +580,15 @@ function ns:OpenJournalGuide(section)
 	return frame
 end
 
--- « Revoir le tutoriel » : le carnet se ferme, le compagnon rejoue les bulles
-function ns:JournalGuideReplay()
-	if not self.CompanionStartMenagerieTutorial then return false end
+-- 3.0.0 : « Tuto des captures » / « Tuto du carnet » : la visite guidée
+-- (GuidedTour.lua) ; celle des captures referme le carnet (elle se joue
+-- autour du filet), celle du carnet s'y joue
+function ns:JournalGuideReplay(which)
+	if not self.TourReplay then return false end
+	which = which == "journal" and "journal" or "capture"
 	local frame = self.journalFrame
-	if frame and frame:IsShown() then frame:Hide() end
-	if self.CompanionUpdateVisibility then self:CompanionUpdateVisibility() end
-	return self:CompanionStartMenagerieTutorial()
+	if which == "capture" and frame and frame:IsShown() then frame:Hide() end
+	return self:TourReplay(which)
 end
 
 -- ---------------------------------------------------------------------------

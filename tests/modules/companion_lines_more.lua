@@ -54,7 +54,7 @@ do
 			end
 			if not ok then bad[#bad + 1] = key end
 			if Specs(en[key]) ~= spec then bad[#bad + 1] = key .. " (fr/en)" end
-			-- astuces et tutoriels (TUTO, TUTO_MENAGERIE…) : 130
+			-- astuces et tutoriel de base (TUTO) : 130
 			local limit = (pool == "TIP" or pool:find("^TUTO") ~= nil) and 130 or 100
 			if Chars(fr[key]) > limit or Chars(en[key]) > limit then long[#long + 1] = key end
 			local text = fr[key]

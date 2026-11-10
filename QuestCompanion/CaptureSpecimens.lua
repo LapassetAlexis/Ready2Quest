@@ -28,7 +28,7 @@
 -- Données (au compte, QuestCompanionDB.capture, voir ns:CaptureData) :
 --   capture.specimens[id] = { id, npc, stars (1..3), shiny (true|nil), zone
 --       (uiMapID|nil), at (time()|nil), by (nom du personnage|nil),
---       origin ("capture"|"migration"), name (texte|nil) }
+--       origin ("capture"|"migration"|"gift3"), name (texte|nil) }
 --   capture.codex[npc]    = { best = id (normale), bestShiny = id (brillante) }
 --   capture.specNext      = prochain numéro de spécimen
 --   capture.specV         = version du schéma (ns.SPECIMEN_SCHEMA)
@@ -89,6 +89,13 @@
 --   ns:HuntText() -> « 12 min », « jusqu'à l'arrêt », ou nil
 --   ns.HUNT_CHOICES = { 5, 15, 30, 60 } (+ « jusqu'à ce que je l'arrête » : nil)
 --   ns:CaptureWariness(npc) -> facteur (1 hors chasse), captures du jour
+-- 3.0.0 : migration et cadeau de bienvenue
+--   ns:SpecimenMigratedCounts() -> espèces, spécimens, brillants (origin "migration")
+--   ns.GIFT30 = { max = 3, minSpecies = 4, origin = "gift3" }
+--   ns:Gift30Available() -> bool (plus de 3 espèces migrées, pas encore utilisé)
+--   ns:Gift30Candidates() -> { { npc, stars, name, zone, shinyOnly }, … } (Codex)
+--   ns:Gift30Grant(npcs) -> { ids } | false, "used"|"count"|"missing"|"full"
+--       copies normales en Réserve, étoiles de la référence ; capture.gift30Used
 -- Événements (ns:RegisterCallback) : "SPECIMENS" (quoi, id), "PAILLETTES"
 -- (solde, delta, raison), "HUNT" (actif).
 -- Commande : /qc chasse [5|15|30|60|on|stop] (alias /qc hunt) ; raccourci
@@ -753,12 +760,98 @@ function ns:CaptureGreatLine(candidate)
 	if candidate.shiny then pool = "CAPTURE_GREAT_SHINY"
 	elseif tonumber(candidate.stars) == 3 then pool = "CAPTURE_GREAT" end
 	if not pool then return false end
-	-- hors combat, une réaction comme « On l'embarque ? » (le tutoriel de la
-	-- ménagerie passe devant) ; en combat, un 3 étoiles est gardé pour après ;
+	-- hors combat, une réaction comme « On l'embarque ? » ; en combat, un 3 étoiles est gardé pour après ;
 	-- une brillante a déjà sa grande bulle (Shiny.lua) : la nôtre ne la recouvre pas
 	local fight = Call(G("InCombatLockdown")) or Call(G("UnitAffectingCombat"), "player")
 	return self:CompanionSay(pool, { category = (fight and not candidate.shiny) and "event" or nil,
 		args = { candidate.name } })
+end
+
+-- ---------------------------------------------------------------------------
+-- 3.0.0 : ta collection d'avant la 3.0, et le cadeau de bienvenue
+-- ---------------------------------------------------------------------------
+-- Les spécimens venus de la migration (origin "migration") : espèces,
+-- spécimens, brillants. Lu par la visite guidée (GuidedTour.lua).
+function ns:SpecimenMigratedCounts()
+	local capture = Store(self)
+	local species, total, shiny, seen = 0, 0, 0, {}
+	for _, spec in pairs(capture.specimens) do
+		if type(spec) == "table" and spec.origin == "migration" then
+			total = total + 1
+			if spec.shiny then shiny = shiny + 1 end
+			if spec.npc ~= nil and not seen[spec.npc] then seen[spec.npc] = true; species = species + 1 end
+		end
+	end
+	return species, total, shiny
+end
+
+-- Cadeau de la 3.0 : qui avait PLUS de GIFT30.minSpecies - 1 espèces avant
+-- la 3.0 choisit jusqu'à GIFT30.max créatures de son Codex ; une copie de
+-- chacune entre dans la Réserve (version normale, étoiles de la référence ;
+-- une espèce possédée seulement brillante est copiée en normale, avec ses
+-- étoiles). Une fois par compte (capture.gift30Used). Les copies vont
+-- toujours en Réserve (jamais au Codex) et y prennent une place.
+ns.GIFT30 = { max = 3, minSpecies = 4, origin = "gift3" }
+
+function ns:Gift30Available()
+	local capture = Store(self)
+	if capture.gift30Used then return false end
+	local species = self:SpecimenMigratedCounts()
+	return species >= ns.GIFT30.minSpecies
+end
+
+-- Ce qui peut être copié : une ligne par espèce du Codex (table neuve,
+-- triée par nom) { npc, stars, name, shinyOnly }
+function ns:Gift30Candidates()
+	local capture = Store(self)
+	local list = {}
+	for npc, codex in pairs(capture.codex) do
+		local ref = codex.best and capture.specimens[codex.best]
+		local shinyOnly = false
+		if not ref and codex.bestShiny then ref, shinyOnly = capture.specimens[codex.bestShiny], true end
+		if ref then
+			local name = self.CreatureName and self:CreatureName(npc, { name = ref.name }) or tostring(ref.name or npc)
+			list[#list + 1] = { npc = npc, stars = ref.stars, name = name, zone = ref.zone, shinyOnly = shinyOnly or nil }
+		end
+	end
+	table.sort(list, function(a, b)
+		if a.name ~= b.name then return tostring(a.name) < tostring(b.name) end
+		return tostring(a.npc) < tostring(b.npc)
+	end)
+	return list
+end
+
+-- Verse les copies : `npcs` = liste de 1 à GIFT30.max espèces du Codex.
+-- Rend la liste des ids créés, ou false, raison ("used", "count", "missing",
+-- "full").
+function ns:Gift30Grant(npcs)
+	if not self:Gift30Available() then return false, "used" end
+	local capture = Store(self)
+	local picks, seen = {}, {}
+	for _, npc in ipairs(type(npcs) == "table" and npcs or {}) do
+		npc = Key(npc)
+		if not seen[npc] then seen[npc] = true; picks[#picks + 1] = npc end
+	end
+	if #picks == 0 or #picks > ns.GIFT30.max then return false, "count" end
+	local refs = {}
+	for index, npc in ipairs(picks) do
+		local codex = capture.codex[npc]
+		local ref = codex and ((codex.best and capture.specimens[codex.best]) or (codex.bestShiny and capture.specimens[codex.bestShiny]))
+		if not ref then return false, "missing" end
+		refs[index] = ref
+	end
+	if self:SpecimenReserveCount() + #picks > self:ReserveCapacity() then return false, "full" end
+	local ids, at = {}, RealTime()
+	for index, ref in ipairs(refs) do
+		local id = NewId(capture)
+		capture.specimens[id] = { id = id, npc = ref.npc, stars = Clamp(ref.stars), zone = ref.zone, at = at,
+			origin = ns.GIFT30.origin, name = ref.name }
+		ids[index] = id
+	end
+	capture.gift30Used = true
+	Touch(capture)
+	Fire("SPECIMENS", "gift", ids[1])
+	return ids
 end
 
 -- ---------------------------------------------------------------------------

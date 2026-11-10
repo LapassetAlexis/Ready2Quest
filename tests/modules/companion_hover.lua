@@ -32,7 +32,7 @@ do
 	Check("[HOVER] l'aide reste sous les barres", hover.hint.top < hover.bars.curiosity.top - 12)
 	Check("[HOVER] une ligne plus longue : le cadre grandit, rien ne se chevauche", hover.layoutHeight >= short)
 	local before = hover.layoutHeight
-	hover.hint:SetText(string.rep("aide très longue ", 12))
+	hover.hint:SetText(string.rep("aide très longue ", 30))   -- 3.0.0 : l'aide réelle est plus longue (Maj + clic droit)
 	NS:CompanionLayoutHover()
 	Check("[HOVER] aide plus longue : le cadre grandit", hover.layoutHeight > before, hover.layoutHeight)
 	hover.hint:SetText(NS.L.COMP_HOVER_HINT)

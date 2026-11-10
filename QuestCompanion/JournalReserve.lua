@@ -76,6 +76,19 @@ local FR = {
 	RES_PICK             = "Choisis un spécimen dans la grille.",
 	RES_BY               = "Capturé par %s",
 	RES_BY_MIGRATION     = "Avant la 3.0",
+	RES_BY_GIFT3         = "Cadeau de la 3.0",
+	-- 3.0.0 : le cadeau de bienvenue (CaptureSpecimens.lua, ns.GIFT30)
+	GIFT30_OPEN          = "Cadeau de la 3.0 : choisis %d créatures",
+	GIFT30_TITLE         = "Cadeau de la 3.0",
+	GIFT30_SUB           = "Choisis jusqu'à %d créatures de ton Codex : une copie de chacune va dans ta Réserve (version normale, mêmes étoiles).",
+	GIFT30_SEARCH        = "Rechercher une créature",
+	GIFT30_COUNT         = "%d / %d choisies",
+	GIFT30_CONFIRM       = "Ajouter à ma Réserve",
+	GIFT30_LATER         = "Plus tard",
+	GIFT30_HINT          = "Clic : choisir ou reposer. Le cadeau ne sert qu'une fois.",
+	GIFT30_FULL          = "Ta Réserve n'a plus assez de place (%d/%d) : relâche un spécimen d'abord.",
+	GIFT30_EMPTY         = "Aucune créature ne correspond à ta recherche.",
+	GIFT30_DONE          = "Cadeau de la 3.0 : %s rejoignent ta Réserve.",
 	RES_BETTER           = "Meilleur que ton spécimen du Codex (%s)",
 	RES_CODEX_REF        = "Au Codex : %s",
 	RES_VALUE            = "Relâcher : +%d paillettes",
@@ -133,6 +146,18 @@ local EN = {
 	RES_PICK             = "Pick a specimen in the grid.",
 	RES_BY               = "Captured by %s",
 	RES_BY_MIGRATION     = "Before 3.0",
+	RES_BY_GIFT3         = "3.0 gift",
+	GIFT30_OPEN          = "3.0 gift: pick %d creatures",
+	GIFT30_TITLE         = "3.0 gift",
+	GIFT30_SUB           = "Pick up to %d creatures from your Codex: a copy of each goes to your Reserve (normal version, same stars).",
+	GIFT30_SEARCH        = "Search a creature",
+	GIFT30_COUNT         = "%d / %d picked",
+	GIFT30_CONFIRM       = "Add to my Reserve",
+	GIFT30_LATER         = "Later",
+	GIFT30_HINT          = "Click: pick or put back. The gift works only once.",
+	GIFT30_FULL          = "Your Reserve is short of room (%d/%d): release a specimen first.",
+	GIFT30_EMPTY         = "No creature matches your search.",
+	GIFT30_DONE          = "3.0 gift: %s join your Reserve.",
 	RES_BETTER           = "Better than your Codex specimen (%s)",
 	RES_CODEX_REF        = "In the Codex: %s",
 	RES_VALUE            = "Release: +%d glitter",
@@ -426,6 +451,7 @@ function ns:SpecimenOriginText(spec)
 	if type(spec) ~= "table" then return "" end
 	local parts = {}
 	if spec.origin == "migration" then parts[1] = L.RES_BY_MIGRATION
+	elseif spec.origin == (ns.GIFT30 and ns.GIFT30.origin or "gift3") then parts[1] = L.RES_BY_GIFT3
 	elseif spec.by then parts[1] = self:F("RES_BY", spec.by) end
 	parts[#parts + 1] = ZoneName(self, spec.zone)
 	parts[#parts + 1] = Day(spec.at)
@@ -440,6 +466,7 @@ end
 
 local function Scroll(self, frame, delta)
 	if frame.resView == "shop" then return end
+	if frame.resView == "gift" then frame.giftOffset = (frame.giftOffset or 0) - (tonumber(delta) or 0); return end
 	frame.resOffset = (frame.resOffset or 0) - (tonumber(delta) or 0)
 end
 
@@ -560,6 +587,59 @@ local function Build(self, frame, content, ui)
 	rv.confirmYes:SetPoint("BOTTOMLEFT", p, "BOTTOMLEFT", 12, 8)
 	rv.confirmNo = Theme.CreateButton(p, half, LAY.actionH, L.RES_CONFIRM_NO, function() ns:ReserveCancelConfirm() end, "outline")
 	rv.confirmNo:SetPoint("BOTTOMRIGHT", p, "BOTTOMRIGHT", -12, 8)
+
+	-- 3.0.0 : le cadeau de la 3.0, tant qu'il n'a pas servi (à droite, au-dessus de la grille)
+	rv.giftButton = Theme.CreateButton(rv, "auto", LAY.actionH, ns:F("GIFT30_OPEN", ns.GIFT30 and ns.GIFT30.max or 3),
+		function() ns:Gift30Open() end, "accent")
+	rv.giftButton:SetPoint("TOPRIGHT", content, "TOPLEFT", ui.PAD + GRID_W, warnY + 4)
+	rv.giftButton:Hide()
+
+	-- ===== vue Cadeau de la 3.0 (choix de 3 créatures du Codex) =====
+	local gv = CreateFrame("Frame", nil, pane)
+	gv:SetAllPoints()
+	pane.gift = gv
+	gv.search = Theme.CreateSearchBox(gv, 220, L.GIFT30_SEARCH, function(text)
+		frame.giftSearch, frame.giftOffset = text, 0
+		ns:RefreshJournal()
+	end)
+	At(gv.search, content, 0, rowY)
+	gv.count = Text(gv, Theme.F_LABEL, Theme.GOLD, 140)
+	At(gv.count, content, 232, rowY - 5)
+	gv.later = Theme.CreateButton(gv, "auto", LAY.actionH, L.GIFT30_LATER, function() ns:Gift30Later() end, "outline")
+	gv.later:SetPoint("TOPRIGHT", content, "TOPLEFT", ui.PAD + INNER, rowY)
+	gv.confirm = Theme.CreateButton(gv, "auto", LAY.actionH, L.GIFT30_CONFIRM, function(b)
+		if b.qcEnabled ~= false then ns:Gift30Confirm() end
+	end, "primary")
+	gv.confirm:SetPoint("TOPRIGHT", gv.later, "TOPLEFT", -8, 0)
+	gv.warn = Text(gv, Theme.F_SMALL, Theme.RED, INNER)
+	At(gv.warn, content, 0, warnY)
+	if gv.warn.SetWordWrap then gv.warn:SetWordWrap(false) end
+	local gcols = math.floor((INNER + LAY.gap) / (LAY.tileW + LAY.gap))
+	gv.cols, gv.rows = gcols, rows
+	gv.grid = CreateFrame("Frame", nil, gv)
+	At(gv.grid, content, 0, gridTop)
+	gv.grid:SetSize(INNER, rows * (LAY.tileH + LAY.gap))
+	gv.tiles = {}
+	for index = 1, gcols * rows do
+		local tile = ns.AllureNewTile(frame, gv.grid, { w = LAY.tileW, h = LAY.tileH, portrait = LAY.portrait })
+		local slot = index - 1
+		tile:ClearAllPoints()
+		tile:SetPoint("TOPLEFT", gv.grid, "TOPLEFT", (slot % gcols) * (LAY.tileW + LAY.gap), -math.floor(slot / gcols) * (LAY.tileH + LAY.gap))
+		BuildTileStars(tile)
+		tile:SetScript("OnClick", function(t) if t.gift then ns:Gift30Toggle(t.gift.npc) end end)
+		tile.onEnter = function(t)
+			local tip = UI().Tip
+			if tip and t.gift then tip(t, t.gift.name, { Stars(ns, t.gift.stars, 12) }) end
+		end
+		tile.onLeave = HideTip
+		tile:Hide()
+		gv.tiles[index] = tile
+	end
+	gv.empty = Text(gv, Theme.F_BODY, Theme.MUTED_LIGHT, INNER - 20)
+	At(gv.empty, content, 10, gridTop - 20)
+	ui.Pager(gv, content)
+	gv.hint:SetText(L.GIFT30_HINT)
+	gv:Hide()
 
 	-- ===== vue Échoppe =====
 	local sv = CreateFrame("Frame", nil, pane)
@@ -741,6 +821,8 @@ local function RefreshReserve(self, frame, pane)
 	end
 	frame.resList = list
 	rv.warn:SetText(self:ReserveFull() and self:F("RES_FULL", count, capacity) or "")
+	-- 3.0.0 : le cadeau de la 3.0, tant qu'il n'a pas servi
+	if self.Gift30Available and self:Gift30Available() then rv.giftButton:Show() else rv.giftButton:Hide() end
 	local cols, rows = rv.cols, rv.rows
 	local totalRows = math.ceil(#list / cols)
 	local maxOffset = math.max(0, totalRows - rows)
@@ -837,22 +919,151 @@ local function RefreshShop(self, frame, pane)
 	end
 end
 
+-- 3.0.0 : le choix du cadeau de la 3.0. frame.giftPicks = { npc, … } (dans
+-- l'ordre du choix), frame.giftSearch, frame.giftOffset.
+local function GiftPicked(frame, npc)
+	for index, value in ipairs(frame.giftPicks or {}) do if value == npc then return index end end
+	return nil
+end
+local function RefreshGift(self, frame, pane)
+	local gv = pane.gift
+	local max = ns.GIFT30.max
+	frame.giftPicks = frame.giftPicks or {}
+	frame.header:SetTitle(L.GIFT30_TITLE)
+	frame.header:SetSubtitle(self:F("GIFT30_SUB", max))
+	local all = self:Gift30Candidates()
+	local needle = tostring(frame.giftSearch or ""):lower()
+	local list = all
+	if needle ~= "" then
+		list = {}
+		for _, item in ipairs(all) do
+			if tostring(item.name):lower():find(needle, 1, true) then list[#list + 1] = item end
+		end
+	end
+	-- un choix qui n'est plus au Codex s'en va
+	for index = #frame.giftPicks, 1, -1 do
+		local keep = false
+		for _, item in ipairs(all) do if item.npc == frame.giftPicks[index] then keep = true end end
+		if not keep then table.remove(frame.giftPicks, index) end
+	end
+	local picked = #frame.giftPicks
+	gv.count:SetText(self:F("GIFT30_COUNT", picked, max))
+	local count, capacity = self:SpecimenReserveCount(), self:ReserveCapacity()
+	local room = count + math.max(1, picked) <= capacity
+	gv.warn:SetText(room and "" or self:F("GIFT30_FULL", count, capacity))
+	Enable(gv.confirm, picked > 0 and room, room and nil or self:F("GIFT30_FULL", count, capacity))
+	local cols, rows = gv.cols, gv.rows
+	local totalRows = math.ceil(#list / cols)
+	local maxOffset = math.max(0, totalRows - rows)
+	frame.giftOffset = math.max(0, math.min(frame.giftOffset or 0, maxOffset))
+	local first = frame.giftOffset * cols
+	for index, tile in ipairs(gv.tiles) do
+		local item = list[first + index]
+		tile.gift = item
+		if item then
+			if self.AllureTileLook then self:AllureTileLook(tile, { id = "spec:" .. item.npc, npc = item.npc }) end
+			tile.label:SetText(item.name)
+			tile.label:SetTextColor(Theme.LABEL[1], Theme.LABEL[2], Theme.LABEL[3], 1)
+			tile.label.azKeep = nil
+			PaintTileStars(tile, item.stars)
+			if tile.gem then tile.gem:Hide() end
+			if tile.fav then tile.fav:Hide() end
+			local on = GiftPicked(frame, item.npc) ~= nil
+			tile:SetSelected(on)
+			if ns.AllureShowRing then ns.AllureShowRing(tile, on, frame) end
+			tile:SetAccent(on and Theme.GOLD or nil)
+			tile:SetAlpha((on or picked < max) and 1 or 0.55)
+			tile:Show()
+		else
+			tile:Hide()
+		end
+	end
+	if #list == 0 then gv.empty:SetText(L.GIFT30_EMPTY); gv.empty:Show() else gv.empty:SetText(""); gv.empty:Hide() end
+	gv.pager:Update(frame.giftOffset, rows, totalRows, maxOffset)
+	gv.list = list
+end
+
 local function Refresh(self, frame, ui)
 	local pane = frame.res
 	if not pane then return end
-	local view = frame.resView == "shop" and "shop" or "reserve"
+	local view = frame.resView
+	if view == "gift" and not (self.Gift30Available and self:Gift30Available()) then view = "reserve" end
+	if view ~= "shop" and view ~= "gift" then view = "reserve" end
 	frame.resView = view
-	pane.views:Select(view, true)
+	pane.views:Select(view == "gift" and "reserve" or view, true)
 	pane.balance:SetText(self:F("RES_BALANCE", ns.PaillettesGlyph(14), self:Paillettes()))
+	pane.reserve:Hide(); pane.shop:Hide(); pane.gift:Hide()
 	if view == "shop" then
-		pane.reserve:Hide()
 		pane.shop:Show()
 		RefreshShop(self, frame, pane)
+	elseif view == "gift" then
+		pane.gift:Show()
+		RefreshGift(self, frame, pane)
 	else
-		pane.shop:Hide()
 		pane.reserve:Show()
 		RefreshReserve(self, frame, pane)
 	end
+end
+
+-- 3.0.0 : le cadeau de la 3.0 (page Réserve, vue « gift »). La visite du
+-- carnet attend qu'il soit choisi ou remis à plus tard (tourHoldJournal).
+function ns:Gift30Open()
+	if not (self.Gift30Available and self:Gift30Available()) then return nil end
+	self.tourHoldJournal = true
+	local frame = self:EnsureJournalWindow()
+	if frame then frame.giftPicks, frame.giftSearch, frame.giftOffset = {}, "", 0 end
+	local opened = self:OpenReserve("gift")
+	if frame and frame.res and frame.res.gift and frame.res.gift.search then frame.res.gift.search:SetText("") end
+	return opened
+end
+
+function ns:Gift30Toggle(npc)
+	local frame = self.journalFrame
+	if not (frame and npc ~= nil) then return nil end
+	frame.giftPicks = frame.giftPicks or {}
+	local index = GiftPicked(frame, npc)
+	if index then
+		table.remove(frame.giftPicks, index)
+	elseif #frame.giftPicks < ns.GIFT30.max then
+		frame.giftPicks[#frame.giftPicks + 1] = npc
+	else
+		return false
+	end
+	self:RefreshJournal()
+	return index == nil
+end
+
+-- Après le cadeau (choisi ou remis) : la Réserve, et la visite du carnet si elle reste à voir
+local function GiftLeave(self)
+	local frame = self.journalFrame
+	self.tourHoldJournal = nil
+	if frame then frame.resView, frame.giftPicks = "reserve", nil end
+	self:RefreshJournal()
+	if frame and frame:IsShown() and self.TourDone and not self:TourDone("journal") and ns.TOUR_AUTO and self.TourStart then
+		self:TourStart("journal", { defer = true })
+	end
+end
+
+function ns:Gift30Confirm()
+	local frame = self.journalFrame
+	local picks = frame and frame.giftPicks or {}
+	local ids, why = self:Gift30Grant(picks)
+	if not ids then
+		if why == "full" then self:Print(self:F("GIFT30_FULL", self:SpecimenReserveCount(), self:ReserveCapacity())) end
+		self:RefreshJournal()
+		return false, why
+	end
+	local names = {}
+	for index, id in ipairs(ids) do names[index] = self:SpecimenLabel(self:SpecimenGet(id)) end
+	self:Print(self:F("GIFT30_DONE", table.concat(names, ", ")))
+	if frame then frame.resPick = ids[1] end
+	GiftLeave(self)
+	return ids
+end
+
+function ns:Gift30Later()
+	GiftLeave(self)
+	return true
 end
 
 -- Ouvrir la page (vue « reserve » ou « shop »)

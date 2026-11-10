@@ -1,18 +1,11 @@
--- QuestCompanion 2.3.0 : le tutoriel de la ménagerie (Companion.lua,
--- CompanionLines.lua, accroché par CaptureQueue.lua) et la page Guide du
--- carnet (JournalGuide.lua) ; Échap et le « × » ferment la scène de capture
--- et la liste du filet (CaptureStage.lua, CaptureQueue.lua).
---   * le tutoriel commence à la première occasion de capture, hors combat
---     (en combat : à la fin du combat), jamais à la connexion à vide ;
---   * sa première bulle attend le lancer du filet (pas le temps, pas
---     « Suivant »), le filet bat ; la scène se joue en silence ; la suite
---     reprend après sa fermeture (réussi / échappé), au rythme du tutoriel ;
---   * candidat parti avant le clic : « Trop tard », reprise à l'occasion
---     suivante ; une fois par personnage ; jamais si la capture est coupée ;
---   * /qc compagnon tuto menagerie et le bouton de la page Guide rejouent au
---     temps ; les chiffres des bulles viennent des constantes ; parité FR/EN ;
+-- QuestCompanion 2.3.0 : la page Guide du carnet (JournalGuide.lua) ; Échap
+-- et le « × » ferment la scène de capture et la liste du filet
+-- (CaptureStage.lua, CaptureQueue.lua).
+-- 3.0.0 : le tutoriel de la ménagerie en bulles est retiré (les visites
+-- guidées de GuidedTour.lua le remplacent : tests/modules/qc30_tutoriel.lua) ;
+-- ses tests sont partis avec lui.
 --   * la page Guide : sommaire, sections, table des types avec les vraies
---     valeurs, pagination, bouton « Revoir », aucun chevauchement (FR et EN).
+--     valeurs, pagination, boutons des tutoriels, aucun chevauchement (FR et EN).
 local Check, Say, ResetWorld, NS, Mock = T.Check, T.Say, T.ResetWorld, T.QNS, T.Mock
 local ROOT = rawget(_G, "ADDON_ROOT") or "."
 local Snap = assert(loadfile(ROOT .. "/tests/snapshot.lua"))()
@@ -23,7 +16,7 @@ local GLOBALS = { "UnitGUID", "UnitName", "UnitExists", "UnitIsPlayer", "UnitIsD
 	"GetRaidTargetIndex", "SetRaidTarget", "IsInGroup", "UnitIsGroupLeader", "IsInInstance", "Screenshot", "C_Timer",
 	"UnitAffectingCombat", "InCombatLockdown", "PlaySound" }
 for _, name in ipairs(GLOBALS) do G.saved[name] = rawget(_G, name) end
-G.savedShiny, G.savedAuto = NS.SHINY_CHANCE, NS.TUTO_MENAGERIE_AUTO
+G.savedShiny = NS.SHINY_CHANCE
 local PLAYER = "Player-1-00000001"
 local POOLS = NS.COMPANION_POOLS
 local RULES = NS.COMPANION_RULES
@@ -58,7 +51,7 @@ function G.Install()
 	_G.PlaySound = function(id) w.sounds[#w.sounds + 1] = id; return true end
 end
 -- Monde neuf : compagnon connu (tutoriel de base vu), capture allumée, scène
--- animée coupée (la petite fenêtre suffit), tutoriel automatique allumé
+-- animée coupée (la petite fenêtre suffit)
 function G.Reset()
 	ResetWorld()
 	for _, field in ipairs({ "companionFrame", "companionBubble", "companionHover", "journalFrame", "capturePrompt",
@@ -77,7 +70,6 @@ function G.Reset()
 	G.Install()
 	NS.SHINY_CHANCE = 1 / 150
 	G.Roll(0.99)                      -- jamais de brillante au hasard
-	NS.TUTO_MENAGERIE_AUTO = true
 	NS:CompanionData().tutoDone = true
 	NS:TreatData().treatsInit = true
 	NS:DB().companionCaptureAnim = false
@@ -122,7 +114,6 @@ function G.Done()
 	for _, name in ipairs(GLOBALS) do _G[name] = G.saved[name] end
 	math.random = G.random
 	NS.SHINY_CHANCE = G.savedShiny
-	NS.TUTO_MENAGERIE_AUTO = G.savedAuto
 	ResetWorld()
 end
 local function Count(list, value)
@@ -131,203 +122,7 @@ local function Count(list, value)
 	return n
 end
 
--- 1. Première occasion de capture : le tutoriel guidé ---------------------------------------------
-do
-	Say("-- qc2 guide : tutoriel à la première occasion de capture")
-	G.Reset()
-	G.Login()
-	Mock:Advance(120)
-	Check("[GUIDE] connexion d'un personnage connu : aucune bulle de tutoriel à vide",
-		not NS:CompanionTutorialActive() and not tostring(G.Key() or ""):find("^TUTO"), G.Key())
-	G.SeeKill(5001, { name = "Sanglier" })
-	Check("[GUIDE] un monstre dans le filet, hors combat : le tutoriel commence, bulle « clique sur le filet »",
-		NS:CompanionTutorialActive() and G.Key() == "TUTO_MENAGERIE_START"
-		and NS.companionBubbleLine == POOLS.TUTO_MENAGERIE_START[1], G.Key())
-	Check("[GUIDE] … l'étape attend le filet", NS:CompanionSequenceWaits("net"))
-	Check("[GUIDE] … le carillon du bandeau a sonné une fois, le tutoriel ne le rejoue pas",
-		Count(G.sounds, NS.CAPTURE_SOUNDS.ready) == 1, #G.sounds)
-	Mock:Advance(RULES.tutoStep + 1)
-	Check("[GUIDE] le temps ne passe pas l'étape", G.Key() == "TUTO_MENAGERIE_START" and NS:CompanionSequenceWaits("net"))
-	NS.companionBubble.nextButton:Click()
-	Check("[GUIDE] « Suivant » non plus : la consigne est redite", G.Key() == "TUTO_MENAGERIE_START" and NS:CompanionSequenceWaits("net"))
-	Mock:Advance(0.1)
-	local net = NS.captureNetButton
-	Check("[GUIDE] le filet bat tant que l'étape attend", net and net.pulseUntil and net.pulseUntil > Mock.now)
-	Mock:Advance(NS.CAPTURE_NET_PULSE + 1)
-	Check("[GUIDE] … et bat encore après le battement d'arrivée", net.pulseUntil and net.pulseUntil > Mock.now)
-	Check("[GUIDE] pendant l'attente, les autres bulles patientent", NS:CompanionSay("QUEST", { force = true }) == false)
-	-- le filet part : silence pendant la scène
-	G.Roll(0)
-	Check("[GUIDE] clic sur le filet : le filet part", NS:CaptureThrow() == true and NS:CaptureState().rolling ~= nil)
-	Check("[GUIDE] … la bulle s'efface, l'étape attend la fin de la scène", G.Key() == nil and NS:CompanionSequenceWaits("stage")
-		and NS:CompanionTutorialActive())
-	Check("[GUIDE] … silence : rien d'autre ne parle", NS:CompanionSay("QUEST", { force = true }) == false)
-	G.PlayCapture()
-	Check("[GUIDE] scène refermée, capturée : « Voilà ! »", NS:CaptureState().rolling == nil and G.Key() == "TUTO_MENAGERIE_OK", G.Key())
-	Mock:Advance(RULES.tutoStep)
-	Check("[GUIDE] puis la suite, au rythme du tutoriel : le filet et ses %d s", G.Key() == "TUTO_MENAGERIE"
-		and NS.companionBubbleLine == POOLS.TUTO_MENAGERIE[1] and G.Text():find(NS.CAPTURE_QUEUE_TIME .. " s", 1, true) ~= nil, G.Text())
-	NS.companionBubble.nextButton:Click()
-	Check("[GUIDE] étoiles : la chance de 3 étoiles vient des constantes", NS.companionBubbleLine == POOLS.TUTO_MENAGERIE[2]
-		and G.Text():find(NS.CAPTURE_STAR_ODDS[3] .. " %", 1, true) ~= nil, G.Text())
-	NS.companionBubble.nextButton:Click()
-	Check("[GUIDE] brillantes : 1 sur 150, 1 sur 40 après 50 abattus", NS.companionBubbleLine == POOLS.TUTO_MENAGERIE[3]
-		and G.Text():find("sur 150", 1, true) and G.Text():find("sur 40", 1, true) and G.Text():find("50 abattus", 1, true), G.Text())
-	NS.companionBubble.nextButton:Click()
-	NS.companionBubble.nextButton:Click()
-	Check("[GUIDE] emmener : les effets après 2 min", NS.companionBubbleLine == POOLS.TUTO_MENAGERIE[5]
-		and G.Text():find(math.floor(NS.EFFECT_DELAY / 60) .. " min", 1, true) ~= nil, G.Text())
-	NS.companionBubble.nextButton:Click()
-	Check("[GUIDE] envies : le seuil des effets entiers", G.Text():find(NS.EFFECT_NEED_OK .. " %", 1, true) ~= nil, G.Text())
-	NS.companionBubble.nextButton:Click()
-	Check("[GUIDE] sceaux : +50 % de brillantes", G.Text():find("+" .. math.floor((NS.SEAL_SHINY_MULT - 1) * 100 + 0.5) .. " %", 1, true) ~= nil, G.Text())
-	NS.companionBubble.nextButton:Click()
-	Check("[GUIDE] titres : premier et dernier paliers", G.Text():find(NS.TRAINER_RANKS[1].count .. " espèces", 1, true)
-		and G.Text():find("à " .. NS.TRAINER_RANKS[#NS.TRAINER_RANKS].count, 1, true), G.Text())
-	-- combat au milieu : la bulle s'efface, la même étape revient
-	local line = NS.companionBubbleLine
-	G.combat = true
-	Mock:Fire("PLAYER_REGEN_DISABLED")
-	Check("[GUIDE] combat : la bulle s'efface, le tutoriel attend", G.Key() == nil and NS:CompanionTutorialActive())
-	G.combat = false
-	Mock:Advance(1.5)
-	Check("[GUIDE] fin du combat : la même bulle revient", NS.companionBubbleLine == line and G.Key() == "TUTO_MENAGERIE", NS.companionBubbleLine)
-	for _ = 1, 3 do NS.companionBubble.nextButton:Click() end
-	Check("[GUIDE] dernière bulle : le renvoi au Guide", NS.companionBubbleLine == POOLS.TUTO_MENAGERIE[#POOLS.TUTO_MENAGERIE]
-		and G.Text():find("tuto collection", 1, true) ~= nil and not NS:CompanionData().tutoMenagerieDone)
-	Mock:Advance(RULES.tutoStep)
-	Check("[GUIDE] fini : vu pour ce personnage, bulle fermée", NS:CompanionData().tutoMenagerieDone == true
-		and not NS:CompanionTutorialActive() and G.Key() == nil)
-	Check("[GUIDE] … et le carnet s'ouvre sur la page Guide", NS.journalFrame and NS.journalFrame:IsShown()
-		and NS.journalFrame.kind == "guide", NS.journalFrame and NS.journalFrame.kind)
-	NS.journalFrame:Hide()
-	G.SeeKill(5002, { name = "Loup" })
-	Check("[GUIDE] une seule fois par personnage : la capture suivante ne le relance pas",
-		not NS:CompanionTutorialActive() and G.Key() ~= "TUTO_MENAGERIE_START", G.Key())
-	Check("[GUIDE] le tutoriel de base reste vu", NS:CompanionData().tutoDone == true)
-end
-
--- 2. En combat, échec, trop tard, capture coupée, muet ---------------------------------------------
-do
-	Say("-- qc2 guide : combat, échappé, trop tard, capture coupée")
-	G.Reset()
-	G.combat = true
-	G.SeeKill(5101, { name = "Raptor" })
-	Check("[GUIDE] monstre abattu en combat : le tutoriel attend la fin du combat", not NS:CompanionTutorialActive())
-	G.combat = false
-	Mock:Advance(0.2); NS:CaptureTick(NS.Now())
-	Check("[GUIDE] fin du combat (le compte démarre) : le tutoriel commence", NS:CompanionTutorialActive()
-		and G.Key() == "TUTO_MENAGERIE_START" and NS:CompanionSequenceWaits("net"), G.Key())
-	-- échappé
-	G.Roll(0.99)
-	NS:CaptureThrow()
-	G.PlayCapture()
-	Check("[GUIDE] échappé : « Il s'est échappé », puis la suite", G.Key() == "TUTO_MENAGERIE_FAIL", G.Key())
-	Mock:Advance(RULES.tutoStep)
-	Check("[GUIDE] … la suite reprend", G.Key() == "TUTO_MENAGERIE" and NS.companionBubbleLine == POOLS.TUTO_MENAGERIE[1])
-	NS:CompanionSkipTutorial()
-	-- trop tard : le candidat expire avant le clic
-	G.Reset()
-	G.SeeKill(5201, { name = "Crocilisque" })
-	Check("[GUIDE] tutoriel lancé", NS:CompanionSequenceWaits("net"))
-	Mock:Advance(NS.CAPTURE_QUEUE_TIME + 2); NS:CaptureTick(NS.Now())
-	Check("[GUIDE] candidat parti avant le clic : « Trop tard », tutoriel en pause, pas vu",
-		#NS:CaptureQueue() == 0 and not NS:CompanionTutorialActive() and G.Key() == "TUTO_MENAGERIE_LATE"
-		and not NS:CompanionData().tutoMenagerieDone, G.Key())
-	Mock:Advance(RULES.bubbleTime + 1)
-	G.SeeKill(5202, { name = "Zhévra" })
-	Check("[GUIDE] occasion suivante : il repart", NS:CompanionTutorialActive() and G.Key() == "TUTO_MENAGERIE_START", G.Key())
-	-- « Ignorer » sur le bandeau vide le filet : pareil
-	NS.captureToast.ignore:Click()
-	Check("[GUIDE] Ignorer le seul candidat : « Trop tard » aussi", not NS:CompanionTutorialActive() and G.Key() == "TUTO_MENAGERIE_LATE", G.Key())
-	-- « Passer » pendant l'attente : vu
-	Mock:Advance(RULES.bubbleTime + 1)
-	G.SeeKill(5203, { name = "Kodo" })
-	NS.companionBubble.skipButton:Click()
-	Check("[GUIDE] « Passer » : fini, vu, message du chat", NS:CompanionData().tutoMenagerieDone == true
-		and not NS:CompanionTutorialActive() and Mock:Output():find("tuto collection", 1, true) ~= nil)
-	-- capture coupée
-	G.Reset()
-	NS:DB().companionCapture = false
-	G.SeeKill(5301, { name = "Hyène" })
-	Mock:Advance(60)
-	Check("[GUIDE] capture coupée : rien, drapeau à faux", not NS:CompanionTutorialActive()
-		and not NS:CompanionData().tutoMenagerieDone and G.Key() ~= "TUTO_MENAGERIE_START")
-	Mock:Reset()
-	NS:HandleCommand("compagnon tuto collection")
-	Check("[GUIDE] … à la demande : le chat dit pourquoi", not NS:CompanionTutorialActive()
-		and Mock:Output():find(NS.L.COMP_MSG_TUTO_MEN_OFF, 1, true) ~= nil)
-	-- muet
-	G.Reset()
-	NS:DB().companionChatter = 0
-	G.SeeKill(5302, { name = "Lion" })
-	Check("[GUIDE] bulles coupées : rien, drapeau à faux", not NS:CompanionTutorialActive() and not NS:CompanionData().tutoMenagerieDone)
-end
-
--- 3. Nouveau personnage : le tutoriel de base d'abord, sans enchaîner -------------------------------
-do
-	Say("-- qc2 guide : nouveau personnage")
-	G.Reset()
-	NS:CompanionData().tutoDone = nil
-	G.Login()
-	Check("[GUIDE] nouveau personnage : le tutoriel de base", G.Key() == "TUTO" and NS:CompanionTutorialActive())
-	Check("[GUIDE] sa dernière bulle annonce le filet", NS.L[POOLS.TUTO[#POOLS.TUTO]]:find("filet", 1, true) ~= nil)
-	G.SeeKill(5401, { name = "Sanglier" })
-	Check("[GUIDE] un monstre pendant le tutoriel de base : il continue, la collection attendra", G.Key() == "TUTO")
-	for _ = 1, #POOLS.TUTO do NS.companionBubble.nextButton:Click() end
-	Check("[GUIDE] tutoriel de base fini : rien n'enchaîne", NS:CompanionData().tutoDone == true and not NS:CompanionTutorialActive())
-	Mock:Advance(90)
-	Check("[GUIDE] … et rien ne part à vide", not NS:CompanionTutorialActive() and G.Key() ~= "TUTO_MENAGERIE_START")
-	G.SeeKill(5402, { name = "Loup" })
-	Check("[GUIDE] occasion suivante : le tutoriel des créatures, guidé", NS:CompanionTutorialActive()
-		and G.Key() == "TUTO_MENAGERIE_START" and NS:CompanionSequenceWaits("net"), G.Key())
-	NS:CompanionSkipTutorial()
-end
-
--- 4. Rejeu : /qc compagnon tuto menagerie, bouton de la page Guide ----------------------------------
-do
-	Say("-- qc2 guide : rejeu")
-	G.Reset()
-	NS:CompanionData().tutoMenagerieDone = true
-	Mock:Reset()
-	NS:HandleCommand("compagnon tuto collection")
-	Check("[GUIDE] /qc compagnon tuto collection : l'intro, sans attendre de capture", NS:CompanionTutorialActive()
-		and G.Key() == "TUTO_MENAGERIE_INTRO" and not NS:CompanionSequenceWaits("net"), G.Key())
-	Mock:Advance(RULES.tutoStep)
-	Check("[GUIDE] … l'étape passe au temps", G.Key() == "TUTO_MENAGERIE" and NS.companionBubbleLine == POOLS.TUTO_MENAGERIE[1])
-	NS:HandleCommand("compagnon tuto passer")
-	Check("[GUIDE] … « passer » : fini, message de la collection", not NS:CompanionTutorialActive()
-		and Mock:Output():find(NS.L.COMP_MSG_TUTO_MEN_SKIPPED, 1, true) ~= nil)
-	NS:HandleCommand("compagnon tuto")
-	Check("[GUIDE] /qc compagnon tuto : toujours le tutoriel de base", G.Key() == "TUTO")
-	NS:HandleCommand("compagnon tuto passer")
-	Check("[GUIDE] l'aide de la commande nomme « collection »", NS.L.HELP_COMPANION:find("collection", 1, true) ~= nil)
-	-- rejeu jusqu'au bout : le carnet ne s'ouvre pas tout seul
-	NS:HandleCommand("compagnon tuto collection")
-	for _ = 1, #POOLS.TUTO_MENAGERIE + 1 do Mock:Advance(RULES.tutoStep) end
-	Check("[GUIDE] rejeu fini : pas de carnet ouvert", not NS:CompanionTutorialActive()
-		and not (NS.journalFrame and NS.journalFrame:IsShown()))
-	-- en combat : il attend la fin du combat
-	G.combat = true
-	Mock:Reset()
-	NS:HandleCommand("compagnon tuto collection")
-	Check("[GUIDE] rejeu en combat : après le combat", not NS:CompanionTutorialActive()
-		and Mock:Output():find(NS.L.COMP_MSG_TUTO_COMBAT, 1, true) ~= nil)
-	G.combat = false
-	Mock:Fire("PLAYER_REGEN_ENABLED")
-	Check("[GUIDE] … fin du combat : il part", NS:CompanionTutorialActive() and G.Key() == "TUTO_MENAGERIE_INTRO")
-	NS:CompanionSkipTutorial()
-	-- le bouton de la page Guide
-	NS:ToggleJournal(true)
-	NS:SelectJournalKind("guide")
-	local pane = NS.journalFrame.guide
-	pane.replay:Click()
-	Check("[GUIDE] « Revoir le tutoriel » : le carnet se ferme, les bulles repartent", not NS.journalFrame:IsShown()
-		and NS:CompanionTutorialActive() and G.Key() == "TUTO_MENAGERIE_INTRO", G.Key())
-	NS:CompanionSkipTutorial()
-end
-
--- 5. Parité FR/EN des bulles et des textes du guide ----------------------------------------------------
+-- 5. Parité FR/EN des textes du guide ----------------------------------------------------
 do
 	Say("-- qc2 guide : parité fr/en")
 	local function Specs(text)
@@ -335,28 +130,7 @@ do
 		for spec in tostring(text or ""):gsub("%%%%", ""):gmatch("%%[sd]") do list[#list + 1] = spec end
 		return table.concat(list, ",")
 	end
-	local lines = NS.COMPANION_LINE_STRINGS
-	local bad = {}
-	for _, pool in ipairs({ "TUTO_MENAGERIE", "TUTO_MENAGERIE_START", "TUTO_MENAGERIE_OK", "TUTO_MENAGERIE_FAIL",
-		"TUTO_MENAGERIE_LATE", "TUTO_MENAGERIE_INTRO" }) do
-		for _, key in ipairs(POOLS[pool] or {}) do
-			local fr, en = lines.fr[key], lines.en[key]
-			if type(fr) ~= "string" or fr == "" or type(en) ~= "string" or en == "" or Specs(fr) ~= Specs(en) then bad[#bad + 1] = key end
-		end
-	end
-	Check("[GUIDE] bulles : chaque clé en français et en anglais, mêmes arguments", #bad == 0, table.concat(bad, ", "))
-	Check("[GUIDE] bulles : la suite tient en une dizaine", #POOLS.TUTO_MENAGERIE >= 9 and #POOLS.TUTO_MENAGERIE <= 12, #POOLS.TUTO_MENAGERIE)
-	-- les arguments de chaque bulle de la suite, prêts pour sa ligne
-	local steps, stepArgs = NS:CompanionMenagerieTutorialSteps(true)
-	local unformatted = {}
-	for index, step in ipairs(steps) do
-		if type(step) == "string" then
-			local text = NS:F(step, unpack(stepArgs[index] or {}))
-			if text:find("%%[sd]") then unformatted[#unformatted + 1] = step end
-		end
-	end
-	Check("[GUIDE] bulles : aucun « %d » laissé sans argument (guidé)", #unformatted == 0 and #steps == #POOLS.TUTO_MENAGERIE + 2,
-		table.concat(unformatted, ", "))
+	local bad
 	local guide = NS.GUIDE_STRINGS
 	bad = {}
 	for key, fr in pairs(guide.fr) do
@@ -465,8 +239,9 @@ do
 	NS:JournalGuidePick("settings")
 	Check("[GUIDE] Réglages : sons, cadrage (Portrait, Buste, En pied), commandes", pane.paras[1].text:find(NS.L.OPT_DAILY_CAPTURE_SOUND, 1, true)
 		and pane.paras[2].text:find(NS.L.OPT_COMP_FRAMING, 1, true) and pane.paras[2].text:find(NS.L.COMP_FRAMING_pied, 1, true)
-		and pane.paras[3].text:find("/qc compagnon tuto collection", 1, true) and pane.paras[3].text:find("sourdine", 1, true)
-		and pane.paras[4].text:find(NS.L.GUIDE_REPLAY, 1, true), pane.paras[2].text)
+		and pane.paras[3].text:find("/qc tuto", 1, true) and pane.paras[3].text:find("sourdine", 1, true)
+		and pane.paras[4].text:find(NS.L.GUIDE_REPLAY, 1, true) and pane.paras[4].text:find(NS.L.GUIDE_REPLAY_JOURNAL, 1, true)
+		and pane.paras[4].text:find("Maj + clic droit", 1, true), pane.paras[2].text)
 	Check("[GUIDE] anciens noms de page : inchangés", (function() NS:SelectJournalKind("collection"); return f.kind == "evolution" end)())
 	NS:SelectJournalKind("guide")
 	Check("[GUIDE] la page retenue pour la prochaine ouverture", NS:DB().journalTab == "guide")
@@ -544,7 +319,6 @@ end
 do
 	Say("-- qc2 guide : fermer la scène et la liste")
 	G.Reset()
-	NS.TUTO_MENAGERIE_AUTO = false
 	NS:DB().companionCaptureAnim = true
 	G.SeeKill(5501, { name = "Ours" })
 	NS.captureNetButton:Click("RightButton")

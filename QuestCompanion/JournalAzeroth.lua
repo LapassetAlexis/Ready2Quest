@@ -1239,6 +1239,8 @@ function PAGE.reserve(self, frame)
 		InkPager(rv.pager)
 		if rv.preview then SkinPreview(rv.preview) end
 	end
+	-- 3.0.0 : le cadeau de la 3.0 (même fond, mêmes vignettes)
+	if pane.gift then InkPager(pane.gift.pager) end
 end
 
 local function ReserveInk(fs, role) if fs then RolePaint(fs, role) end end
@@ -1260,6 +1262,16 @@ function POST.reserve(self, frame)
 		for index, line in ipairs(p and p.lines or {}) do
 			ReserveInk(line, (index == rv.betterLine and "reserve.better") or (index == rv.reasonLine and "reserve.reason")
 				or "reserve.detail")
+		end
+	end
+	local gv = pane.gift
+	if gv and gv:IsShown() then
+		ReserveInk(gv.warn, "reserve.full")
+		ReserveInk(gv.empty, "reserve.text")
+		ReserveInk(gv.hint, "reserve.hint")
+		ReserveInk(gv.count, "reserve.balance")
+		for _, tile in ipairs(gv.tiles or {}) do
+			if tile.gift and tile.label then ReserveInk(tile.label, "reserve.name") end
 		end
 	end
 	if sv and sv:IsShown() then

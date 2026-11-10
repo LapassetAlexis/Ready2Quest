@@ -545,17 +545,17 @@ do
 	for _ = 1, 12 do Mock:Advance(1); NS:CaptureTick(NS.Now()) end
 	NS:CaptureState().rolling = nil
 	if NS.captureStage then NS.captureStage:Hide() end
-	-- le tutoriel de la ménagerie : « filet lancé », puis « scène refermée » avec le verdict
+	-- 3.0.0 : la visite guidée (GuidedTour.lua) : « filet lancé », puis le verdict
 	LOT.SeeKill(6710, { name = "Sanglier C" })
 	LOT.SeeKill(6711, { name = "Sanglier D" })
 	local calls = {}
-	local advance = NS.CompanionSequenceAdvance
-	NS.CompanionSequenceAdvance = function(self, tag, info) calls[#calls + 1] = tag .. (info and (info.ok and ":ok" or ":fail") or "") end
+	local signal = NS.TourSignal
+	NS.TourSignal = function(self, tag, info) calls[#calls + 1] = tag .. (tag == "result" and (info and ":ok" or ":fail") or "") end
 	batch = NS:CaptureBatch()
 	local before = table.concat(calls, ",")
 	NS:CaptureBatchStop(true)
-	NS.CompanionSequenceAdvance = advance
-	Check("[LOT] tutoriel : « net » au lancer, « stage » à la fin", before == "net" and table.concat(calls, ",") == "net,stage:ok",
+	NS.TourSignal = signal
+	Check("[LOT] visite guidée : « throw » au lancer, « result » à la fin", before == "throw" and table.concat(calls, ",") == "throw,result:ok",
 		table.concat(calls, ","))
 	-- capture coupée : rien
 	NS:DB().companionCapture = false
@@ -709,14 +709,14 @@ do
 	Check("[LOT] choix : textes fr et en", #missing == 0, table.concat(missing, ", "))
 end
 
--- 8b. Le tutoriel de la ménagerie avance quel que soit le bouton choisi ------------------------
+-- 8b. La visite guidée avance quel que soit le bouton choisi (3.0.0) ------------------------
 do
 	Say("-- tout capturer : le choix et le tutoriel")
 	LOT.Reset()
 	LOT.Roll(0)
 	local calls = {}
-	local advance = NS.CompanionSequenceAdvance
-	NS.CompanionSequenceAdvance = function(self, tag) calls[#calls + 1] = tag end
+	local signal = NS.TourSignal
+	NS.TourSignal = function(self, tag) calls[#calls + 1] = tag end
 	LOT.SeeKill(6820, { name = "Tuto A" })
 	LOT.SeeKill(6821, { name = "Tuto B" })
 	NS.captureNetButton:Click("LeftButton")
@@ -729,10 +729,10 @@ do
 	NS.captureNetButton:Click("LeftButton")
 	NS.captureChooser.all:Click()
 	NS:CaptureBatchStop(true)
-	NS.CompanionSequenceAdvance = advance
-	Check("[LOT] tutoriel : ouvrir le choix n'avance rien", opened == 0)
-	Check("[LOT] tutoriel : « Capturer : … » avance « net »", single:find("net", 1, true) == 1, single)
-	Check("[LOT] tutoriel : « Tout capturer » avance « net » puis « stage »", calls[1] == "net" and calls[#calls] == "stage",
+	NS.TourSignal = signal
+	Check("[LOT] visite guidée : ouvrir le choix n'avance rien", opened == 0)
+	Check("[LOT] visite guidée : « Capturer : … » avance « throw »", single:find("throw", 1, true) == 1, single)
+	Check("[LOT] visite guidée : « Tout capturer » avance « throw » puis « result »", calls[1] == "throw" and calls[#calls] == "result",
 		table.concat(calls, ","))
 	NS.captureBatchFrame:Hide()
 end

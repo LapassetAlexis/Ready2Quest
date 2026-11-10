@@ -360,10 +360,18 @@ do
 	Say("-- qc215 préparation : mode chasse")
 	P.Reset()
 	local frame = NS.companionFrame
+	-- 3.0.0 : clic droit seul = le carnet ; Maj + clic droit = le menu
 	frame.scripts.OnMouseDown(frame)
 	frame.scripts.OnMouseUp(frame, "RightButton")
+	Check("[HUNT] clic droit seul : le carnet, pas le menu", NS.journalFrame and NS.journalFrame:IsShown()
+		and not (NS.companionMenu and NS.companionMenu:IsShown()))
+	NS.journalFrame:Hide()
+	P.shift = true
+	frame.scripts.OnMouseUp(frame, "RightButton")
+	P.shift = false
 	local menu = NS.companionMenu
-	Check("[HUNT] clic droit : le menu (carnet, mode chasse)", menu and menu:IsShown() and menu.journal ~= nil)
+	Check("[HUNT] Maj + clic droit : le menu (carnet, mode chasse)", menu and menu:IsShown() and menu.journal ~= nil)
+	Check("[HUNT] l'indicateur le dit : Maj + clic droit pour l'arrêter", Has(NS.L.COMP_HUNT_TIP_HINT, "Maj + clic droit"))
 	local minutes = {}
 	for index, button in ipairs(menu.durations) do minutes[index] = button.minutes end
 	Check("[HUNT] 5 min / 15 min / 30 min / 1 h, jusqu'à l'arrêt, arrêter", table.concat(minutes, ",") == "5,15,30,60"
@@ -398,7 +406,7 @@ do
 	Check("[HUNT] hors chasse : pas de ligne de méfiance", NS:BestiaryTooltipWary(P.Guid(6601)) == nil)
 	NS:CompanionMenuShow()
 	NS:CompanionMenuToggle()
-	Check("[HUNT] second clic droit : le menu se ferme", not menu:IsShown())
+	Check("[HUNT] second Maj + clic droit : le menu se ferme", not menu:IsShown())
 end
 
 -- 8. Les deux styles, et les contrastes ---------------------------------------------------------------------

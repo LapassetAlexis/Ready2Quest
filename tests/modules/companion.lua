@@ -488,20 +488,35 @@ do
 	if NS.journalFrame then NS.journalFrame:Hide() end
 	NS:DB().journalTab = "evolution"
 	NS.JournalCounts = C.savedJournal
-	-- 2.15.0 : clic droit = un petit menu (carnet, mode chasse) ; « Carnet de voyage » ouvre le carnet
+	-- 3.0.0 : clic droit = le carnet, d'un geste (comme avant la 3.0) ;
+	-- Maj + clic droit = le petit menu (carnet de voyage, mode chasse)
+	local shiftSaved = rawget(_G, "IsShiftKeyDown")
+	_G.IsShiftKeyDown = function() return false end
 	NS.companionFrame.scripts.OnMouseDown(NS.companionFrame)
 	NS.companionFrame.scripts.OnMouseUp(NS.companionFrame, "RightButton")
-	Check("[COMP] clic droit : le menu, sans caresse", NS.companionMenu and NS.companionMenu:IsShown() and C.Needs().mood == 66)
+	Check("[COMP] clic droit : le carnet sur son dernier onglet, sans menu ni caresse", NS.journalFrame and NS.journalFrame:IsShown()
+		and NS.journalFrame.kind == "evolution" and not (NS.companionMenu and NS.companionMenu:IsShown()) and C.Needs().mood == 66)
+	NS.companionFrame.scripts.OnMouseUp(NS.companionFrame, "RightButton")
+	Check("[COMP] clic droit de nouveau : carnet refermé", not NS.journalFrame:IsShown())
+	_G.IsShiftKeyDown = function() return true end
+	NS.companionFrame.scripts.OnMouseUp(NS.companionFrame, "RightButton")
+	Check("[COMP] Maj + clic droit : le menu (carnet, chasse), sans carnet ni caresse", NS.companionMenu and NS.companionMenu:IsShown()
+		and not NS.journalFrame:IsShown() and C.Needs().mood == 66)
 	NS.companionMenu.journal:Click()
-	Check("[COMP] menu « Carnet de voyage » : carnet ouvert sur son dernier onglet", NS.journalFrame and NS.journalFrame:IsShown()
-		and NS.journalFrame.kind == "evolution" and not NS.companionMenu:IsShown())
+	Check("[COMP] menu « Carnet de voyage » : carnet ouvert, menu fermé", NS.journalFrame:IsShown() and not NS.companionMenu:IsShown())
 	NS:CompanionMenuShow()
 	NS.companionMenu.journal:Click()
 	Check("[COMP] de nouveau : carnet refermé", not NS.journalFrame:IsShown())
+	NS.companionFrame.scripts.OnMouseUp(NS.companionFrame, "RightButton")
+	NS.companionFrame.scripts.OnMouseUp(NS.companionFrame, "RightButton")
+	Check("[COMP] second Maj + clic droit : le menu se ferme", not NS.companionMenu:IsShown())
+	_G.IsShiftKeyDown = shiftSaved
 	NS.companionFrame.scripts.OnMouseUp(NS.companionFrame, "MiddleButton")
 	Check("[COMP] autre bouton : rien", not NS.journalFrame:IsShown() and C.Needs().mood == 66)
 	NS.JournalCounts = nil
-	Check("[COMP] survol : le clic droit est annoncé", NS.L.COMP_HOVER_HINT:find("clic droit : carnet", 1, true) ~= nil)
+	Check("[COMP] survol : clic droit (carnet) et Maj + clic droit (chasse) annoncés",
+		NS.L.COMP_HOVER_HINT:find("clic droit : carnet", 1, true) ~= nil and NS.L.COMP_HOVER_HINT:find("Maj + clic droit : chasse", 1, true) ~= nil
+		and NS.L.COMP_HOVER_HINT_locked:find("Maj + clic droit : chasse", 1, true) ~= nil)
 	Check("[COMP] survol : changer de compagnon est expliqué (2.9.0)", NS.L.COMP_HOVER_HINT:find("Change de compagnon", 1, true) ~= nil)
 	-- une caresse réveille
 	local data = NS:CompanionData()

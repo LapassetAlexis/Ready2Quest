@@ -91,4 +91,5 @@ CompanionJokes.lua
 WinterCompanions.lua
 CompanionAllure.lua
 JournalReserve.lua
+GuidedTour.lua
 Bindings.lua

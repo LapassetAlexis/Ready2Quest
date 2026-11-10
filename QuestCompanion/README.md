@@ -33,7 +33,7 @@ Since 2.0, QuestCompanion is first a **creature-collecting game**: capture what 
 - **Zone seals**: capture every species of a zone (world bosses aside) and it gets a **seal**: a frame, then a background, in the colours of its landscape, and better shiny odds in that zone for good.
 - **Type collection and titles**: every 10, 20 and 40 captures of a type (5, 10, 20 for the rarest types) strengthen that type's effect. At 10, 25, 50, 100 and 250 species you earn a **trainer title** (Apprentice trainer … Grand master trainer) and a reward, through their achievement (35 more titles come from other achievements).
 - **Trainer card**: your title, your companion in 3D, a **showcase of 3 creatures** you choose, your numbers and your seal badges. Other players who have the addon can open it from the **right-click menu** on you (the entry only shows for players known to have the addon), and you theirs; a "QuestCompanion trainer" line shows in their tooltip. `/qc fiche` opens yours (to pick your showcase), `/qc fiche <name>` asks for someone's. Shared by default, can be turned off (Day by day page): then the addon stays silent.
-- **Creatures tutorial and Guide page** (2.3.0): the first time a monster lands in the net (out of combat, or as soon as the fight ends), your companion walks you through it in bubbles: it asks you to click the net (which pulses until you do), stays quiet during the scene, comments the verdict, then explains stars, shinies, taking a creature along, seals, titles, missions and the trainer card, and opens the journal on its **Guide** page. Once per character, never in combat, never with capture turned off. `/qc compagnon tuto menagerie` replays it (no capture needed). The **Guide** page explains everything section by section with the game's own numbers, including the table of the eight types, and has a **Replay the tutorial** button.
+- **Guided tutorials and Guide page** (3.0.0, replacing the 2.3.0 bubble tutorial): a callout walks you through your first capture (the net, the preparation card, Throw/Skip, Codex or Reserve, hunt mode) and, the first time you open the journal, through each tab, highlighting what it talks about. Once per account, never in combat; "Skip tutorial" or Escape stops it; `/qc tuto [capture|carnet|reset]` and the two buttons of the **Guide** page replay them. The **Guide** page explains everything section by section with the game's own numbers, including the table of the eight types.
 
 ## Achievements and titles (2.7)
 
@@ -175,7 +175,7 @@ Light on memory: about 2 MB (zone data is built only when you get there, and onl
 |---|---|
 | `/qc` | opens your travel journal (same as `/qc carnet`) |
 | `/qc options` | opens the settings |
-| `/qc compagnon` | your companion's mood (`nom <name>` to rename it, `tuto` to replay the tutorial, `tuto menagerie` for the collection one, `anim` to see its animations) |
+| `/qc compagnon` | your companion's mood (`nom <name>` to rename it, `tuto` to replay the tutorial, `anim` to see its animations) |
 | `/qc coffre` | opens a pending zone chest |
 | `/qc capture` | your collection and capture aids |
 | `/qc filet` | captures the best creature waiting in the net |
@@ -235,7 +235,7 @@ Depuis la 2.0, QuestCompanion est d'abord un **jeu de collection de créatures**
 - **Les sceaux de zone** : capture toutes les espèces d'une zone (hors boss du monde) et elle reçoit un **sceau** : un cadre, puis un fond, aux couleurs de son paysage, et une meilleure chance de brillant dans cette zone pour toujours.
 - **Collection par type et titres** : 10, 20 et 40 captures d'un type (5, 10, 20 pour les types les plus rares) renforcent son effet. À 10, 25, 50, 100 et 250 espèces, tu gagnes un **titre de dresseur** (Apprenti dresseur … Grand maître dresseur) et une récompense, par leur haut fait (35 autres titres viennent d'autres hauts faits).
 - **Fiche de dresseur** : ton titre, ton compagnon en 3D, une **vitrine de 3 créatures** que tu choisis, tes chiffres et les badges de tes sceaux. Les autres joueurs qui ont l'addon l'ouvrent depuis le **menu du clic droit** sur toi (l'entrée n'apparaît que pour les joueurs connus comme détenteurs), et toi la leur ; une ligne « Dresseur QuestCompanion » s'affiche dans leur infobulle. `/qc fiche` ouvre la tienne (pour choisir ta vitrine), `/qc fiche <nom>` demande celle de quelqu'un. Partagée par défaut, se coupe (page Au jour le jour) : l'addon reste alors muet.
-- **Tutoriel de la collection et page Guide** (2.3.0) : la première fois qu'un monstre tombe dans le filet (hors combat, ou dès la fin du combat), ton compagnon te guide en bulles : il te demande de cliquer sur le filet (qui bat tant que tu n'as pas cliqué), se tait pendant la scène, commente le verdict, puis explique les étoiles, les brillantes, emmener une créature, les sceaux, les titres, les missions et la fiche de dresseur, et ouvre le carnet sur sa page **Guide**. Une fois par personnage, jamais en combat, jamais si la capture est coupée. `/qc compagnon tuto menagerie` le rejoue (sans attendre de capture). La page **Guide** explique tout, section par section, avec les chiffres du jeu, dont la table des huit types, et un bouton **Revoir le tutoriel**.
+- **Tutoriels guidés et page Guide** (3.0.0, à la place du tutoriel en bulles de la 2.3.0) : une bulle t'accompagne dans ta première capture (le filet, la carte de préparation, Lancer ou Passer, Codex ou Réserve, le mode chasse) et, à la première ouverture du carnet, dans chaque onglet, en surlignant ce dont elle parle. Une fois par compte, jamais en combat ; « Passer le tutoriel » ou Échap l'arrêtent ; `/qc tuto [capture|carnet|reset]` et les deux boutons de la page **Guide** les rejouent. La page **Guide** explique tout, section par section, avec les chiffres du jeu, dont la table des huit types.
 
 ## Hauts faits et titres (2.7)
 
@@ -377,7 +377,7 @@ Léger en mémoire : environ 2 Mo (les données d'une zone ne sont construites q
 |---|---|
 | `/qc` | ouvre ton carnet de voyage (comme `/qc carnet`) |
 | `/qc options` | ouvre les réglages |
-| `/qc compagnon` | l'humeur de ton compagnon (`nom <nom>` pour le renommer, `tuto` pour revoir le tutoriel, `tuto menagerie` celui de la collection, `anim` pour voir ses animations) |
+| `/qc compagnon` | l'humeur de ton compagnon (`nom <nom>` pour le renommer, `tuto` pour revoir le tutoriel, `anim` pour voir ses animations) |
 | `/qc coffre` | ouvre un coffre de zone en attente |
 | `/qc capture` | ta collection et tes aides de capture |
 | `/qc filet` | capture la meilleure créature qui attend dans le filet |

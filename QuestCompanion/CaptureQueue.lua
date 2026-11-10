@@ -578,8 +578,8 @@ function ns:CaptureOffer(guid, entry, shiny)
 	-- et le bandeau « Capture possible » ; en combat, il attend la fin du combat
 	if not InCombat() then
 		self:CaptureToastShow()
-		-- première occasion de capture : le tutoriel de la ménagerie (Companion.lua, 2.3.0)
-		if self.CompanionMenagerieOpportunity then pcall(self.CompanionMenagerieOpportunity, self) end
+		-- 3.0.0 : occasion de capture : la visite des premières captures (GuidedTour.lua)
+		if self.TourCaptureOpportunity then pcall(self.TourCaptureOpportunity, self) end
 	end
 	return candidate
 end
@@ -647,9 +647,9 @@ do
 			if not picked then return false end
 			-- 2.15.0 : Réserve pleine et il irait en Réserve : refusé, il reste au filet
 			if self.CaptureRefuseBlocked and self:CaptureRefuseBlocked(picked) then return false end
-			-- le tutoriel de la ménagerie attendait ce geste (avant que la
-			-- file ne se vide : le filet part, ce n'est pas « trop tard »)
-			if self.CompanionSequenceAdvance then pcall(self.CompanionSequenceAdvance, self, "net") end
+			-- 3.0.0 : le filet part (visite guidée, GuidedTour.lua ; avant que
+			-- la file ne se vide : ce n'est pas un candidat perdu)
+			if self.TourSignal then pcall(self.TourSignal, self, "throw") end
 			self:CaptureQueueRemove(picked)
 			self:CaptureToastHide()
 			self:CapturePlaySound("throw")
@@ -669,7 +669,7 @@ do
 		-- CAPTURE_HOLD_CHECKS.throw, quand le lancer se termine)
 		if thrown then self:CaptureQueueHold("throw") end
 		-- (lancer depuis la petite fenêtre déjà ouverte : le geste compte aussi)
-		if thrown and self.CompanionSequenceAdvance then pcall(self.CompanionSequenceAdvance, self, "net") end
+		if thrown and self.TourSignal then pcall(self.TourSignal, self, "throw") end
 		self:CaptureQueueRefresh()
 		return thrown
 	end
@@ -779,9 +779,9 @@ do
 		base(self, now)
 		local state = self.captureState
 		-- la scène (ou la petite fenêtre) vient de se refermer sur son verdict :
-		-- le tutoriel de la ménagerie reprend (Companion.lua, 2.3.0)
-		if before and before.result and not (state and state.rolling) and self.CompanionSequenceAdvance then
-			pcall(self.CompanionSequenceAdvance, self, "stage", { ok = before.success and true or false })
+		-- la visite guidée passe au verdict (GuidedTour.lua, 3.0.0)
+		if before and before.result and not (state and state.rolling) and self.TourSignal then
+			pcall(self.TourSignal, self, "result", before.success and true or false)
 		end
 		-- la scène refermée, le choix abandonné… : le compte à rebours reprend
 		local resumed = self:CaptureQueueCheckHolds()
@@ -798,9 +798,9 @@ do
 		if not InCombat() and self:CaptureQueueStartTimers(now) then
 			changed = true
 			-- fin du combat : ceux qui attendaient sont annoncés, et c'est
-			-- aussi une occasion de capture pour le tutoriel de la ménagerie
+			-- aussi une occasion pour la visite des premières captures
 			self:CaptureToastShow()
-			if self.CompanionMenagerieOpportunity then pcall(self.CompanionMenagerieOpportunity, self) end
+			if self.TourCaptureOpportunity then pcall(self.TourCaptureOpportunity, self) end
 		end
 		local due = changed or resumed or state.queuePrunedSerial ~= self:CaptureData().serial or not state.queuePrunedAt
 			or now - state.queuePrunedAt >= ns.CAPTURE_QUEUE_PRUNE_GAP or now < state.queuePrunedAt
@@ -1032,12 +1032,8 @@ function ns:EnsureCaptureNet()
 	-- l'arrivée d'un candidat (le battement attire l'œil, sans clignoter)
 	button:SetScript("OnUpdate", function(b)
 		local now = Clock()
-		-- le tutoriel de la ménagerie attend le clic sur le filet : il bat tant que l'étape attend
-		-- (protégé : appelé à chaque image)
-		if ns.CompanionSequenceWaits then
-			local ok, waits = pcall(ns.CompanionSequenceWaits, ns, "net")
-			if ok and waits then b.pulseUntil = now + ns.CAPTURE_NET_PULSE end
-		end
+		-- 3.0.0 : la visite guidée montre le filet : il bat tant que l'étape attend
+		if ns.tourNetPulse then b.pulseUntil = now + ns.CAPTURE_NET_PULSE end
 		if b.shiny then
 			b.glow:SetAlpha(0.20 + 0.35 * math.abs(math.sin(now * 3)))
 		elseif b.pulseUntil and now < b.pulseUntil then
@@ -1060,11 +1056,6 @@ end
 -- de suite (avec l'aide déjà choisie). Carte déjà ouverte : un clic la ferme.
 function ns:CaptureDirectOn()
 	if self:DB().companionCaptureDirect == true then return true end
-	-- le tutoriel de la ménagerie attend le lancer du filet : il part tout de suite
-	if self.CompanionSequenceWaits then
-		local ok, waits = pcall(self.CompanionSequenceWaits, self, "net")
-		if ok and waits then return true end
-	end
 	return Call(G("IsShiftKeyDown")) and true or false
 end
 
@@ -1137,9 +1128,6 @@ function ns:CaptureQueueRefresh()
 	if count == 0 then self:CaptureToastHide() end
 	if count == 0 then self:CaptureHideQueueList()
 	elseif self.captureQueueList and self.captureQueueList:IsShown() then self:CaptureRefreshQueueList() end
-	-- filet vide (temps écoulé, Ignorer, Tout ignorer) alors que le tutoriel de
-	-- la ménagerie attendait le clic : « Trop tard… », il reviendra (Companion.lua)
-	if count == 0 and self.CompanionSequenceAbort then pcall(self.CompanionSequenceAbort, self, "net") end
 	-- 2.15.0 : la carte de préparation suit la file (CaptureStage.lua)
 	if self.CapturePrepCheck then self:CapturePrepCheck() end
 	return count
