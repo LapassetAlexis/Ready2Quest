@@ -6,8 +6,10 @@
 - **Boule de neige** : pendant la saison, le filet devient une boule de neige qui éclate en flocons, en capture comme dans « Tout capturer ».
 - **Trois compagnons de saison** à choisir dans « Son allure » sans perdre ton compagnon : Grand-père Hiver (un cadeau par jour), Metzen le renne (le nez qui brille la nuit), le petit bonhomme de neige (il aime le froid, il fond au chaud), chacun avec sa voix.
 - **Visite surprise** de Grand-père Hiver, une fois par session (réglable), et un haut fait « Joyeux Voile d'hiver ».
+- **Nouveau choix d'apparence** : dans « Son allure », un bouton « Choisir… » ouvre un panneau avec recherche, filtres (type, brillantes, favoris), grille qui défile ; la version brillante d'une espèce se choisit à côté de la normale ; Maj+clic pour un favori. Aux couleurs du style choisi.
+- **Infobulle des créatures** : les étoiles de l'espèce, et si le filet la proposera encore (« complète, plus proposée » à 3 étoiles).
 
-*English:* Winter Veil season (Azeroth style, Dec 15 – Jan 2): festive lights and snowflakes in the journal and 3D lights on the companion frame (setting or /qc noel); the net becomes a snowball that bursts into snowflakes; three seasonal companions in "Appearance" (Greatfather Winter's daily gift, Metzen's glowing nose at night, the Tiny Snowman who loves the cold and melts in the heat), each with its own voice; a surprise visit from Greatfather Winter and a "Merry Winter Veil" achievement.
+*English:* Winter Veil season (Azeroth style, Dec 15 – Jan 2): festive lights and snowflakes in the journal and 3D lights on the companion frame (setting or /qc noel); the net becomes a snowball that bursts into snowflakes; three seasonal companions in "Appearance" (Greatfather Winter's daily gift, Metzen's glowing nose at night, the Tiny Snowman who loves the cold and melts in the heat), each with its own voice; a surprise visit from Greatfather Winter and a "Merry Winter Veil" achievement; a new appearance picker (search, filters, scrolling grid, shiny or normal side by side, favourites with Shift+click, follows your UI style); creature tooltips show the species' stars and whether the net will still offer it.
 
 ## 2.13.1
 
