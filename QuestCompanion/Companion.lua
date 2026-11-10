@@ -2609,8 +2609,17 @@ function ns:CompanionApplyModel()
 	-- 2.14.0 : un compagnon de saison (créature du jeu, SetCreature) aussi
 	local real = app.captured or app.seasonal
 	if real then distance, y, facing = self:CompanionModelCam(app, framing) end
+	-- 3.1.0 : la taille du spécimen porté (SpecimenTraits.lua) : échelle du
+	-- modèle, rapprochée selon le cadrage, la caméra recule au-dessus de 1
+	local sizeScale = 1
+	if app.captured and self.CompanionSizeScale then
+		local camFactor
+		sizeScale, camFactor = self:CompanionSizeScale(framing)
+		distance = distance * (camFactor or 1)
+	end
+	frame.sizeScale = sizeScale
 	local shown = model and ns.ShowModel(model, { display = app.display, npc = app.npc, shiny = app.shiny,
-		zoom = zoom, cam = distance, y = y, facing = facing, scale = real and 1 or stageDef.scale }, "companion") or false
+		zoom = zoom, cam = distance, y = y, facing = facing, scale = real and sizeScale or stageDef.scale }, "companion") or false
 	frame.usesFallback = not shown
 	frame.displayID = shown and app.display or nil
 	if shown then

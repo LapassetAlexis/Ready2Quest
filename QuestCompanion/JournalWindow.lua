@@ -953,6 +953,10 @@ local function BuildEvolution(self, frame, content)
 	if pane.name.SetWordWrap then pane.name:SetWordWrap(false) end
 	pane.traitTag = Theme.CreateTag(hero, "", Theme.GOLD)
 	pane.traitTag:SetPoint("LEFT", pane.name, "RIGHT", 10, 0)
+	-- 3.1.0 : la taille du spécimen porté, à côté de son caractère
+	pane.sizeTag = Theme.CreateTag(hero, "", Theme.MUTED_LIGHT)
+	pane.sizeTag:SetPoint("LEFT", pane.traitTag, "RIGHT", 6, 0)
+	pane.sizeTag:Hide()
 	pane.look = Text(hero, Theme.F_BODY, Theme.MUTED_LIGHT, textW)
 	pane.look:SetPoint("TOPLEFT", hero, "TOPLEFT", textX, -42)
 	if pane.look.SetWordWrap then pane.look:SetWordWrap(false) end
@@ -2268,7 +2272,23 @@ local function RefreshEvolution(self, frame)
 	pane.name:SetText(name)
 	local trait = self.CompanionTrait and self:CompanionTrait()
 	local traitLabel = trait and self.PersonaLabel and self:PersonaLabel(trait)
-	if traitLabel and traitLabel ~= "" then pane.traitTag:SetTag(traitLabel); pane.traitTag:Show() else pane.traitTag:Hide() end
+	-- 3.1.0 : un spécimen porté : son caractère à sa couleur, et sa taille
+	local worn = self.CompanionWornSpecimen and self:CompanionWornSpecimen()
+	local traitColor = worn and worn.trait == trait and self:SpecimenTraitColor(trait) or Theme.GOLD
+	if traitLabel and traitLabel ~= "" then pane.traitTag:SetTag(traitLabel, traitColor); pane.traitTag:Show() else pane.traitTag:Hide() end
+	if pane.sizeTag then
+		if worn then
+			pane.sizeTag:SetTag(self:SpecimenSizeLabel(worn.size), self:SpecimenSizeColor(worn.size))
+			if not (traitLabel and traitLabel ~= "") then
+				pane.sizeTag:ClearAllPoints(); pane.sizeTag:SetPoint("LEFT", pane.name, "RIGHT", 10, 0)
+			else
+				pane.sizeTag:ClearAllPoints(); pane.sizeTag:SetPoint("LEFT", pane.traitTag, "RIGHT", 6, 0)
+			end
+			pane.sizeTag:Show()
+		else
+			pane.sizeTag:Hide()
+		end
+	end
 	local app = self.CompanionCurrentAppearance and self:CompanionCurrentAppearance()
 	pane.look:SetText(self:F("JRN_EVO_STAGE", app and tostring(L[app.label]) or name, stageLabel, stage, #stages))
 	for index, step in ipairs(pane.steps) do
@@ -2452,6 +2472,9 @@ function ns:JournalPreviewMenagerie(entry, keep)
 		-- 2.0 : la qualité du spécimen gardé (CaptureQueue.lua), sur la même ligne
 		local stars = self.CaptureStars and self:CaptureStars(entry.npc, shinyView)
 		stars = stars and self:CaptureStarsText(stars, 12)
+		-- 3.1.0 : taille et caractère du spécimen du Codex, après ses étoiles
+		local ref = self.SpecimenReference and self:SpecimenReference(entry.npc, shinyView)
+		if stars and ref and self.SpecimenTagsShort then stars = stars .. L.SPEC_TAGS_SEP .. self:SpecimenTagsShort(ref) end
 		if when then
 			lines[#lines + 1] = self:F(shinyView and "JRN_MEN_SHINY_CAUGHT" or "JRN_MEN_CAUGHT", when) .. (stars and ("  " .. stars) or "")
 		elseif stars then

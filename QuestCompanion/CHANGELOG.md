@@ -1,5 +1,15 @@
 # QuestCompanion
 
+## 3.1.0 — caractère et taille
+
+- **Chaque spécimen a son caractère** : un des caractères du compagnon (Curieux, Gourmand, Téméraire, Paresseux, Taquin, Câlin, et plus rarement Zen ou Espiègle), tiré à la capture. Porté par ton compagnon, il lui donne sa voix et ses répliques (réglage « Caractère : Apparence », par défaut) et **un petit effet**, jamais sur le combat, l'XP ni le butin : par exemple Curieux, la curiosité baisse 10 % moins vite ; Gourmand, 10 % de chance d'une friandise en plus aux paliers de zone ; Câlin, une caresse compte plus ; Espiègle, capture +3 %. Il s'affiche dans « Ses effets » (« Caractère : … »).
+- **Chaque spécimen a sa taille** : minuscule (2 %), petit (18 %), normal (60 %), grand (18 %) ou géant (2 %). Ton compagnon prend la taille du spécimen porté dans son cadre (sans en sortir, quel que soit le cadrage). Deux hauts faits pour les plus rares : « Un géant parmi les bêtes » et « Petit mais costaud ».
+- **Partout où se voit un spécimen** : le message de capture (« Raptor : 3 étoiles · Grand · Curieux »), la scène de capture, la Réserve (pastille de taille sur la vignette ; taille, caractère et effet sur la fiche), le choix d'allure, la fiche des Créatures et la page Compagnon (étiquette de taille à côté du caractère).
+- **Ta collection en 3.1** : tes spécimens reçoivent un caractère et la taille normale ; celui que porte ton compagnon garde le caractère qu'il avait, rien ne change pour lui. Les copies du cadeau de la 3.0 ont aussi leur caractère.
+- Caractère et taille font partie du spécimen : ils suivront les échanges de la 3.2.
+
+*English:* every specimen now has its own character, one of the companion's personalities (Curious, Glutton, Daring, Lazy, Teasing, Cuddly, and more rarely Zen or Mischievous), rolled at capture. When your companion wears it, it takes that voice and those lines (Character setting "Appearance", the default) plus one small effect, never on combat, XP or loot — e.g. Curious: curiosity drops 10% slower; Glutton: 10% chance of an extra treat at zone milestones; Cuddly: petting counts more; Mischievous: capture +3% — shown in "Its effects". Every specimen also has a size: tiny (2%), small (18%), normal (60%), large (18%) or giant (2%); your companion takes the worn specimen's size in its frame (always staying inside it), and two achievements reward the rarest ("A Giant Among Beasts", "Small but Mighty"). Size and character show in the capture message ("Raptor: 3 stars · Large · Curious"), the capture scene, the Reserve, the look picker, the Creatures card and the Companion page. Your existing specimens get a character and the normal size; the one your companion wears keeps the character it had, so nothing changes. Character and size are part of the specimen and will travel with 3.2 trades.
+
 ## 3.0.0 — chaque capture est unique
 
 - **Des spécimens** : chaque capture est un spécimen à part, avec sa qualité (1 à 3 étoiles), brillant ou non, et son origine (qui, où, quand). Ton meilleur spécimen de chaque espèce va au **Codex** ; les autres rejoignent ta **Réserve**. Ta collection est reprise telle quelle (rien n'est perdu).

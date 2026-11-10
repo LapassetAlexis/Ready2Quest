@@ -302,8 +302,13 @@ do
 	Say("-- 2.10.0 : ne plus proposer cette espèce")
 	D.Reset()
 	NS:DB().capture = nil
+	-- 3.1.0 : qualité fixe au coup fatal (tirée au hasard, elle trie la file :
+	-- l'ordre dépendait de l'état du générateur laissé par les modules d'avant)
+	local rollQuality = NS.CaptureRollQuality
+	NS.CaptureRollQuality = function() return 1 end
 	NS:CaptureOffer("Creature-0-1-1-1-7001-0000000001", { zoneID = 1, npcID = 7001 })
 	NS:CaptureOffer("Creature-0-1-1-1-7002-0000000002", { zoneID = 1, npcID = 7002 })
+	NS.CaptureRollQuality = rollQuality
 	Check("[SKIP] deux candidats dans la file", #NS:CaptureQueueState() == 2)
 	NS:CaptureShowQueueList()
 	local list = NS.captureQueueList

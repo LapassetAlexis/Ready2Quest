@@ -752,6 +752,11 @@ do
 			capture.serial = (tonumber(capture.serial) or 0) + 1
 			self.captureAppCache = nil
 			local text = self:CaptureStarsText(rolling.stars)
+			-- 3.1.0 : « Raptor : <étoiles> · Grand · Curieux. » (taille et caractère du spécimen)
+			if rolling.specimen and self.SpecimenTagsShort then
+				local tags = self:SpecimenTagsShort(rolling.specimen)
+				if tags ~= "" then text = text .. L.SPEC_TAGS_SEP .. tags end
+			end
 			if before == nil then
 				self:Print(self:F("CAPTURE_MSG_STARS", target.name, text))
 			elseif better then

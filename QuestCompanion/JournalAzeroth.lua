@@ -1882,8 +1882,11 @@ do
 			if pane and frame and frame.azeroth and frame.evo == pane and pane.effHunt then
 				local effects = self.CompanionEffects and self:CompanionEffects()
 				local active = effects and effects.active and true or false
-				local roles = active and { effHunt = "effects.line", effComfort = "effects.line", effState = "effects.state" }
-					or { effHunt = "effects.linePending", effComfort = "effects.linePending", effState = "effects.statePending" }
+				-- 3.1.0 : la ligne du caractère (effTrait) à la même encre
+				local roles = active and { effHunt = "effects.line", effComfort = "effects.line", effTrait = "effects.line",
+					effState = "effects.state" }
+					or { effHunt = "effects.linePending", effComfort = "effects.linePending", effTrait = "effects.linePending",
+					effState = "effects.statePending" }
 				for field, role in pairs(roles) do
 					local fs = pane[field]
 					local ink = RoleInk(role)

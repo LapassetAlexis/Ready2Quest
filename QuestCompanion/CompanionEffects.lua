@@ -57,6 +57,10 @@ ns.EFFECT_NAMED = { elite = true, rare = true, rareelite = true, worldboss = tru
 --   nightCapture : la nuit (heure du jeu), capture ×(1 + v) sur tout
 --   cold         : en zone froide, les envies baissent v moins vite (en
 --                  zone chaude, le moral baisse plus vite : il fond)
+-- 3.1.0 (caractère du spécimen porté, SpecimenTraits.lua) : un troisième
+-- effet, `trait`, petit et fixe (ni étape, ni envies, ni rang), pris dans
+-- les sortes existantes ; jamais de combat, d'XP ni de butin. `shiny` peut
+-- viser tout (`all`). Deux effets de la même sorte s'additionnent.
 local EFFECTS = {
 	-- chasse
 	spot             = { kind = "spot",      type = "beast",      base = 0.05, cap = 0.25 },
@@ -86,6 +90,21 @@ local EFFECTS = {
 	winter_nose      = { kind = "nightCapture",                   base = 0.03, cap = 0.15 },
 	winter_pet       = { kind = "pet",                            base = 0.25, cap = 1.00 },
 	winter_cold      = { kind = "cold",                           base = 0.06, cap = 0.30 },
+	-- 3.1.0 : caractère du spécimen porté (valeur fixe : base = cap)
+	trait_curious     = { kind = "decay",     need = "curiosity",  base = 0.10, cap = 0.10, trait = true },
+	trait_glutton     = { kind = "treatZone",                      base = 0.10, cap = 0.10, trait = true },
+	trait_daring      = { kind = "capture",   named = true,        base = 0.05, cap = 0.05, trait = true },
+	trait_lazy        = { kind = "rest",                           base = 0.10, cap = 0.10, trait = true },
+	trait_teasing     = { kind = "decay",     need = "mood",       base = 0.08, cap = 0.08, trait = true },
+	trait_cuddly      = { kind = "pet",                            base = 0.25, cap = 0.25, trait = true },
+	trait_wise        = { kind = "aidKeep",                        base = 0.05, cap = 0.05, trait = true },
+	trait_parrot      = { kind = "chain",                          base = 0.10, cap = 0.10, trait = true },
+	trait_mystic      = { kind = "shiny",     all = true,          base = 0.05, cap = 0.05, trait = true },
+	trait_zen         = { kind = "decay",                          base = 0.05, cap = 0.05, trait = true },
+	trait_sly         = { kind = "aidZone",                        base = 0.10, cap = 0.10, trait = true },
+	trait_mischievous = { kind = "capture",   all = true,          base = 0.03, cap = 0.03, trait = true },
+	trait_fearful     = { kind = "decay",     need = "energy",     base = 0.08, cap = 0.08, trait = true },
+	trait_tinker      = { kind = "aidRefund",                      base = 0.08, cap = 0.08, trait = true },
 }
 for id, def in pairs(EFFECTS) do def.id = id end
 ns.COMPANION_EFFECTS = EFFECTS
@@ -112,6 +131,13 @@ local WINTER_EFFECTS = {
 	snowman = { hunt = "winter_pet",    comfort = "winter_cold" },
 }
 ns.COMPANION_WINTER_EFFECTS = WINTER_EFFECTS
+-- 3.1.0 : caractère -> son effet (chaque caractère de Personality.lua en a un)
+local TRAIT_EFFECTS = {}
+for id, def in pairs(EFFECTS) do
+	local trait = def.trait and id:match("^trait_(.+)$")
+	if trait then TRAIT_EFFECTS[trait] = id end
+end
+ns.COMPANION_TRAIT_EFFECTS = TRAIT_EFFECTS
 
 local FR = {
 	EFF_HUNT               = "Chasse : %s",
@@ -140,6 +166,21 @@ local FR = {
 	EFF_winter_nose        = "« Le nez qui brille » : capture +%d %% la nuit (20 h - 6 h)",
 	EFF_winter_pet         = "une caresse remonte le moral de %d %% en plus",
 	EFF_winter_cold        = "« Il aime le froid » : envies %d %% plus lentes au froid, il fond au chaud",
+	EFF_TRAIT              = "Caractère : %s, %s",
+	EFF_trait_curious      = "la curiosité baisse %d %% moins vite",
+	EFF_trait_glutton      = "%d %% de chance d'une friandise en plus à chaque palier de zone",
+	EFF_trait_daring       = "capture des élites et rares +%d %%",
+	EFF_trait_lazy         = "au repos, l'énergie remonte %d %% plus vite",
+	EFF_trait_teasing      = "le moral baisse %d %% moins vite",
+	EFF_trait_cuddly       = "une caresse remonte le moral de %d %% en plus",
+	EFF_trait_wise         = "%d %% de chance qu'une aide utilisée ne soit pas consommée",
+	EFF_trait_parrot       = "chasse au brillant : abattus comptés +%d %%",
+	EFF_trait_mystic       = "chance de brillant +%d %% sur toutes les créatures",
+	EFF_trait_zen          = "les envies baissent %d %% moins vite",
+	EFF_trait_sly          = "%d %% de chance d'une aide de capture en plus à chaque palier de zone",
+	EFF_trait_mischievous  = "capture +%d %% sur toutes les créatures",
+	EFF_trait_fearful      = "l'énergie baisse %d %% moins vite",
+	EFF_trait_tinker       = "capture ratée : %d %% de chance que l'aide revienne",
 	EFF_SEASON             = "Saison : %s",
 	EFF_QUIRK              = "Particularité : %s",
 	EFF_SECTION            = "Ses effets",
@@ -194,6 +235,21 @@ local EN = {
 	EFF_winter_nose        = "\"Glowing nose\": capture +%d%% at night (8 p.m. - 6 a.m.)",
 	EFF_winter_pet         = "petting raises mood %d%% more",
 	EFF_winter_cold        = "\"Loves the cold\": needs drop %d%% slower in the cold, melts in the heat",
+	EFF_TRAIT              = "Character: %s, %s",
+	EFF_trait_curious      = "curiosity drops %d%% slower",
+	EFF_trait_glutton      = "%d%% chance of an extra treat at each zone milestone",
+	EFF_trait_daring       = "elite and rare capture +%d%%",
+	EFF_trait_lazy         = "while resting, energy comes back %d%% faster",
+	EFF_trait_teasing      = "mood drops %d%% slower",
+	EFF_trait_cuddly       = "petting raises mood %d%% more",
+	EFF_trait_wise         = "%d%% chance that a used aid is not spent",
+	EFF_trait_parrot       = "shiny hunt: kills count +%d%%",
+	EFF_trait_mystic       = "shiny chance +%d%% on every creature",
+	EFF_trait_zen          = "needs drop %d%% slower",
+	EFF_trait_sly          = "%d%% chance of an extra capture aid at each zone milestone",
+	EFF_trait_mischievous  = "capture +%d%% on every creature",
+	EFF_trait_fearful      = "energy drops %d%% slower",
+	EFF_trait_tinker       = "failed capture: %d%% chance to get the aid back",
 	EFF_SEASON             = "Season: %s",
 	EFF_QUIRK              = "Quirk: %s",
 	EFF_SECTION            = "Its effects",
@@ -308,6 +364,11 @@ function ns:CompanionEffectsFor(spec, opts)
 			strength = strength + math.max(0, tonumber((Call(self.MenagerieTypeBonus, self, typeKey))) or 0)
 		end
 		result.npc, result.shiny, result.class, result.stars = npc, shiny, class, stars
+		-- 3.1.0 : le caractère du spécimen de référence de cette version
+		if not opts.noTrait and self.SpecimenReference then
+			local ref = Call(self.SpecimenReference, self, npc, shiny)
+			result.trait = type(ref) == "table" and self:CompanionTraitEffect(ref.trait) or nil
+		end
 	end
 	if not pair then
 		-- mascotte (ou créature de type inconnu) : l'effet général, à la force de l'étape
@@ -325,6 +386,14 @@ function ns:CompanionEffectsFor(spec, opts)
 		result[slot] = { id = def.id, value = value, label = self:F("EFF_" .. def.id, Pct(value)) }
 	end
 	return result
+end
+
+-- 3.1.0 : l'effet d'un caractère { id, value, label, trait }, ou nil
+function ns:CompanionTraitEffect(trait)
+	local def = EFFECTS[TRAIT_EFFECTS[trait or ""] or ""]
+	if not def then return nil end
+	local value = math.min(def.cap, def.base)
+	return { id = def.id, value = value, label = self:F("EFF_" .. def.id, Pct(value)), trait = trait }
 end
 
 -- Clé d'effet d'une apparence : toutes les mascottes partagent le même
@@ -388,7 +457,7 @@ function ns:CompanionEffects()
 	local _, needsOk = self:CompanionEffectNeeds()
 	local stage = self.CompanionStage and self:CompanionStage() or 1
 	local key = table.concat({ spec.id, tostring(stage), tostring(needsOk), tostring(capture.serial), tostring(capture.count),
-		tostring(self.CaptureStars ~= nil), tostring(self.MenagerieTypeBonus ~= nil) }, "|")
+		tostring(capture.specSerial), tostring(self.CaptureStars ~= nil), tostring(self.MenagerieTypeBonus ~= nil) }, "|")
 	local cache = self.effectCache
 	local effects
 	if cache and cache.key == key then
@@ -413,16 +482,19 @@ function ns:CompanionEffectValue(id)
 	if not ok or type(effects) ~= "table" or not effects.active then return 0 end
 	if effects.hunt and effects.hunt.id == id then return effects.hunt.value end
 	if effects.comfort and effects.comfort.id == id then return effects.comfort.value end
+	if effects.trait and effects.trait.id == id then return effects.trait.value end
 	return 0
 end
 
 -- L'effet actif d'une sorte (capture, decay…) : def et valeur, ou nil
+-- (3.1.0 : le caractère du spécimen porté en troisième)
+local EFFECT_SLOTS = { "hunt", "comfort", "trait" }
 local function ActiveOf(self, kind)
 	if not ModuleOn() then return nil end
 	local ok, effects = pcall(self.CompanionEffects, self)
 	if not ok or type(effects) ~= "table" or not effects.active then return nil end
 	local found = {}
-	for _, slot in ipairs({ "hunt", "comfort" }) do
+	for _, slot in ipairs(EFFECT_SLOTS) do
 		local effect = effects[slot]
 		local def = effect and EFFECTS[effect.id]
 		if def and def.kind == kind and effect.value > 0 then found[#found + 1] = { def = def, value = effect.value } end
@@ -431,6 +503,12 @@ local function ActiveOf(self, kind)
 end
 -- 2.14.0 : lu par les particularités des compagnons de saison (WinterCompanions.lua)
 function ns:CompanionEffectActive(kind) return ActiveOf(self, kind) end
+-- 3.1.0 : deux effets de la même sorte (type et caractère) s'additionnent
+local function Sum(found)
+	local total = 0
+	for _, item in ipairs(found or {}) do total = total + item.value end
+	return total
+end
 
 -- Les deux lignes « Chasse : … / Confort : … »
 function ns:CompanionEffectsText(effects)
@@ -439,15 +517,21 @@ function ns:CompanionEffectsText(effects)
 	if effects.seasonal then
 		return { self:F("EFF_SEASON", effects.hunt.label), self:F("EFF_QUIRK", effects.comfort.label) }
 	end
-	return { self:F("EFF_HUNT", effects.hunt.label), self:F("EFF_COMFORT", effects.comfort.label) }
+	local lines = { self:F("EFF_HUNT", effects.hunt.label), self:F("EFF_COMFORT", effects.comfort.label) }
+	-- 3.1.0 : « Caractère : Curieux, la curiosité baisse 10 % moins vite »
+	if effects.trait and self.PersonaLabel then
+		lines[3] = self:F("EFF_TRAIT", self:PersonaLabel(effects.trait.trait), effects.trait.label)
+	end
+	return lines
 end
 
 -- Fiche de la Ménagerie : les effets de cette créature (pleine force,
 -- version montrée) ; une espèce jamais croisée : rien
 function ns:CompanionEffectsLines(entry, shiny)
 	if type(entry) ~= "table" or not entry.known or not entry.npc then return {} end
+	-- 3.1.0 : sans le caractère (la fiche le montre avec la taille, sur la ligne des étoiles)
 	local effects = self:CompanionEffectsFor({ npc = entry.npc, shiny = shiny, class = entry.class, type = entry.type },
-		{ full = true })
+		{ full = true, noTrait = true })
 	if not effects or effects.mascot then return {} end
 	return self:CompanionEffectsText(effects)
 end
@@ -506,11 +590,11 @@ do
 		function ns:ShinyChance(class, killed, typeKey, ...)
 			typeKey = typeKey or self.effectShinyType
 			local chain = ActiveOf(self, "chain")
-			if chain and killed then killed = (tonumber(killed) or 0) * (1 + chain[1].value) end
+			if chain and killed then killed = (tonumber(killed) or 0) * (1 + Sum(chain)) end
 			local value = shinyChance(self, class, killed, typeKey, ...)
 			local found = ActiveOf(self, "shiny")
 			for _, item in ipairs(found or {}) do
-				if item.def.type == typeKey then value = value * (1 + item.value) end
+				if item.def.all or item.def.type == typeKey then value = value * (1 + item.value) end
 			end
 			return value
 		end
@@ -536,7 +620,7 @@ do
 		function ns:CaptureSpend(id, ...)
 			local found = ActiveOf(self, "aidKeep")
 			local items = self.CaptureData and self:CaptureData().items
-			if found and items and (items[id] or 0) > 0 and math.random() < found[1].value then
+			if found and items and (items[id] or 0) > 0 and math.random() < Sum(found) then
 				self:Print(self:F("EFF_MSG_AID_KEPT", self:CompanionName(), self:CaptureAidLabel(id)))
 				return true
 			end
@@ -559,7 +643,7 @@ do
 					return
 				end
 				local found = rolling.aid and ActiveOf(self, "aidRefund")
-				if found and math.random() < found[1].value then
+				if found and math.random() < Sum(found) then
 					local back = self:CaptureGrant(rolling.aid, { quiet = true, silent = true })
 					if back == "ok" then self:Print(self:F("EFF_MSG_AID_REFUND", self:CaptureAidLabel(rolling.aid))) end
 				end
@@ -581,11 +665,11 @@ do
 			local ok, err = pcall(function()
 				local aid, treat = ActiveOf(self, "aidZone"), ActiveOf(self, "treatZone")
 				for _ in ipairs(gained) do
-					if aid and self.CaptureGrant and math.random() < aid[1].value then
+					if aid and self.CaptureGrant and math.random() < Sum(aid) then
 						local result, id = self:CaptureGrant("draw", { quiet = true, silent = true })
 						if result == "ok" then self:Print(self:F("EFF_MSG_AID_ZONE", self:CaptureAidLabel(id))) end
 					end
-					if treat and self.TreatGrant and self.TreatRandom and math.random() < treat[1].value then
+					if treat and self.TreatGrant and self.TreatRandom and math.random() < Sum(treat) then
 						local kind = self:TreatRandom()
 						if kind and self:TreatGrant(kind, { quiet = true }) then
 							self:Print(self:F("EFF_MSG_TREAT_ZONE", self:TreatLabel(kind)))
@@ -622,7 +706,7 @@ do
 			if found and self:CompanionResting() and not self:CompanionData().sleepy then
 				local rules = ns.COMPANION_RULES or {}
 				local needs = self:CompanionData().needs
-				local gain = (tonumber(rules.restGain) or 4) * (seconds / 60) * found[1].value
+				local gain = (tonumber(rules.restGain) or 4) * (seconds / 60) * Sum(found)
 				needs.energy = math.min(tonumber(rules.max) or 100, (tonumber(needs.energy) or 0) + gain)
 			end
 			return result
@@ -641,7 +725,7 @@ do
 			local done = pet(self, ...)
 			if done and self.companionLastPet ~= nil and self.companionLastPet ~= before then
 				local found = ActiveOf(self, "pet")
-				if found then self:CompanionAdd("mood", 8 * found[1].value) end
+				if found then self:CompanionAdd("mood", 8 * Sum(found)) end
 			end
 			return done
 		end
@@ -803,8 +887,12 @@ function ns:CompanionEffectsBuildPane(pane, content, x, y, width)
 	end
 	pane.effHunt = Line(-24, Theme.TEXT)
 	pane.effComfort = Line(-40, Theme.TEXT)
+	-- 3.1.0 : le caractère du spécimen porté ; l'état descend d'un cran s'il est là
+	pane.effTrait = Line(-56, Theme.TEXT)
 	pane.effState = Line(-58, Theme.MUTED_LIGHT)
+	pane.effX, pane.effY, pane.effContent = x, y, content
 end
+ns.EFFECT_PANE_STATE_Y = { -58, -74 }
 
 local function Clockface(seconds)
 	seconds = math.max(0, math.ceil(tonumber(seconds) or 0))
@@ -821,6 +909,14 @@ function ns:CompanionEffectsRefreshPane(pane)
 	local lines = self:CompanionEffectsText(effects)
 	pane.effHunt:SetText(lines[1] or "")
 	pane.effComfort:SetText(lines[2] or "")
+	if pane.effTrait then
+		pane.effTrait:SetText(lines[3] or "")
+		local stateY = ns.EFFECT_PANE_STATE_Y[lines[3] and 2 or 1]
+		if pane.effStateY ~= stateY and ns.JournalUI and ns.JournalUI.At then
+			pane.effStateY = stateY
+			ns.JournalUI.At(pane.effState, pane.effContent, pane.effX, pane.effY + stateY)
+		end
+	end
 	local state
 	if not ModuleOn() then
 		state = L.EFF_OFF
@@ -835,6 +931,7 @@ function ns:CompanionEffectsRefreshPane(pane)
 	local tc = effects.active and Theme.TEXT or Theme.MUTED
 	pane.effHunt:SetTextColor(tc[1], tc[2], tc[3])
 	pane.effComfort:SetTextColor(tc[1], tc[2], tc[3])
+	if pane.effTrait then pane.effTrait:SetTextColor(tc[1], tc[2], tc[3]) end
 end
 
 -- ---------------------------------------------------------------------------

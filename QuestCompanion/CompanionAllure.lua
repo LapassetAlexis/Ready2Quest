@@ -458,6 +458,9 @@ function ns:AllureTileTip(tile)
 	else
 		local typeLabel = m.typeKey and self.CreatureTypeLabel and self:CreatureTypeLabel(m.typeKey) or m.typeText
 		if typeLabel then lines[#lines + 1] = tostring(typeLabel) end
+		-- 3.1.0 : la taille et le caractère du spécimen du Codex (celui qu'il portera)
+		local ref = def.npc and self.SpecimenReference and self:SpecimenReference(def.npc, def.shiny and true or false)
+		if ref and self.SpecimenTagsShort then lines[#lines + 1] = self:SpecimenTagsShort(ref) end
 		if def.shiny then
 			lines[#lines + 1] = L.ALLURE_TIP_SHINY
 		else
