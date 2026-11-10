@@ -1196,11 +1196,10 @@ function PAGE.evolution(self, frame)
 	end
 end
 
-function PAGE.menagerie(self, frame)
-	local pane = frame.men
-	if pane then InkPager(pane.pager) end
-	if not (pane and pane.preview) then return end
-	local p = pane.preview
+-- La fiche (aperçu) d'une page : parchemin clair, fond des Talking Heads
+-- sous le modèle, titre sur la bande grise, encadré en bois (Créatures ;
+-- 2.15.0 : Réserve)
+local function SkinPreview(p)
 	TileStyle(p, "light")
 	HideAll(p.border)
 	if p.stage and SetTex(p.stage, ns.AZEROTH_PORTRAIT_BG) then p.stage:SetVertexColor(1, 1, 1, 1) end
@@ -1217,6 +1216,58 @@ function PAGE.menagerie(self, frame)
 		RolePaint(p.title, "preview.title", true)
 	end
 	WoodBorder(p)
+end
+
+function PAGE.menagerie(self, frame)
+	local pane = frame.men
+	if pane then InkPager(pane.pager) end
+	if not (pane and pane.preview) then return end
+	SkinPreview(pane.preview)
+end
+
+-- 2.15.0 : Réserve et Échoppe du dresseur (JournalReserve.lua). Vignettes et
+-- lignes de l'échoppe : tuiles claires (relevées à leur création) ; la fiche
+-- comme celle des Créatures ; encres « reserve.* » / « shop.* » mesurées sur
+-- les mêmes fonds (page, tuiles claires).
+function PAGE.reserve(self, frame)
+	local pane = frame.res
+	if not pane then return end
+	local rv = pane.reserve
+	if rv then
+		InkPager(rv.pager)
+		if rv.preview then SkinPreview(rv.preview) end
+	end
+end
+
+local function ReserveInk(fs, role) if fs then RolePaint(fs, role) end end
+function POST.reserve(self, frame)
+	local pane = frame.res
+	if not pane then return end
+	ReserveInk(pane.balance, "reserve.balance")
+	local rv, sv = pane.reserve, pane.shop
+	if rv and rv:IsShown() then
+		ReserveInk(rv.warn, "reserve.full")
+		ReserveInk(rv.empty, "reserve.text")
+		ReserveInk(rv.hint, "reserve.hint")
+		ReserveInk(rv.confirm, "reserve.confirm")
+		for _, tile in ipairs(rv.tiles or {}) do
+			local spec = tile.spec
+			if spec and tile.label then ReserveInk(tile.label, spec.shiny and "reserve.shiny" or "reserve.name") end
+		end
+		local p = rv.preview
+		for index, line in ipairs(p and p.lines or {}) do
+			ReserveInk(line, (index == rv.betterLine and "reserve.better") or (index == rv.reasonLine and "reserve.reason")
+				or "reserve.detail")
+		end
+	end
+	if sv and sv:IsShown() then
+		ReserveInk(sv.note, "reserve.text")
+		for _, row in ipairs(sv.rows or {}) do
+			ReserveInk(row.name, "shop.name")
+			ReserveInk(row.desc, "shop.desc")
+			ReserveInk(row.price, row.state == "short" and "shop.short" or "shop.price")
+		end
+	end
 end
 
 -- 2.8.2 : la couleur de rareté du nom, en version sombre pour la ligne
@@ -1510,6 +1561,9 @@ ns.CarnetQuestLineInk = QuestLineInk
 function POST.progress(self, frame)
 	local pane = frame.prog
 	if not pane then return end
+	-- 2.15.0 : « n à compléter » / « complète » (tuile claire)
+	local tag = pane.todoTag
+	if tag and tag.label and tag:IsShown() then RolePaint(tag.label, tag.complete and "codex.done" or "codex.todo") end
 	for _, row in ipairs(pane.zones or {}) do ZoneRowText(row); ZoneRowInk(row) end
 	for _, tile in ipairs(pane.marks or {}) do
 		if TileStyle(tile, tile.reached and "gold" or "grey") then
@@ -1955,7 +2009,8 @@ end
 local JOURNAL_STATE = { "kind", "activity", "offset", "zoneFilter", "zoneSort", "zoneOffset", "questFilter", "collKind",
 	"menZone", "menState", "menRank", "menSort", "menSearch", "menType", "menOffset", "featsCat", "featsOffset",
 	"zoneID", "zonePicked", "progPart", "progOffset", "progItemOffset", "guideSection", "guideOffset",
-	"jukeView", "jukeOffset", "jukeSearch" }   -- 2.12.0 : Juke-box
+	"jukeView", "jukeOffset", "jukeSearch",   -- 2.12.0 : Juke-box
+	"resView", "resSort", "resShow", "resNpc", "resOffset", "resPick" }   -- 2.15.0 : Réserve
 
 function ns:CarnetRestyle()
 	local want = self:JournalStyle()

@@ -110,7 +110,8 @@ do
 		and items.appat == 1)
 	got = NS:MissionGrant("allDaily")
 	Check("[MISR] les trois du jour : festin et lasso", got[1].id == "festin" and got[2].id == "lasso")
-	Check("[MISR] texte de la récompense", NS:MissionRewardText("zone") == "Gain : friandise + Appât savoureux",
+	-- 2.15.0 : plus quelques paillettes (Échoppe du dresseur)
+	Check("[MISR] texte de la récompense", NS:MissionRewardText("zone") == "Gain : friandise + Appât savoureux + 3 paillettes",
 		NS:MissionRewardText("zone"))
 	NS:DB().companionCapture = false
 	Check("[MISR] capture coupée : la friandise seule", #NS:MissionGrant("zone") == 1

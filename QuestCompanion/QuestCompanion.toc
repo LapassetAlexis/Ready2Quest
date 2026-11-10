@@ -90,4 +90,5 @@ CompanionLore.lua
 CompanionJokes.lua
 WinterCompanions.lua
 CompanionAllure.lua
+JournalReserve.lua
 Bindings.lua

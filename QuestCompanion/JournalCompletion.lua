@@ -50,6 +50,13 @@ local FR = {
 	JRN_LOCATE_OFF         = "Effacer",
 	JRN_LOCATE_TIP_quest   = "Pose un repère sur la carte du monde, là où se prend la quête. Un 2e clic l'enlève.",
 	JRN_LOCATE_TIP_creature = "Pose un repère sur la carte du monde, là où elle apparaît. Un 2e clic l'enlève.",
+	-- 2.15.0 : ce qui reste à compléter dans la zone (étoiles du Codex)
+	JRN_PROG_TODO          = "%d à compléter",
+	JRN_PROG_TODO_DONE     = "complète %s",
+	JRN_PROG_TODO_TIP      = "Espèces de la zone sans 3 étoiles au Codex (pas encore capturées comprises). Clic : la page Créatures, filtre « À compléter ».",
+	JRN_PROG_TODO_DONE_TIP = "Toutes les espèces de la zone sont au Codex en 3 étoiles. Clic : la page Créatures.",
+	JRN_PROG_TODO_ROW      = "Créatures : %d à compléter",
+	JRN_PROG_TODO_ROW_DONE = "Créatures : complète (3 étoiles)",
 }
 local EN = {
 	JRN_SEC_progress       = "Exploration",
@@ -85,6 +92,12 @@ local EN = {
 	JRN_LOCATE_OFF         = "Clear",
 	JRN_LOCATE_TIP_quest   = "Sets a pin on the world map where the quest is picked up. Click again to remove it.",
 	JRN_LOCATE_TIP_creature = "Sets a pin on the world map where it spawns. Click again to remove it.",
+	JRN_PROG_TODO          = "%d to complete",
+	JRN_PROG_TODO_DONE     = "complete %s",
+	JRN_PROG_TODO_TIP      = "Species of the zone without 3 stars in the Codex (not captured yet included). Click: the Creatures page, \"To complete\" filter.",
+	JRN_PROG_TODO_DONE_TIP = "Every species of the zone is in the Codex at 3 stars. Click: the Creatures page.",
+	JRN_PROG_TODO_ROW      = "Creatures: %d to complete",
+	JRN_PROG_TODO_ROW_DONE = "Creatures: complete (3 stars)",
 }
 ns.RegisterStrings(FR, EN)
 if ns.KEEP_STRINGS then ns.JOURNAL_PROGRESS_STRINGS = { fr = FR, en = EN } end
@@ -105,6 +118,8 @@ local BAR_X, BAR_Y, TILES_Y = 16, -62, -74
 local NAME_X = 104
 -- 2.11.0 : rangée du filtre au-dessus des zones (liste déroulante + recherche)
 local FILTER_H, FILTER_GAP, FILTER_W = 22, 8, 98
+-- 2.15.0 : largeur du tag « n à compléter » (bas de la carte de zone)
+local TODO_W = 118
 ns.JOURNAL_PROG_FILTERS = { "mine", "seen", "all" }
 -- zones de départ (et voisines) d'une faction : exclues de « Pour moi » pour
 -- l'autre faction ; les autres zones (contestées, propres à Forever) jamais
@@ -287,6 +302,11 @@ local function Build(self, frame, content, ui)
 			local lines = {}
 			if zone.lo < 99 then lines[1] = ns:F("JRN_PROG_LEVELS", zone.lo, zone.hi) end
 			if not zone.seen then lines[#lines + 1] = L.JRN_PROG_UNSEEN end
+			-- 2.15.0 : ce qui reste à compléter (comptes gardés, MenagerieView.lua)
+			local codex = ns.CodexZoneCounts and ns:CodexZoneCounts(zone.id)
+			if codex and codex.total > 0 then
+				lines[#lines + 1] = codex.complete and L.JRN_PROG_TODO_ROW_DONE or ns:F("JRN_PROG_TODO_ROW", codex.todo)
+			end
 			Tip(r, zone.name, lines, "row")
 		end
 		row.onLeave = HideTip
@@ -433,7 +453,19 @@ local function Build(self, frame, content, ui)
 		if frame.progZone and ns.OpenMenagerieZone then ns:OpenMenagerieZone(frame.progZone) end
 	end, "accent")
 	pane.toMen:SetPoint("TOPRIGHT", content, "TOPLEFT", PAD + INNER, PAGER_Y)
-	pane.bestiary = NoWrap(Text(pane, Theme.F_SMALL, Theme.MUTED_LIGHT, RW - pane.toMen:GetWidth() - 12))
+	-- 2.15.0 : « n à compléter » / « complète ★★★ », à gauche de « Créatures »
+	pane.todoTag = Theme.CreateTile(pane, TODO_W, Theme.PAGER_HEIGHT)
+	pane.todoTag:SetPoint("RIGHT", pane.toMen, "LEFT", -8, 0)
+	pane.todoTag.label = NoWrap(Text(pane.todoTag, Theme.F_SMALL, Theme.LABEL, TODO_W - 12))
+	pane.todoTag.label:SetPoint("CENTER", pane.todoTag, "CENTER", 0, 0)
+	pane.todoTag.label:SetJustifyH("CENTER")
+	pane.todoTag:SetScript("OnClick", function(t) ns:JournalProgressTodo(t.zoneID) end)
+	pane.todoTag.onEnter = function(t)
+		Tip(t, t.label:GetText(), { t.complete and L.JRN_PROG_TODO_DONE_TIP or L.JRN_PROG_TODO_TIP })
+	end
+	pane.todoTag.onLeave = HideTip
+	pane.todoTag:Hide()
+	pane.bestiary = NoWrap(Text(pane, Theme.F_SMALL, Theme.MUTED_LIGHT, RW - pane.toMen:GetWidth() - 12 - TODO_W - 8))
 	At(pane.bestiary, content, RX, PAGER_Y - 5)
 	pane:Hide()
 end
@@ -559,6 +591,7 @@ local function ShowRight(pane, on)
 	if not on then
 		for _, line in ipairs(pane.items) do line:Hide() end
 		if pane.locate then pane.locate:Hide() end
+		if pane.todoTag then pane.todoTag:Hide() end
 	end
 end
 
@@ -709,6 +742,30 @@ local function RefreshBestiary(self, frame, pane, zoneID)
 		pane.bestiary:SetText(self:F("JRN_PROG_BESTIARY", counts.killed, counts.seen))
 	end
 	if self.OpenMenagerieZone and frame.men then pane.toMen:Show() else pane.toMen:Hide() end
+	-- 2.15.0 : ce qui reste à compléter dans la zone
+	local tag = pane.todoTag
+	local codex = tag and frame.men and self.CodexZoneCounts and self:CodexZoneCounts(zoneID)
+	if codex and codex.total > 0 then
+		tag.zoneID, tag.complete = zoneID, codex.complete
+		local stars = self.CaptureStarsText and self:CaptureStarsText(3, 10) or "***"
+		tag.label:SetText(codex.complete and self:F("JRN_PROG_TODO_DONE", stars) or self:F("JRN_PROG_TODO", codex.todo))
+		Paint(tag.label, codex.complete and Theme.GREEN or Theme.LABEL)
+		tag:SetAccent(codex.complete and Theme.GREEN or Theme.GOLD)
+		tag:Show()
+	elseif tag then
+		tag.zoneID = nil
+		tag:Hide()
+	end
+end
+
+-- 2.15.0 : clic sur le tag : les Créatures de la zone, « À compléter » (tout
+-- au Codex en 3 étoiles : la zone entière)
+function ns:JournalProgressTodo(zoneID)
+	zoneID = tonumber(zoneID)
+	if not zoneID then return nil end
+	local codex = self.CodexZoneCounts and self:CodexZoneCounts(zoneID)
+	if codex and codex.complete then return self:OpenMenagerieZone(zoneID) end
+	return self.OpenMenagerieTodo and self:OpenMenagerieTodo(zoneID)
 end
 
 local function Refresh(self, frame, ui)

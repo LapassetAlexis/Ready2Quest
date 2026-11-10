@@ -333,8 +333,12 @@ local LIST_W = math.floor((INNER - (LIST_COLS - 1) * 12) / LIST_COLS)
 -- 2.6.0 : plus de page « Souvenirs » (l'album est retiré)
 -- 2.7.0 : « feats » (Hauts faits, JournalFeats.lua) après la Ménagerie
 -- 2.12.0 : « juke » (Juke-box, Jukebox.lua) avant le guide
-local SECTIONS = { "evolution", "menagerie", "feats", "day", "progress", "juke", "guide" }
-local MEN_STATES = { "all", "captured", "missing", "tokill", "shiny" }
+-- 2.15.0 : « reserve » (Réserve et Échoppe du dresseur, JournalReserve.lua)
+-- juste après les Créatures ; États « À compléter » et « Épinglées » (todo,
+-- pinned : MenagerieView.lua) en tête des puces de la page Créatures
+local SECTIONS = { "evolution", "menagerie", "reserve", "feats", "day", "progress", "juke", "guide" }
+ns.JOURNAL_SECTIONS = SECTIONS
+local MEN_STATES = { "all", "todo", "pinned", "captured", "missing", "tokill", "shiny" }
 local MEN_RANKS = { "all", "normal", "elite", "rare", "boss" }
 local MEN_SORTS = { "no", "name", "level", "rank", "kills", "date" }
 
@@ -347,6 +351,8 @@ local MEN_SORTS = { "no", "name", "level", "rank", "kills", "date" }
 local STATE_VALID = {
 	menRank = MEN_RANKS, menSort = MEN_SORTS, menState = MEN_STATES,
 	progPart = { "explore", "craft", "quests" }, progFilter = { "mine", "seen", "all" },
+	-- 2.15.0 : Réserve (JournalReserve.lua) : vue et tri
+	resView = { "reserve", "shop" }, resSort = { "stars", "date", "name" },
 }
 local function Valid(list, value)
 	for _, v in ipairs(list or {}) do if v == value then return true end end
@@ -431,6 +437,16 @@ local FR2 = {
 	JRN_MEN_missing        = "À capturer",
 	JRN_MEN_tokill         = "À abattre",
 	JRN_MEN_shiny          = "Brillantes",
+	JRN_MEN_todo           = "À compléter",
+	JRN_MEN_pinned         = "Épinglées",
+	JRN_MEN_COUNT_CODEX    = "%d à compléter · %d épinglées",
+	JRN_MEN_PIN            = "Épingler",
+	JRN_MEN_PIN_TIP        = "Liste de chasse : l'espèce est toujours proposée au filet et mise en évidence. Un 2e clic la retire.",
+	JRN_MEN_UNPIN          = "Désépingler",
+	JRN_MEN_RESERVE        = "En Réserve : %d",
+	JRN_MEN_ROW_RESERVE    = "Réserve %d",
+	JRN_MEN_PINNED_LINE    = "Épinglée",
+	JRN_MEN_TODO_LINE      = "À compléter",
 	JRN_MEN_COUNT          = "%d capturées · %d croisées · %d en tout",
 	JRN_MEN_COUNT_SHINY    = "%d capturées · brillantes : %d · %d croisées · %d en tout",
 	JRN_MEN_SEE_SHINY      = "Version brillante",
@@ -518,6 +534,16 @@ local EN2 = {
 	JRN_MEN_missing        = "To capture",
 	JRN_MEN_tokill         = "To defeat",
 	JRN_MEN_shiny          = "Shiny",
+	JRN_MEN_todo           = "To complete",
+	JRN_MEN_pinned         = "Pinned",
+	JRN_MEN_COUNT_CODEX    = "%d to complete · %d pinned",
+	JRN_MEN_PIN            = "Pin",
+	JRN_MEN_PIN_TIP        = "Hunt list: the species is always offered in the net and highlighted. Click again to remove it.",
+	JRN_MEN_UNPIN          = "Unpin",
+	JRN_MEN_RESERVE        = "In the Reserve: %d",
+	JRN_MEN_ROW_RESERVE    = "Reserve %d",
+	JRN_MEN_PINNED_LINE    = "Pinned",
+	JRN_MEN_TODO_LINE      = "To complete",
 	JRN_MEN_COUNT          = "%d captured · %d met · %d in all",
 	JRN_MEN_COUNT_SHINY    = "%d captured · %d shiny · %d met · %d in all",
 	JRN_MEN_SEE_SHINY      = "Shiny version",
@@ -1103,6 +1129,40 @@ function ns.MenagerieRowStars(row, count)
 	end
 end
 
+-- 2.15.0 : petites icônes des lignes de Créatures (épingle, « Localiser ») :
+-- icônes du client, grisées au repos, en couleur quand l'état est actif
+-- (épinglée, repère posé) ou au survol. Construites avec la ligne.
+local MEN_ICON = 18
+local MEN_PIN_ICON = "Interface\\Icons\\Ability_Hunter_SniperShot"    -- Marque du chasseur
+local MEN_LOCATE_ICON = "Interface\\Icons\\INV_Misc_Map_01"
+ns.MEN_ROW_ICONS = { size = MEN_ICON, pin = MEN_PIN_ICON, locate = MEN_LOCATE_ICON }
+local function MenIconPaint(button)
+	local lit = button.on or button.hovered
+	if button.glyph.SetDesaturated then button.glyph:SetDesaturated(not lit) end
+	button.glyph:SetAlpha(button.on and 1 or (button.hovered and 0.9 or 0.45))
+	local c = button.on and Theme.GOLD or (button.hovered and Theme.EDGE or Theme.EDGE_SOFT)
+	button.border:SetColor(c[1], c[2], c[3], 1)
+end
+local function MenIconButton(row, texture, onClick)
+	local button = CreateFrame("Button", nil, row)
+	button:SetSize(MEN_ICON, MEN_ICON)
+	button.border = Theme.Border(button, Theme.EDGE_SOFT, 1)
+	-- l'icône (champ « glyph », pas « icon ») : posée DANS la ligne, ce n'est
+	-- pas un bloc de plus pour le relevé des chevauchements (tests/snapshot.lua)
+	button.glyph = button:CreateTexture(nil, "ARTWORK")
+	button.glyph:SetPoint("TOPLEFT", button, "TOPLEFT", 1, -1)
+	button.glyph:SetPoint("BOTTOMRIGHT", button, "BOTTOMRIGHT", -1, 1)
+	button.glyph:SetTexCoord(0.08, 0.92, 0.08, 0.92)
+	pcall(button.glyph.SetTexture, button.glyph, texture)
+	function button:SetOn(on) self.on = on and true or false; MenIconPaint(self) end
+	button:SetScript("OnClick", onClick)
+	button:SetScript("OnEnter", function(b) b.hovered = true; MenIconPaint(b); if b.onTip then b.onTip(b) end end)
+	button:SetScript("OnLeave", function(b) b.hovered = false; MenIconPaint(b); HideTip() end)
+	button:SetOn(false)
+	button:Hide()
+	return button
+end
+
 local function BuildMenagerie(self, frame, content)
 	local pane = CreateFrame("Frame", nil, content)
 	pane:SetAllPoints()
@@ -1129,9 +1189,10 @@ local function BuildMenagerie(self, frame, content)
 	for _, key in ipairs(MEN_SORTS) do sorts[#sorts + 1] = { value = key, label = L["JRN_MEN_SORT_" .. key] } end
 	pane.sort:SetOptions(sorts)
 	pane.count = Text(pane, Theme.F_SMALL, Theme.MUTED_LIGHT, PREVIEW_W)
-	pane.count:SetPoint("TOPRIGHT", content, "TOPLEFT", PAD + INNER, TOP - 4)
 	pane.count:SetJustifyH("RIGHT")
-	-- 2e rangée : état, recherche
+	-- 2e rangée : l'état, sur toute la largeur (2.15.0 : sept puces avec
+	-- « À compléter » et « Épinglées » ; la recherche monte sur la 1re rangée,
+	-- au-dessus de l'aperçu, et le compte descend à côté des boutons de type)
 	local rowY = TOP - 32
 	pane.stateRow, pane.states = Chips(pane, MEN_STATES, "JRN_MEN_", function(key)
 		frame.menState = key
@@ -1139,9 +1200,7 @@ local function BuildMenagerie(self, frame, content)
 		Changed()
 	end)
 	At(pane.stateRow, content, 0, rowY)
-	-- la recherche va jusqu'au bord droit (au-dessus de l'aperçu, qui commence
-	-- plus bas) : cinq puces d'état tiennent à côté (1.6.0)
-	local searchW = math.max(120, INNER - (pane.stateRow.used or 300) - 12)
+	local searchW = PREVIEW_W
 	pane.search = Theme.CreateSearchBox(pane, searchW, L.JRN_MEN_SEARCH, function(text)
 		frame.menSearch = text or ""
 		frame.menOffset = 0
@@ -1152,12 +1211,14 @@ local function BuildMenagerie(self, frame, content)
 	if pane.search.HookScript then
 		pane.search:HookScript("OnEnterPressed", function() ns:JournalSoon("menSearch"); ns:RefreshJournal() end)
 	end
-	pane.search:SetPoint("TOPRIGHT", content, "TOPLEFT", PAD + INNER, rowY)
+	pane.search:SetPoint("TOPRIGHT", content, "TOPLEFT", PAD + INNER, TOP)
 	-- 3e rangée (2.4) : boutons de type, « Tous » (MenagerieView.lua)
 	local typeH = 0
+	local typeY = rowY - Theme.CHIP_HEIGHT - 8
 	if self.MenagerieViewBuild then
-		typeH = tonumber(self:MenagerieViewBuild(pane, content, 0, rowY - Theme.CHIP_HEIGHT - 8, frame)) or 0
+		typeH = tonumber(self:MenagerieViewBuild(pane, content, 0, typeY, frame)) or 0
 	end
+	pane.count:SetPoint("TOPRIGHT", content, "TOPLEFT", PAD + INNER, typeY - 6)
 	-- la liste, façon Pokédex : numéro, type, nom, marques ; la fiche à droite
 	pane.items = {}
 	local gridTop = rowY - Theme.CHIP_HEIGHT - 12 - (typeH > 0 and typeH + 8 or 0)
@@ -1177,7 +1238,8 @@ local function BuildMenagerie(self, frame, content)
 		row.icon:SetTexCoord(0.08, 0.92, 0.08, 0.92)
 		row.text:ClearAllPoints()
 		row.text:SetPoint("LEFT", row, "LEFT", 58 + rowH - 8 + 8, 0)
-		row.text:SetWidth(GRID_W - 58 - rowH - 158)
+		-- 2.15.0 : la place de l'épingle et de « Localiser » (deux icônes)
+		row.text:SetWidth(GRID_W - 58 - rowH - 158 - 2 * (MEN_ICON + 4))
 		row.label = row.text
 		-- nom (ou « ??? ») à la couleur de sa rareté, type à droite, et
 		-- l'étoile d'une brillante ; capturée : liseré vert à gauche (1.5.1)
@@ -1187,6 +1249,17 @@ local function BuildMenagerie(self, frame, content)
 		row.detail:SetWidth(150 - 30 - 3 * ns.MEN_STAR.step - 4)
 		if row.detail.SetJustifyH then row.detail:SetJustifyH("RIGHT") end
 		BuildStars(row)
+		-- 2.15.0 : épingle (liste de chasse) et « Localiser », à gauche des étoiles
+		row.pin = MenIconButton(row, MEN_PIN_ICON, function(b) ns:JournalMenagerieRowPin(b:GetParent()) end)
+		row.pin:SetPoint("RIGHT", row, "RIGHT", -150 - 4, 0)
+		row.pin.onTip = function(b)
+			local entry = b:GetParent().entry
+			local on = entry and ns.HuntPinned and ns:HuntPinned(entry.npc)
+			Tip(b, on and L.JRN_MEN_UNPIN or L.JRN_MEN_PIN, { L.JRN_MEN_PIN_TIP })
+		end
+		row.locate = MenIconButton(row, MEN_LOCATE_ICON, function(b) ns:JournalMenagerieRowLocate(b:GetParent()) end)
+		row.locate:SetPoint("RIGHT", row.pin, "LEFT", -4, 0)
+		row.locate.onTip = function(b) Tip(b, L.JRN_LOCATE, { L.JRN_LOCATE_TIP_creature }) end
 		row.star = Theme.CreateDiamond(row, 8)
 		row.star:SetPoint("RIGHT", row, "RIGHT", -12, 0)
 		row.star:SetVertexColor(Theme.GOLD_LIGHT[1], Theme.GOLD_LIGHT[2], Theme.GOLD_LIGHT[3], 1)
@@ -1251,14 +1324,62 @@ local function PreviewLocate(self, preview, entry)
 		button:Hide()
 	end
 end
+-- 2.15.0 : les zones où chercher une espèce, celle montrée d'abord
+local function EntryZones(entry)
+	local zones = { entry.zoneID }
+	for _, zoneID in ipairs(entry.zones or {}) do if zoneID ~= entry.zoneID then zones[#zones + 1] = zoneID end end
+	return zones
+end
 function ns:JournalMenagerieLocate()
 	local preview = self.journalFrame and self.journalFrame.men and self.journalFrame.men.preview
 	local entry = preview and preview.entry
-	local x, y = CreaturePoint(self, entry)
+	local x = CreaturePoint(self, entry)
 	if not x then return false end
-	local set = self:MapPinToggle("creature:" .. entry.npc, entry.zoneID, x, y)
+	-- 2.15.0 : même chemin que la ligne (la carte s'ouvre sur une autre zone)
+	local set = self:LocateSpecies(entry.npc, entry.zoneID)
 	PreviewLocate(self, preview, entry)
-	return set
+	self:JournalMenagerieRowsMarks()
+	return set and true or false
+end
+
+-- 2.15.0 : l'épingle et « Localiser » d'une ligne de Créatures
+function ns:JournalMenagerieRowPin(row)
+	local entry = row and row.entry
+	if not (entry and entry.known and self.CodexTogglePin) then return nil end
+	local on = self:CodexTogglePin(entry.npc)
+	self:RefreshJournal()
+	return on
+end
+function ns:JournalMenagerieRowLocate(row)
+	local entry = row and row.entry
+	if not (entry and self.LocateSpecies) then return nil end
+	local set = self:LocateSpecies(entry.npc, EntryZones(entry))
+	local preview = self.journalFrame and self.journalFrame.men and self.journalFrame.men.preview
+	if preview and preview.entry then PreviewLocate(self, preview, preview.entry) end
+	self:JournalMenagerieRowsMarks()
+	return set and true or false
+end
+-- état des deux icônes de chaque ligne visible (épinglée, repère posé)
+function ns:JournalMenagerieRowsMarks()
+	local pane = self.journalFrame and self.journalFrame.men
+	if not pane then return end
+	for _, row in ipairs(pane.items) do
+		local entry = row.entry
+		if entry and row.pin then
+			local pinned = entry.known and self.HuntPinned and self:HuntPinned(entry.npc) or false
+			row.pinned = pinned
+			if entry.known and self.HuntPin then row.pin:SetOn(pinned); row.pin:Show() else row.pin:Hide() end
+			local point = self.SpeciesPoint and self:SpeciesPoint(entry.npc, EntryZones(entry))
+			if point then
+				row.locate:SetOn(self:MapPinActive("creature:" .. entry.npc))
+				row.locate:Show()
+			else
+				row.locate:Hide()
+			end
+		elseif row.pin then
+			row.pin:Hide(); row.locate:Hide()
+		end
+	end
 end
 
 -- Missions (2.9.1 : refonte d'après la maquette validée). En haut, une bande
@@ -2305,6 +2426,13 @@ function ns:JournalPreviewMenagerie(entry, keep)
 	local rank = L["CAPTURE_RANK_" .. tostring(entry.class or "normal")]
 	local lines = { self:F("JRN_MEN_RANK", rank, LevelText(entry)) }
 	if entry.zoneID then lines[#lines + 1] = self:F("JRN_MEN_ZONE", ZoneName(self, entry.zoneID)) end
+	-- 2.15.0 : une ligne pour le Codex : Réserve, épinglée, à compléter
+	local codex = {}
+	local reserve = self.CodexReserveCounts and self:CodexReserveCounts()[entry.npc]
+	if reserve and reserve > 0 then codex[#codex + 1] = self:F("JRN_MEN_RESERVE", reserve) end
+	if self.HuntPinned and self:HuntPinned(entry.npc) then codex[#codex + 1] = L.JRN_MEN_PINNED_LINE end
+	if entry.captured and self.CodexItemTodo and self:CodexItemTodo(entry) then codex[#codex + 1] = L.JRN_MEN_TODO_LINE end
+	if #codex > 0 then lines[#lines + 1] = table.concat(codex, " · ") end
 	-- « Chasse : … / Confort : … » de cette créature (CompanionEffects.lua) :
 	-- dès qu'elle est croisée, pour choisir quoi capturer
 	if self.CompanionEffectsLines then
@@ -2450,7 +2578,10 @@ local function RefreshMenagerie(self, frame)
 		local ok, err = pcall(self.MenagerieViewRefresh, self, pane, frame, stats)
 		if not ok and self.RecordError then self:RecordError("menagerie:types", err) end
 	end
-	if (stats.shinySeen or 0) > 0 then
+	if stats.todo then
+		-- 2.15.0 : « À compléter » / « Épinglées » (MenagerieView.lua)
+		pane.count:SetText(self:F("JRN_MEN_COUNT_CODEX", stats.todo, stats.pinned or 0))
+	elseif (stats.shinySeen or 0) > 0 then
 		pane.count:SetText(self:F("JRN_MEN_COUNT_SHINY", stats.captured, stats.shinySeen, stats.known, stats.total))
 	else
 		pane.count:SetText(self:F("JRN_MEN_COUNT", stats.captured, stats.known, stats.total))
@@ -2461,6 +2592,7 @@ local function RefreshMenagerie(self, frame)
 	frame.menOffset = math.max(0, math.min(frame.menOffset or 0, maxOffset))
 	local current = self:CompanionData().appearance
 	local shown = pane.preview.entry
+	local reserves = stats.todo and self.CodexReserveCounts and self:CodexReserveCounts() or nil
 	for index, row in ipairs(pane.items) do
 		local entry = list[index + frame.menOffset]
 		row.entry = entry
@@ -2484,7 +2616,17 @@ local function RefreshMenagerie(self, frame)
 			ns.MenagerieRowStars(row, stars)
 			-- verrouillée : pas de type, seulement la zone où la chercher (toutes zones)
 			local hint = (not entry.known and frame.menZone == "all" and entry.zoneID) and ZoneName(self, entry.zoneID) or ""
-			row.detail:SetText(entry.known and (entry.type or "") or hint)
+			-- 2.15.0 : « À compléter » / « Épinglées » : la zone où la chercher
+			-- (toutes zones) et les spécimens en Réserve, à la place du type
+			if stats.todo then
+				local parts = {}
+				if frame.menZone == "all" and entry.zoneID then parts[1] = ZoneName(self, entry.zoneID) end
+				local reserve = reserves and reserves[entry.npc]
+				if reserve and reserve > 0 then parts[#parts + 1] = self:F("JRN_MEN_ROW_RESERVE", reserve) end
+				row.detail:SetText(table.concat(parts, " · "))
+			else
+				row.detail:SetText(entry.known and (entry.type or "") or hint)
+			end
 			-- liseré vert : la version normale capturée ; losange doré : la
 			-- brillante, plein si capturée, au trait si seulement reconnue
 			if entry.captured and entry.normal ~= false then row.caught:Show() else row.caught:Hide() end
@@ -2496,15 +2638,18 @@ local function RefreshMenagerie(self, frame)
 			end
 			local worn = current == ("cap:" .. entry.npc) or current == ("cap:" .. entry.npc .. ":s")
 			local picked = shown and shown.npc == entry.npc
-			if picked or worn then row.mark:Show() else row.mark:Hide() end
-			local mc = worn and Theme.GOLD or Theme.WHITE
-			row.mark:SetVertexColor(mc[1], mc[2], mc[3], worn and 0.12 or 0.05)
+			-- 2.15.0 : une espèce épinglée (liste de chasse) s'éclaire d'or
+			local pinned = entry.known and self.HuntPinned and self:HuntPinned(entry.npc) or false
+			if picked or worn or pinned then row.mark:Show() else row.mark:Hide() end
+			local mc = (worn or pinned) and Theme.GOLD or Theme.WHITE
+			row.mark:SetVertexColor(mc[1], mc[2], mc[3], worn and 0.12 or (pinned and 0.08 or 0.05))
 			row:Show()
 		else
 			row:Hide()
 		end
 	end
 	pane.pager:Update(frame.menOffset, page, #list, maxOffset)
+	self:JournalMenagerieRowsMarks()
 	if pane.collection and self.MenagerieCollectionRefresh then
 		local ok, err = pcall(self.MenagerieCollectionRefresh, self, pane, self:MenagerieZoneValue(frame.menZone or "here"))
 		if not ok and self.RecordError then self:RecordError("menagerie:collection", err) end

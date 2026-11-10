@@ -344,6 +344,27 @@ ns.AZEROTH_CONTRAST = {
 	["stage.chance"] = { "ink", 0.3665, 4.5, 12 },   -- sombre, fond 0.367 (moy. 0.399) : 7.47:1
 	["stage.aidCount"] = { "inkSoft", 0.3210, 4.5, 11 },   -- sombre, fond 0.321 (moy. 0.359) : 5.93:1
 	["stage.status"] = { "ink", 0.2297, 4.5, 11 },   -- sombre, fond 0.230 (moy. 0.254) : 5.02:1
+	-- 2.15.0 : Réserve et Échoppe du dresseur (JournalReserve.lua). Mêmes surfaces que des rôles déjà
+	-- mesurés : textes posés sur la page (parchemin 130661, voile page 0,35) au fond de page.* ; aide de
+	-- la pagination au fond de pager.position (bas de page, le plus sombre) ; vignettes, fiche et lignes
+	-- de l'échoppe : tuiles claires (235397 + voile light 0,40), au fond de tile.* (comme allure.*)
+	["reserve.balance"] = { "amber", 0.3172, 4.5, 12 },   -- sombre, fond 0.317 (moy. 0.390) : 4.75:1 (solde de paillettes)
+	["reserve.full"] = { "red", 0.3172, 4.5, 11 },   -- sombre, même fond : 4.73:1 (Réserve pleine)
+	["reserve.text"] = { "inkSoft", 0.3172, 4.5, 12 },   -- sombre, même fond : 5.87:1 (page vide, note de l'échoppe)
+	["reserve.hint"] = { "inkSoft", 0.3105, 4.5, 11 },   -- sombre, fond 0.311 (moy. 0.342) : 5.76:1 (aide sous la grille)
+	["reserve.name"] = { "ink", 0.3252, 4.5, 11 },   -- sombre, fond 0.325 (moy. 0.425) : 6.73:1 (nom d'une vignette)
+	["reserve.shiny"] = { "rShiny", 0.3252, 4.5, 11 },   -- sombre, même fond : 4.84:1 (spécimen brillant)
+	["reserve.detail"] = { "inkSoft", 0.3252, 4.5, 11 },   -- sombre, même fond : 5.95:1 (lignes de la fiche)
+	["reserve.better"] = { "green", 0.3252, 4.5, 11 },   -- sombre, même fond : 4.78:1 (« Meilleur que ton spécimen du Codex »)
+	["reserve.reason"] = { "red", 0.3252, 4.5, 11 },   -- sombre, même fond : 4.83:1 (pourquoi on ne peut pas le relâcher)
+	["reserve.confirm"] = { "ink", 0.3252, 4.5, 11 },   -- sombre, même fond : 6.73:1 (confirmation dans la fiche)
+	["shop.name"] = { "ink", 0.3252, 4.5, 12 },   -- sombre, même fond : 6.73:1 (article)
+	["shop.desc"] = { "inkMuted", 0.3252, 4.5, 11 },   -- sombre, même fond : 5.05:1 (effet, besace)
+	["shop.price"] = { "amber", 0.3252, 4.5, 12 },   -- sombre, même fond : 4.85:1 (prix)
+	["shop.short"] = { "red", 0.3252, 4.5, 12 },   -- sombre, même fond : 4.83:1 (prix hors de portée)
+	-- 2.15.0 : tag « n à compléter » de la page Exploration (tuile claire, au fond de tile.*)
+	["codex.todo"] = { "ink", 0.3252, 4.5, 11 },   -- sombre, même fond : 6.73:1
+	["codex.done"] = { "green", 0.3252, 4.5, 11 },   -- sombre, même fond : 4.78:1 (« complète ★★★ »)
 }
 -- Luminance relative WCAG 2.x d'une couleur (0..1)
 local function Lin(c) if c <= 0.03928 then return c / 12.92 end return ((c + 0.055) / 1.055) ^ 2.4 end

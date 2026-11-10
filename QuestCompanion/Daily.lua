@@ -52,12 +52,14 @@ local GENERIC = { kind = "pets", need = 3 }
 -- Récompenses (1.4.0) : de quoi nourrir la créature ET de quoi capturer.
 -- treat : "need" = la friandise de l'envie la plus basse, "draw" = au hasard,
 -- ou une sorte ; aid : une aide de capture (Capture.lua), "draw" = tirage.
+-- 2.15.0 : `paillettes` : quelques paillettes en plus (Échoppe du dresseur,
+-- JournalReserve.lua), avec les aides : rien si la capture est coupée
 ns.MISSION_REWARDS = {
-	zone      = { treat = "need",   aid = "appat" },
-	trait     = { treat = "need",   aid = "appat" },
-	allDaily  = { treat = "festin", aid = "lasso" },
-	weekly    = { treat = "draw",   aid = "lasso" },
-	allWeekly = { treat = "festin", aid = "sifflet" },
+	zone      = { treat = "need",   aid = "appat",   paillettes = 3 },
+	trait     = { treat = "need",   aid = "appat",   paillettes = 3 },
+	allDaily  = { treat = "festin", aid = "lasso",   paillettes = 5 },
+	weekly    = { treat = "draw",   aid = "lasso",   paillettes = 5 },
+	allWeekly = { treat = "festin", aid = "sifflet", paillettes = 10 },
 }
 
 local FR = {
@@ -80,6 +82,7 @@ local FR = {
 	MIS_gold         = "Gagne %d pièce d'or",
 	MIS_captures     = "Capture %d créatures",
 	MIS_REWARD       = "Gain : %s",
+	MIS_REWARD_PAILLETTES = "%d paillettes",
 	MIS_REWARD_TREAT = "friandise",
 	MIS_REWARD_AID   = "aide de capture",
 	MIS_SOURCE_zone  = "mission de %s",
@@ -143,6 +146,7 @@ local EN = {
 	MIS_gold         = "Earn %d gold coin",
 	MIS_captures     = "Capture %d creatures",
 	MIS_REWARD       = "Gain: %s",
+	MIS_REWARD_PAILLETTES = "%d glitter",
 	MIS_REWARD_TREAT = "treat",
 	MIS_REWARD_AID   = "capture aid",
 	MIS_SOURCE_zone  = "%s mission",
@@ -454,6 +458,10 @@ function ns:MissionGrant(scope)
 		local result, id = self:CaptureGrant(def.aid, { quiet = true, silent = true })
 		if result == "ok" then got[#got + 1] = { kind = "aid", id = id } end
 	end
+	-- 2.15.0 : les paillettes (hors de `got` : friandise et aide, comme avant)
+	if def.paillettes and self.PaillettesAdd and self:DB().companionCapture ~= false then
+		self:PaillettesAdd(def.paillettes, "mission:" .. tostring(scope))
+	end
 	return got
 end
 
@@ -466,6 +474,9 @@ function ns:MissionRewardText(scope)
 	elseif def.treat then parts[#parts + 1] = L.MIS_REWARD_TREAT end
 	if def.aid and self.CaptureAidLabel and self:DB().companionCapture ~= false then
 		parts[#parts + 1] = def.aid == "draw" and L.MIS_REWARD_AID or self:CaptureAidLabel(def.aid)
+	end
+	if def.paillettes and self.PaillettesAdd and self:DB().companionCapture ~= false then
+		parts[#parts + 1] = self:F("MIS_REWARD_PAILLETTES", def.paillettes)
 	end
 	return self:F("MIS_REWARD", table.concat(parts, " + "))
 end

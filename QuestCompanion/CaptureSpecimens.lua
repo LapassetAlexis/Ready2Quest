@@ -59,7 +59,9 @@
 --       « Mettre au Codex » : il devient la référence, l'ancienne va en Réserve
 --   ns:SpecimenWorn(id) -> bool (référence portée comme apparence par un personnage)
 --   ns:SpecimenReleaseValue(id|spec) -> paillettes rendues (1/3/8, brillant 20)
---   ns:SpecimenCanRelease(id) -> true | false, raison ("missing"|"reference"|"worn")
+--   ns:SpecimenCanRelease(id) -> true | false, raison ("missing"|"reference"|"worn"|"better")
+--       2.15.0 : "better" = meilleur que la référence du Codex (relâcher ne
+--       fait jamais baisser tes étoiles : « Mets-le au Codex avant »)
 --   ns:SpecimenRelease(id) -> gain | false, raison (mêmes raisons)
 --   ns:SpecimenLabel(spec) -> nom (avec « (brillant) »)
 -- Réserve
@@ -141,6 +143,7 @@ local FR = {
 	SPECIMEN_ERR_reference = "C'est ton spécimen du Codex : mets-en un autre au Codex avant de le relâcher.",
 	SPECIMEN_ERR_worn      = "Ton compagnon porte cette apparence : change d'apparence avant de le relâcher.",
 	SPECIMEN_ERR_already   = "Il est déjà au Codex.",
+	SPECIMEN_ERR_better    = "Il est meilleur que ton spécimen du Codex : mets-le au Codex avant de le relâcher.",
 	PAILLETTES_NAME      = "paillettes",
 }
 local EN = {
@@ -167,6 +170,7 @@ local EN = {
 	SPECIMEN_ERR_reference = "This is your Codex specimen: put another one in the Codex before releasing it.",
 	SPECIMEN_ERR_worn      = "Your companion wears this look: change looks before releasing it.",
 	SPECIMEN_ERR_already   = "It's already in the Codex.",
+	SPECIMEN_ERR_better    = "It beats your Codex specimen: put it in the Codex before releasing it.",
 	PAILLETTES_NAME      = "glitter",
 }
 ns.RegisterStrings(FR, EN)
@@ -506,6 +510,9 @@ function ns:SpecimenCanRelease(id)
 	if not spec then return false, "missing" end
 	if self:SpecimenWorn(id) then return false, "worn" end
 	if self:SpecimenIsReference(id) then return false, "reference" end
+	-- 2.15.0 : relâcher ne fait jamais baisser tes étoiles. Un spécimen de
+	-- Réserve meilleur que la référence de sa version passe d'abord au Codex.
+	if self:SpecimenBetterThanCodex(id) then return false, "better" end
 	return true
 end
 

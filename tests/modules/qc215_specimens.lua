@@ -404,25 +404,30 @@ do
 	Check("[CODEX] valeurs : 1 / 3 / 8, brillant 20", NS:SpecimenReleaseValue({ stars = 1 }) == 1
 		and NS:SpecimenReleaseValue({ stars = 2 }) == 3 and NS:SpecimenReleaseValue({ stars = 3 }) == 8
 		and NS:SpecimenReleaseValue({ stars = 1, shiny = true }) == 20)
-	local gain = NS:SpecimenRelease(three)
-	Check("[REL] relâcher un 3 étoiles de Réserve : +8 paillettes", gain == 8 and NS:Paillettes() == 8
-		and NS:SpecimenGet(three) == nil and data.creatures[950].stars == 2)
-	local no, reason = NS:SpecimenRelease(two)
-	Check("[REL] la référence du Codex : interdit", no == false and reason == "reference" and NS:SpecimenGet(two) ~= nil)
+	-- 2.15.0 (journal) : relâcher ne fait jamais baisser tes étoiles
+	local better, betterWhy = NS:SpecimenRelease(three)
+	Check("[REL] meilleur que la référence du Codex : « better », gardé", better == false and betterWhy == "better"
+		and NS:SpecimenGet(three) ~= nil and NS:Paillettes() == 0)
+	NS:SpecimenSetReference(three)
+	local gain = NS:SpecimenRelease(two)
+	Check("[REL] relâcher un 2 étoiles de Réserve : +3 paillettes", gain == 3 and NS:Paillettes() == 3
+		and NS:SpecimenGet(two) == nil and data.creatures[950].stars == 3)
+	local no, reason = NS:SpecimenRelease(three)
+	Check("[REL] la référence du Codex : interdit", no == false and reason == "reference" and NS:SpecimenGet(three) ~= nil)
 	NS:CompanionData().appearance = "cap:950"
-	local _, worn = NS:SpecimenCanRelease(two)
-	Check("[REL] l'apparence portée : interdit", worn == "worn" and NS:SpecimenWorn(two))
+	local _, worn = NS:SpecimenCanRelease(three)
+	Check("[REL] l'apparence portée : interdit", worn == "worn" and NS:SpecimenWorn(three))
 	NS:CompanionData().appearance = nil
 	local missing = select(2, NS:SpecimenRelease(99999))
 	Check("[REL] spécimen inconnu : « missing »", missing == "missing")
 	local shinyId = NS:SpecimenAdd({ npc = 950, stars = 1, shiny = true })
 	local shinyRes = NS:SpecimenAdd({ npc = 950, stars = 1, shiny = true })
 	Check("[REL] brillant de Réserve : +20", NS:SpecimenIsReference(shinyId) and NS:SpecimenRelease(shinyRes) == 20
-		and NS:Paillettes() == 28)
-	Check("[PAIL] dépenser", select(1, NS:PaillettesSpend(5, "test")) == true and NS:Paillettes() == 23)
+		and NS:Paillettes() == 23)
+	Check("[PAIL] dépenser", select(1, NS:PaillettesSpend(5, "test")) == true and NS:Paillettes() == 18)
 	local ok, short = NS:PaillettesSpend(100, "test")
-	Check("[PAIL] pas assez : refusé, solde intact", ok == false and short == "short" and NS:Paillettes() == 23)
-	Check("[PAIL] gagner", NS:PaillettesAdd(7, "mission") == 30 and NS:CaptureData().paillettesEarned == 35)
+	Check("[PAIL] pas assez : refusé, solde intact", ok == false and short == "short" and NS:Paillettes() == 18)
+	Check("[PAIL] gagner", NS:PaillettesAdd(7, "mission") == 25 and NS:CaptureData().paillettesEarned == 30)
 	local list = NS:SpecimenList({ npc = 950, where = "codex" })
 	Check("[LIST] filtre Codex d'une espèce : normale + brillante", #list == 2)
 	Check("[LIST] Réserve triée par étoiles", #NS:SpecimenReserve() == 1 and NS:SpecimenReserve()[1].id == one)
