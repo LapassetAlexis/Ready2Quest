@@ -651,6 +651,15 @@ function ns:EnsureCaptureStage()
 		if frame.footer.SetWordWrap then frame.footer:SetWordWrap(false) end
 		RoleInk(frame.footer, "stage.status")
 	end
+	-- 3.1.0 : taille et caractère du spécimen pris (« Grand · Curieux »),
+	-- juste au-dessus du pied, écrits par SpecimenTraits.lua au verdict
+	frame.specTags = Theme.Text(frame, Theme.F_SMALL, Theme.GOLD_LIGHT)
+	frame.specTags:SetPoint("BOTTOM", frame.footer, "TOP", 0, 2)
+	frame.specTags:SetWidth(width - (az and 2 * (ns.AZEROTH_CARD and ns.AZEROTH_CARD.pad or 16) or 24))
+	frame.specTags:SetJustifyH("CENTER")
+	if frame.specTags.SetWordWrap then frame.specTags:SetWordWrap(false) end
+	if az then RoleInk(frame.specTags, "stage.status") end
+	frame.specTags:Hide()
 	frame:SetScript("OnUpdate", function()
 		local done, err = pcall(ns.CaptureStageUpdate, ns, Clock())
 		if not done and ns.RecordError then ns:RecordError("capture:stage", err) end

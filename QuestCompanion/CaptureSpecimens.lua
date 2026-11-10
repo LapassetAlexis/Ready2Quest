@@ -28,10 +28,13 @@
 -- Données (au compte, QuestCompanionDB.capture, voir ns:CaptureData) :
 --   capture.specimens[id] = { id, npc, stars (1..3), shiny (true|nil), zone
 --       (uiMapID|nil), at (time()|nil), by (nom du personnage|nil),
---       origin ("capture"|"migration"|"gift3"), name (texte|nil) }
+--       origin ("capture"|"migration"|"gift3"), name (texte|nil),
+--       trait (caractère, ns.PERSONALITY_TRAITS), size ("tiny"|"small"|
+--       "normal"|"large"|"giant") } -- 3.1.0 : SpecimenTraits.lua
 --   capture.codex[npc]    = { best = id (normale), bestShiny = id (brillante) }
 --   capture.specNext      = prochain numéro de spécimen
 --   capture.specV         = version du schéma (ns.SPECIMEN_SCHEMA)
+--   capture.traitV        = 3.1.0 : caractères et tailles posés (ns.SPECIMEN_TRAIT_SCHEMA)
 --   capture.paillettes    = solde ; capture.paillettesEarned = total gagné
 --   capture.reserveBonus  = places de Réserve en plus (boutique, plus tard)
 --   capture.pins[npc]     = true (liste de chasse, au compte)
@@ -41,7 +44,9 @@
 --
 -- Spécimens
 --   ns:SpecimenAdd(spec) -> id, place ("codex"|"reserve"), oldRefId|nil
---       spec = { npc, stars, shiny, zone, at, by, origin, name } ; un
+--       spec = { npc, stars, shiny, zone, at, by, origin, name, trait, size } ;
+--       3.1.0 : caractère et taille tirés s'ils manquent (taille normale
+--       hors capture) ; un
 --       spécimen meilleur que tout ce que tu as de cette version devient la
 --       référence du Codex (l'ancienne passe en Réserve). Ne vérifie PAS la
 --       place : ns:CaptureBlockedReason le fait avant le lancer.
@@ -276,6 +281,8 @@ local function Reconcile(capture, npc, entry)
 				codex = codex or {}
 				capture.codex[npc] = codex
 				codex[field] = best.id
+				-- 3.1.0 : son caractère (celui du compagnon s'il est porté) au prochain Store
+				capture.traitDirty = true
 			end
 		end
 	end
@@ -303,6 +310,10 @@ local function Store(self)
 	if type(capture.codex) ~= "table" then capture.codex = {} end
 	if type(capture.pins) ~= "table" then capture.pins = {} end
 	if capture.specV ~= ns.SPECIMEN_SCHEMA or capture.specDirty then ReconcileAll(capture) end
+	-- 3.1.0 : caractère et taille de chaque spécimen (SpecimenTraits.lua)
+	if (capture.traitV ~= ns.SPECIMEN_TRAIT_SCHEMA or capture.traitDirty) and ns.SpecimenTraitsFill then
+		ns.SpecimenTraitsFill(self, capture)
+	end
 	return capture
 end
 ns.SpecimenStore = Store
@@ -362,6 +373,13 @@ function ns:SpecimenAdd(spec)
 	local id = NewId(capture)
 	local new = { id = id, npc = npc, stars = Clamp(spec.stars), shiny = shiny or nil, zone = tonumber(spec.zone),
 		at = tonumber(spec.at), by = spec.by, origin = spec.origin or "capture", name = spec.name }
+	-- 3.1.0 : caractère tiré, taille tirée à la capture (normale sinon)
+	local traits = ns.PERSONALITY_TRAITS or {}
+	new.trait = traits[spec.trait or ""] and spec.trait or (self.SpecimenRollTrait and self:SpecimenRollTrait()) or nil
+	local sizes = ns.SPECIMEN_SIZE_BY_ID or {}
+	if sizes[spec.size or ""] then new.size = spec.size
+	elseif new.origin == "capture" and self.SpecimenRollSize then new.size = self:SpecimenRollSize()
+	else new.size = "normal" end
 	local best = BestOf(capture, npc, shiny)
 	capture.specimens[id] = new
 	local codex = capture.codex[npc] or {}
@@ -377,6 +395,7 @@ function ns:SpecimenAdd(spec)
 	if new.origin == "capture" then capture.caught = (tonumber(capture.caught) or 0) + 1 end
 	Touch(capture)
 	Sync(self, capture, npc)
+	if new.origin == "capture" and self.SpecimenSizeFeat then pcall(self.SpecimenSizeFeat, self, new) end
 	Fire("SPECIMENS", "add", id)
 	return id, place, previous
 end
@@ -844,8 +863,10 @@ function ns:Gift30Grant(npcs)
 	local ids, at = {}, RealTime()
 	for index, ref in ipairs(refs) do
 		local id = NewId(capture)
+		-- 3.1.0 : un caractère tiré, taille normale
 		capture.specimens[id] = { id = id, npc = ref.npc, stars = Clamp(ref.stars), zone = ref.zone, at = at,
-			origin = ns.GIFT30.origin, name = ref.name }
+			origin = ns.GIFT30.origin, name = ref.name, trait = self.SpecimenRollTrait and self:SpecimenRollTrait() or nil,
+			size = "normal" }
 		ids[index] = id
 	end
 	capture.gift30Used = true

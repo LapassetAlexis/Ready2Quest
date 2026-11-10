@@ -45,7 +45,9 @@ function I.Catalogue(before)
 	local defs = {}
 	for _, def in ipairs(NS:FeatDefs()) do
 		-- 2.14.0 : « Joyeux Voile d'hiver » (code 175) venu après l'intégration
-		if not (before and (def.id == "fun_unlucky" or def.id == "fun_winter_veil")) then defs[#defs + 1] = def end
+		-- 3.1.0 : tailles rares des spécimens (codes 176, 177)
+		if not (before and (def.id == "fun_unlucky" or def.id == "fun_winter_veil" or def.id == "men_size_giant"
+			or def.id == "men_size_tiny")) then defs[#defs + 1] = def end
 	end
 	table.sort(defs, function(a, b) return a.n < b.n end)
 	local lines = {}
@@ -77,8 +79,8 @@ do
 		hash == "beba8d94" and count == 173, "empreinte " .. hash .. " (" .. count .. " lignes)")
 	text, count = I.Catalogue(false)
 	hash = I.Hash(text)
-	Check("[HF-I] catalogue actuel : 175 lignes (173 numérotées + « La poisse » + « Joyeux Voile d'hiver »), empreinte",
-		hash == "0ee09fd9" and count == 175, "empreinte " .. hash .. " (" .. count .. " lignes)")
+	Check("[HF-I] catalogue actuel : 177 lignes (173 numérotées + « La poisse » + « Joyeux Voile d'hiver » + tailles 3.1), empreinte",
+		hash == "9b55a1f2" and count == 177, "empreinte " .. hash .. " (" .. count .. " lignes)")
 	local def = NS:FeatDef("men_species_10")
 	Check("[HF-I] définition compacte : lue par ses noms, champs absents à nil, écriture d'un champ connu",
 		getmetatable(def) == NS.FEAT_DEF_MT and def.id == "men_species_10" and def.n == 2 and def.pts == 10

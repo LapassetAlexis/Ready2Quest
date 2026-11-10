@@ -302,6 +302,8 @@ Colonnes : identifiant stable, nom FR, nom EN, condition, détection (source exa
 | `men_companion_types` | Tour de la collection | Collection Tour | Emmener un compagnon de chacun des 8 types (effet actif) | `ns:CompanionEffects()` (`active`, `typeKey`) → `set.ctypes` | ✅ | 10 | — |
 | `men_companion_boss` | Garde du corps | Bodyguard | Emmener un boss du monde capturé (effet actif) | idem, `class == "worldboss"` | ✅ | 10 | — |
 
+Hors numérotation (3.1.0, tailles des spécimens, `SpecimenTraits.lua`) : `men_size_giant` (code 176) — Un géant parmi les bêtes / A Giant Among Beasts — capturer un spécimen géant (2 % des captures) : `flag` `sizeGiant`, compte, 10 points ; `men_size_tiny` (code 177) — Petit mais costaud / Small but Mighty — capturer un spécimen minuscule (2 %) : `flag` `sizeTiny`, compte, 10 points. Le drapeau est posé à la capture (`ns:SpecimenSizeFeat`) ; pas de rattrapage (aucune taille rare avant la 3.1).
+
 ### 2.2 Brillantes (`shiny`) — 12
 
 | id | FR | EN | Condition | Détection | F | Pts | Récompense |
@@ -584,7 +586,7 @@ Rien pour Ragnaros, Hakkar, Nefarian, Ossirian, C'Thun, Kel'Thuzad (pas de ligne
 | Grands hauts faits | 8 | 285 |
 | **Total** | **173** | **2810** |
 
-Hors numérotation : `fun_unlucky` (Insolite, 5 points, §2.10) et `fun_winter_veil` (Insolite, 10 points, saisonnier), soit 175 lignes et 2825 points implémentés (état : §6).
+Hors numérotation : `fun_unlucky` (Insolite, 5 points, §2.10), `fun_winter_veil` (Insolite, 10 points, saisonnier), `men_size_giant` et `men_size_tiny` (Créatures, 10 points chacun, 3.1.0), soit 177 lignes et 2845 points implémentés (état : §6).
 
 Faisabilité : 126 ✅, 9 « ✅ (alt) / ⚠️ » (statistique d'abord, notre propre suivi sinon : sûrs dans tous les cas) et 38 ⚠️ (34 dépendent d'une statistique ou d'une rencontre de boss ; 4 d'une autre vérification : vitesse de monture, uiMapID des zones propres à Forever ×2, id de la dernière quête de Valthalak). Sans aucune statistique lisible, 135 hauts faits restent atteignables.
 
@@ -769,6 +771,7 @@ Relevé du 2026-11-07, branche d'intégration des lots A à D (le lot E, cosmét
 ### 6.1 Implémentés
 
 - **174 lignes** : les 173 du catalogue numéroté (§2.1 à §2.11, codes `n` 1 à 173, tous présents, contrôlés par les tests) et `fun_unlucky` (code 174, Insolite, 5 points, titre T39 : le moteur refuse une ligne sans points). Total : **2815 points** (2810 + 5).
+- 3.1.0 : + `fun_winter_veil` (code 175, 2.14.0), `men_size_giant` (code 176) et `men_size_tiny` (code 177) : **177 lignes**, **2845 points**.
 - Comptes par catégorie conformes au §2.14 : Ménagerie 29, Brillantes 12, Zones et sceaux 23, Au jour le jour 14, Guilde et entraide 7, Personnage 21, Donjons et raids 21, Métiers 12, Quêtes, réputations et honneur 11, Insolite 15 (+ `fun_unlucky`), Grands hauts faits 8.
 - **Titres** : les 40 (§4.1), dans un seul registre (`FeatsTitles.lua`), chacun donné par exactement une ligne (`src`).
 - **Statistiques** lisibles sur Forever (§2.13, relevé en jeu) : les lignes qui n'attendaient que leur confirmation sont actives (`char_hearth_50`, `char_camp_25`, `char_gold_looted`, `char_epic`, `dng_runs_50`, `pvp_hk_100`, `fun_respec`) ; les zones propres à Forever sont connues (Mont Hyjal 2482, Riverglades 2548, Shen'dralas 2652) : `zone_visit_all` et `zone_forever_new` sont actifs.

@@ -52,6 +52,8 @@ ns.RESERVE_VIEWS = { "reserve", "shop" }
 -- grille : vignettes de l'allure, un peu plus hautes (étoiles sous le portrait)
 ns.RESERVE_LAYOUT = { tileW = 58, tileH = 84, gap = 7, portrait = 46, star = 10, starStep = 11, starY = -55,
 	shopH = 50, shopGap = 6, shopIcon = 34, shopButton = 104, actionH = 22, actionGap = 4 }
+-- 3.1.0 : pavé de la taille sur une vignette (fond Theme.NAV presque opaque)
+ns.RESERVE_SIZE_TAG = { w = 20, h = 13, alpha = 0.85 }
 local LAY = ns.RESERVE_LAYOUT
 
 local FR = {
@@ -538,6 +540,17 @@ local function Build(self, frame, content, ui)
 		tile:ClearAllPoints()
 		tile:SetPoint("TOPLEFT", rv.grid, "TOPLEFT", (slot % cols) * (LAY.tileW + LAY.gap), -math.floor(slot / cols) * (LAY.tileH + LAY.gap))
 		BuildTileStars(tile)
+		-- 3.1.0 : la taille (XS, S, L, XL ; rien pour « normal »), en haut à
+		-- gauche, sur un pavé sombre (lisible sur le portrait, dans les deux styles)
+		tile.sizeBack = Theme.Solid(tile, "ARTWORK", Theme.NAV, ns.RESERVE_SIZE_TAG.alpha)
+		if tile.sizeBack.SetDrawLayer then tile.sizeBack:SetDrawLayer("ARTWORK", 5) end
+		tile.sizeBack:SetPoint("TOPLEFT", tile, "TOPLEFT", 2, -2)
+		tile.sizeBack:SetSize(ns.RESERVE_SIZE_TAG.w, ns.RESERVE_SIZE_TAG.h)
+		tile.sizeTag = Text(tile, Theme.F_SMALL, Theme.LABEL, ns.RESERVE_SIZE_TAG.w)
+		tile.sizeTag:SetPoint("CENTER", tile.sizeBack, "CENTER", 0, 0)
+		tile.sizeTag:SetJustifyH("CENTER")
+		tile.sizeTag.azKeep = true
+		tile.sizeBack:Hide(); tile.sizeTag:Hide()
 		tile:SetScript("OnClick", function(t) ns:ReservePick(t.spec and t.spec.id) end)
 		tile.onEnter = function(t) ns:ReserveTileTip(t) end
 		tile.onLeave = HideTip
@@ -713,6 +726,8 @@ function ns:ReserveTileTip(tile)
 	local spec = tile and tile.spec
 	if not spec then return end
 	local lines = { Stars(self, spec.stars, 12), self:SpecimenOriginText(spec) }
+	-- 3.1.0 : taille et caractère
+	if self.SpecimenTagsShort then lines[#lines + 1] = self:SpecimenTagsShort(spec) end
 	if self:SpecimenBetterThanCodex(spec.id) then
 		local ref = self:SpecimenReference(spec.npc, spec.shiny)
 		lines[#lines + 1] = self:F("RES_BETTER", Stars(self, ref and ref.stars or 1, 10))
@@ -754,6 +769,14 @@ local function RefreshDetails(self, frame, rv, spec)
 		return
 	end
 	local lines = { Stars(self, spec.stars, 14), self:SpecimenOriginText(spec) }
+	-- 3.1.0 : la taille, puis le caractère et son effet, chacun à sa couleur
+	rv.sizeLine, rv.traitLine = nil, nil
+	if self.SpecimenSizeLine then
+		lines[#lines + 1] = self:SpecimenSizeLine(spec)
+		rv.sizeLine = #lines
+		local trait = self:SpecimenTraitLine(spec, true)
+		if trait ~= "" then lines[#lines + 1] = trait; rv.traitLine = #lines end
+	end
 	local ref = self:SpecimenReference(spec.npc, spec.shiny)
 	local better = self:SpecimenBetterThanCodex(spec.id)
 	rv.betterLine = nil
@@ -776,6 +799,8 @@ local function RefreshDetails(self, frame, rv, spec)
 	-- couleurs : « meilleur » en vert, la raison du refus en rouge
 	for index, line in ipairs(p.lines) do
 		local c = (index == rv.betterLine and Theme.GREEN) or (index == rv.reasonLine and Theme.RED)
+			or (index == rv.sizeLine and self:SpecimenSizeColor(spec.size))
+			or (index == rv.traitLine and self:SpecimenTraitColor(spec.trait))
 			or (index == 1 and Theme.LABEL or Theme.MUTED_LIGHT)
 		line:SetTextColor(c[1], c[2], c[3], 1)
 		line.azKeep = nil
@@ -847,6 +872,18 @@ local function RefreshReserve(self, frame, pane)
 			tile.label:SetTextColor(c[1], c[2], c[3], 1)
 			tile.label.azKeep = nil
 			PaintTileStars(tile, spec.stars)
+			-- 3.1.0 : la taille, si elle n'est pas normale
+			if tile.sizeTag then
+				local size = spec.size
+				if size and size ~= "normal" and ns.SPECIMEN_SIZE_BY_ID and ns.SPECIMEN_SIZE_BY_ID[size] then
+					tile.sizeTag:SetText(L["SPEC_SIZE_SHORT_" .. size])
+					local sc = self:SpecimenSizeColor(size)
+					tile.sizeTag:SetTextColor(sc[1], sc[2], sc[3], 1)
+					tile.sizeTag:Show(); tile.sizeBack:Show()
+				else
+					tile.sizeTag:Hide(); tile.sizeBack:Hide()
+				end
+			end
 			if tile.gem then if spec.shiny then tile.gem:Show() else tile.gem:Hide() end end
 			if tile.fav then tile.fav:Hide() end
 			local on = spec.id == frame.resPick
