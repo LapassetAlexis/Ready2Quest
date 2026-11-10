@@ -1171,6 +1171,8 @@ function PAGE.evolution(self, frame)
 			vine:SetAllPoints(ring)
 			if ns.AzerothAtlas and ns.AzerothAtlas(vine, ns.AZEROTH_ATLAS.frameRound) then vine:Show() else ring:Hide() end
 			pane.azVine = vine
+			-- 2.14.0 (bêta 7) : à la teinte du cadre choisi
+			if self.CarnetPaintRing then self:CarnetPaintRing(frame) end
 		end
 	end
 	if pane.name then GoldTitle(pane.name, 19, true) end

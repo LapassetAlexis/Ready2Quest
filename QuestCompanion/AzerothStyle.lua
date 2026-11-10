@@ -1726,6 +1726,131 @@ function ns:CompanionApplyMoodTab()
 	return mood
 end
 
+-- ---------------------------------------------------------------------------
+-- 2.14.0 (bêta 7) : le cadre gagné colore l'anneau. En Azeroth, la bordure
+-- du cadre choisi (Sobre) est cachée sous l'anneau doré
+-- (ui-achievement-guild-iconframe) : choisir « Ardoise », « Cuivre » ou
+-- « Givre » ne changeait rien à l'écran (35 à 38.png). Chaque cadre donne
+-- désormais sa teinte à l'anneau (couleur de sommet sur l'or ; désaturé
+-- d'abord pour l'argent, l'ardoise, le bleu, le vert), dans la palette de
+-- sa bordure Sobre ; `glow` : un halo du client en fusion additive autour
+-- de l'anneau, teinté (Givre : glacé ; Étincelant : doré). Absent de la
+-- table : l'or d'origine (Ardoise, le cadre par défaut de tous ; Insigne du
+-- dresseur, déjà doré). Sceaux de biome : désaturés, à la couleur de leur
+-- filet. La même teinte pour le grand portrait de la page Créature.
+-- ---------------------------------------------------------------------------
+ns.AZEROTH_RING_TINTS = {
+	sparkle    = { glow = { 1.0, 0.84, 0.40 } },              -- Étincelant : or vif, halo doré
+	master     = { 1.0, 0.84, 0.52 },                          -- Insigne du maître : or soutenu
+	copper     = { 1.0, 0.60, 0.40 },                          -- Cuivre
+	oak        = { 0.76, 0.54, 0.32, desat = true },           -- Chêne : brun chaud
+	silver     = { 0.90, 0.92, 0.96, desat = true },           -- Argent
+	frost      = { 0.78, 0.88, 1.0, desat = true, glow = { 0.75, 0.90, 1.0 } }, -- Givre : argent-bleu, halo glacé
+	rune       = { 0.62, 0.58, 1.0, desat = true },            -- Runique : bleu-violet
+	fel        = { 0.52, 1.0, 0.32, desat = true },            -- Gangrené : vert gangrène
+	gilded     = { 1.0, 0.80, 0.45 },                          -- Or ciselé : or riche
+	stone      = { 0.70, 0.70, 0.74, desat = true },           -- Pierre
+	toast      = { 0.60, 0.76, 1.0, desat = true },            -- Messager : bleu
+	glue       = { 0.96, 0.86, 0.68 },                         -- Portail : or pâle
+	carved     = { 0.88, 0.70, 0.50 },                         -- Sculpté : bois doré
+	feat_eight = { 1.0, 0.80, 0.45 },                          -- Huit familles : or riche (icônes autour)
+	feat_prism = { 1.0, 1.0, 1.0, desat = true },              -- Prismatique : nacre (halo arc-en-ciel)
+}
+-- le halo (fond noir : fusion ADD) ; le premier atlas présent du client
+-- (vérifié en jeu le 10/11 : l'anneau de glace des reliques)
+ns.AZEROTH_RING_GLOW = { atlases = { "Relic-Frost-TraitGlowRing" }, size = 138, alpha = 0.8 }
+
+-- L'allure de l'anneau pour un cadre (`def`, sinon le cadre porté) :
+-- { r, g, b, desat, glow } ou nil (l'or d'origine), et l'id du cadre
+function ns:AzerothRingLook(def)
+	def = def or (self.CompanionCurrentStyle and self:CompanionCurrentStyle("frame"))
+	local id = def and def.id
+	if not id then return nil, nil end
+	local look = ns.AZEROTH_RING_TINTS[id]
+	if not look and type(id) == "string" and id:find("^seal_") and type(def.edge) == "table" then
+		look = { def.edge[1], def.edge[2], def.edge[3], desat = true }
+	end
+	return look, id
+end
+
+-- Teinte (et désaturation) d'une texture de l'anneau ; sans allure : l'or
+function ns.AzerothPaintRing(tex, look)
+	if not tex then return nil end
+	local desat = (look and look.desat) and true or false
+	if tex.SetDesaturated then pcall(tex.SetDesaturated, tex, desat) end
+	tex.azDesat = desat
+	local r, g, b = 1, 1, 1
+	if look and look[1] then r, g, b = look[1], look[2], look[3] end
+	tex:SetVertexColor(r, g, b, 1)
+	return desat
+end
+
+-- Le halo autour de l'anneau : sur un cadre enfant de l'habit (caché avec
+-- lui, mode voyage compris), au niveau du cadre, sous le modèle (+ 1)
+local function RingGlow(frame, skin)
+	if frame.azRingGlow ~= nil then return frame.azRingGlow or nil end
+	local G = ns.AZEROTH_RING_GLOW
+	local holder = CreateFrame("Frame", nil, skin)
+	holder:SetAllPoints(frame)
+	holder:SetFrameLevel(frame:GetFrameLevel() or 1)
+	holder:EnableMouse(false)
+	local tex = holder:CreateTexture(nil, "BACKGROUND", nil, -8)
+	local placed
+	for _, name in ipairs(G.atlases) do
+		if ns.AzerothHasAtlas(name) and Atlas(tex, name) then placed = name; break end
+	end
+	if not placed then
+		tex:Hide()
+		holder:Hide()
+		frame.azRingGlow = false
+		return nil
+	end
+	if tex.SetBlendMode then pcall(tex.SetBlendMode, tex, "ADD") end
+	tex:SetSize(G.size, G.size)
+	tex:SetPoint("CENTER", frame, "TOP", 0, RING_Y)
+	tex:SetAlpha(G.alpha)
+	tex.azAtlas = placed
+	tex.holder = holder
+	tex:Hide()
+	frame.azRingGlow = tex
+	return tex
+end
+
+-- L'anneau du compagnon à l'allure du cadre porté (Azeroth) ; rend l'id
+-- du cadre dont l'allure est posée (nil : l'or d'origine)
+function ns:CompanionPaintRing()
+	local frame = self.companionFrame
+	local skin = frame and frame.azSkin
+	if not (skin and skin.ring) then return nil end
+	local look, id
+	if frame.uiStyle == "azeroth" then look, id = self:AzerothRingLook() end
+	ns.AzerothPaintRing(skin.ring, look)
+	skin.ring.azLook = look and id or nil
+	local glow = look and look.glow
+	local tex = glow and RingGlow(frame, skin) or frame.azRingGlow or nil
+	if tex then
+		if glow then
+			tex:SetVertexColor(glow[1], glow[2], glow[3], 1)
+			tex.holder:Show()
+			tex:Show()
+		else
+			tex:Hide()
+		end
+	end
+	return skin.ring.azLook
+end
+
+-- Le grand portrait de la page Créature (même anneau, étiré au carré)
+function ns:CarnetPaintRing(frame)
+	frame = frame or self.journalFrame
+	local vine = frame and frame.evo and frame.evo.azVine
+	if not vine then return nil end
+	local look, id = self:AzerothRingLook()
+	ns.AzerothPaintRing(vine, look)
+	vine.azLook = look and id or nil
+	return vine.azLook
+end
+
 function ns:CompanionApplyUIStyle()
 	local frame = self.companionFrame
 	if not frame then return nil end
@@ -1787,6 +1912,8 @@ function ns:CompanionApplyUIStyle()
 	frame.uiStyle = az and "azeroth" or "sobre"
 	-- le cadre gagné (bordure du client) revient en Sobre
 	if not az and self.CompanionApplyFrame then self:CompanionApplyFrame() end
+	-- 2.14.0 (bêta 7) : en Azeroth, sa teinte sur l'anneau (l'or en Sobre)
+	self:CompanionPaintRing()
 	return frame.uiStyle
 end
 
@@ -1807,6 +1934,9 @@ do
 			local a, b = apply(self, ...)
 			local frame = self.companionFrame
 			if frame and frame.uiStyle == "azeroth" then EdgesShown(frame, false) end
+			-- 2.14.0 (bêta 7) : le cadre choisi colore l'anneau (cadre et carnet)
+			pcall(self.CompanionPaintRing, self)
+			pcall(self.CarnetPaintRing, self)
 			return a, b
 		end
 	end

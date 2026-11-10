@@ -2142,6 +2142,8 @@ local function RefreshEvolution(self, frame)
 	pane.stage:SetText(L.JRN_SUB_companion)
 	local hero = pane.hero
 	if hero.portrait and hero.portrait.Refresh then hero.portrait:Refresh(self) end
+	-- 2.14.0 (bêta 7) : en Azeroth, l'anneau du portrait à la teinte du cadre choisi
+	if self.CarnetPaintRing then self:CarnetPaintRing(frame) end
 	pane.name:SetText(name)
 	local trait = self.CompanionTrait and self:CompanionTrait()
 	local traitLabel = trait and self.PersonaLabel and self:PersonaLabel(trait)
