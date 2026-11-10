@@ -7,7 +7,7 @@ local ADDON, ns = ...
 
 ns.APP = {
 	id = "Ready2Quest",
-	version = "1.33.2",
+	version = "1.33.3",
 	-- nom dans l'en-tête des réglages, le « 2 » en bleu
 	brand = "Ready|cff5b8fd62|rQuest",
 	-- sauvegarde (## SavedVariables), et anciens noms repris une fois

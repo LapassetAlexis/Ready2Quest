@@ -1,5 +1,13 @@
 # QuestCompanion
 
+## 2.13.1
+
+- **Humeur lisible** : l'humeur du compagnon (radieux, content…) était cachée sous le cadre gagné. Elle passe dans un petit rabat sous la plaque du nom, teinté selon l'humeur.
+- **Cadre recentré** : le cadre du portrait était décalé de quelques pixels par rapport à la plaque du nom.
+- **Créatures** : la Forest Sprite de l'île de Zephras est retirée, on ne pouvait ni la tuer ni la capturer.
+
+*English:* the companion's mood (radiant, happy…) was hidden under the earned frame — it now sits in a small tab under the name plate, tinted by mood; the portrait frame is centred on the name plate; the Forest Sprite on Zephras Isle is gone from Creatures (it could not be killed or caught).
+
 ## 2.13.0 — le compagnon prend la parole
 
 - **Une voix par type de créature** : ta créature capturée parle selon ce qu'elle est (bête, mort-vivant, démon, élémentaire, draconien, mécanique, géant, humanoïde, bestiole), avec des centaines de nouvelles répliques, et son caractère colore le ton. Il dit aussi un mot en entrant dans un donjon.
