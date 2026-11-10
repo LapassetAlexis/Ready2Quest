@@ -1,5 +1,13 @@
 # QuestCompanion
 
+## 2.14.1
+
+- **Guirlande du compagnon** posée sur le bord doré du cadre (réglée en jeu).
+- **Cadre givré** : un cadre que tu choisis pendant le Voile d'hiver s'affiche, au lieu de l'allure Givre imposée.
+- **Cadres en style Azeroth** : Ardoise colore l'anneau en gris ardoise, Étincelant en or clair (les premiers cadres se ressemblaient tous).
+
+*English:* the companion's Christmas lights now sit on the frame's gold border; a frame you pick during Winter Veil now shows instead of the forced Frost look; in the Azeroth style Slate now tints the ring slate grey and Sparkling a lighter gold.
+
 ## 2.14.0 — le Voile d'hiver
 
 - **Décor de saison** (style Azeroth) du 15 décembre au 2 janvier : guirlande lumineuse et flocons dans le carnet, guirlande en 3D sur le cadre du compagnon. Réglage « Décor du Voile d'hiver » (automatique, toujours, jamais) ou /qc noel.
