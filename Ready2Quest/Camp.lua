@@ -408,10 +408,21 @@ function ns:EnsureCampFrame()
 	return frame
 end
 
+-- 1.33.3 : un feu de camp de ville ou de village (lieu connu ou appris)
+-- n'appelle pas de décompte : on y est déjà à l'abri. Le repos seul ne compte
+-- pas : sur Forever, on se repose aussi à un feu de camp en pleine nature.
+local TOWN_REASONS = { known = true, place = true, city = true, village = true }
+function ns:CampInTown()
+	if type(self.IsCurrentZoneSafe) ~= "function" then return false end
+	local ok, safe, _, reason = pcall(self.IsCurrentZoneSafe, self, true)
+	return ok and safe == true and TOWN_REASONS[reason] == true
+end
+
 -- Texte du cadre, ou nil s'il doit être masqué
 function ns:CampTimerText(now)
 	now = now or Now()
-	if not self:CampEnabled() or self:DB().campCountdown == false or not self:AtCamp() then
+	if not self:CampEnabled() or self:DB().campCountdown == false or not self:AtCamp()
+		or self:CampInTown() then
 		self.campArrivedAt = nil
 		return nil
 	end

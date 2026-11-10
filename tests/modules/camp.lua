@@ -253,6 +253,21 @@ do
 	Mock:Advance(0.3)
 	Check("[CAMP] retour au camp : décompte neuf", FrameText() == "Au camp : buffs dans ~1:00", FrameText())
 
+	-- 1.33.3 : feu de camp dans une ville apprise : pas de décompte
+	local savedMap, savedSub = Mock.world.mapID, Mock.world.subzone
+	Mock.world.mapID, Mock.world.subzone = 20, "Bois"
+	NS:DB().safe["c:20"] = { kind = "city", source = "resting" }
+	Mock:Advance(0.3)
+	Check("[CAMP] feu de camp en ville : cadre masqué", not FrameShown())
+	Check("[CAMP] en ville : le camp reste une zone sûre", NS:IsCurrentZoneSafe() == true)
+	NS:DB().safe["c:20"] = nil
+	Mock.world.resting = true
+	Mock:Advance(0.3)
+	Check("[CAMP] repos seul (feu en pleine nature) : cadre affiché", FrameShown())
+	Mock.world.resting = false
+	Mock.world.mapID, Mock.world.subzone = savedMap, savedSub
+	Mock:Advance(0.3)
+
 	-- réglage coupé
 	NS:DB().campCountdown = false
 	Mock:Advance(0.3)

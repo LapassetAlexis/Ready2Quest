@@ -9,6 +9,7 @@ local DEFAULTS = {
 	enabled             = true,
 	showWindow          = true,   -- false = résumé dans le chat
 	learnBuffs          = true,   -- apprend les buffs depuis tes propres auras
+	buffRole            = "auto", -- 1.33.3 : auto, TANK, HEALER, DAMAGER (buffs de tank)
 	continuousBagAlert  = true,   -- alerte en continu quand les sacs sont pleins
 	showMinimap         = true,   -- lanceur autour de la minicarte
 	minimapAngle        = 225,    -- position sur l'anneau (degrés)
@@ -114,13 +115,15 @@ ns.VillageKey, ns.CityKey = VillageKey, CityKey
 -- Lieux connus (ns:HubIndex, PlayerFaction, KnownHub), ns:InInstance et
 -- ns:AtCamp : socle commun, Libs/Socle/World.lua.
 
-function ns:IsCurrentZoneSafe()
+-- ignoreCamp : passe le feu de camp pour savoir si l'on est aussi en ville
+-- (le bandeau du camp se tait en ville : Camp.lua)
+function ns:IsCurrentZoneSafe(ignoreCamp)
 	local db = self:DB()
 	local mapID = self:CurrentMap()
 	local subzone = self:CurrentSubZone()
 
 	if self:InInstance() then return false, mapID, nil, nil end
-	if self:AtCamp() then
+	if not ignoreCamp and self:AtCamp() then
 		return true, mapID, "camp", { name = L.CAMP_PLACE, source = "camp" }
 	end
 	local hub, hubName, hostile = self:KnownHub()

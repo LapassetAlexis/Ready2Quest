@@ -3,7 +3,7 @@
 -- FICHIER GÉNÉRÉ par tools/gen_zone_data.py, ne pas éditer à la main :
 -- corrige data/forever/ et relance le script (voir docs/DONNEES.md).
 -- Source : notre base data/forever/, importée de Questie/QuestieDB
---   (commit c5de61ab7c629132a772cccddf7f604ac48cecf9, data/Forever ; Questie 12.4.0) le 2026-11-04. Générée le 2026-11-08.
+--   (commit c5de61ab7c629132a772cccddf7f604ac48cecf9, data/Forever ; Questie 12.4.0) le 2026-11-04. Générée le 2026-11-10.
 -- Couches appliquées : brut -> legacy (corrections Era héritées) -> delta-base générée -> traces -> corrections Forever.
 -- Licence : GPL-3.0 (https://www.gnu.org/licenses/gpl-3.0.html), comme la
 --   base de Questie dont ces données dérivent ; voir NOTICE.md.
@@ -3699,7 +3699,6 @@ Z[2521] = [[
 165189	7	30	0		Cat
 250868	6	6	0		Vuldren
 250874	10	10	0		Vuldren Alpha
-250921	7	8	0		Forest Sprite
 250926	3	4	0		Scrawny Ursera
 250927	10	11	0		Shadowgale Ursera
 250936	13	13	0		Den'dralass
@@ -7484,7 +7483,6 @@ P[2521] = [[
 165189	558595
 250868	442524
 250874	543740
-250921	582395
 250926	398278
 250927	562383
 250936	553382

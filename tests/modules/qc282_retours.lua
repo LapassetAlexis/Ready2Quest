@@ -173,7 +173,8 @@ do
 	local R = NS.AZEROTH_RING
 	local hole = NS.AZEROTH_RING_HOLE
 	local fw = frame:GetWidth()
-	local left, top = fw / 2 - R.w / 2, R.y + R.h / 2
+	-- 2.13.1 : l'anneau décalé de R.x pour centrer son ouverture
+	local left, top = fw / 2 - R.w / 2 + (R.x or 0), R.y + R.h / 2
 	local hx0, hx1 = left + R.w * hole.l, left + R.w * hole.r
 	local hy0, hy1 = top - R.h * hole.t, top - R.h * hole.b
 	local function Inside()
@@ -203,8 +204,10 @@ do
 	NS:CompanionPlaceModel(0, 0)
 	Check("[RT] cadrage reposé à la fin du chargement (OnModelLoaded)", frame.model.hooks and type(frame.model.hooks.OnModelLoaded) == "function"
 		and type(frame.model.framing) == "function")
-	Check("[RT] plaque : humeur à l'encre sur sa bande éclaircie", frame.azSkin.moodBand and frame.azSkin.moodBand:IsShown()
-		and Same(frame.mood.textColor, INK[NS.AZEROTH_CONTRAST["cplate.mood"][1]]))
+	-- 2.13.1 : l'humeur est dans son rabat, à l'encre de sa teinte ; la bande claire n'a plus de voile
+	local tabInk = NS.AZEROTH_MOOD_TAB[frame.azSkin.moodTab.mood or "happy"].ink
+	Check("[RT] plaque : humeur à l'encre de son rabat", not frame.azSkin.moodBand:IsShown()
+		and Same(frame.mood.textColor, tabInk))
 	NS:DB().companionStyle = "sobre"
 	NS:ApplyUIStyle()
 	p = Point(frame.model, "TOPLEFT")

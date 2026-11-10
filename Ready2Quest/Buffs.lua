@@ -221,7 +221,7 @@ local TOGGLE_GROUPS = {
 	["druid-form"] = true, ["hunter-aspect"] = true, ["seal"] = true, ["paladin-aura"] = true,
 }
 local TOGGLE_NAMES = {}
-for _, name in ipairs({ "fureur vertueuse", "righteous fury", "camouflage", "stealth", "rôder", "prowl",
+for _, name in ipairs({ "camouflage", "stealth", "rôder", "prowl",
 	"forme d'ombre", "shadowform", "loup fantôme", "ghost wolf", "posture de combat", "posture défensive",
 	"posture berserker", "battle stance", "defensive stance", "berserker stance", "présence de sang",
 	"présence de givre", "présence impie", "blood presence", "frost presence", "unholy presence",
@@ -239,6 +239,124 @@ for _, name in ipairs({ "force", "strength", "agilité", "agility", "intelligenc
 end
 -- (ns.AsciiLower ne baisse pas « É » : les deux formes)
 local CONSUMABLE_PREFIXES = { "élixir", "Élixir", "elixir", "flacon", "flask", "potion", "philtre", "juju", "parchemin", "scroll" }
+
+-- ---------------------------------------------------------------------------
+-- 1.33.3 : l'effet du sort, le rôle, le mana. Un buff de classe n'est pas
+-- toujours utile au départ :
+--   * de situation (sous l'eau, résistances, peur, invisibilité) : jamais
+--     réclamé par défaut, on le pose quand la situation arrive ;
+--   * de rôle (Fureur vertueuse) : réclamé seulement si ton rôle est tank ;
+--   * de mana (Intelligence des arcanes, Esprit divin, Sagesse) : pas
+--     réclamé à une classe sans mana (guerrier, voleur).
+-- Le choix du joueur (entry.userSet) l'emporte toujours.
+-- ---------------------------------------------------------------------------
+local SITUATIONAL_NAMES = {}
+for _, name in ipairs({ "respiration aquatique", "water breathing", "respiration interminable", "unending breath",
+	"marche sur l'eau", "water walking", "détection de l'invisibilité", "detect invisibility",
+	"détection de l'invisibilité inférieure", "detect lesser invisibility", "protection contre l'ombre",
+	"shadow protection", "gardien de peur", "garde de peur", "fear ward", "protection contre le feu", "fire ward",
+	"protection contre le givre", "frost ward" }) do
+	SITUATIONAL_NAMES[name] = true
+end
+local TANK_NAMES = { ["fureur vertueuse"] = true, ["righteous fury"] = true }
+local MANA_NAMES = {}
+for _, name in ipairs({ "intelligence des arcanes", "arcane intellect", "esprit divin", "divine spirit",
+	"bénédiction de sagesse", "blessing of wisdom" }) do
+	MANA_NAMES[name] = true
+end
+local NO_MANA_CLASSES = { WARRIOR = true, ROGUE = true, DEATHKNIGHT = true }
+ns.BUFF_SITUATIONAL_NAMES, ns.BUFF_TANK_NAMES, ns.BUFF_MANA_NAMES = SITUATIONAL_NAMES, TANK_NAMES, MANA_NAMES
+
+-- Rôle par arbre de talents (ordre des onglets du client, le même dans
+-- toutes les langues). Druide farouche : DPS (l'ours se choisit à la main).
+local TALENT_ROLES = {
+	PALADIN = { "HEALER", "TANK", "DAMAGER" },
+	WARRIOR = { "DAMAGER", "DAMAGER", "TANK" },
+	PRIEST  = { "HEALER", "HEALER", "DAMAGER" },
+	SHAMAN  = { "DAMAGER", "DAMAGER", "HEALER" },
+	DRUID   = { "DAMAGER", "DAMAGER", "HEALER" },
+}
+ns.BUFF_ROLES = { "auto", "TANK", "HEALER", "DAMAGER" }
+local GROUP_ROLES = { TANK = true, HEALER = true, DAMAGER = true }
+
+local function Plain0(v) return ns.Plain and ns.Plain(v) or v end
+
+-- Points d'un onglet de talents. Classique : nom, icône, points, fichier ;
+-- clients récents : id, nom, description, icône, points…
+local function TalentPoints(tab)
+	local fn = rawget(_G, "GetTalentTabInfo")
+	if type(fn) ~= "function" then return nil end
+	local r = { pcall(fn, tab) }
+	if not r[1] then return nil end
+	if type(Plain0(r[2])) == "string" then return tonumber(Plain0(r[4])) end
+	return tonumber(Plain0(r[6]))
+end
+
+-- Rôle déduit : rôle de groupe choisi, sinon l'arbre le plus rempli
+function ns:BuffRoleAuto()
+	local fn = rawget(_G, "UnitGroupRolesAssigned")
+	if type(fn) == "function" then
+		local ok, role = pcall(fn, "player")
+		role = ok and Plain0(role)
+		if GROUP_ROLES[role] then return role, "group" end
+	end
+	-- clients à plusieurs spés par classe : le rôle de la spé active. Forever
+	-- (vérifié en jeu le 10/11) n'a qu'une spé par classe (« Paladin »,
+	-- DAMAGER quels que soient les talents) : elle ne dit rien, on la saute.
+	local S = rawget(_G, "C_SpecializationInfo")
+	if type(S) == "table" and type(S.GetSpecialization) == "function" and type(S.GetSpecializationInfo) == "function"
+		and type(S.GetNumSpecializationsForClassID) == "function" and type(UnitClass) == "function" then
+		local okClass, _, _, classID = pcall(UnitClass, "player")
+		local okNum, count = pcall(S.GetNumSpecializationsForClassID, Plain0(classID))
+		if okClass and okNum and (tonumber(Plain0(count)) or 0) > 1 then
+			local okSpec, index = pcall(S.GetSpecialization)
+			if okSpec and Plain0(index) then
+				local r = { pcall(S.GetSpecializationInfo, Plain0(index)) }
+				if r[1] and GROUP_ROLES[Plain0(r[6])] then return Plain0(r[6]), "spec" end
+			end
+		end
+	end
+	local classFn = ns.PlayerClassToken
+	local class = type(classFn) == "function" and Plain0(classFn()) or nil
+	local roles = class and TALENT_ROLES[class]
+	if not roles then return "DAMAGER", "class" end
+	local best, bestPoints = nil, 0
+	for tab = 1, 3 do
+		local points = TalentPoints(tab) or 0
+		if points > bestPoints then best, bestPoints = tab, points end
+	end
+	if not best then return "DAMAGER", "none" end
+	return roles[best], "talents"
+end
+
+-- Rôle retenu : le réglage du joueur, sinon le rôle déduit (relu une fois
+-- par image : EvaluateBuffs le demande pour chaque buff)
+function ns:BuffRole()
+	local forced = self:DB().buffRole
+	if GROUP_ROLES[forced] then return forced, "forced" end
+	local now = type(GetTime) == "function" and GetTime() or nil
+	if now and self.buffRoleAt == now then return self.buffRoleValue, self.buffRoleWhy end
+	local role, why = self:BuffRoleAuto()
+	self.buffRoleAt, self.buffRoleValue, self.buffRoleWhy = now, role, why
+	return role, why
+end
+
+function ns:BuffSetRole(value)
+	local db = self:DB()
+	db.buffRole = GROUP_ROLES[value] and value or "auto"
+	self.buffRoleAt = nil
+end
+
+function ns:BuffRoleChoices()
+	local list = {}
+	for _, key in ipairs(self.BUFF_ROLES) do
+		local label = L["BUFF_ROLE_" .. string.upper(key)]
+		-- « Automatique (tank) » : ce que l'addon a déduit
+		if key == "auto" then label = self:F("BUFF_ROLE_AUTO_IS", L["BUFF_ROLE_" .. (self:BuffRoleAuto())]) end
+		list[#list + 1] = { value = key, label = label }
+	end
+	return list
+end
 
 local function IsToggle(family)
 	if type(family) ~= "string" then return false end
@@ -261,6 +379,8 @@ end
 local KnowsSpell
 local function BuffKind(spellId, entry)
 	local family = BuffFamily(type(entry) == "table" and entry.name)
+	if family and SITUATIONAL_NAMES[family] then return "situational" end
+	if family and TANK_NAMES[family] then return "role" end
 	if IsToggle(family) then return "toggle" end
 	if IsConsumableName(family) then return "consumable" end
 	if BuffClass(family) then return "class" end
@@ -276,7 +396,9 @@ ns.BuffKind = BuffKind
 local function BuffEnabled(entry, spellId)
 	if type(entry) ~= "table" then return false end
 	if entry.userSet then return entry.enabled ~= false end
-	return BuffKind(spellId, entry) == "class"
+	local kind = BuffKind(spellId, entry)
+	if kind == "role" then return (ns:BuffRole()) == "TANK" end
+	return kind == "class"
 end
 ns.BuffEnabled = BuffEnabled
 
@@ -516,6 +638,10 @@ function ns:BuffAvailability(spellId, entry, classes, grouped, others)
 	local family = BuffFamily(entry.name)
 	-- 1.30.1 : un buff de classe ne vient que de cette classe (toi ou ton groupe)
 	local cls = BuffClass(family)
+	-- 1.33.3 : un buff de mana n'a rien à faire sur une classe sans mana
+	if family and MANA_NAMES[family] and NO_MANA_CLASSES[PlayerClass() or ""] then
+		return false, "mana", cls
+	end
 	if cls then
 		local mine = PlayerClass() == cls
 		-- 1.31.0 : buff personnel : seulement au personnage de cette classe

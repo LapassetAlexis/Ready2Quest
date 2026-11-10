@@ -1,5 +1,12 @@
 # Journal des modifications
 
+## 1.33.3
+
+- **Buffs avant le départ, avec du discernement** : les buffs de situation (Respiration aquatique, Marche sur l'eau, résistances, Gardien de peur…) ne sont plus réclamés ; Fureur vertueuse seulement si ton rôle est tank ; Intelligence des arcanes et Esprit divin plus réclamés au guerrier ni au voleur. Nouveau réglage « Ton rôle » (Automatique, tank, soigneur, dégâts) dans les réglages des buffs ; tu peux toujours activer ou couper chaque buff à la main.
+- **Camp** : plus de décompte « Au camp : buffs dans… » à un feu de camp de ville ou de village.
+
+*English:* smarter pre-departure buffs — situational buffs (Water Breathing, Water Walking, resistances, Fear Ward…) are no longer asked; Righteous Fury only when your role is tank; Arcane Intellect and Divine Spirit no longer asked of warriors and rogues; new "Your role" setting (Automatic, tank, healer, damage) on the buffs page, and every buff can still be turned on or off by hand; no more camp countdown at a town or village campfire.
+
 ## 1.33.2
 
 - **Sac plein** : les objets mis de côté avec « Ignorer » dans Place au butin s'affichaient « true » dans la liste « Toujours garder » ; ils s'affichent maintenant par leur nom.

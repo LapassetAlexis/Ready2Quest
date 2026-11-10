@@ -73,6 +73,11 @@ local R2Q_PAGES = {
 		modules = { "buffs", "reagents", "quests" }, list = "buffs",
 		rows = {
 			{ key = "learnBuffs", label = "OPT_LEARNBUFFS", kind = "bool" },
+			-- 1.33.3 : le rôle décide des buffs de tank (Fureur vertueuse)
+			{ key = "buffRole", label = "OPT_BUFF_ROLE", kind = "action",
+				choices = function() return ns:BuffRoleChoices() end,
+				current = function() return ns:DB().buffRole or "auto" end,
+				choose = function(value) ns:BuffSetRole(value) end },
 		},
 	},
 	-- pas de page propre : leur réglage est l'interrupteur, et leur placement
@@ -134,7 +139,10 @@ local function BuffItems()
 		local because = ns:F("BUFF_WHY_" .. string.upper(reason or "other"), ns:ClassName(cls))
 		-- 1.32.2 : pas réclamé par défaut (consommable, posture…) : à activer
 		local kind = ns.BuffKind and ns.BuffKind(spellId, entry.entry)
-		if not entry.entry.userSet and kind and kind ~= "class" then
+		if not entry.entry.userSet and kind == "role" then
+			-- 1.33.3 : buff de tank, selon ton rôle
+			because = ns:F("BUFF_WHY_ROLE", L["BUFF_ROLE_" .. (ns:BuffRole())])
+		elseif not entry.entry.userSet and kind and kind ~= "class" then
 			because = L["BUFF_WHY_OPTIN_" .. string.upper(kind)] or because
 		end
 		items[#items + 1] = {
@@ -170,7 +178,7 @@ ns.OPTION_LISTS.safe = {
 }
 -- quatre lignes : la page des buffs porte aussi l'aperçu et six cartes
 ns.OPTION_LISTS.buffs = { items = BuffItems, header = "OPT_BUFFS_LIST", empty = "OPT_BUFFS_EMPTY",
-	lines = ns.OPT_LAYOUT.listLines - 5 }
+	lines = ns.OPT_LAYOUT.listLines - 6 }
 
 -- ---------------------------------------------------------------------------
 -- Actions, bouton principal, fenêtres exclusives, interrupteurs
