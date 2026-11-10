@@ -371,7 +371,7 @@ do
 	P.SeeKill(7101, { name = "Raptor" })
 	local net = NS.captureNetButton
 	Check("[CAP] première occasion : le filet montré, son liseré, 1 / 5", NS:TourActive() == "capture" and P.StepId() == "net"
-		and P.Ring().anchor == net and P.Callout().step:GetText() == "1 / 5" and Has(P.Text(), "★"), P.Text())
+		and P.Ring().anchor == net and P.Callout().step:GetText() == "1 / 5" and Has(P.Text(), "étoiles"), P.Text())
 	Check("[CAP] … pas de « Suivant » (il faut cliquer), le filet bat", not P.Callout().nextButton:IsShown() and NS.tourNetPulse == true)
 	NS:CaptureNetClick("LeftButton")
 	Mock:Advance(0.2)
