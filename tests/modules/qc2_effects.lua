@@ -6,6 +6,11 @@
 local Check, Say, ResetWorld, NS, Mock = T.Check, T.Say, T.ResetWorld, T.QNS, T.Mock
 
 local EF = { saved = {}, random = math.random, units = {} }
+-- 3.0.0 : le caractère du spécimen porté (tiré au hasard) ajoute son petit
+-- effet : neutralisé ici (ce module teste les effets de type), rendu à la fin
+EF.traitEffects = {}
+for k, v in pairs(NS.COMPANION_TRAIT_EFFECTS or {}) do EF.traitEffects[k] = v end
+for k in pairs(NS.COMPANION_TRAIT_EFFECTS or {}) do NS.COMPANION_TRAIT_EFFECTS[k] = nil end
 local GLOBALS = { "UnitGUID", "UnitName", "UnitExists", "UnitIsPlayer", "UnitIsDead", "UnitPlayerControlled",
 	"UnitReaction", "UnitCanAttack", "UnitClassification", "UnitCreatureType", "UnitCreatureFamily", "UnitLevel",
 	"GetRaidTargetIndex", "SetRaidTarget", "IsInGroup", "UnitIsGroupLeader", "IsInInstance", "C_NamePlate", "IsResting" }
@@ -560,6 +565,7 @@ end
 
 -- fin
 for _, name in ipairs(GLOBALS) do _G[name] = EF.saved[name] end
+for k, v in pairs(EF.traitEffects) do NS.COMPANION_TRAIT_EFFECTS[k] = v end
 math.random = EF.random
 NS.SHINY_CHANCE = EF.savedShiny
 NS.CaptureStars, NS.MenagerieTypeBonus = EF.savedStars, EF.savedBonus
