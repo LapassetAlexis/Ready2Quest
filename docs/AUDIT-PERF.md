@@ -92,7 +92,7 @@ Points critiques retenus, du plus coûteux au moins coûteux :
 ### Tests
 
 - **`tests/run_tests.lua`** : la maquette connaît `RegisterUnitEvent` et filtre par unité comme le client (`region.unitFilter`).
-- **`tests/modules/qc30_perf.lua`** (`[PERF]`, 24 vérifications) :
+- **`tests/modules/performance.lua`** (`[PERF]`, regroupé avec `[OPT]`, `[MEM]` et les raccourcis 2.11.1 ; un contrôle par raccourci) :
   - filtre par unité et repli ;
   - abonnements de R2Q, du camp, des stats et des hauts faits ;
   - `AsciiLower` identique ;

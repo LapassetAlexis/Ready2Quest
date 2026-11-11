@@ -33,12 +33,16 @@ permissions:
   contents: write
 
 jobs:
+  # les tests du commit du tag (tests.yml ne tourne pas sur un push de tag ni
+  # sur une branche sans PR : une seule exécution pour ce commit)
   tests:
     uses: ./.github/workflows/tests.yml
 
   release:
     needs: tests
     runs-on: ubuntu-latest
+    # paquet et envoi aux sites : quelques minutes d'habitude
+    timeout-minutes: 20
     steps:
       - uses: actions/checkout@v4
         with:

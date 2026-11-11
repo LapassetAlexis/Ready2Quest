@@ -59,21 +59,20 @@ do
 	local safe, _, reason, entry = NS:IsCurrentZoneSafe()
 	Check("[START] dans la vallée : zone sûre", safe and reason == "known" and entry.kind == "start")
 	Mock.world.level = 8
-	Check("[START] départ d'une vallée : silencieux, même au niveau 8", NS:IsQuietDeparture({ kind = "start" }) == true)
+	local valley = NS:IsQuietDeparture({ kind = "start" }) == true
 	Mock.world.level = 4
-	Check("[START] sous le niveau 6 : silencieux, d'où qu'on parte", NS:IsQuietDeparture({ kind = "town" }) == true)
+	local low = NS:IsQuietDeparture({ kind = "town" }) == true
 	Mock.world.level = 6
-	Check("[START] niveau 6, depuis un village : alerte normale", NS:IsQuietDeparture({ kind = "town" }) == false)
+	Check("[START] silencieux depuis une vallée (même niveau 8) ou sous le niveau 6 ; alerte normale ensuite", valley and low
+		and NS:IsQuietDeparture({ kind = "town" }) == false)
 
 	S.Reset(5)
 	local fromDeparture
 	NS:RegisterCallback("DEPARTURE", function(_, from) fromDeparture = from end)
 	S.Leave()
-	Check("[START] sortie de la vallée : rien ne s'affiche", not (NS.noticeFrame and NS.noticeFrame:IsShown())
-		and not (NS.window and NS.window:IsShown()))
-	Check("[START] … ni dans le chat", Mock:Output() == "", Mock:Output())
+	Check("[START] sortie de la vallée : ni icône, ni fenêtre, ni chat, ni expédition", not (NS.noticeFrame and NS.noticeFrame:IsShown())
+		and not (NS.window and NS.window:IsShown()) and Mock:Output() == "" and NS.expedition == nil, Mock:Output())
 	Check("[START] le départ est quand même signalé aux autres modules", fromDeparture and fromDeparture.quiet == true)
-	Check("[START] pas de bilan d'expédition au retour", NS.expedition == nil)
 	NS.callbacks.DEPARTURE[#NS.callbacks.DEPARTURE] = nil
 	NS:RunChecklist("manual")
 	Check("[START] le check reste disponible à la main", NS.window and NS.window:IsShown())
@@ -106,12 +105,10 @@ do
 		if NS.window then NS.window:Hide() end
 		return Result("classreagents")
 	end
-	Check("[AMMO] niveau 5 : 250 flèches suffisent", Run(5, 250).ok == true)
-	local mid = Run(20, 500)
-	Check("[AMMO] niveau 20 : 500 ne suffisent plus (600)", mid.ok == false and mid.detail:find("500 / 600", 1, true) ~= nil,
-		mid.detail)
-	local high = Run(40, 800)
-	Check("[AMMO] niveau 40 : il en faut 1000", high.ok == false and high.detail:find("/ 1000", 1, true) ~= nil, high.detail)
+	local low, mid, high = Run(5, 250).ok == true, Run(20, 500), Run(40, 800)
+	Check("[AMMO] 250 suffisent au niveau 5 ; 500/600 au 20 ; il en faut 1000 au 40", low and mid.ok == false
+		and mid.detail:find("500 / 600", 1, true) ~= nil and high.ok == false and high.detail:find("/ 1000", 1, true) ~= nil,
+		mid.detail .. " | " .. high.detail)
 	Check("[AMMO] paliers : 200, 600 dès le niveau 10, 1000 dès le niveau 30",
 		NS.ReagentMinimum(NS.CLASS_REAGENTS.HUNTER[1].min, 9) == 200
 		and NS.ReagentMinimum(NS.CLASS_REAGENTS.HUNTER[1].min, 10) == 600
@@ -129,12 +126,9 @@ do
 
 	-- poids et plafond : sans munitions, pas de tir automatique
 	local dry = Run(20, 0)
-	Check("[AMMO] munitions : poids 40 (plus que les vivres)", dry.weight == NS.AMMO_WEIGHT and NS.AMMO_WEIGHT == 40
-		and NS.AMMO_WEIGHT > 20, dry.weight)
-	Check("[AMMO] à sec : jamais « Prêt » (note plafonnée à 59)", NS.score <= NS.SCORE_CAP_BLOCKING
-		and NS.score <= 59 and dry.blocking == true, NS.score)
-	Check("[AMMO] conseil propre aux munitions, en tête", NS.lastAdvice[1]
-		and NS.lastAdvice[1].text == NS.L.ADV_AMMO, NS.lastAdvice[1] and NS.lastAdvice[1].text)
+	Check("[AMMO] munitions : poids 40 (plus que les vivres)", dry.weight == NS.AMMO_WEIGHT and NS.AMMO_WEIGHT == 40, dry.weight)
+	Check("[AMMO] à sec : bloquant (note plafonnée à 59), conseil des munitions en tête", NS.score <= NS.SCORE_CAP_BLOCKING
+		and NS.score <= 59 and dry.blocking == true and NS.lastAdvice[1] and NS.lastAdvice[1].text == NS.L.ADV_AMMO, NS.score)
 	-- tout le reste parfait (un contrôle fictif très lourd) : la moyenne serait
 	-- « Prêt », le plafond la ramène à « Pas prêt »
 	local fake = { id = "fake_ok", label = "Fictif", weight = 400, run = function() return true, "ok", 100 end }

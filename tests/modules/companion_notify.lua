@@ -3,6 +3,18 @@
 -- par NOTIFY_GAP s, le reste regroupé ; liseré qui pulse puis s'éteint.
 local Check, Say, ResetWorld, NS, Mock = T.Check, T.Say, T.ResetWorld, T.QNS, T.Mock
 
+-- Un scénario = une assertion ; chaque étape en défaut est nommée dans le message.
+local function Scenario(name)
+	local bad = {}
+	return {
+		ok = function(label, cond, extra)
+			if not cond then bad[#bad + 1] = label .. (extra ~= nil and (" [" .. tostring(extra) .. "]") or "") end
+			return cond
+		end,
+		done = function() Check(name, #bad == 0, table.concat(bad, " ; ")) end,
+	}
+end
+
 local NO = { saved = {}, units = {}, savedList = NS.ZoneQuestList }
 local GLOBALS = { "UnitGUID", "UnitName", "UnitExists", "UnitIsPlayer", "UnitIsDead", "UnitPlayerControlled",
 	"UnitReaction", "UnitCanAttack", "UnitClassification", "UnitCreatureType", "UnitCreatureFamily", "UnitLevel",
@@ -60,6 +72,7 @@ end
 -- 1. Bestiaire ---------------------------------------------------------------------------------
 do
 	Say("-- carnet annoncé : bestiaire")
+	local S = Scenario("[NOTIFY] carnet annoncé : bestiaire")
 	NO.Reset()
 	-- de quoi ne pas finir la zone (sinon c'est le coffre qui parle)
 	local book = NS:BestiaryData()
@@ -67,29 +80,31 @@ do
 	for index = 1, 6 do book[9900][4190 + index] = { name = "Ombre " .. index, seen = true, killed = 0 } end
 	book[9900][4199] = { name = "Roi caché", seen = true, killed = 0, class = "rare" }
 	NO.Kill(4100, { name = "Loup gris" })
-	Check("[NOTIFY] espèce abattue pour la première fois : annoncée", NS.companionBubbleKey == "FOUND"
+	S.ok("espèce abattue pour la première fois : annoncée", NS.companionBubbleKey == "FOUND"
 		and NS.companionBubbleText:find("Loup gris", 1, true) and NS.companionBubbleText:find("bestiaire", 1, true),
 		NS.companionBubbleText)
 	NO.Quiet()
 	Mock:Advance(NS.NOTIFY_GAP + 1)
 	NO.Kill(4100, { name = "Loup gris", spawn = "00002B3C4D" })
-	Check("[NOTIFY] même espèce, deuxième fois : rien", NS.companionBubbleKey ~= "FOUND", NS.companionBubbleKey)
+	S.ok("même espèce, deuxième fois : rien", NS.companionBubbleKey ~= "FOUND", NS.companionBubbleKey)
 	NO.Quiet()
 	NO.Kill(4101, { name = "Chef ogre", class = "elite" })
-	Check("[NOTIFY] un nommé : sa part « nommés »", NS.companionBubbleKey == "FOUND"
+	S.ok("un nommé : sa part « nommés »", NS.companionBubbleKey == "FOUND"
 		and NS.companionBubbleText:find("nommés", 1, true), NS.companionBubbleText)
 	-- deux de suite : la seconde attend, puis le regroupement
 	NO.Quiet()
 	NO.Kill(4102, { name = "Sanglier" })
-	Check("[NOTIFY] trop tôt après la précédente : mise de côté", NS.companionBubbleKey ~= "FOUND"
+	S.done()
+	S = Scenario("[NOTIFY] écart entre deux annonces, regroupement, brillante à part")
+	S.ok("trop tôt après la précédente : mise de côté", NS.companionBubbleKey ~= "FOUND"
 		and NS:NotifyState().pending == 1)
 	Mock:Advance(1)
-	Check("[NOTIFY] pas de regroupement avant l'écart", NS.companionBubbleKey ~= "FOUND_MANY" and NS:NotifyState().pending == 1)
+	S.ok("pas de regroupement avant l'écart", NS.companionBubbleKey ~= "FOUND_MANY" and NS:NotifyState().pending == 1)
 	NO.Quiet()
 	Mock:Advance(NS.NOTIFY_GAP)
-	Check("[NOTIFY] l'écart passé : « et 1 de plus au carnet »", NS.companionBubbleKey == "FOUND_MANY"
+	S.ok("l'écart passé : « et 1 de plus au carnet »", NS.companionBubbleKey == "FOUND_MANY"
 		and NS.companionBubbleText:find("1", 1, true) and NS:NotifyState().pending == 0, NS.companionBubbleText)
-	Check("[NOTIFY] rien en attente : rien de plus", NS:NotifyFlush(Mock.now + 100) == false)
+	S.ok("rien en attente : rien de plus", NS:NotifyFlush(Mock.now + 100) == false)
 	-- une brillante : sa propre bulle, pas celle du carnet
 	NO.Quiet()
 	local guid = string.format("Creature-0-4378-1-12-%d-%s", 4150, "00001A2B3C")
@@ -99,70 +114,77 @@ do
 	NO.Quiet()
 	NS:BestiaryCombat("SWING_DAMAGE", PLAYER, 0, guid, 0)
 	NS:BestiaryCombat("PARTY_KILL", PLAYER, 0, guid, 0)
-	Check("[NOTIFY] brillante abattue : sa bulle à elle", NS.companionBubbleKey == "SHINY_KILLED", NS.companionBubbleKey)
+	S.ok("brillante abattue : sa bulle à elle", NS.companionBubbleKey == "SHINY_KILLED", NS.companionBubbleKey)
+	S.done()
 end
 
 -- 2. Récolte, quêtes -------------------------------------------------------------------------------
 do
 	Say("-- carnet annoncé : récolte et quêtes")
+	local S = Scenario("[NOTIFY] carnet annoncé : récolte et quêtes")
 	NO.Reset()
 	NS:GatheringRecord(765, 1, 9900)
-	Check("[NOTIFY] ressource récoltée pour la première fois ici : annoncée", NS.companionBubbleKey == "FOUND"
+	S.ok("ressource récoltée pour la première fois ici : annoncée", NS.companionBubbleKey == "FOUND"
 		and NS.companionBubbleText:find("765", 1, true) or (NS.companionBubbleText or ""):find("Feuillargent", 1, true),
 		NS.companionBubbleText)
 	NO.Quiet()
 	Mock:Advance(NS.NOTIFY_GAP + 1)
 	NS:GatheringRecord(765, 1, 9900)
-	Check("[NOTIFY] même ressource, même zone : rien", NS.companionBubbleKey == nil)
+	S.ok("même ressource, même zone : rien", NS.companionBubbleKey == nil)
 	NS:GatheringRecord(765, 1, nil)
-	Check("[NOTIFY] sans zone (instance) : rien", NS.companionBubbleKey == nil)
+	S.ok("sans zone (instance) : rien", NS.companionBubbleKey == nil)
 	NS.ZoneQuestList = function() return { { id = 321, name = "Le ragoût du val", done = true } } end
 	Mock:Fire("QUEST_TURNED_IN", 321, 0, 0)
-	Check("[NOTIFY] quête de la zone rendue : annoncée", NS.companionBubbleKey == "FOUND"
+	S.ok("quête de la zone rendue : annoncée", NS.companionBubbleKey == "FOUND"
 		and NS.companionBubbleText:find("Le ragoût du val", 1, true), NS.companionBubbleText)
 	NO.Quiet()
 	Mock:Advance(NS.NOTIFY_GAP + 1)
 	Mock:Fire("QUEST_TURNED_IN", 999, 0, 0)
-	Check("[NOTIFY] quête d'ailleurs : pas d'annonce du carnet", NS.companionBubbleKey ~= "FOUND")
+	S.ok("quête d'ailleurs : pas d'annonce du carnet", NS.companionBubbleKey ~= "FOUND")
 	NS.ZoneQuestList = NO.savedList
 	NS:DB().companionEnabled = false
 	local pending = NS:NotifyState().pending
-	Check("[NOTIFY] compagnon coupé : rien, pas même en attente", NS:NotifyFound("x", 9900, "bestiary") == false
+	S.ok("compagnon coupé : rien, pas même en attente", NS:NotifyFound("x", 9900, "bestiary") == false
 		and NS:NotifyState().pending == pending)
 	NS:DB().companionEnabled = true
-	Check("[NOTIFY] texte de la part", NS:NotifyPartText(nil, "quests") == "quêtes")
+	S.ok("texte de la part", NS:NotifyPartText(nil, "quests") == "quêtes")
+	S.done()
 end
 
 -- 3. Le cadre brille quand il parle ----------------------------------------------------------------
 do
 	Say("-- cadre qui brille")
+	local S = Scenario("[GLOW] cadre qui brille")
 	NO.Reset()
-	Check("[GLOW] sans bulle : éteint", NS:GlowAlpha(Mock.now) == 0 and NS:GlowUpdate(Mock.now) == 0)
+	S.ok("sans bulle : éteint", NS:GlowAlpha(Mock.now) == 0 and NS:GlowUpdate(Mock.now) == 0)
 	NS:CompanionSay("EAT", { force = true })
 	local frame = NS.companionFrame
 	local untilAt = NS.companionBubbleUntil
 	local alpha = NS:GlowUpdate(Mock.now)
-	Check("[GLOW] il parle : le liseré s'allume", alpha > 0 and frame.glow and frame.glow[1]:IsShown())
-	Check("[GLOW] … sans dépasser l'éclat prévu", alpha <= NS.GLOW_ALPHA)
+	S.ok("il parle : le liseré s'allume", alpha > 0 and frame.glow and frame.glow[1]:IsShown())
+	S.ok("… sans dépasser l'éclat prévu", alpha <= NS.GLOW_ALPHA)
 	local a, b = NS:GlowAlpha(untilAt - 1.0), NS:GlowAlpha(untilAt - 1.25)
-	Check("[GLOW] … il pulse", math.abs(a - b) > 0.01)
-	Check("[GLOW] juste après la bulle : il s'éteint doucement", NS:GlowAlpha(untilAt + NS.GLOW_FADE / 2) > 0)
-	Check("[GLOW] longtemps après : zéro, pas moins", NS:GlowAlpha(untilAt + NS.GLOW_FADE + 1) == 0)
+	S.ok("… il pulse", math.abs(a - b) > 0.01)
+	S.ok("juste après la bulle : il s'éteint doucement", NS:GlowAlpha(untilAt + NS.GLOW_FADE / 2) > 0)
+	S.ok("longtemps après : zéro, pas moins", NS:GlowAlpha(untilAt + NS.GLOW_FADE + 1) == 0)
 	NS:GlowUpdate(untilAt + NS.GLOW_FADE + 0.1)
-	Check("[GLOW] puis éteint", not frame.glow[1]:IsShown())
+	S.ok("puis éteint", not frame.glow[1]:IsShown())
 	Mock:Advance(0.1)
 	NS:CompanionSay("EAT", { force = true })
 	Mock:Advance(0.1)
-	Check("[GLOW] l'horloge l'allume toute seule", frame.glowAlpha and frame.glowAlpha > 0)
+	S.done()
+	S = Scenario("[GLOW] horloge, compagnon coupé, répliques et textes")
+	S.ok("l'horloge l'allume toute seule", frame.glowAlpha and frame.glowAlpha > 0)
 	NS:DB().companionEnabled = false
-	Check("[GLOW] compagnon coupé : éteint", NS:GlowUpdate(Mock.now) == 0)
+	S.ok("compagnon coupé : éteint", NS:GlowUpdate(Mock.now) == 0)
 	NS:DB().companionEnabled = true
 	local missing = {}
 	for key in pairs(NS.NOTIFY_STRINGS.fr) do if not NS.NOTIFY_STRINGS.en[key] then missing[#missing + 1] = key end end
 	for name, keys in pairs(NS.NOTIFY_POOLS) do
-		Check("[NOTIFY] répliques enregistrées : " .. name, NS.COMPANION_POOLS[name] == keys)
+		S.ok("répliques enregistrées : " .. name, NS.COMPANION_POOLS[name] == keys)
 	end
-	Check("[NOTIFY] textes fr et en", #missing == 0, table.concat(missing, ", "))
+	S.ok("textes fr et en", #missing == 0, table.concat(missing, ", "))
+	S.done()
 end
 
 for _, name in ipairs(GLOBALS) do _G[name] = NO.saved[name] end

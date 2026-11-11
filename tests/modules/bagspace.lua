@@ -1,5 +1,6 @@
--- Module « Sac plein » (v1.24.0) : l'objet le moins coûteux à jeter, et sa
--- destruction, toujours confirmée.
+-- Module « Sac plein » (v1.24.0) : choix de l'objet le moins coûteux à jeter
+-- (exclusions, listes garder/jeter), déclenchement, destruction toujours
+-- confirmée et revérifiée, combat, commandes, page de réglages.
 local Check, ResetWorld, NS, Mock = T.Check, T.ResetWorld, T.NS, T.Mock
 
 -- Globales du client absentes du harnais : posées ici, restaurées en fin de fichier
@@ -123,9 +124,8 @@ do
 		if type(strings.en[key]) ~= "string" or strings.en[key] == "" or value == "" then missing[#missing + 1] = key end
 	end
 	for key in pairs(strings.en) do if strings.fr[key] == nil then missing[#missing + 1] = key end end
-	Check("[BAG] chaînes fr + en complètes", #missing == 0, table.concat(missing, ","))
-	Check("[BAG] client fr : chaînes en français", NS.L.BAG_BTN_DESTROY == "Jeter" and NS.L.OPT_PAGE_BAGSPACE == "Sac plein")
-	Check("[BAG] anglais : boutons traduits", strings.en.BAG_BTN_NEXT == "Other" and strings.en.BAG_BTN_KEEP == "Always keep")
+	Check("[BAG] chaînes fr + en complètes, client fr en français", #missing == 0 and NS.L.BAG_BTN_DESTROY == "Jeter"
+		and strings.en.BAG_BTN_KEEP == "Always keep", table.concat(missing, ","))
 end
 
 -- 2. Choix : le moins coûteux par emplacement, exclusions ---------------------
@@ -133,10 +133,11 @@ do
 	B.Reset()
 	Check("[BAG] gris à 5 pc avant blanc à 5 pc (égalité)", B.First() == GREY, B.Ids())
 	local ids = "," .. B.Ids() .. ","
-	Check("[BAG] objet de quête jamais proposé", not ids:find("," .. QUEST .. ",", 1, true), ids)
-	Check("[BAG] pierre de foyer jamais proposée", not ids:find("," .. HEARTH .. ",", 1, true), ids)
-	Check("[BAG] démoniste : fragments d'âme protégés", not ids:find("," .. SHARD .. ",", 1, true), ids)
-	Check("[BAG] dernière nourriture protégée (seuil des vivres)", not ids:find("," .. FOOD .. ",", 1, true), ids)
+	local bad = {}
+	for _, id in ipairs({ QUEST, HEARTH, SHARD, FOOD }) do
+		if ids:find("," .. id .. ",", 1, true) then bad[#bad + 1] = id end
+	end
+	Check("[BAG] protégés : quête, foyer, fragments du démoniste, dernière nourriture", #bad == 0, ids)
 	Check("[BAG] pile de 3 à 10 pc = 30 pc, en dernier", NS:BagSpaceCandidates()[3].itemID == CLOTH
 		and NS:BagSpaceCandidates()[3].value == 30, B.Ids())
 
@@ -162,18 +163,16 @@ end
 do
 	B.Reset()
 	Mock:Fire("UI_ERROR_MESSAGE", 51, "L'inventaire est plein.")
-	Check("[BAG] erreur (type, message) : cadre affiché", B.Shown())
-	Check("[BAG] cadre : ligne « Sac plein — jette »", NS.bagspaceFrame.text.text:find("Sac plein — jette : ", 1, true) ~= nil
+	Check("[BAG] erreur (type, message) : cadre « Sac plein — jette » affiché", B.Shown()
+		and NS.bagspaceFrame.text.text:find("Sac plein — jette : ", 1, true) ~= nil
 		and NS.bagspaceFrame.text.text:find("[Os brisé]", 1, true) ~= nil and NS.bagspaceFrame.text.text:find("×1 (5 pc)", 1, true) ~= nil,
-		NS.bagspaceFrame.text.text)
+		NS.bagspaceFrame and NS.bagspaceFrame.text.text)
 
-	B.Reset()
-	Mock:Fire("UI_ERROR_MESSAGE", "L'inventaire est plein.")
-	Check("[BAG] erreur (message) des anciens clients : cadre affiché", B.Shown())
-
-	B.Reset()
-	Mock:Fire("UI_ERROR_MESSAGE", 51, "")
-	Check("[BAG] erreur reconnue à son numéro seul", B.Shown())
+	-- formes de l'erreur : message seul (anciens clients), numéro seul
+	local shown = {}
+	B.Reset(); Mock:Fire("UI_ERROR_MESSAGE", "L'inventaire est plein."); shown[1] = B.Shown()
+	B.Reset(); Mock:Fire("UI_ERROR_MESSAGE", 51, ""); shown[2] = B.Shown()
+	Check("[BAG] erreur reconnue à son message seul ou à son numéro seul", shown[1] and shown[2])
 
 	B.Reset()
 	Mock:Fire("UI_ERROR_MESSAGE", 3, "Pas assez de mana")
@@ -228,10 +227,10 @@ end
 do
 	B.Reset()
 	B.Full()
-	Check("[BAG] premier candidat : le gris", NS:BagSpaceCurrent().itemID == GREY)
+	local first = NS:BagSpaceCurrent().itemID
 	NS.bagspaceFrame.nextButton:Click()
-	Check("[BAG] [Autre] : candidat suivant", NS:BagSpaceCurrent().itemID == WHITE, NS:BagSpaceCurrent().itemID)
-	Check("[BAG] [Autre] : le cadre suit", NS.bagspaceFrame.text.text:find("[Caillou]", 1, true) ~= nil, NS.bagspaceFrame.text.text)
+	Check("[BAG] [Autre] : candidat suivant, le cadre suit", first == GREY and NS:BagSpaceCurrent().itemID == WHITE
+		and NS.bagspaceFrame.text.text:find("[Caillou]", 1, true) ~= nil, NS.bagspaceFrame.text.text)
 	NS.bagspaceFrame.nextButton:Click()
 	NS.bagspaceFrame.nextButton:Click()
 	Check("[BAG] [Autre] : retour au premier après le dernier", NS:BagSpaceCurrent().itemID == GREY)
@@ -240,8 +239,8 @@ do
 	Check("[BAG] nouvelle erreur : le choix [Autre] est conservé", NS:BagSpaceCurrent().itemID == WHITE)
 
 	NS.bagspaceFrame.keepButton:Click()
-	Check("[BAG] [Garder toujours] : ajouté à la liste", NS:DB().bagspaceKeep[WHITE] == "Caillou")
-	Check("[BAG] [Garder toujours] : plus proposé", NS:BagSpaceCurrent().itemID == GREY and not ("," .. B.Ids() .. ","):find("," .. WHITE .. ",", 1, true))
+	Check("[BAG] [Garder toujours] : ajouté à la liste, plus proposé", NS:DB().bagspaceKeep[WHITE] == "Caillou"
+		and NS:BagSpaceCurrent().itemID == GREY and not ("," .. B.Ids() .. ","):find("," .. WHITE .. ",", 1, true))
 end
 
 -- 5. [Jeter] : confirmation obligatoire ----------------------------------------
@@ -251,10 +250,10 @@ do
 	NS.bagspaceFrame.nextButton:Click()                 -- le blanc, sac 0 case 4
 	NS.bagspaceFrame.destroyButton:Click()
 	local popup = Mock.world.popup
-	Check("[BAG] [Jeter] : fenêtre de confirmation", popup and popup.which == "READY2QUEST_BAGSPACE_DESTROY")
-	Check("[BAG] [Jeter] : rien détruit avant confirmation", Mock.world.deleted == nil and Mock.world.bags[0].items[4] ~= nil)
-	Check("[BAG] [Jeter] : la confirmation nomme l'objet", popup and tostring(popup.text_arg1):find("[Caillou]", 1, true) ~= nil and popup.text_arg2 == 1)
 	local def = StaticPopupDialogs["READY2QUEST_BAGSPACE_DESTROY"]
+	Check("[BAG] [Jeter] : confirmation qui nomme l'objet, rien détruit avant", popup and popup.which == "READY2QUEST_BAGSPACE_DESTROY"
+		and tostring(popup.text_arg1):find("[Caillou]", 1, true) ~= nil and popup.text_arg2 == 1
+		and Mock.world.deleted == nil and Mock.world.bags[0].items[4] ~= nil)
 	Check("[BAG] popup déclarée, texte et boutons traduits", def and def.text:find("Détruire", 1, true) and def.button1 == "Détruire"
 		and def.button2 == "Annuler" and def.timeout == 0)
 
@@ -264,11 +263,9 @@ do
 	NS.bagspaceFrame.destroyButton:Click()
 	popup = Mock.world.popup
 	def.OnAccept(popup, popup.data)
-	Check("[BAG] confirmé : le bon sac et la bonne case détruits", Mock.world.deleted and Mock.world.deleted[1] == "0:4:" .. WHITE,
-		Mock.world.deleted and table.concat(Mock.world.deleted, ","))
-	Check("[BAG] confirmé : un seul objet détruit", Mock.world.deleted and #Mock.world.deleted == 1)
-	Check("[BAG] confirmé : message dans le chat", B.Has("Détruit : "))
-	Check("[BAG] confirmé : cadre fermé", not B.Shown())
+	Check("[BAG] confirmé : un seul objet, le bon sac et la bonne case", Mock.world.deleted and #Mock.world.deleted == 1
+		and Mock.world.deleted[1] == "0:4:" .. WHITE, Mock.world.deleted and table.concat(Mock.world.deleted, ","))
+	Check("[BAG] confirmé : message dans le chat, cadre fermé", B.Has("Détruit : ") and not B.Shown())
 
 	-- l'objet bouge entre le clic et la confirmation
 	B.Reset()
@@ -277,8 +274,8 @@ do
 	popup = Mock.world.popup
 	Mock.world.bags[0].items[7] = { itemID = CLOTH, stackCount = 5, quality = 1, hyperlink = B.Link(CLOTH) }
 	StaticPopupDialogs["READY2QUEST_BAGSPACE_DESTROY"].OnAccept(popup, popup.data)
-	Check("[BAG] objet déplacé avant confirmation : rien détruit", Mock.world.deleted == nil and Mock.world.bags[0].items[7].itemID == CLOTH)
-	Check("[BAG] objet déplacé : le joueur est prévenu", B.Has("rien n'a été détruit"))
+	Check("[BAG] objet déplacé avant confirmation : rien détruit, le joueur est prévenu", Mock.world.deleted == nil
+		and Mock.world.bags[0].items[7].itemID == CLOTH and B.Has("rien n'a été détruit"))
 
 	-- même objet, mais la pile a changé (fusion) : ce n'est plus ce qui a été confirmé
 	B.Reset()
@@ -306,8 +303,8 @@ do
 	DeleteCursorItem = nil
 	Mock.world.popup = nil
 	NS.bagspaceFrame.destroyButton:Click()
-	Check("[BAG] API absente : pas de confirmation, rien détruit", Mock.world.popup == nil and Mock.world.bags[0].items[7] ~= nil)
-	Check("[BAG] API absente : à jeter à la main (sac 1, case 7)", B.Has("à la main") and B.Has("sac 1, case 7"), B.Output())
+	Check("[BAG] API absente : rien détruit, à jeter à la main (sac 1, case 7)", Mock.world.popup == nil
+		and Mock.world.bags[0].items[7] ~= nil and B.Has("à la main") and B.Has("sac 1, case 7"), B.Output())
 	DeleteCursorItem = delete
 end
 
@@ -316,8 +313,8 @@ do
 	B.Reset()
 	Mock.world.combat = true
 	B.Full()
-	Check("[BAG] combat : pas de cadre", not B.Shown())
-	Check("[BAG] combat : suggestion dans le chat", B.Has("Sac plein — jette : ") and B.Has("[Os brisé]"), B.Output())
+	Check("[BAG] combat : pas de cadre, suggestion dans le chat", not B.Shown() and B.Has("Sac plein — jette : ")
+		and B.Has("[Os brisé]"), B.Output())
 	Mock:Reset()
 	B.Full()
 	Check("[BAG] chat : pas de répétition à chaque erreur", B.Output() == "", B.Output())
@@ -328,8 +325,8 @@ do
 	Mock.world.combat = true
 	Mock.world.popup = nil
 	NS.bagspaceFrame.destroyButton:Click()
-	Check("[BAG] [Jeter] en combat : ni confirmation ni destruction", Mock.world.popup == nil and Mock.world.deleted == nil)
-	Check("[BAG] [Jeter] en combat : conseil dans le chat", B.Has("En combat"), B.Output())
+	Check("[BAG] [Jeter] en combat : ni confirmation ni destruction, conseil", Mock.world.popup == nil
+		and Mock.world.deleted == nil and B.Has("En combat"), B.Output())
 	-- confirmation ouverte avant le combat, acceptée pendant
 	Mock.world.combat = false
 	NS.bagspaceFrame.destroyButton:Click()
@@ -348,32 +345,33 @@ end
 do
 	B.Reset()
 	NS:HandleCommand("jeter")
-	Check("[BAG] /r2q jeter : meilleure suggestion", B.Has("Le moins coûteux à jeter : ") and B.Has("[Os brisé]") and B.Has("Places libres : 0"), B.Output())
+	local jeter = B.Has("Le moins coûteux à jeter : ") and B.Has("[Os brisé]") and B.Has("Places libres : 0")
 	Mock:Reset()
 	NS:HandleCommand("sac")
-	Check("[BAG] /r2q sac : même suggestion", B.Has("[Os brisé]"), B.Output())
-	Check("[BAG] commande : rien détruit", Mock.world.deleted == nil)
+	Check("[BAG] /r2q jeter et /r2q sac : suggestion, rien détruit", jeter and B.Has("[Os brisé]") and Mock.world.deleted == nil,
+		B.Output())
 
 	NS:HandleCommand("garder " .. B.Link(GREY))
-	Check("[BAG] /r2q garder [lien] : ajouté", NS:DB().bagspaceKeep[GREY] == "Os brisé")
+	local added = NS:DB().bagspaceKeep[GREY] == "Os brisé"
 	NS:HandleCommand("garder " .. B.Link(GREY))
-	Check("[BAG] /r2q garder [lien] une 2e fois : retiré", NS:DB().bagspaceKeep[GREY] == nil)
+	Check("[BAG] /r2q garder [lien] : ajouté, puis retiré une 2e fois", added and NS:DB().bagspaceKeep[GREY] == nil)
 	NS:HandleCommand("jeter-toujours " .. B.Link(CLOTH))
-	Check("[BAG] /r2q jeter-toujours [lien] : ajouté", NS:DB().bagspaceDiscard[CLOTH] == "Étoffe")
+	added = NS:DB().bagspaceDiscard[CLOTH] == "Étoffe"
 	NS:HandleCommand("garder " .. B.Link(CLOTH))
-	Check("[BAG] garder retire de « toujours jeter »", NS:DB().bagspaceKeep[CLOTH] ~= nil and NS:DB().bagspaceDiscard[CLOTH] == nil)
+	Check("[BAG] /r2q jeter-toujours [lien] ; garder le retire de « toujours jeter »", added
+		and NS:DB().bagspaceKeep[CLOTH] ~= nil and NS:DB().bagspaceDiscard[CLOTH] == nil)
 	Mock:Reset()
 	NS:HandleCommand("garder")
 	Check("[BAG] /r2q garder sans objet : aide", B.Has("Indique un objet"), B.Output())
 
 	Mock:Reset()
 	NS:HandleCommand("modules")
-	Check("[BAG] /r2q modules : Sac plein listé", B.Has("bagspace"), B.Output())
+	local listed = B.Has("bagspace")
 	NS:HandleCommand("module sac off")
-	Check("[BAG] /r2q module sac off", NS:DB().bagspaceEnabled == false)
 	Mock:Reset()
 	NS:HandleCommand("jeter")
-	Check("[BAG] module coupé : la commande le dit", B.Has("coupé"), B.Output())
+	Check("[BAG] /r2q modules liste le module, « module sac off » le coupe, la commande le dit", listed
+		and NS:DB().bagspaceEnabled == false and B.Has("coupé"), B.Output())
 	Check("[BAG] aide : la commande est listée", (function()
 		for _, section in ipairs(NS.HELP) do
 			for _, key in ipairs(section[2]) do if key == "HELP_BAGSPACE" then return true end end
@@ -389,8 +387,8 @@ do
 	B.Full()
 	Mock.world.loot = { B.Link(NEWLOOT) }
 	Mock:Fire("LOOT_OPENED")
-	Check("[BAG] module coupé : ni cadre ni chat", not B.Shown() and B.Output() == "", B.Output())
-	Check("[BAG] module coupé : l'alerte appelée directement ne fait rien", NS:BagSpaceAlert() == nil and not B.Shown())
+	Check("[BAG] module coupé : ni cadre ni chat, l'alerte directe ne fait rien", not B.Shown() and B.Output() == ""
+		and NS:BagSpaceAlert() == nil and not B.Shown(), B.Output())
 	B.Reset()
 	NS:DB().enabled = false
 	B.Full()
@@ -406,16 +404,15 @@ do
 	local frame = NS.optionsFrame
 	local def
 	for _, d in ipairs(NS.OPTION_PAGES) do if d.id == "bagspace" then def = d end end
-	Check("[BAG] page : sous-page du QoL", def and def.parent == "qol" and def.group == "OPT_GROUP_QOL")
 	local page = frame.pages.bagspace
 	local notes = page and page.notes or {}
-	Check("[BAG] page : construite, avec les listes", notes.bagspaceKeep ~= nil and notes.bagspaceDiscard ~= nil)
-	Check("[BAG] page : liste « toujours garder » affichée", notes.bagspaceKeep.text.text:find("Os brisé", 1, true) ~= nil, notes.bagspaceKeep.text.text)
+	Check("[BAG] page : sous-page du QoL, listes affichées", def and def.parent == "qol" and def.group == "OPT_GROUP_QOL"
+		and notes.bagspaceKeep ~= nil and notes.bagspaceKeep.text.text:find("Os brisé", 1, true) ~= nil
+		and notes.bagspaceDiscard.text.text:find("(vide)", 1, true) ~= nil
+		and notes.bagspaceConfirm.text.text:find("toujours", 1, true) ~= nil)
 	NS:DB().bagspaceKeep[GREY] = true
 	Check("[BAG] page : ancienne entrée `true` affichée par son nom", NS:BagSpaceListText("bagspaceKeep"):find("true", 1, true) == nil, NS:BagSpaceListText("bagspaceKeep"))
 	NS:DB().bagspaceKeep[GREY] = "Os brisé"
-	Check("[BAG] page : « toujours jeter » vide", notes.bagspaceDiscard.text.text:find("(vide)", 1, true) ~= nil)
-	Check("[BAG] page : confirmation toujours, sans interrupteur", notes.bagspaceConfirm.text.text:find("toujours", 1, true) ~= nil)
 	NS:HandleCommand("jeter-toujours " .. B.Link(CLOTH))
 	Check("[BAG] page : rafraîchie après une commande", notes.bagspaceDiscard.text.text:find("Étoffe", 1, true) ~= nil)
 	NS:SelectOptionsPage("bagspace")
@@ -423,10 +420,10 @@ do
 	Check("[BAG] page : l'aide du bas se voit (défilement)", notes.bagspaceHint:IsShown() == true)
 	local sections = 0
 	for _, item in ipairs(page.items) do if item.kind == "section" then sections = sections + 1 end end
-	Check("[BAG] page : sections Réglages, À garder, À jeter", sections == 3, sections)
 	local rowKeys = {}
 	for _, row in ipairs(page.rows) do rowKeys[#rowKeys + 1] = row.def and row.def.key end
-	Check("[BAG] page : interrupteurs module et cadre", table.concat(rowKeys, ",") == "bagspaceEnabled,bagspaceFrame", table.concat(rowKeys, ","))
+	Check("[BAG] page : trois sections, interrupteurs module et cadre", sections == 3
+		and table.concat(rowKeys, ",") == "bagspaceEnabled,bagspaceFrame", sections .. " " .. table.concat(rowKeys, ","))
 	frame:Hide()
 	NS.optionsFrame = nil
 end

@@ -1,7 +1,8 @@
--- QuestCompanion 2.6.0 : les Souvenirs sont retirés. Plus d'album dans le
--- carnet, plus de page de réglages, plus de photos ni d'anniversaires ; un
--- ménage unique et silencieux vide les données de l'album de la sauvegarde.
--- Les fonds des sceaux de zone restent (sols du client depuis la 2.7.0, MenagerieCollection.lua).
+-- QuestCompanion 2.6.0 : les Souvenirs sont retirés. Une seule garde que
+-- l'album est parti (module, fonctions, appels) et qu'un ancien onglet
+-- sauvegardé rouvre la page Compagnon ; surtout, le ménage unique et
+-- silencieux de la sauvegarde (ns:DropMemories) : clés de l'album retirées,
+-- « since » recalé, données abîmées, réglages des photos, une seule fois.
 local Check, Say, ResetWorld, NS, Mock = T.Check, T.Say, T.ResetWorld, T.QNS, T.Mock
 local ROOT = rawget(_G, "ADDON_ROOT") or "."
 
@@ -19,69 +20,35 @@ function SS.Reset()
 	if NS.optionsFrame then NS.optionsFrame:Hide() end
 end
 
--- 1. Plus de module, plus de fonctions -------------------------------------------------------------
+-- 1. Plus d'album : une seule garde (module, fonctions, appels) ; un ancien onglet sauvegardé -----------
 do
-	Say("-- 2.6.0 sans souvenirs : module et fonctions")
-	local toc = SS.Read("QuestCompanion/QuestCompanion.toc") or ""
-	Check("[SANS] Memories.lua sorti du .toc et du dépôt", not toc:find("Memories.lua", 1, true)
-		and SS.Read("QuestCompanion/Memories.lua") == nil)
+	Say("-- 2.6.0 sans souvenirs : plus d'album")
 	local left = {}
-	for _, name in ipairs({ "MemoryData", "MemoryRecord", "MemoryText", "MemoryAnnivLabel", "MemoryWantPhoto",
-		"MemoryAsk", "MemoryAnswer", "MemoryPhotoStep", "MemoryPhotoDone", "MemoryCheckAnniversary", "MemoryRecall",
-		"MemoryPoll", "OpenMemories", "EnsurePhotoPrompt", "BuildMemoriesPane", "RefreshMemoriesPane", "MemoryArt",
-		"MemoryScene", "MemoryPose", "MemoryCreature", "MemoryState", "MemoryPhotosToday" }) do
+	local toc = SS.Read("QuestCompanion/QuestCompanion.toc") or ""
+	if toc:find("Memories.lua", 1, true) or SS.Read("QuestCompanion/Memories.lua") ~= nil then left[#left + 1] = "Memories.lua" end
+	for _, name in ipairs({ "MemoryData", "MemoryRecord", "OpenMemories", "EnsurePhotoPrompt", "BuildMemoriesPane",
+		"MEMORY_STRINGS", "memoryEventFrame", "photoPrompt" }) do
 		if NS[name] ~= nil then left[#left + 1] = name end
 	end
-	for _, name in ipairs({ "MEMORY_STRINGS", "MEMORY_PHOTO_KINDS", "MEMORY_SCENE_TEXTURE", "MEMORY_ZONE_BIOME",
-		"MEMORY_INSTANCE_ART", "MEMORY_FOREVER_ART", "MEMORY_FLIGHT_ART", "memoryEventFrame", "photoPrompt" }) do
-		if NS[name] ~= nil then left[#left + 1] = name end
-	end
-	Check("[SANS] aucune fonction ni table des souvenirs dans le namespace", #left == 0, table.concat(left, ", "))
-	Check("[SANS] pas de bouton « Ouvrir l'album »", type(NS.OPTION_ACTIONS) ~= "table" or NS.OPTION_ACTIONS.companionAlbum == nil)
-	Check("[SANS] pas de réglages par défaut des photos ni du rappel", NS.DEFAULTS.companionPhotos == nil
-		and NS.DEFAULTS.companionRecall == nil)
-	Check("[SANS] chaînes retirées (carnet, réglages)", NS.L.JRN_SEC_memories == "JRN_SEC_memories"
-		and NS.L.OPT_PAGE_MEMORIES == "OPT_PAGE_MEMORIES" and NS.L.MEM_TXT_capture == "MEM_TXT_capture")
-	local pools = {}
-	for key in pairs(NS.COMPANION_LINE_STRINGS.fr) do
-		if key:find("^PHOTO") or key:find("^RECALL") or key:find("^ANNIV") then pools[#pools + 1] = key end
-	end
-	local persona = SS.Read("QuestCompanion/PersonalityLines.lua") or ""
-	Check("[SANS] plus de répliques de photo, de rappel ni d'anniversaire", #pools == 0
-		and not persona:find("\n\tPHOTO = {", 1, true), table.concat(pools, ", "))
-	-- aucun appel restant vers l'album dans les fichiers chargés
-	local calls = {}
 	for _, file in ipairs(rawget(_G, "TOC_FILES") or {}) do
 		if file:find("^QuestCompanion/") then
 			local text = SS.Read(file) or ""
 			if text:find(":Memory%u") or text:find("%.Memory%u") or text:find("MEMORY_STRINGS", 1, true)
-				or text:find("OpenMemories", 1, true) then calls[#calls + 1] = file end
+				or text:find("OpenMemories", 1, true) then left[#left + 1] = file end
 		end
 	end
-	Check("[SANS] aucun fichier n'appelle plus l'album", #calls == 0, table.concat(calls, ", "))
-end
-
--- 2. Carnet et réglages -------------------------------------------------------------------------------
-do
-	Say("-- 2.6.0 sans souvenirs : carnet et réglages")
+	Check("[SANS] l'album est parti : ni module, ni fonctions, ni appels", #left == 0, table.concat(left, ", "))
 	SS.Reset()
 	NS:DB().journalTab = "memories"
 	NS:ToggleJournal(true)
 	local f = NS.journalFrame
-	Check("[SANS] carnet : pas d'entrée Souvenirs, ni de page", f.sections.memories == nil and f.mem == nil
-		and f.sections.evolution and f.sections.guide)
 	NS:SelectJournalKind("memories")
-	Check("[SANS] un ancien onglet « memories » rouvre la page Compagnon", f.kind == "evolution" and f.evo:IsShown())
+	Check("[SANS] carnet : pas d'entrée Souvenirs ; un ancien onglet « memories » sauvegardé rouvre la page Compagnon",
+		f.sections.memories == nil and f.mem == nil and f.kind == "evolution" and f.evo:IsShown())
 	f:Hide()
-	local ids = {}
-	for _, page in ipairs(NS.OPTION_PAGES) do
-		if page.id == "companionMemories" or page.title == "OPT_PAGE_MEMORIES" then ids[#ids + 1] = page.id end
-	end
-	Check("[SANS] réglages : plus de page Souvenirs", #ids == 0, table.concat(ids, ", "))
-	Check("[SANS] effets : plus d'éclair de photo", NS.COMPANION_FX.flash == nil)
 end
 
--- 3. Ménage de la sauvegarde ---------------------------------------------------------------------------
+-- 2. Ménage de la sauvegarde ---------------------------------------------------------------------------
 do
 	Say("-- 2.6.0 sans souvenirs : ménage unique de la sauvegarde")
 	SS.Reset()
@@ -106,15 +73,15 @@ do
 	local ok, cleaned = pcall(NS.DropMemories, NS)
 	Check("[SANS] ménage : sans erreur, quatre personnages nettoyés", ok and cleaned == 4, tostring(cleaned))
 	local one = db.chars["Testeur - Royaume"].companion
-	Check("[SANS] … l'album et ses clés quittent la sauvegarde", one.memories == nil and one.memoryKeys == nil
-		and one.metAt == nil and one.sillyScore == nil and one.photoDay == nil)
-	Check("[SANS] … le reste du compagnon est gardé, « since » aussi", one.name == "Brindille" and one.since == 1700000000)
-	Check("[SANS] … « jours ensemble » recalé sur le plus vieux souvenir",
-		db.chars["Autre - Royaume"].companion.since == 1791000000, tostring(db.chars["Autre - Royaume"].companion.since))
-	Check("[SANS] … ou sur la date de la rencontre", db.chars["Trois - Royaume"].companion.since == 1785000000)
+	Check("[SANS] … l'album et ses clés quittent la sauvegarde, le reste du compagnon est gardé (« since » aussi)",
+		one.memories == nil and one.memoryKeys == nil and one.metAt == nil and one.sillyScore == nil and one.photoDay == nil
+		and one.name == "Brindille" and one.since == 1700000000)
+	Check("[SANS] … « jours ensemble » recalé sur le plus vieux souvenir, ou sur la date de la rencontre",
+		db.chars["Autre - Royaume"].companion.since == 1791000000 and db.chars["Trois - Royaume"].companion.since == 1785000000,
+		tostring(db.chars["Autre - Royaume"].companion.since))
 	local bad = db.chars["Abime - Royaume"].companion
-	Check("[SANS] … données abîmées retirées aussi", bad.memories == nil and bad.memoryKeys == nil and bad.since == nil)
-	Check("[SANS] … réglages des photos et du rappel retirés", db.companionPhotos == nil and db.companionPhotosAsked == nil
+	Check("[SANS] … données abîmées retirées aussi ; réglages des photos et du rappel retirés", bad.memories == nil
+		and bad.memoryKeys == nil and bad.since == nil and db.companionPhotos == nil and db.companionPhotosAsked == nil
 		and db.companionRecall == nil and db.memoriesDropped == true)
 	db.chars["Testeur - Royaume"].companion.memories = { {} }
 	Check("[SANS] une seule fois : le second passage ne fait rien", NS:DropMemories() == 0

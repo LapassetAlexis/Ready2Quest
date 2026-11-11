@@ -56,18 +56,14 @@ do
 	Check("[PLC] lieux de Forever générés, plus de lieux d'Era", counts.forever >= 120 and NS.PLACE_DATA.era == nil,
 		counts.forever)
 	Check("[PLC] chaque lieu est bien formé (position, rayon, faction, services)", #bad == 0, table.concat(bad, ", "))
-	for _, client in ipairs({ "forever" }) do
-		local places = NS.PLACE_DATA[client].places
-		local goldshire = P.Near(places[1429], 42.4, 67.1, 2)
-		local razor = P.Near(places[1411], 52.0, 42.2, 2)
-		Check("[PLC] " .. client .. " : Comté-de-l'Or, Alliance, avec son auberge", goldshire and goldshire[4] == "A"
-			and goldshire[5] % 2 == 1)
-		Check("[PLC] " .. client .. " : Razor Hill, Horde", razor and razor[4] == "H")
-	end
+	local places = NS.PLACE_DATA.forever.places
+	local goldshire = P.Near(places[1429], 42.4, 67.1, 2)
+	local razor = P.Near(places[1411], 52.0, 42.2, 2)
 	local neutral
-	for _, p in ipairs(NS.PLACE_DATA.forever.places[1434] or {}) do if p[4] == "N" and p[5] % 2 == 1 then neutral = p end end
-	Check("[PLC] Booty Bay : lieu neutre avec auberge", neutral ~= nil)
-	Check("[PLC] socle : Places.lua dans les deux .toc", (function()
+	for _, p in ipairs(places[1434] or {}) do if p[4] == "N" and p[5] % 2 == 1 then neutral = p end end
+	Check("[PLC] Comté-de-l'Or (Alliance, auberge), Razor Hill (Horde), Booty Bay (neutre, auberge)", goldshire
+		and goldshire[4] == "A" and goldshire[5] % 2 == 1 and razor and razor[4] == "H" and neutral ~= nil)
+	Check("[PLC] socle : Places.lua dans le .toc", (function()
 		for _, file in ipairs(TOC_FILES) do
 			if file == "Ready2Quest/Libs/Socle/Places.lua" then return true end
 		end
@@ -88,12 +84,13 @@ do
 	Check("[PLC] lieu de l'autre faction : signalé hostile", none == nil and where == 1429 and hostile == true)
 	Mock.world.faction = "Alliance"
 	Mock.world.instance = true
-	Check("[PLC] en instance : rien", NS:KnownPlace() == nil)
+	local inInstance = NS:KnownPlace()
 	Mock.world.instance = false
 	C_Map.GetPlayerMapPosition = function() return nil end
-	Check("[PLC] position inconnue : rien", NS:KnownPlace() == nil)
+	local unknown = NS:KnownPlace()
 	C_Map.GetPlayerMapPosition = nil
-	Check("[PLC] sans l'API : rien, sans erreur", NS:KnownPlace() == nil)
+	Check("[PLC] en instance, position inconnue, sans l'API : rien, sans erreur", inInstance == nil and unknown == nil
+		and NS:KnownPlace() == nil)
 	P.Reset()
 	Mock.world.mapID = 20
 	Check("[PLC] carte sans lieu repéré", NS:MapHasPlaces() == false and NS:KnownPlace() == nil)
@@ -106,11 +103,11 @@ do
 	P.Reset()
 	NS:DB().exitDelay = 0
 	local safe, _, reason, entry = NS:IsCurrentZoneSafe()
-	Check("[PLC] zone sûre : un lieu repéré, nommé d'après la carte", safe and reason == "place"
-		and entry.name == "Forêt d'Elwynn" and entry.source == "known")
 	Mock.world.subzone = "Comté-de-l'Or"
 	local _, _, namedReason, named = NS:IsCurrentZoneSafe()
-	Check("[PLC] … ou d'après la sous-zone quand elle existe", namedReason == "place" and named.name == "Comté-de-l'Or")
+	Check("[PLC] zone sûre : un lieu repéré, nommé d'après la carte ou la sous-zone", safe and reason == "place"
+		and entry.name == "Forêt d'Elwynn" and entry.source == "known"
+		and namedReason == "place" and named.name == "Comté-de-l'Or")
 	Mock.world.subzone = nil
 	Mock.world.faction = "Horde"
 	local hostileSafe, _, hostileReason = NS:IsCurrentZoneSafe()
@@ -128,9 +125,9 @@ do
 	Mock:Advance(0.5)
 	Check("[PLC] vérification espacée : rien avant 1,5 s", NS.inSafe == true)
 	Mock:Advance(1.5)
-	Check("[PLC] sortie du lieu vue sans événement de zone", NS.inSafe == false)
+	local left = NS.inSafe == false
 	Mock:Advance(1)
-	Check("[PLC] départ annoncé", events[1] == "depart", table.concat(events, ","))
+	Check("[PLC] sortie du lieu vue sans événement de zone, départ annoncé", left and events[1] == "depart", table.concat(events, ","))
 
 	Mock.world.px = 42.4                 -- retour au village
 	Mock:Advance(2)

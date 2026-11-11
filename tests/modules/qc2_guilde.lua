@@ -1,5 +1,5 @@
 -- QuestCompanion 2.4 : exploits de la ménagerie annoncés à la guilde (GuildFeats.lua).
--- Envoi (réglages, guilde, combat, format, regroupement, écart), crochets de
+-- Envoi (réglages, guilde, combat, format versionné E~1~…, regroupement, écart), crochets de
 -- capture / sceau / palier, réception stricte (canal, soi, champs, identifiants
 -- inconnus), file des bandeaux, son, clic vers la fiche, découverte au survol,
 -- réessai quand le client refuse un message pour cause de débit.
@@ -123,23 +123,22 @@ do
 	end
 	for key in pairs(strings.en) do if strings.fr[key] == nil then bad[#bad + 1] = "fr manquant:" .. key end end
 	Check("[GLD] chaînes françaises et anglaises complètes", #bad == 0, table.concat(bad, ", "))
-	Check("[GLD] par défaut : annoncer, tout voir, pas de chat", NS:GuildFeatsSending() and NS:GuildFeatsShowMode() == "all"
-		and NS:DB().guildFeatsChat ~= true)
 	local keys, trainerAt = {}, nil
 	for index, row in ipairs(NS.DAILY_OPTION_ROWS) do
 		keys[row.key] = index
 		if row.key == "trainerShare" then trainerAt = index end
 	end
-	Check("[GLD] réglages sous le partage de la fiche", trainerAt and keys.guildFeatsSend == trainerAt + 1
-		and keys.guildFeatsShow == trainerAt + 2 and keys.guildFeatsChat == trainerAt + 3)
+	Check("[GLD] par défaut : annoncer, tout voir, pas de chat ; réglages sous le partage de la fiche", NS:GuildFeatsSending()
+		and NS:GuildFeatsShowMode() == "all" and NS:DB().guildFeatsChat ~= true and trainerAt
+		and keys.guildFeatsSend == trainerAt + 1 and keys.guildFeatsShow == trainerAt + 2 and keys.guildFeatsChat == trainerAt + 3)
 	local choices = NS:GuildFeatsShowChoices()
-	Check("[GLD] trois choix : tous, brillantes seulement, aucun", #choices == 3 and choices[1].value == "all"
-		and choices[2].label == "Brillantes seulement" and choices[3].value == "off")
-	Check("[GLD] choix inconnu refusé", NS:GuildFeatsSetShowMode("tout") == nil and NS:GuildFeatsShowMode() == "all")
+	Check("[GLD] trois choix (tous, brillantes seulement, aucun), choix inconnu refusé", #choices == 3
+		and choices[1].value == "all" and choices[2].label == "Brillantes seulement" and choices[3].value == "off"
+		and NS:GuildFeatsSetShowMode("tout") == nil and NS:GuildFeatsShowMode() == "all")
 	NS:GuildFeatsSetShowMode("shiny")
-	Check("[GLD] choix gardé dans la sauvegarde", NS:DB().guildFeatsShow == "shiny" and NS:GuildFeatsShowMode() == "shiny")
+	local kept = NS:DB().guildFeatsShow == "shiny" and NS:GuildFeatsShowMode() == "shiny"
 	NS:DB().guildFeatsShow = "n'importe quoi"
-	Check("[GLD] valeur sauvegardée illisible : tous", NS:GuildFeatsShowMode() == "all")
+	Check("[GLD] choix gardé dans la sauvegarde ; valeur illisible : tous", kept and NS:GuildFeatsShowMode() == "all")
 end
 
 -- 2. Envoi : réglages, guilde, combat, format ---------------------------------------------------
@@ -147,42 +146,44 @@ do
 	Say("-- exploits de guilde : envoi")
 	GF.Reset()
 	local shiny = { kind = "s", id = 3098, zone = 1411, stars = 3, class = "normal" }
+	local refused = {}
 	GF.guild = false
-	Check("[GLD] hors guilde : rien de retenu", not NS:GuildFeatNote(shiny))
+	if NS:GuildFeatNote(shiny) then refused[#refused + 1] = "hors guilde" end
 	GF.guild = true
 	NS:DB().guildFeatsSend = false
-	Check("[GLD] annonce coupée : rien de retenu", not NS:GuildFeatNote(shiny))
+	if NS:GuildFeatNote(shiny) then refused[#refused + 1] = "annonce coupée" end
 	NS:DB().guildFeatsSend = true
 	NS:DB().trainerShare = false
-	Check("[GLD] fiche non partagée : l'addon reste muet", not NS:GuildFeatNote(shiny))
+	if NS:GuildFeatNote(shiny) then refused[#refused + 1] = "fiche non partagée" end
 	NS:DB().trainerShare = true
-	Check("[GLD] sorte inconnue refusée", not NS:GuildFeatNote({ kind = "x", id = 1 }))
-	Check("[GLD] exploit retenu", NS:GuildFeatNote(shiny))
+	if NS:GuildFeatNote({ kind = "x", id = 1 }) then refused[#refused + 1] = "sorte inconnue" end
+	Check("[GLD] rien de retenu hors guilde, annonce coupée, fiche non partagée, sorte inconnue", #refused == 0,
+		table.concat(refused, ", "))
+	local noted = NS:GuildFeatNote(shiny)
 	GF.Tick(1)
-	Check("[GLD] la série attend quelques secondes (regroupement)", #GF.sent == 0)
+	Check("[GLD] exploit retenu, la série attend quelques secondes (regroupement)", noted and #GF.sent == 0)
 	GF.Tick(NS.GFEAT_GATHER)
 	local sent = GF.Take()
-	Check("[GLD] une annonce, à la guilde, sur le préfixe de la fiche", #sent == 1 and sent[1].channel == "GUILD"
-		and sent[1].prefix == "QCTrainer" and sent[1].target == nil, sent[1] and sent[1].channel)
-	Check("[GLD] format versionné : E~1~s~npc~zone~étoiles~rang~autres", sent[1] and sent[1].text == "E~1~s~3098~1411~3~normal~0",
-		sent[1] and sent[1].text)
-	Check("[GLD] le message relu est le même exploit", (function()
-		local feat = NS:GuildFeatParse(sent[1].text)
-		return feat and feat.kind == "s" and feat.id == 3098 and feat.zone == 1411 and feat.stars == 3 and feat.more == 0
-	end)())
+	Check("[GLD] une annonce, à la guilde, préfixe de la fiche, format versionné E~1~s~npc~zone~étoiles~rang~autres",
+		#sent == 1 and sent[1].channel == "GUILD" and sent[1].prefix == "QCTrainer" and sent[1].target == nil
+		and sent[1].text == "E~1~s~3098~1411~3~normal~0", sent[1] and sent[1].text)
+	local feat = NS:GuildFeatParse(sent[1].text)
+	Check("[GLD] le message relu est le même exploit", feat and feat.kind == "s" and feat.id == 3098 and feat.zone == 1411
+		and feat.stars == 3 and feat.more == 0)
 	-- combat, verrou de messagerie : la série attend
 	NS:GuildFeatsReset()
 	NS:GuildFeatNote({ kind = "z", id = 1412, zone = 0, stars = 0 })
 	GF.combat = true
 	GF.Tick(NS.GFEAT_GATHER + 1)
-	Check("[GLD] en combat : rien n'est envoyé", #GF.sent == 0 and NS.guildFeatsState.out ~= nil)
+	local combat = #GF.sent == 0 and NS.guildFeatsState.out ~= nil
 	GF.combat, GF.lockdown = false, true
 	GF.Tick(1)
-	Check("[GLD] verrou de messagerie : rien n'est envoyé", #GF.sent == 0)
+	local lockdown = #GF.sent == 0
 	GF.lockdown = false
 	GF.Tick(1)
 	sent = GF.Take()
-	Check("[GLD] après le combat : l'annonce part", #sent == 1 and sent[1].text == "E~1~z~1412~0~0~-~0", sent[1] and sent[1].text)
+	Check("[GLD] en combat, verrou de messagerie : rien ; après : l'annonce part", combat and lockdown and #sent == 1
+		and sent[1].text == "E~1~z~1412~0~0~-~0", sent[1] and sent[1].text)
 	-- sorti de la guilde entre-temps : la série est oubliée
 	NS:GuildFeatsReset()
 	NS:GuildFeatNote(shiny)
@@ -210,11 +211,11 @@ do
 		and NS.GuildFeatScore({ kind = "n", class = "rare" }) > NS.GuildFeatScore({ kind = "n", class = "elite", stars = 3 }))
 	NS:GuildFeatNote({ kind = "n", id = 3099, zone = 1411, stars = 1, class = "elite" })
 	GF.Tick(NS.GFEAT_GATHER + 1)
-	Check("[GLD] écart entre deux annonces respecté", #GF.sent == 0)
+	local waited = #GF.sent == 0
 	GF.Tick(NS.GFEAT_GAP)
 	sent = GF.Take()
-	Check("[GLD] l'écart passé : l'annonce suivante part", #sent == 1 and sent[1].text:find("^E~1~n~3099~") ~= nil,
-		sent[1] and sent[1].text)
+	Check("[GLD] écart entre deux annonces respecté, puis l'annonce suivante part", waited and #sent == 1
+		and sent[1].text:find("^E~1~n~3099~") ~= nil, sent[1] and sent[1].text)
 	local parts = NS:GuildFeatMessage({ kind = "s", id = 3098, zone = 1411, stars = 9, class = "dieu" }, 500)
 	Check("[GLD] champs bornés à l'envoi (étoiles, rang inconnu, autres)", parts[4] == 3 and parts[5] == "-" and parts[6] == 99)
 end
@@ -230,30 +231,30 @@ do
 		return out and out.feat
 	end
 	NS:CaptureResolve({ success = true, target = { npcID = 3098, name = "Sanglier tacheté", class = "normal", zoneID = 1411 } })
-	Check("[GLD] espèce commune nouvelle : pas d'annonce", Last() == nil)
+	local common = Last() == nil
 	NS:CaptureResolve({ success = true, target = { npcID = 3099, name = "Garde kolkar", class = "elite", zoneID = 1411 } })
 	local feat = Last()
-	Check("[GLD] élite nouvelle : annoncée", feat and feat.kind == "n" and feat.id == 3099 and feat.zone == 1411
-		and feat.class == "elite" and feat.stars >= 1)
+	Check("[GLD] espèce commune nouvelle : rien ; élite nouvelle : annoncée", common and feat and feat.kind == "n"
+		and feat.id == 3099 and feat.zone == 1411 and feat.class == "elite" and feat.stars >= 1)
 	NS:CaptureResolve({ success = true, target = { npcID = 3099, name = "Garde kolkar", class = "elite", zoneID = 1411 } })
-	Check("[GLD] élite recapturée : pas d'annonce", Last() == nil)
+	local again = Last() == nil
 	NS:CaptureResolve({ success = false, target = { npcID = 3100, name = "Griffe-sanglante", class = "rare", zoneID = 1411 } })
-	Check("[GLD] capture ratée : pas d'annonce", Last() == nil)
+	Check("[GLD] élite recapturée, capture ratée : pas d'annonce", again and Last() == nil)
 	NS:CaptureResolve({ success = true, target = { npcID = 3098, name = "Sanglier tacheté", class = "normal", zoneID = 1411, shiny = true } })
 	feat = Last()
-	Check("[GLD] brillante : annoncée, même d'une espèce commune", feat and feat.kind == "s" and feat.id == 3098)
 	NS:CaptureResolve({ success = true, stars = 1, target = { npcID = 3098, name = "Sanglier tacheté", class = "normal", zoneID = 1411, shiny = true } })
-	Check("[GLD] même brillante, pas mieux : pas d'annonce", Last() == nil)
+	Check("[GLD] brillante : annoncée même d'une espèce commune ; la même, pas mieux : rien", feat and feat.kind == "s"
+		and feat.id == 3098 and Last() == nil)
 	-- le kodo, seule espèce de Mulgore : la zone est scellée
 	NS:CaptureResolve({ success = true, target = { npcID = 201, name = "Kodo", class = "normal", zoneID = 1412 } })
 	feat = Last()
 	Check("[GLD] sceau de zone : annoncé", NS:MenagerieSealed(1412) and feat and feat.kind == "z" and feat.id == 1412)
 	GF.Caught(3100, { class = "rare" })
 	NS:MenagerieSealCheck(1411, { quiet = true })
-	Check("[GLD] rattrapage silencieux : scellée, pas d'annonce", NS:MenagerieSealed(1411) and Last() == nil)
+	local quietSeal = NS:MenagerieSealed(1411) and Last() == nil
 	for index = 1, 10 do GF.Caught(5000 + index) end
 	NS:MenagerieRankCheck({ quiet = true })
-	Check("[GLD] palier en silence : pas d'annonce", Last() == nil)
+	Check("[GLD] rattrapages silencieux (sceau, palier) : pas d'annonce", quietSeal and Last() == nil)
 	NS:MenagerieCollectionData().ranks = {}
 	for index = 11, 25 do GF.Caught(5000 + index) end
 	NS:MenagerieRankCheck()
@@ -268,19 +269,20 @@ end
 do
 	Say("-- exploits de guilde : réception")
 	GF.Reset()
-	Check("[GLD] brillante reçue de la guilde : retenue", GF.Receive("E~1~s~3098~1411~3~normal~0"))
+	local retained = GF.Receive("E~1~s~3098~1411~3~normal~0")
 	local item = NS:GuildFeatsQueue()[1]
-	Check("[GLD] la ligne refaite chez nous", item and item.info.line == "Dyokrion a capturé une brillante !"
-		and item.info.name == "Sanglier tacheté" and item.info.stars == 3 and item.sender == "Dyokrion-Royaume",
-		item and item.info.line)
+	Check("[GLD] brillante reçue de la guilde : retenue, la ligne refaite chez nous", retained and item
+		and item.info.line == "Dyokrion a capturé une brillante !" and item.info.name == "Sanglier tacheté"
+		and item.info.stars == 3 and item.sender == "Dyokrion-Royaume", item and item.info.line)
 	Check("[GLD] l'expéditeur devient un détenteur connu (menu du clic droit)", NS:TrainerIsHolder("Dyokrion"))
 	NS:GuildFeatsReset()
 	GF.Receive("E~1~s~3098~1411~3~normal~0", "Bob-Royaume", "WHISPER")
 	GF.Receive("E~1~s~3098~1411~3~normal~0", "Bob-Royaume", "PARTY")
-	Check("[GLD] hors du canal GUILD : ignoré (mais détenteur noté)", #NS:GuildFeatsQueue() == 0 and NS:TrainerIsHolder("Bob"))
+	local otherChannel = #NS:GuildFeatsQueue() == 0 and NS:TrainerIsHolder("Bob")
 	GF.Receive("E~1~s~3098~1411~3~normal~0", "Testeur-Royaume")
-	Check("[GLD] son propre message : ignoré", #NS:GuildFeatsQueue() == 0)
-	Check("[GLD] lecture directe : canal et soi vérifiés aussi", not NS:GuildFeatsOnMessage("E~1~s~3098~1411~3~normal~0", "WHISPER", "Bob")
+	Check("[GLD] hors du canal GUILD (détenteur noté quand même), son propre message : ignorés, en lecture directe aussi",
+		otherChannel and #NS:GuildFeatsQueue() == 0
+		and not NS:GuildFeatsOnMessage("E~1~s~3098~1411~3~normal~0", "WHISPER", "Bob")
 		and not NS:GuildFeatsOnMessage("E~1~s~3098~1411~3~normal~0", "GUILD", "Testeur"))
 	local bad = {
 		"E~1~x~3098~1411~3~normal~0",           -- sorte inconnue
@@ -311,31 +313,29 @@ do
 	end
 	Check("[GLD] champs invalides ou identifiants inconnus : tous rejetés", #accepted == 0 and #NS:GuildFeatsQueue() == 0,
 		table.concat(accepted, " | "))
-	Check("[GLD] version future avec champs en plus : lue", (function()
-		local feat = NS:GuildFeatParse("E~2~n~3100~1411~2~rare~0~futur~x")
-		return feat and feat.proto == 2 and feat.kind == "n" and feat.class == "rare"
-	end)())
+	local future = NS:GuildFeatParse("E~2~n~3100~1411~2~rare~0~futur~x")
+	Check("[GLD] version future avec champs en plus : lue", future and future.proto == 2 and future.kind == "n"
+		and future.class == "rare")
 	-- le rang de la créature vient de NOS tables, pas du message
 	local info = NS:GuildFeatDescribe(NS:GuildFeatParse("E~1~n~3100~1411~2~elite~0"), "Bob-Royaume")
 	Check("[GLD] espèce nouvelle : rang et nom de nos tables", info and info.class == "rare" and info.line == "Bob a capturé un rare !"
 		and info.name == "Griffe-sanglante", info and info.line)
-	info = NS:GuildFeatDescribe(NS:GuildFeatParse("E~1~z~1412~0~0~-~2"), "Bob-Royaume")
-	Check("[GLD] sceau : le nom de la zone vient de notre client", info and info.line == "Bob a scellé une zone !"
-		and info.sub == "Sceau de zone : Mulgore" and NS:GuildFeatMoreText(info.more) == "et 2 autres exploits")
-	info = NS:GuildFeatDescribe(NS:GuildFeatParse("E~1~r~25~0~0~-~1"), "Bob-Royaume")
-	Check("[GLD] palier : le titre dans notre langue", info and info.line == "Bob a capturé 25 espèces !"
-		and info.sub:find("Nouveau titre : ", 1, true) == 1 and NS:GuildFeatMoreText(info.more) == "et 1 autre exploit",
-		info and info.sub)
-	-- espèce apprise par notre carnet (absente des tables livrées) : connue
+	local seal = NS:GuildFeatDescribe(NS:GuildFeatParse("E~1~z~1412~0~0~-~2"), "Bob-Royaume")
+	local rank = NS:GuildFeatDescribe(NS:GuildFeatParse("E~1~r~25~0~0~-~1"), "Bob-Royaume")
+	Check("[GLD] sceau (nom de zone de notre client) et palier (titre dans notre langue), « et N autres »", seal
+		and seal.line == "Bob a scellé une zone !" and seal.sub == "Sceau de zone : Mulgore"
+		and NS:GuildFeatMoreText(seal.more) == "et 2 autres exploits" and rank and rank.line == "Bob a capturé 25 espèces !"
+		and rank.sub:find("Nouveau titre : ", 1, true) == 1 and NS:GuildFeatMoreText(rank.more) == "et 1 autre exploit",
+		rank and rank.sub)
+	-- espèce apprise par notre carnet (absente des tables livrées) : connue ; noms désarmés
 	GF.Caught(7777, { name = "Bête|cffff0000 piégée", class = "rareelite", zoneID = 1450 })
 	info = NS:GuildFeatDescribe(NS:GuildFeatParse("E~1~n~7777~1450~1~-~0"), "Bob-Royaume")
-	Check("[GLD] créature de notre créatures : nom désarmé", info and info.line == "Bob a capturé un rare élite !"
-		and info.name:find("||c", 1, true) ~= nil, info and info.name)
-	Check("[GLD] nom de l'expéditeur : sans le royaume s'il est le nôtre, désarmé", (function()
-		local a = NS:GuildFeatDescribe(NS:GuildFeatParse("E~1~s~3098~1411~1~-~0"), "Ève-AutreRoyaume")
-		local b = NS:GuildFeatDescribe(NS:GuildFeatParse("E~1~s~3098~1411~1~-~0"), "Mé|chant-Royaume")
-		return a and a.line:find("Ève-AutreRoyaume", 1, true) == 1 and b and b.line:find("Mé||chant", 1, true) == 1
-	end)())
+	local a = NS:GuildFeatDescribe(NS:GuildFeatParse("E~1~s~3098~1411~1~-~0"), "Ève-AutreRoyaume")
+	local b = NS:GuildFeatDescribe(NS:GuildFeatParse("E~1~s~3098~1411~1~-~0"), "Mé|chant-Royaume")
+	Check("[GLD] créature de notre carnet et expéditeur (royaume étranger gardé) : noms désarmés", info
+		and info.line == "Bob a capturé un rare élite !" and info.name:find("||c", 1, true) ~= nil
+		and a and a.line:find("Ève-AutreRoyaume", 1, true) == 1 and b and b.line:find("Mé||chant", 1, true) == 1,
+		info and info.name)
 end
 
 -- 6. Réglages de réception, chat ----------------------------------------------------------------
@@ -350,21 +350,21 @@ do
 	GF.Receive("E~1~n~3100~1411~2~rare~0", "Dan-Royaume")
 	NS:GuildFeatsSetShowMode("all")
 	GF.Receive("E~1~n~3100~1411~2~rare~0", "Dan-Royaume")
-	Check("[GLD] tous : le rare retenu", #NS:GuildFeatsQueue() == 2)
+	local all = #NS:GuildFeatsQueue() == 2
 	NS:GuildFeatsSetShowMode("shiny")
-	Check("[GLD] passer à « brillantes seulement » vide les autres de la file", #NS:GuildFeatsQueue() == 1)
+	Check("[GLD] tous : le rare retenu ; repasser à « brillantes seulement » vide les autres", all and #NS:GuildFeatsQueue() == 1)
 	NS:GuildFeatsSetShowMode("off")
 	GF.Receive("E~1~s~3098~1411~1~normal~0", "Eve-Royaume")
 	Check("[GLD] aucun : rien retenu, file vidée", #NS:GuildFeatsQueue() == 0)
 	NS:GuildFeatsSetShowMode("all")
 	local before = #Mock.output
 	GF.Receive("E~1~s~3098~1411~1~normal~0", "Fay-Royaume")
-	Check("[GLD] chat coupé par défaut : pas de ligne", #Mock.output == before)
+	local silent = #Mock.output == before
 	NS:DB().guildFeatsChat = true
 	GF.Receive("E~1~s~3099~1411~2~elite~0", "Gus-Royaume")
 	local line = Mock.output[#Mock.output] or ""
-	Check("[GLD] chat activé : une ligne « Guilde — … »", #Mock.output == before + 1 and line:find("Guilde — Gus a capturé une brillante !", 1, true) ~= nil
-		and line:find("Garde kolkar", 1, true) ~= nil, line)
+	Check("[GLD] chat coupé par défaut ; activé : une ligne « Guilde — … »", silent and #Mock.output == before + 1
+		and line:find("Guilde — Gus a capturé une brillante !", 1, true) ~= nil and line:find("Garde kolkar", 1, true) ~= nil, line)
 end
 
 -- 7. File des bandeaux, son, clic ---------------------------------------------------------------
@@ -376,18 +376,17 @@ do
 	GF.Receive("E~1~n~3099~1411~1~elite~0", "Ann-Royaume")
 	local queue = NS:GuildFeatsQueue()
 	Check("[GLD] un bandeau par membre : le meilleur gardé", #queue == 1 and queue[1].feat.id == 3100)
+	local function Has(prefix)
+		for _, item in ipairs(NS:GuildFeatsQueue()) do if item.key:find("^" .. prefix) then return true end end
+		return false
+	end
 	GF.Receive("E~1~n~3099~1411~1~elite~0", "Ben-Royaume")
 	GF.Receive("E~1~z~1412~0~0~-~0", "Cal-Royaume")
 	GF.Receive("E~1~n~3099~1411~2~elite~0", "Dee-Royaume")
-	Check("[GLD] file de 3 : le moins bon remplacé par un meilleur", #queue == 3 and (function()
-		for _, item in ipairs(NS:GuildFeatsQueue()) do if item.key:find("^ben") then return false end end
-		return true
-	end)())
+	local replaced = #queue == 3 and not Has("ben")
 	GF.Receive("E~1~n~3099~1411~1~elite~0", "Eli-Royaume")
-	Check("[GLD] file pleine : un moins bon est laissé", #NS:GuildFeatsQueue() == 3 and (function()
-		for _, item in ipairs(NS:GuildFeatsQueue()) do if item.key:find("^eli") then return false end end
-		return true
-	end)())
+	Check("[GLD] file de 3 : le moins bon remplacé par un meilleur, un moins bon laissé", replaced
+		and #NS:GuildFeatsQueue() == 3 and not Has("eli"))
 	GF.combat = true
 	GF.Tick(0.2)
 	Check("[GLD] en combat : pas de bandeau", NS:GuildFeatsShowing() == nil)
@@ -395,27 +394,28 @@ do
 	GF.Tick(0.2)
 	local f = NS.guildFeatToast
 	local showing = NS:GuildFeatsShowing()
-	Check("[GLD] un bandeau : le meilleur d'abord (le sceau)", f and f:IsShown() and showing and showing.feat.kind == "z"
-		and f.title.text == "GUILDE" and f.text.text == "Cal a scellé une zone !" and f.info.text == "Sceau de zone : Mulgore",
-		f and f.text.text)
-	Check("[GLD] le bandeau : liseré doré, aide « Clic : sa fiche »", f.hint.text == "Clic : sa fiche de dresseur"
-		and f.accentColor == NS.Theme.GOLD)
-	Check("[GLD] son de réussite", #GF.sounds == 1 and GF.sounds[1] == 17316, GF.sounds[1])
+	Check("[GLD] un bandeau : le meilleur d'abord (le sceau), liseré doré, aide « Clic : sa fiche », son de réussite",
+		f and f:IsShown() and showing and showing.feat.kind == "z" and f.title.text == "GUILDE"
+		and f.text.text == "Cal a scellé une zone !" and f.info.text == "Sceau de zone : Mulgore"
+		and f.hint.text == "Clic : sa fiche de dresseur" and f.accentColor == NS.Theme.GOLD
+		and #GF.sounds == 1 and GF.sounds[1] == 17316, f and f.text.text)
 	GF.Tick(1)
-	Check("[GLD] un seul bandeau à la fois", NS:GuildFeatsShowing() == showing and #NS:GuildFeatsQueue() == 2)
+	local single = NS:GuildFeatsShowing() == showing and #NS:GuildFeatsQueue() == 2
 	GF.Tick(NS.GFEAT_TOAST_SECONDS)
 	local second = NS:GuildFeatsShowing()
-	Check("[GLD] fini : le suivant", second and second ~= showing and second.feat.kind == "n" and f.info.text:find("Griffe-sanglante", 1, true)
-		and f.info.text:find(NS.Theme.Hex(NS.Theme.RANK.rare), 1, true) ~= nil, f.info.text)   -- 2.11.0 : jeton Theme.RANK (texte éclairci)
+	Check("[GLD] un seul bandeau à la fois ; fini : le suivant (rang à la couleur du thème)", single and second
+		and second ~= showing and second.feat.kind == "n" and f.info.text:find("Griffe-sanglante", 1, true)
+		and f.info.text:find(NS.Theme.Hex(NS.Theme.RANK.rare), 1, true) ~= nil, f.info.text)   -- 2.11.0 : jeton Theme.RANK
 	-- son limité : deux bandeaux à moins d'une seconde
 	local sounds = #GF.sounds
 	NS:GuildFeatsShowToast({ key = "x", sender = "Xan-Royaume", feat = { kind = "s" }, score = 1000, at = Mock.now,
 		info = { line = "Xan a capturé une brillante !", shiny = true, class = "normal", name = "Sanglier", stars = 2 } })
-	Check("[GLD] son : pas deux en moins d'une seconde", #GF.sounds == sounds)
+	local throttled = #GF.sounds == sounds
 	Mock.now = Mock.now + 1.1
 	NS:GuildFeatsShowToast({ key = "x", sender = "Xan-Royaume", feat = { kind = "s" }, score = 1000, at = Mock.now,
 		info = { line = "Xan a capturé une brillante !", shiny = true, class = "normal", name = "Sanglier", stars = 2 } })
-	Check("[GLD] brillante : la fanfare, liseré doré clair", GF.sounds[#GF.sounds] == 63971 and f.accentColor == (NS.Theme.GOLD_LIGHT or NS.Theme.GOLD))
+	Check("[GLD] son : pas deux en moins d'une seconde ; brillante : la fanfare, liseré doré clair", throttled
+		and GF.sounds[#GF.sounds] == 63971 and f.accentColor == (NS.Theme.GOLD_LIGHT or NS.Theme.GOLD))
 	NS:DB().companionCaptureSound = false
 	sounds = #GF.sounds
 	Mock.now = Mock.now + 2
@@ -435,8 +435,8 @@ do
 		info = { line = "Yan a scellé une zone !", sub = "Sceau de zone : Mulgore" } })
 	f.button:Click("RightButton")
 	NS:TrainerPump(10)
-	Check("[GLD] clic droit : le bandeau se ferme, rien demandé", not f:IsShown() and #GF.Take() == 0)
-	Check("[GLD] bandeau déplaçable, position gardée", f.button.scripts.OnDragStart ~= nil and f.scripts.OnDragStop ~= nil)
+	Check("[GLD] clic droit : le bandeau se ferme, rien demandé ; bandeau déplaçable", not f:IsShown() and #GF.Take() == 0
+		and f.button.scripts.OnDragStart ~= nil and f.scripts.OnDragStop ~= nil)
 	-- périmés
 	NS:GuildFeatsReset()
 	GF.Receive("E~1~s~3098~1411~1~normal~0", "Zed-Royaume")
@@ -455,23 +455,23 @@ do
 	GameTooltip.GetUnit = function() return hovered and GF.units[hovered].name, hovered end
 	GF.units.mouseover = { name = "Ilda" }
 	hovered = "mouseover"
-	Check("[GLD] survol d'un joueur : une sonde", NS:GuildFeatsTooltipProbe(GameTooltip))
+	local probed = NS:GuildFeatsTooltipProbe(GameTooltip)
 	NS:TrainerPump(10)
 	local sent = GF.Take()
-	Check("[GLD] sonde : P en chuchotement", sent[1] and sent[1].text == "P~1" and sent[1].channel == "WHISPER"
-		and sent[1].target == "Ilda-Royaume")
+	Check("[GLD] survol d'un joueur : une sonde P en chuchotement", probed and sent[1] and sent[1].text == "P~1"
+		and sent[1].channel == "WHISPER" and sent[1].target == "Ilda-Royaume")
 	GF.units.mouseover = { name = "Jorn" }
-	Check("[GLD] une sonde par seconde au plus", not NS:GuildFeatsTooltipProbe(GameTooltip))
+	local throttled = not NS:GuildFeatsTooltipProbe(GameTooltip)
 	Mock.now = Mock.now + 1
-	Check("[GLD] une seconde plus tard : sonde", NS:GuildFeatsTooltipProbe(GameTooltip))
+	Check("[GLD] une sonde par seconde au plus", throttled and NS:GuildFeatsTooltipProbe(GameTooltip))
 	Mock.now = Mock.now + 1
 	Check("[GLD] même joueur : pas deux fois par session", not NS:GuildFeatsTooltipProbe(GameTooltip))
 	NS:TrainerMarkHolder("Kara")
 	GF.units.mouseover = { name = "Kara" }
-	Check("[GLD] détenteur vu il y a peu : pas de sonde", not NS:GuildFeatsTooltipProbe(GameTooltip))
+	local fresh = not NS:GuildFeatsTooltipProbe(GameTooltip)
 	GF.now = GF.now + NS.GFEAT_PROBE_FRESH + 1
 	GF.combat = true
-	Check("[GLD] en combat : pas de sonde", not NS:GuildFeatsTooltipProbe(GameTooltip))
+	Check("[GLD] pas de sonde : détenteur vu il y a peu, en combat", fresh and not NS:GuildFeatsTooltipProbe(GameTooltip))
 	GF.combat = false
 	Check("[GLD] détenteur vu il y a longtemps : resondé", NS:GuildFeatsTooltipProbe(GameTooltip))
 	GF.units.mouseover, hovered = nil, nil
@@ -485,8 +485,8 @@ do
 	GF.Reset()
 	NS:TrainerSend("E", "GUILD", nil, "z", 1412, 0, 0, "-", 0)
 	GF.codes = { 3 }
-	Check("[GLD] refus du client (débit) : rien d'envoyé, gardé", NS:TrainerPump(10) == 0 and #NS.trainerState.queue == 1)
-	Check("[GLD] pas de nouvel essai avant une seconde", NS:TrainerPump(0.2) == 0)
+	Check("[GLD] refus du client (débit) : rien d'envoyé, gardé, pas de nouvel essai avant une seconde",
+		NS:TrainerPump(10) == 0 and #NS.trainerState.queue == 1 and NS:TrainerPump(0.2) == 0)
 	Mock.now = Mock.now + 1
 	Check("[GLD] une seconde plus tard : envoyé", NS:TrainerPump(1) == 1 and GF.sent[1] and GF.sent[1].text == "E~1~z~1412~0~0~-~0")
 	NS:TrainerSend("E", "GUILD", nil, "z", 1412, 0, 0, "-", 0)

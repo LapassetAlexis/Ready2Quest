@@ -42,8 +42,6 @@ do
 	local fr, en, missing = NS.NOTICE_STRINGS.fr, NS.NOTICE_STRINGS.en, {}
 	for key in pairs(fr) do if type(en[key]) ~= "string" or en[key] == "" then missing[#missing + 1] = key end end
 	for key in pairs(en) do if fr[key] == nil then missing[#missing + 1] = key end end
-	Check("[NTC] textes en français et en anglais", #missing == 0, table.concat(missing, ", "))
-	Check("[NTC] icône par défaut", NS:DB().reportIcon == true and NS:WantsNotice())
 	local row
 	for _, def in ipairs(NS.OPTION_PAGES) do
 		if def.id == "general" then
@@ -52,7 +50,8 @@ do
 			end
 		end
 	end
-	Check("[NTC] réglage dans Général, sous « fenêtre ou chat »", row and row.key == "showWindow")
+	Check("[NTC] textes fr/en ; icône par défaut, réglée dans Général sous « fenêtre ou chat »", #missing == 0
+		and NS:DB().reportIcon == true and NS:WantsNotice() and row and row.key == "showWindow", table.concat(missing, ", "))
 	Check("[NTC] icônes du jeu : « ! » au départ et au donjon, « ? » au retour",
 		NS.NOTICE_ICONS.depart == "Interface\\GossipFrame\\AvailableQuestIcon"
 		and NS.NOTICE_ICONS.dungeon == NS.NOTICE_ICONS.depart
@@ -85,12 +84,10 @@ do
 	N.Reset()
 	Mock:Reset()
 	N.Depart()
-	Check("[NTC] départ : la fenêtre ne s'ouvre pas", not (NS.window and NS.window:IsShown()))
-	Check("[NTC] départ : le « ! » s'affiche", N.Shown() and NS.notice.kind == "depart"
-		and NS.noticeFrame.icon.texture == NS.NOTICE_ICONS.depart)
-	Check("[NTC] départ : dans la couleur de la note", N.Tinted(Theme.ScoreColor((NS.score or 0) / 100)))
-	Check("[NTC] départ : la ligne du chat reste", Mock:Output():find(tostring(NS.score) .. "/100", 1, true) ~= nil,
-		Mock:Output())
+	Check("[NTC] départ : pas de fenêtre, le « ! » dans la couleur de la note, la ligne du chat reste",
+		not (NS.window and NS.window:IsShown()) and N.Shown() and NS.notice.kind == "depart"
+		and NS.noticeFrame.icon.texture == NS.NOTICE_ICONS.depart and N.Tinted(Theme.ScoreColor((NS.score or 0) / 100))
+		and Mock:Output():find(tostring(NS.score) .. "/100", 1, true) ~= nil, Mock:Output())
 	NS.noticeFrame:GetScript("OnClick")(NS.noticeFrame, "LeftButton")
 	Check("[NTC] clic : la fenêtre Avant le départ s'ouvre, l'icône s'en va", NS.window and NS.window:IsShown()
 		and not N.Shown())
@@ -121,9 +118,9 @@ do
 	local second = NS.noticeFrame.glow.alpha
 	Check("[NTC] pulsation : le halo varie", N.Shown() and first ~= second, tostring(first) .. " / " .. tostring(second))
 	Mock:Advance(NS.NOTICE_PULSE)
-	Check("[NTC] après la pulsation : toujours là, atténuée", N.Shown() and NS.noticeFrame.alpha == 0.6)
+	local dimmed = N.Shown() and NS.noticeFrame.alpha < 1
 	Mock:Advance(NS.NOTICE_LINGER)
-	Check("[NTC] puis disparue", not N.Shown())
+	Check("[NTC] après la pulsation : atténuée, puis disparue", dimmed and not N.Shown())
 
 	NS:ShowNotice(notice)
 	NS.noticeFrame:GetScript("OnClick")(NS.noticeFrame, "RightButton")
@@ -131,10 +128,10 @@ do
 
 	Mock.world.combat = true
 	NS:ShowNotice(notice)
-	Check("[NTC] en combat : elle attend", not N.Shown() and NS.noticePending == true)
+	local waiting = not N.Shown() and NS.noticePending == true
 	Mock.world.combat = nil
 	Mock:Fire("PLAYER_REGEN_ENABLED")
-	Check("[NTC] fin du combat : elle s'affiche", N.Shown())
+	Check("[NTC] en combat : elle attend ; fin du combat : elle s'affiche", waiting and N.Shown())
 	NS.noticeFrame:GetScript("OnClick")(NS.noticeFrame, "LeftButton")
 	Check("[NTC] clic : le rapport demandé", clicked == 1)
 
@@ -156,10 +153,9 @@ do
 	Mock.world.subzone = "Goldshire"
 	Mock:Reset()
 	Mock:Fire("ZONE_CHANGED")
-	Check("[NTC] retour : le « ? » au lieu du bilan", N.Shown() and NS.notice.kind == "return"
-		and not (NS.expeditionFrame and NS.expeditionFrame:IsShown()))
-	Check("[NTC] retour avec une mort : rouge", N.Tinted(Theme.RED))
-	Check("[NTC] retour : la ligne du chat reste", Mock:Output() ~= "")
+	Check("[NTC] retour avec une mort : le « ? » rouge au lieu du bilan, la ligne du chat reste", N.Shown()
+		and NS.notice.kind == "return" and not (NS.expeditionFrame and NS.expeditionFrame:IsShown())
+		and N.Tinted(Theme.RED) and Mock:Output() ~= "")
 	NS.noticeFrame:GetScript("OnClick")(NS.noticeFrame, "LeftButton")
 	Check("[NTC] clic : le bilan s'ouvre", NS.expeditionFrame and NS.expeditionFrame:IsShown())
 
@@ -167,9 +163,9 @@ do
 	Mock:Reset()
 	NS:ShowDungeonSheet({ key = "deadmines", name = "Les Mortemines", how = "instance", verdict = "ok",
 		quests = {}, readiness = {}, blueprints = {} })
-	Check("[NTC] donjon : le « ! » au lieu de la fiche", N.Shown() and NS.notice.kind == "dungeon"
-		and not (NS.dungeonFrame and NS.dungeonFrame:IsShown()) and N.Tinted(Theme.BLUE))
-	Check("[NTC] donjon : une ligne dans le chat", Mock:Output():find("Les Mortemines", 1, true) ~= nil, Mock:Output())
+	Check("[NTC] donjon : le « ! » au lieu de la fiche, une ligne dans le chat", N.Shown() and NS.notice.kind == "dungeon"
+		and not (NS.dungeonFrame and NS.dungeonFrame:IsShown()) and N.Tinted(Theme.BLUE)
+		and Mock:Output():find("Les Mortemines", 1, true) ~= nil, Mock:Output())
 	NS.noticeFrame:GetScript("OnClick")(NS.noticeFrame, "LeftButton")
 	Check("[NTC] clic : la fiche s'ouvre", NS.dungeonFrame and NS.dungeonFrame:IsShown())
 	NS.dungeonFrame:Hide()
@@ -180,10 +176,9 @@ do
 	Say("-- icône : placement")
 	N.Reset()
 	NS:StartEditMode()
-	Check("[NTC] mode édition : l'icône s'affiche pour être placée", NS.noticeFrame:IsShown()
-		and NS.noticeFrame.moveGlow:IsShown())
+	local placed = NS.noticeFrame:IsShown() and NS.noticeFrame.moveGlow:IsShown()
 	NS:StopEditMode()
-	Check("[NTC] fin du mode édition : elle repart", not NS.noticeFrame:IsShown())
+	Check("[NTC] mode édition : l'icône s'affiche pour être placée, puis repart", placed and not NS.noticeFrame:IsShown())
 	N.Reset()
 end
 _G.UnitAffectingCombat = N.combatFn

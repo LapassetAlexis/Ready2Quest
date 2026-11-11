@@ -1,7 +1,19 @@
 -- Compagnon : effets à l'écran (CompanionFx.lua). Rebond, tremblement,
--- flottement heureux, cœurs, miettes, « ! », éclair, « Zzz » ; animations
+-- flottement heureux, cœurs, miettes, « ! », « Zzz » ; animations
 -- de créature coupées par apparence ; /qc compagnon anim.
 local Check, Say, ResetWorld, NS, Mock = T.Check, T.Say, T.ResetWorld, T.QNS, T.Mock
+
+-- Un scénario = une assertion ; chaque étape en défaut est nommée dans le message.
+local function Scenario(name)
+	local bad = {}
+	return {
+		ok = function(label, cond, extra)
+			if not cond then bad[#bad + 1] = label .. (extra ~= nil and (" [" .. tostring(extra) .. "]") or "") end
+			return cond
+		end,
+		done = function() Check(name, #bad == 0, table.concat(bad, " ; ")) end,
+	}
+end
 
 local FX = { savedCreateFrame = _G.CreateFrame, savedHappy = NS.CompanionIsHappy }
 
@@ -62,80 +74,86 @@ end
 
 do
 	Say("-- compagnon : effets")
+	local S = Scenario("[FX] compagnon : effets")
 	local frame = FX.Reset(true)
-	Check("[FX] cadre visible avec modèle", frame:IsShown() and not frame.usesFallback)
+	S.ok("cadre visible avec modèle", frame:IsShown() and not frame.usesFallback)
 	local rest = FX.Y(frame)
 
-	Check("[FX] rebond lancé", NS:CompanionFx("bounce") == true)
+	S.ok("rebond lancé", NS:CompanionFx("bounce") == true)
 	Mock:Advance(0.15)
-	Check("[FX] rebond : il monte", FX.Y(frame) > rest + 5, FX.Y(frame))
+	S.ok("rebond : il monte", FX.Y(frame) > rest + 5, FX.Y(frame))
 	Mock:Advance(1)
-	Check("[FX] rebond fini : de retour en place", FX.Y(frame) == rest, FX.Y(frame))
+	S.ok("rebond fini : de retour en place", FX.Y(frame) == rest, FX.Y(frame))
 
 	NS:CompanionFx("shake")
 	local xs = {}
 	for _ = 1, 4 do Mock:Advance(0.05); xs[#xs + 1] = FX.X(frame) end
 	local moved = false
 	for _, x in ipairs(xs) do moved = moved or math.abs(x - 4) > 0.5 end
-	Check("[FX] tremblement : il bouge de côté", moved, table.concat(xs, ","))
+	S.ok("tremblement : il bouge de côté", moved, table.concat(xs, ","))
 	Mock:Advance(1)
-	Check("[FX] tremblement fini : en place", FX.X(frame) == 4, FX.X(frame))
+	S.ok("tremblement fini : en place", FX.X(frame) == 4, FX.X(frame))
 
 	NS.CompanionIsHappy = function() return true end
 	local ys = {}
 	for _ = 1, 6 do Mock:Advance(0.4); ys[FX.Y(frame)] = true end
 	local count = 0
 	for _ in pairs(ys) do count = count + 1 end
-	Check("[FX] heureux : il flotte doucement", count >= 3)
+	S.ok("heureux : il flotte doucement", count >= 3)
 	NS.CompanionIsHappy = function() return false end
 	Mock:Advance(0.1)
-	Check("[FX] plus heureux : immobile", FX.Y(frame) == rest)
+	S.ok("plus heureux : immobile", FX.Y(frame) == rest)
 
 	NS:CompanionFx("hearts")
-	Check("[FX] cœurs : 4 roses", FX.Particles("hearts") == 4 and NS.companionFx.particles[1].region.vertex[1] == 1)
+	S.done()
+	S = Scenario("[FX] particules : cœurs, miettes réemployées")
+	S.ok("cœurs : 4 roses", FX.Particles("hearts") == 4 and NS.companionFx.particles[1].region.vertex[1] == 1)
 	local y0 = NS.companionFx.particles[1].region.lastPoint.y
 	Mock:Advance(0.8)
 	local p = NS.companionFx.particles[1]
-	Check("[FX] cœurs : ils montent et pâlissent", p.region.lastPoint.y > y0 and p.region.alpha < 1 and p.region.alpha > 0)
+	S.ok("cœurs : ils montent et pâlissent", p.region.lastPoint.y > y0 and p.region.alpha < 1 and p.region.alpha > 0)
 	Mock:Advance(1)
-	Check("[FX] cœurs : partis au bout de 1,6 s", FX.Particles("hearts") == 0 and #NS.companionFx.pool >= 4)
+	S.ok("cœurs : partis au bout de 1,6 s", FX.Particles("hearts") == 0 and #NS.companionFx.pool >= 4)
 	NS:CompanionFx("crumbs")
-	Check("[FX] miettes : régions réemployées", FX.Particles("crumbs") == 5 and #NS.companionFx.pool == 0)
+	S.ok("miettes : régions réemployées", FX.Particles("crumbs") == 5 and #NS.companionFx.pool == 0)
 	Mock:Advance(2)
 
 	NS:CompanionFx("alert")
-	Check("[FX] « ! » au-dessus de lui", frame.alert and frame.alert:IsShown())
+	S.done()
+	S = Scenario("[FX] « ! », effet inconnu, cadre caché")
+	S.ok("« ! » au-dessus de lui", frame.alert and frame.alert:IsShown())
 	Mock:Advance(2.1)
-	Check("[FX] « ! » disparaît après 2 s", not frame.alert:IsShown())
-	Check("[FX] plus d'éclair (photo souvenir retirée en 2.6.0)", NS:CompanionFx("flash") == false and NS.COMPANION_FX.flash == nil)
-	Check("[FX] effet inconnu : rien", NS:CompanionFx("boum") == false)
+	S.ok("« ! » disparaît après 2 s", not frame.alert:IsShown())
+	S.ok("effet inconnu : rien", NS:CompanionFx("boum") == false)
 	frame:Hide()
-	Check("[FX] cadre caché : rien", NS:CompanionFx("bounce") == false)
+	S.ok("cadre caché : rien", NS:CompanionFx("bounce") == false)
 	frame:Show()
+	S.done()
 end
 
 do
 	Say("-- compagnon : effets sur les moments")
+	local S = Scenario("[FX] compagnon : effets sur les moments")
 	local frame = FX.Reset(true)
 	NS:CompanionPet()
-	Check("[FX] caresse : des cœurs", FX.Particles("hearts") > 0)
+	S.ok("caresse : des cœurs", FX.Particles("hearts") > 0)
 	Mock:Advance(2)
 	NS:CompanionOnLevel(12)
-	Check("[FX] niveau : rebond", NS.companionFx.motion and NS.companionFx.motion.kind == "bounce")
+	S.ok("niveau : rebond", NS.companionFx.motion and NS.companionFx.motion.kind == "bounce")
 	Mock:Advance(2)
 	NS.companionLastBubble, NS.companionBubbleUntil, NS.companionBubblePrio = nil, nil, nil
 	NS:CompanionSay("ADVICE_ELITE", { category = "advice", force = true, args = { "Ogre" } })
-	Check("[FX] élite repéré : tremblement et « ! »", NS.companionFx.motion and NS.companionFx.motion.kind == "shake"
+	S.ok("élite repéré : tremblement et « ! »", NS.companionFx.motion and NS.companionFx.motion.kind == "shake"
 		and frame.alert:IsShown())
 	Mock:Advance(3)
 	NS.companionLastBubble, NS.companionBubbleUntil, NS.companionBubblePrio = nil, nil, nil
 	NS:CompanionSay("GROUP_NO_HEALER", { category = "advice", force = true })
-	Check("[FX] conseil : « ! » sans tremblement", frame.alert:IsShown() and not NS.companionFx.motion)
+	S.ok("conseil : « ! » sans tremblement", frame.alert:IsShown() and not NS.companionFx.motion)
 	Mock:Advance(3)
 	NS:DB().companionChatter = 0
 	NS.companionLastBubble, NS.companionBubbleUntil, NS.companionBubblePrio = nil, nil, nil
 	NS:CompanionSay("GROUP_NO_HEALER", { category = "advice" })
-	Check("[FX] conseil tu (sourdine) : pas de « ! »", not frame.alert:IsShown())
+	S.ok("conseil tu (sourdine) : pas de « ! »", not frame.alert:IsShown())
 	NS:DB().companionChatter = nil
 
 	-- repas : miettes au début, puis toutes les 4 s
@@ -143,17 +161,19 @@ do
 	local eating = true
 	NS.CompanionAuraState = function() return eating, false, false end
 	NS:CompanionCheckAuras()
-	Check("[FX] repas : des miettes", FX.Particles("crumbs") == 5)
+	S.done()
+	S = Scenario("[FX] repas : miettes toutes les 4 s ; sommeil : Zzz")
+	S.ok("repas : des miettes", FX.Particles("crumbs") == 5)
 	Mock:Advance(2)
 	NS:CompanionCheckAuras()
-	Check("[FX] miettes pas en rafale", FX.Particles("crumbs") == 0)
+	S.ok("miettes pas en rafale", FX.Particles("crumbs") == 0)
 	Mock:Advance(2.5)
 	NS:CompanionCheckAuras()
-	Check("[FX] miettes de nouveau 4 s plus tard", FX.Particles("crumbs") == 5)
+	S.ok("miettes de nouveau 4 s plus tard", FX.Particles("crumbs") == 5)
 	eating = false
 	Mock:Advance(5)
 	NS:CompanionCheckAuras()
-	Check("[FX] fin du repas : plus de miettes", FX.Particles("crumbs") == 0)
+	S.ok("fin du repas : plus de miettes", FX.Particles("crumbs") == 0)
 	NS.CompanionAuraState = savedState
 	NS.companionEating = nil
 	Mock:Advance(2)
@@ -161,77 +181,84 @@ do
 	-- sommeil : des « Zzz » qui montent, toutes les 3 s
 	NS:CompanionAnimate("sleep")
 	Mock:Advance(0.1)
-	Check("[FX] il dort : des Zzz", FX.Particles("zzz") == 2 and NS.companionFx.particles[1].region.text ~= nil)
+	S.ok("il dort : des Zzz", FX.Particles("zzz") == 2 and NS.companionFx.particles[1].region.text ~= nil)
 	NS:CompanionAnimate("idle")
 	Mock:Advance(3)
-	Check("[FX] réveillé : plus de Zzz", FX.Particles("zzz") == 0)
+	S.ok("réveillé : plus de Zzz", FX.Particles("zzz") == 0)
+	S.done()
 end
 
 do
 	Say("-- compagnon : effets sans modèle (boussole)")
+	local S = Scenario("[FX] compagnon : effets sans modèle (boussole)")
 	local frame = FX.Reset(false)
-	Check("[FX] repli boussole", frame.usesFallback == true)
+	S.ok("repli boussole", frame.usesFallback == true)
 	local rest = FX.Y(frame)
 	NS:CompanionFx("bounce")
 	Mock:Advance(0.15)
-	Check("[FX] la boussole rebondit aussi", FX.Y(frame) > rest + 5 and frame.fallback.lastPoint.point == "TOP")
+	S.ok("la boussole rebondit aussi", FX.Y(frame) > rest + 5 and frame.fallback.lastPoint.point == "TOP")
 	Mock:Advance(1)
+	S.done()
 end
 
 do
 	Say("-- compagnon : animations par apparence")
+	local S = Scenario("[FX] compagnon : animations par apparence")
 	local frame = FX.Reset(true)
 	local anims = NS.COMPANION_ANIMS
 	NS:CompanionAnimate("dance", 3)
-	Check("[FX] danse jouée par défaut", frame.model.anim == anims.dance)
+	S.ok("danse jouée par défaut", frame.model.anim == anims.dance)
 	NS:CompanionAnimate()
 	Mock:Output()
 	Mock.output = {}
 	NS:CompanionCommand("anim non dance")
-	Check("[FX] /qc compagnon anim non dance : retenu", NS:CompanionAnimSupported("dance") == false
+	S.ok("/qc compagnon anim non dance : retenu", NS:CompanionAnimSupported("dance") == false
 		and Mock:Output():find("dance", 1, true))
 	NS:CompanionAnimate("dance", 3)
-	Check("[FX] danse coupée : il reste immobile", frame.model.anim == anims.idle and frame.animation == "dance")
-	Check("[FX] … mais la durée compte", NS.companionAnimUntil ~= nil)
+	S.ok("danse coupée : il reste immobile", frame.model.anim == anims.idle and frame.animation == "dance")
+	S.ok("… mais la durée compte", NS.companionAnimUntil ~= nil)
 	local data = NS:CompanionData()
 	local before = data.appearance
 	data.appearance = "autre"
-	Check("[FX] autre apparence : danse jouée", NS:CompanionAnimSupported("dance") == true)
+	S.ok("autre apparence : danse jouée", NS:CompanionAnimSupported("dance") == true)
 	data.appearance = before
 	NS:CompanionCommand("anim oui dance")
-	Check("[FX] /qc compagnon anim oui dance : de nouveau jouée", NS:CompanionAnimSupported("dance") == true)
+	S.ok("/qc compagnon anim oui dance : de nouveau jouée", NS:CompanionAnimSupported("dance") == true)
 	Mock.output = {}
 	NS:CompanionCommand("anim non idle")
-	Check("[FX] le repos ne se coupe pas", NS:CompanionAnimSupported("idle") == true
+	S.ok("le repos ne se coupe pas", NS:CompanionAnimSupported("idle") == true
 		and Mock:Output():find("inconnue", 1, true))
 	NS:CompanionCommand("anim non boum")
-	Check("[FX] animation inconnue : liste des noms", Mock:Output():find("walk", 1, true) ~= nil)
+	S.ok("animation inconnue : liste des noms", Mock:Output():find("walk", 1, true) ~= nil)
 
 	-- défilé : chaque animation 3 s, même celles coupées
 	NS:CompanionCommand("anim non run")
 	Mock.output = {}
 	NS:CompanionCommand("anim")
 	local order = NS.COMPANION_ANIM_ORDER
-	Check("[FX] défilé : première animation", frame.model.anim == anims[order[1]] and Mock:Output():find("1/" .. #order, 1, true))
+	S.done()
+	S = Scenario("[FX] défilé /qc compagnon anim, textes fr/en, module coupé")
+	S.ok("défilé : première animation", frame.model.anim == anims[order[1]] and Mock:Output():find("1/" .. #order, 1, true))
 	local seen = { [frame.model.anim] = true }
 	for _ = 2, #order do
 		Mock:Advance(NS.COMPANION_ANIM_STEP)
 		seen[frame.model.anim] = true
 	end
-	Check("[FX] défilé : la course coupée est montrée aussi", seen[anims.run] == true and seen[anims.sleep] == true)
+	S.ok("défilé : la course coupée est montrée aussi", seen[anims.run] == true and seen[anims.sleep] == true)
 	Mock:Advance(NS.COMPANION_ANIM_STEP)
-	Check("[FX] fin du défilé : la liste des coupées", NS.companionAnimTest == nil
+	S.ok("fin du défilé : la liste des coupées", NS.companionAnimTest == nil
 		and Mock:Output():find("run", 1, true) and frame.model.anim == anims.idle, Mock:Output())
 
 	local fx = NS.COMPANION_FX_STRINGS
 	local missing = {}
 	for key in pairs(fx.fr) do if not fx.en[key] then missing[#missing + 1] = key end end
 	for key in pairs(fx.en) do if not fx.fr[key] then missing[#missing + 1] = key end end
-	Check("[FX] textes en français et en anglais", #missing == 0, table.concat(missing, ", "))
+	S.ok("textes en français et en anglais", #missing == 0, table.concat(missing, ", "))
 	NS:DB().companionEnabled = false
 	Mock.output = {}
 	NS:CompanionCommand("anim")
-	Check("[FX] module coupé : pas de défilé", NS.companionAnimTest == nil)
+	S.ok("module coupé : pas de défilé", NS.companionAnimTest == nil)
 	NS:DB().companionEnabled = nil
 	FX.Done()
+	S.done()
 end

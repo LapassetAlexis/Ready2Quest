@@ -32,7 +32,7 @@ Copie le dossier de chaque addon voulu dans `World of Warcraft/<client>/Interfac
 ## Pour les développeurs
 
 - **Socle commun** : chaque addon embarque sa copie de `Libs/Socle`, comme une lib WoW. On ne le modifie que dans `Ready2Quest/Libs/Socle`, puis `python3 -I tools/sync_socle.py` le recopie dans `QuestCompanion/Libs/Socle`. Ce qui change d'un addon à l'autre (nom, sauvegarde, commande, logo) est dans son `Config.lua`.
-- **Tests** : `python3 tests/run_tests.py` (paquet `lupa` requis). Ils refusent de tourner si les deux copies du socle diffèrent, ou si un fichier de la racine risque de partir dans un zip publié.
+- **Tests** : `python3 tests/run_tests.py` (paquet `lupa` requis), quelques secondes : chaque module dans son propre état Lua, un processus par cœur (`-j N` pour choisir, `--profile` pour les plus lents, `python3 tests/run_tests.py trades capture` pour quelques modules). Ils refusent de tourner si les deux copies du socle diffèrent, ou si un fichier de la racine risque de partir dans un zip publié. Voir `docs/TESTS.md`.
 - **Mémoire** : `python3 tests/run_tests.py --memoire` donne la mémoire Lua que prend chaque fichier des deux addons au chargement (comme un client français, sans jouer les tests).
 - **Données de zone paresseuses** : les tables générées (`ZoneCreatures_Forever.lua`, `ZoneQuests_Forever.lua`) ne construisent une zone qu'à sa première lecture ; les parcourir avec `ns.ZoneIds` / `ns.ZoneEach` (voir [docs/TECHNIQUE.md](docs/TECHNIQUE.md)).
 - **Publication** sur CurseForge et Wago : tag `v*` pour Ready2Quest, `qc-v*` pour QuestCompanion. Voir [docs/PUBLIER.md](docs/PUBLIER.md).

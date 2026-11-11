@@ -77,7 +77,7 @@ déclarés une seule fois dans `Libs/Socle/Base.lua` (premier fichier du socle :
 `Strings.lua`, `Locales.lua` et les messages de démarrage s'en servent) ;
 `Theme.T_*` en sont des alias. `Theme.Hex(couleur)` donne le code d'un jeton.
 Plus aucun `|cff…` écrit à la main dans les fichiers nettoyés
-(`tests/modules/socle_textes.lua` le vérifie).
+(`tests/modules/socle.lua` le vérifie).
 
 **Rareté** : un seul jeton, `Theme.RANK` (trivial gris, normal PARCHMENT,
 élite #669ef2, rare #bf80ff, boss #ff8000, brillante GOLD_LIGHT : la
@@ -441,7 +441,7 @@ seule hauteur, `Theme.CONTROL_HEIGHT`, et les éléments s'y calent par le haut.
 
 Tout est construit une fois : les lignes de l'Échoppe, les deux pastilles et
 leurs animations (secousse, fondu) naissent avec le carnet ; un
-rafraîchissement ne crée aucun cadre (`tests/modules/qc30_composants.lua`) ;
+rafraîchissement ne crée aucun cadre (`tests/modules/ui_windows.lua`) ;
 le peintre d'états ne crée rien (voiles de survol et d'appui créés à
 l'habillage) ; pas d'`OnUpdate`.
 
@@ -468,7 +468,7 @@ pour le carnet).
 - Contraste mesuré : chaque texte posé sur une matière du client a un rôle
   dans `ns.AZEROTH_CONTRAST` (encre, luminance du pire fond mesurée, seuil,
   taille) ; `RolePaint` / `RoleInk` posent l'encre d'un rôle, et
-  `tests/modules/qc282_retours.lua` recalcule chaque ratio.
+  `tests/modules/azeroth_style.lua` recalcule chaque ratio.
 - Changement de style à chaud : la fenêtre affichée est remplacée par celle de
   l'autre style (état recopié) ; l'ancienne est mise de côté
   (`ns.uiStyleCache`) et resservira au retour. Une fenêtre qui existe dans

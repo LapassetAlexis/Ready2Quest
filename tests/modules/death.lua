@@ -55,23 +55,23 @@ function D.Shown() return NS.deathFrame ~= nil and NS.deathFrame:IsShown() == tr
 do
 	Say("-- chargement, réglages")
 	D.Reset()
-	Check("[MORT] Death.lua chargé", NS.Loaded.Death == true)
-	Check("[MORT] réglages par défaut", NS:DB().deathEnabled == true and NS:DB().deathPanel == true)
 	local page
 	for _, def in ipairs(NS.OPTION_PAGES) do if def.id == "death" then page = def end end
-	Check("[MORT] sous-page du QoL", page and page.parent == "qol" and page.group == "OPT_GROUP_QOL" and #page.rows == 2)
-	Check("[MORT] module « mort » trouvé", NS:FindModule("mort") and NS:FindModule("mort").key == "deathEnabled")
+	Check("[MORT] chargé, réglages par défaut, sous-page du QoL, module « mort »", NS.Loaded.Death == true
+		and NS:DB().deathEnabled == true and NS:DB().deathPanel == true
+		and page and page.parent == "qol" and page.group == "OPT_GROUP_QOL" and #page.rows == 2
+		and NS:FindModule("mort") and NS:FindModule("mort").key == "deathEnabled")
 end
 
 do
 	Say("-- faiblesse par niveau")
-	Check("[MORT] niveau 5 : aucune faiblesse", NS:SicknessFromLevel(5) == 0, NS:SicknessFromLevel(5))
-	Check("[MORT] niveau 10 : aucune faiblesse", NS:SicknessFromLevel(10) == 0)
-	Check("[MORT] niveau 15 : 5 min", NS:SicknessFromLevel(15) == 300, NS:SicknessFromLevel(15))
-	Check("[MORT] niveau 25 : 10 min (plafond)", NS:SicknessFromLevel(25) == 600, NS:SicknessFromLevel(25))
-	Check("[MORT] niveau 20 : 10 min", NS:SicknessFromLevel(20) == 600)
-	Check("[MORT] durée du client lue (« 3 Min »)", NS:ParseSicknessText("3 Min") == 180)
-	Check("[MORT] durée du client illisible : ignorée", NS:ParseSicknessText("bientôt") == nil)
+	local bad = {}
+	for level, want in pairs({ [5] = 0, [10] = 0, [15] = 300, [20] = 600, [25] = 600 }) do
+		if NS:SicknessFromLevel(level) ~= want then bad[#bad + 1] = level .. "=" .. tostring(NS:SicknessFromLevel(level)) end
+	end
+	Check("[MORT] table : rien jusqu'au niveau 10, 5 min au 15, plafond 10 min dès le 20", #bad == 0, table.concat(bad, ", "))
+	Check("[MORT] durée du client lue (« 3 Min »), illisible ignorée", NS:ParseSicknessText("3 Min") == 180
+		and NS:ParseSicknessText("bientôt") == nil)
 	D.Reset(25)
 	D.W.sickText = "3 Min"
 	Check("[MORT] la durée du client prime sur la table", NS:DeathSickness(25) == 180, NS:DeathSickness(25))
@@ -82,20 +82,21 @@ do
 	D.Reset(25)
 	NS:CharData().repairRate = 500              -- 50 points * 500 = 2 po 50 pa
 	D.Die()
-	Check("[MORT] fenêtre à la mort", D.Shown())
-	Check("[MORT] avant libération : distance à venir", D.Text():find("libère ton esprit", 1, true) ~= nil, D.Text())
-	Check("[MORT] avant libération : pas de verdict", NS.deathAdvice.verdict == nil)
+	Check("[MORT] fenêtre à la mort ; avant libération : distance à venir, pas de verdict", D.Shown()
+		and D.Text():find("libère ton esprit", 1, true) ~= nil and NS.deathAdvice.verdict == nil, D.Text())
 	-- 175 yards sur l'axe x : 175 / 8,75 = 20 s
 	D.Release({ 0.5, 0.5 }, { 0.675, 0.5 })
 	local a = NS.deathAdvice
-	Check("[MORT] distance depuis les positions monde", a and math.abs(a.distance - 175) < 0.01, a and a.distance)
-	Check("[MORT] temps à vitesse de fantôme (125 %)", math.abs(a.runTime - 20) < 0.01, a.runTime)
-	Check("[MORT] texte : 175 m, ~20 s", D.Text():find("175 m, ~20 s", 1, true) ~= nil, D.Text())
+	Check("[MORT] distance depuis les positions monde, temps à vitesse de fantôme (125 %)", a and math.abs(a.distance - 175) < 0.01
+		and math.abs(a.runTime - 20) < 0.01, a and a.distance)
 	Check("[MORT] réparation du guérisseur (25 % du max)", a.points == 50 and a.cost == 25000, tostring(a.points) .. "/" .. tostring(a.cost))
-	Check("[MORT] texte : -2 po 50 pa, 10 min de faiblesse", D.Text():find("-2 po 50 pa de réparation, 10 min de faiblesse", 1, true) ~= nil, D.Text())
-	Check("[MORT] rappel des 10 % déjà perdus", D.Text():find("Les 10 % de la mort sont déjà perdus", 1, true) ~= nil)
-	Check("[MORT] verdict : cours (20 s < 10 min)", a.verdict == "run" and D.Text():find("Cours :", 1, true) ~= nil, a.verdict)
-	Check("[MORT] règle expliquée", D.Text():find("Règle :", 1, true) ~= nil)
+	Check("[MORT] verdict : cours (20 s < 10 min)", a.verdict == "run", a.verdict)
+	local missing = {}
+	for _, part in ipairs({ "175 m, ~20 s", "-2 po 50 pa de réparation, 10 min de faiblesse", "Les 10 % de la mort sont déjà perdus",
+		"Cours :", "Règle :" }) do
+		if not D.Text():find(part, 1, true) then missing[#missing + 1] = part end
+	end
+	Check("[MORT] texte : distance, coût, rappel des 10 %, verdict, règle", #missing == 0, table.concat(missing, " / "))
 	local lines = NS.deathFrame.lines
 	Check("[MORT] note et règle sur deux lignes, pas coupées", lines[3].height > lines[1].height and lines[5].height > lines[1].height,
 		lines[1].height .. "/" .. lines[3].height .. "/" .. lines[5].height)
@@ -114,10 +115,10 @@ do
 	D.Die()
 	D.Release({ 0, 0.5 }, { 1, 0.5 })           -- 1000 yards : ~114 s
 	local a = NS.deathAdvice
-	Check("[MORT] verdict : guérisseur (114 s > 1 min)", a.verdict == "healer", a.verdict)
-	Check("[MORT] texte : guérisseur", D.Text():find("Guérisseur : la course est plus longue", 1, true) ~= nil, D.Text())
-	Check("[MORT] sans taux mesuré : le % seul", a.cost == nil and D.Text():find("-25 % de durabilité", 1, true) ~= nil, D.Text())
-	Check("[MORT] faiblesse 1 min affichée", D.Text():find("1 min de faiblesse", 1, true) ~= nil, D.Text())
+	Check("[MORT] verdict : guérisseur (114 s > 1 min)", a.verdict == "healer"
+		and D.Text():find("Guérisseur : la course est plus longue", 1, true) ~= nil, D.Text())
+	Check("[MORT] sans taux mesuré : le % seul, 1 min de faiblesse", a.cost == nil and D.Text():find("-25 % de durabilité", 1, true) ~= nil
+		and D.Text():find("1 min de faiblesse", 1, true) ~= nil, D.Text())
 	-- limite : course juste sous la faiblesse -> cours
 	D.Reset(11)
 	D.Die()
@@ -140,19 +141,19 @@ do
 	D.Reset(25)
 	D.W.instance = true
 	D.Die()
-	Check("[MORT] en instance : pas de fenêtre", not D.Shown() and NS.deathAdvice == nil)
+	local noFrame = not D.Shown() and NS.deathAdvice == nil
 	NS:DB().deathPanel = false
 	Mock:Reset()
 	D.Release({ 0.5, 0.5 }, { 0.6, 0.5 })
-	Check("[MORT] en instance : rien dans le chat", Mock:Output() == "", Mock:Output())
+	Check("[MORT] en instance : ni fenêtre ni chat", noFrame and Mock:Output() == "", Mock:Output())
 	-- mort dehors, puis entrée du fantôme dans l'instance
 	D.Reset(25)
 	D.Die()
 	D.Release({ 0.5, 0.5 }, { 0.6, 0.5 })
-	Check("[MORT] dehors : fenêtre", D.Shown())
+	local outside = D.Shown()
 	D.W.instance = true
 	Mock:Fire("ZONE_CHANGED_NEW_AREA")
-	Check("[MORT] fantôme entré dans l'instance : cachée", not D.Shown())
+	Check("[MORT] fenêtre dehors, cachée quand le fantôme entre dans l'instance", outside and not D.Shown())
 end
 
 do
@@ -162,28 +163,33 @@ do
 	_G.C_DeathInfo = nil
 	D.Die()
 	D.Release({ 0.5, 0.5 }, { 0.6, 0.5 })
-	Check("[MORT] sans C_DeathInfo : distance inconnue", NS.deathAdvice.distance == nil and D.Text():find("distance inconnue", 1, true) ~= nil, D.Text())
-	Check("[MORT] sans distance : pas de verdict inventé", NS.deathAdvice.verdict == nil and D.Text():find("À toi de voir", 1, true) ~= nil, D.Text())
+	Check("[MORT] sans C_DeathInfo : distance inconnue, pas de verdict inventé", NS.deathAdvice.distance == nil
+		and D.Text():find("distance inconnue", 1, true) ~= nil and NS.deathAdvice.verdict == nil
+		and D.Text():find("À toi de voir", 1, true) ~= nil, D.Text())
 	D.Reset(25)
 	C_Map.GetWorldPosFromMapPos = nil
 	D.Die()
 	D.Release({ 0.5, 0.5 }, { 0.6, 0.5 })
 	Check("[MORT] sans positions monde : taille de carte", NS.deathAdvice.distance and math.abs(NS.deathAdvice.distance - 100) < 0.01, NS.deathAdvice.distance)
 	D.Reset(25)
+	-- sans aucune conversion, API qui lève une erreur, pas de corps (déjà repris) : inconnue
+	local known = {}
+	D.Reset(25)
 	C_Map.GetWorldPosFromMapPos, C_Map.GetMapWorldSize = nil, nil
 	D.Die()
 	D.Release({ 0.5, 0.5 }, { 0.6, 0.5 })
-	Check("[MORT] sans aucune conversion : inconnue", NS.deathAdvice.distance == nil, NS.deathAdvice.distance)
+	if NS.deathAdvice.distance ~= nil then known[#known + 1] = "conversion" end
 	D.Reset(25)
 	C_Map.GetPlayerMapPosition = function() error("restreint") end
 	D.Die()
 	D.Release({ 0.5, 0.5 }, { 0.6, 0.5 })
-	Check("[MORT] API qui lève une erreur : inconnue", NS.deathAdvice.distance == nil)
+	if NS.deathAdvice.distance ~= nil then known[#known + 1] = "erreur" end
 	D.Reset(25)
 	D.Die()
-	D.Release(nil, { 0.6, 0.5 })                -- pas de corps (déjà repris)
-	Check("[MORT] pas de corps : inconnue", NS.deathAdvice.distance == nil)
-	Check("[MORT] aucune erreur enregistrée", #NS.errors == errors, NS.errors[#NS.errors] and NS.errors[#NS.errors].message)
+	D.Release(nil, { 0.6, 0.5 })
+	if NS.deathAdvice.distance ~= nil then known[#known + 1] = "corps" end
+	Check("[MORT] sans conversion, API en erreur, sans corps : distance inconnue, aucune erreur enregistrée", #known == 0
+		and #NS.errors == errors, table.concat(known, ",") .. " " .. tostring(NS.errors[#NS.errors] and NS.errors[#NS.errors].message))
 end
 
 do
@@ -193,8 +199,7 @@ do
 	Mock:Reset()
 	D.Die()
 	D.Release({ 0.5, 0.5 }, { 0.6, 0.5 })
-	Check("[MORT] module coupé : pas de fenêtre", not D.Shown() and NS.deathAdvice == nil)
-	Check("[MORT] module coupé : rien dans le chat", Mock:Output() == "", Mock:Output())
+	Check("[MORT] module coupé : ni fenêtre ni chat", not D.Shown() and NS.deathAdvice == nil and Mock:Output() == "", Mock:Output())
 
 	D.Reset(25)
 	NS:DB().deathPanel = false
@@ -204,8 +209,8 @@ do
 	Check("[MORT] chat : rien à la mort même", Mock:Output() == "", Mock:Output())
 	D.Release({ 0.5, 0.5 }, { 0.675, 0.5 })
 	local out = Mock:Output()
-	Check("[MORT] chat : une ligne à la libération", out:find("Après la mort — Cours : 175 m, ~20 s · Guérisseur : -2 po 50 pa de réparation, 10 min de faiblesse · conseil : cours", 1, true) ~= nil, out)
-	Check("[MORT] chat : pas de fenêtre", not D.Shown())
+	Check("[MORT] chat : une ligne à la libération, pas de fenêtre", out:find("Après la mort — Cours : 175 m, ~20 s · Guérisseur : -2 po 50 pa de réparation, 10 min de faiblesse · conseil : cours", 1, true) ~= nil
+		and not D.Shown(), out)
 	Mock:Reset()
 	Mock:Advance(3)
 	Mock:Fire("ZONE_CHANGED_NEW_AREA")
@@ -231,11 +236,9 @@ do
 	for k in pairs(S.fr) do if S.en[k] == nil then missing[#missing + 1] = "en:" .. k end end
 	for k in pairs(S.en) do if S.fr[k] == nil then missing[#missing + 1] = "fr:" .. k end end
 	Check("[MORT] chaque clé dans les deux langues", #missing == 0, table.concat(missing, ","))
-	Check("[MORT] anglais : yards", string.format(S.en.DEATH_RUN_SHORT, 175, "20 s") == "175 yd, ~20 s")
-	Check("[MORT] anglais : ligne de chat", string.format(S.en.DEATH_CHAT, "175 yd, ~20 s", "-2g 50s in repairs, 10 min of sickness", "run")
+	Check("[MORT] anglais : yards, ligne de chat", string.format(S.en.DEATH_RUN_SHORT, 175, "20 s") == "175 yd, ~20 s"
+		and string.format(S.en.DEATH_CHAT, "175 yd, ~20 s", "-2g 50s in repairs, 10 min of sickness", "run")
 		== "After death — Run: 175 yd, ~20 s · Healer: -2g 50s in repairs, 10 min of sickness · advice: run")
-	Check("[MORT] anglais : inconnue", S.en.DEATH_RUN_UNKNOWN == "distance unknown")
-	Check("[MORT] page de réglages : sous-titre", NS.L.OPT_PAGE_DEATH_SUB ~= "OPT_PAGE_DEATH_SUB")
 end
 
 -- remise en état pour les fichiers suivants

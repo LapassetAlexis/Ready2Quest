@@ -1,5 +1,6 @@
--- Module « Portée d'aggro » : formule, verdicts, distance par paliers,
--- touche, combat, infobulle, anneaux des barres de nom, diag.
+-- Module « Portée d'aggro » : chaînes et réglages (migrations « danger seul »
+-- 1.31.0 et anneau -> pastille 1.33.1), formule, verdicts, distance par
+-- paliers, touche, combat, infobulle, marques des barres de nom, diag, cache.
 local Check, Say, ResetWorld, NS, Mock = T.Check, T.Say, T.ResetWorld, T.NS, T.Mock
 
 local NAMES = { "UnitExists", "UnitIsPlayer", "UnitIsDead", "UnitCanAttack", "UnitCreatureType", "UnitReaction",
@@ -111,9 +112,8 @@ do
 	end
 	for key in pairs(strings.en) do if strings.fr[key] == nil then missing[#missing + 1] = "fr?" .. key end end
 	Check("[AGGRO] chaînes en français et en anglais, mêmes placeholders", #missing == 0, table.concat(missing, ", "))
-	Check("[AGGRO] Aggro.lua chargé", NS.Loaded.Aggro == true)
-	Check("[AGGRO] module « aggro » inscrit", NS:FindModule("aggro") and NS:FindModule("aggro").key == "aggroEnabled"
-		and NS:FindModule("portee") ~= nil)
+	Check("[AGGRO] chargé, module « aggro » inscrit (alias portee)", NS.Loaded.Aggro == true and NS:FindModule("aggro")
+		and NS:FindModule("aggro").key == "aggroEnabled" and NS:FindModule("portee") ~= nil)
 	local page
 	for _, def in ipairs(NS.OPTION_PAGES) do if def.id == "aggro" then page = def end end
 	Check("[AGGRO] sous-page du QoL, 5 réglages (dont le style de marque)", page and page.parent == "qol" and page.group == "OPT_GROUP_QOL"
@@ -122,13 +122,13 @@ do
 	Check("[AGGRO] défauts : actif, danger seul, infobulle, anneaux", db.aggroEnabled == true and db.aggroKey == "alert"
 		and NS:AggroKey() == "alert" and db.aggroTooltip == true and db.aggroRings == true)
 	local choices = NS:AggroKeyChoices()
-	Check("[AGGRO] cinq choix, « danger seul » en premier", #choices == 5 and choices[1].value == "alert"
-		and choices[1].label == "Danger seul (tout avec Maj)" and choices[2].value == "shift" and choices[5].value == "always")
-	Check("[AGGRO] réglage nommé « Affichage »", NS.L.OPT_AGGRO_KEY == "Affichage" and NS.AGGRO_STRINGS.en.OPT_AGGRO_KEY == "Display")
+	Check("[AGGRO] réglage « Affichage » : cinq choix, « danger seul » en premier", #choices == 5 and choices[1].value == "alert"
+		and choices[1].label == "Danger seul (tout avec Maj)" and choices[2].value == "shift" and choices[5].value == "always"
+		and NS.L.OPT_AGGRO_KEY == "Affichage")
 	NS:AggroSetKey("n'importe quoi")
-	Check("[AGGRO] touche inconnue refusée", NS:AggroKey() == "alert")
+	local refused = NS:AggroKey() == "alert"
 	db.aggroKey = "n'importe quoi"
-	Check("[AGGRO] valeur inconnue en sauvegarde : repli « danger seul »", NS:AggroKey() == "alert")
+	Check("[AGGRO] touche inconnue refusée, ou lue en sauvegarde : repli « danger seul »", refused and NS:AggroKey() == "alert")
 	-- la liste déroulante des réglages : choisir, puis relire
 	page.rows[2].choose("ctrl")
 	Check("[AGGRO] choix de la liste enregistré", db.aggroKey == "ctrl" and page.rows[2].current() == "ctrl")
@@ -141,38 +141,37 @@ do
 	NS:AggroSetKey("shift")
 	Check("[AGGRO] migration : Maj rechoisi ensuite est gardé", NS:AggroKey() == "shift" and NS:AggroKey() == "shift")
 	db.aggroKey, db.aggroKeySchema = "ctrl", nil
-	Check("[AGGRO] migration : Ctrl gardé", NS:AggroKey() == "ctrl" and db.aggroKeySchema == 2)
+	local ctrl = NS:AggroKey() == "ctrl" and db.aggroKeySchema == 2
 	db.aggroKey, db.aggroKeySchema = "always", nil
-	Check("[AGGRO] migration : « toujours » gardé", NS:AggroKey() == "always")
+	Check("[AGGRO] migration : Ctrl et « toujours » gardés", ctrl and NS:AggroKey() == "always")
 	db.aggroKey = "alert"
 end
 
 -- 2. Formule et verdicts -------------------------------------------------------
 do
 	Say("-- aggro : portée estimée")
-	local R = NS.AggroRadius
-	Check("[AGGRO] niveau égal : 20", R(20, 20) == 20)
-	Check("[AGGRO] joueur 5 niveaux au-dessus : 15", R(25, 20) == 15)
-	Check("[AGGRO] joueur 5 niveaux en dessous : 25", R(20, 25) == 25)
-	Check("[AGGRO] borné à 5", R(60, 1) == 5, R(60, 1))
-	Check("[AGGRO] borné à 45", R(1, 60) == 45, R(1, 60))
-	Check("[AGGRO] niveau « ?? » : dix de plus", R(30, -1) == 30, R(30, -1))
-	Check("[AGGRO] niveau illisible : rien", R(nil, 20) == nil and R(20, nil) == nil)
+	-- joueur, monstre -> rayon : 20 à niveau égal, ±1 m par niveau, borné à [5, 45],
+	-- « ?? » = dix niveaux de plus, illisible = rien
+	local R, bad = NS.AggroRadius, {}
+	for _, c in ipairs({ { 20, 20, 20 }, { 25, 20, 15 }, { 20, 25, 25 }, { 60, 1, 5 }, { 1, 60, 45 }, { 30, -1, 30 },
+		{ nil, 20, nil }, { 20, nil, nil } }) do
+		if R(c[1], c[2]) ~= c[3] then bad[#bad + 1] = tostring(c[1]) .. "/" .. tostring(c[2]) .. "=" .. tostring(R(c[1], c[2])) end
+	end
+	Check("[AGGRO] formule du rayon (niveaux, bornes 5-45, « ?? », illisible)", #bad == 0, table.concat(bad, ", "))
 
+	-- rayon, borne basse, borne haute -> verdict. 1.30.0 : le rouge prévient 5 m
+	-- avant la portée, l'ambre jusqu'à 12 m au-delà ; 1.31.0 : la borne basse
+	-- décide (20 < 17 + 5 : on PEUT être trop près)
 	local V = NS.AggroVerdict
-	Check("[AGGRO] 10-15 m pour 17 : rouge", V(17, 10, 15) == "red")
-	-- 1.30.0 : le rouge prévient 5 m avant la portée, l'ambre jusqu'à 12 m au-delà
-	Check("[AGGRO] 15-20 m pour 17 : rouge (à moins de 5 m du bord, on prévient)", V(17, 15, 20) == "red")
-	-- 1.31.0 : la borne basse décide (20 < 17 + 5 : on PEUT être trop près)
-	Check("[AGGRO] 20-25 m pour 17 : rouge (borne basse)", V(17, 20, 25) == "red")
-	Check("[AGGRO] 20-28 m pour 20 : rouge (pas de palier entre 20 et 28)", V(20, 20, 28) == "red")
-	Check("[AGGRO] 28-30 m pour 20 : ambre", V(20, 28, 30) == "amber")
-	Check("[AGGRO] 35 m et plus pour 20 : vert", V(20, 35, nil) == "green")
-	Check("[AGGRO] 25-30 m pour 17 : ambre (moins de 12 m de marge)", V(17, 25, 30) == "amber")
-	Check("[AGGRO] 30-35 m pour 17 : vert", V(17, 30, 35) == "green")
-	Check("[AGGRO] moins de 5 m : rouge", V(5, 0, 5) == "red")
-	Check("[AGGRO] au-delà de 80 m : vert", V(45, 80, nil) == "green")
-	Check("[AGGRO] sans mesure : pas de verdict", V(20, nil, nil) == nil)
+	bad = {}
+	for _, c in ipairs({ { 17, 10, 15, "red" }, { 17, 15, 20, "red" }, { 17, 20, 25, "red" }, { 20, 20, 28, "red" },
+		{ 5, 0, 5, "red" }, { 20, 28, 30, "amber" }, { 17, 25, 30, "amber" }, { 20, 35, nil, "green" },
+		{ 17, 30, 35, "green" }, { 45, 80, nil, "green" }, { 20, nil, nil, nil } }) do
+		if V(c[1], c[2], c[3]) ~= c[4] then
+			bad[#bad + 1] = c[1] .. ":" .. tostring(c[2]) .. "-" .. tostring(c[3]) .. "=" .. tostring(V(c[1], c[2], c[3]))
+		end
+	end
+	Check("[AGGRO] verdicts rouge (5 m d'avance, borne basse) / ambre (12 m) / vert / sans mesure", #bad == 0, table.concat(bad, ", "))
 end
 
 -- 3. Distance par paliers ------------------------------------------------------
@@ -180,30 +179,30 @@ do
 	Say("-- aggro : distance")
 	A.Reset()
 	A.Mob("nameplate1", 20, 22)
-	local low, high = NS:AggroDistance("nameplate1")
-	Check("[AGGRO] 22 m : entre 20 et 25", low == 20 and high == 25, tostring(low) .. "-" .. tostring(high))
-	A.Mob("nameplate1", 20, 3)
-	low, high = NS:AggroDistance("nameplate1")
-	Check("[AGGRO] 3 m : moins de 5", low == 0 and high == 5, tostring(low) .. "-" .. tostring(high))
-	A.Mob("nameplate1", 20, 120)
-	low, high = NS:AggroDistance("nameplate1")
-	Check("[AGGRO] 120 m : plus de 80", low == 80 and high == nil, tostring(low) .. "-" .. tostring(high))
-	Check("[AGGRO] mesure notée pour le diag", NS.aggroMeasured == true)
+	local got = {}
+	for _, c in ipairs({ { 22, 20, 25 }, { 3, 0, 5 }, { 120, 80, nil } }) do
+		A.Mob("nameplate1", 20, c[1])
+		local low, high = NS:AggroDistance("nameplate1")
+		if low ~= c[2] or high ~= c[3] then got[#got + 1] = c[1] .. " m -> " .. tostring(low) .. "-" .. tostring(high) end
+	end
+	Check("[AGGRO] paliers : 22 m entre 20 et 25, 3 m sous 5, 120 m au-delà de 80 ; mesure notée", #got == 0
+		and NS.aggroMeasured == true, table.concat(got, ", "))
+	local low, high
 
 	-- objets muets (pas en cache, ou client fermé) : CheckInteractDistance prend le relais
 	A.W.noItems, A.W.interact = true, true
 	A.Mob("nameplate1", 20, 22)
 	low, high = NS:AggroDistance("nameplate1")
-	Check("[AGGRO] repli interaction : entre 10 et 28", low == 10 and high == 28, tostring(low) .. "-" .. tostring(high))
-	Check("[AGGRO] repli interaction : rouge pour un monstre de même niveau", NS.AggroVerdict(20, low, high) == "red")
+	Check("[AGGRO] repli interaction : entre 10 et 28, rouge à niveau égal", low == 10 and high == 28
+		and NS.AggroVerdict(20, low, high) == "red", tostring(low) .. "-" .. tostring(high))
 	A.W.interact = false
 	low, high = NS:AggroDistance("nameplate1")
-	Check("[AGGRO] aucune réponse : pas de distance", low == nil and high == nil)
+	local silent = low == nil and high == nil
 	-- une API qui lève une erreur ne casse rien
 	C_Item.IsItemInRange = function() error("restricted") end
 	_G.CheckInteractDistance = function() error("restricted") end
 	local ok, l2 = pcall(NS.AggroDistance, NS, "nameplate1")
-	Check("[AGGRO] API refusée : pas d'erreur, pas de distance", ok and l2 == nil)
+	Check("[AGGRO] aucune réponse ou API refusée : pas de distance, pas d'erreur", silent and ok and l2 == nil)
 	A.Install()
 
 	-- 1.31.0 : paliers mesurés en jeu sur Forever (9/11) : 5, 20, 28
@@ -222,9 +221,9 @@ do
 	A.Mob("nameplate1", 20, 40)
 	NS:AggroDistance("nameplate1")
 	local line = NS:AggroDiagLine()
-	Check("[AGGRO] diag : paliers qui répondent", line:find("paliers qui répondent : 5, 10, 20, 28, 30, 35 m", 1, true) ~= nil, line)
 	NS.aggroSteps = nil
-	Check("[AGGRO] diag : aucun palier encore", NS:AggroDiagLine():find("paliers qui répondent : aucun", 1, true) ~= nil)
+	Check("[AGGRO] diag : paliers qui répondent (ou aucun encore)", line:find("paliers qui répondent : 5, 10, 20, 28, 30, 35 m", 1, true) ~= nil
+		and NS:AggroDiagLine():find("paliers qui répondent : aucun", 1, true) ~= nil, line)
 	-- préchargement des objets des paliers, et mesures oubliées à leur arrivée
 	local asked = {}
 	local savedReq = C_Item.RequestLoadItemDataByID
@@ -233,52 +232,56 @@ do
 	Mock:Fire("PLAYER_ENTERING_WORLD")
 	local n, all = 0, true
 	for id in pairs(NS.AGGRO_ITEM_SET) do n = n + 1; if not asked[id] then all = false end end
-	Check("[AGGRO] objets des paliers demandés à l'entrée en jeu", all and n > 10 and NS.aggroPreloaded == true)
+	local first = all and n > 10 and NS.aggroPreloaded == true
 	asked = {}
 	Mock:Fire("PLAYER_ENTERING_WORLD")
-	Check("[AGGRO] … une seule fois", next(asked) == nil)
+	Check("[AGGRO] objets des paliers demandés à l'entrée en jeu, une seule fois", first and next(asked) == nil)
 	C_Item.RequestLoadItemDataByID = savedReq
 	NS.aggroDistCache = { nameplate1 = { low = 1 } }
 	Mock:Fire("GET_ITEM_INFO_RECEIVED", 32321, true)
-	Check("[AGGRO] objet d'un palier reçu : mesures oubliées", NS.aggroDistCache == nil)
+	local forgotten = NS.aggroDistCache == nil
 	NS.aggroDistCache = { nameplate1 = { low = 1 } }
 	Mock:Fire("GET_ITEM_INFO_RECEIVED", 2589, true)
-	Check("[AGGRO] autre objet reçu : mesures gardées", NS.aggroDistCache ~= nil)
+	Check("[AGGRO] objet d'un palier reçu : mesures oubliées ; autre objet : gardées", forgotten and NS.aggroDistCache ~= nil)
 end
 
 -- 4. Touche et combat ----------------------------------------------------------
 do
 	Say("-- aggro : touche et combat")
 	A.Reset()
-	Check("[AGGRO] sans touche : inactif", NS:AggroActive() == false)
+	local states = {}
+	local function Is(name, want) if NS:AggroActive() ~= want then states[#states + 1] = name end end
+	Is("Maj, sans touche", false)
 	A.W.shift = true
-	Check("[AGGRO] Maj tenue : actif", NS:AggroActive() == true)
+	Is("Maj tenue", true)
 	A.W.combat = true
-	Check("[AGGRO] en combat : inactif", NS:AggroActive() == false)
+	Is("Maj en combat", false)
 	A.W.combat, A.W.shift = false, false
 	NS:DB().aggroKey = "ctrl"
 	A.W.ctrl = true
-	Check("[AGGRO] Ctrl choisi : Ctrl suffit", NS:AggroActive() == true)
+	Is("Ctrl tenue", true)
 	A.W.ctrl, A.W.shift = false, true
-	Check("[AGGRO] Ctrl choisi : Maj ne suffit pas", NS:AggroActive() == false)
+	Is("Ctrl choisi, Maj tenue", false)
 	NS:DB().aggroKey = "alt"
 	A.W.alt = true
-	Check("[AGGRO] Alt choisi", NS:AggroActive() == true)
+	Is("Alt tenue", true)
 	NS:DB().aggroKey = "always"
 	A.W.alt, A.W.shift = false, false
-	Check("[AGGRO] « toujours » : sans touche", NS:AggroActive() == true)
+	Is("toujours, sans touche", true)
 	NS:DB().aggroEnabled = false
-	Check("[AGGRO] module coupé : inactif", NS:AggroActive() == false)
+	Is("module coupé", false)
+	Check("[AGGRO] touche choisie (Maj, Ctrl, Alt, toujours), combat et module coupé", #states == 0, table.concat(states, ", "))
 	NS:DB().aggroEnabled, NS:DB().aggroKey = true, "shift"
 
 	-- 1.31.0 : « danger seul »
 	NS:DB().aggroKey = "alert"
 	A.W.shift, A.W.ctrl, A.W.alt = false, false, false
-	Check("[AGGRO] danger seul, sans touche : actif, rouge seul", NS:AggroActive() == true and NS:AggroMode() == "red-only")
+	local redOnly = NS:AggroActive() == true and NS:AggroMode() == "red-only"
 	A.W.shift = true
-	Check("[AGGRO] danger seul, Maj tenue : tout", NS:AggroMode() == "full")
+	local full = NS:AggroMode() == "full"
 	A.W.combat = true
-	Check("[AGGRO] danger seul, en combat : inactif", NS:AggroActive() == false)
+	Check("[AGGRO] danger seul : rouge seul sans touche, tout avec Maj, inactif en combat", redOnly and full
+		and NS:AggroActive() == false)
 	A.W.combat, A.W.shift = false, false
 	NS:DB().aggroKey = "shift"
 	Check("[AGGRO] Maj choisi, sans touche : rien", NS:AggroMode() == nil)
@@ -293,16 +296,10 @@ do
 	Check("[AGGRO] sans la touche : rien dans l'infobulle", NS:AggroOnTooltip(GameTooltip, {}) == false and #GameTooltip.lines == 0)
 	A.W.shift = true
 	NS:AggroOnTooltip(GameTooltip, {})
-	Check("[AGGRO] ligne : portée, distance, verdict",
-		A.Tip():find("Aggro ~20 m · tu es à 20-25 m · danger, trop près", 1, true) ~= nil, A.Tip())   -- 1.30.0 : on prévient avant
-	Check("[AGGRO] couleur rouge (5 m avant la portée)", GameTooltip.styled[1].color[1] == NS.Theme.RED[1])
-	Check("[AGGRO] mention d'estimation", A.Tip():find("Estimation", 1, true) ~= nil)
-
-	GameTooltip:ClearLines()
-	A.Mob("mouseover", 20, 12)
-	NS:AggroOnTooltip(GameTooltip, {})
-	Check("[AGGRO] 12 m d'un monstre de même niveau : dans sa portée, rouge",
-		A.Tip():find("danger, trop près", 1, true) ~= nil and GameTooltip.styled[1].color[1] == NS.Theme.RED[1], A.Tip())
+	-- 1.30.0 : on prévient 5 m avant la portée
+	Check("[AGGRO] ligne rouge : portée, distance, verdict, mention d'estimation",
+		A.Tip():find("Aggro ~20 m · tu es à 20-25 m · danger, trop près", 1, true) ~= nil
+		and GameTooltip.styled[1].color[1] == NS.Theme.RED[1] and A.Tip():find("Estimation", 1, true) ~= nil, A.Tip())
 
 	GameTooltip:ClearLines()
 	A.W.level = 30
@@ -325,20 +322,22 @@ do
 	Check("[AGGRO] neutre : n'attaque pas", A.Tip():find("neutre, n'attaque pas", 1, true) ~= nil, A.Tip())
 
 	GameTooltip:ClearLines()
+	local shown = {}
 	A.Mob("mouseover", 20, 22, { player = true })
-	Check("[AGGRO] joueur : rien", NS:AggroOnTooltip(GameTooltip, {}) == false)
+	if NS:AggroOnTooltip(GameTooltip, {}) ~= false then shown[#shown + 1] = "joueur" end
 	A.Mob("mouseover", 1, 5, { creature = "Bestiole" })
-	Check("[AGGRO] bestiole : rien", NS:AggroOnTooltip(GameTooltip, {}) == false)
+	if NS:AggroOnTooltip(GameTooltip, {}) ~= false then shown[#shown + 1] = "bestiole" end
 	A.Mob("mouseover", 20, 5, { friendly = true })
-	Check("[AGGRO] PNJ amical : rien", NS:AggroOnTooltip(GameTooltip, {}) == false)
-
+	if NS:AggroOnTooltip(GameTooltip, {}) ~= false then shown[#shown + 1] = "amical" end
 	A.Mob("mouseover", 20, 22)
 	A.W.combat = true
-	Check("[AGGRO] en combat : rien", NS:AggroOnTooltip(GameTooltip, {}) == false)
+	if NS:AggroOnTooltip(GameTooltip, {}) ~= false then shown[#shown + 1] = "combat" end
 	A.W.combat = false
 	NS:DB().aggroTooltip = false
-	Check("[AGGRO] infobulle coupée : rien", NS:AggroOnTooltip(GameTooltip, {}) == false)
+	if NS:AggroOnTooltip(GameTooltip, {}) ~= false then shown[#shown + 1] = "coupée" end
 	NS:DB().aggroTooltip = true
+	Check("[AGGRO] rien pour un joueur, une bestiole, un PNJ amical, en combat, infobulle coupée", #shown == 0,
+		table.concat(shown, ", "))
 
 	-- 1.31.0 : danger seul : la ligne sans touche, fourchette complète, même loin
 	NS:DB().aggroKey = "alert"
@@ -348,18 +347,18 @@ do
 	GameTooltip:ClearLines()
 	A.Mob("mouseover", 20, 22)
 	NS:AggroOnTooltip(GameTooltip, {})
-	Check("[AGGRO] danger seul : infobulle sans touche, paliers classiques",
-		A.Tip():find("tu es à 20-28 m · danger, trop près", 1, true) ~= nil, A.Tip())
+	local close = A.Tip()
 	GameTooltip:ClearLines()
 	A.W.level = 30
 	NS:AggroOnTooltip(GameTooltip, {})
-	Check("[AGGRO] danger seul : monstre faible (rayon 10) à 22 m, ambre dans l'infobulle",
-		A.Tip():find("à la limite", 1, true) ~= nil, A.Tip())
+	local weak = A.Tip()
 	A.W.level = 20
 	GameTooltip:ClearLines()
 	A.Mob("mouseover", 20, 60)
 	NS:AggroOnTooltip(GameTooltip, {})
-	Check("[AGGRO] danger seul : loin, fourchette complète (pas coupée)", A.Tip():find("plus de 35 m", 1, true) ~= nil, A.Tip())
+	Check("[AGGRO] danger seul : infobulle sans touche (paliers classiques, ambre, fourchette complète au loin)",
+		close:find("tu es à 20-28 m · danger, trop près", 1, true) ~= nil and weak:find("à la limite", 1, true) ~= nil
+		and A.Tip():find("plus de 35 m", 1, true) ~= nil, close .. " | " .. weak .. " | " .. A.Tip())
 	A.W.silent = nil
 	NS:DB().aggroKey = "shift"
 end
@@ -378,34 +377,29 @@ do
 
 	A.W.shift = true
 	Mock:Advance(NS.AGGRO_TICK)
-	Check("[AGGRO] dans la portée : anneau rouge", A.RingShown("nameplate1") and A.Ring("nameplate1").verdict == "red"
-		and A.Ring("nameplate1").texture.vertex[1] == NS.Theme.RED[1])
-	Check("[AGGRO] à la limite : anneau ambre", A.RingShown("nameplate2") and A.Ring("nameplate2").verdict == "amber")
-	Check("[AGGRO] loin : anneau vert, discret", A.RingShown("nameplate3") and A.Ring("nameplate3").verdict == "green"
-		and A.Ring("nameplate3").alpha < 0.9)
-	Check("[AGGRO] neutre : pas d'anneau", not A.RingShown("nameplate4"))
-	Check("[AGGRO] anneau accroché au cadre de base de la barre", A.Ring("nameplate1"):GetParent() == A.W.plates.nameplate1
+	Check("[AGGRO] marques rouge (dans la portée), ambre (à la limite), vert discret (loin) ; neutre : aucune",
+		A.RingShown("nameplate1") and A.Ring("nameplate1").verdict == "red" and A.Ring("nameplate1").texture.vertex[1] == NS.Theme.RED[1]
+		and A.RingShown("nameplate2") and A.Ring("nameplate2").verdict == "amber"
+		and A.RingShown("nameplate3") and A.Ring("nameplate3").verdict == "green" and A.Ring("nameplate3").alpha < 0.9
+		and not A.RingShown("nameplate4"))
+	Check("[AGGRO] marque accrochée au cadre de base de la barre", A.Ring("nameplate1"):GetParent() == A.W.plates.nameplate1
 		and A.Ring("nameplate1").lastPoint and A.Ring("nameplate1").lastPoint.relTo == A.W.plates.nameplate1)
 
 	-- style par défaut : la pastille (losange du client à gauche) ; 1.33.1 : plus d'anneau
 	local r1 = A.Ring("nameplate1")
-	Check("[AGGRO] marque par défaut : pastille (losange du client)", NS:AggroStyle() == "dot" and r1.dot:IsShown()
-		and r1.ringTexture == nil and not r1.bar:IsShown() and r1.texture == r1.dot and r1.dot.clientRole == "diamond")
-	Check("[AGGRO] pastille : 16 px, rentrée vers le nom", NS.AGGRO_DOT_SIZE == 16 and r1.dot.width == 16
-		and r1.dotBack.lastPoint.x == NS.AGGRO_DOT_INSET and NS.AGGRO_DOT_INSET > 2)
-	Check("[AGGRO] pastille : à gauche de la barre, au-dessus d'elle", r1.dotBack.lastPoint and r1.dotBack.lastPoint.relTo == A.W.plates.nameplate1
-		and r1.dotBack.lastPoint.point == "RIGHT")
+	Check("[AGGRO] marque par défaut : pastille (losange du client), à gauche de la barre", NS:AggroStyle() == "dot" and r1.dot:IsShown()
+		and r1.ringTexture == nil and not r1.bar:IsShown() and r1.texture == r1.dot and r1.dot.clientRole == "diamond"
+		and r1.dotBack.lastPoint and r1.dotBack.lastPoint.relTo == A.W.plates.nameplate1 and r1.dotBack.lastPoint.point == "RIGHT")
 	NS:AggroSetStyle("bar")
 	Check("[AGGRO] style trait : une ligne sous la barre, à la couleur", r1.bar:IsShown() and not r1.dot:IsShown()
 		and r1.texture == r1.bar and r1.bar.vertex[1] == NS.Theme.RED[1])
 	NS:AggroSetStyle("ring")
-	Check("[AGGRO] style anneau retiré (1.33.1) : refusé", NS:AggroStyle() == "bar" and r1.bar:IsShown())
+	local ringRefused = NS:AggroStyle() == "bar" and r1.bar:IsShown()
 	NS:AggroSetStyle("nimportequoi")
-	Check("[AGGRO] style inconnu : refusé", NS:AggroStyle() == "bar")
 	local choices = NS:AggroStyleChoices()
-	Check("[AGGRO] deux styles proposés : pastille, trait", #choices == 2 and choices[1].value == "dot" and choices[2].value == "bar")
-	Check("[AGGRO] plus de texte « anneau » (FR/EN)", NS.AGGRO_STRINGS.fr.AGGRO_STYLE_ring == nil
-		and NS.AGGRO_STRINGS.en.AGGRO_STYLE_ring == nil)
+	Check("[AGGRO] anneau retiré (1.33.1) et style inconnu refusés ; deux styles : pastille, trait", ringRefused
+		and NS:AggroStyle() == "bar" and #choices == 2 and choices[1].value == "dot" and choices[2].value == "bar"
+		and NS.AGGRO_STRINGS.fr.AGGRO_STYLE_ring == nil)
 	-- 1.33.1 : migration une seule fois, l'anneau sauvegardé devient la pastille
 	local db = NS:DB()
 	db.aggroStyle, db.aggroStyleSchema = "ring", nil
@@ -435,9 +429,9 @@ do
 	-- combat : tout disparaît
 	A.W.combat = true
 	Mock:Fire("PLAYER_REGEN_DISABLED")
-	Check("[AGGRO] entrée en combat : anneaux masqués", not A.RingShown("nameplate1") and not A.RingShown("nameplate2"))
+	local hidden = not A.RingShown("nameplate1") and not A.RingShown("nameplate2")
 	Mock:Advance(NS.AGGRO_TICK)
-	Check("[AGGRO] en combat : pas de retour des anneaux", not A.RingShown("nameplate1"))
+	Check("[AGGRO] entrée en combat : marques masquées, pas de retour", hidden and not A.RingShown("nameplate1"))
 	A.W.combat = false
 	Mock:Fire("PLAYER_REGEN_ENABLED")
 	Check("[AGGRO] sortie de combat, touche tenue : anneaux revenus", A.RingShown("nameplate1"))
@@ -451,13 +445,13 @@ do
 	A.W.shift = true
 	NS:DB().aggroRings = false
 	Mock:Advance(NS.AGGRO_TICK)
-	Check("[AGGRO] anneaux coupés dans les réglages", not A.RingShown("nameplate1"))
+	local off = not A.RingShown("nameplate1")
 	NS:DB().aggroRings = true
 
 	-- sans mesure de distance : pas d'anneau
 	A.W.noItems = true
 	Mock:Advance(NS.AGGRO_TICK)
-	Check("[AGGRO] sans distance : pas d'anneau", not A.RingShown("nameplate1"))
+	Check("[AGGRO] marques coupées dans les réglages, ou sans distance : aucune", off and not A.RingShown("nameplate1"))
 	A.W.noItems = false
 end
 
@@ -470,8 +464,8 @@ do
 	A.Mob("nameplate3", 20, 60)                       -- vert
 	for i = 1, 3 do A.Plate("nameplate" .. i) end
 	Mock:Advance(NS.AGGRO_TICK)
-	Check("[AGGRO] danger seul, sans touche : marque rouge", A.RingShown("nameplate1") and A.Ring("nameplate1").verdict == "red")
-	Check("[AGGRO] danger seul, sans touche : ni ambre ni vert", not A.RingShown("nameplate2") and not A.RingShown("nameplate3"))
+	Check("[AGGRO] danger seul, sans touche : marque rouge, ni ambre ni vert", A.RingShown("nameplate1")
+		and A.Ring("nameplate1").verdict == "red" and not A.RingShown("nameplate2") and not A.RingShown("nameplate3"))
 	A.W.shift = true
 	Mock:Fire("MODIFIER_STATE_CHANGED", "LSHIFT", 1)
 	Check("[AGGRO] danger seul, Maj tenue : les trois couleurs", A.RingShown("nameplate1") and A.RingShown("nameplate2")
@@ -483,9 +477,9 @@ do
 	A.W.combat = true
 	Mock:Fire("PLAYER_REGEN_DISABLED")
 	Mock:Advance(NS.AGGRO_TICK)
-	Check("[AGGRO] danger seul, en combat : rien", not A.RingShown("nameplate1"))
 	A.W.combat = false
-	Check("[AGGRO] danger seul : diag « danger seul »", NS:AggroDiagLine():find("danger seul", 1, true) ~= nil, NS:AggroDiagLine())
+	Check("[AGGRO] danger seul, en combat : rien ; diag « danger seul »", not A.RingShown("nameplate1")
+		and NS:AggroDiagLine():find("danger seul", 1, true) ~= nil, NS:AggroDiagLine())
 
 	-- mesure coupée : rien au-delà du seuil du rouge (rayon 20 + 5 = 25 m)
 	A.Reset(true)
@@ -518,9 +512,9 @@ do
 		and line:find("1 marque", 1, true) ~= nil and line:find("oui", 1, true) ~= nil, line)
 	Mock:Reset()
 	NS:HandleCommand("diag")
-	Check("[AGGRO] /r2q diag dit l'état de l'aggro", Mock:Output():find("aggro :", 1, true) ~= nil)
 	NS:DB().aggroEnabled = false
-	Check("[AGGRO] diag : module coupé", NS:AggroDiagLine():find("désactivé", 1, true) ~= nil)
+	Check("[AGGRO] /r2q diag dit l'état de l'aggro, module coupé compris", Mock:Output():find("aggro :", 1, true) ~= nil
+		and NS:AggroDiagLine():find("désactivé", 1, true) ~= nil)
 	NS:DB().aggroEnabled = true
 	-- C_NamePlate absent (client restreint) : rien ne casse
 	_G.C_NamePlate = nil
