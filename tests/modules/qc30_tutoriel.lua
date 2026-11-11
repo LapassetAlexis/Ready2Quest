@@ -466,7 +466,8 @@ do
 	Check("[JRN] première ouverture : la visite du carnet, onglet Compagnon", NS:TourActive() == "journal"
 		and P.StepId() == "evolution" and f.kind == "evolution" and P.Ring().anchor == f.sections.evolution
 		and P.Title() == NS.L.JRN_SEC_evolution, tostring(P.StepId()) .. " " .. tostring(f.kind) .. " " .. tostring(P.Ring().anchor == f.sections.evolution) .. " " .. P.Title())
-	local order = { "evolution", "menagerie", "reserve", "feats", "day", "progress", "juke", "guide" }
+	-- 3.0.0 : l'Échoppe du dresseur a son onglet, donc son étape
+	local order = { "evolution", "menagerie", "reserve", "shop", "feats", "day", "progress", "juke", "guide" }
 	local okAll, total = true, NS.tourState.total
 	for index, key in ipairs(order) do
 		if f.sections[key] then
@@ -476,7 +477,7 @@ do
 			if index < #order then P.Callout().nextButton:Click() end
 		end
 	end
-	Check("[JRN] chaque onglet : surligné, ouvert, expliqué (8 étapes)", okAll and total == 8, total)
+	Check("[JRN] chaque onglet : surligné, ouvert, expliqué (9 étapes)", okAll and total == 9, total)
 	Check("[JRN] dernière étape : « Terminer »", P.Callout().nextButton.text:GetText() == NS.L.TOUR_DONE)
 	P.Callout().nextButton:Click()
 	Check("[JRN] fini : vue au compte", NS:TourActive() == nil and NS:TourDone("journal"))
@@ -587,8 +588,8 @@ do
 	Migrate(2, 0)
 	NS:ToggleJournal(true)
 	Mock:Advance(0.2)
-	Check("[MIG] carnet ouvert d'abord : l'explication en première étape (1 / 9)", NS:TourActive() == "journal"
-		and P.StepId() == "migration" and P.Callout().step:GetText() == "1 / 9" and Has(P.Text(), "(2 "), P.Callout() and P.Callout().step:GetText())
+	Check("[MIG] carnet ouvert d'abord : l'explication en première étape (1 / 10)", NS:TourActive() == "journal"
+		and P.StepId() == "migration" and P.Callout().step:GetText() == "1 / 10" and Has(P.Text(), "(2 "), P.Callout() and P.Callout().step:GetText())
 	Check("[MIG] … 2 espèces : pas de cadeau", not NS:Gift30Available() and not Has(P.Text(), NS:F("TOUR_MIG_GIFT", 3)))
 	P.Callout().nextButton:Click()
 	Check("[MIG] … puis les onglets", P.StepId() == "evolution" and NS:TourDone("migration"))
@@ -602,8 +603,8 @@ do
 	Mock:Advance(NS.TOUR.migrationDelay + 0.5)
 	NS:ToggleJournal(true)
 	Mock:Advance(0.2)
-	Check("[MIG] nouveau joueur : pas d'explication, la visite commence aux onglets (8)", NS:TourActive() == "journal"
-		and P.StepId() == "evolution" and NS.tourState.total == 8 and NS.tourMigrationAt == nil)
+	Check("[MIG] nouveau joueur : pas d'explication, la visite commence aux onglets (9)", NS:TourActive() == "journal"
+		and P.StepId() == "evolution" and NS.tourState.total == 9 and NS.tourMigrationAt == nil)
 	NS:TourStop()
 	NS.journalFrame:Hide()
 end

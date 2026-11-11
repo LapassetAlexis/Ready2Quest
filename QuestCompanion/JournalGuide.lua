@@ -409,9 +409,9 @@ local function Build(self, frame, content, ui)
 
 	-- 3.0.0 : les deux boutons des visites guidées, en bas de la colonne du
 	-- sommaire (les premières captures au-dessus, le carnet en bas)
-	pane.replay = Theme.CreateButton(pane, "auto", Theme.PAGER_HEIGHT, L.GUIDE_REPLAY, function() ns:JournalGuideReplay("capture") end, "accent")
+	pane.replay = Theme.CreateButton(pane, "auto", "sm", L.GUIDE_REPLAY, function() ns:JournalGuideReplay("capture") end, "accent")
 	At(pane.replay, content, 0, PAGER_Y + (Theme.PAGER_HEIGHT or 24) + 6)
-	pane.replayJournal = Theme.CreateButton(pane, "auto", Theme.PAGER_HEIGHT, L.GUIDE_REPLAY_JOURNAL,
+	pane.replayJournal = Theme.CreateButton(pane, "auto", "sm", L.GUIDE_REPLAY_JOURNAL,
 		function() ns:JournalGuideReplay("journal") end, "accent")
 	At(pane.replayJournal, content, 0, PAGER_Y)
 	for _, pair in ipairs({ { pane.replay, "GUIDE_REPLAY" }, { pane.replayJournal, "GUIDE_REPLAY_JOURNAL" } }) do

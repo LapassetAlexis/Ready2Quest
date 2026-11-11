@@ -1,6 +1,7 @@
 # Interface : système de design (refonte 2026-11)
 
-État décrit : socle 2.11.0, Ready2Quest 1.32.0, QuestCompanion 2.11.0. Cette
+État décrit : socle 2.11.0, Ready2Quest 1.32.0, QuestCompanion 2.11.0 (et,
+pour la section « Composants 3.0 », socle 3.0 et QuestCompanion 3.0.0). Cette
 page dit ce que fait le code aujourd'hui ; l'historique des versions est dans
 `docs/TECHNIQUE.md` et les CHANGELOG.
 
@@ -90,8 +91,8 @@ choisit par la même clé ses encres sombres (`rElite`, `rRare`…).
 socle ; les tests s'en servent pour mesurer chaque couple texte / fond.
 
 **États** : survol = voile blanc à `Theme.HOVER_ALPHA` (6 %) ; inactif =
-`DIM_ALPHA` (45 % : bouton désactivé, carte ou page d'un module coupé, avec
-« Rallumer » en tête de page) ; bouton plein enfoncé = encre mêlée au fond à
+`DIM_ALPHA` (45 % : carte ou page d'un module coupé, avec « Rallumer » en tête
+de page ; plus les boutons depuis la 3.0, voir « Composants 3.0 ») ; bouton plein enfoncé = encre mêlée au fond à
 `PRESS_SHADE` (10 %), libellé décalé de 1, -1.
 
 ## Fenêtre type
@@ -160,8 +161,9 @@ socle ; les tests s'en servent pour mesurer chaque couple texte / fond.
   ambre au survol), `accent` (contour ambre, fond ambre à 7 %), `primary`
   (plein ambre, encre sombre), `adventure` (plein bleu, encre sombre : le blanc
   ne tenait que 3,31:1 ; l'encre tient 5,67 au repos, 6,69 au survol). Les
-  boutons pleins n'ont PAS l'ombre de la police. Désactivé : `DIM_ALPHA`,
-  texte MUTED, sans survol.
+  boutons pleins n'ont PAS l'ombre de la police. Désactivé (socle 3.0) :
+  `Theme.DISABLED` opaque (fond CONTROL pour un bouton plein, filet EDGE_SOFT,
+  texte MUTED, 4,50:1), sans survol ; plus d'estompe `DIM_ALPHA`.
 - Fenêtres : `Theme.CreateWindow` inscrit le nom de la fenêtre dans
   `UISpecialFrames` (`Theme.RegisterEscapeClose`) : une fenêtre sans nom ne se
   ferme pas à Échap.
@@ -311,7 +313,7 @@ Même langage, briques du lot 4 dans le socle :
 
 | Fenêtre / cadre          | Brique              | En bref |
 |--------------------------|---------------------|---------|
-| Carnet de voyage         | fenêtre 980 × 680   | navigation 220 : marque, groupe « Carnet », six entrées (Compagnon, Créatures, Hauts faits, Missions, Exploration, Guide), pastille bleue sur Missions (missions ouvertes du jour et de la semaine) ; dessous, le **tableau de bord** : compagnon (nom, humeur, quatre envies en barres fines), zone où l'on est (%), missions du jour et de la semaine en losanges (pleins = faites), chaque bloc mène à sa page ; points de hauts faits en bas. Grand en-tête (titre et phrase fixe `JRN_SUB_<page>`), roue crantée à gauche du [×]. Pied : garde-manger à gauche, « Ma fiche de dresseur » et « Fermer » (accent) à droite. Filtres de Créatures et d'Exploration gardés au /reload (`QuestCompanionDB.journalState`, la recherche tapée exceptée) |
+| Carnet de voyage         | fenêtre 980 × 680   | navigation 220 : marque, groupe « Carnet », neuf entrées (Compagnon, Créatures, Réserve, Échoppe du dresseur, Hauts faits, Missions, Exploration, Juke-box, Guide), pastille bleue sur Missions (missions ouvertes du jour et de la semaine) ; dessous, le **tableau de bord** : compagnon (nom, humeur, quatre envies en barres fines), zone où l'on est (%), missions du jour et de la semaine en losanges (pleins = faites), chaque bloc mène à sa page ; points de hauts faits en bas. Grand en-tête (titre et phrase fixe `JRN_SUB_<page>`), roue crantée à gauche du [×]. Pied : garde-manger à gauche, « Ma fiche de dresseur » et « Fermer » (accent) à droite. Filtres de Créatures et d'Exploration gardés au /reload (`QuestCompanionDB.journalState`, la recherche tapée exceptée) |
 | › Compagnon              | cartes              | héros (portrait dans son cadre et son fond gagnés, nom, caractère, étapes en losanges, dernière bulle) ; cinq chiffres en plaques (chiffre et libellé centrés) ; envies en barres fines ; « Ses effets » ; allure : apparences, cadres, fonds, ornements (verrou en pointillés tant que pas gagné) ; changer de compagnon demande confirmation (dialogue 420) |
 | › Créatures              | liste + fiche       | rangée 1 : zone, rareté, tri (listes déroulantes), compte ; rangée 2 : puces d'état (Toutes, Capturées, À capturer, À abattre, Brillantes) et recherche (appliquée à la fin de la frappe) ; rangée 3 : boutons de type et « Tous » ; liste façon Pokédex (numéro, icône, nom à la couleur de sa rareté, type, étoiles dorées du client cernées de brun, liseré vert si capturée) ; fiche à droite (modèle 3D, « Localiser ») ; bandeau des sceaux sous la liste ; pagination |
 | › Hauts faits            | liste paginée       | en haut : points (compte et personnage), nombre obtenu, filtres Tous / Obtenus / En cours ; à gauche « Toutes » puis les catégories ; à droite : icône, nom, marque Compte / Perso, description, barre, points, récompense, date |
@@ -358,6 +360,90 @@ Aperçus : `qc-journal-creature|menagerie|day|day-azeroth|progress|guide`,
 `qc-tracker`, `qc-tooltip`, `qc-options-companion`, `qc-options-ornaments`.
 Pas encore d'aperçu des Hauts faits, d'Exploration en Azeroth ni de la fiche
 de dresseur.
+
+## Composants 3.0 (QuestCompanion 3.0.0, socle 3.0)
+
+Passe d'harmonisation après la bêta 4 de la 3.0 (retours : rangée du haut de
+la Réserve dépareillée, « Mettre au Codex » et « Échanger avec ma cible »
+illisibles, solde de paillettes peu visible, « Acheter » muet au clic).
+
+### Inventaire (avant)
+
+| Brique | Variantes trouvées | Décision |
+|---|---|---|
+| `Theme.CreateButton` (60 appels dans QC) | hauteurs 18, 20, 22, 24, 26, 28, `PAGER_HEIGHT` (22), `PAGER_HEIGHT + 2`, `DIALOG_BUTTON_HEIGHT` (28), `ITEM_H - 4`, `M.row` (22), `actionH` (22) | trois tailles nommées `xs` 18, `sm` 24, `md` 28 (`Theme.BUTTON_SIZES`, `height` accepte le nom) ; reste en nombre : le bouton posé sur une ligne d'Exploration (hauteur de la ligne − 4) et les boutons des bandeaux de capture (géométrie `ns.CAPTURE_PREP`) |
+| Désactivé (Sobre) | bouton entier à `DIM_ALPHA` 45 %, texte MUTED : libellé vu à 2,18:1 | `Theme.DISABLED` opaque : fond CONTROL (plein) ou transparent (au trait), filet EDGE_SOFT, texte MUTED |
+| Désactivé (Azeroth, carnet) | aucun : `Theme.ButtonRest` repeignait l'encre sombre du bouton plein sur le rouge (`Mettre au Codex`, 1,22 à 2,11:1), ou du gris estompé sur rouge estompé (`Acheter`, environ 1:1) | peintre unique `ns.AzerothButtonState` (`button.skinPaint`) : bois délavé `AZEROTH_BUTTONS.off`, libellé `buttonOff` |
+| `ns:AzerothButton` (capture, visite) | `Disable()` sans effet visible | mêmes états que le carnet (survol, appui, désactivé) |
+| `Theme.CreateChips` | 24 de haut, F_BODY ; décalé de 1 px à côté des listes | inchangé, hauteur = `Theme.CONTROL_HEIGHT` |
+| `Theme.CreateDropdown` | 22 de haut | `Theme.CONTROL_HEIGHT` (24) par défaut, `opts.height` sinon |
+| `Theme.CreateSearchBox` | 24 | `Theme.CONTROL_HEIGHT` |
+| Solde de paillettes | texte F_LABEL ambre « ◆ 40 paillettes » | pastille `Theme.CreateCurrency` |
+| Intertitres | `Theme.CreateSection` (pages, fiche) ; texte F_LABEL ambre (historique des Échanges) | `Theme.CreateSection` partout (l'historique y passe) ; les en-têtes de colonne de la fenêtre d'échange restent des libellés (« Toi » / nom) |
+| Étiquettes | `Theme.CreateTag` (caractère, taille, rang) ; pavé de taille sur vignette (fond NAV, F_SMALL) | inchangées : le pavé sur portrait garde son fond opaque (lisible sur n'importe quel portrait) |
+| Texte vide | F_BODY MUTED clair, retour à la ligne | règle commune (Réserve, cadeau, Échanges, Créatures) |
+| Onglets (colonne) | `Theme.CreateNavItem` | inchangé ; l'Échoppe y gagne son entrée |
+
+### Composants canoniques
+
+| Composant | Brique | Taille | États |
+|---|---|---|---|
+| Bouton principal | `CreateButton(…, "primary")` ; Azeroth : rouge | `sm` dans une page, `md` au pied et dans un dialogue, `xs` dans un bandeau compact | repos, survol (ambre clair / voile doré ADD), appui (libellé 1, −1 ; fond assombri / voile sombre `pressAlpha`), désactivé |
+| Bouton secondaire | `"outline"` (= `"normal"`) ; Azeroth : brun | idem | idem |
+| Bouton d'accent | `"accent"` ; Azeroth : rouge | idem | idem |
+| Bouton « aventure » | `"adventure"` (Ready2Quest) | idem | idem |
+| Inactif | `button:SetInactive(on, raison)` | — | aspect désactivé, infobulle de la raison, **clic gardé** : le module explique (Échoppe : `ns:ShopRefused`) |
+| Bouton-icône | `Theme.CreateIconButton` | 24 | gris désaturé au repos, ambre au survol |
+| Onglet | `Theme.CreateNavItem` | 28 (Sobre), 29 au pas de 31 (Azeroth) | survol, choisi, pastille |
+| Puces (vue, filtre) | `Theme.CreateChips` | `CONTROL_HEIGHT` 24, F_BODY | au repos, survol, choisie (ambre ; Azeroth : surbrillance des catégories) |
+| Liste déroulante | `Theme.CreateDropdown` | `CONTROL_HEIGHT` 24 | — |
+| Recherche | `Theme.CreateSearchBox` | `CONTROL_HEIGHT` 24 | — |
+| Pastille de monnaie | `Theme.CreateCurrency(parent, { icon, label, tip })` | `CONTROL_HEIGHT` 24, largeur au contenu | `:SetValue(n)`, `:Flash()` (secousse de 4 translations de 0,05 s et voile rouge en fondu 0,45 s, AnimationGroup créés une fois) ; Azeroth : aplat `fieldBg`, liseré brun, rôles `currency.value` / `currency.label` |
+| Intertitre | `Theme.CreateSection` | 20 | Azeroth : rôle `section.label` |
+| Étiquette | `Theme.CreateTag` | 15 | — |
+| Texte vide | `Text(F_BODY, MUTED_LIGHT)` | — | Azeroth : rôle de la page (`reserve.text`…) |
+
+Une rangée d'outils (puces, listes, recherche, bouton `sm`, pastille) a une
+seule hauteur, `Theme.CONTROL_HEIGHT`, et les éléments s'y calent par le haut.
+
+### Écrans
+
+- Réserve : rangée du haut « Réserve | Échanges », « Échanger avec ma cible »
+  (`sm`, au trait) calé sur le haut des puces, pastille du solde à droite ;
+  deuxième rangée : tri et espèce (24) alignés sur « Tous | Brillants » ; les
+  boutons de la fiche en `sm`.
+- **Échoppe du dresseur** : onglet à part (`ns.JOURNAL_PANES.shop`,
+  `frame.shopPane`), juste après la Réserve, avec son étape dans la visite du
+  carnet (`TOUR_B_shop`). Un article hors de portée garde « Acheter »
+  cliquable à l'aspect désactivé : le clic écrit « Il te manque 10 paillettes
+  pour Sifflet du dompteur. » (`SHOP_SHORT_FOR`) et secoue la pastille ;
+  besace pleine, déjà acquis, capture coupée : la raison dans le chat.
+  `ns:OpenReserve("shop")` mène à l'onglet (`ns:OpenShop`).
+- Échanges : même pastille (celle de la page Réserve) ; intertitre de
+  l'historique en `Theme.CreateSection` ; boutons en `sm`.
+- Ailleurs : boutons du carnet (Compagnon, Créatures, Missions, Exploration,
+  Guide, Juke-box), de la fiche de dresseur, du menu du compagnon, de la
+  capture (carte, liste, bandeau, choix), des raccourcis et de la visite
+  guidée passés aux tailles nommées.
+
+### Contrastes mesurés
+
+| Couple | Rapport |
+|---|---|
+| Sobre, désactivé : MUTED sur CONTROL (bouton plein) | 4,50:1 |
+| Sobre, désactivé : MUTED sur la fenêtre (bouton au trait) | 6,09:1 |
+| Azeroth, désactivé : `buttonOff` sur le haut du dégradé `off` (le plus clair) | 4,84:1 (`button.off`) |
+| Azeroth, actif : `goldText` sur le haut du rouge / du brun | 6,39:1 / 11,29:1 |
+| Pastille Sobre : chiffre GOLD / libellé MUTED clair sur FIELD | 8,79:1 / 7,75:1 |
+| Pastille Azeroth : `goldText` / `lightSoft` sur `fieldBg` | 13,18:1 / 12,18:1 |
+
+### Performances
+
+Tout est construit une fois : les lignes de l'Échoppe, les deux pastilles et
+leurs animations (secousse, fondu) naissent avec le carnet ; un
+rafraîchissement ne crée aucun cadre (`tests/modules/qc30_composants.lua`) ;
+le peintre d'états ne crée rien (voiles de survol et d'appui créés à
+l'habillage) ; pas d'`OnUpdate`.
 
 ## Style Azeroth (QuestCompanion)
 

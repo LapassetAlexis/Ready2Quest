@@ -1035,7 +1035,7 @@ function ns:EnsureCapturePrompt()
 		frame.aids[index] = button
 	end
 
-	frame.throw = Theme.CreateButton(frame, 90, Theme.DIALOG_BUTTON_HEIGHT or 28, L.CAPTURE_THROW,
+	frame.throw = Theme.CreateButton(frame, 90, "md", L.CAPTURE_THROW,
 		function() ns:CaptureThrow() end, "primary")
 	frame.throw:SetPoint("BOTTOMRIGHT", frame, "BOTTOMRIGHT", -pad, pad - 2)
 

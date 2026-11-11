@@ -336,7 +336,9 @@ local LIST_W = math.floor((INNER - (LIST_COLS - 1) * 12) / LIST_COLS)
 -- 2.15.0 : « reserve » (Réserve et Échoppe du dresseur, JournalReserve.lua)
 -- juste après les Créatures ; États « À compléter » et « Épinglées » (todo,
 -- pinned : MenagerieView.lua) en tête des puces de la page Créatures
-local SECTIONS = { "evolution", "menagerie", "reserve", "feats", "day", "progress", "juke", "guide" }
+-- 3.0.0 : « shop » (l'Échoppe du dresseur, JournalReserve.lua) a son onglet,
+-- juste après la Réserve (avant : une puce de la page Réserve)
+local SECTIONS = { "evolution", "menagerie", "reserve", "shop", "feats", "day", "progress", "juke", "guide" }
 ns.JOURNAL_SECTIONS = SECTIONS
 local MEN_STATES = { "all", "todo", "pinned", "captured", "missing", "tokill", "shiny" }
 local MEN_RANKS = { "all", "normal", "elite", "rare", "boss" }
@@ -352,7 +354,8 @@ local STATE_VALID = {
 	menRank = MEN_RANKS, menSort = MEN_SORTS, menState = MEN_STATES,
 	progPart = { "explore", "craft", "quests" }, progFilter = { "mine", "seen", "all" },
 	-- 2.15.0 : Réserve (JournalReserve.lua) : vue et tri
-	resView = { "reserve", "shop" }, resSort = { "stars", "date", "name" },
+	-- 3.0.0 : « shop » n'est plus une vue (onglet à part) ; « trade » en est une
+	resView = { "reserve", "trade" }, resSort = { "stars", "date", "name" },
 }
 local function Valid(list, value)
 	for _, v in ipairs(list or {}) do if v == value then return true end end
@@ -987,7 +990,7 @@ local function BuildEvolution(self, frame, content)
 	pane.bubble.text:SetPoint("LEFT", pane.bubble, "LEFT", 12, 0)
 	if pane.bubble.text.SetWordWrap then pane.bubble.text:SetWordWrap(true) end
 	if Theme.NoShadow then Theme.NoShadow(pane.bubble.text) end
-	pane.openChest = Theme.CreateButton(hero, "auto", 24, L.JRN_OPEN_CHEST, function() ns:OpenChest() end, "primary")
+	pane.openChest = Theme.CreateButton(hero, "auto", "sm", L.JRN_OPEN_CHEST, function() ns:OpenChest() end, "primary")
 	pane.openChest:SetPoint("TOPRIGHT", hero, "TOPRIGHT", -14, -14)
 
 	-- cinq chiffres
@@ -1295,7 +1298,7 @@ local function BuildMenagerie(self, frame, content)
 	if pane.empty.SetWordWrap then pane.empty:SetWordWrap(true) end
 	pane.preview = BuildPreview(pane, content, INNER - PREVIEW_W, gridTop, gridTop - PAGER_Y - 12)
 	-- normale / brillante : la fiche montre l'une ou l'autre (1.6.0)
-	pane.preview.variant = Theme.CreateButton(pane.preview, "auto", 20, L.JRN_MEN_SEE_SHINY, function()
+	pane.preview.variant = Theme.CreateButton(pane.preview, "auto", "sm", L.JRN_MEN_SEE_SHINY, function()
 		local preview = frame.men.preview
 		preview.shiny = not preview.shiny
 		if preview.entry then ns:JournalPreviewMenagerie(preview.entry, true) end
@@ -1303,7 +1306,7 @@ local function BuildMenagerie(self, frame, content)
 	pane.preview.variant:SetPoint("TOPRIGHT", pane.preview, "TOPRIGHT", -6, -6)
 	pane.preview.variant:Hide()
 	-- 2.11.0 : « Localiser » : repère sur la carte, là où l'espèce apparaît
-	pane.preview.locate = Theme.CreateButton(pane.preview, "auto", 20, L.JRN_LOCATE or "Localiser", function()
+	pane.preview.locate = Theme.CreateButton(pane.preview, "auto", "sm", L.JRN_LOCATE or "Localiser", function()
 		ns:JournalMenagerieLocate()
 	end, "accent")
 	pane.preview.locate:SetPoint("TOPLEFT", pane.preview, "TOPLEFT", 6, -6)
@@ -1799,7 +1802,7 @@ local function BuildDay(self, frame, content)
 		slot.count = Text(slot, Theme.F_LABEL, Theme.PARCHMENT, cellW)
 		slot.count:SetPoint("TOP", slot, "TOP", 0, -45)
 		slot.count:SetJustifyH("CENTER")
-		slot.give = Theme.CreateButton(slot, cellW - 2, 18, L.DAY_GIVE, function() ns:TreatGive(kind); ns:RefreshJournal() end)
+		slot.give = Theme.CreateButton(slot, cellW - 2, "xs", L.DAY_GIVE, function() ns:TreatGive(kind); ns:RefreshJournal() end)
 		slot.give:SetPoint("BOTTOM", slot, "BOTTOM", 0, 2)
 		if slot.give.text and slot.give.text.SetFontObject then slot.give.text:SetFontObject(Theme.F_SMALL) end
 		if slot.EnableMouse then slot:EnableMouse(true) end
@@ -2129,7 +2132,7 @@ function ns:EnsureJournalWindow()
 			frame.settingsButton:SetFrameLevel(tonumber(frame.close:GetFrameLevel()) or 20)
 		end
 	end
-	frame.closeButton = Theme.CreateButton(frame.footer, "auto", 28, L.OPT_CLOSE, function() frame:Hide() end, "accent")
+	frame.closeButton = Theme.CreateButton(frame.footer, "auto", "md", L.OPT_CLOSE, function() frame:Hide() end, "accent")
 	frame.closeButton:SetPoint("RIGHT", frame.footer, "RIGHT", -PAD, 0)
 	frame:Hide()
 	self.journalFrame = frame
@@ -2367,7 +2370,7 @@ local function RefreshEvolution(self, frame)
 			count = count + 1
 			local button = pane.orns[count]
 			if not button then
-				button = Theme.CreateButton(pane, "auto", 20, "", nil)
+				button = Theme.CreateButton(pane, "auto", "sm", "", nil)
 				pane.orns[count] = button
 			end
 			local label = L[def.label] or def.id

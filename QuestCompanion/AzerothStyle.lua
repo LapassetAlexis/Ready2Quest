@@ -151,6 +151,7 @@ ns.AZEROTH_INK = {
 	fxText = { 1, 0.86, 0.45 },              -- texte « Aguerri ! »
 	bubbleEdge = { 0.24, 0.14, 0.05 },       -- liseré de la bulle
 	goldText = { 1, 0.84, 0.42 },            -- texte des boutons, de la plaque (carnet)
+	buttonOff = { 0.80, 0.77, 0.71 },        -- 3.0.0 : libellé d'un bouton désactivé (bois délavé)
 	lightSoft = { 0.89, 0.82, 0.66 },        -- (même valeur que statLabel)
 	catGold = { 1, 0.76, 0.25 },             -- surbrillance des catégories
 	barGreen = { 0.10, 0.62, 0.10 }, barOrange = { 0.80, 0.33, 0.08 }, barGold = { 0.78, 0.56, 0.12 },
@@ -174,6 +175,13 @@ ns.AZEROTH_BUTTONS = {
 	text = { 1, 0.95, 0.81 }, sub = { 0.9, 0.83, 0.64 },     -- texte et sous-ligne (capture)
 	gloss = { 1, 0.86, 0.59 }, hover = { 1, 0.85, 0.5 },     -- reflet (alpha 0,35), survol (0,12, ADD)
 	outer = { 0.08, 0.03, 0 },                               -- liseré extérieur (carnet)
+	-- 3.0.0 : bouton désactivé (carnet et capture) : bois délavé, gris-brun
+	-- désaturé, libellé clair atténué (4,84:1 sur le haut du dégradé, le plus
+	-- clair : rôle « button.off » ; avant : encre sombre ou gris estompé sur
+	-- le rouge, sous 2:1)
+	off = { top = { 0.33, 0.30, 0.27 }, bottom = { 0.20, 0.18, 0.16 }, edge = { 0.46, 0.42, 0.36 } },
+	offText = ns.AZEROTH_INK.buttonOff,
+	pressAlpha = 0.22,                                       -- voile sombre d'un bouton enfoncé
 }
 -- 2.9.1 : page Missions, habit Azeroth : voile vert d'une carte faite, aplat
 -- et pointillés de l'encart des 3, tampon « Faite », étiquettes, pastilles
@@ -375,6 +383,10 @@ ns.AZEROTH_CONTRAST = {
 	-- 2.15.0 : tag « n à compléter » de la page Exploration (tuile claire, au fond de tile.*)
 	["codex.todo"] = { "ink", 0.3252, 4.5, 11 },   -- sombre, même fond : 6.73:1
 	["codex.done"] = { "green", 0.3252, 4.5, 11 },   -- sombre, même fond : 4.78:1 (« complète ★★★ »)
+	-- 3.0.0 : composants harmonisés (docs/UI.md, « Composants 3.0 »)
+	["button.off"] = { "buttonOff", 0.0756, 4.5, 12 },   -- clair, haut du dégradé « off » (le plus clair) : 4.84:1
+	["currency.value"] = { "goldText", 0.0073, 4.5, 12 },   -- clair, aplat fieldBg de la pastille : 13.18:1 (solde)
+	["currency.label"] = { "lightSoft", 0.0073, 4.5, 11 },   -- clair, même aplat : 12.18:1 (« paillettes »)
 }
 -- Luminance relative WCAG 2.x d'une couleur (0..1)
 local function Lin(c) if c <= 0.03928 then return c / 12.92 end return ((c + 0.055) / 1.055) ^ 2.4 end
@@ -1315,6 +1327,44 @@ local function ButtonLayout(button)
 	button.text:SetPoint("CENTER", button, "CENTER", 0, sub and 6 or 0)
 end
 
+-- 3.0.0 : un seul peintre des états d'un bouton Azeroth, pour les boutons
+-- dessinés de la capture (gold / dark) comme pour ceux du carnet (red /
+-- brown, JournalAzeroth.lua, via Theme.ButtonPaint et button.skinPaint).
+-- État : "rest", "hover", "pressed", "disabled". Champs du bouton : azPalette
+-- (sa palette), azFillTex (la texture du dégradé), azEdge (le liseré d'or
+-- intérieur), azText (couleur du libellé actif), azHover / azPress (voiles).
+function ns.AzerothButtonState(button, state)
+	local off = state == "disabled"
+	local skin = off and BUTTONS.off or button.azPalette
+	if not skin then return end
+	button.azState = state
+	local fill = button.azFillTex
+	if fill and Theme.Gradient then Theme.Gradient(fill, "VERTICAL", skin.bottom, 1, skin.top, 1) end
+	local edge = (state == "hover") and button.azHoverEdge or skin.edge
+	if button.azEdge then button.azEdge:SetColor(edge[1], edge[2], edge[3], 1) end
+	if button.azEdge2 then button.azEdge2:SetColor(skin.edge[1], skin.edge[2], skin.edge[3], 0.8) end
+	local text = off and BUTTONS.offText or button.azText or BUTTONS.text
+	if button.text then button.text:SetTextColor(text[1], text[2], text[3], 1) end
+	if button.azHover then if state == "hover" then button.azHover:Show() else button.azHover:Hide() end end
+	if button.azPress then if state == "pressed" then button.azPress:Show() else button.azPress:Hide() end end
+	if button.gloss then button.gloss:SetAlpha(off and 0 or 1) end
+end
+-- le voile d'un bouton enfoncé (créé une fois)
+function ns.AzerothButtonPress(button)
+	if button.azPress then return button.azPress end
+	local press = Theme.Solid(button, "ARTWORK", Theme.INK, BUTTONS.pressAlpha)
+	press:SetPoint("TOPLEFT", button, "TOPLEFT", 1, -1)
+	press:SetPoint("BOTTOMRIGHT", button, "BOTTOMRIGHT", -1, 1)
+	press:Hide()
+	button.azPress = press
+	return press
+end
+local function AzButtonEnabled(button)
+	if not button.IsEnabled then return true end
+	local ok, on = pcall(button.IsEnabled, button)
+	return not ok or (on ~= false and on ~= nil and on ~= 0)
+end
+
 function ns:AzerothButton(parent, width, height, label, onClick, kind)
 	local skin = BUTTON_SKINS[kind] or BUTTON_SKINS.gold
 	local button = CreateFrame("Button", nil, parent)
@@ -1360,15 +1410,40 @@ function ns:AzerothButton(parent, width, height, label, onClick, kind)
 		if text and text ~= "" then self.sub:Show() else self.sub:Hide() end
 		ButtonLayout(self)
 	end
+	-- 3.0.0 : états par ns.AzerothButtonState (survol, appui, désactivé)
+	button.azPalette, button.azFillTex, button.azEdge, button.azText = skin, button.bg, button.border, BUTTON_TEXT
+	button.azHover, button.azHoverEdge, button.azEdge2 = button.hover, BUTTONS.hover, button.border2
+	ns.AzerothButtonPress(button)
+	local function Rest(b)
+		b.text:ClearAllPoints()
+		ButtonLayout(b)
+		ns.AzerothButtonState(b, AzButtonEnabled(b) and "rest" or "disabled")
+	end
 	button:SetScript("OnEnter", function(b)
-		b.hover:Show()
-		b.border:SetColor(BUTTONS.hover[1], BUTTONS.hover[2], BUTTONS.hover[3], 1)
+		if AzButtonEnabled(b) then ns.AzerothButtonState(b, "hover") end
 	end)
-	button:SetScript("OnLeave", function(b)
-		b.hover:Hide()
-		local e = b.skin.edge
-		b.border:SetColor(e[1], e[2], e[3], 1)
+	button:SetScript("OnLeave", Rest)
+	button:SetScript("OnMouseDown", function(b, mouse)
+		if (mouse and mouse ~= "LeftButton") or not AzButtonEnabled(b) then return end
+		ns.AzerothButtonState(b, "pressed")
 	end)
+	button:SetScript("OnMouseUp", function(b)
+		local over = false
+		if b.IsMouseOver then
+			local ok, value = pcall(b.IsMouseOver, b)
+			over = ok and value and true or false
+		end
+		ns.AzerothButtonState(b, (not AzButtonEnabled(b) and "disabled") or (over and "hover") or "rest")
+	end)
+	for _, method in ipairs({ "Disable", "Enable", "SetEnabled" }) do
+		local original = button[method]
+		if type(original) == "function" then
+			button[method] = function(b, ...)
+				original(b, ...)
+				Rest(b)
+			end
+		end
+	end
 	if onClick then button:SetScript("OnClick", onClick) end
 	return button
 end

@@ -15,7 +15,9 @@
 --   * 3.0.0 : Échanges (CaptureTrades.lua) : la fenêtre d'échange avec un
 --     autre joueur, l'invitation reçue, l'historique ; et le bouton
 --     « Échanger avec ma cible » de la vue Réserve ;
---   * Échoppe du dresseur : dépenser les paillettes (ns.PAILLETTES_SHOP) :
+--   * Échoppe du dresseur (3.0.0 : son propre onglet, ns.JOURNAL_PANES.shop ;
+--     le solde en pastille Theme.CreateCurrency sur les trois vues ; un achat
+--     refusé le dit au clic) : dépenser les paillettes (ns.PAILLETTES_SHOP) :
 --     aides de capture (dans la limite de la besace), places de Réserve, et
 --     deux cosmétiques du compagnon (FeatsCosmetics.lua, pour tout le compte).
 --     Confirmation dans la ligne, une ligne dans le chat à l'achat.
@@ -51,11 +53,13 @@ ns.PAILLETTES_SHOP = {
 ns.PAILLETTES_MILESTONE = 2
 ns.RESERVE_SORTS = { "stars", "date", "name" }
 ns.RESERVE_SHOWS = { "all", "shiny" }
--- 3.0.0 : « Échanges » (CaptureTrades.lua : fenêtre d'échange, invitation, historique)
-ns.RESERVE_VIEWS = { "reserve", "shop", "trade" }
+-- 3.0.0 : « Échanges » (CaptureTrades.lua : fenêtre d'échange, invitation, historique) ;
+-- l'Échoppe du dresseur quitte les puces : elle a son onglet (ns.JOURNAL_PANES.shop)
+ns.RESERVE_VIEWS = { "reserve", "trade" }
 -- grille : vignettes de l'allure, un peu plus hautes (étoiles sous le portrait)
+-- 3.0.0 : boutons à la taille « sm » du thème (Theme.BUTTON_SIZES, 24)
 ns.RESERVE_LAYOUT = { tileW = 58, tileH = 84, gap = 7, portrait = 46, star = 10, starStep = 11, starY = -55,
-	shopH = 50, shopGap = 6, shopIcon = 34, shopButton = 104, actionH = 22, actionGap = 4 }
+	shopH = 50, shopGap = 6, shopIcon = 34, shopButton = 104, actionH = Theme.BUTTON_SIZES.sm, actionGap = 4 }
 -- 3.1.0 : pavé de la taille sur une vignette (fond Theme.NAV presque opaque)
 ns.RESERVE_SIZE_TAG = { w = 20, h = 13, alpha = 0.85 }
 local LAY = ns.RESERVE_LAYOUT
@@ -64,12 +68,14 @@ local FR = {
 	JRN_SEC_reserve      = "Réserve",
 	JRN_SUB_reserve      = "Tes spécimens en plus du Codex : garde, échange de place avec le Codex, relâche contre des paillettes.",
 	RES_VIEW_reserve     = "Réserve",
-	RES_VIEW_shop        = "Échoppe du dresseur",
 	RES_VIEW_trade       = "Échanges",
+	-- 3.0.0 : l'Échoppe a son onglet ; le solde en pastille
+	JRN_SEC_shop         = "Échoppe du dresseur",
+	JRN_SUB_shop         = "Dépense tes paillettes : aides de capture, places de Réserve, allure du compagnon.",
+	RES_BALANCE_LABEL    = "paillettes",
+	RES_BALANCE_TIP      = "Tes paillettes",
+	SHOP_SHORT_FOR       = "Il te manque %d paillettes pour %s.",
 	RES_TITLE            = "Réserve · %d / %d",
-	RES_SHOP_TITLE       = "Échoppe du dresseur",
-	RES_SHOP_SUB         = "Dépense tes paillettes : aides de capture, places de Réserve, allure du compagnon.",
-	RES_BALANCE          = "%s %d paillettes",
 	RES_SORT_stars       = "Tri : qualité",
 	RES_SORT_date        = "Tri : date",
 	RES_SORT_name        = "Tri : nom",
@@ -138,12 +144,13 @@ local EN = {
 	JRN_SEC_reserve      = "Reserve",
 	JRN_SUB_reserve      = "Your specimens beyond the Codex: keep them, swap with the Codex, release them for glitter.",
 	RES_VIEW_reserve     = "Reserve",
-	RES_VIEW_shop        = "Trainer's Stall",
 	RES_VIEW_trade       = "Trades",
+	JRN_SEC_shop         = "Trainer's Stall",
+	JRN_SUB_shop         = "Spend your glitter: capture aids, Reserve slots, your companion's look.",
+	RES_BALANCE_LABEL    = "glitter",
+	RES_BALANCE_TIP      = "Your glitter",
+	SHOP_SHORT_FOR       = "You need %d more glitter for %s.",
 	RES_TITLE            = "Reserve · %d / %d",
-	RES_SHOP_TITLE       = "Trainer's Stall",
-	RES_SHOP_SUB         = "Spend your glitter: capture aids, Reserve slots, your companion's look.",
-	RES_BALANCE          = "%s %d glitter",
 	RES_SORT_stars       = "Sort: quality",
 	RES_SORT_date        = "Sort: date",
 	RES_SORT_name        = "Sort: name",
@@ -302,6 +309,24 @@ function ns:ShopBuy(id)
 	end
 	self:Print(self:F("SHOP_BOUGHT", self:ShopLabel(item), item.price, left))
 	return true, left
+end
+
+-- 3.0.0 : un clic sur « Acheter » refusé : la raison dans le chat
+-- (« Il te manque 10 paillettes pour Sifflet du dompteur. ») et, solde trop court, la
+-- pastille du solde secouée. Rend l'état (comme ns:ShopState).
+function ns:ShopRefused(id)
+	local item = self:ShopItem(id)
+	local state, a, b = self:ShopState(item)
+	if state == "ok" then return state end
+	local text
+	if state == "short" then text = self:F("SHOP_SHORT_FOR", a, self:ShopLabel(item))
+	elseif state == "full" then text = self:F("SHOP_FULL", a, b)
+	elseif state == "owned" then text = L.SHOP_OWNED_TIP
+	elseif state == "off" then text = L.SHOP_OFF end
+	if text then self:Print(text) end
+	local pane = self.journalFrame and self.journalFrame.shopPane
+	if state == "short" and pane and pane.balance then pane.balance:Flash() end
+	return state
 end
 
 -- ---------------------------------------------------------------------------
@@ -535,11 +560,20 @@ local function Stars(self, n, size)
 end
 
 local function Scroll(self, frame, delta)
-	if frame.resView == "shop" then return end
 	if frame.resView == "gift" then frame.giftOffset = (frame.giftOffset or 0) - (tonumber(delta) or 0); return end
 	-- 3.0.0 : la fenêtre d'échange (sa grille ou l'historique, CaptureTrades.lua)
 	if frame.resView == "trade" then frame.tradeOffset = (frame.tradeOffset or 0) - (tonumber(delta) or 0); return end
 	frame.resOffset = (frame.resOffset or 0) - (tonumber(delta) or 0)
+end
+
+-- 3.0.0 : la pastille du solde (Theme.CreateCurrency : icône du client,
+-- chiffre, « paillettes »), la même sur la Réserve, les Échanges et
+-- l'Échoppe : en haut à droite de la page, sur la rangée des puces
+function ns.PaillettesBadge(parent, content, ui)
+	local badge = Theme.CreateCurrency(parent, { icon = ns.PAILLETTES_ICON, label = L.RES_BALANCE_LABEL,
+		tip = { L.RES_BALANCE_TIP, { L.SHOP_NOTE } } })
+	badge:SetPoint("TOPRIGHT", content, "TOPLEFT", ui.PAD + ui.INNER, ui.TOP)
+	return badge
 end
 
 local function Build(self, frame, content, ui)
@@ -551,7 +585,9 @@ local function Build(self, frame, content, ui)
 	frame.resView = frame.resView or "reserve"
 	frame.resSort, frame.resShow, frame.resOffset = frame.resSort or "stars", frame.resShow or "all", frame.resOffset or 0
 
-	-- 1re rangée : la vue (Réserve, Échoppe), le solde à droite
+	-- 1re rangée : la vue (Réserve, Échanges), « Échanger avec ma cible »,
+	-- le solde à droite ; puces, bouton « sm » et pastille à la même hauteur
+	-- (Theme.CONTROL_HEIGHT)
 	local views = {}
 	for _, key in ipairs(ns.RESERVE_VIEWS) do views[#views + 1] = { id = key, label = L["RES_VIEW_" .. key] } end
 	pane.views = Theme.CreateChips(pane, views, function(id)
@@ -560,15 +596,13 @@ local function Build(self, frame, content, ui)
 		ns:RefreshJournal()
 	end)
 	At(pane.views, content, 0, TOP)
-	pane.balance = Text(pane, Theme.F_LABEL, Theme.GOLD, 220)
-	pane.balance:SetPoint("TOPRIGHT", content, "TOPLEFT", ui.PAD + INNER, TOP - 4)
-	pane.balance:SetJustifyH("RIGHT")
+	pane.balance = ns.PaillettesBadge(pane, content, ui)
 
 	-- ===== vue Réserve =====
 	local rv = CreateFrame("Frame", nil, pane)
 	rv:SetAllPoints()
 	pane.reserve = rv
-	local rowY = TOP - Theme.CHIP_HEIGHT - 10
+	local rowY = TOP - Theme.CONTROL_HEIGHT - 10
 	rv.sort = Theme.CreateDropdown(rv, 132, function(value)
 		frame.resSort, frame.resOffset = value, 0
 		if ns.JournalRemember then ns:JournalRemember("resSort", value) end
@@ -589,7 +623,7 @@ local function Build(self, frame, content, ui)
 		frame.resShow, frame.resOffset = id, 0
 		ns:RefreshJournal()
 	end)
-	At(rv.show, content, 332, rowY + 1)
+	At(rv.show, content, 332, rowY)
 	-- avertissement (Réserve pleine), au-dessus de la grille
 	local warnY = rowY - 30
 	rv.warn = Text(rv, Theme.F_SMALL, Theme.RED, GRID_W)
@@ -629,13 +663,13 @@ local function Build(self, frame, content, ui)
 	local actionsH = 3 * (LAY.actionH + LAY.actionGap) + 8
 	p.maxBottom = previewH - 10 - actionsH
 	local bw = PREVIEW_W - 24
-	rv.toCodex = Theme.CreateButton(p, bw, LAY.actionH, L.RES_TO_CODEX, function()
+	rv.toCodex = Theme.CreateButton(p, bw, "sm", L.RES_TO_CODEX, function()
 		if frame.resPick then ns:ReserveToCodex(frame.resPick) end
 	end, "primary")
-	rv.release = Theme.CreateButton(p, bw, LAY.actionH, "", function(b)
+	rv.release = Theme.CreateButton(p, bw, "sm", "", function(b)
 		if frame.resPick and b.qcEnabled ~= false then ns:ReserveRelease(frame.resPick) end
 	end, "outline")
-	rv.locate = Theme.CreateButton(p, bw, LAY.actionH, L.RES_LOCATE, function(b)
+	rv.locate = Theme.CreateButton(p, bw, "sm", L.RES_LOCATE, function(b)
 		if frame.resPick and b.qcEnabled ~= false then ns:ReserveLocate(frame.resPick) end
 	end, "accent")
 	local y = 8
@@ -652,24 +686,24 @@ local function Build(self, frame, content, ui)
 	rv.confirm:SetPoint("BOTTOMLEFT", p, "BOTTOMLEFT", 14, 8 + LAY.actionH + 8)
 	if rv.confirm.SetWordWrap then rv.confirm:SetWordWrap(true) end
 	local half = math.floor((bw - 6) / 2)
-	rv.confirmYes = Theme.CreateButton(p, half, LAY.actionH, L.RES_CONFIRM_YES, function()
+	rv.confirmYes = Theme.CreateButton(p, half, "sm", L.RES_CONFIRM_YES, function()
 		if frame.resConfirm then ns:ReserveRelease(frame.resConfirm, true) end
 	end, "primary")
 	rv.confirmYes:SetPoint("BOTTOMLEFT", p, "BOTTOMLEFT", 12, 8)
-	rv.confirmNo = Theme.CreateButton(p, half, LAY.actionH, L.RES_CONFIRM_NO, function() ns:ReserveCancelConfirm() end, "outline")
+	rv.confirmNo = Theme.CreateButton(p, half, "sm", L.RES_CONFIRM_NO, function() ns:ReserveCancelConfirm() end, "outline")
 	rv.confirmNo:SetPoint("BOTTOMRIGHT", p, "BOTTOMRIGHT", -12, 8)
 
 	-- 3.0.0 : le cadeau de la 3.0, tant qu'il n'a pas servi (à droite, au-dessus de la grille)
-	rv.giftButton = Theme.CreateButton(rv, "auto", LAY.actionH, ns:F("GIFT30_OPEN", ns.GIFT30 and ns.GIFT30.max or 3),
+	rv.giftButton = Theme.CreateButton(rv, "auto", "sm", ns:F("GIFT30_OPEN", ns.GIFT30 and ns.GIFT30.max or 3),
 		function() ns:Gift30Open() end, "accent")
 	rv.giftButton:SetPoint("TOPRIGHT", content, "TOPLEFT", ui.PAD + GRID_W, warnY + 4)
 	rv.giftButton:Hide()
 	-- 3.0.0 : « Échanger avec ma cible » (CaptureTrades.lua), sur la rangée des
 	-- puces, entre elles et le solde (l'avertissement « Réserve pleine » garde sa ligne)
-	rv.tradeButton = Theme.CreateButton(rv, "auto", LAY.actionH, L.RES_TRADE_TARGET, function()
+	rv.tradeButton = Theme.CreateButton(rv, "auto", "sm", L.RES_TRADE_TARGET, function()
 		if ns.TradeWithTarget then ns:TradeWithTarget() end
 	end, "outline")
-	rv.tradeButton:SetPoint("LEFT", pane.views, "RIGHT", 12, 0)
+	rv.tradeButton:SetPoint("TOPLEFT", pane.views, "TOPRIGHT", 12, 0)
 
 	-- ===== vue Cadeau de la 3.0 (choix de 3 créatures du Codex) =====
 	local gv = CreateFrame("Frame", nil, pane)
@@ -682,9 +716,9 @@ local function Build(self, frame, content, ui)
 	At(gv.search, content, 0, rowY)
 	gv.count = Text(gv, Theme.F_LABEL, Theme.GOLD, 140)
 	At(gv.count, content, 232, rowY - 5)
-	gv.later = Theme.CreateButton(gv, "auto", LAY.actionH, L.GIFT30_LATER, function() ns:Gift30Later() end, "outline")
+	gv.later = Theme.CreateButton(gv, "auto", "sm", L.GIFT30_LATER, function() ns:Gift30Later() end, "outline")
 	gv.later:SetPoint("TOPRIGHT", content, "TOPLEFT", ui.PAD + INNER, rowY)
-	gv.confirm = Theme.CreateButton(gv, "auto", LAY.actionH, L.GIFT30_CONFIRM, function(b)
+	gv.confirm = Theme.CreateButton(gv, "auto", "sm", L.GIFT30_CONFIRM, function(b)
 		if b.qcEnabled ~= false then ns:Gift30Confirm() end
 	end, "primary")
 	gv.confirm:SetPoint("TOPRIGHT", gv.later, "TOPLEFT", -8, 0)
@@ -718,12 +752,36 @@ local function Build(self, frame, content, ui)
 	gv.hint:SetText(L.GIFT30_HINT)
 	gv:Hide()
 
-	-- ===== vue Échoppe =====
-	local sv = CreateFrame("Frame", nil, pane)
+	-- ===== vue Échanges (3.0.0, CaptureTrades.lua) =====
+	if ns.TradeBuildView then ns.TradeBuildView(self, frame, pane, content, ui) end
+
+	-- le carnet fermé : plus de confirmation en attente
+	if frame.HookScript then
+		frame:HookScript("OnHide", function(f)
+			f.resConfirm, f.shopConfirm = nil, nil
+			-- l'apprentissage des displayID s'arrête avec le carnet (comme l'allure)
+			if ns.ModelLearnStop then ns:ModelLearnStop() end
+		end)
+	end
+	pane:Hide()
+end
+
+-- ---------------------------------------------------------------------------
+-- 3.0.0 : l'Échoppe du dresseur, onglet du carnet (ns.JOURNAL_PANES.shop) :
+-- la pastille du solde en haut à droite, une ligne par article (construite
+-- une fois, repeinte), la note « Gagner des paillettes » dessous. Un article
+-- hors de portée garde son bouton cliquable, à l'aspect désactivé
+-- (button:SetInactive) : le clic dit pourquoi (ns:ShopRefused).
+-- ---------------------------------------------------------------------------
+local function BuildShop(self, frame, content, ui)
+	local At, Text = ui.At, ui.Text
+	local TOP, INNER = ui.TOP, ui.INNER
+	local sv = CreateFrame("Frame", nil, content)
 	sv:SetAllPoints()
-	pane.shop = sv
+	frame.shopPane = sv
+	sv.balance = ns.PaillettesBadge(sv, content, ui)
 	sv.rows = {}
-	local shopTop = TOP - Theme.CHIP_HEIGHT - 12
+	local shopTop = TOP - Theme.CONTROL_HEIGHT - 10
 	for index, item in ipairs(ns.PAILLETTES_SHOP) do
 		local row = Theme.CreateTile(sv, INNER, LAY.shopH, { kind = "Frame" })
 		At(row, content, 0, shopTop - (index - 1) * (LAY.shopH + LAY.shopGap))
@@ -744,19 +802,20 @@ local function Build(self, frame, content, ui)
 		row.price = Text(row, Theme.F_LABEL, Theme.GOLD, 84)
 		row.price:SetPoint("RIGHT", row, "RIGHT", -(10 + LAY.shopButton + 10), 0)
 		row.price:SetJustifyH("RIGHT")
-		row.buy = Theme.CreateButton(row, LAY.shopButton, LAY.actionH, L.SHOP_BUY, function(b)
-			if b.qcEnabled == false then return end
-			frame.shopConfirm = b:GetParent().item.id
+		row.buy = Theme.CreateButton(row, LAY.shopButton, "sm", L.SHOP_BUY, function(b)
+			local id = b:GetParent().item.id
+			if b.qcEnabled == false then ns:ShopRefused(id); return end
+			frame.shopConfirm = id
 			ns:RefreshJournal()
 		end, "primary")
 		row.buy:SetPoint("RIGHT", row, "RIGHT", -10, 0)
 		local small = math.floor((LAY.shopButton - 4) / 2)
-		row.yes = Theme.CreateButton(row, small, LAY.actionH, L.SHOP_CONFIRM, function(b)
+		row.yes = Theme.CreateButton(row, small, "sm", L.SHOP_CONFIRM, function(b)
 			frame.shopConfirm = nil
 			ns:ShopBuy(b:GetParent().item.id)
 			ns:RefreshJournal()
 		end, "primary")
-		row.no = Theme.CreateButton(row, small, LAY.actionH, L.SHOP_CANCEL, function() ns:ReserveCancelConfirm() end, "outline")
+		row.no = Theme.CreateButton(row, small, "sm", L.SHOP_CANCEL, function() ns:ReserveCancelConfirm() end, "outline")
 		row.no:SetPoint("RIGHT", row, "RIGHT", -10, 0)
 		row.yes:SetPoint("RIGHT", row.no, "LEFT", -4, 0)
 		sv.rows[index] = row
@@ -766,19 +825,10 @@ local function Build(self, frame, content, ui)
 	At(sv.note, content, 0, noteY)
 	if sv.note.SetWordWrap then sv.note:SetWordWrap(true) end
 	sv.note:SetText(L.SHOP_NOTE)
-
-	-- ===== vue Échanges (3.0.0, CaptureTrades.lua) =====
-	if ns.TradeBuildView then ns.TradeBuildView(self, frame, pane, content, ui) end
-
-	-- le carnet fermé : plus de confirmation en attente
 	if frame.HookScript then
-		frame:HookScript("OnHide", function(f)
-			f.resConfirm, f.shopConfirm = nil, nil
-			-- l'apprentissage des displayID s'arrête avec le carnet (comme l'allure)
-			if ns.ModelLearnStop then ns:ModelLearnStop() end
-		end)
+		frame:HookScript("OnHide", function(f) f.shopConfirm = nil end)
 	end
-	pane:Hide()
+	sv:Hide()
 end
 
 -- Choisir un spécimen dans la grille
@@ -956,10 +1006,10 @@ local function RefreshReserve(self, frame, pane)
 	RefreshDetails(self, frame, rv, picked)
 end
 
-local function RefreshShop(self, frame, pane)
-	local sv = pane.shop
-	frame.header:SetTitle(L.RES_SHOP_TITLE)
-	frame.header:SetSubtitle(L.RES_SHOP_SUB)
+local function RefreshShop(self, frame)
+	local sv = frame.shopPane
+	if not sv then return end
+	sv.balance:SetValue(self:Paillettes())
 	local glyph = ns.PaillettesGlyph(14)
 	for _, row in ipairs(sv.rows) do
 		local item = row.item
@@ -991,7 +1041,9 @@ local function RefreshShop(self, frame, pane)
 			elseif state == "full" then tip = self:F("SHOP_FULL", a, b)
 			elseif state == "owned" then tip = L.SHOP_OWNED_TIP
 			elseif state == "off" then tip = L.SHOP_OFF end
-			Enable(row.buy, state == "ok", tip)
+			-- 3.0.0 : refusé = aspect désactivé, clic gardé (la raison dans le chat)
+			row.buy.qcEnabled = state == "ok"
+			row.buy:SetInactive(state ~= "ok", tip)
 			row.buy:Show()
 		end
 		row:SetAccent(asking and Theme.GOLD or nil)
@@ -1073,18 +1125,15 @@ local function Refresh(self, frame, ui)
 	local view = frame.resView
 	if view == "gift" and not (self.Gift30Available and self:Gift30Available()) then view = "reserve" end
 	if view == "trade" and not pane.trade then view = "reserve" end
-	if view ~= "shop" and view ~= "gift" and view ~= "trade" then view = "reserve" end
+	if view ~= "gift" and view ~= "trade" then view = "reserve" end
 	frame.resView = view
 	pane.views:Select(view == "gift" and "reserve" or view, true)
-	pane.balance:SetText(self:F("RES_BALANCE", ns.PaillettesGlyph(14), self:Paillettes()))
-	pane.reserve:Hide(); pane.shop:Hide(); pane.gift:Hide()
+	pane.balance:SetValue(self:Paillettes())
+	pane.reserve:Hide(); pane.gift:Hide()
 	if pane.trade then pane.trade:Hide() end
 	if view == "trade" then
 		pane.trade:Show()
 		self:TradeRefreshView(frame, pane)
-	elseif view == "shop" then
-		pane.shop:Show()
-		RefreshShop(self, frame, pane)
 	elseif view == "gift" then
 		pane.gift:Show()
 		RefreshGift(self, frame, pane)
@@ -1155,8 +1204,10 @@ function ns:Gift30Later()
 	return true
 end
 
--- Ouvrir la page (vue « reserve » ou « shop »)
+-- Ouvrir la page (vue « reserve », « trade » ou « gift » ; 3.0.0 : « shop »
+-- ouvre l'onglet de l'Échoppe)
 function ns:OpenReserve(view)
+	if view == "shop" then return self:OpenShop() end
 	local frame = self:EnsureJournalWindow()
 	if not frame then return nil end
 	if view then frame.resView = view end
@@ -1168,10 +1219,26 @@ function ns:OpenReserve(view)
 	return self.journalFrame
 end
 
+-- 3.0.0 : l'onglet de l'Échoppe du dresseur
+function ns:OpenShop()
+	local frame = self:EnsureJournalWindow()
+	if not frame then return nil end
+	if not frame:IsShown() and self.ToggleJournal then
+		self:DB().journalTab = "shop"
+		self:ToggleJournal(true)
+	end
+	self:SelectJournalKind("shop")
+	return self.journalFrame
+end
+
 ns.JOURNAL_PANES = ns.JOURNAL_PANES or {}
 ns.JOURNAL_PANES.reserve = {
 	field = "res", title = "JRN_SEC_reserve", subtitle = "JRN_SUB_reserve",
 	build = Build, refresh = Refresh, scroll = Scroll,
+}
+ns.JOURNAL_PANES.shop = {
+	field = "shopPane", title = "JRN_SEC_shop", subtitle = "JRN_SUB_shop",
+	build = BuildShop, refresh = function(self, frame) RefreshShop(self, frame) end,
 }
 
 if ns.Mark then ns.Mark("JournalReserve") end

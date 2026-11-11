@@ -2164,7 +2164,8 @@ local MENU_EN = {
 ns.RegisterStrings(MENU_FR, MENU_EN)
 if ns.KEEP_STRINGS then ns.COMPANION_MENU_STRINGS = { fr = MENU_FR, en = MENU_EN } end
 
-ns.COMPANION_MENU = { w = 216, pad = 12, row = 22, gap = 4 }
+-- 3.0.0 : rangées à la taille « sm » des boutons du thème (24)
+ns.COMPANION_MENU = { w = 216, pad = 12, row = Theme.BUTTON_SIZES.sm, gap = 4 }
 ns.COMPANION_HUNT_BADGE = { icon = "Interface\\Icons\\Ability_Hunter_SniperShot", size = 14, h = 18, x = 4, y = -4, refresh = 15 }
 
 -- actif ou non (le client a Enable/Disable ; .off le dit partout)
@@ -2382,7 +2383,7 @@ function ns:EnsureCompanionBubble()
 	if not bubble then return nil end
 	bubble:SetPoint("BOTTOM", frame, "TOP", 0, 12)
 	if Theme.CreateButton then
-		local h = (Theme.DIALOG_BUTTON_HEIGHT or 28) - 6
+		local h = "sm"   -- 3.0.0 : taille canonique (Theme.BUTTON_SIZES)
 		bubble.nextButton = Theme.CreateButton(bubble, "auto", h, L.COMP_TUTO_NEXT, function() ns:CompanionTutorialNext() end, "primary")
 		bubble.nextButton:SetPoint("BOTTOMRIGHT", bubble, "BOTTOMRIGHT", -Theme.BUBBLE_PAD, Theme.BUBBLE_PAD)
 		bubble.skipButton = Theme.CreateButton(bubble, "auto", h, L.COMP_TUTO_SKIP, function() ns:CompanionSkipTutorial() end, "outline")

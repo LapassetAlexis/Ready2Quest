@@ -215,6 +215,12 @@ local function NewRegion(kind, name, parent)
 	function region:Show() self.shown = true; self.mockHidden = false end
 	function region:Hide() self.shown = false; self.mockHidden = true end
 	function region:IsShown() return self.shown end
+	-- QC 3.0.0 : boutons activables (Enable / Disable / SetEnabled / IsEnabled du client) ;
+	-- le clic simulé (GetScript("OnClick")) n'est pas bloqué : les modules gardent leur garde
+	function region:SetEnabled(on) self.enabled = (on and on ~= 0) and true or false end
+	function region:Enable() self.enabled = true end
+	function region:Disable() self.enabled = false end
+	function region:IsEnabled() return self.enabled ~= false end
 	function region:CreateAnimationGroup()
 		local group = { plays = 0, animations = {} }
 		function group:CreateAnimation(kind)

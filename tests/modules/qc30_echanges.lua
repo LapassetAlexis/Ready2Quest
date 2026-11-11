@@ -828,7 +828,7 @@ do
 			and Has(row.sub:GetText(), "Donné : Raptor") and Has(row.sub:GetText(), "Reçu : Ours givré") and not tv.histEmpty:IsShown())
 		if style == "azeroth" then
 			Check("[ECH] azeroth : historique encré", row.line.azRole == "trade.histName" and row.sub.azRole == "trade.histText"
-				and tv.histHead.azRole == "trade.head")
+				and tv.histHead.label.azRole == "section.label")
 			Check("[ECH] azeroth : aucun rôle manquant (historique)", NS.carnetInkMisses == nil, table.concat(NS.carnetInkMisses or {}, ", "))
 		end
 		Check("[ECH] " .. style .. " : aucune erreur", next(NS.errors or {}) == nil)

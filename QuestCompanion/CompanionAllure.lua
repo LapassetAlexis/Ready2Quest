@@ -840,7 +840,7 @@ function ns:AllureBuildCard(pane, content, x, y, width, height)
 	card.portrait:SetSize(side, side)
 	card.portrait:SetPoint("CENTER", card, "LEFT", 6 + 28, 0)
 	card.portrait:Hide()
-	pane.lookChoose = Theme.CreateButton(card, "auto", 24, L.ALLURE_CHOOSE, function() ns:AllureOpen() end, "primary")
+	pane.lookChoose = Theme.CreateButton(card, "auto", "sm", L.ALLURE_CHOOSE, function() ns:AllureOpen() end, "primary")
 	pane.lookChoose:SetPoint("RIGHT", card, "RIGHT", -10, 0)
 	local textX = 70
 	local textW = width - textX - (pane.lookChoose:GetWidth() or 90) - 20

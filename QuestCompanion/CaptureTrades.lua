@@ -1314,24 +1314,25 @@ function ns.TradeBuildView(self, frame, pane, content, ui)
 	if tv.note.SetWordWrap then tv.note:SetWordWrap(true) end
 	-- boutons sans échange : cible, invitation reçue, en suspens
 	local rowY = y0 - 76
-	tv.target = Theme.CreateButton(tv, "auto", RLAY.actionH, L.RES_TRADE_TARGET, function(b)
+	tv.target = Theme.CreateButton(tv, "auto", "sm", L.RES_TRADE_TARGET, function(b)
 		if b.qcEnabled == false then return end
 		if tv.targetMode == "cancel" then ns:TradeCancel() else ns:TradeWithTarget() end
 	end, "primary")
 	At(tv.target, content, 0, rowY)
-	tv.accept = Theme.CreateButton(tv, 120, RLAY.actionH, L.TRADE_ACCEPT, function() ns:TradeAccept() end, "primary")
+	tv.accept = Theme.CreateButton(tv, 120, "sm", L.TRADE_ACCEPT, function() ns:TradeAccept() end, "primary")
 	At(tv.accept, content, 0, rowY)
-	tv.decline = Theme.CreateButton(tv, 120, RLAY.actionH, L.TRADE_DECLINE, function() ns:TradeDecline() end, "outline")
+	tv.decline = Theme.CreateButton(tv, 120, "sm", L.TRADE_DECLINE, function() ns:TradeDecline() end, "outline")
 	tv.decline:SetPoint("LEFT", tv.accept, "RIGHT", 8, 0)
-	tv.abandon = Theme.CreateButton(tv, "auto", RLAY.actionH, L.TRADE_ABANDON, function(b)
+	tv.abandon = Theme.CreateButton(tv, "auto", "sm", L.TRADE_ABANDON, function(b)
 		if b.qcEnabled ~= false then ns:TradeAbandon() end
 	end, "outline")
 	At(tv.abandon, content, 0, rowY)
 	-- l'historique
 	local histY = rowY - RLAY.actionH - 16
-	tv.histHead = Text(tv, Theme.F_LABEL, Theme.GOLD, INNER)
+	-- 3.0.0 : intertitre canonique (Theme.CreateSection, comme les autres pages)
+	tv.histHead = Theme.CreateSection(tv, L.TRADE_HIST_HEAD)
+	tv.histHead:SetWidth(INNER)
 	At(tv.histHead, content, 0, histY)
-	tv.histHead:SetText(L.TRADE_HIST_HEAD)
 	local listTop = histY - 22
 	local step = LAY.histRow + LAY.histGap
 	local rows = math.max(1, math.floor((listTop - ui.PAGER_Y - 8) / step))
@@ -1386,11 +1387,11 @@ function ns.TradeBuildView(self, frame, pane, content, ui)
 		tv.cols[side] = col
 	end
 	local buttonY = tileY - RLAY.tileH - 10
-	tv.validate = Theme.CreateButton(tv, 140, RLAY.actionH, L.TRADE_VALIDATE, function(b)
+	tv.validate = Theme.CreateButton(tv, 140, "sm", L.TRADE_VALIDATE, function(b)
 		if b.qcEnabled ~= false then ns:TradeValidate() end
 	end, "primary")
 	At(tv.validate, content, 0, buttonY)
-	tv.cancel = Theme.CreateButton(tv, "auto", RLAY.actionH, L.TRADE_CANCEL, function() ns:TradeCancel() end, "outline")
+	tv.cancel = Theme.CreateButton(tv, "auto", "sm", L.TRADE_CANCEL, function() ns:TradeCancel() end, "outline")
 	tv.cancel:SetPoint("LEFT", tv.validate, "RIGHT", 8, 0)
 	tv.warn = Text(tv, Theme.F_SMALL, Theme.RED, INNER - 340)
 	At(tv.warn, content, 340, buttonY - 4)
@@ -1629,7 +1630,7 @@ do
 			if not (tv and tv:IsShown()) then return end
 			paint(tv.status, "trade.status")
 			paint(tv.note, "reserve.text")
-			paint(tv.histHead, "trade.head")
+			paint(tv.histHead.label, "section.label")
 			paint(tv.histEmpty, "reserve.text")
 			paint(tv.pickHead, "trade.status")
 			paint(tv.pickEmpty, "reserve.text")

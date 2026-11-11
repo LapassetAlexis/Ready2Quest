@@ -944,7 +944,7 @@ function ns:EnsureCaptureBatchFrame()
 		frame.grid:SetPoint("TOPLEFT", frame, "TOPLEFT", 0, -HEAD)
 		frame.grid:SetPoint("TOPRIGHT", frame, "TOPRIGHT", 0, -HEAD)
 		frame.grid:SetHeight(TILE_H)
-		frame.stop = Theme.CreateButton(frame, "auto", Theme.DIALOG_BUTTON_HEIGHT or 28, L.CAPTURE_BATCH_STOP, stopClick)
+		frame.stop = Theme.CreateButton(frame, "auto", "md", L.CAPTURE_BATCH_STOP, stopClick)
 		frame.stop:SetPoint("BOTTOMRIGHT", frame, "BOTTOMRIGHT", -12, 10)
 		frame.footer = Theme.Text(frame, Theme.F_SMALL, Theme.MUTED)
 		frame.footer:SetPoint("BOTTOMLEFT", frame, "BOTTOMLEFT", left, 18)
@@ -1337,9 +1337,9 @@ function ns:EnsureCaptureChooser()
 		frame.title = Theme.Text(frame, Theme.F_CAPS or Theme.F_SMALL, Theme.MUTED_LIGHT)
 		frame.title:SetPoint("TOPLEFT", frame, "TOPLEFT", left, -9)
 		frame.title:SetText(Theme.Upper and Theme.Upper(L.CAPTURE_CHOOSE_TITLE) or L.CAPTURE_CHOOSE_TITLE)
-		frame.single = Theme.CreateButton(frame, width, 26, "", function() ns:CaptureChooserSingle() end, "normal")
+		frame.single = Theme.CreateButton(frame, width, "md", "", function() ns:CaptureChooserSingle() end, "normal")
 		frame.single:SetPoint("TOPLEFT", frame, "TOPLEFT", left, -26)
-		frame.all = Theme.CreateButton(frame, width, 26, "", function()
+		frame.all = Theme.CreateButton(frame, width, "md", "", function()
 			ns:CaptureChooserHide()
 			ns:CaptureBatch()
 		end, "primary")
@@ -1557,7 +1557,7 @@ do
 			local fresh = not self.captureQueueList
 			local frame = ensure(self, ...)
 			if frame and fresh and not frame.all then
-				local button = Theme.CreateButton(frame, CompactWidth(frame, L.CAPTURE_BATCH_ACTION), 18, L.CAPTURE_BATCH_ACTION,
+				local button = Theme.CreateButton(frame, CompactWidth(frame, L.CAPTURE_BATCH_ACTION), "xs", L.CAPTURE_BATCH_ACTION,
 					function() ns:CaptureHideQueueList(); ns:CaptureBatch() end, "accent")
 				if frame.close then
 					button:SetPoint("RIGHT", frame.close, "LEFT", -6, 0)

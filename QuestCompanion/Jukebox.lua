@@ -648,15 +648,15 @@ local function Build(self, frame, content, ui)
 		if frame.jukeSearch == "" then ns:RefreshJournal() else ns:JournalSoon("jukeSearch") end
 	end)
 	At(pane.search, content, RX, TOP - CTRL_Y)
-	pane.mode = Theme.CreateButton(pane, 110, Theme.PAGER_HEIGHT + 2, L.JUKE_MODE_seq, function()
+	pane.mode = Theme.CreateButton(pane, 110, "sm", L.JUKE_MODE_seq, function()
 		local juke = ns:JukeData()
 		juke.mode = juke.mode == "shuffle" and "seq" or "shuffle"
 		ns:RefreshJournal()
 	end)
 	At(pane.mode, content, RX + 190, TOP - CTRL_Y)
-	pane.playAll = Theme.CreateButton(pane, 96, Theme.PAGER_HEIGHT + 2, L.JUKE_PLAY_ALL, function() ns:JukePlayView() end, "accent")
+	pane.playAll = Theme.CreateButton(pane, 96, "sm", L.JUKE_PLAY_ALL, function() ns:JukePlayView() end, "accent")
 	At(pane.playAll, content, RX + 306, TOP - CTRL_Y)
-	pane.stop = Theme.CreateButton(pane, 92, Theme.PAGER_HEIGHT + 2, L.JUKE_STOP, function() ns:JukeStop() end)
+	pane.stop = Theme.CreateButton(pane, 92, "sm", L.JUKE_STOP, function() ns:JukeStop() end)
 	At(pane.stop, content, RX + RW - 92, TOP - CTRL_Y)
 	for _, def in ipairs({ { pane.mode, L.JUKE_MODE_TIP }, { pane.playAll, L.JUKE_PLAY_ALL_TIP }, { pane.stop, L.JUKE_STOP_TIP } }) do
 		local button, tip = def[1], def[2]

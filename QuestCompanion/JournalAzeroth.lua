@@ -497,6 +497,34 @@ function SKIN.CreateButton(button)
 	end
 	button.azSkin = skin == BUTTONS.red and "red" or "brown"
 	button.azSurface = "dark"
+	-- 3.0.0 : les états passent par le peintre Azeroth (AzerothStyle.lua) :
+	-- Theme.ButtonPaint ne repeint plus l'encre sombre du bouton plein sur le
+	-- rouge ; désactivé = bois délavé, libellé clair atténué (≥ 3:1)
+	button.azPalette, button.azFillTex, button.azEdge, button.azText = skin, fill, button.azInner, GOLD_TEXT
+	button.azHoverEdge = AZB.hover
+	local hover = Theme.Solid(button, "ARTWORK", AZB.hover, 0.12)
+	hover:SetPoint("TOPLEFT", button, "TOPLEFT", 2, -2)
+	hover:SetPoint("BOTTOMRIGHT", button, "BOTTOMRIGHT", -2, 2)
+	if hover.SetBlendMode then hover:SetBlendMode("ADD") end
+	hover:Hide()
+	button.azHover = hover
+	if ns.AzerothButtonPress then ns.AzerothButtonPress(button) end
+	if ns.AzerothButtonState then
+		button.skinPaint = ns.AzerothButtonState
+		if Theme.ButtonRest then Theme.ButtonRest(button) end
+	end
+end
+
+-- 3.0.0 : la pastille de monnaie (solde de paillettes) : aplat sombre d'un
+-- champ, liseré brun, chiffre doré et libellé clair (rôles currency.*)
+function SKIN.CreateCurrency(badge)
+	if badge.bg then badge.bg:SetVertexColor(INKS.fieldBg[1], INKS.fieldBg[2], INKS.fieldBg[3], 1) end
+	if badge.border and badge.border.SetColor then
+		badge.border:SetColor(AZB.brown.edge[1], AZB.brown.edge[2], AZB.brown.edge[3], 1)
+	end
+	if badge.value then RolePaint(badge.value, "currency.value", true); badge.value.azKeep = true end
+	if badge.label then RolePaint(badge.label, "currency.label", true); badge.label.azKeep = true end
+	badge.azSurface = "dark"
 end
 
 local function Field(box)
@@ -621,7 +649,7 @@ function SKIN.CreatePageHeader(header, frame)
 end
 
 local WRAP = { "Text", "CreateTile", "CreateListRow", "CreateBar", "CreateChips", "CreateButton", "CreateDropdown",
-	"CreateSearchBox", "CreateTag", "CreateNavItem", "CreatePageHeader", "CreateSection" }
+	"CreateSearchBox", "CreateTag", "CreateNavItem", "CreatePageHeader", "CreateSection", "CreateCurrency" }
 ns.CARNET_WRAPPED = WRAP
 
 -- Relève les briques créées pendant fn(...) dans reg.new (puis SkinNew)
@@ -1247,8 +1275,7 @@ local function ReserveInk(fs, role) if fs then RolePaint(fs, role) end end
 function POST.reserve(self, frame)
 	local pane = frame.res
 	if not pane then return end
-	ReserveInk(pane.balance, "reserve.balance")
-	local rv, sv = pane.reserve, pane.shop
+	local rv = pane.reserve
 	if rv and rv:IsShown() then
 		ReserveInk(rv.warn, "reserve.full")
 		ReserveInk(rv.empty, "reserve.text")
@@ -1274,13 +1301,17 @@ function POST.reserve(self, frame)
 			if tile.gift and tile.label then ReserveInk(tile.label, "reserve.name") end
 		end
 	end
-	if sv and sv:IsShown() then
-		ReserveInk(sv.note, "reserve.text")
-		for _, row in ipairs(sv.rows or {}) do
-			ReserveInk(row.name, "shop.name")
-			ReserveInk(row.desc, "shop.desc")
-			ReserveInk(row.price, row.state == "short" and "shop.short" or "shop.price")
-		end
+end
+
+-- 3.0.0 : l'Échoppe du dresseur a son onglet (JournalReserve.lua, frame.shopPane)
+function POST.shop(self, frame)
+	local sv = frame.shopPane
+	if not (sv and sv:IsShown()) then return end
+	ReserveInk(sv.note, "reserve.text")
+	for _, row in ipairs(sv.rows or {}) do
+		ReserveInk(row.name, "shop.name")
+		ReserveInk(row.desc, "shop.desc")
+		ReserveInk(row.price, row.state == "short" and "shop.short" or "shop.price")
 	end
 end
 
@@ -2027,7 +2058,7 @@ local JOURNAL_STATE = { "kind", "activity", "offset", "zoneFilter", "zoneSort", 
 	"menZone", "menState", "menRank", "menSort", "menSearch", "menType", "menOffset", "featsCat", "featsOffset",
 	"zoneID", "zonePicked", "progPart", "progOffset", "progItemOffset", "guideSection", "guideOffset",
 	"jukeView", "jukeOffset", "jukeSearch",   -- 2.12.0 : Juke-box
-	"resView", "resSort", "resShow", "resNpc", "resOffset", "resPick" }   -- 2.15.0 : Réserve
+	"resView", "resSort", "resShow", "resNpc", "resOffset", "resPick" }   -- 2.15.0 : Réserve (3.0.0 : l'Échoppe a son onglet)
 
 function ns:CarnetRestyle()
 	local want = self:JournalStyle()

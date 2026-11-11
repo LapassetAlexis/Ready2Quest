@@ -1266,10 +1266,10 @@ function ns:CaptureToastControls(frame)
 	end
 	-- Ignorer et Sourdine, en bas à droite, par-dessus le bouton invisible
 	local above = (frame.button and frame.button.GetFrameLevel and frame.button:GetFrameLevel() or frame:GetFrameLevel() or 1) + 2
-	frame.mute = Theme.CreateButton(frame, "auto", 18, L.CAPTURE_TOAST_MUTE, function() ns:CaptureToastToggleMuteRow() end)
+	frame.mute = Theme.CreateButton(frame, "auto", "xs", L.CAPTURE_TOAST_MUTE, function() ns:CaptureToastToggleMuteRow() end)
 	frame.mute:SetPoint("BOTTOMRIGHT", zone, "BOTTOMRIGHT", -8, 7)
 	frame.mute:SetFrameLevel(above)
-	frame.ignore = Theme.CreateButton(frame, "auto", 18, L.CAPTURE_TOAST_IGNORE, function() ns:CaptureToastIgnore() end)
+	frame.ignore = Theme.CreateButton(frame, "auto", "xs", L.CAPTURE_TOAST_IGNORE, function() ns:CaptureToastIgnore() end)
 	frame.ignore:SetPoint("RIGHT", frame.mute, "LEFT", -6, 0)
 	frame.ignore:SetFrameLevel(above)
 	frame.mute:Show(); frame.ignore:Show()
@@ -1297,13 +1297,13 @@ function ns:CaptureToastControls(frame)
 	local anchor
 	for index, minutes in ipairs(ns.CAPTURE_MUTE_CHOICES) do
 		local label = minutes >= 60 and L.CAPTURE_TOAST_MUTE_HOUR or ns:F("CAPTURE_TOAST_MUTE_MIN", minutes)
-		local choice = Theme.CreateButton(row, CompactWidth(row, label), 18, label, function() ns:CaptureMute(minutes) end, "accent")
+		local choice = Theme.CreateButton(row, CompactWidth(row, label), "xs", label, function() ns:CaptureMute(minutes) end, "accent")
 		if anchor then choice:SetPoint("LEFT", anchor, "RIGHT", 4, 0) else choice:SetPoint("LEFT", row, "LEFT", 4, 0) end
 		choice.minutes = minutes
 		row.choices[index] = choice
 		anchor = choice
 	end
-	row.cancel = Theme.CreateButton(row, CompactWidth(row, L.CAPTURE_TOAST_MUTE_CANCEL), 18, L.CAPTURE_TOAST_MUTE_CANCEL, function() ns:CaptureToastToggleMuteRow(false) end)
+	row.cancel = Theme.CreateButton(row, CompactWidth(row, L.CAPTURE_TOAST_MUTE_CANCEL), "xs", L.CAPTURE_TOAST_MUTE_CANCEL, function() ns:CaptureToastToggleMuteRow(false) end)
 	row.cancel:SetPoint("RIGHT", row, "RIGHT", -4, 0)
 	row:Hide()
 	frame.muteRow = row
@@ -1500,7 +1500,7 @@ function ns:EnsureCaptureQueueList()
 		end)
 		frame.aids[index] = button
 	end
-	frame.ignore = Theme.CreateButton(frame, 100, Theme.DIALOG_BUTTON_HEIGHT or 28, L.CAPTURE_Q_IGNORE,
+	frame.ignore = Theme.CreateButton(frame, 100, "md", L.CAPTURE_Q_IGNORE,
 		function() ns:CaptureQueueClear() end)
 	frame.ignore:SetPoint("BOTTOMRIGHT", frame, "BOTTOMRIGHT", -pad, aidY - 2)
 	frame.hint = Theme.Text(frame, Theme.F_SMALL, Theme.MUTED)

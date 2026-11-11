@@ -272,11 +272,13 @@ for _, style in ipairs({ "sobre", "azeroth" }) do
 	local pane = f and f.res
 	local rv = pane and pane.reserve
 	Check("[J215] " .. style .. " : la page Réserve, dans la navigation", f.kind == "reserve" and f.sections.reserve ~= nil
-		and pane:IsShown() and rv:IsShown() and not pane.shop:IsShown())
+		and pane:IsShown() and rv:IsShown() and not f.shopPane:IsShown())
 	Check("[J215] " .. style .. " : en-tête « Réserve · 5 / 20 »", f.header.title:GetText() == "Réserve · 5 / 20", f.header.title:GetText())
 	NS:PaillettesAdd(126, "test")
 	NS:RefreshJournal()
-	Check("[J215] " .. style .. " : solde de paillettes", (pane.balance:GetText() or ""):find("126 paillettes", 1, true) ~= nil)
+	-- 3.0.0 : le solde en pastille (chiffre, « paillettes »)
+	Check("[J215] " .. style .. " : solde de paillettes", pane.balance.value:GetText() == "126"
+		and pane.balance.label:GetText() == "paillettes")
 	local shown = 0
 	for _, tile in ipairs(rv.tiles) do if tile:IsShown() then shown = shown + 1 end end
 	Check("[J215] " .. style .. " : une vignette par spécimen, la meilleure d'abord", shown == 5 and rv.tiles[1].spec.id == ids.better
@@ -312,7 +314,7 @@ for _, style in ipairs({ "sobre", "azeroth" }) do
 	if style == "azeroth" then
 		local tile = rv.tiles[1]
 		Check("[J215] azeroth : vignettes claires, encres reserve.*", tile.azStyle == "light" and tile.label.azRole == "reserve.name"
-			and pane.balance.azRole == "reserve.balance" and rv.preview.lines[2].azRole == "reserve.detail")
+			and pane.balance.value.azRole == "currency.value" and rv.preview.lines[2].azRole == "reserve.detail")
 		Check("[J215] azeroth : « meilleur » en vert, la raison en rouge, mesurés", rv.betterLine and rv.reasonLine
 			and rv.preview.lines[rv.betterLine].azRole == "reserve.better" and rv.preview.lines[rv.reasonLine].azRole == "reserve.reason")
 		Check("[J215] azeroth : fiche habillée comme celle des Créatures", rv.preview.azStyle == "light" and rv.preview.azWoodBorder ~= nil)
@@ -366,16 +368,19 @@ end
 for _, style in ipairs({ "sobre", "azeroth" }) do
 	Say("-- qc215 carnet : Échoppe (" .. style .. ")")
 	J.Reset(style)
+	-- 3.0.0 : l'Échoppe a son onglet (OpenReserve("shop") y mène encore)
 	local f = NS:OpenReserve("shop")
 	local pane = f.res
-	local sv = pane.shop
-	Check("[J215] " .. style .. " : la vue Échoppe", sv:IsShown() and not pane.reserve:IsShown() and f.header.title:GetText() == "Échoppe du dresseur")
+	local sv = f.shopPane
+	Check("[J215] " .. style .. " : l'onglet Échoppe", f.kind == "shop" and sv:IsShown() and not pane:IsShown()
+		and f.header.title:GetText() == "Échoppe du dresseur")
 	local rows = {}
 	for _, row in ipairs(sv.rows) do rows[row.item.id] = row end
 	Check("[J215] " .. style .. " : six articles, prix de la table", #sv.rows == #NS.PAILLETTES_SHOP and rows.appat.item.price == 5
 		and rows.lasso.item.price == 15 and rows.sifflet.item.price == 40 and rows.slots.item.price == 50)
 	Check("[J215] " .. style .. " : solde à 0 : tout grisé, il manque n", rows.appat.buy.qcEnabled == false
-		and rows.appat.buy.disabledTip == "Il te manque 5 paillettes." and rows.appat.state == "short")
+		and rows.appat.buy.disabledTip == "Il te manque 5 paillettes." and rows.appat.state == "short"
+		and rows.appat.buy.disabledLook == true)
 	NS:PaillettesAdd(200, "test")
 	NS:RefreshJournal()
 	local items = NS:CaptureData().items
@@ -390,7 +395,7 @@ for _, style in ipairs({ "sobre", "azeroth" }) do
 	rows.appat.yes:GetScript("OnClick")(rows.appat.yes)
 	Check("[J215] " .. style .. " : achat : aide dans la besace, −5, ligne dans le chat", (items.appat or 0) == had + 1
 		and NS:Paillettes() == 195 and Mock:Output():find("Échoppe du dresseur", 1, true) ~= nil)
-	Check("[J215] " .. style .. " : solde affiché", (pane.balance:GetText() or ""):find("195", 1, true) ~= nil)
+	Check("[J215] " .. style .. " : solde affiché", sv.balance.value:GetText() == "195")
 	items.sifflet = 3
 	NS:RefreshJournal()
 	Check("[J215] " .. style .. " : besace pleine : grisé, la limite dite", rows.sifflet.state == "full" and rows.sifflet.buy.qcEnabled == false
@@ -414,11 +419,12 @@ for _, style in ipairs({ "sobre", "azeroth" }) do
 	NS:RefreshJournal()
 	Check("[J215] " .. style .. " : capture coupée : pas d'aides", rows.appat.state == "off" and rows.appat.buy.qcEnabled == false)
 	NS:DB().companionCapture = true
-	-- retour à la Réserve par les puces
-	pane.views:Select("reserve")
-	Check("[J215] " .. style .. " : puce Réserve", f.resView == "reserve" and pane.reserve:IsShown() and not sv:IsShown())
+	-- retour à la Réserve par l'onglet
+	f.sections.reserve:GetScript("OnClick")(f.sections.reserve)
+	Check("[J215] " .. style .. " : onglet Réserve", f.kind == "reserve" and f.resView == "reserve" and pane.reserve:IsShown()
+		and not sv:IsShown())
 	if style == "azeroth" then
-		pane.views:Select("shop")
+		NS:OpenShop()
 		Check("[J215] azeroth : lignes de l'échoppe : encres shop.*", rows.appat.name.azRole == "shop.name"
 			and rows.appat.desc.azRole == "shop.desc" and rows.appat.price.azRole == "shop.price" and sv.note.azRole == "reserve.text")
 		Check("[J215] azeroth : aucun rôle manquant", NS.carnetInkMisses == nil, table.concat(NS.carnetInkMisses or {}, ", "))
@@ -461,8 +467,9 @@ do
 		local bottom = top + box:GetHeight()
 		-- en bas : le total (Sobre) ou le garde-manger (Azeroth, étiquette à 50 px du bas)
 		local reserved = style == "azeroth" and 50 + 16 or 18 + 16
-		Check("[J215] " .. style .. " : huit entrées, dont la Réserve après les Créatures", count == 8 and f.sections.reserve ~= nil
-			and NS.JOURNAL_SECTIONS[3] == "reserve")
+		Check("[J215] " .. style .. " : neuf entrées, la Réserve après les Créatures, l'Échoppe après la Réserve", count == 9
+			and f.sections.reserve ~= nil and NS.JOURNAL_SECTIONS[3] == "reserve" and NS.JOURNAL_SECTIONS[4] == "shop"
+			and f.sections.shop ~= nil)
 		Check("[J215] " .. style .. " : le résumé tient au-dessus du bas de la colonne", bottom <= navH - reserved,
 			bottom .. " / " .. navH)
 		J.Done()

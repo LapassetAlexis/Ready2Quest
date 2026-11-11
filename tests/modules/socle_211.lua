@@ -118,7 +118,8 @@ do
 	btn.IsEnabled = function() return false end
 	btn.disabledTip = "Pas maintenant"
 	Theme.ButtonRest(btn)
-	Check("[S211] désactivé : estompé, texte MUTED, fond CONTROL", btn.alpha == Theme.DIM_ALPHA
+	-- socle 3.0 : plus d'estompe (libellé illisible) : Theme.DISABLED opaque
+	Check("[S211] désactivé : opaque, texte MUTED, fond CONTROL", btn.alpha == 1
 		and Same(btn.text.textColor, Theme.MUTED) and Same(btn.bg.vertex, Theme.CONTROL) and btn.disabledLook == true)
 	btn.scripts.OnEnter(btn)
 	Check("[S211] désactivé : pas de survol", Same(btn.bg.vertex, Theme.CONTROL))

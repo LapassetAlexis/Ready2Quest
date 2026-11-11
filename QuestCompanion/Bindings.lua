@@ -226,12 +226,12 @@ local function CaptureFrame(self)
 	frame.text:SetWidth(340 - left - 14)
 	frame.text:SetJustifyH("LEFT")
 	if frame.text.SetWordWrap then frame.text:SetWordWrap(true) end
-	frame.replace = Theme.CreateButton(frame, "auto", 24, L.BIND_REPLACE, function(b)
+	frame.replace = Theme.CreateButton(frame, "auto", "sm", L.BIND_REPLACE, function(b)
 		local f = b:GetParent()
 		if f.pending then ns:BindingApply(f.which, f.pending) end
 	end, "primary")
 	frame.replace:SetPoint("BOTTOMRIGHT", frame, "BOTTOMRIGHT", -12, 10)
-	frame.cancel = Theme.CreateButton(frame, "auto", 24, L.BIND_CANCEL, function() ns:BindingCaptureStop() end)
+	frame.cancel = Theme.CreateButton(frame, "auto", "sm", L.BIND_CANCEL, function() ns:BindingCaptureStop() end)
 	frame.cancel:SetPoint("RIGHT", frame.replace, "LEFT", -8, 0)
 	if frame.EnableKeyboard then pcall(frame.EnableKeyboard, frame, true) end
 	frame:SetScript("OnKeyDown", function(f, key)
@@ -334,7 +334,7 @@ do
 				local which = card.def and ROWS[card.def.key]
 				if which then
 					if not card.clearButton and card.button then
-						card.clearButton = Theme.CreateButton(card, "auto", 22, L.OPT_BIND_CLEAR, function() ns:BindingClear(which) end, "outline")
+						card.clearButton = Theme.CreateButton(card, "auto", "sm", L.OPT_BIND_CLEAR, function() ns:BindingClear(which) end, "outline")
 						card.clearButton:SetPoint("RIGHT", card.button, "LEFT", -8, 0)
 						card.value:ClearAllPoints()
 						card.value:SetPoint("RIGHT", card.clearButton, "LEFT", -10, 0)

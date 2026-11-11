@@ -345,7 +345,7 @@ local function Build(self, frame, content, ui)
 	local watchW = 32 + 8 + math.ceil(Theme.TextWidth(card, L.JRN_WATCH, Theme.F_BODY))
 	pane.name = NoWrap(Text(card, Theme.F_TITLE, Theme.PARCHMENT, RW - NAME_X - 16 - watchW - 12))
 	pane.name:SetPoint("TOPLEFT", card, "TOPLEFT", NAME_X, -16)
-	pane.openChest = Theme.CreateButton(card, "auto", 22, L.JRN_OPEN_CHEST, function()
+	pane.openChest = Theme.CreateButton(card, "auto", "sm", L.JRN_OPEN_CHEST, function()
 		if frame.progZone then ns:OpenChest(frame.progZone) end
 	end, "primary")
 	pane.openChest:SetPoint("TOPRIGHT", card, "TOPRIGHT", -16, -36)
@@ -449,7 +449,7 @@ local function Build(self, frame, content, ui)
 	if pane.empty.SetWordWrap then pane.empty:SetWordWrap(true) end
 
 	-- bestiaire : une ligne, le détail est dans la Ménagerie
-	pane.toMen = Theme.CreateButton(pane, "auto", Theme.PAGER_HEIGHT, L.JRN_PROG_MEN_OPEN, function()
+	pane.toMen = Theme.CreateButton(pane, "auto", "sm", L.JRN_PROG_MEN_OPEN, function()
 		if frame.progZone and ns.OpenMenagerieZone then ns:OpenMenagerieZone(frame.progZone) end
 	end, "accent")
 	pane.toMen:SetPoint("TOPRIGHT", content, "TOPLEFT", PAD + INNER, PAGER_Y)
