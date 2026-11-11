@@ -1,12 +1,29 @@
 #!/usr/bin/env python3
-"""Exécute la suite de tests de l'addon Ready2Quest en Lua 5.1 (version du client WoW).
+"""Exécute la suite de tests des addons Ready2Quest et QuestCompanion en Lua 5.1
+(version du client WoW), hors jeu, via lupa.
 
-Usage : python3 tests/run_tests.py
+Usage :
+  python3 tests/run_tests.py                 toute la suite, en parallèle (un processus par cœur)
+  python3 tests/run_tests.py -j 1            un seul processus (même résultat, plus lent)
+  python3 tests/run_tests.py -j 4            quatre processus
+  python3 tests/run_tests.py qc30_echanges companion   seulement ces modules (sans les scénarios du cœur)
+  python3 tests/run_tests.py core            seulement les scénarios du cœur (tests/run_tests.lua)
+  python3 tests/run_tests.py --profile       en plus : les unités les plus lentes, avec leur nombre de contrôles
+  python3 tests/run_tests.py --memoire       mémoire Lua de chaque fichier au chargement (sans les tests)
+
+Chaque unité (les scénarios du cœur, puis chaque fichier de tests/modules/)
+joue dans son propre état Lua, addons fraîchement chargés (0,1 s) : aucun
+module ne dépend de ce qu'un autre a laissé, l'ordre et le découpage entre
+processus ne changent rien au résultat. La sortie est remise dans l'ordre
+(cœur, puis modules par ordre alphabétique), avec la ligne « RESULTAT: » finale.
+
 Nécessite le paquet `lupa` (pip install lupa).
 """
+import glob
 import os
 import re
 import sys
+import time
 from collections import Counter
 
 sys.path.insert(0, os.environ.get("LUA_PYLIB", "/tmp/pylib"))
@@ -18,9 +35,17 @@ except ImportError:  # pragma: no cover
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 TEST_FILE = os.path.join(ROOT, "tests", "run_tests.lua")
+CORE = "core"
+RANDOM_SEED = int(os.environ.get("TEST_SEED", "1"))  # TEST_SEED=n : chasse aux tests qui dépendent du hasard
+_SOURCE = None
 
-with open(TEST_FILE, "r", encoding="utf-8") as handle:
-    source = handle.read()
+
+def lua_source():
+    global _SOURCE
+    if _SOURCE is None:
+        with open(TEST_FILE, "r", encoding="utf-8") as handle:
+            _SOURCE = handle.read()
+    return _SOURCE
 
 
 def check_mock_duplicates(text):
@@ -34,13 +59,6 @@ def check_mock_duplicates(text):
     names = re.findall(r"function region:([A-Za-z0-9_]+)", block)
     return [name for name, count in Counter(names).items() if count > 1]
 
-
-duplicates = check_mock_duplicates(source)
-if duplicates:
-    print("ERREUR: méthodes dupliquées dans le mock (la seconde écrase la première) :")
-    for name in sorted(duplicates):
-        print("  region:%s" % name)
-    raise SystemExit(2)
 
 def pkgmeta_ignores(path):
     """Liste `ignore:` d'un .pkgmeta (YAML minimal, comme le lit le packager)."""
@@ -108,7 +126,6 @@ def check_socle():
     return problems
 
 
-package_problems = check_packages()
 def check_generated():
     """Les tables de zone de QuestCompanion doivent venir de data/ tel qu'il
     est : on les régénère à part et on compare (en-tête daté exclu)."""
@@ -167,51 +184,74 @@ def check_generated():
     return problems
 
 
-package_problems += check_socle()
-package_problems += check_generated()
-if package_problems:
-    print("ERREUR: paquets de publication incomplets :")
-    for problem in package_problems:
-        print("  " + problem)
-    raise SystemExit(2)
 
-lua = LuaRuntime(unpack_returned_tuples=True)
-globals_ = lua.globals()
-globals_.ADDON_ROOT = ROOT
-# Tests des modules : tests/modules/*.lua, dans l'ordre alphabétique
-import glob
-module_tests = sorted(os.path.relpath(p, ROOT) for p in glob.glob(os.path.join(ROOT, "tests", "modules", "*.lua")))
-globals_.MODULE_TEST_FILES = lua.table_from(module_tests)
 
-# --memoire : mémoire Lua laissée par chaque fichier des addons au chargement
-# (code compilé compris), comme sur un client français ; les tests ne tournent pas
-MEMORY = "--memoire" in sys.argv
-if MEMORY:
-    # l'addon tel que le client le charge : sans le mode test, sans les tests
-    globals_.MEMORY_REPORT = lua.table()
-    globals_.MEMORY_ONLY = True
+def preflight():
+    """Garde-fous d'avant les tests (une fois, dans le processus principal)."""
+    duplicates = check_mock_duplicates(lua_source())
+    if duplicates:
+        print("ERREUR: méthodes dupliquées dans le mock (la seconde écrase la première) :")
+        for name in sorted(duplicates):
+            print("  region:%s" % name)
+        raise SystemExit(2)
+    problems = check_packages() + check_socle() + check_generated()
+    if problems:
+        print("ERREUR: paquets de publication incomplets :")
+        for problem in problems:
+            print("  " + problem)
+        raise SystemExit(2)
 
-try:
-    lua.execute(source)
-except Exception as exc:  # erreur Lua non gérée
-    partial = globals_.TEST_PARTIAL
-    if partial:
-        print(partial)
-        print("\n--- fin du journal ---")
-    print("ERREUR D'EXECUTION LUA :\n%s" % exc)
-    raise SystemExit(2)
 
-# La console Windows est en cp1252 et refuse les caractères hors de sa table
-# (lettres grecques, flèches). Un plantage ici masquerait le vrai résultat :
-# on remplace les caractères non représentables au lieu d'échouer.
-output = globals_.TEST_OUTPUT
-try:
-    print(output)
-except UnicodeEncodeError:
-    encoding = sys.stdout.encoding or "cp1252"
-    print(output.encode(encoding, "replace").decode(encoding, "replace"))
-if MEMORY:
-    rows = [(row.name, float(row.kb)) for row in globals_.MEMORY_REPORT.values()]
+def new_runtime():
+    lua = LuaRuntime(unpack_returned_tuples=True)
+    g = lua.globals()
+    g.ADDON_ROOT = ROOT
+    return lua, g
+
+
+def run_unit(unit):
+    """Joue une unité (CORE ou un chemin tests/modules/x.lua) dans un état Lua
+    neuf. Rend (unité, sortie sans la ligne RESULTAT, réussis, échoués, secondes,
+    erreur Lua ou None)."""
+    start = time.perf_counter()
+    lua, g = new_runtime()
+    g.RUN_CORE = unit == CORE
+    g.MODULE_TEST_FILES = lua.table_from([] if unit == CORE else [unit])
+    # le tirage de Lua 5.1 (rand() du C) est commun à tout le processus : même
+    # graine pour chaque unité, quel que soit ce qui a tourné avant elle
+    lua.execute("math.randomseed(%d)" % RANDOM_SEED)
+    try:
+        lua.execute(lua_source())
+    except Exception as exc:  # erreur Lua non gérée
+        return unit, g.TEST_PARTIAL or "", 0, 1, time.perf_counter() - start, str(exc)
+    lines = (g.TEST_OUTPUT or "").split("\n")
+    while lines and (not lines[-1].strip() or lines[-1].startswith("RESULTAT:")):
+        lines.pop()
+    return (unit, "\n".join(lines), int(g.TEST_PASSED or 0), int(g.TEST_FAILED or 0),
+            time.perf_counter() - start, None)
+
+
+def emit(text):
+    # La console Windows est en cp1252 et refuse les caractères hors de sa table
+    # (lettres grecques, flèches). Un plantage ici masquerait le vrai résultat :
+    # on remplace les caractères non représentables au lieu d'échouer.
+    try:
+        print(text)
+    except UnicodeEncodeError:
+        encoding = sys.stdout.encoding or "cp1252"
+        print(text.encode(encoding, "replace").decode(encoding, "replace"))
+
+
+def run_memory():
+    """--memoire : mémoire Lua laissée par chaque fichier des addons au chargement
+    (code compilé compris), comme sur un client français ; les tests ne tournent
+    pas (l'addon tel que le client le charge : sans le mode test)."""
+    lua, g = new_runtime()
+    g.MODULE_TEST_FILES = lua.table_from([])
+    g.MEMORY_REPORT = lua.table()
+    g.MEMORY_ONLY = True
+    lua.execute(lua_source())
+    rows = [(row.name, float(row.kb)) for row in g.MEMORY_REPORT.values()]
     totals = Counter()
     for name, kb in rows:
         totals[name.split("/")[0]] += kb
@@ -220,5 +260,93 @@ if MEMORY:
         print("%8.1f  %s" % (kb, name))
     for addon, kb in sorted(totals.items()):
         print("%8.1f  TOTAL %s" % (kb, addon))
-failed = int(globals_.TEST_FAILED or 0)
-raise SystemExit(1 if failed else 0)
+
+
+def parse_args(argv):
+    jobs, profile, memory, names = os.cpu_count() or 1, False, False, []
+    i = 0
+    while i < len(argv):
+        arg = argv[i]
+        if arg == "-j" and i + 1 < len(argv):
+            jobs = int(argv[i + 1]); i += 1
+        elif re.match(r"^-j\d+$", arg):
+            jobs = int(arg[2:])
+        elif arg == "--profile":
+            profile = True
+        elif arg == "--memoire":
+            memory = True
+        elif arg.startswith("-"):
+            print("ERREUR: option inconnue %s" % arg)
+            raise SystemExit(2)
+        else:
+            names.append(arg)
+        i += 1
+    return max(1, jobs), profile, memory, names
+
+
+def select_units(names):
+    modules = sorted(os.path.relpath(p, ROOT) for p in glob.glob(os.path.join(ROOT, "tests", "modules", "*.lua")))
+    if not names:
+        return [CORE] + modules
+    units = []
+    for name in names:
+        if name == CORE:
+            units.append(CORE)
+            continue
+        base = os.path.splitext(os.path.basename(name))[0]
+        match = [m for m in modules if os.path.splitext(os.path.basename(m))[0] == base]
+        if not match:
+            print("ERREUR: module introuvable : %s" % name)
+            raise SystemExit(2)
+        units += match
+    return units
+
+
+def main(argv):
+    jobs, profile, memory, names = parse_args(argv)
+    preflight()
+    if memory:
+        run_memory()
+        return 0
+    units = select_units(names)
+    start = time.perf_counter()
+    if jobs == 1 or len(units) == 1:
+        results = [run_unit(unit) for unit in units]
+    else:
+        import multiprocessing
+        # les plus gros d'abord (taille du fichier : bon indice de durée), pour
+        # que la file se vide en même temps sur tous les processus
+        def weight(unit):
+            return 1 << 30 if unit == CORE else os.path.getsize(os.path.join(ROOT, unit))
+        ordered = sorted(units, key=weight, reverse=True)
+        with multiprocessing.get_context("spawn").Pool(min(jobs, len(units))) as pool:
+            results = list(pool.imap_unordered(run_unit, ordered, chunksize=1))
+    wall = time.perf_counter() - start
+    by_unit = {r[0]: r for r in results}
+    passed = failed = 0
+    errors = []
+    for unit in units:
+        _, output, ok, ko, _, error = by_unit[unit]
+        if output:
+            emit(output)
+        if error:
+            emit("\n--- fin du journal de %s ---\nERREUR D'EXECUTION LUA (%s) :\n%s" % (unit, unit, error))
+            errors.append(unit)
+        passed += ok
+        failed += ko
+    emit("")
+    emit("RESULTAT: %d réussis, %d échoués, %d assertions" % (passed, failed, passed + failed))
+    if profile:
+        rows = sorted(results, key=lambda r: -r[4])
+        print("\n== Profil : unités les plus lentes (s, contrôles) ==")
+        for unit, _, ok, ko, seconds, _ in rows[:25]:
+            print("%6.2f s  %5d  %s" % (seconds, ok + ko, unit))
+        print("%6.2f s  %5d  total (%d unités, cumul des processus) ; %.1f s écoulées avec -j %d"
+              % (sum(r[4] for r in results), passed + failed, len(results), wall, jobs))
+    if errors:
+        return 2
+    return 1 if failed else 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main(sys.argv[1:]))

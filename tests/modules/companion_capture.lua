@@ -58,6 +58,10 @@ function CP.Reset()
 	end
 	NS.companionRT, NS.companionSession, NS.companionFx, NS.shinyState, NS.captureState = nil, nil, nil, nil, nil
 	NS.captureAppCache = nil
+	-- annonces du carnet (« Au carnet : … ») retenues : elles ont leurs tests
+	-- (companion_notify.lua) et recouvriraient la bulle de capture ; avant
+	-- le lanceur parallèle, l'écart laissé par les modules précédents le faisait
+	NS.notifyState = { at = math.huge, pending = 0 }
 	NS.bestiaryUnits, NS.bestiaryPrunedAt, NS.bestiaryKilled = {}, nil, {}
 	CP.units, CP.playerLevel = {}, 20
 	Mock.world.maps[1413] = { mapID = 1413, name = "Les Tarides", parentMapID = 1414, mapType = 3 }

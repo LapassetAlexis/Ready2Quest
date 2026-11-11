@@ -107,6 +107,9 @@ do
 		for i = 1, n do if keys[i] == key then return true end end
 		return false
 	end
+	-- la sonde du portrait se pose à l'entrée en jeu : on la joue ici (le
+	-- module tourne seul, sans les scénarios du cœur qui l'avaient faite)
+	Mock:Fire("PLAYER_ENTERING_WORLD", true, false)
 	local r2q = { "core:exit", "portrait", "camp", "death", "aggro" }
 	local qc = { "companion", "companion:aggro", "travel", "advice", "group", "shiny", "capture", "effects",
 		"daily", "notify", "trainer", "feats:minute" }

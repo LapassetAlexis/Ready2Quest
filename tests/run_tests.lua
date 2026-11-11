@@ -917,6 +917,10 @@ end
 ----------------------------------------------------------------------------
 -- 4. Scénarios
 ----------------------------------------------------------------------------
+-- Les scénarios du cœur forment une unité à part : le lanceur parallèle
+-- (run_tests.py -j) les joue dans leur propre état Lua (RUN_CORE = false
+-- pour les états qui ne jouent qu'un module).
+if rawget(_G, "RUN_CORE") ~= false then
 -- 4.1 Chargement
 Say("== chargement ==")
 Check("table de locale chargée", type(NS.L) == "table")
@@ -4066,6 +4070,8 @@ end
 Mock.world.classToken = nil
 end
 
+end -- RUN_CORE
+
 -- 4.99 Tests des modules (tests/modules/*.lua, listés par run_tests.py).
 -- Chaque fichier reçoit la boîte à outils du harnais dans la table T.
 do
@@ -4080,6 +4086,13 @@ do
 	-- 3.0.0 : visites guidées (GuidedTour.lua) : pas de départ automatique
 	-- (leurs bulles couvriraient les scénarios ; qc30_tutoriel.lua les allume)
 	if QNS then QNS.TOUR_AUTO = false end
+	-- conseils du compagnon : pas d'examen automatique au premier pas de
+	-- l'horloge (companion_advice.lua remet l'échéance à zéro lui-même) ;
+	-- avant le lanceur parallèle, l'échéance laissée par les modules
+	-- précédents le masquait
+	if QNS then QNS.adviceNextAt = math.huge end
+	-- module joué seul (sans les scénarios du cœur) : le même monde de départ
+	if rawget(_G, "RUN_CORE") == false then ResetWorld() end
 	-- build Forever par défaut au chargement des modules, comme en jeu
 	Mock.world.build = nil
 	NS:DetectCapabilities()

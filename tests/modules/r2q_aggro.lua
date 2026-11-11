@@ -4,7 +4,7 @@ local Check, Say, ResetWorld, NS, Mock = T.Check, T.Say, T.ResetWorld, T.NS, T.M
 
 local NAMES = { "UnitExists", "UnitIsPlayer", "UnitIsDead", "UnitCanAttack", "UnitCreatureType", "UnitReaction",
 	"IsShiftKeyDown", "IsControlKeyDown", "IsAltKeyDown", "InCombatLockdown", "UnitAffectingCombat",
-	"C_NamePlate", "CheckInteractDistance", "UnitLevel" }
+	"C_NamePlate", "CheckInteractDistance", "UnitLevel", "UnitGUID" }
 local saved = {}
 for _, name in ipairs(NAMES) do saved[name] = rawget(_G, name) end
 saved.inRange = C_Item.IsItemInRange
@@ -28,6 +28,9 @@ function A.Install()
 		if unit == "player" then return A.W.level end
 		return Unit(unit) and Unit(unit).level
 	end
+	-- le cache des mesures est rangé par GUID (avant le lanceur parallèle,
+	-- celui laissé par bestiary.lua servait ici sans qu'on le voie)
+	_G.UnitGUID = function(unit) return Unit(unit) and Unit(unit).guid end
 	_G.IsShiftKeyDown = function() return A.W.shift == true end
 	_G.IsControlKeyDown = function() return A.W.ctrl == true end
 	_G.IsAltKeyDown = function() return A.W.alt == true end
