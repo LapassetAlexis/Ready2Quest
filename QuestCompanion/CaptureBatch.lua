@@ -308,6 +308,8 @@ function ns:CaptureBatch()
 		end
 	end)
 	self.captureBatchResolving = nil
+	-- 3.0.0 (bêta 6) : l'aide ne sert qu'à ce lot ; le lancer suivant repart sans
+	state.aid = nil
 	self.Print, self.CompanionSay = print, say
 	if not ok and self.RecordError then self:RecordError("capture:batch", err) end
 	batch.tried = #batch.results

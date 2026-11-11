@@ -1567,16 +1567,39 @@ end
 -- Le cadrage d'un modèle (zoom portrait, distance, position) : model.framing
 -- le repose ; rappelé à la fin du chargement (OnModelLoaded) et à
 -- l'affichage, car un réglage posé avant la fin du chargement est perdu
+-- 3.0.0 (bêta 6) : OnModelLoaded note aussi que le modèle est là
+-- (model.modelReady, lu par ns.ModelEmpty)
+local function FramingAgain(m) if m.framing then pcall(m.framing, m) end end
+local function FramingLoaded(m)
+	m.modelReady = true
+	FramingAgain(m)
+end
 function ns.ModelKeepFraming(model)
 	if not model or model.azFramingHooked then return model end
 	model.azFramingHooked = true
-	local function Again(m) if m.framing then pcall(m.framing, m) end end
-	for _, event in ipairs({ "OnModelLoaded", "OnShow" }) do
-		if model.HookScript then pcall(model.HookScript, model, event, Again)
-		elseif model.SetScript then pcall(model.SetScript, model, event, Again) end
+	for event, fn in pairs({ OnModelLoaded = FramingLoaded, OnShow = FramingAgain }) do
+		if model.HookScript then pcall(model.HookScript, model, event, fn)
+		elseif model.SetScript then pcall(model.SetScript, model, event, fn) end
 	end
 	return model
 end
+
+-- 3.0.0 (bêta 6) : un modèle demandé mais resté vide. SetCreature d'une
+-- créature que le client n'a pas encore en cache (Grand-père Hiver jamais
+-- croisé) ne dessine rien et ne se refait pas seul : le cadre du compagnon
+-- restait vide jusqu'au /reload (le cache rempli entre-temps), et chaque
+-- rafraîchissement suivant le croyait affiché (même clé). Vide = pas
+-- d'OnModelLoaded et GetDisplayInfo à 0 ; sans GetDisplayInfo, on ne sait
+-- pas : réputé chargé.
+function ns.ModelEmpty(model)
+	if not model or model.modelReady or type(model.GetDisplayInfo) ~= "function" then return false end
+	local ok, id = pcall(model.GetDisplayInfo, model)
+	return ok and (tonumber(id) or 0) <= 0
+end
+-- Le nouvel essai : une fois par demande (clé), après MODEL_RETRY_DELAY (le
+-- temps que la réponse du serveur remplisse le cache ; 0 = l'image suivante),
+-- ou au rafraîchissement suivant s'il vient avant
+ns.MODEL_RETRY_DELAY = 0.5
 -- 2.11.0 (fiche 10) : un seul cadrage pour tous les modèles 3D de l'add-on.
 -- Avant, huit appels posaient sept réglages, souvent avant la fin du
 -- chargement (perdus). ns.ShowModel charge display d'abord, sinon npc, ne
@@ -1669,10 +1692,16 @@ function ns.ShowModel(model, opts, profile)
 	local key = tostring(opts.display) .. ":" .. tostring(npc) .. ":" .. (opts.shiny and "s" or "")
 		.. ":" .. tostring(opts.epoch)
 	if model.modelKey == key and model.modelShown then
-		model.framing(model)
-		model:Show()
-		return true
+		-- 3.0.0 (bêta 6) : même demande, mais rien de chargé : rechargé une fois
+		if model.modelRetried == key or not ns.ModelEmpty(model) then
+			model.framing(model)
+			model:Show()
+			return true
+		end
+		model.modelRetried = key
 	end
+	if model.modelKey ~= key then model.modelRetried = nil end
+	model.modelReady = nil
 	local shown = false
 	if opts.display then shown = ModelCall(model, "SetDisplayInfo", opts.display) end
 	if not shown and npc then shown = ModelCall(model, "SetCreature", npc) end
@@ -1684,6 +1713,20 @@ function ns.ShowModel(model, opts, profile)
 	if shown then
 		model.framing(model)
 		model:Show()
+		-- 3.0.0 (bêta 6) : resté vide ? un nouvel essai, une fois (opts.retry :
+		-- ce que l'appelant refait, ex. tout le cadre du compagnon)
+		if model.modelRetried ~= key and not model.retryQueued and ns.ModelEmpty(model) then
+			local timer = rawget(_G, "C_Timer")
+			if type(timer) == "table" and type(timer.After) == "function" then
+				model.retryQueued = true
+				local again = opts.retry
+				timer.After(ns.MODEL_RETRY_DELAY, function()
+					model.retryQueued = nil
+					if model.modelKey ~= key or model.modelRetried == key or not ns.ModelEmpty(model) then return end
+					if again then pcall(again) else ns.ShowModel(model, opts, profile) end
+				end)
+			end
+		end
 	else
 		ModelCall(model, "ClearModel")
 		model:Hide()
@@ -1694,7 +1737,7 @@ end
 -- Oublie le modèle affiché (le prochain ShowModel recharge)
 function ns.ModelForget(model)
 	if not model then return end
-	model.modelKey, model.modelShown = nil, nil
+	model.modelKey, model.modelShown, model.modelReady, model.modelRetried = nil, nil, nil, nil
 	ModelCall(model, "ClearModel")
 	if model.Hide then model:Hide() end
 end
@@ -2590,6 +2633,7 @@ function ns:CompanionModelCam(app, framing)
 	return cam * factor, y, spec and tonumber(spec.facing) or nil
 end
 
+local function CompanionReapply() ns:CompanionApplyModel() end
 function ns:CompanionApplyModel()
 	local frame = self.companionFrame
 	if not frame then return end
@@ -2619,8 +2663,11 @@ function ns:CompanionApplyModel()
 		distance = distance * (camFactor or 1)
 	end
 	frame.sizeScale = sizeScale
+	-- 3.0.0 (bêta 6) : modèle resté vide (créature pas encore en cache) :
+	-- tout le cadre refait une fois (CompanionReapply)
 	local shown = model and ns.ShowModel(model, { display = app.display, npc = app.npc, shiny = app.shiny,
-		zoom = zoom, cam = distance, y = y, facing = facing, scale = real and sizeScale or stageDef.scale }, "companion") or false
+		zoom = zoom, cam = distance, y = y, facing = facing, scale = real and sizeScale or stageDef.scale,
+		retry = CompanionReapply }, "companion") or false
 	frame.usesFallback = not shown
 	frame.displayID = shown and app.display or nil
 	if shown then

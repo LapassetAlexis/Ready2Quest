@@ -447,13 +447,31 @@ for _, style in ipairs({ "sobre", "azeroth" }) do
 	local chip = pane.views.chips[1]
 	Want(style .. " : puces Réserve / Échanges (l'Échoppe n'y est plus)", #pane.views.chips == 2
 		and pane.views.byId.reserve and pane.views.byId.trade and not pane.views.byId.shop)
-	Want(style .. " : rangée du haut : puces, « Échanger avec ma cible », pastille à la même hauteur",
+	Want(style .. " : rangée du haut : puces et pastille à la même hauteur ; « Échanger avec ma cible » en sm",
 		chip:GetHeight() == H and rv.tradeButton:GetHeight() == H and pane.balance:GetHeight() == H and rv.tradeButton.size == "sm",
 		chip:GetHeight() .. "/" .. rv.tradeButton:GetHeight() .. "/" .. pane.balance:GetHeight())
 	Verdict("[UI30] " .. style .. " : Réserve : puces Réserve / Échanges, rangée du haut à une seule hauteur")
-	local p = rv.tradeButton.lastPoint or {}
-	Want(style .. " : « Échanger avec ma cible » calé sur le haut des puces", p.point == "TOPLEFT" and p.relTo == pane.views
-		and p.relPoint == "TOPRIGHT" and p.y == 0)
+	-- bêta 6 : « Échanger avec ma cible » en bas à gauche, sans rien chevaucher
+	do
+		local function R(region) return Snap.Rect(region, { memo = {} }) end
+		local function Apart(a, b)
+			return a.left + a.width <= b.left or b.left + b.width <= a.left or a.top + a.height <= b.top or b.top + b.height <= a.top
+		end
+		local button, grid, pager, preview, hint, views = R(rv.tradeButton), R(rv.grid), R(rv.pager), R(rv.preview),
+			R(rv.hint), R(pane.views)
+		local lowTile = 0
+		for _, tile in ipairs(rv.tiles) do local r = R(tile); lowTile = math.max(lowTile, r.top + r.height) end
+		Want(style .. " : « Échanger avec ma cible » plus dans la rangée du haut", button.top > views.top + views.height)
+		Want(style .. " : en bas à gauche : aligné sur la grille, sous ses vignettes, centré sur la pagination",
+			button.left == grid.left and button.top >= lowTile and math.abs((button.top + button.height / 2)
+			- (pager.top + pager.height / 2)) <= 1, button.left .. "/" .. grid.left .. " " .. button.top .. "/" .. lowTile)
+		Want(style .. " : ne chevauche ni la grille, ni la pagination, ni la fiche, ni l'aide", Apart(button, grid)
+			and Apart(button, pager) and Apart(button, preview) and Apart(button, hint))
+		Want(style .. " : l'aide à sa droite, avant la pagination, sous la grille", hint.left >= button.left + button.width
+			and hint.left + hint.width <= pager.left and hint.left + hint.width <= grid.left + grid.width
+			and Apart(hint, grid) and rv.hint:GetText() == NS.L.RES_HINT)
+		Want(style .. " : au-dessus du pied du carnet", f.footer == nil or button.top + button.height <= R(f.footer).top)
+	end
 	Want(style .. " : 2e rangée : listes et puces Tous / Brillants à la même hauteur", rv.sort:GetHeight() == H
 		and rv.species:GetHeight() == H and rv.show.chips[1]:GetHeight() == H and rv.show:GetHeight() == H)
 	Want(style .. " : pastille de la Réserve : solde", not pane.balance.mockHidden and pane.balance.value:GetText() == "40"
@@ -492,29 +510,56 @@ for _, style in ipairs({ "sobre", "azeroth" }) do
 	Verdict("[UI30] " .. style .. " : onglet « Échoppe du dresseur » après la Réserve, sa page, sa pastille (même composant, même solde)")
 	local rows = {}
 	for _, row in ipairs(sv.rows) do rows[row.item.id] = row end
+	-- bêta 6 : un « Acheter » hors de portée est désactivé (état désactivé du
+	-- socle), la raison en infobulle ; il suit le solde page ouverte
+	local function TipOf(button)
+		GameTooltip:ClearLines()
+		button:GetScript("OnEnter")(button)
+		local lines = GameTooltip.lines or {}
+		button:GetScript("OnLeave")(button)
+		return lines[1]
+	end
 	local buy = rows.sifflet.buy
-	Want(style .. " : Sifflet (40) : hors de portée, aspect désactivé mais cliquable", rows.sifflet.state == "short"
-		and buy.disabledLook and buy.inactive and buy.qcEnabled == false and buy.size == "sm")
-	Mock:Reset()
-	local flashes = sv.balance.flashes or 0
-	buy:GetScript("OnClick")(buy)
-	Want(style .. " : clic : « Il te manque 10 paillettes pour Sifflet du dompteur. » dans le chat",
-		Has(Mock:Output(), "Il te manque 10 paillettes pour Sifflet du dompteur."), Mock:Output())
-	Want(style .. " : … la pastille secouée, rien d'acheté, pas de confirmation", (sv.balance.flashes or 0) == flashes + 1
-		and NS:Paillettes() == 30 and f.shopConfirm == nil and buy:IsShown())
+	Want(style .. " : Sifflet (40) pour 30 : désactivé, grisé, « Il te manque 10 paillettes » au survol",
+		rows.sifflet.state == "short" and not buy:IsEnabled() and buy.disabledLook and not buy.inactive
+		and buy.qcEnabled == false and buy.size == "sm" and TipOf(buy) == "Il te manque 10 paillettes",
+		tostring(buy:IsEnabled()) .. " / " .. tostring(TipOf(buy)))
+	Want(style .. " : prix au-dessus du solde : tous désactivés (40, 50, 60, 80), à portée : actifs (5, 15)",
+		not rows.slots.buy:IsEnabled() and not rows.frame_glitter.buy:IsEnabled() and not rows.bg_starfall.buy:IsEnabled()
+		and rows.appat.buy:IsEnabled() and rows.lasso.buy:IsEnabled() and not rows.appat.buy.disabledLook)
 	NS:CaptureData().items = NS:CaptureData().items or {}
 	NS:CaptureData().items.appat = 99
 	NS:RefreshJournal()
-	Mock:Reset()
-	rows.appat.buy:GetScript("OnClick")(rows.appat.buy)
-	Want(style .. " : besace pleine : la limite dite au clic, pas de secousse", rows.appat.state == "full"
-		and Has(Mock:Output(), "Besace pleine") and (sv.balance.flashes or 0) == flashes + 1)
+	Want(style .. " : besace pleine : désactivé, « Ta besace est pleine »", rows.appat.state == "full"
+		and not rows.appat.buy:IsEnabled() and TipOf(rows.appat.buy) == "Ta besace est pleine")
 	NS:CaptureData().items.appat = 0
+	NS:CaptureData().shopOwned = { shop_starfall = true }
 	NS:RefreshJournal()
+	Want(style .. " : déjà obtenu : « Acquis », désactivé, « Déjà obtenu »", rows.bg_starfall.state == "owned"
+		and not rows.bg_starfall.buy:IsEnabled() and rows.bg_starfall.buy:GetText() == "Acquis"
+		and TipOf(rows.bg_starfall.buy) == "Déjà obtenu")
+	NS:CaptureData().shopOwned = nil
+	Mock:Reset()
+	local flashes = sv.balance.flashes or 0
+	buy:GetScript("OnClick")(buy)
+	Want(style .. " : un clic qui passerait quand même : rien d'acheté, pas de confirmation", NS:Paillettes() == 30
+		and f.shopConfirm == nil and buy:IsShown() and (sv.balance.flashes or 0) == flashes + 1)
+	-- le solde bouge, page ouverte : les boutons suivent (gain, puis achat)
+	NS:PaillettesAdd(20, "test")
+	if Mock.RunTimers then Mock:RunTimers() end
+	Want(style .. " : +20 paillettes, page ouverte : Sifflet et places (50) actifs, pastille à 50", buy:IsEnabled()
+		and rows.slots.buy:IsEnabled() and not rows.frame_glitter.buy:IsEnabled() and sv.balance.value:GetText() == "50",
+		tostring(buy:IsEnabled()) .. " / " .. tostring(sv.balance.value:GetText()))
+	rows.slots.buy:GetScript("OnClick")(rows.slots.buy)
+	rows.slots.yes:GetScript("OnClick")(rows.slots.yes)
+	Want(style .. " : après l'achat des places (50) : solde 0, tout désactivé", NS:Paillettes() == 0
+		and not buy:IsEnabled() and not rows.lasso.buy:IsEnabled() and TipOf(rows.lasso.buy) == "Il te manque 15 paillettes")
+	NS:PaillettesAdd(30, "test")
+	if Mock.RunTimers then Mock:RunTimers() end
 	rows.lasso.buy:GetScript("OnClick")(rows.lasso.buy)
 	Want(style .. " : à portée : la confirmation dans la ligne", f.shopConfirm == "lasso" and rows.lasso.yes:IsShown()
 		and not rows.lasso.buy.disabledLook)
-	Verdict("[UI30] " .. style .. " : Acheter hors de portée : cliquable, raison dans le chat, pastille secouée ; besace pleine dite ; à portée : confirmation")
+	Verdict("[UI30] " .. style .. " : Acheter hors de portée (prix, besace pleine, déjà obtenu) désactivé, raison au survol ; suit le solde (gain, achat) ; à portée : confirmation")
 	NS:ReserveCancelConfirm()
 	local before = #Mock.frames
 	NS:RefreshJournal(); NS:RefreshJournal()
@@ -522,7 +567,7 @@ for _, style in ipairs({ "sobre", "azeroth" }) do
 	Want(style .. " : OpenReserve(\"shop\") mène à l'onglet", NS:OpenReserve("shop") and f.kind == "shop")
 	if style == "azeroth" then
 		Want("azeroth : boutons Acheter rouges ; refusé : bois délavé", rows.lasso.buy.azSkin == "red"
-			and rows.sifflet.buy.azState == "disabled" and Same(rows.sifflet.buy.text.textColor, NS.AZEROTH_BUTTONS.offText))
+			and rows.frame_glitter.buy.azState == "disabled" and Same(rows.frame_glitter.buy.text.textColor, NS.AZEROTH_BUTTONS.offText))
 		Want("azeroth : aucun rôle manquant", NS.carnetInkMisses == nil, table.concat(NS.carnetInkMisses or {}, ", "))
 	end
 	Want(style .. " : aucune erreur", next(NS.errors or {}) == nil, next(NS.errors or {}))

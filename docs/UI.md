@@ -337,7 +337,10 @@ Même langage, briques du lot 4 dans le socle :
 
 **Modèles 3D** : un seul cadrage, `ns.ShowModel` (charge le `display`
 d'abord, sinon le `npc` ; ne recharge pas un modèle déjà affiché ; repose la
-caméra à chaque `OnModelLoaded` / `OnShow`) avec des profils nommés
+caméra à chaque `OnModelLoaded` / `OnShow` ; 3.0.0 bêta 6 : un modèle resté
+vide, sans `OnModelLoaded` et `GetDisplayInfo` à 0, comme une créature pas
+encore dans le cache du client, est rechargé une fois, après
+`ns.MODEL_RETRY_DELAY` ou au rafraîchissement suivant, `ns.ModelEmpty`) avec des profils nommés
 (`ns.MODEL_PROFILES` : `companion`, `portrait`, `stage`, `prompt`, `preview`,
 `cell`, `card`, `cardTile`). Le zoom « portrait » est réservé aux mascottes
 vérifiées. Faute de modèle : portrait 2D par displayID appris, sinon l'icône
@@ -392,7 +395,7 @@ illisibles, solde de paillettes peu visible, « Acheter » muet au clic).
 | Bouton secondaire | `"outline"` (= `"normal"`) ; Azeroth : brun | idem | idem |
 | Bouton d'accent | `"accent"` ; Azeroth : rouge | idem | idem |
 | Bouton « aventure » | `"adventure"` (Ready2Quest) | idem | idem |
-| Inactif | `button:SetInactive(on, raison)` | — | aspect désactivé, infobulle de la raison, **clic gardé** : le module explique (Échoppe : `ns:ShopRefused`) |
+| Inactif | `button:SetInactive(on, raison)` | — | aspect désactivé, infobulle de la raison, **clic gardé** : le module explique (plus employé par l'Échoppe depuis la bêta 6 : `SetEnabled(false)` + `disabledTip`) |
 | Bouton-icône | `Theme.CreateIconButton` | 24 | gris désaturé au repos, ambre au survol |
 | Onglet | `Theme.CreateNavItem` | 28 (Sobre), 29 au pas de 31 (Azeroth) | survol, choisi, pastille |
 | Puces (vue, filtre) | `Theme.CreateChips` | `CONTROL_HEIGHT` 24, F_BODY | au repos, survol, choisie (ambre ; Azeroth : surbrillance des catégories) |
@@ -408,16 +411,23 @@ seule hauteur, `Theme.CONTROL_HEIGHT`, et les éléments s'y calent par le haut.
 
 ### Écrans
 
-- Réserve : rangée du haut « Réserve | Échanges », « Échanger avec ma cible »
-  (`sm`, au trait) calé sur le haut des puces, pastille du solde à droite ;
-  deuxième rangée : tri et espèce (24) alignés sur « Tous | Brillants » ; les
-  boutons de la fiche en `sm`.
+- Réserve : rangée du haut « Réserve | Échanges », pastille du solde à
+  droite ; deuxième rangée : tri et espèce (24) alignés sur « Tous |
+  Brillants » ; les boutons de la fiche en `sm`. « Échanger avec ma cible »
+  (`sm`, au trait) en bas à gauche, sur la ligne de la pagination (centré
+  sur elle), sous la grille ; l'aide de la page à sa droite (deux lignes au
+  plus, jusqu'au bord de la grille). Rien ne se chevauche (grille,
+  pagination, fiche, aide : `tests/modules/ui_windows.lua`, deux styles).
 - **Échoppe du dresseur** : onglet à part (`ns.JOURNAL_PANES.shop`,
   `frame.shopPane`), juste après la Réserve, avec son étape dans la visite du
-  carnet (`TOUR_B_shop`). Un article hors de portée garde « Acheter »
-  cliquable à l'aspect désactivé : le clic écrit « Il te manque 10 paillettes
-  pour Sifflet du dompteur. » (`SHOP_SHORT_FOR`) et secoue la pastille ;
-  besace pleine, déjà acquis, capture coupée : la raison dans le chat.
+  carnet (`TOUR_B_shop`). Un article hors de portée (prix au-dessus du
+  solde, besace pleine, déjà obtenu, capture coupée) a « Acheter » désactivé
+  (état désactivé du socle, `button:SetEnabled(false)`), la raison en
+  infobulle : « Il te manque 10 paillettes », « Ta besace est pleine »,
+  « Déjà obtenu » (`ns:ShopDisabledTip`). Les boutons suivent le solde page
+  ouverte (achat, relâche, tout gain : rappel `PAILLETTES`,
+  `MenagerieView.lua`). (Bêta 5 : cliquable à l'aspect désactivé, la raison
+  dans le chat ; jugé trop discret.)
   `ns:OpenReserve("shop")` mène à l'onglet (`ns:OpenShop`).
 - Échanges : même pastille (celle de la page Réserve) ; intertitre de
   l'historique en `Theme.CreateSection` ; boutons en `sm`.

@@ -274,7 +274,9 @@ do
 	Check("[LOT] deux lassos pour quatre : deux essais (les deux premiers de la file, avec l'aide), deux restent dans le filet",
 		batch.tried == 2 and batch.short and #NS:CaptureQueue() == 2 and data.items.lasso == 0
 		and batch.results[1].target.npcID == 6400
-		and batch.results[2].target.npcID == 6401 and batch.results[1].aid == "lasso" and batch.results[2].aid == "lasso")
+		and batch.results[2].target.npcID == 6401 and batch.results[1].aid == "lasso" and batch.results[2].aid == "lasso"
+		-- bêta 6 : l'aide ne sert qu'à ce lot
+		and NS:CaptureState().aid == nil)
 	NS:CaptureBatchStop(true)
 	restore()
 	Check("[LOT] c'est dit dans le chat, l'aide montrée dans la scène",

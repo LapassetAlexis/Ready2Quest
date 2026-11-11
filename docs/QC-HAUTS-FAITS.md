@@ -397,7 +397,7 @@ Les numéros entre crochets sont les statistiques du client (§2.13).
 | `char_gold_100` | Bourse ronde | A Round Purse | Avoir possédé 100 po | stat [334] ; alt : plus haut `GetMoney()` vu | ✅ | 10 | — |
 | `char_gold_1000` | Fortune de prince | A Prince's Fortune | Avoir possédé 1000 po | idem | ✅ | 25 | titre T22 |
 | `char_gold_looted` | Fouilleur de poches | Pocket Picker | 100 po ramassées sur les ennemis | stat [333] | ✅ | 10 | — |
-| `char_mount` | Au galop | At a Gallop | Posséder une monture | stat [339] ≥ 1 ; alt : `IsMounted()` vu une fois | ✅ | 10 | — |
+| `char_mount` | Au galop | At a Gallop | Chevaucher sa propre monture | `IsMounted()` vu une fois sur ce personnage, hors taxi (`UnitOnTaxi`) et véhicule (`UnitInVehicle`) ; plus de stat [339] depuis la 3.0.0 bêta 6 (elle compte la collection du compte : un niveau 11 l'obtenait), obtenu avant = gardé | ✅ | 10 | — |
 | `char_mount_epic` | Le vent dans la crinière | Wind in the Mane | Chevaucher une monture rapide | `IsMounted()` et `GetUnitSpeed("player")` ≥ 13,5 m/s au sol, hors vol en taxi | ⚠️ | 25 | — |
 | `char_flight_25` | Passager du ciel | Sky Passenger | 25 trajets en griffon/wyverne | stat [349] ; alt : `UnitOnTaxi` faux → vrai | ✅ | 10 | — |
 | `char_hearth_50` | Retour au bercail | Homeward Bound | 50 retours par pierre de foyer | stat [353] | ✅ | 10 | — |
@@ -540,7 +540,7 @@ Relevé en jeu du 2026-11-07 (client frFR de Forever, `GetStatistic` rend trois 
 | 319 | Duels won | `pvp_duel_10` |
 | 333 ✅ | Gold looted | `char_gold_looted` (montant d'argent) |
 | 334 ✅ | Most gold ever owned | `char_gold_*` (montant d'argent) |
-| 339 ✅ | Mounts owned | `char_mount` |
+| 339 ✅ | Mounts owned | plus employée (3.0.0 bêta 6 : collection du compte, pas le personnage ; `char_mount` = `IsMounted()` hors taxi) |
 | 341 ✅ / 342 | Epic items looted / acquired | `char_epic` |
 | 345 / 922 / 923 / 811 | Health potions / Mana potions / Elixirs / Flasks | `char_potions_100` |
 | 346 / 347 | Beverages consumed / Food eaten | `char_food_500` |

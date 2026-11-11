@@ -1225,7 +1225,9 @@ end
 --     la carte est ouverte (prise « prep »), reprend.
 -- Réserve pleine (ns:CaptureBlockedReason) : le message sur la carte, Lancer
 -- grisé, Passer reste. L'aide choisie est celle de la file (state.aid) :
--- Maj+clic et le raccourci lancent tout de suite avec elle.
+-- Maj+clic et le raccourci lancent tout de suite avec elle. Bêta 6 : elle ne
+-- sert qu'à un lancer (remise à zéro après, Capture.lua / CaptureBatch.lua) ;
+-- l'aide conseillée n'est qu'une lueur, jamais choisie d'office.
 -- Réglage « Lancer directement au clic » (CaptureQueue.lua) : comme avant.
 -- La carte grandit de CAPTURE_PREP.extra pendant la préparation (le
 -- parchemin est recadré à sa nouvelle hauteur) ; encres mesurées sur le

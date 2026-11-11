@@ -415,6 +415,8 @@ end
 -- Un PlayerModel simulé qui sait charger une créature (SetCreature) et dire
 -- son displayID (GetDisplayInfo) : tout de suite, ou après OnModelLoaded (A.lazy).
 local DISPLAYS = { [7003] = 5003, [7004] = 5004 }
+-- (bêta 6) ceux-là ne sont pas à apprendre : compagnons de saison, l'ourson
+local MORE_DISPLAYS = { [7002] = 5002, [13444] = 13369, [15706] = 15904, [15710] = 15671 }
 for n = 1, 12 do DISPLAYS[7100 + n] = 5100 + n end
 local function InstallModels()
 	A.models, A.lazy = {}, false
@@ -424,11 +426,18 @@ local function InstallModels()
 		if kind == "PlayerModel" then
 			A.models[#A.models + 1] = frame
 			frame.loads = 0
-			function frame:SetCreature(id) self.creature, self.display, self.loaded = id, nil, not A.lazy; self.loads = self.loads + 1 end
+			-- A.miss[id] : pas encore dans le cache du client (rien de chargé, une
+			-- fois) ; A.never[id] : jamais
+			function frame:SetCreature(id)
+				local cold = (A.miss and A.miss[id]) or (A.never and A.never[id])
+				if A.miss then A.miss[id] = nil end
+				self.creature, self.display, self.loaded = id, nil, not A.lazy and not cold
+				self.loads = self.loads + 1
+			end
 			function frame:SetDisplayInfo(id) self.display, self.creature, self.loaded = id, nil, true; self.loads = self.loads + 1 end
 			function frame:GetDisplayInfo()
 				if not self.loaded then return 0 end
-				return self.display or DISPLAYS[self.creature or -1] or 0
+				return self.display or DISPLAYS[self.creature or -1] or MORE_DISPLAYS[self.creature or -1] or 0
 			end
 			function frame:ClearModel() self.creature, self.display, self.loaded = nil, nil, false end
 			function frame:SetCamDistanceScale(v) self.cam = v end
@@ -606,6 +615,75 @@ do
 	s.ok("panneau fermé : file arrêtée", #NS:ModelLearnQueue() == 0)
 	s.check("[ALLURE] apprentissage des displayID : sonde à part, une lecture par intervalle, jamais en combat, gardé "
 		.. "une fois chargé, portrait 2D la fois suivante, arrêté à la fermeture")
+	UninstallModels()
+	A.Done()
+end
+
+-- 7 bis. Bêta 6 (4.png) : changer d'allure vers une créature pas encore en cache --------------------------
+-- (Grand-père Hiver jamais croisé) : SetCreature ne dessine rien ; le cadre
+-- restait vide jusqu'au /reload. Un nouvel essai, une fois.
+do
+	Say("-- allure : modèle resté vide au changement, un nouvel essai")
+	A.Reset("azeroth", true)
+	InstallModels()
+	NS:CaptureAccount().display = {}
+	if NS.companionFrame then NS.companionFrame:Hide() end
+	NS.companionFrame = nil
+	local frame = NS:EnsureCompanionFrame()
+	local cm = frame and frame.model
+	local s = Steps()
+	local cases = { { "winter:gfw", 13444 }, { "winter:metzen", 15706 }, { "winter:snowman", 15710 }, { "cap:7003", 7003 },
+		{ "cap:7002:s", 7002 } }
+	for _, case in ipairs(cases) do
+		local id, npc = case[1], case[2]
+		A.miss = { [npc] = true }
+		A.timers = {}
+		local loads = cm.loads
+		local done = NS:CompanionSetAppearance(id)
+		local empty = done and cm.creature == npc and not cm.loaded and NS.ModelEmpty(cm) and #A.timers == 1
+		A.Fire()
+		s.ok(id .. " : vide au choix, rechargé à l'essai suivant", empty and cm.loaded and cm.creature == npc
+			and cm.loads == loads + 2 and not frame.usesFallback and not NS.ModelEmpty(cm) and #A.timers == 0,
+			tostring(empty) .. " " .. tostring(cm.loaded) .. " " .. (cm.loads - loads))
+	end
+	-- le rafraîchissement d'après la confirmation, avant l'essai : il recharge, une fois
+	NS:CompanionSetAppearance("cap:7004")
+	A.miss = { [13444] = true }
+	A.timers = {}
+	NS:CompanionSetAppearance("winter:gfw")
+	local loads = cm.loads
+	NS:CompanionApplyModel()
+	A.Fire()
+	s.ok("rafraîchi avant l'essai : rechargé, sans second essai", cm.loaded and cm.loads == loads + 1 and #A.timers == 0)
+	-- chargé : rien de plus au rafraîchissement
+	loads = cm.loads
+	NS:CompanionApplyModel(); NS:CompanionApplyModel()
+	s.ok("chargé : pas rechargé", cm.loads == loads)
+	-- jamais chargé : un seul essai, pas de boucle
+	NS:CompanionSetAppearance("cap:7004")
+	A.never = { [15710] = true }
+	A.timers = {}
+	NS:CompanionSetAppearance("winter:snowman")
+	loads = cm.loads
+	A.Fire(); A.Fire()
+	NS:CompanionApplyModel(); NS:CompanionApplyModel()
+	s.ok("jamais chargé : un seul essai", cm.loads == loads + 1 and #A.timers == 0, cm.loads - loads)
+	A.never = nil
+	-- OnModelLoaded : chargé, même si GetDisplayInfo dit encore 0
+	NS:CompanionSetAppearance("cap:7004")
+	A.lazy, A.timers = true, {}
+	NS:CompanionSetAppearance("winter:gfw")
+	local hook = cm.hooks and cm.hooks.OnModelLoaded
+	if hook then hook(cm) end
+	s.ok("OnModelLoaded : prêt, pas d'essai", hook ~= nil and cm.modelReady and not NS.ModelEmpty(cm))
+	A.Fire()
+	A.lazy = false
+	s.ok("aucune erreur", next(NS.errors or {}) == nil, next(NS.errors or {}))
+	s.check("[ALLURE] changer d'allure (saison, ordinaire, brillante) vers une créature pas en cache : le modèle est "
+		.. "rechargé une fois (essai différé ou rafraîchissement suivant), jamais en boucle ; OnModelLoaded = prêt")
+	A.miss = nil
+	if NS.companionFrame then NS.companionFrame:Hide() end
+	NS.companionFrame = nil
 	UninstallModels()
 	A.Done()
 end

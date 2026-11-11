@@ -961,7 +961,7 @@ do
 		Check("[J215] articles et prix de la table ; solde à 0 : grisé, il manque n", #sv.rows == #NS.PAILLETTES_SHOP
 			and rows.appat.item.price == 5 and rows.lasso.item.price == 15 and rows.sifflet.item.price == 40
 			and rows.slots.item.price == 50 and rows.appat.buy.qcEnabled == false
-			and rows.appat.buy.disabledTip == "Il te manque 5 paillettes." and rows.appat.state == "short"
+			and rows.appat.buy.disabledTip == "Il te manque 5 paillettes" and not rows.appat.buy:IsEnabled() and rows.appat.state == "short"
 			and rows.appat.buy.disabledLook == true)
 		NS:PaillettesAdd(200, "test")
 		NS:RefreshJournal()
@@ -980,7 +980,7 @@ do
 		items.sifflet = 3
 		NS:RefreshJournal()
 		Check("[J215] besace pleine : grisé, la limite dite", rows.sifflet.state == "full" and rows.sifflet.buy.qcEnabled == false
-			and rows.sifflet.buy.disabledTip == "Besace pleine (3/3) : utilise-en d'abord." and select(2, NS:ShopBuy("sifflet")) == "full")
+			and rows.sifflet.buy.disabledTip == "Ta besace est pleine" and select(2, NS:ShopBuy("sifflet")) == "full")
 		Check("[J215] places de Réserve : +5", NS:ShopBuy("slots") == true and NS:ReserveCapacity() == 25 and NS:Paillettes() == 145)
 		-- cosmétique : au compte, condition « Échoppe du dresseur : n paillettes »
 		local frameDef
@@ -992,6 +992,7 @@ do
 		NS:RefreshJournal()
 		Check("[J215] déjà à toi : « Acquis », grisé ; le fond (60) acheté, le lasso (15) : il manque", rows.frame_glitter.state == "owned"
 			and rows.frame_glitter.buy:GetText() == "Acquis" and rows.frame_glitter.buy.qcEnabled == false
+			and rows.frame_glitter.buy.disabledTip == "Déjà obtenu"
 			and select(2, NS:ShopBuy("frame_glitter")) == "owned" and NS:ShopBuy("bg_starfall") == true
 			and NS:Paillettes() == 5 and select(2, NS:ShopBuy("lasso")) == "short")
 		NS:DB().companionCapture = false

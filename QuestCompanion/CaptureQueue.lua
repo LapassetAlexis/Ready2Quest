@@ -657,7 +657,7 @@ do
 			for key, value in pairs(picked) do pending[key] = value end
 			pending.expires = Clock() + (ns.CAPTURE_WINDOW or 12)
 			state.pending = pending
-			-- l'aide choisie la dernière fois reste choisie s'il en reste
+			-- l'aide choisie pour ce lancer (remise à zéro après, Capture.lua)
 			if state.aid and self:CaptureAidCount(state.aid) <= 0 then state.aid = nil end
 		end
 		-- sans la scène animée : la petite fenêtre montre les secousses

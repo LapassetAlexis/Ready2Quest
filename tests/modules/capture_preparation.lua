@@ -223,6 +223,30 @@ do
 		and not stage.launch:IsShown() and not stage.quality:IsShown() and stage:GetHeight() == NS.CAPTURE_STAGE_AZEROTH.h)
 	Check("[LANCER] … le candidat a quitté le filet, la pause tient (le lancer)", #NS:CaptureQueue() == 0
 		and NS.captureState.queueHolds.throw and not NS.captureState.queueHolds.prep)
+	-- bêta 6 : l'aide ne sert qu'à ce lancer ; la carte suivante (3 étoiles) la
+	-- conseille sans la choisir, et le lancer suivant part sans
+	local s = { bad = {} }
+	local function ok(label, cond, extra) if not cond then s.bad[#s.bad + 1] = label .. (extra and (" (" .. extra .. ")") or "") end end
+	ok("plus d'aide choisie après le lancer", NS:CaptureState().aid == nil)
+	for _ = 1, 12 do Mock:Advance(1); NS:CaptureTick(NS.Now()) end
+	ok("le lancer est fini", NS.captureState.rolling == nil)
+	NS:CaptureGrant("lasso", { quiet = true, silent = true })
+	P.SeeKill(6102, { name = "Kodo", level = 20 })
+	local nextOne = NS:CaptureQueueBest()
+	NS:CaptureNetClick("LeftButton")
+	stage = P.Stage()
+	ok("la carte suivante s'ouvre", stage:IsShown() and stage.prep == nextOne)
+	local advice = NS:CapturePrepAdvice(nextOne)
+	ok("… le sifflet en poche conseillé, en lueur", advice == "sifflet" and P.Cell("sifflet").advised, tostring(advice))
+	ok("… rien de choisi", not P.Cell("sifflet").chosen and not P.Cell("lasso").chosen and not P.Cell("appat").chosen
+		and NS:CaptureState().aid == nil)
+	ok("… chance sans écart", not Has(stage.info:GetText(), "→"))
+	local lassos, whistles = NS:CaptureAidCount("lasso"), NS:CaptureAidCount("sifflet")
+	stage.launch:Click()
+	ok("… lancée sans aide, lasso et sifflet restent en poche", NS.captureState.rolling and NS.captureState.rolling.aid == nil
+		and NS:CaptureAidCount("lasso") == lassos and NS:CaptureAidCount("sifflet") == whistles)
+	Check("[AID] après un lancer avec aide : plus rien de choisi ; la carte suivante conseille sans choisir, lancer sans aide",
+		#s.bad == 0, table.concat(s.bad, " ; "))
 end
 
 -- 3. Passer, clic droit sur Passer, Échap -----------------------------------------------------------------

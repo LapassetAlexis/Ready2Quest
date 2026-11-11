@@ -145,6 +145,9 @@ do
 			local pending = def.pending == true or (before and I.UNPENDED[def.id]) or false
 			local reward = def.reward
 			if before and def.id == "meta_hero" then reward = { title = reward.title } end
+			-- 3.0.0 (bêta 6) : « Au galop » ne lit plus la statistique 339 (collection du compte)
+			local crit = def.crit
+			if before and def.id == "char_mount" then crit = { "stat", { 339 }, 1, alt = "mountSeen" } end
 			-- lot E (FeatsCosmetics.lua) : ces cosmétiques attendaient (reward.soon) ; même ligne, relue en attente
 			if type(reward) == "table" and reward.cosmetic and I.LOT_E[reward.cosmetic[2]] then
 				local copy = {}
@@ -152,7 +155,7 @@ do
 				copy.soon, copy.cosmetic = copy.cosmetic, nil
 				reward = copy
 			end
-			lines[#lines + 1] = table.concat({ def.id, def.n, def.cat, def.pts, def.scope, I.Ser(def.crit), I.Ser(reward),
+			lines[#lines + 1] = table.concat({ def.id, def.n, def.cat, def.pts, def.scope, I.Ser(crit), I.Ser(reward),
 				tostring(def.desc), tostring(pending), type(def.paid) }, "|")
 		end
 		return table.concat(lines, "\n"), #defs
@@ -163,8 +166,9 @@ do
 		hash == "beba8d94" and count == 173, "empreinte " .. hash .. " (" .. count .. " lignes)")
 	text, count = I.Catalogue(false)
 	hash = I.Hash(text)
+	-- 3.0.0 (bêta 6) : « Au galop » sur IsMounted hors taxi (ea095038 avant)
 	Check("[HF] catalogue actuel : 180 lignes (173 + « La poisse » + « Joyeux Voile d'hiver » + tailles 3.1 + échanges 3.0), empreinte",
-		hash == "ea095038" and count == 180, "empreinte " .. hash .. " (" .. count .. " lignes)")
+		hash == "67fd0476" and count == 180, "empreinte " .. hash .. " (" .. count .. " lignes)")
 	local def = NS:FeatDef("men_species_10")
 	local added = NS.FeatAdd({ id = "test_compact", n = 990, cat = "fun", pts = 5, scope = "account",
 		crit = { "flag", "x" }, extra = "gardé" })

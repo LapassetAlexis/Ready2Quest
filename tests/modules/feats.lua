@@ -975,7 +975,19 @@ do
 		J.Run(2)
 		Mock:Fire("PLAYER_CONTROL_GAINED")
 		s.ok("vol de griffon compté une fois", NS:FeatStore("char").ctr.taxi == 1, NS:FeatStore("char").ctr.taxi)
+		-- 3.0.0 (bêta 6) : en taxi ou en véhicule, IsMounted ne compte pas
+		J.mounted = true
+		Mock:Fire("PLAYER_MOUNT_DISPLAY_CHANGED")
+		J.Run(2)
+		local taxi = not Got("char_mount") and (NS:FeatStore("char").ctr.mounted or 0) == 0
 		Mock.world.onTaxi = false
+		local vehicle = rawget(_G, "UnitInVehicle")
+		_G.UnitInVehicle = function(unit) return unit == "player" end
+		Mock:Fire("PLAYER_MOUNT_DISPLAY_CHANGED")
+		J.Run(2)
+		taxi = taxi and not Got("char_mount")
+		_G.UnitInVehicle = vehicle
+		s.ok("en selle en taxi ou en véhicule : rien", taxi)
 		J.mounted, J.speed = true, 14
 		Mock:Fire("UNIT_AURA", "player")
 		J.Run(2)
@@ -1154,11 +1166,19 @@ do
 		Mock:Fire("PLAYER_ENTERING_WORLD", true, false)
 		J.Run(4)
 		local want = { "char_kills_10000", "char_deaths_100", "quest_1000", "char_gold_1000", "dng_raid_ony", "char_flight_25",
-			"char_mount", "rep_honored_10", "rep_exalted_5", "prof_cook_300", "char_level_60" }
+			"rep_honored_10", "rep_exalted_5", "prof_cook_300", "char_level_60" }
 		local miss = {}
 		for _, id in ipairs(want) do if not Got(id) then miss[#miss + 1] = id end end
-		Check("[HFJ] connexion : lignes de statistiques attribuées d'après toute la vie du personnage ; Ragnaros (sans stat) non",
-			#miss == 0 and not Got("dng_raid_mc"), table.concat(miss, ", "))
+		-- 3.0.0 (bêta 6) : « montures possédées » (339) compte la collection du compte : plus lue
+		Check("[HFJ] connexion : lignes de statistiques attribuées d'après toute la vie du personnage ; Ragnaros (sans stat) "
+			.. "et « Au galop » (stat 339 du compte, jamais vu en selle) non",
+			#miss == 0 and not Got("dng_raid_mc") and not Got("char_mount"), table.concat(miss, ", "))
+		-- obtenu avec l'ancienne règle (stat 339) : gardé
+		NS:FeatStore("char").got.char_mount = { at = 1793000000, r = true }
+		NS:FeatEvaluate(nil)
+		NS:FeatLogin()
+		Check("[HFJ] « Au galop » obtenu avant la bêta 6 (stat 339) : jamais retiré", Got("char_mount")
+			and State("char_mount") == "done")
 		local loud = {}
 		for _, info in ipairs(J.earned) do if not info.retro or info.announce then loud[#loud + 1] = info.id end end
 		local lines = 0

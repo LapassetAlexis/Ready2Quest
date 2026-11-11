@@ -426,7 +426,10 @@ ns.FeatCatalog(function()
 		{ "char_gold_100",    92, "char", 10, C, crit = { "count", "goldMax", 100 } },
 		{ "char_gold_1000",   93, "char", 25, C, crit = { "count", "goldMax", 1000 }, reward = { title = 22 } },
 		{ "char_gold_looted", 94, "char", 10, C, crit = { "stat", { 333 }, 1000000 }, desc = "FEATD_goldLooted" },
-		{ "char_mount",       95, "char", 10, C, crit = { "stat", { 339 }, 1, alt = "mountSeen" }, desc = "FEATD_mount" },
+		-- 3.0.0 (bêta 6) : vu en selle sur CE personnage (IsMounted hors taxi et
+		-- véhicule). Avant : statistique 339 « montures possédées », qui compte la
+		-- collection du compte (un niveau 11 l'obtenait) ; obtenu reste obtenu.
+		{ "char_mount",       95, "char", 10, C, crit = { "count", "mountSeen", 1 }, desc = "FEATD_mount" },
 		{ "char_mount_epic",  96, "char", 25, C, crit = { "flag", "mountEpic" }, desc = "FEATD_mountEpic", pending = true },
 		{ "char_flight_25",   97, "char", 10, C, crit = { "stat", { 349 }, 25, alt = "taxiRides" }, desc = "FEATD_flight" },
 		{ "char_epic",       101, "char", 10, C, crit = { "stat", { 341, 342 }, 1 }, desc = "FEATD_epic" },
@@ -514,7 +517,7 @@ end)
 local FR = {
 	FEATD_goldMax         = "Avoir possédé %d pièces d'or",
 	FEATD_goldLooted      = "Ramasser 100 pièces d'or sur les ennemis",
-	FEATD_mount           = "Posséder une monture",
+	FEATD_mount           = "Chevaucher sa propre monture",
 	FEATD_mountEpic       = "Chevaucher une monture rapide",
 	FEATD_flight          = "Prendre %d vols de griffon ou de wyverne",
 	FEATD_epic            = "Ramasser un objet épique",
@@ -633,7 +636,7 @@ local FR = {
 local EN = {
 	FEATD_goldMax         = "Have owned %d gold",
 	FEATD_goldLooted      = "Loot 100 gold from enemies",
-	FEATD_mount           = "Own a mount",
+	FEATD_mount           = "Ride your own mount",
 	FEATD_mountEpic       = "Ride a swift mount",
 	FEATD_flight          = "Take %d gryphon or wyvern flights",
 	FEATD_epic            = "Loot an epic item",
@@ -827,11 +830,16 @@ local function OnEmote(token)
 end
 ns.FeatJeuOnEmote = OnEmote
 
--- Monture : vue une fois (IsMounted) ; monture rapide au sol (en attente)
+-- Monture : vue une fois (IsMounted), hors taxi et véhicule (3.0.0 bêta 6 :
+-- un vol de griffon ou un véhicule de quête ne dit pas que le personnage sait
+-- monter) ; monture rapide au sol (en attente)
 local watchElapsed           -- horloge des montures et des vols (nil : arrêtée)
 local mountCheckAt, wasOnTaxi, taxiUntil = 0, false, 0
 local function Mounted() return Call(G("IsMounted")) == true end
 local function OnTaxi() return Call(G("UnitOnTaxi"), "player") == true end
+local function InVehicle() return Call(G("UnitInVehicle"), "player") == true end
+-- en selle sur sa propre monture
+local function Riding() return Mounted() and not OnTaxi() and not InVehicle() end
 
 local function WatchTick()
 	if not Awake() then return end
@@ -870,7 +878,7 @@ function ns:FeatJeuMountCheck(force)
 	local now = Now()
 	if not force and now >= mountCheckAt and now - mountCheckAt < 1 then return end
 	mountCheckAt = now
-	if Mounted() then
+	if Riding() then
 		if Ctr(self, "mounted") == 0 then self:FeatStore("char").ctr.mounted = 1; Touch("mount") end
 		Watch()
 	end

@@ -788,7 +788,7 @@ function ns:CaptureOffer(guid, entry, shiny)
 		family = species.family, shiny = shiny and true or nil,
 		expires = Clock() + ns.CAPTURE_WINDOW,
 	}
-	-- l'aide choisie la dernière fois reste choisie s'il en reste
+	-- (3.0.0 bêta 6 : plus d'aide reprise d'un lancer à l'autre, voir CaptureThrow)
 	if state.aid and self:CaptureAidCount(state.aid) <= 0 then state.aid = nil end
 	self:CaptureShowPrompt()
 	self:CompanionSay("CAPTURE_PROMPT", { args = { name } })
@@ -828,6 +828,9 @@ function ns:CaptureThrow()
 		return false
 	end
 	local rolling = self:CaptureRoll(pending, state.aid)
+	-- 3.0.0 (bêta 6) : l'aide ne sert qu'à ce lancer ; le suivant repart sans
+	-- (jamais dépensée par défaut ; la carte peut la conseiller, sans la choisir)
+	state.aid = nil
 	state.pending = nil
 	-- scène animée (CaptureStage.lua) : le lancer du filet passe avant les secousses
 	local staged = self.CaptureStageOn and self:CaptureStageOn() or false

@@ -338,7 +338,8 @@ local function JournalFollow(self)
 	local frame = self.journalFrame
 	if not (frame and frame.IsShown and frame:IsShown()) then return end
 	local kind = frame.kind
-	if kind == "menagerie" or kind == "reserve" or kind == "progress" or kind == "evolution" then
+	-- 3.0.0 (bêta 6) : l'Échoppe aussi (ses « Acheter » suivent le solde)
+	if kind == "menagerie" or kind == "reserve" or kind == "shop" or kind == "progress" or kind == "evolution" then
 		if self.JournalSoon then self:JournalSoon("codex") else self:RefreshJournal() end
 	end
 end

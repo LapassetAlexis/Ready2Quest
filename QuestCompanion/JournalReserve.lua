@@ -59,7 +59,8 @@ ns.RESERVE_VIEWS = { "reserve", "trade" }
 -- grille : vignettes de l'allure, un peu plus hautes (étoiles sous le portrait)
 -- 3.0.0 : boutons à la taille « sm » du thème (Theme.BUTTON_SIZES, 24)
 ns.RESERVE_LAYOUT = { tileW = 58, tileH = 84, gap = 7, portrait = 46, star = 10, starStep = 11, starY = -55,
-	shopH = 50, shopGap = 6, shopIcon = 34, shopButton = 104, actionH = Theme.BUTTON_SIZES.sm, actionGap = 4 }
+	shopH = 50, shopGap = 6, shopIcon = 34, shopButton = 104, actionH = Theme.BUTTON_SIZES.sm, actionGap = 4,
+	hintGap = 10 }
 -- 3.1.0 : pavé de la taille sur une vignette (fond Theme.NAV presque opaque)
 ns.RESERVE_SIZE_TAG = { w = 20, h = 13, alpha = 0.85 }
 local LAY = ns.RESERVE_LAYOUT
@@ -126,10 +127,13 @@ local FR = {
 	SHOP_CANCEL          = "Annuler",
 	SHOP_OWNED           = "Acquis",
 	SHOP_PRICE           = "%d %s",
-	SHOP_SHORT           = "Il te manque %d paillettes.",
 	SHOP_FULL            = "Besace pleine (%d/%d) : utilise-en d'abord.",
 	SHOP_OWNED_TIP       = "Déjà à toi.",
 	SHOP_OFF             = "La capture est coupée dans les réglages.",
+	-- 3.0.0 : l'infobulle d'« Acheter » grisé
+	SHOP_DIS_short       = "Il te manque %d paillettes",
+	SHOP_DIS_full        = "Ta besace est pleine",
+	SHOP_DIS_owned       = "Déjà obtenu",
 	SHOP_AID_HAVE        = "%s Dans ta besace : %d / %d.",
 	SHOP_SLOTS           = "+%d places de Réserve",
 	SHOP_SLOTS_DESC      = "Ta Réserve compte %d places.",
@@ -200,10 +204,12 @@ local EN = {
 	SHOP_CANCEL          = "Cancel",
 	SHOP_OWNED           = "Owned",
 	SHOP_PRICE           = "%d %s",
-	SHOP_SHORT           = "You need %d more glitter.",
 	SHOP_FULL            = "Bag full (%d/%d): use some first.",
 	SHOP_OWNED_TIP       = "Already yours.",
 	SHOP_OFF             = "Capture is turned off in the settings.",
+	SHOP_DIS_short       = "You need %d more glitter",
+	SHOP_DIS_full        = "Your bag is full",
+	SHOP_DIS_owned       = "Already owned",
 	SHOP_AID_HAVE        = "%s In your bag: %d / %d.",
 	SHOP_SLOTS           = "+%d Reserve slots",
 	SHOP_SLOTS_DESC      = "Your Reserve has %d slots.",
@@ -309,6 +315,15 @@ function ns:ShopBuy(id)
 	end
 	self:Print(self:F("SHOP_BOUGHT", self:ShopLabel(item), item.price, left))
 	return true, left
+end
+
+-- 3.0.0 (bêta 6) : l'infobulle d'« Acheter » désactivé : la raison, ou nil
+function ns:ShopDisabledTip(state, missing)
+	if state == "short" then return self:F("SHOP_DIS_short", tonumber(missing) or 0) end
+	if state == "full" then return L.SHOP_DIS_full end
+	if state == "owned" then return L.SHOP_DIS_owned end
+	if state == "off" then return L.SHOP_OFF end
+	return nil
 end
 
 -- 3.0.0 : un clic sur « Acheter » refusé : la raison dans le chat
@@ -585,9 +600,8 @@ local function Build(self, frame, content, ui)
 	frame.resView = frame.resView or "reserve"
 	frame.resSort, frame.resShow, frame.resOffset = frame.resSort or "stars", frame.resShow or "all", frame.resOffset or 0
 
-	-- 1re rangée : la vue (Réserve, Échanges), « Échanger avec ma cible »,
-	-- le solde à droite ; puces, bouton « sm » et pastille à la même hauteur
-	-- (Theme.CONTROL_HEIGHT)
+	-- 1re rangée : la vue (Réserve, Échanges), le solde à droite ; puces et
+	-- pastille à la même hauteur (Theme.CONTROL_HEIGHT)
 	local views = {}
 	for _, key in ipairs(ns.RESERVE_VIEWS) do views[#views + 1] = { id = key, label = L["RES_VIEW_" .. key] } end
 	pane.views = Theme.CreateChips(pane, views, function(id)
@@ -698,12 +712,20 @@ local function Build(self, frame, content, ui)
 		function() ns:Gift30Open() end, "accent")
 	rv.giftButton:SetPoint("TOPRIGHT", content, "TOPLEFT", ui.PAD + GRID_W, warnY + 4)
 	rv.giftButton:Hide()
-	-- 3.0.0 : « Échanger avec ma cible » (CaptureTrades.lua), sur la rangée des
-	-- puces, entre elles et le solde (l'avertissement « Réserve pleine » garde sa ligne)
+	-- 3.0.0 : « Échanger avec ma cible » (CaptureTrades.lua). Bêta 6 : en bas
+	-- à gauche de la page, sur la ligne de la pagination (centré sur elle),
+	-- sous la grille ; l'aide de la page passe à sa droite, sur deux lignes au
+	-- plus, jusqu'au bord de la grille (la pagination et la fiche sont à droite)
 	rv.tradeButton = Theme.CreateButton(rv, "auto", "sm", L.RES_TRADE_TARGET, function()
 		if ns.TradeWithTarget then ns:TradeWithTarget() end
 	end, "outline")
-	rv.tradeButton:SetPoint("TOPLEFT", pane.views, "TOPRIGHT", 12, 0)
+	At(rv.tradeButton, content, 0, PAGER_Y + math.floor((LAY.actionH - (Theme.PAGER_HEIGHT or 22)) / 2))
+	local hintX = math.ceil(rv.tradeButton:GetWidth()) + LAY.hintGap
+	rv.hint:ClearAllPoints()
+	rv.hint:SetPoint("LEFT", rv.tradeButton, "RIGHT", LAY.hintGap, 0)
+	rv.hint:SetWidth(GRID_W - hintX)
+	if rv.hint.SetWordWrap then rv.hint:SetWordWrap(true) end
+	if rv.hint.SetMaxLines then rv.hint:SetMaxLines(2) end
 
 	-- ===== vue Cadeau de la 3.0 (choix de 3 créatures du Codex) =====
 	local gv = CreateFrame("Frame", nil, pane)
@@ -770,8 +792,10 @@ end
 -- 3.0.0 : l'Échoppe du dresseur, onglet du carnet (ns.JOURNAL_PANES.shop) :
 -- la pastille du solde en haut à droite, une ligne par article (construite
 -- une fois, repeinte), la note « Gagner des paillettes » dessous. Un article
--- hors de portée garde son bouton cliquable, à l'aspect désactivé
--- (button:SetInactive) : le clic dit pourquoi (ns:ShopRefused).
+-- hors de portée (solde trop court, besace pleine, déjà obtenu, capture
+-- coupée) : « Acheter » désactivé (état désactivé du socle, grisé), la raison
+-- en infobulle (bêta 6 ; avant : cliquable à l'aspect désactivé). Repeint à
+-- chaque mouvement du solde (achat, relâche, gain : MenagerieView.lua).
 -- ---------------------------------------------------------------------------
 local function BuildShop(self, frame, content, ui)
 	local At, Text = ui.At, ui.Text
@@ -1036,14 +1060,9 @@ local function RefreshShop(self, frame)
 		else
 			row.yes:Hide(); row.no:Hide()
 			row.buy:SetText(state == "owned" and L.SHOP_OWNED or L.SHOP_BUY)
-			local tip
-			if state == "short" then tip = self:F("SHOP_SHORT", a)
-			elseif state == "full" then tip = self:F("SHOP_FULL", a, b)
-			elseif state == "owned" then tip = L.SHOP_OWNED_TIP
-			elseif state == "off" then tip = L.SHOP_OFF end
-			-- 3.0.0 : refusé = aspect désactivé, clic gardé (la raison dans le chat)
-			row.buy.qcEnabled = state == "ok"
-			row.buy:SetInactive(state ~= "ok", tip)
+			-- 3.0.0 (bêta 6) : refusé = désactivé pour de bon (grisé, pas de
+			-- clic), la raison en infobulle
+			Enable(row.buy, state == "ok", self:ShopDisabledTip(state, a))
 			row.buy:Show()
 		end
 		row:SetAccent(asking and Theme.GOLD or nil)
