@@ -362,6 +362,16 @@ ns.AZEROTH_CONTRAST = {
 	["shop.desc"] = { "inkMuted", 0.3252, 4.5, 11 },   -- sombre, même fond : 5.05:1 (effet, besace)
 	["shop.price"] = { "amber", 0.3252, 4.5, 12 },   -- sombre, même fond : 4.85:1 (prix)
 	["shop.short"] = { "red", 0.3252, 4.5, 12 },   -- sombre, même fond : 4.83:1 (prix hors de portée)
+	-- 3.0.0 : vue « Échanges » de la Réserve (CaptureTrades.lua). Textes posés sur la page (parchemin
+	-- 130661, voile page 0,35) au fond de page.* / reserve.text (0.3172) ; le « + » d'une place vide sur
+	-- une tuile claire, au fond de tile.* (0.3252) ; vignettes : reserve.name / reserve.shiny
+	["trade.status"] = { "ink", 0.3172, 4.5, 12 },   -- sombre, fond 0.317 : 6.57:1 (état de l'échange, titre de la grille)
+	["trade.head"] = { "amber", 0.3172, 4.5, 12 },   -- sombre, même fond : 4.75:1 (« Toi » / nom, historique)
+	["trade.state"] = { "inkSoft", 0.3172, 4.5, 11 },   -- sombre, même fond : 5.87:1 (« Pas encore validé »)
+	["trade.ok"] = { "green", 0.3172, 4.5, 11 },   -- sombre, même fond : 4.68:1 (« Validé »)
+	["trade.histName"] = { "ink", 0.3172, 4.5, 12 },   -- sombre, même fond : 6.57:1 (date, joueur)
+	["trade.histText"] = { "inkSoft", 0.3172, 4.5, 11 },   -- sombre, même fond : 5.87:1 (donné, reçu)
+	["trade.slot"] = { "inkMuted", 0.3252, 3.0, 16 },   -- sombre, tuile claire : 5.05:1 (« + » d'une place vide)
 	-- 2.15.0 : tag « n à compléter » de la page Exploration (tuile claire, au fond de tile.*)
 	["codex.todo"] = { "ink", 0.3252, 4.5, 11 },   -- sombre, même fond : 6.73:1
 	["codex.done"] = { "green", 0.3252, 4.5, 11 },   -- sombre, même fond : 4.78:1 (« complète ★★★ »)

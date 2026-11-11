@@ -12,6 +12,9 @@
 --     Mettre au Codex, Relâcher (+n paillettes, confirmation dans la page,
 --     jamais de fenêtre), Localiser l'espèce (ZoneQuests.lua). Réserve pleine :
 --     le dire.
+--   * 3.0.0 : Échanges (CaptureTrades.lua) : la fenêtre d'échange avec un
+--     autre joueur, l'invitation reçue, l'historique ; et le bouton
+--     « Échanger avec ma cible » de la vue Réserve ;
 --   * Échoppe du dresseur : dépenser les paillettes (ns.PAILLETTES_SHOP) :
 --     aides de capture (dans la limite de la besace), places de Réserve, et
 --     deux cosmétiques du compagnon (FeatsCosmetics.lua, pour tout le compte).
@@ -48,7 +51,8 @@ ns.PAILLETTES_SHOP = {
 ns.PAILLETTES_MILESTONE = 2
 ns.RESERVE_SORTS = { "stars", "date", "name" }
 ns.RESERVE_SHOWS = { "all", "shiny" }
-ns.RESERVE_VIEWS = { "reserve", "shop" }
+-- 3.0.0 : « Échanges » (CaptureTrades.lua : fenêtre d'échange, invitation, historique)
+ns.RESERVE_VIEWS = { "reserve", "shop", "trade" }
 -- grille : vignettes de l'allure, un peu plus hautes (étoiles sous le portrait)
 ns.RESERVE_LAYOUT = { tileW = 58, tileH = 84, gap = 7, portrait = 46, star = 10, starStep = 11, starY = -55,
 	shopH = 50, shopGap = 6, shopIcon = 34, shopButton = 104, actionH = 22, actionGap = 4 }
@@ -61,6 +65,7 @@ local FR = {
 	JRN_SUB_reserve      = "Tes spécimens en plus du Codex : garde, échange de place avec le Codex, relâche contre des paillettes.",
 	RES_VIEW_reserve     = "Réserve",
 	RES_VIEW_shop        = "Échoppe du dresseur",
+	RES_VIEW_trade       = "Échanges",
 	RES_TITLE            = "Réserve · %d / %d",
 	RES_SHOP_TITLE       = "Échoppe du dresseur",
 	RES_SHOP_SUB         = "Dépense tes paillettes : aides de capture, places de Réserve, allure du compagnon.",
@@ -107,6 +112,9 @@ local FR = {
 	RES_WHY_worn         = "Ton compagnon porte cette apparence.",
 	RES_WHY_reference    = "C'est ton spécimen du Codex.",
 	RES_WHY_missing      = "Ce spécimen n'existe plus.",
+	RES_WHY_locked       = "Il est engagé dans un échange en cours.",
+	RES_BY_TRADE         = "Échange avec %s",
+	RES_TRADE_TARGET     = "Échanger avec ma cible",
 	SHOP_BUY             = "Acheter",
 	SHOP_CONFIRM         = "Confirmer",
 	SHOP_CANCEL          = "Annuler",
@@ -131,6 +139,7 @@ local EN = {
 	JRN_SUB_reserve      = "Your specimens beyond the Codex: keep them, swap with the Codex, release them for glitter.",
 	RES_VIEW_reserve     = "Reserve",
 	RES_VIEW_shop        = "Trainer's Stall",
+	RES_VIEW_trade       = "Trades",
 	RES_TITLE            = "Reserve · %d / %d",
 	RES_SHOP_TITLE       = "Trainer's Stall",
 	RES_SHOP_SUB         = "Spend your glitter: capture aids, Reserve slots, your companion's look.",
@@ -176,6 +185,9 @@ local EN = {
 	RES_WHY_worn         = "Your companion wears this look.",
 	RES_WHY_reference    = "It's your Codex specimen.",
 	RES_WHY_missing      = "This specimen no longer exists.",
+	RES_WHY_locked       = "It's part of a trade in progress.",
+	RES_BY_TRADE         = "Traded with %s",
+	RES_TRADE_TARGET     = "Trade with my target",
 	SHOP_BUY             = "Buy",
 	SHOP_CONFIRM         = "Confirm",
 	SHOP_CANCEL          = "Cancel",
@@ -435,6 +447,56 @@ local function PaintTileStars(tile, count)
 	end
 end
 
+-- 3.0.0 : une vignette de spécimen (Réserve, échanges : CaptureTrades.lua),
+-- construite une fois : celle de l'allure, ses trois étoiles et, en haut à
+-- gauche, le pavé de la taille (3.1.0 : XS, S, L, XL ; rien pour « normal »,
+-- sur un pavé sombre lisible sur le portrait, dans les deux styles)
+function ns.ReserveNewTile(frame, parent)
+	local tile = ns.AllureNewTile(frame, parent, { w = LAY.tileW, h = LAY.tileH, portrait = LAY.portrait })
+	BuildTileStars(tile)
+	tile.sizeBack = Theme.Solid(tile, "ARTWORK", Theme.NAV, ns.RESERVE_SIZE_TAG.alpha)
+	if tile.sizeBack.SetDrawLayer then tile.sizeBack:SetDrawLayer("ARTWORK", 5) end
+	tile.sizeBack:SetPoint("TOPLEFT", tile, "TOPLEFT", 2, -2)
+	tile.sizeBack:SetSize(ns.RESERVE_SIZE_TAG.w, ns.RESERVE_SIZE_TAG.h)
+	local tag = Theme.Text(tile, Theme.F_SMALL, Theme.LABEL)
+	tag:SetWidth(ns.RESERVE_SIZE_TAG.w)
+	tag:SetPoint("CENTER", tile.sizeBack, "CENTER", 0, 0)
+	tag:SetJustifyH("CENTER")
+	tag.azKeep = true
+	tile.sizeTag = tag
+	tile.sizeBack:Hide(); tag:Hide()
+	return tile
+end
+
+-- Peint une vignette d'après un spécimen (ou les données d'un spécimen reçu
+-- par message : npc, stars, shiny, size, name) : apparence, nom, étoiles,
+-- taille, perle des brillants. Rend true si la vignette montre quelque chose.
+function ns:ReserveTilePaint(tile, spec)
+	if not (tile and type(spec) == "table" and spec.npc ~= nil) then return false end
+	if self.AllureTileLook then
+		self:AllureTileLook(tile, { id = "spec:" .. spec.npc .. (spec.shiny and ":s" or ""), npc = spec.npc, shiny = spec.shiny })
+	end
+	tile.label:SetText(self.CreatureName and self:CreatureName(spec.npc, { name = spec.name }) or tostring(spec.name or spec.npc))
+	local c = spec.shiny and Theme.GOLD_LIGHT or Theme.LABEL
+	tile.label:SetTextColor(c[1], c[2], c[3], 1)
+	tile.label.azKeep = nil
+	PaintTileStars(tile, spec.stars)
+	if tile.sizeTag then
+		local size = spec.size
+		if size and size ~= "normal" and ns.SPECIMEN_SIZE_BY_ID and ns.SPECIMEN_SIZE_BY_ID[size] then
+			tile.sizeTag:SetText(L["SPEC_SIZE_SHORT_" .. size])
+			local sc = self:SpecimenSizeColor(size)
+			tile.sizeTag:SetTextColor(sc[1], sc[2], sc[3], 1)
+			tile.sizeTag:Show(); tile.sizeBack:Show()
+		else
+			tile.sizeTag:Hide(); tile.sizeBack:Hide()
+		end
+	end
+	if tile.gem then if spec.shiny then tile.gem:Show() else tile.gem:Hide() end end
+	if tile.fav then tile.fav:Hide() end
+	return true
+end
+
 local function Day(at)
 	at = tonumber(at)
 	local date = G("date")
@@ -449,17 +511,23 @@ local function ZoneName(self, zoneID)
 end
 
 -- « Capturé par X · zone · date » (« Avant la 3.0 » pour la migration)
+-- 3.0.0 : un spécimen reçu par échange : « Échange avec X · Capturé par Y · zone · date »
+-- (origine d'avant l'échange gardée dans firstOrigin : migration, cadeau)
 function ns:SpecimenOriginText(spec)
 	if type(spec) ~= "table" then return "" end
-	local parts = {}
-	if spec.origin == "migration" then parts[1] = L.RES_BY_MIGRATION
-	elseif spec.origin == (ns.GIFT30 and ns.GIFT30.origin or "gift3") then parts[1] = L.RES_BY_GIFT3
-	elseif spec.by then parts[1] = self:F("RES_BY", spec.by) end
-	parts[#parts + 1] = ZoneName(self, spec.zone)
-	parts[#parts + 1] = Day(spec.at)
-	local out = {}
-	for index = 1, 3 do if parts[index] then out[#out + 1] = parts[index] end end
-	return table.concat(out, " · ")
+	local parts, n = {}, 0
+	if spec.tradedFrom then n = n + 1; parts[n] = self:F("RES_BY_TRADE", spec.tradedFrom) end
+	local origin = spec.origin == "trade" and spec.firstOrigin or spec.origin
+	local first
+	if origin == "migration" then first = L.RES_BY_MIGRATION
+	elseif origin == (ns.GIFT30 and ns.GIFT30.origin or "gift3") then first = L.RES_BY_GIFT3
+	elseif spec.by then first = self:F("RES_BY", spec.by) end
+	if first then n = n + 1; parts[n] = first end
+	local zone = ZoneName(self, spec.zone)
+	if zone then n = n + 1; parts[n] = zone end
+	local day = Day(spec.at)
+	if day then n = n + 1; parts[n] = day end
+	return table.concat(parts, " · ")
 end
 
 local function Stars(self, n, size)
@@ -469,6 +537,8 @@ end
 local function Scroll(self, frame, delta)
 	if frame.resView == "shop" then return end
 	if frame.resView == "gift" then frame.giftOffset = (frame.giftOffset or 0) - (tonumber(delta) or 0); return end
+	-- 3.0.0 : la fenêtre d'échange (sa grille ou l'historique, CaptureTrades.lua)
+	if frame.resView == "trade" then frame.tradeOffset = (frame.tradeOffset or 0) - (tonumber(delta) or 0); return end
 	frame.resOffset = (frame.resOffset or 0) - (tonumber(delta) or 0)
 end
 
@@ -535,22 +605,10 @@ local function Build(self, frame, content, ui)
 	rv.grid:SetSize(GRID_W, rows * (LAY.tileH + LAY.gap))
 	rv.tiles = {}
 	for index = 1, cols * rows do
-		local tile = ns.AllureNewTile(frame, rv.grid, { w = LAY.tileW, h = LAY.tileH, portrait = LAY.portrait })
+		local tile = ns.ReserveNewTile(frame, rv.grid)
 		local slot = index - 1
 		tile:ClearAllPoints()
 		tile:SetPoint("TOPLEFT", rv.grid, "TOPLEFT", (slot % cols) * (LAY.tileW + LAY.gap), -math.floor(slot / cols) * (LAY.tileH + LAY.gap))
-		BuildTileStars(tile)
-		-- 3.1.0 : la taille (XS, S, L, XL ; rien pour « normal »), en haut à
-		-- gauche, sur un pavé sombre (lisible sur le portrait, dans les deux styles)
-		tile.sizeBack = Theme.Solid(tile, "ARTWORK", Theme.NAV, ns.RESERVE_SIZE_TAG.alpha)
-		if tile.sizeBack.SetDrawLayer then tile.sizeBack:SetDrawLayer("ARTWORK", 5) end
-		tile.sizeBack:SetPoint("TOPLEFT", tile, "TOPLEFT", 2, -2)
-		tile.sizeBack:SetSize(ns.RESERVE_SIZE_TAG.w, ns.RESERVE_SIZE_TAG.h)
-		tile.sizeTag = Text(tile, Theme.F_SMALL, Theme.LABEL, ns.RESERVE_SIZE_TAG.w)
-		tile.sizeTag:SetPoint("CENTER", tile.sizeBack, "CENTER", 0, 0)
-		tile.sizeTag:SetJustifyH("CENTER")
-		tile.sizeTag.azKeep = true
-		tile.sizeBack:Hide(); tile.sizeTag:Hide()
 		tile:SetScript("OnClick", function(t) ns:ReservePick(t.spec and t.spec.id) end)
 		tile.onEnter = function(t) ns:ReserveTileTip(t) end
 		tile.onLeave = HideTip
@@ -606,6 +664,12 @@ local function Build(self, frame, content, ui)
 		function() ns:Gift30Open() end, "accent")
 	rv.giftButton:SetPoint("TOPRIGHT", content, "TOPLEFT", ui.PAD + GRID_W, warnY + 4)
 	rv.giftButton:Hide()
+	-- 3.0.0 : « Échanger avec ma cible » (CaptureTrades.lua), sur la rangée des
+	-- puces, entre elles et le solde (l'avertissement « Réserve pleine » garde sa ligne)
+	rv.tradeButton = Theme.CreateButton(rv, "auto", LAY.actionH, L.RES_TRADE_TARGET, function()
+		if ns.TradeWithTarget then ns:TradeWithTarget() end
+	end, "outline")
+	rv.tradeButton:SetPoint("LEFT", pane.views, "RIGHT", 12, 0)
 
 	-- ===== vue Cadeau de la 3.0 (choix de 3 créatures du Codex) =====
 	local gv = CreateFrame("Frame", nil, pane)
@@ -703,6 +767,9 @@ local function Build(self, frame, content, ui)
 	if sv.note.SetWordWrap then sv.note:SetWordWrap(true) end
 	sv.note:SetText(L.SHOP_NOTE)
 
+	-- ===== vue Échanges (3.0.0, CaptureTrades.lua) =====
+	if ns.TradeBuildView then ns.TradeBuildView(self, frame, pane, content, ui) end
+
 	-- le carnet fermé : plus de confirmation en attente
 	if frame.HookScript then
 		frame:HookScript("OnHide", function(f)
@@ -757,7 +824,8 @@ local function SpeciesOptions(self, all)
 	return options, seen
 end
 
-local WHY = { better = "RES_WHY_better", worn = "RES_WHY_worn", reference = "RES_WHY_reference", missing = "RES_WHY_missing" }
+local WHY = { better = "RES_WHY_better", worn = "RES_WHY_worn", reference = "RES_WHY_reference", missing = "RES_WHY_missing",
+	locked = "RES_WHY_locked" }
 
 local function RefreshDetails(self, frame, rv, spec)
 	local p = rv.preview
@@ -864,28 +932,7 @@ local function RefreshReserve(self, frame, pane)
 		local spec = list[first + index]
 		tile.spec = spec
 		if spec then
-			if self.AllureTileLook then
-				self:AllureTileLook(tile, { id = "spec:" .. spec.npc .. (spec.shiny and ":s" or ""), npc = spec.npc, shiny = spec.shiny })
-			end
-			tile.label:SetText(self.CreatureName and self:CreatureName(spec.npc, { name = spec.name }) or tostring(spec.name or spec.npc))
-			local c = spec.shiny and Theme.GOLD_LIGHT or Theme.LABEL
-			tile.label:SetTextColor(c[1], c[2], c[3], 1)
-			tile.label.azKeep = nil
-			PaintTileStars(tile, spec.stars)
-			-- 3.1.0 : la taille, si elle n'est pas normale
-			if tile.sizeTag then
-				local size = spec.size
-				if size and size ~= "normal" and ns.SPECIMEN_SIZE_BY_ID and ns.SPECIMEN_SIZE_BY_ID[size] then
-					tile.sizeTag:SetText(L["SPEC_SIZE_SHORT_" .. size])
-					local sc = self:SpecimenSizeColor(size)
-					tile.sizeTag:SetTextColor(sc[1], sc[2], sc[3], 1)
-					tile.sizeTag:Show(); tile.sizeBack:Show()
-				else
-					tile.sizeTag:Hide(); tile.sizeBack:Hide()
-				end
-			end
-			if tile.gem then if spec.shiny then tile.gem:Show() else tile.gem:Hide() end end
-			if tile.fav then tile.fav:Hide() end
+			self:ReserveTilePaint(tile, spec)
 			local on = spec.id == frame.resPick
 			tile:SetSelected(on)
 			if ns.AllureShowRing then ns.AllureShowRing(tile, on, frame) end
@@ -1025,12 +1072,17 @@ local function Refresh(self, frame, ui)
 	if not pane then return end
 	local view = frame.resView
 	if view == "gift" and not (self.Gift30Available and self:Gift30Available()) then view = "reserve" end
-	if view ~= "shop" and view ~= "gift" then view = "reserve" end
+	if view == "trade" and not pane.trade then view = "reserve" end
+	if view ~= "shop" and view ~= "gift" and view ~= "trade" then view = "reserve" end
 	frame.resView = view
 	pane.views:Select(view == "gift" and "reserve" or view, true)
 	pane.balance:SetText(self:F("RES_BALANCE", ns.PaillettesGlyph(14), self:Paillettes()))
 	pane.reserve:Hide(); pane.shop:Hide(); pane.gift:Hide()
-	if view == "shop" then
+	if pane.trade then pane.trade:Hide() end
+	if view == "trade" then
+		pane.trade:Show()
+		self:TradeRefreshView(frame, pane)
+	elseif view == "shop" then
 		pane.shop:Show()
 		RefreshShop(self, frame, pane)
 	elseif view == "gift" then

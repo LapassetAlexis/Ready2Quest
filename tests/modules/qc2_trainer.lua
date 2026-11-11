@@ -378,8 +378,10 @@ do
 	QNS:TrainerMarkHolder("Oscar-Royaume")
 	root = Root()
 	hooks.MENU_UNIT_PARTY(nil, root, { unit = "party1", name = "Oscar" })
-	Check("[TRN] détenteur connu : « Voir sa fiche de dresseur »", #root.buttons == 1
-		and root.buttons[1].text == "Voir sa fiche de dresseur" and root.dividers == 1)
+	-- 3.0.0 : suivie de « Proposer un échange » (CaptureTrades.lua)
+	Check("[TRN] détenteur connu : « Voir sa fiche de dresseur »", #root.buttons == 2
+		and root.buttons[1].text == "Voir sa fiche de dresseur" and root.buttons[2].text == "Proposer un échange"
+		and root.dividers == 1)
 	root.buttons[1].fn()
 	Check("[TRN] clic : la fiche demandée et la fenêtre ouverte", QNS.trainerFrame:IsShown()
 		and QNS.trainerFrame.viewing == "Oscar-Royaume" and QNS:TrainerStatus("Oscar") == "pending")
@@ -387,7 +389,7 @@ do
 	TC.units.raid3 = { name = "Oscar" }
 	root = Root()
 	hooks.MENU_UNIT_RAID_PLAYER(nil, root, { unit = "raid3" })
-	Check("[TRN] menu sans nom : lu depuis l'unité", #root.buttons == 1)
+	Check("[TRN] menu sans nom : lu depuis l'unité", #root.buttons == 2)
 	Check("[TRN] menu mal formé : sans erreur", pcall(hooks.MENU_UNIT_PLAYER, nil, {}, nil)
 		and pcall(hooks.MENU_UNIT_PLAYER, nil, nil, { name = "Oscar" }))
 	_G.Menu = { ModifyMenu = function() error("menu inconnu") end }

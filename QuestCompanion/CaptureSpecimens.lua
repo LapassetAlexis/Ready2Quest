@@ -28,7 +28,9 @@
 -- Données (au compte, QuestCompanionDB.capture, voir ns:CaptureData) :
 --   capture.specimens[id] = { id, npc, stars (1..3), shiny (true|nil), zone
 --       (uiMapID|nil), at (time()|nil), by (nom du personnage|nil),
---       origin ("capture"|"migration"|"gift3"), name (texte|nil),
+--       origin ("capture"|"migration"|"gift3"|"trade"), name (texte|nil),
+--       3.0.0 échanges : tradedFrom (dernier donneur), tradedAt, firstOrigin
+--       (origine d'avant le premier échange), hops (échanges subis),
 --       trait (caractère, ns.PERSONALITY_TRAITS), size ("tiny"|"small"|
 --       "normal"|"large"|"giant") } -- 3.1.0 : SpecimenTraits.lua
 --   capture.codex[npc]    = { best = id (normale), bestShiny = id (brillante) }
@@ -50,6 +52,8 @@
 --       spécimen meilleur que tout ce que tu as de cette version devient la
 --       référence du Codex (l'ancienne passe en Réserve). Ne vérifie PAS la
 --       place : ns:CaptureBlockedReason le fait avant le lancer.
+--       3.0.0 : spec.keepReserve (échanges, CaptureTrades.lua) : jamais promu
+--       au Codex s'il y a déjà une référence de cette version.
 --   ns:SpecimenGet(id) -> spec|nil
 --   ns:CaptureCaughtCount() -> captures réussies (spécimens ; capture.count = espèces)
 --   ns:SpecimenList(filter) -> { spec, … } (table neuve, triée)
@@ -68,6 +72,7 @@
 --       2.15.0 : "better" = meilleur que la référence du Codex (relâcher ne
 --       fait jamais baisser tes étoiles : « Mets-le au Codex avant »)
 --   ns:SpecimenRelease(id) -> gain | false, raison (mêmes raisons)
+--   ns:SpecimenTake(id) -> spec | nil (3.0.0 : part sans paillettes, échange)
 --   ns:SpecimenLabel(spec) -> nom (avec « (brillant) »)
 -- Réserve
 --   ns:ReserveCapacity() -> CAPTURE_RESERVE_BASE + bonus
@@ -389,7 +394,9 @@ function ns:SpecimenAdd(spec)
 	local place, previous = "reserve", nil
 	if not old then
 		codex[field], place = id, "codex"
-	elseif not best or new.stars > best.stars then
+	elseif (not best or new.stars > best.stars) and not spec.keepReserve then
+		-- 3.0.0 : un spécimen reçu par échange (keepReserve) reste en Réserve,
+		-- marqué « Meilleur que ton spécimen du Codex » : le joueur choisit
 		codex[field], place, previous = id, "codex", old
 	end
 	if new.origin == "capture" then capture.caught = (tonumber(capture.caught) or 0) + 1 end
@@ -555,6 +562,19 @@ function ns:SpecimenRelease(id)
 	self:Print(self:F("SPECIMEN_RELEASED", self:SpecimenLabel(spec), gain, total))
 	Fire("SPECIMENS", "release", spec.id)
 	return gain
+end
+
+-- 3.0.0 : un spécimen de Réserve qui s'en va sans paillettes (échange conclu,
+-- CaptureTrades.lua). Jamais une référence du Codex. Rend le spécimen ou nil.
+function ns:SpecimenTake(id)
+	local capture = Store(self)
+	local spec = capture.specimens[tonumber(id) or id]
+	if not spec or self:SpecimenIsReference(spec.id) then return nil end
+	capture.specimens[spec.id] = nil
+	Touch(capture)
+	Sync(self, capture, spec.npc)
+	Fire("SPECIMENS", "take", spec.id)
+	return spec
 end
 
 -- ---------------------------------------------------------------------------

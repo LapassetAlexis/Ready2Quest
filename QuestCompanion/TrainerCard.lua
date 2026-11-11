@@ -876,14 +876,20 @@ local function ChatApi()
 	return nil
 end
 
-function ns:TrainerRegisterPrefix()
-pcall(ns.TrainerHookMenus, ns)
+-- 3.0.0 : un préfixe de messages d'addon auprès du client (fiche de
+-- dresseur, échanges de spécimens : CaptureTrades.lua). true si accepté.
+function ns.ChatRegisterPrefix(prefix)
 	local api = G("C_ChatInfo")
 	local fn = type(api) == "table" and api.RegisterAddonMessagePrefix or G("RegisterAddonMessagePrefix")
 	if type(fn) ~= "function" then return false end
-	local ok, result = pcall(fn, ns.TRAINER_PREFIX)
+	local ok, result = pcall(fn, prefix)
 	-- moteur récent : un code (0 = réussi) ; ancien : un booléen
-	state.prefixOk = ok and (result == nil or result == true or result == 0 or result == 1)
+	return (ok and (result == nil or result == true or result == 0 or result == 1)) and true or false
+end
+
+function ns:TrainerRegisterPrefix()
+pcall(ns.TrainerHookMenus, ns)
+	state.prefixOk = ns.ChatRegisterPrefix(ns.TRAINER_PREFIX)
 	return state.prefixOk and true or false
 end
 
@@ -898,12 +904,28 @@ function ns:TrainerBlocked()
 	return false
 end
 
-local function Queue(text, channel, target)
+-- 3.0.0 : `prefix` facultatif (fiche par défaut) : les échanges de
+-- spécimens (CaptureTrades.lua) passent par la même file et le même débit
+local function Queue(text, channel, target, prefix)
 	if #text > ns.TRAINER_MAX_MSG then return false end
 	local queue = state.queue
 	if #queue >= ns.TRAINER_QUEUE_MAX then table.remove(queue, 1) end
-	queue[#queue + 1] = { text = text, channel = channel, target = target, at = Clock() }
+	queue[#queue + 1] = { text = text, channel = channel, target = target, at = Clock(), prefix = prefix }
 	return true
+end
+
+-- Un message déjà mis en forme, sous un autre préfixe, dans la file commune
+function ns:ChatQueue(prefix, text, channel, target)
+	if not ChatApi() or type(text) ~= "string" then return false end
+	return Queue(text, channel, target, prefix)
+end
+
+-- Envoi immédiat, hors file (dernier mot avant un écran de chargement) : true si le client l'a pris
+function ns:ChatSendNow(prefix, text, channel, target)
+	local api = ChatApi()
+	if not api or type(text) ~= "string" or #text > ns.TRAINER_MAX_MSG or self:TrainerBlocked() then return false end
+	local ok, result = pcall(api.SendAddonMessage, prefix, text, channel, target)
+	return ok and (result == nil or result == true or result == 0) or false
 end
 
 -- Un message court : « type~version[~…] »
@@ -997,7 +1019,7 @@ function ns:TrainerPump(elapsed)
 		if msg.card then
 			if fresh then ExpandCard(self, msg) end
 		elseif fresh and api then
-			local ok, result = pcall(api.SendAddonMessage, ns.TRAINER_PREFIX, msg.text, msg.channel, msg.target)
+			local ok, result = pcall(api.SendAddonMessage, msg.prefix or ns.TRAINER_PREFIX, msg.text, msg.channel, msg.target)
 			-- moteur récent : le client refuse un message de trop (codes 3 et 8,
 			-- débit de l'addon ou du canal) ; il repart un peu plus tard, en tête
 			if ok and (result == 3 or result == 8) and (msg.tries or 0) < ns.TRAINER_RETRY_MAX then

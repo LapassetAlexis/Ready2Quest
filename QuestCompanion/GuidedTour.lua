@@ -98,7 +98,7 @@ local FR = {
 	-- visite du carnet (titres : le nom de l'onglet)
 	TOUR_B_evolution     = "Ton compagnon : son humeur, ses envies (faim, énergie, moral, curiosité) et ses effets. « Choisir… » change son allure.",
 	TOUR_B_menagerie     = "Le Codex : ton meilleur spécimen de chaque espèce. « À compléter » montre ce qui manque ; épingle une espèce pour qu'elle passe toujours au filet, « Localiser » dit où la trouver.",
-	TOUR_B_reserve       = "Tes spécimens en plus. « Mettre au Codex » en fait ta référence ; « Relâcher » rend des paillettes, à dépenser à l'Échoppe du dresseur. Chaque spécimen a son caractère (un petit effet quand ton compagnon le porte) et sa taille : un minuscule ou un géant, c'est rare !",
+	TOUR_B_reserve       = "Tes spécimens en plus. « Mettre au Codex » en fait ta référence ; « Relâcher » rend des paillettes, à dépenser à l'Échoppe du dresseur. Chaque spécimen a son caractère (un petit effet quand ton compagnon le porte) et sa taille : un minuscule ou un géant, c'est rare ! Et pour échanger avec un autre joueur : /qc echange <nom> (vue Échanges).",
 	TOUR_B_feats         = "Tes hauts faits et leurs points : certains donnent des titres et des apparences pour ton compagnon.",
 	TOUR_B_day           = "Trois missions par jour et trois par semaine : friandises, aides et paillettes à la clé.",
 	TOUR_B_progress      = "Chaque zone : lieux, récolte, quêtes. « n à compléter » compte les espèces de la zone sans 3 étoiles au Codex.",
@@ -140,7 +140,7 @@ local EN = {
 	TOUR_A5              = "Shift + right-click your companion: hunt mode. From 5 min to 1 h, every defeated monster goes to the net. Wariness: each capture of the same species in a day makes the next one harder.",
 	TOUR_B_evolution     = "Your companion: its mood, its needs (hunger, energy, mood, curiosity) and its effects. \"Choose…\" changes its look.",
 	TOUR_B_menagerie     = "The Codex: your best specimen of each species. \"To complete\" shows what's missing; pin a species so it always comes to the net, \"Locate\" tells where to find it.",
-	TOUR_B_reserve       = "Your extra specimens. \"Set in Codex\" makes one your reference; \"Release\" gives glitter, to spend at the Trainer's shop. Each specimen has its own character (a small effect when your companion wears it) and size: a tiny or a giant one is rare!",
+	TOUR_B_reserve       = "Your extra specimens. \"Set in Codex\" makes one your reference; \"Release\" gives glitter, to spend at the Trainer's shop. Each specimen has its own character (a small effect when your companion wears it) and size: a tiny or a giant one is rare! And to trade with another player: /qc trade <name> (Trades view).",
 	TOUR_B_feats         = "Your achievements and their points: some grant titles and looks for your companion.",
 	TOUR_B_day           = "Three missions a day and three a week: treats, aids and glitter as rewards.",
 	TOUR_B_progress      = "Each zone: places, gathering, quests. \"n to complete\" counts the zone's species without 3 stars in the Codex.",
