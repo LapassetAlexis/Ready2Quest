@@ -500,7 +500,7 @@ function Snap.Group(...)
 end
 
 -- ---------------------------------------------------------------------------
--- Contrôles de mise en page (tests/modules/windows_v2.lua, companion_v2.lua)
+-- Contrôles de mise en page (tests/modules/ui_windows.lua, ui_bricks.lua)
 -- ---------------------------------------------------------------------------
 -- blocs lisibles : textes (hors boutons) et boutons dessinés, visibles
 function Snap.Blocks(root)

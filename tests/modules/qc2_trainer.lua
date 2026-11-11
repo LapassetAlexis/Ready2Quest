@@ -1,7 +1,11 @@
 -- QuestCompanion 2.0, lot 5 : fiche de dresseur (TrainerCard.lua).
--- Messages d'addon simulés entre deux « joueurs » (ce que l'un envoie est
--- rejoué chez l'autre), limite de débit, combat, refus, absence de réponse,
--- découverte (groupe, guilde, cible), menu du clic droit, infobulle, fenêtre.
+-- Protocole (préfixe QCTrainer, messages R/C/N/H/A/P versionnés, fiche
+-- encodée, morceaux sous 255 octets) : sérialisation et texte piégé, version
+-- future, messages d'addon simulés entre deux « joueurs » (ce que l'un envoie
+-- est rejoué chez l'autre), débit sortant et entrant, combat, refus, absence
+-- de réponse, morceaux incohérents, usurpation, découverte (groupe, guilde,
+-- cible), cache des détenteurs (clés converties), menu du clic droit,
+-- infobulle, fenêtre et /qc fiche.
 local Check, Say, ResetWorld, QNS, Mock = T.Check, T.Say, T.ResetWorld, T.QNS, T.Mock
 
 local TC = { saved = {} }
@@ -105,20 +109,19 @@ do
 	Check("[TRN] préfixe enregistré auprès du client", QNS:TrainerRegisterPrefix() and TC.prefixes[1] == "QCTrainer"
 		and #QNS.TRAINER_PREFIX <= 16)
 	local text = QNS.TrainerEncode({ n = "A;b=c,d~e|f:g%h", l = { "x,y", "z" }, k = 3 })
-	Check("[TRN] encodage : aucun caractère réservé en clair", not text:find("[|~]") and select(2, text:gsub(";", "")) == 2, text)
 	local back = QNS.TrainerDecode(text)
-	Check("[TRN] aller-retour d'un texte piégé", QNS.TrainerUnescape(back.n) == "A;b=c,d~e|f:g%h")
-	Check("[TRN] décodage tolérant : morceaux sans « = » ignorés", next(QNS.TrainerDecode("n'importe;quoi")) == nil)
+	Check("[TRN] encodage : aucun caractère réservé en clair, aller-retour d'un texte piégé", not text:find("[|~]")
+		and select(2, text:gsub(";", "")) == 2 and QNS.TrainerUnescape(back.n) == "A;b=c,d~e|f:g%h", text)
 	local card = QNS:TrainerParseCard("p=9;n=Bob-Royaume;zz=inconnu;sp=12;st=40;futur=1;v2=7002,1,3,rare,beast,Griffe;b=ek%3A2,xx%3A1")
-	Check("[TRN] version plus récente et champs inconnus : lus quand même", card.proto == 9 and card.name == "Bob-Royaume"
+	Check("[TRN] décodage tolérant (morceaux sans « = ») ; version plus récente et champs inconnus : lus quand même",
+		next(QNS.TrainerDecode("n'importe;quoi")) == nil and card.proto == 9 and card.name == "Bob-Royaume"
 		and card.species == 12 and card.total == 40 and card.showcase[2] and card.showcase[2].npc == 7002
 		and card.showcase[2].shiny and card.showcase[2].stars == 3 and card.badges.ek == 2)
 	local hostile = QNS:TrainerParseCard("n=" .. QNS.TrainerEscape("|cffff0000Méchant|r|Tinterface\\x:0|t")
 		.. ";cl=" .. string.rep("x", 400) .. ";cy=99;cr=dieu")
-	Check("[TRN] texte reçu désarmé : pas de code couleur ni d'icône", hostile.name:find("||c", 1, true) ~= nil
-		and not hostile.name:gsub("||", ""):find("|", 1, true), hostile.name)
-	Check("[TRN] valeurs bornées (nom long, étoiles, rang inconnu)", #hostile.companion.name <= 48
-		and hostile.companion.stars == 3 and hostile.companion.class == nil)
+	Check("[TRN] texte reçu désarmé (ni couleur ni icône), valeurs bornées (nom long, étoiles, rang inconnu)",
+		hostile.name:find("||c", 1, true) ~= nil and not hostile.name:gsub("||", ""):find("|", 1, true)
+		and #hostile.companion.name <= 48 and hostile.companion.stars == 3 and hostile.companion.class == nil, hostile.name)
 	Check("[TRN] fiche vide : sans erreur", pcall(QNS.TrainerParseCard, QNS, "") and pcall(QNS.TrainerParseCard, QNS, nil))
 end
 
@@ -127,28 +130,26 @@ do
 	Say("-- fiche de dresseur : ma fiche")
 	TC.Reset()
 	TC.Captures()
-	Check("[TRN] vitrine : une créature non capturée refusée", not QNS:TrainerSetShowcase(1, "cap:9999"))
-	Check("[TRN] vitrine : la brillante pas capturée refusée", not QNS:TrainerSetShowcase(1, "cap:7001:s"))
-	Check("[TRN] vitrine : emplacement hors limites refusé", not QNS:TrainerSetShowcase(4, "cap:7001"))
+	Check("[TRN] vitrine refusée : créature non capturée, brillante pas capturée, emplacement hors limites",
+		not QNS:TrainerSetShowcase(1, "cap:9999") and not QNS:TrainerSetShowcase(1, "cap:7001:s")
+		and not QNS:TrainerSetShowcase(4, "cap:7001"))
 	QNS:TrainerSetShowcase(1, "cap:7002:s")
 	QNS:TrainerSetShowcase(3, "cap:7003")
 	QNS:TrainerSetShowcase(2, "cap:7003")
 	local showcase = QNS:TrainerShowcase()
 	Check("[TRN] vitrine : une créature n'occupe qu'un emplacement", showcase[2] == "cap:7003" and not showcase[3])
 	local card = QNS:TrainerOwnCard()
-	Check("[TRN] nom complet avec royaume", card.name == "Testeur-Royaume", card.name)
-	Check("[TRN] première capture : la plus ancienne", card.first == TC.now - 86400 * 10)
-	Check("[TRN] chiffres : espèces capturées / total, brillantes", card.species == 3 and card.total >= 3
+	Check("[TRN] ma fiche : nom avec royaume, première capture la plus ancienne, espèces / total, brillantes",
+		card.name == "Testeur-Royaume" and card.first == TC.now - 86400 * 10 and card.species == 3 and card.total >= 3
 		and card.shinies == 1 and (card.shinySeen or 0) >= 1, tostring(card.species) .. "/" .. tostring(card.total))
 	Check("[TRN] vitrine : brillante et élite", card.showcase[1].npc == 7002 and card.showcase[1].shiny
 		and card.showcase[1].typeKey == "beast" and card.showcase[2].npc == 7003 and card.showcase[3] == nil)
 	-- version assemblée (lots 1 à 3 présents) : 3 espèces, pas encore de titre
 	-- (le premier vient à 10), aucun sceau, étoiles de la vitrine lues (1 par défaut)
-	Check("[TRN] avec les lots 1 à 3 : pas encore de titre ni de sceau, étoiles lues", card.title == nil
-		and (card.seals or 0) == 0 and card.showcase[2].stars == 1, tostring(card.title) .. " / " .. tostring(card.seals)
-		.. " / " .. tostring(card.showcase[2].stars))
-	Check("[TRN] compagnon : la mascotte, son modèle", card.companion and card.companion.mascot
-		and card.companion.display ~= nil and card.companion.name == QNS:CompanionName())
+	Check("[TRN] pas encore de titre ni de sceau, étoiles lues ; compagnon : la mascotte, son modèle", card.title == nil
+		and (card.seals or 0) == 0 and card.showcase[2].stars == 1 and card.companion and card.companion.mascot
+		and card.companion.display ~= nil and card.companion.name == QNS:CompanionName(),
+		tostring(card.title) .. " / " .. tostring(card.seals) .. " / " .. tostring(card.showcase[2].stars))
 	-- les lots 1, 2 et 3 présents
 	QNS.TrainerTitle = function() return "Maître des bêtes" end
 	QNS.MenagerieSeals = function() return { 1413, 1411, 1429 } end
@@ -159,14 +160,12 @@ do
 		comfort = { id = "decay_hunger", value = 0.2, label = "faim -20 %" } } end
 	QNS:CompanionData().appearance = "cap:7002:s"
 	card = QNS:TrainerOwnCard()
-	Check("[TRN] lot 3 : titre, sceaux, badges par continent", card.title == "Maître des bêtes" and card.seals == 3
-		and card.badges.ka == 2 and card.badges.ek == 1)
-	Check("[TRN] lot 1 : étoiles de la vitrine et du compagnon", card.showcase[1].stars == 3 and card.showcase[2].stars == 2
-		and card.companion.stars == 3)
-	Check("[TRN] lot 2 : effets du compagnon", card.companion.hunt == "repère les Bêtes" and card.companion.comfort == "faim -20 %"
-		and card.companion.strength == 2.5 and card.companion.active == false)
-	Check("[TRN] compagnon capturé : brillant, rare, son npcID", card.companion.npc == 7002 and card.companion.shiny
-		and card.companion.class == "rare" and not card.companion.mascot)
+	Check("[TRN] titre, sceaux, badges par continent ; étoiles de la vitrine et du compagnon", card.title == "Maître des bêtes"
+		and card.seals == 3 and card.badges.ka == 2 and card.badges.ek == 1 and card.showcase[1].stars == 3
+		and card.showcase[2].stars == 2 and card.companion.stars == 3)
+	Check("[TRN] compagnon capturé (brillant, rare, npcID) et ses effets", card.companion.hunt == "repère les Bêtes"
+		and card.companion.comfort == "faim -20 %" and card.companion.strength == 2.5 and card.companion.active == false
+		and card.companion.npc == 7002 and card.companion.shiny and card.companion.class == "rare" and not card.companion.mascot)
 	local text = QNS:TrainerSerializeCard(card)
 	local back = QNS:TrainerParseCard(text)
 	-- effets : envoyés en identifiant + valeur, libellé refait dans la langue du destinataire
@@ -198,52 +197,52 @@ do
 	-- « Bob » nous demande notre fiche
 	QNS.TRAINER_CHUNK = 80
 	QNS:TrainerOnAddonMessage("QCTrainer", "R~1", "WHISPER", "Bob-Royaume")
-	Check("[TRN] demande reçue : Bob noté comme détenteur", QNS:TrainerIsHolder("Bob"))
+	local holder = QNS:TrainerIsHolder("Bob")
 	TC.Flush()
 	local answer = TC.Take()
-	Check("[TRN] réponse : la fiche en morceaux, en chuchotement à Bob", #answer > 1 and TC.Kinds(answer):find("^C") ~= nil
-		and answer[1].channel == "WHISPER" and answer[1].target == "Bob-Royaume" and answer[1].prefix == "QCTrainer",
-		TC.Kinds(answer))
+	Check("[TRN] demande reçue : Bob détenteur, la fiche en morceaux C, en chuchotement à Bob", holder and #answer > 1
+		and TC.Kinds(answer):find("^C") ~= nil and answer[1].channel == "WHISPER" and answer[1].target == "Bob-Royaume"
+		and answer[1].prefix == "QCTrainer", TC.Kinds(answer))
 	-- nous demandons la fiche de Bob : la réponse ci-dessus joue la sienne
 	QNS:TrainerOpen("Bob")
 	TC.Flush()
 	local request = TC.Take()
-	Check("[TRN] demande envoyée : R en chuchotement", TC.Kinds(request) == "R" and request[1].target == "Bob-Royaume")
 	local f = QNS.trainerFrame
-	Check("[TRN] fenêtre : demande en cours", f:IsShown() and f.state == "pending" and f.status.text:find("Bob", 1, true) ~= nil
-		and not f.body:IsShown(), f.state)
+	Check("[TRN] demande envoyée : R en chuchotement, fenêtre en attente", TC.Kinds(request) == "R"
+		and request[1].target == "Bob-Royaume" and f:IsShown() and f.state == "pending"
+		and f.status.text:find("Bob", 1, true) ~= nil and not f.body:IsShown(), f.state)
 	-- morceaux dans le désordre, un doublon
 	local shuffled = { answer[#answer], answer[1] }
 	for index = 2, #answer - 1 do shuffled[#shuffled + 1] = answer[index] end
 	shuffled[#shuffled + 1] = answer[1]
 	TC.Deliver(shuffled, "Bob-Royaume")
 	local card = QNS:TrainerCard("Bob")
-	Check("[TRN] fiche reçue, recollée dans le désordre", card and card.name == "Testeur-Royaume" and card.showcase[1]
-		and card.showcase[1].npc == 7001 and QNS:TrainerStatus("Bob") == "ok")
+	Check("[TRN] fiche reçue, recollée dans le désordre (doublon compris)", card and card.name == "Testeur-Royaume"
+		and card.showcase[1] and card.showcase[1].npc == 7001 and QNS:TrainerStatus("Bob") == "ok")
 	-- (la fiche rejouée est la nôtre : son champ « n » dit Testeur, le titre dit qui l'a vraiment envoyée)
-	Check("[TRN] fenêtre : la fiche affichée, sans réglage de partage", f.state == "card" and f.body:IsShown()
+	Check("[TRN] fenêtre : la fiche (chiffres, vitrine), sans réglage de partage", f.state == "card" and f.body:IsShown()
 		and f.header.title.text == "Bob" and not f.shareToggle:IsShown() and f.retryButton:IsShown()
-		and not f.tiles[1].picker:IsShown())
-	Check("[TRN] fenêtre : chiffres et vitrine", f.lines[2].text:find("3", 1, true) ~= nil and f.tiles[1].name.text == "Kodo"
-		and f.tiles[1].item and f.tiles[1].item.npc == 7001, f.lines[2].text .. " / " .. tostring(f.tiles[1].name.text)
-		.. " / " .. tostring(f.tiles[1].model and f.tiles[1].model.npc))
+		and not f.tiles[1].picker:IsShown() and f.lines[2].text:find("3", 1, true) ~= nil and f.tiles[1].name.text == "Kodo"
+		and f.tiles[1].item and f.tiles[1].item.npc == 7001, f.lines[2].text .. " / " .. tostring(f.tiles[1].name.text))
 	-- une seconde demande trop tôt : pas de nouvel envoi (débit par joueur)
 	QNS:TrainerOnAddonMessage("QCTrainer", "R~1", "WHISPER", "Bob-Royaume")
 	Check("[TRN] demandes répétées : une fiche toutes les 10 s au plus", TC.Flush() == 0)
 	-- limite de débit : le seau se vide, puis un message par seconde
 	QNS:TrainerResetSession()
 	for index = 1, 10 do QNS:TrainerSend("P", "WHISPER", "Joueur" .. index .. "-Royaume") end
-	Check("[TRN] débit : 6 messages d'affilée au plus", QNS:TrainerPump(0) == 6)
-	Check("[TRN] débit : puis un par seconde", QNS:TrainerPump(1) == 1 and QNS:TrainerPump(0.2) == 0)
+	local burst = QNS:TrainerPump(0) == 6
+	local perSecond = QNS:TrainerPump(1) == 1 and QNS:TrainerPump(0.2) == 0
 	Mock:Advance(1)
-	Check("[TRN] l'horloge de l'addon vide la file", #TC.sent == 8, #TC.sent)
+	Check("[TRN] débit : 6 d'affilée au plus, puis un par seconde ; l'horloge de l'addon vide la file", burst and perSecond
+		and #TC.sent == 8, #TC.sent)
 	-- combat, verrou de messagerie : rien ne part, la file attend
 	TC.combat = true
-	Check("[TRN] en combat : rien n'est envoyé", QNS:TrainerPump(10) == 0)
+	local combat = QNS:TrainerPump(10) == 0
 	TC.combat, TC.lockdown = false, true
-	Check("[TRN] verrou de messagerie (rencontre) : rien n'est envoyé", QNS:TrainerPump(10) == 0)
+	local lockdown = QNS:TrainerPump(10) == 0
 	TC.lockdown = false
-	Check("[TRN] hors combat : la file repart", QNS:TrainerPump(10) == 2)
+	Check("[TRN] en combat, verrou de messagerie (rencontre) : rien ; ensuite la file repart", combat and lockdown
+		and QNS:TrainerPump(10) == 2)
 	Check("[TRN] message trop long : refusé", not QNS:TrainerSend("Z", "WHISPER", "Bob-Royaume", string.rep("x", 300)))
 	QNS.TRAINER_CHUNK = 200
 	f:Hide()
@@ -256,11 +255,12 @@ do
 	QNS:DB().trainerShare = false
 	QNS:TrainerOnAddonMessage("QCTrainer", "R~1", "WHISPER", "Carl-Royaume")
 	TC.Flush()
-	Check("[TRN] partage coupé : la demande reçoit un refus", TC.Kinds(TC.Take()) == "N")
+	local refusal = TC.Kinds(TC.Take()) == "N"
 	QNS:TrainerOnAddonMessage("QCTrainer", "H~1", "PARTY", "Carl-Royaume")
 	QNS:TrainerOnAddonMessage("QCTrainer", "P~1", "WHISPER", "Carl-Royaume")
 	TC.Flush()
-	Check("[TRN] partage coupé : ni accusé, ni annonce", #TC.sent == 0 and not QNS:TrainerAnnounce("GUILD"))
+	Check("[TRN] partage coupé : la demande reçoit un refus N, ni accusé, ni annonce", refusal and #TC.sent == 0
+		and not QNS:TrainerAnnounce("GUILD"))
 	QNS:DB().trainerShare = true
 	QNS:TrainerOpen("Dave-Autre Royaume")
 	TC.Flush()
@@ -273,11 +273,11 @@ do
 	QNS:TrainerOpen("Eve")
 	Mock.now = Mock.now + 5
 	QNS:TrainerPump(0)
-	Check("[TRN] 5 s sans réponse : toujours en attente", f.state == "pending")
+	local pending = f.state == "pending"
 	Mock.now = Mock.now + 8
 	QNS:TrainerPump(0)
-	Check("[TRN] pas de réponse : « Pas de fiche reçue »", f.state == "none" and f.status.text:find("Pas de fiche reçue", 1, true) ~= nil
-		and f.statusHint.text ~= "", f.status.text)
+	Check("[TRN] 5 s sans réponse : en attente ; plus : « Pas de fiche reçue »", pending and f.state == "none"
+		and f.status.text:find("Pas de fiche reçue", 1, true) ~= nil and f.statusHint.text ~= "", f.status.text)
 	f.retryButton:Click()
 	Check("[TRN] Redemander : nouvelle demande en attente", f.state == "pending" and TC.Kinds(TC.Take()) == "R")
 	f:Hide()
@@ -302,7 +302,7 @@ do
 	QNS:TrainerOnAddonMessage("QCTrainer", "bonjour", "PARTY", "Ivy-Royaume")
 	QNS:TrainerOnAddonMessage("QCTrainer", "H~1", "PARTY", "Testeur-Royaume")
 	QNS:TrainerOnAddonMessage("QCTrainer", "H~1", "PARTY", SECRET)
-	Check("[TRN] autre préfixe, texte illisible, soi-même : ignorés", not QNS:TrainerIsHolder("Hal")
+	Check("[TRN] autre préfixe, texte illisible, soi-même, expéditeur secret : ignorés", not QNS:TrainerIsHolder("Hal")
 		and not QNS:TrainerIsHolder("Ivy") and next(QNS:TrainerHolders(), nil) ~= nil and #TC.sent == 0)
 	QNS:TrainerOnAddonMessage("QCTrainer", "Z~3~nouveau", "WHISPER", "Jo-Royaume")
 	TC.Flush()
@@ -313,15 +313,15 @@ do
 	QNS:TrainerOnEvent("GROUP_ROSTER_UPDATE")
 	TC.Flush()
 	sent = TC.Take()
-	Check("[TRN] entrée en groupe : une annonce au groupe", TC.Kinds(sent) == "H" and sent[1].channel == "PARTY")
+	local party = TC.Kinds(sent) == "H" and sent[1].channel == "PARTY"
 	TC.raid = true
 	QNS:TrainerOnEvent("GROUP_ROSTER_UPDATE")
 	TC.guild = true
 	QNS:TrainerOnEvent("PLAYER_GUILD_UPDATE")
 	TC.Flush()
 	sent = TC.Take()
-	Check("[TRN] passage en raid, guilde : une annonce chacun", TC.Kinds(sent) == "H,H" and sent[1].channel == "RAID"
-		and sent[2].channel == "GUILD")
+	Check("[TRN] annonces H : une à l'entrée en groupe, une en raid, une à la guilde", party and TC.Kinds(sent) == "H,H"
+		and sent[1].channel == "RAID" and sent[2].channel == "GUILD")
 	QNS:TrainerOnEvent("PLAYER_GUILD_UPDATE")
 	Check("[TRN] guilde : pas deux annonces dans la minute", TC.Flush() == 0)
 	-- cible : une sonde par joueur et par session, hors combat
@@ -332,23 +332,26 @@ do
 	sent = TC.Take()
 	Check("[TRN] cible un joueur : une sonde silencieuse, une seule", TC.Kinds(sent) == "P" and sent[1].channel == "WHISPER"
 		and sent[1].target == "Kim-Royaume")
+	local probed = {}
 	TC.units.target = { name = "Lou" }
 	TC.combat = true
-	Check("[TRN] en combat : pas de sonde", not QNS:TrainerOnTarget("target"))
+	if QNS:TrainerOnTarget("target") then probed[#probed + 1] = "combat" end
 	TC.combat = false
 	TC.units.target = { name = "Max", faction = "Horde" }
-	Check("[TRN] autre faction : pas de sonde (chuchotement impossible)", not QNS:TrainerOnTarget("target"))
+	if QNS:TrainerOnTarget("target") then probed[#probed + 1] = "autre faction" end
 	TC.units.target = { name = "Ned", player = false }
-	Check("[TRN] un PNJ : pas de sonde", not QNS:TrainerOnTarget("target"))
+	if QNS:TrainerOnTarget("target") then probed[#probed + 1] = "PNJ" end
 	TC.units.target = { name = SECRET }
 	_G.issecretvalue = function(v) return v == SECRET end
-	Check("[TRN] nom secret : pas de sonde, sans erreur", pcall(QNS.TrainerOnTarget, QNS, "target")
-		and not QNS:TrainerOnTarget("target"))
+	local ok, res = pcall(QNS.TrainerOnTarget, QNS, "target")
+	if not ok or res then probed[#probed + 1] = "nom secret" end
 	_G.issecretvalue = TC.saved.issecretvalue
+	Check("[TRN] pas de sonde : en combat, autre faction (chuchotement impossible), PNJ, nom secret (sans erreur)",
+		#probed == 0, table.concat(probed, ", "))
 	-- cache des détenteurs : oublié au bout de 14 jours
 	TC.now = TC.now + 15 * 86400
-	Check("[TRN] détenteur pas revu depuis 15 jours : oublié", not QNS:TrainerIsHolder("Fay"))
-	Check("[TRN] ménage du cache", QNS:TrainerPruneHolders() >= 1 and next(QNS:TrainerHolders()) == nil)
+	Check("[TRN] détenteur pas revu depuis 15 jours : oublié, ménage du cache", not QNS:TrainerIsHolder("Fay")
+		and QNS:TrainerPruneHolders() >= 1 and next(QNS:TrainerHolders()) == nil)
 	-- sans API de messages : rien, sans erreur
 	_G.C_ChatInfo = nil
 	Check("[TRN] sans C_ChatInfo : rien n'est envoyé, sans erreur", not QNS:TrainerSend("H", "GUILD")
@@ -363,9 +366,8 @@ do
 	_G.Menu = { ModifyMenu = function(tag, fn) hooks[tag] = fn end }
 	QNS.trainerState.menuHooked = nil
 	local count = QNS:TrainerHookMenus()
-	Check("[TRN] menus de joueur : groupe, raid, ami, joueur", count >= 4 and hooks.MENU_UNIT_PLAYER and hooks.MENU_UNIT_PARTY
-		and hooks.MENU_UNIT_RAID_PLAYER and hooks.MENU_UNIT_FRIEND)
-	Check("[TRN] accroches posées une seule fois", QNS:TrainerHookMenus() == count)
+	Check("[TRN] menus de joueur (groupe, raid, ami, joueur), accrochés une seule fois", count >= 4 and hooks.MENU_UNIT_PLAYER
+		and hooks.MENU_UNIT_PARTY and hooks.MENU_UNIT_RAID_PLAYER and hooks.MENU_UNIT_FRIEND and QNS:TrainerHookMenus() == count)
 	local function Root()
 		local root = { buttons = {}, dividers = 0 }
 		function root:CreateDivider() self.dividers = self.dividers + 1 end
@@ -378,8 +380,10 @@ do
 	QNS:TrainerMarkHolder("Oscar-Royaume")
 	root = Root()
 	hooks.MENU_UNIT_PARTY(nil, root, { unit = "party1", name = "Oscar" })
-	Check("[TRN] détenteur connu : « Voir sa fiche de dresseur »", #root.buttons == 1
-		and root.buttons[1].text == "Voir sa fiche de dresseur" and root.dividers == 1)
+	-- 3.0.0 : suivie de « Proposer un échange » (CaptureTrades.lua)
+	Check("[TRN] détenteur connu : « Voir sa fiche de dresseur »", #root.buttons == 2
+		and root.buttons[1].text == "Voir sa fiche de dresseur" and root.buttons[2].text == "Proposer un échange"
+		and root.dividers == 1)
 	root.buttons[1].fn()
 	Check("[TRN] clic : la fiche demandée et la fenêtre ouverte", QNS.trainerFrame:IsShown()
 		and QNS.trainerFrame.viewing == "Oscar-Royaume" and QNS:TrainerStatus("Oscar") == "pending")
@@ -387,25 +391,23 @@ do
 	TC.units.raid3 = { name = "Oscar" }
 	root = Root()
 	hooks.MENU_UNIT_RAID_PLAYER(nil, root, { unit = "raid3" })
-	Check("[TRN] menu sans nom : lu depuis l'unité", #root.buttons == 1)
-	Check("[TRN] menu mal formé : sans erreur", pcall(hooks.MENU_UNIT_PLAYER, nil, {}, nil)
-		and pcall(hooks.MENU_UNIT_PLAYER, nil, nil, { name = "Oscar" }))
+	Check("[TRN] menu sans nom : lu depuis l'unité ; mal formé : sans erreur", #root.buttons == 2
+		and pcall(hooks.MENU_UNIT_PLAYER, nil, {}, nil) and pcall(hooks.MENU_UNIT_PLAYER, nil, nil, { name = "Oscar" }))
 	_G.Menu = { ModifyMenu = function() error("menu inconnu") end }
 	QNS.trainerState.menuHooked = nil
-	Check("[TRN] ModifyMenu en erreur : rien, sans erreur", QNS:TrainerHookMenus() == 0)
+	local failing = QNS:TrainerHookMenus() == 0
 	_G.Menu = nil
 	QNS.trainerState.menuHooked = nil
-	Check("[TRN] sans Menu : rien, sans erreur", QNS:TrainerHookMenus() == 0)
+	Check("[TRN] ModifyMenu en erreur, ou sans Menu : rien, sans erreur", failing and QNS:TrainerHookMenus() == 0)
 	-- infobulle : une ligne pour les détenteurs
 	local listed = false
 	for _, fn in ipairs(QNS.UNIT_TOOLTIP_LINES or {}) do if fn then listed = true end end
-	Check("[TRN] ligne d'infobulle inscrite auprès de Tooltips.lua", listed)
 	TC.units.mouseover = { name = "Oscar" }
 	GameTooltip.GetUnit = function() return "Oscar", "mouseover" end
 	GameTooltip:ClearLines()
 	for _, fn in ipairs(QNS.UNIT_TOOLTIP_LINES) do fn(QNS, GameTooltip, { guid = "Player-1-0000000A" }) end
-	Check("[TRN] infobulle d'un détenteur : « Dresseur QuestCompanion »", GameTooltip.lines[1] == "Dresseur QuestCompanion",
-		GameTooltip.lines[1])
+	Check("[TRN] ligne d'infobulle inscrite auprès de Tooltips.lua : « Dresseur QuestCompanion » pour un détenteur", listed
+		and GameTooltip.lines[1] == "Dresseur QuestCompanion", GameTooltip.lines[1])
 	TC.units.mouseover = { name = "Paul" }
 	GameTooltip.GetUnit = function() return "Paul", "mouseover" end
 	GameTooltip:ClearLines()
@@ -435,13 +437,12 @@ do
 	QNS:DB().journalTracker = false
 	QNS:ToggleJournal(true)
 	local j = QNS.journalFrame
-	Check("[TRN] carnet : bouton « Ma fiche de dresseur » dans le pied", j and j.trainerButton
-		and j.trainerButton:GetText() == "Ma fiche de dresseur")
+	local button = j and j.trainerButton and j.trainerButton:GetText() == "Ma fiche de dresseur"
 	j.trainerButton:Click()
 	local f = QNS.trainerFrame
-	Check("[TRN] ma fiche : ouverte, avec le réglage de partage", f:IsShown() and f.viewing == nil and f.state == "card"
-		and f.shareToggle:IsShown() and f.shareToggle:GetChecked() and not f.retryButton:IsShown())
-	Check("[TRN] ma fiche : par-dessus le carnet (non exclusive)", j:IsShown())
+	Check("[TRN] carnet : « Ma fiche de dresseur » l'ouvre par-dessus, avec le réglage de partage", button and f:IsShown()
+		and f.viewing == nil and f.state == "card" and f.shareToggle:IsShown() and f.shareToggle:GetChecked()
+		and not f.retryButton:IsShown() and j:IsShown())
 	local picker = f.tiles[1].picker
 	Check("[TRN] vitrine : une liste par emplacement, les captures (et la brillante)", picker:IsShown()
 		and #picker.options == 5 and picker.value == "none", #picker.options)
@@ -454,16 +455,18 @@ do
 		and f.tiles[1].model.npc == 7002 and f.tiles[1].name.text:find("brillant", 1, true) ~= nil,
 		tostring(QNS:TrainerShowcase()[1]) .. " / " .. tostring(f.tiles[1].model.npc) .. " / " .. tostring(f.tiles[1].name.text))
 	f.shareToggle:Click()
-	Check("[TRN] interrupteur : partage coupé", QNS:DB().trainerShare == false and not f.shareToggle:GetChecked())
+	local off = QNS:DB().trainerShare == false and not f.shareToggle:GetChecked()
 	f.shareToggle:Click()
 	local row
 	for _, r in ipairs(QNS.DAILY_OPTION_ROWS or {}) do if r.key == "trainerShare" then row = r end end
-	Check("[TRN] réglage dans « Au jour le jour »", row ~= nil and QNS:DB().trainerShare == true)
+	Check("[TRN] interrupteur : partage coupé puis remis ; réglage dans « Au jour le jour »", off and row ~= nil
+		and QNS:DB().trainerShare == true)
 	f:Hide()
 	QNS:HandleCommand("fiche")
-	Check("[TRN] /qc fiche : ma fiche", f:IsShown() and f.viewing == nil)
+	local mine = f:IsShown() and f.viewing == nil
 	QNS:HandleCommand("fiche zoe")
-	Check("[TRN] /qc fiche zoe : demande à Zoe", f.viewing == "Zoe-Royaume" and QNS:TrainerStatus("Zoe") == "pending")
+	Check("[TRN] /qc fiche : ma fiche ; /qc fiche zoe : demande à Zoe", mine and f.viewing == "Zoe-Royaume"
+		and QNS:TrainerStatus("Zoe") == "pending")
 	f:Hide()
 	j:Hide()
 	-- textes : français et anglais, mêmes clés
@@ -485,47 +488,49 @@ do
 	TC.combat = true
 	QNS:TrainerOnAddonMessage("QCTrainer", "R~1", "WHISPER", "Bob-Royaume")
 	TC.Flush()
-	Check("[TRN] demande en combat : fiche pas construite", builds == 0 and #TC.sent == 0, builds)
+	local combat = builds == 0 and #TC.sent == 0
 	TC.combat = false
 	TC.Flush()
-	Check("[TRN] hors combat : construite une fois, envoyée", builds == 1 and TC.Kinds(TC.Take()):find("^C") ~= nil, builds)
+	local once = builds == 1 and TC.Kinds(TC.Take()):find("^C") ~= nil
 	QNS:TrainerOnAddonMessage("QCTrainer", "R~1", "WHISPER", "Cid-Royaume")
 	TC.Flush()
-	Check("[TRN] autre demande, rien n'a changé : fiche en cache", builds == 1 and #TC.Take() > 0, builds)
+	Check("[TRN] demande en combat : fiche pas construite ; hors combat : construite une fois, puis en cache", combat
+		and once and builds == 1 and #TC.Take() > 0, builds)
 	local capture = QNS:CaptureData()
 	capture.serial = (tonumber(capture.serial) or 0) + 1
 	QNS:TrainerOnAddonMessage("QCTrainer", "R~1", "WHISPER", "Dan-Royaume")
 	TC.Flush()
-	Check("[TRN] captures changées : refaite", builds == 2, builds)
+	local rebuilt = builds == 2
 	QNS:TrainerSetShowcase(1, "cap:7001")
 	QNS:TrainerOnAddonMessage("QCTrainer", "R~1", "WHISPER", "Eli-Royaume")
 	TC.Flush()
 	TC.Take()
-	Check("[TRN] vitrine changée : refaite", builds == 3, builds)
+	Check("[TRN] refaite quand les captures ou la vitrine changent", rebuilt and builds == 3, builds)
 	QNS.TrainerOwnCard = own
 
 	-- première capture : la date figée du lot 1, pas `at`
 	capture.firstAt = TC.now - 86400 * 30
-	Check("[TRN] première capture : capture.firstAt", QNS:TrainerOwnCard().first == TC.now - 86400 * 30)
+	local frozen = QNS:TrainerOwnCard().first == TC.now - 86400 * 30
 	capture.firstAt = nil
 	capture.creatures[7001].firstAt = TC.now - 86400 * 20
-	Check("[TRN] … sinon la plus ancienne firstAt des fiches", QNS:TrainerOwnCard().first == TC.now - 86400 * 20)
+	Check("[TRN] première capture : capture.firstAt, sinon la plus ancienne firstAt des fiches", frozen
+		and QNS:TrainerOwnCard().first == TC.now - 86400 * 20)
 
 	-- noms : casse, accents, royaume à trait d'union
 	TC.Reset()
 	QNS:TrainerOnAddonMessage("QCTrainer", "H~1", "PARTY", "Bob-Hyjal")
-	Check("[TRN] « Bob-hyjal » : détenteur reconnu", QNS:TrainerIsHolder("Bob-hyjal") and QNS:TrainerIsHolder("bob-HYJAL"))
-	Check("[TRN] clé : minuscules, accents compris", QNS:TrainerKey("Élodie") == "élodie-royaume"
+	Check("[TRN] clé : casse et accents (« Bob-hyjal », « élodie-royaume »)", QNS:TrainerIsHolder("Bob-hyjal")
+		and QNS:TrainerIsHolder("bob-HYJAL") and QNS:TrainerKey("Élodie") == "élodie-royaume"
 		and QNS:TrainerKey("élodie-Royaume") == "élodie-royaume", tostring(QNS:TrainerKey("Élodie")))
 	Check("[TRN] menu : royaume avec trait d'union", QNS:TrainerMenuTarget({ name = "Kim", server = "Azjol-Nerub" }) == "Kim-AzjolNerub"
 		and QNS:TrainerFullName("Kim-Azjol-Nerub") == "Kim-AzjolNerub")
 	TC.Take()
 	QNS:HandleCommand("fiche élodie")
 	local f = QNS.trainerFrame
-	Check("[TRN] /qc fiche élodie : demande en cours", f:IsShown() and f.state == "pending")
+	local pending = f:IsShown() and f.state == "pending"
 	QNS:TrainerOnAddonMessage("QCTrainer", "C~1~4~1~1~n=" .. QNS.TrainerEscape("Élodie-Royaume") .. ";sp=7", "WHISPER", "Élodie-Royaume")
-	Check("[TRN] … fiche reçue de « Élodie » : affichée", f.state == "card" and QNS:TrainerStatus("élodie") == "ok"
-		and QNS:TrainerCard("ÉLODIE") ~= nil, f.state)
+	Check("[TRN] /qc fiche élodie : demande en cours, fiche reçue de « Élodie » affichée", pending and f.state == "card"
+		and QNS:TrainerStatus("élodie") == "ok" and QNS:TrainerCard("ÉLODIE") ~= nil, f.state)
 	f:Hide()
 	local db = QNS:DB()
 	db.trainerHolders, db.trainerHoldersV = { ["Vieux-Royaume"] = TC.now }, nil
@@ -550,9 +555,10 @@ do
 	for _ = 1, QNS.TRAINER_IN_MAX + 10 do
 		if QNS:TrainerOnAddonMessage("QCTrainer", "A~1", "WHISPER", "Hal-Royaume") then accepted = accepted + 1 end
 	end
-	Check("[TRN] rafale d'un même joueur : plafonnée", accepted == QNS.TRAINER_IN_MAX, accepted)
+	local capped = accepted == QNS.TRAINER_IN_MAX
 	Mock.now = Mock.now + QNS.TRAINER_IN_WINDOW + 1
-	Check("[TRN] … puis de nouveau écouté", QNS:TrainerOnAddonMessage("QCTrainer", "A~1", "WHISPER", "Hal-Royaume"))
+	Check("[TRN] rafale d'un même joueur : plafonnée, puis de nouveau écouté", capped
+		and QNS:TrainerOnAddonMessage("QCTrainer", "A~1", "WHISPER", "Hal-Royaume"), accepted)
 
 	-- morceaux incohérents : rejetés, sans erreur
 	local function Feed(list)
@@ -562,12 +568,14 @@ do
 		end
 		return ok
 	end
-	Check("[TRN] morceau hors du total de la série : sans erreur, pas de fiche",
-		Feed({ "C~1~6~1~2~sp=1", "C~1~6~3~3~;st=2" }) and QNS:TrainerCard("Ian") == nil)
-	Check("[TRN] total qui change en route : rejeté", Feed({ "C~1~7~2~2~;st=2", "C~1~7~1~1~sp=1" })
-		and QNS:TrainerCard("Ian") == nil)
-	Check("[TRN] numéros absurdes : rejetés", Feed({ "C~1~8~0~1~x", "C~1~8~1~99~x", "C~1~8~1.5~2~x", "C~1~8~x~y~z" })
-		and QNS:TrainerCard("Ian") == nil)
+	local bad = {}
+	if not (Feed({ "C~1~6~1~2~sp=1", "C~1~6~3~3~;st=2" }) and QNS:TrainerCard("Ian") == nil) then bad[#bad + 1] = "hors du total" end
+	if not (Feed({ "C~1~7~2~2~;st=2", "C~1~7~1~1~sp=1" }) and QNS:TrainerCard("Ian") == nil) then bad[#bad + 1] = "total changé" end
+	if not (Feed({ "C~1~8~0~1~x", "C~1~8~1~99~x", "C~1~8~1.5~2~x", "C~1~8~x~y~z" }) and QNS:TrainerCard("Ian") == nil) then
+		bad[#bad + 1] = "numéros absurdes"
+	end
+	Check("[TRN] morceaux incohérents (hors du total, total qui change, numéros absurdes) : rejetés, sans erreur", #bad == 0,
+		table.concat(bad, ", "))
 	Check("[TRN] une série propre ensuite : reçue", Feed({ "C~1~9~2~2~;st=40", "C~1~9~1~2~sp=12" })
 		and QNS:TrainerCard("Ian") and QNS:TrainerCard("Ian").species == 12 and QNS:TrainerCard("Ian").total == 40)
 
@@ -577,10 +585,9 @@ do
 		and card.companion.comfort == QNS:F("EFF_pet_mood", 100), tostring(card.companion.comfort))
 	card = QNS:TrainerParseCard("n=x;cn=7;hi=inconnu;hv=1;ch=" .. QNS.TrainerEscape(string.rep("é", 120)))
 	local hunt = card.companion.hunt
-	Check("[TRN] effet inconnu : libellé reçu, coupé sur un caractère entier", hunt and #hunt <= 160 and #hunt % 2 == 0
-		and hunt:sub(-2) == "é", hunt and #hunt)
-	Check("[TRN] coupe UTF-8 : jamais au milieu d'un caractère", QNS.TrainerUtf8Cut("aé", 2) == "a"
-		and QNS.TrainerUtf8Cut("aé", 3) == "aé" and QNS.TrainerUtf8Cut("abc", 2) == "ab")
+	Check("[TRN] effet inconnu : libellé reçu, coupé sur un caractère entier (jamais au milieu)", hunt and #hunt <= 160
+		and #hunt % 2 == 0 and hunt:sub(-2) == "é" and QNS.TrainerUtf8Cut("aé", 2) == "a"
+		and QNS.TrainerUtf8Cut("aé", 3) == "aé" and QNS.TrainerUtf8Cut("abc", 2) == "ab", hunt and #hunt)
 
 	-- guilde : une annonce par session
 	TC.Reset()
@@ -592,14 +599,15 @@ do
 	QNS:TrainerOnEvent("PLAYER_GUILD_UPDATE")
 	TC.Flush()
 	local guildSent = TC.Take()
-	Check("[TRN] guilde : une seule annonce par session", TC.Kinds(guildSent) == "H", TC.Kinds(guildSent))
+	local single = TC.Kinds(guildSent) == "H"
 	TC.guild = false
 	QNS:TrainerOnEvent("PLAYER_GUILD_UPDATE")
 	TC.guild = true
 	Mock.now = Mock.now + 120
 	QNS:TrainerOnEvent("PLAYER_GUILD_UPDATE")
 	TC.Flush()
-	Check("[TRN] … une nouvelle guilde : une annonce", TC.Kinds(TC.Take()) == "H")
+	Check("[TRN] guilde : une seule annonce par session, une nouvelle pour une nouvelle guilde", single
+		and TC.Kinds(TC.Take()) == "H", TC.Kinds(guildSent))
 
 	-- UnitIsFriend secret : lu par ns.Plain, sans erreur
 	_G.UnitIsFriend = function() return SECRET end

@@ -4,7 +4,8 @@
 -- ménagerie (1.5.3) : « capturé » (vert, doré si brillant) ou « à capturer »
 -- avec ta chance du moment, et son rang si c'est un nommé (rare, élite…).
 -- Capture coupée dans les réglages : la ligne du bestiaire d'avant
--- (« à abattre » ou « abattu (n) »). Mêmes libellés et couleurs que le carnet
+-- (« à abattre » ou « abattu (n) »). 2.15.0 : en mode chasse, une ligne
+-- de méfiance sous celle-ci (ns:BestiaryTooltipWary). Mêmes libellés et couleurs que le carnet
 -- (JournalWindow.lua). Une créature hors bestiaire (amicale, bestiole, en
 -- instance) : rien.
 -- Accroche commune du socle (ns:HookTooltip, Libs/Socle/Compat.lua) :
@@ -21,10 +22,10 @@ local FR = {
 	MEN_TIP_SHINY_CAUGHT = "capturée",
 	MEN_TIP_TODO       = "à capturer · %d %%",
 	MEN_TIP_SHINY      = "BRILLANTE · %s",
-	-- 2.14.0 : où en est l'espèce (3 étoiles : plus proposée au filet)
-	MEN_TIP_FULL       = "%s %s · complète, plus proposée",
-	MEN_TIP_MORE       = "%s %s · encore des étoiles à gagner",
-	MEN_TIP_NOTRY      = "%s %s · plus d'essais (réglage Recaptures)",
+	-- 2.14.0 : où en est l'espèce ; 2.15.0 : le filet ne revient que pour mieux
+	MEN_TIP_FULL       = "%s %s · complète",
+	MEN_TIP_MORE       = "%s %s · amélioration possible si tu trouves mieux",
+	MEN_TIP_PINNED     = "%s %s · épinglée",
 }
 local EN = {
 	BST_TOOLTIP        = "Bestiary: %s",
@@ -33,9 +34,9 @@ local EN = {
 	MEN_TIP_SHINY_CAUGHT = "captured",
 	MEN_TIP_TODO       = "to capture · %d%%",
 	MEN_TIP_SHINY      = "SHINY · %s",
-	MEN_TIP_FULL       = "%s %s · complete, no longer offered",
-	MEN_TIP_MORE       = "%s %s · more stars to earn",
-	MEN_TIP_NOTRY      = "%s %s · no tries left (Recaptures setting)",
+	MEN_TIP_FULL       = "%s %s · complete",
+	MEN_TIP_MORE       = "%s %s · can improve if you find a better one",
+	MEN_TIP_PINNED     = "%s %s · pinned",
 }
 ns.RegisterStrings(FR, EN)
 if ns.KEEP_STRINGS then ns.TOOLTIP_STRINGS = { fr = FR, en = EN } end
@@ -91,17 +92,16 @@ function ns:BestiaryTooltipLine(guid, level)
 		if has then
 			status = live and L.MEN_TIP_SHINY_CAUGHT or L.MEN_TIP_CAUGHT
 			color = live and (Theme.GOLD_LIGHT or Theme.GOLD) or Theme.GREEN
-			-- 2.14.0 : ses étoiles, et si le filet la proposera encore (une
-			-- espèce à 3 étoiles ne revient plus : « je ne capture plus rien »)
+			-- 2.14.0 : ses étoiles ; 2.15.0 : épinglée (toujours proposée),
+			-- complète (3 étoiles), ou le filet reviendra pour un meilleur spécimen
 			local stars = self.CaptureStars and self:CaptureStars(npcID, live and true or false)
 			if stars and self.CaptureStarsText then
 				local starText = self:CaptureStarsText(stars, 12)
 				local key = "MEN_TIP_MORE"
-				if stars >= (ns.CAPTURE_STAR_MAX or 3) then
+				if self.HuntPinned and self:HuntPinned(npcID) then
+					key = "MEN_TIP_PINNED"
+				elseif stars >= (ns.CAPTURE_STAR_MAX or 3) then
 					key = "MEN_TIP_FULL"
-				elseif self.CaptureRetryLeft and self:CaptureRetryLeft({ class = class or "normal", npcID = npcID,
-					shiny = live and true or nil }) == 0 then
-					key = "MEN_TIP_NOTRY"
 				end
 				status = self:F(key, status, starText)
 			end
@@ -133,10 +133,29 @@ function ns:BestiaryTooltipLine(guid, level)
 	return text, color
 end
 
+-- 2.15.0 : en mode chasse, la méfiance de l'espèce survolée : « Méfiant ·
+-- 2 capture(s) aujourd'hui (−30 %) » (CaptureSpecimens.lua, ns:CaptureWariness) ;
+-- nil hors chasse, ou sans capture de l'espèce aujourd'hui
+function ns:BestiaryTooltipWary(guid)
+	if not (self.CaptureWariness and self.HuntActive and self:HuntActive()) then return nil end
+	if self:DB().companionCapture == false or not (ns.CompanionOn and ns.CompanionOn()) then return nil end
+	local npcID = ns.BestiaryNpcID and ns.BestiaryNpcID(guid)
+	if not npcID then return nil end
+	local factor, count = self:CaptureWariness(npcID)
+	if not count or count <= 0 then return nil end
+	return self:F("CAPTURE_WARY", count, math.floor((1 - factor) * 100 + 0.5 + 1e-9))
+end
+
 function ns:BestiaryOnTooltip(tooltip, data)
-	local text, color = self:BestiaryTooltipLine(HoveredGUID(tooltip, data))
+	local guid, level = HoveredGUID(tooltip, data)
+	local text, color = self:BestiaryTooltipLine(guid, level)
 	if not text then return false end
 	tooltip:AddLine(text, color[1], color[2], color[3])
+	local wary = self:BestiaryTooltipWary(guid)
+	if wary then
+		local c = Theme.ORANGE or Theme.GOLD
+		tooltip:AddLine(wary, c[1], c[2], c[3])
+	end
 	-- accroche OnTooltipSetUnit (pas de data) : le cadre reprend sa taille
 	if data == nil and type(tooltip.Show) == "function" then pcall(tooltip.Show, tooltip) end
 	return true

@@ -85,6 +85,14 @@ Theme.HOVER_ALPHA = 0.06   -- voile blanc d'une carte ou d'une ligne survolée (
 Theme.DIM_ALPHA   = 0.45   -- élément inactif (bouton désactivé, carte d'un module coupé)
 Theme.PRESS_SHADE = 0.10   -- bouton plein enfoncé : part d'encre mêlée au fond (0,15 de la fiche
                            -- faisait tomber l'encre à 4,41:1 sur le bleu ; 0,10 : 4,81)
+-- socle 3.0 (QuestCompanion 3.0.0) : composants canoniques (docs/UI.md, « Composants 3.0 »).
+-- Une rangée d'outils (puces, listes déroulantes, recherche, bouton « sm ») a
+-- une seule hauteur ; les boutons ont trois tailles nommées ; un bouton
+-- désactivé n'est plus estompé (le libellé tombait sous 2:1) : fond CONTROL,
+-- filet EDGE_SOFT, libellé MUTED, tous opaques (4,5:1 sur CONTROL).
+Theme.CONTROL_HEIGHT = 24
+Theme.BUTTON_SIZES = { xs = 18, sm = 24, md = 28 }
+Theme.DISABLED = { bg = Theme.CONTROL, edge = Theme.EDGE_SOFT, text = Theme.MUTED }
 
 -- socle 2.11.0 : contraste mesuré (formule WCAG 2.x), partagé par les deux
 -- addons et par les tests (tests/modules/socle_211.lua, socle_contrast).
@@ -909,7 +917,7 @@ end
 -- ---------------------------------------------------------------------------
 function Theme.CreateSearchBox(parent, width, placeholder, onChange)
 	local box = CreateFrame("EditBox", nil, parent)
-	box:SetSize(width or 180, 24)
+	box:SetSize(width or 180, Theme.CONTROL_HEIGHT)
 	if box.SetAutoFocus then box:SetAutoFocus(false) end
 	if box.SetFontObject then box:SetFontObject(Theme.F_BODY) end
 	if box.SetTextInsets then box:SetTextInsets(8, 8, 0, 0) end
@@ -1066,7 +1074,8 @@ end
 --                 5,67 au repos, 6,69 au survol).
 -- Au survol, le contour (ou le fond, pour les boutons pleins) s'éclaire.
 -- socle 2.11.0 : enfoncé (libellé décalé de 1, -1 ; fond plein assombri,
--- contour ambre sombre) et désactivé (DIM_ALPHA, texte MUTED, sans survol).
+-- contour ambre sombre) et désactivé (socle 3.0 : Theme.DISABLED opaque,
+-- sans survol ; plus de DIM_ALPHA sur le bouton).
 -- Theme.BUTTON_STYLES est exposé (tests de contraste).
 -- ---------------------------------------------------------------------------
 local BUTTON_STYLES = {
@@ -1085,25 +1094,49 @@ local function ButtonEnabled(button)
 	local ok, on = pcall(button.IsEnabled, button)
 	return not ok or (on ~= false and on ~= nil and on ~= 0)
 end
--- repos (ou aspect désactivé)
-local function ButtonRest(self)
+-- socle 3.0 : un seul peintre des états d'un bouton ("rest", "hover",
+-- "pressed", "disabled"). Un habillage (style Azeroth de QuestCompanion) pose
+-- button.skinPaint(button, état) et peint lui-même ses matières : le thème ne
+-- repeint plus par-dessus (avant : l'encre sombre du bouton plein retombait
+-- sur le rouge du carnet après chaque Enable).
+local function ButtonPaint(self, state)
 	local s = self.spec
-	self.text:ClearAllPoints()
-	self.text:SetPoint("CENTER", 0, 0)
-	if not ButtonEnabled(self) then
-		self:SetAlpha(Theme.DIM_ALPHA)
-		local bg = s.filled and Theme.CONTROL or s.bg
-		self.bg:SetVertexColor(bg[1], bg[2], bg[3], s.filled and 1 or s.bgAlpha)
-		self.border:SetColor(Theme.EDGE[1], Theme.EDGE[2], Theme.EDGE[3], 1)
-		SetColor(self.text, Theme.MUTED)
-		self.disabledLook = true
+	self.paintState = state
+	self.disabledLook = (state == "disabled") or nil
+	self:SetAlpha(1)
+	if self.skinPaint then return self.skinPaint(self, state) end
+	if state == "disabled" then
+		local d = Theme.DISABLED
+		self.bg:SetVertexColor(d.bg[1], d.bg[2], d.bg[3], s.filled and 1 or 0)
+		self.border:SetColor(d.edge[1], d.edge[2], d.edge[3], 1)
+		SetColor(self.text, d.text)
 		return
 	end
-	self.disabledLook = nil
-	self:SetAlpha(1)
 	SetColor(self.text, s.text)
 	self.bg:SetVertexColor(s.bg[1], s.bg[2], s.bg[3], s.bgAlpha)
 	self.border:SetColor(s.edge[1], s.edge[2], s.edge[3], 1)
+	if state == "hover" then
+		if s.hoverBg then self.bg:SetVertexColor(s.hoverBg[1], s.hoverBg[2], s.hoverBg[3], 1) end
+		if s.hoverAlpha then self.bg:SetVertexColor(s.bg[1], s.bg[2], s.bg[3], s.hoverAlpha) end
+		if s.hoverEdge then self.border:SetColor(s.hoverEdge[1], s.hoverEdge[2], s.hoverEdge[3], 1) end
+	elseif state == "pressed" then
+		if s.filled then
+			local c = Theme.Over(s.bg, Theme.INK, Theme.PRESS_SHADE)
+			self.bg:SetVertexColor(c[1], c[2], c[3], 1)
+		else
+			self.border:SetColor(Theme.GOLD_SOFT[1], Theme.GOLD_SOFT[2], Theme.GOLD_SOFT[3], 1)
+		end
+	end
+end
+Theme.ButtonPaint = ButtonPaint
+-- repos (ou aspect désactivé)
+-- socle 3.0 : `inactive` (button:SetInactive) : l'aspect désactivé, mais le
+-- clic passe encore (le module dit pourquoi : « il te manque n paillettes »)
+local function ButtonOn(button) return ButtonEnabled(button) and not button.inactive end
+local function ButtonRest(self)
+	self.text:ClearAllPoints()
+	self.text:SetPoint("CENTER", 0, 0)
+	ButtonPaint(self, ButtonOn(self) and "rest" or "disabled")
 end
 Theme.ButtonRest = ButtonRest
 
@@ -1138,10 +1171,16 @@ function Theme.ButtonWidth(parent, label, minimum)
 end
 
 -- `width` nil ou "auto" : la largeur suit le libellé (Theme.ButtonWidth)
+-- socle 3.0 : `height` est un nombre ou une taille nommée de
+-- Theme.BUTTON_SIZES ("xs" 18, "sm" 24, "md" 28 ; nil : "md")
+function Theme.ButtonHeight(height)
+	return Theme.BUTTON_SIZES[height] or tonumber(height) or Theme.BUTTON_SIZES.md
+end
 function Theme.CreateButton(parent, width, height, label, onClick, style)
 	local button = CreateFrame("Button", nil, parent)
 	if width == nil or width == "auto" then width = Theme.ButtonWidth(parent, label) end
-	button:SetSize(width, height or 28)
+	button.size = Theme.BUTTON_SIZES[height] and height or nil
+	button:SetSize(width, Theme.ButtonHeight(height))
 	button.style = style or "normal"
 	local spec = BUTTON_STYLES[button.style] or BUTTON_STYLES.outline
 	button.spec = spec
@@ -1161,7 +1200,7 @@ function Theme.CreateButton(parent, width, height, label, onClick, style)
 	button.GetText = function(self) return self.text:GetText() end
 
 	button:SetScript("OnEnter", function(self)
-		if not ButtonEnabled(self) then
+		if not ButtonOn(self) then
 			-- désactivé : pas de survol, mais l'infobulle qui dit pourquoi
 			local tooltip = rawget(_G, "GameTooltip")
 			if self.disabledTip and type(tooltip) == "table" and tooltip.SetOwner then
@@ -1171,10 +1210,7 @@ function Theme.CreateButton(parent, width, height, label, onClick, style)
 			end
 			return
 		end
-		local s = self.spec
-		if s.hoverBg then self.bg:SetVertexColor(s.hoverBg[1], s.hoverBg[2], s.hoverBg[3], 1) end
-		if s.hoverAlpha then self.bg:SetVertexColor(s.bg[1], s.bg[2], s.bg[3], s.hoverAlpha) end
-		if s.hoverEdge then self.border:SetColor(s.hoverEdge[1], s.hoverEdge[2], s.hoverEdge[3], 1) end
+		ButtonPaint(self, "hover")
 	end)
 	button:SetScript("OnLeave", function(self)
 		ButtonRest(self)
@@ -1185,17 +1221,11 @@ function Theme.CreateButton(parent, width, height, label, onClick, style)
 	button:SetScript("OnHide", ButtonRest)
 	-- appui : libellé enfoncé d'un pixel, fond plein assombri ou contour ambre sombre
 	button:SetScript("OnMouseDown", function(self, mouse)
-		if (mouse and mouse ~= "LeftButton") or not ButtonEnabled(self) then return end
-		local s = self.spec
+		if (mouse and mouse ~= "LeftButton") or not ButtonOn(self) then return end
 		self.pressed = true
 		self.text:ClearAllPoints()
 		self.text:SetPoint("CENTER", 1, -1)
-		if s.filled then
-			local c = Theme.Over(s.bg, Theme.INK, Theme.PRESS_SHADE)
-			self.bg:SetVertexColor(c[1], c[2], c[3], 1)
-		else
-			self.border:SetColor(Theme.GOLD_SOFT[1], Theme.GOLD_SOFT[2], Theme.GOLD_SOFT[3], 1)
-		end
+		ButtonPaint(self, "pressed")
 	end)
 	button:SetScript("OnMouseUp", function(self)
 		self.pressed = nil
@@ -1217,6 +1247,13 @@ function Theme.CreateButton(parent, width, height, label, onClick, style)
 				ButtonRest(self)
 			end
 		end
+	end
+	-- socle 3.0 : aspect désactivé, clic gardé (le module explique le refus) ;
+	-- tip : l'infobulle du survol
+	function button:SetInactive(on, tip)
+		self.inactive = on and true or nil
+		self.disabledTip = on and tip or nil
+		ButtonRest(self)
 	end
 	if onClick then button:SetScript("OnClick", onClick) end
 	return button
@@ -1495,7 +1532,8 @@ function Theme.CreateDropdown(parent, width, onSelect, opts)
 	width = width or 160
 	local listWidth = math.max(width, tonumber(opts.listWidth) or width)
 	dropdown.maxRows = tonumber(opts.maxRows) or Theme.DROPDOWN_MAX_ROWS
-	dropdown:SetSize(width, 22)
+	-- socle 3.0 : à la hauteur des puces et de la recherche (Theme.CONTROL_HEIGHT)
+	dropdown:SetSize(width, tonumber(opts.height) or Theme.CONTROL_HEIGHT)
 	dropdown.options = {}
 	dropdown.offset = 0
 	dropdown.bg = Solid(dropdown, "BACKGROUND", Theme.FIELD, 1)
@@ -2334,7 +2372,7 @@ end
 -- onSelect(id) au clic. :Select(id, silent) ; .byId[id] = la puce (.text,
 -- .selected) ; .used = largeur occupée (pour aligner la rangée à droite).
 -- ---------------------------------------------------------------------------
-Theme.CHIP_HEIGHT = 24
+Theme.CHIP_HEIGHT = Theme.CONTROL_HEIGHT
 Theme.CHIP_PAD = 24
 function Theme.CreateChips(parent, defs, onSelect, opts)
 	opts = opts or {}
@@ -2462,6 +2500,91 @@ function Theme.CreateTag(parent, text, color)
 	end
 	tag:SetTag(text, color)
 	return tag
+end
+
+-- ---------------------------------------------------------------------------
+-- socle 3.0 : pastille de monnaie (solde de paillettes de QuestCompanion),
+-- comme les monnaies du client : cadre FIELD au filet EDGE, à la hauteur
+-- d'une rangée d'outils, icône du client, chiffre F_NUMBER ambre, libellé
+-- F_SMALL MUTED clair. opts = { icon, label, tip = { titre, lignes } }.
+-- :SetValue(n, libellé) recalcule la largeur (posée par TOPRIGHT, elle
+-- grandit vers la gauche) ; :Flash() secoue la pastille et la rougit un
+-- instant (solde trop court) ; animations créées une fois, sans OnUpdate.
+-- ---------------------------------------------------------------------------
+Theme.CURRENCY = { pad = 8, icon = 16, gap = 5, labelGap = 4, shake = { 4, -8, 8, -4 }, step = 0.05, flash = 0.45,
+	flashAlpha = 0.35 }
+function Theme.CreateCurrency(parent, opts)
+	opts = opts or {}
+	local C = Theme.CURRENCY
+	local badge = CreateFrame("Frame", nil, parent)
+	badge:SetSize(80, Theme.CONTROL_HEIGHT)
+	badge.bg = Solid(badge, "BACKGROUND", Theme.FIELD, 1)
+	badge.bg:SetAllPoints()
+	badge.border = Border(badge, Theme.EDGE, 1)
+	badge.flash = Solid(badge, "ARTWORK", Theme.RED, C.flashAlpha)
+	badge.flash:SetPoint("TOPLEFT", badge, "TOPLEFT", 1, -1)
+	badge.flash:SetPoint("BOTTOMRIGHT", badge, "BOTTOMRIGHT", -1, 1)
+	badge.flash:Hide()
+	badge.icon = badge:CreateTexture(nil, "OVERLAY")
+	badge.icon:SetSize(C.icon, C.icon)
+	badge.icon:SetPoint("LEFT", badge, "LEFT", C.pad, 0)
+	badge.icon:SetTexCoord(0.08, 0.92, 0.08, 0.92)
+	if opts.icon then pcall(badge.icon.SetTexture, badge.icon, opts.icon) end
+	badge.value = Text(badge, Theme.F_NUMBER, Theme.GOLD)
+	badge.value:SetPoint("LEFT", badge.icon, "RIGHT", C.gap, 0)
+	badge.label = Text(badge, Theme.F_SMALL, Theme.MUTED_LIGHT)
+	badge.label:SetPoint("LEFT", badge.value, "RIGHT", C.labelGap, 0)
+	badge.tip = opts.tip
+	function badge:SetValue(n, label)
+		local value = tostring(math.floor(tonumber(n) or 0))
+		label = label or opts.label or ""
+		self.amount = tonumber(n) or 0
+		self.value:SetText(value)
+		self.label:SetText(label)
+		local width = C.pad + C.icon + C.gap + Theme.TextWidth(self, value, Theme.F_NUMBER)
+		if label ~= "" then width = width + C.labelGap + Theme.TextWidth(self, label, Theme.F_SMALL) end
+		self:SetWidth(math.ceil(width + C.pad + 2))
+		return self.amount
+	end
+	-- la secousse : quatre pas de translation, construits une fois
+	if badge.CreateAnimationGroup then
+		local ok, group = pcall(badge.CreateAnimationGroup, badge)
+		if ok and group and group.CreateAnimation then
+			for index, dx in ipairs(C.shake) do
+				local move = group:CreateAnimation("Translation")
+				if move and move.SetOffset then
+					move:SetOffset(dx, 0)
+					move:SetDuration(C.step)
+					if move.SetOrder then move:SetOrder(index) end
+				end
+			end
+			badge.shake = group
+		end
+	end
+	function badge:Flash()
+		self.flashes = (self.flashes or 0) + 1
+		if self.shake then self.shake:Stop(); self.shake:Play() end
+		self.flash:SetAlpha(1)
+		self.flash:Show()
+		Theme.FadeOut(self.flash, C.flash)
+		return self.flashes
+	end
+	if badge.EnableMouse then badge:EnableMouse(true) end
+	badge:SetScript("OnEnter", function(self)
+		local tooltip = rawget(_G, "GameTooltip")
+		local tip = self.tip
+		if not (tip and type(tooltip) == "table" and tooltip.SetOwner) then return end
+		tooltip:SetOwner(self, "ANCHOR_BOTTOM")
+		Theme.TooltipTitle(tooltip, tip[1])
+		for _, line in ipairs(tip[2] or {}) do Theme.TooltipHint(tooltip, line, true) end
+		tooltip:Show()
+	end)
+	badge:SetScript("OnLeave", function()
+		local tooltip = rawget(_G, "GameTooltip")
+		if type(tooltip) == "table" and tooltip.Hide then tooltip:Hide() end
+	end)
+	badge:SetValue(opts.value or 0)
+	return badge
 end
 
 -- ---------------------------------------------------------------------------

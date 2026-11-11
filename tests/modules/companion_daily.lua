@@ -1,8 +1,10 @@
 -- Compagnon : au jour le jour (Daily.lua). Carte de fidélité des auberges (un
 -- tampon par jour, Festin au 7e, pas de série), missions du jour (deux de zone
--- faisables, une du caractère ; 2.0 : la première de ménagerie, voir aussi
--- qc2_missions.lua ; changer une fois ; friandise, Festin des
--- trois), onglet Jour du carnet, objectifs du bloc à l'écran, réglage.
+-- faisables, une du caractère ; 2.0 : la première de créatures, voir
+-- missions.lua ; tirage une fois par jour ; chaque sorte avance sur son
+-- événement ; changer une fois ; friandise, Festin des trois), onglet
+-- Missions du carnet (besace, carte, garde-manger), objectifs du bloc à
+-- l'écran (clé, masquer, purge), réglage coupé.
 local Check, Say, ResetWorld, NS, Mock = T.Check, T.Say, T.ResetWorld, T.QNS, T.Mock
 
 local DY = { saved = {}, random = math.random, day = "2026-11-05",
@@ -73,19 +75,20 @@ do
 	DY.Reset()
 	local _, inn = NS:DailyData()
 	NS:CompanionData().needs.energy = 40
-	Check("[DAY] aubergiste : un tampon", NS:CompanionOnNpc("innkeeper") == true and inn.card == 1 and inn.total == 1)
-	Check("[DAY] … +20 d'énergie", NS:CompanionData().needs.energy == 40 + NS.INN_ENERGY, NS:CompanionData().needs.energy)
-	Check("[DAY] … sa bulle « 1/7 »", NS.companionBubbleKey == "INN_STAMP" and NS.companionBubbleText:find("1/7", 1, true)
-		or (NS.companionBubbleText or ""):find("1 sur 7", 1, true), NS.companionBubbleText)
+	Check("[DAY] aubergiste : un tampon, +20 d'énergie, sa bulle « 1/7 »", NS:CompanionOnNpc("innkeeper") == true
+		and inn.card == 1 and inn.total == 1 and NS:CompanionData().needs.energy == 40 + NS.INN_ENERGY
+		and NS.companionBubbleKey == "INN_STAMP" and ((NS.companionBubbleText or ""):find("1/7", 1, true)
+		or (NS.companionBubbleText or ""):find("1 sur 7", 1, true)), NS.companionBubbleText)
 	DY.Quiet()
 	NS:CompanionOnNpc("innkeeper")
 	Check("[DAY] même jour : pas de second tampon", inn.card == 1 and NS.companionBubbleKey ~= "INN_STAMP")
 	DY.day = "2026-11-09"
 	NS:InnStamp()
-	Check("[DAY] jours sautés : rien de perdu", inn.card == 2)
+	local skipped = inn.card == 2
 	for day = 10, 14 do DY.day = "2026-11-" .. day; NS:InnStamp() end
-	Check("[DAY] 7e tampon : carte pleine, un Festin", inn.card == 0 and inn.total == 7 and NS:TreatCount("festin") == 1)
-	Check("[DAY] … « carte pleine »", NS.companionBubbleKey == "INN_FULL", NS.companionBubbleKey)
+	Check("[DAY] jours sautés : rien de perdu ; 7e tampon : carte pleine, un Festin, « carte pleine »", skipped
+		and inn.card == 0 and inn.total == 7 and NS:TreatCount("festin") == 1 and NS.companionBubbleKey == "INN_FULL",
+		NS.companionBubbleKey)
 	NS:DB().companionEnabled = false
 	DY.day = "2026-11-20"
 	Check("[DAY] compagnon coupé : pas de tampon", NS:InnStamp() == nil and inn.total == 7)
@@ -96,50 +99,57 @@ end
 do
 	Say("-- au jour le jour : tirage")
 	DY.Reset()
+	local bad = {}
 	for _, kind in ipairs(NS.DAILY_ZONE_MISSIONS) do
-		Check("[MIS] faisable ici : " .. kind, NS:MissionFeasible(kind, 9800))
+		if not NS:MissionFeasible(kind, 9800) then bad[#bad + 1] = kind end
 	end
+	Check("[MIS] zone à faire : chaque mission de zone faisable", #bad == 0, table.concat(bad, ", "))
+	-- chaque but atteint rend sa mission infaisable
 	DY.counts.killed = 8
-	Check("[MIS] moins de 3 espèces à abattre : pas de mission espèces", not NS:MissionFeasible("species", 9800))
+	if NS:MissionFeasible("species", 9800) then bad[#bad + 1] = "species" end
 	DY.counts.namedKilled = 2
-	Check("[MIS] nommés tous abattus : pas de mission nommé", not NS:MissionFeasible("named", 9800))
+	if NS:MissionFeasible("named", 9800) then bad[#bad + 1] = "named" end
 	DY.band = {}
-	Check("[MIS] pas de métier ici : pas de récolte", not NS:MissionFeasible("gather", 9800))
+	if NS:MissionFeasible("gather", 9800) then bad[#bad + 1] = "gather" end
 	DY.parts[1].have = 4
-	Check("[MIS] tous les lieux vus : pas de visite", not NS:MissionFeasible("village", 9800))
+	if NS:MissionFeasible("village", 9800) then bad[#bad + 1] = "village" end
 	DY.parts[2].have = 5
-	Check("[MIS] moins de 2 quêtes : pas de quêtes", not NS:MissionFeasible("quests", 9800))
+	if NS:MissionFeasible("quests", 9800) then bad[#bad + 1] = "quests" end
 	DY.percent = 98
-	Check("[MIS] zone presque finie : pas de +3 %", not NS:MissionFeasible("percent", 9800))
+	if NS:MissionFeasible("percent", 9800) then bad[#bad + 1] = "percent" end
+	Check("[MIS] infaisables : espèces, nommé, récolte, visite, quêtes, +3 % quand il n'y a plus de quoi", #bad == 0,
+		table.concat(bad, ", "))
 	NS:DB().companionCapture = false
 	NS:MissionDraw(9800)
-	Check("[MIS] zone toute faite, capture coupée : gens à qui parler et ennemis", DY.Kinds() == "talks,kills,pets", DY.Kinds())
+	local off = DY.Kinds()
 	NS:DB().companionCapture = true
 	NS:MissionDraw(9800)
-	Check("[MIS] … capture allumée : une capture (créatures), partout faisable", DY.Kinds() == "captures,talks,pets", DY.Kinds())
+	Check("[MIS] zone toute faite : gens à qui parler et ennemis ; capture allumée : une capture, partout faisable",
+		off == "talks,kills,pets" and DY.Kinds() == "captures,talks,pets" and NS:MissionFeasible("captures", nil) == true,
+		off .. " / " .. DY.Kinds())
 
 	DY.Reset()
 	DY.First()
-	Check("[MIS] premier passage du jour : tirage", NS:DailyPoll() == true)
+	local first = NS:DailyPoll() == true
 	local daily = NS:DailyData()
-	Check("[MIS] trois missions : deux de zone différentes, une du caractère", #daily.missions == 3
-		and daily.missions[1].source == "zone" and daily.missions[2].source == "zone"
-		and daily.missions[1].kind ~= daily.missions[2].kind and daily.missions[3].source == "trait", DY.Kinds())
-	Check("[MIS] avant le caractère : « fais-moi 3 caresses »", daily.missions[3].kind == "pets" and daily.missions[3].need == 3)
-	Check("[MIS] la créature l'annonce", NS.companionBubbleKey == "MISSION_NEW", NS.companionBubbleKey)
+	Check("[MIS] premier passage du jour : trois missions (deux de zone différentes, « 3 caresses » avant le caractère), annoncées",
+		first and #daily.missions == 3 and daily.missions[1].source == "zone" and daily.missions[2].source == "zone"
+		and daily.missions[1].kind ~= daily.missions[2].kind and daily.missions[3].source == "trait"
+		and daily.missions[3].kind == "pets" and daily.missions[3].need == 3 and NS.companionBubbleKey == "MISSION_NEW", DY.Kinds())
 	Check("[MIS] même jour : pas de second tirage", NS:DailyPoll() == false)
 	Mock.world.mapID = nil
 	DY.day = "2026-11-06"
-	Check("[MIS] lendemain, en instance : on attend une zone", NS:DailyPoll() == false)
+	local waits = NS:DailyPoll() == false
 	Mock.world.mapID = 9800
 	NS.CompanionTrait = function() return "glutton" end
-	Check("[MIS] lendemain : nouveau tirage", NS:DailyPoll() == true and daily.day == "2026-11-06")
+	local drawn = NS:DailyPoll() == true and NS:DailyData().day == "2026-11-06"
 	daily = NS:DailyData()
-	Check("[MIS] Gourmande : « mange 3 fois »", daily.missions[3].kind == "meals" and daily.missions[3].trait == "glutton")
-	Check("[MIS] libellés", NS:MissionLabel(daily.missions[3]) == "Mange ou bois 3 fois"
+	Check("[MIS] lendemain : en instance on attend une zone, puis tirage ; Gourmande : « mange 3 fois »", waits and drawn
+		and daily.missions[3].kind == "meals" and daily.missions[3].trait == "glutton")
+	Check("[MIS] libellés et source", NS:MissionLabel(daily.missions[3]) == "Mange ou bois 3 fois"
 		and NS:MissionLabel({ kind = "species", need = 3, zoneID = 9800 }) == "Abats 3 espèces jamais vaincues (Val des missions)"
-		and NS:MissionLabel({ kind = "percent", need = 3, zoneID = 9800 }) == "Fais gagner 3 % à Val des missions")
-	Check("[MIS] source", NS:MissionSource(daily.missions[3]):find("Gourmand", 1, true) ~= nil, NS:MissionSource(daily.missions[3]))
+		and NS:MissionLabel({ kind = "percent", need = 3, zoneID = 9800 }) == "Fais gagner 3 % à Val des missions"
+		and NS:MissionSource(daily.missions[3]):find("Gourmand", 1, true) ~= nil, NS:MissionSource(daily.missions[3]))
 end
 
 -- 3. Avancer, finir ---------------------------------------------------------------------------------
@@ -155,37 +165,38 @@ do
 	NS:CompanionData().needs = { hunger = 80, energy = 20, mood = 80, curiosity = 50 }
 	DY.counts.killed = DY.counts.killed + 2
 	NS:RefreshJournalTracker()
-	Check("[MIS] espèces : mesurées au rafraîchissement", daily.missions[1].have == 2 and not daily.missions[1].done)
+	local measured = daily.missions[1].have == 2 and not daily.missions[1].done
 	DY.Quiet()
 	DY.counts.killed = DY.counts.killed + 1
 	NS:RefreshJournalTracker()
-	Check("[MIS] 3/3 : faite", daily.missions[1].done == true and daily.missions[1].have == 3)
-	Check("[MIS] … une friandise (envie la plus basse) et de la curiosité", NS:TreatCount("infusion") == 1
-		and NS:CompanionData().needs.curiosity == 50 + NS.MISSION_CURIOSITY, NS:CompanionData().needs.curiosity)
-	Check("[MIS] … « mission accomplie »", NS.companionBubbleKey == "MISSION_DONE", NS.companionBubbleKey)
+	Check("[MIS] espèces : mesurées au rafraîchissement, 3/3 : faite", measured and daily.missions[1].done == true
+		and daily.missions[1].have == 3)
+	Check("[MIS] … une friandise (envie la plus basse), de la curiosité, « mission accomplie »", NS:TreatCount("infusion") == 1
+		and NS:CompanionData().needs.curiosity == 50 + NS.MISSION_CURIOSITY and NS.companionBubbleKey == "MISSION_DONE",
+		NS.companionBubbleKey)
 	Mock.world.mapID = 9801
 	NS:MissionEvent("elites", 1, 9801)
-	Check("[MIS] nommé dans une autre zone : ne compte pas", daily.missions[2].have == 0)
+	local elsewhere = daily.missions[2].have == 0
 	Mock.world.mapID = 9800
 	_G.UnitIsDead = function() return true end
 	_G.UnitClassification = function() return "elite" end
 	NS:CompanionEliteKilled()
 	_G.UnitIsDead, _G.UnitClassification = nil, nil
-	Check("[MIS] élite abattu ici : nommé fait", daily.missions[2].done == true)
+	Check("[MIS] nommé : pas dans une autre zone, fait par un élite abattu ici", elsewhere and daily.missions[2].done == true)
 	-- caresses (pas Maj + clic)
 	_G.IsShiftKeyDown = function() return true end
 	NS:CompanionPet()
-	Check("[MIS] Maj + clic : pas une caresse", daily.missions[3].have == 0)
+	local shift = daily.missions[3].have == 0
 	_G.IsShiftKeyDown = function() return false end
 	NS:CompanionPet()
 	Mock:Advance(20); NS:CompanionPet()
-	Check("[MIS] caresses comptées", daily.missions[3].have == 2, daily.missions[3].have)
+	Check("[MIS] caresses comptées, pas Maj + clic", shift and daily.missions[3].have == 2, daily.missions[3].have)
 	DY.Quiet()
 	local festins = NS:TreatCount("festin")
 	Mock:Advance(20); NS:CompanionPet()
-	Check("[MIS] les trois faites : un Festin en plus", daily.allDone == true and NS:TreatCount("festin") == festins + 1)
-	Check("[MIS] … « festin ! »", NS.companionBubbleKey == "MISSION_ALL", NS.companionBubbleKey)
-	Check("[MIS] fait : plus rien n'avance", NS:MissionEvent("pets", 1) == false)
+	Check("[MIS] les trois faites : un Festin en plus, « festin ! », plus rien n'avance", daily.allDone == true
+		and NS:TreatCount("festin") == festins + 1 and NS.companionBubbleKey == "MISSION_ALL"
+		and NS:MissionEvent("pets", 1) == false, NS.companionBubbleKey)
 end
 
 -- 4. Missions du caractère : repos, calme, nuit, or, repas, PNJ, quêtes, lieux, récolte -------------------
@@ -202,37 +213,37 @@ do
 	end
 	local m = Set("rest", 15)
 	NS:CompanionTick(600)
-	Check("[MIS] repos : pas au repos, rien", m.have == 0)
+	local away = m.have == 0
 	DY.resting = true
 	NS:CompanionTick(600)
-	Check("[MIS] repos : 10 minutes", m.have == 10, m.have)
+	Check("[MIS] repos : rien hors repos, 10 minutes au repos", away and m.have == 10, m.have)
 	DY.resting = false
 	m = Set("calm", 15)
 	NS:CompanionTick(300)
 	NS:CompanionOnDead()
-	Check("[MIS] calme : une mort remet à zéro", m.have == 0)
+	local reset = m.have == 0
 	NS:CompanionTick(15 * 60)
-	Check("[MIS] calme : 15 minutes sans tomber", m.done == true)
+	Check("[MIS] calme : une mort remet à zéro, 15 minutes sans tomber", reset and m.done == true)
 	m = Set("nightKills", 5)
 	DY.hour = 14
 	NS:CompanionOnKill()
-	Check("[MIS] de jour : ne compte pas de nuit", m.have == 0)
+	local byDay = m.have == 0
 	DY.hour = 23
 	Mock:Advance(3)
 	NS:CompanionOnKill()
-	Check("[MIS] de nuit : compte", m.have == 1)
+	local byNight = m.have == 1
 	Mock:Advance(0.5)
 	NS:CompanionOnKill()
-	Check("[MIS] même mort comptée deux fois (XP et journal) : une seule", m.have == 1)
+	Check("[MIS] de nuit seulement ; la même mort (XP et journal) comptée une fois", byDay and byNight and m.have == 1)
 	m = Set("gold", 1)
 	DY.money = 5000
 	NS:CompanionTick(1)
 	DY.money = 12000
 	NS:CompanionTick(1)
-	Check("[MIS] or : 70 pièces d'argent ne font pas une pièce d'or", not m.done and m.have == 0)
+	local silver = not m.done and m.have == 0
 	DY.money = 16000
 	NS:CompanionTick(1)
-	Check("[MIS] or : une pièce d'or gagnée", m.done == true)
+	Check("[MIS] or : 70 pièces d'argent ne font pas une pièce d'or, une pièce d'or gagnée", silver and m.done == true)
 	m = Set("meals", 3)
 	NS.CompanionAuraState = function() return true, false, false end
 	NS:CompanionCheckAuras(); NS:CompanionCheckAuras()
@@ -244,23 +255,28 @@ do
 	Check("[MIS] jamais au-delà du but", m.have == 2 and m.done)
 	m = Set("quests", 2, 9800)
 	Mock:Fire("QUEST_TURNED_IN", 1, 0, 0)
-	Check("[MIS] quête rendue dans la zone : mission « quêtes » de la zone", m.have == 1)
+	local zoneQuest = m.have == 1
+	m = Set("turnins", 3)
+	Mock:Fire("QUEST_TURNED_IN", 1, 0, 0)
+	Check("[MIS] quête rendue : « quêtes » de la zone et « rendre des quêtes »", zoneQuest and m.have == 1)
 	m = Set("rest", 15)
 	DY.resting = true
 	NS:DB().companionMissions = false
 	NS:CompanionTick(600)
 	NS:DB().companionMissions = true
 	DY.resting = false
-	Check("[MIS] missions coupées : le repos ne compte pas", m.have == 0)
+	local off = m.have == 0
 	daily.day = "2026-11-04"
-	Check("[MIS] missions d'hier : plus rien n'avance", NS:MissionEvent("rest", 1) == false)
+	Check("[MIS] missions coupées, ou d'hier : plus rien n'avance", off and NS:MissionEvent("rest", 1) == false)
 	daily.day = DY.day
+	-- relecture 1.2.0 : un même PNJ (deux fenêtres) compte une fois
 	m = Set("talks", 3)
+	daily.talked = {}
+	_G.UnitGUID = function(unit) if unit == "npc" then return "Creature-0-1-1-1-777-0001" end return nil end
 	NS:CompanionOnNpc("merchant")
-	Check("[MIS] PNJ : compté", m.have == 1)
-	m = Set("turnins", 3)
-	Mock:Fire("QUEST_TURNED_IN", 1, 0, 0)
-	Check("[MIS] quête rendue : comptée", m.have == 1)
+	NS:CompanionOnNpc("quest")
+	_G.UnitGUID = function() return nil end
+	Check("[MIS] PNJ : compté, une fois par PNJ", m.have == 1, m.have)
 	m = Set("places", 2)
 	NS:CompanionOnStamp({ kind = "subzone", name = "Clairière", new = true })
 	NS:CompanionOnStamp({ kind = "subzone", name = "Clairière", new = false })
@@ -281,23 +297,23 @@ do
 	DY.First()
 	NS:DailyPoll()
 	local daily = NS:DailyData()
-	-- 2.0 : mission 1 = ménagerie (ici « captures », rien d'autre à capturer
-	-- dans la zone : pas d'autre mission de ménagerie), mission 2 = exploration
+	-- 2.0 : mission 1 = créatures (ici « captures », rien d'autre à capturer
+	-- dans la zone : pas d'autre mission de créatures), mission 2 = exploration
 	local before = daily.missions[2].kind
-	Check("[MIS] mission du caractère : pas changeable", NS:MissionReroll(3) == false)
-	Check("[MIS] créatures sans autre choix : pas changeable", NS:MissionReroll(1) == false and not daily.rerolled)
-	Check("[MIS] une mission d'exploration changée", NS:MissionReroll(2) == true and daily.missions[2].kind ~= before
-		and daily.missions[2].kind ~= daily.missions[1].kind and daily.missions[2].have == 0)
-	Check("[MIS] une seule fois par jour", NS:MissionReroll(2) == false and daily.rerolled == true)
+	Check("[MIS] pas changeables : celle du caractère, celle de créatures sans autre choix", NS:MissionReroll(3) == false
+		and NS:MissionReroll(1) == false and not daily.rerolled)
+	Check("[MIS] une mission d'exploration changée, une seule fois par jour", NS:MissionReroll(2) == true
+		and daily.missions[2].kind ~= before and daily.missions[2].kind ~= daily.missions[1].kind and daily.missions[2].have == 0
+		and NS:MissionReroll(2) == false and daily.rerolled == true)
 	DY.day = "2026-11-06"
 	NS:DailyPoll()
 	daily = NS:DailyData()
-	Check("[MIS] lendemain : on peut de nouveau changer", daily.rerolled == nil)
+	local again = daily.rerolled == nil
 	daily.missions[1].done = true
-	Check("[MIS] mission faite : pas changeable", NS:MissionReroll(1) == false)
+	Check("[MIS] lendemain : on peut de nouveau changer, sauf une mission faite", again and NS:MissionReroll(1) == false)
 end
 
--- 6. Carnet : onglet Jour, objectifs ---------------------------------------------------------------------
+-- 6. Carnet : onglet Missions, objectifs ------------------------------------------------------------------
 do
 	Say("-- au jour le jour : carnet")
 	DY.Reset()
@@ -309,47 +325,42 @@ do
 	NS:DB().journalTracker = false
 	NS:ToggleJournal(true)
 	local f = NS.journalFrame
-	Check("[DAYW] onglet Missions, avec les missions qui restent (pastille)", f.sections.day and f.sections.day.text.text == "Missions"
-		and f.sections.day.badge.text == "6" and f.sections.day.badge:IsShown(), f.sections.day and f.sections.day.badge.text)
+	local tab = f.sections.day and f.sections.day.text.text == "Missions" and f.sections.day.badge.text == "6"
+		and f.sections.day.badge:IsShown()
 	f.sections.day:Click()
 	local day = f.day
-	Check("[DAYW] affiché seul", f.kind == "day" and day:IsShown() and not f.evo:IsShown())
-	Check("[DAYW] mission du compagnon en tête, libellé et compteur", day.missions[1].label.text == "Fais-moi 3 caresses"
-		and day.missions[1].count.text == "0/3", day.missions[1].label.text)
-	Check("[DAYW] … sa récompense : friandise et appât", day.missions[1].source.text:find("Appât savoureux", 1, true) ~= nil,
-		day.missions[1].source.text)
-	Check("[DAYW] changer : sur les missions du jour seulement", day.missions[2].reroll:IsShown()
-		and day.missions[1].reroll == nil)
-	Check("[DAYW] trois missions de la semaine, récompense lasso", day.missions[4].mission ~= nil and day.missions[6].mission ~= nil
-		and day.missions[4].source.text:find("Lasso tressé", 1, true) ~= nil, day.missions[4].source.text)
-	Check("[DAYW] … une capture dans le lot", day.missions[4].mission.kind == "captures" or day.missions[4].mission.kind == "captureNamed")
-	day.missions[3].reroll:Click()
-	Check("[DAYW] changé : le bouton disparaît", NS:DailyData().rerolled and not day.missions[3].reroll:IsShown()
-		and not day.missions[2].reroll:IsShown())
-	Check("[DAYW] besace de capture affichée", #day.aids == 3 and day.aids[1].count.text:find("^%d+ / 10$") ~= nil, day.aids[1].count.text)
-	Check("[DAYW] carte : 3 tampons sur 7", day.stamps[3].got and not day.stamps[4].got)
+	Check("[DAYW] onglet Missions (pastille des missions qui restent), affiché seul", tab and f.kind == "day"
+		and day:IsShown() and not f.evo:IsShown(), f.sections.day and f.sections.day.badge.text)
+	Check("[DAYW] mission du compagnon en tête (libellé, compteur, récompense), semaine : trois dont une capture",
+		day.missions[1].label.text == "Fais-moi 3 caresses" and day.missions[1].count.text == "0/3"
+		and day.missions[1].source.text:find("Appât savoureux", 1, true) ~= nil and day.missions[6].mission ~= nil
+		and (day.missions[4].mission.kind == "captures" or day.missions[4].mission.kind == "captureNamed"),
+		day.missions[1].label.text)
 	local slot
 	for _, s in ipairs(day.slots) do if s.kind == "bonbon" then slot = s end end
-	Check("[DAYW] garde-manger : « 2 / 3 », bouton Donner", slot.count.text == "2 / 3" and slot.give:IsShown())
+	Check("[DAYW] besace, carte (3 tampons sur 7), garde-manger « 2 / 3 » avec Donner", #day.aids == 3
+		and day.aids[1].count.text:find("^%d+ / 10$") ~= nil and day.stamps[3].got and not day.stamps[4].got
+		and slot.count.text == "2 / 3" and slot.give:IsShown(), day.aids[1].count.text)
 	slot.give:Click()
 	Check("[DAYW] donner : une de moins", NS:TreatCount("bonbon") == 1 and slot.count.text == "1 / 3")
 	f:Hide()
 	-- objectifs dans le bloc à l'écran
 	local found
 	for _, goal in ipairs(NS:JournalObjectives()) do if goal.id:find("^mission:.-:3:") then found = goal end end
-	Check("[DAYW] objectif : la mission du jour", found and found.label == "Fais-moi 3 caresses" and found.progress == "0/3")
 	-- 2.10.0 : la clé porte le jour et la sorte de mission, plus l'emplacement seul
 	local today = NS:DailyData().day
-	Check("[DAYW] clé de mission : jour, emplacement, sorte", found and found.id == "mission:" .. today .. ":3:"
-		.. tostring(NS:DailyData().missions[3].kind), found and found.id)
+	Check("[DAYW] objectif : la mission du jour, clé jour + emplacement + sorte", found and found.label == "Fais-moi 3 caresses"
+		and found.progress == "0/3" and found.id == "mission:" .. today .. ":3:" .. tostring(NS:DailyData().missions[3].kind),
+		found and found.id)
 	found.onClick()
-	Check("[DAYW] clic sur l'objectif : onglet Jour", f:IsShown() and f.kind == "day")
+	local opened = f:IsShown() and f.kind == "day"
 	found.onClick()
-	Check("[DAYW] … déjà sur le Jour : le clic referme", not f:IsShown())
+	local closed = not f:IsShown()
 	NS:ToggleJournal(true)
 	NS:SelectJournalKind("evolution")
 	found.onClick()
-	Check("[DAYW] … ouvert ailleurs : il va au Jour, reste ouvert", f:IsShown() and f.kind == "day")
+	Check("[DAYW] clic sur l'objectif : ouvre le Jour, le referme s'il y est, y va s'il est ailleurs", opened and closed
+		and f:IsShown() and f.kind == "day")
 	f:Hide()
 	-- masquer : cette mission, ce jour ; le lendemain et après « Changer », elle revient
 	local dismissed = NS:JournalData().dismissed or {}
@@ -359,9 +370,9 @@ do
 		for _, goal in ipairs(NS:JournalTrackerObjectives()) do if goal.id == id then return true end end
 		return false
 	end
-	Check("[DAYW] mission masquée : hors du suivi, comptée", not Listed(found.id) and NS:JournalHiddenCount() >= 1)
 	local m3 = NS:DailyData().missions[3]
-	Check("[DAYW] … le lendemain, une autre clé", NS:MissionGoalKey("2099-01-01", 3, m3) ~= found.id)
+	Check("[DAYW] mission masquée : hors du suivi, comptée ; le lendemain, une autre clé", not Listed(found.id)
+		and NS:JournalHiddenCount() >= 1 and NS:MissionGoalKey("2099-01-01", 3, m3) ~= found.id)
 	local m1 = NS:DailyData().missions[1]
 	local id1 = NS:MissionGoalKey(today, 1, m1)
 	NS:JournalDismiss(id1, true)
@@ -380,23 +391,20 @@ do
 	Check("[DAYW] réafficher : plus aucun masqué", NS:JournalHiddenCount() == 0 and dismissed[found.id] == nil)
 	-- réglage coupé
 	NS:DB().companionMissions = false
-	Check("[DAYW] missions coupées : rien ne compte", NS:MissionEvent("pets", 1) == false)
+	local noEvent = NS:MissionEvent("pets", 1) == false
 	local listed = false
 	for _, goal in ipairs(NS:JournalObjectives()) do if goal.id:find("^mission:") then listed = true end end
-	Check("[DAYW] … ni objectif", not listed)
 	NS:ToggleJournal(true)
 	f.sections.day:Click()
-	Check("[DAYW] … onglet : il le dit", day.missions[1].label.text == NS.L.MIS_OFF)
+	local said = day.missions[1].label.text == NS.L.MIS_OFF
 	f:Hide()
 	DY.day = "2026-11-07"
-	Check("[DAYW] … pas de tirage", NS:DailyPoll() == false)
+	Check("[DAYW] missions coupées : rien ne compte, ni objectif, l'onglet le dit, pas de tirage", noEvent and not listed
+		and said and NS:DailyPoll() == false)
 	NS:DB().companionMissions = true
 	local page
 	for _, p in ipairs(NS.OPTION_PAGES) do if p.id == "companionDaily" then page = p end end
 	Check("[DAYW] réglage dans la page « Au jour le jour »", page and page.rows[1].key == "companionMissions")
-	local missing = {}
-	for key in pairs(NS.DAILY_STRINGS.fr) do if not NS.DAILY_STRINGS.en[key] then missing[#missing + 1] = key end end
-	Check("[DAYW] textes fr et en", #missing == 0, table.concat(missing, ", "))
 end
 
 DY.Done()

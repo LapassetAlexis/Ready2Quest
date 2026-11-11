@@ -171,3 +171,24 @@ Check("[HYG] carnet : encres lues dans AZEROTH_INK", QINK and QNS.CARNET_COLORS
 	and QNS.CARNET_COLORS.catGold == QINK.catGold and QNS.CARNET_COLORS.green == QINK.barGreen)
 Check("[HYG] scène de capture : teintes partagées (CAPTURE_FX_COLORS)", QNS and QNS.CAPTURE_FX_COLORS
 	and QNS.CAPTURE_FX_COLORS.white == QNS.Theme.WHITE and QNS.CAPTURE_FX_COLORS.fledName[1] == 0.7)
+
+-- 3.0.0 : la police du jeu n'a pas les étoiles ★ / ☆ (un carré à la place,
+-- tutoriel 3.0 bêta 2) : jamais dans un texte affiché (hors commentaires) ;
+-- les étoiles passent par les atlas du client (ns:CaptureStarsText)
+do
+	local glyphs = {}
+	for _, path in ipairs(CLEAN) do
+		local data = ReadFile(path)
+		if data then
+			local n = 0
+			for line in (data .. "\n"):gmatch("([^\n]*)\n") do
+				n = n + 1
+				local code = line:gsub("%-%-.*$", "")
+				if code:find("\226\152\133", 1, true) or code:find("\226\152\134", 1, true) then
+					glyphs[#glyphs + 1] = path .. ":" .. n
+				end
+			end
+		end
+	end
+	Check("[HYG] pas d'étoile ★/☆ dans les textes (police du jeu sans ce glyphe)", #glyphs == 0, table.concat(glyphs, ", "))
+end

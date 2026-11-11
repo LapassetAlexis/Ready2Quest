@@ -13,4 +13,7 @@
 	<Binding name="QUESTCOMPANION_NET" category="ADDONS">
 		QuestCompanion_ThrowNet()
 	</Binding>
+	<Binding name="QUESTCOMPANION_HUNT" category="ADDONS">
+		QuestCompanion_ToggleHunt()
+	</Binding>
 </Bindings>

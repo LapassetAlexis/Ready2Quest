@@ -87,6 +87,21 @@ local ORNAMENTS = {
 		size = 24, at = { "BOTTOM", "TOP", 27, -10 } },
 }
 ns.FEAT_COSMETICS = { frame = FRAMES, bg = BACKGROUNDS, orn = ORNAMENTS }
+-- 2.15.0 : deux cosmétiques de l'Échoppe du dresseur (JournalReserve.lua,
+-- prix dans ns.PAILLETTES_SHOP), achetés en paillettes et gardés au compte
+-- (QuestCompanionDB.capture.shopOwned) : `unlock = { shop = id }`, palier 0
+-- (jamais au coffre). Bordure et filets du client, comme les autres cadres.
+local SHOP_FRAMES = {
+	{ id = "shop_glitter", label = "COMP_FRAME_SHOP_GLITTER", tier = 0, unlock = { shop = "shop_glitter" },
+		edge = { 1, 0.86, 0.55, 1 }, inner = { 0.98, 0.80, 0.96, 0.55 },
+		backdrop = { file = "Interface\\Glues\\Common\\Glue-Tooltip-Border", size = 16, color = { 1, 0.90, 0.70 } } },
+}
+local SHOP_BACKGROUNDS = {
+	{ id = "shop_starfall", label = "COMP_BG_SHOP_STARFALL", tier = 0, unlock = { shop = "shop_starfall" },
+		color = { 0.18, 0.07, 0.24, 0.92 }, stars = true,
+		gradient = { top = { 0.07, 0.03, 0.16, 0.92 }, bottom = { 0.34, 0.12, 0.30, 0.90 } } },
+}
+ns.SHOP_COSMETICS = { frame = SHOP_FRAMES, bg = SHOP_BACKGROUNDS }
 -- icônes des huit familles (les mêmes que la page Ménagerie du carnet)
 local FAMILY_ICONS = {
 	beast = "Ability_Hunter_Pet_Wolf", humanoid = "INV_Misc_Head_Human_01", undead = "Spell_Shadow_RaiseDead",
@@ -111,6 +126,8 @@ end
 Append(ns.COMPANION_FRAMES, FRAMES)
 Append(ns.COMPANION_BACKGROUNDS, BACKGROUNDS)
 Append(ns.COMPANION_ORNAMENTS, ORNAMENTS)
+Append(ns.COMPANION_FRAMES, SHOP_FRAMES)
+Append(ns.COMPANION_BACKGROUNDS, SHOP_BACKGROUNDS)
 
 -- ---------------------------------------------------------------------------
 -- Chaînes
@@ -127,6 +144,9 @@ local FR = {
 	COMP_ORN_FEAT_ANNIVERSARY = "Ruban d'anniversaire",
 	COMP_ORN_FEAT_EYE         = "Œil clos",
 	COMP_ORN_FEAT_WILDCROWN   = "Couronne sauvage",
+	COMP_FRAME_SHOP_GLITTER   = "Cadre pailleté",
+	COMP_BG_SHOP_STARFALL     = "Nuit pailletée",
+	COMP_REQ_shop             = "Échoppe du dresseur",
 	COMP_REQ_feat             = "Haut fait : %s",
 	FEAT_SOON_cardbg          = "fond de fiche (à venir)",
 	FEAT_SOON_cardframe       = "cadre de fiche (à venir)",
@@ -144,6 +164,9 @@ local EN = {
 	COMP_ORN_FEAT_ANNIVERSARY = "Anniversary Ribbon",
 	COMP_ORN_FEAT_EYE         = "Closed Eye",
 	COMP_ORN_FEAT_WILDCROWN   = "Wild Crown",
+	COMP_FRAME_SHOP_GLITTER   = "Glitter Frame",
+	COMP_BG_SHOP_STARFALL     = "Glittering Night",
+	COMP_REQ_shop             = "Trainer's Stall",
 	COMP_REQ_feat             = "Achievement: %s",
 	FEAT_SOON_cardbg          = "card background (coming soon)",
 	FEAT_SOON_cardframe       = "card frame (coming soon)",
@@ -171,6 +194,41 @@ do
 				for _, row in ipairs(page.rows) do if row.key == def.key then present = true end end
 				if not present then page.rows[#page.rows + 1] = { key = def.key, label = def.label, kind = "bool" } end
 			end
+		end
+	end
+end
+
+-- ---------------------------------------------------------------------------
+-- 2.15.0 : cosmétiques de l'Échoppe : gardés au compte, la condition dit
+-- où les acheter et leur prix
+-- ---------------------------------------------------------------------------
+function ns:ShopCosmeticOwned(id)
+	local capture = self.CaptureData and self:CaptureData()
+	return capture ~= nil and type(capture.shopOwned) == "table" and capture.shopOwned[id] == true
+end
+function ns:ShopCosmeticGrant(id)
+	local capture = self:CaptureData()
+	if type(capture.shopOwned) ~= "table" then capture.shopOwned = {} end
+	capture.shopOwned[id] = true
+	return true
+end
+do
+	local unlocked = ns.CompanionIsUnlocked
+	if unlocked then
+		function ns:CompanionIsUnlocked(kind, def, ...)
+			local unlock = def and def.unlock
+			if unlock and unlock.shop then return self:ShopCosmeticOwned(unlock.shop) end
+			return unlocked(self, kind, def, ...)
+		end
+	end
+	local requirement = ns.CompanionRequirement
+	if requirement then
+		function ns:CompanionRequirement(unlock, ...)
+			if type(unlock) == "table" and unlock.shop then
+				local price = self.ShopCosmeticPrice and self:ShopCosmeticPrice(unlock.shop)
+				return price and self:F("SHOP_REQ", price) or L.COMP_REQ_shop
+			end
+			return requirement(self, unlock, ...)
 		end
 	end
 end

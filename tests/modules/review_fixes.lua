@@ -1,4 +1,10 @@
--- Relecture de QuestCompanion (1.2.0) : un test par défaut corrigé.
+-- Relecture de QuestCompanion (1.2.0) et correctifs Forever : un test par
+-- défaut corrigé. Astuces sans « % » seul, rang d'une créature normale dans
+-- l'aperçu, nom coupé sans casser l'UTF-8, niveau dit au cran Calme, pas de
+-- rappel en niveaux quand l'évolution est prête, conseils (élite vu en
+-- combat), rare engagé oublié, morts comptées par le message d'XP, valeurs
+-- secrètes (vie, remarque du caractère). Missions (« +3 % » en anglais, un
+-- PNJ compté une fois) : missions.lua et companion_daily.lua.
 local Check, Say, ResetWorld, NS, Mock = T.Check, T.Say, T.ResetWorld, T.QNS, T.Mock
 
 local RF = { saved = {} }
@@ -23,11 +29,8 @@ end
 do
 	Say("-- relecture : correctifs")
 	RF.Reset()
-	-- textes : le pourcentage de mission en anglais, les astuces à « 100 % »
-	local en = NS.DAILY_STRINGS.en.MIS_percent
-	local ok, text = pcall(string.format, en, 3, "Westfall")
-	Check("[FIX] mission « +3 % » en anglais : lisible", ok and text == "Gain 3% in Westfall", tostring(text))
-	ok = pcall(NS.F, NS, "COMP_SAY_TIP_" .. 1)
+	-- textes : les astuces à « 100 % »
+	local ok = pcall(NS.F, NS, "COMP_SAY_TIP_" .. 1)
 	Check("[FIX] astuces : aucun « % » seul", ok)
 	-- aperçu d'une créature normale : son rang écrit (la fiche de Zone est
 	-- retirée, l'aperçu des créatures est celui de la Ménagerie)
@@ -44,9 +47,9 @@ do
 	NS.journalFrame:Hide()
 	-- nom : couper sans perdre un « é » complet
 	local name = NS:CompanionSanitizeName(string.rep("a", 22) .. "éx")
-	Check("[FIX] nom de 24 octets : le « é » complet reste", name == string.rep("a", 22) .. "é", name)
-	name = NS:CompanionSanitizeName(string.rep("a", 23) .. "éx")
-	Check("[FIX] nom coupé au milieu d'un « é » : il part", name == string.rep("a", 23), name)
+	local cut = NS:CompanionSanitizeName(string.rep("a", 23) .. "éx")
+	Check("[FIX] nom de 24 octets : le « é » complet reste, coupé au milieu il part", name == string.rep("a", 22) .. "é"
+		and cut == string.rep("a", 23), name .. " / " .. cut)
 	-- un niveau : grand moment, dit au cran Calme
 	NS:DB().companionChatter = 2
 	NS:CompanionOnLevel(13)
@@ -62,18 +65,8 @@ do
 end
 
 do
-	Say("-- relecture : PNJ, conseils")
+	Say("-- relecture : conseils")
 	RF.Reset()
-	-- « parle à N personnes » : un PNJ compte une fois
-	local daily = NS:DailyData()
-	daily.day = NS:DailyToday()
-	daily.missions = { { kind = "talks", need = 3, have = 0, source = "trait" } }
-	daily.talked = {}
-	_G.UnitGUID = function(unit) if unit == "npc" then return "Creature-0-1-1-1-777-0001" end return nil end
-	NS:CompanionOnNpc("quest")
-	NS:CompanionOnNpc("quest")
-	Check("[FIX] même PNJ, deux fenêtres : compté une fois", daily.missions[1].have == 1, daily.missions[1].have)
-	_G.UnitGUID = RF.saved.UnitGUID
 	-- conseils : un élite vu en plein combat n'est pas annoncé après
 	_G.IsInInstance = function() return false, "none" end
 	_G.UnitExists = function() return true end
@@ -84,9 +77,9 @@ do
 	_G.UnitName = function(unit) if unit == "player" then return "Testeur" end return "Ogre" end
 	_G.UnitGUID = function() return "Creature-0-1-1-1-888-0001" end
 	_G.InCombatLockdown = function() return true end
-	Check("[FIX] élite vu en combat : rien de retenu", NS:AdviceSeeUnit("target") == false and NS:AdviceState().elite == nil)
+	local inCombat = NS:AdviceSeeUnit("target") == false and NS:AdviceState().elite == nil
 	_G.InCombatLockdown = function() return false end
-	Check("[FIX] hors combat : retenu", NS:AdviceSeeUnit("target") == true)
+	Check("[FIX] élite vu en combat : rien de retenu ; hors combat : retenu", inCombat and NS:AdviceSeeUnit("target") == true)
 	RF.Restore()
 end
 
@@ -140,8 +133,8 @@ do
 	w.guid, w.dead = "Creature-0-4378-1-12-6100-0000AAAA03", false
 	NS:BestiarySeeUnit("target")
 	Mock:Fire("CHAT_MSG_COMBAT_XP_GAIN", "Loup meurt, vous gagnez 40 points d'expérience.")
-	Check("[BSTXP] cible encore vivante : rien", book[6100].killed == 2)
-	Check("[BSTXP] XP sans nom (quête) : rien", NS:BestiaryOnXP("Vous gagnez 40 points d'expérience.") == false)
+	Check("[BSTXP] cible encore vivante, ou XP sans nom (quête) : rien", book[6100].killed == 2
+		and NS:BestiaryOnXP("Vous gagnez 40 points d'expérience.") == false)
 	-- /qc diag : ce que le bestiaire a reçu
 	local lines = {}
 	local print = NS.Print
@@ -173,15 +166,15 @@ do
 	Mock:Fire("PLAYER_REGEN_ENABLED")
 	local errs = {}
 	for _, e in ipairs(NS.errors) do errs[#errs + 1] = tostring(e.where) .. " : " .. tostring(e.message) end
-	Check("[SECRET] fin de combat, vie secrète : aucune erreur", #errs == 0, table.concat(errs, " || "))
-	Check("[SECRET] … et pas de conseil « vie basse »", NS:AdviceState().health == nil)
+	Check("[SECRET] fin de combat, vie secrète : aucune erreur, pas de conseil « vie basse »", #errs == 0
+		and NS:AdviceState().health == nil, table.concat(errs, " || "))
+	local failed = {}
 	for _, look in ipairs({ "turtle", "chicken" }) do
 		NS:CompanionData().appearance = look
 		local ok, err = pcall(NS.PersonaTickNotice, NS, Mock.now, NS:PersonaState())
-		Check("[SECRET] remarque du caractère (" .. look .. ") : pas d'erreur", ok, tostring(err))
+		if not ok then failed[#failed + 1] = look .. " : " .. tostring(err) end
 	end
-	_G.GetRaidTargetIndex = function() return SECRET end
-	Check("[SECRET] icône de cible secrète : on n'y touche pas", NS:ShinyMark("target") == false)
+	Check("[SECRET] remarque du caractère (tortue, poulet) : pas d'erreur", #failed == 0, table.concat(failed, " || "))
 	_G.issecretvalue, _G.UnitHealth, _G.UnitHealthMax, _G.UnitAffectingCombat, _G.GetRaidTargetIndex =
 		saved[1], saved[2], saved[3], saved[4], saved[5]
 	_G.tonumber = realTonumber

@@ -32,11 +32,10 @@ Mock.world.mapID, Mock.world.subzone = 30, "Goldshire"
 Mock:Fire("PLAYER_ENTERING_WORLD", true, false)
 Mock.now = Mock.now + 60
 Mock.world.subzone = "Bois"; Mock:Fire("ZONE_CHANGED"); Mock:Advance(6)
-Check("[API] module de départ coupé : DEPARTURE émis quand même", events[1] == "DEPARTURE:Goldshire", table.concat(events, ","))
-Check("[API] module de départ coupé : pas d'alerte", NS.lastResults == nil)
+Check("[API] module de départ coupé : DEPARTURE émis quand même, sans alerte", events[1] == "DEPARTURE:Goldshire"
+	and NS.lastResults == nil, table.concat(events, ","))
 
-Check("[API] AddCheck exposé", type(NS.AddCheck) == "function")
-Check("[API] AddOptionPage exposé", type(NS.AddOptionPage) == "function")
-Check("[API] RegisterModule exposé", type(NS.RegisterModule) == "function")
+Check("[API] AddCheck, AddOptionPage, RegisterModule exposés", type(NS.AddCheck) == "function"
+	and type(NS.AddOptionPage) == "function" and type(NS.RegisterModule) == "function")
 Check("[API] le harnais charge les fichiers du .toc", TOC_FILES and #TOC_FILES >= 15, TOC_FILES and #TOC_FILES)
 _G.UnitFactionGroup = nil

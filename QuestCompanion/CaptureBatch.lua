@@ -64,7 +64,8 @@ local TILE_W, TILE_H, TILE_GAP = 104, 136, 8
 local SCENE_H, MODEL, NET = 88, 84, 92
 local PAD, HEAD, FOOT, MIN_W = 16, 44, 48, 340
 local ROPES, BURST = 3, 6
-local CHOOSER_W = 248
+local CHOOSER_W, CHOOSER_H = 248, 146   -- 2.15.0 : 112 -> 146 (la rangée d'aides)
+ns.CAPTURE_CHOOSER_AID = 24
 -- style Azeroth (2.5.1, maquette validée) : fenêtre en bois, plaque de titre,
 -- cases avec la créature dans le cadre d'icône doré des hauts faits
 local AZB = { tileW = 132, tileH = 148, gapX = 14, gapY = 16, ring = 96, window = 72, model = 76, net = 104,
@@ -73,8 +74,9 @@ local AZB = { tileW = 132, tileH = 148, gapX = 14, gapY = 16, ring = 96, window 
 ns.CAPTURE_BATCH_AZEROTH = AZB
 -- le choix au filet, en bois : le glyphe du filet dans son cadre, la légende,
 -- deux boutons dorés (avec leur ligne de dessous), les raccourcis
-local AZC = { w = 300, h = 252, ring = 44, glyph = 28, ringY = -22, captionY = -70, buttonH = 44,
-	oneY = -90, allY = -142, hintY = -194, gap = 14 }
+-- 2.15.0 : une rangée d'aides pour tout le lot (aidsY), le pied descend d'autant
+local AZC = { w = 300, h = 290, ring = 44, glyph = 28, ringY = -22, captionY = -70, buttonH = 44,
+	oneY = -90, allY = -142, aidsY = -194, hintY = -232, gap = 14 }
 ns.CAPTURE_CHOOSER_AZEROTH = AZC
 local RANK_ORDER = { trivial = 0, minus = 0, normal = 1, elite = 2, rare = 3, rareelite = 4, worldboss = 5 }
 
@@ -109,6 +111,7 @@ local FR = {
 	CAPTURE_CHOOSE_ALL_AID = "chaque essai coûte : %s",
 	CAPTURE_CHOOSE_ALL_FREE = "un lancer pour chacune",
 	CAPTURE_CHOOSE_KEYS    = "Maj+clic : la meilleure · Ctrl+clic : tout · Échap : fermer",
+	CAPTURE_CHOOSE_AID_TIP = "Clic : l'aide de tout le lot (un par essai, tant qu'il en reste)",
 }
 local EN = {
 	CAPTURE_BATCH_ACTION   = "Capture all",
@@ -141,6 +144,7 @@ local EN = {
 	CAPTURE_CHOOSE_ALL_AID = "each try uses: %s",
 	CAPTURE_CHOOSE_ALL_FREE = "one throw for each",
 	CAPTURE_CHOOSE_KEYS    = "Shift-click: the best · Ctrl-click: all · Escape: close",
+	CAPTURE_CHOOSE_AID_TIP = "Click: the aid for the whole batch (one per try, while they last)",
 }
 ns.RegisterStrings(FR, EN)
 if ns.KEEP_STRINGS then ns.CAPTURE_BATCH_STRINGS = { fr = FR, en = EN } end
@@ -261,8 +265,8 @@ function ns:CaptureBatch()
 	Hold(self, "batch")
 	local aid = state.aid
 	if aid and self:CaptureAidCount(aid) <= 0 then aid, state.aid = nil, nil end
-	-- le tutoriel de la ménagerie attendait le filet (avant que la file ne se vide)
-	if self.CompanionSequenceAdvance then pcall(self.CompanionSequenceAdvance, self, "net") end
+	-- 3.0.0 : le filet part (visite guidée, GuidedTour.lua)
+	if self.TourSignal then pcall(self.TourSignal, self, "throw") end
 	self:CaptureToastHide()
 	self:CapturePlaySound("throw")
 
@@ -278,6 +282,9 @@ function ns:CaptureBatch()
 			-- espèce, déjà à 3 étoiles) : il sort du filet sans essai
 			if not self:CaptureQueueReason(candidate) then
 				self:CaptureQueueRemove(candidate)
+			-- 2.15.0 : Réserve pleine et il irait en Réserve : il reste au filet
+			elseif self.CaptureRefuseBlocked and self:CaptureRefuseBlocked(candidate) then
+				batch.blocked = (batch.blocked or 0) + 1
 			else
 				-- l'aide manque : les suivants restent dans le filet
 				if aid and self:CaptureAidCount(aid) <= 0 then batch.short = true; break end
@@ -301,6 +308,8 @@ function ns:CaptureBatch()
 		end
 	end)
 	self.captureBatchResolving = nil
+	-- 3.0.0 (bêta 6) : l'aide ne sert qu'à ce lot ; le lancer suivant repart sans
+	state.aid = nil
 	self.Print, self.CompanionSay = print, say
 	if not ok and self.RecordError then self:RecordError("capture:batch", err) end
 	batch.tried = #batch.results
@@ -344,8 +353,8 @@ function ns:CaptureBatchFlush(batch)
 			self:CompanionSay("CAPTURE_FAIL", { force = true, args = { last and last.target.name or "" } })
 		end
 	end
-	-- la scène est « refermée » pour le tutoriel de la ménagerie (Companion.lua)
-	if self.CompanionSequenceAdvance then pcall(self.CompanionSequenceAdvance, self, "stage", { ok = got > 0 }) end
+	-- la scène est « refermée » : la visite guidée passe au verdict (GuidedTour.lua)
+	if self.TourSignal then pcall(self.TourSignal, self, "result", got > 0) end
 end
 
 
@@ -937,7 +946,7 @@ function ns:EnsureCaptureBatchFrame()
 		frame.grid:SetPoint("TOPLEFT", frame, "TOPLEFT", 0, -HEAD)
 		frame.grid:SetPoint("TOPRIGHT", frame, "TOPRIGHT", 0, -HEAD)
 		frame.grid:SetHeight(TILE_H)
-		frame.stop = Theme.CreateButton(frame, "auto", Theme.DIALOG_BUTTON_HEIGHT or 28, L.CAPTURE_BATCH_STOP, stopClick)
+		frame.stop = Theme.CreateButton(frame, "auto", "md", L.CAPTURE_BATCH_STOP, stopClick)
 		frame.stop:SetPoint("BOTTOMRIGHT", frame, "BOTTOMRIGHT", -12, 10)
 		frame.footer = Theme.Text(frame, Theme.F_SMALL, Theme.MUTED)
 		frame.footer:SetPoint("BOTTOMLEFT", frame, "BOTTOMLEFT", left, 18)
@@ -1191,6 +1200,7 @@ end
 -- combat, ou quand la file retombe sous deux. Pendant qu'il est ouvert, le
 -- compte à rebours de la file est en pause.
 -- ---------------------------------------------------------------------------
+local BuildChooserAids
 local function Busy(self)
 	local state = self.captureState
 	return state ~= nil and state.rolling ~= nil and not state.rolling.result
@@ -1200,6 +1210,69 @@ local function Over(frame)
 	if not (frame and frame.IsMouseOver) then return false end
 	local ok, over = pcall(frame.IsMouseOver, frame)
 	return ok and over and true or false
+end
+
+-- 2.15.0 : une seule aide pour tout le lot, choisie dans le choix : les trois
+-- aides en icônes (celle choisie en couleurs, liseré d'or ; à 0 : grisée), le
+-- nombre en poche ; c'est l'aide de la file (state.aid), dépensée à chaque
+-- essai tant qu'il en reste (ns:CaptureBatch)
+local function AidTip(b)
+	local tooltip = Tooltip()
+	if not tooltip then return end
+	local count = ns:CaptureAidCount(b.aid)
+	tooltip:SetOwner(b, "ANCHOR_TOP")
+	Theme.TooltipLine(tooltip, ns:CaptureAidLabel(b.aid), Theme.PARCHMENT)
+	Theme.TooltipLine(tooltip, L["CAPTURE_AID_DESC_" .. b.aid], Theme.TEXT)
+	Theme.TooltipLine(tooltip, count > 0 and ns:F("CAPTURE_AID_HINT", count) or L.CAPTURE_AID_NONE, Theme.MUTED_LIGHT)
+	Theme.TooltipLine(tooltip, L.CAPTURE_CHOOSE_AID_TIP, Theme.MUTED_LIGHT)
+	tooltip:Show()
+end
+function BuildChooserAids(frame, y, centered)
+	frame.aids = {}
+	local aids = ns.CAPTURE_AIDS or {}
+	local size, step = ns.CAPTURE_CHOOSER_AID, ns.CAPTURE_CHOOSER_AID + 22
+	for index, aid in ipairs(aids) do
+		local button = Theme.CreateIconButton(frame, size, aid.icon, function(b)
+			ns:CaptureToggleAid(b.aid)
+			ns:CaptureChooserRefresh()
+		end)
+		if centered then
+			button:SetPoint("TOP", frame, "TOP", (index - (#aids + 1) / 2) * step - 6, y)
+		else
+			button:SetPoint("TOPLEFT", frame, "TOPLEFT", (frame.contentLeft or 14) + (index - 1) * step, y)
+		end
+		button.aid = aid.id
+		button.count = Theme.Text(button, Theme.F_SMALL, Theme.PARCHMENT)
+		button.count:SetPoint("LEFT", button, "RIGHT", 3, 0)
+		button:SetScript("OnEnter", AidTip)
+		button:SetScript("OnLeave", function() local t = Tooltip(); if t and t.Hide then t:Hide() end end)
+		frame.aids[index] = button
+	end
+end
+
+-- Les aides du choix à jour (sans table neuve ; le nombre n'est réécrit que s'il change)
+local function RefreshChooserAids(self, frame)
+	local chosen = self:CaptureState().aid
+	for _, button in ipairs(frame.aids or {}) do
+		local count = self:CaptureAidCount(button.aid)
+		if button.shown ~= count then
+			button.shown = count
+			button.count:SetText(count > 0 and tostring(count) or "")
+		end
+		local on = chosen == button.aid
+		if button.icon.SetDesaturated then button.icon:SetDesaturated(not on) end
+		button.icon:SetAlpha(on and 1 or (count > 0 and 0.6 or 0.25))
+		local c = on and Theme.GOLD or Theme.EDGE
+		if button.border and button.border.SetColor then button.border:SetColor(c[1], c[2], c[3], 1) end
+	end
+end
+
+-- « Capturer : <le meilleur> » : la carte de préparation (2.15.0), ou le
+-- lancer tout de suite avec « Lancer directement au clic »
+function ns:CaptureChooserSingle()
+	self:CaptureChooserHide()
+	if self:DB().companionCaptureDirect == true or not self.CapturePrepOpen then return self:CaptureThrow() end
+	return self:CapturePrepOpen()
 end
 
 -- Azeroth (2.5.1) : petit panneau en bois, le glyphe du filet dans son cadre
@@ -1228,16 +1301,14 @@ local function BuildChooserAzeroth(self, frame)
 	frame.title:SetJustifyH("CENTER")
 	if ns.AzerothFont then ns.AzerothFont(frame.title, 11) end
 	if frame.title.SetWordWrap then frame.title:SetWordWrap(false) end
-	frame.single = self:AzerothButton(frame, bw, AZC.buttonH, "", function()
-		ns:CaptureChooserHide()
-		ns:CaptureThrow()
-	end, "gold")
+	frame.single = self:AzerothButton(frame, bw, AZC.buttonH, "", function() ns:CaptureChooserSingle() end, "gold")
 	frame.single:SetPoint("TOP", frame, "TOP", 0, AZC.oneY)
 	frame.all = self:AzerothButton(frame, bw, AZC.buttonH, "", function()
 		ns:CaptureChooserHide()
 		ns:CaptureBatch()
 	end, "dark")
 	frame.all:SetPoint("TOP", frame, "TOP", 0, AZC.allY)
+	BuildChooserAids(frame, AZC.aidsY, true)
 	frame.hint = Theme.Text(frame, Theme.F_SMALL, colors.hint or Theme.MUTED)
 	frame.hint:SetPoint("TOP", frame, "TOP", 0, AZC.hintY)
 	frame.hint:SetWidth(bw)
@@ -1257,7 +1328,7 @@ function ns:EnsureCaptureChooser()
 		if Theme.RegisterEscapeClose then pcall(Theme.RegisterEscapeClose, frame) end
 		BuildChooserAzeroth(self, frame)
 	else
-		frame = Theme.CreateToast(UIParent, CHOOSER_W, 112, { strata = "DIALOG", name = "QuestCompanionCaptureChooser", accent = Theme.GOLD })
+		frame = Theme.CreateToast(UIParent, CHOOSER_W, CHOOSER_H, { strata = "DIALOG", name = "QuestCompanionCaptureChooser", accent = Theme.GOLD })
 		if not frame then return nil end
 		frame.uiStyle = "sobre"
 		frame:EnableMouse(true)
@@ -1268,12 +1339,9 @@ function ns:EnsureCaptureChooser()
 		frame.title = Theme.Text(frame, Theme.F_CAPS or Theme.F_SMALL, Theme.MUTED_LIGHT)
 		frame.title:SetPoint("TOPLEFT", frame, "TOPLEFT", left, -9)
 		frame.title:SetText(Theme.Upper and Theme.Upper(L.CAPTURE_CHOOSE_TITLE) or L.CAPTURE_CHOOSE_TITLE)
-		frame.single = Theme.CreateButton(frame, width, 26, "", function()
-			ns:CaptureChooserHide()
-			ns:CaptureThrow()
-		end, "normal")
+		frame.single = Theme.CreateButton(frame, width, "md", "", function() ns:CaptureChooserSingle() end, "normal")
 		frame.single:SetPoint("TOPLEFT", frame, "TOPLEFT", left, -26)
-		frame.all = Theme.CreateButton(frame, width, 26, "", function()
+		frame.all = Theme.CreateButton(frame, width, "md", "", function()
 			ns:CaptureChooserHide()
 			ns:CaptureBatch()
 		end, "primary")
@@ -1282,8 +1350,9 @@ function ns:EnsureCaptureChooser()
 			button.text:SetWidth(width - 12)
 			if button.text.SetWordWrap then button.text:SetWordWrap(false) end
 		end
+		BuildChooserAids(frame, -90, false)
 		frame.hint = Theme.Text(frame, Theme.F_SMALL, Theme.MUTED)
-		frame.hint:SetPoint("TOPLEFT", frame, "TOPLEFT", left, -92)
+		frame.hint:SetPoint("TOPLEFT", frame, "TOPLEFT", left, -124)
 		frame.hint:SetWidth(width)
 		frame.hint:SetJustifyH("LEFT")
 		if frame.hint.SetWordWrap then frame.hint:SetWordWrap(false) end
@@ -1355,6 +1424,7 @@ function ns:CaptureChooserRefresh()
 		local c = best.shiny and (Theme.GOLD_LIGHT or Theme.GOLD) or (Theme.LABEL or Theme.PARCHMENT)
 		frame.single.text:SetTextColor(c[1], c[2], c[3])
 	end
+	RefreshChooserAids(self, frame)
 	frame.best = best
 	return true
 end
@@ -1429,10 +1499,12 @@ do
 				return base(self, mouse, ...)
 			end
 			if open then self:CaptureChooserHide(); return nil end
+			if self.CapturePrepShown and self:CapturePrepShown() then self:CapturePrepClose(); return nil end
 			if InCombat() then return self:CaptureRefuseCombat() end
 			if not self:CaptureBatchOffered() or Busy(self) then return base(self, mouse, ...) end
 			if Key("IsControlKeyDown") then return self:CaptureBatch() end
-			if Key("IsShiftKeyDown") then return base(self, mouse, ...) end
+			-- 2.15.0 : Maj+clic lance tout de suite (sans la carte de préparation)
+			if Key("IsShiftKeyDown") then return self:CaptureThrow() end
 			return self:CaptureChooserShow()
 		end
 	end
@@ -1487,7 +1559,7 @@ do
 			local fresh = not self.captureQueueList
 			local frame = ensure(self, ...)
 			if frame and fresh and not frame.all then
-				local button = Theme.CreateButton(frame, CompactWidth(frame, L.CAPTURE_BATCH_ACTION), 18, L.CAPTURE_BATCH_ACTION,
+				local button = Theme.CreateButton(frame, CompactWidth(frame, L.CAPTURE_BATCH_ACTION), "xs", L.CAPTURE_BATCH_ACTION,
 					function() ns:CaptureHideQueueList(); ns:CaptureBatch() end, "accent")
 				if frame.close then
 					button:SetPoint("RIGHT", frame.close, "LEFT", -6, 0)

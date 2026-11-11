@@ -227,4 +227,125 @@ function ns:MenagerieViewRotate(model)
 	model:SetScript("OnHide", Stop)
 end
 
+-- ---------------------------------------------------------------------------
+-- 2.15.0 : revenir compléter. « À compléter » (todo) : une espèce dont la
+-- référence du Codex n'a pas 3 étoiles, version par version (la normale,
+-- même pas encore capturée ; la brillante si tu l'as) ; « Épinglées »
+-- (pinned) : la liste de chasse (ns:HuntPin). Deux états de plus pour
+-- ns:MenagerieList ; les comptes d'une zone pour la page Exploration ; la
+-- Réserve comptée par espèce. Rien n'est créé à l'affichage : les comptes
+-- sont gardés tant que rien ne bouge (numéros de série de la capture).
+-- ---------------------------------------------------------------------------
+local CODEX_STATES = { todo = true, pinned = true }
+ns.CODEX_STATES = CODEX_STATES
+local STAR_MAX = 3
+
+-- Une espèce de la liste (ns:MenagerieList) est-elle à compléter ?
+function ns:CodexItemTodo(item)
+	if type(item) ~= "table" then return false end
+	local max = ns.CAPTURE_STAR_MAX or STAR_MAX
+	local normal = (item.captured and item.normal ~= false) and (tonumber(item.stars) or 1) or 0
+	if normal < max then return true end
+	return item.shiny == true and (tonumber(item.shinyStars) or 1) < max
+end
+
+-- Spécimens en Réserve par espèce : { [npc] = n }, gardé tant que les
+-- spécimens ne bougent pas (capture.specSerial)
+function ns:CodexReserveCounts()
+	local capture = ns.SpecimenStore and ns.SpecimenStore(self)
+	if not capture then return {} end
+	local cache = self.codexReserveCache
+	if cache and cache.serial == capture.specSerial and cache.specimens == capture.specimens then return cache.counts end
+	local counts = {}
+	for _, spec in pairs(capture.specimens) do
+		local codex = capture.codex[spec.npc]
+		if not (codex and codex[spec.shiny and "bestShiny" or "best"] == spec.id) then
+			counts[spec.npc] = (counts[spec.npc] or 0) + 1
+		end
+	end
+	self.codexReserveCache = { serial = capture.specSerial, specimens = capture.specimens, counts = counts }
+	return counts
+end
+
+do
+	local base = ns.MenagerieList
+	if base then
+		function ns:MenagerieList(opts, ...)
+			if type(opts) ~= "table" or not CODEX_STATES[opts.state or ""] then return base(self, opts, ...) end
+			local want = opts.state
+			local copy = {}
+			for key, value in pairs(opts) do copy[key] = value end
+			copy.state = "all"
+			local list, stats = base(self, copy, ...)
+			local kept = {}
+			stats.todo, stats.pinned = 0, 0
+			for _, item in ipairs(list or {}) do
+				item.todo = self:CodexItemTodo(item)
+				item.pinned = self.HuntPinned and self:HuntPinned(item.npc) or false
+				if item.todo then stats.todo = stats.todo + 1 end
+				if item.pinned then stats.pinned = stats.pinned + 1 end
+				if (want == "todo" and item.todo) or (want == "pinned" and item.pinned) then kept[#kept + 1] = item end
+			end
+			return kept, stats
+		end
+	end
+end
+
+-- Comptes d'une zone (page Exploration) : { total, todo, missing } ;
+-- complete = toutes ses espèces à 3 étoiles. Gardés par zone tant que la
+-- capture ne bouge pas (capture.serial, capture.specSerial).
+function ns:CodexZoneCounts(zoneID)
+	zoneID = tonumber(zoneID)
+	if not (zoneID and self.MenagerieList and self.CaptureData) then return nil end
+	local capture = self:CaptureData()
+	local cache = self.codexZoneCache
+	if not cache or cache.serial ~= capture.serial or cache.specSerial ~= capture.specSerial or cache.creatures ~= capture.creatures then
+		cache = { serial = capture.serial, specSerial = capture.specSerial, creatures = capture.creatures, zones = {} }
+		self.codexZoneCache = cache
+	end
+	local counts = cache.zones[zoneID]
+	if counts then return counts end
+	local list, stats = self:MenagerieList({ zone = zoneID, state = "todo" })
+	counts = { total = stats.total or 0, todo = #list, missing = (stats.total or 0) - (stats.captured or 0) }
+	counts.complete = counts.total > 0 and counts.todo == 0
+	cache.zones[zoneID] = counts
+	return counts
+end
+
+-- Les Créatures d'une zone, filtre « À compléter » (tag de la page Exploration)
+function ns:OpenMenagerieTodo(zoneID)
+	local frame = self:EnsureJournalWindow()
+	if not frame then return nil end
+	frame.menZone = tonumber(zoneID) or "here"
+	frame.menState, frame.menRank, frame.menSearch, frame.menOffset = "todo", "all", "", 0
+	frame.menType = nil
+	if frame.men and frame.men.search then frame.men.search:SetText("") end
+	self:SelectJournalKind("menagerie")
+	return frame
+end
+
+-- Épingler / désépingler depuis le carnet (la ligne d'une espèce)
+function ns:CodexTogglePin(npc)
+	if npc == nil or not self.HuntPin then return nil end
+	local on = self:HuntPin(npc)
+	local name = self.CreatureName and self:CreatureName(npc) or tostring(npc)
+	self:Print(self:F(on and "HUNT_PINNED" or "HUNT_UNPINNED", name))
+	return on
+end
+
+-- Le carnet suit les spécimens, les épingles et les paillettes
+local function JournalFollow(self)
+	local frame = self.journalFrame
+	if not (frame and frame.IsShown and frame:IsShown()) then return end
+	local kind = frame.kind
+	-- 3.0.0 (bêta 6) : l'Échoppe aussi (ses « Acheter » suivent le solde)
+	if kind == "menagerie" or kind == "reserve" or kind == "shop" or kind == "progress" or kind == "evolution" then
+		if self.JournalSoon then self:JournalSoon("codex") else self:RefreshJournal() end
+	end
+end
+if ns.RegisterCallback then
+	ns:RegisterCallback("SPECIMENS", function(self) JournalFollow(self) end)
+	ns:RegisterCallback("PAILLETTES", function(self) JournalFollow(self) end)
+end
+
 if ns.Mark then ns.Mark("MenagerieView") end

@@ -9,6 +9,9 @@
 -- tortue Zen, serpent Rusé, dragon féerique Espiègle) : par défaut, il prend
 -- celui de son apparence (réglage « Caractère : apparence / le sien ») ; une
 -- fois porté, un caractère d'apparence reste au choix dans les réglages.
+-- 3.1.0 : chaque créature capturée a son caractère (celui de son spécimen,
+-- SpecimenTraits.lua), qu'elle apporte comme une apparence ; le caractère
+-- formé reste celui des mascottes et des compagnons de saison.
 -- Ce que ça change :
 --   * ses phrases : ses propres versions des grands moments (et des conseils) ;
 --   * ses goûts : l'envie qu'il préfère monte 50 % plus vite et baisse moins ;
@@ -55,7 +58,7 @@ local FR = {
 	OPT_TRAIT_SOURCE     = "Caractère",
 	OPT_TRAIT_SOURCE_1   = "Apparence",
 	OPT_TRAIT_SOURCE_2   = "Le sien",
-	OPT_TRAIT_SOURCE_DESC_1 = "Recommandé : chouette, ara, feu follet, tortue, serpent, dragon féerique, poulet et écureuil mécanique apportent leur caractère. Les autres gardent le sien.",
+	OPT_TRAIT_SOURCE_DESC_1 = "Recommandé : chaque créature capturée a son caractère, et chouette, ara, feu follet, tortue, serpent, dragon féerique, poulet et écureuil mécanique apportent le leur. Les autres gardent le sien.",
 	OPT_TRAIT_SOURCE_DESC_2 = "Il garde son caractère quelle que soit son apparence.",
 	OPT_TRAIT_PICK       = "Son caractère",
 	OPT_TRAIT_NOW        = "Aujourd'hui : %s. %s",
@@ -97,7 +100,7 @@ local EN = {
 	OPT_TRAIT_SOURCE     = "Character",
 	OPT_TRAIT_SOURCE_1   = "Appearance",
 	OPT_TRAIT_SOURCE_2   = "Its own",
-	OPT_TRAIT_SOURCE_DESC_1 = "Recommended: owl, macaw, wisp, tortoise, snake, sprite, chicken and mechanical squirrel bring their character. Others keep their own.",
+	OPT_TRAIT_SOURCE_DESC_1 = "Recommended: every captured creature has its own character, and owl, macaw, wisp, tortoise, snake, sprite, chicken and mechanical squirrel bring theirs. Others keep their own.",
 	OPT_TRAIT_SOURCE_DESC_2 = "It keeps its own character whatever its appearance.",
 	OPT_TRAIT_PICK       = "Its character",
 	OPT_TRAIT_NOW        = "Today: %s. %s",

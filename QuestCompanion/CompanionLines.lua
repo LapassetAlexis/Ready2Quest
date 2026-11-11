@@ -808,51 +808,8 @@ P.TUTO = {
 	{ "Pour me personnaliser : réglages, page Compagnon. Et dès que tu abats un monstre, je t'explique le filet !", "To customise me: settings, Companion page. And as soon as you defeat a monster, I'll explain the net!" },
 }
 
--- ---------------------------------------------------------------------------
--- Tutoriel de la ménagerie (2.3.0) : ce qu'apportent la 2.0, la 2.1 et la
--- 2.2. Il commence à la PREMIÈRE OCCASION DE CAPTURE (un monstre dans le
--- filet, hors combat) : START attend que le joueur lance le filet, la scène
--- se joue en silence, puis OK ou FAIL selon le verdict, puis la suite
--- (TUTO_MENAGERIE) au rythme du tutoriel. LATE : le monstre est parti avant
--- le clic (le tutoriel reprendra à l'occasion suivante). INTRO ouvre le rejeu
--- (/qc compagnon tuto menagerie), qui n'attend aucune capture.
--- Chaque bulle de la suite reçoit SES arguments (Companion.lua,
--- ns:CompanionMenagerieTutorialSteps), tirés des constantes des modules :
--- aucun chiffre n'est écrit ici. Tous en « %d », dans l'ordre (la ligne la
--- plus fournie fixe le gabarit du réservoir, tests/modules/companion_lines_more.lua) :
---   1 : %d s de filet après le combat          6 : %d %% d'envie pour la pleine force
---   2 : %d %% de chance de 3 étoiles           7 : +%d %% de brillantes en zone scellée
---   3 : 1 sur %d, jusqu'à 1 sur %d après %d    8 : %d espèces (1er titre), %d (dernier)
---   5 : effets après %d min
--- ---------------------------------------------------------------------------
-P.TUTO_MENAGERIE_START = {
-	{ "Un monstre qui manque à ma collection ! Clique sur le filet, là, à côté de moi : je le capture.", "A monster missing from my collection! Click the net, right there next to me: I'll capture it." },
-}
-P.TUTO_MENAGERIE_OK = {
-	{ "Voilà ! Elle rejoint ma collection (page Créatures du carnet, /qc).", "There! It joins my collection (Creatures page of the journal, /qc)." },
-}
-P.TUTO_MENAGERIE_FAIL = {
-	{ "Il s'est échappé, ça arrive ! Au prochain, retente.", "It got away, it happens! Try again on the next one." },
-}
-P.TUTO_MENAGERIE_LATE = {
-	{ "Trop tard, il est parti… la prochaine fois !", "Too late, it's gone… next time!" },
-}
-P.TUTO_MENAGERIE_INTRO = {
-	{ "On révise la capture ? Tu vois le filet, à côté de moi : un monstre abattu qui manque à ta collection y tombe.", "Capture refresher? See the net next to me: a defeated monster missing from your collection lands in it." },
-}
-P.TUTO_MENAGERIE = {
-	{ "Le filet garde un monstre %d s après le combat. Clic : je capture le meilleur ; clic droit : la liste. Le bandeau te prévient.", "The net keeps a monster %d s after the fight. Click: I capture the best one; right-click: the list. The banner lets you know." },
-	{ "Chaque capture vaut 1 à 3 étoiles (3 étoiles : %d %% de chance). Recapture pour tenter mieux : je garde le meilleur.", "Each capture is worth 1 to 3 stars (3 stars: a %d%% chance). Recapture to try for better: I keep the best one." },
-	{ "Les brillantes ! 1 chance sur %d au départ, jusqu'à 1 sur %d après %d abattus de la même espèce. Insiste, ça paie.", "Shinies! 1 chance in %d to start, up to 1 in %d after %d kills of the same species. Keep at it, it pays off." },
-	{ "Un losange doré sur une barre de nom : une brillante ! Deux versions par espèce à capturer. Et brillant, je suis tout doré.", "A gold diamond on a nameplate: a shiny! Two versions per species to capture. And as a shiny, I'm all golden." },
-	{ "Emmène-la : clic sur elle dans la page Créatures. Selon son type, elle t'aide à chasser et me rend la vie douce, après %d min.", "Take it along: click it on the Creatures page. By its type, it helps you hunt and makes my life sweet, after %d min." },
-	{ "Changer se confirme. Mes envies à %d %% ou plus : effets entiers, alors nourris-moi ! Une mascotte reste le compagnon de cœur.", "Switching asks first. My needs at %d%% or more: full effects, so feed me! A mascot stays the companion of the heart." },
-	{ "Capture toutes les espèces d'une zone : elle est scellée ! Un cadre, puis un fond à ses couleurs, et +%d %% de brillantes là-bas.", "Capture every species of a zone: it gets sealed! A frame, then a background in its colours, and +%d%% shinies there." },
-	{ "Par type, des paliers renforcent mes effets. À %d espèces, ton premier titre de dresseur ; à %d, le dernier. Ça claque.", "Per type, milestones strengthen my effects. At %d species, your first trainer title; at %d, the last one. Fancy." },
-	{ "Chaque jour, une mission de capture ; chaque semaine, une chasse au brillant et des missions par type. Friandises et aides !", "Every day, a capture mission; every week, a shiny hunt and missions by type. Treats and aids as rewards!" },
-	{ "Ta fiche de dresseur : /qc fiche. Ton titre, moi en 3D, une vitrine de 3 créatures. Clic droit sur un autre dresseur : la sienne.", "Your trainer card: /qc fiche. Your title, me in 3D, a showcase of 3 creatures. Right-click another trainer: theirs." },
-	{ "Tout est écrit dans le carnet, page Guide (/qc). Pour me réentendre : /qc compagnon tuto collection. Allez, à la chasse !", "It's all in the journal, Guide page (/qc). To hear me again: /qc compagnon tuto collection. Now, off to the hunt!" },
-}
+-- (3.0.0 : le tutoriel de la ménagerie, 2.3.0, est retiré ; les visites
+-- guidées de GuidedTour.lua le remplacent, avec leurs propres textes.)
 
 -- ---------------------------------------------------------------------------
 -- Conseils de route (Advice.lua) : %s = nom, %d = nombre ou pourcentage

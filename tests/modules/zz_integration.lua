@@ -1,6 +1,10 @@
 -- Intégration : TOUS les modules chargés en même temps. Chaque module, testé
 -- seul, tient dans le panneau ; c'est leur somme qui a fait déborder la
--- navigation sur le pied en v1.23.0 (« Marchand » sous les boutons).
+-- navigation sur le pied en v1.23.0 (« Marchand » sous les boutons). Aussi :
+-- modules déclarés et uniques, alias sans conflit, premier relevé du
+-- compagnon silencieux, ornements verrouillés, simulation du résumé de stuff,
+-- compagnon et suivi du carnet ensemble, coffre avec le vrai catalogue, part
+-- de complétion dans son onglet.
 local Check, ResetWorld, NS, QNS = T.Check, T.ResetWorld, T.NS, T.QNS
 
 ResetWorld()
@@ -10,22 +14,21 @@ local frame, lay = NS.optionsFrame, NS.OPT_LAYOUT
 -- la navigation (entrées de premier niveau) s'arrête au-dessus de la version,
 -- en bas de la colonne (18 px du bas, une ligne)
 local navFloor = -(lay.height - 2 - 40)
-Check("[INT] navigation : rien sous la version", frame.navBottom >= navFloor, frame.navBottom .. " >= " .. navFloor)
 -- ordre : tous les modules avant le titre QOL, un seul titre par groupe
 local seenQol, misplaced = false, {}
 for _, def in ipairs(NS.OPTION_PAGES) do
 	if def.group == "OPT_GROUP_QOL" then seenQol = true
 	elseif seenQol then misplaced[#misplaced + 1] = def.id end
 end
-Check("[INT] aucun module rangé sous le QoL", #misplaced == 0, table.concat(misplaced, ","))
 -- titres : le Check avant le départ, MODULES, le Confort de jeu ; chacun une fois
 local titles, twice = {}, 0
 for _, label in ipairs(frame.navGroups) do
 	if titles[label.text] then twice = twice + 1 end
 	titles[label.text] = true
 end
-Check("[INT] un titre par groupe dans la navigation", #frame.navGroups == 3 and twice == 0, #frame.navGroups)
-Check("[INT] panneau toujours à l'écran", lay.height <= lay.maxHeight, lay.height)
+Check("[INT] navigation au-dessus de la version, panneau à l'écran, trois titres de groupe uniques, aucun module sous le QoL",
+	frame.navBottom >= navFloor and lay.height <= lay.maxHeight and #frame.navGroups == 3 and twice == 0 and #misplaced == 0,
+	frame.navBottom .. " >= " .. navFloor .. " / " .. #frame.navGroups .. " / " .. table.concat(misplaced, ","))
 
 local overflow = {}
 for id in pairs(frame.pages) do
@@ -42,8 +45,8 @@ do
 	for id in pairs(qframe.pages) do
 		for _, miss in ipairs(QNS:OptionsUnreachable(id)) do qoverflow[#qoverflow + 1] = miss end
 	end
-	Check("[INT] QC : chaque page se voit en entier", #qoverflow == 0, table.concat(qoverflow, ", "))
-	Check("[INT] QC : navigation au-dessus de la version", qframe.navBottom >= navFloor, qframe.navBottom)
+	Check("[INT] QC : chaque page se voit en entier, navigation au-dessus de la version", #qoverflow == 0
+		and qframe.navBottom >= navFloor, table.concat(qoverflow, ", ") .. " / " .. qframe.navBottom)
 	qframe:Hide()
 end
 
@@ -65,11 +68,10 @@ do
 	for _, def in ipairs(NS.checks or {}) do
 		if NS:FindModule(def.id) then clash[#clash + 1] = def.id end
 	end
-	Check("[INT] aucun alias de module ne masque un contrôle", #clash == 0, table.concat(clash, ","))
 	ResetWorld()
 	NS:HandleCommand("module bags off")
-	Check("[INT] /r2q module bags off coupe le contrôle Sacs", NS:IsModuleEnabled("bags") == false
-		and NS:DB().bagspaceEnabled ~= false)
+	Check("[INT] aucun alias de module ne masque un contrôle : /r2q module bags off coupe le contrôle Sacs", #clash == 0
+		and NS:IsModuleEnabled("bags") == false and NS:DB().bagspaceEnabled ~= false, table.concat(clash, ","))
 	NS:SetModuleEnabled("bags", true)
 end
 
@@ -111,27 +113,26 @@ do
 	NS:ToggleOptions()
 	NS:SelectOptionsPage("toast")
 	local page = NS.optionsFrame.pages.toast
-	Check("[INT] résumé : bouton « Simuler un changement »", page.actionButtons and page.actionButtons.toastPreview ~= nil)
 	NS:DB().showGearToast = false            -- même module coupé, l'aperçu s'affiche
 	page.actionButtons.toastPreview:Click()
 	local toast = NS.toastFrame
-	Check("[INT] simulation : le cadre s'affiche", toast and toast:IsShown() == true)
-	Check("[INT] simulation : au-dessus des réglages", toast and toast.strata == "FULLSCREEN_DIALOG", toast and toast.strata)
-	Check("[INT] simulation : le panneau reste ouvert", NS.optionsFrame:IsShown() == true)
+	Check("[INT] « Simuler un changement » : le cadre s'affiche au-dessus des réglages, le panneau reste ouvert",
+		toast and toast:IsShown() == true and toast.strata == "FULLSCREEN_DIALOG" and NS.optionsFrame:IsShown() == true,
+		toast and toast.strata)
 	-- une seule ligne s'affiche : la stat principale de la classe, qui alterne
 	-- gain (1er clic) et perte (2e clic) pour voir les deux flèches
 	local first = NS:SimulateGearToast()
 	local second = NS:SimulateGearToast()
-	Check("[INT] simulation : stat principale de la classe", first[1].label == "STR" and second[1].label == "STR", first[1].label)   -- guerrier du harnais
-	Check("[INT] simulation : un clic gain, le suivant perte", (first[1].delta > 0) ~= (second[1].delta > 0),
-		first[1].delta .. " / " .. second[1].delta)
+	Check("[INT] simulation : stat principale de la classe (guerrier du harnais), un clic gain, le suivant perte",
+		first[1].label == "STR" and second[1].label == "STR" and (first[1].delta > 0) ~= (second[1].delta > 0),
+		first[1].label .. " " .. first[1].delta .. " / " .. second[1].delta)
 	-- l'aperçu s'efface tout seul et rend sa couche normale au cadre
 	T.Mock:Advance(30)
-	Check("[INT] simulation : s'efface toute seule", toast:IsShown() == false)
-	Check("[INT] fin de l'aperçu : couche normale", toast.strata == "HIGH", toast.strata)
+	local gone = toast:IsShown() == false and toast.strata == "HIGH"
 	NS:DB().showGearToast = true
 	NS:ShowGearToast({ { label = "STR", kind = "integer", polarity = true, delta = 2 } })
-	Check("[INT] vrai changement : couche normale", toast.strata == "HIGH", toast.strata)
+	Check("[INT] simulation : s'efface toute seule, couche normale rendue ; vrai changement en couche normale", gone
+		and toast.strata == "HIGH", toast.strata)
 end
 
 -- Compagnon ↔ suivi du carnet : chaque agent a testé contre une doublure de
@@ -140,7 +141,6 @@ do
 	ResetWorld()
 	T.Mock.world.level = 15
 	local unlocks = QNS:CompanionNextUnlocks()
-	Check("[INT] compagnon : prochains déblocages fournis", type(unlocks) == "table" and #unlocks > 0, unlocks and #unlocks)
 	local objectives = QNS:JournalObjectives()
 	local fromCompanion, text = 0, {}
 	for _, goal in ipairs(objectives) do
@@ -150,9 +150,9 @@ do
 		end
 		text[#text + 1] = tostring(goal.label) .. " " .. tostring(goal.progress)
 	end
-	Check("[INT] suivi : objectifs du compagnon affichés", fromCompanion > 0, table.concat(text, " | "))
 	local joined = table.concat(text, " | ")
-	Check("[INT] suivi : un stade ou une apparence au niveau, avec sa progression", joined:find("niveau 20 15/20", 1, true) ~= nil, joined)
+	Check("[INT] suivi : prochains déblocages du compagnon affichés avec leur progression", type(unlocks) == "table"
+		and #unlocks > 0 and fromCompanion > 0 and joined:find("niveau 20 15/20", 1, true) ~= nil, joined)
 	Check("[INT] suivi : aucune clé de traduction brute", not joined:find("JRN_", 1, true) and not joined:find("COMP_", 1, true), joined)
 end
 
@@ -162,26 +162,24 @@ do
 	ResetWorld()
 	local counts = {}
 	for tier = 1, 3 do counts[tier] = #QNS:ChestOptions(tier) end
-	Check("[INT] coffre : au moins 7 objets par palier", counts[1] >= 7 and counts[2] >= 7 and counts[3] >= 7,
-		counts[1] .. "/" .. counts[2] .. "/" .. counts[3])
+
 	local labels, raw = {}, false
 	for _, reward in ipairs(QNS:ChestOptions(2)) do
 		local text = QNS:ChestRewardLabel(reward)
 		labels[#labels + 1] = text
 		if text:find("COMP_", 1, true) or text:find("OPT_", 1, true) then raw = true end
 	end
-	Check("[INT] coffre : libellés traduits", not raw and #labels > 0, table.concat(labels, ", "))
+	Check("[INT] coffre : au moins 7 objets par palier, libellés traduits", counts[1] >= 7 and counts[2] >= 7 and counts[3] >= 7
+		and not raw and #labels > 0, counts[1] .. "/" .. counts[2] .. "/" .. counts[3] .. " " .. table.concat(labels, ", "))
 	local data = QNS:CompanionData()
 	QNS:ChestData()[4242] = { tier = 1, name = "Zone test", at = 0 }
 	local frame
 	for _, reward in ipairs(QNS:ChestOptions(1)) do
 		if reward.kind == "frame" then frame = reward; break end
 	end
-	Check("[INT] coffre : un cadre au palier 1", frame ~= nil)
-	if frame then
-		Check("[INT] coffre : cadre choisi, débloqué", QNS:ChestPick(4242, frame) == true and data.unlocked["frame:" .. frame.id] == true)
-		Check("[INT] coffre : le cadre gagné se sélectionne", QNS:CompanionIsUnlocked("frame", QNS:CompanionStyleDef("frame", frame.id)) == true)
-	end
+	Check("[INT] coffre : un cadre au palier 1, choisi, débloqué, sélectionnable", frame ~= nil
+		and QNS:ChestPick(4242, frame) == true and data.unlocked["frame:" .. frame.id] == true
+		and QNS:CompanionIsUnlocked("frame", QNS:CompanionStyleDef("frame", frame.id)) == true)
 	QNS:ChestData()[4242] = nil
 end
 
@@ -191,7 +189,6 @@ do
 	for _, def in ipairs(QNS.ZONE_PARTS) do
 		if def.id == "quests" then quests = def end
 	end
-	Check("[INT] part Quêtes : onglet et détail", quests and quests.tab == "quests" and type(quests.Items) == "function")
 	-- une part factice de l'onglet Quêtes s'affiche dans la fenêtre
 	local fake = { id = "fakeq", label = "JRN_PART_quests", tab = "quests",
 		Compute = function() return { have = 1, need = 2 } end,
@@ -200,6 +197,7 @@ do
 	local rows = QNS:JournalActivityRows(1413, "quests")
 	local found = false
 	for _, row in ipairs(rows) do if row.name == "Quête A" and row.detail == "niveau 12" then found = true end end
-	Check("[INT] fenêtre : une part de l'onglet Quêtes y est listée", found and rows[1].header)
+	Check("[INT] part Quêtes : son onglet ; une part de l'onglet Quêtes y est listée", quests and quests.tab == "quests"
+		and type(quests.Items) == "function" and found and rows[1].header)
 	for index = #QNS.ZONE_PARTS, 1, -1 do if QNS.ZONE_PARTS[index] == fake then table.remove(QNS.ZONE_PARTS, index) end end
 end

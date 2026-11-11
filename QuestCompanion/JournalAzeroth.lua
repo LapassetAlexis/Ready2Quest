@@ -497,6 +497,34 @@ function SKIN.CreateButton(button)
 	end
 	button.azSkin = skin == BUTTONS.red and "red" or "brown"
 	button.azSurface = "dark"
+	-- 3.0.0 : les états passent par le peintre Azeroth (AzerothStyle.lua) :
+	-- Theme.ButtonPaint ne repeint plus l'encre sombre du bouton plein sur le
+	-- rouge ; désactivé = bois délavé, libellé clair atténué (≥ 3:1)
+	button.azPalette, button.azFillTex, button.azEdge, button.azText = skin, fill, button.azInner, GOLD_TEXT
+	button.azHoverEdge = AZB.hover
+	local hover = Theme.Solid(button, "ARTWORK", AZB.hover, 0.12)
+	hover:SetPoint("TOPLEFT", button, "TOPLEFT", 2, -2)
+	hover:SetPoint("BOTTOMRIGHT", button, "BOTTOMRIGHT", -2, 2)
+	if hover.SetBlendMode then hover:SetBlendMode("ADD") end
+	hover:Hide()
+	button.azHover = hover
+	if ns.AzerothButtonPress then ns.AzerothButtonPress(button) end
+	if ns.AzerothButtonState then
+		button.skinPaint = ns.AzerothButtonState
+		if Theme.ButtonRest then Theme.ButtonRest(button) end
+	end
+end
+
+-- 3.0.0 : la pastille de monnaie (solde de paillettes) : aplat sombre d'un
+-- champ, liseré brun, chiffre doré et libellé clair (rôles currency.*)
+function SKIN.CreateCurrency(badge)
+	if badge.bg then badge.bg:SetVertexColor(INKS.fieldBg[1], INKS.fieldBg[2], INKS.fieldBg[3], 1) end
+	if badge.border and badge.border.SetColor then
+		badge.border:SetColor(AZB.brown.edge[1], AZB.brown.edge[2], AZB.brown.edge[3], 1)
+	end
+	if badge.value then RolePaint(badge.value, "currency.value", true); badge.value.azKeep = true end
+	if badge.label then RolePaint(badge.label, "currency.label", true); badge.label.azKeep = true end
+	badge.azSurface = "dark"
 end
 
 local function Field(box)
@@ -621,7 +649,7 @@ function SKIN.CreatePageHeader(header, frame)
 end
 
 local WRAP = { "Text", "CreateTile", "CreateListRow", "CreateBar", "CreateChips", "CreateButton", "CreateDropdown",
-	"CreateSearchBox", "CreateTag", "CreateNavItem", "CreatePageHeader", "CreateSection" }
+	"CreateSearchBox", "CreateTag", "CreateNavItem", "CreatePageHeader", "CreateSection", "CreateCurrency" }
 ns.CARNET_WRAPPED = WRAP
 
 -- Relève les briques créées pendant fn(...) dans reg.new (puis SkinNew)
@@ -1198,11 +1226,10 @@ function PAGE.evolution(self, frame)
 	end
 end
 
-function PAGE.menagerie(self, frame)
-	local pane = frame.men
-	if pane then InkPager(pane.pager) end
-	if not (pane and pane.preview) then return end
-	local p = pane.preview
+-- La fiche (aperçu) d'une page : parchemin clair, fond des Talking Heads
+-- sous le modèle, titre sur la bande grise, encadré en bois (Créatures ;
+-- 2.15.0 : Réserve)
+local function SkinPreview(p)
 	TileStyle(p, "light")
 	HideAll(p.border)
 	if p.stage and SetTex(p.stage, ns.AZEROTH_PORTRAIT_BG) then p.stage:SetVertexColor(1, 1, 1, 1) end
@@ -1219,6 +1246,73 @@ function PAGE.menagerie(self, frame)
 		RolePaint(p.title, "preview.title", true)
 	end
 	WoodBorder(p)
+end
+
+function PAGE.menagerie(self, frame)
+	local pane = frame.men
+	if pane then InkPager(pane.pager) end
+	if not (pane and pane.preview) then return end
+	SkinPreview(pane.preview)
+end
+
+-- 2.15.0 : Réserve et Échoppe du dresseur (JournalReserve.lua). Vignettes et
+-- lignes de l'échoppe : tuiles claires (relevées à leur création) ; la fiche
+-- comme celle des Créatures ; encres « reserve.* » / « shop.* » mesurées sur
+-- les mêmes fonds (page, tuiles claires).
+function PAGE.reserve(self, frame)
+	local pane = frame.res
+	if not pane then return end
+	local rv = pane.reserve
+	if rv then
+		InkPager(rv.pager)
+		if rv.preview then SkinPreview(rv.preview) end
+	end
+	-- 3.0.0 : le cadeau de la 3.0 (même fond, mêmes vignettes)
+	if pane.gift then InkPager(pane.gift.pager) end
+end
+
+local function ReserveInk(fs, role) if fs then RolePaint(fs, role) end end
+function POST.reserve(self, frame)
+	local pane = frame.res
+	if not pane then return end
+	local rv = pane.reserve
+	if rv and rv:IsShown() then
+		ReserveInk(rv.warn, "reserve.full")
+		ReserveInk(rv.empty, "reserve.text")
+		ReserveInk(rv.hint, "reserve.hint")
+		ReserveInk(rv.confirm, "reserve.confirm")
+		for _, tile in ipairs(rv.tiles or {}) do
+			local spec = tile.spec
+			if spec and tile.label then ReserveInk(tile.label, spec.shiny and "reserve.shiny" or "reserve.name") end
+		end
+		local p = rv.preview
+		for index, line in ipairs(p and p.lines or {}) do
+			ReserveInk(line, (index == rv.betterLine and "reserve.better") or (index == rv.reasonLine and "reserve.reason")
+				or "reserve.detail")
+		end
+	end
+	local gv = pane.gift
+	if gv and gv:IsShown() then
+		ReserveInk(gv.warn, "reserve.full")
+		ReserveInk(gv.empty, "reserve.text")
+		ReserveInk(gv.hint, "reserve.hint")
+		ReserveInk(gv.count, "reserve.balance")
+		for _, tile in ipairs(gv.tiles or {}) do
+			if tile.gift and tile.label then ReserveInk(tile.label, "reserve.name") end
+		end
+	end
+end
+
+-- 3.0.0 : l'Échoppe du dresseur a son onglet (JournalReserve.lua, frame.shopPane)
+function POST.shop(self, frame)
+	local sv = frame.shopPane
+	if not (sv and sv:IsShown()) then return end
+	ReserveInk(sv.note, "reserve.text")
+	for _, row in ipairs(sv.rows or {}) do
+		ReserveInk(row.name, "shop.name")
+		ReserveInk(row.desc, "shop.desc")
+		ReserveInk(row.price, row.state == "short" and "shop.short" or "shop.price")
+	end
 end
 
 -- 2.8.2 : la couleur de rareté du nom, en version sombre pour la ligne
@@ -1512,6 +1606,9 @@ ns.CarnetQuestLineInk = QuestLineInk
 function POST.progress(self, frame)
 	local pane = frame.prog
 	if not pane then return end
+	-- 2.15.0 : « n à compléter » / « complète » (tuile claire)
+	local tag = pane.todoTag
+	if tag and tag.label and tag:IsShown() then RolePaint(tag.label, tag.complete and "codex.done" or "codex.todo") end
 	for _, row in ipairs(pane.zones or {}) do ZoneRowText(row); ZoneRowInk(row) end
 	for _, tile in ipairs(pane.marks or {}) do
 		if TileStyle(tile, tile.reached and "gold" or "grey") then
@@ -1816,8 +1913,11 @@ do
 			if pane and frame and frame.azeroth and frame.evo == pane and pane.effHunt then
 				local effects = self.CompanionEffects and self:CompanionEffects()
 				local active = effects and effects.active and true or false
-				local roles = active and { effHunt = "effects.line", effComfort = "effects.line", effState = "effects.state" }
-					or { effHunt = "effects.linePending", effComfort = "effects.linePending", effState = "effects.statePending" }
+				-- 3.1.0 : la ligne du caractère (effTrait) à la même encre
+				local roles = active and { effHunt = "effects.line", effComfort = "effects.line", effTrait = "effects.line",
+					effState = "effects.state" }
+					or { effHunt = "effects.linePending", effComfort = "effects.linePending", effTrait = "effects.linePending",
+					effState = "effects.statePending" }
 				for field, role in pairs(roles) do
 					local fs = pane[field]
 					local ink = RoleInk(role)
@@ -1957,7 +2057,8 @@ end
 local JOURNAL_STATE = { "kind", "activity", "offset", "zoneFilter", "zoneSort", "zoneOffset", "questFilter", "collKind",
 	"menZone", "menState", "menRank", "menSort", "menSearch", "menType", "menOffset", "featsCat", "featsOffset",
 	"zoneID", "zonePicked", "progPart", "progOffset", "progItemOffset", "guideSection", "guideOffset",
-	"jukeView", "jukeOffset", "jukeSearch" }   -- 2.12.0 : Juke-box
+	"jukeView", "jukeOffset", "jukeSearch",   -- 2.12.0 : Juke-box
+	"resView", "resSort", "resShow", "resNpc", "resOffset", "resPick" }   -- 2.15.0 : Réserve (3.0.0 : l'Échoppe a son onglet)
 
 function ns:CarnetRestyle()
 	local want = self:JournalStyle()

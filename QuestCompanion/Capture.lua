@@ -383,8 +383,8 @@ end
 -- ---------------------------------------------------------------------------
 -- Chance
 -- ---------------------------------------------------------------------------
--- `info` : { class, level } ; `aidID` : aide choisie (ou nil). Renvoie la
--- chance (0..1) et true si la capture est assurée.
+-- `info` : { class, level, stars, npcID } ; `aidID` : aide choisie (ou nil).
+-- Renvoie la chance (0..1) et true si la capture est assurée.
 function ns:CaptureChance(info, aidID, playerLevel)
 	local aid = aidID and AID_BY_ID[aidID]
 	if aid and aid.sure then return 1, true end
@@ -397,7 +397,13 @@ function ns:CaptureChance(info, aidID, playerLevel)
 		if diff > 0 then factor = math.max(step.floor, 1 - step.above * diff)
 		elseif diff < 0 then factor = math.min(step.ceil, 1 - step.below * diff) end
 	end
-	local chance = base * factor * (aid and aid.mult or 1)
+	-- 2.15.0 : la qualité tirée au coup fatal (un beau spécimen se débat
+	-- plus) et, en mode chasse, la méfiance de l'espèce (CaptureSpecimens.lua)
+	local stars = math.max(1, math.min(3, math.floor(tonumber(info and info.stars) or 1)))
+	local quality = (ns.CAPTURE_QUALITY_FACTOR and ns.CAPTURE_QUALITY_FACTOR[stars]) or 1
+	local npc = info and (info.npcID or info.npc)
+	local wary = (npc ~= nil and self.CaptureWariness) and self:CaptureWariness(npc) or 1
+	local chance = base * factor * quality * wary * (aid and aid.mult or 1)
 	return math.max(0, math.min(ns.CAPTURE_MAX, chance)), false
 end
 
@@ -782,7 +788,7 @@ function ns:CaptureOffer(guid, entry, shiny)
 		family = species.family, shiny = shiny and true or nil,
 		expires = Clock() + ns.CAPTURE_WINDOW,
 	}
-	-- l'aide choisie la dernière fois reste choisie s'il en reste
+	-- (3.0.0 bêta 6 : plus d'aide reprise d'un lancer à l'autre, voir CaptureThrow)
 	if state.aid and self:CaptureAidCount(state.aid) <= 0 then state.aid = nil end
 	self:CaptureShowPrompt()
 	self:CompanionSay("CAPTURE_PROMPT", { args = { name } })
@@ -798,12 +804,7 @@ function ns:CaptureRoll(target, aid)
 	if aid and not self:CaptureSpend(aid) then aid = nil end
 	local chance, sure = self:CaptureChance(target, aid)
 	local data = self:CaptureData()
-	-- une espèce déjà à toi (cette version) : un essai de recapture compté (2.9.0)
-	local owned = target and data.creatures[tonumber(target.npcID) or target.npcID]
-	if type(owned) == "table" and (target.shiny and owned.shiny or (not target.shiny and owned.normal ~= false)) then
-		if target.shiny then owned.shinyRetries = (tonumber(owned.shinyRetries) or 0) + 1
-		else owned.retries = (tonumber(owned.retries) or 0) + 1 end
-	end
+	-- (2.15.0 : plus d'essais de recapture comptés ; les anciens `retries` restent ignorés)
 	-- malchance : chaque échec d'affilée rend le filet un peu plus sûr
 	local streak = math.min(ns.CAPTURE_PITY.max, tonumber(data.missStreak) or 0)
 	if not sure and streak > 0 then chance = math.min(ns.CAPTURE_MAX, chance + ns.CAPTURE_PITY.step * streak) end
@@ -827,6 +828,9 @@ function ns:CaptureThrow()
 		return false
 	end
 	local rolling = self:CaptureRoll(pending, state.aid)
+	-- 3.0.0 (bêta 6) : l'aide ne sert qu'à ce lancer ; le suivant repart sans
+	-- (jamais dépensée par défaut ; la carte peut la conseiller, sans la choisir)
+	state.aid = nil
 	state.pending = nil
 	-- scène animée (CaptureStage.lua) : le lancer du filet passe avant les secousses
 	local staged = self.CaptureStageOn and self:CaptureStageOn() or false
@@ -1034,7 +1038,7 @@ function ns:EnsureCapturePrompt()
 		frame.aids[index] = button
 	end
 
-	frame.throw = Theme.CreateButton(frame, 90, Theme.DIALOG_BUTTON_HEIGHT or 28, L.CAPTURE_THROW,
+	frame.throw = Theme.CreateButton(frame, 90, "md", L.CAPTURE_THROW,
 		function() ns:CaptureThrow() end, "primary")
 	frame.throw:SetPoint("BOTTOMRIGHT", frame, "BOTTOMRIGHT", -pad, pad - 2)
 

@@ -281,15 +281,19 @@ local function TileModel(tile)
 	local ok, model = pcall(CreateFrame, "PlayerModel", nil, tile)
 	if not (ok and model) then tile.noModel = true; return nil end
 	model:SetPoint("TOP", tile, "TOP", 0, -5)
-	model:SetSize(ns.ALLURE_TILE_W - 6, ns.ALLURE_PORTRAIT)
+	model:SetSize((tile.tileW or ns.ALLURE_TILE_W) - 6, tile.portraitSize or ns.ALLURE_PORTRAIT)
 	if model.EnableMouse then model:EnableMouse(false) end
 	tile.model = model
 	return model
 end
 
-local function NewTile(frame, parent, seasonal)
-	local TW, TH, P = ns.ALLURE_TILE_W, ns.ALLURE_TILE_H, ns.ALLURE_PORTRAIT
+-- 2.15.0 : opts = { w, h, portrait } (la Réserve du carnet reprend ces
+-- vignettes, un peu plus hautes pour ses étoiles : JournalReserve.lua)
+local function NewTile(frame, parent, seasonal, opts)
+	opts = opts or {}
+	local TW, TH, P = opts.w or ns.ALLURE_TILE_W, opts.h or ns.ALLURE_TILE_H, opts.portrait or ns.ALLURE_PORTRAIT
 	local tile = Theme.CreateTile(parent, TW, TH, { accent = "top" })
+	tile.tileW, tile.portraitSize = TW, P
 	if tile.RegisterForClicks then tile:RegisterForClicks("LeftButtonUp") end
 	tile.seasonal = seasonal and true or false
 	if seasonal then TileModel(tile) end
@@ -377,6 +381,23 @@ local function PaintLook(self, tile, def, m)
 	return tile.look
 end
 
+-- Le portrait, le modèle ou l'icône d'une vignette, montré (et l'autre
+-- caché) ; 2.15.0 : repris par la Réserve (ns:AllureTileLook)
+local function ShowLook(self, tile, def, m, locked)
+	if PaintLook(self, tile, def, m) == "model" then
+		tile.portrait:Hide()
+		tile.model:Show()
+		return "model"
+	end
+	if tile.model then tile.model:Hide() end
+	local tint = def.shiny and Theme.SHINY or Theme.WHITE
+	tile.portrait:SetVertexColor(tint[1], tint[2], tint[3], 1)
+	if tile.portrait.SetDesaturated then tile.portrait:SetDesaturated(locked and true or false) end
+	tile.portrait:SetAlpha(locked and Theme.DIM_ALPHA or 1)
+	tile.portrait:Show()
+	return tile.look
+end
+
 local function PaintTile(self, tile, def, current)
 	local frame = tile.frame
 	tile.def = def
@@ -389,17 +410,7 @@ local function PaintTile(self, tile, def, current)
 	tile.locked = locked
 	tile.label:SetText(m.kind == "capture" and m.base or m.name)
 	-- portrait, modèle ou icône (rechargé seulement s'il change)
-	if PaintLook(self, tile, def, m) == "model" then
-		tile.portrait:Hide()
-		tile.model:Show()
-	else
-		if tile.model then tile.model:Hide() end
-		local tint = def.shiny and Theme.SHINY or Theme.WHITE
-		tile.portrait:SetVertexColor(tint[1], tint[2], tint[3], 1)
-		if tile.portrait.SetDesaturated then tile.portrait:SetDesaturated(locked) end
-		tile.portrait:SetAlpha(locked and Theme.DIM_ALPHA or 1)
-		tile.portrait:Show()
-	end
+	ShowLook(self, tile, def, m, locked)
 	-- encres : nom, grisé, brillante
 	if locked then
 		Ink(tile.label, frame, "allure.locked", Theme.MUTED)
@@ -419,6 +430,21 @@ local function PaintTile(self, tile, def, current)
 	tile:Show()
 end
 
+-- ---------------------------------------------------------------------------
+-- 2.15.0 : les vignettes prêtées à la Réserve du carnet (JournalReserve.lua)
+-- ---------------------------------------------------------------------------
+-- Une vignette neuve (construite une fois, réutilisée) ; le module pose ses
+-- propres OnClick, onEnter, onLeave par-dessus
+function ns.AllureNewTile(frame, parent, opts) return NewTile(frame, parent, false, opts) end
+-- Montre une espèce (npc, brillante) : portrait 2D, sinon petit modèle 3D,
+-- sinon l'icône du type. look = { id, npc, shiny, display, typeText } (id :
+-- clé de rechargement, « cap:<npc>[:s] »). Rend "portrait", "model" ou "icon".
+function ns:AllureTileLook(tile, look)
+	if not (tile and look) then return nil end
+	return ShowLook(self, tile, look, { typeText = look.typeText }, false)
+end
+function ns.AllureShowRing(tile, on, frame) ShowRing(tile, on, frame) end
+
 function ns:AllureTileTip(tile)
 	local def = tile and tile.def
 	if not def then return end
@@ -432,6 +458,9 @@ function ns:AllureTileTip(tile)
 	else
 		local typeLabel = m.typeKey and self.CreatureTypeLabel and self:CreatureTypeLabel(m.typeKey) or m.typeText
 		if typeLabel then lines[#lines + 1] = tostring(typeLabel) end
+		-- 3.1.0 : la taille et le caractère du spécimen du Codex (celui qu'il portera)
+		local ref = def.npc and self.SpecimenReference and self:SpecimenReference(def.npc, def.shiny and true or false)
+		if ref and self.SpecimenTagsShort then lines[#lines + 1] = self:SpecimenTagsShort(ref) end
 		if def.shiny then
 			lines[#lines + 1] = L.ALLURE_TIP_SHINY
 		else
@@ -811,7 +840,7 @@ function ns:AllureBuildCard(pane, content, x, y, width, height)
 	card.portrait:SetSize(side, side)
 	card.portrait:SetPoint("CENTER", card, "LEFT", 6 + 28, 0)
 	card.portrait:Hide()
-	pane.lookChoose = Theme.CreateButton(card, "auto", 24, L.ALLURE_CHOOSE, function() ns:AllureOpen() end, "primary")
+	pane.lookChoose = Theme.CreateButton(card, "auto", "sm", L.ALLURE_CHOOSE, function() ns:AllureOpen() end, "primary")
 	pane.lookChoose:SetPoint("RIGHT", card, "RIGHT", -10, 0)
 	local textX = 70
 	local textW = width - textX - (pane.lookChoose:GetWidth() or 90) - 20

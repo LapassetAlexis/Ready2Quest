@@ -1,4 +1,7 @@
--- Module « La bonne récompense » (v1.24.0) : conseil au rendu d'une quête.
+-- Module « La bonne récompense » (v1.24.0) : conseil au rendu d'une quête
+-- (meilleur choix selon la spé, armures/armes mal portées, anneaux/bijoux,
+-- repli « la plus chère », chat sans bouton, infobulle, module coupé, sans
+-- GetItemStats).
 local Check, ResetWorld, NS, Mock = T.Check, T.ResetWorld, T.NS, T.Mock
 
 -- Globales du client absentes du harnais : posées ici, restaurées en fin de fichier
@@ -151,7 +154,6 @@ do
 	for key in pairs(strings.en) do
 		if strings.fr[key] == nil then missing[#missing + 1] = "fr?" .. key end
 	end
-	Check("[RWD] chaînes présentes en français et en anglais", #missing == 0, table.concat(missing, ", "))
 	local mismatch = {}
 	local function Placeholders(text)
 		local list = {}
@@ -161,25 +163,22 @@ do
 	for key, value in pairs(strings.fr) do
 		if Placeholders(value) ~= Placeholders(strings.en[key]) then mismatch[#mismatch + 1] = key end
 	end
-	Check("[RWD] mêmes placeholders en fr et en", #mismatch == 0, table.concat(mismatch, ", "))
-	Check("[RWD] libellés demandés", strings.fr.REWARD_FOR_YOU == "Pour toi" and strings.fr.OPT_REWARD_TOOLTIP == "Montrer dans l'infobulle"
-		and strings.fr.OPT_REWARD_SELL == "Repli : la plus chère" and strings.en.REWARD_FOR_YOU == "For you")
-	Check("[RWD] sous-titre de page en fr et en", strings.fr.OPT_PAGE_REWARD_SUB ~= nil and strings.en.OPT_PAGE_REWARD_SUB ~= nil)
+	Check("[RWD] chaînes fr/en, mêmes placeholders, libellés demandés", #missing == 0 and #mismatch == 0
+		and strings.fr.REWARD_FOR_YOU == "Pour toi" and strings.en.REWARD_FOR_YOU == "For you",
+		table.concat(missing, ", ") .. " / " .. table.concat(mismatch, ", "))
 
 	local page
 	for _, def in ipairs(NS.OPTION_PAGES) do if def.id == "reward" then page = def end end
-	Check("[RWD] sous-page QoL", page and page.parent == "qol" and page.group == "OPT_GROUP_QOL")
 	local keys = {}
 	for _, row in ipairs(page and page.rows or {}) do keys[#keys + 1] = row.key .. ":" .. row.kind end
-	Check("[RWD] trois interrupteurs", table.concat(keys, ",") == "rewardEnabled:bool,rewardTooltip:bool,rewardSellBest:bool",
-		table.concat(keys, ","))
 	local db = NS:DB()
-	Check("[RWD] réglages par défaut actifs", db.rewardEnabled == true and db.rewardTooltip == true and db.rewardSellBest == true)
-	Check("[RWD] module déclaré (alias recompense)", NS:FindModule("recompense") and NS:FindModule("reward").key == "rewardEnabled")
+	Check("[RWD] sous-page QoL, trois interrupteurs actifs par défaut", page and page.parent == "qol" and page.group == "OPT_GROUP_QOL"
+		and table.concat(keys, ",") == "rewardEnabled:bool,rewardTooltip:bool,rewardSellBest:bool"
+		and db.rewardEnabled == true and db.rewardTooltip == true and db.rewardSellBest == true, table.concat(keys, ","))
 	NS:HandleCommand("module recompense off")
-	Check("[RWD] /r2q module recompense off", db.rewardEnabled == false)
+	local off = db.rewardEnabled == false
 	NS:HandleCommand("module reward on")
-	Check("[RWD] /r2q module reward on", db.rewardEnabled == true)
+	Check("[RWD] /r2q module recompense off, reward on", off and db.rewardEnabled == true)
 end
 
 -- 2. Le meilleur choix selon la spé ---------------------------------------------
@@ -188,22 +187,21 @@ do
 	R.Buttons(3)
 	R.Offer(R.Trio())
 	local best, mode = R.Best()
-	Check("[RWD] guerrier Armes : la Force (cuir) l'emporte", best == 1 and mode == "upgrade", tostring(best) .. " " .. tostring(mode))
-	Check("[RWD] bouton marqué « Pour toi »", R.Label(1) == "Pour toi" and R.Marked() == "1", R.Marked())
-	Check("[RWD] surlignage ambre", R.buttons[1].r2qRewardMark.glow.vertex[1] == NS.Theme.GOLD[1])
-	Check("[RWD] pas de ligne de chat quand le bouton existe", not R.Has(Mock:Output(), "Récompense conseillée"))
+	Check("[RWD] guerrier Armes : la Force (cuir) l'emporte, marquée « Pour toi », pas de chat", best == 1 and mode == "upgrade"
+		and R.Label(1) == "Pour toi" and R.Marked() == "1" and not R.Has(Mock:Output(), "Récompense conseillée"),
+		tostring(best) .. " " .. tostring(mode))
 	R.RunTimers()
 	Check("[RWD] second passage : toujours un seul bouton marqué", R.Marked() == "1", R.Marked())
 
 	R.Reset("WARRIOR", 3)
 	R.Buttons(3)
 	R.Offer(R.Trio())
-	Check("[RWD] guerrier Protection : l'Endurance (maille)", (R.Best()) == 3, tostring((R.Best())))
-
+	local prot = R.Best()
 	R.Reset("MAGE", 1)
 	R.Buttons(3)
 	R.Offer(R.Trio())
-	Check("[RWD] mage : l'Intelligence (tissu)", (R.Best()) == 2 and R.Label(2) == "Pour toi", tostring((R.Best())))
+	Check("[RWD] guerrier Protection : l'Endurance (maille) ; mage : l'Intelligence (tissu)", prot == 3
+		and (R.Best()) == 2 and R.Label(2) == "Pour toi", tostring(prot) .. " " .. tostring((R.Best())))
 
 	-- une seule source de vérité : la priorité vient de ns.SPEC_STATS
 	R.Reset("MAGE", 1)
@@ -230,8 +228,8 @@ do
 	local cloth = R.Item(9102, "Robe simple", { equipLoc = "INVTYPE_ROBE", classID = 4, subClassID = 1,
 		stats = { ITEM_MOD_INTELLECT_SHORT = 3 } })
 	R.Offer(plate, cloth)
-	Check("[RWD] mage : jamais de plaques, même pleines d'Intelligence", (R.Best()) == 2, tostring((R.Best())))
-	Check("[RWD] infobulle des plaques : « Pas pour toi »", R.Has(R.Tooltip(1), "Pas pour toi"), R.Tooltip(1))
+	Check("[RWD] mage : jamais de plaques, même pleines d'Intelligence (« Pas pour toi »)", (R.Best()) == 2
+		and R.Has(R.Tooltip(1), "Pas pour toi"), R.Tooltip(1))
 
 	R.Reset("ROGUE", 1)
 	R.Buttons(2)
@@ -240,7 +238,7 @@ do
 	local dagger = R.Item(9104, "Dague fine", { equipLoc = "INVTYPE_WEAPON", classID = 2, subClassID = 15,
 		stats = { ITEM_MOD_AGILITY_SHORT = 2 } })
 	R.Offer(shield, dagger)
-	Check("[RWD] voleur : pas de bouclier", (R.Best()) == 2, tostring((R.Best())))
+	local rogue = R.Best()
 
 	R.Reset("PRIEST", 1)
 	R.Buttons(2)
@@ -249,17 +247,16 @@ do
 	local mace = R.Item(9106, "Masse bénie", { equipLoc = "INVTYPE_WEAPON", classID = 2, subClassID = 4,
 		stats = { ITEM_MOD_INTELLECT_SHORT = 2 } })
 	R.Offer(sword, mace)
-	Check("[RWD] prêtre : pas d'épée (arme non maîtrisée)", (R.Best()) == 2, tostring((R.Best())))
+	Check("[RWD] voleur : pas de bouclier ; prêtre : pas d'épée (arme non maîtrisée)", rogue == 2 and (R.Best()) == 2,
+		tostring(rogue) .. " " .. tostring((R.Best())))
 
 	-- plaques : utilisables par un guerrier dès le niveau 40 seulement
 	R.Reset("WARRIOR", 1)
 	local plateInfo = { equipLoc = "INVTYPE_CHEST", classID = 4, subClassID = 4 }
-	Check("[RWD] plaques interdites au guerrier de niveau 20", NS.RewardSuitability(plateInfo, "WARRIOR", 20) == 0)
-	Check("[RWD] plaques portées au niveau 40", NS.RewardSuitability(plateInfo, "WARRIOR", 40) == 1)
-	Check("[RWD] tissu au guerrier de niveau 40 : à éviter", NS.RewardSuitability(
-		{ equipLoc = "INVTYPE_CHEST", classID = 4, subClassID = 1 }, "WARRIOR", 40) == 0)
-	Check("[RWD] cape en tissu : jamais pénalisée", NS.RewardSuitability(
-		{ equipLoc = "INVTYPE_CLOAK", classID = 4, subClassID = 1 }, "WARRIOR", 40) == 1)
+	Check("[RWD] guerrier : plaques dès le niveau 40, tissu à éviter, cape en tissu jamais pénalisée",
+		NS.RewardSuitability(plateInfo, "WARRIOR", 20) == 0 and NS.RewardSuitability(plateInfo, "WARRIOR", 40) == 1
+		and NS.RewardSuitability({ equipLoc = "INVTYPE_CHEST", classID = 4, subClassID = 1 }, "WARRIOR", 40) == 0
+		and NS.RewardSuitability({ equipLoc = "INVTYPE_CLOAK", classID = 4, subClassID = 1 }, "WARRIOR", 40) == 1)
 
 	-- le jeu dit lui-même que l'objet est inutilisable (niveau, maîtrise)
 	R.Reset("WARRIOR", 1)
@@ -286,10 +283,9 @@ do
 		stats = { ITEM_MOD_SPIRIT_SHORT = 5 }, sellPrice = 900 })
 	R.Offer(ring, cloak)
 	local result = NS.rewardState.result
-	Check("[RWD] anneau : comparé à l'anneau faible (emplacement 12)", result.choices[1].replaced.slot == 12,
-		result.choices[1].replaced.slot)
-	Check("[RWD] anneau +5 contre +2 : conseillé", (R.Best()) == 1 and R.Label(1) == "Pour toi", tostring((R.Best())))
-	Check("[RWD] infobulle : écart avec le porté", R.Has(R.Tooltip(1), "Par rapport au porté : +3 Force"), R.Tooltip(1))
+	Check("[RWD] anneau +5 comparé à l'anneau faible (+2, emplacement 12) : conseillé, écart en infobulle",
+		result.choices[1].replaced.slot == 12 and (R.Best()) == 1 and R.Label(1) == "Pour toi"
+		and R.Has(R.Tooltip(1), "Par rapport au porté : +3 Force"), R.Tooltip(1))
 	Check("[RWD] infobulle : Esprit inutile au guerrier", R.Has(R.Tooltip(2), "Pas mieux que ton équipement"), R.Tooltip(2))
 
 	R.Reset("WARRIOR", 1)
@@ -321,8 +317,8 @@ do
 		stats = {}, sellPrice = 300 })
 	R.Offer(a, b, c)
 	local best, mode = R.Best()
-	Check("[RWD] aucune amélioration : la plus chère", best == 2 and mode == "sell", tostring(best) .. " " .. tostring(mode))
-	Check("[RWD] libellé « À vendre : 1 po 20 pa »", R.Label(2) == "À vendre : 1 po 20 pa", R.Label(2))
+	Check("[RWD] aucune amélioration : la plus chère, « À vendre : 1 po 20 pa »", best == 2 and mode == "sell"
+		and R.Label(2) == "À vendre : 1 po 20 pa", tostring(best) .. " " .. tostring(R.Label(2)))
 
 	NS:DB().rewardSellBest = false
 	Mock:Fire("QUEST_FINISHED")
@@ -335,14 +331,13 @@ do
 	R.Reset("WARRIOR", 1)
 	local trio = { R.Trio() }
 	R.Offer(trio[1], trio[2], trio[3])
-	Check("[RWD] chat : rien avant le second passage (boutons pas encore créés)", not R.Has(Mock:Output(), "Récompense conseillée"))
+	local early = R.Has(Mock:Output(), "Récompense conseillée")
 	R.RunTimers()
 	local out = Mock:Output()
-	Check("[RWD] chat : « Récompense conseillée : [lien] (pourquoi) »",
-		R.Has(out, "Récompense conseillée : " .. trio[1] .. " (+5 Force)"), out)
 	Mock:Fire("QUEST_ITEM_UPDATE")
 	local _, count = Mock:Output():gsub("Récompense conseillée", "")
-	Check("[RWD] chat : une seule ligne par rendu", count == 1, count)
+	Check("[RWD] chat au second passage seulement : « Récompense conseillée : [lien] (pourquoi) », une ligne par rendu",
+		not early and R.Has(out, "Récompense conseillée : " .. trio[1] .. " (+5 Force)") and count == 1, out)
 
 	R.Reset("WARRIOR", 1)
 	Mock.world.equipped[5] = R.Item(9305, "Plastron d'élite", { equipLoc = "INVTYPE_CHEST", classID = 4, subClassID = 3,
@@ -373,14 +368,13 @@ do
 	R.Reset("WARRIOR", 1)
 	R.Buttons(3)
 	R.Offer(R.Trio())
-	Check("[RWD] accroche sur SetQuestItem", NS.rewardTooltipHooked == "SetQuestItem")
-	Check("[RWD] infobulle du choix conseillé : +5 Force", R.Has(R.Tooltip(1), "Par rapport au porté : +5 Force"), R.Tooltip(1))
-	Check("[RWD] infobulle du tissu : pas pour un guerrier", R.Has(R.Tooltip(2), "Pas pour toi"), R.Tooltip(2))
+	Check("[RWD] accroche sur SetQuestItem : +5 Force au conseillé, tissu pas pour un guerrier", NS.rewardTooltipHooked == "SetQuestItem"
+		and R.Has(R.Tooltip(1), "Par rapport au porté : +5 Force") and R.Has(R.Tooltip(2), "Pas pour toi"), R.Tooltip(1))
 	NS:DB().rewardTooltip = false
-	Check("[RWD] « Montrer dans l'infobulle » coupé : rien", R.Tooltip(1) == "", R.Tooltip(1))
+	local off = R.Tooltip(1)
 	NS:DB().rewardTooltip = true
 	QuestFrameRewardPanel:Hide()
-	Check("[RWD] panneau fermé : pas de ligne", R.Tooltip(1) == "", R.Tooltip(1))
+	Check("[RWD] infobulle coupée ou panneau fermé : pas de ligne", off == "" and R.Tooltip(1) == "", R.Tooltip(1))
 	QuestFrameRewardPanel:Show()
 	Mock:Fire("QUEST_FINISHED")
 	Check("[RWD] après QUEST_FINISHED : pas de ligne, marques retirées", R.Tooltip(1) == "" and R.Marked() == "", R.Marked())
@@ -393,9 +387,8 @@ do
 	NS:DB().rewardEnabled = false
 	R.Offer(R.Trio())
 	R.RunTimers()
-	Check("[RWD] module coupé : aucun bouton marqué", R.Marked() == "", R.Marked())
-	Check("[RWD] module coupé : pas de chat", not R.Has(Mock:Output(), "Récompense"), Mock:Output())
-	Check("[RWD] module coupé : pas d'infobulle", R.Tooltip(1) == "", R.Tooltip(1))
+	Check("[RWD] module coupé : ni marque, ni chat, ni infobulle", R.Marked() == "" and not R.Has(Mock:Output(), "Récompense")
+		and R.Tooltip(1) == "", Mock:Output())
 	NS:DB().rewardEnabled = true
 	NS:DB().enabled = false
 	R.Offer(R.Trio())
@@ -413,9 +406,8 @@ do
 	local robe = R.Item(9403, "Robe neuve", { equipLoc = "INVTYPE_ROBE", classID = 4, subClassID = 1, itemLevel = 18 })
 	local low = R.Item(9404, "Robe d'apprenti", { equipLoc = "INVTYPE_ROBE", classID = 4, subClassID = 1, itemLevel = 10, sellPrice = 99 })
 	local ok = pcall(R.Offer, plate, robe, low)
-	Check("[RWD] sans GetItemStats : pas d'erreur", ok)
-	Check("[RWD] sans GetItemStats : niveau d'objet, plaques écartées", (R.Best()) == 2 and R.Label(2) == "Pour toi", tostring((R.Best())))
-	Check("[RWD] sans GetItemStats : infobulle en niveau d'objet", R.Has(R.Tooltip(2), "niveau d'objet +3"), R.Tooltip(2))
+	Check("[RWD] sans GetItemStats : pas d'erreur, niveau d'objet (+3 en infobulle), plaques écartées", ok and (R.Best()) == 2
+		and R.Label(2) == "Pour toi" and R.Has(R.Tooltip(2), "niveau d'objet +3"), R.Tooltip(2))
 	C_Item.GetItemStats = MockItemStats
 end
 

@@ -49,10 +49,9 @@ end
 
 do
 	Say("-- données")
-	Check("[DGN] DungeonData.lua et Dungeon.lua chargés", NS.Loaded.DungeonData and NS.Loaded.Dungeon)
 	local count = 0
 	for _ in pairs(NS.DUNGEONS or {}) do count = count + 1 end
-	Check("[DGN] 28 donjons dans la base", count == 28, count)
+	Check("[DGN] chargés, 28 donjons dans la base", NS.Loaded.DungeonData and NS.Loaded.Dungeon and count == 28, count)
 	local forever = { "thanes", "lordaeron", "excavation", "dalaran", "drowned", "kroldok", "alcaz", "blackmaw", "shaper" }
 	local missing = {}
 	for _, key in ipairs(forever) do
@@ -61,10 +60,9 @@ do
 	end
 	Check("[DGN] les 9 donjons de Forever présents", #missing == 0, table.concat(missing, ","))
 	local dal = NS.DUNGEONS.dalaran
-	Check("[DGN] Cité de Dalaran : carte 2959, niveaux 28-33", dal.map == 2959 and dal.fo[1] == 28 and dal.fo[2] == 33)
-	Check("[DGN] Mortemines : niveaux de Forever seuls (17-26)", NS.DUNGEONS.dm.era == nil
+	Check("[DGN] Dalaran : carte 2959, 28-33 ; Mortemines : niveaux de Forever seuls (17-26)", dal.map == 2959
+		and dal.fo[1] == 28 and dal.fo[2] == 33 and NS.DUNGEONS.dm.era == nil
 		and NS.DUNGEONS.dm.fo[1] == 17 and NS.DUNGEONS.dm.fo[2] == 26)
-	Check("[DGN] plans avancés : table présente", type(NS.DUNGEON_BLUEPRINTS) == "table")
 end
 
 do
@@ -72,29 +70,29 @@ do
 	Reset(22)
 	Inside("Donjon d'Ombrecroc", 33)
 	local sheet = NS.lastDungeonSheet
-	Check("[DGN] fiche à l'entrée dans l'instance", sheet and sheet.key == "sfk" and sheet.how == "instance", sheet and sheet.key)
-	Check("[DGN] fenêtre affichée", NS.dungeonFrame and NS.dungeonFrame:IsShown())
-	Check("[DGN] nom traduit en sous-titre", NS.dungeonFrame and tostring(NS.dungeonFrame.subtitle.text):find("Donjon d'Ombrecroc", 1, true) ~= nil)
+	Check("[DGN] fiche à l'entrée dans l'instance : fenêtre, nom traduit en sous-titre", sheet and sheet.key == "sfk"
+		and sheet.how == "instance" and NS.dungeonFrame and NS.dungeonFrame:IsShown()
+		and tostring(NS.dungeonFrame.subtitle.text):find("Donjon d'Ombrecroc", 1, true) ~= nil, sheet and sheet.key)
 	Check("[DGN] la fenêtre du Check avant le départ reste fermée", NS.window == nil)
 	NS.lastDungeonSheet = nil
 	Mock:Fire("ZONE_CHANGED_INDOORS"); Mock:Fire("ZONE_CHANGED"); Mock:RunTimers()
 	Check("[DGN] pas de seconde fiche dans la même instance", NS.lastDungeonSheet == nil)
 	Reset(22)
 	Inside("Donjon d'Ombrecroc", 33, "raid")
-	Check("[DGN] instance de type raid : pas de fiche", NS.lastDungeonSheet == nil)
+	local raid = NS.lastDungeonSheet
 	Reset(22)
 	Inside("Instance inconnue", 4242)
-	Check("[DGN] instance hors base : pas de fiche", NS.lastDungeonSheet == nil)
+	Check("[DGN] raid ou instance hors base : pas de fiche", raid == nil and NS.lastDungeonSheet == nil)
 	Reset(36)
 	Inside("The Drowned City", 99999)
 	Check("[DGN] donjon sans mapID : reconnu au nom", NS.lastDungeonSheet and NS.lastDungeonSheet.key == "drowned")
 	Reset(22)
 	Mock.world.dead = true
 	Inside("Donjon d'Ombrecroc", 33)
-	Check("[DGN] fantôme : pas de fiche", NS.lastDungeonSheet == nil)
+	local ghost = NS.lastDungeonSheet
 	Mock.world.dead = false
 	Mock:Fire("ZONE_CHANGED")
-	Check("[DGN] ressuscité dans l'instance : fiche", NS.lastDungeonSheet ~= nil)
+	Check("[DGN] fantôme : pas de fiche ; ressuscité dans l'instance : fiche", ghost == nil and NS.lastDungeonSheet ~= nil)
 end
 
 do
@@ -105,12 +103,10 @@ do
 	NS.lastDungeonSheet = nil
 	Mock.now = Mock.now + 30; Sub("Forêt des Pins-Argentés")
 	Mock.now = Mock.now + 30; Sub("Donjon d'Ombrecroc")
-	Check("[DGN] aller-retour à l'entrée : pas de nouvelle fiche", NS.lastDungeonSheet == nil)
 	Inside("Donjon d'Ombrecroc", 33)
-	Check("[DGN] entrée puis instance : une seule fiche", NS.lastDungeonSheet == nil)
 	Mock.now = Mock.now + 3600; Mock:Fire("ZONE_CHANGED")
 	Outside("Donjon d'Ombrecroc")
-	Check("[DGN] longtemps dedans puis sortie : même visite", NS.lastDungeonSheet == nil)
+	Check("[DGN] aller-retour à l'entrée, instance, longtemps dedans puis sortie : une seule fiche", NS.lastDungeonSheet == nil)
 	Mock.now = Mock.now + 60; Sub("Pyrewood")
 	Mock.now = Mock.now + 1000; Sub("Donjon d'Ombrecroc")
 	Check("[DGN] retour après 15 min loin : nouvelle visite", NS.lastDungeonSheet ~= nil)
@@ -123,25 +119,24 @@ do
 	Say("-- niveaux")
 	Reset(22)
 	local sfk = NS.DUNGEONS.sfk
-	Check("[DGN] Forever : 19 trop bas", NS:DungeonVerdict(sfk, 19) == "low")
-	Check("[DGN] Forever : 20 ok", NS:DungeonVerdict(sfk, 20) == "ok")
-	Check("[DGN] Forever : 30 ok", NS:DungeonVerdict(sfk, 30) == "ok")
-	Check("[DGN] Forever : 31 gris", NS:DungeonVerdict(sfk, 31) == "grey")
+	Check("[DGN] Forever : 19 trop bas, 20 et 30 ok, 31 gris", NS:DungeonVerdict(sfk, 19) == "low"
+		and NS:DungeonVerdict(sfk, 20) == "ok" and NS:DungeonVerdict(sfk, 30) == "ok" and NS:DungeonVerdict(sfk, 31) == "grey")
 	Reset(10); Sub("Donjon d'Ombrecroc")
-	Check("[DGN] entrée, niveau 10 : rien (passage)", NS.lastDungeonSheet == nil)
+	local low = NS.lastDungeonSheet
 	Reset(60); Sub("Donjon d'Ombrecroc")
-	Check("[DGN] entrée, niveau 60 : rien (gris)", NS.lastDungeonSheet == nil)
+	Check("[DGN] entrée au niveau 10 (passage) ou 60 (gris) : rien", low == nil and NS.lastDungeonSheet == nil)
 	Reset(18); Sub("Donjon d'Ombrecroc")
 	local sheet = NS.lastDungeonSheet
-	Check("[DGN] entrée, 2 niveaux sous le mini : fiche « trop bas »", sheet and sheet.verdict == "low", sheet and sheet.verdict)
-	Check("[DGN] texte : trop bas de 2", sheet and NS:LevelText(sheet):find("trop bas de 2", 1, true) ~= nil)
+	Check("[DGN] entrée, 2 niveaux sous le mini : fiche « trop bas de 2 »", sheet and sheet.verdict == "low"
+		and NS:LevelText(sheet):find("trop bas de 2", 1, true) ~= nil, sheet and sheet.verdict)
 	Reset(60); Inside("Donjon d'Ombrecroc", 33)
 	sheet = NS.lastDungeonSheet
 	Check("[DGN] instance au niveau 60 : fiche « gris »", sheet and sheet.verdict == "grey", sheet and sheet.verdict)
 	Reset(22); NS:DB().dungeonAtEntrance = false; Sub("Donjon d'Ombrecroc")
-	Check("[DGN] réglage « aussi à l'entrée » coupé : rien à l'entrée", NS.lastDungeonSheet == nil)
+	local atEntrance = NS.lastDungeonSheet
 	Inside("Donjon d'Ombrecroc", 33)
-	Check("[DGN] … mais fiche dans l'instance", NS.lastDungeonSheet ~= nil)
+	Check("[DGN] réglage « aussi à l'entrée » coupé : rien à l'entrée, fiche dans l'instance", atEntrance == nil
+		and NS.lastDungeonSheet ~= nil)
 end
 
 do
@@ -159,8 +154,8 @@ do
 	Reset(22); Mock.world.quests = log
 	Inside("Donjon d'Ombrecroc", 33)
 	local q = NS.lastDungeonSheet and NS.lastDungeonSheet.quests or {}
-	Check("[DGN] 2 quêtes sous l'en-tête du donjon", #q == 2, #q)
-	Check("[DGN] titres et « à rendre » via ReadyForTurnIn", q[1] and q[1].title == "Le livre d'Ur" and q[2].ready == true and q[1].ready == false)
+	Check("[DGN] 2 quêtes sous l'en-tête du donjon, « à rendre » via ReadyForTurnIn", #q == 2 and q[1].title == "Le livre d'Ur"
+		and q[2].ready == true and q[1].ready == false, #q)
 	Reset(22); Mock.world.quests = log
 	Inside("Les Mortemines", 36)
 	q = NS.lastDungeonSheet and NS.lastDungeonSheet.quests or {}
@@ -171,9 +166,9 @@ do
 	Check("[DGN] en-tête replié signalé", NS.lastDungeonSheet and NS.lastDungeonSheet.collapsed == true)
 	Reset(22)
 	Inside("Donjon d'Ombrecroc", 33)
-	Check("[DGN] journal vide : liste vide", NS.lastDungeonSheet and #NS.lastDungeonSheet.quests == 0)
-	Check("[DGN] journal vide : ligne « aucune quête » dans la fenêtre",
-		NS.dungeonFrame.lines[3] and tostring(NS.dungeonFrame.lines[3].text.text):find("Aucune quête", 1, true) ~= nil)
+	Check("[DGN] journal vide : liste vide, ligne « aucune quête » dans la fenêtre", NS.lastDungeonSheet
+		and #NS.lastDungeonSheet.quests == 0
+		and NS.dungeonFrame.lines[3] and tostring(NS.dungeonFrame.lines[3].text.text):find("Aucune quête", 1, true) ~= nil)
 	Check("[DGN] Normalize : article et casse", NS.DungeonNormalize("The Deadmines") == NS.DungeonNormalize("deadmines")
 		and NS.DungeonNormalize("Les Mortemines") == "mortemines")
 end
@@ -185,12 +180,10 @@ do
 	Inside("Donjon d'Ombrecroc", 33)
 	local byId = {}
 	for _, line in ipairs(NS.lastDungeonSheet.readiness) do byId[line.id] = line end
-	Check("[DGN] durabilité 10 % : en échec", byId.durability and byId.durability.ok == false)
-	Check("[DGN] sans vivres : en échec", byId.vivres and byId.vivres.ok == false)
-	Check("[DGN] sans pierre de foyer : en échec", byId.hearth and byId.hearth.ok == false)
-	Check("[DGN] potions à seuil 0 : absentes (sans objet)", byId.potions == nil)
-	Check("[DGN] réparation jamais mesurée : absente", byId.repair == nil)
-	Check("[DGN] seulement les 5 contrôles de donjon", byId.bags == nil and byId.buffs == nil)
+	Check("[DGN] durabilité 10 %, sans vivres, sans pierre de foyer : en échec", byId.durability and byId.durability.ok == false
+		and byId.vivres and byId.vivres.ok == false and byId.hearth and byId.hearth.ok == false)
+	Check("[DGN] absents : potions à seuil 0, réparation jamais mesurée, contrôles hors donjon", byId.potions == nil
+		and byId.repair == nil and byId.bags == nil and byId.buffs == nil)
 	local bad = 0
 	for _, line in ipairs(NS.dungeonFrame.lines) do
 		if line:IsShown() and line.status.state == "bad" then bad = bad + 1 end
@@ -202,8 +195,8 @@ do
 	Inside("Donjon d'Ombrecroc", 33)
 	byId = {}
 	for _, line in ipairs(NS.lastDungeonSheet.readiness) do byId[line.id] = line end
-	Check("[DGN] contrôle coupé par le joueur : absent", byId.vivres == nil)
-	Check("[DGN] durabilité pleine : OK", byId.durability and byId.durability.ok == true)
+	Check("[DGN] contrôle coupé par le joueur : absent ; durabilité pleine : OK", byId.vivres == nil
+		and byId.durability and byId.durability.ok == true)
 end
 
 do
@@ -213,30 +206,29 @@ do
 	Mock.world.quests = { { title = "Donjon d'Ombrecroc", isHeader = true }, { title = "Arugal doit mourir", questID = 3, ready = true } }
 	Inside("Donjon d'Ombrecroc", 33)
 	local out = Mock:Output()
-	Check("[DGN] chat : en-tête de la fiche", out:find("Avant le donjon :", 1, true) ~= nil, out)
-	Check("[DGN] chat : quête et « à rendre »", out:find("Arugal doit mourir (à rendre)", 1, true) ~= nil)
-	Check("[DGN] chat : préparation résumée", out:find("À voir :", 1, true) ~= nil)
-	Check("[DGN] chat : pas de fenêtre", not (NS.dungeonFrame and NS.dungeonFrame:IsShown()))
+	Check("[DGN] chat : en-tête, quête « à rendre », préparation résumée, pas de fenêtre", out:find("Avant le donjon :", 1, true) ~= nil
+		and out:find("Arugal doit mourir (à rendre)", 1, true) ~= nil and out:find("À voir :", 1, true) ~= nil
+		and not (NS.dungeonFrame and NS.dungeonFrame:IsShown()), out)
 	Reset(22)
 	NS:DB().dungeonEnabled = false
 	Inside("Donjon d'Ombrecroc", 33); Sub("Donjon d'Ombrecroc")
-	Check("[DGN] module coupé : rien", NS.lastDungeonSheet == nil and Mock:Output() == "")
+	local moduleOff = NS.lastDungeonSheet == nil and Mock:Output() == ""
 	Reset(22)
 	NS:DB().enabled = false
 	Inside("Donjon d'Ombrecroc", 33)
-	Check("[DGN] addon coupé : rien", NS.lastDungeonSheet == nil)
+	Check("[DGN] module ou addon coupé : rien", moduleOff and NS.lastDungeonSheet == nil)
 	Reset(22)
 	NS:HandleCommand("module donjon off")
-	Check("[DGN] /r2q module donjon off", NS:DB().dungeonEnabled == false)
-	Check("[DGN] module enregistré (alias dungeon)", NS:FindModule("dungeon") and NS:FindModule("dungeon").key == "dungeonEnabled")
+	Check("[DGN] /r2q module donjon off ; module enregistré (alias dungeon)", NS:DB().dungeonEnabled == false
+		and NS:FindModule("dungeon") and NS:FindModule("dungeon").key == "dungeonEnabled")
 	local page
 	for _, def in ipairs(NS.OPTION_PAGES) do if def.id == "dungeon" then page = def end end
-	Check("[DGN] page de réglages avec interrupteur", page and page.power == "dungeonEnabled" and page.group == "OPT_GROUP_MODULES" and #page.rows == 2)
 	NS.optionsFrame = nil
 	local okOpen = pcall(NS.ToggleOptions, NS)
 	local okPage = okOpen and pcall(NS.SelectOptionsPage, NS, "dungeon")
-	Check("[DGN] page « Avant le donjon » construite et sélectionnable",
-		okPage and NS.optionsFrame and NS.optionsFrame.currentPage == "dungeon")
+	Check("[DGN] page avec interrupteur, construite et sélectionnable", page and page.power == "dungeonEnabled"
+		and page.group == "OPT_GROUP_MODULES" and #page.rows == 2
+		and okPage and NS.optionsFrame and NS.optionsFrame.currentPage == "dungeon")
 	if NS.optionsFrame then NS.optionsFrame:Hide() end
 end
 
@@ -246,11 +238,9 @@ do
 	local gaps = {}
 	for k, v in pairs(S.fr) do if type(S.en[k]) ~= "string" or S.en[k] == "" or v == "" then gaps[#gaps + 1] = k end end
 	for k in pairs(S.en) do if S.fr[k] == nil then gaps[#gaps + 1] = k end end
-	Check("[DGN] chaque texte existe en fr et en en", #gaps == 0, table.concat(gaps, ","))
-	Check("[DGN] page traduite (client fr)", NS.L.OPT_PAGE_DUNGEON == "Avant le donjon" and NS.L.OPT_PAGE_DUNGEON_SUB ~= "OPT_PAGE_DUNGEON_SUB")
-	Check("[DGN] anglais : « Before the dungeon »", S.en.DGN_TITLE == "Before the dungeon")
 	local okFmt = pcall(string.format, S.en.DGN_LEVEL_LOW, 20, 30, 18, 2) and pcall(string.format, S.fr.DGN_LEVEL_LOW, 20, 30, 18, 2)
-	Check("[DGN] formats de niveau valides", okFmt)
+	Check("[DGN] chaque texte en fr et en en, client fr traduit, formats de niveau valides", #gaps == 0
+		and NS.L.OPT_PAGE_DUNGEON == "Avant le donjon" and S.en.DGN_TITLE == "Before the dungeon" and okFmt, table.concat(gaps, ","))
 end
 
 do
@@ -260,10 +250,11 @@ do
 	_G.GetSkillLineInfo = function() return W.prof end
 	Reset(22); W.prof = "Forge"
 	Inside("Donjon d'Ombrecroc", 33)
-	Check("[DGN] plan du métier du joueur listé", NS.lastDungeonSheet and #NS.lastDungeonSheet.blueprints == 1)
+	local mine = NS.lastDungeonSheet and #NS.lastDungeonSheet.blueprints == 1
 	Reset(22); W.prof = "Couture"
 	Inside("Donjon d'Ombrecroc", 33)
-	Check("[DGN] plan d'un autre métier : absent", NS.lastDungeonSheet and #NS.lastDungeonSheet.blueprints == 0)
+	Check("[DGN] plan du métier du joueur listé, d'un autre métier absent", mine and NS.lastDungeonSheet
+		and #NS.lastDungeonSheet.blueprints == 0)
 	NS.DUNGEON_BLUEPRINTS.sfk = nil
 end
 

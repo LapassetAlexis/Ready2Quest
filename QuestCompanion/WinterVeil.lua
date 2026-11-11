@@ -1345,4 +1345,10 @@ if type(ns.HELP) == "table" then
 	end
 end
 
+-- 2.15.0 : la carte de préparation (CaptureStage.lua) garde la boule de neige
+-- au lancer (même scène) ; ses encres mesurées rejoignent le tableau des
+-- contrastes, défini par AzerothStyle.lua (chargé avant ce fichier, après
+-- CaptureStage.lua)
+if ns.CapturePrepContrastMerge then ns.CapturePrepContrastMerge() end
+
 if ns.Mark then ns.Mark("WinterVeil") end

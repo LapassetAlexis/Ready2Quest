@@ -1,17 +1,31 @@
-# Suite de tests hors jeu (client WoW simulé, Lua 5.1 via lupa), à chaque
-# push et pull request, et avant toute publication (release.yml).
+# Suite de tests hors jeu (client WoW simulé, Lua 5.1 via lupa).
+#
+# Une seule exécution par commit :
+#   - pull request (à chaque push sur sa branche ; un push plus récent annule
+#     l'exécution en cours de la même PR) ;
+#   - push sur main (le commit de fusion) ;
+#   - avant toute publication : release.yml l'appelle sur le commit du tag.
+# Un push sur une branche sans PR ne lance plus rien : les tests tournent en
+# local en quelques secondes (python3 tests/run_tests.py), et la
+# publication d'une bêta depuis cette branche les rejoue de toute façon.
 name: Tests
 
 on:
   push:
-    branches: ['**']
-    tags-ignore: ['**']
+    branches: [main]
   pull_request:
   workflow_call:
+  workflow_dispatch:
 
 jobs:
   tests:
     runs-on: ubuntu-latest
+    # la suite tient en une à deux minutes (un processus par cœur) ; au-delà,
+    # quelque chose boucle
+    timeout-minutes: 10
+    concurrency:
+      group: tests-${{ github.workflow }}-${{ github.ref }}
+      cancel-in-progress: ${{ github.event_name == 'pull_request' }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -20,4 +34,5 @@ jobs:
       - name: lupa
         run: pip install lupa
       - name: Tests
-        run: python3 tests/run_tests.py
+        # un processus par cœur (-j par défaut) ; --profile : unités les plus lentes à la fin du journal
+        run: python3 tests/run_tests.py --profile

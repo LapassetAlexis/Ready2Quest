@@ -495,6 +495,57 @@ function ns:MapPinToggle(key, zoneID, x, y)
 	return true
 end
 
+-- ---------------------------------------------------------------------------
+-- 2.15.0 : « Localiser » une espèce (Créatures « À compléter », Réserve) :
+-- repère sur la carte du monde + flèche de guidage (MapPinToggle), et la
+-- carte ouverte sur sa zone quand ce n'est pas celle où tu es.
+-- ---------------------------------------------------------------------------
+-- La zone où tu es (carte du joueur), ou nil
+local function PlayerMap()
+	local map = rawget(_G, "C_Map")
+	if type(map) ~= "table" or type(map.GetBestMapForUnit) ~= "function" then return nil end
+	local ok, id = pcall(map.GetBestMapForUnit, "player")
+	return ok and tonumber(id) or nil
+end
+
+-- Ouvre la carte du monde sur une zone (pas en combat, pas sur la zone où
+-- tu es : la flèche suffit). Rend true si la carte a été ouverte.
+function ns:MapOpenZone(zoneID)
+	zoneID = tonumber(zoneID)
+	if not zoneID or zoneID == PlayerMap() or InCombat() then return false end
+	local open = rawget(_G, "OpenWorldMap")
+	if type(open) == "function" and pcall(open, zoneID) then return true end
+	local frame = rawget(_G, "WorldMapFrame")
+	if type(frame) ~= "table" or type(frame.SetMapID) ~= "function" then return false end
+	if not (frame.IsShown and frame:IsShown()) then
+		local toggle = rawget(_G, "ToggleWorldMap")
+		if type(toggle) == "function" then pcall(toggle) elseif frame.Show then pcall(frame.Show, frame) end
+	end
+	return pcall(frame.SetMapID, frame, zoneID) and true or false
+end
+
+-- Le point d'une espèce : la première zone (zones = uiMapID ou liste) qui a
+-- un point connu et où le client sait poser un repère. Rend zone, x, y.
+function ns:SpeciesPoint(npc, zones)
+	if npc == nil then return nil end
+	local list = type(zones) == "table" and zones or { zones }
+	for _, zoneID in ipairs(list) do
+		local x, y = self:ZonePoint("creature", zoneID, npc)
+		if x and self:MapPinAvailable(zoneID) then return tonumber(zoneID), x, y end
+	end
+	return nil
+end
+
+-- Pose (ou retire, au 2e clic) le repère de l'espèce ; posé ailleurs que là
+-- où tu es : la carte s'ouvre sur sa zone. Rend true si posé, et la zone.
+function ns:LocateSpecies(npc, zones)
+	local zoneID, x, y = self:SpeciesPoint(npc, zones)
+	if not zoneID then return false end
+	local set = self:MapPinToggle("creature:" .. tostring(npc), zoneID, x, y)
+	if set then self:MapOpenZone(zoneID) end
+	return set, zoneID
+end
+
 local HANDLERS = { QUEST_TURNED_IN = Forget, QUEST_LOG_UPDATE = Forget, PLAYER_REGEN_ENABLED = AfterCombat,
 	QUESTLINE_UPDATE = QuestLinesUpdated, QUEST_DATA_LOAD_RESULT = QuestDataLoaded }
 

@@ -104,7 +104,7 @@ local CHATTER = {
 ns.COMPANION_CHATTER = CHATTER
 ns.COMPANION_CHATTER_DEFAULT = 3
 local POOL_CATEGORY = {
-	EVOLVE = "event", UNLOCK = "event", READY = "event", CHEST = "event", TUTO = "tuto", TUTO_MENAGERIE = "tuto",
+	EVOLVE = "event", UNLOCK = "event", READY = "event", CHEST = "event", TUTO = "tuto",
 	TIP = "tip", GOAL = "tip", GOAL_STAGE = "tip",
 	IDLE = "chatter", NIGHT = "chatter",
 	JOKE = "chatter",     -- 2.13.0 : les blagues au repos (CompanionJokes.lua)
@@ -128,10 +128,9 @@ local NIGHT_GRACE = 600
 local IDLE_REST  = 300                 -- 5 min au repos sans rien dire : un mot
 local CONVO_STEP = 3.5                 -- s entre deux bulles d'une conversation
 local TUTO_STEP  = 9                   -- s par bulle du tutoriel (« Suivant » accélère)
-local TUTO_WAIT  = 90                  -- s qu'une étape qui attend un geste (le filet) garde sa bulle avant de la redire
--- Tutoriel de la ménagerie (2.3.0) : lancé de lui-même à la première occasion
--- de capture ; coupé dans le banc de test (comme le tirage des missions)
-ns.TUTO_MENAGERIE_AUTO = ns.TUTO_MENAGERIE_AUTO ~= false
+-- 3.0.0 : le tutoriel de la ménagerie (2.3.0, bulles) est retiré : les
+-- visites guidées (GuidedTour.lua) le remplacent ; son drapeau
+-- (tutoMenagerieDone) reste dans les sauvegardes, ignoré
 local HISTORY    = 6                   -- lignes récentes évitées par réservoir (réservoirs triplés en 1.4.0)
 local SAME_NPC   = 120                 -- même PNJ (bavardage puis vendeur) : un avis
 local SAME_HUB   = 600                 -- même village ré-entré : pas de nouveau mot
@@ -140,7 +139,7 @@ ns.COMPANION_RULES = {
 	floor = NEED_FLOOR, max = NEED_MAX, decay = DECAY, restGain = REST_GAIN, bubbleGap = BUBBLE_GAP,
 	petCooldown = PET_COOLDOWN, sleepyAfter = SLEEPY_AFTER, sleepyMin = SLEEPY_MIN, sleepyMax = SLEEPY_MAX,
 	priority = PRIORITY, cooldowns = COOLDOWNS, tipGap = TIP_GAP, tipJitter = TIP_JITTER, needLow = NEED_LOW,
-	needGrace = NEED_GRACE, idleRest = IDLE_REST, convoStep = CONVO_STEP, tutoStep = TUTO_STEP, tutoWait = TUTO_WAIT,
+	needGrace = NEED_GRACE, idleRest = IDLE_REST, convoStep = CONVO_STEP, tutoStep = TUTO_STEP,
 	goalFirst = GOAL_FIRST, bubbleTime = BUBBLE_TIME,
 	-- part des PNJ non humanoïdes jugés sur leur nature plutôt que leur rôle
 	-- (lu à chaque fois : les tests le fixent à 0 ou 1)
@@ -287,7 +286,7 @@ local FR = {
 	COMP_REQ_total         = "%d tampons",
 	COMP_REQ_inn           = "%d cartes d'auberge pleines",
 	COMP_REQ_missions      = "%d jours aux trois missions",
-	COMP_HOVER_HINT        = "Clic : un câlin · Maj + clic : friandises · clic droit : carnet · glisser : déplacer\nChange de compagnon : toute créature capturée au filet, page Compagnon du carnet",
+	COMP_HOVER_HINT        = "Clic : un câlin · Maj + clic : friandises · clic droit : carnet · Maj + clic droit : chasse · glisser : déplacer\nChange de compagnon : toute créature capturée au filet, page Compagnon du carnet",
 	-- 2.10.0 : compagnon discret en combat, masqué en donjon, alerte d'aggro réglable, déplacement verrouillé
 	OPT_COMP_COMBAT_FADE   = "Estomper en combat",
 	OPT_COMP_COMBAT_FADE_DESC = "Le compagnon se fait discret pendant un combat et te raconte tout après.",
@@ -303,8 +302,8 @@ local FR = {
 	COMP_MOVE_free         = "En le glissant",
 	COMP_MOVE_alt          = "Alt + glisser",
 	COMP_MOVE_locked       = "Verrouillé",
-	COMP_HOVER_HINT_alt    = "Clic : un câlin · Maj + clic : friandises · clic droit : carnet · Alt + glisser : déplacer\nChange de compagnon : toute créature capturée au filet, page Compagnon du carnet",
-	COMP_HOVER_HINT_locked = "Clic : un câlin · Maj + clic : friandises · clic droit : carnet\nChange de compagnon : toute créature capturée au filet, page Compagnon du carnet",
+	COMP_HOVER_HINT_alt    = "Clic : un câlin · Maj + clic : friandises · clic droit : carnet · Maj + clic droit : chasse · Alt + glisser : déplacer\nChange de compagnon : toute créature capturée au filet, page Compagnon du carnet",
+	COMP_HOVER_HINT_locked = "Clic : un câlin · Maj + clic : friandises · clic droit : carnet · Maj + clic droit : chasse\nChange de compagnon : toute créature capturée au filet, page Compagnon du carnet",
 	COMP_MSG_SHOWN         = "Compagnon : %s.",
 	OPT_COMP_TUTO          = "Rejouer le tutoriel",
 	COMP_PREVIEW_LINE      = "%s  ·  %s",
@@ -330,8 +329,6 @@ local FR = {
 	COMP_MSG_TUTO_MUTED    = "Bulles du compagnon coupées (Bavardage : Muet) : remonte la réglette, ou /qc compagnon muet, pour voir le tutoriel.",
 	COMP_MSG_TUTO_COMBAT   = "Le tutoriel du compagnon commencera après le combat.",
 	COMP_MSG_TUTO_SKIPPED  = "Tutoriel du compagnon passé (/qc compagnon tuto pour le revoir).",
-	COMP_MSG_TUTO_MEN_SKIPPED = "Tutoriel des créatures passé (/qc compagnon tuto collection pour le revoir).",
-	COMP_MSG_TUTO_MEN_OFF  = "La capture est coupée (réglages, page Au jour le jour) : rallume-la pour le tutoriel des créatures.",
 	COMP_MSG_UNLOCK_APP    = "Compagnon : nouvelle apparence débloquée, %s. Choisis-la dans les réglages.",
 	COMP_MSG_UNLOCK_ORN    = "Compagnon : nouvel ornement débloqué, %s.",
 	COMP_MSG_EVOLVE        = "Compagnon : %s devient %s !",
@@ -344,7 +341,7 @@ local FR = {
 	COMP_MSG_APPEARANCE    = "Apparence : %s.",
 	COMP_MSG_MUTE          = "Bulles du compagnon : %s.",
 	COMP_MSG_FALLBACK      = "Modèle 3D indisponible sur ce client : la boussole le remplace.",
-	HELP_COMPANION         = "/qc compagnon [nom <nom> | caresse | apparence | muet | cacher | montrer | tuto [collection | passer] | anim] — ton compagnon de route",
+	HELP_COMPANION         = "/qc compagnon [nom <nom> | caresse | apparence | muet | cacher | montrer | tuto [passer] | anim] — ton compagnon de route",
 }
 local EN = {
 	OPT_PAGE_COMPANION_MAIN = "Companion",
@@ -482,7 +479,7 @@ local EN = {
 	COMP_REQ_total         = "%d stamps",
 	COMP_REQ_inn           = "%d full inn cards",
 	COMP_REQ_missions      = "%d days with all three missions",
-	COMP_HOVER_HINT        = "Click: a cuddle · Shift + click: treats · right-click: journal · drag: move\nSwitch companion: any creature caught with the net, journal's Companion page",
+	COMP_HOVER_HINT        = "Click: a cuddle · Shift + click: treats · right-click: journal · Shift + right-click: hunt · drag: move\nSwitch companion: any creature caught with the net, journal's Companion page",
 	OPT_COMP_TUTO          = "Replay the tutorial",
 	COMP_PREVIEW_LINE      = "%s  ·  %s",
 	COMP_TUTO_NEXT         = "Next",
@@ -505,8 +502,6 @@ local EN = {
 	COMP_MSG_TUTO_MUTED    = "Companion bubbles are off (Chattiness: Silent): raise the slider, or /qc compagnon muet, to see the tutorial.",
 	COMP_MSG_TUTO_COMBAT   = "The companion tutorial will start after combat.",
 	COMP_MSG_TUTO_SKIPPED  = "Companion tutorial skipped (/qc compagnon tuto to see it again).",
-	COMP_MSG_TUTO_MEN_SKIPPED = "Creatures tutorial skipped (/qc compagnon tuto collection to see it again).",
-	COMP_MSG_TUTO_MEN_OFF  = "Capture is off (settings, Day by day page): turn it back on for the creatures tutorial.",
 	COMP_MSG_UNLOCK_APP    = "Companion: new appearance unlocked, %s. Pick it in the settings.",
 	COMP_MSG_UNLOCK_ORN    = "Companion: new ornament unlocked, %s.",
 	COMP_MSG_EVOLVE        = "Companion: %s becomes %s!",
@@ -531,8 +526,8 @@ local EN = {
 	COMP_MOVE_free         = "By dragging",
 	COMP_MOVE_alt          = "Alt + drag",
 	COMP_MOVE_locked       = "Locked",
-	COMP_HOVER_HINT_alt    = "Click: a cuddle · Shift + click: treats · right-click: journal · Alt + drag: move\nSwitch companion: any creature caught with the net, journal's Companion page",
-	COMP_HOVER_HINT_locked = "Click: a cuddle · Shift + click: treats · right-click: journal\nSwitch companion: any creature caught with the net, journal's Companion page",
+	COMP_HOVER_HINT_alt    = "Click: a cuddle · Shift + click: treats · right-click: journal · Shift + right-click: hunt · Alt + drag: move\nSwitch companion: any creature caught with the net, journal's Companion page",
+	COMP_HOVER_HINT_locked = "Click: a cuddle · Shift + click: treats · right-click: journal · Shift + right-click: hunt\nSwitch companion: any creature caught with the net, journal's Companion page",
 	COMP_MSG_SHOWN         = "Companion: %s.",
 	COMP_MSG_MUTE          = "Companion bubbles: %s.",
 	COMP_MSG_FALLBACK      = "3D model unavailable on this client: the compass stands in.",
@@ -1208,8 +1203,7 @@ function ns:CompanionSay(pool, opts)
 	-- tutoriel reprendra son étape après la bulle
 	if seq and not opts.seq then
 		if seq.kind == "tuto" then
-			-- (une étape qui attend un geste garde son rang : elle sera redite)
-			if not seq.waiting then seq.index = math.max(0, seq.index - 1) end
+			seq.index = math.max(0, seq.index - 1)
 			seq.nextAt = now + BUBBLE_TIME
 		else
 			rt.seq = nil
@@ -1422,46 +1416,20 @@ function ns:CompanionToggleShown()
 end
 
 -- ---------------------------------------------------------------------------
--- Séquences : petite conversation (clic), tutoriel de base, tutoriel de la
--- ménagerie (2.3.0). `steps` : les clés du réservoir `pool`, ou des étapes
--- détaillées { key, pool, args, waitFor } ; `waitFor` (liste de gestes :
--- "net" = le filet lancé, "stage" = la scène de capture refermée) retient la
--- séquence tant que le geste n'est pas venu (ns:CompanionSequenceAdvance,
--- appelé par CaptureQueue.lua) ; `result = { ok = étape, fail = étape }`
--- choisit l'étape selon le verdict de la scène. opts.stepArgs : les
--- arguments de chaque étape (sinon `args` pour toutes) ; opts.manual : rejeu
--- demandé par le joueur.
+-- Séquences : petite conversation (clic), tutoriel de base. `steps` : les
+-- clés du réservoir `pool`, dites au rythme `stepTime` ; opts.manual : rejeu
+-- demandé par le joueur. (3.0.0 : les étapes qui attendaient un geste, pour
+-- le tutoriel de la ménagerie, sont parties avec lui : GuidedTour.lua.)
 -- ---------------------------------------------------------------------------
 function ns:CompanionStartSequence(kind, pool, steps, stepTime, args, opts)
 	opts = opts or {}
 	local rt = RT()
 	rt.seq = {
 		kind = kind, pool = pool, steps = steps, index = 0, step = stepTime, args = args,
-		stepArgs = opts.stepArgs, manual = opts.manual and true or false,
+		manual = opts.manual and true or false,
 		prio = kind == "tuto" and PRIORITY.tuto or PRIORITY.reaction, nextAt = Clock(),
 	}
 	return self:CompanionSequenceStep()
-end
-
--- L'étape `index` d'une séquence : clé, réservoir, arguments, gestes attendus
-local function SequenceStep(seq, index)
-	local step = seq.steps[index]
-	if step == nil then return nil end
-	local key, pool, args, waitFor = step, seq.pool, seq.args, nil
-	if type(step) == "table" then
-		if step.result then step = step.result[seq.result or "fail"] or step.result.fail end
-		key, pool, args, waitFor = step.key, step.pool or seq.pool, step.args or seq.args, step.waitFor
-	end
-	if seq.stepArgs and seq.stepArgs[index] then args = seq.stepArgs[index] end
-	return key, pool, args, waitFor
-end
-
--- Dit une étape ; une étape qui attend un geste garde sa bulle plus longtemps
-local function SaySequenceStep(self, seq, key, pool, args, waiting)
-	return self:CompanionSay(pool, {
-		seq = true, line = key, args = args, category = seq.kind == "tuto" and "tuto" or "reaction",
-		duration = waiting and TUTO_WAIT or math.max(BUBBLE_TIME, seq.step),
-	})
 end
 
 function ns:CompanionSequenceStep()
@@ -1474,35 +1442,19 @@ function ns:CompanionSequenceStep()
 		self:CompanionPauseTutorial()
 		return false
 	end
-	-- l'étape attend un geste : sa bulle reste, redite si elle s'est effacée
-	-- (sauf pendant la scène de capture, où l'on se tait)
-	if seq.waiting then
-		local shown = self.companionBubblePrio == PRIORITY.tuto and self.companionBubbleUntil and now < self.companionBubbleUntil
-		if seq.waiting[1] == "net" and not shown then
-			local key, pool, args = SequenceStep(seq, seq.index)
-			local ok, why = SaySequenceStep(self, seq, key, pool, args, true)
-			if not ok and why ~= "busy" then rt.seq = nil; return false end
-			if not ok then seq.nextAt = now + BUBBLE_TIME; return false end
-		end
-		seq.nextAt = now + TUTO_WAIT
-		return false
-	end
 	seq.index = seq.index + 1
-	local key, pool, args, waitFor = SequenceStep(seq, seq.index)
+	local key = seq.steps[seq.index]
 	if not key then
 		rt.seq = nil
 		if seq.kind == "tuto" then self:CompanionFinishTutorial(seq.pool, { manual = seq.manual }) end
 		return false
 	end
-	local ok, why = SaySequenceStep(self, seq, key, pool, args, waitFor ~= nil)
+	local ok, why = self:CompanionSay(seq.pool, {
+		seq = true, line = key, args = seq.args, category = seq.kind == "tuto" and "tuto" or "reaction",
+		duration = math.max(BUBBLE_TIME, seq.step),
+	})
 	if ok then
-		if waitFor then
-			seq.waiting = {}
-			for index, tag in ipairs(type(waitFor) == "table" and waitFor or { waitFor }) do seq.waiting[index] = tag end
-			seq.nextAt = now + TUTO_WAIT
-		else
-			seq.nextAt = now + seq.step
-		end
+		seq.nextAt = now + seq.step
 		return true
 	end
 	if why == "busy" then
@@ -1512,53 +1464,9 @@ function ns:CompanionSequenceStep()
 		return false
 	end
 	-- coupé, muet ou masqué : la séquence s'arrête (le tutoriel n'est pas
-	-- marqué comme vu, il reviendra à la prochaine connexion ou occasion)
+	-- marqué comme vu, il reviendra à la prochaine connexion)
 	rt.seq = nil
 	return false
-end
-
--- Le geste attendu est venu (CaptureQueue.lua) : "net" = le filet est lancé
--- (la scène se joue : silence jusqu'à sa fermeture), "stage" = la scène est
--- refermée (info.ok : capturée). Rend true si la séquence l'attendait.
-function ns:CompanionSequenceAdvance(tag, info)
-	local rt = self.companionRT
-	local seq = rt and rt.seq
-	if not (seq and seq.waiting and seq.waiting[1] == tag) then return false end
-	table.remove(seq.waiting, 1)
-	if tag == "net" then
-		if self.companionBubblePrio == PRIORITY.tuto then self:CompanionHideBubble() end
-	elseif tag == "stage" then
-		seq.result = (info and info.ok) and "ok" or "fail"
-	end
-	if #seq.waiting == 0 then
-		seq.waiting = nil
-		seq.nextAt = Clock()
-		self:CompanionSequenceStep()
-	else
-		seq.nextAt = Clock() + TUTO_WAIT
-	end
-	return true
-end
-
--- Le geste attendu ne viendra plus (le filet s'est vidé) : une bulle le dit,
--- la séquence s'arrête sans être marquée comme vue et repartira à l'occasion
--- suivante. Rend true si la séquence attendait ce geste.
-function ns:CompanionSequenceAbort(tag)
-	local rt = self.companionRT
-	local seq = rt and rt.seq
-	if not (seq and seq.waiting and seq.waiting[1] == tag) then return false end
-	rt.seq = nil
-	if self.companionBubblePrio == PRIORITY.tuto then self:CompanionHideBubble() end
-	if seq.pool == "TUTO_MENAGERIE" and tag == "net" and not InCombat() then
-		self:CompanionSay("TUTO_MENAGERIE_LATE", { force = true, category = "event" })
-	end
-	return true
-end
-
--- La séquence en cours attend-elle ce geste ? (le filet bat tant que oui)
-function ns:CompanionSequenceWaits(tag)
-	local seq = self.companionRT and self.companionRT.seq
-	return seq ~= nil and seq.waiting ~= nil and seq.waiting[1] == tag
 end
 
 -- Conversation : une au hasard, jamais la même que les dernières
@@ -1586,117 +1494,14 @@ function ns:CompanionStartTutorial(manual)
 	return self:CompanionStartSequence("tuto", "TUTO", ns.COMPANION_POOLS.TUTO, TUTO_STEP, { self:CompanionName() })
 end
 
--- ---------------------------------------------------------------------------
--- Tutoriel de la ménagerie (2.3.0) : ce qu'apportent les versions 2.0 à 2.2.
--- Une fois par personnage, à la PREMIÈRE OCCASION DE CAPTURE (CaptureQueue.lua
--- appelle ns:CompanionMenagerieOpportunity : un monstre dans le filet, hors
--- combat), en mode guidé : la première bulle attend que le joueur lance le
--- filet, la scène se joue en silence, puis le verdict et la suite. Jamais si
--- la capture est coupée (le drapeau tutoMenagerieDone reste à faux), jamais
--- pendant le tutoriel de base ni à la connexion « à vide ».
--- /qc compagnon tuto menagerie (et le bouton de la page Guide) le rejoue au
--- temps, sans attendre de capture. Les chiffres des bulles viennent des
--- constantes des modules (CaptureQueue, Shiny, CompanionEffects,
--- MenagerieCollection), jamais des textes.
--- ---------------------------------------------------------------------------
--- Les étapes et les arguments de chacune ; `guided` : la version qui attend
--- le filet (START, puis OK ou FAIL), sinon INTRO
-function ns:CompanionMenagerieTutorialSteps(guided)
-	local pools = ns.COMPANION_POOLS
-	local shiny = tonumber(ns.SHINY_CHANCE) or 0
-	local base = shiny > 0 and math.floor(1 / shiny + 0.5) or 0
-	local best = shiny > 0 and math.floor(1 / (shiny * (tonumber(ns.SHINY_CHAIN_MAX) or 1)) + 0.5) or 0
-	local odds = ns.CAPTURE_STAR_ODDS or {}
-	local ranks = ns.TRAINER_RANKS or {}
-	local first, last = ranks[1], ranks[#ranks]
-	local args = {
-		{ ns.CAPTURE_QUEUE_TIME or 0 },
-		{ odds[#odds] or 0 },
-		{ base, best, ns.SHINY_CHAIN_KILLS or 0 },
-		{},
-		{ math.floor((ns.EFFECT_DELAY or 0) / 60 + 0.5) },
-		{ ns.EFFECT_NEED_OK or 0 },
-		{ math.floor(((ns.SEAL_SHINY_MULT or 1) - 1) * 100 + 0.5) },
-		{ first and first.count or 0, last and last.count or 0 },
-		{}, {}, {},
-	}
-	local steps, stepArgs = {}, {}
-	if guided then
-		steps[1] = { key = pools.TUTO_MENAGERIE_START[1], pool = "TUTO_MENAGERIE_START", waitFor = { "net", "stage" } }
-		steps[2] = { result = {
-			ok = { key = pools.TUTO_MENAGERIE_OK[1], pool = "TUTO_MENAGERIE_OK" },
-			fail = { key = pools.TUTO_MENAGERIE_FAIL[1], pool = "TUTO_MENAGERIE_FAIL" },
-		} }
-	else
-		steps[1] = { key = pools.TUTO_MENAGERIE_INTRO[1], pool = "TUTO_MENAGERIE_INTRO" }
-	end
-	for index, key in ipairs(pools.TUTO_MENAGERIE) do
-		steps[#steps + 1] = key
-		stepArgs[#steps] = args[index] or {}
-	end
-	return steps, stepArgs
-end
-
--- Le tutoriel peut-il se jouer ? (module, capture et bulles allumés ; à la
--- demande, la raison est dite dans le chat)
-local function MenagerieTutorialReady(self, manual)
-	if not ModuleOn() then return false end
-	local db = self:DB()
-	if db.companionCapture == false or not self.CaptureQueue then
-		if manual then self:Print(L.COMP_MSG_TUTO_MEN_OFF) end
-		return false
-	end
-	if self:CompanionChatterLevel() == 0 or db.companionShow == false then
-		if manual then self:Print(L.COMP_MSG_TUTO_MUTED) end
-		return false
-	end
-	return true
-end
-
--- Première occasion de capture (CaptureQueue.lua, hors combat) : le
--- tutoriel guidé, une fois par personnage. Rend true s'il commence.
-function ns:CompanionMenagerieOpportunity()
-	if not ns.TUTO_MENAGERIE_AUTO then return false end
-	if not ModuleOn() then return false end
-	local data = self:CompanionData()
-	if data.tutoMenagerieDone or not data.tutoDone then return false end
-	local rt = RT()
-	-- jamais deux tutoriels à la fois, jamais en combat : l'occasion suivante fera l'affaire
-	if rt.tutoPending or (rt.seq and rt.seq.kind == "tuto") or InCombat() then return false end
-	if not MenagerieTutorialReady(self, false) then return false end
-	local steps, stepArgs = self:CompanionMenagerieTutorialSteps(true)
-	return self:CompanionStartSequence("tuto", "TUTO_MENAGERIE", steps, TUTO_STEP, nil, { stepArgs = stepArgs })
-end
-
--- Rejeu (/qc compagnon tuto menagerie, bouton « Revoir le tutoriel » de la
--- page Guide) : les mêmes bulles, au temps, sans attendre de capture
-function ns:CompanionStartMenagerieTutorial()
-	if not MenagerieTutorialReady(self, true) then return false end
-	local rt = RT()
-	if InCombat() then
-		rt.tutoMenageriePending = true
-		self:Print(L.COMP_MSG_TUTO_COMBAT)
-		return false
-	end
-	rt.tutoMenageriePending = nil
-	if rt.seq and rt.seq.kind == "tuto" then
-		rt.seq = nil
-		if self.companionBubblePrio == PRIORITY.tuto then self:CompanionHideBubble() end
-	end
-	rt.tutoPending = nil
-	local steps, stepArgs = self:CompanionMenagerieTutorialSteps(false)
-	return self:CompanionStartSequence("tuto", "TUTO_MENAGERIE", steps, TUTO_STEP, nil, { stepArgs = stepArgs, manual = true })
-end
-
--- Combat qui commence : la bulle du tutoriel s'efface, son étape reviendra
--- (une étape qui attend un geste garde son rang : elle sera redite).
+-- Combat qui commence : la bulle du tutoriel s'efface, son étape reviendra.
 -- Appelée dès PLAYER_REGEN_DISABLED, où InCombatLockdown() vaut encore faux.
 function ns:CompanionPauseTutorial()
 	local seq = self.companionRT and self.companionRT.seq
 	if not (seq and seq.kind == "tuto") then return false end
 	if self.companionBubblePrio == PRIORITY.tuto and self.companionBubbleUntil then
 		self:CompanionHideBubble()
-		if not seq.waiting then seq.index = math.max(0, seq.index - 1) end
+		seq.index = math.max(0, seq.index - 1)
 	end
 	seq.nextAt = Clock() + 1
 	return true
@@ -1714,24 +1519,15 @@ function ns:CompanionTutorialNext()
 	return true
 end
 
--- Fin d'un tutoriel (lu jusqu'au bout, ou passé) : `pool` dit lequel (TUTO,
--- le tutoriel de base ; TUTO_MENAGERIE, celui de la ménagerie, qui ouvre
--- alors le carnet sur sa page Guide quand il s'est joué de lui-même jusqu'au
--- bout). opts.skipped : passé ; opts.manual : c'était un rejeu.
+-- Fin du tutoriel de base (lu jusqu'au bout, ou passé). opts.skipped :
+-- passé ; opts.manual : c'était un rejeu.
 function ns:CompanionFinishTutorial(pool, opts)
 	opts = opts or {}
 	local data = self:CompanionData()
 	local rt = RT()
 	local seq = rt.seq
-	pool = pool or (seq and seq.kind == "tuto" and seq.pool) or (rt.tutoMenageriePending and "TUTO_MENAGERIE") or "TUTO"
 	if seq and seq.kind == "tuto" then rt.seq = nil end
 	if self.companionBubblePrio == PRIORITY.tuto then self:CompanionHideBubble() end
-	if pool == "TUTO_MENAGERIE" then
-		data.tutoMenagerieDone = true
-		rt.tutoMenageriePending = nil
-		if not opts.skipped and not opts.manual and self.OpenJournalGuide then pcall(self.OpenJournalGuide, self) end
-		return
-	end
 	data.tutoDone = true
 	rt.tutoPending = nil
 end
@@ -1739,10 +1535,9 @@ end
 function ns:CompanionSkipTutorial()
 	local rt = RT()
 	local seq = rt.seq
-	local pool = (seq and seq.kind == "tuto" and seq.pool) or (rt.tutoPending and "TUTO")
-		or (rt.tutoMenageriePending and "TUTO_MENAGERIE") or nil
+	local pool = (seq and seq.kind == "tuto" and seq.pool) or (rt.tutoPending and "TUTO") or nil
 	self:CompanionFinishTutorial(pool or "TUTO", { skipped = true })
-	if pool then self:Print(pool == "TUTO_MENAGERIE" and L.COMP_MSG_TUTO_MEN_SKIPPED or L.COMP_MSG_TUTO_SKIPPED) end
+	if pool then self:Print(L.COMP_MSG_TUTO_SKIPPED) end
 	return pool ~= nil
 end
 
@@ -1772,16 +1567,39 @@ end
 -- Le cadrage d'un modèle (zoom portrait, distance, position) : model.framing
 -- le repose ; rappelé à la fin du chargement (OnModelLoaded) et à
 -- l'affichage, car un réglage posé avant la fin du chargement est perdu
+-- 3.0.0 (bêta 6) : OnModelLoaded note aussi que le modèle est là
+-- (model.modelReady, lu par ns.ModelEmpty)
+local function FramingAgain(m) if m.framing then pcall(m.framing, m) end end
+local function FramingLoaded(m)
+	m.modelReady = true
+	FramingAgain(m)
+end
 function ns.ModelKeepFraming(model)
 	if not model or model.azFramingHooked then return model end
 	model.azFramingHooked = true
-	local function Again(m) if m.framing then pcall(m.framing, m) end end
-	for _, event in ipairs({ "OnModelLoaded", "OnShow" }) do
-		if model.HookScript then pcall(model.HookScript, model, event, Again)
-		elseif model.SetScript then pcall(model.SetScript, model, event, Again) end
+	for event, fn in pairs({ OnModelLoaded = FramingLoaded, OnShow = FramingAgain }) do
+		if model.HookScript then pcall(model.HookScript, model, event, fn)
+		elseif model.SetScript then pcall(model.SetScript, model, event, fn) end
 	end
 	return model
 end
+
+-- 3.0.0 (bêta 6) : un modèle demandé mais resté vide. SetCreature d'une
+-- créature que le client n'a pas encore en cache (Grand-père Hiver jamais
+-- croisé) ne dessine rien et ne se refait pas seul : le cadre du compagnon
+-- restait vide jusqu'au /reload (le cache rempli entre-temps), et chaque
+-- rafraîchissement suivant le croyait affiché (même clé). Vide = pas
+-- d'OnModelLoaded et GetDisplayInfo à 0 ; sans GetDisplayInfo, on ne sait
+-- pas : réputé chargé.
+function ns.ModelEmpty(model)
+	if not model or model.modelReady or type(model.GetDisplayInfo) ~= "function" then return false end
+	local ok, id = pcall(model.GetDisplayInfo, model)
+	return ok and (tonumber(id) or 0) <= 0
+end
+-- Le nouvel essai : une fois par demande (clé), après MODEL_RETRY_DELAY (le
+-- temps que la réponse du serveur remplisse le cache ; 0 = l'image suivante),
+-- ou au rafraîchissement suivant s'il vient avant
+ns.MODEL_RETRY_DELAY = 0.5
 -- 2.11.0 (fiche 10) : un seul cadrage pour tous les modèles 3D de l'add-on.
 -- Avant, huit appels posaient sept réglages, souvent avant la fin du
 -- chargement (perdus). ns.ShowModel charge display d'abord, sinon npc, ne
@@ -1874,10 +1692,16 @@ function ns.ShowModel(model, opts, profile)
 	local key = tostring(opts.display) .. ":" .. tostring(npc) .. ":" .. (opts.shiny and "s" or "")
 		.. ":" .. tostring(opts.epoch)
 	if model.modelKey == key and model.modelShown then
-		model.framing(model)
-		model:Show()
-		return true
+		-- 3.0.0 (bêta 6) : même demande, mais rien de chargé : rechargé une fois
+		if model.modelRetried == key or not ns.ModelEmpty(model) then
+			model.framing(model)
+			model:Show()
+			return true
+		end
+		model.modelRetried = key
 	end
+	if model.modelKey ~= key then model.modelRetried = nil end
+	model.modelReady = nil
 	local shown = false
 	if opts.display then shown = ModelCall(model, "SetDisplayInfo", opts.display) end
 	if not shown and npc then shown = ModelCall(model, "SetCreature", npc) end
@@ -1889,6 +1713,20 @@ function ns.ShowModel(model, opts, profile)
 	if shown then
 		model.framing(model)
 		model:Show()
+		-- 3.0.0 (bêta 6) : resté vide ? un nouvel essai, une fois (opts.retry :
+		-- ce que l'appelant refait, ex. tout le cadre du compagnon)
+		if model.modelRetried ~= key and not model.retryQueued and ns.ModelEmpty(model) then
+			local timer = rawget(_G, "C_Timer")
+			if type(timer) == "table" and type(timer.After) == "function" then
+				model.retryQueued = true
+				local again = opts.retry
+				timer.After(ns.MODEL_RETRY_DELAY, function()
+					model.retryQueued = nil
+					if model.modelKey ~= key or model.modelRetried == key or not ns.ModelEmpty(model) then return end
+					if again then pcall(again) else ns.ShowModel(model, opts, profile) end
+				end)
+			end
+		end
 	else
 		ModelCall(model, "ClearModel")
 		model:Hide()
@@ -1899,7 +1737,7 @@ end
 -- Oublie le modèle affiché (le prochain ShowModel recharge)
 function ns.ModelForget(model)
 	if not model then return end
-	model.modelKey, model.modelShown = nil, nil
+	model.modelKey, model.modelShown, model.modelReady, model.modelRetried = nil, nil, nil, nil
 	ModelCall(model, "ClearModel")
 	if model.Hide then model:Hide() end
 end
@@ -2309,8 +2147,13 @@ function ns:EnsureCompanionFrame()
 		if button and button ~= "LeftButton" and button ~= "RightButton" then return end
 		local x, y = Call(rawget(_G, "GetCursorPosition"))
 		if f.downX and x and (math.abs(x - f.downX) > 4 or math.abs((y or 0) - (f.downY or 0)) > 4) then return end
-		-- clic droit : son carnet de voyage, ouvert sur les objectifs
-		if button == "RightButton" then return ns:CompanionOpenJournal() end
+		-- 3.0.0 : clic droit = le carnet, d'un geste (comme avant la 3.0) ;
+		-- Maj + clic droit = le petit menu (carnet de voyage, mode chasse)
+		if button == "RightButton" then
+			if Call(rawget(_G, "IsShiftKeyDown")) then return ns:CompanionMenuToggle() end
+			ns:CompanionMenuHide()
+			return ns:CompanionOpenJournal()
+		end
 		ns:CompanionPet()
 	end)
 	frame:SetScript("OnEnter", function() ns:CompanionShowHover() end)
@@ -2321,6 +2164,245 @@ function ns:EnsureCompanionFrame()
 	self:CompanionApplyOrnaments()
 	return frame
 end
+
+-- ---------------------------------------------------------------------------
+-- 2.15.0 : le menu du clic droit et l'indicateur du mode chasse (maquette
+-- capture215, écran 3). Maj + clic droit sur la créature (3.0.0 ; le clic
+-- droit seul ouvre de nouveau le carnet) : un petit menu, comme la
+-- rangée de sourdine du bandeau de capture : « Carnet de voyage » (le geste
+-- d'avant), puis « Mode chasse » : 5 min, 15 min, 30 min, 1 h (ns.HUNT_CHOICES),
+-- « Jusqu'à ce que je l'arrête », « Arrêter la chasse » (actif seulement en
+-- chasse), « Annuler ». Échap, un clic ailleurs ou un second Maj + clic droit le
+-- referment. Pendant la chasse : l'icône de la chasse (client, 132212) et le
+-- temps restant en haut à gauche du cadre, à jour au fil des minutes (horloge
+-- de l'addon, COMPANION_HUNT_BADGE.refresh), caché en vol (griffon) comme le
+-- reste du décor ; au survol, « Mode chasse : encore 12 min ».
+-- ---------------------------------------------------------------------------
+local MENU_FR = {
+	COMP_MENU_JOURNAL   = "Carnet de voyage",
+	COMP_MENU_HUNT_STOP = "Arrêter la chasse",
+	COMP_MENU_CANCEL    = "Annuler",
+	COMP_MENU_HUNT_OFF  = "Chaque monstre abattu au filet, pour la durée choisie.",
+	COMP_MENU_HUNT_ON   = "En cours : encore %s.",
+	COMP_MENU_HUNT_ON_STOP = "En cours, jusqu'à ce que tu l'arrêtes.",
+	COMP_MENU_MIN       = "%d min",
+	COMP_MENU_HOUR      = "1 h",
+	COMP_HUNT_TIP       = "Mode chasse : encore %s",
+	COMP_HUNT_TIP_ON    = "Mode chasse : jusqu'à ce que tu l'arrêtes",
+	COMP_HUNT_TIP_HINT  = "Maj + clic droit sur le compagnon : l'arrêter",
+}
+local MENU_EN = {
+	COMP_MENU_JOURNAL   = "Travel journal",
+	COMP_MENU_HUNT_STOP = "Stop hunting",
+	COMP_MENU_CANCEL    = "Cancel",
+	COMP_MENU_HUNT_OFF  = "Every defeated monster in the net, for the time you pick.",
+	COMP_MENU_HUNT_ON   = "On: %s left.",
+	COMP_MENU_HUNT_ON_STOP = "On, until you stop it.",
+	COMP_MENU_MIN       = "%d min",
+	COMP_MENU_HOUR      = "1 h",
+	COMP_HUNT_TIP       = "Hunt mode: %s left",
+	COMP_HUNT_TIP_ON    = "Hunt mode: until you stop it",
+	COMP_HUNT_TIP_HINT  = "Shift + right-click the companion: stop it",
+}
+ns.RegisterStrings(MENU_FR, MENU_EN)
+if ns.KEEP_STRINGS then ns.COMPANION_MENU_STRINGS = { fr = MENU_FR, en = MENU_EN } end
+
+-- 3.0.0 : rangées à la taille « sm » des boutons du thème (24)
+ns.COMPANION_MENU = { w = 216, pad = 12, row = Theme.BUTTON_SIZES.sm, gap = 4 }
+ns.COMPANION_HUNT_BADGE = { icon = "Interface\\Icons\\Ability_Hunter_SniperShot", size = 14, h = 18, x = 4, y = -4, refresh = 15 }
+
+-- actif ou non (le client a Enable/Disable ; .off le dit partout)
+local function SetOn(button, on)
+	button.off = not on or nil
+	if on then
+		if button.Enable then button:Enable() end
+	elseif button.Disable then
+		button:Disable()
+	end
+end
+local function MenuOver(frame)
+	if not (frame and frame.IsMouseOver) then return false end
+	local ok, over = pcall(frame.IsMouseOver, frame)
+	return ok and over and true or false
+end
+
+function ns:EnsureCompanionMenu()
+	if self.companionMenu then return self.companionMenu end
+	if not (Theme and Theme.CreateToast and Theme.CreateButton) then return nil end
+	local M = ns.COMPANION_MENU
+	local frame = Theme.CreateToast(UIParent, M.w, 100, { strata = "DIALOG", name = "QuestCompanionCompanionMenu", accent = Theme.GOLD })
+	if not frame then return nil end
+	frame:EnableMouse(true)
+	if Theme.RegisterEscapeClose then pcall(Theme.RegisterEscapeClose, frame) end
+	local left = frame.contentLeft or M.pad
+	local width = M.w - left - M.pad
+	local y = -M.pad
+	frame.journal = Theme.CreateButton(frame, width, M.row, L.COMP_MENU_JOURNAL, function()
+		ns:CompanionMenuHide()
+		ns:CompanionOpenJournal()
+	end, "normal")
+	frame.journal:SetPoint("TOPLEFT", frame, "TOPLEFT", left, y)
+	y = y - M.row - 10
+	frame.huntTitle = Theme.Text(frame, Theme.F_CAPS or Theme.F_SMALL, Theme.GOLD)
+	frame.huntTitle:SetPoint("TOPLEFT", frame, "TOPLEFT", left, y)
+	frame.huntTitle:SetText(Theme.Upper and Theme.Upper(L.HUNT_TITLE or "") or (L.HUNT_TITLE or ""))
+	y = y - 15
+	frame.huntStatus = Theme.Text(frame, Theme.F_SMALL, Theme.MUTED_LIGHT)
+	frame.huntStatus:SetPoint("TOPLEFT", frame, "TOPLEFT", left, y)
+	frame.huntStatus:SetWidth(width)
+	frame.huntStatus:SetJustifyH("LEFT")
+	if frame.huntStatus.SetWordWrap then frame.huntStatus:SetWordWrap(true) end
+	y = y - 28
+	frame.durations = {}
+	local choices = ns.HUNT_CHOICES or { 5, 15, 30, 60 }
+	local w = math.floor((width - (#choices - 1) * M.gap) / #choices)
+	for index, minutes in ipairs(choices) do
+		local label = minutes >= 60 and L.COMP_MENU_HOUR or ns:F("COMP_MENU_MIN", minutes)
+		local button = Theme.CreateButton(frame, w, M.row, label, function()
+			ns:CompanionMenuHide()
+			if ns.HuntStart then ns:HuntStart(minutes) end
+		end, "accent")
+		button:SetPoint("TOPLEFT", frame, "TOPLEFT", left + (index - 1) * (w + M.gap), y)
+		button.minutes = minutes
+		frame.durations[index] = button
+	end
+	y = y - M.row - M.gap
+	frame.untilStop = Theme.CreateButton(frame, width, M.row, L.HUNT_UNTIL_STOP or "", function()
+		ns:CompanionMenuHide()
+		if ns.HuntStart then ns:HuntStart(nil) end
+	end, "accent")
+	frame.untilStop:SetPoint("TOPLEFT", frame, "TOPLEFT", left, y)
+	y = y - M.row - M.gap
+	frame.stop = Theme.CreateButton(frame, width, M.row, L.COMP_MENU_HUNT_STOP, function()
+		ns:CompanionMenuHide()
+		if ns.HuntStop then ns:HuntStop() end
+	end, "normal")
+	frame.stop:SetPoint("TOPLEFT", frame, "TOPLEFT", left, y)
+	y = y - M.row - M.gap
+	frame.cancel = Theme.CreateButton(frame, width, M.row, L.COMP_MENU_CANCEL, function() ns:CompanionMenuHide() end, "outline")
+	frame.cancel:SetPoint("TOPLEFT", frame, "TOPLEFT", left, y)
+	y = y - M.row
+	frame:SetHeight(-y + M.pad)
+	-- un clic ailleurs (hors du menu et du compagnon), le combat : on referme
+	pcall(frame.RegisterEvent, frame, "PLAYER_REGEN_DISABLED")
+	pcall(frame.RegisterEvent, frame, "GLOBAL_MOUSE_DOWN")
+	frame:SetScript("OnEvent", function(f, event)
+		if not f:IsShown() then return end
+		if event == "GLOBAL_MOUSE_DOWN" and (MenuOver(f) or MenuOver(ns.companionFrame)) then return end
+		ns:CompanionMenuHide()
+	end)
+	frame:Hide()
+	self.companionMenu = frame
+	return frame
+end
+
+function ns:CompanionMenuRefresh()
+	local frame = self.companionMenu
+	if not frame then return nil end
+	local left = self.HuntRemaining and self:HuntRemaining()
+	if not left then
+		frame.huntStatus:SetText(L.COMP_MENU_HUNT_OFF)
+		SetOn(frame.stop, false)
+	elseif left < 0 then
+		frame.huntStatus:SetText(L.COMP_MENU_HUNT_ON_STOP)
+		SetOn(frame.stop, true)
+	else
+		frame.huntStatus:SetText(self:F("COMP_MENU_HUNT_ON", self:HuntText() or ""))
+		SetOn(frame.stop, true)
+	end
+	return left
+end
+
+function ns:CompanionMenuShow()
+	local frame = self:EnsureCompanionMenu()
+	if not frame then return self:CompanionOpenJournal() end
+	local anchor = self.companionFrame
+	frame:ClearAllPoints()
+	if anchor then frame:SetPoint("BOTTOM", anchor, "TOP", 0, 8) else frame:SetPoint("CENTER", UIParent, "CENTER", 0, 0) end
+	self:CompanionHideHover()
+	self:CompanionMenuRefresh()
+	frame:Show()
+	if Theme.FadeIn then pcall(Theme.FadeIn, frame, 0.12) end
+	return frame
+end
+
+function ns:CompanionMenuHide()
+	if self.companionMenu then self.companionMenu:Hide() end
+end
+
+function ns:CompanionMenuToggle()
+	local frame = self.companionMenu
+	if frame and frame:IsShown() then self:CompanionMenuHide(); return nil end
+	return self:CompanionMenuShow()
+end
+
+-- L'indicateur de chasse sur le cadre : rend true s'il est montré
+local function HuntBadgeTip(badge)
+	local tooltip = rawget(_G, "GameTooltip")
+	if not (type(tooltip) == "table" and tooltip.SetOwner) then return end
+	tooltip:SetOwner(badge, "ANCHOR_TOP")
+	local left = ns.HuntRemaining and ns:HuntRemaining()
+	local line = (left and left >= 0) and ns:F("COMP_HUNT_TIP", ns:HuntText() or "") or L.COMP_HUNT_TIP_ON
+	Theme.TooltipLine(tooltip, line, Theme.GOLD)
+	Theme.TooltipLine(tooltip, L.COMP_HUNT_TIP_HINT, Theme.MUTED_LIGHT)
+	tooltip:Show()
+end
+
+function ns:CompanionHuntBadge()
+	local frame = self.companionFrame
+	if not frame then return false end
+	local badge = frame.huntBadge
+	local left = ModuleOn() and self.HuntRemaining and self:HuntRemaining()
+	-- en vol (griffon) : rangé, comme le reste du décor
+	local flying = Call(rawget(_G, "UnitOnTaxi"), "player") == true
+	if not left or flying then
+		if badge then badge:Hide() end
+		return false
+	end
+	local B = ns.COMPANION_HUNT_BADGE
+	if not badge then
+		badge = CreateFrame("Frame", nil, frame)
+		badge:SetHeight(B.h)
+		badge:SetPoint("TOPLEFT", frame, "TOPLEFT", B.x, B.y)
+		badge:SetFrameLevel((frame:GetFrameLevel() or 1) + 6)
+		badge.bg = Theme.Solid(badge, "BACKGROUND", Theme.INK, 0.85)
+		badge.bg:SetAllPoints(badge)
+		badge.edge = Theme.Border(badge, Theme.GOLD, 1, "BORDER")
+		badge.icon = badge:CreateTexture(nil, "ARTWORK")
+		badge.icon:SetSize(B.size, B.size)
+		badge.icon:SetPoint("LEFT", badge, "LEFT", 2, 0)
+		badge.icon:SetTexture(B.icon)
+		badge.icon:SetTexCoord(0.08, 0.92, 0.08, 0.92)
+		badge.text = Theme.Text(badge, Theme.F_SMALL, Theme.GOLD_LIGHT)
+		badge.text:SetPoint("LEFT", badge.icon, "RIGHT", 3, 0)
+		if badge.EnableMouse then badge:EnableMouse(true) end
+		badge:SetScript("OnEnter", HuntBadgeTip)
+		badge:SetScript("OnLeave", function()
+			local tooltip = rawget(_G, "GameTooltip")
+			if type(tooltip) == "table" and tooltip.Hide then tooltip:Hide() end
+		end)
+		frame.huntBadge = badge
+	end
+	-- jusqu'à l'arrêt : l'icône seule ; minutée : le temps restant
+	local text = left >= 0 and (self:HuntText() or "") or ""
+	if badge.label ~= text then
+		badge.label = text
+		badge.text:SetText(text)
+		local w = text ~= "" and (Theme.TextWidth and tonumber(Theme.TextWidth(badge, text, Theme.F_SMALL)) or 30) or 0
+		badge:SetWidth(B.size + 4 + (text ~= "" and (w + 6) or 0))
+	end
+	badge:Show()
+	return true
+end
+
+ns:RegisterCallback("HUNT", function(self)
+	self:CompanionHuntBadge()
+	if self.companionMenu and self.companionMenu:IsShown() then self:CompanionMenuRefresh() end
+end)
+ns.Every("companionHunt", ns.COMPANION_HUNT_BADGE.refresh, function()
+	local ok, err = pcall(ns.CompanionHuntBadge, ns)
+	if not ok and ns.RecordError then ns:RecordError("companion:hunt", err) end
+end)
 
 -- Clic droit sur la créature : le carnet, sur son dernier onglet. Déjà
 -- ouvert : on le ferme.
@@ -2344,7 +2426,7 @@ function ns:EnsureCompanionBubble()
 	if not bubble then return nil end
 	bubble:SetPoint("BOTTOM", frame, "TOP", 0, 12)
 	if Theme.CreateButton then
-		local h = (Theme.DIALOG_BUTTON_HEIGHT or 28) - 6
+		local h = "sm"   -- 3.0.0 : taille canonique (Theme.BUTTON_SIZES)
 		bubble.nextButton = Theme.CreateButton(bubble, "auto", h, L.COMP_TUTO_NEXT, function() ns:CompanionTutorialNext() end, "primary")
 		bubble.nextButton:SetPoint("BOTTOMRIGHT", bubble, "BOTTOMRIGHT", -Theme.BUBBLE_PAD, Theme.BUBBLE_PAD)
 		bubble.skipButton = Theme.CreateButton(bubble, "auto", h, L.COMP_TUTO_SKIP, function() ns:CompanionSkipTutorial() end, "outline")
@@ -2551,6 +2633,7 @@ function ns:CompanionModelCam(app, framing)
 	return cam * factor, y, spec and tonumber(spec.facing) or nil
 end
 
+local function CompanionReapply() ns:CompanionApplyModel() end
 function ns:CompanionApplyModel()
 	local frame = self.companionFrame
 	if not frame then return end
@@ -2571,8 +2654,20 @@ function ns:CompanionApplyModel()
 	-- 2.14.0 : un compagnon de saison (créature du jeu, SetCreature) aussi
 	local real = app.captured or app.seasonal
 	if real then distance, y, facing = self:CompanionModelCam(app, framing) end
+	-- 3.1.0 : la taille du spécimen porté (SpecimenTraits.lua) : échelle du
+	-- modèle, rapprochée selon le cadrage, la caméra recule au-dessus de 1
+	local sizeScale = 1
+	if app.captured and self.CompanionSizeScale then
+		local camFactor
+		sizeScale, camFactor = self:CompanionSizeScale(framing)
+		distance = distance * (camFactor or 1)
+	end
+	frame.sizeScale = sizeScale
+	-- 3.0.0 (bêta 6) : modèle resté vide (créature pas encore en cache) :
+	-- tout le cadre refait une fois (CompanionReapply)
 	local shown = model and ns.ShowModel(model, { display = app.display, npc = app.npc, shiny = app.shiny,
-		zoom = zoom, cam = distance, y = y, facing = facing, scale = real and 1 or stageDef.scale }, "companion") or false
+		zoom = zoom, cam = distance, y = y, facing = facing, scale = real and sizeScale or stageDef.scale,
+		retry = CompanionReapply }, "companion") or false
 	frame.usesFallback = not shown
 	frame.displayID = shown and app.display or nil
 	if shown then
@@ -2916,7 +3011,6 @@ end
 function ns:CompanionChatter(seconds)
 	local rt = RT()
 	if rt.tutoPending and not InCombat() then self:CompanionStartTutorial(false) end
-	if rt.tutoMenageriePending and not InCombat() then self:CompanionStartMenagerieTutorial() end
 	if InCombat() then return end
 	if self:CompanionTryNeed() then return end
 	if self:CompanionTryGoal() then return end
@@ -3779,9 +3873,12 @@ function ns:CompanionCommand(rest)
 		local what = (arg or ""):lower()
 		if what == "passer" or what == "skip" or what == "stop" then return self:CompanionSkipTutorial() end
 		self:CompanionUpdateVisibility()
-		-- « tuto menagerie » : le tutoriel de la ménagerie (2.3.0), rejoué au temps
+		-- 3.0.0 : « tuto collection / capture / menagerie » (le tutoriel de la
+		-- ménagerie, retiré) : la visite guidée des premières captures
 		if what == "menagerie" or what == "ménagerie" or what == "capture" or what == "collection"
-			or what == "creatures" or what == "créatures" then return self:CompanionStartMenagerieTutorial() end
+			or what == "creatures" or what == "créatures" then
+			return self.TourCommand and self:TourCommand("capture") or false
+		end
 		return self:CompanionStartTutorial(true)
 	end
 	self:CompanionCheckUnlocks()
@@ -3847,7 +3944,6 @@ local HANDLERS = {
 		ns:CompanionCombatEnded()
 		local rt = ns.companionRT
 		if rt and rt.tutoPending then ns:CompanionStartTutorial(false) end
-		if rt and rt.tutoMenageriePending then ns:CompanionStartMenagerieTutorial() end
 	end,
 	QUEST_TURNED_IN        = function()
 		ns:CompanionAdd("mood", 12)

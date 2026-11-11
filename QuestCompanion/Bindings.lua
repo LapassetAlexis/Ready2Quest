@@ -42,6 +42,8 @@ local FR = {
 	BIND_NET_COMBAT   = "Pas pendant un combat : le filet attend la fin du combat.",
 	OPT_BIND_TOGGLE   = "Raccourci du compagnon",
 	OPT_BIND_NET      = "Raccourci du filet",
+	BIND_HUNT         = "Mode chasse (lancer / arrêter)",
+	OPT_BIND_HUNT     = "Raccourci du mode chasse",
 }
 local EN = {
 	BIND_HEADER       = "QuestCompanion",
@@ -66,12 +68,14 @@ local EN = {
 	BIND_NET_COMBAT   = "Not in combat: the net waits until the fight is over.",
 	OPT_BIND_TOGGLE   = "Companion key",
 	OPT_BIND_NET      = "Net key",
+	BIND_HUNT         = "Hunt mode (start / stop)",
+	OPT_BIND_HUNT     = "Hunt mode key",
 }
 ns.RegisterStrings(FR, EN)
 if ns.KEEP_STRINGS then ns.BINDINGS_STRINGS = { fr = FR, en = EN } end
 
 ns.BINDINGS = { feats = "QUESTCOMPANION_FEATS", journal = "QUESTCOMPANION_JOURNAL",
-	toggle = "QUESTCOMPANION_TOGGLE", net = "QUESTCOMPANION_NET" }
+	toggle = "QUESTCOMPANION_TOGGLE", net = "QUESTCOMPANION_NET", hunt = "QUESTCOMPANION_HUNT" }
 ns.BINDING_DEFAULT_KEY = "Y"
 -- Y déjà posé sur ces actions du jeu compte comme libre : sur Forever, Y ouvre
 -- les hauts faits de Blizzard, vides (2.8.3)
@@ -79,7 +83,7 @@ ns.BINDING_REPLACEABLE = { TOGGLEACHIEVEMENT = true }
 -- 2 : tentative faite avec la règle 2.8.3 (true = ancienne tentative, refaite une fois)
 local TRIED = 2
 local B = ns.BINDINGS
-local LABEL = { feats = "BIND_FEATS", journal = "BIND_JOURNAL", toggle = "BIND_TOGGLE", net = "BIND_NET" }
+local LABEL = { feats = "BIND_FEATS", journal = "BIND_JOURNAL", toggle = "BIND_TOGGLE", net = "BIND_NET", hunt = "BIND_HUNT" }
 -- touches seules qui ne font qu'ajouter un modificateur
 local MODIFIERS = { LSHIFT = true, RSHIFT = true, LCTRL = true, RCTRL = true, LALT = true, RALT = true,
 	LMETA = true, RMETA = true, UNKNOWN = true }
@@ -94,6 +98,9 @@ _G.BINDING_NAME_QUESTCOMPANION_TOGGLE = L.BIND_TOGGLE
 _G.BINDING_NAME_QUESTCOMPANION_NET = L.BIND_NET
 _G.QuestCompanion_ToggleCompanion = function() if ns.CompanionToggleShown then return ns:CompanionToggleShown() end end
 _G.QuestCompanion_ThrowNet = function() return ns:BindingThrowNet() end
+-- 2.15.0 : mode chasse (CaptureSpecimens.lua) : lancé jusqu'à l'arrêt, ou arrêté
+_G.BINDING_NAME_QUESTCOMPANION_HUNT = L.BIND_HUNT
+_G.QuestCompanion_ToggleHunt = function() if ns.HuntToggle then return ns:HuntToggle() end end
 
 local function G(name) return rawget(_G, name) end
 local function Call(fn, ...)
@@ -122,7 +129,10 @@ end
 function ns:BindingThrowNet()
 	if not (self.CaptureThrow and self.CaptureQueuePrune) then return false end
 	if InCombat() or Call(G("UnitAffectingCombat"), "player") then self:Print(L.BIND_NET_COMBAT); return false end
+	-- 2.15.0 : la carte de préparation ouverte : son candidat, avec l'aide choisie
+	if self.CapturePrepShown and self:CapturePrepShown() then return self:CapturePrepLaunch() and true or false end
 	if #self:CaptureQueuePrune() == 0 then self:Print(L.CAPTURE_Q_NOTHING); return false end
+	-- sinon tout de suite (pas de carte), avec l'aide déjà choisie
 	return self:CaptureThrow() and true or false
 end
 
@@ -216,12 +226,12 @@ local function CaptureFrame(self)
 	frame.text:SetWidth(340 - left - 14)
 	frame.text:SetJustifyH("LEFT")
 	if frame.text.SetWordWrap then frame.text:SetWordWrap(true) end
-	frame.replace = Theme.CreateButton(frame, "auto", 24, L.BIND_REPLACE, function(b)
+	frame.replace = Theme.CreateButton(frame, "auto", "sm", L.BIND_REPLACE, function(b)
 		local f = b:GetParent()
 		if f.pending then ns:BindingApply(f.which, f.pending) end
 	end, "primary")
 	frame.replace:SetPoint("BOTTOMRIGHT", frame, "BOTTOMRIGHT", -12, 10)
-	frame.cancel = Theme.CreateButton(frame, "auto", 24, L.BIND_CANCEL, function() ns:BindingCaptureStop() end)
+	frame.cancel = Theme.CreateButton(frame, "auto", "sm", L.BIND_CANCEL, function() ns:BindingCaptureStop() end)
 	frame.cancel:SetPoint("RIGHT", frame.replace, "LEFT", -8, 0)
 	if frame.EnableKeyboard then pcall(frame.EnableKeyboard, frame, true) end
 	frame:SetScript("OnKeyDown", function(f, key)
@@ -277,7 +287,7 @@ end
 -- Options : page Carnet de voyage, section Hauts faits ; la carte montre la
 -- touche, « Changer » (bouton de la carte) et « Retirer » (ajouté)
 -- ---------------------------------------------------------------------------
-local ROWS = { bindFeats = "feats", bindJournal = "journal", bindToggle = "toggle", bindNet = "net" }
+local ROWS = { bindFeats = "feats", bindJournal = "journal", bindToggle = "toggle", bindNet = "net", bindHunt = "hunt" }
 do
 	for _, page in ipairs(ns.OPTION_PAGES or {}) do
 		if page.id == "journal" and type(page.rows) == "table" then
@@ -301,6 +311,8 @@ do
 				if row.key == "bindToggle" then present = true end
 			end
 			if at and not present then
+				table.insert(page.rows, at, { key = "bindHunt", label = "OPT_BIND_HUNT", kind = "action", button = "OPT_BIND_CHANGE",
+					describe = function() return L.OPT_BIND_DESC end })
 				table.insert(page.rows, at, { key = "bindNet", label = "OPT_BIND_NET", kind = "action", button = "OPT_BIND_CHANGE",
 					describe = function() return L.OPT_BIND_DESC end })
 				table.insert(page.rows, at, { key = "bindToggle", label = "OPT_BIND_TOGGLE", kind = "action", button = "OPT_BIND_CHANGE",
@@ -322,7 +334,7 @@ do
 				local which = card.def and ROWS[card.def.key]
 				if which then
 					if not card.clearButton and card.button then
-						card.clearButton = Theme.CreateButton(card, "auto", 22, L.OPT_BIND_CLEAR, function() ns:BindingClear(which) end, "outline")
+						card.clearButton = Theme.CreateButton(card, "auto", "sm", L.OPT_BIND_CLEAR, function() ns:BindingClear(which) end, "outline")
 						card.clearButton:SetPoint("RIGHT", card.button, "LEFT", -8, 0)
 						card.value:ClearAllPoints()
 						card.value:SetPoint("RIGHT", card.clearButton, "LEFT", -10, 0)
