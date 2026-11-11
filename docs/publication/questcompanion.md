@@ -1,7 +1,7 @@
 <!--
 Fiche de la page QuestCompanion sur CurseForge et Wago (à copier à la main, voir docs/PUBLIER.md).
-Summary EN (obligatoire en anglais sur CurseForge, 256 caractères max, ici 205) :
-  Catch the monsters you defeat in WoW Forever: 1-3 star specimens, rare shinies, 175 achievements and 40 titles, a companion that hunts with you, zone seals and a trainer card shared with your guild. FR/EN.
+Summary EN (obligatoire en anglais sur CurseForge, 256 caractères max, ici 222) :
+  Catch the monsters you defeat in WoW Forever: unique 1-3 star specimens, rare shinies, trades between players, 180 achievements and 40 titles, a companion that hunts with you and a trainer card shared with your guild. FR/EN.
 Catégories : Companions (principale), Quests & Leveling (additionnelle). Si Companions n'existe pas : Miscellaneous (principale).
 Licence : GPLv3. Logo : docs/publication/logo_questcompanion.png.
 Relation : Optional Dependency -> Ready2Quest (facultatif).
@@ -15,6 +15,13 @@ Une seule description, anglais d'abord puis français (règle des stores : l'ang
 ![A shiny creature tries its luck against the net](https://media.forgecdn.net/attachments/2161/225/f-gif.gif)
 
 For **WoW Forever** (1.60). English and French. Free, standalone (`/qc`), about 2 MB of memory. Pairs well with [Ready2Quest](https://www.curseforge.com/wow/addons/ready2quest).
+
+## New in 3.0: every capture is unique
+- **Specimens**: each capture is its own specimen, with a quality (1 to 3 stars), shiny or not, a **size** (tiny to giant) and a **character** that gives your companion its voice and a small effect. Your best per species goes to the **Codex**, the others to your **Reserve**. Your collection carries over intact.
+- **Quality is rolled at the kill** and shown before you throw (7% three stars on normal monsters, 15% on elites, 25% on rares, at any level). The net only shows up when it's worth it: new species, shiny, a better specimen or a pinned species.
+- **Preparation card**: pick an aid with live odds, then **Throw** or **Skip**. **Hunt mode** offers every kill for 5 min to 1 h. A "To complete" filter, pins and **Locate** help you finish what you missed while levelling.
+- **Glitter and the Trainer's Stall**: release extra specimens for glitter, earn more from missions and zone milestones, and spend it on aids, Reserve slots and cosmetics.
+- **Trades between players** (`/qc trade <name>`): up to 3 Reserve specimens each, safe on both sides, with their origin kept. Plus guided tutorials, a 3.0 welcome gift and 5 new achievements.
 
 ## New in 2.14: Winter Veil
 - **Winter Veil season** (Azeroth style, Dec 15 – Jan 2): festive lights and falling snow on the journal and the companion, a frosted frame, and the net turns into a **snowball**. `/qc noel` to force it on or off.
@@ -58,7 +65,7 @@ For **WoW Forever** (1.60). English and French. Free, standalone (`/qc`), about 
 ## Your collection
 
 - **Capture what you defeat**: a net button appears next to your companion when something can be caught, with a "Capture possible" banner. One click, one try: the net drops, shakes once, twice, three times… and it's yours, or it tears and the creature runs off. A whole pack? They queue up for 30 seconds, or use **Capture all**.
-- **Stars and shinies**: each specimen has 1 to 3 stars (recapture for a better one). Any monster can be **shiny** (1 in 150 at first, up to 1 in 40 the more of a species you defeat, better for elites and rares). A gold diamond sparkles over its nameplate and your companion calls it out.
+- **Stars and shinies**: each specimen has 1 to 3 stars, a size and a character. Any monster can be **shiny** (1 in 150 at first, up to 1 in 40 the more of a species you defeat, better for elites and rares). A gold diamond sparkles over its nameplate and your companion calls it out.
 - **About 3,500 creatures** per faction on the Creatures page, numbered like a creature index, hidden until you meet them, coloured by rarity, each with a 3D card. **Capture aids** (bait, lasso, tamer's whistle) improve your odds.
 - **Your companion hunts with you**: the creature you take along gives a hunt effect and a comfort effect tied to its type (Beast, Humanoid, Undead, Elemental, Dragonkin, Demon, Giant, Mechanical), stronger for elites, rares, shinies and starred specimens.
 - **Seals, titles, trainer card**: catch every species of a zone to seal it, earn trainer titles at 10/25/50/100/250 species, and show your trainer card (title, companion, a showcase of 3) to other players who have the addon, from the right-click menu.
@@ -89,7 +96,7 @@ For **WoW Forever** (1.60). English and French. Free, standalone (`/qc`), about 
 - **Prefilled zones**: creatures, gathering nodes and quests of every zone are known from your first visit (Forever islands and zones included). No other addon needed.
 - **Missions**: two of the day in your zone plus one from your companion's personality, three of the week (always a shiny hunt among them); they reward treats and capture aids. An inn loyalty card, too.
 - **Companion**: your creature up close, its numbers (captured, shinies, days together, missions done, distance travelled together), its needs and its look (appearances, frames, backgrounds, ornaments).
-- **Achievements** (174, with points and 40 titles), **stamps** for every first (they feed your achievements), and an **on-screen tracker** with your closest goals.
+- **Achievements** (180, with points and 40 titles), **stamps** for every first (they feed your achievements), and an **on-screen tracker** with your closest goals.
 - **Light**: about 2 MB of memory.
 
 ![Missions of the day and week, pantry and capture aids](https://media.forgecdn.net/attachments/2155/839/qc-4-png.png)
@@ -119,6 +126,13 @@ Free software, **GPL-3.0**. Zone data (creatures, gathering, quests) is generate
 ![Une brillante tente sa chance contre le filet](https://media.forgecdn.net/attachments/2161/225/f-gif.gif)
 
 Pour **WoW Forever** (1.60). En français et en anglais. Gratuit, autonome (`/qc`), environ 2 Mo de mémoire. Va très bien avec [Ready2Quest](https://www.curseforge.com/wow/addons/ready2quest).
+
+## Nouveau en 3.0 : chaque capture est unique
+- **Des spécimens** : chaque capture est un spécimen à part, avec sa qualité (1 à 3 étoiles), brillant ou non, sa **taille** (de minuscule à géant) et son **caractère**, qui donne sa voix et un petit effet à ton compagnon. Le meilleur de chaque espèce va au **Codex**, les autres dans ta **Réserve**. Ta collection est reprise telle quelle.
+- **La qualité se tire au kill** et se voit avant de lancer (7 % de 3 étoiles sur un monstre normal, 15 % sur un élite, 25 % sur un rare, à tout niveau). Le filet ne vient que si ça vaut le coup : espèce nouvelle, brillante, meilleur spécimen ou espèce épinglée.
+- **Carte de préparation** : choisis ton aide avec la chance en direct, puis **Lancer** ou **Passer**. Le **mode chasse** propose chaque monstre de 5 min à 1 h. Le filtre « À compléter », les épingles et **Localiser** t'aident à finir ce que tu as manqué en montant de niveau.
+- **Paillettes et Échoppe du dresseur** : relâche tes spécimens en trop contre des paillettes, gagne-en aussi aux missions et aux paliers de zone, et dépense-les en aides, places de Réserve et cosmétiques.
+- **Échanges entre joueurs** (`/qc echange <nom>`) : jusqu'à 3 spécimens de Réserve chacun, sans risque des deux côtés, origine conservée. Et aussi des tutoriels guidés, un cadeau de bienvenue 3.0 et 5 nouveaux hauts faits.
 
 ## Nouveau en 2.14 : le Voile d'hiver
 - **La saison du Voile d'hiver** (style Azeroth, du 15 décembre au 2 janvier) : guirlandes et neige qui tombe sur le carnet et le compagnon, un cadre givré, et le filet devient une **boule de neige**. `/qc noel` pour le forcer ou le couper.
@@ -162,7 +176,7 @@ Pour **WoW Forever** (1.60). En français et en anglais. Gratuit, autonome (`/qc
 ## Ta collection
 
 - **Capture ce que tu abats** : un bouton filet apparaît à côté de ton compagnon quand une créature peut être capturée, avec un bandeau « Capture possible ». Un clic, un essai : le filet tombe, bouge une fois, deux fois, trois fois… et elle est à toi, ou il se déchire et elle s'enfuit. Un pack entier ? Les créatures attendent 30 secondes dans la file, ou utilise **Tout capturer**.
-- **Étoiles et brillantes** : chaque spécimen a 1 à 3 étoiles (recapture pour un meilleur). N'importe quel monstre peut être **brillant** (1 chance sur 150 au départ, jusqu'à 1 sur 40 plus tu abats de son espèce, mieux pour un élite ou un rare). Un losange doré scintille sur sa barre de nom et ton compagnon te prévient.
+- **Étoiles et brillantes** : chaque spécimen a 1 à 3 étoiles, une taille et un caractère. N'importe quel monstre peut être **brillant** (1 chance sur 150 au départ, jusqu'à 1 sur 40 plus tu abats de son espèce, mieux pour un élite ou un rare). Un losange doré scintille sur sa barre de nom et ton compagnon te prévient.
 - **Environ 3 500 créatures** par faction dans la page Créatures, numérotées comme un index, cachées tant que tu ne les as pas croisées, à la couleur de leur rareté, chacune avec sa fiche en 3D. Des **aides de capture** (appât, lasso, sifflet du dompteur) améliorent tes chances.
 - **Ton compagnon chasse avec toi** : la créature que tu emmènes donne un effet de chasse et un effet de confort liés à son type (Bête, Humanoïde, Mort-vivant, Élémentaire, Draconien, Démon, Géant, Mécanique), plus forts pour un élite, un rare, une brillante ou un spécimen étoilé.
 - **Sceaux, titres, fiche de dresseur** : capture toutes les espèces d'une zone pour la sceller, gagne des titres de dresseur à 10/25/50/100/250 espèces, et montre ta fiche (titre, compagnon, vitrine de 3) aux autres joueurs qui ont l'addon, depuis le menu du clic droit.
@@ -187,7 +201,7 @@ Pour **WoW Forever** (1.60). En français et en anglais. Gratuit, autonome (`/qc
 - **Zones préremplies** : créatures, points de récolte et quêtes de chaque zone sont connus dès ta première visite (îles et zones propres à Forever comprises). Aucun autre addon requis.
 - **Missions** : deux du jour dans ta zone et une de son caractère, trois de la semaine (dont toujours une chasse au brillant) ; elles rapportent friandises et aides de capture. Et une carte de fidélité des auberges.
 - **Compagnon** : ta créature en grand, ses chiffres (capturées, brillantes, jours ensemble, missions faites, distance parcourue ensemble), ses envies et son allure (apparences, cadres, fonds, ornements).
-- **Des hauts faits** (174, avec des points et 40 titres), **des tampons** pour chaque première fois (ils nourrissent tes hauts faits), et un **suivi à l'écran** de tes objectifs les plus proches.
+- **Des hauts faits** (180, avec des points et 40 titres), **des tampons** pour chaque première fois (ils nourrissent tes hauts faits), et un **suivi à l'écran** de tes objectifs les plus proches.
 - **Léger** : environ 2 Mo de mémoire.
 
 ## Commandes
