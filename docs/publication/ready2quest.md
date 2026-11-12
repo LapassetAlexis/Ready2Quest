@@ -1,7 +1,7 @@
 <!--
 Fiche de la page Ready2Quest sur CurseForge et Wago (à copier à la main, voir docs/PUBLIER.md).
 Summary EN (obligatoire en anglais sur CurseForge, 256 caractères max, ici 231) :
-  Leave town ready: a readiness score before each outing (food, bags, durability, buffs, hearthstone), trip reports, dungeon briefs, aggro range on nameplates, best quest reward tags and old spell ranks fixed. For WoW Forever. EN/FR.
+  Leave town ready: a readiness score before each outing (food, bags, durability, buffs, hearthstone), trip reports, dungeon briefs, aggro range on nameplates, best quest reward tags, favorite items protected from selling. For WoW Forever. EN/FR.
 Catégories : Quests & Leveling (principale), Bags & Inventory (additionnelle).
 Licence : GPLv3. Logo : docs/publication/logo_ready2quest.png.
 Captures à prendre en jeu : la fenêtre « Avant le départ », le bilan de retour, la fiche de donjon, l'étiquette « Pour toi » d'une récompense de quête, le cadre « Sac plein ».
@@ -14,6 +14,11 @@ Une seule description, anglais d'abord puis français (règle des stores : l'ang
 For **WoW Forever** (1.60). English and French.
 
 ![Pre-departure check: a readiness score out of 100 with tips](https://media.forgecdn.net/attachments/2147/118/r2q-1-png.png)
+
+## New in 1.34: favorite items
+- **Favorites**: Alt + click an item in your bags (shortcut configurable, works with Baganator, Bagnon and other bag addons) to protect it. A gold padlock marks it and its tooltip says so.
+- **Never sold by mistake**: grey auto-sell and the full-bags helper skip favorites, a right-click at a merchant asks for confirmation, and a favorite sold anyway is **bought back automatically**.
+- **Quest Companion**: a new section in the options shows its status and opens its journal; the two addons' windows no longer overlap.
 
 ## Modules
 
@@ -65,6 +70,11 @@ Free software, **GPL-3.0**. Source code: https://github.com/LapassetAlexis/Ready
 **Prépare ta sortie avant de quitter la ville.** Quand tu quittes un village, une capitale ou un camp, Ready2Quest vérifie que tu es prêt : vivres, place dans les sacs, équipement en état, tes buffs habituels, ta pierre de foyer… et te le dit au bon moment, pas quand il est trop tard.
 
 Pour **WoW Forever** (1.60). En français et en anglais.
+
+## Nouveau en 1.34 : les objets favoris
+- **Favoris** : Alt + clic sur un objet de ton sac (raccourci réglable, marche avec Baganator, Bagnon et les autres addons de sacs) pour le protéger. Un cadenas doré le signale, son infobulle aussi.
+- **Jamais vendu par erreur** : la vente auto des gris et l'aide « Sac plein » ne les touchent pas, un clic droit chez le marchand demande confirmation, et un favori vendu quand même est **racheté automatiquement**.
+- **Quest Companion** : une rubrique des options montre son état et ouvre son carnet ; les fenêtres des deux addons ne se chevauchent plus.
 
 ## Modules
 
