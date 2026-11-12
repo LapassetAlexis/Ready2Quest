@@ -16,9 +16,14 @@
 --     d'un autre addon) : on propose de le racheter.
 --
 -- Aucune souillure (taint) : on ne remplace JAMAIS le OnClick d'une case de
--- sac, on ne pose aucun attribut. Raccourci (Alt+clic par défaut) : post-hook
--- HookScript("OnClick"), après le code du jeu. Rien n'est créé ni déplacé en
--- combat : le rafraîchissement attend PLAYER_REGEN_ENABLED.
+-- sac, on ne pose aucun attribut. Raccourci (Alt+clic par défaut, 1.34.0
+-- bêta 2) : l'événement GLOBAL_MOUSE_UP, quel que soit le sac (celui du jeu,
+-- Baganator, un autre) ; la case sous la souris est LUE (GetBagID/GetID,
+-- bagID/slotID, GetSlotAndBagID, ou l'objet de l'infobulle qu'elle montre),
+-- jamais modifiée, et l'objet doit être dans les sacs. Client sans cet
+-- événement : repli sur HookScript("OnClick") des cases du jeu (jamais les
+-- deux). Rien n'est créé ni déplacé en combat : le rafraîchissement attend
+-- PLAYER_REGEN_ENABLED.
 local ADDON, ns = ...
 local L = ns.L
 local Theme = ns.Theme
@@ -39,6 +44,9 @@ local FR = {
 	FAV_ADDED            = "%s ajouté aux favoris.",
 	FAV_REMOVED          = "%s retiré des favoris.",
 	FAV_TOOLTIP          = "Favori : protégé de la vente",
+	FAV_HINT_ADD         = "%s : ajouter aux favoris",
+	FAV_WIDGET           = "Favori (Ready2Quest)",
+	FAV_HINT_REMOVE      = "%s : retirer des favoris",
 	FAV_SELL_CONFIRM     = "Vendre ce favori ?\n%s",
 	FAV_SELL_YES         = "Vendre",
 	FAV_SELL_NO          = "Annuler",
@@ -65,6 +73,9 @@ local EN = {
 	FAV_ADDED            = "%s added to favorites.",
 	FAV_REMOVED          = "%s removed from favorites.",
 	FAV_TOOLTIP          = "Favorite: protected from selling",
+	FAV_HINT_ADD         = "%s: add to favorites",
+	FAV_WIDGET           = "Favorite (Ready2Quest)",
+	FAV_HINT_REMOVE      = "%s: remove from favorites",
 	FAV_SELL_CONFIRM     = "Sell this favorite?\n%s",
 	FAV_SELL_YES         = "Sell",
 	FAV_SELL_NO          = "Cancel",
@@ -229,6 +240,7 @@ function ns:SetFavorite(itemID, on, name, quiet)
 	if not quiet then self:Print(self:F(on and "FAV_ADDED" or "FAV_REMOVED", name)) end
 	if self.RefreshOptions then self:RefreshOptions() end
 	self:FavoritesRefresh()
+	self:FavoritesBaganatorRefresh()
 	return on
 end
 
@@ -284,6 +296,97 @@ function ns:FavoriteOnSlotClick(bag, slot, mouseButton)
 	if not info then return false end
 	self:ToggleFavorite(info.itemID, DisplayName(info.itemID, info.hyperlink))
 	return true
+end
+
+-- ---------------------------------------------------------------------------
+-- Quelle case de sac est sous la souris ? Lecture seule, n'importe quel sac
+-- ---------------------------------------------------------------------------
+local PARENT_STEPS = 4
+
+-- (sac, case) d'un cadre : GetBagID + GetID (cases du jeu, Baganator…),
+-- champs bagID / slotID, ou GetSlotAndBagID ; seulement les sacs portés (0-4)
+local function FrameSlot(frame)
+	if type(frame) ~= "table" then return nil end
+	local bag, slot
+	if type(frame.GetBagID) == "function" then
+		bag, slot = Method(frame, "GetBagID"), Method(frame, "GetID")
+	end
+	if type(bag) ~= "number" and type(frame.bagID) == "number" and type(frame.slotID) == "number" then
+		bag, slot = frame.bagID, frame.slotID
+	end
+	if type(bag) ~= "number" and type(frame.GetSlotAndBagID) == "function" then
+		slot, bag = Method(frame, "GetSlotAndBagID")
+	end
+	bag, slot = ns.Plain(bag), ns.Plain(slot)
+	if type(bag) ~= "number" or type(slot) ~= "number" or slot < 1 then return nil end
+	if bag < 0 or bag > NUM_BAG_SLOTS then return nil end
+	return bag, slot
+end
+
+local function InBags(itemID)
+	local numSlots = ContainerFn("GetContainerNumSlots")
+	if not (numSlots and itemID) then return false end
+	for bag = 0, NUM_BAG_SLOTS do
+		for slot = 1, tonumber(Call(numSlots, bag)) or 0 do
+			local info = ContainerInfo(bag, slot)
+			if info and info.itemID == itemID then return true end
+		end
+	end
+	return false
+end
+ns.FavoriteInBags = InBags
+
+-- L'objet de l'infobulle, si elle appartient à ce cadre
+local function TooltipItemOf(frame)
+	local tip = rawget(_G, "GameTooltip")
+	if type(tip) ~= "table" or not Method(tip, "IsShown") or Method(tip, "GetOwner") ~= frame then return nil end
+	local _, link = Method(tip, "GetItem")
+	return ItemIDFrom(link), link
+end
+
+-- Cadre (ou un de ses parents) -> itemID, nom, (sac, case) ; nil si ce
+-- n'est pas un objet des sacs
+function ns:FavoriteResolve(frame)
+	local current = frame
+	for _ = 0, PARENT_STEPS do
+		if type(current) ~= "table" then break end
+		if current.isFavoriteShield then return nil end   -- le bouclier a son propre clic
+		local bag, slot = FrameSlot(current)
+		if bag then
+			local info = ContainerInfo(bag, slot)
+			if info then return info.itemID, DisplayName(info.itemID, info.hyperlink), bag, slot end
+			return nil
+		end
+		local itemID, link = TooltipItemOf(current)
+		if itemID then
+			if InBags(itemID) then return itemID, DisplayName(itemID, link) end
+			return nil
+		end
+		current = Method(current, "GetParent")
+	end
+	return nil
+end
+
+-- Les cadres sous la souris (GetMouseFoci, sinon GetMouseFocus)
+local function MouseFoci()
+	local foci = Call(Global("GetMouseFoci"))
+	if type(foci) == "table" then return foci end
+	local focus = Call(Global("GetMouseFocus"))
+	if type(focus) == "table" then return { focus } end
+	return {}
+end
+
+-- GLOBAL_MOUSE_UP : un relâchement = au plus une bascule
+function ns:FavoriteGlobalClick(mouseButton)
+	if not self:FavoriteClickMatches(mouseButton) then return false end
+	for _, frame in ipairs(MouseFoci()) do
+		local itemID, name = self:FavoriteResolve(frame)
+		if itemID then
+			self:ToggleFavorite(itemID, name)
+			return true
+		end
+	end
+	return false
 end
 
 -- ---------------------------------------------------------------------------
@@ -347,6 +450,8 @@ local function EachFrameButton(frame, fn)
 end
 
 local function HookButton(button)
+	-- GLOBAL_MOUSE_UP connu du client : il fait tout (pas de double bascule)
+	if ns.favoritesGlobalClick then return end
 	if hooked[button] or type(button.HookScript) ~= "function" then return end
 	-- post-hook : le code du jeu a déjà traité le clic ; on ne fait que lire
 	-- la case et écrire dans notre sauvegarde
@@ -424,6 +529,7 @@ local function NewShield()
 	local parent = rawget(_G, "UIParent")
 	local ok, shield = pcall(CreateFrame, "Button", nil, parent)
 	if not ok or type(shield) ~= "table" then return nil end
+	shield.isFavoriteShield = true
 	Method(shield, "EnableMouse", true)
 	Method(shield, "RegisterForClicks", "AnyUp")
 	Method(shield, "RegisterForDrag", "LeftButton")
@@ -653,10 +759,38 @@ function ns:FavoriteTooltipLine(tooltip, data)
 		local ok, _, link = pcall(tooltip.GetItem, tooltip)
 		itemID = ok and ItemIDFrom(link) or nil
 	end
-	if not itemID or not self:IsFavorite(itemID) then return false end
-	local c = Theme.GOLD
-	tooltip:AddLine(L.FAV_TOOLTIP, c[1], c[2], c[3])
-	return true
+	if not itemID then return false end
+	local favorite = self:IsFavorite(itemID)
+	if favorite then
+		local c = Theme.GOLD
+		tooltip:AddLine(L.FAV_TOOLTIP, c[1], c[2], c[3])
+	end
+	-- 1.34.0 bêta 2 : le raccourci, seulement sur un objet de tes sacs (la
+	-- case qui montre l'infobulle), et pas s'il est désactivé
+	local choice = self:FavoriteClickChoice()
+	if choice.button and self:FavoriteTooltipInBags(tooltip, itemID) then
+		local m = Theme.MUTED
+		tooltip:AddLine(self:F(favorite and "FAV_HINT_REMOVE" or "FAV_HINT_ADD", L[choice.label]), m[1], m[2], m[3])
+		return true
+	end
+	return favorite
+end
+
+-- L'infobulle vient-elle d'une case des sacs ? Son propriétaire (ou un
+-- parent) donne (sac, case) et la case tient cet objet ; ou c'est un bouclier
+function ns:FavoriteTooltipInBags(tooltip, itemID)
+	local owner = Method(tooltip, "GetOwner")
+	for _ = 0, PARENT_STEPS do
+		if type(owner) ~= "table" then return false end
+		if owner.isFavoriteShield then return owner.itemID == itemID end
+		local bag, slot = FrameSlot(owner)
+		if bag then
+			local info = ContainerInfo(bag, slot)
+			return info ~= nil and info.itemID == itemID
+		end
+		owner = Method(owner, "GetParent")
+	end
+	return false
 end
 
 function ns:FavoritesHookTooltip()
@@ -731,8 +865,52 @@ local HANDLERS = {
 	end,
 }
 
+-- ---------------------------------------------------------------------------
+-- Baganator : son API publique de coins d'icône (Baganator.API.RegisterCornerWidget)
+-- porte notre cadenas ; on ne touche à rien d'autre de ses cadres
+-- ---------------------------------------------------------------------------
+function ns:FavoritesBaganator()
+	if self.favoritesBaganator then return self.favoritesBaganator end
+	local bag = rawget(_G, "Baganator")
+	local api = type(bag) == "table" and bag.API
+	if type(api) ~= "table" or type(api.RegisterCornerWidget) ~= "function" then return nil end
+	local ok = pcall(api.RegisterCornerWidget, L.FAV_WIDGET,
+		"ready2quest_favorite",
+		function(corner, details)   -- onUpdate : montré si l'objet est favori
+			local itemID = type(details) == "table" and (details.itemID or ItemIDFrom(details.itemLink))
+			return ns:IsFavorite(itemID)
+		end,
+		function(itemButton)        -- onInit : le cadenas, rendu à Baganator qui le place
+			local texture = itemButton:CreateTexture(nil, "OVERLAY")
+			texture:SetTexture(LOCK_TEXTURE)
+			texture:SetSize(LOCK_SIZE, LOCK_SIZE)
+			return texture
+		end,
+		{ corner = "top_left", priority = 1 })
+	self.favoritesBaganator = ok and "registered" or "failed"
+	return self.favoritesBaganator
+end
+
+function ns:FavoritesBaganatorRefresh()
+	local bag = rawget(_G, "Baganator")
+	local api = type(bag) == "table" and bag.API
+	if self.favoritesBaganator == "registered" and type(api) == "table" and type(api.RequestItemButtonsRefresh) == "function" then
+		pcall(api.RequestItemButtonsRefresh)
+	end
+end
+
+HANDLERS.GLOBAL_MOUSE_UP = function(mouseButton) ns:FavoriteGlobalClick(mouseButton) end
+HANDLERS.ADDON_LOADED = function(name)
+	if name == "Baganator" then ns:FavoritesBaganator() end
+end
+
 local eventFrame = CreateFrame("Frame")
-for event in pairs(HANDLERS) do pcall(eventFrame.RegisterEvent, eventFrame, event) end
+for event in pairs(HANDLERS) do
+	local ok = pcall(eventFrame.RegisterEvent, eventFrame, event)
+	if event == "GLOBAL_MOUSE_UP" then ns.favoritesGlobalClick = ok or nil end
+end
+-- Baganator chargé avant nous
+ns:FavoritesBaganator()
 eventFrame:SetScript("OnEvent", function(_, event, ...)
 	local ok, err = pcall(HANDLERS[event], ...)
 	if not ok and ns.RecordError then ns:RecordError("favorites:" .. tostring(event), err) end

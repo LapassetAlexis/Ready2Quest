@@ -159,7 +159,7 @@ Your bags are full out in the wild and some loot won't fit? A small frame sugges
 
 ### Favorites
 
-Alt+click an item in your bags (the shortcut can be changed, or turned off, on the Full bags page) to mark it as a favorite, or unmark it; `/r2q favori [link]` does the same. Every copy of the item counts.
+Alt+click an item in your bags (the shortcut can be changed, or turned off, on the Full bags page) to mark it as a favorite, or unmark it; `/r2q favori [link]` does the same. Every copy of the item counts, and it works in bag addons too (Baganator…); the item's tooltip reminds you of the shortcut.
 - A small padlock on its slot in the game's bags, and "Favorite: protected from selling" in its tooltip.
 - Never sold with the grays, never suggested by Full bags or Room for loot.
 - At a merchant, right-click asks "Sell this favorite?" first. If one gets sold anyway, you are offered to buy it back.
@@ -441,7 +441,7 @@ Ton sac est plein en pleine nature et un butin ne rentre pas ? Un petit cadre te
 
 ### Favoris
 
-Alt+clic sur un objet de tes sacs (raccourci modifiable, ou désactivable, dans la page Sac plein) le met en favori, ou l'en retire ; `/r2q favori [lien]` fait de même. Toutes les copies de l'objet comptent.
+Alt+clic sur un objet de tes sacs (raccourci modifiable, ou désactivable, dans la page Sac plein) le met en favori, ou l'en retire ; `/r2q favori [lien]` fait de même. Toutes les copies de l'objet comptent, et ça marche aussi dans les sacs d'un addon (Baganator…) ; l'infobulle de l'objet rappelle le raccourci.
 - Un petit cadenas sur sa case dans les sacs du jeu, et « Favori : protégé de la vente » dans son infobulle.
 - Jamais vendu avec les gris, jamais proposé par Sac plein ni Place au butin.
 - Chez un marchand, le clic droit demande d'abord « Vendre ce favori ? ». S'il part quand même, on te propose de le racheter.

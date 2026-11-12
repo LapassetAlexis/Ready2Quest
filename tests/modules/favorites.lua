@@ -13,10 +13,12 @@ F.saved = {
 	TooltipDataProcessor = TooltipDataProcessor,
 	tooltipCallback = Mock.tooltipCallback,
 	ttHooks = GameTooltip.hooks and GameTooltip.hooks.OnTooltipSetItem,
+	GetOwner = GameTooltip.GetOwner, IsShown = GameTooltip.IsShown,
 }
 for _, name in ipairs({ "IsAltKeyDown", "IsControlKeyDown", "IsShiftKeyDown", "InCombatLockdown",
 	"StaticPopup_Show", "StaticPopupDialogs", "GetNumBuybackItems", "GetBuybackItemLink", "BuybackItem",
-	"HandleModifiedItemClick", "ContainerFrame1", "ContainerFrameCombinedBags" }) do
+	"HandleModifiedItemClick", "ContainerFrame1", "ContainerFrameCombinedBags", "GetMouseFoci", "GetMouseFocus",
+	"Baganator" }) do
 	F.savedG[name] = { value = rawget(_G, name) }
 end
 
@@ -61,6 +63,17 @@ _G.GetBuybackItemLink = function(i) return (Mock.world.buyback or {})[i] end
 _G.BuybackItem = function(i) Mock.world.boughtBack = i end
 
 function F.Keys(alt, ctrl, shift) F.keys = { alt = alt, ctrl = ctrl, shift = shift } end
+
+-- Un clic n'importe où : le cadre sous la souris, puis GLOBAL_MOUSE_UP
+_G.GetMouseFoci = function() return F.focus and { F.focus } or {} end
+function F.Click(frame, mouse)
+	F.focus = frame
+	Mock:Fire("GLOBAL_MOUSE_UP", mouse or "LeftButton")
+	F.focus = nil
+end
+-- L'infobulle du jeu : son propriétaire et l'objet montré
+GameTooltip.GetOwner = function() return F.tipOwner end
+GameTooltip.IsShown = function() return F.tipOwner ~= nil end
 
 -- Une case du jeu : espionne SetScript et SetAttribute (aucun appel attendu)
 function F.Button(bag, slot)
@@ -157,8 +170,10 @@ do
 	F.Reset()
 	NS:FavoritesRefresh()
 	local button = F.frame.Items[2]   -- le Caillou
-	local hook = button.hooks and button.hooks.OnClick
-	s.ok("post-hook OnClick posé", type(hook) == "function")
+	-- 1.34.0 bêta 2 : le clic global (GLOBAL_MOUSE_UP), pas d'accroche sur la case
+	local hook = function(b, mouse) F.Click(b, mouse) end
+	s.ok("clic global écouté, aucune accroche OnClick", NS.favoritesGlobalClick == true
+		and not (button.hooks and button.hooks.OnClick))
 	local cases = {
 		{ "alt",          { true, false, false }, "LeftButton",  { false, true, false }, "LeftButton" },
 		{ "ctrlalt",      { true, true, false },  "LeftButton",  { true, false, false }, "LeftButton" },
@@ -421,7 +436,7 @@ do
 	NS:SetFavorite(BLUE, true, nil, true)
 	Mock:Fire("MERCHANT_SHOW")
 	F.Keys(true, false, false)
-	for _, button in ipairs(F.frame.Items) do button.hooks.OnClick(button, "LeftButton") end
+	for _, button in ipairs(F.frame.Items) do F.Click(button, "LeftButton") end
 	F.Keys(false, false, false)
 	Mock:Fire("BAG_UPDATE_DELAYED")
 	Mock:Fire("MERCHANT_CLOSED")
@@ -431,10 +446,9 @@ do
 		if button.scripts.OnClick ~= nil then replaced = true end
 	end
 	s.ok("OnClick des cases jamais remplacé", not replaced)
-	s.ok("une seule accroche par case", (function()
-		local hook = F.frame.Items[1].hooks.OnClick
-		NS:FavoritesRefresh()
-		return F.frame.Items[1].hooks.OnClick == hook
+	s.ok("aucune accroche sur les cases (clic global)", (function()
+		for _, button in ipairs(F.frame.Items) do if button.hooks and button.hooks.OnClick then return false end end
+		return true
 	end)())
 	s.check("[FAV] aucune souillure : les cases du jeu ne sont jamais modifiées")
 end
@@ -483,6 +497,170 @@ do
 	s.check("[FAV] infobulle du jeu au survol du candidat de Sac plein et du butin bloqué")
 end
 
+
+-- 11. Clic global : n'importe quel sac, une bascule par clic --------------------------------
+do
+	local s = Steps()
+	F.Reset()
+	NS:SetFavoriteClick("alt")
+	-- case du jeu
+	F.Keys(true, false, false)
+	F.Click(F.frame.Items[2])
+	s.ok("case du jeu : une bascule", NS:IsFavorite(WHITE))
+	F.Click(F.frame.Items[2])
+	s.ok("case du jeu : second clic, retiré", not NS:IsFavorite(WHITE))
+	-- case d'un autre sac (GetBagID/GetID), clic sur son icône (enfant)
+	local other = CreateFrame("Button", nil, UIParent)
+	other.GetBagID = function() return 0 end
+	other.GetID = function() return 3 end
+	local icon = CreateFrame("Frame", nil, other)
+	Mock:Reset()
+	F.Click(icon)
+	s.ok("autre sac, par le parent : une bascule", NS:IsFavorite(BLUE) and select(2, Mock:Output():gsub("ajouté aux favoris", "")) == 1,
+		Mock:Output())
+	-- champs bagID / slotID
+	local fields = CreateFrame("Button", nil, UIParent)
+	fields.bagID, fields.slotID = 0, 1
+	F.Click(fields)
+	s.ok("bagID/slotID : une bascule", NS:IsFavorite(GREY))
+	-- cadre sans case : l'objet de l'infobulle qu'il montre
+	local bare = CreateFrame("Button", nil, UIParent)
+	F.tipOwner, Mock.world.hoveredLink = bare, F.Link(BLUE)
+	F.Click(bare)
+	s.ok("par l'infobulle : une bascule", not NS:IsFavorite(BLUE))
+	-- objet qui n'est pas dans les sacs (lien du chat, hôtel des ventes)
+	Mock.world.itemInfo[882099] = { name = "Ailleurs", quality = 1, sellPrice = 1 }
+	Mock.world.hoveredLink = F.Link(882099)
+	F.Click(bare)
+	s.ok("hors des sacs : rien", not NS:IsFavorite(882099))
+	F.tipOwner, Mock.world.hoveredLink = nil, nil
+	-- sac de banque (hors 0-4) : rien
+	local bank = CreateFrame("Button", nil, UIParent)
+	bank.GetBagID = function() return -1 end
+	bank.GetID = function() return 1 end
+	Mock.world.bags[-1] = { size = 1, items = { [1] = { itemID = 882099, stackCount = 1, quality = 1, hyperlink = F.Link(882099) } } }
+	F.Click(bank)
+	s.ok("banque : rien", not NS:IsFavorite(882099))
+	-- mauvais modificateurs, mauvais bouton
+	F.Keys(false, true, false); F.Click(F.frame.Items[2])
+	F.Keys(true, false, true); F.Click(F.frame.Items[2])
+	F.Keys(true, false, false); F.Click(F.frame.Items[2], "RightButton")
+	s.ok("autres combinaisons : rien", not NS:IsFavorite(WHITE))
+	-- Désactivé
+	NS:SetFavoriteClick("off")
+	F.Click(F.frame.Items[2]); F.Click(F.frame.Items[2], "RightButton")
+	s.ok("désactivé : rien", not NS:IsFavorite(WHITE))
+	NS:SetFavoriteClick("alt")
+	-- le bouclier du marchand garde son propre clic : pas de double bascule
+	Mock:Fire("MERCHANT_SHOW")
+	NS:SetFavorite(BLUE, true, nil, true)
+	local shield
+	for _, sh in ipairs(NS.favoriteShields) do if sh:IsShown() and sh.itemID == BLUE then shield = sh end end
+	F.Click(shield)
+	s.ok("bouclier : le clic global l'ignore", NS:IsFavorite(BLUE))
+	shield:Click("LeftButton")
+	s.ok("bouclier : son clic bascule une fois", not NS:IsFavorite(BLUE))
+	Mock:Fire("MERCHANT_CLOSED")
+	F.Keys(false, false, false)
+	-- client sans GLOBAL_MOUSE_UP : repli sur l'accroche des cases du jeu
+	NS.favoritesGlobalClick = nil
+	NS:FavoritesRefresh()
+	local hook = F.frame.Items[2].hooks and F.frame.Items[2].hooks.OnClick
+	F.Keys(true, false, false)
+	if hook then hook(F.frame.Items[2], "LeftButton") end
+	s.ok("repli : accroche OnClick, une bascule", hook ~= nil and NS:IsFavorite(WHITE))
+	NS.favoritesGlobalClick = true
+	F.Keys(false, false, false)
+	Mock.world.bags[-1] = nil
+	s.check("[FAV] clic global : case du jeu, autre sac, infobulle ; une bascule ; hors sacs, mauvais clic, désactivé : rien")
+end
+
+-- 12. Infobulle : le raccourci, seulement sur un objet des sacs ------------------------------
+do
+	local s = Steps()
+	F.Reset()
+	NS.favoriteTooltipHook = nil
+	NS:FavoritesHookTooltip()
+	local function Lines(owner, itemID)
+		F.tipOwner = owner
+		GameTooltip:ClearLines()
+		Mock.tooltipCallback(GameTooltip, { id = itemID })
+		F.tipOwner = nil
+		return GameTooltip.lines or {}, GameTooltip.styled or {}
+	end
+	local slot2 = F.frame.Items[2]   -- Caillou
+	local bad = {}
+	for _, choice in ipairs(NS.FAVORITE_CLICKS) do
+		NS:SetFavoriteClick(choice.id)
+		NS:DB().favorites = {}
+		local plain = Lines(slot2, WHITE)
+		NS:DB().favorites = { [WHITE] = "Caillou" }
+		local fav = Lines(slot2, WHITE)
+		local label = NS.L[choice.label]
+		if choice.button then
+			if not (#plain == 1 and plain[1] == label .. " : ajouter aux favoris") then bad[#bad + 1] = choice.id .. " ajouter" end
+			if not (#fav == 2 and fav[1] == "Favori : protégé de la vente" and fav[2] == label .. " : retirer des favoris") then
+				bad[#bad + 1] = choice.id .. " retirer"
+			end
+		else
+			if not (#plain == 0 and #fav == 1 and fav[1] == "Favori : protégé de la vente") then bad[#bad + 1] = "désactivé" end
+		end
+	end
+	s.ok("chaque raccourci, favori ou non", #bad == 0, table.concat(bad, ", "))
+	NS:SetFavoriteClick("alt")
+	NS:DB().favorites = {}
+	local _, styled = Lines(slot2, WHITE)
+	local m = styled[1] and styled[1].color
+	s.ok("ligne grise", m and m[1] == NS.Theme.MUTED[1])
+	local ratio = NS.Theme.Contrast(NS.Theme.MUTED, { 0.05, 0.05, 0.05 })
+	s.ok("contraste du gris ≥ 4,5", ratio >= 4.5, ratio)
+	-- hors des sacs : lien (pas de propriétaire), objet vendu par le marchand, butin
+	local merchant = CreateFrame("Button", nil, UIParent)
+	s.ok("lien : rien", #Lines(nil, WHITE) == 0)
+	s.ok("marchand : rien", #Lines(merchant, WHITE) == 0)
+	NS:DB().favorites = { [WHITE] = "Caillou" }
+	local loot = Lines(merchant, WHITE)
+	s.ok("hors des sacs, favori : la ligne seule", #loot == 1 and loot[1] == "Favori : protégé de la vente")
+	-- la case montre un autre objet que l'infobulle : pas d'aide
+	s.ok("case d'un autre objet : rien", #Lines(F.frame.Items[3], WHITE) == 1)
+	local en = NS.FAVORITES_STRINGS.en
+	s.ok("anglais", en.FAV_HINT_ADD == "%s: add to favorites" and en.FAV_HINT_REMOVE == "%s: remove from favorites")
+	s.check("[FAV] infobulle : le raccourci (ajouter / retirer) sur un objet des sacs, rien ailleurs ni désactivé")
+end
+
+-- 13. Baganator : le cadenas par son API de coins ------------------------------------------
+do
+	local s = Steps()
+	F.Reset()
+	local calls = {}
+	_G.Baganator = { API = {
+		RegisterCornerWidget = function(label, id, onUpdate, onInit, position)
+			calls[#calls + 1] = { label = label, id = id, onUpdate = onUpdate, onInit = onInit, position = position }
+		end,
+		RequestItemButtonsRefresh = function() calls.refreshed = (calls.refreshed or 0) + 1 end,
+	} }
+	NS.favoritesBaganator = nil
+	Mock:Fire("ADDON_LOADED", "Baganator")
+	local call = calls[1]
+	s.ok("inscrit une fois", #calls == 1 and NS.favoritesBaganator == "registered")
+	Mock:Fire("ADDON_LOADED", "Baganator")
+	s.ok("pas deux fois", #calls == 1)
+	s.ok("libellé et coin", call and call.label == "Favori (Ready2Quest)" and call.position.corner == "top_left")
+	local tex = call and call.onInit(CreateFrame("Button", nil, UIParent))
+	s.ok("cadenas du client", tex and tex.texture == "Interface\\Buttons\\LockButton-Locked-Up")
+	NS:SetFavorite(BLUE, true, nil, true)
+	s.ok("montré sur un favori seulement", call.onUpdate(tex, { itemID = BLUE }) == true
+		and call.onUpdate(tex, { itemID = WHITE }) == false)
+	s.ok("bascule : Baganator rafraîchit", (calls.refreshed or 0) >= 1)
+	_G.Baganator = { API = {} }
+	NS.favoritesBaganator = nil
+	s.ok("API absente : rien, sans erreur", NS:FavoritesBaganator() == nil)
+	_G.Baganator = nil
+	NS.favoritesBaganator = nil
+	s.check("[FAV] Baganator : cadenas inscrit par son API de coins (RegisterCornerWidget), gardé")
+end
+
+GameTooltip.GetOwner, GameTooltip.IsShown = F.saved.GetOwner, F.saved.IsShown
 -- restauration
 for _, shield in ipairs(NS.favoriteShields) do shield:Hide() end
 NS.favoritesMerchant = nil
