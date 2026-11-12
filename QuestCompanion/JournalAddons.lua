@@ -103,6 +103,8 @@ end
 function ns:AddonsOpenR2Q()
 	local other = rawget(_G, R2Q)
 	if type(other) ~= "table" or other == ns then return false end
+	-- le carnet se ferme d'abord : les réglages ne s'ouvrent pas dessous
+	if self.journalFrame and self.journalFrame.Hide then self.journalFrame:Hide() end
 	if type(other.ToggleOptions) == "function" then
 		local frame = other.optionsFrame
 		if frame and frame.IsShown and frame:IsShown() then return true end
@@ -155,6 +157,13 @@ local function Build(self, frame, content, ui)
 	local pane = CreateFrame("Frame", nil, content)
 	pane:SetAllPoints()
 	frame.addons = pane
+	-- 3.0.1 bêta 3 : un fond opaque propre à la page, sous tout le reste. Une
+	-- autre fenêtre de même strate (les réglages de Ready2Quest) pouvait
+	-- s'intercaler entre le fond du carnet et cette page : on la voyait au
+	-- travers. Même couleur que le fond de la fenêtre : rien ne change à l'œil.
+	pane.base = pane:CreateTexture(nil, "BACKGROUND", nil, -8)
+	pane.base:SetColorTexture(Theme.WINDOW[1], Theme.WINDOW[2], Theme.WINDOW[3], 1)
+	pane.base:SetAllPoints(pane)
 
 	local card = Theme.CreateTile(pane, INNER, CARD_H)
 	At(card, content, 0, TOP)

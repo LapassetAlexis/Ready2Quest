@@ -206,6 +206,63 @@ do
 	s.check("[ADD] réglages de Ready2Quest : Quest Companion chargé (ouvrir le carnet), désactivé (activer), absent (liens)")
 end
 
+-- 5. Fond opaque, fenêtres l'une après l'autre, textes qui tiennent -----------------------------------
+do
+	local s = Steps()
+	for _, style in ipairs({ "sobre", "azeroth" }) do
+		A.Reset(style)
+		QNS:ToggleJournal(true)
+		local f = QNS.journalFrame
+		for _, kind in ipairs({ "guide", "addons" }) do
+			QNS:SelectJournalKind(kind)
+			local pane = f[kind]
+			local base = style == "azeroth" and pane.azBase or pane.base
+			local alpha = base and ((base.colorTexture and base.colorTexture[4]) or 1) * base:GetAlpha()
+			s.ok(style .. " " .. kind .. " : fond propre, opaque, sous tout", base and not base.mockHidden and alpha == 1
+				and base.drawLayer == "BACKGROUND" and base.subLevel == -8 and base.allPoints ~= nil, alpha)
+			if style == "azeroth" then
+				s.ok("azeroth " .. kind .. " : le parchemin du carnet, fond Sobre caché", base and base.texture == f.content.azBg.texture
+					and pane.base.mockHidden == true)
+			end
+		end
+		-- textes de la page : les points de la carte sur une ligne, les faits sur deux au plus
+		local pane = f.addons
+		for i, point in ipairs(pane.card.points) do
+			s.ok(style .. " : point " .. i .. " tient sur sa ligne", point:GetStringWidth() <= point:GetWidth(), point:GetStringWidth())
+		end
+		for i, fact in ipairs(pane.facts) do
+			s.ok(style .. " : fait " .. i .. " sur deux lignes au plus, dans la page", fact:GetStringWidth() <= 2 * fact:GetWidth()
+				and fact:GetWidth() <= QNS.JournalUI.INNER - 8, fact:GetStringWidth())
+		end
+	end
+	A.Restore()
+	s.check("[ADD] Guide et Addons liés : fond propre opaque (deux styles) ; textes de « Ensemble » dans la page")
+end
+
+do
+	local s = Steps()
+	A.Reset("sobre")
+	A.AddOns("Ready2Quest", "loaded", "1.34.0")
+	local f = A.Open()
+	local savedToggle, order = NS.ToggleOptions, {}
+	NS.ToggleOptions = function() order[#order + 1] = f:IsShown() and "journal open" or "journal closed" end
+	f.addons.card.button:Click()
+	NS.ToggleOptions = savedToggle
+	s.ok("« Ouvrir Ready2Quest » : le carnet se ferme d'abord", order[1] == "journal closed" and not f:IsShown())
+	A.AddOns("QuestCompanion", "loaded", "3.0.1")
+	NS.optionsFrame = nil
+	NS:ToggleOptions()
+	local options = NS.optionsFrame
+	local savedJournal, seen = QNS.ToggleJournal, nil
+	QNS.ToggleJournal = function() seen = options:IsShown() and "options open" or "options closed" end
+	NS:QCAction()
+	QNS.ToggleJournal = savedJournal
+	s.ok("« Ouvrir le carnet » : les réglages se ferment d'abord", seen == "options closed" and not options:IsShown())
+	NS.optionsFrame = nil
+	A.Restore()
+	s.check("[ADD] ouvrir l'autre addon ferme d'abord sa propre fenêtre (jamais l'une sous l'autre)")
+end
+
 -- 4. Textes, visite ---------------------------------------------------------------------------------
 do
 	local s = Steps()

@@ -249,6 +249,8 @@ function ns:QCAction()
 	if status == "loaded" then
 		local qc = rawget(_G, QC)
 		if type(qc) == "table" and qc ~= ns and type(qc.ToggleJournal) == "function" then
+			-- les réglages se ferment d'abord : le carnet ne s'ouvre pas dessous
+			if self.optionsFrame and self.optionsFrame.Hide then self.optionsFrame:Hide() end
 			return (pcall(qc.ToggleJournal, qc, true)) and "journal" or nil
 		end
 		return nil

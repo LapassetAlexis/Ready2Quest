@@ -1632,6 +1632,33 @@ function POST.progress(self, frame)
 	end
 end
 
+-- 3.0.1 bêta 3 : le fond opaque d'une page (Guide, Addons liés), à son
+-- niveau : le même parchemin que le carnet (même recadrage), son ombre et son
+-- voile, recopiés. Rien ne change à l'œil ; une fenêtre qui s'intercale
+-- entre le fond du carnet et la page ne se voit plus au travers.
+local function OpaqueBase(pane, content)
+	if pane.azBase or not content then return pane.azBase end
+	if pane.base then pane.base:Hide() end
+	local w, h = tonumber(content:GetWidth()) or 0, tonumber(content:GetHeight()) or 0
+	local page = NewTex(pane, "BACKGROUND", -8, T.parchH)
+	if not page then
+		if pane.base then pane.base:Show() end
+		return nil
+	end
+	page:SetAllPoints(content)
+	Cover(page, T.parchH, w, h)
+	local shade = NewTex(pane, "BACKGROUND", -7, T.shadow)
+	if shade then
+		shade:SetPoint("TOPLEFT", content, "TOPLEFT", 0, 0)
+		shade:SetPoint("BOTTOMLEFT", content, "BOTTOMLEFT", 0, 0)
+		shade:SetWidth(34)
+		shade:SetAlpha(0.4)
+	end
+	pane.azBase, pane.azBaseVeil = page, ns.AzerothVeil(pane, content, "page", -6)
+	return page
+end
+ns.CarnetOpaqueBase = OpaqueBase
+
 function PAGE.guide(self, frame)
 	local pane = frame.guide
 	if not pane then return end
@@ -1640,6 +1667,7 @@ function PAGE.guide(self, frame)
 	end
 	local ui, content = ns.JournalUI, frame.content
 	if not ui then return end
+	OpaqueBase(pane, content)
 	local page = NewTex(pane, "BACKGROUND", 1, T.stats)
 	if page then
 		local x0, x1 = ui.PAD + pane.RX - 12, ui.PAD + ui.INNER + 8
@@ -1744,6 +1772,7 @@ function POST.juke(self, frame)
 	InkPager(pane.pager)
 end
 
+
 -- 3.0.1 : Addons liés. Le parchemin voilé du guide sur toute la page, la
 -- carte de Ready2Quest en tuile claire, encres mesurées (addons.*)
 function PAGE.addons(self, frame)
@@ -1752,6 +1781,7 @@ function PAGE.addons(self, frame)
 	if pane.card then TileStyle(pane.card, "light") end
 	local ui, content = ns.JournalUI, frame.content
 	if not ui then return end
+	OpaqueBase(pane, content)
 	local page = NewTex(pane, "BACKGROUND", 1, T.stats)
 	if page then
 		local x0, x1 = ui.PAD - 12, ui.PAD + ui.INNER + 8
