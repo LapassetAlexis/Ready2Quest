@@ -1556,12 +1556,14 @@ function ns:CaptureResultShow(result)
 		banner:SetLevel(result.level)
 	end
 	self.captureResultHideAt = Clock() + ns.CAPTURE_RESULT_SECONDS
+	if self.BannerShown then self:BannerShown("result", frame, "captureResultPoint", { point = "TOP", x = 0, y = -200 }) end
 	return frame
 end
 
 function ns:CaptureResultHide()
 	self.captureResultHideAt = nil
 	if self.captureResult then self.captureResult:Hide() end
+	if self.BannerDone then self:BannerDone("result") end
 end
 
 -- Horloge (celle de la capture, 10 fois par seconde)
@@ -1575,6 +1577,8 @@ function ns:CaptureResultTick(now)
 	if self:CaptureSceneBusy() then pending.at = now; return false end
 	if now - (pending.at or now) > ns.CAPTURE_RESULT_STALE then self.captureResultPending = nil; return false end
 	if InCombat() then return false end
+	-- 3.0.1 : passe devant la file des bandeaux, sans couvrir celui affiché
+	if self.BannerTurn and not self:BannerTurn("result") then return false end
 	self.captureResultPending = nil
 	return self:CaptureResultShow(pending) ~= nil
 end

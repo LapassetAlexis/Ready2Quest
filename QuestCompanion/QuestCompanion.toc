@@ -30,6 +30,7 @@ Libs\Socle\Commands.lua
 Libs\Socle\Options.lua
 Libs\Socle\Minimap.lua
 Core.lua
+Banners.lua
 CreatureTypes.lua
 CompanionData.lua
 CompanionLines.lua

@@ -1384,6 +1384,8 @@ function ns:CaptureToastShow()
 	end
 	-- Azeroth : nom ajusté à la largeur, bouclier gris (pas encore à toi), apparition
 	if self.StyleShown then self:StyleShown(frame, { shiny = best.shiny, shield = "grey", play = fresh }) end
+	-- 3.0.1 : sous le bandeau du haut s'il y en a un (Banners.lua), jamais dessus
+	if fresh and self.BannerStackCapture then self:BannerStackCapture() end
 	if frame.chimedFor ~= best.serial then
 		frame.chimedFor = best.serial
 		self:CapturePlaySound("ready")

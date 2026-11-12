@@ -497,6 +497,12 @@ Les modules ont été faits comme en v1.23.0 : un agent par module dans son work
 - Chevauche une fenêtre inscrite visible : à côté (le côté le plus large d'abord, haut aligné, 12 px), sinon dessous, gardée à l'écran. Rien ne bouge à la fermeture ; seule, une fenêtre reprend sa place d'origine (premier `GetPoint` relevé à l'inscription).
 - Jamais déplacée : glissée pendant la session (`OnDragStop` accroché), `IsUserPlaced()`, ou `opts.userPlaced()` (Sac plein : `db.bagspacePoint`). La scène de capture (filet) est ancrée à sa carte : elle suit.
 
+**Couloir des bandeaux** (QuestCompanion 3.0.1, `Banners.lua`)
+- Bandeaux du haut : carnet (`Journal.lua`, TOP −190 : tampons, sceaux, « Haut fait obtenu »), guilde (`GuildFeats.lua`, −150), « Capturé ! » (`AzerothStyle.lua`, −200), « capture possible » (`CaptureQueue.lua`, −240, boutons).
+- Carnet, guilde, résultat : une place (`BannerTurn` / `BannerShown` / `BannerDone`), file par ordre d'arrivée de la tête de chaque système, résultat prioritaire sans préemption ; un système qui ne redemande plus pendant `BANNER_STALE` s perd son rang ; un bandeau caché sans `BannerDone` libère la place.
+- « Capture possible » n'attend pas (occasion qui file, boutons) : empilé sous le bandeau du couloir (`BannerStackCapture`). Tous évitent les fenêtres du couloir du socle (`ns.Popups`) : dessous, sinon au-dessus. Position enregistrée par le joueur : jamais bougé.
+- Guilde : exploits d'un même membre fusionnés (`info.more`), y compris sur le bandeau affiché. Hauts faits groupés : `FeatNamesLine` (3 noms, « et N autres », ajusté à la largeur), `FeatChatLines` (tous, ~250 octets par ligne), clic → `FeatOpenRecent` (filtre « obtenus »).
+
 **Après la mort** (`Death.lua`)
 - **Distance** : `C_DeathInfo.GetCorpseMapPosition` et `C_Map.GetPlayerMapPosition`, converties en coordonnées monde par `C_Map.GetWorldPosFromMapPos`. Repli sur `C_Map.GetMapWorldSize`, sinon « distance inconnue ».
 - **Fantôme** : 125 % de la vitesse de course, soit 8,75 yd/s (warcraft.wiki.gg « Death (gameplay) »).
