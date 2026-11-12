@@ -105,6 +105,7 @@ local FR = {
 	TOUR_B_progress      = "Chaque zone : lieux, récolte, quêtes. « n à compléter » compte les espèces de la zone sans 3 étoiles au Codex.",
 	TOUR_B_juke          = "La musique du jeu : écoute, mets en favoris, fais ta liste.",
 	TOUR_B_guide         = "Tout est expliqué ici, avec les chiffres. En bas à gauche, deux boutons rejouent ces tutoriels.",
+	TOUR_B_addons        = "L'autre addon du projet, Ready2Quest : s'il est là, et ce que les deux font ensemble.",
 	-- ta collection d'avant la 3.0
 	TOUR_MIG_T           = "Ta collection passe en 3.0",
 	TOUR_MIG             = "Tes créatures capturées avant la 3.0 (%d espèces) sont devenues %d spécimens au Codex, dont %d brillants, gardés à part. Rien n'est perdu : apparences, hauts faits et Ménagerie ne bougent pas ; ces spécimens portent la mention « %s ».\n\nDésormais, la qualité se tire au coup fatal et le filet ne vient que si ça vaut le coup : les réglages « Recaptures » ont disparu. Une nouvelle capture va au Codex si elle bat la tienne, sinon dans ta Réserve. À voir dans le carnet : Créatures et Réserve.",
@@ -148,6 +149,7 @@ local EN = {
 	TOUR_B_progress      = "Each zone: places, gathering, quests. \"n to complete\" counts the zone's species without 3 stars in the Codex.",
 	TOUR_B_juke          = "The game's music: listen, add favourites, build your list.",
 	TOUR_B_guide         = "Everything is explained here, with the numbers. Bottom left, two buttons replay these tutorials.",
+	TOUR_B_addons        = "The project's other addon, Ready2Quest: whether it's there, and what the two do together.",
 	TOUR_MIG_T           = "Your collection moves to 3.0",
 	TOUR_MIG             = "Your creatures captured before 3.0 (%d species) became %d specimens in the Codex, including %d shinies, kept apart. Nothing is lost: looks, achievements and Menagerie stay the same; these specimens are marked \"%s\".\n\nFrom now on, quality is rolled at the kill and the net only shows up when it's worth it: the \"Recaptures\" settings are gone. A new capture goes to the Codex if it beats yours, otherwise to your Reserve. See it in the journal: Creatures and Reserve.",
 	TOUR_MIG_GO          = "Visit the journal",
@@ -297,6 +299,8 @@ DEFS.journal = {
 		-- 3.0.0 : l'Échoppe du dresseur a son onglet, donc son étape
 		JournalTab("evolution"), JournalTab("menagerie"), JournalTab("reserve"), JournalTab("shop"), JournalTab("feats"),
 		JournalTab("day"), JournalTab("progress"), JournalTab("juke"), JournalTab("guide"),
+		-- 3.0.1 : Addons liés (déjà vue : la visite ne repart pas)
+		JournalTab("addons"),
 	},
 	-- le carnet refermé : la visite s'arrête (elle reprendra à sa prochaine ouverture)
 	abort = function()

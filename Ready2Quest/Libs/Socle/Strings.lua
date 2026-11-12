@@ -210,6 +210,11 @@ ns.RegisterStrings({
 	SETTINGS_VERSION   = "Version %s",
 	SETTINGS_HINT      = "Les réglages de l'addon ont leur propre fenêtre.",
 	SETTINGS_OPEN      = "Ouvrir les réglages",
+	-- socle 3.0.1 : l'autre addon du projet (Addons liés)
+	LINK_RELOAD_ASK    = "%s est activé pour ce personnage. Recharger l'interface maintenant ?",
+	LINK_RELOAD        = "Recharger",
+	LINK_COPY_TEXT     = "%s : Ctrl+C pour copier le lien.",
+	LINK_COPY_HINT     = "Ctrl+C pour copier",
 }, {
 	OPT_TITLE           = "Settings",
 	OPT_HINT            = "Click a row to change the value.",
@@ -281,6 +286,10 @@ ns.RegisterStrings({
 	SETTINGS_VERSION   = "Version %s",
 	SETTINGS_HINT      = "The addon's settings have their own window.",
 	SETTINGS_OPEN      = "Open the settings",
+	LINK_RELOAD_ASK    = "%s is enabled for this character. Reload the interface now?",
+	LINK_RELOAD        = "Reload",
+	LINK_COPY_TEXT     = "%s: Ctrl+C to copy the link.",
+	LINK_COPY_HINT     = "Ctrl+C to copy",
 })
 
 if ns.Mark then ns.Mark("Strings") end

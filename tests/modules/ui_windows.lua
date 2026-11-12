@@ -585,7 +585,7 @@ do
 		and Has(NS.L.TOUR_B_shop, "paillettes") and Has(NS.L.TOUR_B_reserve, "onglet suivant"), list)
 end
 
--- 7. Colonne de navigation : neuf entrées qui tiennent, dans les deux styles --------------------------------
+-- 7. Colonne de navigation : dix entrées (3.0.1 : Addons liés) qui tiennent, dans les deux styles --------------------------------
 local navBad = {}
 for _, style in ipairs({ "sobre", "azeroth" }) do
 	Say("-- qc30 composants : navigation (" .. style .. ")")
@@ -599,8 +599,8 @@ for _, style in ipairs({ "sobre", "azeroth" }) do
 	local navH = style == "azeroth" and (f:GetHeight() - lay.band - lay.wood) or (f:GetHeight() - 2)
 	local bottom = -(box.lastPoint and box.lastPoint.y or 0) + box:GetHeight()
 	local reserved = style == "azeroth" and 50 + 16 or 18 + 16
-	if not (count == 9 and bottom <= navH - reserved) then navBad[#navBad + 1] = style .. " : " .. count .. " / " .. bottom .. " / " .. navH end
+	if not (count == 10 and bottom <= navH - reserved) then navBad[#navBad + 1] = style .. " : " .. count .. " / " .. bottom .. " / " .. navH end
 	C.Done()
 end
-Check("[UI30] Sobre et Azeroth : neuf onglets, le tableau de bord tient au-dessus du bas", #navBad == 0, table.concat(navBad, ", "))
+Check("[UI30] Sobre et Azeroth : dix onglets (Addons liés en dernier), le tableau de bord tient au-dessus du bas", #navBad == 0, table.concat(navBad, ", "))
 end

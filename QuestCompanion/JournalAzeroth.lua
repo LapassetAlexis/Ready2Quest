@@ -1744,6 +1744,41 @@ function POST.juke(self, frame)
 	InkPager(pane.pager)
 end
 
+-- 3.0.1 : Addons liés. Le parchemin voilé du guide sur toute la page, la
+-- carte de Ready2Quest en tuile claire, encres mesurées (addons.*)
+function PAGE.addons(self, frame)
+	local pane = frame.addons
+	if not pane then return end
+	if pane.card then TileStyle(pane.card, "light") end
+	local ui, content = ns.JournalUI, frame.content
+	if not ui then return end
+	local page = NewTex(pane, "BACKGROUND", 1, T.stats)
+	if page then
+		local x0, x1 = ui.PAD - 12, ui.PAD + ui.INNER + 8
+		local y0, y1 = ui.TOP + 10, ui.PAGER_Y - 28
+		page:SetPoint("TOPLEFT", content, "TOPLEFT", x0, y0)
+		page:SetPoint("BOTTOMRIGHT", content, "TOPLEFT", x1, y1)
+		Cover(page, T.stats, x1 - x0, y0 - y1)
+		pane.azPage, pane.azVeil = page, ns.AzerothVeil(pane, page, "guide", 2)
+	end
+end
+
+function POST.addons(self, frame)
+	local pane = frame.addons
+	if not pane then return end
+	local card = pane.card
+	if card then
+		RolePaint(card.name, "addons.name")
+		RolePaint(card.line, "addons.text")
+		RolePaint(card.status, card.status.addonsRole or "addons.muted")
+		for _, point in ipairs(card.points or {}) do RolePaint(point, "addons.text") end
+	end
+	RolePaint(pane.linkHint, "addons.muted")
+	for _, link in ipairs(pane.links or {}) do RolePaint(link.label, "addons.text") end
+	if pane.together and pane.together.label then RolePaint(pane.together.label, "addons.head") end
+	for _, fact in ipairs(pane.facts or {}) do RolePaint(fact, "addons.text") end
+end
+
 -- ---------------------------------------------------------------------------
 -- Construction et rafraîchissement du carnet Azeroth
 -- ---------------------------------------------------------------------------

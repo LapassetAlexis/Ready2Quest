@@ -292,7 +292,7 @@ do
 		Want("défilement : la carte du bas se règle", NS:DB().optTest30 == false)
 		for _ = 1, 40 do NS:ScrollOptions(1) end
 		Want("molette : bornée en haut", page.offset == 0 and Shown("optTest1"))
-		NS:SelectOptionsPage("general")
+		NS:SelectOptionsPage("toast")
 		Want("page courte : pas d'ascenseur", not frame.scrollThumb:IsShown())
 		Verdict("défilement : ascenseur, molette bornée, rien de coupé, la carte du bas se règle, pas d'ascenseur sur page courte")
 		frame:Hide()

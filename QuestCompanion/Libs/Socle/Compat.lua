@@ -317,6 +317,110 @@ function ns:PrintCapabilities()
 	end
 end
 
+-- ---------------------------------------------------------------------------
+-- socle 3.0.1 : un autre addon (l'autre addon du projet, page « Addons liés »)
+--   ns.AddonStatus(nom, globale) -> "loaded" | "disabled" | "missing", version
+--   ns.AddonEnable(nom)          -> true si activé pour ce personnage (hors combat)
+--   ns:AskReload(titre)          -> demande de recharger l'interface
+--   ns:ShowCopyLinks(titre, liens) -> fenêtre avec un lien à copier ; un
+--                                   bouton par lien ({ { label, url }, … })
+-- C_AddOns d'abord, sinon les anciennes globales ; tout est gardé.
+-- ---------------------------------------------------------------------------
+local function AddonApi(name)
+	local api = rawget(_G, "C_AddOns")
+	if type(api) == "table" and type(api[name]) == "function" then return api[name] end
+	local fn = rawget(_G, name)
+	if type(fn) == "function" then return fn end
+	return nil
+end
+
+local function Try(fn, ...)
+	if type(fn) ~= "function" then return nil end
+	local r = Pack(pcall(fn, ...))
+	if not r[1] then return nil end
+	return unpack(r, 2, r.n)
+end
+
+function ns.AddonStatus(name, global)
+	local other = type(global) == "string" and rawget(_G, global) or nil
+	if type(other) ~= "table" then other = nil end
+	local version = ns.Plain(Try(AddonApi("GetAddOnMetadata"), name, "Version"))
+	if type(version) ~= "string" and other then version = other.version end
+	if Try(AddonApi("IsAddOnLoaded"), name) or (other and other.version) then return "loaded", version end
+	local exists = AddonApi("DoesAddOnExist")
+	if exists then
+		local ok, yes = pcall(exists, name)
+		if ok and yes == false then return "missing" end
+		if ok and yes then return "disabled", version end
+	end
+	local info = AddonApi("GetAddOnInfo")
+	if info then
+		local ok, found, _, _, _, reason = pcall(info, name)
+		if ok and found ~= nil and reason ~= "MISSING" then return "disabled", version end
+	end
+	return "missing"
+end
+
+function ns.AddonEnable(name)
+	if Try(rawget(_G, "InCombatLockdown")) then return false end
+	local enable = AddonApi("EnableAddOn")
+	if not enable then return false end
+	local who = Try(rawget(_G, "UnitName"), "player")
+	return (pcall(enable, name, who)) and true or false
+end
+
+local function PopupKey(suffix) return string.upper(tostring(ns.APP and ns.APP.id or ADDON)) .. "_" .. suffix end
+
+function ns:AskReload(title)
+	local dialogs, show = rawget(_G, "StaticPopupDialogs"), rawget(_G, "StaticPopup_Show")
+	local reload = rawget(_G, "ReloadUI")
+	if type(dialogs) ~= "table" or type(show) ~= "function" or type(reload) ~= "function" then return nil end
+	local key = PopupKey("RELOAD")
+	dialogs[key] = dialogs[key] or {
+		text = ns.L.LINK_RELOAD_ASK, button1 = ns.L.LINK_RELOAD, button2 = ns.L.OPT_CLOSE,
+		OnAccept = function() local fn = rawget(_G, "ReloadUI"); if type(fn) == "function" then fn() end end,
+		timeout = 0, whileDead = 1, hideOnEscape = 1, preferredIndex = 3,
+	}
+	return Try(show, key, tostring(title or ""))
+end
+
+-- Le champ ne se modifie pas : chaque frappe remet le lien, tout sélectionné
+function ns.CopyBoxLock(box, url)
+	box.copyURL = url
+	if box.SetText then box:SetText(url) end
+	if box.HighlightText then box:HighlightText() end
+end
+
+function ns:ShowCopyLinks(title, links)
+	local dialogs, show = rawget(_G, "StaticPopupDialogs"), rawget(_G, "StaticPopup_Show")
+	if type(dialogs) ~= "table" or type(show) ~= "function" or type(links) ~= "table" or not links[1] then return nil end
+	local key = PopupKey("COPY_LINK")
+	local function Pick(dialog, index)
+		local data = dialog and dialog.data
+		local link = data and data.links and data.links[index]
+		local box = dialog and (dialog.editBox or dialog.EditBox)
+		if link and box then ns.CopyBoxLock(box, link[2]) end
+		return true   -- reste ouverte : on passe d'un lien à l'autre
+	end
+	dialogs[key] = {
+		text = ns.L.LINK_COPY_TEXT, hasEditBox = 1, editBoxWidth = 360,
+		button1 = links[1][1], button2 = links[2] and links[2][1] or nil, button3 = ns.L.OPT_CLOSE,
+		OnShow = function(dialog) Pick(dialog, 1) end,
+		OnAccept = function(dialog) return Pick(dialog, 1) end,
+		OnCancel = function(dialog, _, reason) if reason == "clicked" then return Pick(dialog, 2) end end,
+		OnAlt = function() end,
+		EditBoxOnTextChanged = function(box) if box.copyURL and box:GetText() ~= box.copyURL then ns.CopyBoxLock(box, box.copyURL) end end,
+		EditBoxOnEscapePressed = function(box) local parent = box:GetParent(); if parent and parent.Hide then parent:Hide() end end,
+		timeout = 0, whileDead = 1, hideOnEscape = 1, preferredIndex = 3,
+	}
+	local dialog = Try(show, key, tostring(title or ""), nil, { links = links })
+	if type(dialog) == "table" then
+		dialog.data = dialog.data or { links = links }
+		Pick(dialog, 1)
+	end
+	return dialog
+end
+
 ns:DetectCapabilities()
 
 if ns.Mark then ns.Mark("Compat") end

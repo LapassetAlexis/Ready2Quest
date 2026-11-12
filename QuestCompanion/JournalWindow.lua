@@ -338,7 +338,8 @@ local LIST_W = math.floor((INNER - (LIST_COLS - 1) * 12) / LIST_COLS)
 -- pinned : MenagerieView.lua) en tête des puces de la page Créatures
 -- 3.0.0 : « shop » (l'Échoppe du dresseur, JournalReserve.lua) a son onglet,
 -- juste après la Réserve (avant : une puce de la page Réserve)
-local SECTIONS = { "evolution", "menagerie", "reserve", "shop", "feats", "day", "progress", "juke", "guide" }
+-- 3.0.1 : « addons » (Addons liés, JournalAddons.lua) sous le Guide
+local SECTIONS = { "evolution", "menagerie", "reserve", "shop", "feats", "day", "progress", "juke", "guide", "addons" }
 ns.JOURNAL_SECTIONS = SECTIONS
 local MEN_STATES = { "all", "todo", "pinned", "captured", "missing", "tokill", "shiny" }
 local MEN_RANKS = { "all", "normal", "elite", "rare", "boss" }

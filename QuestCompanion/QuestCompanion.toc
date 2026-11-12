@@ -72,6 +72,7 @@ Tooltips.lua
 JournalWindow.lua
 JournalCompletion.lua
 JournalGuide.lua
+JournalAddons.lua
 MenagerieView.lua
 TrainerCard.lua
 GuildFeats.lua

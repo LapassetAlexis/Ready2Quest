@@ -32,6 +32,10 @@ local R2Q_PAGES = {
 			{ key = "minimapPos",  label = "OPT_MINIMAP_POS", kind = "action", button = "OPT_BTN_CHANGE" },
 			{ key = "showWindow",  label = "OPT_SHOWWINDOW",  kind = "bool" },
 			{ key = "popupScore",  label = "OPT_POPUPSCORE",  kind = "number", min = 0, max = 100, step = 5 },
+			-- 1.34.0 : l'autre addon du projet (état en direct, ns.AddonStatus du socle)
+			{ header = "OPT_SECTION_QC" },
+			{ key = "qcNote", kind = "note", text = function() return ns:QCLinkText() end },
+			{ key = "qcAction", label = "OPT_QC_LABEL", kind = "action", button = "OPT_QC_OPEN" },
 		},
 		frameButtons = true,
 	},
@@ -179,6 +183,103 @@ ns.OPTION_LISTS.safe = {
 -- quatre lignes : la page des buffs porte aussi l'aperçu et six cartes
 ns.OPTION_LISTS.buffs = { items = BuffItems, header = "OPT_BUFFS_LIST", empty = "OPT_BUFFS_EMPTY",
 	lines = ns.OPT_LAYOUT.listLines - 6 }
+
+-- ---------------------------------------------------------------------------
+-- 1.34.0 : QuestCompanion, l'autre addon du projet (page Général). Trois
+-- états : chargé (version, « Ouvrir le carnet »), installé mais désactivé
+-- (comment l'activer, bouton « Activer » hors combat puis rechargement),
+-- absent (les liens CurseForge et Wago dans une fenêtre à copier).
+-- ---------------------------------------------------------------------------
+local QC = "QuestCompanion"
+ns.QC_URLS = {
+	{ "CurseForge", "https://www.curseforge.com/wow/addons/quest-companion" },
+	{ "Wago", "https://addons.wago.io/addons/quest-companion" },
+}
+local QC_FR = {
+	OPT_SECTION_QC     = "QUEST COMPANION",
+	OPT_QC_LABEL       = "Quest Companion",
+	OPT_QC_WHAT        = "L'autre addon du projet : un compagnon de route qui capture les créatures, des hauts faits et un carnet de voyage.",
+	OPT_QC_LOADED      = "Installé et actif · version %s.",
+	OPT_QC_DISABLED    = "Installé mais désactivé : active-le à l'écran de sélection du personnage (bouton AddOns), puis /reload.",
+	OPT_QC_MISSING     = "Pas installé : le bouton donne ses liens CurseForge et Wago.",
+	OPT_QC_OPEN        = "Ouvrir le carnet",
+	OPT_QC_ENABLE      = "Activer",
+	OPT_QC_LINKS       = "Liens",
+	OPT_QC_COMBAT      = "Pas en combat : réessaie après.",
+}
+local QC_EN = {
+	OPT_SECTION_QC     = "QUEST COMPANION",
+	OPT_QC_LABEL       = "Quest Companion",
+	OPT_QC_WHAT        = "The project's other addon: a road companion that captures creatures, achievements and a travel journal.",
+	OPT_QC_LOADED      = "Installed and enabled · version %s.",
+	OPT_QC_DISABLED    = "Installed but disabled: enable it on the character select screen (AddOns button), then /reload.",
+	OPT_QC_MISSING     = "Not installed: the button gives its CurseForge and Wago links.",
+	OPT_QC_OPEN        = "Open the journal",
+	OPT_QC_ENABLE      = "Enable",
+	OPT_QC_LINKS       = "Links",
+	OPT_QC_COMBAT      = "Not in combat: try again after.",
+}
+ns.RegisterStrings(QC_FR, QC_EN)
+if ns.KEEP_STRINGS then ns.QC_LINK_STRINGS = { fr = QC_FR, en = QC_EN } end
+
+function ns:QCStatus()
+	if not ns.AddonStatus then return "missing" end
+	return ns.AddonStatus(QC, QC)
+end
+
+function ns:QCLinkText()
+	local status, version = self:QCStatus()
+	local line
+	if status == "loaded" then line = self:F("OPT_QC_LOADED", tostring(version or "?"))
+	elseif status == "disabled" then line = L.OPT_QC_DISABLED
+	else line = L.OPT_QC_MISSING end
+	return L.OPT_QC_WHAT .. "\n" .. line
+end
+
+function ns:QCButtonLabel()
+	local status = self:QCStatus()
+	if status == "loaded" then return L.OPT_QC_OPEN end
+	if status == "disabled" then return L.OPT_QC_ENABLE end
+	return L.OPT_QC_LINKS
+end
+
+-- Le bouton : le carnet (QuestCompanion:ToggleJournal), l'activer, ou les liens
+function ns:QCAction()
+	local status = self:QCStatus()
+	if status == "loaded" then
+		local qc = rawget(_G, QC)
+		if type(qc) == "table" and qc ~= ns and type(qc.ToggleJournal) == "function" then
+			return (pcall(qc.ToggleJournal, qc, true)) and "journal" or nil
+		end
+		return nil
+	end
+	if status == "disabled" then
+		if ns.AddonEnable and ns.AddonEnable(QC) then
+			if self.AskReload then self:AskReload(QC) end
+			return "enabled"
+		end
+		self:Print(L.OPT_QC_COMBAT)
+		return nil
+	end
+	if self.ShowCopyLinks and self:ShowCopyLinks(L.OPT_QC_LABEL, ns.QC_URLS) then return "links" end
+	return nil
+end
+ns.OPTION_ACTIONS.qcAction = function(self) self:QCAction() end
+
+-- le libellé du bouton suit l'état (rafraîchi avec la page)
+do
+	local base = ns.RefreshOptions
+	function ns:RefreshOptions(...)
+		local result = base(self, ...)
+		local frame = self.optionsFrame
+		for _, card in ipairs(frame and frame.rows or {}) do
+			if card.def and card.def.key == "qcAction" and card.button and card.button.SetText then
+				card.button:SetText(self:QCButtonLabel())
+			end
+		end
+		return result
+	end
+end
 
 -- ---------------------------------------------------------------------------
 -- Actions, bouton principal, fenêtres exclusives, interrupteurs

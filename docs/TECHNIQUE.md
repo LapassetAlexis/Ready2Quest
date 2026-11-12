@@ -503,6 +503,12 @@ Les modules ont été faits comme en v1.23.0 : un agent par module dans son work
 - « Capture possible » n'attend pas (occasion qui file, boutons) : empilé sous le bandeau du couloir (`BannerStackCapture`). Tous évitent les fenêtres du couloir du socle (`ns.Popups`) : dessous, sinon au-dessus. Position enregistrée par le joueur : jamais bougé.
 - Guilde : exploits d'un même membre fusionnés (`info.more`), y compris sur le bandeau affiché. Hauts faits groupés : `FeatNamesLine` (3 noms, « et N autres », ajusté à la largeur), `FeatChatLines` (tous, ~250 octets par ligne), clic → `FeatOpenRecent` (filtre « obtenus »).
 
+**Addons liés** (socle 3.0.1 `Compat.lua`, QC `JournalAddons.lua`, R2Q `OptionPages.lua`)
+- `ns.AddonStatus(nom, globale)` : `C_AddOns.IsAddOnLoaded` ou la globale de l'autre addon (`_G.Ready2Quest`, `_G.QuestCompanion`) → « loaded » + version (`GetAddOnMetadata`) ; `DoesAddOnExist`, sinon `GetAddOnInfo` (raison ≠ « MISSING ») → « disabled » ; sinon « missing ». `ns.AddonEnable` (`EnableAddOn(nom, personnage)`, hors combat) puis `ns:AskReload` (StaticPopup → `ReloadUI`). `ns:ShowCopyLinks` : StaticPopup à champ, un bouton par lien, le champ remet son lien à chaque frappe.
+- QC : onglet « addons » (dernier de la colonne, 10 entrées), carte R2Q (icône `IconTexture` du .toc, sinon `INV_Misc_Bag_08`), ouvreur `Ready2Quest:ToggleOptions()` (repli : `SlashCmdList.SACETDEPART`), liens dans deux champs en lecture seule. Azeroth : parchemin voilé du guide, encres `addons.*`.
+- R2Q : page Général, section QUEST COMPANION (note + carte d'action dont le bouton suit l'état), ouvreur `QuestCompanion:ToggleJournal(true)`.
+- À vérifier en jeu : `C_AddOns.DoesAddOnExist` / `GetAddOnInfo` sur Forever, `EnableAddOn` puis `ReloadUI` depuis le bouton, le champ de la StaticPopup (`editBox` ou `EditBox`).
+
 **Après la mort** (`Death.lua`)
 - **Distance** : `C_DeathInfo.GetCorpseMapPosition` et `C_Map.GetPlayerMapPosition`, converties en coordonnées monde par `C_Map.GetWorldPosFromMapPos`. Repli sur `C_Map.GetMapWorldSize`, sinon « distance inconnue ».
 - **Fantôme** : 125 % de la vitesse de course, soit 8,75 yd/s (warcraft.wiki.gg « Death (gameplay) »).
