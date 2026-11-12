@@ -423,7 +423,7 @@ do
 	local rowKeys = {}
 	for _, row in ipairs(page.rows) do rowKeys[#rowKeys + 1] = row.def and row.def.key end
 	Check("[BAG] page : trois sections, interrupteurs module et cadre, raccourci des favoris", sections == 3
-		and table.concat(rowKeys, ",") == "bagspaceEnabled,bagspaceFrame,favoriteClick", sections .. " " .. table.concat(rowKeys, ","))
+		and table.concat(rowKeys, ",") == "bagspaceEnabled,bagspaceFrame,favoriteClick,favoriteAutoBuyback", sections .. " " .. table.concat(rowKeys, ","))
 	frame:Hide()
 	NS.optionsFrame = nil
 end

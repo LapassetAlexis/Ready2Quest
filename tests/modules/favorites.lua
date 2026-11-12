@@ -103,6 +103,10 @@ function F.Reset()
 	Mock.world.bags[0] = { size = 4, items = { [1] = Item(GREY), [2] = Item(WHITE), [3] = Item(BLUE), [4] = Item(GREY) } }
 	local db = NS:DB()
 	db.favorites, db.bagspaceDiscard, db.favoriteClick = {}, {}, "alt"
+	-- la fenêtre « Le racheter ? » d'abord ; le rachat d'office a sa section
+	db.favoriteAutoBuyback = false
+	NS.favoriteAutoBuying, NS.favoriteAutoResult = nil, nil
+	if NS.favoriteHoverShield then NS.favoriteHoverShield:Hide() end
 	NS.favoritesMerchant, NS.favoriteCounts, NS.favoriteSalesAllowed = nil, nil, nil
 	-- le sac du jeu : ContainerFrame1, quatre cases (.Items, client récent)
 	local frame = CreateFrame("Frame", "ContainerFrame1", UIParent)
@@ -658,6 +662,144 @@ do
 	_G.Baganator = nil
 	NS.favoritesBaganator = nil
 	s.check("[FAV] Baganator : cadenas inscrit par son API de coins (RegisterCornerWidget), gardé")
+end
+
+-- 14. Sac d'un autre addon chez le marchand : bouclier au survol --------------------------------
+do
+	local s = Steps()
+	F.Reset()
+	NS.favoriteTooltipHook = nil
+	NS:FavoritesHookTooltip()
+	NS:SetFavorite(BLUE, true, nil, true)
+	-- un bouton de Baganator (ou autre) : sac 0, case 3 ; on ne le touche pas
+	local other = CreateFrame("Button", nil, UIParent)
+	other.GetBagID = function() return 0 end
+	other.GetID = function() return 3 end
+	other.GetFrameLevel = function() return 7 end
+	local touched = {}
+	other.SetScript = function() touched[#touched + 1] = "SetScript" end
+	other.SetAttribute = function() touched[#touched + 1] = "SetAttribute" end
+	local function Hover(owner, itemID)
+		F.tipOwner = owner
+		GameTooltip:ClearLines()
+		Mock.tooltipCallback(GameTooltip, { id = itemID })
+		F.tipOwner = nil
+	end
+	Hover(other, BLUE)
+	s.ok("hors marchand : pas de bouclier", NS.favoriteHoverShield == nil or not NS.favoriteHoverShield:IsShown())
+	Mock:Fire("MERCHANT_SHOW")
+	local other2 = CreateFrame("Button", nil, UIParent)
+	other2.GetBagID = function() return 0 end
+	other2.GetID = function() return 2 end
+	Hover(other2, WHITE)
+	s.ok("pas favori : pas de bouclier", NS.favoriteHoverShield == nil or not NS.favoriteHoverShield:IsShown())
+	Hover(other, BLUE)
+	local shield = NS.favoriteHoverShield
+	s.ok("favori survolé : bouclier sur le bouton", shield and shield:IsShown() and shield.allPoints == other
+		and shield.bag == 0 and shield.slot == 3 and shield.level > 7 and shield.mockParent == UIParent)
+	s.ok("le bouton n'est pas touché", #touched == 0, table.concat(touched, ","))
+	-- son infobulle (posée par le bouclier) ne crée pas de second bouclier
+	local count = 0
+	Hover(shield, BLUE)
+	for _, sh in ipairs(NS.favoriteShields) do if sh:IsShown() and sh.target == other then count = count + 1 end end
+	s.ok("pas de second bouclier", count == 0 and shield:IsShown())
+	-- clic droit : confirmation, puis la vente
+	Mock.world.sold, Mock.world.popup = nil, nil
+	shield:Click("RightButton")
+	local popup = Mock.world.popup
+	s.ok("clic droit : « Vendre ce favori ? »", popup and popup.which == "READY2QUEST_FAVORITE_SELL" and Mock.world.sold == nil)
+	StaticPopupDialogs.READY2QUEST_FAVORITE_SELL.OnAccept(popup, popup.data)
+	s.ok("vendre : UseContainerItem(0, 3)", Mock.world.sold and Mock.world.sold[1] == BLUE)
+	Mock:Fire("BAG_UPDATE_DELAYED")
+	s.ok("vente voulue : pas de rachat", Mock.world.popup == popup)
+	-- la souris quitte le bouclier : il part
+	Mock.world.bags[0].items[3] = { itemID = BLUE, stackCount = 1, quality = 3, hyperlink = F.Link(BLUE) }
+	Mock:Fire("BAG_UPDATE_DELAYED")
+	Hover(other, BLUE)
+	shield.scripts.OnLeave(shield)
+	s.ok("quitté : caché", not shield:IsShown())
+	-- case du jeu : déjà son bouclier fixe, pas de bouclier de survol en plus
+	local fixed
+	for _, sh in ipairs(NS.favoriteShields) do if sh:IsShown() and sh.target == F.frame.Items[3] then fixed = sh end end
+	Hover(F.frame.Items[3], BLUE)
+	s.ok("sacs du jeu : un seul bouclier", fixed ~= nil and not shield:IsShown())
+	-- combat : aucun
+	Mock.world.combat = true
+	Hover(other, BLUE)
+	s.ok("combat : pas de bouclier", not shield:IsShown())
+	Mock.world.combat = false
+	Hover(other, BLUE)
+	Mock:Fire("MERCHANT_CLOSED")
+	s.ok("marchand fermé : caché", not shield:IsShown())
+	s.check("[FAV] sac d'un autre addon : bouclier au survol d'un favori chez le marchand, confirmation, jamais en double")
+end
+
+-- 15. Rachat d'office d'un favori vendu quand même -------------------------------------------------
+do
+	local s = Steps()
+	F.Reset()
+	NS:DB().favoriteAutoBuyback = nil
+	s.ok("actif par défaut", NS.DEFAULTS.favoriteAutoBuyback == true)
+	NS:SetFavorite(BLUE, true, nil, true)
+	local timers = {}
+	local savedTimer = _G.C_Timer
+	_G.C_Timer = { After = function(delay, fn) timers[#timers + 1] = { delay, fn } end }
+	local function RunTimers() while #timers > 0 do table.remove(timers, 1)[2]() end end
+	-- BuybackItem qui remet l'objet dans le sac
+	_G.BuybackItem = function(i)
+		Mock.world.boughtBack = i
+		local link = table.remove(Mock.world.buyback, i)
+		if Mock.world.backWorks ~= false then
+			Mock.world.bags[0].items[3] = { itemID = BLUE, stackCount = 1, quality = 3, hyperlink = link }
+		else
+			table.insert(Mock.world.buyback, i, link)
+		end
+	end
+	Mock:Fire("MERCHANT_SHOW")
+	Mock.world.popup = nil
+	Mock.world.bags[0].items[3] = nil
+	Mock.world.buyback = { F.Link(BLUE), F.Link(WHITE), F.Link(BLUE) }
+	Mock:Reset()
+	Mock:Fire("BAG_UPDATE_DELAYED")
+	s.ok("après un court délai", #timers == 1 and timers[1][1] == 0.2 and Mock.world.boughtBack == nil)
+	RunTimers()
+	s.ok("l'entrée la plus récente rachetée", Mock.world.boughtBack == 3, Mock.world.boughtBack)
+	s.ok("revenu : une ligne de chat, pas de fenêtre", Mock.world.bags[0].items[3] ~= nil and Mock.world.popup == nil
+		and Mock:Output():find("Épée bleue était un favori : racheté automatiquement.", 1, true) ~= nil, Mock:Output())
+	Mock:Fire("BAG_UPDATE_DELAYED")
+	s.ok("pas de boucle", #timers == 0 and NS.favoriteAutoBuying[BLUE] == nil)
+	-- rachat refusé par le client : la fenêtre en repli
+	Mock.world.backWorks, Mock.world.boughtBack = false, nil
+	Mock.world.bags[0].items[3] = nil
+	Mock.world.buyback = { F.Link(BLUE) }
+	Mock:Fire("BAG_UPDATE_DELAYED")
+	RunTimers()
+	s.ok("pas revenu : « Le racheter ? »", Mock.world.boughtBack == 1 and Mock.world.popup
+		and Mock.world.popup.which == "READY2QUEST_FAVORITE_BUYBACK" and NS.favoriteAutoResult == "popup")
+	Mock.world.backWorks = nil
+	-- vendu par « Vendre ce favori ? » : jamais racheté
+	Mock.world.bags[0].items[3] = { itemID = BLUE, stackCount = 1, quality = 3, hyperlink = F.Link(BLUE) }
+	Mock:Fire("BAG_UPDATE_DELAYED")
+	Mock.world.boughtBack, Mock.world.popup = nil, nil
+	NS:FavoriteRequestSell(0, 3)
+	StaticPopupDialogs.READY2QUEST_FAVORITE_SELL.OnAccept(Mock.world.popup, Mock.world.popup.data)
+	Mock.world.buyback = { F.Link(BLUE) }
+	Mock:Fire("BAG_UPDATE_DELAYED")
+	RunTimers()
+	s.ok("vente confirmée : pas de rachat", Mock.world.boughtBack == nil and #timers == 0)
+	-- réglage coupé : la fenêtre
+	NS:DB().favoriteAutoBuyback = false
+	Mock.world.bags[0].items[3] = { itemID = BLUE, stackCount = 1, quality = 3, hyperlink = F.Link(BLUE) }
+	Mock:Fire("BAG_UPDATE_DELAYED")
+	Mock.world.popup = nil
+	Mock.world.bags[0].items[3] = nil
+	Mock.world.buyback = { F.Link(BLUE) }
+	Mock:Fire("BAG_UPDATE_DELAYED")
+	s.ok("coupé : « Le racheter ? »", #timers == 0 and Mock.world.popup and Mock.world.popup.which == "READY2QUEST_FAVORITE_BUYBACK")
+	Mock:Fire("MERCHANT_CLOSED")
+	_G.C_Timer = savedTimer
+	_G.BuybackItem = function(i) Mock.world.boughtBack = i end
+	s.check("[FAV] rachat d'office : actif par défaut, entrée la plus récente, vérifié, fenêtre en repli, jamais après une vente confirmée")
 end
 
 GameTooltip.GetOwner, GameTooltip.IsShown = F.saved.GetOwner, F.saved.IsShown

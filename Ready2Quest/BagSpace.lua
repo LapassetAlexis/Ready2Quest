@@ -128,6 +128,7 @@ if ns.AddOptionPage then
 				choices = function() return ns:FavoriteClickChoices() end,
 				current = function() return ns:FavoriteClickChoice().id end,
 				choose = function(value) ns:SetFavoriteClick(value) end },
+			{ key = "favoriteAutoBuyback", label = "OPT_FAV_AUTOBUY", kind = "bool" },
 			{ key = "favoritesHowTo", kind = "note", small = true, text = function() return ns:FavoriteHowToText() end },
 			{ key = "favorites", kind = "note", text = function() return ns:BagSpaceListText("favorites") end },
 			{ header = "OPT_BAGSPACE_DISCARD" },

@@ -46,6 +46,8 @@ local FR = {
 	FAV_TOOLTIP          = "Favori : protégé de la vente",
 	FAV_HINT_ADD         = "%s : ajouter aux favoris",
 	FAV_WIDGET           = "Favori (Ready2Quest)",
+	FAV_AUTO_BOUGHT      = "%s était un favori : racheté automatiquement.",
+	OPT_FAV_AUTOBUY      = "Rachat automatique d'un favori vendu",
 	FAV_HINT_REMOVE      = "%s : retirer des favoris",
 	FAV_SELL_CONFIRM     = "Vendre ce favori ?\n%s",
 	FAV_SELL_YES         = "Vendre",
@@ -75,6 +77,8 @@ local EN = {
 	FAV_TOOLTIP          = "Favorite: protected from selling",
 	FAV_HINT_ADD         = "%s: add to favorites",
 	FAV_WIDGET           = "Favorite (Ready2Quest)",
+	FAV_AUTO_BOUGHT      = "%s was a favorite: bought back automatically.",
+	OPT_FAV_AUTOBUY      = "Buy back a sold favorite automatically",
 	FAV_HINT_REMOVE      = "%s: remove from favorites",
 	FAV_SELL_CONFIRM     = "Sell this favorite?\n%s",
 	FAV_SELL_YES         = "Sell",
@@ -104,6 +108,9 @@ if ns.KEEP_STRINGS then ns.FAVORITES_STRINGS = { fr = FR, en = EN } end
 ns.RegisterDefaults({
 	favorites     = {},      -- [itemID] = nom affiché
 	favoriteClick = "alt",   -- raccourci (ns.FAVORITE_CLICKS)
+	-- bêta 4 : favori vendu quand même (glissé sur le marchand) = racheté
+	-- d'office ; BuybackItem sans clic vérifié en jeu sur Forever
+	favoriteAutoBuyback = true,
 })
 
 if type(ns.HELP) == "table" then
@@ -500,8 +507,13 @@ local function ShieldEnter(shield)
 	Method(tip, "Show")
 end
 
-local function ShieldLeave()
+local function ShieldLeave(shield)
 	Method(rawget(_G, "GameTooltip"), "Hide")
+	-- bouclier de survol (sac d'un autre addon) : il part avec la souris
+	if type(shield) == "table" and shield.hover and not InCombat() then
+		shield:Hide()
+		shield.bag, shield.slot, shield.itemID, shield.target = nil, nil, nil, nil
+	end
 end
 
 function ns:FavoriteShieldClick(shield, mouseButton)
@@ -575,7 +587,37 @@ function ns:FavoritesHideShields()
 		shield:Hide()
 		shield.bag, shield.slot, shield.itemID, shield.target = nil, nil, nil, nil
 	end
+	local hover = self.favoriteHoverShield
+	if hover then hover:Hide(); hover.bag, hover.slot, hover.itemID, hover.target = nil, nil, nil, nil end
 	return true
+end
+
+-- Bêta 4 : sac d'un autre addon (Baganator…) chez le marchand. Au survol
+-- d'un favori, l'infobulle nomme sa case : un bouclier (le nôtre, réutilisé)
+-- se pose sur le bouton survolé, qu'on ne touche pas. Le clic droit qui
+-- suit tombe sur le bouclier : confirmation avant la vente. Jamais en combat,
+-- jamais sur une case qui a déjà son bouclier (sacs du jeu).
+function ns:FavoriteHoverShield(button, bag, slot, itemID)
+	if not self.favoritesMerchant or InCombat() or type(button) ~= "table" then return nil end
+	if button.isFavoriteShield then return nil end
+	for _, shield in ipairs(shields) do
+		if shield.target == button and shield:IsShown() then return nil end
+	end
+	local shield = self.favoriteHoverShield
+	if not shield then
+		shield = NewShield()
+		if not shield then return nil end
+		shield.hover = true
+		self.favoriteHoverShield = shield
+	end
+	shield.bag, shield.slot, shield.itemID, shield.target = bag, slot, itemID, button
+	shield:ClearAllPoints()
+	shield:SetAllPoints(button)
+	local strata = Method(button, "GetFrameStrata")
+	if strata then Method(shield, "SetFrameStrata", strata) end
+	Method(shield, "SetFrameLevel", (tonumber(Method(button, "GetFrameLevel")) or 1) + 5)
+	shield:Show()
+	return shield
 end
 
 -- ---------------------------------------------------------------------------
@@ -621,6 +663,8 @@ function ns:FavoritesRefresh()
 		shields[i]:Hide()
 		shields[i].bag, shields[i].slot, shields[i].itemID, shields[i].target = nil, nil, nil, nil
 	end
+	local hover = self.favoriteHoverShield
+	if hover and not shieldsOn then hover:Hide(); hover.bag, hover.slot, hover.itemID, hover.target = nil, nil, nil, nil end
 	return true
 end
 
@@ -724,6 +768,10 @@ function ns:FavoritesCheckSold()
 	local name = Favorites()[found]
 	name = type(name) == "string" and name or DisplayName(found)
 	local index = BuybackIndex(found)
+	-- bêta 4 : rachat d'office (réglage, actif par défaut), un peu après la vente
+	if index and Global("BuybackItem") and self:DB().favoriteAutoBuyback ~= false then
+		return self:FavoriteAutoBuyback(found, name)
+	end
 	if index and Global("BuybackItem") then
 		local link = Call(Global("GetBuybackItemLink"), index)
 		local data = { itemID = found, index = index, link = link or name }
@@ -737,6 +785,47 @@ function ns:FavoritesCheckSold()
 		return "warn"
 	end
 	return nil   -- consommé, jeté, posté : pas une vente
+end
+
+-- Rachat d'office : 0,2 s après la vente (BAG_UPDATE_DELAYED l'a confirmée),
+-- l'entrée la plus récente de cet objet ; puis on vérifie qu'il est revenu
+-- (sacs ou liste de rachat), sinon la fenêtre « Le racheter ? ». Une seule
+-- tentative en cours par objet : pas de boucle.
+local AUTO_DELAY, AUTO_CHECK = 0.2, 0.6
+function ns:FavoriteAutoBuyback(itemID, name)
+	self.favoriteAutoBuying = self.favoriteAutoBuying or {}
+	if self.favoriteAutoBuying[itemID] then return "busy" end
+	self.favoriteAutoBuying[itemID] = true
+	local timer = rawget(_G, "C_Timer")
+	local after = type(timer) == "table" and type(timer.After) == "function" and timer.After or nil
+	local function Later(delay, fn) if after then after(delay, fn) else fn() end end
+	Later(AUTO_DELAY, function()
+		local index = BuybackIndex(itemID)
+		local before = FavoriteCounts()[itemID] or 0
+		local entries = tonumber(Call(Global("GetNumBuybackItems"))) or 0
+		local ok = index ~= nil and pcall(Global("BuybackItem") or error, index)
+		Later(AUTO_CHECK, function()
+			ns.favoriteAutoBuying[itemID] = nil
+			local back = ok and ((FavoriteCounts()[itemID] or 0) > before
+				or (tonumber(Call(Global("GetNumBuybackItems"))) or 0) < entries)
+			if back then
+				-- revenu : la photo des sacs le compte (pas pris pour une vente)
+				if ns.favoriteCounts then ns.favoriteCounts[itemID] = math.max(ns.favoriteCounts[itemID] or 0, FavoriteCounts()[itemID] or 0) end
+				ns:Print(ns:F("FAV_AUTO_BOUGHT", name))
+				ns.favoriteAutoResult = "bought"
+				return
+			end
+			ns.favoriteAutoResult = "popup"
+			local again = BuybackIndex(itemID)
+			if again then
+				local link = Call(Global("GetBuybackItemLink"), again)
+				local data = { itemID = itemID, index = again, link = link or name }
+				if ShowPopup(POPUP_BUYBACK, tostring(data.link), data) then ns.favoriteBuybackAsked = data; return end
+			end
+			ns:Print(ns:F("FAV_SOLD_WARN", name))
+		end)
+	end)
+	return "auto"
 end
 
 -- « Racheter » : l'index a pu bouger (autre vente entre-temps), on le recherche
@@ -768,7 +857,8 @@ function ns:FavoriteTooltipLine(tooltip, data)
 	-- 1.34.0 bêta 2 : le raccourci, seulement sur un objet de tes sacs (la
 	-- case qui montre l'infobulle), et pas s'il est désactivé
 	local choice = self:FavoriteClickChoice()
-	if choice.button and self:FavoriteTooltipInBags(tooltip, itemID) then
+	local inBags = (choice.button or (favorite and self.favoritesMerchant)) and self:FavoriteTooltipInBags(tooltip, itemID)
+	if choice.button and inBags then
 		local m = Theme.MUTED
 		tooltip:AddLine(self:F(favorite and "FAV_HINT_REMOVE" or "FAV_HINT_ADD", L[choice.label]), m[1], m[2], m[3])
 		return true
@@ -786,7 +876,12 @@ function ns:FavoriteTooltipInBags(tooltip, itemID)
 		local bag, slot = FrameSlot(owner)
 		if bag then
 			local info = ContainerInfo(bag, slot)
-			return info ~= nil and info.itemID == itemID
+			local here = info ~= nil and info.itemID == itemID
+			-- bêta 4 : chez le marchand, un favori survolé reçoit son bouclier
+			if here and self.favoritesMerchant and self:IsFavorite(itemID) then
+				self:FavoriteHoverShield(owner, bag, slot, itemID)
+			end
+			return here, owner, bag, slot
 		end
 		owner = Method(owner, "GetParent")
 	end
@@ -852,7 +947,8 @@ local HANDLERS = {
 		ns:FavoritesRefresh()
 	end,
 	PLAYER_REGEN_ENABLED = function()
-		if ns.favoritesPending or (not ns.favoritesMerchant and shields[1] and shields[1]:IsShown()) then
+		local hover = ns.favoriteHoverShield
+		if ns.favoritesPending or (not ns.favoritesMerchant and ((shields[1] and shields[1]:IsShown()) or (hover and hover:IsShown()))) then
 			ns:FavoritesRefresh()
 		end
 	end,
