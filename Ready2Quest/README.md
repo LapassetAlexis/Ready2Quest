@@ -154,8 +154,15 @@ It goes quiet at max level.
 
 Your bags are full out in the wild and some loot won't fit? A small frame suggests **the item that costs you the least to throw away**, meaning the one worth the least per slot.
 - It never suggests a quest item, your hearthstone, your class reagents or your last food and drink.
-- **[Discard]** destroys it **after confirmation**, always, since it can't be undone. **[Other]** moves on to the next one. **[Always keep]** sets it aside for good.
-- `/r2q jeter` gives the suggestion in chat. `/r2q garder` and `/r2q jeter-toujours` manage your lists.
+- **[Discard]** destroys it **after confirmation**, always, since it can't be undone. **[Other]** moves on to the next one. **[Favorite]** sets it aside for good (see Favorites). Hover the item for its tooltip.
+- `/r2q jeter` gives the suggestion in chat. `/r2q favori` and `/r2q jeter-toujours` manage your lists.
+
+### Favorites
+
+Alt+click an item in your bags (the shortcut can be changed, or turned off, on the Full bags page) to mark it as a favorite, or unmark it; `/r2q favori [link]` does the same. Every copy of the item counts.
+- A small padlock on its slot in the game's bags, and "Favorite: protected from selling" in its tooltip.
+- Never sold with the grays, never suggested by Full bags or Room for loot.
+- At a merchant, right-click asks "Sell this favorite?" first. If one gets sold anyway, you are offered to buy it back.
 
 ### Room for loot
 
@@ -163,7 +170,7 @@ Inspired by the *Delete Cheapest Item* addon. Your bags are full and some loot w
 - At the top, **the loot that doesn't fit**: a quest item first, otherwise the most valuable one, with its price.
 - Below, **the cheapest items in your bags**, with their vendor price and, if Auctionator or TSM is installed, their auction price. An item worth more than the loot stays listed, but greyed out.
 - **[Drop]** destroys the item, then **picks the loot up** by itself. Grey and white items go on the click; a green item or better asks for confirmation first (an option).
-- **[Ignore]** never offers that item again (the same "always keep" list as Full bags).
+- **[Ignore]** never offers that item again (adds it to your favorites).
 - Never offered: quest items, keys, your hearthstone, class reagents, reagents of tracked recipes, your last food.
 
 ### Spell ranks
@@ -429,8 +436,15 @@ Il se tait au niveau maximum.
 
 Ton sac est plein en pleine nature et un butin ne rentre pas ? Un petit cadre te propose **l'objet que tu perds le moins à jeter**, c'est-à-dire celui qui vaut le moins cher par case.
 - Il ne propose jamais un objet de quête, ta pierre de foyer, tes réactifs de classe ou tes derniers vivres.
-- **[Jeter]** le détruit **après confirmation**, toujours, puisque c'est irréversible. **[Autre]** passe au suivant. **[Garder toujours]** l'écarte pour de bon.
-- `/r2q jeter` donne la proposition dans le chat. `/r2q garder` et `/r2q jeter-toujours` gèrent tes listes.
+- **[Jeter]** le détruit **après confirmation**, toujours, puisque c'est irréversible. **[Autre]** passe au suivant. **[Favori]** l'écarte pour de bon (voir Favoris). Survole l'objet pour son infobulle.
+- `/r2q jeter` donne la proposition dans le chat. `/r2q favori` et `/r2q jeter-toujours` gèrent tes listes.
+
+### Favoris
+
+Alt+clic sur un objet de tes sacs (raccourci modifiable, ou désactivable, dans la page Sac plein) le met en favori, ou l'en retire ; `/r2q favori [lien]` fait de même. Toutes les copies de l'objet comptent.
+- Un petit cadenas sur sa case dans les sacs du jeu, et « Favori : protégé de la vente » dans son infobulle.
+- Jamais vendu avec les gris, jamais proposé par Sac plein ni Place au butin.
+- Chez un marchand, le clic droit demande d'abord « Vendre ce favori ? ». S'il part quand même, on te propose de le racheter.
 
 ### Place au butin
 
@@ -438,7 +452,7 @@ Inspiré de l'addon *Delete Cheapest Item*. Tes sacs sont pleins et un butin ne 
 - En haut, **le butin qui ne rentre pas** : un objet de quête d'abord, sinon le plus cher, avec son prix.
 - Dessous, **les objets les moins chers de tes sacs**, avec leur prix chez le marchand et, si Auctionator ou TSM est installé, à l'hôtel des ventes. Un objet qui vaut plus que le butin reste proposé, mais en gris.
 - **[Jeter]** détruit l'objet, puis **ramasse le butin** tout seul. Gris et blancs partent au clic ; un objet vert ou mieux demande d'abord confirmation (réglable).
-- **[Ignorer]** ne le propose plus jamais (la même liste « toujours garder » que Sac plein).
+- **[Ignorer]** ne le propose plus jamais (il passe dans tes favoris).
 - Jamais proposés : objets de quête, clés, pierre de foyer, composants de classe, composants des recettes suivies, dernière nourriture.
 
 ### Rangs de sorts

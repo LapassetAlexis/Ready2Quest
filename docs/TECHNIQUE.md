@@ -219,7 +219,7 @@ Mesure : `python3 tests/run_tests.py --memoire` charge les deux addons comme un 
 
 ## Ready2Quest 1.27.0 — Place au butin, Rangs de sorts
 
-- **Place au butin** (`LootRoom.lua`, après `BagSpace.lua`) : `LootRoomLoot()` (objets du butin sans place ni pile à compléter, quêtes d'abord puis valeur), `LootRoomRows(cible)` (les `LOOTROOM_ROWS` premiers de `BagSpaceCandidates()`, mêmes protections, prix HV par `LootRoomAuction` : Auctionator `API.v1.GetAuctionPriceByItemLink`, sinon TSM `DBMarket`), `dearer` si la valeur dépasse celle du butin. `LootRoomDelete` : confirmation (`StaticPopup`) pour qualité ≥ 2 si `lootroomConfirm`, sinon `LootRoomDestroy` (vérifie la case, `PickupContainerItem`, `DeleteCursorItem`, puis `lootRoomPending` = case du butin, ramassée par `LootSlot` au `BAG_UPDATE_DELAYED`). `LootRoomIgnore` → `bagspaceKeep`. Déclencheurs : `LOOT_OPENED`, `UI_ERROR_MESSAGE` (sacs pleins) pendant un butin ; `LOOT_CLOSED` ferme. `/r2q place`. `BagSpaceAlert` s'efface si `LootRoomActive()`.
+- **Place au butin** (`LootRoom.lua`, après `BagSpace.lua`) : `LootRoomLoot()` (objets du butin sans place ni pile à compléter, quêtes d'abord puis valeur), `LootRoomRows(cible)` (les `LOOTROOM_ROWS` premiers de `BagSpaceCandidates()`, mêmes protections, prix HV par `LootRoomAuction` : Auctionator `API.v1.GetAuctionPriceByItemLink`, sinon TSM `DBMarket`), `dearer` si la valeur dépasse celle du butin. `LootRoomDelete` : confirmation (`StaticPopup`) pour qualité ≥ 2 si `lootroomConfirm`, sinon `LootRoomDestroy` (vérifie la case, `PickupContainerItem`, `DeleteCursorItem`, puis `lootRoomPending` = case du butin, ramassée par `LootSlot` au `BAG_UPDATE_DELAYED`). `LootRoomIgnore` → favoris (`SetFavorite`). Déclencheurs : `LOOT_OPENED`, `UI_ERROR_MESSAGE` (sacs pleins) pendant un butin ; `LOOT_CLOSED` ferme. `/r2q place`. `BagSpaceAlert` s'efface si `LootRoomActive()`.
 - **Rangs de sorts** (`SpellRanks.lua`) : `SpellRankOf` (nom, rang lu dans le sous-texte), `SpellRankBook` (meilleur rang par nom : `C_SpellBook` + `Enum.SpellBookSpellBank.Player`, sinon onglets et `GetSpellBookItemInfo`), `SpellRankScan` (cases 1-120, `GetActionInfo`), ignorés par case dans `db.spellranksIgnore["case:sort"]`. `SpellRankUpdate` : hors combat, case inchangée, `PickupSpell` + `PlaceAction` + `ClearCursor`. `SpellRanksCheck` : icône `ShowNotice{ kind = "spells" }` et chat quand le nombre augmente, remis à la fin du combat. Check `barranks` (pas « spellranks » : id du module). `/r2q sorts`.
 - Tests `[LOOT]`, `[RANK]` (`tests/modules/lootroom.lua`).
 
@@ -482,9 +482,15 @@ Les modules ont été faits comme en v1.23.0 : un agent par module dans son work
 **Sac plein** (`BagSpace.lua`)
 - **Déclenchement** : l'erreur « inventaire plein », sous les deux signatures de `UI_ERROR_MESSAGE`, ou un butin qui ne rentre pas.
 - **Classement** : prix de vente × pile, du moins cher au plus cher. Un prix inconnu n'est jamais proposé.
-- **Exclusions** : objets de quête, clés, pierre de foyer, réactifs de classe, composants des recettes suivies, derniers vivres, liste « garder ».
+- **Exclusions** : objets de quête, clés, pierre de foyer, réactifs de classe, composants des recettes suivies, derniers vivres, favoris (`db.favorites`, ex `bagspaceKeep`).
 - **Destruction** : uniquement dans le `OnAccept` d'une StaticPopup dédiée. La case est revérifiée (même objet, même pile, pas de combat) et le curseur aussi, avant `DeleteCursorItem`. La confirmation n'est pas réglable.
 - **Alias** : `bags` retiré à l'intégration. C'est l'identifiant du contrôle Sacs, et `/r2q module bags off` doit toujours viser ce contrôle (testé).
+
+**Favoris** (`Favorites.lua`, 1.34.0)
+- **Données** : `db.favorites[itemID] = nom`, au compte (toute la sauvegarde l'est). `ns:MigrateFavorites` (appelé par `OnDBReady`) reprend `db.bagspaceKeep` une fois, sans écraser un favori nommé, puis le retire. `favoriteClick` : `alt` (défaut), `ctrlalt`, `shiftalt`, `altright`, `ctrlaltright`, `off` (modificateurs exacts).
+- **Sans souillure** : aucune case du jeu n'est modifiée (ni `SetScript`, ni `SetAttribute`, ni champ écrit : tables à clés faibles). Raccourci = `HookScript("OnClick")` posé une fois par case. Cadenas = une texture créée paresseusement par case (`Interface\PetBattles\PetBattle-LockIcon`). Cadres parcourus : `ContainerFrameCombinedBags` et `ContainerFrame1..13` (`.Items`, `EnumerateValidItems`, ou `ContainerFrameNItemM`). Rafraîchi sur `BAG_UPDATE_DELAYED`, `OnShow`/`OnHide` des cadres, `hooksecurefunc` sur `UpdateItems` et `ContainerFrame_Update` s'ils existent ; jamais en combat (repris à `PLAYER_REGEN_ENABLED`).
+- **Chez le marchand** : un bouclier (Button à nous, enfant d'UIParent, `SetAllPoints` sur la case, niveau +5) par favori visible. Clic droit = StaticPopup puis `UseContainerItem` ; clic gauche/glisser = `PickupContainerItem` ; Maj/Ctrl = `HandleModifiedItemClick` ; survol = `SetBagItem`. Favori disparu sans passer par la confirmation et présent dans la liste de rachat : StaticPopup « Racheter » → `BuybackItem` (index recherché à nouveau au clic).
+- **Infobulle** : `TooltipDataProcessor.AddTooltipPostCall(Item)`, sinon `OnTooltipSetItem` ; GameTooltip seule ; couleur `Theme.GOLD`.
 
 **Après la mort** (`Death.lua`)
 - **Distance** : `C_DeathInfo.GetCorpseMapPosition` et `C_Map.GetPlayerMapPosition`, converties en coordonnées monde par `C_Map.GetWorldPosFromMapPos`. Repli sur `C_Map.GetMapWorldSize`, sinon « distance inconnue ».
@@ -498,6 +504,7 @@ Les modules ont été faits comme en v1.23.0 : un agent par module dans son work
 - **Récompense** : les noms des boutons de récompense, et `GameTooltip:SetQuestItem`.
 - **Rythme** : la barre d'XP de Forever, et l'ordre des événements quand on rend une quête.
 - **Sac plein** : `DeleteCursorItem` depuis le bouton d'une StaticPopup d'addon (point principal), et `ERR_INV_FULL` en français.
+- **Favoris** : la disposition des cases dans les sacs combinés de Forever (bouclier et cadenas bien placés), Alt+clic sans action du jeu, `UseContainerItem` depuis le bouton d'une StaticPopup (vente), ordre de la liste de rachat.
 - **Mort** : les positions renvoyées par `GetCorpseMapPosition`, et le format de `GetResSicknessDuration`.
 
 ## v1.23.0 — trois nouveaux modules et une API d'extension

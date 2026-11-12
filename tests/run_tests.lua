@@ -1837,7 +1837,7 @@ ResetWorld()
 -- 4.38 Bootstrap : la commande survit à un échec de chargement
 Say("\n== bootstrap et diagnostic ==")
 ResetWorld()
-Check("version exposée", NS.version == "1.33.3", NS.version)
+Check("version exposée", NS.version == "1.34.0", NS.version)
 do
 	local missingMods = {}
 	for _, name in ipairs({ "Bootstrap", "Locales", "Compat", "Theme", "Core", "Buffs", "Reagents",
@@ -1858,7 +1858,7 @@ do
 	Mock:Reset()
 	NS:HandleCommand("diag")
 	Check("/sd diag liste les modules et la version", Mock:Output():find("modules :") ~= nil
-		and Mock:Output():find("1%.33%.3") ~= nil, Mock:Output())
+		and Mock:Output():find("1%.34%.0") ~= nil, Mock:Output())
 
 	-- une erreur est enregistrée et affichée
 	Mock:Reset()

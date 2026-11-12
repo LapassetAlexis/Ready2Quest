@@ -1,5 +1,14 @@
 # Journal des modifications
 
+## 1.34.0
+
+- **Objets favoris** : Alt+clic sur un objet de tes sacs le met en favori (toutes ses copies), ou l'en retire ; le raccourci se choisit dans Sac plein (Alt+clic, Ctrl+Alt+clic, Maj+Alt+clic, Alt+clic droit, Ctrl+Alt+clic droit, ou désactivé), et `/r2q favori [lien]` fait de même. Un favori porte un petit cadenas dans les sacs du jeu et une ligne « Favori : protégé de la vente » dans son infobulle.
+- **Protégés de la vente** : jamais vendus avec les gris, jamais proposés par Sac plein ni Place au butin. Chez un marchand, le clic droit sur un favori demande « Vendre ce favori ? » avant de vendre ; s'il part quand même (glissé sur le marchand), on te propose de le racheter.
+- **La liste « Toujours garder » devient « Favoris »** : tout ce qu'elle contenait est repris, rien n'est perdu. « Ignorer » dans Place au butin et le bouton « Favori » de Sac plein y ajoutent l'objet.
+- **Infobulles** : survoler l'objet proposé par Sac plein, ou le butin bloqué de Place au butin, montre l'infobulle du jeu (Maj+clic pour le lier).
+
+*English:* favorite items — Alt+click an item in your bags to mark it (every copy) as a favorite, or unmark it; the shortcut is set on the Full bags page (Alt+click, Ctrl+Alt+click, Shift+Alt+click, Alt+right-click, Ctrl+Alt+right-click, or disabled), and `/r2q favori [link]` does the same. Favorites show a small padlock in the game's bags and a "Favorite: protected from selling" tooltip line; they are never sold with the grays nor suggested by Full bags or Loot room; at a merchant, right-clicking a favorite asks "Sell this favorite?" first, and if one gets sold anyway (dragged onto the merchant) you are offered to buy it back. The "Always keep" list becomes "Favorites", with all its items kept; Loot room's "Ignore" and Full bags' "Favorite" button add to it. Hovering the item suggested by Full bags, or the blocked loot in Loot room, shows the game tooltip (Shift+click to link it).
+
 ## 1.33.3
 
 - **Buffs avant le départ, avec du discernement** : les buffs de situation (Respiration aquatique, Marche sur l'eau, résistances, Gardien de peur…) ne sont plus réclamés ; Fureur vertueuse seulement si ton rôle est tank ; Intelligence des arcanes et Esprit divin plus réclamés au guerrier ni au voleur. Nouveau réglage « Ton rôle » (Automatique, tank, soigneur, dégâts) dans les réglages des buffs ; tu peux toujours activer ou couper chaque buff à la main.

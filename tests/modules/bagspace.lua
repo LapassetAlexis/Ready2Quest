@@ -125,7 +125,7 @@ do
 	end
 	for key in pairs(strings.en) do if strings.fr[key] == nil then missing[#missing + 1] = key end end
 	Check("[BAG] chaînes fr + en complètes, client fr en français", #missing == 0 and NS.L.BAG_BTN_DESTROY == "Jeter"
-		and strings.en.BAG_BTN_KEEP == "Always keep", table.concat(missing, ","))
+		and strings.en.BAG_BTN_KEEP == "Favorite", table.concat(missing, ","))
 end
 
 -- 2. Choix : le moins coûteux par emplacement, exclusions ---------------------
@@ -153,7 +153,7 @@ do
 	Check("[BAG] prix inconnu : jamais proposé", not ("," .. B.Ids() .. ","):find("," .. WHITE .. ",", 1, true), B.Ids())
 
 	B.Reset()
-	NS:DB().bagspaceKeep[GREY] = "Os brisé"
+	NS:DB().favorites[GREY] = "Os brisé"
 	Check("[BAG] liste « toujours garder » respectée", B.First() == WHITE, B.Ids())
 	NS:DB().bagspaceDiscard[CLOTH] = "Étoffe"
 	Check("[BAG] liste « toujours jeter » en premier, même plus chère", B.First() == CLOTH, B.Ids())
@@ -239,7 +239,7 @@ do
 	Check("[BAG] nouvelle erreur : le choix [Autre] est conservé", NS:BagSpaceCurrent().itemID == WHITE)
 
 	NS.bagspaceFrame.keepButton:Click()
-	Check("[BAG] [Garder toujours] : ajouté à la liste, plus proposé", NS:DB().bagspaceKeep[WHITE] == "Caillou"
+	Check("[BAG] [Favori] : ajouté aux favoris, plus proposé", NS:DB().favorites[WHITE] == "Caillou"
 		and NS:BagSpaceCurrent().itemID == GREY and not ("," .. B.Ids() .. ","):find("," .. WHITE .. ",", 1, true))
 end
 
@@ -352,14 +352,14 @@ do
 		B.Output())
 
 	NS:HandleCommand("garder " .. B.Link(GREY))
-	local added = NS:DB().bagspaceKeep[GREY] == "Os brisé"
+	local added = NS:DB().favorites[GREY] == "Os brisé"
 	NS:HandleCommand("garder " .. B.Link(GREY))
-	Check("[BAG] /r2q garder [lien] : ajouté, puis retiré une 2e fois", added and NS:DB().bagspaceKeep[GREY] == nil)
+	Check("[BAG] /r2q garder [lien] : ajouté, puis retiré une 2e fois", added and NS:DB().favorites[GREY] == nil)
 	NS:HandleCommand("jeter-toujours " .. B.Link(CLOTH))
 	added = NS:DB().bagspaceDiscard[CLOTH] == "Étoffe"
 	NS:HandleCommand("garder " .. B.Link(CLOTH))
 	Check("[BAG] /r2q jeter-toujours [lien] ; garder le retire de « toujours jeter »", added
-		and NS:DB().bagspaceKeep[CLOTH] ~= nil and NS:DB().bagspaceDiscard[CLOTH] == nil)
+		and NS:DB().favorites[CLOTH] ~= nil and NS:DB().bagspaceDiscard[CLOTH] == nil)
 	Mock:Reset()
 	NS:HandleCommand("garder")
 	Check("[BAG] /r2q garder sans objet : aide", B.Has("Indique un objet"), B.Output())
@@ -398,7 +398,7 @@ end
 -- 9. Page de réglages -----------------------------------------------------------
 do
 	B.Reset()
-	NS:DB().bagspaceKeep[GREY] = "Os brisé"
+	NS:DB().favorites[GREY] = "Os brisé"
 	NS.optionsFrame = nil
 	NS:ToggleOptions()
 	local frame = NS.optionsFrame
@@ -407,12 +407,12 @@ do
 	local page = frame.pages.bagspace
 	local notes = page and page.notes or {}
 	Check("[BAG] page : sous-page du QoL, listes affichées", def and def.parent == "qol" and def.group == "OPT_GROUP_QOL"
-		and notes.bagspaceKeep ~= nil and notes.bagspaceKeep.text.text:find("Os brisé", 1, true) ~= nil
+		and notes.favorites ~= nil and notes.favorites.text.text:find("Os brisé", 1, true) ~= nil
 		and notes.bagspaceDiscard.text.text:find("(vide)", 1, true) ~= nil
 		and notes.bagspaceConfirm.text.text:find("toujours", 1, true) ~= nil)
-	NS:DB().bagspaceKeep[GREY] = true
-	Check("[BAG] page : ancienne entrée `true` affichée par son nom", NS:BagSpaceListText("bagspaceKeep"):find("true", 1, true) == nil, NS:BagSpaceListText("bagspaceKeep"))
-	NS:DB().bagspaceKeep[GREY] = "Os brisé"
+	NS:DB().favorites[GREY] = true
+	Check("[BAG] page : ancienne entrée `true` affichée par son nom", NS:BagSpaceListText("favorites"):find("true", 1, true) == nil, NS:BagSpaceListText("favorites"))
+	NS:DB().favorites[GREY] = "Os brisé"
 	NS:HandleCommand("jeter-toujours " .. B.Link(CLOTH))
 	Check("[BAG] page : rafraîchie après une commande", notes.bagspaceDiscard.text.text:find("Étoffe", 1, true) ~= nil)
 	NS:SelectOptionsPage("bagspace")
@@ -422,8 +422,8 @@ do
 	for _, item in ipairs(page.items) do if item.kind == "section" then sections = sections + 1 end end
 	local rowKeys = {}
 	for _, row in ipairs(page.rows) do rowKeys[#rowKeys + 1] = row.def and row.def.key end
-	Check("[BAG] page : trois sections, interrupteurs module et cadre", sections == 3
-		and table.concat(rowKeys, ",") == "bagspaceEnabled,bagspaceFrame", sections .. " " .. table.concat(rowKeys, ","))
+	Check("[BAG] page : trois sections, interrupteurs module et cadre, raccourci des favoris", sections == 3
+		and table.concat(rowKeys, ",") == "bagspaceEnabled,bagspaceFrame,favoriteClick", sections .. " " .. table.concat(rowKeys, ","))
 	frame:Hide()
 	NS.optionsFrame = nil
 end
