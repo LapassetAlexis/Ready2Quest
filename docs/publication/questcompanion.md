@@ -23,6 +23,14 @@ For **WoW Forever** (1.60). English and French. Free, standalone (`/qc`), about 
 - **Glitter and the Trainer's Stall**: release extra specimens for glitter, earn more from missions and zone milestones, and spend it on aids, Reserve slots and cosmetics.
 - **Trades between players** (`/qc trade <name>`): up to 3 Reserve specimens each, safe on both sides, with their origin kept. Plus guided tutorials, a 3.0 welcome gift and 5 new achievements.
 
+![The preparation card: quality, odds, aids, Throw or Skip](https://media.forgecdn.net/attachments/2192/335/qc30-carte-capture-png.png)
+
+![The Reserve: your specimens with their size, character and origin](https://media.forgecdn.net/attachments/2192/331/qc30-reserve-png.png)
+
+![The Trainer's Stall: spend your glitter](https://media.forgecdn.net/attachments/2192/332/qc30-echoppe-png.png)
+
+![Creatures: To complete, pins and Locate](https://media.forgecdn.net/attachments/2192/333/qc30-creatures-png.png)
+
 ## New in 2.14: Winter Veil
 - **Winter Veil season** (Azeroth style, Dec 15 – Jan 2): festive lights and falling snow on the journal and the companion, a frosted frame, and the net turns into a **snowball**. `/qc noel` to force it on or off.
 - **Three seasonal companions**: Greatfather Winter (a gift a day), Metzen the reindeer (glowing nose at night) and the Tiny Snowman (loves the cold, melts in the heat), each with its own voice. A surprise visit from Greatfather Winter and a "Merry Winter Veil" achievement.
@@ -133,6 +141,14 @@ Pour **WoW Forever** (1.60). En français et en anglais. Gratuit, autonome (`/qc
 - **Carte de préparation** : choisis ton aide avec la chance en direct, puis **Lancer** ou **Passer**. Le **mode chasse** propose chaque monstre de 5 min à 1 h. Le filtre « À compléter », les épingles et **Localiser** t'aident à finir ce que tu as manqué en montant de niveau.
 - **Paillettes et Échoppe du dresseur** : relâche tes spécimens en trop contre des paillettes, gagne-en aussi aux missions et aux paliers de zone, et dépense-les en aides, places de Réserve et cosmétiques.
 - **Échanges entre joueurs** (`/qc echange <nom>`) : jusqu'à 3 spécimens de Réserve chacun, sans risque des deux côtés, origine conservée. Et aussi des tutoriels guidés, un cadeau de bienvenue 3.0 et 5 nouveaux hauts faits.
+
+![La carte de préparation : qualité, chance, aides, Lancer ou Passer](https://media.forgecdn.net/attachments/2192/335/qc30-carte-capture-png.png)
+
+![La Réserve : tes spécimens avec leur taille, leur caractère et leur origine](https://media.forgecdn.net/attachments/2192/331/qc30-reserve-png.png)
+
+![L'Échoppe du dresseur : dépense tes paillettes](https://media.forgecdn.net/attachments/2192/332/qc30-echoppe-png.png)
+
+![Créatures : À compléter, épingles et Localiser](https://media.forgecdn.net/attachments/2192/333/qc30-creatures-png.png)
 
 ## Nouveau en 2.14 : le Voile d'hiver
 - **La saison du Voile d'hiver** (style Azeroth, du 15 décembre au 2 janvier) : guirlandes et neige qui tombe sur le carnet et le compagnon, un cadre givré, et le filet devient une **boule de neige**. `/qc noel` pour le forcer ou le couper.
