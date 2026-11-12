@@ -113,7 +113,9 @@ function ns:SellGrayBatch()
 		local slots = C_Container and Call(C_Container.GetContainerNumSlots, bag)
 		for slot = 1, tonumber(slots) or 0 do
 			local info = ContainerItem(bag, slot)
-			if info and info.quality == 0 and not info.isLocked then
+			-- 1.34.0 : un favori (Favorites.lua) n'est jamais vendu d'office
+			if info and info.quality == 0 and not info.isLocked
+				and not (ns.IsFavorite and ns:IsFavorite(info.itemID)) then
 				local price = SellPrice(info)
 				if price > 0 then
 					if sold >= SELL_BATCH then return sold, value, true end

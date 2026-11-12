@@ -74,6 +74,13 @@ function GF.Reset()
 	NS:JournalData().bestiary = {}
 	NS:DB().journalTracker = false
 	NS:TrainerHolders()
+	-- 3.0.1 : une seule place pour les bandeaux du haut (Banners.lua) ; un
+	-- bandeau du carnet resté d'avant la retiendrait
+	NS.journalToasts, NS.journalToastHideAt = {}, nil
+	if NS.journalToast then NS.journalToast:Hide() end
+	NS.bannerLane.showing, NS.bannerLane.frame, NS.bannerLane.waiting = nil, nil, {}
+	-- les tampons gagnés en route (zone de Mulgore) ne passent pas devant
+	db.journalToast = false
 end
 
 function GF.Done()
@@ -84,6 +91,7 @@ function GF.Done()
 	NS:GuildFeatsReset()
 	NS:TrainerResetSession()
 	ResetWorld()
+	NS:DB().journalToast = nil
 end
 
 -- l'horloge de l'addon (celle de la fiche) : exploits en attente, bandeaux,

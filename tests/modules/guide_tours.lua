@@ -812,7 +812,8 @@ do
 		local first = NS:TourActive() == "journal" and P.StepId() == "evolution" and f.kind == "evolution"
 			and P.Ring().anchor == f.sections.evolution and P.Title() == NS.L.JRN_SEC_evolution
 		-- 3.0.0 : l'Échoppe du dresseur a son onglet, donc son étape
-		local order = { "evolution", "menagerie", "reserve", "shop", "feats", "day", "progress", "juke", "guide" }
+		-- 3.0.1 : Addons liés en dernier
+		local order = { "evolution", "menagerie", "reserve", "shop", "feats", "day", "progress", "juke", "guide", "addons" }
 		local bad, total = {}, NS.tourState.total
 		for index, key in ipairs(order) do
 			if f.sections[key] then
@@ -824,8 +825,8 @@ do
 		end
 		local lastLabel = P.Callout().nextButton.text:GetText() == NS.L.TOUR_DONE
 		P.Callout().nextButton:Click()
-		Check("[JRN] première ouverture : chaque onglet surligné, ouvert, expliqué (9 étapes), « Terminer », vue au compte", first
-			and #bad == 0 and total == 9 and lastLabel and NS:TourActive() == nil and NS:TourDone("journal"), table.concat(bad, ", "))
+		Check("[JRN] première ouverture : chaque onglet surligné, ouvert, expliqué (10 étapes), « Terminer », vue au compte", first
+			and #bad == 0 and total == 10 and lastLabel and NS:TourActive() == nil and NS:TourDone("journal"), table.concat(bad, ", "))
 		f:Hide()
 		NS:ToggleJournal(true)
 		Mock:Advance(0.2)
@@ -933,14 +934,14 @@ do
 		Migrate(2, 0)
 		NS:ToggleJournal(true)
 		Mock:Advance(0.2)
-		local inJournal = NS:TourActive() == "journal" and P.StepId() == "migration" and P.Callout().step:GetText() == "1 / 10"
+		local inJournal = NS:TourActive() == "journal" and P.StepId() == "migration" and P.Callout().step:GetText() == "1 / 11"
 			and Has(P.Text(), "(2 ") and not NS:Gift30Available() and not Has(P.Text(), NS:F("TOUR_MIG_GIFT", 3))
 		P.Callout().nextButton:Click()
 		local tabs = P.StepId() == "evolution" and NS:TourDone("migration")
 		NS:TourStop()
 		NS.journalFrame:Hide()
 		Mock:Fire("PLAYER_ENTERING_WORLD", true, false)
-		Check("[MIG] carnet ouvert d'abord : l'explication en 1re étape (1 / 10, 2 espèces : pas de cadeau), puis les onglets ; rien à la connexion",
+		Check("[MIG] carnet ouvert d'abord : l'explication en 1re étape (1 / 11, 2 espèces : pas de cadeau), puis les onglets ; rien à la connexion",
 			inJournal and tabs and NS.tourMigrationAt == nil)
 		-- sans créatures d'avant : jamais
 		P.Reset()
@@ -948,8 +949,8 @@ do
 		Mock:Advance(NS.TOUR.migrationDelay + 0.5)
 		NS:ToggleJournal(true)
 		Mock:Advance(0.2)
-		Check("[MIG] nouveau joueur : pas d'explication, la visite commence aux onglets (9)", NS:TourActive() == "journal"
-			and P.StepId() == "evolution" and NS.tourState.total == 9 and NS.tourMigrationAt == nil)
+		Check("[MIG] nouveau joueur : pas d'explication, la visite commence aux onglets (10)", NS:TourActive() == "journal"
+			and P.StepId() == "evolution" and NS.tourState.total == 10 and NS.tourMigrationAt == nil)
 		NS:TourStop()
 		NS.journalFrame:Hide()
 	end

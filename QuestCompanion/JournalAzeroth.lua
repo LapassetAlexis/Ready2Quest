@@ -1632,6 +1632,33 @@ function POST.progress(self, frame)
 	end
 end
 
+-- 3.0.1 bêta 3 : le fond opaque d'une page (Guide, Addons liés), à son
+-- niveau : le même parchemin que le carnet (même recadrage), son ombre et son
+-- voile, recopiés. Rien ne change à l'œil ; une fenêtre qui s'intercale
+-- entre le fond du carnet et la page ne se voit plus au travers.
+local function OpaqueBase(pane, content)
+	if pane.azBase or not content then return pane.azBase end
+	if pane.base then pane.base:Hide() end
+	local w, h = tonumber(content:GetWidth()) or 0, tonumber(content:GetHeight()) or 0
+	local page = NewTex(pane, "BACKGROUND", -8, T.parchH)
+	if not page then
+		if pane.base then pane.base:Show() end
+		return nil
+	end
+	page:SetAllPoints(content)
+	Cover(page, T.parchH, w, h)
+	local shade = NewTex(pane, "BACKGROUND", -7, T.shadow)
+	if shade then
+		shade:SetPoint("TOPLEFT", content, "TOPLEFT", 0, 0)
+		shade:SetPoint("BOTTOMLEFT", content, "BOTTOMLEFT", 0, 0)
+		shade:SetWidth(34)
+		shade:SetAlpha(0.4)
+	end
+	pane.azBase, pane.azBaseVeil = page, ns.AzerothVeil(pane, content, "page", -6)
+	return page
+end
+ns.CarnetOpaqueBase = OpaqueBase
+
 function PAGE.guide(self, frame)
 	local pane = frame.guide
 	if not pane then return end
@@ -1640,6 +1667,7 @@ function PAGE.guide(self, frame)
 	end
 	local ui, content = ns.JournalUI, frame.content
 	if not ui then return end
+	OpaqueBase(pane, content)
 	local page = NewTex(pane, "BACKGROUND", 1, T.stats)
 	if page then
 		local x0, x1 = ui.PAD + pane.RX - 12, ui.PAD + ui.INNER + 8
@@ -1742,6 +1770,43 @@ function POST.juke(self, frame)
 	RolePaint(pane.hintLine, "juke.hint")
 	RolePaint(pane.empty, "juke.now")
 	InkPager(pane.pager)
+end
+
+
+-- 3.0.1 : Addons liés. Le parchemin voilé du guide sur toute la page, la
+-- carte de Ready2Quest en tuile claire, encres mesurées (addons.*)
+function PAGE.addons(self, frame)
+	local pane = frame.addons
+	if not pane then return end
+	if pane.card then TileStyle(pane.card, "light") end
+	local ui, content = ns.JournalUI, frame.content
+	if not ui then return end
+	OpaqueBase(pane, content)
+	local page = NewTex(pane, "BACKGROUND", 1, T.stats)
+	if page then
+		local x0, x1 = ui.PAD - 12, ui.PAD + ui.INNER + 8
+		local y0, y1 = ui.TOP + 10, ui.PAGER_Y - 28
+		page:SetPoint("TOPLEFT", content, "TOPLEFT", x0, y0)
+		page:SetPoint("BOTTOMRIGHT", content, "TOPLEFT", x1, y1)
+		Cover(page, T.stats, x1 - x0, y0 - y1)
+		pane.azPage, pane.azVeil = page, ns.AzerothVeil(pane, page, "guide", 2)
+	end
+end
+
+function POST.addons(self, frame)
+	local pane = frame.addons
+	if not pane then return end
+	local card = pane.card
+	if card then
+		RolePaint(card.name, "addons.name")
+		RolePaint(card.line, "addons.text")
+		RolePaint(card.status, card.status.addonsRole or "addons.muted")
+		for _, point in ipairs(card.points or {}) do RolePaint(point, "addons.text") end
+	end
+	RolePaint(pane.linkHint, "addons.muted")
+	for _, link in ipairs(pane.links or {}) do RolePaint(link.label, "addons.text") end
+	if pane.together and pane.together.label then RolePaint(pane.together.label, "addons.head") end
+	for _, fact in ipairs(pane.facts or {}) do RolePaint(fact, "addons.text") end
 end
 
 -- ---------------------------------------------------------------------------

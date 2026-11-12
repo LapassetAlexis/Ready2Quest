@@ -54,6 +54,8 @@ function ns:OnDBReady(db)
 	self:MigrateSafeZones(db)
 	-- 1.32.2 : buffs réclamés par défaut (Buffs.lua, schéma 2)
 	if type(self.MigrateBuffs) == "function" then self:MigrateBuffs(db) end
+	-- 1.34.0 : « toujours garder » de Sac plein -> favoris (Favorites.lua)
+	if type(self.MigrateFavorites) == "function" then self:MigrateFavorites(db) end
 end
 
 -- Schéma 1 (jusqu'à v1.17) : db.safe[mapID]. Sur Era, un mapID est une zone

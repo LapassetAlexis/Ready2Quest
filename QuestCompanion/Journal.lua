@@ -498,6 +498,38 @@ end
 -- Bandeau du thème (docs/UI.md) : liseré ambre, losange du tampon, « NOUVEAU
 -- TAMPON · SORTE » en capitales pâles, le nom en titre dessous
 local TOAST_W, TOAST_H = 280, 50
+
+-- 3.0.1 : un bouton invisible par-dessus le bandeau : clic = l'action du
+-- bandeau affiché (entry.onClick : la page Hauts faits pour un lot), clic
+-- droit = fermer ; le glisser passe au bandeau (sa place reste enregistrée)
+local function ToastButton(frame)
+	local ok, button = pcall(CreateFrame, "Button", nil, frame)
+	if not ok or not button then return end
+	button:SetAllPoints(frame)
+	if button.RegisterForClicks then button:RegisterForClicks("LeftButtonUp", "RightButtonUp") end
+	if button.RegisterForDrag then button:RegisterForDrag("LeftButton") end
+	button:SetScript("OnClick", function(_, mouse) ns:JournalToastClick(mouse) end)
+	button:SetScript("OnDragStart", function() if frame.StartMoving then pcall(frame.StartMoving, frame) end end)
+	button:SetScript("OnDragStop", function()
+		local stop = frame.GetScript and frame:GetScript("OnDragStop")
+		if type(stop) == "function" then pcall(stop, frame) elseif frame.StopMovingOrSizing then pcall(frame.StopMovingOrSizing, frame) end
+	end)
+	frame.button = button
+end
+
+function ns:JournalToastClick(mouse)
+	local frame = self.journalToast
+	local entry = frame and frame.entry
+	if mouse ~= "RightButton" and entry and type(entry.onClick) == "function" then
+		local ok, err = pcall(entry.onClick, self, entry)
+		if not ok and self.RecordError then self:RecordError("journal:toastclick", err) end
+	end
+	self.journalToastHideAt = nil
+	if frame then frame:Hide() end
+	if self.BannerDone then self:BannerDone("journal") end
+	return true
+end
+
 function ns:EnsureJournalToast()
 	if self.journalToast then return self.journalToast end
 	-- style de l'interface (2.5.0, AzerothStyle.lua) : Azeroth = bandeau doré,
@@ -507,6 +539,7 @@ function ns:EnsureJournalToast()
 	local frame = self.AzerothOn and self:AzerothOn() and self:AzerothCreateBanner({ strata = "MEDIUM" })
 	if frame then
 		frame.icon:SetTexture(Theme.LOGO_SMALL)
+		ToastButton(frame)
 		if self.RestorePoint then self:RestorePoint(frame, "journalToastPoint", { point = "TOP", x = 0, y = -190 }) end
 		frame:Hide()
 		self.journalToast = frame
@@ -530,6 +563,7 @@ function ns:EnsureJournalToast()
 	frame.text:SetWidth(TOAST_W - left - 22 - 12)
 	frame.text:SetJustifyH("LEFT")
 	frame.text:SetWordWrap(false)
+	ToastButton(frame)
 	if self.RestorePoint then self:RestorePoint(frame, "journalToastPoint", { point = "TOP", x = 0, y = -190 }) end
 	frame:Hide()
 	self.journalToast = frame
@@ -566,7 +600,12 @@ ns.JournalToastDecor = ToastDecor
 
 function ns:ShowNextJournalToast()
 	local queue = self.journalToasts
-	if #queue == 0 then return nil end
+	if #queue == 0 then
+		if self.BannerCancel then self:BannerCancel("journal") end
+		return nil
+	end
+	-- 3.0.1 : une seule place pour les bandeaux du haut (Banners.lua)
+	if self.BannerTurn and not self:BannerTurn("journal") then return nil end
 	local frame = self:EnsureJournalToast()
 	if not frame then self.journalToasts = {}; return nil end
 	-- les bandeaux « tout faits » (hauts faits, déjà regroupés par leur
@@ -588,6 +627,16 @@ function ns:ShowNextJournalToast()
 		if stamp.title then
 			frame.title:SetText(Theme.Upper(stamp.title))
 			frame.text:SetText(stamp.name or "")
+			-- 3.0.1 : un lot de hauts faits nomme les siens, ajustés à la largeur
+			if type(stamp.names) == "table" and #stamp.names > 0 and self.FeatNamesLine then
+				local width = tonumber(frame.text.GetWidth and frame.text:GetWidth()) or 0
+				frame.text:SetText(self:FeatNamesLine(stamp.names, function(text)
+					frame.text:SetText(text)
+					local measure = frame.text.GetUnboundedStringWidth or frame.text.GetStringWidth
+					local used = tonumber(measure and measure(frame.text)) or 0
+					return width <= 0 or used <= width
+				end))
+			end
 			frame.message = stamp.message or stamp.name
 		else
 			frame.title:SetText(Theme.Upper(L.JRN_TOAST_TITLE) .. "  ·  " .. Theme.Upper(self:JournalKindLabel(stamp.kind)))
@@ -599,6 +648,7 @@ function ns:ShowNextJournalToast()
 		shown = stamp
 	end
 	frame:Show()
+	if self.BannerShown then self:BannerShown("journal", frame, "journalToastPoint", { point = "TOP", x = 0, y = -190 }) end
 	if shown and type(shown.onShow) == "function" then pcall(shown.onShow, self, shown) end
 	if Theme.FadeIn then Theme.FadeIn(frame, 0.2) end
 	if self.StyleShown then self:StyleShown(frame, { shield = "gold", play = true }) end
@@ -623,6 +673,7 @@ function ns:UpdateJournalToast(now)
 	if self.journalToastHideAt and now >= self.journalToastHideAt then
 		self.journalToastHideAt = nil
 		if self.journalToast then self.journalToast:Hide() end
+		if self.BannerDone then self:BannerDone("journal") end
 	end
 	if not self.journalToastHideAt and #self.journalToasts > 0 and not InCombat() then
 		self:ShowNextJournalToast()
@@ -793,6 +844,7 @@ local function JournalToastTick()
 	if not ok then
 		if #ns.journalToasts > 0 then table.remove(ns.journalToasts, 1) end
 		ns.journalToastHideAt = nil
+		if ns.BannerDone then ns:BannerDone("journal") end
 		if ns.RecordError then ns:RecordError("journal:toast", err) end
 	end
 	return (ns.journalToastHideAt or #ns.journalToasts > 0) and true or false

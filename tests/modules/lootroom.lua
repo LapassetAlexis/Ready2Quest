@@ -84,7 +84,7 @@ function LR.Reset()
 	Mock.world.deleted, Mock.world.looted, Mock.world.popup, Mock.world.combat = 0, nil, nil, false
 	_G.StaticPopupDialogs = {}
 	_G.Auctionator = nil
-	NS:DB().bagspaceKeep = {}
+	NS:DB().favorites = {}
 end
 
 -- 1. Place au butin ---------------------------------------------------------------------
@@ -142,7 +142,7 @@ do
 	LR.Reset()
 	Mock:Fire("LOOT_OPENED")
 	NS.lootRoomFrame.rows[1].ignore:Click()
-	Check("[LOOT] ignorer : toujours gardé, plus proposé", type(NS:DB().bagspaceKeep[GREY]) == "string"
+	Check("[LOOT] ignorer : toujours gardé, plus proposé", type(NS:DB().favorites[GREY]) == "string"
 		and NS.lootRoom.rows[1].itemID ~= GREY)
 	-- prix de l'hôtel des ventes
 	LR.Reset()
@@ -378,7 +378,7 @@ do
 		for i = 1, 12 do Mock.world.itemInfo[991000 + i] = { name = "Babiole " .. i, classID = 15, subClassID = 0, sellPrice = i } end
 		Mock.world.loot = { { id = KLOOT } }
 		skills = { { "Minage", 50 }, { "Forge", 40 } }
-		NS:DB().bagspaceKeep, NS:DB().bagspaceDiscard = {}, {}
+		NS:DB().favorites, NS:DB().bagspaceDiscard = {}, {}
 	end
 
 	Reset()
@@ -425,7 +425,7 @@ do
 	Check("[LOOT] molette : une ligne plus bas, butée en bas", oneDown and NS.lootRoom.offset == 4
 		and frame.rows[8].data.itemID == 991012)
 	frame.rows[8].ignore:Click()
-	Check("[LOOT] ignorer une ligne défilée : la bonne", type(NS:DB().bagspaceKeep[991012]) == "string" and #NS.lootRoom.rows == 11
+	Check("[LOOT] ignorer une ligne défilée : la bonne", type(NS:DB().favorites[991012]) == "string" and #NS.lootRoom.rows == 11
 		and NS.lootRoom.offset == 3)
 	NS:LootRoomScroll(20)
 	local top = NS.lootRoom.offset == 0

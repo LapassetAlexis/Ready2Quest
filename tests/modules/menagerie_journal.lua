@@ -1043,8 +1043,8 @@ do
 			local bottom = top + box:GetHeight()
 			-- en bas : le total (Sobre) ou le garde-manger (Azeroth, étiquette à 50 px du bas)
 			local reserved = style == "azeroth" and 50 + 16 or 18 + 16
-			Check("[J215] " .. style .. " : neuf entrées (Réserve puis Échoppe après les Créatures), le résumé tient au-dessus du bas",
-				count == 9 and f.sections.reserve ~= nil and NS.JOURNAL_SECTIONS[3] == "reserve" and NS.JOURNAL_SECTIONS[4] == "shop"
+			Check("[J215] " .. style .. " : dix entrées (Réserve puis Échoppe après les Créatures), le résumé tient au-dessus du bas",
+				count == 10 and f.sections.reserve ~= nil and NS.JOURNAL_SECTIONS[3] == "reserve" and NS.JOURNAL_SECTIONS[4] == "shop"
 				and f.sections.shop ~= nil and bottom <= navH - reserved, bottom .. " / " .. navH)
 			J.Done()
 		end

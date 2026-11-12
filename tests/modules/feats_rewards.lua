@@ -455,6 +455,9 @@ do
 		NS.journalToastHideAt = nil
 		NS:JournalToastPush({ kind = "feat", id = "zone_visit_10", title = "Haut fait obtenu", name = "Bourlingueur", points = 5 })
 		s.ok("rien pour un petit", #TT.fx == 1)
+		-- 3.0.1 : une place pour les bandeaux du haut (Banners.lua) : le carnet la rend
+		NS.journalToast:Hide()
+		NS.journalToastHideAt = nil
 		NS:GuildFeatsOnMessage("E~1~h~73~0~0~-~0~13~f", "GUILD", "Bob-Royaume")
 		NS:GuildFeatsToastTick(Mock.now)
 		s.ok("bandeau de guilde d'un titre : effet et bouclier", #TT.fx == 2 and TT.fx[2] == NS.guildFeatToast

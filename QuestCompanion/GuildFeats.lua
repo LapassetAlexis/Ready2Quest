@@ -626,12 +626,35 @@ end
 -- ---------------------------------------------------------------------------
 -- File des bandeaux : 3 au plus, un par membre (le meilleur gardé)
 -- ---------------------------------------------------------------------------
+-- 3.0.1 : plusieurs exploits d'un même membre coup sur coup = un bandeau,
+-- le meilleur, avec « et N autres exploits » (ses autres comptés)
+local GFEAT_MERGED_MAX = 99
+local function Merge(best, other)
+	local more = (tonumber(best.info.more) or 0) + 1 + (tonumber(other.info.more) or 0)
+	best.info.more = math.min(more, GFEAT_MERGED_MAX)
+	return best
+end
+
 function ns:GuildFeatsEnqueue(item)
 	local queue = state.toasts
+	-- son bandeau est à l'écran : il compte celui-ci en plus
+	local showing = state.showing
+	if showing and showing.key == item.key and item.score <= showing.score then
+		Merge(showing, item)
+		local frame = self.guildFeatToast
+		if frame and frame.hint then
+			local more = self:GuildFeatMoreText(showing.info.more)
+			frame.hint:SetText(more and (more .. "  ·  " .. L.GFEAT_HINT) or L.GFEAT_HINT)
+		end
+		return true
+	end
 	for index, other in ipairs(queue) do
 		if other.key == item.key then
-			if item.score >= other.score then queue[index] = item end
-			return item.score >= other.score
+			local keep = item.score >= other.score
+			queue[index] = keep and Merge(item, other) or Merge(other, item)
+			-- rang d'arrivée : celui du premier
+			queue[index].at = math.min(item.at or 0, other.at or 0)
+			return keep
 		end
 	end
 	if #queue < ns.GFEAT_TOAST_QUEUE then
@@ -751,6 +774,7 @@ end
 function ns:GuildFeatsHideToast()
 	state.showing, state.hideAt = nil, nil
 	if self.guildFeatToast then self.guildFeatToast:Hide() end
+	if self.BannerDone then self:BannerDone("guild") end
 end
 
 -- Icône et points d'un bandeau : un haut fait montre l'icône de sa catégorie
@@ -799,6 +823,7 @@ function ns:GuildFeatsShowToast(item)
 	if frame.ownGlyph and not frame.azeroth and not feat then frame.icon:SetVertexColor(accent[1], accent[2], accent[3], 1) end
 	state.showing, state.hideAt = item, Clock() + ns.GFEAT_TOAST_SECONDS
 	frame:Show()
+	if self.BannerShown then self:BannerShown("guild", frame, "guildFeatToastPoint", { point = "TOP", x = 0, y = -150 }) end
 	if Theme.FadeIn then pcall(Theme.FadeIn, frame, 0.2) end
 	-- haut fait : bandeau des hauts faits (points dans le bouclier d'or) ; un
 	-- titre ou un gros haut fait : ailes et éclat (Azeroth seulement)
@@ -823,7 +848,13 @@ function ns:GuildFeatsToastTick(now)
 		if now >= item.at and now - item.at <= ns.GFEAT_TOAST_STALE then kept[#kept + 1] = item end
 	end
 	state.toasts = kept
-	if #kept == 0 or InCombat() then return false end
+	if #kept == 0 then
+		if self.BannerCancel then self:BannerCancel("guild") end
+		return false
+	end
+	if InCombat() then return false end
+	-- 3.0.1 : une seule place pour les bandeaux du haut (Banners.lua)
+	if self.BannerTurn and not self:BannerTurn("guild") then return false end
 	local best = 1
 	for index, item in ipairs(kept) do
 		if item.score > kept[best].score or (item.score == kept[best].score and item.at < kept[best].at) then best = index end

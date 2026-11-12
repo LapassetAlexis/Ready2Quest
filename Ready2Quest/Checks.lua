@@ -16,7 +16,8 @@ local EachBagItem, FreeBagSlots = ns.EachBagItem, ns.FreeBagSlots
 local function CountQuality(quality)
 	local count = 0
 	EachBagItem(function(_, _, info)
-		if info.quality == quality then count = count + 1 end
+		-- un favori n'est pas « à vendre » (1.34.0, Favorites.lua)
+		if info.quality == quality and not (ns.IsFavorite and ns:IsFavorite(info.itemID)) then count = count + 1 end
 	end)
 	return count
 end

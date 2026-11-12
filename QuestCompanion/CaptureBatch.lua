@@ -1086,7 +1086,10 @@ function ns:CaptureBatchShow(batch)
 	end
 	frame.stop:SetText(L.CAPTURE_BATCH_STOP)
 	frame.footer:SetText(L.CAPTURE_BATCH_RUNNING)
+	local fresh = not frame:IsShown()
 	frame:Show()
+	-- 3.0.1 : à côté d'une autre fenêtre déjà ouverte (Place au butin…), socle
+	if fresh and ns.PopupPlace then ns.PopupPlace(frame) end
 	if Theme.FadeIn then pcall(Theme.FadeIn, frame) end
 	-- capture animée coupée (réglage) : tout se montre d'emblée
 	if self.CaptureStageOn and not self:CaptureStageOn() then self:CaptureBatchStop(true) end

@@ -277,6 +277,12 @@ ns.AZEROTH_CONTRAST = {
 	["juke.detail"] = { "inkMuted", 0.4213, 4.5, 11 },   -- sombre, fond 0.421 (moy. 0.452) : 6.34:1 (durée, « + »)
 	["juke.now"] = { "inkSoft", 0.3300, 4.5, 12 },   -- sombre, fond 0.330 (moy. 0.453) : 6.08:1 (comme guide.text)
 	["juke.hint"] = { "red", 0.3300, 4.5, 11 },   -- sombre, même fond : 4.89:1 (musique coupée)
+	-- 3.0.1 : Addons liés, carte claire et parchemin voilé du guide (fond 0.325)
+	["addons.name"] = { "ink", 0.3250, 4.5, 16 },   -- sombre, comme juke.name : 6.73:1
+	["addons.text"] = { "inkSoft", 0.3250, 4.5, 12 },   -- sombre, même fond : ~6:1 (comme guide.text)
+	["addons.muted"] = { "inkMuted", 0.3250, 4.5, 11 },   -- sombre, même fond : 5.04:1 (comme juke.missing)
+	["addons.ok"] = { "green", 0.3250, 4.5, 11 },   -- sombre, même fond : ~4.8:1 (comme page.green)
+	["addons.head"] = { "head", 0.3300, 4.5, 12 },   -- sombre, comme guide.head : 5.14:1
 	["zone.label"] = { "navText", 0.0455, 4.5, 12 },   -- clair, fond 0.046 (moy. 0.016) : 7.41:1 (zone vue)
 	["zone.unseen"] = { "zoneDim", 0.0455, 4.5, 12 },   -- clair, fond 0.046 (moy. 0.016) : 5.41:1 (zone pas encore vue, rangée opaque)
 	-- 2.9.1 : page Missions en cartes. Cartes : fond 235397 en Cover sur 206×68 (demie) ou 420×68 (large),
@@ -1556,12 +1562,14 @@ function ns:CaptureResultShow(result)
 		banner:SetLevel(result.level)
 	end
 	self.captureResultHideAt = Clock() + ns.CAPTURE_RESULT_SECONDS
+	if self.BannerShown then self:BannerShown("result", frame, "captureResultPoint", { point = "TOP", x = 0, y = -200 }) end
 	return frame
 end
 
 function ns:CaptureResultHide()
 	self.captureResultHideAt = nil
 	if self.captureResult then self.captureResult:Hide() end
+	if self.BannerDone then self:BannerDone("result") end
 end
 
 -- Horloge (celle de la capture, 10 fois par seconde)
@@ -1575,6 +1583,8 @@ function ns:CaptureResultTick(now)
 	if self:CaptureSceneBusy() then pending.at = now; return false end
 	if now - (pending.at or now) > ns.CAPTURE_RESULT_STALE then self.captureResultPending = nil; return false end
 	if InCombat() then return false end
+	-- 3.0.1 : passe devant la file des bandeaux, sans couvrir celui affiché
+	if self.BannerTurn and not self:BannerTurn("result") then return false end
 	self.captureResultPending = nil
 	return self:CaptureResultShow(pending) ~= nil
 end

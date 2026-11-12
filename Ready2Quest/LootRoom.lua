@@ -52,7 +52,7 @@ local FR = {
 	LOOTROOM_YES           = "Détruire",
 	LOOTROOM_NO            = "Annuler",
 	LOOTROOM_DELETED       = "Jeté : %s ×%d.",
-	LOOTROOM_IGNORED       = "%s ne sera plus proposé (liste « toujours garder »).",
+	LOOTROOM_IGNORED       = "%s ne sera plus proposé (ajouté aux favoris).",
 	HELP_LOOTROOM          = "/r2q place — les objets les moins chers de tes sacs, à jeter pour un butin",
 }
 local EN = {
@@ -79,7 +79,7 @@ local EN = {
 	LOOTROOM_YES           = "Destroy",
 	LOOTROOM_NO            = "Cancel",
 	LOOTROOM_DELETED       = "Dropped: %s ×%d.",
-	LOOTROOM_IGNORED       = "%s will not be offered again (\"always keep\" list).",
+	LOOTROOM_IGNORED       = "%s will not be offered again (added to favorites).",
 	HELP_LOOTROOM          = "/r2q place — the cheapest items in your bags, to drop for some loot",
 }
 ns.RegisterStrings(FR, EN)
@@ -381,11 +381,16 @@ end
 
 function ns:LootRoomIgnore(row)
 	if not row then return false end
-	local db = self:DB()
-	if type(db.bagspaceKeep) ~= "table" then db.bagspaceKeep = {} end
-	-- la liste « toujours garder » de Sac plein garde le nom affiché
+	-- 1.34.0 : « Ignorer » met l'objet en favori (ex « toujours garder » de
+	-- Sac plein), avec son nom affiché ; le message ci-dessous suffit
 	local name = type(row.link) == "string" and row.link:match("%[(.-)%]") or nil
-	db.bagspaceKeep[row.itemID] = name or ("#" .. tostring(row.itemID))
+	if self.SetFavorite then
+		self:SetFavorite(row.itemID, true, name or ("#" .. tostring(row.itemID)), true)
+	else
+		local db = self:DB()
+		if type(db.favorites) ~= "table" then db.favorites = {} end
+		db.favorites[row.itemID] = name or ("#" .. tostring(row.itemID))
+	end
 	self:Print(self:F("LOOTROOM_IGNORED", tostring(row.link)))
 	self:LootRoomRefresh()
 	return true
@@ -413,6 +418,22 @@ local function Tooltip(owner, link, extra)
 	tip:Show()
 end
 local function HideTip() local tip = rawget(_G, "GameTooltip"); if tip and tip.Hide then tip:Hide() end end
+
+-- Butin bloqué : l'infobulle du jeu pour sa case de butin, sinon son lien
+function ns:LootRoomTargetTooltip(owner)
+	local target = self.lootRoom and self.lootRoom.target
+	local tip = rawget(_G, "GameTooltip")
+	if not target or type(tip) ~= "table" or not tip.SetOwner then return nil end
+	tip:SetOwner(owner, "ANCHOR_RIGHT")
+	local how
+	if type(tip.SetLootItem) == "function" and target.slot and pcall(tip.SetLootItem, tip, target.slot) then
+		how = "loot"
+	elseif type(target.link) == "string" and tip.SetHyperlink and pcall(tip.SetHyperlink, tip, target.link) then
+		how = "link"
+	end
+	tip:Show()
+	return how
+end
 
 -- hauteur pour `count` lignes (au moins une : la phrase « rien à proposer »)
 local function LootRoomHeight(count)
@@ -447,6 +468,16 @@ function ns:EnsureLootRoom()
 	frame.target:SetWidth(inner - 64)
 	frame.target:SetJustifyH("LEFT")
 	if frame.target.SetWordWrap then frame.target:SetWordWrap(false) end
+	-- 1.34.0 : l'infobulle du butin bloqué (SetLootItem, sinon son lien)
+	frame.targetZone = CreateFrame("Button", nil, frame.targetCard)
+	frame.targetZone:SetAllPoints(frame.targetCard)
+	frame.targetZone:SetScript("OnEnter", function(h) ns:LootRoomTargetTooltip(h) end)
+	frame.targetZone:SetScript("OnLeave", HideTip)
+	frame.targetZone:SetScript("OnClick", function()
+		local target = ns.lootRoom and ns.lootRoom.target
+		local shift = rawget(_G, "IsShiftKeyDown")
+		if target and type(shift) == "function" and shift() then Call(Global("HandleModifiedItemClick"), target.link) end
+	end)
 
 	local rowsTop = top - TARGET_CARD - GAP
 	frame.rows = {}
@@ -583,9 +614,12 @@ function ns:LootRoomOpen(manual)
 	local frame = self:EnsureLootRoom()
 	if not frame then return nil end
 	if not manual and #self:LootRoomLoot() == 0 then return nil end
-	if not frame:IsShown() then self.lootRoomOffset = 0 end
+	local fresh = not frame:IsShown()
+	if fresh then self.lootRoomOffset = 0 end
 	frame:Show()
 	self:LootRoomRefresh()
+	-- 1.34.0 : à côté d'une fenêtre de QuestCompanion déjà ouverte (socle)
+	if fresh and ns.PopupPlace then ns.PopupPlace(frame) end
 	return frame
 end
 

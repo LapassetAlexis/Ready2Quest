@@ -1,7 +1,7 @@
 -- BagSpace.lua -- module QoL « Sac plein » (v1.24.0)
 --
 -- Sacs pleins loin d'une zone sûre : on propose l'objet qu'on perd le moins à
--- jeter, avec trois boutons [Jeter] [Autre] [Garder toujours]. Le module vit
+-- jeter, avec trois boutons [Jeter] [Autre] [Favori]. Le module vit
 -- tout entier dans ce fichier et ne s'appuie que sur l'API d'extension
 -- (RegisterStrings, RegisterDefaults, AddOptionPage, RegisterModule) et sur
 -- ns.EXTRA_COMMANDS, la seule ligne ajoutée à Core.lua.
@@ -16,7 +16,7 @@
 --   * jamais proposés : objets de quête, clés, pierre de foyer, composants de
 --     classe (et munitions du chasseur), composants des recettes suivies,
 --     nourriture si la jeter ferait passer sous le seuil des vivres, objets
---     verrouillés, liste « toujours garder ». Les sacs équipés ne sont pas
+--     verrouillés, favoris (Favorites.lua, ex « toujours garder »). Les sacs équipés ne sont pas
 --     dans les emplacements parcourus : ils ne peuvent pas être proposés.
 --   * la liste « toujours jeter » passe devant tout le reste.
 --
@@ -44,18 +44,18 @@ local FR = {
 	OPT_BAGSPACE_ENABLED   = "Activer le module",
 	OPT_BAGSPACE_FRAME     = "Cadre avec boutons (sinon chat seul)",
 	OPT_BAGSPACE_CONFIRM   = "Confirmation avant de détruire : toujours",
-	OPT_BAGSPACE_KEEP      = "TOUJOURS GARDER",
+	OPT_BAGSPACE_KEEP      = "FAVORIS",
 	OPT_BAGSPACE_DISCARD   = "TOUJOURS JETER EN PREMIER",
 	OPT_BAGSPACE_EMPTY     = "(vide)",
 	OPT_BAGSPACE_MORE      = "et %d autre(s)",
-	OPT_BAGSPACE_HINT      = "/r2q garder [lien] et /r2q jeter-toujours [lien] ajoutent un objet, ou le retirent s'il y est déjà.",
+	OPT_BAGSPACE_HINT      = "/r2q favori [lien] et /r2q jeter-toujours [lien] ajoutent un objet, ou le retirent s'il y est déjà.",
 	BAG_LINE               = "Sac plein — jette : %s ×%d (%s)",
 	BAG_SUGGEST            = "Le moins coûteux à jeter : %s ×%d (%s). Places libres : %d.",
 	BAG_NONE               = "Rien à proposer : tout ce qui reste dans tes sacs est protégé.",
 	BAG_NO_VALUE           = "sans valeur",
 	BAG_BTN_DESTROY        = "Jeter",
 	BAG_BTN_NEXT           = "Autre",
-	BAG_BTN_KEEP           = "Garder toujours",
+	BAG_BTN_KEEP           = "Favori",
 	BAG_CONFIRM            = "Détruire %s ×%d ?\nC'est définitif.",
 	BAG_YES                = "Détruire",
 	BAG_NO                 = "Annuler",
@@ -63,13 +63,11 @@ local FR = {
 	BAG_MOVED              = "L'objet a bougé dans tes sacs : rien n'a été détruit.",
 	BAG_COMBAT             = "En combat : rien n'est détruit. À jeter à la main : %s ×%d (sac %d, case %d).",
 	BAG_MANUAL             = "Destruction impossible depuis l'addon. À jeter à la main : %s ×%d (sac %d, case %d).",
-	BAG_KEEP_ADDED         = "%s : toujours gardé, plus jamais proposé.",
-	BAG_KEEP_REMOVED       = "%s : retiré de « toujours garder ».",
 	BAG_DISCARD_ADDED      = "%s : proposé en premier quand les sacs sont pleins.",
 	BAG_DISCARD_REMOVED    = "%s : retiré de « toujours jeter ».",
-	BAG_NEED_ITEM          = "Indique un objet : /r2q garder [lien] (Maj+clic sur l'objet).",
+	BAG_NEED_ITEM          = "Indique un objet : /r2q jeter-toujours [lien] (Maj+clic sur l'objet).",
 	BAG_MODULE_OFF         = "Le module « Sac plein » est coupé (/r2q module sac on).",
-	HELP_BAGSPACE          = "/r2q jeter -- l'objet le moins coûteux à jeter ; /r2q garder [lien], /r2q jeter-toujours [lien] -- listes",
+	HELP_BAGSPACE          = "/r2q jeter -- l'objet le moins coûteux à jeter ; /r2q jeter-toujours [lien] -- à jeter en premier",
 }
 local EN = {
 	OPT_PAGE_BAGSPACE      = "Full bags",
@@ -77,18 +75,18 @@ local EN = {
 	OPT_BAGSPACE_ENABLED   = "Enable the module",
 	OPT_BAGSPACE_FRAME     = "Frame with buttons (else chat only)",
 	OPT_BAGSPACE_CONFIRM   = "Confirmation before destroying: always",
-	OPT_BAGSPACE_KEEP      = "ALWAYS KEEP",
+	OPT_BAGSPACE_KEEP      = "FAVORITES",
 	OPT_BAGSPACE_DISCARD   = "ALWAYS DISCARD FIRST",
 	OPT_BAGSPACE_EMPTY     = "(empty)",
 	OPT_BAGSPACE_MORE      = "and %d more",
-	OPT_BAGSPACE_HINT      = "/r2q garder [link] and /r2q jeter-toujours [link] add an item, or remove it if it is already listed.",
+	OPT_BAGSPACE_HINT      = "/r2q favori [link] and /r2q jeter-toujours [link] add an item, or remove it if it is already listed.",
 	BAG_LINE               = "Bags full — discard: %s ×%d (%s)",
 	BAG_SUGGEST            = "Cheapest to discard: %s ×%d (%s). Free slots: %d.",
 	BAG_NONE               = "Nothing to suggest: everything left in your bags is protected.",
 	BAG_NO_VALUE           = "no value",
 	BAG_BTN_DESTROY        = "Discard",
 	BAG_BTN_NEXT           = "Other",
-	BAG_BTN_KEEP           = "Always keep",
+	BAG_BTN_KEEP           = "Favorite",
 	BAG_CONFIRM            = "Destroy %s ×%d?\nThis cannot be undone.",
 	BAG_YES                = "Destroy",
 	BAG_NO                 = "Cancel",
@@ -96,13 +94,11 @@ local EN = {
 	BAG_MOVED              = "The item moved in your bags: nothing was destroyed.",
 	BAG_COMBAT             = "In combat: nothing destroyed. Discard it by hand: %s ×%d (bag %d, slot %d).",
 	BAG_MANUAL             = "The addon cannot destroy it. Discard it by hand: %s ×%d (bag %d, slot %d).",
-	BAG_KEEP_ADDED         = "%s: always kept, never suggested again.",
-	BAG_KEEP_REMOVED       = "%s: removed from \"always keep\".",
 	BAG_DISCARD_ADDED      = "%s: suggested first when bags are full.",
 	BAG_DISCARD_REMOVED    = "%s: removed from \"always discard\".",
-	BAG_NEED_ITEM          = "Name an item: /r2q garder [link] (Shift+click the item).",
+	BAG_NEED_ITEM          = "Name an item: /r2q jeter-toujours [link] (Shift+click the item).",
 	BAG_MODULE_OFF         = "The \"Full bags\" module is off (/r2q module sac on).",
-	HELP_BAGSPACE          = "/r2q jeter -- the cheapest item to discard; /r2q garder [link], /r2q jeter-toujours [link] -- lists",
+	HELP_BAGSPACE          = "/r2q jeter -- the cheapest item to discard; /r2q jeter-toujours [link] -- discarded first",
 }
 ns.RegisterStrings(FR, EN)
 -- exposées aux tests : chaque clé doit exister dans les deux langues
@@ -111,7 +107,7 @@ if ns.KEEP_STRINGS then ns.BAGSPACE_STRINGS = { fr = FR, en = EN } end
 ns.RegisterDefaults({
 	bagspaceEnabled = true,
 	bagspaceFrame   = true,
-	bagspaceKeep    = {},   -- [itemID] = nom affiché
+	-- (« toujours garder », bagspaceKeep : devenu les favoris en 1.34.0, Favorites.lua)
 	bagspaceDiscard = {},   -- [itemID] = nom affiché
 })
 
@@ -126,8 +122,15 @@ if ns.AddOptionPage then
 			{ key = "bagspaceEnabled", label = "OPT_BAGSPACE_ENABLED", kind = "bool" },
 			{ key = "bagspaceFrame",   label = "OPT_BAGSPACE_FRAME",   kind = "bool" },
 			{ key = "bagspaceConfirm", kind = "note", text = "OPT_BAGSPACE_CONFIRM" },
+			-- 1.34.0 : « Toujours garder » devient les favoris (Favorites.lua)
 			{ header = "OPT_BAGSPACE_KEEP" },
-			{ key = "bagspaceKeep", kind = "note", text = function() return ns:BagSpaceListText("bagspaceKeep") end },
+			{ key = "favoriteClick", label = "OPT_FAV_CLICK", kind = "action",
+				choices = function() return ns:FavoriteClickChoices() end,
+				current = function() return ns:FavoriteClickChoice().id end,
+				choose = function(value) ns:SetFavoriteClick(value) end },
+			{ key = "favoriteAutoBuyback", label = "OPT_FAV_AUTOBUY", kind = "bool" },
+			{ key = "favoritesHowTo", kind = "note", small = true, text = function() return ns:FavoriteHowToText() end },
+			{ key = "favorites", kind = "note", text = function() return ns:BagSpaceListText("favorites") end },
 			{ header = "OPT_BAGSPACE_DISCARD" },
 			{ key = "bagspaceDiscard", kind = "note", text = function() return ns:BagSpaceListText("bagspaceDiscard") end },
 			{ key = "bagspaceHint", kind = "note", small = true, text = "OPT_BAGSPACE_HINT" },
@@ -319,7 +322,7 @@ end
 
 function ns:BagSpaceCandidates()
 	local db = self:DB()
-	local keep, discard = ListOf(db, "bagspaceKeep"), ListOf(db, "bagspaceDiscard")
+	local keep, discard = ListOf(db, "favorites"), ListOf(db, "bagspaceDiscard")
 	local protected = ProtectedItems()
 	local hunter = PlayerClass() == "HUNTER"
 
@@ -515,15 +518,13 @@ local function ToggleList(key, otherKey, itemID, name)
 	return true
 end
 
+-- « Garder » : ce sont les favoris (Favorites.lua), même liste, mêmes messages
 function ns:BagSpaceToggleKeep(itemID, name)
-	local added = ToggleList("bagspaceKeep", "bagspaceDiscard", itemID, name or DisplayName(itemID))
-	self:Print(self:F(added and "BAG_KEEP_ADDED" or "BAG_KEEP_REMOVED", name or DisplayName(itemID)))
-	if self.RefreshOptions then self:RefreshOptions() end
-	return added
+	return self:ToggleFavorite(itemID, name or DisplayName(itemID))
 end
 
 function ns:BagSpaceToggleDiscard(itemID, name)
-	local added = ToggleList("bagspaceDiscard", "bagspaceKeep", itemID, name or DisplayName(itemID))
+	local added = ToggleList("bagspaceDiscard", "favorites", itemID, name or DisplayName(itemID))
 	self:Print(self:F(added and "BAG_DISCARD_ADDED" or "BAG_DISCARD_REMOVED", name or DisplayName(itemID)))
 	if self.RefreshOptions then self:RefreshOptions() end
 	return added
@@ -533,9 +534,7 @@ function ns:BagSpaceKeepCurrent()
 	local candidate = self:BagSpaceCurrent()
 	if not candidate then return nil end
 	local name = DisplayName(candidate.itemID, candidate.link)
-	ListOf(self:DB(), "bagspaceKeep")[candidate.itemID] = name
-	ListOf(self:DB(), "bagspaceDiscard")[candidate.itemID] = nil
-	self:Print(self:F("BAG_KEEP_ADDED", name))
+	self:SetFavorite(candidate.itemID, true, name)
 	local list = self:BagSpaceCandidates()
 	self.bagspace = { list = list, index = 1 }
 	if #list == 0 then
@@ -648,6 +647,27 @@ function ns:EnsureBagSpaceFrame()
 	frame.text:SetWidth(WIDTH - left - 6 - 18 - 8)
 	frame.text:SetJustifyH("LEFT")
 	frame.text:SetWordWrap(false)
+	-- 1.34.0 : survol de l'objet proposé = infobulle du jeu ; Maj+clic = lien
+	frame.itemArea = CreateFrame("Button", nil, frame)
+	frame.itemArea:SetAllPoints(frame.text)
+	if frame.itemArea.EnableMouse then frame.itemArea:EnableMouse(true) end
+	frame.itemArea:SetScript("OnEnter", function(area)
+		area.hovering = true
+		ns:BagSpaceItemTooltip(area)
+	end)
+	frame.itemArea:SetScript("OnLeave", function(area)
+		area.hovering = nil
+		local tip = rawget(_G, "GameTooltip")
+		if type(tip) == "table" and tip.Hide then tip:Hide() end
+	end)
+	frame.itemArea:SetScript("OnClick", function()
+		local c = ns:BagSpaceCurrent()
+		local shift = Global("IsShiftKeyDown")
+		if c and shift and shift() then
+			local link = Global("HandleModifiedItemClick")
+			if link then pcall(link, c.link) end
+		end
+	end)
 
 	frame.destroyButton = Theme.CreateButton(frame, nil, 22, L.BAG_BTN_DESTROY, function() ns:BagSpaceRequestDestroy() end, "primary")
 	frame.destroyButton:SetPoint("BOTTOMLEFT", frame, "BOTTOMLEFT", left, 8)
@@ -667,6 +687,27 @@ function ns:RefreshBagSpaceFrame()
 	if not frame then return end
 	if not c then frame:Hide(); return end
 	frame.text:SetText(self:BagSpaceLine(c))
+	-- [Autre] sous la souris : l'infobulle suit le nouveau candidat
+	if frame.itemArea and frame.itemArea.hovering then self:BagSpaceItemTooltip(frame.itemArea) end
+end
+
+-- Infobulle du candidat : sa case (SetBagItem), sinon son lien si la case a
+-- changé ou que l'API manque. Renvoie la voie prise ("bag", "link") ou nil.
+function ns:BagSpaceItemTooltip(owner)
+	local c = self:BagSpaceCurrent()
+	local tip = rawget(_G, "GameTooltip")
+	if not c or type(tip) ~= "table" or type(tip.SetOwner) ~= "function" then return nil end
+	tip:SetOwner(owner, "ANCHOR_RIGHT")
+	local how
+	local info = ContainerInfo(c.bag, c.slot)
+	if info and info.itemID == c.itemID and type(tip.SetBagItem) == "function"
+		and pcall(tip.SetBagItem, tip, c.bag, c.slot) then
+		how = "bag"
+	elseif type(c.link) == "string" and type(tip.SetHyperlink) == "function" and pcall(tip.SetHyperlink, tip, c.link) then
+		how = "link"
+	end
+	tip:Show()
+	return how
 end
 
 function ns:ShowBagSpaceFrame()
@@ -675,6 +716,10 @@ function ns:ShowBagSpaceFrame()
 	self:RefreshBagSpaceFrame()
 	if not frame:IsShown() then
 		frame:Show()
+		-- 1.34.0 : jamais sur une autre fenêtre ouverte ; position du joueur gardée
+		if ns.PopupPlace then
+			ns.PopupPlace(frame, { userPlaced = function() return type(ns:DB().bagspacePoint) == "table" end })
+		end
 		if Theme.FadeIn then Theme.FadeIn(frame, 0.15) end
 	end
 	return frame
@@ -731,7 +776,7 @@ local function ListText(list)
 	return text
 end
 
--- « bagspaceKeep » ou « bagspaceDiscard » : les noms, triés, bornés
+-- « favorites » ou « bagspaceDiscard » : les noms, triés, bornés
 function ns:BagSpaceListText(key)
 	return ListText(ListOf(self:DB(), key))
 end

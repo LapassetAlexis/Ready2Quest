@@ -386,6 +386,13 @@ local function Build(self, frame, content, ui)
 	local pane = CreateFrame("Frame", nil, content)
 	pane:SetAllPoints()
 	frame.guide = pane
+	-- 3.0.1 bêta 3 : un fond opaque propre à la page, sous tout le reste. Une
+	-- autre fenêtre de même strate (les réglages de Ready2Quest) pouvait
+	-- s'intercaler entre le fond du carnet et cette page : on la voyait au
+	-- travers. Même couleur que le fond de la fenêtre : rien ne change à l'œil.
+	pane.base = pane:CreateTexture(nil, "BACKGROUND", nil, -8)
+	pane.base:SetColorTexture(Theme.WINDOW[1], Theme.WINDOW[2], Theme.WINDOW[3], 1)
+	pane.base:SetAllPoints(pane)
 	pane.RX, pane.RW = RX, RW
 	pane.bodyTop = TOP - TITLE_H
 	pane.areaH = pane.bodyTop - (PAGER_Y + AREA_BOTTOM)

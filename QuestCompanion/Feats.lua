@@ -55,6 +55,11 @@ local FR = {
 	FEAT_TOAST_TITLE     = "Haut fait obtenu",
 	FEAT_TOAST_MANY_TITLE = "Hauts faits obtenus",
 	FEAT_TOAST_MANY      = "%d hauts faits · +%d points",
+	FEAT_TOAST_MANY_HEAD = "%d hauts faits obtenus",
+	FEAT_TOAST_MORE_1    = "et 1 autre",
+	FEAT_TOAST_MORE      = "et %d autres",
+	FEAT_CHAT_MANY       = "Hauts faits obtenus : %s (%d points).",
+	FEAT_CHAT_MANY_CONT  = "… %s",
 	FEAT_TOAST_NEW_TITLE = "Nouveau titre : %s",
 	FEAT_CHAT            = "Haut fait obtenu : %s (+%d points).",
 	FEAT_RETRO           = "Hauts faits : %d obtenu(s) d'après ta progression (%d points). /qc hf pour les voir.",
@@ -87,6 +92,11 @@ local EN = {
 	FEAT_TOAST_TITLE     = "Achievement earned",
 	FEAT_TOAST_MANY_TITLE = "Achievements earned",
 	FEAT_TOAST_MANY      = "%d achievements · +%d points",
+	FEAT_TOAST_MANY_HEAD = "%d achievements earned",
+	FEAT_TOAST_MORE_1    = "and 1 more",
+	FEAT_TOAST_MORE      = "and %d more",
+	FEAT_CHAT_MANY       = "Achievements earned: %s (%d points).",
+	FEAT_CHAT_MANY_CONT  = "… %s",
 	FEAT_TOAST_NEW_TITLE = "New title: %s",
 	FEAT_CHAT            = "Achievement earned: %s (+%d points).",
 	FEAT_RETRO           = "Achievements: %d earned from your progress (%d points). /qc hf to see them.",
@@ -809,6 +819,75 @@ function ns:FeatQueue(record)
 	Wake()
 end
 
+-- 3.0.1 : le bandeau groupé nomme ses hauts faits. Jusqu'à 3 noms séparés
+-- par « · », puis « et N autres » ; `fits(texte)` dit si la ligne tient dans
+-- le bandeau : on retire des noms, puis on raccourcit le premier (…).
+local NAMES_SHOWN = 3
+function ns:FeatNamesLine(names, fits)
+	fits = fits or function() return true end
+	local count = #names
+	local function Line(k, first)
+		local shown = { first or names[1] }
+		for i = 2, k do shown[i] = names[i] end
+		local text = table.concat(shown, " · ")
+		local rest = count - k
+		if rest == 1 then text = text .. " " .. L.FEAT_TOAST_MORE_1
+		elseif rest > 1 then text = text .. " " .. self:F("FEAT_TOAST_MORE", rest) end
+		return text
+	end
+	for k = math.min(NAMES_SHOWN, count), 1, -1 do
+		local text = Line(k)
+		if fits(text) then return text end
+	end
+	-- même un seul nom ne tient pas : raccourci, caractère par caractère (UTF-8)
+	local first = tostring(names[1] or "")
+	while #first > 1 do
+		first = first:gsub("[%z\1-\127\194-\244][\128-\191]*$", "")
+		local text = Line(1, first .. "…")
+		if fits(text) then return text end
+	end
+	return Line(1, "…")
+end
+
+-- La ligne de chat d'un lot : tous les noms, en lignes d'environ 250 octets
+local CHAT_LINE = 250
+function ns:FeatChatLines(names, pts)
+	local lines, current = {}, {}
+	local function Width(list) return #table.concat(list, ", ") end
+	for _, name in ipairs(names) do
+		current[#current + 1] = name
+		if #current > 1 and Width(current) > CHAT_LINE - 40 then
+			table.remove(current)
+			lines[#lines + 1] = table.concat(current, ", ")
+			current = { name }
+		end
+	end
+	if #current > 0 then lines[#lines + 1] = table.concat(current, ", ") end
+	local out = {}
+	for index, chunk in ipairs(lines) do
+		if index == #lines then
+			out[#out + 1] = index == 1 and self:F("FEAT_CHAT_MANY", chunk, pts) or self:F("FEAT_CHAT_MANY_CONT", self:F("FEAT_CHAT_MANY", chunk, pts):match(": (.*)$") or chunk)
+		elseif index == 1 then
+			out[#out + 1] = (self:F("FEAT_CHAT_MANY", chunk, pts):match("^(.-: )") or "") .. chunk .. ","
+		else
+			out[#out + 1] = self:F("FEAT_CHAT_MANY_CONT", chunk .. ",")
+		end
+	end
+	return out
+end
+
+-- Clic sur un bandeau groupé : la page Hauts faits, les obtenus (du plus
+-- récent au plus ancien), en haut de la liste
+function ns:FeatOpenRecent()
+	self:DB().featsFilter = "got"
+	local frame = self.OpenJournalFeats and self:OpenJournalFeats("all")
+	if frame then
+		frame.featsOffset = 0
+		if self.RefreshJournal then pcall(self.RefreshJournal, self) end
+	end
+	return frame
+end
+
 -- Annonce ce qui attend : jamais en combat ni pendant la sourdine de capture.
 -- À partir de 3 (ou avec un lot de rattrapage) : un seul bandeau groupé.
 function ns:FeatFlush(force)
@@ -819,18 +898,34 @@ function ns:FeatFlush(force)
 	self.featPending, self.featFlushAt = {}, nil
 	local db = self:DB()
 	local units, pts, grouped = 0, 0, false
+	local names, namedPts = {}, 0
 	for _, record in ipairs(pending) do
 		units, pts = units + (record.many or 1), pts + (record.pts or 0)
-		if record.many then grouped = true end
-		if not record.many and db.featChat == true then self:Print(self:F("FEAT_CHAT", record.name, record.pts or 0)) end
+		if record.many then grouped = true
+		else names[#names + 1] = record.name; namedPts = namedPts + (record.pts or 0) end
+	end
+	local collapse = grouped or units >= TOAST_COLLAPSE
+	if collapse then
+		-- 3.0.1 : un lot = une ligne de chat qui les nomme tous (même sans le
+		-- réglage « une ligne par haut fait » : sinon la liste se perd)
+		if #names > 0 then
+			for _, line in ipairs(self:FeatChatLines(names, namedPts)) do self:Print(line) end
+		end
+	elseif db.featChat == true then
+		for _, record in ipairs(pending) do self:Print(self:F("FEAT_CHAT", record.name, record.pts or 0)) end
 	end
 	if db.featToast == false or not self.JournalToastPush then return true end
 	local function Fanfare() PlayFanfare(ns) end
-	if grouped or units >= TOAST_COLLAPSE then
+	local function Open() ns:FeatOpenRecent() end
+	if collapse then
 		local text = self:F("FEAT_TOAST_MANY", units, pts)
 		local metaCat = Index().cats.meta
-		self:JournalToastPush({ kind = "feat", title = L.FEAT_TOAST_MANY_TITLE, name = text, message = text,
-			icon = metaCat and metaCat.icon, points = pts, onShow = Fanfare, count = units })
+		-- rattrapage de connexion (sans noms) : le texte d'avant ; sinon les
+		-- noms (ajustés au bandeau), le compte et les points dans le titre
+		local named = not grouped and #names > 0
+		self:JournalToastPush({ kind = "feat", title = named and self:F("FEAT_TOAST_MANY_HEAD", units) or L.FEAT_TOAST_MANY_TITLE,
+			name = text, message = text, names = named and names or nil,
+			icon = metaCat and metaCat.icon, points = pts, onShow = Fanfare, onClick = Open, count = units })
 	else
 		for _, record in ipairs(pending) do
 			self:JournalToastPush({ kind = "feat", title = L.FEAT_TOAST_TITLE, name = record.name, id = record.id,

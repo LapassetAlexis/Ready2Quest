@@ -1484,8 +1484,9 @@ Say("\n== panneau de réglages ==")
 ResetWorld()
 NS:RefreshOptions()   -- sans panneau : ne doit pas planter
 NS:HandleCommand("options")
-Check("panneau créé et affiché : 32 lignes (17 réglages + 2 actions + 13 contrôles)", NS.optionsFrame
-	and NS.optionsFrame.shown == true and #NS.optionsFrame.rows == 32, NS.optionsFrame and #NS.optionsFrame.rows)
+-- 1.34.0 : + la carte Quest Companion (page Général)
+Check("panneau créé et affiché : 33 lignes (17 réglages + 3 actions + 13 contrôles)", NS.optionsFrame
+	and NS.optionsFrame.shown == true and #NS.optionsFrame.rows == 33, NS.optionsFrame and #NS.optionsFrame.rows)
 do
 	-- on repère les lignes par leur clé : l'ordre du panneau peut évoluer
 	local boolRow, numberRow
@@ -1837,7 +1838,7 @@ ResetWorld()
 -- 4.38 Bootstrap : la commande survit à un échec de chargement
 Say("\n== bootstrap et diagnostic ==")
 ResetWorld()
-Check("version exposée", NS.version == "1.33.3", NS.version)
+Check("version exposée", NS.version == "1.34.0", NS.version)
 do
 	local missingMods = {}
 	for _, name in ipairs({ "Bootstrap", "Locales", "Compat", "Theme", "Core", "Buffs", "Reagents",
@@ -1858,7 +1859,7 @@ do
 	Mock:Reset()
 	NS:HandleCommand("diag")
 	Check("/sd diag liste les modules et la version", Mock:Output():find("modules :") ~= nil
-		and Mock:Output():find("1%.33%.3") ~= nil, Mock:Output())
+		and Mock:Output():find("1%.34%.0") ~= nil, Mock:Output())
 
 	-- une erreur est enregistrée et affichée
 	Mock:Reset()
@@ -3008,7 +3009,7 @@ do
 	Mock.world.fontRefused = false
 	Check("sans templates ni police : même fenêtre, titrée, complète", fallback.chrome == "window"
 		and fallback.header ~= nil and tostring(fallback.header.title.text) ~= ""
-		and fallback.rows ~= nil and #fallback.rows == 32, fallback.rows and #fallback.rows)
+		and fallback.rows ~= nil and #fallback.rows == 33, fallback.rows and #fallback.rows)
 end
 Mock.world.noBackdropTemplate = false
 
@@ -3667,7 +3668,8 @@ Check("[ID] chaque page a sa phrase d'explication", subs == pageCount and pageCo
 local displayRows = {}
 for _, row in ipairs(o.pages.general.rows) do if row.def then displayRows[row.def.key] = true end end
 Check("[AFF] Général réunit l'affichage", displayRows.showMinimap and displayRows.minimapPos and displayRows.showWindow
-	and displayRows.popupScore and o.pages.general.sectionHeaders and #o.pages.general.sectionHeaders == 1)
+	and displayRows.popupScore and o.pages.general.sectionHeaders and #o.pages.general.sectionHeaders == 2
+	and displayRows.qcAction)
 -- bug signalé en jeu : cliquer sur « Stats du portrait » ou « Résumé de stuff »
 -- ouvrait Général. Chaque module a maintenant sa page, qui explique ce qu'il fait.
 local pageBugs = {}

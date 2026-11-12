@@ -141,6 +141,8 @@ do
 			and HF.earned[1].announce == false and HF.earned[1].retro == false)
 		s.ok("sa récompense : un appât", NS:CaptureAidCount("appat") >= 1)
 		s.check("[HF] capture réussie : « Premier filet » obtenu à la passe groupée suivante, avec sa récompense")
+		-- 3.0.1 : le bandeau « Capturé ! » passe d'abord (Banners.lua) ; il se ferme
+		if NS.CaptureResultHide then NS:CaptureResultHide() end
 		HF.Run(2)
 		local toast = NS.journalToast
 		Check("[HF] bandeau « Haut fait obtenu » : nom, points dans le bouclier, icône de la catégorie ; fanfare, pas de chat",
@@ -387,9 +389,13 @@ do
 		HF.Run(5)
 		NS:FeatAward("char_level_30"); NS:FeatAward("char_level_40"); NS:FeatAward("char_level_50")
 		HF.Run(2)
-		s.ok("trois d'un coup : un seul", toast:IsShown() and toast.text:GetText() == "3 hauts faits · +30 points"
+		-- 3.0.1 : le bandeau groupé nomme ses hauts faits (compte dans le titre, points dans le bouclier)
+		s.ok("trois d'un coup : un seul, qui les nomme", toast:IsShown() and toast.text:GetText() == "À mi-chemin · En selle · Vétéran"
+			and toast.title:GetText():find("3 HAUTS FAITS OBTENUS", 1, true) == 1
 			and toast.featPoints:GetText() == "30" and #NS.journalToasts == 0, toast.text:GetText())
-		s.check("[HF] bandeaux : deux l'un après l'autre, trois d'un coup en un seul « 3 hauts faits · +30 points »")
+		s.ok("une ligne de chat qui les nomme", Mock:Output():find("Hauts faits obtenus : À mi-chemin, En selle, Vétéran (30 points).", 1, true) ~= nil,
+			Mock:Output())
+		s.check("[HF] bandeaux : deux l'un après l'autre, trois d'un coup en un seul bandeau qui les nomme")
 		HF.Run(5)
 		HF.Reset(60)
 		local meta = NS.FeatAdd({ "test_meta_pts", 902, "meta", 10, "account", crit = { "points", 10 } })
