@@ -886,7 +886,7 @@ function ns:FavoritesBaganator()
 			texture:SetSize(LOCK_SIZE, LOCK_SIZE)
 			return texture
 		end,
-		{ corner = "top_left", priority = 1 })
+		{ corner = "top_right", priority = 1 })
 	self.favoritesBaganator = ok and "registered" or "failed"
 	return self.favoritesBaganator
 end

@@ -645,7 +645,7 @@ do
 	s.ok("inscrit une fois", #calls == 1 and NS.favoritesBaganator == "registered")
 	Mock:Fire("ADDON_LOADED", "Baganator")
 	s.ok("pas deux fois", #calls == 1)
-	s.ok("libellé et coin", call and call.label == "Favori (Ready2Quest)" and call.position.corner == "top_left")
+	s.ok("libellé et coin", call and call.label == "Favori (Ready2Quest)" and call.position.corner == "top_right")
 	local tex = call and call.onInit(CreateFrame("Button", nil, UIParent))
 	s.ok("cadenas du client", tex and tex.texture == "Interface\\Buttons\\LockButton-Locked-Up")
 	NS:SetFavorite(BLUE, true, nil, true)
