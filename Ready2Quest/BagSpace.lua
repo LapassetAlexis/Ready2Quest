@@ -715,6 +715,10 @@ function ns:ShowBagSpaceFrame()
 	self:RefreshBagSpaceFrame()
 	if not frame:IsShown() then
 		frame:Show()
+		-- 1.34.0 : jamais sur une autre fenêtre ouverte ; position du joueur gardée
+		if ns.PopupPlace then
+			ns.PopupPlace(frame, { userPlaced = function() return type(ns:DB().bagspacePoint) == "table" end })
+		end
 		if Theme.FadeIn then Theme.FadeIn(frame, 0.15) end
 	end
 	return frame

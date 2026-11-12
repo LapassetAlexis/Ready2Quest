@@ -26,9 +26,9 @@ local Theme = ns.Theme
 local NUM_BAG_SLOTS   = 4
 local MAX_CONTAINERS  = 13
 local MAX_BAG_ITEMS   = 36
-local LOCK_TEXTURE    = "Interface\\PetBattles\\PetBattle-LockIcon"
+local LOCK_TEXTURE    = "Interface\\Buttons\\LockButton-Locked-Up"
 local HILITE_TEXTURE  = "Interface\\Buttons\\ButtonHilight-Square"
-local LOCK_SIZE       = 14
+local LOCK_SIZE       = 16
 local POPUP_SELL      = "READY2QUEST_FAVORITE_SELL"
 local POPUP_BUYBACK   = "READY2QUEST_FAVORITE_BUYBACK"
 

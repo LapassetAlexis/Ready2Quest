@@ -62,7 +62,7 @@ end
 -- PLACE_DATA, DUNGEONS…) sont partagées telles quelles (ns.SocleData).
 -- Empreinte différente : chacun sa copie, comme avant.
 -- socle:empreinte (écrit par tools/sync_socle.py, ne pas éditer)
-local SOCLE_ID = "5711b540"
+local SOCLE_ID = "d324e10d"
 -- /socle:empreinte
 local REGISTRY = rawget(_G, "ReadyToQuestSocle")
 if type(REGISTRY) ~= "table" then
@@ -146,6 +146,144 @@ function ns.OtherAddon()
 	end
 	return nil
 end
+
+-- ---------------------------------------------------------------------------
+-- socle 3.0.1 : « couloir » des fenêtres centrales, commun aux deux addons.
+-- Place au butin (R2Q), Tout capturer et la carte de capture (QC) s'ouvraient
+-- ensemble au centre de l'écran, l'une sur l'autre. Chaque fenêtre de ce
+-- genre s'annonce à l'ouverture : ns.PopupPlace(cadre, opts). Si elle en
+-- chevauche une autre déjà ouverte, elle se met à côté (du côté où il y a la
+-- place, 12 px d'écart), sinon dessous. Rien ne bouge quand une fenêtre se
+-- ferme ; seule une fenêtre qui s'ouvre se place. Seule, elle revient à sa
+-- place habituelle. Une fenêtre déplacée par le joueur (glissée pendant la
+-- session, IsUserPlaced, ou opts.userPlaced() vrai) n'est jamais déplacée.
+-- Le registre est REGISTRY.popups (_G.ReadyToQuestSocle), la même table pour
+-- les deux addons, comme ns.Shared ; les fonctions sont posées par la
+-- version la plus récente (POPUPS_VERSION).
+-- ---------------------------------------------------------------------------
+local POPUPS_VERSION = 1
+local Popups = REGISTRY.popups
+if type(Popups) ~= "table" then
+	Popups = { frames = {}, serial = 0 }
+	REGISTRY.popups = Popups
+end
+if (tonumber(Popups.version) or 0) < POPUPS_VERSION then
+	Popups.version = POPUPS_VERSION
+	Popups.GAP = 12
+	local function Get(object, name, ...)
+		if type(object) ~= "table" or type(object[name]) ~= "function" then return nil end
+		local ok, a, b, c, d, e = pcall(object[name], object, ...)
+		if ok then return a, b, c, d, e end
+		return nil
+	end
+	local function Root() return rawget(_G, "UIParent") end
+	local function Scale(frame)
+		local own = tonumber(Get(frame, "GetEffectiveScale")) or 1
+		local root = tonumber(Get(Root(), "GetEffectiveScale")) or 1
+		if own <= 0 or root <= 0 then return 1 end
+		return own / root
+	end
+	-- rectangle en unités d'UIParent, ou nil si le client ne le donne pas
+	function Popups.Rect(frame)
+		local l, r = tonumber(Get(frame, "GetLeft")), tonumber(Get(frame, "GetRight"))
+		local t, b = tonumber(Get(frame, "GetTop")), tonumber(Get(frame, "GetBottom"))
+		if not (l and r and t and b) then return nil end
+		local s = Scale(frame)
+		return { l = l * s, r = r * s, t = t * s, b = b * s }
+	end
+	function Popups.Overlap(a, b)
+		return a.l < b.r and b.l < a.r and a.b < b.t and b.b < a.t
+	end
+	local function Visible(frame)
+		if type(frame.IsVisible) == "function" then return Get(frame, "IsVisible") and true or false end
+		return Get(frame, "IsShown") and true or false
+	end
+	function Popups.Register(frame, opts)
+		local entry = Popups.frames[frame]
+		if not entry then
+			entry = {}
+			Popups.frames[frame] = entry
+			local point, rel, relPoint, x, y = Get(frame, "GetPoint", 1)
+			if point then entry.home = { point, rel, relPoint or point, x or 0, y or 0 } end
+			-- glissée par le joueur : plus jamais déplacée (cette session)
+			if type(frame.HookScript) == "function" then
+				pcall(frame.HookScript, frame, "OnDragStop", function() entry.user = true end)
+			end
+		end
+		if type(opts) == "table" and type(opts.userPlaced) == "function" then entry.userPlaced = opts.userPlaced end
+		return entry
+	end
+	function Popups.UserPlaced(frame)
+		local entry = Popups.frames[frame]
+		if entry and entry.user then return true end
+		if entry and entry.userPlaced then
+			local ok, placed = pcall(entry.userPlaced, frame)
+			if ok and placed then return true end
+		end
+		return Get(frame, "IsUserPlaced") and true or false
+	end
+	local function Move(frame, left, top)
+		local s = Scale(frame)
+		frame:ClearAllPoints()
+		frame:SetPoint("TOPLEFT", Root(), "BOTTOMLEFT", left / s, top / s)
+	end
+	-- Place `frame` (qui vient de s'ouvrir). Renvoie "user", "home",
+	-- "right", "left", "below", ou "unknown" (géométrie illisible).
+	function Popups.Place(frame, opts)
+		if type(frame) ~= "table" then return nil end
+		local entry = Popups.Register(frame, opts)
+		if Popups.UserPlaced(frame) then return "user" end
+		Popups.serial = (Popups.serial or 0) + 1
+		entry.order = Popups.serial
+		local home = entry.home
+		if home and type(frame.ClearAllPoints) == "function" then
+			frame:ClearAllPoints()
+			frame:SetPoint(home[1], home[2], home[3], home[4], home[5])
+		end
+		local others = {}
+		for other, data in pairs(Popups.frames) do
+			if other ~= frame and Visible(other) then
+				local rect = Popups.Rect(other)
+				if rect then rect.order = data.order or 0; others[#others + 1] = rect end
+			end
+		end
+		if #others == 0 then return "home" end
+		local me = Popups.Rect(frame)
+		if not me then return "unknown" end
+		local width, height = me.r - me.l, me.t - me.b
+		local screenW = tonumber(Get(Root(), "GetWidth")) or 0
+		local screenH = tonumber(Get(Root(), "GetHeight")) or 0
+		local function Fits(l, t)
+			local rect = { l = l, r = l + width, t = t, b = t - height }
+			if screenW > 0 and (rect.l < 0 or rect.r > screenW) then return false end
+			if screenH > 0 and (rect.b < 0 or rect.t > screenH) then return false end
+			for _, o in ipairs(others) do if Popups.Overlap(rect, o) then return false end end
+			return true
+		end
+		if Fits(me.l, me.t) then return "home" end
+		table.sort(others, function(a, b) return a.order < b.order end)
+		local gap = Popups.GAP
+		for _, o in ipairs(others) do
+			local tries = {
+				{ "right", o.r + gap, o.t, screenW - o.r },
+				{ "left", o.l - gap - width, o.t, o.l },
+			}
+			-- d'abord le côté qui a le plus de place
+			if tries[2][4] > tries[1][4] then tries[1], tries[2] = tries[2], tries[1] end
+			tries[3] = { "below", o.l, o.b - gap }
+			for _, try in ipairs(tries) do
+				if Fits(try[2], try[3]) then Move(frame, try[2], try[3]); return try[1] end
+			end
+		end
+		-- nulle part : sous la première, gardée à l'écran
+		local first = others[1]
+		Move(frame, math.max(0, first.l), math.max(height, first.b - gap))
+		return "below"
+	end
+end
+ns.Popups = Popups
+function ns.PopupPlace(frame, opts) return Popups.Place(frame, opts) end
+
 ns.version = APP.version
 ns.Loaded = {}
 ns.loadOrder = {}

@@ -614,9 +614,12 @@ function ns:LootRoomOpen(manual)
 	local frame = self:EnsureLootRoom()
 	if not frame then return nil end
 	if not manual and #self:LootRoomLoot() == 0 then return nil end
-	if not frame:IsShown() then self.lootRoomOffset = 0 end
+	local fresh = not frame:IsShown()
+	if fresh then self.lootRoomOffset = 0 end
 	frame:Show()
 	self:LootRoomRefresh()
+	-- 1.34.0 : à côté d'une fenêtre de QuestCompanion déjà ouverte (socle)
+	if fresh and ns.PopupPlace then ns.PopupPlace(frame) end
 	return frame
 end
 

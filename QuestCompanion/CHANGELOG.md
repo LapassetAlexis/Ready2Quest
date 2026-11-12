@@ -1,5 +1,11 @@
 # QuestCompanion
 
+## 3.0.1
+
+- **Les fenêtres de QuestCompanion et Ready2Quest ne se chevauchent plus** : quand « Tout capturer » ou la carte de capture s'ouvre alors que « Place au butin » (ou « Sac plein ») de Ready2Quest est déjà à l'écran, elle se met à côté, du côté où il y a la place (sinon dessous). La capture animée reste dans sa fenêtre. Une fenêtre que tu as déplacée n'est jamais bougée.
+
+*English:* QuestCompanion and Ready2Quest windows no longer overlap — when "Capture all" or the capture card opens while Ready2Quest's "Loot room" (or "Full bags") is already on screen, it moves beside it, on the side with room (otherwise below). The capture animation stays inside its window. A window you moved yourself is never moved.
+
 ## 3.0.0 — chaque capture est unique
 
 - **Des spécimens** : chaque capture est un spécimen à part, avec sa qualité (1 à 3 étoiles), brillant ou non, et son origine (qui, où, quand). Ton meilleur spécimen de chaque espèce va au **Codex** ; les autres rejoignent ta **Réserve**. Ta collection est reprise telle quelle (rien n'est perdu).

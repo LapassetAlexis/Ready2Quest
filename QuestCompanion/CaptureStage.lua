@@ -817,6 +817,8 @@ function ns:CaptureShowStage(rolling)
 	-- (venue de la préparation : déjà à l'écran, pas de nouveau fondu)
 	local fresh = not frame:IsShown()
 	frame:Show()
+	-- 3.0.1 : à côté d'une autre fenêtre déjà ouverte (socle)
+	if fresh and ns.PopupPlace then ns.PopupPlace(frame) end
 	if fresh and Theme.FadeIn then pcall(Theme.FadeIn, frame) end
 	self:CaptureStageUpdate(Clock())
 	return frame
@@ -1616,6 +1618,8 @@ function ns:CapturePrepOpen(candidate)
 	StageHeader(self, frame, picked, true)
 	frame.details:Show()
 	frame:Show()
+	-- 3.0.1 : à côté d'une autre fenêtre déjà ouverte (socle)
+	if fresh and ns.PopupPlace then ns.PopupPlace(frame) end
 	if fresh and Theme.FadeIn then pcall(Theme.FadeIn, frame) end
 	-- dès l'ouverture, le temps de la file s'arrête (Échap : il reprend)
 	if self.CaptureQueueHold then self:CaptureQueueHold("prep") end

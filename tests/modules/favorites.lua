@@ -206,7 +206,7 @@ do
 	s.ok("les deux Os ont leur cadenas", F.Lock(1) and F.Lock(4))
 	s.ok("pas de cadenas ailleurs", not F.Lock(2) and not F.Lock(3))
 	local lock = NS.favoriteLocks[F.frame.Items[1]]
-	s.ok("texture du client, en haut à gauche", lock.texture == "Interface\\PetBattles\\PetBattle-LockIcon"
+	s.ok("texture du client, en haut à gauche", lock.texture == "Interface\\Buttons\\LockButton-Locked-Up"
 		and (select(1, lock:GetPoint())) == "TOPLEFT")
 	s.ok("pas de cadenas créé pour une case non favorite", NS.favoriteLocks[F.frame.Items[2]] == nil)
 	-- l'objet bouge : la case 1 se vide, le blanc arrive en case 4
