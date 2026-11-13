@@ -49,5 +49,6 @@ Favorites.lua
 BagSpace.lua
 LootRoom.lua
 SpellRanks.lua
+TrainAll.lua
 Death.lua
 Aggro.lua

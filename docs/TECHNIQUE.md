@@ -1,5 +1,17 @@
 # Ready2Quest — notes techniques et historique
 
+## Ready2Quest 1.35.0 — « Tout apprendre » chez le maître
+
+`TrainAll.lua` (après `SpellRanks.lua`) : sur `ClassTrainerFrame`, à gauche de « Apprendre », un bouton du client (`UIPanelButtonTemplate`, repli sur le bouton du thème) « Tout apprendre (total) ».
+
+- **Compte** : `ns:TrainAllScan()` parcourt `GetNumTrainerServices` ; un service est à apprendre si `"available"` figure parmi les quatre premiers retours de `GetTrainerServiceInfo` (son rang varie selon les clients) ; total par `GetTrainerServiceCost`.
+- **Pas assez d'or pour tout** : bouton grisé, l'infobulle dit le manque (`SetMotionScriptsWhileDisabled`). Rien n'est acheté à moitié.
+- **Série** : `ns:TrainAllStart()` au clic seulement ; `ns:TrainAllStep()` achète le premier service disponible, puis attend `TRAINER_UPDATE`. Un service de moins : compté, on continue. Rien n'a bougé : refus du serveur, la série s'arrête. Silence de plus de `TRAINALL_TIMEOUT` (3 s, tâche d'horloge `trainAll`) : arrêt. Garde-fou `TRAINALL_MAX` (200). Bilan dans le chat (appris, dépensé).
+- **Écoute** : `TRAINER_SHOW` toujours ; `TRAINER_UPDATE`, `TRAINER_CLOSED`, `PLAYER_MONEY` seulement fenêtre ouverte (`ns.On` / `ns.Off`).
+- **Réglage** : `trainAllEnabled` (vrai par défaut), ajouté à la page « Rangs de sorts ».
+- **Tests** : `tests/modules/train_all.lua` (`[TRN]`, 13 contrôles).
+- **À voir en jeu** : que Forever a bien `GetTrainerServiceInfo` / `BuyTrainerService` et `ClassTrainerFrame` / `ClassTrainerTrainButton` ; que `BuyTrainerService` accepte d'être appelé après `TRAINER_UPDATE` (hors clic) ; place du bouton sur la fenêtre ; maîtres de métier.
+
 ## Ready2Quest 1.35.0 — « Groupe prêt » sur la fiche de donjon
 
 Forever n'a ni recherche de donjon ni pierre de rencontre (étude de marché du 2026-11-13 : premier manque). `GroupReady.lua` (chargé après `Dungeon.lua`) fait répondre les membres du groupe qui ont Ready2Quest, par message d'addon : rien dans le chat du groupe, aucune annonce automatique.
