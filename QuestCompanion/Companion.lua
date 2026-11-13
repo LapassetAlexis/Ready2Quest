@@ -604,6 +604,9 @@ ns.AddOptionPage({
 			describe = function(value) return L["COMP_CHATTER_DESC_" .. value] end,
 			tooltip = function() return ns:CompanionChatterTooltip() end,
 			onChange = function(value) ns:CompanionOnChatterChanged(value) end },
+		-- 3.1.0 : astuces de découverte de l'addon (Discovery.lua : chaînes et défaut)
+		{ key = "companionDiscovery",  label = "OPT_COMP_DISCOVERY",  kind = "bool",
+			describe = function() return L.OPT_COMP_DISCOVERY_DESC end },
 		-- listes déroulantes : ce qui est gagné se choisit, le reste est grisé
 		-- avec sa condition (CompanionChoices) ; l'action garde le choix suivant
 		{ key = "companionAppearance", label = "COMP_KIND_app",       kind = "action",
@@ -3058,12 +3061,27 @@ function ns:CompanionTryTip(force)
 	local rt, now = RT(), Clock()
 	if not rt.tipAt then rt.tipAt = now + TipDelay() end
 	if not force and now < rt.tipAt then return false end
-	local key = self:CompanionNextTip()
+	-- 3.1.0 : une astuce de découverte (Discovery.lua) prend le créneau quand
+	-- c'est son moment ; sinon l'astuce ordinaire
+	local discovery
+	if self.DiscoveryPick then
+		local ok, tip = pcall(self.DiscoveryPick, self)
+		if ok then discovery = tip end
+	end
+	if discovery then self.discoveryBubble = discovery.id end
+	local key = discovery and discovery.line or self:CompanionNextTip()
 	if not key then return false end
-	if not self:CompanionSay("TIP", { line = key }) then return false end
-	local data = self:CompanionData()
-	data.tipsSeen[key] = true
-	data.lastTip = key
+	if not self:CompanionSay("TIP", { line = key }) then
+		if discovery then self.discoveryBubble = nil end
+		return false
+	end
+	if discovery then
+		self:DiscoveryShown(discovery)
+	else
+		local data = self:CompanionData()
+		data.tipsSeen[key] = true
+		data.lastTip = key
+	end
 	rt.tipAt = now + TipDelay()
 	return true
 end
