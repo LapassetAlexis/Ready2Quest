@@ -3906,6 +3906,10 @@ do
 	if QNS then QNS.SHINY_CHANCE = 0 end
 	-- missions du jour : pas de tirage automatique (companion_daily.lua les tire lui-même)
 	if QNS then QNS.DAILY_AUTO = false end
+	-- 3.1.0 : capture express (CaptureExpress.lua) endormie : les scénarios du
+	-- déroulé d'avant (carte, scène, bandeau) restent ceux du réglage coupé ;
+	-- capture_express.lua la réveille
+	if QNS then QNS.captureExpressDormant = true end
 	-- 3.0.0 : visites guidées (GuidedTour.lua) : pas de départ automatique
 	-- (leurs bulles couvriraient les scénarios ; guide_tours.lua les allume)
 	if QNS then QNS.TOUR_AUTO = false end

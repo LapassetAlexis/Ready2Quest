@@ -1,5 +1,22 @@
 # Ready2Quest — notes techniques et historique
 
+## QuestCompanion 3.1.0 — capture express
+
+Retour : en plein pack, la capture coupait le rythme (bandeau de 384 × 102, carte de préparation, scène de 3,5 s au centre, choix à deux candidats, et refus en combat). `CaptureExpress.lua`, chargé en dernier, enveloppe les entrées du filet sans toucher aux règles (qualité au coup fatal, chance, malchance, aides, Réserve, méfiance, spécimens : tout passe encore par `ns:CaptureRoll` et `ns:CaptureResolve`).
+
+- **Réglages** (page « Au jour le jour », sous « Capturer les monstres abattus ») : `companionCaptureExpress` (vrai par défaut), `companionCaptureAuto` (faux), `companionCaptureAidAuto` (faux). `/qc filet express` et `/qc filet auto` les basculent.
+- **`ns:CaptureExpressOn()`** : réglage, module de capture en service, pas de visite guidée en cours (`ns:TourActive()` : la visite montre la carte et la scène). `ns.captureExpressDormant` l'endort dans le harnais de test (comme `ns.featsDormant`) : les scénarios du déroulé d'avant restent ceux du réglage coupé.
+- **`ns:CaptureExpressThrow(which, opts)`** : prend le candidat (ou le meilleur), le retire de la file, tire (`CaptureRoll`), tranche tout de suite (`CaptureResolve`), pousse une pastille. Pas de `state.rolling`, pas de prise sur le compte à rebours : on peut enchaîner les clics. Autorisé en combat (rien ne s'ouvre). Rend le lancer, ou `false` et `"off"`, `"busy"` (une scène d'avant est en l'air), `"empty"`, `"blocked"` (Réserve pleine).
+- **`ns:CaptureExpressAll()`** : tout le filet, un seul bruit de filet, une pastille de bilan à partir de deux essais.
+- **Gestes** : clic = lancer ; Maj+clic = tout ; Ctrl+clic = carte de préparation (le déroulé d'avant, hors combat) ; clic droit = la liste (un clic sur une ligne lance et la liste reste ouverte, `ns:CaptureListPick`). Raccourci et `/qc filet` : express aussi.
+- **Chat et bulles** : pendant le verdict d'une prise ordinaire, `ns.Print` et `ns.CompanionSay` sont remplacés par des fonctions muettes (même procédé que la volée de `CaptureBatch.lua`), puis rendus. Une prise qui compte (`ns.CaptureExpressNotable` : brillante, espèce nouvelle, qualité au-dessus de la tienne) garde ses messages, réussie ou non.
+- **Aides** : celle choisie dans la liste part avec le lancer suivant ; sinon aucune, sauf « Aide conseillée automatique » (`ns:CapturePrepAdvice` : la meilleure en poche sur un 3 étoiles ou une brillante).
+- **Capture automatique** : `ns:CaptureOffer` enveloppée ; le candidat part aussitôt. Une brillante sans aide à lui donner reste au filet et s'annonce.
+- **Le fil** (`ns.captureExpressFeed`) : quatre lignes de 224 × 20 au-dessus du filet (alignées à droite quand le filet est à gauche du compagnon), plaque d'encre à 0,94, liseré de 3 px (vert, rouge, or, or clair pour une brillante), glissement de 0,15 s, éclat additif de 0,35 s, effacement de 0,4 s ; 2,2 s à l'écran, 3,6 s pour une prise qui compte. `EnableMouse(false)` partout. Les quatre fiches tournent (aucune table par pastille) ; la tâche d'horloge `captureExpress` (`ns.Every`, chaque image) n'existe que tant qu'une pastille vit. `ns:CaptureToastShow` enveloppée : en express, une pastille « capture possible » (nom, chance, étoiles) et le carillon au plus toutes les 3 s (toujours pour une brillante).
+- **Sons** : en express, le même son au plus toutes les 0,15 s (`ns:CapturePlaySound` enveloppée).
+- **Tests** : `tests/modules/capture_express.lua` (`[EXP]`, 35 contrôles).
+- **À voir en jeu** : place du fil selon le côté du filet et l'échelle du compagnon ; lisibilité des pastilles sur sol clair ; éclat additif ; lancer en combat par le raccourci ; rythme des sons en rafale.
+
 ## QuestCompanion 2.12.1 / Ready2Quest 1.33.1 — plus d'images à nous (sauf le filet et les logos)
 
 - **Supprimées** : `QuestCompanion/Textures/` `rayons`, `particules`, `ruban`, `vignette`, `halo`, `etoiles`, `filet_icone` ; `Ready2Quest/Textures/` `aggro_ring`, `fleche_hausse`, `fleche_baisse` ; socle `Media/` `losange`, `losange_trait`, `chevron`, `interrupteur` (et `tools/gen_socle_media.py`). `tools/gen_capture_assets.py` n'écrit plus que `filet`, `corde`, `paquet` (les autres peintres ne servent qu'aux maquettes `--apercu`). Restent embarqués : le filet, ses cordes, le paquet, les deux logos de chaque addon et les polices Inter. `tests/run_tests.py` refuse toute autre image sous `Ready2Quest/` ou `QuestCompanion/`.

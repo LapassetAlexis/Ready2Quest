@@ -860,8 +860,11 @@ local function ShowNetTooltip(button)
 	if best then
 		local name = best.shiny and ns:F("CAPTURE_SHINY_TAG", best.name) or best.name
 		Theme.TooltipLine(tooltip, ns:CaptureQueueLine(best), Theme.PARCHMENT)
+		-- 3.1.0 : capture express (CaptureExpress.lua) : ses gestes, combat compris
+		if ns.CaptureExpressTipLines and ns:CaptureExpressTipLines(tooltip, queue, name) then
+			-- (lignes écrites)
 		-- 2.10.0 : en combat, le clic ne lance rien : l'infobulle le dit
-		if InCombat() then
+		elseif InCombat() then
 			Theme.TooltipLine(tooltip, L.CAPTURE_Q_COMBAT, Theme.MUTED_LIGHT)
 		-- deux candidats ou plus : le choix et ses raccourcis (CaptureBatch.lua)
 		elseif not (ns.CaptureNetClickLines and ns:CaptureNetClickLines(tooltip, queue, name)) then
@@ -1466,7 +1469,9 @@ function ns:EnsureCaptureQueueList()
 		row.text:SetWidth(110)
 		row.detail:SetWidth(LIST_W - 2 * pad - 130)
 		-- clic sur une ligne : le filet part sur ce candidat, la liste se referme
+		-- (3.1.0 : en capture express, la liste reste ouverte pour la suivante)
 		row:SetScript("OnClick", function(r)
+			if ns.CaptureListPick then return ns:CaptureListPick(r.candidate) end
 			ns:CaptureHideQueueList()
 			if r.candidate then ns:CaptureThrow(r.candidate) end
 		end)
