@@ -16,15 +16,29 @@
 --     la liste des cases ignorées s'oublie dans les réglages.
 -- Remplacer un sort : PickupSpell puis PlaceAction, hors combat seulement, et
 -- toujours sur un clic.
+-- 1.35.0 : « Nouveaux sorts » dans la même fenêtre : les sorts actifs appris
+-- depuis la première visite (photo du livre par personnage : rien n'est
+-- proposé à un personnage déjà avancé) qui ne sont sur aucune case des
+-- barres. Seulement les onglets de la classe (ni l'onglet Général : métiers,
+-- raciaux, montures ; ni les passifs). [Placer] : la première case vide des
+-- barres principales (barre 1, puis les autres barres affichées), sinon le
+-- sort sur le curseur ; [Ignorer] : plus jamais proposé (réglages : la liste
+-- des ignorés, pour en reproposer un).
 local ADDON, ns = ...
 local L = ns.L
 local Theme = ns.Theme
 
 ns.SPELLRANKS_SLOTS = 120       -- cases des barres (pages et barres de posture comprises)
 ns.SPELLRANKS_ROWS = 8
+ns.NEWSPELLS_ROWS = 5           -- lignes « Nouveaux sorts »
+-- barres principales où « Placer » cherche une case vide, dans l'ordre :
+-- { première case, cadre de la barre (nil : toujours là) }
+ns.NEWSPELLS_BARS = { { 1 }, { 61, "MultiBarBottomLeft" }, { 49, "MultiBarBottomRight" },
+	{ 25, "MultiBarRight" }, { 37, "MultiBarLeft" } }
 local WIDTH = 520
 local ROW_CARD, ROW_H = 36, 38       -- carte d'un sort, pas d'une ligne à l'autre
 local GAP = 14
+local NEW_TITLE = 24                 -- intertitre « Nouveaux sorts »
 local BOOK_ICON = "Interface\\Icons\\INV_Misc_Book_09"
 
 local FR = {
@@ -34,7 +48,7 @@ local FR = {
 	OPT_SPELLRANKS_FORGET   = "Oublier les cases ignorées",
 	OPT_SPELLRANKS_BORDER   = "Liseré rouge autour des sorts à mettre à jour",
 	SR_TITLE                = "Rangs de sorts",
-	SR_SUB                  = "Les sorts de tes barres qui ont un meilleur rang.",
+	SR_SUB                  = "Meilleurs rangs et nouveaux sorts pour tes barres.",
 	SR_LINE                 = "%s : du rang %d au rang %d",
 	SR_WHERE                = "barre %d, case %d",
 	SR_BTN_UPDATE           = "Mettre à jour",
@@ -58,6 +72,23 @@ local FR = {
 	CHK_SPELLRANKS_DETAIL   = "%d sort(s) à un rang inférieur sur tes barres",
 	ADV_SPELLRANKS          = "Mets à jour les sorts de tes barres (/r2q sorts).",
 	HELP_SPELLRANKS         = "/r2q sorts — les sorts de tes barres qui ont un meilleur rang",
+	-- 1.35.0 : nouveaux sorts sur aucune barre
+	NS_SECTION              = "Nouveaux sorts",
+	NS_WHERE                = "Sur aucune de tes barres",
+	NS_LINE_RANK            = "%s (rang %d)",
+	NS_BTN_PLACE            = "Placer",
+	NS_BTN_IGNORE           = "Ignorer",
+	NS_PLACED               = "%s : barre %d, case %d.",
+	NS_CURSOR               = "%s : pas de case vide sur tes barres, il est sur ton curseur. Pose-le où tu veux.",
+	NS_COMBAT               = "En combat : place-le après le combat.",
+	NS_IGNORED              = "%s : plus proposé (réglages, Rangs de sorts, pour le reproposer).",
+	NS_RESTORED             = "%s : de nouveau proposé.",
+	NS_CHAT                 = "Nouveaux sorts sur aucune de tes barres : %d. Clique sur l'icône, ou /r2q sorts.",
+	NS_NOTICE               = "Nouveaux sorts : %d",
+	NS_MORE                 = "et %d autre(s) nouveau(x) sort(s)",
+	NS_NONE_IGNORED         = "Aucun sort ignoré",
+	OPT_NEWSPELLS_IGNORED   = "Nouveaux sorts ignorés (choisis-en un pour le reproposer)",
+	CHK_NEWSPELLS_DETAIL    = "%d nouveau(x) sort(s) sur aucune barre",
 }
 local EN = {
 	OPT_PAGE_SPELLRANKS     = "Spell ranks",
@@ -66,7 +97,7 @@ local EN = {
 	OPT_SPELLRANKS_FORGET   = "Forget ignored slots",
 	OPT_SPELLRANKS_BORDER   = "Red outline around spells to update",
 	SR_TITLE                = "Spell ranks",
-	SR_SUB                  = "Spells on your bars that have a higher rank.",
+	SR_SUB                  = "Better ranks and new spells for your bars.",
 	SR_LINE                 = "%s: rank %d to rank %d",
 	SR_WHERE                = "bar %d, slot %d",
 	SR_BTN_UPDATE           = "Update",
@@ -89,6 +120,22 @@ local EN = {
 	CHK_SPELLRANKS_DETAIL   = "%d spell(s) at a lower rank on your bars",
 	ADV_SPELLRANKS          = "Update the spells on your bars (/r2q sorts).",
 	HELP_SPELLRANKS         = "/r2q sorts — the spells on your bars that have a higher rank",
+	NS_SECTION              = "New spells",
+	NS_WHERE                = "On none of your bars",
+	NS_LINE_RANK            = "%s (rank %d)",
+	NS_BTN_PLACE            = "Place",
+	NS_BTN_IGNORE           = "Ignore",
+	NS_PLACED               = "%s: bar %d, slot %d.",
+	NS_CURSOR               = "%s: no empty slot on your bars, it's on your cursor. Drop it wherever you like.",
+	NS_COMBAT               = "In combat: place it after combat.",
+	NS_IGNORED              = "%s: no longer offered (settings, Spell ranks, to offer it again).",
+	NS_RESTORED             = "%s: offered again.",
+	NS_CHAT                 = "New spells on none of your bars: %d. Click the icon, or /r2q sorts.",
+	NS_NOTICE               = "New spells: %d",
+	NS_MORE                 = "and %d more new spell(s)",
+	NS_NONE_IGNORED         = "No ignored spell",
+	OPT_NEWSPELLS_IGNORED   = "Ignored new spells (pick one to offer it again)",
+	CHK_NEWSPELLS_DETAIL    = "%d new spell(s) on no bar",
 }
 ns.RegisterStrings(FR, EN)
 if ns.KEEP_STRINGS then ns.SPELLRANKS_STRINGS = { fr = FR, en = EN } end
@@ -104,6 +151,11 @@ if ns.AddOptionPage then
 			{ key = "spellranksEnabled", label = "OPT_SPELLRANKS_ENABLED", kind = "bool" },
 			{ key = "spellranksBorder", label = "OPT_SPELLRANKS_BORDER", kind = "bool" },
 			{ key = "spellranksForget", label = "OPT_SPELLRANKS_FORGET", kind = "action", button = "OPT_BTN_FORGET" },
+			-- 1.35.0 : les nouveaux sorts ignorés ; en choisir un le repropose
+			{ key = "newspellsIgnored", label = "OPT_NEWSPELLS_IGNORED", kind = "action",
+				choices = function() return ns:NewSpellsIgnoredChoices() end,
+				current = function() return "" end,
+				choose = function(name) ns:NewSpellsRestore(name) end },
 		},
 	})
 end
@@ -275,6 +327,164 @@ function ns:SpellRanksForget()
 end
 
 -- ---------------------------------------------------------------------------
+-- 1.35.0 : nouveaux sorts sur aucune barre
+-- ---------------------------------------------------------------------------
+local function Passive(spellID, flag)
+	if flag then return true end
+	local isPassive = C("IsSpellPassive") or Global("IsPassiveSpell")
+	return Call(isPassive, spellID) and true or false
+end
+
+-- Les sorts actifs des onglets de la classe : { name = { id, rank } } (le
+-- meilleur rang de chaque nom). Pas l'onglet Général (métiers, raciaux,
+-- montures, compagnons), ni un passif, ni un sort d'une autre spécialisation.
+function ns:NewSpellsBook()
+	local best = {}
+	local book = rawget(_G, "C_SpellBook")
+	local bank = rawget(_G, "Enum") and Enum.SpellBookSpellBank and Enum.SpellBookSpellBank.Player
+	local function Add(id, name, passive)
+		if not id or Passive(id, passive) then return end
+		local spellName, rank = self:SpellRankOf(id)
+		name = name or spellName
+		if not name then return end
+		local current = best[name]
+		if not current or (rank or 0) > (current.rank or 0) then best[name] = { id = id, rank = rank } end
+	end
+	if type(book) == "table" and type(book.GetNumSpellBookSkillLines) == "function" and bank ~= nil then
+		for line = 2, tonumber((Call(book.GetNumSpellBookSkillLines))) or 0 do
+			local info = Call(book.GetSpellBookSkillLineInfo, line)
+			if type(info) == "table" and not info.offSpecID and not info.isGuild then
+				local first = tonumber(info.itemIndexOffset) or 0
+				for index = first + 1, first + (tonumber(info.numSpellBookItems) or 0) do
+					local item = Call(book.GetSpellBookItemInfo, index, bank)
+					if type(item) == "table" and item.spellID and not item.isOffSpec then Add(item.spellID, item.name, item.isPassive) end
+				end
+			end
+		end
+		return best
+	end
+	for tab = 2, tonumber((Call(Global("GetNumSpellTabs")))) or 0 do
+		local _, _, offset, count = Call(Global("GetSpellTabInfo"), tab)
+		for index = (offset or 0) + 1, (offset or 0) + (count or 0) do
+			local kind, spellID = Call(Global("GetSpellBookItemInfo"), index, "spell")
+			if kind == "SPELL" and spellID then Add(spellID) end
+		end
+	end
+	return best
+end
+
+-- Les noms des sorts posés sur une case des barres
+local function OnBars(self)
+	local names = {}
+	for slot = 1, ns.SPELLRANKS_SLOTS do
+		local kind, id = Call(Global("GetActionInfo"), slot)
+		if kind == "spell" and id then
+			local name = self:SpellRankOf(id)
+			if name then names[name] = true end
+		end
+	end
+	return names
+end
+
+local function Store(self)
+	local char = self:CharData()
+	if type(char.newSpellsIgnore) ~= "table" then char.newSpellsIgnore = {} end
+	return char
+end
+
+-- Les nouveaux sorts sur aucune barre : { { id, name, rank } }, triés par nom.
+-- Premier passage (livre lu) : la photo des sorts connus, rien de proposé.
+function ns:NewSpellsScan()
+	local char = Store(self)
+	local book = self:NewSpellsBook()
+	if not next(book) then return {} end    -- livre pas encore lu : pas de photo vide
+	if type(char.newSpellsBase) ~= "table" then
+		char.newSpellsBase = {}
+		for name in pairs(book) do char.newSpellsBase[name] = true end
+		return {}
+	end
+	local base, ignore, bars = char.newSpellsBase, char.newSpellsIgnore, OnBars(self)
+	local list = {}
+	for name, spell in pairs(book) do
+		if not base[name] then
+			if bars[name] then
+				base[name] = true      -- posé une fois sur les barres : connu pour de bon
+			elseif not ignore[name] then
+				list[#list + 1] = { id = spell.id, name = name, rank = spell.rank }
+			end
+		end
+	end
+	table.sort(list, function(a, b) return a.name < b.name end)
+	return list
+end
+
+-- La première case vide des barres principales (barre 1, puis les autres affichées)
+function ns:NewSpellsEmptySlot()
+	for _, bar in ipairs(ns.NEWSPELLS_BARS) do
+		local frame = bar[2] and rawget(_G, bar[2])
+		local shown = not bar[2] or (type(frame) == "table" and type(frame.IsShown) == "function" and frame:IsShown())
+		if shown then
+			for slot = bar[1], bar[1] + 11 do
+				local has, taken = Global("HasAction"), nil
+				if has then taken = Call(has, slot) and true or false
+				else taken = Call(Global("GetActionInfo"), slot) ~= nil end
+				if not taken then return slot end
+			end
+		end
+	end
+	return nil
+end
+
+-- [Placer] : une case vide, sinon sur le curseur ; jamais en combat
+function ns:NewSpellPlace(entry)
+	if not entry then return false end
+	if InCombat() then self:Print(L.NS_COMBAT); return false end
+	local pickup = C("PickupSpell") or Global("PickupSpell")
+	if not pickup then return false end
+	local slot = self:NewSpellsEmptySlot()
+	Call(pickup, entry.id)
+	if not slot then
+		self:Print(self:F("NS_CURSOR", entry.name))
+		return "cursor"
+	end
+	Call(Global("PlaceAction"), slot)
+	Call(Global("ClearCursor"))
+	self:Print(self:F("NS_PLACED", entry.name, math.floor((slot - 1) / 12) + 1, (slot - 1) % 12 + 1))
+	self:SpellRanksRefresh()
+	return slot
+end
+
+-- [Ignorer] : plus jamais proposé (ce personnage)
+function ns:NewSpellIgnore(entry)
+	if not (entry and entry.name) then return false end
+	Store(self).newSpellsIgnore[entry.name] = true
+	self:Print(self:F("NS_IGNORED", entry.name))
+	self:SpellRanksRefresh()
+	return true
+end
+
+-- Réglages : la liste des ignorés ; en choisir un le repropose
+function ns:NewSpellsIgnoredChoices()
+	local names = {}
+	for name in pairs(Store(self).newSpellsIgnore) do names[#names + 1] = name end
+	table.sort(names)
+	local list = {}
+	for _, name in ipairs(names) do list[#list + 1] = { value = name, label = name } end
+	if #list == 0 then list[1] = { value = "", label = L.NS_NONE_IGNORED, disabled = true } end
+	return list
+end
+
+function ns:NewSpellsRestore(name)
+	local ignore = Store(self).newSpellsIgnore
+	if not (name and ignore[name]) then return false end
+	ignore[name] = nil
+	self:Print(self:F("NS_RESTORED", name))
+	self.newSpellsAnnounced = nil
+	self:SpellRanksRefresh()
+	return true
+end
+
+-- ---------------------------------------------------------------------------
 -- Annonce : l'icône et une ligne de chat, quand il y a du nouveau
 -- ---------------------------------------------------------------------------
 function ns:SpellRanksCheck()
@@ -285,17 +495,29 @@ function ns:SpellRanksCheck()
 	local count = #list
 	local previous = self.spellRanksAnnounced or 0
 	self.spellRanksAnnounced = count
+	-- 1.35.0 : les nouveaux sorts sur aucune barre, annoncés de même
+	local fresh = self:NewSpellsScan()
+	local newCount = #fresh
+	local newBefore = self.newSpellsAnnounced or 0
+	self.newSpellsAnnounced = newCount
+	local lines = {}
 	if count > previous then
 		self:Print(self:F("SR_CHAT", count))
-		if self.ShowNotice and self.WantsNotice and self:WantsNotice() then
-			local lines = { self:F("SR_NOTICE", count) }
-			for index = 1, math.min(3, count) do
-				lines[#lines + 1] = self:F("SR_LINE", list[index].name, list[index].rank, list[index].bestRank)
-			end
-			if count > 3 then lines[#lines + 1] = self:F("SR_MORE", count - 3) end
-			self:ShowNotice({ kind = "spells", color = Theme.ORANGE, lines = lines,
-				onClick = function() ns:SpellRanksOpen() end })
+		lines[#lines + 1] = self:F("SR_NOTICE", count)
+		for index = 1, math.min(3, count) do
+			lines[#lines + 1] = self:F("SR_LINE", list[index].name, list[index].rank, list[index].bestRank)
 		end
+		if count > 3 then lines[#lines + 1] = self:F("SR_MORE", count - 3) end
+	end
+	if newCount > newBefore then
+		self:Print(self:F("NS_CHAT", newCount))
+		lines[#lines + 1] = self:F("NS_NOTICE", newCount)
+		for index = 1, math.min(3, newCount) do lines[#lines + 1] = fresh[index].name end
+		if newCount > 3 then lines[#lines + 1] = self:F("NS_MORE", newCount - 3) end
+	end
+	if #lines > 0 and self.ShowNotice and self.WantsNotice and self:WantsNotice() then
+		self:ShowNotice({ kind = "spells", color = Theme.ORANGE, lines = lines,
+			onClick = function() ns:SpellRanksOpen() end })
 	end
 	self:SpellRanksRefresh()
 	return count
@@ -339,6 +561,29 @@ function ns:EnsureSpellRanks()
 		row:Hide()
 		frame.rows[index] = row
 	end
+	-- 1.35.0 : « Nouveaux sorts », sous les rangs (placés à chaque rafraîchissement)
+	frame.newSection = Theme.CreateSection(frame, L.NS_SECTION)
+	frame.newSection:SetWidth(inner)
+	frame.newSection:Hide()
+	frame.newRows = {}
+	for index = 1, ns.NEWSPELLS_ROWS do
+		local row = Theme.CreateListRow(frame, inner, ROW_CARD, { icon = 24 })
+		row:SetIndex(index)
+		row.ignore = Theme.CreateButton(row, nil, 24, L.NS_BTN_IGNORE, function() ns:NewSpellIgnore(row.data) end, "outline")
+		row.ignore:SetPoint("RIGHT", row, "RIGHT", -8, 0)
+		row.place = Theme.CreateButton(row, nil, 24, L.NS_BTN_PLACE, function() ns:NewSpellPlace(row.data) end, "accent")
+		row.place:SetPoint("RIGHT", row.ignore, "LEFT", -6, 0)
+		local textWidth = inner - row.textLeft - row.place:GetWidth() - row.ignore:GetWidth() - 8 - 6 - 12
+		row.text:ClearAllPoints()
+		row.text:SetPoint("TOPLEFT", row, "TOPLEFT", row.textLeft, -5)
+		row.text:SetWidth(textWidth)
+		row.where = Theme.Text(row, Theme.F_SMALL, Theme.MUTED)
+		row.where:SetPoint("TOPLEFT", row, "TOPLEFT", row.textLeft, -20)
+		row.where:SetWidth(textWidth)
+		row.where:SetJustifyH("LEFT")
+		row:Hide()
+		frame.newRows[index] = row
+	end
 	frame.empty = Theme.Text(frame, Theme.F_BODY, Theme.MUTED_LIGHT)
 	frame.empty:SetPoint("TOPLEFT", frame, "TOPLEFT", pad + 12, top - 6)
 	frame.empty:SetWidth(inner - 24)
@@ -373,11 +618,47 @@ function ns:SpellRanksRefresh()
 			row:Hide()
 		end
 	end
-	frame.empty:SetText(#list == 0 and L.SR_NONE or "")
-	frame.more:SetText(#list > ns.SPELLRANKS_ROWS and self:F("SR_MORE", #list - ns.SPELLRANKS_ROWS) or "")
+	-- 1.35.0 : les nouveaux sorts, sous les rangs (ou à leur place)
+	local fresh = self:NewSpellsScan()
+	frame.newList = fresh
+	local shownRanks = math.min(#list, #frame.rows)
+	local top = frame.contentTop - GAP
+	local pad = frame.pad + 1
+	local y = top - shownRanks * ROW_H
+	if #fresh > 0 then
+		if shownRanks > 0 then y = y - (GAP - (ROW_H - ROW_CARD)) end
+		frame.newSection:ClearAllPoints()
+		frame.newSection:SetPoint("TOPLEFT", frame, "TOPLEFT", pad + 4, y)
+		frame.newSection:Show()
+		y = y - NEW_TITLE
+	else
+		frame.newSection:Hide()
+	end
+	for index, row in ipairs(frame.newRows) do
+		local entry = fresh[index]
+		row.data = entry
+		if entry then
+			local icon = Call(C("GetSpellTexture") or Global("GetSpellTexture"), entry.id)
+			if row.icon.tex then row.icon.tex:SetTexture(icon) end
+			row.text:SetText(entry.rank and self:F("NS_LINE_RANK", entry.name, entry.rank) or entry.name)
+			row.where:SetText(L.NS_WHERE)
+			row:ClearAllPoints()
+			row:SetPoint("TOPLEFT", frame, "TOPLEFT", pad, y - (index - 1) * ROW_H)
+			row:Show()
+		else
+			row:Hide()
+		end
+	end
+	local shownNew = math.min(#fresh, #frame.newRows)
+	frame.empty:SetText((#list == 0 and #fresh == 0) and L.SR_NONE or "")
+	local more = {}
+	if #list > ns.SPELLRANKS_ROWS then more[#more + 1] = self:F("SR_MORE", #list - ns.SPELLRANKS_ROWS) end
+	if #fresh > ns.NEWSPELLS_ROWS then more[#more + 1] = self:F("NS_MORE", #fresh - ns.NEWSPELLS_ROWS) end
+	frame.more:SetText(table.concat(more, " · "))
 	if #list > 0 then frame.all:Show() else frame.all:Hide() end
 	-- la fenêtre suit la liste : pas de cartes vides sous la dernière
-	frame:SetHeight(SpellRanksHeight(math.min(#list, #frame.rows)))
+	local extra = shownNew > 0 and (NEW_TITLE + shownNew * ROW_H + (shownRanks > 0 and (GAP - (ROW_H - ROW_CARD)) or 0)) or 0
+	frame:SetHeight(SpellRanksHeight(shownRanks) + extra - ((shownRanks == 0 and shownNew > 0) and ROW_H or 0))
 	return list
 end
 
@@ -405,8 +686,12 @@ if ns.AddCheck then
 		label = function() return L.CHK_SPELLRANKS end,
 		run = function()
 			local count = #ns:SpellRankScan()
-			if count == 0 then return true, L.CHK_SPELLRANKS_GOOD, 100 end
-			return false, ns:F("CHK_SPELLRANKS_DETAIL", count), 50
+			local fresh = #ns:NewSpellsScan()
+			if count == 0 and fresh == 0 then return true, L.CHK_SPELLRANKS_GOOD, 100 end
+			local parts = {}
+			if count > 0 then parts[#parts + 1] = ns:F("CHK_SPELLRANKS_DETAIL", count) end
+			if fresh > 0 then parts[#parts + 1] = ns:F("CHK_NEWSPELLS_DETAIL", fresh) end
+			return false, table.concat(parts, ", "), 50
 		end,
 	}
 end
@@ -540,6 +825,8 @@ end
 local HANDLERS = {
 	PLAYER_ENTERING_WORLD = function() ns.spellRanksDueAt = ns.Now() + 3 end,
 	LEARNED_SPELL_IN_TAB  = function() ns.spellRanksDueAt = ns.Now() + 1 end,
+	-- 1.35.0 : moteur récent (le livre par lignes de compétence)
+	LEARNED_SPELL_IN_SKILL_LINE = function() ns.spellRanksDueAt = ns.Now() + 1 end,
 	SPELLS_CHANGED        = function() ns.spellRanksDueAt = ns.spellRanksDueAt or (ns.Now() + 1) end,
 	ACTIONBAR_SLOT_CHANGED = function() ns:SpellRanksRefresh() end,
 	-- la page ou la posture change : les mêmes boutons montrent d'autres cases

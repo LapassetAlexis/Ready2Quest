@@ -1,5 +1,11 @@
 # Journal des modifications
 
+## 1.35.0
+
+- **Rangs de sorts : les nouveaux sorts aussi** : la fenêtre des rangs propose maintenant, dans une section « Nouveaux sorts », les sorts actifs que tu as appris (chez ton maître de classe) et qui ne sont sur aucune de tes barres. **Placer** le pose dans la première case vide (barre 1, puis tes autres barres affichées) ; s'il n'y a plus de place, il arrive sur ton curseur pour que tu le poses où tu veux. **Ignorer** ne le propose plus (la liste des sorts ignorés est dans les réglages, page Rangs de sorts, pour en reproposer un). Jamais en combat. Pas de passifs, de métiers ni de montures ; et pour ne pas tout te proposer d'un coup, seuls les sorts appris à partir de maintenant comptent. L'icône, le chat et la ligne du check avant le départ les comptent aussi.
+
+*English:* Spell ranks now also offers new spells — the window gets a "New spells" section listing active spells you learned (at your class trainer) that are on none of your bars. **Place** puts it in the first empty slot (bar 1, then your other shown bars); with no room left, it lands on your cursor so you can drop it wherever you like. **Ignore** stops offering it (the list of ignored spells is in the settings, Spell ranks page, to offer one again). Never in combat. No passives, professions or mounts; and so you don't get everything at once, only spells learned from now on count. The icon, the chat and the pre-departure check line count them too.
+
 ## 1.34.0
 
 - **Objets favoris** : Alt+clic sur un objet de tes sacs le met en favori (toutes ses copies), ou l'en retire, aussi dans les sacs d'un autre addon (Baganator…) ; l'infobulle d'un objet de tes sacs rappelle le raccourci (« Alt+clic : ajouter aux favoris » / « retirer des favoris ») ; le raccourci se choisit dans Sac plein (Alt+clic, Ctrl+Alt+clic, Maj+Alt+clic, Alt+clic droit, Ctrl+Alt+clic droit, ou désactivé), et `/r2q favori [lien]` fait de même. Un favori porte un petit cadenas dans les sacs du jeu (et dans Baganator) et une ligne « Favori : protégé de la vente » dans son infobulle.
