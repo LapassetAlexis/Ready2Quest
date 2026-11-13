@@ -48,6 +48,7 @@ LevelPace.lua
 Favorites.lua
 BagSpace.lua
 LootRoom.lua
+QuickLoot.lua
 SpellRanks.lua
 TrainAll.lua
 Death.lua

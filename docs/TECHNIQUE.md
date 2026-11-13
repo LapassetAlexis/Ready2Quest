@@ -1,5 +1,24 @@
 # Ready2Quest — notes techniques et historique
 
+## QuestCompanion 3.1.0 — cadrage automatique du compagnon
+
+Retour : le compagnon est tantôt trop zoomé, tantôt pas assez, selon l'espèce. Cause : la caméra d'un `PlayerModel` est fixe et la créature s'y voit à sa taille réelle ; la distance venait du **type** (`COMPANION_MODEL_TYPE_CAM`), qui ne dit rien de la taille (un loup et un kodo sont des Bêtes).
+
+- **Données** : `tools/gen_display_sizes.py --import` lit `CreatureDisplayInfo` et `CreatureModelData` (wago.tools, client 1.60.1.70753) et écrit `data/forever/display_sizes.json` : taille = max(hauteur, largeur, 0,6 × longueur) de la boîte du modèle × `ModelScale` × `CreatureModelScale`. 13 932 apparences. Sans option, il écrit `QuestCompanion/DisplaySizes_Forever.lua` : une chaîne de 28 Ko (écart de displayID en base 85, puis un caractère de taille par paliers de 9,9 %), jamais mise en table. `tests/run_tests.py` refuse de tourner si le fichier ne suit plus la base.
+- **`ns:DisplaySize(displayID)`** : lit la chaîne (parcours linéaire, résultat gardé, 256 au plus).
+- **`ns:CompanionFitScale(displayID)`** : `COMPANION_FIT.ref / taille`, bornée (0,03 à 4). Le modèle est mis à cette échelle (`SetModelScale`, fois la taille du spécimen) et la caméra à `COMPANION_FIT.cam` × le cadrage du réglage (`ns:CompanionFitCam`) : toutes les créatures occupent la même place.
+- **Calage** sur deux réglages faits en jeu (2.14) : Grand-père Hiver (apparence 13369, taille 1,78) bien cadré à 1,5 ; le Renne de l'Hiver (15904, taille 0,56) bien cadré à 0,6 : taille / distance ≈ 1,19 et 0,93. D'où `ref = 1.78`, `cam = 1.5`.
+- **`ns.ShowModel`** : `opts.fit`, `opts.fitCam`, `opts.fitDisplay`. L'apparence est celle demandée, celle apprise au compte (`ns:CompanionKnownDisplay`), sinon celle que le client a chargée (`GetDisplayInfo`, connue à `OnModelLoaded`, où le cadrage est reposé). Sans taille connue : la distance par type, comme avant.
+- **Inchangé** : les mascottes de départ (zoom « tête »), les espèces à surcharge réglée en jeu (`COMPANION_MODEL_OVERRIDES` : `CompanionModelCam` rend `false` en 4e valeur).
+- **Appelants** : cadre du compagnon (`CompanionApplyModel`), vignettes et carte du choix d'allure (`CompanionAllure.lua`).
+- **Réglage en jeu (développeur)** : `/qc compagnon cadrage` dit le pnj, l'apparence, sa taille, l'échelle et la distance posées ; `on|off` bascule pour la session (comparaison avec la distance par type).
+- **Hypothèses à confirmer en jeu** : `SetModelScale` multiplie l'échelle de l'apparence (et ne la remplace pas) ; la caméra vise le même point quelle que soit l'échelle ; la boîte du modèle est proche de ce qu'on voit (ailes, effets). Si une espèce reste mal cadrée : une surcharge, ou revoir `ref`.
+- **Tests** : `tests/modules/companion_fit.lua` (`[FIT]`, 14 contrôles).
+
+## Ready2Quest 1.35.0 — butin rapide
+
+`QuickLoot.lua` (après `LootRoom.lua`), réglage `quickLootEnabled` **coupé par défaut**, page « Place au butin ». À `LOOT_READY` (repli `LOOT_OPENED` si le client refuse l'événement) : `LootSlot` de la dernière case à la première, si le butin automatique est voulu (`autoLootDefault` inversé par `IsModifiedClick("AUTOLOOTTOGGLE")`, comme le client). Cases verrouillées laissées (6e retour de `GetLootSlotInfo`). Un passage au plus toutes les `QUICKLOOT_GAP` (0,3 s). `ns.QUICKLOOT_RIVALS` : SpeedyAutoLoot, Leatrix Plus (`LeaPlusDB.FasterLooting == "On"`) : la main leur est laissée, dit une fois. L'événement n'est écouté que réglage actif (`ns.On` / `ns.Off`). Tests : `tests/modules/quick_loot.lua` (`[QLT]`, 11 contrôles). À voir en jeu : `LootSlot` hors clic, `LOOT_READY`, pêche et dépeçage, sacs pleins avec Place au butin ; les grosses suites (OneForAll, Naowh, ForeverPlus) ne sont pas détectées.
+
 ## Ready2Quest 1.35.0 — « Tout apprendre » chez le maître
 
 `TrainAll.lua` (après `SpellRanks.lua`) : sur `ClassTrainerFrame`, à gauche de « Apprendre », un bouton du client (`UIPanelButtonTemplate`, repli sur le bouton du thème) « Tout apprendre (total) ».
