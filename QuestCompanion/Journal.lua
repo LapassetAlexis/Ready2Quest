@@ -583,7 +583,7 @@ local function ToastDecor(frame, entry)
 			if ns.AzerothShieldCenter then ns.AzerothShieldCenter(frame.featPoints, frame.shield)
 			else frame.featPoints:SetPoint("CENTER", frame.shield, "CENTER", 0, 4) end
 			if ns.AzerothFont then ns.AzerothFont(frame.featPoints, 16, "OUTLINE") end
-			frame.featPoints:SetTextColor(1, 1, 1, 1)
+			frame.featPoints:SetTextColor(Theme.WHITE[1], Theme.WHITE[2], Theme.WHITE[3], 1)
 		else
 			frame.featPoints = Theme.Text(frame, Theme.F_NUMBER, Theme.GOLD)
 			frame.featPoints:SetPoint("RIGHT", frame, "RIGHT", -12, 0)
@@ -647,6 +647,7 @@ function ns:ShowNextJournalToast()
 		ToastDecor(frame, stamp)
 		shown = stamp
 	end
+	frame.shownEntry = shown   -- nil pour une rafale groupée (3.1.0 : reprise après combat)
 	frame:Show()
 	if self.BannerShown then self:BannerShown("journal", frame, "journalToastPoint", { point = "TOP", x = 0, y = -190 }) end
 	if shown and type(shown.onShow) == "function" then pcall(shown.onShow, self, shown) end
@@ -669,7 +670,23 @@ function ns:JournalFlush()
 	if not self.journalToastHideAt then self:ShowNextJournalToast() end
 end
 
+-- 3.1.0 : le combat commence pendant qu'un bandeau est affiché : il s'efface
+-- (il ne reste pas au haut de l'écran, sous la souris) et, s'il n'avait pas
+-- encore tenu la moitié de son temps, il revient en tête de file après le
+-- combat. (Le résultat de capture s'effaçait déjà ainsi.)
+function ns:JournalToastCombat(now)
+	if not (self.journalToastHideAt and InCombat()) then return false end
+	local frame = self.journalToast
+	local entry = frame and frame.shownEntry
+	if entry and self.journalToastHideAt - now > TOAST_SECONDS / 2 then table.insert(self.journalToasts, 1, entry) end
+	self.journalToastHideAt = nil
+	if frame then frame.shownEntry = nil; frame:Hide() end
+	if self.BannerDone then self:BannerDone("journal") end
+	return true
+end
+
 function ns:UpdateJournalToast(now)
+	self:JournalToastCombat(now)
 	if self.journalToastHideAt and now >= self.journalToastHideAt then
 		self.journalToastHideAt = nil
 		if self.journalToast then self.journalToast:Hide() end

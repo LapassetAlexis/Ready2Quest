@@ -826,3 +826,168 @@ do
 end
 
 end
+
+-- QuestCompanion 3.1.0 : passe de cohérence (docs/UI.md, « Passe de cohérence 3.1.0 ») ------------------
+do
+local NS = QNS
+local Theme = NS.Theme
+local function Same(a, b)
+	if type(a) ~= "table" or type(b) ~= "table" then return false end
+	for i = 1, 3 do if math.abs((a[i] or -1) - (b[i] or -2)) > 0.001 then return false end end
+	return true
+end
+
+-- 1. Socle : appui des petits boutons dessinés, bouton-icône désactivé -----------------------------------
+do
+	Say("-- 3.1.0 : appui de [×], bouton-icône, roue crantée")
+	ResetWorld()
+	local parent = CreateFrame("Frame", nil, UIParent)
+	local close = Theme.CreateCloseButton(parent, 22)
+	local icon = Theme.CreateIconButton(parent, 24, Theme.REFRESH, nil, "Relancer")
+	local gear = Theme.CreateGearButton(parent, 22, nil, "Réglages")
+	for _, def in ipairs({ { "[×]", close, close.label }, { "icône", icon, icon.icon }, { "roue", gear, gear.icon } }) do
+		local name, b, region = def[1], def[2], def[3]
+		b.scripts.OnMouseDown(b, "LeftButton")
+		Want(name .. " : contenu enfoncé d'un pixel", b.pressed and region.lastPoint.x == 1 and region.lastPoint.y == -1,
+			tostring(region.lastPoint.x) .. "," .. tostring(region.lastPoint.y))
+		if name ~= "roue" then
+			Want(name .. " : filet ambre sombre à l'appui", Same(b.border.top.vertex, Theme.GOLD_SOFT))
+		end
+		b.scripts.OnMouseUp(b, "LeftButton")
+		Want(name .. " : relâché, contenu à sa place", not b.pressed and region.lastPoint.x == 0 and region.lastPoint.y == 0
+			and region.lastPoint.point == "CENTER")
+		b.scripts.OnMouseDown(b, "RightButton")
+		Want(name .. " : clic droit sans appui", not b.pressed)
+	end
+	Want("[×] relâché hors survol : filet EDGE", Same(close.border.top.vertex, Theme.EDGE))
+	icon:SetEnabled(false)
+	Want("bouton-icône désactivé : filet EDGE_SOFT, icône plus pâle", icon.disabledLook and Same(icon.border.top.vertex, Theme.DISABLED.edge)
+		and (icon.icon.alpha or 1) < 0.6)
+	GameTooltip:ClearLines()
+	icon.scripts.OnEnter(icon)
+	Want("bouton-icône désactivé : pas de survol, l'infobulle reste", Same(icon.border.top.vertex, Theme.DISABLED.edge)
+		and GameTooltip.lines[1] == "Relancer")
+	icon.scripts.OnMouseDown(icon, "LeftButton")
+	Want("bouton-icône désactivé : pas d'appui", not icon.pressed and icon.icon.lastPoint.x == 0)
+	icon.scripts.OnLeave(icon)
+	icon:SetEnabled(true)
+	Want("bouton-icône réactivé : repos", not icon.disabledLook and Same(icon.border.top.vertex, Theme.EDGE))
+	parent:Hide()
+	Verdict("[UI31] appui de [×], du bouton-icône et de la roue (contenu enfoncé, filet ambre sombre) ; bouton-icône désactivé sans survol")
+end
+
+-- 2. Infobulles par les briques du thème ; contrastes sur le fond d'infobulle ------------------------------
+do
+	Say("-- 3.1.0 : infobulles du suivi et de la fiche")
+	ResetWorld()
+	GameTooltip:ClearLines()
+	NS:ShowJournalGoalTooltip(UIParent, { label = "Bestiaire", progress = "3/10", hint = { "Un loup" } })
+	local st = GameTooltip.styled or {}
+	local last = st[#st]
+	Want("objectif : titre ambre", st[1] and Same(st[1].color, Theme.GOLD))
+	Want("objectif : progression PARCHMENT (plus de blanc en dur)", st[2] and Same(st[2].color, Theme.PARCHMENT))
+	Want("objectif : aide du clic en MUTED clair (TooltipHint)", last and Same(last.color, Theme.MUTED_LIGHT) and last.text == NS.L.JRN_HINT_CLICK)
+	-- fond d'une infobulle du jeu (l'aperçu hors-jeu la peint ainsi, tests/snapshot.lua)
+	local tipBg = { 0.03, 0.03, 0.06 }
+	local bad = {}
+	for name, c in pairs({ PARCHMENT = Theme.PARCHMENT, TEXT = Theme.TEXT, MUTED_LIGHT = Theme.MUTED_LIGHT, GOLD = Theme.GOLD }) do
+		local r = Theme.Contrast(c, tipBg)
+		if r < 4.5 then bad[#bad + 1] = name .. string.format("=%.2f", r) end
+	end
+	Want("encres d'infobulle ≥ 4,5:1 sur le fond du jeu", #bad == 0, table.concat(bad, ", "))
+	-- aucun AddLine écrit à la main dans les fichiers passés au thème
+	local root = rawget(_G, "ADDON_ROOT") or "."
+	local raw = {}
+	for _, file in ipairs({ "JournalTracker.lua", "TrainerCard.lua", "Tooltips.lua" }) do
+		local h = io.open(root .. "/QuestCompanion/" .. file, "r")
+		local src = h and h:read("*a") or ""
+		if h then h:close() end
+		if src:find(":AddLine%(") then raw[#raw + 1] = file end
+	end
+	Want("plus de AddLine à la main (JournalTracker, TrainerCard, Tooltips)", #raw == 0, table.concat(raw, ", "))
+	GameTooltip:Hide()
+	Verdict("[UI31] infobulles : titre, texte, aide par Theme.Tooltip* ; encres ≥ 4,5:1 sur le fond d'infobulle")
+end
+
+-- 3. Survol des commandes cliquables ; Échap et largeurs -----------------------------------------------------
+do
+	Say("-- 3.1.0 : survol, Échap, largeurs")
+	ResetWorld()
+	NS.uiStyleCache = {}
+	local frame = NS:ToggleJournal(true)
+	NS:SelectJournalKind("juke")
+	local row = frame and frame.juke and frame.juke.rows[1]
+	Want("juke-box : une rangée", row ~= nil)
+	if row then
+		for _, b in ipairs({ row.fav, row.add }) do
+			b.scripts.OnEnter(b)
+			Want("juke-box : étoile et « + » éclairés au survol", b.hover and b.hover:IsShown())
+			b.scripts.OnLeave(b)
+			Want("juke-box : éteints en partant", b.hover and not b.hover:IsShown())
+		end
+	end
+	local box = frame and frame.navSummary
+	Want("tableau de bord présent", box ~= nil)
+	if box then
+		box.pet.scripts.OnEnter(box.pet)
+		Want("tableau de bord : bloc éclairé au survol", box.pet.hover and box.pet.hover:IsShown())
+		box.pet.scripts.OnLeave(box.pet)
+		Want("tableau de bord : éteint en partant", not box.pet.hover:IsShown())
+	end
+	if frame then frame:Hide() end
+	NS.journalFrame, NS.uiStyleCache = nil, {}
+	-- garde-manger : Échap, titre tenu ; fiche au survol : libellés dans leur colonne
+	NS:CompanionUpdateVisibility()
+	local pet = NS:EnsureCompanionFrame()
+	local menu = pet and NS:EnsureTreatMenu()
+	local registered = false
+	for _, name in ipairs(UISpecialFrames or {}) do if name == "QuestCompanionTreatMenu" then registered = true end end
+	Want("garde-manger : Échap le ferme", menu and registered)
+	Want("garde-manger : titre à la largeur du menu", menu and menu.title.width and menu.title.width <= menu:GetWidth())
+	local hover = pet and NS:EnsureCompanionHover()
+	if hover then NS:CompanionRefreshHover() end
+	local wide = {}
+	for key, bar in pairs(hover and hover.bars or {}) do
+		local room = (bar.lastPoint and bar.lastPoint.x or 0) - (bar.label.lastPoint and bar.label.lastPoint.x or 0)
+		if not (bar.label.width and bar.label.width <= room and bar.label.wordWrap == false) then
+			wide[#wide + 1] = key .. "=" .. tostring(bar.label.width) .. "/" .. room
+		end
+	end
+	Want("fiche au survol : libellés d'envie bornés, sans retour à la ligne", hover and #wide == 0, table.concat(wide, ","))
+	local m = pet and NS:EnsureCompanionMenu()
+	Want("menu du compagnon : titre de chasse borné", m and m.huntTitle.width and m.huntTitle.width > 0)
+	Verdict("[UI31] survol de l'étoile, du « + » et des blocs du tableau de bord ; garde-manger à Échap ; textes bornés")
+end
+
+-- 4. Combat : la fiche au survol et le garde-manger ne restent pas ouverts ----------------------------------
+do
+	Say("-- 3.1.0 : combat")
+	ResetWorld()
+	local saved = { rawget(_G, "InCombatLockdown"), rawget(_G, "UnitAffectingCombat") }
+	local fighting = false
+	_G.InCombatLockdown = function() return fighting end
+	_G.UnitAffectingCombat = function() return fighting end
+	NS.companionFighting = nil
+	NS:CompanionUpdateVisibility()
+	NS:EnsureCompanionFrame()
+	NS:CompanionShowHover()
+	local hover = NS.companionHover
+	Want("hors combat : la fiche s'ouvre au survol", hover and hover:IsShown())
+	local menu = NS:EnsureTreatMenu()
+	if menu then menu:Show() end
+	fighting = true
+	Mock:Fire("PLAYER_REGEN_DISABLED")
+	Want("combat : fiche fermée", hover and not hover:IsShown())
+	Want("combat : garde-manger fermé", menu and not menu:IsShown())
+	NS:CompanionShowHover()
+	Want("combat : la fiche ne s'ouvre pas au survol", hover and not hover:IsShown())
+	fighting = false
+	Mock:Fire("PLAYER_REGEN_ENABLED")
+	NS.companionFighting = nil
+	NS:CompanionShowHover()
+	Want("après le combat : la fiche revient", hover and hover:IsShown())
+	NS:CompanionHideHover()
+	_G.InCombatLockdown, _G.UnitAffectingCombat = saved[1], saved[2]
+	Verdict("[UI31] combat : fiche au survol et garde-manger fermés à l'entrée, la fiche ne s'ouvre plus avant la fin")
+end
+end

@@ -488,6 +488,58 @@ function Theme.RegisterEscapeClose(frame)
 	UISpecialFrames[#UISpecialFrames + 1] = name
 end
 
+-- socle 3.1 : retour d'appui des petits boutons dessinés ([×], bouton-icône,
+-- roue crantée), comme Theme.CreateButton : le contenu (`region`, centré)
+-- s'enfonce d'un pixel, le filet passe à l'ambre sombre ; au relâché, le
+-- survol revient si la souris est encore dessus (sinon le repos). Un bouton
+-- désactivé ne bouge pas. Pose OnMouseDown / OnMouseUp (libres sur ces
+-- boutons).
+function Theme.PressFeedback(button, region)
+	if not (button and region and button.SetScript) then return end
+	local function Enabled(self)
+		if not self.IsEnabled then return true end
+		local ok, on = pcall(self.IsEnabled, self)
+		return not ok or (on ~= false and on ~= nil and on ~= 0)
+	end
+	-- les ancres du contenu, relues à l'appui (un module a pu les changer) :
+	-- décalées de 1, -1 puis remises telles quelles
+	local saved = {}
+	local function Anchors()
+		for i = #saved, 1, -1 do saved[i] = nil end
+		local count = region.GetNumPoints and tonumber(region:GetNumPoints()) or 1
+		for i = 1, math.max(1, count) do
+			local point, relTo, relPoint, x, y = region:GetPoint(i)
+			if point then saved[#saved + 1] = { point, relTo or button, relPoint or point, tonumber(x) or 0, tonumber(y) or 0 } end
+		end
+	end
+	local function Place(dx, dy)
+		if #saved == 0 then return end
+		region:ClearAllPoints()
+		for _, p in ipairs(saved) do region:SetPoint(p[1], p[2], p[3], p[4] + dx, p[5] + dy) end
+	end
+	button:SetScript("OnMouseDown", function(self, mouse)
+		if (mouse and mouse ~= "LeftButton") or not Enabled(self) or self.pressed then return end
+		self.pressed = true
+		Anchors()
+		Place(1, -1)
+		if self.border and self.border.SetColor then
+			self.border:SetColor(Theme.GOLD_SOFT[1], Theme.GOLD_SOFT[2], Theme.GOLD_SOFT[3], 1)
+		end
+	end)
+	button:SetScript("OnMouseUp", function(self)
+		if not self.pressed then return end
+		self.pressed = nil
+		Place(0, 0)
+		local over = false
+		if self.IsMouseOver then
+			local ok, value = pcall(self.IsMouseOver, self)
+			over = ok and value and true or false
+		end
+		local script = self:GetScript(over and "OnEnter" or "OnLeave")
+		if script then script(self) end
+	end)
+end
+
 -- Fenêtre déplaçable à la souris, gardée à l'écran
 local function Draggable(frame)
 	frame:SetMovable(true)
@@ -516,6 +568,9 @@ function Theme.CreateCloseButton(frame, size)
 		close.border:SetColor(Theme.EDGE[1], Theme.EDGE[2], Theme.EDGE[3], 1)
 		SetColor(close.label, Theme.MUTED_LIGHT)
 	end)
+	-- socle 3.1 : appui comme un bouton au trait (filet ambre sombre, « × »
+	-- enfoncé d'un pixel), relâché : survol ou repos
+	Theme.PressFeedback(close, close.label)
 	close:SetScript("OnClick", function() frame:Hide() end)
 	return close
 end
@@ -2054,16 +2109,32 @@ function Theme.CreateIconButton(parent, size, texture, onClick, tip)
 	button.icon:SetTexture(texture)
 	button.icon:SetPoint("CENTER", button, "CENTER", 0, 0)
 	button.icon:SetSize(size - 8, size - 8)
+	-- socle 3.1 : désactivé = filet EDGE_SOFT, icône grise plus pâle, pas de
+	-- survol (l'infobulle reste : elle dit à quoi il sert)
 	local function Rest(self)
+		local off = not ButtonEnabled(self)
+		self.disabledLook = off or nil
 		if self.icon.SetDesaturated then self.icon:SetDesaturated(true) end
-		self.icon:SetAlpha(0.6)
-		self.border:SetColor(Theme.EDGE[1], Theme.EDGE[2], Theme.EDGE[3], 1)
+		self.icon:SetAlpha(off and 0.3 or 0.6)
+		local edge = off and Theme.DISABLED.edge or Theme.EDGE
+		self.border:SetColor(edge[1], edge[2], edge[3], 1)
 	end
 	Rest(button)
+	for _, method in ipairs({ "Disable", "Enable", "SetEnabled" }) do
+		local original = button[method]
+		if type(original) == "function" then
+			button[method] = function(self, ...)
+				original(self, ...)
+				Rest(self)
+			end
+		end
+	end
 	button:SetScript("OnEnter", function(self)
-		if self.icon.SetDesaturated then self.icon:SetDesaturated(false) end
-		self.icon:SetAlpha(1)
-		self.border:SetColor(Theme.GOLD[1], Theme.GOLD[2], Theme.GOLD[3], 1)
+		if ButtonEnabled(self) then
+			if self.icon.SetDesaturated then self.icon:SetDesaturated(false) end
+			self.icon:SetAlpha(1)
+			self.border:SetColor(Theme.GOLD[1], Theme.GOLD[2], Theme.GOLD[3], 1)
+		end
 		if tip then
 			local tooltip = rawget(_G, "GameTooltip")
 			if type(tooltip) == "table" and tooltip.SetOwner then
@@ -2078,6 +2149,7 @@ function Theme.CreateIconButton(parent, size, texture, onClick, tip)
 		local tooltip = rawget(_G, "GameTooltip")
 		if tip and type(tooltip) == "table" and tooltip.Hide then tooltip:Hide() end
 	end)
+	Theme.PressFeedback(button, button.icon)
 	if onClick then button:SetScript("OnClick", onClick) end
 	return button
 end
@@ -2125,6 +2197,7 @@ function Theme.CreateGearButton(parent, size, onClick, tip)
 		local tooltip = rawget(_G, "GameTooltip")
 		if tip and type(tooltip) == "table" and tooltip.Hide then tooltip:Hide() end
 	end)
+	Theme.PressFeedback(button, button.icon)
 	if onClick then button:SetScript("OnClick", onClick) end
 	return button
 end

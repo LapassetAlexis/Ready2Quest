@@ -375,8 +375,13 @@ function ns:EnsureTreatMenu()
 	menu:SetPoint("BOTTOM", parent, "TOP", 0, 14)
 	if menu.SetFrameStrata then menu:SetFrameStrata("DIALOG") end
 	if menu.SetClampedToScreen then menu:SetClampedToScreen(true) end
+	-- 3.1.0 : Échap le ferme, comme le menu du compagnon (et le combat, voir
+	-- PLAYER_REGEN_DISABLED dans Companion.lua) ; titre tenu à la largeur
+	if Theme.RegisterEscapeClose then pcall(Theme.RegisterEscapeClose, menu) end
 	menu.title = Theme.Text(menu, Theme.F_CAPS, Theme.MUTED_LIGHT)
 	menu.title:SetPoint("TOPLEFT", menu, "TOPLEFT", left, -PAD)
+	menu.title:SetWidth(width - left - PAD)
+	if menu.title.SetWordWrap then menu.title:SetWordWrap(false) end
 	menu.title:SetJustifyH("LEFT")
 	menu.title:SetText(Theme.Upper(L.TREAT_MENU_TITLE))
 	menu.buttons = {}

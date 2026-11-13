@@ -873,21 +873,20 @@ function ns:ShowJournalGoalTooltip(owner, goal)
 	if type(tip) ~= "table" or not goal then return end
 	pcall(tip.SetOwner, tip, owner, "ANCHOR_LEFT")
 	if tip.ClearLines then tip:ClearLines() end
-	tip:AddLine(goal.label, Theme.GOLD[1], Theme.GOLD[2], Theme.GOLD[3])
-	tip:AddLine(goal.progress .. (goal.unit and (" " .. goal.unit) or ""), 1, 1, 1)
+	-- 3.1.0 : par les briques d'infobulle du thème (titre, texte, aide pâle)
+	Theme.TooltipTitle(tip, goal.label)
+	Theme.TooltipLine(tip, goal.progress .. (goal.unit and (" " .. goal.unit) or ""), Theme.PARCHMENT)
 	local rewards = goal.rewards or (goal.reward and { goal.reward })
 	if rewards and #rewards > 0 then
-		tip:AddLine(self:F("JRN_REWARD", table.concat(rewards, " · ")), Theme.GOLD[1], Theme.GOLD[2], Theme.GOLD[3], true)
+		Theme.TooltipLine(tip, self:F("JRN_REWARD", table.concat(rewards, " · ")), Theme.GOLD, true)
 	end
 	if type(goal.hint) == "table" and #goal.hint > 0 then
-		tip:AddLine(" ")
-		tip:AddLine(L.JRN_HINT_TODO, Theme.PARCHMENT[1], Theme.PARCHMENT[2], Theme.PARCHMENT[3])
-		for _, text in ipairs(goal.hint) do
-			tip:AddLine(text, Theme.TEXT[1], Theme.TEXT[2], Theme.TEXT[3], true)
-		end
+		Theme.TooltipLine(tip, " ")
+		Theme.TooltipLine(tip, L.JRN_HINT_TODO, Theme.PARCHMENT)
+		for _, text in ipairs(goal.hint) do Theme.TooltipLine(tip, text, Theme.TEXT, true) end
 	end
-	tip:AddLine(" ")
-	tip:AddLine(L.JRN_HINT_CLICK, Theme.MUTED[1], Theme.MUTED[2], Theme.MUTED[3])
+	Theme.TooltipLine(tip, " ")
+	Theme.TooltipHint(tip, L.JRN_HINT_CLICK)
 	tip:Show()
 	return tip
 end
@@ -918,8 +917,17 @@ local function BuildLine(frame, index)
 	end)
 	line:SetScript("OnDragStart", StartDrag)
 	line:SetScript("OnDragStop", StopDrag)
-	line:SetScript("OnEnter", function(self) ns:ShowJournalGoalTooltip(self, self.goal) end)
-	line:SetScript("OnLeave", HideTooltip)
+	-- 3.1.0 : une ligne cliquable s'éclaire au survol (voile du thème), comme
+	-- les lignes du carnet
+	line.hover = Theme.CreateHover and Theme.CreateHover(line) or nil
+	line:SetScript("OnEnter", function(self)
+		if self.hover then self.hover:Show() end
+		ns:ShowJournalGoalTooltip(self, self.goal)
+	end)
+	line:SetScript("OnLeave", function(self)
+		if self.hover then self.hover:Hide() end
+		HideTooltip()
+	end)
 
 	-- la carte en vedette : bandeau du thème (fond WINDOW, filet, liseré ambre)
 	if featured then
@@ -997,9 +1005,9 @@ function ns:EnsureJournalTracker()
 		if type(tip) ~= "table" then return end
 		pcall(tip.SetOwner, tip, self, "ANCHOR_LEFT")
 		if tip.ClearLines then tip:ClearLines() end
-		tip:AddLine(L.JRN_TRK_TIP_TITLE, Theme.GOLD[1], Theme.GOLD[2], Theme.GOLD[3])
-		tip:AddLine(L.JRN_TRK_TIP_CLICK, Theme.MUTED_LIGHT[1], Theme.MUTED_LIGHT[2], Theme.MUTED_LIGHT[3])
-		tip:AddLine(L.JRN_TRK_TIP_RESTORE, Theme.MUTED_LIGHT[1], Theme.MUTED_LIGHT[2], Theme.MUTED_LIGHT[3])
+		Theme.TooltipTitle(tip, L.JRN_TRK_TIP_TITLE)
+		Theme.TooltipHint(tip, L.JRN_TRK_TIP_CLICK)
+		Theme.TooltipHint(tip, L.JRN_TRK_TIP_RESTORE)
 		tip:Show()
 	end)
 	title:SetScript("OnLeave", HideTooltip)

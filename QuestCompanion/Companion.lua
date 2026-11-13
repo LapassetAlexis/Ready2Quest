@@ -2245,6 +2245,9 @@ function ns:EnsureCompanionMenu()
 	y = y - M.row - 10
 	frame.huntTitle = Theme.Text(frame, Theme.F_CAPS or Theme.F_SMALL, Theme.GOLD)
 	frame.huntTitle:SetPoint("TOPLEFT", frame, "TOPLEFT", left, y)
+	frame.huntTitle:SetWidth(width)
+	if frame.huntTitle.SetWordWrap then frame.huntTitle:SetWordWrap(false) end
+	frame.huntTitle:SetJustifyH("LEFT")
 	frame.huntTitle:SetText(Theme.Upper and Theme.Upper(L.HUNT_TITLE or "") or (L.HUNT_TITLE or ""))
 	y = y - 15
 	frame.huntStatus = Theme.Text(frame, Theme.F_SMALL, Theme.MUTED_LIGHT)
@@ -2479,6 +2482,9 @@ function ns:EnsureCompanionHover()
 	hover.bars = {}
 	for _, key in ipairs(NEED_KEYS) do
 		local label = Theme.Text(hover, Theme.F_SMALL, Theme.LABEL)
+		-- 3.1.0 : le libellé tient dans sa colonne (jamais sur la barre)
+		label:SetWidth(HOVER_LABEL_W - 4)
+		if label.SetWordWrap then label:SetWordWrap(false) end
 		label:SetJustifyH("LEFT")
 		label:SetText(L["COMP_NEED_" .. key])
 		local bar = Theme.CreateBar(hover, width - HOVER_LABEL_W - 36, 4)
@@ -2553,6 +2559,9 @@ function ns:CompanionRefreshHover()
 end
 
 function ns:CompanionShowHover()
+	-- 3.1.0 : pas de fiche en combat (le cadre est estompé, la souris ne fait
+	-- que passer) ; elle revient au prochain survol hors combat
+	if InCombat() then return end
 	local hover = self:EnsureCompanionHover()
 	if not hover then return end
 	if hover.hint then hover.hint:SetText(self:CompanionHoverHint()) end
@@ -3762,11 +3771,20 @@ function ns:CompanionPreview(container)
 	box:SetPoint("LEFT", container, "LEFT", 14, 0)
 	container.box = box
 
-	container.name = Theme.Text(container, Theme.F_TITLE, Theme.PARCHMENT)
+	-- 3.1.0 : trois lignes tenues à la largeur de l'aperçu (coupées, jamais
+	-- au-delà du cadre)
+	local textW = math.max(120, (tonumber(container.GetWidth and container:GetWidth()) or 0) - SIZE - 34 - 20)
+	local function Fit(fs)
+		fs:SetWidth(textW)
+		fs:SetJustifyH("LEFT")
+		if fs.SetWordWrap then fs:SetWordWrap(false) end
+		return fs
+	end
+	container.name = Fit(Theme.Text(container, Theme.F_TITLE, Theme.PARCHMENT))
 	container.name:SetPoint("TOPLEFT", container, "TOPLEFT", SIZE + 34, -20)
-	container.line = Theme.Text(container, Theme.F_BODY, Theme.MUTED_LIGHT)
+	container.line = Fit(Theme.Text(container, Theme.F_BODY, Theme.MUTED_LIGHT))
 	container.line:SetPoint("TOPLEFT", container.name, "BOTTOMLEFT", 0, -6)
-	container.style = Theme.Text(container, Theme.F_SMALL, Theme.MUTED)
+	container.style = Fit(Theme.Text(container, Theme.F_SMALL, Theme.MUTED))
 	container.style:SetPoint("TOPLEFT", container.line, "BOTTOMLEFT", 0, -6)
 
 	function container:Refresh(addon)
@@ -3938,6 +3956,10 @@ local HANDLERS = {
 		ns.companionFighting = Clock()
 		ns:CompanionPauseTutorial()
 		ns:CompanionHideBubble()
+		-- 3.1.0 : fiche au survol et garde-manger fermés (le menu du
+		-- compagnon se ferme déjà de lui-même)
+		ns:CompanionHideHover()
+		if ns.treatMenu and ns.treatMenu.Hide then ns.treatMenu:Hide() end
 		ns:CompanionApplyContext()
 	end,
 	PLAYER_REGEN_ENABLED   = function()

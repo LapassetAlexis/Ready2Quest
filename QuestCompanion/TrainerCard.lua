@@ -1297,7 +1297,7 @@ function ns:TrainerTooltipLine(tooltip, data)
 	local title = card and card.titleCode and self.FeatTitleText and self:FeatTitleText(card.titleCode, nil, card.gender)
 	title = title or (card and card.title)
 	if title then text = text .. " · " .. title end
-	tooltip:AddLine(text, Theme.GOLD[1], Theme.GOLD[2], Theme.GOLD[3])
+	Theme.TooltipTitle(tooltip, text)
 	if data == nil and type(tooltip.Show) == "function" then pcall(tooltip.Show, tooltip) end
 	return true
 end

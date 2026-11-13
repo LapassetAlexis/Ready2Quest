@@ -642,10 +642,7 @@ function ns:GuildFeatsEnqueue(item)
 	if showing and showing.key == item.key and item.score <= showing.score then
 		Merge(showing, item)
 		local frame = self.guildFeatToast
-		if frame and frame.hint then
-			local more = self:GuildFeatMoreText(showing.info.more)
-			frame.hint:SetText(more and (more .. "  ·  " .. L.GFEAT_HINT) or L.GFEAT_HINT)
-		end
+		if frame and frame.hint then frame.hint:SetText(self:GuildFeatMoreText(showing.info.more) or "") end
 		return true
 	end
 	for index, other in ipairs(queue) do
@@ -719,6 +716,21 @@ function ns:EnsureGuildFeatToast()
 		if button.RegisterForClicks then button:RegisterForClicks("LeftButtonUp", "RightButtonUp") end
 		if button.RegisterForDrag then button:RegisterForDrag("LeftButton") end
 		button:SetScript("OnClick", function(_, mouse) ns:GuildFeatsClick(mouse) end)
+		-- 3.1.0 : l'aide au survol (avant : une 4e ligne sur chaque bandeau
+		-- Sobre, rien en Azeroth)
+		button:SetScript("OnEnter", function(b)
+			local tip = rawget(_G, "GameTooltip")
+			if type(tip) ~= "table" or not tip.SetOwner then return end
+			tip:SetOwner(b, "ANCHOR_BOTTOM")
+			Theme.TooltipHint(tip, L.GFEAT_HINT)
+			tip:Show()
+		end)
+		button:SetScript("OnLeave", function(b)
+			local tip = rawget(_G, "GameTooltip")
+			if type(tip) ~= "table" or not tip.Hide then return end
+			if tip.GetOwner and tip:GetOwner() ~= b then return end
+			tip:Hide()
+		end)
 		button:SetScript("OnDragStart", function() if frame.StartMoving then pcall(frame.StartMoving, frame) end end)
 		button:SetScript("OnDragStop", function()
 			local stop = frame.GetScript and frame:GetScript("OnDragStop")
@@ -773,7 +785,13 @@ end
 
 function ns:GuildFeatsHideToast()
 	state.showing, state.hideAt = nil, nil
-	if self.guildFeatToast then self.guildFeatToast:Hide() end
+	local frame = self.guildFeatToast
+	if frame then
+		-- son infobulle part avec lui (le bandeau s'efface sous la souris)
+		local leave = frame.button and frame.button:GetScript("OnLeave")
+		if leave then leave(frame.button) end
+		frame:Hide()
+	end
 	if self.BannerDone then self:BannerDone("guild") end
 end
 
@@ -794,7 +812,7 @@ GuildFeatDecor = function(self, frame, info, feat)
 			if ns.AzerothShieldCenter then ns.AzerothShieldCenter(frame.featPoints, frame.shield)
 			else frame.featPoints:SetPoint("CENTER", frame.shield, "CENTER", 0, 4) end
 			if ns.AzerothFont then ns.AzerothFont(frame.featPoints, 16, "OUTLINE") end
-			frame.featPoints:SetTextColor(1, 1, 1, 1)
+			frame.featPoints:SetTextColor(Theme.WHITE[1], Theme.WHITE[2], Theme.WHITE[3], 1)
 		else
 			frame.featPoints = Theme.Text(frame, Theme.F_NUMBER, Theme.GOLD)
 			frame.featPoints:SetPoint("RIGHT", frame, "RIGHT", -12, 0)
@@ -814,8 +832,9 @@ function ns:GuildFeatsShowToast(item)
 	frame.title:SetText(Theme.Upper and Theme.Upper(L.GFEAT_TITLE) or L.GFEAT_TITLE)
 	frame.text:SetText(info.line)
 	frame.info:SetText(self:GuildFeatSubLine(info))
-	local more = self:GuildFeatMoreText(info.more)
-	frame.hint:SetText(more and (more .. "  ·  " .. L.GFEAT_HINT) or L.GFEAT_HINT)
+	-- 3.1.0 : la ligne d'aide ne garde que « et N autres exploits » ; « Clic :
+	-- sa fiche de dresseur » passe dans l'infobulle du bandeau (les deux styles)
+	frame.hint:SetText(self:GuildFeatMoreText(info.more) or "")
 	local accent = info.shiny and (Theme.GOLD_LIGHT or Theme.GOLD) or Theme.GOLD
 	if frame.SetAccent then frame:SetAccent(accent) end
 	local feat = info.kind == "h"
@@ -838,6 +857,17 @@ end
 function ns:GuildFeatsToastTick(now)
 	now = now or Clock()
 	if state.showing then
+		-- 3.1.0 : le combat commence : le bandeau s'efface du haut de l'écran
+		-- et, s'il n'avait pas tenu la moitié de son temps, revient après
+		local item = state.showing
+		if InCombat() then
+			if state.hideAt and state.hideAt - now > ns.GFEAT_TOAST_SECONDS / 2 then
+				item.at = now
+				table.insert(state.toasts, 1, item)
+			end
+			self:GuildFeatsHideToast()
+			return false
+		end
 		if state.hideAt and now < state.hideAt then return false end
 		self:GuildFeatsHideToast()
 	end

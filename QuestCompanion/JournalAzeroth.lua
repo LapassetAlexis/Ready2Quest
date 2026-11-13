@@ -1100,6 +1100,12 @@ local function JournalNav(self, frame)
 			for _, block in ipairs({ box.pet, box.zone, box.missions }) do
 				local c = ns.AZEROTH_MISSION.rule
 				if block.rule then block.rule:SetVertexColor(c[1], c[2], c[3], 0.6) end
+				-- 3.1.0 : survol du bloc sur parchemin : voile et filet à l'encre
+				-- du filet (le voile blanc du thème ne se verrait pas)
+				if block.hover then
+					block.hover:SetVertexColor(c[1], c[2], c[3], 0.10)
+					if block.hover.edge and block.hover.edge.SetColor then block.hover.edge:SetColor(c[1], c[2], c[3], 0.6) end
+				end
 			end
 		end
 	end

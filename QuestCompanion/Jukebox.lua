@@ -584,18 +584,24 @@ local function NewRow(pane, ui, width)
 		local r = b:GetParent()
 		if r.track then ns:JukeToggleFav(r.track.id); ns:RefreshJournal() end
 	end)
-	row.fav:SetScript("OnEnter", function(b) ui.Tip(b, L.JRN_SEC_juke, { L.JUKE_FAV_TIP }, "above") end)
-	row.fav:SetScript("OnLeave", ui.HideTip)
+	-- 3.1.0 : « étoile » et « + » s'éclairent au survol (voile et filet du
+	-- thème), comme toute commande cliquable du carnet
+	row.fav.hover = Theme.CreateHover(row.fav)
+	row.add.hover = Theme.CreateHover(row.add)
+	local function Leave(b) b.hover:Hide(); ui.HideTip() end
+	row.fav:SetScript("OnEnter", function(b) b.hover:Show(); ui.Tip(b, L.JRN_SEC_juke, { L.JUKE_FAV_TIP }, "above") end)
+	row.fav:SetScript("OnLeave", Leave)
 	row.add:SetScript("OnClick", function(b)
 		local r = b:GetParent()
 		if r.track then ns:JukeListToggle(r.listIndex or ns:JukeData().active, r.track.id); ns:RefreshJournal() end
 	end)
 	row.add:SetScript("OnEnter", function(b)
+		b.hover:Show()
 		local r = b:GetParent()
 		local label = ViewLabel("list" .. (r.listIndex or ns:JukeData().active))
 		ui.Tip(b, L.JRN_SEC_juke, { ns:F(r.listIndex and "JUKE_REMOVE_TIP" or "JUKE_ADD_TIP", label) }, "above")
 	end)
-	row.add:SetScript("OnLeave", ui.HideTip)
+	row.add:SetScript("OnLeave", Leave)
 	return row
 end
 

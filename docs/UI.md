@@ -396,7 +396,8 @@ illisibles, solde de paillettes peu visible, « Acheter » muet au clic).
 | Bouton d'accent | `"accent"` ; Azeroth : rouge | idem | idem |
 | Bouton « aventure » | `"adventure"` (Ready2Quest) | idem | idem |
 | Inactif | `button:SetInactive(on, raison)` | — | aspect désactivé, infobulle de la raison, **clic gardé** : le module explique (plus employé par l'Échoppe depuis la bêta 6 : `SetEnabled(false)` + `disabledTip`) |
-| Bouton-icône | `Theme.CreateIconButton` | 24 | gris désaturé au repos, ambre au survol |
+| Bouton-icône | `Theme.CreateIconButton` | 24 | gris désaturé au repos, ambre au survol ; appui (icône 1, −1, filet ambre sombre) et désactivé (filet EDGE_SOFT, icône à 30 %, sans survol) depuis le socle 3.1 |
+| Fermer, roue crantée | `Theme.CreateCloseButton`, `CreateGearButton` | 22-24 | survol ; appui (contenu 1, −1 ; filet ambre sombre pour [×]) depuis le socle 3.1 (`Theme.PressFeedback`) |
 | Onglet | `Theme.CreateNavItem` | 28 (Sobre), 29 au pas de 31 (Azeroth) | survol, choisi, pastille |
 | Puces (vue, filtre) | `Theme.CreateChips` | `CONTROL_HEIGHT` 24, F_BODY | au repos, survol, choisie (ambre ; Azeroth : surbrillance des catégories) |
 | Liste déroulante | `Theme.CreateDropdown` | `CONTROL_HEIGHT` 24 | — |
@@ -454,6 +455,54 @@ leurs animations (secousse, fondu) naissent avec le carnet ; un
 rafraîchissement ne crée aucun cadre (`tests/modules/ui_windows.lua`) ;
 le peintre d'états ne crée rien (voiles de survol et d'appui créés à
 l'habillage) ; pas d'`OnUpdate`.
+
+## Passe de cohérence 3.1.0 (QuestCompanion, socle 3.1)
+
+Relecture de toutes les fenêtres, bandeaux et infobulles du compagnon
+(hors capture, en réécriture à part) : états des contrôles, Échap, combat,
+textes bornés. Tests : `ui_bricks.lua` (« [UI31] »), `banners.lua` (§ 7),
+`qc2_guilde.lua`.
+
+### Corrigé
+
+| Écart | Avant | Après |
+|---|---|---|
+| Appui des petits boutons du socle | [×], bouton-icône et roue crantée sans état « enfoncé » (seuls les `CreateButton` l'avaient) | `Theme.PressFeedback` : contenu décalé de 1, −1, filet ambre sombre ; relâché : survol ou repos ; ancres d'origine remises telles quelles |
+| Bouton-icône désactivé | `Disable()` sans effet visible, survol ambre quand même | filet `DISABLED.edge`, icône à 30 %, pas de survol ni d'appui, infobulle gardée |
+| Infobulles écrites à la main | `AddLine` avec couleurs recopiées (progression en blanc pur, aide du clic en MUTED) dans le suivi « Carnet », la ligne « fiche de dresseur » et la ligne du bestiaire | `Theme.TooltipTitle` / `TooltipLine` / `TooltipHint` (progression PARCHMENT, aide MUTED clair) ; un test interdit `:AddLine(` dans ces fichiers |
+| Commandes cliquables muettes au survol | étoile et « + » du Juke-box, blocs du tableau de bord du carnet, lignes du bloc « Carnet » : seule l'infobulle disait qu'on pouvait cliquer | voile et filet de survol du thème (`Theme.CreateHover`) ; sur le parchemin Azeroth, les blocs du tableau de bord prennent l'encre du filet |
+| Garde-manger (Maj+clic) | nommé mais pas à Échap, restait ouvert en combat | Échap le ferme ; fermé à l'entrée en combat (comme le menu du compagnon) |
+| Fiche au survol du compagnon | s'ouvrait en combat (strate TOOLTIP, 220 px) dès que la souris passait sur le cadre estompé | ne s'ouvre pas en combat, fermée à `PLAYER_REGEN_DISABLED` ; revient au survol suivant |
+| Bandeaux du carnet et de guilde | mis en file pendant le combat, mais un bandeau déjà affiché restait au haut de l'écran avec son bouton invisible qui prend la souris | effacé dès le combat ; s'il n'avait pas tenu la moitié de son temps, il revient en tête de file après (le résultat de capture s'effaçait déjà) |
+| Bandeau de guilde : 4e ligne | « Clic : sa fiche de dresseur » sur chaque bandeau Sobre (et nulle part en Azeroth) | la ligne ne garde que « et N autres exploits » ; l'aide passe dans l'infobulle du bandeau, dans les deux styles |
+| Textes sans largeur | libellés des envies de la fiche au survol (pouvaient passer sur la barre), titre du garde-manger, titre « Chasse » du menu, trois lignes de l'aperçu des réglages du compagnon | largeur posée, sans retour à la ligne |
+| Blanc en dur | points des hauts faits sur l'écu (`SetTextColor(1, 1, 1)`) | `Theme.WHITE` |
+
+Contraste ajouté : PARCHMENT, TEXT, MUTED clair et GOLD sur le fond
+d'infobulle du jeu (≥ 4,5:1, mesuré dans `ui_bricks.lua`). Aucune autre
+couleur n'a changé.
+
+### Laissé tel quel
+
+| Élément | Pourquoi |
+|---|---|
+| Panneau d'allure et confirmation « changer de compagnon » sans nom global | Échap est géré par la fenêtre (`OnKeyDown`) pour ne fermer qu'elle et pas le carnet dessous ; en combat (clavier non pris), Échap ferme le carnet, qui les ferme avec lui |
+| Carnet, fiche de dresseur, coffre de zone ouverts en combat | ouverts par le joueur : ils restent (rien ne se ferme tout seul) |
+| Échanges | la session se termine déjà au combat ; la page Échanges ne s'ouvre seule qu'à l'acceptation d'une invitation, impossible à lancer en combat |
+| Bulles du compagnon, conseils, visite guidée, visite de Grand-père Hiver, annonces du carnet (Notify) | déjà retenues ou suspendues en combat (seules les alertes `COMBAT_PASS` : brillante, rare vivant, peur) |
+| Cases du garde-manger (pied du carnet, menu) et ↻ des Missions | survol par le filet ambre, déjà documenté ; pas d'appui (cases d'icône, comme les emplacements du jeu) |
+| Boutons de type des Créatures (`MenagerieView.lua`) | bascules dessinées avec repos, survol, choisi : un état « enfoncé » n'y ajouterait rien |
+| Cases du garde-manger vides à 40 % | case d'icône (pas un libellé à lire), même convention que les emplacements vides du jeu |
+| Fenêtres et bandeaux de la capture | hors de cette passe (réécriture en cours) ; ils profitent quand même de l'appui du [×] et des boutons-icônes du socle |
+
+### À regarder en jeu
+
+- Appui du [×], des boutons-icônes (rang des aides de capture, filet à
+  l'écran) et de la roue : le décalage d'un pixel, et surtout que le filet
+  de capture déplacé à la souris garde son icône à sa place.
+- Voile de survol des lignes du bloc « Carnet » sur le monde, et des blocs
+  du tableau de bord sur le parchemin (encre du filet à 10 %).
+- Bandeau du carnet effacé au premier coup reçu, et revenu après le combat.
 
 ## Style Azeroth (QuestCompanion)
 

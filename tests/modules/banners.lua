@@ -272,3 +272,47 @@ do
 	B.Reset()
 	s.check("[BAN] lot de hauts faits : noms au bandeau (3, puis « et N autres », ajustés), chat complet, clic vers la page")
 end
+
+-- 7. 3.1.0 : le combat commence sous un bandeau : il s'efface, et revient après s'il était frais --------
+do
+	local s = Steps()
+	local saved = { rawget(_G, "InCombatLockdown"), rawget(_G, "UnitAffectingCombat") }
+	local fighting = false
+	_G.InCombatLockdown = function() return fighting end
+	_G.UnitAffectingCombat = function() return fighting end
+	B.Reset()
+	NS:JournalToastPush(B.Feat("Premier filet"))
+	B.Step(0)
+	s.ok("carnet : à l'écran avant le combat", B.Shown()[1] == "journal")
+	fighting = true
+	B.Step(0.5)
+	s.ok("carnet : effacé dès le combat, place rendue", #B.Shown() == 0 and NS:BannerShowing() == nil, table.concat(B.Shown(), ","))
+	s.ok("carnet : frais, remis en tête de file", #NS.journalToasts == 1 and NS.journalToasts[1].name == "Premier filet")
+	B.Step(5)
+	s.ok("carnet : rien tant que dure le combat", #B.Shown() == 0)
+	fighting = false
+	B.Step(0.25)
+	s.ok("carnet : revient après le combat", B.Shown()[1] == "journal" and NS.journalToast.text:GetText() == "Premier filet",
+		NS.journalToast.text:GetText())
+	-- presque fini : pas remontré
+	B.Step(3)
+	fighting = true
+	B.Step(0.1)
+	s.ok("carnet : presque fini au combat, effacé sans retour", #B.Shown() == 0 and #NS.journalToasts == 0)
+	fighting = false
+	-- guilde : même règle
+	B.Reset()
+	NS:GuildFeatsEnqueue(B.Guild("ann", "Ann a scellé une zone !"))
+	B.Step(0)
+	s.ok("guilde : à l'écran avant le combat", B.Shown()[1] == "guild")
+	fighting = true
+	B.Step(0.5)
+	s.ok("guilde : effacé dès le combat, remis en file", #B.Shown() == 0 and #NS:GuildFeatsQueue() == 1
+		and NS:BannerShowing() == nil)
+	fighting = false
+	B.Step(0.25)
+	s.ok("guilde : revient après le combat", B.Shown()[1] == "guild" and NS.guildFeatToast.text:GetText() == "Ann a scellé une zone !")
+	B.Reset()
+	_G.InCombatLockdown, _G.UnitAffectingCombat = saved[1], saved[2]
+	s.check("[BAN] 3.1.0 combat : bandeau du carnet ou de guilde effacé du haut de l'écran, revient après s'il était frais")
+end

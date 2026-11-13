@@ -150,12 +150,10 @@ function ns:BestiaryOnTooltip(tooltip, data)
 	local guid, level = HoveredGUID(tooltip, data)
 	local text, color = self:BestiaryTooltipLine(guid, level)
 	if not text then return false end
-	tooltip:AddLine(text, color[1], color[2], color[3])
+	-- 3.1.0 : par la brique d'infobulle du thème
+	Theme.TooltipLine(tooltip, text, color)
 	local wary = self:BestiaryTooltipWary(guid)
-	if wary then
-		local c = Theme.ORANGE or Theme.GOLD
-		tooltip:AddLine(wary, c[1], c[2], c[3])
-	end
+	if wary then Theme.TooltipLine(tooltip, wary, Theme.ORANGE or Theme.GOLD) end
 	-- accroche OnTooltipSetUnit (pas de data) : le cadre reprend sa taille
 	if data == nil and type(tooltip.Show) == "function" then pcall(tooltip.Show, tooltip) end
 	return true
