@@ -1605,7 +1605,8 @@ do
 		function ns:CaptureResolve(rolling, ...)
 			local result = base(self, rolling, ...)
 			local target = rolling and rolling.target
-			if target and rolling.success and not rolling.batch and not self.captureBatchResolving
+			-- (3.1.0 : une prise express ordinaire a sa pastille, pas de bandeau : rolling.quiet)
+			if target and rolling.success and not rolling.batch and not rolling.quiet and not self.captureBatchResolving
 				and not SceneShowsVerdict(self, rolling) then
 				self:CaptureResultQueue({ name = target.name, shiny = target.shiny and true or false, stars = rolling.stars,
 					npcID = target.npcID, level = target.level, type = target.type })

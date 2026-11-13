@@ -145,6 +145,8 @@ do
 	XP.Roll(0)
 	XP.SeeKill(6100, { name = "Raptor A" })
 	NS:CaptureExpressThrow()
+	local pendingNew = NS.captureResultPending ~= nil
+	NS.captureResultPending = nil
 	-- la même espèce en mode chasse : proposée, mais ni nouvelle ni meilleure
 	NS:CaptureState().queue[1] = nil
 	local candidate = { guid = XP.Guid(6100, "0000000002"), npcID = 6100, zoneID = 1413, name = "Raptor A",
@@ -156,6 +158,8 @@ do
 	local _, item = Row(1)
 	Check("[EXP] prise ordinaire : pastille verte, rien dans le chat, pas de bulle",
 		type(rolling) == "table" and rolling.success and item.kind == "ok" and #printed == 0 and #said == 0, #printed)
+	Check("[EXP] prise ordinaire : pas de bandeau « Capturé ! » en attente ; une prise qui compte garde le sien",
+		rolling.quiet == true and NS.captureResultPending == nil and pendingNew)
 	Check("[EXP] après le lancer, le chat et les bulles sont rendus", NS.Print ~= nil and NS.captureExpressResolving == nil)
 	XP.Roll(0.999)
 	XP.SeeKill(6101, { name = "Raptor B" })

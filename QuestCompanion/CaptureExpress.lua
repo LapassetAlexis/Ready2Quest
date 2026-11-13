@@ -372,6 +372,8 @@ function ns:CaptureExpressThrow(which, opts)
 	if not (opts and opts.silent) then self:CapturePlaySound("throw") end
 	local rolling = self:CaptureRoll(picked, aid)
 	rolling.express = true
+	-- prise ordinaire : ni chat, ni bulle, ni bandeau « Capturé ! » (AzerothStyle.lua)
+	rolling.quiet = not notable or nil
 	rolling.result = rolling.success and "ok" or "fail"
 	-- l'aide ne sert qu'à ce lancer (comme la carte et la volée)
 	state.aid = nil
