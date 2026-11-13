@@ -1033,12 +1033,14 @@ end
 -- Visible si : module allumé, suivi allumé, pas en combat (si réglé), et au
 -- moins un objectif. Un titre seul, sans rien à suivre, ne serait que du bruit,
 -- sauf s'il reste des masqués (2.10.0) : il sert à les réafficher.
+local NO_GOALS = {}   -- jamais remplie
 function ns:RefreshJournalTracker()
 	local db = self:DB()
 	local frame = self.journalTracker
 	local wanted = ModuleOn() and db.journalTracker ~= false
 		and not (db.journalTrackerCombat ~= false and InCombat())
-	local goals, hidden = {}, 0
+	-- 3.1.0 : caché (combat, module coupé) : la liste vide partagée, pas de table neuve
+	local goals, hidden = NO_GOALS, 0
 	if wanted then goals, hidden = self:JournalTrackerObjectives() end
 	if #goals == 0 and hidden == 0 then
 		if frame then frame:Hide() end
@@ -1152,12 +1154,9 @@ local HANDLERS = {
 	PLAYER_REGEN_ENABLED  = function() ns.journalTrackerCombat = false; ns:RefreshJournalTracker() end,
 }
 
-local eventFrame = CreateFrame("Frame")
-for event in pairs(HANDLERS) do pcall(eventFrame.RegisterEvent, eventFrame, event) end
-eventFrame:SetScript("OnEvent", function(_, event, ...)
-	local ok, err = pcall(HANDLERS[event], ...)
-	if not ok and ns.RecordError then ns:RecordError("journaltracker:" .. tostring(event), err) end
-end)
-ns.journalTrackerEventFrame = eventFrame
+-- 3.1.0 : cadre d'événements commun (ns.Listen, Libs/Socle/Compat.lua) ;
+-- sans porte : l'état de combat et les zones de relais sont suivis même
+-- module coupé
+ns.Listen("journaltracker", HANDLERS)
 
 if ns.Mark then ns.Mark("JournalTracker") end

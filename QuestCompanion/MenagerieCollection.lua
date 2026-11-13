@@ -612,6 +612,21 @@ function ns:MenagerieCollectionCatchUp()
 	return sealed, #types, #ranks
 end
 
+-- (3.1.0 : fonction faite une fois, plus de fermeture à chaque rafraîchissement du suivi)
+local function SealCheck(self)
+	if not self:MenagerieCollectionData().init then
+		self:MenagerieCollectionCatchUp()
+	else
+		local zoneID = self.JournalZone and self:JournalZone()
+		local capture = self.CaptureData and self:CaptureData()
+		local serial = capture and capture.serial
+		local last = self.menagerieSealSeen
+		if zoneID and not (last and last.zone == zoneID and last.serial == serial and last.count == (capture and capture.count)) then
+			self.menagerieSealSeen = { zone = zoneID, serial = serial, count = capture and capture.count }
+			self:MenagerieSealCheck(zoneID)
+		end
+	end
+end
 do
 	local resolve = ns.CaptureResolve
 	if resolve then
@@ -631,20 +646,7 @@ do
 		function ns:RefreshJournalTracker(...)
 			local a, b = refresh(self, ...)
 			if ModuleOn() then
-				local ok, err = pcall(function()
-					if not self:MenagerieCollectionData().init then
-						self:MenagerieCollectionCatchUp()
-					else
-						local zoneID = self.JournalZone and self:JournalZone()
-						local capture = self.CaptureData and self:CaptureData()
-						local serial = capture and capture.serial
-						local last = self.menagerieSealSeen
-						if zoneID and not (last and last.zone == zoneID and last.serial == serial and last.count == (capture and capture.count)) then
-							self.menagerieSealSeen = { zone = zoneID, serial = serial, count = capture and capture.count }
-							self:MenagerieSealCheck(zoneID)
-						end
-					end
-				end)
+				local ok, err = pcall(SealCheck, self)
 				if not ok and self.RecordError then self:RecordError("menagerie:catchup", err) end
 			end
 			return a, b

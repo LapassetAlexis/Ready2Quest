@@ -8,7 +8,9 @@
 --     des brillantes ;
 --   * infobulle d'unité : une espèce lue (BestiarySpeciesOne) ; ns:AtCamp lu
 --     une fois par image ; UNIT_AURA du joueur seulement ; AsciiLower,
---     MapChain, MemoGlobals, erreurs bornées, molette du carnet, conseils en rafale.
+--     MapChain, MemoGlobals, erreurs bornées, molette du carnet, conseils en rafale ;
+--   * passe 2 (3.1.0) : cadre d'événements commun (ns.On), portes et attente,
+--     menu du compagnon, UNIT_AURA rafraîchie sans relecture.
 -- La mesure de la mémoire elle-même : python3 tests/run_tests.py --memoire.
 local Check, Say, NS, QNS, Mock = T.Check, T.Say, T.NS, T.QNS, T.Mock
 local ROOT = rawget(_G, "ADDON_ROOT") or "."
@@ -396,8 +398,8 @@ do
 	Want("autre événement ordinaire", NS.RegisterGameEvent(frame, "PLAYER_LOGIN") == true
 		and not (frame.unitFilter and frame.unitFilter.PLAYER_LOGIN))
 	Verdict("[PERF] RegisterGameEvent : UNIT_AURA filtré au joueur, repli RegisterEvent, autres événements ordinaires")
-	local hub = QNS.featEventFrame
-	Check("[PERF] abonnements réels au joueur seulement : R2Q, camp, stats, hauts faits de QC",
+	local hub = QNS.eventHub
+	Check("[PERF] abonnements réels au joueur seulement : R2Q, camp, stats, cadre commun de QC",
 		NS.eventFrame.unitFilter and NS.eventFrame.unitFilter.UNIT_AURA and NS.eventFrame.unitFilter.UNIT_AURA.player == true
 		and NS.campEventFrame.unitFilter.UNIT_AURA.player == true and NS.statsEventFrame.unitFilter.UNIT_STATS.player == true
 		and (not hub.events.UNIT_AURA or hub.unitFilter.UNIT_AURA.player == true))
@@ -472,4 +474,138 @@ do
 		burst and calls == 1)
 	QNS.AdviceEvaluate = evaluate
 	QNS.adviceNextAt = nil
+end
+
+-- 7. Passe 2 (3.1.0, docs/AUDIT-PERF.md) : cadre d'événements commun -----------------------------------
+do
+	Say("-- passe 2 : un seul cadre d'événements (ns.On / ns.Off / ns.Listen)")
+	local hub = QNS.eventHub
+	local EV = "QC_PERF_TEST_EVENT"
+	local calls = {}
+	local function Sub(name) return function(...) calls[#calls + 1] = name .. ":" .. table.concat({ ... }, ",") end end
+	Want("cadre commun créé", hub ~= nil)
+	Want("abonné : écouté", QNS.On(EV, "a", Sub("a")) == true and hub.events[EV] == true)
+	QNS.On(EV, "b", Sub("b"))
+	Mock:Fire(EV, "x", "y")
+	Want("ordre d'abonnement, arguments transmis : " .. table.concat(calls, " "), table.concat(calls, " ") == "a:x,y b:x,y")
+	-- une erreur notée sous « qui:ÉVÉNEMENT », les suivants appelés
+	local savedErrors, savedPrint = QNS.errors, _G.print
+	QNS.errors, _G.print = {}, function() end
+	calls = {}
+	QNS.On(EV, "a", function() error("boum") end)
+	Mock:Fire(EV, "z")
+	Want("erreur notée, le suivant appelé", #QNS.errors == 1 and QNS.errors[1].where == "a:" .. EV and calls[1] == "b:z")
+	QNS.errors, _G.print = savedErrors, savedPrint
+	-- désabonné pendant l'appel : la boucle tient, l'autre n'est plus appelé
+	calls = {}
+	QNS.On(EV, "a", function() calls[#calls + 1] = "a"; QNS.Off(EV, "b") end)
+	Mock:Fire(EV)
+	Mock:Fire(EV)
+	Want("Off pendant l'appel : " .. table.concat(calls, " "), table.concat(calls, " ") == "a a" and hub.events[EV] == true)
+	QNS.Off(EV, "a")
+	Want("dernier désabonné : plus écouté par le client", hub.events[EV] == nil and not QNS.Listening(EV))
+	-- réabonné : à la fin de l'ordre d'appel, comme un cadre réabonné
+	calls = {}
+	QNS.On(EV, "b", Sub("b")); QNS.On(EV, "a", Sub("a"))
+	Mock:Fire(EV, 1)
+	Want("réabonnés dans l'ordre : " .. table.concat(calls, " "), table.concat(calls, " ") == "b:1 a:1")
+	-- mise en attente : rang gardé
+	calls = {}
+	QNS.EventHold("b", true)
+	Mock:Fire(EV, 2)
+	QNS.EventHold("b", false)
+	Mock:Fire(EV, 3)
+	Want("attente puis reprise, rang gardé : " .. table.concat(calls, " "), table.concat(calls, " ") == "a:2 b:3 a:3")
+	QNS.Unlisten("a"); QNS.Unlisten("b")
+	Want("tout retiré", hub.events[EV] == nil)
+	-- événement inconnu du client : pas d'erreur, rien d'écouté
+	Mock.world.unknownEvents = { QC_PERF_UNKNOWN = true }
+	local okUnknown, heard = pcall(QNS.On, "QC_PERF_UNKNOWN", "a", Sub("a"))
+	Mock.world.unknownEvents = nil
+	Want("événement refusé : sans erreur, non écouté", okUnknown and heard == false and not QNS.Listening("QC_PERF_UNKNOWN"))
+	QNS.Unlisten("a")
+	-- UNIT_AURA sur le cadre commun : le joueur seulement
+	Want("UNIT_AURA du joueur seulement", hub.unitFilter and hub.unitFilter.UNIT_AURA and hub.unitFilter.UNIT_AURA.player == true)
+	Verdict("[PERF2] cadre commun : ordre, erreurs isolées, désabonnement (même pendant l'appel), attente, événement refusé")
+
+	-- un seul cadre de QC pour les événements fréquents
+	local many = {}
+	for _, event in ipairs({ "NAME_PLATE_UNIT_ADDED", "UPDATE_MOUSEOVER_UNIT", "PLAYER_TARGET_CHANGED", "ZONE_CHANGED",
+		"CHAT_MSG_LOOT", "QUEST_TURNED_IN", "PLAYER_ENTERING_WORLD" }) do
+		local count = 0
+		for _, frame in ipairs(Mock.frames) do
+			if frame.mockAddon == hub.mockAddon and frame.events and frame.events[event] then count = count + 1 end
+		end
+		if count ~= 1 then many[#many + 1] = event .. "=" .. count end
+	end
+	Check("[PERF2] QC : un seul cadre reçoit chaque événement fréquent (barres de vie, survol, cible, zone, butin, quête)",
+		#many == 0, table.concat(many, ", "))
+
+	-- compagnon coupé : ses événements (et ceux de la récolte, du groupe) ne sont plus écoutés
+	local db = QNS:DB()
+	local savedOn = db.companionEnabled
+	QNS:ToggleModuleKey("companionEnabled")
+	Want("coupé par les réglages", db.companionEnabled == false)
+	Want("butin plus écouté", not QNS.Listening("CHAT_MSG_LOOT"))
+	Want("groupe plus écouté", not QNS.Listening("GROUP_ROSTER_UPDATE", "group"))
+	Want("compagnon plus abonné", not QNS.Listening("QUEST_TURNED_IN", "companion"))
+	Want("le reste (bestiaire, suivi) toujours", QNS.Listening("UPDATE_MOUSEOVER_UNIT") and QNS.Listening("PLAYER_REGEN_ENABLED"))
+	local function Polling()
+		local count, list = QNS.ClockJobs()
+		for i = 1, count do if list[i] == "events:gates" then return true end end
+		return false
+	end
+	Want("porte fermée relue de temps en temps", Polling())
+	-- rallumé par un autre chemin (sauvegarde écrite directement) : rouvert à la relecture suivante
+	db.companionEnabled = true
+	QNS.clockFrame.scripts.OnUpdate(QNS.clockFrame, QNS.EVENT_GATE_POLL + 0.05)
+	Want("rouvert par la relecture", QNS.Listening("CHAT_MSG_LOOT") and QNS.Listening("QUEST_TURNED_IN", "companion"))
+	Want("toutes ouvertes : plus de relecture", not Polling())
+	-- par la commande
+	QNS:HandleCommand("module companion off")
+	Want("« module companion off » : plus écouté", not QNS.Listening("CHAT_MSG_LOOT"))
+	QNS:HandleCommand("module companion on")
+	Want("« module companion on » : écouté", QNS.Listening("CHAT_MSG_LOOT"))
+	local mood = QNS:CompanionData().needs.mood
+	Mock:Fire("QUEST_TURNED_IN", 1)
+	Want("rallumé : le compagnon réagit de nouveau", QNS:CompanionData().needs.mood > mood or mood >= 100)
+	db.companionEnabled = savedOn
+	QNS.EventsResync()
+	Verdict("[PERF2] compagnon coupé : butin, groupe et compagnon plus écoutés, rouverts au rallumage (réglage, commande ou relecture)")
+
+	-- conseils : cible, survol, barres de vie mis en attente en combat
+	Mock:Fire("PLAYER_REGEN_DISABLED")
+	Want("en combat : survol des conseils en attente", not QNS.Listening("UPDATE_MOUSEOVER_UNIT", "advice:units")
+		and QNS.Listening("UPDATE_MOUSEOVER_UNIT", "bestiary"))
+	Mock:Fire("PLAYER_REGEN_ENABLED")
+	Want("hors combat : repris", QNS.Listening("UPDATE_MOUSEOVER_UNIT", "advice:units")
+		and QNS.Listening("NAME_PLATE_UNIT_ADDED", "advice:units"))
+	Verdict("[PERF2] conseils : cible, survol et barres de vie pas écoutés en combat")
+
+	-- menu du compagnon : GLOBAL_MOUSE_DOWN seulement menu ouvert
+	local menu = QNS.EnsureCompanionMenu and QNS:EnsureCompanionMenu()
+	if menu then
+		Want("menu fermé : pas de clic écouté", not menu.events.GLOBAL_MOUSE_DOWN and menu.events.PLAYER_REGEN_DISABLED)
+		QNS:CompanionMenuShow()
+		Want("menu ouvert : clics écoutés", menu:IsShown() and menu.events.GLOBAL_MOUSE_DOWN == true)
+		menu.IsMouseOver = function() return false end
+		Mock:Fire("GLOBAL_MOUSE_DOWN", "LeftButton")
+		menu.IsMouseOver = nil
+		Want("clic ailleurs : menu fermé, clics plus écoutés", not menu:IsShown() and not menu.events.GLOBAL_MOUSE_DOWN)
+		Verdict("[PERF2] menu du compagnon : GLOBAL_MOUSE_DOWN écouté seulement menu ouvert")
+	end
+
+	-- UNIT_AURA : des auras seulement rafraîchies ne relancent pas la lecture des auras
+	local scans = 0
+	local savedState = QNS.CompanionAuraState
+	QNS.CompanionAuraState = function(...) scans = scans + 1; return savedState(...) end
+	Mock:Fire("UNIT_AURA", "player", { isFullUpdate = false, updatedAuraInstanceIDs = { 12 } })
+	local refreshOnly = scans
+	Mock:Fire("UNIT_AURA", "player", { isFullUpdate = false, addedAuras = { { name = "Food" } } })
+	Mock:Fire("UNIT_AURA", "player", { isFullUpdate = false, removedAuraInstanceIDs = { 12 } })
+	Mock:Fire("UNIT_AURA", "player", { isFullUpdate = true })
+	Mock:Fire("UNIT_AURA", "player")
+	QNS.CompanionAuraState = savedState
+	Check("[PERF2] UNIT_AURA : rafraîchies seulement -> pas de lecture ; ajoutée, retirée, complète ou sans détail -> lue",
+		refreshOnly == 0 and scans == 4, refreshOnly .. " / " .. scans)
 end

@@ -2286,14 +2286,21 @@ function ns:EnsureCompanionMenu()
 	frame.cancel:SetPoint("TOPLEFT", frame, "TOPLEFT", left, y)
 	y = y - M.row
 	frame:SetHeight(-y + M.pad)
-	-- un clic ailleurs (hors du menu et du compagnon), le combat : on referme
+	-- un clic ailleurs (hors du menu et du compagnon), le combat : on referme.
+	-- 3.1.0 : GLOBAL_MOUSE_DOWN (chaque clic, partout) n'est écouté que menu
+	-- ouvert : posé par CompanionMenuShow, retiré quand le menu se cache
 	pcall(frame.RegisterEvent, frame, "PLAYER_REGEN_DISABLED")
-	pcall(frame.RegisterEvent, frame, "GLOBAL_MOUSE_DOWN")
 	frame:SetScript("OnEvent", function(f, event)
-		if not f:IsShown() then return end
+		if not f:IsShown() then
+			if event == "GLOBAL_MOUSE_DOWN" then pcall(f.UnregisterEvent, f, event) end
+			return
+		end
 		if event == "GLOBAL_MOUSE_DOWN" and (MenuOver(f) or MenuOver(ns.companionFrame)) then return end
 		ns:CompanionMenuHide()
 	end)
+	if frame.HookScript then
+		pcall(frame.HookScript, frame, "OnHide", function(f) pcall(f.UnregisterEvent, f, "GLOBAL_MOUSE_DOWN") end)
+	end
 	frame:Hide()
 	self.companionMenu = frame
 	return frame
@@ -2324,13 +2331,17 @@ function ns:CompanionMenuShow()
 	if anchor then frame:SetPoint("BOTTOM", anchor, "TOP", 0, 8) else frame:SetPoint("CENTER", UIParent, "CENTER", 0, 0) end
 	self:CompanionHideHover()
 	self:CompanionMenuRefresh()
+	pcall(frame.RegisterEvent, frame, "GLOBAL_MOUSE_DOWN")
 	frame:Show()
 	if Theme.FadeIn then pcall(Theme.FadeIn, frame, 0.12) end
 	return frame
 end
 
 function ns:CompanionMenuHide()
-	if self.companionMenu then self.companionMenu:Hide() end
+	local frame = self.companionMenu
+	if not frame then return end
+	frame:Hide()
+	pcall(frame.UnregisterEvent, frame, "GLOBAL_MOUSE_DOWN")
 end
 
 function ns:CompanionMenuToggle()
@@ -2957,6 +2968,25 @@ function ns:CompanionAuraState()
 		if name and FED_AURAS[name] then fed = true end
 	end
 	return eating or drinking, fed, drinking and not eating
+end
+
+-- 3.1.0 : UNIT_AURA dit ce qui a changé (moteur récent, updateInfo). Des
+-- auras seulement rafraîchies (durée, charges : la plupart des messages en
+-- combat) ne changent aucun nom : rien à relire. Sans ces infos, ou illisibles
+-- (valeurs secrètes), on relit tout comme avant.
+local function Empty(list)
+	return list == nil or (type(list) == "table" and next(list) == nil)
+end
+local function RefreshOnly(info)
+	if ns.Plain(info.isFullUpdate) ~= false then return false end
+	if not (Empty(info.addedAuras) and Empty(info.removedAuraInstanceIDs)) then return false end
+	local updated = info.updatedAuraInstanceIDs
+	return type(updated) == "table" and next(updated) ~= nil
+end
+function ns.CompanionAuraRefreshOnly(info)
+	if type(info) ~= "table" then return false end
+	local ok, only = pcall(RefreshOnly, info)
+	return ok and only == true
 end
 
 -- Repas : un gros coup de faim comblé au début, puis un peu chaque minute
@@ -3976,21 +4006,26 @@ local HANDLERS = {
 	ZONE_CHANGED_NEW_AREA  = function() ns:CompanionInstanceChanged(); ns:CompanionOnZone(true) end,
 	ZONE_CHANGED           = function() ns:CompanionOnZone(false) end,
 	ZONE_CHANGED_INDOORS   = function() ns:CompanionOnZone(false) end,
-	UNIT_AURA              = function(unit) if unit == "player" then ns:CompanionCheckAuras() end end,
+	UNIT_AURA              = function(unit, info)
+		if unit == "player" and not ns.CompanionAuraRefreshOnly(info) then ns:CompanionCheckAuras() end
+	end,
 	PLAYER_UPDATE_RESTING  = function()
 		if Call(rawget(_G, "IsResting")) and not ns:CompanionData().sleepy then ns:CompanionSay("INN") end
 	end,
 }
 
+-- 3.1.0 : cadre d'événements commun (ns.Listen, Libs/Socle/Compat.lua).
+-- Chaque gestionnaire garde le test du module ; la porte (ModuleOn) retire
+-- en plus l'écoute quand le compagnon est coupé (ns.EventsResync).
+-- Le cadre ci-dessous ne porte plus que le balancement du modèle (OnUpdate).
+for event, handler in pairs(HANDLERS) do
+	HANDLERS[event] = function(...)
+		if not ModuleOn() then return end
+		return handler(...)
+	end
+end
+ns.Listen("companion", HANDLERS, ModuleOn)
 local events = CreateFrame("Frame")
-ns.RegisterHandlers(events, HANDLERS)
-events:SetScript("OnEvent", function(_, event, ...)
-	if not ModuleOn() then return end
-	local handler = HANDLERS[event]
-	if not handler then return end
-	local ok, err = pcall(handler, ...)
-	if not ok and ns.RecordError then ns:RecordError("companion:" .. tostring(event), err) end
-end)
 
 -- Horloge : besoins toutes les TICK s, fin de bulle, fin d'animation,
 -- léger balancement du modèle.

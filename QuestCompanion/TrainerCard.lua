@@ -1948,22 +1948,18 @@ end
 ns:TrainerRegisterPrefix()
 pcall(ns.TrainerHookMenus, ns)
 do
-	local ok, frame = pcall(CreateFrame, "Frame")
-	if ok and frame then
-		for _, event in ipairs({ "CHAT_MSG_ADDON", "GROUP_ROSTER_UPDATE", "PLAYER_GUILD_UPDATE",
-			"PLAYER_TARGET_CHANGED", "PLAYER_ENTERING_WORLD" }) do
-			pcall(frame.RegisterEvent, frame, event)
-		end
-		frame:SetScript("OnEvent", function(_, event, ...)
-			local done, err = pcall(ns.TrainerOnEvent, ns, event, ...)
-			if not done and ns.RecordError then ns:RecordError("trainer:" .. tostring(event), err) end
-		end)
+	-- 3.1.0 : cadre d'événements commun (ns.On, Libs/Socle/Compat.lua) ; une
+	-- fonction par événement, faite une fois (TrainerOnEvent reçoit son nom)
+	for _, event in ipairs({ "CHAT_MSG_ADDON", "GROUP_ROSTER_UPDATE", "PLAYER_GUILD_UPDATE",
+		"PLAYER_TARGET_CHANGED", "PLAYER_ENTERING_WORLD" }) do
+		ns.On(event, "trainer", function(...) return ns:TrainerOnEvent(event, ...) end)
+	end
+	do
 		-- 2.11.2 (fiche 25) : sur l'horloge de l'addon (plus d'OnUpdate permanent)
 		ns.Every("trainer", ns.TRAINER_TICK, function(elapsed)
 			local done, err = pcall(ns.TrainerPump, ns, elapsed)
 			if not done and ns.RecordError then ns:RecordError("trainer:pump", err) end
 		end)
-		ns.trainerEventFrame = frame
 	end
 end
 

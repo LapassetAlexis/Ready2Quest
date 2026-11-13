@@ -549,12 +549,9 @@ end
 local HANDLERS = { QUEST_TURNED_IN = Forget, QUEST_LOG_UPDATE = Forget, PLAYER_REGEN_ENABLED = AfterCombat,
 	QUESTLINE_UPDATE = QuestLinesUpdated, QUEST_DATA_LOAD_RESULT = QuestDataLoaded }
 
-local eventFrame = CreateFrame("Frame")
-for event in pairs(HANDLERS) do pcall(eventFrame.RegisterEvent, eventFrame, event) end
-eventFrame:SetScript("OnEvent", function(_, event, ...)
-	local ok, err = pcall(HANDLERS[event], ...)
-	if not ok and ns.RecordError then ns:RecordError("zonequests:" .. tostring(event), err) end
-end)
-ns.zoneQuestsEventFrame = eventFrame
+-- 3.1.0 : cadre d'événements commun (ns.Listen, Libs/Socle/Compat.lua) ; ce
+-- cadre-ci ne porte plus que le rafraîchissement regroupé (ns.ZoneQuestsFlush)
+ns.Listen("zonequests", HANDLERS)
+ns.zoneQuestsEventFrame = CreateFrame("Frame")
 
 if ns.Mark then ns.Mark("ZoneQuests") end

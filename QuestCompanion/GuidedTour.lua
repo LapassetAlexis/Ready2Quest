@@ -864,22 +864,20 @@ do
 		driver = frame
 		ns.tourDriver = frame
 		frame.acc = 0
-		frame:RegisterEvent("PLAYER_ENTERING_WORLD")
-		frame:RegisterEvent("PLAYER_REGEN_DISABLED")
-		frame:RegisterEvent("PLAYER_REGEN_ENABLED")
-		frame:SetScript("OnEvent", function(_, event, isLogin, isReload)
-			if event == "PLAYER_REGEN_DISABLED" then
-				ns:TourPause()
-			elseif event == "PLAYER_REGEN_ENABLED" then
-				Wake()
-				if ns.tourState or ns.tourPending then frame:Show() end
-			elseif event == "PLAYER_ENTERING_WORLD" and (isLogin or isReload) and ns.TOUR_AUTO then
-				-- une fois, au compte : ce que sont devenues les créatures d'avant la 3.0
-				local okCount, pending = pcall(MigrationPending, ns)
-				if okCount and pending then
-					ns.tourMigrationAt = Clock() + TOUR.migrationDelay
-					frame:Show()
-				end
+		-- 3.1.0 : événements sur le cadre commun de l'addon (ns.On,
+		-- Libs/Socle/Compat.lua) ; ce cadre garde le relevé (OnUpdate)
+		ns.On("PLAYER_REGEN_DISABLED", "tour", function() ns:TourPause() end)
+		ns.On("PLAYER_REGEN_ENABLED", "tour", function()
+			Wake()
+			if ns.tourState or ns.tourPending then frame:Show() end
+		end)
+		ns.On("PLAYER_ENTERING_WORLD", "tour", function(isLogin, isReload)
+			if not ((isLogin or isReload) and ns.TOUR_AUTO) then return end
+			-- une fois, au compte : ce que sont devenues les créatures d'avant la 3.0
+			local okCount, pending = pcall(MigrationPending, ns)
+			if okCount and pending then
+				ns.tourMigrationAt = Clock() + TOUR.migrationDelay
+				frame:Show()
 			end
 		end)
 		frame:SetScript("OnUpdate", function(f, elapsed)

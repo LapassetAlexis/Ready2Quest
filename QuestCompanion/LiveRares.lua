@@ -139,24 +139,15 @@ local HANDLERS = {
 	VIGNETTES_UPDATED = function() ns:LiveRareScan() end,
 }
 
-local okFrame, eventFrame = pcall(CreateFrame, "Frame")
-if okFrame and eventFrame then
-	eventFrame:SetScript("OnEvent", function(_, event, ...)
-		local done, err = pcall(HANDLERS[event], ...)
-		if not done and ns.RecordError then ns:RecordError("rares:" .. tostring(event), err) end
-	end)
-	ns.liveRareFrame = eventFrame
-end
-
 -- Écoute posée une fois, si le client a l'API ; renvoie true si elle l'est
+-- 3.1.0 : cadre d'événements commun (ns.On, Libs/Socle/Compat.lua) ; un
+-- événement inconnu du client ne bloque pas l'autre
 function ns:LiveRareListen()
-	local frame = self.liveRareFrame
-	if not frame or not Api() then return false end
+	if not Api() then return false end
 	if not self.liveRareListening then
-		for event in pairs(HANDLERS) do
-			-- un événement inconnu du client ne bloque pas l'autre
-			pcall(frame.RegisterEvent, frame, event)
-		end
+		-- les deux gestionnaires ne font rien alerte coupée : la porte retire l'écoute
+		ns.EventGate("rares", function() return ns:LiveRaresOn() end)
+		for event, fn in pairs(HANDLERS) do ns.On(event, "rares", fn) end
 		self.liveRareListening = true
 	end
 	return true

@@ -562,7 +562,7 @@ do
 		if f and f.scripts and f.scripts.OnUpdate then missing[#missing + 1] = "OnUpdate R2Q " .. name end
 	end
 	for _, name in ipairs({ "adviceEventFrame", "groupEventFrame", "dailyEventFrame", "journalEventFrame",
-		"notifyEventFrame", "trainerEventFrame", "featEventFrame" }) do
+		"notifyEventFrame", "trainerEventFrame", "featEventFrame", "eventHub" }) do
 		local f = QNS[name]
 		if f and f.scripts and f.scripts.OnUpdate then missing[#missing + 1] = "OnUpdate QC " .. name end
 	end

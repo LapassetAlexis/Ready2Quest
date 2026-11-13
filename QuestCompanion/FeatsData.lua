@@ -180,43 +180,22 @@ end
 --     2.11.2 (fiche 25) : façade de l'horloge de l'addon (ns.Every, clé
 --     « feats:<clé> ») ; plus d'OnUpdate sur le cadre des hauts faits.
 -- ---------------------------------------------------------------------------
-local sets, clocks, hub = {}, {}, nil
-
-local function HubEvent(_, event, ...)
-	for _, handlers in ipairs(sets) do
-		local fn = handlers[event]
-		if fn then
-			local ok, err = pcall(fn, ...)
-			if not ok and ns.RecordError then ns:RecordError("feats:" .. tostring(event), err) end
-		end
-	end
-end
-
-do
-	local ok, frame = pcall(CreateFrame, "Frame")
-	if ok and frame then
-		hub = frame
-		frame:SetScript("OnEvent", HubEvent)
-		ns.featEventFrame = frame
-	end
-end
+-- 3.1.0 : les tables passent par le cadre d'événements commun de l'addon
+-- (ns.Listen, Libs/Socle/Compat.lua), chacune abonnée sous son propre nom :
+-- même ordre d'appel (abonnement), événement retiré au dernier désabonné.
+local sets, clocks = {}, {}
 
 function ns.FeatListen(handlers)
-	for _, set in ipairs(sets) do if set == handlers then return end end
-	sets[#sets + 1] = handlers
-	if not hub then return end
-	if ns.RegisterHandlers then ns.RegisterHandlers(hub, handlers)
-	else for event in pairs(handlers) do pcall(hub.RegisterEvent, hub, event) end end
+	if sets[handlers] then return end
+	sets[handlers] = true
+	if not ns.Listen then return end
+	ns.Listen(handlers, handlers, nil, "feats")
 end
 
 function ns.FeatUnlisten(handlers)
-	for index = #sets, 1, -1 do if sets[index] == handlers then table.remove(sets, index) end end
-	if not hub then return end
-	for event in pairs(handlers) do
-		local used = false
-		for _, set in ipairs(sets) do if set[event] then used = true end end
-		if not used then pcall(hub.UnregisterEvent, hub, event) end
-	end
+	if not sets[handlers] then return end
+	sets[handlers] = nil
+	if ns.Unlisten then ns.Unlisten(handlers) end
 end
 
 function ns.FeatClock(key, fn, period)

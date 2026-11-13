@@ -742,12 +742,8 @@ do
 	end
 end
 
-local eventFrame = CreateFrame("Frame")
-ns.bestiaryStats.combatLog = ns.RegisterHandlers(eventFrame, HANDLERS)
-eventFrame:SetScript("OnEvent", function(_, event, ...)
-	local ok, err = pcall(HANDLERS[event], ...)
-	if not ok and ns.RecordError then ns:RecordError("bestiary:" .. tostring(event), err) end
-end)
-ns.bestiaryEventFrame = eventFrame
+-- 3.1.0 : cadre d'événements commun (ns.Listen, Libs/Socle/Compat.lua)
+ns.BESTIARY_HANDLERS = HANDLERS
+ns.bestiaryStats.combatLog = ns.Listen("bestiary", HANDLERS)
 
 if ns.Mark then ns.Mark("Bestiary") end

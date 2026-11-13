@@ -54,6 +54,7 @@ ns.COMMANDS["reset"] = function(self)
 	db = self:ResetDB()
 	db.chars, db.migratedFromR2Q, db.memoriesDropped = chars or {}, migrated, dropped
 	self:Print(L.MSG_RESET)
+	if ns.EventsResync then ns.EventsResync() end
 	if self.RefreshOptions then self:RefreshOptions() end
 end
 
@@ -154,6 +155,22 @@ function ns:OnAddonLoaded()
 	if not ok and self.RecordError then self:RecordError("memories:drop", err) end
 	-- réglette « Bavardage » : cran déduit des anciens réglages, une fois
 	if self.CompanionChatterLevel then self:CompanionChatterLevel() end
+	-- sauvegarde lue : un module coupé n'écoute plus ses événements
+	if ns.EventsResync then ns.EventsResync() end
+end
+
+-- 3.1.0 : un interrupteur changé (réglages, « /qc module … ») : les portes du
+-- cadre d'événements commun sont relues (Libs/Socle/Compat.lua)
+do
+	local apply, toggled = ns.ApplyDisplayOptions, ns.OnModuleToggled
+	function ns:ApplyDisplayOptions(...)
+		if ns.EventsResync then ns.EventsResync() end
+		if apply then return apply(self, ...) end
+	end
+	function ns:OnModuleToggled(...)
+		if ns.EventsResync then ns.EventsResync() end
+		if toggled then return toggled(self, ...) end
+	end
 end
 
 -- ---------------------------------------------------------------------------
@@ -172,15 +189,13 @@ ns:BridgeReady2Quest()
 
 -- ---------------------------------------------------------------------------
 -- Événements du cœur : le bouton de minicarte à l'entrée en jeu
+-- 3.1.0 : sur le cadre d'événements commun (ns.On, Libs/Socle/Compat.lua),
+-- créé ici, au premier abonné : les modules suivants s'y abonnent dans
+-- l'ordre de chargement, comme leurs cadres s'abonnaient avant.
 -- ---------------------------------------------------------------------------
-local ok, frame = pcall(CreateFrame, "Frame")
-if ok and frame then
-	frame:RegisterEvent("PLAYER_ENTERING_WORLD")
-	frame:SetScript("OnEvent", function()
-		if ns:DB().showMinimap ~= false and ns.ShowMinimapButton then ns:ShowMinimapButton() end
-	end)
-	ns.coreEventFrame = frame
-end
+ns.On("PLAYER_ENTERING_WORLD", "core", function()
+	if ns:DB().showMinimap ~= false and ns.ShowMinimapButton then ns:ShowMinimapButton() end
+end)
 
 -- ---------------------------------------------------------------------------
 -- Tables de zones paresseuses (1.6.1) : les données livrées par zone

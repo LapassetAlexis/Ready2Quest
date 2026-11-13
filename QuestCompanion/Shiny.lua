@@ -246,22 +246,24 @@ function ns:ShinySpot(unit, guid, entry, species)
 end
 
 -- Un monstre repéré pour la première fois : le tirage, une fois par GUID
+-- (3.1.0 : fonction faite une fois, plus de fermeture à chaque barre de vie)
+local function ShinySee(self, unit, species)
+	local guid = ns.Plain(Call(G("UnitGUID"), unit))
+	local entry = guid and self.bestiaryUnits and self.bestiaryUnits[guid]
+	local state = self:ShinyState()
+	if not entry or state.rolled[guid] then return end
+	-- une mémoire de session : vidée de temps en temps, sans perdre les brillantes vivantes
+	if state.rolledCount > 5000 then state.rolled, state.rolledCount = {}, 0 end
+	state.rolled[guid], state.rolledCount = true, state.rolledCount + 1
+	if self:ShinyRoll(unit, entry) then self:ShinySpot(unit, guid, entry, species) end
+end
 do
 	local see = ns.BestiarySeeUnit
 	if see then
 		function ns:BestiarySeeUnit(unit, ...)
 			local species = see(self, unit, ...)
 			if species and ModuleOn() then
-				local ok, err = pcall(function()
-					local guid = ns.Plain(Call(G("UnitGUID"), unit))
-					local entry = guid and self.bestiaryUnits and self.bestiaryUnits[guid]
-					local state = self:ShinyState()
-					if not entry or state.rolled[guid] then return end
-					-- une mémoire de session : vidée de temps en temps, sans perdre les brillantes vivantes
-					if state.rolledCount > 5000 then state.rolled, state.rolledCount = {}, 0 end
-					state.rolled[guid], state.rolledCount = true, state.rolledCount + 1
-					if self:ShinyRoll(unit, entry) then self:ShinySpot(unit, guid, entry, species) end
-				end)
+				local ok, err = pcall(ShinySee, self, unit, species)
 				if not ok and self.RecordError then self:RecordError("shiny:see", err) end
 			end
 			return species
@@ -380,9 +382,13 @@ function ns:ShinyAuraTick(now)
 	local state = self:ShinyState()
 	if now < (state.auraAt or 0) then return false end
 	state.auraAt = now + ns.SHINY_AURA_EVERY
-	-- l'aura gagnée, ou un compagnon brillant (1.6.0) : il scintille
-	local app = self.CompanionCurrentAppearance and self:CompanionCurrentAppearance()
-	if not (self:CompanionOrnamentShown(self:ShinyAuraDef()) or (app and app.shiny)) then return false end
+	-- l'aura gagnée, ou un compagnon brillant (1.6.0) : il scintille.
+	-- 3.1.0 : l'ornement d'abord ; l'apparence (qui refait la liste des
+	-- apparences, captures comprises) seulement s'il ne suffit pas
+	if not self:CompanionOrnamentShown(self:ShinyAuraDef()) then
+		local app = self.CompanionCurrentAppearance and self:CompanionCurrentAppearance()
+		if not (app and app.shiny) then return false end
+	end
 	return self:CompanionFx("sparkle")
 end
 
@@ -567,7 +573,6 @@ function ns:ShinyPlatesRefresh()
 end
 
 do
-	local plateFrame = CreateFrame("Frame")
 	local PLATE_EVENTS = {
 		NAME_PLATE_UNIT_ADDED = function(unit)
 			if type(unit) ~= "string" then return end
@@ -584,12 +589,8 @@ do
 			if type(unit) == "string" then ns.shinyPlates[unit] = nil end
 		end,
 	}
-	for event in pairs(PLATE_EVENTS) do pcall(plateFrame.RegisterEvent, plateFrame, event) end
-	plateFrame:SetScript("OnEvent", function(_, event, ...)
-		local ok, err = pcall(PLATE_EVENTS[event], ...)
-		if not ok and ns.RecordError then ns:RecordError("shiny:plate", err) end
-	end)
-	ns.shinyPlateFrame = plateFrame
+	-- 3.1.0 : cadre d'événements commun (ns.On, Libs/Socle/Compat.lua)
+	for event, fn in pairs(PLATE_EVENTS) do ns.On(event, "shiny", fn, "shiny:plate") end
 end
 
 -- repérée : son repère tout de suite ; abattue ou morte : il s'en va

@@ -128,7 +128,7 @@ do
 		and #(QNS.COMPANION_POOLS.RARE_LIVE or {}) >= 2, table.concat(missing, ", "))
 
 	-- sans l'API : rien n'écoute, rien ne parle, rien ne casse
-	Want("pas d'écoute", QNS:LiveRareListen() == false and not (QNS.liveRareFrame and QNS.liveRareFrame.events.VIGNETTES_UPDATED))
+	Want("pas d'écoute", QNS:LiveRareListen() == false and not QNS.Listening("VIGNETTES_UPDATED"))
 	Mock:Fire("VIGNETTES_UPDATED")
 	Want("scan neutre", QNS:LiveRareScan() == 0 and QNS:LiveRareCheck("v1") == false and QNS.companionBubbleKey == nil)
 	local row = false
@@ -138,8 +138,8 @@ do
 
 	-- avec l'API : un rare de la table apparaît sur la minicarte
 	LA.InstallVignettes()
-	Want("écoute posée", QNS:LiveRareListen() == true and QNS.liveRareFrame.events.VIGNETTES_UPDATED
-		and QNS.liveRareFrame.events.VIGNETTE_MINIMAP_UPDATED)
+	Want("écoute posée", QNS:LiveRareListen() == true and QNS.Listening("VIGNETTES_UPDATED", "rares")
+		and QNS.Listening("VIGNETTE_MINIMAP_UPDATED", "rares"))
 	local rareGUID = LA.Guid(5001)
 	LA.Vignette("v-rare", { name = "Griffe-Grise", objectGUID = rareGUID, vignetteID = 1, atlasName = "VignetteKill", type = 0 })
 	Mock:Fire("VIGNETTES_UPDATED")

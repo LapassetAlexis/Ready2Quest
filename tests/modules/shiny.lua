@@ -477,7 +477,7 @@ do
 	-- barre retirée puis reprise par une autre unité : rien ne traîne
 	NS:ShinyState().live[guid] = { npcID = 3500 }
 	NS:ShinyPlatesRefresh()
-	NS.shinyPlateFrame:GetScript("OnEvent")(NS.shinyPlateFrame, "NAME_PLATE_UNIT_REMOVED", "nameplate1")
+	NS.EventDeliver("shiny", "NAME_PLATE_UNIT_REMOVED", "nameplate1")
 	Check("[SHV] brillante abattue ou barre retirée : losange parti", gone and not mark:IsShown())
 	NS:ShinyState().live[guid] = nil
 	NS.shinyPlates = {}

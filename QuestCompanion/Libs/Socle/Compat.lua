@@ -196,6 +196,248 @@ function ns.RegisterHandlers(frame, handlers)
 	return logOpen
 end
 
+-- ---------------------------------------------------------------------------
+-- socle 3.1.0 : un seul cadre d'événements par addon (passe de performance 2)
+-- ---------------------------------------------------------------------------
+-- Avant, chaque module avait son cadre : un événement suivi par cinq modules
+-- (barre de vie qui apparaît, changement de zone…) faisait cinq appels du
+-- client vers le Lua. Ici, un cadre (créé au premier abonné) et une liste
+-- d'abonnés par événement : l'événement est enregistré auprès du client au
+-- premier abonné actif, retiré au dernier. Chaque abonné est appelé sous
+-- pcall, dans l'ordre d'abonnement ; une erreur est notée (« où:ÉVÉNEMENT »).
+--   ns.On(événement, qui, fn[, où]) : abonne (ou remplace la fonction de) `qui`
+--     (chaîne ou table) ; rend true si le client écoute l'événement.
+--   ns.Off(événement, qui) ; ns.Unlisten(qui) : désabonne (tout `qui`).
+--   ns.Listen(qui, handlers[, porte[, nom]]) : comme ns.RegisterHandlers (journal de
+--     combat s'il est ouvert, sinon PARTY_KILL / UNIT_DIED) ; rend true si le
+--     journal est écouté. porte() rend false : les événements de `qui` ne
+--     sont plus écoutés (module coupé), jusqu'au prochain ns.EventsResync() ;
+--     nom : préfixe des erreurs notées (sinon `qui`).
+--   ns.EventGate(qui, porte) : la même porte, posée seule.
+--   ns.EventHold(qui, oui) : écoute de `qui` mise en attente / reprise (ce
+--     qui ne sert pas en combat), sans perdre son rang dans l'ordre d'appel.
+--   ns.EventsResync() : relit les portes (réglage changé). Tant qu'une porte
+--     est fermée, elle est relue toutes les EVENT_GATE_POLL s (un réglage
+--     changé par un autre chemin rouvre l'écoute dans la seconde).
+--   ns.EventDeliver(qui, événement, ...) : le gestionnaire de `qui` seul,
+--     protégé (tests, simulation).
+--   ns.Listening(événement[, qui]) : écouté (par `qui`, s'il est donné).
+-- Les gestionnaires gardent leurs propres tests (ModuleOn…) : la porte
+-- n'économise que les appels, jamais elle ne remplace un test.
+ns.EVENT_GATE_POLL = 1
+local hubFrame                 -- nil : pas encore créé ; false : création impossible
+local hubSubs = {}             -- événement -> { entrée, … } dans l'ordre d'abonnement
+local hubActive = {}           -- événement -> nombre d'abonnés actifs
+local hubHeard = {}            -- événement -> true si le client l'envoie au cadre
+local hubGates = {}            -- qui -> porte ; hubOpen[qui] : dernière lecture
+local hubOpen = {}
+local hubHeld = {}             -- qui -> true : mis en attente (ns.EventHold)
+local hubDepth, hubDirty = 0, false
+
+local function HubCompact()
+	for _, list in pairs(hubSubs) do
+		for i = #list, 1, -1 do if list[i].dead then table.remove(list, i) end end
+	end
+	hubDirty = false
+end
+
+local function HubDispatch(_, event, ...)
+	local list = hubSubs[event]
+	if not list then return end
+	hubDepth = hubDepth + 1
+	for i = 1, #list do
+		local entry = list[i]
+		if entry.active then
+			local ok, err = pcall(entry.fn, ...)
+			if not ok and ns.RecordError then ns:RecordError(entry.where or (tostring(entry.label) .. ":" .. tostring(event)), err) end
+		end
+	end
+	hubDepth = hubDepth - 1
+	if hubDirty and hubDepth == 0 then HubCompact() end
+end
+ns.EventDispatch = function(event, ...) return HubDispatch(nil, event, ...) end
+
+local function Hub()
+	if hubFrame == nil then
+		local ok, frame = pcall(CreateFrame, "Frame")
+		hubFrame = (ok and frame) or false
+		if hubFrame then
+			hubFrame:SetScript("OnEvent", HubDispatch)
+			ns.eventHub = hubFrame
+		end
+	end
+	return hubFrame
+end
+
+-- un abonné de plus ou de moins sur `event` : le client suit
+local function HubCount(event, delta)
+	local count = (hubActive[event] or 0) + delta
+	hubActive[event] = count
+	local frame = Hub()
+	if not frame then return false end
+	if count > 0 and not hubHeard[event] then
+		hubHeard[event] = ns.RegisterGameEvent(frame, event) or nil
+	elseif count <= 0 then
+		hubActive[event] = 0
+		if hubHeard[event] then
+			hubHeard[event] = nil
+			if type(frame.UnregisterEvent) == "function" then pcall(frame.UnregisterEvent, frame, event) end
+		end
+	end
+	return hubHeard[event] == true
+end
+
+-- le client accepte-t-il `event` sur ce cadre ? (essayé une fois, sans
+-- laisser l'événement enregistré s'il n'a pas encore d'abonné actif)
+local hubAccepts = {}
+local function HubAccepts(event)
+	if hubHeard[event] then return true end
+	if hubAccepts[event] == nil then
+		local frame = Hub()
+		local ok = frame and ns.RegisterGameEvent(frame, event) or false
+		if ok and (hubActive[event] or 0) <= 0 and type(frame.UnregisterEvent) == "function" then
+			pcall(frame.UnregisterEvent, frame, event)
+		elseif ok then
+			hubHeard[event] = true
+		end
+		hubAccepts[event] = ok and true or false
+	end
+	return hubAccepts[event]
+end
+
+local function Find(event, owner)
+	local list = hubSubs[event]
+	if not list then return nil end
+	for i = 1, #list do
+		local entry = list[i]
+		if entry.owner == owner and not entry.dead then return entry end
+	end
+	return nil
+end
+
+local function SetActive(entry, on)
+	if entry.active == on then return end
+	entry.active = on
+	HubCount(entry.event, on and 1 or -1)
+end
+
+function ns.On(event, owner, fn, where)
+	if type(event) ~= "string" or owner == nil or type(fn) ~= "function" then return false end
+	local entry = Find(event, owner)
+	if entry then
+		entry.fn, entry.where = fn, where
+	else
+		local list = hubSubs[event]
+		if not list then list = {}; hubSubs[event] = list end
+		entry = { event = event, owner = owner, fn = fn, where = where, active = false,
+			label = type(owner) == "string" and owner or "event" }
+		list[#list + 1] = entry
+	end
+	SetActive(entry, hubOpen[owner] ~= false and not hubHeld[owner])
+	if not entry.active then return false end
+	return hubHeard[event] == true
+end
+
+function ns.Off(event, owner)
+	local entry = Find(event, owner)
+	if not entry then return end
+	SetActive(entry, false)
+	entry.dead, entry.fn = true, nil
+	if hubDepth > 0 then hubDirty = true else HubCompact() end
+end
+
+function ns.Unlisten(owner)
+	for event in pairs(hubSubs) do ns.Off(event, owner) end
+	hubGates[owner], hubOpen[owner], hubHeld[owner] = nil, nil, nil
+end
+
+-- toutes les entrées de `owner` suivent sa porte et sa mise en attente ;
+-- elles gardent leur place dans l'ordre d'appel
+local function OwnerSync(owner)
+	local on = hubOpen[owner] ~= false and not hubHeld[owner]
+	for _, list in pairs(hubSubs) do
+		for i = 1, #list do
+			local entry = list[i]
+			if entry.owner == owner and not entry.dead then SetActive(entry, on) end
+		end
+	end
+end
+
+-- Met en attente (held vrai) ou reprend l'écoute de `owner`, sans perdre
+-- son rang : pour ce qui ne sert qu'en combat, ou hors combat
+function ns.EventHold(owner, held)
+	held = held and true or nil
+	if hubHeld[owner] == held then return end
+	hubHeld[owner] = held
+	OwnerSync(owner)
+end
+
+local function GateOpen(gate)
+	local ok, open = pcall(gate)
+	return not ok or open ~= false and open ~= nil
+end
+
+local function GatePoll() ns.EventsResync() end
+function ns.EventsResync()
+	local closed = false
+	for owner, gate in pairs(hubGates) do
+		local open = GateOpen(gate)
+		if hubOpen[owner] ~= open then
+			hubOpen[owner] = open
+			OwnerSync(owner)
+		end
+		if not open then closed = true end
+	end
+	-- une porte fermée est relue de temps en temps (filet de sécurité) ;
+	-- toutes ouvertes : aucune tâche
+	if ns.Every then
+		if closed then
+			ns.Every("events:gates", ns.EVENT_GATE_POLL, GatePoll)
+		elseif ns.Cancel then
+			ns.Cancel("events:gates")
+		end
+	end
+	return closed
+end
+
+-- porte de `owner` (relue par ns.EventsResync) ; ouverte jusqu'à la relecture
+function ns.EventGate(owner, gate)
+	if type(gate) ~= "function" then return end
+	hubGates[owner] = gate
+	if hubOpen[owner] == nil then hubOpen[owner] = true end
+end
+
+function ns.Listen(owner, handlers, gate, label)
+	ns.EventGate(owner, gate)
+	local logOpen = false
+	if handlers[CLEU] and not ns.CombatLogRestricted() and HubAccepts(CLEU) then
+		logOpen = true
+		ns.On(CLEU, owner, handlers[CLEU], label and (label .. ":" .. CLEU))
+	end
+	for event, fn in pairs(handlers) do
+		if event ~= CLEU and not (STANDALONE[event] and logOpen) then
+			ns.On(event, owner, fn, label and (label .. ":" .. tostring(event)))
+		end
+	end
+	return logOpen
+end
+
+function ns.EventDeliver(owner, event, ...)
+	local entry = Find(event, owner)
+	if not (entry and entry.fn) then return false end
+	local ok, err = pcall(entry.fn, ...)
+	if not ok and ns.RecordError then ns:RecordError(entry.where or (tostring(entry.label) .. ":" .. tostring(event)), err) end
+	return ok
+end
+
+function ns.Listening(event, owner)
+	if owner ~= nil then
+		local entry = Find(event, owner)
+		return (entry and entry.active and hubHeard[event]) and true or false
+	end
+	return hubHeard[event] == true
+end
+
 local probeModel
 
 function ns:DetectCapabilities()

@@ -323,10 +323,11 @@ end
 
 -- Envies comblées (>= EFFECT_NEED_OK) et facteur de force : 1 si les quatre,
 -- un huitième de moins par envie en dessous (0,5 au pire)
+local NEED_KEYS = { "hunger", "energy", "mood", "curiosity" }
 function ns:CompanionEffectNeeds()
 	local needs = self.CompanionData and self:CompanionData().needs or {}
 	local ok = 0
-	for _, key in ipairs({ "hunger", "energy", "mood", "curiosity" }) do
+	for _, key in ipairs(NEED_KEYS) do
 		if (tonumber(needs[key]) or 0) >= ns.EFFECT_NEED_OK then ok = ok + 1 end
 	end
 	return 0.5 + 0.5 * ok / 4, ok
@@ -456,17 +457,21 @@ function ns:CompanionEffects()
 	local capture = self.CaptureData and self:CaptureData() or {}
 	local _, needsOk = self:CompanionEffectNeeds()
 	local stage = self.CompanionStage and self:CompanionStage() or 1
-	local key = table.concat({ spec.id, tostring(stage), tostring(needsOk), tostring(capture.serial), tostring(capture.count),
-		tostring(capture.specSerial), tostring(self.CaptureStars ~= nil), tostring(self.MenagerieTypeBonus ~= nil) }, "|")
+	-- 3.1.0 : la clé du cache comparée champ par champ (avant : une chaîne
+	-- refaite à chaque lecture, soit à chaque infobulle et relevé d'envies)
+	local stars, bonus = self.CaptureStars ~= nil, self.MenagerieTypeBonus ~= nil
 	local cache = self.effectCache
 	local effects
-	if cache and cache.key == key then
+	if cache and cache.app == spec.id and cache.stage == stage and cache.needsOk == needsOk
+		and cache.serial == capture.serial and cache.count == capture.count and cache.specSerial == capture.specSerial
+		and cache.stars == stars and cache.bonus == bonus then
 		effects = cache.effects
 	else
 		effects = self:CompanionEffectsFor(spec)
 		if not effects then return nil end
 		effects.app = spec.id
-		self.effectCache = { key = key, effects = effects }
+		self.effectCache = { app = spec.id, stage = stage, needsOk = needsOk, serial = capture.serial, count = capture.count,
+			specSerial = capture.specSerial, stars = stars, bonus = bonus, effects = effects }
 	end
 	local now = Wall()
 	effects.activeAt = (tonumber(record.since) or now) + ns.EFFECT_DELAY
@@ -1041,37 +1046,30 @@ function ns:EffectPlatesRefresh()
 end
 
 do
-	local ok, plateFrame = pcall(CreateFrame, "Frame")
-	if ok and plateFrame then
-		local PLATE_EVENTS = {
-			-- chaque barre de nom qui apparaît : rien de coûteux sans l'effet de
-			-- repérage (type gardé par EffectPlatesRefresh, relu au plus toutes
-			-- les EFFECT_SPOT_TTL secondes)
-			NAME_PLATE_UNIT_ADDED = function(unit)
-				if type(unit) ~= "string" then return end
-				ns.effectPlates[unit] = nil
-				if not ModuleOn() then return end
-				local cache, now = ns.effectSpotCache, ns.Now and ns.Now() or 0
-				if not cache or now - cache.at >= ns.EFFECT_SPOT_TTL or now < cache.at then
-					cache = { type = ns:EffectSpotType() or false, at = now }
-					ns.effectSpotCache = cache
-				end
-				if cache.type then ns:EffectPlateUpdate(unit, cache.type) end
-			end,
-			NAME_PLATE_UNIT_REMOVED = function(unit)
-				local plate = type(unit) == "string" and ns.effectPlates[unit]
-				local mark = plate and ns.effectPlateMarks[plate]
-				if mark then mark:Hide() end
-				if type(unit) == "string" then ns.effectPlates[unit] = nil end
-			end,
-		}
-		for event in pairs(PLATE_EVENTS) do pcall(plateFrame.RegisterEvent, plateFrame, event) end
-		plateFrame:SetScript("OnEvent", function(_, event, ...)
-			local done, err = pcall(PLATE_EVENTS[event], ...)
-			if not done and ns.RecordError then ns:RecordError("effects:plate", err) end
-		end)
-		ns.effectPlateFrame = plateFrame
-	end
+	local PLATE_EVENTS = {
+		-- chaque barre de nom qui apparaît : rien de coûteux sans l'effet de
+		-- repérage (type gardé par EffectPlatesRefresh, relu au plus toutes
+		-- les EFFECT_SPOT_TTL secondes)
+		NAME_PLATE_UNIT_ADDED = function(unit)
+			if type(unit) ~= "string" then return end
+			ns.effectPlates[unit] = nil
+			if not ModuleOn() then return end
+			local cache, now = ns.effectSpotCache, ns.Now and ns.Now() or 0
+			if not cache or now - cache.at >= ns.EFFECT_SPOT_TTL or now < cache.at then
+				cache = { type = ns:EffectSpotType() or false, at = now }
+				ns.effectSpotCache = cache
+			end
+			if cache.type then ns:EffectPlateUpdate(unit, cache.type) end
+		end,
+		NAME_PLATE_UNIT_REMOVED = function(unit)
+			local plate = type(unit) == "string" and ns.effectPlates[unit]
+			local mark = plate and ns.effectPlateMarks[plate]
+			if mark then mark:Hide() end
+			if type(unit) == "string" then ns.effectPlates[unit] = nil end
+		end,
+	}
+	-- 3.1.0 : cadre d'événements commun (ns.On, Libs/Socle/Compat.lua)
+	for event, fn in pairs(PLATE_EVENTS) do ns.On(event, "effects", fn, "effects:plate") end
 end
 
 -- ---------------------------------------------------------------------------

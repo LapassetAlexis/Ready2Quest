@@ -678,13 +678,9 @@ Wrap("CompanionTick", { run = function(self, _, _, seconds)
 end })
 
 -- Quêtes rendues : l'événement du jeu, la zone où l'on est
-local ok, frame = pcall(CreateFrame, "Frame")
-if ok and frame then
-	pcall(frame.RegisterEvent, frame, "QUEST_TURNED_IN")
-	frame:SetScript("OnEvent", function()
-		local done, err = pcall(ns.MissionEvent, ns, "turnins", 1, Here(ns))
-		if not done and ns.RecordError then ns:RecordError("daily:quest", err) end
-	end)
+-- 3.1.0 : cadre d'événements commun (ns.On, Libs/Socle/Compat.lua)
+ns.On("QUEST_TURNED_IN", "daily", function() ns:MissionEvent("turnins", 1, Here(ns)) end, "daily:quest")
+do
 	-- 2.11.2 (fiche 25) : regardé dix fois par seconde sur l'horloge de
 	-- l'addon (l'échéance reste ns.dailyPollAt), plus d'OnUpdate permanent
 	ns.Every("daily", ns.CLOCK_POLL, function()
@@ -694,7 +690,6 @@ if ok and frame then
 		local done, err = pcall(ns.DailyPoll, ns)
 		if not done and ns.RecordError then ns:RecordError("daily:poll", err) end
 	end)
-	ns.dailyEventFrame = frame
 end
 
 -- Le suivi se recalcule (kill, récolte, tampon) : les missions mesurées aussi

@@ -666,7 +666,7 @@ function ns:JournalFlush()
 	for _, stamp in ipairs(self.journalChats) do
 		self:Print(self:F("JRN_CHAT", self:JournalKindLabel(stamp.kind), stamp.name))
 	end
-	self.journalChats = {}
+	if #self.journalChats > 0 then self.journalChats = {} end
 	if not self.journalToastHideAt then self:ShowNextJournalToast() end
 end
 
@@ -844,12 +844,8 @@ local HANDLERS = {
 	PLAYER_REGEN_ENABLED    = function() ns:JournalFlush() end,
 }
 
-local eventFrame = CreateFrame("Frame")
-ns.RegisterHandlers(eventFrame, HANDLERS)
-eventFrame:SetScript("OnEvent", function(_, event, ...)
-	local ok, err = pcall(HANDLERS[event], ...)
-	if not ok and ns.RecordError then ns:RecordError("journal:" .. tostring(event), err) end
-end)
+-- 3.1.0 : cadre d'événements commun (ns.Listen, Libs/Socle/Compat.lua)
+ns.Listen("journal", HANDLERS)
 -- protégé : une erreur sur un bandeau en file se répéterait à chaque image ;
 -- on le retire de la file (la suite passe) et on note l'erreur une fois.
 -- 2.11.2 (fiche 25) : sur l'horloge de l'addon, posée quand un bandeau entre
@@ -869,6 +865,5 @@ end
 function ns:JournalToastArm()
 	if self.journalToastHideAt or #self.journalToasts > 0 then ns.Every("journal:toast", 0, JournalToastTick) end
 end
-ns.journalEventFrame = eventFrame
 
 if ns.Mark then ns.Mark("Journal") end

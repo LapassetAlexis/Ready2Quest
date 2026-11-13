@@ -1176,16 +1176,10 @@ function ns:TradeChatFilter(text)
 end
 
 do
-	local ok, frame = pcall(CreateFrame, "Frame")
-	if ok and frame then
-		for _, event in ipairs({ "PLAYER_REGEN_DISABLED", "PLAYER_LEAVING_WORLD", "PLAYER_ENTERING_WORLD", "CHAT_MSG_SYSTEM" }) do
-			pcall(frame.RegisterEvent, frame, event)
-		end
-		frame:SetScript("OnEvent", function(_, event, ...)
-			local done, err = pcall(ns.TradeOnEvent, ns, event, ...)
-			if not done and ns.RecordError then ns:RecordError("trade:" .. tostring(event), err) end
-		end)
-		ns.tradeEventFrame = frame
+	-- 3.1.0 : cadre d'événements commun de l'addon (ns.On, Libs/Socle/Compat.lua) ;
+	-- une fonction par événement, faite une fois (TradeOnEvent reçoit son nom)
+	for _, event in ipairs({ "PLAYER_REGEN_DISABLED", "PLAYER_LEAVING_WORLD", "PLAYER_ENTERING_WORLD", "CHAT_MSG_SYSTEM" }) do
+		ns.On(event, "trade", function(...) return ns:TradeOnEvent(event, ...) end)
 	end
 	ns.ChatRegisterPrefix(ns.TRADE_PREFIX)
 	if ns.Every then

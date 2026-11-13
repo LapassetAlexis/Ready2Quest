@@ -528,12 +528,8 @@ local HANDLERS = {
 	end,
 }
 
-local eventFrame = CreateFrame("Frame")
-for event in pairs(HANDLERS) do pcall(eventFrame.RegisterEvent, eventFrame, event) end
-eventFrame:SetScript("OnEvent", function(_, event, ...)
-	local ok, err = pcall(HANDLERS[event], ...)
-	if not ok and ns.RecordError then ns:RecordError("gathering:" .. tostring(event), err) end
-end)
-ns.gatheringEventFrame = eventFrame
+-- 3.1.0 : cadre d'événements commun ; les deux gestionnaires ne font rien
+-- module coupé : la porte retire alors l'écoute (CHAT_MSG_LOOT, fréquent en groupe)
+ns.Listen("gathering", HANDLERS, ModuleOn)
 
 if ns.Mark then ns.Mark("Gathering") end

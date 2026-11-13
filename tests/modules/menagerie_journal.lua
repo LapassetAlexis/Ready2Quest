@@ -1156,7 +1156,7 @@ do
 		titles[9201] = nil
 		NS.zoneQuests.lists = {}
 		Check("[R291] QUEST_DATA_LOAD_RESULT (écouté) : le titre traduit remplace l'anglais, gardé même si le client l'oublie",
-			loaded and Names()[9201] == "Armes égarées" and NS.zoneQuestsEventFrame.events.QUEST_DATA_LOAD_RESULT == true)
+			loaded and Names()[9201] == "Armes égarées" and NS.Listening("QUEST_DATA_LOAD_RESULT", "zonequests"))
 		-- sans l'API : repli sur nos noms, sans erreur
 		C_QuestLog.GetTitleForQuestID, C_QuestLog.RequestLoadQuestByID = nil, nil
 		ZQReset({ [1413] = { [9201] = { en = "Wayward Weapons", lvl = 2 } } })

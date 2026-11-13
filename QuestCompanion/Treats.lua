@@ -313,20 +313,22 @@ end
 
 -- Les paliers se vérifient quand le suivi se recalcule (comme le coffre),
 -- après lui : sa bulle passe d'abord
+-- (3.1.0 : fonction faite une fois, plus de fermeture à chaque rafraîchissement)
+local function TreatsCheck(self)
+	if not self:TreatData().treatsInit then
+		self:TreatCatchUp()
+	else
+		local zoneID = self.JournalZone and self:JournalZone()
+		if zoneID then self:TreatCheckZone(zoneID) end
+	end
+end
 do
 	local previous = ns.RefreshJournalTracker
 	if previous then
 		function ns:RefreshJournalTracker(...)
 			local a, b = previous(self, ...)
 			if ModuleOn() then
-				local ok, err = pcall(function()
-					if not self:TreatData().treatsInit then
-						self:TreatCatchUp()
-					else
-						local zoneID = self.JournalZone and self:JournalZone()
-						if zoneID then self:TreatCheckZone(zoneID) end
-					end
-				end)
+				local ok, err = pcall(TreatsCheck, self)
 				if not ok and self.RecordError then self:RecordError("treats:check", err) end
 			end
 			return a, b
