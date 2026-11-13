@@ -88,6 +88,8 @@ ns.AddOptionPage({
 	rows = {
 		{ key = "dungeonShowWindow", label = "OPT_DUNGEON_WINDOW",   kind = "bool" },
 		{ key = "dungeonAtEntrance", label = "OPT_DUNGEON_ENTRANCE", kind = "bool" },
+		{ key = "dungeonGroup",      label = "OPT_DUNGEON_GROUP",    kind = "bool",
+			describe = function() return L.OPT_DUNGEON_GROUP_DESC end },
 	},
 })
 
@@ -421,6 +423,11 @@ function ns:ShowDungeonWindow(sheet)
 		Add(line.label .. "  " .. Theme.T_GREY .. line.detail .. "|r", line.ok and "ok" or "bad")
 	end
 	if #sheet.readiness == 0 then Add(L.DGN_PREP_NONE, nil, "note") end
+	-- 1.35.0 : « Groupe prêt » (GroupReady.lua) : qui est sur place, qui est prêt
+	if self.GroupSheetRows then
+		local okGroup, err = pcall(self.GroupSheetRows, self, sheet, Add)
+		if not okGroup and self.RecordError then self:RecordError("dungeon:group", err) end
+	end
 
 	frame.subtitle:SetText(tostring(sheet.name))
 	local y = (frame.contentTop or -65) - GAP

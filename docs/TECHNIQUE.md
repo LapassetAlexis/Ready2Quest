@@ -1,5 +1,18 @@
 # Ready2Quest — notes techniques et historique
 
+## Ready2Quest 1.35.0 — « Groupe prêt » sur la fiche de donjon
+
+Forever n'a ni recherche de donjon ni pierre de rencontre (étude de marché du 2026-11-13 : premier manque). `GroupReady.lua` (chargé après `Dungeon.lua`) fait répondre les membres du groupe qui ont Ready2Quest, par message d'addon : rien dans le chat du groupe, aucune annonce automatique.
+
+- **Protocole** : préfixe `R2QGroup`, un seul message, `S|1|clé du donjon|i/e/a|niveau|soucis|0/1` (dedans, à l'entrée, en route ; soucis = identifiants des contrôles de la fiche qui clochent ; dernier champ = « et vous ? »). `ns:GroupDecode` ignore sans bruit une autre version, un message de plus de 200 caractères, un lieu inconnu ; un souci hors de la liste des cinq contrôles n'entre pas dans la fiche.
+- **Déroulé** : `ns:ShowDungeonSheet` enveloppée : fiche sortie en groupe, mon état part avec la demande (`ns:GroupSend(clé, true)`). Un membre qui reçoit une demande répond une fois (jamais de demande en réponse : pas de boucle). Réponse au plus toutes les `GROUP_REPLY_GAP` (5 s) pour un même donjon. Un état de plus de `GROUP_STALE` (600 s) n'est plus montré.
+- **En combat** : rien n'est calculé ni envoyé ; la réponse attend (`state.pending`) la fin du combat.
+- **Écoute à la demande** (cadre unique du socle, `ns.On` / `ns.Off`) : `GROUP_ROSTER_UPDATE` et `PLAYER_ENTERING_WORLD` toujours ; `CHAT_MSG_ADDON` seulement en groupe, module et réglage actifs ; `PLAYER_REGEN_ENABLED` seulement tant qu'une réponse attend. `ns:GroupEvents()` refait le point (groupe, réglages via `RefreshOptions`).
+- **Affichage** : `ns:GroupSheetRows` ajoute la section « GROUPE (N PRÊTS SUR M) » à la fenêtre de la fiche (appel protégé dans `ShowDungeonWindow`) ; la fenêtre ouverte se redessine à chaque réponse. Prêt = aucun souci et pas « en route ». Un membre sans réponse reste listé (« pas de réponse (sans Ready2Quest ?) »). `/r2q groupe` (ou `group`) : le même bilan dans le chat, et une nouvelle demande.
+- **Réglage** : `dungeonGroup` (vrai par défaut), page « Avant le donjon ». Aucune donnée gardée dans la sauvegarde.
+- **Tests** : `tests/modules/group_ready.lua` (`[GRP]`, 18 contrôles).
+- **À voir en jeu, à deux comptes** : le client Forever accepte `C_ChatInfo.SendAddonMessage` en `PARTY` / `RAID` / `INSTANCE_CHAT` (QuestCompanion l'utilise déjà pour les fiches de dresseur) ; noms avec royaume (`Nom-Royaume` ramené au nom court) ; délai de la réponse en entrant dans l'instance.
+
 ## QuestCompanion 3.1.0 — capture express
 
 Retour : en plein pack, la capture coupait le rythme (bandeau de 384 × 102, carte de préparation, scène de 3,5 s au centre, choix à deux candidats, et refus en combat). `CaptureExpress.lua`, chargé en dernier, enveloppe les entrées du filet sans toucher aux règles (qualité au coup fatal, chance, malchance, aides, Réserve, méfiance, spécimens : tout passe encore par `ns:CaptureRoll` et `ns:CaptureResolve`).
