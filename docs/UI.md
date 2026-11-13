@@ -455,6 +455,33 @@ rafraîchissement ne crée aucun cadre (`tests/modules/ui_windows.lua`) ;
 le peintre d'états ne crée rien (voiles de survol et d'appui créés à
 l'habillage) ; pas d'`OnUpdate`.
 
+## Partager (QuestCompanion 3.1.0, `Share.lua`)
+
+- Bouton-icône 20 px (`ns:ShareButton`) : l'icône de chat du client
+  (`ns.SHARE_ICON` : atlas `communities-icon-chat`, repli
+  `Interface\ChatFrame\UI-ChatIcon-Chat-Up`, par `Theme.PaintClient`),
+  plaque NAV, filet EDGE (Azeroth : le liseré doré des boutons), ambre au
+  survol, infobulle « Partager dans le chat ». Créé une fois par cadre
+  réutilisé (bandeau du carnet, « Capturé ! », scène de capture Azeroth,
+  fiche de la Réserve) : la file des bandeaux (`Banners.lua`) ne change pas.
+- Placement (`ns.SHARE_BUTTON`) : Azeroth, en bas à droite du bandeau, sous
+  le bouclier ; Sobre, à droite et centré, avant les points d'un haut fait,
+  les textes du bandeau raccourcis d'autant ; scène Azeroth, coin haut droit
+  (hors de la plaque de titre) ; Réserve, coin haut droit du modèle de la
+  fiche. Hauts faits : clic droit sur une ligne obtenue (infobulle : « Clic
+  droit : partager dans le chat »).
+- Menu des canaux (`ns:ShareMenu`, un cadre, `ns.SHARE_MENU` 160 de large,
+  rangées de 22) : seuls les canaux disponibles (Guilde, Raid ou Groupe,
+  Dire, Copier). Sobre : fond NAV, titre F_CAPS MUTED clair (7,96:1), entrées
+  F_LABEL LABEL (12,77:1 au survol), voile `HOVER_ALPHA`. Azeroth : aplat `woodBg`,
+  liseré doré, Friz Quadrata, rôles `share.title` (`goldHead`) et
+  `share.entry` (`lightSoft`) mesurés sur le bois sous le voile de survol
+  (11,08:1 et 10,22:1).
+  Échap ou un clic ailleurs le referme.
+- Envoi : `SendChatMessage` seulement depuis le clic d'une entrée ; « Copier »
+  (`ChatEdit_InsertLink` si la saisie est ouverte, sinon
+  `ChatFrame_OpenChat`, repli `ChatFrameUtil.OpenChat`) n'envoie rien.
+
 ## Style Azeroth (QuestCompanion)
 
 Réglage « Style de l'interface » : Sobre (le langage ci-dessus) ou Azeroth

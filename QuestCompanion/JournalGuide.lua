@@ -79,6 +79,8 @@ local FR = {
 	GUIDE_card_2           = "/qc fiche ouvre la tienne (c'est là que tu choisis ta vitrine) ; /qc fiche <nom> demande celle d'un autre joueur. Les joueurs qui ont l'addon ont « %s » dans le menu du clic droit (seulement pour les joueurs connus comme détenteurs) et une ligne « %s » dans leur infobulle.",
 	GUIDE_card_4           = "Tes exploits partent aussi à ta guilde : brillante, élite, rare ou boss capturé, sceau de zone, palier d'espèces et titre, gros haut fait (25 points ou plus, ou un titre). Chez les guildeux qui ont QuestCompanion, un bandeau « GUILDE » l'annonce ; un clic ouvre ta fiche. Réglages : « Annoncer mes exploits à la guilde », « Voir les exploits de la guilde ».",
 	GUIDE_card_3           = "Partagée par défaut ; coupe « %s » dans les réglages (page Au jour le jour) : ta fiche n'est envoyée à personne et l'addon reste muet. Les échanges passent par des messages d'addon invisibles, jamais en combat.",
+	-- 3.1.0 : partager un beau moment dans le chat (Share.lua)
+	GUIDE_card_5           = "Partager : sur les bandeaux des beaux moments (brillante, 3 étoiles, élite, rare ou boss, espèce nouvelle, haut fait, sceau, titre), le petit bouton de chat ouvre un menu : %s, %s ou %s, %s, ou %s (le texte va dans ta zone de saisie, à relire avant Entrée ; pour les canaux publics). Rien ne part sans ton clic. Plus tard : le bouton de la fiche d'un spécimen de la Réserve, ou clic droit sur un haut fait obtenu. Réglage « %s » (page Carnet de voyage).",
 	GUIDE_SEC_settings     = "Réglages et commandes",
 	GUIDE_settings_1       = "Page Au jour le jour : %s (tout coupe, infobulle comprise) · %s · %s · %s · %s · %s · %s.",
 	GUIDE_settings_2       = "Page Compagnon de route : %s (%s), pour que la créature remplisse son cadre à l'écran, même une bête capturée de taille réelle ; la réglette %s (Muet coupe aussi les tutoriels).",
@@ -147,6 +149,7 @@ local EN = {
 	GUIDE_card_2           = "/qc fiche opens yours (that is where you pick your showcase); /qc fiche <name> asks for another player's. Players who have the addon get \"%s\" in the right-click menu (only for players known to have it) and a \"%s\" line in their tooltip.",
 	GUIDE_card_4           = "Your feats also go to your guild: shiny, elite, rare or boss captured, zone seal, species milestone and title, big achievement (25 points or more, or a title). Guildmates running QuestCompanion see a \"GUILD\" banner; a click opens your card. Settings: \"Announce my feats to the guild\", \"Show guild feats\".",
 	GUIDE_card_3           = "Shared by default; turn off \"%s\" in the settings (Day by day page): your card is sent to nobody and the addon stays silent. Exchanges go through invisible addon messages, never in combat.",
+	GUIDE_card_5           = "Share: on the banners of great moments (shiny, 3 stars, elite, rare or boss, new species, achievement, seal, title), the small chat button opens a menu: %s, %s or %s, %s, or %s (the text goes to your chat input box, to read before pressing Enter; for public channels). Nothing is sent without your click. Later: the button on a Reserve specimen card, or right-click an earned achievement. Setting \"%s\" (Travel journal page).",
 	GUIDE_SEC_settings     = "Settings and commands",
 	GUIDE_settings_1       = "Day by day page: %s (turns everything off, tooltip included) · %s · %s · %s · %s · %s · %s.",
 	GUIDE_settings_2       = "Road companion page: %s (%s), so the creature fills its on-screen frame, even a life-size captured beast; the %s slider (Silent also turns the tutorials off).",
@@ -343,6 +346,8 @@ function BUILD.card(self)
 		P(self:F("GUIDE_card_2", L.TRAINER_MENU, L.TRAINER_TOOLTIP)),
 		P(self:F("GUIDE_card_3", L.OPT_DAILY_TRAINER)),
 		P(L.GUIDE_card_4),
+		P(self:F("GUIDE_card_5", L.SHARE_CH_GUILD, L.SHARE_CH_PARTY, L.SHARE_CH_RAID, L.SHARE_CH_SAY, L.SHARE_CH_COPY,
+			L.OPT_SHARE_BANNER)),
 	}
 end
 

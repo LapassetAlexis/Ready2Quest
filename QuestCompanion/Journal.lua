@@ -138,6 +138,9 @@ if ns.AddOptionPage then
 			{ key = "featToast",    label = "OPT_FEAT_TOAST", kind = "bool" },
 			{ key = "featChat",     label = "OPT_FEAT_CHAT",  kind = "bool" },
 			{ key = "featSound",    label = "OPT_FEAT_SOUND", kind = "bool" },
+			-- 3.1.0 : le bouton Partager des bandeaux (Share.lua : chaînes et défaut)
+			{ key = "shareBanner",  label = "OPT_SHARE_BANNER", kind = "bool",
+				describe = function() return ns.L.OPT_SHARE_BANNER_DESC end },
 			{ key = "featStats",    label = "OPT_FEAT_STATS", kind = "bool" },
 			-- suivi à l'écran (JournalTracker.lua : chaînes, défauts, action)
 			{ key = "journalTracker",       label = "OPT_JRN_TRACKER",        kind = "bool" },

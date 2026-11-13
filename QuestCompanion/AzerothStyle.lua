@@ -1603,12 +1603,21 @@ do
 	local base = ns.CaptureResolve
 	if base then
 		function ns:CaptureResolve(rolling, ...)
-			local result = base(self, rolling, ...)
 			local target = rolling and rolling.target
-			if target and rolling.success and not rolling.batch and not self.captureBatchResolving
-				and not SceneShowsVerdict(self, rolling) then
-				self:CaptureResultQueue({ name = target.name, shiny = target.shiny and true or false, stars = rolling.stars,
-					npcID = target.npcID, level = target.level, type = target.type })
+			-- 3.1.0 : espèce nouvelle ? (avant que la capture ne l'inscrive ; Share.lua)
+			local fresh = target and target.npcID ~= nil and not self:CaptureIsCaptured(target.npcID) or nil
+			local result = base(self, rolling, ...)
+			if target and rolling.success and not rolling.batch and not self.captureBatchResolving then
+				-- 3.1.0 : de quoi partager ce verdict (Share.lua : rang, espèce nouvelle, spécimen)
+				local shown = { name = target.name, shiny = target.shiny and true or false, stars = rolling.stars,
+					npcID = target.npcID, level = target.level, type = target.type, class = target.class,
+					fresh = fresh, specimen = rolling.specimen }
+				rolling.shareResult = shown
+				if SceneShowsVerdict(self, rolling) then
+					if self.ShareStageVerdict then pcall(self.ShareStageVerdict, self, rolling, shown) end
+				else
+					self:CaptureResultQueue(shown)
+				end
 			end
 			return result
 		end
@@ -1632,7 +1641,7 @@ do
 				if best then
 					self:CaptureResultQueue({ name = best.target.name, shiny = best.target.shiny and true or false,
 						stars = best.stars, more = got - 1, npcID = best.target.npcID, level = best.target.level,
-						type = best.target.type })
+						type = best.target.type, class = best.target.class, fresh = best.fresh, specimen = best.specimen })
 				end
 			end
 			return base(self, batch, ...)

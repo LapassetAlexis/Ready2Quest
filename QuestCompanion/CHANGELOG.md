@@ -1,5 +1,14 @@
 # QuestCompanion
 
+## 3.1.0 — Partager
+
+- **Partage tes beaux moments dans le chat** : un petit bouton (l'icône de chat du jeu) apparaît sur les bandeaux qui valent d'être racontés : « Capturé ! » d'une brillante, d'un spécimen 3 étoiles, d'un élite, d'un rare ou d'un boss, ou d'une espèce nouvelle (en style Azeroth, dans le coin de la scène de capture), « Haut fait obtenu » (seul ou groupé), sceau de zone et titre de dresseur. Un clic ouvre un petit menu avec les seuls canaux disponibles : Guilde, Groupe ou Raid, Dire, et **Copier** (le texte va dans ta zone de saisie, à relire avant Entrée : le bon choix pour Général ou Commerce). Exemple : « [Quest Companion] Dyokrion a capturé un Raptor brillant (3 étoiles, Grand) ! ».
+- **Rien ne part sans ton clic** : jamais d'envoi automatique. Un partage toutes les 10 secondes au plus, et pas deux fois la même chose dans le même canal en moins d'une minute (une ligne de chat te le dit). Hors instance, le jeu réserve « Dire » à ta saisie : le texte t'y attend, appuie sur Entrée.
+- **Plus tard aussi** : le même bouton sur la fiche d'un spécimen de la Réserve, et clic droit sur un haut fait obtenu (page Hauts faits).
+- **Réglage « Bouton Partager sur les bandeaux »** (page Carnet de voyage, actif par défaut) : il cache le bouton des bandeaux ; la Réserve et les Hauts faits gardent leur entrée. La page Guide (Fiche de dresseur) l'explique.
+
+*English:* share your great moments in chat — a small button (the game's chat icon) now shows on banners worth telling: "Captured!" for a shiny, a 3-star specimen, an elite, rare or boss, or a new species (in Azeroth style, in the corner of the capture scene), "Achievement earned" (single or grouped), zone seals and trainer titles. A click opens a small menu with only the channels you can use: Guild, Party or Raid, Say, and **Copy** (the text goes to your chat input box so you can read it before pressing Enter: the right pick for General or Trade). Example: "[Quest Companion] Dyokrion captured a shiny Raptor (3 stars, Large)!". Nothing is ever sent without your click; at most one share every 10 seconds, and not the same thing in the same channel twice within a minute (a chat line tells you). Outside instances the game keeps "Say" for your own typing: the text waits in your chat box, press Enter. You can share later too: the same button on a Reserve specimen card, and right-click an earned achievement on the Achievements page. New setting "Share button on banners" (Travel journal page, on by default) hides the banner button; the Reserve and Achievements keep their entry. The Guide page (Trainer card) explains it.
+
 ## 3.0.2
 
 - **Plus d'erreur au survol d'une créature** : quand le jeu rend l'identifiant d'une créature secret, Quest Companion ne le lit plus (« attempt to index local 'guid' (a secret string value) » dans Bestiary.lua). La créature n'est simplement pas notée ce jour-là.

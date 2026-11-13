@@ -303,6 +303,7 @@ function ns:CaptureBatch()
 				batch.results[#batch.results + 1] = {
 					target = target, success = rolling.success and true or false, stars = rolling.stars, shakes = rolling.shakes,
 					better = rolling.starsBetter, before = before, fresh = fresh, aid = rolling.aid,
+					specimen = rolling.specimen,
 				}
 			end
 		end
