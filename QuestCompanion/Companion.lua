@@ -169,7 +169,10 @@ local FR = {
 	COMP_FRAMING_portrait  = "Portrait (la tête)",
 	COMP_FRAMING_buste     = "Buste",
 	COMP_FRAMING_pied      = "En pied",
-	COMP_FRAMING_DESC      = "Comment la créature est cadrée dans son cadre à l'écran. Une créature capturée est de taille réelle : en pied, elle est toute petite.",
+	COMP_FRAMING_DESC      = "Comment la créature est cadrée dans son cadre à l'écran. Chaque créature capturée est ramenée à la même taille, quelle que soit son espèce.",
+	COMP_FIT_DIAG          = "Cadrage automatique %s : pnj %s, apparence %s, taille réelle %s, échelle %s, distance %s, cadrage %s. /qc compagnon cadrage on|off.",
+	COMP_FIT_ON            = "actif",
+	COMP_FIT_OFF           = "coupé (distance par type)",
 	OPT_COMP_CHATTER       = "Bavardage",
 	COMP_CHATTER_0         = "Muet",
 	COMP_CHATTER_1         = "Discret",
@@ -363,7 +366,10 @@ local EN = {
 	COMP_FRAMING_portrait  = "Portrait (the head)",
 	COMP_FRAMING_buste     = "Bust",
 	COMP_FRAMING_pied      = "Full body",
-	COMP_FRAMING_DESC      = "How the creature is framed in its on-screen frame. A captured creature is life-size: full body, it looks tiny.",
+	COMP_FRAMING_DESC      = "How the creature is framed in its on-screen frame. Every captured creature is brought to the same size, whatever its species.",
+	COMP_FIT_DIAG          = "Automatic framing %s: npc %s, display %s, real size %s, scale %s, distance %s, framing %s. /qc compagnon cadrage on|off.",
+	COMP_FIT_ON            = "on",
+	COMP_FIT_OFF           = "off (distance by type)",
 	OPT_COMP_CHATTER       = "Chattiness",
 	COMP_CHATTER_0         = "Silent",
 	COMP_CHATTER_1         = "Discreet",
@@ -1672,8 +1678,29 @@ function ns.ShowModel(model, opts, profile)
 	local scale, y = opts.scale, tonumber(opts.y) or p.y or 0
 	-- 2.14.0 (bêta 3) : cap (SetFacing), seulement s'il est demandé
 	local facing = tonumber(opts.facing)
+	-- 3.1.0 : cadrage automatique (opts.fit) : le modèle est ramené à la même
+	-- taille à l'écran d'après la taille réelle de son apparence
+	-- (ns:CompanionFitScale), la caméra à opts.fitCam. L'apparence : celle
+	-- demandée, celle apprise (opts.fitDisplay), sinon celle que le client a
+	-- chargée (GetDisplayInfo, connue à OnModelLoaded : le cadrage est reposé).
+	local fit, fitCam, fitDisplay = opts.fit and true or false, tonumber(opts.fitCam), tonumber(opts.display) or tonumber(opts.fitDisplay)
 	model.lightShiny = opts.shiny and true or false
 	model.framing = function(m)
+		local scale, cam = scale, cam
+		m.fitDisplay, m.fitScale = nil, nil
+		if fit and ns.CompanionFitScale then
+			local display = fitDisplay
+			if not display then
+				local ok, id = ModelCall(m, "GetDisplayInfo")
+				display = ok and tonumber(id) or nil
+			end
+			local mult = display and display > 0 and ns:CompanionFitScale(display) or nil
+			if mult then
+				scale, cam = (scale or 1) * mult, fitCam or cam
+				m.fitDisplay, m.fitScale = display, mult
+			end
+		end
+		m.framingCam = cam
 		if scale then ModelCall(m, "SetModelScale", scale) end
 		ModelCall(m, "SetCamDistanceScale", cam)
 		ModelCall(m, "SetPortraitZoom", zoom)
@@ -2641,6 +2668,75 @@ ns.COMPANION_MODEL_TYPE_CAM = {
 ns.COMPANION_MODEL_OVERRIDES = {}
 ns.COMPANION_FRAMING_CAM = { portrait = 0.75, buste = 0.88, pied = 1 }
 
+-- ---------------------------------------------------------------------------
+-- 3.1.0 : cadrage automatique. La caméra d'un modèle est fixe : une créature
+-- s'y voit à sa taille réelle (un rat minuscule, un géant qui déborde), et le
+-- type (Bête, Géant…) ne dit rien de la taille : un loup et un kodo sont des
+-- Bêtes. Chaque apparence a sa taille réelle (DisplaySizes_Forever.lua, tirée
+-- des tables du client) : le modèle est mis à l'échelle REF / taille, de sorte
+-- que toutes les créatures occupent la même place, caméra à COMPANION_FIT.cam
+-- (fois le cadrage du réglage). Référence réglée en jeu : Grand-père Hiver
+-- (apparence 13369, taille 1,78) bien cadré à 1,5 ; le Renne de l'Hiver
+-- (15904, taille 0,56) bien cadré à 0,6 : même rapport taille / distance.
+-- Sans taille connue (ou /qc compagnon cadrage off) : la distance par type.
+-- Les surcharges par espèce (COMPANION_MODEL_OVERRIDES) passent avant.
+-- ---------------------------------------------------------------------------
+ns.COMPANION_FIT = { ref = 1.78, cam = 1.5, min = 0.03, max = 4 }
+ns.DISPLAY_SIZE_CACHE_MAX = 256
+do
+	local values, cache, cached = nil, {}, 0
+	local byte = string.byte
+	-- Taille réelle d'une apparence (en unités du jeu), ou nil si inconnue
+	function ns:DisplaySize(displayID)
+		displayID = tonumber(displayID)
+		if not displayID or displayID <= 0 then return nil end
+		local hit = cache[displayID]
+		if hit ~= nil then return hit or nil end
+		local data, alphabet = ns.DISPLAY_SIZES, ns.DISPLAY_SIZE_ALPHABET
+		if type(data) ~= "string" or type(alphabet) ~= "string" then return nil end
+		if not values then
+			values = {}
+			for index = 1, #alphabet do values[byte(alphabet, index)] = index - 1 end
+		end
+		local pos, id, n, found = 1, 0, #data, false
+		while pos <= n do
+			local v = values[byte(data, pos)]
+			if not v then break end
+			if v < 80 then
+				id, pos = id + v, pos + 1
+			elseif v < 84 then
+				id = id + (v - 80) * 7225 + (values[byte(data, pos + 1)] or 0) * 85 + (values[byte(data, pos + 2)] or 0)
+				pos = pos + 3
+			else
+				id = id + (((values[byte(data, pos + 1)] or 0) * 85 + (values[byte(data, pos + 2)] or 0)) * 85
+					+ (values[byte(data, pos + 3)] or 0)) * 85 + (values[byte(data, pos + 4)] or 0)
+				pos = pos + 5
+			end
+			if id >= displayID then
+				local rank = id == displayID and values[byte(data, pos)]
+				if rank then found = (ns.DISPLAY_SIZE_MIN or 0.05) * (ns.DISPLAY_SIZE_STEP or 1.099) ^ rank end
+				break
+			end
+			pos = pos + 1
+		end
+		if cached >= ns.DISPLAY_SIZE_CACHE_MAX then cache, cached = {}, 0 end
+		cache[displayID], cached = found, cached + 1
+		return found or nil
+	end
+end
+
+-- L'échelle qui ramène cette apparence à la taille de référence, ou nil
+-- (taille inconnue, cadrage automatique coupé)
+function ns:CompanionFitScale(displayID)
+	if ns.companionFitOff then return nil end
+	local size = self:DisplaySize(displayID)
+	if not size then return nil end
+	local fit = ns.COMPANION_FIT
+	return math.max(fit.min, math.min(fit.max, fit.ref / size))
+end
+
+-- Rend la distance (par type ou par surcharge), y, le cap, et true si le
+-- cadrage automatique peut la remplacer (pas de surcharge pour cette espèce)
 function ns:CompanionModelCam(app, framing)
 	app = app or {}
 	local over = ns.COMPANION_MODEL_OVERRIDES
@@ -2653,7 +2749,19 @@ function ns:CompanionModelCam(app, framing)
 		cam = (kind and types[kind]) or types.default
 	end
 	local factor = ns.COMPANION_FRAMING_CAM[framing or self:CompanionFraming()] or 1
-	return cam * factor, y, spec and tonumber(spec.facing) or nil
+	return cam * factor, y, spec and tonumber(spec.facing) or nil, spec == nil
+end
+
+-- La distance du cadrage automatique pour ce cadrage (portrait, buste, pied)
+function ns:CompanionFitCam(framing)
+	return ns.COMPANION_FIT.cam * (ns.COMPANION_FRAMING_CAM[framing or self:CompanionFraming()] or 1)
+end
+
+-- L'apparence apprise d'une espèce (sonde, gardée au compte), ou nil
+function ns:CompanionKnownDisplay(npc)
+	local account = self.CaptureAccount and self:CaptureAccount()
+	local known = account and type(account.display) == "table" and account.display[tonumber(npc) or -1]
+	return tonumber(known)
 end
 
 local function CompanionReapply() ns:CompanionApplyModel() end
@@ -2676,7 +2784,12 @@ function ns:CompanionApplyModel()
 	-- rapprochée par le cadrage (portrait, buste, pied)
 	-- 2.14.0 : un compagnon de saison (créature du jeu, SetCreature) aussi
 	local real = app.captured or app.seasonal
-	if real then distance, y, facing = self:CompanionModelCam(app, framing) end
+	local fit, fitCam
+	if real then
+		distance, y, facing, fit = self:CompanionModelCam(app, framing)
+		-- 3.1.0 : cadrage automatique d'après la taille réelle de l'apparence
+		if fit then fitCam = self:CompanionFitCam(framing) end
+	end
 	-- 3.1.0 : la taille du spécimen porté (SpecimenTraits.lua) : échelle du
 	-- modèle, rapprochée selon le cadrage, la caméra recule au-dessus de 1
 	local sizeScale = 1
@@ -2684,12 +2797,14 @@ function ns:CompanionApplyModel()
 		local camFactor
 		sizeScale, camFactor = self:CompanionSizeScale(framing)
 		distance = distance * (camFactor or 1)
+		if fitCam then fitCam = fitCam * (camFactor or 1) end
 	end
 	frame.sizeScale = sizeScale
 	-- 3.0.0 (bêta 6) : modèle resté vide (créature pas encore en cache) :
 	-- tout le cadre refait une fois (CompanionReapply)
 	local shown = model and ns.ShowModel(model, { display = app.display, npc = app.npc, shiny = app.shiny,
 		zoom = zoom, cam = distance, y = y, facing = facing, scale = real and sizeScale or stageDef.scale,
+		fit = fit, fitCam = fitCam, fitDisplay = fit and app.npc and self:CompanionKnownDisplay(app.npc) or nil,
 		retry = CompanionReapply }, "companion") or false
 	frame.usesFallback = not shown
 	frame.displayID = shown and app.display or nil
@@ -3898,11 +4013,36 @@ function ns:CompanionSanitizeName(text)
 	return text
 end
 
+-- /qc compagnon cadrage [on|off] : ce que le cadrage automatique a fait du
+-- compagnon porté (pour le réglage : aucune manipulation n'est demandée au
+-- joueur), et son interrupteur de session
+function ns:CompanionFitCommand(arg)
+	arg = tostring(arg or ""):lower()
+	if arg == "off" or arg == "non" then ns.companionFitOff = true
+	elseif arg == "on" or arg == "oui" then ns.companionFitOff = nil end
+	if arg ~= "" then self:CompanionApplyModel() end
+	local model = self.companionFrame and self.companionFrame.model
+	local app = self:CompanionCurrentAppearance() or {}
+	local display = model and model.fitDisplay
+	local read
+	if model and type(model.GetDisplayInfo) == "function" then
+		local ok, id = pcall(model.GetDisplayInfo, model)
+		read = ok and tonumber(id) or nil
+	end
+	self:Print(self:F("COMP_FIT_DIAG", ns.companionFitOff and L.COMP_FIT_OFF or L.COMP_FIT_ON,
+		tostring(app.npc), tostring(display or read), tostring(self:DisplaySize(display or read) or "?"),
+		tostring(model and model.fitScale and string.format("%.3f", model.fitScale) or "-"),
+		tostring(model and model.framingCam and string.format("%.2f", model.framingCam) or "?"), self:CompanionFraming()))
+	return display ~= nil
+end
+
 function ns:CompanionCommand(rest)
 	if not ModuleOn() then return self:Print(L.COMP_MSG_OFF) end
 	local sub, arg = tostring(rest or ""):match("^%s*(%S*)%s*(.-)%s*$")
 	sub = (sub or ""):lower()
-	if sub == "nom" or sub == "name" then
+	if sub == "cadrage" or sub == "framing" then
+		return self:CompanionFitCommand(arg)
+	elseif sub == "nom" or sub == "name" then
 		local name = self:CompanionSanitizeName(arg)
 		if not name then return self:Print(L.COMP_MSG_NAME_BAD) end
 		self:CompanionData().name = name

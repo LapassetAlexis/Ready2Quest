@@ -33,6 +33,7 @@ Core.lua
 Banners.lua
 CreatureTypes.lua
 CompanionData.lua
+DisplaySizes_Forever.lua
 CompanionLines.lua
 CompanionVoices.lua
 Companion.lua

@@ -363,12 +363,14 @@ local function PaintLook(self, tile, def, m)
 		end
 		if want3d then
 			local model = TileModel(tile)
-			local cam, y, facing
+			local cam, y, facing, fit
 			if self.CompanionModelCam then
-				cam, y, facing = self:CompanionModelCam({ npc = def.npc, type = m.typeText }, "pied")
+				cam, y, facing, fit = self:CompanionModelCam({ npc = def.npc, type = m.typeText }, "pied")
 			end
+			-- 3.1.0 : cadrage automatique (taille réelle de l'apparence)
 			if model and ns.ShowModel and ns.ShowModel(model, { npc = def.npc, shiny = def.shiny,
-				cam = cam, y = y, facing = facing }, "tile") then
+				cam = cam, y = y, facing = facing, fit = fit, fitCam = fit and self:CompanionFitCam("pied") or nil,
+				fitDisplay = fit and self:CompanionKnownDisplay(def.npc) or nil }, "tile") then
 				tile.look = "model"
 			end
 		end
@@ -891,12 +893,13 @@ function ns:AllureRefreshCard(pane)
 	if card.model and ns.ShowModel then
 		-- 2.14.0 (bêta 3) : une créature (capturée, de saison) cadrée comme
 		-- dans le cadre du compagnon (Metzen : de loin)
-		local cam, y, facing
+		local cam, y, facing, fit
 		if (def.captured or def.seasonal) and self.CompanionModelCam then
-			cam, y, facing = self:CompanionModelCam({ npc = def.npc, type = m.typeText }, "pied")
+			cam, y, facing, fit = self:CompanionModelCam({ npc = def.npc, type = m.typeText }, "pied")
 		end
 		ns.ShowModel(card.model, { display = def.display, npc = def.npc, shiny = def.shiny,
-			cam = cam, y = y, facing = facing }, "cell")
+			cam = cam, y = y, facing = facing, fit = fit, fitCam = fit and self:CompanionFitCam("pied") or nil,
+			fitDisplay = fit and def.npc and self:CompanionKnownDisplay(def.npc) or nil }, "cell")
 	end
 end
 

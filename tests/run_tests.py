@@ -179,6 +179,12 @@ def check_generated():
         gen_lore.build(lore)
         if open(lore, encoding="utf-8").read() != open(os.path.join(ROOT, "QuestCompanion", "LoreData.lua"), encoding="utf-8").read():
             problems.append("QuestCompanion/LoreData.lua ne correspond plus à data/forever/lore/lore.json (python3 -I tools/gen_lore.py)")
+        # 3.1.0 : taille des apparences (data/forever/display_sizes.json)
+        import gen_display_sizes
+        sizes = os.path.join(out, "DisplaySizes_Forever.lua")
+        gen_display_sizes.build(sizes)
+        if open(sizes, encoding="utf-8").read() != open(os.path.join(ROOT, "QuestCompanion", "DisplaySizes_Forever.lua"), encoding="utf-8").read():
+            problems.append("QuestCompanion/DisplaySizes_Forever.lua ne correspond plus à data/forever/display_sizes.json (python3 -I tools/gen_display_sizes.py)")
     finally:
         shutil.rmtree(out, ignore_errors=True)
     return problems
