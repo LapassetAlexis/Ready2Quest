@@ -8,7 +8,7 @@ Relation : Optional Dependency -> Ready2Quest (facultatif).
 Captures à prendre en jeu : le compagnon et une bulle, la scène de capture (filet), la page Créatures (avec une brillante), la page Compagnon, la page Exploration, la page Missions, le coffre de zone ouvert.
 Une seule description, anglais d'abord puis français (règle des stores : l'anglais en premier). Coller le tout.
 -->
-# Quest Companion – Creatures & Achievements
+# Quest Companion Forever – Creatures & Achievements
 
 **Capture the monsters you defeat and build your collection.** Every creature of WoW Forever can be caught, with 1 to 3 stars and rare **shiny** versions. Take one along as your hunting companion, seal every zone, earn trainer titles and show off your trainer card to your guild. A little travel companion and its journal come along for the ride.
 

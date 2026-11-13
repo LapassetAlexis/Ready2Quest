@@ -7,7 +7,7 @@ Licence : GPLv3. Logo : docs/publication/logo_ready2quest.png.
 Captures à prendre en jeu : la fenêtre « Avant le départ », le bilan de retour, la fiche de donjon, l'étiquette « Pour toi » d'une récompense de quête, le cadre « Sac plein ».
 Une seule description, anglais d'abord puis français (règle des stores : l'anglais en premier). Coller le tout.
 -->
-# Ready2Quest
+# Ready2Quest Forever – Ready Check & Travel QoL
 
 **Get ready before you leave town.** When you step out of a village, a capital or a camp, Ready2Quest checks that you are ready: food and water, room in your bags, gear in good shape, your usual buffs, your hearthstone… and tells you at the right moment, not when it is too late.
 
