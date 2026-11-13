@@ -31,7 +31,7 @@ Ready2Quest ne s'abonne pas à `QUEST_LOG_UPDATE`. Le journal de quêtes n'est l
 
 ### `Core.lua` : abonnements à la demande
 
-- **`ns.EventGate(nom, porte)`** : chaque module déclare ses « portes » : cadre, événements, tâche d'horloge éventuelle, `want(ns)` (faut-il écouter ?), `onPause`/`onResume`. Au chargement, tout est abonné comme avant. `ns:SyncEventGates()` relit chaque porte et ne touche qu'à celles qui changent (`RegisterGameEvent` pour réabonner, donc `UNIT_*` du joueur seulement ; `UnregisterEvent` sous `pcall`). Un `want` en erreur garde l'abonnement et note l'erreur.
+- **`ns.FrameGate(nom, porte)`** : chaque module déclare ses « portes » : cadre, événements, tâche d'horloge éventuelle, `want(ns)` (faut-il écouter ?), `onPause`/`onResume`. Au chargement, tout est abonné comme avant. `ns:SyncEventGates()` relit chaque porte et ne touche qu'à celles qui changent (`RegisterGameEvent` pour réabonner, donc `UNIT_*` du joueur seulement ; `UnregisterEvent` sous `pcall`). Un `want` en erreur garde l'abonnement et note l'erreur.
 - **Chemins de synchro** :
   - entrée en jeu ;
   - entrée et sortie de combat ;
@@ -45,7 +45,7 @@ Ready2Quest ne s'abonne pas à `QUEST_LOG_UPDATE`. Le journal de quêtes n'est l
 - `/r2q diag` : « abonnements en pause : … (en combat) ».
 - `IsCurrentZoneSafe` lit le premier signal vivant sans table (`FirstLiveSignal`, même ordre que `LiveSafeSignals`, qui reste pour `LearnFromSignals` et les tests).
 
-`ns.EventGate` est un candidat pour le socle (QuestCompanion en profiterait aussi). Il est resté dans `Core.lua` parce que le socle était en travaux de son côté.
+`ns.FrameGate` est un candidat pour le socle (QuestCompanion en profiterait aussi). Il est resté dans `Core.lua` parce que le socle était en travaux de son côté.
 
 ### Portes posées
 
