@@ -246,11 +246,14 @@ function ns:UpdateNotice(now)
 		return
 	end
 	if now < notice.pulseUntil then
+		notice.lingering = nil
 		local wave = 0.5 + 0.5 * math.sin((now - notice.shownAt) * math.pi * 2 / 1.2)
 		frame.glow:SetAlpha(0.35 + 0.65 * wave)
 		frame.icon:SetAlpha(0.75 + 0.25 * wave)
 		frame:SetAlpha(1)
-	else
+	elseif not notice.lingering then
+		-- une minute d'icône atténuée, immobile : posée une fois, pas à chaque image
+		notice.lingering = true
 		frame.glow:SetAlpha(0.25)
 		frame.icon:SetAlpha(1)
 		frame:SetAlpha(0.6)
@@ -368,6 +371,8 @@ if StartEdit and StopEdit then
 	function ns:StartEditMode()
 		StartEdit(self)
 		local frame = self:EnsureNotice()
+		-- l'opacité de l'icône atténuée sera reposée après le placement
+		if self.notice then self.notice.lingering = nil end
 		if frame then
 			if not self.notice then
 				frame.icon:SetTexture(ns.NOTICE_ICONS.depart)

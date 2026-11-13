@@ -801,6 +801,8 @@ local function ResetWorld()
 	NS.wasAtCamp = nil
 	NS.departed = nil
 	if NS.InvalidateReagents then NS:InvalidateReagents() end
+	-- abonnements à la demande (R2Q) : monde neuf = tout abonné, hors combat
+	if NS.ResetEventGates then NS:ResetEventGates() end
 end
 
 ----------------------------------------------------------------------------

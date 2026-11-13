@@ -139,9 +139,9 @@ end
 -- GetItemInfo rend 11 valeurs (le prix de vente en dernier) : on les garde toutes
 local function ItemData(item)
 	if item == nil then return nil end
-	local r = { true, ns.ItemInfo(item) }
-	if not r[2] then return nil end
-	return { name = r[2], link = r[3], quality = r[4], maxStack = r[9], texture = r[11], sellPrice = r[12] }
+	local name, link, quality, _, _, _, _, maxStack, _, texture, sellPrice = ns.ItemInfo(item)
+	if not name then return nil end
+	return { name = name, link = link, quality = quality, maxStack = maxStack, texture = texture, sellPrice = sellPrice }
 end
 local function Money(value)
 	if not value or value <= 0 then return L.LOOTROOM_NO_VALUE end
@@ -182,6 +182,13 @@ local function HasStackRoom(itemID, maxStack)
 	return room
 end
 
+-- quêtes d'abord, puis les plus chers, puis l'ordre du butin
+local function LootBefore(a, b)
+	if a.quest ~= b.quest then return a.quest end
+	if a.value ~= b.value then return a.value > b.value end
+	return a.slot < b.slot
+end
+
 -- Objets du butin qui ne trouvent pas de place, du plus utile au moins utile :
 -- les objets de quête d'abord, puis les plus chers
 function ns:LootRoomLoot()
@@ -206,11 +213,7 @@ function ns:LootRoomLoot()
 			end
 		end
 	end
-	table.sort(list, function(a, b)
-		if a.quest ~= b.quest then return a.quest end
-		if a.value ~= b.value then return a.value > b.value end
-		return a.slot < b.slot
-	end)
+	table.sort(list, LootBefore)
 	return list
 end
 
@@ -356,6 +359,8 @@ function ns:LootRoomDestroy(row)
 	self:Print(self:F("LOOTROOM_DELETED", tostring(row.link), row.count))
 	local target = self.lootRoom and self.lootRoom.target
 	if target then self.lootRoomPending = target.slot end
+	-- le ramassage attend BAG_UPDATE_DELAYED (même fenêtre fermée entre-temps)
+	if self.SyncEventGate then self:SyncEventGate("lootroom:bags") end
 	return true
 end
 
@@ -621,6 +626,8 @@ function ns:LootRoomOpen(manual)
 	local fresh = not frame:IsShown()
 	if fresh then self.lootRoomOffset = 0 end
 	frame:Show()
+	-- la fenêtre suit les sacs tant qu'elle est ouverte
+	if self.SyncEventGate then self:SyncEventGate("lootroom:bags") end
 	self:LootRoomRefresh()
 	-- 1.34.0 : à côté d'une fenêtre de QuestCompanion déjà ouverte (socle)
 	if fresh and ns.PopupPlace then ns.PopupPlace(frame) end
@@ -641,12 +648,16 @@ local HANDLERS = {
 	LOOT_CLOSED = function()
 		ns.lootRoomPending = nil
 		if ns.lootRoomFrame then ns.lootRoomFrame:Hide() end
+		if ns.SyncEventGate then ns:SyncEventGate("lootroom:bags") end
 	end,
 	UI_ERROR_MESSAGE = function(a, b)
 		if ModuleOn() and ns.IsBagFullError and ns:IsBagFullError(a, b) and ns:LootRoomActive() then ns:LootRoomOpen(false) end
 	end,
 	BAG_UPDATE_DELAYED = function()
-		if not ns:LootRoomAfterBags() then ns:LootRoomRefresh() end
+		if not ns:LootRoomAfterBags() and not ns:LootRoomRefresh() then
+			-- fenêtre fermée (bouton, Échap), rien à ramasser : plus besoin des sacs
+			if ns.SyncEventGate then ns:SyncEventGate("lootroom:bags") end
+		end
 	end,
 }
 local ok, eventFrame = pcall(CreateFrame, "Frame")
@@ -657,6 +668,24 @@ if ok and eventFrame then
 		if not done and ns.RecordError then ns:RecordError("lootroom:" .. tostring(event), err) end
 	end)
 	ns.lootRoomEventFrame = eventFrame
+	-- Module coupé : ni butin ni messages d'erreur. Les sacs (BAG_UPDATE_DELAYED)
+	-- ne servent qu'à la fenêtre ouverte (même ouverte à la main, /r2q place,
+	-- module coupé) ou à un ramassage en attente. LOOT_CLOSED reste abonné.
+	if ns.FrameGate then
+		ns.FrameGate("lootroom", {
+			frame = eventFrame,
+			events = { "LOOT_OPENED", "UI_ERROR_MESSAGE" },
+			want = function() return ModuleOn() end,
+		})
+		ns.FrameGate("lootroom:bags", {
+			frame = eventFrame,
+			events = { "BAG_UPDATE_DELAYED" },
+			want = function(self)
+				local frame = self.lootRoomFrame
+				return self.lootRoomPending ~= nil or (frame ~= nil and frame:IsShown() == true)
+			end,
+		})
+	end
 end
 
 if type(ns.EXTRA_COMMANDS) == "table" then

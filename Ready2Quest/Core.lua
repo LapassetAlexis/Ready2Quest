@@ -107,6 +107,20 @@ function ns:LiveSafeSignals()
 	return signals
 end
 
+-- Même lecture, le premier signal seulement (aucune table)
+local function FirstLiveSignal()
+	local fn = rawget(_G, "IsResting")
+	if type(fn) == "function" then
+		local ok, res = pcall(fn)
+		if ok and (res == true or res == 1) then return "resting" end
+	end
+	if type(UnitIsPVPSanctuary) == "function" then
+		local ok, res = pcall(UnitIsPVPSanctuary, "player")
+		if ok and (res == true or res == 1) then return "sanctuary" end
+	end
+	return nil
+end
+
 -- ns:CurrentSubZone : socle commun, Libs/Socle/World.lua.
 
 local function VillageKey(mapID, subzone) return "v:" .. tostring(mapID) .. ":" .. tostring(subzone) end
@@ -153,8 +167,11 @@ function ns:IsCurrentZoneSafe(ignoreCamp)
 		end
 	end
 
-	local signals = self:LiveSafeSignals()
-	if #signals > 0 then return true, mapID, signals[1], nil end
+	-- le premier signal vivant, dans l'ordre de LiveSafeSignals, sans sa
+	-- table (appelé toutes les PLACE_CHECK s sur une carte à lieux repérés,
+	-- et quatre fois par seconde au camp par Camp.lua)
+	local signal = FirstLiveSignal()
+	if signal then return true, mapID, signal, nil end
 	return false, mapID, nil, nil
 end
 
@@ -554,6 +571,157 @@ function ns:CheckBagPressure()
 end
 
 -- ---------------------------------------------------------------------------
+-- Abonnements à la demande (passe perf R2Q, docs/AUDIT-PERF-R2Q.md)
+--
+-- Un module coupé, ou un événement qui ne sert qu'à un moment (voyage en
+-- cours, fenêtre ouverte, hors combat), ne reste pas abonné : le client ne
+-- nous l'envoie plus du tout. Chaque module déclare ses « portes » :
+--   ns.FrameGate(nom, { frame = cadre, events = { ... }, want = fn(ns),
+--     clock = { key, period, fn } (facultatif : tâche de l'horloge),
+--     onPause = fn(ns), onResume = fn(ns) })
+-- want(ns) dit si les événements doivent arriver. Au chargement, tout est
+-- abonné comme avant ; la première synchro a lieu à l'entrée en jeu.
+-- ns:SyncEventGates() relit chaque porte et ne touche qu'à celles qui
+-- changent. Elle est appelée à l'entrée en jeu, à l'entrée et à la sortie de
+-- combat, au changement de zone, après chaque commande /r2q et chaque
+-- changement de réglage (RefreshOptions, OptionPages.lua), et toutes les
+-- GATE_SAFETY s en filet (un chemin oublié rattrape son retard).
+-- Un want() en erreur garde l'abonnement (dans le doute, on écoute).
+-- Socle candidat (ns.FrameGate) : propre à R2Q pour l'instant, le socle
+-- étant en travaux de son côté.
+-- ---------------------------------------------------------------------------
+ns.eventGates, ns.eventGateOrder = {}, {}
+ns.GATE_SAFETY = 10
+
+-- Combat vu par les événements (PLAYER_REGEN_*) : sur PLAYER_REGEN_DISABLED,
+-- InCombatLockdown() est encore faux. Un /reload en combat le relit à
+-- l'entrée en jeu.
+function ns:GateInCombat()
+	return self.gateCombat == true
+end
+
+local function ClientInCombat()
+	local fn = rawget(_G, "InCombatLockdown")
+	if type(fn) == "function" then
+		local ok, res = pcall(fn)
+		if ok and res then return true end
+	end
+	return false
+end
+
+local function GateWant(gate)
+	local ok, want = pcall(gate.want, ns)
+	if not ok then
+		ns:RecordError("gate:" .. tostring(gate.name), want)
+		return true
+	end
+	return want and true or false
+end
+
+local function GateApply(gate, want)
+	gate.on = want
+	local frame = gate.frame
+	if frame then
+		for i = 1, #gate.events do
+			local event = gate.events[i]
+			if want then
+				ns.RegisterGameEvent(frame, event)     -- UNIT_* : le joueur seulement
+			elseif type(frame.UnregisterEvent) == "function" then
+				pcall(frame.UnregisterEvent, frame, event)
+			end
+		end
+	end
+	local clock = gate.clock
+	if clock then
+		if want then ns.Every(clock[1], clock[2], clock[3]) else ns.Cancel(clock[1]) end
+	end
+end
+
+function ns.FrameGate(name, gate)
+	if type(gate) ~= "table" or type(gate.want) ~= "function" then return nil end
+	gate.name = name
+	gate.events = gate.events or {}
+	gate.on = true      -- au chargement : abonné, comme avant cette passe
+	if not ns.eventGates[name] then ns.eventGateOrder[#ns.eventGateOrder + 1] = name end
+	ns.eventGates[name] = gate
+	return gate
+end
+
+-- Relit une porte (nom ou table) ; rend son état
+function ns:SyncEventGate(which)
+	local gate = type(which) == "table" and which or self.eventGates[which]
+	if not gate then return nil end
+	local want = GateWant(gate)
+	if gate.on == want then return want end
+	GateApply(gate, want)
+	local hook = want and gate.onResume or gate.onPause
+	if hook then
+		local ok, err = pcall(hook, self)
+		if not ok then self:RecordError("gate:" .. tostring(gate.name), err) end
+	end
+	return want
+end
+
+function ns:SyncEventGates()
+	local order = self.eventGateOrder
+	for i = 1, #order do self:SyncEventGate(order[i]) end
+end
+
+-- Combat : posé par le premier des cadres qui reçoit PLAYER_REGEN_* (celui
+-- du cœur ou celui d'un module), sans effet s'il ne change pas
+function ns:SetGateCombat(inCombat)
+	inCombat = inCombat and true or false
+	if self.gateCombat == inCombat then return end
+	self.gateCombat = inCombat
+	self:SyncEventGates()
+end
+
+-- Retour à l'état du chargement : tout abonné, hors combat (banc de test,
+-- ResetWorld ; en jeu, l'entrée en jeu relit tout de toute façon)
+function ns:ResetEventGates()
+	self.gateCombat = nil
+	local order = self.eventGateOrder
+	for i = 1, #order do
+		local gate = self.eventGates[order[i]]
+		if gate and not gate.on then GateApply(gate, true) end
+	end
+end
+
+-- /r2q diag : les portes fermées (à vérifier en jeu : module coupé, hors
+-- voyage, en combat…)
+ns.RegisterStrings({
+	MSG_DIAG_GATES      = "  abonnements en pause : %s%s",
+	MSG_DIAG_GATES_NONE = "aucun",
+	MSG_DIAG_GATES_COMBAT = " (en combat)",
+}, {
+	MSG_DIAG_GATES      = "  subscriptions paused: %s%s",
+	MSG_DIAG_GATES_NONE = "none",
+	MSG_DIAG_GATES_COMBAT = " (in combat)",
+})
+function ns:GateDiagLine()
+	local closed = {}
+	for _, name in ipairs(self.eventGateOrder) do
+		local gate = self.eventGates[name]
+		if gate and not gate.on then closed[#closed + 1] = name end
+	end
+	local list = #closed > 0 and table.concat(closed, ", ") or L.MSG_DIAG_GATES_NONE
+	return self:F("MSG_DIAG_GATES", list, self:GateInCombat() and L.MSG_DIAG_GATES_COMBAT or "")
+end
+
+-- Filet : un PLAYER_REGEN_ENABLED manqué, un réglage changé par un chemin
+-- inconnu. Le combat n'est relu ici qu'à froid (jamais pendant
+-- PLAYER_REGEN_DISABLED, où le client dit encore « hors combat »).
+local function GateSafety()
+	if ns.gateCombat and not ClientInCombat() then
+		local fn = rawget(_G, "UnitAffectingCombat")
+		local ok, res = false, nil
+		if type(fn) == "function" then ok, res = pcall(fn, "player") end
+		if not (ok and res) then ns.gateCombat = false end
+	end
+	ns:SyncEventGates()
+end
+
+-- ---------------------------------------------------------------------------
 -- Événements
 -- ---------------------------------------------------------------------------
 ns.handlers = {
@@ -573,12 +741,21 @@ ns.handlers = {
 		-- Relevé de référence pour le résumé de changement de stuff
 		if self.CaptureStatBaseline then pcall(function() self:CaptureStatBaseline() end) end
 		if self.InitPlayerFrameHooks then pcall(function() self:InitPlayerFrameHooks() end) end
+
+		-- abonnements à la demande : première synchro (un /reload en combat
+		-- arrive ici en combat : PLAYER_REGEN_ENABLED rouvrira)
+		self.gateCombat = ClientInCombat()
+		self:SyncEventGates()
 	end,
 
 	ZONE_CHANGED_NEW_AREA = function(self)
 		self:LearnFromSignals()
 		self:Evaluate("zone")
+		self:SyncEventGates()
 	end,
+
+	PLAYER_REGEN_DISABLED = function(self) self:SetGateCombat(true) end,
+	PLAYER_REGEN_ENABLED = function(self) self:SetGateCombat(false) end,
 
 	-- Changement de sous-zone : c'est l'événement qui marque la sortie d'un village
 	ZONE_CHANGED = function(self)
@@ -719,6 +896,7 @@ ns.HELP = {
 -- ns:PrintHelp : socle commun (Libs/Socle/Commands.lua)
 
 local COMMANDS = {
+	-- (abonnements relus après chaque commande : HandleCommand, plus bas)
 	["on"] = function(self) self:DB().enabled = true; self:Print(L.MSG_ON) end,
 	["off"] = function(self) self:DB().enabled = false; self:Print(L.MSG_OFF) end,
 	["safe"] = function(self, rest)
@@ -984,6 +1162,8 @@ local COMMANDS = {
 		-- dernier changement d'équipement (résumé de stuff), portée d'aggro
 		if self.GearDiagLine then self:Print(self:GearDiagLine()) end
 		if self.AggroDiagLine then self:Print(self:AggroDiagLine()) end
+		-- abonnements à la demande : ceux qui sont en pause
+		if self.GateDiagLine then self:Print(self:GateDiagLine()) end
 	end,
 }
 
@@ -995,6 +1175,21 @@ function ns:DefaultCommand()
 	self:RunChecklist("manual")
 end
 for name, fn in pairs(COMMANDS) do ns.COMMANDS[name] = fn end
+
+-- Après chaque commande (/r2q on|off, module, reset, portrait…), les
+-- abonnements suivent les réglages. Le socle (Base.lua) relit
+-- ns.HandleCommand à chaque appel : l'enveloppe est prise en compte.
+do
+	local handle = ns.HandleCommand
+	if type(handle) == "function" then
+		function ns:HandleCommand(...)
+			local ok, err = pcall(handle, self, ...)
+			local synced, syncErr = pcall(self.SyncEventGates, self)
+			if not synced then self:RecordError("gate:commande", syncErr) end
+			if not ok then error(err, 0) end
+		end
+	end
+end
 
 -- ---------------------------------------------------------------------------
 -- Amorçage
@@ -1057,6 +1252,8 @@ local function ToastFade()
 	return ns.toastHideAt ~= nil
 end
 function ns:ArmToastFade() ns.Every("core:toast", 0, ToastFade) end
+-- filet des abonnements à la demande (voir ns.FrameGate)
+ns.Every("core:gates", ns.GATE_SAFETY, GateSafety)
 ns:RegisterEvents(frame)
 
 ns.eventFrame = frame

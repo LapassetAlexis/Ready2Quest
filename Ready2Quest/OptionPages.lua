@@ -268,10 +268,16 @@ function ns:QCAction()
 end
 ns.OPTION_ACTIONS.qcAction = function(self) self:QCAction() end
 
--- le libellé du bouton suit l'état (rafraîchi avec la page)
+-- le libellé du bouton suit l'état (rafraîchi avec la page) ; chaque
+-- changement de réglage passe par ici : les abonnements à la demande suivent
+-- (ns.FrameGate, Core.lua)
 do
 	local base = ns.RefreshOptions
 	function ns:RefreshOptions(...)
+		if self.SyncEventGates then
+			local ok, err = pcall(self.SyncEventGates, self)
+			if not ok then self:RecordError("gate:options", err) end
+		end
 		local result = base(self, ...)
 		local frame = self.optionsFrame
 		for _, card in ipairs(frame and frame.rows or {}) do

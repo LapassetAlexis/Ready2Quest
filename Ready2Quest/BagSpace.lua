@@ -182,9 +182,15 @@ end
 
 local function ItemInfo(item)
 	if item == nil then return nil end
-	local r = { true, ns.ItemInfo(item) }
 	-- name, link, quality, level, minLevel, type, subType, maxStack, equipLoc, texture, sellPrice
-	return { name = r[2], link = r[3], quality = r[4], maxStack = r[9], sellPrice = r[12] }
+	local name, link, quality, _, _, _, _, maxStack, _, _, sellPrice = ns.ItemInfo(item)
+	return { name = name, link = link, quality = quality, maxStack = maxStack, sellPrice = sellPrice }
+end
+
+-- Prix de vente seul (11e retour), sans table : lu pour chaque objet des sacs
+local function ItemSellPrice(itemID)
+	if itemID == nil then return nil end
+	return (select(11, ns.ItemInfo(itemID)))
 end
 
 local function ItemClass(itemID)
@@ -307,9 +313,8 @@ end
 -- Prix de vente unitaire : 0 si l'objet ne se vend pas, nil si inconnu
 local function SellPrice(info)
 	if info.hasNoValue then return 0 end
-	local data = ItemInfo(info.itemID)
-	if not data then return nil end
-	return tonumber(data.sellPrice)
+	if info.itemID == nil then return nil end
+	return tonumber(ItemSellPrice(info.itemID))
 end
 
 local function Before(a, b)
@@ -416,6 +421,25 @@ local function Normalize(text)
 	return text
 end
 
+-- UI_ERROR_MESSAGE arrive sans cesse en combat (« hors de portée », « pas
+-- assez de rage »…) et deux modules le lisent (Sac plein, Place au butin) :
+-- les textes normalisés sont gardés, ceux des messages reçus bornés à
+-- NORMALIZED_MAX (le client n'en a que quelques dizaines), ceux des globales
+-- du client tant qu'elles ne changent pas. Résultat identique, sans chaînes
+-- refaites à chaque message.
+local NORMALIZED_MAX = 64
+local normalized, normalizedCount = {}, 0
+local function NormalizeMessage(text)
+	local known = normalized[text]
+	if known then return known end
+	known = Normalize(text)
+	if normalizedCount >= NORMALIZED_MAX then normalized, normalizedCount = {}, 0 end
+	normalized[text], normalizedCount = known, normalizedCount + 1
+	return known
+end
+ns.BAGSPACE_NORMALIZED_MAX = NORMALIZED_MAX
+function ns.BagSpaceNormalizedCount() return normalizedCount end
+
 -- Signature de UI_ERROR_MESSAGE : (messageType, message) sur les clients
 -- récents, (message) sur les anciens. On accepte les deux.
 function ns:IsBagFullError(a, b)
@@ -427,11 +451,11 @@ function ns:IsBagFullError(a, b)
 	end
 	local message = (type(a) == "string" and a) or (type(b) == "string" and b) or nil
 	if not message then return false end
-	message = Normalize(message)
+	message = NormalizeMessage(message)
 	if message == "" then return false end
 	for _, name in ipairs(ERROR_GLOBALS) do
 		local text = rawget(_G, name)
-		if type(text) == "string" and Normalize(text) == message then return true end
+		if type(text) == "string" and NormalizeMessage(text) == message then return true end
 	end
 	for _, text in ipairs(ERROR_FALLBACK) do
 		if text == message then return true end
@@ -725,11 +749,14 @@ function ns:ShowBagSpaceFrame()
 		end
 		if Theme.FadeIn then Theme.FadeIn(frame, 0.15) end
 	end
+	-- le cadre suit les sacs tant qu'il est là
+	if self.SyncEventGate then self:SyncEventGate("bagspace:bags") end
 	return frame
 end
 
 function ns:HideBagSpaceFrame()
 	if self.bagspaceFrame then self.bagspaceFrame:Hide() end
+	if self.SyncEventGate then self:SyncEventGate("bagspace:bags") end
 end
 
 -- 1.35.0 : en combat, le bandeau se range (rien ne s'y fait : jeter attend
@@ -809,7 +836,11 @@ local function OnBagUpdate()
 	-- une place s'est libérée (vente, objet consommé, jeté à la main) : le
 	-- cadre n'a plus lieu d'être ; sinon on suit les objets qui ont bougé
 	local frame = ns.bagspaceFrame
-	if not frame or not frame:IsShown() then return end
+	if not frame or not frame:IsShown() then
+		-- cadre fermé (bouton, Échap…) : plus besoin des sacs
+		if ns.SyncEventGate then ns:SyncEventGate("bagspace:bags") end
+		return
+	end
 	if ns:BagSpaceFreeSlots() > 0 then ns:HideBagSpaceFrame(); return end
 	ns:BagSpaceRebuild()
 	ns:RefreshBagSpaceFrame()
@@ -836,5 +867,25 @@ eventFrame:SetScript("OnEvent", function(_, event, ...)
 	if not ok and ns.RecordError then ns:RecordError("bagspace:" .. tostring(event), err) end
 end)
 ns.bagspaceEventFrame = eventFrame
+
+-- Module coupé : plus rien. Les mouvements des sacs (BAG_UPDATE, très
+-- fréquent : chaque butin, chaque charge consommée) ne servent qu'au cadre
+-- affiché : abonnés à son ouverture (ShowBagSpaceFrame), rendus quand il est
+-- fermé (au premier événement qui le trouve fermé, ou à la synchro suivante).
+if ns.FrameGate then
+	ns.FrameGate("bagspace", {
+		frame = eventFrame,
+		events = { "UI_ERROR_MESSAGE", "LOOT_OPENED" },
+		want = function() return ModuleOn() end,
+	})
+	ns.FrameGate("bagspace:bags", {
+		frame = eventFrame,
+		events = { "BAG_UPDATE", "BAG_UPDATE_DELAYED" },
+		want = function(self)
+			local frame = self.bagspaceFrame
+			return ModuleOn() and frame ~= nil and frame:IsShown() == true
+		end,
+	})
+end
 
 if ns.Mark then ns.Mark("BagSpace") end

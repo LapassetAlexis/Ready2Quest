@@ -503,10 +503,36 @@ frame:SetScript("OnEvent", function(_, event, unit)
 end)
 -- le décompte avance sans événement : rafraîchi quatre fois par seconde
 -- (1.32.2, fiche 25 : sur l'horloge de l'addon, plus d'OnUpdate permanent)
-ns.Every("camp", TICK, function()
+local function CampTick()
 	local ok, err = pcall(ns.UpdateCampFrame, ns)
 	if not ok and ns.RecordError then ns:RecordError("camp:tick", err) end
-end)
+end
+ns.Every("camp", TICK, CampTick)
 ns.campEventFrame = frame
+
+-- Décompte coupé (module ou réglage) : ni UNIT_AURA ni passage de l'horloge ;
+-- à l'arrêt, le cadre est rangé comme le faisait le passage suivant. En
+-- combat, UNIT_AURA (les auras du joueur bougent sans cesse) n'est plus
+-- écouté : le passage de l'horloge, quatre fois par seconde, suffit au
+-- décompte, et un passage est fait à la sortie du combat.
+local function CountdownOn(self)
+	return self:CampEnabled() and self:DB().campCountdown ~= false
+end
+if ns.FrameGate then
+	ns.FrameGate("camp", {
+		clock = { "camp", TICK, CampTick },
+		want = CountdownOn,
+		onPause = function(self)
+			self.campArrivedAt = nil
+			if self.campFrame then self.campFrame:Hide() end
+		end,
+	})
+	ns.FrameGate("camp:aura", {
+		frame = frame,
+		events = { "UNIT_AURA" },
+		want = function(self) return CountdownOn(self) and not self:GateInCombat() end,
+		onResume = function() CampTick() end,
+	})
+end
 
 if ns.Mark then ns.Mark("Camp") end

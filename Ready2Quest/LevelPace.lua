@@ -567,6 +567,21 @@ eventFrame:SetScript("OnEvent", function(_, event, ...)
 end)
 ns.paceEventFrame = eventFrame
 
+-- Module coupé ou niveau maximum : plus aucun relevé (l'XP des monstres,
+-- CHAT_MSG_COMBAT_XP_GAIN, arrive à chaque mort de monstre). L'entrée en jeu
+-- reste abonnée (accroche de la barre d'XP). À l'arrêt, le suivi est oublié,
+-- comme le faisait le premier événement reçu module coupé ; il repart de
+-- zéro au premier gain après la reprise.
+if ns.FrameGate then
+	ns.FrameGate("pace", {
+		frame = eventFrame,
+		events = { "PLAYER_XP_UPDATE", "PLAYER_LEVEL_UP", "CHAT_MSG_COMBAT_XP_GAIN", "QUEST_COMPLETE",
+			"QUEST_FINISHED", "QUEST_TURNED_IN" },
+		want = function(self) return self:PaceOn() and not self:PaceAtMaxLevel() end,
+		onPause = function(self) self.pace = nil end,
+	})
+end
+
 pcall(ns.PaceHookXPBar, ns)
 
 if ns.Mark then ns.Mark("LevelPace") end

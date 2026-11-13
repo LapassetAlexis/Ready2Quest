@@ -801,8 +801,18 @@ function ns:EnsurePortraitPanel()
 	return frame
 end
 
+-- Classe du joueur (nom affiché, jeton), protégée : nil, nil si le client
+-- ne répond pas
+local function PlayerClassInfo()
+	local fn = rawget(_G, "UnitClass")
+	if type(fn) ~= "function" then return nil, nil end
+	local ok, name, token = pcall(fn, "player")
+	if not ok then return nil, nil end
+	return ns.Plain(name), ns.Plain(token)
+end
+
 local function ClassColor()
-	local _, classFile = UnitClass("player")
+	local _, classFile = PlayerClassInfo()
 	local colors = RAID_CLASS_COLORS
 	if colors and classFile and colors[classFile] then
 		local c = colors[classFile]
@@ -986,7 +996,7 @@ function ns:ShowPortraitStats()
 	local snapshot = self:StatSnapshot()
 	local r, g, b = ClassColor()
 
-	local className, classFile = UnitClass("player")
+	local className, classFile = PlayerClassInfo()
 	local spec = SpecName()
 	local classText = tostring(className or classFile or "?")
 	if spec then classText = classText .. " · " .. tostring(spec) end
@@ -1099,6 +1109,9 @@ ns.PORTRAIT_POLL = 0.1
 local PORTRAIT_PARENTS = 3
 
 -- Unité affichée par un cadre (attribut sécurisé, sinon champ .unit), ou nil
+-- (lue dix fois par seconde par la sonde : le champ est lu par une fonction
+-- faite une fois, plus par une fermeture neuve à chaque cadre)
+local function UnitField(frame) return frame.unit end
 local function FrameUnit(frame)
 	if type(frame) ~= "table" then return nil end
 	local unit
@@ -1107,7 +1120,7 @@ local function FrameUnit(frame)
 		if ok then unit = ns.Plain(value) end
 	end
 	if type(unit) ~= "string" then
-		local ok, value = pcall(function() return frame.unit end)
+		local ok, value = pcall(UnitField, frame)
 		unit = ok and ns.Plain(value) or nil
 	end
 	return type(unit) == "string" and unit or nil
@@ -1265,6 +1278,8 @@ function ns:QueueEquipmentChange(slot)
 	end
 	pending.serial = pending.serial + 1
 	local serial = pending.serial
+	-- les relectures des stats (UNIT_STATS…) ne servent que pendant la série
+	if self.SyncEventGate then self:SyncEventGate("gear") end
 	if type(C_Timer) ~= "table" or type(C_Timer.After) ~= "function" then
 		return self:OnEquipmentChanged(true)
 	end
@@ -1282,7 +1297,11 @@ end
 -- Statistiques recalculées par le client : une tentative de plus, s'il en attend
 function ns:OnStatsUpdated(unit)
 	if unit ~= nil and ns.Plain(unit) ~= "player" then return end
-	if not self.gearPending then return end
+	if not self.gearPending then
+		-- série close : plus besoin de UNIT_STATS (porte « gear », plus bas)
+		if self.SyncEventGate then self:SyncEventGate("gear") end
+		return
+	end
 	self:OnEquipmentChanged(false)
 end
 
@@ -1387,6 +1406,16 @@ do
 			if not okStats and ns.RecordError then ns:RecordError("stuff:" .. tostring(event), err) end
 		end)
 		ns.statsEventFrame = statsFrame
+		-- UNIT_STATS du joueur bouge à chaque buff, proc ou forme (en combat
+		-- surtout) : seulement pendant une série de changements d'équipement
+		-- (QueueEquipmentChange), rendu au premier événement qui la trouve close
+		if ns.FrameGate then
+			ns.FrameGate("gear", {
+				frame = statsFrame,
+				events = { "UNIT_STATS", "PLAYER_AVG_ITEM_LEVEL_UPDATE" },
+				want = function(self) return self.gearPending ~= nil end,
+			})
+		end
 	end
 end
 

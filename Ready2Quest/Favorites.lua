@@ -276,7 +276,12 @@ end
 
 function ns:SetFavoriteClick(value)
 	for _, choice in ipairs(ns.FAVORITE_CLICKS) do
-		if choice.id == value then self:DB().favoriteClick = value; return value end
+		if choice.id == value then
+			self:DB().favoriteClick = value
+			-- « désactivé » : plus de GLOBAL_MOUSE_UP (porte « favorites:click »)
+			if self.SyncEventGate then self:SyncEventGate("favorites:click") end
+			return value
+		end
 	end
 	return nil
 end
@@ -421,13 +426,19 @@ local function Visible(region)
 	return Method(region, "IsShown") and true or false
 end
 
--- Les cadres de sacs du jeu qui existent (séparés, combiné)
+-- Les cadres de sacs du jeu qui existent (séparés, combiné). Noms faits une
+-- fois ; la liste rendue est une table de travail, réutilisée à chaque appel
+-- (FavoritesRefresh, à chaque mouvement des sacs) : ne pas la garder.
+local CONTAINER_NAMES = {}
+for i = 1, MAX_CONTAINERS do CONTAINER_NAMES[i] = "ContainerFrame" .. i end
+local containerList = {}
 local function ContainerFrames()
-	local list = {}
+	local list = containerList
+	for i = #list, 1, -1 do list[i] = nil end
 	local combined = rawget(_G, "ContainerFrameCombinedBags")
 	if type(combined) == "table" then list[#list + 1] = combined end
 	for i = 1, MAX_CONTAINERS do
-		local frame = rawget(_G, "ContainerFrame" .. i)
+		local frame = rawget(_G, CONTAINER_NAMES[i])
 		if type(frame) == "table" then list[#list + 1] = frame end
 	end
 	return list
@@ -1011,5 +1022,16 @@ eventFrame:SetScript("OnEvent", function(_, event, ...)
 	if not ok and ns.RecordError then ns:RecordError("favorites:" .. tostring(event), err) end
 end)
 ns.favoritesEventFrame = eventFrame
+
+-- GLOBAL_MOUSE_UP arrive à chaque clic relâché, partout (combat compris) :
+-- raccourci « désactivé » dans les réglages, plus abonné. Un client qui ne le
+-- connaît pas garde les accroches des cases (ns.favoritesGlobalClick nil).
+if ns.FrameGate then
+	ns.FrameGate("favorites:click", {
+		frame = eventFrame,
+		events = { "GLOBAL_MOUSE_UP" },
+		want = function(self) return self.favoritesGlobalClick == true and self:FavoriteClickChoice().button ~= nil end,
+	})
+end
 
 if ns.Mark then ns.Mark("Favorites") end

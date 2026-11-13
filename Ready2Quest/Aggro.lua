@@ -448,13 +448,20 @@ function ns:AggroUnitKind(unit)
 	return "hostile"
 end
 
--- Portée, fourchette et verdict d'une unité hostile
+-- Portée, fourchette et verdict d'une unité hostile, en valeurs (aucune
+-- table : appelé pour chaque barre de nom, cinq fois par seconde)
 -- redOnly (1.31.0) : seul le rouge compte, la mesure s'arrête au-delà
-function ns:AggroEvaluate(unit, redOnly)
+local function Evaluate(self, unit, redOnly)
 	local radius = ns.AggroRadius(Call("UnitLevel", "player"), Call("UnitLevel", unit))
 	if not radius then return nil end
 	local low, high = self:AggroDistance(unit, redOnly and radius + AGGRO_WARN or nil)
-	return { radius = radius, low = low, high = high, verdict = ns.AggroVerdict(radius, low, high) }
+	return radius, low, high, ns.AggroVerdict(radius, low, high)
+end
+
+function ns:AggroEvaluate(unit, redOnly)
+	local radius, low, high, verdict = Evaluate(self, unit, redOnly)
+	if not radius then return nil end
+	return { radius = radius, low = low, high = high, verdict = verdict }
 end
 
 local function Yards(value) return tostring(math.floor((tonumber(value) or 0) + 0.5)) end
@@ -604,16 +611,18 @@ function ns:AggroHideAll()
 	for _, ring in pairs(self.aggroRings) do ring:Hide(); ring.verdict = nil end
 end
 
--- Pose (ou retire) la marque d'une unité ; rend le verdict affiché ou nil
-function ns:AggroUpdatePlate(unit)
+-- Pose (ou retire) la marque d'une unité ; rend le verdict affiché ou nil.
+-- mode : celui d'AggroMode, lu une fois par passage (AggroTick) ; nil : relu
+function ns:AggroUpdatePlate(unit, mode)
 	local plate = self.aggroPlates[unit] or PlateForUnit(unit)
 	if not plate then return nil end
 	self.aggroPlates[unit] = plate
 	local verdict
 	if self:AggroUnitKind(unit) == "hostile" then
-		local redOnly = self:AggroMode() == "red-only"
-		local eval = self:AggroEvaluate(unit, redOnly)
-		verdict = eval and eval.verdict
+		if mode == nil then mode = self:AggroMode() end
+		local redOnly = mode == "red-only"
+		local _, _, _, value = Evaluate(self, unit, redOnly)
+		verdict = value
 		-- 1.31.0 : « danger seul » sans touche : ni vert ni ambre
 		if redOnly and verdict ~= "red" then verdict = nil end
 	end
@@ -646,8 +655,9 @@ end
 
 -- Une passe : tout masquer hors état actif, sinon chaque barre connue
 function ns:AggroTick()
-	local active = self:AggroActive()
-	if not active or self:DB().aggroRings == false then
+	-- AggroActive, le mode gardé pour toutes les barres du passage
+	local mode = self:AggroOn() and not self:AggroInCombat() and self:AggroMode() or nil
+	if mode == nil or self:DB().aggroRings == false then
 		if self.aggroShowing then self:AggroHideAll() end
 		self.aggroShowing = nil
 		return
@@ -664,7 +674,7 @@ function ns:AggroTick()
 		end
 	end
 	for unit in pairs(self.aggroPlates) do
-		local ok, err = pcall(self.AggroUpdatePlate, self, unit)
+		local ok, err = pcall(self.AggroUpdatePlate, self, unit, mode)
 		if not ok and self.RecordError then self:RecordError("aggro:plate", err) end
 	end
 end
@@ -711,8 +721,16 @@ local HANDLERS = {
 		ns.aggroPlates[unit] = nil
 	end,
 	MODIFIER_STATE_CHANGED = function() ns:AggroRefresh() end,
-	PLAYER_REGEN_DISABLED  = function() ns:AggroHideAll(); ns.aggroShowing = nil end,
-	PLAYER_REGEN_ENABLED   = function() ns:AggroTick() end,
+	-- combat : les abonnements de la porte « aggro » suivent (le premier
+	-- cadre qui reçoit l'événement, celui-ci ou celui du cœur, la bascule)
+	PLAYER_REGEN_DISABLED  = function()
+		ns:AggroHideAll(); ns.aggroShowing = nil
+		if ns.SetGateCombat then ns:SetGateCombat(true) end
+	end,
+	PLAYER_REGEN_ENABLED   = function()
+		if ns.SetGateCombat then ns:SetGateCombat(false) end
+		ns:AggroTick()
+	end,
 	GET_ITEM_INFO_RECEIVED = function(itemID)
 		if ns.AGGRO_ITEM_SET[tonumber(ns.Plain(itemID))] then ForgetDistances() end
 	end,
@@ -733,10 +751,33 @@ end)
 -- rafraîchissement hors combat (le joueur bouge) ; 1.31.0 : en « danger
 -- seul », aussi sans touche, mesure coupée au-delà du seuil du rouge
 -- (1.32.2, fiche 25 : sur l'horloge de l'addon, plus d'OnUpdate permanent)
-ns.Every("aggro", ns.AGGRO_TICK, function()
+local function AggroClock()
 	local ok, err = pcall(ns.AggroTick, ns)
 	if not ok and ns.RecordError then ns:RecordError("aggro:tick", err) end
-end)
+end
+ns.Every("aggro", ns.AGGRO_TICK, AggroClock)
 ns.aggroEventFrame = eventFrame
+
+-- Module coupé, ou en combat (les marques s'y cachent) : ni barres de nom,
+-- ni touches, ni objets reçus, ni passage de l'horloge. À la reprise, les
+-- barres sont relues (GetNamePlates) : celles apparues entre-temps n'ont
+-- envoyé aucun événement. Les événements de combat et d'entrée en jeu
+-- restent abonnés.
+if ns.FrameGate then
+	ns.FrameGate("aggro", {
+		frame = eventFrame,
+		events = { "NAME_PLATE_UNIT_ADDED", "NAME_PLATE_UNIT_REMOVED", "MODIFIER_STATE_CHANGED", "GET_ITEM_INFO_RECEIVED" },
+		clock = { "aggro", ns.AGGRO_TICK, AggroClock },
+		want = function(self) return self:AggroOn() and not self:GateInCombat() end,
+		onPause = function(self)
+			self:AggroHideAll()
+			self.aggroShowing = nil
+		end,
+		onResume = function(self)
+			self.aggroPlates, self.aggroScanned, self.aggroDistCache = {}, nil, nil
+			self:AggroTick()
+		end,
+	})
+end
 
 if ns.Mark then ns.Mark("Aggro") end

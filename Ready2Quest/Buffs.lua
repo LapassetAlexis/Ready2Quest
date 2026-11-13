@@ -689,6 +689,12 @@ function ns:ClassName(classFile)
 	return name
 end
 
+-- Aura présente ? Appelée sous pcall (une valeur secrète fait échouer la
+-- comparaison) : une fonction faite une fois, plus une fermeture par buff
+local function HasAuraBySpellID(spellId)
+	return C_UnitAuras.GetPlayerAuraBySpellID(spellId) ~= nil
+end
+
 -- Retourne : manquants (table), suivis (nombre), illisibles (nombre)
 function ns:EvaluateBuffs()
 	local db = self:DB()
@@ -735,9 +741,7 @@ function ns:EvaluateBuffs()
 			if hasByID then
 				-- une valeur secrète fait échouer l'appel : dans ce cas on ne
 				-- sait pas, et on ne crie pas « manquant »
-				local ok, res = pcall(function()
-					return C_UnitAuras.GetPlayerAuraBySpellID(spellId) ~= nil
-				end)
+				local ok, res = pcall(HasAuraBySpellID, spellId)
 				if ok then
 					active = active or res == true
 				else

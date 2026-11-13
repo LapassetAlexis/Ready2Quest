@@ -258,6 +258,17 @@ function ns:SpellRankBook()
 	return best
 end
 
+-- Le sort d'une case, s'il existe à un meilleur rang dans le livre `best` :
+-- id, nom, rang, meilleur ({ id, rank }) ; nil sinon
+local function SlotUpgrade(self, slot, best)
+	local kind, id = Call(Global("GetActionInfo"), slot)
+	if kind ~= "spell" or not id then return nil end
+	local name, rank = self:SpellRankOf(id)
+	local top = name and best[name]
+	if rank and top and top.rank > rank and top.id ~= id then return id, name, rank, top end
+	return nil
+end
+
 -- Les cases dont le sort a un meilleur rang, sans les cases ignorées
 -- (`all` : celles-ci aussi, marquées `ignored`)
 function ns:SpellRankScan(all)
@@ -265,16 +276,12 @@ function ns:SpellRankScan(all)
 	local best = self:SpellRankBook()
 	local ignore = self:DB().spellranksIgnore or {}
 	for slot = 1, ns.SPELLRANKS_SLOTS do
-		local kind, id = Call(Global("GetActionInfo"), slot)
-		if kind == "spell" and id then
-			local name, rank = self:SpellRankOf(id)
-			local top = name and best[name]
-			if rank and top and top.rank > rank and top.id ~= id then
-				local ignored = ignore[slot .. ":" .. id] == true
-				if all or not ignored then
-					list[#list + 1] = { slot = slot, id = id, name = name, rank = rank, bestID = top.id,
-						bestRank = top.rank, ignored = ignored, bar = math.floor((slot - 1) / 12) + 1, case = (slot - 1) % 12 + 1 }
-				end
+		local id, name, rank, top = SlotUpgrade(self, slot, best)
+		if id then
+			local ignored = ignore[slot .. ":" .. id] == true
+			if all or not ignored then
+				list[#list + 1] = { slot = slot, id = id, name = name, rank = rank, bestID = top.id,
+					bestRank = top.rank, ignored = ignored, bar = math.floor((slot - 1) / 12) + 1, case = (slot - 1) % 12 + 1 }
 			end
 		end
 	end
@@ -706,6 +713,8 @@ function ns:SpellRanksOpen()
 	if not frame then return nil end
 	if self.CloseOtherWindows then self:CloseOtherWindows(frame) end
 	frame:Show()
+	-- module coupé : la fenêtre ouverte à la main suit quand même les barres
+	if self.SyncEventGate then self:SyncEventGate("spellranks") end
 	self:SpellRanksRefresh()
 	return frame
 end
@@ -840,23 +849,60 @@ function ns:SpellRanksPreview(container)
 end
 ns.SPELLRANKS_BORDER_COLOR = BORDER_COLOR
 
--- Pose ou retire les liserés ; rend le nombre de cases marquées
+-- Noms des boutons des barres (ns.SPELLRANKS_BUTTONS), faits une fois : un
+-- passage en lisait plus de 450 avec string.format (une posture, une page de
+-- barre en donnent un, en combat aussi). Refaits si la liste change.
+local buttonNames, buttonNamesFor, buttonNamesCount = nil, nil, -1
+local function ButtonNames()
+	local families = ns.SPELLRANKS_BUTTONS
+	if buttonNames == nil or buttonNamesFor ~= families or buttonNamesCount ~= #families then
+		local names = {}
+		for _, family in ipairs(families) do
+			for index = 1, family[2] do names[#names + 1] = string.format(family[1], index) end
+		end
+		buttonNames, buttonNamesFor, buttonNamesCount = names, families, #families
+	end
+	return buttonNames
+end
+
+-- En combat, le livre de sorts ne change pas (ni entraîneur ni talents) : il
+-- est lu une fois et gardé jusqu'à la fin du combat (ou un SPELLS_CHANGED /
+-- LEARNED_SPELL_IN_TAB). Hors combat, il est relu à chaque passage, comme avant.
+local combatBook
+local function MarkBook(self)
+	if InCombat() then
+		if not combatBook then combatBook = self:SpellRankBook() end
+		return combatBook
+	end
+	combatBook = nil
+	return self:SpellRankBook()
+end
+local function ForgetCombatBook() combatBook = nil end
+
+-- Pose ou retire les liserés ; rend le nombre de cases marquées. Les cases
+-- à marquer vont dans une table réutilisée (aucune liste ni fiche par case).
+local markSlots = {}
 function ns:SpellRanksMark()
-	local slots = {}
+	local slots = markSlots
+	for key in pairs(slots) do slots[key] = nil end
 	if ModuleOn() and self:DB().spellranksBorder ~= false then
-		for _, entry in ipairs(self:SpellRankScan()) do slots[entry.slot] = true end
+		local best = MarkBook(self)
+		local ignore = self:DB().spellranksIgnore or {}
+		for slot = 1, ns.SPELLRANKS_SLOTS do
+			local id = SlotUpgrade(self, slot, best)
+			if id and ignore[slot .. ":" .. id] ~= true then slots[slot] = true end
+		end
 	end
 	local marked = 0
-	for _, family in ipairs(ns.SPELLRANKS_BUTTONS) do
-		for index = 1, family[2] do
-			local button = rawget(_G, string.format(family[1], index))
-			if type(button) == "table" then
-				local slot = ns.SpellRankButtonSlot(button)
-				local want = slot and slots[slot] and (type(button.IsVisible) ~= "function" or button:IsVisible())
-				local border = want and Border(button) or borders[button]
-				if border then
-					if want then border:Show(); marked = marked + 1 else border:Hide() end
-				end
+	local names = ButtonNames()
+	for i = 1, #names do
+		local button = rawget(_G, names[i])
+		if type(button) == "table" then
+			local slot = ns.SpellRankButtonSlot(button)
+			local want = slot and slots[slot] and (type(button.IsVisible) ~= "function" or button:IsVisible())
+			local border = want and Border(button) or borders[button]
+			if border then
+				if want then border:Show(); marked = marked + 1 else border:Hide() end
 			end
 		end
 	end
@@ -867,11 +913,11 @@ end
 -- Événements, commande
 -- ---------------------------------------------------------------------------
 local HANDLERS = {
-	PLAYER_ENTERING_WORLD = function() ns.spellRanksDueAt = ns.Now() + 3 end,
-	LEARNED_SPELL_IN_TAB  = function() ns.spellRanksDueAt = ns.Now() + 1 end,
+	PLAYER_ENTERING_WORLD = function() ForgetCombatBook(); ns.spellRanksDueAt = ns.Now() + 3 end,
+	LEARNED_SPELL_IN_TAB  = function() ForgetCombatBook(); ns.spellRanksDueAt = ns.Now() + 1 end,
 	-- 1.35.0 : moteur récent (le livre par lignes de compétence)
-	LEARNED_SPELL_IN_SKILL_LINE = function() ns.spellRanksDueAt = ns.Now() + 1 end,
-	SPELLS_CHANGED        = function() ns.spellRanksDueAt = ns.spellRanksDueAt or (ns.Now() + 1) end,
+	LEARNED_SPELL_IN_SKILL_LINE = function() ForgetCombatBook(); ns.spellRanksDueAt = ns.Now() + 1 end,
+	SPELLS_CHANGED        = function() ForgetCombatBook(); ns.spellRanksDueAt = ns.spellRanksDueAt or (ns.Now() + 1) end,
 	ACTIONBAR_SLOT_CHANGED = function() ns:SpellRanksRefresh() end,
 	-- la page ou la posture change : les mêmes boutons montrent d'autres cases
 	ACTIONBAR_PAGE_CHANGED = function() MarkSoon(0.2) end,
@@ -917,6 +963,23 @@ function ArmDue()
 end
 if ok and eventFrame then
 	ns.spellRanksEventFrame = eventFrame
+	-- Module coupé (et fenêtre fermée) : ni barres d'action, ni postures, ni
+	-- livre de sorts, ni fin de combat. À l'arrêt, un dernier passage retire
+	-- les liserés ; à la reprise, ils sont reposés. L'entrée en jeu reste
+	-- abonnée (vérification module coupé : elle ne fait rien).
+	if ns.FrameGate then
+		ns.FrameGate("spellranks", {
+			frame = eventFrame,
+			events = { "LEARNED_SPELL_IN_TAB", "LEARNED_SPELL_IN_SKILL_LINE", "SPELLS_CHANGED", "ACTIONBAR_SLOT_CHANGED", "ACTIONBAR_PAGE_CHANGED",
+				"UPDATE_BONUS_ACTIONBAR", "UPDATE_SHAPESHIFT_FORM", "PLAYER_REGEN_ENABLED" },
+			want = function(self)
+				local frame = self.spellRanksFrame
+				return ModuleOn() or (frame ~= nil and frame:IsShown() == true)
+			end,
+			onPause = function() ForgetCombatBook(); MarkSoon(0) end,
+			onResume = function() MarkSoon(0.2) end,
+		})
+	end
 end
 
 if type(ns.EXTRA_COMMANDS) == "table" then

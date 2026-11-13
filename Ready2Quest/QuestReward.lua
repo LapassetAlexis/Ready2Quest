@@ -112,11 +112,15 @@ end
 -- ---------------------------------------------------------------------------
 -- Appels défensifs
 -- ---------------------------------------------------------------------------
+-- Tous les retours de fn, sans table intermédiaire (appelé à chaque survol
+-- d'objet : classe, niveau, statistiques des pièces portées)
+local function Pass(ok, ...)
+	if not ok then return nil end
+	return ...
+end
 local function Call(fn, ...)
 	if type(fn) ~= "function" then return nil end
-	local r = { pcall(fn, ...) }
-	if not r[1] then return nil end
-	return unpack(r, 2, table.maxn(r))
+	return Pass(pcall(fn, ...))
 end
 
 local function PlayerClass()
@@ -672,6 +676,8 @@ ns:RewardHookItemTooltip()
 -- ---------------------------------------------------------------------------
 function ns:RewardOnComplete()
 	self.rewardState = { active = true }
+	-- objets arrivés en cache, pendant que la récompense est affichée
+	if self.SyncEventGate then self:SyncEventGate("reward") end
 	if not self:RewardEnabled() then return end
 	self:RewardHookTooltip()
 	-- Notre cadre peut recevoir QUEST_COMPLETE avant celui de la quête, qui
@@ -692,6 +698,12 @@ end
 function ns:RewardOnFinished()
 	self:RewardClearMarks()
 	self.rewardState = nil
+	if self.SyncEventGate then self:SyncEventGate("reward") end
+end
+
+local function RewardShown()
+	local state = ns.rewardState
+	return (state ~= nil and state.active) and true or false
 end
 
 local HANDLERS = {
@@ -699,11 +711,15 @@ local HANDLERS = {
 	QUEST_FINISHED = function() ns:RewardOnFinished() end,
 	-- objet arrivé en cache après coup : on recalcule
 	QUEST_ITEM_UPDATE = function()
-		if ns.rewardState and ns.rewardState.active then ns:RewardApply(true) end
+		if RewardShown() then ns:RewardApply(true) elseif ns.SyncEventGate then ns:SyncEventGate("reward") end
 	end,
 	GET_ITEM_INFO_RECEIVED = function()
 		local state = ns.rewardState
-		if state and state.active and state.result and state.result.pending then ns:RewardApply(true) end
+		if not RewardShown() then
+			if ns.SyncEventGate then ns:SyncEventGate("reward") end
+		elseif state.result and state.result.pending then
+			ns:RewardApply(true)
+		end
 	end,
 }
 
@@ -716,5 +732,17 @@ eventFrame:SetScript("OnEvent", function(_, event, ...)
 	if not ok and ns.RecordError then ns:RecordError("reward:" .. tostring(event), err) end
 end)
 ns.rewardEventFrame = eventFrame
+
+-- GET_ITEM_INFO_RECEIVED arrive pour chaque objet que le client charge
+-- (sacs, butin, infobulles, autres addons) : seulement pendant que l'écran de
+-- récompense est ouvert (QUEST_COMPLETE … QUEST_FINISHED), comme
+-- QUEST_ITEM_UPDATE.
+if ns.FrameGate then
+	ns.FrameGate("reward", {
+		frame = eventFrame,
+		events = { "QUEST_ITEM_UPDATE", "GET_ITEM_INFO_RECEIVED" },
+		want = function() return RewardShown() end,
+	})
+end
 
 if ns.Mark then ns.Mark("QuestReward") end
