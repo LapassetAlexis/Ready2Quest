@@ -316,7 +316,7 @@ do
 			-- « parle à N personnes » : chaque PNJ compte une fois par jour (le même
 			-- donneur de quête ouvre souvent deux fenêtres de suite)
 			if kind then
-				local guid = Call(G("UnitGUID"), "npc")
+				local guid = ns.Plain(Call(G("UnitGUID"), "npc"))
 				local daily = self:DailyData()
 				daily.talked = type(daily.talked) == "table" and daily.talked or {}
 				if not guid or not daily.talked[guid] then

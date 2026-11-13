@@ -3442,7 +3442,7 @@ ns.CompanionGossipKind = GossipKind
 function ns:CompanionOnNpc(kind)
 	local rt, now = RT(), Clock()
 	-- bavardage puis fenêtre du vendeur : le même PNJ n'a qu'un avis
-	local guid = Call(rawget(_G, "UnitGUID"), "npc")
+	local guid = ns.Plain(Call(rawget(_G, "UnitGUID"), "npc"))
 	if guid and rt.npcGUID == guid and rt.npcAt and now - rt.npcAt < SAME_NPC then return false end
 	local name = Call(rawget(_G, "UnitName"), "npc")
 	if type(name) ~= "string" or name == "" then name = nil end

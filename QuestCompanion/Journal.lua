@@ -407,7 +407,7 @@ function ns:JournalSeeUnit(unit)
 	if not ModuleOn() or type(unit) ~= "string" then return end
 	if not RARE_CLASSES[Call("UnitClassification", unit) or ""] then return end
 	if Call("UnitIsPlayer", unit) then return end
-	self:JournalSeeRare(Call("UnitGUID", unit), Call("UnitName", unit))
+	self:JournalSeeRare(ns.Plain(Call("UnitGUID", unit)), ns.Plain(Call("UnitName", unit)))
 end
 
 -- Un rare repéré par son GUID (unité lue ci-dessus, ou vignette de la
