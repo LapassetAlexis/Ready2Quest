@@ -14,7 +14,8 @@ for _, name in ipairs({ "DeleteCursorItem", "CursorHasItem", "StaticPopup_Show",
 	"GetNumLootItems", "GetLootSlotLink", "LootSlotHasItem", "GetLootSlotInfo", "LootSlot", "Auctionator",
 	"GetActionInfo", "GetSpellInfo", "GetSpellSubtext", "GetSpellTexture", "PickupSpell", "PlaceAction", "ClearCursor",
 	"GetNumSpellTabs", "GetSpellTabInfo", "GetSpellBookItemInfo", "C_Spell", "C_SpellBook", "GetNumSkillLines",
-	"GetSkillLineInfo" }) do
+	"GetSkillLineInfo", "IsPassiveSpell", "HasAction", "MultiBarBottomLeft", "MultiBarBottomRight", "MultiBarRight",
+	"MultiBarLeft" }) do
 	LR.savedG[name] = { value = rawget(_G, name) }
 end
 function LR.Restore()
@@ -438,6 +439,186 @@ do
 	NS:LootRoomOpen(true)
 	Check("[LOOT] liste courte : pas de glissière, aide normale", not frame.thumb:IsShown() and frame.hint.text == NS.L.LOOTROOM_HINT)
 	frame:Hide()
+end
+
+
+-- 4. 1.35.0 : nouveaux sorts sur aucune barre (Rangs de sorts) --------------------------
+do
+	Say("-- rangs de sorts : nouveaux sorts (1.35.0)")
+	local function Steps()
+		local st = { bad = {} }
+		function st.ok(label, cond, extra)
+			if not cond then st.bad[#st.bad + 1] = label .. (extra ~= nil and (" (" .. tostring(extra) .. ")") or "") end
+		end
+		function st.check(name) Check(name, #st.bad == 0, table.concat(st.bad, " ; ")) end
+		return st
+	end
+	-- livre : onglet Général (métier, monture) puis onglet de la classe
+	local SPELLS = {
+		[900] = { "Cuisine" }, [901] = { "Destrier" }, [902] = { "Secourisme" },
+		[101] = { "Lumière sacrée", "Rang 3" }, [102] = { "Lumière sacrée", "Rang 5" }, [301] = { "Purification" },
+		[501] = { "Consécration", "Rang 1" }, [502] = { "Aura de dévotion" }, [503] = { "Bénédiction de puissance", "Rang 1" },
+		[504] = { "Exorcisme", "Rang 2" },
+	}
+	local W = {}
+	local function Install()
+		ResetWorld()
+		if NS.spellRanksFrame then NS.spellRanksFrame:Hide() end
+		NS.spellRanksAnnounced, NS.newSpellsAnnounced, NS.spellRanksPending, NS.notice = nil, nil, nil, nil
+		W.general = { 900, 901 }
+		W.class = { 101, 102, 301 }
+		W.passive = { [502] = true }
+		W.actions = { [4] = 102, [5] = 301 }
+		W.picked, W.placed, W.combat, W.cleared = nil, {}, false, 0
+		_G.C_Spell, _G.C_SpellBook, _G.HasAction = nil, nil, nil
+		_G.GetActionInfo = function(slot) local id = W.actions[slot]; if id then return "spell", id end end
+		_G.GetSpellInfo = function(id) return SPELLS[id] and SPELLS[id][1] end
+		_G.GetSpellSubtext = function(id) return SPELLS[id] and SPELLS[id][2] end
+		_G.GetSpellTexture = function() return "Interface\\Icons\\Spell_Holy_HolyBolt" end
+		_G.IsPassiveSpell = function(id) return W.passive[id] == true end
+		_G.GetNumSpellTabs = function() return 2 end
+		_G.GetSpellTabInfo = function(tab)
+			if tab == 1 then return "Général", "", 0, #W.general end
+			return "Sacré", "", #W.general, #W.class
+		end
+		_G.GetSpellBookItemInfo = function(index)
+			local id = index <= #W.general and W.general[index] or W.class[index - #W.general]
+			return "SPELL", id
+		end
+		_G.PickupSpell = function(id) W.picked = id end
+		_G.PlaceAction = function(slot) W.actions[slot] = W.picked; W.placed[#W.placed + 1] = slot end
+		_G.ClearCursor = function() W.picked = nil; W.cleared = W.cleared + 1 end
+		_G.InCombatLockdown = function() return W.combat == true end
+		for _, name in ipairs({ "MultiBarBottomLeft", "MultiBarBottomRight", "MultiBarRight", "MultiBarLeft" }) do _G[name] = nil end
+	end
+	local function Learn(id) W.class[#W.class + 1] = id end
+	local function Names(list) local t = {} for i, e in ipairs(list) do t[i] = e.name end return table.concat(t, ",") end
+
+	-- photo du livre, puis seulement les nouveaux
+	local s = Steps()
+	Install()
+	s.ok("premier passage : la photo, rien de proposé", #NS:NewSpellsScan() == 0 and NS:CharData().newSpellsBase
+		and NS:CharData().newSpellsBase["Lumière sacrée"] == true and NS:CharData().newSpellsBase["Purification"] == true)
+	s.ok("ni l'onglet Général dans la photo (métiers, montures)", NS:CharData().newSpellsBase["Cuisine"] == nil)
+	Learn(501); Learn(502); Learn(503); Learn(504)
+	W.general[#W.general + 1] = 902               -- un nouveau métier (Général)
+	W.actions[7] = 503                            -- déjà posé sur une barre
+	local list = NS:NewSpellsScan()
+	s.ok("nouveau sort actif hors des barres : proposé ; passif, métier, déjà sur une barre : non", Names(list) == "Consécration,Exorcisme",
+		Names(list))
+	s.ok("posé une fois : connu pour de bon (retiré des barres, pas reproposé)", (function()
+		W.actions[7] = nil
+		local again = Names(NS:NewSpellsScan())
+		return again == "Consécration,Exorcisme"
+	end)())
+	-- un livre pas encore lu à la connexion : pas de photo vide
+	Install()
+	_G.GetNumSpellTabs = function() return 0 end
+	NS:NewSpellsScan()
+	s.ok("livre vide : pas de photo (tout serait proposé ensuite)", NS:CharData().newSpellsBase == nil)
+	s.check("[NEW] nouveaux sorts : photo d'abord, puis seulement les sorts actifs appris hors des barres (ni passif, ni métier, ni monture)")
+
+	-- annonce, check, fenêtre
+	s = Steps()
+	Install()
+	NS:NewSpellsScan()
+	Learn(501)
+	NS:DB().reportIcon = true
+	Mock:Reset()
+	NS:SpellRanksCheck()
+	s.ok("annonce : chat et icône", Mock:Output():find("Nouveaux sorts sur aucune de tes barres : 1", 1, true) ~= nil
+		and NS.notice and NS.notice.kind == "spells", Mock:Output())
+	local check
+	for _, def in ipairs(NS.checks) do if def.id == "barranks" then check = def end end
+	local ok, detail = check.run()
+	s.ok("check avant le départ : compté", ok == false and detail:find("1 nouveau", 1, true) ~= nil, detail)
+	NS:HandleCommand("sorts")
+	local frame = NS.spellRanksFrame
+	local row = frame.newRows[1]
+	s.ok("fenêtre : section et ligne", frame:IsShown() and frame.newSection:IsShown() and row:IsShown()
+		and row.text.text == "Consécration (rang 1)" and row.where.text == "Sur aucune de tes barres", row.text.text)
+	s.ok("sans rang à mettre à jour : pas de « Tout mettre à jour », pas de « tout est à jour »",
+		not frame.all:IsShown() and frame.empty.text == "")
+	row.place:Click()
+	s.ok("[Placer] : la première case vide de la barre 1", W.actions[1] == 501 and W.placed[1] == 1 and W.picked == nil
+		and #frame.newList == 0 and not frame.newSection:IsShown())
+	s.ok("check validé ensuite", check.run() == true)
+	frame:Hide()
+	s.check("[NEW] annonce, ligne du check, fenêtre : section « Nouveaux sorts », [Placer] dans une case vide")
+
+	-- cases pleines, autres barres, combat, curseur
+	s = Steps()
+	Install()
+	NS:NewSpellsScan()
+	Learn(504)
+	for slot = 1, 12 do W.actions[slot] = W.actions[slot] or 301 end
+	W.combat = true
+	local entry = NS:NewSpellsScan()[1]
+	s.ok("en combat : rien", NS:NewSpellPlace(entry) == false and #W.placed == 0 and W.picked == nil)
+	W.combat = false
+	_G.MultiBarBottomLeft = { IsShown = function() return true end }
+	s.ok("barre 1 pleine : la barre en bas à gauche affichée (case 61)", NS:NewSpellPlace(entry) == 61 and W.actions[61] == 504)
+	W.actions[61] = nil
+	_G.MultiBarBottomLeft = { IsShown = function() return false end }
+	Mock:Reset()
+	s.ok("aucune case vide (autres barres cachées) : sur le curseur, un mot dans le chat", NS:NewSpellPlace(entry) == "cursor"
+		and W.picked == 504 and #W.placed == 1 and Mock:Output():find("sur ton curseur", 1, true) ~= nil, Mock:Output())
+	s.check("[NEW] [Placer] : barre 1, puis les autres barres affichées, sinon le curseur ; jamais en combat")
+
+	-- ignorer, réglages, reproposer
+	s = Steps()
+	Install()
+	NS:NewSpellsScan()
+	Learn(501); Learn(504)
+	NS:NewSpellIgnore(NS:NewSpellsScan()[1])
+	s.ok("[Ignorer] : plus proposé, gardé par personnage", Names(NS:NewSpellsScan()) == "Exorcisme"
+		and NS:CharData().newSpellsIgnore["Consécration"] == true)
+	local choices = NS:NewSpellsIgnoredChoices()
+	s.ok("réglages : la liste des ignorés", #choices == 1 and choices[1].value == "Consécration")
+	local rowDef
+	for _, page in ipairs(NS.OPTION_PAGES or {}) do
+		for _, r in ipairs(page.rows or {}) do if r.key == "newspellsIgnored" then rowDef = r end end
+	end
+	s.ok("réglage dans la page Rangs de sorts", rowDef ~= nil and rowDef.choices ~= nil)
+	rowDef.choose("Consécration")
+	s.ok("le choisir : reproposé", Names(NS:NewSpellsScan()) == "Consécration,Exorcisme"
+		and NS:NewSpellsIgnoredChoices()[1].disabled == true)
+	s.check("[NEW] [Ignorer] : retenu par personnage ; la liste des réglages le repropose")
+
+	-- livre récent, textes, contraste
+	s = Steps()
+	Install()
+	_G.Enum = _G.Enum or {}
+	local savedBank = Enum.SpellBookSpellBank
+	Enum.SpellBookSpellBank = { Player = 0 }
+	local lines = { { 900, 901 }, { 101, 102, 301 } }
+	_G.C_SpellBook = {
+		GetNumSpellBookSkillLines = function() return #lines end,
+		GetSpellBookSkillLineInfo = function(line)
+			local offset = 0
+			for i = 1, line - 1 do offset = offset + #lines[i] end
+			return { itemIndexOffset = offset, numSpellBookItems = #lines[line] }
+		end,
+		GetSpellBookItemInfo = function(index)
+			for _, l in ipairs(lines) do
+				if index <= #l then local id = l[index]; return { spellID = id, name = SPELLS[id][1], isPassive = W.passive[id] } end
+				index = index - #l
+			end
+		end,
+	}
+	NS:NewSpellsScan()
+	table.insert(lines[2], 501); table.insert(lines[2], 502); table.insert(lines[1], 902)
+	s.ok("livre récent (C_SpellBook) : le même tri", Names(NS:NewSpellsScan()) == "Consécration")
+	Enum.SpellBookSpellBank = savedBank
+	_G.C_SpellBook = nil
+	local strings, missing = NS.SPELLRANKS_STRINGS, {}
+	for key in pairs(strings.fr) do if not strings.en[key] then missing[#missing + 1] = key end end
+	for key in pairs(strings.en) do if not strings.fr[key] then missing[#missing + 1] = key end end
+	s.ok("textes FR et EN", #missing == 0, table.concat(missing, ","))
+	local Theme = NS.Theme
+	s.ok("intertitre lisible (MUTED clair sur la fenêtre ≥ 4,5:1)", Theme.Contrast(Theme.MUTED_LIGHT, Theme.WINDOW) >= 4.5)
+	s.check("[NEW] livre récent, textes FR/EN, contraste de l'intertitre")
+	_G.MultiBarBottomLeft = nil
 end
 
 LR.Restore()

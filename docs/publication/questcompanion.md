@@ -1,14 +1,14 @@
 <!--
 Fiche de la page QuestCompanion sur CurseForge et Wago (à copier à la main, voir docs/PUBLIER.md).
-Summary EN (obligatoire en anglais sur CurseForge, 256 caractères max, ici 222) :
-  Catch the monsters you defeat in WoW Forever: unique 1-3 star specimens, rare shinies, trades between players, 180 achievements and 40 titles, a companion that hunts with you and a trainer card shared with your guild. FR/EN.
+Summary EN (obligatoire en anglais sur CurseForge, 256 caractères max, ici 201) :
+  Catch the monsters you defeat in WoW Forever: unique 1-3 star specimens, rare shinies, player trades, a companion that hunts and talks with you, 180 achievements, 40 titles and a travel journal. FR/EN.
 Catégories : Companions (principale), Quests & Leveling (additionnelle). Si Companions n'existe pas : Miscellaneous (principale).
 Licence : GPLv3. Logo : docs/publication/logo_questcompanion.png.
 Relation : Optional Dependency -> Ready2Quest (facultatif).
 Captures à prendre en jeu : le compagnon et une bulle, la scène de capture (filet), la page Créatures (avec une brillante), la page Compagnon, la page Exploration, la page Missions, le coffre de zone ouvert.
 Une seule description, anglais d'abord puis français (règle des stores : l'anglais en premier). Coller le tout.
 -->
-# Quest Companion – Creatures & Achievements
+# Quest Companion Forever – Creatures & Achievements
 
 **Capture the monsters you defeat and build your collection.** Every creature of WoW Forever can be caught, with 1 to 3 stars and rare **shiny** versions. Take one along as your hunting companion, seal every zone, earn trainer titles and show off your trainer card to your guild. A little travel companion and its journal come along for the ride.
 

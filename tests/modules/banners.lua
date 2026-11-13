@@ -108,7 +108,8 @@ do
 	NS:CaptureResultQueue({ name = "Loup" })
 	B.Step(0.25)
 	s.ok("résultat : attend la fin du bandeau affiché", B.Shown()[1] == "journal" and #B.Shown() == 1)
-	B.Step(5)
+	-- (3.1.0 : un haut fait porte le bouton Partager, 3 s de plus)
+	B.Step(5 + (NS.SHARE_EXTRA or 0))
 	s.ok("puis s'affiche", B.Shown()[1] == "result")
 	s.check("[BAN] file : ordre d'arrivée, durée entière ; le résultat n'interrompt jamais un bandeau affiché")
 end
@@ -294,8 +295,8 @@ do
 	B.Step(0.25)
 	s.ok("carnet : revient après le combat", B.Shown()[1] == "journal" and NS.journalToast.text:GetText() == "Premier filet",
 		NS.journalToast.text:GetText())
-	-- presque fini : pas remontré
-	B.Step(3)
+	-- plus de la moitié de son temps (7 s avec le bouton Partager) : pas remontré
+	B.Step(4)
 	fighting = true
 	B.Step(0.1)
 	s.ok("carnet : presque fini au combat, effacé sans retour", #B.Shown() == 0 and #NS.journalToasts == 0)

@@ -95,6 +95,8 @@ WinterCompanions.lua
 CompanionAllure.lua
 JournalReserve.lua
 CaptureTrades.lua
+Share.lua
 GuidedTour.lua
 Bindings.lua
+Discovery.lua
 CaptureExpress.lua

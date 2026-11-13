@@ -504,6 +504,44 @@ couleur n'a changé.
   du tableau de bord sur le parchemin (encre du filet à 10 %).
 - Bandeau du carnet effacé au premier coup reçu, et revenu après le combat.
 
+## Partager (QuestCompanion 3.1.0, `Share.lua`)
+
+- Bouton 24 px (taille `sm`, `ns:ShareButton`) : l'icône de chat du client
+  (`ns.SHARE_ICON` : atlas `communities-icon-chat`, repli
+  `Interface\ChatFrame\UI-ChatIcon-Chat-Up`, par `Theme.PaintClient`),
+  plaque NAV opaque, filet EDGE (Azeroth : le liseré doré des boutons), au
+  survol filet ambre et voile `HOVER_ALPHA`, infobulle « Partager dans le
+  chat ». Sur les bandeaux Azeroth, le libellé « Partager » à côté de
+  l'icône (rôle `share.label`, `lightSoft` sur la plaque : ≥ 4,5:1), le
+  bouton s'élargit à son texte. Bêta 2 : un bandeau qui porte le bouton
+  reste 3 s de plus (`ns.SHARE_EXTRA`) ; sous la souris (bandeau, bouton) ou
+  tant que son menu est ouvert, il ne part pas, puis garde au moins 3 s
+  (`ns.SHARE_RESUME`). Créé une fois par cadre
+  réutilisé (bandeau du carnet, « Capturé ! », scène de capture Azeroth,
+  fiche de la Réserve) : la file des bandeaux (`Banners.lua`) ne change pas.
+- Placement (`ns.SHARE_BUTTON`) : Azeroth, en bas à droite du bandeau, sous
+  le bouclier ; Sobre, à droite et centré, avant les points d'un haut fait,
+  les textes du bandeau raccourcis d'autant ; scène Azeroth, coin haut droit
+  (hors de la plaque de titre) ; Réserve, coin haut droit du modèle de la
+  fiche. Hauts faits : clic droit sur une ligne obtenue (infobulle : « Clic
+  droit : partager dans le chat »).
+- Menu des canaux (`ns:ShareMenu`, un cadre, `ns.SHARE_MENU` 160 de large,
+  rangées de 22) : seuls les canaux disponibles (Guilde, Raid ou Groupe,
+  Dire, Copier). Sobre : fond NAV, titre F_CAPS MUTED clair (7,96:1), entrées
+  F_LABEL LABEL (12,77:1 au survol), voile `HOVER_ALPHA`. Azeroth : aplat `woodBg`,
+  liseré doré, Friz Quadrata, rôles `share.title` (`goldHead`) et
+  `share.entry` (`lightSoft`) mesurés sur le bois sous le voile de survol
+  (11,08:1 et 10,22:1).
+  Échap ou un clic ailleurs le referme.
+- Envoi : `SendChatMessage` seulement depuis le clic d'une entrée ; « Copier »
+  (`ChatEdit_InsertLink` si la saisie est ouverte, sinon
+  `ChatFrame_OpenChat`, repli `ChatFrameUtil.OpenChat`) n'envoie rien.
+- Annonce automatique (`ns:AnnounceCaptures`) : brillante ou 3 étoiles, une
+  ligne au groupe (INSTANCE_CHAT, RAID ou PARTY ; guilde avec le second
+  réglage), jamais en combat (file vidée à PLAYER_REGEN_ENABLED), une par
+  canal toutes les 30 s, un lot en une ligne, pas de doublon avec le partage
+  manuel ; envoi refusé : noté une fois, sans message.
+
 ## Style Azeroth (QuestCompanion)
 
 Réglage « Style de l'interface » : Sobre (le langage ci-dessus) ou Azeroth

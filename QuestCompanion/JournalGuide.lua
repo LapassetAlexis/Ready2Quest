@@ -79,6 +79,8 @@ local FR = {
 	GUIDE_card_2           = "/qc fiche ouvre la tienne (c'est là que tu choisis ta vitrine) ; /qc fiche <nom> demande celle d'un autre joueur. Les joueurs qui ont l'addon ont « %s » dans le menu du clic droit (seulement pour les joueurs connus comme détenteurs) et une ligne « %s » dans leur infobulle.",
 	GUIDE_card_4           = "Tes exploits partent aussi à ta guilde : brillante, élite, rare ou boss capturé, sceau de zone, palier d'espèces et titre, gros haut fait (25 points ou plus, ou un titre). Chez les guildeux qui ont QuestCompanion, un bandeau « GUILDE » l'annonce ; un clic ouvre ta fiche. Réglages : « Annoncer mes exploits à la guilde », « Voir les exploits de la guilde ».",
 	GUIDE_card_3           = "Partagée par défaut ; coupe « %s » dans les réglages (page Au jour le jour) : ta fiche n'est envoyée à personne et l'addon reste muet. Les échanges passent par des messages d'addon invisibles, jamais en combat.",
+	-- 3.1.0 : partager un beau moment dans le chat (Share.lua)
+	GUIDE_card_5           = "Partager : sur les bandeaux des beaux moments (brillante, 3 étoiles, élite, rare ou boss, espèce nouvelle, haut fait, sceau, titre), le petit bouton de chat ouvre un menu : %s, %s ou %s, %s, ou %s (le texte va dans ta zone de saisie, à relire avant Entrée ; pour les canaux publics). Rien ne part sans ton clic. Plus tard : le bouton de la fiche d'un spécimen de la Réserve, ou clic droit sur un haut fait obtenu. Réglage « %s » (page Carnet de voyage). Et tout seul : une brillante ou un spécimen 3 étoiles s'annonce dans le chat de ton groupe ou raid (rien en solo, jamais en combat : à la fin du combat, au plus une ligne toutes les 30 secondes, un lot de « Tout capturer » en une ligne). Réglages « %s » et « %s ».",
 	GUIDE_SEC_settings     = "Réglages et commandes",
 	GUIDE_settings_1       = "Page Au jour le jour : %s (tout coupe, infobulle comprise) · %s · %s · %s · %s · %s · %s.",
 	GUIDE_settings_2       = "Page Compagnon de route : %s (%s), pour que la créature remplisse son cadre à l'écran, même une bête capturée de taille réelle ; la réglette %s (Muet coupe aussi les tutoriels).",
@@ -88,6 +90,8 @@ local FR = {
 	GUIDE_settings_6       = "Hauts faits (page du carnet) : /qc hf l'ouvre, /qc hf diag dit quelles statistiques du client sont lisibles ; ce qui attend encore sa vérification est grisé. Les hauts faits de collection valent pour tout ton compte, ceux de performance pour ce personnage. /qc titre choisit ton titre. Touche Y (si elle était libre) : les hauts faits. Bandeau, chat, fanfare, forme des titres et raccourcis : page Carnet de voyage.",
 	-- 2.13.0 : crédits de l'histoire des lieux (LoreData.lua, CompanionLore.lua)
 	GUIDE_settings_7       = "Histoire des lieux (réglage « %s ») : textes de Warcraft Wiki (warcraft.wiki.gg), licence CC BY-SA 4.0, choisis et traduits par Spoken de Rusty Key (github.com/rusty-key/spoken-wow). Merci à eux !",
+	-- 3.1.0 : astuces de découverte (Discovery.lua)
+	GUIDE_settings_8       = "Astuces de découverte : de temps en temps, ton compagnon te montre une fonction que tu n'utilises pas encore (changer d'allure, garde-manger, mode chasse, Réserve, juke-box…) ; au plus une toutes les 20 minutes, jamais en combat, en instance ou pendant une capture, chacune une fois par compte. Clic sur la bulle : la page qui va avec. Réglage « %s » (page Compagnon de route), /qc astuces on|off|reset.",
 }
 local EN = {
 	JRN_SEC_guide          = "Guide",
@@ -147,6 +151,7 @@ local EN = {
 	GUIDE_card_2           = "/qc fiche opens yours (that is where you pick your showcase); /qc fiche <name> asks for another player's. Players who have the addon get \"%s\" in the right-click menu (only for players known to have it) and a \"%s\" line in their tooltip.",
 	GUIDE_card_4           = "Your feats also go to your guild: shiny, elite, rare or boss captured, zone seal, species milestone and title, big achievement (25 points or more, or a title). Guildmates running QuestCompanion see a \"GUILD\" banner; a click opens your card. Settings: \"Announce my feats to the guild\", \"Show guild feats\".",
 	GUIDE_card_3           = "Shared by default; turn off \"%s\" in the settings (Day by day page): your card is sent to nobody and the addon stays silent. Exchanges go through invisible addon messages, never in combat.",
+	GUIDE_card_5           = "Share: on the banners of great moments (shiny, 3 stars, elite, rare or boss, new species, achievement, seal, title), the small chat button opens a menu: %s, %s or %s, %s, or %s (the text goes to your chat input box, to read before pressing Enter; for public channels). Nothing is sent without your click. Later: the button on a Reserve specimen card, or right-click an earned achievement. Setting \"%s\" (Travel journal page). And on its own: a shiny or a 3-star specimen is announced in your party or raid chat (nothing solo, never in combat: it goes out when combat ends, at most one line every 30 seconds, a \"Capture all\" batch in one line). Settings \"%s\" and \"%s\".",
 	GUIDE_SEC_settings     = "Settings and commands",
 	GUIDE_settings_1       = "Day by day page: %s (turns everything off, tooltip included) · %s · %s · %s · %s · %s · %s.",
 	GUIDE_settings_2       = "Road companion page: %s (%s), so the creature fills its on-screen frame, even a life-size captured beast; the %s slider (Silent also turns the tutorials off).",
@@ -155,6 +160,7 @@ local EN = {
 	GUIDE_settings_5       = "Interface style (Road companion page): %s or %s, banners, journal and card included. /qc style azeroth|sobre.",
 	GUIDE_settings_6       = "Achievements (journal page): /qc hf opens it, /qc hf diag tells which client statistics are readable; what still awaits verification is greyed out. Collection achievements count for your whole account, performance ones for this character. /qc title picks your title. Y key (if it was free): achievements. Banner, chat, fanfare, title form and key bindings: Travel journal page.",
 	GUIDE_settings_7       = "Story of places (\"%s\" setting): text from Warcraft Wiki (warcraft.wiki.gg), CC BY-SA 4.0 licence, selected and translated by Spoken by Rusty Key (github.com/rusty-key/spoken-wow). Thanks to them!",
+	GUIDE_settings_8       = "Discovery tips: now and then your companion shows you a feature you don't use yet (changing look, pantry, hunt mode, Reserve, jukebox…); at most one every 20 minutes, never in combat, in instances or during a capture, each once per account. Click the bubble: the matching page. Setting \"%s\" (Road companion page), /qc astuces on|off|reset.",
 }
 ns.RegisterStrings(FR, EN)
 if ns.KEEP_STRINGS then ns.GUIDE_STRINGS = { fr = FR, en = EN } end
@@ -343,6 +349,8 @@ function BUILD.card(self)
 		P(self:F("GUIDE_card_2", L.TRAINER_MENU, L.TRAINER_TOOLTIP)),
 		P(self:F("GUIDE_card_3", L.OPT_DAILY_TRAINER)),
 		P(L.GUIDE_card_4),
+		P(self:F("GUIDE_card_5", L.SHARE_CH_GUILD, L.SHARE_CH_PARTY, L.SHARE_CH_RAID, L.SHARE_CH_SAY, L.SHARE_CH_COPY,
+			L.OPT_SHARE_BANNER, L.OPT_ANNOUNCE_GROUP, L.OPT_ANNOUNCE_GUILD)),
 	}
 end
 
@@ -358,6 +366,7 @@ function BUILD.settings(self)
 		P(self:F("GUIDE_settings_5", L.UI_STYLE_azeroth, L.UI_STYLE_sobre)),
 		P(L.GUIDE_settings_6),
 		P(self:F("GUIDE_settings_7", L.OPT_COMP_LORE)),
+		P(self:F("GUIDE_settings_8", L.OPT_COMP_DISCOVERY)),
 	}
 end
 

@@ -384,9 +384,10 @@ do
 		local toast = NS.journalToast
 		local s = Steps()
 		s.ok("deux : le premier", toast:IsShown() and toast.text:GetText() == "Premiers pas" and #NS.journalToasts == 1)
-		HF.Run(5)
+		-- (3.1.0 : un haut fait porte le bouton Partager, 3 s de plus)
+		HF.Run(5 + (NS.SHARE_EXTRA or 0))
 		s.ok("… puis le second", toast:IsShown() and toast.text:GetText() == "Sur la route")
-		HF.Run(5)
+		HF.Run(5 + (NS.SHARE_EXTRA or 0))
 		NS:FeatAward("char_level_30"); NS:FeatAward("char_level_40"); NS:FeatAward("char_level_50")
 		HF.Run(2)
 		-- 3.0.1 : le bandeau groupé nomme ses hauts faits (compte dans le titre, points dans le bouclier)
@@ -1169,6 +1170,9 @@ do
 		J.stats = { [107] = "12 000", [60] = "150", [98] = "1 200", [334] = "1500g 0s 0c", [1098] = "2", [349] = "40",
 			[339] = "2", [529] = "12", [377] = "6", [1524] = "300" }
 		J.earned = {}
+		-- un « Capturé ! » d'un test précédent ne tient pas la place (3.1.0 : +3 s avec le bouton Partager)
+		NS.captureResultPending = nil
+		NS:CaptureResultHide()
 		Mock:Fire("PLAYER_ENTERING_WORLD", true, false)
 		J.Run(4)
 		local want = { "char_kills_10000", "char_deaths_100", "quest_1000", "char_gold_1000", "dng_raid_ony", "char_flight_25",

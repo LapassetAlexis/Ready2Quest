@@ -138,6 +138,13 @@ if ns.AddOptionPage then
 			{ key = "featToast",    label = "OPT_FEAT_TOAST", kind = "bool" },
 			{ key = "featChat",     label = "OPT_FEAT_CHAT",  kind = "bool" },
 			{ key = "featSound",    label = "OPT_FEAT_SOUND", kind = "bool" },
+			-- 3.1.0 : le bouton Partager des bandeaux (Share.lua : chaînes et défaut)
+			{ key = "shareBanner",  label = "OPT_SHARE_BANNER", kind = "bool",
+				describe = function() return ns.L.OPT_SHARE_BANNER_DESC end },
+			{ key = "announceGroup", label = "OPT_ANNOUNCE_GROUP", kind = "bool",
+				describe = function() return ns.L.OPT_ANNOUNCE_GROUP_DESC end },
+			{ key = "announceGuild", label = "OPT_ANNOUNCE_GUILD", kind = "bool",
+				describe = function() return ns.L.OPT_ANNOUNCE_GUILD_DESC end },
 			{ key = "featStats",    label = "OPT_FEAT_STATS", kind = "bool" },
 			-- suivi à l'écran (JournalTracker.lua : chaînes, défauts, action)
 			{ key = "journalTracker",       label = "OPT_JRN_TRACKER",        kind = "bool" },
@@ -653,6 +660,7 @@ function ns:ShowNextJournalToast()
 	if shown and type(shown.onShow) == "function" then pcall(shown.onShow, self, shown) end
 	if Theme.FadeIn then Theme.FadeIn(frame, 0.2) end
 	if self.StyleShown then self:StyleShown(frame, { shield = "gold", play = true }) end
+	self.journalToastShownAt = ns.Now()
 	self.journalToastHideAt = ns.Now() + TOAST_SECONDS
 	self:JournalToastArm()
 	return frame
@@ -678,7 +686,9 @@ function ns:JournalToastCombat(now)
 	if not (self.journalToastHideAt and InCombat()) then return false end
 	local frame = self.journalToast
 	local entry = frame and frame.shownEntry
-	if entry and self.journalToastHideAt - now > TOAST_SECONDS / 2 then table.insert(self.journalToasts, 1, entry) end
+	-- (la moitié de SON temps : un bandeau qui porte le bouton Partager dure plus, Share.lua)
+	local shownAt = self.journalToastShownAt or (self.journalToastHideAt - TOAST_SECONDS)
+	if entry and now - shownAt < (self.journalToastHideAt - shownAt) / 2 then table.insert(self.journalToasts, 1, entry) end
 	self.journalToastHideAt = nil
 	if frame then frame.shownEntry = nil; frame:Hide() end
 	if self.BannerDone then self:BannerDone("journal") end
