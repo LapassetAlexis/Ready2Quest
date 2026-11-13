@@ -851,16 +851,15 @@ function ns:FavoriteTooltipLine(tooltip, data)
 	if not itemID then return false end
 	local favorite = self:IsFavorite(itemID)
 	if favorite then
-		local c = Theme.GOLD
-		tooltip:AddLine(L.FAV_TOOLTIP, c[1], c[2], c[3])
+		Theme.TooltipLine(tooltip, L.FAV_TOOLTIP, Theme.GOLD)
 	end
 	-- 1.34.0 bêta 2 : le raccourci, seulement sur un objet de tes sacs (la
 	-- case qui montre l'infobulle), et pas s'il est désactivé
 	local choice = self:FavoriteClickChoice()
 	local inBags = (choice.button or (favorite and self.favoritesMerchant)) and self:FavoriteTooltipInBags(tooltip, itemID)
 	if choice.button and inBags then
-		local m = Theme.MUTED
-		tooltip:AddLine(self:F(favorite and "FAV_HINT_REMOVE" or "FAV_HINT_ADD", L[choice.label]), m[1], m[2], m[3])
+		-- 1.35.0 : l'aide du clic par la brique du thème (MUTED clair)
+		Theme.TooltipHint(tooltip, self:F(favorite and "FAV_HINT_REMOVE" or "FAV_HINT_ADD", L[choice.label]))
 		return true
 	end
 	return favorite

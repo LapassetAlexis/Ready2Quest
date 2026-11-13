@@ -632,8 +632,11 @@ end
 function ns:EnsureBagSpaceFrame()
 	if self.bagspaceFrame then return self.bagspaceFrame end
 	if not Theme or not Theme.CreateToast or not Theme.CreateButton then return nil end
-	local ok, frame = pcall(Theme.CreateToast, UIParent, WIDTH, HEIGHT, { strata = "DIALOG", accent = Theme.ORANGE_DEEP })
+	-- 1.35.0 : nommé et inscrit à Échap (comme les sacs du jeu, qu'Échap ferme)
+	local ok, frame = pcall(Theme.CreateToast, UIParent, WIDTH, HEIGHT, { strata = "DIALOG", accent = Theme.ORANGE_DEEP,
+		name = "Ready2QuestBagSpace" })
 	if not ok or not frame then return nil end
+	if Theme.RegisterEscapeClose then Theme.RegisterEscapeClose(frame) end
 	-- au-dessus des sacs ouverts, en bas à droite de l'écran
 	if self.RestorePoint then self:RestorePoint(frame, "bagspacePoint", { point = "BOTTOMRIGHT", x = -240, y = 180 }) end
 	local left = frame.contentLeft
@@ -728,6 +731,24 @@ end
 function ns:HideBagSpaceFrame()
 	if self.bagspaceFrame then self.bagspaceFrame:Hide() end
 end
+
+-- 1.35.0 : en combat, le bandeau se range (rien ne s'y fait : jeter attend
+-- la fin du combat) ; après, il revient si les sacs sont toujours pleins
+ns.COMBAT_UI = ns.COMBAT_UI or {}
+table.insert(ns.COMBAT_UI, {
+	id = "bagspace",
+	hide = function(self)
+		local frame = self.bagspaceFrame
+		if not (frame and frame:IsShown()) then return false end
+		frame:Hide()
+		return true
+	end,
+	restore = function(self)
+		if not ModuleOn() or self:BagSpaceFreeSlots() > 0 then return end
+		self:BagSpaceRebuild()
+		if self:BagSpaceCurrent() then self:ShowBagSpaceFrame() end
+	end,
+})
 
 -- ---------------------------------------------------------------------------
 -- Commandes : /r2q jeter (ou sac), /r2q garder [lien], /r2q jeter-toujours [lien]

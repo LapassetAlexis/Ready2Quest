@@ -385,15 +385,19 @@ local function Clock(seconds)
 end
 
 ns.CAMP_ICON = "Interface\\Icons\\Spell_Fire_Fire"
+local CAMP_WIDTH, CAMP_MAX = 300, 440
 
 -- bandeau (Theme.CreateToast) : liseré ambre, le décompte au centre
 function ns:EnsureCampFrame()
 	if self.campFrame then return self.campFrame end
 	if not (Theme and Theme.CreateToast) then return nil end
-	local frame = Theme.CreateToast(UIParent, 300, 28)
+	local frame = Theme.CreateToast(UIParent, CAMP_WIDTH, 28)
 	if not frame then return nil end
 	frame.text = Theme.Text(frame, Theme.F_LABEL, Theme.LABEL)
 	frame.text:SetPoint("CENTER", frame, "CENTER", Theme.TOAST_ACCENT / 2 + 11, 0)
+	-- 1.35.0 : le texte tient dans le bandeau, l'icône comprise (largeur posée
+	-- à chaque texte, UpdateCampFrame : l'icône reste collée au texte)
+	if frame.text.SetWordWrap then frame.text:SetWordWrap(false) end
 	-- l'icône du feu de camp, à gauche du texte (1.29.6)
 	if frame.CreateTexture then
 		frame.icon = frame:CreateTexture(nil, "ARTWORK")
@@ -454,6 +458,14 @@ function ns:UpdateCampFrame(now)
 	if frame.campText ~= text then
 		frame.campText = text
 		frame.text:SetText(text)
+		-- 1.35.0 : le texte garde sa largeur (l'icône, 18 + 5, reste collée à
+		-- gauche) ; le bandeau s'élargit pour un texte long (« assieds-toi ou
+		-- fabrique ici » dépassait les 300), jusqu'à CAMP_MAX, puis le client coupe
+		local margin = 2 * (18 + 5 + 8) + Theme.TOAST_ACCENT
+		local need = tonumber(Theme.TextWidth and Theme.TextWidth(frame, text, Theme.F_LABEL)) or (CAMP_WIDTH - margin)
+		local width = math.min(CAMP_MAX, math.max(CAMP_WIDTH, math.ceil(need + 2) + margin))
+		frame:SetWidth(width)
+		frame.text:SetWidth(math.min(width - margin, math.ceil(need + 2)))
 	end
 	frame:Show()
 end

@@ -268,7 +268,7 @@ Toutes les autres fenêtres et cadres suivent le même langage, à leur taille
 | Place au butin           | dialogue 480   | butin bloqué dans une carte à liseré ambre ; cartes icône, nom, prix, « Jeter » (plein) / « Ignorer » ; aide dans le pied ; hauteur au nombre de lignes |
 | Rangs de sorts           | dialogue 520   | cartes icône, sort, case ; « Mettre à jour » (accent) / « Ignorer » ; « Tout mettre à jour » plein dans le pied |
 | Sac plein                | bandeau 380    | liseré orange, suggestion, « Jeter » plein, « Autre », « Garder toujours » |
-| Kit de camp              | bandeau 300 × 28 | décompte centré |
+| Kit de camp              | bandeau 300 × 28 | décompte centré ; s'élargit au texte jusqu'à 440 (1.35.0) |
 | Résumé de stuff          | `SkinToast`    | même mise en page (titre espacé, filet, une ligne), fond autour, suit le libellé |
 | Stats du portrait        | bandeau 206    | liseré à la couleur de la classe, classe et niveau d'objet, filet, valeurs à droite |
 | Mode déplacement         | bandeau 460    | titre et aide à gauche, « Terminer le déplacement » plein à droite |
@@ -541,6 +541,68 @@ couleur n'a changé.
   réglage), jamais en combat (file vidée à PLAYER_REGEN_ENABLED), une par
   canal toutes les 30 s, un lot en une ligne, pas de doublon avec le partage
   manuel ; envoi refusé : noté une fois, sans message.
+
+## Passe de cohérence Ready2Quest 1.35.0
+
+Même relecture sur les fenêtres, bandeaux et infobulles de Ready2Quest, avec
+les briques du socle 3.1 (aucune modification du socle). Tests :
+`tests/modules/r2q_ui.lua` (« [R2QUI] ») ; `death.lua`, `favorites.lua`,
+`lootroom.lua` mis à jour.
+
+Combat : une seule accroche, `ns.COMBAT_UI` (`Notice.lua`, sur son cadre
+d'événements : `PLAYER_REGEN_DISABLED` en plus). Chaque bandeau s'y inscrit
+(`{ id, hide, restore }`) ; `hide` le range au premier coup, `restore` le
+rend à `PLAYER_REGEN_ENABLED` s'il a lieu d'être.
+
+### Corrigé
+
+| Écart | Avant | Après |
+|---|---|---|
+| Icône d'annonce (« ! », « ? ») en combat | retenue si le combat avait déjà commencé, mais déjà affichée elle restait (bouton de 40 px en haut de l'écran) | effacée au premier coup ; revient après si elle n'avait pas tenu la moitié de ses 68 s, sinon oubliée (règle du carnet) |
+| Rapports ouverts seuls (icône coupée : Avant le départ, Retour d'expédition, Avant le donjon) | restaient au milieu de l'écran pendant le combat | rangés au premier coup, rendus après ; ouverts par le joueur (/r2q, flèche, clic sur l'icône) ils restent (`ns:ReportOpenedAlone`) |
+| Bandeau « Sac plein » | restait en combat avec ses boutons (« Jeter » refusé en combat) ; sans nom, pas fermé par Échap | rangé au premier coup, revient si les sacs sont toujours pleins ; nommé `Ready2QuestBagSpace`, fermé par Échap (comme les sacs du jeu) |
+| Résumé de stuff | apparaissait au centre à chaque changement d'arme en combat | effacé au premier coup, pas de nouveau en combat (la référence des stats suit) ; aperçu des réglages et mode déplacement inchangés |
+| Lignes du check | toutes éclairées au survol, aucune cliquable (sauf le repli) | le clic fait le geste du conseil : Sacs et Objets gris ouvrent les sacs, Quêtes le journal, Rangs de sorts sa fenêtre ; l'aide du clic en dernière ligne de l'infobulle ; voile de survol seulement sur une ligne qui répond (infobulle ou clic) |
+| Rangs de sorts en combat | « la mise à jour attendra la fin du combat » dans le chat, mais le clic était perdu | le clic (et « Tout mettre à jour ») est retenu et joué à la fin du combat ; message une fois |
+| Après la mort : [×] et Échap | fermaient sans retenir le refus : la fenêtre revenait au changement de zone suivant | valent « Fermer » (`OnHide`) ; le rangement par l'addon (résurrection) et l'interface masquée (Alt+Z) n'en sont pas |
+| Après la mort : ordre | verdict en 4e, après la note pâle des 10 % | verdict juste après les deux options, puis les deux notes pâles |
+| Place au butin : objet plus cher que le butin | ligne entière à 55 % : prix à 2,68:1, « Jeter » d'aspect désactivé alors qu'il marche | ligne opaque, icône estompée, prix MUTED (5,79 sur ROW, 5,49 sur ROW_ALT) |
+| Infobulles écrites à la main | `AddLine` avec couleurs recopiées : aggro (verdict, réserve en MUTED), favoris (statut, aide en MUTED), allure (ligne vide), récompense (deux lignes) | `Theme.TooltipLine` / `TooltipHint` (aides en MUTED clair) ; un test interdit `:AddLine(` dans les modules |
+| Textes sans borne | « barre N, case N » (pouvait passer à la ligne sur la carte suivante), « et N autre(s) » du pied des Rangs de sorts, étiquette « Pour toi » / prix de vente sur le bouton de récompense, texte du kit de camp (« assieds-toi ou fabrique ici » dépassait les 300 px) | une ligne, largeur posée ; le bandeau du camp s'élargit au texte (300 à 440), l'icône reste collée |
+
+Contrastes : seuls changent le prix de la ligne de butin (opaque) et les
+aides d'infobulle (MUTED → MUTED clair) ; mesurés dans `r2q_ui.lua` avec les
+couleurs de verdict (GREEN, RED, ORANGE_DEEP, BLUE, GOLD) sur le fond
+d'infobulle (≥ 4,5:1).
+
+### Laissé tel quel
+
+| Élément | Pourquoi |
+|---|---|
+| Fenêtres ouvertes par le joueur (check à la main, Rangs de sorts, réglages, fiche ou bilan ouverts d'un clic) | elles restent en combat (règle commune) |
+| Place au butin en combat | liée à la fenêtre de butin, ouverte par le joueur ; se ferme avec elle |
+| Après la mort | pas de combat quand on est mort |
+| Bandeau du kit de camp en combat | en haut de l'écran, souris coupée, une ligne ; son décompte tourne sur l'horloge de l'addon (passe de performance en cours, pas touché) |
+| Stats au survol du portrait en combat | ne vient qu'au survol, comme une infobulle du jeu |
+| Choix de la récompense de quête | la bonne est cernée d'ambre et étiquetée ; la sélectionner d'office ferait gagner un clic mais risque une récompense non voulue, et le gestionnaire du client 1.12 (`QuestRewardItem_OnClick`) lit `this` : pas vérifiable hors jeu |
+| Autres lignes du check (vivres, potions, buffs, repos, durabilité, réparation, réactifs, pierre de foyer, sorts, camp, métiers) | pas de geste en un clic hors d'un marchand ou d'un entraîneur : pas de clic promis |
+| « Fermer » du pied et [×] dans les dialogues | convention de la fenêtre type, gardée |
+| `Dungeon.lua` | hors de cette passe (fichier tenu ailleurs) ; sa fenêtre profite quand même du rangement en combat par `ns.COMBAT_UI` |
+| Couleur de repli de la classe (`1, 0.82, 0`, `Stats.lua`) | seulement quand `RAID_CLASS_COLORS` manque ; c'est l'or du jeu |
+| Icône d'annonce et bandeau du camp au même point par défaut (`TOP`, −150) | ne se montrent presque jamais ensemble (départ d'une ville / feu de camp hors ville) et se déplacent ; à placer par `ns.PopupPlace` si un retour le signale |
+
+### À regarder en jeu
+
+- Clic sur Sacs (`OpenAllBags`, sinon `ToggleBackpack`) et Quêtes
+  (`ToggleQuestLog`) sur Forever : les fonctions sont cherchées au moment du
+  clic ; sans elles, la ligne n'a ni clic ni aide.
+- Bandeau « Sac plein » et icône d'annonce effacés au premier coup, et revenus
+  à la fin du combat ; rapport (icône coupée) rangé puis rendu.
+- Rangs de sorts : « Mettre à jour » cliqué en combat, appliqué à la sortie.
+- Étiquette de la récompense conseillée : une ligne calée à droite, bornée au
+  bouton (largeur du bouton lue à la première marque).
+- Bandeau du camp élargi pour « Buffs du feu de camp : assieds-toi ou fabrique
+  ici », toujours centré.
 
 ## Style Azeroth (QuestCompanion)
 

@@ -498,10 +498,11 @@ function ns:AggroOnTooltip(tooltip, data)
 	if not self:AggroActive() or self:DB().aggroTooltip == false then return false end
 	local text, color = self:AggroTooltipText(TooltipUnit(tooltip))
 	if not text then return false end
-	tooltip:AddLine(text, color[1], color[2], color[3])
+	-- 1.35.0 : briques d'infobulle du thème (le verdict dans sa couleur, la
+	-- réserve d'estimation en aide MUTED clair)
+	Theme.TooltipLine(tooltip, text, color)
 	if text ~= L.AGGRO_NEUTRAL then
-		local m = Theme.MUTED
-		tooltip:AddLine(self:F("AGGRO_ESTIMATE", tostring(AGGRO_BASE), L.AGGRO_UNIT), m[1], m[2], m[3], true)
+		Theme.TooltipHint(tooltip, self:F("AGGRO_ESTIMATE", tostring(AGGRO_BASE), L.AGGRO_UNIT), true)
 	end
 	-- accroche OnTooltipSetUnit (pas de data) : le cadre reprend sa taille
 	if data == nil and type(tooltip.Show) == "function" then pcall(tooltip.Show, tooltip) end

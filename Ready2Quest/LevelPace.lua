@@ -457,7 +457,7 @@ function ns:PaceOnBarEnter(bar)
 		owned = ok and owner == bar
 	end
 	if owned then
-		tip:AddLine(" ")
+		Theme.TooltipLine(tip, " ")
 		self.paceOwnsTooltip = false
 	else
 		pcall(tip.SetOwner, tip, bar, "ANCHOR_TOP")

@@ -350,19 +350,30 @@ function ns:EnsureDeathPanel()
 		ns.deathDismissed = true
 		frame:Hide()
 	end, "accent")
+	-- 1.35.0 : [×] et Échap valent « Fermer » (avant : la fenêtre revenait au
+	-- changement de zone suivant). Seul le rangement par l'addon (résurrection,
+	-- module coupé) ne compte pas comme un refus, ni l'interface masquée
+	-- (Alt+Z : la fenêtre reste « montrée », seul son parent est caché).
+	frame:SetScript("OnHide", function(f)
+		if not ns.deathHiding and not f:IsShown() then ns.deathDismissed = true end
+	end)
 	self.deathFrame = frame
 	return frame
 end
 
 function ns:DeathPanelRows(advice)
+	-- 1.35.0 : le verdict (la réponse à la question du titre) suit les deux
+	-- options, avant les deux notes pâles ; avant, il venait après la note
+	-- des 10 %, entre deux blocs gris
 	local rows = {
 		Theme.T_GOLD .. L.DEATH_ROW_RUN .. "|r  " .. self:DeathRunText(advice),
 		Theme.T_GOLD .. L.DEATH_ROW_HEALER .. "|r  " .. self:DeathHealerText(advice),
-		Theme.T_GREY .. self:F("DEATH_LOSS_NOTE", DEATH_LOSS * 100, SPIRIT_LOSS * 100) .. "|r",
 	}
-	local tall = { [3] = true }
+	local tall = {}
 	local verdict = self:DeathVerdictText(advice)
 	if verdict then rows[#rows + 1] = verdict end
+	rows[#rows + 1] = Theme.T_GREY .. self:F("DEATH_LOSS_NOTE", DEATH_LOSS * 100, SPIRIT_LOSS * 100) .. "|r"
+	tall[#rows] = true
 	rows[#rows + 1] = Theme.T_GREY .. L.DEATH_RULE .. "|r"
 	tall[#rows] = true
 	return rows, tall
@@ -413,7 +424,11 @@ function ns:ShowDeathPanel(advice)
 end
 
 function ns:HideDeathPanel()
-	if self.deathFrame then self.deathFrame:Hide() end
+	if self.deathFrame then
+		self.deathHiding = true
+		self.deathFrame:Hide()
+		self.deathHiding = nil
+	end
 end
 
 -- ---------------------------------------------------------------------------

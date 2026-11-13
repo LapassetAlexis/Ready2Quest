@@ -111,7 +111,7 @@ do
 	local rows = NS.lootRoom.rows
 	Check("[LOOT] les moins chers d'abord, prix du marchand ; plus cher que le butin : en gris (90 > 50)", rows[1].itemID == GREY
 		and rows[2].itemID == WHITE and rows[3].itemID == GREEN and rows[4].itemID == CLOTH and rows[4].dearer == true
-		and frame.rows[4].alpha < 1 and not rows[1].dearer and frame.rows[1].price.text:find("marchand", 1, true) ~= nil)
+		and frame.rows[4].icon.alpha < 1 and (frame.rows[4].alpha or 1) == 1 and not rows[1].dearer and frame.rows[1].price.text:find("marchand", 1, true) ~= nil)
 	-- jeter un gris : tout de suite, puis le butin est ramassé
 	frame.rows[1].delete:Click()
 	local thrown = Mock.world.deleted == 1 and Mock.world.popup == nil and Mock.world.bags[0].items[4] == nil

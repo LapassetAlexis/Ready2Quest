@@ -282,9 +282,39 @@ function ns:SpellRankScan(all)
 end
 
 -- Remplace le sort de la case par son meilleur rang (hors combat)
+-- 1.35.0 : en combat, le clic est retenu et joué à la fin du combat (le chat
+-- le promettait déjà : « la mise à jour attendra la fin du combat »)
+local function Queue(self, entry)
+	self.spellRanksQueued = self.spellRanksQueued or {}
+	for _, queued in ipairs(self.spellRanksQueued) do
+		if queued.slot == entry.slot and queued.id == entry.id then return end
+	end
+	self.spellRanksQueued[#self.spellRanksQueued + 1] = entry
+end
+
+-- Fin du combat : les mises à jour retenues (une case changée entre-temps
+-- est laissée : SpellRankUpdate revérifie le sort de la case)
+function ns:SpellRanksFlushQueue()
+	local queued = self.spellRanksQueued
+	self.spellRanksQueued = nil
+	if not queued or InCombat() then
+		self.spellRanksQueued = queued
+		return 0
+	end
+	local done = 0
+	for _, entry in ipairs(queued) do
+		if self:SpellRankUpdate(entry) then done = done + 1 end
+	end
+	return done
+end
+
 function ns:SpellRankUpdate(entry)
 	if not entry then return false end
-	if InCombat() then self:Print(L.SR_COMBAT); return false end
+	if InCombat() then
+		if not self.spellRanksQueued or #self.spellRanksQueued == 0 then self:Print(L.SR_COMBAT) end
+		Queue(self, entry)
+		return false
+	end
 	local kind, id = Call(Global("GetActionInfo"), entry.slot)
 	if kind ~= "spell" or id ~= entry.id then return false end
 	local pickup = C("PickupSpell") or Global("PickupSpell")
@@ -298,7 +328,11 @@ function ns:SpellRankUpdate(entry)
 end
 
 function ns:SpellRankUpdateAll()
-	if InCombat() then self:Print(L.SR_COMBAT); return 0 end
+	if InCombat() then
+		self:Print(L.SR_COMBAT)
+		for _, entry in ipairs(self:SpellRankScan()) do Queue(self, entry) end
+		return 0
+	end
 	local done = 0
 	for _, entry in ipairs(self:SpellRankScan()) do
 		if self:SpellRankUpdate(entry) then done = done + 1 end
@@ -558,6 +592,7 @@ function ns:EnsureSpellRanks()
 		row.where:SetPoint("TOPLEFT", row, "TOPLEFT", row.textLeft, -20)
 		row.where:SetWidth(textWidth)
 		row.where:SetJustifyH("LEFT")
+		if row.where.SetWordWrap then row.where:SetWordWrap(false) end
 		row:Hide()
 		frame.rows[index] = row
 	end
@@ -592,6 +627,10 @@ function ns:EnsureSpellRanks()
 	frame.more = Theme.Text(frame.footer, Theme.F_SMALL, Theme.MUTED)
 	frame.more:SetPoint("LEFT", frame.footer, "LEFT", Theme.DIALOG_PAD, 0)
 	frame.all = frame:AddFooterButton(L.SR_BTN_ALL, function() ns:SpellRankUpdateAll() end, "primary")
+	-- 1.35.0 : « et N autre(s) » s'arrête avant « Tout mettre à jour »
+	frame.more:SetWidth(math.max(40, WIDTH - 2 * Theme.DIALOG_PAD - (tonumber(frame.all:GetWidth()) or 0) - 12))
+	frame.more:SetJustifyH("LEFT")
+	if frame.more.SetWordWrap then frame.more:SetWordWrap(false) end
 	frame:Hide()
 	self.spellRanksFrame = frame
 	return frame
@@ -695,6 +734,11 @@ if ns.AddCheck then
 		end,
 	}
 end
+-- 1.35.0 : clic sur la ligne du check (UI.lua) : la fenêtre des sorts
+ns.CHECK_ACTIONS = ns.CHECK_ACTIONS or {}
+ns.CHECK_ACTIONS.barranks = { hint = "DIAG_CLICK_SPELLS",
+	run = function() return ns:SpellRanksOpen() ~= nil end,
+	available = function() return ModuleOn() end }
 
 -- ---------------------------------------------------------------------------
 -- Liseré rouge sur les cases des barres dont le sort a un meilleur rang
@@ -834,6 +878,7 @@ local HANDLERS = {
 	UPDATE_BONUS_ACTIONBAR = function() MarkSoon(0.2) end,
 	UPDATE_SHAPESHIFT_FORM = function() MarkSoon(0.2) end,
 	PLAYER_REGEN_ENABLED  = function()
+		if ns.spellRanksQueued then ns:SpellRanksFlushQueue() end
 		if ns.spellRanksPending then ns.spellRanksDueAt = ns.Now() + 1 end
 		-- liserés qui n'ont pas pu être créés en combat
 		MarkSoon(0.5)

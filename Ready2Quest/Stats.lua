@@ -496,6 +496,23 @@ function ns:HideToast()
 	if self.toastFrame then self.toastFrame:Hide() end
 end
 
+-- 1.35.0 : le résumé de stuff s'efface au début du combat (il n'a qu'un
+-- temps : il ne revient pas). Le mode déplacement et l'aperçu des réglages
+-- (demandés par le joueur) le gardent.
+ns.COMBAT_UI = ns.COMBAT_UI or {}
+table.insert(ns.COMBAT_UI, {
+	id = "geartoast",
+	hide = function(self)
+		local frame = self.toastFrame
+		if frame and frame:IsShown() and not self.editMode and not self.toastPreview then
+			frame:Hide()
+			frame:SetAlpha(1)
+			self.toastHideAt = nil
+		end
+		return false
+	end,
+})
+
 -- Construit les lignes affichées : { label, value, improved, texture }
 -- Un seul changement = une seule ligne, comme dans la référence.
 function ns:ToastRows(diffRows, texture)
@@ -642,6 +659,9 @@ end
 function ns:ShowGearToast(rows, texture, preview)
 	local db = self:DB()
 	if db.showGearToast == false and not preview then return end
+	-- 1.35.0 : pas de résumé au milieu de l'écran en combat (changement d'arme) ;
+	-- la référence suit quand même (OnEquipmentChanged)
+	if not preview and ns.InCombatNow and ns.InCombatNow() then return end
 
 	-- Un équipement peut changer sans modifier aucune statistique (même objet
 	-- d'une autre apparence, bijou sans stat, etc.). Sans écart, il n'y a

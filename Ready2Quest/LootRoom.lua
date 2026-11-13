@@ -575,7 +575,11 @@ function ns:LootRoomRefresh()
 			row.price:SetText(price)
 			local c = data.dearer and Theme.MUTED or Theme.MUTED_LIGHT
 			row.price:SetTextColor(c[1], c[2], c[3])
-			row:SetAlpha(data.dearer and 0.55 or 1)
+			-- 1.35.0 : plus cher que le butin = icône estompée, prix MUTED ; la
+			-- ligne reste opaque (estompée à 55 %, le prix tombait à 2,6:1 et
+			-- « Jeter » avait l'air désactivé alors qu'il marche)
+			row:SetAlpha(1)
+			if row.icon then row.icon:SetAlpha(data.dearer and 0.55 or 1) end
 			row:Show()
 		else
 			row:Hide()

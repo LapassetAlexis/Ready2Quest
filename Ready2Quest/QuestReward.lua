@@ -515,6 +515,12 @@ local function MarkButton(button, text)
 		mark.edge = Theme.Border(button, c, 1, "OVERLAY")
 		mark.label = Theme.Text(button, Theme.F_LABEL, c)
 		mark.label:SetPoint("BOTTOMRIGHT", button, "BOTTOMRIGHT", -6, 4)
+		-- 1.35.0 : bornée au bouton (un prix de vente long ne déborde plus sur
+		-- le choix voisin), une ligne, calée à droite
+		local width = tonumber(Call(button.GetWidth, button))
+		if width and width > 24 then mark.label:SetWidth(width - 12) end
+		mark.label:SetJustifyH("RIGHT")
+		if mark.label.SetWordWrap then mark.label:SetWordWrap(false) end
 		button.r2qRewardMark = mark
 	end
 	mark.label:SetText(text)
@@ -577,8 +583,8 @@ function ns:RewardAddTooltip(tooltip, index, link)
 	end
 	local line = self:RewardTooltipLine(choice, result)
 	if not line or type(tooltip) ~= "table" or type(tooltip.AddLine) ~= "function" then return end
-	local c = Theme.GOLD   -- 1.32.0 (fiche 28) : plus de repli recopié
-	pcall(tooltip.AddLine, tooltip, line, c[1], c[2], c[3], true)
+	-- 1.35.0 : par la brique du thème (ambre, retour à la ligne)
+	pcall(Theme.TooltipLine, tooltip, line, Theme.GOLD, true)
 	if type(tooltip.Show) == "function" then pcall(tooltip.Show, tooltip) end   -- recalcule la taille
 end
 
@@ -647,8 +653,7 @@ function ns:RewardOnItemTooltip(tooltip)
 	if not ok then return false end
 	local line = self:RewardItemUpgradeLine(link)
 	if not line then return false end
-	local c = Theme.GREEN
-	tooltip:AddLine(line, c[1], c[2], c[3])
+	Theme.TooltipLine(tooltip, line, Theme.GREEN)
 	return true
 end
 

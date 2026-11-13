@@ -41,15 +41,73 @@ local function Truncate(text, limit)
 end
 ns.Truncate = Truncate
 
+local FR = {
+	DIAG_CLICK_BAGS   = "Clic : ouvrir les sacs",
+	DIAG_CLICK_QUESTS = "Clic : ouvrir le journal de quêtes",
+	DIAG_CLICK_SPELLS = "Clic : la fenêtre Rangs de sorts",
+}
+local EN = {
+	DIAG_CLICK_BAGS   = "Click: open your bags",
+	DIAG_CLICK_QUESTS = "Click: open the quest log",
+	DIAG_CLICK_SPELLS = "Click: the Spell ranks window",
+}
+if ns.RegisterStrings then ns.RegisterStrings(FR, EN) end
+if ns.KEEP_STRINGS then ns.DIAG_UI_STRINGS = { fr = FR, en = EN } end   -- exposé aux tests (parité fr/en)
+
+-- 1.35.0 : le clic sur une ligne fait la chose évidente (le geste que le
+-- conseil demande), quand le client la permet. Une action = { hint = clé
+-- du texte, run = fonction qui rend vrai si elle a pu agir, available =
+-- fonction facultative }. Les modules en ajoutent (SpellRanks.lua : barranks).
+local function OpenWith(...)
+	local names = { ... }
+	return function()
+		for _, name in ipairs(names) do
+			local fn = rawget(_G, name)
+			if type(fn) == "function" and pcall(fn) then return true end
+		end
+		return false
+	end
+end
+local function HasGlobal(...)
+	local names = { ... }
+	return function()
+		for _, name in ipairs(names) do if type(rawget(_G, name)) == "function" then return true end end
+		return false
+	end
+end
+ns.CHECK_ACTIONS = ns.CHECK_ACTIONS or {}
+ns.CHECK_ACTIONS.bags = { hint = "DIAG_CLICK_BAGS", run = OpenWith("OpenAllBags", "ToggleBackpack"),
+	available = HasGlobal("OpenAllBags", "ToggleBackpack") }
+ns.CHECK_ACTIONS.gray = ns.CHECK_ACTIONS.bags
+ns.CHECK_ACTIONS.quests = { hint = "DIAG_CLICK_QUESTS", run = OpenWith("ToggleQuestLog"),
+	available = HasGlobal("ToggleQuestLog") }
+
+-- L'action d'une ligne (nil : la ligne n'a pas de clic)
+function ns:DiagRowAction(result)
+	if type(result) ~= "table" then return nil end
+	if result.fold then return { run = function() ns:ToggleDiagFold(); return true end } end
+	if result.disabled then return nil end
+	local action = result.id and ns.CHECK_ACTIONS[result.id]
+	if not action then return nil end
+	if action.available and not action.available() then return nil end
+	return action
+end
+
 -- 1.31.0 : infobulle d'une ligne coupée, en échec ou porteuse d'une liste
--- (buffs manquants) : libellé, texte entier, liste, conseil
+-- (buffs manquants) : libellé, texte entier, liste, conseil ; 1.35.0 : l'aide
+-- du clic quand la ligne en a un. Le voile de survol ne s'allume que sur une
+-- ligne qui répond (infobulle ou clic) : une ligne muette ne fait pas croire
+-- qu'on peut cliquer.
 local function RowTooltip(row)
-	if row.hover then row.hover:Show() end
 	local r = row.result
 	local tooltip = rawget(_G, "GameTooltip")
-	if not r or type(tooltip) ~= "table" then return end
+	if not r then return end
 	local failed = not r.ok and not r.disabled and not r.info
-	if not row.cut and not failed and not r.tip then return end
+	local action = ns:DiagRowAction(r)
+	if not row.cut and not failed and not r.tip and not action then return end
+	if row.hover then row.hover:Show() end
+	-- la ligne de repli dit déjà « Afficher » / « Masquer » : le voile suffit
+	if type(tooltip) ~= "table" or r.fold then return end
 	tooltip:SetOwner(row, "ANCHOR_RIGHT")
 	if type(tooltip.ClearLines) == "function" then tooltip:ClearLines() end
 	Theme.TooltipTitle(tooltip, r.label)
@@ -59,6 +117,7 @@ local function RowTooltip(row)
 		for _, line in ipairs(r.tip) do Theme.TooltipLine(tooltip, "  " .. tostring(line), Theme.TEXT) end
 	end
 	if failed and r.advice and L[r.advice] then Theme.TooltipHint(tooltip, L[r.advice], true) end
+	if action and L[action.hint] then Theme.TooltipHint(tooltip, L[action.hint]) end
 	tooltip:Show()
 end
 
@@ -136,13 +195,15 @@ function ns:EnsureWindow()
 	frame.rows = {}
 	-- 1.32.0 : une ligne de plus, celle du repli des points en ordre
 	for index = 1, rowCount + 1 do
-		-- 1.31.0 : un bouton, pour le survol et l'infobulle (aucun clic)
+		-- 1.31.0 : un bouton, pour le survol et l'infobulle
 		local row = Theme.CreateListRow(frame, inner, ROW_CARD, { status = 9, detail = true, kind = "Button" })
 		row:SetScript("OnEnter", RowTooltip)
 		row:SetScript("OnLeave", RowLeave)
-		-- 1.32.0 : la ligne de repli plie ou déplie les points en ordre
+		-- 1.32.0 : la ligne de repli plie ou déplie les points en ordre ;
+		-- 1.35.0 : les autres font leur geste (sacs, journal, rangs de sorts)
 		row:SetScript("OnClick", function(self)
-			if self.result and self.result.fold then ns:ToggleDiagFold() end
+			local action = ns:DiagRowAction(self.result)
+			if action then action.run() end
 		end)
 		row:SetIndex(index)
 		row.name = row.text

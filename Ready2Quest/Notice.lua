@@ -265,12 +265,98 @@ function ns:HideNotice()
 end
 
 -- ---------------------------------------------------------------------------
--- Fin de combat : l'icône en attente s'affiche
+-- Combat (R2Q 1.35.0, docs/UI.md « Passe de cohérence Ready2Quest 1.35.0 ») :
+-- au premier coup, rien de ce qui s'est ouvert tout seul ne reste à l'écran.
+--   * l'icône d'annonce s'efface ; si elle n'avait pas tenu la moitié de son
+--     temps, elle revient après le combat (sinon elle est oubliée) ;
+--   * un rapport ouvert tout seul (icône coupée : Avant le départ, Retour
+--     d'expédition, Avant le donjon) se range et revient après le combat ;
+--     ouvert par le joueur (/r2q, clic sur l'icône, flèche), il reste ;
+--   * les modules inscrivent leurs bandeaux dans ns.COMBAT_UI :
+--     { id, hide = function(ns) -> vrai s'il était affiché, restore = function(ns) }.
+-- ---------------------------------------------------------------------------
+ns.COMBAT_UI = ns.COMBAT_UI or {}
+ns.InCombatNow = InCombat
+
+-- Rapports qui s'ouvrent seuls quand l'icône est coupée (champ de ns)
+ns.REPORT_WINDOWS = { "window", "expeditionFrame", "dungeonFrame" }
+
+-- Le rapport `field` affiché a-t-il été ouvert tout seul ? Avec l'icône, un
+-- rapport ne s'ouvre qu'au clic ; sans elle, seul le check à la main (et sa
+-- flèche) vient du joueur.
+function ns:ReportOpenedAlone(field)
+	if self:WantsNotice() then return false end
+	if field == "window" then return self.lastTrigger ~= "manual" end
+	return true
+end
+
+table.insert(ns.COMBAT_UI, {
+	id = "notice",
+	hide = function(self)
+		local frame, notice = self.noticeFrame, self.notice
+		if not (frame and notice and frame:IsShown()) or self.editMode then return false end
+		frame:Hide()
+		if type(GameTooltip) == "table" and GameTooltip.Hide and GameTooltip.GetOwner
+			and GameTooltip:GetOwner() == frame then GameTooltip:Hide() end
+		local life = ns.NOTICE_PULSE + ns.NOTICE_LINGER
+		if notice.shownAt and (ns.Now() - notice.shownAt) < life / 2 then
+			self.noticePending = true
+		else
+			self.notice, self.noticePending = nil, nil
+		end
+		return false   -- le retour passe par noticePending
+	end,
+})
+
+table.insert(ns.COMBAT_UI, {
+	id = "reports",
+	hide = function(self)
+		local hidden
+		for _, field in ipairs(ns.REPORT_WINDOWS) do
+			local frame = self[field]
+			if frame and frame.IsShown and frame:IsShown() and self:ReportOpenedAlone(field) then
+				frame:Hide()
+				hidden = hidden or {}
+				hidden[#hidden + 1] = frame
+			end
+		end
+		self.reportsAfterCombat = hidden
+		return hidden ~= nil
+	end,
+	restore = function(self)
+		for _, frame in ipairs(self.reportsAfterCombat or {}) do frame:Show() end
+		self.reportsAfterCombat = nil
+	end,
+})
+
+function ns:CombatStartUI()
+	local hidden = {}
+	for _, entry in ipairs(ns.COMBAT_UI) do
+		local ok, was = pcall(entry.hide, self)
+		if ok and was and entry.restore then hidden[#hidden + 1] = entry end
+		if not ok and self.RecordError then self:RecordError("combat:" .. tostring(entry.id), was) end
+	end
+	self.combatHidden = hidden
+end
+
+function ns:CombatEndUI()
+	if self.noticePending and self.notice then self:DisplayNotice() end
+	local hidden = self.combatHidden or {}
+	self.combatHidden = nil
+	for _, entry in ipairs(hidden) do
+		local ok, err = pcall(entry.restore, self)
+		if not ok and self.RecordError then self:RecordError("combat:" .. tostring(entry.id), err) end
+	end
+end
+
+-- ---------------------------------------------------------------------------
+-- Début et fin de combat
 -- ---------------------------------------------------------------------------
 local events = CreateFrame("Frame")
 pcall(events.RegisterEvent, events, "PLAYER_REGEN_ENABLED")
-events:SetScript("OnEvent", function()
-	if ns.noticePending and ns.notice then ns:DisplayNotice() end
+pcall(events.RegisterEvent, events, "PLAYER_REGEN_DISABLED")
+events:SetScript("OnEvent", function(_, event)
+	if event == "PLAYER_REGEN_DISABLED" then ns:CombatStartUI() else ns:CombatEndUI() end
 end)
 ns.noticeEventFrame = events
 
