@@ -1,5 +1,11 @@
 # QuestCompanion
 
+## 3.0.2
+
+- **Plus d'erreur au survol d'une créature** : quand le jeu rend l'identifiant d'une créature secret, Quest Companion ne le lit plus (« attempt to index local 'guid' (a secret string value) » dans Bestiary.lua). La créature n'est simplement pas notée ce jour-là.
+
+*English:* no more error when hovering a creature whose identifier the game keeps secret (« attempt to index local 'guid' (a secret string value) » in Bestiary.lua); the bestiary, rares, shinies and companion lines now skip secret identifiers.
+
 ## 3.0.1
 
 - **Les fenêtres de QuestCompanion et Ready2Quest ne se chevauchent plus** : quand « Tout capturer » ou la carte de capture s'ouvre alors que « Place au butin » (ou « Sac plein ») de Ready2Quest est déjà à l'écran, elle se met à côté, du côté où il y a la place (sinon dessous). La capture animée reste dans sa fenêtre. Une fenêtre que tu as déplacée n'est jamais bougée.

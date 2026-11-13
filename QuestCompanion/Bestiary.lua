@@ -106,6 +106,7 @@ local CRITTERS = {
 -- Numéro de PNJ d'un GUID de créature (« Creature-0-srv-inst-zone-npcID-spawn ») ;
 -- tout autre format (joueur, familier « Pet- », objet) : nil
 local function NpcID(guid)
+	guid = ns.Plain(guid)   -- valeur secrète (Forever) : on ne la lit pas
 	if type(guid) ~= "string" then return nil end
 	local kind, id = guid:match("^(%a+)%-%d+%-%d+%-%d+%-%d+%-(%d+)%-%x+$")
 	if kind ~= "Creature" and kind ~= "Vehicle" then return nil end
@@ -432,7 +433,7 @@ function ns:BestiarySeeUnit(unit)
 	if Call("UnitIsPlayer", unit) then return nil end
 	-- familier, gardien, monture d'un joueur : contrôlé par un joueur
 	if Call("UnitPlayerControlled", unit) then return nil end
-	local guid = Call("UnitGUID", unit)
+	local guid = ns.Plain(Call("UnitGUID", unit))
 	local npcID = NpcID(guid)
 	if not npcID then return nil end
 	if Call("UnitIsDead", unit) then return nil end
@@ -720,7 +721,7 @@ function ns:BestiaryOnXP(message)
 	local ok, xp, named = pcall(parse, self, message)
 	if not (ok and xp and named) then return false end
 	if not Call("UnitIsDead", "target") then return false end
-	local guid = Call("UnitGUID", "target")
+	local guid = ns.Plain(Call("UnitGUID", "target"))
 	if not NpcID(guid) then return false end
 	local entry = self.bestiaryUnits[guid] or Adopt(self, guid)
 	if not entry then return false end

@@ -253,7 +253,7 @@ do
 			local species = see(self, unit, ...)
 			if species and ModuleOn() then
 				local ok, err = pcall(function()
-					local guid = Call(G("UnitGUID"), unit)
+					local guid = ns.Plain(Call(G("UnitGUID"), unit))
 					local entry = guid and self.bestiaryUnits and self.bestiaryUnits[guid]
 					local state = self:ShinyState()
 					if not entry or state.rolled[guid] then return end

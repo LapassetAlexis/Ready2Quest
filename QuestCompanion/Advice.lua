@@ -219,7 +219,7 @@ function ns:AdviceSeeUnit(unit)
 	local mine = self.PlayerLevelNow()
 	-- -1 : « ?? », bien au-dessus
 	if level ~= -1 and level < mine + self.ADVICE_ELITE_LEVELS then return false end
-	local guid = Call(rawget(_G, "UnitGUID"), unit) or tostring(Call(rawget(_G, "UnitName"), unit))
+	local guid = ns.Plain(Call(rawget(_G, "UnitGUID"), unit)) or tostring(ns.Plain(Call(rawget(_G, "UnitName"), unit)))
 	local state = self:AdviceState()
 	if state.elites[guid] then return false end
 	-- bornée : une longue session croise des milliers d'élites ; au-delà de

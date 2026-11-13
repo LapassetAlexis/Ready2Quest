@@ -166,6 +166,18 @@ do
 	B.See("nameplate2", { guid = B.Guid(3102), name = "Centaure kolkar", type = "Humanoïde", level = 15 }, "nameplate")
 	Check("[BST] survol et plaque de nom : espèce retenue", B.Species(1413, 3101) ~= nil and B.Species(1413, 3102)
 		and B.Species(1413, 3102).type == "Humanoïde")
+	-- 3.0.2 : GUID rendu secret par le client (« attempt to index local 'guid' (a secret string value) »)
+	do
+		local secretGuid = B.Guid(3109)
+		local savedSecret = rawget(_G, "issecretvalue")
+		_G.issecretvalue = function(v) return v == secretGuid end
+		local errors = #(NS.errors or {})
+		local ok = pcall(B.See, "mouseover", { guid = secretGuid, name = "Ombre secrète", type = "Bête", level = 13 }, "mouseover")
+		local npc = NS.BestiaryNpcID(secretGuid)
+		_G.issecretvalue = savedSecret
+		Check("[BST] GUID secret au survol : pas d'erreur, rien de retenu", ok and npc == nil
+			and B.Species(1413, 3109) == nil and (#(NS.errors or {})) == errors)
+	end
 	B.Target(3100, "Sanglier des Tarides", nil, "000099999")
 	local counts = NS:BestiaryCounts(1413)
 	Check("[BST] même espèce, autre apparition : une seule espèce", counts.seen == 3 and counts.killed == 0, counts.seen)
