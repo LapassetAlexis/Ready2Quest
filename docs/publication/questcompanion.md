@@ -1,7 +1,7 @@
 <!--
 Fiche de la page QuestCompanion sur CurseForge et Wago (à copier à la main, voir docs/PUBLIER.md).
-Summary EN (obligatoire en anglais sur CurseForge, 256 caractères max, ici 222) :
-  Catch the monsters you defeat in WoW Forever: unique 1-3 star specimens, rare shinies, trades between players, 180 achievements and 40 titles, a companion that hunts with you and a trainer card shared with your guild. FR/EN.
+Summary EN (obligatoire en anglais sur CurseForge, 256 caractères max, ici 201) :
+  Catch the monsters you defeat in WoW Forever: unique 1-3 star specimens, rare shinies, player trades, a companion that hunts and talks with you, 180 achievements, 40 titles and a travel journal. FR/EN.
 Catégories : Companions (principale), Quests & Leveling (additionnelle). Si Companions n'existe pas : Miscellaneous (principale).
 Licence : GPLv3. Logo : docs/publication/logo_questcompanion.png.
 Relation : Optional Dependency -> Ready2Quest (facultatif).

@@ -1,7 +1,7 @@
 <!--
 Fiche de la page Ready2Quest sur CurseForge et Wago (à copier à la main, voir docs/PUBLIER.md).
-Summary EN (obligatoire en anglais sur CurseForge, 256 caractères max, ici 231) :
-  Leave town ready: a readiness score before each outing (food, bags, durability, buffs, hearthstone), trip reports, dungeon briefs, aggro range on nameplates, best quest reward tags, favorite items protected from selling. For WoW Forever. EN/FR.
+Summary EN (obligatoire en anglais sur CurseForge, 256 caractères max, ici 220) :
+  WoW Forever QoL: a readiness score before you leave town (food, bags, repairs, buffs, hearthstone), trip reports, dungeon briefs, aggro range on nameplates, quest reward picks and favorite items safe from selling. EN/FR.
 Catégories : Quests & Leveling (principale), Bags & Inventory (additionnelle).
 Licence : GPLv3. Logo : docs/publication/logo_ready2quest.png.
 Captures à prendre en jeu : la fenêtre « Avant le départ », le bilan de retour, la fiche de donjon, l'étiquette « Pour toi » d'une récompense de quête, le cadre « Sac plein ».
