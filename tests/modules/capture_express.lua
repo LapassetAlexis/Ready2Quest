@@ -223,6 +223,16 @@ do
 	Check("[EXP] fil : au plus quatre pastilles, la plus récente en bas, les fiches tournent",
 		#feed.items == X.rows and #feed.rows == X.rows and feed.items[1].text == "N" .. (X.rows + 2)
 		and (feed.items[1] == first or feed.items[2] == first or feed.items[3] == first or feed.items[4] == first))
+	-- lisibilité (règle des contrastes) : les encres sur la plaque posée sur le
+	-- pire des sols (neige blanche derrière une plaque à 0,94)
+	local Theme = NS.Theme
+	local function Over(c, alpha) return { c[1] * alpha + (1 - alpha), c[2] * alpha + (1 - alpha), c[3] * alpha + (1 - alpha) } end
+	local plate = Over(Theme.INK, X.plate)
+	local worst = math.huge
+	for _, ink in ipairs({ Theme.PARCHMENT, Theme.MUTED_LIGHT, Theme.RED, Theme.SHINY }) do
+		worst = math.min(worst, Theme.Contrast(ink, plate))
+	end
+	Check("[EXP] fil : textes lisibles sur la plaque, même sur la neige (contraste >= 4,5)", worst >= 4.5, worst)
 	local mouse = false
 	for _, row in ipairs(feed.rows) do if row.IsMouseEnabled and row:IsMouseEnabled() then mouse = true end end
 	Check("[EXP] fil : ne prend pas la souris", not mouse and not (feed.IsMouseEnabled and feed:IsMouseEnabled()))
