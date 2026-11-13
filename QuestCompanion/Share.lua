@@ -36,10 +36,15 @@ ns.SHARE_PREFIX = "[Quest Companion]"
 ns.SHARE_MAX = 255           -- octets d'une ligne de chat
 ns.SHARE_GAP = 10            -- s entre deux partages
 ns.SHARE_REPEAT = 60         -- s avant de repartager la même chose au même canal
-ns.SHARE_HOLD = 10           -- s de plus pour le bandeau dont le menu est ouvert
+-- 3.1.0 bêta 3 (retour en jeu : « l'infobulle disparaît trop vite, trop
+-- petite ») : bouton plus grand, bandeau en pause sous la souris et tant que
+-- le menu est ouvert, quelques secondes de plus quand il porte le bouton
+ns.SHARE_RESUME = 3          -- s au moins quand la souris quitte le bandeau (ou le menu se ferme)
+ns.SHARE_EXTRA = 3           -- s de plus pour un bandeau qui porte le bouton
 -- l'icône de chat du client, par référence (jamais d'image à nous)
 ns.SHARE_ICON = { atlases = { "communities-icon-chat" }, fallback = "Interface\\ChatFrame\\UI-ChatIcon-Chat-Up" }
-ns.SHARE_BUTTON = { size = 20, icon = 16, azeroth = { x = -40, y = 14 }, stage = { x = -8, y = -12 },
+ns.SHARE_BUTTON = { size = Theme.BUTTON_SIZES and Theme.BUTTON_SIZES.sm or 24, icon = 18, labelGap = 4, labelPad = 8,
+	azeroth = { x = -36, y = 6 }, stage = { x = -8, y = -12 },
 	reserve = { x = -6, y = -6 }, sobreGap = 10, featGap = 36 }
 ns.SHARE_MENU = { w = 160, row = 22, pad = 6, title = 18, rows = 5 }
 -- les rangs qui valent un partage (le Capturé ! d'un monstre normal : non)
@@ -49,6 +54,7 @@ ns.SHARE_CHANNELS = { "GUILD", "RAID", "PARTY", "INSTANCE_CHAT", "SAY", "COPY" }
 
 local FR = {
 	SHARE_TIP            = "Partager dans le chat",
+	SHARE_LABEL          = "Partager",
 	SHARE_TIP_DETAIL     = "Choisis le canal : rien ne part sans ton clic.",
 	SHARE_MENU_TITLE     = "Partager dans",
 	SHARE_CH_GUILD       = "Guilde",
@@ -100,6 +106,7 @@ local FR = {
 }
 local EN = {
 	SHARE_TIP            = "Share in chat",
+	SHARE_LABEL          = "Share",
 	SHARE_TIP_DETAIL     = "Pick the channel: nothing is sent without your click.",
 	SHARE_MENU_TITLE     = "Share in",
 	SHARE_CH_GUILD       = "Guild",
@@ -158,6 +165,8 @@ if ns.AZEROTH_CONTRAST and ns.AZEROTH_INK and ns.AZEROTH_INK.woodBg and Theme.Lu
 	local worst = Theme.Luminance(Theme.Over(ns.AZEROTH_INK.woodBg, Theme.WHITE, Theme.HOVER_ALPHA))
 	ns.AZEROTH_CONTRAST["share.title"] = { "goldHead", worst, 4.5, 10 }
 	ns.AZEROTH_CONTRAST["share.entry"] = { "lightSoft", worst, 4.5, 12 }
+	-- libellé « Partager » du bouton : sur sa plaque opaque (NAV), survol compris
+	ns.AZEROTH_CONTRAST["share.label"] = { "lightSoft", Theme.Luminance(Theme.Over(Theme.NAV, Theme.WHITE, Theme.HOVER_ALPHA)), 4.5, 11 }
 end
 
 local function G(name) return rawget(_G, name) end
@@ -572,17 +581,7 @@ function ns:ShareOpen(owner, item)
 	else menu:SetPoint("CENTER", UIParent, "CENTER", 0, 0) end
 	menu.owner, menu.item = owner, item
 	menu:Show()
-	-- le bandeau d'où il vient reste un peu plus longtemps
-	local now = Now()
-	local banner = owner and owner.shareBanner
-	if banner == "journal" and self.journalToastHideAt then
-		self.journalToastHideAt = math.max(self.journalToastHideAt, now + ns.SHARE_HOLD)
-	elseif banner == "result" and self.captureResultHideAt then
-		self.captureResultHideAt = math.max(self.captureResultHideAt, now + ns.SHARE_HOLD)
-	elseif banner == "stage" then
-		local rolling = self.captureState and self.captureState.rolling
-		if rolling and rolling.closeAt then rolling.closeAt = math.max(rolling.closeAt, now + ns.SHARE_HOLD) end
-	end
+	-- le bandeau d'où il vient reste tant que le menu est ouvert (ns:ShareHold)
 	return menu
 end
 
@@ -602,8 +601,31 @@ local function ButtonLook(button, hot)
 	local az = button.azeroth
 	local edge = hot and Theme.GOLD or (az and ns.AZEROTH_BUTTONS and ns.AZEROTH_BUTTONS.gold.edge) or Theme.EDGE
 	button.edge:SetColor(edge[1], edge[2], edge[3], 1)
-	if button.icon.SetDesaturated then button.icon:SetDesaturated(not hot) end
-	button.icon:SetAlpha(hot and 1 or 0.85)
+	if button.icon.SetDesaturated then button.icon:SetDesaturated(false) end
+	button.icon:SetAlpha(hot and 1 or 0.9)
+	if hot then button.hover:Show() else button.hover:Hide() end
+end
+
+-- Le libellé « Partager » à côté de l'icône (bandeaux Azeroth, où il y a la
+-- place) : le bouton s'élargit à son texte
+local function ButtonLabel(button, on)
+	local B = ns.SHARE_BUTTON
+	if on then
+		local role = ns.AZEROTH_CONTRAST and ns.AZEROTH_CONTRAST["share.label"]
+		local ink = (role and ns.AZEROTH_INK and ns.AZEROTH_INK[role[1]]) or Theme.LABEL
+		if ns.AzerothFont and role then ns.AzerothFont(button.label, role[4]) end
+		button.label:SetTextColor(ink[1], ink[2], ink[3], 1)
+		button.label:SetText(L.SHARE_LABEL)
+		local measure = button.label.GetUnboundedStringWidth or button.label.GetStringWidth
+		local w = math.ceil(tonumber(measure and measure(button.label)) or 50)
+		button:SetWidth(B.size + B.labelGap + w + B.labelPad)
+		button.label:Show()
+	else
+		button.label:SetText("")
+		button.label:Hide()
+		button:SetWidth(B.size)
+	end
+	button.labelled = on and true or false
 end
 
 function ns:ShareButton(parent, where)
@@ -611,13 +633,21 @@ function ns:ShareButton(parent, where)
 	local button = CreateFrame("Button", nil, parent)
 	button:SetSize(B.size, B.size)
 	button.shareBanner = where
-	button.plate = Theme.Solid(button, "BACKGROUND", Theme.NAV, 0.9)
+	-- plaque opaque : l'icône et le libellé se lisent sur n'importe quel bandeau
+	button.plate = Theme.Solid(button, "BACKGROUND", Theme.NAV, 1)
 	button.plate:SetAllPoints()
+	button.hover = Theme.Solid(button, "BORDER", Theme.WHITE, Theme.HOVER_ALPHA)
+	button.hover:SetAllPoints()
+	button.hover:Hide()
 	button.edge = Theme.Border(button, Theme.EDGE, 1)
 	button.icon = button:CreateTexture(nil, "ARTWORK")
 	button.icon:SetSize(B.icon, B.icon)
-	button.icon:SetPoint("CENTER", button, "CENTER", 0, 0)
+	button.icon:SetPoint("LEFT", button, "LEFT", math.floor((B.size - B.icon) / 2), 0)
 	Theme.PaintClient(button.icon, ns.SHARE_ICON)
+	button.label = Theme.Text(button, Theme.F_SMALL, Theme.LABEL)
+	button.label:SetPoint("LEFT", button.icon, "RIGHT", B.labelGap, 0)
+	button.label:SetJustifyH("LEFT")
+	button.label:Hide()
 	ButtonLook(button, false)
 	button:SetScript("OnEnter", function(b)
 		ButtonLook(b, true)
@@ -691,10 +721,79 @@ function ns:ShareSync(frame, item, where)
 	button.item = on and item or nil
 	button.azeroth = frame.azeroth and true or false
 	ButtonLook(button, false)
+	ButtonLabel(button, on and frame.azeroth and where ~= "stage")
 	Place(self, frame, button, on)
 	if on then button:Show() else button:Hide() end
 	if not on and self.shareMenu and self.shareMenu.owner == button then self.shareMenu:Hide() end
+	-- un bandeau qui porte le bouton reste un peu plus longtemps
+	if on then
+		local now = Now()
+		if where == "journal" and self.journalToastHideAt then
+			self.journalToastHideAt = self.journalToastHideAt + ns.SHARE_EXTRA
+		elseif where == "result" and self.captureResultHideAt then
+			self.captureResultHideAt = self.captureResultHideAt + ns.SHARE_EXTRA
+		end
+		button.shownAt = now
+	end
 	return on and button or nil
+end
+
+-- ---------------------------------------------------------------------------
+-- Pause : un bandeau ne part pas sous la souris (bandeau, bouton, menu), ni
+-- tant que son menu est ouvert ; ensuite, au moins SHARE_RESUME secondes
+-- ---------------------------------------------------------------------------
+local function Hovered(frame)
+	if type(frame) ~= "table" or not (frame.IsShown and frame:IsShown()) then return false end
+	return Over(frame) or Over(frame.button) or Over(frame.shareButton)
+end
+
+-- Le bandeau `frame` doit-il rester ? (souris dessus, ou son menu ouvert)
+function ns:ShareHeld(frame)
+	if type(frame) ~= "table" or not (frame.IsShown and frame:IsShown()) then return false end
+	local menu = self.shareMenu
+	if menu and menu:IsShown() and menu.owner ~= nil and menu.owner == frame.shareButton then return true end
+	if menu and menu:IsShown() and Over(menu) and menu.owner == frame.shareButton then return true end
+	return Hovered(frame)
+end
+
+-- Repousse l'échéance `at` (s) d'un bandeau tenu : jamais moins de SHARE_RESUME devant
+function ns:ShareHold(frame, at)
+	if not at then return at end
+	if not self:ShareHeld(frame) then return at end
+	return math.max(at, Now() + ns.SHARE_RESUME)
+end
+
+do
+	local base = ns.UpdateJournalToast
+	if base then
+		function ns:UpdateJournalToast(now, ...)
+			if self.journalToastHideAt then self.journalToastHideAt = self:ShareHold(self.journalToast, self.journalToastHideAt) end
+			return base(self, now, ...)
+		end
+	end
+end
+do
+	local base = ns.CaptureResultTick
+	if base then
+		function ns:CaptureResultTick(now, ...)
+			if self.captureResultHideAt then self.captureResultHideAt = self:ShareHold(self.captureResult, self.captureResultHideAt) end
+			return base(self, now, ...)
+		end
+	end
+end
+do
+	-- la scène de capture (Azeroth) : son verdict reste tant qu'on le partage
+	local base = ns.CaptureTick
+	if base then
+		function ns:CaptureTick(now, ...)
+			local rolling = self.captureState and self.captureState.rolling
+			local stage = self.captureStage
+			if rolling and rolling.closeAt and stage and stage.shareButton and stage.shareButton:IsShown() then
+				rolling.closeAt = self:ShareHold(stage, rolling.closeAt)
+			end
+			return base(self, now, ...)
+		end
+	end
 end
 
 -- ---------------------------------------------------------------------------

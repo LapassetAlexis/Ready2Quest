@@ -108,7 +108,8 @@ do
 	NS:CaptureResultQueue({ name = "Loup" })
 	B.Step(0.25)
 	s.ok("résultat : attend la fin du bandeau affiché", B.Shown()[1] == "journal" and #B.Shown() == 1)
-	B.Step(5)
+	-- (3.1.0 : un haut fait porte le bouton Partager, 3 s de plus)
+	B.Step(5 + (NS.SHARE_EXTRA or 0))
 	s.ok("puis s'affiche", B.Shown()[1] == "result")
 	s.check("[BAN] file : ordre d'arrivée, durée entière ; le résultat n'interrompt jamais un bandeau affiché")
 end

@@ -365,8 +365,9 @@ do
 	Check("[AZ] scène refermée : « Capturé ! », bouclier d'or, étoiles, éclat", seen and seen.azeroth
 		and seen.title:GetText() == "CAPTURÉ !" and seen.text:GetText() == "Raptor" and seen.shieldKind == "gold"
 		and (seen.stars:GetText() or "") ~= "" and seen.animBling == true and not seen.animShine, seen and seen.title:GetText())
-	AZT.Tick(4)
-	Check("[AZ] … puis s'efface (3,5 s)", not NS.captureResult:IsShown())
+	-- espèce nouvelle : le bouton Partager, et ses 3 s de plus (3.1.0)
+	AZT.Tick(4 + (NS.SHARE_EXTRA or 0))
+	Check("[AZ] … puis s'efface (3,5 s, + le temps du bouton Partager)", not NS.captureResult:IsShown())
 	NS:CaptureResultQueue({ name = "Kodo doré", shiny = true, stars = 3 })
 	NS:CaptureTick(NS.Now())
 	local r = NS.captureResult

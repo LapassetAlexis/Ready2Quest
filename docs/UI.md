@@ -457,11 +457,17 @@ l'habillage) ; pas d'`OnUpdate`.
 
 ## Partager (QuestCompanion 3.1.0, `Share.lua`)
 
-- Bouton-icône 20 px (`ns:ShareButton`) : l'icône de chat du client
+- Bouton 24 px (taille `sm`, `ns:ShareButton`) : l'icône de chat du client
   (`ns.SHARE_ICON` : atlas `communities-icon-chat`, repli
   `Interface\ChatFrame\UI-ChatIcon-Chat-Up`, par `Theme.PaintClient`),
-  plaque NAV, filet EDGE (Azeroth : le liseré doré des boutons), ambre au
-  survol, infobulle « Partager dans le chat ». Créé une fois par cadre
+  plaque NAV opaque, filet EDGE (Azeroth : le liseré doré des boutons), au
+  survol filet ambre et voile `HOVER_ALPHA`, infobulle « Partager dans le
+  chat ». Sur les bandeaux Azeroth, le libellé « Partager » à côté de
+  l'icône (rôle `share.label`, `lightSoft` sur la plaque : ≥ 4,5:1), le
+  bouton s'élargit à son texte. Bêta 2 : un bandeau qui porte le bouton
+  reste 3 s de plus (`ns.SHARE_EXTRA`) ; sous la souris (bandeau, bouton) ou
+  tant que son menu est ouvert, il ne part pas, puis garde au moins 3 s
+  (`ns.SHARE_RESUME`). Créé une fois par cadre
   réutilisé (bandeau du carnet, « Capturé ! », scène de capture Azeroth,
   fiche de la Réserve) : la file des bandeaux (`Banners.lua`) ne change pas.
 - Placement (`ns.SHARE_BUTTON`) : Azeroth, en bas à droite du bandeau, sous

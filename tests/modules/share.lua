@@ -389,11 +389,14 @@ do
 	s.ok("mêmes boutons", NS.journalToast.shareButton == buttons[1] and NS.captureResult.shareButton == buttons[2] and buttons[1] ~= nil)
 	-- menu ouvert : le bandeau reste un peu plus, puis la file reprend
 	NS:JournalToastPush(SH.Feat("Encore"))
-	NS:CaptureResultQueue({ name = "Raptor", shiny = true, stars = 3, npcID = 7001, class = "normal" })
 	SH.Step(0)
 	NS.journalToast.shareButton:Click("LeftButton")
-	SH.Step(6)
-	s.ok("menu ouvert : le bandeau tient", NS.journalToast:IsShown())
+	SH.Step(30)
+	s.ok("menu ouvert : le bandeau tient (même 30 s)", NS.journalToast:IsShown())
+	NS.shareMenu:Hide()
+	NS:CaptureResultQueue({ name = "Raptor", shiny = true, stars = 3, npcID = 7001, class = "normal" })
+	local left = NS.journalToastHideAt and NS.journalToastHideAt - NS.Now()
+	s.ok("menu fermé : encore 3 s au moins", NS.journalToast:IsShown() and left and left >= NS.SHARE_RESUME - 0.3, left)
 	local order2 = Play(40)
 	s.ok("puis la file reprend", table.concat(order2, ",") == "journal,result", table.concat(order2, ","))
 	-- ouvrir le menu deux fois : un seul cadre de menu
@@ -647,4 +650,69 @@ do
 	SH.Reset()
 	SH.Restore()
 	s.check("[ANN] lot en une ligne (≤ 255) ; pas de doublon avec le partage manuel ; envoi refusé sans erreur, noté une fois")
+end
+
+-- 12. Retour en jeu (bêta 2) : bouton plus grand, bandeau en pause sous la souris ----------
+do
+	local s = Steps()
+	SH.Reset({ guild = true })
+	-- durée d'un bandeau sans bouton (un tampon), puis avec
+	NS:JournalNotify({ kind = "zone", name = "Clairière", id = "zone:1" })
+	local plain = NS.journalToastHideAt - NS.Now()
+	SH.Step(plain + 0.5)
+	NS:JournalToastPush(SH.Feat("Premier filet"))
+	local j = NS.journalToast
+	local b = j.shareButton
+	s.ok("bouton : 24 px au moins (taille « sm »)", b and b.width >= 24 and b.height >= 24 and b.height >= NS.Theme.BUTTON_SIZES.sm,
+		b and (b.width .. "x" .. b.height))
+	local with = NS.journalToastHideAt - NS.Now()
+	s.ok("bandeau avec bouton : 3 s de plus", math.abs(with - plain - NS.SHARE_EXTRA) < 0.01, plain .. " / " .. with)
+	-- souris sur le bandeau : il ne part pas
+	j.IsMouseOver = function() return true end
+	SH.Step(20)
+	s.ok("survolé 20 s : toujours là", j:IsShown())
+	-- souris partie : au moins 3 s, puis il part
+	j.IsMouseOver = nil
+	SH.Step(0)
+	local left = NS.journalToastHideAt - NS.Now()
+	s.ok("souris partie : au moins 3 s", j:IsShown() and left >= NS.SHARE_RESUME - 0.01, left)
+	-- sur le bouton seul : pareil
+	b.IsMouseOver = function() return true end
+	SH.Step(15)
+	s.ok("survol du bouton : toujours là", j:IsShown())
+	b.IsMouseOver = nil
+	SH.Step(NS.SHARE_RESUME + 0.5)
+	s.ok("puis il part", not j:IsShown())
+	-- « Capturé ! » : même pause, et la file avance ensuite
+	NS:CaptureResultQueue({ name = "Raptor", shiny = true, stars = 3, npcID = 7001, class = "normal" })
+	SH.Step(0)
+	NS:JournalToastPush(SH.Feat("Sur la route"))
+	local r = NS.captureResult
+	s.ok("résultat affiché", r and r:IsShown())
+	r.IsMouseOver = function() return true end
+	SH.Step(30)
+	s.ok("résultat survolé : il reste, le carnet attend", r:IsShown() and not j:IsShown())
+	r.IsMouseOver = nil
+	SH.Step(NS.SHARE_RESUME + 0.5)
+	SH.Step(0.25)
+	s.ok("puis la file avance : le carnet", not r:IsShown() and j:IsShown())
+	-- Azeroth : le libellé « Partager » à côté de l'icône
+	SH.Reset({ guild = true })
+	for _, field in ipairs({ "journalToast", "captureResult" }) do if NS[field] then NS[field]:Hide() end NS[field] = nil end
+	NS.uiStyleCache = {}
+	Mock.InstallAtlas(true)
+	NS:AzerothAtlasOK(true)
+	NS:JournalToastPush(SH.Feat("Premier filet"))
+	local ab = NS.journalToast.shareButton
+	s.ok("Azeroth : « Partager » écrit, bouton élargi", ab and ab.labelled and ab.label:GetText() == "Partager" and ab.width > 24
+		and ab.height >= 24)
+	s.ok("libellé mesuré (rôle share.label ≥ 4,5:1)", NS.AZEROTH_CONTRAST["share.label"]
+		and NS.Theme.Contrast(NS.AZEROTH_INK.lightSoft, NS.AZEROTH_CONTRAST["share.label"][2]) >= 4.5)
+	Mock.InstallAtlas(nil)
+	NS:AzerothAtlasOK(true)
+	for _, field in ipairs({ "journalToast", "captureResult" }) do if NS[field] then NS[field]:Hide() end NS[field] = nil end
+	NS.uiStyleCache = {}
+	SH.Reset()
+	SH.Restore()
+	s.check("[SHARE] bêta 2 : bouton 24 px (Azeroth : « Partager »), +3 s, pause sous la souris puis 3 s, la file avance ensuite")
 end
