@@ -90,6 +90,13 @@ local FR = {
 	SHARE_MORE           = "%s…",
 	SHARE_MSG_SEAL       = "%s a scellé la zone %s !",
 	SHARE_MSG_TITLE      = "%s porte maintenant le titre « %s » !",
+	-- annonce automatique (brillante, 3 étoiles) : un lot de « Tout capturer »
+	SHARE_MSG_BATCH      = "%s a capturé %d spécimens : %s !",
+	SHARE_BATCH_SHINY    = "%s brillant",
+	OPT_ANNOUNCE_GROUP   = "Annoncer au groupe mes brillantes et 3 étoiles",
+	OPT_ANNOUNCE_GROUP_DESC = "Une ligne dans le chat du groupe (ou du raid) quand tu captures une brillante ou un spécimen 3 étoiles. Seul : rien. Jamais en combat (elle part à la fin du combat), au plus une toutes les 30 secondes.",
+	OPT_ANNOUNCE_GUILD   = "Annoncer aussi à la guilde",
+	OPT_ANNOUNCE_GUILD_DESC = "La même ligne dans le chat de ta guilde.",
 }
 local EN = {
 	SHARE_TIP            = "Share in chat",
@@ -133,11 +140,17 @@ local EN = {
 	SHARE_MORE           = "%s…",
 	SHARE_MSG_SEAL       = "%s sealed the zone %s!",
 	SHARE_MSG_TITLE      = "%s now bears the title \"%s\"!",
+	SHARE_MSG_BATCH      = "%s captured %d specimens: %s!",
+	SHARE_BATCH_SHINY    = "shiny %s",
+	OPT_ANNOUNCE_GROUP   = "Announce my shinies and 3-star captures to the group",
+	OPT_ANNOUNCE_GROUP_DESC = "A line in your party (or raid) chat when you capture a shiny or a 3-star specimen. Solo: nothing. Never in combat (it goes out when combat ends), at most one every 30 seconds.",
+	OPT_ANNOUNCE_GUILD   = "Also announce to the guild",
+	OPT_ANNOUNCE_GUILD_DESC = "The same line in your guild chat.",
 }
 ns.RegisterStrings(FR, EN)
 if ns.KEEP_STRINGS then ns.SHARE_STRINGS = { fr = FR, en = EN } end
 
-ns.RegisterDefaults({ shareBanner = true })
+ns.RegisterDefaults({ shareBanner = true, announceGroup = true, announceGuild = false })
 
 -- 3.1.0 : le menu en Azeroth, sur l'aplat du bois sombre (survol compris) :
 -- rôles mesurés (tests/modules/azeroth_style.lua recalcule chaque ratio)
@@ -311,7 +324,7 @@ function ns:ShareItemFromSpecimen(spec)
 	local entry = self.CaptureData and self:CaptureData().creatures[spec.npc]
 	local name = self.CreatureName and self:CreatureName(spec.npc, { name = spec.name }) or spec.name
 	return { kind = "capture", name = name, shiny = spec.shiny and true or false, stars = spec.stars, size = spec.size,
-		class = type(entry) == "table" and entry.class or nil, key = "spec:" .. tostring(spec.id) }
+		class = type(entry) == "table" and entry.class or nil, key = "cap:" .. tostring(spec.id) }
 end
 
 function ns:ShareItemFromFeat(def)
@@ -800,6 +813,202 @@ do
 			end
 			return result
 		end
+	end
+end
+
+-- ---------------------------------------------------------------------------
+-- Annonce automatique (3.1.0) : brillante ou spécimen 3 étoiles, dans le chat
+-- du groupe (comme le message de groupe de Questie)
+-- ---------------------------------------------------------------------------
+-- Réglages « Annoncer au groupe mes brillantes et 3 étoiles » (actif) et
+-- « Annoncer aussi à la guilde » (coupé). Groupe : INSTANCE_CHAT, RAID ou
+-- PARTY ; seul : rien. Jamais Dire, Crier ni un canal public. Ces canaux ne
+-- demandent pas d'événement matériel, mais Forever restreint les addons en
+-- combat : rien ne part en combat, l'annonce attend PLAYER_REGEN_ENABLED (et
+-- les prises du combat partent ensemble, une ligne). Envoi protégé (pcall) ;
+-- refusé (ADDON_ACTION_BLOCKED) ou en erreur : abandonné sans un mot, noté
+-- une fois au journal des erreurs. Au plus une annonce par canal toutes les
+-- 30 s ; un spécimen déjà partagé à la main dans ce canal depuis moins d'une
+-- minute n'est pas annoncé (et l'inverse : ns.shareLog.sent).
+ns.ANNOUNCE_GAP = 30          -- s entre deux annonces automatiques d'un même canal
+ns.announceQueue = ns.announceQueue or {}
+ns.announceLog = ns.announceLog or {}
+
+local function Notable(stars, shiny)
+	return shiny == true or (tonumber(stars) or 0) >= (ns.CAPTURE_STAR_MAX or 3)
+end
+
+-- Une erreur d'annonce, notée une fois, sans rien dire dans le chat
+local function QuietError(self, where, message)
+	if self.announceErrorNoted then return end
+	self.announceErrorNoted = true
+	local errors = self.errors
+	if type(errors) ~= "table" then return end
+	if #errors >= (ns.ERRORS_MAX or 50) then self.errorsDropped = (self.errorsDropped or 0) + 1; return end
+	errors[#errors + 1] = { where = where, message = tostring(message) }
+end
+
+function ns:AnnounceInCombat()
+	return Call("InCombatLockdown") and true or (Call("UnitAffectingCombat", "player") and true or false)
+end
+
+-- Canaux de l'annonce, maintenant (jamais SAY, YELL ni un canal public)
+function ns:AnnounceChannels()
+	local db, list = self:DB(), {}
+	if db.announceGroup ~= false then
+		local home, instance = G("LE_PARTY_CATEGORY_HOME") or 1, G("LE_PARTY_CATEGORY_INSTANCE") or 2
+		if Call("IsInGroup", instance) then list[#list + 1] = "INSTANCE_CHAT"
+		elseif Call("IsInRaid") then list[#list + 1] = "RAID"
+		elseif Call("IsInGroup", home) then list[#list + 1] = "PARTY" end
+	end
+	if db.announceGuild == true and Call("IsInGuild") then list[#list + 1] = "GUILD" end
+	return list
+end
+
+-- Libellé court d'une prise dans un lot : « Raptor brillant », « Loup (3 étoiles) »
+local function BatchLabel(lang, item)
+	local label = ns.ShareClean(item.name)
+	if item.shiny then label = Fmt(lang, "SHARE_BATCH_SHINY", label) end
+	if (tonumber(item.stars) or 0) >= (ns.CAPTURE_STAR_MAX or 3) then
+		label = Fmt(lang, "SHARE_DETAILS", label, Plural(lang, "SHARE_STARS", item.stars))
+	end
+	return label
+end
+
+-- La ligne d'une annonce : une prise, le texte du partage ; plusieurs, une
+-- liste tant qu'elle tient (255), puis « … »
+function ns:AnnounceText(items, lang)
+	if type(items) ~= "table" or #items == 0 then return nil end
+	if #items == 1 then return self:ShareText(items[1], lang) end
+	local who = ns.ShareClean(items.who or Player() or S(lang, "SHARE_SOMEONE"))
+	local prefix = ns.SHARE_PREFIX .. " "
+	local room = ns.SHARE_MAX - #prefix
+	local list, best = {}, nil
+	for index, item in ipairs(items) do
+		list[index] = BatchLabel(lang, item)
+		local joined = table.concat(list, S(lang, "SHARE_SEP"))
+		if index < #items then joined = Fmt(lang, "SHARE_MORE", joined) end
+		local line = Fmt(lang, "SHARE_MSG_BATCH", who, #items, joined)
+		if #line > room and best then break end
+		best = line
+	end
+	return ns.ShareCut(ns.ShareClean(prefix .. best), ns.SHARE_MAX)
+end
+
+local function Send(self, text, channel)
+	local send = G("SendChatMessage")
+	local info = G("C_ChatInfo")
+	if type(send) ~= "function" and type(info) == "table" then send = info.SendChatMessage end
+	if type(send) ~= "function" then return false end
+	local ok, err = pcall(send, text, channel)
+	if not ok then QuietError(self, "share:announce", err); return false end
+	return true
+end
+
+-- Annonce maintenant (hors combat) ; rend le nombre de lignes envoyées
+function ns:AnnounceFlush()
+	local queue = self.announceQueue
+	if #queue == 0 or self:AnnounceInCombat() then return 0 end
+	self.announceQueue = {}
+	local log, now, sent = self.shareLog, Now(), 0
+	for _, channel in ipairs(self:AnnounceChannels()) do
+		local last = self.announceLog[channel]
+		if not (last and now - last < ns.ANNOUNCE_GAP) then
+			-- les prises déjà partagées à la main dans ce canal (moins d'une minute) restent dehors
+			local items = {}
+			for _, item in ipairs(queue) do
+				local at = item.key and log.sent[item.key .. "|" .. channel]
+				if not (at and now - at < ns.SHARE_REPEAT) then items[#items + 1] = item end
+			end
+			local text = #items > 0 and self:AnnounceText(items)
+			if text and Send(self, text, channel) then
+				sent = sent + 1
+				self.announceLog[channel] = now
+				for _, item in ipairs(items) do
+					if item.key then log.sent[item.key .. "|" .. channel] = now end
+				end
+			end
+		end
+	end
+	return sent
+end
+
+-- Une prise (ou un lot) à annoncer : en combat, elle attend la fin
+function ns:AnnounceCaptures(items)
+	if type(items) ~= "table" or #items == 0 then return false end
+	local db = self:DB()
+	if db.announceGroup == false and db.announceGuild ~= true then return false end
+	for _, item in ipairs(items) do self.announceQueue[#self.announceQueue + 1] = item end
+	return self:AnnounceFlush() > 0
+end
+
+local function CaptureItem(self, result)
+	if not (type(result) == "table" and Notable(result.stars, result.shiny)) then return nil end
+	local item = self:ShareItemFromResult(result)
+	return item
+end
+
+-- Lancer seul : le verdict (AzerothStyle.lua a posé rolling.shareResult)
+do
+	local base = ns.CaptureResolve
+	if base then
+		function ns:CaptureResolve(rolling, ...)
+			local result = base(self, rolling, ...)
+			if rolling and rolling.success and not rolling.batch and not self.captureBatchResolving then
+				local ok, err = pcall(function()
+					local item = CaptureItem(self, rolling.shareResult)
+					if item then self:AnnounceCaptures({ item }) end
+				end)
+				if not ok then QuietError(self, "share:announce", err) end
+			end
+			return result
+		end
+	end
+end
+
+-- Tout capturer : les brillantes et 3 étoiles du lot, en une ligne
+do
+	local base = ns.CaptureBatchFlush
+	if base then
+		function ns:CaptureBatchFlush(batch, ...)
+			local fresh = batch and not batch.flushed
+			local result = base(self, batch, ...)
+			if fresh then
+				local ok, err = pcall(function()
+					local items = {}
+					for _, res in ipairs(batch.results or {}) do
+						local target = res.target or {}
+						if res.success then
+							local item = CaptureItem(self, { name = target.name, shiny = target.shiny and true or false,
+								stars = res.stars, npcID = target.npcID, class = target.class, fresh = res.fresh,
+								specimen = res.specimen })
+							if item then items[#items + 1] = item end
+						end
+					end
+					self:AnnounceCaptures(items)
+				end)
+				if not ok then QuietError(self, "share:announce", err) end
+			end
+			return result
+		end
+	end
+end
+
+-- Fin du combat : la file part ; un envoi refusé par le client : noté une fois
+do
+	local ok, events = pcall(CreateFrame, "Frame")
+	if ok and events then
+		pcall(events.RegisterEvent, events, "PLAYER_REGEN_ENABLED")
+		pcall(events.RegisterEvent, events, "ADDON_ACTION_BLOCKED")
+		events:SetScript("OnEvent", function(_, event, addon, fn)
+			if event == "PLAYER_REGEN_ENABLED" then
+				local done, err = pcall(ns.AnnounceFlush, ns)
+				if not done then QuietError(ns, "share:announce", err) end
+			elseif event == "ADDON_ACTION_BLOCKED" and addon == ADDON then
+				QuietError(ns, "share:blocked", tostring(fn))
+			end
+		end)
+		ns.announceEvents = events
 	end
 end
 

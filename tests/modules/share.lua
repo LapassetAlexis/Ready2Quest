@@ -12,7 +12,7 @@ local Theme = NS.Theme
 
 local SH = { saved = {}, sends = {}, opened = {}, inserted = {} }
 local GLOBALS = { "SendChatMessage", "IsInGuild", "IsInRaid", "IsInGroup", "IsInInstance", "ChatFrame_OpenChat",
-	"ChatEdit_GetActiveWindow", "ChatEdit_InsertLink", "C_ChatInfo", "ChatFrameUtil" }
+	"ChatEdit_GetActiveWindow", "ChatEdit_InsertLink", "C_ChatInfo", "ChatFrameUtil", "InCombatLockdown", "UnitAffectingCombat" }
 for _, name in ipairs(GLOBALS) do SH.saved[name] = rawget(_G, name) end
 SH.rollSize = NS.SpecimenRollSize
 
@@ -42,6 +42,8 @@ function SH.World(opts)
 	_G.ChatFrame_OpenChat = function(text) SH.opened[#SH.opened + 1] = text end
 	_G.ChatEdit_GetActiveWindow = function() return opts.box and {} or nil end
 	_G.ChatEdit_InsertLink = function(text) SH.inserted[#SH.inserted + 1] = text; return true end
+	_G.InCombatLockdown = function() return SH.combat == true end
+	_G.UnitAffectingCombat = function() return SH.combat == true end
 end
 
 function SH.Reset(opts)
@@ -56,6 +58,8 @@ function SH.Reset(opts)
 	NS.bannerLane.showing, NS.bannerLane.frame, NS.bannerLane.waiting = nil, nil, {}
 	if NS.shareMenu then NS.shareMenu:Hide() end
 	NS.shareLog = { last = nil, sent = {} }
+	NS.announceQueue, NS.announceLog, NS.announceErrorNoted = {}, {}, nil
+	SH.combat = false
 	Mock:Reset()
 end
 
@@ -294,7 +298,7 @@ do
 	local f = NS:OpenReserve()
 	NS:ReservePick(res)
 	local p = f.res.reserve.preview
-	s.ok("Réserve : bouton de la fiche", Shown(p.shareButton) and p.shareButton.item and p.shareButton.item.key == "spec:" .. tostring(res))
+	s.ok("Réserve : bouton de la fiche", Shown(p.shareButton) and p.shareButton.item and p.shareButton.item.key == "cap:" .. tostring(res))
 	p.shareButton:Click("LeftButton")
 	s.ok("Réserve : menu, puis envoi au clic", NS.shareMenu:IsShown() and SH.Pick("GUILD") and #SH.sends == 1
 		and SH.sends[1].text == "[Quest Companion] Testeur a capturé un Raptor (2 étoiles, Grand, élite) !", SH.sends[1] and SH.sends[1].text)
@@ -514,4 +518,133 @@ do
 	SH.Reset()
 	SH.Restore()
 	s.check("[SHARE] capture réelle : le résultat porte rang, espèce nouvelle et spécimen ; bouton au bandeau, rien d'envoyé")
+end
+
+-- 10. Annonce automatique au groupe : brillante et 3 étoiles ---------------------------------
+do
+	local s = Steps()
+	local npc = 7500
+	local function Capture(stars, shiny, name)
+		npc = npc + 1
+		NS.captureStage = nil
+		NS:CaptureResolve({ success = true, stars = stars, target = { npcID = npc, name = name or "Raptor", class = "normal",
+			shiny = shiny, zoneID = 1413 } })
+	end
+	NS.SpecimenRollSize = function() return "large" end
+	-- en groupe : une brillante, puis un 3 étoiles (30 s plus tard), une ligne chacun
+	SH.Reset({ party = true })
+	NS.SpecimenRollSize = function() return "large" end
+	Capture(1, true)
+	s.ok("brillante en groupe : une ligne PARTY, le texte du partage", #SH.sends == 1 and SH.sends[1].channel == "PARTY"
+		and SH.sends[1].text == "[Quest Companion] Testeur a capturé un Raptor brillant (1 étoile, Grand, nouvelle espèce) !",
+		SH.sends[1] and SH.sends[1].text)
+	SH.Step(31)
+	Capture(3, false, "Loup")
+	s.ok("3 étoiles : une ligne", #SH.sends == 2 and SH.sends[2].text:find("Loup (3 étoiles", 1, true) ~= nil, SH.sends[2] and SH.sends[2].text)
+	SH.Step(31)
+	Capture(2, false, "Lapin")
+	Capture(1, false, "Crabe")
+	s.ok("1 ou 2 étoiles, pas brillant : rien", #SH.sends == 2)
+	-- raid, groupe d'instance
+	SH.Reset({ raid = true })
+	Capture(3, false)
+	s.ok("raid : RAID", #SH.sends == 1 and SH.sends[1].channel == "RAID")
+	SH.Reset({ instance = true, party = true })
+	Capture(3, false)
+	s.ok("groupe d'instance : INSTANCE_CHAT", #SH.sends == 1 and SH.sends[1].channel == "INSTANCE_CHAT")
+	-- seul : rien ; jamais SAY
+	SH.Reset({ guild = true })
+	Capture(1, true)
+	s.ok("seul, guilde sans le second réglage : rien", #SH.sends == 0)
+	-- réglages
+	SH.Reset({ party = true })
+	NS:DB().announceGroup = false
+	Capture(1, true)
+	s.ok("réglage coupé : rien", #SH.sends == 0)
+	SH.Reset({ guild = true })
+	NS:DB().announceGuild = true
+	Capture(1, true)
+	s.ok("second réglage : la guilde", #SH.sends == 1 and SH.sends[1].channel == "GUILD")
+	SH.Reset({ guild = true, party = true })
+	NS:DB().announceGuild = true
+	Capture(3, false)
+	s.ok("groupe et guilde : deux lignes", #SH.sends == 2 and SH.sends[1].channel == "PARTY" and SH.sends[2].channel == "GUILD")
+	SH.Reset()
+	s.ok("défauts : groupe actif, guilde coupée", NS:DB().announceGroup == true and NS:DB().announceGuild == false)
+	-- combat : en file, envoyé à la fin, les prises du combat en une ligne
+	SH.Reset({ party = true })
+	SH.combat = true
+	Capture(1, true, "Raptor")
+	Capture(3, false, "Loup")
+	s.ok("en combat : rien, en file", #SH.sends == 0 and #NS.announceQueue == 2)
+	SH.combat = false
+	Mock:Fire("PLAYER_REGEN_ENABLED")
+	s.ok("fin du combat : une ligne pour les deux", #SH.sends == 1
+		and SH.sends[1].text == "[Quest Companion] Testeur a capturé 2 spécimens : Raptor brillant, Loup (3 étoiles) !",
+		SH.sends[1] and SH.sends[1].text)
+	-- limite : une annonce par canal toutes les 30 s
+	SH.Reset({ party = true })
+	Capture(1, true)
+	SH.Step(5)
+	Capture(1, true)
+	s.ok("moins de 30 s : pas de seconde ligne", #SH.sends == 1)
+	SH.Step(31)
+	Capture(1, true)
+	s.ok("30 s après : de nouveau", #SH.sends == 2)
+	SH.Reset()
+	SH.Restore()
+	s.check("[ANN] annonce auto : brillante et 3 étoiles une fois au groupe (PARTY / RAID / INSTANCE_CHAT), rien seul ni pour 1-2 étoiles ; réglages ; combat ; 30 s")
+end
+
+-- 11. Lot de « Tout capturer », doublons avec le partage, envoi refusé -----------------------
+do
+	local s = Steps()
+	SH.Reset({ party = true })
+	local batch = { messages = {}, tried = 4, results = {
+		{ success = true, stars = 3, target = { name = "Loup", npcID = 7601, class = "normal" } },
+		{ success = true, stars = 1, target = { name = "Raptor", npcID = 7602, class = "normal", shiny = true } },
+		{ success = true, stars = 1, target = { name = "Lapin", npcID = 7603, class = "normal" } },
+		{ success = false, stars = 3, target = { name = "Ours", npcID = 7604, class = "normal" } },
+	} }
+	NS:CaptureBatchFlush(batch)
+	s.ok("lot : une seule ligne, les deux prises notables", #SH.sends == 1
+		and SH.sends[1].text == "[Quest Companion] Testeur a capturé 2 spécimens : Loup (3 étoiles), Raptor brillant !", SH.sends[1] and SH.sends[1].text)
+	NS:CaptureBatchFlush(batch)
+	s.ok("lot déjà annoncé : rien de plus", #SH.sends == 1)
+	local en = NS:AnnounceText({ { name = "Raptor", shiny = true, stars = 1 }, { name = "Wolf", stars = 3 }, who = "Dyokrion" }, "en")
+	s.ok("anglais", en == "[Quest Companion] Dyokrion captured 2 specimens: shiny Raptor, Wolf (3 stars)!", en)
+	local long = { who = "Dyokrion" }
+	for i = 1, 30 do long[i] = { name = "Créature au long nom " .. i, shiny = true, stars = 3 } end
+	local text = NS:AnnounceText(long, "fr")
+	s.ok("long lot : ≤ 255, coupé par « … »", #text <= 255 and text:find("… !$") ~= nil and not text:find("|", 1, true), #text .. " " .. text)
+	-- doublons : partagé à la main, pas d'annonce ; annoncé, le partage manuel le dit
+	SH.Reset({ party = true })
+	local item = { kind = "capture", name = "Raptor", shiny = true, stars = 1, key = "cap:4242" }
+	NS:ShareOpen(nil, item); SH.Pick("PARTY")
+	SH.Step(1)
+	NS:AnnounceCaptures({ item })
+	s.ok("partagé à la main il y a 1 s : pas d'annonce", #SH.sends == 1)
+	SH.Reset({ party = true })
+	NS:AnnounceCaptures({ item })
+	SH.Step(11)
+	Mock:Reset()
+	NS:ShareOpen(nil, item); SH.Pick("PARTY")
+	s.ok("annoncé : le partage manuel au même canal est retenu", #SH.sends == 1
+		and Mock:Output():find("Déjà partagé dans ce canal", 1, true) ~= nil)
+	-- envoi refusé : aucune erreur, noté une fois sans un mot
+	SH.Reset({ party = true })
+	_G.SendChatMessage = function() error("Interface action failed because of an AddOn") end
+	NS.errors = {}
+	Mock:Reset()
+	local ok1 = pcall(NS.AnnounceCaptures, NS, { { kind = "capture", name = "A", shiny = true, key = "cap:1" } })
+	SH.Step(31)
+	local ok2 = pcall(NS.AnnounceCaptures, NS, { { kind = "capture", name = "B", shiny = true, key = "cap:2" } })
+	local ok3 = pcall(Mock.Fire, Mock, "ADDON_ACTION_BLOCKED", "QuestCompanion", "SendChatMessage")
+	local noted = 0
+	for _, e in ipairs(NS.errors) do if tostring(e.where):find("^share:") then noted = noted + 1 end end
+	s.ok("refusé : pas d'erreur Lua", ok1 and ok2 and ok3)
+	s.ok("noté une fois, rien dans le chat", noted == 1 and Mock:Output() == "", noted .. " / " .. Mock:Output())
+	SH.Reset()
+	SH.Restore()
+	s.check("[ANN] lot en une ligne (≤ 255) ; pas de doublon avec le partage manuel ; envoi refusé sans erreur, noté une fois")
 end

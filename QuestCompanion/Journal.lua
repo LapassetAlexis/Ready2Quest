@@ -141,6 +141,10 @@ if ns.AddOptionPage then
 			-- 3.1.0 : le bouton Partager des bandeaux (Share.lua : chaînes et défaut)
 			{ key = "shareBanner",  label = "OPT_SHARE_BANNER", kind = "bool",
 				describe = function() return ns.L.OPT_SHARE_BANNER_DESC end },
+			{ key = "announceGroup", label = "OPT_ANNOUNCE_GROUP", kind = "bool",
+				describe = function() return ns.L.OPT_ANNOUNCE_GROUP_DESC end },
+			{ key = "announceGuild", label = "OPT_ANNOUNCE_GUILD", kind = "bool",
+				describe = function() return ns.L.OPT_ANNOUNCE_GUILD_DESC end },
 			{ key = "featStats",    label = "OPT_FEAT_STATS", kind = "bool" },
 			-- suivi à l'écran (JournalTracker.lua : chaînes, défauts, action)
 			{ key = "journalTracker",       label = "OPT_JRN_TRACKER",        kind = "bool" },

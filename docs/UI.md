@@ -481,6 +481,11 @@ l'habillage) ; pas d'`OnUpdate`.
 - Envoi : `SendChatMessage` seulement depuis le clic d'une entrée ; « Copier »
   (`ChatEdit_InsertLink` si la saisie est ouverte, sinon
   `ChatFrame_OpenChat`, repli `ChatFrameUtil.OpenChat`) n'envoie rien.
+- Annonce automatique (`ns:AnnounceCaptures`) : brillante ou 3 étoiles, une
+  ligne au groupe (INSTANCE_CHAT, RAID ou PARTY ; guilde avec le second
+  réglage), jamais en combat (file vidée à PLAYER_REGEN_ENABLED), une par
+  canal toutes les 30 s, un lot en une ligne, pas de doublon avec le partage
+  manuel ; envoi refusé : noté une fois, sans message.
 
 ## Style Azeroth (QuestCompanion)
 
