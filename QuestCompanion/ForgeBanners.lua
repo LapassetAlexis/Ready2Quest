@@ -35,7 +35,7 @@ ns.FORGE_BANNER = {
 	medal = 64, out = 14, gap = 8, pad = 12, right = 12,
 	content = 46, icon = 30, well = 3,
 	badge = { h = 16, pad = 6, over = 7 },
-	bloom = 2.3, bloomAlpha = 0.85, halo = 0.35,
+	bloom = 2.3, bloomAlpha = 0.9, halo = 0.6,
 	shine = { w = 120, h = 6, time = 1.1, delay = 0.3, alpha = 0.9 },
 	hatch = { from = 0.9, time = 0.22 },
 	lineGap = 2,
@@ -311,7 +311,10 @@ function ns:ForgeBannerShown(frame, opts)
 		shine:SetVertexColor(c[1], c[2], c[3], 1)
 	end
 	if opts.play then
-		for _, group in ipairs({ frame.forgeHatch, medal and medal.bloomFlash, frame.forgeShineAnim }) do
+		-- (une pièce peut manquer : client sans Scale, par exemple)
+		local groups = { frame.forgeHatch or false, medal and medal.bloomFlash or false, frame.forgeShineAnim or false }
+		for index = 1, #groups do
+			local group = groups[index]
 			if group then group:Stop(); group:Play() end
 		end
 		frame.forgePlays = (frame.forgePlays or 0) + 1

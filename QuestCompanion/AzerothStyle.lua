@@ -666,6 +666,11 @@ function ns:ApplyUIStyle()
 					local fresh = ensure and ensure(self)
 					if fresh then
 						CopyTexts(frame, fresh)
+						-- 3.1.0 : un bandeau du carnet né forgé : son médaillon et ses lignes
+						if fresh.forgeBanner and key == "journalToast" and ns.JournalToastDecor then
+							fresh.entry = frame.entry
+							pcall(ns.JournalToastDecor, fresh, frame.entry)
+						end
 						fresh:Show()
 						self:StyleShown(fresh, { shield = key == "journalToast" and "gold" or nil })
 					end
