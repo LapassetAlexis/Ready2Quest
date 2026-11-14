@@ -171,7 +171,17 @@ do
 	local b = f and f.shareButton
 	s.ok("Partager : plaque forgée, « Partager » écrit, en bas à droite", b and b:IsShown() and b.forge and b.labelled
 		and b.label.text == NS.L.SHARE_LABEL and b.lastPoint.point == "BOTTOMRIGHT")
-	s.ok("la ligne des étoiles s'écarte du bouton", f and f.stars:GetWidth() < f.shareWidths.stars)
+	-- le bouton a sa rangée sous les lignes : aucune ligne ne perd de largeur
+	local function Bottom(fs)
+		local h = math.ceil(Theme.TextHeight(fs, fs:GetWidth(), fs.forgeFont))
+		if fs.forgeMaxLines then h = math.min(h, math.ceil(Theme.TextHeight(fs, 100000, fs.forgeFont)) * fs.forgeMaxLines) end
+		return -fs.lastPoint.y + h
+	end
+	s.ok("Partager sur sa rangée : les lignes gardent toute leur largeur", f and f.stars:GetWidth() == f.shareWidths.stars
+		and f.text:GetWidth() == f.shareWidths.text and f.title:GetWidth() == f.shareWidths.title)
+	s.ok("Partager sous la dernière ligne (le bandeau grandit de la rangée)", f and b
+		and Bottom(f.stars) + NS.FORGE_BANNER.buttonGap <= f:GetHeight() - NS.SHARE_BUTTON.forge.y - b:GetHeight() + 0.5
+		and f:GetHeight() > NS.FORGE_RESULT.h, f and (Bottom(f.stars) .. " / " .. f:GetHeight()))
 	s.ok("aucun habillage du client (atlas)", f and not ClientChrome(f, {}))
 	-- texte à droite du médaillon : rien ne le chevauche
 	local textLeft = f and f.title.lastPoint.x or 0
@@ -207,6 +217,17 @@ do
 	if NS.BannerDone then NS:BannerDone("journal") end
 	NS:JournalToastPush({ kind = "feat", id = "day_rare_50", title = NS.L.FEAT_TOAST_TITLE, name = "Le traqueur", points = 25,
 		icon = "Interface\\Icons\\Ability_Hunter_BeastTaming", sub = NS:F("FEAT_TOAST_NEW_TITLE", "Traqueuse") })
+	-- chaque titre (deux formes) : la sous-ligne tient en deux lignes, sans « ... »
+	local worst, worstText = 0, ""
+	for code in pairs(NS.FEAT_TITLES) do
+		for _, gender in ipairs({ "m", "f" }) do
+			local sub = NS:F("FEAT_TOAST_NEW_TITLE", NS:FeatTitleText(code, nil, gender) or "")
+			local lines = Theme.TextWidth(j, sub, j.stars.forgeFont) / j.stars:GetWidth()
+			if lines > worst then worst, worstText = lines, sub end
+		end
+	end
+	s.ok("le plus long « Nouveau titre : … » tient en deux lignes (jamais coupé)", j.stars.forgeMaxLines == 2
+		and j.stars.wordWrap == true and worst <= 2, string.format("%.2f %s", worst, worstText))
 	s.ok("sous-ligne « Nouveau titre », bandeau plus haut", j.stars:IsShown() and j.stars.text == NS:F("FEAT_TOAST_NEW_TITLE", "Traqueuse")
 		and j:GetHeight() > plainH, tostring(j:GetHeight()) .. " / " .. tostring(plainH))
 	-- grand effet forgé (sans atlas : éclat ART.dot et filets lumineux en miroir)

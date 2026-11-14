@@ -15,6 +15,11 @@ local NS = T.QNS
 local Theme = NS.Theme
 
 local SH = { saved = {}, sends = {}, opened = {}, inserted = {} }
+-- même couleur, les trois composantes
+local function Same(a, b)
+	return type(a) == "table" and type(b) == "table" and math.abs(a[1] - b[1]) < 1e-6
+		and math.abs(a[2] - b[2]) < 1e-6 and math.abs(a[3] - b[3]) < 1e-6
+end
 local GLOBALS = { "SendChatMessage", "IsInGuild", "IsInRaid", "IsInGroup", "IsInInstance", "ChatFrame_OpenChat",
 	"ChatEdit_GetActiveWindow", "ChatEdit_InsertLink", "C_ChatInfo", "ChatFrameUtil", "InCombatLockdown", "UnitAffectingCombat" }
 for _, name in ipairs(GLOBALS) do SH.saved[name] = rawget(_G, name) end
@@ -467,6 +472,9 @@ do
 	local j = NS.journalToast
 	local b = j and j.shareButton
 	s.ok("Azeroth : bandeau doré et bouton", j and j.azeroth and Shown(b))
+	-- (le thème du socle suit le choix, donc forgé : le bois garde l'aplat et le filet d'or)
+	s.ok("Azeroth : bouton à l'aplat de l'ancien habillage, jamais la petite plaque forgée", b and NS.QCForged()
+		and not b.forge and not (b.plate and b.plate.parts), b and (tostring(NS.QCForged()) .. "/" .. tostring(b.forge)))
 	local point = b and b.lastPoint
 	s.ok("Azeroth : sous le bouclier, dans le bandeau", point and point.point == "BOTTOMRIGHT" and point.relTo == j.banner,
 		point and point.point)
@@ -504,10 +512,11 @@ do
 		and fb.forge and fb.plate and fb.plate.parts and fb.lastPoint.point == "BOTTOMRIGHT")
 	s.ok("forgé : « Partager » écrit, bouton élargi", fb and fb.labelled and fb.label:GetText() == NS.L.SHARE_LABEL
 		and fb.width > NS.SHARE_BUTTON.size)
-	s.ok("forgé : le nom s'écarte du bouton", fj and fj.text:GetWidth() < fj.shareWidths.text)
+	s.ok("forgé : le bouton a sa rangée, le nom et la sous-ligne gardent leur largeur", fj and fj.text:GetWidth() == fj.shareWidths.text
+		and fj.stars:GetWidth() == fj.shareWidths.stars and fj.forgeBottomReserve == fb:GetHeight() + NS.SHARE_BUTTON.forge.y)
 	fb:Click("LeftButton")
 	s.ok("forgé : menu habillé par le socle, titre en couleur d'identité", NS.shareMenu.skinDressed == true
-		and NS.shareMenu.azeroth == false and NS.shareMenu.title.textColor[3] == Theme.IDENTITY_LIGHT[3])
+		and NS.shareMenu.azeroth == false and Same(NS.shareMenu.title.textColor, Theme.IDENTITY_LIGHT))
 	NS.shareMenu:Hide()
 	-- Sobre (choix du joueur) : à droite, avant les points, les textes s'écartent
 	SH.Reset({ guild = true })
@@ -523,7 +532,7 @@ do
 	s.ok("Sobre : le nom s'écarte du bouton", sj and sj.text:GetWidth() < sj.shareWidths.text)
 	sj.shareButton:Click("LeftButton")
 	s.ok("Sobre : menu sans habillage forgé, titre MUTED_LIGHT", NS.shareMenu.skinDressed == false
-		and NS.shareMenu.title.textColor[1] == Theme.MUTED_LIGHT[1])
+		and Same(NS.shareMenu.title.textColor, Theme.MUTED_LIGHT))
 	NS.shareMenu:Hide()
 	if NS.journalToast then NS.journalToast:Hide() end
 	NS.journalToast, NS.uiStyleCache = nil, {}

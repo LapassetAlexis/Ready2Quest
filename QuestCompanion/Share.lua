@@ -678,7 +678,9 @@ function ns:ShareButton(parent, where)
 	button.label:Hide()
 	-- 3.1.0 : sous le thème forgé, une petite plaque forgée (décidé à la
 	-- création) ; la plaque opaque et le filet du Sobre sont cachés
-	if ns.QCForged and ns.QCForged() and Theme.ForgeSmallPlate then
+	-- (jamais sur un cadre de l'ancien habillage : son bois garde l'aplat)
+	if ns.QCForged and ns.QCForged() and not parent.azeroth and parent.uiStyle ~= "azeroth"
+		and Theme.ForgeSmallPlate then
 		button.plate:Hide()
 		button.border = button.edge
 		Theme.ForgeSmallPlate(button)
@@ -736,15 +738,19 @@ local function Place(self, frame, button, on)
 		button:SetPoint("BOTTOMRIGHT", frame.banner or frame, "BOTTOMRIGHT", B.azeroth.x, B.azeroth.y)
 		return
 	end
-	-- 3.1.0 : bandeau forgé : en bas à droite, libellé écrit ; les textes
-	-- s'écartent de la largeur du bouton (les points sont au médaillon)
+	-- 3.1.0 : bandeau forgé : en bas à droite, libellé écrit, sur sa propre
+	-- rangée sous les lignes (comme la maquette) : aucune ligne ne perd de
+	-- largeur (le nom et « Nouveau titre : … » restent entiers) ; le bandeau
+	-- grandit de la rangée (ns:ForgeBannerStack)
 	if frame.forgeBanner then
 		button:SetPoint("BOTTOMRIGHT", frame, "BOTTOMRIGHT", B.forge.x, B.forge.y)
-		local reserve = on and ((tonumber(button:GetWidth()) or B.size) + B.sobreGap) or 0
 		for key, width in pairs(frame.shareWidths or {}) do
 			local fs = frame[key]
-			if fs and fs.SetWidth and tonumber(width) then fs:SetWidth(math.max(40, width - reserve)) end
+			if fs and fs.SetWidth and tonumber(width) then fs:SetWidth(width) end
 		end
+		frame.forgeBottomReserve = on and ((tonumber(button:GetHeight()) or B.size) + B.forge.y) or 0
+		local stack = frame.forgeStack
+		if stack and self.ForgeBannerStack then self:ForgeBannerStack(frame, stack.keys, stack.minH) end
 		return
 	end
 	-- Sobre : à droite, centré, avant les points d'un haut fait ; les textes s'écartent

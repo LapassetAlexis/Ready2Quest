@@ -46,6 +46,9 @@ ns.FORGE_BANNER = {
 	shine = { w = 120, h = 6, time = 1.1, delay = 0.3, alpha = 0.9 },
 	hatch = { from = 0.9, time = 0.22 },
 	lineGap = 2,
+	-- la rangée du bouton Partager, sous les lignes (comme la maquette) :
+	-- écart entre la dernière ligne et le haut du bouton
+	buttonGap = 4,
 }
 local K = ns.FORGE_BANNER
 
@@ -273,10 +276,14 @@ end
 
 -- Empile les lignes de texte du bandeau (champs `keys` de frame, cachées si
 -- vides) de haut en bas, centrées dans la hauteur ; la hauteur du bandeau
--- suit (au moins `minH`). La largeur de chaque ligne ne change pas (elle
--- est réservée à la construction, le bouton Partager la réduit).
+-- suit (au moins `minH`). La largeur de chaque ligne ne change pas. Le
+-- bouton Partager a sa propre rangée, en bas à droite, sous les lignes
+-- (frame.forgeBottomReserve, posé par Share.lua) : il ne prend la largeur
+-- d'aucune ligne. Les clés et la hauteur minimale sont retenues
+-- (frame.forgeStack) pour réempiler quand le bouton paraît ou s'en va.
 function ns:ForgeBannerStack(frame, keys, minH)
 	if not (frame and frame.forgeBanner) then return nil end
+	frame.forgeStack = { keys = keys, minH = minH }
 	local textLeft = ns.ForgeBannerTextLeft(frame)
 	local heights, total = {}, 0
 	for index, key in ipairs(keys) do
@@ -298,8 +305,16 @@ function ns:ForgeBannerStack(frame, keys, minH)
 			fs:Hide()
 		end
 	end
-	local height = math.max(tonumber(minH) or 0, total + 2 * K.pad)
-	local y = math.floor((height - total) / 2 + 0.5)
+	local reserve = tonumber(frame.forgeBottomReserve) or 0
+	local height, y
+	if reserve > 0 then
+		-- les lignes au-dessus de la rangée du bouton
+		height = math.max(tonumber(minH) or 0, K.pad + total + K.buttonGap + reserve)
+		y = math.max(K.pad, math.floor((height - reserve - K.buttonGap - total) / 2 + 0.5))
+	else
+		height = math.max(tonumber(minH) or 0, total + 2 * K.pad)
+		y = math.floor((height - total) / 2 + 0.5)
+	end
 	for index, key in ipairs(keys) do
 		local fs = frame[key]
 		if fs and heights[index] then
@@ -312,13 +327,21 @@ function ns:ForgeBannerStack(frame, keys, minH)
 	return height
 end
 
--- Une ligne de texte d'un bandeau forgé (police retenue pour la mesure)
-function ns.ForgeBannerLine(frame, font, color, width)
+-- Une ligne de texte d'un bandeau forgé (police retenue pour la mesure) ;
+-- lines : 2 pour une ligne qui passe sur deux lignes au plus, coupée aux
+-- mots (sinon une seule ligne, coupée par des points de suspension)
+function ns.ForgeBannerLine(frame, font, color, width, lines)
 	local fs = Theme.Text(frame, font, color)
 	fs:SetJustifyH("LEFT")
-	if fs.SetWordWrap then fs:SetWordWrap(false) end
 	fs:SetWidth(width)
 	fs.forgeFont = font
+	if tonumber(lines) and lines > 1 then
+		if fs.SetWordWrap then fs:SetWordWrap(true) end
+		if fs.SetMaxLines then pcall(fs.SetMaxLines, fs, lines) end
+		fs.forgeMaxLines = lines
+	elseif fs.SetWordWrap then
+		fs:SetWordWrap(false)
+	end
 	return fs
 end
 
@@ -382,7 +405,7 @@ function ns:ForgeCaptureResult(glyph)
 	local width = R.w - left - K.right
 	frame.title = ns.ForgeBannerLine(frame, Theme.F_CAPS, Theme.IDENTITY_LIGHT, width)
 	frame.text = ns.ForgeBannerLine(frame, Theme.F_TITLE, Theme.PARCHMENT, width)
-	frame.stars = ns.ForgeBannerLine(frame, Theme.F_SMALL, Theme.GOLD, width)
+	frame.stars = ns.ForgeBannerLine(frame, Theme.F_SMALL, Theme.GOLD, width, 2)
 	frame.forgeGlyph = glyph
 	frame.icon = frame.medal.glyph
 	self:ForgeMedalSet(frame, "glyph", glyph)
@@ -429,7 +452,8 @@ function ns:ForgeJournalToast()
 	local width = J.w - left - K.right
 	frame.title = ns.ForgeBannerLine(frame, Theme.F_CAPS, Theme.IDENTITY_LIGHT, width)
 	frame.text = ns.ForgeBannerLine(frame, Theme.F_TITLE, Theme.PARCHMENT, width)
-	frame.stars = ns.ForgeBannerLine(frame, Theme.F_SMALL, Theme.GOLD_LIGHT, width)
+	-- (« Nouveau titre : … » : deux lignes au plus, jamais coupée)
+	frame.stars = ns.ForgeBannerLine(frame, Theme.F_SMALL, Theme.GOLD_LIGHT, width, 2)
 	frame.icon = frame.medal.icon
 	self:ForgeMedalSet(frame, nil)
 	return frame
@@ -468,11 +492,8 @@ function ns:ForgeGuildFeatToast(glyph)
 	if not left then return frame end
 	local width = G.w - left - K.right
 	frame.title = ns.ForgeBannerLine(frame, Theme.F_CAPS, Theme.IDENTITY_LIGHT, width)
-	frame.text = ns.ForgeBannerLine(frame, Theme.F_TITLE, Theme.PARCHMENT, width)
 	-- la ligne « Xan a capturé… » : deux lignes au plus, coupées aux mots
-	if frame.text.SetWordWrap then frame.text:SetWordWrap(true) end
-	if frame.text.SetMaxLines then pcall(frame.text.SetMaxLines, frame.text, 2) end
-	frame.text.forgeMaxLines = 2
+	frame.text = ns.ForgeBannerLine(frame, Theme.F_TITLE, Theme.PARCHMENT, width, 2)
 	frame.info = ns.ForgeBannerLine(frame, Theme.F_SMALL, Theme.TEXT, width)
 	frame.hint = ns.ForgeBannerLine(frame, Theme.F_SMALL, Theme.MUTED_LIGHT, width)
 	frame.forgeGlyph = glyph
