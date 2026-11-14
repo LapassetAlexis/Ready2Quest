@@ -373,8 +373,13 @@ do
 	end
 
 	-- 5. La boule de neige ------------------------------------------------------------------------------
+	-- 3.1.0 : joué deux fois, avec l'ancien habillage (scènes en bois) puis
+	-- dans l'état du produit (drapeau coupé : scènes et volée forgées)
+	for _, legacy in ipairs({ true, false }) do
+	T.Legacy(legacy)
+	local tag = legacy and "" or " [produit : scène forgée]"
 	do
-		Say("-- voile d'hiver : la boule de neige")
+		Say("-- voile d'hiver : la boule de neige" .. tag)
 		WV.Reset(nil, "on")
 		local NET = "Interface\\Icons\\INV_Misc_Net_01"
 		local button = NS:EnsureCaptureNet()
@@ -390,7 +395,7 @@ do
 		local glyph = UIParent:CreateTexture(nil, "ARTWORK")
 		NS.CapturePaintNetGlyph(glyph)
 		s.ok("glyphe des bandeaux", glyph.texture == 132387)
-		s.check("[WV] bouton du filet et glyphe des bandeaux : boule de neige pendant le décor, filet sinon, sans /reload")
+		s.check("[WV] bouton du filet et glyphe des bandeaux : boule de neige pendant le décor, filet sinon, sans /reload" .. tag)
 
 		-- la scène : la boule vole, puis éclate en flocons ; filet et paquet cachés
 		-- (un client qui sait masquer, pour voir la boule arrondie)
@@ -416,6 +421,8 @@ do
 		_G.CreateFrame = mockCreateFrame
 		local S, B = NS.WINTER_VEIL_SNOWBALL, ART.ball
 		s = Steps()
+		s.ok("la scène du bon habillage (forgée dans l'état du produit)", stage and (legacy and stage.azeroth
+			or (not legacy and stage.forged and not stage.azeroth)))
 		NS:CaptureStageUpdate(start + NS.CAPTURE_THROW_TIME * 0.1)
 		local ball = stage and stage.wvBall
 		local early = ball and ball:GetWidth()
@@ -431,7 +438,7 @@ do
 		for _, tex in ipairs(stage.wvTrail) do if Shown(tex) and tex.texture == 236121 then trail = trail + 1 end end
 		s.ok("rapetisse, tourne un peu, traîne de flocons", early > ball:GetWidth() and ball.rotation ~= nil and trail == S.trail)
 		s.ok("pied « vole »", stage.footer:GetText() == NS.L.WINTER_VEIL_STAGE_FLY)
-		s.check("[WV] scène : la boule de neige vole (découpée, arrondie, traîne), sans paquet ni filet")
+		s.check("[WV] scène : la boule de neige vole (découpée, arrondie, traîne), sans paquet ni filet" .. tag)
 		s = Steps()
 		NS:CaptureStageUpdate(start + NS.CAPTURE_THROW_TIME * 0.999)
 		local hit = ball.lastPoint
@@ -453,13 +460,13 @@ do
 		local gone = true
 		for _, tex in ipairs(flakes) do if Shown(tex) then gone = false end end
 		s.ok("puis tout disparaît", gone and not Shown(stage.wvPuff))
-		s.check("[WV] scène : la boule touche la créature, éclate en flocons qui s'effacent")
+		s.check("[WV] scène : la boule touche la créature, éclate en flocons qui s'effacent" .. tag)
 		NS:CaptureHideStage()
 		NS:SetWinterVeil("off")
 		stage = NS:CaptureShowStage({ target = { name = "Raptor", class = "normal", npcID = 7100 }, start = Mock.now, done = 0 })
 		NS:CaptureStageUpdate(Mock.now + NS.CAPTURE_THROW_TIME * 0.9)
 		local errOk, errs = NoErrors()
-		Check("[WV] scène hors décor : paquet et filet, pas de boule ; aucune erreur de capture", Shown(stage.bundle)
+		Check("[WV] scène hors décor : paquet et filet, pas de boule ; aucune erreur de capture" .. tag, Shown(stage.bundle)
 			and Shown(stage.net) and not Shown(stage.wvBall) and errOk, errs)
 		NS:CaptureHideStage()
 		WV.Done()
@@ -467,7 +474,7 @@ do
 
 	-- 5 bis. « Tout capturer » : une boule de neige par case ---------------------------------------------
 	do
-		Say("-- voile d'hiver : tout capturer")
+		Say("-- voile d'hiver : tout capturer" .. tag)
 		local function Batch()
 			local results = {
 				{ target = { name = "Raptor", class = "normal", npcID = 7100 }, success = true, shakes = 3, stars = 1 },
@@ -492,6 +499,8 @@ do
 		local first = batch.cards[1]
 		local drape = NS.CAPTURE_BATCH_DRAPE
 		local s = Steps()
+		s.ok("la volée du bon habillage (forgée dans l'état du produit)", NS.captureBatchFrame and (legacy
+			and NS.captureBatchFrame.azeroth or (not legacy and NS.captureBatchFrame.forged and not NS.captureBatchFrame.azeroth)))
 		NS:CaptureBatchUpdate(batch.startedAt + first.dropAt + drape / 2)
 		s.ok("boule qui tombe, découpée, pas de filet", Shown(first.tile.wvBall) and first.tile.wvBall.texture == 132387
 			and first.tile.wvBall.texCoord[1] == ART.ball.c[1] and NetsHidden(batch))
@@ -508,7 +517,7 @@ do
 		s.ok("arrêtée : ni filet ni neige", batch.done and quiet and NetsHidden(batch))
 		local ok, errs = NoErrors()
 		s.ok("sans erreur", ok, errs)
-		s.check("[WV] « Tout capturer » : une boule de neige par case, qui éclate ; jamais de filet pendant le décor")
+		s.check("[WV] « Tout capturer » : une boule de neige par case, qui éclate ; jamais de filet pendant le décor" .. tag)
 		if NS.captureBatchFrame then NS.captureBatchFrame:Hide() end
 		NS.captureBatch = nil
 		NS:SetWinterVeil("off")
@@ -517,12 +526,14 @@ do
 		NS:CaptureBatchUpdate(batch.startedAt + first.dropAt + drape / 2)
 		local falls = Shown(first.tile.net) and not Shown(first.tile.wvBall)
 		NS:CaptureBatchStop(true)
-		Check("[WV] « Tout capturer » hors décor : le filet tombe, déchiré sur l'échappée", falls and Shown(batch.cards[2].tile.net))
+		Check("[WV] « Tout capturer » hors décor : le filet tombe, déchiré sur l'échappée" .. tag, falls and Shown(batch.cards[2].tile.net))
 		if NS.captureBatchFrame then NS.captureBatchFrame:Hide() end
 		NS.captureBatch = nil
 		NS.captureBatchFrame, NS.captureBatchFrames = nil, nil
 		WV.Done()
 	end
+	end
+	T.Legacy(true)
 
 	-- 6. La neige qui tombe et le cadre givré -----------------------------------------------------------------
 	do

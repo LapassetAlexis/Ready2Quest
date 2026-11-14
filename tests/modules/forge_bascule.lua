@@ -253,15 +253,24 @@ do
 	NS:EnsureCaptureResult()
 	local active = NS:WinterVeilApply()
 	s.ok("posé partout sans erreur (carnet et compagnon sans hôte : rien)", active == true and Errors() == "", Errors())
-	-- (lot carnet : le décor du carnet re-logé sur le cadre forgé, journal_forge.lua)
-	s.ok("carnet : pas de décor de l'ancien habillage (le sien, forgé)", NS.journalFrame
-		and (NS.journalFrame.wvDecor == nil or NS.journalFrame.wvDecor.forged == true))
-	s.ok("compagnon : pas de décor de l'ancien habillage", NS.companionFrame and NS.companionFrame.wvDecor == nil)
-	-- les effets de l'ancien habillage : rien (à re-loger par le lot du
-	-- compagnon et des bandeaux), sans erreur
+	-- le décor re-logé sur les cadres forgés : carnet (journal_forge.lua),
+	-- compagnon en médaillon (companion_forge.lua, frame.wvForgeDecor)
+	s.ok("carnet : le décor forgé posé (jamais celui de l'ancien habillage)", NS.journalFrame
+		and NS.journalFrame.wvDecor ~= nil and NS.journalFrame.wvDecor.forged == true)
+	s.ok("compagnon : médaillon forgé et son décor, pas celui de l'ancien habillage", NS.companionFrame
+		and NS.companionFrame.ring == "forge" and NS.companionFrame.wvForgeDecor ~= nil and NS.companionFrame.wvDecor == nil)
+	-- les effets sont re-logés par les nouvelles API (ns:CompanionShinyFX,
+	-- ns:CompanionLevelFX, ns:BannerRewardFX) ; celles de l'ancien
+	-- habillage (AzerothShinyFX, AzerothLevelFX, AzerothRewardFX) restent
+	-- muettes hors drapeau, sans erreur
+	local toast = NS:EnsureJournalToast()
+	toast:Show()
 	local fx = { NS:AzerothShinyFX(), NS:AzerothLevelFX("Niveau 12 !", "level"),
-		NS:AzerothRewardFX(NS:EnsureJournalToast()), NS:CompanionPaintRing(), NS:CarnetPaintRing() }
+		NS:AzerothRewardFX(toast), NS:CompanionPaintRing(), NS:CarnetPaintRing() }
 	s.ok("effets de l'ancien habillage : aucun, sans erreur", not fx[1] and not fx[2] and not fx[3] and Errors() == "", Errors())
+	s.ok("grand effet re-logé sur le bandeau forgé (ns:BannerRewardFX)", toast.forgeBanner and NS:BannerRewardFX(toast) == true)
+	if NS.AzerothFxStop then NS:AzerothFxStop() end
+	toast:Hide()
 	NS:SetUIStyle("sobre")
 	s.ok("choix Sobre : décor éteint", NS:WinterVeilActive() == false and Errors() == "", Errors())
 	s.check("[BASC] Voile d'hiver : suit le choix Azeroth, posé sans erreur sur les cadres du socle")

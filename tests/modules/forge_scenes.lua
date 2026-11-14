@@ -230,7 +230,8 @@ do
 	-- Partager : dans le coin de la scène (rang nommé : rare)
 	local button = stage.shareButton
 	s.ok("bouton Partager dans le coin de la scène", button and button:IsShown() and button.shareBanner == "stage"
-		and button.lastPoint.point == "TOPRIGHT" and button.lastPoint.relTo == stage and button.item ~= nil)
+		and button.lastPoint.point == "TOPRIGHT" and button.lastPoint.relTo == stage and button.item ~= nil
+		and button.forge and button.plate and button.plate.parts ~= nil and not button.labelled)
 	stage.scripts.OnMouseUp(stage)
 	local seen = FS.Close(6)
 	s.ok("un clic ferme, sans bandeau « Capturé ! » en double", not seen and NS.captureState.rolling == nil
