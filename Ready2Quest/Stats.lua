@@ -502,7 +502,7 @@ function ns:ForgeToast(frame)
 	frame.skinAround = frame.skinAround or frame.bg
 	if Theme.DressWindow then pcall(Theme.DressWindow, frame) end
 	if frame.rule then
-		frame.ruleGlow = ns.ForgeLine(frame, Theme.GOLD)
+		frame.ruleGlow = ns.ForgeLine(frame, Theme.IDENTITY)
 		frame.ruleGlow:SetPoint("LEFT", frame.rule, "LEFT", 0, 0)
 		frame.ruleGlow:SetPoint("RIGHT", frame.rule, "RIGHT", 0, 0)
 		ns.ForgeHideFlat(frame.rule)
@@ -797,7 +797,7 @@ function ns:EnsurePortraitPanel()
 	frame.rule:SetHeight(1)
 	-- thème forgé : le filet sous la classe devient un filet lumineux
 	if ns.ForgeOn and ns.ForgeOn() then
-		frame.ruleGlow = ns.ForgeLine(frame, Theme.GOLD)
+		frame.ruleGlow = ns.ForgeLine(frame, Theme.IDENTITY)
 		frame.ruleGlow:SetPoint("LEFT", frame.rule, "LEFT", 0, 0)
 		frame.ruleGlow:SetPoint("RIGHT", frame.rule, "RIGHT", 0, 0)
 		ns.ForgeHideFlat(frame.rule)

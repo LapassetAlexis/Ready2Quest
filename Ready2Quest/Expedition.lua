@@ -528,7 +528,7 @@ function ns:EnsureExpeditionWindow()
 		Theme.TextShadow(frame.duration)
 		local _, size = frame.duration.GetFont and frame.duration:GetFont()
 		local F = ns.FORGE.glow
-		frame.durationGlow = ns.ForgeDot(frame.hero, math.floor((tonumber(size) or 28) * F.size + 0.5), Theme.GOLD, F.alpha, "BORDER")
+		frame.durationGlow = ns.ForgeDot(frame.hero, math.floor((tonumber(size) or 28) * F.size + 0.5), Theme.IDENTITY, F.alpha, "BORDER")
 		frame.durationGlow:SetPoint("CENTER", frame.duration, "CENTER", 0, 0)
 		frame.forged = true
 	end

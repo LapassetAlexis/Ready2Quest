@@ -40,9 +40,11 @@ do
 		gold    = (Theme.FORGE_PLATE or {}).gold or { 1.0, 0.82, 0.50 },       -- plaque principale (le filet)
 		danger  = (Theme.FORGE_INK or {}).red or { 0.96, 0.73, 0.69 },         -- encre d'un échec (« échappée »)
 		rim     = Theme.EDGE,                    -- filet d'un creux au repos (or patiné)
-		rimOn   = Theme.GOLD_LIGHT,              -- au survol
-		title   = Theme.TITLE,                   -- titre d'un bloc (or clair)
-		glow    = Theme.GOLD,                    -- filet et point lumineux
+		-- rôles du socle (socle 3.3, changés sur place selon ns.APP.identity :
+		-- QuestCompanion a le bleu arcane pour identité, l'or pour sélection)
+		rimOn   = Theme.SELECT_LIGHT or Theme.GOLD_LIGHT,   -- au survol (sélection : or clair)
+		title   = Theme.TITLE,                              -- titre d'un bloc (identité : arcane très clair)
+		glow    = Theme.IDENTITY or Theme.GOLD,             -- filet et point lumineux (identité : bleu arcane)
 		line    = { h = 4, alpha = 0.85 },       -- filet lumineux sous un titre
 	}
 end
@@ -56,7 +58,8 @@ function ns.QCForged()
 end
 
 -- Le filet lumineux du thème forgé (Theme.ART.line, blanc qui s'efface vers
--- la droite), teint en or ; mirror : il s'efface vers la gauche
+-- la droite), teint de l'identité (QC_FORGE.glow) ; mirror : il s'efface
+-- vers la gauche
 function ns.QCForgeLine(parent, layer, mirror, color)
 	local Theme, K = ns.Theme, ns.QC_FORGE
 	if not (parent and Theme and Theme.ART and Theme.ART.line) then return nil end

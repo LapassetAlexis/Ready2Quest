@@ -125,12 +125,13 @@ do
 	local gs, as = Spec(gold.forgePill), Spec(arcane.forgePill)
 	Want("or par défaut : pilule ambre qui s'éteint à droite, titre or clair", gs and gs[1] == "HORIZONTAL"
 		and Same(gs[2], Theme.GOLD) and gs[3] == K.pill.from and gs[5] == K.pill.to and Same(gold.textColor, Theme.GOLD_LIGHT)
-		and gold.toneInk == Theme.GOLD_LIGHT and gold.tone == "gold")
+		and gold.toneInk == Theme.IDENTITY_LIGHT and gold.tone == "identity")
 	Want("arcane : pilule bleue, titre arcane clair", as and Same(as[2], Theme.BLUE) and Same(arcane.textColor, Theme.ARCANE_LIGHT)
-		and arcane.tone == "arcane")
+		and arcane.tone == "second")
 	Want("filet et reflet de la pilule", gold.forgePillEdge and Alpha(gold.forgePillEdge.top) == K.pill.edge
 		and Alpha(gold.forgePillSheen) == K.pill.sheen)
-	Want("ton inconnu : or", Theme.CreateNavGroup(host, "x", "rose").tone == "gold")
+	Want("ton inconnu : l'identité ; nouveaux noms : identity, second", Theme.CreateNavGroup(host, "x", "rose").tone == "identity"
+		and Theme.CreateNavGroup(host, "x", "second").tone == "second" and Theme.CreateNavGroup(host, "x", "identity").tone == "identity")
 	Verdict("titre de groupe : pilule de son ton (or ou arcane), filet et reflet")
 
 	local item = Theme.CreateNavItem(host, 219)
@@ -194,7 +195,7 @@ do
 	local section = Theme.CreateSection(host, "Préparation", nil)
 	Want("or : point lumineux, titre or clair, filet or", section.forgeDot.texture == Theme.ART.dot.file
 		and Same(section.forgeDot.vertex, Theme.GOLD_LIGHT) and Same(section.label.textColor, Theme.GOLD_LIGHT)
-		and section.forgeLine.texture == Theme.ART.line.file and section.tone == "gold")
+		and section.forgeLine.texture == Theme.ART.line.file and section.tone == "identity")
 	Want("titre après le point", section.label.points[1].x == S.text and section.forgeDot.width == S.dot)
 	Want("filet : du titre au bord droit", section.forgeLine.points[1].relTo == section.label
 		and section.forgeLine.points[2].point == "RIGHT")
@@ -202,7 +203,7 @@ do
 	Want("avec détail : le filet part après le détail", section.forgeLine.points[1].relTo == section.detail)
 	local nav = Theme.CreateSection(host, "Résultats", nil, "arcane")
 	Want("arcane : point, titre et filet arcane", Same(nav.label.textColor, Theme.ARCANE_LIGHT)
-		and Same(nav.forgeLine.vertex, Theme.ARCANE_LIGHT) and nav.tone == "arcane")
+		and Same(nav.forgeLine.vertex, Theme.ARCANE_LIGHT) and nav.tone == "second")
 	Verdict("section : point lumineux, titre de son ton, filet qui part après le titre")
 	host:Hide()
 end
@@ -325,8 +326,8 @@ do
 		end
 	end
 	local departure, plain = Head("departure"), Plain()
-	Want("page à sous-pages (une fonction) : pilule or", departure and departure.label.tone == "gold")
-	Want("titre de rangement : pilule arcane", plain and plain.tone == "arcane")
+	Want("page à sous-pages (une fonction) : pilule or", departure and departure.label.tone == "identity")
+	Want("titre de rangement : pilule arcane", plain and plain.tone == "second")
 	Want("voyants dans la colonne", departure.power.led and frame.navButtons[#frame.navButtons].power.led)
 	local key = departure.powerKey
 	Want("le groupe « départ » porte l'interrupteur de son module", key ~= nil)
@@ -351,7 +352,7 @@ do
 	frame.search:SetText("alerte")
 	frame.search.scripts.OnTextChanged(frame.search, true)
 	local first = frame.searchPage.sections[1]
-	Check("[FORGE-NAV] recherche : sections de résultats en arcane (où vit le réglage)", first and first.tone == "arcane"
+	Check("[FORGE-NAV] recherche : sections de résultats en arcane (où vit le réglage)", first and first.tone == "second"
 		and Same(first.label.textColor, Theme.ARCANE_LIGHT))
 	frame.search:SetText("")
 	frame.search.scripts.OnTextChanged(frame.search, true)

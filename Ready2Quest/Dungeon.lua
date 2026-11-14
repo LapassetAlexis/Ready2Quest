@@ -396,8 +396,8 @@ local function Forge(frame, line, kind, tone)
 	local K = ns.DGN_FORGE
 	if kind == "head" then
 		if not line.forgeDot then
-			line.forgeDot = ns.ForgeDot(line, K.dot, Theme.GOLD, 1, "ARTWORK")
-			line.forgeRule = ns.ForgeLine(line, Theme.GOLD)
+			line.forgeDot = ns.ForgeDot(line, K.dot, Theme.IDENTITY, 1, "ARTWORK")
+			line.forgeRule = ns.ForgeLine(line, Theme.IDENTITY)
 		end
 		line.text:ClearAllPoints()
 		line.text:SetPoint("LEFT", line, "LEFT", K.textLeft, K.rise)

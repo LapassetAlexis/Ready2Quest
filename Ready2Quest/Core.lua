@@ -1327,10 +1327,11 @@ do
 			color = opts.color or Theme.EDGE, around = opts.around, out = opts.out, margin = opts.margin })
 	end
 
-	-- Filet lumineux qui s'efface vers la droite (Theme.ART.line)
+	-- Filet lumineux qui s'efface vers la droite (Theme.ART.line), de
+	-- l'identité par défaut (Theme.IDENTITY, socle 3.3 : l'or pour Ready2Quest)
 	function ns.ForgeLine(parent, color, alpha, layer)
 		if not (parent and ns.ForgeOn() and Theme.ART and Theme.ART.line) then return nil end
-		color = color or Theme.GOLD
+		color = color or Theme.IDENTITY or Theme.GOLD
 		local tex = parent:CreateTexture(nil, layer or "ARTWORK")
 		tex:SetTexture(Theme.ART.line.file)
 		tex:SetVertexColor(color[1], color[2], color[3], alpha or ns.FORGE.line.alpha)
