@@ -267,6 +267,19 @@ do
 	s.check("[JFG] Voile d'hiver : guirlande sous le bord haut, cadeau et renne autour du titre, flocons, suit le réglage")
 	f:Hide()
 	Done()
+	-- la bande du client refusée : le repli en matières forgées (fil et ampoules)
+	Fresh("azeroth", "on")
+	Mock.world.textureRefused = { [NS.WINTER_VEIL_ART.lights.file] = true }
+	f = NS:ToggleJournal(true)
+	d = f.wvDecor
+	local bulbs = 0
+	for _, tex in ipairs(d and d.lights or {}) do if tex.texture == Theme.ART.dot.file then bulbs = bulbs + 1 end end
+	Check("[JFG] Voile d'hiver : bande du client refusée, fil lumineux et ampoules en matières forgées (jamais rien)",
+		d and d.forgeLights and d.wire and d.wire.texture == Theme.ART.line.file and bulbs >= 10 and Errors() == "",
+		tostring(bulbs) .. " " .. Errors())
+	Mock.world.textureRefused = nil
+	f:Hide()
+	Done()
 	Fresh("sobre", "on")
 	f = NS:ToggleJournal(true)
 	Check("[JFG] Voile d'hiver : jamais en Sobre", f.wvDecor == nil)
