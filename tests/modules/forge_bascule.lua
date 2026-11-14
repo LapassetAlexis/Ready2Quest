@@ -253,7 +253,9 @@ do
 	NS:EnsureCaptureResult()
 	local active = NS:WinterVeilApply()
 	s.ok("posé partout sans erreur (carnet et compagnon sans hôte : rien)", active == true and Errors() == "", Errors())
-	s.ok("carnet : pas de décor de l'ancien habillage", NS.journalFrame and NS.journalFrame.wvDecor == nil)
+	-- (lot carnet : le décor du carnet re-logé sur le cadre forgé, journal_forge.lua)
+	s.ok("carnet : pas de décor de l'ancien habillage (le sien, forgé)", NS.journalFrame
+		and (NS.journalFrame.wvDecor == nil or NS.journalFrame.wvDecor.forged == true))
 	s.ok("compagnon : pas de décor de l'ancien habillage", NS.companionFrame and NS.companionFrame.wvDecor == nil)
 	-- les effets de l'ancien habillage : rien (à re-loger par le lot du
 	-- compagnon et des bandeaux), sans erreur
