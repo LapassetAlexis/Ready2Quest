@@ -1274,10 +1274,11 @@ ns.eventFrame = frame
 do
 	local Theme = ns.Theme
 	ns.FORGE = {
-		card    = { 0.118, 0.145, 0.176 },        -- plaque d'un bloc en relief
-		neutral = { 0.165, 0.196, 0.239 },        -- plaque d'un bouton neutre (tuile d'annonce)
-		plate   = { top = 0.885, bottom = 0.50 },  -- luminance de la plaque (contrastes)
-		inset   = { fill = 0.14 },                 -- fond du creux, × la teinte du filet
+		-- (teintes et niveaux lus dans le thème du socle : une seule définition)
+		card    = (Theme.FORGE_PLATE or {}).card or { 0.118, 0.145, 0.176 },      -- plaque d'un bloc en relief
+		neutral = (Theme.FORGE_PLATE or {}).neutral or { 0.165, 0.196, 0.239 },   -- plaque d'un bouton neutre (tuile d'annonce)
+		plate   = { top = (Theme.FORGE or {}).plateTop or 0.885, bottom = (Theme.FORGE or {}).plateBottom or 0.50 },  -- luminance de la plaque (contrastes)
+		inset   = { fill = (Theme.FORGE or {}).insetFill or 0.14 },                -- fond du creux, × la teinte du filet
 		well    = { out = 3, margin = 6 },         -- creux autour d'une barre fine
 		tag     = { margin = 6, padX = 8, height = 18 },   -- étiquette en creux
 		-- liseré lumineux d'un bloc : sa couleur assombrie en bas, éclaircie en haut, un halo

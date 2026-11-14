@@ -369,14 +369,14 @@ if ns.Mark then ns.Mark("OptionPages") end
 -- ---------------------------------------------------------------------------
 ns.RegisterStrings({
 	OPT_UI_STYLE      = "Style de l'interface",
-	OPT_UI_STYLE_DESC = "Azeroth : cadre en bois, bordures dorées et titres dans la police du jeu. Sobre : l'aspect d'avant, à plat. Les fenêtres déjà ouvertes prennent le nouveau style au prochain /reload.",
+	OPT_UI_STYLE_DESC = "Azeroth : cadre doré, boutons en relief et titres dans la police du jeu. Sobre : l'aspect d'avant, à plat. Les fenêtres déjà ouvertes prennent le nouveau style au prochain /reload.",
 	UI_STYLE_azeroth  = "Azeroth (doré)",
 	UI_STYLE_sobre    = "Sobre",
 	UI_STYLE_MSG      = "Style de l'interface : %s. Tape /reload pour l'appliquer aux fenêtres déjà ouvertes.",
 	UI_STYLE_USAGE    = "/r2q style azeroth|sobre",
 }, {
 	OPT_UI_STYLE      = "Interface style",
-	OPT_UI_STYLE_DESC = "Azeroth: wooden frame, golden borders and titles in the game font. Plain: the previous flat look. Windows already open take the new style after the next /reload.",
+	OPT_UI_STYLE_DESC = "Azeroth: golden frame, bevelled buttons and titles in the game font. Plain: the previous flat look. Windows already open take the new style after the next /reload.",
 	UI_STYLE_azeroth  = "Azeroth (golden)",
 	UI_STYLE_sobre    = "Plain",
 	UI_STYLE_MSG      = "Interface style: %s. Type /reload to apply it to windows already open.",

@@ -1109,6 +1109,8 @@ function ns:CaptureRefreshPrompt()
 		button.icon:SetAlpha(chosen and 1 or (count > 0 and 0.6 or 0.25))
 		local c = chosen and Theme.GOLD or Theme.EDGE
 		if button.border and button.border.SetColor then button.border:SetColor(c[1], c[2], c[3], 1) end
+		-- thème forgé : le contour est caché, la plaque dit l'aide choisie
+		if button.forgeLook then button.forgeLook(button, chosen and "hover" or "rest") end
 		if state.rolling then button:Hide() else button:Show() end
 	end
 	if state.rolling then

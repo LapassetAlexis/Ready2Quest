@@ -24,7 +24,7 @@ ns.RegisterDefaults({
 -- Thème forgé (socle 3.2, Theme.Forged) : les teintes de nos blocs faits
 -- main (filet, pastilles de capture, garde-manger, carnet à l'écran, fiche
 -- au survol). Les briques du socle (boutons, tuiles, champs) ont les leurs.
--- Plaque (Theme.ART.plate) : texture grise de 0,86 en haut à 0,50 en bas
+-- Plaque (Theme.ART.plate) : texture grise de 0,885 en haut à 0,50 en bas
 -- (1,0 au filet clair du bord) : la teinte multipliée par ces valeurs donne
 -- le fond réel le plus clair et le plus sombre (contrastes mesurés,
 -- tests/modules/ui_forge_qc.lua). Creux (Theme.ART.inset) : fond presque
@@ -33,10 +33,12 @@ ns.RegisterDefaults({
 do
 	local Theme = ns.Theme or {}
 	ns.QC_FORGE = {
-		plateTop = 0.86, plateBottom = 0.50,     -- luminosité de la plaque, haut et bas
-		card    = { 0.118, 0.145, 0.176 },       -- carte (pastille du filet)
-		gold    = { 1.0, 0.84, 0.56 },           -- plaque principale (le filet)
-		danger  = { 0.96, 0.73, 0.69 },          -- encre d'un échec (« échappée »)
+		-- (teintes et niveaux lus dans le thème du socle : une seule définition)
+		plateTop = (Theme.FORGE or {}).plateTop or 0.885,        -- luminosité de la plaque, haut…
+		plateBottom = (Theme.FORGE or {}).plateBottom or 0.50,   -- … et bas
+		card    = (Theme.FORGE_PLATE or {}).card or { 0.118, 0.145, 0.176 },   -- carte (pastille du filet)
+		gold    = (Theme.FORGE_PLATE or {}).gold or { 1.0, 0.82, 0.50 },       -- plaque principale (le filet)
+		danger  = (Theme.FORGE_INK or {}).red or { 0.96, 0.73, 0.69 },         -- encre d'un échec (« échappée »)
 		rim     = Theme.EDGE,                    -- filet d'un creux au repos (or patiné)
 		rimOn   = Theme.GOLD_LIGHT,              -- au survol
 		title   = Theme.TITLE,                   -- titre d'un bloc (or clair)

@@ -87,14 +87,12 @@ do
 	Check("[SKIN] l'en-tête laisse la place au médaillon (pas de petit logo), titre en or clair, plaque de titre",
 		frame.header.logo == nil and frame.header.textLeft == Theme.EMBLEM.text and frame.header.plate ~= nil
 		and Same({ frame.title:GetTextColor() }, Theme.TITLE))
-	local _, _, _, edgeAlpha = frame.border.top:GetVertexColor()
-	Check("[SKIN] le filet d'un pixel s'efface sous le cadre forgé", edgeAlpha == 0, edgeAlpha)
+	Check("[SKIN] le filet d'un pixel se cache sous le cadre forgé", not frame.border.top:IsShown() and not frame.border.left:IsShown())
 	Theme.ApplySkin("sobre")
 	Theme.DressWindow(frame)
-	_, _, _, edgeAlpha = frame.border.top:GetVertexColor()
 	Check("[SKIN] passage en Sobre : l'habillage se cache à l'affichage suivant, le filet revient",
 		frame.skinDressed == false and not chrome.frame.parts.tl:IsShown() and not chrome.corners[1]:IsShown()
-		and not chrome.emblem:IsShown() and not chrome.shadow.parts.c:IsShown() and edgeAlpha == 1)
+		and not chrome.emblem:IsShown() and not chrome.shadow.parts.tl:IsShown() and frame.border.top:IsShown())
 	Theme.ApplySkin("azeroth")
 	Theme.DressWindow(frame)
 	Check("[SKIN] retour en Azeroth : le même habillage revient (rien n'est recréé)", frame.skinChrome == chrome
@@ -111,6 +109,50 @@ do
 	local toast = Theme.CreateToast(UIParent, 300, 60, {})
 	Check("[SKIN] bandeau : ombre et cadre, sans coins ni médaillon", toast.skinDressed == true
 		and toast.skinChrome.frame ~= nil and toast.skinChrome.corners == nil and toast.skinChrome.emblem == nil)
+	-- relecture 3.1.0 : l'habillage ne touche ni à la couleur d'un filet posé par
+	-- un module, ni aux marges d'écran qu'il n'a pas posées lui-même
+	Theme.ApplySkin("sobre")
+	local banner = Theme.CreateToast(UIParent, 300, 60, {})
+	banner.border:SetColor(Theme.GOLD_SOFT[1], Theme.GOLD_SOFT[2], Theme.GOLD_SOFT[3], 1)
+	Theme.DressWindow(banner)
+	Theme.DressWindow(banner)
+	Check("[SKIN] Sobre : réafficher un bandeau ne repeint pas son filet (la couleur du module reste)",
+		Same({ banner.border.top:GetVertexColor() }, Theme.GOLD_SOFT) and banner.border.top.mockHidden ~= true)
+	local clamps = {}
+	local journal = Theme.CreateWindow(UIParent, 400, 300, {})
+	journal.SetClampRectInsets = function(_, l, r, t, b) clamps[#clamps + 1] = { l, r, t, b } end
+	journal:SetClampRectInsets(-8, 8, 46, -8)
+	journal.azeroth = true
+	Theme.ApplySkin("azeroth")
+	Theme.DressWindow(journal)
+	Theme.ApplySkin("sobre")
+	Theme.DressWindow(journal)
+	Check("[SKIN] les marges d'écran posées par un module (plaque de titre du carnet) ne sont jamais remises à zéro",
+		#clamps == 1 and clamps[1][3] == 46, #clamps)
+	Theme.ApplySkin("azeroth")
+	local emblemed = Theme.CreateDialog(UIParent, 420, 300, { title = "Titre" })
+	local seen = {}
+	emblemed.SetClampRectInsets = function(_, l, r, t, b) seen[#seen + 1] = { l, r, t, b } end
+	Theme.DressWindow(emblemed)
+	Theme.ApplySkin("sobre")
+	Theme.DressWindow(emblemed)
+	Check("[SKIN] le médaillon pose ses marges d'écran, et le socle retire les siennes en Sobre",
+		#seen == 2 and seen[1][1] == Theme.EMBLEM.x and seen[1][3] == Theme.EMBLEM.y and seen[2][1] == 0 and seen[2][3] == 0, #seen)
+	Theme.ApplySkin("azeroth")
+	local pressed = Theme.CreateIconButton(UIParent, 24, "Interface\\Icons\\INV_Misc_Bag_10")
+	-- (un module remplace OnEnter / OnLeave, comme le filet et les aides de capture)
+	pressed:SetScript("OnEnter", function() end)
+	pressed:SetScript("OnLeave", function() end)
+	pressed:GetScript("OnMouseDown")(pressed, "LeftButton")
+	local down = pressed.forgeState
+	pressed:GetScript("OnMouseUp")(pressed, "LeftButton")
+	Check("[SKIN] petit bouton forgé : relâché, la plaque revient au repos même si le module a remplacé OnEnter et OnLeave",
+		down == "pressed" and pressed.forgeState == "rest", tostring(pressed.forgeState))
+	local diamond = Theme.CreateDiamond(UIParent, 10)
+	diamond:SetAlpha(0.05)
+	Check("[SKIN] losange forgé : son halo suit l'opacité (particules qui s'estompent)",
+		diamond.forgeGlow ~= nil and math.abs(diamond.forgeGlow:GetAlpha() - 0.05) < 1e-6)
+	for _, f in ipairs({ banner, journal, emblemed, pressed }) do f:Hide() end
 	local sobre
 	Theme.ApplySkin("sobre")
 	sobre = Theme.CreateDialog(UIParent, 420, 300, { title = "Titre" })

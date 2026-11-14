@@ -1268,6 +1268,8 @@ local function RefreshChooserAids(self, frame)
 		button.icon:SetAlpha(on and 1 or (count > 0 and 0.6 or 0.25))
 		local c = on and Theme.GOLD or Theme.EDGE
 		if button.border and button.border.SetColor then button.border:SetColor(c[1], c[2], c[3], 1) end
+		-- thème forgé : le contour est caché, la plaque dit l'aide choisie
+		if button.forgeLook then button.forgeLook(button, on and "hover" or "rest") end
 	end
 end
 

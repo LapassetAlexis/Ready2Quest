@@ -430,11 +430,11 @@ local INK = INKS.ink                      -- encre des bandes claires (2.8.2 : #
 
 local FR = {
 	OPT_UI_STYLE           = "Style de l'interface",
-	OPT_UI_STYLE_DESC      = "Bandeaux et cadre du compagnon. Azeroth : dorés, façon hauts faits. Sobre : le style d'avant.",
+	OPT_UI_STYLE_DESC      = "Azeroth : cadres dorés, boutons en relief, carnet en parchemin. Sobre : le style d'avant, à plat. Les bandeaux et le compagnon changent tout de suite ; les fenêtres déjà ouvertes, au prochain /reload.",
 	OPT_UI_STYLE_MISSING   = "Les textures des hauts faits manquent sur ce client : le style Sobre s'affiche à la place.",
 	UI_STYLE_azeroth       = "Azeroth (doré)",
 	UI_STYLE_sobre         = "Sobre",
-	UI_STYLE_MSG           = "Style de l'interface : %s.",
+	UI_STYLE_MSG           = "Style de l'interface : %s. Tape /reload pour l'appliquer aux fenêtres déjà ouvertes.",
 	UI_STYLE_MSG_MISSING   = "Style de l'interface : %s. Ses textures manquent sur ce client : le style Sobre reste affiché.",
 	UI_STYLE_USAGE         = "/qc style azeroth|sobre (actuel : %s)",
 	HELP_STYLE             = "/qc style azeroth|sobre — style des bandeaux et du cadre du compagnon",
@@ -446,11 +446,11 @@ local FR = {
 }
 local EN = {
 	OPT_UI_STYLE           = "Interface style",
-	OPT_UI_STYLE_DESC      = "Banners and companion frame. Azeroth: golden, achievement-style. Plain: the previous look.",
+	OPT_UI_STYLE_DESC      = "Azeroth: golden frames, bevelled buttons, parchment journal. Plain: the previous flat look. Banners and the companion change right away; windows already open, after the next /reload.",
 	OPT_UI_STYLE_MISSING   = "This client lacks the achievement textures: the Plain style is shown instead.",
 	UI_STYLE_azeroth       = "Azeroth (golden)",
 	UI_STYLE_sobre         = "Plain",
-	UI_STYLE_MSG           = "Interface style: %s.",
+	UI_STYLE_MSG           = "Interface style: %s. Type /reload to apply it to windows already open.",
 	UI_STYLE_MSG_MISSING   = "Interface style: %s. Its textures are missing on this client: the Plain style stays on screen.",
 	UI_STYLE_USAGE         = "/qc style azeroth|sobre (current: %s)",
 	HELP_STYLE             = "/qc style azeroth|sobre — style of the banners and the companion frame",
@@ -578,6 +578,9 @@ end
 -- côté (et remplacés s'ils étaient affichés), le compagnon est rhabillé
 function ns:ApplyUIStyle()
 	local style = self:UIStyle()
+	-- socle 3.2 : le thème des fenêtres d'abord (jetons, police des titres,
+	-- habillage) : un bandeau reconstruit ci-dessous naît dans le bon thème
+	if Theme.ApplySkin then pcall(Theme.ApplySkin, style) end
 	for _, key in ipairs(STYLED_FRAMES) do
 		local frame = self[key]
 		if frame and (frame.uiStyle or "sobre") ~= style then
@@ -605,8 +608,6 @@ function ns:ApplyUIStyle()
 		end
 	end
 	if self.CompanionApplyUIStyle then self:CompanionApplyUIStyle() end
-	-- socle 3.2 : le thème des fenêtres suit (jetons, police des titres, bois)
-	if Theme.ApplySkin then pcall(Theme.ApplySkin, style) end
 	return style
 end
 

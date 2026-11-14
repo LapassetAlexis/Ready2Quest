@@ -295,10 +295,10 @@ do
 	local around = chrome and select(2, chrome.frame.parts.tl:GetPoint(1))
 	Check("[FORGE-R2Q] résumé de stuff : le socle pose ombre et cadre d'orfèvre autour de son fond (le cadre de 10 px ne les portait pas)",
 		chrome ~= nil and IsSlice(chrome.shadow, "shadow") and IsSlice(chrome.frame, "frame") and around == toast.bg
-		and chrome.frame.parts.c == nil and chrome.corners == nil and select(4, toast.border.top:GetVertexColor()) == 0)
+		and chrome.frame.parts.c == nil and chrome.corners == nil and not Shown(toast.border.top))
 	Theme.DressWindow(toast)
 	Check("[FORGE-R2Q] résumé : rhabillé sans rien recréer, filet du titre en lumière",
-		toast.skinChrome == chrome and select(4, toast.border.top:GetVertexColor()) == 0 and toast.ruleGlow ~= nil and not Shown(toast.rule))
+		toast.skinChrome == chrome and not Shown(toast.border.top) and toast.ruleGlow ~= nil and not Shown(toast.rule))
 	toast:Hide()
 
 	NS.forceStats = true

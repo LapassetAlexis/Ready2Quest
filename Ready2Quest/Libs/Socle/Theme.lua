@@ -543,6 +543,11 @@ function Theme.PressFeedback(button, region)
 			local ok, value = pcall(self.IsMouseOver, self)
 			over = ok and value and true or false
 		end
+		-- thème forgé : la plaque reprend son état sans dépendre des scripts du
+		-- module (un module qui remplace OnEnter / OnLeave la laissait enfoncée)
+		if self.forgeLook then
+			self.forgeLook(self, (not Enabled(self) and "disabled") or (over and "hover" or "rest"))
+		end
 		local script = self:GetScript(over and "OnEnter" or "OnLeave")
 		if script then script(self) end
 	end)
@@ -659,7 +664,7 @@ function Theme.CreateWindow(parent, width, height, opts)
 	-- opts.chrome = false : jamais (fenêtre qui s'habille elle-même) ;
 	-- opts.emblem : le médaillon du logo déborde du coin haut gauche.
 	frame.wantsEmblem = opts.emblem and true or nil
-	if opts.chrome ~= false and opts.wood ~= false then
+	if opts.chrome ~= false then
 		if frame.HookScript then pcall(frame.HookScript, frame, "OnShow", Theme.DressWindow) end
 		pcall(Theme.DressWindow, frame)
 	else
@@ -1523,8 +1528,9 @@ function Theme.CreateButton(parent, width, height, label, onClick, style)
 	button.bg = Solid(button, "BACKGROUND", spec.bg, spec.bgAlpha)
 	button.bg:SetAllPoints()
 	button.border = Border(button, spec.edge, 1)
-	-- socle 3.2 : thème forgé, plaque de relief teintée selon le style
-	if Theme.Forged() then
+	-- socle 3.2 : thème forgé, plaque de relief teintée selon le style (pas
+	-- sous l'habit d'un module qui rhabille lui-même ses boutons : le carnet)
+	if Theme.ForgeHere("CreateButton") then
 		button.forge = Theme.FORGE_BUTTONS[button.style] or Theme.FORGE_BUTTONS.outline
 		button.plate = Theme.ForgeSlice(button, "plate", Theme.FORGE_PLATE[button.forge.plate])
 	end
@@ -2488,7 +2494,8 @@ function Theme.CreateDiamond(parent, size, outline)
 		glow:SetSize(side, side)
 		glow:SetPoint("CENTER", tex, "CENTER", 0, 0)
 		tex.forgeGlow = glow
-		local show, hide, tint = tex.Show, tex.Hide, tex.SetVertexColor
+		local show, hide, tint, fade = tex.Show, tex.Hide, tex.SetVertexColor, tex.SetAlpha
+		tex.SetAlpha = function(self, a) fade(self, a); glow:SetAlpha(a) end
 		tex.Show = function(self) show(self); glow:Show() end
 		tex.Hide = function(self) hide(self); glow:Hide() end
 		tex.SetShown = function(self, on) if on then self:Show() else self:Hide() end end
@@ -3354,7 +3361,10 @@ end
 -- ===========================================================================
 Theme.SKINS = { "azeroth", "sobre" }
 Theme.SKIN_DEFAULT = "azeroth"
-Theme.SKIN_FONT = "Fonts\\FRIZQT__.TTF"
+-- la police de titre du client : Friz Quadrata, ou celle de sa langue
+-- (STANDARD_TEXT_FONT : cyrillique, chinois, coréen… où Friz n'a pas les glyphes)
+Theme.SKIN_FONT = (type(rawget(_G, "STANDARD_TEXT_FONT")) == "string" and rawget(_G, "STANDARD_TEXT_FONT") ~= ""
+	and rawget(_G, "STANDARD_TEXT_FONT")) or "Fonts\\FRIZQT__.TTF"
 -- rôles de police qui passent en Friz Quadrata (titres et sections ; le
 -- corps de texte garde sa police, plus lisible en petit)
 Theme.SKIN_FONT_ROLES = { "DISPLAY", "TITLE", "CAPS" }
@@ -3409,11 +3419,23 @@ function Theme.ApplySkin(id)
 	for _, role in ipairs(Theme.SKIN_FONT_ROLES) do
 		local entry = Theme.fonts and Theme.fonts[role]
 		if entry and entry.object and type(entry.object.SetFont) == "function" then
-			file = id == "azeroth" and Theme.SKIN_FONT or entry.file
-			local ok, applied = pcall(entry.object.SetFont, entry.object, file, entry.size, "")
-			-- refusée : la police d'avant est reposée
-			if not ok or applied == false then pcall(entry.object.SetFont, entry.object, entry.file, entry.size, "") end
-			entry.skinFont = (ok and applied ~= false) and file or entry.file
+			if id == "azeroth" then
+				file = Theme.SKIN_FONT
+				local ok, applied = pcall(entry.object.SetFont, entry.object, file, entry.size, "")
+				entry.skinFont = (ok and applied ~= false) and file or nil
+			end
+			-- retour à Sobre, ou police du jeu refusée : la police d'avant. Un rôle
+			-- qui avait dû se replier sur une police du jeu (la nôtre refusée au
+			-- chargement) y revient, on ne lui repose pas la nôtre.
+			if entry.skinFont == nil or id ~= "azeroth" then
+				if entry.inter then
+					pcall(entry.object.SetFont, entry.object, entry.file, entry.size, "")
+				else
+					local base = rawget(_G, entry.fallback)
+					if base and type(entry.object.CopyFontObject) == "function" then pcall(entry.object.CopyFontObject, entry.object, base) end
+				end
+				entry.skinFont = id == "azeroth" and nil or entry.file
+			end
 		end
 	end
 	Theme.FONT_TITLE = id == "azeroth" and Theme.SKIN_FONT or Theme.FONT_BOLD
@@ -3528,6 +3550,7 @@ Theme.FORGE = {
 	margin = 7, marginSmall = 5, smallBelow = 24, insetMargin = 6, insetSmall = 4,
 	hover = 0.12, press = 0.85,
 	label = { light = 0.786, dark = 0.593 }, insetFill = 0.14,
+	plateTop = 0.885, plateBottom = 0.50,     -- plaque entière : son point le plus clair, le plus sombre
 	track = { 0.020, 0.027, 0.039 },          -- fond d'une piste (curseur, barre)
 	trackRim = 0.07,                          -- filet clair sous une piste (blanc, alpha)
 	trackShade = 0.6,                         -- ombre d'un pixel en haut d'une piste (noir, alpha)
@@ -3612,14 +3635,6 @@ function Theme.ForgeSmallPlate(button)
 	button.forgeLook(button, "rest")
 	return button.plate
 end
--- Remplissage d'une barre ou d'un curseur : dégradé vertical (bas sombre,
--- haut éclairci) de la couleur
-function Theme.ForgeFill(tex, color, alpha)
-	local F = Theme.FORGE
-	local low = Theme.ForgeTint(color, F.fillLow)
-	local high = Theme.Over(color, Theme.WHITE, F.fillHigh)
-	return Theme.Gradient(tex, "VERTICAL", low, alpha or 1, high, alpha or 1)
-end
 
 -- L'habillage forgé d'une fenêtre ou d'un bandeau : ombre portée, bords
 -- assombris, cadre d'orfèvre, coins, et le médaillon du logo si la fenêtre le
@@ -3646,7 +3661,8 @@ function Theme.DressWindow(frame)
 	local chrome = frame.skinChrome
 	if want and not chrome then
 		chrome = {}
-		chrome.shadow = Theme.Slice(frame, "shadow", { layer = "BACKGROUND", sub = -8, out = K.shadowOut, around = around })
+		chrome.shadow = Theme.Slice(frame, "shadow", { layer = "BACKGROUND", sub = -8, out = K.shadowOut, around = around,
+			fill = false })
 		local ok, top = pcall(CreateFrame, "Frame", nil, frame)
 		top = ok and top or frame
 		if top ~= frame then
@@ -3689,15 +3705,30 @@ function Theme.DressWindow(frame)
 		for _, tex in ipairs(chrome.corners or {}) do if want then tex:Show() else tex:Hide() end end
 		if chrome.emblem then if want and frame.wantsEmblem then chrome.emblem:Show() else chrome.emblem:Hide() end end
 	end
-	-- le filet d'un pixel de la fenêtre : remplacé par le cadre forgé
-	if frame.border and frame.border.SetColor then
-		frame.border:SetColor(Theme.EDGE[1], Theme.EDGE[2], Theme.EDGE[3], want and 0 or 1)
+	-- le filet d'un pixel de la fenêtre : caché sous le cadre forgé, rendu
+	-- ensuite. Sa couleur n'est jamais touchée (un module a pu la poser), et
+	-- rien ne bouge tant que le socle ne l'a pas caché lui-même.
+	if type(frame.border) == "table" and (want or frame.skinBorderHidden) then
+		for _, side in ipairs({ "top", "bottom", "left", "right" }) do
+			local edge = frame.border[side]
+			if edge and edge.Show and edge.Hide then
+				if want then edge:Hide() else edge:Show() end
+			end
+		end
+		frame.skinBorderHidden = want or nil
 	end
-	-- la fenêtre reste à l'écran, médaillon compris
-	if frame.SetClampRectInsets and (chrome or frame.skinDressed ~= nil) then
+	-- la fenêtre reste à l'écran, médaillon compris. Les marges d'un module
+	-- (plaque de titre du carnet) ne sont jamais touchées : le socle ne remet
+	-- à zéro que celles qu'il a posées.
+	if frame.SetClampRectInsets then
 		local E = Theme.EMBLEM
-		local emblem = want and frame.wantsEmblem and chrome and chrome.emblem
-		pcall(frame.SetClampRectInsets, frame, emblem and E.x or 0, 0, emblem and E.y or 0, 0)
+		if want and frame.wantsEmblem and chrome and chrome.emblem then
+			pcall(frame.SetClampRectInsets, frame, E.x, 0, E.y, 0)
+			frame.skinClamp = true
+		elseif frame.skinClamp then
+			pcall(frame.SetClampRectInsets, frame, 0, 0, 0, 0)
+			frame.skinClamp = nil
+		end
 	end
 	frame.skinDressed = want and true or false
 	return frame.skinDressed

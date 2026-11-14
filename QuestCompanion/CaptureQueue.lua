@@ -1023,7 +1023,18 @@ function ns:CaptureForgeNet(button)
 	button.glow = glow
 	button.glowRest = F.haloRest
 	glow:SetAlpha(F.haloRest)
+	-- la petite plaque neutre du bouton-icône (socle) laisse la place à la
+	-- plaque d'or, qui a ses propres états : sans cela, l'appui la teintait en
+	-- bronze pour de bon (le socle peignait « sa » plaque, devenue celle-ci)
+	if button.plate and button.plate.Hide then button.plate:Hide() end
 	button.plate = Theme.Slice(button, "plate", { layer = "BACKGROUND", sub = 4, margin = F.plate, color = F.plateTint })
+	button.forgeLook = function(self, state)
+		local tint = F.plateTint
+		if state == "hover" and Theme.ForgeHover then tint = Theme.ForgeHover(tint)
+		elseif state == "pressed" and Theme.ForgeTint then tint = Theme.ForgeTint(tint, Theme.FORGE.press) end
+		self.forgeState = state
+		if self.plate then self.plate:SetColor(tint[1], tint[2], tint[3], 1) end
+	end
 	-- l'icône dans un creux, au milieu de la plaque
 	button.icon:ClearAllPoints()
 	button.icon:SetPoint("CENTER", button, "CENTER", 0, 0)
@@ -1170,6 +1181,8 @@ function ns:CaptureStyleNet()
 		local rim = (button.hover or button.shiny) and K.rimOn or K.rim
 		if button.socket then button.socket:SetColor(rim[1], rim[2], rim[3], 1) end
 		button.glowRest = button.hover and F.haloHover or F.haloRest
+		-- la plaque d'or reprend son état (repos, survol), sauf pendant l'appui
+		if button.forgeLook and not button.pressed then button.forgeLook(button, button.hover and "hover" or "rest") end
 	elseif button.countBack and button.countBack.SetVertexColor then
 		local cc = button.shiny and Theme.GOLD_LIGHT or Theme.GOLD
 		button.countBack:SetVertexColor(cc[1], cc[2], cc[3], 1)
@@ -1626,6 +1639,8 @@ function ns:CaptureRefreshQueueList(now)
 		button.icon:SetAlpha(chosen and 1 or (count > 0 and 0.6 or 0.25))
 		local c = chosen and Theme.GOLD or Theme.EDGE
 		if button.border and button.border.SetColor then button.border:SetColor(c[1], c[2], c[3], 1) end
+		-- thème forgé : le contour est caché, la plaque dit l'aide choisie
+		if button.forgeLook then button.forgeLook(button, chosen and "hover" or "rest") end
 	end
 end
 
