@@ -606,47 +606,153 @@ d'infobulle (≥ 4,5:1).
 
 ## Thèmes du socle (socle 3.2 : QuestCompanion 3.1.0, Ready2Quest 1.35.0)
 
-Jusqu'ici, Azeroth était un habillage posé par QuestCompanion sur son carnet,
-ses bandeaux et ses scènes ; le reste (tout Ready2Quest, les réglages, les
-fenêtres secondaires) restait en Sobre. Le thème vit maintenant dans le socle
-(`Theme.lua`, section « Thèmes ») : il change les jetons que lisent toutes les
-briques, donc toutes les fenêtres des deux addons suivent sans être habillées
-une à une.
+Deux thèmes, pour les deux addons : **Sobre** (ardoise et ambre, à plat : le
+langage décrit plus haut, inchangé) et **Azeroth**, dit « forgé » (le défaut).
+Le thème vit dans le socle (`Theme.lua`, section « Thèmes ») : aucune fenêtre
+n'est habillée une à une.
+
+Maquette validée le 2026-11-14 (référence visuelle) : profondeur (ombre
+portée, bords assombris, champs en creux, boutons en relief), lumière (filets
+qui s'éteignent, points lumineux, sélection en dégradé), identité (médaillon
+du logo qui déborde du coin, police du jeu pour les titres), et une couleur
+qui porte le sens.
+
+### Jetons et police
 
 | | Sobre | Azeroth |
 |---|---|---|
-| `EDGE` (bord de fenêtre, bouton en contour) | `#3a424a` | or patiné `#996b2e` |
+| `EDGE` (bord, bouton en contour) | `#3a424a` | or patiné `#996b2e` |
 | `EDGE_SOFT` (filets, séparations) | `#2a3138` | or sombre `#4d381f` |
 | `NAV` (colonne, pied, plaque de titre) | `#0d1013` | bois sombre `#16100c` |
 | `TITLE` (titres de fenêtre) | parchemin | or clair `#f6c77d` |
-| `ACTIVE` (onglet, entrée, ligne sélectionnés) | ambre | bleu arcane `#5b8fd6` |
+| `ACTIVE` (onglet, entrée, ligne choisis) | ambre | bleu arcane `#5b8fd6` |
 | Police des rôles DISPLAY, TITLE, CAPS | Inter | Friz Quadrata (`Fonts\FRIZQT__.TTF`) |
-| Cadre | filet d'un pixel | + cadre en bois des hauts faits, hors du contenu |
 
-- `Theme.ApplySkin(id)` modifie les jetons **sur place** (les tables gardent
-  leur identité) et repose la police des rôles de titre. Posé par le socle dès
-  `ADDON_LOADED` (`Store.lua`), avant toute fenêtre. Une fenêtre déjà
-  construite garde ses couleurs jusqu'au `/reload` ; le bois, lui, suit à
-  l'affichage suivant (`Theme.DressWindow`, accroché à `OnShow` et joué à la
-  création).
-- Le bois : huit pièces `achievement-wood-nineslice-*` (vues en jeu dans les
-  scènes de capture), posées à `WOOD_BAND` (24 px) **hors** du cadre : rien du
-  contenu n'est recouvert, aucune mise en page ne change. Pas de bois sous
-  `WOOD_MIN` (160), sur une fenêtre déjà habillée par son module
-  (`frame.azeroth`, `frame.uiStyle == "azeroth"` : le carnet), sur une fenêtre
-  qui le refuse (`opts.wood = false`), ni si une pièce manque au client.
-- Les encres du texte courant ne changent pas et le bois n'est pas plus clair
-  que le fond qu'il remplace : les contrastes d'avant tiennent, et
-  `tests/modules/ui_skin.lua` (« [SKIN] ») les recalcule pour Azeroth.
-- Réglage : Ready2Quest, « Style de l'interface » (page Général, `uiStyle`,
-  `/r2q style`) ; QuestCompanion garde le sien (`companionStyle`,
-  `/qc style`), qui pose aussi le thème du socle (`ns:ApplyUIStyle`).
-- Nouveaux jetons à utiliser dans les modules : `Theme.TITLE` pour un titre de
-  fenêtre, `Theme.ACTIVE` pour un état sélectionné. `Theme.GOLD` reste
-  l'accent « important » (bouton principal, valeur mise en avant).
-- À regarder en jeu : le bois autour de chaque fenêtre (réglages 900 px, petits
-  dialogues), Friz en capitales de 10 px (sections), le bleu des onglets, la
-  plaque de titre.
+`Theme.ApplySkin(id)` modifie ces jetons **sur place** (les tables gardent
+leur identité) et repose la police des rôles de titre. Posé par le socle dès
+`ADDON_LOADED` (`Store.lua`), avant toute fenêtre. Les encres du texte
+courant ne changent pas. Une brique décide son habit à sa création
+(`Theme.Forged()`) : changer de thème demande un `/reload` pour une fenêtre
+déjà construite ; l'habillage de la fenêtre elle-même (`Theme.DressWindow`)
+suit à l'affichage suivant.
+
+### Matières (nos textures, `tools/gen_ui_assets.py`)
+
+Formes, reliefs et lueurs calculés par script, écrits dans
+`Libs/Socle/Media/` (TGA 32 bits, 86 Ko en tout) ; aucune illustration, rien
+du jeu. `Theme.ART` :
+
+| Clé | Fichier | Rôle |
+|---|---|---|
+| `frame` | `cadre.tga` 64, marge 16 | cadre d'orfèvre (en couleurs), centre vide |
+| `shadow` | `ombre.tga` 64, marge 28 | ombre portée |
+| `corner` | `coin.tga` 64 | coin haut gauche, retourné pour les trois autres |
+| `plate` | `plaque.tga` 32, marge 8 | plaque en relief, **grise** : la teinte la multiplie |
+| `inset` | `creux.tga` 32, marge 8 | creux, gris : le filet prend la teinte, le fond reste presque noir |
+| `line` | `lueur_ligne.tga` 256 × 8 | filet lumineux qui s'éteint à droite (blanc, se teinte) |
+| `dot` | `lueur_point.tga` 32 | point lumineux (blanc, se teinte) |
+| `vignette` | `vignette.tga` 64 | bords assombris d'une fenêtre |
+
+`Theme.Slice(frame, art, opts)` découpe une matière en 9 tranches (9
+textures) : coins à leur taille, bords et centre étirés. `opts` : `layer`,
+`sub`, `out` (débord), `margin`, `fill = false` (sans centre), `color`,
+`alpha`, `around`. Une découpe coûte 9 textures : bien pour un bouton, un
+champ, un bloc ; jamais sur chaque ligne d'une liste (un dégradé suffit).
+
+### Fenêtres et bandeaux (`Theme.DressWindow`)
+
+Ombre portée (débord 20), bords assombris, cadre d'orfèvre, quatre coins, et
+le **médaillon du logo** (`Theme.LOGO`, 84 px) qui déborde du coin haut
+gauche quand la fenêtre le demande (`opts.emblem` de `CreateWindow`,
+`frame.wantsEmblem` ; `CreateDialog` le demande, la fenêtre de réglages
+aussi : l'en-tête et la marque lui laissent la place). Le cadre, les coins et
+le médaillon vivent sur un cadre à part, au-dessus des enfants de la fenêtre
+(`Theme.CHROME.level`), sans souris. Le filet d'un pixel de Sobre s'efface.
+Posé à la création et à chaque `OnShow` (et `OnSizeChanged` pour un
+bandeau). Un bandeau (`Theme.SkinToast`) a l'ombre et le cadre, ni coins ni
+médaillon ; si son fond déborde (`opts.outset`), l'habillage suit le fond.
+Pas d'habillage : fenêtre déjà habillée par son module (`frame.azeroth`,
+`frame.uiStyle == "azeroth"` : le carnet en parchemin de QuestCompanion),
+`opts.chrome = false`, ou plus petite que `Theme.CHROME.min`.
+
+### Contrôles
+
+- **Boutons** : plaque en relief teintée (`Theme.FORGE_PLATE`), encre
+  mesurée (`Theme.FORGE_INK`), par style (`Theme.FORGE_BUTTONS`). La couleur
+  dit le geste : `primary` or (l'action principale du pied, encre sombre sans
+  ombre), `accent` bronze, `outline` ardoise, et trois styles de sens,
+  `add` (vert), `danger` (rouge), `arcane` (bleu : ouvrir, changer). En Sobre
+  ces trois-là valent `outline`. Survol : la teinte s'éclaire ; appui : elle
+  s'assombrit et le libellé s'enfonce d'un pixel ; désactivé : plaque sombre,
+  texte lisible.
+- **Petits boutons** ([×], icône, engrenage) : petite plaque, bronze au survol.
+- **Case** : creux, coche or avec une lueur. **Interrupteur** : piste en
+  creux, curseur en relief, bleu arcane et lumineux quand il est actif.
+  **Voyant de module** : point vert lumineux ou point sombre.
+- **Curseur** : piste en creux, part remplie en dégradé d'or, poignée claire.
+  **Champ**, **case de valeur**, **liste** : creux ou plaque, filet bleu
+  arcane au focus, chevron or.
+- **Barre** : piste presque noire, remplissage en dégradé avec un reflet d'un
+  pixel (pas de découpe : une barre se répète sur chaque ligne).
+
+### Navigation, sections, cartes, listes
+
+- Colonne : titres de groupe en « pilule » (dégradé de leur ton, or ou
+  arcane), entrée choisie en dégradé arcane avec une barre claire à gauche.
+- Titre de section : point lumineux, titre, filet qui s'éteint
+  (`Theme.FORGE_SECTION`, tons de `Theme.FORGE_TONES`).
+- Carte de réglage : relief posé sur le fond (voile clair en haut, sombre en
+  bas, reflet et ombre d'un pixel : `Theme.FORGE_CARD`), sans découpe.
+- Onglet choisi : dégradé arcane, souligné clair. Ligne choisie : dégradé
+  arcane et barre ; losange de statut avec un halo de sa couleur.
+- En-tête : plaque de bois au haut plus chaud, filet lumineux sous le titre.
+  Pied : bande sombre, reflet d'un pixel (`Theme.ForgeFooter`).
+
+### Dans les modules
+
+Les blocs faits à la main reprennent ces matières par des jetons du module,
+lus dans le thème : `ns.FORGE` et `ns.ForgeOn()` côté Ready2Quest
+(`Core.lua` : bloc de la note du check, verdict en creux, conseils, cartes de
+liste, étiquettes), `ns.QC_FORGE` côté QuestCompanion (filet en plaque d'or,
+pastilles de capture en petites cartes, garde-manger, suivi). Un bouton prend
+un style de sens par `ns.ForgeStyle(sobre, forgé…)`.
+
+Le carnet en parchemin, les scènes de capture et les bandeaux dorés de
+QuestCompanion (textures du client, section suivante) ne sont pas convertis.
+
+### Logos (`tools/gen_logos.py`)
+
+Une famille : le même médaillon d'or, un glyphe et une couleur par addon.
+Ready2Quest : l'écu coché, échancré au sommet, qui porte en cimier le « ! »
+doré des quêtes. QuestCompanion : l'empreinte, en bleu arcane. Trois fichiers
+par addon : `logo.tga` (128 : marque, médaillon des fenêtres),
+`logo_petit.tga` (64, glyphe simplifié : liste des addons, bandeaux),
+`logo_glyphe.tga` (64, sans anneau : bouton de la mini-carte, qui a le sien).
+L'outil demande `rsvg-convert` et Pillow.
+
+### Voir sans le jeu
+
+`python3 tests/snapshot.py <scène> sortie.html` rend une fenêtre avec le vrai
+code (Azeroth par défaut, `sobre:<scène>` pour Sobre) : teintes multipliées,
+textures retournées, débords et ordre des cadres comme en jeu. Reste
+approché : la police des titres, les textures du client, le rendu exact des
+reliefs et des lueurs.
+
+### Contrastes et tests
+
+Chaque texte posé sur une matière forgée est mesuré au point le plus clair et
+au plus sombre de son fond (≥ 4,5 corps, ≥ 3 titres) :
+`tests/modules/ui_skin.lua`, `ui_forge_controles.lua`,
+`ui_forge_navigation.lua`, `ui_forge_r2q.lua`, `ui_forge_qc.lua`.
+`ui_bricks.lua` et deux blocs de `socle.lua` sont épinglés en Sobre : ils
+décrivent le thème d'avant, qui ne doit pas bouger.
+
+### À regarder en jeu
+
+Le relief des plaques et la profondeur des creux (teinte × texture), les
+dégradés (`SetGradient`), les lueurs additives, Friz Quadrata en capitales
+de 10 px, le médaillon et les quatre coins sur chaque fenêtre, le bouton de
+la mini-carte et l'icône de la liste des addons.
 
 ## Style Azeroth (QuestCompanion)
 
