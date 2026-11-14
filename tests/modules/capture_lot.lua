@@ -46,6 +46,10 @@ function LOT.Install()
 end
 function LOT.Reset()
 	ResetWorld()
+	-- 3.1.0 : le Voile d'hiver suit le thème forgé (choix par défaut) et
+	-- l'horloge du harnais (1970-01-01) tombe en saison : décor coupé, la
+	-- boule de neige remplacerait le filet (winter_veil.lua le teste)
+	NS:DB().winterVeil = "off"
 	-- 2.15.0 : qualité tirée au coup fatal figée à 1 étoile (sauf LOT.quality) :
 	-- les chances attendues restent celles du rang
 	LOT.quality = nil

@@ -430,14 +430,14 @@ local INK = INKS.ink                      -- encre des bandes claires (2.8.2 : #
 
 local FR = {
 	OPT_UI_STYLE           = "Style de l'interface",
-	OPT_UI_STYLE_DESC      = "Azeroth : cadres dorés, boutons en relief, carnet en parchemin. Sobre : le style d'avant, à plat. Les bandeaux et le compagnon changent tout de suite ; les fenêtres déjà ouvertes, au prochain /reload.",
+	OPT_UI_STYLE_DESC      = "Azeroth : cadre doré, boutons en relief et titres dans la police du jeu. Sobre : l'aspect d'avant, à plat. Les fenêtres déjà ouvertes prennent le nouveau style au prochain /reload.",
 	OPT_UI_STYLE_MISSING   = "Les textures des hauts faits manquent sur ce client : le style Sobre s'affiche à la place.",
 	UI_STYLE_azeroth       = "Azeroth (doré)",
 	UI_STYLE_sobre         = "Sobre",
 	UI_STYLE_MSG           = "Style de l'interface : %s. Tape /reload pour l'appliquer aux fenêtres déjà ouvertes.",
 	UI_STYLE_MSG_MISSING   = "Style de l'interface : %s. Ses textures manquent sur ce client : le style Sobre reste affiché.",
 	UI_STYLE_USAGE         = "/qc style azeroth|sobre (actuel : %s)",
-	HELP_STYLE             = "/qc style azeroth|sobre — style des bandeaux et du cadre du compagnon",
+	HELP_STYLE             = "/qc style azeroth|sobre — style de toute l'interface (Azeroth : cadre doré ; Sobre : à plat)",
 	CAPTURE_RESULT         = "Capturé !",
 	CAPTURE_RESULT_SHINY   = "Brillant capturé !",
 	CAPTURE_RESULT_MORE    = "et %d de plus",
@@ -446,14 +446,14 @@ local FR = {
 }
 local EN = {
 	OPT_UI_STYLE           = "Interface style",
-	OPT_UI_STYLE_DESC      = "Azeroth: golden frames, bevelled buttons, parchment journal. Plain: the previous flat look. Banners and the companion change right away; windows already open, after the next /reload.",
+	OPT_UI_STYLE_DESC      = "Azeroth: golden frame, bevelled buttons and titles in the game font. Plain: the previous flat look. Windows already open take the new style after the next /reload.",
 	OPT_UI_STYLE_MISSING   = "This client lacks the achievement textures: the Plain style is shown instead.",
 	UI_STYLE_azeroth       = "Azeroth (golden)",
 	UI_STYLE_sobre         = "Plain",
 	UI_STYLE_MSG           = "Interface style: %s. Type /reload to apply it to windows already open.",
 	UI_STYLE_MSG_MISSING   = "Interface style: %s. Its textures are missing on this client: the Plain style stays on screen.",
 	UI_STYLE_USAGE         = "/qc style azeroth|sobre (current: %s)",
-	HELP_STYLE             = "/qc style azeroth|sobre — style of the banners and the companion frame",
+	HELP_STYLE             = "/qc style azeroth|sobre — style of the whole interface (Azeroth: golden frame; Plain: flat)",
 	CAPTURE_RESULT         = "Captured!",
 	CAPTURE_RESULT_SHINY   = "Shiny captured!",
 	CAPTURE_RESULT_MORE    = "and %d more",
@@ -3038,7 +3038,9 @@ do
 					choices = function() return ns:UIStyleChoices() end,
 					current = function() return ns:UIStyleChoice() end,
 					describe = function() return L.OPT_UI_STYLE_DESC end,
-					tooltip = function() if not ns:AzerothAtlasOK() then return L.OPT_UI_STYLE_MISSING end end,
+					-- 3.1.0 : seulement pour l'ancien habillage (le thème forgé n'a
+					-- besoin d'aucune texture du client)
+					tooltip = function() if ns.AZEROTH_LEGACY == true and not ns:AzerothAtlasOK() then return L.OPT_UI_STYLE_MISSING end end,
 					choose = function(id) ns:SetUIStyle(id) end })
 			end
 		end
@@ -3057,7 +3059,7 @@ function ns:UIStyleCommand(rest)
 		self:Print(self:F("UI_STYLE_USAGE", L["UI_STYLE_" .. self:UIStyleChoice()]))
 		return nil
 	end
-	local missing = id == "azeroth" and not self:AzerothAtlasOK()
+	local missing = id == "azeroth" and ns.AZEROTH_LEGACY == true and not self:AzerothAtlasOK()
 	self:Print(self:F(missing and "UI_STYLE_MSG_MISSING" or "UI_STYLE_MSG", L["UI_STYLE_" .. id]))
 	return id
 end

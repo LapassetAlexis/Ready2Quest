@@ -313,9 +313,18 @@ local function SeasonNow()
 	return seasonCache.value
 end
 
--- Le décor est-il là ? Style Azeroth affiché ET réglage (auto : la saison)
+-- 3.1.0 : le décor suit le choix du style « Azeroth » (le thème forgé, posé
+-- sans les atlas du client), plus l'ancien habillage (ns:AzerothOn) : la
+-- saison reste là quand l'ancien habillage est coupé. Chaque pose (carnet,
+-- compagnon, scènes, glyphes) se garde d'un cadre qui n'a pas son hôte.
+function ns:WinterVeilStyleOn()
+	if self.UIStyleChoice then return self:UIStyleChoice() == "azeroth" end
+	return (self.AzerothOn and self:AzerothOn()) and true or false
+end
+
+-- Le décor est-il là ? Style Azeroth choisi ET réglage (auto : la saison)
 function ns:WinterVeilActive()
-	if not (self.AzerothOn and self:AzerothOn()) then return false end
+	if not self:WinterVeilStyleOn() then return false end
 	local choice = self:WinterVeilChoice()
 	if choice == "on" then return true end
 	if choice == "off" then return false end
@@ -1295,7 +1304,7 @@ do
 					choices = function() return ns:WinterVeilChoices() end,
 					current = function() return ns:WinterVeilChoice() end,
 					describe = function() return L.OPT_WINTER_VEIL_DESC end,
-					tooltip = function() if not (ns.AzerothOn and ns:AzerothOn()) then return L.OPT_WINTER_VEIL_SOBRE end end,
+					tooltip = function() if not ns:WinterVeilStyleOn() then return L.OPT_WINTER_VEIL_SOBRE end end,
 					choose = function(id) ns:SetWinterVeil(id) end })
 			end
 			-- 2.14.0 (bêta 6) : le cadre givré, juste sous le décor
@@ -1307,7 +1316,7 @@ do
 			if not frost and after then
 				table.insert(page.rows, after + 1, { key = "winterVeilFrost", label = "OPT_WINTER_VEIL_FROST", kind = "bool",
 					describe = function() return L.OPT_WINTER_VEIL_FROST_DESC end,
-					tooltip = function() if not (ns.AzerothOn and ns:AzerothOn()) then return L.OPT_WINTER_VEIL_SOBRE end end,
+					tooltip = function() if not ns:WinterVeilStyleOn() then return L.OPT_WINTER_VEIL_SOBRE end end,
 					onChange = function()
 						local ok, err = pcall(ns.WinterVeilCompanion, ns)
 						if not ok and ns.RecordError then ns:RecordError("noel:givre", err) end
@@ -1328,7 +1337,7 @@ function ns:WinterVeilCommand(rest)
 		self:Print(self:F("WINTER_VEIL_USAGE", L["WINTER_VEIL_" .. self:WinterVeilChoice()]))
 		return nil
 	end
-	local sobre = mode ~= "off" and not (self.AzerothOn and self:AzerothOn())
+	local sobre = mode ~= "off" and not self:WinterVeilStyleOn()
 	self:Print(self:F(sobre and "WINTER_VEIL_MSG_SOBRE" or "WINTER_VEIL_MSG", L["WINTER_VEIL_" .. mode]))
 	return mode
 end
