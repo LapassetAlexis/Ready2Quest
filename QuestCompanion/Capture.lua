@@ -972,8 +972,29 @@ end
 -- ---------------------------------------------------------------------------
 local PROMPT_W, PROMPT_H, MODEL_SIZE, AID_SIZE = 304, 104, 64, 26
 
+-- 3.1.0 : la petite fenêtre est gardée par clé de thème (« forge » ou
+-- « sobre ») : ses briques forgées (titre, Lancer, aides) sont décidées à la
+-- construction, et un changement de thème sans /reload ne doit pas resservir
+-- la fenêtre de l'autre thème
+local function PromptKey()
+	return (ns.QCForged and ns.QCForged()) and "forge" or "sobre"
+end
+
 function ns:EnsureCapturePrompt()
-	if self.capturePrompt then return self.capturePrompt end
+	local key = PromptKey()
+	local have = self.capturePrompt
+	if have and (have.styleKey or "sobre") == key then return have end
+	self.capturePrompts = self.capturePrompts or {}
+	if have then
+		have:Hide()
+		self.capturePrompts[have.styleKey or "sobre"] = have
+		self.capturePrompt = nil
+	end
+	if self.capturePrompts[key] then
+		self.capturePrompt = self.capturePrompts[key]
+		self.capturePrompts[key] = nil
+		return self.capturePrompt
+	end
 	if not (Theme and Theme.CreateToast) then return nil end
 	local frame = Theme.CreateToast(UIParent, PROMPT_W, PROMPT_H, { strata = "HIGH" })
 	if not frame then return nil end
@@ -1058,6 +1079,7 @@ function ns:EnsureCapturePrompt()
 		frame.timer = Theme.CreateBar(frame, PROMPT_W - 2, 2)
 		frame.timer:SetPoint("BOTTOMLEFT", frame, "BOTTOMLEFT", 1, 1)
 	end
+	frame.styleKey = key
 	frame:Hide()
 	self.capturePrompt = frame
 	return frame
@@ -1114,7 +1136,7 @@ function ns:CaptureRefreshPrompt()
 		local chosen = state.aid == button.aid and state.pending ~= nil
 		if button.icon.SetDesaturated then button.icon:SetDesaturated(not chosen) end
 		button.icon:SetAlpha(chosen and 1 or (count > 0 and 0.6 or 0.25))
-		local c = chosen and Theme.GOLD or Theme.EDGE
+		local c = chosen and (Theme.SELECT or Theme.GOLD) or Theme.EDGE
 		if button.border and button.border.SetColor then button.border:SetColor(c[1], c[2], c[3], 1) end
 		-- thème forgé : le contour est caché, la plaque dit l'aide choisie
 		if button.forgeLook then button.forgeLook(button, chosen and "hover" or "rest") end

@@ -1630,6 +1630,11 @@ function ns:CaptureRefreshQueueList(now)
 	if not frame then return end
 	local queue = self:CaptureQueueState()
 	frame.title:SetText(self:F("CAPTURE_Q_COUNT", #queue))
+	-- 3.1.0 : un titre, à l'encre de l'identité au thème forgé (bleu arcane
+	-- dans QuestCompanion), l'ambre d'avant en Sobre ; lu à chaque
+	-- rafraîchissement (la liste est construite une fois, le thème peut changer)
+	local ink = (ns.QCForged and ns.QCForged()) and Theme.IDENTITY_LIGHT or Theme.GOLD
+	frame.title:SetTextColor(ink[1], ink[2], ink[3], 1)
 	for index, row in ipairs(frame.rows) do
 		local candidate = queue[index]
 		row.candidate = candidate

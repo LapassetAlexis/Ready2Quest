@@ -544,6 +544,7 @@ do
 		frame:Hide()
 		return frame
 	end
+	NS.capturePrompts = nil
 	local forged = Prompt("azeroth")
 	s.ok("forgé : titre de l'identité, Lancer en plaque d'or, aides en petites plaques, habillé par le socle",
 		forged and forged.forged and Same(forged.title.textColor, Theme.IDENTITY_LIGHT) and forged.throw.forge
@@ -552,7 +553,27 @@ do
 	local sobre = Prompt("sobre")
 	s.ok("Sobre : le titre ambre d'avant, sans plaque", sobre and sobre ~= forged and not sobre.forged
 		and Same(sobre.title.textColor, Theme.GOLD) and sobre.throw.forge == nil and sobre.aids[1].forgeLook == nil)
-	NS.capturePrompt = nil
+	NS.capturePrompt, NS.capturePrompts = nil, nil
+	-- bascule sans /reload : la fenêtre est gardée par clé, jamais resservie dans l'autre thème
+	local first = Prompt("azeroth")
+	NS:DB().companionStyle = "sobre"; NS:ApplyUIStyle()
+	local plain = NS:EnsureCapturePrompt()
+	s.ok("bascule vers le Sobre : une autre fenêtre, titre ambre, sans brique forgée", plain and plain ~= first
+		and plain.styleKey == "sobre" and Same(plain.title.textColor, Theme.GOLD) and plain.throw.forge == nil)
+	NS:DB().companionStyle = "azeroth"; NS:ApplyUIStyle()
+	s.ok("retour au thème forgé : la fenêtre forgée revient (pas de doublon)", NS:EnsureCapturePrompt() == first
+		and first.styleKey == "forge")
+	NS.capturePrompt, NS.capturePrompts = nil, nil
+	-- la liste du filet : titre à l'identité au thème forgé, ambre en Sobre (suit la bascule)
+	FS.Reset("azeroth")
+	FS.SeeKill(8810, { name = "Kodo" })
+	local list = NS:CaptureShowQueueList()
+	s.ok("liste du filet, thème forgé : titre à l'identité", list and Same(list.title.textColor, Theme.IDENTITY_LIGHT)
+		and list.title:GetText() == NS:F("CAPTURE_Q_COUNT", #NS:CaptureQueueState()))
+	NS:DB().companionStyle = "sobre"; NS:ApplyUIStyle()
+	NS:CaptureRefreshQueueList()
+	s.ok("liste du filet, Sobre : l'ambre d'avant", list and Same(list.title.textColor, Theme.GOLD))
+	NS:CaptureHideQueueList()
 	s.check("[FSC] « Capturer ? » : briques du socle, titre de l'identité au thème forgé, Sobre inchangé")
 end
 
