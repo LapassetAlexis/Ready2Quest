@@ -81,6 +81,28 @@ local function Flash(region, to, inTime, outTime, delay)
 	return group
 end
 
+-- La petite plaque d'or à chiffre (une seule fabrique pour les points du
+-- médaillon, le niveau du verdict de la scène et le badge d'étoiles d'une
+-- case de la volée) : un cadre sans souris, .slice (la plaque, teinte
+-- FORGE_PLATE.gold, recolorable), .text (le chiffre à l'encre sombre de
+-- l'or, sans ombre), caché. opts : layer, sub (la plaque), margin, ink.
+function ns.ForgeGoldBadge(parent, w, h, font, opts)
+	opts = opts or {}
+	local badge = CreateFrame("Frame", nil, parent)
+	badge:SetSize(w, h)
+	if badge.EnableMouse then badge:EnableMouse(false) end
+	badge.slice = Theme.ForgeSlice(badge, "plate", Theme.FORGE_PLATE.gold, { layer = opts.layer or "ARTWORK",
+		sub = opts.sub or 0, margin = opts.margin, height = h })
+	badge.text = badge:CreateFontString(nil, "OVERLAY", font or Theme.F_NUMBER)
+	badge.text:SetPoint("CENTER", badge, "CENTER", 0, 0)
+	badge.text:SetJustifyH("CENTER")
+	local ink = opts.ink or Theme.FORGE_INK.gold
+	badge.text:SetTextColor(ink[1], ink[2], ink[3], 1)
+	if Theme.NoShadow then Theme.NoShadow(badge.text) end
+	badge:Hide()
+	return badge
+end
+
 -- L'habillage forgé d'un bandeau (Theme.CreateToast) : médaillon, éclat,
 -- trait, éclosion. Seulement sous le thème forgé ; rend le bord gauche du
 -- texte (ou nil, rien posé). opts.medal : diamètre de l'anneau.
@@ -162,20 +184,11 @@ function ns:ForgeBannerDress(frame, opts)
 	medal.ring:SetTexture(Theme.ART.ring.file)
 	medal.ring:SetAllPoints(medal)
 	-- la plaque des points ou du niveau, à cheval sur le bas de l'anneau
-	local badge = CreateFrame("Frame", nil, medal)
-	badge:SetSize(K.badge.h * 2, K.badge.h)
+	local badge = ns.ForgeGoldBadge(medal, K.badge.h * 2, K.badge.h, Theme.F_NUMBER,
+		{ layer = "BACKGROUND", sub = 0, margin = Theme.FORGE.marginSmall })
 	badge:SetPoint("TOP", medal, "BOTTOM", 0, K.badge.over)
 	if badge.SetFrameLevel then badge:SetFrameLevel(Level(medal) + 2) end
-	if badge.EnableMouse then badge:EnableMouse(false) end
-	badge.plate = Theme.ForgeSlice(badge, "plate", Theme.FORGE_PLATE.gold, { layer = "BACKGROUND", sub = 0,
-		margin = Theme.FORGE.marginSmall, height = K.badge.h })
-	badge.text = badge:CreateFontString(nil, "OVERLAY", Theme.F_NUMBER)
-	badge.text:SetPoint("CENTER", badge, "CENTER", 0, 0)
-	badge.text:SetJustifyH("CENTER")
-	local ink = Theme.FORGE_INK.gold
-	badge.text:SetTextColor(ink[1], ink[2], ink[3], 1)
-	if Theme.NoShadow then Theme.NoShadow(badge.text) end
-	badge:Hide()
+	badge.plate = badge.slice
 	medal.badge = badge
 	-- le trait qui traverse le bandeau, au bas de la zone du texte (tête
 	-- lumineuse devant : la lueur s'efface vers la gauche)

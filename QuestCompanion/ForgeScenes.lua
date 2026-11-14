@@ -208,18 +208,11 @@ function ns:ForgeVerdict(parent, width, height)
 	banner.portraitIcon:SetTexCoord(0.08, 0.92, 0.08, 0.92)
 	banner.portraitIcon:Hide()
 	-- le niveau, sur sa plaque (« bouclier » de l'interface d'AzerothVerdict)
-	local shield = CreateFrame("Frame", nil, banner)
-	shield:SetSize(V.levelW, V.levelH)
+	-- (la petite plaque d'or commune, ns.ForgeGoldBadge de ForgeBanners.lua)
+	local shield = ns.ForgeGoldBadge(banner, V.levelW, V.levelH, Theme.F_TITLE, { ink = inks.levelGold })
 	shield:SetPoint("RIGHT", banner, "RIGHT", -V.levelX, 0)
-	shield.slice = Theme.ForgeSlice(shield, "plate", Theme.FORGE_PLATE.gold, { layer = "ARTWORK", sub = 0,
-		height = V.levelH })
-	shield:Hide()
 	banner.shield = shield
-	banner.levelText = shield:CreateFontString(nil, "OVERLAY", Theme.F_TITLE)
-	banner.levelText:SetPoint("CENTER", shield, "CENTER", 0, 0)
-	banner.levelText:SetJustifyH("CENTER")
-	Paint(banner.levelText, inks.levelGold)
-	if Theme.NoShadow then Theme.NoShadow(banner.levelText) end
+	banner.levelText = shield.text
 	banner.levelText:SetText("")
 	banner.levelText:Hide()
 	-- l'éclat, sur la plaque d'or (au-dessus d'elle)
@@ -366,18 +359,9 @@ function ns.ForgeTileDress(tile)
 	local B = K.batch
 	tile.forged = true
 	tile.inset = ns.ForgeInset(tile, tile.scene, B.inset, nil, "BORDER", -1)
-	local badge = CreateFrame("Frame", nil, tile.fx or tile)
-	badge:SetSize(B.badgeW, B.badgeH)
+	local badge = ns.ForgeGoldBadge(tile.fx or tile, B.badgeW, B.badgeH, Theme.F_NUMBER or Theme.F_LABEL)
 	badge:SetPoint("TOPRIGHT", tile, "TOPRIGHT", B.badgeX, B.badgeY)
 	badge:SetFrameLevel(((tile.fx or tile):GetFrameLevel() or 1) + 2)
-	if badge.EnableMouse then badge:EnableMouse(false) end
-	badge.slice = Theme.ForgeSlice(badge, "plate", Theme.FORGE_PLATE.gold, { layer = "ARTWORK", sub = 0, height = B.badgeH })
-	badge.text = badge:CreateFontString(nil, "OVERLAY", Theme.F_NUMBER or Theme.F_LABEL)
-	badge.text:SetPoint("CENTER", badge, "CENTER", 0, 0)
-	badge.text:SetJustifyH("CENTER")
-	Paint(badge.text, Theme.FORGE_INK.gold)
-	if Theme.NoShadow then Theme.NoShadow(badge.text) end
-	badge:Hide()
 	tile.badge = badge
 	return tile
 end
