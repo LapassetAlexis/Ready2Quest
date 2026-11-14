@@ -237,6 +237,13 @@ function ns:ScrollOptionList(list, delta)
 	self:RefreshOptionList(list)
 end
 
+-- socle 3.2 : style d'un bouton d'action selon le thème. En thème forgé, la
+-- couleur dit le sens (Theme.FORGE_BUTTONS : or principal, vert ajouter,
+-- rouge retirer, bleu arcane action neutre) ; en Sobre, le style d'avant.
+local function ActionStyle(sobre, forged)
+	return Theme.Forged and Theme.Forged() and forged or sobre
+end
+
 -- Bloc de liste : pleine largeur, lignes alternées, pied (position, ^ v)
 local function BuildList(page, source)
 	local def = LIST_SOURCES[source] or {}
@@ -274,7 +281,7 @@ local function BuildList(page, source)
 				line.item.onAction()
 				ns:RefreshOptions()
 			end
-		end, "outline")
+		end, ActionStyle("outline", "danger"))
 		line.action:SetPoint("RIGHT", line, "RIGHT", -8, 0)
 
 		-- clic sur la ligne : bascule (buffs suivis)
@@ -562,7 +569,10 @@ local function ActionCard(page, def)
 	local probe = Theme.Text(card, Theme.F_LABEL, Theme.LABEL)
 	probe:Hide()
 	local buttonWidth = math.max(84, math.ceil(TextWidth(probe, text)) + 28)
-	card.button = Theme.CreateButton(card, buttonWidth, 22, text, function() ns:RunOptionAction(def.key) end, "outline")
+	-- thème forgé : action neutre en bleu arcane ; def.forgeStyle ("danger",
+	-- "add"…) pour une action qui retire ou ajoute
+	card.button = Theme.CreateButton(card, buttonWidth, 22, text, function() ns:RunOptionAction(def.key) end,
+		ActionStyle("outline", def.forgeStyle or "arcane"))
 	card.button:SetPoint("RIGHT", card, "RIGHT", -PAD, 0)
 	card.controlRegion = card.button
 	card.value:ClearAllPoints()
@@ -961,7 +971,7 @@ function BuildPage(frame, def, placed)
 				page.clearButton = Theme.CreateButton(block, width, 26, label, function()
 					source.clear.run(ns)
 					ns:RefreshOptions()
-				end, "outline")
+				end, ActionStyle("outline", "danger"))
 				page.clearButton:SetPoint("LEFT", block, "LEFT", 0, 0)
 				x = width + 14
 			end
@@ -1240,7 +1250,7 @@ function ns:EnsureOptions()
 	-- socle 2.11.0 : « Rallumer » d'un module coupé, à droite de la phrase
 	frame.offBanner = Theme.CreateButton(frame.header, "auto", 22, L.OPT_PAGE_OFF_ON, function(button)
 		if button.key then ns:ToggleModuleKey(button.key) end
-	end, "outline")
+	end, ActionStyle("outline", "add"))
 	frame.offBanner:SetPoint("TOPRIGHT", frame.header, "TOPRIGHT", -MARGIN, -55)
 	frame.offBanner:Hide()
 
@@ -1307,7 +1317,7 @@ function ns:EnsureOptions()
 	frame.resetButton:SetPoint("LEFT", frame.runButton, "RIGHT", 10, 0)
 	frame.closeButton = Theme.CreateButton(foot, Width(L.OPT_DONE), 28, L.OPT_DONE, function()
 		frame:Hide()
-	end, "accent")
+	end, ActionStyle("accent", "primary"))
 	frame.closeButton:SetPoint("RIGHT", foot, "RIGHT", -MARGIN, 0)
 
 	-- la recherche se vide à la fermeture

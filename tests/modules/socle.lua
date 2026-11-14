@@ -94,6 +94,9 @@ end
 -- 3. États des contrôles ---------------------------------------------------------------------------
 do
 	Say("-- socle : survol, appui, désactivé")
+	-- les aspects du Sobre (le thème forgé : tests/modules/ui_forge_controles.lua)
+	local skin0 = Theme.skin
+	Theme.ApplySkin("sobre")
 	local parent = CreateFrame("Frame", nil, UIParent)
 	local card = Theme.CreateSettingCard(parent, 300, 38, "Button")
 	Want("repos : voile caché", card.hover.vertex[4] == Theme.HOVER_ALPHA and not card.hover:IsShown() and not card.hover.edge.top:IsShown())
@@ -158,11 +161,15 @@ do
 		NS:DB()[key] ~= false and back == total and not frame.offBanner:IsShown()
 		and frame.header.subtitle.text ~= NS.L.OPT_PAGE_OFF and moduleCards > 0)
 	frame:Hide()
+	Theme.ApplySkin(skin0)
 end
 
 -- 4. Pictos et cases du client, repli sans atlas -----------------------------------------------------
 do
 	Say("-- socle : atlas du client, repli")
+	-- les cases du client sont celles du Sobre (le thème forgé dessine les siennes)
+	local skin0 = Theme.skin
+	Theme.ApplySkin("sobre")
 	local parent = CreateFrame("Frame", nil, UIParent)
 	Mock.InstallAtlas(nil)
 	local d = Theme.CreateDiamond(parent, 10, false)
@@ -214,6 +221,7 @@ do
 		and pager.up.icon.rotation == math.pi)
 	Mock.InstallAtlas(nil)
 	parent:Hide()
+	Theme.ApplySkin(skin0)
 end
 
 -- 5. Pulsations et fondus ----------------------------------------------------------------------------

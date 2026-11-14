@@ -531,6 +531,8 @@ function Theme.PressFeedback(button, region)
 		if self.border and self.border.SetColor then
 			self.border:SetColor(Theme.GOLD_SOFT[1], Theme.GOLD_SOFT[2], Theme.GOLD_SOFT[3], 1)
 		end
+		-- socle 3.2 : thème forgé, la petite plaque s'assombrit
+		if self.forgeLook then self.forgeLook(self, "pressed") end
 	end)
 	button:SetScript("OnMouseUp", function(self)
 		if not self.pressed then return end
@@ -566,13 +568,19 @@ function Theme.CreateCloseButton(frame, size)
 	close.label = Text(close, Theme.F_TITLE, Theme.MUTED_LIGHT)
 	close.label:SetPoint("CENTER", 0, 0)
 	close.label:SetText("\195\151")   -- × (U+00D7), présent dans Inter et les polices du jeu
+	-- socle 3.2 : thème forgé, petite plaque ; « × » or clair au survol
+	if Theme.Forged() then
+		Theme.ForgeSmallPlate(close)
+	end
 	close:SetScript("OnEnter", function()
 		close.border:SetColor(Theme.GOLD[1], Theme.GOLD[2], Theme.GOLD[3], 1)
-		SetColor(close.label, Theme.PARCHMENT)
+		SetColor(close.label, close.forgeLook and Theme.GOLD_LIGHT or Theme.PARCHMENT)
+		if close.forgeLook then close.forgeLook(close, "hover") end
 	end)
 	close:SetScript("OnLeave", function()
 		close.border:SetColor(Theme.EDGE[1], Theme.EDGE[2], Theme.EDGE[3], 1)
 		SetColor(close.label, Theme.MUTED_LIGHT)
+		if close.forgeLook then close.forgeLook(close, "rest") end
 	end)
 	-- socle 3.1 : appui comme un bouton au trait (filet ambre sombre, « × »
 	-- enfoncé d'un pixel), relâché : survol ou repos
@@ -1017,6 +1025,24 @@ function Theme.CreateSearchBox(parent, width, placeholder, onChange)
 	box.placeholder:SetPoint("LEFT", box, "LEFT", 8, 0)
 	box.placeholder:SetJustifyH("LEFT")
 	box.placeholder:SetText(placeholder or "")
+	-- socle 3.2 : thème forgé, champ en creux ; le filet passe au bleu arcane
+	-- au focus. Le fond et le contour du Sobre restent, transparents : un
+	-- habillage (azSurface, carnet Azeroth) les reprend et retrouve son focus.
+	if Theme.Forged() then
+		box.bg:SetVertexColor(Theme.FIELD[1], Theme.FIELD[2], Theme.FIELD[3], 0)
+		box.border:SetColor(Theme.EDGE[1], Theme.EDGE[2], Theme.EDGE[3], 0)
+		box.inset = Theme.ForgeSlice(box, "inset", Theme.EDGE)
+	end
+	local function Focus(self, on)
+		if self.inset and not self.azSurface then
+			local c = on and Theme.ACTIVE or Theme.EDGE
+			self.inset:SetColor(c[1], c[2], c[3], 1)
+			self.focused = on
+			return
+		end
+		local c = on and Theme.GOLD or Theme.EDGE
+		self.border:SetColor(c[1], c[2], c[3], 1)
+	end
 
 	function box:Refresh()
 		local text = self:GetText() or ""
@@ -1030,8 +1056,8 @@ function Theme.CreateSearchBox(parent, width, placeholder, onChange)
 			if onChange then onChange(text, self) end
 		end
 	end)
-	box:SetScript("OnEditFocusGained", function(self) self.border:SetColor(Theme.GOLD[1], Theme.GOLD[2], Theme.GOLD[3], 1) end)
-	box:SetScript("OnEditFocusLost", function(self) self.border:SetColor(Theme.EDGE[1], Theme.EDGE[2], Theme.EDGE[3], 1) end)
+	box:SetScript("OnEditFocusGained", function(self) Focus(self, true) end)
+	box:SetScript("OnEditFocusLost", function(self) Focus(self, false) end)
 	box:SetScript("OnEscapePressed", function(self) if self.ClearFocus then self:ClearFocus() end end)
 	box:SetScript("OnEnterPressed", function(self) if self.ClearFocus then self:ClearFocus() end end)
 	box.lastValue = ""
@@ -1135,6 +1161,44 @@ function Theme.CreateBar(parent, width, height)
 	bar.fill:SetPoint("BOTTOMLEFT")
 	bar.fill:SetWidth(0)
 
+	-- socle 3.2 : thème forgé. Piste presque noire ; le remplissage garde sa
+	-- couleur (bar:SetColor, les habillages) et reçoit un voile en dégradé
+	-- (bas assombri) ; dès 5 px, un reflet d'un pixel en haut du remplissage,
+	-- l'ombre en haut de la piste et son filet clair dessous. Jamais de
+	-- découpe en 9 tranches : une barre vit souvent sur chaque ligne d'une liste.
+	if Theme.Forged() then
+		local F = Theme.FORGE
+		bar.forge = true
+		bar.bg:SetVertexColor(F.track[1], F.track[2], F.track[3], 1)
+		bar.fillShade = bar:CreateTexture(nil, "ARTWORK", nil, 1)
+		bar.fillShade:SetTexture(Theme.SOLID)
+		bar.fillShade:SetPoint("TOPLEFT", bar.fill, "TOPLEFT", 0, 0)
+		bar.fillShade:SetPoint("BOTTOMRIGHT", bar.fill, "BOTTOMRIGHT", 0, 0)
+		Theme.Gradient(bar.fillShade, "VERTICAL", Theme.SHADOW, 1 - F.fillLow, Theme.SHADOW, 0)
+		bar.fillShade:Hide()
+		if (tonumber(height) or 0) >= 5 then
+			bar.sheen = bar:CreateTexture(nil, "ARTWORK", nil, 2)
+			bar.sheen:SetTexture(Theme.SOLID)
+			bar.sheen:SetVertexColor(Theme.WHITE[1], Theme.WHITE[2], Theme.WHITE[3], F.sheen)
+			bar.sheen:SetPoint("TOPLEFT", bar.fill, "TOPLEFT", 0, 0)
+			bar.sheen:SetPoint("TOPRIGHT", bar.fill, "TOPRIGHT", 0, 0)
+			bar.sheen:SetHeight(1)
+			bar.sheen:Hide()
+			bar.trackShade = bar:CreateTexture(nil, "BACKGROUND", nil, 1)
+			bar.trackShade:SetTexture(Theme.SOLID)
+			bar.trackShade:SetVertexColor(Theme.SHADOW[1], Theme.SHADOW[2], Theme.SHADOW[3], F.trackShade)
+			bar.trackShade:SetPoint("TOPLEFT", bar, "TOPLEFT", 0, 0)
+			bar.trackShade:SetPoint("TOPRIGHT", bar, "TOPRIGHT", 0, 0)
+			bar.trackShade:SetHeight(1)
+			bar.trackRim = bar:CreateTexture(nil, "BACKGROUND", nil, 1)
+			bar.trackRim:SetTexture(Theme.SOLID)
+			bar.trackRim:SetVertexColor(Theme.WHITE[1], Theme.WHITE[2], Theme.WHITE[3], F.trackRim)
+			bar.trackRim:SetPoint("BOTTOMLEFT", bar, "BOTTOMLEFT", 0, 0)
+			bar.trackRim:SetPoint("BOTTOMRIGHT", bar, "BOTTOMRIGHT", 0, 0)
+			bar.trackRim:SetHeight(1)
+		end
+	end
+
 	function bar:SetValue(ratio)
 		ratio = Clamp(tonumber(ratio) or 0, 0, 1)
 		self.ratio = ratio
@@ -1142,6 +1206,17 @@ function Theme.CreateBar(parent, width, height)
 		-- une texture de largeur 0 peut s'afficher sur 1 px : on la masque
 		if w <= 0 then self.fill:Hide() else self.fill:Show() end
 		self.fill:SetWidth(math.max(0, w))
+		-- le relief suit le remplissage ; une barre habillée par son module
+		-- (azSurface : le carnet Azeroth) garde ses seules matières
+		if self.forge then
+			local on = w > 0 and not self.azSurface
+			for _, key in ipairs({ "fillShade", "sheen" }) do
+				if self[key] then if on then self[key]:Show() else self[key]:Hide() end end
+			end
+			for _, key in ipairs({ "trackShade", "trackRim" }) do
+				if self[key] then if self.azSurface then self[key]:Hide() else self[key]:Show() end end
+			end
+		end
 	end
 
 	function bar:SetColor(r, g, b, a)
@@ -1173,6 +1248,11 @@ local BUTTON_STYLES = {
 		text = Theme.INK, filled = true },
 }
 BUTTON_STYLES.normal = BUTTON_STYLES.outline
+-- socle 3.2 : styles qui ont un sens en thème forgé (plaque verte, rouge,
+-- bleu arcane : Theme.FORGE_BUTTONS) ; en Sobre, le bouton en contour
+BUTTON_STYLES.add = BUTTON_STYLES.outline      -- ajouter, rallumer
+BUTTON_STYLES.danger = BUTTON_STYLES.outline   -- retirer, détruire, effacer
+BUTTON_STYLES.arcane = BUTTON_STYLES.outline   -- action neutre (ouvrir, changer)
 Theme.BUTTON_STYLES = BUTTON_STYLES
 
 -- bouton actif ? (sans IsEnabled : toujours actif)
@@ -1186,12 +1266,37 @@ end
 -- button.skinPaint(button, état) et peint lui-même ses matières : le thème ne
 -- repeint plus par-dessus (avant : l'encre sombre du bouton plein retombait
 -- sur le rouge du carnet après chaque Enable).
+-- socle 3.2 : thème forgé, la plaque teintée par état (survol éclairé, appui
+-- assombri, désactivé désaturé) ; le fond et le contour du Sobre restent,
+-- transparents (un habillage les reprend)
+local function ForgePaint(self, state)
+	local f, F = self.forge, Theme.FORGE
+	local tint = Theme.FORGE_PLATE[f.plate] or Theme.FORGE_PLATE.neutral
+	local text = f.text
+	if state == "disabled" then
+		tint, text = Theme.FORGE_PLATE.disabled, Theme.DISABLED.text
+	elseif state == "hover" then
+		tint = Theme.ForgeHover(tint)
+	elseif state == "pressed" then
+		tint = Theme.ForgeTint(tint, f.press or F.press)
+	end
+	self.plate:SetColor(tint[1], tint[2], tint[3], 1)
+	self.forgeTint = tint
+	self.bg:SetVertexColor(tint[1], tint[2], tint[3], 0)
+	self.border:SetColor(tint[1], tint[2], tint[3], 0)
+	SetColor(self.text, text)
+	-- encre sombre sur l'or : sans ombre ; libellé clair : ombre noire
+	if f.noShadow or state == "disabled" then Theme.NoShadow(self.text) else Theme.TextShadow(self.text, 0.7) end
+end
 local function ButtonPaint(self, state)
 	local s = self.spec
 	self.paintState = state
 	self.disabledLook = (state == "disabled") or nil
 	self:SetAlpha(1)
+	-- un habillage (carnet Azeroth) peint ses matières : la plaque s'efface
+	if self.plate then self.plate:SetShown(not self.skinPaint) end
 	if self.skinPaint then return self.skinPaint(self, state) end
+	if self.plate then return ForgePaint(self, state) end
 	if state == "disabled" then
 		local d = Theme.DISABLED
 		self.bg:SetVertexColor(d.bg[1], d.bg[2], d.bg[3], s.filled and 1 or 0)
@@ -1275,6 +1380,11 @@ function Theme.CreateButton(parent, width, height, label, onClick, style)
 	button.bg = Solid(button, "BACKGROUND", spec.bg, spec.bgAlpha)
 	button.bg:SetAllPoints()
 	button.border = Border(button, spec.edge, 1)
+	-- socle 3.2 : thème forgé, plaque de relief teintée selon le style
+	if Theme.Forged() then
+		button.forge = Theme.FORGE_BUTTONS[button.style] or Theme.FORGE_BUTTONS.outline
+		button.plate = Theme.ForgeSlice(button, "plate", Theme.FORGE_PLATE[button.forge.plate])
+	end
 
 	button.text = Text(button, Theme.F_LABEL, spec.text)
 	button.text:SetPoint("CENTER", 0, 0)
@@ -1343,6 +1453,7 @@ function Theme.CreateButton(parent, width, height, label, onClick, style)
 		ButtonRest(self)
 	end
 	if onClick then button:SetScript("OnClick", onClick) end
+	if button.plate then ButtonRest(button) end
 	return button
 end
 
@@ -1369,8 +1480,35 @@ local function PaintCheck(tex, size)
 		tex:SetSize(math.floor(size / 2), math.floor(size / 2))
 	end
 end
+-- socle 3.2 : thème forgé, case en creux (nos textures, sans atlas du
+-- client), coche or clair qui luit ; partiel : trait clair. frame.box est le
+-- fond du creux, frame.inset la découpe entière (le filet prend la teinte).
+local function ForgeCheckbox(frame, size)
+	local F = Theme.FORGE
+	size = tonumber(size) or Theme.CHECKBOX_SIZE
+	frame.inset = frame.inset or Theme.ForgeSlice(frame, "inset", Theme.EDGE, { margin = Theme.ForgeMargin(size, true) })
+	frame.box = frame.inset.parts.c
+	frame.glow = frame.glow or Theme.ForgeGlow(frame, frame, Theme.GOLD_LIGHT, math.floor(size * F.checkGlow.size + 0.5),
+		"ARTWORK", 0, F.checkGlow.alpha)
+	frame.check = frame.check or frame:CreateTexture(nil, "OVERLAY")
+	frame.check:SetTexture(Theme.CHECK_FILE)
+	frame.check:SetPoint("CENTER", frame, "CENTER", 0, 0)
+	frame.check:SetSize(math.floor(size * F.tick + 0.5), math.floor(size * F.tick + 0.5))
+	frame.check:SetVertexColor(Theme.GOLD_LIGHT[1], Theme.GOLD_LIGHT[2], Theme.GOLD_LIGHT[3], 1)
+	frame.check:Hide()
+	frame.partialMark = frame.partialMark or frame:CreateTexture(nil, "OVERLAY")
+	frame.partialMark:SetTexture(Theme.SOLID)
+	frame.partialMark:SetPoint("CENTER", frame, "CENTER", 0, 0)
+	frame.partialMark:SetSize(math.floor(size / 2), 2)
+	frame.partialMark:SetVertexColor(Theme.MUTED_LIGHT[1], Theme.MUTED_LIGHT[2], Theme.MUTED_LIGHT[3], 1)
+	frame.partialMark:Hide()
+	frame.checkbox, frame.forgeCheck = true, true
+	return true
+end
 -- Habille `frame` d'une case du client (rend vrai) ; faux si l'atlas manque
+-- (thème forgé : toujours la case en creux)
 function Theme.ApplyCheckbox(frame, size)
+	if Theme.Forged() then return ForgeCheckbox(frame, size) end
 	local box = frame.box or frame:CreateTexture(nil, "ARTWORK")
 	if not Theme.PaintClient(box, "checkbox") then
 		if frame.box then frame.box:Hide() end
@@ -1401,6 +1539,14 @@ function Theme.SetCheckboxState(frame, state)
 	if not frame.checkbox then return end
 	if state == true then frame.check:Show() else frame.check:Hide() end
 	if state == "partial" then frame.partialMark:Show() else frame.partialMark:Hide() end
+	if frame.forgeCheck then
+		-- filet or quand la case est cochée, or patiné sinon ; la coche luit
+		local c = (state == true) and Theme.GOLD_SOFT or Theme.EDGE
+		frame.inset:SetColor(c[1], c[2], c[3], 1)
+		frame.checkState = state
+		if state == true then frame.glow:Show() else frame.glow:Hide() end
+		return
+	end
 	local c = (state == false) and Theme.MUTED_LIGHT or Theme.WHITE
 	frame.box:SetVertexColor(c[1], c[2], c[3], 1)
 end
@@ -1414,8 +1560,22 @@ function Theme.CreateToggle(parent, width, height, kind)
 	toggle.edge = Border(toggle, Theme.GOLD, 0)
 	toggle.knob = Solid(toggle, "ARTWORK", Theme.MUTED, 1)
 	toggle.knob:SetSize(height - 4, height - 4)
-	-- case du client : la case remplace la piste (carré, aligné à droite)
-	if Theme.ApplyCheckbox(toggle, Theme.CHECKBOX_SIZE) then
+	-- socle 3.2 : thème forgé, interrupteur dessiné (nos textures, jamais la
+	-- case du client) : piste en creux, curseur en relief ; actif = filet et
+	-- curseur bleu arcane, qui luit. toggle.knob (invisible) porte la place du
+	-- curseur, toggle.thumb (plaque) le dessine.
+	if Theme.Forged() then
+		toggle.forgeSwitch = true
+		toggle.track:SetAlpha(0)
+		toggle.knob:SetAlpha(0)
+		toggle.knob:SetSize(math.floor(width / 2 + 0.5), math.max(4, height - 2))
+		Theme.ForgeHideBorder(toggle.edge)
+		toggle.inset = Theme.ForgeSlice(toggle, "inset", Theme.EDGE, { margin = Theme.ForgeMargin(height, true) })
+		toggle.glow = Theme.ForgeGlow(toggle, toggle.knob, Theme.FORGE_PLATE.thumbOn,
+			math.floor(height * Theme.FORGE.glowSize + 0.5), "ARTWORK", 0)
+		toggle.thumb = Theme.ForgeSlice(toggle, "plate", Theme.FORGE_PLATE.thumb,
+			{ layer = "ARTWORK", sub = 1, margin = Theme.FORGE.marginSmall - 1, around = toggle.knob })
+	elseif Theme.ApplyCheckbox(toggle, Theme.CHECKBOX_SIZE) then
 		toggle:SetSize(Theme.CHECKBOX_SIZE, Theme.CHECKBOX_SIZE)
 		toggle.track:Hide()
 		toggle.knob:Hide()
@@ -1426,6 +1586,22 @@ function Theme.CreateToggle(parent, width, height, kind)
 
 	-- partiel : une partie seulement des modules est active (contour ambre,
 	-- curseur gris au centre)
+	-- thème forgé : filet, curseur et lueur selon l'état ("on", "off", "partial")
+	local function ForgeState(self, state)
+		if not self.forgeSwitch then return end
+		local P = Theme.FORGE_PLATE
+		local rim = (state == "on" and Theme.ACTIVE) or (state == "partial" and Theme.GOLD) or Theme.EDGE
+		local thumb = state == "on" and P.thumbOn or P.thumb
+		self.inset:SetColor(rim[1], rim[2], rim[3], 1)
+		self.thumb:SetColor(thumb[1], thumb[2], thumb[3], 1)
+		if state == "on" then self.glow:Show() else self.glow:Hide() end
+		self.knob:ClearAllPoints()
+		if state == "on" then self.knob:SetPoint("RIGHT", self, "RIGHT", -1, 0)
+		elseif state == "off" then self.knob:SetPoint("LEFT", self, "LEFT", 1, 0)
+		else self.knob:SetPoint("CENTER", self, "CENTER", 0, 0) end
+		self.forgeState = state
+	end
+
 	function toggle:SetPartial()
 		self.checked, self.partial = nil, true
 		self.knob:ClearAllPoints()
@@ -1434,6 +1610,7 @@ function Theme.CreateToggle(parent, width, height, kind)
 		self.track:SetVertexColor(Theme.CONTROL[1], Theme.CONTROL[2], Theme.CONTROL[3], 1)
 		self.edge:SetColor(Theme.GOLD[1], Theme.GOLD[2], Theme.GOLD[3], self.checkbox and 0 or 1)
 		Theme.SetCheckboxState(self, "partial")
+		ForgeState(self, "partial")
 	end
 
 	function toggle:SetChecked(on)
@@ -1452,6 +1629,7 @@ function Theme.CreateToggle(parent, width, height, kind)
 			self.edge:SetColor(0, 0, 0, 0)
 		end
 		Theme.SetCheckboxState(self, self.checked)
+		ForgeState(self, self.checked and "on" or "off")
 	end
 	function toggle:GetChecked() return self.checked == true end
 	toggle:SetChecked(false)
@@ -1467,7 +1645,14 @@ function Theme.CreatePowerButton(parent, size)
 	button:SetSize(size, size)
 	button.icon = button:CreateTexture(nil, "ARTWORK")
 	button.icon:SetAllPoints()
-	if Theme.ApplyCheckbox(button, size) then
+	-- socle 3.2 : thème forgé, un voyant (point lumineux) : vert qui luit
+	-- quand le module tourne, petit point éteint sinon
+	if Theme.Forged() then
+		button.forgeLed = true
+		button.icon:SetTexture(Theme.ART.dot.file)
+		button.icon:ClearAllPoints()
+		button.icon:SetPoint("CENTER", button, "CENTER", 0, 0)
+	elseif Theme.ApplyCheckbox(button, size) then
 		button.icon:Hide()
 	else
 		button.icon:SetTexture(Theme.POWER)
@@ -1476,6 +1661,12 @@ function Theme.CreatePowerButton(parent, size)
 end
 function Theme.SetPowerState(button, on)
 	local c = on and Theme.GOLD or Theme.MUTED
+	if button.forgeLed then
+		local F = Theme.FORGE
+		c = on and Theme.GREEN or F.ledOff
+		local size = on and F.led or math.floor(F.led * 0.6 + 0.5)
+		button.icon:SetSize(size, size)
+	end
 	button.icon:SetVertexColor(c[1], c[2], c[3], 1)
 	Theme.SetCheckboxState(button, on and true or false)
 end
@@ -1520,6 +1711,38 @@ function Theme.CreateSlider(parent, width, minValue, maxValue, step, onChange, v
 	slider.fill:SetSize(1, 3)
 	slider.handle = Solid(slider.hit, "OVERLAY", Theme.GOLD, 1)
 	slider.handle:SetSize(8, 12)
+	-- socle 3.2 : thème forgé. Case de valeur en creux ; piste sombre en
+	-- creux (ombre en haut, filet clair dessous), part remplie en dégradé or
+	-- sombre -> or clair ; poignée claire, liseré noir, qui luit d'or.
+	if Theme.Forged() then
+		local F = Theme.FORGE
+		slider.forge = true
+		slider.box.bg:SetAlpha(0)
+		Theme.ForgeHideBorder(slider.box.border)
+		slider.box.inset = Theme.ForgeSlice(slider.box, "inset", Theme.EDGE, { margin = Theme.ForgeMargin(18, true) })
+		slider.track:SetHeight(F.sliderTrack)
+		slider.track:SetVertexColor(F.track[1], F.track[2], F.track[3], 1)
+		slider.trackShade = Solid(slider.hit, "BACKGROUND", Theme.SHADOW, F.trackShade)
+		slider.trackShade:SetPoint("TOPLEFT", slider.track, "TOPLEFT", 0, 0)
+		slider.trackShade:SetPoint("TOPRIGHT", slider.track, "TOPRIGHT", 0, 0)
+		slider.trackShade:SetHeight(1)
+		slider.trackRim = Solid(slider.hit, "BACKGROUND", Theme.WHITE, F.trackRim)
+		slider.trackRim:SetPoint("TOPLEFT", slider.track, "BOTTOMLEFT", 0, 0)
+		slider.trackRim:SetPoint("TOPRIGHT", slider.track, "BOTTOMRIGHT", 0, 0)
+		slider.trackRim:SetHeight(1)
+		slider.fill:SetHeight(F.sliderTrack)
+		Theme.Gradient(slider.fill, "HORIZONTAL", F.goldDeep, 1, Theme.GOLD_LIGHT, 1)
+		slider.handle:SetSize(F.thumb[1], F.thumb[2])
+		Theme.Gradient(slider.handle, "VERTICAL", F.thumbBottom, 1, F.thumbTop, 1)
+		slider.handleEdge = slider.hit:CreateTexture(nil, "OVERLAY", nil, -1)
+		slider.handleEdge:SetTexture(Theme.SOLID)
+		slider.handleEdge:SetVertexColor(Theme.SHADOW[1], Theme.SHADOW[2], Theme.SHADOW[3], 1)
+		slider.handleEdge:SetPoint("TOPLEFT", slider.handle, "TOPLEFT", -1, 1)
+		slider.handleEdge:SetPoint("BOTTOMRIGHT", slider.handle, "BOTTOMRIGHT", 1, -1)
+		slider.glow = Theme.ForgeGlow(slider.hit, slider.handle, Theme.GOLD_LIGHT,
+			math.floor(F.thumb[2] * F.glowSize * 0.8 + 0.5), "ARTWORK", 1)
+		slider.glow:Show()
+	end
 
 	-- valeur ramenée dans la plage, au cran près
 	function slider:Snap(value)
@@ -1636,6 +1859,37 @@ function Theme.CreateDropdown(parent, width, onSelect, opts)
 	dropdown.chevron:SetSize(12, 12)
 	dropdown.chevron:SetPoint("RIGHT", dropdown, "RIGHT", -6, 0)
 	dropdown.chevron:SetVertexColor(Theme.MUTED_LIGHT[1], Theme.MUTED_LIGHT[2], Theme.MUTED_LIGHT[3], 1)
+	-- socle 3.2 : thème forgé. Plaque en relief (éclairée au survol, bleu
+	-- arcane ouverte) et chevron or dessiné (un triangle de 4 rangées : pas
+	-- d'atlas du client). Le fond et le contour du Sobre restent, transparents :
+	-- un habillage (azSurface, carnet Azeroth) les reprend.
+	if Theme.Forged() then
+		local F = Theme.FORGE
+		dropdown.bg:SetVertexColor(Theme.FIELD[1], Theme.FIELD[2], Theme.FIELD[3], 0)
+		dropdown.border:SetColor(Theme.EDGE[1], Theme.EDGE[2], Theme.EDGE[3], 0)
+		dropdown.plate = Theme.ForgeSlice(dropdown, "plate", Theme.FORGE_PLATE.neutral)
+		dropdown.chevron:Hide()
+		dropdown.caret = {}
+		local rows = #F.caret
+		for index, w in ipairs(F.caret) do
+			local row = Solid(dropdown, "OVERLAY", Theme.GOLD_LIGHT, 1)
+			row:SetSize(w, 1)
+			row:SetPoint("CENTER", dropdown, "RIGHT", -12, math.floor(rows / 2) - index + 1)
+			dropdown.caret[index] = row
+		end
+	end
+	-- état de la plaque : "rest", "hover", "open"
+	local function ForgeLook(self, state)
+		if not self.plate then return end
+		local P, F = Theme.FORGE_PLATE, Theme.FORGE
+		local tint = P.neutral
+		if state == "open" then tint = P.arcane
+		elseif state == "hover" then tint = Theme.ForgeHover(P.neutral) end
+		self.plate:SetShown(not self.azSurface)
+		self.plate:SetColor(tint[1], tint[2], tint[3], 1)
+		self.forgeState = state
+	end
+	dropdown.ForgeLook = ForgeLook
 
 	local list = CreateFrame("Frame", nil, dropdown)
 	list:SetPoint("TOPRIGHT", dropdown, "BOTTOMRIGHT", 0, -2)
@@ -1650,6 +1904,12 @@ function Theme.CreateDropdown(parent, width, onSelect, opts)
 	list.thumb = Solid(list, "ARTWORK", Theme.GOLD, 0.8)
 	list.thumb:SetWidth(2)
 	list.rows = {}
+	-- thème forgé : la liste ouverte est une carte en relief
+	if dropdown.plate then
+		list.bg:SetAlpha(0)
+		Theme.ForgeHideBorder(list.border)
+		list.plate = Theme.ForgeSlice(list, "plate", Theme.FORGE_PLATE.card, { margin = Theme.FORGE.marginSmall })
+	end
 	list:Hide()
 	dropdown.list = list
 
@@ -1665,7 +1925,7 @@ function Theme.CreateDropdown(parent, width, onSelect, opts)
 		if not entry then return end
 		local color = Theme.LABEL
 		if entry.disabled then color = Theme.MUTED
-		elseif entry.value == dropdown.value then color = Theme.GOLD end
+		elseif entry.value == dropdown.value then color = dropdown.plate and Theme.GOLD_LIGHT or Theme.GOLD end
 		SetColor(row.label, color)
 		if row.hovered and not entry.disabled then row.hover:Show() else row.hover:Hide() end
 	end
@@ -1713,6 +1973,10 @@ function Theme.CreateDropdown(parent, width, onSelect, opts)
 				row:SetSize(listWidth - 2, Theme.DROPDOWN_ROW)
 				row.hover = Solid(row, "BACKGROUND", Theme.GOLD, 0.10)
 				row.hover:SetAllPoints()
+				-- thème forgé : survol en dégradé bleu arcane qui s'estompe
+				if dropdown.plate then
+					Theme.Gradient(row.hover, "HORIZONTAL", Theme.ACTIVE, Theme.FORGE.rowSelect, Theme.ACTIVE, 0.05)
+				end
 				row.hover:Hide()
 				row.label = Text(row, Theme.F_BODY, Theme.LABEL)
 				row.label:SetPoint("LEFT", row, "LEFT", 8, 0)
@@ -1780,16 +2044,29 @@ function Theme.CreateDropdown(parent, width, onSelect, opts)
 		end
 		self.openedUp = up and true or false
 		list:Show()
-		self.border:SetColor(Theme.GOLD[1], Theme.GOLD[2], Theme.GOLD[3], 1)
+		if self.plate and not self.azSurface then
+			ForgeLook(self, "open")
+		else
+			self.border:SetColor(Theme.GOLD[1], Theme.GOLD[2], Theme.GOLD[3], 1)
+		end
 	end
 	function dropdown:Close()
 		list:Hide()
-		self.border:SetColor(Theme.EDGE[1], Theme.EDGE[2], Theme.EDGE[3], 1)
+		if self.plate and not self.azSurface then
+			ForgeLook(self, "rest")
+		else
+			self.border:SetColor(Theme.EDGE[1], Theme.EDGE[2], Theme.EDGE[3], 1)
+		end
 		if Theme.openDropdown == self then Theme.openDropdown = nil end
 	end
 	function dropdown:IsOpen() return list:IsShown() and true or false end
 	dropdown:SetScript("OnClick", function(self) if self:IsOpen() then self:Close() else self:Open() end end)
 	dropdown:SetScript("OnHide", function(self) self:Close() end)
+	if dropdown.plate then
+		dropdown:SetScript("OnEnter", function(self) if not self:IsOpen() then ForgeLook(self, "hover") end end)
+		dropdown:SetScript("OnLeave", function(self) if not self:IsOpen() then ForgeLook(self, "rest") end end)
+		ForgeLook(dropdown, "rest")
+	end
 	return dropdown
 end
 
@@ -1802,6 +2079,15 @@ function Theme.CreateSwatch(parent, size)
 	swatch.color = Solid(swatch, "ARTWORK", Theme.GOLD, 1)
 	swatch.color:SetPoint("TOPLEFT", swatch, "TOPLEFT", 2, -2)
 	swatch.color:SetPoint("BOTTOMRIGHT", swatch, "BOTTOMRIGHT", -2, 2)
+	-- socle 3.2 : thème forgé, la couleur au fond d'un petit creux
+	if Theme.Forged() then
+		local inset = Theme.FORGE.insetSmall - 1
+		Theme.ForgeHideBorder(swatch.border)
+		swatch.inset = Theme.ForgeSlice(swatch, "inset", Theme.EDGE, { margin = Theme.FORGE.insetSmall })
+		swatch.color:ClearAllPoints()
+		swatch.color:SetPoint("TOPLEFT", swatch, "TOPLEFT", inset, -inset)
+		swatch.color:SetPoint("BOTTOMRIGHT", swatch, "BOTTOMRIGHT", -inset, inset)
+	end
 	function swatch:SetColor(r, g, b, a)
 		self.rgba = { r, g, b, a or 1 }
 		self.color:SetVertexColor(r, g, b, a or 1)
@@ -2150,7 +2436,10 @@ function Theme.CreateIconButton(parent, size, texture, onClick, tip)
 		self.icon:SetAlpha(off and 0.3 or 0.6)
 		local edge = off and Theme.DISABLED.edge or Theme.EDGE
 		self.border:SetColor(edge[1], edge[2], edge[3], 1)
+		if self.forgeLook then self.forgeLook(self, off and "disabled" or "rest") end
 	end
+	-- socle 3.2 : thème forgé, petite plaque (bronze au survol)
+	if Theme.Forged() then Theme.ForgeSmallPlate(button) end
 	Rest(button)
 	for _, method in ipairs({ "Disable", "Enable", "SetEnabled" }) do
 		local original = button[method]
@@ -2166,6 +2455,7 @@ function Theme.CreateIconButton(parent, size, texture, onClick, tip)
 			if self.icon.SetDesaturated then self.icon:SetDesaturated(false) end
 			self.icon:SetAlpha(1)
 			self.border:SetColor(Theme.GOLD[1], Theme.GOLD[2], Theme.GOLD[3], 1)
+			if self.forgeLook then self.forgeLook(self, "hover") end
 		end
 		if tip then
 			local tooltip = rawget(_G, "GameTooltip")
@@ -2192,13 +2482,17 @@ end
 -- « gm-icon-settings »), sinon le fichier UI-OptionsButton désaturé ; sans
 -- carré au trait, grise au repos, plus claire au survol (comme le carnet de
 -- QuestCompanion 2.9.1). Plus de « pièce jaune » (INV_Misc_Gear_01).
-Theme.GEAR = { size = 16, rest = { 0.78, 0.78, 0.78, 0.85 }, hover = { 1, 1, 1, 1 } }
+Theme.GEAR = { size = 16, rest = { 0.78, 0.78, 0.78, 0.85 }, hover = { 1, 1, 1, 1 },
+	forgeHover = { Theme.GOLD_LIGHT[1], Theme.GOLD_LIGHT[2], Theme.GOLD_LIGHT[3], 1 } }
 local function GearLook(button, hot)
 	local c = hot and Theme.GEAR.hover or Theme.GEAR.rest
+	-- socle 3.2 : thème forgé, la roue passe à l'or clair au survol
+	if hot and button.forgeLook then c = Theme.GEAR.forgeHover end
 	if button.icon.SetDesaturated then button.icon:SetDesaturated(true) end
 	button.icon:SetVertexColor(c[1], c[2], c[3])
 	button.icon:SetAlpha(c[4])
 	button.gearHot = hot and true or false
+	if button.forgeLook then button.forgeLook(button, hot and "hover" or "rest") end
 end
 function Theme.CreateGearButton(parent, size, onClick, tip)
 	local button = CreateFrame("Button", nil, parent)
@@ -2214,6 +2508,7 @@ function Theme.CreateGearButton(parent, size, onClick, tip)
 	button.gearSource = Theme.PaintClient(button.icon, "gear")
 	button.gearAtlas = button.gearSource ~= "fallback" and button.gearSource or nil
 	button.icon:SetSize(Theme.GEAR.size, Theme.GEAR.size)
+	if Theme.Forged() then Theme.ForgeSmallPlate(button) end
 	GearLook(button, false)
 	button:SetScript("OnEnter", function(self)
 		GearLook(self, true)
@@ -2946,6 +3241,146 @@ function Theme.Slice(frame, art, opts)
 	slice.shown = true
 	if opts.color then slice:SetColor(opts.color[1], opts.color[2], opts.color[3], opts.alpha) end
 	return slice
+end
+
+-- [controles]
+-- Contrôles forgés (thème Azeroth) : boutons en plaque de relief teintée,
+-- champs et pistes en creux, coche et curseur qui luisent. Décidé à la
+-- création (Theme.Forged()) : en Sobre, les mêmes régions qu'avant, rien de
+-- plus. Les couleurs vivent ici, jamais en dur dans les fabriques.
+-- Teintes de la plaque (ART.plate, grise : luminance 0,885 en haut, 0,50 en
+-- bas, reflet d'un pixel à 1,0) : la couleur vue = teinte x niveau.
+Theme.FORGE_PLATE = {
+	neutral  = { 0.165, 0.196, 0.239 },  -- bouton secondaire (ardoise)
+	bronze   = { 0.400, 0.290, 0.150 },  -- accent : bronze, libellé or
+	gold     = { 1.000, 0.820, 0.500 },  -- principal : or, encre sombre
+	green    = { 0.180, 0.370, 0.230 },  -- ajouter, rallumer
+	red      = { 0.400, 0.170, 0.150 },  -- retirer, détruire
+	arcane   = { 0.210, 0.350, 0.560 },  -- action neutre (ouvrir, changer)
+	card     = { 0.118, 0.145, 0.176 },  -- liste déroulante ouverte
+	thumb    = { 0.420, 0.450, 0.500 },  -- curseur d'un interrupteur coupé
+	thumbOn  = { 0.357, 0.561, 0.839 },  -- curseur d'un interrupteur actif (= BLUE)
+	disabled = { 0.150, 0.160, 0.170 },  -- désactivé : désaturé, sombre
+}
+-- Encres posées sur ces plaques (mesurées : tests/modules/ui_forge_controles.lua)
+Theme.FORGE_INK = {
+	gold   = { 0.060, 0.040, 0.010 },    -- encre sombre sur l'or, sans ombre
+	green  = { 0.770, 0.950, 0.790 },
+	red    = { 0.960, 0.730, 0.690 },
+	arcane = { 0.860, 0.910, 1.000 },
+}
+-- Style de bouton (Theme.BUTTON_STYLES) -> plaque et encre en thème forgé
+Theme.FORGE_BUTTONS = {
+	outline   = { plate = "neutral", text = Theme.LABEL },
+	accent    = { plate = "bronze", text = Theme.GOLD_LIGHT },
+	primary   = { plate = "gold", text = Theme.FORGE_INK.gold, noShadow = true, press = 0.96 },
+	adventure = { plate = "gold", text = Theme.FORGE_INK.gold, noShadow = true, press = 0.96 },
+	add       = { plate = "green", text = Theme.FORGE_INK.green },
+	danger    = { plate = "red", text = Theme.FORGE_INK.red },
+	arcane    = { plate = "arcane", text = Theme.FORGE_INK.arcane },
+}
+Theme.FORGE_BUTTONS.normal = Theme.FORGE_BUTTONS.outline
+-- Géométrie et états. hover : part de blanc mêlée à la teinte au survol ;
+-- press : facteur de la teinte à l'appui (en plus du libellé enfoncé d'un
+-- pixel ; l'or garde le sien, plus doux, pour son encre). label : niveaux de
+-- la plaque sous un libellé (tranche du centre, rangées 8 à 23 de la texture),
+-- le plus clair et le plus sombre, pour les contrastes. insetFill : niveau du
+-- fond d'un creux (le filet du bas est à 1,0).
+Theme.FORGE = {
+	margin = 7, marginSmall = 5, smallBelow = 24, insetMargin = 6, insetSmall = 4,
+	hover = 0.12, press = 0.85,
+	label = { light = 0.786, dark = 0.593 }, insetFill = 0.14,
+	track = { 0.020, 0.027, 0.039 },          -- fond d'une piste (curseur, barre)
+	trackRim = 0.07,                          -- filet clair sous une piste (blanc, alpha)
+	trackShade = 0.6,                         -- ombre d'un pixel en haut d'une piste (noir, alpha)
+	sheen = 0.45,                             -- reflet d'un pixel en haut d'un remplissage (blanc, alpha)
+	fillLow = 0.62, fillHigh = 0.15,          -- remplissage : bas = couleur x 0,62 ; haut = 15 % de blanc
+	sliderTrack = 5, thumb = { 9, 15 },       -- curseur : piste, poignée
+	thumbTop = { 1.0, 1.0, 1.0 }, thumbBottom = { 0.741, 0.718, 0.663 },
+	goldDeep = { 0.541, 0.365, 0.133 },       -- départ du remplissage doré (#8a5d22)
+	glow = 0.75, glowSize = 2.4,              -- lueur (ART.dot) : alpha, taille x l'élément
+	checkGlow = { size = 1.5, alpha = 0.35 }, -- lueur de la coche, discrète (la case reste lisible)
+	tick = 1.15,                              -- coche (UI-CheckBox-Check, marges comprises) : x la case
+	caret = { 7, 5, 3, 1 },                   -- chevron d'une liste : rangées du triangle
+	led = 20, ledOff = { 0.21, 0.23, 0.26 },  -- voyant d'un module (interrupteur de navigation)
+	rowSelect = 0.45,                         -- ligne choisie d'une liste : bleu arcane, alpha de départ
+}
+
+-- Teinte multipliée (survol, appui), bornée à 1
+function Theme.ForgeTint(color, factor)
+	factor = tonumber(factor) or 1
+	return { math.min(1, color[1] * factor), math.min(1, color[2] * factor), math.min(1, color[3] * factor) }
+end
+-- Survol : la teinte éclaircie vers le blanc (FORGE.hover), sans changer de
+-- teinte quand une composante est déjà à 1 (l'or)
+function Theme.ForgeHover(color)
+	return Theme.Over(color, Theme.WHITE, Theme.FORGE.hover)
+end
+-- Couleur vue d'une matière teinte à un niveau de sa texture (contrastes)
+function Theme.ForgeSurface(tint, level)
+	return { tint[1] * level, tint[2] * level, tint[3] * level }
+end
+-- Coin de la découpe à l'écran selon la hauteur du contrôle
+function Theme.ForgeMargin(height, inset)
+	local F = Theme.FORGE
+	height = tonumber(height) or F.smallBelow
+	if inset then return height < F.smallBelow - 4 and F.insetSmall or F.insetMargin end
+	return height < F.smallBelow and F.marginSmall or F.margin
+end
+-- Plaque ou creux d'un contrôle (9 tranches), teinte posée
+function Theme.ForgeSlice(frame, art, tint, opts)
+	opts = opts or {}
+	local height = opts.height or (frame.GetHeight and frame:GetHeight())
+	local slice = Theme.Slice(frame, art, { layer = opts.layer or "BACKGROUND", sub = opts.sub or -2,
+		margin = opts.margin or Theme.ForgeMargin(height, art == "inset"), around = opts.around })
+	if slice and tint then slice:SetColor(tint[1], tint[2], tint[3], opts.alpha) end
+	return slice
+end
+-- Lueur (ART.dot teinte) derrière `around`, cachée par défaut
+function Theme.ForgeGlow(frame, around, color, size, layer, sub, alpha)
+	local glow = frame:CreateTexture(nil, layer or "ARTWORK", nil, sub or 0)
+	glow:SetTexture(Theme.ART.dot.file)
+	glow:SetSize(size, size)
+	glow:SetPoint("CENTER", around or frame, "CENTER", 0, 0)
+	glow:SetVertexColor(color[1], color[2], color[3], alpha or Theme.FORGE.glow)
+	if glow.SetBlendMode then glow:SetBlendMode("ADD") end
+	glow:Hide()
+	return glow
+end
+-- Contour d'un pixel du Sobre gardé (les modules et les tests le lisent)
+-- mais caché : le relief le remplace
+function Theme.ForgeHideBorder(border)
+	if type(border) ~= "table" then return end
+	for _, side in ipairs({ "top", "bottom", "left", "right" }) do
+		if border[side] and border[side].Hide then border[side]:Hide() end
+	end
+end
+-- Petite plaque d'un bouton dessiné ([×], bouton-icône, roue crantée) :
+-- neutre au repos, bronze au survol, assombrie à l'appui, éteinte désactivée.
+-- Le contour d'un pixel est caché (Theme.PressFeedback le recolore encore).
+-- Pose button.plate et button.forgeLook(button, état).
+function Theme.ForgeSmallPlate(button)
+	Theme.ForgeHideBorder(button.border)
+	button.plate = Theme.ForgeSlice(button, "plate", Theme.FORGE_PLATE.neutral, { margin = Theme.FORGE.marginSmall })
+	button.forgeLook = function(self, state)
+		local P, F = Theme.FORGE_PLATE, Theme.FORGE
+		local tint = P.neutral
+		if state == "hover" then tint = Theme.ForgeHover(P.bronze)
+		elseif state == "pressed" then tint = Theme.ForgeTint(P.bronze, F.press)
+		elseif state == "disabled" then tint = P.disabled end
+		self.forgeState = state
+		if self.plate then self.plate:SetColor(tint[1], tint[2], tint[3], 1) end
+	end
+	button.forgeLook(button, "rest")
+	return button.plate
+end
+-- Remplissage d'une barre ou d'un curseur : dégradé vertical (bas sombre,
+-- haut éclairci) de la couleur
+function Theme.ForgeFill(tex, color, alpha)
+	local F = Theme.FORGE
+	local low = Theme.ForgeTint(color, F.fillLow)
+	local high = Theme.Over(color, Theme.WHITE, F.fillHigh)
+	return Theme.Gradient(tex, "VERTICAL", low, alpha or 1, high, alpha or 1)
 end
 
 -- L'habillage forgé d'une fenêtre ou d'un bandeau : ombre portée, bords
