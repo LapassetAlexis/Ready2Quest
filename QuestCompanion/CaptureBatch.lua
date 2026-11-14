@@ -176,14 +176,27 @@ local function Upper(text) return Theme.Upper and Theme.Upper(text) or text end
 local function SceneStyle(self)
 	return (self.AzerothScenesOn and self:AzerothScenesOn()) and "azeroth" or "sobre"
 end
--- Une fenêtre par style, gardée (cache[style]) : rend celle du style voulu
+-- 3.1.0 : la clé de cache (ns:StyleKey) : « azeroth » (ancien habillage),
+-- « forge » (née sous le thème forgé) ou « sobre »
+local function SceneKey(self, style)
+	if not self.StyleKey then return style end
+	return self:StyleKey(style == "azeroth")
+end
+local function KeyOf(frame)
+	return ns.FrameStyleKey and ns.FrameStyleKey(frame) or frame.uiStyle or "sobre"
+end
+-- Le nom global d'une fenêtre (Échap) : un par clé
+local function SceneName(base, key)
+	return ns.StyleName and ns.StyleName(base, key) or base
+end
+-- Une fenêtre par clé, gardée (cache[clé]) : rend celle de la clé voulue
 -- déjà construite, ou nil (à construire). Celle du style d'avant reste à
 -- l'écran tant qu'elle y est (le nouveau style vient à la prochaine).
 local function Reuse(self, field, cacheField, want)
 	local current = self[field]
-	if current and ((current.uiStyle or "sobre") == want or current:IsShown()) then return current end
+	if current and (KeyOf(current) == want or current:IsShown()) then return current end
 	self[cacheField] = self[cacheField] or {}
-	if current then self[cacheField][current.uiStyle or "sobre"] = current end
+	if current then self[cacheField][KeyOf(current)] = current end
 	local kept = self[cacheField][want]
 	if kept then self[field] = kept end
 	return kept
@@ -856,18 +869,21 @@ end
 -- Azeroth (bois, plaque « TOUT CAPTURER », cadres d'icône), gardées
 -- (ns.captureBatchFrames[style]) ; leurs cases resservent d'un lot à l'autre
 function ns:EnsureCaptureBatchFrame()
-	local want = SceneStyle(self)
+	local style = SceneStyle(self)
+	local want = SceneKey(self, style)
 	local kept = Reuse(self, "captureBatchFrame", "captureBatchFrames", want)
 	if kept then return kept end
 	if not (Theme and Theme.CreateToast) then return nil end
 	-- un nom global : Échap la referme (UISpecialFrames), comme la scène d'un lancer seul
-	local frame = want == "azeroth" and self.AzerothCreateWindow
+	local frame = style == "azeroth" and self.AzerothCreateWindow
 		and self:AzerothCreateWindow(AZB.minW, 300, { strata = "DIALOG", name = "QuestCompanionCaptureBatchAzeroth" }) or nil
 	if not frame then
-		frame = Theme.CreateToast(UIParent, MIN_W, 300, { strata = "DIALOG", name = "QuestCompanionCaptureBatch", accent = Theme.GOLD })
+		local key = SceneKey(self, "sobre")
+		frame = Theme.CreateToast(UIParent, MIN_W, 300, { strata = "DIALOG", name = SceneName("QuestCompanionCaptureBatch", key), accent = Theme.GOLD })
 		if not frame then return nil end
 		frame.uiStyle = "sobre"
 	end
+	if self.MarkStyle then self:MarkStyle(frame) end
 	local az = frame.azeroth and true or false
 	frame:ClearAllPoints()
 	frame:SetPoint("CENTER", UIParent, "CENTER", 0, 60)
@@ -961,7 +977,7 @@ function ns:EnsureCaptureBatchFrame()
 	end)
 	frame:Hide()
 	self.captureBatchFrames = self.captureBatchFrames or {}
-	self.captureBatchFrames[frame.uiStyle or "sobre"] = frame
+	self.captureBatchFrames[KeyOf(frame)] = frame
 	self.captureBatchFrame = frame
 	return frame
 end
@@ -1323,18 +1339,20 @@ local function BuildChooserAzeroth(self, frame)
 end
 
 function ns:EnsureCaptureChooser()
-	local want = SceneStyle(self)
+	local style = SceneStyle(self)
+	local want = SceneKey(self, style)
 	local kept = Reuse(self, "captureChooser", "captureChoosers", want)
 	if kept then return kept end
 	if not (Theme and Theme.CreateToast) then return nil end
-	local frame = want == "azeroth" and self.AzerothCreateWindow
+	local frame = style == "azeroth" and self.AzerothCreateWindow
 		and self:AzerothCreateWindow(AZC.w, AZC.h, { strata = "DIALOG", name = "QuestCompanionCaptureChooserAzeroth" }) or nil
 	if frame then
 		frame:EnableMouse(true)
 		if Theme.RegisterEscapeClose then pcall(Theme.RegisterEscapeClose, frame) end
 		BuildChooserAzeroth(self, frame)
 	else
-		frame = Theme.CreateToast(UIParent, CHOOSER_W, CHOOSER_H, { strata = "DIALOG", name = "QuestCompanionCaptureChooser", accent = Theme.GOLD })
+		frame = Theme.CreateToast(UIParent, CHOOSER_W, CHOOSER_H, { strata = "DIALOG",
+			name = SceneName("QuestCompanionCaptureChooser", SceneKey(self, "sobre")), accent = Theme.GOLD })
 		if not frame then return nil end
 		frame.uiStyle = "sobre"
 		frame:EnableMouse(true)
@@ -1396,7 +1414,8 @@ function ns:EnsureCaptureChooser()
 	end)
 	frame:Hide()
 	self.captureChoosers = self.captureChoosers or {}
-	self.captureChoosers[frame.uiStyle or "sobre"] = frame
+	if self.MarkStyle and not frame.styleKey then self:MarkStyle(frame) end
+	self.captureChoosers[KeyOf(frame)] = frame
 	self.captureChooser = frame
 	return frame
 end

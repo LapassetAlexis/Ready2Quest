@@ -332,6 +332,16 @@ end
 local function StageStyle(self)
 	return (self.AzerothScenesOn and self:AzerothScenesOn()) and "azeroth" or "sobre"
 end
+-- 3.1.0 : la clé de cache (ns:StyleKey) : « azeroth » (ancien habillage),
+-- « forge » (née sous le thème forgé) ou « sobre » ; jamais frame.azeroth
+-- hors ancien habillage (Theme.DressWindow refuserait de l'habiller)
+local function StageKey(self, style)
+	if not self.StyleKey then return style end
+	return self:StyleKey(style == "azeroth")
+end
+local function KeyOf(frame)
+	return ns.FrameStyleKey and ns.FrameStyleKey(frame) or frame.uiStyle or "sobre"
+end
 
 -- Le cadre lui-même : Azeroth (carte de parchemin, plaque, bandeau de
 -- verdict ; 2.14.0 bêta 3, avant le grand cadre en bois sombre) ou Sobre
@@ -340,8 +350,10 @@ local function StageWindow(self, az)
 		local frame = self:AzerothCreateCard(AZS.w, AZS.h, { strata = "DIALOG", name = "QuestCompanionCaptureStageAzeroth" })
 		if frame then return frame end
 	end
-	local frame = Theme.CreateToast(UIParent, STAGE_W, STAGE_H, { strata = "DIALOG", name = "QuestCompanionCaptureStage" })
-	if frame then frame.uiStyle = "sobre" end
+	local key = StageKey(self, "sobre")
+	local frame = Theme.CreateToast(UIParent, STAGE_W, STAGE_H, { strata = "DIALOG",
+		name = ns.StyleName and ns.StyleName("QuestCompanionCaptureStage", key) or "QuestCompanionCaptureStage" })
+	if frame then frame.uiStyle, frame.styleKey = "sobre", key end
 	return frame
 end
 
@@ -414,16 +426,18 @@ local function GroundShadow(frame, az)
 end
 
 function ns:EnsureCaptureStage()
-	local want = StageStyle(self)
+	local style = StageStyle(self)
+	local want = StageKey(self, style)
 	local current = self.captureStage
-	if current and ((current.uiStyle or "sobre") == want or current:IsShown()) then return current end
+	if current and (KeyOf(current) == want or current:IsShown()) then return current end
 	self.captureStages = self.captureStages or {}
-	if current then self.captureStages[current.uiStyle or "sobre"] = current end
+	if current then self.captureStages[KeyOf(current)] = current end
 	local kept = self.captureStages[want]
 	if kept then self.captureStage = kept; return kept end
 	-- un nom global : Échap la referme (UISpecialFrames), comme les fenêtres du thème (2.3.0)
-	local frame = StageWindow(self, want == "azeroth")
+	local frame = StageWindow(self, style == "azeroth")
 	if not frame then return nil end
+	if self.MarkStyle and not frame.styleKey then self:MarkStyle(frame) end
 	local az = frame.azeroth and true or false
 	frame:ClearAllPoints()
 	frame:SetPoint("CENTER", UIParent, "CENTER", 0, 60)
@@ -665,7 +679,7 @@ function ns:EnsureCaptureStage()
 		if not done and ns.RecordError then ns:RecordError("capture:stage", err) end
 	end)
 	frame:Hide()
-	self.captureStages[frame.uiStyle or "sobre"] = frame
+	self.captureStages[KeyOf(frame)] = frame
 	self.captureStage = frame
 	return frame
 end

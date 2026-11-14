@@ -10,6 +10,10 @@
 -- suivi, boss en instance, lignes « à vérifier » jamais attribuées, chiffres
 -- de toute la vie rattrapés en silence, portée par personnage, diagnostic.
 -- Le catalogue lui-même : feats_catalogue.lua.
+-- 3.1.0 : affirme l'ancien habillage (carnet en parchemin, scènes en bois, bandeaux
+-- dorés, anneau) : le drapeau QNS.AZEROTH_LEGACY rallumé pour tout le module
+-- (remis à la valeur du produit à sa fin, tests/run_tests.lua)
+T.Legacy(true)
 local Check, Say, ResetWorld, NS, Mock = T.Check, T.Say, T.ResetWorld, T.QNS, T.Mock
 
 -- plusieurs étapes d'un même sujet : un contrôle, les étapes ratées nommées

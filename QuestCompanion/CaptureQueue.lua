@@ -1285,6 +1285,7 @@ function ns:EnsureCaptureToast()
 		frame = self:CaptureToastSobre()
 	end
 	if not frame then return nil end
+	if self.MarkStyle then self:MarkStyle(frame) end
 	self:CaptureToastControls(frame)
 	if self.RestorePoint then self:RestorePoint(frame, "captureToastPoint", { point = "TOP", x = 0, y = -240 }) end
 	frame:Hide()

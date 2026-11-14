@@ -537,12 +537,67 @@ function ns:UIStyleChoice()
 	return ns.UI_STYLE_DEFAULT
 end
 
--- Le style affiché : Azeroth seulement si le client a ses textures
-function ns:UIStyle()
-	if self:UIStyleChoice() == "azeroth" and self:AzerothAtlasOK() then return "azeroth" end
+-- 3.1.0 (bascule vers le thème forgé) : deux questions séparées.
+--   * Quel thème du socle ? Le choix du joueur, rien d'autre : « azeroth »
+--     pose le thème forgé (nos textures, toujours là), « sobre » le Sobre.
+--     ns:UISkinChoice (le socle le lit à ADDON_LOADED) est redéfini ici.
+--   * L'ancien habillage d'art du client (carnet en parchemin, scènes en
+--     bois, bandeaux dorés, anneau du compagnon) ? Seulement si le drapeau
+--     interne ns.AZEROTH_LEGACY vaut true (faux dans le produit ; aucun
+--     réglage ni commande ; les tests de l'ancien habillage le posent par
+--     T.Legacy) ET que le client a ses textures. ns:UIStyle(), AzerothOn(),
+--     AzerothScenesOn() et JournalStyle() en dépendent : « sobre » / faux
+--     dans le produit, et tout le code de l'ancien habillage garde son sens.
+-- Pour décider d'une brique forgée : ns.QCForged() / Theme.Forged(), jamais
+-- AzerothOn.
+ns.AZEROTH_LEGACY = false
+
+-- Le thème du socle : le choix du joueur (plus de repli sur les atlas du
+-- client, qui ne servent qu'à l'ancien habillage)
+function ns:UISkinChoice() return self:UIStyleChoice() end
+
+-- L'ancien habillage : « azeroth » seulement derrière le drapeau, au choix
+-- azeroth, le client ayant ses textures ; « sobre » sinon
+function ns:LegacyStyle()
+	if ns.AZEROTH_LEGACY == true and self:UIStyleChoice() == "azeroth" and self:AzerothAtlasOK() then return "azeroth" end
 	return "sobre"
 end
+-- Le style de l'ancien habillage (compatibilité : frame.uiStyle, les portes)
+function ns:UIStyle() return self:LegacyStyle() end
 function ns:AzerothOn() return self:UIStyle() == "azeroth" end
+
+-- La clé de cache d'un cadre construit (frame.styleKey) : « azeroth » si
+-- l'ancien habillage l'a construit, « forge » s'il est né sous le thème
+-- forgé, « sobre » sinon. Une brique forgée est décidée à la création : un
+-- cadre né forgé n'est jamais resservi en Sobre, ni l'inverse. `legacy` :
+-- la porte de l'ancien habillage propre à la surface (AzerothScenesOn pour
+-- les scènes et le carnet) ; par défaut AzerothOn().
+function ns:StyleKey(legacy)
+	if legacy == nil then legacy = self:AzerothOn() end
+	if legacy then return "azeroth" end
+	local Theme_ = ns.Theme
+	if Theme_ and type(Theme_.Forged) == "function" and Theme_.Forged() then return "forge" end
+	return "sobre"
+end
+-- La clé d'un cadre déjà construit (un cadre d'avant styleKey : son uiStyle)
+function ns.FrameStyleKey(frame)
+	if not frame then return nil end
+	return frame.styleKey or (frame.uiStyle == "azeroth" and "azeroth") or "sobre"
+end
+-- Marque un cadre qui vient d'être construit avec la clé du moment (ancien
+-- habillage : lu sur le cadre, frame.uiStyle « azeroth » ou frame.azeroth) ;
+-- rend le cadre
+function ns:MarkStyle(frame)
+	if frame then frame.styleKey = self:StyleKey((frame.uiStyle == "azeroth" or frame.azeroth == true) and true or false) end
+	return frame
+end
+-- Le nom global d'une fenêtre par clé (Échap vise la bonne, celle de
+-- l'autre clé restant en cache) : base + « Azeroth » / « Forge » / rien
+function ns.StyleName(base, key)
+	if key == "azeroth" then return base .. "Azeroth" end
+	if key == "forge" then return base .. "Forge" end
+	return base
+end
 -- Style des fenêtres de capture : Azeroth si le style l'est et que le bois est là
 function ns:AzerothScenesOn() return self:AzerothOn() and self:AzerothSceneAtlasOK() end
 
@@ -556,11 +611,12 @@ end
 ns.uiStyleCache = ns.uiStyleCache or {}
 local STYLED_FRAMES = { "captureToast", "guildFeatToast", "journalToast", "captureResult" }
 
--- Un cadre déjà construit pour le style courant (et retiré du cache), ou nil
+-- Un cadre déjà construit pour la clé courante (ns:StyleKey, et retiré du
+-- cache), ou nil
 function ns:StyleCached(key)
 	local slot = self.uiStyleCache[key]
 	if not slot then return nil end
-	local style = self:UIStyle()
+	local style = self:StyleKey()
 	local frame = slot[style]
 	slot[style] = nil
 	return frame
@@ -579,15 +635,20 @@ end
 function ns:ApplyUIStyle()
 	local style = self:UIStyle()
 	-- socle 3.2 : le thème des fenêtres d'abord (jetons, police des titres,
-	-- habillage) : un bandeau reconstruit ci-dessous naît dans le bon thème
-	if Theme.ApplySkin then pcall(Theme.ApplySkin, style) end
+	-- habillage) : un bandeau reconstruit ci-dessous naît dans le bon thème.
+	-- 3.1.0 : le thème suit le choix du joueur (ns:UISkinChoice), et les
+	-- bandeaux sont comparés par clé (ns:StyleKey : ancien habillage, forgé,
+	-- Sobre) : deux appels de suite gardent les mêmes cadres
+	if Theme.ApplySkin then pcall(Theme.ApplySkin, self:UISkinChoice()) end
+	local want = self:StyleKey()
 	for _, key in ipairs(STYLED_FRAMES) do
 		local frame = self[key]
-		if frame and (frame.uiStyle or "sobre") ~= style then
+		local have = ns.FrameStyleKey(frame)
+		if frame and have ~= want then
 			local shown = frame:IsShown()
 			frame:Hide()
 			self.uiStyleCache[key] = self.uiStyleCache[key] or {}
-			self.uiStyleCache[key][frame.uiStyle or "sobre"] = frame
+			self.uiStyleCache[key][have] = frame
 			self[key] = nil
 			if shown then
 				if key == "captureToast" then
@@ -1501,6 +1562,7 @@ function ns:EnsureCaptureResult()
 		frame.text = Line(Theme.F_TITLE, Theme.PARCHMENT, -23)
 		frame.stars = Line(Theme.F_SMALL, Theme.GOLD, -44)
 	end
+	self:MarkStyle(frame)
 	if self.RestorePoint then self:RestorePoint(frame, "captureResultPoint", { point = "TOP", x = 0, y = -200 }) end
 	frame:Hide()
 	self.captureResult = frame
@@ -2044,6 +2106,9 @@ function ns:CompanionApplyUIStyle()
 		EdgesShown(frame, true)
 	end
 	frame.uiStyle = az and "azeroth" or "sobre"
+	-- 3.1.0 : rhabillé sur place (pas de cache) ; sa clé dit sous quel thème
+	-- il a été habillé la dernière fois
+	frame.styleKey = self:StyleKey(az)
 	-- le cadre gagné (bordure du client) revient en Sobre
 	if not az and self.CompanionApplyFrame then self:CompanionApplyFrame() end
 	-- 2.14.0 (bêta 7) : en Azeroth, sa teinte sur l'anneau (l'or en Sobre)

@@ -3,6 +3,10 @@
 -- de Ready2Quest dans ses trois états (chargé, désactivé, absent), les liens
 -- à copier ; dans les réglages de Ready2Quest, le bloc Quest Companion dans
 -- les mêmes trois états ; ouvreurs, encres, textes FR/EN, visite du carnet.
+-- 3.1.0 : affirme l'ancien habillage (carnet en parchemin, scènes en bois, bandeaux
+-- dorés, anneau) : le drapeau QNS.AZEROTH_LEGACY rallumé pour tout le module
+-- (remis à la valeur du produit à sa fin, tests/run_tests.lua)
+T.Legacy(true)
 local Check, Say, ResetWorld, NS, QNS, Mock = T.Check, T.Say, T.ResetWorld, T.NS, T.QNS, T.Mock
 
 local A = { saved = {} }

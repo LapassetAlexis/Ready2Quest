@@ -7,6 +7,10 @@
 --      tutoriel de la ménagerie 2.3.0 retiré (une seule vérification) et la
 --      remise à zéro, la visite des captures, celle du carnet, clic droit =
 --      carnet, l'explication de la migration et le cadeau de la 3.0.
+-- 3.1.0 : affirme l'ancien habillage (carnet en parchemin, scènes en bois, bandeaux
+-- dorés, anneau) : le drapeau QNS.AZEROTH_LEGACY rallumé pour tout le module
+-- (remis à la valeur du produit à sa fin, tests/run_tests.lua)
+T.Legacy(true)
 local Check, Say, ResetWorld, NS, Mock = T.Check, T.Say, T.ResetWorld, T.QNS, T.Mock
 
 -- 1. La page Guide -------------------------------------------------------------------------------------
@@ -489,7 +493,8 @@ do
 		for _ = 1, 3 do Mock:Advance(1); NS:CaptureTick(NS.Now()) end
 	end
 	function P.UI()
-		local style = (NS.AzerothOn and NS:AzerothOn()) and "azeroth" or "sobre"
+		-- 3.1.0 : le jeu de la clé courante (ancien habillage, forgé, Sobre)
+		local style = NS.StyleKey and NS:StyleKey() or ((NS.AzerothOn and NS:AzerothOn()) and "azeroth" or "sobre")
 		return NS.tourUI and NS.tourUI[style] or {}
 	end
 	function P.Callout() return P.UI().callout end

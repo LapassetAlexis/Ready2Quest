@@ -569,8 +569,10 @@ end
 -- Le panneau du style en cours, construit une fois par style
 function ns:EnsureAllure()
 	local style = (self.JournalStyle and self:JournalStyle()) or "sobre"
+	-- 3.1.0 : gardé par clé (ns:JournalStyleKey : ancien habillage, forgé, Sobre)
+	local key = (self.JournalStyleKey and self:JournalStyleKey()) or style
 	self.allureByStyle = self.allureByStyle or {}
-	local frame = self.allureByStyle[style]
+	local frame = self.allureByStyle[key]
 	if frame then self.allurePanel = frame; return frame end
 	if style == "azeroth" and ns.CarnetCaptureRun and ns.CarnetSkinDialog then
 		local reg = { new = {}, texts = {} }
@@ -590,7 +592,8 @@ function ns:EnsureAllure()
 		style = "sobre"
 	end
 	if not frame then return nil end
-	self.allureByStyle[frame.uiStyle] = frame
+	frame.styleKey = (self.StyleKey and self:StyleKey(frame.uiStyle == "azeroth")) or frame.uiStyle
+	self.allureByStyle[frame.styleKey] = frame
 	self.allurePanel = frame
 	return frame
 end
@@ -809,8 +812,8 @@ do
 			local open = self:AllureShown()
 			local before = open and self.allurePanel
 			local a, b = restyle(self, ...)
-			local want = self.JournalStyle and self:JournalStyle() or "sobre"
-			if before and before.uiStyle ~= want then
+			local want = self.JournalStyleKey and self:JournalStyleKey() or "sobre"
+			if before and (before.styleKey or before.uiStyle) ~= want then
 				before:Hide()
 				local journal = self.journalFrame
 				if journal and journal:IsShown() then self:AllureOpen() end

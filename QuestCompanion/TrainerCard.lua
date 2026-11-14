@@ -1449,9 +1449,10 @@ function ns:EnsureTrainerWindow()
 	if self.trainerFrame then return self.trainerFrame end
 	if not (Theme and Theme.CreateWindow) then return nil end
 	-- 2.10.0 : un nom global par style, sinon Échap vise la fenêtre de l'autre style restée en cache
-	local style = (self.JournalStyle and self:JournalStyle()) or "sobre"
+	-- 3.1.0 : un par clé (ancien habillage, forgé, Sobre : ns:JournalStyleKey)
+	local key = (self.JournalStyleKey and self:JournalStyleKey()) or "sobre"
 	local frame = Theme.CreateWindow(UIParent, WIN_W, WIN_H, {
-		name = style == "azeroth" and "QuestCompanionTrainerFrameAzeroth" or "QuestCompanionTrainerFrame",
+		name = ns.StyleName and ns.StyleName("QuestCompanionTrainerFrame", key) or "QuestCompanionTrainerFrame",
 		footer = FOOT_H, strata = "FULLSCREEN" })
 	if not frame then return nil end
 	frame.chrome = "trainer"

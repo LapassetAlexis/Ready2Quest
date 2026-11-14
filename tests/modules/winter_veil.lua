@@ -9,6 +9,10 @@
 -- Compagnons de saison (WinterCompanions.lua) : en saison seulement, sans
 -- perdre l'apparence habituelle ; effets, voix, visite surprise, haut fait
 -- souvenir, départ en fin de saison.
+-- 3.1.0 : affirme l'ancien habillage (carnet en parchemin, scènes en bois, bandeaux
+-- dorés, anneau) : le drapeau QNS.AZEROTH_LEGACY rallumé pour tout le module
+-- (remis à la valeur du produit à sa fin, tests/run_tests.lua)
+T.Legacy(true)
 local Check, Say, ResetWorld, NS, Mock = T.Check, T.Say, T.ResetWorld, T.QNS, T.Mock
 
 -- plusieurs étapes d'un même sujet : un contrôle, les étapes ratées nommées

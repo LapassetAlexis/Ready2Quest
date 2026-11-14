@@ -7,6 +7,10 @@
 -- boutons-icônes, infobulles, puces, tuiles, étiquettes, pagination, bulle,
 -- hauteur de texte, pastille de monnaie ; rendu hors-jeu (tests/snapshot.lua).
 -- La mise en page des vraies fenêtres : ui_windows.lua.
+-- 3.1.0 : affirme l'ancien habillage (carnet en parchemin, scènes en bois, bandeaux
+-- dorés, anneau) : le drapeau QNS.AZEROTH_LEGACY rallumé pour tout le module
+-- (remis à la valeur du produit à sa fin, tests/run_tests.lua)
+T.Legacy(true)
 local Check, Say, NS, QNS, Mock, ResetWorld = T.Check, T.Say, T.NS, T.QNS, T.Mock, T.ResetWorld
 local ROOT = rawget(_G, "ADDON_ROOT") or "."
 local Snap = assert(loadfile(ROOT .. "/tests/snapshot.lua"))()

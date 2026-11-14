@@ -7,6 +7,10 @@
 -- à une seule hauteur, pastille de monnaie, refus d'achat expliqué au clic,
 -- aucun cadre créé au rafraîchissement ; visite guidée, colonne de navigation.
 -- Les briques elles-mêmes : ui_bricks.lua.
+-- 3.1.0 : affirme l'ancien habillage (carnet en parchemin, scènes en bois, bandeaux
+-- dorés, anneau) : le drapeau QNS.AZEROTH_LEGACY rallumé pour tout le module
+-- (remis à la valeur du produit à sa fin, tests/run_tests.lua)
+T.Legacy(true)
 local Check, Say, NS, QNS, Mock = T.Check, T.Say, T.NS, T.QNS, T.Mock
 local ROOT = rawget(_G, "ADDON_ROOT") or "."
 local Snap = assert(loadfile(ROOT .. "/tests/snapshot.lua"))()

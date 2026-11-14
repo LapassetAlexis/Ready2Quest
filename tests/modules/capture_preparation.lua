@@ -7,6 +7,10 @@
 -- qualité du filet ; la réplique d'un 3 étoiles ; le menu du compagnon (mode
 -- chasse) et son indicateur ; la méfiance dans l'infobulle ; les deux styles
 -- et leurs contrastes.
+-- 3.1.0 : affirme l'ancien habillage (carnet en parchemin, scènes en bois, bandeaux
+-- dorés, anneau) : le drapeau QNS.AZEROTH_LEGACY rallumé pour tout le module
+-- (remis à la valeur du produit à sa fin, tests/run_tests.lua)
+T.Legacy(true)
 local Check, Say, ResetWorld, NS, Mock = T.Check, T.Say, T.ResetWorld, T.QNS, T.Mock
 
 local P = { saved = {}, random = math.random, units = {} }

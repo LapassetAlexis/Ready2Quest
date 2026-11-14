@@ -709,6 +709,7 @@ function ns:EnsureGuildFeatToast()
 		frame = self:GuildFeatToastSobre(art)
 	end
 	if not frame then return nil end
+	if self.MarkStyle then self:MarkStyle(frame) end
 	-- un bouton invisible par-dessus : clic (la fiche) et glisser
 	local ok, button = pcall(CreateFrame, "Button", nil, frame)
 	if ok and button then

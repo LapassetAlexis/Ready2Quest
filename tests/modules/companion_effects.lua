@@ -9,6 +9,10 @@
 --      « Talking Head », lueur ronde, éclats d'une brillante, évolution et
 --      niveau, ailes des grandes récompenses, atlas manquants sans erreur,
 --      changement de style à chaud.
+-- 3.1.0 : affirme l'ancien habillage (carnet en parchemin, scènes en bois, bandeaux
+-- dorés, anneau) : le drapeau QNS.AZEROTH_LEGACY rallumé pour tout le module
+-- (remis à la valeur du produit à sa fin, tests/run_tests.lua)
+T.Legacy(true)
 local Check, Say, ResetWorld, NS, Mock = T.Check, T.Say, T.ResetWorld, T.QNS, T.Mock
 
 -- 1. Le compagnon actif ---------------------------------------------------------------------------------

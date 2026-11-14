@@ -1821,6 +1821,14 @@ end
 -- Construction et rafraîchissement du carnet Azeroth
 -- ---------------------------------------------------------------------------
 function ns:JournalStyle() return (self.AzerothScenesOn and self:AzerothScenesOn()) and "azeroth" or "sobre" end
+-- 3.1.0 : la clé de cache du carnet, de la fiche, des confirmations et du
+-- panneau d'allure (ns:StyleKey) : « azeroth » (ancien habillage), « forge »
+-- ou « sobre ». Le cache, les noms globaux (Échap) et la relève à chaud la
+-- suivent : un carnet né forgé n'est jamais resservi en Sobre.
+function ns:JournalStyleKey()
+	if not self.StyleKey then return self:JournalStyle() end
+	return self:StyleKey(self:JournalStyle() == "azeroth")
+end
 
 local function JournalCounter(self)
 	if self.FeatPoints then return self:F("CARNET_AZ_POINTS", (self:FeatPoints())) end
@@ -1925,13 +1933,15 @@ do
 	if ensure then
 		function ns:EnsureEffectsConfirm(...)
 			local style = self:JournalStyle()
+			local key = self:JournalStyleKey()
 			self.effectsConfirmByStyle = self.effectsConfirmByStyle or {}
 			local cache = self.effectsConfirmByStyle
 			local current = self.effectsConfirm
-			if current and not current.uiStyle then current.uiStyle = "sobre"; cache.sobre = current end
+			if current and not current.uiStyle then current.uiStyle = "sobre" end
+			if current and not current.styleKey then current.styleKey = ns.FrameStyleKey(current); cache[current.styleKey] = current end
 			-- une question en cours garde sa fenêtre
-			if current and (current.uiStyle == style or (current.IsShown and current:IsShown())) then return current end
-			if cache[style] then self.effectsConfirm = cache[style]; return cache[style] end
+			if current and (current.styleKey == key or (current.IsShown and current:IsShown())) then return current end
+			if cache[key] then self.effectsConfirm = cache[key]; return cache[key] end
 			self.effectsConfirm = nil
 			local frame
 			if style == "azeroth" then
@@ -1944,7 +1954,7 @@ do
 			else
 				frame = ensure(self, ...)
 			end
-			if frame then frame.uiStyle = style; cache[style] = frame end
+			if frame then frame.uiStyle, frame.styleKey = style, key; cache[key] = frame end
 			self.effectsConfirm = frame
 			return frame
 		end
@@ -1964,7 +1974,8 @@ do
 		function ns:EnsureJournalWindow(...)
 			if self.journalFrame then return self.journalFrame end
 			local style = self:JournalStyle()
-			local cached = Cached(self, "journalFrame", style)
+			local key = self:JournalStyleKey()
+			local cached = Cached(self, "journalFrame", key)
 			if cached then
 				self.journalFrame = cached
 				-- 2.11.0 (fiche 27) : suit les choix faits dans l'autre style
@@ -1973,12 +1984,13 @@ do
 			end
 			if style ~= "azeroth" then
 				local frame = ensure(self, ...)
-				if frame then frame.uiStyle = "sobre" end
+				if frame then frame.uiStyle, frame.styleKey = "sobre", key end
 				return frame
 			end
 			local reg = NewReg()
 			local frame = CaptureRun(reg, ensure, self, ...)
 			if frame then
+				frame.styleKey = key
 				local ok, err = pcall(SkinJournal, self, frame, reg)
 				if not ok and self.RecordError then self:RecordError("carnet:azeroth", err) end
 			end
@@ -2113,19 +2125,21 @@ do
 		function ns:EnsureTrainerWindow(...)
 			if self.trainerFrame then return self.trainerFrame end
 			local style = self:JournalStyle()
-			local cached = Cached(self, "trainerFrame", style)
+			local key = self:JournalStyleKey()
+			local cached = Cached(self, "trainerFrame", key)
 			if cached then
 				self.trainerFrame = cached
 				return cached
 			end
 			if style ~= "azeroth" then
 				local frame = ensure(self, ...)
-				if frame then frame.uiStyle = "sobre" end
+				if frame then frame.uiStyle, frame.styleKey = "sobre", key end
 				return frame
 			end
 			local reg = NewReg()
 			local frame = CaptureRun(reg, ensure, self, ...)
 			if frame then
+				frame.styleKey = key
 				local ok, err = pcall(SkinTrainer, self, frame, reg)
 				if not ok and self.RecordError then self:RecordError("carnet:trainer", err) end
 			end
@@ -2160,14 +2174,20 @@ local JOURNAL_STATE = { "kind", "activity", "offset", "zoneFilter", "zoneSort", 
 	"jukeView", "jukeOffset", "jukeSearch",   -- 2.12.0 : Juke-box
 	"resView", "resSort", "resShow", "resNpc", "resOffset", "resPick" }   -- 2.15.0 : Réserve (3.0.0 : l'Échoppe a son onglet)
 
+-- 3.1.0 : par clé (ns:JournalStyleKey) : forgé et Sobre ont chacun leur
+-- carnet, comme l'ancien habillage
+local function KeyOf(frame)
+	return frame.styleKey or (frame.azeroth and "azeroth") or "sobre"
+end
+
 function ns:CarnetRestyle()
-	local want = self:JournalStyle()
+	local want = self:JournalStyleKey()
 	local swapped = {}
 	local journal = self.journalFrame
-	if journal and (journal.azeroth and "azeroth" or "sobre") ~= want then
+	if journal and KeyOf(journal) ~= want then
 		local shown = journal:IsShown()
 		journal:Hide()
-		Stash(self, "journalFrame", journal, journal.azeroth and "azeroth" or "sobre")
+		Stash(self, "journalFrame", journal, KeyOf(journal))
 		self.journalFrame = nil
 		if shown then
 			local fresh = self:EnsureJournalWindow()
@@ -2181,10 +2201,10 @@ function ns:CarnetRestyle()
 		swapped.journal = true
 	end
 	local trainer = self.trainerFrame
-	if trainer and (trainer.azeroth and "azeroth" or "sobre") ~= want then
+	if trainer and KeyOf(trainer) ~= want then
 		local shown = trainer:IsShown()
 		trainer:Hide()
-		Stash(self, "trainerFrame", trainer, trainer.azeroth and "azeroth" or "sobre")
+		Stash(self, "trainerFrame", trainer, KeyOf(trainer))
 		self.trainerFrame = nil
 		if shown then
 			local fresh = self:EnsureTrainerWindow()

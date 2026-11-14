@@ -545,6 +545,7 @@ function ns:EnsureJournalToast()
 	if cached then self.journalToast = cached; return cached end
 	local frame = self.AzerothOn and self:AzerothOn() and self:AzerothCreateBanner({ strata = "MEDIUM" })
 	if frame then
+		if self.MarkStyle then self:MarkStyle(frame) end
 		frame.icon:SetTexture(Theme.LOGO_SMALL)
 		ToastButton(frame)
 		if self.RestorePoint then self:RestorePoint(frame, "journalToastPoint", { point = "TOP", x = 0, y = -190 }) end
@@ -556,6 +557,7 @@ function ns:EnsureJournalToast()
 	frame = Theme.CreateToast(UIParent, TOAST_W, TOAST_H)
 	if not frame then return nil end
 	frame.uiStyle = "sobre"
+	if self.MarkStyle then self:MarkStyle(frame) end
 	local left = frame.contentLeft or 14
 	frame.diamond = Theme.CreateDiamond(frame, 12, false)
 	frame.diamond:SetPoint("LEFT", frame, "LEFT", left, 0)

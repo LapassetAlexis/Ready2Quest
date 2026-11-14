@@ -7,6 +7,10 @@
 -- deux habits (Sobre, Azeroth), Échap ; vignettes : portrait 2D, modèle de la
 -- créature, apprentissage des displayID en fond ; Metzen (modèle, portraits
 -- 2D des compagnons de saison, /qc noel metzen) ; des noms, jamais des numéros.
+-- 3.1.0 : affirme l'ancien habillage (carnet en parchemin, scènes en bois, bandeaux
+-- dorés, anneau) : le drapeau QNS.AZEROTH_LEGACY rallumé pour tout le module
+-- (remis à la valeur du produit à sa fin, tests/run_tests.lua)
+T.Legacy(true)
 local Check, Say, ResetWorld, NS, Mock = T.Check, T.Say, T.ResetWorld, T.QNS, T.Mock
 
 local A = { saved = {} }

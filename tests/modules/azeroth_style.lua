@@ -7,6 +7,10 @@
 -- dans l'écu) ; cadre du compagnon (anneau, plaque, rabat de l'humeur, modèle
 -- dans l'ouverture), bande Sobre lisible ; bulle sur le parchemin ; textures
 -- du client par référence (QC et R2Q), jamais nos images en repli.
+-- 3.1.0 : affirme l'ancien habillage (carnet en parchemin, scènes en bois, bandeaux
+-- dorés, anneau) : le drapeau QNS.AZEROTH_LEGACY rallumé pour tout le module
+-- (remis à la valeur du produit à sa fin, tests/run_tests.lua)
+T.Legacy(true)
 local Check, Say, ResetWorld, NS, RNS, Mock = T.Check, T.Say, T.ResetWorld, T.QNS, T.NS, T.Mock
 local Theme = NS.Theme
 

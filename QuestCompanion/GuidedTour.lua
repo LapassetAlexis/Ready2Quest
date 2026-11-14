@@ -365,10 +365,14 @@ local function Paint(fs, az, role, color)
 	fs:SetTextColor(color[1], color[2], color[3], 1)
 end
 
-local function BuildCallout(self, style)
+local function BuildCallout(self, style, key)
 	local az = style == "azeroth"
-	local name = az and "QuestCompanionTourCalloutAzeroth" or "QuestCompanionTourCallout"
+	-- 3.1.0 : un nom par clé (ns:StyleKey : ancien habillage, forgé, Sobre)
+	key = key or style
+	local name = ns.StyleName and ns.StyleName("QuestCompanionTourCallout", key)
+		or (az and "QuestCompanionTourCalloutAzeroth" or "QuestCompanionTourCallout")
 	local frame = CreateFrame("Frame", name, UIParent)
+	frame.styleKey = key
 	frame:SetSize(TOUR.w, 120)
 	frame:SetFrameStrata(TOUR.strata)
 	frame:SetClampedToScreen(true)
@@ -466,11 +470,13 @@ end
 
 local function Parts(self)
 	local style = TourStyle(self)
+	-- 3.1.0 : un jeu par clé (une bulle née forgée ne sert pas en Sobre)
+	local key = self.StyleKey and self:StyleKey(style == "azeroth") or style
 	self.tourUI = self.tourUI or {}
-	local ui = self.tourUI[style]
+	local ui = self.tourUI[key]
 	if not ui then
-		ui = { callout = BuildCallout(self, style), ring = BuildRing(style), style = style }
-		self.tourUI[style] = ui
+		ui = { callout = BuildCallout(self, style, key), ring = BuildRing(style), style = style, key = key }
+		self.tourUI[key] = ui
 	end
 	return ui
 end

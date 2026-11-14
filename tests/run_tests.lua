@@ -3929,6 +3929,16 @@ do
 	-- le client pose QuestCompanionDB puis envoie ADDON_LOADED("QuestCompanion")
 	Mock:Fire("ADDON_LOADED", "Ready2Quest")
 	Mock:Fire("ADDON_LOADED", "QuestCompanion")
+	-- 3.1.0 : QuestCompanion tourne dans l'état du produit (thème forgé, ancien
+	-- habillage coupé : QNS.AZEROTH_LEGACY faux). T.Legacy(true) rallume
+	-- l'ancien habillage (carnet en parchemin, scènes en bois, bandeaux dorés,
+	-- anneau) pour les modules ou sous-cas qui l'affirment ; T.Legacy(false)
+	-- le recoupe. Remis à la valeur du produit à la fin de chaque module.
+	local legacyDefault = QNS.AZEROTH_LEGACY
+	function T.Legacy(on)
+		QNS.AZEROTH_LEGACY = on and true or false
+		return QNS.AZEROTH_LEGACY
+	end
 	for _, path in ipairs(MODULE_TEST_FILES or {}) do
 		Say("\n== module : " .. path .. " ==")
 		local handle = assert(io.open(ROOT .. "/" .. path, "r"))
@@ -3937,6 +3947,7 @@ do
 		local chunk, compileError = loadstring(source, "@" .. path)
 		assert(chunk, "erreur de compilation dans " .. path .. ":\n" .. tostring(compileError))
 		chunk()
+		QNS.AZEROTH_LEGACY = legacyDefault
 	end
 end
 

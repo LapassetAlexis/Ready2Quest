@@ -2064,8 +2064,9 @@ function ns:EnsureJournalWindow()
 	if self.journalFrame then return self.journalFrame end
 	if not Theme or not Theme.CreateWindow then return nil end
 	-- 2.10.0 : un nom global par style (et plus de préfixe Ready2Quest), sinon Échap vise la fenêtre de l'autre style restée en cache
-	local style = (self.JournalStyle and self:JournalStyle()) or "sobre"
-	local name = style == "azeroth" and "QuestCompanionJournalFrameAzeroth" or "QuestCompanionJournalFrame"
+	-- 3.1.0 : un par clé (ancien habillage, forgé, Sobre : ns:JournalStyleKey)
+	local key = (self.JournalStyleKey and self:JournalStyleKey()) or "sobre"
+	local name = ns.StyleName and ns.StyleName("QuestCompanionJournalFrame", key) or "QuestCompanionJournalFrame"
 	local frame = Theme.CreateWindow(UIParent, WIDTH, HEIGHT, { name = name, nav = NAV_W, footer = FOOTER_H })
 	if not frame then return nil end
 	frame.chrome = "journal"

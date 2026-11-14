@@ -6,6 +6,10 @@
 -- étoile ★ ni code d'échappement ; anti-spam ; réglage qui cache le bouton
 -- des bandeaux ; file des bandeaux intacte ; « Copier » remplit la saisie
 -- sans envoyer.
+-- 3.1.0 : affirme l'ancien habillage (carnet en parchemin, scènes en bois, bandeaux
+-- dorés, anneau) : le drapeau QNS.AZEROTH_LEGACY rallumé pour tout le module
+-- (remis à la valeur du produit à sa fin, tests/run_tests.lua)
+T.Legacy(true)
 local Check, Say, ResetWorld, Mock = T.Check, T.Say, T.ResetWorld, T.Mock
 local NS = T.QNS
 local Theme = NS.Theme

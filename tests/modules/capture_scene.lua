@@ -6,6 +6,10 @@
 -- capturer » (icône du type au lieu du modèle 3D et nombre d'étoiles dans
 -- l'écu : retours en jeu 2.9.1) ; le repli Sobre sans le bois ; le style
 -- Sobre ; le changement de style pendant une scène.
+-- 3.1.0 : affirme l'ancien habillage (carnet en parchemin, scènes en bois, bandeaux
+-- dorés, anneau) : le drapeau QNS.AZEROTH_LEGACY rallumé pour tout le module
+-- (remis à la valeur du produit à sa fin, tests/run_tests.lua)
+T.Legacy(true)
 local Check, Say, ResetWorld, NS, Mock = T.Check, T.Say, T.ResetWorld, T.QNS, T.Mock
 
 local SZ = { saved = {}, random = math.random, units = {}, sounds = {} }
