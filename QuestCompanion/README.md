@@ -365,7 +365,7 @@ Léger en mémoire : environ 2 Mo (les données d'une zone ne sont construites q
 
 ## Réglages
 
-`/qc options`, ou un clic droit sur le bouton de minicarte au dragonnet.
+`/qc options`, ou un clic droit sur le bouton de minicarte à l'empreinte.
 - **Général** : activer l'addon, le bouton de minicarte et sa position.
 - **Compagnon de route** : la réglette **Taille** (Petit, Moyen, Grand, Très grand : son cadre grandit, sa bulle reste lisible), le **Cadrage** (Portrait, la tête comme ton portrait ; Buste ; En pied), la réglette **Bavardage** (Muet, Discret, Calme, Normal, Bavard : la phrase sous la réglette dit ce que fait chaque cran, et il te le confirme lui-même), apparence, cadre et fond ; les sous-pages **Ornements** et **Carnet** (bandeau, chat, suivi à l'écran).
 

@@ -580,7 +580,10 @@ local function ActionCard(page, def)
 	-- valeur affichée à gauche du bouton : l'angle du bouton de minicarte
 	local valueWidth = def.key == "minimapPos" and 44 or 0
 	if valueWidth > 0 then card.value:Show() end
-	FitCard(card, buttonWidth + valueWidth)
+	-- def.reserve : place gardée pour un contrôle que le module ajoute après
+	-- coup à gauche du bouton (« Retirer » d'un raccourci) : la carte passe en
+	-- pleine largeur plutôt que de laisser la valeur recouvrir le libellé
+	FitCard(card, buttonWidth + valueWidth + (tonumber(def.reserve) or 0))
 	card:SetScript("OnClick", function() ns:RunOptionAction(def.key) end)
 	function card:Refresh(db)
 		if def.key == "minimapPos" then

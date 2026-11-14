@@ -287,6 +287,9 @@ end
 -- Options : page Carnet de voyage, section Hauts faits ; la carte montre la
 -- touche, « Changer » (bouton de la carte) et « Retirer » (ajouté)
 -- ---------------------------------------------------------------------------
+-- place gardée sur la carte d'un raccourci pour « Retirer » et la touche
+-- (ajoutés après coup) : la carte passe en pleine largeur si le libellé n'y tient plus
+ns.BIND_CARD_RESERVE = 150
 local ROWS = { bindFeats = "feats", bindJournal = "journal", bindToggle = "toggle", bindNet = "net", bindHunt = "hunt" }
 do
 	for _, page in ipairs(ns.OPTION_PAGES or {}) do
@@ -297,9 +300,9 @@ do
 				if row.key == "bindFeats" then present = true end
 			end
 			if at and not present then
-				table.insert(page.rows, at, { key = "bindJournal", label = "OPT_BIND_JOURNAL", kind = "action", button = "OPT_BIND_CHANGE",
+				table.insert(page.rows, at, { key = "bindJournal", label = "OPT_BIND_JOURNAL", kind = "action", button = "OPT_BIND_CHANGE", reserve = ns.BIND_CARD_RESERVE,
 					describe = function() return L.OPT_BIND_DESC end })
-				table.insert(page.rows, at, { key = "bindFeats", label = "OPT_BIND_FEATS", kind = "action", button = "OPT_BIND_CHANGE",
+				table.insert(page.rows, at, { key = "bindFeats", label = "OPT_BIND_FEATS", kind = "action", button = "OPT_BIND_CHANGE", reserve = ns.BIND_CARD_RESERVE,
 					describe = function() return L.OPT_BIND_DESC end })
 			end
 		end
@@ -311,11 +314,11 @@ do
 				if row.key == "bindToggle" then present = true end
 			end
 			if at and not present then
-				table.insert(page.rows, at, { key = "bindHunt", label = "OPT_BIND_HUNT", kind = "action", button = "OPT_BIND_CHANGE",
+				table.insert(page.rows, at, { key = "bindHunt", label = "OPT_BIND_HUNT", kind = "action", button = "OPT_BIND_CHANGE", reserve = ns.BIND_CARD_RESERVE,
 					describe = function() return L.OPT_BIND_DESC end })
-				table.insert(page.rows, at, { key = "bindNet", label = "OPT_BIND_NET", kind = "action", button = "OPT_BIND_CHANGE",
+				table.insert(page.rows, at, { key = "bindNet", label = "OPT_BIND_NET", kind = "action", button = "OPT_BIND_CHANGE", reserve = ns.BIND_CARD_RESERVE,
 					describe = function() return L.OPT_BIND_DESC end })
-				table.insert(page.rows, at, { key = "bindToggle", label = "OPT_BIND_TOGGLE", kind = "action", button = "OPT_BIND_CHANGE",
+				table.insert(page.rows, at, { key = "bindToggle", label = "OPT_BIND_TOGGLE", kind = "action", button = "OPT_BIND_CHANGE", reserve = ns.BIND_CARD_RESERVE,
 					describe = function() return L.OPT_BIND_DESC end })
 			end
 		end
@@ -336,13 +339,16 @@ do
 					if not card.clearButton and card.button then
 						card.clearButton = Theme.CreateButton(card, "auto", "sm", L.OPT_BIND_CLEAR, function() ns:BindingClear(which) end, "outline")
 						card.clearButton:SetPoint("RIGHT", card.button, "LEFT", -8, 0)
-						card.value:ClearAllPoints()
-						card.value:SetPoint("RIGHT", card.clearButton, "LEFT", -10, 0)
 					end
 					card.value:SetText(self:BindingKeyText(which))
 					card.value:Show()
 					if card.clearButton then
-						if self:BindingKey(which) then card.clearButton:Show() else card.clearButton:Hide() end
+						-- la valeur se cale à gauche de « Retirer » quand il est là, sinon
+						-- à gauche de « Changer » (elle recouvrait le libellé)
+						local bound = self:BindingKey(which) and true or false
+						if bound then card.clearButton:Show() else card.clearButton:Hide() end
+						card.value:ClearAllPoints()
+						card.value:SetPoint("RIGHT", bound and card.clearButton or card.button, "LEFT", -10, 0)
 					end
 				end
 			end

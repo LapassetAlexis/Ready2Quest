@@ -188,6 +188,16 @@ def check_generated():
         gen_lore.build(lore)
         if open(lore, encoding="utf-8").read() != open(os.path.join(ROOT, "QuestCompanion", "LoreData.lua"), encoding="utf-8").read():
             problems.append("QuestCompanion/LoreData.lua ne correspond plus à data/forever/lore/lore.json (python3 -I tools/gen_lore.py)")
+        # 3.1.0 / 1.35.0 : textures d'habillage du thème (tools/gen_ui_assets.py)
+        import gen_ui_assets
+        media = os.path.join(ROOT, "Ready2Quest", "Libs", "Socle", "Media")
+        for name, draw in gen_ui_assets.ASSETS:
+            current = os.path.join(media, name + ".tga")
+            if not os.path.exists(current) or open(current, "rb").read() != gen_ui_assets.tga(*draw()):
+                problems.append("Ready2Quest/Libs/Socle/Media/%s.tga ne correspond plus à tools/gen_ui_assets.py "
+                                "(python3 -I tools/gen_ui_assets.py, puis tools/sync_socle.py)" % name)
+        if tuple(name for name, _ in gen_ui_assets.ASSETS) != UI_ASSETS:
+            problems.append("tests/run_tests.py : UI_ASSETS ne suit plus tools/gen_ui_assets.py (ASSETS)")
         # 3.1.0 : taille des apparences (data/forever/display_sizes.json)
         import gen_display_sizes
         sizes = os.path.join(out, "DisplaySizes_Forever.lua")

@@ -177,7 +177,7 @@ Theme.T_BLUE      = TC.BLUE
 Theme.BG_DARK  = "Interface\\DialogFrame\\UI-DialogBox-Background-Dark"
 Theme.BG_LIGHT = "Interface\\DialogFrame\\UI-DialogBox-Background"
 Theme.SOLID    = "Interface\\Buttons\\WHITE8X8"
-Theme.LOGO          = MEDIA .. "Textures\\logo"         -- logo de l'addon (boussole R2Q, dragonnet QC)
+Theme.LOGO          = MEDIA .. "Textures\\logo"         -- logo de l'addon : médaillon complet (écu coché de R2Q, empreinte de QC)
 Theme.LOGO_SMALL    = MEDIA .. "Textures\\logo_petit"   -- petites tailles : bandeaux, liste des addons
 Theme.LOGO_GLYPH    = MEDIA .. "Textures\\logo_glyphe"  -- le glyphe sans anneau : bouton de la mini-carte
 -- socle 2.12.1 : la coche du client (fichier), repli de la case « checkmark-minimal »
@@ -3353,7 +3353,7 @@ end
 --   Theme.ApplySkin(id) : pose le thème (jetons modifiés SUR PLACE : les
 --     tables gardent leur identité, tout ce qui les lit suit). Une fenêtre
 --     déjà construite garde ses couleurs jusqu'au rechargement de
---     l'interface ; le cadre en bois, lui, suit à l'affichage suivant.
+--     l'interface ; l'habillage de la fenêtre, lui, suit à l'affichage suivant.
 --   Theme.skin : le thème posé ; Theme.Forged() : thème Azeroth (forgé).
 -- Les encres du texte courant (TEXT, MUTED, LABEL, PARCHMENT) ne changent
 -- pas, et les fonds restent aussi sombres : les contrastes mesurés tiennent

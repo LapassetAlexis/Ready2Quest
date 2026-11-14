@@ -21,8 +21,8 @@ et `/qc diag` disent « Socle : partagé » ou « propre ».
 
 Inspiration : les addons « premium » récents (fenêtre large, navigation à
 gauche, en-tête à grand titre, réglages en cartes sur deux colonnes). On garde
-notre identité : l'ambre (accent), le bleu de nuit (information, départ), la
-boussole et le dragonnet.
+notre identité : l'ambre (accent), le bleu de nuit (information, départ), et
+les médaillons des deux logos (l'écu coché au « ! » des quêtes, l'empreinte).
 
 ## Police
 
@@ -799,10 +799,12 @@ pour le carnet).
 - Contraste mesuré, pas estimé : ≥ 4,5:1 pour le corps de texte, ≥ 3:1 pour
   les titres, sur le vrai fond (texture comprise). Un texte sur une matière du
   client a son rôle dans `ns.AZEROTH_CONTRAST`.
-- Textures du client uniquement, par référence (atlas, FileDataID,
-  `Interface\\…`), avec un repli quand l'atlas manque ; jamais d'image
-  générée ni embarquée (exceptions historiques : les fichiers de repli du
-  socle et le filet de capture).
+- Illustrations : celles du client uniquement, par référence (atlas,
+  FileDataID, `Interface\\…`), avec un repli quand l'atlas manque ; jamais
+  d'illustration générée, ni d'image reprise du jeu ou d'internet. Sont à
+  nous, générés par script : l'habillage du thème forgé (formes, reliefs et
+  lueurs : `tools/gen_ui_assets.py`), les logos (`tools/gen_logos.py`) et le
+  filet de capture. Un test tient la liste des images embarquées.
 - Tout texte affiché existe en français et en anglais (`ns.RegisterStrings`,
   `Locales.lua` ; table bilingue de `Base.lua` pour les messages d'avant
   `Strings.lua`). Pluriels : `ns:FP(clé, n, …)`.

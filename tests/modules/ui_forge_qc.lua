@@ -72,6 +72,10 @@ do
 	local s = Steps()
 	s.ok("thème Sobre posé", Theme.skin == "sobre" and not NS.QCForged())
 	local net = NS:EnsureCaptureNet()
+	-- (relecture 3.1.0 : en Sobre, un clic ne touche pas la plaque d'encre)
+	net:GetScript("OnMouseDown")(net, "LeftButton")
+	net:GetScript("OnMouseUp")(net, "LeftButton")
+	s.ok("filet : un clic laisse la plaque d'encre intacte, pas d'état forgé", net.forgeLook == nil and Same(net.plate.vertex, Theme.INK))
 	s.ok("filet : plaque d'encre, liseré doré, ombre et halo à plat", not net.forged and net.plate and net.plate.texture == Theme.SOLID
 		and Same(net.plate.vertex, Theme.INK) and net.ring and net.ring.top and net.shadow.texture == Theme.SOLID
 		and net.glow.texture == Theme.SOLID and net.socket == nil and net.glowRest == nil)
@@ -104,6 +108,13 @@ do
 	s.ok("thème forgé posé avec le style Azeroth", Theme.skin == "azeroth" and NS.QCForged())
 	local net = NS:EnsureCaptureNet()
 	s.ok("plaque d'or en relief (9 tranches teintes)", net.forged and SliceOf(net.plate, "plate") and Same(net.plate.color, K.gold))
+	-- relecture 3.1.0 : un clic teintait la plaque d'or en bronze pour de bon
+	net:GetScript("OnMouseDown")(net, "LeftButton")
+	local down = { net.plate.color[1], net.plate.color[2], net.plate.color[3] }
+	net:GetScript("OnMouseUp")(net, "LeftButton")
+	NS:CaptureStyleNet()
+	s.ok("clic : la plaque s'assombrit à l'appui, puis reste d'or", down[1] < K.gold[1] and Same(net.plate.color, K.gold)
+		and net.forgeState == "rest", net.forgeState)
 	s.ok("l'icône dans un creux, plus petite que la plaque", SliceOf(net.socket, "inset")
 		and net.icon.width == NS.CAPTURE_NET_SIZE - 2 * F.icon)
 	local add = true
