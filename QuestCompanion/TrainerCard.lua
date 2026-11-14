@@ -1448,7 +1448,10 @@ end
 -- 3.1.0 (thème forgé) : le portrait dans un cadre d'orfèvre (nos matières :
 -- cadre, bords assombris), posé au-dessus du modèle, sans souris ; le filet
 -- d'un pixel s'efface. Remplace l'anneau à volutes de l'ancien habillage.
-ns.TRAINER_FORGE = { frameOut = 1, frameMargin = 16, corner = 30, cornerOut = 3, vignette = 0.85, insetOut = 3, insetMargin = 6 }
+ns.TRAINER_FORGE = { frameOut = 1, frameMargin = 16, corner = 30, cornerOut = 3, vignette = 0.85, insetOut = 3, insetMargin = 6,
+	-- case de la vitrine : le modèle rapetissé pour que le creux (insetOut) garde
+	-- tileEdge px jusqu'au liseré de la carte, et le texte tileText px après le creux
+	tileEdge = 4, tileText = 8 }
 local function ForgeStage(stage)
 	local K = ns.TRAINER_FORGE
 	local ring = CreateFrame("Frame", nil, stage)
@@ -1488,6 +1491,28 @@ local function ForgeIconInset(owner, around)
 	owner.forgeInset = Theme.Slice(owner, "inset", { layer = "BORDER", out = K.insetOut, margin = K.insetMargin,
 		around = around, color = Theme.EDGE })
 	return owner.forgeInset
+end
+
+-- 3.1.0 (thème forgé) : une case de la vitrine. Le creux déborde du modèle
+-- de insetOut px : le modèle est rapetissé et décalé pour que le creux ne
+-- touche ni le liseré ni la barre d'accent de la carte ; nom, détail et
+-- étoiles partent tileText px après le creux.
+local function ForgeTile(tile)
+	local K = ns.TRAINER_FORGE
+	local edge = K.insetOut + K.tileEdge
+	local size = TILE_H - 2 * edge
+	tile.model:SetSize(size, size)
+	tile.model:ClearAllPoints()
+	tile.model:SetPoint("LEFT", tile, "LEFT", edge, 0)
+	local x = edge + size + K.insetOut + K.tileText
+	for _, pair in ipairs({ { tile.name, -10 }, { tile.detail, -28 }, { tile.stars, -44 } }) do
+		local fs = pair[1]
+		fs:ClearAllPoints()
+		fs:SetPoint("TOPLEFT", tile, "TOPLEFT", x, pair[2])
+		fs:SetWidth(TILE_W - x - 8)
+	end
+	tile.forgeTextX = x
+	return ForgeIconInset(tile, tile.model)
 end
 
 function ns:EnsureTrainerWindow()
@@ -1601,7 +1626,7 @@ function ns:EnsureTrainerWindow()
 	frame.tiles = {}
 	for slot = 1, ns.TRAINER_SHOWCASE_SIZE do
 		frame.tiles[slot] = BuildTile(self, body, PAD + (slot - 1) * (TILE_W + TILE_GAP), slot)
-		if forged and frame.tiles[slot].model then ForgeIconInset(frame.tiles[slot], frame.tiles[slot].model) end
+		if forged and frame.tiles[slot].model then ForgeTile(frame.tiles[slot]) end
 	end
 
 	-- pied : partage (ma fiche), redemander (une autre), fermer
@@ -1761,6 +1786,38 @@ local function PaintFeats(self, frame, card, own)
 		frame.featsPicker:Show()
 	else
 		frame.featsPicker:Hide()
+	end
+	ns.TrainerFitFeatsDetail(frame)
+end
+
+-- 3.1.0 : le détail de l'en-tête des hauts faits (« (3 obtenus · 15 points
+-- · …) ») s'arrête TRAINER_DETAIL_GAP px avant la liste « Vitrine : … » ;
+-- trop long, il est tenu sur une ligne et coupé. Rien ne change quand il tient.
+-- Au thème forgé seulement (le point et le retrait du titre de section le
+-- poussent de 16 px ; le Sobre garde 7 px d'écart et reste tel quel).
+ns.TRAINER_DETAIL_GAP = 8
+local function Measure(fs)
+	local ok, w = pcall(fs.GetStringWidth, fs)
+	return ok and tonumber(w) or 0
+end
+function ns.TrainerFitFeatsDetail(frame)
+	local section, picker = frame and frame.featsSection, frame and frame.featsPicker
+	local detail = section and section.detail
+	if not (detail and section.label) then return end
+	if frame.featsDetailFit then
+		-- largeur posée la fois d'avant : rendue au texte, puis remesurée
+		detail:SetWidth(0)
+		frame.featsDetailFit = nil
+	end
+	if not (frame.trainerForged and detail:IsShown()) then return end
+	local start = (section.forged and Theme.FORGE_SECTION and Theme.FORGE_SECTION.text or 0) + Measure(section.label) + 6
+	local room = COL_W - start
+	if picker and picker:IsShown() then room = room - (tonumber(picker:GetWidth()) or 200) - ns.TRAINER_DETAIL_GAP end
+	room = math.floor(room)
+	if Measure(detail) > room then
+		detail:SetWidth(math.max(room, 0))
+		if detail.SetWordWrap then detail:SetWordWrap(false) end
+		frame.featsDetailFit = room
 	end
 end
 

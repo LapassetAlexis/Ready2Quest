@@ -207,6 +207,39 @@ do
 	local tiles = 0
 	for _, tile in ipairs(f.tiles) do if not tile.model or (tile.forgeInset and tile.forgeInset.art == Theme.ART.inset) then tiles = tiles + 1 end end
 	s.ok("vitrine : chaque modèle en creux", tiles == #f.tiles)
+	-- le creux déborde du modèle de insetOut px : il garde de la marge jusqu'au
+	-- liseré de la carte (haut, bas, gauche), et le texte part après lui
+	local K, placed = NS.TRAINER_FORGE, 0
+	for _, tile in ipairs(f.tiles) do
+		local m = tile.model
+		if m then
+			local p, tp = m.lastPoint or {}, tile.name.lastPoint or {}
+			local th, mh = tile:GetHeight() or 0, m:GetHeight() or 0
+			local vMargin = (th - mh) / 2 - K.insetOut
+			local hMargin = (p.x or 0) - K.insetOut
+			local textGap = (tp.x or 0) - ((p.x or 0) + (m:GetWidth() or 0) + K.insetOut)
+			if p.point == "LEFT" and vMargin >= 4 and hMargin >= 4 and textGap >= 6
+				and (tile.detail.lastPoint or {}).x == tp.x and (tile.stars.lastPoint or {}).x == tp.x then
+				placed = placed + 1
+			end
+		else
+			placed = placed + 1
+		end
+	end
+	s.ok("vitrine : creux à 4 px au moins du liseré, texte à 6 px au moins du creux", placed == #f.tiles, placed)
+	-- l'en-tête des hauts faits (détail entre parenthèses) s'arrête avant la liste « Vitrine »
+	local sec, picker = f.featsSection, f.featsPicker
+	sec:SetText(NS.L.TRAINER_FEATS_HEAD, string.rep("détail très long ", 8))
+	NS.TrainerFitFeatsDetail(f)
+	local start = (sec.forged and Theme.FORGE_SECTION.text or 0) + sec.label:GetStringWidth() + 6
+	local right = start + (sec.detail:GetWidth() or 1e9)
+	local pickerLeft = (picker.lastPoint and picker.lastPoint.x or 0) - (f.featsSection.lastPoint.x or 0) - picker:GetWidth()
+	s.ok("en-tête des hauts faits : un détail trop long est coupé sur une ligne avant la liste « Vitrine »",
+		f.featsDetailFit ~= nil and sec.detail.wordWrap == false and right <= pickerLeft - NS.TRAINER_DETAIL_GAP + 0.5,
+		string.format("%.1f / %.1f", right, pickerLeft))
+	sec:SetText(NS.L.TRAINER_FEATS_HEAD, "court")
+	NS.TrainerFitFeatsDetail(f)
+	s.ok("en-tête des hauts faits : un détail court garde sa largeur naturelle", f.featsDetailFit == nil)
 	-- aucune information perdue : les points de la fiche en sous-titre
 	s.ok("points de la fiche en sous-titre", (f.header.subtitle.text or ""):find("points", 1, true), f.header.subtitle.text)
 	s.ok("nom du compagnon au titre (identité)", Same(f.compName.textColor, Theme.TITLE))
