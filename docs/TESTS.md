@@ -97,6 +97,26 @@ Sobre. Conséquences :
 - `tests/modules/forge_bascule.lua` (`[BASC]`) épingle l'état du produit,
   avec et sans atlas : thème forgé, surfaces au socle (`uiStyle` « sobre »,
   `styleKey` « forge », fenêtres habillées), bascule à chaud sans fuite.
+- Un module par lot du thème forgé, chacun avec son Sobre inchangé et ses
+  contrastes mesurés sur le vrai fond (`docs/UI.md`, « QuestCompanion au
+  thème forgé ») : `ui_identite.lua` (`[IDENT]`, 5 contrôles : rôles des
+  deux addons, Ready2Quest au chiffre près, QuestCompanion inversé, Sobre,
+  allers-retours), `journal_forge.lua` (`[JFG]`, 11 : médaillon et plaque du
+  carnet, paliers des envies, garde-manger, Hauts faits, fiche, allure et
+  confirmation, Voile d'hiver du carnet et son repli),
+  `forge_bandeaux.lua` (`[FBAN]`, 8 : médaillon, plaques, apparition, grand
+  effet avec et sans atlas, guilde sur deux lignes, Partager, bulle des
+  visites), `forge_scenes.lua` (`[FSC]`, 9 : verdict dans la scène,
+  préparation, volée, choix au filet, « Capturer ? », clés de cache),
+  `companion_forge.lua` (`[FCOMP]`, 13 : médaillon, humeurs, cadre gagné,
+  effets, Voile d'hiver, bulle, bascule à chaud sans cadre créé, ancien
+  habillage). Les assertions des modules du produit qui décrivaient le
+  cadre carré ou le Sobre sous le thème forgé sont épinglées en Sobre
+  (`companion_notify`, `companion_rewards`) ou lisent le cadre forgé
+  (`share`, `feats_rewards`, `capture_lot`, `companion_fx`).
+
+Avec ces modules, la suite compte 3 592 contrôles (3.1.0 bêta, avant
+publication).
 
 ## Écrire un test
 

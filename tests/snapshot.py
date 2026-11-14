@@ -33,9 +33,18 @@ Scènes (Snap.scenes dans tests/snapshot.lua ; « list » les donne toutes) :
   r2q-check, r2q-dungeon, r2q-expedition, r2q-death, r2q-lootroom, r2q-spellranks ; bandeaux :
   r2q-bagspace, r2q-camp, r2q-gear-toast, r2q-portrait, r2q-edit-banner, r2q-notice,
   r2q-exit-alert ; infobulles et divers : r2q-pace, r2q-minimap-tooltip, r2q-reward,
-  r2q-settings-canvas ; QuestCompanion : qc-journal-creature, qc-journal-menagerie,
-  qc-journal-day, qc-journal-progress, qc-journal-guide, qc-companion,
-  qc-companion-hover, qc-tutorial, qc-pantry, qc-chest, qc-notify, qc-tracker, qc-tooltip.
+  r2q-settings-canvas ; QuestCompanion (3.1.0 : tout au thème forgé) : carnet
+  qc-journal-creature, qc-journal-progress, qc-journal-day, qc-journal-menagerie,
+  qc-journal-guide, qc-journal-feats, qc-journal-reserve, qc-journal-juke,
+  qc-journal-confirm, qc-journal-winter, qc-trainer, qc-allure (et
+  qc-journal-day-azeroth : l'ancien habillage, sous son drapeau) ; compagnon
+  qc-companion, qc-companion-hover, qc-companion-frame-tint, qc-companion-talk,
+  qc-companion-sad, qc-companion-winter, qc-tutorial, qc-pantry ; capture
+  qc-capture, qc-capture-shake, qc-capture-ok, qc-capture-fail, qc-capture-toast,
+  qc-capture-shiny, qc-capture-prep, qc-capture-batch3, qc-capture-batch6,
+  qc-capture-chooser ; bandeaux qc-result-forge, qc-result-shiny-forge,
+  qc-feat-forge, qc-feat-big-forge, qc-guild-forge, qc-tour-forge ; divers
+  qc-chest, qc-notify, qc-tracker, qc-tooltip.
 Ne pas versionner les HTML produits.
 """
 import base64
