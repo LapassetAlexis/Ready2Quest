@@ -1829,8 +1829,10 @@ ns.FORGE_RING = { w = 104, h = 104, x = 0, y = RING_Y, model = 64, disc = 88, sq
 -- matières forgées) : halo du cadre gagné (× w), éclats (px), poussière
 -- (trois points par grappe : x, y, taille), filets du titre (hauteur),
 -- ligne de lumière (hauteur), reflet de la bulle (épaisseur)
+-- (le point lumineux n'a qu'un halo court : sa taille est celle où le bord
+-- de l'anneau tombe dans le halo, son cœur restant sous le portrait)
 ns.FORGE_FX = {
-	haloSize = 1.45, sparkSize = 22, rule = 6, lineH = 8, sheenW = 28, sheenAlpha = 0.45,
+	haloSize = 2.4, glowSize = 3.2, sparkSize = 22, rule = 6, lineH = 8, sheenW = 34, sheenAlpha = 0.65,
 	dust = { { -14, 4, 7 }, { 4, -6, 9 }, { 16, 8, 6 } }, cloudAlpha = 0.55,
 }
 
@@ -2576,11 +2578,9 @@ local function ForgeBubbleParts(bubble)
 	parts.name:SetJustifyH("CENTER")
 	if parts.name.SetWordWrap then parts.name:SetWordWrap(false) end
 	Theme.TextShadow(parts.name, 0.8)
-	-- le reflet : le filet lumineux posé debout (coordonnées tournées d'un
-	-- quart de tour : son cœur à la verticale, il s'éteint vers le bas)
-	if Theme.ART and Theme.ART.line then
-		parts.sheen = ForgeTex(bubble, "ARTWORK", 2, "line", Theme.WHITE, 1)
-		parts.sheen:SetTexCoord(0, 0, 1, 0, 0, 1, 1, 1)
+	-- le reflet : une traînée de lumière debout (point lumineux étiré)
+	if Theme.ART and Theme.ART.dot then
+		parts.sheen = ForgeTex(bubble, "ARTWORK", 2, "dot", Theme.WHITE, 1)
 		parts.sheen:Hide()
 	end
 	parts.regions = { parts.name }
@@ -2745,7 +2745,7 @@ local function RoundGlow(frame)
 		glow:SetPoint("CENTER", frame, "TOP", 0, RING_Y)
 		glow:SetAlpha(0)
 		glow:Hide()
-		glow.base = math.floor(RING_W * FXC.glowSize)
+		glow.base = math.floor(RING_W * ns.FORGE_FX.glowSize)
 		glow:SetSize(glow.base, glow.base)
 		frame.azGlow = glow
 		return glow
@@ -2930,7 +2930,8 @@ local function LevelParts(frame)
 		Atlas(parts.iglow, FXA.iconGlow)
 		Additive(parts.iglow)
 	elseif forge then
-		parts.iglow = ForgeTex(layer, "OVERLAY", 1, "dot", Theme.GOLD_LIGHT, 1)
+		-- (notre anneau en lumière : il cerne le portrait sans le voiler)
+		parts.iglow = ForgeTex(layer, "OVERLAY", 1, "ring", Theme.GOLD_LIGHT, 1)
 	end
 	if parts.iglow then
 		parts.iglow:SetPoint("CENTER", frame, "TOP", 0, RING_Y)

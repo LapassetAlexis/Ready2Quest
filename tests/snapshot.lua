@@ -1529,6 +1529,50 @@ Snap.scenes["qc-companion-hover"] = function(T)
 	return Snap.Group(frame, ns.companionHover), "QuestCompanion : la fiche au survol du compagnon"
 end
 
+-- 3.1.0 : le médaillon forgé. Cadre gagné « Givre » : l'anneau prend sa
+-- teinte (argent-bleu) et son halo glacé (point lumineux sans l'atlas)
+Snap.scenes["qc-companion-frame-tint"] = function(T)
+	local ns, frame = QCCompanion(T, function(n)
+		local data = n:CompanionData()
+		data.unlocked["frame:frost"] = true
+		data.frameStyle = "frost"
+	end)
+	ns:CompanionApplyFrame()
+	return frame, "QuestCompanion : médaillon forgé, cadre gagné Givre (teinte et halo de l'anneau)"
+end
+
+-- il parle : bulle forgée (nom de qui parle en capitales), lueur ronde qui
+-- respire, reflet de la réplique saisi en pleine traversée
+Snap.scenes["qc-companion-talk"] = function(T)
+	local ns, frame = QCCompanion(T)
+	ns:CompanionSay("HELLO", { force = true, line = "COMP_SAY_HELLO", args = { ns:CompanionName() } })
+	local now = ns.Now()
+	ns:GlowUpdate(now + 0.55)
+	if ns.AzerothFxStep then ns.AzerothFxStep(now + 0.35) end
+	return Snap.Group(frame, ns.companionBubble), "QuestCompanion : il parle (bulle forgée, lueur ronde, reflet)"
+end
+
+-- humeur au plus bas (« rêveur ») : l'étiquette change de teinte ; et l'effet
+-- « Niveau 24 ! » (filets lumineux, lueur et poussière en points lumineux)
+Snap.scenes["qc-companion-sad"] = function(T)
+	local ns, frame = QCCompanion(T, function(n)
+		n:CompanionData().needs = { hunger = 20, energy = 30, mood = 25, curiosity = 15 }
+	end)
+	ns:CompanionRefreshLabels()
+	ns:CompanionLevelFX(ns:F("AZ_FX_LEVEL", 24), "level")
+	if ns.AzerothFxStep then ns.AzerothFxStep(ns.Now() + 0.9) end
+	local group = frame.azLevel and frame.azLevel.group
+	return Snap.Group(frame, group), "QuestCompanion : humeur « rêveur » et effet « Niveau 24 ! » (médaillon forgé)"
+end
+
+-- Voile d'hiver : flocons aux coins, guirlande posée sur la bande d'or (le
+-- modèle 3D de la guirlande ne se dessine pas hors du jeu), anneau Givre
+Snap.scenes["qc-companion-winter"] = function(T)
+	local ns, frame = QCCompanion(T, function(n) n:DB().winterVeil = "on" end)
+	ns:WinterVeilApply()
+	return frame, "QuestCompanion : médaillon forgé au Voile d'hiver (flocons, anneau Givre)"
+end
+
 Snap.scenes["qc-tutorial"] = function(T)
 	local ns, frame = QCCompanion(T, function(n) n:CompanionData().tutoDone = nil end)
 	ns:CompanionStartTutorial(true)
