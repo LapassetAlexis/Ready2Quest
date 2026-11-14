@@ -2876,7 +2876,9 @@ end
 function ns:CompanionApplySobrePlate()
 	local frame = self.companionFrame
 	if not (frame and frame.plate) then return nil end
-	local az = frame.uiStyle == "azeroth" or (frame.uiStyle == nil and self.AzerothOn and self:AzerothOn())
+	-- 3.1.0 : tout anneau (l'ancien habillage, le médaillon forgé) a sa plaque
+	local az = frame.uiStyle == "azeroth" or frame.ring ~= nil
+		or (frame.uiStyle == nil and self.CompanionRingOn and self:CompanionRingOn())
 	if az then frame.plate:Hide(); return "azeroth" end
 	frame.plate:Show()
 	local t = Theme.TEXT

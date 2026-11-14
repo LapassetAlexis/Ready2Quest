@@ -560,6 +560,10 @@ do
 	Say("-- cosmétiques : cadre et fond posés")
 	local S = Scenario("[COSM] cadre et fond posés")
 	local frame = K.Reset()
+	-- 3.1.0 : bordures et filets du client : le cadre carré (Sobre) ; au thème
+	-- forgé, le cadre gagné teinte l'anneau (tests/modules/companion_forge.lua)
+	NS:DB().companionStyle = "sobre"
+	NS:ApplyUIStyle()
 	S.ok("cadre par défaut : ardoise, sans bordure du client", frame.frameStyle == "slate" and not frame.frameBackdrop)
 	S.ok("fond par défaut : nuit, aplat", frame.bgStyle == "night" and frame.bg.texture == NS.Theme.SOLID
 		and frame.bg.vertex[4] == 0.66)

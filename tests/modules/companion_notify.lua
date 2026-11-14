@@ -156,6 +156,10 @@ do
 	Say("-- cadre qui brille")
 	local S = Scenario("[GLOW] cadre qui brille")
 	NO.Reset()
+	-- 3.1.0 : le liseré rectangulaire est celui du cadre carré (Sobre) ; le
+	-- médaillon forgé a sa lueur ronde (tests/modules/companion_forge.lua)
+	NS:DB().companionStyle = "sobre"
+	NS:ApplyUIStyle()
 	S.ok("sans bulle : éteint", NS:GlowAlpha(Mock.now) == 0 and NS:GlowUpdate(Mock.now) == 0)
 	NS:CompanionSay("EAT", { force = true })
 	local frame = NS.companionFrame

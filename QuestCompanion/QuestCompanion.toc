@@ -78,6 +78,7 @@ MenagerieView.lua
 TrainerCard.lua
 GuildFeats.lua
 AzerothStyle.lua
+ForgeCompanion.lua
 FeatsData.lua
 FeatsCatMenagerie.lua
 FeatsCatJeu.lua

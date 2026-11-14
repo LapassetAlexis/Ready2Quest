@@ -1810,6 +1810,58 @@ ns.AZEROTH_RING_HOLE = { l = 16 / 78, r = 58 / 78, t = 17 / 75, b = 57 / 75 }
 local RING_X = math.floor(RING_W * (0.5 - (ns.AZEROTH_RING_HOLE.l + ns.AZEROTH_RING_HOLE.r) / 2) + 0.5)
 ns.AZEROTH_RING.x = RING_X
 
+-- ---------------------------------------------------------------------------
+-- 3.1.0 : le médaillon forgé. Sous le thème forgé (l'ancien habillage coupé),
+-- le compagnon garde la géométrie de la maquette validée : anneau rond
+-- centré sur le portrait, plaque du nom dessous, étiquette d'humeur glissée
+-- sous la plaque ; en NOS matières (Theme.ART.ring, Theme.Slice "plate").
+-- Même centre (RING_Y) et même emprise que l'anneau du client : le filet et
+-- les pastilles ne bougent pas. Un seul prédicat décide de la branche
+-- « anneau » : ns:CompanionRingOn() ; frame.ring dit celle qui est posée
+-- ("azeroth" : l'ancien habillage, "forge" : le médaillon forgé, nil : le
+-- cadre carré du Sobre). Habillage dans ForgeCompanion.lua.
+-- ---------------------------------------------------------------------------
+-- w, h : l'anneau ; model : côté du portrait 3D (ses coins sous la bande
+-- d'or) ; disc : le fond gagné, en disque sous la bande (masque) ; square :
+-- son repli sans masque (carré dont les coins restent sous la bande)
+ns.FORGE_RING = { w = 104, h = 104, x = 0, y = RING_Y, model = 64, disc = 88, square = 64 }
+-- Effets du médaillon forgé quand l'atlas du client manque (repli en
+-- matières forgées) : halo du cadre gagné (× w), éclats (px), poussière
+-- (trois points par grappe : x, y, taille), filets du titre (hauteur),
+-- ligne de lumière (hauteur), reflet de la bulle (épaisseur)
+ns.FORGE_FX = {
+	haloSize = 1.45, sparkSize = 22, rule = 6, lineH = 8, sheenW = 28, sheenAlpha = 0.45,
+	dust = { { -14, 4, 7 }, { 4, -6, 9 }, { 16, 8, 6 } }, cloudAlpha = 0.55,
+}
+
+-- La branche « anneau » : l'ancien habillage, ou le thème forgé
+function ns:CompanionRingOn()
+	return (self:AzerothOn() or ns.QCForged()) and true or false
+end
+-- Le cadre porte-t-il un anneau (ancien habillage ou médaillon forgé) ?
+function ns.CompanionRinged(frame) return frame ~= nil and frame.ring ~= nil end
+-- L'habit de l'anneau posé (nil : le cadre carré)
+function ns.CompanionRingSkin(frame)
+	if not frame then return nil end
+	if frame.ring == "forge" then return frame.forgeSkin end
+	if frame.ring == "azeroth" then return frame.azSkin end
+	return nil
+end
+-- La géométrie de l'anneau posé (celle du client par défaut)
+function ns.CompanionRingGeometry(frame)
+	if frame and frame.ring == "forge" then return ns.FORGE_RING end
+	return ns.AZEROTH_RING
+end
+
+-- Place du portrait dans le médaillon forgé (depuis le coin haut gauche)
+function ns.ForgeCompanionModelBase(frameW)
+	local F = ns.FORGE_RING
+	local side = F.model
+	local x0 = math.floor((frameW or 104) / 2 + F.x - side / 2 + 0.5)
+	local y0 = math.floor(F.y + side / 2 + 0.5)
+	return { x = x0, y = y0, w = side, h = side }
+end
+
 -- Place du modèle dans le cadre Azeroth (depuis le coin haut gauche du cadre)
 function ns.AzerothCompanionModelBase(frameW)
 	local hole = ns.AZEROTH_RING_HOLE
@@ -1879,18 +1931,25 @@ local function BuildCompanionSkin(frame)
 	return skin
 end
 
-local function Masked(frame, on)
-	local mask = frame.azSkin and frame.azSkin.mask
+-- skin : l'habit dont le masque arrondit le fond (l'anneau du client par défaut)
+local function Masked(frame, on, skin)
+	skin = skin or frame.azSkin
+	local mask = skin and skin.mask
 	if not mask then return false end
 	local regions = { frame.bg }
 	for _, star in ipairs(frame.stars or {}) do regions[#regions + 1] = star end
 	for _, region in ipairs(regions) do
 		if region then
+			-- 3.1.0 : le masque de l'autre habit (bascule à chaud) est d'abord ôté
+			if on and region.azMasked and region.azMask and region.azMask ~= mask then
+				Method(region, "RemoveMaskTexture", region.azMask)
+				region.azMasked, region.azMask = nil, nil
+			end
 			if on and not region.azMasked then
-				if Method(region, "AddMaskTexture", mask) then region.azMasked = true end
+				if Method(region, "AddMaskTexture", mask) then region.azMasked, region.azMask = true, mask end
 			elseif not on and region.azMasked then
-				Method(region, "RemoveMaskTexture", mask)
-				region.azMasked = nil
+				Method(region, "RemoveMaskTexture", region.azMask or mask)
+				region.azMasked, region.azMask = nil, nil
 			end
 		end
 	end
@@ -1910,6 +1969,10 @@ end
 -- 2.13.1 : teinte du rabat et encre du mot selon l'humeur ; largeur au mot
 function ns:CompanionApplyMoodTab()
 	local frame = self.companionFrame
+	-- 3.1.0 : le médaillon forgé a son étiquette (ForgeCompanion.lua)
+	if frame and frame.ring == "forge" then
+		return self.CompanionForgeMoodTab and self:CompanionForgeMoodTab() or nil
+	end
 	local tab = frame and frame.azSkin and frame.azSkin.moodTab
 	if not (tab and frame.mood) then return nil end
 	local mood = self.CompanionMood and self:CompanionMood() or "happy"
@@ -1988,8 +2051,15 @@ end
 
 -- Le halo autour de l'anneau : sur un cadre enfant de l'habit (caché avec
 -- lui, mode voyage compris), au niveau du cadre, sous le modèle (+ 1)
+-- 3.1.0 : un halo par habit (skin.ringGlow ; frame.azRingGlow : celui de
+-- l'anneau du client, lu par les tests). Médaillon forgé sans l'atlas du
+-- client : notre point lumineux (Theme.ART.dot), sous le cadre (le fond du
+-- portrait le couvre au centre), jamais « pas de halo ».
 local function RingGlow(frame, skin)
-	if frame.azRingGlow ~= nil then return frame.azRingGlow or nil end
+	local forge = skin == frame.forgeSkin and skin ~= nil
+	local cached
+	if forge then cached = skin.ringGlow else cached = frame.azRingGlow end
+	if cached ~= nil then return cached or nil end
 	local G = ns.AZEROTH_RING_GLOW
 	local holder = CreateFrame("Frame", nil, skin)
 	holder:SetAllPoints(frame)
@@ -2000,6 +2070,12 @@ local function RingGlow(frame, skin)
 	for _, name in ipairs(G.atlases) do
 		if ns.AzerothHasAtlas(name) and Atlas(tex, name) then placed = name; break end
 	end
+	local size = G.size
+	if not placed and forge and Theme.ART and Theme.ART.dot then
+		tex:SetTexture(Theme.ART.dot.file)
+		holder:SetFrameLevel(math.max(0, (frame:GetFrameLevel() or 1) - 1))
+		placed, size = "forge", math.floor(ns.FORGE_RING.w * ns.FORGE_FX.haloSize + 0.5)
+	end
 	if not placed then
 		tex:Hide()
 		holder:Hide()
@@ -2007,28 +2083,31 @@ local function RingGlow(frame, skin)
 		return nil
 	end
 	if tex.SetBlendMode then pcall(tex.SetBlendMode, tex, "ADD") end
-	tex:SetSize(G.size, G.size)
+	tex:SetSize(size, size)
 	tex:SetPoint("CENTER", frame, "TOP", 0, RING_Y)
 	tex:SetAlpha(G.alpha)
 	tex.azAtlas = placed
 	tex.holder = holder
 	tex:Hide()
-	frame.azRingGlow = tex
+	if forge then skin.ringGlow = tex else frame.azRingGlow = tex end
 	return tex
 end
 
--- L'anneau du compagnon à l'allure du cadre porté (Azeroth) ; rend l'id
--- du cadre dont l'allure est posée (nil : l'or d'origine)
+-- L'anneau du compagnon à l'allure du cadre porté (Azeroth, médaillon
+-- forgé) ; rend l'id du cadre dont l'allure est posée (nil : l'or d'origine)
 function ns:CompanionPaintRing()
 	local frame = self.companionFrame
-	local skin = frame and frame.azSkin
+	local skin = ns.CompanionRingSkin(frame) or (frame and frame.azSkin)
 	if not (skin and skin.ring) then return nil end
 	local look, id
-	if frame.uiStyle == "azeroth" then look, id = self:AzerothRingLook() end
+	if frame.ring ~= nil then look, id = self:AzerothRingLook() end
 	ns.AzerothPaintRing(skin.ring, look)
 	skin.ring.azLook = look and id or nil
+	-- le halo de l'autre habit (bascule à chaud) s'éteint
+	local other = (skin == frame.forgeSkin) and frame.azRingGlow or (frame.forgeSkin and frame.forgeSkin.ringGlow)
+	if other then other:Hide() end
 	local glow = look and look.glow
-	local tex = glow and RingGlow(frame, skin) or frame.azRingGlow or nil
+	local tex = glow and RingGlow(frame, skin) or ((skin == frame.forgeSkin) and skin.ringGlow or frame.azRingGlow) or nil
 	if tex then
 		if glow then
 			tex:SetVertexColor(glow[1], glow[2], glow[3], 1)
@@ -2056,9 +2135,18 @@ function ns:CompanionApplyUIStyle()
 	local frame = self.companionFrame
 	if not frame then return nil end
 	local az = self:AzerothOn()
+	-- 3.1.0 : le thème forgé sans l'ancien habillage : le médaillon forgé
+	local forge = not az and self:CompanionRingOn() and self.CompanionApplyForgeSkin ~= nil
 	if az and not frame.azSkin then frame.azSkin = BuildCompanionSkin(frame) end
 	local skin = frame.azSkin
-	if az then
+	if not forge and frame.ring == "forge" and self.CompanionLeaveForgeSkin then
+		-- (quitte le médaillon forgé : son habit caché, son fond libéré)
+		self:CompanionLeaveForgeSkin(frame)
+	end
+	if forge then
+		if skin then skin:Hide() end
+		self:CompanionApplyForgeSkin(frame)
+	elseif az then
 		skin:Show()
 		EdgesShown(frame, false)
 		Masked(frame, true)
@@ -2088,7 +2176,7 @@ function ns:CompanionApplyUIStyle()
 		-- la bande claire n'a plus de texte : pas de voile
 		if skin.moodBand and skin.moodBand.Hide then skin.moodBand:Hide() end
 		self:CompanionApplyMoodTab()
-	elseif frame.uiStyle == "azeroth" then
+	elseif frame.uiStyle == "azeroth" or frame.ring ~= nil then
 		if skin then skin:Hide() end
 		Masked(frame, false)
 		frame.modelBase = ns.COMPANION_MODEL_BASE
@@ -2111,15 +2199,23 @@ function ns:CompanionApplyUIStyle()
 		EdgesShown(frame, true)
 	end
 	frame.uiStyle = az and "azeroth" or "sobre"
+	-- 3.1.0 : l'anneau posé (ns.CompanionRinged : les effets, le décor, les
+	-- cosmétiques du cadre le lisent)
+	frame.ring = (az and "azeroth") or (forge and "forge") or nil
 	-- 3.1.0 : rhabillé sur place (pas de cache) ; sa clé dit sous quel thème
 	-- il a été habillé la dernière fois
 	frame.styleKey = self:StyleKey(az)
 	-- le cadre gagné (bordure du client) revient en Sobre
-	if not az and self.CompanionApplyFrame then self:CompanionApplyFrame() end
+	if not az and not forge and self.CompanionApplyFrame then self:CompanionApplyFrame() end
 	-- 2.14.0 (bêta 7) : en Azeroth, sa teinte sur l'anneau (l'or en Sobre)
 	self:CompanionPaintRing()
 	return frame.uiStyle
 end
+
+-- 3.1.0 : les pièces du cadre partagées avec le médaillon forgé
+-- (ForgeCompanion.lua) ; pas une API
+ns.AzerothCompanionKit = { Masked = Masked, EdgesShown = EdgesShown, Measure = Measure, PLATE_H = PLATE_H,
+	MOOD_TAB_H = MOOD_TAB_H, MOOD_TAB_TUCK = MOOD_TAB_TUCK, MASK = MASK }
 
 do
 	local ensure = ns.EnsureCompanionFrame
@@ -2137,7 +2233,7 @@ do
 		function ns:CompanionApplyFrame(...)
 			local a, b = apply(self, ...)
 			local frame = self.companionFrame
-			if frame and frame.uiStyle == "azeroth" then EdgesShown(frame, false) end
+			if frame and (frame.uiStyle == "azeroth" or frame.ring ~= nil) then EdgesShown(frame, false) end
 			-- 2.14.0 (bêta 7) : le cadre choisi colore l'anneau (cadre et carnet)
 			pcall(self.CompanionPaintRing, self)
 			pcall(self.CarnetPaintRing, self)
@@ -2229,12 +2325,24 @@ local function AtlasMirrored(tex, name)
 end
 ns.AzerothAtlasMirrored = AtlasMirrored
 
--- Le compagnon est-il habillé en Azeroth, affiché, module allumé ?
+-- Le compagnon porte-t-il un anneau (ancien habillage ou, 3.1.0, médaillon
+-- forgé), affiché, module allumé ?
 local function AzCompanion(self)
 	local frame = self.companionFrame
-	if not (frame and frame.uiStyle == "azeroth" and frame:IsShown()) then return nil end
+	if not (frame and frame.ring ~= nil and frame:IsShown()) then return nil end
 	if ns.CompanionOn and not ns.CompanionOn() then return nil end
 	return frame
+end
+-- 3.1.0 : l'atlas d'un effet est-il là, ou son repli forgé (médaillon forgé) ?
+local function Forged(frame) return frame ~= nil and frame.ring == "forge" and Theme.ART ~= nil end
+-- Une texture en matière forgée (Theme.ART), teinte, en lumière additive
+local function ForgeTex(parent, layer, sub, art, color, alpha)
+	local tex = parent:CreateTexture(nil, layer or "OVERLAY", nil, sub or 0)
+	tex:SetTexture(Theme.ART[art].file)
+	tex:SetVertexColor(color[1], color[2], color[3], alpha or 1)
+	if tex.SetBlendMode then tex:SetBlendMode("ADD") end
+	tex.forgeArt = art
+	return tex
 end
 
 -- Le calque des effets sur le cadre : au-dessus du modèle et de l'anneau,
@@ -2442,6 +2550,84 @@ local function AzBubbleLayout(self, bubble)
 	return height
 end
 
+-- ---------------------------------------------------------------------------
+-- 3.1.0 : la bulle du médaillon forgé. La brique du socle (Theme.CreateBubble,
+-- fond sombre, filet lumineux de l'identité, pointe) ; on y re-loge ce que la
+-- bulle de parchemin avait en propre : le nom de qui parle, en capitales
+-- (titre : identité), au-dessus de la réplique, et un reflet qui traverse
+-- la bulle à chaque nouvelle réplique (Theme.ART.line, sur l'horloge des
+-- effets). Une bulle née en Sobre reçoit le filet lumineux à la bascule ;
+-- née forgée, elle retrouve l'aplat d'or du Sobre au retour (créés une fois).
+-- ---------------------------------------------------------------------------
+ns.FORGE_BUBBLE = { nameH = 13, nameY = -8 }
+local function ForgeBubbleParts(bubble)
+	if bubble.forgeTalk then return bubble.forgeTalk end
+	local parts = {}
+	local pad = Theme.BUBBLE_PAD or 10
+	if not bubble.forged and Theme.ArtTexture and Theme.ART and Theme.ART.line and Theme.FORGE_RULE then
+		parts.rule = Theme.ArtTexture(bubble, "line", "ARTWORK", 0, Theme.IDENTITY_LIGHT or Theme.GOLD_LIGHT, Theme.FORGE_RULE.alpha)
+		parts.rule:SetHeight(Theme.FORGE_RULE.height)
+		parts.rule:SetPoint("TOPLEFT", bubble, "TOPLEFT", 1, -1)
+		parts.rule:SetPoint("TOPRIGHT", bubble, "TOPRIGHT", -1, -1)
+	end
+	parts.name = bubble:CreateFontString(nil, "OVERLAY", Theme.F_CAPS)
+	parts.name:SetPoint("TOPLEFT", bubble, "TOPLEFT", pad, ns.FORGE_BUBBLE.nameY)
+	parts.name:SetPoint("TOPRIGHT", bubble, "TOPRIGHT", -pad, ns.FORGE_BUBBLE.nameY)
+	parts.name:SetJustifyH("CENTER")
+	if parts.name.SetWordWrap then parts.name:SetWordWrap(false) end
+	Theme.TextShadow(parts.name, 0.8)
+	-- le reflet : le filet lumineux posé debout (coordonnées tournées d'un
+	-- quart de tour : son cœur à la verticale, il s'éteint vers le bas)
+	if Theme.ART and Theme.ART.line then
+		parts.sheen = ForgeTex(bubble, "ARTWORK", 2, "line", Theme.WHITE, 1)
+		parts.sheen:SetTexCoord(0, 0, 1, 0, 0, 1, 1, 1)
+		parts.sheen:Hide()
+	end
+	parts.regions = { parts.name }
+	if parts.rule then parts.regions[#parts.regions + 1] = parts.rule end
+	bubble.forgeTalk = parts
+	return parts
+end
+
+-- La bulle d'un thème : le filet du Sobre (aplat d'or) ou le forgé
+local function BubbleRule(bubble, forged)
+	local parts = bubble.forgeTalk
+	if forged then
+		if parts and parts.rule then bubble.rule:Hide(); parts.rule:Show() end
+		if bubble.sobreRule then bubble.sobreRule:Hide() end
+		if bubble.forged then bubble.rule:Show() end
+		return
+	end
+	if parts and parts.rule then parts.rule:Hide(); bubble.rule:Show() end
+	if bubble.forged then
+		-- née forgée : l'aplat d'or du Sobre (Theme.CreateBubble), créé une fois
+		if not bubble.sobreRule then
+			bubble.sobreRule = Theme.Solid(bubble, "ARTWORK", Theme.GOLD, 1)
+			bubble.sobreRule:SetHeight(2)
+			bubble.sobreRule:SetPoint("TOPLEFT", bubble, "TOPLEFT", 1, -1)
+			bubble.sobreRule:SetPoint("TOPRIGHT", bubble, "TOPRIGHT", -1, -1)
+		end
+		bubble.rule:Hide()
+		bubble.sobreRule:Show()
+	end
+end
+
+-- Mise en page forgée : le nom au-dessus, la réplique décalée d'autant
+local function ForgeBubbleLayout(self, bubble, height)
+	local parts = ForgeBubbleParts(bubble)
+	local pad = Theme.BUBBLE_PAD or 10
+	local c = Theme.TITLE
+	parts.name:SetTextColor(c[1], c[2], c[3], 1)
+	parts.name:SetText(Upper(self.CompanionName and self:CompanionName() or ""))
+	if bubble.text then
+		bubble.text:ClearAllPoints()
+		bubble.text:SetPoint("TOPLEFT", bubble, "TOPLEFT", pad, -pad - 1 - ns.FORGE_BUBBLE.nameH)
+	end
+	height = math.ceil((tonumber(height) or bubble:GetHeight() or Theme.BUBBLE_MIN or 34) + ns.FORGE_BUBBLE.nameH)
+	bubble:SetHeight(height)
+	return height
+end
+
 -- Habille la bulle selon le style du compagnon (et la rhabille si affichée)
 function ns:CompanionBubbleApplyStyle()
 	local bubble = self.companionBubble
@@ -2449,6 +2635,38 @@ function ns:CompanionBubbleApplyStyle()
 	local frame = self.companionFrame
 	-- 2.8.2 : plus d'atlas des Talking Heads exigé (le parchemin vient de son fichier)
 	local az = frame ~= nil and frame.uiStyle == "azeroth"
+	-- 3.1.0 : le médaillon forgé, sa bulle forgée
+	local forge = not az and frame ~= nil and frame.ring == "forge"
+	if bubble.forgeBubble and not forge then
+		local parts = bubble.forgeTalk
+		for _, region in ipairs(parts.regions) do region:Hide() end
+		if parts.sheen then parts.sheen:Hide() end
+		bubble.forgeBubble = nil
+		BubbleRule(bubble, false)
+		if bubble.text then
+			local pad = Theme.BUBBLE_PAD or 10
+			bubble.text:ClearAllPoints()
+			bubble.text:SetPoint("TOPLEFT", bubble, "TOPLEFT", pad, -pad - 1)
+		end
+		if not az then bubble:SetText(bubble.text and bubble.text:GetText() or "", bubble.azExtra) end
+	end
+	if forge then
+		if bubble.azBubble then
+			local skin = bubble.azTalk
+			for _, region in ipairs(skin.regions) do region:Hide() end
+			if skin.sheen then skin.sheen:Hide() end
+			SobreChrome(bubble, true)
+			PlaceTutoButtons(bubble, false)
+			bubble.azBubble = nil
+			if bubble.sobreW then bubble:SetWidth(bubble.sobreW) end
+		end
+		local parts = ForgeBubbleParts(bubble)
+		for _, region in ipairs(parts.regions) do region:Show() end
+		BubbleRule(bubble, true)
+		bubble.forgeBubble = true
+		bubble:SetText(bubble.text and bubble.text:GetText() or "", bubble.azExtra)
+		return "forge"
+	end
 	if az then
 		local skin = BubbleSkin(bubble)
 		bubble.sobreW = bubble.sobreW or bubble:GetWidth()
@@ -2486,6 +2704,13 @@ local function SkinBubble(self, bubble)
 				FxState(ns).sheenAt = Clock()
 				FxStart(ns)
 			end
+		elseif self.forgeBubble then
+			-- 3.1.0 : le nom au-dessus ; le reflet passe à chaque réplique
+			height = ForgeBubbleLayout(ns, self, height)
+			if self.forgeTalk.sheen and value and value ~= "" then
+				FxState(ns).sheenAt = Clock()
+				FxStart(ns)
+			end
 		end
 		return height
 	end
@@ -2514,6 +2739,17 @@ end
 local function RoundGlow(frame)
 	if frame.azGlow ~= nil then return frame.azGlow or nil end
 	local key = HasFx("circle") and "circle" or (HasFx("circleAlt") and "circleAlt") or nil
+	-- 3.1.0 : médaillon forgé sans l'atlas : notre point lumineux, doré
+	if not key and Forged(frame) then
+		local glow = ForgeTex(frame, "BACKGROUND", -8, "dot", Theme.GOLD_LIGHT, 1)
+		glow:SetPoint("CENTER", frame, "TOP", 0, RING_Y)
+		glow:SetAlpha(0)
+		glow:Hide()
+		glow.base = math.floor(RING_W * FXC.glowSize)
+		glow:SetSize(glow.base, glow.base)
+		frame.azGlow = glow
+		return glow
+	end
 	if not key then return nil end   -- pas d'atlas : pas de lueur (et pas de liseré)
 	local glow = frame:CreateTexture(nil, "BACKGROUND", nil, -8)
 	glow:SetPoint("CENTER", frame, "TOP", 0, RING_Y)
@@ -2569,7 +2805,7 @@ do
 	if glowUpdate then
 		function ns:GlowUpdate(now, ...)
 			local frame = self.companionFrame
-			if not (frame and frame.uiStyle == "azeroth") then
+			if not (frame and frame.ring ~= nil) then
 				if frame and frame.azGlow and frame.azGlowAlpha ~= 0 then frame.azGlow:Hide(); frame.azGlowAlpha = 0 end
 				return glowUpdate(self, now, ...)
 			end
@@ -2591,11 +2827,18 @@ local function Sparks(frame)
 	if frame.azSparks then return frame.azSparks end
 	local layer = FxLayer(frame)
 	local list = {}
+	-- 3.1.0 : sans l'atlas du client (médaillon forgé), notre point lumineux doré
+	local star = HasFx("star")
 	for index = 1, #SPARKS do
-		local tex = layer:CreateTexture(nil, "OVERLAY", nil, 3)
-		Atlas(tex, FXA.star)
-		Additive(tex)
-		Gold(tex)
+		local tex
+		if star then
+			tex = layer:CreateTexture(nil, "OVERLAY", nil, 3)
+			Atlas(tex, FXA.star)
+			Additive(tex)
+			Gold(tex)
+		else
+			tex = ForgeTex(layer, "OVERLAY", 3, "dot", Theme.GOLD_LIGHT, 1)
+		end
 		tex:Hide()
 		list[index] = tex
 	end
@@ -2603,13 +2846,16 @@ local function Sparks(frame)
 	return list
 end
 
-function ns:AzerothShinyFX()
+-- Lance les éclats ; 3.1.0 : pour tout anneau (ancien habillage ou
+-- médaillon forgé : ns:CompanionShinyFX). ns:AzerothShinyFX reste l'effet
+-- de l'ancien habillage seul (rien hors drapeau).
+local function ShinyFX(self)
 	local frame = AzCompanion(self)
 	if not frame then return false end
 	local state = FxState(self)
 	local now = Clock()
 	state.shinyUntil = now + FXC.shinyTime
-	if HasFx("star") then
+	if HasFx("star") or Forged(frame) then
 		state.sparkAt = now
 		local w, h = frame:GetWidth() or 104, frame:GetHeight() or 118
 		for index, tex in ipairs(Sparks(frame)) do
@@ -2622,6 +2868,12 @@ function ns:AzerothShinyFX()
 	FxStart(self)
 	return true
 end
+function ns:AzerothShinyFX()
+	local frame = self.companionFrame
+	if not (frame and frame.uiStyle == "azeroth") then return false end
+	return ShinyFX(self)
+end
+function ns:CompanionShinyFX() return ShinyFX(self) end
 
 local function SparkStep(frame, state, now)
 	local list = frame.azSparks
@@ -2643,7 +2895,8 @@ local function SparkStep(frame, state, now)
 			local alpha, scale = 0, 0.3
 			if p < 0.4 then alpha, scale = p / 0.4, 0.3 + 0.7 * p / 0.4
 			elseif p < 0.7 then alpha, scale = 1 - (p - 0.4) / 0.3, 1 end
-			local size = math.max(1, math.floor(FXC.sparkSize * scale + 0.5))
+			local base = tex.forgeArt and ns.FORGE_FX.sparkSize or FXC.sparkSize
+			local size = math.max(1, math.floor(base * scale + 0.5))
 			tex:SetSize(size, size)
 			Rotate(tex, math.rad(30) * math.min(1, p / 0.4))
 			tex:SetAlpha(alpha * fade)
@@ -2661,15 +2914,26 @@ end
 -- bulle, si elle est là, monte d'un cran le temps de l'effet : rien ne se
 -- chevauche.
 -- ---------------------------------------------------------------------------
+-- 3.1.0 : chaque pièce dont l'atlas du client manque a son repli en
+-- matières forgées sur le médaillon forgé (lueur et poussière : points
+-- lumineux dorés ; volutes : deux filets lumineux de l'identité qui
+-- s'éteignent vers l'extérieur ; nuage : un point lumineux sombre ; ligne de
+-- lumière : un point lumineux étiré). Construites une fois par cadre.
 local function LevelParts(frame)
 	if frame.azLevel then return frame.azLevel end
 	local layer = FxLayer(frame)
 	local parts = {}
+	local forge = Forged(frame)
+	local FF = ns.FORGE_FX
 	if HasFx("iconGlow") then
 		parts.iglow = layer:CreateTexture(nil, "OVERLAY", nil, 1)
-		parts.iglow:SetPoint("CENTER", frame, "TOP", 0, RING_Y)
 		Atlas(parts.iglow, FXA.iconGlow)
 		Additive(parts.iglow)
+	elseif forge then
+		parts.iglow = ForgeTex(layer, "OVERLAY", 1, "dot", Theme.GOLD_LIGHT, 1)
+	end
+	if parts.iglow then
+		parts.iglow:SetPoint("CENTER", frame, "TOP", 0, RING_Y)
 		parts.iglow.base = math.floor(RING_W * 1.1)
 		parts.iglow:Hide()
 	end
@@ -2682,6 +2946,20 @@ local function LevelParts(frame)
 			Additive(tex)
 			tex:Hide()
 			parts.dots[index] = tex
+		elseif forge then
+			-- une grappe de trois points lumineux (même emprise que l'atlas)
+			local cluster = CreateFrame("Frame", nil, layer)
+			cluster:SetSize(58, 34)
+			cluster:EnableMouse(false)
+			cluster.points = {}
+			for k, p in ipairs(FF.dust) do
+				local dot = ForgeTex(cluster, "OVERLAY", 2, "dot", Theme.GOLD_LIGHT, 1)
+				dot:SetSize(p[3], p[3])
+				dot:SetPoint("CENTER", cluster, "CENTER", p[1], p[2])
+				cluster.points[k] = dot
+			end
+			cluster:Hide()
+			parts.dots[index] = cluster
 		end
 	end
 	-- le groupe du titre : hors du cadre (pas à son échelle), même strate que la bulle
@@ -2693,6 +2971,12 @@ local function LevelParts(frame)
 		group.cloud = group:CreateTexture(nil, "BACKGROUND")
 		group.cloud:SetPoint("CENTER", group, "CENTER", 0, 0)
 		Atlas(group.cloud, FXA.cloud)
+	elseif forge then
+		group.cloud = group:CreateTexture(nil, "BACKGROUND")
+		group.cloud:SetTexture(Theme.ART.dot.file)
+		group.cloud:SetVertexColor(Theme.SHADOW[1], Theme.SHADOW[2], Theme.SHADOW[3], 1)
+		group.cloud:SetPoint("CENTER", group, "CENTER", 0, 0)
+		group.cloud.forgeArt = "dot"
 	end
 	group.text = group:CreateFontString(nil, "OVERLAY", Theme.F_TITLE)
 	group.text:SetPoint("CENTER", group, "CENTER", 0, 0)
@@ -2709,12 +2993,24 @@ local function LevelParts(frame)
 		group.right:SetSize(FXC.filigreeW, FXC.filigreeH)
 		group.right:SetPoint("LEFT", group.text, "RIGHT", FXC.filigreeGap, 0)
 		AtlasMirrored(group.right, FXA.filigree)
+	elseif forge then
+		local c = Theme.IDENTITY_LIGHT or Theme.GOLD_LIGHT
+		group.left = ForgeTex(group, "ARTWORK", 0, "line", c, 1)
+		group.left:SetTexCoord(1, 0, 0, 1)   -- s'éteint vers la gauche
+		group.left:SetSize(FXC.filigreeW, FF.rule)
+		group.left:SetPoint("RIGHT", group.text, "LEFT", -FXC.filigreeGap, 0)
+		group.right = ForgeTex(group, "ARTWORK", 0, "line", c, 1)
+		group.right:SetSize(FXC.filigreeW, FF.rule)
+		group.right:SetPoint("LEFT", group.text, "RIGHT", FXC.filigreeGap, 0)
 	end
 	if HasFx("line") then
 		group.line = group:CreateTexture(nil, "OVERLAY")
 		group.line:SetPoint("TOP", group, "BOTTOM", 0, 4)
 		Atlas(group.line, FXA.line)
 		Additive(group.line)
+	elseif forge then
+		group.line = ForgeTex(group, "OVERLAY", 0, "dot", Theme.IDENTITY_LIGHT or Theme.GOLD_LIGHT, 1)
+		group.line:SetPoint("TOP", group, "BOTTOM", 0, 4)
 	end
 	group:Hide()
 	parts.group = group
@@ -2739,18 +3035,26 @@ local function LiftBubble(self, lift)
 	end
 end
 
--- Lance l'effet ; `text` : « Aguerri ! », « Niveau 12 ! »
-function ns:AzerothLevelFX(text, kind)
+-- Lance l'effet ; `text` : « Aguerri ! », « Niveau 12 ! ». 3.1.0 : pour tout
+-- anneau (ns:CompanionLevelFX) ; ns:AzerothLevelFX : l'ancien habillage seul.
+local function LevelFX(self, text, kind)
 	local frame = AzCompanion(self)
 	if not frame then return false end
 	local parts = LevelParts(frame)
 	local group = parts.group
 	group.text:SetText(text or "")
+	-- 3.1.0 : médaillon forgé : le titre à l'encre de l'identité ; l'ancien
+	-- habillage garde la sienne
+	local ink = Forged(frame) and Theme.TITLE or FX_TEXT
+	group.text:SetTextColor(ink[1], ink[2], ink[3], 1)
 	local textW = math.ceil(Measure(group.text))
 	local width = textW + (group.left and 2 * (FXC.filigreeW + FXC.filigreeGap) or 0)
 	group:SetSize(math.max(40, width), FXC.groupH)
 	if group.cloud then group.cloud:SetSize(width + 40, FXC.groupH + 14) end
-	if group.line then group.line.base = width + 40; group.line:SetSize(width + 40, 12) end
+	if group.line then
+		group.line.base = width + 40
+		group.line:SetSize(width + 40, group.line.forgeArt and ns.FORGE_FX.lineH or 12)
+	end
 	group:ClearAllPoints()
 	group:SetPoint("BOTTOM", frame, "TOP", 0, FXC.groupY)
 	group:SetAlpha(0)
@@ -2760,6 +3064,12 @@ function ns:AzerothLevelFX(text, kind)
 	FxStart(self)
 	return true
 end
+function ns:AzerothLevelFX(text, kind)
+	local frame = self.companionFrame
+	if not (frame and frame.uiStyle == "azeroth") then return false end
+	return LevelFX(self, text, kind)
+end
+function ns:CompanionLevelFX(text, kind) return LevelFX(self, text, kind) end
 
 local function LevelStop(self, frame)
 	local parts = frame and frame.azLevel
@@ -2806,7 +3116,7 @@ local function LevelStep(self, frame, state, now)
 	end
 	local group = parts.group
 	group:SetAlpha(env)
-	if group.cloud then group.cloud:SetAlpha(0.55) end
+	if group.cloud then group.cloud:SetAlpha(ns.FORGE_FX.cloudAlpha) end
 	if group.line then
 		local p = (t % FXC.levelCycle) / FXC.levelCycle
 		local alpha, scale = 0, 1
@@ -2917,19 +3227,27 @@ end
 -- ---------------------------------------------------------------------------
 local function SheenStep(self, state, now)
 	local bubble = self.companionBubble
-	local skin = bubble and bubble.azTalk
+	-- 3.1.0 : la bulle forgée a son reflet (le filet lumineux debout)
+	local forge = bubble ~= nil and bubble.forgeBubble and bubble.forgeTalk ~= nil
+	local skin = bubble and (forge and bubble.forgeTalk or bubble.azTalk)
 	local sheen = skin and skin.sheen
 	if not (state.sheenAt and sheen) then return false end
 	local p = (now - state.sheenAt) / FXC.sheenTime
-	if p >= 1 or not bubble.azBubble or not bubble:IsShown() then
+	if p >= 1 or not (bubble.azBubble or forge) or not bubble:IsShown() then
 		sheen:Hide(); state.sheenAt = nil
 		return false
 	end
 	local w, h = bubble:GetWidth() or FXC.bubbleW, bubble:GetHeight() or FXC.bubbleMin
-	sheen:SetSize(70, h)
+	local peak = 0.6
+	if forge then
+		sheen:SetSize(ns.FORGE_FX.sheenW, math.max(1, h - 2))
+		peak = ns.FORGE_FX.sheenAlpha
+	else
+		sheen:SetSize(70, h)
+	end
 	sheen:ClearAllPoints()
 	sheen:SetPoint("CENTER", bubble, "LEFT", math.floor(w * p), 0)
-	sheen:SetAlpha(0.6 * (p < 0.3 and p / 0.3 or 1 - (p - 0.3) / 0.7))
+	sheen:SetAlpha(peak * (p < 0.3 and p / 0.3 or 1 - (p - 0.3) / 0.7))
 	sheen:Show()
 	return true
 end
@@ -2949,6 +3267,7 @@ function ns:AzerothFxStop()
 	end
 	local bubble = self.companionBubble
 	if bubble and bubble.azTalk and bubble.azTalk.sheen then bubble.azTalk.sheen:Hide() end
+	if bubble and bubble.forgeTalk and bubble.forgeTalk.sheen then bubble.forgeTalk.sheen:Hide() end
 end
 
 FxStep = function(self, now)
@@ -2984,7 +3303,7 @@ do
 		function ns:ShinySpot(...)
 			local result = spot(self, ...)
 			if result then
-				local ok, err = pcall(self.AzerothShinyFX, self)
+				local ok, err = pcall(self.CompanionShinyFX, self)
 				if not ok and self.RecordError then self:RecordError("azeroth:shiny", err) end
 			end
 			return result
@@ -2996,7 +3315,7 @@ do
 			local evolved = stage(self, level, celebrate, ...)
 			if evolved == true and celebrate ~= false then
 				local ok, err = pcall(function()
-					self:AzerothLevelFX(self:F("AZ_FX_EVOLVE", self:CompanionStageLabel()), "evolve")
+					self:CompanionLevelFX(self:F("AZ_FX_EVOLVE", self:CompanionStageLabel()), "evolve")
 				end)
 				if not ok and self.RecordError then self:RecordError("azeroth:evolve", err) end
 			end
@@ -3011,7 +3330,7 @@ do
 			-- l'évolution du même niveau a déjà son effet
 			if not (fx and fx.kind == "evolve" and Clock() - fx.at < 0.5) then
 				local n = tonumber(level) or Call(G("UnitLevel"), "player") or 0
-				local ok, err = pcall(self.AzerothLevelFX, self, self:F("AZ_FX_LEVEL", n), "level")
+				local ok, err = pcall(self.CompanionLevelFX, self, self:F("AZ_FX_LEVEL", n), "level")
 				if not ok and self.RecordError then self:RecordError("azeroth:level", err) end
 			end
 			return a, b
@@ -3021,7 +3340,9 @@ do
 	function ns:CompanionApplyUIStyle(...)
 		local style = apply(self, ...)
 		local frame = self.companionFrame
-		if frame and frame.uiStyle ~= "azeroth" then self:AzerothFxStop() end
+		-- 3.1.0 : l'anneau change (ou disparaît) : les effets s'arrêtent net
+		if frame and (frame.ring == nil or frame.ring ~= frame.fxRing) then self:AzerothFxStop() end
+		if frame then frame.fxRing = frame.ring end
 		self:CompanionBubbleApplyStyle()
 		return style
 	end
