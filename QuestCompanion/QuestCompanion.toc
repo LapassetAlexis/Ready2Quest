@@ -58,6 +58,7 @@ Shiny.lua
 Capture.lua
 CaptureSpecimens.lua
 CaptureStage.lua
+ForgeScenes.lua
 CaptureQueue.lua
 CompanionEffects.lua
 SpecimenTraits.lua
