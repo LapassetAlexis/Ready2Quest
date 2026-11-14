@@ -11,6 +11,9 @@ ns.APP = {
 	version = "3.1.0",
 	-- nom dans l'en-tête des réglages
 	brand = "Quest|cff5b8fd6Companion|r",
+	-- couleur d'identité dans le thème forgé (socle 3.3, Theme.IDENTITY_TOKENS) :
+	-- bleu arcane (titres, filets, pilules) ; la sélection prend l'or
+	identity = "arcane",
 	-- sauvegarde (## SavedVariables)
 	db = "QuestCompanionDB",
 	-- /qc et /questcompanion

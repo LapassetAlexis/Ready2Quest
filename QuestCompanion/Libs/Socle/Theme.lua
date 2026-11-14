@@ -96,6 +96,22 @@ Theme.CONTROL_HEIGHT = 24
 -- de navigation, pastille ou ligne sélectionnés)
 Theme.TITLE     = { 0.95, 0.91, 0.83 }   -- = PARCHMENT en Sobre
 Theme.ACTIVE    = { 0.91, 0.65, 0.29 }   -- = GOLD en Sobre
+-- socle 3.3 : rôles d'identité du thème forgé (docs/UI.md, « Identité et
+-- sélection »). Chaque addon a une couleur d'IDENTITÉ (titres, filets
+-- lumineux, pilules, plaque d'en-tête) et une couleur de SÉLECTION, l'autre
+-- (entrée, onglet, ligne, puce choisis, interrupteur actif, focus) :
+-- Ready2Quest or / bleu arcane, QuestCompanion (ns.APP.identity = "arcane")
+-- bleu arcane / or. Tables à part (jamais celles de GOLD ou BLUE), changées
+-- sur place par Theme.ApplySkin (Theme.IDENTITY_TOKENS) ; en Sobre, l'ambre.
+Theme.ARCANE_LIGHT   = { 0.561, 0.722, 0.941 } -- bleu arcane clair #8fb8f0
+Theme.IDENTITY       = { 0.91, 0.65, 0.29 }    -- identité (Sobre : ambre)
+Theme.IDENTITY_LIGHT = { 0.96, 0.78, 0.49 }    -- identité, clair : encre des titres de groupe et de section, filets
+Theme.SELECT         = { 0.91, 0.65, 0.29 }    -- sélection (Sobre : ambre, = ACTIVE)
+Theme.SELECT_LIGHT   = { 0.96, 0.78, 0.49 }    -- sélection, clair : barre, souligné, filet d'une puce choisie
+-- facteur des voiles de sélection (dégradés d'une entrée, d'une ligne, d'un
+-- onglet, d'une puce, survol d'une liste) : l'or, plus clair que le bleu, se
+-- pose plus léger pour garder les encres lisibles (mesuré)
+Theme.SELECT_ALPHA   = 1
 Theme.BUTTON_SIZES = { xs = 18, sm = 24, md = 28 }
 Theme.DISABLED = { bg = Theme.CONTROL, edge = Theme.EDGE_SOFT, text = Theme.MUTED }
 
@@ -675,15 +691,16 @@ end
 
 -- Filet ambre lumineux : transparent -> ambre -> ambre clair -> transparent,
 -- avec un halo plus large et très pâle dessous. Retourne { segments, glow }.
--- Thème forgé : une seule texture, notre filet lumineux (ART.line, or ou
--- `tone` = "arcane") qui s'éteint vers la droite ; .segments = { ce filet }
+-- Thème forgé : une seule texture, notre filet lumineux (ART.line, du ton
+-- `tone` : Theme.ResolveTone, l'identité par défaut) qui s'éteint vers la
+-- droite ; .segments = { ce filet }
 -- (ceux qui cachent les segments le cachent), pas de halo à part.
 function Theme.CreateGlowRule(parent, height, tone)
 	local rule = { segments = {}, glow = {} }
 	height = height or 2
 	if Theme.ForgeHere("CreateGlowRule") then
 		local K = Theme.FORGE_RULE
-		local c = (Theme.FORGE_TONES[tone] or Theme.FORGE_TONES.gold).light
+		local c = Theme.ResolveTone(tone).light
 		local line = Theme.ArtTexture(parent, "line", "ARTWORK", 0, c, K.alpha)
 		line.from, line.to = 0, 1
 		rule.segments[1], rule.forgeLine, rule.forged = line, line, true
@@ -786,11 +803,15 @@ function Theme.CreatePageHeader(parent, width, opts)
 		header.plate = Solid(header, "BACKGROUND", Theme.NAV, 1)
 		header.plate:SetAllPoints()
 		if header.plate.SetDrawLayer then header.plate:SetDrawLayer("BACKGROUND", 1) end
-		-- forgé : le bois prend un haut plus chaud (dégradé vers le bas) ; la
-		-- lueur ambre du haut et du coin reste par-dessus
+		-- forgé : le bois prend un haut teinté de l'identité (FORGE_HEADER.warm :
+		-- chaud pour l'or, froid pour l'arcane), dégradé vers le bas ; la lueur
+		-- du haut et du coin reste par-dessus
 		if Theme.ForgeHere("CreatePageHeader") then
 			local K = Theme.FORGE_HEADER
 			Gradient(header.plate, "VERTICAL", Theme.NAV, K.bottom, K.warm, K.top)
+			-- les lueurs du haut et du coin prennent l'identité (or, ou arcane)
+			Gradient(header.topGlow, "VERTICAL", Theme.IDENTITY, 0, Theme.IDENTITY, 0.06)
+			Gradient(header.cornerGlow, "HORIZONTAL", Theme.IDENTITY, 0.05, Theme.IDENTITY, 0)
 			for _, key in ipairs({ "topGlow", "cornerGlow" }) do
 				if header[key].SetDrawLayer then header[key]:SetDrawLayer("BACKGROUND", 2) end
 			end
@@ -839,9 +860,9 @@ function Theme.CreateNavBrand(parent, logoTexture, name, emblem)
 	brand.name:SetJustifyH("LEFT")
 	brand.name:SetText(name or "")
 	if Theme.ForgeHere("CreateNavBrand") then
-		-- forgé : notre filet lumineux, qui s'éteint vers la droite
+		-- forgé : notre filet lumineux, de l'identité, qui s'éteint vers la droite
 		local K = Theme.FORGE_RULE
-		brand.rule = Theme.ArtTexture(brand, "line", "ARTWORK", 0, Theme.GOLD_LIGHT, K.alpha)
+		brand.rule = Theme.ArtTexture(brand, "line", "ARTWORK", 0, Theme.IDENTITY_LIGHT, K.alpha)
 		brand.rule:SetPoint("BOTTOMLEFT", brand, "BOTTOMLEFT", 16, -K.lift)
 		brand.rule:SetPoint("BOTTOMRIGHT", brand, "BOTTOMRIGHT", -16, -K.lift)
 		brand.rule:SetHeight(K.height)
@@ -858,16 +879,17 @@ end
 -- Titre de groupe : ambre, F_CAPS, en capitales.
 -- Thème forgé : une « pilule » derrière le titre (dégradé de son ton vers la
 -- droite, filet, reflet d'un pixel), du bord gauche du titre au bord droit
--- du parent ; `tone` : "gold" (par défaut) ou "arcane". label.toneInk : son
--- encre (le module la reprend quand il recolore le titre).
+-- du parent ; `tone` : "identity" (par défaut) ou "second" (Theme.ResolveTone).
+-- label.tone : le ton retenu ; label.toneInk : son encre (le module la
+-- reprend quand il recolore le titre).
 function Theme.CreateNavGroup(parent, text, tone)
 	local label = Text(parent, Theme.F_CAPS, Theme.GOLD)
 	label:SetJustifyH("LEFT")
 	label:SetText(Theme.Upper(text))
 	if Theme.ForgeHere("CreateNavGroup") and parent.CreateTexture then
 		local K = Theme.FORGE_NAV.pill
-		local spec = Theme.FORGE_TONES[tone] or Theme.FORGE_TONES.gold
-		label.tone, label.toneInk = Theme.FORGE_TONES[tone] and tone or "gold", spec.light
+		local spec, name = Theme.ResolveTone(tone)
+		label.tone, label.toneInk = name, spec.light
 		SetColor(label, spec.light)
 		local pill = parent:CreateTexture(nil, "BACKGROUND", nil, 2)
 		pill:SetTexture(Theme.SOLID)
@@ -914,8 +936,8 @@ function Theme.CreateNavItem(parent, width)
 	item.badge:Hide()
 
 	-- thème forgé : fond en retrait des bords de la colonne ; survol voilé,
-	-- choix en dégradé arcane qui s'éteint vers la droite, barre arcane claire
-	-- à gauche, reflet d'un pixel en haut (montré avec le choix)
+	-- choix en dégradé de la sélection (Theme.SELECT) qui s'éteint vers la
+	-- droite, barre claire à gauche, reflet d'un pixel en haut (montré avec le choix)
 	local forged = Theme.ForgeHere("CreateNavItem")
 	if forged then
 		local K = Theme.FORGE_NAV
@@ -927,8 +949,9 @@ function Theme.CreateNavItem(parent, width)
 		end
 		for _, tex in ipairs({ item.hover, item.tint }) do tex:SetPoint("RIGHT", item, "RIGHT", -K.insetRight, 0) end
 		item.hover:SetVertexColor(Theme.WHITE[1], Theme.WHITE[2], Theme.WHITE[3], K.hover)
-		Gradient(item.tint, "HORIZONTAL", Theme.BLUE, K.select.from, Theme.BLUE, K.select.to)
-		item.bar:SetVertexColor(Theme.ARCANE_LIGHT[1], Theme.ARCANE_LIGHT[2], Theme.ARCANE_LIGHT[3], 1)
+		Gradient(item.tint, "HORIZONTAL", Theme.SELECT, Theme.SelectAlpha(K.select.from), Theme.SELECT,
+			Theme.SelectAlpha(K.select.to))
+		item.bar:SetVertexColor(Theme.SELECT_LIGHT[1], Theme.SELECT_LIGHT[2], Theme.SELECT_LIGHT[3], 1)
 		item.bar:SetWidth(K.bar)
 		item.forgeSheen = Solid(item, "BORDER", Theme.WHITE, K.sheen)
 		item.forgeSheen:SetPoint("TOPLEFT", item.tint, "TOPLEFT", 0, 0)
@@ -955,7 +978,7 @@ function Theme.CreateNavItem(parent, width)
 		if self.hovered and not self.selected then self.hover:Show() else self.hover:Hide() end
 		if self.forgeSheen then
 			if self.selected then self.forgeSheen:Show() else self.forgeSheen:Hide() end
-			-- le compteur reste lisible sur le dégradé arcane (le bleu s'y perd)
+			-- le compteur reste lisible sur le dégradé de sélection (le bleu s'y perd)
 			SetColor(self.badge, self.selected and Theme.PARCHMENT or Theme.BLUE)
 		end
 	end
@@ -1018,7 +1041,7 @@ function Theme.CreateTabs(parent, onSelect)
 	bar.rule:SetPoint("BOTTOMRIGHT", bar, "BOTTOMRIGHT", 0, 0)
 	bar.rule:SetHeight(1)
 	-- thème forgé : filet noir sous la rangée, reflet d'un pixel dessous ;
-	-- l'onglet choisi en dégradé arcane, souligné arcane clair, reflet en haut
+	-- l'onglet choisi en dégradé de la sélection, souligné clair, reflet en haut
 	local forged = Theme.ForgeHere("CreateTabs")
 	local K = Theme.FORGE_TABS
 	if forged then
@@ -1085,11 +1108,12 @@ function Theme.CreateTabs(parent, onSelect)
 				tab.underline:SetPoint("BOTTOMRIGHT", tab, "BOTTOMRIGHT", 0, 0)
 				tab.underline:SetHeight(2)
 				if forged then
-					tab.underline:SetVertexColor(Theme.ARCANE_LIGHT[1], Theme.ARCANE_LIGHT[2], Theme.ARCANE_LIGHT[3], 1)
+					tab.underline:SetVertexColor(Theme.SELECT_LIGHT[1], Theme.SELECT_LIGHT[2], Theme.SELECT_LIGHT[3], 1)
 					tab.forgeGlow = tab:CreateTexture(nil, "BACKGROUND")
 					tab.forgeGlow:SetTexture(Theme.SOLID)
 					tab.forgeGlow:SetAllPoints()
-					Gradient(tab.forgeGlow, "VERTICAL", Theme.BLUE, K.to, Theme.BLUE, K.from)
+					Gradient(tab.forgeGlow, "VERTICAL", Theme.SELECT, Theme.SelectAlpha(K.to), Theme.SELECT,
+						Theme.SelectAlpha(K.from))
 					tab.forgeSheen = Theme.ForgeEdgeLine(tab, "top", Theme.WHITE, K.sheen)
 				end
 				tab:SetScript("OnClick", function(selfTab) bar:Select(selfTab.id) end)
@@ -1144,8 +1168,8 @@ function Theme.CreateSearchBox(parent, width, placeholder, onChange)
 	box.placeholder:SetPoint("LEFT", box, "LEFT", 8, 0)
 	box.placeholder:SetJustifyH("LEFT")
 	box.placeholder:SetText(placeholder or "")
-	-- socle 3.2 : thème forgé, champ en creux ; le filet passe au bleu arcane
-	-- au focus. Le fond et le contour du Sobre restent, transparents : un
+	-- socle 3.2 : thème forgé, champ en creux ; le filet passe à la couleur
+	-- de sélection (ACTIVE) au focus. Le fond et le contour du Sobre restent, transparents : un
 	-- habillage (azSurface, carnet Azeroth) les reprend et retrouve son focus.
 	if Theme.Forged() then
 		box.bg:SetVertexColor(Theme.FIELD[1], Theme.FIELD[2], Theme.FIELD[3], 0)
@@ -1187,9 +1211,10 @@ end
 -- ---------------------------------------------------------------------------
 -- Section : titre F_CAPS en capitales, MUTED clair, détail plus pâle
 -- ---------------------------------------------------------------------------
--- Thème forgé : point lumineux à gauche, titre de son ton (or clair ; `tone`
--- = "arcane" pour une section de choix ou de navigation), filet lumineux qui
--- part après le titre (ou son détail) et s'éteint au bord droit.
+-- Thème forgé : point lumineux à gauche, titre de son ton (l'identité ;
+-- `tone` = "second" pour une section de choix ou de navigation :
+-- Theme.ResolveTone), filet lumineux qui part après le titre (ou son détail)
+-- et s'éteint au bord droit.
 function Theme.CreateSection(parent, text, detail, tone)
 	local section = CreateFrame("Frame", nil, parent)
 	section:SetSize((parent.GetWidth and parent:GetWidth()) or 400, 20)
@@ -1201,8 +1226,8 @@ function Theme.CreateSection(parent, text, detail, tone)
 	section.detail:SetJustifyH("LEFT")
 	if Theme.ForgeHere("CreateSection") then
 		local K = Theme.FORGE_SECTION
-		local spec = Theme.FORGE_TONES[tone] or Theme.FORGE_TONES.gold
-		section.forged, section.tone = true, Theme.FORGE_TONES[tone] and tone or "gold"
+		local spec, name = Theme.ResolveTone(tone)
+		section.forged, section.tone = true, name
 		section.forgeDot = Theme.ArtTexture(section, "dot", "ARTWORK", 0, spec.light, 1)
 		section.forgeDot:SetSize(K.dot, K.dot)
 		section.forgeDot:SetPoint("LEFT", section, "LEFT", K.dotX, 0)
@@ -1711,7 +1736,7 @@ function Theme.CreateToggle(parent, width, height, kind)
 	toggle.knob:SetSize(height - 4, height - 4)
 	-- socle 3.2 : thème forgé, interrupteur dessiné (nos textures, jamais la
 	-- case du client) : piste en creux, curseur en relief ; actif = filet et
-	-- curseur bleu arcane, qui luit. toggle.knob (invisible) porte la place du
+	-- curseur de la sélection (FORGE_PLATE.thumbOn), qui luit. toggle.knob (invisible) porte la place du
 	-- curseur, toggle.thumb (plaque) le dessine.
 	if Theme.Forged() then
 		toggle.forgeSwitch = true
@@ -1739,7 +1764,8 @@ function Theme.CreateToggle(parent, width, height, kind)
 	local function ForgeState(self, state)
 		if not self.forgeSwitch then return end
 		local P = Theme.FORGE_PLATE
-		local rim = (state == "on" and Theme.ACTIVE) or (state == "partial" and Theme.GOLD) or Theme.EDGE
+		-- (partiel : l'identité, pour se distinguer de l'actif, couleur de sélection)
+		local rim = (state == "on" and Theme.ACTIVE) or (state == "partial" and Theme.IDENTITY) or Theme.EDGE
 		local thumb = state == "on" and P.thumbOn or P.thumb
 		self.inset:SetColor(rim[1], rim[2], rim[3], 1)
 		self.thumb:SetColor(thumb[1], thumb[2], thumb[3], 1)
@@ -2008,8 +2034,8 @@ function Theme.CreateDropdown(parent, width, onSelect, opts)
 	dropdown.chevron:SetSize(12, 12)
 	dropdown.chevron:SetPoint("RIGHT", dropdown, "RIGHT", -6, 0)
 	dropdown.chevron:SetVertexColor(Theme.MUTED_LIGHT[1], Theme.MUTED_LIGHT[2], Theme.MUTED_LIGHT[3], 1)
-	-- socle 3.2 : thème forgé. Plaque en relief (éclairée au survol, bleu
-	-- arcane ouverte) et chevron or dessiné (un triangle de 4 rangées : pas
+	-- socle 3.2 : thème forgé. Plaque en relief (éclairée au survol, de la
+	-- sélection ouverte : FORGE_PLATE.select) et chevron or dessiné (un triangle de 4 rangées : pas
 	-- d'atlas du client). Le fond et le contour du Sobre restent, transparents :
 	-- un habillage (azSurface, carnet Azeroth) les reprend.
 	if Theme.Forged() then
@@ -2032,7 +2058,7 @@ function Theme.CreateDropdown(parent, width, onSelect, opts)
 		if not self.plate then return end
 		local P, F = Theme.FORGE_PLATE, Theme.FORGE
 		local tint = P.neutral
-		if state == "open" then tint = P.arcane
+		if state == "open" then tint = P.select
 		elseif state == "hover" then tint = Theme.ForgeHover(P.neutral) end
 		self.plate:SetShown(not self.azSurface)
 		self.plate:SetColor(tint[1], tint[2], tint[3], 1)
@@ -2074,6 +2100,8 @@ function Theme.CreateDropdown(parent, width, onSelect, opts)
 		if not entry then return end
 		local color = Theme.LABEL
 		if entry.disabled then color = Theme.MUTED
+		-- (forgé : le choix courant en or clair, la famille commune ; le survol
+		-- prend la sélection)
 		elseif entry.value == dropdown.value then color = dropdown.plate and Theme.GOLD_LIGHT or Theme.GOLD end
 		SetColor(row.label, color)
 		if row.hovered and not entry.disabled then row.hover:Show() else row.hover:Hide() end
@@ -2122,9 +2150,10 @@ function Theme.CreateDropdown(parent, width, onSelect, opts)
 				row:SetSize(listWidth - 2, Theme.DROPDOWN_ROW)
 				row.hover = Solid(row, "BACKGROUND", Theme.GOLD, 0.10)
 				row.hover:SetAllPoints()
-				-- thème forgé : survol en dégradé bleu arcane qui s'estompe
+				-- thème forgé : survol en dégradé de la sélection qui s'estompe
 				if dropdown.plate then
-					Theme.Gradient(row.hover, "HORIZONTAL", Theme.ACTIVE, Theme.FORGE.rowSelect, Theme.ACTIVE, 0.05)
+					Theme.Gradient(row.hover, "HORIZONTAL", Theme.ACTIVE, Theme.SelectAlpha(Theme.FORGE.rowSelect), Theme.ACTIVE,
+						Theme.SelectAlpha(0.05))
 				end
 				row.hover:Hide()
 				row.label = Text(row, Theme.F_BODY, Theme.LABEL)
@@ -2749,7 +2778,7 @@ function Theme.CreateListRow(parent, width, height, opts)
 	row.bg:SetAllPoints()
 	-- thème forgé : pas de découpe (une liste en porte beaucoup) : fond en
 	-- dégradé qui s'éteint vers la droite ; choisie (row:SetSelected) =
-	-- dégradé arcane et barre arcane claire à gauche
+	-- dégradé de la sélection et barre claire à gauche
 	local forged = Theme.ForgeHere("CreateListRow")
 	if forged then
 		local K = Theme.FORGE_ROW
@@ -2757,9 +2786,10 @@ function Theme.CreateListRow(parent, width, height, opts)
 		row.forgeTint = row:CreateTexture(nil, "BACKGROUND", nil, 1)
 		row.forgeTint:SetTexture(Theme.SOLID)
 		row.forgeTint:SetAllPoints()
-		Gradient(row.forgeTint, "HORIZONTAL", Theme.BLUE, K.select.from, Theme.BLUE, K.select.to)
+		Gradient(row.forgeTint, "HORIZONTAL", Theme.SELECT, Theme.SelectAlpha(K.select.from), Theme.SELECT,
+			Theme.SelectAlpha(K.select.to))
 		row.forgeTint:Hide()
-		row.forgeBar = Solid(row, "BORDER", Theme.ARCANE_LIGHT, 1)
+		row.forgeBar = Solid(row, "BORDER", Theme.SELECT_LIGHT, 1)
 		row.forgeBar:SetPoint("TOPLEFT", row, "TOPLEFT", 0, 0)
 		row.forgeBar:SetPoint("BOTTOMLEFT", row, "BOTTOMLEFT", 0, 0)
 		row.forgeBar:SetWidth(Theme.FORGE_NAV.bar)
@@ -2811,7 +2841,7 @@ function Theme.CreateListRow(parent, width, height, opts)
 	end
 	-- rang dans la liste (1, 2, …) : les rangs pairs en ROW_ALT
 	function row:SetIndex(index) self:SetAlt((tonumber(index) or 1) % 2 == 0) end
-	-- ligne choisie (forgé : dégradé arcane et barre ; Sobre : rien de dessiné)
+	-- ligne choisie (forgé : dégradé de la sélection et barre ; Sobre : rien de dessiné)
 	function row:SetSelected(on)
 		self.selected = on and true or false
 		if self.forgeTint then
@@ -2996,8 +3026,8 @@ function Theme.CreateChips(parent, defs, onSelect, opts)
 	row.chips, row.byId = {}, {}
 	local height = tonumber(opts.height) or Theme.CHIP_HEIGHT
 	local gap = tonumber(opts.gap) or 6
-	-- thème forgé : la puce choisie (un filtre) en bleu arcane : dégradé
-	-- vertical, filet arcane clair, texte parchemin ; au repos, filet or sombre
+	-- thème forgé : la puce choisie (un filtre) de la sélection : dégradé
+	-- vertical, filet clair, texte parchemin ; au repos, filet or sombre
 	local forged = Theme.ForgeHere("CreateChips")
 	row.forged = forged or nil
 	local function Paint(chip)
@@ -3005,9 +3035,10 @@ function Theme.CreateChips(parent, defs, onSelect, opts)
 		chip.selected = on
 		if forged then
 			local K = Theme.FORGE_CHIP
-			local edge = on and Theme.ARCANE_LIGHT or (chip.hovered and Theme.EDGE or Theme.EDGE_SOFT)
+			local edge = on and Theme.SELECT_LIGHT or (chip.hovered and Theme.EDGE or Theme.EDGE_SOFT)
 			chip.border:SetColor(edge[1], edge[2], edge[3], 1)
-			Gradient(chip.bg, "VERTICAL", Theme.BLUE, on and K.to or 0, Theme.BLUE, on and K.from or 0)
+			Gradient(chip.bg, "VERTICAL", Theme.SELECT, on and Theme.SelectAlpha(K.to) or 0, Theme.SELECT,
+				on and Theme.SelectAlpha(K.from) or 0)
 			SetColor(chip.text, on and Theme.PARCHMENT or (chip.hovered and Theme.LABEL or Theme.MUTED_LIGHT))
 			return
 		end
@@ -3284,8 +3315,8 @@ function Theme.CreateBubble(parent, width, opts)
 	bubble.bg:SetAllPoints()
 	bubble.border = Border(bubble, Theme.EDGE, 1)
 	if Theme.ForgeHere("CreateBubble") then
-		-- thème forgé : notre filet lumineux en haut, qui s'éteint vers la droite
-		bubble.rule = Theme.ArtTexture(bubble, "line", "ARTWORK", 0, Theme.GOLD_LIGHT, Theme.FORGE_RULE.alpha)
+		-- thème forgé : notre filet lumineux en haut, de l'identité, qui s'éteint vers la droite
+		bubble.rule = Theme.ArtTexture(bubble, "line", "ARTWORK", 0, Theme.IDENTITY_LIGHT, Theme.FORGE_RULE.alpha)
 		bubble.rule:SetHeight(Theme.FORGE_RULE.height)
 		bubble.forged = true
 	else
@@ -3346,7 +3377,8 @@ end
 
 -- ===========================================================================
 -- Thèmes (socle 3.2) : Sobre (ardoise et ambre, à plat) et Azeroth (bois,
--- or patiné, Friz Quadrata, accent arcane). Un thème ne reconstruit rien :
+-- or patiné, Friz Quadrata ; socle 3.3 : identité et sélection par addon,
+-- Theme.IDENTITY_TOKENS). Un thème ne reconstruit rien :
 -- il change les jetons que lisent toutes les briques, la police des titres,
 -- et pose l'habillage forgé des fenêtres (cadre d'orfèvre, ombre, coins,
 -- médaillon), fait de nos textures (tools/gen_ui_assets.py).
@@ -3373,11 +3405,50 @@ Theme.SKIN_TOKENS = {
 		EDGE      = { 0.60, 0.42, 0.18 },    -- or patiné : bord de fenêtre, bouton en contour
 		EDGE_SOFT = { 0.30, 0.22, 0.12 },    -- or sombre : filets, séparations
 		NAV       = { 0.086, 0.063, 0.047 }, -- bois sombre : colonne, pied, plaque de titre
-		TITLE     = { 0.96, 0.78, 0.49 },    -- or clair (= GOLD_LIGHT)
-		ACTIVE    = { 0.357, 0.561, 0.839 }, -- bleu arcane (= BLUE)
+		-- (TITLE, ACTIVE et les rôles : Theme.IDENTITY_TOKENS, selon l'addon)
 	},
 	sobre = {},
 }
+-- socle 3.3 : l'identité de l'addon, en thème forgé seulement (Sobre garde
+-- ses valeurs de départ). Lue dans ns.APP.identity (Config.lua) : "gold"
+-- (défaut : Ready2Quest) ou "arcane" (QuestCompanion) ; inconnue = "gold".
+-- Clé = jeton de Theme ; « TABLE.champ » = un champ d'une table de Theme.
+-- Chaque valeur est recopiée composante par composante (aucune table
+-- partagée). TITLE : titres de fenêtre ; ACTIVE : ce qui est choisi ou actif ;
+-- FORGE_HEADER.warm : haut de la plaque d'en-tête (chaud ou froid) ;
+-- FORGE_PLATE.select : plaque d'une liste ouverte ; FORGE_PLATE.thumbOn :
+-- curseur d'un interrupteur actif. `action` : plaque du style de bouton
+-- "arcane" (action neutre : ouvrir, changer), son encre (FORGE_INK de même
+-- nom, sinon LABEL) ; `selectAlpha` : Theme.SELECT_ALPHA.
+Theme.IDENTITY_DEFAULT = "gold"
+Theme.IDENTITY_TOKENS = {
+	gold = {
+		IDENTITY = { 0.91, 0.65, 0.29 }, IDENTITY_LIGHT = { 0.96, 0.78, 0.49 },     -- or (= GOLD, GOLD_LIGHT)
+		SELECT = { 0.357, 0.561, 0.839 }, SELECT_LIGHT = { 0.561, 0.722, 0.941 },  -- bleu arcane (= BLUE, ARCANE_LIGHT)
+		TITLE = { 0.96, 0.78, 0.49 },                                              -- or clair
+		ACTIVE = { 0.357, 0.561, 0.839 },                                          -- bleu arcane
+		["FORGE_HEADER.warm"] = { 0.235, 0.165, 0.086 },                           -- bois chaud
+		["FORGE_PLATE.select"] = { 0.210, 0.350, 0.560 },                          -- plaque arcane
+		["FORGE_PLATE.thumbOn"] = { 0.357, 0.561, 0.839 },                         -- bleu arcane
+		action = "arcane", selectAlpha = 1,
+	},
+	arcane = {
+		IDENTITY = { 0.357, 0.561, 0.839 }, IDENTITY_LIGHT = { 0.561, 0.722, 0.941 },
+		SELECT = { 0.91, 0.65, 0.29 }, SELECT_LIGHT = { 0.96, 0.78, 0.49 },
+		TITLE = { 0.737, 0.839, 0.984 },                                           -- arcane très clair #bcd6fb
+		ACTIVE = { 0.91, 0.65, 0.29 },                                             -- or
+		["FORGE_HEADER.warm"] = { 0.110, 0.180, 0.322 },                           -- haut froid (nuit bleutée)
+		["FORGE_PLATE.select"] = { 0.400, 0.290, 0.150 },                          -- plaque bronze
+		["FORGE_PLATE.thumbOn"] = { 0.91, 0.65, 0.29 },                            -- or
+		action = "neutral", selectAlpha = 0.8,
+	},
+}
+-- l'identité déclarée par l'addon (Config.lua : ns.APP.identity)
+function Theme.IdentityChoice()
+	local id = type(ns.APP) == "table" and ns.APP.identity or nil
+	if Theme.IDENTITY_TOKENS[id] then return id end
+	return Theme.IDENTITY_DEFAULT
+end
 -- Matières du thème forgé : nos textures (tools/gen_ui_assets.py, dans
 -- Libs/Socle/Media). size : côté de la texture ; margin : largeur d'un coin
 -- de la découpe en 9 tranches (px de la texture, rendus tels quels à l'écran).
@@ -3398,22 +3469,41 @@ Theme.CHROME = { shadowOut = 20, frameOut = 1, corner = 46, cornerOut = 3, min =
 Theme.EMBLEM = { size = 84, x = -24, y = 28, text = 72 }
 
 local skinBase = {}
+-- la table d'un jeton : Theme[clé], ou Theme.TABLE.champ pour « TABLE.champ »
+local function SkinToken(key)
+	local node = Theme
+	for part in string.gmatch(key, "[^%.]+") do
+		if type(node) ~= "table" then return nil end
+		node = node[part]
+	end
+	return type(node) == "table" and node or nil
+end
 function Theme.ApplySkin(id)
 	if not Theme.SKIN_TOKENS[id] then id = "sobre" end
 	local tokens = Theme.SKIN_TOKENS[id]
+	local identity = Theme.IdentityChoice()
+	-- l'identité ne joue qu'en thème forgé
+	local roles = id == "azeroth" and Theme.IDENTITY_TOKENS[identity] or {}
 	-- les valeurs de départ, gardées une fois (retour à Sobre)
-	for _, skin in pairs(Theme.SKIN_TOKENS) do
-		for key in pairs(skin) do
-			if not skinBase[key] and type(Theme[key]) == "table" then
-				skinBase[key] = { Theme[key][1], Theme[key][2], Theme[key][3] }
-			end
+	local function Keep(set)
+		for key, value in pairs(set) do
+			local token = type(value) == "table" and SkinToken(key)
+			if token and not skinBase[key] then skinBase[key] = { token[1], token[2], token[3] } end
 		end
 	end
+	for _, skin in pairs(Theme.SKIN_TOKENS) do Keep(skin) end
+	for _, set in pairs(Theme.IDENTITY_TOKENS) do Keep(set) end
 	for key, base in pairs(skinBase) do
-		local value = tokens[key] or base
-		local token = Theme[key]
-		token[1], token[2], token[3] = value[1], value[2], value[3]
+		local value = roles[key] or tokens[key] or base
+		local token = SkinToken(key)
+		if token then token[1], token[2], token[3] = value[1], value[2], value[3] end
 	end
+	-- le style de bouton "arcane" (action neutre) et le voile de sélection
+	local action = roles.action or Theme.IDENTITY_TOKENS[Theme.IDENTITY_DEFAULT].action
+	local style = Theme.FORGE_BUTTONS and Theme.FORGE_BUTTONS.arcane
+	if style then style.plate, style.text = action, (Theme.FORGE_INK or {})[action] or Theme.LABEL end
+	Theme.SELECT_ALPHA = roles.selectAlpha or 1
+	Theme.identity = id == "azeroth" and identity or nil
 	-- la police des titres : celle du jeu en Azeroth, la nôtre en Sobre
 	local file
 	for _, role in ipairs(Theme.SKIN_FONT_ROLES) do
@@ -3516,10 +3606,12 @@ Theme.FORGE_PLATE = {
 	gold     = { 1.000, 0.820, 0.500 },  -- principal : or, encre sombre
 	green    = { 0.180, 0.370, 0.230 },  -- ajouter, rallumer
 	red      = { 0.400, 0.170, 0.150 },  -- retirer, détruire
-	arcane   = { 0.210, 0.350, 0.560 },  -- action neutre (ouvrir, changer)
+	arcane   = { 0.210, 0.350, 0.560 },  -- action neutre (ouvrir, changer) de Ready2Quest
 	card     = { 0.118, 0.145, 0.176 },  -- liste déroulante ouverte
 	thumb    = { 0.420, 0.450, 0.500 },  -- curseur d'un interrupteur coupé
-	thumbOn  = { 0.357, 0.561, 0.839 },  -- curseur d'un interrupteur actif (= BLUE)
+	-- rôles (Theme.IDENTITY_TOKENS, changés sur place) : la couleur de sélection
+	select   = { 0.210, 0.350, 0.560 },  -- liste ouverte (arcane ; bronze si la sélection est l'or)
+	thumbOn  = { 0.357, 0.561, 0.839 },  -- curseur d'un interrupteur actif (= SELECT)
 	disabled = { 0.150, 0.160, 0.170 },  -- désactivé : désaturé, sombre
 }
 -- Encres posées sur ces plaques (mesurées : tests/modules/ui_forge_controles.lua)
@@ -3537,6 +3629,9 @@ Theme.FORGE_BUTTONS = {
 	adventure = { plate = "gold", text = Theme.FORGE_INK.gold, noShadow = true, press = 0.96 },
 	add       = { plate = "green", text = Theme.FORGE_INK.green },
 	danger    = { plate = "red", text = Theme.FORGE_INK.red },
+	-- action neutre : plaque arcane, ou neutre quand le bleu est l'identité
+	-- (QuestCompanion : il n'y est pas une couleur d'action) ; Theme.ApplySkin
+	-- pose `plate` et `text` (IDENTITY_TOKENS.*.action)
 	arcane    = { plate = "arcane", text = Theme.FORGE_INK.arcane },
 }
 Theme.FORGE_BUTTONS.normal = Theme.FORGE_BUTTONS.outline
@@ -3564,7 +3659,7 @@ Theme.FORGE = {
 	tick = 1.15,                              -- coche (UI-CheckBox-Check, marges comprises) : x la case
 	caret = { 7, 5, 3, 1 },                   -- chevron d'une liste : rangées du triangle
 	led = 20, ledOff = { 0.21, 0.23, 0.26 },  -- voyant d'un module (interrupteur de navigation)
-	rowSelect = 0.45,                         -- ligne choisie d'une liste : bleu arcane, alpha de départ
+	rowSelect = 0.45,                         -- survol d'une liste : couleur de sélection (ACTIVE), alpha de départ
 }
 
 -- Teinte multipliée (survol, appui), bornée à 1
@@ -3736,20 +3831,37 @@ end
 
 -- [navigation]
 -- Thème forgé : navigation, sections, cartes et listes. Les couleurs disent
--- le sens : or = principal, bleu arcane = choisi / navigation. Rien n'est
--- posé en Sobre (mêmes régions qu'avant) ; la décision se prend à la
+-- le sens : or = principal ; l'identité de l'addon (Theme.IDENTITY : titres,
+-- filets, pilules) et la sélection, l'autre couleur (Theme.SELECT : choisi,
+-- actif). Rien n'est posé en Sobre (mêmes régions qu'avant) ; la décision se prend à la
 -- création de la brique (changer de thème demande un rechargement).
-Theme.ARCANE_LIGHT = { 0.561, 0.722, 0.941 }  -- bleu arcane clair #8fb8f0 (barre de l'entrée choisie)
--- deux tons de lueur : or (par défaut) et arcane (choix, navigation)
+-- deux tons de lueur, par rôle (Theme.ARCANE_LIGHT et les rôles sont
+-- définis avec la palette) : "identity" (par défaut : titres de groupe et de
+-- section, filets) et "second" (l'autre couleur, pour alterner : celle de la
+-- sélection). Ready2Quest : or puis bleu arcane ; QuestCompanion : l'inverse.
 Theme.FORGE_TONES = {
-	gold   = { color = Theme.GOLD, light = Theme.GOLD_LIGHT },
-	arcane = { color = Theme.BLUE, light = Theme.ARCANE_LIGHT },
+	identity = { color = Theme.IDENTITY, light = Theme.IDENTITY_LIGHT },
+	second   = { color = Theme.SELECT, light = Theme.SELECT_LIGHT },
 }
+-- anciens noms (avant le socle 3.3), gardés : "gold" = identité, "arcane" =
+-- second ton. Un ton inconnu ou absent : l'identité.
+Theme.TONE_ALIASES = { gold = "identity", arcane = "second" }
+-- Theme.ResolveTone(tone) -> spec { color, light }, nom du ton ("identity" ou "second")
+function Theme.ResolveTone(tone)
+	local name = Theme.TONE_ALIASES[tone] or tone
+	if not Theme.FORGE_TONES[name] then name = "identity" end
+	return Theme.FORGE_TONES[name], name
+end
+-- un voile de sélection : son alpha × Theme.SELECT_ALPHA (1 quand la
+-- sélection est le bleu arcane)
+function Theme.SelectAlpha(alpha)
+	return (tonumber(alpha) or 0) * (tonumber(Theme.SELECT_ALPHA) or 1)
+end
 -- filet lumineux (ART.line) : hauteur de la lueur, décalage vers le haut
 -- pour rester centré sur l'ancien filet de 2 px
 Theme.FORGE_RULE = { height = 6, lift = 2, alpha = 1 }
 -- colonne de navigation : fond d'une entrée en retrait du bord (voile de
--- survol, dégradé arcane du choix et sa barre claire, reflet d'un pixel),
+-- survol, dégradé de sélection du choix et sa barre claire, reflet d'un pixel),
 -- titres de groupe en « pilule » (dégradé de leur ton, filet, reflet), voyant
 -- de module (point vert lumineux / point sombre)
 Theme.FORGE_NAV = {
@@ -3763,7 +3875,7 @@ Theme.FORGE_NAV = {
 }
 -- titre de section : point lumineux, titre de son ton, filet qui s'éteint à droite
 Theme.FORGE_SECTION = { dot = 18, dotX = -5, text = 12, lineGap = 8, line = 6 }
--- onglets : l'onglet choisi en dégradé arcane (vers le bas), souligné clair ;
+-- onglets : l'onglet choisi en dégradé de sélection (vers le bas), souligné clair ;
 -- filet noir sous la rangée et reflet d'un pixel dessous
 Theme.FORGE_TABS = { from = 0.28, to = 0.02, sheen = 0.07, rule = 0.9, ruleLight = 0.05 }
 -- carte de réglage, tuile : relief posé sur le fond (pas de découpe en 9 :
@@ -3772,7 +3884,7 @@ Theme.FORGE_TABS = { from = 0.28, to = 0.02, sheen = 0.07, rule = 0.9, ruleLight
 -- reflet d'un pixel en haut, ombre d'un pixel en bas. Le fond garde sa
 -- couleur (ROW / ROW_ALT, ou celle du module).
 Theme.FORGE_CARD = { light = 0.045, dark = 0.30, sheen = 0.07, shade = 0.55 }
--- ligne de liste : pas de fond (survol voilé), choisie = dégradé arcane et
+-- ligne de liste : pas de fond (survol voilé), choisie = dégradé de sélection et
 -- barre claire ; losange de statut avec un halo de sa couleur (ART.dot)
 Theme.FORGE_ROW = { select = { from = 0.25, to = 0.04 }, glow = 2.6, glowAlpha = 0.9, fade = { from = 0, to = 0.55 } }
 -- en-tête de page : plaque de bois au haut plus chaud ; pied : bande plus
@@ -3782,7 +3894,7 @@ Theme.FORGE_FOOT = { from = 0.38, to = 0.12, sheen = 0.045 }
 -- étiquette : filet de sa couleur ; pastille de monnaie : creux (ART.inset)
 Theme.FORGE_TAG = { edge = 0.35 }
 Theme.FORGE_INSET = { margin = 6 }
--- puce choisie (filtres) : dégradé arcane, filet clair
+-- puce choisie (filtres) : dégradé de sélection, filet clair
 Theme.FORGE_CHIP = { from = 0.30, to = 0.08 }
 -- cadre discret : bois sombre vers le noir
 Theme.FORGE_DISCREET = { top = 0.80, bottom = 0.62 }

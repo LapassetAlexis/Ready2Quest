@@ -569,7 +569,8 @@ local function ActionCard(page, def)
 	local probe = Theme.Text(card, Theme.F_LABEL, Theme.LABEL)
 	probe:Hide()
 	local buttonWidth = math.max(84, math.ceil(TextWidth(probe, text)) + 28)
-	-- thème forgé : action neutre en bleu arcane ; def.forgeStyle ("danger",
+	-- thème forgé : action neutre (style "arcane" : plaque arcane, ou neutre
+	-- quand le bleu est l'identité de l'addon) ; def.forgeStyle ("danger",
 	-- "add"…) pour une action qui retire ou ajoute
 	card.button = Theme.CreateButton(card, buttonWidth, 22, text, function() ns:RunOptionAction(def.key) end,
 		ActionStyle("outline", def.forgeStyle or "arcane"))
@@ -1061,13 +1062,14 @@ end
 
 -- Titre de groupe : capitales ambre. Celui d'une page à sous-pages est
 -- cliquable (sa première sous-page) et porte l'interrupteur de son module.
--- Thème forgé : en « pilule » ; or pour une page à sous-pages (une fonction
--- de l'addon, cliquable), arcane pour un simple titre de rangement
--- (navigation) ; l'interrupteur devient un voyant.
+-- Thème forgé : en « pilule » ; ton de l'identité pour une page à sous-pages
+-- (une fonction de l'addon, cliquable), second ton pour un simple titre de
+-- rangement (navigation) : or puis arcane dans Ready2Quest, l'inverse dans
+-- QuestCompanion ; l'interrupteur devient un voyant.
 local function NavHeader(frame, text, def)
 	local header = CreateFrame("Button", nil, frame.navList)
 	header:SetSize(NAV_WIDTH - 1, NAV_HEADER_H)
-	header.label = Theme.CreateNavGroup(header, text, def and "gold" or "arcane")
+	header.label = Theme.CreateNavGroup(header, text, def and "identity" or "second")
 	header.label:SetPoint("BOTTOMLEFT", header, "BOTTOMLEFT", 18, 8)
 	header.label:SetWidth(NAV_WIDTH - 18 - 40)
 	if header.label.SetWordWrap then header.label:SetWordWrap(false) end
@@ -1620,8 +1622,8 @@ function ns:SetOptionsSearch(text)
 		end
 		local section = results.sections[index]
 		if not section then
-			-- résultats : sections de navigation (où vit le réglage), en arcane
-			section = Theme.CreateSection(results, "", nil, "arcane")
+			-- résultats : sections de navigation (où vit le réglage), au second ton
+			section = Theme.CreateSection(results, "", nil, "second")
 			section:SetWidth(INNER)
 			results.sections[index] = section
 		end
