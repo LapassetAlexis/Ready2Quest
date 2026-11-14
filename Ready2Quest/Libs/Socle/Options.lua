@@ -1201,7 +1201,7 @@ function ns:EnsureOptions()
 	if not Theme or not Theme.CreateWindow then return nil end
 
 	local frame = Theme.CreateWindow(UIParent, FRAME_WIDTH, FRAME_HEIGHT,
-		{ name = ns.APP.id .. "OptionsFrame", nav = NAV_WIDTH, footer = FOOTER })
+		{ name = ns.APP.id .. "OptionsFrame", nav = NAV_WIDTH, footer = FOOTER, emblem = Theme.Forged() })
 	if not frame then return nil end
 	frame:Hide()
 	ns:RestorePoint(frame, "optionsPoint", { point = "CENTER", x = 0, y = 20 })

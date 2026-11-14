@@ -94,11 +94,15 @@ def check_packages():
         if addon in ignored:
             problems.append("%s : le dossier %s lui-même est ignoré" % (pkgmeta, addon))
     # 2.12.1 / 1.33.1 : plus aucune image à nous hors du filet et des logos ;
-    # le reste vient du client, par référence (polices .ttf permises)
+    # le reste vient du client, par référence (polices .ttf permises).
+    # 3.1.0 / 1.35.0 : s'y ajoutent les textures d'habillage du thème Azeroth
+    # (formes, reliefs et lueurs générés par tools/gen_ui_assets.py, dans le
+    # socle) et le glyphe du logo pour la mini-carte. Toujours aucune
+    # illustration, et rien de repris du jeu.
     for f in tracked:
         if f.split("/")[0] in ("Ready2Quest", "QuestCompanion") and os.path.exists(os.path.join(ROOT, f)) \
                 and os.path.splitext(f)[1].lower() in IMAGE_EXTS and f not in ALLOWED_IMAGES:
-            problems.append("image non autorisée : %s (n'embarquer que le filet et les logos)" % f)
+            problems.append("image non autorisée : %s (n'embarquer que le filet, les logos et l'habillage du thème)" % f)
     return problems
 
 
@@ -107,7 +111,12 @@ ALLOWED_IMAGES = {
     "QuestCompanion/Textures/filet.tga", "QuestCompanion/Textures/corde.tga", "QuestCompanion/Textures/paquet.tga",
     "QuestCompanion/Textures/logo.tga", "QuestCompanion/Textures/logo_petit.tga",
     "Ready2Quest/Textures/logo.tga", "Ready2Quest/Textures/logo_petit.tga",
+    "QuestCompanion/Textures/logo_glyphe.tga", "Ready2Quest/Textures/logo_glyphe.tga",
 }
+UI_ASSETS = ("cadre", "ombre", "coin", "plaque", "creux", "lueur_ligne", "lueur_point", "vignette")
+for _addon in ("Ready2Quest", "QuestCompanion"):
+    for _name in UI_ASSETS:
+        ALLOWED_IMAGES.add("%s/Libs/Socle/Media/%s.tga" % (_addon, _name))
 
 
 def check_socle():

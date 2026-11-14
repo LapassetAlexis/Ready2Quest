@@ -102,4 +102,4 @@ Le packager déduit les versions du jeu de la ligne `## Interface:`. Depuis Read
 
 - `tests/run_tests.py` refuse de lancer les tests si une entrée de la racine du dépôt n'est pas exclue des deux `.pkgmeta` (elle partirait dans un zip), ou si les deux copies du socle diffèrent.
 - Le workflow `Tests` tourne à chaque push et pull request.
-- Logos : `python3 -I tools/gen_store_logos.py` les régénère : la boussole de Ready2Quest (même dessin et même police que le logo en jeu) et le monogramme QC devant l'ombre d'un dragonnet pour QuestCompanion, ainsi que son icône en jeu `QuestCompanion/Textures/logo_petit.tga`.
+- Logos : `python3 tools/gen_logos.py` les régénère (rsvg-convert et Pillow requis) : le même médaillon d'or pour les deux addons, l'écu coché au « ! » des quêtes pour Ready2Quest, l'empreinte bleue pour QuestCompanion. Il écrit les PNG des stores (400 × 400) et les logos en jeu (`Textures/logo.tga`, `logo_petit.tga`, `logo_glyphe.tga`).

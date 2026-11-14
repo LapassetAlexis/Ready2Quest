@@ -1,16 +1,11 @@
 -- Thèmes du socle (3.2) : Sobre et Azeroth. Jetons changés sur place, police
--- des titres, accent de l'état actif, cadre en bois posé à l'affichage (et
--- ôté en Sobre), fenêtres déjà habillées laissées, atlas absent, contrastes
+-- des titres, accent de l'état actif, habillage forgé des fenêtres (découpe
+-- en 9 tranches, ombre, cadre, coins, médaillon ; ôté en Sobre), contrastes
 -- recalculés pour le thème, réglage de Ready2Quest, thème posé au chargement.
 local Check, Say, NS, QNS, Mock, ResetWorld = T.Check, T.Say, T.NS, T.QNS, T.Mock, T.ResetWorld
 local Theme = NS.Theme
 local SKIN0 = { NS.Theme.skin, QNS.Theme.skin }
-local savedTexture = rawget(_G, "C_Texture")
 local function Same(a, b) return math.abs(a[1] - b[1]) < 1e-6 and math.abs(a[2] - b[2]) < 1e-6 and math.abs(a[3] - b[3]) < 1e-6 end
-local function Atlases(missing)
-	_G.C_Texture = { GetAtlasInfo = function(name) if name ~= missing then return { width = 64, height = 64 } end end }
-	Theme.ResetAtlasCache()
-end
 
 do
 	Say("-- thèmes : jetons et polices")
@@ -63,41 +58,66 @@ do
 end
 
 do
-	Say("-- thèmes : le cadre en bois")
-	Atlases()
+	Say("-- thèmes : l'habillage forgé des fenêtres")
 	Theme.ApplySkin("azeroth")
+	-- la découpe en 9 tranches
+	local host = CreateFrame("Frame", nil, UIParent)
+	host:SetSize(120, 40)
+	local slice = Theme.Slice(host, "plate", { color = Theme.GOLD })
+	local n = 0
+	for _ in pairs(slice.parts) do n = n + 1 end
+	local k = Theme.ART.plate.margin / Theme.ART.plate.size
+	local tl = slice.parts.tl
+	Check("[SKIN] découpe : neuf pièces de la même texture, coins à leur taille, teinte posée sur toutes",
+		n == 9 and tl.texture == Theme.ART.plate.file and tl:GetWidth() == Theme.ART.plate.margin
+		and Same({ tl:GetTexCoord() }, { 0, k, 0 }) and Same({ slice.parts.c:GetVertexColor() }, Theme.GOLD), n)
+	local hollow = Theme.Slice(host, "frame", { fill = false })
+	slice:SetShown(false)
+	Check("[SKIN] découpe : sans centre à la demande ; cachée, toutes ses pièces le sont", hollow.parts.c == nil
+		and not slice.parts.tl:IsShown() and not slice.parts.c:IsShown() and Theme.Slice(host, "line") == nil)
+
 	local frame = Theme.CreateDialog(UIParent, 420, 300, { title = "Titre" })
-	Check("[SKIN] fenêtre faite en Azeroth : plaque de titre, titre en or clair",
-		frame.header.plate ~= nil and Same({ frame.title:GetTextColor() }, Theme.TITLE))
-	Theme.DressWindow(frame)
-	local wood = frame.skinWood
-	local shown = wood ~= nil
-	for _, key in ipairs(Theme.WOOD_KEYS) do shown = shown and wood[key] ~= nil and wood[key]:IsShown() end
-	Check("[SKIN] à l'affichage : huit pièces de bois autour de la fenêtre, hors du contenu", shown and frame.skinDressed == true)
+	local chrome = frame.skinChrome
+	Check("[SKIN] fenêtre de module en Azeroth : ombre, cadre, bords assombris, quatre coins, médaillon du logo",
+		chrome ~= nil and chrome.shadow ~= nil and chrome.frame ~= nil and chrome.vignette ~= nil and #chrome.corners == 4
+		and chrome.emblem ~= nil and chrome.emblem.texture == Theme.LOGO and frame.skinDressed == true)
+	Check("[SKIN] le cadre, les coins et le médaillon vivent au-dessus des enfants de la fenêtre, sans souris",
+		chrome.top ~= frame and chrome.top:GetFrameLevel() > frame.close:GetFrameLevel()
+		and not (chrome.top.IsMouseEnabled and chrome.top:IsMouseEnabled()))
+	Check("[SKIN] l'en-tête laisse la place au médaillon (pas de petit logo), titre en or clair, plaque de titre",
+		frame.header.logo == nil and frame.header.textLeft == Theme.EMBLEM.text and frame.header.plate ~= nil
+		and Same({ frame.title:GetTextColor() }, Theme.TITLE))
+	local _, _, _, edgeAlpha = frame.border.top:GetVertexColor()
+	Check("[SKIN] le filet d'un pixel s'efface sous le cadre forgé", edgeAlpha == 0, edgeAlpha)
 	Theme.ApplySkin("sobre")
 	Theme.DressWindow(frame)
-	local hidden = true
-	for _, key in ipairs(Theme.WOOD_KEYS) do if wood[key]:IsShown() then hidden = false end end
-	Check("[SKIN] passage en Sobre : le bois s'ôte à l'affichage suivant", hidden and frame.skinDressed == false)
+	_, _, _, edgeAlpha = frame.border.top:GetVertexColor()
+	Check("[SKIN] passage en Sobre : l'habillage se cache à l'affichage suivant, le filet revient",
+		frame.skinDressed == false and not chrome.frame.parts.tl:IsShown() and not chrome.corners[1]:IsShown()
+		and not chrome.emblem:IsShown() and not chrome.shadow.parts.c:IsShown() and edgeAlpha == 1)
 	Theme.ApplySkin("azeroth")
 	Theme.DressWindow(frame)
-	Check("[SKIN] retour en Azeroth : les mêmes pièces reviennent (rien n'est recréé)", frame.skinWood == wood and wood.tl:IsShown())
-	local small = Theme.CreateWindow(UIParent, 120, 90, {})
-	Theme.DressWindow(small)
+	Check("[SKIN] retour en Azeroth : le même habillage revient (rien n'est recréé)", frame.skinChrome == chrome
+		and chrome.frame.parts.tl:IsShown() and chrome.emblem:IsShown())
+	local plain = Theme.CreateWindow(UIParent, 400, 300, {})
 	local own = Theme.CreateWindow(UIParent, 400, 300, {})
 	own.azeroth = true
 	Theme.DressWindow(own)
-	local off = Theme.CreateWindow(UIParent, 400, 300, { wood = false })
-	Theme.DressWindow(off)
-	Check("[SKIN] pas de bois : fenêtre trop petite, fenêtre déjà habillée par son module, fenêtre qui le refuse",
-		small.skinWood == nil and own.skinDressed == false and not (own.skinWood and own.skinWood.tl:IsShown())
-		and off.skinWood == nil)
-	Atlases(Theme.WOOD.top)
-	local bare = Theme.CreateWindow(UIParent, 400, 300, {})
-	Theme.DressWindow(bare)
-	Check("[SKIN] une pièce du bois absente du client : pas de bois, la fenêtre est construite quand même",
-		bare ~= nil and bare.skinWood == nil and bare.bg ~= nil and Theme.SkinWoodOK() == false)
-	for _, f in ipairs({ frame, small, own, off, bare }) do f:Hide() end
+	local off = Theme.CreateWindow(UIParent, 400, 300, { chrome = false })
+	local tiny = Theme.CreateWindow(UIParent, 30, 30, {})
+	Check("[SKIN] fenêtre nue : habillée sans médaillon ; déjà habillée par son module, qui refuse, ou minuscule : rien",
+		plain.skinDressed == true and plain.skinChrome.emblem == nil and own.skinDressed == false
+		and not own.skinChrome.frame.parts.tl:IsShown() and off.skinChrome == nil and tiny.skinChrome == nil)
+	local toast = Theme.CreateToast(UIParent, 300, 60, {})
+	Check("[SKIN] bandeau : ombre et cadre, sans coins ni médaillon", toast.skinDressed == true
+		and toast.skinChrome.frame ~= nil and toast.skinChrome.corners == nil and toast.skinChrome.emblem == nil)
+	local sobre
+	Theme.ApplySkin("sobre")
+	sobre = Theme.CreateDialog(UIParent, 420, 300, { title = "Titre" })
+	Check("[SKIN] fenêtre faite en Sobre : aucune texture d'habillage créée, petit logo dans l'en-tête",
+		sobre.skinChrome == nil and sobre.header.logo ~= nil and sobre.skinDressed == false)
+	Theme.ApplySkin("azeroth")
+	for _, f in ipairs({ frame, plain, own, off, tiny, toast, sobre, host }) do f:Hide() end
 end
 
 do
@@ -120,6 +140,4 @@ do
 	NS:DB().uiStyle = nil
 end
 
-_G.C_Texture = savedTexture
-Theme.ResetAtlasCache()
 NS.Theme.ApplySkin(SKIN0[1]); QNS.Theme.ApplySkin(SKIN0[2])

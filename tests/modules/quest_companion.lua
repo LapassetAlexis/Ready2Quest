@@ -162,8 +162,8 @@ do
 	Verdict("[QC] son panneau (ses pages, son bouton principal), ses médias")
 
 	local button = QNS:EnsureMinimapButton()
-	Want("son bouton, au dragonnet", button and button.name == "QuestCompanionMinimapButton"
-		and button ~= NS:EnsureMinimapButton() and button.icon.texture == "Interface\\AddOns\\QuestCompanion\\Textures\\logo_petit")
+	Want("son bouton, à son glyphe", button and button.name == "QuestCompanionMinimapButton"
+		and button ~= NS:EnsureMinimapButton() and button.icon.texture == "Interface\\AddOns\\QuestCompanion\\Textures\\logo_glyphe")
 	button:GetScript("OnClick")(button, "LeftButton")
 	Want("clic gauche : le carnet", QNS.journalFrame:IsShown())
 	QNS.journalFrame:Hide()

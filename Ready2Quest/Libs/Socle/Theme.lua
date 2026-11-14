@@ -178,7 +178,8 @@ Theme.BG_DARK  = "Interface\\DialogFrame\\UI-DialogBox-Background-Dark"
 Theme.BG_LIGHT = "Interface\\DialogFrame\\UI-DialogBox-Background"
 Theme.SOLID    = "Interface\\Buttons\\WHITE8X8"
 Theme.LOGO          = MEDIA .. "Textures\\logo"         -- logo de l'addon (boussole R2Q, dragonnet QC)
-Theme.LOGO_SMALL    = MEDIA .. "Textures\\logo_petit"   -- petites tailles : bandeaux, minicarte
+Theme.LOGO_SMALL    = MEDIA .. "Textures\\logo_petit"   -- petites tailles : bandeaux, liste des addons
+Theme.LOGO_GLYPH    = MEDIA .. "Textures\\logo_glyphe"  -- le glyphe sans anneau : bouton de la mini-carte
 -- socle 2.12.1 : la coche du client (fichier), repli de la case « checkmark-minimal »
 -- et de l'interrupteur de module quand l'atlas de la case manque
 Theme.CHECK_FILE    = "Interface\\Buttons\\UI-CheckBox-Check"
@@ -643,13 +644,16 @@ function Theme.CreateWindow(parent, width, height, opts)
 	end
 
 	Theme.RegisterEscapeClose(frame)
-	-- thème : le cadre en bois se pose (ou s'ôte) à chaque affichage
-	-- (et dès la création : une fenêtre née affichée ne reçoit pas OnShow)
-	if opts.wood ~= false then
+	-- thème : l'habillage forgé se pose (ou s'ôte) à chaque affichage, et dès la
+	-- création (une fenêtre née affichée ne reçoit pas OnShow).
+	-- opts.chrome = false : jamais (fenêtre qui s'habille elle-même) ;
+	-- opts.emblem : le médaillon du logo déborde du coin haut gauche.
+	frame.wantsEmblem = opts.emblem and true or nil
+	if opts.chrome ~= false and opts.wood ~= false then
 		if frame.HookScript then pcall(frame.HookScript, frame, "OnShow", Theme.DressWindow) end
 		pcall(Theme.DressWindow, frame)
 	else
-		frame.skinNoWood = true
+		frame.skinNoChrome = true
 	end
 	return frame
 end
@@ -734,7 +738,10 @@ function Theme.CreatePageHeader(parent, width, opts)
 	Gradient(header.cornerGlow, "HORIZONTAL", Theme.GOLD, 0.05, Theme.GOLD, 0)
 
 	local left = pad
-	if compact and opts.logo ~= false then
+	if compact and opts.logo ~= false and opts.emblem then
+		-- thème forgé : le médaillon de la fenêtre (Theme.DressWindow) tient lieu de logo
+		left = Theme.EMBLEM.text
+	elseif compact and opts.logo ~= false then
 		header.logo = header:CreateTexture(nil, "ARTWORK")
 		header.logo:SetTexture(opts.logo or Theme.LOGO_SMALL)
 		header.logo:SetSize(28, 28)
@@ -779,7 +786,13 @@ function Theme.CreateNavBrand(parent, logoTexture, name)
 	brand.logo:SetSize(32, 32)
 	brand.logo:SetPoint("LEFT", brand, "LEFT", 16, 2)
 	brand.name = Text(brand, Theme.F_TITLE, Theme.TITLE)
-	brand.name:SetPoint("LEFT", brand.logo, "RIGHT", 10, 0)
+	if Theme.Forged() then
+		-- thème forgé : le médaillon de la fenêtre tient lieu de logo de la marque
+		brand.logo:Hide()
+		brand.name:SetPoint("LEFT", brand, "LEFT", Theme.EMBLEM.text - 2, 2)
+	else
+		brand.name:SetPoint("LEFT", brand.logo, "RIGHT", 10, 0)
+	end
 	brand.name:SetJustifyH("LEFT")
 	brand.name:SetText(name or "")
 	brand.rule = Solid(brand, "ARTWORK", Theme.GOLD, 1)
@@ -2342,6 +2355,8 @@ function Theme.SkinToast(frame, opts)
 		self.accent:Show()
 	end
 	frame:SetAccent(opts.accent)
+	if frame.HookScript then pcall(frame.HookScript, frame, "OnShow", Theme.DressWindow) end
+	pcall(Theme.DressWindow, frame)
 	return frame
 end
 
@@ -2378,8 +2393,9 @@ function Theme.CreateDialog(parent, width, height, opts)
 	opts = opts or {}
 	local footer = opts.footer
 	if footer == nil then footer = Theme.DIALOG_FOOTER end
+	local emblem = Theme.Forged() and opts.logo ~= false
 	local frame = Theme.CreateWindow(parent, width, height, { name = opts.name, strata = opts.strata,
-		alpha = opts.alpha, footer = footer ~= false and footer or nil })
+		alpha = opts.alpha, footer = footer ~= false and footer or nil, emblem = emblem })
 	if not frame then return nil end
 	frame.chrome = "dialog"
 	frame.pad = Theme.DIALOG_PAD
@@ -2387,7 +2403,8 @@ function Theme.CreateDialog(parent, width, height, opts)
 	frame.close:ClearAllPoints()
 	frame.close:SetPoint("TOPRIGHT", frame, "TOPRIGHT", -16, -16)
 
-	frame.header = Theme.CreatePageHeader(frame.content, width - 2, { compact = true, logo = opts.logo, pad = Theme.DIALOG_PAD })
+	frame.header = Theme.CreatePageHeader(frame.content, width - 2, { compact = true, logo = opts.logo, pad = Theme.DIALOG_PAD,
+		emblem = emblem })
 	frame.header:SetPoint("TOPLEFT", frame.content, "TOPLEFT", 0, 0)
 	frame.title, frame.subtitle, frame.logo = frame.header.title, frame.header.subtitle, frame.header.logo
 	frame.title:SetText(opts.title or "")
@@ -2791,18 +2808,16 @@ end
 -- Thèmes (socle 3.2) : Sobre (ardoise et ambre, à plat) et Azeroth (bois,
 -- or patiné, Friz Quadrata, accent arcane). Un thème ne reconstruit rien :
 -- il change les jetons que lisent toutes les briques, la police des titres,
--- et pose un cadre en bois autour des fenêtres.
+-- et pose l'habillage forgé des fenêtres (cadre d'orfèvre, ombre, coins,
+-- médaillon), fait de nos textures (tools/gen_ui_assets.py).
 --   Theme.ApplySkin(id) : pose le thème (jetons modifiés SUR PLACE : les
 --     tables gardent leur identité, tout ce qui les lit suit). Une fenêtre
 --     déjà construite garde ses couleurs jusqu'au rechargement de
 --     l'interface ; le cadre en bois, lui, suit à l'affichage suivant.
---   Theme.skin : le thème posé ; Theme.SkinWoodOK() : le client a le bois.
+--   Theme.skin : le thème posé ; Theme.Forged() : thème Azeroth (forgé).
 -- Les encres du texte courant (TEXT, MUTED, LABEL, PARCHMENT) ne changent
 -- pas, et les fonds restent aussi sombres : les contrastes mesurés tiennent
 -- (recalculés pour le thème dans tests/modules/ui_skin.lua).
--- Matières : atlas du client seulement (le cadre en bois des hauts faits, vu
--- en jeu dans les scènes de capture de QuestCompanion) ; atlas absent : pas
--- de bois, le reste du thème tient.
 -- ===========================================================================
 Theme.SKINS = { "azeroth", "sobre" }
 Theme.SKIN_DEFAULT = "azeroth"
@@ -2820,21 +2835,24 @@ Theme.SKIN_TOKENS = {
 	},
 	sobre = {},
 }
-Theme.WOOD = {
-	tl     = "achievement-wood-nineslice-cornertopleft",
-	tr     = "achievement-wood-nineslice-cornertopright",
-	bl     = "achievement-wood-nineslice-cornerbottomleft",
-	br     = "achievement-wood-nineslice-cornerbottomright",
-	top    = "_achievement-wood-nineslice-edgetop",
-	bottom = "_achievement-wood-nineslice-edgebottom",
-	left   = "!achievement-wood-nineslice-edgeleft",
-	right  = "!achievement-wood-nineslice-edgeright",
+-- Matières du thème forgé : nos textures (tools/gen_ui_assets.py, dans
+-- Libs/Socle/Media). size : côté de la texture ; margin : largeur d'un coin
+-- de la découpe en 9 tranches (px de la texture, rendus tels quels à l'écran).
+Theme.ART = {
+	frame    = { file = SOCLE_MEDIA .. "cadre",  size = 64, margin = 16 },   -- cadre d'orfèvre (en couleurs)
+	shadow   = { file = SOCLE_MEDIA .. "ombre",  size = 64, margin = 28 },   -- ombre portée
+	corner   = { file = SOCLE_MEDIA .. "coin",   size = 64 },                -- coin haut gauche, retourné pour les autres
+	plate    = { file = SOCLE_MEDIA .. "plaque", size = 32, margin = 8 },    -- plaque en relief (grise : se teinte)
+	inset    = { file = SOCLE_MEDIA .. "creux",  size = 32, margin = 8 },    -- creux (gris : le filet prend la teinte)
+	line     = { file = SOCLE_MEDIA .. "lueur_ligne" },                      -- filet lumineux (blanc : se teinte)
+	dot      = { file = SOCLE_MEDIA .. "lueur_point" },                      -- point lumineux (blanc : se teinte)
+	vignette = { file = SOCLE_MEDIA .. "vignette" },                         -- bords assombris
 }
-Theme.WOOD_KEYS = { "tl", "tr", "bl", "br", "top", "bottom", "left", "right" }
--- pièce de 64 px dont le bois occupe les 24 px extérieurs : posée à 24 px
--- hors du cadre, le bois l'entoure sans rien recouvrir du contenu
-Theme.WOOD_SIZE, Theme.WOOD_BAND = 64, 24
-Theme.WOOD_MIN = 160          -- en dessous (largeur ou hauteur), pas de bois : les coins se toucheraient
+-- géométrie de l'habillage d'une fenêtre
+Theme.CHROME = { shadowOut = 20, frameOut = 1, corner = 46, cornerOut = 3, min = 40, level = 30 }
+-- le médaillon du logo : taille, débord hors du coin haut gauche, et où
+-- commence le texte de l'en-tête à sa droite
+Theme.EMBLEM = { size = 84, x = -24, y = 28, text = 72 }
 
 local skinBase = {}
 function Theme.ApplySkin(id)
@@ -2870,62 +2888,136 @@ function Theme.ApplySkin(id)
 	return id
 end
 
--- Le client a-t-il les huit pièces du cadre en bois ?
-function Theme.SkinWoodOK()
-	for _, key in ipairs(Theme.WOOD_KEYS) do
-		if not Theme.HasAtlas(Theme.WOOD[key]) then return false end
+-- Le thème forgé est-il posé ? (ses matières sont les nôtres : toujours là)
+function Theme.Forged() return Theme.skin == "azeroth" end
+
+-- Découpe en 9 tranches d'une matière (Theme.ART) autour de `around` (ou du
+-- cadre) : quatre coins à leur taille, quatre bords et un centre étirés.
+-- opts : layer, sub (sous-couche), out (débord en px), margin (taille d'un
+-- coin à l'écran, celle de la texture par défaut), fill (false : sans centre),
+-- color { r, g, b }, alpha, around. Rend { parts, SetColor, SetAlpha, SetShown }.
+function Theme.Slice(frame, art, opts)
+	opts = opts or {}
+	local spec = type(art) == "table" and art or Theme.ART[art]
+	if not (frame and spec and spec.margin) then return nil end
+	local layer, sub = opts.layer or "BACKGROUND", opts.sub or 0
+	local m, out = tonumber(opts.margin) or spec.margin, tonumber(opts.out) or 0
+	local k = spec.margin / spec.size
+	local around = opts.around or frame
+	local slice = { parts = {}, art = spec, margin = m, out = out }
+	local function Part(key, l, r, t, b)
+		local tex = frame:CreateTexture(nil, layer, nil, sub)
+		tex:SetTexture(spec.file)
+		tex:SetTexCoord(l, r, t, b)
+		slice.parts[key] = tex
+		return tex
 	end
-	return true
+	local tl = Part("tl", 0, k, 0, k)
+	tl:SetSize(m, m); tl:SetPoint("TOPLEFT", around, "TOPLEFT", -out, out)
+	local tr = Part("tr", 1 - k, 1, 0, k)
+	tr:SetSize(m, m); tr:SetPoint("TOPRIGHT", around, "TOPRIGHT", out, out)
+	local bl = Part("bl", 0, k, 1 - k, 1)
+	bl:SetSize(m, m); bl:SetPoint("BOTTOMLEFT", around, "BOTTOMLEFT", -out, -out)
+	local br = Part("br", 1 - k, 1, 1 - k, 1)
+	br:SetSize(m, m); br:SetPoint("BOTTOMRIGHT", around, "BOTTOMRIGHT", out, -out)
+	local function Span(key, l, r, t, b, a1, p1, a2, p2)
+		local tex = Part(key, l, r, t, b)
+		tex:SetPoint("TOPLEFT", a1, p1, 0, 0)
+		tex:SetPoint("BOTTOMRIGHT", a2, p2, 0, 0)
+		return tex
+	end
+	Span("t", k, 1 - k, 0, k, tl, "TOPRIGHT", tr, "BOTTOMLEFT")
+	Span("b", k, 1 - k, 1 - k, 1, bl, "TOPRIGHT", br, "BOTTOMLEFT")
+	Span("l", 0, k, k, 1 - k, tl, "BOTTOMLEFT", bl, "TOPRIGHT")
+	Span("r", 1 - k, 1, k, 1 - k, tr, "BOTTOMLEFT", br, "TOPRIGHT")
+	if opts.fill ~= false then Span("c", k, 1 - k, k, 1 - k, tl, "BOTTOMRIGHT", br, "TOPLEFT") end
+	function slice:SetColor(r, g, b, a)
+		self.color = self.color or {}
+		self.color[1], self.color[2], self.color[3], self.color[4] = r, g, b, a or 1
+		for _, tex in pairs(self.parts) do tex:SetVertexColor(r, g, b, a or 1) end
+	end
+	function slice:SetAlpha(a) for _, tex in pairs(self.parts) do tex:SetAlpha(a) end end
+	function slice:SetShown(on)
+		self.shown = on and true or false
+		for _, tex in pairs(self.parts) do if on then tex:Show() else tex:Hide() end end
+	end
+	function slice:Show() self:SetShown(true) end
+	function slice:Hide() self:SetShown(false) end
+	slice.shown = true
+	if opts.color then slice:SetColor(opts.color[1], opts.color[2], opts.color[3], opts.alpha) end
+	return slice
 end
 
--- Le cadre en bois d'une fenêtre : créé au premier besoin, montré en
--- Azeroth, caché sinon. Une fenêtre déjà habillée par son module (bois,
--- parchemin : QuestCompanion) ou trop petite n'en reçoit pas.
+-- L'habillage forgé d'une fenêtre ou d'un bandeau : ombre portée, bords
+-- assombris, cadre d'orfèvre, coins, et le médaillon du logo si la fenêtre le
+-- demande (frame.wantsEmblem). Créé au premier besoin, montré en thème
+-- Azeroth, caché sinon (le filet d'un pixel revient). Le cadre, les coins et
+-- le médaillon vivent sur un cadre à part, au-dessus des enfants de la
+-- fenêtre (une colonne ou un pied les recouvriraient), sans souris.
+-- Une fenêtre déjà habillée par son module (frame.azeroth : le carnet de
+-- QuestCompanion) ou trop petite n'en reçoit pas.
 function Theme.DressWindow(frame)
 	if not frame then return false end
-	local want = Theme.skin == "azeroth" and not frame.skinNoWood and not frame.azeroth and frame.uiStyle ~= "azeroth"
-		and (frame.wood == nil or frame.wood == frame.skinWood)
+	local K = Theme.CHROME
+	local want = Theme.Forged() and not frame.skinNoChrome and not frame.azeroth and frame.uiStyle ~= "azeroth"
 	if want and frame.GetWidth and frame.GetHeight then
-		want = (tonumber(frame:GetWidth()) or 0) >= Theme.WOOD_MIN and (tonumber(frame:GetHeight()) or 0) >= Theme.WOOD_MIN
+		want = (tonumber(frame:GetWidth()) or 0) >= K.min and (tonumber(frame:GetHeight()) or 0) >= K.min
 	end
-	want = want and Theme.SkinWoodOK()
-	local wood = frame.skinWood
-	if want and not wood then
-		local S, O = Theme.WOOD_SIZE, Theme.WOOD_BAND
-		wood = {}
-		local function Piece(key)
-			local tex = frame:CreateTexture(nil, "BORDER", nil, 2)
-			tex:SetSize(S, S)
-			pcall(tex.SetAtlas, tex, Theme.WOOD[key])
-			wood[key] = tex
-			return tex
+	local chrome = frame.skinChrome
+	if want and not chrome then
+		chrome = {}
+		chrome.shadow = Theme.Slice(frame, "shadow", { layer = "BACKGROUND", sub = -8, out = K.shadowOut })
+		local ok, top = pcall(CreateFrame, "Frame", nil, frame)
+		top = ok and top or frame
+		if top ~= frame then
+			top:SetAllPoints(frame)
+			if top.SetFrameLevel and frame.GetFrameLevel then top:SetFrameLevel((tonumber(frame:GetFrameLevel()) or 1) + K.level) end
+			if top.EnableMouse then top:EnableMouse(false) end
 		end
-		Piece("tl"):SetPoint("TOPLEFT", frame, "TOPLEFT", -O, O)
-		Piece("tr"):SetPoint("TOPRIGHT", frame, "TOPRIGHT", O, O)
-		Piece("bl"):SetPoint("BOTTOMLEFT", frame, "BOTTOMLEFT", -O, -O)
-		Piece("br"):SetPoint("BOTTOMRIGHT", frame, "BOTTOMRIGHT", O, -O)
-		local top, bottom, left, right = Piece("top"), Piece("bottom"), Piece("left"), Piece("right")
-		top:SetPoint("TOPLEFT", wood.tl, "TOPRIGHT", 0, 0)
-		top:SetPoint("TOPRIGHT", wood.tr, "TOPLEFT", 0, 0)
-		bottom:SetPoint("BOTTOMLEFT", wood.bl, "BOTTOMRIGHT", 0, 0)
-		bottom:SetPoint("BOTTOMRIGHT", wood.br, "BOTTOMLEFT", 0, 0)
-		left:SetPoint("TOPLEFT", wood.tl, "BOTTOMLEFT", 0, 0)
-		left:SetPoint("BOTTOMLEFT", wood.bl, "TOPLEFT", 0, 0)
-		right:SetPoint("TOPRIGHT", wood.tr, "BOTTOMRIGHT", 0, 0)
-		right:SetPoint("BOTTOMRIGHT", wood.br, "TOPRIGHT", 0, 0)
-		if top.SetHorizTile then pcall(top.SetHorizTile, top, true); pcall(bottom.SetHorizTile, bottom, true) end
-		if left.SetVertTile then pcall(left.SetVertTile, left, true); pcall(right.SetVertTile, right, true) end
-		frame.skinWood = wood
+		chrome.top = top
+		chrome.frame = Theme.Slice(top, "frame", { layer = "BORDER", out = K.frameOut, fill = false })
+		if frame.chrome ~= "toast" then
+			chrome.vignette = frame:CreateTexture(nil, "BACKGROUND", nil, 2)
+			chrome.vignette:SetTexture(Theme.ART.vignette.file)
+			chrome.vignette:SetAllPoints(frame)
+			chrome.corners = {}
+			local o = K.cornerOut
+			for _, c in ipairs({ { "TOPLEFT", -o, o, 0, 1, 0, 1 }, { "TOPRIGHT", o, o, 1, 0, 0, 1 },
+				{ "BOTTOMLEFT", -o, -o, 0, 1, 1, 0 }, { "BOTTOMRIGHT", o, -o, 1, 0, 1, 0 } }) do
+				local tex = top:CreateTexture(nil, "ARTWORK")
+				tex:SetTexture(Theme.ART.corner.file)
+				tex:SetTexCoord(c[4], c[5], c[6], c[7])
+				tex:SetSize(K.corner, K.corner)
+				tex:SetPoint(c[1], frame, c[1], c[2], c[3])
+				chrome.corners[#chrome.corners + 1] = tex
+			end
+		end
+		frame.skinChrome = chrome
 	end
-	if wood then
-		for _, key in ipairs(Theme.WOOD_KEYS) do
-			if want then wood[key]:Show() else wood[key]:Hide() end
+	if chrome then
+		-- le médaillon : demandé après coup aussi (frame.wantsEmblem posé par le module)
+		if want and frame.wantsEmblem and not chrome.emblem and frame.chrome ~= "toast" then
+			local E = Theme.EMBLEM
+			chrome.emblem = chrome.top:CreateTexture(nil, "OVERLAY")
+			chrome.emblem:SetTexture(Theme.LOGO)
+			chrome.emblem:SetSize(E.size, E.size)
+			chrome.emblem:SetPoint("TOPLEFT", frame, "TOPLEFT", E.x, E.y)
 		end
-		-- la fenêtre reste à l'écran bois compris
-		if frame.SetClampRectInsets then
-			local o = want and Theme.WOOD_BAND or 0
-			pcall(frame.SetClampRectInsets, frame, -o, o, o, -o)
-		end
+		chrome.shadow:SetShown(want)
+		chrome.frame:SetShown(want)
+		if chrome.vignette then if want then chrome.vignette:Show() else chrome.vignette:Hide() end end
+		for _, tex in ipairs(chrome.corners or {}) do if want then tex:Show() else tex:Hide() end end
+		if chrome.emblem then if want and frame.wantsEmblem then chrome.emblem:Show() else chrome.emblem:Hide() end end
+	end
+	-- le filet d'un pixel de la fenêtre : remplacé par le cadre forgé
+	if frame.border and frame.border.SetColor then
+		frame.border:SetColor(Theme.EDGE[1], Theme.EDGE[2], Theme.EDGE[3], want and 0 or 1)
+	end
+	-- la fenêtre reste à l'écran, médaillon compris
+	if frame.SetClampRectInsets and (chrome or frame.skinDressed ~= nil) then
+		local E = Theme.EMBLEM
+		local emblem = want and frame.wantsEmblem and chrome and chrome.emblem
+		pcall(frame.SetClampRectInsets, frame, emblem and E.x or 0, 0, emblem and E.y or 0, 0)
 	end
 	frame.skinDressed = want and true or false
 	return frame.skinDressed

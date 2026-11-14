@@ -1007,9 +1007,10 @@ do
 	NS:RegisterAddonCompartment()
 	local r2q, qc = W.entries[1], W.entries[2]
 	if r2q and r2q.text ~= "Ready2Quest" then r2q, qc = qc, r2q end
-	Check("[CMP] une entrée par addon, une seule fois, à son nom, icône de la minicarte, non cochable", #W.entries == 2
+	-- (3.1.0 : la liste montre le médaillon ; le bouton de la mini-carte, le glyphe sans anneau)
+	Check("[CMP] une entrée par addon, une seule fois, à son nom, au médaillon du logo, non cochable", #W.entries == 2
 		and W.self == AddonCompartmentFrame and r2q.text == "Ready2Quest" and qc.text == "QuestCompanion"
-		and r2q.icon == NS.Theme.LOGO_SMALL and r2q.icon == NS:EnsureMinimapButton().icon.texture
+		and r2q.icon == NS.Theme.LOGO_SMALL and NS:EnsureMinimapButton().icon.texture == NS.Theme.LOGO_GLYPH
 		and r2q.notCheckable == true and qc.notCheckable == true, #W.entries)
 
 	local calls = {}
