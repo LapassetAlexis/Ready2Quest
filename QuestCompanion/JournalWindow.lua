@@ -713,6 +713,17 @@ function ns:NeedTooltipLines(key)
 	return lines, value >= happyMin
 end
 
+-- 3.1.0 (thème forgé) : une envie en trois paliers, comme l'ancien
+-- habillage : comblée (seuil du bonheur) en vert, basse (sous 30 %) en orange,
+-- entre les deux en or. Rend la couleur de la barre et celle du chiffre.
+ns.NEED_LOW = 30
+function ns.NeedTier(value)
+	value = tonumber(value) or 0
+	if value >= (ns.COMPANION_HAPPY_MIN or 70) then return Theme.GREEN, Theme.GREEN, "happy" end
+	if value < ns.NEED_LOW then return Theme.ORANGE_DEEP, Theme.ORANGE_DEEP, "low" end
+	return Theme.GOLD, Theme.LABEL, "mid"
+end
+
 function ns:ShowNeedTooltip(owner, key)
 	if type(GameTooltip) ~= "table" or not GameTooltip.SetOwner then return end
 	local lines, happy = self:NeedTooltipLines(key)
@@ -1972,6 +1983,8 @@ local function LayoutDay(pane, content)
 end
 
 -- Garde-manger dans le pied : un clic donne la friandise
+-- 3.1.0 : pastille du chiffre au thème forgé (encre, alpha, débord)
+ns.JOURNAL_PANTRY_FORGE = { padAlpha = 0.78, padX = 2, padY = 1 }
 local function BuildPantry(self, frame)
 	if not ns.TREAT_KINDS or not frame.footer then return end
 	local foot = frame.footer
@@ -1991,10 +2004,22 @@ local function BuildPantry(self, frame)
 		button.icon:SetTexture(ns.TREAT_ICONS[kind])
 		button.count = Theme.Text(button, Theme.F_NUMBER, Theme.PARCHMENT)
 		button.count:SetPoint("BOTTOMRIGHT", button, "BOTTOMRIGHT", -2, 2)
+		if frame.journalForged then
+			-- 3.1.0 (forgé) : le chiffre sur une pastille sombre, avec son ombre
+			-- (sur une icône claire il se perdait ; l'ancien habillage l'avait)
+			local K = ns.JOURNAL_PANTRY_FORGE
+			button.countPad = Theme.Solid(button, "ARTWORK", Theme.INK, K.padAlpha)
+			if button.countPad.SetDrawLayer then button.countPad:SetDrawLayer("ARTWORK", 7) end
+			button.countPad:SetPoint("TOPLEFT", button.count, "TOPLEFT", -K.padX, K.padY)
+			button.countPad:SetPoint("BOTTOMRIGHT", button.count, "BOTTOMRIGHT", K.padX, -K.padY)
+			Theme.TextShadow(button.count, 1)
+		end
 		button.kind = kind
 		button:SetScript("OnClick", function(b) if ns.TreatGive then ns:TreatGive(b.kind); ns:RefreshJournal() end end)
 		button:SetScript("OnEnter", function(b)
-			b.border:SetColor(Theme.GOLD[1], Theme.GOLD[2], Theme.GOLD[3], 1)
+			-- survol : la sélection au thème forgé (l'or dans QuestCompanion)
+			local hot = frame.journalForged and Theme.SELECT_LIGHT or Theme.GOLD
+			b.border:SetColor(hot[1], hot[2], hot[3], 1)
 			Tip(b, ns:TreatLabel(b.kind), { L["TREAT_DESC_" .. b.kind], ns:F("TREAT_COUNT", ns:TreatCount(b.kind), ns:TreatCap(b.kind)) }, "above")
 		end)
 		button:SetScript("OnLeave", function(b)
@@ -2060,6 +2085,29 @@ function ns.JournalCogSkin(button)
 	return chosen
 end
 
+-- 3.1.0 : au thème forgé, les points de hauts faits sous la marque, sur une
+-- plaque forgée (ardoise, losange d'or) : ce que montrait la case de la
+-- plaque de titre de l'ancien habillage. Le bas de la colonne ne garde que
+-- « module coupé ». Rend la hauteur prise (la navigation descend d'autant).
+ns.JOURNAL_FEAT_PLATE = { x = 18, y = -78, h = 24, shift = 24, diamond = 10, tint = "neutral" }
+local function BuildFeatPlate(frame, nav)
+	local K = ns.JOURNAL_FEAT_PLATE
+	local plate = CreateFrame("Frame", nil, nav)
+	plate:SetSize(NAV_W - 2 * K.x, K.h)
+	plate:SetPoint("TOPLEFT", nav, "TOPLEFT", K.x, K.y)
+	plate.slice = Theme.ForgeSlice(plate, "plate", Theme.FORGE_PLATE[K.tint], { height = K.h, sub = 0 })
+	plate.diamond = Theme.CreateDiamond(plate, K.diamond, false)
+	plate.diamond:SetPoint("LEFT", plate, "LEFT", 10, 0)
+	plate.diamond:SetVertexColor(Theme.GOLD[1], Theme.GOLD[2], Theme.GOLD[3], 1)
+	plate.text = Text(plate, Theme.F_LABEL, Theme.GOLD_LIGHT, NAV_W - 2 * K.x - 32)
+	plate.text:SetPoint("LEFT", plate, "LEFT", 10 + K.diamond + 8, 0)
+	plate.text:SetJustifyH("LEFT")
+	if plate.text.SetWordWrap then plate.text:SetWordWrap(false) end
+	Theme.TextShadow(plate.text, 0.8)
+	frame.featPlate = plate
+	return K.shift
+end
+
 function ns:EnsureJournalWindow()
 	if self.journalFrame then return self.journalFrame end
 	if not Theme or not Theme.CreateWindow then return nil end
@@ -2067,9 +2115,13 @@ function ns:EnsureJournalWindow()
 	-- 3.1.0 : un par clé (ancien habillage, forgé, Sobre : ns:JournalStyleKey)
 	local key = (self.JournalStyleKey and self:JournalStyleKey()) or "sobre"
 	local name = ns.StyleName and ns.StyleName("QuestCompanionJournalFrame", key) or "QuestCompanionJournalFrame"
-	local frame = Theme.CreateWindow(UIParent, WIDTH, HEIGHT, { name = name, nav = NAV_W, footer = FOOTER_H })
+	-- 3.1.0 : au thème forgé, décidé à la création (le carnet est gardé par
+	-- clé) : médaillon du logo, points sous la marque sur une plaque forgée
+	local forged = ns.QCForged() or nil
+	local frame = Theme.CreateWindow(UIParent, WIDTH, HEIGHT, { name = name, nav = NAV_W, footer = FOOTER_H, emblem = forged })
 	if not frame then return nil end
 	frame.chrome = "journal"
+	frame.journalForged = forged
 	if self.RestorePoint then self:RestorePoint(frame, "journalPoint", { point = "CENTER", x = 0, y = 20 }) end
 	frame.kind, frame.activity, frame.offset = "evolution", "explore", 0
 	frame.zoneFilter, frame.zoneSort, frame.zoneOffset = "all", "lvl", 0
@@ -2078,14 +2130,15 @@ function ns:EnsureJournalWindow()
 	local content, nav = frame.content, frame.nav
 
 	-- navigation : marque, une entrée par page, le total du carnet en bas
-	frame.brand = Theme.CreateNavBrand(nav, Theme.LOGO, L.JRN_TITLE)
+	frame.brand = Theme.CreateNavBrand(nav, Theme.LOGO, L.JRN_TITLE, forged)
 	frame.brand:SetPoint("TOPLEFT", nav, "TOPLEFT", 0, -8)
 	frame.brand:SetWidth(NAV_W)
 	frame.title = frame.brand.name
+	local shift = forged and BuildFeatPlate(frame, nav) or 0
 	frame.navGroup = Theme.CreateNavGroup(nav, L.JRN_NAV_GROUP)
-	frame.navGroup:SetPoint("TOPLEFT", nav, "TOPLEFT", 18, -92)
+	frame.navGroup:SetPoint("TOPLEFT", nav, "TOPLEFT", 18, -92 - shift)
 	frame.sections = {}
-	local y = -112
+	local y = -112 - shift
 	for _, section in ipairs(SECTIONS) do
 		local external = ns.JOURNAL_PANES[section]
 		local builtin = section == "evolution" or (section == "day" and self.DailyData) or (section == "menagerie" and self.MenagerieList)
@@ -2128,7 +2181,9 @@ function ns:EnsureJournalWindow()
 	if Theme.CreateGearButton and frame.close then
 		frame.settingsButton = Theme.CreateGearButton(frame, 22, function() ns:ToggleOptions() end, L.JRN_SETTINGS_TIP)
 		frame.settingsButton:SetPoint("RIGHT", frame.close, "LEFT", -8, 0)
-		ns.JournalCogSkin(frame.settingsButton)
+		-- 3.1.0 : au thème forgé, la roue du socle (petite plaque, comme les
+		-- réglages) ; la roue grise du journal de quêtes reste au Sobre
+		if not forged then ns.JournalCogSkin(frame.settingsButton) end
 		frame.settingsButton:Show()
 		if frame.settingsButton.SetFrameLevel and frame.close.GetFrameLevel then
 			frame.settingsButton:SetFrameLevel(tonumber(frame.close:GetFrameLevel()) or 20)
@@ -2349,9 +2404,10 @@ local function RefreshEvolution(self, frame)
 		row.label:SetText(L["COMP_NEED_" .. row.key] or row.key)
 		row.bar:SetValue(value / 100)
 		local c = value >= happyMin and Theme.GOLD or Theme.MUTED
+		local vc = value >= happyMin and Theme.GOLD or Theme.LABEL
+		if frame.journalForged then c, vc = ns.NeedTier(value) end
 		row.bar:SetColor(c[1], c[2], c[3], 1)
 		row.value:SetText(value .. " %")
-		local vc = value >= happyMin and Theme.GOLD or Theme.LABEL
 		row.value:SetTextColor(vc[1], vc[2], vc[3])
 	end
 
@@ -3027,6 +3083,7 @@ function ns:JournalNavSummaryRefresh(frame)
 			local value = tonumber(data.needs and data.needs[row.key]) or 0
 			row.bar:SetValue(math.max(0, math.min(1, value / 100)))
 			local c = value >= happy and Theme.GOLD or Theme.MUTED_LIGHT
+			if frame.journalForged then c = ns.NeedTier(value) end
 			row.bar:SetColor(c[1], c[2], c[3], 1)
 			row.value = value
 		end
@@ -3085,8 +3142,15 @@ function ns:RefreshJournal()
 		local total
 		if self.FeatPoints then total = self:F("JRN_TOTAL_FEATS", (self:FeatPoints()))
 		else total = self:F("JRN_TOTAL", self:JournalCounts().total) end
-		frame.subtitle:SetText(total
-			.. (ModuleOn() and "" or ("|n" .. Theme.T_GREY .. L.MODULE_OFF .. "|r")))
+		if frame.featPlate then
+			-- 3.1.0 (forgé) : les points sur la plaque, la colonne ne dit plus
+			-- que « module coupé »
+			frame.featPlate.text:SetText(total)
+			frame.subtitle:SetText(ModuleOn() and "" or (Theme.T_GREY .. L.MODULE_OFF .. "|r"))
+		else
+			frame.subtitle:SetText(total
+				.. (ModuleOn() and "" or ("|n" .. Theme.T_GREY .. L.MODULE_OFF .. "|r")))
+		end
 	end
 	for key, field in pairs(PANES) do
 		local pane = frame[field]

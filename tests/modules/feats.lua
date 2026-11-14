@@ -441,7 +441,7 @@ do
 			f and f:IsShown() and f.kind == "feats" and pane and pane:IsShown() and f.header.title.text == NS.L.JRN_SEC_feats
 			and f.sections.feats and f.sections.menagerie
 			and select(5, f.sections.feats:GetPoint(1)) < select(5, f.sections.menagerie:GetPoint(1))
-			and f.subtitle.text:find("15 points de hauts faits", 1, true)
+			and ((f.featPlate and f.featPlate.text.text) or f.subtitle.text):find("15 points de hauts faits", 1, true)
 			and pane.totals.text == "Compte : 5 points · Personnage : 10 points"
 			and pane.count.text:find("3 / " .. #NS:FeatDefs(), 1, true), pane and pane.totals.text)
 		local rows, firstGot = pane.list, nil

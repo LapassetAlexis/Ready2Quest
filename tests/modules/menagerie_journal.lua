@@ -1226,8 +1226,22 @@ do
 
 	-- 4.3 La roue crantée du carnet : la roue grise du journal de quêtes du client
 	do
-		Say("-- exploration 2.9.1 : roue crantée grise")
+		Say("-- exploration 2.9.1 : roue crantée grise (Sobre ; 3.1.0 : la roue du socle au thème forgé)")
+		-- 3.1.0 : au thème forgé, la roue du socle sur sa petite plaque
 		R.Reset()
+		NS:ApplyUIStyle()
+		local forgedCarnet = NS:ToggleJournal(true)
+		local gear = forgedCarnet and forgedCarnet.settingsButton
+		Check("[R291] thème forgé : roue du socle sur sa petite plaque, pas la roue grise du journal de quêtes",
+			NS.QCForged() and forgedCarnet.journalForged and gear and gear.cogTexture == nil and gear.plate ~= nil and gear.forgeLook ~= nil,
+			gear and tostring(gear.cogTexture))
+		forgedCarnet:Hide()
+		local function SobreReset(atlas)
+			R.Reset(atlas)
+			NS:DB().companionStyle = "sobre"
+			NS:ApplyUIStyle()
+		end
+		SobreReset()
 		local f = NS:ToggleJournal(true)
 		local button = f.settingsButton
 		local cog = NS.JOURNAL_COG
@@ -1242,11 +1256,11 @@ do
 		Check("[R291] roue : plus claire au survol, revient au repos", hot and Same(button.icon.vertex, cog.rest) and button.cogHot == false)
 		f:Hide()
 		-- atlas absent : le second, puis le fichier
-		R.Reset({ ["questlog-icon-setting"] = true })
+		SobreReset({ ["questlog-icon-setting"] = true })
 		f = NS:ToggleJournal(true)
 		local second = f.settingsButton.icon.atlas == "gm-icon-settings" and f.settingsButton.cogTexture == "gm-icon-settings"
 		f:Hide()
-		R.Reset(false)
+		SobreReset(false)
 		f = NS:ToggleJournal(true)
 		local okErr, errs = NoErrors()
 		Check("[R291] roue : repli sur « gm-icon-settings », puis sur le fichier UI-OptionsButton, sans erreur", second

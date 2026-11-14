@@ -352,6 +352,11 @@ do
 	-- 1.9 Fenêtre, commandes -----------------------------------------------------------
 	do
 		Say("-- carnet : fenêtre et commandes")
+		-- 3.1.0 : au thème forgé, les points sont sur la plaque sous la marque
+		local function PointsText(frame)
+			if frame and frame.featPlate then return frame.featPlate.text.text or "" end
+			return frame and frame.subtitle.text or ""
+		end
 		J.Reset(20)
 		J.Enter(); J.Sub("Goldshire")
 		J.W.zone = "Stormwind City"; J.Map(1453)
@@ -359,12 +364,12 @@ do
 		local f = NS.journalFrame
 		Check("[JRN] /r2q carnet : ouvert sur le Compagnon, titre, sections, points de hauts faits (2.7.0)", f and f:IsShown()
 			and f.title.text == "Carnet de voyage" and f.sections.progress and f.sections.evolution and f.kind == "evolution"
-			and f.subtitle.text:find("0 points de hauts faits", 1, true), f and f.subtitle.text)
+			and PointsText(f):find("0 points de hauts faits", 1, true), f and PointsText(f))
 		f.sections.evolution:Click()
-		local before = f.subtitle.text
+		local before = PointsText(f)
 		NS:FeatAward("char_level_10", { silent = true })
-		Check("[JRN] fenêtre ouverte : rafraîchie au gain d'un haut fait", f.subtitle.text ~= before
-			and f.subtitle.text:find("5 points", 1, true), f.subtitle.text)
+		Check("[JRN] fenêtre ouverte : rafraîchie au gain d'un haut fait", PointsText(f) ~= before
+			and PointsText(f):find("5 points", 1, true), PointsText(f))
 		NS:HandleCommand("journal")
 		local closed = not f:IsShown()
 		NS:HandleCommand("carnet")
