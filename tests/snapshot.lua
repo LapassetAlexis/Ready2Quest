@@ -1742,7 +1742,12 @@ Snap.scenes["qc-capture-shiny"] = function(T)
 	local rolling = ns:CaptureState().rolling
 	rolling.done, rolling.result, rolling.resultAt, rolling.stars = rolling.shakes, "ok", rolling.start + 3, 3
 	ns:CaptureStageUpdate(rolling.resultAt + 0.9)
-	return Centered(ns.captureStage), "QuestCompanion : capture animée, une brillante capturée (verdict dans la scène)"
+	-- le bouton Partager, dans le coin (Share.lua, comme au verdict d'un lancer)
+	local stage = Centered(ns.captureStage)
+	if ns.ShareStageVerdict then
+		ns:ShareStageVerdict(rolling, { name = "Ours gris", shiny = true, stars = 3, npcID = 3100, level = 21, class = "rare" })
+	end
+	return stage, "QuestCompanion : capture animée, une brillante capturée (verdict dans la scène, Partager au coin)"
 end
 -- la carte de préparation : 3 étoiles (l'aide conseillée luit), Appât choisi
 Snap.scenes["qc-capture-prep"] = function(T)

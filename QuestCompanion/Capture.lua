@@ -1004,6 +1004,13 @@ function ns:EnsureCapturePrompt()
 	frame.title = Theme.Text(frame, Theme.F_SMALL, Theme.GOLD)
 	frame.title:SetPoint("TOPLEFT", frame, "TOPLEFT", left, -pad)
 	frame.title:SetText(L.CAPTURE_TITLE)
+	-- 3.1.0 : thème forgé, le titre à l'encre de l'identité (le reste est
+	-- déjà fait des briques du socle : plaques des aides, Lancer doré)
+	if ns.QCForged and ns.QCForged() then
+		local c = Theme.IDENTITY_LIGHT
+		frame.title:SetTextColor(c[1], c[2], c[3], 1)
+		frame.forged = true
+	end
 	frame.name = Theme.Text(frame, Theme.F_BODY, Theme.PARCHMENT)
 	frame.name:SetPoint("TOPLEFT", frame.title, "BOTTOMLEFT", 0, -3)
 	frame.name:SetWidth(PROMPT_W - left - pad)

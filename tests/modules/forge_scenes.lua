@@ -512,6 +512,36 @@ do
 end
 
 -- ---------------------------------------------------------------------------
+-- 7 bis. La petite fenêtre « Capturer ? » (capture animée coupée) : déjà des
+-- briques du socle ; au thème forgé, le titre à l'encre de l'identité
+-- ---------------------------------------------------------------------------
+do
+	Say("-- scènes forgées : la petite fenêtre « Capturer ? »")
+	local s = Steps()
+	local function Prompt(style)
+		FS.Reset(style)
+		NS:DB().companionCaptureAnim = false
+		FS.SeeKill(8800, { name = "Sanglier" })
+		local candidate = NS:CaptureQueueState()[1]
+		NS:CaptureState().pending = candidate
+		candidate.expires = NS.Now() + 20
+		local frame = NS:CaptureShowPrompt()
+		frame:Hide()
+		return frame
+	end
+	local forged = Prompt("azeroth")
+	s.ok("forgé : titre de l'identité, Lancer en plaque d'or, aides en petites plaques, habillé par le socle",
+		forged and forged.forged and Same(forged.title.textColor, Theme.IDENTITY_LIGHT) and forged.throw.forge
+		and forged.throw.forge.plate == "gold" and forged.aids[1].forgeLook ~= nil and forged.skinChrome ~= nil)
+	NS.capturePrompt = nil
+	local sobre = Prompt("sobre")
+	s.ok("Sobre : le titre ambre d'avant, sans plaque", sobre and sobre ~= forged and not sobre.forged
+		and Same(sobre.title.textColor, Theme.GOLD) and sobre.throw.forge == nil and sobre.aids[1].forgeLook == nil)
+	NS.capturePrompt = nil
+	s.check("[FSC] « Capturer ? » : briques du socle, titre de l'identité au thème forgé, Sobre inchangé")
+end
+
+-- ---------------------------------------------------------------------------
 -- 8. Contrastes : chaque nouveau texte sur son vrai fond (WCAG)
 -- ---------------------------------------------------------------------------
 do
@@ -544,6 +574,7 @@ do
 		{ "choix : la légende (identité)", inks.caption, window, 4.5 },
 		{ "choix : temps en pause, lignes de dessous, raccourcis", inks.sub, window, 4.5 },
 		{ "choix : « brillante » en or", Theme.GOLD_LIGHT, window, 4.5 },
+		{ "« Capturer ? » : le titre (identité)", Theme.IDENTITY_LIGHT, window, 4.5 },
 	}
 	for class, rarity in pairs(NS.CAPTURE_RARITY) do
 		pairs_[#pairs_ + 1] = { "plaque : nom de rang " .. class, rarity.text, head, 4.5 }
