@@ -245,6 +245,8 @@ end
 -- ---------------------------------------------------------------------------
 do
 	Say("-- thème forgé (QuestCompanion) : confirmations sur parchemin")
+	-- 3.1.0 : le parchemin est l'ancien habillage, derrière le drapeau
+	T.Legacy(true)
 	Fresh(true)
 	local s = Steps()
 	local frame = NS:EnsureEffectsConfirm()
@@ -261,6 +263,7 @@ do
 	if frame.hooks and frame.hooks.OnShow then frame.hooks.OnShow(frame) end
 	s.ok("réaffichée : toujours sans habillage forgé", frame.skinDressed == false)
 	s.check("[FORGE-QC] confirmations sur parchemin : le bois seul, titre lisible à sa marge")
+	T.Legacy(false)
 end
 
 -- remise en état

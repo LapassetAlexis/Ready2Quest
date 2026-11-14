@@ -11,7 +11,7 @@ do
 	Say("-- thèmes : jetons et polices")
 	ResetWorld()
 	Check("[SKIN] thème par défaut : Azeroth, pour les deux addons", Theme.SKIN_DEFAULT == "azeroth"
-		and NS:UISkinChoice() == "azeroth" and QNS:UIStyleChoice() == "azeroth" and QNS:UISkinChoice() == QNS:UIStyle())
+		and NS:UISkinChoice() == "azeroth" and QNS:UIStyleChoice() == "azeroth" and QNS:UISkinChoice() == QNS:UIStyleChoice())
 	Theme.ApplySkin("sobre")
 	local edge, nav, title, active = Theme.EDGE, Theme.NAV, Theme.TITLE, Theme.ACTIVE
 	local sobre = { { edge[1], edge[2], edge[3] }, { nav[1], nav[2], nav[3] } }

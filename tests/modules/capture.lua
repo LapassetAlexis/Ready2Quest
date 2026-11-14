@@ -56,6 +56,12 @@ function C.Quiet()
 	NS.companionBubbleText = nil
 	if NS.companionRT then NS.companionRT.cool = {} end
 end
+-- 3.1.0 : le harnais tourne au thème forgé (le choix par défaut) ; ces
+-- sous-cas épinglent le filet et le bandeau du thème Sobre, inchangés
+function C.Sobre()
+	NS:DB().companionStyle = "sobre"
+	NS:ApplyUIStyle()
+end
 -- anim : la scène animée (sinon la petite fenêtre)
 function C.Reset(anim)
 	ResetWorld()
@@ -233,6 +239,7 @@ end
 do
 	Say("-- capture : tri de la file")
 	C.Reset()
+	C.Sobre()
 	local creatures = NS:CaptureData().creatures
 	creatures[4300] = { name = "Trois", class = "normal", normal = true, at = 1, stars = 3 }
 	creatures[4301] = { name = "Une", class = "normal", normal = true, at = 1, stars = 1 }
@@ -542,6 +549,7 @@ end
 do
 	Say("-- capture : le filet à l'écran")
 	C.Reset()
+	C.Sobre()
 	NS:DB().companionSize = 2
 	NS:CompanionApplySize()
 	C.SeeKill(4300, { name = "Loup seul" })
@@ -590,6 +598,7 @@ end
 do
 	Say("-- capture : bandeau")
 	C.Reset()
+	C.Sobre()
 	C.SeeKill(4400, { name = "Raptor" })
 	local toast, net = NS.captureToast, NS.captureNetButton
 	Check("[CAP] bandeau montré : titre, nom, aide ; « Jamais capturée · 50 % de chance » en doré", toast and toast:IsShown()

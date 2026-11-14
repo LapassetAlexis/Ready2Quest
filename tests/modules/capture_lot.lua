@@ -458,7 +458,7 @@ do
 	Check("[LOT] après Arrêter : plus rien ne bouge, le bouton « Fermer » ferme", frozen and closeLabel and not frame:IsShown())
 	-- Échap : la scène est inscrite sous son nom ; cachée, tout se termine
 	local registered = false
-	for _, name in ipairs(UISpecialFrames) do if name == "QuestCompanionCaptureBatch" then registered = true end end
+	for _, name in ipairs(UISpecialFrames) do if name == "QuestCompanionCaptureBatchForge" then registered = true end end
 	LOT.SeeKill(6610, { name = "Chacal A" })
 	LOT.SeeKill(6611, { name = "Chacal B" })
 	printed, restore = LOT.Collect()
@@ -468,7 +468,7 @@ do
 	frame:GetScript("OnHide")(frame)
 	restore()
 	Check("[LOT] Échap (inscrite sous son nom) : fermé, lot terminé sans bruit, messages livrés", registered
-		and frame:GetName() == "QuestCompanionCaptureBatch" and not frame:IsShown() and batch.done
+		and frame:GetName() == "QuestCompanionCaptureBatchForge" and not frame:IsShown() and batch.done
 		and batch.resolved == 2 and Count(LOT.sounds, NS.CAPTURE_SOUNDS.ok) == 0
 		and printed[#printed] == NS:F("CAPTURE_BATCH_SUMMARY", 2, 2), printed[#printed])
 	-- le × aussi
@@ -583,9 +583,9 @@ do
 		chooser.single:GetText() == NS:F("CAPTURE_CHOOSE_ONE", "Raptor élite") and chooser.all:GetText() == NS:F("CAPTURE_CHOOSE_ALL", 2),
 		chooser.single:GetText() .. " / " .. chooser.all:GetText())
 	local registered = false
-	for _, name in ipairs(UISpecialFrames) do if name == "QuestCompanionCaptureChooser" then registered = true end end
+	for _, name in ipairs(UISpecialFrames) do if name == "QuestCompanionCaptureChooserForge" then registered = true end end
 	Check("[LOT] choix : panneau nommé, Échap le referme (UISpecialFrames), les boutons tiennent dedans sans se chevaucher",
-		chooser:GetName() == "QuestCompanionCaptureChooser" and registered
+		chooser:GetName() == "QuestCompanionCaptureChooserForge" and registered
 		and chooser.single:GetWidth() + (chooser.contentLeft or 14) + 10 <= chooser:GetWidth() + 1e-6
 		and chooser.all.lastPoint.y < chooser.single.lastPoint.y - chooser.single:GetHeight())
 	-- un second clic sur le filet le referme

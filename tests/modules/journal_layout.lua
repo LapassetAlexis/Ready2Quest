@@ -51,6 +51,9 @@ function CZ.Reset(style, refused)
 	if style == "sobre" then Mock.InstallAtlas(nil) else Mock.InstallAtlas(true) end
 	NS:AzerothAtlasOK(true)
 	NS:DB().companionStyle = style == "sobre" and "sobre" or "azeroth"
+	-- 3.1.0 : le thème du socle suit le choix (il ne retombe plus en Sobre
+	-- faute d'atlas au chargement) : posé ici, comme au chargement
+	NS.Theme.ApplySkin(NS:UISkinChoice())
 	NS:DB().journalState = nil
 	NS:CompanionData().tutoDone = true
 end

@@ -434,7 +434,7 @@ do
 	chooser.single:Click()
 	local stage = NS.captureStage
 	local sobreStage = stage and stage:IsShown() and not stage.azeroth and stage.topBar and stage.ribbonPanel
-		and Has(_G.UISpecialFrames, "QuestCompanionCaptureStage")
+		and Has(_G.UISpecialFrames, NS.StyleName("QuestCompanionCaptureStage", NS:StyleKey(false)))
 	SZ.UntilVerdict()
 	local pending = NS.captureResultPending ~= nil
 	stage.scripts.OnMouseUp(stage)

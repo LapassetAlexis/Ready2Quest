@@ -184,6 +184,10 @@ end
 do
 	Say("-- suivi du carnet : cadre")
 	K.Reset(27)
+	-- 3.1.0 : le harnais tourne au thème forgé (choix par défaut) ; ce cadre
+	-- épingle le suivi du thème Sobre, inchangé (le forgé : ui_forge_qc.lua)
+	NS:DB().companionStyle = "sobre"
+	NS:ApplyUIStyle()
 	K.Stamp("subzone", 380); K.Stamp("capital", 1637)
 	Mock:Fire("PLAYER_ENTERING_WORLD", true, false)
 	local tracker = NS.journalTracker

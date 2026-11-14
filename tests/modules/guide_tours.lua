@@ -330,7 +330,7 @@ do
 		-- (dans le mock, GetName() rend le champ `name`, où la scène range la
 		-- FontString du nom de la créature : on lit l'inscription elle-même)
 		Check("[GUIDE] clic sur une ligne : le filet part, la liste se ferme, la scène inscrite pour Échap", not list:IsShown()
-			and NS:CaptureState().rolling ~= nil and stage and Registered("QuestCompanionCaptureStage") and stage:IsShown(),
+			and NS:CaptureState().rolling ~= nil and stage and Registered(NS.StyleName("QuestCompanionCaptureStage", NS:StyleKey(false))) and stage:IsShown(),
 			table.concat(UISpecialFrames, ","))
 		-- Échap avant le verdict : la scène se cache, la capture se résout quand même
 		Mock:Reset()
