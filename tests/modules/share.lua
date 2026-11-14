@@ -494,13 +494,41 @@ do
 		NS[field] = nil
 	end
 	NS.uiStyleCache = {}
-	-- Sobre : à droite, les textes s'écartent
+	-- 3.1.0 : sans les atlas, le thème forgé : bandeau à médaillon, petite
+	-- plaque forgée en bas à droite, « Partager » écrit, les textes s'écartent
 	SH.Reset({ guild = true })
 	NS:JournalToastPush(SH.Feat("Premier filet"))
+	local fj = NS.journalToast
+	local fb = fj and fj.shareButton
+	s.ok("forgé : bandeau à médaillon, plaque forgée en bas à droite", fj and fj.forgeBanner and not fj.azeroth and Shown(fb)
+		and fb.forge and fb.plate and fb.plate.parts and fb.lastPoint.point == "BOTTOMRIGHT")
+	s.ok("forgé : « Partager » écrit, bouton élargi", fb and fb.labelled and fb.label:GetText() == NS.L.SHARE_LABEL
+		and fb.width > NS.SHARE_BUTTON.size)
+	s.ok("forgé : le nom s'écarte du bouton", fj and fj.text:GetWidth() < fj.shareWidths.text)
+	fb:Click("LeftButton")
+	s.ok("forgé : menu habillé par le socle, titre en couleur d'identité", NS.shareMenu.skinDressed == true
+		and NS.shareMenu.azeroth == false and NS.shareMenu.title.textColor[3] == Theme.IDENTITY_LIGHT[3])
+	NS.shareMenu:Hide()
+	-- Sobre (choix du joueur) : à droite, avant les points, les textes s'écartent
+	SH.Reset({ guild = true })
+	if NS.journalToast then NS.journalToast:Hide() end
+	NS.journalToast, NS.uiStyleCache = nil, {}
+	NS:DB().companionStyle = "sobre"
+	NS:ApplyUIStyle()
+	NS:JournalToastPush(SH.Feat("Premier filet"))
 	local sj = NS.journalToast
-	s.ok("Sobre : bouton à droite, avant les points", sj and not sj.azeroth and Shown(sj.shareButton)
+	s.ok("Sobre : bouton à droite, avant les points", sj and not sj.azeroth and not sj.forgeBanner and Shown(sj.shareButton)
+		and not sj.shareButton.forge and not sj.shareButton.labelled
 		and sj.shareButton.lastPoint.point == "RIGHT" and sj.shareButton.lastPoint.x == -NS.SHARE_BUTTON.featGap)
-	s.ok("Sobre : le nom s'écarte du bouton", sj.text:GetWidth() < sj.shareWidths.text)
+	s.ok("Sobre : le nom s'écarte du bouton", sj and sj.text:GetWidth() < sj.shareWidths.text)
+	sj.shareButton:Click("LeftButton")
+	s.ok("Sobre : menu sans habillage forgé, titre MUTED_LIGHT", NS.shareMenu.skinDressed == false
+		and NS.shareMenu.title.textColor[1] == Theme.MUTED_LIGHT[1])
+	NS.shareMenu:Hide()
+	if NS.journalToast then NS.journalToast:Hide() end
+	NS.journalToast, NS.uiStyleCache = nil, {}
+	NS:DB().companionStyle = nil
+	NS:ApplyUIStyle()
 	SH.Reset()
 	SH.Restore()
 	s.check("[SHARE] deux styles : bouton placé (Azeroth sous le bouclier, Sobre à droite), scène Azeroth, menu habillé, contrastes mesurés")

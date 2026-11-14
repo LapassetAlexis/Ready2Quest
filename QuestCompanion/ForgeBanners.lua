@@ -1,0 +1,452 @@
+-- ForgeBanners.lua -- l'habillage forgé des bandeaux (3.1.0)
+--
+-- L'ancien habillage donnait aux bandeaux (« Capturé ! », haut fait, guilde,
+-- capture possible) un médaillon, une apparition et un nom d'or pour une
+-- brillante, en art du client. Le thème forgé les re-loge ici, en matières
+-- du socle seulement (Theme.ART, Theme.Slice, Theme.ForgeSlice) :
+--   * un MÉDAILLON rond à gauche, à cheval sur le bord du bandeau (comme la
+--     maquette) : l'anneau d'or du logo, et dedans le portrait de la
+--     créature, l'icône (dans un creux) ou le logo nu ; une petite plaque
+--     d'or sous l'anneau porte les points ou le niveau (le chiffre ne
+--     chevauche plus jamais le texte, dont la largeur est réservée) ;
+--   * l'apparition : éclosion (Scale) et éclat derrière le médaillon
+--     (ART.dot), puis un trait lumineux (ART.line) qui traverse le bandeau,
+--     le tout en AnimationGroup (aucun OnUpdate) ;
+--   * une brillante : son nom dans sa couleur (Theme.SHINY) et un halo au
+--     repos derrière le médaillon.
+-- Tout est décidé à la construction du bandeau (ns.QCForged()) : un bandeau
+-- né dans le Sobre n'en reçoit rien, et reste identique au pixel près.
+-- Couleurs par rôle : petit titre et trait = identité (bleu arcane dans QC),
+-- anneau et plaque des points = or (cadre et médaillon dorés), nom d'une
+-- brillante = Theme.SHINY.
+local ADDON, ns = ...
+if ns.blocked then return end
+
+local Theme = ns.Theme
+
+-- Géométrie (px). medal : diamètre de l'anneau ; out : débord hors du bord
+-- gauche ; gap : du médaillon au texte ; content : diamètre du portrait rond
+-- dans l'anneau ; icon / well : icône carrée et marge de son creux ; badge :
+-- plaque des points (hauteur, marge du chiffre, recouvrement de l'anneau) ;
+-- bloom : éclat (× médaillon) ; halo : alpha du halo d'une brillante au
+-- repos ; shine : trait qui traverse (largeur, hauteur, durée, attente) ;
+-- hatch : éclosion (échelle de départ, durée).
+ns.FORGE_BANNER = {
+	medal = 64, out = 14, gap = 8, pad = 12, right = 12,
+	content = 46, icon = 30, well = 3,
+	badge = { h = 16, pad = 6, over = 7 },
+	bloom = 2.3, bloomAlpha = 0.85, halo = 0.35,
+	shine = { w = 120, h = 6, time = 1.1, delay = 0.3, alpha = 0.9 },
+	hatch = { from = 0.9, time = 0.22 },
+	lineGap = 2,
+}
+local K = ns.FORGE_BANNER
+
+local function Level(frame)
+	return (frame and frame.GetFrameLevel and tonumber(frame:GetFrameLevel())) or 1
+end
+
+-- Le bord gauche du texte, depuis le bord gauche du bandeau
+function ns.ForgeBannerTextLeft(frame)
+	local size = (frame and frame.forgeMedalSize) or K.medal
+	return -K.out + size + K.gap
+end
+
+-- Une animation d'alpha (0 -> to -> 0) sur une région au repos à `rest`
+local function Flash(region, to, inTime, outTime, delay)
+	if not (region and region.CreateAnimationGroup) then return nil end
+	local ok, group = pcall(region.CreateAnimationGroup, region)
+	if not ok or not group or not group.CreateAnimation then return nil end
+	local up = group:CreateAnimation("Alpha")
+	if not (up and up.SetFromAlpha) then return nil end
+	up:SetFromAlpha(0); up:SetToAlpha(to); up:SetDuration(inTime)
+	if up.SetStartDelay and delay then up:SetStartDelay(delay) end
+	local down = group:CreateAnimation("Alpha")
+	if down and down.SetFromAlpha then
+		down:SetFromAlpha(to); down:SetToAlpha(0); down:SetDuration(outTime)
+		if down.SetStartDelay then down:SetStartDelay((delay or 0) + inTime) end
+		if down.SetSmoothing then down:SetSmoothing("OUT") end
+	end
+	group.up, group.down = up, down
+	return group
+end
+
+-- L'habillage forgé d'un bandeau (Theme.CreateToast) : médaillon, éclat,
+-- trait, éclosion. Seulement sous le thème forgé ; rend le bord gauche du
+-- texte (ou nil, rien posé). opts.medal : diamètre de l'anneau.
+function ns:ForgeBannerDress(frame, opts)
+	if not (frame and ns.QCForged and ns.QCForged()) then return nil end
+	if frame.forgeBanner then return ns.ForgeBannerTextLeft(frame) end
+	opts = opts or {}
+	local size = tonumber(opts.medal) or K.medal
+	frame.forgeBanner, frame.forgeMedalSize = true, size
+	-- la barre d'accent du toast passerait sous le médaillon : cachée, sa
+	-- couleur reste lue (frame.accentColor) pour l'éclat
+	if frame.accent then frame.accent:Hide() end
+	function frame:SetAccent(color)
+		if color ~= false then self.accentColor = color end
+		if self.accent then self.accent:Hide() end
+	end
+	-- le médaillon : un cadre au-dessus de l'habillage du socle (cadre d'or
+	-- du toast au niveau +30), sans souris (le clic passe au bandeau)
+	local medal = CreateFrame("Frame", nil, frame)
+	medal:SetSize(size, size)
+	medal:SetPoint("LEFT", frame, "LEFT", -K.out, 0)
+	if medal.SetFrameLevel then medal:SetFrameLevel(Level(frame) + 34) end
+	if medal.EnableMouse then medal:EnableMouse(false) end
+	frame.medal = medal
+	-- l'éclat derrière le médaillon (au repos : éteint, ou halo d'une brillante)
+	medal.bloom = medal:CreateTexture(nil, "BACKGROUND", nil, -2)
+	medal.bloom:SetTexture(Theme.ART.dot.file)
+	medal.bloom:SetSize(math.floor(size * K.bloom), math.floor(size * K.bloom))
+	medal.bloom:SetPoint("CENTER", medal, "CENTER", 0, 0)
+	if medal.bloom.SetBlendMode then medal.bloom:SetBlendMode("ADD") end
+	medal.bloom:SetAlpha(0)
+	medal.bloomFlash = Flash(medal.bloom, K.bloomAlpha, 0.3, 0.9, 0.05)
+	-- l'anneau d'or (le médaillon du logo : disque sombre, anneau, glyphe ;
+	-- le contenu recouvre le glyphe quand il y en a un)
+	medal.ring = medal:CreateTexture(nil, "ARTWORK", nil, 0)
+	medal.ring:SetTexture(Theme.LOGO)
+	medal.ring:SetAllPoints(medal)
+	-- le creux d'une icône carrée (caché pour un portrait rond ou le logo nu)
+	local wellSize = K.icon + 2 * K.well
+	medal.wellHost = CreateFrame("Frame", nil, medal)
+	medal.wellHost:SetSize(wellSize, wellSize)
+	medal.wellHost:SetPoint("CENTER", medal, "CENTER", 0, 0)
+	medal.well = Theme.ForgeSlice(medal, "inset", Theme.EDGE, { layer = "ARTWORK", sub = 1,
+		margin = Theme.FORGE.insetMargin, around = medal.wellHost })
+	if medal.well then medal.well:Hide() end
+	-- l'icône ou le portrait (une seule texture, retaillée selon le contenu)
+	medal.icon = medal:CreateTexture(nil, "ARTWORK", nil, 2)
+	medal.icon:SetSize(K.icon, K.icon)
+	medal.icon:SetPoint("CENTER", medal, "CENTER", 0, 0)
+	medal.icon:Hide()
+	-- la plaque des points ou du niveau, à cheval sur le bas de l'anneau
+	local badge = CreateFrame("Frame", nil, medal)
+	badge:SetSize(K.badge.h * 2, K.badge.h)
+	badge:SetPoint("TOP", medal, "BOTTOM", 0, K.badge.over)
+	if badge.SetFrameLevel then badge:SetFrameLevel(Level(medal) + 2) end
+	if badge.EnableMouse then badge:EnableMouse(false) end
+	badge.plate = Theme.ForgeSlice(badge, "plate", Theme.FORGE_PLATE.gold, { layer = "BACKGROUND", sub = 0,
+		margin = Theme.FORGE.marginSmall, height = K.badge.h })
+	badge.text = badge:CreateFontString(nil, "OVERLAY", Theme.F_NUMBER)
+	badge.text:SetPoint("CENTER", badge, "CENTER", 0, 0)
+	badge.text:SetJustifyH("CENTER")
+	local ink = Theme.FORGE_INK.gold
+	badge.text:SetTextColor(ink[1], ink[2], ink[3], 1)
+	if Theme.NoShadow then Theme.NoShadow(badge.text) end
+	badge:Hide()
+	medal.badge = badge
+	-- le trait qui traverse le bandeau, au bas de la zone du texte (tête
+	-- lumineuse devant : la lueur s'efface vers la gauche)
+	local textLeft = ns.ForgeBannerTextLeft(frame)
+	local shine = frame:CreateTexture(nil, "ARTWORK", nil, 3)
+	shine:SetTexture(Theme.ART.line.file)
+	shine:SetTexCoord(1, 0, 0, 1)
+	shine:SetSize(K.shine.w, K.shine.h)
+	shine:SetPoint("BOTTOMLEFT", frame, "BOTTOMLEFT", textLeft - K.shine.w, 2)
+	if shine.SetBlendMode then shine:SetBlendMode("ADD") end
+	shine:SetAlpha(0)
+	local travel = Flash(shine, K.shine.alpha, 0.25, K.shine.time - 0.25, K.shine.delay)
+	if travel then
+		local move = travel:CreateAnimation("Translation")
+		if move and move.SetOffset then
+			local width = tonumber(frame.GetWidth and frame:GetWidth()) or 300
+			move:SetOffset(width - textLeft + K.shine.w * 0.5, 0)
+			move:SetDuration(K.shine.time)
+			if move.SetStartDelay then move:SetStartDelay(K.shine.delay) end
+			if move.SetSmoothing then move:SetSmoothing("IN_OUT") end
+			travel.move = move
+		end
+	end
+	frame.forgeShine, frame.forgeShineAnim = shine, travel
+	-- l'éclosion du bandeau (si le client sait animer une échelle)
+	if frame.CreateAnimationGroup then
+		local ok, group = pcall(frame.CreateAnimationGroup, frame)
+		local scale = ok and group and group.CreateAnimation and group:CreateAnimation("Scale")
+		if scale and scale.SetScaleFrom and scale.SetScaleTo then
+			scale:SetScaleFrom(K.hatch.from, K.hatch.from)
+			scale:SetScaleTo(1, 1)
+			scale:SetDuration(K.hatch.time)
+			if scale.SetSmoothing then scale:SetSmoothing("OUT") end
+			frame.forgeHatch = group
+		end
+	end
+	-- le médaillon déborde à gauche : il reste à l'écran avec le bandeau
+	if frame.SetClampRectInsets then pcall(frame.SetClampRectInsets, frame, -K.out, 0, 0, 0) end
+	return textLeft
+end
+
+-- Le contenu du médaillon. what : "portrait" (target = { npcID, type,
+-- shiny } : le portrait 2D de la créature, sinon l'icône de son type),
+-- "icon" (texture = fichier ou id), "glyph" (paint = fonction qui peint la
+-- texture : le glyphe du filet, la boule de neige du Voile d'hiver), ou
+-- nil (le logo nu). Rend le genre posé.
+function ns:ForgeMedalSet(frame, what, value)
+	local medal = frame and frame.medal
+	if not medal then return nil end
+	local icon = medal.icon
+	local kind = nil
+	if what == "portrait" and type(value) == "table" and ns.CreaturePortrait then
+		kind = ns:CreaturePortrait(icon, value)
+	elseif what == "icon" and value then
+		icon:SetTexture(value)
+		if icon.SetTexCoord then icon:SetTexCoord(0.08, 0.92, 0.08, 0.92) end
+		kind = "icon"
+	elseif what == "glyph" and type(value) == "function" then
+		value(icon)
+		kind = "glyph"
+	end
+	if icon.SetVertexColor and kind ~= "glyph" then icon:SetVertexColor(1, 1, 1, 1) end
+	if kind == "portrait" then
+		icon:SetSize(K.content, K.content)
+		if medal.well then medal.well:Hide() end
+		icon:Show()
+	elseif kind then
+		icon:SetSize(K.icon, K.icon)
+		if medal.well then medal.well:Show() end
+		icon:Show()
+	else
+		if medal.well then medal.well:Hide() end
+		icon:Hide()
+	end
+	medal.kind = kind
+	return kind
+end
+
+-- La plaque des points ou du niveau (nil, 0 ou vide : cachée)
+function ns:ForgeMedalBadge(frame, value)
+	local badge = frame and frame.medal and frame.medal.badge
+	if not badge then return nil end
+	local n = tonumber(value)
+	if not n or n <= 0 then
+		badge.text:SetText("")
+		badge:Hide()
+		return nil
+	end
+	local text = tostring(math.floor(n))
+	badge.text:SetText(text)
+	local w = Theme.TextWidth and Theme.TextWidth(badge, text, Theme.F_NUMBER) or (#text * 7)
+	badge:SetWidth(math.max(K.badge.h * 2, math.ceil(tonumber(w) or 14) + 2 * K.badge.pad))
+	badge:Show()
+	return text
+end
+
+-- Empile les lignes de texte du bandeau (champs `keys` de frame, cachées si
+-- vides) de haut en bas, centrées dans la hauteur ; la hauteur du bandeau
+-- suit (au moins `minH`). La largeur de chaque ligne ne change pas (elle
+-- est réservée à la construction, le bouton Partager la réduit).
+function ns:ForgeBannerStack(frame, keys, minH)
+	if not (frame and frame.forgeBanner) then return nil end
+	local textLeft = ns.ForgeBannerTextLeft(frame)
+	local heights, total = {}, 0
+	for index, key in ipairs(keys) do
+		local fs = frame[key]
+		local text = fs and fs.GetText and fs:GetText()
+		if fs and text and text ~= "" then
+			local font = fs.forgeFont or Theme.F_BODY
+			local width = tonumber(fs.GetWidth and fs:GetWidth()) or 200
+			local h = math.max(1, math.ceil(tonumber(Theme.TextHeight(fs, width, font)) or 12))
+			-- (une ligne bornée en lignes : jamais plus haute que ses lignes)
+			if fs.forgeMaxLines then
+				local one = math.max(1, math.ceil(tonumber(Theme.TextHeight(fs, 100000, font)) or 12))
+				h = math.min(h, one * fs.forgeMaxLines)
+			end
+			heights[index] = h
+			total = total + h + (total > 0 and K.lineGap or 0)
+			fs:Show()
+		elseif fs then
+			fs:Hide()
+		end
+	end
+	local height = math.max(tonumber(minH) or 0, total + 2 * K.pad)
+	local y = math.floor((height - total) / 2 + 0.5)
+	for index, key in ipairs(keys) do
+		local fs = frame[key]
+		if fs and heights[index] then
+			fs:ClearAllPoints()
+			fs:SetPoint("TOPLEFT", frame, "TOPLEFT", textLeft, -y)
+			y = y + heights[index] + K.lineGap
+		end
+	end
+	if frame.SetHeight and tonumber(frame:GetHeight()) ~= height then frame:SetHeight(height) end
+	return height
+end
+
+-- Une ligne de texte d'un bandeau forgé (police retenue pour la mesure)
+function ns.ForgeBannerLine(frame, font, color, width)
+	local fs = Theme.Text(frame, font, color)
+	fs:SetJustifyH("LEFT")
+	if fs.SetWordWrap then fs:SetWordWrap(false) end
+	fs:SetWidth(width)
+	fs.forgeFont = font
+	return fs
+end
+
+-- Après avoir rempli un bandeau forgé (ns:StyleShown) : petit titre en
+-- couleur d'identité, nom (or des brillantes), halo, apparition.
+-- opts : shiny, play
+function ns:ForgeBannerShown(frame, opts)
+	if not (frame and frame.forgeBanner) then return false end
+	opts = opts or {}
+	local title, text = frame.title, frame.text
+	local id = Theme.IDENTITY_LIGHT
+	if title then title:SetTextColor(id[1], id[2], id[3], 1) end
+	local name = opts.shiny and Theme.SHINY or Theme.PARCHMENT
+	if text then text:SetTextColor(name[1], name[2], name[3], 1) end
+	local medal = frame.medal
+	local glow = opts.shiny and Theme.SHINY or Theme.IDENTITY
+	if medal and medal.bloom then
+		medal.bloom:SetVertexColor(glow[1], glow[2], glow[3], 1)
+		medal.bloom:SetAlpha(opts.shiny and K.halo or 0)
+		if medal.bloomFlash and medal.bloomFlash.up then
+			local rest = opts.shiny and K.halo or 0
+			medal.bloomFlash.up:SetFromAlpha(rest)
+			if medal.bloomFlash.down then medal.bloomFlash.down:SetToAlpha(rest) end
+		end
+	end
+	local shine = frame.forgeShine
+	if shine then
+		local c = opts.shiny and Theme.SHINY or Theme.IDENTITY_LIGHT
+		shine:SetVertexColor(c[1], c[2], c[3], 1)
+	end
+	if opts.play then
+		for _, group in ipairs({ frame.forgeHatch, medal and medal.bloomFlash, frame.forgeShineAnim }) do
+			if group then group:Stop(); group:Play() end
+		end
+		frame.forgePlays = (frame.forgePlays or 0) + 1
+	end
+	return true
+end
+
+-- ---------------------------------------------------------------------------
+-- « Capturé ! » / « Brillant capturé ! » (ns:EnsureCaptureResult) : le
+-- portrait 2D de la créature dans le médaillon, son niveau sur la plaque,
+-- les étoiles puis la taille et le caractère du spécimen. Même file, même
+-- horloge, même bouton Partager que le bandeau du Sobre.
+-- ---------------------------------------------------------------------------
+ns.FORGE_RESULT = { w = 360, h = 78 }
+
+-- glyph : la fonction qui peint le glyphe du filet (boule de neige comprise)
+function ns:ForgeCaptureResult(glyph)
+	if not (ns.QCForged and ns.QCForged() and Theme.CreateToast) then return nil end
+	local R = ns.FORGE_RESULT
+	local frame = Theme.CreateToast(UIParent, R.w, R.h, { strata = "HIGH", accent = Theme.GOLD,
+		name = ns.StyleName and ns.StyleName("QuestCompanionCaptureResult", "forge") or nil })
+	if not frame then return nil end
+	frame.uiStyle = "sobre"
+	local left = self:ForgeBannerDress(frame)
+	if not left then return frame end
+	local width = R.w - left - K.right
+	frame.title = ns.ForgeBannerLine(frame, Theme.F_CAPS, Theme.IDENTITY_LIGHT, width)
+	frame.text = ns.ForgeBannerLine(frame, Theme.F_TITLE, Theme.PARCHMENT, width)
+	frame.stars = ns.ForgeBannerLine(frame, Theme.F_SMALL, Theme.GOLD, width)
+	frame.forgeGlyph = glyph
+	frame.icon = frame.medal.icon
+	self:ForgeMedalSet(frame, "glyph", glyph)
+	return frame
+end
+
+-- Remplit le médaillon et la ligne des étoiles (avant l'affichage)
+function ns:ForgeCaptureResultFill(frame, result, line)
+	if not (frame and frame.forgeBanner and type(result) == "table") then return nil end
+	if result.npcID then
+		self:ForgeMedalSet(frame, "portrait", { npcID = result.npcID, type = result.type, shiny = result.shiny })
+	else
+		self:ForgeMedalSet(frame, "glyph", frame.forgeGlyph)
+	end
+	self:ForgeMedalBadge(frame, result.level)
+	-- les étoiles, la taille et le caractère, puis « et N de plus »
+	local parts = {}
+	local stars = (result.stars and self.CaptureStarsText) and self:CaptureStarsText(result.stars, 14) or ""
+	if stars ~= "" then parts[#parts + 1] = stars end
+	local tags = (result.specimen and self.SpecimenTagsShort) and self:SpecimenTagsShort(result.specimen) or ""
+	if tags ~= "" then parts[#parts + 1] = tags end
+	if (tonumber(result.more) or 0) > 0 then parts[#parts + 1] = self:F("CAPTURE_RESULT_MORE", result.more) end
+	if #parts > 0 then frame.stars:SetText(table.concat(parts, "  ·  ")) else frame.stars:SetText(line or "") end
+	self:ForgeBannerStack(frame, { "title", "text", "stars" }, ns.FORGE_RESULT.h)
+	return frame.medal.kind
+end
+
+-- ---------------------------------------------------------------------------
+-- Bandeau du carnet (ns:EnsureJournalToast) : tampons, rafale, sceaux de
+-- zone, titres de dresseur, « Haut fait obtenu ». L'icône de la catégorie
+-- dans le médaillon (le logo nu sinon), les points sur sa plaque, la
+-- sous-ligne « Nouveau titre : X » ; la hauteur suit les lignes.
+-- ---------------------------------------------------------------------------
+ns.FORGE_JOURNAL = { w = 330, h = 70 }
+
+function ns:ForgeJournalToast()
+	if not (ns.QCForged and ns.QCForged() and Theme.CreateToast) then return nil end
+	local J = ns.FORGE_JOURNAL
+	local frame = Theme.CreateToast(UIParent, J.w, J.h)
+	if not frame then return nil end
+	frame.uiStyle = "sobre"
+	local left = self:ForgeBannerDress(frame)
+	if not left then return frame end
+	local width = J.w - left - K.right
+	frame.title = ns.ForgeBannerLine(frame, Theme.F_CAPS, Theme.IDENTITY_LIGHT, width)
+	frame.text = ns.ForgeBannerLine(frame, Theme.F_TITLE, Theme.PARCHMENT, width)
+	frame.stars = ns.ForgeBannerLine(frame, Theme.F_SMALL, Theme.GOLD_LIGHT, width)
+	frame.icon = frame.medal.icon
+	self:ForgeMedalSet(frame, nil)
+	return frame
+end
+
+-- L'habillage d'une entrée (Journal.lua, ToastDecor) : icône, points,
+-- sous-ligne, hauteur. entry nil : une rafale (le logo, rien d'autre).
+function ns:ForgeJournalToastFill(frame, entry)
+	if not (frame and frame.forgeBanner) then return nil end
+	if entry and entry.icon then self:ForgeMedalSet(frame, "icon", entry.icon) else self:ForgeMedalSet(frame, nil) end
+	self:ForgeMedalBadge(frame, entry and entry.points)
+	-- (le Sobre et l'ancien habillage lisent frame.featPoints : ici, la plaque)
+	frame.featPoints = nil
+	frame.stars:SetText((entry and entry.sub) or "")
+	self:ForgeBannerStack(frame, { "title", "text", "stars" }, ns.FORGE_JOURNAL.h)
+	return true
+end
+
+-- ---------------------------------------------------------------------------
+-- Bandeau de guilde (ns:EnsureGuildFeatToast) : « GUILDE », la ligne sur
+-- deux lignes au besoin (coupée aux mots), la créature, « et N autres
+-- exploits » ; le médaillon porte l'icône d'un haut fait et ses points (ils
+-- ne chevauchent plus le texte), le glyphe du filet sinon.
+-- ---------------------------------------------------------------------------
+ns.FORGE_GUILD = { w = 380, h = 78 }
+
+-- glyph : la fonction qui peint le glyphe du filet
+function ns:ForgeGuildFeatToast(glyph)
+	if not (ns.QCForged and ns.QCForged() and Theme.CreateToast) then return nil end
+	local G = ns.FORGE_GUILD
+	local frame = Theme.CreateToast(UIParent, G.w, G.h, { strata = "HIGH", accent = Theme.GOLD,
+		name = ns.StyleName and ns.StyleName("QuestCompanionGuildFeat", "forge") or nil })
+	if not frame then return nil end
+	frame.uiStyle = "sobre"
+	local left = self:ForgeBannerDress(frame)
+	if not left then return frame end
+	local width = G.w - left - K.right
+	frame.title = ns.ForgeBannerLine(frame, Theme.F_CAPS, Theme.IDENTITY_LIGHT, width)
+	frame.text = ns.ForgeBannerLine(frame, Theme.F_TITLE, Theme.PARCHMENT, width)
+	-- la ligne « Xan a capturé… » : deux lignes au plus, coupées aux mots
+	if frame.text.SetWordWrap then frame.text:SetWordWrap(true) end
+	if frame.text.SetMaxLines then pcall(frame.text.SetMaxLines, frame.text, 2) end
+	frame.text.forgeMaxLines = 2
+	frame.info = ns.ForgeBannerLine(frame, Theme.F_SMALL, Theme.TEXT, width)
+	frame.hint = ns.ForgeBannerLine(frame, Theme.F_SMALL, Theme.MUTED_LIGHT, width)
+	frame.forgeGlyph = glyph
+	frame.icon = frame.medal.icon
+	self:ForgeMedalSet(frame, "glyph", glyph)
+	return frame
+end
+
+-- L'habillage d'un exploit (GuildFeats.lua, GuildFeatDecor) : icône et
+-- points d'un haut fait, glyphe sinon ; lignes empilées, hauteur
+function ns:ForgeGuildFeatFill(frame, info, feat)
+	if not (frame and frame.forgeBanner) then return nil end
+	if feat and info and info.icon then self:ForgeMedalSet(frame, "icon", info.icon)
+	else self:ForgeMedalSet(frame, "glyph", frame.forgeGlyph) end
+	self:ForgeMedalBadge(frame, feat and info and info.points or nil)
+	frame.featPoints = nil
+	self:ForgeBannerStack(frame, { "title", "text", "info", "hint" }, ns.FORGE_GUILD.h)
+	return true
+end

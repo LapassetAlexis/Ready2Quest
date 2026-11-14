@@ -505,6 +505,7 @@ end
 -- Bandeau du thème (docs/UI.md) : liseré ambre, losange du tampon, « NOUVEAU
 -- TAMPON · SORTE » en capitales pâles, le nom en titre dessous
 local TOAST_W, TOAST_H = 280, 50
+local TOAST_SUB_H = 15   -- 3.1.0 : la sous-ligne « Nouveau titre : X » du Sobre
 
 -- 3.0.1 : un bouton invisible par-dessus le bandeau : clic = l'action du
 -- bandeau affiché (entry.onClick : la page Hauts faits pour un lot), clic
@@ -554,6 +555,16 @@ function ns:EnsureJournalToast()
 		return frame
 	end
 	if not (Theme and Theme.CreateToast) then return nil end
+	-- 3.1.0 : sous le thème forgé, le bandeau à médaillon (ForgeBanners.lua)
+	frame = ns.QCForged and ns.QCForged() and self.ForgeJournalToast and self:ForgeJournalToast()
+	if frame then
+		if self.MarkStyle then self:MarkStyle(frame) end
+		ToastButton(frame)
+		if self.RestorePoint then self:RestorePoint(frame, "journalToastPoint", { point = "TOP", x = 0, y = -190 }) end
+		frame:Hide()
+		self.journalToast = frame
+		return frame
+	end
 	frame = Theme.CreateToast(UIParent, TOAST_W, TOAST_H)
 	if not frame then return nil end
 	frame.uiStyle = "sobre"
@@ -583,6 +594,8 @@ end
 -- le cadre, points dans le bouclier (Azeroth) ou à droite (Sobre), sous-ligne
 -- (nouveau titre). Les autres bandeaux reprennent le logo, sans points.
 local function ToastDecor(frame, entry)
+	-- 3.1.0 : bandeau forgé : icône et points dans le médaillon, sous-ligne
+	if frame.forgeBanner and ns.ForgeJournalToastFill then return ns:ForgeJournalToastFill(frame, entry) end
 	if frame.icon and frame.icon.SetTexture then frame.icon:SetTexture((entry and entry.icon) or Theme.LOGO_SMALL) end
 	local points = entry and tonumber(entry.points)
 	if points and not frame.featPoints then
@@ -604,6 +617,27 @@ local function ToastDecor(frame, entry)
 		if points then frame.featPoints:Show() else frame.featPoints:Hide() end
 	end
 	if frame.stars and frame.azeroth then frame.stars:SetText((entry and entry.sub) or "") end
+	-- 3.1.0 : le bandeau du Sobre perdait la sous-ligne « Nouveau titre : X »
+	-- (seul l'ancien habillage l'écrivait) : une 3e ligne, créée à la
+	-- première sous-ligne, et le bandeau grandit le temps de l'afficher
+	if not frame.azeroth then
+		local sub = entry and entry.sub
+		if sub and sub ~= "" and not frame.stars and frame.text then
+			local fs = Theme.Text(frame, Theme.F_SMALL, Theme.GOLD_LIGHT)
+			fs:SetPoint("TOPLEFT", frame.text, "BOTTOMLEFT", 0, -3)
+			fs:SetWidth(tonumber(frame.text:GetWidth()) or (TOAST_W - 48))
+			fs:SetJustifyH("LEFT")
+			if fs.SetWordWrap then fs:SetWordWrap(false) end
+			frame.stars = fs
+			if frame.shareWidths and frame.shareWidths.text then frame.shareWidths.stars = frame.shareWidths.text end
+		end
+		if frame.stars then
+			local on = sub ~= nil and sub ~= ""
+			frame.stars:SetText(on and sub or "")
+			if on then frame.stars:Show() else frame.stars:Hide() end
+			frame:SetHeight(on and TOAST_H + TOAST_SUB_H or TOAST_H)
+		end
+	end
 end
 ns.JournalToastDecor = ToastDecor
 

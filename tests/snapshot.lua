@@ -1746,6 +1746,80 @@ Snap.scenes["qc-notify"] = function(T)
 	return toast, "QuestCompanion : bandeau « Nouveau tampon » du carnet"
 end
 
+-- 3.1.0 : les bandeaux au thème forgé (ForgeBanners.lua) : médaillon,
+-- plaque des points ou du niveau, bouton Partager écrit, grand effet
+local function QCBannerWorld(T)
+	local ns = QCWorld(T)
+	for _, field in ipairs({ "captureResult", "guildFeatToast", "journalToast", "captureToast" }) do
+		if ns[field] then ns[field]:Hide() end
+		ns[field] = nil
+	end
+	ns.uiStyleCache = {}
+	ns.captureResultHideAt, ns.captureResultPending = nil, nil
+	return ns
+end
+
+local function QCResultScene(T, shiny)
+	local ns = QCBannerWorld(T)
+	local frame = ns:CaptureResultShow({ name = shiny and "Gesharahan" or "Raptor des Tarides", shiny = shiny, stars = 3,
+		npcID = shiny and 3398 or 3255, level = shiny and 20 or 18, type = "Beast", class = shiny and "rare" or "normal",
+		fresh = true, specimen = { size = shiny and "giant" or "large", trait = "curious", stars = 3 } })
+	return Centered(frame)
+end
+
+Snap.scenes["qc-result-forge"] = function(T)
+	return QCResultScene(T, false), "QuestCompanion : bandeau « Capturé ! » (portrait, niveau, étoiles et traits, Partager)"
+end
+
+Snap.scenes["qc-result-shiny-forge"] = function(T)
+	return QCResultScene(T, true), "QuestCompanion : bandeau « Brillant capturé ! » (nom d'or, halo du médaillon)"
+end
+
+Snap.scenes["qc-feat-forge"] = function(T)
+	local ns = QCBannerWorld(T)
+	ns:JournalToastPush({ kind = "feat", id = "zone_visit_10", title = ns.L.FEAT_TOAST_TITLE, name = "Bourlingueur",
+		icon = "Interface\\Icons\\INV_Misc_Map_01", points = 10 })
+	return Centered(ns.journalToast), "QuestCompanion : bandeau « Haut fait obtenu » (icône et points au médaillon)"
+end
+
+Snap.scenes["qc-feat-big-forge"] = function(T)
+	local ns = QCBannerWorld(T)
+	ns:JournalToastPush({ kind = "feat", id = "day_rare_50", title = ns.L.FEAT_TOAST_TITLE, name = "Le traqueur",
+		icon = "Interface\\Icons\\Ability_Hunter_BeastTaming", points = 25, sub = ns:F("FEAT_TOAST_NEW_TITLE", "Traqueuse") })
+	local toast = Centered(ns.journalToast)
+	-- le grand effet à mi-course (ailes ouvertes, éclat)
+	local fx = toast.azReward
+	if fx and fx.at and ns.AzerothFxStep then ns.AzerothFxStep(fx.at + 0.9) end
+	return toast, "QuestCompanion : gros haut fait (« Nouveau titre », 25 points, ailes et éclat forgés)"
+end
+
+Snap.scenes["qc-guild-forge"] = function(T)
+	local ns = QCBannerWorld(T)
+	ns:GuildFeatsShowToast({ key = "x", sender = "Xan-Royaume", feat = { kind = "h" }, score = 1000, at = Mock.now,
+		info = { kind = "h", line = "Xan, Maîtresse des brillantes, a gagné le titre « Traqueuse » !",
+			icon = "Interface\\Icons\\Ability_Hunter_BeastTaming", points = 25, more = 2, sub = "Nouveau titre : Traqueuse" } })
+	return Centered(ns.guildFeatToast), "QuestCompanion : bandeau de guilde (deux lignes, médaillon, « et 2 autres exploits »)"
+end
+
+Snap.scenes["qc-tour-forge"] = function(T)
+	local ns = QCBannerWorld(T)
+	local anchor = CreateFrame("Frame", nil, UIParent)
+	anchor:SetSize(150, 34)
+	anchor:SetPoint("CENTER", UIParent, "CENTER", 0, -90)
+	local back = ns.Theme.Solid(anchor, "BACKGROUND", ns.Theme.NAV, 1)
+	back:SetAllPoints(anchor)
+	local label = ns.Theme.Text(anchor, ns.Theme.F_LABEL, ns.Theme.LABEL)
+	label:SetPoint("CENTER", anchor, "CENTER", 0, 0)
+	label:SetText(ns.L.TOUR_A1_T or "Le filet")
+	anchor:Show()
+	ns.TOUR_DEFS.snapForge = { steps = {
+		{ id = "a", anchor = anchor, title = "TOUR_A1_T", text = "TOUR_A1", placement = "top" },
+		{ id = "b", anchor = anchor, title = "TOUR_A2_T", text = "TOUR_A2", placement = "top" } } }
+	ns:TourStart("snapForge")
+	local ui = ns.tourUI and (ns.tourUI.forge or ns.tourUI.sobre)
+	return Snap.Group(ui.callout, ui.ring, anchor), "QuestCompanion : bulle d'une visite guidée et liseré de la cible"
+end
+
 Snap.scenes["qc-tracker"] = function(T)
 	local ns = QCWorld(T)
 	ns:DB().journalTracker = true

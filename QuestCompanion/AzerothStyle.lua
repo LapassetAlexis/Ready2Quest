@@ -1002,7 +1002,10 @@ end
 -- Après avoir rempli un bandeau : en Azeroth, couleur du nom (or pour une
 -- brillante), nom ajusté, bouclier, apparition. En Sobre : rien.
 -- opts : shiny, shield ("grey" | "gold"), play, bling, shine
+-- 3.1.0 : un bandeau né sous le thème forgé (frame.forgeBanner,
+-- ForgeBanners.lua) a son équivalent : nom, halo, apparition.
 function ns:StyleShown(frame, opts)
+	if frame and frame.forgeBanner and self.ForgeBannerShown then return self:ForgeBannerShown(frame, opts) end
 	if not (frame and frame.azeroth) then return false end
 	opts = opts or {}
 	local c = opts.shiny and SHINY_NAME or INKS.white
@@ -1546,6 +1549,17 @@ function ns:EnsureCaptureResult()
 		Glyph(frame.icon)
 	else
 		if not (Theme and Theme.CreateToast) then return nil end
+		-- 3.1.0 : sous le thème forgé, le bandeau à médaillon (ForgeBanners.lua)
+		if ns.QCForged and ns.QCForged() and self.ForgeCaptureResult then
+			frame = self:ForgeCaptureResult(Glyph)
+			if frame then
+				self:MarkStyle(frame)
+				if self.RestorePoint then self:RestorePoint(frame, "captureResultPoint", { point = "TOP", x = 0, y = -200 }) end
+				frame:Hide()
+				self.captureResult = frame
+				return frame
+			end
+		end
 		frame = Theme.CreateToast(UIParent, 300, 66, { strata = "HIGH", accent = Theme.GOLD, name = "QuestCompanionCaptureResult" })
 		if not frame then return nil end
 		frame.uiStyle = "sobre"
@@ -1603,7 +1617,10 @@ function ns:CaptureResultShow(result)
 		line = line ~= "" and (line .. "  ·  " .. more) or more
 	end
 	frame.stars:SetText(line)
-	if not frame.azeroth then
+	-- 3.1.0 (thème forgé) : portrait et niveau dans le médaillon, taille et
+	-- caractère du spécimen sur la ligne des étoiles (ForgeBanners.lua)
+	if frame.forgeBanner and self.ForgeCaptureResultFill then self:ForgeCaptureResultFill(frame, result, line) end
+	if not frame.azeroth and not frame.forgeBanner then
 		local c = result.shiny and (Theme.GOLD_LIGHT or Theme.GOLD) or Theme.PARCHMENT
 		frame.text:SetTextColor(c[1], c[2], c[3])
 		if frame.SetAccent then frame:SetAccent(result.shiny and (Theme.GOLD_LIGHT or Theme.GOLD) or Theme.GOLD) end
@@ -3170,11 +3187,118 @@ function ns:AzerothRewardFX(frame, opts)
 	return true
 end
 
+-- 3.1.0 : les grandes récompenses sous le thème forgé, sur un bandeau né
+-- forgé (ForgeBanners.lua). Les ailes et l'éclat du client s'il les a
+-- (un effet, pas un habillage) ; sinon, en matières du socle : un éclat
+-- (Theme.ART.dot, or des brillantes) derrière le bandeau et deux paires de
+-- filets lumineux (Theme.ART.line, ns.QCForgeLine : couleur d'identité) en
+-- miroir de part et d'autre, qui s'ouvrent en ailes. Même horloge (FxStep),
+-- mêmes durées ; textures créées une fois par bandeau.
+ns.FORGE_REWARD = { spread = 1.9, lineH = 6, lift = 0.22, glowW = 1.6, glowH = 2.6, glowAlpha = 0.8 }
+local FORGE_WINGS = { "wingUL", "wingUR", "wingLL", "wingLR" }
+local function ForgeReward(self, frame, opts)
+	opts = opts or {}
+	local anchor = opts.anchor or frame
+	local wings, burst = HasFx("wings"), HasFx("burst")
+	local fx = frame.azReward
+	if not fx then
+		fx = { forge = true }
+		if wings then
+			fx.left = frame:CreateTexture(nil, "BACKGROUND", nil, -8)
+			Atlas(fx.left, FXA.wings)
+			fx.right = frame:CreateTexture(nil, "BACKGROUND", nil, -8)
+			AtlasMirrored(fx.right, FXA.wings)
+		elseif ns.QCForgeLine then
+			-- les filets : à gauche, la lueur s'efface vers l'extérieur (miroir)
+			for index, key in ipairs(FORGE_WINGS) do
+				local leftSide = index % 2 == 1
+				local tex = ns.QCForgeLine(frame, "BACKGROUND", leftSide)
+				if tex then
+					if tex.SetDrawLayer then tex:SetDrawLayer("BACKGROUND", -8) end
+					if tex.SetBlendMode then tex:SetBlendMode("ADD") end
+					tex:SetHeight(ns.FORGE_REWARD.lineH)
+					tex:Hide()
+					fx[key] = tex
+				end
+			end
+		end
+		if burst then
+			fx.burst = frame:CreateTexture(nil, "BACKGROUND", nil, -7)
+			Atlas(fx.burst, FXA.burst)
+			Additive(fx.burst)
+		elseif Theme.ART and Theme.ART.dot then
+			fx.glow = frame:CreateTexture(nil, "BACKGROUND", nil, -7)
+			fx.glow:SetTexture(Theme.ART.dot.file)
+			Additive(fx.glow)
+			local c = Theme.SHINY or Theme.GOLD_LIGHT
+			fx.glow:SetVertexColor(c[1], c[2], c[3], 1)
+			fx.glow:Hide()
+		end
+		frame.azReward = fx
+	end
+	local h = tonumber(anchor:GetHeight()) or 66
+	fx.h, fx.w = h, tonumber(anchor:GetWidth()) or 300
+	local lift = math.floor(h * ns.FORGE_REWARD.lift)
+	if fx.left then
+		fx.left:ClearAllPoints(); fx.left:SetPoint("CENTER", anchor, "LEFT", 0, math.floor(h * 0.2))
+		fx.right:ClearAllPoints(); fx.right:SetPoint("CENTER", anchor, "RIGHT", 0, math.floor(h * 0.2))
+	end
+	if fx.wingUL then
+		fx.wingUL:ClearAllPoints(); fx.wingUL:SetPoint("RIGHT", anchor, "LEFT", 0, lift)
+		fx.wingUR:ClearAllPoints(); fx.wingUR:SetPoint("LEFT", anchor, "RIGHT", 0, lift)
+		fx.wingLL:ClearAllPoints(); fx.wingLL:SetPoint("RIGHT", anchor, "LEFT", 0, -lift)
+		fx.wingLR:ClearAllPoints(); fx.wingLR:SetPoint("LEFT", anchor, "RIGHT", 0, -lift)
+	end
+	if fx.burst then fx.burst:ClearAllPoints(); fx.burst:SetPoint("CENTER", anchor, "CENTER", 0, 0) end
+	if fx.glow then fx.glow:ClearAllPoints(); fx.glow:SetPoint("CENTER", anchor, "CENTER", 0, 0) end
+	fx.at = Clock()
+	FxState(self).rewards[frame] = true
+	FxStart(self)
+	return true
+end
+
+-- Les grandes récompenses d'un bandeau, quel que soit son habit : l'ancien
+-- habillage (ns:AzerothRewardFX), le thème forgé (bandeau né forgé), rien en
+-- Sobre. Rend true si un effet part.
+function ns:BannerRewardFX(frame, opts)
+	if not (frame and frame.CreateTexture) then return false end
+	if self:AzerothOn() then return self:AzerothRewardFX(frame, opts) end
+	if frame.forgeBanner and ns.QCForged and ns.QCForged() then return ForgeReward(self, frame, opts) end
+	return false
+end
+
 local function RewardStop(frame)
 	local fx = frame.azReward
 	if not fx then return end
-	for _, key in ipairs({ "left", "right", "burst" }) do if fx[key] then fx[key]:Hide() end end
+	for _, key in ipairs({ "left", "right", "burst", "glow", "wingUL", "wingUR", "wingLL", "wingLR" }) do
+		if fx[key] then fx[key]:Hide() end
+	end
 	fx.at = nil
+end
+
+-- Les ailes et l'éclat forgés (repli sans atlas) : les filets s'allongent
+-- vers l'extérieur, les hauts plus longs, puis s'effacent ; l'éclat s'ouvre
+local function ForgeRewardStep(fx, p)
+	local R = ns.FORGE_REWARD
+	if fx.wingUL then
+		local alpha = p < 0.25 and p / 0.25 or (p > 0.8 and Clamp01(1 - (p - 0.8) / 0.2) or 1)
+		local open = math.min(1, p / 0.35)
+		local long = math.max(1, math.floor(fx.h * R.spread * (0.3 + 0.7 * open)))
+		local short = math.max(1, math.floor(long * 0.7))
+		fx.wingUL:SetWidth(long); fx.wingUR:SetWidth(long)
+		fx.wingLL:SetWidth(short); fx.wingLR:SetWidth(short)
+		for _, key in ipairs(FORGE_WINGS) do
+			fx[key]:SetAlpha(alpha)
+			fx[key]:Show()
+		end
+	end
+	if fx.glow then
+		local alpha = (p < 0.25 and p / 0.25 or Clamp01(1 - (p - 0.25) / 0.6)) * R.glowAlpha
+		local scale = 0.4 + 0.6 * math.min(1, p / 0.5)
+		fx.glow:SetSize(math.max(1, math.floor(fx.w * R.glowW * scale)), math.max(1, math.floor(fx.h * R.glowH * scale)))
+		fx.glow:SetAlpha(alpha)
+		fx.glow:Show()
+	end
 end
 
 local function RewardStep(frame, now)
@@ -3182,6 +3306,7 @@ local function RewardStep(frame, now)
 	if not (fx and fx.at) or not frame:IsShown() then RewardStop(frame); return false end
 	local p = (now - fx.at) / FXC.rewardTime
 	if p >= 1 then RewardStop(frame); return false end
+	if fx.forge then ForgeRewardStep(fx, p) end
 	local h = fx.h
 	if fx.left then
 		-- les ailes s'ouvrent (0,4 → 1, en se redressant), restent, s'effacent
@@ -3214,9 +3339,10 @@ do
 		function ns:ShowNextJournalToast(...)
 			local head = self.journalToasts and self.journalToasts[1]
 			local frame = showNext(self, ...)
-			if frame and frame.azeroth and head and (head.kind == "rank" or head.big)
+			-- 3.1.0 : l'ancien habillage ou le thème forgé (ns:BannerRewardFX)
+			if frame and (frame.azeroth or frame.forgeBanner) and head and (head.kind == "rank" or head.big)
 				and frame.text and frame.text:GetText() == head.name then
-				self:AzerothRewardFX(frame)
+				self:BannerRewardFX(frame)
 			end
 			return frame
 		end

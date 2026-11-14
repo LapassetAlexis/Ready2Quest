@@ -706,7 +706,9 @@ function ns:EnsureGuildFeatToast()
 		frame.hint = frame.banner:CreateFontString(nil, "OVERLAY", Theme.F_SMALL)
 		frame.hint:Hide()
 	else
-		frame = self:GuildFeatToastSobre(art)
+		-- 3.1.0 : sous le thème forgé, le bandeau à médaillon (ForgeBanners.lua)
+		frame = ns.QCForged and ns.QCForged() and self.ForgeGuildFeatToast and self:ForgeGuildFeatToast(Glyph)
+		frame = frame or self:GuildFeatToastSobre(art)
 	end
 	if not frame then return nil end
 	if self.MarkStyle then self:MarkStyle(frame) end
@@ -800,6 +802,8 @@ end
 -- et ses points (bouclier en Azeroth, à droite en Sobre) ; les autres
 -- exploits retrouvent le glyphe du filet
 GuildFeatDecor = function(self, frame, info, feat)
+	-- 3.1.0 : bandeau forgé : icône et points dans le médaillon, deux lignes
+	if frame.forgeBanner and self.ForgeGuildFeatFill then return self:ForgeGuildFeatFill(frame, info, feat) end
 	if feat then
 		if info.icon then frame.icon:SetTexture(info.icon); frame.icon:SetVertexColor(1, 1, 1, 1) end
 	else
@@ -846,9 +850,10 @@ function ns:GuildFeatsShowToast(item)
 	if self.BannerShown then self:BannerShown("guild", frame, "guildFeatToastPoint", { point = "TOP", x = 0, y = -150 }) end
 	if Theme.FadeIn then pcall(Theme.FadeIn, frame, 0.2) end
 	-- haut fait : bandeau des hauts faits (points dans le bouclier d'or) ; un
-	-- titre ou un gros haut fait : ailes et éclat (Azeroth seulement)
+	-- titre ou un gros haut fait : ailes et éclat (3.1.0 : ancien habillage
+	-- ou thème forgé, ns:BannerRewardFX ; rien en Sobre)
 	if self.StyleShown then self:StyleShown(frame, { shiny = info.shiny, play = true, shield = feat and "gold" or nil }) end
-	if feat and info.big and frame.azeroth and self.AzerothRewardFX then pcall(self.AzerothRewardFX, self, frame) end
+	if feat and info.big and self.BannerRewardFX then pcall(self.BannerRewardFX, self, frame) end
 	PlayFeatSound(self, info.shiny)
 	return frame
 end

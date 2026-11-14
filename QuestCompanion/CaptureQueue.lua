@@ -1299,16 +1299,30 @@ function ns:CaptureToastSobre()
 	if not frame then return nil end
 	frame.uiStyle = "sobre"
 	local left = frame.contentLeft or 14
-	frame.icon = frame:CreateTexture(nil, "ARTWORK")
-	frame.ownGlyph = PaintNetIcon(frame.icon)
-	if frame.ownGlyph then
-		frame.icon:SetVertexColor(Theme.GOLD[1], Theme.GOLD[2], Theme.GOLD[3], 1)
+	local textLeft
+	-- 3.1.0 : sous le thème forgé, le glyphe du filet dans le médaillon
+	-- (ForgeBanners.lua) ; même contenu, mêmes boutons
+	local forgedLeft = ns.QCForged and ns.QCForged() and self.ForgeBannerDress and self:ForgeBannerDress(frame)
+	if forgedLeft then
+		frame.icon = frame.medal.icon
+		self:ForgeMedalSet(frame, "glyph", function(tex)
+			frame.ownGlyph = PaintNetIcon(tex)
+			if frame.ownGlyph then tex:SetVertexColor(Theme.GOLD[1], Theme.GOLD[2], Theme.GOLD[3], 1)
+			else tex:SetTexCoord(0.08, 0.92, 0.08, 0.92) end
+		end)
+		textLeft = forgedLeft
 	else
-		frame.icon:SetTexCoord(0.08, 0.92, 0.08, 0.92)
+		frame.icon = frame:CreateTexture(nil, "ARTWORK")
+		frame.ownGlyph = PaintNetIcon(frame.icon)
+		if frame.ownGlyph then
+			frame.icon:SetVertexColor(Theme.GOLD[1], Theme.GOLD[2], Theme.GOLD[3], 1)
+		else
+			frame.icon:SetTexCoord(0.08, 0.92, 0.08, 0.92)
+		end
+		frame.icon:SetSize(TOAST_ICON, TOAST_ICON)
+		frame.icon:SetPoint("LEFT", frame, "LEFT", left, 0)
+		textLeft = left + TOAST_ICON + 10
 	end
-	frame.icon:SetSize(TOAST_ICON, TOAST_ICON)
-	frame.icon:SetPoint("LEFT", frame, "LEFT", left, 0)
-	local textLeft = left + TOAST_ICON + 10
 	local textW = TOAST_W - textLeft - 12
 	frame.title = Theme.Text(frame, Theme.F_CAPS, Theme.MUTED_LIGHT)
 	frame.title:SetPoint("TOPLEFT", frame, "TOPLEFT", textLeft, -9)
