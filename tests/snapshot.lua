@@ -2,20 +2,29 @@
 --
 -- Personne ne lance le client ici : on dessine l'arbre de régions du Mock
 -- (tests/run_tests.lua) en divs positionnées, pour juger une fenêtre à l'œil.
--- Ce n'est pas une capture du jeu : polices approchées, pas de TexCoord,
--- textures du jeu en vignettes grises. Les textures de l'addon (.tga) sont
--- converties en images par tests/snapshot.py.
+-- Ce n'est pas une capture du jeu : polices approchées, textures du jeu en
+-- vignettes grises. Les textures de l'addon (.tga) sont converties en images
+-- par tests/snapshot.py (découpées et retournées par SetTexCoord, teintées
+-- par multiplication, fusion additive).
 --
 -- Bibliothèque (retournée par ce fichier) :
 --   Snap.Rect(region, ctx)          rectangle absolu { left, top, width, height } (y vers le bas)
+--   Snap.TexCoord(texture)          découpe remise dans l'ordre + miroirs (flipX, flipY)
+--   Snap.LiveLevel(frame)           niveau du cadre comme en jeu (posé, sinon parent + 1)
 --   Snap.Render(frame, opts)        HTML autonome (chaîne)
 --   Snap.Snapshot(frame, path, opts) écrit le HTML
---   Snap.RunScene(name, path)       joue une scène nommée (Snap.scenes) et l'écrit
+--   Snap.SplitSkin(name)            « sobre:<scène> » -> "sobre", "<scène>" (Azeroth sans préfixe)
+--   Snap.ForceSkin(skin, T)         pose et tient un thème dans les deux addons ; rend l'annulation
+--   Snap.RunScene(name, path)       joue une scène nommée (Snap.scenes), dans son thème, et l'écrit
 -- Lancement : python3 tests/snapshot.py <scène> <sortie.html> (voir ce fichier).
 local Snap = {}
 
 local ROOT = rawget(_G, "ADDON_ROOT") or "."
 Snap.SCREEN = { width = 1600, height = 1000 }
+-- fond de la scène : ciel, horizon et herbe estompés (la maquette du thème forgé)
+Snap.BACKDROP = "linear-gradient(180deg,#56697a 0%,#7f8f8c 34%,#9aa184 44%,#56603f 50%,#323b28 78%,#20261b 100%)"
+-- marge autour de ce qui est dessiné (ombre portée et médaillon compris)
+Snap.MARGIN = 40
 
 -- ---------------------------------------------------------------------------
 -- 1. Géométrie : ancres -> rectangle absolu
@@ -299,6 +308,45 @@ local function TextureStyle(region, alpha)
 	return nil
 end
 
+-- Découpe d'une texture (SetTexCoord) remise dans l'ordre : { gauche, droite,
+-- haut, bas, flipX, flipY } (gauche < droite, haut < bas ; flipX / flipY :
+-- la texture est retournée dans ce sens). Les deux formes du client : 4
+-- nombres (gauche, droite, haut, bas) ou 8 (les coins HG, BG, HD, BD ; sans
+-- rotation). nil : texture entière.
+function Snap.TexCoord(region)
+	local tc = region.texCoord
+	if type(tc) ~= "table" then return nil end
+	local l, r, t, b
+	if #tc >= 8 then
+		l, t, r, b = tc[1], tc[2], tc[5], tc[4]
+	elseif #tc == 4 then
+		l, r, t, b = tc[1], tc[2], tc[3], tc[4]
+	else
+		return nil
+	end
+	l, r, t, b = tonumber(l), tonumber(r), tonumber(t), tonumber(b)
+	if not (l and r and t and b) then return nil end
+	return { math.min(l, r), math.max(l, r), math.min(t, b), math.max(t, b), flipX = l > r, flipY = t > b }
+end
+
+-- Niveau d'un cadre tel que le client le donne (GetFrameLevel) : posé
+-- (SetFrameLevel), sinon celui du parent + 1. Le Mock rend 1 pour tout cadre
+-- non posé ; l'aperçu branche celui-ci sur les cadres créés pendant une
+-- scène (Snap.RunScene), pour que « niveau de la fenêtre + 30 » (le cadre
+-- du dessus de l'habillage forgé) passe bien au-dessus de ses enfants.
+function Snap.LiveLevel(frame)
+	local level, node, guard = 0, frame, 0
+	while node and guard < 60 do
+		if node.levelSet then return level + (tonumber(node.level) or 1) end
+		local parent = node.mockParent
+		if not parent or parent == rawget(_G, "UIParent") then return level + 1 end
+		level = level + 1
+		node = parent
+		guard = guard + 1
+	end
+	return level + 1
+end
+
 function Snap.Render(root, opts)
 	opts = opts or {}
 	local ctx = { memo = {}, screen = opts.screen or Snap.SCREEN, root = root }
@@ -334,7 +382,7 @@ function Snap.Render(root, opts)
 	minX = math.min(minX, rootRect.left); minY = math.min(minY, rootRect.top)
 	maxX = math.max(maxX, rootRect.left + rootRect.width); maxY = math.max(maxY, rootRect.top + rootRect.height)
 	if minX == math.huge then minX, minY, maxX, maxY = 0, 0, 100, 100 end
-	local margin = 32
+	local margin = Snap.MARGIN
 	local ox, oy = margin - minX, margin - minY
 
 	local out = {}
@@ -348,11 +396,15 @@ function Snap.Render(root, opts)
 			-- texture retournée par SetTexCoord (haut et bas échangés), tournée
 			-- (SetRotation, sens trigonométrique), en fusion additive ; une
 			-- découpe de feuille de sprites part en data-crop (tests/snapshot.py)
-			local tc = region.texCoord
+			-- (gauche > droite : miroir horizontal, coins de droite du cadre forgé ;
+			-- haut > bas : miroir vertical, coins du bas). La découpe part
+			-- remise dans l'ordre, le miroir passe par transform.
+			local tc = Snap.TexCoord(region)
 			local transform, crop = "", ""
-			if tc and #tc == 4 then
-				if tc[3] > tc[4] then transform = " scaleY(-1)" end
-				crop = string.format(' data-crop="%.4f,%.4f,%.4f,%.4f"', tc[1], tc[2], math.min(tc[3], tc[4]), math.max(tc[3], tc[4]))
+			if tc then
+				if tc.flipX then transform = transform .. " scaleX(-1)" end
+				if tc.flipY then transform = transform .. " scaleY(-1)" end
+				crop = string.format(' data-crop="%.4f,%.4f,%.4f,%.4f"', tc[1], tc[2], tc[3], tc[4])
 			end
 			if region.rotation and region.rotation ~= 0 then
 				transform = transform .. string.format(" rotate(%.1fdeg)", -math.deg(region.rotation))
@@ -419,9 +471,10 @@ function Snap.Render(root, opts)
 		string.format("@font-face{font-family:InterSnap;font-weight:700;src:url('file://%sInter-Bold.ttf')}", fontDir),
 		"body{margin:0;background:#06080a;color:#ddd;font-family:InterSnap,Inter,system-ui,sans-serif}",
 		".bar{padding:8px 16px;font-size:12px;color:#7d8389;border-bottom:1px solid #1d2227}",
-		string.format(".stage{position:relative;width:%dpx;height:%dpx;background:#0b0e11;"
-			.. "background-image:radial-gradient(#151a1f 1px,transparent 1px);background-size:16px 16px}",
-			math.ceil(maxX - minX + 2 * margin), math.ceil(maxY - minY + 2 * margin)),
+		-- un paysage flou (ciel, horizon, herbe) comme derrière une fenêtre en
+		-- jeu : l'ombre portée et les débords (médaillon, coins) s'y voient
+		string.format(".stage{position:relative;width:%dpx;height:%dpx;background:%s}",
+			math.ceil(maxX - minX + 2 * margin), math.ceil(maxY - minY + 2 * margin), Snap.BACKDROP),
 		".stage>div{position:absolute;box-sizing:border-box}",
 		".txt{display:flex;overflow:visible;line-height:1.2;font-family:InterSnap,Inter,system-ui,sans-serif}",
 		".tex.file{font-size:9px;color:#9aa;display:flex;align-items:center;justify-content:center;overflow:hidden;"
@@ -431,7 +484,8 @@ function Snap.Render(root, opts)
 		".t{overflow:hidden;text-overflow:ellipsis;max-width:100%}",
 		".icon{display:inline-block;width:1em;height:1em;background:#556;vertical-align:middle}",
 		"</style></head><body>",
-		'<div class="bar">' .. Escape(opts.title or "Aperçu") .. " · aperçu hors-jeu (tests/snapshot.lua), pas une capture du client</div>",
+		'<div class="bar">' .. Escape(opts.title or "Aperçu") .. (opts.skin and (" · thème " .. Escape(opts.skin)) or "")
+			.. " · aperçu hors-jeu (tests/snapshot.lua), pas une capture du client</div>",
 		'<div class="stage">',
 		table.concat(out, "\n"),
 		"</div></body></html>",
@@ -591,7 +645,8 @@ Snap.scenes = {}
 Snap.scenes.bricks = function(T)
 	local NS = T.NS
 	local Theme = NS.Theme
-	local win = Theme.CreateWindow(UIParent, 980, 680, { name = "SnapBricks", nav = 220, footer = 56 })
+	-- emblem : le médaillon du thème forgé, comme la vraie fenêtre des réglages
+	local win = Theme.CreateWindow(UIParent, 980, 680, { name = "SnapBricks", nav = 220, footer = 56, emblem = true })
 	win:SetPoint("CENTER", UIParent, "CENTER", 0, 0)
 
 	local nav = win.nav
@@ -707,6 +762,188 @@ Snap.scenes.bricks = function(T)
 	done:SetPoint("RIGHT", foot, "RIGHT", -24, 0)
 	win:Show()
 	return win, "Briques du socle (Theme v2)"
+end
+
+-- ---------------------------------------------------------------------------
+-- Thème forgé (socle 3.2) : les matières (Theme.ART) et l'habillage des
+-- fenêtres, vus seuls. À rendre aussi en « sobre:forge-… » : le tableau
+-- garde ses matières, la fenêtre perd son cadre d'orfèvre.
+-- ---------------------------------------------------------------------------
+-- teintes d'essai de la plaque et du creux (le guide de teinte du thème
+-- forgé : bouton neutre, principal or, ajout vert, retrait rouge, action
+-- arcane, carte) ; libellé, teinte, encre du texte posé dessus
+local FORGE_PLATES = {
+	{ "neutre", { 0.165, 0.196, 0.239 }, { 0.90, 0.92, 0.94 } },
+	{ "principal", { 1.0, 0.84, 0.56 }, { 0.11, 0.075, 0.02 } },
+	{ "ajout", { 0.18, 0.37, 0.23 }, { 0.77, 0.95, 0.79 } },
+	{ "retrait", { 0.40, 0.17, 0.15 }, { 0.96, 0.73, 0.69 } },
+	{ "arcane", { 0.21, 0.35, 0.56 }, { 0.86, 0.91, 1.0 } },
+	{ "carte", { 0.118, 0.145, 0.176 }, { 0.90, 0.92, 0.94 } },
+}
+
+-- Le tableau des matières : chaque texture de Theme.ART à sa taille (agrandie
+-- si elle est petite), la plaque et le creux découpés en 9 tranches à
+-- plusieurs tailles et teintes, filets et points lumineux teintés, et les
+-- boutons du socle tels qu'ils sont.
+Snap.scenes["forge-bricks"] = function(T)
+	local Theme = T.NS.Theme
+	local ART = Theme.ART
+	local win = Theme.CreateWindow(UIParent, 1120, 760, { name = "SnapForge", emblem = true })
+	win:SetPoint("CENTER", UIParent, "CENTER", 0, 0)
+	local host = win.content
+	local function Label(text, x, y, color)
+		local fs = Theme.Text(host, Theme.F_SMALL, color or Theme.MUTED_LIGHT)
+		fs:SetPoint("TOPLEFT", host, "TOPLEFT", x, y)
+		fs:SetJustifyH("LEFT")
+		fs:SetText(text)
+		return fs
+	end
+	local function Heading(text, y)
+		local fs = Theme.Text(host, Theme.F_CAPS, Theme.TITLE)
+		fs:SetPoint("TOPLEFT", host, "TOPLEFT", 24, y)
+		fs:SetJustifyH("LEFT")
+		fs:SetText(text)
+		return fs
+	end
+	local title = Theme.Text(host, Theme.F_DISPLAY, Theme.TITLE)
+	title:SetPoint("TOPLEFT", host, "TOPLEFT", 96, -22)
+	title:SetJustifyH("LEFT")
+	title:SetText("Matières du thème forgé")
+	Label("Theme.ART (tools/gen_ui_assets.py) · Theme.Slice · thème posé : " .. tostring(Theme.skin), 96, -52)
+
+	-- 1. chaque matière, brute (blanc : sans teinte)
+	Heading("Textures", -84)
+	local x = 24
+	for _, key in ipairs({ "frame", "shadow", "corner", "plate", "inset", "dot", "line", "vignette" }) do
+		local spec = ART[key]
+		local w, h = 96, 96
+		if key == "line" then w, h = 192, 12 end
+		if key == "vignette" then w, h = 140, 96 end
+		local back = host:CreateTexture(nil, "BACKGROUND", nil, 1)
+		back:SetColorTexture(0.30, 0.31, 0.33, 1)   -- gris moyen : l'ombre et les gris se voient
+		back:SetPoint("TOPLEFT", host, "TOPLEFT", x, -110)
+		back:SetSize(w, 96)
+		local tex = host:CreateTexture(nil, "ARTWORK")
+		tex:SetTexture(spec.file)
+		tex:SetSize(w, h)
+		tex:SetPoint("CENTER", back, "CENTER", 0, 0)
+		Label(key .. (spec.size and (" " .. spec.size) or ""), x, -210)
+		x = x + w + 12
+	end
+
+	-- 2. la plaque en 9 tranches, teintée (multiplie le gris), avec son texte
+	Heading("Plaque (plate) : teintes et tailles", -240)
+	x = 24
+	for index, spec in ipairs(FORGE_PLATES) do
+		local w = index == 1 and 150 or 140
+		local b = CreateFrame("Frame", nil, host)
+		b:SetSize(w, 30)
+		b:SetPoint("TOPLEFT", host, "TOPLEFT", x, -266)
+		Theme.Slice(b, "plate", { layer = "BACKGROUND", color = spec[2] })
+		local fs = Theme.Text(b, Theme.F_LABEL, spec[3])
+		fs:SetPoint("CENTER", b, "CENTER", 0, 0)
+		fs:SetText(spec[1])
+		x = x + w + 12
+	end
+	-- tailles : petite pastille, grande carte, bloc carré
+	x = 24
+	for _, size in ipairs({ { 24, 24 }, { 60, 60 }, { 200, 44 }, { 320, 70 } }) do
+		local b = CreateFrame("Frame", nil, host)
+		b:SetSize(size[1], size[2])
+		b:SetPoint("TOPLEFT", host, "TOPLEFT", x, -310)
+		Theme.Slice(b, "plate", { layer = "BACKGROUND", color = FORGE_PLATES[size[1] >= 200 and 6 or 1][2] })
+		Label(size[1] .. "×" .. size[2], x, -310 - size[2] - 4)
+		x = x + size[1] + 16
+	end
+
+	-- 3. le creux : filet au repos (EDGE), au survol (GOLD_SOFT), actif (ACTIVE)
+	Heading("Creux (inset) : repos, survol, actif", -420)
+	x = 24
+	for _, spec in ipairs({ { "repos · EDGE", Theme.EDGE }, { "survol · GOLD_SOFT", Theme.GOLD_SOFT },
+		{ "actif · ACTIVE", Theme.ACTIVE } }) do
+		local f = CreateFrame("Frame", nil, host)
+		f:SetSize(210, 30)
+		f:SetPoint("TOPLEFT", host, "TOPLEFT", x, -446)
+		Theme.Slice(f, "inset", { layer = "BACKGROUND", color = spec[2] })
+		local fs = Theme.Text(f, Theme.F_BODY, Theme.TEXT)
+		fs:SetPoint("LEFT", f, "LEFT", 10, 0)
+		fs:SetText(spec[1])
+		x = x + 222
+	end
+	local tall = CreateFrame("Frame", nil, host)
+	tall:SetSize(120, 70)
+	tall:SetPoint("TOPLEFT", host, "TOPLEFT", x, -446)
+	Theme.Slice(tall, "inset", { layer = "BACKGROUND", color = Theme.EDGE })
+	Label("120×70", x, -520)
+
+	-- 4. lumière : filets qui s'éteignent vers la droite, points lumineux
+	Heading("Lumière : filets (line) et points (dot), teintés", -548)
+	local y = -576
+	for _, color in ipairs({ Theme.GOLD, Theme.ACTIVE, Theme.GREEN }) do
+		local dot = host:CreateTexture(nil, "ARTWORK")
+		dot:SetTexture(ART.dot.file)
+		dot:SetVertexColor(color[1], color[2], color[3], 1)
+		dot:SetSize(14, 14)
+		dot:SetPoint("TOPLEFT", host, "TOPLEFT", 24, y + 3)
+		local line = host:CreateTexture(nil, "ARTWORK")
+		line:SetTexture(ART.line.file)
+		line:SetVertexColor(color[1], color[2], color[3], 1)
+		line:SetSize(320, 6)
+		line:SetPoint("TOPLEFT", host, "TOPLEFT", 44, y)
+		local glow = host:CreateTexture(nil, "ARTWORK")
+		glow:SetTexture(ART.dot.file)
+		glow:SetVertexColor(color[1], color[2], color[3], 1)
+		glow:SetBlendMode("ADD")
+		glow:SetSize(28, 28)
+		glow:SetPoint("TOPLEFT", host, "TOPLEFT", 380, y + 10)
+		y = y - 24
+	end
+	Label("additif (ADD)", 414, -578)
+
+	-- 5. les boutons du socle, tels quels (les autres lots les forgent)
+	Heading("Boutons du socle", -660)
+	x = 24
+	for _, spec in ipairs({ { nil, "Par défaut" }, { "outline", "Contour" }, { "accent", "Accent" },
+		{ "primary", "Principal" }, { "adventure", "Aventure" } }) do
+		local b = Theme.CreateButton(host, 120, 28, spec[2], nil, spec[1])
+		b:SetPoint("TOPLEFT", host, "TOPLEFT", x, -684)
+		x = x + 132
+	end
+	local off = Theme.CreateButton(host, 120, 28, "Inactif", nil, "primary")
+	off:SetPoint("TOPLEFT", host, "TOPLEFT", x, -684)
+	if off.Disable then off:Disable() end
+	win:Show()
+	return win, "Thème forgé : matières (Theme.ART), plaque et creux en 9 tranches, lueurs, boutons"
+end
+
+-- Une fenêtre de dialogue (médaillon, cadre d'orfèvre, quatre coins, ombre)
+-- et un bandeau (cadre sans coins ni médaillon), côte à côte
+Snap.scenes["forge-dialog-toast"] = function(T)
+	local Theme = T.NS.Theme
+	local dialog = Theme.CreateDialog(UIParent, 480, 280, { name = "SnapForgeDialog", title = "Avant le donjon",
+		subtitle = "Le groupe est prêt : vivres, réparations, sacs.", logo = Theme.LOGO })
+	dialog:SetPoint("TOPLEFT", UIParent, "CENTER", -520, 150)
+	local body = Theme.Text(dialog.content, Theme.F_BODY, Theme.TEXT)
+	body:SetPoint("TOPLEFT", dialog.content, "TOPLEFT", dialog.pad, dialog.contentTop - 16)
+	body:SetWidth(dialog.innerWidth)
+	body:SetJustifyH("LEFT")
+	body:SetText("Trois points restent à voir avant d'entrer. La fenêtre se ferme d'elle-même quand tout est prêt.")
+	dialog:AddFooterButton("Fermer", nil, "primary", "right")
+	dialog:AddFooterButton("Diagnostic", nil, "outline", "left")
+	dialog:Show()
+
+	local toast = Theme.CreateToast(UIParent, 380, 72, { name = "SnapForgeToast" })
+	toast:SetPoint("TOPLEFT", UIParent, "CENTER", 40, 150)
+	local head = Theme.Text(toast, Theme.F_TITLE, Theme.TITLE)
+	head:SetPoint("TOPLEFT", toast, "TOPLEFT", toast.contentLeft, -14)
+	head:SetJustifyH("LEFT")
+	head:SetText("Capture possible")
+	local line = Theme.Text(toast, Theme.F_BODY, Theme.TEXT)
+	line:SetPoint("TOPLEFT", head, "BOTTOMLEFT", 0, -6)
+	line:SetJustifyH("LEFT")
+	line:SetText("Ours gris (rare) · et 1 de plus")
+	toast:Show()
+	return Snap.Group(dialog, toast), "Thème forgé : une fenêtre de dialogue et un bandeau, côte à côte"
 end
 
 -- fenêtre de module centrée (la position sauvegardée n'a pas de sens ici)
@@ -1392,8 +1629,61 @@ Snap.scenes["qc-tooltip"] = function(T)
 	return tip, "QuestCompanion : infobulle d'une créature (ligne du bestiaire)"
 end
 
+-- Thème d'une scène : « sobre:<scène> » ou « azeroth:<scène> » ; sans
+-- préfixe, Azeroth (le thème par défaut des deux addons). Rend le thème et
+-- le nom de la scène.
+function Snap.SplitSkin(name)
+	local skin, rest = tostring(name or ""):match("^(%a+):(.+)$")
+	if skin == "sobre" or skin == "azeroth" then return skin, rest end
+	return "azeroth", name
+end
+
+-- Pose le thème pour toute la scène, dans les deux addons (chacun a sa copie
+-- du socle), avant que la moindre fenêtre ne soit construite. Le thème du
+-- socle (Theme.ApplySkin) et le choix du joueur (NS:UISkinChoice,
+-- QNS:UIStyleChoice) sont tenus le temps de la scène : un ResetWorld ou un
+-- ADDON_LOADED rejoué reposerait la sauvegarde. Les modules chargés pendant
+-- la scène (T.LoadModules : le socle de QuestCompanion arrive alors) sont
+-- pris au vol, juste avant leur ADDON_LOADED. Le style propre du carnet de
+-- QuestCompanion (atlas du client) reste décidé par la scène. Rend une
+-- fonction qui remet tout comme avant.
+function Snap.ForceSkin(skin, T)
+	local undo, held = {}, {}
+	local function Swap(owner, key, value)
+		if type(owner) ~= "table" then return end
+		local before = rawget(owner, key)
+		owner[key] = value
+		undo[#undo + 1] = function() owner[key] = before end
+	end
+	local function Hold()
+		for _, ns in ipairs({ T and T.NS, T and T.QNS }) do
+			local Theme = type(ns) == "table" and rawget(ns, "Theme")
+			if Theme and Theme.ApplySkin and not held[Theme] then
+				held[Theme] = true
+				local apply = Theme.ApplySkin
+				Swap(Theme, "ApplySkin", function() return apply(skin) end)
+				Swap(ns, "UISkinChoice", function() return skin end)
+				if ns.UIStyleChoice then Swap(ns, "UIStyleChoice", function() return skin end) end
+				apply(skin)
+			end
+		end
+	end
+	Hold()
+	local mock = T and T.Mock
+	if type(mock) == "table" and type(mock.Fire) == "function" then
+		local fire = mock.Fire
+		Swap(mock, "Fire", function(self, event, ...)
+			if event == "ADDON_LOADED" then Hold() end
+			return fire(self, event, ...)
+		end)
+	end
+	return function() for i = #undo, 1, -1 do undo[i]() end end
+end
+
 function Snap.RunScene(name, path, T)
 	T = T or rawget(_G, "T")
+	local skin
+	skin, name = Snap.SplitSkin(name)
 	local scene = Snap.scenes[name]
 	if not scene then
 		local names = {}
@@ -1404,10 +1694,20 @@ function Snap.RunScene(name, path, T)
 	-- dégradés : l'API récente, comme Forever
 	local savedColor = rawget(_G, "CreateColor")
 	_G.CreateColor = savedColor or Mock.CreateColor
+	-- les cadres créés pendant la scène lisent leur niveau comme en jeu
+	local savedCreate = rawget(_G, "CreateFrame")
+	_G.CreateFrame = function(...)
+		local frame = savedCreate(...)
+		if type(frame) == "table" then frame.GetFrameLevel = Snap.LiveLevel end
+		return frame
+	end
+	local restoreSkin = Snap.ForceSkin(skin, T)
 	local ok, frame, title = pcall(scene, T)
 	_G.CreateColor = savedColor
+	_G.CreateFrame = savedCreate
+	restoreSkin()
 	if not ok then error(frame, 0) end
-	local count = Snap.Snapshot(frame, path, { title = title or name })
+	local count = Snap.Snapshot(frame, path, { title = title or name, skin = skin })
 	return string.format("%s : %d éléments -> %s", name, count, path)
 end
 

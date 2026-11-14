@@ -7,12 +7,28 @@ d'après les ancres, couleurs, textes, police Inter. Les textures de l'addon
 (.tga) sont incrustées en PNG (teintées par leur couleur de sommet) ; celles
 du jeu restent des vignettes portant le nom du fichier.
 
+Thème (socle 3.2) : chaque scène est rendue dans le thème Azeroth (forgé, le
+thème par défaut des deux addons) ; préfixer le nom par « sobre: » la rend dans
+le thème Sobre (« azeroth: » est accepté aussi). Le thème est posé dans les
+deux addons avant la construction des fenêtres et tenu pendant la scène.
+
+Rendu du thème forgé : une couleur de sommet MULTIPLIE la texture (une plaque
+grise en relief garde son relief, l'alpha de la texture découpe la forme) ;
+SetTexCoord découpe la texture et la retourne (gauche > droite : miroir
+horizontal, haut > bas : vertical) ; ADD passe en fusion additive ; l'ordre
+de dessin suit strate, niveau du cadre (comme en jeu : parent + 1, ou
+SetFrameLevel), couche et sous-couche ; la scène s'agrandit pour tout ce qui
+déborde des fenêtres (ombre portée, médaillon), sur un fond de paysage estompé.
+
 Usage :
-  python3 tests/snapshot.py <scène> <sortie.html>
-  python3 tests/snapshot.py all <dossier>       (toutes les scènes)
+  python3 tests/snapshot.py <scène> <sortie.html>          (Azeroth)
+  python3 tests/snapshot.py sobre:<scène> <sortie.html>    (Sobre)
+  python3 tests/snapshot.py all <dossier>       (toutes les scènes ; « sobre:all » en Sobre)
   python3 tests/snapshot.py list
 Scènes (Snap.scenes dans tests/snapshot.lua ; « list » les donne toutes) :
-  bricks ; réglages : r2q-options, r2q-options-bags, r2q-options-nav, r2q-options-spellranks,
+  thème forgé : forge-bricks (chaque matière de Theme.ART, plaque et creux en
+  9 tranches à plusieurs tailles et teintes, lueurs, boutons), forge-dialog-toast
+  (fenêtre de dialogue et bandeau côte à côte) ; bricks ; réglages : r2q-options, r2q-options-bags, r2q-options-nav, r2q-options-spellranks,
   qc-options-companion, qc-options-ornaments, options-search ; fenêtres de Ready2Quest :
   r2q-check, r2q-dungeon, r2q-expedition, r2q-death, r2q-lootroom, r2q-spellranks ; bandeaux :
   r2q-bagspace, r2q-camp, r2q-gear-toast, r2q-portrait, r2q-edit-banner, r2q-notice,
@@ -149,9 +165,13 @@ def embed_textures(out):
         if (r, g, b) == (255, 255, 255):
             look = "background:url(%s) %s no-repeat;opacity:%.3f" % (uri, geometry, a)
         else:
-            # texture blanche teintée : masque + couleur de sommet
-            look = ("background:%s;-webkit-mask:url(%s) %s no-repeat;mask:url(%s) %s no-repeat"
-                    % (tint, uri, geometry, uri, geometry))
+            # couleur de sommet : comme le client, elle MULTIPLIE la texture
+            # (une plaque grise en relief garde son relief, une lueur blanche
+            # prend la couleur) ; l'alpha de la texture découpe la forme
+            # (masque), l'alpha du sommet passe par l'opacité
+            look = ("background:url(%s) %s no-repeat,rgb(%d,%d,%d);background-blend-mode:multiply;"
+                    "-webkit-mask:url(%s) %s no-repeat;mask:url(%s) %s no-repeat;opacity:%.3f"
+                    % (uri, geometry, r, g, b, uri, geometry, uri, geometry, a))
         return '<div class="tex" title="%s" style="%s;%s"></div>' % (html.escape(src), pos, look)
 
     text = pattern.sub(replace, text)
@@ -167,10 +187,12 @@ def main(argv):
         print(__doc__)
         return 2
     scene, out = argv
-    if scene == "all":
+    if scene in ("all", "sobre:all", "azeroth:all"):
+        prefix = scene[:-len("all")]
         os.makedirs(out, exist_ok=True)
         for name in scene_names():
-            print(render(name, os.path.abspath(os.path.join(out, name + ".html"))))
+            path = os.path.join(out, prefix.replace(":", "-") + name + ".html")
+            print(render(prefix + name, os.path.abspath(path)))
         return 0
     print(render(scene, os.path.abspath(out)))
     return 0
