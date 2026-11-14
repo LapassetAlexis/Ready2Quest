@@ -1362,6 +1362,10 @@ local function QCWorld(T)
 	ns.journalToasts, ns.journalChats, ns.journalToastHideAt = {}, {}, nil
 	local db = ns:DB()
 	db.journalTracker, db.companionShow = false, true
+	-- 3.1.0 : le Voile d'hiver suit le thème forgé, et l'horloge du faux
+	-- client (1970-01-01) tombe en saison : décor coupé (les scènes montrent
+	-- le filet, pas la boule de neige)
+	db.winterVeil = "off"
 	local data = ns:CompanionData()
 	data.name, data.tutoDone, data.appearance = "Brindille", true, "whelp_green"
 	data.frameStyle, data.background = "copper", "forest"
@@ -1437,9 +1441,13 @@ Snap.scenes["qc-journal-day"] = function(T)
 end
 
 -- 2.9.1 : la même page Missions, habit Azeroth (atlas du client simulés)
+-- 3.1.0 : l'ancien habillage, derrière son drapeau (ns.AZEROTH_LEGACY)
 Snap.scenes["qc-journal-day-azeroth"] = function(T)
 	if T.Mock and T.Mock.InstallAtlas then T.Mock.InstallAtlas(true) end
 	local frame = QCJournal(T, "day", function(ns)
+		ns.AZEROTH_LEGACY = true
+		-- (rendue comme avant : le décor en saison, horloge du faux client)
+		ns:DB().winterVeil = nil
 		ns.uiStyleCache = {}
 		ns:AzerothAtlasOK(true)
 		ns:DB().companionStyle = "azeroth"
