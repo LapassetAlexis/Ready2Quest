@@ -596,7 +596,7 @@ function ns:EnsureAllure()
 		frame = Build(self)
 		if frame then frame.uiStyle = "sobre" end
 		-- 3.1.0 (forgé) : relevé au-dessus du carnet, son habillage monte avec lui
-		if frame and frame.allureForged and ns.CarnetChromeFollows then ns.CarnetChromeFollows(frame) end
+		if frame and frame.allureForged and ns.ForgeChromeFollows then ns.ForgeChromeFollows(frame) end
 		style = "sobre"
 	end
 	if not frame then return nil end

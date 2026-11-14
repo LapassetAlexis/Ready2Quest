@@ -266,6 +266,13 @@ do
 	if worn then s.ok("allure portée : la sélection", Same(worn.ring.top.vertex or { worn.ring.top:GetVertexColor() }, Theme.SELECT_LIGHT)) end
 	s.ok("allure : l'habillage suit le niveau du panneau", panel.chromeFollows == true and panel.skinChrome
 		and panel.skinChrome.top:GetFrameLevel() > panel:GetFrameLevel())
+	-- le suivi de niveau sert au produit : il ne vit pas dans un fichier de
+	-- l'ancien habillage, voué à disparaître (JournalAzeroth.lua, AzerothStyle.lua)
+	local info = debug and debug.getinfo and debug.getinfo(NS.ForgeChromeFollows, "S")
+	local src = info and info.source or ""
+	s.ok("suivi de niveau de l'habillage (ns.ForgeChromeFollows) hors des fichiers de l'ancien habillage",
+		type(NS.ForgeChromeFollows) == "function" and src ~= "" and not src:find("JournalAzeroth", 1, true)
+		and not src:find("AzerothStyle", 1, true), src)
 	NS:AllureClose()
 	local dialog = NS:EnsureEffectsConfirm()
 	NS:EffectsConfirmPlace(dialog)

@@ -15,6 +15,24 @@ if ns.blocked then return end
 local L = ns.L
 local Theme = ns.Theme
 
+-- 3.1.0 : l'habillage forgé d'une fenêtre (Theme.DressWindow : cadre, coins,
+-- médaillon sur skinChrome.top, Theme.CHROME.level au-dessus d'elle) suit
+-- son niveau quand le module la relève. Produit (thème forgé), PAS l'ancien
+-- habillage : ne pas le supprimer avec JournalAzeroth.lua. Appelé par
+-- CompanionAllure.lua (panneau d'allure) et pour la question des effets.
+function ns.ForgeChromeFollows(frame)
+	if not (frame and frame.SetFrameLevel) or frame.chromeFollows then return end
+	local set = frame.SetFrameLevel
+	frame.SetFrameLevel = function(f, level, ...)
+		set(f, level, ...)
+		local top = f.skinChrome and f.skinChrome.top
+		if top and top ~= f and top.SetFrameLevel then
+			top:SetFrameLevel((tonumber(level) or 1) + ((Theme.CHROME and Theme.CHROME.level) or 30))
+		end
+	end
+	frame.chromeFollows = true
+end
+
 local WIDTH, HEIGHT = 980, 680
 local ZONE_LIST_MAX = 12
 local ACTIVITIES = { "explore", "combat", "craft", "quests" }
