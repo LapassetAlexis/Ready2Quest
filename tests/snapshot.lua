@@ -811,9 +811,11 @@ Snap.scenes["forge-bricks"] = function(T)
 	title:SetText("Matières du thème forgé")
 	Label("Theme.ART (tools/gen_ui_assets.py) · Theme.Slice · thème posé : " .. tostring(Theme.skin), 96, -52)
 
-	-- 1. chaque matière, brute (blanc : sans teinte)
+	-- 1. chaque matière, brute (blanc : sans teinte) ; écart de 8 px : les neuf
+	-- cases tiennent dans la largeur de la fenêtre (1092 sur 1120)
 	Heading("Textures", -84)
 	local x = 24
+	win.brickCells = {}
 	for _, key in ipairs({ "frame", "shadow", "corner", "plate", "inset", "dot", "line", "vignette", "ring" }) do
 		local spec = ART[key]
 		local w, h = 96, 96
@@ -828,7 +830,8 @@ Snap.scenes["forge-bricks"] = function(T)
 		tex:SetSize(w, h)
 		tex:SetPoint("CENTER", back, "CENTER", 0, 0)
 		Label(key .. (spec.size and (" " .. spec.size) or ""), x, -210)
-		x = x + w + 12
+		win.brickCells[#win.brickCells + 1] = { key = key, left = x, right = x + w }
+		x = x + w + 8
 	end
 
 	-- 2. la plaque en 9 tranches, teintée (multiplie le gris), avec son texte

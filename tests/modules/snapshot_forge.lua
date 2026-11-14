@@ -145,6 +145,13 @@ do
 	end
 	Check("[SNAPF] « forge-bricks » : chaque matière de Theme.ART dessinée, fenêtre habillée",
 		ok and #missing == 0 and win.skinDressed == true, ok and table.concat(missing, ", ") or win)
+	local inside, last = true, ""
+	for _, cell in ipairs(ok and win.brickCells or {}) do
+		last = cell.key .. " " .. cell.right
+		if cell.left < 0 or cell.right > win:GetWidth() - 16 then inside = false end
+	end
+	Check("[SNAPF] « forge-bricks » : les neuf cases de textures tiennent dans la fenêtre (marge du cadre)",
+		ok and #(win.brickCells or {}) == 9 and inside, last)
 	Check("[SNAPF] « forge-bricks » : plaques teintées (couleur de sommet transmise) et lueur additive",
 		html:find('plaque" data%-tint="rgba%(255,214,143') ~= nil and html:find("plus%-lighter") ~= nil)
 	win:Hide()
