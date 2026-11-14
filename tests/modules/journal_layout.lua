@@ -256,6 +256,26 @@ do
 	end
 	Check("[CZ] aucun texte au repli « assombri », chaque rôle posé existe dans la table", #misses == 0 and #unknown == 0
 		and roled > 0, table.concat(misses, " | ") .. " / " .. table.concat(unknown, ", "))
+	-- 3.1.0 : un texte peint au jeton d'identité (bleu arcane dans QC, de la
+	-- couleur de BLUE) garde l'encre de l'or d'avant, pas celle de l'information
+	local roles = NS.CarnetTokenRoles()
+	local T_ = NS.Theme
+	local head = f.prog and f.prog.head
+	NS:JournalGuidePick("effects")   -- une section à table (en-tête et son filet)
+	local guideHeads = #(f.guide and f.guide.theads or {}) > 0
+	for _, fs in ipairs(f.guide and f.guide.heads or {}) do
+		if fs.azRole and fs.azRole ~= "page.amber" then guideHeads = false end
+	end
+	local theadLine = true
+	for _, row in ipairs(f.guide and f.guide.theads or {}) do
+		local c = row.line and row.line.vertex
+		if not c or not (math.abs(c[1] - T_.GOLD[1]) < 0.01 and math.abs(c[2] - T_.GOLD[2]) < 0.01) then theadLine = false end
+	end
+	Check("[CZ] jetons de rôle (identité, sélection) : encre ambre sur parchemin ; titre de liste d'Exploration, intertitres et filet du Guide",
+		roles[T_.IDENTITY] == "page.amber" and roles[T_.IDENTITY_LIGHT] == "page.amber" and roles[T_.SELECT] == "page.amber"
+		and roles[T_.SELECT_LIGHT] == "page.amber" and roles[T_.TITLE] == "page.ink"
+		and head and head.azRole == "page.amber" and Same(head.textColor, INK.amber) and guideHeads and theadLine,
+		tostring(head and head.azRole))
 	local pantryOK = f.azPlate.count.azRole == "plate.count"
 	for _, button in pairs(f.pantry or {}) do
 		if button.count and (button.count.azRole ~= "pantry.count" or not (button.azShade and button.azShade:IsShown())) then pantryOK = false end

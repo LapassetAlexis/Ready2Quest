@@ -745,6 +745,13 @@ local function TokenRoles()
 	Add(Theme.GOLD, "page.amber"); Add(Theme.GOLD_LIGHT, "page.amber"); Add(Theme.GOLD_SOFT, "page.amber")
 	Add(Theme.GREEN, "page.green"); Add(Theme.BLUE, "page.blue"); Add(Theme.RED, "page.red")
 	Add(Theme.ORANGE_DEEP, "page.orange")
+	-- 3.1.0 : les jetons de rôle (identité, sélection, titre). Ils ont leur
+	-- propre table ; dans QuestCompanion, l'identité a la couleur de BLUE et
+	-- serait sinon reconnue comme l'information (page.blue). Sur le
+	-- parchemin, ils gardent l'encre de l'or d'avant (ambre) ; TITLE, l'encre
+	Add(Theme.IDENTITY, "page.amber"); Add(Theme.IDENTITY_LIGHT, "page.amber")
+	Add(Theme.SELECT, "page.amber"); Add(Theme.SELECT_LIGHT, "page.amber")
+	Add(Theme.ACTIVE, "page.amber"); Add(Theme.TITLE, "page.ink")
 	return TOKEN_ROLE
 end
 ns.CarnetTokenRoles = TokenRoles

@@ -395,6 +395,9 @@ local function Build(self, frame, content, ui)
 	local pane = CreateFrame("Frame", nil, content)
 	pane:SetAllPoints()
 	frame.guide = pane
+	-- 3.1.0 : thème forgé, décidé à la création du carnet (jamais sous l'ancien
+	-- habillage, dont le parchemin attend le filet or d'avant)
+	pane.forged = frame.journalForged
 	-- 3.0.1 bêta 3 : un fond opaque propre à la page, sous tout le reste. Une
 	-- autre fenêtre de même strate (les réglages de Ready2Quest) pouvait
 	-- s'intercaler entre le fond du carnet et cette page : on la voyait au
@@ -517,8 +520,9 @@ local function NewRow(pane, head)
 		local cell = NewText(row, fonts[index], colors[index])
 		row.cells[index] = cell
 	end
-	-- filet d'en-tête : l'identité (= or en Sobre)
-	row.line = Theme.Solid(row, "ARTWORK", head and Theme.IDENTITY or Theme.EDGE_SOFT, head and 0.8 or 1)
+	-- filet d'en-tête : l'identité au thème forgé, l'or ailleurs (Sobre, parchemin)
+	local rule = pane.forged and Theme.IDENTITY or Theme.GOLD
+	row.line = Theme.Solid(row, "ARTWORK", head and rule or Theme.EDGE_SOFT, head and 0.8 or 1)
 	row.line:SetPoint("BOTTOMLEFT", row, "BOTTOMLEFT", 0, 0)
 	row.line:SetPoint("BOTTOMRIGHT", row, "BOTTOMRIGHT", 0, 0)
 	row.line:SetHeight(1)
