@@ -196,7 +196,7 @@ function ns:EnsureWindow()
 	local height = self:WindowHeight(rowCount, false)
 
 	local frame = Theme.CreateDialog(UIParent, WIDTH, height, { name = "Ready2QuestDiagFrame",
-		title = L.WIN_TITLE_DIAG, footer = FOOTER })
+		title = L.WIN_TITLE_DIAG, footer = FOOTER, headerIcon = true })
 	if not frame then return nil end
 	ns:RestorePoint(frame, "diagPoint", { point = "CENTER", x = 0, y = 120 })
 

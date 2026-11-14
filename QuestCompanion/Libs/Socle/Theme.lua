@@ -2921,9 +2921,11 @@ end
 -- .contentTop = haut de la zone libre sous l'en-tête (négatif, depuis le haut
 -- de la fenêtre) ; .pad = marge latérale (20).
 -- opts : name, title, subtitle, strata, footer (hauteur, 52 par défaut ;
--- false = sans pied), logo (texture, false = sans).
+-- false = sans pied), logo (texture, false = sans), headerIcon (vrai : un
+-- bouton-icône sera posé à gauche du [×] ; le titre lui laisse sa place).
 -- ---------------------------------------------------------------------------
 Theme.DIALOG_PAD = 20
+Theme.DIALOG_HEADER_BUTTON = 22 + 8   -- un bouton d'en-tête et son écart
 Theme.DIALOG_FOOTER = 52
 Theme.DIALOG_BUTTON_HEIGHT = 28
 function Theme.CreateDialog(parent, width, height, opts)
@@ -2946,8 +2948,10 @@ function Theme.CreateDialog(parent, width, height, opts)
 	frame.title, frame.subtitle, frame.logo = frame.header.title, frame.header.subtitle, frame.header.logo
 	frame.title:SetText(opts.title or "")
 	frame.subtitle:SetText(opts.subtitle or "")
-	-- le sous-titre s'arrête avant le [×] (et un bouton-icône à sa gauche)
-	local textWidth = width - frame.header.textLeft - Theme.DIALOG_PAD - 2 * (22 + 8)
+	-- le sous-titre s'arrête avant le [×] (et le bouton-icône à sa gauche,
+	-- s'il y en a un : sinon, au médaillon forgé, il était coupé pour rien)
+	local buttons = 1 + (opts.headerIcon and 1 or 0)
+	local textWidth = width - frame.header.textLeft - Theme.DIALOG_PAD - buttons * Theme.DIALOG_HEADER_BUTTON
 	frame.subtitle:SetWidth(textWidth)
 	if frame.subtitle.SetWordWrap then frame.subtitle:SetWordWrap(false) end
 	frame.title:SetWidth(textWidth)

@@ -62,7 +62,7 @@ end
 -- PLACE_DATA, DUNGEONS…) sont partagées telles quelles (ns.SocleData).
 -- Empreinte différente : chacun sa copie, comme avant.
 -- socle:empreinte (écrit par tools/sync_socle.py, ne pas éditer)
-local SOCLE_ID = "54f0e3aa"
+local SOCLE_ID = "f2d757a5"
 -- /socle:empreinte
 local REGISTRY = rawget(_G, "ReadyToQuestSocle")
 if type(REGISTRY) ~= "table" then
