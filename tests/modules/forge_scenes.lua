@@ -198,6 +198,8 @@ do
 		and stage.title:GetText() == "CAPTURE · RARE" and stage.name:GetText() == "Grand trotteur"
 		and Same(stage.name.textColor, NS.CAPTURE_RARITY.rare.text) and Same(stage.title.textColor, Theme.IDENTITY_LIGHT)
 		and stage.topBar == nil and stage.ribbonPanel == nil and stage.bannerText == nil)
+	s.ok("le nom en police de titre, à sa taille (il rapetisse pour tenir)", stage.name.fontObject == Theme.F_TITLE
+		and stage.name.fitSize == F.nameMax and stage.name.font and stage.name.font.size == F.nameMax and stage.name.width == stage.nameW)
 	s.ok("filet lumineux de la rareté sous le nom", stage.rarityRuleL and stage.rarityRuleL.texture == Theme.ART.line.file
 		and Same(stage.rarityRuleL.vertex, NS.CAPTURE_RARITY.rare.color))
 	local cells = stage.aidCells
@@ -268,6 +270,15 @@ do
 	s.ok("brillante : le nom en or sur la plaque et dans le verdict, le reflet traverse le bandeau (rogné)",
 		rolling.result == "ok" and stage.name.textColor[3] < 0.6 and Same(banner.text.textColor, Theme.GOLD_LIGHT)
 		and banner.shine:IsShown() and banner.shine:GetParent() == banner.shineClip and banner.shineClip.clipsChildren == true)
+	stage.scripts.OnMouseUp(stage)
+	FS.Close(5)
+	-- un nom très long : la police descend jusqu'au plus petit (la largeur coupe le reste)
+	FS.SeeKill(8203, { name = "Ancienne mystique Tranchegroin des collines lointaines" })
+	FS.Roll(0)
+	NS:CaptureThrow()
+	s.ok("nom très long : la police rapetisse jusqu'au plus petit", stage.name.fitSize == NS.FORGE_SCENE.stage.nameMin
+		and stage.name.width == stage.nameW, stage.name.fitSize)
+	FS.UntilVerdict()
 	stage.scripts.OnMouseUp(stage)
 	FS.Close(5)
 	-- Échap avant le verdict : la scène ne l'a pas montré, le bandeau le dira

@@ -509,11 +509,13 @@ function ns:EnsureCaptureStage()
 		frame.title:SetWidth(lay.plateW - 16)
 		frame.title:SetJustifyH("CENTER")
 		if frame.title.SetWordWrap then frame.title:SetWordWrap(false) end
-		frame.name = Theme.Text(frame, Theme.F_HEADING or Theme.F_BODY, Theme.PARCHMENT)
+		-- le nom en police de titre ; il rapetisse pour tenir (StageHeader)
+		frame.name = Theme.Text(frame, Theme.F_TITLE or Theme.F_HEADING, Theme.PARCHMENT)
 		frame.name:SetPoint("TOP", frame.titlePlate, "TOP", 0, lay.nameY)
 		frame.name:SetWidth(lay.plateW - 16)
 		frame.name:SetJustifyH("CENTER")
 		if frame.name.SetWordWrap then frame.name:SetWordWrap(false) end
+		frame.nameW = lay.plateW - 16
 		frame.rarityRuleL = ns.QCForgeLine(frame, "ARTWORK", true)
 		frame.rarityRuleR = ns.QCForgeLine(frame, "ARTWORK", false)
 		if frame.rarityRuleL and frame.rarityRuleR then
@@ -862,7 +864,12 @@ local function StageHeader(self, frame, target, withLevel)
 		-- 2.11.0 : le nom prend la variante claire du rang (lisible en Sobre)
 		local ink = rarity.text or c
 		frame.name:SetTextColor(ink[1], ink[2], ink[3])
-		-- (forgé : le filet lumineux de la rareté sous le nom)
+		-- (forgé : le nom rapetisse pour tenir sur la plaque ; le filet
+		-- lumineux de la rareté sous lui)
+		if frame.nameW and ns.ForgeSceneFit then
+			local F = ns.FORGE_SCENE.stage
+			ns.ForgeSceneFit(frame.name, frame.nameW, F.nameMax, F.nameMin)
+		end
 		if frame.rarityRuleL then
 			frame.rarityRuleL:SetVertexColor(c[1], c[2], c[3], ns.QC_FORGE.line.alpha)
 			frame.rarityRuleR:SetVertexColor(c[1], c[2], c[3], ns.QC_FORGE.line.alpha)
