@@ -1058,26 +1058,29 @@ end
 
 -- Titre de groupe : capitales ambre. Celui d'une page à sous-pages est
 -- cliquable (sa première sous-page) et porte l'interrupteur de son module.
+-- Thème forgé : en « pilule » ; or pour une page à sous-pages (une fonction
+-- de l'addon, cliquable), arcane pour un simple titre de rangement
+-- (navigation) ; l'interrupteur devient un voyant.
 local function NavHeader(frame, text, def)
 	local header = CreateFrame("Button", nil, frame.navList)
 	header:SetSize(NAV_WIDTH - 1, NAV_HEADER_H)
-	header.label = Theme.CreateNavGroup(header, text)
+	header.label = Theme.CreateNavGroup(header, text, def and "gold" or "arcane")
 	header.label:SetPoint("BOTTOMLEFT", header, "BOTTOMLEFT", 18, 8)
 	header.label:SetWidth(NAV_WIDTH - 18 - 40)
 	if header.label.SetWordWrap then header.label:SetWordWrap(false) end
-	header.power = Theme.CreatePowerButton(header, 16)
+	header.power = Theme.CreateNavPower(header, 16)
 	header.power:SetPoint("BOTTOMRIGHT", header, "BOTTOMRIGHT", -12, 4)
 	header.power:Hide()
 	function header:SetModuleState(state)
-		local c = Theme.GOLD
+		local c = self.label.toneInk or Theme.GOLD
 		if state == nil then
 			self.moduleOn = nil
 			self.power:Hide()
 		else
 			self.moduleOn = (state == true or state == "on")
 			self.power:Show()
-			c = self.moduleOn and Theme.GOLD or Theme.MUTED
-			Theme.SetPowerState(self.power, self.moduleOn)
+			if not self.moduleOn then c = self.label.toneInk and Theme.FORGE_NAV.offInk or Theme.MUTED end
+			Theme.SetNavPower(self.power, self.moduleOn)
 		end
 		self.label:SetTextColor(c[1], c[2], c[3], 1)
 	end
@@ -1223,6 +1226,10 @@ function ns:EnsureOptions()
 
 	-- Navigation : marque, recherche, groupes et pages, version en bas
 	local nav = frame.nav
+	-- thème forgé : colonne plus sombre au bord gauche, séparateur noir et
+	-- reflet ; pied en bande plus sombre sous un filet noir et son reflet
+	Theme.ForgeNavColumn(nav)
+	Theme.ForgeFooter(frame.footer)
 	frame.brand = Theme.CreateNavBrand(nav, Theme.LOGO, ns.APP.brand or ns.APP.id)
 	frame.brand:SetPoint("TOPLEFT", nav, "TOPLEFT", 0, -8)
 	frame.brand:SetWidth(NAV_WIDTH)
@@ -1263,6 +1270,8 @@ function ns:EnsureOptions()
 	frame.previewStrip.bg = Theme.Solid(frame.previewStrip, "BACKGROUND", Theme.NAV, 1)
 	frame.previewStrip.bg:SetAllPoints()
 	frame.previewStrip.border = Theme.Border(frame.previewStrip, Theme.EDGE_SOFT, 1)
+	-- thème forgé : le relief d'une carte (voile, reflet d'un pixel)
+	if Theme.ForgeHere() then Theme.ForgeRelief(frame.previewStrip, true) end
 	frame.previewStrip:Hide()
 
 	frame.scrollTrack = Theme.Solid(content, "BORDER", Theme.EDGE_SOFT, 1)
@@ -1608,7 +1617,8 @@ function ns:SetOptionsSearch(text)
 		end
 		local section = results.sections[index]
 		if not section then
-			section = Theme.CreateSection(results, "", nil)
+			-- résultats : sections de navigation (où vit le réglage), en arcane
+			section = Theme.CreateSection(results, "", nil, "arcane")
 			section:SetWidth(INNER)
 			results.sections[index] = section
 		end

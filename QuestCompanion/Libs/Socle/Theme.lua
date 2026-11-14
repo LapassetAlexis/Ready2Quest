@@ -668,9 +668,25 @@ end
 
 -- Filet ambre lumineux : transparent -> ambre -> ambre clair -> transparent,
 -- avec un halo plus large et très pâle dessous. Retourne { segments, glow }.
-function Theme.CreateGlowRule(parent, height)
+-- Thème forgé : une seule texture, notre filet lumineux (ART.line, or ou
+-- `tone` = "arcane") qui s'éteint vers la droite ; .segments = { ce filet }
+-- (ceux qui cachent les segments le cachent), pas de halo à part.
+function Theme.CreateGlowRule(parent, height, tone)
 	local rule = { segments = {}, glow = {} }
 	height = height or 2
+	if Theme.ForgeHere("CreateGlowRule") then
+		local K = Theme.FORGE_RULE
+		local c = (Theme.FORGE_TONES[tone] or Theme.FORGE_TONES.gold).light
+		local line = Theme.ArtTexture(parent, "line", "ARTWORK", 0, c, K.alpha)
+		line.from, line.to = 0, 1
+		rule.segments[1], rule.forgeLine, rule.forged = line, line, true
+		function rule:Place(left, y, width)
+			line:ClearAllPoints()
+			line:SetPoint("TOPLEFT", parent, "TOPLEFT", left, y + K.lift)
+			line:SetSize(math.max(1, math.floor(width + 0.5)), K.height)
+		end
+		return rule
+	end
 	local stops = {
 		{ 0.00, 0.35, Theme.GOLD, 0, Theme.GOLD, 1 },
 		{ 0.35, 0.65, Theme.GOLD, 1, Theme.GOLD_LIGHT, 1 },
@@ -763,6 +779,16 @@ function Theme.CreatePageHeader(parent, width, opts)
 		header.plate = Solid(header, "BACKGROUND", Theme.NAV, 1)
 		header.plate:SetAllPoints()
 		if header.plate.SetDrawLayer then header.plate:SetDrawLayer("BACKGROUND", 1) end
+		-- forgé : le bois prend un haut plus chaud (dégradé vers le bas) ; la
+		-- lueur ambre du haut et du coin reste par-dessus
+		if Theme.ForgeHere("CreatePageHeader") then
+			local K = Theme.FORGE_HEADER
+			Gradient(header.plate, "VERTICAL", Theme.NAV, K.bottom, K.warm, K.top)
+			for _, key in ipairs({ "topGlow", "cornerGlow" }) do
+				if header[key].SetDrawLayer then header[key]:SetDrawLayer("BACKGROUND", 2) end
+			end
+			header.forged = true
+		end
 	end
 	header.title = Text(header, compact and Theme.F_TITLE or Theme.F_DISPLAY, Theme.TITLE)
 	header.title:SetPoint("TOPLEFT", header, "TOPLEFT", left, compact and -14 or -22)
@@ -803,6 +829,15 @@ function Theme.CreateNavBrand(parent, logoTexture, name)
 	end
 	brand.name:SetJustifyH("LEFT")
 	brand.name:SetText(name or "")
+	if Theme.ForgeHere("CreateNavBrand") then
+		-- forgé : notre filet lumineux, qui s'éteint vers la droite
+		local K = Theme.FORGE_RULE
+		brand.rule = Theme.ArtTexture(brand, "line", "ARTWORK", 0, Theme.GOLD_LIGHT, K.alpha)
+		brand.rule:SetPoint("BOTTOMLEFT", brand, "BOTTOMLEFT", 16, -K.lift)
+		brand.rule:SetPoint("BOTTOMRIGHT", brand, "BOTTOMRIGHT", -16, -K.lift)
+		brand.rule:SetHeight(K.height)
+		return brand
+	end
 	brand.rule = Solid(brand, "ARTWORK", Theme.GOLD, 1)
 	brand.rule:SetPoint("BOTTOMLEFT", brand, "BOTTOMLEFT", 16, 0)
 	brand.rule:SetPoint("BOTTOMRIGHT", brand, "BOTTOMRIGHT", -16, 0)
@@ -811,11 +846,33 @@ function Theme.CreateNavBrand(parent, logoTexture, name)
 	return brand
 end
 
--- Titre de groupe : ambre, F_CAPS, en capitales
-function Theme.CreateNavGroup(parent, text)
+-- Titre de groupe : ambre, F_CAPS, en capitales.
+-- Thème forgé : une « pilule » derrière le titre (dégradé de son ton vers la
+-- droite, filet, reflet d'un pixel), du bord gauche du titre au bord droit
+-- du parent ; `tone` : "gold" (par défaut) ou "arcane". label.toneInk : son
+-- encre (le module la reprend quand il recolore le titre).
+function Theme.CreateNavGroup(parent, text, tone)
 	local label = Text(parent, Theme.F_CAPS, Theme.GOLD)
 	label:SetJustifyH("LEFT")
 	label:SetText(Theme.Upper(text))
+	if Theme.ForgeHere("CreateNavGroup") and parent.CreateTexture then
+		local K = Theme.FORGE_NAV.pill
+		local spec = Theme.FORGE_TONES[tone] or Theme.FORGE_TONES.gold
+		label.tone, label.toneInk = Theme.FORGE_TONES[tone] and tone or "gold", spec.light
+		SetColor(label, spec.light)
+		local pill = parent:CreateTexture(nil, "BACKGROUND", nil, 2)
+		pill:SetTexture(Theme.SOLID)
+		pill:SetPoint("TOPLEFT", label, "TOPLEFT", -K.padX, K.padY)
+		pill:SetPoint("BOTTOMLEFT", label, "BOTTOMLEFT", -K.padX, -K.padY)
+		pill:SetPoint("RIGHT", parent, "RIGHT", -K.right, 0)
+		Gradient(pill, "HORIZONTAL", spec.color, K.from, spec.color, K.to)
+		label.forgePill = pill
+		label.forgePillEdge = Border(parent, spec.color, K.edge, "BORDER", pill)
+		label.forgePillSheen = Solid(parent, "BORDER", Theme.WHITE, K.sheen)
+		label.forgePillSheen:SetPoint("TOPLEFT", pill, "TOPLEFT", 1, -1)
+		label.forgePillSheen:SetPoint("TOPRIGHT", pill, "TOPRIGHT", -1, -1)
+		label.forgePillSheen:SetHeight(1)
+	end
 	return label
 end
 
@@ -847,9 +904,34 @@ function Theme.CreateNavItem(parent, width)
 	item.badge:SetJustifyH("RIGHT")
 	item.badge:Hide()
 
+	-- thème forgé : fond en retrait des bords de la colonne ; survol voilé,
+	-- choix en dégradé arcane qui s'éteint vers la droite, barre arcane claire
+	-- à gauche, reflet d'un pixel en haut (montré avec le choix)
+	local forged = Theme.ForgeHere("CreateNavItem")
+	if forged then
+		local K = Theme.FORGE_NAV
+		item.forged = true
+		for _, tex in ipairs({ item.hover, item.tint, item.bar }) do
+			tex:ClearAllPoints()
+			tex:SetPoint("TOPLEFT", item, "TOPLEFT", K.inset, -1)
+			tex:SetPoint("BOTTOMLEFT", item, "BOTTOMLEFT", K.inset, 1)
+		end
+		for _, tex in ipairs({ item.hover, item.tint }) do tex:SetPoint("RIGHT", item, "RIGHT", -K.insetRight, 0) end
+		item.hover:SetVertexColor(Theme.WHITE[1], Theme.WHITE[2], Theme.WHITE[3], K.hover)
+		Gradient(item.tint, "HORIZONTAL", Theme.BLUE, K.select.from, Theme.BLUE, K.select.to)
+		item.bar:SetVertexColor(Theme.ARCANE_LIGHT[1], Theme.ARCANE_LIGHT[2], Theme.ARCANE_LIGHT[3], 1)
+		item.bar:SetWidth(K.bar)
+		item.forgeSheen = Solid(item, "BORDER", Theme.WHITE, K.sheen)
+		item.forgeSheen:SetPoint("TOPLEFT", item.tint, "TOPLEFT", 0, 0)
+		item.forgeSheen:SetPoint("TOPRIGHT", item.tint, "TOPRIGHT", 0, 0)
+		item.forgeSheen:SetHeight(1)
+		item.forgeSheen:Hide()
+	end
+
 	-- interrupteur de module : rond ouvert, ambre si actif, gris si coupé
-	item.power = Theme.CreatePowerButton(item, 16)
-	item.power:SetPoint("RIGHT", item, "RIGHT", -12, 0)
+	-- (forgé : voyant, point vert lumineux ou point sombre)
+	item.power = Theme.CreateNavPower(item, 16, forged)
+	item.power:SetPoint("RIGHT", item, "RIGHT", forged and -14 or -12, 0)
 	item.power:SetScript("OnClick", function()
 		if item.onPower then item.onPower(item, not item.moduleOn) end
 	end)
@@ -862,6 +944,11 @@ function Theme.CreateNavItem(parent, width)
 		SetColor(self.label, color)
 		if self.selected then self.tint:Show(); self.bar:Show() else self.tint:Hide(); self.bar:Hide() end
 		if self.hovered and not self.selected then self.hover:Show() else self.hover:Hide() end
+		if self.forgeSheen then
+			if self.selected then self.forgeSheen:Show() else self.forgeSheen:Hide() end
+			-- le compteur reste lisible sur le dégradé arcane (le bleu s'y perd)
+			SetColor(self.badge, self.selected and Theme.PARCHMENT or Theme.BLUE)
+		end
 	end
 	local function PlaceBadge(self)
 		self.badge:ClearAllPoints()
@@ -886,7 +973,7 @@ function Theme.CreateNavItem(parent, width)
 		else
 			self.moduleOn = (state == true or state == "on")
 			self.power:Show()
-			Theme.SetPowerState(self.power, self.moduleOn)
+			Theme.SetNavPower(self.power, self.moduleOn)
 		end
 		PlaceBadge(self)
 		Paint(self)
@@ -921,6 +1008,18 @@ function Theme.CreateTabs(parent, onSelect)
 	bar.rule:SetPoint("BOTTOMLEFT", bar, "BOTTOMLEFT", 0, 0)
 	bar.rule:SetPoint("BOTTOMRIGHT", bar, "BOTTOMRIGHT", 0, 0)
 	bar.rule:SetHeight(1)
+	-- thème forgé : filet noir sous la rangée, reflet d'un pixel dessous ;
+	-- l'onglet choisi en dégradé arcane, souligné arcane clair, reflet en haut
+	local forged = Theme.ForgeHere("CreateTabs")
+	local K = Theme.FORGE_TABS
+	if forged then
+		bar.forged = true
+		bar.rule:SetVertexColor(Theme.SHADOW[1], Theme.SHADOW[2], Theme.SHADOW[3], K.rule)
+		bar.forgeRuleLight = Solid(bar, "BORDER", Theme.WHITE, K.ruleLight)
+		bar.forgeRuleLight:SetPoint("TOPLEFT", bar, "BOTTOMLEFT", 0, 0)
+		bar.forgeRuleLight:SetPoint("TOPRIGHT", bar, "BOTTOMRIGHT", 0, 0)
+		bar.forgeRuleLight:SetHeight(1)
+	end
 
 	bar.dim = {}
 	local function Paint(tab)
@@ -929,6 +1028,9 @@ function Theme.CreateTabs(parent, onSelect)
 		local rest = bar.dim[tab.id] and Theme.MUTED or Theme.MUTED_LIGHT
 		SetColor(tab.label, on and Theme.PARCHMENT or (tab.hovered and Theme.TEXT or rest))
 		if on then tab.underline:Show() else tab.underline:Hide() end
+		if tab.forgeGlow then
+			if on then tab.forgeGlow:Show(); tab.forgeSheen:Show() else tab.forgeGlow:Hide(); tab.forgeSheen:Hide() end
+		end
 	end
 	-- onglet estompé (MUTED au repos) : il reste cliquable (ex. une liste
 	-- absente de ce client, que l'onglet explique au survol)
@@ -973,6 +1075,14 @@ function Theme.CreateTabs(parent, onSelect)
 				tab.underline:SetPoint("BOTTOMLEFT", tab, "BOTTOMLEFT", 0, 0)
 				tab.underline:SetPoint("BOTTOMRIGHT", tab, "BOTTOMRIGHT", 0, 0)
 				tab.underline:SetHeight(2)
+				if forged then
+					tab.underline:SetVertexColor(Theme.ARCANE_LIGHT[1], Theme.ARCANE_LIGHT[2], Theme.ARCANE_LIGHT[3], 1)
+					tab.forgeGlow = tab:CreateTexture(nil, "BACKGROUND")
+					tab.forgeGlow:SetTexture(Theme.SOLID)
+					tab.forgeGlow:SetAllPoints()
+					Gradient(tab.forgeGlow, "VERTICAL", Theme.BLUE, K.to, Theme.BLUE, K.from)
+					tab.forgeSheen = Theme.ForgeEdgeLine(tab, "top", Theme.WHITE, K.sheen)
+				end
 				tab:SetScript("OnClick", function(selfTab) bar:Select(selfTab.id) end)
 				tab:SetScript("OnEnter", function(selfTab) selfTab.hovered = true; Paint(selfTab) end)
 				tab:SetScript("OnLeave", function(selfTab) selfTab.hovered = false; Paint(selfTab) end)
@@ -1068,7 +1178,10 @@ end
 -- ---------------------------------------------------------------------------
 -- Section : titre F_CAPS en capitales, MUTED clair, détail plus pâle
 -- ---------------------------------------------------------------------------
-function Theme.CreateSection(parent, text, detail)
+-- Thème forgé : point lumineux à gauche, titre de son ton (or clair ; `tone`
+-- = "arcane" pour une section de choix ou de navigation), filet lumineux qui
+-- part après le titre (ou son détail) et s'éteint au bord droit.
+function Theme.CreateSection(parent, text, detail, tone)
 	local section = CreateFrame("Frame", nil, parent)
 	section:SetSize((parent.GetWidth and parent:GetWidth()) or 400, 20)
 	section.label = Text(section, Theme.F_CAPS, Theme.MUTED_LIGHT)
@@ -1077,6 +1190,19 @@ function Theme.CreateSection(parent, text, detail)
 	section.detail = Text(section, Theme.F_SMALL, Theme.MUTED)
 	section.detail:SetPoint("LEFT", section.label, "RIGHT", 6, 0)
 	section.detail:SetJustifyH("LEFT")
+	if Theme.ForgeHere("CreateSection") then
+		local K = Theme.FORGE_SECTION
+		local spec = Theme.FORGE_TONES[tone] or Theme.FORGE_TONES.gold
+		section.forged, section.tone = true, Theme.FORGE_TONES[tone] and tone or "gold"
+		section.forgeDot = Theme.ArtTexture(section, "dot", "ARTWORK", 0, spec.light, 1)
+		section.forgeDot:SetSize(K.dot, K.dot)
+		section.forgeDot:SetPoint("LEFT", section, "LEFT", K.dotX, 0)
+		section.label:ClearAllPoints()
+		section.label:SetPoint("LEFT", section, "LEFT", K.text, 0)
+		SetColor(section.label, spec.light)
+		section.forgeLine = Theme.ArtTexture(section, "line", "ARTWORK", 0, spec.light, Theme.FORGE_RULE.alpha)
+		section.forgeLine:SetHeight(K.line)
+	end
 	function section:SetText(label, more)
 		self.label:SetText(Theme.Upper(label))
 		if more and more ~= "" then
@@ -1085,6 +1211,12 @@ function Theme.CreateSection(parent, text, detail)
 		else
 			self.detail:SetText("")
 			self.detail:Hide()
+		end
+		if self.forgeLine then
+			local K = Theme.FORGE_SECTION
+			self.forgeLine:ClearAllPoints()
+			self.forgeLine:SetPoint("LEFT", self.detail:IsShown() and self.detail or self.label, "RIGHT", K.lineGap, 0)
+			self.forgeLine:SetPoint("RIGHT", self, "RIGHT", 0, 0)
 		end
 	end
 	section:SetText(text, detail)
@@ -1098,10 +1230,11 @@ end
 -- socle 2.11.0 : voile de survol d'une carte ou d'une ligne, blanc à
 -- Theme.HOVER_ALPHA, plus un filet EDGE (comme les tuiles) qui suit le voile :
 -- hover:Show() / hover:Hide() montrent ou cachent les deux.
+-- Thème forgé : le filet (or patiné) plus discret, le voile reste.
 function Theme.CreateHover(frame)
 	local hover = Solid(frame, "BORDER", Theme.WHITE, Theme.HOVER_ALPHA)
 	hover:SetAllPoints()
-	local edge = Border(frame, Theme.EDGE, 1, "BORDER")
+	local edge = Border(frame, Theme.EDGE, Theme.ForgeHere("CreateHover") and Theme.FORGE_NAV.hoverEdge or 1, "BORDER")
 	hover.edge = edge
 	local show, hide = hover.Show, hover.Hide
 	hover.Show = function(self)
@@ -1118,12 +1251,18 @@ end
 
 -- `kind` = "Button" : carte cliquable (interrupteur, action), éclairée au survol
 Theme.CARD_HEIGHT = 38
+-- Thème forgé : la carte garde son fond (ROW / ROW_ALT) ; par-dessus, un
+-- relief (Theme.ForgeRelief : voile plus clair en haut, plus sombre en bas,
+-- reflet d'un pixel en haut, ombre d'un pixel en bas). Trois textures au
+-- lieu des neuf d'une découpe : une page de réglages porte des dizaines de
+-- cartes, toutes construites à l'ouverture.
 function Theme.CreateSettingCard(parent, width, height, kind)
 	local card = CreateFrame(kind or "Frame", nil, parent)
 	width, height = width or 340, height or Theme.CARD_HEIGHT
 	card:SetSize(width, height)
 	card.bg = Solid(card, "BACKGROUND", Theme.ROW, 1)
 	card.bg:SetAllPoints()
+	if Theme.ForgeHere("CreateSettingCard") then Theme.ForgeRelief(card) end
 	card.hover = Theme.CreateHover(card)
 	if kind == "Button" then
 		card:SetScript("OnEnter", function(self) self.hover:Show() end)
@@ -2291,11 +2430,19 @@ function Theme.CreateDiscreet(parent, width, height)
 	frame.bg:SetTexture(Theme.SOLID)
 	frame.bg:SetVertexColor(0, 0, 0, 0.66)
 	frame.bg:SetAllPoints()
+	-- thème forgé : bois sombre vers le noir, filets or patiné
+	local forged = Theme.ForgeHere("CreateDiscreet")
+	if forged then
+		local K = Theme.FORGE_DISCREET
+		Gradient(frame.bg, "VERTICAL", Theme.SHADOW, K.bottom, Theme.NAV, K.top)
+		frame.forged = true
+	end
 
 	local function Edge()
 		local edge = frame:CreateTexture(nil, "BORDER")
 		edge:SetTexture(Theme.SOLID)
-		edge:SetVertexColor(Theme.GOLD_SOFT[1], Theme.GOLD_SOFT[2], Theme.GOLD_SOFT[3], 0.45)
+		local c = forged and Theme.EDGE or Theme.GOLD_SOFT
+		edge:SetVertexColor(c[1], c[2], c[3], forged and Theme.SHADE.veil or 0.45)
 		return edge
 	end
 
@@ -2323,11 +2470,29 @@ function Theme.CreateDiscreet(parent, width, height)
 	return frame
 end
 
--- Losange de statut / puce : plein (échec, alerte, puce) ou au trait (OK)
+-- Losange de statut / puce : plein (échec, alerte, puce) ou au trait (OK).
+-- Thème forgé : un halo de sa couleur derrière (ART.dot, tex.glow) qui le
+-- suit (couleur, affiché / caché).
 function Theme.CreateDiamond(parent, size, outline)
 	local tex = parent:CreateTexture(nil, "OVERLAY")
 	Theme.SetDiamond(tex, outline)
 	tex:SetSize(size or 10, size or 10)
+	if Theme.ForgeHere("CreateDiamond") and parent.CreateTexture then
+		local K = Theme.FORGE_ROW
+		local glow = Theme.ArtTexture(parent, "dot", "ARTWORK", 7, Theme.WHITE, K.glowAlpha)
+		local side = math.floor((size or 10) * K.glow + 0.5)
+		glow:SetSize(side, side)
+		glow:SetPoint("CENTER", tex, "CENTER", 0, 0)
+		tex.forgeGlow = glow
+		local show, hide, tint = tex.Show, tex.Hide, tex.SetVertexColor
+		tex.Show = function(self) show(self); glow:Show() end
+		tex.Hide = function(self) hide(self); glow:Hide() end
+		tex.SetShown = function(self, on) if on then self:Show() else self:Hide() end end
+		tex.SetVertexColor = function(self, r, g, b, a)
+			tint(self, r, g, b, a)
+			glow:SetVertexColor(r, g, b, K.glowAlpha * (a or 1))
+		end
+	end
 	return tex
 end
 
@@ -2571,6 +2736,29 @@ function Theme.CreateListRow(parent, width, height, opts)
 	row:SetSize(width, height)
 	row.bg = Solid(row, "BACKGROUND", Theme.ROW, 1)
 	row.bg:SetAllPoints()
+	-- thème forgé : pas de découpe (une liste en porte beaucoup) : fond en
+	-- dégradé qui s'éteint vers la droite ; choisie (row:SetSelected) =
+	-- dégradé arcane et barre arcane claire à gauche
+	local forged = Theme.ForgeHere("CreateListRow")
+	if forged then
+		local K = Theme.FORGE_ROW
+		row.forged = true
+		row.forgeTint = row:CreateTexture(nil, "BACKGROUND", nil, 1)
+		row.forgeTint:SetTexture(Theme.SOLID)
+		row.forgeTint:SetAllPoints()
+		Gradient(row.forgeTint, "HORIZONTAL", Theme.BLUE, K.select.from, Theme.BLUE, K.select.to)
+		row.forgeTint:Hide()
+		row.forgeBar = Solid(row, "BORDER", Theme.ARCANE_LIGHT, 1)
+		row.forgeBar:SetPoint("TOPLEFT", row, "TOPLEFT", 0, 0)
+		row.forgeBar:SetPoint("BOTTOMLEFT", row, "BOTTOMLEFT", 0, 0)
+		row.forgeBar:SetWidth(Theme.FORGE_NAV.bar)
+		row.forgeBar:Hide()
+		-- le fond s'éteint vers la droite (voile noir par-dessus)
+		row.forgeFade = row:CreateTexture(nil, "BACKGROUND", nil, 1)
+		row.forgeFade:SetTexture(Theme.SOLID)
+		row.forgeFade:SetAllPoints()
+		Gradient(row.forgeFade, "HORIZONTAL", Theme.SHADOW, K.fade.from, Theme.SHADOW, K.fade.to)
+	end
 	row.hover = Theme.CreateHover(row)
 	if opts.kind == "Button" then
 		row:SetScript("OnEnter", function(self) self.hover:Show() end)
@@ -2612,6 +2800,13 @@ function Theme.CreateListRow(parent, width, height, opts)
 	end
 	-- rang dans la liste (1, 2, …) : les rangs pairs en ROW_ALT
 	function row:SetIndex(index) self:SetAlt((tonumber(index) or 1) % 2 == 0) end
+	-- ligne choisie (forgé : dégradé arcane et barre ; Sobre : rien de dessiné)
+	function row:SetSelected(on)
+		self.selected = on and true or false
+		if self.forgeTint then
+			if self.selected then self.forgeTint:Show(); self.forgeBar:Show() else self.forgeTint:Hide(); self.forgeBar:Hide() end
+		end
+	end
 	row:SetAlt(false)
 	return row
 end
@@ -2784,9 +2979,21 @@ function Theme.CreateChips(parent, defs, onSelect, opts)
 	row.chips, row.byId = {}, {}
 	local height = tonumber(opts.height) or Theme.CHIP_HEIGHT
 	local gap = tonumber(opts.gap) or 6
+	-- thème forgé : la puce choisie (un filtre) en bleu arcane : dégradé
+	-- vertical, filet arcane clair, texte parchemin ; au repos, filet or sombre
+	local forged = Theme.ForgeHere("CreateChips")
+	row.forged = forged or nil
 	local function Paint(chip)
 		local on = row.selected == chip.id
 		chip.selected = on
+		if forged then
+			local K = Theme.FORGE_CHIP
+			local edge = on and Theme.ARCANE_LIGHT or (chip.hovered and Theme.EDGE or Theme.EDGE_SOFT)
+			chip.border:SetColor(edge[1], edge[2], edge[3], 1)
+			Gradient(chip.bg, "VERTICAL", Theme.BLUE, on and K.to or 0, Theme.BLUE, on and K.from or 0)
+			SetColor(chip.text, on and Theme.PARCHMENT or (chip.hovered and Theme.LABEL or Theme.MUTED_LIGHT))
+			return
+		end
 		local edge = on and Theme.GOLD or (chip.hovered and Theme.EDGE or Theme.EDGE_SOFT)
 		chip.border:SetColor(edge[1], edge[2], edge[3], 1)
 		chip.bg:SetVertexColor(Theme.GOLD[1], Theme.GOLD[2], Theme.GOLD[3], on and 0.12 or 0)
@@ -2840,6 +3047,9 @@ function Theme.CreateTile(parent, width, height, opts)
 	tile:SetSize(width, height)
 	tile.bg = Solid(tile, "BACKGROUND", Theme.ROW, 1)
 	tile.bg:SetAllPoints()
+	-- thème forgé : le relief d'une carte par-dessus son fond (sans l'ombre du
+	-- bas : le filet de la tuile la borde)
+	if Theme.ForgeHere("CreateTile") then Theme.ForgeRelief(tile, true) end
 	tile.border = Border(tile, Theme.EDGE_SOFT, 1)
 	tile.accent = Solid(tile, "ARTWORK", Theme.GOLD, 1)
 	if opts.accent == "top" then
@@ -2892,6 +3102,8 @@ function Theme.CreateTag(parent, text, color)
 	tag.bg:SetAllPoints()
 	tag.label = Text(tag, Theme.F_CAPS, Theme.GOLD)
 	tag.label:SetPoint("CENTER", tag, "CENTER", 0, 0)
+	-- thème forgé : un filet de sa couleur autour
+	if Theme.ForgeHere("CreateTag") then tag.forgeEdge = Border(tag, Theme.GOLD, Theme.FORGE_TAG.edge) end
 	function tag:SetTag(value, c)
 		value = value and Theme.Upper(value) or ""
 		c = c or Theme.GOLD
@@ -2899,6 +3111,7 @@ function Theme.CreateTag(parent, text, color)
 		self.color = c
 		SetColor(self.label, c)
 		self.bg:SetVertexColor(c[1], c[2], c[3], 0.16)
+		if self.forgeEdge then self.forgeEdge:SetColor(c[1], c[2], c[3], Theme.FORGE_TAG.edge) end
 		self:SetSize(math.ceil(Theme.TextWidth(self, value, Theme.F_CAPS) + 10), Theme.TAG_HEIGHT)
 		if value == "" then self:Hide() else self:Show() end
 	end
@@ -2925,6 +3138,14 @@ function Theme.CreateCurrency(parent, opts)
 	badge.bg = Solid(badge, "BACKGROUND", Theme.FIELD, 1)
 	badge.bg:SetAllPoints()
 	badge.border = Border(badge, Theme.EDGE, 1)
+	-- thème forgé : un creux (ART.inset, filet or patiné) à la place du fond
+	-- et du filet plats
+	if Theme.ForgeHere("CreateCurrency") then
+		badge.forgeInset = Theme.Slice(badge, "inset", { layer = "BACKGROUND", sub = 1, margin = Theme.FORGE_INSET.margin,
+			color = Theme.EDGE })
+		badge.bg:SetAlpha(0)
+		badge.border:SetColor(Theme.EDGE[1], Theme.EDGE[2], Theme.EDGE[3], 0)
+	end
 	badge.flash = Solid(badge, "ARTWORK", Theme.RED, C.flashAlpha)
 	badge.flash:SetPoint("TOPLEFT", badge, "TOPLEFT", 1, -1)
 	badge.flash:SetPoint("BOTTOMRIGHT", badge, "BOTTOMRIGHT", -1, 1)
@@ -3045,10 +3266,17 @@ function Theme.CreateBubble(parent, width, opts)
 	bubble.bg = Solid(bubble, "BACKGROUND", Theme.WINDOW, 0.96)
 	bubble.bg:SetAllPoints()
 	bubble.border = Border(bubble, Theme.EDGE, 1)
-	bubble.rule = Solid(bubble, "ARTWORK", Theme.GOLD, 1)
+	if Theme.ForgeHere("CreateBubble") then
+		-- thème forgé : notre filet lumineux en haut, qui s'éteint vers la droite
+		bubble.rule = Theme.ArtTexture(bubble, "line", "ARTWORK", 0, Theme.GOLD_LIGHT, Theme.FORGE_RULE.alpha)
+		bubble.rule:SetHeight(Theme.FORGE_RULE.height)
+		bubble.forged = true
+	else
+		bubble.rule = Solid(bubble, "ARTWORK", Theme.GOLD, 1)
+		bubble.rule:SetHeight(2)
+	end
 	bubble.rule:SetPoint("TOPLEFT", bubble, "TOPLEFT", 1, -1)
 	bubble.rule:SetPoint("TOPRIGHT", bubble, "TOPRIGHT", -1, -1)
-	bubble.rule:SetHeight(2)
 	-- pointe : un losange EDGE (sa moitié haute sous le fond), un losange
 	-- WINDOW plus petit par-dessus, qui efface le filet du bas à cet endroit
 	bubble.tailEdge = bubble:CreateTexture(nil, "BACKGROUND", nil, -8)
@@ -3456,6 +3684,192 @@ function Theme.DressWindow(frame)
 	end
 	frame.skinDressed = want and true or false
 	return frame.skinDressed
+end
+
+-- [navigation]
+-- Thème forgé : navigation, sections, cartes et listes. Les couleurs disent
+-- le sens : or = principal, bleu arcane = choisi / navigation. Rien n'est
+-- posé en Sobre (mêmes régions qu'avant) ; la décision se prend à la
+-- création de la brique (changer de thème demande un rechargement).
+Theme.ARCANE_LIGHT = { 0.561, 0.722, 0.941 }  -- bleu arcane clair #8fb8f0 (barre de l'entrée choisie)
+-- deux tons de lueur : or (par défaut) et arcane (choix, navigation)
+Theme.FORGE_TONES = {
+	gold   = { color = Theme.GOLD, light = Theme.GOLD_LIGHT },
+	arcane = { color = Theme.BLUE, light = Theme.ARCANE_LIGHT },
+}
+-- filet lumineux (ART.line) : hauteur de la lueur, décalage vers le haut
+-- pour rester centré sur l'ancien filet de 2 px
+Theme.FORGE_RULE = { height = 6, lift = 2, alpha = 1 }
+-- colonne de navigation : fond d'une entrée en retrait du bord (voile de
+-- survol, dégradé arcane du choix et sa barre claire, reflet d'un pixel),
+-- titres de groupe en « pilule » (dégradé de leur ton, filet, reflet), voyant
+-- de module (point vert lumineux / point sombre)
+Theme.FORGE_NAV = {
+	inset = 10, insetRight = 8, hover = 0.05, hoverEdge = 0.6, sheen = 0.08, bar = 2,
+	select = { from = 0.55, to = 0.07 },
+	pill = { from = 0.27, to = 0.03, edge = 0.22, sheen = 0.06, padX = 8, padY = 5, right = 8 },
+	led = { size = 16, glow = 16, core = 7, offCore = 11, off = { 0.36, 0.39, 0.43 }, hover = 0.35 },
+	shade = { from = 0.34, to = 0.05 },  -- colonne : plus sombre au bord gauche
+	edgeLight = 0.04,                    -- reflet d'un pixel à droite du séparateur noir
+	offInk = Theme.MUTED_LIGHT,          -- titre de groupe d'un module coupé, lisible sur sa pilule
+}
+-- titre de section : point lumineux, titre de son ton, filet qui s'éteint à droite
+Theme.FORGE_SECTION = { dot = 18, dotX = -5, text = 12, lineGap = 8, line = 6 }
+-- onglets : l'onglet choisi en dégradé arcane (vers le bas), souligné clair ;
+-- filet noir sous la rangée et reflet d'un pixel dessous
+Theme.FORGE_TABS = { from = 0.28, to = 0.02, sheen = 0.07, rule = 0.9, ruleLight = 0.05 }
+-- carte de réglage, tuile : relief posé sur le fond (pas de découpe en 9 :
+-- une page de réglages en porte des dizaines, toutes construites à
+-- l'ouverture) : voile blanc en haut (light) qui passe au noir en bas (dark),
+-- reflet d'un pixel en haut, ombre d'un pixel en bas. Le fond garde sa
+-- couleur (ROW / ROW_ALT, ou celle du module).
+Theme.FORGE_CARD = { light = 0.045, dark = 0.30, sheen = 0.07, shade = 0.55 }
+-- ligne de liste : pas de fond (survol voilé), choisie = dégradé arcane et
+-- barre claire ; losange de statut avec un halo de sa couleur (ART.dot)
+Theme.FORGE_ROW = { select = { from = 0.25, to = 0.04 }, glow = 2.6, glowAlpha = 0.9, fade = { from = 0, to = 0.55 } }
+-- en-tête de page : plaque de bois au haut plus chaud ; pied : bande plus
+-- sombre et reflet d'un pixel sous son filet noir
+Theme.FORGE_HEADER = { warm = { 0.235, 0.165, 0.086 }, top = 0.7, bottom = 0.30 }
+Theme.FORGE_FOOT = { from = 0.38, to = 0.12, sheen = 0.045 }
+-- étiquette : filet de sa couleur ; pastille de monnaie : creux (ART.inset)
+Theme.FORGE_TAG = { edge = 0.35 }
+Theme.FORGE_INSET = { margin = 6 }
+-- puce choisie (filtres) : dégradé arcane, filet clair
+Theme.FORGE_CHIP = { from = 0.30, to = 0.08 }
+-- cadre discret : bois sombre vers le noir
+Theme.FORGE_DISCREET = { top = 0.80, bottom = 0.62 }
+
+-- Le thème forgé s'applique-t-il aux briques ? Non en Sobre ; non plus
+-- pendant qu'un module rhabille lui-même ce qu'il construit en enveloppant
+-- des fabriques (carnet de QuestCompanion en Azeroth : Theme[nom] est alors
+-- son enveloppe) : rien de forgé ne doit passer sous son habit, même d'une
+-- brique qu'il n'enveloppe pas (titre de groupe, losange, filet).
+local FORGE_OWN = {}
+for _, name in ipairs({ "CreateGlowRule", "CreatePageHeader", "CreateNavBrand", "CreateNavGroup", "CreateNavItem",
+	"CreateTabs", "CreateSection", "CreateHover", "CreateSettingCard", "CreateDiamond", "CreateListRow", "CreateChips",
+	"CreateTile", "CreateTag", "CreateCurrency", "CreatePager", "CreateBubble", "CreateDiscreet" }) do
+	FORGE_OWN[name] = Theme[name]
+end
+local FORGE_WATCH = { "CreateTile", "CreateListRow", "CreateChips", "CreateTag", "CreateNavItem", "CreatePageHeader",
+	"CreateSection", "CreateCurrency", "CreateButton", "CreateDropdown", "CreateSearchBox", "CreateBar", "Text" }
+local FORGE_SEEN = {}
+for _, name in ipairs(FORGE_WATCH) do FORGE_SEEN[name] = Theme[name] end
+function Theme.ForgeHere(name)
+	if not Theme.Forged() then return false end
+	if name and FORGE_OWN[name] ~= nil and Theme[name] ~= FORGE_OWN[name] then return false end
+	for _, watched in ipairs(FORGE_WATCH) do
+		if Theme[watched] ~= FORGE_SEEN[watched] then return false end
+	end
+	return true
+end
+
+-- Une texture de nos matières (Theme.ART), teinte posée
+function Theme.ArtTexture(parent, art, layer, sub, color, alpha)
+	local spec = Theme.ART[art]
+	local tex = parent:CreateTexture(nil, layer or "ARTWORK", nil, sub or 0)
+	tex:SetTexture(spec and spec.file or Theme.SOLID)
+	color = color or Theme.WHITE
+	tex:SetVertexColor(color[1], color[2], color[3], alpha or 1)
+	return tex
+end
+
+-- Reflet (ou ombre) d'un pixel en haut (ou en bas) d'un cadre
+function Theme.ForgeEdgeLine(frame, where, color, alpha, layer)
+	local tex = Solid(frame, layer or "BORDER", color or Theme.WHITE, alpha or 0.06)
+	local top = where ~= "bottom"
+	tex:SetPoint(top and "TOPLEFT" or "BOTTOMLEFT", frame, top and "TOPLEFT" or "BOTTOMLEFT", 0, 0)
+	tex:SetPoint(top and "TOPRIGHT" or "BOTTOMRIGHT", frame, top and "TOPRIGHT" or "BOTTOMRIGHT", 0, 0)
+	tex:SetHeight(1)
+	return tex
+end
+
+-- Relief d'une carte, posé sur son fond : voile vertical (plus clair en
+-- haut, plus sombre en bas), reflet d'un pixel en haut, ombre d'un pixel en
+-- bas (sauf `noShade`). frame.forgeRelief, .forgeSheen, .forgeShade.
+function Theme.ForgeRelief(frame, noShade)
+	if not frame or frame.forgeRelief then return false end
+	local K = Theme.FORGE_CARD
+	frame.forged = true
+	frame.forgeRelief = frame:CreateTexture(nil, "BACKGROUND", nil, 1)
+	frame.forgeRelief:SetTexture(Theme.SOLID)
+	frame.forgeRelief:SetAllPoints()
+	Gradient(frame.forgeRelief, "VERTICAL", Theme.SHADOW, K.dark, Theme.WHITE, K.light)
+	frame.forgeSheen = Theme.ForgeEdgeLine(frame, "top", Theme.WHITE, K.sheen)
+	if not noShade then frame.forgeShade = Theme.ForgeEdgeLine(frame, "bottom", Theme.SHADOW, K.shade) end
+	return true
+end
+
+-- Voyant de module (navigation des réglages). En Sobre : l'interrupteur du
+-- thème (Theme.CreatePowerButton). Forgé : un bouton rond, point vert
+-- lumineux si le module est actif, point sombre s'il est coupé ; un halo
+-- clair au survol (couche HIGHLIGHT : le client le montre seul).
+-- `forge` : décision de la brique appelante (nil : le thème posé).
+function Theme.CreateNavPower(parent, size, forge)
+	if forge == nil then forge = Theme.ForgeHere() end
+	if not forge then return Theme.CreatePowerButton(parent, size) end
+	local K = Theme.FORGE_NAV.led
+	local button = CreateFrame("Button", nil, parent)
+	button:SetSize(size or K.size, size or K.size)
+	button.led = true
+	button.glow = Theme.ArtTexture(button, "dot", "ARTWORK", 0, Theme.GREEN, 1)
+	button.glow:SetSize(K.glow, K.glow)
+	button.glow:SetPoint("CENTER", button, "CENTER", 0, 0)
+	button.core = Theme.ArtTexture(button, "dot", "ARTWORK", 1, K.off, 1)
+	button.core:SetSize(K.core, K.core)
+	button.core:SetPoint("CENTER", button, "CENTER", 0, 0)
+	button.highlight = Theme.ArtTexture(button, "dot", "HIGHLIGHT", 0, Theme.WHITE, K.hover)
+	button.highlight:SetAllPoints()
+	return button
+end
+function Theme.SetNavPower(button, on)
+	if not (button and button.led) then return Theme.SetPowerState(button, on) end
+	button.on = on and true or false
+	local K = Theme.FORGE_NAV.led
+	if on then
+		button.glow:Show()
+		button.core:SetVertexColor(Theme.GREEN[1], Theme.GREEN[2], Theme.GREEN[3], 1)
+		button.core:SetSize(K.core, K.core)
+	else
+		button.glow:Hide()
+		button.core:SetVertexColor(K.off[1], K.off[2], K.off[3], 1)
+		button.core:SetSize(K.offCore, K.offCore)
+	end
+end
+
+-- Pied d'une fenêtre, forgé : bande plus sombre en haut, filet noir, reflet
+-- d'un pixel dessous. Une fois par pied ; rien en Sobre.
+function Theme.ForgeFooter(footer)
+	if not (footer and Theme.ForgeHere()) or footer.forged then return false end
+	local K = Theme.FORGE_FOOT
+	footer.forgeShade = footer:CreateTexture(nil, "BACKGROUND", nil, 1)
+	footer.forgeShade:SetTexture(Theme.SOLID)
+	footer.forgeShade:SetAllPoints()
+	Gradient(footer.forgeShade, "VERTICAL", Theme.SHADOW, K.to, Theme.SHADOW, K.from)
+	if footer.line then footer.line:SetVertexColor(Theme.SHADOW[1], Theme.SHADOW[2], Theme.SHADOW[3], 1) end
+	footer.forgeSheen = Solid(footer, "BORDER", Theme.WHITE, K.sheen)
+	footer.forgeSheen:SetPoint("TOPLEFT", footer, "TOPLEFT", 0, -1)
+	footer.forgeSheen:SetPoint("TOPRIGHT", footer, "TOPRIGHT", 0, -1)
+	footer.forgeSheen:SetHeight(1)
+	footer.forged = true
+	return true
+end
+
+-- Colonne de navigation, forgée : plus sombre au bord gauche, séparateur
+-- noir et reflet d'un pixel à sa droite. Une fois ; rien en Sobre.
+function Theme.ForgeNavColumn(nav)
+	if not (nav and Theme.ForgeHere()) or nav.forged then return false end
+	local K = Theme.FORGE_NAV
+	nav.forgeShade = nav:CreateTexture(nil, "BACKGROUND", nil, 1)
+	nav.forgeShade:SetTexture(Theme.SOLID)
+	nav.forgeShade:SetAllPoints()
+	Gradient(nav.forgeShade, "HORIZONTAL", Theme.SHADOW, K.shade.from, Theme.SHADOW, K.shade.to)
+	if nav.separator then nav.separator:SetVertexColor(Theme.SHADOW[1], Theme.SHADOW[2], Theme.SHADOW[3], 1) end
+	nav.forgeEdge = Solid(nav, "BORDER", Theme.WHITE, K.edgeLight)
+	nav.forgeEdge:SetPoint("TOPLEFT", nav, "TOPRIGHT", 0, 0)
+	nav.forgeEdge:SetPoint("BOTTOMLEFT", nav, "BOTTOMRIGHT", 0, 0)
+	nav.forgeEdge:SetWidth(1)
+	nav.forged = true
+	return true
 end
 
 -- Le thème choisi par le joueur : celui de l'addon s'il a son propre réglage
