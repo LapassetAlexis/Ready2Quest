@@ -45,7 +45,7 @@ Forever has no achievement window: QuestCompanion brings its own, with points.
 - **The Achievements page** of the journal (`/qc hf`): your points, the categories, progress, rewards and dates. An "Achievement earned" banner (golden wings for the big ones), never in combat.
 - **40 titles**: "Trainer Dyokrion", "Dyokrion the Tracker"…, masculine or feminine (from your character or your pick). Choose yours on your trainer card or with `/qc title`; it shows on your card with your points, and your big achievements are announced to your guild with your title.
 
-In the Azeroth style (2.8), the travel journal and the trainer card look like the game's achievement frame (wood, parchment, header plate, shields, green bars). The trainer card shows a showcase of 3 achievements. The **Y** key opens your achievements if it was free (Key Bindings menu or Travel journal settings).
+In the Azeroth style (forged theme, 3.1), the travel journal and the trainer card wear the addon's medallion, with your achievement points on a plate under the title; the trainer card frames the portrait in gold and shows a showcase of 3 achievements, each in its own inset. The Plain style is still available. The **Y** key opens your achievements if it was free (Key Bindings menu or Travel journal settings).
 
 ## Road companion
 
@@ -247,7 +247,7 @@ Forever n'a pas de fenêtre de hauts faits : QuestCompanion apporte la sienne, a
 - **La page Hauts faits** du carnet (`/qc hf`) : tes points, les catégories, la progression, les récompenses et les dates. Un bandeau « Haut fait obtenu » (des ailes dorées pour les gros), jamais en combat.
 - **40 titres** : « Dresseur Dyokrion », « Dyokrion le Traqueur »…, au masculin ou au féminin (selon ton personnage ou à ton choix). Tu choisis le tien sur ta fiche de dresseur ou avec `/qc titre` ; il s'affiche sur ta fiche avec tes points, et tes gros hauts faits sont annoncés à ta guilde avec ton titre.
 
-En style Azeroth (2.8), le carnet de voyage et la fiche de dresseur prennent l'habit du cadre des hauts faits du jeu (bois, parchemin, plaque d'en-tête, boucliers, barres vertes). La fiche montre une vitrine de 3 hauts faits. La touche **Y** ouvre tes hauts faits si elle était libre (menu Raccourcis du jeu ou réglages du Carnet de voyage).
+En style Azeroth (thème forgé, 3.1), le carnet de voyage et la fiche de dresseur portent le médaillon de l'addon, avec tes points de hauts faits sur une plaque sous le titre ; la fiche encadre le portrait d'or et montre une vitrine de 3 hauts faits, chacun dans son creux. Le style Sobre reste au choix. La touche **Y** ouvre tes hauts faits si elle était libre (menu Raccourcis du jeu ou réglages du Carnet de voyage).
 
 ## Compagnon de route
 
