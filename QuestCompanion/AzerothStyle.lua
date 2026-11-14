@@ -1856,6 +1856,8 @@ ns.FORGE_RING = { w = 104, h = 104, x = 0, y = RING_Y, model = 64, disc = 88, sq
 ns.FORGE_FX = {
 	haloSize = 2.4, glowSize = 3.2, sparkSize = 22, rule = 6, lineH = 8, sheenW = 34, sheenAlpha = 0.65,
 	dust = { { -14, 4, 7 }, { 4, -6, 9 }, { 16, 8, 6 } }, cloudAlpha = 0.55,
+	-- la lueur de « Niveau N ! » : niveau au-dessus du cadre (sous l'habit, + 4)
+	glowBelow = 3,
 }
 
 -- La branche « anneau » : l'ancien habillage, ou le thème forgé
@@ -2044,17 +2046,36 @@ ns.AZEROTH_RING_TINTS = {
 	feat_eight = { 1.0, 0.80, 0.45 },                          -- Huit familles : or riche (icônes autour)
 	feat_prism = { 1.0, 1.0, 1.0, desat = true },              -- Prismatique : nacre (halo arc-en-ciel)
 }
+-- 3.1.0 : la même palette, recalibrée pour NOTRE anneau (anneau.tga :
+-- bande d'or moyenne ≈ (207, 164, 98), mesurée sur la texture). Calibrées
+-- sur l'or plus sombre du client, les teintes chaudes multipliées sur notre
+-- or tournaient à l'orange vif (Cuivre : teinte 20°, saturation 0,81 ; Or
+-- ciselé et Insigne du maître pareils, sans différence avec le Cuivre). Ici :
+-- le Cuivre désaturé puis teinté (saturation ≈ 0,6), les ors
+-- à peine teintés (plus soutenus que l'or d'origine, sans virer à l'orange),
+-- bois et portail adoucis. Absent de cette table : la teinte ci-dessus.
+-- Saturation ≤ 0,7 et écart à l'or contrôlés (tests/modules/companion_forge.lua).
+ns.FORGE_RING_GOLD = { 207 / 255, 164 / 255, 98 / 255 }
+ns.AZEROTH_RING_TINTS_FORGE = {
+	copper     = { 1.0, 0.64, 0.42, desat = true },            -- Cuivre : cuivre (teinte 23°, saturation 0,58)
+	master     = { 1.0, 0.92, 0.78 },                          -- Insigne du maître : or soutenu
+	gilded     = { 1.0, 0.88, 0.70 },                          -- Or ciselé : or riche
+	feat_eight = { 1.0, 0.88, 0.70 },                          -- Huit familles : or riche
+	carved     = { 0.92, 0.72, 0.50, desat = true },           -- Sculpté : bois doré
+	glue       = { 1.0, 0.95, 0.85 },                          -- Portail : or pâle
+}
 -- le halo (fond noir : fusion ADD) ; le premier atlas présent du client
 -- (vérifié en jeu le 10/11 : l'anneau de glace des reliques)
 ns.AZEROTH_RING_GLOW = { atlases = { "Relic-Frost-TraitGlowRing" }, size = 138, alpha = 0.8 }
 
 -- L'allure de l'anneau pour un cadre (`def`, sinon le cadre porté) :
 -- { r, g, b, desat, glow } ou nil (l'or d'origine), et l'id du cadre
-function ns:AzerothRingLook(def)
+-- forge : l'allure sur notre anneau (ns.AZEROTH_RING_TINTS_FORGE d'abord)
+function ns:AzerothRingLook(def, forge)
 	def = def or (self.CompanionCurrentStyle and self:CompanionCurrentStyle("frame"))
 	local id = def and def.id
 	if not id then return nil, nil end
-	local look = ns.AZEROTH_RING_TINTS[id]
+	local look = (forge and ns.AZEROTH_RING_TINTS_FORGE[id]) or ns.AZEROTH_RING_TINTS[id]
 	if not look and type(id) == "string" and id:find("^seal_") and type(def.edge) == "table" then
 		look = { def.edge[1], def.edge[2], def.edge[3], desat = true }
 	end
@@ -2124,7 +2145,7 @@ function ns:CompanionPaintRing()
 	local skin = ns.CompanionRingSkin(frame) or (frame and frame.azSkin)
 	if not (skin and skin.ring) then return nil end
 	local look, id
-	if frame.ring ~= nil then look, id = self:AzerothRingLook() end
+	if frame.ring ~= nil then look, id = self:AzerothRingLook(nil, frame.ring == "forge") end
 	ns.AzerothPaintRing(skin.ring, look)
 	skin.ring.azLook = look and id or nil
 	-- le halo de l'autre habit (bascule à chaud) s'éteint
@@ -2145,11 +2166,14 @@ function ns:CompanionPaintRing()
 end
 
 -- Le grand portrait de la page Créature (même anneau, étiré au carré)
+-- 3.1.0 : ou l'anneau forgé du carnet forgé (frame.evo.forgeRing, notre
+-- anneau.tga : la palette recalibrée pour lui)
 function ns:CarnetPaintRing(frame)
 	frame = frame or self.journalFrame
-	local vine = frame and frame.evo and frame.evo.azVine
+	local evo = frame and frame.evo
+	local vine = evo and (evo.azVine or evo.forgeRing)
 	if not vine then return nil end
-	local look, id = self:AzerothRingLook()
+	local look, id = self:AzerothRingLook(nil, vine == evo.forgeRing)
 	ns.AzerothPaintRing(vine, look)
 	vine.azLook = look and id or nil
 	return vine.azLook
@@ -2947,13 +2971,23 @@ local function LevelParts(frame)
 	local parts = {}
 	local forge = Forged(frame)
 	local FF = ns.FORGE_FX
+	-- médaillon forgé : la lueur sous l'habit (niveau du cadre + 3 < habit
+	-- + 4) : elle déborde de l'anneau, la plaque du nom la recouvre en bas
+	local glowParent = layer
+	if forge then
+		glowParent = CreateFrame("Frame", nil, layer)
+		glowParent:SetAllPoints(frame)
+		glowParent:SetFrameLevel((frame:GetFrameLevel() or 1) + FF.glowBelow)
+		glowParent:EnableMouse(false)
+		parts.iglowHost = glowParent
+	end
 	if HasFx("iconGlow") then
-		parts.iglow = layer:CreateTexture(nil, "OVERLAY", nil, 1)
+		parts.iglow = glowParent:CreateTexture(nil, "OVERLAY", nil, 1)
 		Atlas(parts.iglow, FXA.iconGlow)
 		Additive(parts.iglow)
 	elseif forge then
 		-- (notre anneau en lumière : il cerne le portrait sans le voiler)
-		parts.iglow = ForgeTex(layer, "OVERLAY", 1, "ring", Theme.GOLD_LIGHT, 1)
+		parts.iglow = ForgeTex(glowParent, "OVERLAY", 1, "ring", Theme.GOLD_LIGHT, 1)
 	end
 	if parts.iglow then
 		parts.iglow:SetPoint("CENTER", frame, "TOP", 0, RING_Y)

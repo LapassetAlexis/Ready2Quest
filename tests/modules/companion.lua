@@ -405,8 +405,10 @@ do
 	data.unlocked["orn:gold"] = true
 	NS:CompanionCheckUnlocks()
 	NS:CompanionApplyOrnaments()
+	-- (3.1.0 : le double liseré carré n'est pas posé sur le médaillon forgé,
+	-- dont l'anneau d'or tient lieu : companion_forge.lua)
 	S.ok("gains définitifs", data.unlocked["orn:ribbon"] and data.unlocked["orn:gold"]
-		and NS.companionFrame.ornaments.gold:IsShown())
+		and NS.companionFrame.ornaments.gold:IsShown() == (NS.companionFrame.ring ~= "forge"))
 	S.ok("condition lisible", NS:CompanionRequirement({ stamp = "dungeon", count = 5 }) == "5 donjons"
 		and NS:CompanionRequirement({ level = 20 }) == "niveau 20")
 	S.done()

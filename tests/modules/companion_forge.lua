@@ -113,7 +113,8 @@ do
 	s.ok("même centre que l'anneau du client (filet et pastilles en place)", F.y == NS.AZEROTH_RING.y)
 	s.ok("plaque du nom : plaque en relief teinte carte", SliceOf(skin.plate, "plate")
 		and Same(skin.plate.color, Theme.FORGE_PLATE.card))
-	s.ok("plaque : sous le cadre, plus large que lui", skin.plateBox.lastPoint.point == "BOTTOM"
+	s.ok("plaque : sous l'anneau, plus large que le cadre", skin.plateBox.lastPoint.point == "TOP"
+		and skin.plateBox.lastPoint.y == NS.ForgeCompanionPlateTop()
 		and skin.plateBox.width == frame.width + 2 * NS.FORGE_COMPANION_PLATE.out
 		and skin.plateBox.height == NS.FORGE_COMPANION_PLATE.height)
 	s.ok("nom sur la plaque, encre des titres", frame.name:GetParent() == skin
@@ -223,7 +224,8 @@ do
 		and Same(glow.vertex, NS.AZEROTH_RING_TINTS.frost.glow))
 	data.unlocked["frame:copper"] = true
 	NS:CompanionSetStyle("frame", "copper")
-	s.ok("Cuivre : teinte cuivre, halo éteint", ring.azLook == "copper" and not ring.azDesat and not Shown(glow))
+	s.ok("Cuivre : teinte recalibrée pour notre anneau (désaturé puis teint), halo éteint", ring.azLook == "copper"
+		and ring.azDesat == true and Same(ring.vertex, NS.AZEROTH_RING_TINTS_FORGE.copper) and not Shown(glow))
 	s.ok("bordures carrées du client cachées", not (frame.styleBorder and Shown(frame.styleBorder)))
 	s.ok("sans erreur", Errors() == "", Errors())
 	s.check("[FCOMP] cadre gagné : teinte de l'anneau (Ardoise, Givre, Cuivre), halo glacé en point lumineux")
@@ -488,6 +490,190 @@ do
 	s.ok("… ≥ 4,5 sur le fond du menu", c >= 4.5, string.format("%.2f", c))
 	s.ok("sans erreur", Errors() == "", Errors())
 	s.check(string.format("[FCOMP] aggro : battement en anneau rouge sur le médaillon ; petit menu : titre de l'identité (%.2f)", c))
+end
+
+
+-- 14. Relecture avant bêta : géométrie de la plaque, ornements sur l'anneau, huit familles et halos
+-- sous la plaque, teintes recalibrées, « stade · niveau » au gain de niveau ---------------------------
+-- bas d'un cadre posé par un seul point (y du point, hauteur)
+local function Bottom(o)
+	local p = o.lastPoint
+	local h = o.height or 0
+	if p.point == "CENTER" or p.point == "LEFT" or p.point == "RIGHT" then return p.y - h / 2 end
+	if p.point == "BOTTOM" or p.point == "BOTTOMLEFT" or p.point == "BOTTOMRIGHT" then return p.y end
+	return p.y - h
+end
+
+do
+	Say("-- médaillon forgé : plaque sous l'anneau, souris, fiche au survol")
+	local frame = Fresh("azeroth")
+	local s = Steps()
+	local F, P, M = NS.FORGE_RING, NS.FORGE_COMPANION_PLATE, NS.FORGE_MOOD_TAB
+	local top = NS.ForgeCompanionPlateTop()
+	local band = F.y - F.h / 2 * NS.FORGE_RING_BAND
+	s.ok("la plaque commence où finit la bande d'or (recouvrement ≤ 5 px)", top - band <= P.overlap + 1 and top - band >= 0,
+		top - band)
+	local nameTop = top - P.height + P.nameY + P.nameMax / 2 + 1
+	s.ok("le nom entier sous l'anneau (pointe basse comprise)", nameTop <= F.y - F.h / 2, nameTop)
+	local below = -(top - P.height - (M.h - M.tuck)) - frame.height
+	s.ok("la souris garde la plaque et l'étiquette sous le cadre", frame.forgeHitBelow == math.ceil(below) and below > 0,
+		frame.forgeHitBelow)
+	NS:CompanionShowHover()
+	local hover = NS.companionHover
+	s.ok("fiche au survol à 8 px du bord de la plaque", hover and hover.lastPoint.x == -8 - P.out
+		and NS.CompanionSideOverhang(frame) == P.out, hover and hover.lastPoint.x)
+	s.ok("débord de la plaque ≤ l'écart du filet (8 px)", P.out <= 6)
+	NS:SetUIStyle("sobre")
+	NS:CompanionShowHover()
+	s.ok("Sobre : souris et fiche d'avant", frame.forgeHitBelow == nil and hover.lastPoint.x == -8)
+	s.ok("sans erreur", Errors() == "", Errors())
+	s.check("[FCOMP] plaque sous l'anneau : nom entier dans la plaque, souris étendue, fiche au survol écartée ; Sobre d'avant")
+end
+
+do
+	Say("-- médaillon forgé : ornements sur l'anneau")
+	local frame = Fresh("azeroth")
+	local s = Steps()
+	local data = NS:CompanionData()
+	for _, def in ipairs(NS.COMPANION_ORNAMENTS) do data.unlocked["orn:" .. def.id] = true end
+	NS:CompanionApplyOrnaments()
+	local orn = frame.ornaments
+	local F = NS.FORGE_RING
+	local top = NS.ForgeCompanionPlateTop()
+	s.ok("cadre doré (liseré carré) caché : l'anneau en tient lieu", not Shown(orn.gold)
+		and not Shown(orn.gold.corner[1]))
+	local bad = {}
+	for id in pairs(NS.FORGE_ORNAMENTS) do
+		local o = orn[id]
+		if not (o.forgePlaced and o.lastPoint.relPoint == "TOP" and Bottom(o) > top and Shown(o)
+			and o:GetFrameLevel() > frame.forgeSkin:GetFrameLevel()) then
+			bad[#bad + 1] = id
+		end
+	end
+	s.ok("ornements posés autour de l'anneau, au-dessus de la plaque et de la bande", #bad == 0, table.concat(bad, ","))
+	local r = orn.ribbon.lastPoint
+	local spec = NS.FORGE_ORNAMENTS.ribbon
+	local dx, dy = r.x - spec.x - F.x, r.y - spec.y - F.y
+	s.ok("ruban en travers de la bande (haut gauche de l'anneau)", math.abs(math.sqrt(dx * dx + dy * dy) - F.w / 2) < 1)
+	local featBad = {}
+	for id, fspec in pairs(NS.FEAT_ORN_FORGE) do
+		local o = frame.featOrn and frame.featOrn[id]
+		if o then
+			if not o.forgePlaced then featBad[#featBad + 1] = id
+			elseif fspec.angle and Bottom(o) <= top then featBad[#featBad + 1] = id .. " (plaque)" end
+		end
+	end
+	s.ok("ornements des hauts faits recalés (autour de l'anneau, aux bouts de la plaque, sous l'étiquette)",
+		#featBad == 0, table.concat(featBad, ","))
+	NS:SetUIStyle("sobre")
+	local home = orn.ribbon.home
+	s.ok("Sobre : ornements à leurs coins, cadre doré revenu", not orn.ribbon.forgePlaced
+		and orn.ribbon.lastPoint.point == home[1] and orn.ribbon.lastPoint.x == home[4] and Shown(orn.gold)
+		and orn.ribbon:GetFrameLevel() == orn.ribbon.homeLevel)
+	NS:SetUIStyle("azeroth")
+	s.ok("forgé de nouveau : sur l'anneau", orn.ribbon.forgePlaced and not Shown(orn.gold))
+	s.ok("sans erreur", Errors() == "", Errors())
+	s.check("[FCOMP] ornements : sur l'anneau au thème forgé (cadre doré caché), à leurs coins au Sobre")
+end
+
+do
+	Say("-- médaillon forgé : huit familles et halos sous la plaque")
+	local frame = Fresh("azeroth")
+	local s = Steps()
+	local data = NS:CompanionData()
+	data.unlocked["frame:feat_eight"], data.unlocked["frame:feat_prism"] = true, true
+	NS:CompanionSetStyle("frame", "feat_eight")
+	local top = NS.ForgeCompanionPlateTop()
+	local low = 99
+	for _, icon in ipairs(frame.featDeco.eight) do
+		local b = icon.lastPoint.y - icon.height / 2
+		if b < low then low = b end
+	end
+	s.ok("huit familles sur l'arc du haut, aucune sur la plaque du nom", low > top, low)
+	NS:CompanionSetStyle("frame", "feat_prism")
+	local halo = frame.featDeco.halo
+	local skinLevel = frame.forgeSkin:GetFrameLevel()
+	s.ok("halo prismatique sous l'habit (la plaque le recouvre)", halo and halo.host
+		and halo.host:GetFrameLevel() < skinLevel and Shown(halo))
+	s.ok("halo désaturé : l'arc-en-ciel le colore vraiment", halo and halo.azDesat == true)
+	NS:CompanionOnLevel(25)
+	local parts = frame.azLevel
+	s.ok("lueur de « Niveau N ! » sous l'habit", parts.iglowHost and parts.iglowHost:GetFrameLevel() < skinLevel
+		and parts.iglow:GetParent() == parts.iglowHost)
+	s.ok("sans erreur", Errors() == "", Errors())
+	s.check("[FCOMP] huit familles hors de la plaque ; halo prismatique (désaturé) et lueur du niveau sous la plaque")
+end
+
+do
+	Say("-- médaillon forgé : teintes recalibrées, plaque au gain de niveau, grand portrait du carnet")
+	local frame = Fresh("azeroth")
+	local s = Steps()
+	local gold = NS.FORGE_RING_GOLD
+	local function Out(look)
+		local c = { gold[1], gold[2], gold[3] }
+		if look.desat then
+			local l = 0.299 * c[1] + 0.587 * c[2] + 0.114 * c[3]
+			c = { l, l, l }
+		end
+		return { c[1] * look[1], c[2] * look[2], c[3] * look[3] }
+	end
+	local function HueSat(c)
+		local mx, mn = math.max(c[1], c[2], c[3]), math.min(c[1], c[2], c[3])
+		local sat = mx > 0 and (mx - mn) / mx or 0
+		local h = 0
+		if mx > mn then
+			if mx == c[1] then h = 60 * (((c[2] - c[3]) / (mx - mn)) % 6)
+			elseif mx == c[2] then h = 60 * ((c[3] - c[1]) / (mx - mn) + 2)
+			else h = 60 * ((c[1] - c[2]) / (mx - mn) + 4) end
+		end
+		return h, sat
+	end
+	local worst, at = 0, ""
+	for id, look in pairs(NS.AZEROTH_RING_TINTS_FORGE) do
+		local _, sat = HueSat(Out(look))
+		if sat > worst then worst, at = sat, id end
+	end
+	s.ok("teintes de notre anneau : saturation ≤ 0,70 (plus d'orange vif)", worst <= 0.70, string.format("%.2f (%s)", worst, at))
+	local h, sat = HueSat(Out(NS.AZEROTH_RING_TINTS_FORGE.copper))
+	s.ok("Cuivre : teinte de cuivre (18° à 30°), saturation ≈ 0,6", h >= 18 and h <= 30 and sat >= 0.45 and sat <= 0.65,
+		string.format("%.0f° %.2f", h, sat))
+	local old = select(2, HueSat(Out(NS.AZEROTH_RING_TINTS.copper)))
+	s.ok("… l'ancienne teinte y passait à l'orange vif", old > 0.75, string.format("%.2f", old))
+	-- la plaque au gain de niveau (UnitLevel rend encore l'ancien niveau pendant l'événement)
+	NS:CompanionOnLevel(25)
+	s.ok("gain de niveau : « niveau 25 » sur la plaque tout de suite", frame.forgeSkin.stage:GetText():find("niveau 25", 1, true)
+		~= nil, frame.forgeSkin.stage:GetText())
+	Mock:Advance(NS.FORGE_LEVEL_SEEN_S + 1)
+	NS:CompanionRefreshLabels()
+	s.ok("… puis le niveau du client reprend la main", frame.forgeSkin.stage:GetText():find("niveau 24", 1, true) ~= nil)
+	-- le grand portrait du carnet forgé : son anneau forgé porte la teinte du cadre gagné
+	local data = NS:CompanionData()
+	data.unlocked["frame:copper"] = true
+	NS:CompanionSetStyle("frame", "copper")
+	local tex = CreateFrame("Frame"):CreateTexture()
+	local fake = { evo = { forgeRing = tex } }
+	s.ok("carnet forgé : l'anneau du portrait prend la teinte recalibrée", NS:CarnetPaintRing(fake) == "copper"
+		and tex.azDesat == true and Same(tex.vertex, NS.AZEROTH_RING_TINTS_FORGE.copper))
+	s.ok("sans erreur", Errors() == "", Errors())
+	s.check(string.format("[FCOMP] teintes recalibrées pour notre anneau (saturation max %.2f, Cuivre %.0f°) ; plaque à jour au gain de niveau ; portrait du carnet", worst, h))
+end
+
+do
+	Say("-- confirmation forgée : sous-titre en entier")
+	Fresh("azeroth")
+	local s = Steps()
+	local dialog = NS:EnsureEffectsConfirm()
+	local pad, button = Theme.DIALOG_PAD, Theme.DIALOG_HEADER_BUTTON
+	s.ok("sans bouton-icône : seule la place du [×] est retirée", dialog.subtitle.width
+		== dialog.width - dialog.header.textLeft - pad - button, dialog.subtitle.width)
+	local RT = T.NS.Theme
+	local plain = RT.CreateDialog(UIParent, 400, 200, { title = "x" })
+	local icon = RT.CreateDialog(UIParent, 400, 200, { title = "x", headerIcon = true })
+	s.ok("headerIcon (fenêtre de Ready2Quest au bouton d'actualisation) : sa place aussi",
+		plain.subtitle.width - icon.subtitle.width == RT.DIALOG_HEADER_BUTTON)
+	plain:Hide(); icon:Hide()
+	s.ok("sans erreur", Errors() == "", Errors())
+	s.check("[FCOMP] confirmation : le sous-titre ne réserve que les boutons d'en-tête montrés")
 end
 
 Done()

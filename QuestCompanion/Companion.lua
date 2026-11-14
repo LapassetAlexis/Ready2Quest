@@ -854,6 +854,8 @@ function ns:CompanionCheckStage(level, celebrate)
 	end
 	data.stage, data.stageReady = target, nil
 	self:CompanionApplyModel()
+	-- 3.1.0 : la plaque du médaillon forgé dit le stade (« stade · niveau »)
+	self:CompanionRefreshLabels()
 	if celebrate ~= false then self:CompanionCelebrate() end
 	if self.RefreshJournalTracker then pcall(self.RefreshJournalTracker, self) end
 	return true
@@ -1987,12 +1989,19 @@ local function CreateModel(parent)
 	return nil
 end
 
+-- 3.1.0 : la place d'un ornement sur le cadre carré, retenue (le médaillon
+-- forgé les pose sur son anneau, ForgeCompanion.lua, et les y remet au retour)
+local function Home(o, point, rel, relPoint, x, y)
+	o:SetPoint(point, rel, relPoint, x, y)
+	o.home = { point, rel, relPoint, x, y }
+end
+
 local function BuildOrnaments(frame)
 	local orn = {}
 	-- ruban : bandeau bleu de nuit en travers du coin haut gauche, et sa queue
 	orn.ribbon = CreateFrame("Frame", nil, frame)
 	orn.ribbon:SetSize(34, 10)
-	orn.ribbon:SetPoint("TOPLEFT", frame, "TOPLEFT", -4, 4)
+	Home(orn.ribbon, "TOPLEFT", frame, "TOPLEFT", -4, 4)
 	orn.ribbon.band = Theme.Solid(orn.ribbon, "OVERLAY", Theme.BLUE, 0.95)
 	orn.ribbon.band:SetPoint("TOPLEFT", orn.ribbon, "TOPLEFT", 0, 0)
 	orn.ribbon.band:SetSize(34, 5)
@@ -2002,7 +2011,7 @@ local function BuildOrnaments(frame)
 	-- lanterne : un fil, un corps ambre et un halo doux, en haut à droite
 	orn.lantern = CreateFrame("Frame", nil, frame)
 	orn.lantern:SetSize(14, 24)
-	orn.lantern:SetPoint("TOPRIGHT", frame, "TOPRIGHT", 4, 6)
+	Home(orn.lantern, "TOPRIGHT", frame, "TOPRIGHT", 4, 6)
 	orn.lantern.wire = Theme.Solid(orn.lantern, "ARTWORK", Theme.GOLD_SOFT, 1)
 	orn.lantern.wire:SetPoint("TOP", orn.lantern, "TOP", 0, 0)
 	orn.lantern.wire:SetSize(1, 8)
@@ -2015,7 +2024,7 @@ local function BuildOrnaments(frame)
 	-- médaille : losange doré sur un ruban, en bas à gauche
 	orn.medal = CreateFrame("Frame", nil, frame)
 	orn.medal:SetSize(16, 22)
-	orn.medal:SetPoint("BOTTOMLEFT", frame, "BOTTOMLEFT", 4, 18)
+	Home(orn.medal, "BOTTOMLEFT", frame, "BOTTOMLEFT", 4, 18)
 	orn.medal.strap = Theme.Solid(orn.medal, "ARTWORK", Theme.RED, 0.9)
 	orn.medal.strap:SetPoint("TOP", orn.medal, "TOP", 0, 0)
 	orn.medal.strap:SetSize(6, 9)
@@ -2031,7 +2040,7 @@ local function BuildOrnaments(frame)
 	-- fleur des champs : une tige verte et un losange rose, en bas à droite
 	orn.flower = CreateFrame("Frame", nil, frame)
 	orn.flower:SetSize(12, 20)
-	orn.flower:SetPoint("BOTTOMRIGHT", frame, "BOTTOMRIGHT", -5, 18)
+	Home(orn.flower, "BOTTOMRIGHT", frame, "BOTTOMRIGHT", -5, 18)
 	orn.flower.stem = Theme.Solid(orn.flower, "ARTWORK", Theme.GREEN, 0.9)
 	orn.flower.stem:SetPoint("BOTTOM", orn.flower, "BOTTOM", 0, 0)
 	orn.flower.stem:SetSize(1, 11)
@@ -2047,7 +2056,7 @@ local function BuildOrnaments(frame)
 	-- fanion : une hampe et un petit drapeau rouge à liseré ambre, flanc gauche
 	orn.pennant = CreateFrame("Frame", nil, frame)
 	orn.pennant:SetSize(14, 22)
-	orn.pennant:SetPoint("LEFT", frame, "LEFT", -6, 14)
+	Home(orn.pennant, "LEFT", frame, "LEFT", -6, 14)
 	orn.pennant.pole = Theme.Solid(orn.pennant, "ARTWORK", Theme.GOLD_SOFT, 1)
 	orn.pennant.pole:SetPoint("TOPLEFT", orn.pennant, "TOPLEFT", 0, 0)
 	orn.pennant.pole:SetSize(1, 22)
@@ -2060,7 +2069,7 @@ local function BuildOrnaments(frame)
 	-- cristal de lune : losange bleu pâle et son halo, flanc droit
 	orn.crystal = CreateFrame("Frame", nil, frame)
 	orn.crystal:SetSize(18, 18)
-	orn.crystal:SetPoint("RIGHT", frame, "RIGHT", 7, 10)
+	Home(orn.crystal, "RIGHT", frame, "RIGHT", 7, 10)
 	orn.crystal.glow = Theme.Solid(orn.crystal, "ARTWORK", { 0.60, 0.85, 1 }, 0.18)
 	orn.crystal.glow:SetPoint("CENTER", orn.crystal, "CENTER", 0, 0)
 	orn.crystal.glow:SetSize(16, 16)
@@ -2073,7 +2082,7 @@ local function BuildOrnaments(frame)
 	-- couronne : un bandeau d'or et trois pointes en losange, en haut au centre
 	orn.crown = CreateFrame("Frame", nil, frame)
 	orn.crown:SetSize(26, 12)
-	orn.crown:SetPoint("BOTTOM", frame, "TOP", 0, -4)
+	Home(orn.crown, "BOTTOM", frame, "TOP", 0, -4)
 	orn.crown.band = Theme.Solid(orn.crown, "OVERLAY", Theme.GOLD, 1)
 	orn.crown.band:SetPoint("BOTTOM", orn.crown, "BOTTOM", 0, 0)
 	orn.crown.band:SetSize(22, 4)
@@ -2618,6 +2627,13 @@ function ns:CompanionShowHover()
 	local hover = self:EnsureCompanionHover()
 	if not hover then return end
 	if hover.hint then hover.hint:SetText(self:CompanionHoverHint()) end
+	-- 3.1.0 : à 8 px du bord le plus à gauche (la plaque du médaillon forgé
+	-- déborde du cadre)
+	local frame = self.companionFrame
+	if frame then
+		hover:ClearAllPoints()
+		hover:SetPoint("BOTTOMRIGHT", frame, "BOTTOMLEFT", -8 - ns.CompanionSideOverhang(frame), 0)
+	end
 	self:CompanionRefreshHover()
 	hover:Show()
 end
@@ -2895,6 +2911,9 @@ function ns:CompanionApplyOrnaments()
 		local o = frame.ornaments[def.id]
 		if o then
 			local shown = self:CompanionOrnamentShown(def)
+			-- 3.1.0 : le médaillon forgé n'a pas de cadre carré à border
+			-- (son anneau d'or en tient lieu)
+			if def.id == "gold" and frame.ring == "forge" then shown = false end
 			if shown then o:Show() else o:Hide() end
 			if def.id == "gold" and o.corner then
 				for _, tex in ipairs(o.corner) do if shown then tex:Show() else tex:Hide() end end
@@ -3497,9 +3516,13 @@ end
 
 function ns:CompanionOnLevel(level)
 	level = tonumber(level) or PlayerLevel()
+	-- 3.1.0 : le niveau de l'événement (UnitLevel peut encore rendre l'ancien
+	-- pendant PLAYER_LEVEL_UP) : la plaque du médaillon forgé le lit
+	self.companionLevelSeen = { level = level, at = Clock() }
 	self:CompanionAdd("mood", 25)
 	self:CompanionWake(false)
 	local evolved = self:CompanionCheckStage(level, true)
+	self:CompanionRefreshLabels()
 	-- l'évolution garde sa bulle ; un déblocage du même niveau passe au chat
 	local fresh = self:CompanionCheckUnlocks(level, false, evolved)
 	if not evolved and #fresh == 0 then self:CompanionSay("LEVEL", { args = { level } }) end

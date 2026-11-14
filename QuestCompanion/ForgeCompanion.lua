@@ -39,11 +39,51 @@ local function Call(fn, ...)
 	return nil
 end
 
--- La plaque du nom (px du cadre) : hauteur, centre du nom et de la ligne
--- « stade · niveau » depuis le bas de la plaque, marge du texte, tailles
--- de la police des titres (le nom rapetisse s'il est long)
-ns.FORGE_COMPANION_PLATE = { height = 42, out = 10, nameY = 27, subY = 12, pad = 7, nameMax = 13, nameMin = 9,
-	subMax = 11, subMin = 9 }
+-- La plaque du nom (px du cadre) : hauteur, débord de chaque côté du cadre,
+-- recouvrement sous la bande d'or (la plaque commence où finit l'anneau, sa
+-- pointe basse seule passe dessus, comme la maquette), centre du nom et de
+-- la ligne « stade · niveau » depuis le bas de la plaque, marge du texte,
+-- tailles de la police des titres (le nom rapetisse s'il est long)
+-- (out ≤ 6 : à 8 px, le filet et la fiche au survol gardent leur écart)
+ns.FORGE_COMPANION_PLATE = { height = 42, out = 6, overlap = 4, nameY = 26, subY = 12, pad = 7, nameMax = 13,
+	nameMin = 9, subMax = 11, subMin = 9 }
+-- Rayon extérieur de la bande d'or d'anneau.tga (part du demi-côté)
+ns.FORGE_RING_BAND = 0.94
+
+-- Haut de la plaque, depuis le haut du cadre (sous la bande d'or)
+function ns.ForgeCompanionPlateTop()
+	local F, P = ns.FORGE_RING, ns.FORGE_COMPANION_PLATE
+	return F.y - math.floor(F.h / 2 * ns.FORGE_RING_BAND) + P.overlap
+end
+-- Ce que l'habit forgé dépasse sous le cadre (plaque et étiquette d'humeur) :
+-- la souris y garde le cadre
+function ns.ForgeCompanionBelow(frameH)
+	local P, M = ns.FORGE_COMPANION_PLATE, ns.FORGE_MOOD_TAB
+	local bottom = ns.ForgeCompanionPlateTop() - P.height - (M.h - M.tuck)
+	return math.max(0, math.ceil(-bottom - (frameH or 118)))
+end
+-- Ce que l'habit déborde de chaque côté du cadre (0 : le cadre carré)
+function ns.CompanionSideOverhang(frame)
+	if frame and frame.ring == "forge" then return ns.FORGE_COMPANION_PLATE.out end
+	return 0
+end
+
+-- Les ornements sur l'anneau (le cadre carré les pose à ses coins, qui
+-- tombent dans le vide autour d'un médaillon rond) : point de l'ornement,
+-- angle sur le bord de l'anneau (degrés, 0 à droite, sens trigonométrique),
+-- décalage. Mêmes décalages que sur le carré pour ceux du bord.
+ns.FORGE_ORNAMENTS = {
+	ribbon  = { point = "TOPLEFT",  angle = 135, x = -4, y = 4 },
+	lantern = { point = "TOPRIGHT", angle = 45,  x = 4,  y = 6 },
+	crown   = { point = "BOTTOM",   angle = 90,  x = 0,  y = -4 },
+	pennant = { point = "LEFT",     angle = 180, x = -6, y = 0 },
+	crystal = { point = "RIGHT",    angle = 0,   x = 7,  y = 0 },
+	-- accrochés sur la bande, au-dessus de la plaque du nom
+	medal   = { point = "CENTER",   angle = 218, x = 0,  y = 0 },
+	flower  = { point = "CENTER",   angle = 322, x = 0,  y = 0 },
+}
+-- Le niveau d'un PLAYER_LEVEL_UP, cru (s) avant que UnitLevel ne le rende
+ns.FORGE_LEVEL_SEEN_S = 30
 -- L'étiquette d'humeur : hauteur, part glissée sous la plaque, marge du mot
 ns.FORGE_MOOD_TAB = { h = 16, tuck = 3, pad = 9 }
 -- humeur -> plaque (Theme.FORGE_PLATE) et encre ; encre ≥ 7:1 sur les
@@ -82,7 +122,7 @@ local function BuildForgeSkin(frame)
 	local w = math.floor((frame:GetWidth() or 104) + 2 * P.out)
 	skin.plateBox = CreateFrame("Frame", nil, skin)
 	skin.plateBox:SetSize(w, P.height)
-	skin.plateBox:SetPoint("BOTTOM", frame, "BOTTOM", 0, 0)
+	skin.plateBox:SetPoint("TOP", frame, "TOP", 0, ns.ForgeCompanionPlateTop())
 	skin.plateBox:EnableMouse(false)
 	skin.plate = Theme.Slice(skin, "plate", { around = skin.plateBox, layer = "BACKGROUND", sub = 1,
 		margin = Theme.FORGE.margin, color = Theme.FORGE_PLATE.card })
@@ -139,6 +179,14 @@ end
 function ns:CompanionForgeStageLine()
 	local stage = self.CompanionStageLabel and self:CompanionStageLabel() or ""
 	local level = tonumber(Call(G("UnitLevel"), "player")) or 1
+	-- (le niveau d'un PLAYER_LEVEL_UP qui vient d'arriver, si UnitLevel retarde :
+	-- cru quelques secondes, le temps que le client se mette à jour)
+	local seen = self.companionLevelSeen
+	local now = (ns.Now and ns.Now()) or 0
+	if type(seen) == "table" and tonumber(seen.level) and now - (tonumber(seen.at) or 0) <= ns.FORGE_LEVEL_SEEN_S
+		and seen.level > level then
+		level = seen.level
+	end
 	return self:F("COMP_PLATE_SUB", tostring(stage), level)
 end
 
@@ -171,6 +219,58 @@ function ns:CompanionForgeMoodTab()
 	tab:SetWidth(math.floor(Measure(frame.mood) + 2 * M.pad + 0.5))
 	tab.mood, tab.plate = mood, spec.plate
 	return mood
+end
+
+local function Method(obj, name, ...)
+	local fn = obj and obj[name]
+	if type(fn) ~= "function" then return false end
+	return pcall(fn, obj, ...)
+end
+
+-- Les ornements posés sur l'anneau (on) ou remis aux coins du carré ; le
+-- double liseré carré (« cadre doré ») n'a rien à border autour du médaillon
+function ns:CompanionForgeOrnaments(frame, on)
+	local orn = frame and frame.ornaments
+	if not orn then return nil end
+	local F = ns.FORGE_RING
+	local r = F.w / 2
+	-- au-dessus de l'anneau (un ruban passe en travers de la bande d'or)
+	local skin = frame.forgeSkin
+	local over = ((skin and skin:GetFrameLevel()) or ((frame:GetFrameLevel() or 1) + 4)) + 1
+	for id, spec in pairs(ns.FORGE_ORNAMENTS) do
+		local o = orn[id]
+		if o and o.home then
+			o:ClearAllPoints()
+			if o.homeLevel == nil then o.homeLevel = o:GetFrameLevel() or false end
+			if on then
+				o:SetFrameLevel(over)
+			elseif o.homeLevel then
+				o:SetFrameLevel(o.homeLevel)
+			end
+			if on then
+				local a = math.rad(spec.angle)
+				o:SetPoint(spec.point, frame, "TOP", math.floor(F.x + r * math.cos(a) + spec.x + 0.5),
+					math.floor(F.y + r * math.sin(a) + spec.y + 0.5))
+				o.forgePlaced = true
+			else
+				local h = o.home
+				o:SetPoint(h[1], h[2], h[3], h[4], h[5])
+				o.forgePlaced = nil
+			end
+		end
+	end
+	local gold = orn.gold
+	if gold then
+		local shown = false
+		if not on then
+			for _, def in ipairs(ns.COMPANION_ORNAMENTS or {}) do
+				if def.id == "gold" then shown = self:CompanionOrnamentShown(def) and true or false end
+			end
+		end
+		if shown then gold:Show() else gold:Hide() end
+		for _, tex in ipairs(gold.corner or {}) do if shown then tex:Show() else tex:Hide() end end
+	end
+	return on
 end
 
 -- Pose le médaillon forgé (appelé par ns:CompanionApplyUIStyle)
@@ -215,6 +315,11 @@ function ns:CompanionApplyForgeSkin(frame)
 		Theme.NoShadow(frame.mood)
 	end
 	frame.ring = "forge"
+	-- la plaque et l'étiquette d'humeur dépassent sous le cadre : la souris
+	-- (survol, glisser, clic droit) les garde
+	frame.forgeHitBelow = ns.ForgeCompanionBelow(frame:GetHeight())
+	Method(frame, "SetHitRectInsets", 0, 0, 0, -frame.forgeHitBelow)
+	self:CompanionForgeOrnaments(frame, true)
 	self:CompanionForgeMoodTab()
 	return skin
 end
@@ -226,6 +331,9 @@ function ns:CompanionLeaveForgeSkin(frame)
 	local skin = frame and frame.forgeSkin
 	if not skin then return nil end
 	skin:Hide()
+	frame.forgeHitBelow = nil
+	Method(frame, "SetHitRectInsets", 0, 0, 0, 0)
+	self:CompanionForgeOrnaments(frame, false)
 	local kit = Kit()
 	if kit.Masked then kit.Masked(frame, false, skin) end
 	PlaceBackground(frame, skin, false)
