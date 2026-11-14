@@ -171,6 +171,12 @@ ns.WINTER_VEIL_GIFT = "frost"
 -- 2.14.1 : recalé sur le réglage en jeu (y = -20 posé sur l'or, 10/11) :
 -- les mesures faites sur captures (-5..-17) plaçaient l'or trop haut
 ns.WINTER_VEIL_RING_GOLD = { top = -14, inner = -26, w = 91 }
+-- 3.1.0 : le médaillon forgé (ns.FORGE_RING, anneau généré de 104 px centré
+-- 45 px sous le haut du cadre, bande d'or des rayons 0,80 à 0,94) : le haut
+-- de sa bande va de +4 à -3 px du haut du cadre ; la guirlande y est posée
+-- (y, depuis le haut du cadre) au lieu de WINTER_VEIL_COMPANION.y
+ns.WINTER_VEIL_FORGE_GOLD = { top = 4, inner = -3, w = 98 }
+ns.WINTER_VEIL_FORGE_LIGHTS = { y = 1 }
 -- la scène de capture : la boule de neige (taille, tours en vol), son
 -- éclatement en flocons (nombre, durée, portée, taille)
 -- 2.14.0 (bêta 3) : un peu plus soigné, mêmes durées. La boule ralentit un
@@ -516,6 +522,8 @@ end
 -- Les brins à leur place (créés au besoin, les autres cachés)
 local function PlaceSwags(frame, d)
 	local C, box = ns.WINTER_VEIL_COMPANION, ns.WinterVeilLightsBox()
+	-- 3.1.0 : sur le médaillon forgé, posée sur le haut de sa bande d'or
+	local y = (frame.ring == "forge") and (C.y - ns.WINTER_VEIL_COMPANION_DEFAULT.y + ns.WINTER_VEIL_FORGE_LIGHTS.y) or C.y
 	d.swags = d.swags or {}
 	for index = 1, math.max(box.count, #d.swags) do
 		local model = d.swags[index]
@@ -527,7 +535,7 @@ local function PlaceSwags(frame, d)
 			if index <= box.count then
 				model:SetSize(box.frameW, C.h)
 				model:ClearAllPoints()
-				model:SetPoint("CENTER", frame, "TOP", box.centers[index], C.y)
+				model:SetPoint("CENTER", frame, "TOP", box.centers[index], y)
 				if model.wvModel ~= C.model then
 					if Method(model, "SetModel", C.model) then model.wvModel = C.model end
 				end
@@ -629,8 +637,18 @@ local function BuildCompanionDecor(frame, skin)
 		end
 	end
 	BuildSnow(frame, d)
-	frame.wvDecor = d
+	-- 3.1.0 : un décor par habit : frame.wvDecor pour l'anneau du client,
+	-- frame.wvForgeDecor pour le médaillon forgé
+	if skin and skin.forge then frame.wvForgeDecor = d else frame.wvDecor = d end
+	d.skin = skin
 	return d
+end
+
+-- 3.1.0 : le décor de l'habit posé (ou nil)
+function ns.WinterVeilCompanionDecor(frame)
+	if not frame then return nil end
+	if frame.ring == "forge" then return frame.wvForgeDecor end
+	return frame.wvDecor
 end
 
 -- ---------------------------------------------------------------------------
@@ -786,7 +804,8 @@ end
 -- L'habit du cadre (anneau, plaque) ne se voit pas ?
 function ns:WinterVeilCompanionBare(frame)
 	frame = frame or self.companionFrame
-	local skin = frame and frame.azSkin
+	-- 3.1.0 : l'habit de l'anneau posé (ancien habillage ou médaillon forgé)
+	local skin = frame and ((ns.CompanionRingSkin and ns.CompanionRingSkin(frame)) or frame.azSkin)
 	if not skin or Hidden(frame) or Hidden(skin) then return true end
 	return EffectiveAlpha(skin) < ns.WINTER_VEIL_BARE_ALPHA
 end
@@ -808,16 +827,22 @@ end
 function ns:WinterVeilCompanion()
 	local frame = self.companionFrame
 	if not frame then return nil end
-	local skin = frame.azSkin
-	local on = skin and frame.uiStyle == "azeroth" and self:WinterVeilActive()
-	local d = frame.wvDecor
-	if not on then
-		if d then
-			d:Hide()
-			for _, model in ipairs(d.swags or {}) do model:Hide() end
-			SnowFalling(d, false)
-			d.bare, d.calm = nil, nil
+	-- 3.1.0 : tout anneau (ancien habillage ou médaillon forgé) a son décor
+	local skin = ns.CompanionRingSkin and ns.CompanionRingSkin(frame) or nil
+	if not skin and frame.uiStyle == "azeroth" then skin = frame.azSkin end
+	local on = skin and (frame.ring ~= nil or frame.uiStyle == "azeroth") and self:WinterVeilActive()
+	local d = on and ns.WinterVeilCompanionDecor(frame) or nil
+	-- le décor de l'autre habit (bascule à chaud) se cache
+	for index = 1, 2 do
+		local other = (index == 1) and frame.wvDecor or frame.wvForgeDecor
+		if other and other ~= d then
+			other:Hide()
+			for _, model in ipairs(other.swags or {}) do model:Hide() end
+			SnowFalling(other, false)
+			other.bare, other.calm = nil, nil
 		end
+	end
+	if not on then
 		PaintRings(self)
 		return false
 	end
@@ -850,7 +875,7 @@ end
 -- 2.14.0 (bêta 6) : le combat aussi (la neige s'arrête, puis reprend).
 function ns:WinterVeilWatch()
 	local frame = self.companionFrame
-	local d = frame and frame.wvDecor
+	local d = ns.WinterVeilCompanionDecor(frame)
 	if not (d and d:IsShown()) then return false end
 	local bare = self:WinterVeilCompanionBare(frame)
 	if (d.bare and true or false) == bare then

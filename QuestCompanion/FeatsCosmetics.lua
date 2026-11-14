@@ -371,8 +371,26 @@ local TYPES = ns.CREATURE_TYPES or { "beast", "humanoid", "undead", "elemental",
 local EIGHT_SOBRE = { "TOPLEFT", "TOP", "TOPRIGHT", "RIGHT", "BOTTOMRIGHT", "BOTTOM", "BOTTOMLEFT", "LEFT" }
 local EIGHT_SIZE = 13
 
-local function Azeroth(frame) return frame and frame.uiStyle == "azeroth" end
-local function Ring() return ns.AZEROTH_RING or { w = 108, h = 104, y = -45 } end
+-- 3.1.0 : tout anneau (l'ancien habillage, le médaillon forgé : frame.ring)
+local function Azeroth(frame)
+	if not frame then return false end
+	if ns.CompanionRinged then return ns.CompanionRinged(frame) or frame.uiStyle == "azeroth" end
+	return frame.uiStyle == "azeroth"
+end
+local function Ring(frame)
+	return (ns.CompanionRingGeometry and ns.CompanionRingGeometry(frame)) or ns.AZEROTH_RING or { w = 108, h = 104, y = -45 }
+end
+-- 3.1.0 : le halo prismatique du médaillon forgé sans l'atlas du client :
+-- notre anneau, en lumière additive (il tourne dans l'arc-en-ciel)
+local function ForgeHalo(holder)
+	local art = Theme.ART and Theme.ART.ring
+	if not art then return nil end
+	local tex = holder:CreateTexture(nil, "ARTWORK")
+	tex:SetTexture(art.file)
+	Method(tex, "SetBlendMode", "ADD")
+	tex.forgeArt = "ring"
+	return tex
+end
 
 local function DecoHolder(frame)
 	if frame.featDeco then return frame.featDeco end
@@ -446,7 +464,7 @@ function ns:FeatApplyFrameDeco()
 	-- huit icônes de familles (celles du client)
 	if deco == "eight" then
 		holder.eight = holder.eight or {}
-		local ring = Ring()
+		local ring = Ring(frame)
 		for index, key in ipairs(TYPES) do
 			local icon = holder.eight[index]
 			if not icon then
@@ -471,8 +489,9 @@ function ns:FeatApplyFrameDeco()
 	-- filet arc-en-ciel (Sobre) ou halo du client qui tourne autour de l'anneau (Azeroth)
 	if deco == "prism" then
 		if az and holder.halo == nil then holder.halo = Glow(holder, "ARTWORK") or false end
+		if az and holder.halo == false and frame.ring == "forge" then holder.halo = ForgeHalo(holder) or false end
 		if holder.halo then
-			local ring = Ring()
+			local ring = Ring(frame)
 			holder.halo:ClearAllPoints()
 			holder.halo:SetSize(ring.w + 26, ring.w + 26)
 			holder.halo:SetPoint("CENTER", frame, "TOP", 0, ring.y)
@@ -607,14 +626,20 @@ function ns:FeatApplyBackgroundDeco()
 	end
 	local fire = frame.featFire
 	if not fire then return nil end
-	local mask = frame.azSkin and frame.azSkin.mask
+	-- 3.1.0 : le masque de l'anneau posé (ancien habillage ou médaillon forgé)
+	local skin = (ns.CompanionRingSkin and ns.CompanionRingSkin(frame)) or frame.azSkin
+	local mask = skin and skin.mask
 	for _, tex in pairs(fire) do
 		if on then tex:Show() else tex:Hide() end
+		if tex.azMasked and tex.azMask and tex.azMask ~= mask then
+			Method(tex, "RemoveMaskTexture", tex.azMask)
+			tex.azMasked, tex.azMask = nil, nil
+		end
 		if mask and Azeroth(frame) and not tex.azMasked then
-			if Method(tex, "AddMaskTexture", mask) then tex.azMasked = true end
+			if Method(tex, "AddMaskTexture", mask) then tex.azMasked, tex.azMask = true, mask end
 		elseif tex.azMasked and not Azeroth(frame) then
-			Method(tex, "RemoveMaskTexture", mask)
-			tex.azMasked = nil
+			Method(tex, "RemoveMaskTexture", tex.azMask or mask)
+			tex.azMasked, tex.azMask = nil, nil
 		end
 	end
 	return on
