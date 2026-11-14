@@ -419,24 +419,28 @@ do
 	frame.scripts.OnHide(frame)
 end
 
--- 5. Le bois manque : fenêtres Sobre (les bandeaux gardent Azeroth) -----------------------------------
+-- 5. Le bois manque : fenêtres au thème forgé (les bandeaux gardent Azeroth) ----------------------
 do
-	Say("-- scène de capture : repli Sobre sans le bois")
+	Say("-- scène de capture : repli forgé sans le bois")
 	SZ.Reset({ ["_achievement-wood-nineslice-edgetop"] = true })
 	SZ.SeeKill(8500, { name = "Sanglier" })
 	SZ.SeeKill(8501, { name = "Loup" })
 	NS:CaptureNetClick("LeftButton")
 	local chooser = NS.captureChooser
-	Check("[AZS] bois absent : bandeaux en Azeroth, fenêtres en Sobre (le choix Sobre)", NS:AzerothOn() and not NS:AzerothScenesOn()
-		and chooser and chooser:IsShown() and not chooser.azeroth and chooser.uiStyle == "sobre"
-		and chooser.hint:GetText() == NS.L.CAPTURE_CHOOSE_PAUSED)
+	-- 3.1.0 : le repli des scènes sans le bois est le thème forgé (le choix
+	-- est « azeroth ») : les fenêtres du socle, avec leurs fonctions re-logées
+	-- (ForgeScenes.lua : compte, raccourcis, verdict dans la scène)
+	Check("[AZS] bois absent : bandeaux en Azeroth, fenêtres au thème forgé (le choix forgé)", NS:AzerothOn() and not NS:AzerothScenesOn()
+		and chooser and chooser:IsShown() and not chooser.azeroth and chooser.uiStyle == "sobre" and chooser.forged
+		and chooser.hint:GetText() == NS.L.CAPTURE_CHOOSE_KEYS and chooser.paused:GetText() == NS.L.CAPTURE_CHOOSE_PAUSED)
 	SZ.Roll(0)
 	chooser.single:Click()
 	local stage = NS.captureStage
-	local sobreStage = stage and stage:IsShown() and not stage.azeroth and stage.topBar and stage.ribbonPanel
+	local sobreStage = stage and stage:IsShown() and not stage.azeroth and stage.forged and stage.titlePlate
+		and stage.banner.verdict and stage.ribbonPanel == nil
 		and Has(_G.UISpecialFrames, NS.StyleName("QuestCompanionCaptureStage", NS:StyleKey(false)))
 	SZ.UntilVerdict()
-	local pending = NS.captureResultPending ~= nil
+	local pending = NS.captureResultPending == nil and NS.captureState.rolling.sceneVerdict == true
 	stage.scripts.OnMouseUp(stage)
 	SZ.Close(5)
 	NS:CaptureResultHide()
@@ -444,8 +448,9 @@ do
 	SZ.SeeKill(8502, { name = "Ours" })
 	NS:CaptureBatch()
 	local frame = NS.captureBatchFrame
-	Check("[AZS] repli : scène Sobre (le bandeau « Capturé ! » reste), volée Sobre", sobreStage and pending
-		and frame and frame:IsShown() and not frame.azeroth and frame.close and not frame.tiles[1].az)
+	Check("[AZS] repli : scène forgée (le verdict dans la scène, pas de bandeau « Capturé ! » en double), volée forgée",
+		sobreStage and pending and frame and frame:IsShown() and not frame.azeroth and frame.forged and frame.close
+		and not frame.tiles[1].az and frame.tiles[1].badge ~= nil)
 	NS:CaptureBatchStop(true)
 	frame:Hide()
 	frame.scripts.OnHide(frame)

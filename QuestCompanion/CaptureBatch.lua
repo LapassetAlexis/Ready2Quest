@@ -506,7 +506,7 @@ local function CreateTileAzeroth(parent)
 	return tile
 end
 
-local function CreateTile(parent, az)
+local function CreateTile(parent, az, forged)
 	if az then return CreateTileAzeroth(parent) end
 	local coords = Coords()
 	local tile = CreateFrame("Frame", nil, parent)
@@ -565,6 +565,9 @@ local function CreateTile(parent, az)
 	tile.stars = Theme.Text(tile, Theme.F_SMALL, Theme.PARCHMENT)
 	tile.stars:SetPoint("BOTTOM", tile, "BOTTOM", 0, 10)
 	tile.stars:SetJustifyH("CENTER")
+	-- 3.1.0 : thème forgé, le creux autour de la créature et le badge
+	-- d'étoiles au coin (ForgeScenes.lua)
+	if forged and ns.ForgeTileDress then ns.ForgeTileDress(tile) end
 	return tile
 end
 
@@ -613,6 +616,7 @@ local function ApplyIdle(self, tile, result)
 		Tint(tile.bg, Theme.NAV or Theme.WINDOW, 1)
 		if tile.edge and tile.edge.SetColor then local c = Theme.GOLD_SOFT or Theme.GOLD; tile.edge:SetColor(c[1], c[2], c[3], 1) end
 		tile.bar:Hide()
+		if tile.badge then ns.ForgeTileBadge(tile, nil) end
 	end
 	tile.halo:Hide()
 	tile.net:Hide()
@@ -709,6 +713,8 @@ local function ApplyVerdict(self, tile, result)
 		tile.tag:SetText("")
 		Coord(tile.net, Coords().netTorn)
 	end
+	-- (forgé : le nombre d'étoiles d'une prise dans le badge du coin)
+	if tile.badge then ns.ForgeTileBadge(tile, result) end
 end
 
 -- La case figée sur son verdict (fin de l'animation, Arrêter, réglage coupé)
@@ -879,7 +885,12 @@ function ns:EnsureCaptureBatchFrame()
 		and self:AzerothCreateWindow(AZB.minW, 300, { strata = "DIALOG", name = "QuestCompanionCaptureBatchAzeroth" }) or nil
 	if not frame then
 		local key = SceneKey(self, "sobre")
-		frame = Theme.CreateToast(UIParent, MIN_W, 300, { strata = "DIALOG", name = SceneName("QuestCompanionCaptureBatch", key), accent = Theme.GOLD })
+		local name = SceneName("QuestCompanionCaptureBatch", key)
+		-- 3.1.0 : née sous le thème forgé, la carte du socle (ForgeScenes.lua)
+		if key == "forge" and ns.ForgeSceneWindow and ns.QCForged and ns.QCForged() then
+			frame = ns.ForgeSceneWindow(MIN_W, 300, { strata = "DIALOG", name = name })
+		end
+		frame = frame or Theme.CreateToast(UIParent, MIN_W, 300, { strata = "DIALOG", name = name, accent = Theme.GOLD })
 		if not frame then return nil end
 		frame.uiStyle = "sobre"
 	end
@@ -940,6 +951,40 @@ function ns:EnsureCaptureBatchFrame()
 		frame.footer:SetPoint("BOTTOMLEFT", frame, "BOTTOMLEFT", AZB.pad, 24)
 		frame.footer:SetJustifyH("LEFT")
 		if frame.footer.SetWordWrap then frame.footer:SetWordWrap(false) end
+	elseif frame.forged then
+		-- 3.1.0 : thème forgé. La plaque de titre : « TOUT CAPTURER » et le
+		-- compteur mis en avant ; dessous, « Aide : <aide> » ; le ×, Arrêter /
+		-- Fermer et le pied comme en Sobre
+		local B = ns.FORGE_SCENE.batch
+		local left = frame.contentLeft or PAD
+		frame.titlePlate = ns.ForgeTitlePlate(frame, B.plateW, B.plateH, B.plateY)
+		frame.title = Theme.Text(frame, Theme.F_CAPS or Theme.F_SMALL, Theme.IDENTITY_LIGHT)
+		frame.title:SetPoint("TOP", frame.titlePlate, "TOP", 0, B.titleY)
+		frame.title:SetText(Upper(L.CAPTURE_BATCH_TITLE))
+		frame.counter = Theme.Text(frame, Theme.F_TITLE or Theme.F_LABEL, Theme.TITLE)
+		frame.counter:SetPoint("TOP", frame.titlePlate, "TOP", 0, B.counterY)
+		if Theme.CreateCloseButton then
+			frame.close = Theme.CreateCloseButton(frame, 18)
+			frame.close:SetPoint("TOPRIGHT", frame, "TOPRIGHT", -8, -8)
+		end
+		frame.aidIcon = frame:CreateTexture(nil, "OVERLAY")
+		frame.aidIcon:SetSize(14, 14)
+		frame.aidIcon:SetTexCoord(0.08, 0.92, 0.08, 0.92)
+		frame.aidIcon:SetPoint("TOPLEFT", frame, "TOPLEFT", left, B.aidY)
+		frame.aidText = Theme.Text(frame, Theme.F_SMALL, Theme.SELECT_LIGHT)
+		frame.aidText:SetPoint("LEFT", frame.aidIcon, "RIGHT", 4, 0)
+		frame.aidText:SetJustifyH("LEFT")
+		if frame.aidText.SetWordWrap then frame.aidText:SetWordWrap(false) end
+		frame.grid = CreateFrame("Frame", nil, frame)
+		frame.grid:SetPoint("TOPLEFT", frame, "TOPLEFT", 0, -B.head)
+		frame.grid:SetPoint("TOPRIGHT", frame, "TOPRIGHT", 0, -B.head)
+		frame.grid:SetHeight(TILE_H)
+		frame.stop = Theme.CreateButton(frame, "auto", "md", L.CAPTURE_BATCH_STOP, stopClick)
+		frame.stop:SetPoint("BOTTOMRIGHT", frame, "BOTTOMRIGHT", -12, 10)
+		frame.footer = Theme.Text(frame, Theme.F_SMALL, Theme.MUTED)
+		frame.footer:SetPoint("BOTTOMLEFT", frame, "BOTTOMLEFT", left, 18)
+		frame.footer:SetJustifyH("LEFT")
+		if frame.footer.SetWordWrap then frame.footer:SetWordWrap(false) end
 	else
 		local left = frame.contentLeft or PAD
 		frame.title = Theme.Text(frame, Theme.F_CAPS or Theme.F_SMALL, Theme.MUTED_LIGHT)
@@ -983,7 +1028,7 @@ function ns:EnsureCaptureBatchFrame()
 end
 
 -- Taille de la grille pour `n` cases : colonnes, rangées. Azeroth (cases
--- plus grandes) : 5 ou 6 cases en deux rangées de 3
+-- plus grandes) et forgé (3.1.0) : 5 ou 6 cases en deux rangées de 3
 function ns:CaptureBatchGrid(n, az)
 	local most = ns.CAPTURE_BATCH_COLS
 	if az and (n == 5 or n == 6) then most = 3 end
@@ -1046,15 +1091,17 @@ function ns:CaptureBatchShow(batch)
 	if not (frame and batch) then return nil end
 	local n = #batch.results
 	local az = frame.azeroth and true or false
+	local forged = (not az) and frame.forged and true or false
 	local tileW, tileH = az and AZB.tileW or TILE_W, az and AZB.tileH or TILE_H
 	local gapX, gapY = az and AZB.gapX or TILE_GAP, az and AZB.gapY or TILE_GAP
-	local cols, rows = self:CaptureBatchGrid(n, az)
+	local cols, rows = self:CaptureBatchGrid(n, az or forged)
 	local gridW = cols * tileW + (cols - 1) * gapX
 	local gridH = rows * tileH + (rows - 1) * gapY
 	if az then
 		frame:SetSize(math.max(AZB.minW, gridW + 2 * AZB.pad), AZB.head + gridH + AZB.foot)
 	else
-		frame:SetSize(math.max(MIN_W, gridW + 2 * PAD), HEAD + gridH + FOOT)
+		local head = forged and ns.FORGE_SCENE.batch.head or HEAD
+		frame:SetSize(math.max(MIN_W, gridW + 2 * PAD), head + gridH + FOOT)
 	end
 	frame.grid:SetHeight(gridH)
 	batch.cards = {}
@@ -1062,7 +1109,7 @@ function ns:CaptureBatchShow(batch)
 		local tile = frame.tiles[index]
 		if index <= n then
 			-- créée à la demande, gardée pour les lots suivants
-			if not tile then tile = CreateTile(frame.grid, az); frame.tiles[index] = tile end
+			if not tile then tile = CreateTile(frame.grid, az, forged); frame.tiles[index] = tile end
 			local col, row = (index - 1) % cols, math.floor((index - 1) / cols)
 			tile:ClearAllPoints()
 			tile:SetPoint("TOPLEFT", frame.grid, "TOP", -gridW / 2 + col * (tileW + gapX), -row * (tileH + gapY))
@@ -1096,7 +1143,7 @@ function ns:CaptureBatchShow(batch)
 	if aid then
 		frame.aidIcon:SetTexture(aid.icon)
 		local label = tostring(self:CaptureAidLabel(aid.id))
-		frame.aidText:SetText(az and self:F("CAPTURE_BATCH_AID", label) or label)
+		frame.aidText:SetText((az or forged) and self:F("CAPTURE_BATCH_AID", label) or label)
 		frame.aidIcon:Show(); frame.aidText:Show()
 	else
 		frame.aidIcon:Hide(); frame.aidText:Hide()
@@ -1338,6 +1385,63 @@ local function BuildChooserAzeroth(self, frame)
 	frame.hint:SetText(L.CAPTURE_CHOOSE_KEYS)
 end
 
+-- 3.1.0 : thème forgé (maquette validée, ForgeScenes.lua). En haut, le
+-- filet du jeu dans un creux, « N CRÉATURES DANS LE FILET » et le temps en
+-- pause ; « Capturer : X » en principal doré, sa ligne dessous (brillante,
+-- chance) ; « Tout capturer (N) » en second, ce que coûte chaque essai ; les
+-- aides du lot ; les raccourcis. Mêmes champs (.single, .all, .hint, .title).
+local function BuildChooserForged(self, frame)
+	local C = ns.FORGE_SCENE.chooser
+	local inks = ns.ForgeSceneInks()
+	local left = 14
+	local width = C.w - 2 * left
+	frame.glyphHolder = CreateFrame("Frame", nil, frame)
+	frame.glyphHolder:SetSize(C.glyph, C.glyph)
+	frame.glyphHolder:SetPoint("TOPLEFT", frame, "TOPLEFT", left, C.glyphY)
+	frame.glyphInset = ns.ForgeInset(frame, frame.glyphHolder, 0, nil, "BORDER", 1)
+	frame.glyph = frame:CreateTexture(nil, "ARTWORK", nil, 1)
+	frame.glyph:SetPoint("TOPLEFT", frame.glyphHolder, "TOPLEFT", 3, -3)
+	frame.glyph:SetPoint("BOTTOMRIGHT", frame.glyphHolder, "BOTTOMRIGHT", -3, 3)
+	if ns.CapturePaintNetGlyph then ns.CapturePaintNetGlyph(frame.glyph) else frame.glyph:SetTexture(Theme.LOGO_SMALL) end
+	local textW = C.w - C.textX - left
+	frame.title = Theme.Text(frame, Theme.F_CAPS or Theme.F_SMALL, inks.caption)
+	frame.title:SetPoint("TOPLEFT", frame, "TOPLEFT", C.textX, C.titleY)
+	frame.title:SetWidth(textW)
+	frame.title:SetJustifyH("LEFT")
+	if frame.title.SetWordWrap then frame.title:SetWordWrap(false) end
+	frame.paused = Theme.Text(frame, Theme.F_SMALL, inks.sub)
+	frame.paused:SetPoint("TOPLEFT", frame, "TOPLEFT", C.textX, C.pausedY)
+	frame.paused:SetWidth(textW)
+	frame.paused:SetJustifyH("LEFT")
+	if frame.paused.SetWordWrap then frame.paused:SetWordWrap(true) end
+	frame.paused:SetText(L.CAPTURE_CHOOSE_PAUSED)
+	frame.single = Theme.CreateButton(frame, width, C.buttonH, "", function() ns:CaptureChooserSingle() end, "primary")
+	frame.single:SetPoint("TOPLEFT", frame, "TOPLEFT", left, C.oneY)
+	frame.all = Theme.CreateButton(frame, width, C.buttonH, "", function()
+		ns:CaptureChooserHide()
+		ns:CaptureBatch()
+	end, "normal")
+	frame.all:SetPoint("TOPLEFT", frame, "TOPLEFT", left, C.allY)
+	for _, button in ipairs({ frame.single, frame.all }) do
+		button.text:SetWidth(width - 12)
+		if button.text.SetWordWrap then button.text:SetWordWrap(false) end
+		-- la ligne de dessous (sous le bouton : le libellé du bouton reste centré)
+		button.sub = Theme.Text(frame, Theme.F_SMALL, inks.sub)
+		button.sub:SetPoint("TOP", button, "BOTTOM", 0, -C.subGap)
+		button.sub:SetWidth(width)
+		button.sub:SetJustifyH("CENTER")
+		if button.sub.SetWordWrap then button.sub:SetWordWrap(false) end
+		function button:SetSub(text) self.sub:SetText(text or ""); if text and text ~= "" then self.sub:Show() else self.sub:Hide() end end
+	end
+	BuildChooserAids(frame, C.aidsY, true)
+	frame.hint = Theme.Text(frame, Theme.F_SMALL, inks.hint)
+	frame.hint:SetPoint("TOP", frame, "TOP", 0, C.hintY)
+	frame.hint:SetWidth(width)
+	frame.hint:SetJustifyH("CENTER")
+	if frame.hint.SetWordWrap then frame.hint:SetWordWrap(true) end
+	frame.hint:SetText(L.CAPTURE_CHOOSE_KEYS)
+end
+
 function ns:EnsureCaptureChooser()
 	local style = SceneStyle(self)
 	local want = SceneKey(self, style)
@@ -1346,10 +1450,18 @@ function ns:EnsureCaptureChooser()
 	if not (Theme and Theme.CreateToast) then return nil end
 	local frame = style == "azeroth" and self.AzerothCreateWindow
 		and self:AzerothCreateWindow(AZC.w, AZC.h, { strata = "DIALOG", name = "QuestCompanionCaptureChooserAzeroth" }) or nil
+	local key = SceneKey(self, "sobre")
 	if frame then
 		frame:EnableMouse(true)
 		if Theme.RegisterEscapeClose then pcall(Theme.RegisterEscapeClose, frame) end
 		BuildChooserAzeroth(self, frame)
+	elseif key == "forge" and ns.ForgeSceneWindow and ns.QCForged and ns.QCForged() then
+		local C = ns.FORGE_SCENE.chooser
+		frame = ns.ForgeSceneWindow(C.w, C.h, { strata = "DIALOG", name = SceneName("QuestCompanionCaptureChooser", key) })
+		if not frame then return nil end
+		frame:EnableMouse(true)
+		if Theme.RegisterEscapeClose then pcall(Theme.RegisterEscapeClose, frame) end
+		BuildChooserForged(self, frame)
 	else
 		frame = Theme.CreateToast(UIParent, CHOOSER_W, CHOOSER_H, { strata = "DIALOG",
 			name = SceneName("QuestCompanionCaptureChooser", SceneKey(self, "sobre")), accent = Theme.GOLD })
@@ -1445,6 +1557,16 @@ function ns:CaptureChooserRefresh()
 		frame.all:SetSub(aid and self:F("CAPTURE_CHOOSE_ALL_AID", self:CaptureAidLabel(aid)) or L.CAPTURE_CHOOSE_ALL_FREE)
 		local c = best.shiny and (colors.shinyName or Theme.GOLD_LIGHT) or ns.AZEROTH_BUTTONS.text
 		frame.single.text:SetTextColor(c[1], c[2], c[3])
+	elseif frame.forged then
+		-- 3.1.0 (forgé) : la légende, et sous chaque bouton : brillante et
+		-- chance (« brillante » en or) ; ce que coûte chaque essai. Le libellé
+		-- du principal garde l'encre sombre de sa plaque d'or.
+		frame.title:SetText(Upper(self:F("CAPTURE_CHOOSE_COUNT", #queue)))
+		local aid = self:CaptureState().aid
+		local chance, sure = self:CaptureChance(best, aid)
+		local odds = sure and L.CAPTURE_TOAST_SURE or self:F("CAPTURE_TOAST_CHANCE", math.floor((chance or 0) * 100 + 0.5 + 1e-9))
+		frame.single:SetSub(best.shiny and (Theme.Hex(Theme.GOLD_LIGHT) .. L.CAPTURE_CHOOSE_SHINY .. "|r · " .. odds) or odds)
+		frame.all:SetSub(aid and self:F("CAPTURE_CHOOSE_ALL_AID", self:CaptureAidLabel(aid)) or L.CAPTURE_CHOOSE_ALL_FREE)
 	else
 		local c = best.shiny and (Theme.GOLD_LIGHT or Theme.GOLD) or (Theme.LABEL or Theme.PARCHMENT)
 		frame.single.text:SetTextColor(c[1], c[2], c[3])
@@ -1479,15 +1601,17 @@ function ns:CaptureChooserShow()
 	self:CaptureHideQueueList()
 	frame:ClearAllPoints()
 	local net = self.captureNetButton
-	if net and net:IsShown() and frame.azeroth then
+	if net and net:IsShown() and (frame.azeroth or frame.forged) then
 		-- à côté du filet, du côté où il y a la place : à gauche s'il est dans
 		-- la moitié droite de l'écran, à droite sinon (gardé à l'écran, bois compris)
+		-- 3.1.0 : aussi au thème forgé
 		local side = ChooserSide(net)
+		local gap = frame.azeroth and AZC.gap or ns.FORGE_SCENE.chooser.gap
 		frame.side = side
 		if side == "left" then
-			frame:SetPoint("RIGHT", net, "LEFT", -AZC.gap, 0)
+			frame:SetPoint("RIGHT", net, "LEFT", -gap, 0)
 		else
-			frame:SetPoint("LEFT", net, "RIGHT", AZC.gap, 0)
+			frame:SetPoint("LEFT", net, "RIGHT", gap, 0)
 		end
 	elseif net and net:IsShown() then
 		frame:SetPoint("BOTTOM", net, "TOP", 0, 8)

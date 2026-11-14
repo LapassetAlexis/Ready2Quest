@@ -283,9 +283,10 @@ do
 		and NS:CaptureState().aid == nil)
 	NS:CaptureBatchStop(true)
 	restore()
-	Check("[LOT] c'est dit dans le chat, l'aide montrée dans la scène",
-		Find(printed, NS:F("CAPTURE_BATCH_SHORT", NS:CaptureAidLabel("lasso"), 2, 4))
-		and NS.captureBatchFrame.aidText:GetText() == NS:CaptureAidLabel("lasso"), table.concat(printed, " | "))
+	-- 3.1.0 : thème forgé (état du produit), « Aide : <aide> » comme l'ancien habillage
+	Check("[LOT] c'est dit dans le chat, l'aide montrée dans la scène (« Aide : … » au thème forgé)",
+		Find(printed, NS:F("CAPTURE_BATCH_SHORT", NS:CaptureAidLabel("lasso"), 2, 4)) and NS.captureBatchFrame.forged
+		and NS.captureBatchFrame.aidText:GetText() == NS:F("CAPTURE_BATCH_AID", NS:CaptureAidLabel("lasso")), table.concat(printed, " | "))
 	-- sans aide choisie : pas de limite
 	NS:CaptureState().aid = nil
 	batch = NS:CaptureBatch()

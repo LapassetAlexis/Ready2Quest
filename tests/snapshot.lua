@@ -1728,6 +1728,90 @@ Snap.scenes["qc-capture-toast"] = function(T)
 	ns:CaptureOffer("Creature-0-1-1-1-3101-0001", { zoneID = 1413, npcID = 3101 })
 	return Centered(ns:CaptureToastShow()), "QuestCompanion : bandeau « Capture possible » (rare, et 1 de plus)"
 end
+-- 3.1.0 : les scènes de capture au thème forgé (ForgeScenes.lua). Le verdict
+-- d'une brillante dans la scène (lueur, éclat, reflet, niveau sur la plaque d'or)
+Snap.scenes["qc-capture-shiny"] = function(T)
+	local ns = QCWorld(T)
+	ns:DB().companionCaptureAnim = true
+	ns:BestiaryData()[1413] = { [3100] = { name = "Ours gris", class = "rare", level = 21, killed = 1 } }
+	ns:CaptureOffer("Creature-0-1-1-1-3100-0001", { zoneID = 1413, npcID = 3100 }, true)
+	local saved = math.random
+	math.random = function(a) if a then return a end return 0 end
+	ns:CaptureThrow()
+	math.random = saved
+	local rolling = ns:CaptureState().rolling
+	rolling.done, rolling.result, rolling.resultAt, rolling.stars = rolling.shakes, "ok", rolling.start + 3, 3
+	ns:CaptureStageUpdate(rolling.resultAt + 0.9)
+	return Centered(ns.captureStage), "QuestCompanion : capture animée, une brillante capturée (verdict dans la scène)"
+end
+-- la carte de préparation : 3 étoiles (l'aide conseillée luit), Appât choisi
+Snap.scenes["qc-capture-prep"] = function(T)
+	local ns = QCWorld(T)
+	ns:DB().companionCaptureAnim = true
+	local data = ns:CaptureData()
+	data.items.appat, data.items.lasso, data.items.sifflet = 3, 1, 0
+	ns:BestiaryData()[1413] = { [3100] = { name = "Ours gris", class = "rare", level = 21, killed = 1 } }
+	ns:CaptureOffer("Creature-0-1-1-1-3100-0001", { zoneID = 1413, npcID = 3100 })
+	ns:CaptureQueueState()[1].stars = 3
+	ns:CaptureToggleAid("appat")
+	return Centered(ns:CapturePrepOpen()), "QuestCompanion : carte de préparation (3 étoiles, Appât choisi, Lasso conseillé)"
+end
+-- la volée « Tout capturer », figée sur ses verdicts (une échappée, une brillante à 6)
+local QC_BATCH = { { 3100, "Ours gris", "rare", 21 }, { 3101, "Sanglier", "normal", 20 }, { 3102, "Loup des plaines", "elite", 21 },
+	{ 3103, "Kodo des Tarides", "normal", 22 }, { 3104, "Raptor des Tarides", "normal", 21 }, { 3105, "Messager zhévra", "normal", 20 } }
+local function QCCaptureBatch(T, count)
+	local ns = QCWorld(T)
+	ns:DB().companionCaptureAnim = true
+	ns:CaptureData().items.lasso = 9
+	local book = {}
+	for index = 1, count do
+		local c = QC_BATCH[index]
+		book[c[1]] = { name = c[2], class = c[3], level = c[4], killed = 1 }
+	end
+	ns:BestiaryData()[1413] = book
+	for index = 1, count do
+		ns:CaptureOffer("Creature-0-1-1-1-" .. QC_BATCH[index][1] .. "-0001", { zoneID = 1413, npcID = QC_BATCH[index][1] },
+			count > 3 and index == count)
+	end
+	ns:CaptureToggleAid("lasso")
+	local saved, chance = math.random, ns.CaptureChance
+	math.random = function(a) if a then return a end return 0.5 end
+	ns.CaptureChance = function(self, info, ...)
+		if info and info.npcID == 3102 then return 0, false end
+		return 0.95, false
+	end
+	ns:CaptureBatch()
+	math.random, ns.CaptureChance = saved, chance
+	ns:CaptureBatchStop(true)
+	return Centered(ns.captureBatchFrame)
+end
+Snap.scenes["qc-capture-batch3"] = function(T)
+	return QCCaptureBatch(T, 3), "QuestCompanion : « Tout capturer », 3 cases (une échappée)"
+end
+Snap.scenes["qc-capture-batch6"] = function(T)
+	return QCCaptureBatch(T, 6), "QuestCompanion : « Tout capturer », 6 cases en 2 × 3 (une brillante)"
+end
+-- le choix au filet : une brillante en tête, deux autres ; posé à côté du filet
+Snap.scenes["qc-capture-chooser"] = function(T)
+	local ns = QCWorld(T)
+	ns:BestiaryData()[1413] = { [3100] = { name = "Ours gris", class = "rare", level = 21, killed = 1 },
+		[3101] = { name = "Sanglier", class = "normal", level = 20, killed = 1 },
+		[3102] = { name = "Loup des plaines", class = "elite", level = 21, killed = 1 } }
+	ns:CaptureData().items.appat, ns:CaptureData().items.lasso = 3, 1
+	ns:CaptureOffer("Creature-0-1-1-1-3100-0001", { zoneID = 1413, npcID = 3100 }, true)
+	ns:CaptureOffer("Creature-0-1-1-1-3101-0001", { zoneID = 1413, npcID = 3101 })
+	ns:CaptureOffer("Creature-0-1-1-1-3102-0001", { zoneID = 1413, npcID = 3102 })
+	ns:CaptureToggleAid("appat")
+	if ns.CaptureToastHide then ns:CaptureToastHide() end
+	local net = ns.captureNetButton
+	if net then
+		net:ClearAllPoints()
+		net:SetPoint("CENTER", UIParent, "CENTER", 260, 0)
+		net:Show()
+	end
+	local chooser = ns:CaptureChooserShow()
+	return Snap.Group(net, chooser), "QuestCompanion : choix au filet (brillante en tête, Appât pour le lot), à côté du filet"
+end
 
 Snap.scenes["qc-chest"] = function(T)
 	local ns = QCWorld(T)
