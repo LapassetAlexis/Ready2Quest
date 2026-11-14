@@ -44,7 +44,7 @@ ns.FORGE_SCENE = {
 		titleY = -12, ruleY = -25, ruleW = 64, nameY = -31, lineY = -56, nameMax = 16, nameMin = 11, glow = 1.6,
 		shineAlpha = 0.55 },
 	-- la plaque d'une aide (carte et choix)
-	aid = { margin = 5, pad = 3 },
+	aid = { margin = 5, pad = 3, glow = 2.8 },
 	batch = { plateW = 252, plateH = 44, plateY = -10, titleY = -7, counterY = -20, aidY = -62, head = 82,
 		inset = 2, badgeW = 22, badgeH = 20, badgeX = 4, badgeY = 4, cols = 3 },
 	chooser = { w = 272, glyph = 32, glyphY = -12, textX = 56, titleY = -12, pausedY = -28, oneY = -64, allY = -112,
@@ -354,7 +354,7 @@ end
 
 -- La lueur de l'aide conseillée (préparation) : notre point lumineux, d'or
 function ns.ForgeAidGlow(details, cell, size)
-	local glow = Theme.ForgeGlow(details, cell.icon, Theme.GOLD_LIGHT, math.floor((size or 24) * 2.2), "BACKGROUND", 1, 0.9)
+	local glow = Theme.ForgeGlow(details, cell.edge, Theme.GOLD_LIGHT, math.floor((size or 24) * K.aid.glow), "BACKGROUND", 1, 1)
 	return glow
 end
 
