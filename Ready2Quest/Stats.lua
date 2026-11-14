@@ -488,8 +488,32 @@ function ns:EnsureToast()
 	frame.moveGlow:SetAllPoints(frame.bg)
 	frame.moveGlow:Hide()
 
+	self:ForgeToast(frame)
 	self.toastFrame = frame
 	return frame
+end
+
+-- Thème forgé : le résumé garde un cadre de 10 de haut (position, saisie en
+-- mode édition) et son fond déborde autour : l'habillage du socle
+-- (Theme.DressWindow) habille le cadre, trop petit, et rien ne se voit.
+-- On pose donc l'ombre et le cadre d'orfèvre autour du fond (bandeau : pas
+-- de coins ni de médaillon), le filet d'un pixel se cache, et le filet sous
+-- le titre devient un filet lumineux. Rien en Sobre.
+function ns:ForgeToast(frame)
+	if not (frame and frame.bg and ns.ForgeOn and ns.ForgeOn()) then return false end
+	local K = Theme.CHROME
+	frame.forgeShadow = Theme.Slice(frame, "shadow", { layer = "BACKGROUND", sub = -8, out = K.shadowOut, around = frame.bg })
+	frame.forgeFrame = Theme.Slice(frame, "frame", { layer = "BORDER", sub = 1, out = K.frameOut, fill = false, around = frame.bg })
+	ns.ForgeHideFlat(frame.border)
+	-- le socle n'habille pas ce cadre (il le ferait autour des 10 px)
+	frame.skinNoChrome = true
+	if frame.rule then
+		frame.ruleGlow = ns.ForgeLine(frame, Theme.GOLD)
+		frame.ruleGlow:SetPoint("LEFT", frame.rule, "LEFT", 0, 0)
+		frame.ruleGlow:SetPoint("RIGHT", frame.rule, "RIGHT", 0, 0)
+		ns.ForgeHideFlat(frame.rule)
+	end
+	return true
 end
 
 function ns:HideToast()
@@ -777,6 +801,13 @@ function ns:EnsurePortraitPanel()
 	frame.rule:SetPoint("TOPLEFT", frame, "TOPLEFT", left, -STATS_LINES + 6)
 	frame.rule:SetPoint("TOPRIGHT", frame, "TOPRIGHT", -10, -STATS_LINES + 6)
 	frame.rule:SetHeight(1)
+	-- thème forgé : le filet sous la classe devient un filet lumineux
+	if ns.ForgeOn and ns.ForgeOn() then
+		frame.ruleGlow = ns.ForgeLine(frame, Theme.GOLD)
+		frame.ruleGlow:SetPoint("LEFT", frame.rule, "LEFT", 0, 0)
+		frame.ruleGlow:SetPoint("RIGHT", frame.rule, "RIGHT", 0, 0)
+		ns.ForgeHideFlat(frame.rule)
+	end
 
 	-- Cinq statistiques primaires (Force, Agilité, Intelligence, Esprit,
 	-- Endurance) puis l'armure et le DPS : sept lignes au total. Une boucle

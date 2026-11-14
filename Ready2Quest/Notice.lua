@@ -76,6 +76,9 @@ ns.NOTICE_PULSE = 8        -- secondes de pulsation
 ns.NOTICE_LINGER = 60      -- puis visible, atténuée, avant de disparaître
 local SIZE = 40            -- la tuile ; l'icône du jeu tient dedans, à 5 px du bord
 local ICON_INSET = 5
+-- thème forgé : teinte de la plaque (bouton neutre), lueur du filet du bas,
+-- filet rentré dans la plaque (son bord noir)
+ns.NOTICE_FORGE = { plate = ns.FORGE.neutral, glowAlpha = 0.8, glowHeight = 12, accentInset = 3 }
 
 local function InCombat()
 	if type(InCombatLockdown) == "function" and InCombatLockdown() then return true end
@@ -168,6 +171,20 @@ function ns:EnsureNotice()
 	frame.accent:SetPoint("BOTTOMLEFT", frame, "BOTTOMLEFT", 1, 1)
 	frame.accent:SetPoint("BOTTOMRIGHT", frame, "BOTTOMRIGHT", -1, 1)
 	frame.accent:SetHeight(2)
+	-- thème forgé : la tuile en plaque (bouton neutre), le filet du bas en
+	-- lumière (un point étiré de la couleur du rapport, posé à l'affichage)
+	if ns.ForgeOn and ns.ForgeOn() then
+		local K = ns.NOTICE_FORGE
+		frame.plate = ns.ForgeCard(frame, { color = K.plate, sub = 2, layer = "BORDER" })
+		ns.ForgeHideFlat(frame.tile, frame.border)
+		frame.accentGlow = ns.ForgeDot(frame, nil, Theme.GOLD, K.glowAlpha, "OVERLAY")
+		frame.accentGlow:ClearAllPoints()
+		frame.accentGlow:SetPoint("CENTER", frame.accent, "CENTER", 0, 0)
+		frame.accentGlow:SetSize(SIZE, K.glowHeight)
+		frame.accent:ClearAllPoints()
+		frame.accent:SetPoint("BOTTOMLEFT", frame, "BOTTOMLEFT", K.accentInset, K.accentInset)
+		frame.accent:SetPoint("BOTTOMRIGHT", frame, "BOTTOMRIGHT", -K.accentInset, K.accentInset)
+	end
 
 	-- icône du jeu, désaturée puis teintée : un jaune teinté donnerait un vert sale
 	frame.icon = frame:CreateTexture(nil, "ARTWORK")
@@ -227,6 +244,7 @@ function ns:DisplayNotice()
 	frame.icon:SetVertexColor(color[1], color[2], color[3], 1)
 	frame.glow:SetVertexColor(color[1], color[2], color[3], 1)
 	frame.accent:SetVertexColor(color[1], color[2], color[3], 1)
+	if frame.accentGlow then frame.accentGlow:SetVertexColor(color[1], color[2], color[3], ns.NOTICE_FORGE.glowAlpha) end
 	local now = ns.Now()
 	notice.shownAt = now
 	notice.pulseUntil = now + ns.NOTICE_PULSE

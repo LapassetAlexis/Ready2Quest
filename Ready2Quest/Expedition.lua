@@ -519,6 +519,19 @@ function ns:EnsureExpeditionWindow()
 	frame.durationLabel = Theme.Text(frame.hero, Theme.F_BODY, Theme.MUTED)
 	frame.durationLabel:SetPoint("BOTTOMLEFT", frame.duration, "BOTTOMRIGHT", 8, 4)
 	frame.durationLabel:SetText(L.EXP_DURATION_LABEL)
+	-- thème forgé : la durée sur une plaque, en or clair sur un halo (comme la
+	-- note d'« Avant le départ »)
+	if ns.ForgeOn and ns.ForgeOn() then
+		frame.hero.plate = ns.ForgeCard(frame.hero)
+		ns.ForgeHideFlat(frame.hero.bg, frame.hero.border)
+		frame.duration:SetTextColor(Theme.TITLE[1], Theme.TITLE[2], Theme.TITLE[3])
+		Theme.TextShadow(frame.duration)
+		local _, size = frame.duration.GetFont and frame.duration:GetFont()
+		local F = ns.FORGE.glow
+		frame.durationGlow = ns.ForgeDot(frame.hero, math.floor((tonumber(size) or 28) * F.size + 0.5), Theme.GOLD, F.alpha, "BORDER")
+		frame.durationGlow:SetPoint("CENTER", frame.duration, "CENTER", 0, 0)
+		frame.forged = true
+	end
 
 	local rowsTop = top - HERO - GAP
 	frame.lines = {}

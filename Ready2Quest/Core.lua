@@ -1259,6 +1259,150 @@ ns:RegisterEvents(frame)
 ns.eventFrame = frame
 
 
+-- ---------------------------------------------------------------------------
+-- Thème forgé (Azeroth) : les matières des blocs propres aux fenêtres de
+-- Ready2Quest (bloc note, conseils, cartes, creux, étiquettes, filets et
+-- points lumineux), faites des textures du socle (Theme.ART, grises : elles
+-- prennent la teinte). Tout est décidé à la construction : en Sobre, chaque
+-- fonction rend nil sans rien créer, le module garde ses aplats d'avant ;
+-- changer de thème demande /reload pour une fenêtre déjà construite.
+-- Plaque (Theme.ART.plate) : la teinte × la luminance de la texture, 0,885 en
+-- haut, 0,50 au pied (sous un texte : entre les deux, mesuré aux deux bouts).
+-- Creux (Theme.ART.inset) : fond presque noir (0,14 × la teinte, 0 sous
+-- l'ombre du haut) ; seul son filet prend la couleur.
+-- ---------------------------------------------------------------------------
+do
+	local Theme = ns.Theme
+	ns.FORGE = {
+		card    = { 0.118, 0.145, 0.176 },        -- plaque d'un bloc en relief
+		neutral = { 0.165, 0.196, 0.239 },        -- plaque d'un bouton neutre (tuile d'annonce)
+		plate   = { top = 0.885, bottom = 0.50 },  -- luminance de la plaque (contrastes)
+		inset   = { fill = 0.14 },                 -- fond du creux, × la teinte du filet
+		well    = { out = 3, margin = 6 },         -- creux autour d'une barre fine
+		tag     = { margin = 6, padX = 8, height = 18 },   -- étiquette en creux
+		-- liseré lumineux d'un bloc : sa couleur assombrie en bas, éclaircie en haut, un halo
+		bar     = { width = 3, halo = 14, haloAlpha = 0.18, shade = 0.35, light = 0.25 },
+		glow    = { alpha = 0.45, size = 2.4 },    -- halo derrière un grand chiffre (× sa hauteur)
+		dot     = { size = 18, alpha = 0.55 },     -- point lumineux sous une puce
+		line    = { height = 6, gap = 6, alpha = 0.85 },  -- filet lumineux qui s'efface
+		-- carte de liste (une texture : dégradé de la plaque, et un reflet d'1 px)
+		sheen   = { highlight = 0.10 },
+		-- rangées de couleur : le sens d'un état (vert : en ordre, rouge : à
+		-- voir d'urgence, or : à voir, gris : sans objet)
+		tone    = { ok = Theme.GREEN, bad = Theme.RED, warn = Theme.GOLD, none = Theme.EDGE },
+	}
+
+	function ns.ForgeOn()
+		return Theme ~= nil and type(Theme.Forged) == "function" and Theme.Forged() and type(Theme.Slice) == "function"
+	end
+
+	-- cache les aplats de Sobre (textures, ou filets de Theme.Border)
+	function ns.ForgeHideFlat(...)
+		for index = 1, select("#", ...) do
+			local part = select(index, ...)
+			if type(part) == "table" then
+				if part.Hide then
+					part:Hide()
+				elseif part.top then
+					for _, side in ipairs({ "top", "bottom", "left", "right" }) do if part[side] then part[side]:Hide() end end
+				end
+			end
+		end
+	end
+
+	-- Plaque en relief (carte) sous `frame` (ou autour de opts.around)
+	function ns.ForgeCard(frame, opts)
+		if not (frame and ns.ForgeOn()) then return nil end
+		opts = opts or {}
+		return Theme.Slice(frame, "plate", { layer = opts.layer or "BACKGROUND", sub = opts.sub or 1,
+			color = opts.color or ns.FORGE.card, around = opts.around, out = opts.out, margin = opts.margin })
+	end
+
+	-- Creux : fond presque noir, filet à la teinte (or patiné au repos)
+	function ns.ForgeWell(frame, opts)
+		if not (frame and ns.ForgeOn()) then return nil end
+		opts = opts or {}
+		return Theme.Slice(frame, "inset", { layer = opts.layer or "BACKGROUND", sub = opts.sub or 1,
+			color = opts.color or Theme.EDGE, around = opts.around, out = opts.out, margin = opts.margin })
+	end
+
+	-- Filet lumineux qui s'efface vers la droite (Theme.ART.line)
+	function ns.ForgeLine(parent, color, alpha, layer)
+		if not (parent and ns.ForgeOn() and Theme.ART and Theme.ART.line) then return nil end
+		color = color or Theme.GOLD
+		local tex = parent:CreateTexture(nil, layer or "ARTWORK")
+		tex:SetTexture(Theme.ART.line.file)
+		tex:SetVertexColor(color[1], color[2], color[3], alpha or ns.FORGE.line.alpha)
+		tex:SetHeight(ns.FORGE.line.height)
+		return tex
+	end
+
+	-- Point lumineux (Theme.ART.dot) : puce, braise, halo d'un chiffre
+	function ns.ForgeDot(parent, size, color, alpha, layer)
+		if not (parent and ns.ForgeOn() and Theme.ART and Theme.ART.dot) then return nil end
+		color = color or Theme.GOLD
+		local tex = parent:CreateTexture(nil, layer or "BORDER")
+		tex:SetTexture(Theme.ART.dot.file)
+		tex:SetVertexColor(color[1], color[2], color[3], alpha or ns.FORGE.dot.alpha)
+		tex:SetSize(size or ns.FORGE.dot.size, size or ns.FORGE.dot.size)
+		return tex
+	end
+
+	-- Liseré d'un bloc, en lumière : la barre d'accent de Sobre (texture
+	-- `bar`, verticale, à gauche) passe en dégradé (sa couleur éclaircie en
+	-- haut, assombrie en bas), plus large, avec un halo qui s'efface vers la
+	-- droite. Rend le halo.
+	function ns.ForgeAccentBar(block, bar, color)
+		if not (block and bar and ns.ForgeOn()) then return nil end
+		color = color or Theme.GOLD
+		local B = ns.FORGE.bar
+		bar:SetWidth(B.width)
+		Theme.Gradient(bar, "VERTICAL", Theme.Over(color, Theme.SHADOW, B.shade), 1, Theme.Over(color, Theme.WHITE, B.light), 1)
+		local halo = block:CreateTexture(nil, "BORDER")
+		halo:SetTexture(Theme.SOLID)
+		halo:SetPoint("TOPLEFT", bar, "TOPRIGHT", 0, 0)
+		halo:SetPoint("BOTTOMLEFT", bar, "BOTTOMRIGHT", 0, 0)
+		halo:SetWidth(B.halo)
+		Theme.Gradient(halo, "HORIZONTAL", color, B.haloAlpha, color, 0)
+		return halo
+	end
+
+	-- Carte de liste en une texture (Theme.ART.plate imitée par un dégradé :
+	-- une plaque de 9 pièces par ligne serait trop lourde) et un reflet d'1 px
+	-- en haut. Le fond plat de la ligne se cache. Rend la texture du dégradé.
+	function ns.ForgeSheen(row)
+		if not (row and ns.ForgeOn()) then return nil end
+		local P, card = ns.FORGE.plate, ns.FORGE.card
+		local sheen = row:CreateTexture(nil, "BACKGROUND", nil, 1)
+		sheen:SetTexture(Theme.SOLID)
+		sheen:SetAllPoints(row)
+		Theme.Gradient(sheen, "VERTICAL", { card[1] * P.bottom, card[2] * P.bottom, card[3] * P.bottom }, 1,
+			{ card[1] * P.top, card[2] * P.top, card[3] * P.top }, 1)
+		local lit = row:CreateTexture(nil, "BACKGROUND", nil, 2)
+		lit:SetTexture(Theme.SOLID)
+		lit:SetVertexColor(Theme.WHITE[1], Theme.WHITE[2], Theme.WHITE[3], ns.FORGE.sheen.highlight)
+		lit:SetPoint("TOPLEFT", row, "TOPLEFT", 1, -1)
+		lit:SetPoint("TOPRIGHT", row, "TOPRIGHT", -1, -1)
+		lit:SetHeight(1)
+		sheen.highlight = lit
+		if row.bg then row.bg:Hide() end
+		row.forgeSheen = sheen
+		return sheen
+	end
+
+	-- Style de bouton qui porte le sens en thème forgé (« danger », « add »,
+	-- « arcane »…), si le socle le connaît ; sinon celui de Sobre
+	function ns.ForgeStyle(sobre, ...)
+		if not ns.ForgeOn() then return sobre end
+		local styles = Theme.BUTTON_STYLES or {}
+		for index = 1, select("#", ...) do
+			local name = select(index, ...)
+			if styles[name] then return name end
+		end
+		return sobre
+	end
+end
+
 -- API publique : QuestCompanion s'y abonne aux départs et retours de zone
 -- sûre (ns:RegisterCallback("DEPARTURE" | "RETURN"), Libs/Socle/Store.lua)
 _G.Ready2Quest = ns

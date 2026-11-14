@@ -385,6 +385,43 @@ local function Style(line, kind, rank)
 	line:SetIndex(rank or 1)
 end
 
+-- Thème forgé (maquette « Avant le donjon ») : un titre de section en or
+-- clair, un point lumineux devant et un filet qui s'efface derrière ; le
+-- niveau dans un creux dont le filet dit le verdict. Matières créées au
+-- premier besoin (lignes recyclées), rien en Sobre.
+ns.DGN_FORGE = { dot = 12, textLeft = 14, rise = -4,
+	tone = { ok = Theme.GREEN, low = Theme.RED, grey = Theme.GREY } }
+local function Forge(frame, line, kind, tone)
+	if not (ns.ForgeOn and ns.ForgeOn()) then return end
+	local K = ns.DGN_FORGE
+	if kind == "head" then
+		if not line.forgeDot then
+			line.forgeDot = ns.ForgeDot(line, K.dot, Theme.GOLD, 1, "ARTWORK")
+			line.forgeRule = ns.ForgeLine(line, Theme.GOLD)
+		end
+		line.text:ClearAllPoints()
+		line.text:SetPoint("LEFT", line, "LEFT", K.textLeft, K.rise)
+		line.text:SetTextColor(Theme.TITLE[1], Theme.TITLE[2], Theme.TITLE[3])
+		line.forgeDot:ClearAllPoints()
+		line.forgeDot:SetPoint("CENTER", line, "LEFT", K.dot / 2 - 2, K.rise)
+		local textWidth = Theme.TextWidth(frame, line.text:GetText(), Theme.F_CAPS)
+		local left = K.textLeft + math.ceil(textWidth) + ns.FORGE.line.gap
+		line.forgeRule:ClearAllPoints()
+		line.forgeRule:SetPoint("LEFT", line, "LEFT", left, K.rise)
+		line.forgeRule:SetWidth(math.max(1, (frame.innerWidth or 0) - left))
+	end
+	if kind == "level" and not line.forgeWell then line.forgeWell = ns.ForgeWell(line) end
+	if line.forgeDot then
+		if kind == "head" then line.forgeDot:Show(); line.forgeRule:Show() else line.forgeDot:Hide(); line.forgeRule:Hide() end
+	end
+	if line.forgeWell then
+		line.forgeWell:SetShown(kind == "level")
+		local c = tone or Theme.EDGE
+		line.forgeWell:SetColor(c[1], c[2], c[3], 1)
+	end
+	if kind == "level" then line.bg:Hide() end
+end
+
 function ns:EnsureDungeonWindow()
 	if self.dungeonFrame then return self.dungeonFrame end
 	if not (Theme and Theme.CreateDialog) then return nil end
@@ -445,6 +482,7 @@ function ns:ShowDungeonWindow(sheet)
 		line.text:SetText(row.kind == "head" and Theme.Upper(row.text) or row.text)
 		Theme.SetStatus(line.status, row.state)
 		Style(line, row.kind, rank)
+		Forge(frame, line, row.kind, row.kind == "level" and ns.DGN_FORGE.tone[sheet.verdict] or nil)
 		line:Show()
 		y = y - ROW_STEP
 	end

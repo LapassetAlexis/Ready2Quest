@@ -371,12 +371,31 @@ function ns:DeathPanelRows(advice)
 	}
 	local tall = {}
 	local verdict = self:DeathVerdictText(advice)
-	if verdict then rows[#rows + 1] = verdict end
+	local verdictIndex
+	if verdict then rows[#rows + 1] = verdict; verdictIndex = #rows end
 	rows[#rows + 1] = Theme.T_GREY .. self:F("DEATH_LOSS_NOTE", DEATH_LOSS * 100, SPIRIT_LOSS * 100) .. "|r"
 	tall[#rows] = true
 	rows[#rows + 1] = Theme.T_GREY .. L.DEATH_RULE .. "|r"
 	tall[#rows] = true
-	return rows, tall
+	return rows, tall, verdictIndex
+end
+
+-- Thème forgé : les deux options en plaques, le verdict dans un creux dont
+-- le filet dit le sens (vert : cours, or : guérisseur, or patiné : rien à
+-- conseiller) ; les notes pâles restent à nu. Rien en Sobre.
+ns.DEATH_FORGE = { run = Theme.GREEN, healer = Theme.GOLD }
+local function ForgeLine(line, kind, advice)
+	if not (ns.ForgeOn and ns.ForgeOn()) then return end
+	if kind == "card" and not line.forgePlate then line.forgePlate = ns.ForgeCard(line) end
+	if kind == "verdict" and not line.forgeWell then line.forgeWell = ns.ForgeWell(line) end
+	if line.forgePlate then line.forgePlate:SetShown(kind == "card") end
+	if line.forgeWell then
+		line.forgeWell:SetShown(kind == "verdict")
+		local c = ns.DEATH_FORGE[advice and advice.verdict] or Theme.EDGE
+		line.forgeWell:SetColor(c[1], c[2], c[3], 1)
+	end
+	line.bg:Hide()
+	line.forgeKind = kind
 end
 
 function ns:ShowDeathPanel(advice)
@@ -385,7 +404,7 @@ function ns:ShowDeathPanel(advice)
 		if not ok and self.RecordError then self:RecordError("death:panel", frame) end
 		return false
 	end
-	local rows, tall = self:DeathPanelRows(advice)
+	local rows, tall, verdictIndex = self:DeathPanelRows(advice)
 	local y = (frame.contentTop or -65) - GAP
 	local rank = 0
 	for index = 1, MAX_LINES do
@@ -411,6 +430,7 @@ function ns:ShowDeathPanel(advice)
 			line.text:SetWordWrap(note)
 			line.text:SetHeight(note and (height - 4) or 14)
 			line.text:SetText(text or "")
+			ForgeLine(line, note and "note" or (index == verdictIndex and "verdict") or "card", advice)
 			if text then line:Show(); y = y - height - (ROW_STEP - ROW_CARD) else line:Hide() end
 		end
 	end

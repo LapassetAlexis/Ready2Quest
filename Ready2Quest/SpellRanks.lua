@@ -587,9 +587,13 @@ function ns:EnsureSpellRanks()
 		local row = Theme.CreateListRow(frame, inner, ROW_CARD, { icon = 24 })
 		row:SetPoint("TOPLEFT", frame, "TOPLEFT", pad, top - (index - 1) * ROW_H)
 		row:SetIndex(index)
+		-- thème forgé : carte en relief (une texture) ; « Mettre à jour » en
+		-- bleu arcane (action neutre) si le socle a ce style
+		if ns.ForgeSheen then ns.ForgeSheen(row) end
 		row.ignore = Theme.CreateButton(row, nil, 24, L.SR_BTN_IGNORE, function() ns:SpellRankIgnore(row.data) end, "outline")
 		row.ignore:SetPoint("RIGHT", row, "RIGHT", -8, 0)
-		row.update = Theme.CreateButton(row, nil, 24, L.SR_BTN_UPDATE, function() ns:SpellRankUpdate(row.data) end, "accent")
+		row.update = Theme.CreateButton(row, nil, 24, L.SR_BTN_UPDATE, function() ns:SpellRankUpdate(row.data) end,
+			ns.ForgeStyle and ns.ForgeStyle("accent", "arcane") or "accent")
 		row.update:SetPoint("RIGHT", row.ignore, "LEFT", -6, 0)
 		local textWidth = inner - row.textLeft - row.update:GetWidth() - row.ignore:GetWidth() - 8 - 6 - 12
 		row.text:ClearAllPoints()
@@ -611,9 +615,13 @@ function ns:EnsureSpellRanks()
 	for index = 1, ns.NEWSPELLS_ROWS do
 		local row = Theme.CreateListRow(frame, inner, ROW_CARD, { icon = 24 })
 		row:SetIndex(index)
+		-- thème forgé : carte en relief ; « Placer » en vert (ajouter) si le
+		-- socle a ce style
+		if ns.ForgeSheen then ns.ForgeSheen(row) end
 		row.ignore = Theme.CreateButton(row, nil, 24, L.NS_BTN_IGNORE, function() ns:NewSpellIgnore(row.data) end, "outline")
 		row.ignore:SetPoint("RIGHT", row, "RIGHT", -8, 0)
-		row.place = Theme.CreateButton(row, nil, 24, L.NS_BTN_PLACE, function() ns:NewSpellPlace(row.data) end, "accent")
+		row.place = Theme.CreateButton(row, nil, 24, L.NS_BTN_PLACE, function() ns:NewSpellPlace(row.data) end,
+			ns.ForgeStyle and ns.ForgeStyle("accent", "add", "positive") or "accent")
 		row.place:SetPoint("RIGHT", row.ignore, "LEFT", -6, 0)
 		local textWidth = inner - row.textLeft - row.place:GetWidth() - row.ignore:GetWidth() - 8 - 6 - 12
 		row.text:ClearAllPoints()

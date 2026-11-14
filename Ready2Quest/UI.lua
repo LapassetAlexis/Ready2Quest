@@ -135,6 +135,57 @@ local function VerdictText(self)
 end
 
 -- ---------------------------------------------------------------------------
+-- Thème forgé (maquette « Avant le départ ») : le bloc note en plaque, le
+-- chiffre en or clair sur un halo, le verdict dans un creux à filet de sa
+-- couleur, la barre dans un creux (dégradé d'or, une braise au bout) ; les
+-- conseils en plaque à liseré lumineux, puces sur un point de lumière.
+-- Rien en Sobre (ns.ForgeOn) : les aplats d'avant restent tels quels.
+-- ---------------------------------------------------------------------------
+function ns:ForgeScoreCard(frame)
+	if not ns.ForgeOn() then return false end
+	local F = ns.FORGE
+	local card = frame.scoreCard
+	card.plate = ns.ForgeCard(card)
+	ns.ForgeHideFlat(card.bg, card.border)
+	frame.scoreValue:SetTextColor(Theme.TITLE[1], Theme.TITLE[2], Theme.TITLE[3])
+	Theme.TextShadow(frame.scoreValue)
+	local _, size = frame.scoreValue.GetFont and frame.scoreValue:GetFont()
+	local glowSize = math.floor((tonumber(size) or 28) * F.glow.size + 0.5)
+	frame.scoreGlow = ns.ForgeDot(card, glowSize, Theme.GOLD, F.glow.alpha, "BORDER")
+	frame.scoreGlow:SetPoint("CENTER", frame.scoreValue, "CENTER", 0, 0)
+	-- le tampon : un creux, filet à la couleur du verdict (posée à l'affichage)
+	frame.stamp.well = ns.ForgeWell(frame.stamp, { margin = F.tag.margin })
+	ns.ForgeHideFlat(frame.stamp.fill, frame.stamp.border)
+	-- la barre : dans un creux, dégradé d'or (sombre en bas, clair en haut)
+	local bar = frame.scoreBar
+	bar.well = ns.ForgeWell(card, { around = bar, out = F.well.out, margin = F.well.margin, sub = 2 })
+	ns.ForgeHideFlat(bar.bg)
+	Theme.Gradient(bar.fill, "VERTICAL", Theme.GOLD_SOFT, 1, Theme.GOLD_LIGHT, 1)
+	bar.ember = ns.ForgeDot(bar, F.dot.size, Theme.GOLD_LIGHT, F.dot.alpha, "OVERLAY")
+	bar.ember:SetPoint("CENTER", bar.fill, "RIGHT", 0, 0)
+	local setValue = bar.SetValue
+	function bar:SetValue(ratio)
+		setValue(self, ratio)
+		if (self.ratio or 0) > 0 then self.ember:Show() else self.ember:Hide() end
+	end
+	frame.forged = true
+	return true
+end
+
+function ns:ForgeAdviceBlock(frame)
+	if not ns.ForgeOn() then return false end
+	local block = frame.adviceBlock
+	block.plate = ns.ForgeCard(block)
+	ns.ForgeHideFlat(block.bg)
+	block.halo = ns.ForgeAccentBar(block, block.bar, Theme.GOLD)
+	for _, bullet in ipairs(frame.adviceBullets or {}) do
+		bullet.glow = ns.ForgeDot(block, ns.FORGE.dot.size, Theme.GOLD, ns.FORGE.dot.alpha, "BORDER")
+		bullet.glow:SetPoint("CENTER", bullet, "CENTER", 0, 0)
+	end
+	return true
+end
+
+-- ---------------------------------------------------------------------------
 -- Construction de la fenêtre
 -- ---------------------------------------------------------------------------
 function ns:EnsureWindow()
@@ -184,6 +235,7 @@ function ns:EnsureWindow()
 
 	frame.scoreBar = Theme.CreateBar(frame.scoreCard, inner - 32, 6)
 	frame.scoreBar:SetPoint("BOTTOMLEFT", frame.scoreCard, "BOTTOMLEFT", 16, 14)
+	ns:ForgeScoreCard(frame)
 
 	-- Lignes de modules ------------------------------------------------------
 	-- Placées à chaque affichage (LayoutWindow) : les modules sans objet sont
@@ -237,6 +289,7 @@ function ns:EnsureWindow()
 		bullet:SetVertexColor(Theme.GOLD[1], Theme.GOLD[2], Theme.GOLD[3], 1)
 		frame.adviceBullets[index] = bullet
 	end
+	ns:ForgeAdviceBlock(frame)
 
 	-- Animation : la note compte jusqu'à sa valeur, la barre suit (0,45 s)
 	frame:SetScript("OnUpdate", function(f) ns:AnimateScore(f) end)
@@ -424,7 +477,8 @@ function ns:ShowWindow(results)
 	local sr, sg, sb = unpack(Theme.ScoreColor(ratio))
 
 	frame.scoreValue:SetText(tostring(score))
-	frame.scoreBar:SetColor(Theme.GOLD[1], Theme.GOLD[2], Theme.GOLD[3])
+	-- thème forgé : la barre garde son dégradé d'or (posé une fois)
+	if not frame.forged then frame.scoreBar:SetColor(Theme.GOLD[1], Theme.GOLD[2], Theme.GOLD[3]) end
 	frame.scoreBar:SetValue(ratio)
 	-- départ de l'animation : la note compte de 0 à sa valeur
 	frame.animFrom, frame.animTo, frame.animStart = 0, score, ns.Now()
@@ -435,6 +489,8 @@ function ns:ShowWindow(results)
 		frame.verdict:SetTextColor(sr, sg, sb)
 		frame.stamp.border:SetColor(sr, sg, sb, 1)
 		frame.stamp.fill:SetVertexColor(sr, sg, sb, 0.10)
+		-- thème forgé : le tampon est un creux, son filet prend la couleur du verdict
+		if frame.stamp.well then frame.stamp.well:SetColor(sr, sg, sb, 1) end
 		frame.stamp:SetWidth(math.max(120, math.ceil(Theme.TextWidth(frame.stamp, label, Theme.F_LABEL) + 32)))
 	end
 
@@ -522,6 +578,10 @@ function ns:ShowWindow(results)
 				if bullet then bullet:Hide() end
 			end
 		end
+	end
+	-- thème forgé : la lueur suit sa puce
+	for _, bullet in ipairs(frame.adviceBullets or {}) do
+		if bullet.glow then if bullet:IsShown() then bullet.glow:Show() else bullet.glow:Hide() end end
 	end
 
 	-- Une seule fenêtre à la fois : les réglages se ferment

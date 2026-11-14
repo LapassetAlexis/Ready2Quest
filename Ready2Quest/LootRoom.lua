@@ -466,6 +466,12 @@ function ns:EnsureLootRoom()
 	frame.targetCard.bar:SetPoint("TOPLEFT", frame.targetCard, "TOPLEFT", 0, 0)
 	frame.targetCard.bar:SetPoint("BOTTOMLEFT", frame.targetCard, "BOTTOMLEFT", 0, 0)
 	frame.targetCard.bar:SetWidth(2)
+	-- thème forgé : la carte du butin en plaque, son liseré en lumière
+	if ns.ForgeOn and ns.ForgeOn() then
+		frame.targetCard.plate = ns.ForgeCard(frame.targetCard)
+		ns.ForgeHideFlat(frame.targetCard.bg)
+		frame.targetCard.halo = ns.ForgeAccentBar(frame.targetCard, frame.targetCard.bar, Theme.GOLD)
+	end
 	frame.targetIcon = Theme.CreateIcon(frame.targetCard, 28)
 	frame.targetIcon:SetPoint("LEFT", frame.targetCard, "LEFT", 12, 0)
 	frame.target = Theme.Text(frame.targetCard, Theme.F_LABEL, Theme.LABEL)
@@ -490,9 +496,13 @@ function ns:EnsureLootRoom()
 		local row = Theme.CreateListRow(frame, inner, ROW_CARD, { icon = 24 })
 		row:SetPoint("TOPLEFT", frame, "TOPLEFT", pad, rowsTop - (index - 1) * ROW_H)
 		row:SetIndex(index)
+		-- thème forgé : carte en relief (une texture), « Jeter » en rouge
+		-- (détruire) si le socle a ce style
+		if ns.ForgeSheen then ns.ForgeSheen(row) end
 		row.ignore = Theme.CreateButton(row, nil, 24, L.LOOTROOM_BTN_IGNORE, function() ns:LootRoomIgnore(row.data) end, "outline")
 		row.ignore:SetPoint("RIGHT", row, "RIGHT", -8, 0)
-		row.delete = Theme.CreateButton(row, nil, 24, L.LOOTROOM_BTN_DELETE, function() ns:LootRoomDelete(row.data) end, "primary")
+		row.delete = Theme.CreateButton(row, nil, 24, L.LOOTROOM_BTN_DELETE, function() ns:LootRoomDelete(row.data) end,
+			ns.ForgeStyle and ns.ForgeStyle("primary", "danger", "remove") or "primary")
 		row.delete:SetPoint("RIGHT", row.ignore, "LEFT", -6, 0)
 		local textWidth = inner - row.textLeft - row.delete:GetWidth() - row.ignore:GetWidth() - 8 - 6 - 12
 		row.name = row.text

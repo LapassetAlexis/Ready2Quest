@@ -492,6 +492,8 @@ function ns:RewardButton(index)
 end
 
 local marked = {}
+-- thème forgé : voile ambre de la récompense conseillée, à son plus fort (à droite)
+ns.REWARD_FORGE = { glow = 0.22 }
 
 function ns:RewardClearMarks()
 	for button in pairs(marked) do
@@ -499,6 +501,7 @@ function ns:RewardClearMarks()
 		if mark then
 			if mark.glow then mark.glow:Hide() end
 			if mark.label then mark.label:Hide() end
+			if mark.well then mark.well:SetShown(false) end
 			if mark.edge then for _, side in ipairs({ "top", "bottom", "left", "right" }) do mark.edge[side]:Hide() end end
 		end
 		marked[button] = nil
@@ -525,14 +528,35 @@ local function MarkButton(button, text)
 		if width and width > 24 then mark.label:SetWidth(width - 12) end
 		mark.label:SetJustifyH("RIGHT")
 		if mark.label.SetWordWrap then mark.label:SetWordWrap(false) end
+		-- thème forgé : l'étiquette dans un creux à filet d'or (son fond presque
+		-- noir porte l'ambre bien mieux que le parchemin), le voile en lumière
+		-- qui s'efface vers la gauche
+		if ns.ForgeOn and ns.ForgeOn() then
+			local K = ns.FORGE.tag
+			-- le creux est dessiné sur le bouton (au-dessus du voile, sous le
+			-- texte), autour d'un cadre vide qui suit la largeur du libellé
+			mark.tag = CreateFrame("Frame", nil, button)
+			mark.tag:SetHeight(K.height)
+			mark.tag:SetPoint("RIGHT", mark.label, "RIGHT", K.padX, 0)
+			mark.well = ns.ForgeWell(button, { around = mark.tag, margin = K.margin, layer = "OVERLAY", sub = 1, color = Theme.GOLD })
+			if mark.label.SetDrawLayer then mark.label:SetDrawLayer("OVERLAY", 2) end
+			Theme.Gradient(mark.glow, "HORIZONTAL", c, 0, c, ns.REWARD_FORGE.glow)
+		end
 		button.r2qRewardMark = mark
 	end
 	mark.label:SetText(text)
+	if mark.tag then
+		local width = tonumber(mark.label.GetStringWidth and mark.label:GetStringWidth()) or 0
+		local limit = tonumber(mark.label:GetWidth()) or width
+		mark.tag:SetWidth(math.min(width, limit) + 2 * ns.FORGE.tag.padX)
+		mark.well:SetShown(true)
+	end
 	mark.glow:Show()
 	mark.label:Show()
 	for _, side in ipairs({ "top", "bottom", "left", "right" }) do mark.edge[side]:Show() end
 	marked[button] = true
 end
+ns.RewardMarkButton = MarkButton   -- exposée aux tests (habillage de la marque)
 
 -- Applique le conseil. `final` : dernière tentative, le chat sert de repli.
 function ns:RewardApply(final)

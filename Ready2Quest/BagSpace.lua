@@ -664,6 +664,8 @@ function ns:EnsureBagSpaceFrame()
 	-- au-dessus des sacs ouverts, en bas à droite de l'écran
 	if self.RestorePoint then self:RestorePoint(frame, "bagspacePoint", { point = "BOTTOMRIGHT", x = -240, y = 180 }) end
 	local left = frame.contentLeft
+	-- thème forgé : le liseré orange en lumière (sac plein : à voir)
+	if ns.ForgeAccentBar and frame.accent then frame.accentHalo = ns.ForgeAccentBar(frame, frame.accent, Theme.ORANGE_DEEP) end
 
 	frame.closeButton = Theme.CreateCloseButton(frame, 18)
 	frame.closeButton:SetPoint("TOPRIGHT", frame, "TOPRIGHT", -6, -6)
@@ -696,11 +698,16 @@ function ns:EnsureBagSpaceFrame()
 		end
 	end)
 
-	frame.destroyButton = Theme.CreateButton(frame, nil, 22, L.BAG_BTN_DESTROY, function() ns:BagSpaceRequestDestroy() end, "primary")
+	-- thème forgé : la couleur dit le geste (rouge : détruire, vert : garder
+	-- en favori), si le socle a ces styles ; sinon ceux de Sobre
+	local Style = ns.ForgeStyle or function(sobre) return sobre end
+	frame.destroyButton = Theme.CreateButton(frame, nil, 22, L.BAG_BTN_DESTROY, function() ns:BagSpaceRequestDestroy() end,
+		Style("primary", "danger", "remove"))
 	frame.destroyButton:SetPoint("BOTTOMLEFT", frame, "BOTTOMLEFT", left, 8)
 	frame.nextButton = Theme.CreateButton(frame, nil, 22, L.BAG_BTN_NEXT, function() ns:BagSpaceNext() end, "outline")
 	frame.nextButton:SetPoint("LEFT", frame.destroyButton, "RIGHT", 6, 0)
-	frame.keepButton = Theme.CreateButton(frame, nil, 22, L.BAG_BTN_KEEP, function() ns:BagSpaceKeepCurrent() end, "outline")
+	frame.keepButton = Theme.CreateButton(frame, nil, 22, L.BAG_BTN_KEEP, function() ns:BagSpaceKeepCurrent() end,
+		Style("outline", "add", "positive"))
 	frame.keepButton:SetPoint("LEFT", frame.nextButton, "RIGHT", 6, 0)
 
 	frame:Hide()
