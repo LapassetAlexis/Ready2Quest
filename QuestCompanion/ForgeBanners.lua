@@ -510,6 +510,12 @@ function ns:ForgeGuildFeatFill(frame, info, feat)
 	else self:ForgeMedalSet(frame, "glyph", frame.forgeGlyph) end
 	self:ForgeMedalBadge(frame, feat and info and info.points or nil)
 	frame.featPoints = nil
+	-- « Nouveau titre : … » : une récompense, en or clair comme sur le bandeau
+	-- du carnet (une seule règle) ; la ligne de la créature garde l'encre courante
+	if frame.info then
+		local ink = (info and info.sub and info.sub ~= "") and Theme.GOLD_LIGHT or Theme.TEXT
+		frame.info:SetTextColor(ink[1], ink[2], ink[3], 1)
+	end
 	self:ForgeBannerStack(frame, { "title", "text", "info", "hint" }, ns.FORGE_GUILD.h)
 	return true
 end

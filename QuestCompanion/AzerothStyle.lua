@@ -660,16 +660,33 @@ function ns:ApplyUIStyle()
 					local hideAt = self.captureToastHideAt
 					if self.CaptureToastShow then self:CaptureToastShow() end
 					self.captureToastHideAt = hideAt or self.captureToastHideAt
+				elseif key == "captureResult" then
+					-- « Capturé ! » remontré tel quel dans le nouveau thème
+					-- (portrait, niveau, traits, Partager), sans allonger son temps
+					local result = frame.result
+					if result and self.CaptureResultShow then
+						local hideAt = self.captureResultHideAt
+						local ok, err = pcall(self.CaptureResultShow, self, result)
+						if not ok and self.RecordError then self:RecordError("style:captureResult", err) end
+						self.captureResultHideAt = hideAt or self.captureResultHideAt
+					end
 				else
 					local ensure = (key == "guildFeatToast" and self.EnsureGuildFeatToast)
 						or (key == "journalToast" and self.EnsureJournalToast) or nil
 					local fresh = ensure and ensure(self)
 					if fresh then
 						CopyTexts(frame, fresh)
-						-- 3.1.0 : un bandeau du carnet né forgé : son médaillon et ses lignes
-						if fresh.forgeBanner and key == "journalToast" and ns.JournalToastDecor then
+						-- 3.1.0 : un bandeau du carnet, dans les deux sens : icône,
+						-- points, sous-ligne « Nouveau titre » (habillage de l'entrée),
+						-- puis le bouton Partager, sans allonger son temps
+						if key == "journalToast" then
 							fresh.entry = frame.entry
-							pcall(ns.JournalToastDecor, fresh, frame.entry)
+							if ns.JournalToastDecor then pcall(ns.JournalToastDecor, fresh, frame.entry) end
+							if self.ShareSync and self.ShareItemFromEntry then
+								local hideAt = self.journalToastHideAt
+								pcall(self.ShareSync, self, fresh, self:ShareItemFromEntry(frame.entry), "journal")
+								self.journalToastHideAt = hideAt
+							end
 						end
 						fresh:Show()
 						self:StyleShown(fresh, { shield = key == "journalToast" and "gold" or nil })

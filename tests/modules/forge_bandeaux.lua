@@ -283,6 +283,8 @@ do
 	s.ok("la ligne : deux lignes au plus, coupée aux mots", g and g.text.wordWrap == true and g.text.forgeMaxLines == 2)
 	s.ok("« et 2 autres exploits » gardée", g and g.hint:IsShown() and g.hint.text == NS:GuildFeatMoreText(2))
 	s.ok("points sur la plaque du médaillon (plus de chevauchement)", g and g.medal.badge.text.text == "25" and g.featPoints == nil)
+	s.ok("« Nouveau titre : … » en or clair, comme sur le bandeau du carnet (une seule règle)", g
+		and g.info.text == "Nouveau titre : Traqueuse" and Same(g.info.textColor, Theme.GOLD_LIGHT))
 	local right = -NS.FORGE_BANNER.out + NS.FORGE_BANNER.medal
 	local clear = true
 	for _, key in ipairs({ "title", "text", "info", "hint" }) do
@@ -298,6 +300,7 @@ do
 		info = { line = "Yan a capturé une brillante !", shiny = true, class = "normal", name = "Sanglier", stars = 2 } })
 	s.ok("exploit ordinaire : glyphe du filet, pas de plaque, nom d'or", g.medal.kind == "glyph" and not g.medal.badge:IsShown()
 		and Same(g.text.textColor, Theme.SHINY))
+	s.ok("exploit ordinaire : la ligne de la créature reprend l'encre courante", Same(g.info.textColor, Theme.TEXT))
 	NS:GuildFeatsHideToast()
 	s.ok("sans erreur", Errors() == "", Errors())
 	s.check("[FBAN] guilde forgée : deux lignes, médaillon et points sans chevauchement, « et N autres exploits », grand effet")
@@ -425,5 +428,47 @@ do
 	NS:CaptureResultHide()
 	s.ok("sans erreur", Errors() == "", Errors())
 	s.check("[FBAN] médaillon : masque rond du client ; le Voile d'hiver repeint le glyphe, jamais le portrait ni l'icône")
+	Done()
+end
+
+-- 10. Bascule à chaud d'un bandeau affiché : « Capturé ! » remontré, carnet complet --------------
+do
+	Say("-- bandeaux forgés : bascule à chaud")
+	Fresh("sobre")
+	local s = Steps()
+	NS:CaptureAccount().display = NS:CaptureAccount().display or {}
+	NS:CaptureAccount().display[3255] = 4321
+	_G.SetPortraitTextureFromCreatureDisplayID = function(tex, id) tex.portraitID = id end
+	local plain = NS:CaptureResultShow({ name = "Raptor des Tarides", shiny = true, stars = 3, npcID = 3255, level = 18,
+		type = "Beast", class = "rare" })
+	local hideAt = NS.captureResultHideAt
+	s.ok("Sobre : « Capturé ! » affiché", plain and plain:IsShown() and not plain.forgeBanner)
+	NS:DB().companionStyle = "azeroth"; NS:ApplyUIStyle()
+	local f = NS.captureResult
+	s.ok("après la bascule : le bandeau forgé remontre la prise (portrait, niveau, Partager)", f and f ~= plain and f:IsShown()
+		and f.forgeBanner and f.medal.kind == "portrait" and f.medal.badge.text.text == "18" and f.text.text == "Raptor des Tarides"
+		and f.shareButton and f.shareButton:IsShown())
+	s.ok("son temps n'est pas allongé", NS.captureResultHideAt == hideAt)
+	NS:CaptureResultHide()
+	-- carnet : forgé (sous-ligne, points, Partager) puis Sobre, puis retour
+	NS:JournalToastPush({ kind = "feat", id = "day_rare_50", title = NS.L.FEAT_TOAST_TITLE, name = "Le traqueur", points = 25,
+		icon = "Interface\\Icons\\Ability_Hunter_BeastTaming", sub = NS:F("FEAT_TOAST_NEW_TITLE", "Traqueuse") })
+	local j = NS.journalToast
+	local jHide = NS.journalToastHideAt
+	s.ok("forgé : sous-ligne, points au médaillon, Partager", j and j.forgeBanner and j.stars:IsShown() and j.medal.badge:IsShown()
+		and j.shareButton and j.shareButton:IsShown())
+	NS:DB().companionStyle = "sobre"; NS:ApplyUIStyle()
+	local sj = NS.journalToast
+	s.ok("vers le Sobre : sous-ligne « Nouveau titre » gardée, bandeau plus haut", sj and sj ~= j and not sj.forgeBanner
+		and sj.stars and sj.stars:IsShown() and sj.stars.text == NS:F("FEAT_TOAST_NEW_TITLE", "Traqueuse") and sj:GetHeight() > 50)
+	s.ok("vers le Sobre : points et Partager gardés", sj and sj.featPoints and sj.featPoints:IsShown()
+		and sj.featPoints.text == "25" and sj.shareButton and sj.shareButton:IsShown())
+	s.ok("vers le Sobre : temps inchangé", NS.journalToastHideAt == jHide)
+	NS:DB().companionStyle = "azeroth"; NS:ApplyUIStyle()
+	local back = NS.journalToast
+	s.ok("retour au forgé : médaillon, plaque et Partager", back == j and back:IsShown() and back.medal.badge.text.text == "25"
+		and back.shareButton and back.shareButton:IsShown())
+	s.ok("sans erreur", Errors() == "", Errors())
+	s.check("[FBAN] bascule à chaud : « Capturé ! » remontré dans le nouveau thème ; bandeau du carnet complet dans les deux sens")
 	Done()
 end
