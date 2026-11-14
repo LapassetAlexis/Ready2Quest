@@ -815,7 +815,8 @@ do
 	for _ = 1, 4 do Mock:Advance(1); NS:CaptureTick(NS.Now()) end
 	Check("[CAPFX] échec : « Échappé », le filet déchiré (moitié droite) tombe, ses cordes volent", rolling.result == "fail"
 		and NS:CaptureStageUpdate(rolling.resultAt + 0.3) == "fail" and stage.bannerText:GetText() == NS.L.CAPTURE_FLED
-		and stage.net.texCoord[1] == 0.5 and stage.net:IsShown() and stage.ropes[1]:IsShown() and not stage.starSlots[1]:IsShown())
+		and stage.net.texCoord[1] == 0.5 and stage.net:IsShown() and stage.ropes[1]:IsShown() and not stage.starSlots[1]:IsShown()
+		and stage.footer:GetText() == NS.L.CAPTURE_STAGE_FAIL)
 	local fallen = NS:CaptureStageUpdate(rolling.resultAt + 1.5) == "fail" and not stage.net:IsShown() and not stage.ropes[1]:IsShown()
 	for _ = 1, 5 do Mock:Advance(1); NS:CaptureTick(NS.Now()) end
 	Check("[CAPFX] … tout retombe, la scène se ferme seule après le temps d'affichage", fallen and not stage:IsShown())

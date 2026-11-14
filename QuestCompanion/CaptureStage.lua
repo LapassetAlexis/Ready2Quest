@@ -1249,7 +1249,10 @@ local function StageFail(frame, r, c, rolling)
 		Banner(frame, r, PANEL_FAIL, TRIM_FAIL, L.CAPTURE_FLED, Theme.RED)
 	end
 	HideAll(frame.shakeDots)
-	frame.footer:SetText(r > 1.2 and L.CAPTURE_STAGE_CLOSE or L.CAPTURE_STAGE_FAIL)
+	-- le verdict (forgé, ancien habillage) écrit déjà la phrase : le pied ne la
+	-- répète pas ; le ruban du Sobre n'en a pas, il la garde au pied
+	local said = frame.banner.azeroth or frame.banner.verdict
+	frame.footer:SetText(r > 1.2 and L.CAPTURE_STAGE_CLOSE or (said and "" or L.CAPTURE_STAGE_FAIL))
 end
 
 function ns:CaptureStageUpdate(now)

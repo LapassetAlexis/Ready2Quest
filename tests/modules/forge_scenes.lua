@@ -258,6 +258,10 @@ do
 		and Same(banner.text.textColor, Theme.MUTED_LIGHT) and banner.shieldKind == "grey"
 		and Same(banner.shield.slice.color, Theme.FORGE_PLATE.neutral) and Same(banner.levelText.textColor, Theme.LABEL)
 		and not banner.bling:IsShown() and Same(banner.ruleL.vertex, Theme.RED))
+	s.ok("échappée : la phrase n'est écrite qu'une fois (pas de doublon au pied)", stage.footer:GetText() ~= NS.L.CAPTURE_STAGE_FAIL,
+		stage.footer:GetText())
+	NS:CaptureStageUpdate(rolling.resultAt + 1.5)
+	s.ok("échappée : puis « Clic ou Échap pour fermer » au pied", stage.footer:GetText() == NS.L.CAPTURE_STAGE_CLOSE)
 	stage.scripts.OnMouseUp(stage)
 	FS.Close(5)
 	-- brillante
