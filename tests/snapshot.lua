@@ -814,7 +814,7 @@ Snap.scenes["forge-bricks"] = function(T)
 	-- 1. chaque matière, brute (blanc : sans teinte)
 	Heading("Textures", -84)
 	local x = 24
-	for _, key in ipairs({ "frame", "shadow", "corner", "plate", "inset", "dot", "line", "vignette" }) do
+	for _, key in ipairs({ "frame", "shadow", "corner", "plate", "inset", "dot", "line", "vignette", "ring" }) do
 		local spec = ART[key]
 		local w, h = 96, 96
 		if key == "line" then w, h = 192, 12 end

@@ -113,7 +113,7 @@ ALLOWED_IMAGES = {
     "Ready2Quest/Textures/logo.tga", "Ready2Quest/Textures/logo_petit.tga",
     "QuestCompanion/Textures/logo_glyphe.tga", "Ready2Quest/Textures/logo_glyphe.tga",
 }
-UI_ASSETS = ("cadre", "ombre", "coin", "plaque", "creux", "lueur_ligne", "lueur_point", "vignette")
+UI_ASSETS = ("cadre", "ombre", "coin", "plaque", "creux", "lueur_ligne", "lueur_point", "vignette", "anneau")
 for _addon in ("Ready2Quest", "QuestCompanion"):
     for _name in UI_ASSETS:
         ALLOWED_IMAGES.add("%s/Libs/Socle/Media/%s.tga" % (_addon, _name))

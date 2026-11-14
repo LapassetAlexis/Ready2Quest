@@ -3461,6 +3461,9 @@ Theme.ART = {
 	line     = { file = SOCLE_MEDIA .. "lueur_ligne" },                      -- filet lumineux (blanc : se teinte)
 	dot      = { file = SOCLE_MEDIA .. "lueur_point" },                      -- point lumineux (blanc : se teinte)
 	vignette = { file = SOCLE_MEDIA .. "vignette" },                         -- bords assombris
+	-- anneau d'un médaillon de portrait (le compagnon de QuestCompanion) : bande
+	-- d'or des rayons 0,80 à 0,94 de la demi-taille, centre vide ; en or, se teinte
+	ring     = { file = SOCLE_MEDIA .. "anneau", size = 128, inner = 0.80, outer = 0.94 },
 }
 -- géométrie de l'habillage d'une fenêtre
 Theme.CHROME = { shadowOut = 20, frameOut = 1, corner = 46, cornerOut = 3, min = 40, level = 30 }

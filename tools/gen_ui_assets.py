@@ -23,6 +23,9 @@ tools/sync_socle.py) des TGA 32 bits non compressés, côtés en puissances de 2
   lueur_ligne.tga  256x8   filet lumineux qui s'estompe vers la droite. Blanc, alpha.
   lueur_point.tga  32x32   point lumineux (cœur + halo). Blanc, alpha.
   vignette.tga     64x64   assombrit les bords d'une fenêtre. Noir, alpha.
+  anneau.tga       128x128 anneau du médaillon du compagnon : bande d'or en relief
+                           (rayons 0,80 à 0,94), liserés noirs, quatre pointes,
+                           ombre intérieure ; centre vide. En or : se teinte.
 
 L'anneau du médaillon des logos (ring) est aussi dessiné ici : tools/gen_logos.py
 le reprend.
@@ -264,8 +267,57 @@ def ring(size=352):
     return size, size, pixels
 
 
+def anneau(size=128, outer=0.94, inner=0.80, shade=0.66):
+    """Anneau du médaillon du compagnon : bande d'or en relief, liseré noir,
+    filet clair, ombre intérieure, quatre pointes ; le centre est vide (le
+    portrait 3D s'y voit). En or : la teinte d'un cadre gagné la multiplie
+    (désaturée d'abord pour l'argent, l'ardoise, le bleu, le vert)."""
+    pixels, centre, half = [], size / 2, size / 2
+    ro, ri, rs = outer * half, inner * half, shade * half
+    unit = size / 128
+    mid = (ro + ri) / 2
+
+    def band(d, at, width):
+        return max(0.0, min(1.0, width / 2 + 0.5 - abs(d - at)))
+    for y in range(size):
+        for x in range(size):
+            dx, dy = x + 0.5 - centre, y + 0.5 - centre
+            d, angle = math.hypot(dx, dy), math.atan2(dy, dx)
+            colour, alpha = (0, 0, 0), 0.0
+            if rs < d < ri:                                   # ombre intérieure sur le portrait
+                colour, alpha = (0, 0, 0), 0.6 * ((d - rs) / (ri - rs)) ** 1.6
+            lit = 0.5 - 0.5 * math.sin(angle)                 # lumière d'en haut
+            cov = max(0.0, min(1.0, d - ri + 0.5)) * max(0.0, min(1.0, ro - d + 0.5))
+            if cov > 0:                                       # la bande d'or
+                profile = 1 - abs(d - mid) / ((ro - ri) / 2)
+                gold = mix(GOLD_LO, GOLD_HI, max(0.0, min(1.0, lit * 0.75 + profile * 0.45)))
+                colour = mix(colour, gold, cov)
+                alpha = max(alpha, cov)
+            thin = band(d, ri + 1.6 * unit, 1.0 * unit)       # filet clair, au bord de l'ouverture
+            if thin > 0 and cov > 0:
+                colour = mix(colour, mix(GOLD_HI, (255, 240, 205), 0.4), thin * 0.8)
+            for at, width, strength in ((ri, 1.4 * unit, 0.85), (ro, 1.6 * unit, 0.9)):   # liserés noirs
+                edge = band(d, at, width)
+                if edge > 0:
+                    colour = mix(colour, (0, 0, 0), edge * strength)
+                    alpha = max(alpha, edge * strength)
+            for k in range(4):                                # quatre pointes sur la bande
+                px = centre + math.cos(k * math.pi / 2) * mid
+                py = centre + math.sin(k * math.pi / 2) * mid
+                diamond = (abs(x + 0.5 - px) + abs(y + 0.5 - py)) / unit
+                m = max(0.0, min(1.0, 7.5 - diamond))
+                if m > 0:
+                    tip = mix((255, 232, 176), GOLD_LO, min(1.0, diamond / 7.5))
+                    if diamond > 5.8:
+                        tip = (20, 14, 6)
+                    colour = mix(colour, tip, m)
+                    alpha = max(alpha, m)
+            pixels.append((clamp(colour[0]), clamp(colour[1]), clamp(colour[2]), clamp(alpha * 255)))
+    return size, size, pixels
+
+
 ASSETS = [("cadre", cadre), ("ombre", ombre), ("coin", coin), ("plaque", plaque), ("creux", creux),
-          ("lueur_ligne", lueur_ligne), ("lueur_point", lueur_point), ("vignette", vignette)]
+          ("lueur_ligne", lueur_ligne), ("lueur_point", lueur_point), ("vignette", vignette), ("anneau", anneau)]
 
 
 def main(argv=None):
