@@ -903,6 +903,8 @@ local function Chrome(self, frame, title)
 	frame.azSize = { W, H }
 	Method(frame, "SetClampRectInsets", -8, 8, LAY.plateUp, -8)
 	frame.azeroth, frame.uiStyle = true, "azeroth"
+	-- (socle 3.2 : le carnet a son propre bois : pas le cadre du thème)
+	if Theme.DressWindow then pcall(Theme.DressWindow, frame) end
 	if frame.bg then frame.bg:SetVertexColor(WOOD_BG[1], WOOD_BG[2], WOOD_BG[3], 0.98) end
 	HideAll(frame.border)
 	local over = CreateFrame("Frame", nil, frame)

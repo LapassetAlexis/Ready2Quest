@@ -604,6 +604,50 @@ d'infobulle (≥ 4,5:1).
 - Bandeau du camp élargi pour « Buffs du feu de camp : assieds-toi ou fabrique
   ici », toujours centré.
 
+## Thèmes du socle (socle 3.2 : QuestCompanion 3.1.0, Ready2Quest 1.35.0)
+
+Jusqu'ici, Azeroth était un habillage posé par QuestCompanion sur son carnet,
+ses bandeaux et ses scènes ; le reste (tout Ready2Quest, les réglages, les
+fenêtres secondaires) restait en Sobre. Le thème vit maintenant dans le socle
+(`Theme.lua`, section « Thèmes ») : il change les jetons que lisent toutes les
+briques, donc toutes les fenêtres des deux addons suivent sans être habillées
+une à une.
+
+| | Sobre | Azeroth |
+|---|---|---|
+| `EDGE` (bord de fenêtre, bouton en contour) | `#3a424a` | or patiné `#996b2e` |
+| `EDGE_SOFT` (filets, séparations) | `#2a3138` | or sombre `#4d381f` |
+| `NAV` (colonne, pied, plaque de titre) | `#0d1013` | bois sombre `#16100c` |
+| `TITLE` (titres de fenêtre) | parchemin | or clair `#f6c77d` |
+| `ACTIVE` (onglet, entrée, ligne sélectionnés) | ambre | bleu arcane `#5b8fd6` |
+| Police des rôles DISPLAY, TITLE, CAPS | Inter | Friz Quadrata (`Fonts\FRIZQT__.TTF`) |
+| Cadre | filet d'un pixel | + cadre en bois des hauts faits, hors du contenu |
+
+- `Theme.ApplySkin(id)` modifie les jetons **sur place** (les tables gardent
+  leur identité) et repose la police des rôles de titre. Posé par le socle dès
+  `ADDON_LOADED` (`Store.lua`), avant toute fenêtre. Une fenêtre déjà
+  construite garde ses couleurs jusqu'au `/reload` ; le bois, lui, suit à
+  l'affichage suivant (`Theme.DressWindow`, accroché à `OnShow` et joué à la
+  création).
+- Le bois : huit pièces `achievement-wood-nineslice-*` (vues en jeu dans les
+  scènes de capture), posées à `WOOD_BAND` (24 px) **hors** du cadre : rien du
+  contenu n'est recouvert, aucune mise en page ne change. Pas de bois sous
+  `WOOD_MIN` (160), sur une fenêtre déjà habillée par son module
+  (`frame.azeroth`, `frame.uiStyle == "azeroth"` : le carnet), sur une fenêtre
+  qui le refuse (`opts.wood = false`), ni si une pièce manque au client.
+- Les encres du texte courant ne changent pas et le bois n'est pas plus clair
+  que le fond qu'il remplace : les contrastes d'avant tiennent, et
+  `tests/modules/ui_skin.lua` (« [SKIN] ») les recalcule pour Azeroth.
+- Réglage : Ready2Quest, « Style de l'interface » (page Général, `uiStyle`,
+  `/r2q style`) ; QuestCompanion garde le sien (`companionStyle`,
+  `/qc style`), qui pose aussi le thème du socle (`ns:ApplyUIStyle`).
+- Nouveaux jetons à utiliser dans les modules : `Theme.TITLE` pour un titre de
+  fenêtre, `Theme.ACTIVE` pour un état sélectionné. `Theme.GOLD` reste
+  l'accent « important » (bouton principal, valeur mise en avant).
+- À regarder en jeu : le bois autour de chaque fenêtre (réglages 900 px, petits
+  dialogues), Friz en capitales de 10 px (sections), le bleu des onglets, la
+  plaque de titre.
+
 ## Style Azeroth (QuestCompanion)
 
 Réglage « Style de l'interface » : Sobre (le langage ci-dessus) ou Azeroth

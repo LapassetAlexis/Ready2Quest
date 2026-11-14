@@ -91,6 +91,11 @@ Theme.PRESS_SHADE = 0.10   -- bouton plein enfoncé : part d'encre mêlée au fo
 -- désactivé n'est plus estompé (le libellé tombait sous 2:1) : fond CONTROL,
 -- filet EDGE_SOFT, libellé MUTED, tous opaques (4,5:1 sur CONTROL).
 Theme.CONTROL_HEIGHT = 24
+-- socle 3.2 : deux jetons de plus, que le thème change (Theme.ApplySkin) :
+-- l'encre des titres de fenêtre et l'accent de l'état actif (onglet, entrée
+-- de navigation, pastille ou ligne sélectionnés)
+Theme.TITLE     = { 0.95, 0.91, 0.83 }   -- = PARCHMENT en Sobre
+Theme.ACTIVE    = { 0.91, 0.65, 0.29 }   -- = GOLD en Sobre
 Theme.BUTTON_SIZES = { xs = 18, sm = 24, md = 28 }
 Theme.DISABLED = { bg = Theme.CONTROL, edge = Theme.EDGE_SOFT, text = Theme.MUTED }
 
@@ -434,7 +439,7 @@ end
 function Theme.CreateTitle(parent, size, layer)
 	local fs = parent:CreateFontString(nil, layer or "OVERLAY", Theme.F_TITLE)
 	Theme.TitleFont(fs, size)
-	fs:SetTextColor(Theme.PARCHMENT[1], Theme.PARCHMENT[2], Theme.PARCHMENT[3])
+	fs:SetTextColor(Theme.TITLE[1], Theme.TITLE[2], Theme.TITLE[3])
 	return fs
 end
 
@@ -638,6 +643,14 @@ function Theme.CreateWindow(parent, width, height, opts)
 	end
 
 	Theme.RegisterEscapeClose(frame)
+	-- thème : le cadre en bois se pose (ou s'ôte) à chaque affichage
+	-- (et dès la création : une fenêtre née affichée ne reçoit pas OnShow)
+	if opts.wood ~= false then
+		if frame.HookScript then pcall(frame.HookScript, frame, "OnShow", Theme.DressWindow) end
+		pcall(Theme.DressWindow, frame)
+	else
+		frame.skinNoWood = true
+	end
 	return frame
 end
 
@@ -730,7 +743,13 @@ function Theme.CreatePageHeader(parent, width, opts)
 	end
 	header.textLeft = left
 
-	header.title = Text(header, compact and Theme.F_TITLE or Theme.F_DISPLAY, Theme.PARCHMENT)
+	-- thème Azeroth : la plaque de titre (bois sombre) sous l'en-tête
+	if Theme.skin == "azeroth" then
+		header.plate = Solid(header, "BACKGROUND", Theme.NAV, 1)
+		header.plate:SetAllPoints()
+		if header.plate.SetDrawLayer then header.plate:SetDrawLayer("BACKGROUND", 1) end
+	end
+	header.title = Text(header, compact and Theme.F_TITLE or Theme.F_DISPLAY, Theme.TITLE)
 	header.title:SetPoint("TOPLEFT", header, "TOPLEFT", left, compact and -14 or -22)
 	header.title:SetJustifyH("LEFT")
 	header.title:SetText("")
@@ -759,7 +778,7 @@ function Theme.CreateNavBrand(parent, logoTexture, name)
 	brand.logo:SetTexture(logoTexture or Theme.LOGO)
 	brand.logo:SetSize(32, 32)
 	brand.logo:SetPoint("LEFT", brand, "LEFT", 16, 2)
-	brand.name = Text(brand, Theme.F_TITLE, Theme.PARCHMENT)
+	brand.name = Text(brand, Theme.F_TITLE, Theme.TITLE)
 	brand.name:SetPoint("LEFT", brand.logo, "RIGHT", 10, 0)
 	brand.name:SetJustifyH("LEFT")
 	brand.name:SetText(name or "")
@@ -792,7 +811,7 @@ function Theme.CreateNavItem(parent, width)
 	item.tint:SetAllPoints()
 	Gradient(item.tint, "HORIZONTAL", Theme.GOLD, 0.16, Theme.GOLD, 0)
 	item.tint:Hide()
-	item.bar = Solid(item, "ARTWORK", Theme.GOLD, 1)
+	item.bar = Solid(item, "ARTWORK", Theme.ACTIVE, 1)
 	item.bar:SetPoint("TOPLEFT", item, "TOPLEFT", 0, 0)
 	item.bar:SetPoint("BOTTOMLEFT", item, "BOTTOMLEFT", 0, 0)
 	item.bar:SetWidth(2)
@@ -929,7 +948,7 @@ function Theme.CreateTabs(parent, onSelect)
 				tab.label = Text(tab, Theme.F_HEADING, Theme.MUTED_LIGHT)
 				tab.label:SetPoint("CENTER", tab, "CENTER", 0, 1)
 				tab.text = tab.label
-				tab.underline = Solid(tab, "ARTWORK", Theme.GOLD, 1)
+				tab.underline = Solid(tab, "ARTWORK", Theme.ACTIVE, 1)
 				tab.underline:SetPoint("BOTTOMLEFT", tab, "BOTTOMLEFT", 0, 0)
 				tab.underline:SetPoint("BOTTOMRIGHT", tab, "BOTTOMRIGHT", 0, 0)
 				tab.underline:SetHeight(2)
@@ -2522,7 +2541,7 @@ function Theme.CreateTile(parent, width, height, opts)
 	end
 	tile.accent:Hide()
 	local function PaintEdge(self)
-		local c = self.selected and Theme.GOLD or (self.hovered and Theme.EDGE or Theme.EDGE_SOFT)
+		local c = self.selected and Theme.ACTIVE or (self.hovered and Theme.EDGE or Theme.EDGE_SOFT)
 		self.border:SetColor(c[1], c[2], c[3], 1)
 	end
 	function tile:SetAccent(color, alpha)
@@ -2767,6 +2786,171 @@ function Theme.TooltipPair(tooltip, label, value)
 		Theme.TooltipLine(tooltip, tostring(label) .. " : " .. tostring(value))
 	end
 end
+
+-- ===========================================================================
+-- Thèmes (socle 3.2) : Sobre (ardoise et ambre, à plat) et Azeroth (bois,
+-- or patiné, Friz Quadrata, accent arcane). Un thème ne reconstruit rien :
+-- il change les jetons que lisent toutes les briques, la police des titres,
+-- et pose un cadre en bois autour des fenêtres.
+--   Theme.ApplySkin(id) : pose le thème (jetons modifiés SUR PLACE : les
+--     tables gardent leur identité, tout ce qui les lit suit). Une fenêtre
+--     déjà construite garde ses couleurs jusqu'au rechargement de
+--     l'interface ; le cadre en bois, lui, suit à l'affichage suivant.
+--   Theme.skin : le thème posé ; Theme.SkinWoodOK() : le client a le bois.
+-- Les encres du texte courant (TEXT, MUTED, LABEL, PARCHMENT) ne changent
+-- pas, et les fonds restent aussi sombres : les contrastes mesurés tiennent
+-- (recalculés pour le thème dans tests/modules/ui_skin.lua).
+-- Matières : atlas du client seulement (le cadre en bois des hauts faits, vu
+-- en jeu dans les scènes de capture de QuestCompanion) ; atlas absent : pas
+-- de bois, le reste du thème tient.
+-- ===========================================================================
+Theme.SKINS = { "azeroth", "sobre" }
+Theme.SKIN_DEFAULT = "azeroth"
+Theme.SKIN_FONT = "Fonts\\FRIZQT__.TTF"
+-- rôles de police qui passent en Friz Quadrata (titres et sections ; le
+-- corps de texte garde sa police, plus lisible en petit)
+Theme.SKIN_FONT_ROLES = { "DISPLAY", "TITLE", "CAPS" }
+Theme.SKIN_TOKENS = {
+	azeroth = {
+		EDGE      = { 0.60, 0.42, 0.18 },    -- or patiné : bord de fenêtre, bouton en contour
+		EDGE_SOFT = { 0.30, 0.22, 0.12 },    -- or sombre : filets, séparations
+		NAV       = { 0.086, 0.063, 0.047 }, -- bois sombre : colonne, pied, plaque de titre
+		TITLE     = { 0.96, 0.78, 0.49 },    -- or clair (= GOLD_LIGHT)
+		ACTIVE    = { 0.357, 0.561, 0.839 }, -- bleu arcane (= BLUE)
+	},
+	sobre = {},
+}
+Theme.WOOD = {
+	tl     = "achievement-wood-nineslice-cornertopleft",
+	tr     = "achievement-wood-nineslice-cornertopright",
+	bl     = "achievement-wood-nineslice-cornerbottomleft",
+	br     = "achievement-wood-nineslice-cornerbottomright",
+	top    = "_achievement-wood-nineslice-edgetop",
+	bottom = "_achievement-wood-nineslice-edgebottom",
+	left   = "!achievement-wood-nineslice-edgeleft",
+	right  = "!achievement-wood-nineslice-edgeright",
+}
+Theme.WOOD_KEYS = { "tl", "tr", "bl", "br", "top", "bottom", "left", "right" }
+-- pièce de 64 px dont le bois occupe les 24 px extérieurs : posée à 24 px
+-- hors du cadre, le bois l'entoure sans rien recouvrir du contenu
+Theme.WOOD_SIZE, Theme.WOOD_BAND = 64, 24
+Theme.WOOD_MIN = 160          -- en dessous (largeur ou hauteur), pas de bois : les coins se toucheraient
+
+local skinBase = {}
+function Theme.ApplySkin(id)
+	if not Theme.SKIN_TOKENS[id] then id = "sobre" end
+	local tokens = Theme.SKIN_TOKENS[id]
+	-- les valeurs de départ, gardées une fois (retour à Sobre)
+	for _, skin in pairs(Theme.SKIN_TOKENS) do
+		for key in pairs(skin) do
+			if not skinBase[key] and type(Theme[key]) == "table" then
+				skinBase[key] = { Theme[key][1], Theme[key][2], Theme[key][3] }
+			end
+		end
+	end
+	for key, base in pairs(skinBase) do
+		local value = tokens[key] or base
+		local token = Theme[key]
+		token[1], token[2], token[3] = value[1], value[2], value[3]
+	end
+	-- la police des titres : celle du jeu en Azeroth, la nôtre en Sobre
+	local file
+	for _, role in ipairs(Theme.SKIN_FONT_ROLES) do
+		local entry = Theme.fonts and Theme.fonts[role]
+		if entry and entry.object and type(entry.object.SetFont) == "function" then
+			file = id == "azeroth" and Theme.SKIN_FONT or entry.file
+			local ok, applied = pcall(entry.object.SetFont, entry.object, file, entry.size, "")
+			-- refusée : la police d'avant est reposée
+			if not ok or applied == false then pcall(entry.object.SetFont, entry.object, entry.file, entry.size, "") end
+			entry.skinFont = (ok and applied ~= false) and file or entry.file
+		end
+	end
+	Theme.FONT_TITLE = id == "azeroth" and Theme.SKIN_FONT or Theme.FONT_BOLD
+	Theme.skin = id
+	return id
+end
+
+-- Le client a-t-il les huit pièces du cadre en bois ?
+function Theme.SkinWoodOK()
+	for _, key in ipairs(Theme.WOOD_KEYS) do
+		if not Theme.HasAtlas(Theme.WOOD[key]) then return false end
+	end
+	return true
+end
+
+-- Le cadre en bois d'une fenêtre : créé au premier besoin, montré en
+-- Azeroth, caché sinon. Une fenêtre déjà habillée par son module (bois,
+-- parchemin : QuestCompanion) ou trop petite n'en reçoit pas.
+function Theme.DressWindow(frame)
+	if not frame then return false end
+	local want = Theme.skin == "azeroth" and not frame.skinNoWood and not frame.azeroth and frame.uiStyle ~= "azeroth"
+		and (frame.wood == nil or frame.wood == frame.skinWood)
+	if want and frame.GetWidth and frame.GetHeight then
+		want = (tonumber(frame:GetWidth()) or 0) >= Theme.WOOD_MIN and (tonumber(frame:GetHeight()) or 0) >= Theme.WOOD_MIN
+	end
+	want = want and Theme.SkinWoodOK()
+	local wood = frame.skinWood
+	if want and not wood then
+		local S, O = Theme.WOOD_SIZE, Theme.WOOD_BAND
+		wood = {}
+		local function Piece(key)
+			local tex = frame:CreateTexture(nil, "BORDER", nil, 2)
+			tex:SetSize(S, S)
+			pcall(tex.SetAtlas, tex, Theme.WOOD[key])
+			wood[key] = tex
+			return tex
+		end
+		Piece("tl"):SetPoint("TOPLEFT", frame, "TOPLEFT", -O, O)
+		Piece("tr"):SetPoint("TOPRIGHT", frame, "TOPRIGHT", O, O)
+		Piece("bl"):SetPoint("BOTTOMLEFT", frame, "BOTTOMLEFT", -O, -O)
+		Piece("br"):SetPoint("BOTTOMRIGHT", frame, "BOTTOMRIGHT", O, -O)
+		local top, bottom, left, right = Piece("top"), Piece("bottom"), Piece("left"), Piece("right")
+		top:SetPoint("TOPLEFT", wood.tl, "TOPRIGHT", 0, 0)
+		top:SetPoint("TOPRIGHT", wood.tr, "TOPLEFT", 0, 0)
+		bottom:SetPoint("BOTTOMLEFT", wood.bl, "BOTTOMRIGHT", 0, 0)
+		bottom:SetPoint("BOTTOMRIGHT", wood.br, "BOTTOMLEFT", 0, 0)
+		left:SetPoint("TOPLEFT", wood.tl, "BOTTOMLEFT", 0, 0)
+		left:SetPoint("BOTTOMLEFT", wood.bl, "TOPLEFT", 0, 0)
+		right:SetPoint("TOPRIGHT", wood.tr, "BOTTOMRIGHT", 0, 0)
+		right:SetPoint("BOTTOMRIGHT", wood.br, "TOPRIGHT", 0, 0)
+		if top.SetHorizTile then pcall(top.SetHorizTile, top, true); pcall(bottom.SetHorizTile, bottom, true) end
+		if left.SetVertTile then pcall(left.SetVertTile, left, true); pcall(right.SetVertTile, right, true) end
+		frame.skinWood = wood
+	end
+	if wood then
+		for _, key in ipairs(Theme.WOOD_KEYS) do
+			if want then wood[key]:Show() else wood[key]:Hide() end
+		end
+		-- la fenêtre reste à l'écran bois compris
+		if frame.SetClampRectInsets then
+			local o = want and Theme.WOOD_BAND or 0
+			pcall(frame.SetClampRectInsets, frame, -o, o, o, -o)
+		end
+	end
+	frame.skinDressed = want and true or false
+	return frame.skinDressed
+end
+
+-- Le thème choisi par le joueur : celui de l'addon s'il a son propre réglage
+-- (QuestCompanion : ns:UIStyle), sinon le réglage `uiStyle` du socle
+function ns:UISkinChoice()
+	-- (le style réellement affiché : Sobre si le client n'a pas ses textures)
+	if self.UIStyle then return self:UIStyle() end
+	local choice = self:DB().uiStyle
+	for _, id in ipairs(Theme.SKINS) do if id == choice then return id end end
+	return Theme.SKIN_DEFAULT
+end
+function ns:SetUISkin(id)
+	if self.SetUIStyle then return self:SetUIStyle(id) end
+	local valid = false
+	for _, known in ipairs(Theme.SKINS) do if known == id then valid = true end end
+	if not valid then return nil end
+	self:DB().uiStyle = id
+	Theme.ApplySkin(id)
+	if self.RefreshOptions then pcall(self.RefreshOptions, self) end
+	return id
+end
+Theme.skin = "sobre"
 
 if ns.Mark then ns.Mark("Theme") end
 end)(SOCLE_ADDON, SOCLE_NS)

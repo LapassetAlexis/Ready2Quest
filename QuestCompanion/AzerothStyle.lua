@@ -605,6 +605,8 @@ function ns:ApplyUIStyle()
 		end
 	end
 	if self.CompanionApplyUIStyle then self:CompanionApplyUIStyle() end
+	-- socle 3.2 : le thème des fenêtres suit (jetons, police des titres, bois)
+	if Theme.ApplySkin then pcall(Theme.ApplySkin, style) end
 	return style
 end
 

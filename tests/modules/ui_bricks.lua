@@ -12,6 +12,10 @@ local ROOT = rawget(_G, "ADDON_ROOT") or "."
 local Snap = assert(loadfile(ROOT .. "/tests/snapshot.lua"))()
 
 local function Near(a, b) return math.abs((a or 0) - (b or 0)) < 0.01 end
+-- socle 3.2 : ces contrôles décrivent le thème Sobre (jetons de docs/UI.md,
+-- polices Inter) ; le thème Azeroth a les siens (ui_skin.lua). Rendu à la fin.
+local SKIN0 = { NS.Theme.skin, QNS.Theme.skin }
+NS.Theme.ApplySkin("sobre"); QNS.Theme.ApplySkin("sobre")
 local function SameColor(c, token) return c and Near(c[1], token[1]) and Near(c[2], token[2]) and Near(c[3], token[3]) end
 local function Same(a, b)
 	if type(a) ~= "table" or type(b) ~= "table" then return false end
@@ -991,3 +995,5 @@ do
 	Verdict("[UI31] combat : fiche au survol et garde-manger fermés à l'entrée, la fiche ne s'ouvre plus avant la fin")
 end
 end
+
+NS.Theme.ApplySkin(SKIN0[1]); QNS.Theme.ApplySkin(SKIN0[2])

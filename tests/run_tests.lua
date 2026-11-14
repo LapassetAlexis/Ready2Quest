@@ -1487,8 +1487,8 @@ ResetWorld()
 NS:RefreshOptions()   -- sans panneau : ne doit pas planter
 NS:HandleCommand("options")
 -- 1.34.0 : + la carte Quest Companion (page Général)
-Check("panneau créé et affiché : 33 lignes (17 réglages + 3 actions + 13 contrôles)", NS.optionsFrame
-	and NS.optionsFrame.shown == true and #NS.optionsFrame.rows == 33, NS.optionsFrame and #NS.optionsFrame.rows)
+Check("panneau créé et affiché : 34 lignes (17 réglages + 4 actions + 13 contrôles)", NS.optionsFrame
+	and NS.optionsFrame.shown == true and #NS.optionsFrame.rows == 34, NS.optionsFrame and #NS.optionsFrame.rows)
 do
 	-- on repère les lignes par leur clé : l'ordre du panneau peut évoluer
 	local boolRow, numberRow
@@ -3011,7 +3011,7 @@ do
 	Mock.world.fontRefused = false
 	Check("sans templates ni police : même fenêtre, titrée, complète", fallback.chrome == "window"
 		and fallback.header ~= nil and tostring(fallback.header.title.text) ~= ""
-		and fallback.rows ~= nil and #fallback.rows == 33, fallback.rows and #fallback.rows)
+		and fallback.rows ~= nil and #fallback.rows == 34, fallback.rows and #fallback.rows)
 end
 Mock.world.noBackdropTemplate = false
 
