@@ -349,7 +349,7 @@ function ns:EnsureDeathPanel()
 	frame.closeButton = frame:AddFooterButton(L.OPT_CLOSE, function()
 		ns.deathDismissed = true
 		frame:Hide()
-	end, "accent")
+	end, ns.ForgeStyle and ns.ForgeStyle("accent", "primary") or "accent")
 	-- 1.35.0 : [×] et Échap valent « Fermer » (avant : la fenêtre revenait au
 	-- changement de zone suivant). Seul le rangement par l'addon (résurrection,
 	-- module coupé) ne compte pas comme un refus, ni l'interface masquée

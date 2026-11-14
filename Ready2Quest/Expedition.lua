@@ -549,7 +549,9 @@ function ns:EnsureExpeditionWindow()
 	end
 	frame.rowsTop = rowsTop
 
-	frame.closeButton = frame:AddFooterButton(L.OPT_CLOSE, function() frame:Hide() end, "accent")
+	-- (thème forgé : l'action principale du pied est dorée)
+	frame.closeButton = frame:AddFooterButton(L.OPT_CLOSE, function() frame:Hide() end,
+		ns.ForgeStyle and ns.ForgeStyle("accent", "primary") or "accent")
 
 	self.expeditionFrame = frame
 	return frame

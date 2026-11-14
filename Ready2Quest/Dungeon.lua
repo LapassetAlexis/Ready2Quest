@@ -428,7 +428,9 @@ function ns:EnsureDungeonWindow()
 	local frame = Theme.CreateDialog(UIParent, WIDTH, 200, { name = "Ready2QuestDungeonFrame", title = L.DGN_TITLE })
 	if not frame then return nil end
 	if self.RestorePoint then self:RestorePoint(frame, "dungeonPoint", { point = "CENTER", x = 0, y = 60 }) end
-	frame.closeButton = frame:AddFooterButton(L.OPT_CLOSE, function() frame:Hide() end, "accent")
+	-- (thème forgé : l'action principale du pied est dorée)
+	frame.closeButton = frame:AddFooterButton(L.OPT_CLOSE, function() frame:Hide() end,
+		ns.ForgeStyle and ns.ForgeStyle("accent", "primary") or "accent")
 	self.dungeonFrame = frame
 	return frame
 end
