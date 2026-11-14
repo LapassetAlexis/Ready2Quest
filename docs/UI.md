@@ -624,17 +624,79 @@ qui porte le sens.
 | `EDGE` (bord, bouton en contour) | `#3a424a` | or patiné `#996b2e` |
 | `EDGE_SOFT` (filets, séparations) | `#2a3138` | or sombre `#4d381f` |
 | `NAV` (colonne, pied, plaque de titre) | `#0d1013` | bois sombre `#16100c` |
-| `TITLE` (titres de fenêtre) | parchemin | or clair `#f6c77d` |
-| `ACTIVE` (onglet, entrée, ligne choisis) | ambre | bleu arcane `#5b8fd6` |
+| `TITLE` (titres de fenêtre) | parchemin | identité : or clair `#f6c77d` (R2Q), arcane très clair `#bcd6fb` (QC) |
+| `ACTIVE` (onglet, entrée, ligne choisis) | ambre | sélection : bleu arcane `#5b8fd6` (R2Q), or `#e8a54b` (QC) |
 | Police des rôles DISPLAY, TITLE, CAPS | Inter | Friz Quadrata (`Fonts\FRIZQT__.TTF`) |
 
 `Theme.ApplySkin(id)` modifie ces jetons **sur place** (les tables gardent
-leur identité) et repose la police des rôles de titre. Posé par le socle dès
+leur identité), et ceux de l'identité de l'addon (section suivante), et
+repose la police des rôles de titre. Posé par le socle dès
 `ADDON_LOADED` (`Store.lua`), avant toute fenêtre. Les encres du texte
 courant ne changent pas. Une brique décide son habit à sa création
 (`Theme.Forged()`) : changer de thème demande un `/reload` pour une fenêtre
 déjà construite ; l'habillage de la fenêtre elle-même (`Theme.DressWindow`)
 suit à l'affichage suivant.
+
+### Identité et sélection (socle 3.3)
+
+Une couleur d'**identité** par addon, une couleur de **sélection** qui est
+l'autre (maquette « option A · tons inversés », 2026-11-14). La famille
+commune ne change pas : cadre d'or, coins, ombre, médaillon, bouton
+principal doré (« or = on y va »), accent bronze, remplissage doré d'un
+curseur ou d'une barre, statuts, raretés, monnaies, brillant.
+
+| | Ready2Quest | QuestCompanion |
+|---|---|---|
+| Identité : titre de fenêtre, plaque d'en-tête, filets lumineux, pilules et sections au ton par défaut | or | bleu arcane |
+| Sélection : entrée, onglet, ligne, puce choisis ; interrupteur actif ; focus d'un champ ; liste ouverte ; second ton des pilules et sections | bleu arcane | or |
+| Style de bouton `arcane` (action neutre : Ouvrir, Changer) | plaque arcane | plaque neutre (le bleu n'y est pas une action) |
+
+- **Déclaration** : `ns.APP.identity` dans `Config.lua` (chargé avant le
+  socle) : `"gold"` (défaut, Ready2Quest) ou `"arcane"` (QuestCompanion) ;
+  absente ou inconnue : `"gold"`. `Theme.IdentityChoice()` la lit ;
+  `Theme.identity` dit celle qui est posée (`nil` en Sobre).
+- **Jetons de rôle** (tables à part, jamais celles de `GOLD` ou `BLUE`,
+  changées sur place par `Theme.ApplySkin` d'après `Theme.IDENTITY_TOKENS`) :
+  `Theme.IDENTITY`, `Theme.IDENTITY_LIGHT` (encre des titres de groupe et de
+  section, filets), `Theme.SELECT`, `Theme.SELECT_LIGHT` (barre, souligné,
+  filet d'une puce choisie). En dérivent : `TITLE`, `ACTIVE`,
+  `FORGE_HEADER.warm` (haut de la plaque d'en-tête, chaud ou froid),
+  `FORGE_PLATE.select` (liste ouverte : arcane ou bronze),
+  `FORGE_PLATE.thumbOn` (curseur d'un interrupteur actif), le style
+  `FORGE_BUTTONS.arcane`, et `Theme.SELECT_ALPHA` (facteur des voiles de
+  sélection : 1 pour le bleu, 0,8 pour l'or, plus clair, pour garder les
+  encres lisibles). En Sobre, rien de cela ne sert : les rôles reprennent
+  l'ambre et les valeurs de départ reviennent.
+- **Tons** : `Theme.FORGE_TONES.identity` et `.second` ;
+  `Theme.ResolveTone(tone)` rend `spec { color, light }, nom` : `nil` ou
+  `"identity"` = l'identité, `"second"` = l'autre couleur (alternance d'un
+  groupe de rangement, sections de résultats de recherche). Anciens noms
+  gardés : `"gold"` = identité, `"arcane"` = second ton. `CreateNavGroup`,
+  `CreateSection`, `CreateGlowRule` prennent ce `tone` ; `label.tone` /
+  `section.tone` valent `"identity"` ou `"second"`.
+- **Voile de sélection** : `Theme.SelectAlpha(alpha)` (alpha ×
+  `SELECT_ALPHA`) pour tout dégradé de choix.
+
+Un module qui habille une surface au thème forgé lit les rôles, jamais
+`GOLD` / `BLUE` pour dire « titre » ou « choisi » :
+
+```lua
+local T = ns.Theme
+if T.Forged() then
+	title:SetTextColor(T.TITLE[1], T.TITLE[2], T.TITLE[3])           -- titre : identité
+	local spec = T.ResolveTone()                                       -- ton par défaut
+	dot:SetVertexColor(spec.light[1], spec.light[2], spec.light[3], 1)
+	T.Gradient(row.tint, "HORIZONTAL", T.SELECT, T.SelectAlpha(0.25),  -- ligne choisie
+		T.SELECT, T.SelectAlpha(0.04))
+	bar:SetVertexColor(T.SELECT_LIGHT[1], T.SELECT_LIGHT[2], T.SELECT_LIGHT[3], 1)
+end
+```
+
+Lire la table au moment de peindre (ou la garder par référence, comme
+`ns.QC_FORGE.title = Theme.TITLE`, `ns.QC_FORGE.glow = Theme.IDENTITY`) :
+jamais une copie faite au chargement, avant `ApplySkin`. Les tests
+`tests/modules/ui_identite.lua` vérifient les rôles des deux addons, le
+retour en Sobre et les contrastes des nouvelles paires.
 
 ### Matières (nos textures, `tools/gen_ui_assets.py`)
 
@@ -681,31 +743,36 @@ Pas d'habillage : fenêtre déjà habillée par son module (`frame.azeroth`,
   mesurée (`Theme.FORGE_INK`), par style (`Theme.FORGE_BUTTONS`). La couleur
   dit le geste : `primary` or (l'action principale du pied, encre sombre sans
   ombre), `accent` bronze, `outline` ardoise, et trois styles de sens,
-  `add` (vert), `danger` (rouge), `arcane` (bleu : ouvrir, changer). En Sobre
-  ces trois-là valent `outline`. Survol : la teinte s'éclaire ; appui : elle
+  `add` (vert), `danger` (rouge), `arcane` (action neutre : ouvrir,
+  changer ; plaque bleue dans Ready2Quest, neutre dans QuestCompanion). En
+  Sobre ces trois-là valent `outline`. Survol : la teinte s'éclaire ; appui : elle
   s'assombrit et le libellé s'enfonce d'un pixel ; désactivé : plaque sombre,
   texte lisible.
 - **Petits boutons** ([×], icône, engrenage) : petite plaque, bronze au survol.
 - **Case** : creux, coche or avec une lueur. **Interrupteur** : piste en
-  creux, curseur en relief, bleu arcane et lumineux quand il est actif.
+  creux, curseur en relief, de la couleur de sélection et lumineux quand il
+  est actif ; partiel : filet de l'identité.
   **Voyant de module** : point vert lumineux ou point sombre.
 - **Curseur** : piste en creux, part remplie en dégradé d'or, poignée claire.
-  **Champ**, **case de valeur**, **liste** : creux ou plaque, filet bleu
-  arcane au focus, chevron or.
+  **Champ**, **case de valeur**, **liste** : creux ou plaque, filet de la
+  sélection au focus (liste ouverte : `FORGE_PLATE.select`), chevron or.
 - **Barre** : piste presque noire, remplissage en dégradé avec un reflet d'un
   pixel (pas de découpe : une barre se répète sur chaque ligne).
 
 ### Navigation, sections, cartes, listes
 
-- Colonne : titres de groupe en « pilule » (dégradé de leur ton, or ou
-  arcane), entrée choisie en dégradé arcane avec une barre claire à gauche.
+- Colonne : titres de groupe en « pilule » (dégradé de leur ton : identité
+  pour une page à sous-pages, second ton pour un titre de rangement), entrée
+  choisie en dégradé de la sélection avec une barre claire à gauche.
 - Titre de section : point lumineux, titre, filet qui s'éteint
   (`Theme.FORGE_SECTION`, tons de `Theme.FORGE_TONES`).
 - Carte de réglage : relief posé sur le fond (voile clair en haut, sombre en
   bas, reflet et ombre d'un pixel : `Theme.FORGE_CARD`), sans découpe.
-- Onglet choisi : dégradé arcane, souligné clair. Ligne choisie : dégradé
-  arcane et barre ; losange de statut avec un halo de sa couleur.
-- En-tête : plaque de bois au haut plus chaud, filet lumineux sous le titre.
+- Onglet choisi : dégradé de la sélection, souligné clair. Ligne choisie :
+  dégradé de la sélection et barre ; losange de statut avec un halo de sa
+  couleur.
+- En-tête : plaque de bois au haut teinté de l'identité (chaud, ou froid
+  pour QuestCompanion), lueurs et filet lumineux de l'identité.
   Pied : bande sombre, reflet d'un pixel (`Theme.ForgeFooter`).
 
 ### Dans les modules
@@ -743,7 +810,8 @@ reliefs et des lueurs.
 Chaque texte posé sur une matière forgée est mesuré au point le plus clair et
 au plus sombre de son fond (≥ 4,5 corps, ≥ 3 titres) :
 `tests/modules/ui_skin.lua`, `ui_forge_controles.lua`,
-`ui_forge_navigation.lua`, `ui_forge_r2q.lua`, `ui_forge_qc.lua`.
+`ui_forge_navigation.lua`, `ui_forge_r2q.lua`, `ui_forge_qc.lua`,
+`ui_identite.lua`.
 `ui_bricks.lua` et deux blocs de `socle.lua` sont épinglés en Sobre : ils
 décrivent le thème d'avant, qui ne doit pas bouger.
 
