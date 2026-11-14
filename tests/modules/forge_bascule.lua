@@ -255,6 +255,11 @@ do
 	s.ok("posé partout sans erreur (carnet et compagnon sans hôte : rien)", active == true and Errors() == "", Errors())
 	s.ok("carnet : pas de décor de l'ancien habillage", NS.journalFrame and NS.journalFrame.wvDecor == nil)
 	s.ok("compagnon : pas de décor de l'ancien habillage", NS.companionFrame and NS.companionFrame.wvDecor == nil)
+	-- les effets de l'ancien habillage : rien (à re-loger par le lot du
+	-- compagnon et des bandeaux), sans erreur
+	local fx = { NS:AzerothShinyFX(), NS:AzerothLevelFX("Niveau 12 !", "level"),
+		NS:AzerothRewardFX(NS:EnsureJournalToast()), NS:CompanionPaintRing(), NS:CarnetPaintRing() }
+	s.ok("effets de l'ancien habillage : aucun, sans erreur", not fx[1] and not fx[2] and not fx[3] and Errors() == "", Errors())
 	NS:SetUIStyle("sobre")
 	s.ok("choix Sobre : décor éteint", NS:WinterVeilActive() == false and Errors() == "", Errors())
 	s.check("[BASC] Voile d'hiver : suit le choix Azeroth, posé sans erreur sur les cadres du socle")

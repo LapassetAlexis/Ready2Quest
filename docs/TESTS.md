@@ -69,6 +69,35 @@ Par défaut dans le banc (section 4.99) : `SHINY_CHANCE = 0`, `DAILY_AUTO = fals
 eux-mêmes (`shiny.lua`, `companion_daily.lua`, `guide_tours.lua`,
 `companion_advice.lua`).
 
+**Thème de QuestCompanion (3.1.0)** : le banc tourne dans l'état du produit,
+au thème forgé (choix « azeroth » par défaut, posé sans les atlas du client)
+et ancien habillage coupé (`QNS.AZEROTH_LEGACY = false`). Avant, faute de
+`C_Texture` dans la maquette, QuestCompanion tournait sans le dire au thème
+Sobre. Conséquences :
+
+- `T.Legacy(true)` rallume l'ancien habillage (carnet en parchemin, scènes en
+  bois, bandeaux dorés, anneau du compagnon) pour un module ou un sous-cas qui
+  l'affirme, `T.Legacy(false)` le recoupe ; le banc remet la valeur du produit
+  à la fin de chaque module. Les modules de l'ancien habillage l'appellent en
+  tête, sans autre changement de leurs assertions (`azeroth_style`,
+  `capture_scene`, `journal_layout`, `menagerie_journal`, `missions`,
+  `qc212_jukebox`, `specimen_traits`, `trades`, `ui_windows`, `ui_bricks`,
+  `addons_link`, `companion_allure`, `companion_effects`, `feats`,
+  `feats_rewards`, `share`, `guide_tours`, `capture_preparation`,
+  `winter_veil`) ; `ui_forge_qc` le pose pour ses confirmations sur parchemin.
+- Un test du **Sobre** le demande : `companionStyle = "sobre"` puis
+  `ApplyUIStyle()` (le filet et le bandeau dans `capture.lua`, `C.Sobre()` ;
+  le cadre du suivi dans `journal_tracker.lua`).
+- Un reset qui change `companionStyle` après `ResetWorld()` repose aussi le
+  thème (`Theme.ApplySkin(QNS:UISkinChoice())`, comme `journal_layout.lua`) :
+  sinon le thème posé au chargement reste celui du choix d'avant.
+- Le Voile d'hiver suit le choix « azeroth » et l'horloge de la maquette
+  (`time()` vers 1970-01-01) tombe en saison : un scénario du filet coupe le
+  décor (`winterVeil = "off"`), comme les aperçus (`tests/snapshot.lua`).
+- `tests/modules/forge_bascule.lua` (`[BASC]`) épingle l'état du produit,
+  avec et sans atlas : thème forgé, surfaces au socle (`uiStyle` « sobre »,
+  `styleKey` « forge », fenêtres habillées), bascule à chaud sans fuite.
+
 ## Écrire un test
 
 - **Un `Check` par comportement**, pas par ligne de code. Les étapes d'un même

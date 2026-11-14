@@ -27,6 +27,11 @@
 -- 2.7.0 (effets) : bulle façon « Talking Head », lueur ronde quand le
 -- compagnon parle, éclats d'une brillante, évolution / niveau, ailes des
 -- grandes récompenses (ns:AzerothRewardFX) : section « Effets Azeroth ».
+-- 3.1.0 (bascule) : le choix « Azeroth » pose le thème forgé du socle pour
+-- tout QuestCompanion ; tout ce qui est décrit plus haut (art du client) est
+-- l'ancien habillage, derrière le drapeau interne ns.AZEROTH_LEGACY (faux
+-- dans le produit). Portes et clé de cache (ns:StyleKey) : section « Le
+-- style », et docs/UI.md.
 local ADDON, ns = ...
 if ns.blocked then return end
 local L = ns.L

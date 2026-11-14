@@ -784,8 +784,11 @@ liste, étiquettes), `ns.QC_FORGE` côté QuestCompanion (filet en plaque d'or,
 pastilles de capture en petites cartes, garde-manger, suivi). Un bouton prend
 un style de sens par `ns.ForgeStyle(sobre, forgé…)`.
 
-Le carnet en parchemin, les scènes de capture et les bandeaux dorés de
-QuestCompanion (textures du client, section suivante) ne sont pas convertis.
+QuestCompanion 3.1.0 (bascule) : tout QuestCompanion prend ce thème. Le
+carnet en parchemin, les scènes de capture en bois, les bandeaux dorés et
+l'anneau du compagnon (textures du client, section suivante) sont l'ancien
+habillage, coupé dans le produit ; leurs fonctions propres sont re-logées en
+briques forgées, surface par surface.
 
 ### Logos (`tools/gen_logos.py`)
 
@@ -822,12 +825,51 @@ dégradés (`SetGradient`), les lueurs additives, Friz Quadrata en capitales
 de 10 px, le médaillon et les quatre coins sur chaque fenêtre, le bouton de
 la mini-carte et l'icône de la liste des addons.
 
-## Style Azeroth (QuestCompanion)
+## Style Azeroth (QuestCompanion) : l'ancien habillage, derrière un drapeau
 
-Réglage « Style de l'interface » : Sobre (le langage ci-dessus) ou Azeroth
-(doré). Azeroth habille le même contenu, il ne le reconstruit pas
+Réglage « Style de l'interface » : Azeroth (le thème forgé du socle, section
+précédente) ou Sobre. Depuis 3.1.0, le choix ne pose plus que le thème du
+socle (`ns:UISkinChoice` redéfini dans QuestCompanion = `ns:UIStyleChoice`) :
+le thème forgé ne dépend plus des atlas du client. L'habillage d'art du
+client décrit ici (carnet en parchemin, scènes en bois, bandeaux dorés,
+anneau du compagnon) est l'**ancien habillage** : il ne s'affiche que si le
+drapeau interne `ns.AZEROTH_LEGACY` vaut `true` (`false` dans le produit ;
+aucun réglage ni commande ; les tests qui l'affirment le posent par
+`T.Legacy(true)`). Il habille le même contenu, il ne le reconstruit pas
 (`AzerothStyle.lua` pour les bandeaux et la capture, `JournalAzeroth.lua`
 pour le carnet).
+
+Les portes (`AzerothStyle.lua`) :
+
+| Porte | Vaut | Sert à |
+|---|---|---|
+| `ns:UIStyleChoice()` | `azeroth` / `sobre` (réglage `companionStyle`) | le choix du joueur |
+| `ns:UISkinChoice()` | `= UIStyleChoice()` | le thème du socle (`Theme.ApplySkin`, au chargement et à `ApplyUIStyle`) |
+| `ns.QCForged()` / `Theme.Forged()` | thème forgé posé ? | décider d'une **brique forgée** (à la création) |
+| `ns:LegacyStyle()` = `ns:UIStyle()` | `azeroth` seulement si drapeau, choix azeroth et atlas du client ; `sobre` sinon | l'ancien habillage et `frame.uiStyle` |
+| `ns:AzerothOn()`, `AzerothScenesOn()`, `JournalStyle()` | suivent `UIStyle()` : faux / `sobre` dans le produit | le code de l'ancien habillage seulement |
+| `ns:WinterVeilStyleOn()` | choix azeroth | le décor du Voile d'hiver (plus l'ancien habillage) |
+
+Rien ne lit `AzerothOn` pour décider d'une fonction (une information, un
+bouton, un effet) : une fonction qui n'existait que dans l'ancien habillage
+est re-logée derrière `ns.QCForged()`, le Sobre restant intact.
+
+Clé de cache (`ns:StyleKey(legacy)`) : `azeroth` si l'ancien habillage a
+construit le cadre, `forge` s'il est né sous le thème forgé, `sobre` sinon.
+Un cadre construit porte `frame.styleKey` (`ns:MarkStyle(frame)` la pose
+d'après le cadre ; `ns.FrameStyleKey(frame)` la relit). Tous les caches par
+style passent par elle : bandeaux (`ns:StyleCached`, `ns:ApplyUIStyle`),
+carnet, fiche de dresseur, confirmations, panneau d'allure
+(`ns:JournalStyleKey`, `CarnetRestyle`), scènes de capture, volée, choix au
+filet, bulle des visites. Une brique forgée est décidée à la création : un
+cadre né forgé n'est jamais resservi en Sobre, ni l'inverse, et deux
+`ApplyUIStyle` de suite gardent les mêmes cadres. Noms globaux (Échap) :
+`ns.StyleName(base, clé)` = base + `Azeroth` / `Forge` / rien (Sobre, le nom
+d'avant). Hors ancien habillage, `frame.uiStyle` reste `sobre` et
+`frame.azeroth` n'est jamais posé (sinon `Theme.DressWindow` refuse
+d'habiller le cadre).
+
+Ce qui suit décrit l'ancien habillage (drapeau à `true`).
 
 - Matières : bois `achievement-wood-nineslice-*`, parchemin, bandeaux et
   boucliers du client, par atlas ou FileDataID ; aucune image embarquée.
@@ -862,7 +904,7 @@ pour le carnet).
 ## Règles
 
 - Aucune couleur, police ou taille en dur dans un module : jetons et briques
-  du socle (`Theme.*`, `ns.TC`), `ns.AZEROTH_INK` pour le style Azeroth. Les
+  du socle (`Theme.*`, `ns.TC`), `ns.AZEROTH_INK` pour l'ancien habillage. Les
   données (cosmétiques, effets) portent leurs propres teintes.
 - Contraste mesuré, pas estimé : ≥ 4,5:1 pour le corps de texte, ≥ 3:1 pour
   les titres, sur le vrai fond (texture comprise). Un texte sur une matière du
