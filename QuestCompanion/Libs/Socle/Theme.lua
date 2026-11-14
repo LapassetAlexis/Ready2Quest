@@ -643,6 +643,8 @@ function Theme.CreateWindow(parent, width, height, opts)
 		frame.footer.line:SetPoint("TOPLEFT", frame.footer, "TOPLEFT", 0, 0)
 		frame.footer.line:SetPoint("TOPRIGHT", frame.footer, "TOPRIGHT", 0, 0)
 		frame.footer.line:SetHeight(1)
+		-- thème forgé : bande sombre et reflet (idempotent : les réglages l'appellent aussi)
+		if Theme.Forged() and Theme.ForgeFooter then pcall(Theme.ForgeFooter, frame.footer) end
 	end
 
 	frame.close = Theme.CreateCloseButton(frame, 24)
@@ -811,7 +813,9 @@ end
 -- ---------------------------------------------------------------------------
 -- Navigation : marque, groupes, entrées
 -- ---------------------------------------------------------------------------
-function Theme.CreateNavBrand(parent, logoTexture, name)
+-- emblem : la fenêtre porte le médaillon du logo (thème forgé) : la marque
+-- lui laisse la place ; sinon elle garde son petit logo (carnet de QC)
+function Theme.CreateNavBrand(parent, logoTexture, name, emblem)
 	local brand = CreateFrame("Frame", nil, parent)
 	local width = (parent.GetWidth and parent:GetWidth()) or 220
 	brand:SetSize(width, 64)
@@ -820,7 +824,7 @@ function Theme.CreateNavBrand(parent, logoTexture, name)
 	brand.logo:SetSize(32, 32)
 	brand.logo:SetPoint("LEFT", brand, "LEFT", 16, 2)
 	brand.name = Text(brand, Theme.F_TITLE, Theme.TITLE)
-	if Theme.Forged() then
+	if Theme.Forged() and emblem then
 		-- thème forgé : le médaillon de la fenêtre tient lieu de logo de la marque
 		brand.logo:Hide()
 		brand.name:SetPoint("LEFT", brand, "LEFT", Theme.EMBLEM.text - 2, 2)
@@ -2845,7 +2849,13 @@ function Theme.SkinToast(frame, opts)
 		self.accent:Show()
 	end
 	frame:SetAccent(opts.accent)
-	if frame.HookScript then pcall(frame.HookScript, frame, "OnShow", Theme.DressWindow) end
+	-- l'habillage forgé suit le fond (qui déborde du cadre avec opts.outset) et
+	-- la taille du bandeau (un bandeau agrandi alors qu'il est affiché)
+	if opts.outset then frame.skinAround, frame.skinOutset = frame.bg, o end
+	if frame.HookScript then
+		pcall(frame.HookScript, frame, "OnShow", Theme.DressWindow)
+		pcall(frame.HookScript, frame, "OnSizeChanged", Theme.DressWindow)
+	end
 	pcall(Theme.DressWindow, frame)
 	return frame
 end
@@ -3623,13 +3633,20 @@ function Theme.DressWindow(frame)
 	if not frame then return false end
 	local K = Theme.CHROME
 	local want = Theme.Forged() and not frame.skinNoChrome and not frame.azeroth and frame.uiStyle ~= "azeroth"
+	-- ce que l'habillage entoure : le cadre, ou son fond s'il déborde (bandeau)
+	local around = frame.skinAround or frame
 	if want and frame.GetWidth and frame.GetHeight then
-		want = (tonumber(frame:GetWidth()) or 0) >= K.min and (tonumber(frame:GetHeight()) or 0) >= K.min
+		-- (la taille du fond débordant se déduit du cadre et de son débord : une
+		-- région ancrée par ses coins ne dit pas toujours sa taille)
+		local o = frame.skinOutset
+		local width = (tonumber(frame:GetWidth()) or 0) + (o and (o[1] + o[3]) or 0)
+		local height = (tonumber(frame:GetHeight()) or 0) + (o and (o[2] + o[4]) or 0)
+		want = width >= K.min and height >= K.min
 	end
 	local chrome = frame.skinChrome
 	if want and not chrome then
 		chrome = {}
-		chrome.shadow = Theme.Slice(frame, "shadow", { layer = "BACKGROUND", sub = -8, out = K.shadowOut })
+		chrome.shadow = Theme.Slice(frame, "shadow", { layer = "BACKGROUND", sub = -8, out = K.shadowOut, around = around })
 		local ok, top = pcall(CreateFrame, "Frame", nil, frame)
 		top = ok and top or frame
 		if top ~= frame then
@@ -3638,7 +3655,7 @@ function Theme.DressWindow(frame)
 			if top.EnableMouse then top:EnableMouse(false) end
 		end
 		chrome.top = top
-		chrome.frame = Theme.Slice(top, "frame", { layer = "BORDER", out = K.frameOut, fill = false })
+		chrome.frame = Theme.Slice(top, "frame", { layer = "BORDER", out = K.frameOut, fill = false, around = around })
 		if frame.chrome ~= "toast" then
 			chrome.vignette = frame:CreateTexture(nil, "BACKGROUND", nil, 2)
 			chrome.vignette:SetTexture(Theme.ART.vignette.file)

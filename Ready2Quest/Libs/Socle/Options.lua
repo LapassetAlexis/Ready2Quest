@@ -1230,7 +1230,7 @@ function ns:EnsureOptions()
 	-- reflet ; pied en bande plus sombre sous un filet noir et son reflet
 	Theme.ForgeNavColumn(nav)
 	Theme.ForgeFooter(frame.footer)
-	frame.brand = Theme.CreateNavBrand(nav, Theme.LOGO, ns.APP.brand or ns.APP.id)
+	frame.brand = Theme.CreateNavBrand(nav, Theme.LOGO, ns.APP.brand or ns.APP.id, Theme.Forged())
 	frame.brand:SetPoint("TOPLEFT", nav, "TOPLEFT", 0, -8)
 	frame.brand:SetWidth(NAV_WIDTH)
 	frame.brandLogo, frame.brandName = frame.brand.logo, frame.brand.name

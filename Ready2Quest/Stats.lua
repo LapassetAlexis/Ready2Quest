@@ -494,19 +494,13 @@ function ns:EnsureToast()
 end
 
 -- Thème forgé : le résumé garde un cadre de 10 de haut (position, saisie en
--- mode édition) et son fond déborde autour : l'habillage du socle
--- (Theme.DressWindow) habille le cadre, trop petit, et rien ne se voit.
--- On pose donc l'ombre et le cadre d'orfèvre autour du fond (bandeau : pas
--- de coins ni de médaillon), le filet d'un pixel se cache, et le filet sous
--- le titre devient un filet lumineux. Rien en Sobre.
+-- mode édition) et son fond déborde autour : le socle habille le fond
+-- (Theme.SkinToast pose frame.skinAround quand le fond déborde). Ici, seul
+-- le filet sous le titre devient un filet lumineux. Rien en Sobre.
 function ns:ForgeToast(frame)
 	if not (frame and frame.bg and ns.ForgeOn and ns.ForgeOn()) then return false end
-	local K = Theme.CHROME
-	frame.forgeShadow = Theme.Slice(frame, "shadow", { layer = "BACKGROUND", sub = -8, out = K.shadowOut, around = frame.bg })
-	frame.forgeFrame = Theme.Slice(frame, "frame", { layer = "BORDER", sub = 1, out = K.frameOut, fill = false, around = frame.bg })
-	ns.ForgeHideFlat(frame.border)
-	-- le socle n'habille pas ce cadre (il le ferait autour des 10 px)
-	frame.skinNoChrome = true
+	frame.skinAround = frame.skinAround or frame.bg
+	if Theme.DressWindow then pcall(Theme.DressWindow, frame) end
 	if frame.rule then
 		frame.ruleGlow = ns.ForgeLine(frame, Theme.GOLD)
 		frame.ruleGlow:SetPoint("LEFT", frame.rule, "LEFT", 0, 0)

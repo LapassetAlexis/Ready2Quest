@@ -227,7 +227,7 @@ do
 		and Same(sheen.gradientSpec[4], PlateTop(F.card)) and Same(sheen.gradientSpec[2], PlateBottom(F.card))
 		and sheen.highlight:GetHeight() == 1 and not Shown(row.bg) and row.plate == nil)
 	Check("[FORGE-R2Q] le survol de la ligne passe au-dessus de sa carte", row.hover.drawLayer == "BORDER")
-	Check("[FORGE-R2Q] sans style « danger » au socle, « Jeter » garde son style d'avant", row.delete.style == "primary")
+	Check("[FORGE-R2Q] « Jeter » porte le rouge du socle (style danger)", row.delete.style == "danger")
 	NS.spellRanksFrame = nil
 	local list = { { name = "Lumière sacrée", rank = 3, bestRank = 5, bar = 1, case = 4, bestID = 1 } }
 	NS.SpellRankScan = function() return list end
@@ -286,13 +286,19 @@ do
 
 	NS:SimulateGearToast()
 	local toast = NS.toastFrame
-	local around = select(2, toast.forgeFrame.parts.tl:GetPoint(1))
-	Check("[FORGE-R2Q] résumé de stuff : ombre et cadre d'orfèvre autour de son fond (le cadre de 10 px ne les portait pas)",
-		IsSlice(toast.forgeShadow, "shadow") and IsSlice(toast.forgeFrame, "frame") and around == toast.bg
-		and toast.forgeFrame.parts.c == nil and toast.skinNoChrome == true and not Shown(toast.border.top))
+	-- (le banc de test donne à ce bandeau une échelle minuscule : on lui rend
+	-- la taille qu'il a en jeu, puis l'habillage se pose comme à l'affichage)
+	toast:SetSize(240, 10)
+	toast.skinOutset = { 18, 10, 15, 62 }
 	Theme.DressWindow(toast)
-	Check("[FORGE-R2Q] résumé : le socle ne l'habille pas en double, son filet reste caché",
-		toast.skinChrome == nil and not Shown(toast.border.top) and toast.ruleGlow ~= nil and not Shown(toast.rule))
+	local chrome = toast.skinChrome
+	local around = chrome and select(2, chrome.frame.parts.tl:GetPoint(1))
+	Check("[FORGE-R2Q] résumé de stuff : le socle pose ombre et cadre d'orfèvre autour de son fond (le cadre de 10 px ne les portait pas)",
+		chrome ~= nil and IsSlice(chrome.shadow, "shadow") and IsSlice(chrome.frame, "frame") and around == toast.bg
+		and chrome.frame.parts.c == nil and chrome.corners == nil and select(4, toast.border.top:GetVertexColor()) == 0)
+	Theme.DressWindow(toast)
+	Check("[FORGE-R2Q] résumé : rhabillé sans rien recréer, filet du titre en lumière",
+		toast.skinChrome == chrome and select(4, toast.border.top:GetVertexColor()) == 0 and toast.ruleGlow ~= nil and not Shown(toast.rule))
 	toast:Hide()
 
 	NS.forceStats = true
