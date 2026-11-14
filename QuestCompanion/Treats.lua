@@ -363,6 +363,9 @@ end
 -- Bandeau du thème (liseré ambre) au-dessus de la créature : le titre en
 -- capitales, une case par friandise (icône, nombre, filet ambre au survol)
 local BTN, GAP, PAD = 34, 8, 10
+-- thème forgé : le creux de chaque case (débord autour de l'icône, coin de
+-- la découpe, filet au repos ; le survol garde l'ambre)
+ns.TREAT_MENU_FORGE = { out = 3, margin = 6, rim = (ns.QC_FORGE or {}).rim or Theme.EDGE }
 
 function ns:EnsureTreatMenu()
 	if self.treatMenu then return self.treatMenu end
@@ -386,12 +389,26 @@ function ns:EnsureTreatMenu()
 	if menu.title.SetWordWrap then menu.title:SetWordWrap(false) end
 	menu.title:SetJustifyH("LEFT")
 	menu.title:SetText(Theme.Upper(L.TREAT_MENU_TITLE))
+	-- socle 3.2, thème forgé : titre en or clair, chaque case dans un creux
+	-- (Theme.ART.inset, 5 cases) dont le filet s'allume au survol
+	local F = ns.TREAT_MENU_FORGE
+	menu.forged = ns.QCForged and ns.QCForged() or nil
+	if menu.forged then
+		local t = ns.QC_FORGE.title
+		menu.title:SetTextColor(t[1], t[2], t[3])
+	end
 	menu.buttons = {}
 	for index, kind in ipairs(KINDS) do
 		local button = CreateFrame("Button", nil, menu)
 		button:SetSize(BTN, BTN)
 		button:SetPoint("BOTTOMLEFT", menu, "BOTTOMLEFT", left + (index - 1) * (BTN + GAP), PAD)
-		button.border = Theme.Border(button, Theme.EDGE, 1)
+		if menu.forged then
+			button.socket = Theme.Slice(button, "inset", { layer = "BACKGROUND", out = F.out, margin = F.margin, color = F.rim })
+			-- (le survol teinte le creux à la place du liseré d'un pixel)
+			button.border = button.socket
+		else
+			button.border = Theme.Border(button, Theme.EDGE, 1)
+		end
 		button.icon = button:CreateTexture(nil, "ARTWORK")
 		button.icon:SetPoint("TOPLEFT", button, "TOPLEFT", 1, -1)
 		button.icon:SetPoint("BOTTOMRIGHT", button, "BOTTOMRIGHT", -1, 1)

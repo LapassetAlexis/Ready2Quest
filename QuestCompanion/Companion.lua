@@ -2534,8 +2534,18 @@ function ns:EnsureCompanionHover()
 		bar.value:SetJustifyH("RIGHT")
 		hover.bars[key] = bar
 	end
-	hover.rule = Theme.Solid(hover, "ARTWORK", Theme.EDGE_SOFT, 1)
-	hover.rule:SetSize(width, 1)
+	-- socle 3.2, thème forgé : nom en or clair, filet lumineux (Theme.ART.line)
+	-- au lieu du trait d'un pixel
+	hover.forged = ns.QCForged and ns.QCForged() or nil
+	if hover.forged then
+		local t = ns.QC_FORGE.title
+		hover.title:SetTextColor(t[1], t[2], t[3])
+		hover.rule = ns.QCForgeLine(hover, "ARTWORK")
+		hover.rule:SetWidth(width)
+	else
+		hover.rule = Theme.Solid(hover, "ARTWORK", Theme.EDGE_SOFT, 1)
+		hover.rule:SetSize(width, 1)
+	end
 	hover.hint = Theme.Text(hover, Theme.F_SMALL, Theme.MUTED)
 	hover.hint:SetWidth(width)
 	hover.hint:SetJustifyH("LEFT")

@@ -59,6 +59,24 @@ ns.CAPTURE_NET_GAP = 8            -- px entre le cadre du compagnon et le filet
 ns.CAPTURE_NET_PULSE = 4          -- s de battement doré à l'arrivée d'un candidat
 -- 2.15.0 : pastille de qualité (étoiles) au bas du filet : taille, centre (y depuis le bas)
 ns.CAPTURE_NET_BADGE = { w = 40, h = 13, y = -2, star = 10 }
+-- socle 3.2, thème forgé : le filet devient une plaque d'or en relief, l'icône
+-- dans un creux, un halo doré qui respire (le battement d'avant) et un
+-- compteur en pastille d'encre à chiffres d'or (maquette « thème forgé »)
+do
+	local K = ns.QC_FORGE or {}
+	ns.CAPTURE_NET_FORGE = {
+		plate = 10,            -- coin de la plaque d'or (px à l'écran)
+		plateTint = K.gold,
+		icon = 7,              -- retrait de l'icône dans la plaque
+		socket = 2,            -- débord du creux sous l'icône
+		socketMargin = 4,
+		haloOut = 12, haloMargin = 20,   -- halo doré : débord, coin de la découpe
+		haloRest = 0.45, haloHover = 0.85,
+		shadowOut = 6, shadowMargin = 12, shadowAlpha = 0.8,
+		countBack = Theme.INK, countEdge = Theme.GOLD_SOFT, countInk = Theme.GOLD_LIGHT,
+		countShiny = Theme.GOLD,   -- filet de la pastille quand une brillante attend
+	}
+end
 ns.CAPTURE_TOAST_SECONDS = 3      -- s d'affichage du bandeau « Capture possible » (2.9.0 : 5 -> 3)
 local TOAST_W, TOAST_H, TOAST_ICON = 384, 102, 34
 ns.CAPTURE_MUTE_CHOICES = { 5, 15, 30, 60 }   -- minutes de sourdine proposées par le bandeau
@@ -982,40 +1000,88 @@ function ns:CapturePlaceNet()
 	return onCompanion and "companion" or "alone"
 end
 
+-- Le filet du thème forgé (ns.CAPTURE_NET_FORGE). Mêmes champs que le Sobre
+-- (shadow, glow, plate, countBack, countEdge, count), sauf le liseré (ring) :
+-- la plaque d'or en tient lieu. Le halo (glow) garde une lueur au repos
+-- (button.glowRest), plus vive au survol ; le battement et la brillante
+-- l'animent comme avant (même OnUpdate).
+function ns:CaptureForgeNet(button)
+	local F, K = ns.CAPTURE_NET_FORGE, ns.QC_FORGE
+	button.forged = true
+	button.shadow = Theme.Slice(button, "shadow", { layer = "BACKGROUND", sub = -8, out = F.shadowOut,
+		margin = F.shadowMargin, fill = false })
+	if button.shadow then button.shadow:SetAlpha(F.shadowAlpha) end
+	-- le halo : l'ombre portée du socle, teinte en or et en lumière ajoutée
+	-- (une lueur qui épouse la plaque, comme le drop-shadow de la maquette)
+	local glow = Theme.Slice(button, "shadow", { layer = "BACKGROUND", sub = -7, out = F.haloOut,
+		margin = F.haloMargin, fill = false, color = Theme.GOLD })
+	for _, tex in pairs(glow.parts) do
+		if tex.SetBlendMode then pcall(tex.SetBlendMode, tex, "ADD") end
+	end
+	-- (le battement et CaptureStyleNet le traitent comme une texture)
+	function glow:SetVertexColor(r, g, b, a) self:SetColor(r, g, b, a) end
+	button.glow = glow
+	button.glowRest = F.haloRest
+	glow:SetAlpha(F.haloRest)
+	button.plate = Theme.Slice(button, "plate", { layer = "BACKGROUND", sub = 4, margin = F.plate, color = F.plateTint })
+	-- l'icône dans un creux, au milieu de la plaque
+	button.icon:ClearAllPoints()
+	button.icon:SetPoint("CENTER", button, "CENTER", 0, 0)
+	button.icon:SetSize(NET_SIZE - 2 * F.icon, NET_SIZE - 2 * F.icon)
+	button.socket = Theme.Slice(button, "inset", { layer = "ARTWORK", around = button.icon, out = F.socket,
+		margin = F.socketMargin, color = K.rim })
+	if button.border and button.border.SetColor then button.border:SetColor(Theme.SHADOW[1], Theme.SHADOW[2], Theme.SHADOW[3], 1) end
+	-- le compteur : pastille d'encre, chiffres d'or (la maquette)
+	button.countBack = Theme.Solid(button, "ARTWORK", F.countBack, 1)
+	button.countBack:SetSize(18, 16)
+	button.countBack:SetPoint("CENTER", button, "TOPRIGHT", -2, -2)
+	if button.countBack.SetDrawLayer then button.countBack:SetDrawLayer("OVERLAY", 6) end
+	button.countEdge = Theme.Border(button, F.countEdge, 1, "OVERLAY", button.countBack)
+	button.count = Theme.Text(button, Theme.F_LABEL, F.countInk)
+	if button.count.SetDrawLayer then button.count:SetDrawLayer("OVERLAY", 7) end
+	button.count:SetPoint("CENTER", button.countBack, "CENTER", 0, 0)
+	button.count:SetJustifyH("CENTER")
+	return button
+end
+
 function ns:EnsureCaptureNet()
 	if self.captureNetButton then self:CapturePlaceNet(); return self.captureNetButton end
 	local button = Theme.CreateIconButton(UIParent, NET_SIZE, NET_ICON)
 	self.captureNetButton = button
 	if button.icon then button.ownGlyph = PaintNetIcon(button.icon) end
 	if button.RegisterForClicks then button:RegisterForClicks("LeftButtonUp", "RightButtonUp") end
-	-- 2.3.1 : lisible sur n'importe quel sol (sable, neige, pierre claire). Une
-	-- ombre portée sombre autour, une plaque d'encre opaque derrière le glyphe,
-	-- un double liseré (sombre dehors, doré dedans).
-	button.shadow = Theme.Solid(button, "BACKGROUND", Theme.SHADOW, 0.55)
-	button.shadow:SetPoint("TOPLEFT", button, "TOPLEFT", -4, 4)
-	button.shadow:SetPoint("BOTTOMRIGHT", button, "BOTTOMRIGHT", 4, -4)
-	if button.shadow.SetDrawLayer then button.shadow:SetDrawLayer("BACKGROUND", -8) end
-	-- le halo doré d'une brillante (et du battement), entre l'ombre et la plaque
-	button.glow = Theme.Solid(button, "BACKGROUND", Theme.GOLD_LIGHT, 0)
-	button.glow:SetPoint("TOPLEFT", button, "TOPLEFT", -3, 3)
-	button.glow:SetPoint("BOTTOMRIGHT", button, "BOTTOMRIGHT", 3, -3)
-	if button.glow.SetDrawLayer then button.glow:SetDrawLayer("BACKGROUND", 0) end
-	button.plate = Theme.Solid(button, "BACKGROUND", Theme.INK, 0.94)
-	button.plate:SetPoint("TOPLEFT", button, "TOPLEFT", 1, -1)
-	button.plate:SetPoint("BOTTOMRIGHT", button, "BOTTOMRIGHT", -1, 1)
-	if button.plate.SetDrawLayer then button.plate:SetDrawLayer("BACKGROUND", 4) end
-	button.ring = Theme.Border(button, Theme.GOLD, 1, "BORDER", button.plate)
-	if button.border and button.border.SetColor then button.border:SetColor(Theme.SHADOW[1], Theme.SHADOW[2], Theme.SHADOW[3], 1) end
-	-- le compteur : pastille dorée sur le coin, texte sombre (se voit partout)
-	button.countBack = Theme.Solid(button, "ARTWORK", Theme.GOLD, 1)
-	button.countBack:SetSize(18, 16)
-	button.countBack:SetPoint("CENTER", button, "TOPRIGHT", -2, -2)
-	if button.countBack.SetDrawLayer then button.countBack:SetDrawLayer("OVERLAY", 6) end
-	button.countEdge = Theme.Border(button, Theme.SHADOW, 1, "OVERLAY", button.countBack)
-	button.count = Theme.Text(button, Theme.F_LABEL, Theme.INK)
-	if button.count.SetDrawLayer then button.count:SetDrawLayer("OVERLAY", 7) end
-	button.count:SetPoint("CENTER", button.countBack, "CENTER", 0, 0)
-	button.count:SetJustifyH("CENTER")
+	if ns.QCForged and ns.QCForged() then
+		self:CaptureForgeNet(button)
+	else
+		-- 2.3.1 : lisible sur n'importe quel sol (sable, neige, pierre claire). Une
+		-- ombre portée sombre autour, une plaque d'encre opaque derrière le glyphe,
+		-- un double liseré (sombre dehors, doré dedans).
+		button.shadow = Theme.Solid(button, "BACKGROUND", Theme.SHADOW, 0.55)
+		button.shadow:SetPoint("TOPLEFT", button, "TOPLEFT", -4, 4)
+		button.shadow:SetPoint("BOTTOMRIGHT", button, "BOTTOMRIGHT", 4, -4)
+		if button.shadow.SetDrawLayer then button.shadow:SetDrawLayer("BACKGROUND", -8) end
+		-- le halo doré d'une brillante (et du battement), entre l'ombre et la plaque
+		button.glow = Theme.Solid(button, "BACKGROUND", Theme.GOLD_LIGHT, 0)
+		button.glow:SetPoint("TOPLEFT", button, "TOPLEFT", -3, 3)
+		button.glow:SetPoint("BOTTOMRIGHT", button, "BOTTOMRIGHT", 3, -3)
+		if button.glow.SetDrawLayer then button.glow:SetDrawLayer("BACKGROUND", 0) end
+		button.plate = Theme.Solid(button, "BACKGROUND", Theme.INK, 0.94)
+		button.plate:SetPoint("TOPLEFT", button, "TOPLEFT", 1, -1)
+		button.plate:SetPoint("BOTTOMRIGHT", button, "BOTTOMRIGHT", -1, 1)
+		if button.plate.SetDrawLayer then button.plate:SetDrawLayer("BACKGROUND", 4) end
+		button.ring = Theme.Border(button, Theme.GOLD, 1, "BORDER", button.plate)
+		if button.border and button.border.SetColor then button.border:SetColor(Theme.SHADOW[1], Theme.SHADOW[2], Theme.SHADOW[3], 1) end
+		-- le compteur : pastille dorée sur le coin, texte sombre (se voit partout)
+		button.countBack = Theme.Solid(button, "ARTWORK", Theme.GOLD, 1)
+		button.countBack:SetSize(18, 16)
+		button.countBack:SetPoint("CENTER", button, "TOPRIGHT", -2, -2)
+		if button.countBack.SetDrawLayer then button.countBack:SetDrawLayer("OVERLAY", 6) end
+		button.countEdge = Theme.Border(button, Theme.SHADOW, 1, "OVERLAY", button.countBack)
+		button.count = Theme.Text(button, Theme.F_LABEL, Theme.INK)
+		if button.count.SetDrawLayer then button.count:SetDrawLayer("OVERLAY", 7) end
+		button.count:SetPoint("CENTER", button.countBack, "CENTER", 0, 0)
+		button.count:SetJustifyH("CENTER")
+	end
 	-- 2.15.0 : la qualité du meilleur candidat (étoiles du client), sur une
 	-- pastille d'encre au bas du filet ; une brillante garde son halo doré
 	button.badgeBack = Theme.Solid(button, "ARTWORK", Theme.INK, 0.92)
@@ -1042,13 +1108,15 @@ function ns:EnsureCaptureNet()
 		local now = Clock()
 		-- 3.0.0 : la visite guidée montre le filet : il bat tant que l'étape attend
 		if ns.tourNetPulse then b.pulseUntil = now + ns.CAPTURE_NET_PULSE end
+		-- (thème forgé : jamais sous la lueur de repos, b.glowRest)
+		local rest = b.glowRest or 0
 		if b.shiny then
-			b.glow:SetAlpha(0.20 + 0.35 * math.abs(math.sin(now * 3)))
+			b.glow:SetAlpha(math.max(rest, 0.20 + 0.35 * math.abs(math.sin(now * 3))))
 		elseif b.pulseUntil and now < b.pulseUntil then
-			b.glow:SetAlpha(0.15 + 0.35 * math.abs(math.sin(now * 2.5)))
+			b.glow:SetAlpha(math.max(rest, 0.15 + 0.35 * math.abs(math.sin(now * 2.5))))
 		elseif b.pulseUntil then
 			b.pulseUntil = nil
-			b.glow:SetAlpha(0)
+			b.glow:SetAlpha(rest)
 		end
 	end)
 	button:Hide()
@@ -1093,7 +1161,16 @@ function ns:CaptureStyleNet()
 	-- liseré doré dedans, noir dehors : contraste sur sol clair comme sombre
 	if button.ring and button.ring.SetColor then button.ring:SetColor(c[1], c[2], c[3], 1) end
 	if button.border and button.border.SetColor then button.border:SetColor(Theme.SHADOW[1], Theme.SHADOW[2], Theme.SHADOW[3], 1) end
-	if button.countBack and button.countBack.SetVertexColor then
+	if button.forged then
+		-- thème forgé : pastille d'encre (son filet s'allume pour une brillante),
+		-- creux de l'icône et halo plus vifs au survol
+		local F, K = ns.CAPTURE_NET_FORGE, ns.QC_FORGE
+		local edge = button.shiny and F.countShiny or F.countEdge
+		if button.countEdge and button.countEdge.SetColor then button.countEdge:SetColor(edge[1], edge[2], edge[3], 1) end
+		local rim = (button.hover or button.shiny) and K.rimOn or K.rim
+		if button.socket then button.socket:SetColor(rim[1], rim[2], rim[3], 1) end
+		button.glowRest = button.hover and F.haloHover or F.haloRest
+	elseif button.countBack and button.countBack.SetVertexColor then
 		local cc = button.shiny and Theme.GOLD_LIGHT or Theme.GOLD
 		button.countBack:SetVertexColor(cc[1], cc[2], cc[3], 1)
 	end
@@ -1105,7 +1182,7 @@ function ns:CaptureStyleNet()
 	local tint = button.shiny and (ours and Theme.GOLD_LIGHT or ICON_GAME_SHINY)
 		or (ours and (button.hover and Theme.GOLD_LIGHT or Theme.GOLD) or ICON_GAME_REST)
 	button.icon:SetVertexColor(tint[1], tint[2], tint[3], 1)
-	if not button.shiny and not (button.pulseUntil and Clock() < button.pulseUntil) then button.glow:SetAlpha(0) end
+	if not button.shiny and not (button.pulseUntil and Clock() < button.pulseUntil) then button.glow:SetAlpha(button.glowRest or 0) end
 end
 
 -- Bouton et liste à jour (après chaque changement de la file)

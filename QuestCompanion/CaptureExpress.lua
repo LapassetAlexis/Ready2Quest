@@ -164,11 +164,40 @@ local KIND_COLOR = {
 }
 ns.CAPTURE_EXPRESS_COLORS = KIND_COLOR
 
+-- socle 3.2, thème forgé (maquette « thème forgé », .chip) : chaque pastille
+-- est une petite carte en relief (Theme.ART.plate, 9 tranches : 4 pastilles
+-- au plus), son liseré de couleur brille (Theme.ART.dot étiré, en lumière
+-- ajoutée), les étoiles en or clair, un échec en rose pâle (pas le rouge du
+-- liseré : lisible sur la carte). Textures faites une fois, à la construction.
+do
+	local K = ns.QC_FORGE or {}
+	ns.CAPTURE_EXPRESS_FORGE = {
+		card = K.card, margin = 5,       -- teinte de la carte, coin de la découpe (px)
+		glowW = 20, glowOut = 6,         -- lueur du liseré : largeur, débord haut et bas
+		glowAlpha = 0.9,
+		right = Theme.GOLD_LIGHT,        -- étoiles, « 62 % », « nouvelle »
+		failRight = K.danger,            -- « échappée »
+		textLeft = 10,                   -- retrait du nom (après le liseré)
+	}
+end
+local XF = ns.CAPTURE_EXPRESS_FORGE
+
 local function BuildRow(feed, index)
 	local row = CreateFrame("Frame", nil, feed)
 	row:SetSize(X.w, X.h)
-	row.plate = Theme.Solid(row, "BACKGROUND", Theme.INK, X.plate)
-	row.plate:SetAllPoints()
+	if feed.forged then
+		row.forged = true
+		row.plate = Theme.Slice(row, "plate", { layer = "BACKGROUND", margin = XF.margin, color = XF.card, alpha = X.plate })
+		row.glow = row:CreateTexture(nil, "BORDER", nil, 1)
+		row.glow:SetTexture(Theme.ART.dot.file)
+		row.glow:SetPoint("TOPLEFT", row, "TOPLEFT", 1.5 - XF.glowW / 2, XF.glowOut)
+		row.glow:SetPoint("BOTTOMRIGHT", row, "BOTTOMLEFT", 1.5 + XF.glowW / 2, -XF.glowOut)
+		if row.glow.SetBlendMode then pcall(row.glow.SetBlendMode, row.glow, "ADD") end
+		row.glow:SetAlpha(XF.glowAlpha)
+	else
+		row.plate = Theme.Solid(row, "BACKGROUND", Theme.INK, X.plate)
+		row.plate:SetAllPoints()
+	end
 	-- l'éclat : toute la ligne à la couleur du verdict, qui retombe aussitôt
 	row.flash = Theme.Solid(row, "BORDER", Theme.WHITE, 0)
 	row.flash:SetAllPoints()
@@ -181,7 +210,7 @@ local function BuildRow(feed, index)
 	row.right:SetPoint("RIGHT", row, "RIGHT", -6, 0)
 	row.right:SetJustifyH("RIGHT")
 	row.text = Theme.Text(row, Theme.F_SMALL, Theme.PARCHMENT)
-	row.text:SetPoint("LEFT", row, "LEFT", 9, 0)
+	row.text:SetPoint("LEFT", row, "LEFT", row.forged and XF.textLeft or 9, 0)
 	row.text:SetPoint("RIGHT", row.right, "LEFT", -6, 0)
 	row.text:SetJustifyH("LEFT")
 	if row.text.SetWordWrap then row.text:SetWordWrap(false) end
@@ -198,6 +227,7 @@ function ns:EnsureCaptureExpressFeed()
 	if not (ok and frame) then return nil end
 	feed = frame
 	feed:SetSize(X.w, X.rows * (X.h + X.gap))
+	feed.forged = ns.QCForged and ns.QCForged() or nil
 	if feed.SetFrameStrata then pcall(feed.SetFrameStrata, feed, "MEDIUM") end
 	-- jamais la souris : le fil se lit, il ne se clique pas
 	if feed.EnableMouse then feed:EnableMouse(false) end
@@ -274,9 +304,11 @@ function ns:CaptureExpressUpdate(now)
 				local c = KIND_COLOR[item.kind] or Theme.GOLD
 				row.accent:SetVertexColor(c[1], c[2], c[3], 1)
 				row.flash:SetVertexColor(c[1], c[2], c[3], 1)
+				if row.glow then row.glow:SetVertexColor(c[1], c[2], c[3], 1) end
 				local ink = item.kind == "fail" and Theme.MUTED_LIGHT or (item.kind == "shiny" and Theme.SHINY or Theme.PARCHMENT)
 				row.text:SetTextColor(ink[1], ink[2], ink[3])
 				local rc = item.kind == "fail" and Theme.RED or Theme.PARCHMENT
+				if row.forged then rc = item.kind == "fail" and XF.failRight or XF.right end
 				row.right:SetTextColor(rc[1], rc[2], rc[3])
 				row.text:SetText(item.text)
 				row.right:SetText(item.right)

@@ -1860,6 +1860,24 @@ end
 -- fenêtre (CompanionEffects.lua) est construite une fois par style, comme le
 -- carnet : la Sobre reste telle quelle, l'Azeroth naît sous la relève.
 -- ---------------------------------------------------------------------------
+-- Le titre et le sous-titre d'un en-tête du socle ramenés à `left` (même
+-- hauteur) : la marge du médaillon forgé ne sert plus sans lui
+function ns.CarnetHeaderLeft(header, left)
+	left = tonumber(left)
+	if not (header and left) then return false end
+	for _, fs in ipairs({ header.title, header.subtitle }) do
+		if fs and fs.GetPoint then
+			local point, rel, relPoint, _, y = fs:GetPoint(1)
+			if point then
+				fs:ClearAllPoints()
+				fs:SetPoint(point, rel or header, relPoint or point, left, tonumber(y) or 0)
+			end
+		end
+	end
+	header.textLeft = left
+	return true
+end
+
 local function SkinDialog(self, frame, reg)
 	if frame.content then frame.content.azSurface = "light" end
 	SkinNew(frame, reg)
@@ -1883,6 +1901,15 @@ local function SkinDialog(self, frame, reg)
 	end
 	WoodBorder(frame, 6)
 	local header = frame.header
+	-- socle 3.2 : le parchemin a son bois ; pas d'habillage forgé par-dessus
+	-- (cadre d'or, coins, voile, médaillon), ni de plaque de titre sombre
+	-- sous l'encre ; le titre reprend la marge laissée au médaillon
+	frame.azeroth = true
+	if Theme.DressWindow then pcall(Theme.DressWindow, frame) end
+	if header then
+		if header.plate then header.plate:Hide() end
+		if Theme.EMBLEM and header.textLeft == Theme.EMBLEM.text then ns.CarnetHeaderLeft(header, Theme.DIALOG_PAD) end
+	end
 	if header then
 		RolePaint(header.title, "dialog.title")
 		RolePaint(header.subtitle, "dialog.sub")

@@ -21,6 +21,53 @@ ns.RegisterDefaults({
 })
 
 -- ---------------------------------------------------------------------------
+-- Thème forgé (socle 3.2, Theme.Forged) : les teintes de nos blocs faits
+-- main (filet, pastilles de capture, garde-manger, carnet à l'écran, fiche
+-- au survol). Les briques du socle (boutons, tuiles, champs) ont les leurs.
+-- Plaque (Theme.ART.plate) : texture grise de 0,86 en haut à 0,50 en bas
+-- (1,0 au filet clair du bord) : la teinte multipliée par ces valeurs donne
+-- le fond réel le plus clair et le plus sombre (contrastes mesurés,
+-- tests/modules/ui_forge_qc.lua). Creux (Theme.ART.inset) : fond presque
+-- noir, la teinte colore le filet du bas.
+-- ---------------------------------------------------------------------------
+do
+	local Theme = ns.Theme or {}
+	ns.QC_FORGE = {
+		plateTop = 0.86, plateBottom = 0.50,     -- luminosité de la plaque, haut et bas
+		card    = { 0.118, 0.145, 0.176 },       -- carte (pastille du filet)
+		gold    = { 1.0, 0.84, 0.56 },           -- plaque principale (le filet)
+		danger  = { 0.96, 0.73, 0.69 },          -- encre d'un échec (« échappée »)
+		rim     = Theme.EDGE,                    -- filet d'un creux au repos (or patiné)
+		rimOn   = Theme.GOLD_LIGHT,              -- au survol
+		title   = Theme.TITLE,                   -- titre d'un bloc (or clair)
+		glow    = Theme.GOLD,                    -- filet et point lumineux
+		line    = { h = 4, alpha = 0.85 },       -- filet lumineux sous un titre
+	}
+end
+
+-- Thème forgé posé ? (décidé à la création d'un bloc : changer de thème
+-- demande un rechargement pour les blocs déjà faits, comme le socle)
+function ns.QCForged()
+	local Theme = ns.Theme
+	return Theme ~= nil and type(Theme.Forged) == "function" and Theme.Forged() == true
+		and type(Theme.Slice) == "function" and type(Theme.ART) == "table"
+end
+
+-- Le filet lumineux du thème forgé (Theme.ART.line, blanc qui s'efface vers
+-- la droite), teint en or ; mirror : il s'efface vers la gauche
+function ns.QCForgeLine(parent, layer, mirror, color)
+	local Theme, K = ns.Theme, ns.QC_FORGE
+	if not (parent and Theme and Theme.ART and Theme.ART.line) then return nil end
+	local tex = parent:CreateTexture(nil, layer or "ARTWORK")
+	tex:SetTexture(Theme.ART.line.file)
+	if mirror then tex:SetTexCoord(1, 0, 0, 1) end
+	local c = color or K.glow
+	tex:SetVertexColor(c[1], c[2], c[3], K.line.alpha)
+	tex:SetHeight(K.line.h)
+	return tex
+end
+
+-- ---------------------------------------------------------------------------
 -- Réglages : la page Général, le bouton principal, l'aide
 -- ---------------------------------------------------------------------------
 ns.AddOptionPage({

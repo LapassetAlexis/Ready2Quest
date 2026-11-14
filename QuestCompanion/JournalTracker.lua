@@ -33,6 +33,9 @@ local TRACKER_MAX = 4
 -- 2.9.0 : plus large (les libellés étaient coupés), lignes un peu plus hautes
 local TRACKER_WIDTH, TITLE_H, LINE_H = 280, 18, 18
 local FEATURED_H, FEATURED_GAP = 40, 4
+-- thème forgé (socle 3.2) : le filet lumineux du titre (hauteur depuis le bas
+-- du titre, part de la largeur du bloc)
+ns.JOURNAL_TRACKER_FORGE = { ruleY = -2, ruleW = 0.7 }
 local HINT_NAMES = 6        -- noms listés au survol, au-delà « … et N autres »
 -- Ordre d'essai : Era d'abord (QuestWatchFrame), puis le client moderne de
 -- Forever (le cadre global, puis le seul bloc des quêtes)
@@ -1020,6 +1023,17 @@ function ns:EnsureJournalTracker()
 	title.state = Theme.Text(title, Theme.F_SMALL, Theme.MUTED)
 	title.state:SetPoint("RIGHT", title, "RIGHT", -2, 0)
 	title.state:SetTextColor(Theme.MUTED[1], Theme.MUTED[2], Theme.MUTED[3])
+	-- socle 3.2, thème forgé : titre en or clair sur un filet lumineux qui
+	-- part de la droite (le bloc est aligné à droite) et s'efface vers la gauche
+	if ns.QCForged and ns.QCForged() then
+		local K = ns.JOURNAL_TRACKER_FORGE
+		title.forged = true
+		local t = ns.QC_FORGE.title
+		title.text:SetTextColor(t[1], t[2], t[3])
+		title.rule = ns.QCForgeLine(title, "BACKGROUND", true)
+		title.rule:SetPoint("BOTTOMRIGHT", title, "BOTTOMRIGHT", 0, K.ruleY)
+		title.rule:SetWidth(math.floor(TRACKER_WIDTH * K.ruleW))
+	end
 	frame.title = title
 
 	frame.lines = {}
