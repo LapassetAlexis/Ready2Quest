@@ -217,7 +217,7 @@ end
 -- Repérer, marquer, abattre
 -- ---------------------------------------------------------------------------
 function ns:ShinyRoll(unit, entry)
-	local class = Call(G("UnitClassification"), unit)
+	local class = ns.Plain(Call(G("UnitClassification"), unit))
 	local killed = entry and entry.npcID and SpeciesKills(self, entry.npcID) or 0
 	local chance = self:ShinyChance(class, killed)
 	return chance > 0 and math.random() < chance
@@ -233,7 +233,7 @@ end
 
 function ns:ShinySpot(unit, guid, entry, species)
 	local state = self:ShinyState()
-	local name = (species and species.name) or Call(G("UnitName"), unit) or "?"
+	local name = (species and species.name) or ns.Plain(Call(G("UnitName"), unit)) or "?"
 	state.live[guid] = { zoneID = entry.zoneID, npcID = entry.npcID, name = name, at = Clock() }
 	-- reconnue : la Ménagerie la garde, même sans capture
 	local data = self:ShinyData()

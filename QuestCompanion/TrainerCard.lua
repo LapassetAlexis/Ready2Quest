@@ -330,8 +330,10 @@ end
 function ns:TrainerUnitName(unit)
 	if type(unit) ~= "string" then return nil end
 	if not Plain(Call(G("UnitIsPlayer"), unit)) then return nil end
-	local name, realm = Call(G("UnitFullName"), unit)
-	if not Str(name) then name, realm = Call(G("UnitName"), unit) end
+	-- noms secrets (Forever) : ignorés
+	local function PlainPair(a, b) return Plain(a), Plain(b) end
+	local name, realm = PlainPair(Call(G("UnitFullName"), unit))
+	if not Str(name) then name, realm = PlainPair(Call(G("UnitName"), unit)) end
 	return self:TrainerFullName(name, realm)
 end
 

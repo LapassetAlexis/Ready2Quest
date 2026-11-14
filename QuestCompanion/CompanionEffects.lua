@@ -608,7 +608,7 @@ do
 	if roll then
 		function ns:ShinyRoll(unit, entry, ...)
 			-- type secret ou illisible : pas de bonus de type, le tirage se fait quand même
-			local text = Call(G("UnitCreatureType"), unit)
+			local text = ns.Plain(Call(G("UnitCreatureType"), unit))
 			self.effectShinyType = self.CreatureTypeKey and Call(self.CreatureTypeKey, self, text) or nil
 			local ok, result = pcall(roll, self, unit, entry, ...)
 			self.effectShinyType = nil
@@ -1007,7 +1007,7 @@ function ns:EffectSpotUnit(unit, spotType)
 	elseif ns.Plain(Call(G("UnitCanAttack"), "player", unit)) ~= true then
 		return false
 	end
-	if not self.CreatureTypeKey or Call(self.CreatureTypeKey, self, Call(G("UnitCreatureType"), unit)) ~= spotType then return false end
+	if not self.CreatureTypeKey or Call(self.CreatureTypeKey, self, ns.Plain(Call(G("UnitCreatureType"), unit))) ~= spotType then return false end
 	local guid = ns.Plain(Call(G("UnitGUID"), unit))
 	local npc = type(guid) == "string" and ns.BestiaryNpcID and ns.BestiaryNpcID(guid)
 	if not npc then return false end

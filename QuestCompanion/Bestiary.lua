@@ -438,7 +438,7 @@ function ns:BestiarySeeUnit(unit)
 	if not npcID then return nil end
 	if Call("UnitIsDead", unit) then return nil end
 	if not Attackable(unit) then return nil end
-	local creatureType = Call("UnitCreatureType", unit)
+	local creatureType = ns.Plain(Call("UnitCreatureType", unit))
 	if type(creatureType) ~= "string" or creatureType == "" then creatureType = nil end
 	if creatureType and CRITTERS[creatureType] then return nil end
 	local zoneID = self:JournalZone()       -- nil en instance
@@ -465,7 +465,7 @@ function ns:BestiarySeeUnit(unit)
 	local new = species == nil
 	species = species or { killed = 0 }
 	species.seen = true
-	local name = Call("UnitName", unit)
+	local name = ns.Plain(Call("UnitName", unit))
 	if type(name) == "string" and name ~= "" then species.name = name end
 	-- 2.14.0 (bêta 4) : sans nom lu, celui de la table livrée plutôt que le numéro
 	if not ns.CreatureNameGood(species.name, npcID) then
@@ -474,11 +474,11 @@ function ns:BestiarySeeUnit(unit)
 	species.type = creatureType or species.type
 	-- 2.11.0 : son displayID, une fois au compte (portrait 2D, Companion.lua)
 	if self.ModelLearnDisplay then pcall(self.ModelLearnDisplay, self, unit, npcID) end
-	local family = Call("UnitCreatureFamily", unit)
+	local family = ns.Plain(Call("UnitCreatureFamily", unit))
 	if type(family) == "string" and family ~= "" then species.family = family end
-	local class = Call("UnitClassification", unit)
+	local class = ns.Plain(Call("UnitClassification", unit))
 	if type(class) == "string" and class ~= "" then species.class = class end
-	local level = tonumber(Call("UnitLevel", unit))
+	local level = tonumber(ns.Plain(Call("UnitLevel", unit)))
 	if level and level > 0 then species.level = level end
 	book[zoneID][npcID] = species
 	if new then Changed() end

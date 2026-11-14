@@ -45,9 +45,9 @@ function ns:GroupMembers()
 			local _, class = Call(G("UnitClass"), unit)
 			members[#members + 1] = {
 				unit = unit,
-				name = Call(G("UnitName"), unit) or unit,
+				name = ns.Plain(Call(G("UnitName"), unit)) or unit,
 				class = class,
-				level = tonumber(Call(G("UnitLevel"), unit)) or 0,
+				level = tonumber(ns.Plain(Call(G("UnitLevel"), unit))) or 0,
 			}
 		end
 	end

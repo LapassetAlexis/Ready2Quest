@@ -412,7 +412,7 @@ end
 -- pas un joueur, pas un familier de joueur.
 function ns:JournalSeeUnit(unit)
 	if not ModuleOn() or type(unit) ~= "string" then return end
-	if not RARE_CLASSES[Call("UnitClassification", unit) or ""] then return end
+	if not RARE_CLASSES[ns.Plain(Call("UnitClassification", unit)) or ""] then return end
 	if Call("UnitIsPlayer", unit) then return end
 	self:JournalSeeRare(ns.Plain(Call("UnitGUID", unit)), ns.Plain(Call("UnitName", unit)))
 end
