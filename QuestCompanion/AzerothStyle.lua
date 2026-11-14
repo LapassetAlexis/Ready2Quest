@@ -3466,7 +3466,7 @@ function ns:AzerothDebugBubble()
 		self.companionBubbleUntil = Clock() + 8
 		if self.NotifyGlowArm then self:NotifyGlowArm() end
 	end
-	lines[#lines + 1] = self:F("AZ_DEBUG_HEAD", bubble.azBubble and "azeroth" or "sobre",
+	lines[#lines + 1] = self:F("AZ_DEBUG_HEAD", (bubble.azBubble and "azeroth") or (bubble.forgeBubble and "forge") or "sobre",
 		bubble:IsShown() and L.AZ_DEBUG_SHOWN or L.AZ_DEBUG_HIDDEN, Num(Get(bubble, "GetAlpha")),
 		Num(Get(bubble, "GetEffectiveAlpha")), tostring(Get(bubble, "GetFrameStrata")), tostring(Get(bubble, "GetFrameLevel")),
 		Num(Get(bubble, "GetWidth")), Num(Get(bubble, "GetHeight")))
@@ -3481,13 +3481,20 @@ function ns:AzerothDebugBubble()
 			{ "az.name", skin.name }, { "az.text", skin.text } }) do list[#list + 1] = pair end
 		if skin.edge then list[#list + 1] = { "az.edge.top", skin.edge.top } end
 	end
+	-- 3.1.0 : la bulle forgée (nom de qui parle, filet, reflet)
+	local forge = bubble.forgeTalk
+	if forge then
+		for _, pair in ipairs({ { "forge.name", forge.name }, { "forge.rule", forge.rule or bubble.rule },
+			{ "forge.sheen", forge.sheen } }) do list[#list + 1] = pair end
+	end
 	for _, pair in ipairs(list) do lines[#lines + 1] = ns.AzerothRegionLine(pair[1], pair[2]) end
 	local model = frame.model
 	if model then
 		local base = frame.modelBase or {}
+		local ringSkin = ns.CompanionRingSkin(frame) or frame.azSkin
 		lines[#lines + 1] = self:F("AZ_DEBUG_MODEL", model:IsShown() and L.AZ_DEBUG_SHOWN or L.AZ_DEBUG_HIDDEN,
 			Num(Get(model, "GetWidth")), Num(Get(model, "GetHeight")), tostring(base.x), tostring(base.y),
-			tostring(Get(model, "GetFrameLevel")), tostring(frame.azSkin and Get(frame.azSkin, "GetFrameLevel") or "-"),
+			tostring(Get(model, "GetFrameLevel")), tostring(ringSkin and Get(ringSkin, "GetFrameLevel") or "-"),
 			tostring(model.framingZoom))
 	end
 	for _, line in ipairs(lines) do self:Print(line) end

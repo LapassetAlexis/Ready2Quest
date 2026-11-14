@@ -461,4 +461,33 @@ do
 	s.check("[FCOMP] ancien habillage (drapeau) : l'anneau du client, le médaillon forgé jamais construit")
 end
 
+-- 13. Le battement d'aggro suit l'anneau ; le titre du petit menu ---------------------------------------
+do
+	Say("-- médaillon forgé : aggro, petit menu")
+	local frame = Fresh("azeroth")
+	local s = Steps()
+	local saved2 = { C_NamePlate = rawget(_G, "C_NamePlate"), UnitCanAttack = rawget(_G, "UnitCanAttack"),
+		UnitIsUnit = rawget(_G, "UnitIsUnit"), UnitIsDead = rawget(_G, "UnitIsDead") }
+	_G.C_NamePlate = { GetNamePlates = function()
+		return { { namePlateUnitToken = "nameplate1" }, { namePlateUnitToken = "nameplate2" } }
+	end }
+	_G.UnitCanAttack = function() return true end
+	_G.UnitIsDead = function() return false end
+	_G.UnitIsUnit = function(a, b) return b == "player" and (a == "nameplate1target" or a == "nameplate2target") end
+	s.ok("deux monstres : battement", NS:CompanionAggroUpdate(Mock.now + 100) == true)
+	local ring = frame.dangerRing
+	s.ok("… en anneau de lumière rouge autour du médaillon", ring and Shown(ring) and ring.texture == Theme.ART.ring.file
+		and ring.blendMode == "ADD" and ring.lastPoint.y == NS.FORGE_RING.y and not (frame.danger and Shown(frame.danger)))
+	for _, k in ipairs({ "C_NamePlate", "UnitCanAttack", "UnitIsUnit", "UnitIsDead" }) do _G[k] = saved2[k] end
+	NS:CompanionAggroUpdate(Mock.now + 200)
+	s.ok("plus de monstres : éteint", not Shown(ring))
+	-- le petit menu (Maj + clic droit) : titre « Mode chasse » à l'encre de l'identité
+	local menu = NS:EnsureCompanionMenu()
+	s.ok("petit menu : titre de section à l'encre de l'identité", menu and Same(menu.huntTitle.textColor, Theme.IDENTITY_LIGHT))
+	local c = Theme.Contrast(Theme.IDENTITY_LIGHT, Theme.WINDOW)
+	s.ok("… ≥ 4,5 sur le fond du menu", c >= 4.5, string.format("%.2f", c))
+	s.ok("sans erreur", Errors() == "", Errors())
+	s.check(string.format("[FCOMP] aggro : battement en anneau rouge sur le médaillon ; petit menu : titre de l'identité (%.2f)", c))
+end
+
 Done()

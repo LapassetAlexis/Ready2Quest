@@ -2273,7 +2273,9 @@ function ns:EnsureCompanionMenu()
 	end, "normal")
 	frame.journal:SetPoint("TOPLEFT", frame, "TOPLEFT", left, y)
 	y = y - M.row - 10
-	frame.huntTitle = Theme.Text(frame, Theme.F_CAPS or Theme.F_SMALL, Theme.GOLD)
+	-- 3.1.0 : titre de section : encre de l'identité au thème forgé (décidé à la création)
+	local huntInk = (ns.QCForged and ns.QCForged() and Theme.IDENTITY_LIGHT) or Theme.GOLD
+	frame.huntTitle = Theme.Text(frame, Theme.F_CAPS or Theme.F_SMALL, huntInk)
 	frame.huntTitle:SetPoint("TOPLEFT", frame, "TOPLEFT", left, y)
 	frame.huntTitle:SetWidth(width)
 	if frame.huntTitle.SetWordWrap then frame.huntTitle:SetWordWrap(false) end
