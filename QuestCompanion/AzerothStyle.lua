@@ -688,8 +688,16 @@ function ns:ApplyUIStyle()
 								self.journalToastHideAt = hideAt
 							end
 						end
+						-- un exploit de guilde : le bandeau du nouveau thème reprend
+						-- l'exploit affiché (lignes ancrées, médaillon, points)
+						local shiny, gold = nil, key == "journalToast"
+						if key == "guildFeatToast" and self.GuildFeatsRestyle then
+							local ok, filled, info, feat = pcall(self.GuildFeatsRestyle, self, fresh)
+							if ok and filled then shiny, gold = info.shiny, feat
+							elseif not ok and self.RecordError then self:RecordError("style:guildFeatToast", filled) end
+						end
 						fresh:Show()
-						self:StyleShown(fresh, { shield = key == "journalToast" and "gold" or nil })
+						self:StyleShown(fresh, { shiny = shiny, shield = gold and "gold" or nil })
 					end
 				end
 			end

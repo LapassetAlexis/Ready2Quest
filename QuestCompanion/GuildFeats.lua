@@ -830,10 +830,9 @@ GuildFeatDecor = function(self, frame, info, feat)
 	end
 end
 
-function ns:GuildFeatsShowToast(item)
-	local frame = self:EnsureGuildFeatToast()
-	if not frame then return nil end
-	local info = item.info
+-- Remplit un bandeau avec un exploit : textes, accent, icône ou médaillon,
+-- points. Rend vrai si l'exploit est un haut fait.
+local function GuildFeatFill(self, frame, info)
 	frame.title:SetText(Theme.Upper and Theme.Upper(L.GFEAT_TITLE) or L.GFEAT_TITLE)
 	frame.text:SetText(info.line)
 	frame.info:SetText(self:GuildFeatSubLine(info))
@@ -845,6 +844,24 @@ function ns:GuildFeatsShowToast(item)
 	local feat = info.kind == "h"
 	GuildFeatDecor(self, frame, info, feat)
 	if frame.ownGlyph and not frame.azeroth and not feat then frame.icon:SetVertexColor(accent[1], accent[2], accent[3], 1) end
+	return feat
+end
+
+-- 3.1.0 : le thème change pendant qu'un exploit est affiché : le bandeau du
+-- nouveau thème reprend l'exploit en cours (un bandeau forgé n'ancre ses
+-- lignes qu'au remplissage : sans cela il restait vide), sans rejouer le son
+-- ni l'effet et sans allonger son temps. Rend vrai, l'exploit, « haut fait ».
+function ns:GuildFeatsRestyle(frame)
+	local item = state.showing
+	if not (frame and item and item.info) then return false end
+	return true, item.info, GuildFeatFill(self, frame, item.info)
+end
+
+function ns:GuildFeatsShowToast(item)
+	local frame = self:EnsureGuildFeatToast()
+	if not frame then return nil end
+	local info = item.info
+	local feat = GuildFeatFill(self, frame, info)
 	state.showing, state.hideAt = item, Clock() + ns.GFEAT_TOAST_SECONDS
 	frame:Show()
 	if self.BannerShown then self:BannerShown("guild", frame, "guildFeatToastPoint", { point = "TOP", x = 0, y = -150 }) end

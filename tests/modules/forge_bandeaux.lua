@@ -472,3 +472,38 @@ do
 	s.check("[FBAN] bascule à chaud : « Capturé ! » remontré dans le nouveau thème ; bandeau du carnet complet dans les deux sens")
 	Done()
 end
+
+-- 11. Bascule à chaud pendant un exploit de guilde : le bandeau forgé n'est pas vide ---------------
+do
+	Say("-- bandeaux forgés : bascule à chaud d'un exploit de guilde")
+	Fresh("sobre")
+	local s = Steps()
+	NS:GuildFeatsShowToast({ key = "x", sender = "Xan-Royaume", feat = { kind = "h" }, score = 1000, at = Mock.now,
+		info = { kind = "h", line = "Xan, Maîtresse des brillantes, a gagné le titre « Traqueuse » !", big = true,
+			icon = "Interface\\Icons\\Ability_Hunter_BeastTaming", points = 25, more = 2, sub = "Nouveau titre : Traqueuse" } })
+	local plain = NS.guildFeatToast
+	s.ok("Sobre : exploit affiché", plain and plain:IsShown() and not plain.forgeBanner)
+	NS:DB().companionStyle = "azeroth"; NS:ApplyUIStyle()
+	local g = NS.guildFeatToast
+	s.ok("après la bascule : un bandeau forgé, affiché", g and g ~= plain and g.forgeBanner and g:IsShown())
+	local anchored = g ~= nil
+	for _, key in ipairs({ "title", "text", "info", "hint" }) do
+		local fs = g and g[key]
+		if not (fs and fs.lastPoint) then anchored = false end
+	end
+	s.ok("chaque ligne est ancrée (un texte sans ancre ne se dessine pas en jeu)", anchored)
+	s.ok("l'exploit en cours est repris : ligne, sous-ligne, « et 2 autres exploits »", g
+		and g.text.text == "Xan, Maîtresse des brillantes, a gagné le titre « Traqueuse » !"
+		and g.info.text == "Nouveau titre : Traqueuse" and g.hint.text == NS:GuildFeatMoreText(2))
+	s.ok("médaillon : icône du haut fait et plaque des points", g and g.medal and g.medal.kind ~= "glyph"
+		and g.medal.badge:IsShown() and g.medal.badge.text.text == "25")
+	NS:DB().companionStyle = "sobre"; NS:ApplyUIStyle()
+	local back = NS.guildFeatToast
+	s.ok("retour au Sobre : le même cadre, l'exploit et ses points", back == plain and back:IsShown()
+		and back.text.text == "Xan, Maîtresse des brillantes, a gagné le titre « Traqueuse » !"
+		and back.featPoints and back.featPoints:IsShown() and back.featPoints.text == "25")
+	NS:GuildFeatsHideToast()
+	s.ok("sans erreur", Errors() == "", Errors())
+	s.check("[FBAN] bascule à chaud d'un exploit de guilde : le bandeau du nouveau thème reprend l'exploit, lignes ancrées")
+	Done()
+end
