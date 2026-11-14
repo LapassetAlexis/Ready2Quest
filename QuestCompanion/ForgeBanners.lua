@@ -5,8 +5,9 @@
 -- brillante, en art du client. Le thème forgé les re-loge ici, en matières
 -- du socle seulement (Theme.ART, Theme.Slice, Theme.ForgeSlice) :
 --   * un MÉDAILLON rond à gauche, à cheval sur le bord du bandeau (comme la
---     maquette) : l'anneau d'or du logo, et dedans le portrait de la
---     créature, l'icône (dans un creux) ou le logo nu ; une petite plaque
+--     maquette) : l'anneau d'or creux (Theme.ART.ring) sur un disque sombre,
+--     et dedans le portrait de la créature, l'icône (arrondie par le masque
+--     du client), le glyphe du filet ou le glyphe du logo ; une petite plaque
 --     d'or sous l'anneau porte les points ou le niveau (le chiffre ne
 --     chevauche plus jamais le texte, dont la largeur est réservée) ;
 --   * l'apparition : éclosion (Scale) et éclat derrière le médaillon
@@ -24,16 +25,22 @@ if ns.blocked then return end
 
 local Theme = ns.Theme
 
--- Géométrie (px). medal : diamètre de l'anneau ; out : débord hors du bord
--- gauche ; gap : du médaillon au texte ; content : diamètre du portrait rond
--- dans l'anneau ; icon / well : icône carrée et marge de son creux ; badge :
--- plaque des points (hauteur, marge du chiffre, recouvrement de l'anneau) ;
--- bloom : éclat (× médaillon) ; halo : alpha du halo d'une brillante au
--- repos ; shine : trait qui traverse (largeur, hauteur, durée, attente) ;
--- hatch : éclosion (échelle de départ, durée).
+-- Géométrie (px). medal : diamètre de l'anneau (Theme.ART.ring, centre
+-- vide) ; out : débord hors du bord gauche ; gap : du médaillon au texte ;
+-- content : diamètre du contenu rond (portrait, icône masquée en rond), sous
+-- le bord intérieur de la bande d'or ; icon : icône carrée quand le client
+-- n'a pas de masque rond (inscrite dans le centre de l'anneau) ; glyph :
+-- glyphe du filet ; disc : disque sombre du fond, fait de trois aplats
+-- (carré, deux bandes) qui tiennent sous la bande d'or ; badge : plaque des
+-- points (hauteur, marge du chiffre, recouvrement de l'anneau) ; bloom :
+-- éclat (× médaillon) ; halo : alpha du halo d'une brillante au repos ;
+-- shine : trait qui traverse (largeur, hauteur, durée, attente) ; hatch :
+-- éclosion (échelle de départ, durée).
 ns.FORGE_BANNER = {
 	medal = 64, out = 14, gap = 8, pad = 12, right = 12,
-	content = 46, icon = 30, well = 3,
+	content = 52, icon = 38, glyph = 32,
+	disc = { square = 42, long = 52, short = 30 },
+	mask = "Interface\\CharacterFrame\\TempPortraitAlphaMask",
 	badge = { h = 16, pad = 6, over = 7 },
 	bloom = 2.3, bloomAlpha = 0.9, halo = 0.6,
 	shine = { w = 120, h = 6, time = 1.1, delay = 0.3, alpha = 0.9 },
@@ -103,24 +110,54 @@ function ns:ForgeBannerDress(frame, opts)
 	if medal.bloom.SetBlendMode then medal.bloom:SetBlendMode("ADD") end
 	medal.bloom:SetAlpha(0)
 	medal.bloomFlash = Flash(medal.bloom, K.bloomAlpha, 0.3, 0.9, 0.05)
-	-- l'anneau d'or (le médaillon du logo : disque sombre, anneau, glyphe ;
-	-- le contenu recouvre le glyphe quand il y en a un)
-	medal.ring = medal:CreateTexture(nil, "ARTWORK", nil, 0)
-	medal.ring:SetTexture(Theme.LOGO)
-	medal.ring:SetAllPoints(medal)
-	-- le creux d'une icône carrée (caché pour un portrait rond ou le logo nu)
-	local wellSize = K.icon + 2 * K.well
-	medal.wellHost = CreateFrame("Frame", nil, medal)
-	medal.wellHost:SetSize(wellSize, wellSize)
-	medal.wellHost:SetPoint("CENTER", medal, "CENTER", 0, 0)
-	medal.well = Theme.ForgeSlice(medal, "inset", Theme.EDGE, { layer = "ARTWORK", sub = 1,
-		margin = Theme.FORGE.insetMargin, around = medal.wellHost })
-	if medal.well then medal.well:Hide() end
-	-- l'icône ou le portrait (une seule texture, retaillée selon le contenu)
-	medal.icon = medal:CreateTexture(nil, "ARTWORK", nil, 2)
+	-- le fond : un disque sombre (trois aplats en croix arrondie, tous sous
+	-- la bande d'or ; pas besoin de masque)
+	local scale = size / K.medal
+	medal.disc = {}
+	for index, dims in ipairs({ { K.disc.square, K.disc.square }, { K.disc.long, K.disc.short },
+		{ K.disc.short, K.disc.long } }) do
+		local part = medal:CreateTexture(nil, "BACKGROUND", nil, 0)
+		local nav = Theme.NAV
+		part:SetColorTexture(nav[1], nav[2], nav[3], 1)
+		part:SetSize(math.floor(dims[1] * scale), math.floor(dims[2] * scale))
+		part:SetPoint("CENTER", medal, "CENTER", 0, 0)
+		medal.disc[index] = part
+	end
+	-- le masque rond du client (portrait et icône arrondis), s'il existe
+	if medal.CreateMaskTexture then
+		local ok, mask = pcall(medal.CreateMaskTexture, medal)
+		if ok and mask then
+			pcall(mask.SetTexture, mask, K.mask, "CLAMPTOBLACKADDITIVE", "CLAMPTOBLACKADDITIVE")
+			mask:SetSize(math.floor(K.content * scale), math.floor(K.content * scale))
+			mask:SetPoint("CENTER", medal, "CENTER", 0, 0)
+			medal.mask = mask
+		end
+	end
+	-- le portrait ou l'icône (masqués en rond ; sans masque, l'icône carrée
+	-- est inscrite dans le centre de l'anneau)
+	medal.icon = medal:CreateTexture(nil, "ARTWORK", nil, 1)
 	medal.icon:SetSize(K.icon, K.icon)
 	medal.icon:SetPoint("CENTER", medal, "CENTER", 0, 0)
+	if medal.mask and medal.icon.AddMaskTexture and not pcall(medal.icon.AddMaskTexture, medal.icon, medal.mask) then
+		medal.mask = nil
+	end
 	medal.icon:Hide()
+	-- le glyphe du filet (une texture à lui : le Voile d'hiver repeint ses
+	-- glyphes, jamais le portrait ni l'icône)
+	medal.glyph = medal:CreateTexture(nil, "ARTWORK", nil, 1)
+	medal.glyph:SetSize(math.floor(K.glyph * scale), math.floor(K.glyph * scale))
+	medal.glyph:SetPoint("CENTER", medal, "CENTER", 0, 0)
+	medal.glyph:Hide()
+	-- le logo nu (une rafale) : le glyphe du logo, sans son anneau
+	medal.logo = medal:CreateTexture(nil, "ARTWORK", nil, 1)
+	medal.logo:SetTexture(Theme.LOGO_GLYPH or Theme.LOGO_SMALL)
+	medal.logo:SetSize(math.floor(K.content * scale), math.floor(K.content * scale))
+	medal.logo:SetPoint("CENTER", medal, "CENTER", 0, 0)
+	medal.logo:Hide()
+	-- l'anneau d'or creux, par-dessus le contenu (il en cache le bord)
+	medal.ring = medal:CreateTexture(nil, "OVERLAY", nil, 0)
+	medal.ring:SetTexture(Theme.ART.ring.file)
+	medal.ring:SetAllPoints(medal)
 	-- la plaque des points ou du niveau, à cheval sur le bas de l'anneau
 	local badge = CreateFrame("Frame", nil, medal)
 	badge:SetSize(K.badge.h * 2, K.badge.h)
@@ -180,12 +217,14 @@ end
 -- Le contenu du médaillon. what : "portrait" (target = { npcID, type,
 -- shiny } : le portrait 2D de la créature, sinon l'icône de son type),
 -- "icon" (texture = fichier ou id), "glyph" (paint = fonction qui peint la
--- texture : le glyphe du filet, la boule de neige du Voile d'hiver), ou
--- nil (le logo nu). Rend le genre posé.
+-- texture medal.glyph : le glyphe du filet, la boule de neige du Voile
+-- d'hiver), ou nil (le glyphe du logo). Le glyphe a sa propre texture : le
+-- Voile d'hiver la repeint sans jamais toucher au portrait ni à l'icône.
+-- Rend le genre posé.
 function ns:ForgeMedalSet(frame, what, value)
 	local medal = frame and frame.medal
 	if not medal then return nil end
-	local icon = medal.icon
+	local icon, glyph = medal.icon, medal.glyph
 	local kind = nil
 	if what == "portrait" and type(value) == "table" and ns.CreaturePortrait then
 		kind = ns:CreaturePortrait(icon, value)
@@ -194,21 +233,21 @@ function ns:ForgeMedalSet(frame, what, value)
 		if icon.SetTexCoord then icon:SetTexCoord(0.08, 0.92, 0.08, 0.92) end
 		kind = "icon"
 	elseif what == "glyph" and type(value) == "function" then
-		value(icon)
+		value(glyph)
 		kind = "glyph"
 	end
-	if icon.SetVertexColor and kind ~= "glyph" then icon:SetVertexColor(1, 1, 1, 1) end
-	if kind == "portrait" then
-		icon:SetSize(K.content, K.content)
-		if medal.well then medal.well:Hide() end
+	local scale = (frame.forgeMedalSize or K.medal) / K.medal
+	if kind == "portrait" or kind == "icon" then
+		if icon.SetVertexColor then icon:SetVertexColor(1, 1, 1, 1) end
+		-- un portrait du client est déjà rond ; une icône l'est par le masque
+		local side = (kind == "portrait" or medal.mask) and K.content or K.icon
+		icon:SetSize(math.floor(side * scale), math.floor(side * scale))
 		icon:Show()
-	elseif kind then
-		icon:SetSize(K.icon, K.icon)
-		if medal.well then medal.well:Show() end
-		icon:Show()
-	else
-		if medal.well then medal.well:Hide() end
-		icon:Hide()
+	end
+	if kind == "glyph" then glyph:Show() else glyph:Hide() end
+	if kind ~= "portrait" and kind ~= "icon" then icon:Hide() end
+	if medal.logo then
+		if kind then medal.logo:Hide() else medal.logo:Show() end
 	end
 	medal.kind = kind
 	return kind
@@ -345,7 +384,7 @@ function ns:ForgeCaptureResult(glyph)
 	frame.text = ns.ForgeBannerLine(frame, Theme.F_TITLE, Theme.PARCHMENT, width)
 	frame.stars = ns.ForgeBannerLine(frame, Theme.F_SMALL, Theme.GOLD, width)
 	frame.forgeGlyph = glyph
-	frame.icon = frame.medal.icon
+	frame.icon = frame.medal.glyph
 	self:ForgeMedalSet(frame, "glyph", glyph)
 	return frame
 end
@@ -437,7 +476,7 @@ function ns:ForgeGuildFeatToast(glyph)
 	frame.info = ns.ForgeBannerLine(frame, Theme.F_SMALL, Theme.TEXT, width)
 	frame.hint = ns.ForgeBannerLine(frame, Theme.F_SMALL, Theme.MUTED_LIGHT, width)
 	frame.forgeGlyph = glyph
-	frame.icon = frame.medal.icon
+	frame.icon = frame.medal.glyph
 	self:ForgeMedalSet(frame, "glyph", glyph)
 	return frame
 end

@@ -1304,7 +1304,7 @@ function ns:CaptureToastSobre()
 	-- (ForgeBanners.lua) ; même contenu, mêmes boutons
 	local forgedLeft = ns.QCForged and ns.QCForged() and self.ForgeBannerDress and self:ForgeBannerDress(frame)
 	if forgedLeft then
-		frame.icon = frame.medal.icon
+		frame.icon = frame.medal.glyph
 		self:ForgeMedalSet(frame, "glyph", function(tex)
 			frame.ownGlyph = PaintNetIcon(tex)
 			if frame.ownGlyph then tex:SetVertexColor(Theme.GOLD[1], Theme.GOLD[2], Theme.GOLD[3], 1)

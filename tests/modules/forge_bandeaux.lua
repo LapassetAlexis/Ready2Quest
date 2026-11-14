@@ -136,9 +136,31 @@ do
 		and f.uiStyle == "sobre")
 	s.ok("nom global par clé", f and f:GetName() == "QuestCompanionCaptureResultForge", f and f:GetName())
 	local medal = f and f.medal
-	s.ok("médaillon : anneau d'or du logo (matière à nous)", medal and medal.ring.texture == Theme.LOGO)
-	s.ok("portrait 2D de la créature dans le médaillon, rond, sans creux", medal and medal.kind == "portrait"
-		and medal.icon.portraitID == 4321 and medal.icon.width == NS.FORGE_BANNER.content and not medal.well.shown)
+	s.ok("médaillon : anneau d'or creux (Theme.ART.ring), au-dessus du contenu, plus le logo plein", medal
+		and medal.ring.texture == Theme.ART.ring.file and medal.ring.drawLayer == "OVERLAY" and medal.icon.drawLayer == "ARTWORK")
+	-- le disque sombre : couvre tout le centre de l'anneau, sans sortir de la bande d'or
+	local K, R = NS.FORGE_BANNER, Theme.ART.ring
+	local hole, band = K.medal * R.inner / 2, K.medal * R.outer / 2
+	local covered, inside = true, true
+	for deg = 0, 89 do
+		local a = math.rad(deg)
+		local x, y = hole * math.cos(a), hole * math.sin(a)
+		local hit = false
+		for _, part in ipairs(medal and medal.disc or {}) do
+			if x <= part.width / 2 and y <= part.height / 2 then hit = true end
+		end
+		if not hit then covered = false end
+	end
+	for _, part in ipairs(medal and medal.disc or {}) do
+		if math.sqrt((part.width / 2) ^ 2 + (part.height / 2) ^ 2) > band then inside = false end
+		if not Same(part.colorTexture or {}, Theme.NAV) then inside = false end
+	end
+	s.ok("disque sombre (NAV) : tout le centre couvert, rien hors de la bande d'or", medal and #medal.disc == 3 and covered and inside)
+	s.ok("contenu rond sous le bord intérieur de la bande", K.content <= K.medal * R.inner + 2 and K.content >= K.medal * R.inner - 2)
+	s.ok("sans masque : l'icône carrée tient dans le centre de l'anneau", K.icon * math.sqrt(2) / 2 <= hole + 1.5)
+	s.ok("portrait 2D de la créature dans le médaillon, rond, glyphe caché", medal and medal.kind == "portrait"
+		and medal.icon.portraitID == 4321 and medal.icon.width == NS.FORGE_BANNER.content and not medal.glyph.shown
+		and not medal.logo.shown)
 	s.ok("niveau sur la plaque d'or", medal and medal.badge:IsShown() and medal.badge.text.text == "18")
 	local line = f and f.stars.text or ""
 	s.ok("étoiles, taille et caractère du spécimen", line:find(NS:SpecimenTagsShort({ size = "large", trait = "curious" }), 1, true) ~= nil, line)
@@ -160,8 +182,8 @@ do
 	s.ok("même bandeau resservi", g == f)
 	s.ok("brillante : nom d'or (Theme.SHINY), halo au repos", Same(g.text.textColor, Theme.SHINY)
 		and (g.medal.bloom.alpha or 0) > 0)
-	s.ok("sans créature : le glyphe du filet dans un creux, pas de niveau", g.medal.kind == "glyph" and g.medal.well.shown
-		and not g.medal.badge:IsShown())
+	s.ok("sans créature : le glyphe du filet (sa propre texture), pas de niveau", g.medal.kind == "glyph" and g.medal.glyph.shown
+		and not g.medal.icon.shown and not g.medal.badge:IsShown())
 	s.ok("sans erreur", Errors() == "", Errors())
 	s.check("[FBAN] « Capturé ! » forgé : portrait 2D, niveau sur la plaque, étoiles et traits, Partager écrit, apparition, brillante")
 	Done()
@@ -177,8 +199,9 @@ do
 	local j = NS.journalToast
 	s.ok("bandeau né forgé", j and j.forgeBanner and j.styleKey == "forge" and j:IsShown())
 	local plainH = j and j:GetHeight()
-	s.ok("icône de la catégorie dans le médaillon (creux)", j and j.medal.kind == "icon"
-		and j.medal.icon.texture == "Interface\\Icons\\INV_Misc_Map_01" and j.medal.well.shown)
+	s.ok("icône de la catégorie dans le médaillon (carrée sans masque, inscrite)", j and j.medal.kind == "icon"
+		and j.medal.icon.texture == "Interface\\Icons\\INV_Misc_Map_01" and j.medal.icon.shown
+		and j.medal.icon.width == NS.FORGE_BANNER.icon and not j.medal.glyph.shown)
 	s.ok("points sur la plaque, plus de chiffre sur le texte", j and j.medal.badge.text.text == "10" and j.featPoints == nil)
 	j:Hide(); NS.journalToastHideAt = nil
 	if NS.BannerDone then NS:BannerDone("journal") end
@@ -203,7 +226,8 @@ do
 	-- rafale : le logo nu, sans points
 	for index = 1, 6 do NS.journalToasts[#NS.journalToasts + 1] = { kind = "subzone", name = "Lieu " .. index } end
 	NS:ShowNextJournalToast()
-	s.ok("rafale : le logo nu, sans plaque, sans sous-ligne", j.medal.kind == nil and not j.medal.icon:IsShown()
+	s.ok("rafale : le glyphe du logo, sans plaque, sans sous-ligne", j.medal.kind == nil and not j.medal.icon:IsShown()
+		and j.medal.logo.shown and j.medal.logo.texture == (Theme.LOGO_GLYPH or Theme.LOGO_SMALL)
 		and not j.medal.badge:IsShown() and not j.stars:IsShown())
 	s.ok("sans erreur", Errors() == "", Errors())
 	s.check("[FBAN] carnet forgé : icône et points au médaillon, « Nouveau titre », hauteur adaptée, grand effet forgé, rafale")
@@ -265,7 +289,7 @@ do
 	Fresh("azeroth")
 	local s = Steps()
 	local c = NS:EnsureCaptureToast()
-	s.ok("bandeau né forgé, médaillon au glyphe du filet", c and c.forgeBanner and c.medal.kind == "glyph" and c.icon == c.medal.icon)
+	s.ok("bandeau né forgé, médaillon au glyphe du filet", c and c.forgeBanner and c.medal.kind == "glyph" and c.icon == c.medal.glyph)
 	s.ok("textes à droite du médaillon, boutons gardés", c and c.title.lastPoint.x >= -NS.FORGE_BANNER.out + NS.FORGE_BANNER.medal
 		and c.mute and c.ignore and c.muteRow)
 	s.ok("barre d'accent cachée (sous le médaillon), couleur retenue", c and not c.accent.shown)
@@ -325,5 +349,60 @@ do
 	s.ok("« Capture possible » Sobre : glyphe à gauche, barre d'accent", c and not c.forgeBanner and not c.medal and c.accent.shown)
 	s.ok("sans erreur", Errors() == "", Errors())
 	s.check("[FBAN] Sobre : aucun habillage forgé ; seule la sous-ligne « Nouveau titre » (information qui manquait)")
+	Done()
+end
+
+-- 9. Masque rond du client ; le Voile d'hiver ne repeint que le glyphe ---------------------------
+do
+	Say("-- bandeaux forgés : masque rond, Voile d'hiver")
+	Fresh("azeroth")
+	local s = Steps()
+	-- un client qui sait masquer : portrait et icône arrondis, à la taille du contenu
+	local mockCreateFrame = _G.CreateFrame
+	_G.CreateFrame = function(...)
+		local made = mockCreateFrame(...)
+		function made:CreateMaskTexture()
+			local mask = self:CreateTexture(nil, "ARTWORK")
+			function mask:SetTexture(file, h, v) self.texture, self.wrap = file, { h, v } end
+			return mask
+		end
+		local base = made.CreateTexture
+		function made:CreateTexture(...)
+			local tex = base(self, ...)
+			function tex:AddMaskTexture(mask) self.masks = self.masks or {}; self.masks[#self.masks + 1] = mask end
+			return tex
+		end
+		return made
+	end
+	local j = NS:EnsureJournalToast()
+	_G.CreateFrame = mockCreateFrame
+	local medal = j and j.medal
+	s.ok("masque rond posé sur l'icône (diamètre du contenu)", medal and medal.mask and medal.mask.texture == NS.FORGE_BANNER.mask
+		and medal.mask.width == NS.FORGE_BANNER.content and medal.icon.masks and medal.icon.masks[1] == medal.mask)
+	NS:ForgeMedalSet(j, "icon", "Interface\\Icons\\INV_Misc_Map_01")
+	s.ok("avec le masque : l'icône remplit le centre de l'anneau", medal.icon.width == NS.FORGE_BANNER.content and medal.icon.shown)
+	-- Voile d'hiver : « Capturé ! » affiché avec le portrait, puis le décor allumé
+	NS:CaptureAccount().display = NS:CaptureAccount().display or {}
+	NS:CaptureAccount().display[3255] = 4321
+	_G.SetPortraitTextureFromCreatureDisplayID = function(tex, id) tex.portraitID = id; tex.texture = "portrait:" .. id end
+	local f = NS:CaptureResultShow({ name = "Raptor des Tarides", stars = 3, npcID = 3255, level = 18, type = "Beast" })
+	s.ok("portrait au médaillon", f and f.medal.kind == "portrait" and f.medal.icon.texture == "portrait:4321")
+	NS:SetWinterVeil("on")
+	s.ok("décor allumé (saison du faux client)", NS:WinterVeilActive())
+	s.ok("le portrait reste (jamais la boule de neige)", f.medal.icon.texture == "portrait:4321" and not f.medal.icon.wvSnowball
+		and f.medal.kind == "portrait", tostring(f.medal.icon.texture))
+	s.ok("le glyphe du filet, lui, devient la boule de neige (caché)", f.medal.glyph.wvSnowball == true and not f.medal.glyph.shown)
+	-- même chose pour l'icône d'un haut fait sur le bandeau de guilde
+	NS:SetWinterVeil("off")
+	NS:GuildFeatsShowToast({ key = "z", sender = "Zed-Royaume", feat = { kind = "h" }, score = 900, at = Mock.now,
+		info = { kind = "h", line = "Zed a gagné un haut fait !", icon = "Interface\\Icons\\INV_Misc_Map_01", points = 10 } })
+	local g = NS.guildFeatToast
+	NS:SetWinterVeil("on")
+	s.ok("guilde : l'icône du haut fait reste", g and g.medal.kind == "icon" and g.medal.icon.texture == "Interface\\Icons\\INV_Misc_Map_01")
+	NS:SetWinterVeil("off")
+	NS:GuildFeatsHideToast()
+	NS:CaptureResultHide()
+	s.ok("sans erreur", Errors() == "", Errors())
+	s.check("[FBAN] médaillon : masque rond du client ; le Voile d'hiver repeint le glyphe, jamais le portrait ni l'icône")
 	Done()
 end
