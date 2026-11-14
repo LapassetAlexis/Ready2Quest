@@ -213,9 +213,9 @@ function ns:AdviceSeeUnit(unit)
 	if InCombat() then return false end
 	if not Call(rawget(_G, "UnitExists"), unit) or Call(rawget(_G, "UnitIsDead"), unit) then return false end
 	if not Call(rawget(_G, "UnitCanAttack"), "player", unit) then return false end
-	local class = Call(rawget(_G, "UnitClassification"), unit)
+	local class = ns.Plain(Call(rawget(_G, "UnitClassification"), unit))
 	if not ELITE_CLASSES[class or ""] then return false end
-	local level = tonumber(Call(rawget(_G, "UnitLevel"), unit)) or 0
+	local level = tonumber(ns.Plain(Call(rawget(_G, "UnitLevel"), unit))) or 0
 	local mine = self.PlayerLevelNow()
 	-- -1 : « ?? », bien au-dessus
 	if level ~= -1 and level < mine + self.ADVICE_ELITE_LEVELS then return false end
@@ -227,7 +227,7 @@ function ns:AdviceSeeUnit(unit)
 	state.eliteCount = (state.eliteCount or 0) + 1
 	if state.eliteCount > ns.ADVICE_ELITES_MAX then state.elites, state.eliteCount = {}, 1 end
 	state.elites[guid] = true
-	state.elite = { guid = guid, name = Call(rawget(_G, "UnitName"), unit) or "?",
+	state.elite = { guid = guid, name = ns.Plain(Call(rawget(_G, "UnitName"), unit)) or "?",
 		rare = class == "rare" or class == "rareelite" }
 	self:AdviceEvaluate()
 	return true

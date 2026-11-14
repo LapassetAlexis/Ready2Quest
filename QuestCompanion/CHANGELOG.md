@@ -1,5 +1,11 @@
 # QuestCompanion
 
+## 3.0.3
+
+- **Plus d'erreur en parlant à un PNJ** : quand le jeu rend le nom d'un PNJ secret, Quest Companion ne le lit plus (« attempt to compare local 'name' (a secret string value) » dans Companion.lua, à l'ouverture d'un dialogue). Même protection pour le nom, le type, la famille, la classification et le niveau de toutes les créatures et des autres joueurs (conseils, bestiaire, brillantes, groupe, rares, fiche de dresseur). Une garde de test refuse désormais toute lecture non protégée.
+
+*English:* no more error when talking to an NPC whose name the game keeps secret (« attempt to compare local 'name' (a secret string value) » in Companion.lua on GOSSIP_SHOW). The same protection now covers the name, type, family, classification and level of every creature and other player; a test guard rejects any unprotected read.
+
 ## 3.0.2
 
 - **Plus d'erreur au survol d'une créature** : quand le jeu rend l'identifiant d'une créature secret, Quest Companion ne le lit plus (« attempt to index local 'guid' (a secret string value) » dans Bestiary.lua). La créature n'est simplement pas notée ce jour-là.

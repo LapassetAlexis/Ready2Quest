@@ -3304,7 +3304,7 @@ end
 local ELITE_CLASSES = { elite = true, rareelite = true, rare = true, worldboss = true }
 function ns:CompanionEliteKilled()
 	if not Call(rawget(_G, "UnitIsDead"), "target") then return false end
-	if not ELITE_CLASSES[Call(rawget(_G, "UnitClassification"), "target") or ""] then return false end
+	if not ELITE_CLASSES[ns.Plain(Call(rawget(_G, "UnitClassification"), "target")) or ""] then return false end
 	self:CompanionAdd("curiosity", CURIOSITY.elite)
 	return true
 end
@@ -3403,7 +3403,7 @@ local CREATURE_TYPES = {
 ns.COMPANION_CREATURE_TYPES = CREATURE_TYPES
 
 function ns:CompanionCreatureType(unit)
-	local text = Call(rawget(_G, "UnitCreatureType"), unit or "npc")
+	local text = ns.Plain(Call(rawget(_G, "UnitCreatureType"), unit or "npc"))
 	if type(text) ~= "string" or text == "" then return nil end
 	return CREATURE_TYPES[self.AsciiLower(text)] or CREATURE_TYPES[text]
 end
@@ -3444,7 +3444,7 @@ function ns:CompanionOnNpc(kind)
 	-- bavardage puis fenêtre du vendeur : le même PNJ n'a qu'un avis
 	local guid = ns.Plain(Call(rawget(_G, "UnitGUID"), "npc"))
 	if guid and rt.npcGUID == guid and rt.npcAt and now - rt.npcAt < SAME_NPC then return false end
-	local name = Call(rawget(_G, "UnitName"), "npc")
+	local name = ns.Plain(Call(rawget(_G, "UnitName"), "npc"))
 	if type(name) ~= "string" or name == "" then name = nil end
 	local pool = "NPC_" .. tostring(kind)
 	local creature = self:CompanionCreatureType("npc")
