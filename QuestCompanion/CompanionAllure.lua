@@ -328,6 +328,7 @@ end
 
 local function ShowRing(tile, on, frame)
 	local c = Az(frame) and ns.AZEROTH_INK.catGold or Theme.GOLD
+	if frame and frame.allureForged then c = Theme.SELECT_LIGHT end
 	for _, ring in ipairs({ tile.ring, tile.ringIn }) do
 		ring:SetColor(c[1], c[2], c[3], on and 1 or 0)
 	end
@@ -426,7 +427,8 @@ local function PaintTile(self, tile, def, current)
 	local worn = current and current.id == def.id or false
 	tile.worn = worn
 	local rarity = def.captured and ns.CAPTURE_RARITY and ns.CAPTURE_RARITY[def.class or "normal"]
-	tile:SetAccent(worn and Theme.GOLD or (def.shiny and Theme.GOLD_LIGHT) or (rarity and rarity.color) or nil)
+	local wornColor = frame.allureForged and Theme.SELECT or Theme.GOLD
+	tile:SetAccent(worn and wornColor or (def.shiny and Theme.GOLD_LIGHT) or (rarity and rarity.color) or nil)
 	tile:SetSelected(worn)
 	ShowRing(tile, worn, frame)
 	tile:Show()
@@ -508,8 +510,12 @@ end
 local function Build(self)
 	if not (Theme and Theme.CreateDialog) then return nil end
 	local W, H = ns.ALLURE_W, ns.ALLURE_H
+	-- 3.1.0 : au thème forgé (hors ancien habillage, décidé à la création) :
+	-- les titres de section gardent l'identité, l'allure portée la sélection
+	local forged = Theme.ForgeHere and Theme.ForgeHere() or false
 	local frame = Theme.CreateDialog(UIParent, W, H, { title = L.ALLURE_TITLE, subtitle = L.ALLURE_SUB, footer = false })
 	if not frame then return nil end
+	frame.allureForged = forged or nil
 	frame:SetFrameStrata(ns.ALLURE_STRATA)
 	if frame.SetToplevel then pcall(frame.SetToplevel, frame, true) end
 	if frame.close then frame.close:SetScript("OnClick", function() ns:AllureClose() end) end
@@ -589,6 +595,8 @@ function ns:EnsureAllure()
 	if not frame then
 		frame = Build(self)
 		if frame then frame.uiStyle = "sobre" end
+		-- 3.1.0 (forgé) : relevé au-dessus du carnet, son habillage monte avec lui
+		if frame and frame.allureForged and ns.CarnetChromeFollows then ns.CarnetChromeFollows(frame) end
 		style = "sobre"
 	end
 	if not frame then return nil end
@@ -795,7 +803,8 @@ function ns:AllureRefresh()
 	end
 	-- encres des textes du panneau (les vignettes ont les leurs)
 	for _, section in ipairs({ frame.seasonTitle, frame.mineTitle }) do
-		Ink(section.label, frame, "allure.section", Theme.MUTED_LIGHT)
+		-- (forgé : le titre garde l'encre de son ton, l'identité)
+		if not frame.allureForged then Ink(section.label, frame, "allure.section", Theme.MUTED_LIGHT) end
 		Ink(section.detail, frame, "allure.hint", Theme.MUTED)
 	end
 	Ink(frame.empty, frame, "allure.text", Theme.MUTED_LIGHT)

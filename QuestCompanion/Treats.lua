@@ -418,7 +418,7 @@ function ns:EnsureTreatMenu()
 		button.kind = kind
 		button:SetScript("OnClick", function(b) ns:TreatGive(b.kind) end)
 		button:SetScript("OnEnter", function(b)
-			b.border:SetColor(Theme.GOLD[1], Theme.GOLD[2], Theme.GOLD[3], 1)
+			b.border:SetColor(Theme.SELECT[1], Theme.SELECT[2], Theme.SELECT[3], 1)   -- survol : la sélection (= or en Sobre)
 			if not GameTooltip then return end
 			GameTooltip:SetOwner(b, "ANCHOR_TOP")
 			Theme.TooltipTitle(GameTooltip, ns:TreatLabel(b.kind))

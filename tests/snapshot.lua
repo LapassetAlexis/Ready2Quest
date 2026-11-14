@@ -1533,11 +1533,14 @@ end) end
 -- 3.1.0 : page Réserve (quelques spécimens, une brillante)
 Snap.scenes["qc-journal-reserve"] = function(T) return OwnDraws(T, function(T)
 	local frame = QCJournal(T, "reserve", function(ns)
-		local data = ns:CaptureData()
-		data.creatures[3110] = { name = "Crocilisque Gueule-d'effroi", zoneID = 1413, at = 1793500001, class = "normal" }
-		data.creatures[3236] = { name = "Kodo des Tarides", zoneID = 1413, at = 1793500002, class = "normal", shiny = true }
-		data.creatures[3398] = { name = "Gesharahan", zoneID = 1413, at = 1793500003, class = "rare" }
-		data.count = 3
+		local Z = 1413
+		ns:SpecimenAdd({ npc = 3236, stars = 1, name = "Kodo des Tarides", origin = "capture", by = "Testeur", zone = Z, at = 1793500000 })
+		ns:SpecimenAdd({ npc = 3236, stars = 2, name = "Kodo des Tarides", origin = "capture", by = "Testeur", zone = Z, at = 1793600000 })
+		ns:SpecimenAdd({ npc = 3236, stars = 3, name = "Kodo des Tarides", origin = "capture", by = "Testeur", zone = Z, at = 1793650000 })
+		ns:SpecimenAdd({ npc = 3110, stars = 1, name = "Crocilisque Gueule-d'effroi", origin = "capture", by = "Testeur", zone = Z, at = 1793400000 })
+		ns:SpecimenAdd({ npc = 3110, stars = 2, name = "Crocilisque Gueule-d'effroi", origin = "capture", by = "Testeur", zone = Z, at = 1793450000 })
+		ns:SpecimenAdd({ npc = 3242, stars = 1, shiny = true, name = "Messager zhévra", zone = Z, at = 1793300000 })
+		ns:SpecimenAdd({ npc = 3242, stars = 1, shiny = true, name = "Messager zhévra", zone = Z, at = 1793700000 })
 	end)
 	return frame, "QuestCompanion : carnet, page Réserve"
 end) end

@@ -139,7 +139,7 @@ local function LinkBox(pane, width, url)
 	end)
 	box:SetScript("OnEditFocusGained", function(self)
 		if self.HighlightText then self:HighlightText() end
-		if self.border then self.border:SetColor(Theme.GOLD[1], Theme.GOLD[2], Theme.GOLD[3], 1) end
+		if self.border then self.border:SetColor(Theme.SELECT[1], Theme.SELECT[2], Theme.SELECT[3], 1) end   -- focus : la sélection
 	end)
 	box:SetScript("OnMouseUp", function(self)
 		if self.SetFocus then self:SetFocus() end

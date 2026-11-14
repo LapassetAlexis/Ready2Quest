@@ -1928,6 +1928,22 @@ local function SkinDialog(self, frame, reg)
 end
 ns.CarnetSkinDialog = SkinDialog
 
+-- 3.1.0 : l'habillage forgé d'une fenêtre (Theme.DressWindow : cadre, coins,
+-- médaillon sur skinChrome.top, Theme.CHROME.level au-dessus d'elle) suit
+-- son niveau quand le module la relève
+function ns.CarnetChromeFollows(frame)
+	if not (frame and frame.SetFrameLevel) or frame.chromeFollows then return end
+	local set = frame.SetFrameLevel
+	frame.SetFrameLevel = function(f, level, ...)
+		set(f, level, ...)
+		local top = f.skinChrome and f.skinChrome.top
+		if top and top ~= f and top.SetFrameLevel then
+			top:SetFrameLevel((tonumber(level) or 1) + ((Theme.CHROME and Theme.CHROME.level) or 30))
+		end
+	end
+	frame.chromeFollows = true
+end
+
 do
 	local ensure = ns.EnsureEffectsConfirm
 	if ensure then
@@ -1953,6 +1969,11 @@ do
 				end
 			else
 				frame = ensure(self, ...)
+				-- 3.1.0 (forgé) : la question est relevée au-dessus du carnet
+				-- (SetFrameLevel, EffectsConfirmPlace) : l'habillage du socle (cadre,
+				-- coins, médaillon, sur un cadre à part) monte avec elle, sinon le
+				-- fond de la question le recouvre
+				if frame and ns.QCForged() then ns.CarnetChromeFollows(frame) end
 			end
 			if frame then frame.uiStyle, frame.styleKey = style, key; cache[key] = frame end
 			self.effectsConfirm = frame

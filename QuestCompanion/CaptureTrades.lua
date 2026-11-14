@@ -1351,7 +1351,7 @@ function ns.TradeBuildView(self, frame, pane, content, ui)
 	tv.cols = {}
 	for side, x in pairs({ mine = 0, theirs = HALF + GAP }) do
 		local col = { slots = {}, tiles = {} }
-		col.head = Text(tv, Theme.F_LABEL, Theme.GOLD, HALF)
+		col.head = Text(tv, Theme.F_LABEL, Theme.IDENTITY, HALF)   -- titre de colonne : l'identité (= or en Sobre)
 		At(col.head, content, x, colY)
 		if col.head.SetWordWrap then col.head:SetWordWrap(false) end
 		for index = 1, ns.TRADE_MAX do
@@ -1494,7 +1494,7 @@ local function RefreshPicker(self, frame, tv, s)
 			tile.pickable = open and (offered or (ok and #s.mine < ns.TRADE_MAX))
 			tile:SetSelected(offered)
 			if ns.AllureShowRing then ns.AllureShowRing(tile, offered, frame) end
-			tile:SetAccent((offered and Theme.GOLD) or (spec.shiny and Theme.GOLD_LIGHT) or nil)
+			tile:SetAccent((offered and Theme.SELECT) or (spec.shiny and Theme.GOLD_LIGHT) or nil)   -- choisi : la sélection (= or en Sobre)
 			tile:SetAlpha((ok or offered) and 1 or Theme.DIM_ALPHA or 0.45)
 			tile:Show()
 		else

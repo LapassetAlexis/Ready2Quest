@@ -748,7 +748,7 @@ local function RefreshPage(self, frame, ui)
 	for _, tile in ipairs(pane.cats) do
 		local on = tile.view == view and (frame.jukeSearch or "") == ""
 		tile:SetSelected(on)
-		tile:SetAccent(on and Theme.GOLD or nil)
+		tile:SetAccent(on and Theme.SELECT or nil)   -- choisi : la sélection (= or en Sobre)
 		tile:SetFill(on and Theme.ROW_ALT or tile.rowFill)
 		local count
 		if tile.view == "fav" then
@@ -797,7 +797,8 @@ local function RefreshPage(self, frame, ui)
 			Theme.PaintClient(row.fav.icon, juke.fav[track.id] and ns.JUKE_ART.fav or ns.JUKE_ART.favOff)
 			row.add.label:SetText(listIndex and "-" or "+")
 			if not row.text.azKeep then
-				Paint(row.text, missing and Theme.MUTED or (playing and Theme.GOLD or Theme.TEXT))
+				-- piste qui joue : l'actif (= or en Sobre)
+				Paint(row.text, missing and Theme.MUTED or (playing and Theme.ACTIVE or Theme.TEXT))
 				Paint(row.detail, Theme.MUTED_LIGHT)
 			end
 			row:Show()

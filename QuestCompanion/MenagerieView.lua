@@ -68,15 +68,16 @@ end
 -- éclairé quand son filtre est actif
 local function Paint(button)
 	local on, hot = button.selected, button.hovered
-	local edge = on and Theme.GOLD or (hot and Theme.EDGE or Theme.EDGE_SOFT)
+	-- filtre actif : la sélection (= or en Sobre)
+	local edge = on and Theme.SELECT or (hot and Theme.EDGE or Theme.EDGE_SOFT)
 	button.border:SetColor(edge[1], edge[2], edge[3], 1)
-	button.bg:SetVertexColor(Theme.GOLD[1], Theme.GOLD[2], Theme.GOLD[3], on and 0.14 or 0)
+	button.bg:SetVertexColor(Theme.SELECT[1], Theme.SELECT[2], Theme.SELECT[3], on and 0.14 or 0)
 	if button.icon then
 		if button.icon.SetDesaturated then button.icon:SetDesaturated(not (on or hot)) end
 		button.icon:SetAlpha((on or hot) and 1 or (button.empty and 0.3 or 0.65))
 	end
 	if button.text then
-		local c = on and Theme.GOLD or (hot and Theme.LABEL or Theme.MUTED_LIGHT)
+		local c = on and Theme.SELECT or (hot and Theme.LABEL or Theme.MUTED_LIGHT)
 		if button.text.SetTextColor then button.text:SetTextColor(c[1], c[2], c[3], 1) end
 	end
 end
@@ -84,7 +85,7 @@ end
 local function NewButton(parent, width)
 	local button = CreateFrame("Button", nil, parent)
 	button:SetSize(width, BUTTON)
-	button.bg = Theme.Solid(button, "BACKGROUND", Theme.GOLD, 0)
+	button.bg = Theme.Solid(button, "BACKGROUND", Theme.SELECT, 0)
 	button.bg:SetAllPoints()
 	button.border = Theme.Border(button, Theme.EDGE_SOFT, 1)
 	button:SetScript("OnLeave", function(self)

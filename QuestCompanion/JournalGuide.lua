@@ -517,7 +517,8 @@ local function NewRow(pane, head)
 		local cell = NewText(row, fonts[index], colors[index])
 		row.cells[index] = cell
 	end
-	row.line = Theme.Solid(row, "ARTWORK", head and Theme.GOLD or Theme.EDGE_SOFT, head and 0.8 or 1)
+	-- filet d'en-tête : l'identité (= or en Sobre)
+	row.line = Theme.Solid(row, "ARTWORK", head and Theme.IDENTITY or Theme.EDGE_SOFT, head and 0.8 or 1)
 	row.line:SetPoint("BOTTOMLEFT", row, "BOTTOMLEFT", 0, 0)
 	row.line:SetPoint("BOTTOMRIGHT", row, "BOTTOMRIGHT", 0, 0)
 	row.line:SetHeight(1)
@@ -527,7 +528,7 @@ end
 local function Pooled(pane, kind, head, used)
 	local list, make
 	if kind == "p" then list, make = pane.paras, function() return NewText(pane, Theme.F_BODY, Theme.TEXT) end
-	elseif kind == "h" then list, make = pane.heads, function() return NewText(pane, Theme.F_LABEL, Theme.GOLD) end
+	elseif kind == "h" then list, make = pane.heads, function() return NewText(pane, Theme.F_LABEL, Theme.IDENTITY) end   -- intertitre : l'identité
 	elseif head then list, make = pane.theads, function() return NewRow(pane, true) end
 	else list, make = pane.trows, function() return NewRow(pane, false) end end
 	local key = kind == "row" and (head and "thead" or "trow") or kind
@@ -618,7 +619,7 @@ local function Refresh(self, frame, ui)
 	for _, row in ipairs(pane.rows) do
 		local on = row.section == section
 		row:SetSelected(on)
-		row:SetAccent(on and Theme.GOLD or nil)
+		row:SetAccent(on and Theme.SELECT or nil)   -- choisi : la sélection (= or en Sobre)
 		row:SetFill(on and Theme.ROW_ALT or row.rowFill)
 		Paint(row.label, on and Theme.PARCHMENT or Theme.LABEL)
 	end

@@ -1159,7 +1159,7 @@ local function MenIconPaint(button)
 	local lit = button.on or button.hovered
 	if button.glyph.SetDesaturated then button.glyph:SetDesaturated(not lit) end
 	button.glyph:SetAlpha(button.on and 1 or (button.hovered and 0.9 or 0.45))
-	local c = button.on and Theme.GOLD or (button.hovered and Theme.EDGE or Theme.EDGE_SOFT)
+	local c = button.on and Theme.SELECT or (button.hovered and Theme.EDGE or Theme.EDGE_SOFT)   -- choisi : la sélection
 	button.border:SetColor(c[1], c[2], c[3], 1)
 end
 local function MenIconButton(row, texture, onClick)
@@ -1630,7 +1630,7 @@ local function MissionCard(self, pane, slot, group)
 		button.icon:SetTexture(Theme.REFRESH)
 		button:SetScript("OnClick", function() ns:MissionReroll(slot.daily) end)
 		button:SetScript("OnEnter", function(b)
-			b.border:SetColor(Theme.GOLD[1], Theme.GOLD[2], Theme.GOLD[3], 1)
+			b.border:SetColor(Theme.SELECT[1], Theme.SELECT[2], Theme.SELECT[3], 1)   -- survol : la sélection
 			REROLL_TIP[1] = L.MIS_REROLL_TIP
 			Tip(b, L.MIS_REROLL, REROLL_TIP)
 		end)
@@ -1722,7 +1722,9 @@ local function BuildDay(self, frame, content)
 		plaque.icon:SetPoint("LEFT", plaque, "LEFT", 9, 0)
 		plaque.icon:SetTexture(SUMMARY_ICON[id])
 		-- libellé à gauche, compte calé à droite avant les pastilles
-		plaque.label = Text(plaque, Theme.F_LABEL, Theme.GOLD, MIS.sumW - 44 - MIS.sumCount - MIS.pad - 4)
+		-- (3.1.0 : titre d'une plaque : l'identité ; or en Sobre)
+		plaque.label = Text(plaque, Theme.F_LABEL, frame.journalForged and Theme.IDENTITY_LIGHT or Theme.GOLD,
+			MIS.sumW - 44 - MIS.sumCount - MIS.pad - 4)
 		plaque.label:SetPoint("TOPLEFT", plaque, "TOPLEFT", 44, -MIS.sumTop)
 		if plaque.label.SetWordWrap then plaque.label:SetWordWrap(false) end
 		plaque.label:SetText(L["SUM_" .. id])
@@ -2441,9 +2443,10 @@ local function RefreshEvolution(self, frame)
 				ns:RefreshJournal()
 			end)
 			local on = self:CompanionOrnamentShown(def)
-			local c = on and Theme.GOLD or Theme.EDGE
+			-- ornement porté : la sélection
+			local c = on and Theme.SELECT or Theme.EDGE
 			if button.border and button.border.SetColor then button.border:SetColor(c[1], c[2], c[3], 1) end
-			local tc = on and Theme.GOLD or Theme.MUTED_LIGHT
+			local tc = on and Theme.SELECT or Theme.MUTED_LIGHT
 			button.text:SetTextColor(tc[1], tc[2], tc[3])
 			local w = button:GetWidth()
 			if x > 0 and x + w > HALF then x, y = 0, y + 24 end
@@ -2727,7 +2730,7 @@ local function RefreshMenagerie(self, frame)
 			-- 2.15.0 : une espèce épinglée (liste de chasse) s'éclaire d'or
 			local pinned = entry.known and self.HuntPinned and self:HuntPinned(entry.npc) or false
 			if picked or worn or pinned then row.mark:Show() else row.mark:Hide() end
-			local mc = (worn or pinned) and Theme.GOLD or Theme.WHITE
+			local mc = (worn or pinned) and Theme.SELECT or Theme.WHITE   -- portée, épinglée : la sélection
 			row.mark:SetVertexColor(mc[1], mc[2], mc[3], worn and 0.12 or (pinned and 0.08 or 0.05))
 			row:Show()
 		else
