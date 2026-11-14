@@ -173,6 +173,8 @@ local function BuildRow(pane, width)
 	return row
 end
 
+-- 3.1.0 : la plaque du total (thème forgé) : taille, losange, marge, écart
+ns.JOURNAL_FEATS_PLATE = { w = 92, h = 36, diamond = 14, pad = 12, gap = 12, tint = "neutral" }
 local function Build(self, frame, content, ui)
 	local At, Text = ui.At, ui.Text
 	local TOP, INNER = ui.TOP, ui.INNER
@@ -186,10 +188,32 @@ local function Build(self, frame, content, ui)
 	pane.perPage = math.max(1, math.floor((listTop - (ui.PAGER_Y + 8)) / ROW_STEP))
 
 	-- en haut : points et filtres
-	pane.totals = NoWrap(Text(pane, Theme.F_LABEL, Theme.PARCHMENT, INNER - 260))
-	At(pane.totals, content, 0, TOP - 2)
-	pane.count = NoWrap(Text(pane, Theme.F_SMALL, Theme.MUTED_LIGHT, INNER - 260))
-	At(pane.count, content, 0, TOP - 19)
+	-- 3.1.0 (thème forgé, décidé à la création du carnet) : le total des
+	-- points en tête, sur une plaque forgée à losange d'or (le grand bouclier
+	-- de l'ancien habillage) ; les totaux passent à sa droite
+	local headX = 0
+	if frame.journalForged then
+		local K = ns.JOURNAL_FEATS_PLATE
+		local plate = CreateFrame("Frame", nil, pane)
+		plate:SetSize(K.w, K.h)
+		At(plate, content, 0, TOP + 1)
+		plate.slice = Theme.ForgeSlice(plate, "plate", Theme.FORGE_PLATE[K.tint], { height = K.h, sub = 0 })
+		plate.diamond = Theme.CreateDiamond(plate, K.diamond, false)
+		plate.diamond:SetPoint("LEFT", plate, "LEFT", K.pad, 0)
+		plate.diamond:SetVertexColor(Theme.GOLD[1], Theme.GOLD[2], Theme.GOLD[3], 1)
+		plate.value = NoWrap(Theme.Text(plate, Theme.F_TITLE, Theme.GOLD_LIGHT))
+		plate.value:SetPoint("LEFT", plate, "LEFT", K.pad + K.diamond + 6, 0)
+		plate.value:SetWidth(K.w - (K.pad + K.diamond + 6) - K.pad + 4)
+		plate.value:SetJustifyH("CENTER")
+		if plate.value.SetJustifyV then plate.value:SetJustifyV("MIDDLE") end
+		Theme.TextShadow(plate.value, 0.9)
+		pane.pointsPlate = plate
+		headX = K.w + K.gap
+	end
+	pane.totals = NoWrap(Text(pane, Theme.F_LABEL, Theme.PARCHMENT, INNER - 260 - headX))
+	At(pane.totals, content, headX, TOP - 2)
+	pane.count = NoWrap(Text(pane, Theme.F_SMALL, Theme.MUTED_LIGHT, INNER - 260 - headX))
+	At(pane.count, content, headX, TOP - 19)
 	pane.filters, pane.filterChips = ui.Chips(pane, ns.FEAT_FILTERS, "FEAT_FILTER_", function(id)
 		ns:DB().featsFilter = id
 		frame.featsOffset = 0
@@ -240,7 +264,11 @@ local function DateText(self, at)
 end
 
 local function FillRow(self, row, entry)
-	local def, azeroth = entry.def, self.AzerothOn and self:AzerothOn()
+	-- 3.1.0 : le bouclier du client seulement dans le carnet de l'ancien
+	-- habillage (drapeau) ; au thème forgé comme en Sobre, le losange
+	local journal = self.journalFrame
+	local def = entry.def
+	local azeroth = journal and journal.azeroth and self.AzerothOn and self:AzerothOn()
 	row.entry = entry
 	row.def = def
 	row.icon:SetTexture(self:FeatIcon(def))
@@ -301,6 +329,7 @@ local function Refresh(self, frame, ui)
 	else
 		local account, char = self:FeatPoints("account"), self:FeatPoints("char")
 		pane.totals:SetText(self:F("FEAT_TOTALS", account, char))
+		if pane.pointsPlate then pane.pointsPlate.value:SetText(tostring(self:FeatPoints())) end
 		local got, total = self:FeatCategoryStats("all")
 		pane.count:SetText(self:F("FEAT_COUNT", got, total))
 		pane.filters:Select(filter, true)

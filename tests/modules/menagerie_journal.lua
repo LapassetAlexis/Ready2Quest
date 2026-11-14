@@ -1229,6 +1229,7 @@ do
 		Say("-- exploration 2.9.1 : roue crantée grise (Sobre ; 3.1.0 : la roue du socle au thème forgé)")
 		-- 3.1.0 : au thème forgé, la roue du socle sur sa petite plaque
 		R.Reset()
+		T.Legacy(false)
 		NS:ApplyUIStyle()
 		local forgedCarnet = NS:ToggleJournal(true)
 		local gear = forgedCarnet and forgedCarnet.settingsButton
@@ -1236,6 +1237,7 @@ do
 			NS.QCForged() and forgedCarnet.journalForged and gear and gear.cogTexture == nil and gear.plate ~= nil and gear.forgeLook ~= nil,
 			gear and tostring(gear.cogTexture))
 		forgedCarnet:Hide()
+		T.Legacy(true)
 		local function SobreReset(atlas)
 			R.Reset(atlas)
 			NS:DB().companionStyle = "sobre"

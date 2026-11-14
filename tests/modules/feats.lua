@@ -476,9 +476,39 @@ do
 		NS:AzerothAtlasOK(true)
 		NS:DB().companionStyle = "azeroth"
 		earned = Find("char_level_10")
-		s.ok("Azeroth : bouclier doré", earned and earned.shield:IsShown() and earned.shield.atlas == "ui-achievement-shield-1"
-			and not earned.diamond:IsShown())
+		-- 3.1.0 : le bouclier du client n'est plus que dans le carnet de l'ancien
+		-- habillage (frame.azeroth) ; un carnet qui n'en est pas garde le losange
+		if f.azeroth then
+			s.ok("Azeroth (ancien habillage) : bouclier doré", earned and earned.shield:IsShown()
+				and earned.shield.atlas == "ui-achievement-shield-1" and not earned.diamond:IsShown())
+		else
+			s.ok("choix Azeroth hors ancien habillage : losange, jamais le bouclier du client", earned
+				and earned.diamond:IsShown() and not earned.shield:IsShown())
+		end
 		s.check("[HF] lignes : « à vérifier » grisée, portée Compte / Perso, barre et récompense, date d'obtention, deux styles")
+		-- 3.1.0 : le carnet de l'ancien habillage (drapeau du module) garde le
+		-- bouclier du client ; le carnet né avant lui garde le losange
+		do
+			f:Hide()
+			NS.journalFrame, NS.uiStyleCache = nil, {}
+			NS:ApplyUIStyle()
+			local legacy = NS:OpenJournalFeats()
+			local row
+			if legacy and legacy.feats then
+				for offset = 0, #legacy.feats.list, legacy.feats.perPage do
+					legacy.featsOffset = offset
+					NS:RefreshJournal()
+					for _, r in ipairs(legacy.feats.rows) do if r.def and r.def.id == "char_level_10" and r:IsShown() then row = row or r end end
+					if row then break end
+				end
+			end
+			Check("[HF] ancien habillage : bouclier doré du client sur la ligne obtenue, pas de plaque forgée du total",
+				legacy and legacy.azeroth and row and row.shield:IsShown() and row.shield.atlas == "ui-achievement-shield-1"
+				and not row.diamond:IsShown() and legacy.feats.pointsPlate == nil and not legacy.featPlate, legacy and tostring(legacy.azeroth))
+			legacy:Hide()
+			NS.journalFrame = f
+			legacy.featsOffset = 0
+		end
 		s = Steps()
 		pane.filterChips.got:Click()
 		s.ok("Obtenus (gardé)", #pane.list == 3 and NS:DB().featsFilter == "got")

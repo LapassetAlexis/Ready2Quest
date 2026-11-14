@@ -1445,21 +1445,70 @@ local function BuildFeatBar(self, parent, index, cat)
 	return bar
 end
 
+-- 3.1.0 (thème forgé) : le portrait dans un cadre d'orfèvre (nos matières :
+-- cadre, bords assombris), posé au-dessus du modèle, sans souris ; le filet
+-- d'un pixel s'efface. Remplace l'anneau à volutes de l'ancien habillage.
+ns.TRAINER_FORGE = { frameOut = 1, frameMargin = 16, corner = 30, cornerOut = 3, vignette = 0.85, insetOut = 3, insetMargin = 6 }
+local function ForgeStage(stage)
+	local K = ns.TRAINER_FORGE
+	local ring = CreateFrame("Frame", nil, stage)
+	ring:SetAllPoints(stage)
+	if ring.SetFrameLevel and stage.GetFrameLevel then ring:SetFrameLevel((tonumber(stage:GetFrameLevel()) or 1) + 6) end
+	if ring.EnableMouse then ring:EnableMouse(false) end
+	ring.vignette = Theme.ArtTexture(ring, "vignette", "ARTWORK", 0, Theme.WHITE, K.vignette)
+	if ring.vignette then ring.vignette:SetAllPoints(ring) end
+	ring.slice = Theme.Slice(ring, "frame", { layer = "BORDER", out = K.frameOut, margin = K.frameMargin, fill = false })
+	-- les quatre coins d'orfèvre, comme une fenêtre, en plus petit
+	ring.corners = {}
+	local o = K.cornerOut
+	for _, c in ipairs({ { "TOPLEFT", -o, o, 0, 1, 0, 1 }, { "TOPRIGHT", o, o, 1, 0, 0, 1 },
+		{ "BOTTOMLEFT", -o, -o, 0, 1, 1, 0 }, { "BOTTOMRIGHT", o, -o, 1, 0, 1, 0 } }) do
+		local tex = ring:CreateTexture(nil, "OVERLAY")
+		tex:SetTexture(Theme.ART.corner.file)
+		tex:SetTexCoord(c[4], c[5], c[6], c[7])
+		tex:SetSize(K.corner, K.corner)
+		tex:SetPoint(c[1], ring, c[1], c[2], c[3])
+		ring.corners[#ring.corners + 1] = tex
+	end
+	if stage.border then
+		for _, side in ipairs({ "top", "bottom", "left", "right" }) do
+			local edge = stage.border[side]
+			if edge and edge.Hide then edge:Hide() end
+		end
+	end
+	stage.forgeRing = ring
+	return ring
+end
+
+-- 3.1.0 (thème forgé) : un creux (Theme.ART.inset) autour d'une icône ou d'un
+-- modèle de la vitrine, comme les cases du garde-manger
+local function ForgeIconInset(owner, around)
+	local K = ns.TRAINER_FORGE
+	if not (owner and around) then return nil end
+	owner.forgeInset = Theme.Slice(owner, "inset", { layer = "BORDER", out = K.insetOut, margin = K.insetMargin,
+		around = around, color = Theme.EDGE })
+	return owner.forgeInset
+end
+
 function ns:EnsureTrainerWindow()
 	if self.trainerFrame then return self.trainerFrame end
 	if not (Theme and Theme.CreateWindow) then return nil end
 	-- 2.10.0 : un nom global par style, sinon Échap vise la fenêtre de l'autre style restée en cache
 	-- 3.1.0 : un par clé (ancien habillage, forgé, Sobre : ns:JournalStyleKey)
 	local key = (self.JournalStyleKey and self:JournalStyleKey()) or "sobre"
+	-- 3.1.0 : au thème forgé (décidé à la création, la fiche est gardée par
+	-- clé) : médaillon du logo, portrait encadré, icônes de la vitrine en creux
+	local forged = (ns.QCForged() and key ~= "azeroth") or nil   -- (jamais sous l'ancien habillage)
 	local frame = Theme.CreateWindow(UIParent, WIN_W, WIN_H, {
 		name = ns.StyleName and ns.StyleName("QuestCompanionTrainerFrame", key) or "QuestCompanionTrainerFrame",
-		footer = FOOT_H, strata = "FULLSCREEN" })
+		footer = FOOT_H, strata = "FULLSCREEN", emblem = forged })
 	if not frame then return nil end
 	frame.chrome = "trainer"
+	frame.trainerForged = forged
 	-- pas une fenêtre exclusive : ma fiche s'ouvre par-dessus le carnet (strate plus haute)
 	if self.RestorePoint then self:RestorePoint(frame, "trainerPoint", { point = "CENTER", x = 0, y = 40 }) end
 	local content = frame.content
-	frame.header = Theme.CreatePageHeader(content, WIN_W - 2, { compact = true })
+	frame.header = Theme.CreatePageHeader(content, WIN_W - 2, { compact = true, emblem = forged })
 	frame.header:SetPoint("TOPLEFT", content, "TOPLEFT", 0, 0)
 	-- sous le nom (ma fiche) : « Titre affiché : [choix] » ; plus rien en
 	-- haut à droite, où se tient le bouton de fermeture (2.8.0)
@@ -1475,7 +1524,7 @@ function ns:EnsureTrainerWindow()
 	frame.titlePicker:Hide()
 
 	-- message à la place de la fiche (demande en cours, rien reçu, refus)
-	frame.status = Theme.Text(content, Theme.F_TITLE, Theme.PARCHMENT)
+	frame.status = Theme.Text(content, Theme.F_TITLE, forged and Theme.TITLE or Theme.PARCHMENT)
 	frame.status:SetPoint("TOP", content, "TOP", 0, -170)
 	frame.status:SetWidth(WIN_W - 80)
 	frame.statusHint = Theme.Text(content, Theme.F_BODY, Theme.MUTED_LIGHT)
@@ -1501,7 +1550,8 @@ function ns:EnsureTrainerWindow()
 	frame.fallback:SetTexture(Theme.LOGO_SMALL)
 	frame.fallback:SetSize(96, 96)
 	frame.fallback:SetPoint("CENTER", stage, "CENTER", 0, 0)
-	frame.compName = Line(body, Theme.F_TITLE, Theme.PARCHMENT, MODEL_W)
+	if forged then ForgeStage(stage) end
+	frame.compName = Line(body, Theme.F_TITLE, forged and Theme.TITLE or Theme.PARCHMENT, MODEL_W)
 	frame.compName:SetPoint("TOPLEFT", stage, "BOTTOMLEFT", 0, -8)
 	frame.rankTag = Theme.CreateTag(body, "", Theme.BLUE)
 	frame.rankTag:SetPoint("TOPLEFT", frame.compName, "BOTTOMLEFT", 0, -6)
@@ -1538,7 +1588,10 @@ function ns:EnsureTrainerWindow()
 	frame.featsPicker:SetPoint("TOPRIGHT", body, "TOPLEFT", COL_X + COL_W, FEATS_Y + 1)
 	frame.featsPicker:Hide()
 	frame.featCards = {}
-	for index = 1, ns.TRAINER_FEAT_SHOWCASE do frame.featCards[index] = BuildFeatCard(self, body, index) end
+	for index = 1, ns.TRAINER_FEAT_SHOWCASE do
+		frame.featCards[index] = BuildFeatCard(self, body, index)
+		if forged then ForgeIconInset(frame.featCards[index], frame.featCards[index].icon) end
+	end
 	frame.featBars = {}
 	for index, cat in ipairs(ns.TRAINER_FEAT_CATS) do frame.featBars[index] = BuildFeatBar(self, body, index, cat) end
 
@@ -1548,6 +1601,7 @@ function ns:EnsureTrainerWindow()
 	frame.tiles = {}
 	for slot = 1, ns.TRAINER_SHOWCASE_SIZE do
 		frame.tiles[slot] = BuildTile(self, body, PAD + (slot - 1) * (TILE_W + TILE_GAP), slot)
+		if forged and frame.tiles[slot].model then ForgeIconInset(frame.tiles[slot], frame.tiles[slot].model) end
 	end
 
 	-- pied : partage (ma fiche), redemander (une autre), fermer
@@ -1740,7 +1794,9 @@ local function PaintCard(self, frame, card, own)
 			frame.fallback:Show()
 		end
 		frame.compName:SetText(comp.name or "?")
-		frame.rankTag:SetTag(comp.mascot and L.TRAINER_MASCOT or ClassLabel(comp.class) or "", Theme.BLUE)
+		-- (3.1.0 : l'étiquette du rang à l'identité au thème forgé)
+		frame.rankTag:SetTag(comp.mascot and L.TRAINER_MASCOT or ClassLabel(comp.class) or "",
+			frame.trainerForged and Theme.IDENTITY_LIGHT or Theme.BLUE)
 		frame.shinyTag:SetTag(comp.shiny and L.TRAINER_SHINY or "", Theme.GOLD_LIGHT)
 	else
 		ShowModel(frame.model, nil, nil)

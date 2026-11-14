@@ -1501,6 +1501,92 @@ Snap.scenes["qc-journal-guide"] = function(T)
 	return frame, "QuestCompanion : carnet, page Guide (la table des types)"
 end
 
+-- 3.1.0 : les scènes du carnet forgé tirent leurs nombres au hasard d'un
+-- générateur à elles : « all » rend les scènes à la suite dans le même
+-- état, et les tirages des suivantes (capture, chances) restent les mêmes
+local function OwnDraws(T, scene)
+	local saved, seed = math.random, 7
+	math.random = function(a, b)
+		seed = (seed * 1103515245 + 12345) % 2147483648
+		local r = seed / 2147483648
+		if not a then return r end
+		if not b then return 1 + math.floor(r * a) end
+		return a + math.floor(r * (b - a + 1))
+	end
+	local ok, frame, title = pcall(scene, T)
+	math.random = saved
+	if not ok then error(frame, 0) end
+	return frame, title
+end
+
+-- 3.1.0 : page Hauts faits (total sur sa plaque forgée, losanges des lignes)
+Snap.scenes["qc-journal-feats"] = function(T) return OwnDraws(T, function(T)
+	local frame = QCJournal(T, "feats", function(ns)
+		ns:DB().featsFilter = "all"
+		ns:FeatAward("men_first", { silent = true, at = 1700000000 })
+		ns:FeatAward("char_level_10", { silent = true, at = 1700100000 })
+		ns:FeatAward("char_level_20", { silent = true, at = 1700200000 })
+	end)
+	return frame, "QuestCompanion : carnet, page Hauts faits"
+end) end
+
+-- 3.1.0 : page Réserve (quelques spécimens, une brillante)
+Snap.scenes["qc-journal-reserve"] = function(T) return OwnDraws(T, function(T)
+	local frame = QCJournal(T, "reserve", function(ns)
+		local data = ns:CaptureData()
+		data.creatures[3110] = { name = "Crocilisque Gueule-d'effroi", zoneID = 1413, at = 1793500001, class = "normal" }
+		data.creatures[3236] = { name = "Kodo des Tarides", zoneID = 1413, at = 1793500002, class = "normal", shiny = true }
+		data.creatures[3398] = { name = "Gesharahan", zoneID = 1413, at = 1793500003, class = "rare" }
+		data.count = 3
+	end)
+	return frame, "QuestCompanion : carnet, page Réserve"
+end) end
+
+-- 3.1.0 : page Juke-box
+Snap.scenes["qc-journal-juke"] = function(T) return OwnDraws(T, function(T)
+	local frame = QCJournal(T, "juke")
+	return frame, "QuestCompanion : carnet, page Juke-box"
+end) end
+
+-- 3.1.0 : la fiche de dresseur (médaillon, portrait encadré, vitrine en creux)
+Snap.scenes["qc-trainer"] = function(T) return OwnDraws(T, function(T)
+	local ns = QCWorld(T)
+	ns:FeatAward("men_first", { silent = true, at = 1700000000 })
+	ns:FeatAward("char_level_10", { silent = true, at = 1700100000 })
+	ns:FeatAward("char_level_20", { silent = true, at = 1700200000 })
+	if ns.journalFrame then ns.journalFrame:Hide() end
+	ns.trainerFrame = nil
+	local frame = ns:TrainerOpen()
+	if frame and frame.model then frame.model:Hide() end
+	return Centered(frame), "QuestCompanion : fiche de dresseur"
+end) end
+
+-- 3.1.0 : le panneau « Choisir son allure » au-dessus du carnet
+Snap.scenes["qc-allure"] = function(T) return OwnDraws(T, function(T)
+	local _, ns = QCJournal(T, "evolution")
+	local panel = ns:AllureOpen()
+	return panel, "QuestCompanion : carnet, Choisir son allure"
+end) end
+
+-- 3.1.0 : la confirmation du carnet (changer de compagnon)
+Snap.scenes["qc-journal-confirm"] = function(T) return OwnDraws(T, function(T)
+	local _, ns = QCJournal(T, "evolution")
+	local dialog = ns:EnsureEffectsConfirm()
+	dialog.text:SetText(ns.L.EFF_CONFIRM_SUB or "")
+	ns:EffectsConfirmPlace(dialog)
+	dialog:Show()
+	return dialog, "QuestCompanion : carnet, Changer de compagnon ?"
+end) end
+
+-- 3.1.0 : le carnet forgé en saison du Voile d'hiver (guirlande, cadeau et
+-- renne autour du titre de la marque, flocons)
+Snap.scenes["qc-journal-winter"] = function(T) return OwnDraws(T, function(T)
+	local frame = QCJournal(T, "evolution", function(ns)
+		ns:DB().winterVeil = "on"
+	end)
+	return frame, "QuestCompanion : carnet, Voile d'hiver"
+end) end
+
 -- le compagnon à l'écran : cadre (cadre cuivre, fond sous-bois), nom, bulle
 local function QCCompanion(T, prepare)
 	local ns = QCWorld(T)

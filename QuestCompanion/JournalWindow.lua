@@ -2117,7 +2117,7 @@ function ns:EnsureJournalWindow()
 	local name = ns.StyleName and ns.StyleName("QuestCompanionJournalFrame", key) or "QuestCompanionJournalFrame"
 	-- 3.1.0 : au thème forgé, décidé à la création (le carnet est gardé par
 	-- clé) : médaillon du logo, points sous la marque sur une plaque forgée
-	local forged = ns.QCForged() or nil
+	local forged = (ns.QCForged() and key ~= "azeroth") or nil   -- (jamais sous l'ancien habillage)
 	local frame = Theme.CreateWindow(UIParent, WIDTH, HEIGHT, { name = name, nav = NAV_W, footer = FOOTER_H, emblem = forged })
 	if not frame then return nil end
 	frame.chrome = "journal"
