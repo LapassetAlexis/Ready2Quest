@@ -1,7 +1,7 @@
 -- Share.lua -- « Partager » : un beau moment dans le chat (QuestCompanion 3.1.0)
 --
 -- But : le bouche-à-oreille. Un joueur sans l'addon voit passer « [Quest
--- Companion] Dyokrion a capturé un Raptor brillant (3 étoiles, Grand) ! ».
+-- Companion] Dyokrion a capturé : Raptor (version brillante, 3 étoiles, Grand) ! ».
 --   * Où : un petit bouton (l'icône de chat du client, infobulle) sur les
 --     bandeaux du haut quand le moment vaut d'être raconté : « Capturé ! »
 --     (brillante, 3 étoiles, élite / rare / boss, espèce nouvelle ; en
@@ -79,10 +79,13 @@ local FR = {
 	OPT_SHARE_BANNER_DESC = "Un petit bouton sur les bandeaux des beaux moments (brillante, 3 étoiles, élite, espèce nouvelle, haut fait, sceau, titre) pour les partager dans le chat. La Réserve et les Hauts faits gardent leur entrée.",
 	-- le texte partagé (une ligne, langue du client)
 	SHARE_SOMEONE        = "Un dresseur",
-	SHARE_MSG_CAPTURE    = "%s a capturé %s !",
-	SHARE_A              = "un %s",
-	SHARE_AN             = "un %s",
-	SHARE_SHINY          = "un %s brillant",
+	-- 3.1.0 : sans article ni accord (« un Araignée … brillant ») : le genre du
+	-- nom de la créature n'est pas connu ; la brillante passe dans le détail
+	SHARE_MSG_CAPTURE    = "%s a capturé : %s !",
+	SHARE_A              = "%s",
+	SHARE_AN             = "%s",
+	SHARE_SHINY          = "%s",
+	SHARE_SHINY_TAG      = "version brillante",
 	SHARE_DETAILS        = "%s (%s)",
 	SHARE_SEP            = ", ",
 	SHARE_STARS_ONE      = "%d étoile",
@@ -103,7 +106,7 @@ local FR = {
 	SHARE_MSG_TITLE      = "%s porte maintenant le titre « %s » !",
 	-- annonce automatique (brillante, 3 étoiles) : un lot de « Tout capturer »
 	SHARE_MSG_BATCH      = "%s a capturé %d spécimens : %s !",
-	SHARE_BATCH_SHINY    = "%s brillant",
+	SHARE_BATCH_SHINY    = "%s",
 	OPT_ANNOUNCE_GROUP   = "Annoncer au groupe mes brillantes et 3 étoiles",
 	OPT_ANNOUNCE_GROUP_DESC = "Une ligne dans le chat du groupe (ou du raid) quand tu captures une brillante ou un spécimen 3 étoiles. Seul : rien. Jamais en combat (elle part à la fin du combat), au plus une toutes les 30 secondes.",
 	OPT_ANNOUNCE_GUILD   = "Annoncer aussi à la guilde",
@@ -134,6 +137,7 @@ local EN = {
 	SHARE_A              = "a %s",
 	SHARE_AN             = "an %s",
 	SHARE_SHINY          = "a shiny %s",
+	SHARE_SHINY_TAG      = "",   -- l'anglais le dit devant le nom (SHARE_SHINY)
 	SHARE_DETAILS        = "%s (%s)",
 	SHARE_SEP            = ", ",
 	SHARE_STARS_ONE      = "%d star",
@@ -260,6 +264,8 @@ local function CaptureBody(lang, item, who)
 	if item.shiny then phrase = Fmt(lang, "SHARE_SHINY", name)
 	else phrase = Fmt(lang, Vowel(name) and "SHARE_AN" or "SHARE_A", name) end
 	local details = {}
+	local tag = item.shiny and S(lang, "SHARE_SHINY_TAG")
+	if tag and tag ~= "" then details[#details + 1] = tag end
 	local stars = tonumber(item.stars)
 	if stars and stars > 0 then details[#details + 1] = Plural(lang, "SHARE_STARS", stars) end
 	if item.size and item.size ~= "normal" and S(lang, "SPEC_SIZE_" .. item.size) ~= "SPEC_SIZE_" .. item.size then
@@ -1046,13 +1052,19 @@ function ns:AnnounceChannels()
 	return list
 end
 
--- Libellé court d'une prise dans un lot : « Raptor brillant », « Loup (3 étoiles) »
+-- Libellé court d'une prise dans un lot : « Raptor (version brillante) »,
+-- « Loup (3 étoiles) » ; en anglais « shiny Raptor »
 local function BatchLabel(lang, item)
 	local label = ns.ShareClean(item.name)
-	if item.shiny then label = Fmt(lang, "SHARE_BATCH_SHINY", label) end
-	if (tonumber(item.stars) or 0) >= (ns.CAPTURE_STAR_MAX or 3) then
-		label = Fmt(lang, "SHARE_DETAILS", label, Plural(lang, "SHARE_STARS", item.stars))
+	local details = {}
+	if item.shiny then
+		local tag = S(lang, "SHARE_SHINY_TAG")
+		if tag and tag ~= "" then details[#details + 1] = tag else label = Fmt(lang, "SHARE_BATCH_SHINY", label) end
 	end
+	if (tonumber(item.stars) or 0) >= (ns.CAPTURE_STAR_MAX or 3) then
+		details[#details + 1] = Plural(lang, "SHARE_STARS", item.stars)
+	end
+	if #details > 0 then label = Fmt(lang, "SHARE_DETAILS", label, table.concat(details, S(lang, "SHARE_SEP"))) end
 	return label
 end
 

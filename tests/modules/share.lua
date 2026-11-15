@@ -189,10 +189,10 @@ do
 	end
 	local cases = {}
 	local shiny = { kind = "capture", name = "Raptor", shiny = true, stars = 3, size = "large" }
-	cases[#cases + 1] = Same("brillant 3 étoiles", shiny, "fr", "[Quest Companion] Dyokrion a capturé un Raptor brillant (3 étoiles, Grand) !")
+	cases[#cases + 1] = Same("brillant 3 étoiles", shiny, "fr", "[Quest Companion] Dyokrion a capturé : Raptor (version brillante, 3 étoiles, Grand) !")
 	cases[#cases + 1] = Same("brillant 3 étoiles", shiny, "en", "[Quest Companion] Dyokrion captured a shiny Raptor (3 stars, Large)!")
 	local fresh = { kind = "capture", name = "Ourson", stars = 1, class = "elite", fresh = true, size = "normal" }
-	cases[#cases + 1] = Same("espèce nouvelle", fresh, "fr", "[Quest Companion] Dyokrion a capturé un Ourson (1 étoile, élite, nouvelle espèce) !")
+	cases[#cases + 1] = Same("espèce nouvelle", fresh, "fr", "[Quest Companion] Dyokrion a capturé : Ourson (1 étoile, élite, nouvelle espèce) !")
 	fresh.name = "Owlkin"
 	cases[#cases + 1] = Same("espèce nouvelle", fresh, "en", "[Quest Companion] Dyokrion captured an Owlkin (1 star, elite, new species)!")
 	local feat = { kind = "feat", name = "Marchand de créatures", points = 10 }
@@ -226,7 +226,17 @@ do
 	local dirty = { kind = "capture", name = "|cffff0000Raptor|r|TInterface\\Icons\\X:0|t|Hunit:1|h|h", stars = 2, who = "Dyo|rkrion" }
 	local clean = NS:ShareText(dirty, "fr")
 	cases[#cases + 1] = clean
-	s.ok("codes retirés", clean == "[Quest Companion] Dyokrion a capturé un Raptor (2 étoiles) !", clean)
+	s.ok("codes retirés", clean == "[Quest Companion] Dyokrion a capturé : Raptor (2 étoiles) !", clean)
+	-- un nom féminin : ni article ni adjectif accordé (le genre n'est pas connu)
+	local spider = NS:ShareText({ kind = "capture", name = "Araignée des mines", shiny = true, stars = 1, who = "Dyokrion" }, "fr")
+	local hyena = NS:ShareText({ kind = "capture", name = "Grande tarentule", stars = 3, who = "Dyokrion" }, "fr")
+	local pack = NS:AnnounceText({ who = "Dyokrion", { kind = "capture", name = "Araignée des mines", shiny = true, stars = 1 },
+		{ kind = "capture", name = "Hyène", stars = 3 } }, "fr")
+	cases[#cases + 1] = spider
+	s.ok("féminin : sans « un » ni « brillant »", spider == "[Quest Companion] Dyokrion a capturé : Araignée des mines (version brillante, 1 étoile) !"
+		and hyena == "[Quest Companion] Dyokrion a capturé : Grande tarentule (3 étoiles) !"
+		and pack == "[Quest Companion] Dyokrion a capturé 2 spécimens : Araignée des mines (version brillante), Hyène (3 étoiles) !",
+		tostring(spider) .. " / " .. tostring(hyena) .. " / " .. tostring(pack))
 	local link = "|cff1eff00|Hitem:2589::::::::20:::::::|h[Étoffe de lin]|h|r"
 	s.ok("vrai lien d'objet gardé", NS.ShareClean("Avec " .. link .. " |cffffffffsans|r") == "Avec " .. link .. " sans",
 		NS.ShareClean("Avec " .. link))
@@ -310,7 +320,7 @@ do
 	s.ok("Réserve : bouton de la fiche", Shown(p.shareButton) and p.shareButton.item and p.shareButton.item.key == "cap:" .. tostring(res))
 	p.shareButton:Click("LeftButton")
 	s.ok("Réserve : menu, puis envoi au clic", NS.shareMenu:IsShown() and SH.Pick("GUILD") and #SH.sends == 1
-		and SH.sends[1].text == "[Quest Companion] Testeur a capturé un Raptor (2 étoiles, Grand, élite) !", SH.sends[1] and SH.sends[1].text)
+		and SH.sends[1].text == "[Quest Companion] Testeur a capturé : Raptor (2 étoiles, Grand, élite) !", SH.sends[1] and SH.sends[1].text)
 	NS:ReserveRelease(res)
 	s.ok("Réserve : confirmation « Relâcher » à l'écran, pas de bouton", f.resConfirm == res and not Shown(p.shareButton))
 	NS:ReserveCancelConfirm()
@@ -556,7 +566,7 @@ do
 	SH.Step(0)
 	local r = NS.captureResult
 	s.ok("bouton sur le « Capturé ! »", r and r:IsShown() and Shown(r.shareButton))
-	s.ok("texte complet", NS:ShareText(r.shareButton.item) == "[Quest Companion] Testeur a capturé un Raptor (3 étoiles, Grand, élite, nouvelle espèce) !",
+	s.ok("texte complet", NS:ShareText(r.shareButton.item) == "[Quest Companion] Testeur a capturé : Raptor (3 étoiles, Grand, élite, nouvelle espèce) !",
 		NS:ShareText(r.shareButton.item))
 	s.ok("toujours rien d'envoyé", #SH.sends == 0)
 	SH.Reset()
@@ -580,7 +590,7 @@ do
 	NS.SpecimenRollSize = function() return "large" end
 	Capture(1, true)
 	s.ok("brillante en groupe : une ligne PARTY, le texte du partage", #SH.sends == 1 and SH.sends[1].channel == "PARTY"
-		and SH.sends[1].text == "[Quest Companion] Testeur a capturé un Raptor brillant (1 étoile, Grand, nouvelle espèce) !",
+		and SH.sends[1].text == "[Quest Companion] Testeur a capturé : Raptor (version brillante, 1 étoile, Grand, nouvelle espèce) !",
 		SH.sends[1] and SH.sends[1].text)
 	SH.Step(31)
 	Capture(3, false, "Loup")
@@ -624,7 +634,7 @@ do
 	SH.combat = false
 	Mock:Fire("PLAYER_REGEN_ENABLED")
 	s.ok("fin du combat : une ligne pour les deux", #SH.sends == 1
-		and SH.sends[1].text == "[Quest Companion] Testeur a capturé 2 spécimens : Raptor brillant, Loup (3 étoiles) !",
+		and SH.sends[1].text == "[Quest Companion] Testeur a capturé 2 spécimens : Raptor (version brillante), Loup (3 étoiles) !",
 		SH.sends[1] and SH.sends[1].text)
 	-- limite : une annonce par canal toutes les 30 s
 	SH.Reset({ party = true })
@@ -652,7 +662,7 @@ do
 	} }
 	NS:CaptureBatchFlush(batch)
 	s.ok("lot : une seule ligne, les deux prises notables", #SH.sends == 1
-		and SH.sends[1].text == "[Quest Companion] Testeur a capturé 2 spécimens : Loup (3 étoiles), Raptor brillant !", SH.sends[1] and SH.sends[1].text)
+		and SH.sends[1].text == "[Quest Companion] Testeur a capturé 2 spécimens : Loup (3 étoiles), Raptor (version brillante) !", SH.sends[1] and SH.sends[1].text)
 	NS:CaptureBatchFlush(batch)
 	s.ok("lot déjà annoncé : rien de plus", #SH.sends == 1)
 	local en = NS:AnnounceText({ { name = "Raptor", shiny = true, stars = 1 }, { name = "Wolf", stars = 3 }, who = "Dyokrion" }, "en")
