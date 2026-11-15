@@ -359,13 +359,21 @@ do
 	SH.Step(30)
 	NS:JournalToastPush(SH.Feat("Sur la route"))
 	s.ok("réglage rallumé : bouton de retour", j:IsShown() and Shown(j.shareButton))
-	local row2 = nil
+	local row2, header, section, sameSection = nil, nil, nil, true
 	for _, page in ipairs(NS.OPTION_PAGES or {}) do
-		if page.id == "journal" then for _, r2 in ipairs(page.rows or {}) do if r2.key == "shareBanner" then row2 = r2 end end end
+		if page.id == "journal" then
+			-- 3.1.0 : sous le titre « Partage », pas sous « Hauts faits »
+			for _, r2 in ipairs(page.rows or {}) do
+				if r2.header then header = r2.header end
+				if r2.key == "shareBanner" then row2, section = r2, header end
+				if r2.key == "announceGroup" or r2.key == "announceGuild" then sameSection = sameSection and header == "OPT_SECTION_SHARE" end
+			end
+		end
 	end
 	SH.Reset()
 	s.ok("défaut actif ; réglage sur la page Carnet de voyage, libellé FR et EN", NS:DB().shareBanner == true and row2 ~= nil
 		and row2.label == "OPT_SHARE_BANNER" and NS.SHARE_STRINGS.fr.OPT_SHARE_BANNER == "Bouton Partager sur les bandeaux"
+		and section == "OPT_SECTION_SHARE" and sameSection and NS.SHARE_STRINGS.fr.OPT_SECTION_SHARE == "Partage"
 		and NS.SHARE_STRINGS.en.OPT_SHARE_BANNER ~= nil)
 	SH.Reset()
 	SH.Restore()

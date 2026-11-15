@@ -138,19 +138,21 @@ if ns.AddOptionPage then
 			{ key = "featToast",    label = "OPT_FEAT_TOAST", kind = "bool" },
 			{ key = "featChat",     label = "OPT_FEAT_CHAT",  kind = "bool" },
 			{ key = "featSound",    label = "OPT_FEAT_SOUND", kind = "bool" },
-			-- 3.1.0 : le bouton Partager des bandeaux (Share.lua : chaînes et défaut)
-			{ key = "shareBanner",  label = "OPT_SHARE_BANNER", kind = "bool",
-				describe = function() return ns.L.OPT_SHARE_BANNER_DESC end },
-			{ key = "announceGroup", label = "OPT_ANNOUNCE_GROUP", kind = "bool",
-				describe = function() return ns.L.OPT_ANNOUNCE_GROUP_DESC end },
-			{ key = "announceGuild", label = "OPT_ANNOUNCE_GUILD", kind = "bool",
-				describe = function() return ns.L.OPT_ANNOUNCE_GUILD_DESC end },
 			{ key = "featStats",    label = "OPT_FEAT_STATS", kind = "bool" },
 			-- suivi à l'écran (JournalTracker.lua : chaînes, défauts, action)
 			{ key = "journalTracker",       label = "OPT_JRN_TRACKER",        kind = "bool" },
 			{ key = "journalTrackerCombat", label = "OPT_JRN_TRACKER_COMBAT", kind = "bool" },
 			{ key = "journalTrackerReset",  label = "OPT_JRN_TRACKER_RESET",  kind = "action", button = "OPT_RESET" },
 			{ key = "journalTrackerRestore", label = "OPT_JRN_TRACKER_RESTORE", kind = "action", button = "OPT_RESTORE" },
+			-- 3.1.0 : partage (Share.lua : chaînes et défauts), sous son propre
+			-- titre : l'annonce parle de captures, pas de hauts faits
+			{ header = "OPT_SECTION_SHARE" },
+			{ key = "shareBanner",  label = "OPT_SHARE_BANNER", kind = "bool",
+				describe = function() return ns.L.OPT_SHARE_BANNER_DESC end },
+			{ key = "announceGroup", label = "OPT_ANNOUNCE_GROUP", kind = "bool",
+				describe = function() return ns.L.OPT_ANNOUNCE_GROUP_DESC end },
+			{ key = "announceGuild", label = "OPT_ANNOUNCE_GUILD", kind = "bool",
+				describe = function() return ns.L.OPT_ANNOUNCE_GUILD_DESC end },
 		},
 		-- bouton construit par Options.lua (L.OPT_ACTION_JOURNAL), action
 		-- traitée par le relais de RunOptionAction plus bas

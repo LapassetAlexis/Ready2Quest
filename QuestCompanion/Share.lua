@@ -75,6 +75,7 @@ local FR = {
 	SHARE_WAIT_MANY      = "Doucement : attends encore %d secondes avant de partager à nouveau.",
 	SHARE_AGAIN          = "Déjà partagé dans ce canal il y a moins d'une minute.",
 	SHARE_ROW_HINT       = "Clic droit : partager dans le chat",
+	OPT_SECTION_SHARE    = "Partage",
 	OPT_SHARE_BANNER     = "Bouton Partager sur les bandeaux",
 	OPT_SHARE_BANNER_DESC = "Un petit bouton sur les bandeaux des beaux moments (brillante, 3 étoiles, élite, espèce nouvelle, haut fait, sceau, titre) pour les partager dans le chat. La Réserve et les Hauts faits gardent leur entrée.",
 	-- le texte partagé (une ligne, langue du client)
@@ -130,6 +131,7 @@ local EN = {
 	SHARE_WAIT_MANY      = "Easy: wait %d more seconds before sharing again.",
 	SHARE_AGAIN          = "Already shared in this channel less than a minute ago.",
 	SHARE_ROW_HINT       = "Right-click: share in chat",
+	OPT_SECTION_SHARE    = "Sharing",
 	OPT_SHARE_BANNER     = "Share button on banners",
 	OPT_SHARE_BANNER_DESC = "A small button on the banners of great moments (shiny, 3 stars, elite, new species, achievement, seal, title) to share them in chat. The Reserve and Achievements keep their entry.",
 	SHARE_SOMEONE        = "A trainer",
