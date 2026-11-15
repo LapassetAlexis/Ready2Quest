@@ -838,7 +838,7 @@ raretés, étoiles, récompenses et sceaux inchangés.
   (`Theme.ART.inset`) autour de la vitrine. Les points restent dans le
   sous-titre.
 - **Allure et confirmation** : déjà habillées par le socle.
-  `ns.CarnetChromeFollows(frame)` fait monter l'habillage du socle (cadre,
+  `ns.ForgeChromeFollows(frame)` fait monter l'habillage du socle (cadre,
   coins, médaillon) avec une fenêtre relevée au-dessus du carnet. Titres de
   section de l'allure à l'identité, allure portée à la sélection ;
   « Emmener » principal doré, « Annuler » en contour.

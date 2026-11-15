@@ -79,10 +79,10 @@ Puis copie les dossiers dans `Interface/AddOns/` et lance le jeu : chacun seul, 
 
 ## Publier une version
 
-1. Monte `## Version:` dans le `.toc` de l'addon et `version` dans son `Config.lua` (et, pour Ready2Quest, le test « version exposée »).
+1. Monte `## Version:` dans le `.toc` de l'addon et `version` dans son `Config.lua`, puis les tests de version : « version exposée » de Ready2Quest (`tests/run_tests.lua`) et, pour les deux addons, le contrôle `[QC] versions` de `tests/modules/quest_companion.lua` (il lit les deux `.toc` et les deux `Config.lua`).
 2. Ajoute une section en haut de son `CHANGELOG.md` : `Ready2Quest/CHANGELOG.md` ou `QuestCompanion/CHANGELOG.md`. C'est le texte affiché sur les sites. Il doit rester sous 110 000 caractères (`tests/run_tests.py` le contrôle) : GitHub refuse une fiche de plus de 125 000 caractères, et la publication échoue alors après l'envoi à CurseForge et à Wago. Au-delà, range les plus vieilles versions dans `docs/` (comme `docs/CHANGELOG-QuestCompanion-1.x.md`).
 3. Si tu as touché au socle (`Ready2Quest/Libs/Socle`), recopie-le : `python3 -I tools/sync_socle.py`. Les tests le vérifient.
-4. Commite sur `main`, puis tague et pousse :
+4. Passe par une pull request (le workflow `Tests` la vérifie), fusionne-la dans `main`, puis tague le commit de `main` et pousse le tag :
 
 ```sh
 git tag v1.26.0      # Ready2Quest
@@ -101,5 +101,5 @@ Le packager déduit les versions du jeu de la ligne `## Interface:`. Depuis Read
 ## Garde-fous
 
 - `tests/run_tests.py` refuse de lancer les tests si une entrée de la racine du dépôt n'est pas exclue des deux `.pkgmeta` (elle partirait dans un zip), ou si les deux copies du socle diffèrent.
-- Le workflow `Tests` tourne à chaque push et pull request.
+- Le workflow `Tests` tourne sur chaque pull request et sur chaque push sur `main` (le commit de fusion), pas sur un push d'une autre branche sans PR ; `release.yml` le rejoue sur le commit du tag avant toute publication.
 - Logos : `python3 tools/gen_logos.py` les régénère (rsvg-convert et Pillow requis) : le même médaillon d'or pour les deux addons, l'écu coché au « ! » des quêtes pour Ready2Quest, l'empreinte bleue pour QuestCompanion. Il écrit les PNG des stores (400 × 400) et les logos en jeu (`Textures/logo.tga`, `logo_petit.tga`, `logo_glyphe.tga`).
