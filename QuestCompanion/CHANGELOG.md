@@ -1,5 +1,11 @@
 # QuestCompanion
 
+## 3.0.4
+
+- **Plus de fenêtre « QuestCompanion a été bloqué… » à la sortie d'un donjon** : à chaque sortie d'instance, l'addon se désabonnait du journal de combat, que le jeu garde fermé aux addons ; le jeu le prenait pour une action réservée à son interface. Quest Companion ne se désabonne plus que de ce qu'il a réellement écouté.
+
+*English:* no more "QuestCompanion has been blocked…" window when leaving a dungeon: on every instance exit the addon unsubscribed from the combat log, which the game keeps closed to addons, and the game treated that as an action reserved for its own UI. Quest Companion now only unsubscribes from what it actually listened to.
+
 ## 3.0.3
 
 - **Plus d'erreur en parlant à un PNJ** : quand le jeu rend le nom d'un PNJ secret, Quest Companion ne le lit plus (« attempt to compare local 'name' (a secret string value) » dans Companion.lua, à l'ouverture d'un dialogue). Même protection pour le nom, le type, la famille, la classification et le niveau de toutes les créatures et des autres joueurs (conseils, bestiaire, brillantes, groupe, rares, fiche de dresseur). Une garde de test refuse désormais toute lecture non protégée.
