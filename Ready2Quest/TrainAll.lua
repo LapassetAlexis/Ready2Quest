@@ -126,12 +126,7 @@ function ns:EnsureTrainAllButton()
 		button.themed = true
 	end
 	if button.SetSize then button:SetSize(150, 22) end
-	local train = G("ClassTrainerTrainButton")
-	if type(train) == "table" then
-		button:SetPoint("RIGHT", train, "LEFT", -4, 0)
-	else
-		button:SetPoint("BOTTOMLEFT", parent, "BOTTOMLEFT", 16, 8)
-	end
+	-- la place est choisie à chaque rafraîchissement (TrainAllPlace) : jamais sur l'argent
 	button:SetScript("OnClick", function() ns:TrainAllStart() end)
 	button:SetScript("OnEnter", ShowTip)
 	button:SetScript("OnLeave", function()
@@ -144,21 +139,175 @@ function ns:EnsureTrainAllButton()
 	return button
 end
 
--- Le libellé (« Tout apprendre (1 po 20 pa) ») et l'état ; posés seulement s'ils changent
+-- ---------------------------------------------------------------------------
+-- La place du bouton : entre l'argent du joueur et « S'entraîner », sans
+-- jamais recouvrir l'argent (retour 1.35.0-beta5 : « Tout apprendre (5 pa 40 pc) »
+-- couvrait « 1 po 80 pa 8 pc »). Libellé complet s'il tient, sinon le court
+-- (le total reste dans l'infobulle), sinon au-dessus de « S'entraîner ».
+-- ---------------------------------------------------------------------------
+ns.TRAINALL_GAP_TRAIN = 4     -- px entre le bouton et « S'entraîner »
+ns.TRAINALL_GAP_MONEY = 8     -- px laissés libres après l'argent
+ns.TRAINALL_SAFE_LEFT = 220   -- px réservés à gauche quand l'argent est introuvable
+ns.TRAINALL_MIN_WIDTH = 110   -- largeur d'agrément (abandonnée si elle ne tient pas)
+ns.TRAINALL_PAD = 28          -- marge du libellé dans le bouton
+
+local function Scale(frame)
+	if type(frame) ~= "table" or type(frame.GetEffectiveScale) ~= "function" then return 1 end
+	local ok, s = pcall(frame.GetEffectiveScale, frame)
+	s = ok and tonumber(Plain(s)) or nil
+	return (s and s > 0) and s or 1
+end
+
+-- Bord gauche ou droit d'un cadre, en pixels d'écran (nil si illisible)
+local function Edge(frame, method)
+	if type(frame) ~= "table" or type(frame[method]) ~= "function" then return nil end
+	local ok, value = pcall(frame[method], frame)
+	value = ok and tonumber(Plain(value)) or nil
+	return value and value * Scale(frame) or nil
+end
+
+local function FrameName(frame)
+	if type(frame) ~= "table" or type(frame.GetName) ~= "function" then return nil end
+	local ok, name = pcall(frame.GetName, frame)
+	name = ok and Plain(name) or nil
+	return type(name) == "string" and name or nil
+end
+
+-- Un enfant (ou petit-enfant) du maître dont le nom parle d'argent
+local function MoneyChild(frame, depth)
+	if type(frame) ~= "table" or type(frame.GetChildren) ~= "function" or depth > 2 then return nil end
+	local packed = { pcall(frame.GetChildren, frame) }
+	if not packed[1] then return nil end
+	for index = 2, #packed do
+		local name = FrameName(packed[index])
+		if name and name:find("Money") and not name:find("^Ready2Quest") then return packed[index] end
+	end
+	for index = 2, #packed do
+		local found = MoneyChild(packed[index], depth + 1)
+		if found then return found end
+	end
+	return nil
+end
+
+-- Le cadre d'argent du maître : plusieurs noms selon les clients
+function ns:TrainAllMoneyFrame(parent)
+	for _, name in ipairs({ "ClassTrainerMoneyFrame", "ClassTrainerFrameMoneyFrame" }) do
+		local frame = G(name)
+		if type(frame) == "table" then return frame end
+	end
+	if type(parent) ~= "table" then return nil end
+	for _, key in ipairs({ "MoneyFrame", "moneyFrame", "Money" }) do
+		local frame = rawget(parent, key)
+		if type(frame) == "table" then return frame end
+	end
+	return MoneyChild(parent, 1)
+end
+
+-- Bord droit de l'argent affiché (le cadre, ou sa pièce la plus à droite)
+local function MoneyRight(money)
+	local right = Edge(money, "GetRight")
+	local name = FrameName(money)
+	if name then
+		for _, coin in ipairs({ "GoldButton", "SilverButton", "CopperButton" }) do
+			local edge = Edge(G(name .. coin), "GetRight")
+			if edge and (not right or edge > right) then right = edge end
+		end
+	end
+	return right
+end
+
+-- Largeur d'un libellé dans ce bouton (sa propre police si possible)
+local function LabelWidth(button, label)
+	local width
+	if type(button.GetFontString) == "function" then
+		local okFs, fs = pcall(button.GetFontString, button)
+		if okFs and type(fs) == "table" and fs.SetText and fs.GetStringWidth then
+			local old = fs.GetText and fs:GetText()
+			pcall(fs.SetText, fs, label)
+			local ok, w = pcall(fs.GetStringWidth, fs)
+			width = ok and tonumber(Plain(w)) or nil
+			pcall(fs.SetText, fs, old)
+		end
+	end
+	if (not width or width <= 0) and Theme.TextWidth then width = tonumber(Theme.TextWidth(button, label, Theme.F_LABEL)) end
+	return math.ceil(width or (#label * 7)) + ns.TRAINALL_PAD
+end
+
+-- Place libre (px du bouton) entre l'argent et « S'entraîner » ; nil : inconnue
+function ns:TrainAllFreeSpace(button, parent, train)
+	local trainLeft = Edge(train, "GetLeft")
+	if not trainLeft then return nil end
+	local money = self:TrainAllMoneyFrame(parent)
+	local limit = money and MoneyRight(money)
+	local moneyLeft = money and Edge(money, "GetLeft")
+	if limit and moneyLeft and moneyLeft >= trainLeft then
+		-- l'argent est à droite de « S'entraîner » : il n'est pas sur le chemin
+		limit = Edge(parent, "GetLeft")
+		if not limit then return nil end
+	elseif not limit then
+		-- argent introuvable : une marge sûre depuis le bord gauche du maître
+		local parentLeft = Edge(parent, "GetLeft")
+		if not parentLeft then return nil end
+		limit = parentLeft + ns.TRAINALL_SAFE_LEFT * Scale(parent)
+	end
+	return (trainLeft - limit) / Scale(button) - ns.TRAINALL_GAP_TRAIN - ns.TRAINALL_GAP_MONEY
+end
+
+-- Libellé, largeur et ancre ; posés seulement s'ils changent. Rend le mode :
+-- "full" (à côté, avec le total), "short" (à côté, sans le total), "above"
+function ns:TrainAllPlace(button, count, total)
+	local parent, train = G("ClassTrainerFrame"), G("ClassTrainerTrainButton")
+	if type(train) ~= "table" then train = nil end
+	local full = count > 0 and (L.TRAINALL_BTN .. " (" .. Money(total) .. ")") or L.TRAINALL_BTN
+	local short = L.TRAINALL_BTN
+	local fullWidth, shortWidth = LabelWidth(button, full), LabelWidth(button, short)
+	local free = train and self:TrainAllFreeSpace(button, parent, train) or nil
+	local mode, label, width
+	if free then
+		for _, try in ipairs({
+			{ "full", full, math.max(ns.TRAINALL_MIN_WIDTH, fullWidth) }, { "full", full, fullWidth },
+			{ "short", short, math.max(ns.TRAINALL_MIN_WIDTH, shortWidth) }, { "short", short, shortWidth },
+		}) do
+			if try[3] <= free then mode, label, width = try[1], try[2], try[3]; break end
+		end
+	end
+	if not mode then
+		-- pas de place mesurée à côté : au-dessus de « S'entraîner », rien n'est recouvert en bas
+		mode, label, width = "above", full, math.max(ns.TRAINALL_MIN_WIDTH, fullWidth)
+	end
+	button.mode, button.free = mode, free
+	if button.label ~= label then
+		button.label = label
+		button:SetText(label)
+	end
+	if button.width ~= width then
+		button.width = width
+		if button.SetWidth then button:SetWidth(width) end
+	end
+	local anchor = mode .. tostring(train)
+	if button.anchor ~= anchor then
+		button.anchor = anchor
+		if button.ClearAllPoints then button:ClearAllPoints() end
+		if not train then
+			-- pas de « S'entraîner » connu : au-dessus du bas de la fenêtre, à droite
+			button:SetPoint("BOTTOMRIGHT", parent, "BOTTOMRIGHT", -16, 40)
+		elseif mode == "above" then
+			button:SetPoint("BOTTOMRIGHT", train, "TOPRIGHT", 0, ns.TRAINALL_GAP_TRAIN)
+		else
+			button:SetPoint("RIGHT", train, "LEFT", -ns.TRAINALL_GAP_TRAIN, 0)
+		end
+	end
+	return mode
+end
+
+-- Le libellé (« Tout apprendre (1 po 20 pa) »), la place et l'état ; posés seulement s'ils changent
 function ns:TrainAllRefresh()
 	local button = self:EnsureTrainAllButton()
 	if not button then return nil end
 	if not self:TrainAllOn() then button:Hide(); return nil end
 	local count, total, _, money = self:TrainAllScan()
 	button.count, button.total, button.short = count, total, math.max(0, total - money)
-	local label = count > 0 and (L.TRAINALL_BTN .. " (" .. Money(total) .. ")") or L.TRAINALL_BTN
-	if button.label ~= label then
-		button.label = label
-		button:SetText(label)
-		-- la largeur suit le libellé (le total change d'un maître à l'autre)
-		local width = Theme.TextWidth and tonumber(Theme.TextWidth(button, label, Theme.F_LABEL))
-		if width and button.SetWidth then button:SetWidth(math.max(110, math.ceil(width) + 28)) end
-	end
+	self:TrainAllPlace(button, count, total)
 	local on = count > 0 and button.short == 0 and not self.trainAllRun
 	if button.on ~= on then
 		button.on = on
@@ -242,6 +391,18 @@ local OWNER = "trainAll"
 local function OnUpdate()
 	if ns.trainAllRun then ns:TrainAllStep() else ns:TrainAllRefresh() end
 end
+-- l'argent du client se redessine (sa largeur change) après notre passage :
+-- la place est remesurée un instant plus tard, fenêtre toujours ouverte
+local function Relayout()
+	if not ns.Soon then return end
+	ns.Soon("trainAll:layout", 0.1, function()
+		if ns.Listening("TRAINER_UPDATE", OWNER) and not ns.trainAllRun then ns:TrainAllRefresh() end
+	end)
+end
+local function OnMoney()
+	OnUpdate()
+	Relayout()
+end
 local function OnClosed()
 	ns.Off("TRAINER_UPDATE", OWNER)
 	ns.Off("TRAINER_CLOSED", OWNER)
@@ -255,12 +416,14 @@ local function OnShow()
 	end
 	ns.On("TRAINER_UPDATE", OWNER, OnUpdate, "trainall:TRAINER_UPDATE")
 	ns.On("TRAINER_CLOSED", OWNER, OnClosed, "trainall:TRAINER_CLOSED")
-	ns.On("PLAYER_MONEY", OWNER, OnUpdate, "trainall:PLAYER_MONEY")
+	ns.On("PLAYER_MONEY", OWNER, OnMoney, "trainall:PLAYER_MONEY")
 	-- la fenêtre du maître est chargée à la demande par le client, parfois
 	-- juste après cet événement : un second passage la trouve
 	if not ns:TrainAllRefresh() and not ns.trainAllButton and ns.Soon then
 		ns.Soon("trainAll:late", 0.2, function() if ns.Listening("TRAINER_UPDATE", OWNER) then ns:TrainAllRefresh() end end)
 	end
+	-- la fenêtre vient de s'ouvrir : son argent et ses bords peuvent n'être posés qu'après
+	Relayout()
 end
 ns.On("TRAINER_SHOW", OWNER, OnShow, "trainall:TRAINER_SHOW")
 
