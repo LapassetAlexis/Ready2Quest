@@ -45,6 +45,12 @@
 
 *English:* a capture's portrait could show another creature seen just before (a Giant Tarantula with a wolf's head): the "Captured!" banner now shows the creature you just defeated; learned portraits are cleared once and relearned automatically (the type icon shows meanwhile), and the companion's framing follows the actual model. Express capture notifications now stack below the companion, under its mood tag, newest closest to it (above it when there is no room at the bottom of the screen). The "QuestCompanion has been blocked…" window when leaving a dungeon: the addon no longer touches the combat log the game keeps closed (the most likely cause); as a precaution, "Trainer card" and "Offer a trade" are no longer added to the right-click menu inside dungeons, and the automatic group announcement waits for the loading screen to end. If the game still refuses an action, one chat line says so (once per session) and `/qc diag` lists the function, place and moment to send on Discord.
 
+## 3.0.4
+
+- **Fenêtre « QuestCompanion a été bloqué… » à la sortie d'un donjon** : sa cause la plus probable est corrigée. À chaque sortie d'instance, l'addon se désabonnait du journal de combat, que le jeu garde fermé aux addons ; il ne se désabonne plus que de ce qu'il a réellement écouté. Si la fenêtre revient chez toi, dis-le sur le Discord (#addons-bugs).
+
+*English:* the "QuestCompanion has been blocked…" window when leaving a dungeon: its most likely cause is fixed. On every instance exit the addon unsubscribed from the combat log, which the game keeps closed to addons; it now only unsubscribes from what it actually listened to. If the window still shows up for you, tell us on Discord (#addons-bugs).
+
 ## 3.0.3
 
 - **Plus d'erreur en parlant à un PNJ** : quand le jeu rend le nom d'un PNJ secret, Quest Companion ne le lit plus (« attempt to compare local 'name' (a secret string value) » dans Companion.lua, à l'ouverture d'un dialogue). Même protection pour le nom, le type, la famille, la classification et le niveau de toutes les créatures et des autres joueurs (conseils, bestiaire, brillantes, groupe, rares, fiche de dresseur). Une garde de test refuse désormais toute lecture non protégée.
