@@ -215,6 +215,17 @@ ns.RegisterStrings({
 	LINK_RELOAD        = "Recharger",
 	LINK_COPY_TEXT     = "%s : Ctrl+C pour copier le lien.",
 	LINK_COPY_HINT     = "Ctrl+C pour copier",
+	-- socle 3.1.0 : action refusée par le jeu (ADDON_ACTION_FORBIDDEN / BLOCKED)
+	ACTION_REFUSED_CHAT = "action refusée par le jeu (%s). " .. SLASH .. " diag pour le détail, à envoyer sur le Discord.",
+	DIAG_ACTIONS        = "  actions refusées par le jeu : %d",
+	DIAG_ACTION_ROW     = "    %s  %s (%s), v%s : %s, %s",
+	DIAG_ACTION_IN      = "en instance (%s)",
+	DIAG_ACTION_OUT     = "hors instance",
+	DIAG_ACTION_COMBAT  = "en combat",
+	DIAG_ACTION_CALM    = "hors combat",
+	DIAG_ACTION_LOCK    = "messagerie verrouillée",
+	DIAG_ACTION_AFTER   = "      juste après : %s",
+	DIAG_ACTION_AGO     = "%s (il y a %.1f s)",
 }, {
 	OPT_TITLE           = "Settings",
 	OPT_HINT            = "Click a row to change the value.",
@@ -290,6 +301,16 @@ ns.RegisterStrings({
 	LINK_RELOAD        = "Reload",
 	LINK_COPY_TEXT     = "%s: Ctrl+C to copy the link.",
 	LINK_COPY_HINT     = "Ctrl+C to copy",
+	ACTION_REFUSED_CHAT = "action refused by the game (%s). " .. SLASH .. " diag for the details, to send on the Discord.",
+	DIAG_ACTIONS        = "  actions refused by the game: %d",
+	DIAG_ACTION_ROW     = "    %s  %s (%s), v%s: %s, %s",
+	DIAG_ACTION_IN      = "in an instance (%s)",
+	DIAG_ACTION_OUT     = "outside instances",
+	DIAG_ACTION_COMBAT  = "in combat",
+	DIAG_ACTION_CALM    = "out of combat",
+	DIAG_ACTION_LOCK    = "messaging locked",
+	DIAG_ACTION_AFTER   = "      right after: %s",
+	DIAG_ACTION_AGO     = "%s (%.1f s before)",
 })
 
 if ns.Mark then ns.Mark("Strings") end

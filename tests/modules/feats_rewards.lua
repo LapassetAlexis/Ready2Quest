@@ -8,6 +8,10 @@
 -- grand effet des bandeaux. Cosmétiques (FeatsCosmetics.lua) : déblocage par
 -- le haut fait seulement, condition lisible, rendu dans les deux styles,
 -- replis quand une image ou un atlas manque. Catalogue : feats_catalogue.lua.
+-- 3.1.0 : affirme l'ancien habillage (carnet en parchemin, scènes en bois, bandeaux
+-- dorés, anneau) : le drapeau QNS.AZEROTH_LEGACY rallumé pour tout le module
+-- (remis à la valeur du produit à sa fin, tests/run_tests.lua)
+T.Legacy(true)
 local Check, Say, ResetWorld, NS, Mock = T.Check, T.Say, T.ResetWorld, T.QNS, T.Mock
 
 -- plusieurs étapes d'un même sujet : un contrôle, les étapes ratées nommées
@@ -416,13 +420,23 @@ do
 		NS:GuildFeatsOnMessage("E~1~h~73~0~0~-~0~13~f", "GUILD", "Bob-Royaume")
 		NS:GuildFeatsToastTick(Mock.now)
 		local toast = NS.guildFeatToast
+		-- (3.1.0 : bandeau né forgé, ici sans les atlas : les points sur la
+		-- plaque du médaillon, ForgeBanners.lua ; sinon frame.featPoints)
+		local function Points()
+			if toast and toast.forgeBanner then
+				local badge = toast.medal.badge
+				return badge:IsShown() and badge.text.text or nil
+			end
+			local fp = toast and toast.featPoints
+			return fp and fp:IsShown() and fp.text or nil
+		end
 		local withPoints = toast and toast:IsShown()
 			and toast.text.text == "Bob, Maîtresse des brillantes, a gagné le titre « Traqueuse » !"
-			and toast.featPoints and toast.featPoints.text == "25" and toast.featPoints:IsShown()
+			and Points() == "25"
 		NS:GuildFeatsShowToast({ key = "y", sender = "Yan-Royaume", feat = { kind = "z" }, score = 700, at = Mock.now,
 			info = { kind = "z", line = "Yan a scellé une zone !", sub = "Sceau de zone : Mulgore" } })
 		Check("[TIT] bandeau de guilde : la ligne et les points d'un haut fait, plus de points pour un exploit ordinaire",
-			withPoints and not toast.featPoints:IsShown())
+			withPoints and Points() == nil)
 		NS:GuildFeatsHideToast()
 	end
 

@@ -89,10 +89,11 @@ do
 	local xs = {}
 	for _ = 1, 4 do Mock:Advance(0.05); xs[#xs + 1] = FX.X(frame) end
 	local moved = false
-	for _, x in ipairs(xs) do moved = moved or math.abs(x - 4) > 0.5 end
+	local baseX = (frame.modelBase or NS.COMPANION_MODEL_BASE).x   -- 3.1.0 : le médaillon forgé place le portrait au centre de l'anneau
+	for _, x in ipairs(xs) do moved = moved or math.abs(x - baseX) > 0.5 end
 	S.ok("tremblement : il bouge de côté", moved, table.concat(xs, ","))
 	Mock:Advance(1)
-	S.ok("tremblement fini : en place", FX.X(frame) == 4, FX.X(frame))
+	S.ok("tremblement fini : en place", FX.X(frame) == baseX, FX.X(frame))
 
 	NS.CompanionIsHappy = function() return true end
 	local ys = {}

@@ -801,6 +801,8 @@ local function ResetWorld()
 	NS.wasAtCamp = nil
 	NS.departed = nil
 	if NS.InvalidateReagents then NS:InvalidateReagents() end
+	-- abonnements à la demande (R2Q) : monde neuf = tout abonné, hors combat
+	if NS.ResetEventGates then NS:ResetEventGates() end
 end
 
 ----------------------------------------------------------------------------
@@ -1485,8 +1487,8 @@ ResetWorld()
 NS:RefreshOptions()   -- sans panneau : ne doit pas planter
 NS:HandleCommand("options")
 -- 1.34.0 : + la carte Quest Companion (page Général)
-Check("panneau créé et affiché : 33 lignes (17 réglages + 3 actions + 13 contrôles)", NS.optionsFrame
-	and NS.optionsFrame.shown == true and #NS.optionsFrame.rows == 33, NS.optionsFrame and #NS.optionsFrame.rows)
+Check("panneau créé et affiché : 34 lignes (17 réglages + 4 actions + 13 contrôles)", NS.optionsFrame
+	and NS.optionsFrame.shown == true and #NS.optionsFrame.rows == 34, NS.optionsFrame and #NS.optionsFrame.rows)
 do
 	-- on repère les lignes par leur clé : l'ordre du panneau peut évoluer
 	local boolRow, numberRow
@@ -1838,7 +1840,7 @@ ResetWorld()
 -- 4.38 Bootstrap : la commande survit à un échec de chargement
 Say("\n== bootstrap et diagnostic ==")
 ResetWorld()
-Check("version exposée", NS.version == "1.34.0", NS.version)
+Check("version exposée", NS.version == "1.35.0", NS.version)
 do
 	local missingMods = {}
 	for _, name in ipairs({ "Bootstrap", "Locales", "Compat", "Theme", "Core", "Buffs", "Reagents",
@@ -1859,7 +1861,7 @@ do
 	Mock:Reset()
 	NS:HandleCommand("diag")
 	Check("/sd diag liste les modules et la version", Mock:Output():find("modules :") ~= nil
-		and Mock:Output():find("1%.34%.0") ~= nil, Mock:Output())
+		and Mock:Output():find("1%.35%.0") ~= nil, Mock:Output())
 
 	-- une erreur est enregistrée et affichée
 	Mock:Reset()
@@ -2066,6 +2068,7 @@ do
 	NS:HandleCommand("aide")
 	Check("/r2q help : aide classée (aide = help)", helpOut:find("Zones sûres") and helpOut:find("/r2q module <depart")
 		and helpOut:find("/r2q diag") and Mock:Output() == helpOut, helpOut)
+	Check("/r2q help : /r2q style (1.35.0)", helpOut:find("/r2q style azeroth|sobre -- ", 1, true), helpOut)
 	Mock:Reset()
 	NS:HandleCommand("nimportequoi")
 	local _, unknownLines = Mock:Output():gsub("\n", "\n")
@@ -3009,7 +3012,7 @@ do
 	Mock.world.fontRefused = false
 	Check("sans templates ni police : même fenêtre, titrée, complète", fallback.chrome == "window"
 		and fallback.header ~= nil and tostring(fallback.header.title.text) ~= ""
-		and fallback.rows ~= nil and #fallback.rows == 33, fallback.rows and #fallback.rows)
+		and fallback.rows ~= nil and #fallback.rows == 34, fallback.rows and #fallback.rows)
 end
 Mock.world.noBackdropTemplate = false
 
@@ -3906,6 +3909,10 @@ do
 	if QNS then QNS.SHINY_CHANCE = 0 end
 	-- missions du jour : pas de tirage automatique (companion_daily.lua les tire lui-même)
 	if QNS then QNS.DAILY_AUTO = false end
+	-- 3.1.0 : capture express (CaptureExpress.lua) endormie : les scénarios du
+	-- déroulé d'avant (carte, scène, bandeau) restent ceux du réglage coupé ;
+	-- capture_express.lua la réveille
+	if QNS then QNS.captureExpressDormant = true end
 	-- 3.0.0 : visites guidées (GuidedTour.lua) : pas de départ automatique
 	-- (leurs bulles couvriraient les scénarios ; guide_tours.lua les allume)
 	if QNS then QNS.TOUR_AUTO = false end
@@ -3923,6 +3930,16 @@ do
 	-- le client pose QuestCompanionDB puis envoie ADDON_LOADED("QuestCompanion")
 	Mock:Fire("ADDON_LOADED", "Ready2Quest")
 	Mock:Fire("ADDON_LOADED", "QuestCompanion")
+	-- 3.1.0 : QuestCompanion tourne dans l'état du produit (thème forgé, ancien
+	-- habillage coupé : QNS.AZEROTH_LEGACY faux). T.Legacy(true) rallume
+	-- l'ancien habillage (carnet en parchemin, scènes en bois, bandeaux dorés,
+	-- anneau) pour les modules ou sous-cas qui l'affirment ; T.Legacy(false)
+	-- le recoupe. Remis à la valeur du produit à la fin de chaque module.
+	local legacyDefault = QNS.AZEROTH_LEGACY
+	function T.Legacy(on)
+		QNS.AZEROTH_LEGACY = on and true or false
+		return QNS.AZEROTH_LEGACY
+	end
 	for _, path in ipairs(MODULE_TEST_FILES or {}) do
 		Say("\n== module : " .. path .. " ==")
 		local handle = assert(io.open(ROOT .. "/" .. path, "r"))
@@ -3931,6 +3948,7 @@ do
 		local chunk, compileError = loadstring(source, "@" .. path)
 		assert(chunk, "erreur de compilation dans " .. path .. ":\n" .. tostring(compileError))
 		chunk()
+		QNS.AZEROTH_LEGACY = legacyDefault
 	end
 end
 

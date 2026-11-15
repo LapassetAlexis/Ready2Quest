@@ -10,6 +10,10 @@
 -- suivi, boss en instance, lignes « à vérifier » jamais attribuées, chiffres
 -- de toute la vie rattrapés en silence, portée par personnage, diagnostic.
 -- Le catalogue lui-même : feats_catalogue.lua.
+-- 3.1.0 : affirme l'ancien habillage (carnet en parchemin, scènes en bois, bandeaux
+-- dorés, anneau) : le drapeau QNS.AZEROTH_LEGACY rallumé pour tout le module
+-- (remis à la valeur du produit à sa fin, tests/run_tests.lua)
+T.Legacy(true)
 local Check, Say, ResetWorld, NS, Mock = T.Check, T.Say, T.ResetWorld, T.QNS, T.Mock
 
 -- plusieurs étapes d'un même sujet : un contrôle, les étapes ratées nommées
@@ -384,9 +388,10 @@ do
 		local toast = NS.journalToast
 		local s = Steps()
 		s.ok("deux : le premier", toast:IsShown() and toast.text:GetText() == "Premiers pas" and #NS.journalToasts == 1)
-		HF.Run(5)
+		-- (3.1.0 : un haut fait porte le bouton Partager, 3 s de plus)
+		HF.Run(5 + (NS.SHARE_EXTRA or 0))
 		s.ok("… puis le second", toast:IsShown() and toast.text:GetText() == "Sur la route")
-		HF.Run(5)
+		HF.Run(5 + (NS.SHARE_EXTRA or 0))
 		NS:FeatAward("char_level_30"); NS:FeatAward("char_level_40"); NS:FeatAward("char_level_50")
 		HF.Run(2)
 		-- 3.0.1 : le bandeau groupé nomme ses hauts faits (compte dans le titre, points dans le bouclier)
@@ -436,7 +441,7 @@ do
 			f and f:IsShown() and f.kind == "feats" and pane and pane:IsShown() and f.header.title.text == NS.L.JRN_SEC_feats
 			and f.sections.feats and f.sections.menagerie
 			and select(5, f.sections.feats:GetPoint(1)) < select(5, f.sections.menagerie:GetPoint(1))
-			and f.subtitle.text:find("15 points de hauts faits", 1, true)
+			and ((f.featPlate and f.featPlate.text.text) or f.subtitle.text):find("15 points de hauts faits", 1, true)
 			and pane.totals.text == "Compte : 5 points · Personnage : 10 points"
 			and pane.count.text:find("3 / " .. #NS:FeatDefs(), 1, true), pane and pane.totals.text)
 		local rows, firstGot = pane.list, nil
@@ -471,9 +476,39 @@ do
 		NS:AzerothAtlasOK(true)
 		NS:DB().companionStyle = "azeroth"
 		earned = Find("char_level_10")
-		s.ok("Azeroth : bouclier doré", earned and earned.shield:IsShown() and earned.shield.atlas == "ui-achievement-shield-1"
-			and not earned.diamond:IsShown())
+		-- 3.1.0 : le bouclier du client n'est plus que dans le carnet de l'ancien
+		-- habillage (frame.azeroth) ; un carnet qui n'en est pas garde le losange
+		if f.azeroth then
+			s.ok("Azeroth (ancien habillage) : bouclier doré", earned and earned.shield:IsShown()
+				and earned.shield.atlas == "ui-achievement-shield-1" and not earned.diamond:IsShown())
+		else
+			s.ok("choix Azeroth hors ancien habillage : losange, jamais le bouclier du client", earned
+				and earned.diamond:IsShown() and not earned.shield:IsShown())
+		end
 		s.check("[HF] lignes : « à vérifier » grisée, portée Compte / Perso, barre et récompense, date d'obtention, deux styles")
+		-- 3.1.0 : le carnet de l'ancien habillage (drapeau du module) garde le
+		-- bouclier du client ; le carnet né avant lui garde le losange
+		do
+			f:Hide()
+			NS.journalFrame, NS.uiStyleCache = nil, {}
+			NS:ApplyUIStyle()
+			local legacy = NS:OpenJournalFeats()
+			local row
+			if legacy and legacy.feats then
+				for offset = 0, #legacy.feats.list, legacy.feats.perPage do
+					legacy.featsOffset = offset
+					NS:RefreshJournal()
+					for _, r in ipairs(legacy.feats.rows) do if r.def and r.def.id == "char_level_10" and r:IsShown() then row = row or r end end
+					if row then break end
+				end
+			end
+			Check("[HF] ancien habillage : bouclier doré du client sur la ligne obtenue, pas de plaque forgée du total",
+				legacy and legacy.azeroth and row and row.shield:IsShown() and row.shield.atlas == "ui-achievement-shield-1"
+				and not row.diamond:IsShown() and legacy.feats.pointsPlate == nil and not legacy.featPlate, legacy and tostring(legacy.azeroth))
+			legacy:Hide()
+			NS.journalFrame = f
+			legacy.featsOffset = 0
+		end
 		s = Steps()
 		pane.filterChips.got:Click()
 		s.ok("Obtenus (gardé)", #pane.list == 3 and NS:DB().featsFilter == "got")
@@ -1169,6 +1204,9 @@ do
 		J.stats = { [107] = "12 000", [60] = "150", [98] = "1 200", [334] = "1500g 0s 0c", [1098] = "2", [349] = "40",
 			[339] = "2", [529] = "12", [377] = "6", [1524] = "300" }
 		J.earned = {}
+		-- un « Capturé ! » d'un test précédent ne tient pas la place (3.1.0 : +3 s avec le bouton Partager)
+		NS.captureResultPending = nil
+		NS:CaptureResultHide()
 		Mock:Fire("PLAYER_ENTERING_WORLD", true, false)
 		J.Run(4)
 		local want = { "char_kills_10000", "char_deaths_100", "quest_1000", "char_gold_1000", "dng_raid_ony", "char_flight_25",

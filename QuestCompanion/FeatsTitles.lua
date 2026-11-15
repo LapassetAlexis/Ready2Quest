@@ -118,7 +118,7 @@ local FR = {
 	FEAT_TITLE_LIST_NONE     = "Aucun titre gagné pour l'instant (le premier vient à 10 espèces capturées).",
 	FEAT_TITLE_LIST_ROW      = "  %d — %s",
 	FEAT_TITLE_LIST_HINT     = "/qc titre <numéro|nom|auto|aucun>",
-	HELP_TITLE               = "/qc titre [numéro|nom|auto|aucun] — le titre affiché sur ta fiche de dresseur",
+	HELP_TITLE_CMD           = "/qc titre [numéro|nom|auto|aucun] — le titre affiché sur ta fiche de dresseur",
 }
 local EN = {
 	OPT_FEAT_TITLE_FORM      = "Title form",
@@ -139,7 +139,7 @@ local EN = {
 	FEAT_TITLE_LIST_NONE     = "No title earned yet (the first one comes at 10 species captured).",
 	FEAT_TITLE_LIST_ROW      = "  %d — %s",
 	FEAT_TITLE_LIST_HINT     = "/qc title <number|name|auto|none>",
-	HELP_TITLE               = "/qc title [number|name|auto|none] — the title shown on your trainer card",
+	HELP_TITLE_CMD           = "/qc title [number|name|auto|none] — the title shown on your trainer card",
 }
 ns.RegisterStrings(FR, EN)
 if ns.KEEP_STRINGS then ns.FEAT_TITLE_STRINGS = { fr = FR, en = EN } end
@@ -449,7 +449,7 @@ ns.EXTRA_COMMANDS["titre"] = function(self, rest) return self:FeatTitleCommand(r
 ns.EXTRA_COMMANDS["title"] = ns.EXTRA_COMMANDS["titre"]
 if type(ns.HELP) == "table" then
 	for _, section in ipairs(ns.HELP) do
-		if section[1] == "HELP_H_OPEN" and type(section[2]) == "table" then table.insert(section[2], "HELP_TITLE") end
+		if section[1] == "HELP_H_OPEN" and type(section[2]) == "table" then table.insert(section[2], "HELP_TITLE_CMD") end
 	end
 end
 

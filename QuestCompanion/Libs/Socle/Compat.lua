@@ -174,19 +174,41 @@ end
 -- côté client ; repli sur RegisterEvent (les gestionnaires gardent leur test
 -- unit == "player"). Un gestionnaire ajouté ici ne voit plus que le joueur.
 ns.PLAYER_UNIT_EVENTS = { UNIT_AURA = true, UNIT_STATS = true }
+local CLEU = "COMBAT_LOG_EVENT_UNFILTERED"
+-- socle 3.1.0 (retour « action bloquée à chaque sortie de donjon ») : sur le
+-- moteur 12.0, toucher au journal de combat fermé (s'y abonner OU s'en
+-- désabonner) est une action réservée à Blizzard : le client lève la fenêtre
+-- ADDON_ACTION_FORBIDDEN au nom de l'addon, pcall ou pas. QuestCompanion
+-- 3.0.3 désabonnait le journal à chaque sortie d'instance (hauts faits).
+-- Aucun appel au client pour lui tant qu'il est fermé, dans un sens ou l'autre.
+function ns.EventForbidden(event)
+	return event == CLEU and ns.CombatLogRestricted()
+end
+
 function ns.RegisterGameEvent(frame, event)
+	if ns.EventForbidden(event) then return false end
 	if ns.PLAYER_UNIT_EVENTS[event] and type(frame.RegisterUnitEvent) == "function" then
 		if pcall(frame.RegisterUnitEvent, frame, event, "player") then return true end
 	end
 	return pcall(frame.RegisterEvent, frame, event) and true or false
 end
 
-local CLEU = "COMBAT_LOG_EVENT_UNFILTERED"
+-- Désabonne seulement ce qui est abonné (IsEventRegistered quand le client
+-- l'a), jamais un événement fermé ; rend true si l'appel est parti
+function ns.UnregisterGameEvent(frame, event)
+	if type(frame) ~= "table" or type(frame.UnregisterEvent) ~= "function" or ns.EventForbidden(event) then return false end
+	if type(frame.IsEventRegistered) == "function" then
+		local ok, on = pcall(frame.IsEventRegistered, frame, event)
+		if ok and ns.Plain(on) == false then return false end
+	end
+	return pcall(frame.UnregisterEvent, frame, event) and true or false
+end
+
 local STANDALONE = { PARTY_KILL = true, UNIT_DIED = true }
 function ns.RegisterHandlers(frame, handlers)
 	local logOpen = false
 	if handlers[CLEU] and not ns.CombatLogRestricted() then
-		logOpen = pcall(frame.RegisterEvent, frame, CLEU) and true or false
+		logOpen = ns.RegisterGameEvent(frame, CLEU)
 	end
 	for event in pairs(handlers) do
 		if event ~= CLEU and not (STANDALONE[event] and logOpen) then
@@ -194,6 +216,273 @@ function ns.RegisterHandlers(frame, handlers)
 		end
 	end
 	return logOpen
+end
+
+-- ---------------------------------------------------------------------------
+-- socle 3.1.0 : un seul cadre d'événements par addon (passe de performance 2)
+-- ---------------------------------------------------------------------------
+-- Avant, chaque module avait son cadre : un événement suivi par cinq modules
+-- (barre de vie qui apparaît, changement de zone…) faisait cinq appels du
+-- client vers le Lua. Ici, un cadre (créé au premier abonné) et une liste
+-- d'abonnés par événement : l'événement est enregistré auprès du client au
+-- premier abonné actif, retiré au dernier. Chaque abonné est appelé sous
+-- pcall, dans l'ordre d'abonnement ; une erreur est notée (« où:ÉVÉNEMENT »).
+--   ns.On(événement, qui, fn[, où]) : abonne (ou remplace la fonction de) `qui`
+--     (chaîne ou table) ; rend true si le client écoute l'événement.
+--   ns.Off(événement, qui) ; ns.Unlisten(qui) : désabonne (tout `qui`).
+--   ns.Listen(qui, handlers[, porte[, nom]]) : comme ns.RegisterHandlers (journal de
+--     combat s'il est ouvert, sinon PARTY_KILL / UNIT_DIED) ; rend true si le
+--     journal est écouté. porte() rend false : les événements de `qui` ne
+--     sont plus écoutés (module coupé), jusqu'au prochain ns.EventsResync() ;
+--     nom : préfixe des erreurs notées (sinon `qui`).
+--   ns.EventGate(qui, porte) : la même porte, posée seule.
+--   ns.EventHold(qui, oui) : écoute de `qui` mise en attente / reprise (ce
+--     qui ne sert pas en combat), sans perdre son rang dans l'ordre d'appel.
+--   ns.EventsResync() : relit les portes (réglage changé). Tant qu'une porte
+--     est fermée, elle est relue toutes les EVENT_GATE_POLL s (un réglage
+--     changé par un autre chemin rouvre l'écoute dans la seconde).
+--   ns.EventDeliver(qui, événement, ...) : le gestionnaire de `qui` seul,
+--     protégé (tests, simulation).
+--   ns.Listening(événement[, qui]) : écouté (par `qui`, s'il est donné).
+-- Les gestionnaires gardent leurs propres tests (ModuleOn…) : la porte
+-- n'économise que les appels, jamais elle ne remplace un test.
+ns.EVENT_GATE_POLL = 1
+local hubFrame                 -- nil : pas encore créé ; false : création impossible
+local hubSubs = {}             -- événement -> { entrée, … } dans l'ordre d'abonnement
+local hubActive = {}           -- événement -> nombre d'abonnés actifs
+local hubHeard = {}            -- événement -> true si le client l'envoie au cadre
+local hubGates = {}            -- qui -> porte ; hubOpen[qui] : dernière lecture
+local hubOpen = {}
+local hubHeld = {}             -- qui -> true : mis en attente (ns.EventHold)
+local hubDepth, hubDirty = 0, false
+
+local function HubCompact()
+	for _, list in pairs(hubSubs) do
+		for i = #list, 1, -1 do if list[i].dead then table.remove(list, i) end end
+	end
+	hubDirty = false
+end
+
+-- Derniers gestionnaires appelés (diagnostic d'une action refusée par le jeu,
+-- ns.ActionRecent) : un petit anneau, trois écritures par appel, rien d'alloué
+ns.ACTION_RECENT_MAX = 8
+local recentWhere, recentEvent, recentAt, recentIndex = {}, {}, {}, 0
+local function Recent(where, event)
+	recentIndex = recentIndex % ns.ACTION_RECENT_MAX + 1
+	recentWhere[recentIndex], recentEvent[recentIndex] = where, event
+	recentAt[recentIndex] = ns.Now and ns.Now() or 0
+end
+ns.ActionRecentNote = Recent
+-- du plus récent au plus ancien : { { where = "qui:ÉVÉNEMENT", at = horloge }, … }
+function ns.ActionRecent()
+	local list = {}
+	for step = 0, ns.ACTION_RECENT_MAX - 1 do
+		local i = (recentIndex - step - 1) % ns.ACTION_RECENT_MAX + 1
+		local where = recentWhere[i]
+		if where == nil then break end
+		local event = recentEvent[i]
+		if event and not tostring(where):find(event, 1, true) then where = tostring(where) .. ":" .. event end
+		list[#list + 1] = { where = tostring(where), at = recentAt[i] }
+	end
+	return list
+end
+
+local function HubDispatch(_, event, ...)
+	local list = hubSubs[event]
+	if not list then return end
+	hubDepth = hubDepth + 1
+	for i = 1, #list do
+		local entry = list[i]
+		if entry.active then
+			Recent(entry.where or entry.label, event)
+			local ok, err = pcall(entry.fn, ...)
+			if not ok and ns.RecordError then ns:RecordError(entry.where or (tostring(entry.label) .. ":" .. tostring(event)), err) end
+		end
+	end
+	hubDepth = hubDepth - 1
+	if hubDirty and hubDepth == 0 then HubCompact() end
+end
+ns.EventDispatch = function(event, ...) return HubDispatch(nil, event, ...) end
+
+local function Hub()
+	if hubFrame == nil then
+		local ok, frame = pcall(CreateFrame, "Frame")
+		hubFrame = (ok and frame) or false
+		if hubFrame then
+			hubFrame:SetScript("OnEvent", HubDispatch)
+			ns.eventHub = hubFrame
+		end
+	end
+	return hubFrame
+end
+
+-- un abonné de plus ou de moins sur `event` : le client suit
+local function HubCount(event, delta)
+	local count = (hubActive[event] or 0) + delta
+	hubActive[event] = count
+	local frame = Hub()
+	if not frame then return false end
+	if count > 0 and not hubHeard[event] then
+		hubHeard[event] = ns.RegisterGameEvent(frame, event) or nil
+	elseif count <= 0 then
+		hubActive[event] = 0
+		if hubHeard[event] then
+			hubHeard[event] = nil
+			ns.UnregisterGameEvent(frame, event)
+		end
+	end
+	return hubHeard[event] == true
+end
+
+-- le client accepte-t-il `event` sur ce cadre ? (essayé une fois, sans
+-- laisser l'événement enregistré s'il n'a pas encore d'abonné actif)
+local hubAccepts = {}
+local function HubAccepts(event)
+	if hubHeard[event] then return true end
+	if hubAccepts[event] == nil then
+		local frame = Hub()
+		local ok = frame and ns.RegisterGameEvent(frame, event) or false
+		if ok and (hubActive[event] or 0) <= 0 then
+			ns.UnregisterGameEvent(frame, event)
+		elseif ok then
+			hubHeard[event] = true
+		end
+		hubAccepts[event] = ok and true or false
+	end
+	return hubAccepts[event]
+end
+
+local function Find(event, owner)
+	local list = hubSubs[event]
+	if not list then return nil end
+	for i = 1, #list do
+		local entry = list[i]
+		if entry.owner == owner and not entry.dead then return entry end
+	end
+	return nil
+end
+
+local function SetActive(entry, on)
+	if entry.active == on then return end
+	entry.active = on
+	HubCount(entry.event, on and 1 or -1)
+end
+
+function ns.On(event, owner, fn, where)
+	if type(event) ~= "string" or owner == nil or type(fn) ~= "function" then return false end
+	local entry = Find(event, owner)
+	if entry then
+		entry.fn, entry.where = fn, where
+	else
+		local list = hubSubs[event]
+		if not list then list = {}; hubSubs[event] = list end
+		entry = { event = event, owner = owner, fn = fn, where = where, active = false,
+			label = type(owner) == "string" and owner or "event" }
+		list[#list + 1] = entry
+	end
+	SetActive(entry, hubOpen[owner] ~= false and not hubHeld[owner])
+	if not entry.active then return false end
+	return hubHeard[event] == true
+end
+
+function ns.Off(event, owner)
+	local entry = Find(event, owner)
+	if not entry then return end
+	SetActive(entry, false)
+	entry.dead, entry.fn = true, nil
+	if hubDepth > 0 then hubDirty = true else HubCompact() end
+end
+
+function ns.Unlisten(owner)
+	for event in pairs(hubSubs) do ns.Off(event, owner) end
+	hubGates[owner], hubOpen[owner], hubHeld[owner] = nil, nil, nil
+end
+
+-- toutes les entrées de `owner` suivent sa porte et sa mise en attente ;
+-- elles gardent leur place dans l'ordre d'appel
+local function OwnerSync(owner)
+	local on = hubOpen[owner] ~= false and not hubHeld[owner]
+	for _, list in pairs(hubSubs) do
+		for i = 1, #list do
+			local entry = list[i]
+			if entry.owner == owner and not entry.dead then SetActive(entry, on) end
+		end
+	end
+end
+
+-- Met en attente (held vrai) ou reprend l'écoute de `owner`, sans perdre
+-- son rang : pour ce qui ne sert qu'en combat, ou hors combat
+function ns.EventHold(owner, held)
+	held = held and true or nil
+	if hubHeld[owner] == held then return end
+	hubHeld[owner] = held
+	OwnerSync(owner)
+end
+
+local function GateOpen(gate)
+	local ok, open = pcall(gate)
+	return not ok or open ~= false and open ~= nil
+end
+
+local function GatePoll() ns.EventsResync() end
+function ns.EventsResync()
+	local closed = false
+	for owner, gate in pairs(hubGates) do
+		local open = GateOpen(gate)
+		if hubOpen[owner] ~= open then
+			hubOpen[owner] = open
+			OwnerSync(owner)
+		end
+		if not open then closed = true end
+	end
+	-- une porte fermée est relue de temps en temps (filet de sécurité) ;
+	-- toutes ouvertes : aucune tâche
+	if ns.Every then
+		if closed then
+			ns.Every("events:gates", ns.EVENT_GATE_POLL, GatePoll)
+		elseif ns.Cancel then
+			ns.Cancel("events:gates")
+		end
+	end
+	return closed
+end
+
+-- porte de `owner` (relue par ns.EventsResync) ; ouverte jusqu'à la relecture
+function ns.EventGate(owner, gate)
+	if type(gate) ~= "function" then return end
+	hubGates[owner] = gate
+	if hubOpen[owner] == nil then hubOpen[owner] = true end
+end
+
+function ns.Listen(owner, handlers, gate, label)
+	ns.EventGate(owner, gate)
+	local logOpen = false
+	if handlers[CLEU] and not ns.CombatLogRestricted() and HubAccepts(CLEU) then
+		logOpen = true
+		ns.On(CLEU, owner, handlers[CLEU], label and (label .. ":" .. CLEU))
+	end
+	for event, fn in pairs(handlers) do
+		if event ~= CLEU and not (STANDALONE[event] and logOpen) then
+			ns.On(event, owner, fn, label and (label .. ":" .. tostring(event)))
+		end
+	end
+	return logOpen
+end
+
+function ns.EventDeliver(owner, event, ...)
+	local entry = Find(event, owner)
+	if not (entry and entry.fn) then return false end
+	local ok, err = pcall(entry.fn, ...)
+	if not ok and ns.RecordError then ns:RecordError(entry.where or (tostring(entry.label) .. ":" .. tostring(event)), err) end
+	return ok
+end
+
+function ns.Listening(event, owner)
+	if owner ~= nil then
+		local entry = Find(event, owner)
+		return (entry and entry.active and hubHeard[event]) and true or false
+	end
+	return hubHeard[event] == true
 end
 
 local probeModel
@@ -419,6 +708,110 @@ function ns:ShowCopyLinks(title, links)
 		Pick(dialog, 1)
 	end
 	return dialog
+end
+
+-- ---------------------------------------------------------------------------
+-- socle 3.1.0 : action refusée par le jeu (« <addon> a été bloqué à cause
+-- d'une action qui n'est utilisable que par l'IU de Blizzard »).
+-- ADDON_ACTION_FORBIDDEN / ADDON_ACTION_BLOCKED (addon, fonction) qui nomment
+-- CET addon : notés dans la sauvegarde (db.actionLog, ACTION_LOG_MAX entrées,
+-- gardés après « Désactiver » ou /reload) avec l'heure, la version, la zone,
+-- instance ou non, combat ou non, messagerie verrouillée ou non, et les
+-- derniers gestionnaires d'événement appelés (ns.ActionRecent). Une entrée
+-- par fonction et par session ; UNE ligne dans le chat par session ;
+-- /diag les liste (ns:DiagActionLines, dans ns:DiagErrorLines).
+-- ---------------------------------------------------------------------------
+ns.ACTION_LOG_MAX = 10
+ns.ACTION_RECENT_SHOWN = 5
+local function Call1(name, ...)
+	local fn = rawget(_G, name)
+	if type(fn) ~= "function" then return nil end
+	local ok, a, b = pcall(fn, ...)
+	if not ok then return nil end
+	return ns.Plain(a), ns.Plain(b)
+end
+
+local function ActionLog(self, create)
+	local okDB, db = pcall(self.DB, self)
+	if not (okDB and type(db) == "table") then return nil end
+	if type(db.actionLog) ~= "table" then
+		if not create then return nil end
+		db.actionLog = {}
+	end
+	return db.actionLog
+end
+
+function ns:ActionRefused(event, addon, fn)
+	if ns.Plain(addon) ~= ADDON then return nil end
+	local kind = event == "ADDON_ACTION_BLOCKED" and "blocked" or "forbidden"
+	fn = tostring(ns.Plain(fn) or "?")
+	self.actionSeen = self.actionSeen or {}
+	if self.actionSeen[kind .. "|" .. fn] then return nil end
+	self.actionSeen[kind .. "|" .. fn] = true
+	local inside, instanceType = Call1("IsInInstance")
+	local info = rawget(_G, "C_ChatInfo")
+	local locked = false
+	if type(info) == "table" and type(info.InChatMessagingLockdown) == "function" then
+		local ok, value = pcall(info.InChatMessagingLockdown)
+		locked = ok and ns.Plain(value) == true
+	end
+	local now = ns.Now and ns.Now() or 0
+	local recent = {}
+	for _, step in ipairs(ns.ActionRecent()) do
+		if #recent >= ns.ACTION_RECENT_SHOWN then break end
+		recent[#recent + 1] = self:F("DIAG_ACTION_AGO", step.where, math.max(0, now - (tonumber(step.at) or now)))
+	end
+	local zone = Call1("GetRealZoneText")
+	local entry = {
+		kind = kind, fn = fn, version = tostring(ns.version or "?"),
+		at = tostring(Call1("date", "%Y-%m-%d %H:%M:%S") or "?"),
+		zone = type(zone) == "string" and zone ~= "" and zone or "?",
+		instance = inside == true and tostring(instanceType or "?") or nil,
+		combat = Call1("InCombatLockdown") == true or nil,
+		locked = locked or nil,
+		recent = recent,
+	}
+	local log = ActionLog(self, true)
+	if log then
+		log[#log + 1] = entry
+		while #log > ns.ACTION_LOG_MAX do table.remove(log, 1) end
+	end
+	if not self.actionChatDone then
+		self.actionChatDone = true
+		self:Print(self:F("ACTION_REFUSED_CHAT", fn))
+	end
+	return entry
+end
+
+function ns:DiagActionLines()
+	local log = ActionLog(self, false)
+	if not log or #log == 0 then return 0 end
+	local Theme = ns.Theme
+	self:Print(Theme.T_RED .. self:F("DIAG_ACTIONS", #log) .. "|r")
+	for _, entry in ipairs(log) do
+		local place = entry.instance and self:F("DIAG_ACTION_IN", entry.instance) or ns.L.DIAG_ACTION_OUT
+		local state = entry.combat and ns.L.DIAG_ACTION_COMBAT or ns.L.DIAG_ACTION_CALM
+		if entry.locked then state = state .. ", " .. ns.L.DIAG_ACTION_LOCK end
+		self:Print(self:F("DIAG_ACTION_ROW", tostring(entry.at), tostring(entry.fn), tostring(entry.kind),
+			tostring(entry.version), tostring(entry.zone) .. " " .. place, state))
+		if type(entry.recent) == "table" and #entry.recent > 0 then
+			self:Print(Theme.T_GREY .. self:F("DIAG_ACTION_AFTER", table.concat(entry.recent, ", ")) .. "|r")
+		end
+	end
+	return #log
+end
+
+do
+	local ok, frame = pcall(CreateFrame, "Frame")
+	if ok and frame then
+		pcall(frame.RegisterEvent, frame, "ADDON_ACTION_FORBIDDEN")
+		pcall(frame.RegisterEvent, frame, "ADDON_ACTION_BLOCKED")
+		frame:SetScript("OnEvent", function(_, event, addon, fn)
+			local done, err = pcall(ns.ActionRefused, ns, event, addon, fn)
+			if not done and ns.RecordError then ns:RecordError("action:" .. tostring(event), err) end
+		end)
+		ns.actionFrame = frame
+	end
 end
 
 ns:DetectCapabilities()

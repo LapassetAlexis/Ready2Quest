@@ -331,18 +331,19 @@ do
 		and NS.GroupFlags("Player-1-00000002") == 2 and NS.GroupFlags("Player-1-00000099") == nil and NS.GroupFlags(nil) == nil)
 
 	-- les événements autonomes, tels que le client les envoie
-	local OnEvent = NS.bestiaryEventFrame.scripts.OnEvent
+	-- gestionnaires appelés tels quels (journal ouvert ou fermé, comme le client les appellerait)
+	local function OnEvent(_, event, ...) return (pcall(NS.BESTIARY_HANDLERS[event], ...)) end
 	B.Reset()
 	local wolf = B.Target(3301, "Loup")
-	OnEvent(NS.bestiaryEventFrame, "PARTY_KILL", PLAYER_GUID, wolf)
+	OnEvent(nil, "PARTY_KILL", PLAYER_GUID, wolf)
 	local boar = B.Target(3302, "Sanglier")
-	OnEvent(NS.bestiaryEventFrame, "PARTY_KILL", "Player-1-00000099", boar)
+	OnEvent(nil, "PARTY_KILL", "Player-1-00000099", boar)
 	local stranger = (B.Species(1413, 3302).killed or 0) == 0
 	B.W.units.party1 = { guid = "Player-1-00000002" }
-	OnEvent(NS.bestiaryEventFrame, "PARTY_KILL", "Player-1-00000002", boar)
+	OnEvent(nil, "PARTY_KILL", "Player-1-00000002", boar)
 	Check("[CL] PARTY_KILL : de toi ou de ton groupe abattu, d'un inconnu pas pour toi", B.Species(1413, 3301).killed == 1
 		and stranger and B.Species(1413, 3302).killed == 1)
-	Check("[CL] UNIT_DIED vide : pas d'erreur", pcall(OnEvent, NS.bestiaryEventFrame, "UNIT_DIED", nil))
+	Check("[CL] UNIT_DIED vide : pas d'erreur", OnEvent(nil, "UNIT_DIED", nil) == true)
 
 	-- message d'XP seul : rare tamponné, brillante abattue ; puis PARTY_KILL : rien de plus
 	B.Reset()
@@ -353,7 +354,7 @@ do
 	Mock:Fire("CHAT_MSG_COMBAT_XP_GAIN", "Croc-Gris meurt, vous gagnez 120 points d'expérience.")
 	Check("[CL] message d'XP : rare compté au bestiaire, tampon « rare », brillante abattue", B.Species(1413, 5801).killed == 1
 		and NS:HasStamp("rare:5801") and NS:ShinyData().count == before + 1 and NS:ShinyState().live[rare] == nil)
-	OnEvent(NS.bestiaryEventFrame, "PARTY_KILL", PLAYER_GUID, rare)
+	OnEvent(nil, "PARTY_KILL", PLAYER_GUID, rare)
 	Check("[CL] XP puis PARTY_KILL : compté une seule fois", B.Species(1413, 5801).killed == 1
 		and NS:ShinyData().count == before + 1)
 end

@@ -7,6 +7,10 @@
 -- dans l'écu) ; cadre du compagnon (anneau, plaque, rabat de l'humeur, modèle
 -- dans l'ouverture), bande Sobre lisible ; bulle sur le parchemin ; textures
 -- du client par référence (QC et R2Q), jamais nos images en repli.
+-- 3.1.0 : affirme l'ancien habillage (carnet en parchemin, scènes en bois, bandeaux
+-- dorés, anneau) : le drapeau QNS.AZEROTH_LEGACY rallumé pour tout le module
+-- (remis à la valeur du produit à sa fin, tests/run_tests.lua)
+T.Legacy(true)
 local Check, Say, ResetWorld, NS, RNS, Mock = T.Check, T.Say, T.ResetWorld, T.QNS, T.NS, T.Mock
 local Theme = NS.Theme
 
@@ -365,8 +369,9 @@ do
 	Check("[AZ] scène refermée : « Capturé ! », bouclier d'or, étoiles, éclat", seen and seen.azeroth
 		and seen.title:GetText() == "CAPTURÉ !" and seen.text:GetText() == "Raptor" and seen.shieldKind == "gold"
 		and (seen.stars:GetText() or "") ~= "" and seen.animBling == true and not seen.animShine, seen and seen.title:GetText())
-	AZT.Tick(4)
-	Check("[AZ] … puis s'efface (3,5 s)", not NS.captureResult:IsShown())
+	-- espèce nouvelle : le bouton Partager, et ses 3 s de plus (3.1.0)
+	AZT.Tick(4 + (NS.SHARE_EXTRA or 0))
+	Check("[AZ] … puis s'efface (3,5 s, + le temps du bouton Partager)", not NS.captureResult:IsShown())
 	NS:CaptureResultQueue({ name = "Kodo doré", shiny = true, stars = 3 })
 	NS:CaptureTick(NS.Now())
 	local r = NS.captureResult
@@ -752,4 +757,13 @@ do
 	NS.SHINY_CHANCE = AZT.savedShiny
 	if AZT.rollQuality then NS.CaptureRollQuality = AZT.rollQuality end
 	ResetWorld()
+end
+
+-- 3.1.0 : la réplique d'essai de /qc debug bulle ne promet plus un parchemin
+-- (thème forgé : la bulle n'en a plus)
+do
+	local all = NS.AZEROTH_DEBUG_STRINGS or {}
+	local fr, en = all.fr and all.fr.AZ_DEBUG_SAMPLE or "", all.en and all.en.AZ_DEBUG_SAMPLE or ""
+	Check("[AZ] /qc debug bulle : réplique d'essai sans « parchemin »", fr ~= "" and en ~= ""
+		and not fr:lower():find("parchemin", 1, true) and not en:lower():find("parchment", 1, true), fr .. " / " .. en)
 end

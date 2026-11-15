@@ -171,6 +171,12 @@ ns.WINTER_VEIL_GIFT = "frost"
 -- 2.14.1 : recalé sur le réglage en jeu (y = -20 posé sur l'or, 10/11) :
 -- les mesures faites sur captures (-5..-17) plaçaient l'or trop haut
 ns.WINTER_VEIL_RING_GOLD = { top = -14, inner = -26, w = 91 }
+-- 3.1.0 : le médaillon forgé (ns.FORGE_RING, anneau généré de 104 px centré
+-- 45 px sous le haut du cadre, bande d'or des rayons 0,80 à 0,94) : le haut
+-- de sa bande va de +4 à -3 px du haut du cadre ; la guirlande y est posée
+-- (y, depuis le haut du cadre) au lieu de WINTER_VEIL_COMPANION.y
+ns.WINTER_VEIL_FORGE_GOLD = { top = 4, inner = -3, w = 98 }
+ns.WINTER_VEIL_FORGE_LIGHTS = { y = 1 }
 -- la scène de capture : la boule de neige (taille, tours en vol), son
 -- éclatement en flocons (nombre, durée, portée, taille)
 -- 2.14.0 (bêta 3) : un peu plus soigné, mêmes durées. La boule ralentit un
@@ -194,7 +200,7 @@ local FR = {
 	WINTER_VEIL_auto_HINT   = "du 15 décembre au 2 janvier",
 	WINTER_VEIL_on          = "Toujours",
 	WINTER_VEIL_off         = "Jamais",
-	WINTER_VEIL_USAGE       = "/qc noel auto|on|off (actuel : %s). Réglages en jeu : /qc noel cadre, /qc noel metzen",
+	WINTER_VEIL_USAGE       = "/qc noel auto|on|off (actuel : %s)",
 	WINTER_VEIL_MSG         = "Décor du Voile d'hiver : %s.",
 	WINTER_VEIL_MSG_SOBRE   = "Décor du Voile d'hiver : %s. Il ne se voit qu'avec le style Azeroth (/qc style azeroth).",
 	HELP_NOEL               = "/qc noel auto|on|off — décor du Voile d'hiver (guirlandes, flocons, boule de neige)",
@@ -217,7 +223,7 @@ local EN = {
 	WINTER_VEIL_auto_HINT   = "December 15 to January 2",
 	WINTER_VEIL_on          = "Always",
 	WINTER_VEIL_off         = "Never",
-	WINTER_VEIL_USAGE       = "/qc noel auto|on|off (current: %s). Live tuning: /qc noel frame, /qc noel metzen",
+	WINTER_VEIL_USAGE       = "/qc noel auto|on|off (current: %s)",
 	WINTER_VEIL_MSG         = "Winter Veil decorations: %s.",
 	WINTER_VEIL_MSG_SOBRE   = "Winter Veil decorations: %s. They only show with the Azeroth style (/qc style azeroth).",
 	HELP_NOEL               = "/qc noel auto|on|off — Winter Veil decorations (lights, snowflakes, snowball)",
@@ -313,9 +319,18 @@ local function SeasonNow()
 	return seasonCache.value
 end
 
--- Le décor est-il là ? Style Azeroth affiché ET réglage (auto : la saison)
+-- 3.1.0 : le décor suit le choix du style « Azeroth » (le thème forgé, posé
+-- sans les atlas du client), plus l'ancien habillage (ns:AzerothOn) : la
+-- saison reste là quand l'ancien habillage est coupé. Chaque pose (carnet,
+-- compagnon, scènes, glyphes) se garde d'un cadre qui n'a pas son hôte.
+function ns:WinterVeilStyleOn()
+	if self.UIStyleChoice then return self:UIStyleChoice() == "azeroth" end
+	return (self.AzerothOn and self:AzerothOn()) and true or false
+end
+
+-- Le décor est-il là ? Style Azeroth choisi ET réglage (auto : la saison)
 function ns:WinterVeilActive()
-	if not (self.AzerothOn and self:AzerothOn()) then return false end
+	if not self:WinterVeilStyleOn() then return false end
 	local choice = self:WinterVeilChoice()
 	if choice == "on" then return true end
 	if choice == "off" then return false end
@@ -437,9 +452,136 @@ function ns.WinterVeilJournalBand(frame)
 	return { x0 = lay.wood + J.lightsEdge, x1 = W - lay.wood - J.lightsEdge, y = -lay.band }
 end
 
+-- ---------------------------------------------------------------------------
+-- 3.1.0 : le décor du carnet au thème forgé (frame.journalForged, décidé à
+-- la création du carnet). La guirlande pend au bord haut du cadre d'or, du
+-- médaillon jusqu'avant la roue et la croix (elles restent libres) ; le
+-- cadeau et le renne encadrent le titre de la marque (le cadeau dans le creux
+-- entre le médaillon et le nom) ; trois flocons sur l'en-tête de la page, à
+-- droite, sous la croix. Le décor vit sur un cadre à part, au-dessus des
+-- enfants du carnet, sous l'habillage du socle (médaillon, coins), sans
+-- souris. Fait une fois (la fenêtre forgée ne change pas de taille) ; seul
+-- son affichage suit la saison. Guirlande : la bande du client si le fichier
+-- est servi, sinon un fil lumineux et des ampoules en matières forgées
+-- (Theme.ART.line, Theme.ART.dot).
+-- ---------------------------------------------------------------------------
+ns.WINTER_VEIL_JOURNAL_FORGE = {
+	lightsH = 20, y = 8,                  -- hauteur de la bande, haut au-dessus du bord du cadre
+	left = 66, right = 92,                -- débuts : après le médaillon ; avant la roue et la croix
+	level = 12,                           -- au-dessus des enfants du carnet (sous Theme.CHROME.level)
+	iconSize = 16, iconGap = 3, navEdge = 6, reindeerLift = 1,   -- icônes du titre ; marge au bord droit de la colonne
+	bulbStep = 26, bulbSize = 12, wireAlpha = 0.55, bulbAlpha = 0.95,   -- repli forgé
+	flakes = {
+		{ point = "TOPRIGHT", x = -44, y = -66, size = 26, alpha = 0.40 },
+		{ point = "TOPRIGHT", x = -88, y = -80, size = 14, alpha = 0.34 },
+		{ point = "TOPRIGHT", x = -128, y = -64, size = 12, alpha = 0.36 },
+	},
+}
+-- teintes des ampoules du repli (statuts du thème : rouge, vert, or), lues à la pose
+local function ForgeBulbColors()
+	local T = ns.Theme
+	return { T.RED, T.GREEN, T.GOLD_LIGHT }
+end
+
+local function BuildForgedJournalDecor(frame)
+	local K, A, T = ns.WINTER_VEIL_JOURNAL_FORGE, ns.WINTER_VEIL_ART, ns.Theme
+	local d = CreateFrame("Frame", nil, frame)
+	d:SetAllPoints(frame)
+	d:SetFrameLevel((tonumber(frame:GetFrameLevel()) or 1) + K.level)
+	d:EnableMouse(false)
+	local W = tonumber(frame:GetWidth()) or 0
+	local x0, x1, h = K.left, W - K.right, K.lightsH
+	d.band = { x0 = x0, x1 = x1, y = K.y }
+	-- la guirlande : bande du client recoupée, sinon le repli forgé
+	d.lights = {}
+	local tileW = math.floor(A.lights.w * h / A.lights.h + 0.5)
+	local c = A.lights.c
+	local x = x0
+	while x < x1 do
+		local w = math.min(tileW, x1 - x)
+		local tex = NewFile(d, "ARTWORK", 1, A.lights)
+		if not tex then break end
+		tex:SetSize(w, h)
+		tex:SetPoint("TOPLEFT", frame, "TOPLEFT", x, K.y)
+		tex:SetTexCoord(c[1], c[1] + (c[2] - c[1]) * w / tileW, c[3], c[4])
+		d.lights[#d.lights + 1] = tex
+		x = x + w
+	end
+	if #d.lights == 0 and T and T.ART then
+		d.forgeLights = true
+		local wire = d:CreateTexture(nil, "ARTWORK", nil, 0)
+		wire:SetTexture(T.ART.line.file)
+		wire:SetVertexColor(T.GOLD_SOFT[1], T.GOLD_SOFT[2], T.GOLD_SOFT[3], K.wireAlpha)
+		wire:SetSize(x1 - x0, 3)
+		wire:SetPoint("TOPLEFT", frame, "TOPLEFT", x0, K.y - 6)
+		if wire.SetTexCoord then wire:SetTexCoord(0, 0.35, 0, 1) end   -- le cœur du filet, sans l'extinction
+		d.wire = wire
+		local colors = ForgeBulbColors()
+		local index = 0
+		for bx = x0 + K.bulbStep / 2, x1 - K.bulbSize / 2, K.bulbStep do
+			index = index + 1
+			local bulb = d:CreateTexture(nil, "ARTWORK", nil, 2)
+			bulb:SetTexture(T.ART.dot.file)
+			local col = colors[(index - 1) % #colors + 1]
+			bulb:SetVertexColor(col[1], col[2], col[3], K.bulbAlpha)
+			bulb:SetSize(K.bulbSize, K.bulbSize)
+			-- une sur deux pend un peu plus bas (le fil festonne)
+			bulb:SetPoint("CENTER", frame, "TOPLEFT", bx, K.y - 8 - (index % 2) * 3)
+			d.lights[#d.lights + 1] = bulb
+		end
+	end
+	-- le cadeau et le renne autour du titre de la marque
+	d.present = NewFile(d, "OVERLAY", 1, A.present)
+	d.reindeer = NewFile(d, "OVERLAY", 1, A.reindeer)
+	for _, icon in ipairs({ d.present, d.reindeer }) do if icon then icon:SetSize(K.iconSize, K.iconSize) end end
+	local title = frame.brand and frame.brand.name
+	if title then
+		local half = K.iconGap + K.iconSize / 2
+		if d.present then d.present:SetPoint("CENTER", title, "LEFT", -half, 0) end
+		-- le renne au-dessus de la fin du nom, calé au bord droit de la colonne :
+		-- « Carnet de voyage » en Friz Quadrata 16 remplit la colonne, à sa
+		-- droite il passerait sur la page (jamais sur le nom, jamais sur la page)
+		if d.reindeer then
+			local nameX = (ns.Theme and ns.Theme.EMBLEM and ns.Theme.EMBLEM.text or 72) - 2
+			local navW = frame.nav and tonumber(frame.nav:GetWidth()) or 220
+			d.reindeer:SetPoint("BOTTOMRIGHT", title, "TOPLEFT", navW - K.navEdge - nameX, K.reindeerLift)
+		end
+	end
+	-- les flocons, sur l'en-tête de la page (couche du décor, sans souris)
+	d.flakes = {}
+	local host = frame.content or frame
+	for _, spec in ipairs(K.flakes) do
+		local tex = NewFile(d, "BORDER", 7, A.flake)
+		if tex then
+			tex:SetSize(spec.size, spec.size)
+			tex:SetPoint("CENTER", host, spec.point, spec.x, spec.y)
+			tex:SetAlpha(spec.alpha)
+			tex.wvSpec = spec
+			d.flakes[#d.flakes + 1] = tex
+		end
+	end
+	d.forged = true
+	frame.wvDecor = d
+	return d
+end
+
+local function ForgedJournal(self, frame)
+	local on = self:WinterVeilActive()
+	local d = frame.wvDecor
+	if not on then
+		if d then d:Hide() end
+		return false
+	end
+	d = d or BuildForgedJournalDecor(frame)
+	d:Show()
+	return true
+end
+
 -- Montre ou cache le décor d'un carnet Azeroth ; rend s'il est montré
+-- (3.1.0 : le carnet né au thème forgé a le sien, ForgedJournal)
 function ns:WinterVeilJournal(frame)
 	frame = frame or self.journalFrame
+	if frame and frame.journalForged then return ForgedJournal(self, frame) end
 	if not (frame and frame.azeroth and frame.azOver) then return nil end
 	local on = self:WinterVeilActive()
 	local d = frame.wvDecor
@@ -507,6 +649,8 @@ end
 -- Les brins à leur place (créés au besoin, les autres cachés)
 local function PlaceSwags(frame, d)
 	local C, box = ns.WINTER_VEIL_COMPANION, ns.WinterVeilLightsBox()
+	-- 3.1.0 : sur le médaillon forgé, posée sur le haut de sa bande d'or
+	local y = (frame.ring == "forge") and (C.y - ns.WINTER_VEIL_COMPANION_DEFAULT.y + ns.WINTER_VEIL_FORGE_LIGHTS.y) or C.y
 	d.swags = d.swags or {}
 	for index = 1, math.max(box.count, #d.swags) do
 		local model = d.swags[index]
@@ -518,7 +662,7 @@ local function PlaceSwags(frame, d)
 			if index <= box.count then
 				model:SetSize(box.frameW, C.h)
 				model:ClearAllPoints()
-				model:SetPoint("CENTER", frame, "TOP", box.centers[index], C.y)
+				model:SetPoint("CENTER", frame, "TOP", box.centers[index], y)
 				if model.wvModel ~= C.model then
 					if Method(model, "SetModel", C.model) then model.wvModel = C.model end
 				end
@@ -620,8 +764,18 @@ local function BuildCompanionDecor(frame, skin)
 		end
 	end
 	BuildSnow(frame, d)
-	frame.wvDecor = d
+	-- 3.1.0 : un décor par habit : frame.wvDecor pour l'anneau du client,
+	-- frame.wvForgeDecor pour le médaillon forgé
+	if skin and skin.forge then frame.wvForgeDecor = d else frame.wvDecor = d end
+	d.skin = skin
 	return d
+end
+
+-- 3.1.0 : le décor de l'habit posé (ou nil)
+function ns.WinterVeilCompanionDecor(frame)
+	if not frame then return nil end
+	if frame.ring == "forge" then return frame.wvForgeDecor end
+	return frame.wvDecor
 end
 
 -- ---------------------------------------------------------------------------
@@ -777,7 +931,8 @@ end
 -- L'habit du cadre (anneau, plaque) ne se voit pas ?
 function ns:WinterVeilCompanionBare(frame)
 	frame = frame or self.companionFrame
-	local skin = frame and frame.azSkin
+	-- 3.1.0 : l'habit de l'anneau posé (ancien habillage ou médaillon forgé)
+	local skin = frame and ((ns.CompanionRingSkin and ns.CompanionRingSkin(frame)) or frame.azSkin)
 	if not skin or Hidden(frame) or Hidden(skin) then return true end
 	return EffectiveAlpha(skin) < ns.WINTER_VEIL_BARE_ALPHA
 end
@@ -799,16 +954,22 @@ end
 function ns:WinterVeilCompanion()
 	local frame = self.companionFrame
 	if not frame then return nil end
-	local skin = frame.azSkin
-	local on = skin and frame.uiStyle == "azeroth" and self:WinterVeilActive()
-	local d = frame.wvDecor
-	if not on then
-		if d then
-			d:Hide()
-			for _, model in ipairs(d.swags or {}) do model:Hide() end
-			SnowFalling(d, false)
-			d.bare, d.calm = nil, nil
+	-- 3.1.0 : tout anneau (ancien habillage ou médaillon forgé) a son décor
+	local skin = ns.CompanionRingSkin and ns.CompanionRingSkin(frame) or nil
+	if not skin and frame.uiStyle == "azeroth" then skin = frame.azSkin end
+	local on = skin and (frame.ring ~= nil or frame.uiStyle == "azeroth") and self:WinterVeilActive()
+	local d = on and ns.WinterVeilCompanionDecor(frame) or nil
+	-- le décor de l'autre habit (bascule à chaud) se cache
+	for index = 1, 2 do
+		local other = (index == 1) and frame.wvDecor or frame.wvForgeDecor
+		if other and other ~= d then
+			other:Hide()
+			for _, model in ipairs(other.swags or {}) do model:Hide() end
+			SnowFalling(other, false)
+			other.bare, other.calm = nil, nil
 		end
+	end
+	if not on then
 		PaintRings(self)
 		return false
 	end
@@ -841,7 +1002,7 @@ end
 -- 2.14.0 (bêta 6) : le combat aussi (la neige s'arrête, puis reprend).
 function ns:WinterVeilWatch()
 	local frame = self.companionFrame
-	local d = frame and frame.wvDecor
+	local d = ns.WinterVeilCompanionDecor(frame)
 	if not (d and d:IsShown()) then return false end
 	local bare = self:WinterVeilCompanionBare(frame)
 	if (d.bare and true or false) == bare then
@@ -1295,7 +1456,7 @@ do
 					choices = function() return ns:WinterVeilChoices() end,
 					current = function() return ns:WinterVeilChoice() end,
 					describe = function() return L.OPT_WINTER_VEIL_DESC end,
-					tooltip = function() if not (ns.AzerothOn and ns:AzerothOn()) then return L.OPT_WINTER_VEIL_SOBRE end end,
+					tooltip = function() if not ns:WinterVeilStyleOn() then return L.OPT_WINTER_VEIL_SOBRE end end,
 					choose = function(id) ns:SetWinterVeil(id) end })
 			end
 			-- 2.14.0 (bêta 6) : le cadre givré, juste sous le décor
@@ -1307,7 +1468,7 @@ do
 			if not frost and after then
 				table.insert(page.rows, after + 1, { key = "winterVeilFrost", label = "OPT_WINTER_VEIL_FROST", kind = "bool",
 					describe = function() return L.OPT_WINTER_VEIL_FROST_DESC end,
-					tooltip = function() if not (ns.AzerothOn and ns:AzerothOn()) then return L.OPT_WINTER_VEIL_SOBRE end end,
+					tooltip = function() if not ns:WinterVeilStyleOn() then return L.OPT_WINTER_VEIL_SOBRE end end,
 					onChange = function()
 						local ok, err = pcall(ns.WinterVeilCompanion, ns)
 						if not ok and ns.RecordError then ns:RecordError("noel:givre", err) end
@@ -1320,7 +1481,8 @@ end
 function ns:WinterVeilCommand(rest)
 	local word, more = tostring(rest or ""):match("^%s*(%S*)%s*(.-)%s*$")
 	word = (word or ""):lower()
-	-- 2.14.0 (bêta 4) : réglages en jeu (guirlande du cadre, Metzen)
+	-- 2.14.0 (bêta 4) : réglages en jeu (guirlande du cadre, Metzen) ; outils de
+	-- mise au point, gardés mais plus annoncés au joueur (3.1.0)
 	if word == "cadre" or word == "frame" then return self:WinterVeilTuneLights(more) end
 	if word == "metzen" and self.WinterMetzenTune then return self:WinterMetzenTune(more) end
 	local mode = word ~= "" and self:SetWinterVeil(word) or nil
@@ -1328,7 +1490,7 @@ function ns:WinterVeilCommand(rest)
 		self:Print(self:F("WINTER_VEIL_USAGE", L["WINTER_VEIL_" .. self:WinterVeilChoice()]))
 		return nil
 	end
-	local sobre = mode ~= "off" and not (self.AzerothOn and self:AzerothOn())
+	local sobre = mode ~= "off" and not self:WinterVeilStyleOn()
 	self:Print(self:F(sobre and "WINTER_VEIL_MSG_SOBRE" or "WINTER_VEIL_MSG", L["WINTER_VEIL_" .. mode]))
 	return mode
 end

@@ -466,6 +466,7 @@ local function Send(self, s, kind, ...)
 	for index = 1, select("#", ...) do parts[#parts + 1] = tostring((select(index, ...))) end
 	s.sentAt = Clock()
 	S.filterUntil = Clock() + 10
+	if self.TradeFilterSet then self:TradeFilterSet(true) end
 	return self:ChatQueue(ns.TRADE_PREFIX, table.concat(parts, "~"), "WHISPER", s.peer)
 end
 
@@ -1176,33 +1177,63 @@ function ns:TradeChatFilter(text)
 end
 
 do
-	local ok, frame = pcall(CreateFrame, "Frame")
-	if ok and frame then
-		for _, event in ipairs({ "PLAYER_REGEN_DISABLED", "PLAYER_LEAVING_WORLD", "PLAYER_ENTERING_WORLD", "CHAT_MSG_SYSTEM" }) do
-			pcall(frame.RegisterEvent, frame, event)
-		end
-		frame:SetScript("OnEvent", function(_, event, ...)
-			local done, err = pcall(ns.TradeOnEvent, ns, event, ...)
-			if not done and ns.RecordError then ns:RecordError("trade:" .. tostring(event), err) end
-		end)
-		ns.tradeEventFrame = frame
+	-- 3.1.0 : cadre d'événements commun de l'addon (ns.On, Libs/Socle/Compat.lua) ;
+	-- une fonction par événement, faite une fois (TradeOnEvent reçoit son nom)
+	for _, event in ipairs({ "PLAYER_REGEN_DISABLED", "PLAYER_LEAVING_WORLD", "PLAYER_ENTERING_WORLD", "CHAT_MSG_SYSTEM" }) do
+		ns.On(event, "trade", function(...) return ns:TradeOnEvent(event, ...) end)
 	end
 	ns.ChatRegisterPrefix(ns.TRADE_PREFIX)
 	if ns.Every then
 		ns.Every("trade", 1, function()
 			local done, err = pcall(ns.TradeTick, ns)
 			if not done and ns.RecordError then ns:RecordError("trade:tick", err) end
+			if S.filterOn then pcall(ns.TradeFilterSync, ns) end
 		end)
 	end
-	-- (moteur récent : ChatFrameUtil.AddMessageEventFilter ; ancien : la fonction globale)
+end
+
+-- 3.1.0 bêta 9 (retour « action bloquée à chaque sortie de donjon ») : le
+-- filtre n'est plus posé pour toute la session. Le code de discussion de
+-- Blizzard appelle chaque filtre pour CHAQUE message système (rafale à la
+-- sortie d'un donjon) : notre fonction teintait ce traitement même sans
+-- échange. Posé seulement pendant la fenêtre utile (S.filterUntil, après un
+-- message d'échange), retiré par TradeTick à l'échéance. Sans API de
+-- retrait, jamais posé (le « joueur introuvable » du client reste visible).
+-- (moteur récent : ChatFrameUtil.Add/RemoveMessageEventFilter ; ancien : les fonctions globales)
+local function TradeFilterFn(_, _, text)
+	local done, hide = pcall(ns.TradeChatFilter, ns, text)
+	return done and hide or false
+end
+local function FilterApi()
 	local util = G("ChatFrameUtil")
-	local addFilter = (type(util) == "table" and util.AddMessageEventFilter) or G("ChatFrame_AddMessageEventFilter")
-	if type(addFilter) == "function" then
-		pcall(addFilter, "CHAT_MSG_SYSTEM", function(_, _, text)
-			local done, hide = pcall(ns.TradeChatFilter, ns, text)
-			return done and hide or false
-		end)
+	if type(util) == "table" and type(util.AddMessageEventFilter) == "function"
+		and type(util.RemoveMessageEventFilter) == "function" then
+		return util.AddMessageEventFilter, util.RemoveMessageEventFilter
 	end
+	local add, remove = G("ChatFrame_AddMessageEventFilter"), G("ChatFrame_RemoveMessageEventFilter")
+	if type(add) == "function" and type(remove) == "function" then return add, remove end
+	return nil
+end
+
+-- Pose (on) ou retire le filtre ; rend true s'il est posé
+function ns:TradeFilterSet(on)
+	on = on and true or false
+	if (S.filterOn or false) == on then return on end
+	local add, remove = FilterApi()
+	if not add then S.filterOn = nil; return false end
+	if on then
+		S.filterOn = pcall(add, "CHAT_MSG_SYSTEM", TradeFilterFn) or nil
+	else
+		pcall(remove, "CHAT_MSG_SYSTEM", TradeFilterFn)
+		S.filterOn = nil
+	end
+	return S.filterOn == true
+end
+
+-- Le filtre suit la fenêtre utile (appelé à chaque envoi et chaque seconde)
+function ns:TradeFilterSync(now)
+	now = now or Clock()
+	return self:TradeFilterSet(S.session ~= nil and S.filterUntil ~= nil and now <= S.filterUntil)
 end
 
 -- ---------------------------------------------------------------------------
@@ -1357,7 +1388,7 @@ function ns.TradeBuildView(self, frame, pane, content, ui)
 	tv.cols = {}
 	for side, x in pairs({ mine = 0, theirs = HALF + GAP }) do
 		local col = { slots = {}, tiles = {} }
-		col.head = Text(tv, Theme.F_LABEL, Theme.GOLD, HALF)
+		col.head = Text(tv, Theme.F_LABEL, Theme.IDENTITY, HALF)   -- titre de colonne : l'identité (= or en Sobre)
 		At(col.head, content, x, colY)
 		if col.head.SetWordWrap then col.head:SetWordWrap(false) end
 		for index = 1, ns.TRADE_MAX do
@@ -1500,7 +1531,7 @@ local function RefreshPicker(self, frame, tv, s)
 			tile.pickable = open and (offered or (ok and #s.mine < ns.TRADE_MAX))
 			tile:SetSelected(offered)
 			if ns.AllureShowRing then ns.AllureShowRing(tile, offered, frame) end
-			tile:SetAccent((offered and Theme.GOLD) or (spec.shiny and Theme.GOLD_LIGHT) or nil)
+			tile:SetAccent((offered and Theme.SELECT) or (spec.shiny and Theme.GOLD_LIGHT) or nil)   -- choisi : la sélection (= or en Sobre)
 			tile:SetAlpha((ok or offered) and 1 or Theme.DIM_ALPHA or 0.45)
 			tile:Show()
 		else

@@ -313,20 +313,22 @@ end
 
 -- Les paliers se vérifient quand le suivi se recalcule (comme le coffre),
 -- après lui : sa bulle passe d'abord
+-- (3.1.0 : fonction faite une fois, plus de fermeture à chaque rafraîchissement)
+local function TreatsCheck(self)
+	if not self:TreatData().treatsInit then
+		self:TreatCatchUp()
+	else
+		local zoneID = self.JournalZone and self:JournalZone()
+		if zoneID then self:TreatCheckZone(zoneID) end
+	end
+end
 do
 	local previous = ns.RefreshJournalTracker
 	if previous then
 		function ns:RefreshJournalTracker(...)
 			local a, b = previous(self, ...)
 			if ModuleOn() then
-				local ok, err = pcall(function()
-					if not self:TreatData().treatsInit then
-						self:TreatCatchUp()
-					else
-						local zoneID = self.JournalZone and self:JournalZone()
-						if zoneID then self:TreatCheckZone(zoneID) end
-					end
-				end)
+				local ok, err = pcall(TreatsCheck, self)
 				if not ok and self.RecordError then self:RecordError("treats:check", err) end
 			end
 			return a, b
@@ -361,6 +363,9 @@ end
 -- Bandeau du thème (liseré ambre) au-dessus de la créature : le titre en
 -- capitales, une case par friandise (icône, nombre, filet ambre au survol)
 local BTN, GAP, PAD = 34, 8, 10
+-- thème forgé : le creux de chaque case (débord autour de l'icône, coin de
+-- la découpe, filet au repos ; le survol garde l'ambre)
+ns.TREAT_MENU_FORGE = { out = 3, margin = 6, rim = (ns.QC_FORGE or {}).rim or Theme.EDGE }
 
 function ns:EnsureTreatMenu()
 	if self.treatMenu then return self.treatMenu end
@@ -375,16 +380,35 @@ function ns:EnsureTreatMenu()
 	menu:SetPoint("BOTTOM", parent, "TOP", 0, 14)
 	if menu.SetFrameStrata then menu:SetFrameStrata("DIALOG") end
 	if menu.SetClampedToScreen then menu:SetClampedToScreen(true) end
+	-- 3.1.0 : Échap le ferme, comme le menu du compagnon (et le combat, voir
+	-- PLAYER_REGEN_DISABLED dans Companion.lua) ; titre tenu à la largeur
+	if Theme.RegisterEscapeClose then pcall(Theme.RegisterEscapeClose, menu) end
 	menu.title = Theme.Text(menu, Theme.F_CAPS, Theme.MUTED_LIGHT)
 	menu.title:SetPoint("TOPLEFT", menu, "TOPLEFT", left, -PAD)
+	menu.title:SetWidth(width - left - PAD)
+	if menu.title.SetWordWrap then menu.title:SetWordWrap(false) end
 	menu.title:SetJustifyH("LEFT")
 	menu.title:SetText(Theme.Upper(L.TREAT_MENU_TITLE))
+	-- socle 3.2, thème forgé : titre en or clair, chaque case dans un creux
+	-- (Theme.ART.inset, 5 cases) dont le filet s'allume au survol
+	local F = ns.TREAT_MENU_FORGE
+	menu.forged = ns.QCForged and ns.QCForged() or nil
+	if menu.forged then
+		local t = ns.QC_FORGE.title
+		menu.title:SetTextColor(t[1], t[2], t[3])
+	end
 	menu.buttons = {}
 	for index, kind in ipairs(KINDS) do
 		local button = CreateFrame("Button", nil, menu)
 		button:SetSize(BTN, BTN)
 		button:SetPoint("BOTTOMLEFT", menu, "BOTTOMLEFT", left + (index - 1) * (BTN + GAP), PAD)
-		button.border = Theme.Border(button, Theme.EDGE, 1)
+		if menu.forged then
+			button.socket = Theme.Slice(button, "inset", { layer = "BACKGROUND", out = F.out, margin = F.margin, color = F.rim })
+			-- (le survol teinte le creux à la place du liseré d'un pixel)
+			button.border = button.socket
+		else
+			button.border = Theme.Border(button, Theme.EDGE, 1)
+		end
 		button.icon = button:CreateTexture(nil, "ARTWORK")
 		button.icon:SetPoint("TOPLEFT", button, "TOPLEFT", 1, -1)
 		button.icon:SetPoint("BOTTOMRIGHT", button, "BOTTOMRIGHT", -1, 1)
@@ -394,7 +418,7 @@ function ns:EnsureTreatMenu()
 		button.kind = kind
 		button:SetScript("OnClick", function(b) ns:TreatGive(b.kind) end)
 		button:SetScript("OnEnter", function(b)
-			b.border:SetColor(Theme.GOLD[1], Theme.GOLD[2], Theme.GOLD[3], 1)
+			b.border:SetColor(Theme.SELECT[1], Theme.SELECT[2], Theme.SELECT[3], 1)   -- survol : la sélection (= or en Sobre)
 			if not GameTooltip then return end
 			GameTooltip:SetOwner(b, "ANCHOR_TOP")
 			Theme.TooltipTitle(GameTooltip, ns:TreatLabel(b.kind))

@@ -642,10 +642,7 @@ function ns:GuildFeatsEnqueue(item)
 	if showing and showing.key == item.key and item.score <= showing.score then
 		Merge(showing, item)
 		local frame = self.guildFeatToast
-		if frame and frame.hint then
-			local more = self:GuildFeatMoreText(showing.info.more)
-			frame.hint:SetText(more and (more .. "  ·  " .. L.GFEAT_HINT) or L.GFEAT_HINT)
-		end
+		if frame and frame.hint then frame.hint:SetText(self:GuildFeatMoreText(showing.info.more) or "") end
 		return true
 	end
 	for index, other in ipairs(queue) do
@@ -709,9 +706,12 @@ function ns:EnsureGuildFeatToast()
 		frame.hint = frame.banner:CreateFontString(nil, "OVERLAY", Theme.F_SMALL)
 		frame.hint:Hide()
 	else
-		frame = self:GuildFeatToastSobre(art)
+		-- 3.1.0 : sous le thème forgé, le bandeau à médaillon (ForgeBanners.lua)
+		frame = ns.QCForged and ns.QCForged() and self.ForgeGuildFeatToast and self:ForgeGuildFeatToast(Glyph)
+		frame = frame or self:GuildFeatToastSobre(art)
 	end
 	if not frame then return nil end
+	if self.MarkStyle then self:MarkStyle(frame) end
 	-- un bouton invisible par-dessus : clic (la fiche) et glisser
 	local ok, button = pcall(CreateFrame, "Button", nil, frame)
 	if ok and button then
@@ -719,6 +719,21 @@ function ns:EnsureGuildFeatToast()
 		if button.RegisterForClicks then button:RegisterForClicks("LeftButtonUp", "RightButtonUp") end
 		if button.RegisterForDrag then button:RegisterForDrag("LeftButton") end
 		button:SetScript("OnClick", function(_, mouse) ns:GuildFeatsClick(mouse) end)
+		-- 3.1.0 : l'aide au survol (avant : une 4e ligne sur chaque bandeau
+		-- Sobre, rien en Azeroth)
+		button:SetScript("OnEnter", function(b)
+			local tip = rawget(_G, "GameTooltip")
+			if type(tip) ~= "table" or not tip.SetOwner then return end
+			tip:SetOwner(b, "ANCHOR_BOTTOM")
+			Theme.TooltipHint(tip, L.GFEAT_HINT)
+			tip:Show()
+		end)
+		button:SetScript("OnLeave", function(b)
+			local tip = rawget(_G, "GameTooltip")
+			if type(tip) ~= "table" or not tip.Hide then return end
+			if tip.GetOwner and tip:GetOwner() ~= b then return end
+			tip:Hide()
+		end)
 		button:SetScript("OnDragStart", function() if frame.StartMoving then pcall(frame.StartMoving, frame) end end)
 		button:SetScript("OnDragStop", function()
 			local stop = frame.GetScript and frame:GetScript("OnDragStop")
@@ -773,7 +788,13 @@ end
 
 function ns:GuildFeatsHideToast()
 	state.showing, state.hideAt = nil, nil
-	if self.guildFeatToast then self.guildFeatToast:Hide() end
+	local frame = self.guildFeatToast
+	if frame then
+		-- son infobulle part avec lui (le bandeau s'efface sous la souris)
+		local leave = frame.button and frame.button:GetScript("OnLeave")
+		if leave then leave(frame.button) end
+		frame:Hide()
+	end
 	if self.BannerDone then self:BannerDone("guild") end
 end
 
@@ -781,6 +802,8 @@ end
 -- et ses points (bouclier en Azeroth, à droite en Sobre) ; les autres
 -- exploits retrouvent le glyphe du filet
 GuildFeatDecor = function(self, frame, info, feat)
+	-- 3.1.0 : bandeau forgé : icône et points dans le médaillon, deux lignes
+	if frame.forgeBanner and self.ForgeGuildFeatFill then return self:ForgeGuildFeatFill(frame, info, feat) end
 	if feat then
 		if info.icon then frame.icon:SetTexture(info.icon); frame.icon:SetVertexColor(1, 1, 1, 1) end
 	else
@@ -794,7 +817,7 @@ GuildFeatDecor = function(self, frame, info, feat)
 			if ns.AzerothShieldCenter then ns.AzerothShieldCenter(frame.featPoints, frame.shield)
 			else frame.featPoints:SetPoint("CENTER", frame.shield, "CENTER", 0, 4) end
 			if ns.AzerothFont then ns.AzerothFont(frame.featPoints, 16, "OUTLINE") end
-			frame.featPoints:SetTextColor(1, 1, 1, 1)
+			frame.featPoints:SetTextColor(Theme.WHITE[1], Theme.WHITE[2], Theme.WHITE[3], 1)
 		else
 			frame.featPoints = Theme.Text(frame, Theme.F_NUMBER, Theme.GOLD)
 			frame.featPoints:SetPoint("RIGHT", frame, "RIGHT", -12, 0)
@@ -807,28 +830,47 @@ GuildFeatDecor = function(self, frame, info, feat)
 	end
 end
 
-function ns:GuildFeatsShowToast(item)
-	local frame = self:EnsureGuildFeatToast()
-	if not frame then return nil end
-	local info = item.info
+-- Remplit un bandeau avec un exploit : textes, accent, icône ou médaillon,
+-- points. Rend vrai si l'exploit est un haut fait.
+local function GuildFeatFill(self, frame, info)
 	frame.title:SetText(Theme.Upper and Theme.Upper(L.GFEAT_TITLE) or L.GFEAT_TITLE)
 	frame.text:SetText(info.line)
 	frame.info:SetText(self:GuildFeatSubLine(info))
-	local more = self:GuildFeatMoreText(info.more)
-	frame.hint:SetText(more and (more .. "  ·  " .. L.GFEAT_HINT) or L.GFEAT_HINT)
+	-- 3.1.0 : la ligne d'aide ne garde que « et N autres exploits » ; « Clic :
+	-- sa fiche de dresseur » passe dans l'infobulle du bandeau (les deux styles)
+	frame.hint:SetText(self:GuildFeatMoreText(info.more) or "")
 	local accent = info.shiny and (Theme.GOLD_LIGHT or Theme.GOLD) or Theme.GOLD
 	if frame.SetAccent then frame:SetAccent(accent) end
 	local feat = info.kind == "h"
 	GuildFeatDecor(self, frame, info, feat)
 	if frame.ownGlyph and not frame.azeroth and not feat then frame.icon:SetVertexColor(accent[1], accent[2], accent[3], 1) end
+	return feat
+end
+
+-- 3.1.0 : le thème change pendant qu'un exploit est affiché : le bandeau du
+-- nouveau thème reprend l'exploit en cours (un bandeau forgé n'ancre ses
+-- lignes qu'au remplissage : sans cela il restait vide), sans rejouer le son
+-- ni l'effet et sans allonger son temps. Rend vrai, l'exploit, « haut fait ».
+function ns:GuildFeatsRestyle(frame)
+	local item = state.showing
+	if not (frame and item and item.info) then return false end
+	return true, item.info, GuildFeatFill(self, frame, item.info)
+end
+
+function ns:GuildFeatsShowToast(item)
+	local frame = self:EnsureGuildFeatToast()
+	if not frame then return nil end
+	local info = item.info
+	local feat = GuildFeatFill(self, frame, info)
 	state.showing, state.hideAt = item, Clock() + ns.GFEAT_TOAST_SECONDS
 	frame:Show()
 	if self.BannerShown then self:BannerShown("guild", frame, "guildFeatToastPoint", { point = "TOP", x = 0, y = -150 }) end
 	if Theme.FadeIn then pcall(Theme.FadeIn, frame, 0.2) end
 	-- haut fait : bandeau des hauts faits (points dans le bouclier d'or) ; un
-	-- titre ou un gros haut fait : ailes et éclat (Azeroth seulement)
+	-- titre ou un gros haut fait : ailes et éclat (3.1.0 : ancien habillage
+	-- ou thème forgé, ns:BannerRewardFX ; rien en Sobre)
 	if self.StyleShown then self:StyleShown(frame, { shiny = info.shiny, play = true, shield = feat and "gold" or nil }) end
-	if feat and info.big and frame.azeroth and self.AzerothRewardFX then pcall(self.AzerothRewardFX, self, frame) end
+	if feat and info.big and self.BannerRewardFX then pcall(self.BannerRewardFX, self, frame) end
 	PlayFeatSound(self, info.shiny)
 	return frame
 end
@@ -838,6 +880,17 @@ end
 function ns:GuildFeatsToastTick(now)
 	now = now or Clock()
 	if state.showing then
+		-- 3.1.0 : le combat commence : le bandeau s'efface du haut de l'écran
+		-- et, s'il n'avait pas tenu la moitié de son temps, revient après
+		local item = state.showing
+		if InCombat() then
+			if state.hideAt and state.hideAt - now > ns.GFEAT_TOAST_SECONDS / 2 then
+				item.at = now
+				table.insert(state.toasts, 1, item)
+			end
+			self:GuildFeatsHideToast()
+			return false
+		end
 		if state.hideAt and now < state.hideAt then return false end
 		self:GuildFeatsHideToast()
 	end

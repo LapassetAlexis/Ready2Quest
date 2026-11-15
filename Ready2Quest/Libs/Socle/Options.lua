@@ -237,6 +237,13 @@ function ns:ScrollOptionList(list, delta)
 	self:RefreshOptionList(list)
 end
 
+-- socle 3.2 : style d'un bouton d'action selon le thème. En thème forgé, la
+-- couleur dit le sens (Theme.FORGE_BUTTONS : or principal, vert ajouter,
+-- rouge retirer, bleu arcane action neutre) ; en Sobre, le style d'avant.
+local function ActionStyle(sobre, forged)
+	return Theme.Forged and Theme.Forged() and forged or sobre
+end
+
 -- Bloc de liste : pleine largeur, lignes alternées, pied (position, ^ v)
 local function BuildList(page, source)
 	local def = LIST_SOURCES[source] or {}
@@ -274,7 +281,7 @@ local function BuildList(page, source)
 				line.item.onAction()
 				ns:RefreshOptions()
 			end
-		end, "outline")
+		end, ActionStyle("outline", "danger"))
 		line.action:SetPoint("RIGHT", line, "RIGHT", -8, 0)
 
 		-- clic sur la ligne : bascule (buffs suivis)
@@ -562,7 +569,11 @@ local function ActionCard(page, def)
 	local probe = Theme.Text(card, Theme.F_LABEL, Theme.LABEL)
 	probe:Hide()
 	local buttonWidth = math.max(84, math.ceil(TextWidth(probe, text)) + 28)
-	card.button = Theme.CreateButton(card, buttonWidth, 22, text, function() ns:RunOptionAction(def.key) end, "outline")
+	-- thème forgé : action neutre (style "arcane" : plaque arcane, ou neutre
+	-- quand le bleu est l'identité de l'addon) ; def.forgeStyle ("danger",
+	-- "add"…) pour une action qui retire ou ajoute
+	card.button = Theme.CreateButton(card, buttonWidth, 22, text, function() ns:RunOptionAction(def.key) end,
+		ActionStyle("outline", def.forgeStyle or "arcane"))
 	card.button:SetPoint("RIGHT", card, "RIGHT", -PAD, 0)
 	card.controlRegion = card.button
 	card.value:ClearAllPoints()
@@ -570,7 +581,10 @@ local function ActionCard(page, def)
 	-- valeur affichée à gauche du bouton : l'angle du bouton de minicarte
 	local valueWidth = def.key == "minimapPos" and 44 or 0
 	if valueWidth > 0 then card.value:Show() end
-	FitCard(card, buttonWidth + valueWidth)
+	-- def.reserve : place gardée pour un contrôle que le module ajoute après
+	-- coup à gauche du bouton (« Retirer » d'un raccourci) : la carte passe en
+	-- pleine largeur plutôt que de laisser la valeur recouvrir le libellé
+	FitCard(card, buttonWidth + valueWidth + (tonumber(def.reserve) or 0))
 	card:SetScript("OnClick", function() ns:RunOptionAction(def.key) end)
 	function card:Refresh(db)
 		if def.key == "minimapPos" then
@@ -961,7 +975,7 @@ function BuildPage(frame, def, placed)
 				page.clearButton = Theme.CreateButton(block, width, 26, label, function()
 					source.clear.run(ns)
 					ns:RefreshOptions()
-				end, "outline")
+				end, ActionStyle("outline", "danger"))
 				page.clearButton:SetPoint("LEFT", block, "LEFT", 0, 0)
 				x = width + 14
 			end
@@ -1048,26 +1062,30 @@ end
 
 -- Titre de groupe : capitales ambre. Celui d'une page à sous-pages est
 -- cliquable (sa première sous-page) et porte l'interrupteur de son module.
+-- Thème forgé : en « pilule » ; ton de l'identité pour une page à sous-pages
+-- (une fonction de l'addon, cliquable), second ton pour un simple titre de
+-- rangement (navigation) : or puis arcane dans Ready2Quest, l'inverse dans
+-- QuestCompanion ; l'interrupteur devient un voyant.
 local function NavHeader(frame, text, def)
 	local header = CreateFrame("Button", nil, frame.navList)
 	header:SetSize(NAV_WIDTH - 1, NAV_HEADER_H)
-	header.label = Theme.CreateNavGroup(header, text)
+	header.label = Theme.CreateNavGroup(header, text, def and "identity" or "second")
 	header.label:SetPoint("BOTTOMLEFT", header, "BOTTOMLEFT", 18, 8)
 	header.label:SetWidth(NAV_WIDTH - 18 - 40)
 	if header.label.SetWordWrap then header.label:SetWordWrap(false) end
-	header.power = Theme.CreatePowerButton(header, 16)
+	header.power = Theme.CreateNavPower(header, 16)
 	header.power:SetPoint("BOTTOMRIGHT", header, "BOTTOMRIGHT", -12, 4)
 	header.power:Hide()
 	function header:SetModuleState(state)
-		local c = Theme.GOLD
+		local c = self.label.toneInk or Theme.GOLD
 		if state == nil then
 			self.moduleOn = nil
 			self.power:Hide()
 		else
 			self.moduleOn = (state == true or state == "on")
 			self.power:Show()
-			c = self.moduleOn and Theme.GOLD or Theme.MUTED
-			Theme.SetPowerState(self.power, self.moduleOn)
+			if not self.moduleOn then c = self.label.toneInk and Theme.FORGE_NAV.offInk or Theme.MUTED end
+			Theme.SetNavPower(self.power, self.moduleOn)
 		end
 		self.label:SetTextColor(c[1], c[2], c[3], 1)
 	end
@@ -1201,7 +1219,7 @@ function ns:EnsureOptions()
 	if not Theme or not Theme.CreateWindow then return nil end
 
 	local frame = Theme.CreateWindow(UIParent, FRAME_WIDTH, FRAME_HEIGHT,
-		{ name = ns.APP.id .. "OptionsFrame", nav = NAV_WIDTH, footer = FOOTER })
+		{ name = ns.APP.id .. "OptionsFrame", nav = NAV_WIDTH, footer = FOOTER, emblem = Theme.Forged() })
 	if not frame then return nil end
 	frame:Hide()
 	ns:RestorePoint(frame, "optionsPoint", { point = "CENTER", x = 0, y = 20 })
@@ -1213,7 +1231,11 @@ function ns:EnsureOptions()
 
 	-- Navigation : marque, recherche, groupes et pages, version en bas
 	local nav = frame.nav
-	frame.brand = Theme.CreateNavBrand(nav, Theme.LOGO, ns.APP.brand or ns.APP.id)
+	-- thème forgé : colonne plus sombre au bord gauche, séparateur noir et
+	-- reflet ; pied en bande plus sombre sous un filet noir et son reflet
+	Theme.ForgeNavColumn(nav)
+	Theme.ForgeFooter(frame.footer)
+	frame.brand = Theme.CreateNavBrand(nav, Theme.LOGO, ns.APP.brand or ns.APP.id, Theme.Forged())
 	frame.brand:SetPoint("TOPLEFT", nav, "TOPLEFT", 0, -8)
 	frame.brand:SetWidth(NAV_WIDTH)
 	frame.brandLogo, frame.brandName = frame.brand.logo, frame.brand.name
@@ -1240,7 +1262,7 @@ function ns:EnsureOptions()
 	-- socle 2.11.0 : « Rallumer » d'un module coupé, à droite de la phrase
 	frame.offBanner = Theme.CreateButton(frame.header, "auto", 22, L.OPT_PAGE_OFF_ON, function(button)
 		if button.key then ns:ToggleModuleKey(button.key) end
-	end, "outline")
+	end, ActionStyle("outline", "add"))
 	frame.offBanner:SetPoint("TOPRIGHT", frame.header, "TOPRIGHT", -MARGIN, -55)
 	frame.offBanner:Hide()
 
@@ -1253,6 +1275,8 @@ function ns:EnsureOptions()
 	frame.previewStrip.bg = Theme.Solid(frame.previewStrip, "BACKGROUND", Theme.NAV, 1)
 	frame.previewStrip.bg:SetAllPoints()
 	frame.previewStrip.border = Theme.Border(frame.previewStrip, Theme.EDGE_SOFT, 1)
+	-- thème forgé : le relief d'une carte (voile, reflet d'un pixel)
+	if Theme.ForgeHere() then Theme.ForgeRelief(frame.previewStrip, true) end
 	frame.previewStrip:Hide()
 
 	frame.scrollTrack = Theme.Solid(content, "BORDER", Theme.EDGE_SOFT, 1)
@@ -1307,7 +1331,7 @@ function ns:EnsureOptions()
 	frame.resetButton:SetPoint("LEFT", frame.runButton, "RIGHT", 10, 0)
 	frame.closeButton = Theme.CreateButton(foot, Width(L.OPT_DONE), 28, L.OPT_DONE, function()
 		frame:Hide()
-	end, "accent")
+	end, ActionStyle("accent", "primary"))
 	frame.closeButton:SetPoint("RIGHT", foot, "RIGHT", -MARGIN, 0)
 
 	-- la recherche se vide à la fermeture
@@ -1598,7 +1622,8 @@ function ns:SetOptionsSearch(text)
 		end
 		local section = results.sections[index]
 		if not section then
-			section = Theme.CreateSection(results, "", nil)
+			-- résultats : sections de navigation (où vit le réglage), au second ton
+			section = Theme.CreateSection(results, "", nil, "second")
 			section:SetWidth(INNER)
 			results.sections[index] = section
 		end

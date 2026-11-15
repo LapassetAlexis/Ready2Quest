@@ -87,6 +87,20 @@ local ORNAMENTS = {
 		size = 24, at = { "BOTTOM", "TOP", 27, -10 } },
 }
 ns.FEAT_COSMETICS = { frame = FRAMES, bg = BACKGROUNDS, orn = ORNAMENTS }
+-- 3.1.0 : leur place sur le médaillon forgé (les coins du carré tombent dans
+-- le vide autour de l'anneau, ou sur la plaque du nom) : `angle` (degrés, 0 à
+-- droite, sens trigonométrique) et `r` (écart au bord de l'anneau) pour le
+-- centre ; `plate` = "left" / "right" (au bout de la plaque, en rivet) ou
+-- "below" (sous l'étiquette d'humeur)
+ns.FEAT_ORN_FORGE = {
+	feat_chain = { plate = "left" },
+	feat_compass = { plate = "right" },
+	feat_goldstars = { plate = "below" },
+	feat_prism_orn = { angle = 158, r = 4 },
+	feat_eye = { angle = 200, r = -2 },
+	feat_anniversary = { angle = 340, r = -2 },
+	feat_wildcrown = { angle = 65, r = 4 },
+}
 -- 2.15.0 : deux cosmétiques de l'Échoppe du dresseur (JournalReserve.lua,
 -- prix dans ns.PAILLETTES_SHOP), achetés en paillettes et gardés au compte
 -- (QuestCompanionDB.capture.shopOwned) : `unlock = { shop = id }`, palier 0
@@ -370,9 +384,47 @@ local TYPES = ns.CREATURE_TYPES or { "beast", "humanoid", "undead", "elemental",
 -- Sobre : coins et milieux des côtés ; Azeroth : autour de l'anneau
 local EIGHT_SOBRE = { "TOPLEFT", "TOP", "TOPRIGHT", "RIGHT", "BOTTOMRIGHT", "BOTTOM", "BOTTOMLEFT", "LEFT" }
 local EIGHT_SIZE = 13
+-- 3.1.0 : médaillon forgé : premier angle et arc couvert (degrés ; angle
+-- compté vers le bas, comme l'ancien habillage), le secteur bas (30° à
+-- 150°) restant à la plaque du nom
+ns.FEAT_EIGHT_FORGE = { from = 150, span = 240 }
 
-local function Azeroth(frame) return frame and frame.uiStyle == "azeroth" end
-local function Ring() return ns.AZEROTH_RING or { w = 108, h = 104, y = -45 } end
+-- 3.1.0 : tout anneau (l'ancien habillage, le médaillon forgé : frame.ring)
+local function Azeroth(frame)
+	if not frame then return false end
+	if ns.CompanionRinged then return ns.CompanionRinged(frame) or frame.uiStyle == "azeroth" end
+	return frame.uiStyle == "azeroth"
+end
+local function Ring(frame)
+	return (ns.CompanionRingGeometry and ns.CompanionRingGeometry(frame)) or ns.AZEROTH_RING or { w = 108, h = 104, y = -45 }
+end
+-- 3.1.0 : le halo prismatique du médaillon forgé sans l'atlas du client :
+-- notre anneau, en lumière additive (il tourne dans l'arc-en-ciel)
+-- Sur son propre cadre, SOUS l'habit (niveau du cadre + 3 < habit + 4) :
+-- sa bande déborde de l'anneau vers le bas, la plaque du nom la recouvre.
+-- Désaturé : la teinte de l'arc-en-ciel le colore vraiment (notre anneau est
+-- doré ; multiplié tel quel, le bleu tournait au brun).
+ns.FEAT_FORGE_HALO = { below = 3 }
+local function ForgeHaloHost(holder, frame)
+	local host = CreateFrame("Frame", nil, holder)
+	host:SetAllPoints(frame)
+	Method(host, "EnableMouse", false)
+	local ok, level = Method(frame, "GetFrameLevel")
+	if ok and tonumber(level) then Method(host, "SetFrameLevel", level + ns.FEAT_FORGE_HALO.below) end
+	return host
+end
+local function ForgeHalo(host)
+	local art = Theme.ART and Theme.ART.ring
+	if not art then return nil end
+	local tex = host:CreateTexture(nil, "ARTWORK")
+	tex:SetTexture(art.file)
+	Method(tex, "SetDesaturated", true)
+	tex.azDesat = true
+	Method(tex, "SetBlendMode", "ADD")
+	tex.forgeArt = "ring"
+	tex.host = host
+	return tex
+end
 
 local function DecoHolder(frame)
 	if frame.featDeco then return frame.featDeco end
@@ -446,7 +498,7 @@ function ns:FeatApplyFrameDeco()
 	-- huit icônes de familles (celles du client)
 	if deco == "eight" then
 		holder.eight = holder.eight or {}
-		local ring = Ring()
+		local ring = Ring(frame)
 		for index, key in ipairs(TYPES) do
 			local icon = holder.eight[index]
 			if not icon then
@@ -456,7 +508,14 @@ function ns:FeatApplyFrameDeco()
 			end
 			icon:SetSize(EIGHT_SIZE, EIGHT_SIZE)
 			icon:ClearAllPoints()
-			if az then
+			if az and frame.ring == "forge" then
+				-- médaillon forgé : la plaque du nom occupe le bas de l'anneau ;
+				-- les huit icônes se rangent sur l'arc du haut (secteur bas libre)
+				local E = ns.FEAT_EIGHT_FORGE
+				local a = math.rad(E.from + (index - 1) * E.span / (#TYPES - 1))
+				local r = ring.w / 2 - 3
+				icon:SetPoint("CENTER", frame, "TOP", r * math.cos(a), ring.y - r * math.sin(a))
+			elseif az then
 				local a = math.rad(22.5 + 45 * (index - 1))
 				local r = ring.w / 2 - 3
 				icon:SetPoint("CENTER", frame, "TOP", r * math.cos(a), ring.y - r * math.sin(a))
@@ -470,9 +529,27 @@ function ns:FeatApplyFrameDeco()
 	end
 	-- filet arc-en-ciel (Sobre) ou halo du client qui tourne autour de l'anneau (Azeroth)
 	if deco == "prism" then
-		if az and holder.halo == nil then holder.halo = Glow(holder, "ARTWORK") or false end
+		-- un halo par anneau (celui du client au-dessus de son habit ; celui du
+		-- médaillon forgé sous la plaque du nom, atlas du client ou le nôtre)
+		local forgeRing = az and frame.ring == "forge"
+		if forgeRing then
+			if holder.forgeHalo == nil then
+				local host = ForgeHaloHost(holder, frame)
+				local tex = Glow(host, "ARTWORK")
+				if tex then tex.host = host else tex = ForgeHalo(host) end
+				holder.forgeHalo = tex or false
+			end
+		elseif az and holder.azHalo == nil then
+			holder.azHalo = Glow(holder, "ARTWORK") or false
+		end
+		for _, tex in ipairs({ holder.azHalo or false, holder.forgeHalo or false }) do
+			if tex then tex:Hide() end
+		end
+		if forgeRing then holder.halo = holder.forgeHalo or nil
+		elseif az then holder.halo = holder.azHalo or nil
+		else holder.halo = holder.azHalo or holder.forgeHalo or nil end
 		if holder.halo then
-			local ring = Ring()
+			local ring = Ring(frame)
 			holder.halo:ClearAllPoints()
 			holder.halo:SetSize(ring.w + 26, ring.w + 26)
 			holder.halo:SetPoint("CENTER", frame, "TOP", 0, ring.y)
@@ -561,6 +638,44 @@ local function BuildOrnament(frame, def)
 	return o
 end
 
+-- Place d'un ornement des hauts faits : celle du carré, ou sur le médaillon
+-- forgé (ns.FEAT_ORN_FORGE)
+local function PlaceOrnament(frame, o, def)
+	o:ClearAllPoints()
+	local spec = frame.ring == "forge" and ns.FEAT_ORN_FORGE[def.id]
+	if not spec then
+		o:SetPoint(def.at[1], frame, def.at[2], def.at[3], def.at[4])
+		o.forgePlaced = nil
+		return
+	end
+	local F = ns.FORGE_RING or { w = 104, x = 0, y = -45 }
+	local P = ns.FORGE_COMPANION_PLATE
+	if spec.plate and P and ns.ForgeCompanionPlateTop then
+		local top = ns.ForgeCompanionPlateTop()
+		local half = math.floor((frame:GetWidth() or 104) / 2 + P.out)
+		if spec.plate == "below" then
+			local M = ns.FORGE_MOOD_TAB
+			o:SetPoint("TOP", frame, "TOP", 0, top - P.height - (M.h - M.tuck))
+		else
+			o:SetPoint("CENTER", frame, "TOP", spec.plate == "left" and -half or half, top - P.height / 2)
+		end
+	else
+		local a, r = math.rad(spec.angle or 0), F.w / 2 + (spec.r or 0)
+		o:SetPoint("CENTER", frame, "TOP", math.floor(F.x + r * math.cos(a) + 0.5), math.floor(F.y + r * math.sin(a) + 0.5))
+	end
+	o.forgePlaced = true
+end
+
+function ns:FeatPlaceOrnaments()
+	local frame = self.companionFrame
+	if not (frame and frame.featOrn) then return nil end
+	for _, def in ipairs(ORNAMENTS) do
+		local o = frame.featOrn[def.id]
+		if o then PlaceOrnament(frame, o, def) end
+	end
+	return true
+end
+
 -- Ornements des hauts faits
 function ns:FeatApplyOrnaments()
 	local frame = self.companionFrame
@@ -575,6 +690,7 @@ function ns:FeatApplyOrnaments()
 			frame.featOrn[def.id] = o
 		end
 		if o then
+			PlaceOrnament(frame, o, def)
 			if on then o:Show(); shown = shown + 1 else o:Hide() end
 		end
 	end
@@ -607,14 +723,20 @@ function ns:FeatApplyBackgroundDeco()
 	end
 	local fire = frame.featFire
 	if not fire then return nil end
-	local mask = frame.azSkin and frame.azSkin.mask
+	-- 3.1.0 : le masque de l'anneau posé (ancien habillage ou médaillon forgé)
+	local skin = (ns.CompanionRingSkin and ns.CompanionRingSkin(frame)) or frame.azSkin
+	local mask = skin and skin.mask
 	for _, tex in pairs(fire) do
 		if on then tex:Show() else tex:Hide() end
+		if tex.azMasked and tex.azMask and tex.azMask ~= mask then
+			Method(tex, "RemoveMaskTexture", tex.azMask)
+			tex.azMasked, tex.azMask = nil, nil
+		end
 		if mask and Azeroth(frame) and not tex.azMasked then
-			if Method(tex, "AddMaskTexture", mask) then tex.azMasked = true end
+			if Method(tex, "AddMaskTexture", mask) then tex.azMasked, tex.azMask = true, mask end
 		elseif tex.azMasked and not Azeroth(frame) then
-			Method(tex, "RemoveMaskTexture", mask)
-			tex.azMasked = nil
+			Method(tex, "RemoveMaskTexture", tex.azMask or mask)
+			tex.azMasked, tex.azMask = nil, nil
 		end
 	end
 	return on
@@ -652,6 +774,8 @@ do
 			local a, b = applyStyle(self, ...)
 			pcall(self.FeatApplyFrameDeco, self)
 			pcall(self.FeatApplyBackgroundDeco, self)
+			-- 3.1.0 : les ornements suivent l'anneau (carré ou médaillon forgé)
+			pcall(self.FeatPlaceOrnaments, self)
 			return a, b
 		end
 	end

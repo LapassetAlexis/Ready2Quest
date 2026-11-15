@@ -1011,7 +1011,7 @@ local function RefreshReserve(self, frame, pane)
 			tile:SetSelected(on)
 			if ns.AllureShowRing then ns.AllureShowRing(tile, on, frame) end
 			local better = self:SpecimenBetterThanCodex(spec.id)
-			tile:SetAccent((on and Theme.GOLD) or (better and Theme.GREEN) or (spec.shiny and Theme.GOLD_LIGHT) or nil)
+			tile:SetAccent((on and Theme.SELECT) or (better and Theme.GREEN) or (spec.shiny and Theme.GOLD_LIGHT) or nil)   -- choisi : la sélection (= or en Sobre)
 			tile:Show()
 			if not (self.ModelKnownDisplay and self:ModelKnownDisplay(spec.npc)) then learn[#learn + 1] = spec.npc end
 		else
@@ -1065,7 +1065,7 @@ local function RefreshShop(self, frame)
 			Enable(row.buy, state == "ok", self:ShopDisabledTip(state, a))
 			row.buy:Show()
 		end
-		row:SetAccent(asking and Theme.GOLD or nil)
+		row:SetAccent(asking and Theme.SELECT or nil)   -- choisi : la sélection (= or en Sobre)
 		row:SetAlpha(1)
 		row:Show()
 	end
@@ -1126,7 +1126,7 @@ local function RefreshGift(self, frame, pane)
 			local on = GiftPicked(frame, item.npc) ~= nil
 			tile:SetSelected(on)
 			if ns.AllureShowRing then ns.AllureShowRing(tile, on, frame) end
-			tile:SetAccent(on and Theme.GOLD or nil)
+			tile:SetAccent(on and Theme.SELECT or nil)   -- choisi : la sélection (= or en Sobre)
 			tile:SetAlpha((on or picked < max) and 1 or 0.55)
 			tile:Show()
 		else

@@ -126,6 +126,15 @@ end
 -- Ce qui entre au carnet
 -- ---------------------------------------------------------------------------
 -- Espèce (ou nommé) abattue pour la première fois dans la zone
+-- (3.1.0 : fonction faite une fois, plus de fermeture à chaque coup)
+local function FirstKill(self, entry)
+	local zone = self:BestiaryData()[entry.zoneID]
+	local species = zone and zone[entry.npcID]
+	if species and (tonumber(species.killed) or 0) > 0 then
+		local part = (self.BestiaryIsNamed and self:BestiaryIsNamed(species)) and "named" or "bestiary"
+		self:NotifyFound(species.name, entry.zoneID, part)
+	end
+end
 do
 	local combat = ns.BestiaryCombat
 	if combat then
@@ -141,14 +150,7 @@ do
 			end
 			local a, b = combat(self, subevent, sourceGUID, sourceFlags, destGUID, ...)
 			if entry and before == 0 then
-				local ok, err = pcall(function()
-					local zone = self:BestiaryData()[entry.zoneID]
-					local species = zone and zone[entry.npcID]
-					if species and (tonumber(species.killed) or 0) > 0 then
-						local part = (self.BestiaryIsNamed and self:BestiaryIsNamed(species)) and "named" or "bestiary"
-						self:NotifyFound(species.name, entry.zoneID, part)
-					end
-				end)
+				local ok, err = pcall(FirstKill, self, entry)
 				if not ok and self.RecordError then self:RecordError("notify:bestiary", err) end
 			end
 			return a, b
@@ -249,15 +251,8 @@ end
 -- ---------------------------------------------------------------------------
 -- Horloge et événements
 -- ---------------------------------------------------------------------------
-local ok, frame = pcall(CreateFrame, "Frame")
-if ok and frame then
-	pcall(frame.RegisterEvent, frame, "QUEST_TURNED_IN")
-	frame:SetScript("OnEvent", function(_, _, questID)
-		local done, err = pcall(ns.NotifyQuest, ns, questID)
-		if not done and ns.RecordError then ns:RecordError("notify:quest", err) end
-	end)
-	ns.notifyEventFrame = frame
-end
+-- 3.1.0 : cadre d'événements commun (ns.On, Libs/Socle/Compat.lua)
+ns.On("QUEST_TURNED_IN", "notify", function(questID) ns:NotifyQuest(questID) end, "notify:quest")
 -- les annonces en attente (écart de NOTIFY_GAP s) se regardent cinq fois par
 -- seconde ; l'éclat pulse image par image, seulement pendant qu'il luit.
 -- 2.11.2 (fiche 25) : les deux sur l'horloge de l'addon (plus d'OnUpdate

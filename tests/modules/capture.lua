@@ -56,9 +56,19 @@ function C.Quiet()
 	NS.companionBubbleText = nil
 	if NS.companionRT then NS.companionRT.cool = {} end
 end
+-- 3.1.0 : le harnais tourne au thème forgé (le choix par défaut) ; ces
+-- sous-cas épinglent le filet et le bandeau du thème Sobre, inchangés
+function C.Sobre()
+	NS:DB().companionStyle = "sobre"
+	NS:ApplyUIStyle()
+end
 -- anim : la scène animée (sinon la petite fenêtre)
 function C.Reset(anim)
 	ResetWorld()
+	-- 3.1.0 : le Voile d'hiver suit le thème forgé (choix par défaut) et
+	-- l'horloge du harnais (1970-01-01) tombe en saison : décor coupé, la
+	-- boule de neige remplacerait le filet (winter_veil.lua le teste)
+	NS:DB().winterVeil = "off"
 	-- 2.15.0 : qualité tirée au coup fatal figée à 1 étoile (sauf C.quality) :
 	-- les chances attendues restent celles du rang
 	C.quality = nil
@@ -233,6 +243,7 @@ end
 do
 	Say("-- capture : tri de la file")
 	C.Reset()
+	C.Sobre()
 	local creatures = NS:CaptureData().creatures
 	creatures[4300] = { name = "Trois", class = "normal", normal = true, at = 1, stars = 3 }
 	creatures[4301] = { name = "Une", class = "normal", normal = true, at = 1, stars = 1 }
@@ -542,6 +553,7 @@ end
 do
 	Say("-- capture : le filet à l'écran")
 	C.Reset()
+	C.Sobre()
 	NS:DB().companionSize = 2
 	NS:CompanionApplySize()
 	C.SeeKill(4300, { name = "Loup seul" })
@@ -590,6 +602,7 @@ end
 do
 	Say("-- capture : bandeau")
 	C.Reset()
+	C.Sobre()
 	C.SeeKill(4400, { name = "Raptor" })
 	local toast, net = NS.captureToast, NS.captureNetButton
 	Check("[CAP] bandeau montré : titre, nom, aide ; « Jamais capturée · 50 % de chance » en doré", toast and toast:IsShown()
@@ -802,7 +815,8 @@ do
 	for _ = 1, 4 do Mock:Advance(1); NS:CaptureTick(NS.Now()) end
 	Check("[CAPFX] échec : « Échappé », le filet déchiré (moitié droite) tombe, ses cordes volent", rolling.result == "fail"
 		and NS:CaptureStageUpdate(rolling.resultAt + 0.3) == "fail" and stage.bannerText:GetText() == NS.L.CAPTURE_FLED
-		and stage.net.texCoord[1] == 0.5 and stage.net:IsShown() and stage.ropes[1]:IsShown() and not stage.starSlots[1]:IsShown())
+		and stage.net.texCoord[1] == 0.5 and stage.net:IsShown() and stage.ropes[1]:IsShown() and not stage.starSlots[1]:IsShown()
+		and stage.footer:GetText() == NS.L.CAPTURE_STAGE_FAIL)
 	local fallen = NS:CaptureStageUpdate(rolling.resultAt + 1.5) == "fail" and not stage.net:IsShown() and not stage.ropes[1]:IsShown()
 	for _ = 1, 5 do Mock:Advance(1); NS:CaptureTick(NS.Now()) end
 	Check("[CAPFX] … tout retombe, la scène se ferme seule après le temps d'affichage", fallen and not stage:IsShown())

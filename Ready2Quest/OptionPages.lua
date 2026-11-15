@@ -32,6 +32,12 @@ local R2Q_PAGES = {
 			{ key = "minimapPos",  label = "OPT_MINIMAP_POS", kind = "action", button = "OPT_BTN_CHANGE" },
 			{ key = "showWindow",  label = "OPT_SHOWWINDOW",  kind = "bool" },
 			{ key = "popupScore",  label = "OPT_POPUPSCORE",  kind = "number", min = 0, max = 100, step = 5 },
+			-- 1.35.0 : thème du socle (Azeroth : bois, or patiné, Friz ; Sobre : à plat)
+			{ key = "uiStyle",     label = "OPT_UI_STYLE",    kind = "action",
+				choices = function() return ns:UISkinChoices() end,
+				current = function() return ns:UISkinChoice() end,
+				describe = function() return ns.L.OPT_UI_STYLE_DESC end,
+				choose = function(id) ns:SetUISkin(id) end },
 			-- 1.34.0 : l'autre addon du projet (état en direct, ns.AddonStatus du socle)
 			{ header = "OPT_SECTION_QC" },
 			{ key = "qcNote", kind = "note", text = function() return ns:QCLinkText() end },
@@ -268,10 +274,16 @@ function ns:QCAction()
 end
 ns.OPTION_ACTIONS.qcAction = function(self) self:QCAction() end
 
--- le libellé du bouton suit l'état (rafraîchi avec la page)
+-- le libellé du bouton suit l'état (rafraîchi avec la page) ; chaque
+-- changement de réglage passe par ici : les abonnements à la demande suivent
+-- (ns.FrameGate, Core.lua)
 do
 	local base = ns.RefreshOptions
 	function ns:RefreshOptions(...)
+		if self.SyncEventGates then
+			local ok, err = pcall(self.SyncEventGates, self)
+			if not ok then self:RecordError("gate:options", err) end
+		end
 		local result = base(self, ...)
 		local frame = self.optionsFrame
 		for _, card in ipairs(frame and frame.rows or {}) do
@@ -351,3 +363,51 @@ function ns:MinimapTooltip(tooltip)
 end
 
 if ns.Mark then ns.Mark("OptionPages") end
+
+-- ---------------------------------------------------------------------------
+-- 1.35.0 : style de l'interface (thème du socle, Theme.ApplySkin)
+-- ---------------------------------------------------------------------------
+ns.RegisterStrings({
+	OPT_UI_STYLE      = "Style de l'interface",
+	OPT_UI_STYLE_DESC = "Azeroth : cadre doré, boutons en relief et titres dans la police du jeu. Sobre : l'aspect d'avant, à plat. Les fenêtres déjà ouvertes prennent le nouveau style au prochain /reload.",
+	UI_STYLE_azeroth  = "Azeroth (doré)",
+	UI_STYLE_sobre    = "Sobre",
+	UI_STYLE_MSG      = "Style de l'interface : %s. Tape /reload pour l'appliquer aux fenêtres déjà ouvertes.",
+	UI_STYLE_USAGE    = "/r2q style azeroth|sobre",
+	HELP_STYLE        = "/r2q style azeroth|sobre -- style de toute l'interface (Azeroth : cadre doré ; Sobre : à plat)",
+}, {
+	OPT_UI_STYLE      = "Interface style",
+	OPT_UI_STYLE_DESC = "Azeroth: golden frame, bevelled buttons and titles in the game font. Plain: the previous flat look. Windows already open take the new style after the next /reload.",
+	UI_STYLE_azeroth  = "Azeroth (golden)",
+	UI_STYLE_sobre    = "Plain",
+	UI_STYLE_MSG      = "Interface style: %s. Type /reload to apply it to windows already open.",
+	UI_STYLE_USAGE    = "/r2q style azeroth|sobre",
+	HELP_STYLE        = "/r2q style azeroth|sobre -- style of the whole interface (Azeroth: golden frame; Plain: flat)",
+})
+function ns:UISkinChoices()
+	local list = {}
+	for _, id in ipairs(ns.Theme.SKINS) do list[#list + 1] = { value = id, label = ns.L["UI_STYLE_" .. id] } end
+	return list
+end
+do
+	local set = ns.SetUISkin
+	function ns:SetUISkin(id)
+		local before = self:UISkinChoice()
+		local done = set(self, id)
+		if done and done ~= before then self:Print(self:F("UI_STYLE_MSG", ns.L["UI_STYLE_" .. done])) end
+		return done
+	end
+end
+-- /r2q style azeroth|sobre
+if ns.COMMANDS then
+	ns.COMMANDS["style"] = function(self, rest)
+		local word = tostring(rest or ""):match("^%s*(%S*)"):lower()
+		if word == "plain" then word = "sobre" end
+		if not self:SetUISkin(word) then self:Print(ns.L.UI_STYLE_USAGE) end
+	end
+end
+if type(ns.HELP) == "table" then
+	for _, section in ipairs(ns.HELP) do
+		if section[1] == "HELP_H_QUICK" and type(section[2]) == "table" then table.insert(section[2], "HELP_STYLE") end
+	end
+end

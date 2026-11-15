@@ -179,3 +179,179 @@ Non chiffrés hors jeu, mais retirés du Lua :
 6. **Conseils du compagnon :** sacs pleins, durabilité basse, quête à rendre (bulle à peine retardée).
 7. **Brillante :** repère sur la barre de vie quand une brillante apparaît à l'écran.
 8. **Raccourci :** saisie en cours puis entrée en combat ; la fenêtre se ferme et les touches répondent.
+
+---
+
+# Passe 2 (3.1.0) — QuestCompanion et socle (2026-11-13)
+
+Partie de `main` (00e95ab, QC 3.0.2). Même règle qu'à la première passe : rien ne change à l'écran ni dans `QuestCompanionDB` (aucune clé ajoutée ni retirée). Fichiers de la capture laissés de côté (réécriture en cours ailleurs) : `Capture.lua`, `CaptureQueue.lua`, `CaptureStage.lua`, `CaptureBatch.lua`, `CaptureSkip.lua`, `CaptureSpecimens.lua`, `Bindings.lua`, le `.toc`. Ready2Quest n'est pas migré : il reçoit seulement le nouveau code du socle, sans s'en servir.
+
+## 1. Diagnostic
+
+- **Un cadre d'événements par module.** Après connexion, 20 cadres de QC étaient abonnés à des événements. Un même événement arrivait du client vers le Lua autant de fois qu'il avait de cadres abonnés :
+  - `NAME_PLATE_UNIT_ADDED` : 5 fois (bestiaire, carnet, conseils, brillantes, effets) ;
+  - `ZONE_CHANGED` : 5 fois ; `ZONE_CHANGED_NEW_AREA` : 6 ;
+  - `PLAYER_TARGET_CHANGED` : 4 ; `UPDATE_MOUSEOVER_UNIT` : 3 ;
+  - `PLAYER_REGEN_ENABLED` : 8 ; `PLAYER_ENTERING_WORLD` : 8 ; `QUEST_TURNED_IN` : 5.
+- **Écoute permanente, même inutile :**
+  - compagnon coupé dans les réglages : tous ses événements arrivaient encore, puis sortaient au premier test ;
+  - menu du compagnon (Maj + clic droit) : `GLOBAL_MOUSE_DOWN` (chaque clic, partout) écouté dès sa première ouverture, et pour toute la session ;
+  - conseils : cible, survol et barres de vie écoutés en combat, où `AdviceSeeUnit` sort aussitôt (après deux appels protégés au client).
+- **Déchets sur les chemins fréquents :**
+  - `UNIT_AURA` du joueur : jusqu'à 40 auras relues (une table neuve par aura sur le moteur récent) à chaque message, même quand rien n'a été ajouté ni retiré (durée ou charges rafraîchies, l'essentiel en combat) ;
+  - effets du compagnon (`CompanionEffects`, lu à chaque infobulle d'unité et à chaque relevé des envies) : une table littérale et une clé de cache refaite par `table.concat` à chaque lecture ;
+  - fermetures neuves à chaque appel : tirage de brillante (chaque barre de vie d'un monstre vu), première victime d'une espèce (`Notify.lua`), friandises et sceau à chaque rafraîchissement du suivi ;
+  - petites tables à chaque passage : seuils et « déjà dit » des conseils (toutes les 3 s), dernier relevé du voyage (1 s), liste vide du suivi caché, file de messages du carnet à chaque fin de combat ;
+  - aura scintillante (toutes les 1,5 s) : la liste de toutes les apparences, captures comprises, refaite avant même de regarder l'ornement.
+
+## 2. Ce qui a été changé, fichier par fichier
+
+### Socle (`Ready2Quest/Libs/Socle`, recopié par `tools/sync_socle.py`)
+
+- **`Compat.lua` : un cadre d'événements par addon.** Il est créé au premier abonné et tient une liste d'abonnés par événement :
+  - l'événement est enregistré auprès du client au premier abonné actif et retiré au dernier ; `UNIT_AURA` et `UNIT_STATS` passent toujours par `ns.RegisterGameEvent` (joueur seulement) ;
+  - les abonnés sont appelés dans l'ordre d'abonnement, chacun sous `pcall`. Une erreur est notée sous « qui:ÉVÉNEMENT », ou sous le nom donné à l'abonnement (« shiny:plate », « daily:quest »…, comme avant) ;
+  - se désabonner pendant un appel ne casse pas la boucle (entrée marquée, liste compactée à la fin) ;
+  - API :
+    - `ns.On(événement, qui, fn[, où])`, `ns.Off`, `ns.Unlisten(qui)` ;
+    - `ns.Listen(qui, handlers[, porte[, nom]])` : comme `ns.RegisterHandlers`, journal de combat s'il est ouvert, sinon `PARTY_KILL` / `UNIT_DIED`, jamais les deux ;
+    - `ns.EventGate(qui, porte)` et `ns.EventsResync()` : une porte fermée (module coupé) retire l'écoute de `qui`. Tant qu'une porte est fermée, une tâche d'horloge `events:gates` la relit chaque seconde (`ns.EVENT_GATE_POLL`) ; aucune tâche quand tout est ouvert ;
+    - `ns.EventHold(qui, oui)` : écoute mise en attente puis reprise, sans perdre son rang dans l'ordre d'appel ;
+    - `ns.EventDeliver(qui, événement, …)` (tests) et `ns.Listening(événement[, qui])` ;
+    - `ns.eventHub` : le cadre lui-même.
+
+### QuestCompanion
+
+- **Cadre commun.** Ces modules passent au cadre commun, abonnés dans l'ordre de chargement comme leurs cadres l'étaient :
+  - `Core`, `Companion`, `Advice`, `Group`, `Journal`, `JournalTracker`, `Bestiary`, `Gathering`, `ZoneQuests` ;
+  - les barres de vie de `Shiny` et de `CompanionEffects` ;
+  - `Daily`, `Notify`, `LiveRares`, `TrainerCard`, `FeatsData` (toutes les tables `ns.FeatListen`), `CaptureTrades`, `GuidedTour`.
+
+  Les cadres qui ne servaient plus qu'à des événements sont supprimés. Restent ceux qui portent un `OnUpdate` : balancement du compagnon (`ns.companionEvents`), rafraîchissement regroupé des quêtes (`ns.zoneQuestsEventFrame`), relevé des visites guidées.
+- **`Core.lua`** : les portes sont relues :
+  - à la lecture de la sauvegarde (`OnAddonLoaded`) ;
+  - à chaque interrupteur des réglages (`ApplyDisplayOptions`) ;
+  - à « /qc module … » (`OnModuleToggled`, nouveau dans QC) ;
+  - à « /qc reset ».
+- **Portes (module coupé : plus d'écoute).** Elles ne sont posées que là où chaque gestionnaire ne fait déjà rien module coupé :
+  - le compagnon, dont le gestionnaire testait déjà `ModuleOn` en tête ;
+  - la récolte (`CHAT_MSG_LOOT`, `SKILL_LINES_CHANGED`) ;
+  - le groupe (`GroupEvaluate` sort d'abord) ;
+  - les rares en direct (alerte coupée).
+- **`Advice.lua`** :
+  - cible, survol et barres de vie sont mis en attente de `PLAYER_REGEN_DISABLED` à `PLAYER_REGEN_ENABLED` ;
+  - seuils dans une table gardée ;
+  - « déjà dit » remis à neuf seulement s'il contient quelque chose.
+- **`Companion.lua`** :
+  - `UNIT_AURA` : quand le client dit que seules des auras ont été rafraîchies (`isFullUpdate == false`, rien d'ajouté ni de retiré, au moins une mise à jour), rien n'est relu (`ns.CompanionAuraRefreshOnly`). Sans ces infos, ou si elles sont illisibles (secrètes), tout est relu comme avant ;
+  - menu : `GLOBAL_MOUSE_DOWN` posé par `CompanionMenuShow`, retiré par `CompanionMenuHide`, par `OnHide`, et par le premier clic reçu menu caché.
+- **`CompanionEffects.lua`** : liste des envies faite une fois ; clé du cache comparée champ par champ (mêmes champs qu'avant).
+- **`Shiny.lua`** :
+  - tirage de brillante : fonction faite une fois (`ShinySee`) ;
+  - aura scintillante : l'ornement d'abord, l'apparence seulement s'il ne suffit pas.
+- **`Notify.lua`** (`FirstKill`), **`Treats.lua`** (`TreatsCheck`), **`MenagerieCollection.lua`** (`SealCheck`) : fonctions faites une fois au lieu d'une fermeture par appel.
+- **`JournalTracker.lua`** : suivi caché (combat, module coupé), une liste vide partagée.
+- **`Journal.lua`** : la file des messages n'est remplacée que si elle a servi.
+- **`CompanionTravel.lua`** : le dernier relevé est réécrit sur place.
+- **`Group.lua`** : jetons `party1..4` faits une fois.
+- **`Bestiary.lua`** : `ns.BESTIARY_HANDLERS` exposé (tests, comme `ns.ADVICE_HANDLERS`).
+
+### Tests
+
+- **`tests/modules/performance.lua`**, `[PERF2]` (6 contrôles) :
+  - cadre commun : ordre, erreurs isolées, désabonnement pendant l'appel, attente avec rang gardé, événement refusé par le client, `UNIT_AURA` du joueur seulement ;
+  - un seul cadre de QC reçoit chaque événement fréquent ;
+  - compagnon coupé puis rallumé, par les réglages, par la commande, ou par la sauvegarde écrite directement (relecture d'une seconde) ;
+  - conseils en attente en combat ;
+  - `GLOBAL_MOUSE_DOWN` du menu ;
+  - `UNIT_AURA` rafraîchie sans relecture.
+- **Tests adaptés aux cadres retirés** :
+  - `bestiary.lua` (gestionnaires appelés directement) ;
+  - `shiny.lua`, `companion_effects.lua` (`ns.EventDeliver`) ;
+  - `live_api.lua`, `menagerie_journal.lua` (`ns.Listening`) ;
+  - `socle.lua` (le cadre commun n'a pas d'`OnUpdate`).
+
+Résultat : **3 244 réussis, 0 échoué** (3 238 avant, plus 6). Aussi vert avec `TEST_SEED=7`.
+
+## 3. Mesures
+
+Hors jeu (maquette, lupa, ramasse-miettes arrêté, 1 000 appels), même méthode qu'à la première passe. Les cadres sont comptés après connexion.
+
+| | avant | après |
+|---|---|---|
+| Cadres de QC abonnés à des événements | 20 | 4 (le cadre commun, deux `PLAYER_LOGIN` du socle, les raccourcis) |
+| Appels client → Lua par `NAME_PLATE_UNIT_ADDED` / `ZONE_CHANGED` / `PLAYER_TARGET_CHANGED` | 5 / 5 / 4 | 1 / 1 / 1 |
+| `CompanionEffects` ×1 000 | 416 Ko | 104 Ko |
+| `AdviceThresholds` ×1 000 | 219 Ko | 0,2 Ko |
+| `AdviceNewTrip` ×1 000 (en ville) | 63 Ko | 0,4 Ko |
+| `RefreshJournalTracker` caché en combat ×1 000 | 2 454 Ko | 2 219 Ko (le reste : `ZoneCompletion`, voir 4) |
+| `NAME_PLATE_UNIT_ADDED` ×1 000 (côté Lua seulement) | 1,7 Ko, 17,7 ms | 1,3 Ko, 16,2 ms |
+
+Non chiffrés hors jeu :
+- les appels du client vers le Lua épargnés : un par cadre retiré et par événement ;
+- les auras relues : la maquette n'en pose pas ; le contrôle `[PERF2]` vérifie qu'aucune lecture n'a lieu ;
+- les clics hors du menu ;
+- les événements d'un compagnon coupé.
+
+Mémoire au chargement (`--memoire`, Ko) :
+
+| | avant | après |
+|---|---|---|
+| QuestCompanion | 5 569 | 5 489 |
+| Ready2Quest | 1 944 | 1 958 |
+| Après connexion | 306,0 | 306,2 |
+
+Dans la maquette, un cadre est une table Lua : la baisse de QC vient surtout des 16 cadres en moins, ce qui n'est pas représentatif du client. Ready2Quest gagne le code du cadre commun (compilé dans son socle) et le bruit déjà signalé en 2.8.1.
+
+## 4. Volontairement pas fait
+
+- **`ZoneCompletion` gardé le temps d'un passage du suivi.** Mesuré : environ 1 Ko et 40 µs par appel, deux appels par rafraîchissement (coffre, friandises), même suivi caché. Le blocage de la première passe tient toujours :
+  - un passage peut changer des données en route (coffre, friandise, tampon et son rappel `STAMP`) ;
+  - la garde devrait envelopper la dernière enveloppe chargée (`Daily.lua`) ;
+  - il faudrait prouver qu'aucune enveloppe ne change une part de zone.
+- **Gestionnaires qui travaillent même module coupé : pas de porte.**
+  - carnet : `JournalCombat` oublie les rares morts, `JournalFlush` vide la file ;
+  - bestiaire : statistiques de `/qc diag` ;
+  - suivi : drapeau de combat lu par les quêtes de zone ;
+  - quêtes de zone : le cache est oublié à chaque `QUEST_LOG_UPDATE` ;
+  - barres de vie des brillantes et des effets : leurs caches sont vidés.
+- **Journal de combat, `PARTY_KILL` et `UNIT_DIED` du carnet écoutés seulement avec un rare repéré.** Les tests remplacent `ns.journalRares` directement, et le bestiaire écoute de toute façon les mêmes événements. Le gain se réduirait à un `next()`.
+- **`CHAT_MSG_SYSTEM` des échanges seulement pendant un échange.** La machine des échanges est voisine de la capture en cours de réécriture ; l'événement est seulement passé au cadre commun.
+- **Cadres de la capture et des raccourcis** (fichiers interdits pour cette passe). Leurs `PLAYER_REGEN_DISABLED` et le `GLOBAL_MOUSE_DOWN` du choix au filet restent sur leurs cadres.
+- **Cadres du socle** (`PLAYER_LOGIN` des réglages et de la minicarte, `ADDON_LOADED` de la sauvegarde) : une fois par session, aucun gain.
+- **Ready2Quest sur le cadre commun** : hors du périmètre ; l'API est prête dans son socle.
+- **Aggro du compagnon sans `C_NamePlate.GetNamePlates`** (une table du client toutes les 0,5 s). Il faudrait tenir la liste des barres par `NAME_PLATE_UNIT_*`, ce qui change la façon de compter (les tests posent les barres sans événement). Raison de la première passe toujours valable pour le reste.
+- **Tables rendues par `ActiveOf` (effets) et par `GroupMembers`** : les appelants peuvent les garder.
+- **`QUEST_DATA_LOAD_RESULT` seulement quand une quête est demandée** : événement rare.
+
+## 5. Risques
+
+- **Ordre des gestionnaires :**
+  - entre modules de QC, l'ordre d'abonnement reste l'ordre de chargement, donc le même qu'avant ;
+  - un abonné qui se réabonne (`ns.Off` puis `ns.On`) passe en dernier, comme un cadre qui se réabonnait. La mise en attente (`EventHold`) et les portes gardent le rang ;
+  - les cadres restés à part (socle, raccourcis, fenêtres de la capture) étaient déjà créés avant ou après tous les modules : leur place ne change pas.
+- **Erreurs** : le cadre du cœur (minicarte à l'entrée en jeu) et celui des visites guidées n'étaient pas protégés. Une erreur y est désormais notée (`/qc diag`) au lieu de remonter au client.
+- **Portes :**
+  - un réglage changé par les réglages, la commande, `/qc reset` ou à la connexion rouvre l'écoute tout de suite ;
+  - par un autre chemin, l'écoute rouvre au plus tard une seconde après. Aucun autre chemin connu en jeu.
+- **`UNIT_AURA`** : on suppose que Forever range une aura nouvelle dans `addedAuras`, comme le client moderne. Si une aura de repas n'y était pas, le « Miam » arriverait au prochain message complet. C'est à vérifier en jeu.
+- **Conseils en combat** : rien n'est écouté entre l'entrée et la sortie de combat ; avant, les gestionnaires sortaient au premier test. Après un `/reload` en combat, l'écoute reste ouverte et les gestionnaires testent toujours le combat.
+- **Menu du compagnon** : seul `CompanionMenuShow` l'ouvre. Un autre chemin qui l'afficherait directement ne le refermerait pas au clic ailleurs (aucun dans le code).
+- **Hauts faits** : avec le journal de combat ouvert (pas sur Forever), une table qui écoute le journal ne reçoit plus le `PARTY_KILL` enregistré pour une autre table. C'était un double compte possible sur l'ancien cadre partagé.
+
+## 6. À vérifier en jeu
+
+1. `/qc diag` : aucune erreur.
+2. **Entrée en jeu :** le bouton de minicarte apparaît ; la visite guidée de connexion, si elle est due, démarre.
+3. **Repas et boisson en combat prolongé :**
+   - « Miam » / « Glou glou » à la première bouchée ;
+   - « bien nourri » compté ;
+   - camp reconnu (`UNIT_AURA` filtré).
+4. **Compagnon coupé puis rallumé** (réglages, puis `/qc module companion off|on`) :
+   - rien ne parle coupé ;
+   - tout repart rallumé : butin, quête rendue, groupe.
+5. **Menu du compagnon** (Maj + clic droit) : un clic ailleurs le ferme ; un clic dedans ou sur le compagnon le garde.
+6. **Conseils :** un élite ou un rare survolé hors combat donne la bulle ; rien en combat ; de nouveau après le combat.
+7. **Barres de vie :** brillante et patte de repérage toujours posées ; bestiaire et carnet qui retiennent les rares.
+8. **Échanges et fiche de dresseur :** un échange complet ; une fiche reçue d'un joueur du groupe.
+9. **Rares en direct :** alerte coupée puis remise dans les réglages ; l'alerte revient.

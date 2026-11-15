@@ -98,8 +98,11 @@ do
 	end
 	Check("[MORT] texte : distance, coût, rappel des 10 %, verdict, règle", #missing == 0, table.concat(missing, " / "))
 	local lines = NS.deathFrame.lines
-	Check("[MORT] note et règle sur deux lignes, pas coupées", lines[3].height > lines[1].height and lines[5].height > lines[1].height,
-		lines[1].height .. "/" .. lines[3].height .. "/" .. lines[5].height)
+	-- 1.35.0 : le verdict (3e) avant la note (4e) et la règle (5e)
+	Check("[MORT] verdict avant les notes ; note et règle sur deux lignes, pas coupées", lines[4].height > lines[1].height
+		and lines[5].height > lines[1].height and lines[3].height == lines[1].height
+		and (lines[3].text.text or ""):find("Cours :", 1, true) ~= nil,
+		lines[1].height .. "/" .. lines[3].height .. "/" .. lines[4].height .. "/" .. lines[5].height)
 	-- la course avance : recalcul à la seconde
 	D.W.player = { 0.5875, 0.5 }
 	Mock:Advance(1)

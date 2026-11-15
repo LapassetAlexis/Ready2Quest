@@ -9,6 +9,10 @@
 --      « Talking Head », lueur ronde, éclats d'une brillante, évolution et
 --      niveau, ailes des grandes récompenses, atlas manquants sans erreur,
 --      changement de style à chaud.
+-- 3.1.0 : affirme l'ancien habillage (carnet en parchemin, scènes en bois, bandeaux
+-- dorés, anneau) : le drapeau QNS.AZEROTH_LEGACY rallumé pour tout le module
+-- (remis à la valeur du produit à sa fin, tests/run_tests.lua)
+T.Legacy(true)
 local Check, Say, ResetWorld, NS, Mock = T.Check, T.Say, T.ResetWorld, T.QNS, T.Mock
 
 -- 1. Le compagnon actif ---------------------------------------------------------------------------------
@@ -498,12 +502,12 @@ do
 		NS:EffectPlatesRefresh()
 		NS:CaptureResolve({ success = true, target = { npcID = 7401, name = "Loup", class = "normal", type = "Bête" } })
 		local gone = not mark:IsShown()
-		NS.effectPlateFrame:GetScript("OnEvent")(NS.effectPlateFrame, "NAME_PLATE_UNIT_REMOVED", "nameplate1")
+		NS.EventDeliver("effects", "NAME_PLATE_UNIT_REMOVED", "nameplate1")
 		Check("[EFF] réglage coupé : cachée ; capturée : la patte s'en va ; barre retirée : oubliée", off and gone
 			and NS.effectPlates.nameplate1 == nil)
-		local onEvent = NS.effectPlateFrame:GetScript("OnEvent")
+		local function onEvent(_, event, ...) return NS.EventDeliver("effects", event, ...) end
 		local fox = Plate("nameplate5", 7405, "Bête")
-		onEvent(NS.effectPlateFrame, "NAME_PLATE_UNIT_ADDED", "nameplate5")
+		onEvent(nil, "NAME_PLATE_UNIT_ADDED", "nameplate5")
 		Check("[EFF] barre ajoutée, repérage actif : patte posée", Marked(fox))
 		EF.Add(5702, "Humanoïde", "normal")
 		EF.Take("cap:5702")
@@ -515,7 +519,7 @@ do
 		NS.CompanionEffects = function(...) effects = effects + 1; return savedEffects(...) end
 		for index = 1, 20 do
 			Plate("nameplate" .. (10 + index), 7500 + index, "Bête")
-			onEvent(NS.effectPlateFrame, "NAME_PLATE_UNIT_ADDED", "nameplate" .. (10 + index))
+			onEvent(nil, "NAME_PLATE_UNIT_ADDED", "nameplate" .. (10 + index))
 		end
 		NS.CompanionEffects = savedEffects
 		_G.C_NamePlate.GetNamePlateForUnit = getPlate

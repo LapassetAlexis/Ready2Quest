@@ -112,11 +112,15 @@ end
 -- ---------------------------------------------------------------------------
 -- Appels défensifs
 -- ---------------------------------------------------------------------------
+-- Tous les retours de fn, sans table intermédiaire (appelé à chaque survol
+-- d'objet : classe, niveau, statistiques des pièces portées)
+local function Pass(ok, ...)
+	if not ok then return nil end
+	return ...
+end
 local function Call(fn, ...)
 	if type(fn) ~= "function" then return nil end
-	local r = { pcall(fn, ...) }
-	if not r[1] then return nil end
-	return unpack(r, 2, table.maxn(r))
+	return Pass(pcall(fn, ...))
 end
 
 local function PlayerClass()
@@ -488,6 +492,8 @@ function ns:RewardButton(index)
 end
 
 local marked = {}
+-- thème forgé : voile ambre de la récompense conseillée, à son plus fort (à droite)
+ns.REWARD_FORGE = { glow = 0.22 }
 
 function ns:RewardClearMarks()
 	for button in pairs(marked) do
@@ -495,6 +501,7 @@ function ns:RewardClearMarks()
 		if mark then
 			if mark.glow then mark.glow:Hide() end
 			if mark.label then mark.label:Hide() end
+			if mark.well then mark.well:SetShown(false) end
 			if mark.edge then for _, side in ipairs({ "top", "bottom", "left", "right" }) do mark.edge[side]:Hide() end end
 		end
 		marked[button] = nil
@@ -515,14 +522,41 @@ local function MarkButton(button, text)
 		mark.edge = Theme.Border(button, c, 1, "OVERLAY")
 		mark.label = Theme.Text(button, Theme.F_LABEL, c)
 		mark.label:SetPoint("BOTTOMRIGHT", button, "BOTTOMRIGHT", -6, 4)
+		-- 1.35.0 : bornée au bouton (un prix de vente long ne déborde plus sur
+		-- le choix voisin), une ligne, calée à droite
+		local width = tonumber(Call(button.GetWidth, button))
+		if width and width > 24 then mark.label:SetWidth(width - 12) end
+		mark.label:SetJustifyH("RIGHT")
+		if mark.label.SetWordWrap then mark.label:SetWordWrap(false) end
+		-- thème forgé : l'étiquette dans un creux à filet d'or (son fond presque
+		-- noir porte l'ambre bien mieux que le parchemin), le voile en lumière
+		-- qui s'efface vers la gauche
+		if ns.ForgeOn and ns.ForgeOn() then
+			local K = ns.FORGE.tag
+			-- le creux est dessiné sur le bouton (au-dessus du voile, sous le
+			-- texte), autour d'un cadre vide qui suit la largeur du libellé
+			mark.tag = CreateFrame("Frame", nil, button)
+			mark.tag:SetHeight(K.height)
+			mark.tag:SetPoint("RIGHT", mark.label, "RIGHT", K.padX, 0)
+			mark.well = ns.ForgeWell(button, { around = mark.tag, margin = K.margin, layer = "OVERLAY", sub = 1, color = Theme.GOLD })
+			if mark.label.SetDrawLayer then mark.label:SetDrawLayer("OVERLAY", 2) end
+			Theme.Gradient(mark.glow, "HORIZONTAL", c, 0, c, ns.REWARD_FORGE.glow)
+		end
 		button.r2qRewardMark = mark
 	end
 	mark.label:SetText(text)
+	if mark.tag then
+		local width = tonumber(mark.label.GetStringWidth and mark.label:GetStringWidth()) or 0
+		local limit = tonumber(mark.label:GetWidth()) or width
+		mark.tag:SetWidth(math.min(width, limit) + 2 * ns.FORGE.tag.padX)
+		mark.well:SetShown(true)
+	end
 	mark.glow:Show()
 	mark.label:Show()
 	for _, side in ipairs({ "top", "bottom", "left", "right" }) do mark.edge[side]:Show() end
 	marked[button] = true
 end
+ns.RewardMarkButton = MarkButton   -- exposée aux tests (habillage de la marque)
 
 -- Applique le conseil. `final` : dernière tentative, le chat sert de repli.
 function ns:RewardApply(final)
@@ -577,8 +611,8 @@ function ns:RewardAddTooltip(tooltip, index, link)
 	end
 	local line = self:RewardTooltipLine(choice, result)
 	if not line or type(tooltip) ~= "table" or type(tooltip.AddLine) ~= "function" then return end
-	local c = Theme.GOLD   -- 1.32.0 (fiche 28) : plus de repli recopié
-	pcall(tooltip.AddLine, tooltip, line, c[1], c[2], c[3], true)
+	-- 1.35.0 : par la brique du thème (ambre, retour à la ligne)
+	pcall(Theme.TooltipLine, tooltip, line, Theme.GOLD, true)
 	if type(tooltip.Show) == "function" then pcall(tooltip.Show, tooltip) end   -- recalcule la taille
 end
 
@@ -647,8 +681,7 @@ function ns:RewardOnItemTooltip(tooltip)
 	if not ok then return false end
 	local line = self:RewardItemUpgradeLine(link)
 	if not line then return false end
-	local c = Theme.GREEN
-	tooltip:AddLine(line, c[1], c[2], c[3])
+	Theme.TooltipLine(tooltip, line, Theme.GREEN)
 	return true
 end
 
@@ -667,6 +700,8 @@ ns:RewardHookItemTooltip()
 -- ---------------------------------------------------------------------------
 function ns:RewardOnComplete()
 	self.rewardState = { active = true }
+	-- objets arrivés en cache, pendant que la récompense est affichée
+	if self.SyncEventGate then self:SyncEventGate("reward") end
 	if not self:RewardEnabled() then return end
 	self:RewardHookTooltip()
 	-- Notre cadre peut recevoir QUEST_COMPLETE avant celui de la quête, qui
@@ -687,6 +722,12 @@ end
 function ns:RewardOnFinished()
 	self:RewardClearMarks()
 	self.rewardState = nil
+	if self.SyncEventGate then self:SyncEventGate("reward") end
+end
+
+local function RewardShown()
+	local state = ns.rewardState
+	return (state ~= nil and state.active) and true or false
 end
 
 local HANDLERS = {
@@ -694,11 +735,15 @@ local HANDLERS = {
 	QUEST_FINISHED = function() ns:RewardOnFinished() end,
 	-- objet arrivé en cache après coup : on recalcule
 	QUEST_ITEM_UPDATE = function()
-		if ns.rewardState and ns.rewardState.active then ns:RewardApply(true) end
+		if RewardShown() then ns:RewardApply(true) elseif ns.SyncEventGate then ns:SyncEventGate("reward") end
 	end,
 	GET_ITEM_INFO_RECEIVED = function()
 		local state = ns.rewardState
-		if state and state.active and state.result and state.result.pending then ns:RewardApply(true) end
+		if not RewardShown() then
+			if ns.SyncEventGate then ns:SyncEventGate("reward") end
+		elseif state.result and state.result.pending then
+			ns:RewardApply(true)
+		end
 	end,
 }
 
@@ -711,5 +756,17 @@ eventFrame:SetScript("OnEvent", function(_, event, ...)
 	if not ok and ns.RecordError then ns:RecordError("reward:" .. tostring(event), err) end
 end)
 ns.rewardEventFrame = eventFrame
+
+-- GET_ITEM_INFO_RECEIVED arrive pour chaque objet que le client charge
+-- (sacs, butin, infobulles, autres addons) : seulement pendant que l'écran de
+-- récompense est ouvert (QUEST_COMPLETE … QUEST_FINISHED), comme
+-- QUEST_ITEM_UPDATE.
+if ns.FrameGate then
+	ns.FrameGate("reward", {
+		frame = eventFrame,
+		events = { "QUEST_ITEM_UPDATE", "GET_ITEM_INFO_RECEIVED" },
+		want = function() return RewardShown() end,
+	})
+end
 
 if ns.Mark then ns.Mark("QuestReward") end

@@ -385,15 +385,20 @@ local function Clock(seconds)
 end
 
 ns.CAMP_ICON = "Interface\\Icons\\Spell_Fire_Fire"
+local CAMP_WIDTH, CAMP_MAX, CAMP_HEIGHT = 300, 440, 28
+ns.CAMP_FORGE = { ember = 34, alpha = 0.45 }   -- thème forgé : braise derrière l'icône du feu
 
 -- bandeau (Theme.CreateToast) : liseré ambre, le décompte au centre
 function ns:EnsureCampFrame()
 	if self.campFrame then return self.campFrame end
 	if not (Theme and Theme.CreateToast) then return nil end
-	local frame = Theme.CreateToast(UIParent, 300, 28)
+	local frame = Theme.CreateToast(UIParent, CAMP_WIDTH, CAMP_HEIGHT)
 	if not frame then return nil end
 	frame.text = Theme.Text(frame, Theme.F_LABEL, Theme.LABEL)
 	frame.text:SetPoint("CENTER", frame, "CENTER", Theme.TOAST_ACCENT / 2 + 11, 0)
+	-- 1.35.0 : le texte tient dans le bandeau, l'icône comprise (largeur posée
+	-- à chaque texte, UpdateCampFrame : l'icône reste collée au texte)
+	if frame.text.SetWordWrap then frame.text:SetWordWrap(false) end
 	-- l'icône du feu de camp, à gauche du texte (1.29.6)
 	if frame.CreateTexture then
 		frame.icon = frame:CreateTexture(nil, "ARTWORK")
@@ -401,6 +406,19 @@ function ns:EnsureCampFrame()
 		frame.icon:SetSize(18, 18)
 		frame.icon:SetPoint("RIGHT", frame.text, "LEFT", -5, 0)
 		if frame.icon.SetTexCoord then frame.icon:SetTexCoord(0.08, 0.92, 0.08, 0.92) end
+	end
+	-- thème forgé : le bandeau prend la hauteur qui porte l'habillage (ombre,
+	-- cadre d'orfèvre : Theme.CHROME.min), une braise derrière le feu
+	if ns.ForgeOn and ns.ForgeOn() then
+		local K = Theme.CHROME
+		frame:SetHeight(math.max(CAMP_HEIGHT, K and K.min or CAMP_HEIGHT))
+		-- (à la création, le bandeau était trop bas pour l'habillage : reposé)
+		if Theme.DressWindow then pcall(Theme.DressWindow, frame) end
+		if frame.accent then frame.accentHalo = ns.ForgeAccentBar(frame, frame.accent, Theme.GOLD) end
+		if frame.icon then
+			frame.ember = ns.ForgeDot(frame, ns.CAMP_FORGE.ember, Theme.GOLD, ns.CAMP_FORGE.alpha, "BORDER")
+			frame.ember:SetPoint("CENTER", frame.icon, "CENTER", 0, 0)
+		end
 	end
 	if self.RestorePoint then self:RestorePoint(frame, "campPoint", { point = "TOP", x = 0, y = -150 }) end
 	frame:Hide()
@@ -454,6 +472,14 @@ function ns:UpdateCampFrame(now)
 	if frame.campText ~= text then
 		frame.campText = text
 		frame.text:SetText(text)
+		-- 1.35.0 : le texte garde sa largeur (l'icône, 18 + 5, reste collée à
+		-- gauche) ; le bandeau s'élargit pour un texte long (« assieds-toi ou
+		-- fabrique ici » dépassait les 300), jusqu'à CAMP_MAX, puis le client coupe
+		local margin = 2 * (18 + 5 + 8) + Theme.TOAST_ACCENT
+		local need = tonumber(Theme.TextWidth and Theme.TextWidth(frame, text, Theme.F_LABEL)) or (CAMP_WIDTH - margin)
+		local width = math.min(CAMP_MAX, math.max(CAMP_WIDTH, math.ceil(need + 2) + margin))
+		frame:SetWidth(width)
+		frame.text:SetWidth(math.min(width - margin, math.ceil(need + 2)))
 	end
 	frame:Show()
 end
@@ -491,10 +517,36 @@ frame:SetScript("OnEvent", function(_, event, unit)
 end)
 -- le décompte avance sans événement : rafraîchi quatre fois par seconde
 -- (1.32.2, fiche 25 : sur l'horloge de l'addon, plus d'OnUpdate permanent)
-ns.Every("camp", TICK, function()
+local function CampTick()
 	local ok, err = pcall(ns.UpdateCampFrame, ns)
 	if not ok and ns.RecordError then ns:RecordError("camp:tick", err) end
-end)
+end
+ns.Every("camp", TICK, CampTick)
 ns.campEventFrame = frame
+
+-- Décompte coupé (module ou réglage) : ni UNIT_AURA ni passage de l'horloge ;
+-- à l'arrêt, le cadre est rangé comme le faisait le passage suivant. En
+-- combat, UNIT_AURA (les auras du joueur bougent sans cesse) n'est plus
+-- écouté : le passage de l'horloge, quatre fois par seconde, suffit au
+-- décompte, et un passage est fait à la sortie du combat.
+local function CountdownOn(self)
+	return self:CampEnabled() and self:DB().campCountdown ~= false
+end
+if ns.FrameGate then
+	ns.FrameGate("camp", {
+		clock = { "camp", TICK, CampTick },
+		want = CountdownOn,
+		onPause = function(self)
+			self.campArrivedAt = nil
+			if self.campFrame then self.campFrame:Hide() end
+		end,
+	})
+	ns.FrameGate("camp:aura", {
+		frame = frame,
+		events = { "UNIT_AURA" },
+		want = function(self) return CountdownOn(self) and not self:GateInCombat() end,
+		onResume = function() CampTick() end,
+	})
+end
 
 if ns.Mark then ns.Mark("Camp") end

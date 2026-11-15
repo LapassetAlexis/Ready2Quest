@@ -21,6 +21,58 @@ ns.RegisterDefaults({
 })
 
 -- ---------------------------------------------------------------------------
+-- Thème forgé (socle 3.2, Theme.Forged) : les teintes de nos blocs faits
+-- main (filet, pastilles de capture, garde-manger, carnet à l'écran, fiche
+-- au survol). Les briques du socle (boutons, tuiles, champs) ont les leurs.
+-- Plaque (Theme.ART.plate) : texture grise de 0,885 en haut à 0,50 en bas
+-- (1,0 au filet clair du bord) : la teinte multipliée par ces valeurs donne
+-- le fond réel le plus clair et le plus sombre (contrastes mesurés,
+-- tests/modules/ui_forge_qc.lua). Creux (Theme.ART.inset) : fond presque
+-- noir, la teinte colore le filet du bas.
+-- ---------------------------------------------------------------------------
+do
+	local Theme = ns.Theme or {}
+	ns.QC_FORGE = {
+		-- (teintes et niveaux lus dans le thème du socle : une seule définition)
+		plateTop = (Theme.FORGE or {}).plateTop or 0.885,        -- luminosité de la plaque, haut…
+		plateBottom = (Theme.FORGE or {}).plateBottom or 0.50,   -- … et bas
+		card    = (Theme.FORGE_PLATE or {}).card or { 0.118, 0.145, 0.176 },   -- carte (pastille du filet)
+		gold    = (Theme.FORGE_PLATE or {}).gold or { 1.0, 0.82, 0.50 },       -- plaque principale (le filet)
+		danger  = (Theme.FORGE_INK or {}).red or { 0.96, 0.73, 0.69 },         -- encre d'un échec (« échappée »)
+		rim     = Theme.EDGE,                    -- filet d'un creux au repos (or patiné)
+		-- rôles du socle (socle 3.3, changés sur place selon ns.APP.identity :
+		-- QuestCompanion a le bleu arcane pour identité, l'or pour sélection)
+		rimOn   = Theme.SELECT_LIGHT or Theme.GOLD_LIGHT,   -- au survol (sélection : or clair)
+		title   = Theme.TITLE,                              -- titre d'un bloc (identité : arcane très clair)
+		glow    = Theme.IDENTITY or Theme.GOLD,             -- filet et point lumineux (identité : bleu arcane)
+		line    = { h = 4, alpha = 0.85 },       -- filet lumineux sous un titre
+	}
+end
+
+-- Thème forgé posé ? (décidé à la création d'un bloc : changer de thème
+-- demande un rechargement pour les blocs déjà faits, comme le socle)
+function ns.QCForged()
+	local Theme = ns.Theme
+	return Theme ~= nil and type(Theme.Forged) == "function" and Theme.Forged() == true
+		and type(Theme.Slice) == "function" and type(Theme.ART) == "table"
+end
+
+-- Le filet lumineux du thème forgé (Theme.ART.line, blanc qui s'efface vers
+-- la droite), teint de l'identité (QC_FORGE.glow) ; mirror : il s'efface
+-- vers la gauche
+function ns.QCForgeLine(parent, layer, mirror, color)
+	local Theme, K = ns.Theme, ns.QC_FORGE
+	if not (parent and Theme and Theme.ART and Theme.ART.line) then return nil end
+	local tex = parent:CreateTexture(nil, layer or "ARTWORK")
+	tex:SetTexture(Theme.ART.line.file)
+	if mirror then tex:SetTexCoord(1, 0, 0, 1) end
+	local c = color or K.glow
+	tex:SetVertexColor(c[1], c[2], c[3], K.line.alpha)
+	tex:SetHeight(K.line.h)
+	return tex
+end
+
+-- ---------------------------------------------------------------------------
 -- Réglages : la page Général, le bouton principal, l'aide
 -- ---------------------------------------------------------------------------
 ns.AddOptionPage({
@@ -54,6 +106,7 @@ ns.COMMANDS["reset"] = function(self)
 	db = self:ResetDB()
 	db.chars, db.migratedFromR2Q, db.memoriesDropped = chars or {}, migrated, dropped
 	self:Print(L.MSG_RESET)
+	if ns.EventsResync then ns.EventsResync() end
 	if self.RefreshOptions then self:RefreshOptions() end
 end
 
@@ -154,6 +207,22 @@ function ns:OnAddonLoaded()
 	if not ok and self.RecordError then self:RecordError("memories:drop", err) end
 	-- réglette « Bavardage » : cran déduit des anciens réglages, une fois
 	if self.CompanionChatterLevel then self:CompanionChatterLevel() end
+	-- sauvegarde lue : un module coupé n'écoute plus ses événements
+	if ns.EventsResync then ns.EventsResync() end
+end
+
+-- 3.1.0 : un interrupteur changé (réglages, « /qc module … ») : les portes du
+-- cadre d'événements commun sont relues (Libs/Socle/Compat.lua)
+do
+	local apply, toggled = ns.ApplyDisplayOptions, ns.OnModuleToggled
+	function ns:ApplyDisplayOptions(...)
+		if ns.EventsResync then ns.EventsResync() end
+		if apply then return apply(self, ...) end
+	end
+	function ns:OnModuleToggled(...)
+		if ns.EventsResync then ns.EventsResync() end
+		if toggled then return toggled(self, ...) end
+	end
 end
 
 -- ---------------------------------------------------------------------------
@@ -172,15 +241,13 @@ ns:BridgeReady2Quest()
 
 -- ---------------------------------------------------------------------------
 -- Événements du cœur : le bouton de minicarte à l'entrée en jeu
+-- 3.1.0 : sur le cadre d'événements commun (ns.On, Libs/Socle/Compat.lua),
+-- créé ici, au premier abonné : les modules suivants s'y abonnent dans
+-- l'ordre de chargement, comme leurs cadres s'abonnaient avant.
 -- ---------------------------------------------------------------------------
-local ok, frame = pcall(CreateFrame, "Frame")
-if ok and frame then
-	frame:RegisterEvent("PLAYER_ENTERING_WORLD")
-	frame:SetScript("OnEvent", function()
-		if ns:DB().showMinimap ~= false and ns.ShowMinimapButton then ns:ShowMinimapButton() end
-	end)
-	ns.coreEventFrame = frame
-end
+ns.On("PLAYER_ENTERING_WORLD", "core", function()
+	if ns:DB().showMinimap ~= false and ns.ShowMinimapButton then ns:ShowMinimapButton() end
+end)
 
 -- ---------------------------------------------------------------------------
 -- Tables de zones paresseuses (1.6.1) : les données livrées par zone

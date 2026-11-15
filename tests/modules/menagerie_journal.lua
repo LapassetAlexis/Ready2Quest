@@ -13,6 +13,10 @@
 --      encres mesurées et textes.
 --   4. Exploration (2.9.1, retours en jeu) : titres des quêtes dans la langue du
 --      client, encres mesurées des quêtes et des zones, roue crantée du carnet.
+-- 3.1.0 : affirme l'ancien habillage (carnet en parchemin, scènes en bois, bandeaux
+-- dorés, anneau) : le drapeau QNS.AZEROTH_LEGACY rallumé pour tout le module
+-- (remis à la valeur du produit à sa fin, tests/run_tests.lua)
+T.Legacy(true)
 local Check, Say, ResetWorld, NS, Mock = T.Check, T.Say, T.ResetWorld, T.QNS, T.Mock
 
 -- 1. Collection ----------------------------------------------------------------------------------------
@@ -1156,7 +1160,7 @@ do
 		titles[9201] = nil
 		NS.zoneQuests.lists = {}
 		Check("[R291] QUEST_DATA_LOAD_RESULT (écouté) : le titre traduit remplace l'anglais, gardé même si le client l'oublie",
-			loaded and Names()[9201] == "Armes égarées" and NS.zoneQuestsEventFrame.events.QUEST_DATA_LOAD_RESULT == true)
+			loaded and Names()[9201] == "Armes égarées" and NS.Listening("QUEST_DATA_LOAD_RESULT", "zonequests"))
 		-- sans l'API : repli sur nos noms, sans erreur
 		C_QuestLog.GetTitleForQuestID, C_QuestLog.RequestLoadQuestByID = nil, nil
 		ZQReset({ [1413] = { [9201] = { en = "Wayward Weapons", lvl = 2 } } })
@@ -1222,8 +1226,24 @@ do
 
 	-- 4.3 La roue crantée du carnet : la roue grise du journal de quêtes du client
 	do
-		Say("-- exploration 2.9.1 : roue crantée grise")
+		Say("-- exploration 2.9.1 : roue crantée grise (Sobre ; 3.1.0 : la roue du socle au thème forgé)")
+		-- 3.1.0 : au thème forgé, la roue du socle sur sa petite plaque
 		R.Reset()
+		T.Legacy(false)
+		NS:ApplyUIStyle()
+		local forgedCarnet = NS:ToggleJournal(true)
+		local gear = forgedCarnet and forgedCarnet.settingsButton
+		Check("[R291] thème forgé : roue du socle sur sa petite plaque, pas la roue grise du journal de quêtes",
+			NS.QCForged() and forgedCarnet.journalForged and gear and gear.cogTexture == nil and gear.plate ~= nil and gear.forgeLook ~= nil,
+			gear and tostring(gear.cogTexture))
+		forgedCarnet:Hide()
+		T.Legacy(true)
+		local function SobreReset(atlas)
+			R.Reset(atlas)
+			NS:DB().companionStyle = "sobre"
+			NS:ApplyUIStyle()
+		end
+		SobreReset()
 		local f = NS:ToggleJournal(true)
 		local button = f.settingsButton
 		local cog = NS.JOURNAL_COG
@@ -1238,11 +1258,11 @@ do
 		Check("[R291] roue : plus claire au survol, revient au repos", hot and Same(button.icon.vertex, cog.rest) and button.cogHot == false)
 		f:Hide()
 		-- atlas absent : le second, puis le fichier
-		R.Reset({ ["questlog-icon-setting"] = true })
+		SobreReset({ ["questlog-icon-setting"] = true })
 		f = NS:ToggleJournal(true)
 		local second = f.settingsButton.icon.atlas == "gm-icon-settings" and f.settingsButton.cogTexture == "gm-icon-settings"
 		f:Hide()
-		R.Reset(false)
+		SobreReset(false)
 		f = NS:ToggleJournal(true)
 		local okErr, errs = NoErrors()
 		Check("[R291] roue : repli sur « gm-icon-settings », puis sur le fichier UI-OptionsButton, sans erreur", second

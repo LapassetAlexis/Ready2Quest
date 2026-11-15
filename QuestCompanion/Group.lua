@@ -34,12 +34,13 @@ local function InCombat()
 end
 
 -- Membres du groupe (party1..4), hors raid. nil si pas en groupe.
+local PARTY = { "party1", "party2", "party3", "party4" }   -- 3.1.0 : faits une fois
 function ns:GroupMembers()
 	if Call(G("IsInRaid")) then return nil end
 	if not Call(G("IsInGroup")) then return nil end
 	local members = {}
 	for index = 1, 4 do
-		local unit = "party" .. index
+		local unit = PARTY[index]
 		if Call(G("UnitExists"), unit) then
 			local _, class = Call(G("UnitClass"), unit)
 			members[#members + 1] = {
@@ -215,15 +216,14 @@ function ns:GroupEvaluate(now)
 	return self:GroupCheckPositions(now, members)
 end
 
-local ok, frame = pcall(CreateFrame, "Frame")
-if ok and frame then
-	for _, event in ipairs({ "GROUP_ROSTER_UPDATE", "ZONE_CHANGED_NEW_AREA", "ZONE_CHANGED" }) do
-		pcall(frame.RegisterEvent, frame, event)
-	end
-	frame:SetScript("OnEvent", function()
-		local done, err = pcall(ns.GroupEvaluate, ns)
-		if not done then ns:RecordError("group:event", err) end
-	end)
+-- 3.1.0 : cadre d'événements commun ; GroupEvaluate ne fait rien compagnon
+-- coupé : la porte retire alors l'écoute
+local function GroupEvent() ns:GroupEvaluate() end
+ns.EventGate("group", function() return ns.CompanionOn and ns.CompanionOn() or false end)
+for _, event in ipairs({ "GROUP_ROSTER_UPDATE", "ZONE_CHANGED_NEW_AREA", "ZONE_CHANGED" }) do
+	ns.On(event, "group", GroupEvent, "group:event")
+end
+do
 	-- 2.11.2 (fiche 25) : regardé dix fois par seconde sur l'horloge de
 	-- l'addon (l'échéance reste ns.groupNextAt), plus d'OnUpdate permanent
 	ns.Every("group", ns.CLOCK_POLL, function()
@@ -233,7 +233,6 @@ if ok and frame then
 		local done, err = pcall(ns.GroupEvaluate, ns, now)
 		if not done then ns:RecordError("group:poll", err) end
 	end)
-	ns.groupEventFrame = frame
 end
 
 if ns.Mark then ns.Mark("Group") end

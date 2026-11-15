@@ -332,6 +332,16 @@ end
 local function StageStyle(self)
 	return (self.AzerothScenesOn and self:AzerothScenesOn()) and "azeroth" or "sobre"
 end
+-- 3.1.0 : la clé de cache (ns:StyleKey) : « azeroth » (ancien habillage),
+-- « forge » (née sous le thème forgé) ou « sobre » ; jamais frame.azeroth
+-- hors ancien habillage (Theme.DressWindow refuserait de l'habiller)
+local function StageKey(self, style)
+	if not self.StyleKey then return style end
+	return self:StyleKey(style == "azeroth")
+end
+local function KeyOf(frame)
+	return ns.FrameStyleKey and ns.FrameStyleKey(frame) or frame.uiStyle or "sobre"
+end
 
 -- Le cadre lui-même : Azeroth (carte de parchemin, plaque, bandeau de
 -- verdict ; 2.14.0 bêta 3, avant le grand cadre en bois sombre) ou Sobre
@@ -340,9 +350,24 @@ local function StageWindow(self, az)
 		local frame = self:AzerothCreateCard(AZS.w, AZS.h, { strata = "DIALOG", name = "QuestCompanionCaptureStageAzeroth" })
 		if frame then return frame end
 	end
-	local frame = Theme.CreateToast(UIParent, STAGE_W, STAGE_H, { strata = "DIALOG", name = "QuestCompanionCaptureStage" })
-	if frame then frame.uiStyle = "sobre" end
+	local key = StageKey(self, "sobre")
+	local name = ns.StyleName and ns.StyleName("QuestCompanionCaptureStage", key) or "QuestCompanionCaptureStage"
+	-- 3.1.0 : née sous le thème forgé, la carte du socle (coins, bords
+	-- assombris), sa plaque de titre et son verdict (ForgeScenes.lua)
+	if key == "forge" and ns.ForgeSceneWindow and ns.QCForged and ns.QCForged() then
+		local F = ns.FORGE_SCENE.stage
+		local frame = ns.ForgeSceneWindow(F.w, F.h, { strata = "DIALOG", name = name })
+		if frame then frame.styleKey = key; return frame end
+	end
+	local frame = Theme.CreateToast(UIParent, STAGE_W, STAGE_H, { strata = "DIALOG", name = name })
+	if frame then frame.uiStyle, frame.styleKey = "sobre", key end
 	return frame
+end
+-- La disposition d'une carte : Azeroth, forgée (3.1.0) ou Sobre
+local function Lay(frame)
+	if frame.azeroth then return AZS end
+	if frame.forged and ns.FORGE_SCENE then return ns.FORGE_SCENE.stage end
+	return SBS
 end
 
 -- 2.14.0 (bêta 3) : l'encre d'un rôle mesuré (ns.AZEROTH_CONTRAST,
@@ -392,6 +417,8 @@ local function StageDetails(frame, lay, az)
 		cell.count = Theme.Text(details, Theme.F_SMALL, Theme.MUTED_LIGHT)
 		cell.count:SetPoint("LEFT", cell.edge, "RIGHT", 4, 0)
 		if az then RoleInk(cell.count, "stage.aidCount") end
+		-- 3.1.0 : thème forgé, la case en petite plaque (ForgeScenes.lua)
+		if frame.forged and ns.ForgeAidCell then ns.ForgeAidCell(details, cell, lay.aid) end
 		frame.aidCells[index] = cell
 	end
 	return details
@@ -414,16 +441,18 @@ local function GroundShadow(frame, az)
 end
 
 function ns:EnsureCaptureStage()
-	local want = StageStyle(self)
+	local style = StageStyle(self)
+	local want = StageKey(self, style)
 	local current = self.captureStage
-	if current and ((current.uiStyle or "sobre") == want or current:IsShown()) then return current end
+	if current and (KeyOf(current) == want or current:IsShown()) then return current end
 	self.captureStages = self.captureStages or {}
-	if current then self.captureStages[current.uiStyle or "sobre"] = current end
+	if current then self.captureStages[KeyOf(current)] = current end
 	local kept = self.captureStages[want]
 	if kept then self.captureStage = kept; return kept end
 	-- un nom global : Échap la referme (UISpecialFrames), comme les fenêtres du thème (2.3.0)
-	local frame = StageWindow(self, want == "azeroth")
+	local frame = StageWindow(self, style == "azeroth")
 	if not frame then return nil end
+	if self.MarkStyle and not frame.styleKey then self:MarkStyle(frame) end
 	local az = frame.azeroth and true or false
 	frame:ClearAllPoints()
 	frame:SetPoint("CENTER", UIParent, "CENTER", 0, 60)
@@ -458,7 +487,8 @@ function ns:EnsureCaptureStage()
 		if rolling and not rolling.result then ns:Print(ns.L.CAPTURE_STAGE_COMBAT) end
 	end)
 	local level = frame:GetFrameLevel() or 1
-	local lay = az and AZS or SBS
+	local forged = (not az) and frame.forged and true or false
+	local lay = Lay(frame)
 	local width = lay.w
 
 	if az then
@@ -468,6 +498,31 @@ function ns:EnsureCaptureStage()
 		frame.plate = self:AzerothPlate(frame, AZS.plateW, AZS.plateH)
 		frame.plate:SetPoint("TOP", frame, "TOP", 0, AZS.plateY)
 		frame.title = frame.plate.title
+	elseif forged then
+		-- 3.1.0 : thème forgé, la plaque de titre (teinte froide de l'en-tête) :
+		-- « CAPTURE · <RANG> » en petites capitales de l'identité, le nom à la
+		-- couleur du rang, et sous lui un filet lumineux de la rareté (il
+		-- remplace le filet haut du Sobre, sous le cadre d'orfèvre)
+		frame.titlePlate = ns.ForgeTitlePlate(frame, lay.plateW, lay.plateH, lay.plateY)
+		frame.title = Theme.Text(frame, Theme.F_CAPS or Theme.F_SMALL, Theme.IDENTITY_LIGHT)
+		frame.title:SetPoint("TOP", frame.titlePlate, "TOP", 0, lay.titleY)
+		frame.title:SetWidth(lay.plateW - 16)
+		frame.title:SetJustifyH("CENTER")
+		if frame.title.SetWordWrap then frame.title:SetWordWrap(false) end
+		-- le nom en police de titre ; il rapetisse pour tenir (StageHeader)
+		frame.name = Theme.Text(frame, Theme.F_TITLE or Theme.F_HEADING, Theme.PARCHMENT)
+		frame.name:SetPoint("TOP", frame.titlePlate, "TOP", 0, lay.nameY)
+		frame.name:SetWidth(lay.plateW - 16)
+		frame.name:SetJustifyH("CENTER")
+		if frame.name.SetWordWrap then frame.name:SetWordWrap(false) end
+		frame.nameW = lay.plateW - 16
+		frame.rarityRuleL = ns.QCForgeLine(frame, "ARTWORK", true)
+		frame.rarityRuleR = ns.QCForgeLine(frame, "ARTWORK", false)
+		if frame.rarityRuleL and frame.rarityRuleR then
+			frame.rarityRuleL:SetWidth(lay.plateW / 2 - 12); frame.rarityRuleR:SetWidth(lay.plateW / 2 - 12)
+			frame.rarityRuleL:SetPoint("BOTTOMRIGHT", frame.titlePlate, "BOTTOM", 0, 2)
+			frame.rarityRuleR:SetPoint("BOTTOMLEFT", frame.titlePlate, "BOTTOM", 0, 2)
+		end
 	else
 		-- filet haut à la couleur de la rareté, titre, puis le nom
 		frame.topBar = Theme.Solid(frame, "BORDER", WHITE, 1)
@@ -594,6 +649,16 @@ function ns:EnsureCaptureStage()
 		frame.banner:SetFrameLevel(level + 13)
 		-- le nom, sur la plaque
 		frame.name = frame.plate.text
+	elseif forged and self.ForgeVerdict then
+		-- 3.1.0 : thème forgé, le verdict dans la scène (ForgeScenes.lua : même
+		-- interface que le bandeau des hauts faits), posé sur la chance et les
+		-- aides, il mord un peu le bas de la scène
+		local V = ns.FORGE_SCENE.verdict
+		frame.banner = self:ForgeVerdict(frame, V.w, V.h)
+		frame.banner.area:SetPoint("TOP", frame.scene, "BOTTOM", 0, lay.verdictBite)
+		frame.banner.area:SetFrameLevel(level + 13)
+		frame.banner:SetFrameLevel(level + 13)
+		frame.forgeVerdict = true
 	else
 		-- le ruban (cadre à part : il surgit avec SetScale), son liseré, son texte,
 		-- et le reflet d'une brillante (dans un cadre qui rogne ses enfants) ;
@@ -619,12 +684,13 @@ function ns:EnsureCaptureStage()
 		frame.bannerText:SetPoint("CENTER", frame.banner, "CENTER", 0, 2)
 		frame.banner:Hide()
 	end
-	-- les étoiles du spécimen : sous le ruban (Sobre), dans le bandeau (Azeroth)
-	local starHost = az and frame.banner or frame
+	-- les étoiles du spécimen : sous le ruban (Sobre), dans le bandeau (Azeroth, forgé)
+	local inBanner = az or frame.forgeVerdict
+	local starHost = inBanner and frame.banner or frame
 	frame.starSlots = {}
 	for index = 1, 3 do
 		local star = Art(starHost, "OVERLAY", 1, "stars", nil, 18)
-		if az then
+		if inBanner then
 			star:SetPoint("TOP", frame.banner, "TOP", (index - 2) * 20, frame.banner.lineY)
 		else
 			star:SetPoint("TOP", frame.banner, "BOTTOM", (index - 2) * 20, -2)
@@ -665,7 +731,7 @@ function ns:EnsureCaptureStage()
 		if not done and ns.RecordError then ns:RecordError("capture:stage", err) end
 	end)
 	frame:Hide()
-	self.captureStages[frame.uiStyle or "sobre"] = frame
+	self.captureStages[KeyOf(frame)] = frame
 	self.captureStage = frame
 	return frame
 end
@@ -710,7 +776,7 @@ local function Rest(frame)
 	frame.netShadow:Hide()
 	frame.starSpark:Hide()
 	if frame.sheen then frame.sheen:Hide() end
-	if frame.banner.azeroth then
+	if frame.banner.azeroth or frame.banner.verdict then
 		frame.banner.bling:Hide()
 		frame.banner.shine:Hide()
 		frame.banner.glow:SetAlpha(0)
@@ -759,6 +825,7 @@ function ns:CaptureStageDetails(frame, rolling)
 		cell.icon:SetAlpha(chosen and 1 or 0.45)
 		local edge = chosen and Theme.GOLD or Theme.EDGE
 		cell.edge:SetVertexColor(edge[1], edge[2], edge[3], 1)
+		if cell.forgeLook then cell:forgeLook(chosen and "chosen" or "rest") end
 		cell.chosen = chosen
 	end
 	frame.details:Show()
@@ -792,11 +859,21 @@ local function StageHeader(self, frame, target, withLevel)
 		if ns.AzerothFit then ns.AzerothFit(frame.plate.title, frame.plate.nameW, 11, 9) end
 		frame.plate:SetName(label, target.shiny)
 	else
-		frame.bannerText:SetText("")
+		if frame.bannerText then frame.bannerText:SetText("") end
 		frame.name:SetText(label)
 		-- 2.11.0 : le nom prend la variante claire du rang (lisible en Sobre)
 		local ink = rarity.text or c
 		frame.name:SetTextColor(ink[1], ink[2], ink[3])
+		-- (forgé : le nom rapetisse pour tenir sur la plaque ; le filet
+		-- lumineux de la rareté sous lui)
+		if frame.nameW and ns.ForgeSceneFit then
+			local F = ns.FORGE_SCENE.stage
+			ns.ForgeSceneFit(frame.name, frame.nameW, F.nameMax, F.nameMin)
+		end
+		if frame.rarityRuleL then
+			frame.rarityRuleL:SetVertexColor(c[1], c[2], c[3], ns.QC_FORGE.line.alpha)
+			frame.rarityRuleR:SetVertexColor(c[1], c[2], c[3], ns.QC_FORGE.line.alpha)
+		end
 	end
 	return rarity
 end
@@ -808,8 +885,9 @@ function ns:CaptureShowStage(rolling)
 	if frame.prep or frame.prepOn then ns.CapturePrepClear(frame) end
 	local target = rolling.target
 	frame.rolling = rolling
-	-- la scène Azeroth montre le verdict : pas de bandeau « Capturé ! » en double (AzerothStyle.lua)
-	rolling.sceneVerdict = frame.azeroth or nil
+	-- la scène Azeroth (3.1.0 : et la carte forgée) montre le verdict : pas de
+	-- bandeau « Capturé ! » en double (AzerothStyle.lua) ; Sobre : le ruban, puis le bandeau
+	rolling.sceneVerdict = (frame.azeroth or frame.forgeVerdict) and true or nil
 	StageHeader(self, frame, target)
 	self:CaptureStageDetails(frame, rolling)
 	frame.footer:SetText(L.CAPTURE_SHAKING)
@@ -979,6 +1057,8 @@ local function Verdict(frame, r, ok, rolling)
 		-- 2.8.0 : la tête de la créature dans le cadre d'icône, son niveau dans le bouclier
 		if banner.SetCreature then banner:SetCreature(target) end
 		if banner.SetLevel then banner:SetLevel(target.level) end
+		-- 3.1.0 : le verdict forgé pose les encres du thème (ForgeScenes.lua)
+		if banner.Paint then banner:Paint(ok, target.shiny) end
 		banner:Fit()
 	end
 	banner:Show()
@@ -1076,7 +1156,7 @@ local function StageOk(frame, r, rolling, c)
 			p:Hide()
 		end
 	end
-	if frame.banner.azeroth then
+	if frame.banner.azeroth or frame.banner.verdict then
 		Verdict(frame, r, true, rolling)
 	else
 		Banner(frame, r, shiny and PANEL_SHINY or { c[1] * 0.42, c[2] * 0.42, c[3] * 0.42 }, col, L.CAPTURE_GOT, Theme.PARCHMENT)
@@ -1163,13 +1243,16 @@ local function StageFail(frame, r, c, rolling)
 	Tint(frame.halo, Theme.RED, 0.35 * (1 - Clamp01(r / 1.5)))
 	frame.halo:SetSize(200, 200)
 	frame.halo:Show()
-	if frame.banner.azeroth then
+	if frame.banner.azeroth or frame.banner.verdict then
 		Verdict(frame, r, false, rolling)
 	else
 		Banner(frame, r, PANEL_FAIL, TRIM_FAIL, L.CAPTURE_FLED, Theme.RED)
 	end
 	HideAll(frame.shakeDots)
-	frame.footer:SetText(r > 1.2 and L.CAPTURE_STAGE_CLOSE or L.CAPTURE_STAGE_FAIL)
+	-- le verdict (forgé, ancien habillage) écrit déjà la phrase : le pied ne la
+	-- répète pas ; le ruban du Sobre n'en a pas, il la garde au pied
+	local said = frame.banner.azeroth or frame.banner.verdict
+	frame.footer:SetText(r > 1.2 and L.CAPTURE_STAGE_CLOSE or (said and "" or L.CAPTURE_STAGE_FAIL))
 end
 
 function ns:CaptureStageUpdate(now)
@@ -1441,9 +1524,14 @@ local function BuildPrep(self, frame)
 	frame.legend:Hide()
 	local lay = az and AZS or SBS
 	for _, cell in ipairs(frame.aidCells or {}) do
-		cell.glow = Theme.Solid(details, "BACKGROUND", Theme.GOLD_LIGHT, 0.55)
-		cell.glow:SetSize(lay.aid + 8, lay.aid + 8)
-		cell.glow:SetPoint("CENTER", cell.edge, "CENTER", 0, 0)
+		if cell.forged and ns.ForgeAidGlow then
+			-- 3.1.0 : thème forgé, la lueur d'or de l'aide conseillée (ART.dot)
+			cell.glow = ns.ForgeAidGlow(details, cell, lay.aid)
+		else
+			cell.glow = Theme.Solid(details, "BACKGROUND", Theme.GOLD_LIGHT, 0.55)
+			cell.glow:SetSize(lay.aid + 8, lay.aid + 8)
+			cell.glow:SetPoint("CENTER", cell.edge, "CENTER", 0, 0)
+		end
 		cell.glow:Hide()
 		local button = CreateFrame("Button", nil, details)
 		button:SetSize(lay.aid + 4, lay.aid + 4)
@@ -1483,7 +1571,7 @@ end
 local function CardHeight(frame, height)
 	frame:SetHeight(height)
 	if frame.cardParch and ns.AzerothCover and ns.AZEROTH_CARD then
-		pcall(ns.AzerothCover, frame.cardParch, ns.AZEROTH_CARD.parch, frame.azeroth and AZS.w or STAGE_W, height)
+		pcall(ns.AzerothCover, frame.cardParch, ns.AZEROTH_CARD.parch, Lay(frame).w, height)
 	end
 end
 
@@ -1504,7 +1592,7 @@ function ns.CapturePrepClear(frame)
 		end
 	end
 	local az = frame.azeroth and true or false
-	CardHeight(frame, az and AZS.h or STAGE_H)
+	CardHeight(frame, Lay(frame).h)
 	if az then RoleInk(frame.footer, "stage.status") end
 	if az then RoleInk(frame.info, "stage.chance") end
 	if was and ns.CaptureQueueRelease then ns:CaptureQueueRelease("prep") end
@@ -1548,6 +1636,7 @@ function ns:CapturePrepRefresh()
 		cell.icon:SetAlpha(chosen and 1 or (count > 0 and 0.7 or 0.3))
 		local edge = chosen and Theme.GOLD or (advice == cell.id and Theme.GOLD_LIGHT or Theme.EDGE)
 		cell.edge:SetVertexColor(edge[1], edge[2], edge[3], 1)
+		if cell.forgeLook then cell:forgeLook(chosen and "chosen" or ((count > 0) and "rest" or "off")) end
 		cell.chosen, cell.advised = chosen, advice == cell.id
 		if advice == cell.id and not chosen then cell.glow:Show() else cell.glow:Hide() end
 		SetOn(cell.button, count > 0 or chosen)
@@ -1614,7 +1703,7 @@ function ns:CapturePrepOpen(candidate)
 	frame.rolling = nil
 	frame.prep, frame.prepOn = picked, true
 	local az = frame.azeroth and true or false
-	CardHeight(frame, (az and AZS.h or STAGE_H) + (az and PREP.extra.azeroth or PREP.extra.sobre))
+	CardHeight(frame, Lay(frame).h + (az and PREP.extra.azeroth or PREP.extra.sobre))
 	StageHeader(self, frame, picked, true)
 	frame.details:Show()
 	frame:Show()

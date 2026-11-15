@@ -82,11 +82,17 @@ function ns:TravelSample(now)
 	if not ModuleOn() then self.travelLast = nil; return 0 end
 	local x, y, place = self:TravelPosition()
 	if not x then self.travelLast = nil; return 0 end
+	-- 3.1.0 : le relevé précédent est réécrit sur place (une table par seconde avant)
 	local last = self.travelLast
-	self.travelLast = { x = x, y = y, place = place, at = now }
-	if not last or last.place ~= place then return 0 end
-	local elapsed = math.max(0.001, now - (last.at or now))
-	local yards = math.sqrt((x - last.x) ^ 2 + (y - last.y) ^ 2)
+	if not last then
+		self.travelLast = { x = x, y = y, place = place, at = now }
+		return 0
+	end
+	local lastX, lastY, lastPlace, lastAt = last.x, last.y, last.place, last.at
+	last.x, last.y, last.place, last.at = x, y, place, now
+	if lastPlace ~= place then return 0 end
+	local elapsed = math.max(0.001, now - (lastAt or now))
+	local yards = math.sqrt((x - lastX) ^ 2 + (y - lastY) ^ 2)
 	if yards < ns.TRAVEL_MIN_MOVE or yards > ns.TRAVEL_MAX_SPEED * elapsed then return 0 end
 	local meters = yards * YARD
 	local data = self:TravelData()

@@ -169,7 +169,10 @@ local FR = {
 	COMP_FRAMING_portrait  = "Portrait (la tête)",
 	COMP_FRAMING_buste     = "Buste",
 	COMP_FRAMING_pied      = "En pied",
-	COMP_FRAMING_DESC      = "Comment la créature est cadrée dans son cadre à l'écran. Une créature capturée est de taille réelle : en pied, elle est toute petite.",
+	COMP_FRAMING_DESC      = "Comment la créature est cadrée dans son cadre à l'écran. Chaque créature capturée est ramenée à la même taille, quelle que soit son espèce.",
+	COMP_FIT_DIAG          = "Cadrage automatique %s : pnj %s, apparence %s, taille réelle %s, échelle %s, distance %s, cadrage %s. /qc compagnon cadrage on|off.",
+	COMP_FIT_ON            = "actif",
+	COMP_FIT_OFF           = "coupé (distance par type)",
 	OPT_COMP_CHATTER       = "Bavardage",
 	COMP_CHATTER_0         = "Muet",
 	COMP_CHATTER_1         = "Discret",
@@ -363,7 +366,10 @@ local EN = {
 	COMP_FRAMING_portrait  = "Portrait (the head)",
 	COMP_FRAMING_buste     = "Bust",
 	COMP_FRAMING_pied      = "Full body",
-	COMP_FRAMING_DESC      = "How the creature is framed in its on-screen frame. A captured creature is life-size: full body, it looks tiny.",
+	COMP_FRAMING_DESC      = "How the creature is framed in its on-screen frame. Every captured creature is brought to the same size, whatever its species.",
+	COMP_FIT_DIAG          = "Automatic framing %s: npc %s, display %s, real size %s, scale %s, distance %s, framing %s. /qc compagnon cadrage on|off.",
+	COMP_FIT_ON            = "on",
+	COMP_FIT_OFF           = "off (distance by type)",
 	OPT_COMP_CHATTER       = "Chattiness",
 	COMP_CHATTER_0         = "Silent",
 	COMP_CHATTER_1         = "Discreet",
@@ -604,6 +610,9 @@ ns.AddOptionPage({
 			describe = function(value) return L["COMP_CHATTER_DESC_" .. value] end,
 			tooltip = function() return ns:CompanionChatterTooltip() end,
 			onChange = function(value) ns:CompanionOnChatterChanged(value) end },
+		-- 3.1.0 : astuces de découverte de l'addon (Discovery.lua : chaînes et défaut)
+		{ key = "companionDiscovery",  label = "OPT_COMP_DISCOVERY",  kind = "bool",
+			describe = function() return L.OPT_COMP_DISCOVERY_DESC end },
 		-- listes déroulantes : ce qui est gagné se choisit, le reste est grisé
 		-- avec sa condition (CompanionChoices) ; l'action garde le choix suivant
 		{ key = "companionAppearance", label = "COMP_KIND_app",       kind = "action",
@@ -845,6 +854,8 @@ function ns:CompanionCheckStage(level, celebrate)
 	end
 	data.stage, data.stageReady = target, nil
 	self:CompanionApplyModel()
+	-- 3.1.0 : la plaque du médaillon forgé dit le stade (« stade · niveau »)
+	self:CompanionRefreshLabels()
 	if celebrate ~= false then self:CompanionCelebrate() end
 	if self.RefreshJournalTracker then pcall(self.RefreshJournalTracker, self) end
 	return true
@@ -1669,8 +1680,38 @@ function ns.ShowModel(model, opts, profile)
 	local scale, y = opts.scale, tonumber(opts.y) or p.y or 0
 	-- 2.14.0 (bêta 3) : cap (SetFacing), seulement s'il est demandé
 	local facing = tonumber(opts.facing)
+	-- 3.1.0 : cadrage automatique (opts.fit) : le modèle est ramené à la même
+	-- taille à l'écran d'après la taille réelle de son apparence
+	-- (ns:CompanionFitScale), la caméra à opts.fitCam. L'apparence : celle
+	-- demandée, celle apprise (opts.fitDisplay), sinon celle que le client a
+	-- chargée (GetDisplayInfo, connue à OnModelLoaded : le cadrage est reposé).
+	local fit, fitCam, fitDisplay = opts.fit and true or false, tonumber(opts.fitCam), tonumber(opts.display) or tonumber(opts.fitDisplay)
 	model.lightShiny = opts.shiny and true or false
 	model.framing = function(m)
+		local scale, cam = scale, cam
+		m.fitDisplay, m.fitScale = nil, nil
+		if fit and ns.CompanionFitScale then
+			-- 3.1.0 : une fois chargé (OnModelLoaded), le modèle dit lui-même son
+			-- apparence : elle passe avant celle apprise (une valeur apprise
+			-- fausse cadrait une tarentule à la taille d'un loup)
+			local display = tonumber(opts.display)
+			if not display and m.modelReady then
+				local ok, id = ModelCall(m, "GetDisplayInfo")
+				display = ok and tonumber(id) or nil
+				if display and display <= 0 then display = nil end
+			end
+			display = display or fitDisplay
+			if not display then
+				local ok, id = ModelCall(m, "GetDisplayInfo")
+				display = ok and tonumber(id) or nil
+			end
+			local mult = display and display > 0 and ns:CompanionFitScale(display) or nil
+			if mult then
+				scale, cam = (scale or 1) * mult, fitCam or cam
+				m.fitDisplay, m.fitScale = display, mult
+			end
+		end
+		m.framingCam = cam
 		if scale then ModelCall(m, "SetModelScale", scale) end
 		ModelCall(m, "SetCamDistanceScale", cam)
 		ModelCall(m, "SetPortraitZoom", zoom)
@@ -1744,52 +1785,138 @@ end
 
 -- Portrait 2D (2.11.0) : SetPortraitTextureFromCreatureDisplayID existe sur
 -- Forever (vérifié en jeu le 9/11/2026). Il faut le displayID de l'espèce :
--- lu une fois, quand elle est vue vivante (BestiarySeeUnit), par un modèle
--- sonde (SetUnit puis GetDisplayInfo), gardé au compte
--- (db.capture.display[npcID]). Jamais en combat, au plus une lecture par
--- seconde.
+-- lu quand elle est vue vivante (BestiarySeeUnit), par un modèle sonde
+-- (SetUnit puis GetDisplayInfo), gardé au compte (db.capture.display[npcID]).
+-- Jamais en combat, au plus une lecture par seconde.
+-- 3.1.0 : une Grande tarentule montrait un loup. Juste après SetUnit, le
+-- modèle n'est souvent pas encore chargé et GetDisplayInfo rend celui du
+-- modèle PRÉCÉDENT (le loup vu juste avant), qui était gardé sous le nouveau
+-- pnj, pour toujours. Désormais chaque lecture est une demande identifiée
+-- (probe.learnReq : pnj, modèle d'avant, heure) :
+--   * lue tout de suite seulement si le modèle a changé (sinon on attend
+--     OnModelLoaded, qui lit la demande en cours) ;
+--   * une demande à la fois par sonde : la suivante attend la réponse, ou
+--     MODEL_LEARN_TIMEOUT s (la demande est alors abandonnée, la sonde
+--     vidée : une réponse tardive ne trouve plus de demande et est ignorée) ;
+--   * la table du compte porte une révision (displayRev) : celle d'avant la
+--     correction, où des valeurs fausses se cachent sans qu'on puisse les
+--     distinguer, est vidée une fois (MODEL_DISPLAY_REV) ; elle se refait
+--     d'elle-même (sonde des créatures à l'ouverture des panneaux, sonde des
+--     unités à chaque espèce revue). En attendant : l'icône du type ;
+--   * une espèce déjà connue est relue une fois par session quand on la
+--     revoit vivante (au plus MODEL_LEARN_TRIES essais, mêmes limites) : le
+--     modèle de l'unité vivante fait foi ; gardé aussi pour la session
+--     (ns.modelLiveDisplay), que lit en premier le portrait d'une capture.
 ns.MODEL_LEARN_GAP = 1
-local function ProbeRead(m)
-	local npcID = m and m.learnNpc
-	if not npcID then return nil end
+ns.MODEL_LEARN_TIMEOUT = 5
+ns.MODEL_LEARN_TRIES = 3
+ns.MODEL_DISPLAY_REV = 2
+ns.modelLiveDisplay = ns.modelLiveDisplay or {}     -- pnj -> displayID lu vivant (session)
+ns.modelLearnTries = ns.modelLearnTries or {}       -- pnj -> essais de la sonde des unités (session)
+local function Fighting()
+	local fn = rawget(_G, "InCombatLockdown")
+	return ns.companionFighting or (type(fn) == "function" and fn()) and true or false
+end
+-- La table des displayID au compte
+function ns:ModelDisplayTable()
+	local account = self.CaptureAccount and self:CaptureAccount()
+	if type(account) ~= "table" then return nil end
+	if type(account.display) ~= "table" then
+		account.display = {}
+		account.displayRev = ns.MODEL_DISPLAY_REV
+	end
+	return account.display
+end
+-- Migration (sauvegarde lue, ADDON_LOADED) : une table d'avant la révision
+-- est vidée, une fois ; rend le nombre de valeurs oubliées. Lit db.capture
+-- directement (CaptureAccount fusionne le personnage, pas encore connu ici).
+function ns:ModelDisplayMigrate()
+	local db = self.DB and self:DB()
+	local account = type(db) == "table" and db.capture
+	if type(account) ~= "table" or account.displayRev == ns.MODEL_DISPLAY_REV then return 0 end
+	local dropped = 0
+	for _ in pairs(type(account.display) == "table" and account.display or {}) do dropped = dropped + 1 end
+	account.display, account.displayRev = {}, ns.MODEL_DISPLAY_REV
+	return dropped
+end
+do
+	local loaded = ns.OnAddonLoaded
+	function ns:OnAddonLoaded(...)
+		local ok, err = pcall(self.ModelDisplayMigrate, self)
+		if not ok and self.RecordError then self:RecordError("display:migrate", err) end
+		if loaded then return loaded(self, ...) end
+	end
+end
+-- Lit la réponse de la demande en cours ; `loaded` : appelée par
+-- OnModelLoaded (le modèle chargé est celui demandé)
+local function ProbeRead(m, loaded)
+	local req = type(m) == "table" and m.learnReq
+	if type(req) ~= "table" then return nil end
 	local ok, id = ModelCall(m, "GetDisplayInfo")
 	id = ok and tonumber(id) or nil
-	if id and id > 0 then
-		local account = ns.CaptureAccount and ns:CaptureAccount()
-		if account then
-			account.display = type(account.display) == "table" and account.display or {}
-			account.display[npcID] = id
-		end
-		m.learnNpc = nil
-		return id
+	if not id or id <= 0 then return nil end
+	if not loaded and id == req.before then return nil end   -- l'ancien modèle, resté
+	m.learnReq = nil
+	local book = ns:ModelDisplayTable()
+	if book then book[req.npc] = id end
+	if req.live then
+		ns.modelLiveDisplay[req.npc] = id
+		local sink = req.sink
+		if type(sink) == "table" and tonumber(sink.npcID) == req.npc then sink.display = id end
 	end
-	return nil
+	return id
 end
-function ns:ModelLearnDisplay(unit, npcID)
+local function ProbeLoaded(m) ProbeRead(m, true) end
+ns.ModelProbeRead = ProbeRead      -- tests
+-- La sonde est-elle libre ? Une demande restée sans réponse trop longtemps
+-- est abandonnée (sonde vidée) : rend true si une nouvelle peut partir
+local function ProbeFree(probe, now)
+	local req = probe.learnReq
+	if type(req) ~= "table" then return true end
+	if now - (tonumber(req.at) or 0) < ns.MODEL_LEARN_TIMEOUT then return false end
+	probe.learnReq = nil
+	ModelCall(probe, "ClearModel")
+	return true
+end
+-- Lance une demande : le modèle d'avant noté, sonde vidée, puis chargée par
+-- `load` (SetUnit / SetCreature) ; rend le displayID s'il est déjà lisible
+local function ProbeAsk(probe, req, load, what, now)
+	local _, before = ModelCall(probe, "GetDisplayInfo")
+	req.before, req.at = tonumber(before), now
+	ModelCall(probe, "ClearModel")
+	probe.learnReq = req
+	ModelCall(probe, load, what)
+	return ProbeRead(probe)
+end
+-- `sink` (facultatif) : la fiche de l'unité vue (Bestiary.lua,
+-- bestiaryUnits[guid]) qui reçoit son displayID (sink.display) une fois lu
+function ns:ModelLearnDisplay(unit, npcID, sink)
 	npcID = tonumber(npcID)
 	if not (unit and npcID) or not self.CaptureAccount then return nil end
-	local fighting = rawget(_G, "InCombatLockdown")
-	if self.companionFighting or (type(fighting) == "function" and fighting()) then return nil end
-	local account = self:CaptureAccount()
-	if type(account.display) == "table" and account.display[npcID] then return account.display[npcID] end
+	if Fighting() then return nil end
+	local live = ns.modelLiveDisplay[npcID]
+	if live then return live end
+	local book = self:ModelDisplayTable()
+	local known = book and tonumber(book[npcID]) or nil
+	if known and (ns.modelLearnTries[npcID] or 0) >= ns.MODEL_LEARN_TRIES then return known end
 	local now = (ns.Now and ns.Now()) or 0
-	if self.modelLearnAt and now - self.modelLearnAt < ns.MODEL_LEARN_GAP then return nil end
-	self.modelLearnAt = now
+	if self.modelLearnAt and now - self.modelLearnAt < ns.MODEL_LEARN_GAP then return known end
 	local probe = self.modelLearnProbe          -- une seule sonde (gardée sur ns : /qc diag, tests)
 	if probe == nil then
 		local ok, made = pcall(CreateFrame, "PlayerModel", nil, UIParent)
-		if not (ok and made) then self.modelLearnProbe = false; return nil end
+		if not (ok and made) then self.modelLearnProbe = false; return known end
 		probe = made
 		self.modelLearnProbe = probe
 		probe:SetSize(1, 1)
 		probe:SetPoint("TOPLEFT", UIParent, "BOTTOMLEFT", -50, -50)   -- hors de l'écran
 		ModelCall(probe, "SetAlpha", 0)
-		if probe.SetScript then pcall(probe.SetScript, probe, "OnModelLoaded", ProbeRead) end
+		if probe.SetScript then pcall(probe.SetScript, probe, "OnModelLoaded", ProbeLoaded) end
 	end
-	if not probe or type(probe.SetUnit) ~= "function" or type(probe.GetDisplayInfo) ~= "function" then return nil end
-	probe.learnNpc = npcID
-	ModelCall(probe, "SetUnit", unit)
-	return ProbeRead(probe)                       -- souvent lisible tout de suite
+	if not probe or type(probe.SetUnit) ~= "function" or type(probe.GetDisplayInfo) ~= "function" then return known end
+	if not ProbeFree(probe, now) then return known end
+	self.modelLearnAt = now
+	ns.modelLearnTries[npcID] = (ns.modelLearnTries[npcID] or 0) + 1
+	return ProbeAsk(probe, { npc = npcID, live = true, sink = sink }, "SetUnit", unit, now) or known
 end
 
 -- 2.14.0 (bêta 3) : apprendre le displayID d'une espèce capturée sans la
@@ -1802,13 +1929,11 @@ end
 -- lecture tous les MODEL_LEARN_CREATURE_GAP s, jamais en combat (reprise
 -- MODEL_LEARN_COMBAT_WAIT s plus tard). Gardé au compte comme les autres
 -- (db.capture.display) : le portrait 2D sert ensuite partout.
+-- 3.1.0 : une demande à la fois (voir plus haut) : la suivante attend la
+-- réponse de la précédente, ou son abandon.
 ns.MODEL_LEARN_CREATURE_GAP = 0.35   -- ≈ 3 lectures par seconde au plus
 ns.MODEL_LEARN_COMBAT_WAIT = 2
 local learnQueue, learnSeen = {}, {}
-local function Fighting()
-	local fn = rawget(_G, "InCombatLockdown")
-	return ns.companionFighting or (type(fn) == "function" and fn()) and true or false
-end
 local function CreatureProbe()
 	local probe = ns.modelLearnCreatureProbe
 	if probe ~= nil then return probe or nil end
@@ -1819,13 +1944,12 @@ local function CreatureProbe()
 	probe:SetSize(1, 1)
 	probe:SetPoint("TOPLEFT", UIParent, "BOTTOMLEFT", -50, -50)
 	ModelCall(probe, "SetAlpha", 0)
-	if probe.SetScript then pcall(probe.SetScript, probe, "OnModelLoaded", ProbeRead) end
+	if probe.SetScript then pcall(probe.SetScript, probe, "OnModelLoaded", ProbeLoaded) end
 	return probe
 end
 function ns:ModelKnownDisplay(npcID)
-	local account = self.CaptureAccount and self:CaptureAccount()
-	local known = account and type(account.display) == "table" and account.display[tonumber(npcID) or -1]
-	return tonumber(known)
+	local book = self.CaptureAccount and self:ModelDisplayTable()
+	return book and tonumber(book[tonumber(npcID) or -1]) or nil
 end
 -- La file : une liste de pnj (rangée par l'appelant) ; rend sa longueur
 function ns:ModelLearnCreatures(list)
@@ -1860,34 +1984,34 @@ function ns:ModelLearnPump()
 	local now = (ns.Now and ns.Now()) or 0
 	local since = now - (self.modelLearnCreatureAt or -1e9)
 	if since < ns.MODEL_LEARN_CREATURE_GAP then Later(ns.MODEL_LEARN_CREATURE_GAP - since); return nil end
-	local npc = table.remove(learnQueue, 1)
-	while npc and self:ModelKnownDisplay(npc) do npc = table.remove(learnQueue, 1) end
-	if not npc then return nil end
 	local probe = CreatureProbe()
 	if not (probe and type(probe.SetCreature) == "function" and type(probe.GetDisplayInfo) == "function") then
 		self:ModelLearnStop()
 		return nil
 	end
+	-- la demande précédente attend encore sa réponse : on repasse plus tard
+	if not ProbeFree(probe, now) then Later(ns.MODEL_LEARN_CREATURE_GAP); return nil end
+	local npc = table.remove(learnQueue, 1)
+	while npc and self:ModelKnownDisplay(npc) do npc = table.remove(learnQueue, 1) end
+	if not npc then return nil end
 	self.modelLearnCreatureAt = now
-	local _, before = ModelCall(probe, "GetDisplayInfo")
-	ModelCall(probe, "ClearModel")
-	probe.learnNpc = npc
-	ModelCall(probe, "SetCreature", npc)
 	-- lecture immédiate : seulement si ce n'est pas l'ancien modèle resté
-	local ok, id = ModelCall(probe, "GetDisplayInfo")
-	id = ok and tonumber(id) or nil
-	if id and id > 0 and id ~= tonumber(before) then ProbeRead(probe) end
+	ProbeAsk(probe, { npc = npc }, "SetCreature", npc, now)
 	if #learnQueue > 0 then Later(ns.MODEL_LEARN_CREATURE_GAP) end
 	return npc
 end
 
--- Le displayID connu d'une créature (candidat, fiche ou compte)
+-- Le displayID connu d'une créature : demandé (target.display), lu sur
+-- l'unité vivante (target.liveDisplay : candidat de capture), lu vivant
+-- dans la session, sinon appris au compte
 function ns:CreatureDisplay(target)
 	if type(target) ~= "table" then return nil end
 	if tonumber(target.display) then return tonumber(target.display) end
-	local account = self.CaptureAccount and self:CaptureAccount()
-	local known = account and type(account.display) == "table" and account.display[tonumber(target.npcID or target.npc) or -1]
-	return tonumber(known)
+	if tonumber(target.liveDisplay) then return tonumber(target.liveDisplay) end
+	local npc = tonumber(target.npcID or target.npc)
+	if not npc then return nil end
+	if ns.modelLiveDisplay[npc] then return ns.modelLiveDisplay[npc] end
+	return self:ModelKnownDisplay(npc)
 end
 
 -- Peint le portrait 2D rond de la créature sur `tex` ; sinon l'icône de son
@@ -1957,12 +2081,19 @@ local function CreateModel(parent)
 	return nil
 end
 
+-- 3.1.0 : la place d'un ornement sur le cadre carré, retenue (le médaillon
+-- forgé les pose sur son anneau, ForgeCompanion.lua, et les y remet au retour)
+local function Home(o, point, rel, relPoint, x, y)
+	o:SetPoint(point, rel, relPoint, x, y)
+	o.home = { point, rel, relPoint, x, y }
+end
+
 local function BuildOrnaments(frame)
 	local orn = {}
 	-- ruban : bandeau bleu de nuit en travers du coin haut gauche, et sa queue
 	orn.ribbon = CreateFrame("Frame", nil, frame)
 	orn.ribbon:SetSize(34, 10)
-	orn.ribbon:SetPoint("TOPLEFT", frame, "TOPLEFT", -4, 4)
+	Home(orn.ribbon, "TOPLEFT", frame, "TOPLEFT", -4, 4)
 	orn.ribbon.band = Theme.Solid(orn.ribbon, "OVERLAY", Theme.BLUE, 0.95)
 	orn.ribbon.band:SetPoint("TOPLEFT", orn.ribbon, "TOPLEFT", 0, 0)
 	orn.ribbon.band:SetSize(34, 5)
@@ -1972,7 +2103,7 @@ local function BuildOrnaments(frame)
 	-- lanterne : un fil, un corps ambre et un halo doux, en haut à droite
 	orn.lantern = CreateFrame("Frame", nil, frame)
 	orn.lantern:SetSize(14, 24)
-	orn.lantern:SetPoint("TOPRIGHT", frame, "TOPRIGHT", 4, 6)
+	Home(orn.lantern, "TOPRIGHT", frame, "TOPRIGHT", 4, 6)
 	orn.lantern.wire = Theme.Solid(orn.lantern, "ARTWORK", Theme.GOLD_SOFT, 1)
 	orn.lantern.wire:SetPoint("TOP", orn.lantern, "TOP", 0, 0)
 	orn.lantern.wire:SetSize(1, 8)
@@ -1985,7 +2116,7 @@ local function BuildOrnaments(frame)
 	-- médaille : losange doré sur un ruban, en bas à gauche
 	orn.medal = CreateFrame("Frame", nil, frame)
 	orn.medal:SetSize(16, 22)
-	orn.medal:SetPoint("BOTTOMLEFT", frame, "BOTTOMLEFT", 4, 18)
+	Home(orn.medal, "BOTTOMLEFT", frame, "BOTTOMLEFT", 4, 18)
 	orn.medal.strap = Theme.Solid(orn.medal, "ARTWORK", Theme.RED, 0.9)
 	orn.medal.strap:SetPoint("TOP", orn.medal, "TOP", 0, 0)
 	orn.medal.strap:SetSize(6, 9)
@@ -2001,7 +2132,7 @@ local function BuildOrnaments(frame)
 	-- fleur des champs : une tige verte et un losange rose, en bas à droite
 	orn.flower = CreateFrame("Frame", nil, frame)
 	orn.flower:SetSize(12, 20)
-	orn.flower:SetPoint("BOTTOMRIGHT", frame, "BOTTOMRIGHT", -5, 18)
+	Home(orn.flower, "BOTTOMRIGHT", frame, "BOTTOMRIGHT", -5, 18)
 	orn.flower.stem = Theme.Solid(orn.flower, "ARTWORK", Theme.GREEN, 0.9)
 	orn.flower.stem:SetPoint("BOTTOM", orn.flower, "BOTTOM", 0, 0)
 	orn.flower.stem:SetSize(1, 11)
@@ -2017,7 +2148,7 @@ local function BuildOrnaments(frame)
 	-- fanion : une hampe et un petit drapeau rouge à liseré ambre, flanc gauche
 	orn.pennant = CreateFrame("Frame", nil, frame)
 	orn.pennant:SetSize(14, 22)
-	orn.pennant:SetPoint("LEFT", frame, "LEFT", -6, 14)
+	Home(orn.pennant, "LEFT", frame, "LEFT", -6, 14)
 	orn.pennant.pole = Theme.Solid(orn.pennant, "ARTWORK", Theme.GOLD_SOFT, 1)
 	orn.pennant.pole:SetPoint("TOPLEFT", orn.pennant, "TOPLEFT", 0, 0)
 	orn.pennant.pole:SetSize(1, 22)
@@ -2030,7 +2161,7 @@ local function BuildOrnaments(frame)
 	-- cristal de lune : losange bleu pâle et son halo, flanc droit
 	orn.crystal = CreateFrame("Frame", nil, frame)
 	orn.crystal:SetSize(18, 18)
-	orn.crystal:SetPoint("RIGHT", frame, "RIGHT", 7, 10)
+	Home(orn.crystal, "RIGHT", frame, "RIGHT", 7, 10)
 	orn.crystal.glow = Theme.Solid(orn.crystal, "ARTWORK", { 0.60, 0.85, 1 }, 0.18)
 	orn.crystal.glow:SetPoint("CENTER", orn.crystal, "CENTER", 0, 0)
 	orn.crystal.glow:SetSize(16, 16)
@@ -2043,7 +2174,7 @@ local function BuildOrnaments(frame)
 	-- couronne : un bandeau d'or et trois pointes en losange, en haut au centre
 	orn.crown = CreateFrame("Frame", nil, frame)
 	orn.crown:SetSize(26, 12)
-	orn.crown:SetPoint("BOTTOM", frame, "TOP", 0, -4)
+	Home(orn.crown, "BOTTOM", frame, "TOP", 0, -4)
 	orn.crown.band = Theme.Solid(orn.crown, "OVERLAY", Theme.GOLD, 1)
 	orn.crown.band:SetPoint("BOTTOM", orn.crown, "BOTTOM", 0, 0)
 	orn.crown.band:SetSize(22, 4)
@@ -2243,8 +2374,13 @@ function ns:EnsureCompanionMenu()
 	end, "normal")
 	frame.journal:SetPoint("TOPLEFT", frame, "TOPLEFT", left, y)
 	y = y - M.row - 10
-	frame.huntTitle = Theme.Text(frame, Theme.F_CAPS or Theme.F_SMALL, Theme.GOLD)
+	-- 3.1.0 : titre de section : encre de l'identité au thème forgé (décidé à la création)
+	local huntInk = (ns.QCForged and ns.QCForged() and Theme.IDENTITY_LIGHT) or Theme.GOLD
+	frame.huntTitle = Theme.Text(frame, Theme.F_CAPS or Theme.F_SMALL, huntInk)
 	frame.huntTitle:SetPoint("TOPLEFT", frame, "TOPLEFT", left, y)
+	frame.huntTitle:SetWidth(width)
+	if frame.huntTitle.SetWordWrap then frame.huntTitle:SetWordWrap(false) end
+	frame.huntTitle:SetJustifyH("LEFT")
 	frame.huntTitle:SetText(Theme.Upper and Theme.Upper(L.HUNT_TITLE or "") or (L.HUNT_TITLE or ""))
 	y = y - 15
 	frame.huntStatus = Theme.Text(frame, Theme.F_SMALL, Theme.MUTED_LIGHT)
@@ -2283,14 +2419,21 @@ function ns:EnsureCompanionMenu()
 	frame.cancel:SetPoint("TOPLEFT", frame, "TOPLEFT", left, y)
 	y = y - M.row
 	frame:SetHeight(-y + M.pad)
-	-- un clic ailleurs (hors du menu et du compagnon), le combat : on referme
+	-- un clic ailleurs (hors du menu et du compagnon), le combat : on referme.
+	-- 3.1.0 : GLOBAL_MOUSE_DOWN (chaque clic, partout) n'est écouté que menu
+	-- ouvert : posé par CompanionMenuShow, retiré quand le menu se cache
 	pcall(frame.RegisterEvent, frame, "PLAYER_REGEN_DISABLED")
-	pcall(frame.RegisterEvent, frame, "GLOBAL_MOUSE_DOWN")
 	frame:SetScript("OnEvent", function(f, event)
-		if not f:IsShown() then return end
+		if not f:IsShown() then
+			if event == "GLOBAL_MOUSE_DOWN" then pcall(f.UnregisterEvent, f, event) end
+			return
+		end
 		if event == "GLOBAL_MOUSE_DOWN" and (MenuOver(f) or MenuOver(ns.companionFrame)) then return end
 		ns:CompanionMenuHide()
 	end)
+	if frame.HookScript then
+		pcall(frame.HookScript, frame, "OnHide", function(f) pcall(f.UnregisterEvent, f, "GLOBAL_MOUSE_DOWN") end)
+	end
 	frame:Hide()
 	self.companionMenu = frame
 	return frame
@@ -2321,13 +2464,17 @@ function ns:CompanionMenuShow()
 	if anchor then frame:SetPoint("BOTTOM", anchor, "TOP", 0, 8) else frame:SetPoint("CENTER", UIParent, "CENTER", 0, 0) end
 	self:CompanionHideHover()
 	self:CompanionMenuRefresh()
+	pcall(frame.RegisterEvent, frame, "GLOBAL_MOUSE_DOWN")
 	frame:Show()
 	if Theme.FadeIn then pcall(Theme.FadeIn, frame, 0.12) end
 	return frame
 end
 
 function ns:CompanionMenuHide()
-	if self.companionMenu then self.companionMenu:Hide() end
+	local frame = self.companionMenu
+	if not frame then return end
+	frame:Hide()
+	pcall(frame.UnregisterEvent, frame, "GLOBAL_MOUSE_DOWN")
 end
 
 function ns:CompanionMenuToggle()
@@ -2479,6 +2626,9 @@ function ns:EnsureCompanionHover()
 	hover.bars = {}
 	for _, key in ipairs(NEED_KEYS) do
 		local label = Theme.Text(hover, Theme.F_SMALL, Theme.LABEL)
+		-- 3.1.0 : le libellé tient dans sa colonne (jamais sur la barre)
+		label:SetWidth(HOVER_LABEL_W - 4)
+		if label.SetWordWrap then label:SetWordWrap(false) end
 		label:SetJustifyH("LEFT")
 		label:SetText(L["COMP_NEED_" .. key])
 		local bar = Theme.CreateBar(hover, width - HOVER_LABEL_W - 36, 4)
@@ -2487,8 +2637,18 @@ function ns:EnsureCompanionHover()
 		bar.value:SetJustifyH("RIGHT")
 		hover.bars[key] = bar
 	end
-	hover.rule = Theme.Solid(hover, "ARTWORK", Theme.EDGE_SOFT, 1)
-	hover.rule:SetSize(width, 1)
+	-- socle 3.2, thème forgé : nom en or clair, filet lumineux (Theme.ART.line)
+	-- au lieu du trait d'un pixel
+	hover.forged = ns.QCForged and ns.QCForged() or nil
+	if hover.forged then
+		local t = ns.QC_FORGE.title
+		hover.title:SetTextColor(t[1], t[2], t[3])
+		hover.rule = ns.QCForgeLine(hover, "ARTWORK")
+		hover.rule:SetWidth(width)
+	else
+		hover.rule = Theme.Solid(hover, "ARTWORK", Theme.EDGE_SOFT, 1)
+		hover.rule:SetSize(width, 1)
+	end
 	hover.hint = Theme.Text(hover, Theme.F_SMALL, Theme.MUTED)
 	hover.hint:SetWidth(width)
 	hover.hint:SetJustifyH("LEFT")
@@ -2553,9 +2713,19 @@ function ns:CompanionRefreshHover()
 end
 
 function ns:CompanionShowHover()
+	-- 3.1.0 : pas de fiche en combat (le cadre est estompé, la souris ne fait
+	-- que passer) ; elle revient au prochain survol hors combat
+	if InCombat() then return end
 	local hover = self:EnsureCompanionHover()
 	if not hover then return end
 	if hover.hint then hover.hint:SetText(self:CompanionHoverHint()) end
+	-- 3.1.0 : à 8 px du bord le plus à gauche (la plaque du médaillon forgé
+	-- déborde du cadre)
+	local frame = self.companionFrame
+	if frame then
+		hover:ClearAllPoints()
+		hover:SetPoint("BOTTOMRIGHT", frame, "BOTTOMLEFT", -8 - ns.CompanionSideOverhang(frame), 0)
+	end
 	self:CompanionRefreshHover()
 	hover:Show()
 end
@@ -2618,6 +2788,75 @@ ns.COMPANION_MODEL_TYPE_CAM = {
 ns.COMPANION_MODEL_OVERRIDES = {}
 ns.COMPANION_FRAMING_CAM = { portrait = 0.75, buste = 0.88, pied = 1 }
 
+-- ---------------------------------------------------------------------------
+-- 3.1.0 : cadrage automatique. La caméra d'un modèle est fixe : une créature
+-- s'y voit à sa taille réelle (un rat minuscule, un géant qui déborde), et le
+-- type (Bête, Géant…) ne dit rien de la taille : un loup et un kodo sont des
+-- Bêtes. Chaque apparence a sa taille réelle (DisplaySizes_Forever.lua, tirée
+-- des tables du client) : le modèle est mis à l'échelle REF / taille, de sorte
+-- que toutes les créatures occupent la même place, caméra à COMPANION_FIT.cam
+-- (fois le cadrage du réglage). Référence réglée en jeu : Grand-père Hiver
+-- (apparence 13369, taille 1,78) bien cadré à 1,5 ; le Renne de l'Hiver
+-- (15904, taille 0,56) bien cadré à 0,6 : même rapport taille / distance.
+-- Sans taille connue (ou /qc compagnon cadrage off) : la distance par type.
+-- Les surcharges par espèce (COMPANION_MODEL_OVERRIDES) passent avant.
+-- ---------------------------------------------------------------------------
+ns.COMPANION_FIT = { ref = 1.78, cam = 1.5, min = 0.03, max = 4 }
+ns.DISPLAY_SIZE_CACHE_MAX = 256
+do
+	local values, cache, cached = nil, {}, 0
+	local byte = string.byte
+	-- Taille réelle d'une apparence (en unités du jeu), ou nil si inconnue
+	function ns:DisplaySize(displayID)
+		displayID = tonumber(displayID)
+		if not displayID or displayID <= 0 then return nil end
+		local hit = cache[displayID]
+		if hit ~= nil then return hit or nil end
+		local data, alphabet = ns.DISPLAY_SIZES, ns.DISPLAY_SIZE_ALPHABET
+		if type(data) ~= "string" or type(alphabet) ~= "string" then return nil end
+		if not values then
+			values = {}
+			for index = 1, #alphabet do values[byte(alphabet, index)] = index - 1 end
+		end
+		local pos, id, n, found = 1, 0, #data, false
+		while pos <= n do
+			local v = values[byte(data, pos)]
+			if not v then break end
+			if v < 80 then
+				id, pos = id + v, pos + 1
+			elseif v < 84 then
+				id = id + (v - 80) * 7225 + (values[byte(data, pos + 1)] or 0) * 85 + (values[byte(data, pos + 2)] or 0)
+				pos = pos + 3
+			else
+				id = id + (((values[byte(data, pos + 1)] or 0) * 85 + (values[byte(data, pos + 2)] or 0)) * 85
+					+ (values[byte(data, pos + 3)] or 0)) * 85 + (values[byte(data, pos + 4)] or 0)
+				pos = pos + 5
+			end
+			if id >= displayID then
+				local rank = id == displayID and values[byte(data, pos)]
+				if rank then found = (ns.DISPLAY_SIZE_MIN or 0.05) * (ns.DISPLAY_SIZE_STEP or 1.099) ^ rank end
+				break
+			end
+			pos = pos + 1
+		end
+		if cached >= ns.DISPLAY_SIZE_CACHE_MAX then cache, cached = {}, 0 end
+		cache[displayID], cached = found, cached + 1
+		return found or nil
+	end
+end
+
+-- L'échelle qui ramène cette apparence à la taille de référence, ou nil
+-- (taille inconnue, cadrage automatique coupé)
+function ns:CompanionFitScale(displayID)
+	if ns.companionFitOff then return nil end
+	local size = self:DisplaySize(displayID)
+	if not size then return nil end
+	local fit = ns.COMPANION_FIT
+	return math.max(fit.min, math.min(fit.max, fit.ref / size))
+end
+
+-- Rend la distance (par type ou par surcharge), y, le cap, et true si le
+-- cadrage automatique peut la remplacer (pas de surcharge pour cette espèce)
 function ns:CompanionModelCam(app, framing)
 	app = app or {}
 	local over = ns.COMPANION_MODEL_OVERRIDES
@@ -2630,7 +2869,17 @@ function ns:CompanionModelCam(app, framing)
 		cam = (kind and types[kind]) or types.default
 	end
 	local factor = ns.COMPANION_FRAMING_CAM[framing or self:CompanionFraming()] or 1
-	return cam * factor, y, spec and tonumber(spec.facing) or nil
+	return cam * factor, y, spec and tonumber(spec.facing) or nil, spec == nil
+end
+
+-- La distance du cadrage automatique pour ce cadrage (portrait, buste, pied)
+function ns:CompanionFitCam(framing)
+	return ns.COMPANION_FIT.cam * (ns.COMPANION_FRAMING_CAM[framing or self:CompanionFraming()] or 1)
+end
+
+-- L'apparence apprise d'une espèce (sonde, gardée au compte), ou nil
+function ns:CompanionKnownDisplay(npc)
+	return self:CreatureDisplay({ npc = npc })
 end
 
 local function CompanionReapply() ns:CompanionApplyModel() end
@@ -2653,7 +2902,12 @@ function ns:CompanionApplyModel()
 	-- rapprochée par le cadrage (portrait, buste, pied)
 	-- 2.14.0 : un compagnon de saison (créature du jeu, SetCreature) aussi
 	local real = app.captured or app.seasonal
-	if real then distance, y, facing = self:CompanionModelCam(app, framing) end
+	local fit, fitCam
+	if real then
+		distance, y, facing, fit = self:CompanionModelCam(app, framing)
+		-- 3.1.0 : cadrage automatique d'après la taille réelle de l'apparence
+		if fit then fitCam = self:CompanionFitCam(framing) end
+	end
 	-- 3.1.0 : la taille du spécimen porté (SpecimenTraits.lua) : échelle du
 	-- modèle, rapprochée selon le cadrage, la caméra recule au-dessus de 1
 	local sizeScale = 1
@@ -2661,12 +2915,14 @@ function ns:CompanionApplyModel()
 		local camFactor
 		sizeScale, camFactor = self:CompanionSizeScale(framing)
 		distance = distance * (camFactor or 1)
+		if fitCam then fitCam = fitCam * (camFactor or 1) end
 	end
 	frame.sizeScale = sizeScale
 	-- 3.0.0 (bêta 6) : modèle resté vide (créature pas encore en cache) :
 	-- tout le cadre refait une fois (CompanionReapply)
 	local shown = model and ns.ShowModel(model, { display = app.display, npc = app.npc, shiny = app.shiny,
 		zoom = zoom, cam = distance, y = y, facing = facing, scale = real and sizeScale or stageDef.scale,
+		fit = fit, fitCam = fitCam, fitDisplay = fit and app.npc and self:CompanionKnownDisplay(app.npc) or nil,
 		retry = CompanionReapply }, "companion") or false
 	frame.usesFallback = not shown
 	frame.displayID = shown and app.display or nil
@@ -2728,7 +2984,9 @@ end
 function ns:CompanionApplySobrePlate()
 	local frame = self.companionFrame
 	if not (frame and frame.plate) then return nil end
-	local az = frame.uiStyle == "azeroth" or (frame.uiStyle == nil and self.AzerothOn and self:AzerothOn())
+	-- 3.1.0 : tout anneau (l'ancien habillage, le médaillon forgé) a sa plaque
+	local az = frame.uiStyle == "azeroth" or frame.ring ~= nil
+		or (frame.uiStyle == nil and self.CompanionRingOn and self:CompanionRingOn())
 	if az then frame.plate:Hide(); return "azeroth" end
 	frame.plate:Show()
 	local t = Theme.TEXT
@@ -2743,6 +3001,9 @@ function ns:CompanionApplyOrnaments()
 		local o = frame.ornaments[def.id]
 		if o then
 			local shown = self:CompanionOrnamentShown(def)
+			-- 3.1.0 : le médaillon forgé n'a pas de cadre carré à border
+			-- (son anneau d'or en tient lieu)
+			if def.id == "gold" and frame.ring == "forge" then shown = false end
 			if shown then o:Show() else o:Hide() end
 			if def.id == "gold" and o.corner then
 				for _, tex in ipairs(o.corner) do if shown then tex:Show() else tex:Hide() end end
@@ -2950,6 +3211,25 @@ function ns:CompanionAuraState()
 	return eating or drinking, fed, drinking and not eating
 end
 
+-- 3.1.0 : UNIT_AURA dit ce qui a changé (moteur récent, updateInfo). Des
+-- auras seulement rafraîchies (durée, charges : la plupart des messages en
+-- combat) ne changent aucun nom : rien à relire. Sans ces infos, ou illisibles
+-- (valeurs secrètes), on relit tout comme avant.
+local function Empty(list)
+	return list == nil or (type(list) == "table" and next(list) == nil)
+end
+local function RefreshOnly(info)
+	if ns.Plain(info.isFullUpdate) ~= false then return false end
+	if not (Empty(info.addedAuras) and Empty(info.removedAuraInstanceIDs)) then return false end
+	local updated = info.updatedAuraInstanceIDs
+	return type(updated) == "table" and next(updated) ~= nil
+end
+function ns.CompanionAuraRefreshOnly(info)
+	if type(info) ~= "table" then return false end
+	local ok, only = pcall(RefreshOnly, info)
+	return ok and only == true
+end
+
 -- Repas : un gros coup de faim comblé au début, puis un peu chaque minute
 function ns:CompanionCheckAuras()
 	local eating, fed, drinkOnly = self:CompanionAuraState()
@@ -3058,12 +3338,27 @@ function ns:CompanionTryTip(force)
 	local rt, now = RT(), Clock()
 	if not rt.tipAt then rt.tipAt = now + TipDelay() end
 	if not force and now < rt.tipAt then return false end
-	local key = self:CompanionNextTip()
+	-- 3.1.0 : une astuce de découverte (Discovery.lua) prend le créneau quand
+	-- c'est son moment ; sinon l'astuce ordinaire
+	local discovery
+	if self.DiscoveryPick then
+		local ok, tip = pcall(self.DiscoveryPick, self)
+		if ok then discovery = tip end
+	end
+	if discovery then self.discoveryBubble = discovery.id end
+	local key = discovery and discovery.line or self:CompanionNextTip()
 	if not key then return false end
-	if not self:CompanionSay("TIP", { line = key }) then return false end
-	local data = self:CompanionData()
-	data.tipsSeen[key] = true
-	data.lastTip = key
+	if not self:CompanionSay("TIP", { line = key }) then
+		if discovery then self.discoveryBubble = nil end
+		return false
+	end
+	if discovery then
+		self:DiscoveryShown(discovery)
+	else
+		local data = self:CompanionData()
+		data.tipsSeen[key] = true
+		data.lastTip = key
+	end
 	rt.tipAt = now + TipDelay()
 	return true
 end
@@ -3311,9 +3606,13 @@ end
 
 function ns:CompanionOnLevel(level)
 	level = tonumber(level) or PlayerLevel()
+	-- 3.1.0 : le niveau de l'événement (UnitLevel peut encore rendre l'ancien
+	-- pendant PLAYER_LEVEL_UP) : la plaque du médaillon forgé le lit
+	self.companionLevelSeen = { level = level, at = Clock() }
 	self:CompanionAdd("mood", 25)
 	self:CompanionWake(false)
 	local evolved = self:CompanionCheckStage(level, true)
+	self:CompanionRefreshLabels()
 	-- l'évolution garde sa bulle ; un déblocage du même niveau passe au chat
 	local fresh = self:CompanionCheckUnlocks(level, false, evolved)
 	if not evolved and #fresh == 0 then self:CompanionSay("LEVEL", { args = { level } }) end
@@ -3762,11 +4061,20 @@ function ns:CompanionPreview(container)
 	box:SetPoint("LEFT", container, "LEFT", 14, 0)
 	container.box = box
 
-	container.name = Theme.Text(container, Theme.F_TITLE, Theme.PARCHMENT)
+	-- 3.1.0 : trois lignes tenues à la largeur de l'aperçu (coupées, jamais
+	-- au-delà du cadre)
+	local textW = math.max(120, (tonumber(container.GetWidth and container:GetWidth()) or 0) - SIZE - 34 - 20)
+	local function Fit(fs)
+		fs:SetWidth(textW)
+		fs:SetJustifyH("LEFT")
+		if fs.SetWordWrap then fs:SetWordWrap(false) end
+		return fs
+	end
+	container.name = Fit(Theme.Text(container, Theme.F_TITLE, Theme.PARCHMENT))
 	container.name:SetPoint("TOPLEFT", container, "TOPLEFT", SIZE + 34, -20)
-	container.line = Theme.Text(container, Theme.F_BODY, Theme.MUTED_LIGHT)
+	container.line = Fit(Theme.Text(container, Theme.F_BODY, Theme.MUTED_LIGHT))
 	container.line:SetPoint("TOPLEFT", container.name, "BOTTOMLEFT", 0, -6)
-	container.style = Theme.Text(container, Theme.F_SMALL, Theme.MUTED)
+	container.style = Fit(Theme.Text(container, Theme.F_SMALL, Theme.MUTED))
 	container.style:SetPoint("TOPLEFT", container.line, "BOTTOMLEFT", 0, -6)
 
 	function container:Refresh(addon)
@@ -3832,11 +4140,36 @@ function ns:CompanionSanitizeName(text)
 	return text
 end
 
+-- /qc compagnon cadrage [on|off] : ce que le cadrage automatique a fait du
+-- compagnon porté (pour le réglage : aucune manipulation n'est demandée au
+-- joueur), et son interrupteur de session
+function ns:CompanionFitCommand(arg)
+	arg = tostring(arg or ""):lower()
+	if arg == "off" or arg == "non" then ns.companionFitOff = true
+	elseif arg == "on" or arg == "oui" then ns.companionFitOff = nil end
+	if arg ~= "" then self:CompanionApplyModel() end
+	local model = self.companionFrame and self.companionFrame.model
+	local app = self:CompanionCurrentAppearance() or {}
+	local display = model and model.fitDisplay
+	local read
+	if model and type(model.GetDisplayInfo) == "function" then
+		local ok, id = pcall(model.GetDisplayInfo, model)
+		read = ok and tonumber(id) or nil
+	end
+	self:Print(self:F("COMP_FIT_DIAG", ns.companionFitOff and L.COMP_FIT_OFF or L.COMP_FIT_ON,
+		tostring(app.npc), tostring(display or read), tostring(self:DisplaySize(display or read) or "?"),
+		tostring(model and model.fitScale and string.format("%.3f", model.fitScale) or "-"),
+		tostring(model and model.framingCam and string.format("%.2f", model.framingCam) or "?"), self:CompanionFraming()))
+	return display ~= nil
+end
+
 function ns:CompanionCommand(rest)
 	if not ModuleOn() then return self:Print(L.COMP_MSG_OFF) end
 	local sub, arg = tostring(rest or ""):match("^%s*(%S*)%s*(.-)%s*$")
 	sub = (sub or ""):lower()
-	if sub == "nom" or sub == "name" then
+	if sub == "cadrage" or sub == "framing" then
+		return self:CompanionFitCommand(arg)
+	elseif sub == "nom" or sub == "name" then
 		local name = self:CompanionSanitizeName(arg)
 		if not name then return self:Print(L.COMP_MSG_NAME_BAD) end
 		self:CompanionData().name = name
@@ -3938,6 +4271,10 @@ local HANDLERS = {
 		ns.companionFighting = Clock()
 		ns:CompanionPauseTutorial()
 		ns:CompanionHideBubble()
+		-- 3.1.0 : fiche au survol et garde-manger fermés (le menu du
+		-- compagnon se ferme déjà de lui-même)
+		ns:CompanionHideHover()
+		if ns.treatMenu and ns.treatMenu.Hide then ns.treatMenu:Hide() end
 		ns:CompanionApplyContext()
 	end,
 	PLAYER_REGEN_ENABLED   = function()
@@ -3954,21 +4291,26 @@ local HANDLERS = {
 	ZONE_CHANGED_NEW_AREA  = function() ns:CompanionInstanceChanged(); ns:CompanionOnZone(true) end,
 	ZONE_CHANGED           = function() ns:CompanionOnZone(false) end,
 	ZONE_CHANGED_INDOORS   = function() ns:CompanionOnZone(false) end,
-	UNIT_AURA              = function(unit) if unit == "player" then ns:CompanionCheckAuras() end end,
+	UNIT_AURA              = function(unit, info)
+		if unit == "player" and not ns.CompanionAuraRefreshOnly(info) then ns:CompanionCheckAuras() end
+	end,
 	PLAYER_UPDATE_RESTING  = function()
 		if Call(rawget(_G, "IsResting")) and not ns:CompanionData().sleepy then ns:CompanionSay("INN") end
 	end,
 }
 
+-- 3.1.0 : cadre d'événements commun (ns.Listen, Libs/Socle/Compat.lua).
+-- Chaque gestionnaire garde le test du module ; la porte (ModuleOn) retire
+-- en plus l'écoute quand le compagnon est coupé (ns.EventsResync).
+-- Le cadre ci-dessous ne porte plus que le balancement du modèle (OnUpdate).
+for event, handler in pairs(HANDLERS) do
+	HANDLERS[event] = function(...)
+		if not ModuleOn() then return end
+		return handler(...)
+	end
+end
+ns.Listen("companion", HANDLERS, ModuleOn)
 local events = CreateFrame("Frame")
-ns.RegisterHandlers(events, HANDLERS)
-events:SetScript("OnEvent", function(_, event, ...)
-	if not ModuleOn() then return end
-	local handler = HANDLERS[event]
-	if not handler then return end
-	local ok, err = pcall(handler, ...)
-	if not ok and ns.RecordError then ns:RecordError("companion:" .. tostring(event), err) end
-end)
 
 -- Horloge : besoins toutes les TICK s, fin de bulle, fin d'animation,
 -- léger balancement du modèle.

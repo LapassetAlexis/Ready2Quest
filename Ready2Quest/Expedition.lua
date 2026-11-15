@@ -220,8 +220,14 @@ local function ModuleOn()
 	return db.enabled ~= false and db.expeditionEnabled ~= false
 end
 
+-- voyage commencé ou refermé : les événements du voyage suivent (porte
+-- « expedition », en bas du fichier)
+local function SyncTrip()
+	if ns.SyncEventGate then ns:SyncEventGate("expedition") end
+end
+
 function ns:ExpeditionStart(from)
-	if not ModuleOn() then self.expedition = nil; return end
+	if not ModuleOn() then self.expedition = nil; SyncTrip(); return end
 	self.expedition = {
 		from      = from,
 		startedAt = ns.Now(),
@@ -238,6 +244,7 @@ function ns:ExpeditionStart(from)
 		quests    = ReadyQuests(),
 		loot      = {},   -- { link, count, quality } dans l'ordre d'arrivée
 	}
+	SyncTrip()
 end
 
 function ns:ExpeditionMoney()
@@ -354,6 +361,7 @@ function ns:ExpeditionFinish(place)
 	-- module coupé pendant le voyage : on oublie le voyage, sans bilan
 	local report = ModuleOn() and self:ExpeditionReport(place) or nil
 	self.expedition = nil
+	SyncTrip()
 	if not report or self:ExpeditionIsTrivial(report) then return nil end
 	self.lastExpedition = report
 
@@ -511,6 +519,19 @@ function ns:EnsureExpeditionWindow()
 	frame.durationLabel = Theme.Text(frame.hero, Theme.F_BODY, Theme.MUTED)
 	frame.durationLabel:SetPoint("BOTTOMLEFT", frame.duration, "BOTTOMRIGHT", 8, 4)
 	frame.durationLabel:SetText(L.EXP_DURATION_LABEL)
+	-- thème forgé : la durée sur une plaque, en or clair sur un halo (comme la
+	-- note d'« Avant le départ »)
+	if ns.ForgeOn and ns.ForgeOn() then
+		frame.hero.plate = ns.ForgeCard(frame.hero)
+		ns.ForgeHideFlat(frame.hero.bg, frame.hero.border)
+		frame.duration:SetTextColor(Theme.TITLE[1], Theme.TITLE[2], Theme.TITLE[3])
+		Theme.TextShadow(frame.duration)
+		local _, size = frame.duration.GetFont and frame.duration:GetFont()
+		local F = ns.FORGE.glow
+		frame.durationGlow = ns.ForgeDot(frame.hero, math.floor((tonumber(size) or 28) * F.size + 0.5), Theme.IDENTITY, F.alpha, "BORDER")
+		frame.durationGlow:SetPoint("CENTER", frame.duration, "CENTER", 0, 0)
+		frame.forged = true
+	end
 
 	local rowsTop = top - HERO - GAP
 	frame.lines = {}
@@ -528,7 +549,9 @@ function ns:EnsureExpeditionWindow()
 	end
 	frame.rowsTop = rowsTop
 
-	frame.closeButton = frame:AddFooterButton(L.OPT_CLOSE, function() frame:Hide() end, "accent")
+	-- (thème forgé : l'action principale du pied est dorée)
+	frame.closeButton = frame:AddFooterButton(L.OPT_CLOSE, function() frame:Hide() end,
+		ns.ForgeStyle and ns.ForgeStyle("accent", "primary") or "accent")
 
 	self.expeditionFrame = frame
 	return frame
@@ -596,7 +619,7 @@ end
 if ns.RegisterCallback then
 	-- départ d'une zone de départ : pas de bilan au retour (rien d'automatique)
 	ns:RegisterCallback("DEPARTURE", function(self, from)
-		if from and from.quiet then self.expedition = nil; return end
+		if from and from.quiet then self.expedition = nil; SyncTrip(); return end
 		self:ExpeditionStart(from)
 	end)
 	ns:RegisterCallback("RETURN", function(self, place) self:ExpeditionFinish(place) end)
@@ -616,10 +639,20 @@ for event in pairs(HANDLERS) do
 	pcall(eventFrame.RegisterEvent, eventFrame, event)
 end
 eventFrame:SetScript("OnEvent", function(_, event, ...)
-	if not ns.expedition then return end
+	if not ns.expedition then SyncTrip(); return end
 	local ok, err = pcall(HANDLERS[event], ...)
 	if not ok and ns.RecordError then ns:RecordError("expedition:" .. tostring(event), err) end
 end)
 ns.expeditionEventFrame = eventFrame
+
+-- Argent, XP, morts, butin (CHAT_MSG_LOOT : chaque ligne de butin du groupe)
+-- ne comptent que pendant un voyage : abonnés au départ, rendus au retour.
+if ns.FrameGate then
+	ns.FrameGate("expedition", {
+		frame = eventFrame,
+		events = { "PLAYER_MONEY", "PLAYER_XP_UPDATE", "PLAYER_LEVEL_UP", "PLAYER_DEAD", "CHAT_MSG_LOOT" },
+		want = function(self) return self.expedition ~= nil end,
+	})
+end
 
 if ns.Mark then ns.Mark("Expedition") end

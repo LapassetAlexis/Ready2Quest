@@ -69,6 +69,12 @@ ns.TOUR_CONTRAST = {
 }
 -- Sobre : sur le fond du socle (Theme.WINDOW), contrastes mesurés dans le test
 ns.TOUR_SOBRE = { title = Theme.PARCHMENT, text = Theme.TEXT, step = Theme.MUTED_LIGHT, ring = Theme.GOLD_LIGHT }
+-- 3.1.0 : thème forgé (jetons de rôle du socle, lus par référence : posés
+-- par Theme.ApplySkin) : titre et liseré en couleur d'identité ; fond du
+-- bandeau du socle (Theme.WINDOW à `alpha`), contrastes dans
+-- tests/modules/forge_bandeaux.lua
+ns.TOUR_FORGE = { title = Theme.TITLE, step = Theme.MUTED_LIGHT, ring = Theme.IDENTITY_LIGHT, ringInner = Theme.IDENTITY,
+	alpha = 0.97 }
 
 local FR = {
 	TOUR_NEXT            = "Suivant",
@@ -365,10 +371,14 @@ local function Paint(fs, az, role, color)
 	fs:SetTextColor(color[1], color[2], color[3], 1)
 end
 
-local function BuildCallout(self, style)
+local function BuildCallout(self, style, key)
 	local az = style == "azeroth"
-	local name = az and "QuestCompanionTourCalloutAzeroth" or "QuestCompanionTourCallout"
+	-- 3.1.0 : un nom par clé (ns:StyleKey : ancien habillage, forgé, Sobre)
+	key = key or style
+	local name = ns.StyleName and ns.StyleName("QuestCompanionTourCallout", key)
+		or (az and "QuestCompanionTourCalloutAzeroth" or "QuestCompanionTourCallout")
 	local frame = CreateFrame("Frame", name, UIParent)
+	frame.styleKey = key
 	frame:SetSize(TOUR.w, 120)
 	frame:SetFrameStrata(TOUR.strata)
 	frame:SetClampedToScreen(true)
@@ -387,12 +397,18 @@ local function BuildCallout(self, style)
 		if ns.AzerothVeil then frame.veil = ns.AzerothVeil(frame, frame, "bubble", 2) end
 		local edge = ns.AZEROTH_INK and ns.AZEROTH_INK.bubbleEdge or Theme.EDGE
 		frame.edge = Theme.Border(frame, edge, 1, "BORDER")
+	elseif key == "forge" and Theme.SkinToast then
+		-- 3.1.0 : thème forgé : la bulle est un bandeau du socle (ombre, cadre
+		-- d'orfèvre, sans barre d'accent), son titre en couleur d'identité
+		Theme.SkinToast(frame, { accent = false, alpha = ns.TOUR_FORGE.alpha })
+		frame.edge = frame.border
+		frame.forgeTour = true
 	else
 		frame.bg = Theme.Solid(frame, "BACKGROUND", Theme.WINDOW, 0.97)
 		frame.bg:SetAllPoints(frame)
 		frame.edge = Theme.Border(frame, Theme.GOLD, 1, "BORDER")
 	end
-	frame.title = Theme.Text(frame, az and Theme.F_CAPS or Theme.F_LABEL, ns.TOUR_SOBRE.title)
+	frame.title = Theme.Text(frame, (az or frame.forgeTour) and Theme.F_CAPS or Theme.F_LABEL, ns.TOUR_SOBRE.title)
 	frame.title:SetPoint("TOPLEFT", frame, "TOPLEFT", TOUR.pad, -TOUR.pad)
 	frame.title:SetJustifyH("LEFT")
 	if frame.title.SetWordWrap then frame.title:SetWordWrap(false) end
@@ -412,6 +428,11 @@ local function BuildCallout(self, style)
 	Paint(frame.title, az, "tour.title", ns.TOUR_SOBRE.title)
 	Paint(frame.step, az, "tour.step", ns.TOUR_SOBRE.step)
 	Paint(frame.text, az, "tour.text", ns.TOUR_SOBRE.text)
+	if frame.forgeTour then
+		local F = ns.TOUR_FORGE
+		frame.title:SetTextColor(F.title[1], F.title[2], F.title[3], 1)
+		frame.step:SetTextColor(F.step[1], F.step[2], F.step[3], 1)
+	end
 	local function Next() ns:TourNext() end
 	local function Skip() ns:TourSkip() end
 	if az and self.AzerothButton then
@@ -442,17 +463,21 @@ local function BuildCallout(self, style)
 	return frame
 end
 
-local function BuildRing(style)
+local function BuildRing(style, key)
 	local az = style == "azeroth"
+	-- 3.1.0 : thème forgé : le liseré de la cible en couleur d'identité
+	local forge = not az and key == "forge"
 	local ring = CreateFrame("Frame", nil, UIParent)
 	ring:SetFrameStrata(TOUR.strata)
 	ring:EnableMouse(false)
-	local outer = az and ns.AZEROTH_BUTTONS and ns.AZEROTH_BUTTONS.gold.edge or ns.TOUR_SOBRE.ring
+	local outer = az and ns.AZEROTH_BUTTONS and ns.AZEROTH_BUTTONS.gold.edge
+		or (forge and ns.TOUR_FORGE.ring) or ns.TOUR_SOBRE.ring
 	ring.outer = Theme.Border(ring, outer, 1, "OVERLAY")
 	ring.inner = CreateFrame("Frame", nil, ring)
 	ring.inner:SetPoint("TOPLEFT", ring, "TOPLEFT", 1, -1)
 	ring.inner:SetPoint("BOTTOMRIGHT", ring, "BOTTOMRIGHT", -1, 1)
-	ring.innerEdge = Theme.Border(ring, Theme.GOLD, 1, "OVERLAY", ring.inner)
+	ring.innerEdge = Theme.Border(ring, forge and ns.TOUR_FORGE.ringInner or Theme.GOLD, 1, "OVERLAY", ring.inner)
+	ring.forge = forge or nil
 	ring.shadow = Theme.Border(ring, Theme.SHADOW, 0.6, "ARTWORK")
 	-- le battement : l'alpha seul, à chaque image (aucune table créée)
 	ring:SetScript("OnUpdate", function(r)
@@ -466,11 +491,13 @@ end
 
 local function Parts(self)
 	local style = TourStyle(self)
+	-- 3.1.0 : un jeu par clé (une bulle née forgée ne sert pas en Sobre)
+	local key = self.StyleKey and self:StyleKey(style == "azeroth") or style
 	self.tourUI = self.tourUI or {}
-	local ui = self.tourUI[style]
+	local ui = self.tourUI[key]
 	if not ui then
-		ui = { callout = BuildCallout(self, style), ring = BuildRing(style), style = style }
-		self.tourUI[style] = ui
+		ui = { callout = BuildCallout(self, style, key), ring = BuildRing(style, key), style = style, key = key }
+		self.tourUI[key] = ui
 	end
 	return ui
 end
@@ -864,22 +891,20 @@ do
 		driver = frame
 		ns.tourDriver = frame
 		frame.acc = 0
-		frame:RegisterEvent("PLAYER_ENTERING_WORLD")
-		frame:RegisterEvent("PLAYER_REGEN_DISABLED")
-		frame:RegisterEvent("PLAYER_REGEN_ENABLED")
-		frame:SetScript("OnEvent", function(_, event, isLogin, isReload)
-			if event == "PLAYER_REGEN_DISABLED" then
-				ns:TourPause()
-			elseif event == "PLAYER_REGEN_ENABLED" then
-				Wake()
-				if ns.tourState or ns.tourPending then frame:Show() end
-			elseif event == "PLAYER_ENTERING_WORLD" and (isLogin or isReload) and ns.TOUR_AUTO then
-				-- une fois, au compte : ce que sont devenues les créatures d'avant la 3.0
-				local okCount, pending = pcall(MigrationPending, ns)
-				if okCount and pending then
-					ns.tourMigrationAt = Clock() + TOUR.migrationDelay
-					frame:Show()
-				end
+		-- 3.1.0 : événements sur le cadre commun de l'addon (ns.On,
+		-- Libs/Socle/Compat.lua) ; ce cadre garde le relevé (OnUpdate)
+		ns.On("PLAYER_REGEN_DISABLED", "tour", function() ns:TourPause() end)
+		ns.On("PLAYER_REGEN_ENABLED", "tour", function()
+			Wake()
+			if ns.tourState or ns.tourPending then frame:Show() end
+		end)
+		ns.On("PLAYER_ENTERING_WORLD", "tour", function(isLogin, isReload)
+			if not ((isLogin or isReload) and ns.TOUR_AUTO) then return end
+			-- une fois, au compte : ce que sont devenues les créatures d'avant la 3.0
+			local okCount, pending = pcall(MigrationPending, ns)
+			if okCount and pending then
+				ns.tourMigrationAt = Clock() + TOUR.migrationDelay
+				frame:Show()
 			end
 		end)
 		frame:SetScript("OnUpdate", function(f, elapsed)

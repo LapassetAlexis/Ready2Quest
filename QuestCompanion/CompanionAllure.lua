@@ -328,6 +328,7 @@ end
 
 local function ShowRing(tile, on, frame)
 	local c = Az(frame) and ns.AZEROTH_INK.catGold or Theme.GOLD
+	if frame and frame.allureForged then c = Theme.SELECT_LIGHT end
 	for _, ring in ipairs({ tile.ring, tile.ringIn }) do
 		ring:SetColor(c[1], c[2], c[3], on and 1 or 0)
 	end
@@ -363,12 +364,14 @@ local function PaintLook(self, tile, def, m)
 		end
 		if want3d then
 			local model = TileModel(tile)
-			local cam, y, facing
+			local cam, y, facing, fit
 			if self.CompanionModelCam then
-				cam, y, facing = self:CompanionModelCam({ npc = def.npc, type = m.typeText }, "pied")
+				cam, y, facing, fit = self:CompanionModelCam({ npc = def.npc, type = m.typeText }, "pied")
 			end
+			-- 3.1.0 : cadrage automatique (taille réelle de l'apparence)
 			if model and ns.ShowModel and ns.ShowModel(model, { npc = def.npc, shiny = def.shiny,
-				cam = cam, y = y, facing = facing }, "tile") then
+				cam = cam, y = y, facing = facing, fit = fit, fitCam = fit and self:CompanionFitCam("pied") or nil,
+				fitDisplay = fit and self:CompanionKnownDisplay(def.npc) or nil }, "tile") then
 				tile.look = "model"
 			end
 		end
@@ -424,7 +427,8 @@ local function PaintTile(self, tile, def, current)
 	local worn = current and current.id == def.id or false
 	tile.worn = worn
 	local rarity = def.captured and ns.CAPTURE_RARITY and ns.CAPTURE_RARITY[def.class or "normal"]
-	tile:SetAccent(worn and Theme.GOLD or (def.shiny and Theme.GOLD_LIGHT) or (rarity and rarity.color) or nil)
+	local wornColor = frame.allureForged and Theme.SELECT or Theme.GOLD
+	tile:SetAccent(worn and wornColor or (def.shiny and Theme.GOLD_LIGHT) or (rarity and rarity.color) or nil)
 	tile:SetSelected(worn)
 	ShowRing(tile, worn, frame)
 	tile:Show()
@@ -506,8 +510,12 @@ end
 local function Build(self)
 	if not (Theme and Theme.CreateDialog) then return nil end
 	local W, H = ns.ALLURE_W, ns.ALLURE_H
+	-- 3.1.0 : au thème forgé (hors ancien habillage, décidé à la création) :
+	-- les titres de section gardent l'identité, l'allure portée la sélection
+	local forged = Theme.ForgeHere and Theme.ForgeHere() or false
 	local frame = Theme.CreateDialog(UIParent, W, H, { title = L.ALLURE_TITLE, subtitle = L.ALLURE_SUB, footer = false })
 	if not frame then return nil end
+	frame.allureForged = forged or nil
 	frame:SetFrameStrata(ns.ALLURE_STRATA)
 	if frame.SetToplevel then pcall(frame.SetToplevel, frame, true) end
 	if frame.close then frame.close:SetScript("OnClick", function() ns:AllureClose() end) end
@@ -567,8 +575,10 @@ end
 -- Le panneau du style en cours, construit une fois par style
 function ns:EnsureAllure()
 	local style = (self.JournalStyle and self:JournalStyle()) or "sobre"
+	-- 3.1.0 : gardé par clé (ns:JournalStyleKey : ancien habillage, forgé, Sobre)
+	local key = (self.JournalStyleKey and self:JournalStyleKey()) or style
 	self.allureByStyle = self.allureByStyle or {}
-	local frame = self.allureByStyle[style]
+	local frame = self.allureByStyle[key]
 	if frame then self.allurePanel = frame; return frame end
 	if style == "azeroth" and ns.CarnetCaptureRun and ns.CarnetSkinDialog then
 		local reg = { new = {}, texts = {} }
@@ -585,10 +595,13 @@ function ns:EnsureAllure()
 	if not frame then
 		frame = Build(self)
 		if frame then frame.uiStyle = "sobre" end
+		-- 3.1.0 (forgé) : relevé au-dessus du carnet, son habillage monte avec lui
+		if frame and frame.allureForged and ns.ForgeChromeFollows then ns.ForgeChromeFollows(frame) end
 		style = "sobre"
 	end
 	if not frame then return nil end
-	self.allureByStyle[frame.uiStyle] = frame
+	frame.styleKey = (self.StyleKey and self:StyleKey(frame.uiStyle == "azeroth")) or frame.uiStyle
+	self.allureByStyle[frame.styleKey] = frame
 	self.allurePanel = frame
 	return frame
 end
@@ -790,7 +803,8 @@ function ns:AllureRefresh()
 	end
 	-- encres des textes du panneau (les vignettes ont les leurs)
 	for _, section in ipairs({ frame.seasonTitle, frame.mineTitle }) do
-		Ink(section.label, frame, "allure.section", Theme.MUTED_LIGHT)
+		-- (forgé : le titre garde l'encre de son ton, l'identité)
+		if not frame.allureForged then Ink(section.label, frame, "allure.section", Theme.MUTED_LIGHT) end
 		Ink(section.detail, frame, "allure.hint", Theme.MUTED)
 	end
 	Ink(frame.empty, frame, "allure.text", Theme.MUTED_LIGHT)
@@ -807,8 +821,8 @@ do
 			local open = self:AllureShown()
 			local before = open and self.allurePanel
 			local a, b = restyle(self, ...)
-			local want = self.JournalStyle and self:JournalStyle() or "sobre"
-			if before and before.uiStyle ~= want then
+			local want = self.JournalStyleKey and self:JournalStyleKey() or "sobre"
+			if before and (before.styleKey or before.uiStyle) ~= want then
 				before:Hide()
 				local journal = self.journalFrame
 				if journal and journal:IsShown() then self:AllureOpen() end
@@ -891,12 +905,13 @@ function ns:AllureRefreshCard(pane)
 	if card.model and ns.ShowModel then
 		-- 2.14.0 (bêta 3) : une créature (capturée, de saison) cadrée comme
 		-- dans le cadre du compagnon (Metzen : de loin)
-		local cam, y, facing
+		local cam, y, facing, fit
 		if (def.captured or def.seasonal) and self.CompanionModelCam then
-			cam, y, facing = self:CompanionModelCam({ npc = def.npc, type = m.typeText }, "pied")
+			cam, y, facing, fit = self:CompanionModelCam({ npc = def.npc, type = m.typeText }, "pied")
 		end
 		ns.ShowModel(card.model, { display = def.display, npc = def.npc, shiny = def.shiny,
-			cam = cam, y = y, facing = facing }, "cell")
+			cam = cam, y = y, facing = facing, fit = fit, fitCam = fit and self:CompanionFitCam("pied") or nil,
+			fitDisplay = fit and def.npc and self:CompanionKnownDisplay(def.npc) or nil }, "cell")
 	end
 end
 

@@ -1,13 +1,13 @@
 <!--
 Fiche de la page Ready2Quest sur CurseForge et Wago (à copier à la main, voir docs/PUBLIER.md).
-Summary EN (obligatoire en anglais sur CurseForge, 256 caractères max, ici 231) :
-  Leave town ready: a readiness score before each outing (food, bags, durability, buffs, hearthstone), trip reports, dungeon briefs, aggro range on nameplates, best quest reward tags, favorite items protected from selling. For WoW Forever. EN/FR.
+Summary EN (obligatoire en anglais sur CurseForge, 256 caractères max, ici 220) :
+  WoW Forever QoL: a readiness score before you leave town (food, bags, repairs, buffs, hearthstone), trip reports, dungeon briefs, aggro range on nameplates, quest reward picks and favorite items safe from selling. EN/FR.
 Catégories : Quests & Leveling (principale), Bags & Inventory (additionnelle).
-Licence : GPLv3. Logo : docs/publication/logo_ready2quest.png.
-Captures à prendre en jeu : la fenêtre « Avant le départ », le bilan de retour, la fiche de donjon, l'étiquette « Pour toi » d'une récompense de quête, le cadre « Sac plein ».
+Licence : GPLv3. Logo : docs/publication/logo_ready2quest.png (l'écu coché dans son médaillon d'or, 1.35 : à remettre sur les deux stores).
+Captures à prendre en jeu, au style Azeroth (thème forgé) : la fenêtre « Avant le départ », le bilan de retour, la fiche de donjon avec sa section « Groupe », le bouton « Tout apprendre » chez un maître, la fenêtre des rangs de sorts avec « Nouveaux sorts », l'étiquette « Pour toi » d'une récompense de quête, le cadre « Sac plein », les réglages.
 Une seule description, anglais d'abord puis français (règle des stores : l'anglais en premier). Coller le tout.
 -->
-# Ready2Quest
+# Ready2Quest Forever – Ready Check & Travel QoL
 
 **Get ready before you leave town.** When you step out of a village, a capital or a camp, Ready2Quest checks that you are ready: food and water, room in your bags, gear in good shape, your usual buffs, your hearthstone… and tells you at the right moment, not when it is too late.
 
@@ -15,10 +15,12 @@ For **WoW Forever** (1.60). English and French.
 
 ![Pre-departure check: a readiness score out of 100 with tips](https://media.forgecdn.net/attachments/2147/118/r2q-1-png.png)
 
-## New in 1.34: favorite items
-- **Favorites**: Alt + click an item in your bags (shortcut configurable, works with Baganator, Bagnon and other bag addons) to protect it. A gold padlock marks it and its tooltip says so.
-- **Never sold by mistake**: grey auto-sell and the full-bags helper skip favorites, a right-click at a merchant asks for confirmation, and a favorite sold anyway is **bought back automatically**.
-- **Quest Companion**: a new section in the options shows its status and opens its journal; the two addons' windows no longer overlap.
+## New in 1.35: a forged look, group ready, learn all
+- **A forged look**: every window gets a gilded frame with the new logo medallion in the corner (a checked shield crowned with the gold quest "!"), raised buttons whose colour tells the action, and titles in the game's font. Ready2Quest keeps gold as its colour, with selections in blue. Prefer the old flat look? **Interface style** setting, General page, or `/r2q style sobre`.
+- **Group ready**: at a dungeon entrance, in a group, the dungeon sheet shows who is there (inside, at the entrance, on the way) and who is ready (durability, repairs, food, potions, hearthstone), for members who also run Ready2Quest. Nothing is posted in group chat. `/r2q groupe` gives the same summary in chat.
+- **Learn all**: at a class or profession trainer, a **Learn all** button with the total cost learns everything available in one click. Not enough gold? It is greyed out and its tooltip tells you how much you're missing.
+- **New spells on your bars**: the spell ranks window now also lists the spells you just learned that are on none of your bars. **Place** puts one in the first empty slot, **Ignore** stops offering it. Never in combat.
+- **Fast loot** (off by default): with the game's auto loot, everything is picked up at once, without the delay between items. It steps aside if SpeedyAutoLoot or Leatrix Plus already does it.
 
 ## Modules
 
@@ -27,7 +29,7 @@ Each one can be switched on or off in one click (`/r2q options`).
 - **Pre-departure check**: when you leave a safe place, a readiness score out of 100 with tips. It checks bags, greys, food and water, potions, buffs (it knows which ones replace each other: one paladin blessing, one mage armor, one hunter aspect…), durability, repair gold, class reagents, spells to learn, hearthstone, profession, quests to turn in and rest. If the score is high, it's a single chat line. If it's low, a "!" icon pulses in the color of your score: click it to open the report. Nothing opens by itself.
 - **Safe places, out of the box**: 80 capitals, villages and hubs, plus neutral towns and Forever's new zones. Small camps are learned as you play (innkeeper, flight master, mailbox…). On Forever, your campfire counts too.
 - **Expedition report**: back in town, a summary of your trip: duration, XP and levels, gold earned and spent, notable loot, deaths, wear, quests ready, what to restock.
-- **Before the dungeon**: at the entrance, a sheet for *that* dungeon, with suggested level, your quests for it and a short prep. It covers the 19 classic dungeons and 9 new Forever dungeons.
+- **Before the dungeon**: at the entrance, a sheet for *that* dungeon, with suggested level, your quests for it, a short prep and, in a group, who is there and ready. It covers the 19 classic dungeons and 9 new Forever dungeons.
 - **Camp kit** *(Forever)*: your campfire kit and camp item ready, and a countdown for camp buffs.
 - **Gear summary**: a short toast with the stats you gained or lost when you swap an item.
 - **Portrait stats**: hover your portrait to see your main stats, picked for your class and spec.
@@ -39,19 +41,21 @@ Each one can be switched on or off in one click (`/r2q options`).
 
 - **Best quest reward**: the reward that helps you most is highlighted ("For you"). If none is an upgrade, the one that sells best gets the "To sell" tag.
 - **Leveling pace**: XP per hour, time to next level, rested XP you would gain by logging out here (`/r2q xp`).
+- **Favorites**: Alt + click an item in your bags (shortcut configurable, works with Baganator, Bagnon and other bag addons) to protect it. A gold padlock marks it. Grey auto-sell and the bag helpers skip it, a right-click at a merchant asks first, and a favorite sold anyway is **bought back automatically**.
 - **Full bags**: out in the wild with full bags? It suggests the item you lose least by dropping, and always asks before destroying anything.
 - **Room for loot**: loot that won't fit in your full bags? It offers your cheapest items (vendor and auction price), drops the one you pick and picks the loot up for you; anything better than white asks first.
-- **Spell ranks**: after training, it tells you which action bar buttons still use an old rank of a spell and swaps them in one click, out of combat.
+- **Spell ranks and new spells**: after training, it tells you which action bar buttons still use an old rank of a spell and swaps them in one click, and offers to place new spells that are on none of your bars. Out of combat.
+- **Learn all** at trainers, with the total cost.
 - **After death**: run back or use the spirit healer? Both options with the numbers.
 - **Merchant**: auto-sell greys and auto-repair (both can be turned off).
 
 ## Companion
 
-The **travel companion**, its **creature menagerie** and its **journal** are a separate, standalone addon: [**Quest Companion**](https://www.curseforge.com/wow/addons/quest-companion) (`/qc`). Installed together, the companion also reacts to your departures and returns.
+The **travel companion**, its **creature collection** and its **journal** are a separate, standalone addon: [**Quest Companion**](https://www.curseforge.com/wow/addons/quest-companion) (`/qc`). Installed together, the companion also reacts to your departures and returns.
 
 ## Commands
 
-`/r2q` runs the check, `/r2q options` opens the settings, `/r2q help` lists everything, `/r2q diag` prints a diagnostic to attach to a bug report.
+`/r2q` runs the check, `/r2q options` opens the settings, `/r2q groupe` sums up your group at a dungeon, `/r2q sorts` opens the spell ranks, `/r2q help` lists everything, `/r2q diag` prints a diagnostic to attach to a bug report.
 
 ![Settings: every module on or off in one click](https://media.forgecdn.net/attachments/2147/116/r2q-3-png.png)
 
@@ -71,10 +75,12 @@ Free software, **GPL-3.0**. Source code: https://github.com/LapassetAlexis/Ready
 
 Pour **WoW Forever** (1.60). En français et en anglais.
 
-## Nouveau en 1.34 : les objets favoris
-- **Favoris** : Alt + clic sur un objet de ton sac (raccourci réglable, marche avec Baganator, Bagnon et les autres addons de sacs) pour le protéger. Un cadenas doré le signale, son infobulle aussi.
-- **Jamais vendu par erreur** : la vente auto des gris et l'aide « Sac plein » ne les touchent pas, un clic droit chez le marchand demande confirmation, et un favori vendu quand même est **racheté automatiquement**.
-- **Quest Companion** : une rubrique des options montre son état et ouvre son carnet ; les fenêtres des deux addons ne se chevauchent plus.
+## Nouveau en 1.35 : un habit forgé, Groupe prêt, Tout apprendre
+- **Un habit forgé** : toutes les fenêtres prennent un cadre d'orfèvre doré avec le médaillon du nouveau logo dans le coin (un écu coché qui porte le « ! » doré des quêtes), des boutons en relief dont la couleur dit le geste et des titres dans la police du jeu. Ready2Quest garde l'or pour couleur, avec la sélection en bleu. Tu préfères l'aspect d'avant, à plat ? Réglage **Style de l'interface**, page Général, ou `/r2q style sobre`.
+- **Groupe prêt** : devant un donjon, en groupe, la fiche du donjon montre qui est sur place (dans le donjon, à l'entrée, en route) et qui est prêt (durabilité, réparation, vivres, potions, foyer), pour les membres qui ont aussi Ready2Quest. Rien n'est écrit dans le chat du groupe. `/r2q groupe` donne le même bilan dans le chat.
+- **Tout apprendre** : chez un maître de classe ou de métier, un bouton **Tout apprendre** avec le total à payer apprend tout ce qui est disponible d'un clic. Pas assez d'or ? Il est grisé et son infobulle dit combien il te manque.
+- **Les nouveaux sorts sur tes barres** : la fenêtre des rangs de sorts liste aussi les sorts que tu viens d'apprendre et qui ne sont sur aucune de tes barres. **Placer** en pose un dans la première case vide, **Ignorer** ne le propose plus. Jamais en combat.
+- **Butin rapide** (coupé par défaut) : avec le butin automatique du jeu, tout est ramassé d'un coup, sans le délai entre deux objets. Il laisse la main à SpeedyAutoLoot ou à Leatrix Plus s'ils s'en chargent déjà.
 
 ## Modules
 
@@ -83,7 +89,7 @@ Chacun s'active ou se coupe d'un clic (`/r2q options`).
 - **Check avant le départ** : quand tu quittes un lieu sûr, une note de préparation sur 100 et des conseils. Il contrôle les sacs, les gris, les vivres, les potions, les buffs (il sait lesquels se remplacent : une bénédiction de paladin, une armure de mage, un aspect de chasseur…), la durabilité, l'or de réparation, les réactifs de classe, les sorts à apprendre, la pierre de foyer, le métier, les quêtes à rendre et le repos. Note haute : une seule ligne dans le chat. Note basse : une icône « ! » clignote à la couleur de ta note, clique dessus pour ouvrir le rapport. Rien ne s'ouvre tout seul.
 - **Lieux sûrs connus dès l'installation** : 80 capitales, villages et hubs, plus les villes neutres et les nouvelles zones de Forever. Les petits camps s'apprennent en jouant (aubergiste, maître de vol, boîte aux lettres…). Sur Forever, ton feu de camp compte aussi.
 - **Retour d'expédition** : de retour en ville, le bilan de ta sortie : durée, XP et niveaux, or gagné et dépensé, butin notable, morts, usure, quêtes prêtes, quoi racheter.
-- **Avant le donjon** : à l'entrée, la fiche de *ce* donjon, avec le niveau conseillé, tes quêtes pour lui et une préparation courte. Les 19 donjons classiques et les 9 nouveaux donjons de Forever.
+- **Avant le donjon** : à l'entrée, la fiche de *ce* donjon, avec le niveau conseillé, tes quêtes pour lui, une préparation courte et, en groupe, qui est là et prêt. Les 19 donjons classiques et les 9 nouveaux donjons de Forever.
 - **Kit de camp** *(Forever)* : ton kit de feu de camp et ton objet de camp prêts, et le compte à rebours des buffs au camp.
 - **Résumé de stuff** : un petit résumé éphémère des stats gagnées ou perdues quand tu changes d'objet.
 - **Stats du portrait** : survole ton portrait pour voir tes stats principales, choisies selon ta classe et ta spécialisation.
@@ -93,19 +99,21 @@ Chacun s'active ou se coupe d'un clic (`/r2q options`).
 
 - **La bonne récompense de quête** : celle qui t'aide le plus est mise en avant (« Pour toi »). Si aucune n'est une amélioration, celle qui se vend le mieux porte l'étiquette « À vendre ».
 - **Rythme de leveling** : XP par heure, temps avant le prochain niveau, XP de repos gagnée si tu te déconnectes ici (`/r2q xp`).
+- **Favoris** : Alt + clic sur un objet de ton sac (raccourci réglable, marche avec Baganator, Bagnon et les autres addons de sacs) pour le protéger. Un cadenas doré le signale. La vente auto des gris et les aides des sacs ne le touchent pas, un clic droit chez le marchand demande d'abord, et un favori vendu quand même est **racheté automatiquement**.
 - **Sac plein** : en pleine nature avec les sacs pleins ? Il te propose l'objet que tu perds le moins à jeter, et demande toujours avant de détruire quoi que ce soit.
 - **Place au butin** : un butin qui ne rentre pas dans tes sacs pleins ? Il te propose tes objets les moins chers (prix marchand et hôtel des ventes), jette celui que tu choisis et ramasse le butin à ta place ; au-delà du blanc, il demande d'abord.
-- **Rangs de sorts** : après l'entraîneur, il te dit quels boutons de tes barres utilisent encore un ancien rang d'un sort et les remplace d'un clic, hors combat.
+- **Rangs de sorts et nouveaux sorts** : après l'entraîneur, il te dit quels boutons de tes barres utilisent encore un ancien rang d'un sort et les remplace d'un clic, et propose de placer les nouveaux sorts qui ne sont sur aucune barre. Hors combat.
+- **Tout apprendre** chez les maîtres, avec le total à payer.
 - **Après la mort** : courir jusqu'au corps ou passer par le gardien des âmes ? Les deux choix, avec les chiffres.
 - **Marchand** : vente automatique des gris et réparation automatique (les deux se coupent).
 
 ## Compagnon
 
-Le **compagnon de route**, sa **ménagerie de créatures** et son **carnet de voyage** sont un addon à part et autonome : [**Quest Companion**](https://www.curseforge.com/wow/addons/quest-companion) (`/qc`). Installés ensemble, le compagnon réagit en plus à tes départs et retours en ville.
+Le **compagnon de route**, sa **collection de créatures** et son **carnet de voyage** sont un addon à part et autonome : [**Quest Companion**](https://www.curseforge.com/wow/addons/quest-companion) (`/qc`). Installés ensemble, le compagnon réagit en plus à tes départs et retours en ville.
 
 ## Commandes
 
-`/r2q` lance le check, `/r2q options` ouvre les réglages, `/r2q help` liste tout, `/r2q diag` affiche un diagnostic à joindre à un signalement de bug.
+`/r2q` lance le check, `/r2q options` ouvre les réglages, `/r2q groupe` fait le point sur ton groupe devant un donjon, `/r2q sorts` ouvre les rangs de sorts, `/r2q help` liste tout, `/r2q diag` affiche un diagnostic à joindre à un signalement de bug.
 
 ## Communauté
 

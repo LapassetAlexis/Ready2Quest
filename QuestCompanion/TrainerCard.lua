@@ -1253,7 +1253,13 @@ function ns:TrainerMenuTarget(contextData)
 	return self:TrainerUnitName(contextData.unit)
 end
 
+-- 3.1.0 bêta 9 (retour « action bloquée à chaque sortie de donjon ») : en
+-- instance, rien n'est écrit dans les menus de Blizzard. C'est par ces menus
+-- (portrait d'un membre, cible) qu'on quitte le groupe ou se téléporte hors
+-- du donjon, actions réservées au jeu : notre ligne ne doit pas y passer.
+-- La fiche reste ouverte à la cible, à la Réserve et dehors.
 function ns:TrainerMenuAdd(rootDescription, contextData)
+	if Plain(Call(G("IsInInstance"))) == true then return false end
 	local name = self:TrainerMenuTarget(contextData)
 	if not name or not self:TrainerIsHolder(name) then return false end
 	if type(rootDescription) ~= "table" or type(rootDescription.CreateButton) ~= "function" then return false end
@@ -1299,7 +1305,7 @@ function ns:TrainerTooltipLine(tooltip, data)
 	local title = card and card.titleCode and self.FeatTitleText and self:FeatTitleText(card.titleCode, nil, card.gender)
 	title = title or (card and card.title)
 	if title then text = text .. " · " .. title end
-	tooltip:AddLine(text, Theme.GOLD[1], Theme.GOLD[2], Theme.GOLD[3])
+	Theme.TooltipTitle(tooltip, text)
 	if data == nil and type(tooltip.Show) == "function" then pcall(tooltip.Show, tooltip) end
 	return true
 end
@@ -1445,20 +1451,95 @@ local function BuildFeatBar(self, parent, index, cat)
 	return bar
 end
 
+-- 3.1.0 (thème forgé) : le portrait dans un cadre d'orfèvre (nos matières :
+-- cadre, bords assombris), posé au-dessus du modèle, sans souris ; le filet
+-- d'un pixel s'efface. Remplace l'anneau à volutes de l'ancien habillage.
+ns.TRAINER_FORGE = { frameOut = 1, frameMargin = 16, corner = 30, cornerOut = 3, vignette = 0.85, insetOut = 3, insetMargin = 6,
+	-- case de la vitrine : le modèle rapetissé pour que le creux (insetOut) garde
+	-- tileEdge px jusqu'au liseré de la carte, et le texte tileText px après le creux
+	tileEdge = 4, tileText = 8 }
+local function ForgeStage(stage)
+	local K = ns.TRAINER_FORGE
+	local ring = CreateFrame("Frame", nil, stage)
+	ring:SetAllPoints(stage)
+	if ring.SetFrameLevel and stage.GetFrameLevel then ring:SetFrameLevel((tonumber(stage:GetFrameLevel()) or 1) + 6) end
+	if ring.EnableMouse then ring:EnableMouse(false) end
+	ring.vignette = Theme.ArtTexture(ring, "vignette", "ARTWORK", 0, Theme.WHITE, K.vignette)
+	if ring.vignette then ring.vignette:SetAllPoints(ring) end
+	ring.slice = Theme.Slice(ring, "frame", { layer = "BORDER", out = K.frameOut, margin = K.frameMargin, fill = false })
+	-- les quatre coins d'orfèvre, comme une fenêtre, en plus petit
+	ring.corners = {}
+	local o = K.cornerOut
+	for _, c in ipairs({ { "TOPLEFT", -o, o, 0, 1, 0, 1 }, { "TOPRIGHT", o, o, 1, 0, 0, 1 },
+		{ "BOTTOMLEFT", -o, -o, 0, 1, 1, 0 }, { "BOTTOMRIGHT", o, -o, 1, 0, 1, 0 } }) do
+		local tex = ring:CreateTexture(nil, "OVERLAY")
+		tex:SetTexture(Theme.ART.corner.file)
+		tex:SetTexCoord(c[4], c[5], c[6], c[7])
+		tex:SetSize(K.corner, K.corner)
+		tex:SetPoint(c[1], ring, c[1], c[2], c[3])
+		ring.corners[#ring.corners + 1] = tex
+	end
+	if stage.border then
+		for _, side in ipairs({ "top", "bottom", "left", "right" }) do
+			local edge = stage.border[side]
+			if edge and edge.Hide then edge:Hide() end
+		end
+	end
+	stage.forgeRing = ring
+	return ring
+end
+
+-- 3.1.0 (thème forgé) : un creux (Theme.ART.inset) autour d'une icône ou d'un
+-- modèle de la vitrine, comme les cases du garde-manger
+local function ForgeIconInset(owner, around)
+	local K = ns.TRAINER_FORGE
+	if not (owner and around) then return nil end
+	owner.forgeInset = Theme.Slice(owner, "inset", { layer = "BORDER", out = K.insetOut, margin = K.insetMargin,
+		around = around, color = Theme.EDGE })
+	return owner.forgeInset
+end
+
+-- 3.1.0 (thème forgé) : une case de la vitrine. Le creux déborde du modèle
+-- de insetOut px : le modèle est rapetissé et décalé pour que le creux ne
+-- touche ni le liseré ni la barre d'accent de la carte ; nom, détail et
+-- étoiles partent tileText px après le creux.
+local function ForgeTile(tile)
+	local K = ns.TRAINER_FORGE
+	local edge = K.insetOut + K.tileEdge
+	local size = TILE_H - 2 * edge
+	tile.model:SetSize(size, size)
+	tile.model:ClearAllPoints()
+	tile.model:SetPoint("LEFT", tile, "LEFT", edge, 0)
+	local x = edge + size + K.insetOut + K.tileText
+	for _, pair in ipairs({ { tile.name, -10 }, { tile.detail, -28 }, { tile.stars, -44 } }) do
+		local fs = pair[1]
+		fs:ClearAllPoints()
+		fs:SetPoint("TOPLEFT", tile, "TOPLEFT", x, pair[2])
+		fs:SetWidth(TILE_W - x - 8)
+	end
+	tile.forgeTextX = x
+	return ForgeIconInset(tile, tile.model)
+end
+
 function ns:EnsureTrainerWindow()
 	if self.trainerFrame then return self.trainerFrame end
 	if not (Theme and Theme.CreateWindow) then return nil end
 	-- 2.10.0 : un nom global par style, sinon Échap vise la fenêtre de l'autre style restée en cache
-	local style = (self.JournalStyle and self:JournalStyle()) or "sobre"
+	-- 3.1.0 : un par clé (ancien habillage, forgé, Sobre : ns:JournalStyleKey)
+	local key = (self.JournalStyleKey and self:JournalStyleKey()) or "sobre"
+	-- 3.1.0 : au thème forgé (décidé à la création, la fiche est gardée par
+	-- clé) : médaillon du logo, portrait encadré, icônes de la vitrine en creux
+	local forged = (ns.QCForged() and key ~= "azeroth") or nil   -- (jamais sous l'ancien habillage)
 	local frame = Theme.CreateWindow(UIParent, WIN_W, WIN_H, {
-		name = style == "azeroth" and "QuestCompanionTrainerFrameAzeroth" or "QuestCompanionTrainerFrame",
-		footer = FOOT_H, strata = "FULLSCREEN" })
+		name = ns.StyleName and ns.StyleName("QuestCompanionTrainerFrame", key) or "QuestCompanionTrainerFrame",
+		footer = FOOT_H, strata = "FULLSCREEN", emblem = forged })
 	if not frame then return nil end
 	frame.chrome = "trainer"
+	frame.trainerForged = forged
 	-- pas une fenêtre exclusive : ma fiche s'ouvre par-dessus le carnet (strate plus haute)
 	if self.RestorePoint then self:RestorePoint(frame, "trainerPoint", { point = "CENTER", x = 0, y = 40 }) end
 	local content = frame.content
-	frame.header = Theme.CreatePageHeader(content, WIN_W - 2, { compact = true })
+	frame.header = Theme.CreatePageHeader(content, WIN_W - 2, { compact = true, emblem = forged })
 	frame.header:SetPoint("TOPLEFT", content, "TOPLEFT", 0, 0)
 	-- sous le nom (ma fiche) : « Titre affiché : [choix] » ; plus rien en
 	-- haut à droite, où se tient le bouton de fermeture (2.8.0)
@@ -1474,7 +1555,7 @@ function ns:EnsureTrainerWindow()
 	frame.titlePicker:Hide()
 
 	-- message à la place de la fiche (demande en cours, rien reçu, refus)
-	frame.status = Theme.Text(content, Theme.F_TITLE, Theme.PARCHMENT)
+	frame.status = Theme.Text(content, Theme.F_TITLE, forged and Theme.TITLE or Theme.PARCHMENT)
 	frame.status:SetPoint("TOP", content, "TOP", 0, -170)
 	frame.status:SetWidth(WIN_W - 80)
 	frame.statusHint = Theme.Text(content, Theme.F_BODY, Theme.MUTED_LIGHT)
@@ -1500,7 +1581,8 @@ function ns:EnsureTrainerWindow()
 	frame.fallback:SetTexture(Theme.LOGO_SMALL)
 	frame.fallback:SetSize(96, 96)
 	frame.fallback:SetPoint("CENTER", stage, "CENTER", 0, 0)
-	frame.compName = Line(body, Theme.F_TITLE, Theme.PARCHMENT, MODEL_W)
+	if forged then ForgeStage(stage) end
+	frame.compName = Line(body, Theme.F_TITLE, forged and Theme.TITLE or Theme.PARCHMENT, MODEL_W)
 	frame.compName:SetPoint("TOPLEFT", stage, "BOTTOMLEFT", 0, -8)
 	frame.rankTag = Theme.CreateTag(body, "", Theme.BLUE)
 	frame.rankTag:SetPoint("TOPLEFT", frame.compName, "BOTTOMLEFT", 0, -6)
@@ -1537,7 +1619,10 @@ function ns:EnsureTrainerWindow()
 	frame.featsPicker:SetPoint("TOPRIGHT", body, "TOPLEFT", COL_X + COL_W, FEATS_Y + 1)
 	frame.featsPicker:Hide()
 	frame.featCards = {}
-	for index = 1, ns.TRAINER_FEAT_SHOWCASE do frame.featCards[index] = BuildFeatCard(self, body, index) end
+	for index = 1, ns.TRAINER_FEAT_SHOWCASE do
+		frame.featCards[index] = BuildFeatCard(self, body, index)
+		if forged then ForgeIconInset(frame.featCards[index], frame.featCards[index].icon) end
+	end
 	frame.featBars = {}
 	for index, cat in ipairs(ns.TRAINER_FEAT_CATS) do frame.featBars[index] = BuildFeatBar(self, body, index, cat) end
 
@@ -1547,6 +1632,7 @@ function ns:EnsureTrainerWindow()
 	frame.tiles = {}
 	for slot = 1, ns.TRAINER_SHOWCASE_SIZE do
 		frame.tiles[slot] = BuildTile(self, body, PAD + (slot - 1) * (TILE_W + TILE_GAP), slot)
+		if forged and frame.tiles[slot].model then ForgeTile(frame.tiles[slot]) end
 	end
 
 	-- pied : partage (ma fiche), redemander (une autre), fermer
@@ -1707,6 +1793,38 @@ local function PaintFeats(self, frame, card, own)
 	else
 		frame.featsPicker:Hide()
 	end
+	ns.TrainerFitFeatsDetail(frame)
+end
+
+-- 3.1.0 : le détail de l'en-tête des hauts faits (« (3 obtenus · 15 points
+-- · …) ») s'arrête TRAINER_DETAIL_GAP px avant la liste « Vitrine : … » ;
+-- trop long, il est tenu sur une ligne et coupé. Rien ne change quand il tient.
+-- Au thème forgé seulement (le point et le retrait du titre de section le
+-- poussent de 16 px ; le Sobre garde 7 px d'écart et reste tel quel).
+ns.TRAINER_DETAIL_GAP = 8
+local function Measure(fs)
+	local ok, w = pcall(fs.GetStringWidth, fs)
+	return ok and tonumber(w) or 0
+end
+function ns.TrainerFitFeatsDetail(frame)
+	local section, picker = frame and frame.featsSection, frame and frame.featsPicker
+	local detail = section and section.detail
+	if not (detail and section.label) then return end
+	if frame.featsDetailFit then
+		-- largeur posée la fois d'avant : rendue au texte, puis remesurée
+		detail:SetWidth(0)
+		frame.featsDetailFit = nil
+	end
+	if not (frame.trainerForged and detail:IsShown()) then return end
+	local start = (section.forged and Theme.FORGE_SECTION and Theme.FORGE_SECTION.text or 0) + Measure(section.label) + 6
+	local room = COL_W - start
+	if picker and picker:IsShown() then room = room - (tonumber(picker:GetWidth()) or 200) - ns.TRAINER_DETAIL_GAP end
+	room = math.floor(room)
+	if Measure(detail) > room then
+		detail:SetWidth(math.max(room, 0))
+		if detail.SetWordWrap then detail:SetWordWrap(false) end
+		frame.featsDetailFit = room
+	end
 end
 
 local function PaintCard(self, frame, card, own)
@@ -1739,7 +1857,9 @@ local function PaintCard(self, frame, card, own)
 			frame.fallback:Show()
 		end
 		frame.compName:SetText(comp.name or "?")
-		frame.rankTag:SetTag(comp.mascot and L.TRAINER_MASCOT or ClassLabel(comp.class) or "", Theme.BLUE)
+		-- (3.1.0 : l'étiquette du rang à l'identité au thème forgé)
+		frame.rankTag:SetTag(comp.mascot and L.TRAINER_MASCOT or ClassLabel(comp.class) or "",
+			frame.trainerForged and Theme.IDENTITY_LIGHT or Theme.BLUE)
 		frame.shinyTag:SetTag(comp.shiny and L.TRAINER_SHINY or "", Theme.GOLD_LIGHT)
 	else
 		ShowModel(frame.model, nil, nil)
@@ -1950,22 +2070,18 @@ end
 ns:TrainerRegisterPrefix()
 pcall(ns.TrainerHookMenus, ns)
 do
-	local ok, frame = pcall(CreateFrame, "Frame")
-	if ok and frame then
-		for _, event in ipairs({ "CHAT_MSG_ADDON", "GROUP_ROSTER_UPDATE", "PLAYER_GUILD_UPDATE",
-			"PLAYER_TARGET_CHANGED", "PLAYER_ENTERING_WORLD" }) do
-			pcall(frame.RegisterEvent, frame, event)
-		end
-		frame:SetScript("OnEvent", function(_, event, ...)
-			local done, err = pcall(ns.TrainerOnEvent, ns, event, ...)
-			if not done and ns.RecordError then ns:RecordError("trainer:" .. tostring(event), err) end
-		end)
+	-- 3.1.0 : cadre d'événements commun (ns.On, Libs/Socle/Compat.lua) ; une
+	-- fonction par événement, faite une fois (TrainerOnEvent reçoit son nom)
+	for _, event in ipairs({ "CHAT_MSG_ADDON", "GROUP_ROSTER_UPDATE", "PLAYER_GUILD_UPDATE",
+		"PLAYER_TARGET_CHANGED", "PLAYER_ENTERING_WORLD" }) do
+		ns.On(event, "trainer", function(...) return ns:TrainerOnEvent(event, ...) end)
+	end
+	do
 		-- 2.11.2 (fiche 25) : sur l'horloge de l'addon (plus d'OnUpdate permanent)
 		ns.Every("trainer", ns.TRAINER_TICK, function(elapsed)
 			local done, err = pcall(ns.TrainerPump, ns, elapsed)
 			if not done and ns.RecordError then ns:RecordError("trainer:pump", err) end
 		end)
-		ns.trainerEventFrame = frame
 	end
 end
 

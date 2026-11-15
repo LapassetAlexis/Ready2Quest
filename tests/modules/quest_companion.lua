@@ -61,8 +61,8 @@ do
 		not QC_TOC:find("## Dependencies", 1, true) and not QC_TOC:find("## RequiredDeps", 1, true)
 		and QC_TOC:find("\n## OptionalDeps: Ready2Quest\n", 1, true) ~= nil
 		and QC_TOC:find("\n## SavedVariables: QuestCompanionDB\n", 1, true) ~= nil)
-	Check("[QC] versions : QC 3.0.4, R2Q 1.34.0, comme leurs namespaces", QC_TOC:find("\n## Version: 3.0.4\n", 1, true)
-		and R2Q_TOC:find("\n## Version: 1.34.0\n", 1, true) and QNS.version == "3.0.4" and NS.version == "1.34.0")
+	Check("[QC] versions : QC 3.1.0, R2Q 1.35.0, comme leurs namespaces", QC_TOC:find("\n## Version: 3.1.0\n", 1, true)
+		and R2Q_TOC:find("\n## Version: 1.35.0\n", 1, true) and QNS.version == "3.1.0" and NS.version == "1.35.0")
 	for _, addon in ipairs({ { "Ready2Quest", R2Q_TOC }, { "QuestCompanion", QC_TOC } }) do
 		local files = QCT.TocFiles(addon[2])
 		Want(addon[1] .. " : Config.lua puis le socle en tête", files[1] == "Config.lua"
@@ -132,11 +132,18 @@ do
 	QNS.journalFrame:Hide()
 	SlashCmdList.QUESTCOMPANION("help")
 	Want("help : l'aide de QC", Mock:Output():find("/qc carnet", 1, true) and not Mock:Output():find("/r2q", 1, true))
+	-- 3.1.0 : l'en-tête du socle (HELP_TITLE) n'est plus écrasé par la ligne de /qc titre
+	local helpText = Mock:Output()
+	local first = helpText:match("^[^\n]*") or ""
+	local _, titleLines = helpText:gsub("/qc titre", "")
+	Want("help : en-tête « Commandes : /qc ou /questcompanion », /qc titre une fois", first:find("Commandes : /qc ou /questcompanion", 1, true)
+		and not first:find("/qc titre", 1, true) and titleLines == 1)
+	Want("help : /qc filet [tout|express|auto]", helpText:find("/qc filet [tout|express|auto]", 1, true) ~= nil)
 	Mock:Reset()
 	SlashCmdList.QUESTCOMPANION("module compagnon off")
 	Want("module compagnon off : réglage de QC", QNS:DB().companionEnabled == false and NS:DB().companionEnabled == nil)
 	SlashCmdList.QUESTCOMPANION("module compagnon on")
-	Verdict("[QC] /qc : le carnet, son aide, ses modules")
+	Verdict("[QC] /qc : le carnet, son aide (en-tête, /qc titre, /qc filet), ses modules")
 end
 
 -- 4. Panneau de réglages et bouton de minicarte ------------------------------------------
@@ -162,8 +169,8 @@ do
 	Verdict("[QC] son panneau (ses pages, son bouton principal), ses médias")
 
 	local button = QNS:EnsureMinimapButton()
-	Want("son bouton, au dragonnet", button and button.name == "QuestCompanionMinimapButton"
-		and button ~= NS:EnsureMinimapButton() and button.icon.texture == "Interface\\AddOns\\QuestCompanion\\Textures\\logo_petit")
+	Want("son bouton, à son glyphe", button and button.name == "QuestCompanionMinimapButton"
+		and button ~= NS:EnsureMinimapButton() and button.icon.texture == "Interface\\AddOns\\QuestCompanion\\Textures\\logo_glyphe")
 	button:GetScript("OnClick")(button, "LeftButton")
 	Want("clic gauche : le carnet", QNS.journalFrame:IsShown())
 	QNS.journalFrame:Hide()

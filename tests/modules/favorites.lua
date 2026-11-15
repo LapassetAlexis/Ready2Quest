@@ -615,8 +615,9 @@ do
 	NS:DB().favorites = {}
 	local _, styled = Lines(slot2, WHITE)
 	local m = styled[1] and styled[1].color
-	s.ok("ligne grise", m and m[1] == NS.Theme.MUTED[1])
-	local ratio = NS.Theme.Contrast(NS.Theme.MUTED, { 0.05, 0.05, 0.05 })
+	-- 1.35.0 : aide par Theme.TooltipHint (MUTED clair)
+	s.ok("ligne grise", m and m[1] == NS.Theme.MUTED_LIGHT[1])
+	local ratio = NS.Theme.Contrast(NS.Theme.MUTED_LIGHT, { 0.05, 0.05, 0.05 })
 	s.ok("contraste du gris ≥ 4,5", ratio >= 4.5, ratio)
 	-- hors des sacs : lien (pas de propriétaire), objet vendu par le marchand, butin
 	local merchant = CreateFrame("Button", nil, UIParent)

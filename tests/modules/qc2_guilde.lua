@@ -402,11 +402,17 @@ do
 	GF.Tick(0.2)
 	local f = NS.guildFeatToast
 	local showing = NS:GuildFeatsShowing()
-	Check("[GLD] un bandeau : le meilleur d'abord (le sceau), liseré doré, aide « Clic : sa fiche », son de réussite",
+	-- 3.1.0 : « Clic : sa fiche » n'est plus une 4e ligne du bandeau, il est
+	-- dans l'infobulle au survol
+	GameTooltip:ClearLines()
+	if f and f.button then f.button:GetScript("OnEnter")(f.button) end
+	local tipHint = GameTooltip.lines and GameTooltip.lines[1]
+	if f and f.button then f.button:GetScript("OnLeave")(f.button) end
+	Check("[GLD] un bandeau : le meilleur d'abord (le sceau), liseré doré, aide « Clic : sa fiche » au survol, son de réussite",
 		f and f:IsShown() and showing and showing.feat.kind == "z" and f.title.text == "GUILDE"
 		and f.text.text == "Cal a scellé une zone !" and f.info.text == "Sceau de zone : Mulgore"
-		and f.hint.text == "Clic : sa fiche de dresseur" and f.accentColor == NS.Theme.GOLD
-		and #GF.sounds == 1 and GF.sounds[1] == 17316, f and f.text.text)
+		and (f.hint.text or "") == "" and tipHint == "Clic : sa fiche de dresseur" and f.accentColor == NS.Theme.GOLD
+		and #GF.sounds == 1 and GF.sounds[1] == 17316, f and (f.text.text .. " / " .. tostring(f.hint.text) .. " / " .. tostring(tipHint)))
 	GF.Tick(1)
 	local single = NS:GuildFeatsShowing() == showing and #NS:GuildFeatsQueue() == 2
 	GF.Tick(NS.GFEAT_TOAST_SECONDS)

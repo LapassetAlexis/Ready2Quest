@@ -451,6 +451,26 @@ function ns:CompanionAggroUpdate(now)
 			and self:CompanionAggroCount() >= ns.COMPANION_AGGRO_MIN
 		state.aggroOn = on and true or false
 	end
+	-- 3.1.0 : sur le médaillon forgé, le battement suit l'anneau (notre anneau
+	-- en lumière rouge) au lieu du rectangle autour du cadre
+	local ring = frame.ring == "forge" and ns.FORGE_RING and ns.Theme.ART and ns.Theme.ART.ring
+	if state.aggroOn and ring then
+		if not frame.dangerRing then
+			frame.dangerRing = frame:CreateTexture(nil, "OVERLAY")
+			frame.dangerRing:SetTexture(ring.file)
+			if frame.dangerRing.SetBlendMode then frame.dangerRing:SetBlendMode("ADD") end
+			local F = ns.FORGE_RING
+			frame.dangerRing:SetSize(math.floor(F.w * 1.18 + 0.5), math.floor(F.h * 1.18 + 0.5))
+			frame.dangerRing:SetPoint("CENTER", frame, "TOP", F.x, F.y)
+			frame.dangerRing:SetVertexColor(DANGER_EDGE[1], DANGER_EDGE[2], DANGER_EDGE[3], 1)
+		end
+		frame.dangerRing:SetAlpha(0.35 + 0.65 * math.abs(math.sin(now * math.pi * 2)))
+		frame.dangerRing:Show()
+		if frame.danger and frame.danger:IsShown() then frame.danger:Hide() end
+		return state.aggroOn
+	elseif frame.dangerRing and frame.dangerRing:IsShown() then
+		frame.dangerRing:Hide()
+	end
 	if state.aggroOn then
 		if not frame.danger then
 			frame.danger = frame:CreateTexture(nil, "OVERLAY")

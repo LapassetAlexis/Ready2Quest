@@ -227,6 +227,12 @@ if ok and loader then
 			local done, err = pcall(ns.OnAddonLoaded, ns)
 			if not done then ns:RecordError("ADDON_LOADED", err) end
 		end
+		-- socle 3.2 : le thème choisi est posé dès que la sauvegarde est lue,
+		-- avant qu'une fenêtre ne soit construite
+		if ns.Theme and ns.Theme.ApplySkin and ns.UISkinChoice then
+			local done, err = pcall(function() ns.Theme.ApplySkin(ns:UISkinChoice()) end)
+			if not done then ns:RecordError("skin", err) end
+		end
 	end)
 	ns.loaderFrame = loader
 end

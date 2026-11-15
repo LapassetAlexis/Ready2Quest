@@ -180,65 +180,22 @@ end
 --     2.11.2 (fiche 25) : façade de l'horloge de l'addon (ns.Every, clé
 --     « feats:<clé> ») ; plus d'OnUpdate sur le cadre des hauts faits.
 -- ---------------------------------------------------------------------------
-local sets, clocks, hub = {}, {}, nil
+-- 3.1.0 : les tables passent par le cadre d'événements commun de l'addon
+-- (ns.Listen, Libs/Socle/Compat.lua), chacune abonnée sous son propre nom :
+-- même ordre d'appel (abonnement), événement retiré au dernier désabonné.
+local sets, clocks = {}, {}
 
-local function HubEvent(_, event, ...)
-	for _, handlers in ipairs(sets) do
-		local fn = handlers[event]
-		if fn then
-			local ok, err = pcall(fn, ...)
-			if not ok and ns.RecordError then ns:RecordError("feats:" .. tostring(event), err) end
-		end
-	end
-end
-
-do
-	local ok, frame = pcall(CreateFrame, "Frame")
-	if ok and frame then
-		hub = frame
-		frame:SetScript("OnEvent", HubEvent)
-		ns.featEventFrame = frame
-	end
-end
-
--- 3.0.4 (« QuestCompanion a été bloqué » à chaque sortie de donjon) : seuls
--- les événements réellement abonnés sont désabonnés. Le journal de combat,
--- fermé sur le moteur 12.0, n'est jamais abonné : s'en désabonner à la
--- sortie d'une instance levait la fenêtre ADDON_ACTION_FORBIDDEN.
-local CLEU = "COMBAT_LOG_EVENT_UNFILTERED"
-local registered = {}        -- événement -> true : abonné sur hub
 function ns.FeatListen(handlers)
-	for _, set in ipairs(sets) do if set == handlers then return end end
-	sets[#sets + 1] = handlers
-	if not hub then return end
-	if ns.RegisterHandlers then
-		local logOpen = ns.RegisterHandlers(hub, handlers)
-		for event in pairs(handlers) do
-			if event == CLEU then
-				if logOpen then registered[event] = true end
-			elseif not (logOpen and (event == "PARTY_KILL" or event == "UNIT_DIED")) then
-				registered[event] = true
-			end
-		end
-	else
-		for event in pairs(handlers) do
-			if event ~= CLEU and pcall(hub.RegisterEvent, hub, event) then registered[event] = true end
-		end
-	end
+	if sets[handlers] then return end
+	sets[handlers] = true
+	if not ns.Listen then return end
+	ns.Listen(handlers, handlers, nil, "feats")
 end
 
 function ns.FeatUnlisten(handlers)
-	for index = #sets, 1, -1 do if sets[index] == handlers then table.remove(sets, index) end end
-	if not hub then return end
-	for event in pairs(handlers) do
-		local used = false
-		for _, set in ipairs(sets) do if set[event] then used = true end end
-		local closed = event == CLEU and ns.CombatLogRestricted and ns.CombatLogRestricted()
-		if not used and registered[event] and not closed then
-			registered[event] = nil
-			pcall(hub.UnregisterEvent, hub, event)
-		end
-	end
+	if not sets[handlers] then return end
+	sets[handlers] = nil
+	if ns.Unlisten then ns.Unlisten(handlers) end
 end
 
 function ns.FeatClock(key, fn, period)

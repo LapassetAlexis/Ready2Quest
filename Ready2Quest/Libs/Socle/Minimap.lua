@@ -197,8 +197,9 @@ function ns:EnsureMinimapButton()
 	end
 
 	button.icon = button:CreateTexture(nil, "ARTWORK")
-	-- la marque de l'addon (boussole) plutôt qu'une icône d'objet générique
-	button.icon:SetTexture(ns.Theme and ns.Theme.LOGO_SMALL or "Interface\\Icons\\INV_Misc_Bag_10")
+	-- la marque de l'addon plutôt qu'une icône d'objet générique : son glyphe
+	-- sans anneau (le bouton de la mini-carte a déjà le sien)
+	button.icon:SetTexture(ns.Theme and (ns.Theme.LOGO_GLYPH or ns.Theme.LOGO_SMALL) or "Interface\\Icons\\INV_Misc_Bag_10")
 	button.icon:SetTexCoord(0, 1, 0, 1)
 	if mainline then
 		button.icon:SetSize(18, 18)

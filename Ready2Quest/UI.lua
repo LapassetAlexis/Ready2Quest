@@ -41,15 +41,73 @@ local function Truncate(text, limit)
 end
 ns.Truncate = Truncate
 
+local FR = {
+	DIAG_CLICK_BAGS   = "Clic : ouvrir les sacs",
+	DIAG_CLICK_QUESTS = "Clic : ouvrir le journal de quêtes",
+	DIAG_CLICK_SPELLS = "Clic : la fenêtre Rangs de sorts",
+}
+local EN = {
+	DIAG_CLICK_BAGS   = "Click: open your bags",
+	DIAG_CLICK_QUESTS = "Click: open the quest log",
+	DIAG_CLICK_SPELLS = "Click: the Spell ranks window",
+}
+if ns.RegisterStrings then ns.RegisterStrings(FR, EN) end
+if ns.KEEP_STRINGS then ns.DIAG_UI_STRINGS = { fr = FR, en = EN } end   -- exposé aux tests (parité fr/en)
+
+-- 1.35.0 : le clic sur une ligne fait la chose évidente (le geste que le
+-- conseil demande), quand le client la permet. Une action = { hint = clé
+-- du texte, run = fonction qui rend vrai si elle a pu agir, available =
+-- fonction facultative }. Les modules en ajoutent (SpellRanks.lua : barranks).
+local function OpenWith(...)
+	local names = { ... }
+	return function()
+		for _, name in ipairs(names) do
+			local fn = rawget(_G, name)
+			if type(fn) == "function" and pcall(fn) then return true end
+		end
+		return false
+	end
+end
+local function HasGlobal(...)
+	local names = { ... }
+	return function()
+		for _, name in ipairs(names) do if type(rawget(_G, name)) == "function" then return true end end
+		return false
+	end
+end
+ns.CHECK_ACTIONS = ns.CHECK_ACTIONS or {}
+ns.CHECK_ACTIONS.bags = { hint = "DIAG_CLICK_BAGS", run = OpenWith("OpenAllBags", "ToggleBackpack"),
+	available = HasGlobal("OpenAllBags", "ToggleBackpack") }
+ns.CHECK_ACTIONS.gray = ns.CHECK_ACTIONS.bags
+ns.CHECK_ACTIONS.quests = { hint = "DIAG_CLICK_QUESTS", run = OpenWith("ToggleQuestLog"),
+	available = HasGlobal("ToggleQuestLog") }
+
+-- L'action d'une ligne (nil : la ligne n'a pas de clic)
+function ns:DiagRowAction(result)
+	if type(result) ~= "table" then return nil end
+	if result.fold then return { run = function() ns:ToggleDiagFold(); return true end } end
+	if result.disabled then return nil end
+	local action = result.id and ns.CHECK_ACTIONS[result.id]
+	if not action then return nil end
+	if action.available and not action.available() then return nil end
+	return action
+end
+
 -- 1.31.0 : infobulle d'une ligne coupée, en échec ou porteuse d'une liste
--- (buffs manquants) : libellé, texte entier, liste, conseil
+-- (buffs manquants) : libellé, texte entier, liste, conseil ; 1.35.0 : l'aide
+-- du clic quand la ligne en a un. Le voile de survol ne s'allume que sur une
+-- ligne qui répond (infobulle ou clic) : une ligne muette ne fait pas croire
+-- qu'on peut cliquer.
 local function RowTooltip(row)
-	if row.hover then row.hover:Show() end
 	local r = row.result
 	local tooltip = rawget(_G, "GameTooltip")
-	if not r or type(tooltip) ~= "table" then return end
+	if not r then return end
 	local failed = not r.ok and not r.disabled and not r.info
-	if not row.cut and not failed and not r.tip then return end
+	local action = ns:DiagRowAction(r)
+	if not row.cut and not failed and not r.tip and not action then return end
+	if row.hover then row.hover:Show() end
+	-- la ligne de repli dit déjà « Afficher » / « Masquer » : le voile suffit
+	if type(tooltip) ~= "table" or r.fold then return end
 	tooltip:SetOwner(row, "ANCHOR_RIGHT")
 	if type(tooltip.ClearLines) == "function" then tooltip:ClearLines() end
 	Theme.TooltipTitle(tooltip, r.label)
@@ -59,6 +117,7 @@ local function RowTooltip(row)
 		for _, line in ipairs(r.tip) do Theme.TooltipLine(tooltip, "  " .. tostring(line), Theme.TEXT) end
 	end
 	if failed and r.advice and L[r.advice] then Theme.TooltipHint(tooltip, L[r.advice], true) end
+	if action and L[action.hint] then Theme.TooltipHint(tooltip, L[action.hint]) end
 	tooltip:Show()
 end
 
@@ -76,6 +135,57 @@ local function VerdictText(self)
 end
 
 -- ---------------------------------------------------------------------------
+-- Thème forgé (maquette « Avant le départ ») : le bloc note en plaque, le
+-- chiffre en or clair sur un halo, le verdict dans un creux à filet de sa
+-- couleur, la barre dans un creux (dégradé d'or, une braise au bout) ; les
+-- conseils en plaque à liseré lumineux, puces sur un point de lumière.
+-- Rien en Sobre (ns.ForgeOn) : les aplats d'avant restent tels quels.
+-- ---------------------------------------------------------------------------
+function ns:ForgeScoreCard(frame)
+	if not ns.ForgeOn() then return false end
+	local F = ns.FORGE
+	local card = frame.scoreCard
+	card.plate = ns.ForgeCard(card)
+	ns.ForgeHideFlat(card.bg, card.border)
+	frame.scoreValue:SetTextColor(Theme.TITLE[1], Theme.TITLE[2], Theme.TITLE[3])
+	Theme.TextShadow(frame.scoreValue)
+	local _, size = frame.scoreValue.GetFont and frame.scoreValue:GetFont()
+	local glowSize = math.floor((tonumber(size) or 28) * F.glow.size + 0.5)
+	frame.scoreGlow = ns.ForgeDot(card, glowSize, Theme.IDENTITY, F.glow.alpha, "BORDER")
+	frame.scoreGlow:SetPoint("CENTER", frame.scoreValue, "CENTER", 0, 0)
+	-- le tampon : un creux, filet à la couleur du verdict (posée à l'affichage)
+	frame.stamp.well = ns.ForgeWell(frame.stamp, { margin = F.tag.margin })
+	ns.ForgeHideFlat(frame.stamp.fill, frame.stamp.border)
+	-- la barre : dans un creux, dégradé d'or (sombre en bas, clair en haut)
+	local bar = frame.scoreBar
+	bar.well = ns.ForgeWell(card, { around = bar, out = F.well.out, margin = F.well.margin, sub = 2 })
+	ns.ForgeHideFlat(bar.bg)
+	Theme.Gradient(bar.fill, "VERTICAL", Theme.GOLD_SOFT, 1, Theme.GOLD_LIGHT, 1)
+	bar.ember = ns.ForgeDot(bar, F.dot.size, Theme.GOLD_LIGHT, F.dot.alpha, "OVERLAY")
+	bar.ember:SetPoint("CENTER", bar.fill, "RIGHT", 0, 0)
+	local setValue = bar.SetValue
+	function bar:SetValue(ratio)
+		setValue(self, ratio)
+		if (self.ratio or 0) > 0 then self.ember:Show() else self.ember:Hide() end
+	end
+	frame.forged = true
+	return true
+end
+
+function ns:ForgeAdviceBlock(frame)
+	if not ns.ForgeOn() then return false end
+	local block = frame.adviceBlock
+	block.plate = ns.ForgeCard(block)
+	ns.ForgeHideFlat(block.bg)
+	block.halo = ns.ForgeAccentBar(block, block.bar, Theme.GOLD)
+	for _, bullet in ipairs(frame.adviceBullets or {}) do
+		bullet.glow = ns.ForgeDot(block, ns.FORGE.dot.size, Theme.GOLD, ns.FORGE.dot.alpha, "BORDER")
+		bullet.glow:SetPoint("CENTER", bullet, "CENTER", 0, 0)
+	end
+	return true
+end
+
+-- ---------------------------------------------------------------------------
 -- Construction de la fenêtre
 -- ---------------------------------------------------------------------------
 function ns:EnsureWindow()
@@ -86,7 +196,7 @@ function ns:EnsureWindow()
 	local height = self:WindowHeight(rowCount, false)
 
 	local frame = Theme.CreateDialog(UIParent, WIDTH, height, { name = "Ready2QuestDiagFrame",
-		title = L.WIN_TITLE_DIAG, footer = FOOTER })
+		title = L.WIN_TITLE_DIAG, footer = FOOTER, headerIcon = true })
 	if not frame then return nil end
 	ns:RestorePoint(frame, "diagPoint", { point = "CENTER", x = 0, y = 120 })
 
@@ -125,6 +235,7 @@ function ns:EnsureWindow()
 
 	frame.scoreBar = Theme.CreateBar(frame.scoreCard, inner - 32, 6)
 	frame.scoreBar:SetPoint("BOTTOMLEFT", frame.scoreCard, "BOTTOMLEFT", 16, 14)
+	ns:ForgeScoreCard(frame)
 
 	-- Lignes de modules ------------------------------------------------------
 	-- Placées à chaque affichage (LayoutWindow) : les modules sans objet sont
@@ -136,13 +247,15 @@ function ns:EnsureWindow()
 	frame.rows = {}
 	-- 1.32.0 : une ligne de plus, celle du repli des points en ordre
 	for index = 1, rowCount + 1 do
-		-- 1.31.0 : un bouton, pour le survol et l'infobulle (aucun clic)
+		-- 1.31.0 : un bouton, pour le survol et l'infobulle
 		local row = Theme.CreateListRow(frame, inner, ROW_CARD, { status = 9, detail = true, kind = "Button" })
 		row:SetScript("OnEnter", RowTooltip)
 		row:SetScript("OnLeave", RowLeave)
-		-- 1.32.0 : la ligne de repli plie ou déplie les points en ordre
+		-- 1.32.0 : la ligne de repli plie ou déplie les points en ordre ;
+		-- 1.35.0 : les autres font leur geste (sacs, journal, rangs de sorts)
 		row:SetScript("OnClick", function(self)
-			if self.result and self.result.fold then ns:ToggleDiagFold() end
+			local action = ns:DiagRowAction(self.result)
+			if action then action.run() end
 		end)
 		row:SetIndex(index)
 		row.name = row.text
@@ -176,6 +289,7 @@ function ns:EnsureWindow()
 		bullet:SetVertexColor(Theme.GOLD[1], Theme.GOLD[2], Theme.GOLD[3], 1)
 		frame.adviceBullets[index] = bullet
 	end
+	ns:ForgeAdviceBlock(frame)
 
 	-- Animation : la note compte jusqu'à sa valeur, la barre suit (0,45 s)
 	frame:SetScript("OnUpdate", function(f) ns:AnimateScore(f) end)
@@ -363,7 +477,8 @@ function ns:ShowWindow(results)
 	local sr, sg, sb = unpack(Theme.ScoreColor(ratio))
 
 	frame.scoreValue:SetText(tostring(score))
-	frame.scoreBar:SetColor(Theme.GOLD[1], Theme.GOLD[2], Theme.GOLD[3])
+	-- thème forgé : la barre garde son dégradé d'or (posé une fois)
+	if not frame.forged then frame.scoreBar:SetColor(Theme.GOLD[1], Theme.GOLD[2], Theme.GOLD[3]) end
 	frame.scoreBar:SetValue(ratio)
 	-- départ de l'animation : la note compte de 0 à sa valeur
 	frame.animFrom, frame.animTo, frame.animStart = 0, score, ns.Now()
@@ -374,6 +489,8 @@ function ns:ShowWindow(results)
 		frame.verdict:SetTextColor(sr, sg, sb)
 		frame.stamp.border:SetColor(sr, sg, sb, 1)
 		frame.stamp.fill:SetVertexColor(sr, sg, sb, 0.10)
+		-- thème forgé : le tampon est un creux, son filet prend la couleur du verdict
+		if frame.stamp.well then frame.stamp.well:SetColor(sr, sg, sb, 1) end
 		frame.stamp:SetWidth(math.max(120, math.ceil(Theme.TextWidth(frame.stamp, label, Theme.F_LABEL) + 32)))
 	end
 
@@ -461,6 +578,10 @@ function ns:ShowWindow(results)
 				if bullet then bullet:Hide() end
 			end
 		end
+	end
+	-- thème forgé : la lueur suit sa puce
+	for _, bullet in ipairs(frame.adviceBullets or {}) do
+		if bullet.glow then if bullet:IsShown() then bullet.glow:Show() else bullet.glow:Hide() end end
 	end
 
 	-- Une seule fenêtre à la fois : les réglages se ferment

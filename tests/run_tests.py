@@ -94,11 +94,57 @@ def check_packages():
         if addon in ignored:
             problems.append("%s : le dossier %s lui-même est ignoré" % (pkgmeta, addon))
     # 2.12.1 / 1.33.1 : plus aucune image à nous hors du filet et des logos ;
-    # le reste vient du client, par référence (polices .ttf permises)
+    # le reste vient du client, par référence (polices .ttf permises).
+    # 3.1.0 / 1.35.0 : s'y ajoutent les textures d'habillage du thème Azeroth
+    # (formes, reliefs et lueurs générés par tools/gen_ui_assets.py, dans le
+    # socle) et le glyphe du logo pour la mini-carte. Toujours aucune
+    # illustration, et rien de repris du jeu.
     for f in tracked:
         if f.split("/")[0] in ("Ready2Quest", "QuestCompanion") and os.path.exists(os.path.join(ROOT, f)) \
                 and os.path.splitext(f)[1].lower() in IMAGE_EXTS and f not in ALLOWED_IMAGES:
-            problems.append("image non autorisée : %s (n'embarquer que le filet et les logos)" % f)
+            problems.append("image non autorisée : %s (n'embarquer que le filet, les logos et l'habillage du thème)" % f)
+    return problems
+
+
+# Le journal des modifications d'un addon est le texte envoyé aux sites à
+# chaque publication (manual-changelog de son .pkgmeta). GitHub refuse une
+# fiche de plus de 125 000 caractères : la publication échoue alors APRÈS
+# l'envoi à CurseForge et à Wago (QuestCompanion 3.1.0-beta8). Marge gardée :
+# au-delà de CHANGELOG_MAX, ranger les plus vieilles versions dans docs/
+# (docs/CHANGELOG-QuestCompanion-1.x.md).
+CHANGELOG_MAX = 110000
+
+
+def pkgmeta_changelog(path):
+    """Fichier `manual-changelog: filename:` d'un .pkgmeta, ou None."""
+    inside = False
+    with open(path, encoding="utf-8") as handle:
+        for line in handle:
+            if line.startswith("manual-changelog:"):
+                inside = True
+            elif inside and line.strip().startswith("filename:"):
+                return line.split(":", 1)[1].strip()
+            elif inside and line.strip() and not line.startswith((" ", "\t")):
+                inside = False
+    return None
+
+
+def check_changelogs():
+    problems = []
+    for pkgmeta in (".pkgmeta", ".pkgmeta-questcompanion"):
+        name = pkgmeta_changelog(os.path.join(ROOT, pkgmeta))
+        if not name:
+            problems.append("%s : pas de manual-changelog" % pkgmeta)
+            continue
+        target = os.path.join(ROOT, name)
+        if not os.path.exists(target):
+            problems.append("%s : journal introuvable : %s" % (pkgmeta, name))
+            continue
+        with open(target, encoding="utf-8") as handle:
+            size = len(handle.read())
+        if size > CHANGELOG_MAX:
+            problems.append("%s : %d caractères, plus que %d (GitHub refuse une fiche de plus de 125 000) : "
+                            "range les plus vieilles versions dans docs/" % (name, size, CHANGELOG_MAX))
     return problems
 
 
@@ -107,7 +153,12 @@ ALLOWED_IMAGES = {
     "QuestCompanion/Textures/filet.tga", "QuestCompanion/Textures/corde.tga", "QuestCompanion/Textures/paquet.tga",
     "QuestCompanion/Textures/logo.tga", "QuestCompanion/Textures/logo_petit.tga",
     "Ready2Quest/Textures/logo.tga", "Ready2Quest/Textures/logo_petit.tga",
+    "QuestCompanion/Textures/logo_glyphe.tga", "Ready2Quest/Textures/logo_glyphe.tga",
 }
+UI_ASSETS = ("cadre", "ombre", "coin", "plaque", "creux", "lueur_ligne", "lueur_point", "vignette", "anneau")
+for _addon in ("Ready2Quest", "QuestCompanion"):
+    for _name in UI_ASSETS:
+        ALLOWED_IMAGES.add("%s/Libs/Socle/Media/%s.tga" % (_addon, _name))
 
 
 def check_socle():
@@ -179,6 +230,22 @@ def check_generated():
         gen_lore.build(lore)
         if open(lore, encoding="utf-8").read() != open(os.path.join(ROOT, "QuestCompanion", "LoreData.lua"), encoding="utf-8").read():
             problems.append("QuestCompanion/LoreData.lua ne correspond plus à data/forever/lore/lore.json (python3 -I tools/gen_lore.py)")
+        # 3.1.0 / 1.35.0 : textures d'habillage du thème (tools/gen_ui_assets.py)
+        import gen_ui_assets
+        media = os.path.join(ROOT, "Ready2Quest", "Libs", "Socle", "Media")
+        for name, draw in gen_ui_assets.ASSETS:
+            current = os.path.join(media, name + ".tga")
+            if not os.path.exists(current) or open(current, "rb").read() != gen_ui_assets.tga(*draw()):
+                problems.append("Ready2Quest/Libs/Socle/Media/%s.tga ne correspond plus à tools/gen_ui_assets.py "
+                                "(python3 -I tools/gen_ui_assets.py, puis tools/sync_socle.py)" % name)
+        if tuple(name for name, _ in gen_ui_assets.ASSETS) != UI_ASSETS:
+            problems.append("tests/run_tests.py : UI_ASSETS ne suit plus tools/gen_ui_assets.py (ASSETS)")
+        # 3.1.0 : taille des apparences (data/forever/display_sizes.json)
+        import gen_display_sizes
+        sizes = os.path.join(out, "DisplaySizes_Forever.lua")
+        gen_display_sizes.build(sizes)
+        if open(sizes, encoding="utf-8").read() != open(os.path.join(ROOT, "QuestCompanion", "DisplaySizes_Forever.lua"), encoding="utf-8").read():
+            problems.append("QuestCompanion/DisplaySizes_Forever.lua ne correspond plus à data/forever/display_sizes.json (python3 -I tools/gen_display_sizes.py)")
     finally:
         shutil.rmtree(out, ignore_errors=True)
     return problems
@@ -194,7 +261,7 @@ def preflight():
         for name in sorted(duplicates):
             print("  region:%s" % name)
         raise SystemExit(2)
-    problems = check_packages() + check_socle() + check_generated()
+    problems = check_packages() + check_socle() + check_generated() + check_changelogs()
     if problems:
         print("ERREUR: paquets de publication incomplets :")
         for problem in problems:

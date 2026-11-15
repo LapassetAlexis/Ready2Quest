@@ -43,8 +43,8 @@ local FR = {
 	GUIDE_SEC_net          = "Le filet",
 	GUIDE_net_1            = "Plus de fenêtre qui s'ouvre toute seule. Quand un monstre abattu vaut le coup (une espèce qui manque à ta collection, une brillante, ou un spécimen qui pourrait battre le tien), il tombe dans le filet posé à côté de ton compagnon.",
 	GUIDE_net_2            = "Un pack entier se met en file (%d monstres au plus) ; chacun y reste %d s à partir de la fin du combat. Le bouton montre leur nombre, devient doré si une brillante attend et bat quelques secondes quand un monstre arrive. Il reste à l'écran si le compagnon est masqué.",
-	GUIDE_net_3            = "Clic : le meilleur candidat (brillante, espèce nouvelle, plus rare, étoiles). Deux créatures ou plus : le clic propose « Capturer : … » ou « Tout capturer (N) » (Maj+clic : le meilleur ; Ctrl+clic : tout). Dès le clic, le compte à rebours s'arrête jusqu'à la fin de la scène. Clic droit : la liste (choisir, aide, tout ignorer ; « × » ou Échap). /qc filet, /qc filet tout. Tout capturer : une volée de filets, chaque créature sa scène, en même temps ; les brillantes en dernier.",
-	GUIDE_net_4            = "Le bandeau « Capture possible » nomme la créature dès qu'elle peut être capturée, dit si tu as déjà l'espèce (et avec combien d'étoiles), ta chance, et « et N de plus » s'il y en a plusieurs. Clic dessus : le filet ; clic droit : la liste ; Ignorer la sort du filet ; Sourdine coupe bandeau et sons pendant %s (/qc filet sourdine [min|off]). Un carillon l'accompagne (réglage %s).",
+	GUIDE_net_3            = "Capture express (par défaut) : un clic sur le filet lance tout de suite sur le meilleur candidat, même en combat ; rien ne s'ouvre, le verdict tient en une ligne au-dessus du filet. Maj+clic : tout le filet. Ctrl+clic : la carte de préparation (aides, Lancer, Passer). Clic droit : la liste (« × » ou Échap). /qc filet, /qc filet tout, /qc filet auto (le filet part seul ; une brillante attend ton clic). Le chat ne parle que des prises qui comptent.",
+	GUIDE_net_4            = "Capture express coupée (/qc filet express) : le bandeau « Capture possible » nomme la créature et ta chance ; le clic ouvre la carte de préparation, puis la scène ; à deux créatures ou plus, il propose « Tout capturer (N) ». Toujours : Sourdine coupe l'annonce et les sons pendant %s (/qc filet sourdine [min|off]) ; un carillon l'accompagne (réglage %s).",
 	GUIDE_net_5            = "La scène de capture se joue (réglage %s) et se referme seule après le verdict ; un clic ou Échap la ferment avant. Ta chance dépend du rang (normal %d %%, élite %d %%, rare %d %%, boss %d %%) et de l'écart de niveau ; les aides la multiplient : %s, %s, %s. Elles tombent des tampons du carnet, des paliers de zone et des missions.",
 	GUIDE_SEC_stars        = "Les étoiles",
 	GUIDE_stars_1          = "Chaque monstre abattu a déjà sa qualité, de 1 à 3 étoiles, tirée au coup fatal : %d %% de chance pour 1 étoile, %d %% pour 2, %d %% pour 3 sur un monstre ordinaire (les élites et les rares sont plus souvent beaux). Un beau spécimen se débat plus : la capture est plus dure.",
@@ -79,15 +79,19 @@ local FR = {
 	GUIDE_card_2           = "/qc fiche ouvre la tienne (c'est là que tu choisis ta vitrine) ; /qc fiche <nom> demande celle d'un autre joueur. Les joueurs qui ont l'addon ont « %s » dans le menu du clic droit (seulement pour les joueurs connus comme détenteurs) et une ligne « %s » dans leur infobulle.",
 	GUIDE_card_4           = "Tes exploits partent aussi à ta guilde : brillante, élite, rare ou boss capturé, sceau de zone, palier d'espèces et titre, gros haut fait (25 points ou plus, ou un titre). Chez les guildeux qui ont QuestCompanion, un bandeau « GUILDE » l'annonce ; un clic ouvre ta fiche. Réglages : « Annoncer mes exploits à la guilde », « Voir les exploits de la guilde ».",
 	GUIDE_card_3           = "Partagée par défaut ; coupe « %s » dans les réglages (page Au jour le jour) : ta fiche n'est envoyée à personne et l'addon reste muet. Les échanges passent par des messages d'addon invisibles, jamais en combat.",
+	-- 3.1.0 : partager un beau moment dans le chat (Share.lua)
+	GUIDE_card_5           = "Partager : sur les bandeaux des beaux moments (brillante, 3 étoiles, élite, rare ou boss, espèce nouvelle, haut fait, sceau, titre), le petit bouton de chat ouvre un menu : %s, %s ou %s, %s, ou %s (le texte va dans ta zone de saisie, à relire avant Entrée ; pour les canaux publics). Rien ne part sans ton clic. Plus tard : le bouton de la fiche d'un spécimen de la Réserve, ou clic droit sur un haut fait obtenu. Réglage « %s » (page Carnet de voyage). Et tout seul : une brillante ou un spécimen 3 étoiles s'annonce dans le chat de ton groupe ou raid (rien en solo, jamais en combat : à la fin du combat, au plus une ligne toutes les 30 secondes, un lot de « Tout capturer » en une ligne). Réglages « %s » et « %s ».",
 	GUIDE_SEC_settings     = "Réglages et commandes",
 	GUIDE_settings_1       = "Page Au jour le jour : %s (tout coupe, infobulle comprise) · %s · %s · %s · %s · %s · %s.",
 	GUIDE_settings_2       = "Page Compagnon de route : %s (%s), pour que la créature remplisse son cadre à l'écran, même une bête capturée de taille réelle ; la réglette %s (Muet coupe aussi les tutoriels).",
 	GUIDE_settings_3       = "Commandes : /qc filet (capture le meilleur candidat), /qc filet tout (tout capturer), /qc filet sourdine [min|off], /qc capture (ta collection et tes aides), /qc fiche [nom] (fiche de dresseur), /qc tuto [capture|carnet|reset] (les tutoriels guidés), /qc compagnon tuto (le tutoriel de base du compagnon), /qc blague (une blague du compagnon).",
 	GUIDE_settings_4       = "Deux tutoriels guidés, une fois par compte : les premières captures (à ta première occasion de capture, du filet au verdict) et le carnet (à sa première ouverture, onglet par onglet). Jamais en combat ; Échap ou « Passer le tutoriel » les arrêtent. Les boutons « %s » et « %s », en bas à gauche, les rejouent. Sur le compagnon : clic droit, le carnet ; Maj + clic droit, le mode chasse.",
-	GUIDE_settings_5       = "Style de l'interface (page Compagnon de route) : %s ou %s, bandeaux, carnet et fiche compris. /qc style azeroth|sobre.",
+	GUIDE_settings_5       = "Style de l'interface (page Compagnon de route) : %s (cadre doré, boutons en relief) ou %s (à plat), pour toute l'interface. /qc style azeroth|sobre.",
 	GUIDE_settings_6       = "Hauts faits (page du carnet) : /qc hf l'ouvre, /qc hf diag dit quelles statistiques du client sont lisibles ; ce qui attend encore sa vérification est grisé. Les hauts faits de collection valent pour tout ton compte, ceux de performance pour ce personnage. /qc titre choisit ton titre. Touche Y (si elle était libre) : les hauts faits. Bandeau, chat, fanfare, forme des titres et raccourcis : page Carnet de voyage.",
 	-- 2.13.0 : crédits de l'histoire des lieux (LoreData.lua, CompanionLore.lua)
 	GUIDE_settings_7       = "Histoire des lieux (réglage « %s ») : textes de Warcraft Wiki (warcraft.wiki.gg), licence CC BY-SA 4.0, choisis et traduits par Spoken de Rusty Key (github.com/rusty-key/spoken-wow). Merci à eux !",
+	-- 3.1.0 : astuces de découverte (Discovery.lua)
+	GUIDE_settings_8       = "Astuces de découverte : de temps en temps, ton compagnon te montre une fonction que tu n'utilises pas encore (changer d'allure, garde-manger, mode chasse, Réserve, juke-box…) ; au plus une toutes les 20 minutes, jamais en combat, en instance ou pendant une capture, chacune une fois par compte. Clic sur la bulle : la page qui va avec. Réglage « %s » (page Compagnon de route), /qc astuces on|off|reset.",
 }
 local EN = {
 	JRN_SEC_guide          = "Guide",
@@ -111,8 +115,8 @@ local EN = {
 	GUIDE_SEC_net          = "The net",
 	GUIDE_net_1            = "No more pop-up. When a defeated monster is worth capturing (a species missing from your collection, a shiny, or a specimen that could beat yours), it lands in the net beside your companion.",
 	GUIDE_net_2            = "Whole packs queue up (%d monsters at most); each one stays %d s from the end of the fight. The button shows their count, turns gold when a shiny is waiting and pulses for a few seconds when a monster arrives. It stays on screen when the companion is hidden.",
-	GUIDE_net_3            = "Click: the best candidate (shiny, new species, rarest, stars). Two creatures or more: the click offers \"Capture: …\" or \"Capture all (N)\" (Shift-click: the best; Ctrl-click: all). From the click, the countdown stops until the scene ends. Right-click: the list (pick, aid, ignore all; \"×\" or Escape). /qc filet, /qc filet tout. Capture all: a volley of nets, each creature its own scene, all at once; shinies last.",
-	GUIDE_net_4            = "The \"Capture possible\" banner names the creature as soon as it can be captured, says whether you already own the species (and with how many stars), your odds, and \"and N more\" when several wait. Click it: the net; right-click: the list; Ignore drops it from the net; Mute silences banner and sounds for %s (/qc filet sourdine [min|off]). A chime comes with it (%s setting).",
+	GUIDE_net_3            = "Express capture (the default): clicking the net throws right away at the best candidate, even in combat; nothing opens, the result is one line above the net. Shift-click: the whole net. Ctrl-click: the preparation card (aids, Throw, Skip). Right-click: the list (\"×\" or Escape). /qc filet, /qc filet tout, /qc filet auto (the net throws itself; a shiny waits for your click). Chat only mentions captures that matter.",
+	GUIDE_net_4            = "Express capture off (/qc filet express): the \"Capture possible\" banner names the creature and your odds; the click opens the preparation card, then the scene; with two creatures or more it offers \"Capture all (N)\". Always: Mute silences the announcement and sounds for %s (/qc filet sourdine [min|off]); a chime comes with it (%s setting).",
 	GUIDE_net_5            = "The capture scene plays (%s setting) and closes by itself after the verdict; a click or Escape closes it sooner. Your odds depend on the rank (normal %d%%, elite %d%%, rare %d%%, boss %d%%) and the level gap; aids multiply them: %s, %s, %s. They drop from journal stamps, zone milestones and missions.",
 	GUIDE_SEC_stars        = "Stars",
 	GUIDE_stars_1          = "Every defeated monster already has its quality, 1 to 3 stars, rolled on the killing blow: a %d%% chance of 1 star, %d%% of 2, %d%% of 3 on an ordinary monster (elites and rares are fine specimens more often). A fine specimen struggles more: it's harder to capture.",
@@ -147,14 +151,16 @@ local EN = {
 	GUIDE_card_2           = "/qc fiche opens yours (that is where you pick your showcase); /qc fiche <name> asks for another player's. Players who have the addon get \"%s\" in the right-click menu (only for players known to have it) and a \"%s\" line in their tooltip.",
 	GUIDE_card_4           = "Your feats also go to your guild: shiny, elite, rare or boss captured, zone seal, species milestone and title, big achievement (25 points or more, or a title). Guildmates running QuestCompanion see a \"GUILD\" banner; a click opens your card. Settings: \"Announce my feats to the guild\", \"Show guild feats\".",
 	GUIDE_card_3           = "Shared by default; turn off \"%s\" in the settings (Day by day page): your card is sent to nobody and the addon stays silent. Exchanges go through invisible addon messages, never in combat.",
+	GUIDE_card_5           = "Share: on the banners of great moments (shiny, 3 stars, elite, rare or boss, new species, achievement, seal, title), the small chat button opens a menu: %s, %s or %s, %s, or %s (the text goes to your chat input box, to read before pressing Enter; for public channels). Nothing is sent without your click. Later: the button on a Reserve specimen card, or right-click an earned achievement. Setting \"%s\" (Travel journal page). And on its own: a shiny or a 3-star specimen is announced in your party or raid chat (nothing solo, never in combat: it goes out when combat ends, at most one line every 30 seconds, a \"Capture all\" batch in one line). Settings \"%s\" and \"%s\".",
 	GUIDE_SEC_settings     = "Settings and commands",
 	GUIDE_settings_1       = "Day by day page: %s (turns everything off, tooltip included) · %s · %s · %s · %s · %s · %s.",
 	GUIDE_settings_2       = "Road companion page: %s (%s), so the creature fills its on-screen frame, even a life-size captured beast; the %s slider (Silent also turns the tutorials off).",
 	GUIDE_settings_3       = "Commands: /qc filet (captures the best candidate), /qc filet tout (capture all), /qc filet sourdine [min|off], /qc capture (your collection and aids), /qc fiche [name] (trainer card), /qc tuto [capture|carnet|reset] (the guided tutorials), /qc compagnon tuto (the companion's base tutorial), /qc joke (a joke from your companion).",
 	GUIDE_settings_4       = "Two guided tutorials, once per account: first captures (at your first capture opportunity, from the net to the verdict) and the journal (when you first open it, tab by tab). Never in combat; Escape or \"Skip tutorial\" stops them. The \"%s\" and \"%s\" buttons, bottom left, replay them. On the companion: right-click, the journal; Shift + right-click, hunt mode.",
-	GUIDE_settings_5       = "Interface style (Road companion page): %s or %s, banners, journal and card included. /qc style azeroth|sobre.",
+	GUIDE_settings_5       = "Interface style (Road companion page): %s (golden frame, bevelled buttons) or %s (flat), for the whole interface. /qc style azeroth|sobre.",
 	GUIDE_settings_6       = "Achievements (journal page): /qc hf opens it, /qc hf diag tells which client statistics are readable; what still awaits verification is greyed out. Collection achievements count for your whole account, performance ones for this character. /qc title picks your title. Y key (if it was free): achievements. Banner, chat, fanfare, title form and key bindings: Travel journal page.",
 	GUIDE_settings_7       = "Story of places (\"%s\" setting): text from Warcraft Wiki (warcraft.wiki.gg), CC BY-SA 4.0 licence, selected and translated by Spoken by Rusty Key (github.com/rusty-key/spoken-wow). Thanks to them!",
+	GUIDE_settings_8       = "Discovery tips: now and then your companion shows you a feature you don't use yet (changing look, pantry, hunt mode, Reserve, jukebox…); at most one every 20 minutes, never in combat, in instances or during a capture, each once per account. Click the bubble: the matching page. Setting \"%s\" (Road companion page), /qc astuces on|off|reset.",
 }
 ns.RegisterStrings(FR, EN)
 if ns.KEEP_STRINGS then ns.GUIDE_STRINGS = { fr = FR, en = EN } end
@@ -343,6 +349,8 @@ function BUILD.card(self)
 		P(self:F("GUIDE_card_2", L.TRAINER_MENU, L.TRAINER_TOOLTIP)),
 		P(self:F("GUIDE_card_3", L.OPT_DAILY_TRAINER)),
 		P(L.GUIDE_card_4),
+		P(self:F("GUIDE_card_5", L.SHARE_CH_GUILD, L.SHARE_CH_PARTY, L.SHARE_CH_RAID, L.SHARE_CH_SAY, L.SHARE_CH_COPY,
+			L.OPT_SHARE_BANNER, L.OPT_ANNOUNCE_GROUP, L.OPT_ANNOUNCE_GUILD)),
 	}
 end
 
@@ -358,6 +366,7 @@ function BUILD.settings(self)
 		P(self:F("GUIDE_settings_5", L.UI_STYLE_azeroth, L.UI_STYLE_sobre)),
 		P(L.GUIDE_settings_6),
 		P(self:F("GUIDE_settings_7", L.OPT_COMP_LORE)),
+		P(self:F("GUIDE_settings_8", L.OPT_COMP_DISCOVERY)),
 	}
 end
 
@@ -386,6 +395,9 @@ local function Build(self, frame, content, ui)
 	local pane = CreateFrame("Frame", nil, content)
 	pane:SetAllPoints()
 	frame.guide = pane
+	-- 3.1.0 : thème forgé, décidé à la création du carnet (jamais sous l'ancien
+	-- habillage, dont le parchemin attend le filet or d'avant)
+	pane.forged = frame.journalForged
 	-- 3.0.1 bêta 3 : un fond opaque propre à la page, sous tout le reste. Une
 	-- autre fenêtre de même strate (les réglages de Ready2Quest) pouvait
 	-- s'intercaler entre le fond du carnet et cette page : on la voyait au
@@ -508,7 +520,9 @@ local function NewRow(pane, head)
 		local cell = NewText(row, fonts[index], colors[index])
 		row.cells[index] = cell
 	end
-	row.line = Theme.Solid(row, "ARTWORK", head and Theme.GOLD or Theme.EDGE_SOFT, head and 0.8 or 1)
+	-- filet d'en-tête : l'identité au thème forgé, l'or ailleurs (Sobre, parchemin)
+	local rule = pane.forged and Theme.IDENTITY or Theme.GOLD
+	row.line = Theme.Solid(row, "ARTWORK", head and rule or Theme.EDGE_SOFT, head and 0.8 or 1)
 	row.line:SetPoint("BOTTOMLEFT", row, "BOTTOMLEFT", 0, 0)
 	row.line:SetPoint("BOTTOMRIGHT", row, "BOTTOMRIGHT", 0, 0)
 	row.line:SetHeight(1)
@@ -518,7 +532,7 @@ end
 local function Pooled(pane, kind, head, used)
 	local list, make
 	if kind == "p" then list, make = pane.paras, function() return NewText(pane, Theme.F_BODY, Theme.TEXT) end
-	elseif kind == "h" then list, make = pane.heads, function() return NewText(pane, Theme.F_LABEL, Theme.GOLD) end
+	elseif kind == "h" then list, make = pane.heads, function() return NewText(pane, Theme.F_LABEL, Theme.IDENTITY) end   -- intertitre : l'identité
 	elseif head then list, make = pane.theads, function() return NewRow(pane, true) end
 	else list, make = pane.trows, function() return NewRow(pane, false) end end
 	local key = kind == "row" and (head and "thead" or "trow") or kind
@@ -609,7 +623,7 @@ local function Refresh(self, frame, ui)
 	for _, row in ipairs(pane.rows) do
 		local on = row.section == section
 		row:SetSelected(on)
-		row:SetAccent(on and Theme.GOLD or nil)
+		row:SetAccent(on and Theme.SELECT or nil)   -- choisi : la sélection (= or en Sobre)
 		row:SetFill(on and Theme.ROW_ALT or row.rowFill)
 		Paint(row.label, on and Theme.PARCHMENT or Theme.LABEL)
 	end

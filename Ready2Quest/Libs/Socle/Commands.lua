@@ -106,6 +106,8 @@ function ns:DiagErrorLines()
 	for _, entry in ipairs(ns.errors or {}) do
 		self:Print("  " .. ns.Theme.T_RED .. L.MSG_DIAG_ERROR .. "|r " .. self:F("MSG_DIAG_WHERE", tostring(entry.where), tostring(entry.message)))
 	end
+	-- socle 3.1.0 : actions refusées par le jeu (Compat.lua)
+	if self.DiagActionLines then self:DiagActionLines() end
 end
 
 COMMANDS["diag"] = function(self)

@@ -418,7 +418,7 @@ local function Build(self, frame, content, ui)
 		ns:RefreshJournal()
 	end)
 	pane.listPager:SetPoint("TOPRIGHT", content, "TOPLEFT", PAD + INNER, headY)
-	pane.head = NoWrap(Text(pane, Theme.F_LABEL, Theme.GOLD, RW - 200 - 8))
+	pane.head = NoWrap(Text(pane, Theme.F_LABEL, Theme.IDENTITY, RW - 200 - 8))   -- titre de liste : l'identité (= or en Sobre)
 	At(pane.head, content, RX, headY - 4)
 	local itemsTop = headY - Theme.PAGER_HEIGHT - 4
 	local itemRows = math.floor((itemsTop - PAGER_Y - 12 + ITEM_STEP - ITEM_H) / ITEM_STEP)
@@ -572,7 +572,7 @@ local function RefreshZoneList(self, frame, pane, list, zoneID)
 			end
 			local selected = zone.id == zoneID
 			row:SetSelected(selected)
-			row:SetAccent(selected and Theme.GOLD or nil)
+			row:SetAccent(selected and Theme.SELECT or nil)   -- choisi : la sélection (= or en Sobre)
 			row:SetFill(selected and Theme.ROW_ALT or row.rowFill)
 			row:SetAlpha(zone.seen and 1 or 0.55)
 			row:Show()
@@ -650,7 +650,7 @@ local function RefreshParts(self, frame, pane, zoneID, parts)
 		tile:SetAlpha(applies and 1 or 0.5)
 		local on = tile.part == selected
 		tile:SetSelected(on)
-		tile:SetAccent(on and Theme.GOLD or nil)
+		tile:SetAccent(on and Theme.SELECT or nil)   -- choisi : la sélection (= or en Sobre)
 		tile:Show()
 	end
 	return selected, quests

@@ -182,9 +182,15 @@ end
 
 local function ItemInfo(item)
 	if item == nil then return nil end
-	local r = { true, ns.ItemInfo(item) }
 	-- name, link, quality, level, minLevel, type, subType, maxStack, equipLoc, texture, sellPrice
-	return { name = r[2], link = r[3], quality = r[4], maxStack = r[9], sellPrice = r[12] }
+	local name, link, quality, _, _, _, _, maxStack, _, _, sellPrice = ns.ItemInfo(item)
+	return { name = name, link = link, quality = quality, maxStack = maxStack, sellPrice = sellPrice }
+end
+
+-- Prix de vente seul (11e retour), sans table : lu pour chaque objet des sacs
+local function ItemSellPrice(itemID)
+	if itemID == nil then return nil end
+	return (select(11, ns.ItemInfo(itemID)))
 end
 
 local function ItemClass(itemID)
@@ -307,9 +313,8 @@ end
 -- Prix de vente unitaire : 0 si l'objet ne se vend pas, nil si inconnu
 local function SellPrice(info)
 	if info.hasNoValue then return 0 end
-	local data = ItemInfo(info.itemID)
-	if not data then return nil end
-	return tonumber(data.sellPrice)
+	if info.itemID == nil then return nil end
+	return tonumber(ItemSellPrice(info.itemID))
 end
 
 local function Before(a, b)
@@ -416,6 +421,25 @@ local function Normalize(text)
 	return text
 end
 
+-- UI_ERROR_MESSAGE arrive sans cesse en combat (« hors de portée », « pas
+-- assez de rage »…) et deux modules le lisent (Sac plein, Place au butin) :
+-- les textes normalisés sont gardés, ceux des messages reçus bornés à
+-- NORMALIZED_MAX (le client n'en a que quelques dizaines), ceux des globales
+-- du client tant qu'elles ne changent pas. Résultat identique, sans chaînes
+-- refaites à chaque message.
+local NORMALIZED_MAX = 64
+local normalized, normalizedCount = {}, 0
+local function NormalizeMessage(text)
+	local known = normalized[text]
+	if known then return known end
+	known = Normalize(text)
+	if normalizedCount >= NORMALIZED_MAX then normalized, normalizedCount = {}, 0 end
+	normalized[text], normalizedCount = known, normalizedCount + 1
+	return known
+end
+ns.BAGSPACE_NORMALIZED_MAX = NORMALIZED_MAX
+function ns.BagSpaceNormalizedCount() return normalizedCount end
+
 -- Signature de UI_ERROR_MESSAGE : (messageType, message) sur les clients
 -- récents, (message) sur les anciens. On accepte les deux.
 function ns:IsBagFullError(a, b)
@@ -427,11 +451,11 @@ function ns:IsBagFullError(a, b)
 	end
 	local message = (type(a) == "string" and a) or (type(b) == "string" and b) or nil
 	if not message then return false end
-	message = Normalize(message)
+	message = NormalizeMessage(message)
 	if message == "" then return false end
 	for _, name in ipairs(ERROR_GLOBALS) do
 		local text = rawget(_G, name)
-		if type(text) == "string" and Normalize(text) == message then return true end
+		if type(text) == "string" and NormalizeMessage(text) == message then return true end
 	end
 	for _, text in ipairs(ERROR_FALLBACK) do
 		if text == message then return true end
@@ -632,11 +656,16 @@ end
 function ns:EnsureBagSpaceFrame()
 	if self.bagspaceFrame then return self.bagspaceFrame end
 	if not Theme or not Theme.CreateToast or not Theme.CreateButton then return nil end
-	local ok, frame = pcall(Theme.CreateToast, UIParent, WIDTH, HEIGHT, { strata = "DIALOG", accent = Theme.ORANGE_DEEP })
+	-- 1.35.0 : nommé et inscrit à Échap (comme les sacs du jeu, qu'Échap ferme)
+	local ok, frame = pcall(Theme.CreateToast, UIParent, WIDTH, HEIGHT, { strata = "DIALOG", accent = Theme.ORANGE_DEEP,
+		name = "Ready2QuestBagSpace" })
 	if not ok or not frame then return nil end
+	if Theme.RegisterEscapeClose then Theme.RegisterEscapeClose(frame) end
 	-- au-dessus des sacs ouverts, en bas à droite de l'écran
 	if self.RestorePoint then self:RestorePoint(frame, "bagspacePoint", { point = "BOTTOMRIGHT", x = -240, y = 180 }) end
 	local left = frame.contentLeft
+	-- thème forgé : le liseré orange en lumière (sac plein : à voir)
+	if ns.ForgeAccentBar and frame.accent then frame.accentHalo = ns.ForgeAccentBar(frame, frame.accent, Theme.ORANGE_DEEP) end
 
 	frame.closeButton = Theme.CreateCloseButton(frame, 18)
 	frame.closeButton:SetPoint("TOPRIGHT", frame, "TOPRIGHT", -6, -6)
@@ -669,11 +698,16 @@ function ns:EnsureBagSpaceFrame()
 		end
 	end)
 
-	frame.destroyButton = Theme.CreateButton(frame, nil, 22, L.BAG_BTN_DESTROY, function() ns:BagSpaceRequestDestroy() end, "primary")
+	-- thème forgé : la couleur dit le geste (rouge : détruire, vert : garder
+	-- en favori), si le socle a ces styles ; sinon ceux de Sobre
+	local Style = ns.ForgeStyle or function(sobre) return sobre end
+	frame.destroyButton = Theme.CreateButton(frame, nil, 22, L.BAG_BTN_DESTROY, function() ns:BagSpaceRequestDestroy() end,
+		Style("primary", "danger", "remove"))
 	frame.destroyButton:SetPoint("BOTTOMLEFT", frame, "BOTTOMLEFT", left, 8)
 	frame.nextButton = Theme.CreateButton(frame, nil, 22, L.BAG_BTN_NEXT, function() ns:BagSpaceNext() end, "outline")
 	frame.nextButton:SetPoint("LEFT", frame.destroyButton, "RIGHT", 6, 0)
-	frame.keepButton = Theme.CreateButton(frame, nil, 22, L.BAG_BTN_KEEP, function() ns:BagSpaceKeepCurrent() end, "outline")
+	frame.keepButton = Theme.CreateButton(frame, nil, 22, L.BAG_BTN_KEEP, function() ns:BagSpaceKeepCurrent() end,
+		Style("outline", "add", "positive"))
 	frame.keepButton:SetPoint("LEFT", frame.nextButton, "RIGHT", 6, 0)
 
 	frame:Hide()
@@ -722,12 +756,33 @@ function ns:ShowBagSpaceFrame()
 		end
 		if Theme.FadeIn then Theme.FadeIn(frame, 0.15) end
 	end
+	-- le cadre suit les sacs tant qu'il est là
+	if self.SyncEventGate then self:SyncEventGate("bagspace:bags") end
 	return frame
 end
 
 function ns:HideBagSpaceFrame()
 	if self.bagspaceFrame then self.bagspaceFrame:Hide() end
+	if self.SyncEventGate then self:SyncEventGate("bagspace:bags") end
 end
+
+-- 1.35.0 : en combat, le bandeau se range (rien ne s'y fait : jeter attend
+-- la fin du combat) ; après, il revient si les sacs sont toujours pleins
+ns.COMBAT_UI = ns.COMBAT_UI or {}
+table.insert(ns.COMBAT_UI, {
+	id = "bagspace",
+	hide = function(self)
+		local frame = self.bagspaceFrame
+		if not (frame and frame:IsShown()) then return false end
+		frame:Hide()
+		return true
+	end,
+	restore = function(self)
+		if not ModuleOn() or self:BagSpaceFreeSlots() > 0 then return end
+		self:BagSpaceRebuild()
+		if self:BagSpaceCurrent() then self:ShowBagSpaceFrame() end
+	end,
+})
 
 -- ---------------------------------------------------------------------------
 -- Commandes : /r2q jeter (ou sac), /r2q garder [lien], /r2q jeter-toujours [lien]
@@ -788,7 +843,11 @@ local function OnBagUpdate()
 	-- une place s'est libérée (vente, objet consommé, jeté à la main) : le
 	-- cadre n'a plus lieu d'être ; sinon on suit les objets qui ont bougé
 	local frame = ns.bagspaceFrame
-	if not frame or not frame:IsShown() then return end
+	if not frame or not frame:IsShown() then
+		-- cadre fermé (bouton, Échap…) : plus besoin des sacs
+		if ns.SyncEventGate then ns:SyncEventGate("bagspace:bags") end
+		return
+	end
 	if ns:BagSpaceFreeSlots() > 0 then ns:HideBagSpaceFrame(); return end
 	ns:BagSpaceRebuild()
 	ns:RefreshBagSpaceFrame()
@@ -815,5 +874,25 @@ eventFrame:SetScript("OnEvent", function(_, event, ...)
 	if not ok and ns.RecordError then ns:RecordError("bagspace:" .. tostring(event), err) end
 end)
 ns.bagspaceEventFrame = eventFrame
+
+-- Module coupé : plus rien. Les mouvements des sacs (BAG_UPDATE, très
+-- fréquent : chaque butin, chaque charge consommée) ne servent qu'au cadre
+-- affiché : abonnés à son ouverture (ShowBagSpaceFrame), rendus quand il est
+-- fermé (au premier événement qui le trouve fermé, ou à la synchro suivante).
+if ns.FrameGate then
+	ns.FrameGate("bagspace", {
+		frame = eventFrame,
+		events = { "UI_ERROR_MESSAGE", "LOOT_OPENED" },
+		want = function() return ModuleOn() end,
+	})
+	ns.FrameGate("bagspace:bags", {
+		frame = eventFrame,
+		events = { "BAG_UPDATE", "BAG_UPDATE_DELAYED" },
+		want = function(self)
+			local frame = self.bagspaceFrame
+			return ModuleOn() and frame ~= nil and frame:IsShown() == true
+		end,
+	})
+end
 
 if ns.Mark then ns.Mark("BagSpace") end

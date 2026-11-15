@@ -488,13 +488,48 @@ function ns:EnsureToast()
 	frame.moveGlow:SetAllPoints(frame.bg)
 	frame.moveGlow:Hide()
 
+	self:ForgeToast(frame)
 	self.toastFrame = frame
 	return frame
+end
+
+-- Thème forgé : le résumé garde un cadre de 10 de haut (position, saisie en
+-- mode édition) et son fond déborde autour : le socle habille le fond
+-- (Theme.SkinToast pose frame.skinAround quand le fond déborde). Ici, seul
+-- le filet sous le titre devient un filet lumineux. Rien en Sobre.
+function ns:ForgeToast(frame)
+	if not (frame and frame.bg and ns.ForgeOn and ns.ForgeOn()) then return false end
+	frame.skinAround = frame.skinAround or frame.bg
+	if Theme.DressWindow then pcall(Theme.DressWindow, frame) end
+	if frame.rule then
+		frame.ruleGlow = ns.ForgeLine(frame, Theme.IDENTITY)
+		frame.ruleGlow:SetPoint("LEFT", frame.rule, "LEFT", 0, 0)
+		frame.ruleGlow:SetPoint("RIGHT", frame.rule, "RIGHT", 0, 0)
+		ns.ForgeHideFlat(frame.rule)
+	end
+	return true
 end
 
 function ns:HideToast()
 	if self.toastFrame then self.toastFrame:Hide() end
 end
+
+-- 1.35.0 : le résumé de stuff s'efface au début du combat (il n'a qu'un
+-- temps : il ne revient pas). Le mode déplacement et l'aperçu des réglages
+-- (demandés par le joueur) le gardent.
+ns.COMBAT_UI = ns.COMBAT_UI or {}
+table.insert(ns.COMBAT_UI, {
+	id = "geartoast",
+	hide = function(self)
+		local frame = self.toastFrame
+		if frame and frame:IsShown() and not self.editMode and not self.toastPreview then
+			frame:Hide()
+			frame:SetAlpha(1)
+			self.toastHideAt = nil
+		end
+		return false
+	end,
+})
 
 -- Construit les lignes affichées : { label, value, improved, texture }
 -- Un seul changement = une seule ligne, comme dans la référence.
@@ -642,6 +677,9 @@ end
 function ns:ShowGearToast(rows, texture, preview)
 	local db = self:DB()
 	if db.showGearToast == false and not preview then return end
+	-- 1.35.0 : pas de résumé au milieu de l'écran en combat (changement d'arme) ;
+	-- la référence suit quand même (OnEquipmentChanged)
+	if not preview and ns.InCombatNow and ns.InCombatNow() then return end
 
 	-- Un équipement peut changer sans modifier aucune statistique (même objet
 	-- d'une autre apparence, bijou sans stat, etc.). Sans écart, il n'y a
@@ -757,6 +795,13 @@ function ns:EnsurePortraitPanel()
 	frame.rule:SetPoint("TOPLEFT", frame, "TOPLEFT", left, -STATS_LINES + 6)
 	frame.rule:SetPoint("TOPRIGHT", frame, "TOPRIGHT", -10, -STATS_LINES + 6)
 	frame.rule:SetHeight(1)
+	-- thème forgé : le filet sous la classe devient un filet lumineux
+	if ns.ForgeOn and ns.ForgeOn() then
+		frame.ruleGlow = ns.ForgeLine(frame, Theme.IDENTITY)
+		frame.ruleGlow:SetPoint("LEFT", frame.rule, "LEFT", 0, 0)
+		frame.ruleGlow:SetPoint("RIGHT", frame.rule, "RIGHT", 0, 0)
+		ns.ForgeHideFlat(frame.rule)
+	end
 
 	-- Cinq statistiques primaires (Force, Agilité, Intelligence, Esprit,
 	-- Endurance) puis l'armure et le DPS : sept lignes au total. Une boucle
@@ -781,8 +826,18 @@ function ns:EnsurePortraitPanel()
 	return frame
 end
 
+-- Classe du joueur (nom affiché, jeton), protégée : nil, nil si le client
+-- ne répond pas
+local function PlayerClassInfo()
+	local fn = rawget(_G, "UnitClass")
+	if type(fn) ~= "function" then return nil, nil end
+	local ok, name, token = pcall(fn, "player")
+	if not ok then return nil, nil end
+	return ns.Plain(name), ns.Plain(token)
+end
+
 local function ClassColor()
-	local _, classFile = UnitClass("player")
+	local _, classFile = PlayerClassInfo()
 	local colors = RAID_CLASS_COLORS
 	if colors and classFile and colors[classFile] then
 		local c = colors[classFile]
@@ -966,7 +1021,7 @@ function ns:ShowPortraitStats()
 	local snapshot = self:StatSnapshot()
 	local r, g, b = ClassColor()
 
-	local className, classFile = UnitClass("player")
+	local className, classFile = PlayerClassInfo()
 	local spec = SpecName()
 	local classText = tostring(className or classFile or "?")
 	if spec then classText = classText .. " · " .. tostring(spec) end
@@ -1079,6 +1134,9 @@ ns.PORTRAIT_POLL = 0.1
 local PORTRAIT_PARENTS = 3
 
 -- Unité affichée par un cadre (attribut sécurisé, sinon champ .unit), ou nil
+-- (lue dix fois par seconde par la sonde : le champ est lu par une fonction
+-- faite une fois, plus par une fermeture neuve à chaque cadre)
+local function UnitField(frame) return frame.unit end
 local function FrameUnit(frame)
 	if type(frame) ~= "table" then return nil end
 	local unit
@@ -1087,7 +1145,7 @@ local function FrameUnit(frame)
 		if ok then unit = ns.Plain(value) end
 	end
 	if type(unit) ~= "string" then
-		local ok, value = pcall(function() return frame.unit end)
+		local ok, value = pcall(UnitField, frame)
 		unit = ok and ns.Plain(value) or nil
 	end
 	return type(unit) == "string" and unit or nil
@@ -1245,6 +1303,8 @@ function ns:QueueEquipmentChange(slot)
 	end
 	pending.serial = pending.serial + 1
 	local serial = pending.serial
+	-- les relectures des stats (UNIT_STATS…) ne servent que pendant la série
+	if self.SyncEventGate then self:SyncEventGate("gear") end
 	if type(C_Timer) ~= "table" or type(C_Timer.After) ~= "function" then
 		return self:OnEquipmentChanged(true)
 	end
@@ -1262,7 +1322,11 @@ end
 -- Statistiques recalculées par le client : une tentative de plus, s'il en attend
 function ns:OnStatsUpdated(unit)
 	if unit ~= nil and ns.Plain(unit) ~= "player" then return end
-	if not self.gearPending then return end
+	if not self.gearPending then
+		-- série close : plus besoin de UNIT_STATS (porte « gear », plus bas)
+		if self.SyncEventGate then self:SyncEventGate("gear") end
+		return
+	end
 	self:OnEquipmentChanged(false)
 end
 
@@ -1367,6 +1431,16 @@ do
 			if not okStats and ns.RecordError then ns:RecordError("stuff:" .. tostring(event), err) end
 		end)
 		ns.statsEventFrame = statsFrame
+		-- UNIT_STATS du joueur bouge à chaque buff, proc ou forme (en combat
+		-- surtout) : seulement pendant une série de changements d'équipement
+		-- (QueueEquipmentChange), rendu au premier événement qui la trouve close
+		if ns.FrameGate then
+			ns.FrameGate("gear", {
+				frame = statsFrame,
+				events = { "UNIT_STATS", "PLAYER_AVG_ITEM_LEVEL_UPDATE" },
+				want = function(self) return self.gearPending ~= nil end,
+			})
+		end
 	end
 end
 

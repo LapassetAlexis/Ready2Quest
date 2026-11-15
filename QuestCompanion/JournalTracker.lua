@@ -33,6 +33,9 @@ local TRACKER_MAX = 4
 -- 2.9.0 : plus large (les libellés étaient coupés), lignes un peu plus hautes
 local TRACKER_WIDTH, TITLE_H, LINE_H = 280, 18, 18
 local FEATURED_H, FEATURED_GAP = 40, 4
+-- thème forgé (socle 3.2) : le filet lumineux du titre (hauteur depuis le bas
+-- du titre, part de la largeur du bloc)
+ns.JOURNAL_TRACKER_FORGE = { ruleY = -2, ruleW = 0.7 }
 local HINT_NAMES = 6        -- noms listés au survol, au-delà « … et N autres »
 -- Ordre d'essai : Era d'abord (QuestWatchFrame), puis le client moderne de
 -- Forever (le cadre global, puis le seul bloc des quêtes)
@@ -873,21 +876,20 @@ function ns:ShowJournalGoalTooltip(owner, goal)
 	if type(tip) ~= "table" or not goal then return end
 	pcall(tip.SetOwner, tip, owner, "ANCHOR_LEFT")
 	if tip.ClearLines then tip:ClearLines() end
-	tip:AddLine(goal.label, Theme.GOLD[1], Theme.GOLD[2], Theme.GOLD[3])
-	tip:AddLine(goal.progress .. (goal.unit and (" " .. goal.unit) or ""), 1, 1, 1)
+	-- 3.1.0 : par les briques d'infobulle du thème (titre, texte, aide pâle)
+	Theme.TooltipTitle(tip, goal.label)
+	Theme.TooltipLine(tip, goal.progress .. (goal.unit and (" " .. goal.unit) or ""), Theme.PARCHMENT)
 	local rewards = goal.rewards or (goal.reward and { goal.reward })
 	if rewards and #rewards > 0 then
-		tip:AddLine(self:F("JRN_REWARD", table.concat(rewards, " · ")), Theme.GOLD[1], Theme.GOLD[2], Theme.GOLD[3], true)
+		Theme.TooltipLine(tip, self:F("JRN_REWARD", table.concat(rewards, " · ")), Theme.GOLD, true)
 	end
 	if type(goal.hint) == "table" and #goal.hint > 0 then
-		tip:AddLine(" ")
-		tip:AddLine(L.JRN_HINT_TODO, Theme.PARCHMENT[1], Theme.PARCHMENT[2], Theme.PARCHMENT[3])
-		for _, text in ipairs(goal.hint) do
-			tip:AddLine(text, Theme.TEXT[1], Theme.TEXT[2], Theme.TEXT[3], true)
-		end
+		Theme.TooltipLine(tip, " ")
+		Theme.TooltipLine(tip, L.JRN_HINT_TODO, Theme.PARCHMENT)
+		for _, text in ipairs(goal.hint) do Theme.TooltipLine(tip, text, Theme.TEXT, true) end
 	end
-	tip:AddLine(" ")
-	tip:AddLine(L.JRN_HINT_CLICK, Theme.MUTED[1], Theme.MUTED[2], Theme.MUTED[3])
+	Theme.TooltipLine(tip, " ")
+	Theme.TooltipHint(tip, L.JRN_HINT_CLICK)
 	tip:Show()
 	return tip
 end
@@ -918,8 +920,17 @@ local function BuildLine(frame, index)
 	end)
 	line:SetScript("OnDragStart", StartDrag)
 	line:SetScript("OnDragStop", StopDrag)
-	line:SetScript("OnEnter", function(self) ns:ShowJournalGoalTooltip(self, self.goal) end)
-	line:SetScript("OnLeave", HideTooltip)
+	-- 3.1.0 : une ligne cliquable s'éclaire au survol (voile du thème), comme
+	-- les lignes du carnet
+	line.hover = Theme.CreateHover and Theme.CreateHover(line) or nil
+	line:SetScript("OnEnter", function(self)
+		if self.hover then self.hover:Show() end
+		ns:ShowJournalGoalTooltip(self, self.goal)
+	end)
+	line:SetScript("OnLeave", function(self)
+		if self.hover then self.hover:Hide() end
+		HideTooltip()
+	end)
 
 	-- la carte en vedette : bandeau du thème (fond WINDOW, filet, liseré ambre)
 	if featured then
@@ -997,9 +1008,9 @@ function ns:EnsureJournalTracker()
 		if type(tip) ~= "table" then return end
 		pcall(tip.SetOwner, tip, self, "ANCHOR_LEFT")
 		if tip.ClearLines then tip:ClearLines() end
-		tip:AddLine(L.JRN_TRK_TIP_TITLE, Theme.GOLD[1], Theme.GOLD[2], Theme.GOLD[3])
-		tip:AddLine(L.JRN_TRK_TIP_CLICK, Theme.MUTED_LIGHT[1], Theme.MUTED_LIGHT[2], Theme.MUTED_LIGHT[3])
-		tip:AddLine(L.JRN_TRK_TIP_RESTORE, Theme.MUTED_LIGHT[1], Theme.MUTED_LIGHT[2], Theme.MUTED_LIGHT[3])
+		Theme.TooltipTitle(tip, L.JRN_TRK_TIP_TITLE)
+		Theme.TooltipHint(tip, L.JRN_TRK_TIP_CLICK)
+		Theme.TooltipHint(tip, L.JRN_TRK_TIP_RESTORE)
 		tip:Show()
 	end)
 	title:SetScript("OnLeave", HideTooltip)
@@ -1012,6 +1023,17 @@ function ns:EnsureJournalTracker()
 	title.state = Theme.Text(title, Theme.F_SMALL, Theme.MUTED)
 	title.state:SetPoint("RIGHT", title, "RIGHT", -2, 0)
 	title.state:SetTextColor(Theme.MUTED[1], Theme.MUTED[2], Theme.MUTED[3])
+	-- socle 3.2, thème forgé : titre en or clair sur un filet lumineux qui
+	-- part de la droite (le bloc est aligné à droite) et s'efface vers la gauche
+	if ns.QCForged and ns.QCForged() then
+		local K = ns.JOURNAL_TRACKER_FORGE
+		title.forged = true
+		local t = ns.QC_FORGE.title
+		title.text:SetTextColor(t[1], t[2], t[3])
+		title.rule = ns.QCForgeLine(title, "BACKGROUND", true)
+		title.rule:SetPoint("BOTTOMRIGHT", title, "BOTTOMRIGHT", 0, K.ruleY)
+		title.rule:SetWidth(math.floor(TRACKER_WIDTH * K.ruleW))
+	end
 	frame.title = title
 
 	frame.lines = {}
@@ -1025,12 +1047,14 @@ end
 -- Visible si : module allumé, suivi allumé, pas en combat (si réglé), et au
 -- moins un objectif. Un titre seul, sans rien à suivre, ne serait que du bruit,
 -- sauf s'il reste des masqués (2.10.0) : il sert à les réafficher.
+local NO_GOALS = {}   -- jamais remplie
 function ns:RefreshJournalTracker()
 	local db = self:DB()
 	local frame = self.journalTracker
 	local wanted = ModuleOn() and db.journalTracker ~= false
 		and not (db.journalTrackerCombat ~= false and InCombat())
-	local goals, hidden = {}, 0
+	-- 3.1.0 : caché (combat, module coupé) : la liste vide partagée, pas de table neuve
+	local goals, hidden = NO_GOALS, 0
 	if wanted then goals, hidden = self:JournalTrackerObjectives() end
 	if #goals == 0 and hidden == 0 then
 		if frame then frame:Hide() end
@@ -1144,12 +1168,9 @@ local HANDLERS = {
 	PLAYER_REGEN_ENABLED  = function() ns.journalTrackerCombat = false; ns:RefreshJournalTracker() end,
 }
 
-local eventFrame = CreateFrame("Frame")
-for event in pairs(HANDLERS) do pcall(eventFrame.RegisterEvent, eventFrame, event) end
-eventFrame:SetScript("OnEvent", function(_, event, ...)
-	local ok, err = pcall(HANDLERS[event], ...)
-	if not ok and ns.RecordError then ns:RecordError("journaltracker:" .. tostring(event), err) end
-end)
-ns.journalTrackerEventFrame = eventFrame
+-- 3.1.0 : cadre d'événements commun (ns.Listen, Libs/Socle/Compat.lua) ;
+-- sans porte : l'état de combat et les zones de relais sont suivis même
+-- module coupé
+ns.Listen("journaltracker", HANDLERS)
 
 if ns.Mark then ns.Mark("JournalTracker") end

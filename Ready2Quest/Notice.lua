@@ -76,6 +76,9 @@ ns.NOTICE_PULSE = 8        -- secondes de pulsation
 ns.NOTICE_LINGER = 60      -- puis visible, atténuée, avant de disparaître
 local SIZE = 40            -- la tuile ; l'icône du jeu tient dedans, à 5 px du bord
 local ICON_INSET = 5
+-- thème forgé : teinte de la plaque (bouton neutre), lueur du filet du bas,
+-- filet rentré dans la plaque (son bord noir)
+ns.NOTICE_FORGE = { plate = ns.FORGE.neutral, glowAlpha = 0.8, glowHeight = 12, accentInset = 3 }
 
 local function InCombat()
 	if type(InCombatLockdown) == "function" and InCombatLockdown() then return true end
@@ -168,6 +171,20 @@ function ns:EnsureNotice()
 	frame.accent:SetPoint("BOTTOMLEFT", frame, "BOTTOMLEFT", 1, 1)
 	frame.accent:SetPoint("BOTTOMRIGHT", frame, "BOTTOMRIGHT", -1, 1)
 	frame.accent:SetHeight(2)
+	-- thème forgé : la tuile en plaque (bouton neutre), le filet du bas en
+	-- lumière (un point étiré de la couleur du rapport, posé à l'affichage)
+	if ns.ForgeOn and ns.ForgeOn() then
+		local K = ns.NOTICE_FORGE
+		frame.plate = ns.ForgeCard(frame, { color = K.plate, sub = 2, layer = "BORDER" })
+		ns.ForgeHideFlat(frame.tile, frame.border)
+		frame.accentGlow = ns.ForgeDot(frame, nil, Theme.GOLD, K.glowAlpha, "OVERLAY")
+		frame.accentGlow:ClearAllPoints()
+		frame.accentGlow:SetPoint("CENTER", frame.accent, "CENTER", 0, 0)
+		frame.accentGlow:SetSize(SIZE, K.glowHeight)
+		frame.accent:ClearAllPoints()
+		frame.accent:SetPoint("BOTTOMLEFT", frame, "BOTTOMLEFT", K.accentInset, K.accentInset)
+		frame.accent:SetPoint("BOTTOMRIGHT", frame, "BOTTOMRIGHT", -K.accentInset, K.accentInset)
+	end
 
 	-- icône du jeu, désaturée puis teintée : un jaune teinté donnerait un vert sale
 	frame.icon = frame:CreateTexture(nil, "ARTWORK")
@@ -227,6 +244,7 @@ function ns:DisplayNotice()
 	frame.icon:SetVertexColor(color[1], color[2], color[3], 1)
 	frame.glow:SetVertexColor(color[1], color[2], color[3], 1)
 	frame.accent:SetVertexColor(color[1], color[2], color[3], 1)
+	if frame.accentGlow then frame.accentGlow:SetVertexColor(color[1], color[2], color[3], ns.NOTICE_FORGE.glowAlpha) end
 	local now = ns.Now()
 	notice.shownAt = now
 	notice.pulseUntil = now + ns.NOTICE_PULSE
@@ -246,11 +264,14 @@ function ns:UpdateNotice(now)
 		return
 	end
 	if now < notice.pulseUntil then
+		notice.lingering = nil
 		local wave = 0.5 + 0.5 * math.sin((now - notice.shownAt) * math.pi * 2 / 1.2)
 		frame.glow:SetAlpha(0.35 + 0.65 * wave)
 		frame.icon:SetAlpha(0.75 + 0.25 * wave)
 		frame:SetAlpha(1)
-	else
+	elseif not notice.lingering then
+		-- une minute d'icône atténuée, immobile : posée une fois, pas à chaque image
+		notice.lingering = true
 		frame.glow:SetAlpha(0.25)
 		frame.icon:SetAlpha(1)
 		frame:SetAlpha(0.6)
@@ -265,12 +286,98 @@ function ns:HideNotice()
 end
 
 -- ---------------------------------------------------------------------------
--- Fin de combat : l'icône en attente s'affiche
+-- Combat (R2Q 1.35.0, docs/UI.md « Passe de cohérence Ready2Quest 1.35.0 ») :
+-- au premier coup, rien de ce qui s'est ouvert tout seul ne reste à l'écran.
+--   * l'icône d'annonce s'efface ; si elle n'avait pas tenu la moitié de son
+--     temps, elle revient après le combat (sinon elle est oubliée) ;
+--   * un rapport ouvert tout seul (icône coupée : Avant le départ, Retour
+--     d'expédition, Avant le donjon) se range et revient après le combat ;
+--     ouvert par le joueur (/r2q, clic sur l'icône, flèche), il reste ;
+--   * les modules inscrivent leurs bandeaux dans ns.COMBAT_UI :
+--     { id, hide = function(ns) -> vrai s'il était affiché, restore = function(ns) }.
+-- ---------------------------------------------------------------------------
+ns.COMBAT_UI = ns.COMBAT_UI or {}
+ns.InCombatNow = InCombat
+
+-- Rapports qui s'ouvrent seuls quand l'icône est coupée (champ de ns)
+ns.REPORT_WINDOWS = { "window", "expeditionFrame", "dungeonFrame" }
+
+-- Le rapport `field` affiché a-t-il été ouvert tout seul ? Avec l'icône, un
+-- rapport ne s'ouvre qu'au clic ; sans elle, seul le check à la main (et sa
+-- flèche) vient du joueur.
+function ns:ReportOpenedAlone(field)
+	if self:WantsNotice() then return false end
+	if field == "window" then return self.lastTrigger ~= "manual" end
+	return true
+end
+
+table.insert(ns.COMBAT_UI, {
+	id = "notice",
+	hide = function(self)
+		local frame, notice = self.noticeFrame, self.notice
+		if not (frame and notice and frame:IsShown()) or self.editMode then return false end
+		frame:Hide()
+		if type(GameTooltip) == "table" and GameTooltip.Hide and GameTooltip.GetOwner
+			and GameTooltip:GetOwner() == frame then GameTooltip:Hide() end
+		local life = ns.NOTICE_PULSE + ns.NOTICE_LINGER
+		if notice.shownAt and (ns.Now() - notice.shownAt) < life / 2 then
+			self.noticePending = true
+		else
+			self.notice, self.noticePending = nil, nil
+		end
+		return false   -- le retour passe par noticePending
+	end,
+})
+
+table.insert(ns.COMBAT_UI, {
+	id = "reports",
+	hide = function(self)
+		local hidden
+		for _, field in ipairs(ns.REPORT_WINDOWS) do
+			local frame = self[field]
+			if frame and frame.IsShown and frame:IsShown() and self:ReportOpenedAlone(field) then
+				frame:Hide()
+				hidden = hidden or {}
+				hidden[#hidden + 1] = frame
+			end
+		end
+		self.reportsAfterCombat = hidden
+		return hidden ~= nil
+	end,
+	restore = function(self)
+		for _, frame in ipairs(self.reportsAfterCombat or {}) do frame:Show() end
+		self.reportsAfterCombat = nil
+	end,
+})
+
+function ns:CombatStartUI()
+	local hidden = {}
+	for _, entry in ipairs(ns.COMBAT_UI) do
+		local ok, was = pcall(entry.hide, self)
+		if ok and was and entry.restore then hidden[#hidden + 1] = entry end
+		if not ok and self.RecordError then self:RecordError("combat:" .. tostring(entry.id), was) end
+	end
+	self.combatHidden = hidden
+end
+
+function ns:CombatEndUI()
+	if self.noticePending and self.notice then self:DisplayNotice() end
+	local hidden = self.combatHidden or {}
+	self.combatHidden = nil
+	for _, entry in ipairs(hidden) do
+		local ok, err = pcall(entry.restore, self)
+		if not ok and self.RecordError then self:RecordError("combat:" .. tostring(entry.id), err) end
+	end
+end
+
+-- ---------------------------------------------------------------------------
+-- Début et fin de combat
 -- ---------------------------------------------------------------------------
 local events = CreateFrame("Frame")
 pcall(events.RegisterEvent, events, "PLAYER_REGEN_ENABLED")
-events:SetScript("OnEvent", function()
-	if ns.noticePending and ns.notice then ns:DisplayNotice() end
+pcall(events.RegisterEvent, events, "PLAYER_REGEN_DISABLED")
+events:SetScript("OnEvent", function(_, event)
+	if event == "PLAYER_REGEN_DISABLED" then ns:CombatStartUI() else ns:CombatEndUI() end
 end)
 ns.noticeEventFrame = events
 
@@ -282,6 +389,8 @@ if StartEdit and StopEdit then
 	function ns:StartEditMode()
 		StartEdit(self)
 		local frame = self:EnsureNotice()
+		-- l'opacité de l'icône atténuée sera reposée après le placement
+		if self.notice then self.notice.lingering = nil end
 		if frame then
 			if not self.notice then
 				frame.icon:SetTexture(ns.NOTICE_ICONS.depart)

@@ -9,6 +9,10 @@
 -- différentes, délai), reprise après un /reload au milieu de l'engagement,
 -- journal (50 lignes), temps de repos, hauts faits, commandes, menu, la vue
 -- « Échanges » dans les deux styles et ses contrastes.
+-- 3.1.0 : affirme l'ancien habillage (carnet en parchemin, scènes en bois, bandeaux
+-- dorés, anneau) : le drapeau QNS.AZEROTH_LEGACY rallumé pour tout le module
+-- (remis à la valeur du produit à sa fin, tests/run_tests.lua)
+T.Legacy(true)
 local Check, Say, ResetWorld, NS, Mock = T.Check, T.Say, T.ResetWorld, T.QNS, T.Mock
 
 local X = { saved = {}, sent = {} }

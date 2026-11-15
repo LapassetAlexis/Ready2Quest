@@ -7,9 +7,12 @@ local ADDON, ns = ...
 
 ns.APP = {
 	id = "Ready2Quest",
-	version = "1.34.0",
+	version = "1.35.0",
 	-- nom dans l'en-tête des réglages, le « 2 » en bleu
 	brand = "Ready|cff5b8fd62|rQuest",
+	-- couleur d'identité dans le thème forgé (socle 3.3, Theme.IDENTITY_TOKENS) :
+	-- l'or (défaut), la sélection en bleu arcane
+	identity = "gold",
 	-- sauvegarde (## SavedVariables), et anciens noms repris une fois
 	db = "Ready2QuestDB",
 	legacyDB = { "ReadyToQuestDB", "SacEtDepartDB" },

@@ -54,11 +54,13 @@ function ns:AdviceThresholds()
 		if ok and type(value) == "table" then db = value end
 	end
 	db = db or {}
-	return {
-		bags = tonumber(db.bagFreeThreshold) or 3,
-		food = math.max(4, tonumber(db.vivresThreshold) or 0),
-		durability = tonumber(db.durabilityMinPct) or 25,
-	}
+	-- 3.1.0 : une table gardée, remplie à chaque examen (toutes les 3 s)
+	local limits = ns.adviceLimits
+	if not limits then limits = {}; ns.adviceLimits = limits end
+	limits.bags = tonumber(db.bagFreeThreshold) or 3
+	limits.food = math.max(4, tonumber(db.vivresThreshold) or 0)
+	limits.durability = tonumber(db.durabilityMinPct) or 25
+	return limits
 end
 
 -- Lieu sûr : celui de Ready2Quest s'il est là, sinon repos, lieux connus
@@ -91,7 +93,9 @@ end
 
 function ns:AdviceNewTrip()
 	local state = self:AdviceState()
-	state.said, state.hearthWasCooling, state.health = {}, nil, nil
+	-- en ville, examiné toutes les 3 s : pas de table neuve si rien n'a été dit
+	if type(state.said) ~= "table" or next(state.said) ~= nil then state.said = {} end
+	state.hearthWasCooling, state.health = nil, nil
 end
 
 -- ---------------------------------------------------------------------------
@@ -246,11 +250,21 @@ local function Soon()
 	if (ns.adviceNextAt or 0) > at then ns.adviceNextAt = at end
 end
 
-local HANDLERS = {
+-- 3.1.0 : cible, survol et barres de vie ne servent pas en combat
+-- (AdviceSeeUnit sort aussitôt) : leur écoute est mise en attente de
+-- l'entrée en combat à la sortie (ns.EventHold, Libs/Socle/Compat.lua)
+local UNIT_HANDLERS = {
 	PLAYER_TARGET_CHANGED = function() ns:AdviceSeeUnit("target") end,
 	UPDATE_MOUSEOVER_UNIT = function() ns:AdviceSeeUnit("mouseover") end,
 	NAME_PLATE_UNIT_ADDED = function(unit) ns:AdviceSeeUnit(unit) end,
+}
+local HANDLERS = {
+	PLAYER_TARGET_CHANGED = UNIT_HANDLERS.PLAYER_TARGET_CHANGED,
+	UPDATE_MOUSEOVER_UNIT = UNIT_HANDLERS.UPDATE_MOUSEOVER_UNIT,
+	NAME_PLATE_UNIT_ADDED = UNIT_HANDLERS.NAME_PLATE_UNIT_ADDED,
+	PLAYER_REGEN_DISABLED = function() ns.EventHold("advice:units", true) end,
 	PLAYER_REGEN_ENABLED = function()
+		ns.EventHold("advice:units", false)
 		-- secrètes sur le moteur récent (Forever) : on ne sait pas, on ne dit rien
 		local health = ns.Plain(Call(rawget(_G, "UnitHealth"), "player"))
 		local maximum = ns.Plain(Call(rawget(_G, "UnitHealthMax"), "player"))
@@ -268,13 +282,12 @@ local HANDLERS = {
 }
 ns.ADVICE_HANDLERS = HANDLERS
 
-local ok, frame = pcall(CreateFrame, "Frame")
-if ok and frame then
-	for event in pairs(HANDLERS) do pcall(frame.RegisterEvent, frame, event) end
-	frame:SetScript("OnEvent", function(_, event, ...)
-		local done, err = pcall(HANDLERS[event], ...)
-		if not done then ns:RecordError("advice:" .. event, err) end
-	end)
+-- 3.1.0 : cadre d'événements commun (ns.Listen, Libs/Socle/Compat.lua) ;
+-- ns.ADVICE_HANDLERS les garde tous (tests, simulation)
+for event, fn in pairs(HANDLERS) do
+	ns.On(event, UNIT_HANDLERS[event] and "advice:units" or "advice", fn, "advice:" .. event)
+end
+do
 	-- examen régulier : ce qui change sans événement (foyer, munitions…).
 	-- 2.11.2 (fiche 25) : regardé dix fois par seconde sur l'horloge de
 	-- l'addon (l'échéance reste ns.adviceNextAt), plus d'OnUpdate permanent
@@ -285,7 +298,6 @@ if ok and frame then
 		local done, err = pcall(ns.AdviceEvaluate, ns)
 		if not done then ns:RecordError("advice:poll", err) end
 	end)
-	ns.adviceEventFrame = frame
 end
 
 if ns.Mark then ns.Mark("Advice") end

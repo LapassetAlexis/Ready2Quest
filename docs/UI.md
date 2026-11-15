@@ -21,8 +21,8 @@ et `/qc diag` disent « Socle : partagé » ou « propre ».
 
 Inspiration : les addons « premium » récents (fenêtre large, navigation à
 gauche, en-tête à grand titre, réglages en cartes sur deux colonnes). On garde
-notre identité : l'ambre (accent), le bleu de nuit (information, départ), la
-boussole et le dragonnet.
+notre identité : l'ambre (accent), le bleu de nuit (information, départ), et
+les médaillons des deux logos (l'écu coché au « ! » des quêtes, l'empreinte).
 
 ## Police
 
@@ -268,7 +268,7 @@ Toutes les autres fenêtres et cadres suivent le même langage, à leur taille
 | Place au butin           | dialogue 480   | butin bloqué dans une carte à liseré ambre ; cartes icône, nom, prix, « Jeter » (plein) / « Ignorer » ; aide dans le pied ; hauteur au nombre de lignes |
 | Rangs de sorts           | dialogue 520   | cartes icône, sort, case ; « Mettre à jour » (accent) / « Ignorer » ; « Tout mettre à jour » plein dans le pied |
 | Sac plein                | bandeau 380    | liseré orange, suggestion, « Jeter » plein, « Autre », « Garder toujours » |
-| Kit de camp              | bandeau 300 × 28 | décompte centré |
+| Kit de camp              | bandeau 300 × 28 | décompte centré ; s'élargit au texte jusqu'à 440 (1.35.0) |
 | Résumé de stuff          | `SkinToast`    | même mise en page (titre espacé, filet, une ligne), fond autour, suit le libellé |
 | Stats du portrait        | bandeau 206    | liseré à la couleur de la classe, classe et niveau d'objet, filet, valeurs à droite |
 | Mode déplacement         | bandeau 460    | titre et aide à gauche, « Terminer le déplacement » plein à droite |
@@ -322,14 +322,14 @@ Même langage, briques du lot 4 dans le socle :
 | › Guide                  | sommaire + texte    | sommaire en tuiles à gauche, « Revoir le tutoriel » en bas ; texte de la section par blocs, paginé ; chiffres lus dans les constantes des modules |
 | Fiche de dresseur        | fenêtre 780 × 580   | au-dessus du carnet ; compagnon en 3D, vitrine de trois créatures, chiffres, sceaux, barres de hauts faits par catégorie |
 | Coffre de zone           | dialogue 480        | tuiles sur deux colonnes (sorte en étiquette, nom), hauteur au nombre d'objets, « Plus tard » dans le pied |
-| Scène de capture         | bandeau 340 × 386 (Azeroth 360 × 504) | modèle de la créature, étoiles, filet lancé, verdict ; créature échappée grisée sous le filet déchiré ; Échap la ferme |
+| Scène de capture         | bandeau 340 × 386 (forgé 340 × 372, ancien habillage 360 × 504) | modèle de la créature, étoiles, filet lancé, verdict ; créature échappée grisée sous le filet déchiré ; Échap la ferme |
 | Capture possible         | bandeau 384 × 102 (Azeroth 388 × 126) | icône, nom, étoiles, aide ; reste affiché tant que la souris est dessus |
 | Liste de capture         | bandeau 300         | six lignes de 24 |
 | Tout capturer            | bandeau (340 au moins) | tuiles des créatures (modèle 3D, nom, étoiles) ; choix du filet : bandeau 248 |
-| Résultat de capture      | bandeau 300 × 66    | verdict |
-| Haut fait obtenu         | bandeau 280 × 50    | losange ambre, titre, nom ; regroupe plusieurs hauts faits |
-| Haut fait de guilde      | bandeau 340 × 84    | icône, membre, haut fait, créature à la couleur `Theme.RANK` |
-| Compagnon à l'écran      | cadre discret       | cadre et fond gagnés ; plaque du nom (F_LABEL) et de l'humeur (MUTED clair, sur bande sombre) ; modèle estompé en combat |
+| Résultat de capture      | bandeau 300 × 66 (forgé 360 × 78) | verdict |
+| Haut fait obtenu         | bandeau 280 × 50 (forgé 330 × 70) | losange ambre, titre, nom ; regroupe plusieurs hauts faits |
+| Haut fait de guilde      | bandeau 340 × 84 (forgé 380 × 78) | icône, membre, haut fait, créature à la couleur `Theme.RANK` |
+| Compagnon à l'écran      | cadre discret       | cadre et fond gagnés ; plaque du nom (F_LABEL) et de l'humeur (MUTED clair, sur bande sombre) ; modèle estompé en combat ; au thème forgé, médaillon rond (« Thèmes du socle », compagnon) |
 | Bulle, tutoriel          | bulle 220           | « Passer » au trait, « Suivant » plein, sous le texte |
 | Fiche au survol          | bandeau 220         | nom F_TITLE, stade et humeur, envies en barres fines avec valeur, filet, aide pâle ; hauteur au contenu |
 | Garde-manger (Maj+clic)  | bandeau             | titre en capitales, cases 34 au filet EDGE (ambre au survol), infobulle du thème |
@@ -358,11 +358,15 @@ alerte rouge à l'écran : avec Ready2Quest, sa marque d'aggro ; le compagnon
 ne clignote pas en même temps.
 
 Aperçus : `qc-journal-creature|menagerie|day|day-azeroth|progress|guide`,
-`qc-capture`, `qc-capture-shake|ok|fail`, `qc-capture-toast`, `qc-companion`,
-`qc-companion-hover`, `qc-tutorial`, `qc-pantry`, `qc-chest`, `qc-notify`,
-`qc-tracker`, `qc-tooltip`, `qc-options-companion`, `qc-options-ornaments`.
-Pas encore d'aperçu des Hauts faits, d'Exploration en Azeroth ni de la fiche
-de dresseur.
+`qc-journal-feats|reserve|juke|confirm|winter`, `qc-trainer`, `qc-allure`,
+`qc-capture`, `qc-capture-shake|ok|fail|shiny|prep|batch3|batch6|chooser`,
+`qc-capture-toast`, `qc-result-forge`, `qc-result-shiny-forge`,
+`qc-feat-forge`, `qc-feat-big-forge`, `qc-guild-forge`, `qc-tour-forge`,
+`qc-companion`, `qc-companion-hover|frame-tint|talk|sad|winter`,
+`qc-tutorial`, `qc-pantry`, `qc-chest`, `qc-notify`, `qc-tracker`,
+`qc-tooltip`, `qc-options-companion`, `qc-options-ornaments`
+(`qc-journal-day-azeroth` : l'ancien habillage, sous son drapeau). Pas encore
+d'aperçu d'Exploration.
 
 ## Composants 3.0 (QuestCompanion 3.0.0, socle 3.0)
 
@@ -396,7 +400,8 @@ illisibles, solde de paillettes peu visible, « Acheter » muet au clic).
 | Bouton d'accent | `"accent"` ; Azeroth : rouge | idem | idem |
 | Bouton « aventure » | `"adventure"` (Ready2Quest) | idem | idem |
 | Inactif | `button:SetInactive(on, raison)` | — | aspect désactivé, infobulle de la raison, **clic gardé** : le module explique (plus employé par l'Échoppe depuis la bêta 6 : `SetEnabled(false)` + `disabledTip`) |
-| Bouton-icône | `Theme.CreateIconButton` | 24 | gris désaturé au repos, ambre au survol |
+| Bouton-icône | `Theme.CreateIconButton` | 24 | gris désaturé au repos, ambre au survol ; appui (icône 1, −1, filet ambre sombre) et désactivé (filet EDGE_SOFT, icône à 30 %, sans survol) depuis le socle 3.1 |
+| Fermer, roue crantée | `Theme.CreateCloseButton`, `CreateGearButton` | 22-24 | survol ; appui (contenu 1, −1 ; filet ambre sombre pour [×]) depuis le socle 3.1 (`Theme.PressFeedback`) |
 | Onglet | `Theme.CreateNavItem` | 28 (Sobre), 29 au pas de 31 (Azeroth) | survol, choisi, pastille |
 | Puces (vue, filtre) | `Theme.CreateChips` | `CONTROL_HEIGHT` 24, F_BODY | au repos, survol, choisie (ambre ; Azeroth : surbrillance des catégories) |
 | Liste déroulante | `Theme.CreateDropdown` | `CONTROL_HEIGHT` 24 | — |
@@ -455,12 +460,645 @@ rafraîchissement ne crée aucun cadre (`tests/modules/ui_windows.lua`) ;
 le peintre d'états ne crée rien (voiles de survol et d'appui créés à
 l'habillage) ; pas d'`OnUpdate`.
 
-## Style Azeroth (QuestCompanion)
+## Passe de cohérence 3.1.0 (QuestCompanion, socle 3.1)
 
-Réglage « Style de l'interface » : Sobre (le langage ci-dessus) ou Azeroth
-(doré). Azeroth habille le même contenu, il ne le reconstruit pas
+Relecture de toutes les fenêtres, bandeaux et infobulles du compagnon
+(hors capture, en réécriture à part) : états des contrôles, Échap, combat,
+textes bornés. Tests : `ui_bricks.lua` (« [UI31] »), `banners.lua` (§ 7),
+`qc2_guilde.lua`.
+
+### Corrigé
+
+| Écart | Avant | Après |
+|---|---|---|
+| Appui des petits boutons du socle | [×], bouton-icône et roue crantée sans état « enfoncé » (seuls les `CreateButton` l'avaient) | `Theme.PressFeedback` : contenu décalé de 1, −1, filet ambre sombre ; relâché : survol ou repos ; ancres d'origine remises telles quelles |
+| Bouton-icône désactivé | `Disable()` sans effet visible, survol ambre quand même | filet `DISABLED.edge`, icône à 30 %, pas de survol ni d'appui, infobulle gardée |
+| Infobulles écrites à la main | `AddLine` avec couleurs recopiées (progression en blanc pur, aide du clic en MUTED) dans le suivi « Carnet », la ligne « fiche de dresseur » et la ligne du bestiaire | `Theme.TooltipTitle` / `TooltipLine` / `TooltipHint` (progression PARCHMENT, aide MUTED clair) ; un test interdit `:AddLine(` dans ces fichiers |
+| Commandes cliquables muettes au survol | étoile et « + » du Juke-box, blocs du tableau de bord du carnet, lignes du bloc « Carnet » : seule l'infobulle disait qu'on pouvait cliquer | voile et filet de survol du thème (`Theme.CreateHover`) ; sur le parchemin Azeroth, les blocs du tableau de bord prennent l'encre du filet |
+| Garde-manger (Maj+clic) | nommé mais pas à Échap, restait ouvert en combat | Échap le ferme ; fermé à l'entrée en combat (comme le menu du compagnon) |
+| Fiche au survol du compagnon | s'ouvrait en combat (strate TOOLTIP, 220 px) dès que la souris passait sur le cadre estompé | ne s'ouvre pas en combat, fermée à `PLAYER_REGEN_DISABLED` ; revient au survol suivant |
+| Bandeaux du carnet et de guilde | mis en file pendant le combat, mais un bandeau déjà affiché restait au haut de l'écran avec son bouton invisible qui prend la souris | effacé dès le combat ; s'il n'avait pas tenu la moitié de son temps, il revient en tête de file après (le résultat de capture s'effaçait déjà) |
+| Bandeau de guilde : 4e ligne | « Clic : sa fiche de dresseur » sur chaque bandeau Sobre (et nulle part en Azeroth) | la ligne ne garde que « et N autres exploits » ; l'aide passe dans l'infobulle du bandeau, dans les deux styles |
+| Textes sans largeur | libellés des envies de la fiche au survol (pouvaient passer sur la barre), titre du garde-manger, titre « Chasse » du menu, trois lignes de l'aperçu des réglages du compagnon | largeur posée, sans retour à la ligne |
+| Blanc en dur | points des hauts faits sur l'écu (`SetTextColor(1, 1, 1)`) | `Theme.WHITE` |
+
+Contraste ajouté : PARCHMENT, TEXT, MUTED clair et GOLD sur le fond
+d'infobulle du jeu (≥ 4,5:1, mesuré dans `ui_bricks.lua`). Aucune autre
+couleur n'a changé.
+
+### Laissé tel quel
+
+| Élément | Pourquoi |
+|---|---|
+| Panneau d'allure et confirmation « changer de compagnon » sans nom global | Échap est géré par la fenêtre (`OnKeyDown`) pour ne fermer qu'elle et pas le carnet dessous ; en combat (clavier non pris), Échap ferme le carnet, qui les ferme avec lui |
+| Carnet, fiche de dresseur, coffre de zone ouverts en combat | ouverts par le joueur : ils restent (rien ne se ferme tout seul) |
+| Échanges | la session se termine déjà au combat ; la page Échanges ne s'ouvre seule qu'à l'acceptation d'une invitation, impossible à lancer en combat |
+| Bulles du compagnon, conseils, visite guidée, visite de Grand-père Hiver, annonces du carnet (Notify) | déjà retenues ou suspendues en combat (seules les alertes `COMBAT_PASS` : brillante, rare vivant, peur) |
+| Cases du garde-manger (pied du carnet, menu) et ↻ des Missions | survol par le filet ambre, déjà documenté ; pas d'appui (cases d'icône, comme les emplacements du jeu) |
+| Boutons de type des Créatures (`MenagerieView.lua`) | bascules dessinées avec repos, survol, choisi : un état « enfoncé » n'y ajouterait rien |
+| Cases du garde-manger vides à 40 % | case d'icône (pas un libellé à lire), même convention que les emplacements vides du jeu |
+| Fenêtres et bandeaux de la capture | hors de cette passe (réécriture en cours) ; ils profitent quand même de l'appui du [×] et des boutons-icônes du socle |
+
+### À regarder en jeu
+
+- Appui du [×], des boutons-icônes (rang des aides de capture, filet à
+  l'écran) et de la roue : le décalage d'un pixel, et surtout que le filet
+  de capture déplacé à la souris garde son icône à sa place.
+- Voile de survol des lignes du bloc « Carnet » sur le monde, et des blocs
+  du tableau de bord sur le parchemin (encre du filet à 10 %).
+- Bandeau du carnet effacé au premier coup reçu, et revenu après le combat.
+
+## Partager (QuestCompanion 3.1.0, `Share.lua`)
+
+- Bouton 24 px (taille `sm`, `ns:ShareButton`) : l'icône de chat du client
+  (`ns.SHARE_ICON` : atlas `communities-icon-chat`, repli
+  `Interface\ChatFrame\UI-ChatIcon-Chat-Up`, par `Theme.PaintClient`),
+  plaque NAV opaque, filet EDGE (Azeroth : le liseré doré des boutons), au
+  survol filet ambre et voile `HOVER_ALPHA`, infobulle « Partager dans le
+  chat ». Sur les bandeaux forgés et ceux de l'ancien habillage, le
+  libellé « Partager » à côté de l'icône (ancien habillage : rôle
+  `share.label`, `lightSoft` sur la plaque ; forgé : `ns.SHARE_FORGE_INK` ;
+  ≥ 4,5:1), le bouton s'élargit à son texte. Né sous le thème forgé, le
+  bouton est une petite plaque du socle (`Theme.ForgeSmallPlate`, neutre,
+  bronze au survol), placée en `ns.SHARE_BUTTON.forge` sur un bandeau ; le
+  menu est habillé par `Theme.DressWindow` (habit de bandeau), titre à
+  l'identité. Bêta 2 : un bandeau qui porte le bouton
+  reste 3 s de plus (`ns.SHARE_EXTRA`) ; sous la souris (bandeau, bouton) ou
+  tant que son menu est ouvert, il ne part pas, puis garde au moins 3 s
+  (`ns.SHARE_RESUME`). Créé une fois par cadre
+  réutilisé (bandeau du carnet, « Capturé ! », scène de capture forgée ou
+  de l'ancien habillage, fiche de la Réserve) : la file des bandeaux (`Banners.lua`) ne change pas.
+- Placement (`ns.SHARE_BUTTON`) : bandeau forgé, en bas à droite (les
+  points vont au médaillon) ; ancien habillage, en bas à droite du bandeau,
+  sous le bouclier ; Sobre, à droite et centré, avant les points d'un haut fait,
+  les textes du bandeau raccourcis d'autant ; scène (forgée ou ancien
+  habillage), coin haut droit
+  (hors de la plaque de titre) ; Réserve, coin haut droit du modèle de la
+  fiche. Hauts faits : clic droit sur une ligne obtenue (infobulle : « Clic
+  droit : partager dans le chat »).
+- Menu des canaux (`ns:ShareMenu`, un cadre, `ns.SHARE_MENU` 160 de large,
+  rangées de 22) : seuls les canaux disponibles (Guilde, Raid ou Groupe,
+  Dire, Copier). Sobre : fond NAV, titre F_CAPS MUTED clair (7,96:1), entrées
+  F_LABEL LABEL (12,77:1 au survol), voile `HOVER_ALPHA`. Azeroth : aplat `woodBg`,
+  liseré doré, Friz Quadrata, rôles `share.title` (`goldHead`) et
+  `share.entry` (`lightSoft`) mesurés sur le bois sous le voile de survol
+  (11,08:1 et 10,22:1).
+  Échap ou un clic ailleurs le referme.
+- Envoi : `SendChatMessage` seulement depuis le clic d'une entrée ; « Copier »
+  (`ChatEdit_InsertLink` si la saisie est ouverte, sinon
+  `ChatFrame_OpenChat`, repli `ChatFrameUtil.OpenChat`) n'envoie rien.
+- Annonce automatique (`ns:AnnounceCaptures`) : brillante ou 3 étoiles, une
+  ligne au groupe (INSTANCE_CHAT, RAID ou PARTY ; guilde avec le second
+  réglage), jamais en combat (file vidée à PLAYER_REGEN_ENABLED), une par
+  canal toutes les 30 s, un lot en une ligne, pas de doublon avec le partage
+  manuel ; envoi refusé : noté une fois, sans message.
+
+## Passe de cohérence Ready2Quest 1.35.0
+
+Même relecture sur les fenêtres, bandeaux et infobulles de Ready2Quest, avec
+les briques du socle 3.1 (aucune modification du socle). Tests :
+`tests/modules/r2q_ui.lua` (« [R2QUI] ») ; `death.lua`, `favorites.lua`,
+`lootroom.lua` mis à jour.
+
+Combat : une seule accroche, `ns.COMBAT_UI` (`Notice.lua`, sur son cadre
+d'événements : `PLAYER_REGEN_DISABLED` en plus). Chaque bandeau s'y inscrit
+(`{ id, hide, restore }`) ; `hide` le range au premier coup, `restore` le
+rend à `PLAYER_REGEN_ENABLED` s'il a lieu d'être.
+
+### Corrigé
+
+| Écart | Avant | Après |
+|---|---|---|
+| Icône d'annonce (« ! », « ? ») en combat | retenue si le combat avait déjà commencé, mais déjà affichée elle restait (bouton de 40 px en haut de l'écran) | effacée au premier coup ; revient après si elle n'avait pas tenu la moitié de ses 68 s, sinon oubliée (règle du carnet) |
+| Rapports ouverts seuls (icône coupée : Avant le départ, Retour d'expédition, Avant le donjon) | restaient au milieu de l'écran pendant le combat | rangés au premier coup, rendus après ; ouverts par le joueur (/r2q, flèche, clic sur l'icône) ils restent (`ns:ReportOpenedAlone`) |
+| Bandeau « Sac plein » | restait en combat avec ses boutons (« Jeter » refusé en combat) ; sans nom, pas fermé par Échap | rangé au premier coup, revient si les sacs sont toujours pleins ; nommé `Ready2QuestBagSpace`, fermé par Échap (comme les sacs du jeu) |
+| Résumé de stuff | apparaissait au centre à chaque changement d'arme en combat | effacé au premier coup, pas de nouveau en combat (la référence des stats suit) ; aperçu des réglages et mode déplacement inchangés |
+| Lignes du check | toutes éclairées au survol, aucune cliquable (sauf le repli) | le clic fait le geste du conseil : Sacs et Objets gris ouvrent les sacs, Quêtes le journal, Rangs de sorts sa fenêtre ; l'aide du clic en dernière ligne de l'infobulle ; voile de survol seulement sur une ligne qui répond (infobulle ou clic) |
+| Rangs de sorts en combat | « la mise à jour attendra la fin du combat » dans le chat, mais le clic était perdu | le clic (et « Tout mettre à jour ») est retenu et joué à la fin du combat ; message une fois |
+| Après la mort : [×] et Échap | fermaient sans retenir le refus : la fenêtre revenait au changement de zone suivant | valent « Fermer » (`OnHide`) ; le rangement par l'addon (résurrection) et l'interface masquée (Alt+Z) n'en sont pas |
+| Après la mort : ordre | verdict en 4e, après la note pâle des 10 % | verdict juste après les deux options, puis les deux notes pâles |
+| Place au butin : objet plus cher que le butin | ligne entière à 55 % : prix à 2,68:1, « Jeter » d'aspect désactivé alors qu'il marche | ligne opaque, icône estompée, prix MUTED (5,79 sur ROW, 5,49 sur ROW_ALT) |
+| Infobulles écrites à la main | `AddLine` avec couleurs recopiées : aggro (verdict, réserve en MUTED), favoris (statut, aide en MUTED), allure (ligne vide), récompense (deux lignes) | `Theme.TooltipLine` / `TooltipHint` (aides en MUTED clair) ; un test interdit `:AddLine(` dans les modules |
+| Textes sans borne | « barre N, case N » (pouvait passer à la ligne sur la carte suivante), « et N autre(s) » du pied des Rangs de sorts, étiquette « Pour toi » / prix de vente sur le bouton de récompense, texte du kit de camp (« assieds-toi ou fabrique ici » dépassait les 300 px) | une ligne, largeur posée ; le bandeau du camp s'élargit au texte (300 à 440), l'icône reste collée |
+
+Contrastes : seuls changent le prix de la ligne de butin (opaque) et les
+aides d'infobulle (MUTED → MUTED clair) ; mesurés dans `r2q_ui.lua` avec les
+couleurs de verdict (GREEN, RED, ORANGE_DEEP, BLUE, GOLD) sur le fond
+d'infobulle (≥ 4,5:1).
+
+### Laissé tel quel
+
+| Élément | Pourquoi |
+|---|---|
+| Fenêtres ouvertes par le joueur (check à la main, Rangs de sorts, réglages, fiche ou bilan ouverts d'un clic) | elles restent en combat (règle commune) |
+| Place au butin en combat | liée à la fenêtre de butin, ouverte par le joueur ; se ferme avec elle |
+| Après la mort | pas de combat quand on est mort |
+| Bandeau du kit de camp en combat | en haut de l'écran, souris coupée, une ligne ; son décompte tourne sur l'horloge de l'addon (passe de performance en cours, pas touché) |
+| Stats au survol du portrait en combat | ne vient qu'au survol, comme une infobulle du jeu |
+| Choix de la récompense de quête | la bonne est cernée d'ambre et étiquetée ; la sélectionner d'office ferait gagner un clic mais risque une récompense non voulue, et le gestionnaire du client 1.12 (`QuestRewardItem_OnClick`) lit `this` : pas vérifiable hors jeu |
+| Autres lignes du check (vivres, potions, buffs, repos, durabilité, réparation, réactifs, pierre de foyer, sorts, camp, métiers) | pas de geste en un clic hors d'un marchand ou d'un entraîneur : pas de clic promis |
+| « Fermer » du pied et [×] dans les dialogues | convention de la fenêtre type, gardée |
+| `Dungeon.lua` | hors de cette passe (fichier tenu ailleurs) ; sa fenêtre profite quand même du rangement en combat par `ns.COMBAT_UI` |
+| Couleur de repli de la classe (`1, 0.82, 0`, `Stats.lua`) | seulement quand `RAID_CLASS_COLORS` manque ; c'est l'or du jeu |
+| Icône d'annonce et bandeau du camp au même point par défaut (`TOP`, −150) | ne se montrent presque jamais ensemble (départ d'une ville / feu de camp hors ville) et se déplacent ; à placer par `ns.PopupPlace` si un retour le signale |
+
+### À regarder en jeu
+
+- Clic sur Sacs (`OpenAllBags`, sinon `ToggleBackpack`) et Quêtes
+  (`ToggleQuestLog`) sur Forever : les fonctions sont cherchées au moment du
+  clic ; sans elles, la ligne n'a ni clic ni aide.
+- Bandeau « Sac plein » et icône d'annonce effacés au premier coup, et revenus
+  à la fin du combat ; rapport (icône coupée) rangé puis rendu.
+- Rangs de sorts : « Mettre à jour » cliqué en combat, appliqué à la sortie.
+- Étiquette de la récompense conseillée : une ligne calée à droite, bornée au
+  bouton (largeur du bouton lue à la première marque).
+- Bandeau du camp élargi pour « Buffs du feu de camp : assieds-toi ou fabrique
+  ici », toujours centré.
+
+## Thèmes du socle (socle 3.2 : QuestCompanion 3.1.0, Ready2Quest 1.35.0)
+
+Deux thèmes, pour les deux addons : **Sobre** (ardoise et ambre, à plat : le
+langage décrit plus haut, inchangé) et **Azeroth**, dit « forgé » (le défaut).
+Le thème vit dans le socle (`Theme.lua`, section « Thèmes ») : aucune fenêtre
+n'est habillée une à une.
+
+Maquette validée le 2026-11-14 (référence visuelle) : profondeur (ombre
+portée, bords assombris, champs en creux, boutons en relief), lumière (filets
+qui s'éteignent, points lumineux, sélection en dégradé), identité (médaillon
+du logo qui déborde du coin, police du jeu pour les titres), et une couleur
+qui porte le sens.
+
+### Jetons et police
+
+| | Sobre | Azeroth |
+|---|---|---|
+| `EDGE` (bord, bouton en contour) | `#3a424a` | or patiné `#996b2e` |
+| `EDGE_SOFT` (filets, séparations) | `#2a3138` | or sombre `#4d381f` |
+| `NAV` (colonne, pied, plaque de titre) | `#0d1013` | bois sombre `#16100c` |
+| `TITLE` (titres de fenêtre) | parchemin | identité : or clair `#f6c77d` (R2Q), arcane très clair `#bcd6fb` (QC) |
+| `ACTIVE` (onglet, entrée, ligne choisis) | ambre | sélection : bleu arcane `#5b8fd6` (R2Q), or `#e8a54b` (QC) |
+| Police des rôles DISPLAY, TITLE, CAPS | Inter | Friz Quadrata (`Fonts\FRIZQT__.TTF`) |
+
+`Theme.ApplySkin(id)` modifie ces jetons **sur place** (les tables gardent
+leur identité), et ceux de l'identité de l'addon (section suivante), et
+repose la police des rôles de titre. Posé par le socle dès
+`ADDON_LOADED` (`Store.lua`), avant toute fenêtre. Les encres du texte
+courant ne changent pas. Une brique décide son habit à sa création
+(`Theme.Forged()`) : changer de thème demande un `/reload` pour une fenêtre
+déjà construite ; l'habillage de la fenêtre elle-même (`Theme.DressWindow`)
+suit à l'affichage suivant.
+
+### Identité et sélection (socle 3.3)
+
+Une couleur d'**identité** par addon, une couleur de **sélection** qui est
+l'autre (maquette « option A · tons inversés », 2026-11-14). La famille
+commune ne change pas : cadre d'or, coins, ombre, médaillon, bouton
+principal doré (« or = on y va »), accent bronze, remplissage doré d'un
+curseur ou d'une barre, statuts, raretés, monnaies, brillant.
+
+| | Ready2Quest | QuestCompanion |
+|---|---|---|
+| Identité : titre de fenêtre, plaque d'en-tête, filets lumineux, pilules et sections au ton par défaut | or | bleu arcane |
+| Sélection : entrée, onglet, ligne, puce choisis ; interrupteur actif ; focus d'un champ ; liste ouverte ; second ton des pilules et sections | bleu arcane | or |
+| Style de bouton `arcane` (action neutre : Ouvrir, Changer) | plaque arcane | plaque neutre (le bleu n'y est pas une action) |
+
+- **Déclaration** : `ns.APP.identity` dans `Config.lua` (chargé avant le
+  socle) : `"gold"` (défaut, Ready2Quest) ou `"arcane"` (QuestCompanion) ;
+  absente ou inconnue : `"gold"`. `Theme.IdentityChoice()` la lit ;
+  `Theme.identity` dit celle qui est posée (`nil` en Sobre).
+- **Jetons de rôle** (tables à part, jamais celles de `GOLD` ou `BLUE`,
+  changées sur place par `Theme.ApplySkin` d'après `Theme.IDENTITY_TOKENS`) :
+  `Theme.IDENTITY`, `Theme.IDENTITY_LIGHT` (encre des titres de groupe et de
+  section, filets), `Theme.SELECT`, `Theme.SELECT_LIGHT` (barre, souligné,
+  filet d'une puce choisie). En dérivent : `TITLE`, `ACTIVE`,
+  `FORGE_HEADER.warm` (haut de la plaque d'en-tête, chaud ou froid),
+  `FORGE_PLATE.select` (liste ouverte : arcane ou bronze),
+  `FORGE_PLATE.thumbOn` (curseur d'un interrupteur actif), le style
+  `FORGE_BUTTONS.arcane`, et `Theme.SELECT_ALPHA` (facteur des voiles de
+  sélection : 1 pour le bleu, 0,8 pour l'or, plus clair, pour garder les
+  encres lisibles). En Sobre, rien de cela ne sert : les rôles reprennent
+  l'ambre et les valeurs de départ reviennent.
+- **Tons** : `Theme.FORGE_TONES.identity` et `.second` ;
+  `Theme.ResolveTone(tone)` rend `spec { color, light }, nom` : `nil` ou
+  `"identity"` = l'identité, `"second"` = l'autre couleur (alternance d'un
+  groupe de rangement, sections de résultats de recherche). Anciens noms
+  gardés : `"gold"` = identité, `"arcane"` = second ton. `CreateNavGroup`,
+  `CreateSection`, `CreateGlowRule` prennent ce `tone` ; `label.tone` /
+  `section.tone` valent `"identity"` ou `"second"`.
+- **Voile de sélection** : `Theme.SelectAlpha(alpha)` (alpha ×
+  `SELECT_ALPHA`) pour tout dégradé de choix.
+
+Un module qui habille une surface au thème forgé lit les rôles, jamais
+`GOLD` / `BLUE` pour dire « titre » ou « choisi » :
+
+```lua
+local T = ns.Theme
+if T.Forged() then
+	title:SetTextColor(T.TITLE[1], T.TITLE[2], T.TITLE[3])           -- titre : identité
+	local spec = T.ResolveTone()                                       -- ton par défaut
+	dot:SetVertexColor(spec.light[1], spec.light[2], spec.light[3], 1)
+	T.Gradient(row.tint, "HORIZONTAL", T.SELECT, T.SelectAlpha(0.25),  -- ligne choisie
+		T.SELECT, T.SelectAlpha(0.04))
+	bar:SetVertexColor(T.SELECT_LIGHT[1], T.SELECT_LIGHT[2], T.SELECT_LIGHT[3], 1)
+end
+```
+
+Lire la table au moment de peindre (ou la garder par référence, comme
+`ns.QC_FORGE.title = Theme.TITLE`, `ns.QC_FORGE.glow = Theme.IDENTITY`) :
+jamais une copie faite au chargement, avant `ApplySkin`. Les tests
+`tests/modules/ui_identite.lua` vérifient les rôles des deux addons, le
+retour en Sobre et les contrastes des nouvelles paires.
+
+### Matières (nos textures, `tools/gen_ui_assets.py`)
+
+Formes, reliefs et lueurs calculés par script, écrits dans
+`Libs/Socle/Media/` (TGA 32 bits, 148 Ko en tout) ; aucune illustration, rien
+du jeu. `Theme.ART` :
+
+| Clé | Fichier | Rôle |
+|---|---|---|
+| `frame` | `cadre.tga` 64, marge 16 | cadre d'orfèvre (en couleurs), centre vide |
+| `shadow` | `ombre.tga` 64, marge 28 | ombre portée |
+| `corner` | `coin.tga` 64 | coin haut gauche, retourné pour les trois autres |
+| `plate` | `plaque.tga` 32, marge 8 | plaque en relief, **grise** : la teinte la multiplie |
+| `inset` | `creux.tga` 32, marge 8 | creux, gris : le filet prend la teinte, le fond reste presque noir |
+| `line` | `lueur_ligne.tga` 256 × 8 | filet lumineux qui s'éteint à droite (blanc, se teinte) |
+| `dot` | `lueur_point.tga` 32 | point lumineux (blanc, se teinte) |
+| `vignette` | `vignette.tga` 64 | bords assombris d'une fenêtre |
+| `ring` | `anneau.tga` 128 | anneau d'or du médaillon du compagnon (socle 3.3) : bande en relief des rayons 0,80 à 0,94 (`inner`, `outer`), liserés noirs, filet clair, ombre intérieure, quatre pointes, centre vide ; en or, la teinte d'un cadre gagné le multiplie (désaturé d'abord pour l'argent, l'ardoise, le bleu, le vert) ; en fusion ADD, un anneau de lumière |
+
+`Theme.Slice(frame, art, opts)` découpe une matière en 9 tranches (9
+textures) : coins à leur taille, bords et centre étirés. `opts` : `layer`,
+`sub`, `out` (débord), `margin`, `fill = false` (sans centre), `color`,
+`alpha`, `around`. Une découpe coûte 9 textures : bien pour un bouton, un
+champ, un bloc ; jamais sur chaque ligne d'une liste (un dégradé suffit).
+
+### Fenêtres et bandeaux (`Theme.DressWindow`)
+
+Ombre portée (débord 20), bords assombris, cadre d'orfèvre, quatre coins, et
+le **médaillon du logo** (`Theme.LOGO`, 84 px) qui déborde du coin haut
+gauche quand la fenêtre le demande (`opts.emblem` de `CreateWindow`,
+`frame.wantsEmblem` ; `CreateDialog` le demande, la fenêtre de réglages
+aussi : l'en-tête et la marque lui laissent la place). Le cadre, les coins et
+le médaillon vivent sur un cadre à part, au-dessus des enfants de la fenêtre
+(`Theme.CHROME.level`), sans souris. Le filet d'un pixel de Sobre s'efface.
+Posé à la création et à chaque `OnShow` (et `OnSizeChanged` pour un
+bandeau). Un bandeau (`Theme.SkinToast`) a l'ombre et le cadre, ni coins ni
+médaillon ; si son fond déborde (`opts.outset`), l'habillage suit le fond.
+Pas d'habillage : fenêtre déjà habillée par son module (`frame.azeroth`,
+`frame.uiStyle == "azeroth"` : l'ancien habillage de QuestCompanion),
+`opts.chrome = false`, ou plus petite que `Theme.CHROME.min`.
+
+### Contrôles
+
+- **Boutons** : plaque en relief teintée (`Theme.FORGE_PLATE`), encre
+  mesurée (`Theme.FORGE_INK`), par style (`Theme.FORGE_BUTTONS`). La couleur
+  dit le geste : `primary` or (l'action principale du pied, encre sombre sans
+  ombre), `accent` bronze, `outline` ardoise, et trois styles de sens,
+  `add` (vert), `danger` (rouge), `arcane` (action neutre : ouvrir,
+  changer ; plaque bleue dans Ready2Quest, neutre dans QuestCompanion). En
+  Sobre ces trois-là valent `outline`. Survol : la teinte s'éclaire ; appui : elle
+  s'assombrit et le libellé s'enfonce d'un pixel ; désactivé : plaque sombre,
+  texte lisible.
+- **Petits boutons** ([×], icône, engrenage) : petite plaque, bronze au survol.
+- **Case** : creux, coche or avec une lueur. **Interrupteur** : piste en
+  creux, curseur en relief, de la couleur de sélection et lumineux quand il
+  est actif ; partiel : filet de l'identité.
+  **Voyant de module** : point vert lumineux ou point sombre.
+- **Curseur** : piste en creux, part remplie en dégradé d'or, poignée claire.
+  **Champ**, **case de valeur**, **liste** : creux ou plaque, filet de la
+  sélection au focus (liste ouverte : `FORGE_PLATE.select`), chevron or.
+- **Barre** : piste presque noire, remplissage en dégradé avec un reflet d'un
+  pixel (pas de découpe : une barre se répète sur chaque ligne).
+
+### Navigation, sections, cartes, listes
+
+- Colonne : titres de groupe en « pilule » (dégradé de leur ton : identité
+  pour une page à sous-pages, second ton pour un titre de rangement), entrée
+  choisie en dégradé de la sélection avec une barre claire à gauche.
+- Titre de section : point lumineux, titre, filet qui s'éteint
+  (`Theme.FORGE_SECTION`, tons de `Theme.FORGE_TONES`).
+- Carte de réglage : relief posé sur le fond (voile clair en haut, sombre en
+  bas, reflet et ombre d'un pixel : `Theme.FORGE_CARD`), sans découpe.
+- Onglet choisi : dégradé de la sélection, souligné clair. Ligne choisie :
+  dégradé de la sélection et barre ; losange de statut avec un halo de sa
+  couleur.
+- En-tête : plaque de bois au haut teinté de l'identité (chaud, ou froid
+  pour QuestCompanion), lueurs et filet lumineux de l'identité.
+  Pied : bande sombre, reflet d'un pixel (`Theme.ForgeFooter`).
+
+### Dans les modules
+
+Les blocs faits à la main reprennent ces matières par des jetons du module,
+lus dans le thème : `ns.FORGE` et `ns.ForgeOn()` côté Ready2Quest
+(`Core.lua` : bloc de la note du check, verdict en creux, conseils, cartes de
+liste, étiquettes), `ns.QC_FORGE` côté QuestCompanion (filet en plaque d'or,
+pastilles de capture en petites cartes, garde-manger, suivi). Un bouton prend
+un style de sens par `ns.ForgeStyle(sobre, forgé…)`.
+
+QuestCompanion 3.1.0 (bascule) : tout QuestCompanion prend ce thème. Le
+carnet en parchemin, les scènes de capture en bois, les bandeaux dorés et
+l'anneau du compagnon (textures du client, section « Style Azeroth ») sont
+l'ancien habillage, coupé dans le produit ; leurs fonctions propres sont
+re-logées en briques forgées (section suivante).
+
+### QuestCompanion au thème forgé (3.1.0)
+
+Ce que l'ancien habillage faisait en art du client existe en matières
+forgées (seuls le masque rond et, s'ils existent, quelques atlas d'effets du
+client sont gardés ; sans eux, un repli en `Theme.ART`, jamais rien). Toute
+brique de cette section est décidée à la **création** du cadre par
+`ns.QCForged()` (jamais par `AzerothOn`) et gardée par clé de style
+(`forge` / `sobre`, section « Style Azeroth ») : rien ne change en Sobre,
+au pixel près, sauf la sous-ligne « Nouveau titre » des bandeaux (plus bas).
+Couleurs : titres, petits titres, filets lumineux et liserés à l'identité
+(bleu arcane) ; choisi, survol, focus à la sélection (or) ; médaillons,
+plaques des chiffres et bouton principal dans la famille dorée ; statuts,
+raretés, étoiles, récompenses et sceaux inchangés.
+
+#### Carnet et fiche de dresseur
+
+- **Carnet** (`frame.journalForged`, décidé à la création ; jamais sous
+  l'ancien habillage ni en Sobre) : médaillon du logo (`emblem` de
+  `CreateWindow`, 4e argument de `CreateNavBrand`), marque sans petit logo.
+  Points de hauts faits sous la marque, sur une plaque ardoise à losange d'or
+  (`ns.JOURNAL_FEAT_PLATE`) ; la navigation descend de 24 px et le bas de
+  colonne ne garde que « module coupé ». Roue des réglages : celle du socle,
+  sur sa petite plaque (la roue grise du client reste au Sobre).
+- **Envies** en trois paliers (`ns.NeedTier`, `ns.NEED_LOW` = 30) : vert si
+  comblée, or entre les deux, orange sous 30 %. Chiffres du garde-manger du
+  pied sur une pastille d'encre (`ns.JOURNAL_PANTRY_FORGE`), survol à la
+  sélection.
+- **Hauts faits** : total en tête sur une plaque forgée
+  (`ns.JOURNAL_FEATS_PLATE`), losange sur les lignes ; le bouclier du client
+  ne vit plus que dans le carnet de l'ancien habillage.
+- **Fiche de dresseur** (`frame.trainerForged`) : médaillon, portrait dans
+  un cadre d'orfèvre (cadre, quatre coins, bords assombris, sur un cadre
+  au-dessus du modèle, sans souris : `ns.TRAINER_FORGE`), creux
+  (`Theme.ART.inset`) autour de la vitrine. Les points restent dans le
+  sous-titre.
+- **Allure et confirmation** : déjà habillées par le socle.
+  `ns.ForgeChromeFollows(frame)` fait monter l'habillage du socle (cadre,
+  coins, médaillon) avec une fenêtre relevée au-dessus du carnet. Titres de
+  section de l'allure à l'identité, allure portée à la sélection ;
+  « Emmener » principal doré, « Annuler » en contour.
+- **Pages** : choisi, survol, focus = `Theme.SELECT` ; piste jouée =
+  `Theme.ACTIVE` ; titres de plaque (Missions), de liste (Exploration), de
+  colonne (Échanges) et intertitres du Guide = identité.
+- Non re-logé, assumé : étoiles de qualité des spécimens et étoile des
+  favoris de l'allure (atlas du client, ce sont des informations), cadre
+  d'icône des lignes de hauts faits (décor ; un creux par ligne coûterait
+  9 textures), bandes et barres vertes de la fiche (décor).
+
+#### Bandeaux forgés (`ForgeBanners.lua`)
+
+- **Habillage commun** : `ns:ForgeBannerDress(frame, opts)` pose
+  `frame.forgeBanner` ; `ns:StyleShown` passe alors par
+  `ns:ForgeBannerShown`. **Médaillon** rond de 64 px (`ns.FORGE_BANNER`),
+  qui dépasse de 14 px à gauche (`LEFT −14`), au-dessus du cadre doré, sans
+  souris : l'anneau du logo (`Theme.LOGO`) porte au choix
+  (`ns:ForgeMedalSet(frame, what, value)`) le portrait 2D, une icône dans un
+  creux, le glyphe du filet (donc la boule de neige du Voile d'hiver) ou le
+  logo nu. Points ou niveau sur une petite plaque d'or à cheval sur le bas
+  de l'anneau (`ns:ForgeMedalBadge`, chiffre `FORGE_INK.gold`) : la largeur du
+  texte la réserve. Lignes empilées par `ns:ForgeBannerStack`, la hauteur
+  suit.
+- **Apparition** en AnimationGroup, sans `OnUpdate` : éclosion (Scale, si le
+  client la joue), éclat derrière le médaillon (`ART.dot`), trait lumineux
+  qui traverse le bas (`ART.line` + Translation). Brillante : nom en
+  `Theme.SHINY`, halo au repos derrière le médaillon. Barre d'accent cachée.
+- **Bandeaux** : « Capture possible » (chemin du socle, glyphe au
+  médaillon) ; « Capturé ! » (`ns.FORGE_RESULT` 360 × 78 : portrait 2D,
+  niveau sur la plaque, ligne « étoiles · taille · caractère ») ; carnet
+  (`ns.FORGE_JOURNAL` 330 × 70 : icône de catégorie, points, sous-ligne
+  « Nouveau titre : X » en `GOLD_LIGHT`, logo nu pour une rafale, rhabillé
+  avec son médaillon après une bascule à chaud) ; guilde (`ns.FORGE_GUILD`
+  380 × 78 : texte sur deux lignes au plus, « et N autres exploits » gardée,
+  points au médaillon). Noms globaux : `QuestCompanionCaptureResultForge`,
+  `QuestCompanionGuildFeatForge`.
+- **Grandes récompenses** : `ns:BannerRewardFX(frame, opts)` (horloge
+  `FxStep`, textures créées une fois) : ancien habillage →
+  `ns:AzerothRewardFX` (qui reste faux hors drapeau) ; bandeau forgé → ailes
+  et éclat du client si les atlas existent, sinon `ART.dot` et quatre
+  `ns.QCForgeLine` en miroir qui s'ouvrent en ailes (`ns.FORGE_REWARD`) ;
+  rien en Sobre.
+- **Sobre** : la sous-ligne « Nouveau titre : X » s'affiche aussi sur le
+  bandeau du carnet (une information qui manquait ; il passe de 50 à 65 px
+  le temps de l'afficher). Seul écart voulu au Sobre.
+- **Visite guidée** de clé `forge` : `Theme.SkinToast` sans barre d'accent ;
+  `ns.TOUR_FORGE` (titre `TITLE`, liseré de la cible `IDENTITY_LIGHT` /
+  `IDENTITY`) ; Suivant / Passer en `Theme.CreateButton`.
+- Non re-logé : le nom réduit à la largeur (il se coupe), le bouclier gris
+  de « Capture possible », l'éclat tournant ; après une bascule à chaud, les
+  bandeaux de guilde et « Capturé ! » affichés ne gardent que leurs textes
+  jusqu'au suivant.
+
+#### Scènes de capture forgées (`ForgeScenes.lua`)
+
+- La carte d'un lancer seul, la volée et le choix au filet naissent forgés
+  quand `StageKey` / `SceneKey` vaut `forge` (noms
+  `QuestCompanionCaptureStageForge`, `…BatchForge`, `…ChooserForge`).
+  `ns.ForgeSceneWindow(w, h, opts)` construit un bandeau du socle créé en
+  1 × 1 puis passé à `chrome = "card"` et à sa taille (`DressWindow` refuse
+  les coins à un bandeau) : ombre, cadre d'orfèvre, quatre coins, bords
+  assombris, sans barre d'accent. Géométrie : `ns.FORGE_SCENE` (carte
+  340 × 372 : la plaque de titre fait descendre la scène de 6 ; préparation
+  + 40 comme en Sobre). Encres : `ns.ForgeSceneInks()`.
+- **Plaque de titre** (`ns.ForgeTitlePlate`) : `ART.plate` teinte
+  `FORGE_HEADER.warm`, « CAPTURE · RANG » en `IDENTITY_LIGHT`, nom à la
+  couleur du rang en `F_TITLE` qui rapetisse de 15 à 10 pour tenir
+  (`ns.ForgeSceneFit`), filet lumineux de la rareté dessous. Le ruban
+  BossBanner disparaît.
+- **ForgeVerdict** (`ns:ForgeVerdict(parent, w, h)`) : même interface que
+  `ns:AzerothVerdict` (`area`, `title`, `text`, `line`, `shield` /
+  `SetShield`, `glow`, `bling`, `shine`, `SetCreature`, `SetLevel`, `Fit`…),
+  marqué par `banner.verdict` (jamais `.azeroth`) ; `banner:Paint(ok, shiny)`
+  pose les encres. Fond NAV dans un `ART.frame`, portrait dans un creux,
+  « CAPTURÉ ! » en `TITLE` (ou « ÉCHAPPÉ… » en `RED`) sur un filet de
+  l'identité (rouge à l'échec), nom (or d'une brillante), trois étoiles,
+  niveau sur une plaque d'or (ardoise à l'échec) ; lueur, éclat et reflet
+  rogné : l'atlas des hauts faits s'il existe, sinon `ART.dot`. L'animation
+  `Verdict()` d'origine le joue telle quelle. `rolling.sceneVerdict` est posé
+  pour la carte forgée : pas de bandeau « Capturé ! » d'après, Partager au
+  coin (`ShareStageVerdict`, plaque de titre étroite pour lui laisser la
+  place). En Sobre : le ruban, puis le bandeau.
+- **Aides** en petites plaques (`ns.ForgeAidCell`, `cell.forgeLook` :
+  `rest`, `chosen` = `FORGE_PLATE.select`, `off`) ; lueur d'or de l'aide
+  conseillée (`ns.ForgeAidGlow`) ; « Lancer » principal doré, « Passer » en
+  ardoise.
+- **Volée** : plaque « TOUT CAPTURER » et compteur (`F_TITLE`, `TITLE`),
+  « Aide : <aide> » en `SELECT_LIGHT`, creux autour de la créature
+  (`ns.ForgeTileDress`), badge d'étoiles au coin d'une prise
+  (`ns.ForgeTileBadge`, caché sur une échappée), 3 colonnes à 5 ou 6 cases.
+- **Choix au filet** : le filet dans un creux, « N CRÉATURES DANS LE FILET »
+  (`IDENTITY_LIGHT`), « Le temps est en pause… » ; « Capturer : X » principal
+  doré avec sa ligne dessous (`button.sub` / `SetSub` : « brillante » en or,
+  puis la chance), « Tout capturer (N) » avec le coût de chaque essai,
+  raccourcis (`CAPTURE_CHOOSE_KEYS`), posé à côté du filet (écart 14).
+- « Capturer ? » (`Capture.lua`) : déjà fait des briques du socle ; son
+  titre passe à l'identité.
+- Non re-logé : losanges éteints des secousses (ils gardent `EDGE`, déjà
+  l'or patiné), ombre au sol et Friz de la ligne de chance (décor du
+  parchemin), disposition des cases de la volée de l'ancien habillage
+  (aucune information perdue). Étoiles, rayons, halo, étincelles et
+  poussière restent les atlas du client communs aux deux voies
+  (`ns.CAPTURE_CLIENT_ART`). Le bouton Partager du coin prend la petite
+  plaque forgée (décidée à la création du bouton), sans libellé.
+
+#### Le compagnon en médaillon (`ForgeCompanion.lua`)
+
+- **Prédicat unique** : `ns:CompanionRingOn()` (ancien habillage ou
+  `ns.QCForged()`). `frame.ring` vaut `"azeroth"` (anneau du client),
+  `"forge"` (médaillon forgé) ou `nil` (cadre carré du Sobre) ; l'habit posé
+  se lit par `ns.CompanionRingSkin(frame)` et `ns.CompanionRingGeometry(frame)`,
+  `ns.CompanionRinged(frame)` dit s'il y a un anneau. Le cadre garde
+  `uiStyle = "sobre"` et la clé `forge`.
+- **Géométrie** `ns.FORGE_RING` : `ART.ring` de 104 px au même centre que
+  l'anneau du client (filet et pastilles ne bougent pas), portrait 3D de
+  64 px dont les coins passent sous la bande, fond gagné en disque de 88 px
+  par le masque du client (carré de 64 px sans masque, et dans les aperçus).
+- **Plaque du nom** (`ns.FORGE_COMPANION_PLATE`) : `Theme.Slice` « plate »
+  teinte `FORGE_PLATE.card`, débord de 10 px ; nom en `TITLE` (police à la
+  largeur), ligne « stade · niveau » en `MUTED_LIGHT` (`COMP_PLATE_SUB`).
+  **Étiquette d'humeur** glissée dessous (`ns.FORGE_MOOD_TAB`,
+  `ns.FORGE_MOOD_TINTS` : radieux vert, content bronze, rêveur arcane,
+  somnolent éteint ; encre ≥ 7:1, 7,69 au pire), largeur au mot.
+- **Effets** (atlas du client s'il existe, sinon `ns.FORGE_FX` : `ART.dot`,
+  `ART.line`, `ART.ring`) : teinte de l'anneau par le cadre gagné
+  (`AZEROTH_RING_TINTS`, désaturée au besoin) et halo en point lumineux ;
+  lueur ronde quand il parle, plus vite pendant une brillante ; éclats d'une
+  brillante (`ns:CompanionShinyFX`) ; « Niveau N ! » et « Aguerri ! »
+  (`ns:CompanionLevelFX(text, kind)` : titre `TITLE` entre deux filets de
+  l'identité, lueur du portrait, poussière, nuage, la bulle monte) ; huit
+  familles en cercle et halo prismatique en anneau de lumière qui tourne ;
+  battement d'aggro en anneau rouge. `ns:AzerothShinyFX` et
+  `ns:AzerothLevelFX` restent l'ancien habillage seul (faux hors drapeau).
+- **Bulle forgée** (`ns.FORGE_BUBBLE`) : la brique du socle, nom de qui
+  parle en capitales (`TITLE`), réplique dessous, reflet qui la traverse à
+  chaque réplique (sur `FxStep`). Le titre « Mode chasse » du petit menu
+  passe en `IDENTITY_LIGHT`.
+- **Bascule à chaud** : le compagnon est rhabillé sur place (pas de cache),
+  l'habit construit une fois puis montré ou caché ; `CompanionLeaveForgeSkin`
+  rend le cadre carré (masque, fond, boussole, polices, largeur) ; effets
+  arrêtés net quand l'anneau change ; aucun cadre créé par les allers-retours.
+- Non re-logé : mise en page « Talking Head » de la bulle de parchemin
+  (la bulle garde 220 px et son texte centré), teinte du cadre gagné sur le
+  grand portrait de la page Créature du carnet ; l'ornement « cadre doré »
+  reste affiché autour du médaillon (décision ouverte).
+
+#### Voile d'hiver re-logé
+
+Seulement en saison (`ns:WinterVeilActive()`, donc au choix azeroth),
+jamais en Sobre ; fait une fois, seul son affichage suit le réglage. Les
+poses de l'ancien habillage (`frame.wvDecor`, `azOver`, `azSkin`) n'ont pas
+changé.
+
+- **Carnet forgé** (`ns.WINTER_VEIL_JOURNAL_FORGE`, cadre à part sous
+  l'habillage du socle, sans souris) : guirlande sur le bord haut du cadre,
+  du médaillon jusqu'avant la roue et la croix (repli en fil `ART.line` et
+  ampoules `ART.dot` rouges, vertes et or si le client refuse la bande),
+  cadeau entre le médaillon et le nom, renne au-dessus de la fin du nom,
+  trois flocons sous la croix. L'intitulé « CARNET » n'est plus caché.
+- **Compagnon** : un décor par habit (`frame.wvForgeDecor`) : flocons,
+  neige, anneau Givre, guirlande 3D posée sur la bande d'or
+  (`ns.WINTER_VEIL_FORGE_GOLD`, `ns.WINTER_VEIL_FORGE_LIGHTS.y = 1`, réglage
+  `/qc noel cadre` gardé).
+- La boule de neige (filet, scène, volée, médaillon de « Capture possible »)
+  passe par les mêmes fonctions qu'avant.
+
+### Logos (`tools/gen_logos.py`)
+
+Une famille : le même médaillon d'or, un glyphe et une couleur par addon.
+Ready2Quest : l'écu coché, échancré au sommet, qui porte en cimier le « ! »
+doré des quêtes. QuestCompanion : l'empreinte, en bleu arcane. Trois fichiers
+par addon : `logo.tga` (128 : marque, médaillon des fenêtres),
+`logo_petit.tga` (64, glyphe simplifié : liste des addons, bandeaux),
+`logo_glyphe.tga` (64, sans anneau : bouton de la mini-carte, qui a le sien).
+L'outil demande `rsvg-convert` et Pillow.
+
+### Voir sans le jeu
+
+`python3 tests/snapshot.py <scène> sortie.html` rend une fenêtre avec le vrai
+code (Azeroth par défaut, `sobre:<scène>` pour Sobre) : teintes multipliées,
+textures retournées, débords et ordre des cadres comme en jeu. Reste
+approché : la police des titres, les textures du client, le rendu exact des
+reliefs et des lueurs.
+
+### Contrastes et tests
+
+Chaque texte posé sur une matière forgée est mesuré au point le plus clair et
+au plus sombre de son fond (≥ 4,5 corps, ≥ 3 titres) :
+`tests/modules/ui_skin.lua`, `ui_forge_controles.lua`,
+`ui_forge_navigation.lua`, `ui_forge_r2q.lua`, `ui_forge_qc.lua`,
+`ui_identite.lua`, et pour QuestCompanion `journal_forge.lua` (carnet,
+fiche), `forge_bandeaux.lua`, `forge_scenes.lua`, `companion_forge.lua`
+(nom 10,96, stade 6,81, bulle 11,00, « Niveau N ! » 7,73, menu 8,83).
+`forge_bascule.lua` tient l'état du produit (thème forgé avec et sans
+atlas, clé `forge`, bascule à chaud sans fuite).
+`ui_bricks.lua` et deux blocs de `socle.lua` sont épinglés en Sobre : ils
+décrivent le thème d'avant, qui ne doit pas bouger.
+
+### À regarder en jeu
+
+Le relief des plaques et la profondeur des creux (teinte × texture), les
+dégradés (`SetGradient`), les lueurs additives, Friz Quadrata en capitales
+de 10 px, le médaillon et les quatre coins sur chaque fenêtre, le bouton de
+la mini-carte et l'icône de la liste des addons.
+
+QuestCompanion (rien de cela ne se voit hors jeu) : masque rond du
+médaillon du compagnon (disque de 88 px), halos en point lumineux sur le fond
+« Nuit », teinte Cuivre sur notre or ; guirlande 3D du médaillon
+(`/qc noel cadre`) et renne du carnet ; Translation du trait et éclosion
+des bandeaux, portrait rond dans l'anneau du logo, `SetMaxLines(2)` de la
+ligne de guilde ; lueurs du verdict forgé et de l'aide conseillée, avec et
+sans les atlas des hauts faits ; voile or à 0,8, plaque d'en-tête froide,
+curseur or de l'interrupteur actif.
+
+## Style Azeroth (QuestCompanion) : l'ancien habillage, derrière un drapeau
+
+Réglage « Style de l'interface » : Azeroth (le thème forgé du socle, section
+précédente) ou Sobre. Depuis 3.1.0, le choix ne pose plus que le thème du
+socle (`ns:UISkinChoice` redéfini dans QuestCompanion = `ns:UIStyleChoice`) :
+le thème forgé ne dépend plus des atlas du client. L'habillage d'art du
+client décrit ici (carnet en parchemin, scènes en bois, bandeaux dorés,
+anneau du compagnon) est l'**ancien habillage** : il ne s'affiche que si le
+drapeau interne `ns.AZEROTH_LEGACY` vaut `true` (`false` dans le produit ;
+aucun réglage ni commande ; les tests qui l'affirment le posent par
+`T.Legacy(true)`). Il habille le même contenu, il ne le reconstruit pas
 (`AzerothStyle.lua` pour les bandeaux et la capture, `JournalAzeroth.lua`
 pour le carnet).
+
+Les portes (`AzerothStyle.lua`) :
+
+| Porte | Vaut | Sert à |
+|---|---|---|
+| `ns:UIStyleChoice()` | `azeroth` / `sobre` (réglage `companionStyle`) | le choix du joueur |
+| `ns:UISkinChoice()` | `= UIStyleChoice()` | le thème du socle (`Theme.ApplySkin`, au chargement et à `ApplyUIStyle`) |
+| `ns.QCForged()` / `Theme.Forged()` | thème forgé posé ? | décider d'une **brique forgée** (à la création) |
+| `ns:LegacyStyle()` = `ns:UIStyle()` | `azeroth` seulement si drapeau, choix azeroth et atlas du client ; `sobre` sinon | l'ancien habillage et `frame.uiStyle` |
+| `ns:AzerothOn()`, `AzerothScenesOn()`, `JournalStyle()` | suivent `UIStyle()` : faux / `sobre` dans le produit | le code de l'ancien habillage seulement |
+| `ns:WinterVeilStyleOn()` | choix azeroth | le décor du Voile d'hiver (plus l'ancien habillage) |
+
+Rien ne lit `AzerothOn` pour décider d'une fonction (une information, un
+bouton, un effet) : une fonction qui n'existait que dans l'ancien habillage
+est re-logée derrière `ns.QCForged()`, le Sobre restant intact.
+
+Clé de cache (`ns:StyleKey(legacy)`) : `azeroth` si l'ancien habillage a
+construit le cadre, `forge` s'il est né sous le thème forgé, `sobre` sinon.
+Un cadre construit porte `frame.styleKey` (`ns:MarkStyle(frame)` la pose
+d'après le cadre ; `ns.FrameStyleKey(frame)` la relit). Tous les caches par
+style passent par elle : bandeaux (`ns:StyleCached`, `ns:ApplyUIStyle`),
+carnet, fiche de dresseur, confirmations, panneau d'allure
+(`ns:JournalStyleKey`, `CarnetRestyle`), scènes de capture, volée, choix au
+filet, bulle des visites. Une brique forgée est décidée à la création : un
+cadre né forgé n'est jamais resservi en Sobre, ni l'inverse, et deux
+`ApplyUIStyle` de suite gardent les mêmes cadres. Noms globaux (Échap) :
+`ns.StyleName(base, clé)` = base + `Azeroth` / `Forge` / rien (Sobre, le nom
+d'avant). Hors ancien habillage, `frame.uiStyle` reste `sobre` et
+`frame.azeroth` n'est jamais posé (sinon `Theme.DressWindow` refuse
+d'habiller le cadre).
+
+Ce qui suit décrit l'ancien habillage (drapeau à `true`).
 
 - Matières : bois `achievement-wood-nineslice-*`, parchemin, bandeaux et
   boucliers du client, par atlas ou FileDataID ; aucune image embarquée.
@@ -495,15 +1133,17 @@ pour le carnet).
 ## Règles
 
 - Aucune couleur, police ou taille en dur dans un module : jetons et briques
-  du socle (`Theme.*`, `ns.TC`), `ns.AZEROTH_INK` pour le style Azeroth. Les
+  du socle (`Theme.*`, `ns.TC`), `ns.AZEROTH_INK` pour l'ancien habillage. Les
   données (cosmétiques, effets) portent leurs propres teintes.
 - Contraste mesuré, pas estimé : ≥ 4,5:1 pour le corps de texte, ≥ 3:1 pour
   les titres, sur le vrai fond (texture comprise). Un texte sur une matière du
   client a son rôle dans `ns.AZEROTH_CONTRAST`.
-- Textures du client uniquement, par référence (atlas, FileDataID,
-  `Interface\\…`), avec un repli quand l'atlas manque ; jamais d'image
-  générée ni embarquée (exceptions historiques : les fichiers de repli du
-  socle et le filet de capture).
+- Illustrations : celles du client uniquement, par référence (atlas,
+  FileDataID, `Interface\\…`), avec un repli quand l'atlas manque ; jamais
+  d'illustration générée, ni d'image reprise du jeu ou d'internet. Sont à
+  nous, générés par script : l'habillage du thème forgé (formes, reliefs et
+  lueurs : `tools/gen_ui_assets.py`), les logos (`tools/gen_logos.py`) et le
+  filet de capture. Un test tient la liste des images embarquées.
 - Tout texte affiché existe en français et en anglais (`ns.RegisterStrings`,
   `Locales.lua` ; table bilingue de `Base.lua` pour les messages d'avant
   `Strings.lua`). Pluriels : `ns:FP(clé, n, …)`.

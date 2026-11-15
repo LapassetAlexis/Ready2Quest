@@ -128,7 +128,7 @@ do
 		and #(QNS.COMPANION_POOLS.RARE_LIVE or {}) >= 2, table.concat(missing, ", "))
 
 	-- sans l'API : rien n'écoute, rien ne parle, rien ne casse
-	Want("pas d'écoute", QNS:LiveRareListen() == false and not (QNS.liveRareFrame and QNS.liveRareFrame.events.VIGNETTES_UPDATED))
+	Want("pas d'écoute", QNS:LiveRareListen() == false and not QNS.Listening("VIGNETTES_UPDATED"))
 	Mock:Fire("VIGNETTES_UPDATED")
 	Want("scan neutre", QNS:LiveRareScan() == 0 and QNS:LiveRareCheck("v1") == false and QNS.companionBubbleKey == nil)
 	local row = false
@@ -138,8 +138,8 @@ do
 
 	-- avec l'API : un rare de la table apparaît sur la minicarte
 	LA.InstallVignettes()
-	Want("écoute posée", QNS:LiveRareListen() == true and QNS.liveRareFrame.events.VIGNETTES_UPDATED
-		and QNS.liveRareFrame.events.VIGNETTE_MINIMAP_UPDATED)
+	Want("écoute posée", QNS:LiveRareListen() == true and QNS.Listening("VIGNETTES_UPDATED", "rares")
+		and QNS.Listening("VIGNETTE_MINIMAP_UPDATED", "rares"))
 	local rareGUID = LA.Guid(5001)
 	LA.Vignette("v-rare", { name = "Griffe-Grise", objectGUID = rareGUID, vignetteID = 1, atlasName = "VignetteKill", type = 0 })
 	Mock:Fire("VIGNETTES_UPDATED")
@@ -1007,9 +1007,10 @@ do
 	NS:RegisterAddonCompartment()
 	local r2q, qc = W.entries[1], W.entries[2]
 	if r2q and r2q.text ~= "Ready2Quest" then r2q, qc = qc, r2q end
-	Check("[CMP] une entrée par addon, une seule fois, à son nom, icône de la minicarte, non cochable", #W.entries == 2
+	-- (3.1.0 : la liste montre le médaillon ; le bouton de la mini-carte, le glyphe sans anneau)
+	Check("[CMP] une entrée par addon, une seule fois, à son nom, au médaillon du logo, non cochable", #W.entries == 2
 		and W.self == AddonCompartmentFrame and r2q.text == "Ready2Quest" and qc.text == "QuestCompanion"
-		and r2q.icon == NS.Theme.LOGO_SMALL and r2q.icon == NS:EnsureMinimapButton().icon.texture
+		and r2q.icon == NS.Theme.LOGO_SMALL and NS:EnsureMinimapButton().icon.texture == NS.Theme.LOGO_GLYPH
 		and r2q.notCheckable == true and qc.notCheckable == true, #W.entries)
 
 	local calls = {}

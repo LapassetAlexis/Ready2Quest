@@ -144,6 +144,15 @@ if ns.AddOptionPage then
 			{ key = "journalTrackerCombat", label = "OPT_JRN_TRACKER_COMBAT", kind = "bool" },
 			{ key = "journalTrackerReset",  label = "OPT_JRN_TRACKER_RESET",  kind = "action", button = "OPT_RESET" },
 			{ key = "journalTrackerRestore", label = "OPT_JRN_TRACKER_RESTORE", kind = "action", button = "OPT_RESTORE" },
+			-- 3.1.0 : partage (Share.lua : chaînes et défauts), sous son propre
+			-- titre : l'annonce parle de captures, pas de hauts faits
+			{ header = "OPT_SECTION_SHARE" },
+			{ key = "shareBanner",  label = "OPT_SHARE_BANNER", kind = "bool",
+				describe = function() return ns.L.OPT_SHARE_BANNER_DESC end },
+			{ key = "announceGroup", label = "OPT_ANNOUNCE_GROUP", kind = "bool",
+				describe = function() return ns.L.OPT_ANNOUNCE_GROUP_DESC end },
+			{ key = "announceGuild", label = "OPT_ANNOUNCE_GUILD", kind = "bool",
+				describe = function() return ns.L.OPT_ANNOUNCE_GUILD_DESC end },
 		},
 		-- bouton construit par Options.lua (L.OPT_ACTION_JOURNAL), action
 		-- traitée par le relais de RunOptionAction plus bas
@@ -498,6 +507,7 @@ end
 -- Bandeau du thème (docs/UI.md) : liseré ambre, losange du tampon, « NOUVEAU
 -- TAMPON · SORTE » en capitales pâles, le nom en titre dessous
 local TOAST_W, TOAST_H = 280, 50
+local TOAST_SUB_H = 15   -- 3.1.0 : la sous-ligne « Nouveau titre : X » du Sobre
 
 -- 3.0.1 : un bouton invisible par-dessus le bandeau : clic = l'action du
 -- bandeau affiché (entry.onClick : la page Hauts faits pour un lot), clic
@@ -538,6 +548,7 @@ function ns:EnsureJournalToast()
 	if cached then self.journalToast = cached; return cached end
 	local frame = self.AzerothOn and self:AzerothOn() and self:AzerothCreateBanner({ strata = "MEDIUM" })
 	if frame then
+		if self.MarkStyle then self:MarkStyle(frame) end
 		frame.icon:SetTexture(Theme.LOGO_SMALL)
 		ToastButton(frame)
 		if self.RestorePoint then self:RestorePoint(frame, "journalToastPoint", { point = "TOP", x = 0, y = -190 }) end
@@ -546,9 +557,20 @@ function ns:EnsureJournalToast()
 		return frame
 	end
 	if not (Theme and Theme.CreateToast) then return nil end
+	-- 3.1.0 : sous le thème forgé, le bandeau à médaillon (ForgeBanners.lua)
+	frame = ns.QCForged and ns.QCForged() and self.ForgeJournalToast and self:ForgeJournalToast()
+	if frame then
+		if self.MarkStyle then self:MarkStyle(frame) end
+		ToastButton(frame)
+		if self.RestorePoint then self:RestorePoint(frame, "journalToastPoint", { point = "TOP", x = 0, y = -190 }) end
+		frame:Hide()
+		self.journalToast = frame
+		return frame
+	end
 	frame = Theme.CreateToast(UIParent, TOAST_W, TOAST_H)
 	if not frame then return nil end
 	frame.uiStyle = "sobre"
+	if self.MarkStyle then self:MarkStyle(frame) end
 	local left = frame.contentLeft or 14
 	frame.diamond = Theme.CreateDiamond(frame, 12, false)
 	frame.diamond:SetPoint("LEFT", frame, "LEFT", left, 0)
@@ -574,6 +596,8 @@ end
 -- le cadre, points dans le bouclier (Azeroth) ou à droite (Sobre), sous-ligne
 -- (nouveau titre). Les autres bandeaux reprennent le logo, sans points.
 local function ToastDecor(frame, entry)
+	-- 3.1.0 : bandeau forgé : icône et points dans le médaillon, sous-ligne
+	if frame.forgeBanner and ns.ForgeJournalToastFill then return ns:ForgeJournalToastFill(frame, entry) end
 	if frame.icon and frame.icon.SetTexture then frame.icon:SetTexture((entry and entry.icon) or Theme.LOGO_SMALL) end
 	local points = entry and tonumber(entry.points)
 	if points and not frame.featPoints then
@@ -583,7 +607,7 @@ local function ToastDecor(frame, entry)
 			if ns.AzerothShieldCenter then ns.AzerothShieldCenter(frame.featPoints, frame.shield)
 			else frame.featPoints:SetPoint("CENTER", frame.shield, "CENTER", 0, 4) end
 			if ns.AzerothFont then ns.AzerothFont(frame.featPoints, 16, "OUTLINE") end
-			frame.featPoints:SetTextColor(1, 1, 1, 1)
+			frame.featPoints:SetTextColor(Theme.WHITE[1], Theme.WHITE[2], Theme.WHITE[3], 1)
 		else
 			frame.featPoints = Theme.Text(frame, Theme.F_NUMBER, Theme.GOLD)
 			frame.featPoints:SetPoint("RIGHT", frame, "RIGHT", -12, 0)
@@ -595,6 +619,27 @@ local function ToastDecor(frame, entry)
 		if points then frame.featPoints:Show() else frame.featPoints:Hide() end
 	end
 	if frame.stars and frame.azeroth then frame.stars:SetText((entry and entry.sub) or "") end
+	-- 3.1.0 : le bandeau du Sobre perdait la sous-ligne « Nouveau titre : X »
+	-- (seul l'ancien habillage l'écrivait) : une 3e ligne, créée à la
+	-- première sous-ligne, et le bandeau grandit le temps de l'afficher
+	if not frame.azeroth then
+		local sub = entry and entry.sub
+		if sub and sub ~= "" and not frame.stars and frame.text then
+			local fs = Theme.Text(frame, Theme.F_SMALL, Theme.GOLD_LIGHT)
+			fs:SetPoint("TOPLEFT", frame.text, "BOTTOMLEFT", 0, -3)
+			fs:SetWidth(tonumber(frame.text:GetWidth()) or (TOAST_W - 48))
+			fs:SetJustifyH("LEFT")
+			if fs.SetWordWrap then fs:SetWordWrap(false) end
+			frame.stars = fs
+			if frame.shareWidths and frame.shareWidths.text then frame.shareWidths.stars = frame.shareWidths.text end
+		end
+		if frame.stars then
+			local on = sub ~= nil and sub ~= ""
+			frame.stars:SetText(on and sub or "")
+			if on then frame.stars:Show() else frame.stars:Hide() end
+			frame:SetHeight(on and TOAST_H + TOAST_SUB_H or TOAST_H)
+		end
+	end
 end
 ns.JournalToastDecor = ToastDecor
 
@@ -647,11 +692,13 @@ function ns:ShowNextJournalToast()
 		ToastDecor(frame, stamp)
 		shown = stamp
 	end
+	frame.shownEntry = shown   -- nil pour une rafale groupée (3.1.0 : reprise après combat)
 	frame:Show()
 	if self.BannerShown then self:BannerShown("journal", frame, "journalToastPoint", { point = "TOP", x = 0, y = -190 }) end
 	if shown and type(shown.onShow) == "function" then pcall(shown.onShow, self, shown) end
 	if Theme.FadeIn then Theme.FadeIn(frame, 0.2) end
 	if self.StyleShown then self:StyleShown(frame, { shield = "gold", play = true }) end
+	self.journalToastShownAt = ns.Now()
 	self.journalToastHideAt = ns.Now() + TOAST_SECONDS
 	self:JournalToastArm()
 	return frame
@@ -665,11 +712,29 @@ function ns:JournalFlush()
 	for _, stamp in ipairs(self.journalChats) do
 		self:Print(self:F("JRN_CHAT", self:JournalKindLabel(stamp.kind), stamp.name))
 	end
-	self.journalChats = {}
+	if #self.journalChats > 0 then self.journalChats = {} end
 	if not self.journalToastHideAt then self:ShowNextJournalToast() end
 end
 
+-- 3.1.0 : le combat commence pendant qu'un bandeau est affiché : il s'efface
+-- (il ne reste pas au haut de l'écran, sous la souris) et, s'il n'avait pas
+-- encore tenu la moitié de son temps, il revient en tête de file après le
+-- combat. (Le résultat de capture s'effaçait déjà ainsi.)
+function ns:JournalToastCombat(now)
+	if not (self.journalToastHideAt and InCombat()) then return false end
+	local frame = self.journalToast
+	local entry = frame and frame.shownEntry
+	-- (la moitié de SON temps : un bandeau qui porte le bouton Partager dure plus, Share.lua)
+	local shownAt = self.journalToastShownAt or (self.journalToastHideAt - TOAST_SECONDS)
+	if entry and now - shownAt < (self.journalToastHideAt - shownAt) / 2 then table.insert(self.journalToasts, 1, entry) end
+	self.journalToastHideAt = nil
+	if frame then frame.shownEntry = nil; frame:Hide() end
+	if self.BannerDone then self:BannerDone("journal") end
+	return true
+end
+
 function ns:UpdateJournalToast(now)
+	self:JournalToastCombat(now)
 	if self.journalToastHideAt and now >= self.journalToastHideAt then
 		self.journalToastHideAt = nil
 		if self.journalToast then self.journalToast:Hide() end
@@ -827,12 +892,8 @@ local HANDLERS = {
 	PLAYER_REGEN_ENABLED    = function() ns:JournalFlush() end,
 }
 
-local eventFrame = CreateFrame("Frame")
-ns.RegisterHandlers(eventFrame, HANDLERS)
-eventFrame:SetScript("OnEvent", function(_, event, ...)
-	local ok, err = pcall(HANDLERS[event], ...)
-	if not ok and ns.RecordError then ns:RecordError("journal:" .. tostring(event), err) end
-end)
+-- 3.1.0 : cadre d'événements commun (ns.Listen, Libs/Socle/Compat.lua)
+ns.Listen("journal", HANDLERS)
 -- protégé : une erreur sur un bandeau en file se répéterait à chaque image ;
 -- on le retire de la file (la suite passe) et on note l'erreur une fois.
 -- 2.11.2 (fiche 25) : sur l'horloge de l'addon, posée quand un bandeau entre
@@ -852,6 +913,5 @@ end
 function ns:JournalToastArm()
 	if self.journalToastHideAt or #self.journalToasts > 0 then ns.Every("journal:toast", 0, JournalToastTick) end
 end
-ns.journalEventFrame = eventFrame
 
 if ns.Mark then ns.Mark("Journal") end

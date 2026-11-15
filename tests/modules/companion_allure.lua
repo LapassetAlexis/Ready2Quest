@@ -7,6 +7,10 @@
 -- deux habits (Sobre, Azeroth), Échap ; vignettes : portrait 2D, modèle de la
 -- créature, apprentissage des displayID en fond ; Metzen (modèle, portraits
 -- 2D des compagnons de saison, /qc noel metzen) ; des noms, jamais des numéros.
+-- 3.1.0 : affirme l'ancien habillage (carnet en parchemin, scènes en bois, bandeaux
+-- dorés, anneau) : le drapeau QNS.AZEROTH_LEGACY rallumé pour tout le module
+-- (remis à la valeur du produit à sa fin, tests/run_tests.lua)
+T.Legacy(true)
 local Check, Say, ResetWorld, NS, Mock = T.Check, T.Say, T.ResetWorld, T.QNS, T.Mock
 
 local A = { saved = {} }
@@ -481,7 +485,9 @@ do
 	Check("[ALLURE] vignettes : portrait 2D si displayID connu, sinon sa créature en 3D (une par tuile), cadrée comme le "
 		.. "compagnon, sans souris", tKodo.look == "portrait" and tKodo.model == nil and tKodo.portrait:IsShown()
 		and models >= 10 and distinct == models and portraitsOnly and tFire.look == "model"
-		and math.abs(tFire.model.cam - NS.COMPANION_MODEL_TYPE_CAM["Élémentaire"]) < 1e-9 and tFire.model.zoom == 0
+		-- 3.1.0 : cadrage automatique si la taille de son apparence est connue, sinon la distance du type
+		and math.abs(tFire.model.cam - (tFire.model.fitScale and NS:CompanionFitCam("pied")
+			or NS.COMPANION_MODEL_TYPE_CAM["Élémentaire"])) < 1e-9 and tFire.model.zoom == 0
 		and tFire.model.mouseEnabled == false, models .. " / " .. distinct)
 
 	-- Metzen en 3D (/qc noel metzen 3d) : le modèle du Renne de l'Hiver (15706)

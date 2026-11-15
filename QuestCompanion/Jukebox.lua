@@ -584,18 +584,24 @@ local function NewRow(pane, ui, width)
 		local r = b:GetParent()
 		if r.track then ns:JukeToggleFav(r.track.id); ns:RefreshJournal() end
 	end)
-	row.fav:SetScript("OnEnter", function(b) ui.Tip(b, L.JRN_SEC_juke, { L.JUKE_FAV_TIP }, "above") end)
-	row.fav:SetScript("OnLeave", ui.HideTip)
+	-- 3.1.0 : « étoile » et « + » s'éclairent au survol (voile et filet du
+	-- thème), comme toute commande cliquable du carnet
+	row.fav.hover = Theme.CreateHover(row.fav)
+	row.add.hover = Theme.CreateHover(row.add)
+	local function Leave(b) b.hover:Hide(); ui.HideTip() end
+	row.fav:SetScript("OnEnter", function(b) b.hover:Show(); ui.Tip(b, L.JRN_SEC_juke, { L.JUKE_FAV_TIP }, "above") end)
+	row.fav:SetScript("OnLeave", Leave)
 	row.add:SetScript("OnClick", function(b)
 		local r = b:GetParent()
 		if r.track then ns:JukeListToggle(r.listIndex or ns:JukeData().active, r.track.id); ns:RefreshJournal() end
 	end)
 	row.add:SetScript("OnEnter", function(b)
+		b.hover:Show()
 		local r = b:GetParent()
 		local label = ViewLabel("list" .. (r.listIndex or ns:JukeData().active))
 		ui.Tip(b, L.JRN_SEC_juke, { ns:F(r.listIndex and "JUKE_REMOVE_TIP" or "JUKE_ADD_TIP", label) }, "above")
 	end)
-	row.add:SetScript("OnLeave", ui.HideTip)
+	row.add:SetScript("OnLeave", Leave)
 	return row
 end
 
@@ -742,7 +748,7 @@ local function RefreshPage(self, frame, ui)
 	for _, tile in ipairs(pane.cats) do
 		local on = tile.view == view and (frame.jukeSearch or "") == ""
 		tile:SetSelected(on)
-		tile:SetAccent(on and Theme.GOLD or nil)
+		tile:SetAccent(on and Theme.SELECT or nil)   -- choisi : la sélection (= or en Sobre)
 		tile:SetFill(on and Theme.ROW_ALT or tile.rowFill)
 		local count
 		if tile.view == "fav" then
@@ -791,7 +797,8 @@ local function RefreshPage(self, frame, ui)
 			Theme.PaintClient(row.fav.icon, juke.fav[track.id] and ns.JUKE_ART.fav or ns.JUKE_ART.favOff)
 			row.add.label:SetText(listIndex and "-" or "+")
 			if not row.text.azKeep then
-				Paint(row.text, missing and Theme.MUTED or (playing and Theme.GOLD or Theme.TEXT))
+				-- piste qui joue : l'actif (= or en Sobre)
+				Paint(row.text, missing and Theme.MUTED or (playing and Theme.ACTIVE or Theme.TEXT))
 				Paint(row.detail, Theme.MUTED_LIGHT)
 			end
 			row:Show()
