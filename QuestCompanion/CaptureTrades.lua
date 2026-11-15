@@ -466,6 +466,7 @@ local function Send(self, s, kind, ...)
 	for index = 1, select("#", ...) do parts[#parts + 1] = tostring((select(index, ...))) end
 	s.sentAt = Clock()
 	S.filterUntil = Clock() + 10
+	if self.TradeFilterSet then self:TradeFilterSet(true) end
 	return self:ChatQueue(ns.TRADE_PREFIX, table.concat(parts, "~"), "WHISPER", s.peer)
 end
 
@@ -1186,17 +1187,53 @@ do
 		ns.Every("trade", 1, function()
 			local done, err = pcall(ns.TradeTick, ns)
 			if not done and ns.RecordError then ns:RecordError("trade:tick", err) end
+			if S.filterOn then pcall(ns.TradeFilterSync, ns) end
 		end)
 	end
-	-- (moteur récent : ChatFrameUtil.AddMessageEventFilter ; ancien : la fonction globale)
+end
+
+-- 3.1.0 bêta 9 (retour « action bloquée à chaque sortie de donjon ») : le
+-- filtre n'est plus posé pour toute la session. Le code de discussion de
+-- Blizzard appelle chaque filtre pour CHAQUE message système (rafale à la
+-- sortie d'un donjon) : notre fonction teintait ce traitement même sans
+-- échange. Posé seulement pendant la fenêtre utile (S.filterUntil, après un
+-- message d'échange), retiré par TradeTick à l'échéance. Sans API de
+-- retrait, jamais posé (le « joueur introuvable » du client reste visible).
+-- (moteur récent : ChatFrameUtil.Add/RemoveMessageEventFilter ; ancien : les fonctions globales)
+local function TradeFilterFn(_, _, text)
+	local done, hide = pcall(ns.TradeChatFilter, ns, text)
+	return done and hide or false
+end
+local function FilterApi()
 	local util = G("ChatFrameUtil")
-	local addFilter = (type(util) == "table" and util.AddMessageEventFilter) or G("ChatFrame_AddMessageEventFilter")
-	if type(addFilter) == "function" then
-		pcall(addFilter, "CHAT_MSG_SYSTEM", function(_, _, text)
-			local done, hide = pcall(ns.TradeChatFilter, ns, text)
-			return done and hide or false
-		end)
+	if type(util) == "table" and type(util.AddMessageEventFilter) == "function"
+		and type(util.RemoveMessageEventFilter) == "function" then
+		return util.AddMessageEventFilter, util.RemoveMessageEventFilter
 	end
+	local add, remove = G("ChatFrame_AddMessageEventFilter"), G("ChatFrame_RemoveMessageEventFilter")
+	if type(add) == "function" and type(remove) == "function" then return add, remove end
+	return nil
+end
+
+-- Pose (on) ou retire le filtre ; rend true s'il est posé
+function ns:TradeFilterSet(on)
+	on = on and true or false
+	if (S.filterOn or false) == on then return on end
+	local add, remove = FilterApi()
+	if not add then S.filterOn = nil; return false end
+	if on then
+		S.filterOn = pcall(add, "CHAT_MSG_SYSTEM", TradeFilterFn) or nil
+	else
+		pcall(remove, "CHAT_MSG_SYSTEM", TradeFilterFn)
+		S.filterOn = nil
+	end
+	return S.filterOn == true
+end
+
+-- Le filtre suit la fenêtre utile (appelé à chaque envoi et chaque seconde)
+function ns:TradeFilterSync(now)
+	now = now or Clock()
+	return self:TradeFilterSet(S.session ~= nil and S.filterUntil ~= nil and now <= S.filterUntil)
 end
 
 -- ---------------------------------------------------------------------------

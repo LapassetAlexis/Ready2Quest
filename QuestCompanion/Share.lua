@@ -1005,6 +1005,34 @@ function ns:AnnounceInCombat()
 	return Call("InCombatLockdown") and true or (Call("UnitAffectingCombat", "player") and true or false)
 end
 
+-- 3.1.0 bêta 9 (retour « action bloquée à chaque sortie de donjon ») : rien
+-- ne part tant que le jeu verrouille la messagerie des addons
+-- (C_ChatInfo.InChatMessagingLockdown, rencontres du moteur 12.0), pendant
+-- un écran de chargement et ANNOUNCE_LOAD_HOLD s après ; la file attend
+-- (nouvel essai dans ANNOUNCE_RETRY s). Un envoi refusé par le jeu
+-- (ADDON_ACTION_FORBIDDEN / BLOCKED sur SendChatMessage) coupe l'annonce
+-- automatique pour la session : jamais deux fois la fenêtre « bloqué ».
+ns.ANNOUNCE_LOAD_HOLD = 2
+ns.ANNOUNCE_RETRY = 3
+function ns:AnnounceHeld()
+	if self.announceCut then return "cut" end
+	if self.announceLoadingUntil and Now() < self.announceLoadingUntil then return "loading" end
+	local info = G("C_ChatInfo")
+	if type(info) == "table" and type(info.InChatMessagingLockdown) == "function" then
+		local ok, locked = pcall(info.InChatMessagingLockdown)
+		if ok and ns.Plain(locked) == true then return "lockdown" end
+	end
+	return nil
+end
+
+local function AnnounceRetry()
+	if not ns.Soon then return end
+	ns.Soon("share:announce", ns.ANNOUNCE_RETRY, function()
+		local done, err = pcall(ns.AnnounceFlush, ns)
+		if not done then QuietError(ns, "share:announce", err) end
+	end)
+end
+
 -- Canaux de l'annonce, maintenant (jamais SAY, YELL ni un canal public)
 function ns:AnnounceChannels()
 	local db, list = self:DB(), {}
@@ -1062,6 +1090,9 @@ end
 function ns:AnnounceFlush()
 	local queue = self.announceQueue
 	if #queue == 0 or self:AnnounceInCombat() then return 0 end
+	local held = self:AnnounceHeld()
+	if held == "cut" then self.announceQueue = {}; return 0 end
+	if held then AnnounceRetry(); return 0 end
 	self.announceQueue = {}
 	local log, now, sent = self.shareLog, Now(), 0
 	for _, channel in ipairs(self:AnnounceChannels()) do
@@ -1151,17 +1182,32 @@ end
 do
 	local ok, events = pcall(CreateFrame, "Frame")
 	if ok and events then
-		pcall(events.RegisterEvent, events, "PLAYER_REGEN_ENABLED")
-		pcall(events.RegisterEvent, events, "ADDON_ACTION_BLOCKED")
+		for _, event in ipairs({ "PLAYER_REGEN_ENABLED", "ADDON_ACTION_BLOCKED", "ADDON_ACTION_FORBIDDEN" }) do
+			pcall(events.RegisterEvent, events, event)
+		end
 		events:SetScript("OnEvent", function(_, event, addon, fn)
 			if event == "PLAYER_REGEN_ENABLED" then
 				local done, err = pcall(ns.AnnounceFlush, ns)
 				if not done then QuietError(ns, "share:announce", err) end
-			elseif event == "ADDON_ACTION_BLOCKED" and addon == ADDON then
-				QuietError(ns, "share:blocked", tostring(fn))
+			elseif ns.Plain(addon) == ADDON then
+				-- (le détail est noté par le socle : db.actionLog, /qc diag)
+				local name = tostring(ns.Plain(fn) or "")
+				if name:find("SendChatMessage", 1, true) then
+					ns.announceCut = true
+					ns.announceQueue = {}
+				end
+				QuietError(ns, "share:blocked", name)
 			end
 		end)
 		ns.announceEvents = events
+	end
+	-- écran de chargement : par le cadre commun (événements fréquents)
+	if ns.On then
+		ns.On("PLAYER_LEAVING_WORLD", "share", function() ns.announceLoadingUntil = math.huge end, "share:PLAYER_LEAVING_WORLD")
+		ns.On("PLAYER_ENTERING_WORLD", "share", function()
+			ns.announceLoadingUntil = Now() + ns.ANNOUNCE_LOAD_HOLD
+			if #ns.announceQueue > 0 then AnnounceRetry() end
+		end, "share:PLAYER_ENTERING_WORLD")
 	end
 end
 

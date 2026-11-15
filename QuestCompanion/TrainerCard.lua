@@ -1253,7 +1253,13 @@ function ns:TrainerMenuTarget(contextData)
 	return self:TrainerUnitName(contextData.unit)
 end
 
+-- 3.1.0 bêta 9 (retour « action bloquée à chaque sortie de donjon ») : en
+-- instance, rien n'est écrit dans les menus de Blizzard. C'est par ces menus
+-- (portrait d'un membre, cible) qu'on quitte le groupe ou se téléporte hors
+-- du donjon, actions réservées au jeu : notre ligne ne doit pas y passer.
+-- La fiche reste ouverte à la cible, à la Réserve et dehors.
 function ns:TrainerMenuAdd(rootDescription, contextData)
+	if Plain(Call(G("IsInInstance"))) == true then return false end
 	local name = self:TrainerMenuTarget(contextData)
 	if not name or not self:TrainerIsHolder(name) then return false end
 	if type(rootDescription) ~= "table" or type(rootDescription.CreateButton) ~= "function" then return false end

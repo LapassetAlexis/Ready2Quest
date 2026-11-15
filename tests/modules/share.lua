@@ -679,6 +679,7 @@ do
 	SH.Reset({ party = true })
 	_G.SendChatMessage = function() error("Interface action failed because of an AddOn") end
 	NS.errors = {}
+	NS.actionSeen, NS.actionChatDone = nil, nil
 	Mock:Reset()
 	local ok1 = pcall(NS.AnnounceCaptures, NS, { { kind = "capture", name = "A", shiny = true, key = "cap:1" } })
 	SH.Step(31)
@@ -687,7 +688,12 @@ do
 	local noted = 0
 	for _, e in ipairs(NS.errors) do if tostring(e.where):find("^share:") then noted = noted + 1 end end
 	s.ok("refusé : pas d'erreur Lua", ok1 and ok2 and ok3)
-	s.ok("noté une fois, rien dans le chat", noted == 1 and Mock:Output() == "", noted .. " / " .. Mock:Output())
+	-- 3.1.0 bêta 9 : le socle le dit une fois (une ligne par session, /qc diag), et
+	-- l'annonce automatique est coupée pour la session
+	local _, lines = Mock:Output():gsub("action refusée par le jeu %(SendChatMessage%)", "")
+	s.ok("noté une fois, une seule ligne dans le chat (socle), annonce coupée", noted == 1 and lines == 1
+		and select(2, Mock:Output():gsub("\n", "")) == 0 and NS.announceCut == true, noted .. " / " .. Mock:Output())
+	NS.announceCut = nil
 	SH.Reset()
 	SH.Restore()
 	s.check("[ANN] lot en une ligne (≤ 255) ; pas de doublon avec le partage manuel ; envoi refusé sans erreur, noté une fois")

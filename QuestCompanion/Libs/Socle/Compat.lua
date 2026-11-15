@@ -174,19 +174,41 @@ end
 -- côté client ; repli sur RegisterEvent (les gestionnaires gardent leur test
 -- unit == "player"). Un gestionnaire ajouté ici ne voit plus que le joueur.
 ns.PLAYER_UNIT_EVENTS = { UNIT_AURA = true, UNIT_STATS = true }
+local CLEU = "COMBAT_LOG_EVENT_UNFILTERED"
+-- socle 3.1.0 (retour « action bloquée à chaque sortie de donjon ») : sur le
+-- moteur 12.0, toucher au journal de combat fermé (s'y abonner OU s'en
+-- désabonner) est une action réservée à Blizzard : le client lève la fenêtre
+-- ADDON_ACTION_FORBIDDEN au nom de l'addon, pcall ou pas. QuestCompanion
+-- 3.0.3 désabonnait le journal à chaque sortie d'instance (hauts faits).
+-- Aucun appel au client pour lui tant qu'il est fermé, dans un sens ou l'autre.
+function ns.EventForbidden(event)
+	return event == CLEU and ns.CombatLogRestricted()
+end
+
 function ns.RegisterGameEvent(frame, event)
+	if ns.EventForbidden(event) then return false end
 	if ns.PLAYER_UNIT_EVENTS[event] and type(frame.RegisterUnitEvent) == "function" then
 		if pcall(frame.RegisterUnitEvent, frame, event, "player") then return true end
 	end
 	return pcall(frame.RegisterEvent, frame, event) and true or false
 end
 
-local CLEU = "COMBAT_LOG_EVENT_UNFILTERED"
+-- Désabonne seulement ce qui est abonné (IsEventRegistered quand le client
+-- l'a), jamais un événement fermé ; rend true si l'appel est parti
+function ns.UnregisterGameEvent(frame, event)
+	if type(frame) ~= "table" or type(frame.UnregisterEvent) ~= "function" or ns.EventForbidden(event) then return false end
+	if type(frame.IsEventRegistered) == "function" then
+		local ok, on = pcall(frame.IsEventRegistered, frame, event)
+		if ok and ns.Plain(on) == false then return false end
+	end
+	return pcall(frame.UnregisterEvent, frame, event) and true or false
+end
+
 local STANDALONE = { PARTY_KILL = true, UNIT_DIED = true }
 function ns.RegisterHandlers(frame, handlers)
 	local logOpen = false
 	if handlers[CLEU] and not ns.CombatLogRestricted() then
-		logOpen = pcall(frame.RegisterEvent, frame, CLEU) and true or false
+		logOpen = ns.RegisterGameEvent(frame, CLEU)
 	end
 	for event in pairs(handlers) do
 		if event ~= CLEU and not (STANDALONE[event] and logOpen) then
@@ -241,6 +263,30 @@ local function HubCompact()
 	hubDirty = false
 end
 
+-- Derniers gestionnaires appelés (diagnostic d'une action refusée par le jeu,
+-- ns.ActionRecent) : un petit anneau, trois écritures par appel, rien d'alloué
+ns.ACTION_RECENT_MAX = 8
+local recentWhere, recentEvent, recentAt, recentIndex = {}, {}, {}, 0
+local function Recent(where, event)
+	recentIndex = recentIndex % ns.ACTION_RECENT_MAX + 1
+	recentWhere[recentIndex], recentEvent[recentIndex] = where, event
+	recentAt[recentIndex] = ns.Now and ns.Now() or 0
+end
+ns.ActionRecentNote = Recent
+-- du plus récent au plus ancien : { { where = "qui:ÉVÉNEMENT", at = horloge }, … }
+function ns.ActionRecent()
+	local list = {}
+	for step = 0, ns.ACTION_RECENT_MAX - 1 do
+		local i = (recentIndex - step - 1) % ns.ACTION_RECENT_MAX + 1
+		local where = recentWhere[i]
+		if where == nil then break end
+		local event = recentEvent[i]
+		if event and not tostring(where):find(event, 1, true) then where = tostring(where) .. ":" .. event end
+		list[#list + 1] = { where = tostring(where), at = recentAt[i] }
+	end
+	return list
+end
+
 local function HubDispatch(_, event, ...)
 	local list = hubSubs[event]
 	if not list then return end
@@ -248,6 +294,7 @@ local function HubDispatch(_, event, ...)
 	for i = 1, #list do
 		local entry = list[i]
 		if entry.active then
+			Recent(entry.where or entry.label, event)
 			local ok, err = pcall(entry.fn, ...)
 			if not ok and ns.RecordError then ns:RecordError(entry.where or (tostring(entry.label) .. ":" .. tostring(event)), err) end
 		end
@@ -281,7 +328,7 @@ local function HubCount(event, delta)
 		hubActive[event] = 0
 		if hubHeard[event] then
 			hubHeard[event] = nil
-			if type(frame.UnregisterEvent) == "function" then pcall(frame.UnregisterEvent, frame, event) end
+			ns.UnregisterGameEvent(frame, event)
 		end
 	end
 	return hubHeard[event] == true
@@ -295,8 +342,8 @@ local function HubAccepts(event)
 	if hubAccepts[event] == nil then
 		local frame = Hub()
 		local ok = frame and ns.RegisterGameEvent(frame, event) or false
-		if ok and (hubActive[event] or 0) <= 0 and type(frame.UnregisterEvent) == "function" then
-			pcall(frame.UnregisterEvent, frame, event)
+		if ok and (hubActive[event] or 0) <= 0 then
+			ns.UnregisterGameEvent(frame, event)
 		elseif ok then
 			hubHeard[event] = true
 		end
@@ -661,6 +708,110 @@ function ns:ShowCopyLinks(title, links)
 		Pick(dialog, 1)
 	end
 	return dialog
+end
+
+-- ---------------------------------------------------------------------------
+-- socle 3.1.0 : action refusée par le jeu (« <addon> a été bloqué à cause
+-- d'une action qui n'est utilisable que par l'IU de Blizzard »).
+-- ADDON_ACTION_FORBIDDEN / ADDON_ACTION_BLOCKED (addon, fonction) qui nomment
+-- CET addon : notés dans la sauvegarde (db.actionLog, ACTION_LOG_MAX entrées,
+-- gardés après « Désactiver » ou /reload) avec l'heure, la version, la zone,
+-- instance ou non, combat ou non, messagerie verrouillée ou non, et les
+-- derniers gestionnaires d'événement appelés (ns.ActionRecent). Une entrée
+-- par fonction et par session ; UNE ligne dans le chat par session ;
+-- /diag les liste (ns:DiagActionLines, dans ns:DiagErrorLines).
+-- ---------------------------------------------------------------------------
+ns.ACTION_LOG_MAX = 10
+ns.ACTION_RECENT_SHOWN = 5
+local function Call1(name, ...)
+	local fn = rawget(_G, name)
+	if type(fn) ~= "function" then return nil end
+	local ok, a, b = pcall(fn, ...)
+	if not ok then return nil end
+	return ns.Plain(a), ns.Plain(b)
+end
+
+local function ActionLog(self, create)
+	local okDB, db = pcall(self.DB, self)
+	if not (okDB and type(db) == "table") then return nil end
+	if type(db.actionLog) ~= "table" then
+		if not create then return nil end
+		db.actionLog = {}
+	end
+	return db.actionLog
+end
+
+function ns:ActionRefused(event, addon, fn)
+	if ns.Plain(addon) ~= ADDON then return nil end
+	local kind = event == "ADDON_ACTION_BLOCKED" and "blocked" or "forbidden"
+	fn = tostring(ns.Plain(fn) or "?")
+	self.actionSeen = self.actionSeen or {}
+	if self.actionSeen[kind .. "|" .. fn] then return nil end
+	self.actionSeen[kind .. "|" .. fn] = true
+	local inside, instanceType = Call1("IsInInstance")
+	local info = rawget(_G, "C_ChatInfo")
+	local locked = false
+	if type(info) == "table" and type(info.InChatMessagingLockdown) == "function" then
+		local ok, value = pcall(info.InChatMessagingLockdown)
+		locked = ok and ns.Plain(value) == true
+	end
+	local now = ns.Now and ns.Now() or 0
+	local recent = {}
+	for _, step in ipairs(ns.ActionRecent()) do
+		if #recent >= ns.ACTION_RECENT_SHOWN then break end
+		recent[#recent + 1] = self:F("DIAG_ACTION_AGO", step.where, math.max(0, now - (tonumber(step.at) or now)))
+	end
+	local zone = Call1("GetRealZoneText")
+	local entry = {
+		kind = kind, fn = fn, version = tostring(ns.version or "?"),
+		at = tostring(Call1("date", "%Y-%m-%d %H:%M:%S") or "?"),
+		zone = type(zone) == "string" and zone ~= "" and zone or "?",
+		instance = inside == true and tostring(instanceType or "?") or nil,
+		combat = Call1("InCombatLockdown") == true or nil,
+		locked = locked or nil,
+		recent = recent,
+	}
+	local log = ActionLog(self, true)
+	if log then
+		log[#log + 1] = entry
+		while #log > ns.ACTION_LOG_MAX do table.remove(log, 1) end
+	end
+	if not self.actionChatDone then
+		self.actionChatDone = true
+		self:Print(self:F("ACTION_REFUSED_CHAT", fn))
+	end
+	return entry
+end
+
+function ns:DiagActionLines()
+	local log = ActionLog(self, false)
+	if not log or #log == 0 then return 0 end
+	local Theme = ns.Theme
+	self:Print(Theme.T_RED .. self:F("DIAG_ACTIONS", #log) .. "|r")
+	for _, entry in ipairs(log) do
+		local place = entry.instance and self:F("DIAG_ACTION_IN", entry.instance) or ns.L.DIAG_ACTION_OUT
+		local state = entry.combat and ns.L.DIAG_ACTION_COMBAT or ns.L.DIAG_ACTION_CALM
+		if entry.locked then state = state .. ", " .. ns.L.DIAG_ACTION_LOCK end
+		self:Print(self:F("DIAG_ACTION_ROW", tostring(entry.at), tostring(entry.fn), tostring(entry.kind),
+			tostring(entry.version), tostring(entry.zone) .. " " .. place, state))
+		if type(entry.recent) == "table" and #entry.recent > 0 then
+			self:Print(Theme.T_GREY .. self:F("DIAG_ACTION_AFTER", table.concat(entry.recent, ", ")) .. "|r")
+		end
+	end
+	return #log
+end
+
+do
+	local ok, frame = pcall(CreateFrame, "Frame")
+	if ok and frame then
+		pcall(frame.RegisterEvent, frame, "ADDON_ACTION_FORBIDDEN")
+		pcall(frame.RegisterEvent, frame, "ADDON_ACTION_BLOCKED")
+		frame:SetScript("OnEvent", function(_, event, addon, fn)
+			local done, err = pcall(ns.ActionRefused, ns, event, addon, fn)
+			if not done and ns.RecordError then ns:RecordError("action:" .. tostring(event), err) end
+		end)
+		ns.actionFrame = frame
+	end
 end
 
 ns:DetectCapabilities()
