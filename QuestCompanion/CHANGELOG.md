@@ -2,9 +2,9 @@
 
 ## 3.0.4
 
-- **Plus de fenêtre « QuestCompanion a été bloqué… » à la sortie d'un donjon** : à chaque sortie d'instance, l'addon se désabonnait du journal de combat, que le jeu garde fermé aux addons ; le jeu le prenait pour une action réservée à son interface. Quest Companion ne se désabonne plus que de ce qu'il a réellement écouté.
+- **Fenêtre « QuestCompanion a été bloqué… » à la sortie d'un donjon** : sa cause la plus probable est corrigée. À chaque sortie d'instance, l'addon se désabonnait du journal de combat, que le jeu garde fermé aux addons ; il ne se désabonne plus que de ce qu'il a réellement écouté. Si la fenêtre revient chez toi, dis-le sur le Discord (#addons-bugs).
 
-*English:* no more "QuestCompanion has been blocked…" window when leaving a dungeon: on every instance exit the addon unsubscribed from the combat log, which the game keeps closed to addons, and the game treated that as an action reserved for its own UI. Quest Companion now only unsubscribes from what it actually listened to.
+*English:* the "QuestCompanion has been blocked…" window when leaving a dungeon: its most likely cause is fixed. On every instance exit the addon unsubscribed from the combat log, which the game keeps closed to addons; it now only unsubscribes from what it actually listened to. If the window still shows up for you, tell us on Discord (#addons-bugs).
 
 ## 3.0.3
 

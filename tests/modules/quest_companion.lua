@@ -61,7 +61,7 @@ do
 		not QC_TOC:find("## Dependencies", 1, true) and not QC_TOC:find("## RequiredDeps", 1, true)
 		and QC_TOC:find("\n## OptionalDeps: Ready2Quest\n", 1, true) ~= nil
 		and QC_TOC:find("\n## SavedVariables: QuestCompanionDB\n", 1, true) ~= nil)
-	Check("[QC] versions : QC 3.0.1, R2Q 1.34.0, comme leurs namespaces", QC_TOC:find("\n## Version: 3.0.4\n", 1, true)
+	Check("[QC] versions : QC 3.0.4, R2Q 1.34.0, comme leurs namespaces", QC_TOC:find("\n## Version: 3.0.4\n", 1, true)
 		and R2Q_TOC:find("\n## Version: 1.34.0\n", 1, true) and QNS.version == "3.0.4" and NS.version == "1.34.0")
 	for _, addon in ipairs({ { "Ready2Quest", R2Q_TOC }, { "QuestCompanion", QC_TOC } }) do
 		local files = QCT.TocFiles(addon[2])
