@@ -22,6 +22,14 @@ local GLOBALS = { "C_CombatLog", "CombatLogGetCurrentEventInfo", "IsInInstance",
 	"UnitIsFriend", "UnitFactionGroup", "GetRealZoneText", "date" }
 for _, name in ipairs(GLOBALS) do saved[name] = rawget(_G, name) end
 local function Restore() for _, name in ipairs(GLOBALS) do _G[name] = saved[name] end end
+-- un bloc qui plante est un échec (les suivants jouent quand même)
+local function Block(name, fn)
+	local ok, err = pcall(fn)
+	if not ok then
+		Restore()
+		Check("[BLOQ] " .. name .. " : sans erreur", false, tostring(err))
+	end
+end
 
 -- Espion : chaque appel au client sur le journal de combat, tous cadres confondus
 local function SpyCLEU()
@@ -48,7 +56,7 @@ local function SpyCLEU()
 end
 
 -- 1. Journal de combat fermé ------------------------------------------------
-do
+Block("journal de combat", function()
 	Say("-- action bloquée : journal de combat fermé, jamais touché")
 	ResetWorld()
 	_G.C_CombatLog = { IsCombatLogRestricted = function() return true end }
@@ -110,10 +118,10 @@ do
 	spy.Stop()
 	Mock.world.instance = nil
 	Restore()
-end
+end)
 
 -- 2. Filtre CHAT_MSG_SYSTEM des échanges -----------------------------------
-do
+Block("filtre du chat", function()
 	Say("-- action bloquée : filtre du chat des échanges, le temps utile")
 	ResetWorld()
 	QNS:TradeResetSession()
@@ -155,10 +163,10 @@ do
 	Check("[BLOQ] filtre : jamais posé sans fonction de retrait", okSet and posed == false and Count() == 0)
 	QNS:TradeResetSession()
 	Restore()
-end
+end)
 
 -- 3. Menus du clic droit : rien en instance ---------------------------------
-do
+Block("menus", function()
 	Say("-- action bloquée : menus du clic droit en instance")
 	ResetWorld()
 	local function Root()
@@ -180,10 +188,10 @@ do
 		addedIn == false and inside.writes == 0 and addedOut == true and outside.writes >= 2,
 		tostring(addedIn) .. "/" .. inside.writes .. "/" .. tostring(addedOut) .. "/" .. outside.writes)
 	Restore()
-end
+end)
 
 -- 4. Annonce automatique : verrou de la messagerie, écran de chargement -----
-do
+Block("annonce", function()
 	Say("-- action bloquée : annonce automatique retenue")
 	ResetWorld()
 	local sends, locked = {}, true
@@ -226,10 +234,10 @@ do
 	QNS.actionSeen, QNS.actionChatDone = nil, nil
 	QNS:DB().actionLog = nil
 	Restore()
-end
+end)
 
 -- 5. Diagnostic --------------------------------------------------------------
-do
+Block("diagnostic", function()
 	Say("-- action bloquée : diagnostic (ADDON_ACTION_FORBIDDEN / BLOCKED)")
 	for _, case in ipairs({ { ns = QNS, addon = "QuestCompanion", other = "Ready2Quest", slash = "/qc" },
 		{ ns = RNS, addon = "Ready2Quest", other = "QuestCompanion", slash = "/r2q" } }) do
@@ -285,4 +293,4 @@ do
 	end
 	Restore()
 	Mock:Reset()
-end
+end)
