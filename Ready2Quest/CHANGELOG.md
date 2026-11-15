@@ -15,6 +15,11 @@
 
 *English:* Spell ranks now also offers new spells — the window gets a "New spells" section listing active spells you learned (at your class trainer) that are on none of your bars. **Place** puts it in the first empty slot (bar 1, then your other shown bars); with no room left, it lands on your cursor so you can drop it wherever you like. **Ignore** stops offering it (the list of ignored spells is in the settings, Spell ranks page, to offer one again). Never in combat. No passives, professions or mounts; and so you don't get everything at once, only spells learned from now on count. The icon, the chat and the pre-departure check line count them too.
 
+- **Tout apprendre** : chez le maître, le bouton ne recouvre plus ton argent. Quand la place manque, il affiche seulement « Tout apprendre » (le total reste dans l'infobulle) ou se pose au-dessus de « S'entraîner ».
+- **Si le jeu refuse une action** : une ligne le dit dans le chat (une fois par session) et `/r2q diag` en donne le détail.
+
+*English:* the "Learn all" button at trainers no longer covers your money: when space is short it shows just "Learn all" (the total stays in the tooltip) or moves above "Train". If the game refuses an action, one chat line says so (once per session) and `/r2q diag` gives the details.
+
 ## 1.34.0
 
 - **Objets favoris** : Alt+clic sur un objet de tes sacs le met en favori (toutes ses copies), ou l'en retire, aussi dans les sacs d'un autre addon (Baganator…) ; l'infobulle d'un objet de tes sacs rappelle le raccourci (« Alt+clic : ajouter aux favoris » / « retirer des favoris ») ; le raccourci se choisit dans Sac plein (Alt+clic, Ctrl+Alt+clic, Maj+Alt+clic, Alt+clic droit, Ctrl+Alt+clic droit, ou désactivé), et `/r2q favori [lien]` fait de même. Un favori porte un petit cadenas dans les sacs du jeu (et dans Baganator) et une ligne « Favori : protégé de la vente » dans son infobulle.

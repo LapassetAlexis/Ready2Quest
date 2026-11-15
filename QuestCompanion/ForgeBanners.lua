@@ -429,7 +429,9 @@ end
 function ns:ForgeCaptureResultFill(frame, result, line)
 	if not (frame and frame.forgeBanner and type(result) == "table") then return nil end
 	if result.npcID then
-		self:ForgeMedalSet(frame, "portrait", { npcID = result.npcID, type = result.type, shiny = result.shiny })
+		-- (liveDisplay : l'apparence lue sur la créature vivante, avant celle gardée au compte)
+		self:ForgeMedalSet(frame, "portrait", { npcID = result.npcID, type = result.type, shiny = result.shiny,
+			liveDisplay = result.liveDisplay })
 	else
 		self:ForgeMedalSet(frame, "glyph", frame.forgeGlyph)
 	end

@@ -507,3 +507,25 @@ do
 	s.check("[FBAN] bascule à chaud d'un exploit de guilde : le bandeau du nouveau thème reprend l'exploit, lignes ancrées")
 	Done()
 end
+
+-- 12. Le portrait du bandeau est celui de la créature vaincue, pas celui gardé au compte -----------
+do
+	Say("-- bandeaux forgés : portrait de la créature vaincue")
+	Fresh("azeroth")
+	local s = Steps()
+	local account = NS:CaptureAccount()
+	account.display = type(account.display) == "table" and account.display or {}
+	account.display[4407] = 500            -- valeur du compte, fausse (l'apparence d'un loup)
+	local keep = rawget(_G, "SetPortraitTextureFromCreatureDisplayID")
+	_G.SetPortraitTextureFromCreatureDisplayID = function(tex, id) tex.portraitID = id end
+	local f = NS:CaptureResultShow({ name = "Grande tarentule", stars = 1, npcID = 4407, level = 19, type = "Beast",
+		class = "normal", liveDisplay = 1088 })
+	s.ok("bandeau forgé, portrait au médaillon", f and f.forgeBanner and f.medal.kind == "portrait")
+	s.ok("l'apparence lue sur la créature vivante passe avant celle du compte", f and f.medal.icon.portraitID == 1088,
+		tostring(f and f.medal.icon.portraitID))
+	NS:CaptureResultHide()
+	_G.SetPortraitTextureFromCreatureDisplayID = keep
+	s.ok("sans erreur", Errors() == "", Errors())
+	s.check("[FBAN] « Capturé ! » : le portrait est celui de la créature vaincue (apparence lue vivante)")
+	Done()
+end

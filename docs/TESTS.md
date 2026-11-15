@@ -114,6 +114,15 @@ Sobre. Conséquences :
   cadre carré ou le Sobre sous le thème forgé sont épinglées en Sobre
   (`companion_notify`, `companion_rewards`) ou lisent le cadre forgé
   (`share`, `feats_rewards`, `capture_lot`, `companion_fx`).
+- Retours en jeu sur la bêta 8 : `portrait_display.lua` (apparence apprise
+  par une sonde dont le modèle n'est pas encore chargé : jamais celle de la
+  créature d'avant ; purge par révision ; apparence lue vivante qui voyage
+  avec la prise), `action_bloquee.lua` (journal de combat fermé jamais
+  abonné ni désabonné, filtre du chat le temps d'un envoi, menus de Blizzard
+  intacts en instance, annonce retenue, relevé des actions refusées dans
+  `/qc diag` et `/r2q diag`), les contrôles `[EXP-PLACE]` de
+  `capture_express.lua` (fil sous le compagnon et ses replis) et la
+  géométrie de `train_all.lua` (le bouton ne recouvre jamais l'argent).
 
 Avec ces modules, la suite compte 3 592 contrôles (3.1.0 bêta, avant
 publication).
