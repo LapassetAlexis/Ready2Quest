@@ -1691,7 +1691,16 @@ function ns.ShowModel(model, opts, profile)
 		local scale, cam = scale, cam
 		m.fitDisplay, m.fitScale = nil, nil
 		if fit and ns.CompanionFitScale then
-			local display = fitDisplay
+			-- 3.1.0 : une fois chargé (OnModelLoaded), le modèle dit lui-même son
+			-- apparence : elle passe avant celle apprise (une valeur apprise
+			-- fausse cadrait une tarentule à la taille d'un loup)
+			local display = tonumber(opts.display)
+			if not display and m.modelReady then
+				local ok, id = ModelCall(m, "GetDisplayInfo")
+				display = ok and tonumber(id) or nil
+				if display and display <= 0 then display = nil end
+			end
+			display = display or fitDisplay
 			if not display then
 				local ok, id = ModelCall(m, "GetDisplayInfo")
 				display = ok and tonumber(id) or nil
@@ -1776,52 +1785,138 @@ end
 
 -- Portrait 2D (2.11.0) : SetPortraitTextureFromCreatureDisplayID existe sur
 -- Forever (vérifié en jeu le 9/11/2026). Il faut le displayID de l'espèce :
--- lu une fois, quand elle est vue vivante (BestiarySeeUnit), par un modèle
--- sonde (SetUnit puis GetDisplayInfo), gardé au compte
--- (db.capture.display[npcID]). Jamais en combat, au plus une lecture par
--- seconde.
+-- lu quand elle est vue vivante (BestiarySeeUnit), par un modèle sonde
+-- (SetUnit puis GetDisplayInfo), gardé au compte (db.capture.display[npcID]).
+-- Jamais en combat, au plus une lecture par seconde.
+-- 3.1.0 : une Grande tarentule montrait un loup. Juste après SetUnit, le
+-- modèle n'est souvent pas encore chargé et GetDisplayInfo rend celui du
+-- modèle PRÉCÉDENT (le loup vu juste avant), qui était gardé sous le nouveau
+-- pnj, pour toujours. Désormais chaque lecture est une demande identifiée
+-- (probe.learnReq : pnj, modèle d'avant, heure) :
+--   * lue tout de suite seulement si le modèle a changé (sinon on attend
+--     OnModelLoaded, qui lit la demande en cours) ;
+--   * une demande à la fois par sonde : la suivante attend la réponse, ou
+--     MODEL_LEARN_TIMEOUT s (la demande est alors abandonnée, la sonde
+--     vidée : une réponse tardive ne trouve plus de demande et est ignorée) ;
+--   * la table du compte porte une révision (displayRev) : celle d'avant la
+--     correction, où des valeurs fausses se cachent sans qu'on puisse les
+--     distinguer, est vidée une fois (MODEL_DISPLAY_REV) ; elle se refait
+--     d'elle-même (sonde des créatures à l'ouverture des panneaux, sonde des
+--     unités à chaque espèce revue). En attendant : l'icône du type ;
+--   * une espèce déjà connue est relue une fois par session quand on la
+--     revoit vivante (au plus MODEL_LEARN_TRIES essais, mêmes limites) : le
+--     modèle de l'unité vivante fait foi ; gardé aussi pour la session
+--     (ns.modelLiveDisplay), que lit en premier le portrait d'une capture.
 ns.MODEL_LEARN_GAP = 1
-local function ProbeRead(m)
-	local npcID = m and m.learnNpc
-	if not npcID then return nil end
+ns.MODEL_LEARN_TIMEOUT = 5
+ns.MODEL_LEARN_TRIES = 3
+ns.MODEL_DISPLAY_REV = 2
+ns.modelLiveDisplay = ns.modelLiveDisplay or {}     -- pnj -> displayID lu vivant (session)
+ns.modelLearnTries = ns.modelLearnTries or {}       -- pnj -> essais de la sonde des unités (session)
+local function Fighting()
+	local fn = rawget(_G, "InCombatLockdown")
+	return ns.companionFighting or (type(fn) == "function" and fn()) and true or false
+end
+-- La table des displayID au compte
+function ns:ModelDisplayTable()
+	local account = self.CaptureAccount and self:CaptureAccount()
+	if type(account) ~= "table" then return nil end
+	if type(account.display) ~= "table" then
+		account.display = {}
+		account.displayRev = ns.MODEL_DISPLAY_REV
+	end
+	return account.display
+end
+-- Migration (sauvegarde lue, ADDON_LOADED) : une table d'avant la révision
+-- est vidée, une fois ; rend le nombre de valeurs oubliées. Lit db.capture
+-- directement (CaptureAccount fusionne le personnage, pas encore connu ici).
+function ns:ModelDisplayMigrate()
+	local db = self.DB and self:DB()
+	local account = type(db) == "table" and db.capture
+	if type(account) ~= "table" or account.displayRev == ns.MODEL_DISPLAY_REV then return 0 end
+	local dropped = 0
+	for _ in pairs(type(account.display) == "table" and account.display or {}) do dropped = dropped + 1 end
+	account.display, account.displayRev = {}, ns.MODEL_DISPLAY_REV
+	return dropped
+end
+do
+	local loaded = ns.OnAddonLoaded
+	function ns:OnAddonLoaded(...)
+		local ok, err = pcall(self.ModelDisplayMigrate, self)
+		if not ok and self.RecordError then self:RecordError("display:migrate", err) end
+		if loaded then return loaded(self, ...) end
+	end
+end
+-- Lit la réponse de la demande en cours ; `loaded` : appelée par
+-- OnModelLoaded (le modèle chargé est celui demandé)
+local function ProbeRead(m, loaded)
+	local req = type(m) == "table" and m.learnReq
+	if type(req) ~= "table" then return nil end
 	local ok, id = ModelCall(m, "GetDisplayInfo")
 	id = ok and tonumber(id) or nil
-	if id and id > 0 then
-		local account = ns.CaptureAccount and ns:CaptureAccount()
-		if account then
-			account.display = type(account.display) == "table" and account.display or {}
-			account.display[npcID] = id
-		end
-		m.learnNpc = nil
-		return id
+	if not id or id <= 0 then return nil end
+	if not loaded and id == req.before then return nil end   -- l'ancien modèle, resté
+	m.learnReq = nil
+	local book = ns:ModelDisplayTable()
+	if book then book[req.npc] = id end
+	if req.live then
+		ns.modelLiveDisplay[req.npc] = id
+		local sink = req.sink
+		if type(sink) == "table" and tonumber(sink.npcID) == req.npc then sink.display = id end
 	end
-	return nil
+	return id
 end
-function ns:ModelLearnDisplay(unit, npcID)
+local function ProbeLoaded(m) ProbeRead(m, true) end
+ns.ModelProbeRead = ProbeRead      -- tests
+-- La sonde est-elle libre ? Une demande restée sans réponse trop longtemps
+-- est abandonnée (sonde vidée) : rend true si une nouvelle peut partir
+local function ProbeFree(probe, now)
+	local req = probe.learnReq
+	if type(req) ~= "table" then return true end
+	if now - (tonumber(req.at) or 0) < ns.MODEL_LEARN_TIMEOUT then return false end
+	probe.learnReq = nil
+	ModelCall(probe, "ClearModel")
+	return true
+end
+-- Lance une demande : le modèle d'avant noté, sonde vidée, puis chargée par
+-- `load` (SetUnit / SetCreature) ; rend le displayID s'il est déjà lisible
+local function ProbeAsk(probe, req, load, what, now)
+	local _, before = ModelCall(probe, "GetDisplayInfo")
+	req.before, req.at = tonumber(before), now
+	ModelCall(probe, "ClearModel")
+	probe.learnReq = req
+	ModelCall(probe, load, what)
+	return ProbeRead(probe)
+end
+-- `sink` (facultatif) : la fiche de l'unité vue (Bestiary.lua,
+-- bestiaryUnits[guid]) qui reçoit son displayID (sink.display) une fois lu
+function ns:ModelLearnDisplay(unit, npcID, sink)
 	npcID = tonumber(npcID)
 	if not (unit and npcID) or not self.CaptureAccount then return nil end
-	local fighting = rawget(_G, "InCombatLockdown")
-	if self.companionFighting or (type(fighting) == "function" and fighting()) then return nil end
-	local account = self:CaptureAccount()
-	if type(account.display) == "table" and account.display[npcID] then return account.display[npcID] end
+	if Fighting() then return nil end
+	local live = ns.modelLiveDisplay[npcID]
+	if live then return live end
+	local book = self:ModelDisplayTable()
+	local known = book and tonumber(book[npcID]) or nil
+	if known and (ns.modelLearnTries[npcID] or 0) >= ns.MODEL_LEARN_TRIES then return known end
 	local now = (ns.Now and ns.Now()) or 0
-	if self.modelLearnAt and now - self.modelLearnAt < ns.MODEL_LEARN_GAP then return nil end
-	self.modelLearnAt = now
+	if self.modelLearnAt and now - self.modelLearnAt < ns.MODEL_LEARN_GAP then return known end
 	local probe = self.modelLearnProbe          -- une seule sonde (gardée sur ns : /qc diag, tests)
 	if probe == nil then
 		local ok, made = pcall(CreateFrame, "PlayerModel", nil, UIParent)
-		if not (ok and made) then self.modelLearnProbe = false; return nil end
+		if not (ok and made) then self.modelLearnProbe = false; return known end
 		probe = made
 		self.modelLearnProbe = probe
 		probe:SetSize(1, 1)
 		probe:SetPoint("TOPLEFT", UIParent, "BOTTOMLEFT", -50, -50)   -- hors de l'écran
 		ModelCall(probe, "SetAlpha", 0)
-		if probe.SetScript then pcall(probe.SetScript, probe, "OnModelLoaded", ProbeRead) end
+		if probe.SetScript then pcall(probe.SetScript, probe, "OnModelLoaded", ProbeLoaded) end
 	end
-	if not probe or type(probe.SetUnit) ~= "function" or type(probe.GetDisplayInfo) ~= "function" then return nil end
-	probe.learnNpc = npcID
-	ModelCall(probe, "SetUnit", unit)
-	return ProbeRead(probe)                       -- souvent lisible tout de suite
+	if not probe or type(probe.SetUnit) ~= "function" or type(probe.GetDisplayInfo) ~= "function" then return known end
+	if not ProbeFree(probe, now) then return known end
+	self.modelLearnAt = now
+	ns.modelLearnTries[npcID] = (ns.modelLearnTries[npcID] or 0) + 1
+	return ProbeAsk(probe, { npc = npcID, live = true, sink = sink }, "SetUnit", unit, now) or known
 end
 
 -- 2.14.0 (bêta 3) : apprendre le displayID d'une espèce capturée sans la
@@ -1834,13 +1929,11 @@ end
 -- lecture tous les MODEL_LEARN_CREATURE_GAP s, jamais en combat (reprise
 -- MODEL_LEARN_COMBAT_WAIT s plus tard). Gardé au compte comme les autres
 -- (db.capture.display) : le portrait 2D sert ensuite partout.
+-- 3.1.0 : une demande à la fois (voir plus haut) : la suivante attend la
+-- réponse de la précédente, ou son abandon.
 ns.MODEL_LEARN_CREATURE_GAP = 0.35   -- ≈ 3 lectures par seconde au plus
 ns.MODEL_LEARN_COMBAT_WAIT = 2
 local learnQueue, learnSeen = {}, {}
-local function Fighting()
-	local fn = rawget(_G, "InCombatLockdown")
-	return ns.companionFighting or (type(fn) == "function" and fn()) and true or false
-end
 local function CreatureProbe()
 	local probe = ns.modelLearnCreatureProbe
 	if probe ~= nil then return probe or nil end
@@ -1851,13 +1944,12 @@ local function CreatureProbe()
 	probe:SetSize(1, 1)
 	probe:SetPoint("TOPLEFT", UIParent, "BOTTOMLEFT", -50, -50)
 	ModelCall(probe, "SetAlpha", 0)
-	if probe.SetScript then pcall(probe.SetScript, probe, "OnModelLoaded", ProbeRead) end
+	if probe.SetScript then pcall(probe.SetScript, probe, "OnModelLoaded", ProbeLoaded) end
 	return probe
 end
 function ns:ModelKnownDisplay(npcID)
-	local account = self.CaptureAccount and self:CaptureAccount()
-	local known = account and type(account.display) == "table" and account.display[tonumber(npcID) or -1]
-	return tonumber(known)
+	local book = self.CaptureAccount and self:ModelDisplayTable()
+	return book and tonumber(book[tonumber(npcID) or -1]) or nil
 end
 -- La file : une liste de pnj (rangée par l'appelant) ; rend sa longueur
 function ns:ModelLearnCreatures(list)
@@ -1892,34 +1984,34 @@ function ns:ModelLearnPump()
 	local now = (ns.Now and ns.Now()) or 0
 	local since = now - (self.modelLearnCreatureAt or -1e9)
 	if since < ns.MODEL_LEARN_CREATURE_GAP then Later(ns.MODEL_LEARN_CREATURE_GAP - since); return nil end
-	local npc = table.remove(learnQueue, 1)
-	while npc and self:ModelKnownDisplay(npc) do npc = table.remove(learnQueue, 1) end
-	if not npc then return nil end
 	local probe = CreatureProbe()
 	if not (probe and type(probe.SetCreature) == "function" and type(probe.GetDisplayInfo) == "function") then
 		self:ModelLearnStop()
 		return nil
 	end
+	-- la demande précédente attend encore sa réponse : on repasse plus tard
+	if not ProbeFree(probe, now) then Later(ns.MODEL_LEARN_CREATURE_GAP); return nil end
+	local npc = table.remove(learnQueue, 1)
+	while npc and self:ModelKnownDisplay(npc) do npc = table.remove(learnQueue, 1) end
+	if not npc then return nil end
 	self.modelLearnCreatureAt = now
-	local _, before = ModelCall(probe, "GetDisplayInfo")
-	ModelCall(probe, "ClearModel")
-	probe.learnNpc = npc
-	ModelCall(probe, "SetCreature", npc)
 	-- lecture immédiate : seulement si ce n'est pas l'ancien modèle resté
-	local ok, id = ModelCall(probe, "GetDisplayInfo")
-	id = ok and tonumber(id) or nil
-	if id and id > 0 and id ~= tonumber(before) then ProbeRead(probe) end
+	ProbeAsk(probe, { npc = npc }, "SetCreature", npc, now)
 	if #learnQueue > 0 then Later(ns.MODEL_LEARN_CREATURE_GAP) end
 	return npc
 end
 
--- Le displayID connu d'une créature (candidat, fiche ou compte)
+-- Le displayID connu d'une créature : demandé (target.display), lu sur
+-- l'unité vivante (target.liveDisplay : candidat de capture), lu vivant
+-- dans la session, sinon appris au compte
 function ns:CreatureDisplay(target)
 	if type(target) ~= "table" then return nil end
 	if tonumber(target.display) then return tonumber(target.display) end
-	local account = self.CaptureAccount and self:CaptureAccount()
-	local known = account and type(account.display) == "table" and account.display[tonumber(target.npcID or target.npc) or -1]
-	return tonumber(known)
+	if tonumber(target.liveDisplay) then return tonumber(target.liveDisplay) end
+	local npc = tonumber(target.npcID or target.npc)
+	if not npc then return nil end
+	if ns.modelLiveDisplay[npc] then return ns.modelLiveDisplay[npc] end
+	return self:ModelKnownDisplay(npc)
 end
 
 -- Peint le portrait 2D rond de la créature sur `tex` ; sinon l'icône de son
@@ -2787,9 +2879,7 @@ end
 
 -- L'apparence apprise d'une espèce (sonde, gardée au compte), ou nil
 function ns:CompanionKnownDisplay(npc)
-	local account = self.CaptureAccount and self:CaptureAccount()
-	local known = account and type(account.display) == "table" and account.display[tonumber(npc) or -1]
-	return tonumber(known)
+	return self:CreatureDisplay({ npc = npc })
 end
 
 local function CompanionReapply() ns:CompanionApplyModel() end

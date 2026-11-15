@@ -97,16 +97,19 @@ do
 	QNS:CaptureAccount().display = {}
 	local probe = FakeModel()
 	probe.SetSize, probe.SetPoint, probe.SetScript = function() end, function() end, function() end
-	function probe:SetUnit(unit) self.unit = unit end
-	function probe:GetDisplayInfo() return 777 end
+	-- (3.1.0) le displayID est celui de l'unité chargée ; 0 une fois vidée
+	function probe:SetUnit(unit) self.unit, self.loaded = unit, unit end
+	function probe:ClearModel() self.loaded = nil end
+	function probe:GetDisplayInfo() return self.loaded and 777 or 0 end
 	QNS.modelLearnProbe, QNS.modelLearnAt = probe, nil
+	QNS.modelLiveDisplay, QNS.modelLearnTries = {}, {}
 	_G.InCombatLockdown = function() return true end
 	local fighting = QNS:ModelLearnDisplay("target", 71) == nil and probe.unit == nil
 	_G.InCombatLockdown = function() return false end
 	Check("[MOD] sonde : rien en combat ; hors combat, displayID lu et gardé au compte", fighting
 		and QNS:ModelLearnDisplay("target", 71) == 777 and QNS:CaptureAccount().display[71] == 777 and probe.unit == "target")
 	QNS.modelLearnAt, probe.unit = nil, nil
-	Check("[MOD] sonde : une espèce connue n'est pas relue", QNS:ModelLearnDisplay("target", 71) == 777 and probe.unit == nil)
+	Check("[MOD] sonde : une espèce lue vivante dans la session n'est pas relue", QNS:ModelLearnDisplay("target", 71) == 777 and probe.unit == nil)
 	QNS.modelLearnProbe, QNS.modelLearnAt = nil, nil
 	_G.InCombatLockdown = saved.InCombatLockdown
 	_G.SetPortraitTextureFromCreatureDisplayID = saved.SetPortraitTextureFromCreatureDisplayID

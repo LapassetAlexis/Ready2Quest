@@ -472,8 +472,10 @@ function ns:BestiarySeeUnit(unit)
 		species.name = self:BestiaryStaticName((self:BestiaryStaticZone(zoneID) or {})[npcID]) or species.name or tostring(npcID)
 	end
 	species.type = creatureType or species.type
-	-- 2.11.0 : son displayID, une fois au compte (portrait 2D, Companion.lua)
-	if self.ModelLearnDisplay then pcall(self.ModelLearnDisplay, self, unit, npcID) end
+	-- 2.11.0 : son displayID, une fois au compte (portrait 2D, Companion.lua) ;
+	-- 3.1.0 : celui de CETTE unité gardé sur sa fiche (entry.display), que
+	-- reprend le candidat de capture si elle tombe
+	if self.ModelLearnDisplay then pcall(self.ModelLearnDisplay, self, unit, npcID, entry) end
 	local family = ns.Plain(Call("UnitCreatureFamily", unit))
 	if type(family) == "string" and family ~= "" then species.family = family end
 	local class = ns.Plain(Call("UnitClassification", unit))

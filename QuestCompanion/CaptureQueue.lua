@@ -571,6 +571,9 @@ function ns:CaptureOffer(guid, entry, shiny)
 		name = self:CreatureName(npcID, { name = name }),
 		class = species.class or "normal", level = species.level, type = species.type,
 		family = species.family, shiny = shiny and true or nil, serial = state.queueSerial,
+		-- 3.1.0 : l'apparence lue sur l'unité vivante (Bestiary.lua) : le
+		-- portrait du bandeau et de la scène est celui de la créature abattue
+		liveDisplay = tonumber(entry.display),
 	}
 	-- 2.15.0 : la qualité se tire ici, au coup fatal (selon le rang) ; abattu
 	-- en mode chasse, il reste proposé jusqu'au bout de son temps
