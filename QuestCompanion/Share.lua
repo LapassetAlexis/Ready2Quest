@@ -11,9 +11,13 @@
 --     du modèle) et le clic droit sur un haut fait obtenu (page Hauts faits).
 --     Un bouton par bandeau, créé une fois sur le cadre réutilisé
 --     (Banners.lua : la file ne change pas).
---   * Quoi : UNIQUEMENT au clic du joueur (règle de Blizzard :
---     SendChatMessage veut un événement matériel ; rien d'automatique). Le
---     clic ouvre un petit menu des canaux disponibles : Guilde (en guilde),
+--   * Quoi : le bouton Partager n'envoie rien sans le clic du joueur (règle
+--     de Blizzard : Dire et les canaux publics veulent un événement
+--     matériel). Seule exception, plus bas (« Annonce automatique ») : les
+--     brillantes et les 3 étoiles partent seules au groupe (réglage
+--     announceGroup, actif par défaut) et, au choix, à la guilde
+--     (announceGuild) ; jamais en combat ni pendant un écran de chargement,
+--     coupées pour la session après un refus du jeu. Le clic ouvre un petit menu des canaux disponibles : Guilde (en guilde),
 --     Raid / Groupe (groupé), Dire, et « Copier » (le texte dans la zone de
 --     saisie du chat, à relire avant Entrée : le choix sûr pour les canaux
 --     publics, jamais d'envoi direct vers Général, Commerce ou la recherche
