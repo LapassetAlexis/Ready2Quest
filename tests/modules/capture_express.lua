@@ -478,6 +478,59 @@ do
 	if NS.captureExpressFeed then NS.captureExpressFeed:Hide(); NS.captureExpressFeed = nil end
 end
 
+-- 11. La bulle et le thème bougent pendant que des pastilles sont à l'écran ----------------
+do
+	Say("-- capture express : le fil suit la bulle et la bascule de thème")
+	XP.Reset()
+	local X = NS.CAPTURE_EXPRESS
+	local frame = NS.companionFrame
+	local oldH = UIParent.height
+	UIParent.height = 768
+	frame.GetBottom = function() return 30 end
+	frame.GetTop = function() return 150 end
+	NS:CaptureExpressPush("ok", "Loup", "")
+	local feed = NS.captureExpressFeed
+	local before = feed.mode == "above" and feed.lastPoint.relTo == frame
+	NS:CompanionSay("HELLO", { force = true, line = "COMP_SAY_HELLO", args = { "Brindille" } })
+	local bubble = NS.companionBubble
+	local p = feed.lastPoint
+	Check("[EXP-PLACE] au-dessus du compagnon, la bulle s'ouvre : le fil monte au-dessus d'elle (jamais dessous)",
+		before and bubble and bubble:IsShown() and feed.mode == "above" and p.relTo == bubble and p.relPoint == "TOP"
+		and p.y == X.gapBubble, feed.mode, tostring(p.relTo == frame))
+	NS:CompanionHideBubble()
+	p = feed.lastPoint
+	Check("[EXP-PLACE] la bulle se ferme : le fil redescend sur le compagnon",
+		feed.mode == "above" and p.relTo == frame and p.y == X.gapAbove, feed.mode)
+	frame.GetBottom, frame.GetTop = nil, nil
+	UIParent.height = oldH
+
+	-- Sobre -> forgé à chaud, pastilles à l'écran : le fil n'est pas laissé sur la plaque
+	local style = NS:DB().companionStyle
+	XP.Reset()
+	NS:DB().companionStyle = "sobre"
+	NS:ApplyUIStyle()
+	NS:CaptureExpressPush("ok", "Golem", "")
+	local old = NS.captureExpressFeed
+	NS:DB().companionStyle = style
+	NS:ApplyUIStyle()
+	frame = NS.companionFrame
+	Check("[EXP-PLACE] bascule Sobre -> forgé : le fil du Sobre est retiré (ni sur la plaque, ni d'un autre style)",
+		frame.ring == "forge" and not old:IsShown() and NS.captureExpressFeed == nil, frame.ring)
+	NS:CaptureExpressPush("ok", "Golem", "")
+	feed = NS.captureExpressFeed
+	p = feed.lastPoint
+	Check("[EXP-PLACE] après la bascule : fil forgé, sous l'étiquette d'humeur",
+		feed.forged and feed.mode == "below" and p.relTo == frame and p.y == -(frame.forgeHitBelow + X.gapBelow), p.y)
+	-- même thème réappliqué (le cadre a pu changer) : le fil à l'écran se replace
+	feed:ClearAllPoints()
+	feed:SetPoint("CENTER", UIParent, "CENTER", 0, 0)
+	NS:ApplyUIStyle()
+	p = feed.lastPoint
+	Check("[EXP-PLACE] thème réappliqué : le fil à l'écran se replace sous le compagnon",
+		NS.captureExpressFeed == feed and p.relTo == frame and p.y == -(frame.forgeHitBelow + X.gapBelow), p.y)
+	feed:Hide()
+end
+
 -- Rendu au harnais
 for _, name in ipairs(GLOBALS) do _G[name] = XP.saved[name] end
 math.random = XP.random

@@ -365,6 +365,57 @@ do
 	end
 end
 
+-- Au-dessus du compagnon (bas de l'écran), le fil est posé sur sa bulle ou sur
+-- lui : la bulle qui s'ouvre (ou se ferme) pendant que des pastilles sont à
+-- l'écran le replace, sinon elle les recouvrirait (bulle et fil partent du
+-- même haut du cadre)
+do
+	local function Follow(self)
+		local feed = self.captureExpressFeed
+		if feed and feed.mode ~= "below" and feed:IsShown() then pcall(self.CaptureExpressPlace, self) end
+	end
+	local say, hide = ns.CompanionSay, ns.CompanionHideBubble
+	if say then
+		function ns:CompanionSay(...)
+			local ok, why = say(self, ...)
+			if ok then Follow(self) end
+			return ok, why
+		end
+	end
+	if hide then
+		function ns:CompanionHideBubble(...)
+			local a = hide(self, ...)
+			Follow(self)
+			return a
+		end
+	end
+end
+
+-- Bascule de thème à chaud : le médaillon forgé déborde sous le cadre, pas le
+-- Sobre (frame.forgeHitBelow change) ; le fil à l'écran se replace. Ses
+-- pastilles sont faites au style du thème : d'un autre style, le fil est
+-- refait à la prochaine pastille.
+do
+	local restyle = ns.ApplyUIStyle
+	if restyle then
+		function ns:ApplyUIStyle(...)
+			local a, b = restyle(self, ...)
+			local feed = self.captureExpressFeed
+			if feed then
+				local forged = ns.QCForged and ns.QCForged() or nil
+				if (feed.forged and true or false) ~= (forged and true or false) then
+					feed:Hide()
+					feed.ticking = nil
+					self.captureExpressFeed = nil
+				elseif feed:IsShown() then
+					pcall(self.CaptureExpressPlace, self)
+				end
+			end
+			return a, b
+		end
+	end
+end
+
 -- Une pastille de plus : `kind` (ok, fail, notable, shiny, offer, all), le
 -- texte de gauche, celui de droite. La plus ancienne fiche est reprise.
 function ns:CaptureExpressPush(kind, text, right, life)
