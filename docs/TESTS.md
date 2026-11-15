@@ -124,8 +124,7 @@ Sobre. Conséquences :
   `capture_express.lua` (fil sous le compagnon et ses replis) et la
   géométrie de `train_all.lua` (le bouton ne recouvre jamais l'argent).
 
-Avec ces modules, la suite compte 3 592 contrôles (3.1.0 bêta, avant
-publication).
+Avec ces modules, la suite compte 3 674 contrôles (3.1.0).
 
 ## Écrire un test
 
