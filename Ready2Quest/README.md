@@ -16,16 +16,18 @@ Ready2Quest brings together **six modules** and a bit of **quality of life** (Qo
 |---|---|---|
 | ◆ | **Departure check** | When you leave a village, a capital or a camp, a readiness score out of 100 and some advice |
 | ◆ | **Expedition report** | When you come back, a summary of your trip: XP, gold, loot, deaths, durability loss, quests to turn in |
-| ◆ | **Before the dungeon** | At a dungeon entrance, its sheet: recommended level, your quests for that dungeon, your preparation |
+| ◆ | **Before the dungeon** | At a dungeon entrance, its sheet: recommended level, your quests for that dungeon, your preparation and, in a group, who is there and ready |
 | ◆ | **Camp kit** *(Forever)* | Your campfire kit and camp object ready, and the countdown to the camp buffs |
 | ◆ | **Gear summary** | When you change an item, a short-lived summary of the stats you gain or lose |
 | ◆ | **Portrait stats** | When you hover your portrait, your main stats, picked for your class and spec |
 | ✦ | **The right reward** | When you turn in a quest, the reward that helps you most is highlighted |
 | ✦ | **Leveling pace** | XP per hour, time to the next level, rested XP you'd earn by logging out |
 | ✦ | **Full bags** | Bags full out in the wild: the item that costs you the least to throw away, in one click |
+| ✦ | **Favorites** | Alt + click an item to protect it from selling and from the bag helpers |
 | ✦ | **After death** | Run back to your corpse or use the spirit healer? Both options, with the numbers |
-| ✦ | **Room for loot** | Full bags in front of loot: the cheapest items in your bags, one click to drop one and pick the loot up |
-| ✦ | **Spell ranks** | A spell on your bars has a higher rank in your spellbook: you get told, and update it in one click |
+| ✦ | **Room for loot** | Full bags in front of loot: the cheapest items in your bags, one click to drop one and pick the loot up; and fast loot (off by default) |
+| ✦ | **Spell ranks** | A spell on your bars has a higher rank in your spellbook: you get told, and update it in one click; new spells on none of your bars are offered too |
+| ✦ | **Learn all** | At a trainer, one button learns everything available, with the total cost |
 | ✦ | **Merchant** | Automatic selling of grey items and automatic repairs at merchants |
 
 The **road companion** and its **travel journal** are a separate addon, [QuestCompanion](../QuestCompanion/README.md), which works on its own or with Ready2Quest.
@@ -102,6 +104,8 @@ When you reach a dungeon entrance, or go inside, a **"!"** announces the sheet f
 - the quests for this dungeon that you have in your log;
 - a short preparation check: durability, repairs, food & drink, potions, hearthstone.
 
+**Group ready**: in a group, the sheet gets a **Group** section: who is inside, at the entrance or on the way, and who is ready (durability, repairs, food, potions, hearthstone), for the members who also run Ready2Quest. It all goes through hidden addon messages: nothing in group chat, nothing sent in combat. A member without the addon is still listed, without a status. `/r2q groupe` gives the same summary in chat. Setting on the **Before the dungeon** page (on).
+
 It covers the 19 classic dungeons and the 9 new Forever dungeons: City of Dalaran, Ruins of Lordaeron, Hall of Thanes, Excavation Site, Krol'dok… On Forever, it will also list the profession recipes that drop in the dungeon, once that data is known.
 
 ## Road companion → QuestCompanion
@@ -162,7 +166,7 @@ Your bags are full out in the wild and some loot won't fit? A small frame sugges
 Alt+click an item in your bags (the shortcut can be changed, or turned off, on the Full bags page) to mark it as a favorite, or unmark it; `/r2q favori [link]` does the same. Every copy of the item counts, and it works in bag addons too (Baganator…); the item's tooltip reminds you of the shortcut.
 - A small padlock on its slot in the game's bags, and "Favorite: protected from selling" in its tooltip.
 - Never sold with the grays, never suggested by Full bags or Room for loot.
-- At a merchant, right-click asks "Sell this favorite?" first. If one gets sold anyway, you are offered to buy it back.
+- At a merchant, right-click asks "Sell this favorite?" first. If one gets sold anyway, it is bought back automatically (if that fails, you are offered to buy it back).
 
 ### Room for loot
 
@@ -173,6 +177,8 @@ Inspired by the *Delete Cheapest Item* addon. Your bags are full and some loot w
 - **[Ignore]** never offers that item again (adds it to your favorites).
 - Never offered: quest items, keys, your hearthstone, class reagents, reagents of tracked recipes, your last food.
 
+**Fast loot** (off by default, on the same settings page): with the game's auto loot, everything is picked up at once, without the delay between two items. It follows your game setting and your auto loot key; what doesn't fit stays in the loot window, where Room for loot takes over. If SpeedyAutoLoot or Leatrix Plus's faster looting is on, Ready2Quest leaves it to them.
+
 ### Spell ranks
 
 A spell on your action bars has a higher rank in your spellbook (Holy Light rank 3 on the bar while you know rank 5)?
@@ -180,6 +186,11 @@ A spell on your action bars has a higher rank in your spellbook (Holy Light rank
 - The Ready2Quest icon shows up (click: the list), with a line in chat, and the departure check gets a line too.
 - The list (`/r2q sorts`): each spell, its rank and the best one you know, its bar and slot. **[Update]** puts the best rank in the same slot, **[Update all]** does them all, out of combat.
 - **[Ignore]** ignores that **slot** for that spell: a rank 1 kept on purpose (a cheap heal) doesn't stop you from being told about the other slots. Settings, **Spell ranks** page, forget the ignored slots.
+- **New spells**: the same window lists, under "New spells", the active spells you learned at your trainer that are on none of your bars. **[Place]** puts one in the first empty slot (bar 1, then your other visible bars); with no room left, it lands on your cursor so you can drop it where you like. **[Ignore]** stops offering it (the list of ignored spells is on the Spell ranks page). No passives, professions or mounts, and only spells learned from 1.35 on count.
+
+### Learn all
+
+At a class or profession trainer, a **Learn all** button next to the game's own shows the total cost; one click learns everything available, one spell after another. Not enough gold for everything? The button is greyed out and its tooltip says how much you're missing. Nothing is ever learned without your click. Setting on the **Spell ranks** page (on).
 
 ### After death
 
@@ -204,7 +215,7 @@ Both are on by default and can be turned off in the settings. They work even if 
 
 `/r2q options`, or right-click the minimap button.
 
-- **General**: turn the addon on, and everything about display (minimap button, window or chat, reports announced by an icon, the score below which a report is announced, placement of the frames and the icon).
+- **General**: turn the addon on, and everything about display (minimap button, window or chat, reports announced by an icon, the score below which a report is announced, placement of the frames and the icon), and the **Interface style**: Azeroth, the forged theme (gilded frame, logo medallion, raised buttons; the default), or Plain, the earlier flat look (`/r2q style azeroth|sobre`; windows already open change at the next `/reload`).
 - **Modules**: each module has its own switch right in the list on the left, and its own page explaining what it does. The Departure check has sub-pages: Trigger, Safe areas, Bags & food, Gear & character, Buffs & crafting. Gear summary and Portrait stats have no settings, but their page offers "Place the frame" (and "Show now" for the portrait).
 - **QoL**: Quality of life, with its sub-pages Merchant, The right reward, Leveling pace, Full bags and After death. A module's sub-pages only show when it's expanded.
 
@@ -225,6 +236,11 @@ Both are on by default and can be turned off in the settings. They work even if 
 | `/r2q checks` · `check vivres off` | the departure check controls |
 | `/r2q xp` | your leveling pace |
 | `/r2q jeter` | what to throw away when your bags are full |
+| `/r2q place` | opens Room for loot |
+| `/r2q favori [link]` | marks or unmarks a favorite |
+| `/r2q sorts` | spell ranks and new spells |
+| `/r2q groupe` | who is there and ready for the dungeon |
+| `/r2q style azeroth\|sobre` | the interface style |
 | `/r2q diag` | diagnostics, to attach if you report a problem |
 
 ---
@@ -298,16 +314,18 @@ Ready2Quest réunit **six modules** et un peu de **confort** (QoL). Chacun s'act
 |---|---|---|
 | ◆ | **Check avant le départ** | Quand tu quittes un village, une capitale ou un camp, une note de préparation sur 100 et des conseils |
 | ◆ | **Retour d'expédition** | Quand tu rentres, le bilan de ta sortie : XP, or, butin, morts, usure, quêtes à rendre |
-| ◆ | **Avant le donjon** | À l'entrée d'un donjon, sa fiche : niveau conseillé, tes quêtes pour ce donjon, ta préparation |
+| ◆ | **Avant le donjon** | À l'entrée d'un donjon, sa fiche : niveau conseillé, tes quêtes pour ce donjon, ta préparation et, en groupe, qui est là et prêt |
 | ◆ | **Kit de camp** *(Forever)* | Ton kit de feu de camp et ton objet de camp prêts, le compte à rebours des buffs au camp |
 | ◆ | **Résumé de stuff** | Quand tu changes d'objet, un petit résumé éphémère des stats gagnées ou perdues |
 | ◆ | **Stats du portrait** | Au survol de ton portrait, tes stats principales, choisies selon ta classe et ta spécialisation |
 | ✦ | **La bonne récompense** | Au rendu d'une quête, la récompense qui te sert le plus est mise en avant |
 | ✦ | **Rythme de leveling** | XP par heure, temps avant le prochain niveau, repos à gagner en te déconnectant |
 | ✦ | **Sac plein** | Sac plein en pleine nature : l'objet que tu perds le moins à jeter, en un clic |
+| ✦ | **Favoris** | Alt + clic sur un objet pour le protéger de la vente et des aides des sacs |
 | ✦ | **Après la mort** | Courir jusqu'au corps ou le guérisseur des esprits ? Les deux options chiffrées |
-| ✦ | **Place au butin** | Sacs pleins devant un butin : les objets les moins chers de tes sacs, un clic pour en jeter un et ramasser le butin |
-| ✦ | **Rangs de sorts** | Un sort de tes barres a un meilleur rang dans ton livre : tu es prévenu, et tu le mets à jour d'un clic |
+| ✦ | **Place au butin** | Sacs pleins devant un butin : les objets les moins chers de tes sacs, un clic pour en jeter un et ramasser le butin ; et le butin rapide (coupé par défaut) |
+| ✦ | **Rangs de sorts** | Un sort de tes barres a un meilleur rang dans ton livre : tu es prévenu, et tu le mets à jour d'un clic ; les nouveaux sorts absents de tes barres sont proposés aussi |
+| ✦ | **Tout apprendre** | Chez un maître, un bouton apprend tout ce qui est disponible, avec le total à payer |
 | ✦ | **Marchand** | Vente automatique des objets gris et réparation automatique chez les marchands |
 
 Le **compagnon de route** et son **carnet de voyage** sont un addon à part, [QuestCompanion](../QuestCompanion/README.md#francais), qui fonctionne seul ou avec Ready2Quest.
@@ -384,6 +402,8 @@ En arrivant à l'entrée d'un donjon, ou en y entrant, un **« ! »** annonce la
 - les quêtes de ce donjon que tu as dans ton journal ;
 - une préparation courte : durabilité, réparation, vivres, potions, pierre de foyer.
 
+**Groupe prêt** : en groupe, la fiche gagne une section **Groupe** : qui est dans le donjon, à l'entrée ou en route, et qui est prêt (durabilité, réparation, vivres, potions, foyer), pour les membres qui ont aussi Ready2Quest. Tout passe par des messages d'addon invisibles : rien dans le chat du groupe, rien d'envoyé en combat. Un membre sans l'addon reste listé, sans état. `/r2q groupe` donne le même bilan dans le chat. Réglage page **Avant le donjon** (actif).
+
 Elle couvre les 19 donjons classiques et les 9 nouveaux donjons de Forever : City of Dalaran, Ruins of Lordaeron, Hall of Thanes, Excavation Site, Krol'dok… Sur Forever, elle listera aussi les plans de métier qui tombent dans le donjon, dès que ces données seront connues.
 
 ## Compagnon de route → QuestCompanion
@@ -444,7 +464,7 @@ Ton sac est plein en pleine nature et un butin ne rentre pas ? Un petit cadre te
 Alt+clic sur un objet de tes sacs (raccourci modifiable, ou désactivable, dans la page Sac plein) le met en favori, ou l'en retire ; `/r2q favori [lien]` fait de même. Toutes les copies de l'objet comptent, et ça marche aussi dans les sacs d'un addon (Baganator…) ; l'infobulle de l'objet rappelle le raccourci.
 - Un petit cadenas sur sa case dans les sacs du jeu, et « Favori : protégé de la vente » dans son infobulle.
 - Jamais vendu avec les gris, jamais proposé par Sac plein ni Place au butin.
-- Chez un marchand, le clic droit demande d'abord « Vendre ce favori ? ». S'il part quand même, on te propose de le racheter.
+- Chez un marchand, le clic droit demande d'abord « Vendre ce favori ? ». S'il part quand même, il est racheté automatiquement (si ça échoue, on te propose de le racheter).
 
 ### Place au butin
 
@@ -455,6 +475,8 @@ Inspiré de l'addon *Delete Cheapest Item*. Tes sacs sont pleins et un butin ne 
 - **[Ignorer]** ne le propose plus jamais (il passe dans tes favoris).
 - Jamais proposés : objets de quête, clés, pierre de foyer, composants de classe, composants des recettes suivies, dernière nourriture.
 
+**Butin rapide** (coupé par défaut, même page des réglages) : avec le butin automatique du jeu, tout est ramassé d'un coup, sans le délai entre deux objets. Il suit ton réglage du jeu et ta touche de butin automatique ; ce qui ne rentre pas reste dans la fenêtre de butin, où Place au butin prend le relais. Si SpeedyAutoLoot ou le butin rapide de Leatrix Plus est actif, Ready2Quest lui laisse la main.
+
 ### Rangs de sorts
 
 Un sort de tes barres d'action a un meilleur rang dans ton livre de sorts (Lumière sacrée rang 3 sur la barre alors que tu connais le rang 5) ?
@@ -462,6 +484,11 @@ Un sort de tes barres d'action a un meilleur rang dans ton livre de sorts (Lumi�
 - L'icône de Ready2Quest apparaît (clic : la liste), avec une ligne dans le chat, et le check avant le départ a sa ligne.
 - La liste (`/r2q sorts`) : chaque sort, son rang et le meilleur que tu connais, sa barre et sa case. **[Mettre à jour]** pose le meilleur rang dans la même case, **[Tout mettre à jour]** fait tout, hors combat.
 - **[Ignorer]** ignore cette **case** pour ce sort : un rang 1 gardé exprès (soin bon marché) ne t'empêche pas d'être prévenu pour les autres cases. Réglages, page **Rangs de sorts**, pour oublier les cases ignorées.
+- **Nouveaux sorts** : la même fenêtre liste, sous « Nouveaux sorts », les sorts actifs appris chez ton maître qui ne sont sur aucune de tes barres. **[Placer]** en pose un dans la première case vide (barre 1, puis tes autres barres affichées) ; s'il n'y a plus de place, il arrive sur ton curseur pour que tu le poses où tu veux. **[Ignorer]** ne le propose plus (la liste des sorts ignorés est dans la page Rangs de sorts). Pas de passifs, de métiers ni de montures, et seuls les sorts appris depuis la 1.35 comptent.
+
+### Tout apprendre
+
+Chez un maître de classe ou de métier, un bouton **Tout apprendre** à côté de celui du jeu affiche le total à payer ; un clic apprend tout ce qui est disponible, un sort après l'autre. Pas assez d'or pour tout ? Le bouton est grisé et son infobulle dit combien il te manque. Rien n'est jamais appris sans ton clic. Réglage page **Rangs de sorts** (actif).
 
 ### Après la mort
 
@@ -486,7 +513,7 @@ Les deux sont actifs par défaut et se coupent dans les réglages. Ils fonctionn
 
 `/r2q options`, ou un clic droit sur le bouton de la minicarte.
 
-- **Général** : activer l'addon, et tout ce qui touche à l'affichage (bouton de minicarte, fenêtre ou chat, rapports annoncés par une icône, note sous laquelle un rapport s'annonce, placement des cadres et de l'icône).
+- **Général** : activer l'addon, et tout ce qui touche à l'affichage (bouton de minicarte, fenêtre ou chat, rapports annoncés par une icône, note sous laquelle un rapport s'annonce, placement des cadres et de l'icône), et le **Style de l'interface** : Azeroth, le thème forgé (cadre d'orfèvre doré, médaillon du logo, boutons en relief ; par défaut), ou Sobre, l'aspect d'avant, à plat (`/r2q style azeroth|sobre` ; une fenêtre déjà ouverte change au `/reload` suivant).
 - **Modules** : chaque module a son interrupteur directement dans la liste de gauche, et sa page qui explique ce qu'il fait. Le Check avant le départ a ses sous-pages : Déclenchement, Zones sûres, Sacs & vivres, Équipement & perso, Buffs & métier. Résumé de stuff et Stats du portrait n'ont pas de réglage, mais leur page propose « Placer le cadre » (et « Afficher maintenant » pour le portrait).
 - **QoL** : Confort de jeu, avec ses sous-pages Marchand, La bonne récompense, Rythme de leveling, Sac plein et Après la mort. Les sous-pages d'un module ne s'affichent que quand il est ouvert.
 
@@ -507,6 +534,11 @@ Les deux sont actifs par défaut et se coupent dans les réglages. Ils fonctionn
 | `/r2q checks` · `check vivres off` | les contrôles du check avant le départ |
 | `/r2q xp` | ton rythme de leveling |
 | `/r2q jeter` | quoi jeter quand le sac est plein |
+| `/r2q place` | ouvre Place au butin |
+| `/r2q favori [lien]` | met ou retire un favori |
+| `/r2q sorts` | rangs de sorts et nouveaux sorts |
+| `/r2q groupe` | qui est sur place et prêt pour le donjon |
+| `/r2q style azeroth\|sobre` | le style de l'interface |
 | `/r2q diag` | diagnostic, à joindre si tu signales un problème |
 
 ---

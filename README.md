@@ -4,10 +4,10 @@ Deux addons pour **World of Warcraft Forever**, en français et en anglais. Ils 
 
 | Addon | Ce qu'il fait | Commande |
 |---|---|---|
-| [**Ready2Quest**](Ready2Quest/README.md) | Prépare ta sortie : check avant de quitter la ville, bilan au retour, fiche de donjon, kit de camp, portée d'aggro, et du confort de jeu (bonne récompense, rythme de leveling, sac plein, place au butin, rangs de sorts, après la mort, marchand). | `/r2q` |
-| [**QuestCompanion**](QuestCompanion/README.md) | Un compagnon de route qui collectionne les créatures : capture les monstres (normaux, brillants, étoilés), emmène celui qui t'aide à chasser, scelle les zones, gagne des titres et montre ta fiche de dresseur ; et son carnet de voyage : exploration, missions, coffres cosmétiques. | `/qc` |
+| [**Ready2Quest**](Ready2Quest/README.md) | Prépare ta sortie : check avant de quitter la ville, bilan au retour, fiche de donjon (avec Groupe prêt), kit de camp, portée d'aggro, et du confort de jeu (bonne récompense, rythme de leveling, favoris, sac plein, place au butin, butin rapide, rangs de sorts et nouveaux sorts, Tout apprendre chez le maître, après la mort, marchand). | `/r2q` |
+| [**QuestCompanion**](QuestCompanion/README.md) | Un compagnon de route qui collectionne les créatures : capture les monstres d'un clic (normaux, brillants, étoilés), emmène celui qui t'aide à chasser, scelle les zones, échange avec les autres joueurs, gagne des hauts faits et des titres, partage tes beaux moments et montre ta fiche de dresseur ; et son carnet de voyage : exploration, missions, coffres cosmétiques, juke-box. | `/qc` |
 
-Ensemble, le compagnon réagit en plus à tes départs et retours en ville.
+Ensemble, le compagnon réagit en plus à tes départs et retours en ville. Les deux portent le même habit forgé (style Azeroth, ou Sobre au choix), chacun avec sa couleur : l'or pour Ready2Quest, le bleu arcane pour QuestCompanion.
 
 ## Communauté
 
@@ -39,7 +39,7 @@ Copie le dossier de chaque addon voulu dans `World of Warcraft/<client>/Interfac
 - [Notes techniques et historique des versions](docs/TECHNIQUE.md).
 - Zones sûres : `tools/gen_hubs.py` (lieux connus par leur sous-zone, `Libs/Socle/Hubs.lua`) et `tools/gen_places.py` (camps repérés par leurs PNJ de service, `Libs/Socle/Places.lua`), depuis `data/`. Donjons : `tools/gen_dungeons.py`.
 - **Notre base de données** (`data/`) : PNJ, objets, quêtes et zones de Forever (et d'Era, gardées pour les outils), importés une fois de [Questie](https://github.com/Questie/QuestieDB) puis corrigés et complétés ici. Les tables de zone de QuestCompanion en sont générées par `tools/gen_zone_data.py`. Voir [docs/DONNEES.md](docs/DONNEES.md).
-- Logos des deux addons (en jeu et pages des stores) : `tools/gen_logos.py` ; habillage du thème Azeroth (cadre, plaques, lueurs) : `tools/gen_ui_assets.py`. Les fonds des sceaux de zone et les cosmétiques des hauts faits utilisent des textures du jeu, appelées par leur identifiant (rien n'est embarqué).
+- Logos des deux addons (en jeu et pages des stores) : `tools/gen_logos.py` ; habillage du thème Azeroth, dit forgé (cadre d'orfèvre, ombre, coins, plaques, creux, anneau, lueurs) : `tools/gen_ui_assets.py`. Les fonds des sceaux de zone et les cosmétiques des hauts faits utilisent des textures du jeu, appelées par leur identifiant (rien n'est embarqué).
 
 ## Licence
 
