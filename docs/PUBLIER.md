@@ -80,7 +80,7 @@ Puis copie les dossiers dans `Interface/AddOns/` et lance le jeu : chacun seul, 
 ## Publier une version
 
 1. Monte `## Version:` dans le `.toc` de l'addon et `version` dans son `Config.lua` (et, pour Ready2Quest, le test « version exposée »).
-2. Ajoute une section en haut de son `CHANGELOG.md` : `Ready2Quest/CHANGELOG.md` ou `QuestCompanion/CHANGELOG.md`. C'est le texte affiché sur les sites.
+2. Ajoute une section en haut de son `CHANGELOG.md` : `Ready2Quest/CHANGELOG.md` ou `QuestCompanion/CHANGELOG.md`. C'est le texte affiché sur les sites. Il doit rester sous 110 000 caractères (`tests/run_tests.py` le contrôle) : GitHub refuse une fiche de plus de 125 000 caractères, et la publication échoue alors après l'envoi à CurseForge et à Wago. Au-delà, range les plus vieilles versions dans `docs/` (comme `docs/CHANGELOG-QuestCompanion-1.x.md`).
 3. Si tu as touché au socle (`Ready2Quest/Libs/Socle`), recopie-le : `python3 -I tools/sync_socle.py`. Les tests le vérifient.
 4. Commite sur `main`, puis tague et pousse :
 

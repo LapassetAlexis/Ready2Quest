@@ -106,6 +106,48 @@ def check_packages():
     return problems
 
 
+# Le journal des modifications d'un addon est le texte envoyé aux sites à
+# chaque publication (manual-changelog de son .pkgmeta). GitHub refuse une
+# fiche de plus de 125 000 caractères : la publication échoue alors APRÈS
+# l'envoi à CurseForge et à Wago (QuestCompanion 3.1.0-beta8). Marge gardée :
+# au-delà de CHANGELOG_MAX, ranger les plus vieilles versions dans docs/
+# (docs/CHANGELOG-QuestCompanion-1.x.md).
+CHANGELOG_MAX = 110000
+
+
+def pkgmeta_changelog(path):
+    """Fichier `manual-changelog: filename:` d'un .pkgmeta, ou None."""
+    inside = False
+    with open(path, encoding="utf-8") as handle:
+        for line in handle:
+            if line.startswith("manual-changelog:"):
+                inside = True
+            elif inside and line.strip().startswith("filename:"):
+                return line.split(":", 1)[1].strip()
+            elif inside and line.strip() and not line.startswith((" ", "\t")):
+                inside = False
+    return None
+
+
+def check_changelogs():
+    problems = []
+    for pkgmeta in (".pkgmeta", ".pkgmeta-questcompanion"):
+        name = pkgmeta_changelog(os.path.join(ROOT, pkgmeta))
+        if not name:
+            problems.append("%s : pas de manual-changelog" % pkgmeta)
+            continue
+        target = os.path.join(ROOT, name)
+        if not os.path.exists(target):
+            problems.append("%s : journal introuvable : %s" % (pkgmeta, name))
+            continue
+        with open(target, encoding="utf-8") as handle:
+            size = len(handle.read())
+        if size > CHANGELOG_MAX:
+            problems.append("%s : %d caractères, plus que %d (GitHub refuse une fiche de plus de 125 000) : "
+                            "range les plus vieilles versions dans docs/" % (name, size, CHANGELOG_MAX))
+    return problems
+
+
 IMAGE_EXTS = {".tga", ".blp", ".png", ".jpg", ".jpeg", ".bmp", ".gif", ".dds", ".webp", ".svg"}
 ALLOWED_IMAGES = {
     "QuestCompanion/Textures/filet.tga", "QuestCompanion/Textures/corde.tga", "QuestCompanion/Textures/paquet.tga",
@@ -219,7 +261,7 @@ def preflight():
         for name in sorted(duplicates):
             print("  region:%s" % name)
         raise SystemExit(2)
-    problems = check_packages() + check_socle() + check_generated()
+    problems = check_packages() + check_socle() + check_generated() + check_changelogs()
     if problems:
         print("ERREUR: paquets de publication incomplets :")
         for problem in problems:

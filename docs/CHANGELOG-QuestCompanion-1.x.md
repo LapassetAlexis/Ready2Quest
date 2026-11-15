@@ -1,0 +1,191 @@
+# QuestCompanion — versions 1.x
+
+Suite de `QuestCompanion/CHANGELOG.md` : les versions 1.0.0 à 1.6.1. Elles sont rangées ici parce que le journal
+principal est le texte envoyé aux sites à chaque publication, et que GitHub refuse une fiche de plus de
+125 000 caractères (`tests/run_tests.py` le contrôle, voir `docs/PUBLIER.md`).
+
+## 1.6.1
+
+- **Plus léger** : l'addon prend environ 2 Mo de mémoire au lieu de 5,8 Mo. Les créatures et les quêtes de chaque zone ne sont construites qu'en arrivant dans la zone (ou en ouvrant la Ménagerie, sans les garder ensuite), seule la langue de ton client reste en mémoire, et le compagnon au repos ne recalcule plus sa position à chaque image.
+
+*English:* lighter: about 2 MB of memory instead of 5.8 MB (zone data built on demand, only your client's language kept, no per-frame work for an idle companion).
+
+## 1.6.0
+
+- **Deux versions par espèce** : la normale et la brillante se capturent chacune de leur côté. Une brillante capturée devient une apparence à part : ton compagnon prend une lumière dorée et scintille. Tes anciennes brillantes capturées deviennent la version brillante de leur espèce ; la version normale reste à capturer.
+- **Reconnue sans capture** : une brillante repérée reste connue. La Ménagerie le montre (losange doré au trait ; plein une fois capturée), a un filtre **Brillantes** et compte les brillantes reconnues. La fiche passe de la version normale à la brillante d'un bouton, et un clic sur la ligne équipe la version montrée.
+- **Chasse** : toutes les espèces peuvent être brillantes ; plus tu as abattu d'une espèce, plus ta chance monte (1 sur 150 au départ, 1 sur 40 après 50 abattus, ×3 pour un élite ou un rare).
+- **Missions de la semaine** : chaque semaine, une chasse au brillant (« Abats une créature brillante » ou « Capture une créature brillante »).
+- **Infobulle** : sur une brillante, « Ménagerie : BRILLANTE · à capturer · 30 % » ou « BRILLANTE · capturée », selon sa version à elle.
+- **Repérer une brillante** : un losange doré scintille au-dessus du nom de chaque brillante repérée encore en vie, seul ou en groupe, sans toucher aux icônes de cible (réglage « Losange doré sur la barre de nom des brillantes », page Au jour le jour). L'étoile au-dessus de sa tête reste pour le joueur seul ou le chef du groupe.
+
+*English:* each species now has a normal and a shiny capture; a shiny companion is golden-lit and sparkles. Spotted shinies are recognised in the Menagerie without capturing them (Shiny filter, normal/shiny toggle on the card). The more of a species you defeat, the higher its shiny odds (1/150 up to 1/40). One weekly mission is always a shiny hunt. A sparkling gold diamond sits on the nameplate of every spotted shiny, solo or in a group.
+
+## 1.5.5
+
+- **Métiers, tout ce que la zone offre** : la liste montre aussi les herbes et minerais de la zone que ta compétence ne permet pas encore, grisés en fin de liste avec la compétence requise (« compétence 155 requise »). Ils ne comptent pas dans le pourcentage. Une zone où rien n'est encore à ta portée les montre quand même.
+
+*English:* the Professions list also shows the zone's herbs and ores you can't gather yet, greyed with the skill they need (not counted).
+
+## 1.5.4
+
+- **Souvenirs, de vrais décors de WoW** :
+  - en donjon, en raid ou sur un champ de bataille, la photo prend **l'écran de chargement du jeu** (les Mortemines, les Cavernes des lamentations, le Gouffre de Ragefeu…) ; les lieux propres à Forever (île de Zéphras, îles Sombrelance, ruines de Lordaeron, Dalaran…) ont leur grand écran peint, et le premier vol montre le continent vu du ciel. Ces images sont celles du client, l'addon n'en embarque aucune ;
+  - ailleurs, chaque zone a son paysage façon Warcraft : forêt ensoleillée (Elwynn, Loch Modan), forêt de nuit (Orneval, Sombrivage), canyons rouges (Durotar), savane (les Tarides, la Marche de l'Ouest), neige (Dun Morogh), marais (les Paluns), désert (Tanaris), terres maudites (Tirisfal, les Maleterres), jungle (Strangleronce, Un'Goro), terres volcaniques (Steppes ardentes). Ils remplacent les décors « prairie, aube, orage » ;
+  - les souvenirs retiennent désormais leur zone et leur instance ; les anciens retrouvent leur décor par le nom de la zone ou du donjon.
+
+*English:* Souvenirs use the game's own loading-screen art in dungeons, raids, Forever's own places and for the first flight, and a Warcraft-style landscape for each zone elsewhere.
+
+## 1.5.3
+
+- **Infobulle des monstres** : elle parle de capture. « Ménagerie : à capturer · 30 % » (ta chance du moment, selon son rang et son niveau), « capturé » en vert, « capturé, brillant » en doré ; le rang des nommés reste affiché. Capture coupée dans les réglages : l'ancienne ligne du bestiaire (« abattu (n) »).
+
+*English:* the monster tooltip now talks about capture: "Menagerie: to capture · 30%" (your current chance), "captured" or "captured, shiny".
+
+## 1.5.2
+
+- **Métiers enfin lus sur WoW Forever** : le client récent ne donne plus la fenêtre de compétences historique ; l'addon lit maintenant tes métiers par `GetProfessions` (et garde l'ancienne lecture pour les autres clients). Nouvelle commande `/qc metiers` : ce que le jeu donne à l'addon, pour signaler un bogue.
+- **Souvenirs** : de vrais décors peints (prairie, aube, crépuscule, grotte, ville, trésor, orage, au-dessus des nuages), recadrés différemment pour chaque souvenir. Chaque photo a son plan — en pied, gros plan sur la tête, plan taille, petit dans le paysage à gauche ou à droite, de profil, de dos face à l'horizon, en l'air — et deux photos voisines n'ont jamais le même. Les gestes sont ceux que les créatures savent faire (rugir, sauter, attaquer, marcher, courir…), selon le moment.
+- **Capture** : un vrai filet maillé couvre toute la scène (plus de carré qui laisse dépasser la créature) : il tombe et rebondit, se resserre à chaque secousse pendant qu'elle se débat, se referme sur elle si elle est prise, se déchire si elle s'échappe.
+- **Compagnon capturé** : il garde le nom de son espèce (« Champion Ravenclaw ») ; le nom que tu as donné reste celui de ta mascotte.
+
+*English:* professions are now read through `GetProfessions` on WoW Forever (new `/qc metiers` diagnostic). Souvenirs get painted backdrops and a distinct shot and gesture per photo. The capture scene now throws a real mesh net that covers the whole scene, tightens, closes or tears. A captured companion keeps its species name.
+
+## 1.5.1
+
+- **Compagnon** : le grand portrait cadre la créature de plus près ; les listes Cadre et Fond ne s'ouvrent plus l'une sur l'autre (ouvrir une liste referme l'autre, partout dans l'addon).
+- **Complétion devient Exploration** ; sa carte « Exploration » devient « Lieux ».
+- **Métiers** : un herboriste ou un mineur confirmé finit aussi les zones basses — les herbes et minerais de la zone que ta compétence permet comptent, même gris (marqués « à récolter (gris) »). La carte nomme tous tes métiers (artisanat, cuisine, pêche, secourisme compris) et dit que seuls herboristerie, minage et dépeçage se suivent zone par zone.
+- **Ménagerie** : le nom (ou « ??? ») prend la couleur de la rareté de la créature, un liseré vert à gauche marque les capturées ; les colonnes de marques (abattue, capturée) disparaissent de la ligne. La liste des zones est triée par ordre alphabétique (accents et « Les / La / Le / L' / The » ignorés).
+- **Souvenirs** : chaque photo a sa pose — un geste selon le moment (fête pour un niveau, assis après une mort ou pour un anniversaire), un angle et un cadrage propres au souvenir, toujours les mêmes d'un affichage à l'autre.
+
+*English:* the Companion portrait is framed closer; the Frame and Background lists no longer open on top of each other. Completion is renamed Exploration (its Exploration card becomes Places). Professions: zone resources your skill allows now count even when grey, and the card names every profession you know. Menagerie: names (or "???") in their rarity colour, a green edge for captured ones, no more mark columns; zones sorted alphabetically. Souvenirs: each photo gets its own pose (gesture, angle, framing).
+
+## 1.5.0
+
+- **Le carnet en cinq pages** : Compagnon · Ménagerie · Missions · Complétion · Souvenirs.
+  - **Compagnon** : ta créature en grand (portrait encadré, caractère, étapes, sa dernière réplique), cinq chiffres (capturées, brillantes, jours ensemble, missions faites, distance parcourue), ses envies, et son allure (apparences, cadre, fond, ornements : l'ancienne Collection).
+  - **Distance parcourue ensemble** : comptée en route, en mètres puis en kilomètres ; ni les téléportations, ni la pierre de foyer, ni les changements de continent ne comptent.
+  - **Ménagerie** : une seule liste numérotée façon Pokédex (numéro, type, nom ou « ??? », abattue, capturée, brillante) et sa fiche en 3D.
+  - **Complétion** (anciennes pages Zones et Zone) : la liste des zones à gauche ; à droite le pourcentage, les paliers 25/50/75/100 et ce qu'ils rapportent, l'exploration, la récolte et les quêtes, le coffre ; le bestiaire n'y est plus qu'un compteur, détaillé dans la Ménagerie.
+  - **Souvenirs** : des photos façon polaroïd recréées par le compagnon (lui en 3D, la créature du moment, un ciel selon le souvenir), puisqu'un addon ne peut pas lire les captures d'écran du jeu.
+
+*English:* the journal now has five pages: Companion (big portrait, character, steps, its last line, captured / shinies / days together / missions / distance travelled together, needs, look: appearances, frame, background, ornaments), Menagerie (one numbered creature index with a 3D card), Missions, Completion (zone list, milestones and their rewards, exploration, gathering, quests, chest; the bestiary is now a counter pointing to the Menagerie) and Souvenirs (polaroid-style photos recreated by your companion, since addons can't read in-game screenshots). Distance travelled together ignores teleports, hearthstones and continent changes.
+
+## 1.4.0
+
+- **Capture des monstres (ménagerie)** : en plus des mascottes, chaque monstre abattu peut désormais être capturé et devenir une apparence de ton compagnon.
+  - au coup fatal, une fenêtre « Capturer ? » (12 s) montre le monstre, son rang et ta chance ; un clic, un essai ; le filet secoue une à trois fois, puis c'est gagné… ou il s'échappe ;
+  - chance selon le rang (normal 30 %, élite 15 %, rare 8 %, rare élite 5 %, boss 2 %) et l'écart de niveau ;
+  - **aides de capture**, gagnées au hasard des tampons du carnet, des paliers de zone (25, 50, 75 %) et des brillantes : Appât savoureux (×1,5), Lasso tressé (×2,5), Sifflet du dompteur (capture assurée) ; un Sifflet offert toutes les 10 captures ;
+  - les créatures capturées rejoignent la liste des apparences (réglages et Collection du carnet) ; une brillante capturée reste marquée ;
+  - **capture animée**, façon ouverture de paquet : le filet part en arc vers le monstre, le recouvre, secoue sous un halo à la couleur de sa rareté (blanc, bleu, violet, orange, doré pour une brillante) ; capturé : éclair, gerbe de losanges, la créature tourne sur elle-même, bannière « Capturé ! » et sa rareté en losanges ; raté : le filet tombe et le monstre file (réglage « Capture animée ») ;
+  - `/qc capture` résume ta ménagerie ; réglage sur la page « Au jour le jour ».
+- **Le carnet s'organise autour de la capture** :
+  - nouvel onglet **Ménagerie**, façon Pokédex : **toutes les créatures capturables du jeu** (3 500 espèces environ, celles de ta faction), numérotées une fois pour toutes ; « ??? » pour celles jamais croisées ; par défaut la zone où tu es, mais une liste choisit n'importe quelle zone ou toutes ; filtres Toutes / Capturées / À capturer / À abattre, rareté (normal, élite, rare, boss), recherche par nom (sans accents), tri par numéro, nom, niveau, rareté ou date de capture ; couleur de rareté pour les capturées, étoile pour les brillantes, tampon pour les abattues, aperçu 3D, chance de capture ; un clic sur une capturée en fait ton compagnon ;
+  - **navigation simplifiée** : Créature · Ménagerie · Missions · Zones · Collection · Souvenirs. La fiche d'une zone s'ouvre depuis Zones (bouton « < Zones » pour revenir) ; son onglet Combat renvoie à la Ménagerie de la zone ; Collection ne garde que les cosmétiques (les créatures capturées vivent dans la Ménagerie) ;
+  - l'onglet Jour devient **Missions** : du compagnon (son caractère), du jour (deux, dont parfois « Capture 2 créatures ») et **de la semaine** (trois, renouvelées à la remise à zéro hebdomadaire : captures, capture d'un élite ou d'un rare, missions du jour, abattus, tampons, récolte, quêtes) ; la récompense est écrite sur chaque mission ;
+  - **récompenses** : mission du jour = friandise + Appât savoureux, les trois = Festin + Lasso tressé ; mission de la semaine = friandise + Lasso tressé, les trois = Festin + Sifflet du dompteur ;
+  - la **besace de capture** (appâts, lassos, sifflets) s'affiche à côté du garde-manger.
+- **Un compagnon bien plus bavard, et plus moqueur** : environ trois fois plus de répliques (2 300 au lieu de 700), pour chaque situation et chaque caractère, avec un ton plus taquin (morts, retours du cimetière, sacs pleins, détours, bestioles inoffensives…). Il évite désormais de répéter ses six dernières répliques.
+
+*English:* monster capture (menagerie): every defeated monster can now be captured and become a companion look. A "Capture?" window (12 s) shows the monster, its rank and your chance; one click, one try, and an animated scene, like opening a card pack: the net flies to the monster, shakes under a rarity-coloured glow, then a flash, a burst and a "Captured!" banner, or the monster runs off. Chance depends on rank and level gap. Capture aids drop at random from journal stamps, zone milestones and shinies: Tasty bait (×1.5), Braided lasso (×2.5), Tamer's whistle (guaranteed), plus a free whistle every 10 captures. Captured creatures join the appearance list (settings and journal Collection). The journal gets a Menagerie tab: every capturable creature in the game (about 3,500 species for your faction), numbered once and for all, "???" until met, current zone by default with a zone picker (or all zones), filters (captured, to capture, to defeat, rarity), name search and sorting (number, name, level, rarity, capture date). Navigation is simpler: the zone page opens from Zones, its Combat tab points to the Menagerie, and Collection keeps cosmetics only and the Day tab becomes Missions: companion, daily and three new weekly missions (reset with the server's weekly reset), each showing its reward; daily missions give a treat and a bait (all three: Feast and lasso), weekly ones a treat and a lasso (all three: Feast and whistle); the capture pack sits next to the pantry. `/qc capture` sums up your menagerie. The companion also has about three times more lines (2,300 instead of 700) with a more teasing tone, and avoids repeating its last six lines.
+
+## 1.3.0
+
+- **Nouvelle interface**, plus moderne et plus lisible :
+  - **police Inter** partout ;
+  - **réglages** dans une grande fenêtre : une entrée par page (Compagnon, Ornements, Carnet de voyage, Souvenirs, Caractère, Au jour le jour), une recherche, les réglages en cartes, et un **aperçu de ta créature** avec son cadre et son fond. Apparence, cadre et fond se choisissent dans une liste ; ce qui n'est pas encore gagné y apparaît grisé, avec sa condition ;
+  - **le carnet** passe dans le même style, en gardant son âme de carnet de voyage : navigation à gauche (Créature, Zones, Zone, Jour, Collection, Souvenirs), en-tête avec la zone et sa progression, liste des zones avec leur barre, fiches du bestiaire avec portrait, rang et état (abattu ou à abattre), collection avec les objets verrouillés et leur condition ;
+  - coffre de zone, question des photos, garde-manger, fiche au survol de la créature, bulle et tutoriel, annonces et suivi à l'écran : tout reprend ce style.
+- Les cadres et fonds gagnés pour ta créature ne changent pas.
+
+*English:* a new, modern interface: the Inter font everywhere; a large settings window with one entry per page, a search, card-style settings and a live preview of your creature (appearance, frame and background chosen from lists, locked ones greyed with their condition); the journal restyled while keeping its travel-notebook feel (left navigation, zone header, zone list with progress bars, bestiary cards with portrait, rank and killed state, collection with locked items); zone chest, photo prompt, pantry, hover card, bubble, tutorial, toasts and tracker restyled to match. Earned frames and backgrounds are unchanged.
+
+## 1.2.1
+
+- **WoW Forever : victimes, rares et brillantes enfin comptés.** Comme le moteur récent de WoW (12.0), Forever ferme son journal de combat aux addons : le bestiaire n'en recevait rien (`/qc diag` le montrait : « journal de combat 0 »). QuestCompanion ne s'y abonne plus quand il est fermé et suit à la place les deux événements que le jeu garde ouverts : la mort d'un monstre tué par toi ou ton groupe, et la mort d'une créature proche. S'y ajoute le message d'expérience, qui comptait déjà les victimes depuis la 1.2.0. Maintenant :
+  - une **brillante abattue** est bien comptée (avant, sur Forever, jamais) ;
+  - un **rare tué** te donne son tampon dans le carnet ;
+  - la créature réagit aussi aux victimes de ton groupe.
+- **Boutons ambre lisibles** (Fermer et Ouvrir le coffre du carnet, Suivant du tutoriel) : l'ombre noire de la police du jeu bavait sous le texte sombre. Elle est retirée sur ces boutons.
+- `/qc diag` dit quelle source le bestiaire écoute, et la nouvelle sonde `combatLog` dit si le journal de combat est ouvert.
+
+*English:* WoW Forever closes the combat log to addons, like the modern engine (12.0). QuestCompanion no longer registers it when closed and uses the PARTY_KILL and UNIT_DIED events plus the experience message instead: shinies killed and rares killed are now counted (rare stamps in the journal), and group kills count too. /qc diag shows the kill source and a new combatLog probe. Amber buttons (Close, Open chest, Next) are readable again: the game font's black shadow no longer smears their dark label.
+
+## 1.2.0
+
+- **WoW Forever seulement** : Classic Era n'est plus pris en charge. Le `.toc` ne déclare plus que Forever, et les tables de zone d'Era (créatures, quêtes, récolte) ne sont plus livrées : le zip est plus léger. Les versions déjà publiées pour Era restent téléchargeables.
+- **Neuf nouvelles créatures**, toutes présentes avec le même modèle sur Era et sur Forever :
+  - **dans les coffres de zone**, deux par palier : chat tigré argenté et crapaud tacheté (palier 1), chat Bombay et ara écarlate (palier 2), bébé panda et bébé murloc (palier 3) ;
+  - **le poulet**, à la troisième carte de fidélité des auberges remplie ;
+  - **l'écureuil mécanique**, au dixième jour où tu fais les trois missions du jour ;
+  - **le bébé hippogriffe**, à 50 créatures brillantes.
+- **Deux nouveaux caractères**, apportés par leur apparence (comme la chouette ou le serpent) : le poulet **Peureux** (il sursaute de tout, le dit quand un combat tape fort, adore les auberges) et l'écureuil mécanique **Bricoleur** (il démonte, répare et invente). Chacun a ses répliques, sa mission du jour et sa remarque.
+- **Cadres et fonds tirés des images du jeu**, à gagner dans les coffres de zone : quatre cadres (Pierre et Messager au palier 1, Portail au palier 2, Sculpté au palier 3) et onze fonds (lettres d'Orgrimmar, de Fossoyeuse et des Pitons, parchemin des hauts faits au palier 1 ; lettres enluminée, d'amour et d'hiver, Kalimdor au palier 2 ; Royaumes de l'Est, Cœur du Magma et Ahn'Qiraj au palier 3). Chaque image existe dans Era et dans Forever.
+- **Moteur récent de Forever mieux exploité** (chaque nouveauté reste sans effet si le client ne la propose pas) :
+  - **rares en direct** : un rare apparaît sur la minicarte, la créature te prévient (« un rare rôde ! ») et le bestiaire comme le carnet le notent tout de suite. Une alerte par rare toutes les 10 minutes, réglable (page « Au jour le jour ») ;
+  - **infobulle des monstres** : « Bestiaire : à abattre » ou « abattu (n) », et le rang des élites, rares et boss ;
+  - **la créature s'anime** : elle parle quand elle bavarde, applaudit au niveau gagné et aux missions, danse pour une brillante, le coffre doré ou une carte d'auberge pleine, s'assoit au repos ;
+  - **niveaux des zones lus dans le jeu** pour les zones que nos tables ne connaissent pas ;
+  - **quêtes proposées sur la carte** : l'onglet Quêtes du carnet ajoute celles que le jeu signale et que nos données n'ont pas ;
+  - **réglages dans Échap > Options > AddOns** et entrée dans le **bouton des addons de la minicarte** ;
+  - moins de calculs à chaque image (brillantes, photos, annonces).
+- Carnet : l'onglet **Créature** passe en tête, et c'est lui qui s'ouvre la première fois.
+- L'onglet **Jour** du carnet dit où tu en es : cartes d'auberge pleines, jours aux trois missions, et ce qu'ils rapportent.
+- **WoW Forever, moteur récent** :
+  - **erreur en fin de combat** (« attempt to perform arithmetic on a secret number value », Advice.lua) : ce client cache la vie du joueur aux addons, sous forme de valeur « secrète ». Le conseil « vie basse », les remarques des caractères Zen et Peureux et l'étoile des brillantes laissent maintenant ces valeurs de côté au lieu de calculer avec ;
+  - **les monstres tués restaient « à abattre »** : le bestiaire compte aussi la mort de ta cible par le message d'expérience (« X meurt, vous gagnez… »), sans jamais la compter deux fois avec le journal de combat. `/qc diag` montre ce qu'il reçoit (journal de combat, coups, victimes comptées) et la liste des modules vérifiés s'allonge.
+- **Relecture complète du code**, correctifs :
+  - le niveau gagné est de nouveau dit au cran Calme de la réglette Bavardage, comme promis ;
+  - prête à évoluer, la créature ne dit plus « encore 2 niveaux » quand ce sont des envies qui manquent ;
+  - le repos ou un repas qui comble la dernière envie la fait évoluer tout de suite ;
+  - un élite repéré en plein combat n'est plus annoncé après, sur son cadavre ;
+  - un rare engagé puis laissé (fuite, évitement) est oublié au bout de 30 min, comme pour le bestiaire ;
+  - l'aubergiste est reconnu aussi par la nouvelle interface de dialogue ;
+  - la mission « +3 % » s'affiche correctement en anglais ; « parle à N personnes » compte chaque PNJ une fois ;
+  - la question des photos revient si elle a été coupée par un rechargement ;
+  - dans le carnet : le rang « normal » est écrit dans l'aperçu, la dernière rangée de fiches ne passe plus sous le défilement, la Collection défile à la molette ;
+  - textes : astuces et tutoriel à jour (les apparences viennent des coffres de zone), quelques fautes (accords, « par-derrière », « plus rapide qu'à pied »), « Étouffante » pour l'herbe Stranglekelp.
+- **Correctif** : dans la fiche qui s'affiche au survol de la créature, l'aide en gris passait sous les barres des envies. La fiche se met maintenant en page de haut en bas et prend la hauteur de son contenu. Elle est aussi un peu plus large, pour le caractère.
+
+*English:* WoW Forever only (Classic Era is no longer supported, its zone tables are no longer shipped). Nine new creatures: six in zone chests (silver tabby, spotted toad, Bombay cat, scarlet macaw, panda cub, baby murloc), the chicken for three full inn cards, the mechanical squirrel for ten days with all three missions, the hippogryph hatchling for 50 shinies. Two appearance characters: the Fearful chicken and the Tinker squirrel. Four frames and eleven backgrounds made from game art (window borders, mail stationery, the achievement parchment, loading screens) join the zone chests. The Creature tab now comes first and opens the first time. The Day tab shows full inn cards and perfect mission days. Fix: the grey help line no longer overlaps the need bars in the hover card. WoW Forever: no more error at the end of combat (secret health values), and kills are also counted from the experience message. A full code review fixed level-up bubbles at Calm chattiness, a wrong goal reminder, stale elite warnings, the English "+3%" mission, NPCs counted twice, a lost photo question, the empty "normal" rank, the last card row under the pager, Collection scrolling and several typos. Better use of Forever's modern engine (each part only when the client offers it): live rare alerts from the minimap, bestiary status in creature tooltips, companion animations (talk, cheer, dance, sit), zone levels and map quests read from the game, an entry in Esc > Options > AddOns and in the minimap addon button, fewer per-frame computations.
+
+## 1.1.0
+
+- **Friandises et garde-manger** : chaque palier d'une zone (25, 50 et 75 %) donne une friandise, rangée dans un garde-manger. **Maj + clic** sur la créature l'ouvre ; un clic sur une friandise la lui donne. Biscuit de voyage (faim à 100 %), Infusion douce (énergie), Bonbon pétillant (moral, et des cœurs), Carte au trésor (curiosité, et elle flaire ce qui reste dans la zone), Festin (les quatre envies). À 25 et 50 %, la friandise de l'envie la plus basse ; à 75 %, un Festin ; à 100 %, le coffre, comme avant. Trois de chaque sorte au plus, deux Festins : une friandise en trop est mangée tout de suite. Un **coffre doré** (palier de cosmétiques déjà complet) donne maintenant un Festin et deux friandises au hasard. Les paliers déjà franchis sont rattrapés à la première connexion, avec une seule bulle. Gourmand, il savoure deux fois : son moral monte aussi.
+
+- **Créatures brillantes** : la première fois que tu cibles ou survoles un monstre, il a une chance sur 150 d'être brillant (trois fois plus pour un élite ou un rare). La créature le voit (bulle, « ! », étincelles) et pose une **étoile** au-dessus de lui si tu joues seul ou mènes le groupe, et s'il n'a pas déjà d'icône. Abattu : sa fiche du bestiaire devient dorée, la créature reçoit une friandise (parfois un Festin) et garde un souvenir (avec photo si tu l'as permise). À **5, 15 et 30** brillantes, trois cosmétiques qu'aucun coffre ne donne : le cadre **Étincelant**, le fond **Poussière d'étoiles** et une **aura scintillante** (ornement, à porter ou non). Le carnet compte les brillantes par zone et dans l'onglet Créature.
+- **Ouverture de coffre animée** : les objets du coffre apparaissent un par un, et la créature s'emballe.
+- **Fidélité aux auberges** : une carte valable dans toutes les auberges. Un tampon par jour chez n'importe quel aubergiste à qui tu parles (+20 d'énergie, et sa joie) ; au 7e, un Festin. Pas besoin de jours d'affilée : rien ne se perd.
+- **Missions du jour** : chaque jour, à la première zone où tu entres, la créature propose deux missions de cette zone, seulement celles qui y sont faisables (abattre 3 espèces jamais vaincues, un élite ou un rare, récolter 5 fois, rendre 2 quêtes, visiter un lieu jamais vu, faire gagner 3 % à la zone), et une mission de son caractère (la Gourmande veut manger 3 fois, la Téméraire un élite, la Paresseuse 15 minutes de repos…). Une mission de zone peut être changée une fois par jour. Chaque mission faite : une friandise et un peu de curiosité ; les trois : un Festin. Une mission non faite est simplement remplacée le lendemain. Elles s'affichent dans le bloc « Carnet » à l'écran et dans le nouvel onglet **Jour** du carnet (missions, carte de fidélité, garde-manger).
+- **Nouvelle page de réglages « Au jour le jour »** : les missions du jour, l'étoile sur les brillantes, l'ouverture animée des coffres.
+- **La créature annonce ce qui entre au carnet** : une espèce abattue pour la première fois, un nommé, une ressource récoltée pour la première fois dans la zone, une quête de la zone rendue. Une courte bulle avec le nom et où en est la partie (« bestiaire 13/24 »), au plus une toutes les 6 secondes ; ce qui arrive entre-temps est regroupé (« Et 3 de plus au carnet ! »).
+- **Son cadre brille quand elle parle** : un liseré doré pulse doucement autour de la créature pendant sa bulle, puis s'éteint, pour attirer l'œil.
+- **Nouveau carnet**, plus grand (820 × 560) et plus complet, avec ses onglets sur le côté droit : **Zones** (la grille de toutes les zones du jeu, jamais visitées en gris, filtre par continent, tri par niveau ou par %), **Zone** (flèches vers la zone voisine, paliers 25/50/75/100 sous la barre, fiches du bestiaire au liseré de leur rang et « ??? » pour les inconnues, aperçu 3D de la créature au survol, icônes des ressources, listes sur deux colonnes, quêtes filtrées à faire ou faites), **Créature** (l'ancienne Évolution, avec son caractère), **Collection** (tous les cosmétiques, verrouillés en gris avec leur source ; clic pour équiper, aperçu au survol) et **Souvenirs**. Le garde-manger est dans l'en-tête. Toutes les zones du jeu sont dans la grille dès le départ, y compris celles propres à Forever et Reflet-de-Lune : leur tranche de niveaux (et le palier de leur coffre) est calculée à partir de leurs créatures. Le carnet rouvre son dernier onglet ; un objectif de zone ouvre sa zone ; le bouton retour de la souris revient à la grille.
+
+*English:* treats and a pantry: each zone milestone (25, 50, 75%) gives a treat; Shift + click the creature to open the pantry and give one (Travel biscuit, Soothing tea, Fizzy candy, Treasure map, Feast). Three of each kind, two Feasts; extra treats get eaten on the spot. A golden chest now gives a Feast and two random treats. Milestones already reached are caught up once. A bigger, denser journal with tabs down the right side: Zones (a grid of every zone, Forever's own included, unvisited ones greyed), Zone (arrows, milestones, bestiary cards with a 3D preview, resource icons, two-column lists, quest filter), Creature, Collection (every cosmetic, click to equip) and Memories; the pantry sits in its header and the journal reopens its last tab. Shiny creatures: 1 in 150 on first sight (×3 elite or rare), a star above it if you solo or lead, a golden bestiary card, a treat and a memory once defeated; 5, 15 and 30 shinies unlock the Sparkling frame, the Stardust background and a Shimmering aura. Animated chest opening. Your companion announces each new journal entry (species, named, resource, zone quest), at most one every 6 s with the rest grouped, and its frame glows softly while it speaks. Inn loyalty card (one stamp a day at any innkeeper, a Feast on the 7th, no streak). Missions of the day: two feasible zone missions and one from its character, one reroll a day, a treat each and a Feast for all three, in the on-screen block and the new Day tab. New "Day by day" settings page.
+
+## 1.0.0
+
+**Première version, séparée de Ready2Quest 1.26.0.** First release, split from Ready2Quest 1.26.0.
+
+- **Autonome** : sa commande `/qc` (ou `/questcompanion`), son panneau de réglages, son bouton de minicarte au dragonnet, sa sauvegarde. Ready2Quest n'est pas nécessaire.
+- **Avec Ready2Quest** : le compagnon réagit en plus à tes départs et retours en ville.
+- **Tu viens de Ready2Quest 1.25 ou avant** ? Mets Ready2Quest à jour (1.26.0) et garde-le activé à la première connexion : ta créature, ton carnet, tes coffres et leurs réglages sont repris, pour tous tes personnages. Avec un Ready2Quest 1.25, QuestCompanion reste en retrait pour éviter deux compagnons.
+- `/qc reset` remet les réglages à zéro sans toucher à ta créature ni à ton carnet.
+- **Réglette « Taille »** (page Compagnon de route) : Petit, Moyen (par défaut), Grand, Très grand. Le cadre de la créature change de taille sans bouger de place ; sa bulle et son infobulle restent lisibles. Les ornements passent dans leur propre sous-page, **Ornements**.
+- **Envies toujours simples à remonter**, même tout exploré : la curiosité se nourrit aussi d'une zone pas vue depuis 2 h (+8), de chaque entrée en donjon (+10), de chaque élite ou rare vaincu (+8), de chaque arrivée en griffon (+5), de chaque coffre ouvert (+20), de chaque récolte (+1) et des allées et venues entre sous-zones (+1, toutes les 30 s au plus). Une fois toutes ses évolutions faites, ses envies ne descendent plus sous 50 %. L'infobulle du carnet le dit.
+- **Conseils de route** : hors d'un lieu sûr, le compagnon prévient d'un élite ou d'un rare plus fort que toi, d'une vie basse après un combat, de munitions basses ou pas équipées, de vivres bas, d'un équipement qui s'abîme, de sacs presque pleins, de quêtes toutes prêtes à rendre, d'une pierre de foyer prête alors que tu es chargé. Une fois par sortie (de nouveau si ça empire), jamais en combat, dans cet ordre d'importance. Il fonctionne seul ; avec Ready2Quest, il suit les mêmes seuils.
+- **En groupe** : le compagnon commente la composition (pas de soigneur, bel équipage), les niveaux face au donjon, un membre resté en arrière ou encore ailleurs, les morts (prudence si c'est le soigneur) et les déconnexions. Rien en raid ni en vol.
+- **Réglette « Bavardage »** (page Compagnon de route), qui remplace « Bulles » et « Astuces » : Muet, Discret (seulement un vrai souci : élite, vie basse, munitions, vivres), Calme (ses conseils et les grands moments), Normal (par défaut, tout), Bavard (tout, plus souvent). Une phrase sous la réglette dit ce que fait le cran choisi, l'infobulle détaille les cinq, et le compagnon confirme le changement. `/qc compagnon muet` met la réglette à zéro et retient le cran d'avant. Les anciens réglages sont repris (bulles coupées : Muet ; astuces coupées : Calme).
+- **Plus vivant à l'écran** : il rebondit quand tu montes de niveau ou qu'il évolue, tremble en voyant un élite ou un rare, fait apparaître un « ! » quand il te conseille, des cœurs quand tu le caresses, des miettes quand vous mangez, des « Zzz » quand il dort, et flotte doucement quand il est heureux. Ces effets marchent avec toutes les apparences. `/qc compagnon anim` fait défiler les animations de la créature (3 s chacune) ; si l'une ne bouge pas avec ton apparence, `/qc compagnon anim non <nom>` la coupe pour cette apparence (`oui <nom>` pour la remettre), les effets restent.
+- **Un caractère** : pendant ses trois premières heures de jeu, le compagnon regarde comment tu joues, puis annonce son caractère : **Curieux** (tu explores), **Gourmand** (tu manges), **Téméraire** (tu te bats, surtout contre des élites), **Paresseux** (tu te reposes), **Taquin** (tu meurs souvent) ou **Câlin** (tu le caresses). Six apparences ont le leur, qu'elles seules apportent : chouette **Sage**, ara **Perroquet**, feu follet **Mystique**, tortue **Zen**, serpent **Rusé**, dragon féerique **Espiègle**. Son caractère change sa façon de parler (plus de 300 répliques à lui, conseils compris), l'envie qu'il préfère (elle monte 50 % plus vite et baisse moins), ce qu'il remarque de lui-même (un coin jamais vu, un petit creux, une farce…) et sa façon de bouger. Page de réglages **Caractère** : celui de l'apparence (recommandé) ou le sien, et le choix de son caractère (un caractère d'apparence reste au choix une fois porté).
+- **Souvenirs et photos** : le compagnon retient les grands moments dans un album (carnet, partie **Souvenirs**, dans l'ordre, avec la date et le lieu) : niveaux 10 à 60, évolutions, premier passage dans chaque donjon et chaque capitale, premier de chaque rare vaincu, zone terminée, première mort et mort « la plus bête », premier groupe complet, premier donjon en groupe, premier vol, première monture. Pour certains, il prend une **photo** (capture d'écran du jeu, dossier Screenshots ; l'album donne son nom) : seulement si tu es d'accord (il le demande une fois, au premier grand moment : Oui, Non ou Plus tard), jamais en combat, trois par jour au plus, avec un « Clic ! » dans sa bulle. Il fête vos **anniversaires** (un jour, une semaine, un mois, trois mois, six mois, un an, puis chaque année) et se **souvient** à voix haute d'un moment, une fois par heure de jeu au plus. Nouvelle page de réglages **Souvenirs** : photos, souvenirs à voix haute, ouvrir l'album.
+- **Carnet, partie Évolution** : survole une envie (faim, énergie, moral, curiosité) pour voir sa valeur, ce qu'il manque pour qu'elle compte et ce qui la remplit (repas, repos, feu de camp, caresse, quêtes, niveaux, exploration, tampons).
+
+*English:* a character formed by your play in its first three hours (Curious, Glutton, Daring, Lazy, Teasing, Cuddly), six exclusive to an appearance (owl Wise, macaw Parrot, wisp Mystic, tortoise Zen, snake Sly, sprite Mischievous); it changes its lines (300+), favourite need, remarks and moves; Character settings page. Memories and pictures: an album in the journal (Memories) of big moments, optional screenshots (asked once, never in combat, three a day at most), anniversaries, and it recalls a memory at most once per hour of play. Livelier on screen: bounces, shakes, "!", hearts, crumbs, "Zzz" and a happy float, for every appearance; `/qc compagnon anim` plays the creature animations, `anim non <name>` turns off one it does not play. Standalone: `/qc` (or `/questcompanion`), its own settings, minimap button and saved data; Ready2Quest is not required. With Ready2Quest, the companion also reacts to your departures and returns. Coming from Ready2Quest 1.25 or earlier? Update Ready2Quest to 1.26.0 and keep it enabled on first login: your companion, journal, chests and their settings are taken over for all your characters.
+
+Au programme / Included: a travel companion that talks, has four needs and evolves when happy; a journal with stamps, per-zone completion (villages, bestiary, named foes, gathering, quests), zones prefilled for Era and Forever; zone chests with cosmetic rewards (appearances, ornaments, frames, backgrounds); on-screen goal tracker.
+
+Clients : WoW Forever (1.60) and Classic Era (1.15). English and French.
