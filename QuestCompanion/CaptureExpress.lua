@@ -63,6 +63,7 @@ local FR = {
 	CAPTURE_X_MSG_AUTO_OFF = "Capture automatique coupée.",
 	CAPTURE_X_MSG_ON     = "Capture express activée.",
 	CAPTURE_X_MSG_OFF    = "Capture express coupée : carte de préparation et scène, comme avant.",
+	HELP_NET             = "/qc filet [tout|express|auto] -- lance le filet (tout : tout capturer) ; express ou auto active ou coupe la capture express ou automatique",
 }
 local EN = {
 	OPT_DAILY_CAPTURE_EXPRESS      = "Express capture",
@@ -84,6 +85,7 @@ local EN = {
 	CAPTURE_X_MSG_AUTO_OFF = "Automatic capture off.",
 	CAPTURE_X_MSG_ON     = "Express capture on.",
 	CAPTURE_X_MSG_OFF    = "Express capture off: preparation card and scene, as before.",
+	HELP_NET             = "/qc filet [tout|express|auto] -- throws the net (tout: capture everything); express or auto turns express or automatic capture on or off",
 }
 ns.RegisterStrings(FR, EN)
 if ns.KEEP_STRINGS then ns.CAPTURE_EXPRESS_STRINGS = { fr = FR, en = EN } end
@@ -764,6 +766,11 @@ if ns.EXTRA_COMMANDS and ns.EXTRA_COMMANDS["filet"] then
 		return base(self, rest, ...)
 	end
 	ns.EXTRA_COMMANDS["net"] = ns.EXTRA_COMMANDS["filet"]
+end
+if type(ns.HELP) == "table" then
+	for _, section in ipairs(ns.HELP) do
+		if section[1] == "HELP_H_OPEN" and type(section[2]) == "table" then table.insert(section[2], "HELP_NET") end
+	end
 end
 
 if ns.Mark then ns.Mark("CaptureExpress") end

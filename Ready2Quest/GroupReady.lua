@@ -42,7 +42,7 @@ local FR = {
 	GRP_CHAT_NONE = "Tu n'es pas en groupe.",
 	GRP_CHAT_NO_DUNGEON = "Pas de donjon en vue : approche-toi d'une entrée, puis /r2q groupe.",
 	GRP_CHAT_OFF = "« Groupe prêt » est coupé (réglages, page Avant le donjon).",
-	HELP_GROUP = "/r2q groupe : qui est sur place et prêt pour le donjon",
+	HELP_GROUP = "/r2q groupe -- qui est sur place et prêt pour le donjon",
 }
 local EN = {
 	OPT_DUNGEON_GROUP = "Group ready: ask members for their status",
@@ -59,7 +59,7 @@ local EN = {
 	GRP_CHAT_NONE = "You are not in a group.",
 	GRP_CHAT_NO_DUNGEON = "No dungeon in sight: walk up to an entrance, then /r2q groupe.",
 	GRP_CHAT_OFF = "\"Group ready\" is off (settings, Before the dungeon page).",
-	HELP_GROUP = "/r2q groupe: who is there and ready for the dungeon",
+	HELP_GROUP = "/r2q groupe -- who is there and ready for the dungeon",
 }
 ns.RegisterStrings(FR, EN)
 if ns.KEEP_STRINGS then ns.GROUP_STRINGS = { fr = FR, en = EN } end
@@ -301,6 +301,11 @@ end
 if ns.COMMANDS then
 	ns.COMMANDS["groupe"] = function(self) self:GroupPrint() end
 	ns.COMMANDS["group"] = ns.COMMANDS["groupe"]
+end
+if type(ns.HELP) == "table" then
+	for _, section in ipairs(ns.HELP) do
+		if section[1] == "HELP_H_MISC" and type(section[2]) == "table" then table.insert(section[2], 1, "HELP_GROUP") end
+	end
 end
 
 -- ---------------------------------------------------------------------------

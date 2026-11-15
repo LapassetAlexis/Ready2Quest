@@ -116,6 +116,10 @@ do
 	restore()
 	Check("[GRP] /r2q groupe : une demande part, le bilan et une ligne par membre dans le chat",
 		#W.sent == 2 and W.sent[2].text:find("|1$") ~= nil and #printed == 1 + 1 + 3, #printed)
+	Mock:Reset()
+	NS:HandleCommand("help")
+	local _, groupLines = Mock:Output():gsub("/r2q groupe %-%- ", "")
+	Check("[GRP] /r2q help : la ligne /r2q groupe, une fois", groupLines == 1, Mock:Output())
 	NS:DB().dungeonGroup = false
 	NS:RefreshOptions()
 	local before = #W.sent

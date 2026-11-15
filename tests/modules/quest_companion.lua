@@ -132,11 +132,18 @@ do
 	QNS.journalFrame:Hide()
 	SlashCmdList.QUESTCOMPANION("help")
 	Want("help : l'aide de QC", Mock:Output():find("/qc carnet", 1, true) and not Mock:Output():find("/r2q", 1, true))
+	-- 3.1.0 : l'en-tête du socle (HELP_TITLE) n'est plus écrasé par la ligne de /qc titre
+	local helpText = Mock:Output()
+	local first = helpText:match("^[^\n]*") or ""
+	local _, titleLines = helpText:gsub("/qc titre", "")
+	Want("help : en-tête « Commandes : /qc ou /questcompanion », /qc titre une fois", first:find("Commandes : /qc ou /questcompanion", 1, true)
+		and not first:find("/qc titre", 1, true) and titleLines == 1)
+	Want("help : /qc filet [tout|express|auto]", helpText:find("/qc filet [tout|express|auto]", 1, true) ~= nil)
 	Mock:Reset()
 	SlashCmdList.QUESTCOMPANION("module compagnon off")
 	Want("module compagnon off : réglage de QC", QNS:DB().companionEnabled == false and NS:DB().companionEnabled == nil)
 	SlashCmdList.QUESTCOMPANION("module compagnon on")
-	Verdict("[QC] /qc : le carnet, son aide, ses modules")
+	Verdict("[QC] /qc : le carnet, son aide (en-tête, /qc titre, /qc filet), ses modules")
 end
 
 -- 4. Panneau de réglages et bouton de minicarte ------------------------------------------

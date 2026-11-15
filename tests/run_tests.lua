@@ -2068,6 +2068,7 @@ do
 	NS:HandleCommand("aide")
 	Check("/r2q help : aide classée (aide = help)", helpOut:find("Zones sûres") and helpOut:find("/r2q module <depart")
 		and helpOut:find("/r2q diag") and Mock:Output() == helpOut, helpOut)
+	Check("/r2q help : /r2q style (1.35.0)", helpOut:find("/r2q style azeroth|sobre -- ", 1, true), helpOut)
 	Mock:Reset()
 	NS:HandleCommand("nimportequoi")
 	local _, unknownLines = Mock:Output():gsub("\n", "\n")

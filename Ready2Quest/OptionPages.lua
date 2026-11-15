@@ -374,6 +374,7 @@ ns.RegisterStrings({
 	UI_STYLE_sobre    = "Sobre",
 	UI_STYLE_MSG      = "Style de l'interface : %s. Tape /reload pour l'appliquer aux fenêtres déjà ouvertes.",
 	UI_STYLE_USAGE    = "/r2q style azeroth|sobre",
+	HELP_STYLE        = "/r2q style azeroth|sobre -- style de toute l'interface (Azeroth : cadre doré ; Sobre : à plat)",
 }, {
 	OPT_UI_STYLE      = "Interface style",
 	OPT_UI_STYLE_DESC = "Azeroth: golden frame, bevelled buttons and titles in the game font. Plain: the previous flat look. Windows already open take the new style after the next /reload.",
@@ -381,6 +382,7 @@ ns.RegisterStrings({
 	UI_STYLE_sobre    = "Plain",
 	UI_STYLE_MSG      = "Interface style: %s. Type /reload to apply it to windows already open.",
 	UI_STYLE_USAGE    = "/r2q style azeroth|sobre",
+	HELP_STYLE        = "/r2q style azeroth|sobre -- style of the whole interface (Azeroth: golden frame; Plain: flat)",
 })
 function ns:UISkinChoices()
 	local list = {}
@@ -402,5 +404,10 @@ if ns.COMMANDS then
 		local word = tostring(rest or ""):match("^%s*(%S*)"):lower()
 		if word == "plain" then word = "sobre" end
 		if not self:SetUISkin(word) then self:Print(ns.L.UI_STYLE_USAGE) end
+	end
+end
+if type(ns.HELP) == "table" then
+	for _, section in ipairs(ns.HELP) do
+		if section[1] == "HELP_H_QUICK" and type(section[2]) == "table" then table.insert(section[2], "HELP_STYLE") end
 	end
 end
