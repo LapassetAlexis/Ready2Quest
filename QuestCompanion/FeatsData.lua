@@ -201,12 +201,30 @@ do
 	end
 end
 
+-- 3.0.4 (« QuestCompanion a été bloqué » à chaque sortie de donjon) : seuls
+-- les événements réellement abonnés sont désabonnés. Le journal de combat,
+-- fermé sur le moteur 12.0, n'est jamais abonné : s'en désabonner à la
+-- sortie d'une instance levait la fenêtre ADDON_ACTION_FORBIDDEN.
+local CLEU = "COMBAT_LOG_EVENT_UNFILTERED"
+local registered = {}        -- événement -> true : abonné sur hub
 function ns.FeatListen(handlers)
 	for _, set in ipairs(sets) do if set == handlers then return end end
 	sets[#sets + 1] = handlers
 	if not hub then return end
-	if ns.RegisterHandlers then ns.RegisterHandlers(hub, handlers)
-	else for event in pairs(handlers) do pcall(hub.RegisterEvent, hub, event) end end
+	if ns.RegisterHandlers then
+		local logOpen = ns.RegisterHandlers(hub, handlers)
+		for event in pairs(handlers) do
+			if event == CLEU then
+				if logOpen then registered[event] = true end
+			elseif not (logOpen and (event == "PARTY_KILL" or event == "UNIT_DIED")) then
+				registered[event] = true
+			end
+		end
+	else
+		for event in pairs(handlers) do
+			if event ~= CLEU and pcall(hub.RegisterEvent, hub, event) then registered[event] = true end
+		end
+	end
 end
 
 function ns.FeatUnlisten(handlers)
@@ -215,7 +233,11 @@ function ns.FeatUnlisten(handlers)
 	for event in pairs(handlers) do
 		local used = false
 		for _, set in ipairs(sets) do if set[event] then used = true end end
-		if not used then pcall(hub.UnregisterEvent, hub, event) end
+		local closed = event == CLEU and ns.CombatLogRestricted and ns.CombatLogRestricted()
+		if not used and registered[event] and not closed then
+			registered[event] = nil
+			pcall(hub.UnregisterEvent, hub, event)
+		end
 	end
 end
 
