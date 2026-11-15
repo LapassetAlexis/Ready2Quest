@@ -162,6 +162,12 @@ do
 		end
 		s.ok("mot inconnu", NS:WinterVeilCommand("bidon") == nil and NS:DB().winterVeil == "auto")
 		s.ok("sans mot", NS:WinterVeilCommand("") == nil)
+		-- 3.1.0 : l'aide ne montre plus les outils de mise au point (cadre, metzen)
+		for _, lang in ipairs({ "fr", "en" }) do
+			local usage = NS.WINTER_VEIL_STRINGS and NS.WINTER_VEIL_STRINGS[lang] and NS.WINTER_VEIL_STRINGS[lang].WINTER_VEIL_USAGE or NS.L.WINTER_VEIL_USAGE
+			s.ok("aide sans outil de réglage " .. lang, not usage:find("cadre", 1, true) and not usage:find("frame", 1, true)
+				and not usage:find("metzen", 1, true), usage)
+		end
 		s.check("[WV] /qc noel on / jamais / toujours / auto ; mot inconnu ou absent : rien ne change")
 		local strings, parity = NS.WINTER_VEIL_STRINGS, {}
 		for k in pairs(strings and strings.fr or {}) do if not strings.en[k] then parity[#parity + 1] = k end end

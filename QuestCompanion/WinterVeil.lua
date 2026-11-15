@@ -200,7 +200,7 @@ local FR = {
 	WINTER_VEIL_auto_HINT   = "du 15 décembre au 2 janvier",
 	WINTER_VEIL_on          = "Toujours",
 	WINTER_VEIL_off         = "Jamais",
-	WINTER_VEIL_USAGE       = "/qc noel auto|on|off (actuel : %s). Réglages en jeu : /qc noel cadre, /qc noel metzen",
+	WINTER_VEIL_USAGE       = "/qc noel auto|on|off (actuel : %s)",
 	WINTER_VEIL_MSG         = "Décor du Voile d'hiver : %s.",
 	WINTER_VEIL_MSG_SOBRE   = "Décor du Voile d'hiver : %s. Il ne se voit qu'avec le style Azeroth (/qc style azeroth).",
 	HELP_NOEL               = "/qc noel auto|on|off — décor du Voile d'hiver (guirlandes, flocons, boule de neige)",
@@ -223,7 +223,7 @@ local EN = {
 	WINTER_VEIL_auto_HINT   = "December 15 to January 2",
 	WINTER_VEIL_on          = "Always",
 	WINTER_VEIL_off         = "Never",
-	WINTER_VEIL_USAGE       = "/qc noel auto|on|off (current: %s). Live tuning: /qc noel frame, /qc noel metzen",
+	WINTER_VEIL_USAGE       = "/qc noel auto|on|off (current: %s)",
 	WINTER_VEIL_MSG         = "Winter Veil decorations: %s.",
 	WINTER_VEIL_MSG_SOBRE   = "Winter Veil decorations: %s. They only show with the Azeroth style (/qc style azeroth).",
 	HELP_NOEL               = "/qc noel auto|on|off — Winter Veil decorations (lights, snowflakes, snowball)",
@@ -1481,7 +1481,8 @@ end
 function ns:WinterVeilCommand(rest)
 	local word, more = tostring(rest or ""):match("^%s*(%S*)%s*(.-)%s*$")
 	word = (word or ""):lower()
-	-- 2.14.0 (bêta 4) : réglages en jeu (guirlande du cadre, Metzen)
+	-- 2.14.0 (bêta 4) : réglages en jeu (guirlande du cadre, Metzen) ; outils de
+	-- mise au point, gardés mais plus annoncés au joueur (3.1.0)
 	if word == "cadre" or word == "frame" then return self:WinterVeilTuneLights(more) end
 	if word == "metzen" and self.WinterMetzenTune then return self:WinterMetzenTune(more) end
 	local mode = word ~= "" and self:SetWinterVeil(word) or nil

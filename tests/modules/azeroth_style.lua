@@ -758,3 +758,12 @@ do
 	if AZT.rollQuality then NS.CaptureRollQuality = AZT.rollQuality end
 	ResetWorld()
 end
+
+-- 3.1.0 : la réplique d'essai de /qc debug bulle ne promet plus un parchemin
+-- (thème forgé : la bulle n'en a plus)
+do
+	local all = NS.AZEROTH_DEBUG_STRINGS or {}
+	local fr, en = all.fr and all.fr.AZ_DEBUG_SAMPLE or "", all.en and all.en.AZ_DEBUG_SAMPLE or ""
+	Check("[AZ] /qc debug bulle : réplique d'essai sans « parchemin »", fr ~= "" and en ~= ""
+		and not fr:lower():find("parchemin", 1, true) and not en:lower():find("parchment", 1, true), fr .. " / " .. en)
+end
