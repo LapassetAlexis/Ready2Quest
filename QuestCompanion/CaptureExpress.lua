@@ -11,7 +11,7 @@
 --     s'ouvre) ;
 --   * Maj+clic = tout le filet d'un coup ; Ctrl+clic = la carte de
 --     préparation, comme avant (aides, Lancer, Passer) ; clic droit = la liste ;
---   * le verdict est une pastille d'une ligne au-dessus du filet (nom,
+--   * le verdict est une pastille d'une ligne sous le compagnon (nom,
 --     étoiles, liseré vert, rouge ou doré), qui glisse, brille et s'efface
 --     seule. Elle ne prend jamais la souris. Le bandeau « Capture possible »
 --     devient une pastille du même fil ;
@@ -30,7 +30,7 @@ local L = ns.L
 local Theme = ns.Theme
 
 ns.CAPTURE_EXPRESS = {
-	rows = 4,            -- pastilles à l'écran, la plus récente en bas
+	rows = 4,            -- pastilles à l'écran, la plus récente contre le compagnon
 	w = 224, h = 20, gap = 2,
 	life = 2.2,          -- s d'une pastille ordinaire
 	lifeNotable = 3.6,   -- s d'une prise qui compte (nouvelle, brillante, record)
@@ -45,7 +45,7 @@ local X = ns.CAPTURE_EXPRESS
 
 local FR = {
 	OPT_DAILY_CAPTURE_EXPRESS      = "Capture express",
-	OPT_DAILY_CAPTURE_EXPRESS_DESC = "Un clic sur le filet lance tout de suite, même en combat : pas de bandeau, pas de carte, pas de scène. Le verdict s'affiche en une ligne au-dessus du filet. Maj+clic : tout le filet. Ctrl+clic : la carte de préparation.",
+	OPT_DAILY_CAPTURE_EXPRESS_DESC = "Un clic sur le filet lance tout de suite, même en combat : pas de bandeau, pas de carte, pas de scène. Le verdict s'affiche en une ligne sous le compagnon. Maj+clic : tout le filet. Ctrl+clic : la carte de préparation.",
 	OPT_DAILY_CAPTURE_AUTO         = "Capture automatique",
 	OPT_DAILY_CAPTURE_AUTO_DESC    = "Le filet part seul dès qu'un monstre abattu vaut le coup. Une brillante attend ton clic, sauf si une aide part avec elle. Demande la capture express.",
 	OPT_DAILY_CAPTURE_AIDAUTO      = "Aide conseillée automatique",
@@ -66,7 +66,7 @@ local FR = {
 }
 local EN = {
 	OPT_DAILY_CAPTURE_EXPRESS      = "Express capture",
-	OPT_DAILY_CAPTURE_EXPRESS_DESC = "Clicking the net throws right away, even in combat: no banner, no card, no scene. The result shows as one line above the net. Shift-click: the whole net. Ctrl-click: the preparation card.",
+	OPT_DAILY_CAPTURE_EXPRESS_DESC = "Clicking the net throws right away, even in combat: no banner, no card, no scene. The result shows as one line below the companion. Shift-click: the whole net. Ctrl-click: the preparation card.",
 	OPT_DAILY_CAPTURE_AUTO         = "Automatic capture",
 	OPT_DAILY_CAPTURE_AUTO_DESC    = "The net is thrown by itself as soon as a defeated monster is worth it. A shiny waits for your click, unless an aid goes with it. Needs express capture.",
 	OPT_DAILY_CAPTURE_AIDAUTO      = "Recommended aid automatically",
@@ -154,7 +154,7 @@ function ns:CaptureExpressAid(candidate)
 end
 
 -- ---------------------------------------------------------------------------
--- Le fil de pastilles : une ligne par événement, au-dessus du filet
+-- Le fil de pastilles : une ligne par événement, sous le compagnon
 -- ---------------------------------------------------------------------------
 -- Aucune table n'est faite par pastille : les X.rows fiches tournent (la plus
 -- ancienne est reprise pour la nouvelle), les cadres sont faits une fois.
@@ -241,23 +241,128 @@ function ns:EnsureCaptureExpressFeed()
 	return feed
 end
 
--- Au-dessus du filet (à gauche du compagnon : aligné à droite, pour ne pas
--- sortir de l'écran) ; sans filet possible, au-dessus de sa place seule
+-- 3.1.0 (bêta 9, retour en jeu : « plus en dessous ? ») : le fil se range
+-- SOUS le compagnon, centré sur lui, empilé vers le bas, la plus récente
+-- contre lui. Sous l'étiquette d'humeur du médaillon forgé (frame.forgeHitBelow,
+-- ForgeCompanion.lua), sous le cadre en Sobre : ni la plaque du nom, ni
+-- l'étiquette, ni le filet (à côté, à mi-hauteur), ni la bulle (au-dessus),
+-- ni la fiche au survol (à côté, posée sur le bas du cadre). Pas la place
+-- dessous (compagnon près du bas de l'écran) : au-dessus de lui (de sa bulle
+-- si elle parle), la plus récente en bas ; sinon l'ancien emplacement, au-
+-- dessus du filet. Compagnon caché : centré au-dessus du filet seul. Le fil
+-- garde sa taille (parent UIParent) quelle que soit l'échelle du compagnon :
+-- seuls les écarts suivent cette échelle.
+X.gapBelow = 6      -- px entre le bas du compagnon (étiquette comprise) et le fil
+X.gapAbove = 12     -- px au-dessus du cadre (l'écart de la bulle)
+X.gapBubble = 6     -- px au-dessus de la bulle
+X.screenPad = 4     -- px gardés au bord de l'écran
+
+-- Une coordonnée du client (nombre lisible, sinon nil)
+local function Edge(region, method)
+	local fn = region and region[method]
+	if type(fn) ~= "function" then return nil end
+	local ok, value = pcall(fn, region)
+	if not ok then return nil end
+	if ns.Plain then value = ns.Plain(value) end
+	return tonumber(value)
+end
+local function ScaleOf(region)
+	local scale = Edge(region, "GetScale")
+	return (scale and scale > 0) and scale or 1
+end
+local function Visible(region)
+	if not (region and region.IsShown) then return false end
+	local ok, shown = pcall(region.IsShown, region)
+	return ok and shown and true or false
+end
+function ns.CaptureExpressHeight() return X.rows * (X.h + X.gap) end
+
+-- Décalage horizontal qui garde le fil dans l'écran (centré sur le compagnon)
+local function ShiftX(frame, scale)
+	local left, right = Edge(frame, "GetLeft"), Edge(frame, "GetRight")
+	local width = Edge(UIParent, "GetWidth")
+	if not (left and right and width and width > 0) then return 0 end
+	local center = (left + right) / 2 * scale
+	local lo, hi = center - X.w / 2, center + X.w / 2
+	if lo < X.screenPad then return X.screenPad - lo end
+	if hi > width - X.screenPad then return width - X.screenPad - hi end
+	return 0
+end
+
+-- L'emplacement du fil : "below" (sous le compagnon), "above" (au-dessus de
+-- lui ou de sa bulle), "net" (au-dessus du filet seul), "side" (l'ancien :
+-- au-dessus du filet à côté du compagnon), "alone" (sans filet). Rend aussi
+-- le sens d'empilement : "down" (la plus récente en haut) ou "up".
 function ns:CaptureExpressPlace()
 	local feed = self.captureExpressFeed
 	if not feed then return nil end
-	local net = self.captureNetButton or (self.EnsureCaptureNet and self:EnsureCaptureNet())
 	feed:ClearAllPoints()
-	if net then
-		local side = net.side == "left" and "RIGHT" or "LEFT"
-		feed:SetPoint("BOTTOM" .. side, net, "TOP" .. side, 0, 10)
-		feed.side = side
-	else
-		local spot = ns.CAPTURE_NET_ALONE or { point = "CENTER", x = 0, y = -170 }
-		feed:SetPoint("BOTTOM", UIParent, spot.point, spot.x, spot.y + 34)
-		feed.side = "LEFT"
+	local mode
+	local height = ns.CaptureExpressHeight()
+	local frame = self.companionFrame
+	if Visible(frame) then
+		local scale = ScaleOf(frame)
+		local x = ShiftX(frame, scale)
+		local below = (tonumber(frame.forgeHitBelow) or 0) * scale + X.gapBelow
+		local bottom = Edge(frame, "GetBottom")
+		if not bottom or bottom * scale - below - height >= X.screenPad then
+			feed:SetPoint("TOP", frame, "BOTTOM", x, -below)
+			mode = "below"
+		else
+			local screen = Edge(UIParent, "GetHeight")
+			local bubble = self.companionBubble
+			local over, gap, top = frame, X.gapAbove, Edge(frame, "GetTop")
+			top = top and top * scale
+			if Visible(bubble) then
+				over, gap = bubble, X.gapBubble
+				top = Edge(bubble, "GetTop")
+				top = top and top * ScaleOf(bubble)
+			end
+			if not (screen and top) or screen - top - gap - height >= X.screenPad then
+				feed:SetPoint("BOTTOM", over, "TOP", x, gap)
+				mode = "above"
+			end
+		end
 	end
-	return feed.side
+	if not mode then
+		local net = self.captureNetButton or (self.EnsureCaptureNet and self:EnsureCaptureNet())
+		if net and net.side then
+			local side = net.side == "left" and "RIGHT" or "LEFT"
+			feed:SetPoint("BOTTOM" .. side, net, "TOP" .. side, 0, 10)
+			feed.side, mode = side, "side"
+		elseif net then
+			feed:SetPoint("BOTTOM", net, "TOP", 0, 10)
+			mode = "net"
+		else
+			local spot = ns.CAPTURE_NET_ALONE or { point = "CENTER", x = 0, y = -170 }
+			feed:SetPoint("BOTTOM", UIParent, spot.point, spot.x, spot.y + 34)
+			mode = "alone"
+		end
+	end
+	if mode ~= "side" then feed.side = "CENTER" end
+	local stack = mode == "below" and "down" or "up"
+	if feed.stack ~= stack then
+		-- les pastilles à l'écran se réancrent à la prochaine image
+		for index = 1, #feed.rows do feed.rows[index].slid = nil end
+		feed.stack = stack
+		feed.dirty = true
+	end
+	feed.mode = mode
+	return mode, stack
+end
+
+-- Le compagnon déplacé, montré, caché ou redimensionné (le filet se replace
+-- alors) : le fil à l'écran suit
+do
+	local base = ns.CapturePlaceNet
+	if base then
+		function ns:CapturePlaceNet(...)
+			local a = base(self, ...)
+			local feed = self.captureExpressFeed
+			if feed and feed:IsShown() then pcall(self.CaptureExpressPlace, self) end
+			return a
+		end
+	end
 end
 
 -- Une pastille de plus : `kind` (ok, fail, notable, shiny, offer, all), le
@@ -273,10 +378,10 @@ function ns:CaptureExpressPush(kind, text, right, life)
 	item.born = Clock()
 	item.life = life or ((kind == "notable" or kind == "shiny") and X.lifeNotable or X.life)
 	feed.dirty = true
-	if not feed:IsShown() then
-		self:CaptureExpressPlace()
-		feed:Show()
-	end
+	-- (replacé à chaque pastille : le compagnon a pu bouger, changer de taille,
+	-- se cacher ; sa bulle a pu s'ouvrir)
+	self:CaptureExpressPlace()
+	if not feed:IsShown() then feed:Show() end
 	-- (la tâche d'horloge n'est posée qu'une fois tant que le fil vit)
 	if not feed.ticking then
 		feed.ticking = true
@@ -315,11 +420,17 @@ function ns:CaptureExpressUpdate(now)
 				row.shownItem, row.shownKind, row.slid = item, item.kind, nil
 				row:Show()
 			end
-			-- glissement à l'arrivée (la ligne du bas seulement), puis en place
+			-- glissement à l'arrivée (la plus récente seulement), puis en place ;
+			-- sous le compagnon, la plus récente en haut (contre lui)
 			local slide = age < X.slide and (1 - EaseOut(age / X.slide)) or 0
 			if slide > 0 or not row.slid then
 				row:ClearAllPoints()
-				row:SetPoint("BOTTOMLEFT", feed, "BOTTOMLEFT", (index == 1 and slide or 0) * 14, (index - 1) * (X.h + X.gap))
+				local dx, step = (index == 1 and slide or 0) * 14, (index - 1) * (X.h + X.gap)
+				if feed.stack == "down" then
+					row:SetPoint("TOPLEFT", feed, "TOPLEFT", dx, -step)
+				else
+					row:SetPoint("BOTTOMLEFT", feed, "BOTTOMLEFT", dx, step)
+				end
 				row.slid = slide == 0 or nil
 			end
 			local alpha = 1

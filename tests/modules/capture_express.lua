@@ -348,6 +348,136 @@ do
 		throws == 1 and #XP.sounds <= 3, #XP.sounds)
 end
 
+
+-- 9. Où se range le fil : sous le compagnon (retour en jeu, 3.1.0 bêta 9) -----------------
+do
+	Say("-- capture express : le fil sous le compagnon")
+	XP.Reset()
+	local X = NS.CAPTURE_EXPRESS
+	local frame = NS.companionFrame
+	Check("[EXP-PLACE] harnais : compagnon affiché, médaillon forgé", Shown(frame) and frame.ring == "forge"
+		and (frame.forgeHitBelow or 0) > 0, frame and frame.ring)
+	NS:CaptureExpressPush("ok", "Golem lézardé", "")
+	NS:CaptureExpressPush("notable", "Raptor", "")
+	NS:CaptureExpressUpdate(NS.Now() + X.slide + 0.05)
+	local feed = NS.captureExpressFeed
+	local p = feed.lastPoint
+	local belowForge = frame.forgeHitBelow
+	Check("[EXP-PLACE] forgé : sous le compagnon, centré sur lui, sous l'étiquette d'humeur (plaque et humeur libres)",
+		feed.mode == "below" and #feed.points == 1 and p.relTo == frame and p.point == "TOP" and p.relPoint == "BOTTOM"
+		and p.x == 0 and p.y == -(belowForge + X.gapBelow), p.point, p.relPoint, p.y)
+	local r1, r2 = feed.rows[1].lastPoint, feed.rows[2].lastPoint
+	Check("[EXP-PLACE] empilées vers le bas, la plus récente contre le compagnon",
+		feed.stack == "down" and r1.point == "TOPLEFT" and r1.y == 0 and r2.point == "TOPLEFT" and r2.y == -(X.h + X.gap)
+		and feed.items[1].text == "Raptor", r1.point, r1.y, r2.y)
+	-- le filet est à côté, à mi-hauteur (il finit au-dessus du bas du cadre) ;
+	-- la fiche au survol se pose sur le bas du cadre et monte ; la bulle au-dessus
+	local net = NS:EnsureCaptureNet()
+	local half = (frame:GetHeight() or 118) / 2
+	Check("[EXP-PLACE] filet à côté du compagnon, plus haut que le fil (badge compris)",
+		net.lastPoint.relTo == frame and (net.lastPoint.relPoint == "RIGHT" or net.lastPoint.relPoint == "LEFT")
+		and half - NS.CAPTURE_NET_SIZE / 2 - NS.CAPTURE_NET_BADGE.h > 0)
+	NS:CompanionShowHover()
+	local hp = NS.companionHover.lastPoint
+	Check("[EXP-PLACE] fiche au survol : posée sur le bas du cadre, à côté (le fil est dessous)",
+		hp.relTo == frame and hp.relPoint == "BOTTOMLEFT" and hp.y == 0 and p.y < 0)
+	NS:CompanionHideHover()
+	local mouse = feed.IsMouseEnabled and feed:IsMouseEnabled()
+	for _, row in ipairs(feed.rows) do if row.IsMouseEnabled and row:IsMouseEnabled() then mouse = true end end
+	Check("[EXP-PLACE] le fil ne prend jamais la souris", not mouse)
+
+	-- compagnon Très grand : l'écart suit son échelle, les pastilles gardent leur taille
+	NS:DB().companionSize = 4
+	NS:CompanionApplySize()
+	local scale = frame:GetScale()
+	p = feed.lastPoint
+	Check("[EXP-PLACE] compagnon agrandi : le fil se replace aussitôt, l'écart suit l'échelle, la pastille garde sa taille",
+		scale > 1 and p.relTo == frame and math.abs(p.y + (frame.forgeHitBelow * scale + X.gapBelow)) < 1e-6
+		and feed:GetScale() == 1 and feed.rows[1].width == X.w and feed.rows[1].height == X.h, scale, p.y)
+	NS:DB().companionSize = 2
+	NS:CompanionApplySize()
+
+	-- au bord droit de l'écran : le fil reste dans l'écran
+	local width = 1600
+	local oldW = UIParent.width
+	UIParent.width = width
+	frame.GetLeft = function() return width - 60 end
+	frame.GetRight = function() return width end
+	NS:CaptureExpressPlace()
+	p = feed.lastPoint
+	Check("[EXP-PLACE] compagnon au bord droit : le fil décale vers la gauche pour rester dans l'écran",
+		p.relPoint == "BOTTOM" and math.abs((width - 30) + p.x + X.w / 2 - (width - X.screenPad)) < 1e-6, p.x)
+	frame.GetLeft, frame.GetRight = nil, nil
+	UIParent.width = oldW
+
+	-- près du bas de l'écran : au-dessus (de la bulle si elle parle), sinon l'ancien emplacement
+	local screen = 768
+	local oldH = UIParent.height
+	UIParent.height = screen
+	frame.GetBottom = function() return 30 end
+	frame.GetTop = function() return 150 end
+	NS:CaptureExpressPlace()
+	p = feed.lastPoint
+	local aboveFrame = feed.mode == "above" and p.relTo == frame and p.point == "BOTTOM" and p.relPoint == "TOP"
+		and p.y == X.gapAbove and feed.stack == "up"
+	NS:CaptureExpressUpdate(NS.Now() + X.slide + 0.06)
+	local up = feed.rows[1].lastPoint.point == "BOTTOMLEFT"
+	Check("[EXP-PLACE] pas la place dessous : au-dessus du compagnon, la plus récente en bas (contre lui)",
+		aboveFrame and up, p.point, p.relPoint, feed.mode)
+	local bubble = NS:EnsureCompanionBubble()
+	bubble:Show()
+	bubble.GetTop = function() return 260 end
+	NS:CaptureExpressPush("ok", "Loup", "")
+	p = feed.lastPoint
+	Check("[EXP-PLACE] bulle ouverte : le fil passe au-dessus de la bulle",
+		feed.mode == "above" and p.relTo == bubble and p.relPoint == "TOP" and p.y == X.gapBubble, feed.mode)
+	bubble.GetTop = function() return screen - 20 end
+	NS:CaptureExpressPlace()
+	p = feed.lastPoint
+	Check("[EXP-PLACE] ni dessous ni dessus : l'ancien emplacement, au-dessus du filet",
+		feed.mode == "side" and p.relTo == net and p.relPoint:find("^TOP") ~= nil, feed.mode)
+	bubble.GetTop = nil
+	bubble:Hide()
+	frame.GetBottom, frame.GetTop = nil, nil
+	UIParent.height = oldH
+
+	-- compagnon caché : centré au-dessus du filet seul
+	frame:Hide()
+	NS:CapturePlaceNet()
+	p = feed.lastPoint
+	Check("[EXP-PLACE] compagnon caché : le fil se replace centré au-dessus du filet seul",
+		net.alone == true and feed.mode == "net" and p.relTo == net and p.point == "BOTTOM" and p.relPoint == "TOP", feed.mode)
+	frame:Show()
+	NS:CapturePlaceNet()
+	Check("[EXP-PLACE] compagnon de retour : le fil revient dessous", feed.mode == "below" and feed.lastPoint.relTo == frame)
+
+	-- valeur illisible du client : jamais d'erreur, le fil reste dessous
+	frame.GetBottom = function() error("secret") end
+	local ok = pcall(NS.CaptureExpressPlace, NS)
+	frame.GetBottom = nil
+	Check("[EXP-PLACE] coordonnée illisible : pas d'erreur, le fil reste sous le compagnon", ok and feed.mode == "below")
+end
+
+-- 10. Sobre : sous le cadre carré -------------------------------------------------------------
+do
+	Say("-- capture express : le fil sous le cadre Sobre")
+	local style = NS:DB().companionStyle
+	XP.Reset()
+	NS:DB().companionStyle = "sobre"
+	NS:ApplyUIStyle()
+	if NS.captureExpressFeed then NS.captureExpressFeed:Hide(); NS.captureExpressFeed = nil end
+	local frame = NS.companionFrame
+	NS:CaptureExpressPush("ok", "Golem", "")
+	local feed = NS.captureExpressFeed
+	local p = feed.lastPoint
+	Check("[EXP-PLACE] Sobre : sous le cadre, centré, empilé vers le bas",
+		not feed.forged and frame.ring ~= "forge" and feed.mode == "below" and p.relTo == frame and p.point == "TOP"
+		and p.relPoint == "BOTTOM" and p.y == -NS.CAPTURE_EXPRESS.gapBelow and feed.stack == "down", frame.ring, p.y)
+	NS:DB().companionStyle = style
+	NS:ApplyUIStyle()
+	if NS.captureExpressFeed then NS.captureExpressFeed:Hide(); NS.captureExpressFeed = nil end
+end
+
 -- Rendu au harnais
 for _, name in ipairs(GLOBALS) do _G[name] = XP.saved[name] end
 math.random = XP.random

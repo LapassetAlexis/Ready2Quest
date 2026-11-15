@@ -1644,6 +1644,24 @@ Snap.scenes["qc-companion-talk"] = function(T)
 	return Snap.Group(frame, ns.companionBubble), "QuestCompanion : il parle (bulle forgée, lueur ronde, reflet)"
 end
 
+-- 3.1.0 (bêta 9) : les pastilles de la capture express sous le compagnon,
+-- sous l'étiquette d'humeur, la plus récente contre lui ; la bulle au-dessus
+-- et le filet à côté restent libres
+Snap.scenes["qc-capture-express-feed"] = function(T)
+	local ns, frame = QCCompanion(T)
+	ns.captureExpressDormant = nil
+	ns:CompanionSay("HELLO", { force = true, line = "COMP_SAY_HELLO", args = { ns:CompanionName() } })
+	-- (les étoiles sont des icônes du client, |A…|a : l'aperçu ne les dessine pas)
+	ns:CaptureExpressPush("ok", "Raptor des Tarides", "")
+	ns:CaptureExpressPush("fail", "Sanglier", ns.L.CAPTURE_X_FLED)
+	ns:CaptureExpressPush("notable", "Golem lézardé", ns.L.CAPTURE_X_NEW)
+	ns:CaptureExpressUpdate(ns.Now() + 0.5)
+	local net = ns:EnsureCaptureNet()
+	net:Show()
+	return Snap.Group(frame, ns.companionBubble, net, ns.captureExpressFeed),
+		"QuestCompanion : pastilles de capture sous le compagnon (la plus récente contre lui)"
+end
+
 -- humeur au plus bas (« rêveur ») : l'étiquette change de teinte ; et l'effet
 -- « Niveau 24 ! » (filets lumineux, lueur et poussière en points lumineux)
 Snap.scenes["qc-companion-sad"] = function(T)
