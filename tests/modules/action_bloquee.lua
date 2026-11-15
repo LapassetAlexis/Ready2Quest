@@ -87,20 +87,23 @@ Block("journal de combat", function()
 	-- les hauts faits : entrée puis sortie de donjon, trois fois (cause de la 3.0.3)
 	_G.IsInInstance = function() return Mock.world.instance == true, Mock.world.instance and "party" or "none" end
 	_G.GetInstanceInfo = function() return "Donjon", Mock.world.instance and "party" or "none" end
+	-- (hauts faits éveillés : compagnon allumé, comme en jeu par défaut)
+	local dormant, companionOn, bossKill = QNS.featsDormant, QNS.CompanionOn, QNS.FeatBossKill
+	QNS.featsDormant, QNS.CompanionOn = false, function() return true end
+	local boss = 0
+	QNS.FeatBossKill = function(self, ...) boss = boss + 1; return bossKill(self, ...) end
 	local zoneErr
 	for _ = 1, 3 do
 		Mock.world.instance = true
 		local ok1, e1 = pcall(Mock.Fire, Mock, "PLAYER_ENTERING_WORLD", false, false)
+		Mock:Fire("UNIT_DIED", "Creature-0-4170-36-1234-639-0000ABCDEF")
 		Mock.world.instance = false
 		local ok2, e2 = pcall(Mock.Fire, Mock, "PLAYER_ENTERING_WORLD", false, false)
-		local ok3, e3 = pcall(QNS.FeatJeuZone, QNS)
-		zoneErr = zoneErr or (not ok1 and e1) or (not ok2 and e2) or (not ok3 and e3)
+		zoneErr = zoneErr or (not ok1 and e1) or (not ok2 and e2)
 	end
-	-- même chose par l'appel direct (au cas où le compagnon dort dans le harnais)
-	Mock.world.instance = true; QNS:FeatJeuZone()
-	Mock.world.instance = false; QNS:FeatJeuZone()
-	Check("[BLOQ] sorties de donjon (journal fermé) : aucun appel au client sur le journal de combat",
-		not zoneErr and #spy.calls == 0, tostring(zoneErr) .. " " .. table.concat(spy.calls, ","))
+	QNS.featsDormant, QNS.CompanionOn, QNS.FeatBossKill = dormant, companionOn, bossKill
+	Check("[BLOQ] sorties de donjon (journal fermé) : aucun appel au client sur le journal de combat, boss écoutés dedans",
+		not zoneErr and #spy.calls == 0 and boss == 3, tostring(zoneErr) .. " " .. boss .. " " .. table.concat(spy.calls, ","))
 	for _, holder in ipairs(HOLDERS) do QNS.EventHold(holder, false) end
 	Check("[BLOQ] journal fermé : les abonnés du chargement reprennent sans appel au client", #spy.calls == 0,
 		table.concat(spy.calls, ","))
