@@ -5,10 +5,6 @@
 -- (tirage faisable dans la zone, libellés, captures comptées, semaine par
 -- type, pourcentage remesuré), page Missions 2.9.1 (cartes, tampon, ↻ une
 -- fois par jour, résumé, encarts, colonne de droite, rôles d'encre mesurés).
--- 3.1.0 : affirme l'ancien habillage (carnet en parchemin, scènes en bois, bandeaux
--- dorés, anneau) : le drapeau QNS.AZEROTH_LEGACY rallumé pour tout le module
--- (remis à la valeur du produit à sa fin, tests/run_tests.lua)
-T.Legacy(true)
 local Check, Say, ResetWorld, NS, Mock = T.Check, T.Say, T.ResetWorld, T.QNS, T.Mock
 
 local SAVED = { random = math.random }
@@ -701,12 +697,6 @@ do
 	local f = PageReset("azeroth")
 	local day = f.day
 	local m = day.missions
-	Check("[M291] Azeroth : carnet habillé, cartes sur le fond recadré, encres des rôles (à faire, faite, tampon, résumé, encart)",
-		f.azeroth == true and m[1].azBg ~= nil and m[1].azCoverW == m[1].cardW and m[2].azCoverW == m[2].cardW
-		and Same(m[2].label.textColor, Role("mcardDone.title")) and Same(m[3].label.textColor, Role("mcard.title"))
-		and Same(m[1].source.textColor, Role("mcard.reward")) and Same(m[2].stamp.text.textColor, Role("mission.stamp"))
-		and Same(day.summary.zone.count.textColor, Role("summary.count")) and Same(day.callouts.zone.text.textColor, Role("bonus.text"))
-		and Same(day.chips.zone.text.textColor, Role("chip.zone")) and Same(day.innTotal.textColor, Role("panel.text")))
 	-- les rôles mesurés de la page
 	local bad = {}
 	for _, key in ipairs({ "mcard.title", "mcard.zone", "mcard.count", "mcard.reward", "mcardDone.title", "mcardDone.zone",
@@ -724,10 +714,6 @@ do
 	-- 2.9.1 : compteur des pagers (Exploration, Créatures) à l'encre mesurée
 	NS:SelectJournalKind("progress")
 	local prog = f.prog
-	Check("[M291] compteurs des pagers (Exploration, Créatures) à l'encre mesurée", prog
-		and Same(prog.zonePager.position.textColor, Role("pager.position")) and prog.zonePager.position.azKeep
-		and Same(prog.listPager.position.textColor, Role("pager.position"))
-		and f.men and Same(f.men.pager.position.textColor, Role("pager.position")))
 	f:Hide()
 	PageDone()
 end

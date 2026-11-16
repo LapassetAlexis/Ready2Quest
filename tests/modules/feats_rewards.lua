@@ -8,10 +8,6 @@
 -- grand effet des bandeaux. Cosmétiques (FeatsCosmetics.lua) : déblocage par
 -- le haut fait seulement, condition lisible, rendu dans les deux styles,
 -- replis quand une image ou un atlas manque. Catalogue : feats_catalogue.lua.
--- 3.1.0 : affirme l'ancien habillage (carnet en parchemin, scènes en bois, bandeaux
--- dorés, anneau) : le drapeau QNS.AZEROTH_LEGACY rallumé pour tout le module
--- (remis à la valeur du produit à sa fin, tests/run_tests.lua)
-T.Legacy(true)
 local Check, Say, ResetWorld, NS, Mock = T.Check, T.Say, T.ResetWorld, T.QNS, T.Mock
 
 -- plusieurs étapes d'un même sujet : un contrôle, les étapes ratées nommées
@@ -33,7 +29,6 @@ do
 		"UnitAffectingCombat", "IsInGuild", "IsInGroup", "IsInRaid", "time", "GetNormalizedRealmName", "PlaySound", "C_Texture" }
 	for _, name in ipairs(GLOBALS) do TT.saved[name] = rawget(_G, name) end
 	TT.savedDormant = NS.featsDormant
-	TT.savedFX = NS.AzerothRewardFX
 
 	function TT.Reset()
 		ResetWorld()
@@ -440,9 +435,9 @@ do
 		NS:GuildFeatsHideToast()
 	end
 
-	-- 8. Grand effet des bandeaux (Azeroth) -----------------------------------------------------------------
+	-- 8. Gros haut fait : marqué « grand » (titre ou 25 points) --------------------------------------------
 	do
-		Say("-- titres : grand effet")
+		Say("-- titres : gros haut fait")
 		TT.Reset()
 		local entry = { kind = "feat", id = "day_rare_50", title = "Haut fait obtenu", name = "Le traqueur", points = 25 }
 		local small = { kind = "feat", id = "zone_visit_10", title = "Haut fait obtenu", name = "Bourlingueur", points = 5 }
@@ -450,44 +445,8 @@ do
 		NS:JournalToastPush(entry)
 		NS:JournalToastPush(small)
 		NS:DB().featToast = nil
-		TT.fx = {}
-		NS.AzerothRewardFX = function(_, frame) TT.fx[#TT.fx + 1] = frame; return true end
-		for _, field in ipairs({ "journalToast", "guildFeatToast" }) do
-			if NS[field] then NS[field]:Hide() end
-			NS[field] = nil
-		end
-		NS.uiStyleCache = {}
-		Mock.InstallAtlas(true)
-		NS:AzerothAtlasOK(true)
-		NS:DB().companionStyle = "azeroth"
+		Check("[TIT] titre ou 25 points : « grand », pas les petits", entry.big == true and not small.big)
 		NS.journalToasts, NS.journalToastHideAt = {}, nil
-		local s = Steps()
-		s.ok("titre ou 25 points : « grand », pas les petits", entry.big == true and not small.big)
-		NS:JournalToastPush({ kind = "feat", id = "day_rare_50", title = "Haut fait obtenu", name = "Le traqueur", points = 25 })
-		s.ok("ailes et éclat sur un gros", #TT.fx == 1 and TT.fx[1] == NS.journalToast and NS.journalToast.azeroth)
-		NS.journalToast:Hide()
-		NS.journalToastHideAt = nil
-		NS:JournalToastPush({ kind = "feat", id = "zone_visit_10", title = "Haut fait obtenu", name = "Bourlingueur", points = 5 })
-		s.ok("rien pour un petit", #TT.fx == 1)
-		-- 3.0.1 : une place pour les bandeaux du haut (Banners.lua) : le carnet la rend
-		NS.journalToast:Hide()
-		NS.journalToastHideAt = nil
-		NS:GuildFeatsOnMessage("E~1~h~73~0~0~-~0~13~f", "GUILD", "Bob-Royaume")
-		NS:GuildFeatsToastTick(Mock.now)
-		s.ok("bandeau de guilde d'un titre : effet et bouclier", #TT.fx == 2 and TT.fx[2] == NS.guildFeatToast
-			and NS.guildFeatToast.azeroth and NS.guildFeatToast.featPoints.text == "25")
-		s.check("[TIT] Azeroth : grand effet (ailes, éclat) sur les bandeaux d'un gros haut fait, du carnet comme de la guilde")
-		NS:GuildFeatsHideToast()
-		NS.AzerothRewardFX = TT.savedFX
-		if NS.AzerothFxStop then NS:AzerothFxStop() end
-		Mock.InstallAtlas(nil)
-		NS:AzerothAtlasOK(true)
-		NS:ApplyUIStyle()
-		for _, field in ipairs({ "journalToast", "guildFeatToast" }) do
-			if NS[field] then NS[field]:Hide() end
-			NS[field] = nil
-		end
-		NS.uiStyleCache = {}
 	end
 
 	-- rangement
@@ -696,40 +655,6 @@ do
 		Mock.InstallAtlas(true)
 		ResetWorld()
 
-		frame = Reset("azeroth")
-		for _, row in ipairs(EXPECTED) do NS:FeatGrant(NS:FeatDef(row[3])) end
-		-- le client a les masques (le banc d'essai non) : le style arrondit le fond gagné
-		frame.azSkin.mask = frame.azSkin.mask or {}
-		frame.bg.AddMaskTexture = function(region, mask) region.maskTex = mask end
-		frame.bg.RemoveMaskTexture = function(region) region.maskTex = nil end
-		NS:CompanionApplyUIStyle()
-		local s = Steps()
-		NS:CompanionSetStyle("bg", "feat_atlas")
-		s.ok("fond en disque sous l'anneau", frame.uiStyle == "azeroth" and frame.bg.azMasked == true
-			and frame.bgTexture == "Interface\\WorldMap\\Azeroth\\Azeroth6")
-		NS:CompanionSetStyle("frame", "feat_eight")
-		local d = frame.featDeco.eight[1]
-		local p, rel, rp, x, y = d:GetPoint()
-		local ring = NS.AZEROTH_RING
-		local r = math.sqrt(x * x + (y - ring.y) * (y - ring.y))
-		s.ok("huit icônes autour de l'anneau", d:IsShown() and p == "CENTER" and rel == frame and rp == "TOP"
-			and math.abs(r - (ring.w / 2 - 3)) < 0.01, r)
-		NS:CompanionSetStyle("frame", "feat_prism")
-		local halo = frame.featDeco.halo
-		s.ok("prismatique : halo du client autour de l'anneau", halo and halo:IsShown() and halo.blendMode == "ADD"
-			and halo.atlasName == "BonusChest-CircleGlow")
-		local v = halo.vertex and halo.vertex[1]
-		Mock:Advance(3)
-		s.ok("sa teinte tourne", halo.vertex and halo.vertex[1] ~= v)
-		NS:SetUIStyle("sobre")
-		if NS.CompanionApplyUIStyle then NS:CompanionApplyUIStyle() end
-		s.ok("retour en Sobre : halo caché, filet arc-en-ciel", not halo:IsShown() and frame.uiStyle == "sobre"
-			and frame.featDeco:GetScript("OnUpdate") ~= nil)
-		NS:SetUIStyle("azeroth")
-		if NS.CompanionApplyUIStyle then NS:CompanionApplyUIStyle() end
-		s.ok("ornements toujours là", frame.featOrn.feat_compass:IsShown())
-		s.check("[HF-E] Azeroth : fond en disque, huit icônes autour de l'anneau, halo prismatique qui tourne, ornements gardés")
-		NS:SetUIStyle("sobre")
 		ResetWorld()
 	end
 end

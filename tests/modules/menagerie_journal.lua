@@ -13,10 +13,6 @@
 --      encres mesurées et textes.
 --   4. Exploration (2.9.1, retours en jeu) : titres des quêtes dans la langue du
 --      client, encres mesurées des quêtes et des zones, roue crantée du carnet.
--- 3.1.0 : affirme l'ancien habillage (carnet en parchemin, scènes en bois, bandeaux
--- dorés, anneau) : le drapeau QNS.AZEROTH_LEGACY rallumé pour tout le module
--- (remis à la valeur du produit à sa fin, tests/run_tests.lua)
-T.Legacy(true)
 local Check, Say, ResetWorld, NS, Mock = T.Check, T.Say, T.ResetWorld, T.QNS, T.Mock
 
 -- 1. Collection ----------------------------------------------------------------------------------------
@@ -892,11 +888,6 @@ do
 			and rv.betterLine ~= nil and rv.release.qcEnabled == false
 			and rv.release.disabledTip == "Mets-le au Codex avant de le relâcher." and text:find("Mets-le au Codex", 1, true) ~= nil, text)
 		local tile = rv.tiles[1]
-		Check("[J215] azeroth : vignettes claires, fiche habillée, encres reserve.* mesurées, aucun rôle manquant",
-			tile.azStyle == "light" and tile.label.azRole == "reserve.name" and pane.balance.value.azRole == "currency.value"
-			and p.lines[2].azRole == "reserve.detail" and rv.reasonLine and p.lines[rv.betterLine].azRole == "reserve.better"
-			and p.lines[rv.reasonLine].azRole == "reserve.reason" and p.azStyle == "light" and p.azWoodBorder ~= nil
-			and NS.carnetInkMisses == nil, table.concat(NS.carnetInkMisses or {}, ", "))
 		-- Mettre au Codex : échange
 		rv.toCodex:GetScript("OnClick")(rv.toCodex)
 		Check("[J215] Mettre au Codex : il y entre, l'ancien passe en Réserve, choisi, « Avant la 3.0 »",
@@ -1006,10 +997,6 @@ do
 		f.sections.reserve:GetScript("OnClick")(f.sections.reserve)
 		local back = f.kind == "reserve" and f.resView == "reserve" and pane.reserve:IsShown() and not sv:IsShown()
 		NS:OpenShop()
-		Check("[J215] onglet Réserve ; lignes de l'échoppe aux encres shop.*, aucun rôle manquant, aucune erreur", back
-			and rows.appat.name.azRole == "shop.name" and rows.appat.desc.azRole == "shop.desc"
-			and rows.appat.price.azRole == "shop.price" and sv.note.azRole == "reserve.text" and NS.carnetInkMisses == nil
-			and NoErrors(), table.concat(NS.carnetInkMisses or {}, ", "))
 		J.Done()
 	end
 
@@ -1041,12 +1028,11 @@ do
 			local box = f.navSummary
 			local count = 0
 			for _ in pairs(f.sections) do count = count + 1 end
-			local lay = NS.CARNET_LAYOUT
-			local navH = style == "azeroth" and (f:GetHeight() - lay.band - lay.wood) or (f:GetHeight() - 2)
+			local navH = f:GetHeight() - 2
 			local top = -(box.lastPoint and box.lastPoint.y or 0)
 			local bottom = top + box:GetHeight()
-			-- en bas : le total (Sobre) ou le garde-manger (Azeroth, étiquette à 50 px du bas)
-			local reserved = style == "azeroth" and 50 + 16 or 18 + 16
+			-- en bas : le total
+			local reserved = 18 + 16
 			Check("[J215] " .. style .. " : dix entrées (Réserve puis Échoppe après les Créatures), le résumé tient au-dessus du bas",
 				count == 10 and f.sections.reserve ~= nil and NS.JOURNAL_SECTIONS[3] == "reserve" and NS.JOURNAL_SECTIONS[4] == "shop"
 				and f.sections.shop ~= nil and bottom <= navH - reserved, bottom .. " / " .. navH)
@@ -1179,57 +1165,11 @@ do
 		ZQReset(R.saved.ZONE_QUESTS)
 	end
 
-	-- 4.2 Exploration : encres mesurées des quêtes et des zones
-	do
-		Say("-- exploration 2.9.1 : encres mesurées")
-		local bad = {}
-		for _, key in ipairs({ "quest.name", "quest.nameDone", "quest.detail", "quest.detailDone", "zone.label", "zone.unseen" }) do
-			local role = CONTRAST[key]
-			local color = role and INK[role[1]]
-			if not (color and Ratio(color, role[2]) >= 4.5 and role[3] >= 4.5) then bad[#bad + 1] = key end
-		end
-		Check("[R291] rôles quest.* et zone.* : 4,5:1 au moins sur le pire fond ; « zoneDim » 5,41:1 sur les catégories", #bad == 0
-			and math.abs(Ratio(INK.zoneDim, 0.0455) - 5.41) < 0.01, table.concat(bad, ", "))
-		R.Reset()
-		ZQReset({ [1413] = { [9301] = { en = "Wayward Weapons", lvl = 2 }, [9302] = { en = "Legging It", lvl = 6 } } })
-		local f = NS:ToggleJournal(true)
-		NS:SelectJournalKind("progress")
-		f.progPart = "quests"
-		NS:RefreshJournal()
-		NS:RefreshJournal()
-		local pane = f.prog
-		local line
-		for _, l in ipairs(pane and pane.items or {}) do
-			if l.item and not l.item.header and l:IsShown() then line = line or l end
-		end
-		local todo = line and line.azStyle == "light" and Same(line.text.textColor, INK[CONTRAST["quest.name"][1]])
-			and not (line.detail:GetText() or ""):find("|c", 1, true) and Same(line.detail.textColor, INK[CONTRAST["quest.detail"][1]])
-		if line then NS.CarnetQuestLineInk(line, { done = true, detail = NS.L.ZQ_DONE }) end
-		Check("[R291] ligne de quête : fond clair, encres « ink » / « inkMuted » sans code couleur ; faite : nom adouci, vert sombre",
-			todo and Same(line.text.textColor, INK.inkMuted) and Same(line.detail.textColor, INK.green), line and tostring(line.azStyle))
-		-- les zones pas encore vues : rangée opaque, gris mesuré
-		local unseen
-		for _, row in ipairs(pane and pane.zones or {}) do
-			if row.zone and not row.zone.seen and not row.selected and row:IsShown() then unseen = unseen or row end
-		end
-		if not unseen and pane and pane.zones[2] then
-			unseen = pane.zones[2]
-			unseen.zone, unseen.selected = { id = 1, name = "Zone test", seen = false }, false
-			NS.CarnetZoneRowInk(unseen)
-		end
-		local okErr, errs = NoErrors()
-		Check("[R291] zone pas encore vue : rangée opaque, nom « zoneDim » ; sans erreur", unseen and (unseen.alpha or 1) == 1
-			and Same(unseen.name.textColor, INK.zoneDim) and okErr, errs)
-		f:Hide()
-		ZQReset(R.saved.ZONE_QUESTS)
-	end
-
 	-- 4.3 La roue crantée du carnet : la roue grise du journal de quêtes du client
 	do
 		Say("-- exploration 2.9.1 : roue crantée grise (Sobre ; 3.1.0 : la roue du socle au thème forgé)")
 		-- 3.1.0 : au thème forgé, la roue du socle sur sa petite plaque
 		R.Reset()
-		T.Legacy(false)
 		NS:ApplyUIStyle()
 		local forgedCarnet = NS:ToggleJournal(true)
 		local gear = forgedCarnet and forgedCarnet.settingsButton
@@ -1237,7 +1177,6 @@ do
 			NS.QCForged() and forgedCarnet.journalForged and gear and gear.cogTexture == nil and gear.plate ~= nil and gear.forgeLook ~= nil,
 			gear and tostring(gear.cogTexture))
 		forgedCarnet:Hide()
-		T.Legacy(true)
 		local function SobreReset(atlas)
 			R.Reset(atlas)
 			NS:DB().companionStyle = "sobre"

@@ -1648,45 +1648,4 @@ function ns:TradeRefreshView(frame, pane)
 	RefreshHistory(self, frame, tv)
 end
 
--- Style Azeroth : encres mesurées (AzerothStyle.lua, rôles trade.*)
-do
-	local posts = ns.CARNET_PAGE_POSTS
-	local skins = ns.CARNET_PAGE_SKINS
-	local paint = ns.CarnetRolePaint
-	if type(posts) == "table" and paint then
-		local base = posts.reserve
-		posts.reserve = function(self, frame)
-			if base then base(self, frame) end
-			local tv = frame.res and frame.res.trade
-			if not (tv and tv:IsShown()) then return end
-			paint(tv.status, "trade.status")
-			paint(tv.note, "reserve.text")
-			paint(tv.histHead.label, "section.label")
-			paint(tv.histEmpty, "reserve.text")
-			paint(tv.pickHead, "trade.status")
-			paint(tv.pickEmpty, "reserve.text")
-			paint(tv.warn, "reserve.full")
-			paint(tv.hint, "reserve.hint")
-			for _, row in ipairs(tv.hist) do paint(row.line, "trade.histName"); paint(row.sub, "trade.histText") end
-			for _, col in pairs(tv.cols) do
-				paint(col.head, "trade.head")
-				paint(col.state, col.stateRole or "trade.state")
-				for _, slot in ipairs(col.slots) do paint(slot.plus, "trade.slot") end
-				for _, tile in ipairs(col.tiles) do
-					if tile.tradeSpec and tile.label then paint(tile.label, tile.tradeSpec.shiny and "reserve.shiny" or "reserve.name") end
-				end
-			end
-			for _, tile in ipairs(tv.picks) do
-				if tile.tradeSpec and tile.label then paint(tile.label, tile.tradeSpec.shiny and "reserve.shiny" or "reserve.name") end
-			end
-		end
-	end
-	if type(skins) == "table" and ns.CarnetInkPager then
-		skins.trade = function(self, frame)
-			local tv = frame.res and frame.res.trade
-			if tv then ns.CarnetInkPager(tv.pager) end
-		end
-	end
-end
-
 if ns.Mark then ns.Mark("CaptureTrades") end

@@ -98,7 +98,7 @@ do
 	local frame = Fresh("azeroth")
 	local s = Steps()
 	local skin = frame and frame.forgeSkin
-	s.ok("thème forgé, ancien habillage coupé", Theme.Forged() and NS.QCForged() and not NS:AzerothOn())
+	s.ok("thème forgé", Theme.Forged() and NS.QCForged())
 	s.ok("prédicat de l'anneau vrai", NS:CompanionRingOn() == true)
 	s.ok("anneau forgé posé", frame and frame.ring == "forge" and NS.CompanionRinged(frame)
 		and NS.CompanionRingSkin(frame) == skin and Shown(skin))
@@ -246,7 +246,6 @@ do
 	local a1 = NS:GlowUpdate(now + 0.2)
 	local a2 = NS:GlowUpdate(now + 1.3)
 	s.ok("elle respire", math.abs(a1 - a2) > 0.01)
-	s.ok("ancienne API des éclats : rien hors ancien habillage", NS:AzerothShinyFX() == false)
 	s.ok("brillante repérée : éclats lancés", NS:CompanionShinyFX() == true and NS.azFx.shinyUntil ~= nil)
 	local _, fast = NS:AzerothGlowEnvelope(Mock.now)
 	s.ok("… lueur accélérée", fast == true)
@@ -273,7 +272,6 @@ do
 	NS:CompanionSay("EAT", { force = true })
 	local bubble = NS.companionBubble
 	local _, _, _, _, y0 = bubble:GetPoint()
-	s.ok("ancienne API du niveau : rien hors ancien habillage", NS:AzerothLevelFX("x", "level") == false)
 	NS:CompanionOnLevel(25)
 	local parts = frame.azLevel
 	local group = parts and parts.group
@@ -448,19 +446,6 @@ do
 		and bubble.forgeBubble and bubble.forgeTalk.rule and Shown(bubble.forgeTalk.rule) and not Shown(bubble.rule))
 	s.ok("sans erreur", Errors() == "", Errors())
 	s.check("[FCOMP] Sobre : aucune brique forgée, effets muets ; né Sobre puis forgé : médaillon et filet lumineux posés")
-end
-
--- 12. L'ancien habillage (drapeau rallumé, atlas du client) : son anneau, pas le forgé -----------------
-do
-	Say("-- médaillon forgé : ancien habillage")
-	T.Legacy(true)
-	local frame = Fresh("azeroth", true)
-	local s = Steps()
-	s.ok("ancien habillage : anneau du client, pas de médaillon forgé", frame.ring == "azeroth" and frame.uiStyle == "azeroth"
-		and frame.azSkin and Shown(frame.azSkin) and frame.forgeSkin == nil)
-	s.ok("ses effets répondent par l'ancienne API", NS:AzerothShinyFX() == true)
-	T.Legacy(false)
-	s.check("[FCOMP] ancien habillage (drapeau) : l'anneau du client, le médaillon forgé jamais construit")
 end
 
 -- 13. Le battement d'aggro suit l'anneau ; le titre du petit menu ---------------------------------------

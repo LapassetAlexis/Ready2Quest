@@ -6,10 +6,6 @@
 -- étoile ★ ni code d'échappement ; anti-spam ; réglage qui cache le bouton
 -- des bandeaux ; file des bandeaux intacte ; « Copier » remplit la saisie
 -- sans envoyer.
--- 3.1.0 : affirme l'ancien habillage (carnet en parchemin, scènes en bois, bandeaux
--- dorés, anneau) : le drapeau QNS.AZEROTH_LEGACY rallumé pour tout le module
--- (remis à la valeur du produit à sa fin, tests/run_tests.lua)
-T.Legacy(true)
 local Check, Say, ResetWorld, Mock = T.Check, T.Say, T.ResetWorld, T.Mock
 local NS = T.QNS
 local Theme = NS.Theme
@@ -486,23 +482,7 @@ do
 	NS.uiStyleCache = {}
 	Mock.InstallAtlas(true)
 	NS:AzerothAtlasOK(true)
-	NS:JournalToastPush(SH.Feat("Premier filet"))
-	local j = NS.journalToast
-	local b = j and j.shareButton
-	s.ok("Azeroth : bandeau doré et bouton", j and j.azeroth and Shown(b))
-	-- (le thème du socle suit le choix, donc forgé : le bois garde l'aplat et le filet d'or)
-	s.ok("Azeroth : bouton à l'aplat de l'ancien habillage, jamais la petite plaque forgée", b and NS.QCForged()
-		and not b.forge and not (b.plate and b.plate.parts), b and (tostring(NS.QCForged()) .. "/" .. tostring(b.forge)))
-	local point = b and b.lastPoint
-	s.ok("Azeroth : sous le bouclier, dans le bandeau", point and point.point == "BOTTOMRIGHT" and point.relTo == j.banner,
-		point and point.point)
-	s.ok("icône du client (atlas ou fichier de repli)", b and (b.icon.atlas == "communities-icon-chat"
-		or b.icon.texture == NS.SHARE_ICON.fallback))
-	b:Click("LeftButton")
-	s.ok("Azeroth : menu sur le bois, encres des rôles", NS.shareMenu.azeroth == true
-		and NS.shareMenu.rows[1].text.textColor and NS.shareMenu.rows[1].text.textColor[1] == NS.AZEROTH_INK.lightSoft[1])
-	NS.shareMenu:Hide()
-	-- scène Azeroth : elle montre le verdict, le bouton va dans son coin
+	-- scène : elle montre le verdict, le bouton va dans son coin
 	local saved = NS.captureStage
 	local stage = CreateFrame("Frame", nil, UIParent)
 	stage.azeroth = true
@@ -558,7 +538,7 @@ do
 	NS:ApplyUIStyle()
 	SH.Reset()
 	SH.Restore()
-	s.check("[SHARE] deux styles : bouton placé (Azeroth sous le bouclier, Sobre à droite), scène Azeroth, menu habillé, contrastes mesurés")
+	s.check("[SHARE] deux styles : bouton placé (forgé : plaque en bas à droite, Sobre à droite), scène, menu habillé, contrastes mesurés")
 end
 
 -- 9. Le verdict d'une vraie capture porte de quoi partager -------------------------------

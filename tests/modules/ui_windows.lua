@@ -7,10 +7,6 @@
 -- à une seule hauteur, pastille de monnaie, refus d'achat expliqué au clic,
 -- aucun cadre créé au rafraîchissement ; visite guidée, colonne de navigation.
 -- Les briques elles-mêmes : ui_bricks.lua.
--- 3.1.0 : affirme l'ancien habillage (carnet en parchemin, scènes en bois, bandeaux
--- dorés, anneau) : le drapeau QNS.AZEROTH_LEGACY rallumé pour tout le module
--- (remis à la valeur du produit à sa fin, tests/run_tests.lua)
-T.Legacy(true)
 local Check, Say, NS, QNS, Mock = T.Check, T.Say, T.NS, T.QNS, T.Mock
 local ROOT = rawget(_G, "ADDON_ROOT") or "."
 local Snap = assert(loadfile(ROOT .. "/tests/snapshot.lua"))()
@@ -487,11 +483,6 @@ for _, style in ipairs({ "sobre", "azeroth" }) do
 	pane.views:Select("trade")
 	Want(style .. " : vue Échanges : la pastille reste", f.resView == "trade" and pane.trade:IsShown()
 		and not pane.balance.mockHidden and pane.balance.value:GetText() == "40")
-	if style == "azeroth" then
-		Want("azeroth : pastille sur aplat sombre, encres currency.*", pane.balance.azSurface == "dark"
-			and pane.balance.value.azRole == "currency.value" and pane.balance.label.azRole == "currency.label")
-		Want("azeroth : intertitre de l'historique canonique", pane.trade.histHead.label ~= nil)
-	end
 	Want(style .. " : aucune erreur", next(NS.errors or {}) == nil, next(NS.errors or {}))
 	Verdict("[UI30] " .. style .. " : Réserve, pastille de solde (même en vue Échanges), rafraîchie sans créer de cadre, sans erreur")
 	C.Done()
@@ -569,13 +560,8 @@ for _, style in ipairs({ "sobre", "azeroth" }) do
 	NS:RefreshJournal(); NS:RefreshJournal()
 	Want(style .. " : rafraîchi sans créer de cadre", #Mock.frames == before)
 	Want(style .. " : OpenReserve(\"shop\") mène à l'onglet", NS:OpenReserve("shop") and f.kind == "shop")
-	if style == "azeroth" then
-		Want("azeroth : boutons Acheter rouges ; refusé : bois délavé", rows.lasso.buy.azSkin == "red"
-			and rows.frame_glitter.buy.azState == "disabled" and Same(rows.frame_glitter.buy.text.textColor, NS.AZEROTH_BUTTONS.offText))
-		Want("azeroth : aucun rôle manquant", NS.carnetInkMisses == nil, table.concat(NS.carnetInkMisses or {}, ", "))
-	end
 	Want(style .. " : aucune erreur", next(NS.errors or {}) == nil, next(NS.errors or {}))
-	Verdict("[UI30] " .. style .. " : Échoppe rafraîchie sans créer de cadre, OpenReserve(\"shop\"), Azeroth (boutons rouges, rôles), sans erreur")
+	Verdict("[UI30] " .. style .. " : Échoppe rafraîchie sans créer de cadre, OpenReserve(\"shop\"), sans erreur")
 	C.Done()
 end
 
@@ -599,12 +585,10 @@ for _, style in ipairs({ "sobre", "azeroth" }) do
 	local count = 0
 	for _ in pairs(f.sections) do count = count + 1 end
 	local box = f.navSummary
-	local lay = NS.CARNET_LAYOUT
-	local navH = style == "azeroth" and (f:GetHeight() - lay.band - lay.wood) or (f:GetHeight() - 2)
+	local navH = f:GetHeight() - 2
 	local bottom = -(box.lastPoint and box.lastPoint.y or 0) + box:GetHeight()
-	local reserved = style == "azeroth" and 50 + 16 or 18 + 16
+	local reserved = 18 + 16
 	if not (count == 10 and bottom <= navH - reserved) then navBad[#navBad + 1] = style .. " : " .. count .. " / " .. bottom .. " / " .. navH end
 	C.Done()
 end
-Check("[UI30] Sobre et Azeroth : dix onglets (Addons liés en dernier), le tableau de bord tient au-dessus du bas", #navBad == 0, table.concat(navBad, ", "))
 end

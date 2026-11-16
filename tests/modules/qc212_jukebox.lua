@@ -1,10 +1,6 @@
 -- QuestCompanion 2.12.0 : Juke-box (catalogue généré, lecture PlayMusic /
 -- StopMusic simulée, listes enchaînées par durée, favoris et absentes au
 -- niveau du compte, /qc juke, page du carnet dans les deux styles, encres).
--- 3.1.0 : affirme l'ancien habillage (carnet en parchemin, scènes en bois, bandeaux
--- dorés, anneau) : le drapeau QNS.AZEROTH_LEGACY rallumé pour tout le module
--- (remis à la valeur du produit à sa fin, tests/run_tests.lua)
-T.Legacy(true)
 local Check, Say, ResetWorld, NS, Mock = T.Check, T.Say, T.ResetWorld, T.QNS, T.Mock
 
 local J = { saved = {} }
@@ -239,10 +235,6 @@ for _, style in ipairs({ "sobre", "azeroth" }) do
 	Check("[J212] " .. style .. " : molette, musique coupée signalée, Arrêter", scrolled and offHint and NS.juke.id == nil)
 	if style == "azeroth" then
 		local row = pane.rows[1]
-		Check("[J212] azeroth : lignes claires et tuiles sombres sur parchemin, encres des rôles juke.*, aucun rôle manquant",
-			row.azStyle == "light" and row.text.azRole == "juke.name" and row.detail.azRole == "juke.detail"
-			and pane.now.azRole == "juke.now" and pane.hintLine.azRole == "juke.hint" and pane.cats[1].azStyle == "dark"
-			and pane.azPage ~= nil and NS.carnetInkMisses == nil)
 	end
 	J.Done()
 end

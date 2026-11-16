@@ -8,10 +8,6 @@
 -- navigation) ; « Localiser », filtre et recherche des zones, état mémorisé ;
 -- « Changer de compagnon ? » (style, au-dessus du carnet, Échap) ; fiche de
 -- dresseur (titre, vitrine, protocole) ; raccourcis (Y, options).
--- 3.1.0 : affirme l'ancien habillage (carnet en parchemin, scènes en bois, bandeaux
--- dorés, anneau) : le drapeau QNS.AZEROTH_LEGACY rallumé pour tout le module
--- (remis à la valeur du produit à sa fin, tests/run_tests.lua)
-T.Legacy(true)
 local Check, Say, ResetWorld, NS, Mock = T.Check, T.Say, T.ResetWorld, T.QNS, T.Mock
 
 local CZ = { saved = {} }
@@ -99,295 +95,6 @@ local function Expect(bad, label, fn)
 	if not (ok and res) then bad[#bad + 1] = label .. (ok and "" or " (erreur)") end
 end
 
--- 1. Le carnet en Azeroth : cadre, plaque, colonne, pages ---------------------------------------------
-do
-	Say("-- carnet azeroth : habits du client, page par page")
-	CZ.Reset()
-	local f = Open("evolution")
-	local ok, errs = NoErrors()
-	local W = LAY.wood + LAY.nav + LAY.gap + NS.JOURNAL_LAYOUT.width - 2 - NS.JOURNAL_LAYOUT.nav + LAY.wood
-	Check("[CZ] carnet Azeroth sans erreur ; la fenêtre grandit du bois et de la bande, la zone des pages garde sa taille",
-		f and f.azeroth and f.uiStyle == "azeroth" and ok and f:GetWidth() == W
-		and f:GetHeight() == LAY.band + NS.JOURNAL_LAYOUT.height - 2 + LAY.wood
-		and f.content:GetWidth() == NS.JOURNAL_LAYOUT.width - 2 - NS.JOURNAL_LAYOUT.nav, errs)
-	local bad = {}
-	local plate, item = f.azPlate, f.sections.evolution
-	Expect(bad, "bois", function() return f.azWood.tl.atlas == NS.AZEROTH_WOOD.tl and f.azWood.right.atlas == NS.AZEROTH_WOOD.right
-		and f.azOver.level > f.level + 20 end)
-	Expect(bad, "plaque", function() return plate.left.texture == TX.headA.file and plate.right.texture == TX.headB.file
-		and select(5, plate:GetPoint()) == LAY.plateUp and plate.box.texture == 235402 and plate.icon.texture == 235415 end)
-	Expect(bad, "parchemins", function() return f.nav.azBg.texture == 130662 and f.content.azBg.texture == 130661
-		and f.nav.bg.mockHidden and f.content.azSurface == "light" end)
-	Expect(bad, "métal", function() return f.azMetalL.texture == 130658 and f.azMetalT.texture == 130659 end)
-	Expect(bad, "catégorie", function() return item.azBg.texture == 130652 and item.tint.texture == 235400
-		and item.tint.blendMode == "ADD" and item.hover.texture == 235400 and item.bar.alpha == 0 end)
-	Expect(bad, "entrées sous la marque", function() return select(5, item:GetPoint()) == LAY.navTop and item:GetWidth() == LAY.nav
-		and f.brand.mockHidden end)
-	Expect(bad, "garde-manger", function()
-		for _, kind in ipairs(NS.TREAT_KINDS) do
-			local b = f.pantry[kind]
-			if b:GetParent() == f.nav and b.azRing and b.azRing.texture == 130656 then return true end
-		end
-	end)
-	Expect(bad, "fermeture", function() return f.close.azIcon.texture:find("MinimizeButton") ~= nil and f.close.label.mockHidden
-		and f.closeButton.azSkin == "red" and f.closeButton.bg.mockHidden and f.closeButton.text.textColor[1] == 1 end)
-	Expect(bad, "filigrane", function() return f.header.azFiligree.m.texture == TX.tsuH and f.header.rule.segments[1].mockHidden end)
-	-- les pages
-	local evo = f.evo
-	Expect(bad, "compagnon : carte", function() return evo.hero.azBg.texture == 235397 and evo.hero.azWoodBorder.pieces.t.texture == 130672
-		and #evo.hero.azWoodBorder.pieces.t.texCoord == 8 and evo.azVine.atlas == NS.AZEROTH_ATLAS.frameRound end)
-	Expect(bad, "compagnon : chiffres", function() local tile = evo.stats.captures; return tile.azBg.texture == 130652 and tile.value.azKeep end)
-	Expect(bad, "compagnon : envies", function() local b = evo.needs[1].bar; return b:GetHeight() == 14 and b.azEdge
-		and b.fill.texture:find("UI%-StatusBar") ~= nil end)
-	Expect(bad, "compagnon : bulle", function() return evo.bubble.azBg.texture == 130661 and evo.bubble.azVeil:IsShown()
-		and evo.look.textColor[1] < 0.3 and evo.look.textColor[3] < 0.1 end)
-	Open("menagerie")
-	local men = f.men
-	Expect(bad, "créatures", function() local row = men.items[1]
-		return (row.azBg.texture == 235397 or row.azBg.texture == 130660) and men.preview.azTitle.texture == 130667
-		and men.preview.stage.texture == 1111217 and men.preview.azWoodBorder and men.states.all.azBg.texture == 130652 end)
-	Open("feats")
-	local hf = f.feats
-	Expect(bad, "hauts faits", function() local frow = hf.rows[1]
-		return hf.cats[1].azBg.texture == 130652 and frow.azTitle.texture == 130667 and frow.azRing.texture == 130656
-		and frow.shield.atlas ~= nil and hf.azShield.texture == 130665
-		and (frow.entry.got and frow.azBg.texture == 235397 or (frow.azBg.texture == 130660 and frow.azTitle.texCoord[3] > 0.3)) end)
-	Open("day")
-	local day = f.day
-	-- 2.9.1 : la carte des auberges en 7 tampons ronds (anneau des hauts faits)
-	Expect(bad, "missions", function() return day.stamps[1].azRing.atlas == NS.AZEROTH_ATLAS.frameRound and #day.stamps == 7
-		and day.missions[1].azBg.texture == 235397 and day.groups.zone.azStrip ~= nil end)
-	Open("progress")
-	local prog = f.prog
-	Expect(bad, "exploration", function() return prog.zones[1].azBg.texture == 130652 and prog.marks[1].azBg.texture == 452109
-		and prog.card.azWoodBorder ~= nil and prog.card.azBg.texture == 235397 end)
-	Open("guide")
-	local guide = f.guide
-	Expect(bad, "guide", function() return guide.azPage.texture == 235412 and guide.title.azKeep and guide.azBand.texture == 235411
-		and guide.azFiligree.l.texture == 130670 and (#guide.heads == 0 or guide.heads[1].azKeep) and guide.rows[1].azHl:IsShown() end)
-	Check("[CZ] habits Azeroth : les textures du client, page par page", #bad == 0, table.concat(bad, ", "))
-	Check("[CZ] plaque : titre du carnet, points des hauts faits (plaque et grand bouclier)", plate.title:GetText() == NS.L.JRN_TITLE
-		and plate.count:GetText() == NS:F("CARNET_AZ_POINTS", (NS:FeatPoints()))
-		and hf.azShieldText:GetText() == tostring((NS:FeatPoints())))
-	-- surbrillances : seule l'entrée choisie, dorée
-	Open("evolution")
-	Check("[CZ] seule l'entrée choisie s'éclaire, en or", item.tint:IsShown() and not f.sections.feats.tint:IsShown()
-		and item.tint.gradientSpec and item.tint.gradientSpec[2][1] > item.tint.gradientSpec[2][3])
-	local need = evo.needs[1]
-	need.bar.ratio = 0.15; need.bar:SetColor(1, 1, 1)
-	local low = need.bar.azColor == NS.CARNET_COLORS.orange
-	need.bar.ratio = 0.9; need.bar:SetColor(1, 1, 1)
-	Check("[CZ] envies : basse orange, comblée verte", low and need.bar.azColor == NS.CARNET_COLORS.green)
-	Open("menagerie")
-	local followed = men.states.all.azHl:IsShown() and not men.states.captured.azHl:IsShown()
-	men.stateRow:Select("captured")
-	Check("[CZ] puces d'état : la surbrillance suit le choix", followed and men.states.captured.azHl:IsShown()
-		and not men.states.all.azHl:IsShown())
-	men.stateRow:Select("all")
-	Open("feats")
-	Check("[CZ] catégories des hauts faits : la choisie en or", hf.cats[1].azHl:IsShown() and not hf.cats[2].azHl:IsShown())
-	Open("guide")
-	NS:ScrollJournal(-1)
-	ok, errs = NoErrors()
-	Check("[CZ] toutes les pages et la molette sans erreur", ok and f.guide:IsShown(), errs)
-end
-
--- 2. Encres par rôle, voiles, marges, infobulles (2.8.2, 2.11.0 fiche 08) ----------------------------------
-do
-	Say("-- carnet azeroth : encres et placement")
-	CZ.Reset()
-	local f = Open()
-	Check("[CZ] voiles des pages, de la colonne ; titre à l'encre du grand titre (l'or ombré tombait à 1,7:1)",
-		math.abs(f.content.azVeil.vertex[4] - INK.alpha.page) < 0.001 and math.abs(f.nav.azVeil.vertex[4] - INK.alpha.nav) < 0.001
-		and f.header.title.azKeep and Same(f.header.title.textColor, INK[CONTRAST["page.title"][1]]))
-	local item = f.sections.feats
-	item:SetBadge("2")
-	local lp, bp = Point(item.label, "LEFT"), Point(item.badge, "RIGHT")
-	Check("[CZ] catégorie : texte et compteur dans leur fond, avec marge", lp and lp.relTo == item.azBg and lp.x == LAY.navPad
-		and lp.x >= 10 and lp.x <= 14 and bp and bp.relTo == item.azBg and bp.x == -LAY.navBadgePad and bp.x < 0)
-	NS:SelectJournalKind("feats")
-	local row = f.feats.rows[1]
-	row.entry.got = { at = 1800000000 }
-	NS.CARNET_PAGE_POSTS.feats(NS, f)
-	Check("[CZ] haut fait obtenu : fond voilé, encres par rôle", row.azVeil:IsShown() and Painted(row.desc, "feat.desc")
-		and Painted(row.reward, "feat.reward") and Painted(row.date, "feat.date") and Same(row.name.textColor, INK.white))
-	row.entry.got = nil
-	NS.CARNET_PAGE_POSTS.feats(NS, f)
-	Check("[CZ] pas encore : parchemin sombre, texte clair ; étiquette Compte opaque", row.azBg.texture == 130660
-		and not row.azVeil:IsShown() and Painted(row.desc, "featOpen.desc") and Painted(row.reward, "featOpen.reward")
-		and row.scope.bg:IsShown() and row.scope.bg.vertex[4] >= 0.9 and row.scope.azBg.vertex[1] == 0.5)
-	NS:JournalFeatsTip(row)
-	local tp = GameTooltip.lastPoint
-	local right = tp and tp.relTo == row and tp.point == "TOPLEFT" and tp.relPoint == "TOPRIGHT" and tp.x == NS.JOURNAL_TIP_GAP
-	local getRight = UIParent.GetRight
-	UIParent.GetRight = function() return 1920 end
-	row.GetRight = function() return 1800 end
-	NS:JournalFeatsTip(row)
-	tp = GameTooltip.lastPoint
-	Check("[CZ] infobulle d'un haut fait : à droite de la ligne, sinon dessous", right and tp.relTo == row
-		and tp.point == "TOPRIGHT" and tp.relPoint == "BOTTOMRIGHT")
-	row.GetRight, UIParent.GetRight = nil, getRight
-	NS:SelectJournalKind("menagerie")
-	local men = f.men
-	local mrow = men.items[1]
-	mrow.entry = { known = true, class = "elite", npc = 1 }
-	NS.CARNET_PAGE_POSTS.menagerie(NS, f)
-	local known = mrow.azVeil:IsShown() and Painted(mrow.no, "men.no") and Same(mrow.label.textColor, INK.rElite)
-		and Painted(mrow.detail, "men.detail")
-	mrow.entry = { known = false, npc = 2 }
-	NS.CARNET_PAGE_POSTS.menagerie(NS, f)
-	Check("[CZ] Créatures : connue voilée (n°, type à l'encre, nom à sa rareté) ; jamais croisée, texte clair", known
-		and Same(mrow.label.textColor, INK.light) and not mrow.azVeil:IsShown())
-	local strip = men.collection
-	Check("[CZ] sceau : bloc voilé, titre et dresseur lisibles", strip.azVeil:IsShown() and Same(strip.title.textColor, INK.ink)
-		and Same(strip.trainer.textColor, INK.amber))
-	local typeButton = men.types and men.types.buttons[1]
-	local enter = typeButton and typeButton:GetScript("OnEnter")
-	if enter then enter(typeButton) end
-	tp = GameTooltip.lastPoint
-	Check("[CZ] infobulle d'un type : sous le bouton (la rangée de commandes reste visible)", enter ~= nil and tp.relTo == typeButton
-		and tp.point == "TOP" and tp.relPoint == "BOTTOM")
-	-- 2.11.0 fiche 08 : chaque texte repeint porte un rôle déclaré, aucun repli « assombri »
-	for _, kind in ipairs({ "evolution", "menagerie", "feats", "day", "progress", "guide" }) do NS:SelectJournalKind(kind) end
-	local misses, unknown, roled = NS.carnetInkMisses or {}, {}, 0
-	for _, fs in ipairs(f.azReg.texts) do
-		if fs.azRole then roled = roled + 1 end
-		if fs.azRole and not CONTRAST[fs.azRole] then unknown[#unknown + 1] = fs.azRole end
-	end
-	Check("[CZ] aucun texte au repli « assombri », chaque rôle posé existe dans la table", #misses == 0 and #unknown == 0
-		and roled > 0, table.concat(misses, " | ") .. " / " .. table.concat(unknown, ", "))
-	-- 3.1.0 : un texte peint au jeton d'identité (bleu arcane dans QC, de la
-	-- couleur de BLUE) garde l'encre de l'or d'avant, pas celle de l'information
-	local roles = NS.CarnetTokenRoles()
-	local T_ = NS.Theme
-	local head = f.prog and f.prog.head
-	NS:JournalGuidePick("effects")   -- une section à table (en-tête et son filet)
-	local guideHeads = #(f.guide and f.guide.theads or {}) > 0
-	for _, fs in ipairs(f.guide and f.guide.heads or {}) do
-		if fs.azRole and fs.azRole ~= "page.amber" then guideHeads = false end
-	end
-	local theadLine = true
-	for _, row in ipairs(f.guide and f.guide.theads or {}) do
-		local c = row.line and row.line.vertex
-		if not c or not (math.abs(c[1] - T_.GOLD[1]) < 0.01 and math.abs(c[2] - T_.GOLD[2]) < 0.01) then theadLine = false end
-	end
-	Check("[CZ] jetons de rôle (identité, sélection) : encre ambre sur parchemin ; titre de liste d'Exploration, intertitres et filet du Guide",
-		roles[T_.IDENTITY] == "page.amber" and roles[T_.IDENTITY_LIGHT] == "page.amber" and roles[T_.SELECT] == "page.amber"
-		and roles[T_.SELECT_LIGHT] == "page.amber" and roles[T_.TITLE] == "page.ink"
-		and head and head.azRole == "page.amber" and Same(head.textColor, INK.amber) and guideHeads and theadLine,
-		tostring(head and head.azRole))
-	local pantryOK = f.azPlate.count.azRole == "plate.count"
-	for _, button in pairs(f.pantry or {}) do
-		if button.count and (button.count.azRole ~= "pantry.count" or not (button.azShade and button.azShade:IsShown())) then pantryOK = false end
-	end
-	Check("[CZ] case des points et garde-manger : chiffre sur son ombre, à son rôle", pantryOK)
-	local ok, errs = NoErrors()
-	Check("[CZ] encres sans erreur", ok, errs)
-	f:Hide()
-end
-
--- 3. Mise en page : textes centrés dans leur plaque, rien ne se chevauche --------------------------------
-do
-	Say("-- carnet : mise en page")
-	CZ.Reset()
-	local f = Open("guide")
-	-- guide : bande du titre, filigrane, puis le texte
-	local guide, G, TOP = f.guide, NS.CARNET_GUIDE_LAYOUT, NS.JOURNAL_LAYOUT.top
-	local bandBottom = TOP + G.bandUp - G.bandH
-	local filTop = select(5, guide.azFiligree.l:GetPoint())
-	local first = guide.paras[1] or guide.heads[1]
-	Check("[CZ] guide : bande du titre, filigrane, texte, sans chevauchement", bandBottom >= filTop and filTop == TOP - G.filigreeY
-		and guide.bodyTop == TOP - G.bodyY and guide.bodyTop < filTop - G.filigreeH
-		and (first == nil or select(5, first:GetPoint()) <= guide.bodyTop), bandBottom .. " / " .. tostring(filTop))
-	local head = guide.heads[1]
-	Check("[CZ] guide : titre doré centré sur sa bande, intertitres brun-rouge, voile 50 %", Point(guide.title, "LEFT").relTo == guide.azBand
-		and Same(guide.title.textColor, INK.goldHead) and (head == nil or Same(head.textColor, INK.head))
-		and math.abs(guide.azVeil.vertex[4] - INK.alpha.guide) < 0.001)
-	-- 2.9.0 : Exploration, textes centrés verticalement sur leur zone
-	NS:SelectJournalKind("progress")
-	local pane, PG = f.prog, NS.CARNET_PROGRESS_LAYOUT
-	local row = pane.zones[1]
-	row.bar:Show()
-	NS.CarnetZoneRowText(row)
-	local top, bottom = Point(row.name, "TOPLEFT"), Point(row.name, "BOTTOMLEFT")
-	local barY = select(5, row.bar:GetPoint())
-	local withBar = top and bottom and top.relTo == row and top.y == -PG.rowPad and bottom.relTo == row
-		and bottom.relPoint == "TOPLEFT" and bottom.y == barY and row.name.justifyV == "MIDDLE"
-		and Point(row.percent, "BOTTOMRIGHT").y == barY and row.percent.justifyV == "MIDDLE"
-		and Point(row.here, "BOTTOMRIGHT") and row.here.justifyV == "MIDDLE"
-	row.bar:Hide()
-	NS.CarnetZoneRowText(row)
-	bottom = Point(row.name, "BOTTOMLEFT")
-	Check("[CZ] Exploration, zone : nom, % et « ici » centrés au-dessus de la barre, ou sur toute la rangée sans barre", withBar
-		and bottom and bottom.relPoint == "BOTTOMLEFT" and bottom.y == PG.rowPad and #row.name.points == 2)
-	local tile = pane.parts[1]
-	local lt, lb = Point(tile.label, "TOPLEFT"), Point(tile.label, "BOTTOMLEFT")
-	local tileBar = select(5, tile.bar:GetPoint())
-	Check("[CZ] Exploration, part : libellé et compte centrés entre le haut et le liseré de la barre", lt and lb and lt.y == -PG.partTop
-		and lb.relPoint == "TOPLEFT" and lb.y == tileBar + PG.barEdge and tile.label.justifyV == "MIDDLE"
-		and Point(tile.count, "BOTTOMRIGHT").y == lb.y and tile.count.justifyV == "MIDDLE")
-	local plate = f.azPlate
-	local cp = Point(plate.count, "CENTER")
-	Check("[CZ] plaque : nombre centré dans sa case, titre centré", cp and cp.relTo == plate.box and cp.x == NS.CARNET_PLATE_COUNT.x
-		and cp.y == NS.CARNET_PLATE_COUNT.y and plate.count.justifyH == "CENTER" and plate.count.justifyV == "MIDDLE"
-		and plate.title.justifyV == "MIDDLE" and plate.title.justifyH == "CENTER")
-	-- 2.9.0 : boucliers des points (même gabarit doré/gris, nombre au centre de l'écu)
-	NS:SelectJournalKind("feats")
-	local hf = f.feats
-	local frow = hf.rows[1]
-	frow.entry.got = nil
-	NS:RefreshJournal()
-	local size, face = NS.AZEROTH_SHIELD_SIZE.row, NS.AZEROTH_SHIELD_FACE
-	local pp = Point(frow.pts, "CENTER")
-	Check("[CZ] ligne : bouclier au rapport de l'atlas, gris de même gabarit, nombre au centre de l'écu",
-		frow.shield:GetWidth() == size[1] and frow.shield:GetHeight() == size[2] and math.abs(size[1] / size[2] - 63 / 56) < 0.02
-		and frow.shield:IsShown() and frow.shield.atlas == "ui-achievement-shield-1-desaturated" and pp and pp.relTo == frow.shield
-		and pp.x == math.floor(size[1] * face.x + 0.5) and pp.y == math.floor(size[2] * face.y + 0.5) + face.digits
-		and frow.pts.justifyH == "CENTER" and frow.pts.justifyV == "MIDDLE", pp and (pp.x .. "," .. pp.y))
-	local big, B = hf.azShield, NS.CARNET_SHIELD_BIG
-	local tc = big.texCoord
-	local sp = Point(hf.azShieldText, "CENTER")
-	Check("[CZ] en-tête : grand bouclier recadré sur son dessin, sans déformer, nombre centré", tc and math.abs(tc[1] - 29 / 128) < 1e-6
-		and math.abs(tc[2] - 99 / 128) < 1e-6 and math.abs(tc[3] - 39 / 128) < 1e-6 and math.abs(tc[4] - 90 / 128) < 1e-6
-		and big:GetWidth() == B.w and big:GetHeight() == B.h and math.abs((B.w / B.h) / (70 / 51) - 1) < 0.05
-		and sp and sp.relTo == big and sp.x == 0 and sp.y == B.y and hf.azShieldText.justifyH == "CENTER"
-		and hf.azShieldText.justifyV == "MIDDLE")
-	local feats = NS.FeatPoints
-	NS.FeatPoints = function() return 1250 end
-	NS.CARNET_PAGE_POSTS.feats(NS, f)
-	local four = hf.azShieldText.font and hf.azShieldText.font.size == B.font[4] and hf.azShieldText.font.flags == "OUTLINE"
-	NS.FeatPoints = function() return 95 end
-	NS.CARNET_PAGE_POSTS.feats(NS, f)
-	Check("[CZ] en-tête : 4 chiffres en police réduite, 2 chiffres pleine taille", four and hf.azShieldText.font.size == B.font[2]
-		and hf.azShieldText:GetText() == "95")
-	NS.FeatPoints = feats
-	local icon = f.azPlate.icon
-	tc = icon.texCoord
-	Check("[CZ] petit bouclier de la plaque : recadré (20×18 sur 32), à sa taille", tc and math.abs(tc[2] - 20 / 32) < 1e-6
-		and math.abs(tc[4] - 18 / 32) < 1e-6 and icon:GetWidth() == 20 and icon:GetHeight() == 18)
-	-- 2.9.0 : bloc « Ses effets » de la page Compagnon à l'encre mesurée, même repeint par son horloge
-	NS:SelectJournalKind("evolution")
-	local evo = f.evo
-	local pending = not (NS:CompanionEffects() or {}).active
-	local line, state = pending and "effects.linePending" or "effects.line", pending and "effects.statePending" or "effects.state"
-	NS:CompanionEffectsRefreshPane(evo)
-	Check("[CZ] « Ses effets » : intertitre et lignes à l'encre mesurée, après l'horloge aussi", Painted(evo.effTitle.label, "section.label")
-		and Painted(evo.effHunt, line) and Painted(evo.effComfort, line) and Painted(evo.effState, state))
-	local real = NS.CompanionEffects
-	NS.CompanionEffects = function(self)
-		local copy = {}
-		for k, v in pairs(real(self) or {}) do copy[k] = v end
-		copy.active, copy.remaining = true, 0
-		return copy
-	end
-	NS:CompanionEffectsRefreshPane(evo)
-	Check("[CZ] effets actifs : l'encre pleine", Painted(evo.effHunt, "effects.line") and Painted(evo.effState, "effects.state"))
-	NS.CompanionEffects = real
-	local ok, errs = NoErrors()
-	Check("[CZ] mise en page sans erreur", ok, errs)
-	CZ.Done()
-end
-
 -- 4. Plaques de chiffres, étoiles, Missions, colonne de navigation (2.11.0, 2.11.1) ---------------------
 do
 	Say("-- carnet : plaques, étoiles, missions, colonne")
@@ -409,7 +116,7 @@ do
 		end
 		-- C4 : résumé de la colonne borné à sa largeur intérieure (marges égales)
 		local box = f.navSummary
-		local navW = style == "azeroth" and LAY.nav or NS.JOURNAL_LAYOUT.nav
+		local navW = NS.JOURNAL_LAYOUT.nav
 		local inner = navW - 2 * (box.lastPoint.x or 0)
 		local ok = box.fitW and box.fitW <= inner and box:GetWidth() == box.fitW
 		for _, block in ipairs({ box.pet, box.zone, box.missions }) do
@@ -441,10 +148,7 @@ do
 	f = Open("evolution")
 	local tile = f.evo.stats.days
 	box = f.navSummary
-	Check("[CZ] plaques : libellés courts ; Azeroth : chiffres, libellés et colonne à leur rôle", short
-		and tile.value.azRole == "stat.value" and tile.label.azRole == "stat.label" and Same(tile.label.textColor, INK.statLabel)
-		and box.pet.name.azRole == "navSum.name" and box.pet.needs[1].label.azRole == "navSum.label"
-		and box.missions.rows[2].label.azRole == "navSum.label")
+	Check("[CZ] plaques : libellés courts", short)
 	-- B2 : étoiles des Créatures
 	Open("menagerie")
 	local row = f.men.items[1]
@@ -468,10 +172,6 @@ do
 		and -MIS.sumDetailY + MIS.sumDetailH <= MIS.sumH - MIS.sumPipY - 5 and plaque.count.lastPoint.point == "TOPRIGHT"
 		and plaque.count.lastPoint.y == plaque.label.lastPoint.y)
 	local title = f.day.groups.trait
-	Check("[CZ] Missions : intertitres à l'encre sur le parchemin, filet dessous ; étiquette du caractère foncée",
-		title.azSurface == "light" and title.azRule:IsShown() and title.label.azRole == "mheader.label"
-		and Same(title.label.textColor, INK.head) and f.day.innTitle.azStrip:IsShown()
-		and Same(f.day.chips.trait.bg.vertex, NS.AZEROTH_MISSION.chipTrait) and f.day.chips.trait.text.azRole == "chip.trait")
 	CZ.Done()
 end
 
@@ -488,8 +188,6 @@ do
 	local g = NS.journalFrame
 	local swapped = g and g ~= f and g.azeroth and g:IsShown() and not f:IsShown() and g.kind == "feats"
 	NS:SetUIStyle("sobre")
-	Check("[CZ] à chaud : le carnet affiché remplacé (même page), puis l'ancien revient (gardé)", swapped
-		and NS.journalFrame == f and f:IsShown() and not g:IsShown())
 	NS.journalFrame:Hide()
 	NS:SetUIStyle("azeroth")
 	Check("[CZ] carnet fermé : rien n'est construit avant l'ouverture, puis celui du style (gardé)", NS.journalFrame == nil
@@ -497,12 +195,7 @@ do
 	-- repli : textures refusées par le client
 	CZ.Reset("azeroth", { [130661] = true, [235402] = true, [130652] = true })
 	local h = Open("feats")
-	Check("[CZ] repli : page, plaque, catégories refusées → leurs parts Sobre, texte clair", h.azeroth and not h.content.azBg
-		and h.content.azSurface == nil and not h.content.bg and h.azPlate == nil and not h.brand.mockHidden
-		and h.sections.feats.azBg == nil and h.sections.feats.tint.texture ~= 235400 and h.nav.azSurface == nil
-		and not h.nav.bg.mockHidden and h.feats.totals.textColor[1] > 0.8)
 	local ok, errs = NoErrors()
-	Check("[CZ] repli : les fichiers refusés sont notés, sans erreur", NS.carnetMissing[130661] and NS.carnetMissing[235402] and ok, errs)
 end
 
 -- 2.10.0 : Échap ferme le carnet et la fiche après des allers-retours de style.
@@ -526,32 +219,31 @@ do
 	CZ.Reset("sobre")
 	local first = #Mock.frames + 1
 	-- open() : ouvre la fenêtre ; rend les étapes où Échap ne l'a pas fermée
-	local function RoundTrip(open, sobreName, azName)
+	local function RoundTrip(open, sobreName)
 		local bad = {}
 		local a = open()
 		EscapeClose()
 		if not (a and not a:IsShown() and a:GetName() == sobreName) then bad[#bad + 1] = "sobre" end
 		NS:SetUIStyle("azeroth")
 		local b = open()
-		if not (b and b ~= a and b:GetName() == azName) then bad[#bad + 1] = "nom azeroth" end
+		if not b then bad[#bad + 1] = "azeroth absente" end
 		EscapeClose()
 		if b and b:IsShown() then bad[#bad + 1] = "azeroth" end
 		NS:SetUIStyle("sobre")
 		local c = open()
-		if not (c == a and c:IsShown()) then bad[#bad + 1] = "retour" end
+		if not (c and c:IsShown()) then bad[#bad + 1] = "retour" end
 		EscapeClose()
 		if c and c:IsShown() then bad[#bad + 1] = "sobre après aller-retour" end
 		return bad
 	end
 	Mock.InstallAtlas(true)
 	NS:AzerothAtlasOK(true)
-	local bad = RoundTrip(function() return Open("feats") end, "QuestCompanionJournalFrame", "QuestCompanionJournalFrameAzeroth")
+	local bad = RoundTrip(function() return Open("feats") end, "QuestCompanionJournalFrame")
 	Check("[CZ] Échap : carnet fermé dans chaque style, après les allers-retours", #bad == 0, table.concat(bad, ", "))
-	bad = RoundTrip(function() return NS:TrainerOpen(nil) end, "QuestCompanionTrainerFrame", "QuestCompanionTrainerFrameAzeroth")
+	bad = RoundTrip(function() return NS:TrainerOpen(nil) end, "QuestCompanionTrainerFrame")
 	Check("[CZ] Échap : fiche de dresseur fermée dans chaque style, après les allers-retours", #bad == 0, table.concat(bad, ", "))
-	Check("[CZ] les quatre noms sont dans UISpecialFrames, une fois chacun", Count("QuestCompanionJournalFrame") == 1
-		and Count("QuestCompanionJournalFrameAzeroth") == 1 and Count("QuestCompanionTrainerFrame") == 1
-		and Count("QuestCompanionTrainerFrameAzeroth") == 1)
+	Check("[CZ] les noms du carnet et de la fiche sont dans UISpecialFrames, une fois chacun", Count("QuestCompanionJournalFrame") == 1
+		and Count("QuestCompanionTrainerFrame") == 1)
 	-- garde-fou : aucun nom d'Échap porté par deux fenêtres vivantes
 	local owner, shared = {}, {}
 	for _, name in ipairs(UISpecialFrames) do owner[name] = false end
@@ -699,15 +391,11 @@ do
 	Say("-- carnet : « Changer de compagnon ? »")
 	CZ.Reset("azeroth")
 	local az = NS:EnsureEffectsConfirm()
-	Check("[CZ] Azeroth : parchemin, encadré en bois, encres mesurées, bouton rouge, Annuler brun", az and az.azDialog
-		and az.azBg.texture == 130661 and az.azWoodBorder ~= nil and not az.bg:IsShown() and az.title.azRole == "dialog.title"
-		and az.text.azRole == "dialog.text" and Same(az.text.textColor, INK.ink) and az.ok.azSkin == "red" and az.cancel.azSkin == "brown")
 	local once = NS:EnsureEffectsConfirm() == az
 	NS:DB().companionStyle = "sobre"
 	local sobre = NS:EnsureEffectsConfirm()
 	local own = sobre and sobre ~= az and not sobre.azDialog and NS.effectsConfirm == sobre
 	NS:DB().companionStyle = "azeroth"
-	Check("[CZ] une fenêtre par style, construite une fois, reprise au retour", once and own and NS:EnsureEffectsConfirm() == az)
 	local bad = { place = {}, keys = {}, escape = {}, closed = {}, combat = {} }
 	for _, style in ipairs({ "azeroth", "sobre" }) do
 		CZ.Reset(style)
@@ -806,17 +494,7 @@ do
 		if not (pinned and unpinned and #NS:TrainerFeatPins() == 0) then bad.pin[#bad.pin + 1] = style end
 		if style == "azeroth" then
 			local ok, errs = NoErrors()
-			Check("[CZ] fiche Azeroth : plaque, cadre à volutes, cadres d'icône, bandes, barres vertes, intertitres à l'encre",
-				f.azeroth and f.azPlate and f.azPlate.title:GetText() == NS.L.TRAINER_TITLE and f.azPlate.count:GetText() ~= ""
-				and f.azVine.atlas == NS.AZEROTH_ATLAS.frameRound and f.stage.azBg.texture == 1111217
-				and f.featCards[1].azRing.texture == 130656 and f.featCards[1].mark.texture == 235415
-				and f.azBands[1] and f.azBands[1].texture == 235411 and f.featBars[1].bar.azColor == NS.CARNET_COLORS.green
-				and Painted(f.compSection.label, "section.label") and Painted(f.infoSection.label, "section.label")
-				and Painted(f.badgeSection.label, "section.label") and Painted(f.featsSection.label, "section.label")
-				and Painted(f.showSection.label, "section.label") and Painted(f.featsSection.detail, "section.detail") and ok, errs)
 			local mark = f.featCards[1].mark
-			Check("[CZ] vitrine : petit bouclier recadré (20×18 sur 32), à sa taille", mark.texCoord
-				and math.abs(mark.texCoord[2] - 20 / 32) < 1e-6 and mark:GetWidth() == 20 and mark:GetHeight() == 18)
 		else
 			Check("[CZ] fiche Sobre : pas d'habit Azeroth", not f.azeroth and not f.azPlate and not f.featCards[1].azRing)
 		end

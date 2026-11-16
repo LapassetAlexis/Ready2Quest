@@ -1,6 +1,6 @@
 -- ForgeCompanion.lua -- le médaillon forgé du compagnon (QuestCompanion 3.1.0)
 --
--- Sous le thème forgé (l'ancien habillage coupé : ns.AZEROTH_LEGACY faux), le
+-- Sous le thème forgé, le
 -- cadre du compagnon garde la géométrie de la maquette validée (2026-11-14) :
 -- un anneau d'or rond centré sur le portrait, la plaque du nom dessous
 -- (nom à l'encre des titres, ligne « stade · niveau »), l'étiquette d'humeur
@@ -284,7 +284,6 @@ function ns:CompanionApplyForgeSkin(frame)
 	if kit.EdgesShown then kit.EdgesShown(frame, false) end
 	if frame.plate then frame.plate:Hide() end
 	if kit.Masked then
-		if frame.azSkin then kit.Masked(frame, false, frame.azSkin) end
 		kit.Masked(frame, true, skin)
 	end
 	PlaceBackground(frame, skin, true)
