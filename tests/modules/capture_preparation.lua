@@ -423,13 +423,6 @@ end
 -- 8. Les deux styles, et les contrastes ---------------------------------------------------------------------
 do
 	Say("-- qc215 préparation : styles et contrastes")
-	local INK, CONTRAST = NS.AZEROTH_INK, NS.AZEROTH_CONTRAST
-	local bad = {}
-	for role, entry in pairs(NS.CAPTURE_PREP_CONTRAST) do
-		local ratio = NS.AzerothContrast(INK[entry[1]], entry[2])
-		if CONTRAST[role] ~= entry or ratio < entry[3] or entry[3] < 4.5 then bad[#bad + 1] = role .. "=" .. string.format("%.2f", ratio) end
-	end
-	Check("[STYLE] Azeroth : rôles mesurés, versés au tableau, ≥ 4,5:1", #bad == 0, table.concat(bad, " "))
 	P.Reset()
 	P.quality = 3
 	P.SeeKill(6701, { name = "Raptor", level = 20 })

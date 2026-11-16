@@ -20,7 +20,6 @@ SZ.savedWidth = _G.UIParent.width
 SZ.savedAnim, SZ.savedStyle = NS:DB().companionCaptureAnim, NS:DB().companionStyle
 local PLAYER = "Player-1-00000001"
 local WOOD = NS.AZEROTH_WOOD
-local AZS, AZB, AZC = NS.CAPTURE_STAGE_AZEROTH, NS.CAPTURE_BATCH_AZEROTH, NS.CAPTURE_CHOOSER_AZEROTH
 
 function SZ.Guid(npcID, spawn) return string.format("Creature-0-4378-1-12-%d-%s", npcID, spawn or "00001A2B3C") end
 function SZ.Install()
@@ -147,43 +146,16 @@ end
 
 -- 1. La scène d'un lancer seul, réussie --------------------------------------------------------------
 do
-	Say("-- scène de capture : lancer seul (Azeroth)")
+	Say("-- scène de capture : lancer seul")
 	SZ.Reset()
 	SZ.SeeKill(8100, { name = "Grand trotteur" })
 	SZ.Roll(0)
 	NS:CaptureThrow()
 	local stage = NS.captureStage
-	-- 2.14.0 (bêta 3) : carte compacte de parchemin, plus le grand cadre en bois sombre
-	local K = NS.AZEROTH_CARD
-	local border, pieces = stage.cardBorder, 0
-	for _, tex in pairs(border and border.pieces or {}) do if tex.texture == 130672 then pieces = pieces + 1 end end
-	local ground = stage.ground
-	local info = stage.info
-	local ink = NS.AZEROTH_INK[NS.AZEROTH_CONTRAST["stage.chance"][1]]
-	local cells, icons = stage.aidCells, 0
-	for index, cell in ipairs(cells) do
-		if cell.icon.texture == NS.CAPTURE_AIDS[index].icon and cell.edge:GetParent() == stage.details then icons = icons + 1 end
-	end
-	local plate = stage.plate
-	-- pendant le lancer et les secousses : pas de halo ; les secousses : losanges d'or sous la scène
-	local r0 = NS.captureState.rolling
-	NS:CaptureStageUpdate(r0.start + NS.CAPTURE_THROW_TIME * 0.5)
-	local throwHalo = stage.halo:IsShown()
-	NS:CaptureStageUpdate(r0.start + NS.CAPTURE_THROW_TIME + 0.1)
-	local dot1, dot3 = stage.shakeDots[1], stage.shakeDots[3]
-	local dots = dot1:IsShown() and dot1.lastPoint.relTo == stage.scene and dot1.vertex[4] == 1 and dot3.vertex[4] < 0.5
-	NS:CaptureStageUpdate(r0.start + NS.CAPTURE_THROW_TIME + 0.5)
 	local rolling = SZ.UntilVerdict()
 	Check("[AZS] verdict tombé : la scène le montre, pas de bandeau « Capturé ! » en attente", rolling and rolling.result == "ok"
 		and rolling.sceneVerdict == true and NS.captureResultPending == nil)
 	NS:CaptureStageUpdate(rolling.resultAt + 0.6)
-	local banner = stage.banner
-	-- 2.14.0 (bêta 4) : le bandeau tenait tout le bas de la carte ; un invariant : il tient dans la carte,
-	-- au-dessus du pied, et le pied au-dessus de l'encadré
-	local vs = AZS.verdictScale
-	local vw = AZS.verdictW * vs
-	local footerBottom = Y(stage.footer)
-	local verdictBottom = AZS.h + AZS.verdictY - AZS.verdictH   -- depuis le bas du cadre
 	NS:CaptureStageUpdate(rolling.resultAt + 1.5)
 	local closeText = stage.footer:GetText() == NS.L.CAPTURE_STAGE_CLOSE
 	stage.scripts.OnMouseUp(stage)
