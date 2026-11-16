@@ -445,6 +445,36 @@ do
 	S.done()
 end
 
+-- 3 bis. 3.1.1 : masqué pendant un vol (griffon) ----------------------------------------------
+do
+	Say("-- 3.1.1 : masqué pendant un vol")
+	local S = Scenario("[DISCRET] masqué pendant un vol")
+	D.Reset()
+	local savedTaxi = rawget(_G, "UnitOnTaxi")
+	local taxi = false
+	_G.UnitOnTaxi = function(unit) return unit == "player" and taxi end
+	S.ok("réglage actif par défaut, visible au sol", NS:DB().companionHideTaxi == true and NS.companionFrame:IsShown())
+	taxi = true
+	Mock:Fire("PLAYER_CONTROL_LOST")
+	S.ok("départ en vol : caché", not NS.companionFrame:IsShown())
+	taxi = false
+	Mock:Fire("PLAYER_CONTROL_GAINED")
+	S.ok("arrivée : il revient", NS.companionFrame:IsShown())
+	-- vu au tick seulement (événement manqué) : rangé quand même
+	taxi = true
+	NS:CompanionTaxiChanged()
+	S.ok("vol vu sans événement : caché", not NS.companionFrame:IsShown())
+	NS:DB().companionHideTaxi = false
+	NS:CompanionTaxiChanged()
+	S.ok("réglage coupé : visible en vol", NS.companionFrame:IsShown())
+	NS:DB().companionHideTaxi = true
+	taxi = false
+	NS:CompanionTaxiChanged()
+	_G.UnitOnTaxi = savedTaxi
+	D.Done()
+	S.done()
+end
+
 -- 4. Alerte « plusieurs monstres sur toi » --------------------------------------------------
 do
 	Say("-- 2.10.0 : alerte d'aggro à trois crans")
@@ -476,7 +506,7 @@ do
 	S.done()
 	S = Scenario("[DISCRET] cartes de la page Compagnon, aggro à trois crans")
 	S.ok("cartes de la page Compagnon : estomper, donjon, aggro, déplacer, deux raccourcis",
-		found.companionCombatFade and found.companionHideInstance and found.companionAggroBlink
+		found.companionCombatFade and found.companionHideInstance and found.companionHideTaxi and found.companionAggroBlink
 		and found.companionMove and found.bindToggle and found.bindNet)
 	local aggro = found.companionAggroBlink
 	aggro.choose("off")
