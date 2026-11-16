@@ -45,7 +45,8 @@ end
 
 function ns:CaptureNetAttach()
 	self:DB().captureNetPoint = nil
-	if self.captureNetButton then self:CapturePlaceNet() end
+	if self.captureNetButton then self.captureNetButton.moved = nil; self:CapturePlaceNet() end
+	if self.captureExpressFeed and self.CaptureExpressPlace then pcall(self.CaptureExpressPlace, self) end
 	if self.Print then self:Print(L.CAPTURE_NET_ATTACHED) end
 	return true
 end
@@ -70,7 +71,8 @@ do
 	end
 end
 
-local function StopDrag(button)
+local StopDrag
+StopDrag = function(button)
 	if not button.netDragging then return end
 	button.netDragging = nil
 	if button.StopMovingOrSizing then button:StopMovingOrSizing() end
@@ -129,6 +131,47 @@ do
 			end
 			return click(self, mouse, ...)
 		end
+	end
+end
+
+-- Le fil des pastilles express suit le filet détaché (retour joueur) : sous
+-- le filet s'il y a la place (la barre d'aides est au-dessus), sinon au-dessus
+-- de la barre d'aides
+ns.CAPTURE_NET_FEED_GAP = 6
+do
+	local place = ns.CaptureExpressPlace
+	if place then
+		function ns:CaptureExpressPlace(...)
+			local feed, net = self.captureExpressFeed, self.captureNetButton
+			if not (feed and net and net.moved and self:CaptureNetPoint()) then return place(self, ...) end
+			feed:ClearAllPoints()
+			local height = ns.CaptureExpressHeight and ns.CaptureExpressHeight() or 0
+			local scale = (net.GetEffectiveScale and net:GetEffectiveScale()) or 1
+			local bottom = net.GetBottom and net:GetBottom()
+			local gap = ns.CAPTURE_NET_FEED_GAP
+			local mode, stack
+			if not bottom or bottom * scale - gap - height >= 0 then
+				feed:SetPoint("TOP", net, "BOTTOM", 0, -gap)
+				mode, stack = "net-below", "down"
+			else
+				local B = ns.CAPTURE_AIDBAR or { size = 28, pad = 4, above = 6 }
+				feed:SetPoint("BOTTOM", net, "TOP", 0, B.above + B.size + 2 * B.pad + gap)
+				mode, stack = "net-above", "up"
+			end
+			feed.side = "CENTER"
+			if feed.stack ~= stack then
+				for index = 1, #(feed.rows or {}) do feed.rows[index].slid = nil end
+				feed.stack, feed.dirty = stack, true
+			end
+			feed.mode = mode
+			return mode, stack
+		end
+	end
+	-- le filet glissé ou rattaché : le fil se replace
+	local stop = StopDrag
+	StopDrag = function(button)
+		stop(button)
+		if ns.captureExpressFeed and ns.CaptureExpressPlace then pcall(ns.CaptureExpressPlace, ns) end
 	end
 end
 

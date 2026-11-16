@@ -607,6 +607,12 @@ do
 		refused and started and saved and saved.point == "CENTER" and saved.x == 120 and saved.y == -40 and notThrown
 		and p and p.relTo == UIParent and p.x == 120 and p.y == -40 and net.moved == true,
 		tostring(saved and saved.x) .. "/" .. tostring(p and p.relTo == UIParent))
+	-- le fil des pastilles suit le filet détaché
+	NS:EnsureCaptureExpressFeed()
+	local feedMode = NS:CaptureExpressPlace()
+	local fp = NS.captureExpressFeed.lastPoint
+	Check("[NET] filet détaché : les pastilles express le suivent (sous le filet, ou au-dessus de la barre d'aides)",
+		(feedMode == "net-below" or feedMode == "net-above") and fp and fp.relTo == net, tostring(feedMode))
 	-- un peu plus tard, le clic lance
 	Mock:Advance(1)
 	local rolling = NS:CaptureNetClick("LeftButton")

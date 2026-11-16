@@ -320,6 +320,7 @@ function ns:CompanionApplyForgeSkin(frame)
 	frame.forgeHitBelow = ns.ForgeCompanionBelow(frame:GetHeight())
 	Method(frame, "SetHitRectInsets", 0, 0, 0, -frame.forgeHitBelow)
 	self:CompanionForgeOrnaments(frame, true)
+	if self.CompanionPlaceStars then self:CompanionPlaceStars(frame) end
 	self:CompanionForgeMoodTab()
 	return skin
 end
@@ -334,6 +335,7 @@ function ns:CompanionLeaveForgeSkin(frame)
 	frame.forgeHitBelow = nil
 	Method(frame, "SetHitRectInsets", 0, 0, 0, 0)
 	self:CompanionForgeOrnaments(frame, false)
+	if self.CompanionPlaceStars then self:CompanionPlaceStars(frame, true) end
 	local kit = Kit()
 	if kit.Masked then kit.Masked(frame, false, skin) end
 	PlaceBackground(frame, skin, false)

@@ -3103,6 +3103,31 @@ end
 -- hasard, le fond ne « bouge » pas à chaque rechargement)
 local STARS = { { 12, -10, 2 }, { 30, -22, 1 }, { 52, -8, 2 }, { 74, -18, 1 }, { 90, -6, 2 },
 	{ 20, -40, 1 }, { 84, -36, 1 }, { 60, -30, 1 }, { 8, -62, 1 }, { 94, -58, 2 } }
+ns.COMPANION_STARS = STARS
+-- 3.1.2 : dans le médaillon rond du thème forgé, les mêmes étoiles semées
+-- dans le disque (x, y depuis son centre, px) : posées pour le cadre carré,
+-- la plupart tombaient sous l'anneau et il n'en restait qu'une rangée
+ns.FORGE_STARS = { { -26, 22 }, { -8, 31 }, { 14, 27 }, { 30, 12 }, { -33, 2 },
+	{ 34, -10 }, { -22, -20 }, { 20, -26 }, { -4, 12 }, { 6, -32 } }
+
+-- Les étoiles d'un fond étoilé à leur place : semées dans le disque en thème
+-- forgé, sinon sur le cadre carré (square : forcé, à la sortie du médaillon)
+function ns:CompanionPlaceStars(frame, square)
+	frame = frame or self.companionFrame
+	if not (frame and frame.stars) then return nil end
+	local forge = not square and frame.ring == "forge" and ns.FORGE_RING
+	for index, star in ipairs(frame.stars) do
+		star:ClearAllPoints()
+		local f = forge and ns.FORGE_STARS[index]
+		if f then
+			star:SetPoint("CENTER", frame, "TOP", (forge.x or 0) + f[1], (forge.y or 0) + f[2])
+		else
+			local s = STARS[index]
+			star:SetPoint("TOPLEFT", frame, "TOPLEFT", s[1], s[2])
+		end
+	end
+	return forge and "forge" or "square"
+end
 
 -- Dégradé vertical : API récente (couleurs CreateColor), sinon l'ancienne
 -- (SetGradientAlpha), sinon rien (l'aplat teinté reste)
@@ -3155,6 +3180,7 @@ function ns:CompanionApplyBackground()
 	for _, star in ipairs(frame.stars or {}) do
 		if def.stars then star:Show() else star:Hide() end
 	end
+	ns:CompanionPlaceStars(frame)
 	frame.bgStyle = def.id
 	frame.bgTexture = path
 	frame.bgFallback = fallback
