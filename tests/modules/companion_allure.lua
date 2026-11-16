@@ -7,10 +7,6 @@
 -- deux habits (Sobre, Azeroth), Échap ; vignettes : portrait 2D, modèle de la
 -- créature, apprentissage des displayID en fond ; Metzen (modèle, portraits
 -- 2D des compagnons de saison, /qc noel metzen) ; des noms, jamais des numéros.
--- 3.1.0 : affirme l'ancien habillage (carnet en parchemin, scènes en bois, bandeaux
--- dorés, anneau) : le drapeau QNS.AZEROTH_LEGACY rallumé pour tout le module
--- (remis à la valeur du produit à sa fin, tests/run_tests.lua)
-T.Legacy(true)
 local Check, Say, ResetWorld, NS, Mock = T.Check, T.Say, T.ResetWorld, T.QNS, T.Mock
 
 local A = { saved = {} }
@@ -367,13 +363,6 @@ do
 	local panel = Open()
 	local tile = TileOf(panel, "cap:7001")
 	local c = INK[NS.AZEROTH_CONTRAST["allure.name"][1]]
-	Check("[ALLURE] Azeroth : parchemin bordé de bois, vignettes claires, puces et recherche habillées, encres des rôles allure.*",
-		panel.uiStyle == "azeroth" and panel.azBg and panel.azDialog == true and #(NS.errors or {}) == 0
-		and tile.azStyle == "light" and panel.chips.chips[1].azBg ~= nil and panel.searchBox.azSurface == "dark"
-		and tile.label.azRole == "allure.name" and TileOf(panel, "cap:7002:s").label.azRole == "allure.shiny"
-		and panel.mineTitle.label.azRole == "allure.section" and panel.pager.position.azRole == "allure.hint"
-		and math.abs(tile.label.textColor[1] - c[1]) < 1e-6,
-		tostring(panel.uiStyle) .. " " .. tostring(NS.errors and NS.errors[1] and NS.errors[1].message))
 	local s = Steps()
 	NS:DB().companionStyle = "sobre"
 	Mock.InstallAtlas(nil)

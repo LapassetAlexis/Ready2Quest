@@ -276,28 +276,3 @@ do
 	s.check("[BASC] Voile d'hiver : suit le choix Azeroth, posé sans erreur sur les cadres du socle")
 	Done()
 end
-
--- 5. L'ancien habillage (drapeau rallumé) : ses bandeaux gardés par clé, sans fuite ------------------
-do
-	Say("-- bascule forgée : ancien habillage, sans fuite")
-	T.Legacy(true)
-	Fresh(true)
-	local s = Steps()
-	local toast, result = NS:EnsureJournalToast(), NS:EnsureCaptureResult()
-	s.ok("bandeaux de l'ancien habillage : clé azeroth", toast.styleKey == "azeroth" and toast.uiStyle == "azeroth"
-		and result.styleKey == "azeroth" and NS:StyleKey() == "azeroth")
-	local before = #Mock.frames
-	NS:ApplyUIStyle()
-	NS:ApplyUIStyle()
-	s.ok("deux ApplyUIStyle de suite : mêmes bandeaux, aucun cadre créé", NS:EnsureJournalToast() == toast
-		and NS:EnsureCaptureResult() == result and #Mock.frames == before, #Mock.frames - before)
-	NS:SetUIStyle("sobre")
-	local sobre = NS:EnsureJournalToast()
-	NS:SetUIStyle("azeroth")
-	s.ok("Sobre puis Azeroth : le bandeau doré revient (gardé)", sobre ~= toast and sobre.styleKey == "sobre"
-		and NS:EnsureJournalToast() == toast)
-	s.ok("sans erreur", Errors() == "", Errors())
-	s.check("[BASC] ancien habillage (T.Legacy) : bandeaux gardés par clé, deux ApplyUIStyle sans fuite")
-	T.Legacy(false)
-	Done()
-end

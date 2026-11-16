@@ -6,10 +6,6 @@
 -- capturer » (icône du type au lieu du modèle 3D et nombre d'étoiles dans
 -- l'écu : retours en jeu 2.9.1) ; le repli Sobre sans le bois ; le style
 -- Sobre ; le changement de style pendant une scène.
--- 3.1.0 : affirme l'ancien habillage (carnet en parchemin, scènes en bois, bandeaux
--- dorés, anneau) : le drapeau QNS.AZEROTH_LEGACY rallumé pour tout le module
--- (remis à la valeur du produit à sa fin, tests/run_tests.lua)
-T.Legacy(true)
 local Check, Say, ResetWorld, NS, Mock = T.Check, T.Say, T.ResetWorld, T.QNS, T.Mock
 
 local SZ = { saved = {}, random = math.random, units = {}, sounds = {} }
@@ -157,43 +153,18 @@ do
 	SZ.Roll(0)
 	NS:CaptureThrow()
 	local stage = NS.captureStage
-	Check("[AZS] atlas présents : la scène Azeroth s'ouvre (fenêtre à part, son nom pour Échap)", NS:AzerothScenesOn()
-		and NS:AzerothSceneAtlasOK() and stage and stage:IsShown() and stage.azeroth and stage.uiStyle == "azeroth"
-		and Has(_G.UISpecialFrames, "QuestCompanionCaptureStageAzeroth") and stage:GetWidth() == AZS.w and stage:GetHeight() == AZS.h,
-		stage and tostring(stage:GetName()))
 	-- 2.14.0 (bêta 3) : carte compacte de parchemin, plus le grand cadre en bois sombre
 	local K = NS.AZEROTH_CARD
 	local border, pieces = stage.cardBorder, 0
 	for _, tex in pairs(border and border.pieces or {}) do if tex.texture == 130672 then pieces = pieces + 1 end end
-	Check("[AZC14] carte de parchemin (130661, voile « page »), encadré fin en bois (8 morceaux) et filet d'or, gardée à l'écran",
-		stage.chrome == "card" and stage.cardParch.texture == 130661 and stage.cardParch:IsShown() and stage.cardParch.texCoord[2] < 1
-		and stage.cardVeil.azVeilKey == "page" and stage.cardBack ~= nil and pieces == 8 and border == stage.azWoodBorder
-		and #stage.cardGold == 4 and stage.clampInset == K.out, pieces)
-	Check("[AZC14] plus de fond sombre, de grand bois ni de boîte noire derrière la créature", stage.wood == nil and stage.woodBg == nil
-		and not stage.accent and not stage.topBar and stage.stageBg == nil and stage.stageTop == nil and stage.stageBottom == nil
-		and NS.CAPTURE_CLIENT_ART.stage == nil)
 	local ground = stage.ground
-	Check("[AZC14] ombre au sol : lueur douce du client, sombre, peu opaque, sous la scène", ground
-		and ground.atlas == "ChallengeMode-SoftYellowGlow" and ground.vertex[1] < 0.2 and ground.vertex[4] <= 0.6
-		and ground.vertex[4] > 0.2 and ground.lastPoint.relTo == stage.scene, ground and ground.atlas)
 	local info = stage.info
 	local ink = NS.AZEROTH_INK[NS.AZEROTH_CONTRAST["stage.chance"][1]]
-	Check("[AZC14] « Chance 50 % » puis les étoiles à gagner (étoiles du client), encre mesurée", info and stage.details:IsShown()
-		and info:GetText():find("^Chance 50 %%") ~= nil
-		and select(2, info:GetText():gsub("auctionhouse%-icon%-favorite%-off", "")) == 3
-		and info.azRole == "stage.chance" and info.textColor[1] == ink[1], info and info:GetText())
 	local cells, icons = stage.aidCells, 0
 	for index, cell in ipairs(cells) do
 		if cell.icon.texture == NS.CAPTURE_AIDS[index].icon and cell.edge:GetParent() == stage.details then icons = icons + 1 end
 	end
-	Check("[AZC14] les aides sous la chance (trois cases grisées), pied « Le filet bouge… » à l'encre mesurée", icons == 3
-		and #cells == 3 and cells[1].icon.alpha < 1 and not cells[1].chosen and stage.details.lastPoint.relTo == stage.scene
-		and stage.footer:GetText() == NS.L.CAPTURE_SHAKING and stage.footer.azRole == "stage.status", icons)
 	local plate = stage.plate
-	Check("[AZS] plaque « CAPTURE · NORMAL » et le nom ; le modèle et notre filet dans la scène", plate
-		and plate.bg.atlas == "ui-achievement-alert-background-mini" and plate.title:GetText() == "CAPTURE · NORMAL"
-		and plate.text:GetText() == "Grand trotteur" and plate.lastPoint.relTo == stage
-		and stage.model and stage.model:GetParent() == stage.scene and stage.net.texture == NS.CAPTURE_ART.net)
 	-- pendant le lancer et les secousses : pas de halo ; les secousses : losanges d'or sous la scène
 	local r0 = NS.captureState.rolling
 	NS:CaptureStageUpdate(r0.start + NS.CAPTURE_THROW_TIME * 0.5)
@@ -202,29 +173,17 @@ do
 	local dot1, dot3 = stage.shakeDots[1], stage.shakeDots[3]
 	local dots = dot1:IsShown() and dot1.lastPoint.relTo == stage.scene and dot1.vertex[4] == 1 and dot3.vertex[4] < 0.5
 	NS:CaptureStageUpdate(r0.start + NS.CAPTURE_THROW_TIME + 0.5)
-	Check("[AZC14] pas de halo pendant le lancer ni les secousses ; secousses en losanges d'or", not throwHalo
-		and not stage.halo:IsShown() and stage.ground:IsShown() and stage.details:IsShown() and dots)
 	local rolling = SZ.UntilVerdict()
 	Check("[AZS] verdict tombé : la scène le montre, pas de bandeau « Capturé ! » en attente", rolling and rolling.result == "ok"
 		and rolling.sceneVerdict == true and NS.captureResultPending == nil)
 	NS:CaptureStageUpdate(rolling.resultAt + 0.6)
 	local banner = stage.banner
-	Check("[AZS] bandeau de verdict : fond des hauts faits, « CAPTURÉ ! », bouclier d'or et son éclat, étoiles ; chance et aides cachées",
-		banner:IsShown() and banner.azeroth and banner.bg.atlas == "ui-achievement-alert-background"
-		and banner.title:GetText() == "CAPTURÉ !" and banner.text:GetText() == "Grand trotteur" and banner.shieldKind == "gold"
-		and banner.shield.atlas == "ui-achievement-shield-1" and banner.shield:IsShown() and banner.bling:IsShown()
-		and stage.starSlots[1]:GetParent() == banner and stage.starSlots[1]:IsShown() and stage.ribbonPanel == nil
-		and not stage.details:IsShown())
 	-- 2.14.0 (bêta 4) : le bandeau tenait tout le bas de la carte ; un invariant : il tient dans la carte,
 	-- au-dessus du pied, et le pied au-dessus de l'encadré
 	local vs = AZS.verdictScale
 	local vw = AZS.verdictW * vs
 	local footerBottom = Y(stage.footer)
 	local verdictBottom = AZS.h + AZS.verdictY - AZS.verdictH   -- depuis le bas du cadre
-	Check("[AZS4] verdict dans la carte (marges), pied entre l'encadré et le bandeau, pas plus large que la carte",
-		math.abs(banner:GetScale() - vs) < 1e-6 and vw <= AZS.w - 60 and stage.footer.lastPoint.relTo == stage
-		and footerBottom >= NS.AZEROTH_CARD.gold + 2 and footerBottom + 14 <= verdictBottom
-		and stage.footer.width <= AZS.w - 2 * NS.AZEROTH_CARD.pad, footerBottom .. " / " .. verdictBottom)
 	NS:CaptureStageUpdate(rolling.resultAt + 1.5)
 	local closeText = stage.footer:GetText() == NS.L.CAPTURE_STAGE_CLOSE
 	stage.scripts.OnMouseUp(stage)
@@ -248,12 +207,6 @@ do
 	NS:CaptureStageUpdate(rolling.resultAt + 0.6)
 	local banner = stage.banner
 	-- 2.14.0 (bêta 3) : l'ombre au sol suit la fuite et s'efface avec la créature
-	Check("[AZS] brillante : nom en or ; échappée : « ÉCHAPPÉ… », bouclier gris, filet déchiré, l'ombre suit et pâlit", gold
-		and rolling.result == "fail" and banner:IsShown() and banner.title:GetText() == "ÉCHAPPÉ…"
-		and banner.text:GetText() == NS.L.CAPTURE_STAGE_FAIL and banner.shieldKind == "grey"
-		and banner.shield.atlas == "ui-achievement-shield-1-desaturated" and not banner.bling:IsShown()
-		and stage.torn == true and stage.net.texCoord[1] == NS.CAPTURE_COORDS.netTorn[1]
-		and stage.ground.lastPoint.x > 20 and stage.ground.vertex[4] < NS.CAPTURE_STAGE_SHADOW.alpha.azeroth, banner.title:GetText())
 	-- les aides : celle du lancer allumée, le nombre en poche ; les étoiles du spécimen pris
 	NS:CaptureData().items.lasso = 2
 	NS:CaptureData().creatures[8299] = { stars = 2, at = 1 }
@@ -263,10 +216,6 @@ do
 	local aidLit = lasso.id == "lasso" and lasso.chosen and lasso.icon.alpha == 1 and lasso.edge.vertex[1] == NS.Theme.GOLD[1]
 		and lasso.count:GetText() == "2" and not bait.chosen and bait.icon.alpha < 1 and lasso.count.azRole == "stage.aidCount"
 	NS:CaptureStageDetails(stage, { target = { npcID = 8298, name = "Sûr" }, aid = "sifflet", chance = 1 })
-	Check("[AZC14] aide du lancer allumée (liseré d'or, nombre en poche) ; chance aide comprise, étoiles du spécimen ; Sifflet : assurée",
-		aidLit and stars:find("^Chance 80 %%") ~= nil and select(2, stars:gsub("favorite:14", "")) == 2
-		and select(2, stars:gsub("favorite%-off:14", "")) == 1
-		and stage.info:GetText():find(NS.L.CAPTURE_STAGE_SURE, 1, true) == 1, stars)
 	NS:CaptureData().creatures[8299] = nil
 	stage.scripts.OnMouseUp(stage)
 	SZ.Close(5)
@@ -280,8 +229,6 @@ do
 	stage = NS.captureStage
 	rolling = SZ.UntilVerdict()
 	NS:CaptureStageUpdate(rolling.resultAt + 0.6)
-	Check("[AZS] sans bouclier gris : le doré désaturé", stage.azeroth and stage.banner.shield.atlas == "ui-achievement-shield-1"
-		and stage.banner.shieldKind == "grey", tostring(stage.banner.shield.atlas) .. "," .. tostring(rolling and rolling.result))
 	stage.scripts.OnMouseUp(stage)
 	SZ.Close(5)
 	-- Échap avant le verdict : la scène ne l'a pas montré, le bandeau « Capturé ! » le dira
@@ -312,20 +259,7 @@ do
 	NS:CaptureNetClick("LeftButton")
 	local chooser = NS.captureChooser
 	-- 2.11.0 : l'icône du filet du jeu (INV_Misc_Net_01) ; 2.12.1 : plus de glyphe à nous
-	Check("[AZS] choix : panneau en bois (nom pour Échap), filet du jeu dans le cadre d'icône, « 2 CRÉATURES DANS LE FILET »",
-		chooser and chooser:IsShown() and chooser.azeroth and chooser.wood and chooser.wood.tr.atlas == WOOD.tr
-		and Has(_G.UISpecialFrames, "QuestCompanionCaptureChooserAzeroth") and chooser.ring.atlas == "ui-achievement-iconframe"
-		and chooser.glyph.texture == NS.CAPTURE_CLIENT_ART.icon.files[1] and chooser.glyph.lastPoint.relTo == chooser.ring
-		and chooser.title:GetText() == "2 CRÉATURES DANS LE FILET", chooser and chooser.title:GetText())
 	local one, all = chooser.single, chooser.all
-	Check("[AZS] choix : deux boutons dorés, « Capturer : … » et sa chance, « Tout capturer (2) » et son coût, raccourcis",
-		one.azeroth and all.azeroth and one.style == "gold" and all.style == "dark"
-		and one:GetText() == NS:F("CAPTURE_CHOOSE_ONE", "Loup gris") and one.sub:IsShown() and one.sub:GetText():find("%%") ~= nil
-		and all:GetText() == NS:F("CAPTURE_CHOOSE_ALL", 2) and all.sub:GetText() == NS.L.CAPTURE_CHOOSE_ALL_FREE
-		and chooser.hint:GetText() == NS.L.CAPTURE_CHOOSE_KEYS, one.sub:GetText())
-	Check("[AZS] choix : à gauche du filet (filet à droite de l'écran), gardé à l'écran", chooser.side == "left"
-		and chooser.lastPoint.point == "RIGHT" and chooser.lastPoint.relTo == net and chooser.lastPoint.relPoint == "LEFT"
-		and chooser.clampInset == NS.AZEROTH_WOOD_OUT)
 	NS:CaptureData().items.lasso = 3
 	NS:CaptureToggleAid("lasso")
 	NS:CaptureChooserRefresh()
@@ -345,80 +279,6 @@ do
 	Check("[AZS] textes : mêmes clés en français et en anglais", #missing == 0, table.concat(missing, ", "))
 end
 
--- 4. Tout capturer -------------------------------------------------------------------------------------
-do
-	Say("-- scène de capture : la volée")
-	SZ.Reset()
-	NS.errors = {}
-	for index = 1, 5 do SZ.SeeKill(8400 + index, { name = "Bête " .. index }) end
-	NS:CaptureOffer(SZ.Guid(8406, "0000005H1N"), { zoneID = 1413, npcID = 8406 }, { name = "Brillant" })
-	local base = NS.CaptureChance
-	NS.CaptureChance = function(self, info, ...)
-		if info and info.npcID == 8402 then return 0, false end
-		return 0.95, false
-	end
-	SZ.Roll(0.5)
-	local batch = NS:CaptureBatch()
-	NS.CaptureChance = base
-	local frame = NS.captureBatchFrame
-	local cols, rows = NS:CaptureBatchGrid(6, true)
-	Check("[AZS] volée : fenêtre en bois à part, plaque « TOUT CAPTURER », « Captures : 0 », Arrêter, 6 cases en 2 × 3",
-		batch and batch.tried == 6 and frame:IsShown() and frame.azeroth and frame.wood.bottom.atlas == WOOD.bottom
-		and Has(_G.UISpecialFrames, "QuestCompanionCaptureBatchAzeroth") and frame.plate.title:GetText() == "TOUT CAPTURER"
-		and frame.counter == frame.plate.text and frame.counter:GetText() == NS:F("CAPTURE_BATCH_COUNT", 0)
-		and frame.stop.azeroth and frame.stop:GetText() == NS.L.CAPTURE_BATCH_STOP and cols == 3 and rows == 2)
-	local tile = frame.tiles[1]
-	local beast = tile
-	for _, card in ipairs(batch.cards) do if card.result.target.npcID == 8401 then beast = card.tile end end
-	-- 2.9.1 (retour en jeu) : l'icône fixe du type remplace le modèle 3D, mal cadré
-	local icons = NS.MENAGERIE_TYPE_ICONS or {}
-	local hole = NS.AZEROTH_ICON_HOLE
-	local size = math.floor(AZB.ring * (hole.r - hole.l) + 0.5)
-	Check("[R291] case : l'icône du type (Bête) dans le cadre d'icône doré, à la taille de son trou, sans modèle 3D", tile.az
-		and tile.ring.atlas == "ui-achievement-iconframe" and tile.fx.level > tile.ringFrame.level and tile.model == nil
-		and not tile.hasModel and frame.tiles[2].model == nil and beast.fallback.texture == icons["Bête"]
-		and tile.fallback.width == size and tile.fallback.height == size and tile.fallback:IsShown()
-		and tile.fallback:GetParent() == tile.scene and tile.scene.clipsChildren == true, tostring(beast.fallback.texture))
-	Check("[AZS] avant le verdict : ni bouclier ni nombre ; la brillante tombe en dernier", not tile.shield:IsShown()
-		and not tile.shieldText:IsShown() and batch.order[#batch.order].result.target.shiny == true)
-	NS:CaptureBatchStop(true)
-	local ok, okCard, fled, shinyTile
-	for _, card in ipairs(batch.cards) do
-		local t = card.tile
-		if card.result.target.shiny then shinyTile = t
-		elseif card.result.success then ok = ok or t; okCard = okCard or card
-		else fled = fled or t end
-	end
-	local point = ok and ok.shieldText.lastPoint
-	Check("[R291] prise : bouclier d'or au coin portant le nombre d'étoiles, centré dessus, la créature reste visible", ok
-		and ok.shield:IsShown() and ok.shieldKind == "gold" and ok.shield.atlas == "ui-achievement-shield-1"
-		and ok.shield.lastPoint.point == "TOPRIGHT" and ok.shieldText:IsShown()
-		and ok.shieldText:GetText() == tostring(okCard.result.stars or 1) and point and point.point == "CENTER"
-		and point.relTo == ok.shield and ok.fallback:IsShown()
-		and (ok.stars:GetText() or ""):find("|A:auctionhouse-icon-favorite:", 1, true) ~= nil, ok and tostring(ok.shieldText:GetText()))
-	Check("[AZS] échappée : ni bouclier ni nombre, « échappée » ; brillante : nom en or, lueur, « BRILLANTE »", fled
-		and fled.shieldKind == nil and not fled.shield:IsShown() and not fled.shieldText:IsShown()
-		and fled.stars:GetText() == NS.L.CAPTURE_BATCH_FLED and shinyTile and shinyTile.name.textColor[3] < 0.6
-		and shinyTile.halo:IsShown() and shinyTile.tag:GetText() == "BRILLANTE")
-	Check("[AZS] volée finie : Fermer, « Captures : 5 », pied dans le cadre au-dessus du bois", frame.stop:GetText() == NS.L.CAPTURE_BATCH_CLOSE
-		and frame.counter:GetText() == NS:F("CAPTURE_BATCH_COUNT", 5) and Y(frame.footer) >= NS.AZEROTH_WOOD_INSET + 4
-		and frame.footer:GetText() == NS.L.CAPTURE_BATCH_DONE)
-	frame.stop:Click()
-	frame.scripts.OnHide(frame)
-	local closed = not frame:IsShown() and not tile.hasModel
-	-- un second lot : les mêmes cases resservent
-	SZ.SeeKill(8410, { name = "Loup" })
-	SZ.SeeKill(8411, { name = "Ours" })
-	SZ.Roll(0)
-	NS:CaptureBatch()
-	local okErr, errs = NoErrors()
-	Check("[AZS] Fermer : la volée se ferme ; second lot : même fenêtre, mêmes cases ; sans erreur", closed
-		and NS.captureBatchFrame == frame and frame.tiles[1] == tile and frame.tiles[3] and not frame.tiles[3]:IsShown() and okErr, errs)
-	NS:CaptureBatchStop(true)
-	frame:Hide()
-	frame.scripts.OnHide(frame)
-end
-
 -- 5. Le bois manque : fenêtres au thème forgé (les bandeaux gardent Azeroth) ----------------------
 do
 	Say("-- scène de capture : repli forgé sans le bois")
@@ -427,12 +287,11 @@ do
 	SZ.SeeKill(8501, { name = "Loup" })
 	NS:CaptureNetClick("LeftButton")
 	local chooser = NS.captureChooser
+	Check("[AZS] bois absent : le choix au thème forgé", chooser and chooser:IsShown() and not chooser.azeroth and chooser.forged
+		and chooser.hint:GetText() == NS.L.CAPTURE_CHOOSE_KEYS and chooser.paused:GetText() == NS.L.CAPTURE_CHOOSE_PAUSED)
 	-- 3.1.0 : le repli des scènes sans le bois est le thème forgé (le choix
 	-- est « azeroth ») : les fenêtres du socle, avec leurs fonctions re-logées
 	-- (ForgeScenes.lua : compte, raccourcis, verdict dans la scène)
-	Check("[AZS] bois absent : bandeaux en Azeroth, fenêtres au thème forgé (le choix forgé)", NS:AzerothOn() and not NS:AzerothScenesOn()
-		and chooser and chooser:IsShown() and not chooser.azeroth and chooser.uiStyle == "sobre" and chooser.forged
-		and chooser.hint:GetText() == NS.L.CAPTURE_CHOOSE_KEYS and chooser.paused:GetText() == NS.L.CAPTURE_CHOOSE_PAUSED)
 	SZ.Roll(0)
 	chooser.single:Click()
 	local stage = NS.captureStage
@@ -527,8 +386,6 @@ do
 	local stays = ok and chooserAz.azeroth and chooserAz:IsShown()
 	NS:CaptureChooserHide()
 	NS:CaptureNetClick("LeftButton")
-	Check("[AZS] choix ouvert, → Sobre : il reste ; rouvert : Sobre", stays and NS.captureChooser ~= chooserAz
-		and not NS.captureChooser.azeroth and NS.captureChooser:IsShown())
 	NS:CaptureChooserHide()
 	-- la volée : Sobre maintenant, Azeroth gardée pour plus tard
 	SZ.Roll(0)

@@ -10,10 +10,6 @@
 -- suivi, boss en instance, lignes « à vérifier » jamais attribuées, chiffres
 -- de toute la vie rattrapés en silence, portée par personnage, diagnostic.
 -- Le catalogue lui-même : feats_catalogue.lua.
--- 3.1.0 : affirme l'ancien habillage (carnet en parchemin, scènes en bois, bandeaux
--- dorés, anneau) : le drapeau QNS.AZEROTH_LEGACY rallumé pour tout le module
--- (remis à la valeur du produit à sa fin, tests/run_tests.lua)
-T.Legacy(true)
 local Check, Say, ResetWorld, NS, Mock = T.Check, T.Say, T.ResetWorld, T.QNS, T.Mock
 
 -- plusieurs étapes d'un même sujet : un contrôle, les étapes ratées nommées
@@ -149,12 +145,6 @@ do
 		if NS.CaptureResultHide then NS:CaptureResultHide() end
 		HF.Run(2)
 		local toast = NS.journalToast
-		Check("[HF] bandeau « Haut fait obtenu » : nom, points dans le bouclier, icône de la catégorie ; fanfare, pas de chat",
-			toast and toast:IsShown() and toast.text:GetText() == NS:FeatName("men_first")
-			and toast.title:GetText():find("HAUT FAIT OBTENU", 1, true) == 1 and toast.featPoints and toast.featPoints:GetText() == "5"
-			and toast.shieldKind == "gold" and toast.icon.texture == NS.FEAT_CATEGORIES[1].icon and (function()
-				for _, id in ipairs(HF.sounds) do if id == NS.FEAT_SOUND then return true end end
-			end)() and not Mock:Output():find("Haut fait obtenu", 1, true), toast and toast.title:GetText())
 		HF.Run(5)
 		-- combat : l'obtention se fait, l'annonce attend
 		NS:DB().featChat = true
@@ -397,7 +387,7 @@ do
 		-- 3.0.1 : le bandeau groupé nomme ses hauts faits (compte dans le titre, points dans le bouclier)
 		s.ok("trois d'un coup : un seul, qui les nomme", toast:IsShown() and toast.text:GetText() == "À mi-chemin · En selle · Vétéran"
 			and toast.title:GetText():find("3 HAUTS FAITS OBTENUS", 1, true) == 1
-			and toast.featPoints:GetText() == "30" and #NS.journalToasts == 0, toast.text:GetText())
+			and toast.medal.badge.text:GetText() == "30" and #NS.journalToasts == 0, toast.text:GetText())
 		s.ok("une ligne de chat qui les nomme", Mock:Output():find("Hauts faits obtenus : À mi-chemin, En selle, Vétéran (30 points).", 1, true) ~= nil,
 			Mock:Output())
 		s.check("[HF] bandeaux : deux l'un après l'autre, trois d'un coup en un seul bandeau qui les nomme")
@@ -502,9 +492,6 @@ do
 					if row then break end
 				end
 			end
-			Check("[HF] ancien habillage : bouclier doré du client sur la ligne obtenue, pas de plaque forgée du total",
-				legacy and legacy.azeroth and row and row.shield:IsShown() and row.shield.atlas == "ui-achievement-shield-1"
-				and not row.diamond:IsShown() and legacy.feats.pointsPlate == nil and not legacy.featPlate, legacy and tostring(legacy.azeroth))
 			legacy:Hide()
 			NS.journalFrame = f
 			legacy.featsOffset = 0

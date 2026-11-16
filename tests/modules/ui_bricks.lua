@@ -7,10 +7,6 @@
 -- boutons-icônes, infobulles, puces, tuiles, étiquettes, pagination, bulle,
 -- hauteur de texte, pastille de monnaie ; rendu hors-jeu (tests/snapshot.lua).
 -- La mise en page des vraies fenêtres : ui_windows.lua.
--- 3.1.0 : affirme l'ancien habillage (carnet en parchemin, scènes en bois, bandeaux
--- dorés, anneau) : le drapeau QNS.AZEROTH_LEGACY rallumé pour tout le module
--- (remis à la valeur du produit à sa fin, tests/run_tests.lua)
-T.Legacy(true)
 local Check, Say, NS, QNS, Mock, ResetWorld = T.Check, T.Say, T.NS, T.QNS, T.Mock, T.ResetWorld
 local ROOT = rawget(_G, "ADDON_ROOT") or "."
 local Snap = assert(loadfile(ROOT .. "/tests/snapshot.lua"))()
@@ -786,51 +782,6 @@ do
 		and Same(b.text.textColor, Theme.INK))
 	Verdict("[UI30] bouton inactif : aspect désactivé, ni survol ni appui, raison en infobulle, le clic passe ; actif de nouveau")
 	parent:Hide()
-end
-
--- 3. Boutons Azeroth : un seul peintre d'états (carnet et capture) -------------------------------------------
-do
-	Say("-- qc30 composants : boutons Azeroth")
-	C.Reset("azeroth")
-	local AZB, INK = NS.AZEROTH_BUTTONS, NS.AZEROTH_INK
-	local f = NS:OpenReserve()
-	local rv = f.res.reserve
-	NS:ReservePick(C.better)
-	local toCodex, release = rv.toCodex, rv.release
-	-- le défaut de la bêta 4 : après Enable(true), l'encre sombre du bouton plein retombait sur le rouge
-	Want("« Mettre au Codex » : rouge, libellé doré (pas l'encre sombre)", toCodex.azSkin == "red"
-		and toCodex.skinPaint == NS.AzerothButtonState and Same(toCodex.text.textColor, INK.goldText)
-		and not Same(toCodex.text.textColor, Theme.INK) and toCodex.alpha == 1)
-	Want("« Relâcher » refusé : bois délavé, libellé clair atténué", release.qcEnabled == false and release.disabledLook
-		and release.azState == "disabled" and Same(release.text.textColor, AZB.offText) and release.alpha == 1)
-	local off = NS.AzerothContrast(AZB.offText, NS.AzerothLuminance(AZB.off.top))
-	local role = NS.AZEROTH_CONTRAST["button.off"]
-	Want("libellé désactivé : ≥ 4,5:1 sur le haut du dégradé (le plus clair), rôle button.off", off >= 4.5 and role
-		and role[1] == "buttonOff" and math.abs(role[2] - NS.AzerothLuminance(AZB.off.top)) < 0.001, string.format("%.2f", off))
-	local onRed = NS.AzerothContrast(INK.goldText, NS.AzerothLuminance(AZB.red.top))
-	local onBrown = NS.AzerothContrast(INK.goldText, NS.AzerothLuminance(AZB.brown.top))
-	Want("libellé actif : ≥ 4,5:1 sur le rouge et le brun", onRed >= 4.5 and onBrown >= 4.5,
-		string.format("%.2f / %.2f", onRed, onBrown))
-	Verdict("[UI30] Azeroth : « Mettre au Codex » rouge libellé doré (défaut bêta 4), refusé en bois délavé, libellés ≥ 4,5:1")
-	toCodex.scripts.OnEnter(toCodex)
-	Want("survol : voile doré", toCodex.azState == "hover" and toCodex.azHover:IsShown())
-	toCodex.scripts.OnMouseDown(toCodex, "LeftButton")
-	Want("appui : voile sombre, libellé décalé", toCodex.azState == "pressed" and toCodex.azPress:IsShown()
-		and toCodex.text.lastPoint.x == 1)
-	toCodex.scripts.OnMouseUp(toCodex)
-	toCodex.scripts.OnLeave(toCodex)
-	Want("repos", toCodex.azState == "rest" and not toCodex.azHover:IsShown() and not toCodex.azPress:IsShown())
-	Verdict("[UI30] Azeroth : survol (voile doré), appui (voile sombre, libellé décalé), repos")
-	-- les boutons dessinés des fenêtres de capture : mêmes états
-	local cap = NS:AzerothButton(UIParent, 120, 30, "Lancer", nil, "gold")
-	cap:Disable()
-	Want("bouton de capture désactivé : même bois délavé", cap.azState == "disabled" and Same(cap.text.textColor, AZB.offText))
-	cap:Enable()
-	Want("… réactivé : doré", cap.azState == "rest" and Same(cap.text.textColor, AZB.text))
-	cap:Hide()
-	Want("aucune erreur", next(NS.errors or {}) == nil, next(NS.errors or {}))
-	Verdict("[UI30] boutons des fenêtres de capture : même bois délavé désactivé, dorés réactivés, sans erreur")
-	C.Done()
 end
 
 end

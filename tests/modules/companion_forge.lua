@@ -450,19 +450,6 @@ do
 	s.check("[FCOMP] Sobre : aucune brique forgée, effets muets ; né Sobre puis forgé : médaillon et filet lumineux posés")
 end
 
--- 12. L'ancien habillage (drapeau rallumé, atlas du client) : son anneau, pas le forgé -----------------
-do
-	Say("-- médaillon forgé : ancien habillage")
-	T.Legacy(true)
-	local frame = Fresh("azeroth", true)
-	local s = Steps()
-	s.ok("ancien habillage : anneau du client, pas de médaillon forgé", frame.ring == "azeroth" and frame.uiStyle == "azeroth"
-		and frame.azSkin and Shown(frame.azSkin) and frame.forgeSkin == nil)
-	s.ok("ses effets répondent par l'ancienne API", NS:AzerothShinyFX() == true)
-	T.Legacy(false)
-	s.check("[FCOMP] ancien habillage (drapeau) : l'anneau du client, le médaillon forgé jamais construit")
-end
-
 -- 13. Le battement d'aggro suit l'anneau ; le titre du petit menu ---------------------------------------
 do
 	Say("-- médaillon forgé : aggro, petit menu")

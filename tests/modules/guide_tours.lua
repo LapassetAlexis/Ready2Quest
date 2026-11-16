@@ -7,10 +7,6 @@
 --      tutoriel de la ménagerie 2.3.0 retiré (une seule vérification) et la
 --      remise à zéro, la visite des captures, celle du carnet, clic droit =
 --      carnet, l'explication de la migration et le cadeau de la 3.0.
--- 3.1.0 : affirme l'ancien habillage (carnet en parchemin, scènes en bois, bandeaux
--- dorés, anneau) : le drapeau QNS.AZEROTH_LEGACY rallumé pour tout le module
--- (remis à la valeur du produit à sa fin, tests/run_tests.lua)
-T.Legacy(true)
 local Check, Say, ResetWorld, NS, Mock = T.Check, T.Say, T.ResetWorld, T.QNS, T.Mock
 
 -- 1. La page Guide -------------------------------------------------------------------------------------
@@ -659,10 +655,6 @@ do
 			local ratio = NS.AzerothContrast(INK[entry[1]], entry[2])
 			if CONTRAST[role] ~= entry or ratio < entry[3] or entry[3] < 4.5 then bad[#bad + 1] = role .. "=" .. string.format("%.2f", ratio) end
 		end
-		Check("[STYLE] Azeroth : bulle de parchemin, rôles versés au tableau, ≥ 4,5:1, même fond que la bulle du compagnon",
-			c.uiStyle == "azeroth" and c.title.azRole == "tour.title" and c.text.azRole == "tour.text" and c.step.azRole == "tour.step"
-			and c.nextButton.azeroth and #bad == 0 and NS.TOUR_CONTRAST["tour.text"][2] == CONTRAST["bubble.text"][2]
-			and NS.TOUR_CONTRAST["tour.title"][2] == CONTRAST["bubble.name"][2], table.concat(bad, " "))
 		NS:TourStop()
 		P.Reset("sobre")
 		a = Anchor()

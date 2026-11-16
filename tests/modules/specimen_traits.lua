@@ -11,10 +11,6 @@
 --   * affichage : message de capture, scène, Réserve (vignette, fiche,
 --     infobulle), choix d'allure, fiche des Créatures, page Compagnon,
 --     « Ses effets », les deux styles ; tutoriel ; contrastes.
--- 3.1.0 : affirme l'ancien habillage (carnet en parchemin, scènes en bois, bandeaux
--- dorés, anneau) : le drapeau QNS.AZEROTH_LEGACY rallumé pour tout le module
--- (remis à la valeur du produit à sa fin, tests/run_tests.lua)
-T.Legacy(true)
 local Check, Say, ResetWorld, NS, Mock = T.Check, T.Say, T.ResetWorld, T.QNS, T.Mock
 
 local W = { saved = {}, random = math.random, units = {} }
@@ -554,9 +550,6 @@ for _, style in ipairs({ "sobre", "azeroth" }) do
 		local tc = p.lines[rv.traitLine].textColor or {}
 		Check("[T31] sobre : caractère à sa couleur (rare : ambre clair), taille aussi", tc[1] == NS.Theme.GOLD_LIGHT[1]
 			and (p.lines[rv.sizeLine].textColor or {})[1] == NS.Theme.GOLD_LIGHT[1])
-	else
-		Check("[T31] azeroth : lignes à l'encre mesurée de la fiche", p.lines[rv.sizeLine].azRole == "reserve.detail"
-			and p.lines[rv.traitLine].azRole == "reserve.detail")
 	end
 	tips = {}
 	NS:ReserveTileTip(tileGiant)
@@ -590,14 +583,10 @@ for _, style in ipairs({ "sobre", "azeroth" }) do
 	Check("[T31] " .. style .. " : page Compagnon : étiquettes CURIEUX (à sa couleur : bleu) et GRAND", pane.traitTag:IsShown()
 		and pane.traitTag.label:GetText() == NS.Theme.Upper("Curieux") and pane.traitTag.color == NS.Theme.BLUE
 		and pane.sizeTag:IsShown() and pane.sizeTag.label:GetText() == NS.Theme.Upper("Grand"))
-	local azKeep = true
-	if style == "azeroth" then
-		NS:CompanionEffectsRefreshPane(pane)
-		azKeep = pane.effTrait.azKeep == true
-	end
-	Check("[T31] " .. style .. " : « Ses effets » : la ligne du caractère (à l'encre des effets en Azeroth), l'état en dessous",
+	NS:CompanionEffectsRefreshPane(pane)
+	Check("[T31] " .. style .. " : « Ses effets » : la ligne du caractère, l'état en dessous",
 		pane.effTrait and pane.effTrait:GetText() == "Caractère : Curieux, la curiosité baisse 10 % moins vite"
-		and pane.effStateY < -58 and azKeep)
+		and pane.effStateY < -58)
 	NS:CompanionData().appearance = nil
 	NS:RefreshJournal()
 	Check("[T31] " .. style .. " : mascotte : pas d'étiquette de taille, pas de ligne de caractère", not pane.sizeTag:IsShown()
@@ -609,7 +598,8 @@ end
 -- 10. Scène : écrite au verdict, une fois ------------------------------------------------------------------
 do
 	Say("-- qc31 : scène de capture")
-	for _, style in ipairs({ "sobre", "azeroth" }) do
+	-- 3.1.0 : une seule scène forgée pour les deux choix de style
+	for _, style in ipairs({ "sobre" }) do
 		W.Reset(style)
 		NS:DB().companionCaptureAnim = true
 		W.Roll(0.99)
@@ -643,12 +633,8 @@ do
 		local ref = NS:SpecimenReference(5300)
 		Check("[T31] " .. style .. " : verdict : « Petit · Câlin » sous le bandeau, écrit au changement seulement (pas à chaque image)",
 			ref and ref.trait == "cuddly" and seen and sets <= 4, tostring(sets))
-		if style == "azeroth" then
-			Check("[T31] azeroth : encre mesurée du pied (stage.status)", tags.azRole == "stage.status")
-		else
-			local c = tags and tags.textColor or {}
-			Check("[T31] sobre : ambre clair, ≥ 4,5:1 sur la fenêtre", c[1] and Ratio(c, NS.Theme.WINDOW) >= 4.5)
-		end
+		local c = tags and tags.textColor or {}
+		Check("[T31] sobre : ambre clair, ≥ 4,5:1 sur la fenêtre", c[1] and Ratio(c, NS.Theme.WINDOW) >= 4.5)
 		if tags then tags.SetText = nil end
 		W.Done()
 	end

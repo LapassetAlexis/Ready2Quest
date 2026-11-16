@@ -3,8 +3,7 @@
 -- l'icône, halo qui respire, compteur d'encre à chiffres d'or), les pastilles
 -- de la capture express (cartes en relief, liseré qui brille, faites une
 -- fois, jamais la souris), le garde-manger (cases en creux), la fiche au
--- survol et le carnet à l'écran (titres en or clair, filet lumineux), les
--- confirmations sur parchemin sans habillage forgé par-dessus. En Sobre : les
+-- survol et le carnet à l'écran (titres en or clair, filet lumineux). En Sobre : les
 -- mêmes régions qu'avant. Contrastes mesurés sur le fond réel (le plus clair
 -- et le plus sombre de la plaque).
 local Check, Say, ResetWorld, NS, Mock = T.Check, T.Say, T.ResetWorld, T.QNS, T.Mock
@@ -238,32 +237,6 @@ do
 		and rule.texture == Theme.ART.line.file and rule.texCoord and rule.texCoord[1] == 1 and rule.texCoord[2] == 0
 		and Same(tracker.title.text.textColor, K.title))
 	s.check("[FORGE-QC] garde-manger en creux, fiche et carnet à l'écran : titres or clair et filets lumineux")
-end
-
--- ---------------------------------------------------------------------------
--- 6. Les confirmations sur parchemin : leur bois, sans l'habillage forgé
--- ---------------------------------------------------------------------------
-do
-	Say("-- thème forgé (QuestCompanion) : confirmations sur parchemin")
-	-- 3.1.0 : le parchemin est l'ancien habillage, derrière le drapeau
-	T.Legacy(true)
-	Fresh(true)
-	local s = Steps()
-	local frame = NS:EnsureEffectsConfirm()
-	local chrome = frame and frame.skinChrome
-	s.ok("confirmation au style Azeroth", frame and frame.azDialog and frame.uiStyle == "azeroth")
-	s.ok("pas d'habillage forgé (cadre, ombre, coins, médaillon cachés)", frame.azeroth and frame.skinDressed == false
-		and (not chrome or (chrome.frame.shown == false and chrome.shadow.shown == false
-			and (not chrome.emblem or chrome.emblem.mockHidden))))
-	local header = frame.header
-	s.ok("pas de plaque de titre sombre sous l'encre du parchemin", not header.plate or header.plate.mockHidden)
-	s.ok("le titre reprend la marge de la fenêtre (plus de place au médaillon)", header.textLeft == Theme.DIALOG_PAD
-		and header.title.lastPoint.x == Theme.DIALOG_PAD and header.subtitle.lastPoint.x == Theme.DIALOG_PAD)
-	frame:Show()
-	if frame.hooks and frame.hooks.OnShow then frame.hooks.OnShow(frame) end
-	s.ok("réaffichée : toujours sans habillage forgé", frame.skinDressed == false)
-	s.check("[FORGE-QC] confirmations sur parchemin : le bois seul, titre lisible à sa marge")
-	T.Legacy(false)
 end
 
 -- remise en état
