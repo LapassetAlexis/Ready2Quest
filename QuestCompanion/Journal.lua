@@ -591,28 +591,18 @@ local function ToastDecor(frame, entry)
 	if frame.icon and frame.icon.SetTexture then frame.icon:SetTexture((entry and entry.icon) or Theme.LOGO_SMALL) end
 	local points = entry and tonumber(entry.points)
 	if points and not frame.featPoints then
-		if frame.azeroth then
-			frame.featPoints = frame.banner:CreateFontString(nil, "OVERLAY", Theme.F_NUMBER)
-			-- au centre visuel de l'écu (2.8.2)
-			if ns.AzerothShieldCenter then ns.AzerothShieldCenter(frame.featPoints, frame.shield)
-			else frame.featPoints:SetPoint("CENTER", frame.shield, "CENTER", 0, 4) end
-			if ns.AzerothFont then ns.AzerothFont(frame.featPoints, 16, "OUTLINE") end
-			frame.featPoints:SetTextColor(Theme.WHITE[1], Theme.WHITE[2], Theme.WHITE[3], 1)
-		else
-			frame.featPoints = Theme.Text(frame, Theme.F_NUMBER, Theme.GOLD)
-			frame.featPoints:SetPoint("RIGHT", frame, "RIGHT", -12, 0)
-		end
+		frame.featPoints = Theme.Text(frame, Theme.F_NUMBER, Theme.GOLD)
+		frame.featPoints:SetPoint("RIGHT", frame, "RIGHT", -12, 0)
 		frame.featPoints:SetJustifyH("CENTER")
 	end
 	if frame.featPoints then
 		frame.featPoints:SetText(points and tostring(points) or "")
 		if points then frame.featPoints:Show() else frame.featPoints:Hide() end
 	end
-	if frame.stars and frame.azeroth then frame.stars:SetText((entry and entry.sub) or "") end
 	-- 3.1.0 : le bandeau du Sobre perdait la sous-ligne « Nouveau titre : X »
 	-- (seul l'ancien habillage l'écrivait) : une 3e ligne, créée à la
 	-- première sous-ligne, et le bandeau grandit le temps de l'afficher
-	if not frame.azeroth then
+	do
 		local sub = entry and entry.sub
 		if sub and sub ~= "" and not frame.stars and frame.text then
 			local fs = Theme.Text(frame, Theme.F_SMALL, Theme.GOLD_LIGHT)
