@@ -175,8 +175,8 @@ do
 			and pane.paras[5].text:find(NS:CaptureAidLabel("sifflet"), 1, true))
 		pane.rows[2]:Click()
 		Want("étoiles", f.guideSection == "stars" and pane.title.text == NS.L.GUIDE_SEC_stars
-			and pane.paras[1].text:find(NS.CAPTURE_STAR_ODDS[1] .. " %", 1, true)
-			and pane.paras[1].text:find(NS.CAPTURE_STAR_ODDS[3] .. " %", 1, true) and pane.paras[3].text:find("+0,25", 1, true))
+			and pane.paras[1].text:find(NS.CAPTURE_QUALITY_ODDS.normal[1] .. " %", 1, true)
+			and pane.paras[1].text:find(NS.CAPTURE_QUALITY_ODDS.normal[3] .. " %", 1, true) and pane.paras[3].text:find("+0,25", 1, true))
 		NS:JournalGuidePick("shiny")
 		Want("brillantes", pane.paras[1].text:find("1 chance sur 150", 1, true) and pane.paras[1].text:find("×" .. NS.SHINY_RANK_MULT, 1, true)
 			and pane.paras[2].text:find("1 sur 40", 1, true) and pane.paras[2].text:find(NS.SHINY_CHAIN_KILLS .. " abattus", 1, true)

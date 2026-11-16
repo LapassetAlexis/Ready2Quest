@@ -580,7 +580,7 @@ do
 		local def = Def("frame", "feat_eight")
 		s.ok("condition « Haut fait : … »", NS:CompanionLockText(def) == "Haut fait : " .. NS:FeatName("men_types_master")
 			and NS:FeatName("men_types_master") == "Les huit familles", NS:CompanionLockText(def))
-		s.ok("carnet : la source dit le haut fait", NS:JournalCosmeticSource({ def = Def("orn", "feat_eye"), tier = 0 })
+		s.ok("carnet : la source dit le haut fait", NS:CompanionRequirement(Def("orn", "feat_eye").unlock)
 			== "Haut fait : L'œil se ferme")
 		local hint
 		for _, c in ipairs(NS:CompanionChoices("bg")) do if c.value == "feat_atlas" then hint = c.disabled and c.hint end end

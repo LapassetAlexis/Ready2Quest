@@ -3905,6 +3905,25 @@ do
 	-- scènes de tests/snapshot.lua l'appellent, tests/modules/ui_windows.lua les joue)
 	_G.T = { Check = Check, Say = Say, ResetWorld = ResetWorld, Result = Result, NS = NS, QNS = QNS, Mock = Mock,
 		LoadModules = function() end }
+	-- catalogue d'une sorte de cosmétique, lu par l'API du compagnon (l'ancien
+	-- ns:JournalCollection, retiré de l'addon en 3.1.2 : plus aucune page ne s'en servait)
+	_G.T.Collection = function(kind)
+		local ns = QNS
+		local lists = { app = "COMPANION_APPEARANCES", orn = "COMPANION_ORNAMENTS", frame = "COMPANION_FRAMES",
+			bg = "COMPANION_BACKGROUNDS" }
+		local data = ns:CompanionData()
+		local current = { app = data.appearance, frame = ns:CompanionCurrentStyle("frame").id,
+			bg = ns:CompanionCurrentStyle("bg").id }
+		local list = {}
+		for _, def in ipairs(ns[lists[kind]] or {}) do
+			local owned = ns:CompanionIsUnlocked(kind, def)
+			local equipped
+			if kind == "orn" then equipped = owned and ns:CompanionOrnamentShown(def) else equipped = current[kind] == def.id end
+			list[#list + 1] = { kind = kind, def = def, owned = owned, equipped = equipped and true or false,
+				tier = tonumber(def.tier) or 0 }
+		end
+		return list
+	end
 	-- créatures brillantes : jamais au hasard pendant les tests (shiny.lua règle sa chance)
 	if QNS then QNS.SHINY_CHANCE = 0 end
 	-- missions du jour : pas de tirage automatique (companion_daily.lua les tire lui-même)

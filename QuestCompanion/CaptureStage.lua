@@ -203,18 +203,18 @@ ns.CAPTURE_RANK_FALLBACK = RANK_FALLBACK
 -- Le jeton du socle (fiche 21) est une couleur de texte par rang
 -- (Theme.RANK[Theme.RankKey(classe)]) : elle donne `text` ; la marque reste
 -- la couleur de qualité du jeu
-local function Rank(id, pips)
+local function Rank(id)
 	local r = RANK_FALLBACK[id]
 	local text = r.text
 	if type(Theme.RANK) == "table" and type(Theme.RankKey) == "function" then
 		local token = Theme.RANK[Theme.RankKey(id)]
 		if type(token) == "table" and tonumber(token[1]) then text = token end
 	end
-	return { color = r.mark, text = text, pips = pips }
+	return { color = r.mark, text = text }
 end
 local RARITY = {
-	trivial = Rank("trivial", 1), minus = Rank("minus", 1), normal = Rank("normal", 1), elite = Rank("elite", 2),
-	rare = Rank("rare", 3), rareelite = Rank("rareelite", 4), worldboss = Rank("worldboss", 5),
+	trivial = Rank("trivial"), minus = Rank("minus"), normal = Rank("normal"), elite = Rank("elite"),
+	rare = Rank("rare"), rareelite = Rank("rareelite"), worldboss = Rank("worldboss"),
 }
 ns.CAPTURE_RARITY = RARITY
 
@@ -300,7 +300,7 @@ end
 function ns:CaptureRarity(target)
 	if target and target.shiny then
 		local gold = Theme.GOLD_LIGHT
-		return { color = gold, text = gold, pips = (RARITY[target.class] or RARITY.normal).pips }
+		return { color = gold, text = gold }
 	end
 	return RARITY[(target and target.class) or "normal"] or RARITY.normal
 end

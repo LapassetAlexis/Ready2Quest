@@ -450,8 +450,6 @@ local FR2 = {
 	JRN_COLL_orn           = "Ornements",
 	JRN_COLL_frame         = "Cadres",
 	JRN_COLL_bg            = "Fonds",
-	JRN_COLL_SRC_BASE      = "possédé d'office",
-	JRN_COLL_SRC_TIER      = "coffre de zone, palier %d",
 	JRN_SEC_menagerie      = "Créatures",
 	JRN_SUB_menagerie      = "Toutes les créatures capturables, numérotées : en couleur celles que tu as capturées.",
 	JRN_MEN_all            = "Toutes",
@@ -547,8 +545,6 @@ local EN2 = {
 	JRN_COLL_orn           = "Ornaments",
 	JRN_COLL_frame         = "Frames",
 	JRN_COLL_bg            = "Backgrounds",
-	JRN_COLL_SRC_BASE      = "owned from the start",
-	JRN_COLL_SRC_TIER      = "zone chest, tier %d",
 	JRN_SEC_menagerie      = "Creatures",
 	JRN_SUB_menagerie      = "Every creature you can capture, numbered: the ones you captured are in colour.",
 	JRN_MEN_all            = "All",
@@ -2277,43 +2273,6 @@ end
 -- ---------------------------------------------------------------------------
 -- Aperçus
 -- ---------------------------------------------------------------------------
--- Catalogue d'une sorte de cosmétique : { kind, def, owned, equipped, label, tier }
-local CATALOG = { app = "COMPANION_APPEARANCES", orn = "COMPANION_ORNAMENTS", frame = "COMPANION_FRAMES",
-	bg = "COMPANION_BACKGROUNDS" }
-function ns:JournalCollection(kind)
-	local list = {}
-	local data = self:CompanionData()
-	local current = {
-		app = data.appearance,
-		frame = self.CompanionCurrentStyle and self:CompanionCurrentStyle("frame").id,
-		bg = self.CompanionCurrentStyle and self:CompanionCurrentStyle("bg").id,
-	}
-	-- les créatures capturées vivent dans la Ménagerie : ici, les cosmétiques
-	local catalog = ns[CATALOG[kind]] or {}
-	for _, def in ipairs(catalog) do
-		local owned = self:CompanionIsUnlocked(kind, def)
-		local equipped
-		if kind == "orn" then equipped = owned and self:CompanionOrnamentShown(def)
-		else equipped = current[kind] == def.id end
-		list[#list + 1] = { kind = kind, def = def, owned = owned, equipped = equipped and true or false,
-			label = L[def.label] or def.id, tier = tonumber(def.tier) or 0 }
-	end
-	return list
-end
-
-function ns:JournalCosmeticSource(entry)
-	if entry.def.captured then
-		local when = entry.def.at and rawget(_G, "date") and select(2, pcall(date, "%d/%m/%Y", entry.def.at))
-		return self:F("CAPTURE_SRC", tostring(when or "?"))
-	end
-	if entry.tier >= 1 then return self:F("JRN_COLL_SRC_TIER", entry.tier) end
-	if entry.def.unlock and self.CompanionRequirement then
-		local ok, text = pcall(self.CompanionRequirement, self, entry.def.unlock)
-		if ok and type(text) == "string" and text ~= "" then return text end
-	end
-	return L.JRN_COLL_SRC_BASE
-end
-
 -- ---------------------------------------------------------------------------
 -- Rafraîchissement
 -- ---------------------------------------------------------------------------

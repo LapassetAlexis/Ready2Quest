@@ -32,7 +32,7 @@ ns.CAPTURE_QUEUE_TIME = 30        -- s par candidat, à partir de la fin du comb
 ns.CAPTURE_QUEUE_MAX = 12         -- au-delà, les moins intéressants sortent
 ns.CAPTURE_STAR_MAX = 3
 -- (2.15.0 : les chances de qualité sont dans CaptureSpecimens.lua,
--- CAPTURE_QUALITY_ODDS ; ns.CAPTURE_STAR_ODDS y reste, celles d'un monstre ordinaire)
+-- CAPTURE_QUALITY_ODDS ; les chances d'un monstre ordinaire : CAPTURE_QUALITY_ODDS.normal)
 -- 2.12.1 : les étoiles et le glyphe du filet viennent du client. Étoiles :
 -- l'atlas « auctionhouse-icon-favorite » (pleine) et sa variante « -off »
 -- (vide) ; en texture simple, l'étoile des marqueurs de raid en repli.
