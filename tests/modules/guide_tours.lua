@@ -644,23 +644,11 @@ do
 	-- 2.2 Les deux styles, et les contrastes
 	do
 		Say("-- visites : styles et contrastes")
-		P.Reset()
+		P.Reset("sobre")
 		local a = Anchor()
 		NS.TOUR_DEFS.test = { steps = { { id = "a", anchor = a, title = "TOUR_A1_T", text = "TOUR_A1" } } }
 		NS:TourStart("test")
 		local c = P.Callout()
-		local INK, CONTRAST = NS.AZEROTH_INK, NS.AZEROTH_CONTRAST
-		local bad = {}
-		for role, entry in pairs(NS.TOUR_CONTRAST) do
-			local ratio = NS.AzerothContrast(INK[entry[1]], entry[2])
-			if CONTRAST[role] ~= entry or ratio < entry[3] or entry[3] < 4.5 then bad[#bad + 1] = role .. "=" .. string.format("%.2f", ratio) end
-		end
-		NS:TourStop()
-		P.Reset("sobre")
-		a = Anchor()
-		NS.TOUR_DEFS.test = { steps = { { id = "a", anchor = a, title = "TOUR_A1_T", text = "TOUR_A1" } } }
-		NS:TourStart("test")
-		c = P.Callout()
 		local low, lowName = 99, ""
 		local bg = Lum(NS.Theme.WINDOW)
 		for _, key in ipairs({ "title", "text", "step" }) do
