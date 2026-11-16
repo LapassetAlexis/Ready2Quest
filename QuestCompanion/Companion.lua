@@ -3129,6 +3129,63 @@ function ns:CompanionPlaceStars(frame, square)
 	return forge and "forge" or "square"
 end
 
+-- 3.1.2 : les étoiles d'un fond étoilé scintillent au hasard. Chacune
+-- s'allume et s'éteint doucement à son rythme (durée tirée entre min et max),
+-- et une étoile éteinte reparaît parfois ailleurs dans le portrait (le disque
+-- du médaillon, ou le cadre carré). Une horloge légère, rien sans fond étoilé
+-- ni cadre visible.
+ns.COMPANION_STAR_TWINKLE = { tick = 0.1, min = 1.2, max = 3.5, low = 0.05, high = 0.9, move = 0.6, edge = 8 }
+local TW = ns.COMPANION_STAR_TWINKLE
+
+local function RandomSpot(frame)
+	local forge = frame.ring == "forge" and ns.FORGE_RING
+	if forge then
+		local radius = (forge.disc or 88) / 2 - TW.edge
+		local angle, r = math.random() * 2 * math.pi, math.sqrt(math.random()) * radius
+		return "CENTER", "TOP", (forge.x or 0) + r * math.cos(angle), (forge.y or 0) + r * math.sin(angle)
+	end
+	local w = (frame.GetWidth and frame:GetWidth()) or 104
+	local h = (frame.GetHeight and frame:GetHeight()) or 104
+	return "TOPLEFT", "TOPLEFT", TW.edge + math.random() * math.max(1, w - 2 * TW.edge),
+		-(TW.edge + math.random() * math.max(1, (h * 0.6) - TW.edge))
+end
+
+function ns:CompanionStarsTick(now)
+	local frame = self.companionFrame
+	if not (frame and frame.starsOn and frame.stars and frame.IsShown and frame:IsShown()) then return false end
+	now = now or ((ns.Now and ns.Now()) or 0)
+	for _, star in ipairs(frame.stars) do
+		local tw = star.twinkle
+		if not tw then
+			tw = { from = TW.low, to = TW.low + math.random() * (TW.high - TW.low), at = now,
+				dur = TW.min + math.random() * (TW.max - TW.min) }
+			star.twinkle = tw
+		end
+		local t = (now - tw.at) / tw.dur
+		if t >= 1 then
+			-- étape finie : on repart vers l'autre bout ; une étoile éteinte change parfois de place
+			local wasLow = tw.to <= TW.low + 0.01
+			if wasLow and math.random() < TW.move then
+				local point, rel, x, y = RandomSpot(frame)
+				star:ClearAllPoints()
+				star:SetPoint(point, frame, rel, x, y)
+				star.moved = true
+			end
+			tw.from = tw.to
+			tw.to = wasLow and (TW.low + math.random() * (TW.high - TW.low)) or TW.low
+			tw.at, tw.dur, t = now, TW.min + math.random() * (TW.max - TW.min), 0
+		end
+		-- en douceur (ni marche, ni clignotement)
+		local k = t * t * (3 - 2 * t)
+		if star.SetAlpha then star:SetAlpha(tw.from + (tw.to - tw.from) * k) end
+	end
+	return true
+end
+ns.Every("companionStars", ns.COMPANION_STAR_TWINKLE.tick, function()
+	local ok, err = pcall(ns.CompanionStarsTick, ns)
+	if not ok and ns.RecordError then ns:RecordError("companion:stars", err) end
+end)
+
 -- Dégradé vertical : API récente (couleurs CreateColor), sinon l'ancienne
 -- (SetGradientAlpha), sinon rien (l'aplat teinté reste)
 local function ApplyGradient(tex, top, bottom)
@@ -3179,7 +3236,9 @@ function ns:CompanionApplyBackground()
 	end
 	for _, star in ipairs(frame.stars or {}) do
 		if def.stars then star:Show() else star:Hide() end
+		star.twinkle, star.moved = nil, nil
 	end
+	frame.starsOn = def.stars and true or nil
 	ns:CompanionPlaceStars(frame)
 	frame.bgStyle = def.id
 	frame.bgTexture = path

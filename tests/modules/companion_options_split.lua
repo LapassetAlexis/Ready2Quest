@@ -59,3 +59,40 @@ do
 		mode == "forge" and #out == 0 and square == "square" and frame.stars[1].lastPoint.point == "TOPLEFT",
 		table.concat(out, ","))
 end
+
+-- 3.1.2 : les étoiles scintillent au hasard, et reparaissent ailleurs dans le disque
+do
+	Say("-- fond étoilé : scintillement")
+	local saved, savedRandom = NS.companionFrame, math.random
+	local frame = CreateFrame("Frame")
+	frame:SetSize(104, 104)
+	frame.stars, frame.starsOn, frame.ring = {}, true, "forge"
+	for i = 1, #NS.COMPANION_STARS do frame.stars[i] = CreateFrame("Frame") end
+	NS.companionFrame = frame
+	frame:Show()
+	local seq, n = { 0.9, 0.1, 0.5, 0.3, 0.7 }, 0
+	math.random = function() n = n + 1; return seq[(n - 1) % #seq + 1] end
+	local alphas, moved, outside = {}, 0, 0
+	local now = 0
+	for _ = 1, 120 do
+		now = now + 0.1
+		NS:CompanionStarsTick(now)
+		alphas[#alphas + 1] = frame.stars[1].alpha or 1
+	end
+	local R, lo, hi = NS.FORGE_RING, 1, 0
+	for _, a in ipairs(alphas) do lo, hi = math.min(lo, a), math.max(hi, a) end
+	for _, star in ipairs(frame.stars) do
+		if star.moved then
+			moved = moved + 1
+			local p = star.lastPoint
+			local dx, dy = (p.x or 0) - (R.x or 0), (p.y or 0) - (R.y or 0)
+			if math.sqrt(dx * dx + dy * dy) > (R.disc or 88) / 2 then outside = outside + 1 end
+		end
+	end
+	frame.starsOn = nil
+	local idle = NS:CompanionStarsTick(now + 1) == false
+	math.random, NS.companionFrame = savedRandom, saved
+	Check("[OPTS] fond étoilé : chaque étoile s'allume et s'éteint en douceur, reparaît ailleurs dans le disque ; rien sans fond étoilé",
+		hi - lo > 0.5 and moved > 0 and outside == 0 and idle,
+		string.format("%.2f-%.2f, déplacées %d, hors disque %d", lo, hi, moved, outside))
+end
