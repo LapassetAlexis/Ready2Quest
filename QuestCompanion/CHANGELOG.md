@@ -3,8 +3,9 @@
 ## 3.1.2
 
 - **Choisir une aide en capture express** : au survol du filet, une petite barre des trois aides (appât, lasso, sifflet) apparaît juste au-dessus, avec ce qu'il t'en reste. Un clic sur une aide lance le filet tout de suite avec elle ; son infobulle donne la chance du lancer. Une aide épuisée est grisée. Marche aussi en combat.
+- **Le filet se déplace seul** : Alt + glisser (comme le compagnon, selon le réglage « Déplacer le compagnon ») le détache du portrait ; il garde sa place, même si tu déplaces le compagnon. « Rattacher le filet au compagnon » (page Compagnon) ou /qc filet rattacher le remet à côté du portrait.
 
-*English:* pick an aid in express capture: hovering the net shows a small bar of the three aids (bait, lasso, whistle) just above it, with how many you have left. Clicking an aid throws the net right away with it; its tooltip gives the catch chance. Used-up aids are greyed out. Works in combat too.
+*English:* pick an aid in express capture: hovering the net shows a small bar of the three aids (bait, lasso, whistle) just above it, with how many you have left. Clicking an aid throws the net right away with it; its tooltip gives the catch chance. Used-up aids are greyed out. Works in combat too. The net can now be moved on its own: Alt + drag (like the companion, following the "Moving the companion" setting) detaches it from the portrait and it keeps its place; "Attach the net to the companion" (Companion page) or /qc net attach puts it back.
 
 ## 3.1.1
 

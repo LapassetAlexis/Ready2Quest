@@ -575,6 +575,56 @@ do
 	if NS.captureAidBar then NS.captureAidBar:Hide() end
 end
 
+-- 3.1.2 : le filet se déplace seul ---------------------------------------------------------
+do
+	Say("-- filet : déplacé indépendamment du compagnon")
+	XP.Reset()
+	XP.Roll(0)
+	XP.SeeKill(6400, { name = "Raptor M" })
+	local net = NS.captureNetButton
+	local savedAlt = rawget(_G, "IsAltKeyDown")
+	local alt = false
+	_G.IsAltKeyDown = function() return alt end
+	-- sans Alt (réglage par défaut « Alt + glisser ») : rien ne bouge
+	net:GetScript("OnDragStart")(net)
+	local refused = net.netDragging == nil
+	-- Alt + glisser : détaché, gardé
+	alt = true
+	net:GetScript("OnDragStart")(net)
+	local started = net.netDragging == true
+	net:ClearAllPoints()
+	net:SetPoint("CENTER", UIParent, "CENTER", 120, -40)
+	net:GetScript("OnDragStop")(net)
+	local saved = NS:DB().captureNetPoint
+	-- le relâcher du glisser ne lance pas le filet
+	local before = #NS:CaptureQueueState()
+	local clicked = NS:CaptureNetClick("LeftButton")
+	local notThrown = clicked == nil and #NS:CaptureQueueState() == before
+	-- replacé : la place gardée, plus collé au portrait
+	NS:CapturePlaceNet()
+	local p = net.lastPoint
+	Check("[NET] Alt + glisser détache le filet et garde sa place ; sans Alt rien ; le relâcher ne lance pas",
+		refused and started and saved and saved.point == "CENTER" and saved.x == 120 and saved.y == -40 and notThrown
+		and p and p.relTo == UIParent and p.x == 120 and p.y == -40 and net.moved == true,
+		tostring(saved and saved.x) .. "/" .. tostring(p and p.relTo == UIParent))
+	-- un peu plus tard, le clic lance
+	Mock:Advance(1)
+	local rolling = NS:CaptureNetClick("LeftButton")
+	-- rattacher : réglage et commande
+	XP.SeeKill(6401, { name = "Raptor N", spawn = "00001A2B3F" })
+	local found
+	for _, page in ipairs(NS.OPTION_PAGES or {}) do
+		if page.id == "companionMain" then for _, row in ipairs(page.rows) do if row.key == "captureNetAttach" then found = row end end end
+	end
+	NS:RunOptionAction("captureNetAttach")
+	local attached = NS:DB().captureNetPoint == nil and net.lastPoint and net.lastPoint.relTo == NS.companionFrame
+	NS:DB().captureNetPoint = { point = "CENTER", x = 10, y = 10 }
+	NS.EXTRA_COMMANDS["filet"](NS, "rattacher")
+	Check("[NET] le clic suivant lance ; « Rattacher le filet au compagnon » (réglage, /qc filet rattacher) le recolle au portrait",
+		rolling and found and found.kind == "action" and attached and NS:DB().captureNetPoint == nil)
+	_G.IsAltKeyDown = savedAlt
+end
+
 -- Rendu au harnais
 for _, name in ipairs(GLOBALS) do _G[name] = XP.saved[name] end
 math.random = XP.random

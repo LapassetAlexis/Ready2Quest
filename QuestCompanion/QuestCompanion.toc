@@ -105,3 +105,4 @@ Bindings.lua
 Discovery.lua
 CaptureExpress.lua
 CaptureAidBar.lua
+CaptureNetMove.lua
