@@ -1,5 +1,14 @@
 # Journal des modifications
 
+## 1.36.0 — Portée d'aggro plus juste, en paliers
+
+- **Portée d'aggro : des paliers sous la barre de nom**, à la place du trait. Six rectangles fins, deux rouges, trois ambre, un vert, d'autant plus allumés que tu es loin de la portée du monstre, avec la distance dessous (« ~17 m », ou la fourchette « 15-20 m »). C'est le nouveau style par défaut, pour tout le monde ; la pastille reste au choix (Options › Portée d'aggro › Marque).
+- **Portée de base plus juste** : 15 m à niveau égal au lieu de 20 (mesurée autour de 14,6 m sur Forever). Les alertes ne s'allument plus 10 m trop tôt.
+- **Des mesures plus fines** : tes sorts offensifs servent aussi de règle (une portée par sort, de 5 à 60 m), en plus des objets ; entre deux paliers, la distance est estimée d'après ta course (« ~17 m »).
+- **La portée apprise en jouant** : quand un monstre t'attaque alors que tu n'as rien fait, seul, la distance à laquelle il t'a repéré est retenue (par monstre, par type, en tout ; 20 valeurs au plus). Elle remplace l'estimation, avec une étoile dans l'infobulle (« Aggro ~13* m »). Réglage « Apprendre la portée en jouant » (activé) ; le nombre d'échantillons dans /r2q diag.
+
+*English:* aggro range: steps under the nameplate replace the line — six thin rectangles (two red, three amber, one green) that light up the further you are, with the distance below ("~17 yd" or "15-20 yd"); this is the new default for everyone; the dot stays available. Base range is now 15 yd at equal level instead of 20 (measured around 14.6 on Forever), so warnings no longer fire 10 yd early. Finer measurement: your offensive spells act as extra range checks (one per range, 5 to 60 yd), and between two steps the distance is estimated from your movement. Range learned as you play: when a monster attacks you while you did nothing, solo, the distance it noticed you from is kept (per monster, per type, overall; up to 20 values) and replaces the estimate, marked with a star in the tooltip. Setting "Learn the range as you play" (on); sample count in /r2q diag.
+
 ## 1.35.0 — Thème forgé, Groupe prêt, Tout apprendre
 
 - **Thème forgé** : toutes les fenêtres de Ready2Quest changent d'allure. Cadre d'orfèvre doré, médaillon du logo au coin, boutons en relief dont la couleur dit le geste (or : action principale ; vert : ajouter ; rouge : jeter ou retirer ; bleu arcane : action neutre), champs et barres en creux, titres dans la police du jeu ; ce que tu choisis s'éclaire en bleu. Actif par défaut ; « Style de l'interface » (page Général) ou /r2q style azeroth|sobre pour garder l'aspect d'avant.

@@ -1,5 +1,11 @@
 # QuestCompanion
 
+## 3.1.1
+
+- **Le compagnon se range pendant un vol** : en griffon (ou toute autre monture de vol), le cadre du compagnon et son filet disparaissent, et reviennent à l'arrivée. Réglage « Masquer pendant un vol » (page Compagnon, activé par défaut).
+
+*English:* the companion now hides during flight paths: its frame and net disappear on a flight and come back when you land. Setting "Hide during flights" (Companion page, on by default).
+
 ## 3.1.0 — Thème forgé, capture express et Partager
 
 - **Thème forgé, partout** : toutes les fenêtres de QuestCompanion changent d'habit. Cadre d'orfèvre doré, médaillon du logo au coin, boutons en relief dont la couleur dit le geste (or : action principale ; vert : ajouter ; rouge : retirer), champs et curseurs en creux, titres dans la police du jeu. Le carnet, la fiche de dresseur, le filet, les scènes de capture et les bandeaux le portent aussi. QuestCompanion a sa couleur : le bleu arcane pour les titres, l'or pour ce que tu choisis (onglet, ligne, filtre). Il n'a plus besoin des textures du client (là où elles manquaient, tout restait en Sobre). Le style Sobre reste proposé, inchangé (réglage « Style de l'interface », page Compagnon, ou /qc style azeroth|sobre).

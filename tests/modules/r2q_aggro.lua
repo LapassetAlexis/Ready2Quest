@@ -116,8 +116,8 @@ do
 		and NS:FindModule("aggro").key == "aggroEnabled" and NS:FindModule("portee") ~= nil)
 	local page
 	for _, def in ipairs(NS.OPTION_PAGES) do if def.id == "aggro" then page = def end end
-	Check("[AGGRO] sous-page du QoL, 5 réglages (dont le style de marque)", page and page.parent == "qol" and page.group == "OPT_GROUP_QOL"
-		and #page.rows == 5 and page.rows[5].key == "aggroStyle")
+	Check("[AGGRO] sous-page du QoL, 6 réglages (style de marque, apprentissage)", page and page.parent == "qol" and page.group == "OPT_GROUP_QOL"
+		and #page.rows == 6 and page.rows[5].key == "aggroStyle" and page.rows[6].key == "aggroLearn")
 	local db = NS:DB()
 	Check("[AGGRO] défauts : actif, danger seul, infobulle, anneaux", db.aggroEnabled == true and db.aggroKey == "alert"
 		and NS:AggroKey() == "alert" and db.aggroTooltip == true and db.aggroRings == true)
@@ -150,10 +150,10 @@ end
 -- 2. Formule et verdicts -------------------------------------------------------
 do
 	Say("-- aggro : portée estimée")
-	-- joueur, monstre -> rayon : 20 à niveau égal, ±1 m par niveau, borné à [5, 45],
+	-- joueur, monstre -> rayon : 15 à niveau égal (1.36.0), ±1 m par niveau, borné à [5, 45],
 	-- « ?? » = dix niveaux de plus, illisible = rien
 	local R, bad = NS.AggroRadius, {}
-	for _, c in ipairs({ { 20, 20, 20 }, { 25, 20, 15 }, { 20, 25, 25 }, { 60, 1, 5 }, { 1, 60, 45 }, { 30, -1, 30 },
+	for _, c in ipairs({ { 20, 20, 15 }, { 25, 20, 10 }, { 20, 25, 20 }, { 60, 1, 5 }, { 1, 60, 45 }, { 30, -1, 25 },
 		{ nil, 20, nil }, { 20, nil, nil } }) do
 		if R(c[1], c[2]) ~= c[3] then bad[#bad + 1] = tostring(c[1]) .. "/" .. tostring(c[2]) .. "=" .. tostring(R(c[1], c[2])) end
 	end
@@ -291,29 +291,29 @@ end
 do
 	Say("-- aggro : infobulle")
 	A.Reset()
-	A.Mob("mouseover", 20, 22)
+	A.Mob("mouseover", 20, 17)
 	GameTooltip:ClearLines()
 	Check("[AGGRO] sans la touche : rien dans l'infobulle", NS:AggroOnTooltip(GameTooltip, {}) == false and #GameTooltip.lines == 0)
 	A.W.shift = true
 	NS:AggroOnTooltip(GameTooltip, {})
 	-- 1.30.0 : on prévient 5 m avant la portée
 	Check("[AGGRO] ligne rouge : portée, distance, verdict, mention d'estimation",
-		A.Tip():find("Aggro ~20 m · tu es à 20-25 m · danger, trop près", 1, true) ~= nil
+		A.Tip():find("Aggro ~15 m · tu es à 15-20 m · danger, trop près", 1, true) ~= nil
 		and GameTooltip.styled[1].color[1] == NS.Theme.RED[1] and A.Tip():find("Estimation", 1, true) ~= nil, A.Tip())
 
 	GameTooltip:ClearLines()
-	A.W.level = 30
-	A.Mob("mouseover", 20, 22)     -- 10 niveaux de moins : portée 10
+	A.W.level = 26
+	A.Mob("mouseover", 20, 22)     -- 6 niveaux de moins : portée 9
 	NS:AggroOnTooltip(GameTooltip, {})
 	Check("[AGGRO] monstre bien plus faible : à la limite, ambre (marge de 12 m)",
-		A.Tip():find("Aggro ~10 m", 1, true) ~= nil and A.Tip():find("à la limite", 1, true) ~= nil
+		A.Tip():find("Aggro ~9 m", 1, true) ~= nil and A.Tip():find("à la limite", 1, true) ~= nil
 		and GameTooltip.styled[1].color[1] == NS.Theme.ORANGE[1], A.Tip())
 	A.W.level = 20
 
 	GameTooltip:ClearLines()
 	A.Mob("mouseover", 20, nil)     -- aucune mesure possible
 	NS:AggroOnTooltip(GameTooltip, {})
-	Check("[AGGRO] sans distance : la portée seule", A.Tip():find("Aggro ~20 m", 1, true) ~= nil
+	Check("[AGGRO] sans distance : la portée seule", A.Tip():find("Aggro ~15 m", 1, true) ~= nil
 		and A.Tip():find("tu es", 1, true) == nil, A.Tip())
 
 	GameTooltip:ClearLines()
@@ -345,11 +345,12 @@ do
 	A.W.silent = { [8] = true, [10] = true, [15] = true, [25] = true, [40] = true, [45] = true, [60] = true, [80] = true }
 	A.W.interact = true
 	GameTooltip:ClearLines()
-	A.Mob("mouseover", 20, 22)
+	A.Mob("mouseover", 20, 18)
 	NS:AggroOnTooltip(GameTooltip, {})
 	local close = A.Tip()
 	GameTooltip:ClearLines()
-	A.W.level = 30
+	A.W.level = 26
+	A.Mob("mouseover", 20, 22)
 	NS:AggroOnTooltip(GameTooltip, {})
 	local weak = A.Tip()
 	A.W.level = 20
@@ -357,7 +358,7 @@ do
 	A.Mob("mouseover", 20, 60)
 	NS:AggroOnTooltip(GameTooltip, {})
 	Check("[AGGRO] danger seul : infobulle sans touche (paliers classiques, ambre, fourchette complète au loin)",
-		close:find("tu es à 20-28 m · danger, trop près", 1, true) ~= nil and weak:find("à la limite", 1, true) ~= nil
+		close:find("tu es à 10-20 m · danger, trop près", 1, true) ~= nil and weak:find("à la limite", 1, true) ~= nil
 		and A.Tip():find("plus de 35 m", 1, true) ~= nil, close .. " | " .. weak .. " | " .. A.Tip())
 	A.W.silent = nil
 	NS:DB().aggroKey = "shift"
@@ -385,30 +386,59 @@ do
 	Check("[AGGRO] marque accrochée au cadre de base de la barre", A.Ring("nameplate1"):GetParent() == A.W.plates.nameplate1
 		and A.Ring("nameplate1").lastPoint and A.Ring("nameplate1").lastPoint.relTo == A.W.plates.nameplate1)
 
-	-- style par défaut : la pastille (losange du client à gauche) ; 1.33.1 : plus d'anneau
+	-- 1.36.0 : style par défaut, les paliers ; la pastille (losange du client à
+	-- gauche) reste au choix ; 1.33.1 : plus d'anneau
 	local r1 = A.Ring("nameplate1")
-	Check("[AGGRO] marque par défaut : pastille (losange du client), à gauche de la barre", NS:AggroStyle() == "dot" and r1.dot:IsShown()
-		and r1.ringTexture == nil and not r1.bar:IsShown() and r1.texture == r1.dot and r1.dot.clientRole == "diamond"
+	local defaultSteps = NS:AggroStyle() == "steps" and r1.steps:IsShown() and not r1.dot:IsShown()
+	NS:AggroSetStyle("dot")
+	Check("[AGGRO] marque par défaut : paliers ; au choix, la pastille (losange du client), à gauche de la barre", defaultSteps
+		and NS:AggroStyle() == "dot" and r1.dot:IsShown()
+		and r1.ringTexture == nil and not r1.steps:IsShown() and r1.texture == r1.dot and r1.dot.clientRole == "diamond"
 		and r1.dotBack.lastPoint and r1.dotBack.lastPoint.relTo == A.W.plates.nameplate1 and r1.dotBack.lastPoint.point == "RIGHT")
-	NS:AggroSetStyle("bar")
-	Check("[AGGRO] style trait : une ligne sous la barre, à la couleur", r1.bar:IsShown() and not r1.dot:IsShown()
-		and r1.texture == r1.bar and r1.bar.vertex[1] == NS.Theme.RED[1])
+	NS:AggroSetStyle("steps")
+	local r3 = A.Ring("nameplate3")
+	local function Lit(ring)
+		local n = 0
+		for i, sq in ipairs(ring.stepSquares) do
+			local c = NS.AGGRO_STEP_COLORS[i]
+			if math.abs(sq.vertex[1] - c[1]) < 1e-6 then n = n + 1 end
+		end
+		return n
+	end
+	Check("[AGGRO] style paliers : six rectangles sous la barre (place du trait), allumés selon la distance, distance dessous",
+		r1.steps:IsShown() and not r1.dot:IsShown() and #r1.stepSquares == 6
+		and r1.steps.lastPoint and r1.steps.lastPoint.relTo == A.W.plates.nameplate1 and r1.steps.lastPoint.point == "TOP" and r1.steps.lastPoint.relPoint == "BOTTOM"
+		and r1.stepsLit <= 2 and Lit(r1) == r1.stepsLit and r3.stepsLit == 6 and Lit(r3) == 6
+		and type(r1.stepsText.text) == "string" and r1.stepsText.text ~= "",
+		tostring(r1.stepsLit) .. "/" .. tostring(r3.stepsLit) .. " « " .. tostring(r1.stepsText.text) .. " »")
+	-- seuils des paliers : mêmes que le verdict
+	local steps = {}
+	for _, case in ipairs({ { 20, 10, 15, 1 }, { 20, 22, 28, 2 }, { 20, 25, 28, 3 }, { 20, 28, 30, 4 }, { 20, 30, 35, 5 },
+		{ 20, 35, nil, 6 }, { 20, nil, nil, nil } }) do
+		local got = NS.AggroSteps(case[1], case[2], case[3])
+		if got ~= case[4] then steps[#steps + 1] = table.concat({ tostring(case[2]), tostring(case[3]), tostring(got) }, "/") end
+	end
+	Check("[AGGRO] paliers : 1 dans la portée, 2 juste avant, 3 à 5 en marge, 6 loin", #steps == 0, table.concat(steps, ", "))
 	NS:AggroSetStyle("ring")
-	local ringRefused = NS:AggroStyle() == "bar" and r1.bar:IsShown()
+	local ringRefused = NS:AggroStyle() == "steps" and r1.steps:IsShown()
+	NS:AggroSetStyle("bar")
+	local barRefused = NS:AggroStyle() == "steps"
 	NS:AggroSetStyle("nimportequoi")
 	local choices = NS:AggroStyleChoices()
-	Check("[AGGRO] anneau retiré (1.33.1) et style inconnu refusés ; deux styles : pastille, trait", ringRefused
-		and NS:AggroStyle() == "bar" and #choices == 2 and choices[1].value == "dot" and choices[2].value == "bar"
-		and NS.AGGRO_STRINGS.fr.AGGRO_STYLE_ring == nil)
-	-- 1.33.1 : migration une seule fois, l'anneau sauvegardé devient la pastille
+	Check("[AGGRO] anneau et trait retirés, style inconnu refusé ; deux styles : pastille, paliers", ringRefused and barRefused
+		and NS:AggroStyle() == "steps" and #choices == 2 and choices[1].value == "steps" and choices[2].value == "dot"
+		and NS.AGGRO_STRINGS.fr.AGGRO_STYLE_ring == nil and NS.AGGRO_STRINGS.fr.AGGRO_STYLE_bar == nil)
+	-- migration 1.36.0, une seule fois : anneau, trait ou pastille d'avant -> paliers ;
+	-- ensuite, la pastille choisie reste
 	local db = NS:DB()
-	db.aggroStyle, db.aggroStyleSchema = "ring", nil
-	Check("[AGGRO] migration : anneau -> pastille", NS:AggroStyle() == "dot" and db.aggroStyle == "dot" and db.aggroStyleSchema == 2)
-	db.aggroStyle = "bar"
-	Check("[AGGRO] migration faite : le trait choisi ensuite reste", NS:AggroStyle() == "bar" and db.aggroStyle == "bar")
-	db.aggroStyle, db.aggroStyleSchema = "bar", nil
-	Check("[AGGRO] migration : le trait gardé tel quel", NS:AggroStyle() == "bar" and db.aggroStyleSchema == 2)
+	local migrated = {}
+	for _, old in ipairs({ "ring", "bar", "dot" }) do
+		db.aggroStyle, db.aggroStyleSchema = old, 3
+		if NS:AggroStyle() ~= "steps" or db.aggroStyleSchema ~= 4 then migrated[#migrated + 1] = old end
+	end
 	NS:AggroSetStyle("dot")
+	Check("[AGGRO] migration 1.36.0 : les paliers pour tout le monde, une fois ; la pastille choisie ensuite reste",
+		#migrated == 0 and NS:AggroStyle() == "dot" and db.aggroStyle == "dot", table.concat(migrated, ", "))
 
 	-- le joueur s'approche : le verdict suit au passage suivant
 	A.W.units.nameplate3.dist = 18

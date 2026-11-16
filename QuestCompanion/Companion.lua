@@ -294,6 +294,8 @@ local FR = {
 	OPT_COMP_COMBAT_FADE   = "Estomper en combat",
 	OPT_COMP_COMBAT_FADE_DESC = "Le compagnon se fait discret pendant un combat et te raconte tout après.",
 	OPT_COMP_HIDE_INSTANCE = "Masquer en donjon et en raid",
+	OPT_COMP_HIDE_TAXI = "Masquer pendant un vol",
+	OPT_COMP_HIDE_TAXI_DESC = "En griffon (ou autre monture de vol) : le compagnon et son filet reviennent à l'arrivée.",
 	OPT_COMP_HIDE_INSTANCE_DESC = "Le compagnon et son filet reviennent à la sortie.",
 	OPT_COMP_AGGRO         = "Alerte « plusieurs monstres sur toi »",
 	OPT_COMP_AGGRO_DESC    = "Le cadre du compagnon clignote en rouge quand deux monstres ou plus te visent.",
@@ -521,6 +523,8 @@ local EN = {
 	OPT_COMP_COMBAT_FADE   = "Fade in combat",
 	OPT_COMP_COMBAT_FADE_DESC = "Your companion keeps quiet during a fight and tells you everything afterwards.",
 	OPT_COMP_HIDE_INSTANCE = "Hide in dungeons and raids",
+	OPT_COMP_HIDE_TAXI = "Hide during flights",
+	OPT_COMP_HIDE_TAXI_DESC = "On a flight path: the companion and its net come back when you land.",
 	OPT_COMP_HIDE_INSTANCE_DESC = "The companion and its net come back when you leave.",
 	OPT_COMP_AGGRO         = "“Several monsters on you” alert",
 	OPT_COMP_AGGRO_DESC    = "The companion's frame flashes red when two or more monsters target you.",
@@ -560,6 +564,7 @@ ns.RegisterDefaults({
 	-- 2.10.0 : discret en combat, masqué en donjon (au choix), glisser avec Alt
 	companionCombatFade   = true,
 	companionHideInstance = false,
+	companionHideTaxi = true,        -- 3.1.1 : rangé pendant un vol (griffon, chauve-souris…)
 	companionMove         = "alt",
 })
 
@@ -584,6 +589,9 @@ ns.AddOptionPage({
 		{ key = "companionHideInstance", label = "OPT_COMP_HIDE_INSTANCE", kind = "bool",
 			describe = function() return L.OPT_COMP_HIDE_INSTANCE_DESC end,
 			onChange = function() ns:CompanionUpdateVisibility(); if ns.CaptureQueueRefresh then ns:CaptureQueueRefresh() end end },
+		{ key = "companionHideTaxi", label = "OPT_COMP_HIDE_TAXI", kind = "bool",
+			describe = function() return L.OPT_COMP_HIDE_TAXI_DESC end,
+			onChange = function() ns:CompanionTaxiChanged() end },
 		{ key = "companionAggroBlink", label = "OPT_COMP_AGGRO",      kind = "action",
 			choices = function() return ns:CompanionModeChoices(ns.COMPANION_AGGRO_MODES, "COMP_AGGRO_") end,
 			current = function() return ns.CompanionAggroMode and ns:CompanionAggroMode() or "solo" end,
@@ -1302,8 +1310,10 @@ function ns:CompanionCombatSummary()
 	return false
 end
 
--- Donjon ou raid, avec le réglage « Masquer en donjon et en raid »
+-- Donjon ou raid, avec le réglage « Masquer en donjon et en raid » ; 3.1.1 :
+-- aussi pendant un vol (UnitOnTaxi), avec « Masquer pendant un vol » (activé)
 local function InstanceHidden(db)
+	if db.companionHideTaxi ~= false and Call(rawget(_G, "UnitOnTaxi"), "player") == true then return true end
 	if not db.companionHideInstance then return false end
 	local inside, kind = Call(rawget(_G, "IsInInstance"))
 	if not inside then return false end
@@ -3152,6 +3162,24 @@ function ns:CompanionApplyBackground()
 	return def
 end
 
+-- 3.1.1 : vol commencé ou fini : visibilité et contexte relus (les
+-- événements de contrôle arrivent un peu avant UnitOnTaxi : relu aussi après)
+function ns:CompanionTaxiChanged()
+	self:CompanionUpdateVisibility()
+	if self.captureNetButton and self.CaptureQueueRefresh then pcall(self.CaptureQueueRefresh, self) end
+end
+
+function ns:CompanionTaxiSoon()
+	self:CompanionTaxiChanged()
+	local timer = rawget(_G, "C_Timer")
+	if timer and type(timer.After) == "function" then
+		timer.After(1, function()
+			local ok, err = pcall(ns.CompanionTaxiChanged, ns)
+			if not ok and ns.RecordError then ns:RecordError("companion:taxi", err) end
+		end)
+	end
+end
+
 -- Affiche ou cache selon le module et le réglage « Afficher »
 function ns:CompanionUpdateVisibility()
 	local db = self:DB()
@@ -3274,6 +3302,8 @@ function ns:CompanionTick(seconds)
 	local rt = RT()
 	local onTaxi = Call(rawget(_G, "UnitOnTaxi"), "player") == true
 	if rt.onTaxi and not onTaxi then self:CompanionAdd("curiosity", CURIOSITY.flight) end
+	-- 3.1.1 : départ ou arrivée d'un vol : rangé ou rendu (filet compris)
+	if (rt.onTaxi == true) ~= onTaxi then self:CompanionTaxiChanged() end
 	rt.onTaxi = onTaxi
 	-- somnolence : il se réveille en jouant, pas en attendant
 	if data.sleepy then
@@ -4267,6 +4297,10 @@ local HANDLERS = {
 	CONFIRM_BINDER         = function() ns:CompanionOnNpc("innkeeper") end,
 	-- tutoriel : suspendu en combat, (re)lancé à la sortie
 	-- 2.10.0 : discret en combat (bulle fermée, cadre et filet estompés)
+	-- 3.1.1 : vol en griffon : rangé au départ, rendu à l'arrivée (UnitOnTaxi
+	-- suit l'événement de peu : relu une seconde plus tard aussi)
+	PLAYER_CONTROL_LOST    = function() ns:CompanionTaxiSoon() end,
+	PLAYER_CONTROL_GAINED  = function() ns:CompanionTaxiSoon() end,
 	PLAYER_REGEN_DISABLED  = function()
 		ns.companionFighting = Clock()
 		ns:CompanionPauseTutorial()

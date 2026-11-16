@@ -12,12 +12,14 @@
 --     tranquille. En « Danger seul », sans touche, seul le rouge s'affiche (un
 --     avertissement, pas un tableau) ; Maj tenue montre tout. Deux styles (réglage « Marque ») : pastille (un losange à
 --     gauche de la barre, qui bat quand c'est rouge ; par défaut depuis la
---     1.29.1) ou trait (une ligne fine sous la barre). 1.33.1 : l'anneau (le
+--     1.29.1) ou paliers (1.36.0, remplace le trait : six rectangles fins
+--     sous la barre, du rouge au vert, d'autant plus allumés qu'on est
+--     loin, avec la distance dessous). 1.33.1 : l'anneau (le
 --     grand halo d'avant) est retiré, ses réglages passent à la pastille. La marque est accrochée au cadre de base de la barre de nom
 --     (C_NamePlate), pas à son habillage : elle suit aussi les barres d'un
 --     addon (EllesmereUI, Plater…).
 --
--- Portée (règles classiques, estimation) : 20 m à niveau égal, 1 m de moins
+-- Portée (règles classiques, estimation) : 15 m à niveau égal (1.36.0), 1 m de moins
 -- par niveau du joueur au-dessus du monstre, 1 m de plus par niveau en
 -- dessous, bornée à [5, 45]. Un neutre (réaction ≥ 4), une bestiole ou un
 -- joueur n'a pas de marque.
@@ -34,7 +36,9 @@ local ADDON, ns = ...
 local L = ns.L
 local Theme = ns.Theme
 
-local AGGRO_BASE   = 20     -- yards, à niveau égal
+-- 1.36.0 : 15 m à niveau égal (mesuré autour de 14,6 m sur Forever) au lieu de 20 ;
+-- la portée apprise en jeu (AggroPlus.lua) remplace cette estimation quand elle existe
+local AGGRO_BASE   = 15     -- yards, à niveau égal
 local AGGRO_MIN    = 5
 local AGGRO_MAX    = 45
 -- 1.30.0 : un avertissement, pas un constat : le rouge s'allume quelques
@@ -48,7 +52,12 @@ local SKULL_GAP    = 10     -- niveau « ?? » : au moins dix niveaux de plus
 ns.AGGRO_TICK = 0.2
 ns.AGGRO_DOT_SIZE = 16          -- pastille (losange)
 ns.AGGRO_DOT_INSET = 14         -- bord droit de la pastille, depuis le bord gauche de la barre : tout près du nom
-ns.AGGRO_BAR_W, ns.AGGRO_BAR_H, ns.AGGRO_BAR_Y = 70, 3, 10   -- trait sous la barre
+-- 1.36.0 : paliers sous la barre, à la place du trait (retour bêta 1 : sous la
+-- barre et plus fins) : six rectangles, deux rouges, trois ambre, un vert ;
+-- allumés de gauche à droite selon la marge entre la distance et la portée
+ns.AGGRO_STEPS = 6
+ns.AGGRO_STEP_W, ns.AGGRO_STEP_H, ns.AGGRO_STEP_GAP, ns.AGGRO_STEPS_Y = 11, 3, 2, 10
+ns.AGGRO_STEP_DIM = 0.3         -- carré éteint : sa couleur, assombrie
 
 -- ---------------------------------------------------------------------------
 -- Chaînes, réglages, page d'options, module
@@ -59,8 +68,12 @@ local FR = {
 	OPT_AGGRO_TOOLTIP    = "Dans l'infobulle des monstres",
 	OPT_AGGRO_RINGS      = "Marque sur les barres de nom",
 	OPT_AGGRO_STYLE      = "Marque",
+	OPT_AGGRO_LEARN      = "Apprendre la portée en jouant",
 	AGGRO_STYLE_dot      = "Pastille (discrète)",
-	AGGRO_STYLE_bar      = "Trait sous la barre",
+	AGGRO_STYLE_steps    = "Paliers (distance)",
+	AGGRO_STEPS_BAND     = "%s-%s %s",
+	AGGRO_STEPS_BELOW    = "<%s %s",
+	AGGRO_STEPS_BEYOND   = ">%s %s",
 	AGGRO_KEY_alert      = "Danger seul (tout avec Maj)",
 	AGGRO_KEY_shift      = "Maj",
 	AGGRO_KEY_ctrl       = "Ctrl",
@@ -72,6 +85,9 @@ local FR = {
 	AGGRO_DIST_BAND      = "tu es à %s-%s %s",
 	AGGRO_DIST_BELOW     = "tu es à moins de %s %s",
 	AGGRO_DIST_BEYOND    = "tu es à plus de %s %s",
+	AGGRO_DIST_EST       = "tu es à ~%s %s",
+	AGGRO_LEARNED_MARK   = "*",
+	AGGRO_STEPS_EST      = "~%s %s",
 	AGGRO_VERDICT_red    = "danger, trop près",
 	AGGRO_VERDICT_amber  = "à la limite",
 	AGGRO_VERDICT_green  = "hors de portée",
@@ -83,6 +99,8 @@ local FR = {
 	MSG_DIAG_AGGRO_IDLE  = "en veille",
 	MSG_DIAG_AGGRO_ALERT = "danger seul",
 	MSG_DIAG_AGGRO_STEPS = "  aggro : paliers qui répondent : %s %s",
+	MSG_DIAG_AGGRO_LEARN = "  aggro : portée apprise en jouant : %d échantillon(s)%s",
+	MSG_DIAG_AGGRO_LEARN_OFF = " (apprentissage coupé)",
 	MSG_DIAG_AGGRO_NOSTEP = "aucun",
 	MSG_DIAG_AGGRO_COMBAT = "en combat (masqué)",
 	MSG_DIAG_AGGRO_YES   = "oui",
@@ -95,8 +113,12 @@ local EN = {
 	OPT_AGGRO_TOOLTIP    = "In monster tooltips",
 	OPT_AGGRO_RINGS      = "Mark on nameplates",
 	OPT_AGGRO_STYLE      = "Mark",
+	OPT_AGGRO_LEARN      = "Learn the range as you play",
 	AGGRO_STYLE_dot      = "Dot (subtle)",
-	AGGRO_STYLE_bar      = "Line under the bar",
+	AGGRO_STYLE_steps    = "Steps (distance)",
+	AGGRO_STEPS_BAND     = "%s-%s %s",
+	AGGRO_STEPS_BELOW    = "<%s %s",
+	AGGRO_STEPS_BEYOND   = ">%s %s",
 	AGGRO_KEY_alert      = "Danger only (all with Shift)",
 	AGGRO_KEY_shift      = "Shift",
 	AGGRO_KEY_ctrl       = "Ctrl",
@@ -108,6 +130,9 @@ local EN = {
 	AGGRO_DIST_BAND      = "you are %s-%s %s away",
 	AGGRO_DIST_BELOW     = "you are within %s %s",
 	AGGRO_DIST_BEYOND    = "you are over %s %s away",
+	AGGRO_DIST_EST       = "you are ~%s %s away",
+	AGGRO_LEARNED_MARK   = "*",
+	AGGRO_STEPS_EST      = "~%s %s",
 	AGGRO_VERDICT_red    = "danger, too close",
 	AGGRO_VERDICT_amber  = "borderline",
 	AGGRO_VERDICT_green  = "out of range",
@@ -119,6 +144,8 @@ local EN = {
 	MSG_DIAG_AGGRO_IDLE  = "idle",
 	MSG_DIAG_AGGRO_ALERT = "danger only",
 	MSG_DIAG_AGGRO_STEPS = "  aggro: range steps answering: %s %s",
+	MSG_DIAG_AGGRO_LEARN = "  aggro: range learned while playing: %d sample(s)%s",
+	MSG_DIAG_AGGRO_LEARN_OFF = " (learning off)",
 	MSG_DIAG_AGGRO_NOSTEP = "none",
 	MSG_DIAG_AGGRO_COMBAT = "in combat (hidden)",
 	MSG_DIAG_AGGRO_YES   = "yes",
@@ -134,9 +161,10 @@ ns.RegisterDefaults({
 	aggroKey     = "alert",   -- alert (1.31.0, danger seul), shift, ctrl, alt ou always
 	aggroTooltip = true,
 	aggroRings   = true,
-	aggroStyle   = "dot",     -- dot ou bar (1.33.1 : ring migré vers dot)
+	aggroStyle   = "steps",   -- steps ou dot (1.33.1 : ring -> dot ; 1.36.0 : paliers par défaut)
+	aggroLearn   = true,      -- 1.36.0 : apprendre la portée réelle en jeu (AggroPlus.lua)
 })
-ns.AGGRO_STYLES = { "dot", "bar" }
+ns.AGGRO_STYLES = { "steps", "dot" }
 
 ns.AGGRO_KEYS = { "alert", "shift", "ctrl", "alt", "always" }
 -- 1.31.0 : « danger seul » : le rouge sans touche, Maj montre tout
@@ -158,6 +186,7 @@ if ns.AddOptionPage then
 				choices = function() return ns:AggroStyleChoices() end,
 				current = function() return ns:AggroStyle() end,
 				choose = function(value) ns:AggroSetStyle(value) end },
+			{ key = "aggroLearn",   label = "OPT_AGGRO_LEARN",   kind = "bool" },
 		},
 	})
 end
@@ -203,16 +232,19 @@ function ns:AggroSetKey(value)
 	self:AggroRefresh()
 end
 
--- 1.33.1 : migration une seule fois : l'anneau retiré devient la pastille
+-- migration une seule fois : 1.33.1 l'anneau retiré devient la pastille ;
+-- 1.36.0 les paliers deviennent le style par défaut, pour tout le monde (la
+-- valeur par défaut était écrite dans la sauvegarde : un choix de la pastille
+-- ne se distingue pas du défaut ; elle reste au choix dans les options)
 function ns:AggroStyle()
 	local db = self:DB()
-	if db.aggroStyleSchema ~= 2 then
-		if db.aggroStyle == "ring" then db.aggroStyle = "dot" end
-		db.aggroStyleSchema = 2
+	if db.aggroStyleSchema ~= 4 then
+		db.aggroStyle = "steps"
+		db.aggroStyleSchema = 4
 	end
 	local style = db.aggroStyle
 	for _, key in ipairs(self.AGGRO_STYLES) do if key == style then return style end end
-	return "dot"
+	return "steps"
 end
 
 function ns:AggroSetStyle(value)
@@ -288,6 +320,22 @@ function ns.AggroVerdict(radius, low, high)
 end
 
 ns.AGGRO_COLORS = { red = Theme.RED, amber = Theme.ORANGE, green = Theme.GREEN }
+-- couleur de chaque palier, de gauche à droite
+ns.AGGRO_STEP_COLORS = { Theme.RED, Theme.RED, Theme.ORANGE, Theme.ORANGE, Theme.ORANGE, Theme.GREEN }
+
+-- Paliers allumés (1 à 6) : mêmes seuils que le verdict. Dans la portée : 1 ;
+-- dans les AGGRO_WARN mètres avant : 2 (rouge) ; jusqu'à AGGRO_MARGIN : 3 à 5
+-- (ambre) ; au-delà : 6 (vert). nil sans portée ni distance.
+function ns.AggroSteps(radius, low, high)
+	radius, low, high = Num(radius), Num(low), Num(high)
+	if not radius or (not low and not high) then return nil end
+	local margin = (low or 0) - radius
+	if margin < 0 then return 1 end
+	if margin < AGGRO_WARN then return 2 end
+	if margin >= AGGRO_MARGIN then return ns.AGGRO_STEPS end
+	local span = (AGGRO_MARGIN - AGGRO_WARN) / 3
+	return math.min(5, 3 + math.floor((margin - AGGRO_WARN) / span))
+end
 
 -- ---------------------------------------------------------------------------
 -- Distance par paliers (approche de LibRangeCheck-2.0, contrôles « hostiles »)
@@ -359,6 +407,11 @@ local function Ladder()
 	for _, step in ipairs(ns.AGGRO_INTERACT) do
 		local index = step[2]
 		ladder[#ladder + 1] = { range = step[1], test = function(unit) return InteractInRange(index, unit) end }
+	end
+	-- 1.36.0 : portées des sorts du joueur (AggroPlus.lua), des paliers en plus
+	if ns.AggroSpellSteps then
+		local ok, extra = pcall(ns.AggroSpellSteps, ns)
+		for _, step in ipairs(ok and type(extra) == "table" and extra or {}) do ladder[#ladder + 1] = step end
 	end
 	table.sort(ladder, function(a, b) return a.range < b.range end)
 	ns.aggroLadder = ladder
@@ -451,17 +504,31 @@ end
 -- Portée, fourchette et verdict d'une unité hostile, en valeurs (aucune
 -- table : appelé pour chaque barre de nom, cinq fois par seconde)
 -- redOnly (1.31.0) : seul le rouge compte, la mesure s'arrête au-delà
+-- 1.36.0 : portée apprise en jeu si elle existe ; distance estimée entre deux
+-- paliers (est) une fois un palier franchi (sure), sinon la borne basse
 local function Evaluate(self, unit, redOnly)
-	local radius = ns.AggroRadius(Call("UnitLevel", "player"), Call("UnitLevel", unit))
+	local playerLevel, mobLevel = Call("UnitLevel", "player"), Call("UnitLevel", unit)
+	local radius = ns.AggroRadius(playerLevel, mobLevel)
 	if not radius then return nil end
+	local learned
+	if self.AggroLearnedRadius then
+		local ok, value = pcall(self.AggroLearnedRadius, self, unit, playerLevel, mobLevel)
+		if ok and value then radius, learned = value, true end
+	end
 	local low, high = self:AggroDistance(unit, redOnly and radius + AGGRO_WARN or nil)
-	return radius, low, high, ns.AggroVerdict(radius, low, high)
+	local est, sure
+	if self.AggroTrack then
+		local ok, e, s2 = pcall(self.AggroTrack, self, unit, low, high, playerLevel, mobLevel)
+		if ok then est, sure = e, s2 end
+	end
+	local near = (sure and est) or low
+	return radius, low, high, ns.AggroVerdict(radius, near, high), est, sure, learned
 end
 
 function ns:AggroEvaluate(unit, redOnly)
-	local radius, low, high, verdict = Evaluate(self, unit, redOnly)
+	local radius, low, high, verdict, est, sure, learned = Evaluate(self, unit, redOnly)
 	if not radius then return nil end
-	return { radius = radius, low = low, high = high, verdict = verdict }
+	return { radius = radius, low = low, high = high, verdict = verdict, est = est, sure = sure, learned = learned }
 end
 
 local function Yards(value) return tostring(math.floor((tonumber(value) or 0) + 0.5)) end
@@ -478,14 +545,17 @@ function ns:AggroTooltipText(unit)
 		return self:F("AGGRO_LINE_RADIUS", Yards(eval.radius), u), Theme.GOLD
 	end
 	local distance
-	if eval.high == nil then
+	if eval.sure and eval.est then
+		distance = self:F("AGGRO_DIST_EST", Yards(eval.est), u)
+	elseif eval.high == nil then
 		distance = self:F("AGGRO_DIST_BEYOND", Yards(eval.low), u)
 	elseif (eval.low or 0) <= 0 then
 		distance = self:F("AGGRO_DIST_BELOW", Yards(eval.high), u)
 	else
 		distance = self:F("AGGRO_DIST_BAND", Yards(eval.low), Yards(eval.high), u)
 	end
-	local text = self:F("AGGRO_LINE", Yards(eval.radius), u, distance, L["AGGRO_VERDICT_" .. eval.verdict])
+	local text = self:F("AGGRO_LINE", Yards(eval.radius) .. (eval.learned and L.AGGRO_LEARNED_MARK or ""), u, distance,
+		L["AGGRO_VERDICT_" .. eval.verdict])
 	return text, self.AGGRO_COLORS[eval.verdict]
 end
 
@@ -578,11 +648,30 @@ local function RingFor(plate)
 	Theme.SetDiamond(frame.dot)
 	frame.dot:SetSize(ns.AGGRO_DOT_SIZE, ns.AGGRO_DOT_SIZE)
 	frame.dot:SetPoint("CENTER", frame.dotBack, "CENTER", 0, 0)
-	-- trait : une ligne fine sous la barre
-	frame.bar = frame:CreateTexture(nil, "OVERLAY")
-	frame.bar:SetTexture(Theme.SOLID or "Interface\\Buttons\\WHITE8X8")
-	frame.bar:SetSize(ns.AGGRO_BAR_W, ns.AGGRO_BAR_H)
-	frame.bar:SetPoint("TOP", plate, "BOTTOM", 0, ns.AGGRO_BAR_Y)
+	-- 1.36.0 : paliers au-dessus de la barre, centrés, la distance dessous
+	local w, h, gap, count = ns.AGGRO_STEP_W, ns.AGGRO_STEP_H, ns.AGGRO_STEP_GAP, ns.AGGRO_STEPS
+	local width = count * w + (count - 1) * gap
+	frame.steps = CreateFrame("Frame", nil, frame)
+	frame.steps:SetSize(width, h + 14)
+	frame.steps:SetPoint("TOP", plate, "BOTTOM", 0, ns.AGGRO_STEPS_Y)
+	frame.stepSquares = {}
+	for i = 1, count do
+		local back = frame.steps:CreateTexture(nil, "ARTWORK")
+		back:SetTexture(Theme.SOLID or "Interface\\Buttons\\WHITE8X8")
+		back:SetSize(w + 2, h + 2)
+		back:SetPoint("TOPLEFT", frame.steps, "TOPLEFT", (i - 1) * (w + gap) - 1, 1)
+		Theme.Shade(back, Theme.SHADE.strong)
+		local square = frame.steps:CreateTexture(nil, "OVERLAY")
+		square:SetTexture(Theme.SOLID or "Interface\\Buttons\\WHITE8X8")
+		square:SetSize(w, h)
+		square:SetPoint("CENTER", back, "CENTER", 0, 0)
+		frame.stepSquares[i] = square
+	end
+	frame.stepsText = Theme.Text(frame.steps, Theme.F_SMALL, Theme.TEXT)
+	frame.stepsText:SetPoint("TOP", frame.steps, "TOP", 0, -(h + 3))
+	frame.stepsText:SetJustifyH("CENTER")
+	if Theme.TextShadow then Theme.TextShadow(frame.stepsText) end
+	frame.steps:Hide()
 	frame.texture = frame.dot
 	frame:Hide()
 	ns.aggroRings[plate] = frame
@@ -611,18 +700,44 @@ function ns:AggroHideAll()
 	for _, ring in pairs(self.aggroRings) do ring:Hide(); ring.verdict = nil end
 end
 
+-- 1.36.0 : paliers allumés et fourchette de distance (« 15-20 m »)
+function ns:AggroPaintSteps(ring, eval)
+	eval = eval or {}
+	local near = (eval.sure and eval.est) or eval.low
+	local lit = ns.AggroSteps(eval.radius, near, eval.high) or 0
+	ring.stepsLit = lit
+	for i, square in ipairs(ring.stepSquares or {}) do
+		local c = ns.AGGRO_STEP_COLORS[i] or Theme.TEXT
+		local k = i <= lit and 1 or ns.AGGRO_STEP_DIM
+		square:SetVertexColor(c[1] * k, c[2] * k, c[3] * k)
+	end
+	local u, low, high = L.AGGRO_UNIT, Num(eval.low), Num(eval.high)
+	local text = ""
+	if eval.sure and Num(eval.est) then
+		text = self:F("AGGRO_STEPS_EST", tostring(math.floor(Num(eval.est) + 0.5)), u)
+	elseif high == nil and low then
+		text = self:F("AGGRO_STEPS_BEYOND", tostring(math.floor(low + 0.5)), u)
+	elseif high and (low or 0) <= 0 then
+		text = self:F("AGGRO_STEPS_BELOW", tostring(math.floor(high + 0.5)), u)
+	elseif high and low then
+		text = self:F("AGGRO_STEPS_BAND", tostring(math.floor(low + 0.5)), tostring(math.floor(high + 0.5)), u)
+	end
+	if ring.stepsText then ring.stepsText:SetText(text) end
+end
+
 -- Pose (ou retire) la marque d'une unité ; rend le verdict affiché ou nil.
 -- mode : celui d'AggroMode, lu une fois par passage (AggroTick) ; nil : relu
 function ns:AggroUpdatePlate(unit, mode)
 	local plate = self.aggroPlates[unit] or PlateForUnit(unit)
 	if not plate then return nil end
 	self.aggroPlates[unit] = plate
-	local verdict
+	local verdict, eval
 	if self:AggroUnitKind(unit) == "hostile" then
 		if mode == nil then mode = self:AggroMode() end
 		local redOnly = mode == "red-only"
-		local _, _, _, value = Evaluate(self, unit, redOnly)
+		local radius, low, high, value, est, sure = Evaluate(self, unit, redOnly)
 		verdict = value
+		eval = { radius = radius, low = low, high = high, est = est, sure = sure }
 		-- 1.31.0 : « danger seul » sans touche : ni vert ni ambre
 		if redOnly and verdict ~= "red" then verdict = nil end
 	end
@@ -637,10 +752,11 @@ function ns:AggroUpdatePlate(unit, mode)
 	if ring.style ~= style then
 		ring.style = style
 		if style == "dot" then ring.dot:Show(); ring.dotBack:Show() else ring.dot:Hide(); ring.dotBack:Hide() end
-		if style == "bar" then ring.bar:Show() else ring.bar:Hide() end
+		if style == "steps" then ring.steps:Show() else ring.steps:Hide() end
 	end
-	ring.texture = (style == "bar" and ring.bar) or ring.dot
+	ring.texture = ring.dot
 	ring.texture:SetVertexColor(color[1], color[2], color[3])
+	if style == "steps" then self:AggroPaintSteps(ring, eval) end
 	if verdict == "red" then
 		-- rouge : la marque bat (un battement par seconde, au rythme du tick)
 		local now = (ns.Now and ns.Now()) or 0
@@ -701,7 +817,13 @@ function ns:AggroDiagLine()
 	for range in pairs(self.aggroSteps or {}) do steps[#steps + 1] = range end
 	table.sort(steps)
 	local list = #steps > 0 and table.concat(steps, ", ") or L.MSG_DIAG_AGGRO_NOSTEP
-	return line .. "\n" .. self:F("MSG_DIAG_AGGRO_STEPS", list, L.AGGRO_UNIT)
+	line = line .. "\n" .. self:F("MSG_DIAG_AGGRO_STEPS", list, L.AGGRO_UNIT)
+	-- 1.36.0 : portée apprise en jouant (AggroPlus.lua)
+	if self.AggroLearnCount then
+		line = line .. "\n" .. self:F("MSG_DIAG_AGGRO_LEARN", self:AggroLearnCount(),
+			self:DB().aggroLearn == false and L.MSG_DIAG_AGGRO_LEARN_OFF or "")
+	end
+	return line
 end
 
 -- ---------------------------------------------------------------------------
