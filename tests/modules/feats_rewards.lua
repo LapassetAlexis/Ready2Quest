@@ -29,7 +29,6 @@ do
 		"UnitAffectingCombat", "IsInGuild", "IsInGroup", "IsInRaid", "time", "GetNormalizedRealmName", "PlaySound", "C_Texture" }
 	for _, name in ipairs(GLOBALS) do TT.saved[name] = rawget(_G, name) end
 	TT.savedDormant = NS.featsDormant
-	TT.savedFX = NS.AzerothRewardFX
 
 	function TT.Reset()
 		ResetWorld()

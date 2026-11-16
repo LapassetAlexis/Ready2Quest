@@ -246,7 +246,6 @@ do
 	local a1 = NS:GlowUpdate(now + 0.2)
 	local a2 = NS:GlowUpdate(now + 1.3)
 	s.ok("elle respire", math.abs(a1 - a2) > 0.01)
-	s.ok("ancienne API des éclats : rien hors ancien habillage", NS:AzerothShinyFX() == false)
 	s.ok("brillante repérée : éclats lancés", NS:CompanionShinyFX() == true and NS.azFx.shinyUntil ~= nil)
 	local _, fast = NS:AzerothGlowEnvelope(Mock.now)
 	s.ok("… lueur accélérée", fast == true)
@@ -273,7 +272,6 @@ do
 	NS:CompanionSay("EAT", { force = true })
 	local bubble = NS.companionBubble
 	local _, _, _, _, y0 = bubble:GetPoint()
-	s.ok("ancienne API du niveau : rien hors ancien habillage", NS:AzerothLevelFX("x", "level") == false)
 	NS:CompanionOnLevel(25)
 	local parts = frame.azLevel
 	local group = parts and parts.group

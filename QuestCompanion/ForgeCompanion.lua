@@ -284,7 +284,6 @@ function ns:CompanionApplyForgeSkin(frame)
 	if kit.EdgesShown then kit.EdgesShown(frame, false) end
 	if frame.plate then frame.plate:Hide() end
 	if kit.Masked then
-		if frame.azSkin then kit.Masked(frame, false, frame.azSkin) end
 		kit.Masked(frame, true, skin)
 	end
 	PlaceBackground(frame, skin, true)
