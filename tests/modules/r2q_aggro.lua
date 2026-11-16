@@ -388,26 +388,49 @@ do
 	-- style par défaut : la pastille (losange du client à gauche) ; 1.33.1 : plus d'anneau
 	local r1 = A.Ring("nameplate1")
 	Check("[AGGRO] marque par défaut : pastille (losange du client), à gauche de la barre", NS:AggroStyle() == "dot" and r1.dot:IsShown()
-		and r1.ringTexture == nil and not r1.bar:IsShown() and r1.texture == r1.dot and r1.dot.clientRole == "diamond"
+		and r1.ringTexture == nil and not r1.steps:IsShown() and r1.texture == r1.dot and r1.dot.clientRole == "diamond"
 		and r1.dotBack.lastPoint and r1.dotBack.lastPoint.relTo == A.W.plates.nameplate1 and r1.dotBack.lastPoint.point == "RIGHT")
-	NS:AggroSetStyle("bar")
-	Check("[AGGRO] style trait : une ligne sous la barre, à la couleur", r1.bar:IsShown() and not r1.dot:IsShown()
-		and r1.texture == r1.bar and r1.bar.vertex[1] == NS.Theme.RED[1])
+	-- 1.36.0 : paliers au-dessus de la barre (remplacent le trait)
+	NS:AggroSetStyle("steps")
+	local r3 = A.Ring("nameplate3")
+	local function Lit(ring)
+		local n = 0
+		for i, sq in ipairs(ring.stepSquares) do
+			local c = NS.AGGRO_STEP_COLORS[i]
+			if math.abs(sq.vertex[1] - c[1]) < 1e-6 then n = n + 1 end
+		end
+		return n
+	end
+	Check("[AGGRO] style paliers : six carrés au-dessus de la barre, allumés selon la distance, fourchette dessous",
+		r1.steps:IsShown() and not r1.dot:IsShown() and #r1.stepSquares == 6
+		and r1.steps.lastPoint and r1.steps.lastPoint.relTo == A.W.plates.nameplate1 and r1.steps.lastPoint.point == "BOTTOM"
+		and r1.stepsLit <= 2 and Lit(r1) == r1.stepsLit and r3.stepsLit == 6 and Lit(r3) == 6
+		and type(r1.stepsText.text) == "string" and r1.stepsText.text ~= "",
+		tostring(r1.stepsLit) .. "/" .. tostring(r3.stepsLit) .. " « " .. tostring(r1.stepsText.text) .. " »")
+	-- seuils des paliers : mêmes que le verdict
+	local steps = {}
+	for _, case in ipairs({ { 20, 10, 15, 1 }, { 20, 22, 28, 2 }, { 20, 25, 28, 3 }, { 20, 28, 30, 4 }, { 20, 30, 35, 5 },
+		{ 20, 35, nil, 6 }, { 20, nil, nil, nil } }) do
+		local got = NS.AggroSteps(case[1], case[2], case[3])
+		if got ~= case[4] then steps[#steps + 1] = table.concat({ tostring(case[2]), tostring(case[3]), tostring(got) }, "/") end
+	end
+	Check("[AGGRO] paliers : 1 dans la portée, 2 juste avant, 3 à 5 en marge, 6 loin", #steps == 0, table.concat(steps, ", "))
 	NS:AggroSetStyle("ring")
-	local ringRefused = NS:AggroStyle() == "bar" and r1.bar:IsShown()
+	local ringRefused = NS:AggroStyle() == "steps" and r1.steps:IsShown()
+	NS:AggroSetStyle("bar")
+	local barRefused = NS:AggroStyle() == "steps"
 	NS:AggroSetStyle("nimportequoi")
 	local choices = NS:AggroStyleChoices()
-	Check("[AGGRO] anneau retiré (1.33.1) et style inconnu refusés ; deux styles : pastille, trait", ringRefused
-		and NS:AggroStyle() == "bar" and #choices == 2 and choices[1].value == "dot" and choices[2].value == "bar"
-		and NS.AGGRO_STRINGS.fr.AGGRO_STYLE_ring == nil)
-	-- 1.33.1 : migration une seule fois, l'anneau sauvegardé devient la pastille
+	Check("[AGGRO] anneau et trait retirés, style inconnu refusé ; deux styles : pastille, paliers", ringRefused and barRefused
+		and NS:AggroStyle() == "steps" and #choices == 2 and choices[1].value == "dot" and choices[2].value == "steps"
+		and NS.AGGRO_STRINGS.fr.AGGRO_STYLE_ring == nil and NS.AGGRO_STRINGS.fr.AGGRO_STYLE_bar == nil)
+	-- migrations une seule fois : anneau -> pastille (1.33.1), trait -> paliers (1.36.0)
 	local db = NS:DB()
 	db.aggroStyle, db.aggroStyleSchema = "ring", nil
-	Check("[AGGRO] migration : anneau -> pastille", NS:AggroStyle() == "dot" and db.aggroStyle == "dot" and db.aggroStyleSchema == 2)
-	db.aggroStyle = "bar"
-	Check("[AGGRO] migration faite : le trait choisi ensuite reste", NS:AggroStyle() == "bar" and db.aggroStyle == "bar")
-	db.aggroStyle, db.aggroStyleSchema = "bar", nil
-	Check("[AGGRO] migration : le trait gardé tel quel", NS:AggroStyle() == "bar" and db.aggroStyleSchema == 2)
+	Check("[AGGRO] migration : anneau -> pastille", NS:AggroStyle() == "dot" and db.aggroStyle == "dot" and db.aggroStyleSchema == 3)
+	db.aggroStyle, db.aggroStyleSchema = "bar", 2
+	Check("[AGGRO] migration 1.36.0 : le trait devient les paliers", NS:AggroStyle() == "steps" and db.aggroStyle == "steps"
+		and db.aggroStyleSchema == 3)
 	NS:AggroSetStyle("dot")
 
 	-- le joueur s'approche : le verdict suit au passage suivant

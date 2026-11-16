@@ -1,5 +1,11 @@
 # Journal des modifications
 
+## 1.36.0 — Paliers de portée d'aggro
+
+- **Portée d'aggro : des paliers au-dessus de la barre de nom** (remplacent le trait dessous). Six petits carrés, deux rouges, trois ambre, un vert, d'autant plus allumés que tu es loin de la portée estimée du monstre, avec la fourchette de distance dessous (« 15-20 m »). Si tu avais choisi le trait, tu passes aux paliers automatiquement ; la pastille reste le style par défaut (Options › Portée d'aggro › Marque).
+
+*English:* aggro range: steps above the nameplate, replacing the line under it. Six small squares (two red, three amber, one green) light up the further you are from the monster's estimated aggro range, with the distance band below ("15-20 yd"). If you used the line, you switch to steps automatically; the dot stays the default (Options › Aggro range › Mark).
+
 ## 1.35.0 — Thème forgé, Groupe prêt, Tout apprendre
 
 - **Thème forgé** : toutes les fenêtres de Ready2Quest changent d'allure. Cadre d'orfèvre doré, médaillon du logo au coin, boutons en relief dont la couleur dit le geste (or : action principale ; vert : ajouter ; rouge : jeter ou retirer ; bleu arcane : action neutre), champs et barres en creux, titres dans la police du jeu ; ce que tu choisis s'éclaire en bleu. Actif par défaut ; « Style de l'interface » (page Général) ou /r2q style azeroth|sobre pour garder l'aspect d'avant.

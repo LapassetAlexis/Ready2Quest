@@ -12,7 +12,9 @@
 --     tranquille. En « Danger seul », sans touche, seul le rouge s'affiche (un
 --     avertissement, pas un tableau) ; Maj tenue montre tout. Deux styles (réglage « Marque ») : pastille (un losange à
 --     gauche de la barre, qui bat quand c'est rouge ; par défaut depuis la
---     1.29.1) ou trait (une ligne fine sous la barre). 1.33.1 : l'anneau (le
+--     1.29.1) ou paliers (1.36.0, remplace le trait : six petits carrés
+--     au-dessus de la barre, du rouge au vert, d'autant plus allumés qu'on est
+--     loin, avec la fourchette de distance dessous). 1.33.1 : l'anneau (le
 --     grand halo d'avant) est retiré, ses réglages passent à la pastille. La marque est accrochée au cadre de base de la barre de nom
 --     (C_NamePlate), pas à son habillage : elle suit aussi les barres d'un
 --     addon (EllesmereUI, Plater…).
@@ -48,7 +50,12 @@ local SKULL_GAP    = 10     -- niveau « ?? » : au moins dix niveaux de plus
 ns.AGGRO_TICK = 0.2
 ns.AGGRO_DOT_SIZE = 16          -- pastille (losange)
 ns.AGGRO_DOT_INSET = 14         -- bord droit de la pastille, depuis le bord gauche de la barre : tout près du nom
-ns.AGGRO_BAR_W, ns.AGGRO_BAR_H, ns.AGGRO_BAR_Y = 70, 3, 10   -- trait sous la barre
+-- 1.36.0 : paliers au-dessus de la barre (remplacent le trait) : six carrés,
+-- deux rouges, trois ambre, un vert ; allumés de gauche à droite selon la
+-- marge entre la distance (borne basse) et la portée estimée
+ns.AGGRO_STEPS = 6
+ns.AGGRO_STEP_SIZE, ns.AGGRO_STEP_GAP, ns.AGGRO_STEPS_Y = 8, 5, 4
+ns.AGGRO_STEP_DIM = 0.3         -- carré éteint : sa couleur, assombrie
 
 -- ---------------------------------------------------------------------------
 -- Chaînes, réglages, page d'options, module
@@ -60,7 +67,10 @@ local FR = {
 	OPT_AGGRO_RINGS      = "Marque sur les barres de nom",
 	OPT_AGGRO_STYLE      = "Marque",
 	AGGRO_STYLE_dot      = "Pastille (discrète)",
-	AGGRO_STYLE_bar      = "Trait sous la barre",
+	AGGRO_STYLE_steps    = "Paliers (distance)",
+	AGGRO_STEPS_BAND     = "%s-%s %s",
+	AGGRO_STEPS_BELOW    = "<%s %s",
+	AGGRO_STEPS_BEYOND   = ">%s %s",
 	AGGRO_KEY_alert      = "Danger seul (tout avec Maj)",
 	AGGRO_KEY_shift      = "Maj",
 	AGGRO_KEY_ctrl       = "Ctrl",
@@ -96,7 +106,10 @@ local EN = {
 	OPT_AGGRO_RINGS      = "Mark on nameplates",
 	OPT_AGGRO_STYLE      = "Mark",
 	AGGRO_STYLE_dot      = "Dot (subtle)",
-	AGGRO_STYLE_bar      = "Line under the bar",
+	AGGRO_STYLE_steps    = "Steps (distance)",
+	AGGRO_STEPS_BAND     = "%s-%s %s",
+	AGGRO_STEPS_BELOW    = "<%s %s",
+	AGGRO_STEPS_BEYOND   = ">%s %s",
 	AGGRO_KEY_alert      = "Danger only (all with Shift)",
 	AGGRO_KEY_shift      = "Shift",
 	AGGRO_KEY_ctrl       = "Ctrl",
@@ -134,9 +147,9 @@ ns.RegisterDefaults({
 	aggroKey     = "alert",   -- alert (1.31.0, danger seul), shift, ctrl, alt ou always
 	aggroTooltip = true,
 	aggroRings   = true,
-	aggroStyle   = "dot",     -- dot ou bar (1.33.1 : ring migré vers dot)
+	aggroStyle   = "dot",     -- dot ou steps (1.33.1 : ring -> dot ; 1.36.0 : bar -> steps)
 })
-ns.AGGRO_STYLES = { "dot", "bar" }
+ns.AGGRO_STYLES = { "dot", "steps" }
 
 ns.AGGRO_KEYS = { "alert", "shift", "ctrl", "alt", "always" }
 -- 1.31.0 : « danger seul » : le rouge sans touche, Maj montre tout
@@ -203,12 +216,14 @@ function ns:AggroSetKey(value)
 	self:AggroRefresh()
 end
 
--- 1.33.1 : migration une seule fois : l'anneau retiré devient la pastille
+-- migration une seule fois : 1.33.1 l'anneau retiré devient la pastille ;
+-- 1.36.0 le trait sous la barre devient les paliers au-dessus
 function ns:AggroStyle()
 	local db = self:DB()
-	if db.aggroStyleSchema ~= 2 then
+	if db.aggroStyleSchema ~= 3 then
 		if db.aggroStyle == "ring" then db.aggroStyle = "dot" end
-		db.aggroStyleSchema = 2
+		if db.aggroStyle == "bar" then db.aggroStyle = "steps" end
+		db.aggroStyleSchema = 3
 	end
 	local style = db.aggroStyle
 	for _, key in ipairs(self.AGGRO_STYLES) do if key == style then return style end end
@@ -288,6 +303,22 @@ function ns.AggroVerdict(radius, low, high)
 end
 
 ns.AGGRO_COLORS = { red = Theme.RED, amber = Theme.ORANGE, green = Theme.GREEN }
+-- couleur de chaque palier, de gauche à droite
+ns.AGGRO_STEP_COLORS = { Theme.RED, Theme.RED, Theme.ORANGE, Theme.ORANGE, Theme.ORANGE, Theme.GREEN }
+
+-- Paliers allumés (1 à 6) : mêmes seuils que le verdict. Dans la portée : 1 ;
+-- dans les AGGRO_WARN mètres avant : 2 (rouge) ; jusqu'à AGGRO_MARGIN : 3 à 5
+-- (ambre) ; au-delà : 6 (vert). nil sans portée ni distance.
+function ns.AggroSteps(radius, low, high)
+	radius, low, high = Num(radius), Num(low), Num(high)
+	if not radius or (not low and not high) then return nil end
+	local margin = (low or 0) - radius
+	if margin < 0 then return 1 end
+	if margin < AGGRO_WARN then return 2 end
+	if margin >= AGGRO_MARGIN then return ns.AGGRO_STEPS end
+	local span = (AGGRO_MARGIN - AGGRO_WARN) / 3
+	return math.min(5, 3 + math.floor((margin - AGGRO_WARN) / span))
+end
 
 -- ---------------------------------------------------------------------------
 -- Distance par paliers (approche de LibRangeCheck-2.0, contrôles « hostiles »)
@@ -578,11 +609,30 @@ local function RingFor(plate)
 	Theme.SetDiamond(frame.dot)
 	frame.dot:SetSize(ns.AGGRO_DOT_SIZE, ns.AGGRO_DOT_SIZE)
 	frame.dot:SetPoint("CENTER", frame.dotBack, "CENTER", 0, 0)
-	-- trait : une ligne fine sous la barre
-	frame.bar = frame:CreateTexture(nil, "OVERLAY")
-	frame.bar:SetTexture(Theme.SOLID or "Interface\\Buttons\\WHITE8X8")
-	frame.bar:SetSize(ns.AGGRO_BAR_W, ns.AGGRO_BAR_H)
-	frame.bar:SetPoint("TOP", plate, "BOTTOM", 0, ns.AGGRO_BAR_Y)
+	-- 1.36.0 : paliers au-dessus de la barre, centrés, la distance dessous
+	local size, gap, count = ns.AGGRO_STEP_SIZE, ns.AGGRO_STEP_GAP, ns.AGGRO_STEPS
+	local width = count * size + (count - 1) * gap
+	frame.steps = CreateFrame("Frame", nil, frame)
+	frame.steps:SetSize(width, size + 14)
+	frame.steps:SetPoint("BOTTOM", plate, "TOP", 0, ns.AGGRO_STEPS_Y)
+	frame.stepSquares = {}
+	for i = 1, count do
+		local back = frame.steps:CreateTexture(nil, "ARTWORK")
+		back:SetTexture(Theme.SOLID or "Interface\\Buttons\\WHITE8X8")
+		back:SetSize(size + 2, size + 2)
+		back:SetPoint("TOPLEFT", frame.steps, "TOPLEFT", (i - 1) * (size + gap) - 1, 1)
+		Theme.Shade(back, Theme.SHADE.strong)
+		local square = frame.steps:CreateTexture(nil, "OVERLAY")
+		square:SetTexture(Theme.SOLID or "Interface\\Buttons\\WHITE8X8")
+		square:SetSize(size, size)
+		square:SetPoint("CENTER", back, "CENTER", 0, 0)
+		frame.stepSquares[i] = square
+	end
+	frame.stepsText = Theme.Text(frame.steps, Theme.F_SMALL, Theme.TEXT)
+	frame.stepsText:SetPoint("TOP", frame.steps, "TOP", 0, -(size + 2))
+	frame.stepsText:SetJustifyH("CENTER")
+	if Theme.TextShadow then Theme.TextShadow(frame.stepsText) end
+	frame.steps:Hide()
 	frame.texture = frame.dot
 	frame:Hide()
 	ns.aggroRings[plate] = frame
@@ -611,18 +661,41 @@ function ns:AggroHideAll()
 	for _, ring in pairs(self.aggroRings) do ring:Hide(); ring.verdict = nil end
 end
 
+-- 1.36.0 : paliers allumés et fourchette de distance (« 15-20 m »)
+function ns:AggroPaintSteps(ring, eval)
+	eval = eval or {}
+	local lit = ns.AggroSteps(eval.radius, eval.low, eval.high) or 0
+	ring.stepsLit = lit
+	for i, square in ipairs(ring.stepSquares or {}) do
+		local c = ns.AGGRO_STEP_COLORS[i] or Theme.TEXT
+		local k = i <= lit and 1 or ns.AGGRO_STEP_DIM
+		square:SetVertexColor(c[1] * k, c[2] * k, c[3] * k)
+	end
+	local u, low, high = L.AGGRO_UNIT, Num(eval.low), Num(eval.high)
+	local text = ""
+	if high == nil and low then
+		text = self:F("AGGRO_STEPS_BEYOND", tostring(math.floor(low + 0.5)), u)
+	elseif high and (low or 0) <= 0 then
+		text = self:F("AGGRO_STEPS_BELOW", tostring(math.floor(high + 0.5)), u)
+	elseif high and low then
+		text = self:F("AGGRO_STEPS_BAND", tostring(math.floor(low + 0.5)), tostring(math.floor(high + 0.5)), u)
+	end
+	if ring.stepsText then ring.stepsText:SetText(text) end
+end
+
 -- Pose (ou retire) la marque d'une unité ; rend le verdict affiché ou nil.
 -- mode : celui d'AggroMode, lu une fois par passage (AggroTick) ; nil : relu
 function ns:AggroUpdatePlate(unit, mode)
 	local plate = self.aggroPlates[unit] or PlateForUnit(unit)
 	if not plate then return nil end
 	self.aggroPlates[unit] = plate
-	local verdict
+	local verdict, eval
 	if self:AggroUnitKind(unit) == "hostile" then
 		if mode == nil then mode = self:AggroMode() end
 		local redOnly = mode == "red-only"
-		local _, _, _, value = Evaluate(self, unit, redOnly)
+		local radius, low, high, value = Evaluate(self, unit, redOnly)
 		verdict = value
+		eval = { radius = radius, low = low, high = high }
 		-- 1.31.0 : « danger seul » sans touche : ni vert ni ambre
 		if redOnly and verdict ~= "red" then verdict = nil end
 	end
@@ -637,10 +710,11 @@ function ns:AggroUpdatePlate(unit, mode)
 	if ring.style ~= style then
 		ring.style = style
 		if style == "dot" then ring.dot:Show(); ring.dotBack:Show() else ring.dot:Hide(); ring.dotBack:Hide() end
-		if style == "bar" then ring.bar:Show() else ring.bar:Hide() end
+		if style == "steps" then ring.steps:Show() else ring.steps:Hide() end
 	end
-	ring.texture = (style == "bar" and ring.bar) or ring.dot
+	ring.texture = ring.dot
 	ring.texture:SetVertexColor(color[1], color[2], color[3])
+	if style == "steps" then self:AggroPaintSteps(ring, eval) end
 	if verdict == "red" then
 		-- rouge : la marque bat (un battement par seconde, au rythme du tick)
 		local now = (ns.Now and ns.Now()) or 0
