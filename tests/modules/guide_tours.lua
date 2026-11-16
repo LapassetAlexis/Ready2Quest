@@ -490,7 +490,7 @@ do
 	end
 	function P.UI()
 		-- 3.1.0 : le jeu de la clé courante (ancien habillage, forgé, Sobre)
-		local style = NS.StyleKey and NS:StyleKey() or ((NS.AzerothOn and NS:AzerothOn()) and "azeroth" or "sobre")
+		local style = NS:StyleKey()
 		return NS.tourUI and NS.tourUI[style] or {}
 	end
 	function P.Callout() return P.UI().callout end

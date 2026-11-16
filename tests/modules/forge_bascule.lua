@@ -1,5 +1,5 @@
 -- QuestCompanion 3.1.0 : la bascule vers le thème forgé. L'état du produit
--- (ancien habillage coupé : QNS.AZEROTH_LEGACY faux, choix « azeroth »),
+-- (choix « azeroth »),
 -- avec ET sans les atlas du client : le thème forgé est posé, et chaque
 -- surface (carnet, fiche de dresseur, confirmation, panneau d'allure,
 -- bandeaux, scène de capture, volée, choix au filet, compagnon, bulle des

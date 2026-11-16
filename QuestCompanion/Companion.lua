@@ -2994,10 +2994,9 @@ end
 function ns:CompanionApplySobrePlate()
 	local frame = self.companionFrame
 	if not (frame and frame.plate) then return nil end
-	-- 3.1.0 : tout anneau (l'ancien habillage, le médaillon forgé) a sa plaque
-	local az = frame.uiStyle == "azeroth" or frame.ring ~= nil
-		or (frame.uiStyle == nil and self.CompanionRingOn and self:CompanionRingOn())
-	if az then frame.plate:Hide(); return "azeroth" end
+	-- 3.1.0 : le médaillon forgé a sa plaque
+	local ringed = frame.ring ~= nil or (frame.uiStyle == nil and self.CompanionRingOn and self:CompanionRingOn())
+	if ringed then frame.plate:Hide(); return "ring" end
 	frame.plate:Show()
 	local t = Theme.TEXT
 	if frame.mood and frame.mood.SetTextColor then frame.mood:SetTextColor(t[1], t[2], t[3], 1) end
