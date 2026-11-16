@@ -12,9 +12,9 @@
 --     tranquille. En « Danger seul », sans touche, seul le rouge s'affiche (un
 --     avertissement, pas un tableau) ; Maj tenue montre tout. Deux styles (réglage « Marque ») : pastille (un losange à
 --     gauche de la barre, qui bat quand c'est rouge ; par défaut depuis la
---     1.29.1) ou paliers (1.36.0, remplace le trait : six petits carrés
---     au-dessus de la barre, du rouge au vert, d'autant plus allumés qu'on est
---     loin, avec la fourchette de distance dessous). 1.33.1 : l'anneau (le
+--     1.29.1) ou paliers (1.36.0, remplace le trait : six rectangles fins
+--     sous la barre, du rouge au vert, d'autant plus allumés qu'on est
+--     loin, avec la distance dessous). 1.33.1 : l'anneau (le
 --     grand halo d'avant) est retiré, ses réglages passent à la pastille. La marque est accrochée au cadre de base de la barre de nom
 --     (C_NamePlate), pas à son habillage : elle suit aussi les barres d'un
 --     addon (EllesmereUI, Plater…).
@@ -52,11 +52,11 @@ local SKULL_GAP    = 10     -- niveau « ?? » : au moins dix niveaux de plus
 ns.AGGRO_TICK = 0.2
 ns.AGGRO_DOT_SIZE = 16          -- pastille (losange)
 ns.AGGRO_DOT_INSET = 14         -- bord droit de la pastille, depuis le bord gauche de la barre : tout près du nom
--- 1.36.0 : paliers au-dessus de la barre (remplacent le trait) : six carrés,
--- deux rouges, trois ambre, un vert ; allumés de gauche à droite selon la
--- marge entre la distance (borne basse) et la portée estimée
+-- 1.36.0 : paliers sous la barre, à la place du trait (retour bêta 1 : sous la
+-- barre et plus fins) : six rectangles, deux rouges, trois ambre, un vert ;
+-- allumés de gauche à droite selon la marge entre la distance et la portée
 ns.AGGRO_STEPS = 6
-ns.AGGRO_STEP_SIZE, ns.AGGRO_STEP_GAP, ns.AGGRO_STEPS_Y = 8, 5, 4
+ns.AGGRO_STEP_W, ns.AGGRO_STEP_H, ns.AGGRO_STEP_GAP, ns.AGGRO_STEPS_Y = 11, 3, 2, 10
 ns.AGGRO_STEP_DIM = 0.3         -- carré éteint : sa couleur, assombrie
 
 -- ---------------------------------------------------------------------------
@@ -648,26 +648,26 @@ local function RingFor(plate)
 	frame.dot:SetSize(ns.AGGRO_DOT_SIZE, ns.AGGRO_DOT_SIZE)
 	frame.dot:SetPoint("CENTER", frame.dotBack, "CENTER", 0, 0)
 	-- 1.36.0 : paliers au-dessus de la barre, centrés, la distance dessous
-	local size, gap, count = ns.AGGRO_STEP_SIZE, ns.AGGRO_STEP_GAP, ns.AGGRO_STEPS
-	local width = count * size + (count - 1) * gap
+	local w, h, gap, count = ns.AGGRO_STEP_W, ns.AGGRO_STEP_H, ns.AGGRO_STEP_GAP, ns.AGGRO_STEPS
+	local width = count * w + (count - 1) * gap
 	frame.steps = CreateFrame("Frame", nil, frame)
-	frame.steps:SetSize(width, size + 14)
-	frame.steps:SetPoint("BOTTOM", plate, "TOP", 0, ns.AGGRO_STEPS_Y)
+	frame.steps:SetSize(width, h + 14)
+	frame.steps:SetPoint("TOP", plate, "BOTTOM", 0, ns.AGGRO_STEPS_Y)
 	frame.stepSquares = {}
 	for i = 1, count do
 		local back = frame.steps:CreateTexture(nil, "ARTWORK")
 		back:SetTexture(Theme.SOLID or "Interface\\Buttons\\WHITE8X8")
-		back:SetSize(size + 2, size + 2)
-		back:SetPoint("TOPLEFT", frame.steps, "TOPLEFT", (i - 1) * (size + gap) - 1, 1)
+		back:SetSize(w + 2, h + 2)
+		back:SetPoint("TOPLEFT", frame.steps, "TOPLEFT", (i - 1) * (w + gap) - 1, 1)
 		Theme.Shade(back, Theme.SHADE.strong)
 		local square = frame.steps:CreateTexture(nil, "OVERLAY")
 		square:SetTexture(Theme.SOLID or "Interface\\Buttons\\WHITE8X8")
-		square:SetSize(size, size)
+		square:SetSize(w, h)
 		square:SetPoint("CENTER", back, "CENTER", 0, 0)
 		frame.stepSquares[i] = square
 	end
 	frame.stepsText = Theme.Text(frame.steps, Theme.F_SMALL, Theme.TEXT)
-	frame.stepsText:SetPoint("TOP", frame.steps, "TOP", 0, -(size + 2))
+	frame.stepsText:SetPoint("TOP", frame.steps, "TOP", 0, -(h + 3))
 	frame.stepsText:SetJustifyH("CENTER")
 	if Theme.TextShadow then Theme.TextShadow(frame.stepsText) end
 	frame.steps:Hide()

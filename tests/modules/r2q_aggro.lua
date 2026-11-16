@@ -402,9 +402,9 @@ do
 		end
 		return n
 	end
-	Check("[AGGRO] style paliers : six carrés au-dessus de la barre, allumés selon la distance, fourchette dessous",
+	Check("[AGGRO] style paliers : six rectangles sous la barre (place du trait), allumés selon la distance, distance dessous",
 		r1.steps:IsShown() and not r1.dot:IsShown() and #r1.stepSquares == 6
-		and r1.steps.lastPoint and r1.steps.lastPoint.relTo == A.W.plates.nameplate1 and r1.steps.lastPoint.point == "BOTTOM"
+		and r1.steps.lastPoint and r1.steps.lastPoint.relTo == A.W.plates.nameplate1 and r1.steps.lastPoint.point == "TOP" and r1.steps.lastPoint.relPoint == "BOTTOM"
 		and r1.stepsLit <= 2 and Lit(r1) == r1.stepsLit and r3.stepsLit == 6 and Lit(r3) == 6
 		and type(r1.stepsText.text) == "string" and r1.stepsText.text ~= "",
 		tostring(r1.stepsLit) .. "/" .. tostring(r3.stepsLit) .. " « " .. tostring(r1.stepsText.text) .. " »")
