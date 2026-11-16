@@ -151,7 +151,7 @@ ns.COMPANION_RULES = {
 -- ---------------------------------------------------------------------------
 local FR = {
 	OPT_PAGE_COMPANION_MAIN = "Compagnon",
-	OPT_PAGE_COMPANION_MAIN_SUB = "Sa créature, sa taille, son bavardage et son apparence.",
+	OPT_PAGE_COMPANION_MAIN_SUB = "Sa créature, son apparence, sa taille et sa place à l'écran.",
 	OPT_PAGE_COMPANION_ORN = "Ornements",
 	OPT_PAGE_COMPANION_ORN_SUB = "Les ornements de son cadre, gagnés en jouant : affiche ceux que tu aimes.",
 	OPT_PAGE_COMPANION     = "Compagnon de route",
@@ -350,7 +350,7 @@ local FR = {
 }
 local EN = {
 	OPT_PAGE_COMPANION_MAIN = "Companion",
-	OPT_PAGE_COMPANION_MAIN_SUB = "Its creature, size, chattiness and appearance.",
+	OPT_PAGE_COMPANION_MAIN_SUB = "Its creature, looks, size and place on screen.",
 	OPT_PAGE_COMPANION_ORN = "Ornaments",
 	OPT_PAGE_COMPANION_ORN_SUB = "The ornaments of its frame, earned by playing: show the ones you like.",
 	OPT_PAGE_COMPANION     = "Road companion",

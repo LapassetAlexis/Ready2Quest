@@ -161,7 +161,7 @@ do
 	AZT.Reset({ ["ui-achievement-guild-iconframe"] = true })
 	local row, framingIndex
 	for _, page in ipairs(NS.OPTION_PAGES) do
-		if page.id == "companionMain" then
+		if (page.id == "companionMain" or page.id == "companionQuiet" or page.id == "companionTalk" or page.id == "companionKeys") then
 			for index, r in ipairs(page.rows) do
 				if r.key == "companionStyle" then row = r; row.index = index end
 				if r.key == "companionFraming" then framingIndex = index end

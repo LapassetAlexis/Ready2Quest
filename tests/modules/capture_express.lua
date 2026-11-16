@@ -614,7 +614,7 @@ do
 	XP.SeeKill(6401, { name = "Raptor N", spawn = "00001A2B3F" })
 	local found
 	for _, page in ipairs(NS.OPTION_PAGES or {}) do
-		if page.id == "companionMain" then for _, row in ipairs(page.rows) do if row.key == "captureNetAttach" then found = row end end end
+		if (page.id == "companionMain" or page.id == "companionQuiet" or page.id == "companionTalk" or page.id == "companionKeys") then for _, row in ipairs(page.rows) do if row.key == "captureNetAttach" then found = row end end end
 	end
 	NS:RunOptionAction("captureNetAttach")
 	local attached = NS:DB().captureNetPoint == nil and net.lastPoint and net.lastPoint.relTo == NS.companionFrame

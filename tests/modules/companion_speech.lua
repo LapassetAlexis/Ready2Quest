@@ -873,7 +873,7 @@ do
 	-- réglage dans la page du compagnon, sous la réglette Bavardage
 	local row, after
 	for _, page in ipairs(NS.OPTION_PAGES or {}) do
-		if page.id == "companionMain" then
+		if (page.id == "companionMain" or page.id == "companionQuiet" or page.id == "companionTalk" or page.id == "companionKeys") then
 			for index, r in ipairs(page.rows) do
 				if r.key == "companionLore" then row, after = r, page.rows[index - 1] end
 			end

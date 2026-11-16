@@ -499,7 +499,7 @@ do
 	S.ok("aggro « toujours », groupé en instance : oui", NS:CompanionAggroAllowed() == true)
 	local found = {}
 	for _, page in ipairs(NS.OPTION_PAGES or {}) do
-		if page.id == "companionMain" then
+		if (page.id == "companionMain" or page.id == "companionQuiet" or page.id == "companionTalk" or page.id == "companionKeys") then
 			for _, row in ipairs(page.rows) do found[row.key] = row end
 		end
 	end

@@ -138,7 +138,7 @@ do
 		WV.Reset()
 		local row, styleIndex
 		for _, page in ipairs(NS.OPTION_PAGES) do
-			if page.id == "companionMain" then
+			if (page.id == "companionMain" or page.id == "companionQuiet" or page.id == "companionTalk" or page.id == "companionKeys") then
 				for index, r in ipairs(page.rows) do
 					if r.key == "companionStyle" then styleIndex = index end
 					if r.key == "winterVeil" then row = r; row.index = index end
@@ -639,7 +639,7 @@ do
 			and glow.width > NS.AZEROTH_RING.w, ring.vertex and table.concat(ring.vertex, ","))
 		local row, at, decorAt
 		for _, page in ipairs(NS.OPTION_PAGES or {}) do
-			if page.id == "companionMain" then
+			if (page.id == "companionMain" or page.id == "companionQuiet" or page.id == "companionTalk" or page.id == "companionKeys") then
 				for index, r in ipairs(page.rows) do
 					if r.key == "winterVeilFrost" then row, at = r, index end
 					if r.key == "winterVeil" then decorAt = index end
@@ -1155,7 +1155,7 @@ do
 		local s = Steps()
 		s.ok("réglage activé par défaut, page du compagnon", NS.DEFAULTS.companionWinterVisit == true and (function()
 			for _, page in ipairs(NS.OPTION_PAGES or {}) do
-				if page.id == "companionMain" then
+				if (page.id == "companionMain" or page.id == "companionQuiet" or page.id == "companionTalk" or page.id == "companionKeys") then
 					for _, row in ipairs(page.rows) do if row.key == "companionWinterVisit" and row.kind == "bool" then return true end end
 				end
 			end
