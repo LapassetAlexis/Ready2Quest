@@ -1,10 +1,13 @@
 # Journal des modifications
 
-## 1.36.0 — Paliers de portée d'aggro
+## 1.36.0 — Portée d'aggro plus juste, en paliers
 
-- **Portée d'aggro : des paliers au-dessus de la barre de nom** (remplacent le trait dessous). Six petits carrés, deux rouges, trois ambre, un vert, d'autant plus allumés que tu es loin de la portée estimée du monstre, avec la fourchette de distance dessous (« 15-20 m »). Si tu avais choisi le trait, tu passes aux paliers automatiquement ; la pastille reste le style par défaut (Options › Portée d'aggro › Marque).
+- **Portée d'aggro : des paliers au-dessus de la barre de nom** (remplacent le trait dessous). Six petits carrés, deux rouges, trois ambre, un vert, d'autant plus allumés que tu es loin de la portée du monstre, avec la distance dessous (« ~17 m », ou la fourchette « 15-20 m »). Si tu avais choisi le trait, tu passes aux paliers automatiquement ; la pastille reste le style par défaut (Options › Portée d'aggro › Marque).
+- **Portée de base plus juste** : 15 m à niveau égal au lieu de 20 (mesurée autour de 14,6 m sur Forever). Les alertes ne s'allument plus 10 m trop tôt.
+- **Des mesures plus fines** : tes sorts offensifs servent aussi de règle (une portée par sort, de 5 à 60 m), en plus des objets ; entre deux paliers, la distance est estimée d'après ta course (« ~17 m »).
+- **La portée apprise en jouant** : quand un monstre t'attaque alors que tu n'as rien fait, seul, la distance à laquelle il t'a repéré est retenue (par monstre, par type, en tout ; 20 valeurs au plus). Elle remplace l'estimation, avec une étoile dans l'infobulle (« Aggro ~13* m »). Réglage « Apprendre la portée en jouant » (activé) ; le nombre d'échantillons dans /r2q diag.
 
-*English:* aggro range: steps above the nameplate, replacing the line under it. Six small squares (two red, three amber, one green) light up the further you are from the monster's estimated aggro range, with the distance band below ("15-20 yd"). If you used the line, you switch to steps automatically; the dot stays the default (Options › Aggro range › Mark).
+*English:* aggro range: steps above the nameplate replace the line under it — six small squares (two red, three amber, one green) that light up the further you are, with the distance below ("~17 yd" or "15-20 yd"); line users switch automatically, the dot stays the default. Base range is now 15 yd at equal level instead of 20 (measured around 14.6 on Forever), so warnings no longer fire 10 yd early. Finer measurement: your offensive spells act as extra range checks (one per range, 5 to 60 yd), and between two steps the distance is estimated from your movement. Range learned as you play: when a monster attacks you while you did nothing, solo, the distance it noticed you from is kept (per monster, per type, overall; up to 20 values) and replaces the estimate, marked with a star in the tooltip. Setting "Learn the range as you play" (on); sample count in /r2q diag.
 
 ## 1.35.0 — Thème forgé, Groupe prêt, Tout apprendre
 

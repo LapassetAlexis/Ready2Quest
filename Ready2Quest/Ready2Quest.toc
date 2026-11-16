@@ -53,3 +53,4 @@ SpellRanks.lua
 TrainAll.lua
 Death.lua
 Aggro.lua
+AggroPlus.lua

@@ -116,8 +116,8 @@ do
 		and NS:FindModule("aggro").key == "aggroEnabled" and NS:FindModule("portee") ~= nil)
 	local page
 	for _, def in ipairs(NS.OPTION_PAGES) do if def.id == "aggro" then page = def end end
-	Check("[AGGRO] sous-page du QoL, 5 réglages (dont le style de marque)", page and page.parent == "qol" and page.group == "OPT_GROUP_QOL"
-		and #page.rows == 5 and page.rows[5].key == "aggroStyle")
+	Check("[AGGRO] sous-page du QoL, 6 réglages (style de marque, apprentissage)", page and page.parent == "qol" and page.group == "OPT_GROUP_QOL"
+		and #page.rows == 6 and page.rows[5].key == "aggroStyle" and page.rows[6].key == "aggroLearn")
 	local db = NS:DB()
 	Check("[AGGRO] défauts : actif, danger seul, infobulle, anneaux", db.aggroEnabled == true and db.aggroKey == "alert"
 		and NS:AggroKey() == "alert" and db.aggroTooltip == true and db.aggroRings == true)
@@ -150,10 +150,10 @@ end
 -- 2. Formule et verdicts -------------------------------------------------------
 do
 	Say("-- aggro : portée estimée")
-	-- joueur, monstre -> rayon : 20 à niveau égal, ±1 m par niveau, borné à [5, 45],
+	-- joueur, monstre -> rayon : 15 à niveau égal (1.36.0), ±1 m par niveau, borné à [5, 45],
 	-- « ?? » = dix niveaux de plus, illisible = rien
 	local R, bad = NS.AggroRadius, {}
-	for _, c in ipairs({ { 20, 20, 20 }, { 25, 20, 15 }, { 20, 25, 25 }, { 60, 1, 5 }, { 1, 60, 45 }, { 30, -1, 30 },
+	for _, c in ipairs({ { 20, 20, 15 }, { 25, 20, 10 }, { 20, 25, 20 }, { 60, 1, 5 }, { 1, 60, 45 }, { 30, -1, 25 },
 		{ nil, 20, nil }, { 20, nil, nil } }) do
 		if R(c[1], c[2]) ~= c[3] then bad[#bad + 1] = tostring(c[1]) .. "/" .. tostring(c[2]) .. "=" .. tostring(R(c[1], c[2])) end
 	end
@@ -291,29 +291,29 @@ end
 do
 	Say("-- aggro : infobulle")
 	A.Reset()
-	A.Mob("mouseover", 20, 22)
+	A.Mob("mouseover", 20, 17)
 	GameTooltip:ClearLines()
 	Check("[AGGRO] sans la touche : rien dans l'infobulle", NS:AggroOnTooltip(GameTooltip, {}) == false and #GameTooltip.lines == 0)
 	A.W.shift = true
 	NS:AggroOnTooltip(GameTooltip, {})
 	-- 1.30.0 : on prévient 5 m avant la portée
 	Check("[AGGRO] ligne rouge : portée, distance, verdict, mention d'estimation",
-		A.Tip():find("Aggro ~20 m · tu es à 20-25 m · danger, trop près", 1, true) ~= nil
+		A.Tip():find("Aggro ~15 m · tu es à 15-20 m · danger, trop près", 1, true) ~= nil
 		and GameTooltip.styled[1].color[1] == NS.Theme.RED[1] and A.Tip():find("Estimation", 1, true) ~= nil, A.Tip())
 
 	GameTooltip:ClearLines()
-	A.W.level = 30
-	A.Mob("mouseover", 20, 22)     -- 10 niveaux de moins : portée 10
+	A.W.level = 26
+	A.Mob("mouseover", 20, 22)     -- 6 niveaux de moins : portée 9
 	NS:AggroOnTooltip(GameTooltip, {})
 	Check("[AGGRO] monstre bien plus faible : à la limite, ambre (marge de 12 m)",
-		A.Tip():find("Aggro ~10 m", 1, true) ~= nil and A.Tip():find("à la limite", 1, true) ~= nil
+		A.Tip():find("Aggro ~9 m", 1, true) ~= nil and A.Tip():find("à la limite", 1, true) ~= nil
 		and GameTooltip.styled[1].color[1] == NS.Theme.ORANGE[1], A.Tip())
 	A.W.level = 20
 
 	GameTooltip:ClearLines()
 	A.Mob("mouseover", 20, nil)     -- aucune mesure possible
 	NS:AggroOnTooltip(GameTooltip, {})
-	Check("[AGGRO] sans distance : la portée seule", A.Tip():find("Aggro ~20 m", 1, true) ~= nil
+	Check("[AGGRO] sans distance : la portée seule", A.Tip():find("Aggro ~15 m", 1, true) ~= nil
 		and A.Tip():find("tu es", 1, true) == nil, A.Tip())
 
 	GameTooltip:ClearLines()
@@ -345,11 +345,12 @@ do
 	A.W.silent = { [8] = true, [10] = true, [15] = true, [25] = true, [40] = true, [45] = true, [60] = true, [80] = true }
 	A.W.interact = true
 	GameTooltip:ClearLines()
-	A.Mob("mouseover", 20, 22)
+	A.Mob("mouseover", 20, 18)
 	NS:AggroOnTooltip(GameTooltip, {})
 	local close = A.Tip()
 	GameTooltip:ClearLines()
-	A.W.level = 30
+	A.W.level = 26
+	A.Mob("mouseover", 20, 22)
 	NS:AggroOnTooltip(GameTooltip, {})
 	local weak = A.Tip()
 	A.W.level = 20
@@ -357,7 +358,7 @@ do
 	A.Mob("mouseover", 20, 60)
 	NS:AggroOnTooltip(GameTooltip, {})
 	Check("[AGGRO] danger seul : infobulle sans touche (paliers classiques, ambre, fourchette complète au loin)",
-		close:find("tu es à 20-28 m · danger, trop près", 1, true) ~= nil and weak:find("à la limite", 1, true) ~= nil
+		close:find("tu es à 10-20 m · danger, trop près", 1, true) ~= nil and weak:find("à la limite", 1, true) ~= nil
 		and A.Tip():find("plus de 35 m", 1, true) ~= nil, close .. " | " .. weak .. " | " .. A.Tip())
 	A.W.silent = nil
 	NS:DB().aggroKey = "shift"
