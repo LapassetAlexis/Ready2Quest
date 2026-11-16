@@ -531,11 +531,55 @@ do
 	feed:Hide()
 end
 
+-- 3.1.2 : les aides au survol du filet ---------------------------------------------------
+do
+	Say("-- capture express : aides au survol du filet")
+	XP.Reset()
+	local items = NS:CaptureData().items
+	items.appat, items.lasso, items.sifflet = 2, 0, 1
+	XP.Roll(0.99)                      -- sans aide, raté à coup sûr
+	XP.SeeKill(6300, { name = "Loup A" })
+	XP.SeeKill(6301, { name = "Loup B", spawn = "00001A2B3D" })
+	local net = NS.captureNetButton
+	local hooked = net and net.aidBarHooked == true
+	local shown = NS:CaptureAidBarShow()
+	local bar = NS.captureAidBar
+	local counts = {}
+	for i, b in ipairs(bar and bar.buttons or {}) do counts[i] = b.aidID .. "=" .. tostring(b.count.text) .. (b.empty and "(gris)" or "") end
+	Check("[EXP] survol du filet : la barre des trois aides au-dessus, comptes et aide vide grisée",
+		hooked and shown and bar:IsShown() and #bar.buttons == 3
+		and bar.lastPoint and bar.lastPoint.relTo == net and bar.lastPoint.point == "BOTTOM"
+		and bar.buttons[2].empty == true and bar.buttons[1].empty ~= true, table.concat(counts, ", "))
+	local refused, why = NS:CaptureAidBarUse("lasso")
+	local stillTwo = #NS:CaptureQueueState() == 2
+	local chance, sure = NS:CaptureAidBarChance("sifflet")
+	local rolling = NS:CaptureAidBarUse("sifflet")
+	Check("[EXP] clic sur une aide : le filet part avec elle (sifflet : assurée), une aide vide refusée, l'aide ne sert qu'une fois",
+		not refused and why == "none" and stillTwo and sure == true and chance == 1
+		and rolling and rolling.success and rolling.aid == "sifflet" and items.sifflet == 0
+		and #NS:CaptureQueueState() == 1 and NS:CaptureState().aid == nil and bar.buttons[3].empty == true)
+	NS:CaptureAidBarUse("appat")
+	Check("[EXP] filet vidé : la barre se range ; l'infobulle du filet le dit",
+		#NS:CaptureQueueState() == 0 and not bar:IsShown())
+	XP.SeeKill(6302, { name = "Loup C", spawn = "00001A2B3E" })
+	GameTooltip:ClearLines()
+	NS:CaptureExpressTipLines(GameTooltip, NS:CaptureQueueState(), "Loup C")
+	local tip = {}
+	for _, line in ipairs(GameTooltip.lines or {}) do tip[#tip + 1] = tostring(line.text or line) end
+	Check("[EXP] infobulle du filet : la ligne des aides au survol",
+		table.concat(tip, " | "):find("aides au-dessus du filet", 1, true) ~= nil, table.concat(tip, " | "))
+	-- capture express coupée : pas de barre
+	NS:DB().companionCaptureExpress = false
+	Check("[EXP] capture express coupée : pas de barre d'aides", NS:CaptureAidBarShow() == false)
+	NS:DB().companionCaptureExpress = true
+	if NS.captureAidBar then NS.captureAidBar:Hide() end
+end
+
 -- Rendu au harnais
 for _, name in ipairs(GLOBALS) do _G[name] = XP.saved[name] end
 math.random = XP.random
 NS.CaptureRollQuality = XP.rollQuality
 NS.captureExpressDormant = XP.dormant
-for _, field in ipairs({ "captureExpressFeed", "captureQueueList" }) do
+for _, field in ipairs({ "captureExpressFeed", "captureQueueList", "captureAidBar" }) do
 	if NS[field] then NS[field]:Hide() end
 end

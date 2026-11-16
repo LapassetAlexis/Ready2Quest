@@ -1,5 +1,11 @@
 # QuestCompanion
 
+## 3.1.2
+
+- **Choisir une aide en capture express** : au survol du filet, une petite barre des trois aides (appât, lasso, sifflet) apparaît juste au-dessus, avec ce qu'il t'en reste. Un clic sur une aide lance le filet tout de suite avec elle ; son infobulle donne la chance du lancer. Une aide épuisée est grisée. Marche aussi en combat.
+
+*English:* pick an aid in express capture: hovering the net shows a small bar of the three aids (bait, lasso, whistle) just above it, with how many you have left. Clicking an aid throws the net right away with it; its tooltip gives the catch chance. Used-up aids are greyed out. Works in combat too.
+
 ## 3.1.1
 
 - **Le compagnon se range pendant un vol** : en griffon (ou toute autre monture de vol), le cadre du compagnon et son filet disparaissent, et reviennent à l'arrivée. Réglage « Masquer pendant un vol » (page Compagnon, activé par défaut).
