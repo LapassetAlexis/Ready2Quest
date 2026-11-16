@@ -386,12 +386,15 @@ do
 	Check("[AGGRO] marque accrochée au cadre de base de la barre", A.Ring("nameplate1"):GetParent() == A.W.plates.nameplate1
 		and A.Ring("nameplate1").lastPoint and A.Ring("nameplate1").lastPoint.relTo == A.W.plates.nameplate1)
 
-	-- style par défaut : la pastille (losange du client à gauche) ; 1.33.1 : plus d'anneau
+	-- 1.36.0 : style par défaut, les paliers ; la pastille (losange du client à
+	-- gauche) reste au choix ; 1.33.1 : plus d'anneau
 	local r1 = A.Ring("nameplate1")
-	Check("[AGGRO] marque par défaut : pastille (losange du client), à gauche de la barre", NS:AggroStyle() == "dot" and r1.dot:IsShown()
+	local defaultSteps = NS:AggroStyle() == "steps" and r1.steps:IsShown() and not r1.dot:IsShown()
+	NS:AggroSetStyle("dot")
+	Check("[AGGRO] marque par défaut : paliers ; au choix, la pastille (losange du client), à gauche de la barre", defaultSteps
+		and NS:AggroStyle() == "dot" and r1.dot:IsShown()
 		and r1.ringTexture == nil and not r1.steps:IsShown() and r1.texture == r1.dot and r1.dot.clientRole == "diamond"
 		and r1.dotBack.lastPoint and r1.dotBack.lastPoint.relTo == A.W.plates.nameplate1 and r1.dotBack.lastPoint.point == "RIGHT")
-	-- 1.36.0 : paliers au-dessus de la barre (remplacent le trait)
 	NS:AggroSetStyle("steps")
 	local r3 = A.Ring("nameplate3")
 	local function Lit(ring)
@@ -423,16 +426,19 @@ do
 	NS:AggroSetStyle("nimportequoi")
 	local choices = NS:AggroStyleChoices()
 	Check("[AGGRO] anneau et trait retirés, style inconnu refusé ; deux styles : pastille, paliers", ringRefused and barRefused
-		and NS:AggroStyle() == "steps" and #choices == 2 and choices[1].value == "dot" and choices[2].value == "steps"
+		and NS:AggroStyle() == "steps" and #choices == 2 and choices[1].value == "steps" and choices[2].value == "dot"
 		and NS.AGGRO_STRINGS.fr.AGGRO_STYLE_ring == nil and NS.AGGRO_STRINGS.fr.AGGRO_STYLE_bar == nil)
-	-- migrations une seule fois : anneau -> pastille (1.33.1), trait -> paliers (1.36.0)
+	-- migration 1.36.0, une seule fois : anneau, trait ou pastille d'avant -> paliers ;
+	-- ensuite, la pastille choisie reste
 	local db = NS:DB()
-	db.aggroStyle, db.aggroStyleSchema = "ring", nil
-	Check("[AGGRO] migration : anneau -> pastille", NS:AggroStyle() == "dot" and db.aggroStyle == "dot" and db.aggroStyleSchema == 3)
-	db.aggroStyle, db.aggroStyleSchema = "bar", 2
-	Check("[AGGRO] migration 1.36.0 : le trait devient les paliers", NS:AggroStyle() == "steps" and db.aggroStyle == "steps"
-		and db.aggroStyleSchema == 3)
+	local migrated = {}
+	for _, old in ipairs({ "ring", "bar", "dot" }) do
+		db.aggroStyle, db.aggroStyleSchema = old, 3
+		if NS:AggroStyle() ~= "steps" or db.aggroStyleSchema ~= 4 then migrated[#migrated + 1] = old end
+	end
 	NS:AggroSetStyle("dot")
+	Check("[AGGRO] migration 1.36.0 : les paliers pour tout le monde, une fois ; la pastille choisie ensuite reste",
+		#migrated == 0 and NS:AggroStyle() == "dot" and db.aggroStyle == "dot", table.concat(migrated, ", "))
 
 	-- le joueur s'approche : le verdict suit au passage suivant
 	A.W.units.nameplate3.dist = 18

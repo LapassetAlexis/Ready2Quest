@@ -161,10 +161,10 @@ ns.RegisterDefaults({
 	aggroKey     = "alert",   -- alert (1.31.0, danger seul), shift, ctrl, alt ou always
 	aggroTooltip = true,
 	aggroRings   = true,
-	aggroStyle   = "dot",     -- dot ou steps (1.33.1 : ring -> dot ; 1.36.0 : bar -> steps)
+	aggroStyle   = "steps",   -- steps ou dot (1.33.1 : ring -> dot ; 1.36.0 : paliers par défaut)
 	aggroLearn   = true,      -- 1.36.0 : apprendre la portée réelle en jeu (AggroPlus.lua)
 })
-ns.AGGRO_STYLES = { "dot", "steps" }
+ns.AGGRO_STYLES = { "steps", "dot" }
 
 ns.AGGRO_KEYS = { "alert", "shift", "ctrl", "alt", "always" }
 -- 1.31.0 : « danger seul » : le rouge sans touche, Maj montre tout
@@ -233,17 +233,18 @@ function ns:AggroSetKey(value)
 end
 
 -- migration une seule fois : 1.33.1 l'anneau retiré devient la pastille ;
--- 1.36.0 le trait sous la barre devient les paliers au-dessus
+-- 1.36.0 les paliers deviennent le style par défaut, pour tout le monde (la
+-- valeur par défaut était écrite dans la sauvegarde : un choix de la pastille
+-- ne se distingue pas du défaut ; elle reste au choix dans les options)
 function ns:AggroStyle()
 	local db = self:DB()
-	if db.aggroStyleSchema ~= 3 then
-		if db.aggroStyle == "ring" then db.aggroStyle = "dot" end
-		if db.aggroStyle == "bar" then db.aggroStyle = "steps" end
-		db.aggroStyleSchema = 3
+	if db.aggroStyleSchema ~= 4 then
+		db.aggroStyle = "steps"
+		db.aggroStyleSchema = 4
 	end
 	local style = db.aggroStyle
 	for _, key in ipairs(self.AGGRO_STYLES) do if key == style then return style end end
-	return "dot"
+	return "steps"
 end
 
 function ns:AggroSetStyle(value)
