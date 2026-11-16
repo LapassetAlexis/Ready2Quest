@@ -15,6 +15,11 @@ For **WoW Forever** (1.60). English and French.
 
 ![Pre-departure check: a readiness score out of 100 with tips](https://media.forgecdn.net/attachments/2147/118/r2q-1-png.png)
 
+## New in 1.36: a sharper aggro range
+- **Steps under the nameplate**: six thin bars, red to green, light up the further you are from the monster's aggro range, with the distance below ("~17 yd"). The new default (the diamond is still available).
+- **More accurate**: base range 15 yd at equal level (measured on Forever), your offensive spells used as extra range checks, and the distance estimated between two checks as you move.
+- **Learns as you play**: when a monster attacks you while you did nothing, solo, its real range is remembered (per monster and type) and replaces the estimate.
+
 ## New in 1.35: a forged look, group ready, learn all
 - **A forged look**: every window gets a gilded frame with the new logo medallion in the corner (a checked shield crowned with the gold quest "!"), raised buttons whose colour tells the action, and titles in the game's font. Ready2Quest keeps gold as its colour, with selections in blue. Prefer the old flat look? **Interface style** setting, General page, or `/r2q style sobre`.
 - **Group ready**: at a dungeon entrance, in a group, the dungeon sheet shows who is there (inside, at the entrance, on the way) and who is ready (durability, repairs, food, potions, hearthstone), for members who also run Ready2Quest. Nothing is posted in group chat. `/r2q groupe` gives the same summary in chat.
@@ -33,7 +38,7 @@ Each one can be switched on or off in one click (`/r2q options`).
 - **Camp kit** *(Forever)*: your campfire kit and camp item ready, and a countdown for camp buffs.
 - **Gear summary**: a short toast with the stats you gained or lost when you swap an item.
 - **Portrait stats**: hover your portrait to see your main stats, picked for your class and spec.
-- **Aggro range**: by default (**Danger only**) a red mark warns you, without any key, as soon as a monster is about to aggro you; hold Shift out of combat and each hostile nameplate gets a small diamond (or a line): red inside its estimated aggro radius, amber close, green safe; its tooltip gives the radius, your distance and the verdict.
+- **Aggro range**: by default (**Danger only**) a red mark warns you, without any key, as soon as a monster is about to aggro you; hold Shift out of combat and each hostile nameplate gets thin steps (or a small diamond): red inside its estimated aggro radius, amber close, green safe; its tooltip gives the radius, your distance and the verdict.
 
 ![Gear summary when you swap an item](https://media.forgecdn.net/attachments/2147/117/r2q-2-png.png)
 
@@ -75,6 +80,11 @@ Free software, **GPL-3.0**. Source code: https://github.com/LapassetAlexis/Ready
 
 Pour **WoW Forever** (1.60). En français et en anglais.
 
+## Nouveau en 1.36 : une portée d'aggro plus juste
+- **Des paliers sous la barre de nom** : six barres fines, du rouge au vert, d'autant plus allumées que tu es loin de la portée du monstre, avec la distance dessous (« ~17 m »). C'est le nouveau style par défaut (le losange reste au choix).
+- **Plus précise** : portée de base 15 m à niveau égal (mesurée sur Forever), tes sorts offensifs servent aussi de règle, et la distance est estimée entre deux mesures pendant que tu avances.
+- **Elle apprend en jouant** : quand un monstre t'attaque alors que tu n'as rien fait, seul, sa vraie portée est retenue (par monstre et par type) et remplace l'estimation.
+
 ## Nouveau en 1.35 : un habit forgé, Groupe prêt, Tout apprendre
 - **Un habit forgé** : toutes les fenêtres prennent un cadre d'orfèvre doré avec le médaillon du nouveau logo dans le coin (un écu coché qui porte le « ! » doré des quêtes), des boutons en relief dont la couleur dit le geste et des titres dans la police du jeu. Ready2Quest garde l'or pour couleur, avec la sélection en bleu. Tu préfères l'aspect d'avant, à plat ? Réglage **Style de l'interface**, page Général, ou `/r2q style sobre`.
 - **Groupe prêt** : devant un donjon, en groupe, la fiche du donjon montre qui est sur place (dans le donjon, à l'entrée, en route) et qui est prêt (durabilité, réparation, vivres, potions, foyer), pour les membres qui ont aussi Ready2Quest. Rien n'est écrit dans le chat du groupe. `/r2q groupe` donne le même bilan dans le chat.
@@ -93,7 +103,7 @@ Chacun s'active ou se coupe d'un clic (`/r2q options`).
 - **Kit de camp** *(Forever)* : ton kit de feu de camp et ton objet de camp prêts, et le compte à rebours des buffs au camp.
 - **Résumé de stuff** : un petit résumé éphémère des stats gagnées ou perdues quand tu changes d'objet.
 - **Stats du portrait** : survole ton portrait pour voir tes stats principales, choisies selon ta classe et ta spécialisation.
-- **Portée d'aggro** : par défaut (**Danger seul**), une marque rouge te prévient, sans toucher au clavier, dès qu'un monstre est sur le point de t'aggro ; maintiens Maj hors combat et chaque barre de nom hostile reçoit un petit losange (ou un trait) : rouge dans son rayon d'aggro estimé, ambre tout près, vert tranquille ; son infobulle donne le rayon, ta distance et le verdict.
+- **Portée d'aggro** : par défaut (**Danger seul**), une marque rouge te prévient, sans toucher au clavier, dès qu'un monstre est sur le point de t'aggro ; maintiens Maj hors combat et chaque barre de nom hostile reçoit des paliers fins (ou un petit losange) : rouge dans son rayon d'aggro estimé, ambre tout près, vert tranquille ; son infobulle donne le rayon, ta distance et le verdict.
 
 ## Confort
 
