@@ -98,7 +98,7 @@ do
 	local frame = Fresh("azeroth")
 	local s = Steps()
 	local skin = frame and frame.forgeSkin
-	s.ok("thème forgé, ancien habillage coupé", Theme.Forged() and NS.QCForged() and not NS:AzerothOn())
+	s.ok("thème forgé", Theme.Forged() and NS.QCForged())
 	s.ok("prédicat de l'anneau vrai", NS:CompanionRingOn() == true)
 	s.ok("anneau forgé posé", frame and frame.ring == "forge" and NS.CompanionRinged(frame)
 		and NS.CompanionRingSkin(frame) == skin and Shown(skin))

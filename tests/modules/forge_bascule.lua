@@ -112,13 +112,11 @@ for _, atlas in ipairs({ true, false }) do
 		Say("-- bascule forgée : état du produit, " .. tag)
 		Fresh(atlas)
 		local s = Steps()
-		s.ok("drapeau coupé", NS.AZEROTH_LEGACY == false)
 		s.ok("choix azeroth, thème du socle azeroth", NS:UIStyleChoice() == "azeroth" and NS:UISkinChoice() == "azeroth")
 		s.ok("thème forgé posé", Theme.Forged() and NS.QCForged())
-		s.ok("ancien habillage coupé", NS:LegacyStyle() == "sobre" and NS:UIStyle() == "sobre" and not NS:AzerothOn()
-			and not NS:AzerothScenesOn() and NS:JournalStyle() == "sobre")
+		s.ok("cadres au style du socle", NS:UIStyle() == "sobre")
 		s.ok("clé de style forge", NS:StyleKey() == "forge" and NS:JournalStyleKey() == "forge")
-		s.check("[BASC] " .. tag .. " : thème forgé posé, ancien habillage coupé, clé « forge »")
+		s.check("[BASC] " .. tag .. " : thème forgé posé, clé « forge »")
 	end
 
 	do
@@ -259,15 +257,11 @@ do
 		and NS.journalFrame.wvDecor ~= nil and NS.journalFrame.wvDecor.forged == true)
 	s.ok("compagnon : médaillon forgé et son décor, pas celui de l'ancien habillage", NS.companionFrame
 		and NS.companionFrame.ring == "forge" and NS.companionFrame.wvForgeDecor ~= nil and NS.companionFrame.wvDecor == nil)
-	-- les effets sont re-logés par les nouvelles API (ns:CompanionShinyFX,
-	-- ns:CompanionLevelFX, ns:BannerRewardFX) ; celles de l'ancien
-	-- habillage (AzerothShinyFX, AzerothLevelFX, AzerothRewardFX) restent
-	-- muettes hors drapeau, sans erreur
+	-- les effets passent par ns:CompanionShinyFX, ns:CompanionLevelFX, ns:BannerRewardFX
 	local toast = NS:EnsureJournalToast()
 	toast:Show()
-	local fx = { NS:AzerothShinyFX(), NS:AzerothLevelFX("Niveau 12 !", "level"),
-		NS:AzerothRewardFX(toast), NS:CompanionPaintRing(), NS:CarnetPaintRing() }
-	s.ok("effets de l'ancien habillage : aucun, sans erreur", not fx[1] and not fx[2] and not fx[3] and Errors() == "", Errors())
+	NS:CompanionPaintRing(); NS:CarnetPaintRing()
+	s.ok("teintes de l'anneau posées sans erreur", Errors() == "", Errors())
 	s.ok("grand effet re-logé sur le bandeau forgé (ns:BannerRewardFX)", toast.forgeBanner and NS:BannerRewardFX(toast) == true)
 	if NS.AzerothFxStop then NS:AzerothFxStop() end
 	toast:Hide()

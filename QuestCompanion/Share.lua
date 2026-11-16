@@ -543,32 +543,21 @@ function ns:ShareMenu()
 	return menu
 end
 
--- Habit du menu : bois sombre et Friz Quadrata en Azeroth, socle en Sobre
+-- Habit du menu : le socle
 local function PaintMenu(self, menu)
-	local az = self.AzerothOn and self:AzerothOn() and ns.AZEROTH_INK and ns.AZEROTH_CONTRAST
-		and ns.AZEROTH_CONTRAST["share.entry"] and true or false
-	menu.azeroth = az
-	local INK = ns.AZEROTH_INK
-	local bg = az and INK.woodBg or Theme.NAV
+	menu.azeroth = false
+	local bg = Theme.NAV
 	menu.bg:SetVertexColor(bg[1], bg[2], bg[3], 1)
-	local edge = az and ns.AZEROTH_BUTTONS and ns.AZEROTH_BUTTONS.gold.edge or Theme.EDGE
+	local edge = Theme.EDGE
 	menu.edge:SetColor(edge[1], edge[2], edge[3], 1)
 	-- (3.1.0 : thème forgé : le titre du menu en couleur d'identité)
-	local forged = not az and ns.QCForged and ns.QCForged()
-	local titleInk = az and INK[ns.AZEROTH_CONTRAST["share.title"][1]] or (forged and Theme.IDENTITY_LIGHT) or Theme.MUTED_LIGHT
-	local entryInk = az and INK[ns.AZEROTH_CONTRAST["share.entry"][1]] or Theme.LABEL
-	if az and ns.AzerothFont then
-		ns.AzerothFont(menu.title, ns.AZEROTH_CONTRAST["share.title"][4])
-	elseif menu.title.SetFontObject then
-		menu.title:SetFontObject(Theme.F_CAPS)
-	end
+	local forged = ns.QCForged and ns.QCForged()
+	local titleInk = forged and Theme.IDENTITY_LIGHT or Theme.MUTED_LIGHT
+	local entryInk = Theme.LABEL
+	if menu.title.SetFontObject then menu.title:SetFontObject(Theme.F_CAPS) end
 	menu.title:SetTextColor(titleInk[1], titleInk[2], titleInk[3], 1)
 	for _, row in ipairs(menu.rows) do
-		if az and ns.AzerothFont then
-			ns.AzerothFont(row.text, ns.AZEROTH_CONTRAST["share.entry"][4])
-		elseif row.text.SetFontObject then
-			row.text:SetFontObject(Theme.F_LABEL)
-		end
+		if row.text.SetFontObject then row.text:SetFontObject(Theme.F_LABEL) end
 		row.text:SetTextColor(entryInk[1], entryInk[2], entryInk[3], 1)
 	end
 end

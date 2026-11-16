@@ -320,12 +320,10 @@ local function SeasonNow()
 end
 
 -- 3.1.0 : le décor suit le choix du style « Azeroth » (le thème forgé, posé
--- sans les atlas du client), plus l'ancien habillage (ns:AzerothOn) : la
--- saison reste là quand l'ancien habillage est coupé. Chaque pose (carnet,
--- compagnon, scènes, glyphes) se garde d'un cadre qui n'a pas son hôte.
+-- sans les atlas du client). Chaque pose (carnet, compagnon, scènes,
+-- glyphes) se garde d'un cadre qui n'a pas son hôte.
 function ns:WinterVeilStyleOn()
-	if self.UIStyleChoice then return self:UIStyleChoice() == "azeroth" end
-	return (self.AzerothOn and self:AzerothOn()) and true or false
+	return self.UIStyleChoice ~= nil and self:UIStyleChoice() == "azeroth"
 end
 
 -- Le décor est-il là ? Style Azeroth choisi ET réglage (auto : la saison)

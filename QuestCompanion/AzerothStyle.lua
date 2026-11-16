@@ -542,69 +542,43 @@ function ns:UIStyleChoice()
 	return ns.UI_STYLE_DEFAULT
 end
 
--- 3.1.0 (bascule vers le thème forgé) : deux questions séparées.
---   * Quel thème du socle ? Le choix du joueur, rien d'autre : « azeroth »
---     pose le thème forgé (nos textures, toujours là), « sobre » le Sobre.
---     ns:UISkinChoice (le socle le lit à ADDON_LOADED) est redéfini ici.
---   * L'ancien habillage d'art du client (carnet en parchemin, scènes en
---     bois, bandeaux dorés, anneau du compagnon) ? Seulement si le drapeau
---     interne ns.AZEROTH_LEGACY vaut true (faux dans le produit ; aucun
---     réglage ni commande ; les tests de l'ancien habillage le posent par
---     T.Legacy) ET que le client a ses textures. ns:UIStyle(), AzerothOn(),
---     AzerothScenesOn() et JournalStyle() en dépendent : « sobre » / faux
---     dans le produit, et tout le code de l'ancien habillage garde son sens.
--- Pour décider d'une brique forgée : ns.QCForged() / Theme.Forged(), jamais
--- AzerothOn.
-ns.AZEROTH_LEGACY = false
-
--- Le thème du socle : le choix du joueur (plus de repli sur les atlas du
--- client, qui ne servent qu'à l'ancien habillage)
+-- 3.1.0 (bascule vers le thème forgé) : le thème du socle est le choix du
+-- joueur, rien d'autre : « azeroth » pose le thème forgé (nos textures,
+-- toujours là), « sobre » le Sobre. ns:UISkinChoice (le socle le lit à
+-- ADDON_LOADED) est redéfini ici. 3.1.2 : l'ancien habillage d'art du client
+-- (carnet en parchemin, scènes en bois, bandeaux dorés, anneau) est retiré.
+-- Pour décider d'une brique forgée : ns.QCForged() / Theme.Forged().
 function ns:UISkinChoice() return self:UIStyleChoice() end
 
--- L'ancien habillage : « azeroth » seulement derrière le drapeau, au choix
--- azeroth, le client ayant ses textures ; « sobre » sinon
-function ns:LegacyStyle()
-	if ns.AZEROTH_LEGACY == true and self:UIStyleChoice() == "azeroth" and self:AzerothAtlasOK() then return "azeroth" end
-	return "sobre"
-end
--- Le style de l'ancien habillage (compatibilité : frame.uiStyle, les portes)
-function ns:UIStyle() return self:LegacyStyle() end
-function ns:AzerothOn() return self:UIStyle() == "azeroth" end
+-- Le style des cadres construits (frame.uiStyle) : toujours « sobre » (les
+-- briques forgées se décident par ns.QCForged)
+function ns:UIStyle() return "sobre" end
 
--- La clé de cache d'un cadre construit (frame.styleKey) : « azeroth » si
--- l'ancien habillage l'a construit, « forge » s'il est né sous le thème
--- forgé, « sobre » sinon. Une brique forgée est décidée à la création : un
--- cadre né forgé n'est jamais resservi en Sobre, ni l'inverse. `legacy` :
--- la porte de l'ancien habillage propre à la surface (AzerothScenesOn pour
--- les scènes et le carnet) ; par défaut AzerothOn().
-function ns:StyleKey(legacy)
-	if legacy == nil then legacy = self:AzerothOn() end
-	if legacy then return "azeroth" end
+-- La clé de cache d'un cadre construit (frame.styleKey) : « forge » s'il est
+-- né sous le thème forgé, « sobre » sinon. Une brique forgée est décidée à
+-- la création : un cadre né forgé n'est jamais resservi en Sobre, ni
+-- l'inverse.
+function ns:StyleKey()
 	local Theme_ = ns.Theme
 	if Theme_ and type(Theme_.Forged) == "function" and Theme_.Forged() then return "forge" end
 	return "sobre"
 end
--- La clé d'un cadre déjà construit (un cadre d'avant styleKey : son uiStyle)
+-- La clé d'un cadre déjà construit
 function ns.FrameStyleKey(frame)
 	if not frame then return nil end
-	return frame.styleKey or (frame.uiStyle == "azeroth" and "azeroth") or "sobre"
+	return frame.styleKey or "sobre"
 end
--- Marque un cadre qui vient d'être construit avec la clé du moment (ancien
--- habillage : lu sur le cadre, frame.uiStyle « azeroth » ou frame.azeroth) ;
--- rend le cadre
+-- Marque un cadre qui vient d'être construit avec la clé du moment ; rend le cadre
 function ns:MarkStyle(frame)
-	if frame then frame.styleKey = self:StyleKey((frame.uiStyle == "azeroth" or frame.azeroth == true) and true or false) end
+	if frame then frame.styleKey = self:StyleKey() end
 	return frame
 end
 -- Le nom global d'une fenêtre par clé (Échap vise la bonne, celle de
--- l'autre clé restant en cache) : base + « Azeroth » / « Forge » / rien
+-- l'autre clé restant en cache) : base + « Forge » / rien
 function ns.StyleName(base, key)
-	if key == "azeroth" then return base .. "Azeroth" end
 	if key == "forge" then return base .. "Forge" end
 	return base
 end
--- Style des fenêtres de capture : Azeroth si le style l'est et que le bois est là
-function ns:AzerothScenesOn() return self:AzerothOn() and self:AzerothSceneAtlasOK() end
 
 function ns:UIStyleChoices()
 	local list = {}
@@ -1573,44 +1547,38 @@ function ns:EnsureCaptureResult()
 		if ns.CapturePaintNetGlyph then ns.CapturePaintNetGlyph(tex) else tex:SetTexture(Theme.LOGO_SMALL) end
 	end
 	local frame
-	if self:AzerothOn() then
-		frame = self:AzerothCreateBanner({ strata = "HIGH", name = "QuestCompanionCaptureResultAzeroth" })
-		if not frame then return nil end
-		Glyph(frame.icon)
-	else
-		if not (Theme and Theme.CreateToast) then return nil end
-		-- 3.1.0 : sous le thème forgé, le bandeau à médaillon (ForgeBanners.lua)
-		if ns.QCForged and ns.QCForged() and self.ForgeCaptureResult then
-			frame = self:ForgeCaptureResult(Glyph)
-			if frame then
-				self:MarkStyle(frame)
-				if self.RestorePoint then self:RestorePoint(frame, "captureResultPoint", { point = "TOP", x = 0, y = -200 }) end
-				frame:Hide()
-				self.captureResult = frame
-				return frame
-			end
+	if not (Theme and Theme.CreateToast) then return nil end
+	-- 3.1.0 : sous le thème forgé, le bandeau à médaillon (ForgeBanners.lua)
+	if ns.QCForged and ns.QCForged() and self.ForgeCaptureResult then
+		frame = self:ForgeCaptureResult(Glyph)
+		if frame then
+			self:MarkStyle(frame)
+			if self.RestorePoint then self:RestorePoint(frame, "captureResultPoint", { point = "TOP", x = 0, y = -200 }) end
+			frame:Hide()
+			self.captureResult = frame
+			return frame
 		end
-		frame = Theme.CreateToast(UIParent, 300, 66, { strata = "HIGH", accent = Theme.GOLD, name = "QuestCompanionCaptureResult" })
-		if not frame then return nil end
-		frame.uiStyle = "sobre"
-		local left = frame.contentLeft or 14
-		frame.icon = frame:CreateTexture(nil, "ARTWORK")
-		Glyph(frame.icon)
-		frame.icon:SetSize(34, 34)
-		frame.icon:SetPoint("LEFT", frame, "LEFT", left, 0)
-		local textLeft, textW = left + 44, 300 - left - 44 - 12
-		local function Line(font, color, y)
-			local fs = Theme.Text(frame, font, color)
-			fs:SetPoint("TOPLEFT", frame, "TOPLEFT", textLeft, y)
-			fs:SetWidth(textW)
-			fs:SetJustifyH("LEFT")
-			if fs.SetWordWrap then fs:SetWordWrap(false) end
-			return fs
-		end
-		frame.title = Line(Theme.F_CAPS, Theme.MUTED_LIGHT, -9)
-		frame.text = Line(Theme.F_TITLE, Theme.PARCHMENT, -23)
-		frame.stars = Line(Theme.F_SMALL, Theme.GOLD, -44)
 	end
+	frame = Theme.CreateToast(UIParent, 300, 66, { strata = "HIGH", accent = Theme.GOLD, name = "QuestCompanionCaptureResult" })
+	if not frame then return nil end
+	frame.uiStyle = "sobre"
+	local left = frame.contentLeft or 14
+	frame.icon = frame:CreateTexture(nil, "ARTWORK")
+	Glyph(frame.icon)
+	frame.icon:SetSize(34, 34)
+	frame.icon:SetPoint("LEFT", frame, "LEFT", left, 0)
+	local textLeft, textW = left + 44, 300 - left - 44 - 12
+	local function Line(font, color, y)
+		local fs = Theme.Text(frame, font, color)
+		fs:SetPoint("TOPLEFT", frame, "TOPLEFT", textLeft, y)
+		fs:SetWidth(textW)
+		fs:SetJustifyH("LEFT")
+		if fs.SetWordWrap then fs:SetWordWrap(false) end
+		return fs
+	end
+	frame.title = Line(Theme.F_CAPS, Theme.MUTED_LIGHT, -9)
+	frame.text = Line(Theme.F_TITLE, Theme.PARCHMENT, -23)
+	frame.stars = Line(Theme.F_SMALL, Theme.GOLD, -44)
 	self:MarkStyle(frame)
 	if self.RestorePoint then self:RestorePoint(frame, "captureResultPoint", { point = "TOP", x = 0, y = -200 }) end
 	frame:Hide()
@@ -1888,11 +1856,11 @@ ns.FORGE_FX = {
 	glowBelow = 3,
 }
 
--- La branche « anneau » : l'ancien habillage, ou le thème forgé
+-- La branche « anneau » : le thème forgé (le médaillon)
 function ns:CompanionRingOn()
-	return (self:AzerothOn() or ns.QCForged()) and true or false
+	return ns.QCForged() and true or false
 end
--- Le cadre porte-t-il un anneau (ancien habillage ou médaillon forgé) ?
+-- Le cadre porte-t-il un anneau (le médaillon forgé) ?
 function ns.CompanionRinged(frame) return frame ~= nil and frame.ring ~= nil end
 -- L'habit de l'anneau posé (nil : le cadre carré)
 function ns.CompanionRingSkin(frame)
@@ -2210,50 +2178,15 @@ end
 function ns:CompanionApplyUIStyle()
 	local frame = self.companionFrame
 	if not frame then return nil end
-	local az = self:AzerothOn()
-	-- 3.1.0 : le thème forgé sans l'ancien habillage : le médaillon forgé
-	local forge = not az and self:CompanionRingOn() and self.CompanionApplyForgeSkin ~= nil
-	if az and not frame.azSkin then frame.azSkin = BuildCompanionSkin(frame) end
-	local skin = frame.azSkin
+	-- 3.1.0 : le thème forgé : le médaillon forgé
+	local forge = self:CompanionRingOn() and self.CompanionApplyForgeSkin ~= nil
 	if not forge and frame.ring == "forge" and self.CompanionLeaveForgeSkin then
 		-- (quitte le médaillon forgé : son habit caché, son fond libéré)
 		self:CompanionLeaveForgeSkin(frame)
 	end
 	if forge then
-		if skin then skin:Hide() end
 		self:CompanionApplyForgeSkin(frame)
-	elseif az then
-		skin:Show()
-		EdgesShown(frame, false)
-		Masked(frame, true)
-		-- le modèle dans l'ouverture du cadre, sous l'anneau (niveau du cadre + 1 < habit + 4)
-		frame.modelBase = ns.AzerothCompanionModelBase(frame.GetWidth and frame:GetWidth() or nil)
-		if frame.model then
-			if frame.model.SetFrameLevel then frame.model:SetFrameLevel((frame:GetFrameLevel() or 1) + 1) end
-			self:CompanionPlaceModel(frame.fxOffset and frame.fxOffset[1], frame.fxOffset and frame.fxOffset[2])
-		end
-		-- nom et humeur sur la plaque (au-dessus du modèle et de l'anneau)
-		for _, fs in ipairs({ frame.name, frame.mood }) do
-			if fs and fs.SetParent then fs:SetParent(skin) end
-		end
-		if frame.name then
-			frame.name:ClearAllPoints()
-			frame.name:SetPoint("CENTER", skin.plate, "BOTTOM", 0, PLATE_NAME_Y)
-			frame.name:SetTextColor(INKS.white[1], INKS.white[2], INKS.white[3], 1)
-			Theme.TextShadow(frame.name)
-		end
-		if frame.mood then
-			-- 2.13.1 : dans le rabat, sous la plaque
-			if frame.mood.SetParent then frame.mood:SetParent(skin.moodTab) end
-			frame.mood:ClearAllPoints()
-			frame.mood:SetPoint("CENTER", skin.moodTab, "CENTER", 0, -MOOD_TAB_TUCK / 2)
-			if Theme.NoShadow then Theme.NoShadow(frame.mood) end
-		end
-		-- la bande claire n'a plus de texte : pas de voile
-		if skin.moodBand and skin.moodBand.Hide then skin.moodBand:Hide() end
-		self:CompanionApplyMoodTab()
-	elseif frame.uiStyle == "azeroth" or frame.ring ~= nil then
-		if skin then skin:Hide() end
+	elseif frame.ring ~= nil then
 		Masked(frame, false)
 		frame.modelBase = ns.COMPANION_MODEL_BASE
 		if frame.model and self.CompanionPlaceModel then self:CompanionPlaceModel(frame.fxOffset and frame.fxOffset[1], frame.fxOffset and frame.fxOffset[2]) end
@@ -2274,16 +2207,16 @@ function ns:CompanionApplyUIStyle()
 		if frame.mood then Theme.TextShadow(frame.mood, 0.6) end
 		EdgesShown(frame, true)
 	end
-	frame.uiStyle = az and "azeroth" or "sobre"
+	frame.uiStyle = "sobre"
 	-- 3.1.0 : l'anneau posé (ns.CompanionRinged : les effets, le décor, les
 	-- cosmétiques du cadre le lisent)
-	frame.ring = (az and "azeroth") or (forge and "forge") or nil
+	frame.ring = forge and "forge" or nil
 	-- 3.1.0 : rhabillé sur place (pas de cache) ; sa clé dit sous quel thème
 	-- il a été habillé la dernière fois
-	frame.styleKey = self:StyleKey(az)
+	frame.styleKey = self:StyleKey()
 	-- le cadre gagné (bordure du client) revient en Sobre
-	if not az and not forge and self.CompanionApplyFrame then self:CompanionApplyFrame() end
-	-- 2.14.0 (bêta 7) : en Azeroth, sa teinte sur l'anneau (l'or en Sobre)
+	if not forge and self.CompanionApplyFrame then self:CompanionApplyFrame() end
+	-- 2.14.0 (bêta 7) : la teinte du cadre sur l'anneau
 	self:CompanionPaintRing()
 	return frame.uiStyle
 end
@@ -3324,12 +3257,10 @@ local function ForgeReward(self, frame, opts)
 	return true
 end
 
--- Les grandes récompenses d'un bandeau, quel que soit son habit : l'ancien
--- habillage (ns:AzerothRewardFX), le thème forgé (bandeau né forgé), rien en
--- Sobre. Rend true si un effet part.
+-- Les grandes récompenses d'un bandeau : le thème forgé (bandeau né forgé),
+-- rien en Sobre. Rend true si un effet part.
 function ns:BannerRewardFX(frame, opts)
 	if not (frame and frame.CreateTexture) then return false end
-	if self:AzerothOn() then return self:AzerothRewardFX(frame, opts) end
 	if frame.forgeBanner and ns.QCForged and ns.QCForged() then return ForgeReward(self, frame, opts) end
 	return false
 end

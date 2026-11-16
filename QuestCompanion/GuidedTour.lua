@@ -344,7 +344,7 @@ DEFS.migration = {
 -- La bulle et le liseré (un jeu par style, créé une fois)
 -- ---------------------------------------------------------------------------
 local function TourStyle(self)
-	return (self.AzerothOn and self:AzerothOn()) and "azeroth" or "sobre"
+	return "sobre"
 end
 
 local function RoleInk(fs, role)
@@ -492,7 +492,7 @@ end
 local function Parts(self)
 	local style = TourStyle(self)
 	-- 3.1.0 : un jeu par clé (une bulle née forgée ne sert pas en Sobre)
-	local key = self.StyleKey and self:StyleKey(style == "azeroth") or style
+	local key = self.StyleKey and self:StyleKey() or style
 	self.tourUI = self.tourUI or {}
 	local ui = self.tourUI[key]
 	if not ui then

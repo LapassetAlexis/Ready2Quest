@@ -264,11 +264,8 @@ local function DateText(self, at)
 end
 
 local function FillRow(self, row, entry)
-	-- 3.1.0 : le bouclier du client seulement dans le carnet de l'ancien
-	-- habillage (drapeau) ; au thème forgé comme en Sobre, le losange
-	local journal = self.journalFrame
+	-- 3.1.0 : au thème forgé comme en Sobre, le losange
 	local def = entry.def
-	local azeroth = journal and journal.azeroth and self.AzerothOn and self:AzerothOn()
 	row.entry = entry
 	row.def = def
 	row.icon:SetTexture(self:FeatIcon(def))
@@ -299,18 +296,12 @@ local function FillRow(self, row, entry)
 		end
 	end
 	row.pts:SetText(tostring(def.pts or 0))
-	if azeroth and ns.AzerothShield then
-		ns.AzerothShield(row.shield, entry.got and "gold" or "grey")
-		row.diamond:Hide()
-		ns.AzerothShieldCenter(row.pts, row.shield)
-	else
-		row.shield:Hide()
-		row.diamond:Show()
-		local c = entry.got and Theme.GOLD or Theme.MUTED
-		row.diamond:SetVertexColor(c[1], c[2], c[3], 1)
-		row.pts:ClearAllPoints()
-		row.pts:SetPoint("CENTER", row.diamond, "CENTER", 0, 0)
-	end
+	row.shield:Hide()
+	row.diamond:Show()
+	local c = entry.got and Theme.GOLD or Theme.MUTED
+	row.diamond:SetVertexColor(c[1], c[2], c[3], 1)
+	row.pts:ClearAllPoints()
+	row.pts:SetPoint("CENTER", row.diamond, "CENTER", 0, 0)
 	Paint(row.pts, entry.got and Theme.PARCHMENT or Theme.MUTED_LIGHT)
 	row:SetAccent(entry.got and Theme.GOLD or nil)
 	row:SetAlpha(pending and 0.45 or 1)

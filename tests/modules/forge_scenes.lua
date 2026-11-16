@@ -185,7 +185,7 @@ do
 	NS:CaptureThrow()
 	local stage = NS.captureStage
 	local F = NS.FORGE_SCENE.stage
-	s.ok("produit : thème forgé, ancien habillage coupé", NS.QCForged() and not NS:AzerothOn() and NS.AZEROTH_LEGACY == false)
+	s.ok("produit : thème forgé", NS.QCForged())
 	s.ok("carte née forgée, clé « forge », nom pour Échap, jamais frame.azeroth", stage and stage:IsShown() and stage.forged
 		and stage.styleKey == "forge" and stage.uiStyle == "sobre" and not stage.azeroth
 		and Has(_G.UISpecialFrames, "QuestCompanionCaptureStageForge") and stage:GetWidth() == F.w and stage:GetHeight() == F.h)

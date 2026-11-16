@@ -546,19 +546,9 @@ function ns:EnsureJournalToast()
 	-- logo dans le cadre carré, bouclier d'or
 	local cached = self.StyleCached and self:StyleCached("journalToast")
 	if cached then self.journalToast = cached; return cached end
-	local frame = self.AzerothOn and self:AzerothOn() and self:AzerothCreateBanner({ strata = "MEDIUM" })
-	if frame then
-		if self.MarkStyle then self:MarkStyle(frame) end
-		frame.icon:SetTexture(Theme.LOGO_SMALL)
-		ToastButton(frame)
-		if self.RestorePoint then self:RestorePoint(frame, "journalToastPoint", { point = "TOP", x = 0, y = -190 }) end
-		frame:Hide()
-		self.journalToast = frame
-		return frame
-	end
 	if not (Theme and Theme.CreateToast) then return nil end
 	-- 3.1.0 : sous le thème forgé, le bandeau à médaillon (ForgeBanners.lua)
-	frame = ns.QCForged and ns.QCForged() and self.ForgeJournalToast and self:ForgeJournalToast()
+	local frame = ns.QCForged and ns.QCForged() and self.ForgeJournalToast and self:ForgeJournalToast()
 	if frame then
 		if self.MarkStyle then self:MarkStyle(frame) end
 		ToastButton(frame)

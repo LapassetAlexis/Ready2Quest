@@ -696,20 +696,9 @@ function ns:EnsureGuildFeatToast()
 	-- style de l'interface (2.5.0, AzerothStyle.lua)
 	local cached = self.StyleCached and self:StyleCached("guildFeatToast")
 	if cached then self.guildFeatToast = cached; return cached end
-	-- Azeroth : variante « guilde » du bandeau, cadre rond à volutes ; la
-	-- sous-ligne (créature, étoiles) sous le nom, l'aide en infobulle seulement
-	local frame = self.AzerothOn and self:AzerothOn()
-		and self:AzerothCreateBanner({ strata = "HIGH", guild = true, round = true, name = "QuestCompanionGuildFeatAzeroth" })
-	if frame then
-		Glyph(frame.icon)
-		frame.info = frame.stars
-		frame.hint = frame.banner:CreateFontString(nil, "OVERLAY", Theme.F_SMALL)
-		frame.hint:Hide()
-	else
-		-- 3.1.0 : sous le thème forgé, le bandeau à médaillon (ForgeBanners.lua)
-		frame = ns.QCForged and ns.QCForged() and self.ForgeGuildFeatToast and self:ForgeGuildFeatToast(Glyph)
-		frame = frame or self:GuildFeatToastSobre(art)
-	end
+	-- 3.1.0 : sous le thème forgé, le bandeau à médaillon (ForgeBanners.lua)
+	local frame = ns.QCForged and ns.QCForged() and self.ForgeGuildFeatToast and self:ForgeGuildFeatToast(Glyph)
+	frame = frame or self:GuildFeatToastSobre(art)
 	if not frame then return nil end
 	if self.MarkStyle then self:MarkStyle(frame) end
 	-- un bouton invisible par-dessus : clic (la fiche) et glisser

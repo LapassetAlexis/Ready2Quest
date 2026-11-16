@@ -1165,47 +1165,6 @@ do
 		ZQReset(R.saved.ZONE_QUESTS)
 	end
 
-	-- 4.2 Exploration : encres mesurées des quêtes et des zones
-	do
-		Say("-- exploration 2.9.1 : encres mesurées")
-		local bad = {}
-		for _, key in ipairs({ "quest.name", "quest.nameDone", "quest.detail", "quest.detailDone", "zone.label", "zone.unseen" }) do
-			local role = CONTRAST[key]
-			local color = role and INK[role[1]]
-			if not (color and Ratio(color, role[2]) >= 4.5 and role[3] >= 4.5) then bad[#bad + 1] = key end
-		end
-		Check("[R291] rôles quest.* et zone.* : 4,5:1 au moins sur le pire fond ; « zoneDim » 5,41:1 sur les catégories", #bad == 0
-			and math.abs(Ratio(INK.zoneDim, 0.0455) - 5.41) < 0.01, table.concat(bad, ", "))
-		R.Reset()
-		ZQReset({ [1413] = { [9301] = { en = "Wayward Weapons", lvl = 2 }, [9302] = { en = "Legging It", lvl = 6 } } })
-		local f = NS:ToggleJournal(true)
-		NS:SelectJournalKind("progress")
-		f.progPart = "quests"
-		NS:RefreshJournal()
-		NS:RefreshJournal()
-		local pane = f.prog
-		local line
-		for _, l in ipairs(pane and pane.items or {}) do
-			if l.item and not l.item.header and l:IsShown() then line = line or l end
-		end
-		local todo = line and line.azStyle == "light" and Same(line.text.textColor, INK[CONTRAST["quest.name"][1]])
-			and not (line.detail:GetText() or ""):find("|c", 1, true) and Same(line.detail.textColor, INK[CONTRAST["quest.detail"][1]])
-		if line then NS.CarnetQuestLineInk(line, { done = true, detail = NS.L.ZQ_DONE }) end
-		-- les zones pas encore vues : rangée opaque, gris mesuré
-		local unseen
-		for _, row in ipairs(pane and pane.zones or {}) do
-			if row.zone and not row.zone.seen and not row.selected and row:IsShown() then unseen = unseen or row end
-		end
-		if not unseen and pane and pane.zones[2] then
-			unseen = pane.zones[2]
-			unseen.zone, unseen.selected = { id = 1, name = "Zone test", seen = false }, false
-			NS.CarnetZoneRowInk(unseen)
-		end
-		local okErr, errs = NoErrors()
-		f:Hide()
-		ZQReset(R.saved.ZONE_QUESTS)
-	end
-
 	-- 4.3 La roue crantée du carnet : la roue grise du journal de quêtes du client
 	do
 		Say("-- exploration 2.9.1 : roue crantée grise (Sobre ; 3.1.0 : la roue du socle au thème forgé)")

@@ -330,14 +330,14 @@ end
 -- quelle, le nouveau style vient à la suivante.
 -- ---------------------------------------------------------------------------
 local function StageStyle(self)
-	return (self.AzerothScenesOn and self:AzerothScenesOn()) and "azeroth" or "sobre"
+	return "sobre"
 end
 -- 3.1.0 : la clé de cache (ns:StyleKey) : « azeroth » (ancien habillage),
 -- « forge » (née sous le thème forgé) ou « sobre » ; jamais frame.azeroth
 -- hors ancien habillage (Theme.DressWindow refuserait de l'habiller)
 local function StageKey(self, style)
 	if not self.StyleKey then return style end
-	return self:StyleKey(style == "azeroth")
+	return self:StyleKey()
 end
 local function KeyOf(frame)
 	return ns.FrameStyleKey and ns.FrameStyleKey(frame) or frame.uiStyle or "sobre"

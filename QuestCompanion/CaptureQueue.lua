@@ -1277,16 +1277,8 @@ function ns:EnsureCaptureToast()
 	-- pour le style courant resservit ; Azeroth = bandeau doré + bande sombre
 	local cached = self.StyleCached and self:StyleCached("captureToast")
 	if cached then self.captureToast = cached; return cached end
-	local frame = self.AzerothOn and self:AzerothOn() and self:AzerothCreateBanner({ strata = "HIGH", strip = true })
-	if frame then
-		frame.ownGlyph = PaintNetIcon(frame.icon)
-		if frame.ownGlyph then frame.icon:SetVertexColor(Theme.GOLD_LIGHT[1], Theme.GOLD_LIGHT[2], Theme.GOLD_LIGHT[3], 1)
-		else frame.icon:SetTexCoord(0.08, 0.92, 0.08, 0.92) end
-	elseif not (Theme and Theme.CreateToast) then
-		return nil
-	else
-		frame = self:CaptureToastSobre()
-	end
+	if not (Theme and Theme.CreateToast) then return nil end
+	local frame = self:CaptureToastSobre()
 	if not frame then return nil end
 	if self.MarkStyle then self:MarkStyle(frame) end
 	self:CaptureToastControls(frame)

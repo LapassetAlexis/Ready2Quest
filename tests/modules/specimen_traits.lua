@@ -654,11 +654,6 @@ do
 	end
 	Check("[T31] couleurs des caractères et des tailles : jetons du thème, ≥ 4,5:1 sur la fenêtre", low >= 4.5,
 		lowName .. "=" .. string.format("%.2f", low))
-	local roles = NS.CarnetTokenRoles and NS.CarnetTokenRoles() or {}
-	local inked = true
-	for id in pairs(NS.PERSONALITY_TRAITS) do if not roles[NS:SpecimenTraitColor(id)] then inked = false end end
-	for _, def in ipairs(NS.SPECIMEN_SIZES) do if not roles[NS:SpecimenSizeColor(def.id)] then inked = false end end
-	Check("[T31] couleurs reconnues par le carnet Azeroth (encre mesurée sur parchemin)", inked)
 	Check("[T31] textes : la visite guidée (Réserve) parle du caractère et de la taille, le réglage « Caractère : Apparence » aussi",
 		Has(NS.L.TOUR_B_reserve, "caractère") and Has(NS.L.TOUR_B_reserve, "taille") and Has(NS.L.TOUR_B_reserve, "géant")
 		and Has(NS.L.OPT_TRAIT_SOURCE_DESC_1, "créature capturée"))

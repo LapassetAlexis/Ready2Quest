@@ -174,13 +174,13 @@ end
 local function Upper(text) return Theme.Upper and Theme.Upper(text) or text end
 -- Style des fenêtres de capture (2.5.1) : Azeroth (bois) ou Sobre
 local function SceneStyle(self)
-	return (self.AzerothScenesOn and self:AzerothScenesOn()) and "azeroth" or "sobre"
+	return "sobre"
 end
 -- 3.1.0 : la clé de cache (ns:StyleKey) : « azeroth » (ancien habillage),
 -- « forge » (née sous le thème forgé) ou « sobre »
 local function SceneKey(self, style)
 	if not self.StyleKey then return style end
-	return self:StyleKey(style == "azeroth")
+	return self:StyleKey()
 end
 local function KeyOf(frame)
 	return ns.FrameStyleKey and ns.FrameStyleKey(frame) or frame.uiStyle or "sobre"
