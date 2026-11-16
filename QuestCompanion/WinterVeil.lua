@@ -49,40 +49,6 @@ ns.WINTER_VEIL_ART = {
 }
 -- le masque rond du client (déjà utilisé par AzerothStyle.lua, FeatsCosmetics.lua)
 ns.WINTER_VEIL_ROUND_MASK = "Interface\\CharacterFrame\\TempPortraitAlphaMask"
--- le carnet : hauteur de la guirlande (sous le métal de la plaque), icônes
--- du titre, flocons (ancre, décalage, côté, opacité), sur la page ou la colonne
--- 2.14.0 (bêta 3) : la guirlande était trop fine (14 px, bulbes de 4 px) et
--- passait sous le joint de métal entre la colonne et la page. Deux bandes
--- de 28 px (bulbes ≈ 13 px), chacune pendue au bas de la barre de métal,
--- l'une sur la colonne, l'autre sur la page : elles s'arrêtent avant le
--- joint (lightsJoint) et avant les volutes des coins de la page
--- (lightsCurl), à lightsInset du bois ; sur la colonne, après son intitulé
--- (lightsGap), qui garde son parchemin nu. Posées sur la colonne et la page
--- (couche BORDER, comme les flocons) : sous leurs textes, sans souris.
--- 2.14.0 (bêta 4) : la bande de la colonne commençait après son intitulé
--- (« CARNET ») : un trou à gauche, une guirlande qui paraissait décentrée
--- (25.png). Elle court désormais sur toute la colonne. L'intitulé de la
--- colonne, qu'elle couvrirait, est caché tant que la guirlande est là (rendu
--- sans elle) : le titre de la fenêtre dit déjà « Carnet de voyage ».
--- 2.14.0 (bêta 5) : deux bandes coupées au joint et sous les volutes
--- laissaient un trou d'une cinquantaine de px autour du poteau de métal
--- entre la colonne et la page, et la fin de la page nue (29.png). Une seule
--- bande désormais, d'un bord intérieur du bois à l'autre (début de la
--- colonne → fin de la page), à lightsEdge px de chaque bout, pendue au bas
--- de la barre de métal : elle passe par-dessus le poteau du joint et les
--- volutes (posée sur le décor, au-dessus du calque du bois et du métal ;
--- rien d'autre dans ses 28 px que l'intitulé caché).
-ns.WINTER_VEIL_JOURNAL = {
-	lightsH = 28, lightsEdge = 8,
-	iconSize = 18, iconGap = 6,
-	-- 2.14.0 (bêta 5) : les flocons sous la bande (haut de la page, haut de
-	-- la colonne) seraient recouverts : descendus sous elle, sur la page
-	flakes = {
-		{ on = "content", point = "TOPRIGHT", x = -34, y = -46, size = 30, alpha = 0.42 },
-		{ on = "content", point = "TOPRIGHT", x = -76, y = -62, size = 16, alpha = 0.36 },
-		{ on = "content", point = "TOPRIGHT", x = -118, y = -44, size = 14, alpha = 0.38 },
-	},
-}
 -- le cadre du compagnon : la guirlande 3D (bande au ras du haut de l'anneau ;
 -- caméra à régler en jeu : cam, position, cap) et ses deux flocons.
 -- 2.14.0 (bêta 3) : en bêta 2 (118×34, cam 1, centre 6 px au-dessus du
@@ -265,14 +231,6 @@ local function NewFile(parent, layer, sub, spec)
 	return tex
 end
 
--- Largeur réelle d'un texte
-local function Measure(fs)
-	local ok, w
-	if fs.GetUnboundedStringWidth then ok, w = pcall(fs.GetUnboundedStringWidth, fs) end
-	if not (ok and tonumber(w)) and fs.GetStringWidth then ok, w = pcall(fs.GetStringWidth, fs) end
-	return (ok and tonumber(w)) or 0
-end
-
 -- ---------------------------------------------------------------------------
 -- La saison et le réglage
 -- ---------------------------------------------------------------------------
@@ -356,98 +314,6 @@ function ns:SetWinterVeil(mode)
 	self:WinterVeilApply()
 	if self.RefreshOptions then pcall(self.RefreshOptions, self) end
 	return mode
-end
-
--- ---------------------------------------------------------------------------
--- Le carnet : guirlande sous la plaque, icônes du titre, flocons
--- ---------------------------------------------------------------------------
-local function BuildJournalDecor(frame)
-	local J, A = ns.WINTER_VEIL_JOURNAL, ns.WINTER_VEIL_ART
-	local over = frame.azOver
-	local d = CreateFrame("Frame", nil, over)
-	d:SetAllPoints(frame)
-	d:SetFrameLevel((over:GetFrameLevel() or 1) + 2)
-	d:EnableMouse(false)
-	-- la guirlande : posée (et reposée) par LayJournalLights
-	d.lights = {}
-	-- le cadeau et le renne, de part et d'autre du titre (placés à chaque rafraîchissement)
-	d.present = NewFile(d, "OVERLAY", 1, A.present)
-	d.reindeer = NewFile(d, "OVERLAY", 1, A.reindeer)
-	for _, icon in ipairs({ d.present, d.reindeer }) do icon:SetSize(J.iconSize, J.iconSize) end
-	-- les flocons : sur la page ou la colonne, sous leurs textes (couche
-	-- BORDER du parchemin : les cadres enfants, textes compris, passent devant)
-	d.flakes = {}
-	for _, spec in ipairs(J.flakes) do
-		local host = frame[spec.on]
-		local tex = host and NewFile(host, "BORDER", 7, A.flake)
-		if tex then
-			tex:SetSize(spec.size, spec.size)
-			tex:SetPoint("CENTER", host, spec.point, spec.x, spec.y)
-			tex:SetAlpha(spec.alpha)
-			tex.wvSpec = spec
-			d.flakes[#d.flakes + 1] = tex
-		end
-	end
-	frame.wvDecor = d
-	return d
-end
-
--- 2.14.0 (bêta 5) : la guirlande, une seule bande de tuiles de 104×36
--- ramenées à la hauteur de la bande, la dernière recoupée ; sur le décor
--- (au-dessus du bois, du métal, du poteau du joint et des volutes), ancrée
--- au cadre. Reposée à chaque rafraîchissement (la fenêtre peut changer de
--- largeur) : les tuiles sont réutilisées, celles en trop cachées.
-local function LayJournalLights(frame, d)
-	local J, A = ns.WINTER_VEIL_JOURNAL, ns.WINTER_VEIL_ART
-	local band = ns.WinterVeilJournalBand(frame)
-	local h = J.lightsH
-	local tileW = math.floor(A.lights.w * h / A.lights.h + 0.5)
-	local c = A.lights.c
-	local x, count = band.x0, 0
-	while x < band.x1 do
-		local w = math.min(tileW, band.x1 - x)
-		count = count + 1
-		local tex = d.lights[count]
-		if not tex then
-			tex = NewFile(d, "ARTWORK", 1, A.lights)
-			if not tex then count = count - 1; break end
-			d.lights[count] = tex
-		end
-		tex:SetSize(w, h)
-		tex:ClearAllPoints()
-		tex:SetPoint("TOPLEFT", frame, "TOPLEFT", x, band.y)
-		tex:SetTexCoord(c[1], c[1] + (c[2] - c[1]) * w / tileW, c[3], c[4])
-		tex:Show()
-		x = x + w
-	end
-	for index = count + 1, #d.lights do d.lights[index]:Hide() end
-	d.band, d.lightsCount = band, count
-	return count
-end
-
--- Le cadeau à gauche du titre, le renne à droite, sans toucher au texte
-local function PlaceTitleIcons(frame, d)
-	local title = frame.azPlate and frame.azPlate.title
-	local J = ns.WINTER_VEIL_JOURNAL
-	if not title then
-		for _, icon in ipairs({ d.present, d.reindeer }) do if icon then icon:Hide() end end
-		return nil
-	end
-	local half = math.floor(Measure(title) / 2 + 0.5)
-	local off = half + J.iconGap + J.iconSize / 2
-	if d.present then d.present:ClearAllPoints(); d.present:SetPoint("CENTER", title, "CENTER", -off, 0); d.present:Show() end
-	if d.reindeer then d.reindeer:ClearAllPoints(); d.reindeer:SetPoint("CENTER", title, "CENTER", off, 0); d.reindeer:Show() end
-	return off
-end
-
--- 2.14.0 (bêta 5) : la bande de la guirlande, en coordonnées du cadre :
--- { x0, x1, y }. D'un bord intérieur du bois à l'autre (début de la colonne,
--- ou de la page sans colonne, → fin de la page), à lightsEdge px de chaque
--- bout ; y : le bas de la barre de métal (le haut de la colonne et de la page).
-function ns.WinterVeilJournalBand(frame)
-	local lay, J = ns.CARNET_LAYOUT, ns.WINTER_VEIL_JOURNAL
-	local W = frame.azSize and tonumber(frame.azSize[1]) or tonumber(frame:GetWidth()) or 0
-	return { x0 = lay.wood + J.lightsEdge, x1 = W - lay.wood - J.lightsEdge, y = -lay.band }
 end
 
 -- ---------------------------------------------------------------------------
@@ -575,32 +441,11 @@ local function ForgedJournal(self, frame)
 	return true
 end
 
--- Montre ou cache le décor d'un carnet Azeroth ; rend s'il est montré
--- (3.1.0 : le carnet né au thème forgé a le sien, ForgedJournal)
+-- Montre ou cache le décor du carnet (né au thème forgé) ; rend s'il est montré
 function ns:WinterVeilJournal(frame)
 	frame = frame or self.journalFrame
 	if frame and frame.journalForged then return ForgedJournal(self, frame) end
-	if not (frame and frame.azeroth and frame.azOver) then return nil end
-	local on = self:WinterVeilActive()
-	local d = frame.wvDecor
-	if not on then
-		if d then
-			d:Hide()
-			for _, tex in ipairs(d.flakes) do tex:Hide() end
-			for _, tex in ipairs(d.lights) do tex:Hide() end
-			if d.navLabelHidden and frame.navGroup then frame.navGroup:Show() end
-			d.navLabelHidden = nil
-		end
-		return false
-	end
-	d = d or BuildJournalDecor(frame)
-	d:Show()
-	-- l'intitulé de la colonne, sous la guirlande : caché (rendu sans elle)
-	if frame.navGroup then frame.navGroup:Hide(); d.navLabelHidden = true end
-	for _, tex in ipairs(d.flakes) do tex:Show() end
-	LayJournalLights(frame, d)
-	PlaceTitleIcons(frame, d)
-	return true
+	return nil
 end
 
 -- ---------------------------------------------------------------------------
@@ -762,9 +607,8 @@ local function BuildCompanionDecor(frame, skin)
 		end
 	end
 	BuildSnow(frame, d)
-	-- 3.1.0 : un décor par habit : frame.wvDecor pour l'anneau du client,
-	-- frame.wvForgeDecor pour le médaillon forgé
-	if skin and skin.forge then frame.wvForgeDecor = d else frame.wvDecor = d end
+	-- 3.1.0 : le décor du médaillon forgé
+	frame.wvForgeDecor = d
 	d.skin = skin
 	return d
 end
@@ -773,7 +617,7 @@ end
 function ns.WinterVeilCompanionDecor(frame)
 	if not frame then return nil end
 	if frame.ring == "forge" then return frame.wvForgeDecor end
-	return frame.wvDecor
+	return nil
 end
 
 -- ---------------------------------------------------------------------------
@@ -929,8 +773,8 @@ end
 -- L'habit du cadre (anneau, plaque) ne se voit pas ?
 function ns:WinterVeilCompanionBare(frame)
 	frame = frame or self.companionFrame
-	-- 3.1.0 : l'habit de l'anneau posé (ancien habillage ou médaillon forgé)
-	local skin = frame and ((ns.CompanionRingSkin and ns.CompanionRingSkin(frame)) or frame.azSkin)
+	-- 3.1.0 : l'habit de l'anneau posé (le médaillon forgé)
+	local skin = frame and ns.CompanionRingSkin and ns.CompanionRingSkin(frame)
 	if not skin or Hidden(frame) or Hidden(skin) then return true end
 	return EffectiveAlpha(skin) < ns.WINTER_VEIL_BARE_ALPHA
 end
@@ -952,14 +796,13 @@ end
 function ns:WinterVeilCompanion()
 	local frame = self.companionFrame
 	if not frame then return nil end
-	-- 3.1.0 : tout anneau (ancien habillage ou médaillon forgé) a son décor
+	-- 3.1.0 : le médaillon forgé a son décor
 	local skin = ns.CompanionRingSkin and ns.CompanionRingSkin(frame) or nil
-	if not skin and frame.uiStyle == "azeroth" then skin = frame.azSkin end
-	local on = skin and (frame.ring ~= nil or frame.uiStyle == "azeroth") and self:WinterVeilActive()
+	local on = skin and frame.ring ~= nil and self:WinterVeilActive()
 	local d = on and ns.WinterVeilCompanionDecor(frame) or nil
 	-- le décor de l'autre habit (bascule à chaud) se cache
-	for index = 1, 2 do
-		local other = (index == 1) and frame.wvDecor or frame.wvForgeDecor
+	do
+		local other = frame.wvForgeDecor
 		if other and other ~= d then
 			other:Hide()
 			for _, model in ipairs(other.swags or {}) do model:Hide() end
