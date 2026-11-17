@@ -12,8 +12,8 @@
 --     « Suivant » : le geste fait avancer), fallback (ancre absente : bulle
 --     au centre de l'écran), visible (l'ancre se voit-elle ? sinon, son
 --     IsVisible), onShow (à l'affichage : changer d'onglet…) ;
---   * une bulle (Azeroth : le parchemin de la bulle du compagnon ; Sobre : le
---     fond sombre du socle) : titre, « 2 / 6 », texte, « Passer le tutoriel »
+--   * une bulle (forgé : un bandeau du socle ; Sobre : le fond sombre du
+--     socle) : titre, « 2 / 6 », texte, « Passer le tutoriel »
 --     et « Suivant » (« Terminer » à la dernière). Échap = passer ;
 --   * jamais en combat : la visite se met en pause (bulle cachée) et
 --     reprend à la même étape après le combat ; démarrée en combat, elle
@@ -58,15 +58,6 @@ ns.TOUR = {
 	strata = "FULLSCREEN_DIALOG",
 }
 local TOUR = ns.TOUR
--- rôles mesurés (style Azeroth) : la bulle reprend le fond de celle du
--- compagnon (fichier 130661 en Cover, aplat parchemin, voile « bubble » 0,40),
--- donc les pires fonds mesurés pour « bubble.name » / « bubble.text » ;
--- versés dans ns.AZEROTH_CONTRAST à la première bulle.
-ns.TOUR_CONTRAST = {
-	["tour.title"] = { "title", 0.3918, 4.5, 12 },    -- comme bubble.name : 5.19:1
-	["tour.text"] = { "ink", 0.3838, 4.5, 12 },       -- comme bubble.text : 7.78:1
-	["tour.step"] = { "inkMuted", 0.3838, 4.5, 10 },  -- compteur « 2 / 6 », même fond : 5.85:1
-}
 -- Sobre : sur le fond du socle (Theme.WINDOW), contrastes mesurés dans le test
 ns.TOUR_SOBRE = { title = Theme.PARCHMENT, text = Theme.TEXT, step = Theme.MUTED_LIGHT, ring = Theme.GOLD_LIGHT }
 -- 3.1.0 : thème forgé (jetons de rôle du socle, lus par référence : posés
@@ -344,39 +335,17 @@ DEFS.migration = {
 -- La bulle et le liseré (un jeu par style, créé une fois)
 -- ---------------------------------------------------------------------------
 local function TourStyle(self)
-	return (self.AzerothOn and self:AzerothOn()) and "azeroth" or "sobre"
+	return "sobre"
 end
 
-local function RoleInk(fs, role)
-	local entry = ns.TOUR_CONTRAST[role]
-	local ink = entry and ns.AZEROTH_INK and ns.AZEROTH_INK[entry[1]]
-	if not ink then return false end
-	fs:SetTextColor(ink[1], ink[2], ink[3], 1)
-	if Theme.NoShadow then Theme.NoShadow(fs) end
-	fs.azRole = role
-	return true
-end
-
-function ns.TourContrastMerge()
-	local table_ = ns.AZEROTH_CONTRAST
-	if type(table_) ~= "table" then return false end
-	for role, entry in pairs(ns.TOUR_CONTRAST) do
-		if table_[role] == nil then table_[role] = entry end
-	end
-	return true
-end
-
-local function Paint(fs, az, role, color)
-	if az and RoleInk(fs, role) then return end
+local function Paint(fs, color)
 	fs:SetTextColor(color[1], color[2], color[3], 1)
 end
 
 local function BuildCallout(self, style, key)
-	local az = style == "azeroth"
-	-- 3.1.0 : un nom par clé (ns:StyleKey : ancien habillage, forgé, Sobre)
+	-- 3.1.0 : un nom par clé (ns:StyleKey : forgé, Sobre)
 	key = key or style
-	local name = ns.StyleName and ns.StyleName("QuestCompanionTourCallout", key)
-		or (az and "QuestCompanionTourCalloutAzeroth" or "QuestCompanionTourCallout")
+	local name = ns.StyleName and ns.StyleName("QuestCompanionTourCallout", key) or "QuestCompanionTourCallout"
 	local frame = CreateFrame("Frame", name, UIParent)
 	frame.styleKey = key
 	frame:SetSize(TOUR.w, 120)
@@ -384,20 +353,7 @@ local function BuildCallout(self, style, key)
 	frame:SetClampedToScreen(true)
 	frame:EnableMouse(true)
 	frame.uiStyle = style
-	if az then
-		ns.TourContrastMerge()
-		local p = ns.AZEROTH_PARCH_SOLID or Theme.PARCHMENT
-		frame.back = Theme.Solid(frame, "BACKGROUND", p, 1)
-		frame.back:SetAllPoints(frame)
-		frame.parch = frame:CreateTexture(nil, "BACKGROUND", nil, 1)
-		frame.parch:SetAllPoints(frame)
-		if not (ns.AzerothFileTexture and ns.AZEROTH_TALK_FILE and ns.AzerothFileTexture(frame.parch, ns.AZEROTH_TALK_FILE)) then
-			frame.parch:Hide()
-		end
-		if ns.AzerothVeil then frame.veil = ns.AzerothVeil(frame, frame, "bubble", 2) end
-		local edge = ns.AZEROTH_INK and ns.AZEROTH_INK.bubbleEdge or Theme.EDGE
-		frame.edge = Theme.Border(frame, edge, 1, "BORDER")
-	elseif key == "forge" and Theme.SkinToast then
+	if key == "forge" and Theme.SkinToast then
 		-- 3.1.0 : thème forgé : la bulle est un bandeau du socle (ombre, cadre
 		-- d'orfèvre, sans barre d'accent), son titre en couleur d'identité
 		Theme.SkinToast(frame, { accent = false, alpha = ns.TOUR_FORGE.alpha })
@@ -408,7 +364,7 @@ local function BuildCallout(self, style, key)
 		frame.bg:SetAllPoints(frame)
 		frame.edge = Theme.Border(frame, Theme.GOLD, 1, "BORDER")
 	end
-	frame.title = Theme.Text(frame, (az or frame.forgeTour) and Theme.F_CAPS or Theme.F_LABEL, ns.TOUR_SOBRE.title)
+	frame.title = Theme.Text(frame, frame.forgeTour and Theme.F_CAPS or Theme.F_LABEL, ns.TOUR_SOBRE.title)
 	frame.title:SetPoint("TOPLEFT", frame, "TOPLEFT", TOUR.pad, -TOUR.pad)
 	frame.title:SetJustifyH("LEFT")
 	if frame.title.SetWordWrap then frame.title:SetWordWrap(false) end
@@ -420,14 +376,9 @@ local function BuildCallout(self, style, key)
 	frame.text:SetJustifyH("LEFT")
 	if frame.text.SetJustifyV then frame.text:SetJustifyV("TOP") end
 	if frame.text.SetWordWrap then frame.text:SetWordWrap(true) end
-	if az and ns.AzerothFont then
-		ns.AzerothFont(frame.title, 12)
-		ns.AzerothFont(frame.step, 10)
-		ns.AzerothFont(frame.text, 12)
-	end
-	Paint(frame.title, az, "tour.title", ns.TOUR_SOBRE.title)
-	Paint(frame.step, az, "tour.step", ns.TOUR_SOBRE.step)
-	Paint(frame.text, az, "tour.text", ns.TOUR_SOBRE.text)
+	Paint(frame.title, ns.TOUR_SOBRE.title)
+	Paint(frame.step, ns.TOUR_SOBRE.step)
+	Paint(frame.text, ns.TOUR_SOBRE.text)
 	if frame.forgeTour then
 		local F = ns.TOUR_FORGE
 		frame.title:SetTextColor(F.title[1], F.title[2], F.title[3], 1)
@@ -435,13 +386,8 @@ local function BuildCallout(self, style, key)
 	end
 	local function Next() ns:TourNext() end
 	local function Skip() ns:TourSkip() end
-	if az and self.AzerothButton then
-		frame.nextButton = self:AzerothButton(frame, TOUR.nextW, TOUR.button, L.TOUR_NEXT, Next, "gold")
-		frame.skipButton = self:AzerothButton(frame, TOUR.skipW, TOUR.button, L.TOUR_SKIP, Skip, "dark")
-	else
-		frame.nextButton = Theme.CreateButton(frame, TOUR.nextW, TOUR.button, L.TOUR_NEXT, Next, "primary")
-		frame.skipButton = Theme.CreateButton(frame, TOUR.skipW, TOUR.button, L.TOUR_SKIP, Skip, "outline")
-	end
+	frame.nextButton = Theme.CreateButton(frame, TOUR.nextW, TOUR.button, L.TOUR_NEXT, Next, "primary")
+	frame.skipButton = Theme.CreateButton(frame, TOUR.skipW, TOUR.button, L.TOUR_SKIP, Skip, "outline")
 	frame.nextButton:SetPoint("BOTTOMRIGHT", frame, "BOTTOMRIGHT", -TOUR.pad, TOUR.pad)
 	frame.skipButton:SetPoint("BOTTOMLEFT", frame, "BOTTOMLEFT", TOUR.pad, TOUR.pad)
 	-- Échap (UISpecialFrames) referme la bulle : la visite est passée.
@@ -464,14 +410,12 @@ local function BuildCallout(self, style, key)
 end
 
 local function BuildRing(style, key)
-	local az = style == "azeroth"
 	-- 3.1.0 : thème forgé : le liseré de la cible en couleur d'identité
-	local forge = not az and key == "forge"
+	local forge = key == "forge"
 	local ring = CreateFrame("Frame", nil, UIParent)
 	ring:SetFrameStrata(TOUR.strata)
 	ring:EnableMouse(false)
-	local outer = az and ns.AZEROTH_BUTTONS and ns.AZEROTH_BUTTONS.gold.edge
-		or (forge and ns.TOUR_FORGE.ring) or ns.TOUR_SOBRE.ring
+	local outer = (forge and ns.TOUR_FORGE.ring) or ns.TOUR_SOBRE.ring
 	ring.outer = Theme.Border(ring, outer, 1, "OVERLAY")
 	ring.inner = CreateFrame("Frame", nil, ring)
 	ring.inner:SetPoint("TOPLEFT", ring, "TOPLEFT", 1, -1)
@@ -492,7 +436,7 @@ end
 local function Parts(self)
 	local style = TourStyle(self)
 	-- 3.1.0 : un jeu par clé (une bulle née forgée ne sert pas en Sobre)
-	local key = self.StyleKey and self:StyleKey(style == "azeroth") or style
+	local key = self.StyleKey and self:StyleKey() or style
 	self.tourUI = self.tourUI or {}
 	local ui = self.tourUI[key]
 	if not ui then
@@ -563,9 +507,6 @@ local function ShowStep(self, st, step, anchor, fallback)
 	local textH = Theme.TextHeight and Theme.TextHeight(callout.text, inner, Theme.F_BODY) or 40
 	local height = TOUR.pad + TOUR.titleH + 6 + math.ceil(tonumber(textH) or 40) + TOUR.gap + TOUR.button + TOUR.pad
 	callout:SetHeight(height)
-	if ui.style == "azeroth" and callout.parch and callout.parch:IsShown() and ns.AzerothCover and ns.AZEROTH_TALK_FILE then
-		pcall(ns.AzerothCover, callout.parch, ns.AZEROTH_TALK_FILE, width, height)
-	end
 	if fallback then
 		Place(callout, UIParent, "center")
 	else

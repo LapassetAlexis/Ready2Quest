@@ -152,7 +152,7 @@ do
 		and NS.companionBubbleText:find("Loup des plaines", 1, true) and NS.companionFrame.alert
 		and NS.companionFrame.alert:IsShown(), NS.companionBubbleText)
 	-- SetRaidTarget est protégé sur Forever : jamais appelé d'office (2.8.3)
-	local solo = SH.units.target.icon == nil and live.marked == false
+	local solo = SH.units.target.icon == nil and live.marked == nil
 	SH.group, SH.leader = true, true
 	SH.See(3202)
 	SH.group, SH.leader = false, false
@@ -284,7 +284,7 @@ do
 	local page
 	for _, p in ipairs(NS.OPTION_PAGES) do if p.id == "companionDaily" then page = p end end
 	Check("[SHINY] page « Au jour le jour », par défaut : étoile et coffre animé", page and page.parent == "companion"
-		and #page.rows >= 2 and NS:DB().companionShinyMark == true and NS:DB().companionChestAnim == true)
+		and #page.rows >= 2 and NS:DB().companionChestAnim == true)
 	local missing = {}
 	for key in pairs(NS.SHINY_STRINGS.fr) do if not NS.SHINY_STRINGS.en[key] then missing[#missing + 1] = key end end
 	for name, keys in pairs(NS.SHINY_POOLS) do

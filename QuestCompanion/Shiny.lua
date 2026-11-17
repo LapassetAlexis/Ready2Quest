@@ -114,7 +114,6 @@ if type(ns.COMPANION_FX) == "table" then
 end
 
 ns.RegisterDefaults({
-	companionShinyMark = true,
 	companionShinyPlate = true,
 	companionChestAnim = true,
 	companionOrnAura = true,
@@ -223,13 +222,8 @@ function ns:ShinyRoll(unit, entry)
 	return chance > 0 and math.random() < chance
 end
 
--- Étoile au-dessus : plus jamais posée d'office. SetRaidTarget est protégé
--- sur Forever : appelé hors d'un clic du joueur, le jeu bloque l'addon
--- (fenêtre « QuestCompanion a été bloqué », 2.8.3). L'alerte du compagnon,
--- le chat et l'éclat suffisent ; la touche reste aux marques du joueur.
-function ns:ShinyMark(unit)
-	return false
-end
+-- (Plus de marque de raid sur une brillante depuis la 2.8.3 : SetRaidTarget est
+-- protégé sur Forever. L'alerte du compagnon, le chat et l'éclat suffisent.)
 
 function ns:ShinySpot(unit, guid, entry, species)
 	local state = self:ShinyState()
@@ -241,7 +235,6 @@ function ns:ShinySpot(unit, guid, entry, species)
 	if npc and not data.seen[npc] then data.seen[npc] = Call(G("time")) or 0 end
 	self:CompanionSay("SHINY_SPOTTED", { force = true, args = { name } })
 	if self.CompanionFx then self:CompanionFx("alert"); self:CompanionFx("sparkle") end
-	state.live[guid].marked = self:ShinyMark(unit)
 	return state.live[guid]
 end
 

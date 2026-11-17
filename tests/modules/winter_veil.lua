@@ -9,10 +9,6 @@
 -- Compagnons de saison (WinterCompanions.lua) : en saison seulement, sans
 -- perdre l'apparence habituelle ; effets, voix, visite surprise, haut fait
 -- souvenir, départ en fin de saison.
--- 3.1.0 : affirme l'ancien habillage (carnet en parchemin, scènes en bois, bandeaux
--- dorés, anneau) : le drapeau QNS.AZEROTH_LEGACY rallumé pour tout le module
--- (remis à la valeur du produit à sa fin, tests/run_tests.lua)
-T.Legacy(true)
 local Check, Say, ResetWorld, NS, Mock = T.Check, T.Say, T.ResetWorld, T.QNS, T.Mock
 
 -- plusieurs étapes d'un même sujet : un contrôle, les étapes ratées nommées
@@ -138,7 +134,7 @@ do
 		WV.Reset()
 		local row, styleIndex
 		for _, page in ipairs(NS.OPTION_PAGES) do
-			if page.id == "companionMain" then
+			if (page.id == "companionMain" or page.id == "companionQuiet" or page.id == "companionTalk" or page.id == "companionKeys") then
 				for index, r in ipairs(page.rows) do
 					if r.key == "companionStyle" then styleIndex = index end
 					if r.key == "winterVeil" then row = r; row.index = index end
@@ -176,214 +172,9 @@ do
 		WV.Done()
 	end
 
-	-- 3. Le cadre du compagnon -------------------------------------------------------------------------
-	do
-		Say("-- voile d'hiver : cadre du compagnon")
-		WV.Reset(nil, "on")
-		NS:CompanionUpdateVisibility()
-		local frame = NS.companionFrame
-		local d = frame and frame.wvDecor
-		local lights = d and d.lights
-		local C = NS.WINTER_VEIL_COMPANION
-		local box = NS.WinterVeilLightsBox()
-		local gift = false
-		for _, child in ipairs(d and d.mockChildren or {}) do if child.texture == 133202 then gift = true end end
-		Check("[WV] compagnon Azeroth : décor montré sans erreur, guirlande 3D sans souris accrochée au haut du cadre, "
-			.. "entre l'anneau et le calque des effets, pas de cadeau", d and Shown(d) and frame.uiStyle == "azeroth" and NoErrors()
-			and lights and Shown(lights) and lights.mouseEnabled == false and lights.kind == "PlayerModel"
-			and lights.lastPoint.relTo == frame and lights.lastPoint.relPoint == "TOP"
-			and lights:GetFrameLevel() > frame.azSkin:GetFrameLevel() and lights:GetFrameLevel() < frame:GetFrameLevel() + 8
-			and not gift, select(2, NoErrors()))
-		-- 2.14.1 : la guirlande posée sur le bord doré du haut (réglée en jeu)
-		local G = NS.WINTER_VEIL_RING_GOLD
-		local swags = d.swags or {}
-		local s = Steps()
-		s.ok("un seul brin, d.lights", #swags == 1 and C.swags == 1 and d.lights == swags[1])
-		s.ok("centré sur le cadre", swags[1] and swags[1].lastPoint.x == 0 and math.abs(box.left + box.right) < 1e-6)
-		s.ok("plus étroit que l'or", box.w > 0 and box.w < G.w, string.format("%.1f", box.w))
-		s.ok("milieu du fil dans la moitié haute de l'or", box.mid <= G.top and box.mid >= (G.top + G.inner) / 2,
-			string.format("%.1f (%d..%d)", box.mid, G.inner, G.top))
-		s.ok("bouts au-dessus de l'or, bulbes juste dans l'ouverture", box.wire > G.top and box.bottom < G.inner
-			and box.bottom >= G.inner - 5, string.format("%.1f / %.1f", box.wire, box.bottom))
-		s.check("[WV] guirlande sur le bord doré : un brin centré, plus étroit que l'or, posé sur sa moitié haute")
-		-- le client charge le modèle : SetModel(199600), caméra déduite de la taille de bulbe
-		for _, model in ipairs(d.swags) do
-			model.SetModel = function(m, id) m.loaded = id end
-			model.SetCamDistanceScale = function(m, v) m.cam = v end
-			model.wvModel = nil
-		end
-		NS:WinterVeilCompanion()
-		Check("[WV] guirlande : modèle 199600 chargé, caméra déduite du bulbe, cadre assez large pour elle (≥ fit × h)",
-			lights.loaded == 199600 and math.abs(lights.cam - NS.WinterVeilLightsBox().cam) < 1e-9
-			and math.abs(box.cam - C.h * C.bulbH / C.bulb) < 1e-9 and box.cam > 1
-			and lights:GetWidth() == box.frameW and box.frameW >= C.fit * C.h - 0.5 and box.frameW >= box.swag)
-		-- le réglage en jeu (/qc noel cadre <bulbe> <x> <y> <brins> <cap>)
-		local printed = {}
-		local print0 = NS.Print
-		NS.Print = function(_, text) printed[#printed + 1] = text end
-		local DEF = NS.WINTER_VEIL_COMPANION_DEFAULT
-		s = Steps()
-		NS:WinterVeilCommand("cadre 10 -3 1 3 0.2")
-		local tuned = NS.WinterVeilLightsBox()
-		s.ok("valeurs posées et réappliquées", C.bulb == 10 and C.x == -3 and C.y == 1 and C.swags == 3 and C.facing == 0.2
-			and #d.swags == 3 and Shown(d.swags[3]) and math.abs(d.swags[1].lastPoint.x - tuned.centers[1]) < 1e-6
-			and d.swags[1].lastPoint.y == 1 and math.abs(lights.cam - tuned.cam) < 1e-9 and printed[1] ~= nil)
-		NS:WinterVeilCommand("cadre - - - 1")
-		s.ok("« - » garde, un brin de moins caché", C.bulb == 10 and C.swags == 1 and Shown(d.swags[1]) and not Shown(d.swags[2]))
-		NS:WinterVeilCommand("frame default")
-		s.ok("valeurs livrées", C.bulb == DEF.bulb and C.swags == DEF.swags and C.x == DEF.x and C.y == DEF.y
-			and d.swags[1].lastPoint.y == DEF.y and not Shown(d.swags[2]) and not Shown(d.swags[3]))
-		printed = {}
-		NS:WinterVeilCommand("cadre")
-		s.ok("sans valeur : affichées", #printed == 1 and C.bulb == DEF.bulb)
-		NS.Print = print0
-		s.check("[WV] /qc noel cadre : réglage en jeu appliqué tout de suite, « - » garde, default rend les valeurs livrées")
-		-- bêta 6 : quatre flocons fixes aux coins, bien visibles
-		local corners, visible = {}, true
-		for index, tex in ipairs(d.flakes) do
-			local spec = C.flakes[index]
-			if tex.texture ~= ART.flake.file or tex.alpha < 0.85 or not Shown(tex) or tex.lastPoint.relTo ~= frame
-				or tex.lastPoint.x ~= spec.x then visible = false end
-			corners[(spec.x < 0 and "G" or "D") .. (spec.y > -40 and "H" or "B")] = true
-		end
-		Check("[WV] quatre flocons fixes aux quatre coins du cadre, presque opaques", #d.flakes == 4 and visible
-			and corners.GH and corners.DH and corners.GB and corners.DB)
-		-- bêta 5 : mode voyage (interface cachée) : l'habit ne se voit plus, les
-		-- modèles 3D si : guirlande et flocons se cachent avec l'habit
-		local function DecorOn()
-			if not (Shown(d.flakes[1]) and Shown(d.flakes[2])) then return false end
-			for index = 1, C.swags do if not Shown(d.swags[index]) then return false end end
-			return true
-		end
-		local function DecorOff()
-			for _, tex in ipairs(d.flakes) do if Shown(tex) then return false end end
-			for _, model in ipairs(d.swags) do if Shown(model) then return false end end
-			return true
-		end
-		s = Steps()
-		s.ok("habit visible", DecorOn() and NS:WinterVeilWatch() == false and d.bare == false)
-		UIParent:SetAlpha(0)
-		s.ok("opacité 0 : nu", NS:WinterVeilCompanionBare(frame) == true)
-		s.ok("le guet cache, décor gardé", NS:WinterVeilWatch() == true and DecorOff() and Shown(d) and d.bare == true)
-		s.ok("rien refait sans changement", NS:WinterVeilWatch() == false and DecorOff())
-		NS:WinterVeilCompanion()
-		s.ok("rafraîchissement ne remontre pas", DecorOff())
-		UIParent:SetAlpha(1)
-		s.ok("interface revenue", NS:WinterVeilWatch() == true and DecorOn())
-		frame.azSkin.GetEffectiveAlpha = function() return NS.COMPANION_COMBAT_ALPHA end
-		s.ok("combat estompé n'est pas nu", NS:WinterVeilWatch() == false and DecorOn())
-		frame.azSkin.GetEffectiveAlpha = function() return 0 end
-		s.ok("GetEffectiveAlpha 0", NS:WinterVeilWatch() == true and DecorOff())
-		frame.azSkin.GetEffectiveAlpha = nil
-		NS:WinterVeilWatch()
-		frame.azSkin:Hide()
-		s.ok("habit caché", NS:WinterVeilWatch() == true and DecorOff())
-		frame.azSkin:Show()
-		s.ok("habit remontré", NS:WinterVeilWatch() == true and DecorOn())
-		local everyOk = false
-		local count, order = NS.ClockJobs()
-		for index = 1, count do if order[index] == "noel:cadre" then everyOk = true end end
-		s.ok("guet sur l'horloge (noel:cadre)", everyOk)
-		s.check("[WV] mode voyage : guirlande et flocons cachés avec l'habit (opacité, habit caché), revenus avec lui, "
-			.. "pas pour l'estompe du combat")
-		s = Steps()
-		NS:SetWinterVeil("off")
-		s.ok("jamais : caché sans /reload", not Shown(d) and not Shown(lights))
-		NS:SetWinterVeil("on")
-		s.ok("toujours : revenu", Shown(d) and Shown(lights))
-		NS:SetUIStyle("sobre")
-		s.ok("Sobre : caché", not Shown(d) and frame.uiStyle == "sobre")
-		NS:SetUIStyle("azeroth")
-		s.ok("Azeroth : revenu", Shown(d))
-		NS:SetWinterVeil("auto")
-		WV.now = JUL1
-		NS:CompanionUpdateVisibility()
-		s.ok("auto hors saison : caché", not Shown(d))
-		WV.now = DEC20
-		NS:CompanionUpdateVisibility()
-		s.ok("la saison commence : revenu", Shown(d))
-		s.check("[WV] décor du compagnon : suit le réglage, le style et la saison à chaud")
-		WV.Done()
-	end
-
-	-- 4. Le carnet ---------------------------------------------------------------------------------------
-	do
-		Say("-- voile d'hiver : le carnet")
-		WV.Reset(nil, "on")
-		local f = NS:ToggleJournal(true)
-		local d = f and f.wvDecor
-		local J = NS.WINTER_VEIL_JOURNAL
-		local ok, errs = NoErrors()
-		-- bêta 5 : une seule bande, d'un bord intérieur du bois à l'autre, par-dessus le joint
-		local min, max, total, good, shown = math.huge, -math.huge, 0, d and #d.lights > 0, 0
-		local xs = {}
-		for _, tex in ipairs(d and d.lights or {}) do
-			if Shown(tex) then
-				shown = shown + 1
-				total = total + tex:GetWidth()
-				min = math.min(min, tex.lastPoint.x)
-				max = math.max(max, tex.lastPoint.x + tex:GetWidth())
-				xs[#xs + 1] = { x = tex.lastPoint.x, w = tex:GetWidth() }
-				if tex.texture ~= 235484 or tex:GetHeight() ~= J.lightsH or tex.lastPoint.y ~= -LAY.band
-					or tex.lastPoint.relTo ~= f or tex:GetParent() ~= d then good = false end
-			end
-		end
-		table.sort(xs, function(a, b) return a.x < b.x end)
-		local continuous = #xs > 0
-		for index = 2, #xs do if math.abs(xs[index].x - (xs[index - 1].x + xs[index - 1].w)) > 0.01 then continuous = false end end
-		local W = f:GetWidth()
-		local jointX = LAY.wood + LAY.nav + LAY.gap / 2
-		local s = Steps()
-		s.ok("décor montré sans erreur", f and f.azeroth and d and Shown(d) and ok, errs)
-		s.ok("bande 235484 pendue sous la barre, au-dessus du décor", good and shown == #d.lights
-			and d:GetFrameLevel() > f.azOver:GetFrameLevel())
-		s.ok("continue, sans trou", continuous and math.abs(total - (max - min)) < 0.01)
-		s.ok("dans le bois, marges égales, par-dessus le joint", min >= LAY.wood and max <= W - LAY.wood
-			and math.abs((min - LAY.wood) - ((W - LAY.wood) - max)) < 0.01 and min < jointX - 20 and max > jointX + 20,
-			string.format("%.1f..%.1f / %d", min, max, W))
-		local before = #d.lights
-		NS:WinterVeilJournal(f)
-		s.ok("rafraîchie : mêmes tuiles", #d.lights == before and d.lightsCount == before)
-		s.check("[WV] carnet Azeroth : une guirlande continue entre les bords intérieurs du bois, par-dessus le joint")
-		local flakesOk = #d.flakes >= 3 and #d.flakes <= 4
-		for _, tex in ipairs(d.flakes) do
-			if tex.texture ~= 236121 or tex.alpha > 0.45 or tex.drawLayer ~= "BORDER" or not Shown(tex)
-				or tex.lastPoint.y + tex.wvSpec.size / 2 > -J.lightsH then flakesOk = false end
-		end
-		Check("[WV] carnet : flocons discrets sous la bande et sous les textes, décor sans souris, intitulé « CARNET » caché",
-			flakesOk and d.mouseEnabled == false and not f.navGroup:IsShown())
-		local title = f.azPlate.title
-		local half = title:GetStringWidth() / 2
-		local size = J.iconSize
-		Check("[WV] cadeau (133202) et renne (236707) autour du titre, sans le toucher", Shown(d.present) and Shown(d.reindeer)
-			and d.present.texture == 133202 and d.reindeer.texture == 236707
-			and d.present.lastPoint.relTo == title and -d.present.lastPoint.x - size / 2 >= half
-			and d.reindeer.lastPoint.x - size / 2 >= half, tostring(d.present.lastPoint.x) .. " / " .. tostring(half))
-		s = Steps()
-		NS:SetWinterVeil("off")
-		s.ok("jamais : caché tout de suite", not Shown(d) and not Shown(d.flakes[1]) and not Shown(d.lights[1])
-			and not Shown(d.lights[#d.lights]))
-		s.ok("jamais : « CARNET » revient", f.navGroup:IsShown())
-		NS:SetWinterVeil("on")
-		s.ok("toujours : revenu", Shown(d) and Shown(d.flakes[1]) and Shown(d.lights[1]))
-		NS:DB().winterVeil = "auto"
-		WV.now = JUL1
-		NS:RefreshJournal()
-		s.ok("auto hors saison : caché", not Shown(d))
-		WV.Done()
-		WV.Reset("sobre", "on")
-		local sobre = NS:ToggleJournal(true)
-		s.ok("Sobre : aucun décor", sobre and not sobre.azeroth and sobre.wvDecor == nil and NoErrors())
-		s.check("[WV] décor du carnet : suit le réglage et la saison, jamais en Sobre")
-		WV.Done()
-	end
-
 	-- 5. La boule de neige ------------------------------------------------------------------------------
-	-- 3.1.0 : joué deux fois, avec l'ancien habillage (scènes en bois) puis
-	-- dans l'état du produit (drapeau coupé : scènes et volée forgées)
-	for _, legacy in ipairs({ true, false }) do
-	T.Legacy(legacy)
-	local tag = legacy and "" or " [produit : scène forgée]"
+	do
+	local tag = ""
 	do
 		Say("-- voile d'hiver : la boule de neige" .. tag)
 		WV.Reset(nil, "on")
@@ -539,7 +330,6 @@ do
 		WV.Done()
 	end
 	end
-	T.Legacy(true)
 
 	-- 6. La neige qui tombe et le cadre givré -----------------------------------------------------------------
 	do
@@ -567,7 +357,7 @@ do
 		NS:CompanionUpdateVisibility()
 		_G.CreateFrame = createFrame
 		local frame = NS.companionFrame
-		local d = frame and frame.wvDecor
+		local d = frame and (frame.wvForgeDecor or frame.wvDecor)
 		local S = NS.WINTER_VEIL_COMPANION.snow
 		local function Snowing()
 			if #d.snow == 0 then return false end
@@ -615,205 +405,6 @@ do
 		UIParent:SetAlpha(1)
 		s.ok("interface revenue", NS:WinterVeilWatch() == true and Snowing())
 		s.check("[WV] neige : s'arrête quand le compagnon s'estompe en combat ou en mode voyage, reprend ensuite")
-
-		-- le cadre givré (allure Azeroth du cadre Givre, AZEROTH_RING_TINTS.frost)
-		local ring = frame.azSkin.ring
-		local F = NS.AZEROTH_RING_TINTS.frost
-		local glow = frame.azRingGlow
-		local function Visible(region)
-			local node = region
-			while node and node ~= frame do
-				if node.shown == false then return false end
-				node = node.mockParent
-			end
-			return region ~= nil and region.shown == true
-		end
-		local function Gold(tex) return tex.vertex[1] == 1 and tex.vertex[2] == 1 and tex.vertex[3] == 1 and tex.azDesat == false end
-		local holder = glow and glow.holder
-		local modelLevel = frame.model and frame.model.GetFrameLevel and frame.model:GetFrameLevel()
-		Check("[WV] givre (par défaut) : anneau désaturé argent-bleu, halo glacé du client en ADD sur l'habit, sous le modèle",
-			NS:WinterVeilFrostOn() == true and ring.vertex and ring.vertex[1] == F[1] and ring.vertex[3] == F[3]
-			and ring.azDesat == true and ring.azLook == "frost"
-			and glow and holder and Visible(glow) and glow.atlas == "Relic-Frost-TraitGlowRing" and glow.blendMode == "ADD"
-			and holder:GetParent() == frame.azSkin and (holder:GetFrameLevel() or 0) < (modelLevel or 99)
-			and glow.width > NS.AZEROTH_RING.w, ring.vertex and table.concat(ring.vertex, ","))
-		local row, at, decorAt
-		for _, page in ipairs(NS.OPTION_PAGES or {}) do
-			if page.id == "companionMain" then
-				for index, r in ipairs(page.rows) do
-					if r.key == "winterVeilFrost" then row, at = r, index end
-					if r.key == "winterVeil" then decorAt = index end
-				end
-			end
-		end
-		Check("[WV] réglage « Cadre givré (Voile d'hiver) » : case à cocher sous le décor", row and row.kind == "bool"
-			and at == decorAt + 1 and NS.L[row.label] == "Cadre givré (Voile d'hiver)" and row.describe() ~= nil)
-		-- 2.14.1 : le cadre choisi pendant la saison l'emporte sur Givre
-		s = Steps()
-		NS:DB().winterVeilFrost = false
-		row.onChange()
-		local curFrame = NS:CompanionCurrentStyle("frame").id
-		s.ok("givre coupé : teinte du cadre choisi, halo caché, décor gardé",
-			ring.azLook == (NS.AZEROTH_RING_TINTS[curFrame] and curFrame or nil) and not Visible(glow) and Shown(d) and Snowing())
-		NS:CompanionData().unlocked["frame:copper"] = true
-		NS:CompanionSetStyle("frame", "copper")
-		s.ok("Cuivre choisi : cuivré", ring.azLook == "copper" and ring.vertex[2] == NS.AZEROTH_RING_TINTS.copper[2])
-		NS:DB().winterVeilFrost = true
-		row.onChange()
-		s.ok("choisi pendant la saison : l'emporte sur Givre", ring.azLook == "copper" and NS:CompanionData().winterFrameChoice == true)
-		NS:CompanionData().winterFrameChoice = nil
-		row.onChange()
-		s.ok("sans choix pendant la saison : Givre", ring.azLook == "frost" and Visible(glow)
-			and NS:CompanionCurrentStyle("frame").id == "copper")
-		s.check("[WV] cadre choisi pendant la saison : il l'emporte sur l'allure Givre ; sans choix, Givre")
-		s = Steps()
-		frame.azSkin:Hide()
-		NS:WinterVeilWatch()
-		s.ok("habit caché : halo caché", not Visible(glow))
-		frame.azSkin:Show()
-		NS:WinterVeilWatch()
-		s.ok("habit revenu : halo revenu", Visible(glow))
-		NS:SetUIStyle("sobre")
-		s.ok("Sobre : anneau à l'or, halo et neige cachés", Gold(ring) and not Visible(glow) and SnowStopped())
-		NS:SetUIStyle("azeroth")
-		s.ok("retour en Azeroth", ring.vertex[1] == F[1] and Visible(glow) and Snowing())
-		NS:SetWinterVeil("off")
-		s.ok("jamais : teinte du cadre choisi", ring.azLook == "copper" and not Visible(glow) and SnowStopped())
-		NS:SetWinterVeil("auto")
-		WV.now = JUL1
-		NS:CompanionUpdateVisibility()
-		s.ok("hors saison : teinte du cadre choisi", ring.azLook == "copper" and not Visible(glow) and SnowStopped())
-		s.check("[WV] givre et neige : cachés avec l'habit, en Sobre, hors décor ; l'anneau reprend la teinte du cadre choisi")
-		NS:CompanionData().unlocked["frame:copper"] = nil
-		NS:CompanionData().frameStyle = nil
-		WV.Done()
-
-		-- atlas du halo absent : rien posé, sans erreur, la teinte reste
-		WV.Reset(nil, "on")
-		Mock.InstallAtlas({ ["Relic-Frost-TraitGlowRing"] = true })
-		NS:AzerothAtlasOK(true)
-		NS:CompanionUpdateVisibility()
-		frame = NS.companionFrame
-		local skinRing = frame.azSkin and frame.azSkin.ring
-		s = Steps()
-		s.ok("pas d'anneau Kyrian en repli", frame.azRingGlow == false and #NS.AZEROTH_RING_GLOW.atlases == 1)
-		s.ok("anneau givré quand même", skinRing and skinRing.vertex and skinRing.vertex[1] == F[1] and NoErrors())
-		NS:SetWinterVeil("off")
-		s.ok("hors décor : Ardoise en gris", skinRing and skinRing.azLook == "slate" and NoErrors())
-		s.check("[WV] halo de glace absent du client : rien posé, pas de repli, l'anneau givré quand même, sans erreur")
-		WV.Done()
-	end
-
-	-- 7. Teinte de l'anneau par cadre, Givre offert pendant la saison --------------------------------------
-	do
-		Say("-- voile d'hiver : teinte de l'anneau par cadre, Givre offert")
-		local TINTS = NS.AZEROTH_RING_TINTS
-		WV.Reset(nil, "off")
-		NS:CompanionUpdateVisibility()
-		local frame = NS.companionFrame
-		local ring = frame.azSkin.ring
-		local data = NS:CompanionData()
-		local missing = {}
-		for _, def in ipairs(NS.COMPANION_FRAMES) do
-			data.unlocked["frame:" .. def.id] = true
-			-- 3.0.0 : les cadres de l'Échoppe se débloquent à l'achat (au compte)
-			if def.unlock and def.unlock.shop and NS.ShopCosmeticGrant then NS:ShopCosmeticGrant(def.unlock.shop) end
-			local set = NS:CompanionSetStyle("frame", def.id)
-			local look = TINTS[def.id]
-			if not look and def.id:find("^seal_") then look = { def.edge[1], def.edge[2], def.edge[3], desat = true } end
-			local r, g, b = 1, 1, 1
-			if look and look[1] then r, g, b = look[1], look[2], look[3] end
-			if not (set and ring.vertex[1] == r and ring.vertex[2] == g and ring.vertex[3] == b
-				and ring.azDesat == ((look and look.desat) and true or false)
-				and ring.azLook == (look and def.id or nil)) then
-				missing[#missing + 1] = def.id
-			end
-			data.unlocked["frame:" .. def.id] = nil
-		end
-		Check("[WV] Azeroth : chaque cadre colore l'anneau (teinte, désaturation), sans erreur", #missing == 0 and NoErrors(),
-			table.concat(missing, ",") .. " " .. select(2, NoErrors()))
-		local function Desat(id) return TINTS[id] and TINTS[id].desat == true end
-		Check("[WV] palette : Ardoise (défaut) en gris (2.14.1), Insigne à l'or, argent/givre/runique/gangrené/chêne désaturés, "
-			.. "teintes de Givre, Runique, Gangrené, Cuivre ; halos d'Étincelant (doré) et de Givre (glacé)",
-			TINTS.slate and TINTS.slate.desat and TINTS.trainer == nil and NS.COMPANION_FRAMES[1].id == "slate"
-			and Desat("silver") and Desat("frost") and Desat("rune") and Desat("fel") and Desat("oak")
-			and not Desat("copper") and not Desat("gilded")
-			and TINTS.frost[3] > TINTS.frost[1] and TINTS.rune[3] > TINTS.rune[2] and TINTS.fel[2] > TINTS.fel[1]
-			and TINTS.fel[2] > TINTS.fel[3] and TINTS.copper[1] > TINTS.copper[2] and TINTS.copper[2] > TINTS.copper[3]
-			and TINTS.sparkle.glow and TINTS.frost.glow and TINTS.sparkle.glow[1] > TINTS.sparkle.glow[3]
-			and TINTS.frost.glow[3] > TINTS.frost.glow[1])
-		local s = Steps()
-		data.unlocked["frame:sparkle"] = true
-		NS:CompanionSetStyle("frame", "sparkle")
-		local glow = frame.azRingGlow
-		s.ok("Étincelant : or clair et halo doré", ring.vertex[2] == TINTS.sparkle[2] and ring.azDesat == false
-			and glow and glow.shown and glow.vertex[1] == TINTS.sparkle.glow[1])
-		NS:CompanionSetStyle("frame", "slate")
-		s.ok("Ardoise : gris, halo caché", ring.vertex[1] == TINTS.slate[1] and ring.azDesat == true and not glow.shown)
-		data.unlocked["frame:sparkle"] = nil
-		data.unlocked["frame:fel"] = true
-		NS:CompanionSetStyle("frame", "fel")
-		local vine = { SetVertexColor = function(t, r, g, b, a) t.vertex = { r, g, b, a } end }
-		local journal = { evo = { azVine = vine } }
-		s.ok("portrait de la page Créature : Gangrené", NS:CarnetPaintRing(journal) == "fel" and vine.vertex[2] == TINTS.fel[2]
-			and vine.azDesat == true)
-		NS:CompanionSetStyle("frame", "slate")
-		s.ok("portrait de la page Créature : Ardoise", NS:CarnetPaintRing(journal) == "slate" and vine.vertex[1] == TINTS.slate[1])
-		data.unlocked["frame:fel"] = nil
-		data.unlocked["frame:rune"] = true
-		NS:CompanionSetStyle("frame", "rune")
-		NS:SetUIStyle("sobre")
-		s.ok("Sobre inchangé : bordure du client, anneau à l'or", frame.frameStyle == "rune" and frame.styleBorder
-			and frame.styleBorder.shown and ring.vertex[1] == 1 and ring.azDesat == false and ring.azLook == nil)
-		NS:SetUIStyle("azeroth")
-		s.check("[WV] halo d'Étincelant, Ardoise en gris, même teinte au portrait du carnet ; Sobre inchangé")
-		data.unlocked["frame:rune"] = nil
-		data.frameStyle = nil
-		WV.Done()
-
-		-- Givre offert pendant la saison, repris après
-		local frost
-		for _, def in ipairs(NS.COMPANION_FRAMES) do if def.id == "frost" then frost = def end end
-		WV.Reset(nil, "auto", JUL1)
-		data = NS:CompanionData()
-		data.unlocked["frame:frost"] = nil
-		s = Steps()
-		s.ok("hors saison : verrouillé", not NS:CompanionIsUnlocked("frame", frost) and not NS:CompanionSetStyle("frame", "frost"))
-		WV.now = DEC20
-		s.ok("en saison : offert", NS:CompanionIsUnlocked("frame", frost) and not NS:WinterVeilGiftEarned())
-		local entry
-		for _, e in ipairs(NS:CompanionChoices("frame")) do if e.value == "frost" then entry = e end end
-		s.ok("liste : indice « Voile d'hiver »", entry and not entry.disabled and entry.hint == "Voile d'hiver")
-		data.unlocked["frame:copper"] = true
-		NS:CompanionSetStyle("frame", "copper")
-		NS:CompanionSetStyle("frame", "frost")
-		s.ok("choisi : cadre d'avant gardé", NS:CompanionCurrentStyle("frame").id == "frost" and data.frameBeforeGift == "copper")
-		WV.now = At(2027, 1, 3)
-		s.ok("saison finie : retour au cadre d'avant", NS:CompanionCurrentStyle("frame").id == "copper"
-			and data.frameStyle == "copper" and data.frameBeforeGift == nil)
-		NS:DB().winterVeil = "on"
-		s.ok("/qc noel on : offert hors saison", NS:CompanionIsUnlocked("frame", frost))
-		NS:DB().winterVeil = "auto"
-		s.check("[WV] Givre offert pendant la saison (indice « Voile d'hiver »), le cadre d'avant rendu à la fin")
-		s = Steps()
-		WV.now = DEC20
-		NS:CompanionSetStyle("frame", "frost")
-		data.unlocked["frame:frost"] = true
-		WV.now = JUL1
-		s.ok("gagné : gardé hors saison", NS:CompanionIsUnlocked("frame", frost) and NS:WinterVeilGiftEarned()
-			and NS:CompanionCurrentStyle("frame").id == "frost" and data.frameBeforeGift == nil)
-		NS:CompanionUpdateVisibility()
-		local f = NS.companionFrame
-		local r = f.azSkin.ring
-		s.ok("porté hors saison : son allure", r.azLook == "frost" and r.vertex[3] == TINTS.frost[3] and f.azRingGlow
-			and f.azRingGlow.shown)
-		data.unlocked["frame:frost"] = nil
-		data.frameStyle, data.frameBeforeGift = "frost", nil
-		s.ok("fin sans cadre d'avant : Ardoise", NS:CompanionCurrentStyle("frame").id == "slate")
-		s.ok("sans erreur", NoErrors(), select(2, NoErrors()))
-		s.check("[WV] Givre gagné : gardé hors saison avec son allure ; sans cadre d'avant connu, Ardoise")
-		data.unlocked["frame:copper"] = nil
-		data.frameStyle = nil
 		WV.Done()
 	end
 
@@ -1155,7 +746,7 @@ do
 		local s = Steps()
 		s.ok("réglage activé par défaut, page du compagnon", NS.DEFAULTS.companionWinterVisit == true and (function()
 			for _, page in ipairs(NS.OPTION_PAGES or {}) do
-				if page.id == "companionMain" then
+				if (page.id == "companionMain" or page.id == "companionQuiet" or page.id == "companionTalk" or page.id == "companionKeys") then
 					for _, row in ipairs(page.rows) do if row.key == "companionWinterVisit" and row.kind == "bool" then return true end end
 				end
 			end

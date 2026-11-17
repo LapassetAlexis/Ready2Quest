@@ -3,10 +3,6 @@
 -- de Ready2Quest dans ses trois états (chargé, désactivé, absent), les liens
 -- à copier ; dans les réglages de Ready2Quest, le bloc Quest Companion dans
 -- les mêmes trois états ; ouvreurs, encres, textes FR/EN, visite du carnet.
--- 3.1.0 : affirme l'ancien habillage (carnet en parchemin, scènes en bois, bandeaux
--- dorés, anneau) : le drapeau QNS.AZEROTH_LEGACY rallumé pour tout le module
--- (remis à la valeur du produit à sa fin, tests/run_tests.lua)
-T.Legacy(true)
 local Check, Say, ResetWorld, NS, QNS, Mock = T.Check, T.Say, T.ResetWorld, T.NS, T.QNS, T.Mock
 
 local A = { saved = {} }
@@ -103,13 +99,9 @@ do
 		local last = ui.TOP - lay.togetherY - 26 - (lay.facts - 1) * lay.factStep - 2 * 15
 		s.ok(style .. " : tout tient au-dessus de la pagination", last > ui.PAGER_Y, last)
 		s.ok(style .. " : carte, cinq points, quatre faits", pane.card and #pane.card.points == 5 and #pane.facts == 4)
-		if style == "azeroth" then
-			s.ok("azeroth : encres mesurées", pane.card.name.azRole == "addons.name" and pane.card.points[1].azRole == "addons.text"
-				and pane.facts[1].azRole == "addons.text" and pane.together.label.azRole == "addons.head" and pane.azPage ~= nil)
-		end
 	end
 	A.Restore()
-	s.check("[ADD] onglet « Addons liés » sous le Guide, deux styles, page qui tient, encres Azeroth")
+	s.check("[ADD] onglet « Addons liés » sous le Guide, deux styles, page qui tient")
 end
 
 -- 2. Carte de Ready2Quest : trois états --------------------------------------------------------
@@ -220,14 +212,10 @@ do
 		for _, kind in ipairs({ "guide", "addons" }) do
 			QNS:SelectJournalKind(kind)
 			local pane = f[kind]
-			local base = style == "azeroth" and pane.azBase or pane.base
+			local base = pane.base
 			local alpha = base and ((base.colorTexture and base.colorTexture[4]) or 1) * base:GetAlpha()
 			s.ok(style .. " " .. kind .. " : fond propre, opaque, sous tout", base and not base.mockHidden and alpha == 1
 				and base.drawLayer == "BACKGROUND" and base.subLevel == -8 and base.allPoints ~= nil, alpha)
-			if style == "azeroth" then
-				s.ok("azeroth " .. kind .. " : le parchemin du carnet, fond Sobre caché", base and base.texture == f.content.azBg.texture
-					and pane.base.mockHidden == true)
-			end
 		end
 		-- textes de la page : les points de la carte sur une ligne, les faits sur deux au plus
 		local pane = f.addons

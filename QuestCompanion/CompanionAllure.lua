@@ -35,10 +35,8 @@
 -- Companion.lua : les vignettes visibles d'abord, ≈ 3 par seconde, jamais en
 -- combat) : la fois suivante, le portrait 2D. L'icône du type ne reste que
 -- si le client ne sait montrer ni l'un ni l'autre.
--- Deux habits : Sobre (socle) et Azeroth (parchemin des confirmations,
--- JournalAzeroth.lua : ns.CarnetSkinDialog, encres mesurées « allure.* »).
--- Un panneau par style, construit à la première ouverture ; changer de style
--- panneau ouvert le rouvre dans le nouveau style (CarnetRestyle).
+-- Un panneau par clé de style (forgé, Sobre), construit à la première
+-- ouverture ; changer de style panneau ouvert le rouvre (CarnetRestyle).
 local ADDON, ns = ...
 if ns.blocked then return end
 local L = ns.L
@@ -135,15 +133,9 @@ local function HideTip()
 	local fn = UI().HideTip
 	if fn then fn() end
 end
-local function Az(frame) return frame and frame.uiStyle == "azeroth" end
--- encre d'un rôle mesuré (Azeroth) ou jeton du socle (Sobre)
-local function Ink(fs, frame, role, token, shadow)
-	if not fs then return end
-	if Az(frame) and ns.CarnetRolePaint then
-		ns.CarnetRolePaint(fs, role, shadow)
-	else
-		fs:SetTextColor(token[1], token[2], token[3], 1)
-	end
+-- un jeton du socle
+local function Ink(fs, token)
+	if fs then fs:SetTextColor(token[1], token[2], token[3], 1) end
 end
 
 -- ---------------------------------------------------------------------------
@@ -327,7 +319,7 @@ local function NewTile(frame, parent, seasonal, opts)
 end
 
 local function ShowRing(tile, on, frame)
-	local c = Az(frame) and ns.AZEROTH_INK.catGold or Theme.GOLD
+	local c = Theme.GOLD
 	if frame and frame.allureForged then c = Theme.SELECT_LIGHT end
 	for _, ring in ipairs({ tile.ring, tile.ringIn }) do
 		ring:SetColor(c[1], c[2], c[3], on and 1 or 0)
@@ -416,11 +408,11 @@ local function PaintTile(self, tile, def, current)
 	ShowLook(self, tile, def, m, locked)
 	-- encres : nom, grisé, brillante
 	if locked then
-		Ink(tile.label, frame, "allure.locked", Theme.MUTED)
+		Ink(tile.label, Theme.MUTED)
 	elseif def.shiny then
-		Ink(tile.label, frame, "allure.shiny", Theme.GOLD_LIGHT)
+		Ink(tile.label, Theme.GOLD_LIGHT)
 	else
-		Ink(tile.label, frame, "allure.name", Theme.LABEL)
+		Ink(tile.label, Theme.LABEL)
 	end
 	if self:AllureIsFav(def.id) then tile.fav:Show() else tile.fav:Hide() end
 	if def.shiny then tile.gem:Show() else tile.gem:Hide() end
@@ -574,33 +566,17 @@ end
 
 -- Le panneau du style en cours, construit une fois par style
 function ns:EnsureAllure()
-	local style = (self.JournalStyle and self:JournalStyle()) or "sobre"
-	-- 3.1.0 : gardé par clé (ns:JournalStyleKey : ancien habillage, forgé, Sobre)
-	local key = (self.JournalStyleKey and self:JournalStyleKey()) or style
+	-- 3.1.0 : gardé par clé (ns:JournalStyleKey : forgé, Sobre)
+	local key = (self.JournalStyleKey and self:JournalStyleKey()) or "sobre"
 	self.allureByStyle = self.allureByStyle or {}
 	local frame = self.allureByStyle[key]
 	if frame then self.allurePanel = frame; return frame end
-	if style == "azeroth" and ns.CarnetCaptureRun and ns.CarnetSkinDialog then
-		local reg = { new = {}, texts = {} }
-		local ok, made = pcall(ns.CarnetCaptureRun, reg, Build, self)
-		frame = ok and made or nil
-		if frame then
-			frame.uiStyle, frame.azReg = "azeroth", reg
-			local skinned, err = pcall(ns.CarnetSkinDialog, self, frame, reg)
-			if not skinned and self.RecordError then self:RecordError("allure:skin", err) end
-		elseif not ok and self.RecordError then
-			self:RecordError("allure:build", made)
-		end
-	end
-	if not frame then
-		frame = Build(self)
-		if frame then frame.uiStyle = "sobre" end
-		-- 3.1.0 (forgé) : relevé au-dessus du carnet, son habillage monte avec lui
-		if frame and frame.allureForged and ns.ForgeChromeFollows then ns.ForgeChromeFollows(frame) end
-		style = "sobre"
-	end
+	frame = Build(self)
 	if not frame then return nil end
-	frame.styleKey = (self.StyleKey and self:StyleKey(frame.uiStyle == "azeroth")) or frame.uiStyle
+	frame.uiStyle = "sobre"
+	-- 3.1.0 (forgé) : relevé au-dessus du carnet, son habillage monte avec lui
+	if frame.allureForged and ns.ForgeChromeFollows then ns.ForgeChromeFollows(frame) end
+	frame.styleKey = key
 	self.allureByStyle[frame.styleKey] = frame
 	self.allurePanel = frame
 	return frame
@@ -804,11 +780,11 @@ function ns:AllureRefresh()
 	-- encres des textes du panneau (les vignettes ont les leurs)
 	for _, section in ipairs({ frame.seasonTitle, frame.mineTitle }) do
 		-- (forgé : le titre garde l'encre de son ton, l'identité)
-		if not frame.allureForged then Ink(section.label, frame, "allure.section", Theme.MUTED_LIGHT) end
-		Ink(section.detail, frame, "allure.hint", Theme.MUTED)
+		if not frame.allureForged then Ink(section.label, Theme.MUTED_LIGHT) end
+		Ink(section.detail, Theme.MUTED)
 	end
-	Ink(frame.empty, frame, "allure.text", Theme.MUTED_LIGHT)
-	Ink(frame.pager.position, frame, "allure.hint", Theme.MUTED_LIGHT)
+	Ink(frame.empty, Theme.MUTED_LIGHT)
+	Ink(frame.pager.position, Theme.MUTED_LIGHT)
 	return #grid, #season
 end
 

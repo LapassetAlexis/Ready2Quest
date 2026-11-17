@@ -33,9 +33,7 @@
 -- créées à la demande et resservent d'un lot à l'autre ; modèles 3D pour
 -- les CAPTURE_BATCH_MODELS premières seulement (icône au-delà). Nos
 -- textures (Textures/, celles de la scène d'un lancer seul) et les aplats
--- du thème ; en style Azeroth (2.5.1), le choix et la volée prennent le
--- cadre en bois, la plaque et les cadres d'icône des hauts faits (atlas du
--- client, désignés par leur nom, jamais embarqués).
+-- du thème ; au thème forgé, la carte du socle (ForgeScenes.lua).
 local ADDON, ns = ...
 if ns.blocked then return end
 local L = ns.L
@@ -66,18 +64,6 @@ local PAD, HEAD, FOOT, MIN_W = 16, 44, 48, 340
 local ROPES, BURST = 3, 6
 local CHOOSER_W, CHOOSER_H = 248, 146   -- 2.15.0 : 112 -> 146 (la rangée d'aides)
 ns.CAPTURE_CHOOSER_AID = 24
--- style Azeroth (2.5.1, maquette validée) : fenêtre en bois, plaque de titre,
--- cases avec la créature dans le cadre d'icône doré des hauts faits
-local AZB = { tileW = 132, tileH = 148, gapX = 14, gapY = 16, ring = 96, window = 72, model = 76, net = 104,
-	pad = 30, head = 150, foot = 50, minW = 440, plateW = 330, plateH = 92, plateY = -22, rowY = -118,
-	stopW = 104, stopH = 22, shieldW = 40, shieldH = 36 }
-ns.CAPTURE_BATCH_AZEROTH = AZB
--- le choix au filet, en bois : le glyphe du filet dans son cadre, la légende,
--- deux boutons dorés (avec leur ligne de dessous), les raccourcis
--- 2.15.0 : une rangée d'aides pour tout le lot (aidsY), le pied descend d'autant
-local AZC = { w = 300, h = 290, ring = 44, glyph = 28, ringY = -22, captionY = -70, buttonH = 44,
-	oneY = -90, allY = -142, aidsY = -194, hintY = -232, gap = 14 }
-ns.CAPTURE_CHOOSER_AZEROTH = AZC
 local RANK_ORDER = { trivial = 0, minus = 0, normal = 1, elite = 2, rare = 3, rareelite = 4, worldboss = 5 }
 
 local FR = {
@@ -172,15 +158,16 @@ local function Method(obj, name, ...)
 	return false
 end
 local function Upper(text) return Theme.Upper and Theme.Upper(text) or text end
--- Style des fenêtres de capture (2.5.1) : Azeroth (bois) ou Sobre
+-- Style des cadres des fenêtres de capture (3.1.2 : toujours Sobre ; le
+-- forgé se décide par la clé)
 local function SceneStyle(self)
-	return (self.AzerothScenesOn and self:AzerothScenesOn()) and "azeroth" or "sobre"
+	return "sobre"
 end
--- 3.1.0 : la clé de cache (ns:StyleKey) : « azeroth » (ancien habillage),
--- « forge » (née sous le thème forgé) ou « sobre »
+-- 3.1.0 : la clé de cache (ns:StyleKey) : « forge » (née sous le thème
+-- forgé) ou « sobre »
 local function SceneKey(self, style)
 	if not self.StyleKey then return style end
-	return self:StyleKey(style == "azeroth")
+	return self:StyleKey()
 end
 local function KeyOf(frame)
 	return ns.FrameStyleKey and ns.FrameStyleKey(frame) or frame.uiStyle or "sobre"
@@ -416,98 +403,7 @@ local function Texture(parent, layer, sub, role, coords, w, h, blend)
 	return tex
 end
 
--- Azeroth : la créature dans le cadre d'icône doré (le cadre devant le
--- modèle), le bouclier du verdict au coin, le nom en Friz (or pour une
--- brillante), les étoiles ou « échappée », l'étiquette dessous
-local AZ_IDLE, AZ_FLED_NAME = FXC.idle, FXC.fledName
-local function CreateTileAzeroth(parent)
-	local coords = Coords()
-	local tile = CreateFrame("Frame", nil, parent)
-	tile:SetSize(AZB.tileW, AZB.tileH)
-	tile.az = true
-	tile.netSize, tile.sceneH, tile.haloSize, tile.modelSize, tile.flee = AZB.net, AZB.window, AZB.ring + 12, AZB.model, 36
-	local level = tile:GetFrameLevel() or 1
-	-- la fenêtre du cadre d'icône : la scène, qui rogne
-	tile.scene = CreateFrame("Frame", nil, tile)
-	tile.scene:SetSize(AZB.window, AZB.window)
-	tile.scene:SetPoint("TOP", tile, "TOP", 0, -2 - (AZB.ring - AZB.window) / 2)
-	Method(tile.scene, "SetClipsChildren", true)
-	tile.bg = Theme.Solid(tile, "BACKGROUND", FXC.tileBg, 1)
-	tile.bg:SetAllPoints(tile.scene)
-	tile.halo = Texture(tile, "ARTWORK", 2, "halo", nil, tile.haloSize, tile.haloSize, "ADD")
-	tile.halo:SetPoint("CENTER", tile.scene, "CENTER", 0, 0)
-	-- 2.9.1 : la créature est l'icône fixe de son type (ns.MENAGERIE_TYPE_ICONS),
-	-- comme la scène de capture depuis 2.9.0 : le modèle 3D se cadrait mal (le
-	-- zoom visait une tête absente, la case ne montrait que le corps ou les
-	-- pattes). L'icône remplit le trou du cadre doré (ns.AZEROTH_ICON_HOLE), centrée.
-	local hole = ns.AZEROTH_ICON_HOLE or { l = 17 / 74, r = 57 / 74 }
-	tile.iconSize = math.floor(AZB.ring * (hole.r - hole.l) + 0.5)
-	tile.fallback = tile.scene:CreateTexture(nil, "ARTWORK")
-	tile.fallback:SetSize(tile.iconSize, tile.iconSize)
-	tile.fallback:SetTexture(ns.AZEROTH_PORTRAIT_ICON or "Interface\\Icons\\Ability_Hunter_BeastTaming")
-	tile.fallback:SetTexCoord(0.08, 0.92, 0.08, 0.92)
-	tile.fallback:Hide()
-	-- le cadre doré, devant le modèle (un cadre enfant passe devant le 3D)
-	tile.ringFrame = CreateFrame("Frame", nil, tile)
-	tile.ringFrame:SetAllPoints(tile)
-	tile.ringFrame:SetFrameLevel(level + 4)
-	tile.ring = tile.ringFrame:CreateTexture(nil, "ARTWORK")
-	tile.ring:SetSize(AZB.ring, AZB.ring)
-	tile.ring:SetPoint("TOP", tile, "TOP", 0, -2)
-	if ns.AzerothAtlas then ns.AzerothAtlas(tile.ring, ns.AZEROTH_ATLAS and ns.AZEROTH_ATLAS.frame) end
-	-- au-dessus : le filet, son ombre, ses cordes, les étincelles, l'éclair, le bouclier
-	tile.fx = CreateFrame("Frame", nil, tile)
-	tile.fx:SetAllPoints(tile.scene)
-	tile.fx:SetFrameLevel(level + 6)
-	tile.shadow = Texture(tile.fx, "ARTWORK", 0, "net", coords.netWhole, AZB.net)
-	tile.net = Texture(tile.fx, "ARTWORK", 1, "net", coords.netWhole, AZB.net)
-	tile.ropes = {}
-	for index = 1, ROPES do
-		local p = Texture(tile.fx, "ARTWORK", 2, "rope", nil, 22 + index * 5, 5)
-		p.vx, p.vy, p.spin, p.rot0 = (index - 2) * 45, 50 + index * 18, (index - 2) * 2.2 + 0.8, index * 0.9
-		tile.ropes[index] = p
-	end
-	tile.burst = {}
-	for index = 1, BURST do
-		local p = Texture(tile.fx, "ARTWORK", 3, "sparks", nil, 11, 11, "ADD")
-		p.angle = (index / BURST) * math.pi * 2 + 0.3
-		p.reach = 40 + (index % 3) * 6
-		tile.burst[index] = p
-	end
-	tile.dust = Texture(tile.fx, "ARTWORK", 2, "dust", nil, 44, 13, "ADD")
-	tile.flash = Texture(tile.fx, "ARTWORK", 4, "halo", nil, 120, 120, "ADD")
-	tile.flash:SetPoint("CENTER", tile.scene, "CENTER", 0, 0)
-	tile.shield = tile.fx:CreateTexture(nil, "OVERLAY")
-	tile.shield:SetSize(AZB.shieldW, AZB.shieldH)
-	tile.shield:SetPoint("TOPRIGHT", tile, "TOPRIGHT", -4, 4)
-	tile.shield:Hide()
-	-- 2.9.1 : l'écu n'est plus vide : il porte le nombre d'étoiles obtenues,
-	-- centré comme les points des hauts faits (ns.AzerothShieldCenter)
-	tile.shieldText = tile.fx:CreateFontString(nil, "OVERLAY", Theme.F_NUMBER or Theme.F_TITLE or Theme.F_SMALL)
-	if ns.AzerothFont then ns.AzerothFont(tile.shieldText, 13, "OUTLINE") end
-	tile.shieldText:SetTextColor(WHITE[1], WHITE[2], WHITE[3], 1)
-	Theme.TextShadow(tile.shieldText)
-	if ns.AzerothShieldCenter then ns.AzerothShieldCenter(tile.shieldText, tile.shield) end
-	tile.shieldText:SetText("")
-	tile.shieldText:Hide()
-	-- sous le cadre : le nom, les étoiles (ou « échappée »), l'étiquette
-	tile.name = tile:CreateFontString(nil, "OVERLAY", Theme.F_LABEL or Theme.F_SMALL)
-	tile.name:SetPoint("TOP", tile, "TOP", 0, -AZB.ring - 4)
-	tile.name:SetWidth(AZB.tileW - 6)
-	tile.name:SetJustifyH("CENTER")
-	if ns.AzerothFont then ns.AzerothFont(tile.name, 12) end
-	Theme.TextShadow(tile.name)
-	if tile.name.SetWordWrap then tile.name:SetWordWrap(false) end
-	tile.stars = Theme.Text(tile, Theme.F_SMALL, Theme.PARCHMENT)
-	tile.stars:SetPoint("TOP", tile.name, "BOTTOM", 0, -3)
-	tile.stars:SetJustifyH("CENTER")
-	tile.tag = Theme.Text(tile, Theme.F_CAPS or Theme.F_SMALL, Theme.GOLD)
-	tile.tag:SetPoint("TOP", tile.stars, "BOTTOM", 0, -2)
-	return tile
-end
-
-local function CreateTile(parent, az, forged)
-	if az then return CreateTileAzeroth(parent) end
+local function CreateTile(parent, forged)
 	local coords = Coords()
 	local tile = CreateFrame("Frame", nil, parent)
 	tile:SetSize(TILE_W, TILE_H)
@@ -607,17 +503,10 @@ local function ApplyIdle(self, tile, result)
 	tile.verdict = nil
 	-- 2.11.0 : une case échappée du lot d'avant reprend ses couleurs
 	if tile.fallback.SetDesaturated then tile.fallback:SetDesaturated(false) end
-	if tile.az then
-		tile.shieldKind = ns.AzerothShield and ns.AzerothShield(tile.shield, nil) or nil
-		tile.shield:Hide()
-		tile.shieldText:SetText("")
-		tile.shieldText:Hide()
-	else
-		Tint(tile.bg, Theme.NAV or Theme.WINDOW, 1)
-		if tile.edge and tile.edge.SetColor then local c = Theme.GOLD_SOFT or Theme.GOLD; tile.edge:SetColor(c[1], c[2], c[3], 1) end
-		tile.bar:Hide()
-		if tile.badge then ns.ForgeTileBadge(tile, nil) end
-	end
+	Tint(tile.bg, Theme.NAV or Theme.WINDOW, 1)
+	if tile.edge and tile.edge.SetColor then local c = Theme.GOLD_SOFT or Theme.GOLD; tile.edge:SetColor(c[1], c[2], c[3], 1) end
+	tile.bar:Hide()
+	if tile.badge then ns.ForgeTileBadge(tile, nil) end
 	tile.halo:Hide()
 	tile.net:Hide()
 	tile.shadow:Hide()
@@ -628,58 +517,15 @@ local function ApplyIdle(self, tile, result)
 	Quiet(tile)
 	local target = result.target
 	tile.name:SetText(target.shiny and self:F("CAPTURE_SHINY_TAG", target.name) or target.name)
-	local m = tile.az and AZ_IDLE or Theme.MUTED_LIGHT or Theme.PARCHMENT
+	local m = Theme.MUTED_LIGHT or Theme.PARCHMENT
 	tile.name:SetTextColor(m[1], m[2], m[3])
-	if tile.az and ns.AzerothFit then ns.AzerothFit(tile.name, AZB.tileW - 6, 12, 9) end
 	tile.stars:SetText("")
 	tile.stars:Hide()
 	tile.tag:SetText("")
 	Creature(tile, 0, 0, 1, 0)
 end
 
--- Le verdict de `result` dans les textes de la case (au moment où le filet
--- tient ou se déchire) ; les étoiles se montrent un peu après
-local function ApplyVerdictAzeroth(self, tile, result)
-	local target = result.target
-	local colors = ns.AZEROTH_COLORS or {}
-	tile.name:SetText(target.name)
-	if result.success then
-		tile.verdict = "ok"
-		local c = target.shiny and (colors.shinyName or Theme.GOLD_LIGHT) or WHITE
-		tile.name:SetTextColor(c[1], c[2], c[3])
-		tile.stars:SetText(self:CaptureStarsText(result.stars or 1, 14))
-		tile.stars:SetTextColor(WHITE[1], WHITE[2], WHITE[3])
-		local tag = target.shiny and L.CAPTURE_BATCH_SHINY or (result.fresh and L.CAPTURE_BATCH_NEW)
-			or (result.before and result.better and L.CAPTURE_BATCH_BETTER) or ""
-		tile.tag:SetText(Upper(tag))
-		local tc = target.shiny and (colors.shinyName or Theme.GOLD_LIGHT) or Theme.GOLD
-		tile.tag:SetTextColor(tc[1], tc[2], tc[3])
-		tile.shieldKind = ns.AzerothShield and ns.AzerothShield(tile.shield, "gold") or nil
-		if tile.shieldKind then
-			if ns.AzerothShieldCenter then ns.AzerothShieldCenter(tile.shieldText, tile.shield) end
-			tile.shieldText:SetText(tostring(math.max(1, math.floor(tonumber(result.stars) or 1))))
-			tile.shieldText:Show()
-		end
-	else
-		tile.verdict = "fail"
-		tile.name:SetTextColor(AZ_FLED_NAME[1], AZ_FLED_NAME[2], AZ_FLED_NAME[3])
-		tile.stars:SetText(L.CAPTURE_BATCH_FLED)
-		local f = colors.fled or Theme.MUTED_LIGHT
-		tile.stars:SetTextColor(f[1], f[2], f[3])
-		tile.tag:SetText("")
-		Coord(tile.net, Coords().netTorn)
-		-- 2.9.0 : plus de bouclier gris sur une échappée (un bouclier sombre et vide,
-		-- qui ne disait rien) ; l'or reste réservé aux prises
-		tile.shieldKind = nil
-		tile.shield:Hide()
-		tile.shieldText:SetText("")
-		tile.shieldText:Hide()
-	end
-	if ns.AzerothFit then ns.AzerothFit(tile.name, AZB.tileW - 6, 12, 9) end
-end
-
 local function ApplyVerdict(self, tile, result)
-	if tile.az then return ApplyVerdictAzeroth(self, tile, result) end
 	local target = result.target
 	if result.success then
 		tile.verdict = "ok"
@@ -871,9 +717,8 @@ local function DrawVerdict(card, r)
 	end
 end
 
--- Une volée par style (2.5.1, comme la scène d'un lancer seul) : Sobre ou
--- Azeroth (bois, plaque « TOUT CAPTURER », cadres d'icône), gardées
--- (ns.captureBatchFrames[style]) ; leurs cases resservent d'un lot à l'autre
+-- Une volée par clé (2.5.1, comme la scène d'un lancer seul) : forgée ou
+-- Sobre, gardées (ns.captureBatchFrames[clé]) ; leurs cases resservent d'un lot à l'autre
 function ns:EnsureCaptureBatchFrame()
 	local style = SceneStyle(self)
 	local want = SceneKey(self, style)
@@ -881,9 +726,8 @@ function ns:EnsureCaptureBatchFrame()
 	if kept then return kept end
 	if not (Theme and Theme.CreateToast) then return nil end
 	-- un nom global : Échap la referme (UISpecialFrames), comme la scène d'un lancer seul
-	local frame = style == "azeroth" and self.AzerothCreateWindow
-		and self:AzerothCreateWindow(AZB.minW, 300, { strata = "DIALOG", name = "QuestCompanionCaptureBatchAzeroth" }) or nil
-	if not frame then
+	local frame
+	do
 		local key = SceneKey(self, "sobre")
 		local name = SceneName("QuestCompanionCaptureBatch", key)
 		-- 3.1.0 : née sous le thème forgé, la carte du socle (ForgeScenes.lua)
@@ -895,7 +739,6 @@ function ns:EnsureCaptureBatchFrame()
 		frame.uiStyle = "sobre"
 	end
 	if self.MarkStyle then self:MarkStyle(frame) end
-	local az = frame.azeroth and true or false
 	frame:ClearAllPoints()
 	frame:SetPoint("CENTER", UIParent, "CENTER", 0, 60)
 	frame:EnableMouse(true)
@@ -925,33 +768,7 @@ function ns:EnsureCaptureBatchFrame()
 		local batch = ns.captureBatch
 		if batch and not batch.done then ns:CaptureBatchStop() else frame:Hide() end
 	end
-	if az then
-		-- la plaque : « TOUT CAPTURER », « Captures : N » ; dessous, l'aide à
-		-- gauche et Arrêter / Fermer à droite ; la grille ; le pied
-		frame.plate = self:AzerothPlate(frame, AZB.plateW, AZB.plateH)
-		frame.plate:SetPoint("TOP", frame, "TOP", 0, AZB.plateY)
-		frame.title, frame.counter = frame.plate.title, frame.plate.text
-		frame.title:SetText(Upper(L.CAPTURE_BATCH_TITLE))
-		frame.aidIcon = frame:CreateTexture(nil, "OVERLAY")
-		frame.aidIcon:SetSize(14, 14)
-		frame.aidIcon:SetTexCoord(0.08, 0.92, 0.08, 0.92)
-		frame.aidIcon:SetPoint("TOPLEFT", frame, "TOPLEFT", AZB.pad, AZB.rowY - 4)
-		local colors = ns.AZEROTH_COLORS or {}
-		frame.aidText = Theme.Text(frame, Theme.F_SMALL, colors.flavour or Theme.PARCHMENT)
-		frame.aidText:SetPoint("LEFT", frame.aidIcon, "RIGHT", 4, 0)
-		frame.aidText:SetJustifyH("LEFT")
-		if frame.aidText.SetWordWrap then frame.aidText:SetWordWrap(false) end
-		frame.stop = self:AzerothButton(frame, AZB.stopW, AZB.stopH, L.CAPTURE_BATCH_STOP, stopClick, "dark")
-		frame.stop:SetPoint("TOPRIGHT", frame, "TOPRIGHT", -AZB.pad, AZB.rowY)
-		frame.grid = CreateFrame("Frame", nil, frame)
-		frame.grid:SetPoint("TOPLEFT", frame, "TOPLEFT", 0, -AZB.head)
-		frame.grid:SetPoint("TOPRIGHT", frame, "TOPRIGHT", 0, -AZB.head)
-		frame.grid:SetHeight(AZB.tileH)
-		frame.footer = Theme.Text(frame, Theme.F_SMALL, colors.hint or Theme.MUTED)
-		frame.footer:SetPoint("BOTTOMLEFT", frame, "BOTTOMLEFT", AZB.pad, 24)
-		frame.footer:SetJustifyH("LEFT")
-		if frame.footer.SetWordWrap then frame.footer:SetWordWrap(false) end
-	elseif frame.forged then
+	if frame.forged then
 		-- 3.1.0 : thème forgé. La plaque de titre : « TOUT CAPTURER » et le
 		-- compteur mis en avant ; dessous, « Aide : <aide> » ; le ×, Arrêter /
 		-- Fermer et le pied comme en Sobre
@@ -1027,11 +844,11 @@ function ns:EnsureCaptureBatchFrame()
 	return frame
 end
 
--- Taille de la grille pour `n` cases : colonnes, rangées. Azeroth (cases
--- plus grandes) et forgé (3.1.0) : 5 ou 6 cases en deux rangées de 3
-function ns:CaptureBatchGrid(n, az)
+-- Taille de la grille pour `n` cases : colonnes, rangées. Forgé (3.1.0,
+-- `byThree`) : 5 ou 6 cases en deux rangées de 3
+function ns:CaptureBatchGrid(n, byThree)
 	local most = ns.CAPTURE_BATCH_COLS
-	if az and (n == 5 or n == 6) then most = 3 end
+	if byThree and (n == 5 or n == 6) then most = 3 end
 	local cols = math.max(1, math.min(n, most))
 	return cols, math.max(1, math.ceil(n / cols))
 end
@@ -1090,36 +907,30 @@ function ns:CaptureBatchShow(batch)
 	local frame = self:EnsureCaptureBatchFrame()
 	if not (frame and batch) then return nil end
 	local n = #batch.results
-	local az = frame.azeroth and true or false
-	local forged = (not az) and frame.forged and true or false
-	local tileW, tileH = az and AZB.tileW or TILE_W, az and AZB.tileH or TILE_H
-	local gapX, gapY = az and AZB.gapX or TILE_GAP, az and AZB.gapY or TILE_GAP
-	local cols, rows = self:CaptureBatchGrid(n, az or forged)
+	local forged = frame.forged and true or false
+	local tileW, tileH = TILE_W, TILE_H
+	local gapX, gapY = TILE_GAP, TILE_GAP
+	local cols, rows = self:CaptureBatchGrid(n, forged)
 	local gridW = cols * tileW + (cols - 1) * gapX
 	local gridH = rows * tileH + (rows - 1) * gapY
-	if az then
-		frame:SetSize(math.max(AZB.minW, gridW + 2 * AZB.pad), AZB.head + gridH + AZB.foot)
-	else
-		local head = forged and ns.FORGE_SCENE.batch.head or HEAD
-		frame:SetSize(math.max(MIN_W, gridW + 2 * PAD), head + gridH + FOOT)
-	end
+	local head = forged and ns.FORGE_SCENE.batch.head or HEAD
+	frame:SetSize(math.max(MIN_W, gridW + 2 * PAD), head + gridH + FOOT)
 	frame.grid:SetHeight(gridH)
 	batch.cards = {}
 	for index = 1, math.max(n, #frame.tiles) do
 		local tile = frame.tiles[index]
 		if index <= n then
 			-- créée à la demande, gardée pour les lots suivants
-			if not tile then tile = CreateTile(frame.grid, az, forged); frame.tiles[index] = tile end
+			if not tile then tile = CreateTile(frame.grid, forged); frame.tiles[index] = tile end
 			local col, row = (index - 1) % cols, math.floor((index - 1) / cols)
 			tile:ClearAllPoints()
 			tile:SetPoint("TOPLEFT", frame.grid, "TOP", -gridW / 2 + col * (tileW + gapX), -row * (tileH + gapY))
 			local result = batch.results[index]
-			-- le modèle 3D pour les premières cases, l'icône au-delà ; 2.9.1 : en
-			-- Azeroth, toujours l'icône du type (cadrage fixe, voir CreateTileAzeroth)
+			-- le modèle 3D pour les premières cases, l'icône au-delà
 			-- 2.11.0 : le repli (et la case échappée) montre le portrait 2D de
 			-- la créature si son displayID est connu, sinon l'icône de son type
 			self:CreaturePortrait(tile.fallback, result.target)
-			local model = not tile.az and index <= ns.CAPTURE_BATCH_MODELS and TileModel(tile) or nil
+			local model = index <= ns.CAPTURE_BATCH_MODELS and TileModel(tile) or nil
 			if tile.model and not model then tile.model:Hide() end
 			tile.hasModel = model and self:CaptureModelSetup(model, result.target) or nil
 			if tile.hasModel then tile.fallback:Hide() end
@@ -1143,7 +954,7 @@ function ns:CaptureBatchShow(batch)
 	if aid then
 		frame.aidIcon:SetTexture(aid.icon)
 		local label = tostring(self:CaptureAidLabel(aid.id))
-		frame.aidText:SetText((az or forged) and self:F("CAPTURE_BATCH_AID", label) or label)
+		frame.aidText:SetText(forged and self:F("CAPTURE_BATCH_AID", label) or label)
 		frame.aidIcon:Show(); frame.aidText:Show()
 	else
 		frame.aidIcon:Hide(); frame.aidText:Hide()
@@ -1344,47 +1155,6 @@ function ns:CaptureChooserSingle()
 	return self:CapturePrepOpen()
 end
 
--- Azeroth (2.5.1) : petit panneau en bois, le glyphe du filet dans son cadre
--- d'icône, « N CRÉATURES DANS LE FILET », deux boutons dorés (le meilleur,
--- avec brillante et chance dessous ; tout, plus sombre, avec ce que coûte
--- chaque essai), les raccourcis. Mêmes champs (.single, .all, .hint, .title).
-local function BuildChooserAzeroth(self, frame)
-	local bw = AZC.w - 2 * (ns.AZEROTH_WOOD_PAD or 26)
-	local colors = ns.AZEROTH_COLORS or {}
-	frame.ring = frame:CreateTexture(nil, "ARTWORK", nil, 1)
-	frame.ring:SetSize(AZC.ring, AZC.ring)
-	frame.ring:SetPoint("TOP", frame, "TOP", 0, AZC.ringY)
-	if ns.AzerothAtlas then ns.AzerothAtlas(frame.ring, ns.AZEROTH_ATLAS and ns.AZEROTH_ATLAS.frame) end
-	frame.glyph = frame:CreateTexture(nil, "ARTWORK", nil, 0)
-	frame.glyph:SetSize(AZC.glyph, AZC.glyph)
-	frame.glyph:SetPoint("CENTER", frame.ring, "CENTER", 0, 0)
-	-- 2.11.0 : l'icône du filet du jeu (INV_Misc_Net_01), sinon notre glyphe blanc teinté d'or
-	if not (ns.CaptureArtPaint and ns.CaptureArtPaint(frame.glyph, "icon")) then frame.glyph:SetTexture(Theme.LOGO_SMALL) end
-	if not frame.glyph.clientArt then
-		local g = Theme.GOLD_LIGHT or Theme.GOLD
-		frame.glyph:SetVertexColor(g[1], g[2], g[3], 1)
-	end
-	frame.title = Theme.Text(frame, Theme.F_CAPS or Theme.F_SMALL, colors.caption or Theme.GOLD)
-	frame.title:SetPoint("TOP", frame, "TOP", 0, AZC.captionY)
-	frame.title:SetWidth(bw)
-	frame.title:SetJustifyH("CENTER")
-	if ns.AzerothFont then ns.AzerothFont(frame.title, 11) end
-	if frame.title.SetWordWrap then frame.title:SetWordWrap(false) end
-	frame.single = self:AzerothButton(frame, bw, AZC.buttonH, "", function() ns:CaptureChooserSingle() end, "gold")
-	frame.single:SetPoint("TOP", frame, "TOP", 0, AZC.oneY)
-	frame.all = self:AzerothButton(frame, bw, AZC.buttonH, "", function()
-		ns:CaptureChooserHide()
-		ns:CaptureBatch()
-	end, "dark")
-	frame.all:SetPoint("TOP", frame, "TOP", 0, AZC.allY)
-	BuildChooserAids(frame, AZC.aidsY, true)
-	frame.hint = Theme.Text(frame, Theme.F_SMALL, colors.hint or Theme.MUTED)
-	frame.hint:SetPoint("TOP", frame, "TOP", 0, AZC.hintY)
-	frame.hint:SetWidth(bw)
-	frame.hint:SetJustifyH("CENTER")
-	frame.hint:SetText(L.CAPTURE_CHOOSE_KEYS)
-end
-
 -- 3.1.0 : thème forgé (maquette validée, ForgeScenes.lua). En haut, le
 -- filet du jeu dans un creux, « N CRÉATURES DANS LE FILET » et le temps en
 -- pause ; « Capturer : X » en principal doré, sa ligne dessous (brillante,
@@ -1448,14 +1218,9 @@ function ns:EnsureCaptureChooser()
 	local kept = Reuse(self, "captureChooser", "captureChoosers", want)
 	if kept then return kept end
 	if not (Theme and Theme.CreateToast) then return nil end
-	local frame = style == "azeroth" and self.AzerothCreateWindow
-		and self:AzerothCreateWindow(AZC.w, AZC.h, { strata = "DIALOG", name = "QuestCompanionCaptureChooserAzeroth" }) or nil
+	local frame
 	local key = SceneKey(self, "sobre")
-	if frame then
-		frame:EnableMouse(true)
-		if Theme.RegisterEscapeClose then pcall(Theme.RegisterEscapeClose, frame) end
-		BuildChooserAzeroth(self, frame)
-	elseif key == "forge" and ns.ForgeSceneWindow and ns.QCForged and ns.QCForged() then
+	if key == "forge" and ns.ForgeSceneWindow and ns.QCForged and ns.QCForged() then
 		local C = ns.FORGE_SCENE.chooser
 		frame = ns.ForgeSceneWindow(C.w, C.h, { strata = "DIALOG", name = SceneName("QuestCompanionCaptureChooser", key) })
 		if not frame then return nil end
@@ -1546,18 +1311,7 @@ function ns:CaptureChooserRefresh()
 	local name = best.shiny and self:F("CAPTURE_SHINY_TAG", best.name) or best.name
 	frame.single:SetText(self:F("CAPTURE_CHOOSE_ONE", name))
 	frame.all:SetText(self:F("CAPTURE_CHOOSE_ALL", #queue))
-	if frame.azeroth then
-		-- la légende, et sous chaque bouton : brillante et chance ; ce que coûte chaque essai
-		local colors = ns.AZEROTH_COLORS or {}
-		frame.title:SetText(Upper(self:F("CAPTURE_CHOOSE_COUNT", #queue)))
-		local aid = self:CaptureState().aid
-		local chance, sure = self:CaptureChance(best, aid)
-		local odds = sure and L.CAPTURE_TOAST_SURE or self:F("CAPTURE_TOAST_CHANCE", math.floor((chance or 0) * 100 + 0.5 + 1e-9))
-		frame.single:SetSub(best.shiny and (L.CAPTURE_CHOOSE_SHINY .. " · " .. odds) or odds)
-		frame.all:SetSub(aid and self:F("CAPTURE_CHOOSE_ALL_AID", self:CaptureAidLabel(aid)) or L.CAPTURE_CHOOSE_ALL_FREE)
-		local c = best.shiny and (colors.shinyName or Theme.GOLD_LIGHT) or ns.AZEROTH_BUTTONS.text
-		frame.single.text:SetTextColor(c[1], c[2], c[3])
-	elseif frame.forged then
+	if frame.forged then
 		-- 3.1.0 (forgé) : la légende, et sous chaque bouton : brillante et
 		-- chance (« brillante » en or) ; ce que coûte chaque essai. Le libellé
 		-- du principal garde l'encre sombre de sa plaque d'or.
@@ -1601,12 +1355,12 @@ function ns:CaptureChooserShow()
 	self:CaptureHideQueueList()
 	frame:ClearAllPoints()
 	local net = self.captureNetButton
-	if net and net:IsShown() and (frame.azeroth or frame.forged) then
+	if net and net:IsShown() and frame.forged then
 		-- à côté du filet, du côté où il y a la place : à gauche s'il est dans
 		-- la moitié droite de l'écran, à droite sinon (gardé à l'écran, bois compris)
 		-- 3.1.0 : aussi au thème forgé
 		local side = ChooserSide(net)
-		local gap = frame.azeroth and AZC.gap or ns.FORGE_SCENE.chooser.gap
+		local gap = ns.FORGE_SCENE.chooser.gap
 		frame.side = side
 		if side == "left" then
 			frame:SetPoint("RIGHT", net, "LEFT", -gap, 0)

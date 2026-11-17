@@ -365,7 +365,7 @@ Aperçus : `qc-journal-creature|menagerie|day|day-azeroth|progress|guide`,
 `qc-companion`, `qc-companion-hover|frame-tint|talk|sad|winter`,
 `qc-tutorial`, `qc-pantry`, `qc-chest`, `qc-notify`, `qc-tracker`,
 `qc-tooltip`, `qc-options-companion`, `qc-options-ornaments`
-(`qc-journal-day-azeroth` : l'ancien habillage, sous son drapeau). Pas encore
+Pas encore
 d'aperçu d'Exploration.
 
 ## Composants 3.0 (QuestCompanion 3.0.0, socle 3.0)
@@ -1054,81 +1054,34 @@ ligne de guilde ; lueurs du verdict forgé et de l'aide conseillée, avec et
 sans les atlas des hauts faits ; voile or à 0,8, plaque d'en-tête froide,
 curseur or de l'interrupteur actif.
 
-## Style Azeroth (QuestCompanion) : l'ancien habillage, derrière un drapeau
+## Style Azeroth (QuestCompanion) : le choix du thème
 
 Réglage « Style de l'interface » : Azeroth (le thème forgé du socle, section
-précédente) ou Sobre. Depuis 3.1.0, le choix ne pose plus que le thème du
-socle (`ns:UISkinChoice` redéfini dans QuestCompanion = `ns:UIStyleChoice`) :
-le thème forgé ne dépend plus des atlas du client. L'habillage d'art du
-client décrit ici (carnet en parchemin, scènes en bois, bandeaux dorés,
-anneau du compagnon) est l'**ancien habillage** : il ne s'affiche que si le
-drapeau interne `ns.AZEROTH_LEGACY` vaut `true` (`false` dans le produit ;
-aucun réglage ni commande ; les tests qui l'affirment le posent par
-`T.Legacy(true)`). Il habille le même contenu, il ne le reconstruit pas
-(`AzerothStyle.lua` pour les bandeaux et la capture, `JournalAzeroth.lua`
-pour le carnet).
-
-Les portes (`AzerothStyle.lua`) :
+précédente) ou Sobre. Le choix ne pose que le thème du socle
+(`ns:UISkinChoice` redéfini dans QuestCompanion = `ns:UIStyleChoice`) : le
+thème forgé ne dépend pas des atlas du client. L'ancien habillage d'art du
+client (carnet en parchemin, scènes en bois, bandeaux dorés, anneau du
+compagnon), gardé derrière un drapeau en 3.1.0 et 3.1.1, est retiré en
+3.1.2.
 
 | Porte | Vaut | Sert à |
 |---|---|---|
 | `ns:UIStyleChoice()` | `azeroth` / `sobre` (réglage `companionStyle`) | le choix du joueur |
 | `ns:UISkinChoice()` | `= UIStyleChoice()` | le thème du socle (`Theme.ApplySkin`, au chargement et à `ApplyUIStyle`) |
 | `ns.QCForged()` / `Theme.Forged()` | thème forgé posé ? | décider d'une **brique forgée** (à la création) |
-| `ns:LegacyStyle()` = `ns:UIStyle()` | `azeroth` seulement si drapeau, choix azeroth et atlas du client ; `sobre` sinon | l'ancien habillage et `frame.uiStyle` |
-| `ns:AzerothOn()`, `AzerothScenesOn()`, `JournalStyle()` | suivent `UIStyle()` : faux / `sobre` dans le produit | le code de l'ancien habillage seulement |
-| `ns:WinterVeilStyleOn()` | choix azeroth | le décor du Voile d'hiver (plus l'ancien habillage) |
+| `ns:UIStyle()` | toujours `sobre` | `frame.uiStyle` des cadres construits |
+| `ns:WinterVeilStyleOn()` | choix azeroth | le décor du Voile d'hiver |
 
-Rien ne lit `AzerothOn` pour décider d'une fonction (une information, un
-bouton, un effet) : une fonction qui n'existait que dans l'ancien habillage
-est re-logée derrière `ns.QCForged()`, le Sobre restant intact.
-
-Clé de cache (`ns:StyleKey(legacy)`) : `azeroth` si l'ancien habillage a
-construit le cadre, `forge` s'il est né sous le thème forgé, `sobre` sinon.
-Un cadre construit porte `frame.styleKey` (`ns:MarkStyle(frame)` la pose
-d'après le cadre ; `ns.FrameStyleKey(frame)` la relit). Tous les caches par
-style passent par elle : bandeaux (`ns:StyleCached`, `ns:ApplyUIStyle`),
-carnet, fiche de dresseur, confirmations, panneau d'allure
-(`ns:JournalStyleKey`, `CarnetRestyle`), scènes de capture, volée, choix au
-filet, bulle des visites. Une brique forgée est décidée à la création : un
-cadre né forgé n'est jamais resservi en Sobre, ni l'inverse, et deux
-`ApplyUIStyle` de suite gardent les mêmes cadres. Noms globaux (Échap) :
-`ns.StyleName(base, clé)` = base + `Azeroth` / `Forge` / rien (Sobre, le nom
-d'avant). Hors ancien habillage, `frame.uiStyle` reste `sobre` et
-`frame.azeroth` n'est jamais posé (sinon `Theme.DressWindow` refuse
-d'habiller le cadre).
-
-Ce qui suit décrit l'ancien habillage (drapeau à `true`).
-
-- Matières : bois `achievement-wood-nineslice-*`, parchemin, bandeaux et
-  boucliers du client, par atlas ou FileDataID ; aucune image embarquée.
-  Police Friz Quadrata (`ns.AZEROTH_FONT`).
-- Repli : un élément dont l'atlas ou le fichier est refusé reste en Sobre ;
-  si le bois manque, les fenêtres passent en Sobre (les bandeaux gardent
-  Azeroth) ; une colonne qui n'a pas pu être habillée entière repasse en
-  Sobre (jamais de texte clair sur parchemin).
-- Encres : texte sombre sur parchemin, texte clair sur bois et bandes ;
-  couleurs prises dans `ns.AZEROTH_INK` (certaines sont les jetons du socle :
-  `tagBlue` = `BLUE`, `navText` = `TEXT`…), jamais en dur. Le carnet repasse
-  les encres (`Recolor`) avant de poser le fond des lignes ; un texte qui
-  porterait un code `|c…` passerait devant l'encre : les couleurs se posent
-  sur la ligne (`SetTextColor`), pas dans le texte.
-- Contraste mesuré : chaque texte posé sur une matière du client a un rôle
-  dans `ns.AZEROTH_CONTRAST` (encre, luminance du pire fond mesurée, seuil,
-  taille) ; `RolePaint` / `RoleInk` posent l'encre d'un rôle, et
-  `tests/modules/azeroth_style.lua` recalcule chaque ratio.
-- Changement de style à chaud : la fenêtre affichée est remplacée par celle de
-  l'autre style (état recopié) ; l'ancienne est mise de côté
-  (`ns.uiStyleCache`) et resservira au retour. Une fenêtre qui existe dans
-  les deux styles a un nom global par style (sinon Échap vise la mauvaise).
-- Carnet en Azeroth (`ns.CARNET_LAYOUT`) : colonne de 196 sur parchemin,
-  entrées sur bandes sombres, plaque de titre de 706 × 100 qui déborde de 46
-  au-dessus, bois de 16 de chaque côté autour d'un contenu de même taille ;
-  le garde-manger descend en bas de la colonne. Confirmations (changer de
-  compagnon) au même habit.
-- Bandeaux (`ns:AzerothCreateBanner`, `ns.AZEROTH_LAYOUT` 388 × 126) :
-  bande claire du titre (encre sombre), nom en blanc ombré, étoiles dorées ;
-  avec `strip`, une bande sombre dessous pour les infos et les boutons.
+Clé de cache (`ns:StyleKey()`) : `forge` si le cadre est né sous le thème
+forgé, `sobre` sinon. Un cadre construit porte `frame.styleKey`
+(`ns:MarkStyle(frame)` la pose ; `ns.FrameStyleKey(frame)` la relit). Tous
+les caches par style passent par elle : bandeaux (`ns:StyleCached`,
+`ns:ApplyUIStyle`), carnet, fiche de dresseur, confirmations, panneau
+d'allure (`ns:JournalStyleKey`, `CarnetRestyle`), scènes de capture, volée,
+choix au filet, bulle des visites. Un cadre né forgé n'est jamais resservi
+en Sobre, ni l'inverse, et deux `ApplyUIStyle` de suite gardent les mêmes
+cadres. Noms globaux (Échap) : `ns.StyleName(base, clé)` = base + `Forge`
+ou rien (Sobre, le nom d'avant).
 
 ## Règles
 

@@ -241,7 +241,6 @@ do
 		and not (fx.wingUR.texCoord and fx.wingUR.texCoord[1] == 1))
 	NS.AzerothFxStep(fx.at + NS.AZEROTH_FX.rewardTime + 0.1)
 	s.ok("fin de l'effet : tout caché", not fx.wingUL:IsShown() and not fx.glow:IsShown() and fx.at == nil)
-	s.ok("l'API de l'ancien habillage reste muette hors drapeau", NS:AzerothRewardFX(j) == false)
 	j:Hide(); NS.journalToastHideAt = nil
 	if NS.BannerDone then NS:BannerDone("journal") end
 	-- rafale : le logo nu, sans points

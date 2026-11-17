@@ -128,7 +128,6 @@ ns.CAPTURE_QUALITY_GROUP = { trivial = "normal", minus = "normal", normal = "nor
 -- chance de capture : un beau spécimen se débat plus
 ns.CAPTURE_QUALITY_FACTOR = { 1, 0.8, 0.6 }
 -- (guide, tutoriel : les chances d'un monstre ordinaire, comme avant 2.15)
-ns.CAPTURE_STAR_ODDS = ns.CAPTURE_QUALITY_ODDS.normal
 -- relâcher : paillettes par étoiles (un brillant vaut toujours `shiny`)
 ns.PAILLETTES_RELEASE = { 1, 3, 8, shiny = 20 }
 -- mode chasse : durées proposées (minutes), comme la sourdine

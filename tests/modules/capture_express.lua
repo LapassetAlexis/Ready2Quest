@@ -531,11 +531,111 @@ do
 	feed:Hide()
 end
 
+-- 3.1.2 : les aides au survol du filet ---------------------------------------------------
+do
+	Say("-- capture express : aides au survol du filet")
+	XP.Reset()
+	local items = NS:CaptureData().items
+	items.appat, items.lasso, items.sifflet = 2, 0, 1
+	XP.Roll(0.99)                      -- sans aide, raté à coup sûr
+	XP.SeeKill(6300, { name = "Loup A" })
+	XP.SeeKill(6301, { name = "Loup B", spawn = "00001A2B3D" })
+	local net = NS.captureNetButton
+	local hooked = net and net.aidBarHooked == true
+	local shown = NS:CaptureAidBarShow()
+	local bar = NS.captureAidBar
+	local counts = {}
+	for i, b in ipairs(bar and bar.buttons or {}) do counts[i] = b.aidID .. "=" .. tostring(b.count.text) .. (b.empty and "(gris)" or "") end
+	Check("[EXP] survol du filet : la barre des trois aides au-dessus, comptes et aide vide grisée",
+		hooked and shown and bar:IsShown() and #bar.buttons == 3
+		and bar.lastPoint and bar.lastPoint.relTo == net and bar.lastPoint.point == "BOTTOM"
+		and bar.buttons[2].empty == true and bar.buttons[1].empty ~= true, table.concat(counts, ", "))
+	local refused, why = NS:CaptureAidBarUse("lasso")
+	local stillTwo = #NS:CaptureQueueState() == 2
+	local chance, sure = NS:CaptureAidBarChance("sifflet")
+	local rolling = NS:CaptureAidBarUse("sifflet")
+	Check("[EXP] clic sur une aide : le filet part avec elle (sifflet : assurée), une aide vide refusée, l'aide ne sert qu'une fois",
+		not refused and why == "none" and stillTwo and sure == true and chance == 1
+		and rolling and rolling.success and rolling.aid == "sifflet" and items.sifflet == 0
+		and #NS:CaptureQueueState() == 1 and NS:CaptureState().aid == nil and bar.buttons[3].empty == true)
+	NS:CaptureAidBarUse("appat")
+	Check("[EXP] filet vidé : la barre se range ; l'infobulle du filet le dit",
+		#NS:CaptureQueueState() == 0 and not bar:IsShown())
+	XP.SeeKill(6302, { name = "Loup C", spawn = "00001A2B3E" })
+	GameTooltip:ClearLines()
+	NS:CaptureExpressTipLines(GameTooltip, NS:CaptureQueueState(), "Loup C")
+	local tip = {}
+	for _, line in ipairs(GameTooltip.lines or {}) do tip[#tip + 1] = tostring(line.text or line) end
+	Check("[EXP] infobulle du filet : la ligne des aides au survol",
+		table.concat(tip, " | "):find("aides au-dessus du filet", 1, true) ~= nil, table.concat(tip, " | "))
+	-- capture express coupée : pas de barre
+	NS:DB().companionCaptureExpress = false
+	Check("[EXP] capture express coupée : pas de barre d'aides", NS:CaptureAidBarShow() == false)
+	NS:DB().companionCaptureExpress = true
+	if NS.captureAidBar then NS.captureAidBar:Hide() end
+end
+
+-- 3.1.2 : le filet se déplace seul ---------------------------------------------------------
+do
+	Say("-- filet : déplacé indépendamment du compagnon")
+	XP.Reset()
+	XP.Roll(0)
+	XP.SeeKill(6400, { name = "Raptor M" })
+	local net = NS.captureNetButton
+	local savedAlt = rawget(_G, "IsAltKeyDown")
+	local alt = false
+	_G.IsAltKeyDown = function() return alt end
+	-- sans Alt (réglage par défaut « Alt + glisser ») : rien ne bouge
+	net:GetScript("OnDragStart")(net)
+	local refused = net.netDragging == nil
+	-- Alt + glisser : détaché, gardé
+	alt = true
+	net:GetScript("OnDragStart")(net)
+	local started = net.netDragging == true
+	net:ClearAllPoints()
+	net:SetPoint("CENTER", UIParent, "CENTER", 120, -40)
+	net:GetScript("OnDragStop")(net)
+	local saved = NS:DB().captureNetPoint
+	-- le relâcher du glisser ne lance pas le filet
+	local before = #NS:CaptureQueueState()
+	local clicked = NS:CaptureNetClick("LeftButton")
+	local notThrown = clicked == nil and #NS:CaptureQueueState() == before
+	-- replacé : la place gardée, plus collé au portrait
+	NS:CapturePlaceNet()
+	local p = net.lastPoint
+	Check("[NET] Alt + glisser détache le filet et garde sa place ; sans Alt rien ; le relâcher ne lance pas",
+		refused and started and saved and saved.point == "CENTER" and saved.x == 120 and saved.y == -40 and notThrown
+		and p and p.relTo == UIParent and p.x == 120 and p.y == -40 and net.moved == true,
+		tostring(saved and saved.x) .. "/" .. tostring(p and p.relTo == UIParent))
+	-- le fil des pastilles suit le filet détaché
+	NS:EnsureCaptureExpressFeed()
+	local feedMode = NS:CaptureExpressPlace()
+	local fp = NS.captureExpressFeed.lastPoint
+	Check("[NET] filet détaché : les pastilles express le suivent (sous le filet, ou au-dessus de la barre d'aides)",
+		(feedMode == "net-below" or feedMode == "net-above") and fp and fp.relTo == net, tostring(feedMode))
+	-- un peu plus tard, le clic lance
+	Mock:Advance(1)
+	local rolling = NS:CaptureNetClick("LeftButton")
+	-- rattacher : réglage et commande
+	XP.SeeKill(6401, { name = "Raptor N", spawn = "00001A2B3F" })
+	local found
+	for _, page in ipairs(NS.OPTION_PAGES or {}) do
+		if (page.id == "companionMain" or page.id == "companionQuiet" or page.id == "companionTalk" or page.id == "companionKeys") then for _, row in ipairs(page.rows) do if row.key == "captureNetAttach" then found = row end end end
+	end
+	NS:RunOptionAction("captureNetAttach")
+	local attached = NS:DB().captureNetPoint == nil and net.lastPoint and net.lastPoint.relTo == NS.companionFrame
+	NS:DB().captureNetPoint = { point = "CENTER", x = 10, y = 10 }
+	NS.EXTRA_COMMANDS["filet"](NS, "rattacher")
+	Check("[NET] le clic suivant lance ; « Rattacher le filet au compagnon » (réglage, /qc filet rattacher) le recolle au portrait",
+		rolling and found and found.kind == "action" and attached and NS:DB().captureNetPoint == nil)
+	_G.IsAltKeyDown = savedAlt
+end
+
 -- Rendu au harnais
 for _, name in ipairs(GLOBALS) do _G[name] = XP.saved[name] end
 math.random = XP.random
 NS.CaptureRollQuality = XP.rollQuality
 NS.captureExpressDormant = XP.dormant
-for _, field in ipairs({ "captureExpressFeed", "captureQueueList" }) do
+for _, field in ipairs({ "captureExpressFeed", "captureQueueList", "captureAidBar" }) do
 	if NS[field] then NS[field]:Hide() end
 end

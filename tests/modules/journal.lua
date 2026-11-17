@@ -514,7 +514,7 @@ do
 		local redirected = f.sections.collection == nil and (function()
 			NS:SelectJournalKind("collection"); return f.kind == "evolution" and f.evo:IsShown()
 		end)()
-		local apps = NS:JournalCollection("app")
+		local apps = T.Collection("app")
 		Check("[COLL] plus d'onglet Collection (l'ancien nom mène au Compagnon) ; catalogue des apparences, l'équipée",
 			redirected and #apps == #NS.COMPANION_APPEARANCES and W.Find(apps, "whelp_green").equipped
 			and not W.Find(apps, "owl").owned)
@@ -531,7 +531,7 @@ do
 		owl:Click()
 		Check("[COLL] verrouillée refusée (appel ou clic sur sa vignette)", refused and data.appearance == "whelp_green")
 		frog:Click()
-		Check("[COLL] clic sur la rainette : équipée", data.appearance == "frog" and W.Find(NS:JournalCollection("app"), "frog").equipped
+		Check("[COLL] clic sur la rainette : équipée", data.appearance == "frog" and W.Find(T.Collection("app"), "frog").equipped
 			and Look("frog").selected)
 		NS:AllureClose()
 		evo.frameStyle:Choose("copper")
@@ -541,14 +541,14 @@ do
 		local function Ribbon()
 			for _, button in ipairs(evo.orns) do if button:IsShown() and button.text.text == NS.L.COMP_ORN_RIBBON then return button end end
 		end
-		local worn = Ribbon() and NS:DB().companionOrnRibbon ~= false and W.Find(NS:JournalCollection("orn"), "ribbon").equipped
+		local worn = Ribbon() and NS:DB().companionOrnRibbon ~= false and W.Find(T.Collection("orn"), "ribbon").equipped
 		Ribbon():Click()
-		local removed = NS:DB().companionOrnRibbon == false and not W.Find(NS:JournalCollection("orn"), "ribbon").equipped
+		local removed = NS:DB().companionOrnRibbon == false and not W.Find(T.Collection("orn"), "ribbon").equipped
 		Ribbon():Click()
 		Check("[COLL] ornement possédé : porté, un clic l'enlève, un autre le remet", worn and removed
 			and NS:DB().companionOrnRibbon == true)
-		local base = W.Find(NS:JournalCollection("bg"), "night")
-		Check("[COLL] fond de base : possédé d'office", base and base.owned and NS:JournalCosmeticSource(base) == "possédé d'office")
+		local base = W.Find(T.Collection("bg"), "night")
+		Check("[COLL] fond de base : possédé d'office", base and base.owned)
 		f:Hide()
 	end
 

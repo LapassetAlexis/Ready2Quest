@@ -482,7 +482,7 @@ do
 	NS:CompanionApplyModel()
 	Check("[CAP] la choisir : le modèle de la créature (SetCreature)", chosen and model.creature == 3500, tostring(model.creature))
 	local coll
-	for _, entry in ipairs(NS:JournalCollection("app")) do if entry.def.id == "cap:3500" then coll = entry end end
+	for _, entry in ipairs(T.Collection("app")) do if entry.def.id == "cap:3500" then coll = entry end end
 	local men
 	for _, entry in ipairs(NS:MenagerieList({ zone = "all", state = "captured" })) do if entry.npc == 3500 then men = entry end end
 	Check("[CAP] pas dans la Collection : dans la page Créatures, capturée", coll == nil and men ~= nil and men.captured and men.known)

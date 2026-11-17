@@ -389,11 +389,10 @@ local EIGHT_SIZE = 13
 -- 150°) restant à la plaque du nom
 ns.FEAT_EIGHT_FORGE = { from = 150, span = 240 }
 
--- 3.1.0 : tout anneau (l'ancien habillage, le médaillon forgé : frame.ring)
+-- 3.1.0 : le médaillon forgé (frame.ring)
 local function Azeroth(frame)
 	if not frame then return false end
-	if ns.CompanionRinged then return ns.CompanionRinged(frame) or frame.uiStyle == "azeroth" end
-	return frame.uiStyle == "azeroth"
+	return ns.CompanionRinged ~= nil and ns.CompanionRinged(frame)
 end
 local function Ring(frame)
 	return (ns.CompanionRingGeometry and ns.CompanionRingGeometry(frame)) or ns.AZEROTH_RING or { w = 108, h = 104, y = -45 }
@@ -724,7 +723,7 @@ function ns:FeatApplyBackgroundDeco()
 	local fire = frame.featFire
 	if not fire then return nil end
 	-- 3.1.0 : le masque de l'anneau posé (ancien habillage ou médaillon forgé)
-	local skin = (ns.CompanionRingSkin and ns.CompanionRingSkin(frame)) or frame.azSkin
+	local skin = ns.CompanionRingSkin and ns.CompanionRingSkin(frame)
 	local mask = skin and skin.mask
 	for _, tex in pairs(fire) do
 		if on then tex:Show() else tex:Hide() end

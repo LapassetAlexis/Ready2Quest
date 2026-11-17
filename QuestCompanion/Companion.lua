@@ -151,7 +151,7 @@ ns.COMPANION_RULES = {
 -- ---------------------------------------------------------------------------
 local FR = {
 	OPT_PAGE_COMPANION_MAIN = "Compagnon",
-	OPT_PAGE_COMPANION_MAIN_SUB = "Sa créature, sa taille, son bavardage et son apparence.",
+	OPT_PAGE_COMPANION_MAIN_SUB = "Sa créature, son apparence, sa taille et sa place à l'écran.",
 	OPT_PAGE_COMPANION_ORN = "Ornements",
 	OPT_PAGE_COMPANION_ORN_SUB = "Les ornements de son cadre, gagnés en jouant : affiche ceux que tu aimes.",
 	OPT_PAGE_COMPANION     = "Compagnon de route",
@@ -350,7 +350,7 @@ local FR = {
 }
 local EN = {
 	OPT_PAGE_COMPANION_MAIN = "Companion",
-	OPT_PAGE_COMPANION_MAIN_SUB = "Its creature, size, chattiness and appearance.",
+	OPT_PAGE_COMPANION_MAIN_SUB = "Its creature, looks, size and place on screen.",
 	OPT_PAGE_COMPANION_ORN = "Ornaments",
 	OPT_PAGE_COMPANION_ORN_SUB = "The ornaments of its frame, earned by playing: show the ones you like.",
 	OPT_PAGE_COMPANION     = "Road companion",
@@ -2994,10 +2994,9 @@ end
 function ns:CompanionApplySobrePlate()
 	local frame = self.companionFrame
 	if not (frame and frame.plate) then return nil end
-	-- 3.1.0 : tout anneau (l'ancien habillage, le médaillon forgé) a sa plaque
-	local az = frame.uiStyle == "azeroth" or frame.ring ~= nil
-		or (frame.uiStyle == nil and self.CompanionRingOn and self:CompanionRingOn())
-	if az then frame.plate:Hide(); return "azeroth" end
+	-- 3.1.0 : le médaillon forgé a sa plaque
+	local ringed = frame.ring ~= nil or (frame.uiStyle == nil and self.CompanionRingOn and self:CompanionRingOn())
+	if ringed then frame.plate:Hide(); return "ring" end
 	frame.plate:Show()
 	local t = Theme.TEXT
 	if frame.mood and frame.mood.SetTextColor then frame.mood:SetTextColor(t[1], t[2], t[3], 1) end
@@ -3103,6 +3102,88 @@ end
 -- hasard, le fond ne « bouge » pas à chaque rechargement)
 local STARS = { { 12, -10, 2 }, { 30, -22, 1 }, { 52, -8, 2 }, { 74, -18, 1 }, { 90, -6, 2 },
 	{ 20, -40, 1 }, { 84, -36, 1 }, { 60, -30, 1 }, { 8, -62, 1 }, { 94, -58, 2 } }
+ns.COMPANION_STARS = STARS
+-- 3.1.2 : dans le médaillon rond du thème forgé, les mêmes étoiles semées
+-- dans le disque (x, y depuis son centre, px) : posées pour le cadre carré,
+-- la plupart tombaient sous l'anneau et il n'en restait qu'une rangée
+ns.FORGE_STARS = { { -26, 22 }, { -8, 31 }, { 14, 27 }, { 30, 12 }, { -33, 2 },
+	{ 34, -10 }, { -22, -20 }, { 20, -26 }, { -4, 12 }, { 6, -32 } }
+
+-- Les étoiles d'un fond étoilé à leur place : semées dans le disque en thème
+-- forgé, sinon sur le cadre carré (square : forcé, à la sortie du médaillon)
+function ns:CompanionPlaceStars(frame, square)
+	frame = frame or self.companionFrame
+	if not (frame and frame.stars) then return nil end
+	local forge = not square and frame.ring == "forge" and ns.FORGE_RING
+	for index, star in ipairs(frame.stars) do
+		star:ClearAllPoints()
+		local f = forge and ns.FORGE_STARS[index]
+		if f then
+			star:SetPoint("CENTER", frame, "TOP", (forge.x or 0) + f[1], (forge.y or 0) + f[2])
+		else
+			local s = STARS[index]
+			star:SetPoint("TOPLEFT", frame, "TOPLEFT", s[1], s[2])
+		end
+	end
+	return forge and "forge" or "square"
+end
+
+-- 3.1.2 : les étoiles d'un fond étoilé scintillent au hasard. Chacune
+-- s'allume et s'éteint doucement à son rythme (durée tirée entre min et max),
+-- et une étoile éteinte reparaît parfois ailleurs dans le portrait (le disque
+-- du médaillon, ou le cadre carré). Une horloge légère, rien sans fond étoilé
+-- ni cadre visible.
+ns.COMPANION_STAR_TWINKLE = { tick = 0.1, min = 1.2, max = 3.5, low = 0.05, high = 0.9, move = 0.6, edge = 8 }
+local TW = ns.COMPANION_STAR_TWINKLE
+
+local function RandomSpot(frame)
+	local forge = frame.ring == "forge" and ns.FORGE_RING
+	if forge then
+		local radius = (forge.disc or 88) / 2 - TW.edge
+		local angle, r = math.random() * 2 * math.pi, math.sqrt(math.random()) * radius
+		return "CENTER", "TOP", (forge.x or 0) + r * math.cos(angle), (forge.y or 0) + r * math.sin(angle)
+	end
+	local w = (frame.GetWidth and frame:GetWidth()) or 104
+	local h = (frame.GetHeight and frame:GetHeight()) or 104
+	return "TOPLEFT", "TOPLEFT", TW.edge + math.random() * math.max(1, w - 2 * TW.edge),
+		-(TW.edge + math.random() * math.max(1, (h * 0.6) - TW.edge))
+end
+
+function ns:CompanionStarsTick(now)
+	local frame = self.companionFrame
+	if not (frame and frame.starsOn and frame.stars and frame.IsShown and frame:IsShown()) then return false end
+	now = now or ((ns.Now and ns.Now()) or 0)
+	for _, star in ipairs(frame.stars) do
+		local tw = star.twinkle
+		if not tw then
+			tw = { from = TW.low, to = TW.low + math.random() * (TW.high - TW.low), at = now,
+				dur = TW.min + math.random() * (TW.max - TW.min) }
+			star.twinkle = tw
+		end
+		local t = (now - tw.at) / tw.dur
+		if t >= 1 then
+			-- étape finie : on repart vers l'autre bout ; une étoile éteinte change parfois de place
+			local wasLow = tw.to <= TW.low + 0.01
+			if wasLow and math.random() < TW.move then
+				local point, rel, x, y = RandomSpot(frame)
+				star:ClearAllPoints()
+				star:SetPoint(point, frame, rel, x, y)
+				star.moved = true
+			end
+			tw.from = tw.to
+			tw.to = wasLow and (TW.low + math.random() * (TW.high - TW.low)) or TW.low
+			tw.at, tw.dur, t = now, TW.min + math.random() * (TW.max - TW.min), 0
+		end
+		-- en douceur (ni marche, ni clignotement)
+		local k = t * t * (3 - 2 * t)
+		if star.SetAlpha then star:SetAlpha(tw.from + (tw.to - tw.from) * k) end
+	end
+	return true
+end
+ns.Every("companionStars", ns.COMPANION_STAR_TWINKLE.tick, function()
+	local ok, err = pcall(ns.CompanionStarsTick, ns)
+	if not ok and ns.RecordError then ns:RecordError("companion:stars", err) end
+end)
 
 -- Dégradé vertical : API récente (couleurs CreateColor), sinon l'ancienne
 -- (SetGradientAlpha), sinon rien (l'aplat teinté reste)
@@ -3154,7 +3235,10 @@ function ns:CompanionApplyBackground()
 	end
 	for _, star in ipairs(frame.stars or {}) do
 		if def.stars then star:Show() else star:Hide() end
+		star.twinkle, star.moved = nil, nil
 	end
+	frame.starsOn = def.stars and true or nil
+	ns:CompanionPlaceStars(frame)
 	frame.bgStyle = def.id
 	frame.bgTexture = path
 	frame.bgFallback = fallback

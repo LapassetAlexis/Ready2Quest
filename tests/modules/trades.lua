@@ -9,10 +9,6 @@
 -- différentes, délai), reprise après un /reload au milieu de l'engagement,
 -- journal (50 lignes), temps de repos, hauts faits, commandes, menu, la vue
 -- « Échanges » dans les deux styles et ses contrastes.
--- 3.1.0 : affirme l'ancien habillage (carnet en parchemin, scènes en bois, bandeaux
--- dorés, anneau) : le drapeau QNS.AZEROTH_LEGACY rallumé pour tout le module
--- (remis à la valeur du produit à sa fin, tests/run_tests.lua)
-T.Legacy(true)
 local Check, Say, ResetWorld, NS, Mock = T.Check, T.Say, T.ResetWorld, T.QNS, T.Mock
 
 local X = { saved = {}, sent = {} }
@@ -806,14 +802,7 @@ do
 		local tipText = tipped and table.concat(tipped.lines, "\n") or ""
 		Check("[ECH] " .. style .. " : infobulle : capturé par, zone, nouvelle espèce", Has(tipText, "Capturé par Thrall")
 			and Has(tipText, "Les Tarides") and Has(tipText, "Nouvelle espèce pour toi"), tipText)
-		if style == "azeroth" then
-			NS:RefreshJournal()
-			Check("[ECH] azeroth : encres trade.* et reserve.*, aucun rôle manquant", tv.status.azRole == "trade.status"
-				and tv.cols.mine.head.azRole == "trade.head" and tv.cols.mine.state.azRole == "trade.ok"
-				and tv.cols.theirs.state.azRole == "trade.state" and theirTile.label.azRole == "reserve.shiny"
-				and tv.cols.mine.slots[2].plus.azRole == "trade.slot" and pick.label.azRole == "reserve.name"
-				and NS.carnetInkMisses == nil, table.concat(NS.carnetInkMisses or {}, ", "))
-		end
+		NS:RefreshJournal()
 		local before = #Mock.frames
 		NS:RefreshJournal(); NS:RefreshJournal()
 		Check("[ECH] " .. style .. " : rafraîchi sans rien créer", #Mock.frames == before, #Mock.frames .. "/" .. before)
@@ -827,10 +816,7 @@ do
 		local row = tv.hist[1]
 		Check("[ECH] " .. style .. " : historique : date, joueur, donné, reçu", row.line:IsShown() and Has(row.line:GetText(), "avec Jaina")
 			and Has(row.sub:GetText(), "Donné : Raptor") and Has(row.sub:GetText(), "Reçu : Ours givré") and not tv.histEmpty:IsShown())
-		local inked = style ~= "azeroth" or (row.line.azRole == "trade.histName" and row.sub.azRole == "trade.histText"
-			and tv.histHead.label.azRole == "section.label" and NS.carnetInkMisses == nil)
-		Check("[ECH] " .. style .. " : aucune erreur (azeroth : historique encré, aucun rôle manquant)", next(NS.errors or {}) == nil
-			and inked, table.concat(NS.carnetInkMisses or {}, ", "))
+		Check("[ECH] " .. style .. " : aucune erreur", next(NS.errors or {}) == nil)
 		X.Done()
 	end
 	-- contraste : rôles mesurés (Azeroth), jetons du socle sur la fenêtre (Sobre)

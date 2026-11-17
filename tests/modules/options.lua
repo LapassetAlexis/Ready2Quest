@@ -96,7 +96,7 @@ do
 	frame:Hide()
 
 	local qframe = Open(QNS, "general")
-	Want("QC : le Compagnon de route en groupe, une entrée par page", NavOrder(QNS) == "general,[COMPAGNON DE ROUTE],companionMain,"
+	Want("QC : le Compagnon de route en groupe, une entrée par page", NavOrder(QNS) == "general,[COMPAGNON DE ROUTE],companionMain,companionQuiet,companionTalk,companionKeys,"
 		.. "companionOrnaments,journal,companionCharacter,companionDaily", NavOrder(QNS))
 	Want("QC : l'interrupteur du module sur le titre du groupe", Header(QNS, "companion").powerKey == "companionEnabled")
 	local qcount = 0

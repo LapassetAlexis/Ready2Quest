@@ -241,7 +241,7 @@ function BUILD.net(self)
 end
 
 function BUILD.stars(self)
-	local odds = ns.CAPTURE_STAR_ODDS or {}
+	local odds = (ns.CAPTURE_QUALITY_ODDS and ns.CAPTURE_QUALITY_ODDS.normal) or {}
 	return {
 		P(self:F("GUIDE_stars_1", odds[1] or 0, odds[2] or 0, odds[3] or 0)),
 		P(L.GUIDE_stars_2),

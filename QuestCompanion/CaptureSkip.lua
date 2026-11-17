@@ -160,7 +160,6 @@ end
 if type(ns.DAILY_OPTION_ROWS) == "table" then
 	local at, present = #ns.DAILY_OPTION_ROWS + 1, false
 	for index, row in ipairs(ns.DAILY_OPTION_ROWS) do
-		if row.key == "companionRetryRare" then at = index + 1 end
 		if row.key == "captureSkipReset" then present = true end
 	end
 	if not present then

@@ -48,7 +48,7 @@ ns.SHARE_EXTRA = 3           -- s de plus pour un bandeau qui porte le bouton
 -- l'icône de chat du client, par référence (jamais d'image à nous)
 ns.SHARE_ICON = { atlases = { "communities-icon-chat" }, fallback = "Interface\\ChatFrame\\UI-ChatIcon-Chat-Up" }
 ns.SHARE_BUTTON = { size = Theme.BUTTON_SIZES and Theme.BUTTON_SIZES.sm or 24, icon = 18, labelGap = 4, labelPad = 8,
-	azeroth = { x = -36, y = 6 }, stage = { x = -8, y = -12 },
+	stage = { x = -8, y = -12 },
 	reserve = { x = -6, y = -6 }, sobreGap = 10, featGap = 36,
 	-- 3.1.0 : bandeau forgé : en bas à droite (les points vont au médaillon)
 	forge = { x = -10, y = 8 } }
@@ -543,32 +543,21 @@ function ns:ShareMenu()
 	return menu
 end
 
--- Habit du menu : bois sombre et Friz Quadrata en Azeroth, socle en Sobre
+-- Habit du menu : le socle
 local function PaintMenu(self, menu)
-	local az = self.AzerothOn and self:AzerothOn() and ns.AZEROTH_INK and ns.AZEROTH_CONTRAST
-		and ns.AZEROTH_CONTRAST["share.entry"] and true or false
-	menu.azeroth = az
-	local INK = ns.AZEROTH_INK
-	local bg = az and INK.woodBg or Theme.NAV
+	menu.azeroth = false
+	local bg = Theme.NAV
 	menu.bg:SetVertexColor(bg[1], bg[2], bg[3], 1)
-	local edge = az and ns.AZEROTH_BUTTONS and ns.AZEROTH_BUTTONS.gold.edge or Theme.EDGE
+	local edge = Theme.EDGE
 	menu.edge:SetColor(edge[1], edge[2], edge[3], 1)
 	-- (3.1.0 : thème forgé : le titre du menu en couleur d'identité)
-	local forged = not az and ns.QCForged and ns.QCForged()
-	local titleInk = az and INK[ns.AZEROTH_CONTRAST["share.title"][1]] or (forged and Theme.IDENTITY_LIGHT) or Theme.MUTED_LIGHT
-	local entryInk = az and INK[ns.AZEROTH_CONTRAST["share.entry"][1]] or Theme.LABEL
-	if az and ns.AzerothFont then
-		ns.AzerothFont(menu.title, ns.AZEROTH_CONTRAST["share.title"][4])
-	elseif menu.title.SetFontObject then
-		menu.title:SetFontObject(Theme.F_CAPS)
-	end
+	local forged = ns.QCForged and ns.QCForged()
+	local titleInk = forged and Theme.IDENTITY_LIGHT or Theme.MUTED_LIGHT
+	local entryInk = Theme.LABEL
+	if menu.title.SetFontObject then menu.title:SetFontObject(Theme.F_CAPS) end
 	menu.title:SetTextColor(titleInk[1], titleInk[2], titleInk[3], 1)
 	for _, row in ipairs(menu.rows) do
-		if az and ns.AzerothFont then
-			ns.AzerothFont(row.text, ns.AZEROTH_CONTRAST["share.entry"][4])
-		elseif row.text.SetFontObject then
-			row.text:SetFontObject(Theme.F_LABEL)
-		end
+		if row.text.SetFontObject then row.text:SetFontObject(Theme.F_LABEL) end
 		row.text:SetTextColor(entryInk[1], entryInk[2], entryInk[3], 1)
 	end
 end
@@ -596,7 +585,7 @@ function ns:ShareOpen(owner, item)
 	end
 	menu:SetHeight(2 * M.pad + M.title + shown * M.row)
 	-- 3.1.0 : l'habillage du socle (ombre et cadre d'orfèvre en thème forgé,
-	-- rien en Sobre ni sur le bois de l'ancien habillage : menu.azeroth),
+	-- rien en Sobre),
 	-- comme un bandeau ; le filet d'un pixel est le sien
 	if Theme.DressWindow then
 		menu.chrome, menu.border = "toast", menu.edge
@@ -631,30 +620,22 @@ local function ButtonLook(button, hot)
 		button.icon:SetAlpha(hot and 1 or 0.9)
 		return
 	end
-	local az = button.azeroth
-	local edge = hot and Theme.GOLD or (az and ns.AZEROTH_BUTTONS and ns.AZEROTH_BUTTONS.gold.edge) or Theme.EDGE
+	local edge = hot and Theme.GOLD or Theme.EDGE
 	button.edge:SetColor(edge[1], edge[2], edge[3], 1)
 	if button.icon.SetDesaturated then button.icon:SetDesaturated(false) end
 	button.icon:SetAlpha(hot and 1 or 0.9)
 	if hot then button.hover:Show() else button.hover:Hide() end
 end
 
--- Le libellé « Partager » à côté de l'icône (bandeaux Azeroth, où il y a la
+-- Le libellé « Partager » à côté de l'icône (bandeaux forgés, où il y a la
 -- place) : le bouton s'élargit à son texte
 local function ButtonLabel(button, on)
 	local B = ns.SHARE_BUTTON
 	if on then
-		if button.forge then
-			-- 3.1.0 : sur la plaque forgée, l'encre des boutons secondaires
-			-- (mesurée sur la plaque neutre et sur le bronze du survol)
-			local ink = ns.SHARE_FORGE_INK
-			button.label:SetTextColor(ink[1], ink[2], ink[3], 1)
-		else
-			local role = ns.AZEROTH_CONTRAST and ns.AZEROTH_CONTRAST["share.label"]
-			local ink = (role and ns.AZEROTH_INK and ns.AZEROTH_INK[role[1]]) or Theme.LABEL
-			if ns.AzerothFont and role then ns.AzerothFont(button.label, role[4]) end
-			button.label:SetTextColor(ink[1], ink[2], ink[3], 1)
-		end
+		-- 3.1.0 : sur la plaque forgée, l'encre des boutons secondaires
+		-- (mesurée sur la plaque neutre et sur le bronze du survol)
+		local ink = button.forge and ns.SHARE_FORGE_INK or Theme.LABEL
+		button.label:SetTextColor(ink[1], ink[2], ink[3], 1)
 		button.label:SetText(L.SHARE_LABEL)
 		local measure = button.label.GetUnboundedStringWidth or button.label.GetStringWidth
 		local w = math.ceil(tonumber(measure and measure(button.label)) or 50)
@@ -690,9 +671,7 @@ function ns:ShareButton(parent, where)
 	button.label:Hide()
 	-- 3.1.0 : sous le thème forgé, une petite plaque forgée (décidé à la
 	-- création) ; la plaque opaque et le filet du Sobre sont cachés
-	-- (jamais sur un cadre de l'ancien habillage : son bois garde l'aplat)
-	if ns.QCForged and ns.QCForged() and not parent.azeroth and parent.uiStyle ~= "azeroth"
-		and Theme.ForgeSmallPlate then
+	if ns.QCForged and ns.QCForged() and Theme.ForgeSmallPlate then
 		button.plate:Hide()
 		button.border = button.edge
 		Theme.ForgeSmallPlate(button)
@@ -727,7 +706,6 @@ local function Attach(self, frame, where)
 	local base = (frame.button and frame.button.GetFrameLevel and frame.button:GetFrameLevel())
 		or (frame.GetFrameLevel and frame:GetFrameLevel()) or 1
 	button:SetFrameLevel(base + 4)
-	button.azeroth = frame.azeroth and true or false
 	ButtonLook(button, false)
 	-- largeurs d'origine des textes (Sobre : ils s'écartent du bouton)
 	frame.shareWidths = {}
@@ -744,10 +722,6 @@ local function Place(self, frame, button, on)
 	button:ClearAllPoints()
 	if button.shareBanner == "stage" then
 		button:SetPoint("TOPRIGHT", frame, "TOPRIGHT", B.stage.x, B.stage.y)
-		return
-	end
-	if frame.azeroth then
-		button:SetPoint("BOTTOMRIGHT", frame.banner or frame, "BOTTOMRIGHT", B.azeroth.x, B.azeroth.y)
 		return
 	end
 	-- 3.1.0 : bandeau forgé : en bas à droite, libellé écrit, sur sa propre
@@ -784,10 +758,9 @@ function ns:ShareSync(frame, item, where)
 	button = button or Attach(self, frame, where)
 	if not button then return nil end
 	button.item = on and item or nil
-	button.azeroth = frame.azeroth and true or false
 	ButtonLook(button, false)
 	-- (3.1.0 : écrit aussi sur un bandeau forgé, où la place est réservée)
-	ButtonLabel(button, on and (frame.azeroth or (frame.forgeBanner and button.forge)) and where ~= "stage")
+	ButtonLabel(button, on and frame.forgeBanner and button.forge and where ~= "stage")
 	Place(self, frame, button, on)
 	if on then button:Show() else button:Hide() end
 	if not on and self.shareMenu and self.shareMenu.owner == button then self.shareMenu:Hide() end

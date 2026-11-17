@@ -163,12 +163,6 @@ do
 	Check("[HYG] Theme.TextShadow : noir (1, -1) opaque, alpha et décalage au choix", plain
 		and fs.color[4] == 0.6 and fs.offset[2] == -2)
 end
-local QINK, BTN = QNS and QNS.AZEROTH_INK, QNS and QNS.AZEROTH_BUTTONS
-Check("[HYG] palette unique des boutons Azeroth (capture et carnet)", BTN and QNS.AZEROTH_BUTTON_SKINS
-	and QNS.AZEROTH_BUTTON_SKINS.gold == BTN.gold and QNS.CARNET_BUTTONS and QNS.CARNET_BUTTONS.red == BTN.red)
-Check("[HYG] carnet : encres lues dans AZEROTH_INK", QINK and QNS.CARNET_COLORS
-	and QNS.CARNET_COLORS.gold == QINK.goldHead and QNS.CARNET_COLORS.light == QINK.light
-	and QNS.CARNET_COLORS.catGold == QINK.catGold and QNS.CARNET_COLORS.green == QINK.barGreen)
 Check("[HYG] scène de capture : teintes partagées (CAPTURE_FX_COLORS)", QNS and QNS.CAPTURE_FX_COLORS
 	and QNS.CAPTURE_FX_COLORS.white == QNS.Theme.WHITE and QNS.CAPTURE_FX_COLORS.fledName[1] == 0.7)
 

@@ -696,20 +696,9 @@ function ns:EnsureGuildFeatToast()
 	-- style de l'interface (2.5.0, AzerothStyle.lua)
 	local cached = self.StyleCached and self:StyleCached("guildFeatToast")
 	if cached then self.guildFeatToast = cached; return cached end
-	-- Azeroth : variante « guilde » du bandeau, cadre rond à volutes ; la
-	-- sous-ligne (créature, étoiles) sous le nom, l'aide en infobulle seulement
-	local frame = self.AzerothOn and self:AzerothOn()
-		and self:AzerothCreateBanner({ strata = "HIGH", guild = true, round = true, name = "QuestCompanionGuildFeatAzeroth" })
-	if frame then
-		Glyph(frame.icon)
-		frame.info = frame.stars
-		frame.hint = frame.banner:CreateFontString(nil, "OVERLAY", Theme.F_SMALL)
-		frame.hint:Hide()
-	else
-		-- 3.1.0 : sous le thème forgé, le bandeau à médaillon (ForgeBanners.lua)
-		frame = ns.QCForged and ns.QCForged() and self.ForgeGuildFeatToast and self:ForgeGuildFeatToast(Glyph)
-		frame = frame or self:GuildFeatToastSobre(art)
-	end
+	-- 3.1.0 : sous le thème forgé, le bandeau à médaillon (ForgeBanners.lua)
+	local frame = ns.QCForged and ns.QCForged() and self.ForgeGuildFeatToast and self:ForgeGuildFeatToast(Glyph)
+	frame = frame or self:GuildFeatToastSobre(art)
 	if not frame then return nil end
 	if self.MarkStyle then self:MarkStyle(frame) end
 	-- un bouton invisible par-dessus : clic (la fiche) et glisser
@@ -811,17 +800,8 @@ GuildFeatDecor = function(self, frame, info, feat)
 	end
 	local points = feat and tonumber(info.points) or nil
 	if points and not frame.featPoints then
-		if frame.azeroth and frame.banner and frame.shield then
-			frame.featPoints = frame.banner:CreateFontString(nil, "OVERLAY", Theme.F_NUMBER)
-			-- au centre visuel de l'écu (2.8.2)
-			if ns.AzerothShieldCenter then ns.AzerothShieldCenter(frame.featPoints, frame.shield)
-			else frame.featPoints:SetPoint("CENTER", frame.shield, "CENTER", 0, 4) end
-			if ns.AzerothFont then ns.AzerothFont(frame.featPoints, 16, "OUTLINE") end
-			frame.featPoints:SetTextColor(Theme.WHITE[1], Theme.WHITE[2], Theme.WHITE[3], 1)
-		else
-			frame.featPoints = Theme.Text(frame, Theme.F_NUMBER, Theme.GOLD)
-			frame.featPoints:SetPoint("RIGHT", frame, "RIGHT", -12, 0)
-		end
+		frame.featPoints = Theme.Text(frame, Theme.F_NUMBER, Theme.GOLD)
+		frame.featPoints:SetPoint("RIGHT", frame, "RIGHT", -12, 0)
 		frame.featPoints:SetJustifyH("CENTER")
 	end
 	if frame.featPoints then
@@ -843,7 +823,7 @@ local function GuildFeatFill(self, frame, info)
 	if frame.SetAccent then frame:SetAccent(accent) end
 	local feat = info.kind == "h"
 	GuildFeatDecor(self, frame, info, feat)
-	if frame.ownGlyph and not frame.azeroth and not feat then frame.icon:SetVertexColor(accent[1], accent[2], accent[3], 1) end
+	if frame.ownGlyph and not feat then frame.icon:SetVertexColor(accent[1], accent[2], accent[3], 1) end
 	return feat
 end
 

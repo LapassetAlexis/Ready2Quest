@@ -32,7 +32,7 @@ ns.CAPTURE_QUEUE_TIME = 30        -- s par candidat, à partir de la fin du comb
 ns.CAPTURE_QUEUE_MAX = 12         -- au-delà, les moins intéressants sortent
 ns.CAPTURE_STAR_MAX = 3
 -- (2.15.0 : les chances de qualité sont dans CaptureSpecimens.lua,
--- CAPTURE_QUALITY_ODDS ; ns.CAPTURE_STAR_ODDS y reste, celles d'un monstre ordinaire)
+-- CAPTURE_QUALITY_ODDS ; les chances d'un monstre ordinaire : CAPTURE_QUALITY_ODDS.normal)
 -- 2.12.1 : les étoiles et le glyphe du filet viennent du client. Étoiles :
 -- l'atlas « auctionhouse-icon-favorite » (pleine) et sa variante « -off »
 -- (vide) ; en texture simple, l'étoile des marqueurs de raid en repli.
@@ -1277,16 +1277,8 @@ function ns:EnsureCaptureToast()
 	-- pour le style courant resservit ; Azeroth = bandeau doré + bande sombre
 	local cached = self.StyleCached and self:StyleCached("captureToast")
 	if cached then self.captureToast = cached; return cached end
-	local frame = self.AzerothOn and self:AzerothOn() and self:AzerothCreateBanner({ strata = "HIGH", strip = true })
-	if frame then
-		frame.ownGlyph = PaintNetIcon(frame.icon)
-		if frame.ownGlyph then frame.icon:SetVertexColor(Theme.GOLD_LIGHT[1], Theme.GOLD_LIGHT[2], Theme.GOLD_LIGHT[3], 1)
-		else frame.icon:SetTexCoord(0.08, 0.92, 0.08, 0.92) end
-	elseif not (Theme and Theme.CreateToast) then
-		return nil
-	else
-		frame = self:CaptureToastSobre()
-	end
+	if not (Theme and Theme.CreateToast) then return nil end
+	local frame = self:CaptureToastSobre()
 	if not frame then return nil end
 	if self.MarkStyle then self:MarkStyle(frame) end
 	self:CaptureToastControls(frame)

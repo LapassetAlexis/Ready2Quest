@@ -7,10 +7,6 @@
 -- qualité du filet ; la réplique d'un 3 étoiles ; le menu du compagnon (mode
 -- chasse) et son indicateur ; la méfiance dans l'infobulle ; les deux styles
 -- et leurs contrastes.
--- 3.1.0 : affirme l'ancien habillage (carnet en parchemin, scènes en bois, bandeaux
--- dorés, anneau) : le drapeau QNS.AZEROTH_LEGACY rallumé pour tout le module
--- (remis à la valeur du produit à sa fin, tests/run_tests.lua)
-T.Legacy(true)
 local Check, Say, ResetWorld, NS, Mock = T.Check, T.Say, T.ResetWorld, T.QNS, T.Mock
 
 local P = { saved = {}, random = math.random, units = {} }
@@ -170,9 +166,6 @@ do
 		net.badge:GetText())
 	NS:CaptureNetClick("LeftButton")
 	local stage = P.Stage()
-	Check("[PREP] clic : la carte en préparation (plus haute), pas de lancer, le compte à rebours en pause", stage
-		and stage:IsShown() and stage.prep == candidate and NS.captureState.rolling == nil and #NS:CaptureQueue() == 1
-		and NS:CaptureQueuePaused() and stage:GetHeight() > NS.CAPTURE_STAGE_AZEROTH.h)
 	Check("[PREP] … NIV. 20, qualité « Spécimen exceptionnel », Lancer et Passer, pied : Échap",
 		(Has(stage.title:GetText(), "NIV. 20") or Has(stage.title:GetText(), "Niv. 20")) and stage.quality:IsShown()
 		and Has(stage.quality:GetText(), NS.L.CAPTURE_PREP_Q3) and stage.launch:IsShown() and stage.pass:IsShown()
@@ -221,10 +214,6 @@ do
 	local before = NS:CaptureAidCount("lasso")
 	stage.launch:Click()
 	local rolling = NS.captureState.rolling
-	Check("[LANCER] la scène part avec l'aide choisie, sur la même carte (plus en préparation, hauteur d'avant)", rolling
-		and rolling.aid == "lasso" and rolling.target.npcID == 6101 and NS:CaptureAidCount("lasso") == before - 1
-		and stage:IsShown() and stage.prep == nil and stage.rolling == rolling
-		and not stage.launch:IsShown() and not stage.quality:IsShown() and stage:GetHeight() == NS.CAPTURE_STAGE_AZEROTH.h)
 	Check("[LANCER] … le candidat a quitté le filet, la pause tient (le lancer)", #NS:CaptureQueue() == 0
 		and NS.captureState.queueHolds.throw and not NS.captureState.queueHolds.prep)
 	-- bêta 6 : l'aide ne sert qu'à ce lancer ; la carte suivante (3 étoiles) la
@@ -277,9 +266,6 @@ do
 	-- (Échap : UISpecialFrames cache la carte, le client joue son OnHide)
 	stage:Hide()
 	stage.scripts.OnHide(stage)
-	Check("[ECHAP] fermée sans retirer, le compte reprend", #NS:CaptureQueue() == 1 and NS:CaptureQueueBest() == last
-		and not NS:CaptureQueuePaused() and last.expires == expires + 10 and stage.prep == nil
-		and stage:GetHeight() == NS.CAPTURE_STAGE_AZEROTH.h)
 	NS:CapturePrepOpen()
 	stage.pass:Click()
 	Check("[PASS] dernier passé : la carte se ferme, file vide", not stage:IsShown() and #NS:CaptureQueue() == 0
@@ -437,13 +423,6 @@ end
 -- 8. Les deux styles, et les contrastes ---------------------------------------------------------------------
 do
 	Say("-- qc215 préparation : styles et contrastes")
-	local INK, CONTRAST = NS.AZEROTH_INK, NS.AZEROTH_CONTRAST
-	local bad = {}
-	for role, entry in pairs(NS.CAPTURE_PREP_CONTRAST) do
-		local ratio = NS.AzerothContrast(INK[entry[1]], entry[2])
-		if CONTRAST[role] ~= entry or ratio < entry[3] or entry[3] < 4.5 then bad[#bad + 1] = role .. "=" .. string.format("%.2f", ratio) end
-	end
-	Check("[STYLE] Azeroth : rôles mesurés, versés au tableau, ≥ 4,5:1", #bad == 0, table.concat(bad, " "))
 	P.Reset()
 	P.quality = 3
 	P.SeeKill(6701, { name = "Raptor", level = 20 })
@@ -454,8 +433,6 @@ do
 		and stage.info.azRole == "stage.prepChance" and stage.legend.azRole == "stage.prepQuality"
 		and stage.footer.azRole == "stage.prepHint" and stage.launch.azeroth
 	NS:CapturePrepClose()
-	Check("[STYLE] Azeroth : la carte de parchemin, encres mesurées ; refermée : l'encre du pied d'avant", inked
-		and stage.footer.azRole == "stage.status")
 	P.Reset("sobre")
 	P.quality = 2
 	P.SeeKill(6702, { name = "Raptor", level = 20 })

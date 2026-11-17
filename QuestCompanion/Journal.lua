@@ -546,19 +546,9 @@ function ns:EnsureJournalToast()
 	-- logo dans le cadre carré, bouclier d'or
 	local cached = self.StyleCached and self:StyleCached("journalToast")
 	if cached then self.journalToast = cached; return cached end
-	local frame = self.AzerothOn and self:AzerothOn() and self:AzerothCreateBanner({ strata = "MEDIUM" })
-	if frame then
-		if self.MarkStyle then self:MarkStyle(frame) end
-		frame.icon:SetTexture(Theme.LOGO_SMALL)
-		ToastButton(frame)
-		if self.RestorePoint then self:RestorePoint(frame, "journalToastPoint", { point = "TOP", x = 0, y = -190 }) end
-		frame:Hide()
-		self.journalToast = frame
-		return frame
-	end
 	if not (Theme and Theme.CreateToast) then return nil end
 	-- 3.1.0 : sous le thème forgé, le bandeau à médaillon (ForgeBanners.lua)
-	frame = ns.QCForged and ns.QCForged() and self.ForgeJournalToast and self:ForgeJournalToast()
+	local frame = ns.QCForged and ns.QCForged() and self.ForgeJournalToast and self:ForgeJournalToast()
 	if frame then
 		if self.MarkStyle then self:MarkStyle(frame) end
 		ToastButton(frame)
@@ -601,28 +591,18 @@ local function ToastDecor(frame, entry)
 	if frame.icon and frame.icon.SetTexture then frame.icon:SetTexture((entry and entry.icon) or Theme.LOGO_SMALL) end
 	local points = entry and tonumber(entry.points)
 	if points and not frame.featPoints then
-		if frame.azeroth then
-			frame.featPoints = frame.banner:CreateFontString(nil, "OVERLAY", Theme.F_NUMBER)
-			-- au centre visuel de l'écu (2.8.2)
-			if ns.AzerothShieldCenter then ns.AzerothShieldCenter(frame.featPoints, frame.shield)
-			else frame.featPoints:SetPoint("CENTER", frame.shield, "CENTER", 0, 4) end
-			if ns.AzerothFont then ns.AzerothFont(frame.featPoints, 16, "OUTLINE") end
-			frame.featPoints:SetTextColor(Theme.WHITE[1], Theme.WHITE[2], Theme.WHITE[3], 1)
-		else
-			frame.featPoints = Theme.Text(frame, Theme.F_NUMBER, Theme.GOLD)
-			frame.featPoints:SetPoint("RIGHT", frame, "RIGHT", -12, 0)
-		end
+		frame.featPoints = Theme.Text(frame, Theme.F_NUMBER, Theme.GOLD)
+		frame.featPoints:SetPoint("RIGHT", frame, "RIGHT", -12, 0)
 		frame.featPoints:SetJustifyH("CENTER")
 	end
 	if frame.featPoints then
 		frame.featPoints:SetText(points and tostring(points) or "")
 		if points then frame.featPoints:Show() else frame.featPoints:Hide() end
 	end
-	if frame.stars and frame.azeroth then frame.stars:SetText((entry and entry.sub) or "") end
 	-- 3.1.0 : le bandeau du Sobre perdait la sous-ligne « Nouveau titre : X »
 	-- (seul l'ancien habillage l'écrivait) : une 3e ligne, créée à la
 	-- première sous-ligne, et le bandeau grandit le temps de l'afficher
-	if not frame.azeroth then
+	do
 		local sub = entry and entry.sub
 		if sub and sub ~= "" and not frame.stars and frame.text then
 			local fs = Theme.Text(frame, Theme.F_SMALL, Theme.GOLD_LIGHT)
