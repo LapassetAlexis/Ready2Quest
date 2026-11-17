@@ -606,6 +606,7 @@ local function Build(self, frame, content, ui)
 	for _, key in ipairs(ns.RESERVE_VIEWS) do views[#views + 1] = { id = key, label = L["RES_VIEW_" .. key] } end
 	pane.views = Theme.CreateChips(pane, views, function(id)
 		frame.resView, frame.resConfirm, frame.shopConfirm = id, nil, nil
+		frame.resTidy, frame.resTidyOrder = nil, nil
 		if ns.JournalRemember then ns:JournalRemember("resView", id) end
 		ns:RefreshJournal()
 	end)
@@ -641,6 +642,7 @@ local function Build(self, frame, content, ui)
 	-- avertissement (Réserve pleine), au-dessus de la grille
 	local warnY = rowY - 30
 	rv.warn = Text(rv, Theme.F_SMALL, Theme.RED, GRID_W)
+	rv.gridWidth = GRID_W
 	At(rv.warn, content, 0, warnY)
 	if rv.warn.SetWordWrap then rv.warn:SetWordWrap(false) end
 	-- la grille : vignettes de l'allure, construites une fois
@@ -657,7 +659,11 @@ local function Build(self, frame, content, ui)
 		local slot = index - 1
 		tile:ClearAllPoints()
 		tile:SetPoint("TOPLEFT", rv.grid, "TOPLEFT", (slot % cols) * (LAY.tileW + LAY.gap), -math.floor(slot / cols) * (LAY.tileH + LAY.gap))
-		tile:SetScript("OnClick", function(t) ns:ReservePick(t.spec and t.spec.id) end)
+		-- 3.2.0 : pendant « Faire de la place », le clic ajoute ou retire
+		tile:SetScript("OnClick", function(t)
+			if frame.resTidy and ns.ReserveTidyToggle then return ns:ReserveTidyToggle(t.spec and t.spec.id) end
+			ns:ReservePick(t.spec and t.spec.id)
+		end)
 		tile.onEnter = function(t) ns:ReserveTileTip(t) end
 		tile.onLeave = HideTip
 		tile:Hide()
@@ -712,6 +718,22 @@ local function Build(self, frame, content, ui)
 		function() ns:Gift30Open() end, "accent")
 	rv.giftButton:SetPoint("TOPRIGHT", content, "TOPLEFT", ui.PAD + GRID_W, warnY + 4)
 	rv.giftButton:Hide()
+	-- 3.2.0 : « Faire de la place » (ReserveTidy.lua), sur la ligne de
+	-- l'avertissement, à droite (à gauche du cadeau s'il est là)
+	rv.tidyButton = Theme.CreateButton(rv, "auto", "sm", L.RES_TIDY_BUTTON or "", function()
+		if ns.ReserveTidyStart then ns:ReserveTidyStart() end
+	end, "primary")
+	rv.tidyButton:Hide()
+	-- la sélection, dans la fiche : son aide, « Relâcher (n) » et « Annuler »
+	rv.tidyYes = Theme.CreateButton(p, half, "sm", "", function()
+		if ns.ReserveTidyConfirm then ns:ReserveTidyConfirm() end
+	end, "primary")
+	rv.tidyYes:SetPoint("BOTTOMLEFT", p, "BOTTOMLEFT", 12, 8)
+	rv.tidyNo = Theme.CreateButton(p, half, "sm", L.RES_TIDY_NO or "", function()
+		if ns.ReserveTidyCancel then ns:ReserveTidyCancel() end
+	end, "outline")
+	rv.tidyNo:SetPoint("BOTTOMRIGHT", p, "BOTTOMRIGHT", -12, 8)
+	rv.tidyYes:Hide(); rv.tidyNo:Hide()
 	-- 3.0.0 : « Échanger avec ma cible » (CaptureTrades.lua). Bêta 6 : en bas
 	-- à gauche de la page, sur la ligne de la pagination (centré sur elle),
 	-- sous la grille ; l'aide de la page passe à sa droite, sur deux lignes au
@@ -781,6 +803,7 @@ local function Build(self, frame, content, ui)
 	if frame.HookScript then
 		frame:HookScript("OnHide", function(f)
 			f.resConfirm, f.shopConfirm = nil, nil
+			f.resTidy, f.resTidyOrder = nil, nil   -- 3.2.0 : la sélection « Faire de la place » aussi
 			-- l'apprentissage des displayID s'arrête avec le carnet (comme l'allure)
 			if ns.ModelLearnStop then ns:ModelLearnStop() end
 		end)
@@ -901,9 +924,38 @@ end
 local WHY = { better = "RES_WHY_better", worn = "RES_WHY_worn", reference = "RES_WHY_reference", missing = "RES_WHY_missing",
 	locked = "RES_WHY_locked" }
 
+-- 3.2.0 : la sélection de « Faire de la place » : la liste, le total, l'aide
+local function RefreshTidy(self, frame, rv)
+	local p = rv.preview
+	local list, gain = self:ReserveTidySelection()
+	local lines = {}
+	for index, spec in ipairs(list) do
+		if index > ns.RESERVE_TIDY_COUNT then
+			lines[#lines + 1] = self:F("RES_TIDY_MORE", #list - ns.RESERVE_TIDY_COUNT)
+			break
+		end
+		lines[#lines + 1] = self:F("RES_TIDY_LINE", self:SpecimenLabel(spec), Stars(self, spec.stars, 10), self:SpecimenReleaseValue(spec))
+	end
+	if #list == 0 then lines[#lines + 1] = L.RES_TIDY_NONE end
+	lines[#lines + 1] = self:F("RES_TIDY_TOTAL", gain)
+	lines[#lines + 1] = L.RES_TIDY_HINT
+	UI().PreviewSet(p, L.RES_TIDY_TITLE, lines, {})
+	for index, line in ipairs(p.lines) do
+		local c = (index == #lines - 1 and Theme.GOLD) or (index == #lines and Theme.MUTED_LIGHT) or Theme.LABEL
+		line:SetTextColor(c[1], c[2], c[3], 1)
+		line.azKeep = nil
+	end
+	for _, region in ipairs({ rv.toCodex, rv.release, rv.locate, rv.confirm, rv.confirmYes, rv.confirmNo }) do region:Hide() end
+	rv.tidyYes:SetText(self:F("RES_TIDY_YES", #list))
+	Enable(rv.tidyYes, #list > 0)
+	rv.tidyYes:Show(); rv.tidyNo:Show()
+end
+
 local function RefreshDetails(self, frame, rv, spec)
 	local p = rv.preview
 	local ui = UI()
+	if frame.resTidy and self.ReserveTidySelection then return RefreshTidy(self, frame, rv) end
+	if rv.tidyYes then rv.tidyYes:Hide(); rv.tidyNo:Hide() end
 	local confirm = spec and frame.resConfirm == spec.id
 	if not spec then
 		ui.PreviewSet(p, "", { L.RES_PICK }, {})
@@ -990,6 +1042,24 @@ local function RefreshReserve(self, frame, pane)
 	rv.warn:SetText(self:ReserveFull() and self:F("RES_FULL", count, capacity) or "")
 	-- 3.0.0 : le cadeau de la 3.0, tant qu'il n'a pas servi
 	if self.Gift30Available and self:Gift30Available() then rv.giftButton:Show() else rv.giftButton:Hide() end
+	-- 3.2.0 : « Faire de la place », Réserve pleine ou presque, hors sélection
+	if rv.tidyButton then
+		local offer = not frame.resTidy and self.ReserveNearFull and self:ReserveNearFull()
+			and #self:ReserveTidyCandidates(1) > 0
+		rv.tidyButton:ClearAllPoints()
+		if rv.giftButton:IsShown() then
+			rv.tidyButton:SetPoint("RIGHT", rv.giftButton, "LEFT", -8, 0)
+		else
+			rv.tidyButton:SetPoint("TOPRIGHT", rv.giftButton, "TOPRIGHT", 0, 0)
+		end
+		if offer then rv.tidyButton:Show() else rv.tidyButton:Hide() end
+		-- l'avertissement s'arrête avant les boutons de droite
+		local room = rv.gridWidth or 0
+		for _, button in ipairs({ rv.tidyButton, rv.giftButton }) do
+			if button:IsShown() then room = room - math.ceil(button:GetWidth()) - 8 end
+		end
+		rv.warn:SetWidth(math.max(80, room))
+	end
 	local cols, rows = rv.cols, rv.rows
 	local totalRows = math.ceil(#list / cols)
 	local maxOffset = math.max(0, totalRows - rows)
@@ -1012,6 +1082,8 @@ local function RefreshReserve(self, frame, pane)
 			if ns.AllureShowRing then ns.AllureShowRing(tile, on, frame) end
 			local better = self:SpecimenBetterThanCodex(spec.id)
 			tile:SetAccent((on and Theme.SELECT) or (better and Theme.GREEN) or (spec.shiny and Theme.GOLD_LIGHT) or nil)   -- choisi : la sélection (= or en Sobre)
+			-- 3.2.0 : pendant « Faire de la place », les autres s'estompent
+			tile:SetAlpha((frame.resTidy and not frame.resTidy[spec.id]) and ns.RESERVE_TIDY_DIM or 1)
 			tile:Show()
 			if not (self.ModelKnownDisplay and self:ModelKnownDisplay(spec.npc)) then learn[#learn + 1] = spec.npc end
 		else

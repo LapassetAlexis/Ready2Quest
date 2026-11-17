@@ -291,8 +291,9 @@ function ns:CaptureRefuseBlocked(candidate)
 	if not state.blockedMsgAt or now - state.blockedMsgAt >= ns.CAPTURE_COMBAT_MSG_GAP or now < state.blockedMsgAt then
 		state.blockedMsgAt = now
 		if why == "reserveFull" then
+			-- 3.2.0 : « /qc tri pour faire de la place » (ReserveTidy.lua)
 			self:Print(self:F("CAPTURE_MSG_RESERVE_FULL", self:SpecimenReserveCount(), self:ReserveCapacity(),
-				candidate.name or tostring(candidate.npcID)))
+				candidate.name or tostring(candidate.npcID)) .. (L.CAPTURE_TIDY_HINT or ""))
 		end
 		self:CapturePlaySound("fail")
 	end
