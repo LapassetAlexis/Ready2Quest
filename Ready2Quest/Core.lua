@@ -14,11 +14,6 @@ local DEFAULTS = {
 	showMinimap         = true,   -- lanceur autour de la minicarte
 	minimapAngle        = 225,    -- position sur l'anneau (degrés)
 	modules             = {},     -- [id de module] = false pour désactiver
-	showGearToast       = true,   -- résumé éphémère au changement de stuff
-	showPortraitStats   = true,   -- stats au survol du portrait
-	toastPoint          = { point = "CENTER", x = 260, y = 20 },
-	portraitPoint       = { point = "CENTER", x = -260, y = 20 },
-	portraitManual      = false,  -- true dès que le joueur a placé le cadre lui-même
 	diagPoint           = { point = "CENTER", x = 0, y = 120 },
 	optionsPoint        = { point = "CENTER", x = 0, y = 20 },
 	bagFreeThreshold    = 4,      -- alerte si <= N emplacements libres
@@ -724,9 +719,13 @@ end
 -- ---------------------------------------------------------------------------
 -- Événements
 -- ---------------------------------------------------------------------------
+-- 1.37.0 : réglages des modules retirés (résumé de stuff, stats du portrait)
+ns.RETIRED_SETTINGS = { "showGearToast", "showPortraitStats", "toastPoint", "portraitPoint", "portraitManual" }
+
 ns.handlers = {
 	PLAYER_ENTERING_WORLD = function(self, isInitialLogin, isReloadingUi)
 		local db = self:DB()
+		for _, key in ipairs(ns.RETIRED_SETTINGS) do db[key] = nil end
 		if self.safePurgeNotice then
 			self:Print(self:F("MSG_SAFE_PURGED", self.safePurgeNotice))
 			self.safePurgeNotice = nil
@@ -737,10 +736,6 @@ ns.handlers = {
 		self.quietUntil = Now() + (db.quietAfterLogin or 15)
 		if db.showMinimap ~= false and self.ShowMinimapButton then self:ShowMinimapButton() end
 		if self.InitCharacterTracking then pcall(function() self:InitCharacterTracking() end) end
-
-		-- Relevé de référence pour le résumé de changement de stuff
-		if self.CaptureStatBaseline then pcall(function() self:CaptureStatBaseline() end) end
-		if self.InitPlayerFrameHooks then pcall(function() self:InitPlayerFrameHooks() end) end
 
 		-- abonnements à la demande : première synchro (un /reload en combat
 		-- arrive ici en combat : PLAYER_REGEN_ENABLED rouvrira)
@@ -818,16 +813,6 @@ ns.handlers = {
 	TRACKED_RECIPE_UPDATE = function(self)
 		if self.InvalidateReagents then self:InvalidateReagents() end
 	end,
-
-	PLAYER_EQUIPMENT_CHANGED = function(self, slot)
-		-- différé et regroupé : un événement par emplacement, et le client n'a
-		-- pas toujours recalculé les stats à l'instant (Stats.lua, GEAR_RETRY)
-		if self.QueueEquipmentChange then
-			self:QueueEquipmentChange(slot)
-		elseif self.OnEquipmentChanged then
-			self:OnEquipmentChanged()
-		end
-	end,
 }
 
 function ns:OnEvent(event, ...)
@@ -862,8 +847,6 @@ end
 -- (registre : socle commun, Libs/Socle/Store.lua).
 for _, module in ipairs({
 	{ id = "depart",   key = "departureEnabled",  label = "OPT_PAGE_DEPARTURE", aliases = { "departure", "check", "depart" } },
-	{ id = "stuff",    key = "showGearToast",     label = "OPT_PAGE_TOAST",     aliases = { "toast", "resume", "stuff" } },
-	{ id = "portrait", key = "showPortraitStats", label = "OPT_PAGE_PORTRAIT",  aliases = { "stats", "portrait" } },
 }) do ns.RegisterModule(module) end
 
 
@@ -886,10 +869,10 @@ end
 
 -- Aide classée par rubrique (titre en ambre, puis les commandes)
 ns.HELP = {
-	{ "HELP_H_OPEN",   { "HELP_RUN", "HELP_OPTIONS", "HELP_STATS", "HELP_STUFF", "HELP_MOVE" } },
+	{ "HELP_H_OPEN",   { "HELP_RUN", "HELP_OPTIONS", "HELP_MOVE" } },
 	{ "HELP_H_SAFE",   { "HELP_SAFE", "HELP_UNSAFE", "HELP_SAFELIST", "HELP_SAFERESET" } },
 	{ "HELP_H_MODULE", { "HELP_ON", "HELP_MODULES", "HELP_MODULE", "HELP_CHECKS", "HELP_CHECK" } },
-	{ "HELP_H_QUICK",  { "HELP_POPUP", "HELP_TOAST", "HELP_PORTRAIT", "HELP_MINIMAP", "HELP_SEUIL", "HELP_BUFFS" } },
+	{ "HELP_H_QUICK",  { "HELP_POPUP", "HELP_MINIMAP", "HELP_SEUIL", "HELP_BUFFS" } },
 	{ "HELP_H_MISC",   { "HELP_COMPO", "HELP_RESETPOS", "HELP_RESET", "HELP_DIAG" } },
 }
 
@@ -996,28 +979,6 @@ local COMMANDS = {
 			self:Print(L.MSG_UNKNOWN_CMD)
 		end
 	end,
-	-- le panneau a été supprimé : la commande affiche désormais le résumé en
-	-- chat, pour ne pas casser l'habitude ni renvoyer une erreur
-	["stuff"] = function(self)
-		if self.ShowGearSummary then
-			self:ShowGearSummary()
-		else
-			self:Print(L.MSG_UNKNOWN_CMD)
-		end
-	end,
-	["toast"] = function(self, value)
-		local db = self:DB()
-		if value == "on" then
-			db.showGearToast = true
-			return self:Print(L.MSG_TOAST_ON)
-		end
-		if value == "off" then
-			db.showGearToast = false
-			return self:Print(L.MSG_TOAST_OFF)
-		end
-		db.showGearToast = not (db.showGearToast ~= false)
-		self:Print(db.showGearToast and L.MSG_TOAST_ON or L.MSG_TOAST_OFF)
-	end,
 	["move"] = function(self, value)
 		if not self.ToggleEditMode then return self:Print(L.MSG_UNKNOWN_CMD) end
 		if value == "stop" then
@@ -1028,37 +989,12 @@ local COMMANDS = {
 	end,
 	["resetpos"] = function(self)
 		local db = self:DB()
-		db.toastPoint = { point = "CENTER", x = 260, y = 20 }
-		db.portraitPoint = { point = "CENTER", x = -260, y = 20 }
-		db.portraitManual = false
-		if self.toastFrame then
-			self.toastFrame:ClearAllPoints()
-			self.toastFrame:SetPoint("CENTER", UIParent, "CENTER", 260, 20)
-		end
-		if self.portraitFrame then
-			self.portraitFrame:Hide()
-			self.portraitFrame:ClearAllPoints()
-			self.portraitFrame:SetPoint("CENTER", UIParent, "CENTER", -260, 20)
+		db.noticePoint = { point = "TOP", x = 0, y = -150 }
+		if self.noticeFrame then
+			self.noticeFrame:ClearAllPoints()
+			self.noticeFrame:SetPoint("TOP", UIParent, "TOP", 0, -150)
 		end
 		self:Print(L.MSG_POS_RESET)
-	end,
-	["stats"] = function(self)
-		if not self.ShowPortraitStats then return self:Print(L.MSG_UNKNOWN_CMD) end
-		self:ShowPortraitStats()
-	end,
-	["portrait"] = function(self, value)
-		local db = self:DB()
-		if value == "on" then
-			db.showPortraitStats = true
-			return self:Print(L.MSG_PORTRAIT_ON)
-		end
-		if value == "off" then
-			db.showPortraitStats = false
-			if self.HidePortraitStats then self:HidePortraitStats() end
-			return self:Print(L.MSG_PORTRAIT_OFF)
-		end
-		db.showPortraitStats = not (db.showPortraitStats ~= false)
-		self:Print(db.showPortraitStats and L.MSG_PORTRAIT_ON or L.MSG_PORTRAIT_OFF)
 	end,
 	-- v1.22.0 : les 3 vrais modules (et leurs alias), puis les 13 contrôles
 	["modules"] = function(self)
@@ -1085,7 +1021,6 @@ local COMMANDS = {
 		if value == "on" then enabled = true elseif value == "off" then enabled = false
 		else enabled = not (db[module.key] ~= false) end
 		db[module.key] = enabled
-		if module.key == "showPortraitStats" and not enabled and self.HidePortraitStats then self:HidePortraitStats() end
 		if module.key == "departureEnabled" and not enabled then self.pendingExit = nil end
 		self:Print(self:F("MSG_MODULE_SET", tostring(L[module.label] or module.id), enabled and L.MODULE_ON or L.MODULE_OFF))
 		if self.RefreshOptions then self:RefreshOptions() end
@@ -1159,8 +1094,7 @@ local COMMANDS = {
 		self:Print(self:F("MSG_DIAG_SAFE", tostring(safe) .. " (" .. tostring(why) .. ", "
 			.. tostring(self:CurrentSubZone()) .. ")"))
 		if self.DiagAuras then self:DiagAuras() else self:Print(L.MSG_DIAG_NOAURA) end
-		-- dernier changement d'équipement (résumé de stuff), portée d'aggro
-		if self.GearDiagLine then self:Print(self:GearDiagLine()) end
+		-- portée d'aggro
 		if self.AggroDiagLine then self:Print(self:AggroDiagLine()) end
 		-- abonnements à la demande : ceux qui sont en pause
 		if self.GateDiagLine then self:Print(self:GateDiagLine()) end
@@ -1244,14 +1178,6 @@ ns.Every("core:exit", ns.EXIT_TICK, function()
 	if ns.pendingExit then ns:UpdatePendingExit(ns:Now()) end
 	ns:CheckPlaceMove(ns:Now())
 end)
--- fondu du résumé éphémère, image par image, seulement pendant qu'il est
--- affiché (la tâche se retire quand il n'y a plus rien à fondre)
-local function ToastFade()
-	if not ns.toastHideAt or not ns.UpdateToast then return false end
-	ns:UpdateToast(ns:Now())
-	return ns.toastHideAt ~= nil
-end
-function ns:ArmToastFade() ns.Every("core:toast", 0, ToastFade) end
 -- filet des abonnements à la demande (voir ns.FrameGate)
 ns.Every("core:gates", ns.GATE_SAFETY, GateSafety)
 ns:RegisterEvents(frame)

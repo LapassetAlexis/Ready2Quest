@@ -278,22 +278,6 @@ do
 		and NS.CaptureArtPaint(icon, "icon") == nil and icon.texture == nil)
 	Mock.world.textureRefused = nil
 	NS:DB().winterVeil = nil
-	-- Ready2Quest : flèches du toast
-	local arrow = UIParent:CreateTexture()
-	Mock.InstallAtlas(nil)
-	Check("[AZ] R2Q flèche : sans atlas, vide", RNS.StatsPaintArrow(arrow, true) == nil and not arrow.clientArrow
-		and arrow.texture == nil)
-	Mock.InstallAtlas(true)
-	local up = RNS.StatsPaintArrow(arrow, true) == "client" and arrow.atlas == RNS.STATS_ARROW_ATLAS
-	_G.C_Texture.GetAtlasInfo = function()
-		return { file = 555, leftTexCoord = 0.1, rightTexCoord = 0.2, topTexCoord = 0.3, bottomTexCoord = 0.4 }
-	end
-	local down = UIParent:CreateTexture()
-	RNS.StatsPaintArrow(down, false)
-	local dc = down.texCoord or {}
-	Check("[AZ] R2Q flèches : hausse bags-greenarrow, baisse la même retournée", up and down.texture == 555
-		and dc[3] == 0.4 and dc[4] == 0.3, tostring(dc[3]) .. "/" .. tostring(dc[4]))
-	Mock.InstallAtlas(nil)
 end
 
 -- Rangement

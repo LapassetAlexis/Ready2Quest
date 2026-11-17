@@ -206,7 +206,7 @@ do
 	-- une seule source de vérité : la priorité vient de ns.SPEC_STATS
 	R.Reset("MAGE", 1)
 	local order = NS.RewardStatPriority()
-	Check("[RWD] priorité = SPEC_STATS du portrait", order == NS.SPEC_STATS.MAGE[1])
+	Check("[RWD] priorité = SPEC_STATS", order == NS.SPEC_STATS.MAGE[1])
 
 	-- un choix déjà battu par l'objet porté n'est pas une amélioration
 	R.Reset("WARRIOR", 1)

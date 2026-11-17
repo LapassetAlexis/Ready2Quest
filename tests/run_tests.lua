@@ -680,7 +680,7 @@ do
 	-- ses textes, Core, ses pages de réglages et les contrôles du check
 	local core = {}
 	for _, file in ipairs({ "Config.lua", "Locales.lua", "Core.lua", "OptionPages.lua", "Buffs.lua",
-		"Reagents.lua", "Merchant.lua", "Equip.lua", "Stats.lua", "Checks.lua", "UI.lua" }) do
+		"Reagents.lua", "Merchant.lua", "Equip.lua", "SpecStats.lua", "EditMode.lua", "Checks.lua", "UI.lua" }) do
 		core[file] = true
 	end
 	for _, file in ipairs(tocFiles) do
@@ -785,10 +785,6 @@ local function ResetWorld()
 	NS.bagAlerted = nil
 	NS.optionsFrame = nil
 	NS.stuffFrame = nil
-	NS.toastFrame = nil
-	NS.portraitFrame = nil
-	NS.statBefore = nil
-	NS.toastHideAt = nil
 	NS.score = nil
 	NS.lastAdvice = nil
 	NS.pendingExit = nil
@@ -929,7 +925,7 @@ if rawget(_G, "RUN_CORE") ~= false then
 -- alerte de sortie (délai, anti-spam, vol, mort, combat), les 13 checks et
 -- leur score, commandes /sd /r2q, robustesse aux API absentes (templates,
 -- quêtes, métiers, valeurs secrètes, événements non supportés), marchand
--- (vente et réparation auto), résumé de stuff, stats du portrait, mode
+-- (vente et réparation auto), mode
 -- édition, réglages et fenêtre de diagnostic (un invariant par souci de mise
 -- en page plutôt que des mesures), et les bugs signalés en jeu ([JEU]).
 -- 4.1 Chargement
@@ -1564,16 +1560,6 @@ Check("note, barre remplie et verdict affichés", NS.window.scoreValue.text:find
 Check("ligne de module : détail et losange de statut", NS.window.rows[1].detail.text ~= ""
 	and NS.window.rows[1].status and NS.window.rows[1].status.clientRole ~= nil, NS.window.rows[1].detail.text)
 
--- pièces faibles : le sous-titre du panneau doit les compter
-ResetWorld()
-Mock.world.equipped[1] = "item:100"
-Mock.world.links["item:100"] = { name = "Heaume", quality = 3, itemLevel = 50, equipLoc = "INVTYPE_HEAD" }
-Mock.world.equipped[5] = "item:101"
-Mock.world.links["item:101"] = { name = "Plastron", quality = 2, itemLevel = 48, equipLoc = "INVTYPE_CHEST" }
-Mock.world.equipped[8] = "item:102"
-Mock.world.links["item:102"] = { name = "Bottes", quality = 1, itemLevel = 20, equipLoc = "INVTYPE_FEET" }
-Check("pièce faible détectée", NS:WeakSlotCount() == 1, NS:WeakSlotCount())
-
 -- 4.27 Panneau d'équipement : supprimé en v1.16.0
 Say("\n== panneau supprimé ==")
 ResetWorld()
@@ -1604,13 +1590,12 @@ do
 			end
 		end
 	end
-	for _, file in ipairs({ "UI.lua", "Options.lua", "Core.lua", "Stats.lua", "Equip.lua",
+	for _, file in ipairs({ "UI.lua", "Options.lua", "Core.lua", "SpecStats.lua", "EditMode.lua", "Equip.lua",
 	                        "Checks.lua", "Minimap.lua", "Buffs.lua", "Reagents.lua" }) do
 		ScanFile(file)
 	end
 	Check("aucune clé de traduction non résolue", #missing == 0, table.concat(missing, ", "))
 end
-Check("niveau d'objet moyen toujours calculé", NS:AverageItemLevel() == 41, NS:AverageItemLevel())
 
 -- 4.30 Sortie de zone sûre : la fenêtre doit s'ouvrir toute seule
 Say("\n== ouverture automatique en quittant une zone sûre ==")
@@ -1840,14 +1825,14 @@ ResetWorld()
 -- 4.38 Bootstrap : la commande survit à un échec de chargement
 Say("\n== bootstrap et diagnostic ==")
 ResetWorld()
-Check("version exposée", NS.version == "1.36.0", NS.version)
+Check("version exposée", NS.version == "1.37.0", NS.version)
 do
 	local missingMods = {}
 	for _, name in ipairs({ "Bootstrap", "Locales", "Compat", "Theme", "Core", "Buffs", "Reagents",
-		"Equip", "Stats", "Minimap", "Checks", "Options", "UI" }) do
+		"Equip", "SpecStats", "EditMode", "Minimap", "Checks", "Options", "UI" }) do
 		if not (NS.Loaded and NS.Loaded[name]) then missingMods[#missingMods + 1] = name end
 	end
-	Check("13 modules marqués chargés", #missingMods == 0, table.concat(missingMods, ", "))
+	Check("14 modules marqués chargés", #missingMods == 0, table.concat(missingMods, ", "))
 
 	-- repli quand Core.lua n'a pas abouti
 	local savedHandle = NS.HandleCommand
@@ -1861,7 +1846,7 @@ do
 	Mock:Reset()
 	NS:HandleCommand("diag")
 	Check("/sd diag liste les modules et la version", Mock:Output():find("modules :") ~= nil
-		and Mock:Output():find("1%.36%.0") ~= nil, Mock:Output())
+		and Mock:Output():find("1%.37%.0") ~= nil, Mock:Output())
 
 	-- une erreur est enregistrée et affichée
 	Mock:Reset()
@@ -2047,8 +2032,8 @@ do
 		and Mock:Output():find("Contrôle inconnu") ~= nil, Mock:Output())
 	Mock:Reset()
 	NS:HandleCommand("modules")
-	Check("/r2q modules : les 3 modules", Mock:Output():find("Check avant le départ") and Mock:Output():find("Résumé de stuff")
-		and Mock:Output():find("Stats du portrait") and not Mock:Output():find("Vivres"), Mock:Output())
+	Check("/r2q modules : le Check avant le départ, sans les contrôles", Mock:Output():find("Check avant le départ")
+		and not Mock:Output():find("Résumé de stuff") and not Mock:Output():find("Vivres"), Mock:Output())
 	Mock:Reset()
 	NS:HandleCommand("checks")
 	Check("/r2q checks : les 13 contrôles", Mock:Output():find("13") and Mock:Output():find("Vivres"), Mock:Output())
@@ -2056,11 +2041,14 @@ do
 	local departOff = NS:DB().departureEnabled == false
 	NS:HandleCommand("module check on")
 	local departOn = NS:DB().departureEnabled == true
+	Mock:Reset()
 	NS:HandleCommand("module stuff off")
-	NS:HandleCommand("module portrait off")
-	Check("/r2q module depart off, alias check on, stuff off, portrait off", departOff and departOn
-		and NS:DB().showGearToast == false and NS:DB().showPortraitStats == false)
-	NS:HandleCommand("module stuff on"); NS:HandleCommand("module portrait on")
+	Check("/r2q module depart off, alias check on ; stuff retiré : module inconnu", departOff and departOn
+		and Mock:Output():find("inconnu") ~= nil and NS:DB().showGearToast == nil, Mock:Output())
+	NS:DB().showGearToast, NS:DB().portraitPoint = false, { point = "CENTER" }
+	NS.handlers.PLAYER_ENTERING_WORLD(NS, false, true)
+	Check("1.37.0 : réglages du résumé de stuff et du portrait purgés à l'entrée en jeu",
+		NS:DB().showGearToast == nil and NS:DB().portraitPoint == nil)
 	Mock:Reset()
 	NS:HandleCommand("help")
 	local helpOut = Mock:Output()
@@ -2164,135 +2152,11 @@ do
 end
 ResetWorld()
 
--- 4.49 Relevé de statistiques et formules
-Say("\n== statistiques ==")
+-- 4.49 Attributs par classe et par spé (SpecStats.lua) : les stats du
+-- portrait et le résumé de stuff ont été retirés en 1.37.0 ; la table sert
+-- encore à la bonne récompense de quête.
+Say("\n== attributs par spé ==")
 ResetWorld()
-do
-	local snap = NS:StatSnapshot()
-	Check("statistiques lues (For, Agi, End, armure, dégâts, vitesse, ilvl)", snap.str == 25 and snap.agi == 14
-		and snap.sta == 30 and snap.armor == 506 and snap.dmgMin == 20 and snap.dmgMax == 24
-		and math.abs(snap.speed - 1.96) < 0.001 and snap.ilvl == 18,
-		snap.str .. "/" .. snap.agi .. "/" .. snap.sta .. "/" .. snap.armor .. "/" .. snap.ilvl)
-	-- formule de réduction : 506 / (506 + 85*11 + 400) = 27,5 %
-	Check("réduction d'armure = 27,5 %", math.abs(snap.reduction - 27.48) < 0.1, snap.reduction)
-	-- DPS = ((20+24)/2) / 1.96 = 11,2
-	Check("DPS = 11,2", math.abs(snap.dps - 11.22) < 0.05, snap.dps)
-end
-
--- 4.49a Changer d'item sans changer aucune statistique : pas de cadre vide
-Say("\n== changement de stuff sans ecart de stats ==")
-ResetWorld()
-NS.toastFrame = nil
-NS:CaptureStatBaseline()
--- on remplace un objet par un autre de mêmes caractéristiques : l'emplacement
--- change, donc le code détecte le changement, mais aucune stat ne bouge
-Mock.world.equipped[10] = "item:850"
-Mock.world.links["item:850"] = { name = "Gantelets identiques", quality = 2,
-	itemLevel = 20, equipLoc = "INVTYPE_HAND", texture = "Interface\\Icons\\INV_Gants2" }
-NS:OnEquipmentChanged()
-Check("aucun cadre affiché sans écart", NS.toastFrame == nil
-	or NS.toastFrame:IsShown() == false,
-	NS.toastFrame and "affiché" or "absent")
-
--- 4.49b Retirer un item doit quand même montrer son icône
-Say("\n== icone au retrait d'un item ==")
-ResetWorld()
-Mock.world.equipped[10] = "item:800"
-Mock.world.links["item:800"] = { name = "Gantelets", quality = 2, itemLevel = 20,
-	equipLoc = "INVTYPE_HAND", texture = "Interface\\Icons\\INV_Gants" }
-NS.toastFrame = nil
--- le relevé doit être pris APRES avoir équipé, sinon la comparaison est vide
-NS:CaptureStatBaseline()
-Check("relevé contient l'item équipé",
-	NS.statBefore and (NS.statBefore.slots or {})[10] == "item:800",
-	NS.statBefore and (NS.statBefore.slots or {})[10])
-
--- on retire l'item de l'emplacement 10 : l'armure baisse
-Mock.world.equipped[10] = nil
-Mock.world.armor = 500
-NS:OnEquipmentChanged()
--- l'emplacement est vide : seule l'icône du lien précédent peut le renseigner
-Check("résumé affiché après retrait, avec l'icône de l'objet retiré", NS.toastFrame ~= nil
-	and NS.toastFrame:IsShown() == true and NS.toastFrame.rows[1].icon.texture ~= nil
-	and NS.toastFrame.rows[1].icon:IsShown() == true, NS.toastFrame and NS.toastFrame.rows[1].icon.texture)
-
--- 4.50 Résumé éphémère au changement de stuff
-Say("\n== résumé de changement de stuff ==")
-ResetWorld()
-NS:CaptureStatBaseline()
-
--- le joueur équipe de meilleures mains : +40 armure, +2 dégâts, +0,04 s de vitesse
-Mock.world.armor = 546
-Mock.world.damage = { 22, 26 }
-Mock.world.attackSpeed = 2.00
-Mock.world.equipped[10] = "item:900"
-Mock.world.links["item:900"] = { name = "Gantelets neufs", quality = 3, itemLevel = 24,
-	equipLoc = "INVTYPE_HAND" }
-NS:OnEquipmentChanged()
-
--- refonte 2026-11 : bandeau v2 (fond WINDOW, filet EDGE, liseré ambre), autour du
--- contenu : il déborde du cadre (hauteur 10) jusque sous la ligne ; aucune
--- bordure hors édition
-do
-	local toastScale = NS.toastFrame.rows[1].icon:GetWidth() / NS.TOAST_ICON
-	Check("toast affiché : fond de bandeau sous le contenu, sans bordure hors édition", NS.toastFrame:IsShown() == true
-		and NS.toastFrame.chrome == "toast" and NS.toastFrame.bg
-		and NS.toastFrame.bg.vertex[1] == NS.Theme.WINDOW[1] and NS.toastFrame.border ~= nil
-		and NS.toastFrame.bg.points[1].y > 0
-		and NS.toastFrame.bg.points[2].y <= (NS.TOAST_ROW_TOP - 14) * toastScale
-		and NS.toastFrame.moveGlow ~= nil and NS.toastFrame.moveGlow:IsShown() == false,
-		tostring(NS.toastFrame.bg and NS.toastFrame.bg.points[2] and NS.toastFrame.bg.points[2].y))
-
-	-- la vitesse qui diminue est une amélioration (polarité inversée)
-	local beforeSnap = NS:StatSnapshot()
-	Mock.world.attackSpeed = 1.60
-	local afterSnap = NS:StatSnapshot()
-	local speedRow
-	for _, row in ipairs(NS:DiffSnapshots(beforeSnap, afterSnap)) do if row.key == "speed" then speedRow = row end end
-	Check("vitesse : variation négative, polarité inversée", speedRow and speedRow.delta < 0
-		and speedRow.polarity == false, speedRow and speedRow.delta)
-	Mock.world.attackSpeed = 1.96
-end
-
--- 4.51 Fondu et disparition
-Say("\n== disparition du résumé ==")
-NS.toastHideAt = 1000
-NS:UpdateToast(1000.5)
-do
-	local before = NS.toastFrame:IsShown() == true
-	NS:UpdateToast(1001.0)
-	Check("visible avant le fondu, puis fondu en cours (alpha réduit)", before and NS.toastFrame:IsShown() == true
-		and (NS.toastFrame.alpha or 1) < 1, NS.toastFrame.alpha)
-end
-NS:UpdateToast(1002.5)
-Check("résumé masqué après le délai", NS.toastFrame:IsShown() == false)
-
--- 4.52 Panneau de stats au survol du portrait
-Say("\n== stats du portrait ==")
-ResetWorld()
-NS:ShowPortraitStats()
-Check("panneau de stats : classe, spé et niveau d'objet", NS.portraitFrame ~= nil and NS.portraitFrame:IsShown() == true
-	and NS.portraitFrame.classLine.text:find("Guerrier") ~= nil and NS.portraitFrame.classLine.text:find("Armes") ~= nil
-	and NS.portraitFrame.ilvlLine.text:find("18") ~= nil, NS.portraitFrame.classLine.text)
-
-do
-	local joined = {}
-	for _, line in ipairs(NS.portraitFrame.lines) do
-		joined[#joined + 1] = tostring(line.left.text) .. " " .. tostring(line.right.text)
-	end
-	local blob = table.concat(joined, " | ")
-	-- Guerrier Armes : la priorité officielle s'arrête à Force et Agilité ;
-	-- ni Endurance, ni Intelligence, ni Esprit (sans effet sur ses dégâts)
-	Check("Guerrier Armes : Force, Agilité, Armure, DPS ; ni Endurance, ni Intelligence, ni Esprit",
-		blob:find("Force") and blob:find("Agilité") and blob:find("Armure") and blob:find("DPS")
-		and not blob:find("Endurance") and not blob:find("Intelligence") and not blob:find("Esprit"), blob)
-	-- la mise en avant suit la classe et la spé, pas le maximum (l'ancienne
-	-- règle soulignait l'Endurance, plus élevée)
-	Check("Force mise en avant pour Guerrier/Armes, pas l'Endurance", blob:find("|cffe8a54bForce") ~= nil
-		and blob:find("|cffe8a54bEndurance") == nil, blob)
-end
-NS:HidePortraitStats()
-
 -- Intégrité de la table SPEC_STATS : les neuf classes, trois spécialisations
 -- chacune, et uniquement des clés de statistiques connues. Une faute de
 -- frappe dans une clé afficherait « nil » dans le panneau, en jeu.
@@ -2330,49 +2194,23 @@ do
 		classCount == 9 and specCount == 27 and #badKeys == 0, classCount .. "/" .. specCount .. " " .. table.concat(badKeys, ", "))
 end
 
--- La mise en avant suit la CLASSE et la SPÉCIALISATION, pas le maximum.
--- Voleur : l'Agilité ; Prêtre/Discipline : l'Intelligence ; Druide
--- Restauration : l'Esprit, sans Force ni Endurance soulignée.
+-- Listes strictes : seulement ce qui compte pour la spé
 do
-	local function highlightFor(classFile, specIndex)
-		local saved = _G.UnitClass
-		_G.UnitClass = function() return classFile, classFile, 1 end
-		Mock.world.specIndex = specIndex
-		NS.portraitFrame = nil
-		NS:ShowPortraitStats()
-		local blob = {}
-		for _, line in ipairs(NS.portraitFrame.lines) do
-			blob[#blob + 1] = tostring(line.left.text) .. " " .. tostring(line.right.text)
-		end
-		local text = table.concat(blob, " | ")
-		NS:HidePortraitStats()
-		_G.UnitClass = saved
-		return text
-	end
-	local rogue = highlightFor("ROGUE", 1)
-	local priest = highlightFor("PRIEST", 1)
-	local druid = highlightFor("DRUID", 3)
-	Check("mise en avant par classe : Voleur Agilité, Prêtre Intelligence, Druide Resto pas l'Endurance",
-		rogue:find("|cffe8a54bAgilité") ~= nil and priest:find("|cffe8a54bIntelligence") ~= nil
-		and druid:find("|cffe8a54bEndurance") == nil, rogue .. " || " .. priest .. " || " .. druid)
-	-- le panneau ne liste que le strict nécessaire
+	local function has(list, key) for _, k in ipairs(list) do if k == key then return true end end return false end
+	local rogue, priest, druid = NS.SPEC_STATS.ROGUE[1], NS.SPEC_STATS.PRIEST[1], NS.SPEC_STATS.DRUID[3]
 	Check("listes strictes : Voleur sans Esprit, Druide Resto avec Esprit sans Force, Prêtre avec Intelligence",
-		rogue:find("Esprit") == nil and druid:find("Esprit") ~= nil and druid:find("Force") == nil
-		and priest:find("Intelligence") ~= nil, rogue .. " || " .. druid)
+		not has(rogue, "SPI") and has(druid, "SPI") and not has(druid, "STR") and has(priest, "INT"))
 end
 
--- Les listes suivent la priorité officielle de Wowhead Forever. Ces cas
--- verrouillent les points où l'on pouvait se tromper de sens.
+-- Premier attribut retenu pour une classe et une spé (même règle que
+-- QuestReward : FERAL_TANK_ORDER pour le druide Farouche en ours)
 local function firstStat(classFile, specIndex)
-	local saved = _G.UnitClass
-	_G.UnitClass = function() return classFile, classFile, 1 end
 	Mock.world.specIndex = specIndex
-	NS.portraitFrame = nil
-	NS:ShowPortraitStats()
-	local text = tostring(NS.portraitFrame.lines[1].left.text)
-	NS:HidePortraitStats()
-	_G.UnitClass = saved
-	return text
+	local bySpec = NS.SPEC_STATS[classFile]
+	local index = NS.SpecIndex() or 0
+	local order = (classFile == "DRUID" and index == 2 and NS.IsBearForm()) and NS.FERAL_TANK_ORDER
+		or bySpec[index] or bySpec[1]
+	return tostring(NS.L["STAT_" .. order[1]])
 end
 
 -- ordre des spés (et des onglets de talents) : Sacré 1, Protection 2, Vindicte 3
@@ -2394,100 +2232,6 @@ do
 	_G.GetShapeshiftForm = savedForm
 end
 Mock.world.specIndex = 1
-
-NS:HidePortraitStats()
-Check("panneau masqué à la sortie", NS.portraitFrame:IsShown() == false)
-
--- 4.53 Désactivation
-Say("\n== désactivation des nouveaux panneaux ==")
-ResetWorld()
-NS:DB().showPortraitStats = false
-NS:ShowPortraitStats()
-Check("stats portrait désactivées", NS.portraitFrame == nil or NS.portraitFrame:IsShown() == false)
-
-ResetWorld()
-NS:DB().showGearToast = false
-NS:CaptureStatBaseline()
-Mock.world.armor = 900
-Mock.world.equipped[10] = "item:901"
-Mock.world.links["item:901"] = { name = "Gantelets", quality = 2, itemLevel = 25, equipLoc = "INVTYPE_HAND" }
-NS:OnEquipmentChanged()
-Check("toast désactivé", NS.toastFrame == nil or NS.toastFrame:IsShown() == false)
-
--- 4.54 Commande /sd stats
-Say("\n== commandes stats ==")
-ResetWorld()
-Mock:Reset()
-NS:HandleCommand("stats")
-Check("/sd stats affiche le panneau", NS.portraitFrame ~= nil and NS.portraitFrame:IsShown() == true)
-Mock:Reset()
-NS:HandleCommand("toast off")
-NS:HandleCommand("portrait off")
-Check("/sd toast off (message), /sd portrait off", NS:DB().showGearToast == false
-	and Mock:Output():find("désactivé") ~= nil and NS:DB().showPortraitStats == false, Mock:Output())
-
--- 4.55 Verrouillage par défaut et mode édition
-Say("\n== mode édition des cadres ==")
-ResetWorld()
-NS:ShowPortraitStats()
-do
-	local lockedPortrait = NS.portraitFrame.mouseEnabled == false and NS.editMode == nil
-	NS:HidePortraitStats()
-	Check("portrait verrouillé par défaut, hors édition, se masque normalement", lockedPortrait
-		and NS.portraitFrame:IsShown() == false)
-end
-
-NS:CaptureStatBaseline()
-Mock.world.armor = 700
-Mock.world.equipped[10] = "item:910"
-Mock.world.links["item:910"] = { name = "Gantelets", quality = 2, itemLevel = 22, equipLoc = "INVTYPE_HAND" }
-NS:OnEquipmentChanged()
-Check("résumé affiché après changement, verrouillé par défaut", NS.toastFrame ~= nil
-	and NS.toastFrame:IsShown() == true and NS.toastFrame.mouseEnabled == false)
-
--- entrée en mode édition
-Mock:Reset()
-NS:ToggleEditMode()
-Check("mode édition actif, annoncé", NS.editMode == true and Mock:Output():find("Mode édition") ~= nil, Mock:Output())
-Check("édition : les deux cadres déverrouillés, visibles, avec leur lueur", NS.toastFrame.mouseEnabled == true
-	and NS.portraitFrame.mouseEnabled == true and NS.toastFrame:IsShown() == true and NS.portraitFrame:IsShown() == true
-	and NS.toastFrame.moveGlow:IsShown() == true and NS.portraitFrame.moveGlow:IsShown() == true)
-
--- le survol ne fait plus disparaître le cadre, le résumé ne s'efface pas
-NS:HidePortraitStats()
-NS.toastHideAt = 1000
-NS:UpdateToast(3000)
-Check("édition : ni masquage du portrait ni fondu du résumé", NS.portraitFrame:IsShown() == true
-	and NS.toastFrame:IsShown() == true)
-
--- déplacement enregistré
-do
-	local toastDrag = NS.toastFrame:GetScript("OnDragStop")
-	local portraitDrag = NS.portraitFrame:GetScript("OnDragStop")
-	if toastDrag then toastDrag(NS.toastFrame) end
-	if portraitDrag then portraitDrag(NS.portraitFrame) end
-end
-Check("déplacement enregistré : position du résumé, portrait en manuel", type(NS:DB().toastPoint.point) == "string"
-	and NS:DB().portraitManual == true, NS:DB().toastPoint.point)
-
--- sortie du mode édition
-Mock:Reset()
-NS:StopEditMode()
-Check("sortie d'édition : cadres reverrouillés, lueurs masquées, résumé masqué, message", NS.editMode == nil
-	and NS.toastFrame.mouseEnabled == false and NS.portraitFrame.mouseEnabled == false
-	and NS.toastFrame.moveGlow:IsShown() == false and NS.portraitFrame.moveGlow:IsShown() == false
-	and NS.toastFrame:IsShown() == false and Mock:Output():find("terminé") ~= nil, Mock:Output())
-
--- édition possible même si les stats du portrait sont désactivées
-ResetWorld()
-NS:DB().showPortraitStats = false
-NS:StartEditMode()
-do
-	local forced = NS.portraitFrame ~= nil and NS.portraitFrame:IsShown() == true
-	NS:StopEditMode()
-	Check("édition force l'affichage du portrait, qui redevient soumis au réglage ensuite", forced
-		and NS.portraitFrame:IsShown() == false)
-end
 
 -- 4.56 Bouton « Déplacer les cadres »
 Say("\n== bouton de déplacement ==")
@@ -2526,15 +2270,11 @@ Check("rouvrir les réglages arrête l'édition", NS.editMode == nil)
 NS:StartEditMode()
 do
 	local shownAtStart = NS.editBanner ~= nil and NS.editBanner:IsShown() == true and NS.editBanner.stopButton ~= nil
-	NS:ShowPortraitStats()
-	local afterPortrait = NS.editBanner ~= nil and NS.editBanner:IsShown() == true
-	NS:OnEquipmentChanged()
-	Check("bandeau d'édition : bouton de sortie, survit au portrait et au changement de stuff", shownAtStart
-		and afterPortrait and NS.editBanner ~= nil and NS.editBanner:IsShown() == true)
+	Check("bandeau d'édition : bouton de sortie", shownAtStart)
 end
 NS:StopEditMode()
 Check("sortie d'édition : bandeau masqué, cadres plus déplaçables", NS.editBanner ~= nil
-	and NS.editBanner:IsShown() == false and (NS.toastFrame == nil or NS.toastFrame:IsShown() == false))
+	and NS.editBanner:IsShown() == false)
 
 do -- portée locale (limite de 200 locales en Lua 5.1)
 -- Géométrie de la fenêtre de réglages (refonte 2026-11, docs/UI.md) :
@@ -2557,7 +2297,7 @@ do
 	for _, nav in ipairs(frame.navButtons) do navIds[#navIds + 1] = nav.pageId end
 	for _, header in ipairs(frame.navHeaders) do heads[#heads + 1] = header.pageId end
 	Check("navigation : une entrée par page, « départ » et « QoL » en titres de groupe", table.concat(navIds, ",")
-		== "general,trigger,safe,bags,gear,buffs,toast,portrait,merchant" and table.concat(heads, ",") == "departure,qol",
+		== "general,trigger,safe,bags,gear,buffs,merchant" and table.concat(heads, ",") == "departure,qol",
 		table.concat(navIds, ",") .. " / " .. table.concat(heads, ","))
 
 	-- pied : action principale et remise à zéro à gauche, Terminé à droite,
@@ -2775,31 +2515,6 @@ end)() == true)
 Check("ns:F formate une clé existante, tolère une clé absente", NS:F("MINIMAP_SCORE", 80, "PRÊT"):find("80") ~= nil
 	and NS:F("CLE_ABSENTE") == "CLE_ABSENTE", NS:F("MINIMAP_SCORE", 80, "PRÊT"))
 
--- 4.58 Piège tonumber() avec des API à plusieurs retours
-Say("\n== tonumber et retours multiples ==")
-ResetWorld()
-do
-	local savedAP = _G.UnitAttackPower
-	_G.UnitAttackPower = function() return 120, 0, 0, nil end
-	local okAP, snapAP = pcall(function() return NS:StatSnapshot() end)
-	Check("4e retour nil : pas de plantage, PA lue sur le 1er retour", okAP and snapAP.ap == 120, tostring(okAP and snapAP.ap or snapAP))
-
-	local savedSpeed = _G.UnitAttackSpeed
-	_G.UnitAttackSpeed = function() return 1.96, 1.50 end
-	local okSpeed, snapSpeed = pcall(function() return NS:StatSnapshot() end)
-	Check("2 retours de vitesse : pas de plantage, 1er retour lu", okSpeed and math.abs(snapSpeed.speed - 1.96) < 0.001,
-		tostring(okSpeed and snapSpeed.speed or snapSpeed))
-
-	local savedCrit = _G.GetCritChance
-	_G.GetCritChance = function() return 12.5, 99 end
-	local okCrit, snapCrit = pcall(function() return NS:StatSnapshot() end)
-	Check("crit lue sans confusion de base", okCrit and snapCrit.crit == 12.5, okCrit and snapCrit.crit)
-
-	_G.UnitAttackPower = savedAP
-	_G.UnitAttackSpeed = savedSpeed
-	_G.GetCritChance = savedCrit
-end
-
 -- 4.59 Rotation du bouton de minicarte
 Say("\n== position du bouton de minicarte ==")
 ResetWorld()
@@ -2816,157 +2531,6 @@ do
 	NS:CycleMinimapAngle()
 	Check("rotation 225 -> 270 (annoncée) -> 315, bouclage vers 225", to270 and to315
 		and math.abs(NS:DB().minimapAngle - 225) < 1, NS:DB().minimapAngle)
-end
-
--- 4.61 Résumé éphémère sans cadre
-Say("\n== résumé sans cadre ==")
-ResetWorld()
-NS:CaptureStatBaseline()
-Mock.world.armor = 600
-Mock.world.equipped[10] = "item:920"
-Mock.world.links["item:920"] = { name = "Gantelets", quality = 2, itemLevel = 20, equipLoc = "INVTYPE_HEAD" }
-NS:OnEquipmentChanged()
-
-do
-	local tframe = NS.toastFrame
-	-- une seule ligne, par choix de conception : le bloc doit se lire d'un coup
-	Check("bandeau : fond, liseré ambre, titre ombré, ni fermeture ni filet, une ligne", tframe.bg ~= nil
-		and tframe.accent ~= nil and tframe.accent:IsShown() and tframe.title ~= nil and tframe.close == nil
-		and tframe.top == nil and tframe.bottom == nil and tframe.leftEdge == nil and tframe.rightEdge == nil
-		and #tframe.rows == 1 and tframe.title.shadow ~= nil and tframe.title.shadowOffset ~= nil, #tframe.rows)
-end
-
--- deux écarts, mais une seule ligne affichée : le premier est retenu
-NS:CaptureStatBaseline()
-Mock.world.armor = 650
-Mock.world.attackSpeed = 2.4
-Mock.world.equipped[10] = "item:921"
-Mock.world.links["item:921"] = { name = "Gantelets runiques", quality = 3, itemLevel = 24,
-	equipLoc = "INVTYPE_HEAD" }
-NS:OnEquipmentChanged()
-do
-	local frame = NS.toastFrame
-	local usedRows = 0
-	for index = 1, #frame.rows do
-		if frame.rows[index].value.text ~= "" then usedRows = usedRows + 1 end
-	end
-	Check("deux écarts : une seule ligne, remplie, pas de deuxième", usedRows == 1 and frame.rows[1].value.text ~= ""
-		and frame.rows[2] == nil, usedRows)
-	Check("libellé en PascalCase, valeur non concaténée", frame.rows[1].label.text == NS.PascalCase(frame.rows[1].label.text)
-		and frame.rows[1].label.text:sub(2):find("%u") == nil and frame.rows[1].value.text:find("·") == nil,
-		frame.rows[1].label.text .. " / " .. frame.rows[1].value.text)
-end
-
--- le panneau de stats du portrait garde son filet, lui
-NS:StartEditMode()
-Check("stats du portrait encadrées ; lueur de déplacement sur le résumé", NS.portraitFrame.border ~= nil
-	and NS.portraitFrame.chrome == "toast" and NS.toastFrame.moveGlow:IsShown() == true)
-NS:StopEditMode()
-Check("lueur masquée à la sortie", NS.toastFrame.moveGlow:IsShown() == false)
-
--- 4.64 Mise en page du résumé : titre espacé, règle, colonnes
-Say("\n== mise en page du résumé ==")
-ResetWorld()
-NS:CaptureStatBaseline()
-Mock.world.armor = 600
-Mock.world.equipped[10] = "item:930"
-Mock.world.links["item:930"] = { name = "Ceinture", quality = 2, itemLevel = 20,
-	equipLoc = "INVTYPE_WAIST", texture = "Interface\\Icons\\INV_Belt_01" }
-NS:OnEquipmentChanged()
-do
-	local panel = NS.toastFrame
-	local row = panel.rows[1]
-	Check("titre en majuscules interlettrées, même corps que les lignes", panel.title ~= nil
-		and panel.title.text == string.upper(panel.title.text) and panel.title.text:find(" ") ~= nil
-		and panel.title.fontObject == NS.Theme.F_BODY and panel.title.fontObject == row.label.fontObject, panel.title.text)
-	Check("règle de séparation sur toute la largeur, au-dessus des lignes", panel.rule ~= nil
-		and #panel.rule.points == 2 and panel.rule.lastPoint.y > row.value.lastPoint.y)
-	Check("valeurs et libellés ombrés, valeur à gauche du libellé, libellé en parchemin", row.value.shadow ~= nil
-		and row.value.shadowOffset ~= nil and row.label.shadow ~= nil
-		and row.value.lastPoint.x < row.label.lastPoint.x
-		and row.label.textColor[1] > 0.9 and row.label.textColor[3] < 0.85,
-		tostring(row.value.lastPoint.x) .. " / " .. tostring(row.label.lastPoint.x))
-	-- l'icône vient du LIEN (GetItemInfo, 10e retour) et non de l'API
-	-- d'emplacement : c'est ce qui la rend disponible même après un retrait
-	Check("icône d'objet du lien, affichée", row.icon.texture == "Interface\\Icons\\INV_Belt_01"
-		and row.icon:IsShown() == true, row.icon.texture)
-	-- gain = vert, perte = rouge
-	Check("ligne colorée selon l'écart", row.value.text ~= "" and row.value.textColor[1] ~= row.value.textColor[2],
-		row.value.text)
-
-	-- casse : titre en majuscules, libellés en PascalCase
-	local wrong = {}
-	for input, want in pairs({ ["armure"] = "Armure", ["score crit"] = "Score Crit",
-		["vitesse d'attaque"] = "Vitesse D'attaque", ["dégâts"] = "Dégâts",
-		["Puissance d'attaque"] = "Puissance D'attaque", [""] = "" }) do
-		if NS.PascalCase(input) ~= want then wrong[#wrong + 1] = input .. " -> " .. tostring(NS.PascalCase(input)) end
-	end
-	Check("PascalCase : mots, apostrophe, accents, déjà capitalisé, vide", #wrong == 0, table.concat(wrong, ", "))
-	Check("libellé réel en PascalCase", row.label.text == "Armure", row.label.text)
-
-	-- Les flèches sont des textures : aucun caractère exotique ne doit subsister
-	-- dans la valeur affichée (les triangles sortaient en carrés vides)
-	local shown = row.value.text
-	Check("valeur sans glyphe de flèche, en ASCII pur", shown:match("^[%+%-]?[%d%s,%.]+$") ~= nil
-		and shown:byte(#shown) < 128, shown)
-	-- 1.33.1 : plus de fichier à nous ; sans atlas (banc), pas de flèche
-	Check("flèche : texture teintée comme la valeur, sans image à nous", row.arrow ~= nil
-		and row.arrow.texture == nil and not row.arrow.clientArrow
-		and row.arrow.vertex ~= nil and row.arrow.vertex[2] > row.arrow.vertex[1], row.arrow and row.arrow.texture)
-
-	-- colonnes : la flèche commence après la valeur la plus longue (44 px
-	-- mesurés pour « -0,60 s ») et ne touche pas le libellé ; le contenu est
-	-- centré dans le bloc (sinon le vide s'accumule à droite, constaté en jeu)
-	-- et icône, flèche, libellé, titre sont décalés de la même marge
-	local inset = (NS.TOAST_WIDTH - NS.TOAST_CONTENT_WIDTH) / 2
-	local scale = row.icon:GetWidth() / NS.TOAST_ICON
-	local function near(a, b) return math.abs(a - b) < 0.02 end
-	local misplaced = {}
-	if not (NS.TOAST_ARROW_LEFT >= NS.TOAST_VALUE_LEFT + 40) then misplaced[#misplaced + 1] = "flèche sur la valeur" end
-	if not (NS.TOAST_ARROW_LEFT + NS.ARROW_SIZE <= NS.TOAST_LABEL_LEFT) then misplaced[#misplaced + 1] = "flèche sur le libellé" end
-	if not (inset > 0) then misplaced[#misplaced + 1] = "inset " .. inset end
-	if not near(row.icon.lastPoint.x, (inset + NS.TOAST_ICON / 2) * scale) then misplaced[#misplaced + 1] = "icône" end
-	if not near(row.label.lastPoint.x, (inset + NS.TOAST_LABEL_LEFT) * scale) then misplaced[#misplaced + 1] = "libellé" end
-	if not near(row.arrow.lastPoint.x, (inset + NS.TOAST_ARROW_LEFT + NS.ARROW_SIZE / 2) * scale) then misplaced[#misplaced + 1] = "flèche" end
-	if not near(panel.title.lastPoint.x, inset * scale) then misplaced[#misplaced + 1] = "titre" end
-	Check("colonnes : flèche entre valeur et libellé, contenu centré dans le bloc", #misplaced == 0, table.concat(misplaced, ", "))
-	-- Centrage vertical. L'icône et la flèche sont ancrées en CENTER : le point
-	-- enregistré EST leur milieu. Le milieu de référence est celui de la ligne,
-	-- calculé depuis le haut de ligne et la hauteur des chiffres.
-	local textMiddle = NS.TOAST_ROW_TOP + NS.TOAST_LINE_MIDDLE
-	local iconMiddle = row.icon.lastPoint.y / scale
-	local arrowMiddle = row.arrow.lastPoint.y / scale
-	Check("icône et flèche centrées verticalement sur la ligne, flèche visible",
-		math.abs(textMiddle - (NS.TOAST_ROW_TOP - NS.TOAST_TEXT_HEIGHT / 2)) < 0.01
-		and math.abs(iconMiddle - textMiddle) < 0.01 and math.abs(arrowMiddle - textMiddle) < 0.01
-		and row.arrow:IsShown() == true, iconMiddle .. " / " .. arrowMiddle .. " vs " .. textMiddle)
-
-	-- cinq écarts et plus : une ligne au maximum
-	local many = {}
-	for index = 1, 8 do
-		many[#many + 1] = { key = "armor", label = "ARMOR", kind = "integer", polarity = true,
-			delta = index, old = 0, new = index }
-	end
-	local built = NS:ToastRows(many)
-	Check("tronqué à une ligne, la première conservée", #built == 1 and built[1].value ~= nil, #built)
-
-	-- ligne vide = aucun résidu d'écart précédent
-	NS:ToastRows({})
-	NS:ToastText(NS:ToastRows({}))
-	local residue = 0
-	for index = 1, #panel.rows do
-		if panel.rows[index].value.text ~= "" then residue = residue + 1 end
-	end
-	Check("rien à afficher : aucun résidu, icône masquée", residue == 0 and row.icon:IsShown() == false, residue)
-
-	-- mode édition : structure d'attente, cadre non vide
-	NS:StartEditMode()
-	local placeholderShown = false
-	for index = 1, #panel.rows do
-		if panel.rows[index].value.text ~= "" then placeholderShown = true end
-	end
-	Check("édition : structure et titre visibles", placeholderShown and panel.title.text:find("S T A T") ~= nil, panel.title.text)
-	NS:StopEditMode()
 end
 
 -- 4.62 Chrome des fenêtres : fond et bord d'infobulle (style AtlasLoot)
@@ -3016,11 +2580,6 @@ do
 end
 Mock.world.noBackdropTemplate = false
 
--- les cadres discrets gardent leur chrome propre
-ResetWorld()
-NS:StartEditMode()
-Check("résumé et stats portrait sans backdrop", NS.toastFrame.backdrop == nil and NS.portraitFrame.backdrop == nil)
-NS:StopEditMode()
 
 -- 4.63 Fermeture par Échap (UISpecialFrames)
 Say("\n== fermeture par Échap ==")
@@ -3040,29 +2599,6 @@ NS:ToggleOptions()
 NS:ToggleOptions()
 Check("pas de doublon après réouverture", #UISpecialFrames == 2, #UISpecialFrames)
 
--- 4.64 Le déplacement effectif des cadres (OnDragStart)
-Say("\n== déplacement effectif ==")
-ResetWorld()
-NS:StartEditMode()
-do
-	local bad = {}
-	for _, pair in ipairs({ { "résumé", NS.toastFrame }, { "stats portrait", NS.portraitFrame } }) do
-		local label, frame = pair[1], pair[2]
-		local dragStart, dragStop = frame:GetScript("OnDragStart"), frame:GetScript("OnDragStop")
-		if not (frame.mouseEnabled == true and frame.movable == true and type(dragStart) == "function"
-			and type(dragStop) == "function") then
-			bad[#bad + 1] = label .. " : pas déplaçable"
-		else
-			-- simuler le glissement : OnDragStart doit réellement démarrer le déplacement
-			dragStart(frame)
-			if frame.isMoving ~= true then bad[#bad + 1] = label .. " : ne démarre pas" end
-			dragStop(frame)
-			if frame.isMoving ~= false then bad[#bad + 1] = label .. " : ne s'arrête pas" end
-		end
-	end
-	Check("en édition, résumé et stats portrait se déplacent vraiment", #bad == 0, table.concat(bad, ", "))
-end
-NS:StopEditMode()
 
 do -- portée locale : Lua 5.1 limite le bloc principal à 200 locales
 -- 4.40 v1.18.0 : nouveaux checks et marchand
@@ -3425,13 +2961,6 @@ NS:DB().buffs[2000] = { name = "Buff mondial", duration = 7200, enabled = true, 
 NS:RunChecklist("manual")
 Check("[23] buff jamais revu depuis 8 jours : plus réclamé", Result("buffs").ok == true, Result("buffs").detail)
 
--- [11] puissance d'attaque = base + bonus (3 retours)
-ResetWorld()
-local savedAP = _G.UnitAttackPower
-_G.UnitAttackPower = function() return 100, 30, -5 end
-Check("[11] PA = base + posBuff + negBuff", NS:StatSnapshot().ap == 125, NS:StatSnapshot().ap)
-_G.UnitAttackPower = savedAP
-
 -- [12] spé sans GetSpecialization : onglet de talents le plus fourni
 ResetWorld()
 local savedSpec, savedSpecInfo = _G.GetSpecialization, _G.GetSpecializationInfo
@@ -3452,21 +2981,9 @@ Check("[12] onglets de talents : paladin Protection affiche l'Endurance d'abord"
 _G.GetSpecialization, _G.GetSpecializationInfo = savedSpec, savedSpecInfo
 _G.GetNumTalentTabs, _G.GetTalentTabInfo = nil, nil
 
--- [17] [18] [19] pourcentage, Esprit, ilvl de repli
 ResetWorld()
-local before = NS:StatSnapshot()
-Mock.world.stats = { 25, 14, 30, 12, 40 }
-local after = NS:StatSnapshot()
-local spiRow = false
-for _, row in ipairs(NS:DiffSnapshots(before, after)) do
-	if row.key == "spi" or row.label == "SPI" or tostring(row.label):find("Esprit") then spiRow = true end
-end
-Check("[18] un changement d'Esprit apparaît dans le résumé", spiRow)
-local savedAvg = _G.GetAverageItemLevel
-_G.GetAverageItemLevel = nil
 Mock.world.equipped = { [1] = "casque" }
 Mock.world.links = { casque = { name = "Casque", quality = 2, itemLevel = 33, equipLoc = "INVTYPE_HEAD" } }
-Check("[19] sans GetAverageItemLevel : ilvl calculé", NS:StatSnapshot().ilvl == 33, NS:StatSnapshot().ilvl)
 -- [20] Equip sans C_Item.GetItemInfo : repli global
 local savedCInfo = C_Item.GetItemInfo
 _G.GetItemInfo = function(link) return savedCInfo(link) end
@@ -3474,14 +2991,6 @@ C_Item.GetItemInfo = nil
 Check("[20] Equip : repli GetItemInfo global", NS.ItemData("casque") ~= nil and NS.ItemData("casque").itemLevel == 33)
 C_Item.GetItemInfo = savedCInfo
 _G.GetItemInfo = function(link) return _G.C_Item.GetItemInfo(link) end
-_G.GetAverageItemLevel = savedAvg
-NS:ShowPortraitStats()
-local percentOK = true
-for _, line in ipairs(NS.portraitFrame and NS.portraitFrame.lines or {}) do
-	if tostring(line.right and line.right.text):find("%%%%") then percentOK = false end
-end
-Check("[17] armure : « % » affiché une seule fois", percentOK)
-NS:HidePortraitStats()
 
 -- [21] [22] troncature UTF-8 et glyphes ASCII
 local cutText = NS.Truncate(string.rep("é", 30), 38)
@@ -3654,7 +3163,7 @@ Check("[ID] préfixe du chat ambre, « 2 » bleu", NS.L.TAG:find("|cffe8a54b", 1
 NS.optionsFrame = nil
 NS:ToggleOptions()
 local o = NS.optionsFrame
-Check("[ID] options : trois titres de groupe (départ, modules, QoL)", #o.navGroups == 3, #o.navGroups)
+Check("[ID] options du cœur : deux titres de groupe (départ, QoL ; les modules viennent avec leurs fichiers)", #o.navGroups == 2, #o.navGroups)
 local toggles, sliders = 0, 0
 for _, row in ipairs(o.rows) do
 	if row.toggle then toggles = toggles + 1 end
@@ -3667,30 +3176,12 @@ for id in pairs(o.pages) do
 	NS:SelectOptionsPage(id)
 	if o.header.subtitle.text ~= "" and not tostring(o.header.subtitle.text):find("_SUB") then subs = subs + 1 end
 end
-Check("[ID] chaque page a sa phrase d'explication", subs == pageCount and pageCount == 9, subs .. "/" .. pageCount)
+Check("[ID] chaque page a sa phrase d'explication", subs == pageCount and pageCount == 7, subs .. "/" .. pageCount)
 local displayRows = {}
 for _, row in ipairs(o.pages.general.rows) do if row.def then displayRows[row.def.key] = true end end
 Check("[AFF] Général réunit l'affichage", displayRows.showMinimap and displayRows.minimapPos and displayRows.showWindow
 	and displayRows.popupScore and o.pages.general.sectionHeaders and #o.pages.general.sectionHeaders == 2
 	and displayRows.qcAction)
--- bug signalé en jeu : cliquer sur « Stats du portrait » ou « Résumé de stuff »
--- ouvrait Général. Chaque module a maintenant sa page, qui explique ce qu'il fait.
-local pageBugs = {}
-for _, id in ipairs({ "toast", "portrait" }) do
-	local nav
-	for _, n in ipairs(o.navButtons) do if n.pageId == id then nav = n end end
-	nav:Click()
-	if not (o.currentPage == id and o.pages[id] and o.pages[id]:IsShown()) then pageBugs[#pageBugs + 1] = id .. " ouvre " .. tostring(o.currentPage) end
-	if not (o.pages[id].infoLines and #o.pages[id].infoLines == 3 and o.pages[id].infoLines[1].text ~= ""
-		and o.pages[id].infoLines[1].text ~= "OPT_" .. id:upper() .. "_INFO_1") then pageBugs[#pageBugs + 1] = id .. " sans explication" end
-	if not (o.pages[id].actionButtons and o.pages[id].actionButtons.editMode ~= nil) then pageBugs[#pageBugs + 1] = id .. " sans « Placer le cadre »" end
-end
-Check("[AFF] résumé et portrait : leur propre page, explication, bouton Placer le cadre", #pageBugs == 0, table.concat(pageBugs, ", "))
-NS:DB().showPortraitStats = false
-NS.portraitFrame = nil
-o.pages.portrait.actionButtons.portraitShow:Click()
-Check("[AFF] portrait : « Afficher maintenant » visible même module coupé", NS.portraitFrame and NS.portraitFrame:IsShown() == true)
-NS:DB().showPortraitStats = true
 local delayRow
 for _, row in ipairs(o.rows) do if row.def and row.def.key == "exitDelay" then delayRow = row end end
 NS:DB().exitDelay = 15
@@ -3723,8 +3214,8 @@ local powered = {}
 for _, nav in ipairs(NS.optionsFrame.navButtons) do if nav.powerKey then powered[#powered + 1] = nav.pageId end end
 for _, h in ipairs(NS.optionsFrame.navHeaders) do if h.powerKey then powered[#powered + 1] = h.pageId end end
 table.sort(powered)
-Check("[NAV] interrupteur sur les 3 modules seulement, visible là et absent ailleurs", table.concat(powered, ",") == "departure,portrait,toast"
-	and HeadOf("departure").power:IsShown() and NavOf("toast").power:IsShown()
+Check("[NAV] interrupteur sur le module de départ seulement, visible là et absent ailleurs", table.concat(powered, ",") == "departure"
+	and HeadOf("departure").power:IsShown()
 	and not NavOf("general").power:IsShown() and not HeadOf("qol").power:IsShown() and not NavOf("trigger").power:IsShown(),
 	table.concat(powered, ","))
 local withTabs = {}
@@ -3744,12 +3235,6 @@ Check("[NAV] clic : check avant le départ coupé, libellé grisé, on reste sur
 	and NS.optionsFrame.currentPage == "general")
 dep.power:Click()
 Check("[NAV] second clic : rallumé", NS:DB().departureEnabled == true)
-NavOf("portrait").power:Click()
-local portraitOff = NS:DB().showPortraitStats == false
-NavOf("portrait").power:Click()
-NavOf("toast").power:Click()
-Check("[NAV] interrupteurs : stats du portrait et résumé de stuff coupés", portraitOff and NS:DB().showGearToast == false)
-NavOf("toast").power:Click()
 -- le QoL ne dépend pas du module de départ
 NS:DB().departureEnabled = false
 Check("[NAV] QoL indépendant : vente auto toujours active", NS:DB().autoSellGray ~= false)

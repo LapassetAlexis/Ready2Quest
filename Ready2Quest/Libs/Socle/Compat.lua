@@ -509,7 +509,7 @@ function ns:DetectCapabilities()
 	--   spellbookModern : livre de sorts C_SpellBook (sinon boucle historique, SpellRanks.lua)
 	--   unitAuraLegacy  : UnitAura global (repli de lecture des auras par index)
 	--   itemInfoGlobal  : GetItemInfo global (repli quand C_Item.GetItemInfo manque)
-	--   specialization  : GetSpecialization (sinon onglet de talents le plus fourni, Stats.lua)
+	--   specialization  : GetSpecialization (sinon onglet de talents le plus fourni, SpecStats.lua de R2Q)
 	local spellBook = rawget(_G, "C_SpellBook")
 	-- exactement ce dont a besoin la branche récente de SpellRanks.lua
 	local enum = rawget(_G, "Enum")

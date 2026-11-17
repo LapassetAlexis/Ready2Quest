@@ -49,7 +49,7 @@ local function Layout(root) return Snap.Layout(root) end
 do
 	Say("-- Ready2Quest : chaque fenêtre, sans chevauchement")
 	local scenes = { "r2q-check", "r2q-dungeon", "r2q-expedition", "r2q-death", "r2q-lootroom", "r2q-spellranks",
-		"r2q-bagspace", "r2q-camp", "r2q-portrait", "r2q-gear-toast", "r2q-settings-canvas" }
+		"r2q-bagspace", "r2q-camp", "r2q-settings-canvas" }
 	local built, overlapping, outsiders, labels = {}, {}, {}, {}
 	for _, name in ipairs(scenes) do
 		local frame, restore = SceneR2Q(name)

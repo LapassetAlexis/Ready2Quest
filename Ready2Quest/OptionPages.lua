@@ -16,8 +16,8 @@ end
 -- Pages. `modules` = interrupteurs de checks (ns.checks), `rows` = réglages,
 -- `list` = liste défilante (zones sûres, buffs suivis), `buttons` = actions.
 -- ---------------------------------------------------------------------------
--- v1.22.0 : l'addon a TROIS modules (Check avant le départ, Résumé de stuff,
--- Stats du portrait) et une section QoL. Les 13 « checks » ne sont pas des
+-- v1.22.0 : l'addon a un module (Check avant le départ ; Résumé de stuff et
+-- Stats du portrait retirés en 1.37.0) et une section QoL. Les 13 « checks » ne sont pas des
 -- modules : ce sont les contrôles du Check avant le départ, réglés dans ses
 -- sous-pages. Un module a son interrupteur dans la navigation (`power` = clé
 -- de réglage) ; une sous-page porte `parent`.
@@ -90,14 +90,6 @@ local R2Q_PAGES = {
 				choose = function(value) ns:BuffSetRole(value) end },
 		},
 	},
-	-- pas de page propre : leur réglage est l'interrupteur, et leur placement
-	-- est dans Général > Affichage
-	-- sans réglage propre, mais avec une vraie page : cliquer sur un module doit
-	-- montrer ce qu'il fait (il renvoyait sur Général, c'était déroutant)
-	{ id = "toast", title = "OPT_PAGE_TOAST", group = "OPT_GROUP_MODULES", power = "showGearToast",
-		info = { "OPT_TOAST_INFO_1", "OPT_TOAST_INFO_2", "OPT_TOAST_INFO_3" }, actions = { "toastPreview", "editMode" } },
-	{ id = "portrait", title = "OPT_PAGE_PORTRAIT", group = "OPT_GROUP_MODULES", power = "showPortraitStats",
-		info = { "OPT_PORTRAIT_INFO_1", "OPT_PORTRAIT_INFO_2", "OPT_PORTRAIT_INFO_3" }, actions = { "portraitShow", "editMode" } },
 	-- QOL -------------------------------------------------------------------
 	-- QOL : une entrée parente, comme le Check avant le départ ; chaque confort
 	-- est une sous-page (Marchand, puis ceux qu'ajoutent les modules QoL)
@@ -302,16 +294,6 @@ ns.OPTION_ACTIONS.resetPos = function(self)
 	self:HandleCommand("resetpos")
 	self:RefreshOptions()
 end
-ns.OPTION_ACTIONS.toastPreview = function(self)
-	if self.SimulateGearToast then self:SimulateGearToast() end
-end
-ns.OPTION_ACTIONS.portraitShow = function(self)
-	if not self.ShowPortraitStats then return end
-	-- aperçu immédiat, même si le module est coupé (forceStats)
-	self.forceStats = true
-	self:ShowPortraitStats()
-	self.forceStats = nil
-end
 
 -- Aperçu de la page « Check avant le départ » : la note du dernier check (ou
 -- une note d'exemple), sa barre et son verdict, aux couleurs de la fenêtre
@@ -352,7 +334,6 @@ end
 
 -- Module coupé : on range ce qui est à l'écran ou en attente
 function ns:OnModuleToggled(key, enabled)
-	if key == "showPortraitStats" and enabled == false and self.HidePortraitStats then self:HidePortraitStats() end
 	if key == "departureEnabled" and enabled == false then self.pendingExit = nil end
 end
 

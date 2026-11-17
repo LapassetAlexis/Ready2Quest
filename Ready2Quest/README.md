@@ -10,7 +10,7 @@ For **World of Warcraft Forever**. Interface in English and French.
 
 ## What the addon does
 
-Ready2Quest brings together **six modules** and a bit of **quality of life** (QoL). Each one can be turned on or off with a click.
+Ready2Quest brings together **four modules** and a bit of **quality of life** (QoL). Each one can be turned on or off with a click.
 
 | | Module | In one sentence |
 |---|---|---|
@@ -18,8 +18,6 @@ Ready2Quest brings together **six modules** and a bit of **quality of life** (Qo
 | ◆ | **Expedition report** | When you come back, a summary of your trip: XP, gold, loot, deaths, durability loss, quests to turn in |
 | ◆ | **Before the dungeon** | At a dungeon entrance, its sheet: recommended level, your quests for that dungeon, your preparation and, in a group, who is there and ready |
 | ◆ | **Camp kit** *(Forever)* | Your campfire kit and camp object ready, and the countdown to the camp buffs |
-| ◆ | **Gear summary** | When you change an item, a short-lived summary of the stats you gain or lose |
-| ◆ | **Portrait stats** | When you hover your portrait, your main stats, picked for your class and spec |
 | ✦ | **The right reward** | When you turn in a quest, the reward that helps you most is highlighted |
 | ✦ | **Leveling pace** | XP per hour, time to the next level, rested XP you'd earn by logging out |
 | ✦ | **Full bags** | Bags full out in the wild: the item that costs you the least to throw away, in one click |
@@ -121,16 +119,6 @@ Camping on Forever makes the camp a real place to get ready. Ready2Quest helps y
 - **when you leave camp**, a reminder of the time left: "Camp buffs: 42 min left."
 
 
-## Gear summary
-
-When you equip a new piece, a small frame shows up for a few seconds with what changes: Strength, Agility, Stamina, Intellect, Spirit, armor, damage, DPS, speed, attack power, crit. An arrow shows the direction, and the color tells you whether it's better or worse. Then it fades away on its own.
-
-To see what it looks like and where it shows up without changing gear: settings, **Gear summary** page, **Simulate a change** button. Each click alternates a gain and a loss on your class's main stat.
-
-## Portrait stats
-
-Hover your portrait: a frame shows your main stats, **only the ones that matter for your class and spec** (no Spirit for a warrior). A feral druid sees other stats in bear form. It works with replacement unit frames too (EllesmereUI, ElvUI, Shadowed Unit Frames, oUF…): the frame shows up above whichever portrait you hover.
-
 ## Aggro range
 
 By default (**Danger only**, since 1.31.0) the **red** mark shows on its own, without any key, as soon as a monster is about to aggro you (from 5 yards before its estimated range); enemy nameplates must be on (V). Hold **Shift** to see everything (or pick Shift, Ctrl, Alt or "always" in the settings) out of combat: each hostile monster's nameplate gets a **mark** — by default a small diamond left of the bar (or a line under it: **Mark** setting) — red if you're inside its estimated aggro radius, amber if you're close to it, green if you're safe — and hovering it adds a tooltip line such as "Aggro ~17 yd · you are 20-25 yd away · out of range". The radius is an estimate (20 yd at equal level, ±1 yd per level of difference, 5 to 45 yd); the distance is a range band measured by the game. Addons can't draw on the ground, hence the mark on the nameplate. Settings: **Quality of life → Aggro range**.
@@ -216,7 +204,7 @@ Both are on by default and can be turned off in the settings. They work even if 
 `/r2q options`, or right-click the minimap button.
 
 - **General**: turn the addon on, and everything about display (minimap button, window or chat, reports announced by an icon, the score below which a report is announced, placement of the frames and the icon), and the **Interface style**: Azeroth, the forged theme (gilded frame, logo medallion, raised buttons; the default), or Plain, the earlier flat look (`/r2q style azeroth|sobre`; windows already open change at the next `/reload`).
-- **Modules**: each module has its own switch right in the list on the left, and its own page explaining what it does. The Departure check has sub-pages: Trigger, Safe areas, Bags & food, Gear & character, Buffs & crafting. Gear summary and Portrait stats have no settings, but their page offers "Place the frame" (and "Show now" for the portrait).
+- **Modules**: each module has its own switch right in the list on the left, and its own page explaining what it does. The Departure check has sub-pages: Trigger, Safe areas, Bags & food, Gear & character, Buffs & crafting.
 - **QoL**: Quality of life, with its sub-pages Merchant, The right reward, Leveling pace, Full bags and After death. A module's sub-pages only show when it's expanded.
 
 ## Commands
@@ -227,12 +215,11 @@ Both are on by default and can be turned off in the settings. They work even if 
 |---|---|
 | `/r2q` | runs the check now |
 | `/r2q options` | opens the settings |
-| `/r2q stats` | shows your main stats |
 | `/r2q move` | place the frames with the mouse |
 | `/r2q safe` · `unsafe` | adds or removes the current village |
 | `/r2q safe list` | lists learned places |
 | `/r2q modules` | module status |
-| `/r2q module depart off` | turns a module off (`depart`, `expedition`, `dungeon`, `camp`, `stuff`, `portrait`…) |
+| `/r2q module depart off` | turns a module off (`depart`, `expedition`, `dungeon`, `camp`…) |
 | `/r2q checks` · `check vivres off` | the departure check controls |
 | `/r2q xp` | your leveling pace |
 | `/r2q jeter` | what to throw away when your bags are full |
@@ -308,7 +295,7 @@ Pour **World of Warcraft Forever**. Interface en français et en anglais.
 
 ## Ce que fait l'addon
 
-Ready2Quest réunit **six modules** et un peu de **confort** (QoL). Chacun s'active ou se coupe d'un clic.
+Ready2Quest réunit **quatre modules** et un peu de **confort** (QoL). Chacun s'active ou se coupe d'un clic.
 
 | | Module | En une phrase |
 |---|---|---|
@@ -316,8 +303,6 @@ Ready2Quest réunit **six modules** et un peu de **confort** (QoL). Chacun s'act
 | ◆ | **Retour d'expédition** | Quand tu rentres, le bilan de ta sortie : XP, or, butin, morts, usure, quêtes à rendre |
 | ◆ | **Avant le donjon** | À l'entrée d'un donjon, sa fiche : niveau conseillé, tes quêtes pour ce donjon, ta préparation et, en groupe, qui est là et prêt |
 | ◆ | **Kit de camp** *(Forever)* | Ton kit de feu de camp et ton objet de camp prêts, le compte à rebours des buffs au camp |
-| ◆ | **Résumé de stuff** | Quand tu changes d'objet, un petit résumé éphémère des stats gagnées ou perdues |
-| ◆ | **Stats du portrait** | Au survol de ton portrait, tes stats principales, choisies selon ta classe et ta spécialisation |
 | ✦ | **La bonne récompense** | Au rendu d'une quête, la récompense qui te sert le plus est mise en avant |
 | ✦ | **Rythme de leveling** | XP par heure, temps avant le prochain niveau, repos à gagner en te déconnectant |
 | ✦ | **Sac plein** | Sac plein en pleine nature : l'objet que tu perds le moins à jeter, en un clic |
@@ -419,16 +404,6 @@ Le camping de Forever en fait un vrai lieu de préparation. Ready2Quest t'aide �
 - **en quittant le camp**, un rappel du temps restant : « Buffs du camp : encore 42 min ».
 
 
-## Résumé de stuff
-
-Quand tu équipes une nouvelle pièce, un petit cadre apparaît quelques secondes et montre ce qui change : Force, Agilité, Endurance, Intelligence, Esprit, armure, dégâts, DPS, vitesse, puissance d'attaque, critique. Une flèche indique le sens, la couleur dit si c'est mieux ou moins bien. Puis il s'efface tout seul.
-
-Pour voir à quoi il ressemble et où il apparaît sans changer d'équipement : réglages, page **Résumé de stuff**, bouton **Simuler un changement**. Chaque clic alterne un gain et une perte sur la stat principale de ta classe.
-
-## Stats du portrait
-
-Survole ton portrait : un cadre affiche tes stats principales, **seulement celles qui comptent pour ta classe et ta spécialisation** (pas d'Esprit pour un guerrier). Un druide farouche voit d'autres stats en forme d'ours. Ça marche aussi avec les cadres d'unité de remplacement (EllesmereUI, ElvUI, Shadowed Unit Frames, oUF…) : le cadre s'affiche au-dessus du portrait survolé.
-
 ## Portée d'aggro
 
 Par défaut (**Danger seul**, depuis la 1.31.0), la marque **rouge** s'affiche seule, sans toucher au clavier, dès qu'un monstre est sur le point de t'aggro (5 m avant sa portée estimée) ; les barres de nom ennemies doivent être affichées (touche V). Maintiens **Maj** pour tout voir (ou choisis Maj, Ctrl, Alt ou « toujours » dans les réglages) hors combat : la barre de nom de chaque monstre hostile reçoit une **marque** — par défaut un petit losange à gauche de la barre (ou un trait dessous : réglage **Marque**) — rouge si tu es dans son rayon d'aggro estimé, ambre si tu en es proche, vert si tu es tranquille — et son survol ajoute une ligne à l'infobulle, par exemple « Aggro ~17 m · tu es à 20-25 m · hors de portée ». Le rayon est une estimation (20 m à niveau égal, ±1 m par niveau d'écart, de 5 à 45 m) ; la distance est une tranche de portée mesurée par le jeu. Les addons ne peuvent pas dessiner au sol, d'où la marque sur la barre de nom. Réglages : **Confort de jeu → Portée d'aggro**.
@@ -514,7 +489,7 @@ Les deux sont actifs par défaut et se coupent dans les réglages. Ils fonctionn
 `/r2q options`, ou un clic droit sur le bouton de la minicarte.
 
 - **Général** : activer l'addon, et tout ce qui touche à l'affichage (bouton de minicarte, fenêtre ou chat, rapports annoncés par une icône, note sous laquelle un rapport s'annonce, placement des cadres et de l'icône), et le **Style de l'interface** : Azeroth, le thème forgé (cadre d'orfèvre doré, médaillon du logo, boutons en relief ; par défaut), ou Sobre, l'aspect d'avant, à plat (`/r2q style azeroth|sobre` ; une fenêtre déjà ouverte change au `/reload` suivant).
-- **Modules** : chaque module a son interrupteur directement dans la liste de gauche, et sa page qui explique ce qu'il fait. Le Check avant le départ a ses sous-pages : Déclenchement, Zones sûres, Sacs & vivres, Équipement & perso, Buffs & métier. Résumé de stuff et Stats du portrait n'ont pas de réglage, mais leur page propose « Placer le cadre » (et « Afficher maintenant » pour le portrait).
+- **Modules** : chaque module a son interrupteur directement dans la liste de gauche, et sa page qui explique ce qu'il fait. Le Check avant le départ a ses sous-pages : Déclenchement, Zones sûres, Sacs & vivres, Équipement & perso, Buffs & métier.
 - **QoL** : Confort de jeu, avec ses sous-pages Marchand, La bonne récompense, Rythme de leveling, Sac plein et Après la mort. Les sous-pages d'un module ne s'affichent que quand il est ouvert.
 
 ## Commandes
@@ -525,12 +500,11 @@ Les deux sont actifs par défaut et se coupent dans les réglages. Ils fonctionn
 |---|---|
 | `/r2q` | lance le check maintenant |
 | `/r2q options` | ouvre les réglages |
-| `/r2q stats` | affiche tes stats principales |
 | `/r2q move` | place les cadres à la souris |
 | `/r2q safe` · `unsafe` | ajoute ou retire le village actuel |
 | `/r2q safe list` | liste les lieux appris |
 | `/r2q modules` | état des modules |
-| `/r2q module depart off` | coupe un module (`depart`, `expedition`, `dungeon`, `camp`, `stuff`, `portrait`…) |
+| `/r2q module depart off` | coupe un module (`depart`, `expedition`, `dungeon`, `camp`…) |
 | `/r2q checks` · `check vivres off` | les contrôles du check avant le départ |
 | `/r2q xp` | ton rythme de leveling |
 | `/r2q jeter` | quoi jeter quand le sac est plein |

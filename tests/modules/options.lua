@@ -55,7 +55,7 @@ do
 	T.ResetWorld()
 	local frame = Open(NS, "general")
 	Want("R2Q : groupes et entrées dans l'ordre des pages", NavOrder(NS) == "general,[CHECK AVANT LE DÉPART],trigger,safe,bags,gear,buffs,"
-		.. "[MODULES],toast,portrait,camp,expedition,dungeon,[CONFORT DE JEU],merchant,reward,pace,bagspace,lootroom,spellranks,death,aggro",
+		.. "[MODULES],camp,expedition,dungeon,[CONFORT DE JEU],merchant,reward,pace,bagspace,lootroom,spellranks,death,aggro",
 		NavOrder(NS))
 	local qol = Header(NS, "qol")
 	Want("page à sous-pages : titre de groupe en capitales ambre", qol and qol.label.text == "CONFORT DE JEU"
@@ -292,7 +292,7 @@ do
 		Want("défilement : la carte du bas se règle", NS:DB().optTest30 == false)
 		for _ = 1, 40 do NS:ScrollOptions(1) end
 		Want("molette : bornée en haut", page.offset == 0 and Shown("optTest1"))
-		NS:SelectOptionsPage("toast")
+		NS:SelectOptionsPage("merchant")
 		Want("page courte : pas d'ascenseur", not frame.scrollThumb:IsShown())
 		Verdict("défilement : ascenseur, molette bornée, rien de coupé, la carte du bas se règle, pas d'ascenseur sur page courte")
 		frame:Hide()

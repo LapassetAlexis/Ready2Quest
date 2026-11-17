@@ -1,5 +1,12 @@
 # Journal des modifications
 
+## 1.37.0 — Deux modules retirés
+
+- **Résumé de stuff et Stats du portrait retirés** : le petit cadre qui montrait les stats gagnées ou perdues en changeant d'objet, et le panneau de stats au survol du portrait, disparaissent, avec leurs pages de réglages et leurs commandes (`/r2q stuff`, `/r2q stats`, `/r2q toast`, `/r2q portrait`). Ils servaient peu ; Ready2Quest n'écoute plus les changements d'équipement ni les stats du joueur. Leurs anciens réglages sont effacés de la sauvegarde.
+- **Ce qui reste** : la bonne récompense de quête garde ses priorités par classe et par spé. « Déplacer les cadres » place désormais l'icône d'annonce, et `/r2q resetpos` la remet à sa place.
+
+*English:* Gear summary and Portrait stats are removed: the small frame showing stats gained or lost when you swap an item, and the stats panel on portrait hover, are gone, along with their settings pages and commands (`/r2q stuff`, `/r2q stats`, `/r2q toast`, `/r2q portrait`). They were little used; Ready2Quest no longer listens to gear changes or player stats. Their old settings are cleared from your saved data. What stays: the best quest reward keeps its per-class and per-spec priorities. "Move the frames" now places the notice icon, and `/r2q resetpos` puts it back in place.
+
 ## 1.36.0 — Portée d'aggro plus juste, en paliers
 
 - **Portée d'aggro : des paliers sous la barre de nom**, à la place du trait. Six rectangles fins, deux rouges, trois ambre, un vert, d'autant plus allumés que tu es loin de la portée du monstre, avec la distance dessous (« ~17 m », ou la fourchette « 15-20 m »). C'est le nouveau style par défaut, pour tout le monde ; la pastille reste au choix (Options › Portée d'aggro › Marque).

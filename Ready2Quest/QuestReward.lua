@@ -7,14 +7,13 @@
 -- Chaque choix reçoit aussi, dans son infobulle, l'écart avec l'objet porté.
 --
 -- Le module ne s'appuie que sur l'API d'extension et sur ce qu'exposent déjà
--- Stats.lua (SPEC_STATS, SpecIndex, IsBearForm, FERAL_TANK_ORDER) et Equip.lua
+-- SpecStats.lua (SPEC_STATS, SpecIndex, IsBearForm, FERAL_TANK_ORDER) et Equip.lua
 -- (ItemLinkForSlot). Il ne modifie aucun fichier commun.
 --
 -- Notation, et pourquoi celle-ci :
---   * les attributs comptent selon la priorité de la spé (SPEC_STATS, même
---     source que le panneau du portrait) : le premier pèse 1, puis 0,6, 0,4…
+--   * les attributs comptent selon la priorité de la spé (SPEC_STATS) : le premier pèse 1, puis 0,6, 0,4…
 --     Un attribut absent de la liste ne vaut rien (l'Esprit d'un guerrier).
---     Une seule source de vérité : changer une priorité dans Stats.lua change
+--     Une seule source de vérité : changer une priorité dans SpecStats.lua change
 --     aussi le conseil ici ;
 --   * un objet que la classe porte mal (plaques pour un mage, bouclier pour
 --     un voleur, arme non maîtrisée) vaut 0 : le conseiller serait pire que
@@ -133,10 +132,9 @@ local function PlayerLevel()
 end
 
 -- ---------------------------------------------------------------------------
--- Priorité des attributs : même choix que le panneau du portrait
+-- Priorité des attributs, par classe et par spé (SpecStats.lua)
 -- ---------------------------------------------------------------------------
--- Reprend la logique de StatsForPlayer (Stats.lua, locale) à partir de ce que
--- ce fichier expose déjà, plutôt que d'ouvrir une fonction de plus là-bas.
+-- Le druide Farouche en ours passe l'Endurance devant (FERAL_TANK_ORDER).
 local FALLBACK_ORDER = { "STR", "AGI", "INT", "SPI", "STA" }
 
 function ns.RewardStatPriority()

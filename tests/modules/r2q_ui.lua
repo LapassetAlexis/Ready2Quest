@@ -28,11 +28,11 @@ end
 function R.Reset()
 	ResetWorld()
 	NS:DB().popupScore = 100          -- toujours un rapport, quelle que soit la note
-	for _, field in ipairs({ "window", "expeditionFrame", "dungeonFrame", "bagspaceFrame", "toastFrame", "spellRanksFrame" }) do
+	for _, field in ipairs({ "window", "expeditionFrame", "dungeonFrame", "bagspaceFrame", "spellRanksFrame" }) do
 		if NS[field] then NS[field]:Hide() end
 	end
 	NS:HideNotice()
-	NS.combatHidden, NS.reportsAfterCombat, NS.spellRanksQueued, NS.toastPreview = nil, nil, nil, nil
+	NS.combatHidden, NS.reportsAfterCombat, NS.spellRanksQueued = nil, nil, nil
 	Mock.world.combat = nil
 	Mock.world.money = 1000
 	Mock.world.durability = { [1] = { 100, 100 } }
@@ -140,21 +140,7 @@ do
 	s.ok("Sac plein : une place libérée entre-temps, il ne revient pas", not R.Shown(frame))
 	for key, fn in pairs(saved) do NS[key] = fn end
 
-	-- résumé de stuff : effacé au premier coup ; pas de nouveau en combat ; l'aperçu reste
-	local rows = { { label = "STR", kind = "integer", polarity = true, delta = 8 } }
-	NS:ShowGearToast(rows, "Interface\\Icons\\INV_Chest_Chain_05")
-	local toast = NS.toastFrame
-	s.ok("résumé : affiché hors combat", R.Shown(toast))
-	R.CombatStart()
-	s.ok("résumé : effacé au premier coup", not R.Shown(toast))
-	NS:ShowGearToast(rows, "Interface\\Icons\\INV_Chest_Chain_05")
-	s.ok("résumé : pas de nouveau en combat", not R.Shown(toast))
-	NS:ShowGearToast(rows, "Interface\\Icons\\INV_Chest_Chain_05", true)
-	s.ok("résumé : l'aperçu des réglages s'affiche quand même", R.Shown(toast))
-	R.CombatEnd()
-	toast:Hide()
-	NS.toastPreview = nil
-	s.check("[R2QUI] combat : bandeau Sac plein rangé puis rendu (si toujours plein), résumé de stuff effacé ; Échap ferme Sac plein")
+	s.check("[R2QUI] combat : bandeau Sac plein rangé puis rendu (si toujours plein) ; Échap ferme Sac plein")
 end
 
 -- 4. Lignes du check : le clic fait le geste du conseil ; voile seulement sur une ligne qui répond ----
@@ -297,7 +283,7 @@ do
 	Say("-- 1.35.0 : infobulles, contrastes")
 	local s = R.Steps()
 	local raw = {}
-	for _, file in ipairs({ "UI.lua", "Notice.lua", "Stats.lua", "Camp.lua", "Expedition.lua", "LootRoom.lua", "BagSpace.lua",
+	for _, file in ipairs({ "UI.lua", "Notice.lua", "Camp.lua", "Expedition.lua", "LootRoom.lua", "BagSpace.lua",
 		"Favorites.lua", "Death.lua", "LevelPace.lua", "QuestReward.lua", "SpellRanks.lua", "Aggro.lua", "Merchant.lua",
 		"OptionPages.lua", "Core.lua" }) do
 		local h = io.open(ROOT .. "/Ready2Quest/" .. file, "r")

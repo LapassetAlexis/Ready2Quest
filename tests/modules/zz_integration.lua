@@ -56,7 +56,7 @@ for _, module in ipairs(NS.MODULES) do
 	seen[module.id] = true
 end
 Check("[INT] identifiants de module uniques", #dup == 0, table.concat(dup, ","))
-Check("[INT] les modules sont déclarés", seen.depart and seen.stuff and seen.portrait and seen.camp and seen.expedition and seen.dungeon
+Check("[INT] les modules sont déclarés", seen.depart and not seen.stuff and not seen.portrait and seen.camp and seen.expedition and seen.dungeon
 	and seen.reward and seen.pace and seen.bagspace and seen.death
 	and not seen.companion and not seen.journal,     -- compagnon et carnet : QuestCompanion (v1.26.0)
 	(function() local t = {} for id in pairs(seen) do t[#t + 1] = id end table.sort(t) return table.concat(t, ",") end)())
@@ -104,36 +104,6 @@ do
 	Check("[INT] ornements verrouillés : un verrou à la place de l'interrupteur", #wrong == 0, table.concat(wrong, ","))
 end
 
--- Résumé de stuff : « Simuler un changement » montre un vrai cadre, au-dessus
--- du panneau de réglages, avec les stats de la classe et un gain + une perte
-do
-	ResetWorld()
-	NS.optionsFrame = nil
-	NS.toastFrame = nil
-	NS:ToggleOptions()
-	NS:SelectOptionsPage("toast")
-	local page = NS.optionsFrame.pages.toast
-	NS:DB().showGearToast = false            -- même module coupé, l'aperçu s'affiche
-	page.actionButtons.toastPreview:Click()
-	local toast = NS.toastFrame
-	Check("[INT] « Simuler un changement » : le cadre s'affiche au-dessus des réglages, le panneau reste ouvert",
-		toast and toast:IsShown() == true and toast.strata == "FULLSCREEN_DIALOG" and NS.optionsFrame:IsShown() == true,
-		toast and toast.strata)
-	-- une seule ligne s'affiche : la stat principale de la classe, qui alterne
-	-- gain (1er clic) et perte (2e clic) pour voir les deux flèches
-	local first = NS:SimulateGearToast()
-	local second = NS:SimulateGearToast()
-	Check("[INT] simulation : stat principale de la classe (guerrier du harnais), un clic gain, le suivant perte",
-		first[1].label == "STR" and second[1].label == "STR" and (first[1].delta > 0) ~= (second[1].delta > 0),
-		first[1].label .. " " .. first[1].delta .. " / " .. second[1].delta)
-	-- l'aperçu s'efface tout seul et rend sa couche normale au cadre
-	T.Mock:Advance(30)
-	local gone = toast:IsShown() == false and toast.strata == "HIGH"
-	NS:DB().showGearToast = true
-	NS:ShowGearToast({ { label = "STR", kind = "integer", polarity = true, delta = 2 } })
-	Check("[INT] simulation : s'efface toute seule, couche normale rendue ; vrai changement en couche normale", gone
-		and toast.strata == "HIGH", toast.strata)
-end
 
 -- Compagnon ↔ suivi du carnet : chaque agent a testé contre une doublure de
 -- l'autre. Ici, les deux vraies fonctions ensemble.

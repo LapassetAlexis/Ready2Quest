@@ -694,7 +694,6 @@ P.TIP = {
 	{ "Astuce : relis l'objectif, un objet de quête tombe parfois d'un seul type d'ennemi.", "Tip: reread objectives, quest items sometimes drop from one enemy type." },
 	{ "Astuce : un métier de récolte rapporte de l'or en chemin.", "Tip: a gathering profession earns gold along the way." },
 	{ "Astuce : rends tes quêtes avant de partir, le check te le rappelle.", "Tip: turn in quests before leaving, the check reminds you." },
-	{ "Astuce : le résumé de stuff montre ce que t'apporte un nouvel objet.", "Tip: the gear summary shows what a new item gives you." },
 	{ "Astuce : flèches, balles ou réactifs ? Fais le plein avant de partir.", "Tip: arrows, bullets or reagents? Stock up before leaving." },
 	{ "Astuce : l'auberge et la ville me redonnent de l'énergie.", "Tip: inns and towns restore my energy." },
 	{ "Astuce : je ne t'en veux jamais. Absent ? Je somnole et je t'attends.", "Tip: I never hold a grudge. Away? I just doze and wait." },

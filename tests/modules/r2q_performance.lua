@@ -4,7 +4,7 @@
 --     plus abonné ; chaque chemin de retour est joué (réglage, commande,
 --     sortie de combat, /reload en combat, filet) ;
 --   * chemins fréquents sans table ni chaîne refaite (marques d'aggro, liserés
---     des rangs de sorts, messages d'erreur, zone sûre, sonde du portrait), et
+--     des rangs de sorts, messages d'erreur, zone sûre), et
 --     chaque raccourci rend ce que rendait l'ancien chemin.
 local Check, Say, ResetWorld, NS, Mock = T.Check, T.Say, T.ResetWorld, T.NS, T.Mock
 
@@ -259,16 +259,6 @@ do
 	Want("récompense refermée : désabonnés", not P.On(reward, "GET_ITEM_INFO_RECEIVED"))
 	Verdict("[R2Q PERF] récompense de quête : objets reçus écoutés pendant l'écran de récompense seulement")
 
-	local stats = NS.statsEventFrame
-	Want("pas de série d'équipement : UNIT_STATS coupé", not P.On(stats, "UNIT_STATS")
-		and not P.On(stats, "PLAYER_AVG_ITEM_LEVEL_UPDATE"))
-	Mock:Fire("PLAYER_EQUIPMENT_CHANGED", 5)
-	Want("pièce changée : UNIT_STATS du joueur seulement", NS.gearPending ~= nil and P.On(stats, "UNIT_STATS")
-		and stats.unitFilter and stats.unitFilter.UNIT_STATS and stats.unitFilter.UNIT_STATS.player == true)
-	NS.gearPending = nil
-	Mock:Fire("UNIT_STATS", "player")
-	Want("série close : rendu au premier UNIT_STATS", not P.On(stats, "UNIT_STATS"))
-	Verdict("[R2Q PERF] résumé de stuff : UNIT_STATS pendant une série de changements seulement")
 
 	-- sacs : seulement fenêtre ouverte (Sac plein, Place au butin)
 	local bag, loot = NS.bagspaceEventFrame, NS.lootRoomEventFrame
@@ -451,12 +441,6 @@ do
 	NS.LiveSafeSignals = listed
 	Verdict("[R2Q PERF] zone sûre : premier signal vivant sans table, même réponse")
 
-	-- 5.5 sonde du portrait : champ .unit lu sans fermeture neuve
-	local plain = { unit = "player" }
-	Want("champ .unit lu", NS.PortraitFrameUnit(plain) == "player" and NS.PortraitFrameUnit({}) == nil)
-	kb = P.Kb(1000, function() NS.PortraitFrameUnit(plain) end)
-	Want("1 000 lectures : rien d'alloué", kb < 1, string.format("%.2f Ko", kb))
-	Verdict("[R2Q PERF] sonde du portrait : unité lue sans fermeture par cadre")
 end
 
 -- Restauration ---------------------------------------------------------------------------------------------
