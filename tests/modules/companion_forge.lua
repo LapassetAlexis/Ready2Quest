@@ -662,3 +662,28 @@ do
 end
 
 Done()
+
+
+-- 3.2.0 : paillettes de l'étincelle (brillante) : elles montent et s'effacent
+-- même si le placement du modèle échoue (elles restaient en ligne, figées)
+do
+	Say("-- médaillon forgé : paillettes jamais figées")
+	local frame = Fresh("azeroth", true)
+	frame:Show()
+	local savedIntensity = NS.CompanionFxIntensity
+	NS.CompanionFxIntensity = function() error("mouvement refusé") end
+	local now = (NS.Now and NS.Now()) or 0
+	NS:CompanionFx("sparkle")
+	NS:CompanionFx("bounce")
+	local state = NS.companionFx
+	local p = state.particles[1]
+	local y0 = p.region.lastPoint.y
+	local ok1 = pcall(NS.CompanionFxUpdate, NS, now + 0.7)
+	local risen, faded = p.region.lastPoint.y > y0, (p.region.alpha or 1) < 1
+	pcall(NS.CompanionFxUpdate, NS, now + 2)
+	local gone = #state.particles == 0 and not p.region:IsShown()
+	NS.CompanionFxIntensity = savedIntensity
+	Check("[FCOMP] paillettes : montent, s'effacent et disparaissent même si le mouvement du modèle échoue",
+		not ok1 and risen and faded and gone, tostring(y0) .. " -> " .. tostring(p.region.lastPoint.y))
+	Done()
+end

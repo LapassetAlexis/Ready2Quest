@@ -140,12 +140,11 @@ function ns:CompanionFx(kind)
 	return true
 end
 
--- Une image : mouvements, particules, fins d'effet, flottement heureux
-function ns:CompanionFxUpdate(now)
-	local frame = self.companionFrame
-	if not frame then return end
-	now = now or Clock()
-	local state = State(self)
+-- Une image : particules et fins d'effet d'abord, puis mouvements et
+-- flottement heureux. 3.2.0 : le mouvement (placement du modèle, humeur,
+-- caractère) est isolé : une erreur là ne fige plus les paillettes en ligne
+-- au milieu du médaillon (elles ne montaient plus, ne s'effaçaient plus)
+local function Motion(self, frame, state, now)
 	local dx, dy = 0, 0
 	local motion = state.motion
 	if motion then
@@ -163,6 +162,13 @@ function ns:CompanionFxUpdate(now)
 	-- son caractère : effets plus ou moins amples (Personality.lua)
 	local scale = self.CompanionFxIntensity and self:CompanionFxIntensity() or 1
 	Offset(frame, dx * scale, dy * scale)
+end
+
+function ns:CompanionFxUpdate(now)
+	local frame = self.companionFrame
+	if not frame then return end
+	now = now or Clock()
+	local state = State(self)
 	-- particules : montent et s'effacent (tassées sur place : pas de table
 	-- neuve à chaque image)
 	local particles = state.particles
@@ -185,6 +191,11 @@ function ns:CompanionFxUpdate(now)
 	if frame.alert and state.alertUntil and now >= state.alertUntil then
 		frame.alert:Hide()
 		state.alertUntil = nil
+	end
+	local ok, err = pcall(Motion, self, frame, state, now)
+	if not ok then
+		state.motion = nil
+		error(err, 0)   -- noté par l'appelant (fx:update), les paillettes ont déjà bougé
 	end
 end
 
