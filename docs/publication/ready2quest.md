@@ -15,6 +15,13 @@ For **WoW Forever** (1.60). English and French.
 
 ![Pre-departure check: a readiness score out of 100 with tips](https://media.forgecdn.net/attachments/2147/118/r2q-1-png.png)
 
+## New in 1.38: combat helpers
+- **A Combat section**: the aggro range plus four helpers, each with its switch.
+- **Spell range**: a green check or a red cross above your target, in combat too; action bar icons grey out when out of range.
+- **Lethal DoTs**: what your DoTs will still deal, on the target's health bar, and a skull when it is enough.
+- **Spell prediction** while you cast, and **numbers on your action bars** (each spell's damage or healing).
+- The engine comes from [DoesItDiePlus](https://www.curseforge.com/wow/addons/doesitdieplus) by Ironship and Does It Die by Joe Greive, free software, with thanks. Already using one of them? Ready2Quest steps aside, nothing shows twice.
+
 ## New in 1.37: who else comes along
 - **Neighbours that follow (+N)**: out of combat, "+2" next to your target's nameplate tells how many monsters of the same kind are close enough to come and help it (an estimate; red from 3).
 - **Learn all, really all**: one click at the trainer now learns everything.
@@ -80,6 +87,13 @@ Free software, **GPL-3.0**. Source code: https://github.com/LapassetAlexis/Ready
 **Prépare ta sortie avant de quitter la ville.** Quand tu quittes un village, une capitale ou un camp, Ready2Quest vérifie que tu es prêt : vivres, place dans les sacs, équipement en état, tes buffs habituels, ta pierre de foyer… et te le dit au bon moment, pas quand il est trop tard.
 
 Pour **WoW Forever** (1.60). En français et en anglais.
+
+## Nouveau en 1.38 : l'aide au combat
+- **Une section Combat** : la portée d'aggro et quatre aides, chacune avec son interrupteur.
+- **Portée des sorts** : une coche verte ou une croix rouge au-dessus de ta cible, aussi en combat ; les icônes des barres se grisent hors de portée.
+- **DoT mortels** : ce que tes DoT vont encore infliger, sur la barre de vie de la cible, et un crâne quand ça suffit.
+- **Prédiction des sorts** pendant l'incantation, et **des chiffres sur tes barres d'action** (les dégâts ou soins de chaque sort).
+- Le moteur vient de [DoesItDiePlus](https://www.curseforge.com/wow/addons/doesitdieplus) d'Ironship et de Does It Die de Joe Greive, logiciels libres, merci à eux. Tu utilises déjà l'un des deux ? Ready2Quest s'efface, rien en double.
 
 ## Nouveau en 1.37 : qui vient avec ?
 - **Voisins qui suivent (+N)** : hors combat, « +2 » à côté de la barre de nom de ta cible dit combien de monstres de la même sorte sont assez près pour venir l'aider (une estimation ; rouge à partir de 3).

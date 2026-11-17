@@ -662,7 +662,14 @@ do
 			line = line:gsub("\r", ""):gsub("^%s+", ""):gsub("%s+$", "")
 			-- le client accepte « Libs\Socle\Base.lua » : chemin à barres obliques ici
 			line = line:gsub("\\", "/")
-			if line ~= "" and not line:find("^#") and line:find("%.lua$") then tocFiles[#tocFiles + 1] = prefix .. line end
+			-- 1.38.0 : le moteur Combat (repris de DoesItDiePlus, Ready2Quest/Combat/)
+			-- n'est pas chargé par le harnais (il demande des barres de statut,
+			-- des API de sorts… que le monde simulé n'a pas) : ses fichiers sont
+			-- compilés à part (tests/modules/r2q_combat.lua), notre intégration
+			-- (CombatBoot.lua, Combat.lua) est testée avec un moteur simulé
+			if line ~= "" and not line:find("^#") and line:find("%.lua$") and not line:find("^Combat/") then
+				tocFiles[#tocFiles + 1] = prefix .. line
+			end
 		end
 		handle:close()
 	end
@@ -1825,7 +1832,7 @@ ResetWorld()
 -- 4.38 Bootstrap : la commande survit à un échec de chargement
 Say("\n== bootstrap et diagnostic ==")
 ResetWorld()
-Check("version exposée", NS.version == "1.37.1", NS.version)
+Check("version exposée", NS.version == "1.38.0", NS.version)
 do
 	local missingMods = {}
 	for _, name in ipairs({ "Bootstrap", "Locales", "Compat", "Theme", "Core", "Buffs", "Reagents",
@@ -1846,7 +1853,7 @@ do
 	Mock:Reset()
 	NS:HandleCommand("diag")
 	Check("/sd diag liste les modules et la version", Mock:Output():find("modules :") ~= nil
-		and Mock:Output():find("1%.37%.1") ~= nil, Mock:Output())
+		and Mock:Output():find("1%.38%.0") ~= nil, Mock:Output())
 
 	-- une erreur est enregistrée et affichée
 	Mock:Reset()

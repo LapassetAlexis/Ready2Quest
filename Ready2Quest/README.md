@@ -123,6 +123,17 @@ Camping on Forever makes the camp a real place to get ready. Ready2Quest helps y
 
 By default (**Danger only**, since 1.31.0) the **red** mark shows on its own, without any key, as soon as a monster is about to aggro you (from 5 yards before its estimated range); enemy nameplates must be on (V). Hold **Shift** to see everything (or pick Shift, Ctrl, Alt or "always" in the settings) out of combat: each hostile monster's nameplate gets a **mark** — by default a small diamond left of the bar (or a line under it: **Mark** setting) — red if you're inside its estimated aggro radius, amber if you're close to it, green if you're safe — and hovering it adds a tooltip line such as "Aggro ~17 yd · you are 20-25 yd away · out of range". The radius is an estimate (20 yd at equal level, ±1 yd per level of difference, 5 to 45 yd); the distance is a range band measured by the game. Addons can't draw on the ground, hence the mark on the nameplate. Settings: **Quality of life → Aggro range**.
 
+## Combat helpers
+
+A **Combat** section in the settings gathers the aggro range and four helpers, each with its own switch (they take effect at the next `/reload`):
+
+- **Spell range**: a green check or a red cross above your target, measured with your class's main spells (it works in combat too); action bar icons grey out when out of range.
+- **Lethal DoTs**: on the target's health bar, what your DoTs will still deal; a skull when they are enough to kill it. Tick sizes are learned as you play.
+- **Spell prediction**: while you cast, the spell's expected damage on the target's health bar, and an icon if it kills.
+- **Action bar numbers**: the damage (or healing) of each spell on its button, read from its description with your spell power and talents.
+
+`/r2q combat` opens the detailed settings. The engine comes from **DoesItDiePlus** by Ironship (GPL-3.0) and **Does It Die** by Joe Greive (MIT), credited in `Combat/README.md`. If one of them is installed, Ready2Quest steps aside so nothing shows twice (the aggro range stays).
+
 ## Quality of life (QoL)
 
 ### The right reward
@@ -277,7 +288,7 @@ Questions, bugs, ideas: join the [Discord](https://discord.gg/b9mYCUhxRb).
 
 ## License
 
-Ready2Quest is free software under the **GPL-3.0** license (see `LICENSE`): you can use, modify and share it, as long as you keep the same license. The interface font, Inter, is under the OFL license (`Libs/Socle/Media/Inter-OFL.txt`).
+Ready2Quest is free software under the **GPL-3.0** license (see `LICENSE`): you can use, modify and share it, as long as you keep the same license. The interface font, Inter, is under the OFL license (`Libs/Socle/Media/Inter-OFL.txt`). The combat engine (`Combat/`) comes from DoesItDiePlus by Ironship (GPL-3.0) and Does It Die by Joe Greive (MIT).
 
 ---
 
@@ -407,6 +418,17 @@ Le camping de Forever en fait un vrai lieu de préparation. Ready2Quest t'aide �
 ## Portée d'aggro
 
 Par défaut (**Danger seul**, depuis la 1.31.0), la marque **rouge** s'affiche seule, sans toucher au clavier, dès qu'un monstre est sur le point de t'aggro (5 m avant sa portée estimée) ; les barres de nom ennemies doivent être affichées (touche V). Maintiens **Maj** pour tout voir (ou choisis Maj, Ctrl, Alt ou « toujours » dans les réglages) hors combat : la barre de nom de chaque monstre hostile reçoit une **marque** — par défaut un petit losange à gauche de la barre (ou un trait dessous : réglage **Marque**) — rouge si tu es dans son rayon d'aggro estimé, ambre si tu en es proche, vert si tu es tranquille — et son survol ajoute une ligne à l'infobulle, par exemple « Aggro ~17 m · tu es à 20-25 m · hors de portée ». Le rayon est une estimation (20 m à niveau égal, ±1 m par niveau d'écart, de 5 à 45 m) ; la distance est une tranche de portée mesurée par le jeu. Les addons ne peuvent pas dessiner au sol, d'où la marque sur la barre de nom. Réglages : **Confort de jeu → Portée d'aggro**.
+
+## Aide au combat
+
+Une section **Combat** dans les réglages réunit la portée d'aggro et quatre aides, chacune avec son interrupteur (effet au prochain `/reload`) :
+
+- **Portée des sorts** : une coche verte ou une croix rouge au-dessus de ta cible, mesurée avec les sorts principaux de ta classe (ça marche aussi en combat) ; les icônes des barres d'action se grisent hors de portée.
+- **DoT mortels** : sur la barre de vie de la cible, ce que tes DoT vont encore infliger ; un crâne quand ils suffisent à la tuer. La taille des ticks s'apprend en jouant.
+- **Prédiction des sorts** : pendant l'incantation, les dégâts attendus du sort sur la barre de vie de la cible, et une icône s'il la tue.
+- **Chiffres des barres** : les dégâts (ou soins) de chaque sort sur son bouton, lus dans sa description avec ta puissance des sorts et tes talents.
+
+`/r2q combat` ouvre les réglages détaillés. Le moteur vient de **DoesItDiePlus** d'Ironship (GPL-3.0) et de **Does It Die** de Joe Greive (MIT), crédités dans `Combat/README.md`. Si l'un des deux est installé, Ready2Quest s'efface pour que rien ne s'affiche en double (la portée d'aggro reste).
 
 ## Confort de jeu (QoL)
 
@@ -562,4 +584,4 @@ Questions, bugs, idées : rejoins le [Discord](https://discord.gg/b9mYCUhxRb).
 
 ## Licence
 
-Ready2Quest est un logiciel libre sous licence **GPL-3.0** (voir `LICENSE`) : tu peux l'utiliser, le modifier et le partager, à condition de garder la même licence. La police de l'interface, Inter, est sous licence OFL (`Libs/Socle/Media/Inter-OFL.txt`).
+Ready2Quest est un logiciel libre sous licence **GPL-3.0** (voir `LICENSE`) : tu peux l'utiliser, le modifier et le partager, à condition de garder la même licence. La police de l'interface, Inter, est sous licence OFL (`Libs/Socle/Media/Inter-OFL.txt`). Le moteur de combat (`Combat/`) vient de DoesItDiePlus d'Ironship (GPL-3.0) et de Does It Die de Joe Greive (MIT).

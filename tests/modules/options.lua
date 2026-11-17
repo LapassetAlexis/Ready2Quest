@@ -55,7 +55,8 @@ do
 	T.ResetWorld()
 	local frame = Open(NS, "general")
 	Want("R2Q : groupes et entrées dans l'ordre des pages", NavOrder(NS) == "general,[CHECK AVANT LE DÉPART],trigger,safe,bags,gear,buffs,"
-		.. "[MODULES],camp,expedition,dungeon,[CONFORT DE JEU],merchant,reward,pace,bagspace,lootroom,spellranks,death,aggro",
+		.. "[MODULES],camp,expedition,dungeon,[CONFORT DE JEU],merchant,reward,pace,bagspace,lootroom,spellranks,death,"
+		.. "[COMBAT],aggro,combatRange,combatDots,combatCast,combatBars",
 		NavOrder(NS))
 	local qol = Header(NS, "qol")
 	Want("page à sous-pages : titre de groupe en capitales ambre", qol and qol.label.text == "CONFORT DE JEU"

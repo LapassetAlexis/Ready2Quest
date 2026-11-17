@@ -17,8 +17,9 @@ local navFloor = -(lay.height - 2 - 40)
 -- ordre : tous les modules avant le titre QOL, un seul titre par groupe
 local seenQol, misplaced = false, {}
 for _, def in ipairs(NS.OPTION_PAGES) do
+	-- 1.38.0 : le groupe COMBAT vient après le confort de jeu
 	if def.group == "OPT_GROUP_QOL" then seenQol = true
-	elseif seenQol then misplaced[#misplaced + 1] = def.id end
+	elseif seenQol and def.group ~= "OPT_GROUP_COMBAT" then misplaced[#misplaced + 1] = def.id end
 end
 -- titres : le Check avant le départ, MODULES, le Confort de jeu ; chacun une fois
 local titles, twice = {}, 0
@@ -26,8 +27,8 @@ for _, label in ipairs(frame.navGroups) do
 	if titles[label.text] then twice = twice + 1 end
 	titles[label.text] = true
 end
-Check("[INT] navigation au-dessus de la version, panneau à l'écran, trois titres de groupe uniques, aucun module sous le QoL",
-	frame.navBottom >= navFloor and lay.height <= lay.maxHeight and #frame.navGroups == 3 and twice == 0 and #misplaced == 0,
+Check("[INT] navigation au-dessus de la version, panneau à l'écran, quatre titres de groupe uniques (COMBAT en dernier), aucun module sous le QoL",
+	frame.navBottom >= navFloor and lay.height <= lay.maxHeight and #frame.navGroups == 4 and twice == 0 and #misplaced == 0,
 	frame.navBottom .. " >= " .. navFloor .. " / " .. #frame.navGroups .. " / " .. table.concat(misplaced, ","))
 
 local overflow = {}

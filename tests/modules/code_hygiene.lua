@@ -41,6 +41,9 @@ for _, addon in ipairs({ "Ready2Quest", "QuestCompanion" }) do
 		if file then
 			file = file:gsub("\\", "/")
 			local path = file:match("^Libs/Socle/") and ("Ready2Quest/" .. file) or (addon .. "/" .. file)
+			-- 1.38.0 : le moteur Combat repris de DoesItDiePlus garde son code
+			-- (tools/sync_combat.py le réimporte tel quel) : hors de nos règles
+			if path:find("^Ready2Quest/Combat/") then seen[path] = true end
 			if not seen[path] and not ALLOWED[path] then seen[path] = true; CLEAN[#CLEAN + 1] = path end
 		end
 	end

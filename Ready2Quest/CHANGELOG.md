@@ -1,5 +1,17 @@
 # Journal des modifications
 
+## 1.38.0 — Aide au combat
+
+- **Une section Combat** dans les réglages : la portée d'aggro y passe, avec quatre aides, chacune avec son interrupteur (effet au prochain /reload) :
+  - **Portée des sorts** : une coche verte ou une croix rouge au-dessus de ta cible (aussi en combat) ; les icônes des barres d'action se grisent hors de portée.
+  - **DoT mortels** : sur la barre de vie de la cible, ce que tes DoT vont encore infliger ; un crâne quand ils suffisent.
+  - **Prédiction des sorts** : pendant l'incantation, les dégâts attendus et une icône si le sort tue.
+  - **Chiffres des barres** : les dégâts ou soins de chaque sort sur son bouton, avec ta puissance des sorts et tes talents.
+- Le moteur vient de **DoesItDiePlus** (Ironship) et **Does It Die** (Joe Greive), sous licence libre, avec leur crédit. Si l'un des deux est installé, Ready2Quest s'efface (rien en double ; la portée d'aggro reste). `/r2q combat` ouvre les réglages détaillés.
+- **Portée d'aggro plus juste pour guerriers, chasseurs et druides** : les sorts « au prochain coup » (Frappe héroïque, Enchaînement, Attaque du raptor, Mutiler) ne servent plus de règle ; ils répondaient « à portée » à 30 m.
+
+*English:* a Combat section in the settings: the aggro range moves there, with four helpers, each with its own switch (takes effect at the next /reload): spell range (a green check or a red cross above your target, in combat too; action bar icons grey out when out of range), lethal DoTs (what your DoTs will still deal, on the target's health bar; a skull when it is enough), spell prediction (the expected damage while you cast, an icon if it kills), action bar numbers (each spell's damage or healing on its button, with your spell power and talents). The engine comes from DoesItDiePlus (Ironship) and Does It Die (Joe Greive), free software, credited; if one of them is installed, Ready2Quest steps aside (nothing twice; the aggro range stays). `/r2q combat` opens the detailed settings. Sharper aggro range for warriors, hunters and druids: "next swing" spells (Heroic Strike, Cleave, Raptor Strike, Maul) are no longer used as a range check; they answered "in range" at 30 yd.
+
 ## 1.37.1
 
 - **Voisins qui suivent (+N)** : hors combat, à droite de la barre de nom de ta cible, « +2 » (ambre ; rouge à partir de 3) dit combien de monstres de la même sorte sont assez près pour venir l'aider si tu l'attaques. C'est une estimation (le jeu ne donne pas la position des monstres : on la déduit de la distance mesurée et de la place des barres de nom à l'écran), à affiner avec vos retours ; `/r2q diag` montre le compte et le rayon utilisé. Réglage « Voisins qui suivent (+N) », page Portée d'aggro (actif).

@@ -7,7 +7,7 @@ local ADDON, ns = ...
 
 ns.APP = {
 	id = "Ready2Quest",
-	version = "1.37.1",
+	version = "1.38.0",
 	-- nom dans l'en-tête des réglages, le « 2 » en bleu
 	brand = "Ready|cff5b8fd62|rQuest",
 	-- couleur d'identité dans le thème forgé (socle 3.3, Theme.IDENTITY_TOKENS) :
