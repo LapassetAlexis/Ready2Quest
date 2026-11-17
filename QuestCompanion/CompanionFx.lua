@@ -155,7 +155,8 @@ function ns:CompanionFx(kind)
 				p.rise = 26 + index * 4
 			else
 				local delay = math.random() * ns.COMPANION_FX_SCATTER.delay * def.duration
-				p.at, p.untilAt = now + delay, now + delay + def.duration * (1 - ns.COMPANION_FX_SCATTER.delay / 2)
+				-- vie : de la naissance (retardée) jusqu'à la fin de l'effet au plus tard
+				p.at, p.untilAt = now + delay, now + delay + def.duration * (1 - ns.COMPANION_FX_SCATTER.delay)
 				p.x, p.y, p.rise = ns.CompanionFxSpot(frame)
 			end
 			local region = (kind == "zzz") and p.text or p.dot
