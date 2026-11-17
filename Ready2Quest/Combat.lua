@@ -46,10 +46,9 @@ local FR = {
 	OPT_COMBAT_INFO_DOTS_2  = "La taille réelle des ticks s'apprend en jouant (résistances comprises).",
 	OPT_COMBAT_INFO_CAST_1  = "Une prédiction, pas une promesse : elle s'affine en jouant, les coups critiques n'y comptent pas.",
 	OPT_COMBAT_INFO_BARS_1  = "Lus dans la description du sort, avec ta puissance des sorts et tes talents (Forever ne les inclut pas).",
-	OPT_COMBAT_INFO_RELOAD  = "Un interrupteur prend effet au prochain /reload.",
+	OPT_COMBAT_INFO_RELOAD  = "Un interrupteur prend effet au rechargement : « Recharger l'interface » apparaît alors en bas.",
 	OPT_COMBAT_INFO_CREDIT  = "Moteur repris de DoesItDiePlus (Ironship) et Does It Die (Joe Greive). Merci à eux !",
 	OPT_COMBAT_RIVAL        = "%s est installé : il s'occupe de tout ça, Ready2Quest s'efface (la portée d'aggro reste).",
-	OPT_ACTION_COMBATRELOAD = "Recharger l'interface",
 	OPT_COMBAT_SHOW_IN      = "Coche verte à portée",
 	OPT_COMBAT_SHOW_OUT     = "Croix rouge hors de portée",
 	OPT_COMBAT_DIM          = "Griser les icônes hors de portée",
@@ -96,7 +95,7 @@ local FR = {
 	COMBAT_NUM_center       = "Au centre",
 	COMBAT_NUM_top          = "En haut",
 	OPT_PX_UNIT             = "px",
-	MSG_COMBAT_RELOAD       = "Combat : le changement prend effet au prochain /reload.",
+	MSG_COMBAT_RELOAD       = "Combat : le changement prend effet au rechargement (bouton en bas des réglages, ou /reload).",
 	MSG_COMBAT_RIVAL        = "Combat : %s est installé, le module Combat de Ready2Quest reste éteint (la portée d'aggro reste).",
 	MSG_COMBAT_OFF          = "Combat : module coupé (Réglages › Combat).",
 	HELP_COMBAT             = "/r2q combat -- les réglages du module Combat",
@@ -118,10 +117,9 @@ local EN = {
 	OPT_COMBAT_INFO_DOTS_2  = "The real tick size is learned as you play (resistances included).",
 	OPT_COMBAT_INFO_CAST_1  = "A prediction, not a promise: it sharpens as you play, critical hits don't count.",
 	OPT_COMBAT_INFO_BARS_1  = "Read from the spell's description, with your spell power and talents (Forever leaves them out).",
-	OPT_COMBAT_INFO_RELOAD  = "A switch takes effect at the next /reload.",
+	OPT_COMBAT_INFO_RELOAD  = "A switch takes effect after a reload: \"Reload the interface\" then shows at the bottom.",
 	OPT_COMBAT_INFO_CREDIT  = "Engine from DoesItDiePlus (Ironship) and Does It Die (Joe Greive). Thanks to them!",
 	OPT_COMBAT_RIVAL        = "%s is installed: it handles all this, Ready2Quest steps aside (aggro range stays).",
-	OPT_ACTION_COMBATRELOAD = "Reload the interface",
 	OPT_COMBAT_SHOW_IN      = "Green check in range",
 	OPT_COMBAT_SHOW_OUT     = "Red cross out of range",
 	OPT_COMBAT_DIM          = "Grey out icons out of range",
@@ -168,7 +166,7 @@ local EN = {
 	COMBAT_NUM_center       = "Centre",
 	COMBAT_NUM_top          = "Top",
 	OPT_PX_UNIT             = "px",
-	MSG_COMBAT_RELOAD       = "Combat: the change takes effect at the next /reload.",
+	MSG_COMBAT_RELOAD       = "Combat: the change takes effect after a reload (button at the bottom of the settings, or /reload).",
 	MSG_COMBAT_RIVAL        = "Combat: %s is installed, Ready2Quest's Combat module stays off (aggro range stays).",
 	MSG_COMBAT_OFF          = "Combat: module switched off (Settings › Combat).",
 	HELP_COMBAT             = "/r2q combat -- the Combat module's settings",
@@ -305,16 +303,16 @@ end
 local PAGES = {
 	{ id = "combatRange", title = "OPT_PAGE_COMBAT_RANGE", group = "OPT_GROUP_COMBAT",
 		power = "combatRange", info = Info({ "OPT_COMBAT_INFO_RANGE_1" }),
-		rows = ns.COMBAT_ROWS.combatRange, actions = { "combatReload" } },
+		rows = ns.COMBAT_ROWS.combatRange },
 	{ id = "combatDots", title = "OPT_PAGE_COMBAT_DOTS", group = "OPT_GROUP_COMBAT",
 		power = "combatDots", info = Info({ "OPT_COMBAT_INFO_DOTS_1", "OPT_COMBAT_INFO_DOTS_3", "OPT_COMBAT_INFO_DOTS_2" }),
-		rows = ns.COMBAT_ROWS.combatDots, actions = { "combatReload" } },
+		rows = ns.COMBAT_ROWS.combatDots },
 	{ id = "combatCast", title = "OPT_PAGE_COMBAT_CAST", group = "OPT_GROUP_COMBAT",
 		power = "combatCast", info = Info({ "OPT_COMBAT_INFO_CAST_1" }),
-		rows = ns.COMBAT_ROWS.combatCast, actions = { "combatReload" } },
+		rows = ns.COMBAT_ROWS.combatCast },
 	{ id = "combatBars", title = "OPT_PAGE_COMBAT_BARS", group = "OPT_GROUP_COMBAT",
 		power = "combatBars", info = Info({ "OPT_COMBAT_INFO_BARS_1", "OPT_COMBAT_INFO_CREDIT" }),
-		rows = ns.COMBAT_ROWS.combatBars, actions = { "combatReload" } },
+		rows = ns.COMBAT_ROWS.combatBars },
 }
 
 do
@@ -331,10 +329,6 @@ do
 	for _, def in ipairs(PAGES) do table.insert(pages, def) end
 end
 
-ns.OPTION_ACTIONS = ns.OPTION_ACTIONS or {}
-ns.OPTION_ACTIONS.combatReload = function(self)
-	if self.AskReload then self:AskReload(L.OPT_PAGE_COMBAT) end
-end
 
 -- Nos réglages, sur la page d'une partie (rival : le chat le dit aussi)
 function ns:CombatOpenPage(page)
@@ -354,7 +348,11 @@ do
 	for _, part in ipairs(ns.COMBAT_PARTS) do keys[part.key] = true end
 	function ns:OnModuleToggled(key, enabled)
 		if previous then previous(self, key, enabled) end
-		if keys[key] then self:Print(L.MSG_COMBAT_RELOAD) end
+		if keys[key] then
+			self:Print(L.MSG_COMBAT_RELOAD)
+			-- le bouton « Recharger l'interface » apparaît dans le pied des réglages
+			if self.MarkReloadPending then self:MarkReloadPending() end
+		end
 	end
 end
 

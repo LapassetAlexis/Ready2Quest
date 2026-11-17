@@ -190,10 +190,13 @@ do
 
 	local printed = {}
 	ns.Print = function(_, msg) printed[#printed + 1] = msg end
+	local pending = 0
+	ns.MarkReloadPending = function() pending = pending + 1 end
 	ns:OnModuleToggled("combatBars", false)
 	ns:OnModuleToggled("autoSellGray", false)
-	Check("[COMBAT] un interrupteur du Combat rappelle le /reload, pas les autres", #printed == 1
-		and printed[1]:find("reload", 1, true) ~= nil, table.concat(printed, " | "))
+	Check("[COMBAT] un interrupteur du Combat rappelle le rechargement (chat, bouton du pied), pas les autres", #printed == 1
+		and printed[1]:find("reload", 1, true) ~= nil and pending == 1 and ns.OPTION_ACTIONS.combatReload == nil,
+		table.concat(printed, " | "))
 end
 
 do
@@ -253,4 +256,25 @@ do
 	Check("[COMBAT] Ready2Quest : groupe COMBAT (aggro + 4 parties), /r2q combat", ids.aggro == "OPT_GROUP_COMBAT"
 		and ids.combatRange == "OPT_GROUP_COMBAT" and ids.combatBars == "OPT_GROUP_COMBAT"
 		and type((NS.COMMANDS or NS.EXTRA_COMMANDS or {}).combat) == "function")
+end
+
+-- 4b. Le pied des réglages : « Recharger l'interface » seulement quand un réglage l'attend
+do
+	T.ResetWorld()
+	NS.optionsFrame, NS.reloadPending = nil, nil
+	NS:ToggleOptions()
+	local frame = NS.optionsFrame
+	local before = frame.reloadButton and frame.reloadButton:IsShown()
+	NS:MarkReloadPending()
+	local after = frame.reloadButton:IsShown()
+	local reloaded = false
+	local saved = rawget(_G, "ReloadUI")
+	_G.ReloadUI = function() reloaded = true end
+	frame.reloadButton:GetScript("OnClick")(frame.reloadButton)
+	_G.ReloadUI = saved
+	NS.reloadPending = nil
+	frame:Hide()
+	Check("[COMBAT] pied des réglages : « Recharger l'interface » caché, puis montré quand un réglage l'attend ; il recharge",
+		frame.reloadButton ~= nil and before == false and after == true and reloaded
+		and frame.reloadButton:GetText() == "Recharger l'interface")
 end

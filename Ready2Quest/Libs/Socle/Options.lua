@@ -823,6 +823,12 @@ end
 -- ---------------------------------------------------------------------------
 -- Rafraîchissement
 -- ---------------------------------------------------------------------------
+-- Un réglage ne prend effet qu'au rechargement : le pied montre le bouton
+function ns:MarkReloadPending()
+	self.reloadPending = true
+	self:RefreshOptions()
+end
+
 function ns:RefreshOptions()
 	local frame = self.optionsFrame
 	if not frame then return end
@@ -830,6 +836,9 @@ function ns:RefreshOptions()
 
 	if frame.editButton and frame.editButton.SetText then
 		frame.editButton:SetText(self.editMode and L.OPT_EDIT_STOP or L.OPT_EDIT_BUTTON)
+	end
+	if frame.reloadButton then
+		if self.reloadPending then frame.reloadButton:Show() else frame.reloadButton:Hide() end
 	end
 
 	-- cartes et notes dont le texte change de longueur : hauteur suivie
@@ -1347,6 +1356,14 @@ function ns:EnsureOptions()
 		frame:Hide()
 	end, ActionStyle("accent", "primary"))
 	frame.closeButton:SetPoint("RIGHT", foot, "RIGHT", -MARGIN, 0)
+	-- socle 3.4 : « Recharger l'interface », à gauche de Terminé, seulement
+	-- quand un réglage l'attend (ns:MarkReloadPending)
+	frame.reloadButton = Theme.CreateButton(foot, Width(L.OPT_RELOAD), 28, L.OPT_RELOAD, function()
+		local reload = rawget(_G, "ReloadUI")
+		if type(reload) == "function" then reload() end
+	end, ActionStyle("accent", "arcane"))
+	frame.reloadButton:SetPoint("RIGHT", frame.closeButton, "LEFT", -10, 0)
+	frame.reloadButton:Hide()
 
 	-- la recherche se vide à la fermeture
 	frame:SetScript("OnHide", function()
