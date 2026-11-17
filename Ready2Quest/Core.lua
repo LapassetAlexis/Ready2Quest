@@ -1096,6 +1096,7 @@ local COMMANDS = {
 		if self.DiagAuras then self:DiagAuras() else self:Print(L.MSG_DIAG_NOAURA) end
 		-- portée d'aggro
 		if self.AggroDiagLine then self:Print(self:AggroDiagLine()) end
+		if self.AggroLinkDiagLine then self:Print(self:AggroLinkDiagLine()) end
 		-- abonnements à la demande : ceux qui sont en pause
 		if self.GateDiagLine then self:Print(self:GateDiagLine()) end
 	end,

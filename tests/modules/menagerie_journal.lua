@@ -846,6 +846,80 @@ do
 		J.Done()
 	end
 
+	-- 3.2.0 : « Faire de la place » (ReserveTidy.lua)
+	do
+		Say("-- carnet 3.2 : Faire de la place")
+		J.Reset("azeroth")
+		local ids = FillReserve()
+		local bad = {}
+		local function ok(label, cond, extra) if not cond then bad[#bad + 1] = label .. (extra ~= nil and (" [" .. tostring(extra) .. "]") or "") end end
+		local f = NS:OpenReserve()
+		local rv = f.res.reserve
+		ok("5/20 : pas de bouton", not rv.tidyButton:IsShown())
+		-- 18/20 : presque pleine
+		for i = 1, 13 do NS:SpecimenAdd({ npc = 900, stars = 1, name = "Raptor", at = 1793000000 + i }) end
+		NS:RefreshJournal()
+		ok("18/20 : « Faire de la place »", NS:ReserveNearFull() and rv.tidyButton:IsShown() and rv.tidyButton:GetText() == "Faire de la place")
+		local list, gain = NS:ReserveTidyCandidates()
+		local protected = false
+		for _, spec in ipairs(list) do
+			if spec.shiny or NS:SpecimenIsReference(spec.id) or NS:SpecimenBetterThanCodex(spec.id) then protected = true end
+		end
+		ok("5 proposés, les moins précieux, jamais protégés", #list == 5 and not protected and list[1].stars == 1
+			and list[1].npc == 900 and gain == 5 * NS:SpecimenReleaseValue(list[1]), #list .. " " .. tostring(gain))
+		ok("ni brillant, ni meilleur que le Codex, en tête", (function()
+			for _, spec in ipairs(NS:ReserveTidyRanked()) do
+				if spec.id == ids.shiny or spec.id == ids.better then return false end
+			end
+			return true
+		end)())
+		rv.tidyButton:GetScript("OnClick")(rv.tidyButton)
+		local text = PreviewText(rv.preview.lines)
+		ok("sélection : la fiche liste, le total, « Relâcher (5) »", f.resTidy ~= nil and #f.resTidyOrder == 5
+			and rv.tidyYes:IsShown() and rv.tidyYes:GetText() == "Relâcher (5)" and text:find("Total : +5 paillettes", 1, true) ~= nil
+			and not rv.tidyButton:IsShown() and not rv.release:IsShown(), text)
+		local dimmed, lit = 0, 0
+		for _, tile in ipairs(rv.tiles) do
+			if tile:IsShown() and tile.spec then
+				if f.resTidy[tile.spec.id] then lit = lit + 1 elseif (tile.alpha or 1) < 1 then dimmed = dimmed + 1 end
+			end
+		end
+		ok("les autres vignettes s'estompent", dimmed > 0, dimmed .. "/" .. lit)
+		-- un clic retire ; un brillant ne s'ajoute pas
+		local first = f.resTidyOrder[1]
+		NS:ReserveTidyToggle(first)
+		ok("clic : retiré (4)", not f.resTidy[first] and #f.resTidyOrder == 4 and rv.tidyYes:GetText() == "Relâcher (4)")
+		ok("brillant : refusé", NS:ReserveTidyToggle(ids.shiny) == false and not f.resTidy[ids.shiny])
+		local count, balance = NS:SpecimenReserveCount(), NS:Paillettes()
+		Mock:Reset()
+		rv.tidyYes:GetScript("OnClick")(rv.tidyYes)
+		local lines = select(2, Mock:Output():gsub("relâché", ""))
+		ok("Relâcher (4) : partis, paillettes, un seul bilan dans le chat", NS:SpecimenReserveCount() == count - 4
+			and NS:Paillettes() == balance + 4 * NS:SpecimenReleaseValue({ stars = 1 }) and lines == 1
+			and f.resTidy == nil and NS:SpecimenGet(first) ~= nil, Mock:Output())
+		-- Annuler
+		NS:ReserveTidyStart()
+		rv.tidyNo:GetScript("OnClick")(rv.tidyNo)
+		ok("Annuler : rien de relâché", f.resTidy == nil and NS:SpecimenReserveCount() == count - 4)
+		-- /qc tri
+		f:Hide()
+		NS.EXTRA_COMMANDS.tri(NS)
+		ok("/qc tri : le carnet sur la Réserve, sélection ouverte", NS.journalFrame:IsShown() and NS.journalFrame.kind == "reserve"
+			and NS.journalFrame.resTidy ~= nil)
+		NS:ReserveTidyCancel()
+		-- le compagnon prévient une fois
+		local said = {}
+		local savedSay = NS.CompanionSay
+		NS.CompanionSay = function(_, pool, opts) said[#said + 1] = pool .. " " .. table.concat(opts.args or {}, "/"); return true end
+		for i = 1, 4 do NS:SpecimenAdd({ npc = 900, stars = 1, name = "Raptor", at = 1794000000 + i }) end
+		NS.CompanionSay = savedSay
+		ok("presque pleine : le compagnon prévient une fois", #said == 1 and said[1] == "RESERVE_NEAR 18/20", table.concat(said, ", "))
+		ok("réplique avec /qc tri", NS.L.COMP_SAY_RESERVE_NEAR:find("/qc tri", 1, true) ~= nil)
+		Check("[TIDY] Faire de la place : 18/20, les moins précieux, sélection, retrait, relâcher, annuler, /qc tri, avertissement",
+			#bad == 0 and NoErrors(), table.concat(bad, " ; "))
+		J.Done()
+	end
+
 	do
 		Say("-- carnet 3.0 : Réserve (azeroth)")
 		J.Reset("azeroth")

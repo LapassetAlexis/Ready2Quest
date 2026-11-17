@@ -1,0 +1,97 @@
+-- Ready2Quest 1.37.1 : « +N », les voisins qui risquent de suivre la cible
+-- (AggroLink.lua) : géométrie, voisins de la même sorte, affichage.
+local Check, Say, ResetWorld, NS = T.Check, T.Say, T.ResetWorld, T.NS
+
+local NAMES = { "UnitIsUnit", "UnitCreatureType", "UnitCreatureFamily", "UnitName", "UnitAffectingCombat", "UnitExists",
+	"UnitIsPlayer", "UnitIsDead", "UnitCanAttack", "UnitReaction", "GetCVar" }
+local saved = {}
+for _, name in ipairs(NAMES) do saved[name] = rawget(_G, name) end
+local savedDistance, savedPlates, savedOn, savedCombat = NS.AggroDistance, NS.aggroPlates, NS.AggroOn, NS.AggroInCombat
+
+Say("-- aggro : voisins qui suivent (+N)")
+local bad = {}
+local function ok(label, cond, extra) if not cond then bad[#bad + 1] = label .. (extra ~= nil and (" [" .. tostring(extra) .. "]") or "") end end
+
+-- géométrie
+local fov = math.rad(90)
+ok("centre de l'écran : angle nul", math.abs(NS.AggroLinkAngle(960, 1920, fov)) < 1e-6)
+ok("bord droit : 45°", math.abs(NS.AggroLinkAngle(1920, 1920, fov) - math.rad(45)) < 1e-6)
+ok("même direction : écart des distances", math.abs(NS.AggroLinkGap(20, 0.1, 26, 0.1) - 6) < 1e-6)
+ok("côte à côte à 20 m, 90° d'écart : ~28 m", math.abs(NS.AggroLinkGap(20, 0, 20, math.rad(90)) - math.sqrt(800)) < 1e-6)
+ok("fourchette sans borne haute : rien", NS.AggroLinkGap(nil, 0, 20, 0) == nil)
+
+-- un monde : la cible (nameplate1), des voisins
+ResetWorld()
+UIParent:SetSize(1920, 1080)
+local W = {}
+local function Plate(unit) return { GetCenter = function() return W.units[unit].x, 500 end, GetFrameLevel = function() return 1 end } end
+local function Install()
+	W = {
+		units = {
+			nameplate1 = { name = "Sanglier", ctype = "Bête", family = "Sanglier", range = { 20, 25 }, x = 960, target = true },
+			nameplate2 = { name = "Sanglier", ctype = "Bête", family = "Sanglier", range = { 20, 25 }, x = 1000 },   -- collé
+			nameplate3 = { name = "Sanglier", ctype = "Bête", family = "Sanglier", range = { 25, 30 }, x = 940 },    -- ~5 m
+			nameplate4 = { name = "Loup", ctype = "Bête", family = "Loup", range = { 20, 25 }, x = 970 },            -- autre famille
+			nameplate5 = { name = "Sanglier", ctype = "Bête", family = "Sanglier", range = { 20, 25 }, x = 1900 },   -- loin à droite
+			nameplate6 = { name = "Sanglier", ctype = "Bête", family = "Sanglier", range = { 20, 25 }, x = 950, combat = true },
+		},
+	}
+	NS.aggroPlates = {}
+	for unit in pairs(W.units) do NS.aggroPlates[unit] = Plate(unit) end
+	local function U(unit)
+		if unit == "target" then for _, u in pairs(W.units) do if u.target then return u end end end
+		return W.units[unit]
+	end
+	_G.UnitIsUnit = function(a, b)
+		local ua, ub = U(a), U(b)
+		return ua ~= nil and ua == ub
+	end
+	_G.UnitExists = function(unit) return U(unit) ~= nil end
+	_G.UnitIsPlayer = function() return false end
+	_G.UnitIsDead = function() return false end
+	_G.UnitCanAttack = function() return true end
+	_G.UnitReaction = function() return 2 end
+	_G.UnitCreatureType = function(unit) local u = U(unit); return u and u.ctype end
+	_G.UnitCreatureFamily = function(unit) local u = U(unit); return u and u.family end
+	_G.UnitName = function(unit) local u = U(unit); return u and u.name end
+	_G.UnitAffectingCombat = function(unit) local u = U(unit); return u and u.combat or false end
+	_G.GetCVar = function(name) if name == "cameraFov" then return "90" end end
+	NS.AggroDistance = function(_, unit) local u = U(unit); if u then return u.range[1], u.range[2] end end
+	NS.AggroOn = function() return true end
+	NS.AggroInCombat = function() return false end
+	NS:DB().aggroLink = nil
+	NS:AggroLinkHide()
+end
+
+Install()
+local count = NS:AggroLinkCount("target")
+ok("2 voisins : même famille, proches, hors combat (pas le loup, pas le lointain, pas celui en combat)", count == 2, count)
+local shown = NS:AggroLinkTick()
+local badge = NS.aggroLinkBadge
+ok("« +2 » en ambre à droite de la barre", shown == 2 and badge:IsShown() and badge.text:GetText() == "+2"
+	and badge.text.textColor[1] == NS.Theme.GOLD[1], badge and badge.text:GetText())
+W.units.nameplate5.x = 980
+ok("« +3 » passe au rouge", NS:AggroLinkTick() == 3 and badge.text.textColor[1] == NS.Theme.RED[1])
+W.units.nameplate1.combat = true
+ok("cible déjà en combat : rien", NS:AggroLinkTick() == 0 and not badge:IsShown())
+W.units.nameplate1.combat = nil
+NS.AggroInCombat = function() return true end
+ok("joueur en combat : rien", NS:AggroLinkTick() == 0 and not badge:IsShown())
+NS.AggroInCombat = function() return false end
+NS:DB().aggroLink = false
+ok("réglage coupé : rien", NS:AggroLinkTick() == 0 and not badge:IsShown())
+NS:DB().aggroLink = nil
+W.units.nameplate1.target = nil
+ok("pas de cible : rien", NS:AggroLinkTick() == 0)
+-- réglage sur la page Portée d'aggro
+local row
+for _, page in ipairs(NS.OPTION_PAGES or {}) do
+	if page.id == "aggro" then for _, r in ipairs(page.rows) do if r.key == "aggroLink" then row = r end end end
+end
+ok("réglage « Voisins qui suivent (+N) » sur la page Portée d'aggro", row ~= nil and NS.L[row.label] == "Voisins qui suivent (+N)")
+
+for _, name in ipairs(NAMES) do _G[name] = saved[name] end
+NS.AggroDistance, NS.aggroPlates, NS.AggroOn, NS.AggroInCombat = savedDistance, savedPlates, savedOn, savedCombat
+NS:AggroLinkHide()
+Check("[LINK] « +N » : géométrie, voisins de la même sorte hors combat, ambre puis rouge, combat, réglage", #bad == 0,
+	table.concat(bad, " ; "))

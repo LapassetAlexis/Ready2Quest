@@ -662,3 +662,70 @@ do
 end
 
 Done()
+
+
+-- 3.2.0 : paillettes de l'étincelle (brillante) : elles montent et s'effacent
+-- même si le placement du modèle échoue (elles restaient en ligne, figées)
+do
+	Say("-- médaillon forgé : paillettes jamais figées")
+	local frame = Fresh("azeroth", true)
+	frame:Show()
+	local savedIntensity = NS.CompanionFxIntensity
+	NS.CompanionFxIntensity = function() error("mouvement refusé") end
+	local savedDelay = NS.COMPANION_FX_SCATTER.delay
+	NS.COMPANION_FX_SCATTER.delay = 0   -- toutes parties tout de suite (l'étalement a son propre test)
+	local now = (NS.Now and NS.Now()) or 0
+	NS:CompanionFx("sparkle")
+	NS:CompanionFx("bounce")
+	local state = NS.companionFx
+	local p = state.particles[1]
+	local y0 = p.region.lastPoint.y
+	local ok1 = pcall(NS.CompanionFxUpdate, NS, now + 0.7)
+	local risen, faded = p.region.lastPoint.y > y0, (p.region.alpha or 1) < 1
+	pcall(NS.CompanionFxUpdate, NS, now + 2)
+	local gone = #state.particles == 0 and not p.region:IsShown()
+	NS.CompanionFxIntensity = savedIntensity
+	NS.COMPANION_FX_SCATTER.delay = savedDelay
+	Check("[FCOMP] paillettes : montent, s'effacent et disparaissent même si le mouvement du modèle échoue",
+		not ok1 and risen and faded and gone, tostring(y0) .. " -> " .. tostring(p.region.lastPoint.y))
+	Done()
+end
+
+-- 3.2.0 : les paillettes naissent au hasard dans le disque (plus en rangée)
+do
+	Say("-- médaillon forgé : paillettes au hasard")
+	local frame = Fresh("azeroth", true)
+	frame:Show()
+	local now = (NS.Now and NS.Now()) or 0
+	NS.companionFx = nil
+	NS:CompanionFx("sparkle")
+	local list = NS.companionFx.particles
+	local F, h = NS.FORGE_RING, frame:GetHeight()
+	local cx, cy, radius = F.x or 0, (F.y or 0) + h / 2, (F.disc or 88) / 2
+	local ys, out, late = {}, 0, 0
+	for _, p in ipairs(list) do
+		ys[math.floor(p.y)] = true
+		local dx, dy = p.x - cx, p.y + p.rise - cy
+		if dx * dx + dy * dy > radius * radius then out = out + 1 end
+		if p.at > now then late = late + 1 end
+	end
+	local rows = 0
+	for _ in pairs(ys) do rows = rows + 1 end
+	-- étalées : un secteur de 60° par paillette (donc au moins 3 des 6 tranches fixes), départs en créneaux (≥ 0,3 s d'écart)
+	local sectors, first, last = {}, math.huge, -math.huge
+	for _, p in ipairs(list) do
+		local a = math.atan2 and math.atan2(p.y - cy, p.x - cx) or math.atan(p.y - cy, p.x - cx)
+		sectors[math.floor(((a + 2 * math.pi) % (2 * math.pi)) / (math.pi / 3))] = true
+		first, last = math.min(first, p.at), math.max(last, p.at)
+	end
+	local nsec = 0
+	for _ in pairs(sectors) do nsec = nsec + 1 end
+	NS:CompanionFxUpdate(now + 0.01)
+	local hiddenLate = true
+	for _, p in ipairs(list) do if p.at > now + 0.01 and (p.region.alpha or 0) > 0 then hiddenLate = false end end
+	NS:CompanionFxUpdate(now + 5)
+	Check("[FCOMP] paillettes : 6, à des hauteurs différentes, dans le disque montée comprise, décalées dans le temps, effacées à la fin",
+		#list == 0 and rows >= 3 and out == 0 and hiddenLate and nsec >= 3 and last - first >= 0.3,
+		rows .. " hauteurs, " .. out .. " hors disque, " .. late .. " en retard, " .. nsec .. " secteurs, étalé " .. string.format("%.2f", last - first))
+	Done()
+end

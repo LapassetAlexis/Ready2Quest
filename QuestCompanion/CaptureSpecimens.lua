@@ -71,7 +71,7 @@
 --   ns:SpecimenCanRelease(id) -> true | false, raison ("missing"|"reference"|"worn"|"better")
 --       2.15.0 : "better" = meilleur que la référence du Codex (relâcher ne
 --       fait jamais baisser tes étoiles : « Mets-le au Codex avant »)
---   ns:SpecimenRelease(id) -> gain | false, raison (mêmes raisons)
+--   ns:SpecimenRelease(id, quiet) -> gain | false, raison (mêmes raisons ; quiet : sans ligne de chat)
 --   ns:SpecimenTake(id) -> spec | nil (3.0.0 : part sans paillettes, échange)
 --   ns:SpecimenLabel(spec) -> nom (avec « (brillant) »)
 -- Réserve
@@ -548,7 +548,9 @@ function ns:SpecimenCanRelease(id)
 	return true
 end
 
-function ns:SpecimenRelease(id)
+-- 3.2.0 : `quiet` (Faire de la place, ReserveTidy.lua) : pas de ligne par
+-- spécimen, le tri imprime son bilan
+function ns:SpecimenRelease(id, quiet)
 	local ok, why = self:SpecimenCanRelease(id)
 	if not ok then return false, why end
 	local capture = Store(self)
@@ -558,7 +560,7 @@ function ns:SpecimenRelease(id)
 	Touch(capture)
 	Sync(self, capture, spec.npc)
 	local total = self:PaillettesAdd(gain, "release")
-	self:Print(self:F("SPECIMEN_RELEASED", self:SpecimenLabel(spec), gain, total))
+	if not quiet then self:Print(self:F("SPECIMEN_RELEASED", self:SpecimenLabel(spec), gain, total)) end
 	Fire("SPECIMENS", "release", spec.id)
 	return gain
 end

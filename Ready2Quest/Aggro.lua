@@ -696,6 +696,22 @@ function ns:AggroDangerShown()
 	return false
 end
 
+-- 1.37.1 : le monstre sous la marque rouge (pour le compagnon de
+-- QuestCompanion, qui crie son nom) : jeton d'unité, nom ; nil sinon
+function ns:AggroDangerUnit()
+	if not (self.aggroRings and self:AggroOn()) then return nil end
+	for plate, ring in pairs(self.aggroRings) do
+		if ring.verdict == "red" and ring.IsShown and ring:IsShown() then
+			local unit = type(plate) == "table" and ns.Plain(plate.namePlateUnitToken) or nil
+			if type(unit) == "string" then
+				local ok, name = pcall(rawget(_G, "UnitName") or function() end, unit)
+				return unit, ok and ns.Plain(name) or nil
+			end
+		end
+	end
+	return nil
+end
+
 function ns:AggroHideAll()
 	for _, ring in pairs(self.aggroRings) do ring:Hide(); ring.verdict = nil end
 end

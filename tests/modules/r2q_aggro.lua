@@ -116,8 +116,8 @@ do
 		and NS:FindModule("aggro").key == "aggroEnabled" and NS:FindModule("portee") ~= nil)
 	local page
 	for _, def in ipairs(NS.OPTION_PAGES) do if def.id == "aggro" then page = def end end
-	Check("[AGGRO] sous-page du QoL, 6 réglages (style de marque, apprentissage)", page and page.parent == "qol" and page.group == "OPT_GROUP_QOL"
-		and #page.rows == 6 and page.rows[5].key == "aggroStyle" and page.rows[6].key == "aggroLearn")
+	Check("[AGGRO] sous-page du QoL, 7 réglages (style de marque, apprentissage, voisins +N)", page and page.parent == "qol" and page.group == "OPT_GROUP_QOL"
+		and #page.rows == 7 and page.rows[5].key == "aggroStyle" and page.rows[6].key == "aggroLearn" and page.rows[7].key == "aggroLink")
 	local db = NS:DB()
 	Check("[AGGRO] défauts : actif, danger seul, infobulle, anneaux", db.aggroEnabled == true and db.aggroKey == "alert"
 		and NS:AggroKey() == "alert" and db.aggroTooltip == true and db.aggroRings == true)

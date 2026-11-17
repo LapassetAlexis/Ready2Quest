@@ -97,6 +97,46 @@ local function Particle(self, frame, kind)
 	return p
 end
 
+-- 3.2.0 : les paillettes, cœurs et miettes naissent au hasard dans le
+-- portrait (le disque du médaillon forgé, sinon le cadre carré), un peu
+-- décalées dans le temps, au lieu d'une rangée sous la créature ; les « Zz »
+-- gardent leur place. scatter : marge au bord, montée (min, max), retard
+-- maximal (part de la durée).
+-- 3.2.0 (bêta 5) : chaque particule a son secteur du disque (ou sa colonne
+-- du cadre carré), loin du centre (inner), et les départs s'étalent sur
+-- `delay` de la durée : plus de grappe, plus de départ groupé
+ns.COMPANION_FX_SCATTER = { edge = 10, riseMin = 10, riseMax = 20, delay = 0.6, inner = 0.35, tries = 8 }
+
+-- Un point de départ au hasard, depuis le CENTRE du cadre : x, y, montée.
+-- index / count : la part du portrait de cette particule
+function ns.CompanionFxSpot(frame, index, count)
+	local S = ns.COMPANION_FX_SCATTER
+	local rise = S.riseMin + math.random() * (S.riseMax - S.riseMin)
+	local w = tonumber(frame.GetWidth and frame:GetWidth()) or 104
+	local h = tonumber(frame.GetHeight and frame:GetHeight()) or 104
+	local F = frame.ring == "forge" and ns.FORGE_RING
+	if F then
+		local cx, cy, radius = (F.x or 0), (F.y or 0) + h / 2, (F.disc or 88) / 2 - S.edge
+		local x, y
+		count, index = math.max(1, count or 1), index or 1
+		local start = (frame.fxTurn or 0)
+		for _ = 1, S.tries do
+			local angle = start + ((index - 1) + math.random()) / count * 2 * math.pi
+			local r = (S.inner + (1 - S.inner) * math.sqrt(math.random())) * radius
+			x, y = cx + r * math.cos(angle), cy + r * math.sin(angle)
+			-- la montée reste dans le disque
+			local dx, dy = x - cx, y + rise - cy
+			if dx * dx + dy * dy <= radius * radius then return x, y, rise end
+		end
+		return x, math.min(y, cy + radius - rise), rise
+	end
+	count, index = math.max(1, count or 1), index or 1
+	local column = math.max(1, w - 2 * S.edge) / count
+	local x = -w / 2 + S.edge + ((index - 1) + math.random()) * column
+	local y = -h / 2 + S.edge + math.random() * math.max(1, h - 2 * S.edge - rise)
+	return x, y, rise
+end
+
 -- Lance un effet ; renvoie true s'il est parti
 function ns:CompanionFx(kind)
 	local frame = self.companionFrame
@@ -115,12 +155,28 @@ function ns:CompanionFx(kind)
 		frame.alert:Show()
 		state.alertUntil = now + def.duration
 	else
+		-- les secteurs tournent d'une salve à l'autre (pas toujours les mêmes places)
+		frame.fxTurn = math.random() * 2 * math.pi
+		-- les départs : un créneau chacun, dans un ordre mélangé
+		local count, slots = def.count or 1, {}
+		for i = 1, count do slots[i] = i end
+		for i = count, 2, -1 do
+			local j = math.random(i)
+			slots[i], slots[j] = slots[j], slots[i]
+		end
 		for index = 1, def.count or 1 do
 			local p = Particle(self, frame, kind)
-			p.at, p.untilAt = now, now + def.duration
-			p.x = (index - (def.count + 1) / 2) * 12
-			p.y = -20
-			p.rise = 26 + index * 4
+			if kind == "zzz" then
+				p.at, p.untilAt = now, now + def.duration
+				p.x = (index - (def.count + 1) / 2) * 12
+				p.y = -20
+				p.rise = 26 + index * 4
+			else
+				local delay = ((slots[index] - 1) + math.random()) / count * ns.COMPANION_FX_SCATTER.delay * def.duration
+				-- vie : de la naissance (retardée) jusqu'à la fin de l'effet au plus tard
+				p.at, p.untilAt = now + delay, now + delay + def.duration * (1 - ns.COMPANION_FX_SCATTER.delay)
+				p.x, p.y, p.rise = ns.CompanionFxSpot(frame, index, def.count)
+			end
 			local region = (kind == "zzz") and p.text or p.dot
 			local other = (kind == "zzz") and p.dot or p.text
 			if other.Hide then other:Hide() end
@@ -133,19 +189,18 @@ function ns:CompanionFx(kind)
 			p.region = region
 			region:ClearAllPoints()
 			region:SetPoint("CENTER", frame, "CENTER", p.x, p.y)
-			region:SetAlpha(1)
+			region:SetAlpha(now < p.at and 0 or 1)   -- une paillette en retard attend, invisible
 			region:Show()
 		end
 	end
 	return true
 end
 
--- Une image : mouvements, particules, fins d'effet, flottement heureux
-function ns:CompanionFxUpdate(now)
-	local frame = self.companionFrame
-	if not frame then return end
-	now = now or Clock()
-	local state = State(self)
+-- Une image : particules et fins d'effet d'abord, puis mouvements et
+-- flottement heureux. 3.2.0 : le mouvement (placement du modèle, humeur,
+-- caractère) est isolé : une erreur là ne fige plus les paillettes en ligne
+-- au milieu du médaillon (elles ne montaient plus, ne s'effaçaient plus)
+local function Motion(self, frame, state, now)
 	local dx, dy = 0, 0
 	local motion = state.motion
 	if motion then
@@ -163,6 +218,13 @@ function ns:CompanionFxUpdate(now)
 	-- son caractère : effets plus ou moins amples (Personality.lua)
 	local scale = self.CompanionFxIntensity and self:CompanionFxIntensity() or 1
 	Offset(frame, dx * scale, dy * scale)
+end
+
+function ns:CompanionFxUpdate(now)
+	local frame = self.companionFrame
+	if not frame then return end
+	now = now or Clock()
+	local state = State(self)
 	-- particules : montent et s'effacent (tassées sur place : pas de table
 	-- neuve à chaque image)
 	local particles = state.particles
@@ -173,10 +235,10 @@ function ns:CompanionFxUpdate(now)
 			if p.region then p.region:Hide() end
 			state.pool[#state.pool + 1] = p
 		else
-			local ratio = (now - p.at) / (p.untilAt - p.at)
+			local ratio = math.max(0, (now - p.at) / (p.untilAt - p.at))
 			p.region:ClearAllPoints()
 			p.region:SetPoint("CENTER", frame, "CENTER", p.x, p.y + p.rise * ratio)
-			p.region:SetAlpha(1 - ratio)
+			p.region:SetAlpha(now < p.at and 0 or (1 - ratio))
 			kept = kept + 1
 			particles[kept] = p
 		end
@@ -185,6 +247,11 @@ function ns:CompanionFxUpdate(now)
 	if frame.alert and state.alertUntil and now >= state.alertUntil then
 		frame.alert:Hide()
 		state.alertUntil = nil
+	end
+	local ok, err = pcall(Motion, self, frame, state, now)
+	if not ok then
+		state.motion = nil
+		error(err, 0)   -- noté par l'appelant (fx:update), les paillettes ont déjà bougé
 	end
 end
 

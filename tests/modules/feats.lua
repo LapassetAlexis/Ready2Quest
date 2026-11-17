@@ -132,7 +132,12 @@ do
 		Mock.InstallAtlas(true)
 		NS:AzerothAtlasOK(true)
 		HF.earned = {}
+		-- taille fixe : un « géant » tiré au hasard débloquait en plus « Un géant
+		-- parmi les bêtes », et son bandeau passait avant ceux qu'on attend ici
+		local savedSize = NS.SpecimenRollSize
+		NS.SpecimenRollSize = function() return "normal" end
 		NS:CaptureResolve({ success = true, target = { npcID = 7001, name = "Raptor", class = "normal", zoneID = 1413 } })
+		NS.SpecimenRollSize = savedSize
 		local s = Steps()
 		s.ok("sujet marqué, passe groupée plus tard", NS.featDirty.capture == true and NS.featEvalAt ~= nil
 			and NS:FeatGot("men_first") == nil)

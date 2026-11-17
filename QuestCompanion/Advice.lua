@@ -106,7 +106,11 @@ local RULES = {}
 function RULES.elite(self, state)
 	local seen = state.elite
 	if not seen then return nil end
-	return { stage = 1, pool = seen.rare and "ADVICE_RARE" or "ADVICE_ELITE", args = { seen.name }, key = "elite:" .. seen.guid }
+	-- 3.2.0 : un élite crâne (« ?? »), le compagnon crie (ADVICE_SKULL -> SHOUT_SKULL) ;
+	-- un rare garde son annonce (une chance plus qu'un danger)
+	local pool = seen.rare and "ADVICE_RARE" or "ADVICE_ELITE"
+	if seen.skull and not seen.rare and self.CompanionShoutPool and self:CompanionShoutPool("ADVICE_SKULL") then pool = "ADVICE_SKULL" end
+	return { stage = 1, pool = pool, args = { seen.name }, key = "elite:" .. seen.guid }
 end
 
 function RULES.health(self, state)
@@ -189,8 +193,16 @@ function ns:AdviceEvaluate()
 		if ok and found then
 			local key = found.key or name
 			if (state.said[key] or 0) < found.stage then
-				local said, why = self:CompanionSay(found.pool, { category = "advice",
-					important = self.ADVICE_IMPORTANT[name], args = found.args })
+				-- 3.2.0 : certains conseils sont criés (CompanionShouts.lua)
+				local shout = self.CompanionShoutPool and self:CompanionShoutPool(found.pool)
+				local said, why
+				if shout then
+					said = self:CompanionShout(shout, found.args)
+					why = said and nil or "busy"
+				else
+					said, why = self:CompanionSay(found.pool, { category = "advice",
+						important = self.ADVICE_IMPORTANT[name], args = found.args })
+				end
 				if said then
 					state.said[key] = found.stage
 					if name == "elite" then state.elite = nil end
@@ -232,7 +244,7 @@ function ns:AdviceSeeUnit(unit)
 	if state.eliteCount > ns.ADVICE_ELITES_MAX then state.elites, state.eliteCount = {}, 1 end
 	state.elites[guid] = true
 	state.elite = { guid = guid, name = ns.Plain(Call(rawget(_G, "UnitName"), unit)) or "?",
-		rare = class == "rare" or class == "rareelite" }
+		rare = class == "rare" or class == "rareelite", skull = level == -1 }
 	self:AdviceEvaluate()
 	return true
 end

@@ -1170,6 +1170,9 @@ end
 --              en combat, refusé sans être noté (2.13.0)
 --   important: conseil de route important (élite, vie, munitions, vivres) :
 --              seul ce qui passe au cran « Discret »
+--   shout    : 3.2.0, il crie : le texte en majuscules, en couleur
+--              ({ ink = "T_RED", accent = "T_GOLD" } : jetons du thème ;
+--              accent = les arguments, nom du monstre…) (CompanionShouts.lua)
 -- Jamais outre la sourdine ni une bulle plus importante encore affichée.
 -- Renvoie true, ou false + raison ("off" : coupé/muet/masqué, "busy").
 function ns:CompanionSay(pool, opts)
@@ -1217,7 +1220,8 @@ function ns:CompanionSay(pool, opts)
 	if not self:CompanionUpdateVisibility() then return false, "off" end
 	local bubble = self:EnsureCompanionBubble()
 	if not bubble then return false, "off" end
-	local text = self:F(lineKey, unpack(opts.args or {}))
+	local text = opts.shout and self:CompanionShoutText(lineKey, opts.args, opts.shout)
+		or self:F(lineKey, unpack(opts.args or {}))
 	-- plus importante qu'une séquence : la conversation s'arrête, le
 	-- tutoriel reprendra son étape après la bulle
 	if seq and not opts.seq then
@@ -1249,6 +1253,27 @@ function ns:CompanionSay(pool, opts)
 	bubble:Show()
 	if Theme.FadeIn then pcall(Theme.FadeIn, bubble) end
 	return true
+end
+
+-- Texte crié : majuscules d'abord (Theme.Upper changerait « |cff » en
+-- « |CFF », que le jeu ne lit pas), couleurs ensuite. Chaque argument prend
+-- l'accent, puis l'encre revient.
+function ns:CompanionShoutText(lineKey, args, style)
+	local upper = Theme.Upper or function(v) return string.upper(tostring(v)) end
+	style = type(style) == "table" and style or {}
+	local ink = type(style.ink) == "string" and Theme[style.ink] or ""
+	local accent = type(style.accent) == "string" and Theme[style.accent] or nil
+	-- arguments tous en texte (colorés) : « %d » devient « %s »
+	local template = upper(L[lineKey] or lineKey):gsub("%%[SDsd]", "%%s")
+	local list = {}
+	for index, value in ipairs(args or {}) do
+		local word = type(value) == "number" and tostring(value) or upper(value)
+		list[index] = accent and (accent .. word .. "|r" .. ink) or word
+	end
+	local ok, text = pcall(string.format, template, unpack(list))
+	if not ok then text = template end
+	if ink ~= "" then text = ink .. text .. "|r" end
+	return text
 end
 
 function ns:CompanionHideBubble()
@@ -3099,9 +3124,12 @@ function ns:CompanionApplyFrame()
 end
 
 -- Petits points de lumière de la voûte étoilée (positions fixes : pas de
--- hasard, le fond ne « bouge » pas à chaque rechargement)
-local STARS = { { 12, -10, 2 }, { 30, -22, 1 }, { 52, -8, 2 }, { 74, -18, 1 }, { 90, -6, 2 },
-	{ 20, -40, 1 }, { 84, -36, 1 }, { 60, -30, 1 }, { 8, -62, 1 }, { 94, -58, 2 } }
+-- hasard, le fond ne « bouge » pas à chaque rechargement). 3.2.0 : en part
+-- de la largeur et de la hauteur du cadre carré (x, y de 0 à 1, taille px),
+-- semées sur tout le cadre : en pixels, elles tenaient en deux rangées en
+-- haut et se lisaient comme des lignes d'étoiles
+local STARS = { { 0.12, 0.10, 2 }, { 0.40, 0.17, 1 }, { 0.72, 0.09, 2 }, { 0.90, 0.32, 1 }, { 0.22, 0.38, 1 },
+	{ 0.56, 0.34, 2 }, { 0.80, 0.57, 1 }, { 0.10, 0.66, 2 }, { 0.44, 0.60, 1 }, { 0.66, 0.78, 1 } }
 ns.COMPANION_STARS = STARS
 -- 3.1.2 : dans le médaillon rond du thème forgé, les mêmes étoiles semées
 -- dans le disque (x, y depuis son centre, px) : posées pour le cadre carré,
@@ -3122,7 +3150,9 @@ function ns:CompanionPlaceStars(frame, square)
 			star:SetPoint("CENTER", frame, "TOP", (forge.x or 0) + f[1], (forge.y or 0) + f[2])
 		else
 			local s = STARS[index]
-			star:SetPoint("TOPLEFT", frame, "TOPLEFT", s[1], s[2])
+			local w = tonumber(frame.GetWidth and frame:GetWidth()) or 104
+			local h = tonumber(frame.GetHeight and frame:GetHeight()) or 104
+			star:SetPoint("TOPLEFT", frame, "TOPLEFT", math.floor(s[1] * w + 0.5), -math.floor(s[2] * h + 0.5))
 		end
 	end
 	return forge and "forge" or "square"
@@ -3133,7 +3163,8 @@ end
 -- et une étoile éteinte reparaît parfois ailleurs dans le portrait (le disque
 -- du médaillon, ou le cadre carré). Une horloge légère, rien sans fond étoilé
 -- ni cadre visible.
-ns.COMPANION_STAR_TWINKLE = { tick = 0.1, min = 1.2, max = 3.5, low = 0.05, high = 0.9, move = 0.6, edge = 8 }
+-- squareH : part de la hauteur du cadre carré où une étoile peut reparaître
+ns.COMPANION_STAR_TWINKLE = { tick = 0.1, min = 1.2, max = 3.5, low = 0.05, high = 0.9, move = 0.6, edge = 8, squareH = 0.85 }
 local TW = ns.COMPANION_STAR_TWINKLE
 
 local function RandomSpot(frame)
@@ -3146,7 +3177,7 @@ local function RandomSpot(frame)
 	local w = (frame.GetWidth and frame:GetWidth()) or 104
 	local h = (frame.GetHeight and frame:GetHeight()) or 104
 	return "TOPLEFT", "TOPLEFT", TW.edge + math.random() * math.max(1, w - 2 * TW.edge),
-		-(TW.edge + math.random() * math.max(1, (h * 0.6) - TW.edge))
+		-(TW.edge + math.random() * math.max(1, (h * TW.squareH) - TW.edge))
 end
 
 function ns:CompanionStarsTick(now)
@@ -3228,7 +3259,7 @@ function ns:CompanionApplyBackground()
 		frame.stars = {}
 		for index, s in ipairs(STARS) do
 			local star = Theme.Solid(frame, "BORDER", Theme.PARCHMENT, 0.8)
-			star:SetPoint("TOPLEFT", frame, "TOPLEFT", s[1], s[2])
+			star:SetPoint("TOPLEFT", frame, "TOPLEFT", 0, 0)   -- placée par CompanionPlaceStars
 			star:SetSize(s[3], s[3])
 			frame.stars[index] = star
 		end
@@ -3640,7 +3671,10 @@ function ns:CompanionOnLoot(message)
 	local link = self:ParseSelfLoot(message)
 	if link and LinkQuality(link) >= 3 then   -- rare ou mieux : un vrai moment
 		self:CompanionAdd("mood", 10)
-		self:CompanionSay("LOOT", { cd = "loot" })
+		-- 3.2.0 : un bleu ou un violet, il crie son nom (CompanionShouts.lua)
+		if not (self.CompanionShoutLoot and self:CompanionShoutLoot(link, LinkQuality(link))) then
+			self:CompanionSay("LOOT", { cd = "loot" })
+		end
 	end
 end
 
@@ -3729,7 +3763,11 @@ function ns:CompanionOnLevel(level)
 	self:CompanionRefreshLabels()
 	-- l'évolution garde sa bulle ; un déblocage du même niveau passe au chat
 	local fresh = self:CompanionCheckUnlocks(level, false, evolved)
-	if not evolved and #fresh == 0 then self:CompanionSay("LEVEL", { args = { level } }) end
+	if not evolved and #fresh == 0 then
+		-- 3.2.0 : il crie le niveau (CompanionShouts.lua), sinon il le dit
+		local shout = self.CompanionShoutPool and self:CompanionShoutPool("LEVEL")
+		if not (shout and self:CompanionShout(shout, { level })) then self:CompanionSay("LEVEL", { args = { level } }) end
+	end
 end
 
 function ns:CompanionOnStamp(stamp)

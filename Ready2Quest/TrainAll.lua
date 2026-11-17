@@ -343,7 +343,10 @@ function ns:TrainAllStep()
 	if run.pending and count < run.pending.count then
 		run.done, run.spent = run.done + 1, run.spent + run.pending.price
 	elseif run.pending then
-		return self:TrainAllFinish()     -- rien n'a bougé : le serveur a refusé
+		-- 1.37.1 : rien n'a encore bougé : on attend la liste à jour (le
+		-- serveur répond en plusieurs fois) ; un vrai refus est arrêté par
+		-- TrainAllWatch au bout de TRAINALL_TIMEOUT
+		return true
 	end
 	run.pending = nil
 	if count == 0 or not first or run.done >= ns.TRAINALL_MAX then return self:TrainAllFinish() end
@@ -399,7 +402,11 @@ local function Relayout()
 		if ns.Listening("TRAINER_UPDATE", OWNER) and not ns.trainAllRun then ns:TrainAllRefresh() end
 	end)
 end
+-- 1.37.1 : pendant une série, l'argent bouge AVANT la liste du maître :
+-- avancer là concluait « refusé » et arrêtait la série après 1 à 3 achats.
+-- Seul TRAINER_UPDATE fait avancer la série.
 local function OnMoney()
+	if ns.trainAllRun then return end
 	OnUpdate()
 	Relayout()
 end
