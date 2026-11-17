@@ -687,3 +687,27 @@ do
 		not ok1 and risen and faded and gone, tostring(y0) .. " -> " .. tostring(p.region.lastPoint.y))
 	Done()
 end
+
+-- 3.2.0 : le filet : une salve sortie du suivi est cachée par l'horloge
+do
+	Say("-- médaillon forgé : filet des paillettes")
+	local frame = Fresh("azeroth", true)
+	frame:Show()
+	local now = (NS.Now and NS.Now()) or 0
+	NS:CompanionFx("sparkle")
+	local list = {}
+	for _, p in ipairs(NS.companionFx.particles) do list[#list + 1] = p end
+	NS.companionFx.particles = {}             -- sortie du suivi : l'animation ne les voit plus
+	local shownBefore = NS:CompanionFxDiag(now + 0.2)
+	local hidden = NS:CompanionFxSweep(now + 1.4 + 0.1)
+	local still = 0
+	for _, p in ipairs(list) do if p.region:IsShown() then still = still + 1 end end
+	local soon = false
+	for _, key in ipairs(select(2, NS.ClockJobs())) do if key == "companion:fx-sweep" then soon = true end end
+	Check("[FCOMP] filet : une salve sortie du suivi est cachée à la fin de l'effet (horloge programmée), /qc diag la compte",
+		shownBefore >= 6 and hidden >= 6 and still == 0 and soon, shownBefore .. "/" .. hidden .. "/" .. still)
+	Mock:Reset()
+	NS:HandleCommand("diag")
+	Check("[FCOMP] /qc diag : ligne des effets", Mock:Output():find("effets :", 1, true) ~= nil, Mock:Output())
+	Done()
+end
