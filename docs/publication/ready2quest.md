@@ -23,7 +23,7 @@ For **WoW Forever** (1.60). English and French.
 - The engine comes from [DoesItDiePlus](https://www.curseforge.com/wow/addons/doesitdieplus) by Ironship and Does It Die by Joe Greive, free software, with thanks. Already using one of them? Ready2Quest steps aside, nothing shows twice.
 
 ## New in 1.37: who else comes along
-- **Neighbours that follow (+N)**: out of combat, "+2" next to your target's nameplate tells how many monsters of the same kind are close enough to come and help it (an estimate; red from 3).
+- **Multi-aggro warning**: out of combat, a warning triangle next to your target when other monsters of the same kind are close by: they may come along.
 - **Learn all, really all**: one click at the trainer now learns everything.
 - **Lighter**: the gear summary and portrait stats modules are gone.
 
@@ -96,7 +96,7 @@ Pour **WoW Forever** (1.60). En français et en anglais.
 - Le moteur vient de [DoesItDiePlus](https://www.curseforge.com/wow/addons/doesitdieplus) d'Ironship et de Does It Die de Joe Greive, logiciels libres, merci à eux. Tu utilises déjà l'un des deux ? Ready2Quest s'efface, rien en double.
 
 ## Nouveau en 1.37 : qui vient avec ?
-- **Voisins qui suivent (+N)** : hors combat, « +2 » à côté de la barre de nom de ta cible dit combien de monstres de la même sorte sont assez près pour venir l'aider (une estimation ; rouge à partir de 3).
+- **Alerte multi-aggro** : hors combat, un triangle d'alerte à côté de ta cible quand d'autres monstres de la même sorte sont tout près : ils risquent de venir aussi.
 - **Tout apprendre, vraiment tout** : un clic chez le maître apprend désormais tout.
 - **Plus léger** : les modules Résumé de stuff et Stats du portrait sont retirés.
 

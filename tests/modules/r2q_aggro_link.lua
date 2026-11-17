@@ -70,10 +70,10 @@ local count = NS:AggroLinkCount("target")
 ok("2 voisins : même famille, proches, hors combat (pas le loup, pas le lointain, pas celui en combat)", count == 2, count)
 local shown = NS:AggroLinkTick()
 local badge = NS.aggroLinkBadge
-ok("« +2 » en ambre à droite de la barre", shown == 2 and badge:IsShown() and badge.text:GetText() == "+2"
-	and badge.text.textColor[1] == NS.Theme.GOLD[1], badge and badge.text:GetText())
+ok("2 voisins : le triangle d'alerte du jeu à droite de la barre, sans chiffre", shown == 2 and badge:IsShown()
+	and badge.icon.texture == NS.AGGRO_LINK_ICON, badge and badge.icon and badge.icon.texture)
 W.units.nameplate5.x = 980
-ok("« +3 » passe au rouge", NS:AggroLinkTick() == 3 and badge.text.textColor[1] == NS.Theme.RED[1])
+ok("3 voisins : la même alerte", NS:AggroLinkTick() == 3 and badge:IsShown())
 W.units.nameplate1.combat = true
 ok("cible déjà en combat : rien", NS:AggroLinkTick() == 0 and not badge:IsShown())
 W.units.nameplate1.combat = nil
@@ -99,12 +99,13 @@ local row
 for _, page in ipairs(NS.OPTION_PAGES or {}) do
 	if page.id == "aggro" then for _, r in ipairs(page.rows) do if r.key == "aggroLink" then row = r end end end
 end
-ok("réglage « Voisins qui suivent (+N) » sur la page Portée d'aggro", row ~= nil and NS.L[row.label] == "Voisins qui suivent (+N)")
+ok("réglage « Alerte multi-aggro » (expliqué) sur la page Portée d'aggro", row ~= nil and NS.L[row.label] == "Alerte multi-aggro"
+	and row.describe ~= nil)
 
 for _, name in ipairs(NAMES) do _G[name] = saved[name] end
 NS.AggroDistance, NS.aggroPlates, NS.AggroOn, NS.AggroInCombat = savedDistance, savedPlates, savedOn, savedCombat
 NS:AggroLinkHide()
-Check("[LINK] « +N » : géométrie, voisins de la même sorte hors combat, ambre puis rouge, combat, réglage", #bad == 0,
+Check("[LINK] alerte multi-aggro : géométrie, voisins de la même sorte hors combat, triangle d'alerte, combat, réglage", #bad == 0,
 	table.concat(bad, " ; "))
 
 -- 1.38.0 (bêta 2) : la position d'une barre de nom est cachée sur Forever :
@@ -141,4 +142,46 @@ do
 	_G.CreateFrame = savedCreate
 	Check("[LINK] position cachée de la barre : repli sur un cadre accroché à son centre (source « probe »)",
 		#created == 1 and probeX == 700 and NS.AggroLinkXSource() == "probe" and angle ~= nil, tostring(probeX))
+end
+
+-- 1.38.0 : direction cachée (Forever) : la seule distance au joueur compte
+do
+	local savedPlates, savedDistance, savedKind = NS.aggroPlates, NS.AggroDistance, NS.AggroUnitKind
+	local NAMES = { "UnitIsUnit", "UnitAffectingCombat", "UnitCreatureType", "UnitCreatureFamily", "UnitName" }
+	local keep = {}
+	for _, n in ipairs(NAMES) do keep[n] = rawget(_G, n) end
+	-- en jeu : la position de la barre ET celle d'un cadre accroché à elle sont cachées
+	local hidden = {}
+	local function Hidden()
+		local f = CreateFrame("Frame", nil, UIParent)
+		f.GetCenter = function() error("secret") end
+		hidden[f] = true
+		return f
+	end
+	local savedCreate = _G.CreateFrame
+	_G.CreateFrame = function(kind, name, parent, ...)
+		local f = savedCreate(kind, name, parent, ...)
+		if hidden[parent] then f.GetCenter = function() error("secret") end end
+		return f
+	end
+	local ranges = { nameplate1 = { 22, 26 }, nameplate2 = { 25, 30 }, nameplate3 = { 40, 45 } }
+	NS.aggroPlates = { nameplate1 = Hidden(), nameplate2 = Hidden(), nameplate3 = Hidden() }
+	NS.AggroDistance = function(_, unit)
+		local key = unit == "target" and "nameplate1" or unit
+		local r = ranges[key]
+		if r then return r[1], r[2] end
+	end
+	NS.AggroUnitKind = function() return "hostile" end
+	_G.UnitIsUnit = function(a, b) return (a == "nameplate1" and b == "target") or a == b end
+	_G.UnitAffectingCombat = function() return false end
+	_G.UnitCreatureType = function() return "Humanoïde" end
+	_G.UnitCreatureFamily = function() return nil end
+	_G.UnitName = function() return "Brute" end
+	local trace = {}
+	local count = NS:AggroLinkCount("target", trace)
+	NS.aggroPlates, NS.AggroDistance, NS.AggroUnitKind = savedPlates, savedDistance, savedKind
+	for n, v in pairs(keep) do _G[n] = v end
+	_G.CreateFrame = savedCreate
+	Check("[LINK] direction cachée : compte les monstres à ±8 m de la distance de la cible (24 vs 27,5 oui, 42,5 non)",
+		count == 1 and trace.x0 == nil, tostring(count))
 end

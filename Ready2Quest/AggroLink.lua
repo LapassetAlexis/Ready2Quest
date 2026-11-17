@@ -1,37 +1,45 @@
--- AggroLink.lua -- « +N » : les voisins qui risquent de suivre ta cible (1.37.1)
+-- AggroLink.lua -- alerte multi-aggro : d'autres monstres près de ta cible
+-- (1.37.1 « +N » ; 1.38.0 : une simple alerte, sans chiffre)
 --
--- Hors combat, ta cible hostile : combien de monstres de la même sorte sont
--- assez près d'elle pour venir l'aider si tu l'attaques. Une ESTIMATION :
--- le client ne donne pas la position des monstres. On la reconstruit :
+-- Hors combat, ta cible hostile : y a-t-il d'autres monstres de la même sorte
+-- assez près d'elle pour venir l'aider si tu l'attaques ? Une ESTIMATION :
+-- le client ne donne pas la position des monstres.
 --   * distance joueur -> monstre : la fourchette de la portée d'aggro
 --     (AggroDistance, objets et sorts de portée), prise en son milieu ;
 --   * direction : la place de la barre de nom à l'écran, convertie en angle
---     avec le champ de vision de la caméra (CVar cameraFov, sinon 90°) ;
---   * puis la distance entre les deux points (loi des cosinus).
+--     avec le champ de vision de la caméra, puis l'écart entre les deux
+--     points (loi des cosinus, rayon AGGRO_LINK_RADIUS). Sur Forever, cette
+--     place est cachée (celle de la barre comme celle d'un cadre accroché à
+--     elle, constaté en jeu le 17/11/2026) : repli sur la seule distance, un
+--     monstre dont la distance est à moins de AGGRO_LINK_BAND de celle de la
+--     cible compte. D'où une alerte, pas un chiffre.
 -- « Même sorte » : même type de créature, et même famille pour les bêtes
 -- (un loup n'aide pas un sanglier) ; vivant, hors combat, hostile ou du même
--- nom que la cible. Rayon d'entraide : AGGRO_LINK_RADIUS (à régler en jeu).
--- Affichage : « +N » à droite de la barre de nom de la cible, ambre (rouge à
--- partir de AGGRO_LINK_RED). Réglage « Voisins qui suivent (+N) », page
--- Portée d'aggro (actif).
+-- nom que la cible.
+-- Affichage : le triangle d'alerte du jeu à droite de la barre de nom de la
+-- cible. Réglage « Alerte multi-aggro », page Portée d'aggro (actif).
 local ADDON, ns = ...
 local L = ns.L
 local Theme = ns.Theme
 
 ns.AGGRO_LINK_RADIUS = 12     -- m : voisin qui vient aider (estimation à régler en jeu)
-ns.AGGRO_LINK_RED = 3         -- à partir de ce nombre, le « +N » passe au rouge
+ns.AGGRO_LINK_BAND = 8        -- m : sans direction, écart de distance au joueur toléré
+ns.AGGRO_LINK_ICON = "Interface\\DialogFrame\\UI-Dialog-Icon-AlertNew"   -- triangle d'alerte du jeu
+ns.AGGRO_LINK_SIZE = 18
 ns.AGGRO_LINK_POLL = 0.5      -- s
 ns.AGGRO_LINK_FOV = 90        -- degrés, si le client ne dit rien
 
 ns.RegisterStrings({
-	OPT_AGGRO_LINK = "Voisins qui suivent (+N)",
-	MSG_DIAG_AGGRO_LINK = "  voisins (+N) : %s sur la cible (rayon %d m, champ %d°)",
+	OPT_AGGRO_LINK = "Alerte multi-aggro",
+	OPT_AGGRO_LINK_DESC = "Un triangle d'alerte à droite de ta cible quand d'autres monstres de la même sorte sont à une distance proche de la sienne : ils risquent de venir aussi.",
+	MSG_DIAG_AGGRO_LINK = "  multi-aggro : %s monstre(s) près de la cible (rayon %d m, champ %d°)",
 	MSG_DIAG_AGGRO_LINK_TARGET = "    cible : %s m, x %s (écran %s, source %s)",
 	MSG_DIAG_AGGRO_LINK_ROW = "    %s : %s m, x %s -> écart %s m",
 	MSG_DIAG_AGGRO_LINK_SKIP = "    %s : autre sorte ou en combat",
 }, {
-	OPT_AGGRO_LINK = "Neighbours that follow (+N)",
-	MSG_DIAG_AGGRO_LINK = "  neighbours (+N): %s on the target (radius %d yd, field %d°)",
+	OPT_AGGRO_LINK = "Multi-aggro warning",
+	OPT_AGGRO_LINK_DESC = "A warning triangle right of your target when other monsters of the same kind are at a similar distance: they may come along too.",
+	MSG_DIAG_AGGRO_LINK = "  multi-aggro: %s monster(s) near the target (radius %d yd, field %d°)",
 	MSG_DIAG_AGGRO_LINK_TARGET = "    target: %s yd, x %s (screen %s, source %s)",
 	MSG_DIAG_AGGRO_LINK_ROW = "    %s: %s yd, x %s -> gap %s yd",
 	MSG_DIAG_AGGRO_LINK_SKIP = "    %s: other kind or in combat",
@@ -41,7 +49,10 @@ for _, page in ipairs(ns.OPTION_PAGES or {}) do
 	if page.id == "aggro" and type(page.rows) == "table" then
 		local present
 		for _, row in ipairs(page.rows) do if row.key == "aggroLink" then present = true end end
-		if not present then table.insert(page.rows, { key = "aggroLink", label = "OPT_AGGRO_LINK", kind = "bool" }) end
+		if not present then
+			table.insert(page.rows, { key = "aggroLink", label = "OPT_AGGRO_LINK", kind = "bool",
+				describe = function() return L.OPT_AGGRO_LINK_DESC end })
+		end
 	end
 end
 
@@ -153,7 +164,7 @@ function ns:AggroLinkCount(target, trace)
 	local r0 = self:AggroLinkRange(target)
 	local a0 = ns.AggroLinkAngle(PlateX(targetPlate), width, fov)
 	if trace then trace.r0, trace.x0 = r0, PlateX(targetPlate) end
-	if not (r0 and a0) then return 0, targetPlate end
+	if not r0 then return 0, targetPlate end
 	local ctype, family, name = Sort(target)
 	local count = 0
 	for unit, plate in pairs(plates) do
@@ -165,8 +176,15 @@ function ns:AggroLinkCount(target, trace)
 				and (kind == "hostile" or uname == name)
 			if same and not Call("UnitAffectingCombat", unit) then
 				local r, x = self:AggroLinkRange(unit), PlateX(plate)
-				local gap = ns.AggroLinkGap(r0, a0, r, ns.AggroLinkAngle(x, width, fov))
-				if gap and gap <= ns.AGGRO_LINK_RADIUS then count = count + 1 end
+				local gap
+				if a0 then
+					gap = ns.AggroLinkGap(r0, a0, r, ns.AggroLinkAngle(x, width, fov))
+					if gap and gap <= ns.AGGRO_LINK_RADIUS then count = count + 1 end
+				elseif r then
+					-- direction cachée : la seule distance au joueur
+					gap = math.abs(r - r0)
+					if gap <= ns.AGGRO_LINK_BAND then count = count + 1 end
+				end
 				if trace then trace[#trace + 1] = { name = uname, r = r, x = x, gap = gap } end
 			elseif trace and kind then
 				trace[#trace + 1] = { name = uname, skip = true }
@@ -177,16 +195,16 @@ function ns:AggroLinkCount(target, trace)
 end
 
 -- ---------------------------------------------------------------------------
--- Le « +N » à droite de la barre de nom de la cible
+-- L'alerte à droite de la barre de nom de la cible
 -- ---------------------------------------------------------------------------
 local function Badge(self)
 	if self.aggroLinkBadge then return self.aggroLinkBadge end
 	local ok, frame = pcall(CreateFrame, "Frame", nil, UIParent)
 	if not ok or not frame then return nil end
-	frame:SetSize(1, 1)
-	frame.text = Theme.Text(frame, Theme.F_LABEL or Theme.F_BODY, Theme.GOLD)
-	frame.text:SetPoint("LEFT", frame, "LEFT", 0, 0)
-	if Theme.TextShadow then Theme.TextShadow(frame.text) end
+	frame:SetSize(ns.AGGRO_LINK_SIZE, ns.AGGRO_LINK_SIZE)
+	frame.icon = frame:CreateTexture(nil, "OVERLAY")
+	frame.icon:SetAllPoints()
+	frame.icon:SetTexture(ns.AGGRO_LINK_ICON)
 	frame:Hide()
 	self.aggroLinkBadge = frame
 	return frame
@@ -197,7 +215,7 @@ function ns:AggroLinkHide()
 	self.aggroLinkShown = nil
 end
 
--- Un passage : rend le nombre affiché (0 : rien)
+-- Un passage : rend le nombre de monstres comptés (0 : pas d'alerte)
 function ns:AggroLinkTick()
 	local db = self:DB()
 	if db.aggroLink == false or not (self.AggroOn and self:AggroOn()) or (self.AggroInCombat and self:AggroInCombat()) then
@@ -211,15 +229,17 @@ function ns:AggroLinkTick()
 	end
 	local badge = Badge(self)
 	if not badge then return 0 end
+	-- à droite de la barre de vie (moteur Combat : il la trouve, quel que
+	-- soit l'addon des barres de nom), sinon de la barre de nom entière
+	local bar = self.combat and self.combat.Plate and type(self.combat.Plate.HealthBar) == "function"
+		and select(2, pcall(self.combat.Plate.HealthBar, plate)) or nil
+	local anchor = type(bar) == "table" and bar or plate
 	badge:SetParent(plate)
 	badge:ClearAllPoints()
-	badge:SetPoint("LEFT", plate, "RIGHT", 2, 0)
+	badge:SetPoint("LEFT", anchor, "RIGHT", 4, 0)
 	if badge.SetFrameLevel and plate.GetFrameLevel then
 		pcall(badge.SetFrameLevel, badge, (tonumber(plate:GetFrameLevel()) or 1) + 6)
 	end
-	local c = count >= ns.AGGRO_LINK_RED and Theme.RED or Theme.GOLD
-	badge.text:SetText("+" .. count)
-	badge.text:SetTextColor(c[1], c[2], c[3], 1)
 	badge:Show()
 	self.aggroLinkShown = count
 	return count
