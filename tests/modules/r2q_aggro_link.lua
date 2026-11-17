@@ -24,7 +24,9 @@ ok("fourchette sans borne haute : rien", NS.AggroLinkGap(nil, 0, 20, 0) == nil)
 ResetWorld()
 UIParent:SetSize(1920, 1080)
 local W = {}
-local function Plate(unit) return { GetCenter = function() return W.units[unit].x, 500 end, GetFrameLevel = function() return 1 end } end
+-- une barre de nom a sa propre échelle : GetCenter est en unités de la barre
+local function Plate(unit) return { GetCenter = function() return W.units[unit].x / (W.plateScale or 1), 500 end,
+	GetEffectiveScale = function() return W.plateScale or 1 end, GetFrameLevel = function() return 1 end } end
 local function Install()
 	W = {
 		units = {
@@ -83,6 +85,15 @@ ok("réglage coupé : rien", NS:AggroLinkTick() == 0 and not badge:IsShown())
 NS:DB().aggroLink = nil
 W.units.nameplate1.target = nil
 ok("pas de cible : rien", NS:AggroLinkTick() == 0)
+-- 1.38.0 : barres de nom à l'échelle 0,5 (GetCenter double) : le même compte
+W.units.nameplate1.target = true
+W.plateScale = 0.5
+ok("échelle des barres de nom convertie : toujours 3", NS:AggroLinkCount("target") == 3, NS:AggroLinkCount("target"))
+local diag = NS:AggroLinkDiagLine()
+ok("/r2q diag : la cible et chaque voisin examiné (distance, x, écart), les autres sortes signalées",
+	diag:find("cible", 1, true) and select(2, diag:gsub("écart", "")) >= 3 and diag:find("autre sorte", 1, true), diag)
+W.plateScale = nil
+W.units.nameplate1.target = nil
 -- réglage sur la page Portée d'aggro
 local row
 for _, page in ipairs(NS.OPTION_PAGES or {}) do

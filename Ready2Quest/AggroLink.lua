@@ -26,9 +26,15 @@ ns.AGGRO_LINK_FOV = 90        -- degrés, si le client ne dit rien
 ns.RegisterStrings({
 	OPT_AGGRO_LINK = "Voisins qui suivent (+N)",
 	MSG_DIAG_AGGRO_LINK = "  voisins (+N) : %s sur la cible (rayon %d m, champ %d°)",
+	MSG_DIAG_AGGRO_LINK_TARGET = "    cible : %s m, x %s (écran %s)",
+	MSG_DIAG_AGGRO_LINK_ROW = "    %s : %s m, x %s -> écart %s m",
+	MSG_DIAG_AGGRO_LINK_SKIP = "    %s : autre sorte ou en combat",
 }, {
 	OPT_AGGRO_LINK = "Neighbours that follow (+N)",
 	MSG_DIAG_AGGRO_LINK = "  neighbours (+N): %s on the target (radius %d yd, field %d°)",
+	MSG_DIAG_AGGRO_LINK_TARGET = "    target: %s yd, x %s (screen %s)",
+	MSG_DIAG_AGGRO_LINK_ROW = "    %s: %s yd, x %s -> gap %s yd",
+	MSG_DIAG_AGGRO_LINK_SKIP = "    %s: other kind or in combat",
 })
 ns.RegisterDefaults({ aggroLink = true })
 for _, page in ipairs(ns.OPTION_PAGES or {}) do
@@ -87,14 +93,26 @@ local function Sort(unit)
 	return Call("UnitCreatureType", unit), Call("UnitCreatureFamily", unit), Call("UnitName", unit)
 end
 
+-- x du centre de la barre, en unités de UIParent : une barre de nom a sa
+-- propre échelle (1.38.0 : sans la conversion, les écarts étaient gonflés et
+-- aucun voisin ne passait sous le rayon)
+local function Scale(frame)
+	if type(frame) ~= "table" or type(frame.GetEffectiveScale) ~= "function" then return 1 end
+	local ok, s = pcall(frame.GetEffectiveScale, frame)
+	s = ok and tonumber(Plain(s)) or nil
+	return (s and s > 0) and s or 1
+end
 local function PlateX(plate)
 	if type(plate) ~= "table" or type(plate.GetCenter) ~= "function" then return nil end
 	local ok, x = pcall(plate.GetCenter, plate)
-	return ok and tonumber(Plain(x)) or nil
+	x = ok and tonumber(Plain(x)) or nil
+	if not x then return nil end
+	return x * Scale(plate) / Scale(UIParent)
 end
 
--- Le nombre de voisins de `target` (0 si rien à dire), et la barre de la cible
-function ns:AggroLinkCount(target)
+-- Le nombre de voisins de `target` (0 si rien à dire), et la barre de la cible.
+-- trace (table) : ce qui a été examiné, pour /r2q diag
+function ns:AggroLinkCount(target, trace)
 	target = target or "target"
 	if not (self.AggroUnitKind and self:AggroUnitKind(target)) then return 0 end
 	if Call("UnitAffectingCombat", target) then return 0 end
@@ -108,6 +126,7 @@ function ns:AggroLinkCount(target)
 	local fov = ns.AggroLinkFov()
 	local r0 = self:AggroLinkRange(target)
 	local a0 = ns.AggroLinkAngle(PlateX(targetPlate), width, fov)
+	if trace then trace.r0, trace.x0 = r0, PlateX(targetPlate) end
 	if not (r0 and a0) then return 0, targetPlate end
 	local ctype, family, name = Sort(target)
 	local count = 0
@@ -119,8 +138,12 @@ function ns:AggroLinkCount(target)
 				and (family == nil or ufamily == family)
 				and (kind == "hostile" or uname == name)
 			if same and not Call("UnitAffectingCombat", unit) then
-				local gap = ns.AggroLinkGap(r0, a0, self:AggroLinkRange(unit), ns.AggroLinkAngle(PlateX(plate), width, fov))
+				local r, x = self:AggroLinkRange(unit), PlateX(plate)
+				local gap = ns.AggroLinkGap(r0, a0, r, ns.AggroLinkAngle(x, width, fov))
 				if gap and gap <= ns.AGGRO_LINK_RADIUS then count = count + 1 end
+				if trace then trace[#trace + 1] = { name = uname, r = r, x = x, gap = gap } end
+			elseif trace and kind then
+				trace[#trace + 1] = { name = uname, skip = true }
 			end
 		end
 	end
@@ -176,11 +199,24 @@ function ns:AggroLinkTick()
 	return count
 end
 
--- /r2q diag : de quoi régler le rayon en jeu
+-- /r2q diag : de quoi régler le rayon en jeu (1.38.0 : le détail des voisins
+-- examinés, sur des lignes en plus)
+local function Fmt(v) return v and string.format("%.1f", v) or "?" end
 function ns:AggroLinkDiagLine()
-	local ok, count = pcall(self.AggroLinkCount, self, "target")
-	return self:F("MSG_DIAG_AGGRO_LINK", ok and tostring(count) or "?", ns.AGGRO_LINK_RADIUS,
-		math.floor(math.deg(ns.AggroLinkFov()) + 0.5))
+	local trace = {}
+	local ok, count = pcall(self.AggroLinkCount, self, "target", trace)
+	local lines = { self:F("MSG_DIAG_AGGRO_LINK", ok and tostring(count) or "?", ns.AGGRO_LINK_RADIUS,
+		math.floor(math.deg(ns.AggroLinkFov()) + 0.5)) }
+	if ok and (trace.r0 or trace.x0) then
+		local width = UIParent and UIParent.GetWidth and tonumber(UIParent:GetWidth()) or nil
+		lines[#lines + 1] = self:F("MSG_DIAG_AGGRO_LINK_TARGET", Fmt(trace.r0), Fmt(trace.x0), Fmt(width))
+	end
+	for index, row in ipairs(ok and trace or {}) do
+		if index > 8 then break end
+		lines[#lines + 1] = row.skip and self:F("MSG_DIAG_AGGRO_LINK_SKIP", tostring(row.name or "?"))
+			or self:F("MSG_DIAG_AGGRO_LINK_ROW", tostring(row.name or "?"), Fmt(row.r), Fmt(row.x), Fmt(row.gap))
+	end
+	return table.concat(lines, "\n")
 end
 
 ns.Every("aggro:link", ns.AGGRO_LINK_POLL, function()
