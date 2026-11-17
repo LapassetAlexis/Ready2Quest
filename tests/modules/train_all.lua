@@ -17,8 +17,10 @@ _G.BuyTrainerService = function(i)
 	W.bought[#W.bought + 1] = i
 	if W.refuse then return end
 	local s = W.services[i]
-	s.kind = "used"
+	-- comme en jeu : l'or bouge d'abord, la liste du maître ensuite
 	W.money = W.money - s.cost
+	if W.moneyFirst then Mock:Fire("PLAYER_MONEY") end
+	s.kind = "used"
 	if not W.silent then Mock:Fire("TRAINER_UPDATE") end
 end
 _G.ClassTrainerFrame = CreateFrame("Frame")
@@ -81,8 +83,11 @@ do
 	local printed, restore = Printed()
 	NS:TrainAllStart()
 	Mock:Fire("TRAINER_UPDATE")
-	Check("[TRN] le serveur refuse : un seul essai, la série s'arrête, rien d'annoncé", #W.bought == 1 and NS.trainAllRun == nil
-		and #printed == 0)
+	local waiting = NS.trainAllRun ~= nil
+	Mock.now = Mock.now + NS.TRAINALL_TIMEOUT + 1
+	NS.TrainAllWatch()
+	Check("[TRN] le serveur refuse : un seul essai ; la série attend la liste, puis s'arrête au délai, rien d'annoncé",
+		waiting and #W.bought == 1 and NS.trainAllRun == nil and #printed == 0)
 	W.refuse, W.silent = false, true
 	NS:TrainAllStart()
 	Mock.now = Mock.now + NS.TRAINALL_TIMEOUT + 1
@@ -221,6 +226,23 @@ do
 	button = Open(Price(0, 5, 40), 40)
 	Check("[TRN] bord qui lève une erreur : pas d'erreur, au-dessus", button.mode == "above", button.mode)
 	train.GetLeft, parent.GetLeft = nil, nil
+end
+
+-- 1.37.1 : l'or bouge avant la liste du maître : la série ne s'arrête plus
+-- au premier PLAYER_MONEY (elle n'apprenait que 2 ou 3 sorts)
+do
+	Say("-- tout apprendre : l'or avant la liste")
+	Reset()
+	for i = 1, 6 do W.services[#W.services + 1] = { name = "Sort " .. i, kind = "available", cost = 100 } end
+	W.moneyFirst = true
+	NS:DB().trainAllEnabled = nil
+	Mock:Fire("TRAINER_SHOW")
+	local printed, restore = Printed()
+	NS.trainAllButton:GetScript("OnClick")(NS.trainAllButton)
+	restore()
+	Check("[TRN] l'or bouge avant la liste : les huit sorts appris d'un seul clic", #W.bought == 8 and NS.trainAllRun == nil
+		and NS:TrainAllScan() == 0 and printed[1] == NS:F("TRAINALL_DONE", 8, NS:FormatMoney(2600)), #W.bought .. " " .. tostring(printed[1]))
+	Mock:Fire("TRAINER_CLOSED")
 end
 
 Mock:Fire("TRAINER_CLOSED")

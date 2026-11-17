@@ -1396,6 +1396,19 @@ function Theme.CreateBar(parent, width, height)
 		self.fill:SetVertexColor(r, g, b, a or 1)
 	end
 
+	-- socle 3.3 : la barre redimensionnée après SetValue garde sa part (le
+	-- remplissage était calculé sur l'ancienne largeur : une mission à 1/2
+	-- paraissait remplie à 15 % une fois sa carte élargie)
+	local setWidth, setSize = bar.SetWidth, bar.SetSize
+	function bar:SetWidth(...)
+		setWidth(self, ...)
+		if self.ratio then self:SetValue(self.ratio) end
+	end
+	function bar:SetSize(...)
+		setSize(self, ...)
+		if self.ratio then self:SetValue(self.ratio) end
+	end
+
 	return bar
 end
 

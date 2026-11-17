@@ -708,11 +708,21 @@ do
 	end
 	local rows = 0
 	for _ in pairs(ys) do rows = rows + 1 end
+	-- étalées : au moins 4 secteurs du disque sur 6, et les départs sur plus de 0,5 s
+	local sectors, first, last = {}, math.huge, -math.huge
+	for _, p in ipairs(list) do
+		local a = math.atan2 and math.atan2(p.y - cy, p.x - cx) or math.atan(p.y - cy, p.x - cx)
+		sectors[math.floor(((a + 2 * math.pi) % (2 * math.pi)) / (math.pi / 3))] = true
+		first, last = math.min(first, p.at), math.max(last, p.at)
+	end
+	local nsec = 0
+	for _ in pairs(sectors) do nsec = nsec + 1 end
 	NS:CompanionFxUpdate(now + 0.01)
 	local hiddenLate = true
 	for _, p in ipairs(list) do if p.at > now + 0.01 and (p.region.alpha or 0) > 0 then hiddenLate = false end end
 	NS:CompanionFxUpdate(now + 5)
 	Check("[FCOMP] paillettes : 6, à des hauteurs différentes, dans le disque montée comprise, décalées dans le temps, effacées à la fin",
-		#list == 0 and rows >= 4 and out == 0 and hiddenLate, rows .. " hauteurs, " .. out .. " hors disque, " .. late .. " en retard")
+		#list == 0 and rows >= 4 and out == 0 and hiddenLate and nsec >= 4 and last - first >= 0.3,
+		rows .. " hauteurs, " .. out .. " hors disque, " .. late .. " en retard, " .. nsec .. " secteurs, étalé " .. string.format("%.2f", last - first))
 	Done()
 end

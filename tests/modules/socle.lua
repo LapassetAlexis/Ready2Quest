@@ -589,3 +589,16 @@ do
 		and NS.spellRanksDueAt == nil, early .. " / " .. checks)
 	NS.SpellRanksCheck = saved
 end
+
+-- socle 3.3 : une barre élargie après SetValue garde sa part
+do
+	Say("-- socle : barre redimensionnée")
+	local Theme = T.NS.Theme
+	local bar = Theme.CreateBar(UIParent, 100, 3)
+	bar:SetValue(0.5)
+	bar:SetWidth(300)
+	local wide = bar.fill:GetWidth()
+	bar:SetSize(200, 3)
+	Check("[SOC] barre : 1/2 reste à moitié après SetWidth / SetSize (150 puis 100 px)", wide == 150 and bar.fill:GetWidth() == 100,
+		tostring(wide) .. " / " .. tostring(bar.fill:GetWidth()))
+end
