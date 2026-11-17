@@ -672,6 +672,8 @@ do
 	frame:Show()
 	local savedIntensity = NS.CompanionFxIntensity
 	NS.CompanionFxIntensity = function() error("mouvement refusé") end
+	local savedDelay = NS.COMPANION_FX_SCATTER.delay
+	NS.COMPANION_FX_SCATTER.delay = 0   -- toutes parties tout de suite (l'étalement a son propre test)
 	local now = (NS.Now and NS.Now()) or 0
 	NS:CompanionFx("sparkle")
 	NS:CompanionFx("bounce")
@@ -683,6 +685,7 @@ do
 	pcall(NS.CompanionFxUpdate, NS, now + 2)
 	local gone = #state.particles == 0 and not p.region:IsShown()
 	NS.CompanionFxIntensity = savedIntensity
+	NS.COMPANION_FX_SCATTER.delay = savedDelay
 	Check("[FCOMP] paillettes : montent, s'effacent et disparaissent même si le mouvement du modèle échoue",
 		not ok1 and risen and faded and gone, tostring(y0) .. " -> " .. tostring(p.region.lastPoint.y))
 	Done()
@@ -708,7 +711,7 @@ do
 	end
 	local rows = 0
 	for _ in pairs(ys) do rows = rows + 1 end
-	-- étalées : au moins 4 secteurs du disque sur 6, et les départs sur plus de 0,5 s
+	-- étalées : un secteur de 60° par paillette (donc au moins 3 des 6 tranches fixes), départs en créneaux (≥ 0,3 s d'écart)
 	local sectors, first, last = {}, math.huge, -math.huge
 	for _, p in ipairs(list) do
 		local a = math.atan2 and math.atan2(p.y - cy, p.x - cx) or math.atan(p.y - cy, p.x - cx)
@@ -722,7 +725,7 @@ do
 	for _, p in ipairs(list) do if p.at > now + 0.01 and (p.region.alpha or 0) > 0 then hiddenLate = false end end
 	NS:CompanionFxUpdate(now + 5)
 	Check("[FCOMP] paillettes : 6, à des hauteurs différentes, dans le disque montée comprise, décalées dans le temps, effacées à la fin",
-		#list == 0 and rows >= 4 and out == 0 and hiddenLate and nsec >= 4 and last - first >= 0.3,
+		#list == 0 and rows >= 3 and out == 0 and hiddenLate and nsec >= 3 and last - first >= 0.3,
 		rows .. " hauteurs, " .. out .. " hors disque, " .. late .. " en retard, " .. nsec .. " secteurs, étalé " .. string.format("%.2f", last - first))
 	Done()
 end

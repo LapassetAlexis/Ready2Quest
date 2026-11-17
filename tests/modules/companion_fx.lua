@@ -105,6 +105,10 @@ do
 	Mock:Advance(0.1)
 	S.ok("plus heureux : immobile", FX.Y(frame) == rest)
 
+	-- 3.2.0 : sans l'étalement dans le temps (il a son propre test,
+	-- companion_forge.lua) : toutes parties ensemble, pour la durée entière
+	local savedDelay = NS.COMPANION_FX_SCATTER.delay
+	NS.COMPANION_FX_SCATTER.delay = 0
 	NS:CompanionFx("hearts")
 	S.done()
 	S = Scenario("[FX] particules : cœurs, miettes réemployées")
@@ -118,6 +122,7 @@ do
 	NS:CompanionFx("crumbs")
 	S.ok("miettes : régions réemployées", FX.Particles("crumbs") == 5 and #NS.companionFx.pool == 0)
 	Mock:Advance(2)
+	NS.COMPANION_FX_SCATTER.delay = savedDelay
 
 	NS:CompanionFx("alert")
 	S.done()
