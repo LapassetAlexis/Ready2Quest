@@ -16,6 +16,11 @@ Une seule description, anglais d'abord puis français (règle des stores : l'ang
 
 For **WoW Forever** (1.60). English and French. Free and standalone (`/qc`). Pairs well with [Ready2Quest](https://www.curseforge.com/wow/addons/ready2quest).
 
+## New in 3.2: your companion shouts
+- **It shouts when it matters**, in CAPITALS: in red for danger (a monster about to aggro you, by name, with Ready2Quest's aggro range; several monsters on you; low health; a monster running away; drowning; out of arrows; a skull elite), in gold for big joys (a close call, a blue or purple item, your level). Once per fight, never on a loop; you can turn it off.
+- **Make room in the Reserve**: when it is nearly full, one button (or `/qc tri`) offers the least precious specimens, never a shiny nor a Codex reference, with the glitter they bring.
+- **Livelier sparkles**: glitter, hearts and crumbs pop all over the portrait, one after another.
+
 ## New in 3.1: a forged look, one-click captures, sharing
 - **A forged look**: the journal, the trainer card, the settings, the capture scenes and the banners all wear a gilded frame with the logo medallion in the corner and raised buttons, made for the addon. A new logo too: the companion's paw print in arcane blue, inside a gold medallion. Quest Companion takes arcane blue as its own colour, and what you select lights up in gold. Prefer a flat look? The **Interface style** setting still offers Plain (`/qc style sobre`).
 - **Your companion in a medallion**: a gold ring around its portrait, a plate with its name, its stage and your level, and a mood tag (radiant, happy, dreamy, sleepy). The frame you earned colours the ring, and a soft glow breathes around it while it talks. Every creature is now framed at the same size, whatever its species: nothing to adjust.
@@ -95,6 +100,11 @@ Free software, **GPL-3.0**. Zone data (creatures, gathering, quests) is generate
 ![Une brillante tente sa chance contre le filet](https://media.forgecdn.net/attachments/2161/225/f-gif.gif)
 
 Pour **WoW Forever** (1.60). En français et en anglais. Gratuit et autonome (`/qc`). Va très bien avec [Ready2Quest](https://www.curseforge.com/wow/addons/ready2quest).
+
+## Nouveau en 3.2 : ton compagnon crie
+- **Il crie quand ça compte**, en MAJUSCULES : en rouge pour le danger (un monstre sur le point de t'aggro, nommé, avec la portée d'aggro de Ready2Quest ; plusieurs monstres sur toi ; ta vie au plus bas ; un monstre qui s'enfuit ; la noyade ; plus de flèches ; un élite crâne), en or pour les grandes joies (survie de justesse, objet bleu ou violet, ton niveau). Une fois par combat, jamais en boucle ; ça se coupe.
+- **Faire de la place dans la Réserve** : presque pleine, un bouton (ou `/qc tri`) propose les spécimens les moins précieux, jamais un brillant ni une référence du Codex, avec les paillettes à la clé.
+- **Des paillettes plus vivantes** : paillettes, cœurs et miettes surgissent dans tout le portrait, l'une après l'autre.
 
 ## Nouveau en 3.1 : un habit forgé, la capture en un clic, le partage
 - **Un habit forgé** : le carnet, la fiche de dresseur, les réglages, les scènes de capture et les bandeaux portent un cadre d'orfèvre doré, le médaillon du logo dans le coin et des boutons en relief, faits pour l'addon. Un nouveau logo aussi : l'empreinte du compagnon en bleu arcane, dans un médaillon d'or. Quest Companion prend le bleu arcane pour couleur, et ce que tu choisis s'éclaire en or. Tu préfères à plat ? Le réglage **Style de l'interface** propose toujours Sobre (`/qc style sobre`).

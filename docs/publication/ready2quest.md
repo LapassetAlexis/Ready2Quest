@@ -15,6 +15,11 @@ For **WoW Forever** (1.60). English and French.
 
 ![Pre-departure check: a readiness score out of 100 with tips](https://media.forgecdn.net/attachments/2147/118/r2q-1-png.png)
 
+## New in 1.37: who else comes along
+- **Neighbours that follow (+N)**: out of combat, "+2" next to your target's nameplate tells how many monsters of the same kind are close enough to come and help it (an estimate; red from 3).
+- **Learn all, really all**: one click at the trainer now learns everything.
+- **Lighter**: the gear summary and portrait stats modules are gone.
+
 ## New in 1.36: a sharper aggro range
 - **Steps under the nameplate**: six thin bars, red to green, light up the further you are from the monster's aggro range, with the distance below ("~17 yd"). The new default (the diamond is still available).
 - **More accurate**: base range 15 yd at equal level (measured on Forever), your offensive spells used as extra range checks, and the distance estimated between two checks as you move.
@@ -75,6 +80,11 @@ Free software, **GPL-3.0**. Source code: https://github.com/LapassetAlexis/Ready
 **Prépare ta sortie avant de quitter la ville.** Quand tu quittes un village, une capitale ou un camp, Ready2Quest vérifie que tu es prêt : vivres, place dans les sacs, équipement en état, tes buffs habituels, ta pierre de foyer… et te le dit au bon moment, pas quand il est trop tard.
 
 Pour **WoW Forever** (1.60). En français et en anglais.
+
+## Nouveau en 1.37 : qui vient avec ?
+- **Voisins qui suivent (+N)** : hors combat, « +2 » à côté de la barre de nom de ta cible dit combien de monstres de la même sorte sont assez près pour venir l'aider (une estimation ; rouge à partir de 3).
+- **Tout apprendre, vraiment tout** : un clic chez le maître apprend désormais tout.
+- **Plus léger** : les modules Résumé de stuff et Stats du portrait sont retirés.
 
 ## Nouveau en 1.36 : une portée d'aggro plus juste
 - **Des paliers sous la barre de nom** : six barres fines, du rouge au vert, d'autant plus allumées que tu es loin de la portée du monstre, avec la distance dessous (« ~17 m »). C'est le nouveau style par défaut (le losange reste au choix).
