@@ -132,7 +132,7 @@ A **Combat** section in the settings gathers the aggro range and four helpers, e
 - **Spell prediction**: while you cast, the spell's expected damage on the target's health bar, and an icon if it kills.
 - **Action bar numbers**: the damage (or healing) of each spell on its button, read from its description with your spell power and talents.
 
-`/r2q combat` opens the detailed settings. The engine comes from **DoesItDiePlus** by Ironship (GPL-3.0) and **Does It Die** by Joe Greive (MIT), credited in `Combat/README.md`. If one of them is installed, Ready2Quest steps aside so nothing shows twice (the aggro range stays).
+`/r2q combat` opens these settings (all in Ready2Quest's window). The engine comes from **DoesItDiePlus** by Ironship (GPL-3.0) and **Does It Die** by Joe Greive (MIT), credited in `Combat/README.md`. If one of them is installed, Ready2Quest steps aside so nothing shows twice (the aggro range stays).
 
 ## Quality of life (QoL)
 
@@ -428,7 +428,7 @@ Une section **Combat** dans les réglages réunit la portée d'aggro et quatre a
 - **Prédiction des sorts** : pendant l'incantation, les dégâts attendus du sort sur la barre de vie de la cible, et une icône s'il la tue.
 - **Chiffres des barres** : les dégâts (ou soins) de chaque sort sur son bouton, lus dans sa description avec ta puissance des sorts et tes talents.
 
-`/r2q combat` ouvre les réglages détaillés. Le moteur vient de **DoesItDiePlus** d'Ironship (GPL-3.0) et de **Does It Die** de Joe Greive (MIT), crédités dans `Combat/README.md`. Si l'un des deux est installé, Ready2Quest s'efface pour que rien ne s'affiche en double (la portée d'aggro reste).
+`/r2q combat` ouvre ces réglages (tous dans la fenêtre de Ready2Quest). Le moteur vient de **DoesItDiePlus** d'Ironship (GPL-3.0) et de **Does It Die** de Joe Greive (MIT), crédités dans `Combat/README.md`. Si l'un des deux est installé, Ready2Quest s'efface pour que rien ne s'affiche en double (la portée d'aggro reste).
 
 ## Confort de jeu (QoL)
 

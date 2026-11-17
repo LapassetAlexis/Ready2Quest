@@ -427,6 +427,18 @@ local function RefreshNote(card, value)
 	return false
 end
 
+-- socle 3.4 : def.store() -> la table où lire et écrire la valeur (réglages
+-- d'un autre moteur : le module Combat de Ready2Quest) ; sinon ns:DB()
+local SCRATCH = {}
+local function Store(def, db)
+	if def.store then
+		local ok, t = pcall(def.store)
+		if ok and type(t) == "table" then return t end
+		return SCRATCH      -- moteur absent : rien n'est écrit dans nos réglages
+	end
+	return db or ns:DB()
+end
+
 local function BoolCard(page, def)
 	local card = NewCard(page, L[def.label] or def.key)
 	card.def = def
@@ -437,7 +449,7 @@ local function BoolCard(page, def)
 	FitCard(card, 32, def.describe ~= nil)
 	card:SetScript("OnClick", function(self)
 		if self.locked then return end
-		local db = ns:DB()
+		local db = Store(def)
 		local before = db[def.key] ~= false
 		db[def.key] = not before
 		ns:RefreshOptions()
@@ -445,6 +457,7 @@ local function BoolCard(page, def)
 		if def.onChange then def.onChange(db[def.key], before) end
 	end)
 	function card:Refresh(db)
+		db = Store(def, db)
 		local on = db[def.key] ~= false
 		self.value:SetText(OnOff(on))
 		self.toggle:SetChecked(on)
@@ -499,7 +512,7 @@ local function NumberCard(page, def)
 	local width = track + valueWidth + 12
 
 	card.slider = Theme.CreateSlider(card, width, minimum, maximum, step, function(new)
-		local db = ns:DB()
+		local db = Store(def)
 		local before = db[def.key]
 		db[def.key] = new
 		ns:RefreshOptions()
@@ -516,6 +529,7 @@ local function NumberCard(page, def)
 		return self.slider:SetValueByUser((self.slider.value or minimum) + (delta or 0) * step)
 	end
 	function card:Refresh(db)
+		db = Store(def, db)
 		local current = db[def.key]
 		self.slider:SetValue(current or 0)
 		-- valeur telle qu'enregistrée (le curseur l'arrondit à son cran)

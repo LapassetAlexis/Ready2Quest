@@ -127,6 +127,9 @@ local function Glue(engine, rival)
 	}
 	ns.EXTRA_COMMANDS = ns.COMMANDS
 	ns.L = setmetatable({}, { __index = function(_, k) return strings[k] or k end })
+	ns.selected = {}
+	function ns:ToggleOptions() self.optionsShown = true end
+	function ns:SelectOptionsPage(id) self.selected[#self.selected + 1] = id end
 	function ns:DB() return db end
 	function ns:Print(msg) printed[#printed + 1] = msg end
 	function ns:F(key, ...) return string.format(strings[key] or key, ...) end
@@ -155,8 +158,32 @@ do
 
 	ns.COMMANDS.combat(ns, "dots")
 	ns.COMMANDS.combat(ns, "")
-	Check("[COMBAT] /r2q combat [dots] : la fenêtre détaillée du moteur, sur la bonne partie", opened[1] == "DoTInfo"
-		and opened[2] == "nil" and #ns.HELP[1][2] == 1, table.concat(opened, ","))
+	engine.OpenSettings("CastPrediction")
+	Check("[COMBAT] /r2q combat [dots] et les portes du moteur (/r2qc, options du jeu) ouvrent NOS pages, sur la bonne partie",
+		ns.optionsShown and table.concat(ns.selected, ",") == "combatDots,combatRange,combatCast" and #opened == 0
+		and #ns.HELP[1][2] == 1, table.concat(ns.selected, ","))
+
+	-- les réglages du moteur dans nos pages : lus et écrits dans ses tables
+	local rows = ns.COMBAT_ROWS
+	engine.Settings = function(name) engine.stores = engine.stores or {}; engine.stores[name] = engine.stores[name] or {}; return engine.stores[name] end
+	_G.Ready2QuestCombat_DoTInfoDB = { showSkull = true }
+	_G.Ready2QuestCombat_SpellDamageInfoDB = { button = "total" }
+	local refreshed = 0
+	engine.modules = { SpellDamageInfo = { Refresh = function() refreshed = refreshed + 1 end } }
+	local function Row(page, key) for _, r in ipairs(rows[page]) do if r.key == key then return r end end end
+	Row("combatRange", "showOut").store().showOut = false
+	local skull = Row("combatDots", "skullPosition")
+	skull.choose("above")
+	local button = Row("combatBars", "button")
+	button.choose("dps")
+	local labels = {}
+	for _, c in ipairs(button.choices()) do labels[#labels + 1] = c.label end
+	Check("[COMBAT] réglages du moteur dans nos pages : portée, DoT (crâne), barres (chiffre, rafraîchi), libellés traduits",
+		engine.stores.Range.showOut == false and _G.Ready2QuestCombat_DoTInfoDB.skullPosition == "above"
+		and _G.Ready2QuestCombat_SpellDamageInfoDB.button == "dps" and refreshed == 1 and skull.current() == "above"
+		and labels[3] == "Par seconde" and #rows.combatRange >= 4 and #rows.combatDots >= 6 and #rows.combatCast >= 6
+		and #rows.combatBars >= 5, table.concat(labels, ","))
+	_G.Ready2QuestCombat_DoTInfoDB, _G.Ready2QuestCombat_SpellDamageInfoDB = nil, nil
 
 	local printed = {}
 	ns.Print = function(_, msg) printed[#printed + 1] = msg end
@@ -171,12 +198,12 @@ do
 	local ns = Glue(nil, "UsefulPlatesAndTooltips")
 	local printed = {}
 	ns.Print = function(_, msg) printed[#printed + 1] = msg end
-	local opened = ns:CombatOpenDetails("Range")
+	local opened = ns:CombatOpenPage("combatRange")
 	local page
 	for _, def in ipairs(ns.OPTION_PAGES) do if def.id == "combatDots" then page = def end end
 	local first = type(page.info[1]) == "function" and page.info[1]() or ""
-	Check("[COMBAT] rival : rien ne s'ouvre, le chat et chaque page le disent (la portée d'aggro reste)",
-		opened == nil and printed[1]:find("DoesItDiePlus", 1, true) ~= nil and first:find("DoesItDiePlus", 1, true) ~= nil
+	Check("[COMBAT] rival : nos pages s'ouvrent, le chat et chaque page le disent (la portée d'aggro reste)",
+		opened == false and printed[1]:find("DoesItDiePlus", 1, true) ~= nil and first:find("DoesItDiePlus", 1, true) ~= nil
 		and not ns:CombatPartOn(ns.COMBAT_PARTS[1]), first)
 end
 
