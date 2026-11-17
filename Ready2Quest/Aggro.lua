@@ -100,6 +100,12 @@ local FR = {
 	MSG_DIAG_AGGRO_ALERT = "danger seul",
 	MSG_DIAG_AGGRO_STEPS = "  aggro : paliers qui répondent : %s %s",
 	MSG_DIAG_AGGRO_LEARN = "  aggro : portée apprise en jouant : %d échantillon(s)%s",
+	MSG_DIAG_AGGRO_PLATE = "    %s %s (%s, niv %s/%s) : portée %s m, mesuré %s m -> %s, %s",
+	MSG_DIAG_AGGRO_SHOWN = "affiché",
+	MSG_DIAG_AGGRO_HIDDEN = "caché",
+	MSG_DIAG_AGGRO_WHY_KIND = "caché (ni hostile ni neutre attaquable)",
+	MSG_DIAG_AGGRO_WHY_LEVEL = "caché (niveau illisible)",
+	MSG_DIAG_AGGRO_WHY_RANGE = "caché (aucune mesure de distance)",
 	MSG_DIAG_AGGRO_LEARN_OFF = " (apprentissage coupé)",
 	MSG_DIAG_AGGRO_NOSTEP = "aucun",
 	MSG_DIAG_AGGRO_COMBAT = "en combat (masqué)",
@@ -145,6 +151,12 @@ local EN = {
 	MSG_DIAG_AGGRO_ALERT = "danger only",
 	MSG_DIAG_AGGRO_STEPS = "  aggro: range steps answering: %s %s",
 	MSG_DIAG_AGGRO_LEARN = "  aggro: range learned while playing: %d sample(s)%s",
+	MSG_DIAG_AGGRO_PLATE = "    %s %s (%s, lvl %s/%s): range %s yd, measured %s yd -> %s, %s",
+	MSG_DIAG_AGGRO_SHOWN = "shown",
+	MSG_DIAG_AGGRO_HIDDEN = "hidden",
+	MSG_DIAG_AGGRO_WHY_KIND = "hidden (not an attackable hostile or neutral)",
+	MSG_DIAG_AGGRO_WHY_LEVEL = "hidden (level unreadable)",
+	MSG_DIAG_AGGRO_WHY_RANGE = "hidden (no distance measured)",
 	MSG_DIAG_AGGRO_LEARN_OFF = " (learning off)",
 	MSG_DIAG_AGGRO_NOSTEP = "none",
 	MSG_DIAG_AGGRO_COMBAT = "in combat (hidden)",
@@ -839,7 +851,35 @@ function ns:AggroDiagLine()
 		line = line .. "\n" .. self:F("MSG_DIAG_AGGRO_LEARN", self:AggroLearnCount(),
 			self:DB().aggroLearn == false and L.MSG_DIAG_AGGRO_LEARN_OFF or "")
 	end
+	-- 1.38.0 : chaque barre de nom suivie (8 au plus) : pourquoi ses paliers
+	-- s'affichent ou non (sorte, niveaux, portée, distance mesurée, verdict)
+	local shown = 0
+	for unit, plate in pairs(self.aggroPlates) do
+		if shown >= ns.AGGRO_DIAG_PLATES then break end
+		shown = shown + 1
+		local ok, row = pcall(self.AggroPlateDiag, self, unit, plate)
+		line = line .. "\n" .. (ok and row or ("    " .. tostring(unit) .. " : " .. tostring(row)))
+	end
 	return line
+end
+
+ns.AGGRO_DIAG_PLATES = 8
+local function Yd(v) v = Num(v); return v and tostring(math.floor(v + 0.5)) or "?" end
+-- « nameplate3 Gnoll (hostile, niv 9/10) : portée 15 m, mesuré 20-25 m -> ambre, affiché »
+function ns:AggroPlateDiag(unit, plate)
+	local name = Call("UnitName", unit) or "?"
+	local kind = self:AggroUnitKind(unit)
+	local mine, level = Call("UnitLevel", "player"), Call("UnitLevel", unit)
+	local radius = ns.AggroRadius(mine, level)
+	local low, high = self:AggroDistance(unit)
+	local ring = plate and self.aggroRings[plate]
+	local why
+	if not kind then why = L.MSG_DIAG_AGGRO_WHY_KIND
+	elseif not radius then why = L.MSG_DIAG_AGGRO_WHY_LEVEL
+	elseif not (low or high) then why = L.MSG_DIAG_AGGRO_WHY_RANGE end
+	return self:F("MSG_DIAG_AGGRO_PLATE", tostring(unit), tostring(name), tostring(kind or "-"), Yd(mine), Yd(level),
+		Yd(radius), (low or high) and (Yd(low) .. "-" .. (high and Yd(high) or "+")) or "?",
+		tostring(ring and ring.verdict or "-"), (ring and ring:IsShown()) and L.MSG_DIAG_AGGRO_SHOWN or (why or L.MSG_DIAG_AGGRO_HIDDEN))
 end
 
 -- ---------------------------------------------------------------------------
