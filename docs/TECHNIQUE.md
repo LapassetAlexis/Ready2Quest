@@ -3,7 +3,7 @@
 ## QuestCompanion 3.2.0 / Ready2Quest 1.37.1 — le compagnon crie
 
 - **`CompanionShouts.lua`** (après `CompanionJokes.lua`) : horloge `companion:shout` (0,5 s), `ns:CompanionShoutTick(now)` rend le réservoir crié. Hors combat : `ns:CompanionShoutDanger()` lit `Ready2Quest:AggroDangerUnit()` (jeton, nom), sinon `AggroDangerShown()` (cri sans nom) ; même monstre : `COMPANION_SHOUT_SAME` (60 s), famille de pause `shout_aggro` (20 s). En combat : `SHOUT_LOW_HP` (vie < `COMPANION_SHOUT_HP`, valeurs secrètes ignorées) et `SHOUT_SWARM` (`CompanionAggroCount` ≥ `COMPANION_SHOUT_SWARM`, seul hors instance, réglage du battement non coupé), une fois par combat ; ajoutés à `COMPANION_COMBAT_PASS`.
-- **`CompanionSay(pool, { shout = true })`** : texte passé par `Theme.Upper` (accents). Les cris sont des conseils importants forcés (`category = "advice"`, `important`, `force`) : ils passent au cran 1, jamais au cran 0.
+- **`CompanionSay(pool, { shout = style })`** : `ns:CompanionShoutText` met le modèle et les arguments en majuscules (`Theme.Upper`, accents) PUIS pose les couleurs (`COMPANION_SHOUT_STYLE` : encre `T_RED`, arguments en `T_GOLD` ; sinon « |cff » deviendrait « |CFF ») ; « %d » devient « %s » (arguments colorés). Contrastes RED et GOLD sur la bulle testés (≥ 4,5). Les cris sont des conseils importants forcés (`category = "advice"`, `important`, `force`) : ils passent au cran 1, jamais au cran 0.
 - Réglage `companionShouts` (actif), rangé dans `companionTalk` (`COMPANION_OPTION_SPLIT`).
 - **R2Q `ns:AggroDangerUnit()`** (`Aggro.lua`) : première barre de nom sous marque rouge affichée -> jeton, `UnitName` ; nil sinon.
 - QC : l'astuce « résumé de stuff » retirée de `CompanionLines.lua`. Tests : `companion_shouts.lua`.

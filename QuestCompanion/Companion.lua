@@ -1170,7 +1170,9 @@ end
 --              en combat, refusé sans être noté (2.13.0)
 --   important: conseil de route important (élite, vie, munitions, vivres) :
 --              seul ce qui passe au cran « Discret »
---   shout    : 3.2.0, il crie : le texte en majuscules (CompanionShouts.lua)
+--   shout    : 3.2.0, il crie : le texte en majuscules, en couleur
+--              ({ ink = "T_RED", accent = "T_GOLD" } : jetons du thème ;
+--              accent = les arguments, nom du monstre…) (CompanionShouts.lua)
 -- Jamais outre la sourdine ni une bulle plus importante encore affichée.
 -- Renvoie true, ou false + raison ("off" : coupé/muet/masqué, "busy").
 function ns:CompanionSay(pool, opts)
@@ -1218,8 +1220,8 @@ function ns:CompanionSay(pool, opts)
 	if not self:CompanionUpdateVisibility() then return false, "off" end
 	local bubble = self:EnsureCompanionBubble()
 	if not bubble then return false, "off" end
-	local text = self:F(lineKey, unpack(opts.args or {}))
-	if opts.shout and Theme.Upper then text = Theme.Upper(text) end
+	local text = opts.shout and self:CompanionShoutText(lineKey, opts.args, opts.shout)
+		or self:F(lineKey, unpack(opts.args or {}))
 	-- plus importante qu'une séquence : la conversation s'arrête, le
 	-- tutoriel reprendra son étape après la bulle
 	if seq and not opts.seq then
@@ -1251,6 +1253,27 @@ function ns:CompanionSay(pool, opts)
 	bubble:Show()
 	if Theme.FadeIn then pcall(Theme.FadeIn, bubble) end
 	return true
+end
+
+-- Texte crié : majuscules d'abord (Theme.Upper changerait « |cff » en
+-- « |CFF », que le jeu ne lit pas), couleurs ensuite. Chaque argument prend
+-- l'accent, puis l'encre revient.
+function ns:CompanionShoutText(lineKey, args, style)
+	local upper = Theme.Upper or function(v) return string.upper(tostring(v)) end
+	style = type(style) == "table" and style or {}
+	local ink = type(style.ink) == "string" and Theme[style.ink] or ""
+	local accent = type(style.accent) == "string" and Theme[style.accent] or nil
+	-- arguments tous en texte (colorés) : « %d » devient « %s »
+	local template = upper(L[lineKey] or lineKey):gsub("%%[SDsd]", "%%s")
+	local list = {}
+	for index, value in ipairs(args or {}) do
+		local word = type(value) == "number" and tostring(value) or upper(value)
+		list[index] = accent and (accent .. word .. "|r" .. ink) or word
+	end
+	local ok, text = pcall(string.format, template, unpack(list))
+	if not ok then text = template end
+	if ink ~= "" then text = ink .. text .. "|r" end
+	return text
 end
 
 function ns:CompanionHideBubble()

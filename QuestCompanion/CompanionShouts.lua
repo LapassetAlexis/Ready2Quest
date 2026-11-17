@@ -1,6 +1,7 @@
 -- CompanionShouts.lua -- le compagnon crie quand ça devient dangereux (3.2.0)
 --
--- Trois situations, en MAJUSCULES (Theme.Upper, accents compris) :
+-- Trois situations, en MAJUSCULES (Theme.Upper, accents compris) et en
+-- rouge (COMPANION_SHOUT_STYLE ; le nom du monstre, le nombre en or) :
 --   * un monstre sur le point de t'aggro : la marque rouge de la portée
 --     d'aggro de Ready2Quest est affichée (son nom si Ready2Quest le donne,
 --     AggroDangerUnit, 1.37.1) ; hors combat seulement ;
@@ -127,9 +128,17 @@ local function SoloOutside()
 	return Call(rawget(_G, "IsInGroup")) ~= true
 end
 
+-- couleurs par cri (jetons du thème ; contraste mesuré sur la bulle, tests)
+ns.COMPANION_SHOUT_STYLE = {
+	SHOUT_AGGRO = { ink = "T_RED", accent = "T_GOLD" },
+	SHOUT_AGGRO_ANY = { ink = "T_RED" },
+	SHOUT_SWARM = { ink = "T_RED", accent = "T_GOLD" },
+	SHOUT_LOW_HP = { ink = "T_RED" },
+}
+
 local function Shout(self, pool, args, cd)
-	local ok, said = pcall(self.CompanionSay, self, pool, { shout = true, category = "advice", important = true,
-		force = true, args = args, cd = cd })
+	local ok, said = pcall(self.CompanionSay, self, pool, { shout = ns.COMPANION_SHOUT_STYLE[pool] or {},
+		category = "advice", important = true, force = true, args = args, cd = cd })
 	return ok and said == true
 end
 

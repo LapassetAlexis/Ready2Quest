@@ -51,8 +51,23 @@ do
 	_G.UnitAffectingCombat = function() return false end
 	local pool = NS:CompanionShoutTick(100)
 	local text = tostring(NS.companionBubbleText)
-	ok("marque rouge : il crie le nom", pool == "SHOUT_AGGRO" and text:find("SANGLIER ÉTÊTÉ", 1, true) ~= nil, text)
-	ok("tout en majuscules", text == NS.Theme.Upper(text), text)
+	local Theme = NS.Theme
+	ok("marque rouge : il crie le nom, en accent doré dans une ligne rouge", pool == "SHOUT_AGGRO"
+		and text:find(Theme.T_GOLD .. "SANGLIER ÉTÊTÉ|r" .. Theme.T_RED, 1, true) ~= nil and text:sub(1, #Theme.T_RED) == Theme.T_RED
+		and text:sub(-2) == "|r", text)
+	local plain = text:gsub("|c%x%x%x%x%x%x%x%x", ""):gsub("|r", "")
+	ok("tout en majuscules, codes couleur intacts (|c minuscule)", plain == Theme.Upper(plain) and not text:find("|C", 1, true), text)
+	-- contraste des encres sur la bulle (fond WINDOW à 0,96 sur un monde blanc : le pire cas)
+	local bubbleBg = Theme.Over(Theme.WHITE, Theme.WINDOW, 0.96)
+	for _, token in ipairs({ "RED", "GOLD" }) do
+		local c = Theme.Contrast(Theme[token], bubbleBg)
+		ok(token .. " sur la bulle ≥ 4,5", c >= 4.5, string.format("%.2f", c))
+	end
+	for pool, style in pairs(NS.COMPANION_SHOUT_STYLE) do
+		for _, key in ipairs({ "ink", "accent" }) do
+			if style[key] and type(Theme[style[key]]) ~= "string" then bad[#bad + 1] = pool .. " " .. key .. " inconnu" end
+		end
+	end
 	NS.companionLastBubble, NS.companionBubbleUntil = nil, nil
 	ok("même monstre : pas de second cri tout de suite", NS:CompanionShoutTick(110) == nil)
 	-- sans AggroDangerUnit (Ready2Quest plus ancien) : le cri sans nom
@@ -68,7 +83,8 @@ do
 	_G.UnitAffectingCombat = function() return true end
 	NS.CompanionAggroCount = function() return 3 end
 	pool = NS:CompanionShoutTick(400)
-	ok("3 monstres en combat : il crie leur nombre", pool == "SHOUT_SWARM" and tostring(NS.companionBubbleText):find("3", 1, true) ~= nil,
+	ok("3 monstres en combat : il crie leur nombre, en or dans une ligne rouge", pool == "SHOUT_SWARM"
+		and tostring(NS.companionBubbleText):find(NS.Theme.T_GOLD .. "3|r" .. NS.Theme.T_RED, 1, true) ~= nil,
 		NS.companionBubbleText)
 	NS.companionLastBubble, NS.companionBubbleUntil = nil, nil
 	ok("une fois par combat", NS:CompanionShoutTick(401) == nil)
