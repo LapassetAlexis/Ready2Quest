@@ -399,9 +399,9 @@ do
 		and not (frame.unitFilter and frame.unitFilter.PLAYER_LOGIN))
 	Verdict("[PERF] RegisterGameEvent : UNIT_AURA filtré au joueur, repli RegisterEvent, autres événements ordinaires")
 	local hub = QNS.eventHub
-	Check("[PERF] abonnements réels au joueur seulement : R2Q, camp, stats, cadre commun de QC",
+	Check("[PERF] abonnements réels au joueur seulement : R2Q, camp, cadre commun de QC",
 		NS.eventFrame.unitFilter and NS.eventFrame.unitFilter.UNIT_AURA and NS.eventFrame.unitFilter.UNIT_AURA.player == true
-		and NS.campEventFrame.unitFilter.UNIT_AURA.player == true and NS.statsEventFrame.unitFilter.UNIT_STATS.player == true
+		and NS.campEventFrame.unitFilter.UNIT_AURA.player == true
 		and (not hub.events.UNIT_AURA or hub.unitFilter.UNIT_AURA.player == true))
 
 	local cases = { { "Bénédiction De PUISSANCE", "bénédiction de puissance" }, { "  Well   Fed\t", "well fed" },

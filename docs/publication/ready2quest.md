@@ -36,11 +36,7 @@ Each one can be switched on or off in one click (`/r2q options`).
 - **Expedition report**: back in town, a summary of your trip: duration, XP and levels, gold earned and spent, notable loot, deaths, wear, quests ready, what to restock.
 - **Before the dungeon**: at the entrance, a sheet for *that* dungeon, with suggested level, your quests for it, a short prep and, in a group, who is there and ready. It covers the 19 classic dungeons and 9 new Forever dungeons.
 - **Camp kit** *(Forever)*: your campfire kit and camp item ready, and a countdown for camp buffs.
-- **Gear summary**: a short toast with the stats you gained or lost when you swap an item.
-- **Portrait stats**: hover your portrait to see your main stats, picked for your class and spec.
 - **Aggro range**: by default (**Danger only**) a red mark warns you, without any key, as soon as a monster is about to aggro you; hold Shift out of combat and each hostile nameplate gets thin steps (or a small diamond): red inside its estimated aggro radius, amber close, green safe; its tooltip gives the radius, your distance and the verdict.
-
-![Gear summary when you swap an item](https://media.forgecdn.net/attachments/2147/117/r2q-2-png.png)
 
 ## Quality of life
 
@@ -101,8 +97,6 @@ Chacun s'active ou se coupe d'un clic (`/r2q options`).
 - **Retour d'expédition** : de retour en ville, le bilan de ta sortie : durée, XP et niveaux, or gagné et dépensé, butin notable, morts, usure, quêtes prêtes, quoi racheter.
 - **Avant le donjon** : à l'entrée, la fiche de *ce* donjon, avec le niveau conseillé, tes quêtes pour lui, une préparation courte et, en groupe, qui est là et prêt. Les 19 donjons classiques et les 9 nouveaux donjons de Forever.
 - **Kit de camp** *(Forever)* : ton kit de feu de camp et ton objet de camp prêts, et le compte à rebours des buffs au camp.
-- **Résumé de stuff** : un petit résumé éphémère des stats gagnées ou perdues quand tu changes d'objet.
-- **Stats du portrait** : survole ton portrait pour voir tes stats principales, choisies selon ta classe et ta spécialisation.
 - **Portée d'aggro** : par défaut (**Danger seul**), une marque rouge te prévient, sans toucher au clavier, dès qu'un monstre est sur le point de t'aggro ; maintiens Maj hors combat et chaque barre de nom hostile reçoit des paliers fins (ou un petit losange) : rouge dans son rayon d'aggro estimé, ambre tout près, vert tranquille ; son infobulle donne le rayon, ta distance et le verdict.
 
 ## Confort

@@ -1,5 +1,13 @@
 # Ready2Quest — notes techniques et historique
 
+## Ready2Quest 1.37.0 — Résumé de stuff et Stats du portrait retirés
+
+- **`Stats.lua` supprimé** (1 528 lignes) : relevés de stats, résumé éphémère, panneau du portrait, sonde du portrait (horloge `portrait`), cadre `UNIT_STATS` / `PLAYER_AVG_ITEM_LEVEL_UPDATE` (porte `gear`), `PLAYER_EQUIPMENT_CHANGED` dans `Core.lua`, tâche `core:toast`.
+- **Ce qui servait ailleurs est gardé** : `SpecStats.lua` (`SPEC_STATS`, `FERAL_TANK_ORDER`, `SpecIndex`, `IsBearForm`, lus par `QuestReward.lua`) ; `EditMode.lua` (`StartEditMode` / `StopEditMode` / `ToggleEditMode` / `IsEditing`, enveloppés par `Notice.lua` pour l'icône d'annonce ; bouton « Déplacer les cadres » du socle). `Equip.lua` ne garde que `ItemLinkForSlot` et `ItemData` (plus de `AverageItemLevel` ni `WeakSlotCount`).
+- **Réglages** : `showGearToast`, `showPortraitStats`, `toastPoint`, `portraitPoint`, `portraitManual` sortent des défauts et sont effacés à `PLAYER_ENTERING_WORLD` (`ns.RETIRED_SETTINGS`). `/r2q resetpos` remet l'icône d'annonce (`noticePoint`). Modules et commandes `stuff`, `portrait`, `stats`, `toast` retirés ; il ne reste que le module `depart` dans le registre du cœur.
+- QuestCompanion : l'astuce du compagnon sur le résumé de stuff est retirée (`CompanionLines.lua`), à livrer avec la prochaine version de QC.
+- Tests : `gear_portrait.lua` supprimé ; les priorités par spé restent vérifiées dans le cœur (« attributs par spé ») ; scènes `r2q-gear-toast` et `r2q-portrait` retirées, `r2q-edit-banner` montre l'icône d'annonce.
+
 ## QuestCompanion 3.1.2 — le filet, les réglages, les fonds étoilés
 
 - **Aides au survol du filet** (`CaptureAidBar.lua`, chargé après `CaptureExpress.lua`) : en capture express, le survol du filet (post-crochet `OnEnter`, posé par une enveloppe d'`EnsureCaptureNet`) montre `ns.captureAidBar` au-dessus du filet, un bouton par aide de `ns.CAPTURE_AIDS` (compte, grisé à zéro). Clic : `state.aid` puis `ns:CaptureExpressThrow()` (l'aide ne sert qu'à ce lancer). Infobulle : `CapturePrepChance`. Rangée par un `OnUpdate` quand la souris quitte filet et barre (`hideDelay`) ; suit `CaptureQueueRefresh`.
@@ -751,8 +759,6 @@ Sur Forever, on est « au repos » à un feu de camp en pleine nature. Le repos 
 | **Général** | addon actif, puis une section **AFFICHAGE** : bouton de minicarte et sa position, fenêtre ou chat, note sous laquelle la fenêtre s'ouvre, placement des cadres |
 | **MODULES** | |
 | Check avant le départ `[on/off]` | sous-pages **Déclenchement** · **Zones sûres** · **Sacs & vivres** · **Équipement & perso** · **Buffs & métier**. Les 13 contrôles sont la configuration du module |
-| Résumé de stuff `[on/off]` | résumé éphémère au changement d'objet : un interrupteur, pas de page (son placement est dans Général) |
-| Stats du portrait `[on/off]` | stats au survol du portrait : un interrupteur, pas de page |
 | **QOL** | |
 | Marchand | vente des gris, réparation : indépendants du module de départ |
 

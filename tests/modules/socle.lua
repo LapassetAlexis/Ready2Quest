@@ -556,9 +556,9 @@ do
 		for i = 1, count do if list[i] == key then return true end end
 		return false
 	end
-	Mock:Fire("PLAYER_ENTERING_WORLD", true, false)   -- pose la sonde du portrait
+	Mock:Fire("PLAYER_ENTERING_WORLD", true, false)
 	local missing = {}
-	for _, key in ipairs({ "core:exit", "portrait", "camp", "death", "aggro" }) do
+	for _, key in ipairs({ "core:exit", "camp", "death", "aggro" }) do
 		if not Has(NS, key) then missing[#missing + 1] = "R2Q " .. key end
 	end
 	for _, key in ipairs({ "companion", "companion:aggro", "travel", "advice", "group", "shiny", "capture", "effects",

@@ -1130,29 +1130,6 @@ Snap.scenes["r2q-exit-alert"] = function(T)
 	return Snap.Group(frame, Snap.Tooltip(GameTooltip, frame, 250)), "Ready2Quest : alerte de sortie (icône et bulle)"
 end
 
--- Résumé de stuff : un gain sur la stat principale
-Snap.scenes["r2q-gear-toast"] = function(T)
-	local NS = T.NS
-	T.ResetWorld()
-	T.LoadModules()
-	UIParent:SetSize(1920, 1080)   -- le résumé se mesure en unités 1920 (échelle 1)
-	NS.toastFrame = nil
-	NS:SimulateGearToast()
-	return Centered(NS.toastFrame), "Ready2Quest : résumé de stuff"
-end
-
--- Stats du portrait
-Snap.scenes["r2q-portrait"] = function(T)
-	local NS = T.NS
-	T.ResetWorld()
-	T.LoadModules()
-	NS.portraitFrame = nil
-	NS.forceStats = true
-	NS:ShowPortraitStats()
-	NS.forceStats = nil
-	return Centered(NS.portraitFrame), "Ready2Quest : stats du portrait"
-end
-
 -- Rythme de leveling : l'infobulle de la barre d'XP
 Snap.scenes["r2q-pace"] = function(T)
 	local NS = T.NS
@@ -1185,22 +1162,20 @@ Snap.scenes["r2q-minimap-tooltip"] = function(T)
 	return Snap.Tooltip(GameTooltip, owner, 280), "Ready2Quest : infobulle du bouton de minicarte (police du jeu)"
 end
 
--- Mode déplacement : le bandeau, avec le résumé et les stats à placer
+-- Mode déplacement : le bandeau, avec l'icône d'alerte à placer
 Snap.scenes["r2q-edit-banner"] = function(T)
 	local NS = T.NS
 	T.ResetWorld()
 	T.LoadModules()
-	UIParent:SetSize(1920, 1080)   -- le résumé se mesure en unités 1920 (échelle 1)
-	NS.editBanner, NS.toastFrame, NS.portraitFrame = nil, nil, nil
+	UIParent:SetSize(1920, 1080)
+	NS.editBanner, NS.noticeFrame = nil, nil
 	NS:StartEditMode()
 	local banner = NS.editBanner
 	banner:ClearAllPoints()
 	banner:SetPoint("CENTER", UIParent, "CENTER", 0, 120)
-	NS.toastFrame:ClearAllPoints()
-	NS.toastFrame:SetPoint("CENTER", UIParent, "CENTER", -130, 0)
-	NS.portraitFrame:ClearAllPoints()
-	NS.portraitFrame:SetPoint("TOPLEFT", UIParent, "CENTER", 60, 40)
-	return Snap.Group(banner, NS.toastFrame, NS.portraitFrame), "Ready2Quest : mode déplacement des cadres"
+	NS.noticeFrame:ClearAllPoints()
+	NS.noticeFrame:SetPoint("CENTER", UIParent, "CENTER", 0, 0)
+	return Snap.Group(banner, NS.noticeFrame), "Ready2Quest : mode déplacement des cadres"
 end
 
 -- Page de l'addon dans Échap > Options > AddOns

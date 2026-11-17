@@ -2,8 +2,8 @@
 -- faits à la main par les modules (bloc note et conseils d'« Avant le
 -- départ », durée du bilan, options et verdict après la mort, titres et
 -- niveau d'« Avant le donjon », cartes de « Place au butin » et des rangs de
--- sorts, bandeaux sac plein et camp, tuile d'annonce, résumé de stuff,
--- portrait, étiquette de la récompense). En Sobre, rien de tout cela n'est
+-- sorts, bandeaux sac plein et camp, tuile d'annonce,
+-- étiquette de la récompense). En Sobre, rien de tout cela n'est
 -- créé : les aplats d'avant restent. Contrastes mesurés sur le vrai fond
 -- (plaque teintée à son point le plus clair et le plus sombre, creux, halo).
 local Check, Say, NS, Mock, ResetWorld = T.Check, T.Say, T.NS, T.Mock, T.ResetWorld
@@ -50,7 +50,7 @@ local function Fresh(skin)
 	Theme.ApplySkin(skin)
 	NS:DB().popupScore = 100
 	for _, field in ipairs({ "window", "expeditionFrame", "dungeonFrame", "deathFrame", "lootRoomFrame", "spellRanksFrame",
-		"bagspaceFrame", "campFrame", "noticeFrame", "toastFrame", "portraitFrame" }) do
+		"bagspaceFrame", "campFrame", "noticeFrame" }) do
 		if NS[field] and NS[field].Hide then NS[field]:Hide() end
 		NS[field] = nil
 	end
@@ -120,9 +120,6 @@ do
 	NS:ShowNotice(NS:NoticeDepart(92, "PRÊT"))
 	s.ok("annonce : tuile plate et filet", NS.noticeFrame.plate == nil and Shown(NS.noticeFrame.tile)
 		and Shown(NS.noticeFrame.border.top) and NS.noticeFrame.accentGlow == nil)
-	NS:SimulateGearToast()
-	s.ok("résumé : filet d'1 px, pas d'habillage maison", NS.toastFrame.forgeFrame == nil and Shown(NS.toastFrame.border.top)
-		and Shown(NS.toastFrame.rule) and NS.toastFrame.skinNoChrome == nil)
 	NS.bagspace = { index = 1, list = { { link = "[Os]", count = 1, value = 5, bag = 0, slot = 4, itemID = 1 } } }
 	local bag = NS:ShowBagSpaceFrame()
 	s.ok("sac plein : « Jeter » ambre, liseré sans halo", bag.destroyButton.style == "primary" and bag.keepButton.style == "outline"
@@ -261,7 +258,7 @@ end
 
 -- ---------------------------------------------------------------------------
 do
-	Say("-- forge R2Q : bandeaux, tuile, résumé, portrait, récompense")
+	Say("-- forge R2Q : bandeaux, tuile, récompense")
 	Fresh("azeroth")
 	NS.bagspace = { index = 1, list = { { link = "[Os]", count = 1, value = 5, bag = 0, slot = 4, itemID = 1 } } }
 	local bag = NS:ShowBagSpaceFrame()
@@ -284,30 +281,6 @@ do
 		and tile.accentGlow ~= nil and Same(tile.accentGlow.vertex, color))
 	NS:HideNotice()
 
-	NS:SimulateGearToast()
-	local toast = NS.toastFrame
-	-- (le banc de test donne à ce bandeau une échelle minuscule : on lui rend
-	-- la taille qu'il a en jeu, puis l'habillage se pose comme à l'affichage)
-	toast:SetSize(240, 10)
-	toast.skinOutset = { 18, 10, 15, 62 }
-	Theme.DressWindow(toast)
-	local chrome = toast.skinChrome
-	local around = chrome and select(2, chrome.frame.parts.tl:GetPoint(1))
-	Check("[FORGE-R2Q] résumé de stuff : le socle pose ombre et cadre d'orfèvre autour de son fond (le cadre de 10 px ne les portait pas)",
-		chrome ~= nil and IsSlice(chrome.shadow, "shadow") and IsSlice(chrome.frame, "frame") and around == toast.bg
-		and chrome.frame.parts.c == nil and chrome.corners == nil and not Shown(toast.border.top))
-	Theme.DressWindow(toast)
-	Check("[FORGE-R2Q] résumé : rhabillé sans rien recréer, filet du titre en lumière",
-		toast.skinChrome == chrome and not Shown(toast.border.top) and toast.ruleGlow ~= nil and not Shown(toast.rule))
-	toast:Hide()
-
-	NS.forceStats = true
-	NS:ShowPortraitStats()
-	NS.forceStats = nil
-	Check("[FORGE-R2Q] portrait : bandeau habillé, filet sous la classe en lumière",
-		NS.portraitFrame.skinDressed == true and NS.portraitFrame.ruleGlow ~= nil and not Shown(NS.portraitFrame.rule)
-		and NS.portraitFrame.ruleGlow.texture == Theme.ART.line.file)
-	NS.portraitFrame:Hide()
 end
 
 do
