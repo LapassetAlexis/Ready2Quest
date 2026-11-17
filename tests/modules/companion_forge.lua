@@ -688,26 +688,31 @@ do
 	Done()
 end
 
--- 3.2.0 : le filet : une salve sortie du suivi est cachée par l'horloge
+-- 3.2.0 : les paillettes naissent au hasard dans le disque (plus en rangée)
 do
-	Say("-- médaillon forgé : filet des paillettes")
+	Say("-- médaillon forgé : paillettes au hasard")
 	local frame = Fresh("azeroth", true)
 	frame:Show()
 	local now = (NS.Now and NS.Now()) or 0
+	NS.companionFx = nil
 	NS:CompanionFx("sparkle")
-	local list = {}
-	for _, p in ipairs(NS.companionFx.particles) do list[#list + 1] = p end
-	NS.companionFx.particles = {}             -- sortie du suivi : l'animation ne les voit plus
-	local shownBefore = NS:CompanionFxDiag(now + 0.2)
-	local hidden = NS:CompanionFxSweep(now + 1.4 + 0.1)
-	local still = 0
-	for _, p in ipairs(list) do if p.region:IsShown() then still = still + 1 end end
-	local soon = false
-	for _, key in ipairs(select(2, NS.ClockJobs())) do if key == "companion:fx-sweep" then soon = true end end
-	Check("[FCOMP] filet : une salve sortie du suivi est cachée à la fin de l'effet (horloge programmée), /qc diag la compte",
-		shownBefore >= 6 and hidden >= 6 and still == 0 and soon, shownBefore .. "/" .. hidden .. "/" .. still)
-	Mock:Reset()
-	NS:HandleCommand("diag")
-	Check("[FCOMP] /qc diag : ligne des effets", Mock:Output():find("effets :", 1, true) ~= nil, Mock:Output())
+	local list = NS.companionFx.particles
+	local F, h = NS.FORGE_RING, frame:GetHeight()
+	local cx, cy, radius = F.x or 0, (F.y or 0) + h / 2, (F.disc or 88) / 2
+	local ys, out, late = {}, 0, 0
+	for _, p in ipairs(list) do
+		ys[math.floor(p.y)] = true
+		local dx, dy = p.x - cx, p.y + p.rise - cy
+		if dx * dx + dy * dy > radius * radius then out = out + 1 end
+		if p.at > now then late = late + 1 end
+	end
+	local rows = 0
+	for _ in pairs(ys) do rows = rows + 1 end
+	NS:CompanionFxUpdate(now + 0.01)
+	local hiddenLate = true
+	for _, p in ipairs(list) do if p.at > now + 0.01 and (p.region.alpha or 0) > 0 then hiddenLate = false end end
+	NS:CompanionFxUpdate(now + 5)
+	Check("[FCOMP] paillettes : 6, à des hauteurs différentes, dans le disque montée comprise, décalées dans le temps, effacées à la fin",
+		#list == 0 and rows >= 4 and out == 0 and hiddenLate, rows .. " hauteurs, " .. out .. " hors disque, " .. late .. " en retard")
 	Done()
 end

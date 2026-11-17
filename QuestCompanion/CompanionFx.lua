@@ -27,7 +27,6 @@ local FR = {
 	COMP_ANIM_OFF        = "Animation « %s » coupée pour cette apparence (les effets restent).",
 	COMP_ANIM_ON         = "Animation « %s » de nouveau jouée pour cette apparence.",
 	COMP_ANIM_UNKNOWN    = "Animation inconnue. Noms : %s.",
-	COMP_FX_DIAG         = "  effets : %d particule(s) à l'écran (la plus vieille : %s s), %d suivie(s), %d rattrapée(s) par le filet",
 }
 local EN = {
 	COMP_ANIM_TEST       = "Animation %d/%d: %s. If nothing moves: /qc compagnon anim non %s",
@@ -36,7 +35,6 @@ local EN = {
 	COMP_ANIM_OFF        = "Animation \"%s\" turned off for this appearance (effects stay).",
 	COMP_ANIM_ON         = "Animation \"%s\" played again for this appearance.",
 	COMP_ANIM_UNKNOWN    = "Unknown animation. Names: %s.",
-	COMP_FX_DIAG         = "  effects: %d particle(s) on screen (oldest %s s), %d tracked, %d caught by the safety net",
 }
 ns.RegisterStrings(FR, EN)
 if ns.KEEP_STRINGS then ns.COMPANION_FX_STRINGS = { fr = FR, en = EN } end
@@ -86,52 +84,6 @@ local function State(self)
 	return state
 end
 
--- 3.2.0 : toutes les particules jamais créées (suivies ou non), pour le
--- filet de nettoyage : une rangée de paillettes restait figée dans le
--- médaillon, sortie du suivi, sans erreur
-local ALL = {}
-ns.COMPANION_FX_ALL = ALL
-ns.COMPANION_FX_GRACE = 0.5   -- s après la fin prévue d'un effet
-
--- Cache toute particule dont l'effet est fini (suivie ou non) ; rend le
--- nombre cachée. Appelé par l'horloge après chaque salve, sans dépendre de
--- l'animation image par image.
-function ns:CompanionFxSweep(now)
-	now = now or Clock()
-	local hidden = 0
-	for _, p in ipairs(ALL) do
-		if p.untilAt and now >= p.untilAt then
-			for _, region in ipairs({ p.dot, p.text }) do
-				if region and region.IsShown and region:IsShown() then region:Hide(); hidden = hidden + 1 end
-			end
-		end
-	end
-	if hidden > 0 then self.companionFxSwept = (self.companionFxSwept or 0) + hidden end
-	return hidden
-end
-
--- /qc diag : les particules à l'écran, la plus vieille, celles rattrapées
-do
-	local previous = ns.DiagExtra
-	function ns:DiagExtra(...)
-		if previous then previous(self, ...) end
-		local shown, oldest, tracked, swept = self:CompanionFxDiag()
-		self:Print(self:F("COMP_FX_DIAG", shown, string.format("%.1f", oldest), tracked, swept))
-	end
-end
-function ns:CompanionFxDiag(now)
-	now = now or Clock()
-	local shown, oldest = 0, 0
-	for _, p in ipairs(ALL) do
-		local region = p.region
-		if region and region.IsShown and region:IsShown() then
-			shown = shown + 1
-			oldest = math.max(oldest, now - (p.at or now))
-		end
-	end
-	return shown, oldest, #(State(self).particles), self.companionFxSwept or 0
-end
-
 local function Particle(self, frame, kind)
 	local state = State(self)
 	local p = table.remove(state.pool)
@@ -139,11 +91,41 @@ local function Particle(self, frame, kind)
 		p = {}
 		p.dot = Theme.CreateDiamond and Theme.CreateDiamond(frame, 7) or frame:CreateTexture(nil, "OVERLAY")
 		p.text = frame:CreateFontString(nil, "OVERLAY", Theme.F_SMALL)
-		ALL[#ALL + 1] = p
 	end
 	p.kind = kind
 	state.particles[#state.particles + 1] = p
 	return p
+end
+
+-- 3.2.0 : les paillettes, cœurs et miettes naissent au hasard dans le
+-- portrait (le disque du médaillon forgé, sinon le cadre carré), un peu
+-- décalées dans le temps, au lieu d'une rangée sous la créature ; les « Zz »
+-- gardent leur place. scatter : marge au bord, montée (min, max), retard
+-- maximal (part de la durée).
+ns.COMPANION_FX_SCATTER = { edge = 10, riseMin = 12, riseMax = 26, delay = 0.35, tries = 8 }
+
+-- Un point de départ au hasard, depuis le CENTRE du cadre : x, y, montée
+function ns.CompanionFxSpot(frame)
+	local S = ns.COMPANION_FX_SCATTER
+	local rise = S.riseMin + math.random() * (S.riseMax - S.riseMin)
+	local w = tonumber(frame.GetWidth and frame:GetWidth()) or 104
+	local h = tonumber(frame.GetHeight and frame:GetHeight()) or 104
+	local F = frame.ring == "forge" and ns.FORGE_RING
+	if F then
+		local cx, cy, radius = (F.x or 0), (F.y or 0) + h / 2, (F.disc or 88) / 2 - S.edge
+		local x, y
+		for _ = 1, S.tries do
+			local angle, r = math.random() * 2 * math.pi, math.sqrt(math.random()) * radius
+			x, y = cx + r * math.cos(angle), cy + r * math.sin(angle)
+			-- la montée reste dans le disque
+			local dx, dy = x - cx, y + rise - cy
+			if dx * dx + dy * dy <= radius * radius then return x, y, rise end
+		end
+		return x, math.min(y, cy + radius - rise), rise
+	end
+	local x = -w / 2 + S.edge + math.random() * math.max(1, w - 2 * S.edge)
+	local y = -h / 2 + S.edge + math.random() * math.max(1, h - 2 * S.edge - rise)
+	return x, y, rise
 end
 
 -- Lance un effet ; renvoie true s'il est parti
@@ -166,10 +148,16 @@ function ns:CompanionFx(kind)
 	else
 		for index = 1, def.count or 1 do
 			local p = Particle(self, frame, kind)
-			p.at, p.untilAt = now, now + def.duration
-			p.x = (index - (def.count + 1) / 2) * 12
-			p.y = -20
-			p.rise = 26 + index * 4
+			if kind == "zzz" then
+				p.at, p.untilAt = now, now + def.duration
+				p.x = (index - (def.count + 1) / 2) * 12
+				p.y = -20
+				p.rise = 26 + index * 4
+			else
+				local delay = math.random() * ns.COMPANION_FX_SCATTER.delay * def.duration
+				p.at, p.untilAt = now + delay, now + delay + def.duration * (1 - ns.COMPANION_FX_SCATTER.delay / 2)
+				p.x, p.y, p.rise = ns.CompanionFxSpot(frame)
+			end
 			local region = (kind == "zzz") and p.text or p.dot
 			local other = (kind == "zzz") and p.dot or p.text
 			if other.Hide then other:Hide() end
@@ -182,12 +170,8 @@ function ns:CompanionFx(kind)
 			p.region = region
 			region:ClearAllPoints()
 			region:SetPoint("CENTER", frame, "CENTER", p.x, p.y)
-			region:SetAlpha(1)
+			region:SetAlpha(now < p.at and 0 or 1)   -- une paillette en retard attend, invisible
 			region:Show()
-		end
-		-- le filet : même si l'animation ne passe plus, la salve s'efface
-		if ns.Soon then
-			ns.Soon("companion:fx-sweep", def.duration + ns.COMPANION_FX_GRACE, function() ns:CompanionFxSweep() end)
 		end
 	end
 	return true
@@ -232,10 +216,10 @@ function ns:CompanionFxUpdate(now)
 			if p.region then p.region:Hide() end
 			state.pool[#state.pool + 1] = p
 		else
-			local ratio = (now - p.at) / (p.untilAt - p.at)
+			local ratio = math.max(0, (now - p.at) / (p.untilAt - p.at))
 			p.region:ClearAllPoints()
 			p.region:SetPoint("CENTER", frame, "CENTER", p.x, p.y + p.rise * ratio)
-			p.region:SetAlpha(1 - ratio)
+			p.region:SetAlpha(now < p.at and 0 or (1 - ratio))
 			kept = kept + 1
 			particles[kept] = p
 		end
