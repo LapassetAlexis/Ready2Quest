@@ -24,7 +24,7 @@ local ADVICE_PAD  = 10     -- marge haute et basse du bloc conseils
 local FOOTER      = 52     -- pied : bouton (28) centré
 local BUTTON_HEIGHT = 28
 
--- Coupe à `limit` octets (1.31.0 : plus utilisé par la fenêtre, gardé pour le chat) sans jamais couper un caractère UTF-8 en deux (é, â…
+-- Coupe à `limit` octets (sert au chat) sans jamais couper un caractère UTF-8 en deux (é, â…
 -- font deux octets) : un octet de continuation (0x80-0xBF) ne peut pas
 -- commencer la partie retirée. « ... » en ASCII : « … » n'est pas garanti
 -- dans la police des cadres sur Era.

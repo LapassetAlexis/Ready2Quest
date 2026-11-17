@@ -16,11 +16,10 @@ end
 -- Pages. `modules` = interrupteurs de checks (ns.checks), `rows` = réglages,
 -- `list` = liste défilante (zones sûres, buffs suivis), `buttons` = actions.
 -- ---------------------------------------------------------------------------
--- v1.22.0 : l'addon a un module (Check avant le départ ; Résumé de stuff et
--- Stats du portrait retirés en 1.37.0) et une section QoL. Les 13 « checks » ne sont pas des
--- modules : ce sont les contrôles du Check avant le départ, réglés dans ses
--- sous-pages. Un module a son interrupteur dans la navigation (`power` = clé
--- de réglage) ; une sous-page porte `parent`.
+-- 2.0.0 : ces pages (et celles des modules) sont la matière du menu par
+-- familles (OptionsMenu.lua lit leurs lignes par id). `group`, `parent` et
+-- `target` ne servent qu'à la navigation par pages du socle, gardée pour
+-- QuestCompanion et éprouvée sur ces pages par les tests.
 local R2Q_PAGES = {
 	{
 		id = "general", title = "OPT_PAGE_GENERAL",

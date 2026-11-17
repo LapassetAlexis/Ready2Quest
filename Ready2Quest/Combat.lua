@@ -31,8 +31,6 @@ ns.RegisterDefaults({ combatRange = true, combatDots = true, combatCast = true, 
 
 local FR = {
 	OPT_GROUP_COMBAT        = "COMBAT",
-	OPT_PAGE_COMBAT         = "Combat",
-	OPT_PAGE_COMBAT_SUB     = "La portée d'aggro et ce qui aide pendant le combat : portée des sorts, DoT mortels, prédiction des sorts, chiffres des barres.",
 	OPT_PAGE_COMBAT_RANGE   = "Portée des sorts",
 	OPT_PAGE_COMBAT_RANGE_SUB = "Une coche verte ou une croix rouge au-dessus de ta cible ; les icônes des barres se grisent hors de portée.",
 	OPT_PAGE_COMBAT_DOTS    = "DoT mortels",
@@ -102,8 +100,6 @@ local FR = {
 }
 local EN = {
 	OPT_GROUP_COMBAT        = "COMBAT",
-	OPT_PAGE_COMBAT         = "Combat",
-	OPT_PAGE_COMBAT_SUB     = "Aggro range and what helps in a fight: spell range, lethal DoTs, spell prediction, action bar numbers.",
 	OPT_PAGE_COMBAT_RANGE   = "Spell range",
 	OPT_PAGE_COMBAT_RANGE_SUB = "A green check or a red cross above your target; action bar icons grey out when out of range.",
 	OPT_PAGE_COMBAT_DOTS    = "Lethal DoTs",
@@ -179,8 +175,7 @@ function ns:CombatRivalTitle()
 	return self.combatRival and (RIVAL_TITLES[self.combatRival] or self.combatRival) or nil
 end
 
--- Le moteur tourne-t-il (chargé, pas de rival) ? Une partie tourne-t-elle ?
-function ns:CombatEngine() return self.combat end
+-- Une partie du moteur tourne-t-elle ?
 function ns:CombatPartOn(part)
 	local db = self:DB()
 	return self.combat ~= nil and db[part.key] ~= false

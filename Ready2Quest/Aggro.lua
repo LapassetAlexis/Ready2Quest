@@ -277,12 +277,6 @@ function ns:AggroKeyChoices()
 	return list
 end
 
-function ns:AggroKeyHeld()
-	local key = self:AggroKey()
-	if key == "always" then return true end
-	return Call(KEY_TEST[key]) and true or false
-end
-
 function ns:AggroInCombat()
 	if Call("UnitAffectingCombat", "player") then return true end
 	return Call("InCombatLockdown") and true or false
