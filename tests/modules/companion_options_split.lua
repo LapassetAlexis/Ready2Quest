@@ -19,7 +19,7 @@ local want = {
 	companionStyle = "companionMain",
 	companionCombatFade = "companionQuiet", companionHideInstance = "companionQuiet", companionHideTaxi = "companionQuiet",
 	companionAggroBlink = "companionQuiet",
-	companionChatter = "companionTalk", companionDiscovery = "companionTalk", companionJokes = "companionTalk",
+	companionChatter = "companionTalk", companionDiscovery = "companionTalk", companionJokes = "companionTalk", companionShouts = "companionTalk",
 	companionLore = "companionTalk", companionTutorial = "companionTalk",
 	bindToggle = "companionKeys", bindNet = "companionKeys", bindHunt = "companionKeys",
 }

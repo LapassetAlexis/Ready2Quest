@@ -38,7 +38,7 @@ if ns.KEEP_STRINGS then ns.COMPANION_SPLIT_STRINGS = { fr = FR, en = EN } end
 ns.COMPANION_OPTION_SPLIT = {
 	companionCombatFade = "companionQuiet", companionHideInstance = "companionQuiet",
 	companionHideTaxi = "companionQuiet", companionAggroBlink = "companionQuiet",
-	companionChatter = "companionTalk", companionDiscovery = "companionTalk", companionJokes = "companionTalk",
+	companionChatter = "companionTalk", companionDiscovery = "companionTalk", companionJokes = "companionTalk", companionShouts = "companionTalk",
 	companionLore = "companionTalk", companionWinterVisit = "companionTalk", companionTutorial = "companionTalk",
 	bindToggle = "companionKeys", bindNet = "companionKeys", bindHunt = "companionKeys",
 }

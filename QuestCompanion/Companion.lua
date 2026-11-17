@@ -1170,6 +1170,7 @@ end
 --              en combat, refusé sans être noté (2.13.0)
 --   important: conseil de route important (élite, vie, munitions, vivres) :
 --              seul ce qui passe au cran « Discret »
+--   shout    : 3.2.0, il crie : le texte en majuscules (CompanionShouts.lua)
 -- Jamais outre la sourdine ni une bulle plus importante encore affichée.
 -- Renvoie true, ou false + raison ("off" : coupé/muet/masqué, "busy").
 function ns:CompanionSay(pool, opts)
@@ -1218,6 +1219,7 @@ function ns:CompanionSay(pool, opts)
 	local bubble = self:EnsureCompanionBubble()
 	if not bubble then return false, "off" end
 	local text = self:F(lineKey, unpack(opts.args or {}))
+	if opts.shout and Theme.Upper then text = Theme.Upper(text) end
 	-- plus importante qu'une séquence : la conversation s'arrête, le
 	-- tutoriel reprendra son étape après la bulle
 	if seq and not opts.seq then

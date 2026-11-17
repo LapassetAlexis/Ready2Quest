@@ -1,5 +1,11 @@
 # Journal des modifications
 
+## 1.37.1
+
+- **Le nom du monstre pour QuestCompanion** : quand la portée d'aggro montre sa marque rouge, le compagnon de QuestCompanion (3.2.0) peut crier le nom du monstre qui va t'aggro.
+
+*English:* the monster's name for QuestCompanion: when the aggro range shows its red mark, the QuestCompanion companion (3.2.0) can shout the name of the monster about to aggro you.
+
 ## 1.37.0 — Deux modules retirés
 
 - **Résumé de stuff et Stats du portrait retirés** : le petit cadre qui montrait les stats gagnées ou perdues en changeant d'objet, et le panneau de stats au survol du portrait, disparaissent, avec leurs pages de réglages et leurs commandes (`/r2q stuff`, `/r2q stats`, `/r2q toast`, `/r2q portrait`). Ils servaient peu ; Ready2Quest n'écoute plus les changements d'équipement ni les stats du joueur. Leurs anciens réglages sont effacés de la sauvegarde.
