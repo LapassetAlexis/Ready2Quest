@@ -27,7 +27,7 @@ ns.COMBAT_PARTS = {
 	{ key = "combatBars",  module = "SpellDamageInfo", page = "combatBars" },
 }
 
-ns.RegisterDefaults({ combatRange = true, combatDots = true, combatCast = true, combatBars = true })
+ns.RegisterDefaults({ combatRange = true, combatDots = true, combatCast = true, combatBars = true, combatOneIcon = true })
 
 local FR = {
 	OPT_GROUP_COMBAT        = "COMBAT",
@@ -62,6 +62,9 @@ local FR = {
 	OPT_COMBAT_PLATES       = "Sur les barres de nom",
 	OPT_COMBAT_MARGIN       = "Marge de sécurité",
 	OPT_COMBAT_SWING        = "Compter un coup d'arme en plus",
+	OPT_COMBAT_ONE_ICON     = "Une seule icône au-dessus du monstre",
+	OPT_COMBAT_ONE_ICON_DESC = "Le crâne (ou l'arme) prend la place de la coche de portée ; hors de portée, la croix rouge revient.",
+	OPT_COMBAT_INFO_DOTS_3  = "Le crâne : tes DoT suffisent. L'arme (baguette, arc, épée) : tes DoT plus un coup d'arme suffisent.",
 	OPT_COMBAT_CAST_MARKER  = "Marqueur pendant l'incantation",
 	OPT_COMBAT_KILL_ICON    = "Icône quand le sort tue",
 	OPT_COMBAT_KILL_SIZE    = "Taille de l'icône",
@@ -131,6 +134,9 @@ local EN = {
 	OPT_COMBAT_PLATES       = "On nameplates",
 	OPT_COMBAT_MARGIN       = "Safety margin",
 	OPT_COMBAT_SWING        = "Count one more weapon swing",
+	OPT_COMBAT_ONE_ICON     = "One icon above the monster",
+	OPT_COMBAT_ONE_ICON_DESC = "The skull (or the weapon) takes the range check's place; out of range, the red cross comes back.",
+	OPT_COMBAT_INFO_DOTS_3  = "The skull: your DoTs are enough. The weapon (wand, bow, sword): your DoTs plus one weapon hit are enough.",
 	OPT_COMBAT_CAST_MARKER  = "Marker while casting",
 	OPT_COMBAT_KILL_ICON    = "Icon when the spell kills",
 	OPT_COMBAT_KILL_SIZE    = "Icon size",
@@ -263,6 +269,8 @@ ns.COMBAT_ROWS = {
 		Choice("nameplateMode", "OPT_COMBAT_PLATES", DOTS, "COMBAT_PLATE_", { "off", "marker", "markerIcon" }),
 		Num("killMargin", "OPT_COMBAT_MARGIN", DOTS, 50, 100, 5, "OPT_PCT_UNIT"),
 		Bool("swingKill", "OPT_COMBAT_SWING", DOTS),
+		{ key = "combatOneIcon", label = "OPT_COMBAT_ONE_ICON", kind = "bool",
+			describe = function() return L.OPT_COMBAT_ONE_ICON_DESC end },
 	},
 	combatCast = {
 		Bool("showMarker", "OPT_COMBAT_CAST_MARKER", CAST),
@@ -299,7 +307,7 @@ local PAGES = {
 		power = "combatRange", info = Info({ "OPT_COMBAT_INFO_RANGE_1" }),
 		rows = ns.COMBAT_ROWS.combatRange, actions = { "combatReload" } },
 	{ id = "combatDots", title = "OPT_PAGE_COMBAT_DOTS", group = "OPT_GROUP_COMBAT",
-		power = "combatDots", info = Info({ "OPT_COMBAT_INFO_DOTS_1", "OPT_COMBAT_INFO_DOTS_2" }),
+		power = "combatDots", info = Info({ "OPT_COMBAT_INFO_DOTS_1", "OPT_COMBAT_INFO_DOTS_3", "OPT_COMBAT_INFO_DOTS_2" }),
 		rows = ns.COMBAT_ROWS.combatDots, actions = { "combatReload" } },
 	{ id = "combatCast", title = "OPT_PAGE_COMBAT_CAST", group = "OPT_GROUP_COMBAT",
 		power = "combatCast", info = Info({ "OPT_COMBAT_INFO_CAST_1" }),
@@ -348,6 +356,77 @@ do
 		if previous then previous(self, key, enabled) end
 		if keys[key] then self:Print(L.MSG_COMBAT_RELOAD) end
 	end
+end
+
+-- ---------------------------------------------------------------------------
+-- Une seule icône au-dessus de la cible (bêta 3) : le crâne / l'arme des DoT
+-- mortels se pose à la place de la coche de portée et passe au-dessus d'elle
+-- (une strate plus haut) ; hors de portée, il est masqué : la croix revient.
+-- Le moment où le crâne apparaît reste décidé par la barre du jeu (vie
+-- cachée) : on ne fait que le placer et le masquer.
+-- ---------------------------------------------------------------------------
+local STRATA = { "BACKGROUND", "LOW", "MEDIUM", "HIGH", "DIALOG", "FULLSCREEN", "FULLSCREEN_DIALOG", "TOOLTIP" }
+local NEXT_STRATA = {}
+for index, name in ipairs(STRATA) do NEXT_STRATA[name] = STRATA[index + 1] or name end
+
+local function Ask(fn, ...)
+	if type(fn) ~= "function" then return nil end
+	local ok, a = pcall(fn, ...)
+	if not ok then return nil end
+	return ns.Plain and ns.Plain(a) or a
+end
+
+-- Les réglages de placement des DoT suivent ceux de la portée
+function ns:CombatAlignIcons(range, dots)
+	local offset, size = tonumber(range.offset) or 56, tonumber(range.size) or 26
+	local want = { nameplateIconPosition = "above", plateIconOffsetX = 0, plateIconOffsetY = offset - 4,
+		nameplateIconSize = size + 2 }
+	local changed = false
+	for key, value in pairs(want) do
+		if dots[key] ~= value then dots[key] = value; changed = true end
+	end
+	return changed
+end
+
+-- Un passage : rend "out" (icône des DoT masquée), "in", ou nil (rien à faire)
+function ns:CombatIconsTick()
+	local e = self.combat
+	if not e or self:DB().combatOneIcon == false then return nil end
+	local modules = e.modules or {}
+	local range, dotsMod = modules.Range, modules.DoTInfo
+	local dots = rawget(_G, "Ready2QuestCombat_DoTInfoDB")
+	local rangeSettings = type(e.Settings) == "function" and e.Settings("Range") or nil
+	if type(dots) ~= "table" or type(rangeSettings) ~= "table" then return nil end
+	self:CombatAlignIcons(rangeSettings, dots)
+	local marker = dotsMod and dotsMod.barMarker
+	local api = rawget(_G, "C_NamePlate")
+	local plate = api and Ask(api.GetNamePlateForUnit, "target")
+	if not (marker and type(marker.widgetsFor) == "function" and type(plate) == "table") then return nil end
+	local bar = e.Plate and type(e.Plate.HealthBar) == "function" and Ask(e.Plate.HealthBar, plate) or nil
+	if not bar then return nil end
+	local ok, w = pcall(marker.widgetsFor, plate, bar)
+	if not (ok and type(w) == "table" and w.iconWindow) then return nil end
+	-- au-dessus de la coche : une strate de plus que la barre
+	-- (strate illisible : la coche se replie sur LOW, le crâne passe en MEDIUM)
+	local strata = Ask(bar.GetFrameStrata, bar)
+	w.iconWindow:SetFrameStrata(type(strata) == "string" and NEXT_STRATA[strata] or "MEDIUM")
+	local state = range and type(range.Check) == "function" and Ask(range.Check) or nil
+	if state == "out" and rangeSettings.showOut ~= false then
+		w.iconWindow:SetAlpha(0)
+		w.r2qHidden = true
+		return "out"
+	elseif w.r2qHidden then
+		w.iconWindow:SetAlpha(1)
+		w.r2qHidden = nil
+	end
+	return "in"
+end
+
+if engine and ns.Every then
+	ns.Every("combat:icons", 0.1, function()
+		local ok, err = pcall(ns.CombatIconsTick, ns)
+		if not ok and ns.RecordError then ns:RecordError("combat:icons", err) end
+	end)
 end
 
 -- La fenêtre du moteur n'est plus montrée : ses portes d'entrée (/r2qc, son

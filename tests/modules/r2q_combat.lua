@@ -197,6 +197,42 @@ do
 end
 
 do
+	Say("-- combat : une seule icône au-dessus de la cible")
+	local window = CreateFrame("Frame")
+	local state = "in"
+	local stores = { Range = { offset = 56, size = 26, showOut = true } }
+	local engine = { state = {}, Settings = function(name) stores[name] = stores[name] or {}; return stores[name] end,
+		Plate = { HealthBar = function() return { GetFrameStrata = function() return "LOW" end } end },
+		modules = { Range = { Check = function() return state end },
+			DoTInfo = { barMarker = { widgetsFor = function() return { iconWindow = window } end } } } }
+	engine.ShouldRun = function() return true end
+	local ns, db = Glue(engine)
+	local savedPlate = rawget(_G, "C_NamePlate")
+	_G.C_NamePlate = { GetNamePlateForUnit = function() return {} end }
+	_G.Ready2QuestCombat_DoTInfoDB = { nameplateIconPosition = "right" }
+	local w = nil
+	engine.modules.DoTInfo.barMarker.widgetsFor = function() w = w or { iconWindow = window }; return w end
+	local first = ns:CombatIconsTick()
+	local dots = _G.Ready2QuestCombat_DoTInfoDB
+	local aligned = dots.nameplateIconPosition == "above" and dots.plateIconOffsetY == 52 and dots.plateIconOffsetX == 0
+		and dots.nameplateIconSize == 28
+	local strata = window.strata or (window.GetFrameStrata and window:GetFrameStrata())
+	state = "out"
+	local out = ns:CombatIconsTick()
+	local hiddenAlpha = window.alpha
+	state = "in"
+	ns:CombatIconsTick()
+	local back = window.alpha
+	db.combatOneIcon = false
+	state = "out"
+	local off = ns:CombatIconsTick()
+	_G.C_NamePlate, _G.Ready2QuestCombat_DoTInfoDB = savedPlate, nil
+	Check("[COMBAT] une icône : crâne/arme à la place de la coche (même hauteur, un peu plus grands, une strate au-dessus) ; hors de portée masqués, la croix revient ; réglage coupé : rien",
+		first == "in" and aligned and strata == "MEDIUM" and out == "out" and hiddenAlpha == 0 and back == 1 and off == nil,
+		tostring(strata) .. " " .. tostring(hiddenAlpha) .. " " .. tostring(back))
+end
+
+do
 	Say("-- combat : DoesItDiePlus installé")
 	local ns = Glue(nil, "UsefulPlatesAndTooltips")
 	local printed = {}
