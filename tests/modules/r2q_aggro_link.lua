@@ -106,3 +106,39 @@ NS.AggroDistance, NS.aggroPlates, NS.AggroOn, NS.AggroInCombat = savedDistance, 
 NS:AggroLinkHide()
 Check("[LINK] « +N » : géométrie, voisins de la même sorte hors combat, ambre puis rouge, combat, réglage", #bad == 0,
 	table.concat(bad, " ; "))
+
+-- 1.38.0 (bêta 2) : la position d'une barre de nom est cachée sur Forever :
+-- repli sur un cadre d'un pixel accroché à son centre
+do
+	ResetWorld()
+	UIParent:SetSize(1920, 1080)
+	local plate = CreateFrame("Frame", nil, UIParent)
+	plate.GetCenter = function() error("valeur secrète") end
+	local created = {}
+	local savedCreate = _G.CreateFrame
+	_G.CreateFrame = function(kind, name, parent, ...)
+		local f = savedCreate(kind, name, parent, ...)
+		if parent == plate then f.GetCenter = function() return 700, 300 end; created[#created + 1] = f end
+		return f
+	end
+	local angle = NS.AggroLinkAngle(700, 1920, math.rad(90))
+	local probeX
+	do
+		-- PlateX est locale : on passe par AggroLinkCount avec une cible simulée minimale
+		local savedPlates, savedDistance, savedKind = NS.aggroPlates, NS.AggroDistance, NS.AggroUnitKind
+		local savedIsUnit, savedCombat = rawget(_G, "UnitIsUnit"), rawget(_G, "UnitAffectingCombat")
+		NS.aggroPlates = { nameplate1 = plate }
+		NS.AggroDistance = function() return 20, 25 end
+		NS.AggroUnitKind = function() return "hostile" end
+		_G.UnitIsUnit = function(a, b) return a == "nameplate1" and b == "target" end
+		_G.UnitAffectingCombat = function() return false end
+		local trace = {}
+		NS:AggroLinkCount("target", trace)
+		probeX = trace.x0
+		NS.aggroPlates, NS.AggroDistance, NS.AggroUnitKind = savedPlates, savedDistance, savedKind
+		_G.UnitIsUnit, _G.UnitAffectingCombat = savedIsUnit, savedCombat
+	end
+	_G.CreateFrame = savedCreate
+	Check("[LINK] position cachée de la barre : repli sur un cadre accroché à son centre (source « probe »)",
+		#created == 1 and probeX == 700 and NS.AggroLinkXSource() == "probe" and angle ~= nil, tostring(probeX))
+end

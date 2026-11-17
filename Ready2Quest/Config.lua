@@ -21,5 +21,5 @@ ns.APP = {
 	slash = { "/sd", "/sacdepart", "/r2q" },
 	-- fichiers attendus, pour le diagnostic quand l'addon reste muet
 	coreFiles = { "Bootstrap", "Locales", "Compat", "Hubs", "Theme", "Core", "Buffs",
-		"Reagents", "Merchant", "Equip", "Stats", "Minimap", "Checks", "Options", "UI" },
+		"Reagents", "Merchant", "Equip", "SpecStats", "EditMode", "Minimap", "Checks", "Options", "UI" },
 }

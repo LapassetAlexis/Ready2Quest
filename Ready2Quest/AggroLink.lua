@@ -26,13 +26,13 @@ ns.AGGRO_LINK_FOV = 90        -- degrés, si le client ne dit rien
 ns.RegisterStrings({
 	OPT_AGGRO_LINK = "Voisins qui suivent (+N)",
 	MSG_DIAG_AGGRO_LINK = "  voisins (+N) : %s sur la cible (rayon %d m, champ %d°)",
-	MSG_DIAG_AGGRO_LINK_TARGET = "    cible : %s m, x %s (écran %s)",
+	MSG_DIAG_AGGRO_LINK_TARGET = "    cible : %s m, x %s (écran %s, source %s)",
 	MSG_DIAG_AGGRO_LINK_ROW = "    %s : %s m, x %s -> écart %s m",
 	MSG_DIAG_AGGRO_LINK_SKIP = "    %s : autre sorte ou en combat",
 }, {
 	OPT_AGGRO_LINK = "Neighbours that follow (+N)",
 	MSG_DIAG_AGGRO_LINK = "  neighbours (+N): %s on the target (radius %d yd, field %d°)",
-	MSG_DIAG_AGGRO_LINK_TARGET = "    target: %s yd, x %s (screen %s)",
+	MSG_DIAG_AGGRO_LINK_TARGET = "    target: %s yd, x %s (screen %s, source %s)",
 	MSG_DIAG_AGGRO_LINK_ROW = "    %s: %s yd, x %s -> gap %s yd",
 	MSG_DIAG_AGGRO_LINK_SKIP = "    %s: other kind or in combat",
 })
@@ -102,13 +102,39 @@ local function Scale(frame)
 	s = ok and tonumber(Plain(s)) or nil
 	return (s and s > 0) and s or 1
 end
-local function PlateX(plate)
-	if type(plate) ~= "table" or type(plate.GetCenter) ~= "function" then return nil end
-	local ok, x = pcall(plate.GetCenter, plate)
+local function CenterX(frame)
+	if type(frame) ~= "table" or type(frame.GetCenter) ~= "function" then return nil end
+	local ok, x = pcall(frame.GetCenter, frame)
 	x = ok and tonumber(Plain(x)) or nil
 	if not x then return nil end
-	return x * Scale(plate) / Scale(UIParent)
+	return x * Scale(frame) / Scale(UIParent)
 end
+
+-- 1.38.0 (bêta 2) : sur Forever, la position d'une barre de nom est cachée
+-- (GetCenter rend une valeur secrète). Repli : un cadre à nous, d'un pixel,
+-- accroché au centre de la barre ; sa position se lit peut-être. La source
+-- retenue est notée pour /r2q diag (« plate », « probe » ou rien).
+local probes = setmetatable({}, { __mode = "k" })
+local function Probe(plate)
+	local probe = probes[plate]
+	if probe then return probe end
+	local ok, frame = pcall(CreateFrame, "Frame", nil, plate)
+	if not ok or not frame then return nil end
+	frame:SetSize(1, 1)
+	frame:SetPoint("CENTER", plate, "CENTER", 0, 0)
+	probes[plate] = frame
+	return frame
+end
+local lastSource
+local function PlateX(plate)
+	local x = CenterX(plate)
+	if x then lastSource = "plate"; return x end
+	local probe = type(plate) == "table" and Probe(plate)
+	x = probe and CenterX(probe)
+	lastSource = x and "probe" or nil
+	return x
+end
+function ns.AggroLinkXSource() return lastSource end
 
 -- Le nombre de voisins de `target` (0 si rien à dire), et la barre de la cible.
 -- trace (table) : ce qui a été examiné, pour /r2q diag
@@ -209,7 +235,8 @@ function ns:AggroLinkDiagLine()
 		math.floor(math.deg(ns.AggroLinkFov()) + 0.5)) }
 	if ok and (trace.r0 or trace.x0) then
 		local width = UIParent and UIParent.GetWidth and tonumber(UIParent:GetWidth()) or nil
-		lines[#lines + 1] = self:F("MSG_DIAG_AGGRO_LINK_TARGET", Fmt(trace.r0), Fmt(trace.x0), Fmt(width))
+		lines[#lines + 1] = self:F("MSG_DIAG_AGGRO_LINK_TARGET", Fmt(trace.r0), Fmt(trace.x0), Fmt(width),
+			tostring(ns.AggroLinkXSource() or "-"))
 	end
 	for index, row in ipairs(ok and trace or {}) do
 		if index > 8 then break end
