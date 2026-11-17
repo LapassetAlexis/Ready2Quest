@@ -55,9 +55,18 @@ do
 		if p.point ~= "CENTER" or p.relPoint ~= "TOP" or math.sqrt(dx * dx + dy * dy) > radius - 4 then out[#out + 1] = i end
 	end
 	local square = NS:CompanionPlaceStars(frame, true)
-	Check("[OPTS] fond étoilé : en thème forgé, toutes les étoiles dans le disque ; sinon sur le cadre carré",
-		mode == "forge" and #out == 0 and square == "square" and frame.stars[1].lastPoint.point == "TOPLEFT",
-		table.concat(out, ","))
+	-- 3.2.0 : sur le cadre carré, semées sur toute la hauteur (plus deux rangées en haut)
+	local rows, lowest = {}, 0
+	for _, star in ipairs(frame.stars) do
+		local y = -(star.lastPoint.y or 0)
+		rows[math.floor(y / 10)] = true
+		lowest = math.max(lowest, y)
+	end
+	local bands = 0
+	for _ in pairs(rows) do bands = bands + 1 end
+	Check("[OPTS] fond étoilé : en thème forgé, toutes les étoiles dans le disque ; sur le cadre carré, sur toute la hauteur",
+		mode == "forge" and #out == 0 and square == "square" and frame.stars[1].lastPoint.point == "TOPLEFT"
+		and bands >= 6 and lowest >= 70, table.concat(out, ",") .. " bandes " .. bands .. ", plus bas " .. lowest)
 end
 
 -- 3.1.2 : les étoiles scintillent au hasard, et reparaissent ailleurs dans le disque

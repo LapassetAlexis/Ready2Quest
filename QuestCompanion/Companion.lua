@@ -3124,9 +3124,12 @@ function ns:CompanionApplyFrame()
 end
 
 -- Petits points de lumière de la voûte étoilée (positions fixes : pas de
--- hasard, le fond ne « bouge » pas à chaque rechargement)
-local STARS = { { 12, -10, 2 }, { 30, -22, 1 }, { 52, -8, 2 }, { 74, -18, 1 }, { 90, -6, 2 },
-	{ 20, -40, 1 }, { 84, -36, 1 }, { 60, -30, 1 }, { 8, -62, 1 }, { 94, -58, 2 } }
+-- hasard, le fond ne « bouge » pas à chaque rechargement). 3.2.0 : en part
+-- de la largeur et de la hauteur du cadre carré (x, y de 0 à 1, taille px),
+-- semées sur tout le cadre : en pixels, elles tenaient en deux rangées en
+-- haut et se lisaient comme des lignes d'étoiles
+local STARS = { { 0.12, 0.10, 2 }, { 0.40, 0.17, 1 }, { 0.72, 0.09, 2 }, { 0.90, 0.32, 1 }, { 0.22, 0.38, 1 },
+	{ 0.56, 0.34, 2 }, { 0.80, 0.57, 1 }, { 0.10, 0.66, 2 }, { 0.44, 0.60, 1 }, { 0.66, 0.78, 1 } }
 ns.COMPANION_STARS = STARS
 -- 3.1.2 : dans le médaillon rond du thème forgé, les mêmes étoiles semées
 -- dans le disque (x, y depuis son centre, px) : posées pour le cadre carré,
@@ -3147,7 +3150,9 @@ function ns:CompanionPlaceStars(frame, square)
 			star:SetPoint("CENTER", frame, "TOP", (forge.x or 0) + f[1], (forge.y or 0) + f[2])
 		else
 			local s = STARS[index]
-			star:SetPoint("TOPLEFT", frame, "TOPLEFT", s[1], s[2])
+			local w = tonumber(frame.GetWidth and frame:GetWidth()) or 104
+			local h = tonumber(frame.GetHeight and frame:GetHeight()) or 104
+			star:SetPoint("TOPLEFT", frame, "TOPLEFT", math.floor(s[1] * w + 0.5), -math.floor(s[2] * h + 0.5))
 		end
 	end
 	return forge and "forge" or "square"
@@ -3158,7 +3163,8 @@ end
 -- et une étoile éteinte reparaît parfois ailleurs dans le portrait (le disque
 -- du médaillon, ou le cadre carré). Une horloge légère, rien sans fond étoilé
 -- ni cadre visible.
-ns.COMPANION_STAR_TWINKLE = { tick = 0.1, min = 1.2, max = 3.5, low = 0.05, high = 0.9, move = 0.6, edge = 8 }
+-- squareH : part de la hauteur du cadre carré où une étoile peut reparaître
+ns.COMPANION_STAR_TWINKLE = { tick = 0.1, min = 1.2, max = 3.5, low = 0.05, high = 0.9, move = 0.6, edge = 8, squareH = 0.85 }
 local TW = ns.COMPANION_STAR_TWINKLE
 
 local function RandomSpot(frame)
@@ -3171,7 +3177,7 @@ local function RandomSpot(frame)
 	local w = (frame.GetWidth and frame:GetWidth()) or 104
 	local h = (frame.GetHeight and frame:GetHeight()) or 104
 	return "TOPLEFT", "TOPLEFT", TW.edge + math.random() * math.max(1, w - 2 * TW.edge),
-		-(TW.edge + math.random() * math.max(1, (h * 0.6) - TW.edge))
+		-(TW.edge + math.random() * math.max(1, (h * TW.squareH) - TW.edge))
 end
 
 function ns:CompanionStarsTick(now)
@@ -3253,7 +3259,7 @@ function ns:CompanionApplyBackground()
 		frame.stars = {}
 		for index, s in ipairs(STARS) do
 			local star = Theme.Solid(frame, "BORDER", Theme.PARCHMENT, 0.8)
-			star:SetPoint("TOPLEFT", frame, "TOPLEFT", s[1], s[2])
+			star:SetPoint("TOPLEFT", frame, "TOPLEFT", 0, 0)   -- placée par CompanionPlaceStars
 			star:SetSize(s[3], s[3])
 			frame.stars[index] = star
 		end
