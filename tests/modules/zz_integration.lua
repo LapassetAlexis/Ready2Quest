@@ -14,7 +14,7 @@ local frame, lay = NS.optionsFrame, NS.OPT_LAYOUT
 -- la navigation (entrées de premier niveau) s'arrête au-dessus de la version,
 -- en bas de la colonne (18 px du bas, une ligne)
 local navFloor = -(lay.height - 2 - 40)
--- 1.39.0 : six familles fixes, plus de titres de groupe ; la colonne ne
+-- 2.0.0 : six familles fixes, plus de titres de groupe ; la colonne ne
 -- défile pas et s'arrête au-dessus de la version
 local list = frame.navList
 local navEnd = lay.navTop - list.contentHeight

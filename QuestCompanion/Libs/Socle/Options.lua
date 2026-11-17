@@ -1097,6 +1097,7 @@ local FAMILIES
 local NAV_FAMILY_H = 52
 local HEAD_H, HEAD_PHRASE_H = 28, 46
 local DASH_LINE = 24
+local DASH_HEAD, DASH_CHIP, DASH_CARD_GAP = 26, 20, 10
 
 function ns.OptionsFamilyMode() return ns.OPTION_FAMILIES ~= nil end
 
@@ -1124,15 +1125,19 @@ local function FunctionHead(frame, page, sec)
 	local head = CreateFrame("Frame", nil, page)
 	head:SetSize(INNER, sec.phrase and HEAD_PHRASE_H or HEAD_H)
 	head.def, head.powerKey = sec, sec.power
-	head.flash = Theme.Solid(head, "BACKGROUND", Theme.GOLD, 0.14)
+	-- plaque teintée et barre à gauche (maquette) : les fonctions d'un même
+	-- onglet se détachent ; la barre passe en MUTED quand la fonction est coupée
+	head.plate = Theme.Solid(head, "BACKGROUND", Theme.ROW, 1)
+	head.plate:SetAllPoints()
+	head.flash = Theme.Solid(head, "BORDER", Theme.GOLD, 0.14)
 	head.flash:SetAllPoints()
 	head.flash:Hide()
-	head.rule = Theme.Solid(head, "BORDER", Theme.EDGE_SOFT, 1)
-	head.rule:SetHeight(1)
-	head.rule:SetPoint("BOTTOMLEFT", head, "BOTTOMLEFT", 0, 0)
-	head.rule:SetPoint("BOTTOMRIGHT", head, "BOTTOMRIGHT", 0, 0)
+	head.bar = Theme.Solid(head, "ARTWORK", Theme.GOLD, 1)
+	head.bar:SetWidth(3)
+	head.bar:SetPoint("TOPLEFT", head, "TOPLEFT", 0, 0)
+	head.bar:SetPoint("BOTTOMLEFT", head, "BOTTOMLEFT", 0, 0)
 	head.title = Theme.Text(head, Theme.F_HEADING, Theme.PARCHMENT)
-	head.title:SetPoint("TOPLEFT", head, "TOPLEFT", 0, -4)
+	head.title:SetPoint("TOPLEFT", head, "TOPLEFT", PAD, -5)
 	head.title:SetJustifyH("LEFT")
 	head.title:SetText(Str(sec.title) or "")
 	if sec.tag then
@@ -1142,8 +1147,8 @@ local function FunctionHead(frame, page, sec)
 	end
 	if sec.phrase then
 		head.phrase = Theme.Text(head, Theme.F_SMALL, Theme.MUTED_LIGHT)
-		head.phrase:SetPoint("TOPLEFT", head, "TOPLEFT", 0, -25)
-		head.phrase:SetWidth(INNER)   -- sous la ligne de l'interrupteur : toute la largeur
+		head.phrase:SetPoint("TOPLEFT", head, "TOPLEFT", PAD, -26)
+		head.phrase:SetWidth(INNER - 2 * PAD)   -- sous la ligne de l'interrupteur : toute la largeur
 		head.phrase:SetJustifyH("LEFT")
 		if head.phrase.SetWordWrap then head.phrase:SetWordWrap(false) end
 		head.phrase:SetText(Str(sec.phrase))
@@ -1162,6 +1167,8 @@ local function FunctionHead(frame, page, sec)
 		self.toggle:SetChecked(on)
 		local c = on and Theme.PARCHMENT or Theme.MUTED
 		self.title:SetTextColor(c[1], c[2], c[3], 1)
+		local b = on and Theme.GOLD or Theme.MUTED
+		self.bar:SetVertexColor(b[1], b[2], b[3], 1)
 	end
 	page.items[#page.items + 1] = { region = head, kind = "head", height = head:GetHeight() }
 	frame.heads[#frame.heads + 1] = head
@@ -1264,23 +1271,63 @@ function BuildDashboard(frame, page, def)
 		for _, id in ipairs(ids) do
 			local family = FAMILY_BY_ID[id]
 			if family then
-				if y > 0 then y = y + 12 end
-				local header = CreateFrame("Button", nil, block)
-				header:SetSize(COL, SECTION_H)
-				header:SetPoint("TOPLEFT", block, "TOPLEFT", x, -y)
-				header.section = Theme.CreateSection(header, Str(family.title) or id)
-				header.section:SetWidth(COL)
-				header.section:SetPoint("TOPLEFT", header, "TOPLEFT", 0, 0)
+				if y > 0 then y = y + DASH_CARD_GAP end
+				-- carte : fond, tête cliquable (icône, nom, « Ouvrir »), lignes,
+				-- puis les raccourcis vers les onglets (`dashTabs`)
+				local top = y
+				local card = CreateFrame("Frame", nil, block)
+				card:SetPoint("TOPLEFT", block, "TOPLEFT", x, -top)
+				card:SetWidth(COL)
+				card.bg = Theme.Solid(card, "BACKGROUND", Theme.FIELD, 1)
+				card.bg:SetAllPoints()
+				card.border = Theme.Border(card, Theme.EDGE_SOFT, 1)
+				local header = CreateFrame("Button", nil, card)
+				header:SetSize(COL, DASH_HEAD)
+				header:SetPoint("TOPLEFT", card, "TOPLEFT", 0, 0)
+				header.plate = Theme.Solid(header, "BACKGROUND", Theme.NAV, 1)
+				header.plate:SetAllPoints()
+				header.icon = header:CreateTexture(nil, "ARTWORK")
+				header.icon:SetSize(16, 16)
+				header.icon:SetPoint("LEFT", header, "LEFT", 10, 0)
+				if family.icon then header.icon:SetTexture(family.icon) end
+				if header.icon.SetTexCoord then header.icon:SetTexCoord(0.08, 0.92, 0.08, 0.92) end
+				header.label = Theme.Text(header, Theme.F_LABEL, Theme.PARCHMENT)
+				header.label:SetPoint("LEFT", header, "LEFT", 32, 0)
+				header.label:SetJustifyH("LEFT")
+				header.label:SetText(Str(family.title) or id)
+				header.open = Theme.Text(header, Theme.F_SMALL, Theme.GOLD)
+				header.open:SetPoint("RIGHT", header, "RIGHT", -PAD, 0)
+				header.open:SetText(L.OPT_DASH_OPEN or "")
 				header:SetScript("OnClick", function() ns:SelectOptionsPage(family.id) end)
 				header.familyId = family.id
 				block.cards[#block.cards + 1] = header
-				y = y + SECTION_H + 4
+				y = y + DASH_HEAD + 2
 				for _, spec in ipairs(DashRows(family)) do
 					local line = DashLine(frame, block, spec)
 					line:SetPoint("TOPLEFT", block, "TOPLEFT", x, -y)
 					line.familyId = family.id
 					y = y + DASH_LINE
 				end
+				if family.dashTabs then
+					header.tabButtons = {}
+					local bx, rowCount = PAD, 0
+					y = y + 4
+					for _, tab in ipairs(family.tabs or {}) do
+						local target = family.id .. ":" .. tostring(tab.id)
+						local chip = Theme.CreateButton(block, "auto", DASH_CHIP, Str(tab.label) or tostring(tab.id),
+							function() ns:SelectOptionsPage(target) end, "outline")
+						local width = chip:GetWidth() or 80
+						if bx > PAD and bx + width > COL - PAD then bx, y = PAD, y + DASH_CHIP + 4 end
+						chip:SetPoint("TOPLEFT", block, "TOPLEFT", x + bx, -y)
+						chip.target = target
+						bx = bx + width + 6
+						rowCount = rowCount + 1
+						header.tabButtons[#header.tabButtons + 1] = chip
+					end
+					y = y + DASH_CHIP
+				end
+				y = y + 4
+				card:SetHeight(y - top)
 			end
 		end
 		tallest = math.max(tallest, y)
@@ -2012,7 +2059,9 @@ function ns:SelectOptionsPage(id)
 
 	-- en-tête : le titre de la page choisie, sa phrase (sinon celle de son groupe)
 	local parent = owner.parent and PageDef(owner.parent)
-	frame.header:SetTitle(L[owner.title] or owner.title)
+	-- socle 3.5 : `heading` = titre de l'en-tête quand il diffère du nom de
+	-- l'entrée (Accueil -> « Ready2Quest »)
+	frame.header:SetTitle(owner.heading or L[owner.title] or owner.title)
 	frame.pageSubtitle = (def.phrase and (L[def.phrase] or def.phrase))
 		or Declared(owner.title .. "_SUB") or (parent and Declared(parent.title .. "_SUB")) or ""
 	frame.header:SetSubtitle(frame.pageSubtitle)

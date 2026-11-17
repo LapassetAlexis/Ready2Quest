@@ -404,7 +404,7 @@ do
 	local frame = NS.optionsFrame
 	local def
 	for _, d in ipairs(NS.OPTION_PAGES) do if d.id == "bagspace" then def = d end end
-	-- 1.39.0 : Sac plein dans Sacs & butin › Sac plein & butin ; les favoris
+	-- 2.0.0 : Sac plein dans Sacs & butin › Sac plein & butin ; les favoris
 	-- dans Marchand & favoris
 	local page, favPage = frame.pages["sacs:plein"], frame.pages["sacs:marchand"]
 	local notes, favNotes = page and page.notes or {}, favPage and favPage.notes or {}

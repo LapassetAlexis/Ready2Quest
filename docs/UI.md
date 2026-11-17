@@ -179,7 +179,7 @@ de page ; plus les boutons depuis la 3.0, voir « Composants 3.0 ») ; bouton pl
 Construite avec les briques ci-dessus ; les modules déclarent leurs pages avec
 `ns.AddOptionPage`, comme avant. Deux navigations, au choix de l'addon.
 
-### Navigation par familles (socle 3.5, Ready2Quest 1.39.0)
+### Navigation par familles (socle 3.5, Ready2Quest 2.0.0)
 
 L'addon déclare `ns.OPTION_FAMILIES` (table, ou `function(ns)` relue à chaque
 construction de la fenêtre : Ready2Quest, `OptionsMenu.lua`, chargé en

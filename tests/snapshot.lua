@@ -1244,7 +1244,7 @@ local function Options(T, ns, page, prepare)
 	return win
 end
 
--- 1.39.0 : navigation par familles (maquette validée le 2026-11-17)
+-- 2.0.0 : navigation par familles (maquette validée le 2026-11-17)
 Snap.scenes["r2q-options"] = function(T)
 	return Options(T, T.NS, nil), "Ready2Quest : réglages, Accueil > Vue d'ensemble (première ouverture)"
 end

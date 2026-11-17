@@ -966,7 +966,7 @@ local COMMANDS = {
 		self:Print(L.MSG_RESET)
 	end,
 	["options"] = function(self, rest)
-		-- 1.39.0 : /r2q options <mot> ouvre sur ce lieu (butin, combat, zones…)
+		-- 2.0.0 : /r2q options <mot> ouvre sur ce lieu (butin, combat, zones…)
 		if rest and tostring(rest):match("%S") and self.OptionsGo then return self:OptionsGo(rest) end
 		if self.ToggleOptions then
 			self:ToggleOptions()
@@ -975,7 +975,7 @@ local COMMANDS = {
 		end
 	end,
 	["config"] = function(self, rest)
-		-- 1.39.0 : /r2q options <mot> ouvre sur ce lieu (butin, combat, zones…)
+		-- 2.0.0 : /r2q options <mot> ouvre sur ce lieu (butin, combat, zones…)
 		if rest and tostring(rest):match("%S") and self.OptionsGo then return self:OptionsGo(rest) end
 		if self.ToggleOptions then
 			self:ToggleOptions()

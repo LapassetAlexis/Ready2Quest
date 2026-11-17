@@ -354,7 +354,7 @@ end
 do
 	Fresh()
 	local frame = NS:EnsureOptions()
-	-- 1.39.0 : Voyage › Kit de camp, l'interrupteur dans la tête de la fonction
+	-- 2.0.0 : Voyage › Kit de camp, l'interrupteur dans la tête de la fonction
 	local page = frame and frame.pages and frame.pages["voyage:camp"]
 	local keys = {}
 	for _, row in ipairs(page and page.rows or {}) do keys[#keys + 1] = tostring(row.moduleId or (row.def and row.def.key)) end

@@ -1,4 +1,4 @@
--- OptionsMenu.lua -- le menu des réglages de Ready2Quest (1.39.0)
+-- OptionsMenu.lua -- le menu des réglages de Ready2Quest (2.0.0)
 --
 -- Maquette validée le 2026-11-17 : six familles fixes dans la colonne
 -- (Accueil, Check avant le départ, Sacs & butin, Voyage, Quêtes & sorts,
@@ -71,6 +71,8 @@ local FR = {
 	OPT_SEC_QUICKLOOT     = "Butin rapide",
 	OPT_SEC_GROUPREADY    = "Groupe prêt",
 	OPT_SEC_TRAINALL      = "Tout apprendre",
+	OPT_SEC_RANGE_SUB     = "Coche verte ou croix rouge au-dessus de ta cible ; les icônes des barres se grisent hors de portée.",
+	OPT_SEC_CAST_SUB      = "Pendant l'incantation, les dégâts attendus sur la barre de vie ; une icône si le sort tue.",
 	OPT_SEC_AGGRO_SUB     = "À quelle distance un monstre te saute dessus : dans son infobulle et sur sa barre de nom.",
 	OPT_SEC_GROUPREADY_SUB = "En groupe, la fiche montre qui est sur place et qui est prêt (membres avec Ready2Quest).",
 	OPT_SEC_TRAINALL_SUB  = "Chez un maître de classe ou de métier : un bouton qui apprend tout ce qui est disponible.",
@@ -141,6 +143,8 @@ local EN = {
 	OPT_SEC_QUICKLOOT     = "Fast loot",
 	OPT_SEC_GROUPREADY    = "Group ready",
 	OPT_SEC_TRAINALL      = "Learn all",
+	OPT_SEC_RANGE_SUB     = "Green check or red cross above your target; action bar icons grey out when out of range.",
+	OPT_SEC_CAST_SUB      = "While you cast, the expected damage on the health bar; an icon if the spell kills.",
 	OPT_SEC_AGGRO_SUB     = "How close a monster jumps on you: in its tooltip and on its nameplate.",
 	OPT_SEC_GROUPREADY_SUB = "In a group, the sheet shows who is there and who is ready (members running Ready2Quest).",
 	OPT_SEC_TRAINALL_SUB  = "At a class or profession trainer: one button that learns everything available.",
@@ -233,7 +237,7 @@ local function Families()
 	local I = ns.OPTION_ICONS
 	return {
 		{
-			id = "home", title = "OPT_FAM_HOME", sub = "OPT_FAM_HOME_SUB", icon = I.home,
+			id = "home", title = "OPT_FAM_HOME", heading = "Ready2Quest", sub = "OPT_FAM_HOME_SUB", icon = I.home,
 			power = "enabled", powerLabel = "OPT_FAM_HOME_POWER",
 			tabs = {
 				{ id = "overview", label = "OPT_TAB_OVERVIEW", phrase = "OPT_TAB_OVERVIEW_SUB", kind = "dashboard",
@@ -252,7 +256,7 @@ local function Families()
 		},
 		{
 			id = "check", title = "OPT_FAM_CHECK", sub = "OPT_FAM_CHECK_SUB", icon = I.check,
-			power = "departureEnabled", powerLabel = "OPT_FAM_CHECK_POWER", aliases = { "departure" },
+			power = "departureEnabled", powerLabel = "OPT_FAM_CHECK_POWER", aliases = { "departure" }, dashTabs = true,
 			oldNames = { "OPT_PAGE_DEPARTURE" },
 			preview = Field("departure", "preview"),
 			dash = {
@@ -357,20 +361,20 @@ local function Families()
 				{ id = "portees", label = "OPT_TAB_RANGES", phrase = "OPT_TAB_RANGES_SUB", sections = {
 					{ id = "aggro", title = "OPT_PAGE_AGGRO", phrase = "OPT_SEC_AGGRO_SUB", power = "aggroEnabled",
 						rows = Rest("aggro", { "aggroEnabled" }) },
-					{ id = "combatRange", title = "OPT_PAGE_COMBAT_RANGE", phrase = "OPT_PAGE_COMBAT_RANGE_SUB", tag = "1.38",
+					{ id = "combatRange", title = "OPT_PAGE_COMBAT_RANGE", phrase = "OPT_SEC_RANGE_SUB", tag = "2.0",
 						power = "combatRange", info = Without(Field("combatRange", "info"), "OPT_COMBAT_INFO_RANGE_1"),
 						rows = Rest("combatRange") },
 				} },
 				{ id = "dots", label = "OPT_TAB_DOTS", phrase = "OPT_PAGE_COMBAT_DOTS_SUB", sections = {
-					{ id = "combatDots", title = "OPT_PAGE_COMBAT_DOTS", phrase = "OPT_PAGE_COMBAT_DOTS_SUB", tag = "1.38",
+					{ id = "combatDots", title = "OPT_PAGE_COMBAT_DOTS", phrase = "OPT_PAGE_COMBAT_DOTS_SUB", tag = "2.0",
 						power = "combatDots", info = Field("combatDots", "info"), rows = Rest("combatDots") },
 				} },
 				{ id = "cast", label = "OPT_TAB_CAST", phrase = "OPT_PAGE_COMBAT_CAST_SUB", sections = {
-					{ id = "combatCast", title = "OPT_PAGE_COMBAT_CAST", phrase = "OPT_PAGE_COMBAT_CAST_SUB", tag = "1.38",
+					{ id = "combatCast", title = "OPT_PAGE_COMBAT_CAST", phrase = "OPT_SEC_CAST_SUB", tag = "2.0",
 						power = "combatCast", info = Field("combatCast", "info"), rows = Rest("combatCast") },
 				} },
 				{ id = "bars", label = "OPT_TAB_BARS", phrase = "OPT_PAGE_COMBAT_BARS_SUB", sections = {
-					{ id = "combatBars", title = "OPT_PAGE_COMBAT_BARS", phrase = "OPT_PAGE_COMBAT_BARS_SUB", tag = "1.38",
+					{ id = "combatBars", title = "OPT_PAGE_COMBAT_BARS", phrase = "OPT_PAGE_COMBAT_BARS_SUB", tag = "2.0",
 						power = "combatBars", info = Field("combatBars", "info"), rows = Rest("combatBars") },
 				} },
 			},

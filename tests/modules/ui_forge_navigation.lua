@@ -316,7 +316,7 @@ do
 	T.ResetWorld()
 	NS.optionsFrame = nil
 	-- groupes et voyants : la colonne par pages du socle (celle de
-	-- QuestCompanion), éprouvée sur Ready2Quest sans ses familles (1.39.0)
+	-- QuestCompanion), éprouvée sur Ready2Quest sans ses familles (2.0.0)
 	local families = NS.OPTION_FAMILIES
 	NS.OPTION_FAMILIES = nil
 	NS:ToggleOptions()

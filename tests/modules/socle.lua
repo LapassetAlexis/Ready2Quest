@@ -136,7 +136,7 @@ do
 	Verdict("[SOC] bouton désactivé : opaque, MUTED sur CONTROL, ni survol ni appui ; réactivé : son style")
 	parent:Hide()
 
-	-- module coupé : cartes estompées (R2Q 1.39.0 : Check › Quand & où ;
+	-- module coupé : cartes estompées (R2Q 2.0.0 : Check › Quand & où ;
 	-- l'interrupteur « Check actif » de l'en-tête tient lieu de « Rallumer »)
 	ResetWorld()
 	local frame = NS:EnsureOptions()

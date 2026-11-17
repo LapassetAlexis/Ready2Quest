@@ -26,7 +26,7 @@ end
 local function Nav(ns, id)
 	for _, nav in ipairs(ns.optionsFrame.navButtons) do if nav.pageId == id then return nav end end
 end
--- R2Q 1.39.0 : navigation par familles. Les blocs qui éprouvent la
+-- R2Q 2.0.0 : navigation par familles. Les blocs qui éprouvent la
 -- navigation par pages du socle (celle de QuestCompanion) la prennent sur
 -- Ready2Quest le temps du bloc, sans ses familles.
 local function Legacy(fn)
@@ -62,7 +62,7 @@ local function NavOrder(ns)
 	return table.concat(out, ",")
 end
 
--- 1. Navigation par familles (R2Q 1.39.0) ----------------------------------------
+-- 1. Navigation par familles (R2Q 2.0.0) ----------------------------------------
 local function Head(ns, id)
 	local sec = ns.optionsFrame.sectionIndex[id]
 	return sec and sec.item and sec.item.region
@@ -226,7 +226,20 @@ do
 	NS.score = nil
 	pace:Click()
 	Want("vue d'ensemble : un nom ouvre ses réglages", frame.currentPage == "quetes:xp" and Head(NS, "pace").flash:IsShown())
-	Verdict("vue d'ensemble : une ligne par fonction, sans défilement, même interrupteur, mentions, le nom ouvre la fonction")
+	NS:SelectOptionsPage("home")
+	Want("Accueil : titre « Ready2Quest »", frame.header.title.text == "Ready2Quest")
+	local checkCard
+	for _, card in ipairs(frame.pages["home:overview"].dashboard.cards) do if card.familyId == "check" then checkCard = card end end
+	local targets = {}
+	for _, chip in ipairs(checkCard.tabButtons or {}) do targets[#targets + 1] = chip.target end
+	Want("carte du check : un raccourci par onglet", table.concat(targets, ",") == "check:bags,check:gear,check:buffs,check:when",
+		table.concat(targets, ","))
+	checkCard.tabButtons[2]:Click()
+	Want("raccourci : l'onglet en un clic", frame.currentPage == "check:gear", frame.currentPage)
+	NS:SelectOptionsPage("home")
+	checkCard:Click()
+	Want("tête de carte : ouvre la famille", frame.currentPage:find("^check:") ~= nil and checkCard.open.text == NS.L.OPT_DASH_OPEN)
+	Verdict("vue d'ensemble : une ligne par fonction, sans défilement, même interrupteur, mentions, le nom ouvre la fonction, raccourcis du check")
 
 	-- l'interrupteur de l'en-tête de l'accueil : l'addon
 	NS:SelectOptionsPage("general")
@@ -656,7 +669,7 @@ do
 	T.ResetWorld()
 	local frame = Open(NS, "trigger")
 	NS:DB().exitDelay = 12
-	-- R2Q 1.39.0 : « Réinitialiser » quitte le pied pour Accueil › Général, avec confirmation
+	-- R2Q 2.0.0 : « Réinitialiser » quitte le pied pour Accueil › Général, avec confirmation
 	Want("pied : plus de « Réinitialiser »", not frame.resetButton:IsShown())
 	local savedDialogs, savedShow = _G.StaticPopupDialogs, _G.StaticPopup_Show
 	local shown

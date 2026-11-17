@@ -275,7 +275,7 @@ do
 	NS:ToggleOptions()
 	local o = NS.optionsFrame
 	local nav, page
-	-- 1.39.0 : Voyage › Retour & mort ; l'interrupteur dans la tête de la fonction
+	-- 2.0.0 : Voyage › Retour & mort ; l'interrupteur dans la tête de la fonction
 	local sec = o.sectionIndex.expedition
 	nav = sec and sec.item.region
 	nav = nav and { power = nav.toggle, powerKey = nav.powerKey }

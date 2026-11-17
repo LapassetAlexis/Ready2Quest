@@ -650,7 +650,7 @@ function ns:DepartedText()
 	return self:F("PANEL_DEPARTED", tostring(from.name or "?"), self:SourceLabel(from.source))
 end
 
--- 1.39.0 : roue crantée d'une fenêtre de module, à gauche de son [×] : les
+-- 2.0.0 : roue crantée d'une fenêtre de module, à gauche de son [×] : les
 -- réglages s'ouvrent sur sa fonction, qui s'éclaire (ns:OpenOptionsAt). Une
 -- fenêtre de dialogue garde sa place avec headerIcon (Theme.CreateDialog).
 function ns:AddSettingsGear(frame, where, size, anchor)

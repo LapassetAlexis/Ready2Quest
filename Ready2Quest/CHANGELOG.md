@@ -1,6 +1,8 @@
 # Journal des modifications
 
-## 1.39.0 — Un nouveau menu des réglages
+## 2.0.0 — Aide au combat et nouveau menu des réglages
+
+### Un nouveau menu des réglages
 
 - **Six familles fixes** dans la colonne de gauche, chacune avec son icône et une ligne qui dit ce qu'elle contient : **Accueil**, **Check avant le départ**, **Sacs & butin**, **Voyage**, **Quêtes & sorts**, **Combat**. La colonne ne défile plus ; « Modules » et « Confort de jeu » disparaissent comme catégories. Les pages d'une famille deviennent ses onglets, en haut.
 - **Un interrupteur par fonction**, dans la tête de sa section (son nom, sa phrase, l'interrupteur). La ligne « Activer » en double disparaît. Une fonction coupée garde ses réglages, estompés. **Butin rapide**, **Groupe prêt** et **Tout apprendre** deviennent des fonctions visibles (mêmes réglages qu'avant, seule leur place change).
@@ -13,7 +15,7 @@
 
 *English:* a new settings menu. Six fixed families in the left column, each with its icon and a one-line summary: Home, Departure check, Bags & loot, Travel, Quests & spells, Combat; their pages become tabs. One switch per feature, in the head of its section (no more duplicated "Enable" line); a feature turned off keeps its settings, dimmed. Fast loot, Group ready and Learn all become visible features. Home › Overview shows every feature with its switch on one screen; click a name to set it up. Check display settings move to Check › When & where, the spell rank and profession checks join the check, favorites move to Merchant & favorites. Reset leaves the footer for Home › General, with a confirmation. The gear button of the game windows opens the settings on their feature; `/r2q options <word>` too. Search also finds features, tabs and old page names.
 
-## 1.38.0 — Aide au combat
+### Aide au combat
 
 - **Une section Combat** dans les réglages : la portée d'aggro y passe, avec quatre aides, chacune avec son interrupteur (effet au prochain /reload) :
   - **Portée des sorts** : une coche verte ou une croix rouge au-dessus de ta cible (aussi en combat) ; les icônes des barres d'action se grisent hors de portée.

@@ -673,7 +673,7 @@ function ns:EnsureBagSpaceFrame()
 
 	frame.text = Theme.Text(frame, Theme.F_BODY, Theme.TEXT)
 	frame.text:SetPoint("TOPLEFT", frame, "TOPLEFT", left, -9)
-	-- 1.39.0 : la roue crantée à gauche du [×] (réglages de Sac plein)
+	-- 2.0.0 : la roue crantée à gauche du [×] (réglages de Sac plein)
 	if ns.AddSettingsGear then ns:AddSettingsGear(frame, "bagspace", 18, frame.closeButton) end
 	frame.text:SetWidth(WIDTH - left - 6 - 18 - 8 - (frame.settingsButton and 24 or 0))
 	frame.text:SetJustifyH("LEFT")

@@ -15,12 +15,12 @@ For **WoW Forever** (1.60). English and French.
 
 ![Pre-departure check: a readiness score out of 100 with tips](https://media.forgecdn.net/attachments/2147/118/r2q-1-png.png)
 
-## New in 1.39: a clearer settings menu
+## New in 2.0: a clearer settings menu
 - **Six families** in the left column: Home, Departure check, Bags & loot, Travel, Quests & spells, Combat. Their pages become tabs.
 - **One switch per feature**, right in its head; **Home › Overview** shows every feature with its switch on one screen.
 - **The gear button** of each window opens the settings on its feature; `/r2q options loot` too. Search also finds features and tabs.
 
-## New in 1.38: combat helpers
+## Also new in 2.0: combat helpers
 - **A Combat section**: the aggro range plus four helpers, each with its switch.
 - **Spell range**: a green check or a red cross above your target, in combat too; action bar icons grey out when out of range.
 - **Lethal DoTs**: what your DoTs will still deal, on the target's health bar, and a skull when it is enough.
@@ -93,12 +93,12 @@ Free software, **GPL-3.0**. Source code: https://github.com/LapassetAlexis/Ready
 
 Pour **WoW Forever** (1.60). En français et en anglais.
 
-## Nouveau en 1.39 : un menu des réglages plus clair
+## Nouveau en 2.0 : un menu des réglages plus clair
 - **Six familles** dans la colonne de gauche : Accueil, Check avant le départ, Sacs & butin, Voyage, Quêtes & sorts, Combat. Leurs pages deviennent des onglets.
 - **Un interrupteur par fonction**, dans sa tête ; **Accueil › Vue d'ensemble** montre toutes les fonctions avec leur interrupteur sur un seul écran.
 - **La roue crantée** de chaque fenêtre ouvre les réglages sur sa fonction ; `/r2q options butin` aussi. La recherche trouve aussi les fonctions et les onglets.
 
-## Nouveau en 1.38 : l'aide au combat
+## Aussi en 2.0 : l'aide au combat
 - **Une section Combat** : la portée d'aggro et quatre aides, chacune avec son interrupteur.
 - **Portée des sorts** : une coche verte ou une croix rouge au-dessus de ta cible, aussi en combat ; les icônes des barres se grisent hors de portée.
 - **DoT mortels** : ce que tes DoT vont encore infliger, sur la barre de vie de la cible, et un crâne quand ça suffit.
