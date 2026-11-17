@@ -15,7 +15,7 @@
 -- Chinese has no spaces: rewrite puts spaces around every number and the word of its unit, turns the full-width punctuation into
 -- plain, and the engine then reads the text like the others. Pure Lua 5.1, no game API.
 
-local _, BIT = "Ready2Quest\\Combat", (select(2, ...)).combat
+local _, BIT = "Ready2Quest", (select(2, ...)).combat
 if not BIT then return end   -- module Combat de Ready2Quest coupé (CombatBoot.lua)
 local ns = BIT and BIT.Module and BIT.Module("SpellDamageInfo") or BIT or {}
 local Parser = ns.Parser

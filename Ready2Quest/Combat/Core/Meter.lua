@@ -16,7 +16,7 @@
 --                         is waited for any more, so empty lists are an answer.
 --   Meter.RETRY, Meter.TRIES   how often a caller asks again while the answer is "wait": every RETRY seconds, TRIES times.
 
-local _, BIT = "Ready2Quest\\Combat", (select(2, ...)).combat
+local _, BIT = "Ready2Quest", (select(2, ...)).combat
 if not BIT then return end   -- module Combat de Ready2Quest coupé (CombatBoot.lua)
 if not BIT then return end
 

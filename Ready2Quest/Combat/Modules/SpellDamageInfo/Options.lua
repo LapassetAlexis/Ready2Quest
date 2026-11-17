@@ -16,7 +16,7 @@
 -- templates, so they do not depend on templates behaving the same on every client. Nothing here
 -- touches a secure frame or calls a protected function, so the window works in combat too.
 
-local _, BIT = "Ready2Quest\\Combat", (select(2, ...)).combat
+local _, BIT = "Ready2Quest", (select(2, ...)).combat
 if not BIT then return end   -- module Combat de Ready2Quest coupé (CombatBoot.lua)
 -- Inside Ready2QuestCombat its own namespace; loaded on its own, the addon's table as before.
 local ns = BIT.Module and BIT.Module("SpellDamageInfo") or BIT

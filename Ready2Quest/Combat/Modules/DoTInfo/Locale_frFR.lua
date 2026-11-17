@@ -12,7 +12,7 @@
 --   * "sec" or plain "s" for seconds ("en 8 s" on Rupture)
 --   * bleeds may be stated as health lost ("perd 15 points de vie en 9 sec", Pourfendre)
 
-local ADDON_NAME, BIT = "Ready2Quest\\Combat", (select(2, ...)).combat
+local ADDON_NAME, BIT = "Ready2Quest", (select(2, ...)).combat
 if not BIT then return end   -- module Combat de Ready2Quest coupé (CombatBoot.lua)
 local ns = BIT.Module("DoTInfo")
 

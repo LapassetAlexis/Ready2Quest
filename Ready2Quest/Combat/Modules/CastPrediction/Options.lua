@@ -4,7 +4,7 @@
 -- preview. The window's left column holds the preview: the module's real marker drawn on mock
 -- frames (Core/Preview.lua) and fed plain numbers, the same way DoTInfo's preview does; the right
 -- column holds the settings, split into sub-tabs.
-local _, BIT = "Ready2Quest\\Combat", (select(2, ...)).combat
+local _, BIT = "Ready2Quest", (select(2, ...)).combat
 if not BIT then return end   -- module Combat de Ready2Quest coupé (CombatBoot.lua)
 local ns = BIT.Module("CastPrediction")
 

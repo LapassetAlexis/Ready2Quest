@@ -12,7 +12,7 @@
 -- Loaded last: Core.lua calls ns.afterRefresh after every refresh to notice changes.
 -- Also exposed through Ready2QuestCombat_API.Get("DoT"); the older global stays compatible.
 
-local ADDON_NAME, BIT = "Ready2Quest\\Combat", (select(2, ...)).combat
+local ADDON_NAME, BIT = "Ready2Quest", (select(2, ...)).combat
 if not BIT then return end   -- module Combat de Ready2Quest coupé (CombatBoot.lua)
 local ns = BIT.Module("DoTInfo")
 

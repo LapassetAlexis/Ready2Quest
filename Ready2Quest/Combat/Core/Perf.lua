@@ -15,7 +15,7 @@
 -- A call that allocated memory and then ran long has often paid for a garbage collection step that the allocation
 -- started: its "kb" is the memory change over the call (a drop is a collection that ran inside it).
 
-local _, BIT = "Ready2Quest\\Combat", (select(2, ...)).combat
+local _, BIT = "Ready2Quest", (select(2, ...)).combat
 if not BIT then return end   -- module Combat de Ready2Quest coupé (CombatBoot.lua)
 if not BIT then return end
 

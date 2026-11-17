@@ -16,7 +16,7 @@
 --   * finishers: "终结技", then "1点：12秒内44点伤害" (Rip) or "1点：25点伤害，持续8秒" (Rupture)
 --   * builders: "奖励1个连击点数" (awards 1 combo point)
 
-local ADDON_NAME, BIT = "Ready2Quest\\Combat", (select(2, ...)).combat
+local ADDON_NAME, BIT = "Ready2Quest", (select(2, ...)).combat
 if not BIT then return end   -- module Combat de Ready2Quest coupé (CombatBoot.lua)
 local ns = BIT.Module("DoTInfo")
 

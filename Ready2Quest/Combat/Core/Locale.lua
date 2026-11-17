@@ -14,7 +14,7 @@
 -- SpellDamageInfo keeps its own language switch (/sdi lang); the spell parser's wordings are packs
 -- of their own (Modules\SpellDamageInfo\Parser_xxXX.lua).
 
-local _, BIT = "Ready2Quest\\Combat", (select(2, ...)).combat
+local _, BIT = "Ready2Quest", (select(2, ...)).combat
 if not BIT then return end   -- module Combat de Ready2Quest coupé (CombatBoot.lua)
 local packs, codes = {}, {} -- code -> { [English text] = translation }; the codes in the order their files load
 local active, activeCode    -- the pack of the language in use (nil while English is shown), and its code

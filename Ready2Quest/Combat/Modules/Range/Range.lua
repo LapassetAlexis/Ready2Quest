@@ -17,7 +17,7 @@
 -- The action bar already turns a button's key binding red while the target is out of that
 -- action's range; with dimIcons on (the default) the button's icon also goes grey and dim.
 
-local _, BIT = "Ready2Quest\\Combat", (select(2, ...)).combat
+local _, BIT = "Ready2Quest", (select(2, ...)).combat
 if not BIT then return end   -- module Combat de Ready2Quest coupé (CombatBoot.lua)
 local M = BIT.Module("Range")
 

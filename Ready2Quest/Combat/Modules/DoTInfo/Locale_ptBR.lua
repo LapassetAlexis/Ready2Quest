@@ -11,7 +11,7 @@
 --   * finishers: "Golpe final", then "1 ponto: 44 de dano ao longo de 12 s." per combo point count
 --   * builders: "Concede 1 ponto de combo."
 
-local ADDON_NAME, BIT = "Ready2Quest\\Combat", (select(2, ...)).combat
+local ADDON_NAME, BIT = "Ready2Quest", (select(2, ...)).combat
 if not BIT then return end   -- module Combat de Ready2Quest coupé (CombatBoot.lua)
 local ns = BIT.Module("DoTInfo")
 

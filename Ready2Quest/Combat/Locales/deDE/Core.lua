@@ -6,7 +6,7 @@
 -- The key is the English text in the code; keep every %s and %d of it, in the same order. Texts used by more than
 -- one part live here, the texts of one part in its own file. The form of address is "Ihr", as in SpellDamageInfo.
 
-local _, BIT = "Ready2Quest\\Combat", (select(2, ...)).combat
+local _, BIT = "Ready2Quest", (select(2, ...)).combat
 if not BIT then return end   -- module Combat de Ready2Quest coupé (CombatBoot.lua)
 BIT.RegisterLocale("deDE", {
   -- the tabs

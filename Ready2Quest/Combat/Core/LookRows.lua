@@ -19,7 +19,7 @@
 -- opts: tooltip, enabledIf(settings) (the row dims and ignores the mouse while it is false), settings() (what enabledIf
 -- reads), layout ({ label, control }), register(row) (the module's list of rows to Refresh). Every row has :Refresh().
 
-local _, BIT = "Ready2Quest\\Combat", (select(2, ...)).combat
+local _, BIT = "Ready2Quest", (select(2, ...)).combat
 if not BIT then return end   -- module Combat de Ready2Quest coupé (CombatBoot.lua)
 local Looks = BIT.Looks
 local Rows = {}

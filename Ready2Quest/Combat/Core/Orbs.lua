@@ -2,7 +2,7 @@
 -- voir Ready2Quest/Combat/README.md. Ne pas modifier ici : corriger l'import.
 -- Shared round markers for range bands and native resource StatusBars.
 -- Counts belong to callers; only the native bars receive secret resource values.
-local _, BIT = "Ready2Quest\\Combat", (select(2, ...)).combat
+local _, BIT = "Ready2Quest", (select(2, ...)).combat
 if not BIT then return end   -- module Combat de Ready2Quest coupé (CombatBoot.lua)
 local Orbs = {}
 BIT.Orbs = Orbs

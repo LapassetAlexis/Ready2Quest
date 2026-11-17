@@ -10,7 +10,7 @@
 -- The window is made of plain frames (no secure templates, no protected calls), so it opens in
 -- combat too.
 
-local _, BIT = "Ready2Quest\\Combat", (select(2, ...)).combat
+local _, BIT = "Ready2Quest", (select(2, ...)).combat
 if not BIT then return end   -- module Combat de Ready2Quest coupé (CombatBoot.lua)
 local WHITE = "Interface\\Buttons\\WHITE8X8"
 local HEADER_HEIGHT = 40

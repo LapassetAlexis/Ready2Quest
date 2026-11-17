@@ -6,7 +6,7 @@
 -- The findings are also kept in the saved settings (census, one entry per class), with the total and duration of
 -- every DoT it read, so they can be taken from the SavedVariables file instead of being pasted.
 
-local _, BIT = "Ready2Quest\\Combat", (select(2, ...)).combat
+local _, BIT = "Ready2Quest", (select(2, ...)).combat
 if not BIT then return end   -- module Combat de Ready2Quest coupé (CombatBoot.lua)
 local ns = BIT.Module("DoTInfo")
 

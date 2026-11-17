@@ -21,7 +21,7 @@
 --
 -- A new language is one more Locale_xxXX.lua after this file in both TOCs, like Locale_deDE.lua.
 
-local ADDON_NAME, BIT = "Ready2Quest\\Combat", (select(2, ...)).combat
+local ADDON_NAME, BIT = "Ready2Quest", (select(2, ...)).combat
 if not BIT then return end   -- module Combat de Ready2Quest coupé (CombatBoot.lua)
 -- Ready2QuestCombat's own namespace for the module, shared by its four files.
 local ns = BIT.Module("DoTInfo")

@@ -15,7 +15,7 @@
 --   BIT.TalentMods.Invalidate() drops the cached answers (the talents changed).
 --   BIT.TalentMods.RankProvider(talentSpellID, name) -> rank or nil: set by CastPrediction's tree reader.
 
-local _, BIT = "Ready2Quest\\Combat", (select(2, ...)).combat
+local _, BIT = "Ready2Quest", (select(2, ...)).combat
 if not BIT then return end   -- module Combat de Ready2Quest coupé (CombatBoot.lua)
 BIT = BIT or {}
 

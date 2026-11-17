@@ -191,7 +191,8 @@ if engine and type(engine.ShouldRun) == "function" then
 	local base = engine.ShouldRun
 	function engine.ShouldRun(name)
 		local part = byModule[name]
-		if part and not ns:CombatPartOn(part) then
+		local ok, on = pcall(ns.CombatPartOn, ns, part or {})
+		if part and ok and not on then
 			engine.state[name] = "off"
 			return false
 		end

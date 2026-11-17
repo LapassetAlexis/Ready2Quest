@@ -3,7 +3,7 @@
 -- Ready2QuestCombat module SpellDamageInfo: Russian interface strings.
 -- Copyright (c) 2026 Ironship. MIT licence, see LICENSE.
 
-local _, BIT = "Ready2Quest\\Combat", (select(2, ...)).combat
+local _, BIT = "Ready2Quest", (select(2, ...)).combat
 if not BIT then return end   -- module Combat de Ready2Quest coupé (CombatBoot.lua)
 local ns = BIT and BIT.Module and BIT.Module("SpellDamageInfo") or BIT or {}
 

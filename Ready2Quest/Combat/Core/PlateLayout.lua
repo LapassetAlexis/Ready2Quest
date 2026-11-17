@@ -9,7 +9,7 @@
 -- at y = -offset and its body occupies [top - height, top]. The previews use the same seat.
 -- Range's check sits above the bar (BOTTOM to TOP) and is not part of this span.
 
-local _, BIT = "Ready2Quest\\Combat", (select(2, ...)).combat
+local _, BIT = "Ready2Quest", (select(2, ...)).combat
 if not BIT then return end   -- module Combat de Ready2Quest coupé (CombatBoot.lua)
 local Plate = {}
 BIT.Plate = Plate

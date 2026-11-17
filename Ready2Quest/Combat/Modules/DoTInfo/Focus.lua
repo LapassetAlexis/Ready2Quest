@@ -12,7 +12,7 @@
 -- there's no focus, the bar isn't visible or there are no DoTs, and pinned so the nameplate refresh leaves them
 -- alone. Bar: EllesmereUI's focus frame, else Blizzard's (BIT.Plate.UnitFrame("focus")).
 
-local ADDON_NAME, BIT = "Ready2Quest\\Combat", (select(2, ...)).combat
+local ADDON_NAME, BIT = "Ready2Quest", (select(2, ...)).combat
 if not BIT then return end   -- module Combat de Ready2Quest coupé (CombatBoot.lua)
 -- Ready2QuestCombat's own namespace for the module, shared by its files.
 local ns = BIT.Module("DoTInfo")

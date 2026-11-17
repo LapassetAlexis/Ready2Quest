@@ -16,7 +16,7 @@
 -- StatusBars accept secret values, so the "this cast would be lethal" comparison is done by the
 -- widget, not by Lua (see the kill icon notes in the Display section).
 
-local ADDON_NAME, BIT = "Ready2Quest\\Combat", (select(2, ...)).combat
+local ADDON_NAME, BIT = "Ready2Quest", (select(2, ...)).combat
 if not BIT then return end   -- module Combat de Ready2Quest coupé (CombatBoot.lua)
 local ns = BIT.Module("CastPrediction")
 
@@ -987,10 +987,10 @@ local function colorOf(id, opacityPercent)
 end
 
 local WHITE = "Interface\\Buttons\\WHITE8X8"
-local CHANNEL_PATTERN = "Interface\\AddOns\\" .. ADDON_NAME .. "\\Modules\\DoTInfo\\Textures\\DashH2"
+local CHANNEL_PATTERN = "Interface\\AddOns\\Ready2Quest\\Combat\\Modules\\DoTInfo\\Textures\\DashH2"
 -- A finisher preview has its own fill: horizontal lines, so it reads differently from a cast (solid), a channel
 -- (vertical dashes) and DoTInfo's DoTs (diagonal stripes) on the same health bar.
-local PREVIEW_PATTERN = "Interface\\AddOns\\" .. ADDON_NAME .. "\\Modules\\DoTInfo\\Textures\\DashV4"
+local PREVIEW_PATTERN = "Interface\\AddOns\\Ready2Quest\\Combat\\Modules\\DoTInfo\\Textures\\DashV4"
 
 local function paintDamage(texture, color, opacity, state)
     -- Which texture: a finisher preview, a channel and a cast each have their own (settings, shared catalog).

@@ -12,7 +12,7 @@
 -- the mana bar's fill texture. Frames: ElvUI (ElvUF_Player.Power), EllesmereUI (.Power), then Blizzard's mana bar.
 --
 -- Instant spells and channels take their mana at once, so there is nothing to show before it goes.
-local _, BIT = "Ready2Quest\\Combat", (select(2, ...)).combat
+local _, BIT = "Ready2Quest", (select(2, ...)).combat
 if not BIT then return end   -- module Combat de Ready2Quest coupé (CombatBoot.lua)
 local talents = BIT.Module("CastPrediction").Talents
 local isRetail = talents and type(talents.IsRetail) == "function" and talents.IsRetail()

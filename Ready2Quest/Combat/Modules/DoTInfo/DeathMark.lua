@@ -15,7 +15,7 @@
 -- formula), whether the burst is reduced by armor, and that UNIT_COMBAT reports every hit that feeds the mark.
 --
 -- Everything here is Forever only (Retail has no readable source for a hit, and no Death Mark).
-local _, BIT = "Ready2Quest\\Combat", (select(2, ...)).combat
+local _, BIT = "Ready2Quest", (select(2, ...)).combat
 if not BIT then return end   -- module Combat de Ready2Quest coupé (CombatBoot.lua)
 local ns = BIT.Module("DoTInfo")
 

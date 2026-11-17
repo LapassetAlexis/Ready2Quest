@@ -9,7 +9,7 @@
 -- Blizzard's own frame is hidden. A nameplate keeps Blizzard's UnitFrame alive and visible, strips only its artwork,
 -- and hangs HydraUI's own button, plate._unitFrame, on Blizzard's health bar: that button's bar (.Health) is the one
 -- on screen, with its own width and height, so the marks go there and not on Blizzard's bar underneath.
-local _, BIT = "Ready2Quest\\Combat", (select(2, ...)).combat
+local _, BIT = "Ready2Quest", (select(2, ...)).combat
 if not BIT then return end   -- module Combat de Ready2Quest coupé (CombatBoot.lua)
 local Plate = BIT.Plate
 local read = Plate.Read

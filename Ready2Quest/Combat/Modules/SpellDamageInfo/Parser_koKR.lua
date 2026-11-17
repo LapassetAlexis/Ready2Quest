@@ -13,7 +13,7 @@
 -- A number is followed by a particle or a unit without a space ("23의", "4초에", "300만큼"); rewrite puts a space after every number
 -- so the engine finds the amount and its unit. Pure Lua 5.1, no game API.
 
-local _, BIT = "Ready2Quest\\Combat", (select(2, ...)).combat
+local _, BIT = "Ready2Quest", (select(2, ...)).combat
 if not BIT then return end   -- module Combat de Ready2Quest coupé (CombatBoot.lua)
 local ns = BIT and BIT.Module and BIT.Module("SpellDamageInfo") or BIT or {}
 local Parser = ns.Parser

@@ -7,7 +7,7 @@
 -- Copyright (c) 2026 Ironship. MIT licence, see LICENSE.
 -- Pure Lua 5.1, no game API.
 
-local _, BIT = "Ready2Quest\\Combat", (select(2, ...)).combat
+local _, BIT = "Ready2Quest", (select(2, ...)).combat
 if not BIT then return end   -- module Combat de Ready2Quest coupé (CombatBoot.lua)
 -- Inside Ready2QuestCombat its own namespace; loaded on its own, the addon's table as before.
 local ns = BIT and BIT.Module and BIT.Module("SpellDamageInfo") or BIT or {}

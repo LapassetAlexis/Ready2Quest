@@ -9,7 +9,7 @@
 --   * the optional weapon hit (settings: swingKill) adds one average swing, wand or ranged shot;
 --   * the Kill margin (killMargin, 50-100%) leaves room for heals, regeneration and estimate error;
 --   * a mob whose shield absorbed one of our ticks in the last seconds shows no icon (ns.shielded).
-local _, BIT = "Ready2Quest\\Combat", (select(2, ...)).combat
+local _, BIT = "Ready2Quest", (select(2, ...)).combat
 if not BIT then return end   -- module Combat de Ready2Quest coupé (CombatBoot.lua)
 local ns = BIT.Module("DoTInfo")
 

@@ -10,7 +10,7 @@
 -- global or function is replaced. Values the client may hand out as secret (WoW: Forever hides
 -- spell power in combat) are checked with issecretvalue before any comparison or maths.
 
-local ADDON, BIT = "Ready2Quest\\Combat", (select(2, ...)).combat
+local ADDON, BIT = "Ready2Quest", (select(2, ...)).combat
 if not BIT then return end   -- module Combat de Ready2Quest coupé (CombatBoot.lua)
 -- Inside Ready2QuestCombat its own namespace; loaded on its own, the addon's table as before.
 local ns = BIT.Module and BIT.Module("SpellDamageInfo") or BIT

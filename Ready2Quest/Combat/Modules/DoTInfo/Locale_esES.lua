@@ -9,7 +9,7 @@
 --   * the school follows the amount: "40 p. de daño de las Sombras durante 12 s."; no school is physical
 --   * numbers: "1.314" is a thousand three hundred and fourteen, "1,5 s" is one point five seconds
 
-local ADDON_NAME, BIT = "Ready2Quest\\Combat", (select(2, ...)).combat
+local ADDON_NAME, BIT = "Ready2Quest", (select(2, ...)).combat
 if not BIT then return end   -- module Combat de Ready2Quest coupé (CombatBoot.lua)
 local ns = BIT.Module("DoTInfo")
 

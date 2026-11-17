@@ -5,7 +5,7 @@
 -- number is worked out. Generated; do not edit by hand. Copyright (c) 2026 Ironship. GPL-3.0-or-later.
 -- Only fills spells SpellCoefficients.lua does not have; the same keys as there (d, o, h, ho).
 
-local _, BIT = "Ready2Quest\\Combat", (select(2, ...)).combat
+local _, BIT = "Ready2Quest", (select(2, ...)).combat
 if not BIT then return end   -- module Combat de Ready2Quest coupé (CombatBoot.lua)
 local ns = BIT.Module("SpellDamageInfo")
 

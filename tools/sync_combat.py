@@ -52,6 +52,8 @@ RENAMES = [
     ('"DoesItDiePlus: "', '"Ready2Quest Combat: "'),
     ('"DoesItDiePlus"', '"Ready2Quest Combat"'),
 ]
+# "Interface\\AddOns\\" .. ADDON_NAME .. "\\  (ou (ADDON or "…") ) -> chemin sous Ready2Quest\Combat
+DYNAMIC_PATH = re.compile(r'"Interface\\\\AddOns\\\\"\s*\.\.\s*\(?\s*[A-Za-z_]+(?:\s+or\s+"[^"]*")?\s*\)?\s*\.\.\s*"\\\\')
 HEADER = re.compile(r"^local\s+([A-Za-z_]+)\s*,\s*BIT\s*=\s*\.\.\.\s*$", re.M)
 
 
@@ -81,8 +83,12 @@ def transform(text, path):
     count = len(HEADER.findall(text))
     if count != 1:
         raise SystemExit("%s : en-tête d'espace de noms introuvable ou multiple (%d)" % (path, count))
+    # 1.38.0 bêta 2 : le nom reste celui de l'addon hôte (« Ready2Quest ») :
+    # trois modules comparent ADDON_LOADED à cette variable ; avec un autre
+    # nom, ils ne démarraient jamais. Seuls les chemins de textures changent.
+    text = DYNAMIC_PATH.sub(r'"Interface\\\\AddOns\\\\Ready2Quest\\\\Combat\\\\', text)
     text = HEADER.sub(
-        lambda m: "local %s, BIT = \"Ready2Quest\\\\Combat\", (select(2, ...)).combat\n"
+        lambda m: "local %s, BIT = \"Ready2Quest\", (select(2, ...)).combat\n"
                   "if not BIT then return end   -- module Combat de Ready2Quest coupé (CombatBoot.lua)" % m.group(1),
         text)
     for old, new in RENAMES:

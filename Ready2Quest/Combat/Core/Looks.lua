@@ -21,14 +21,14 @@
 --
 -- Nothing here reads gameplay data or saved settings; a module stores only the id (a string) it picked.
 
-local ADDON, BIT = "Ready2Quest\\Combat", (select(2, ...)).combat
+local ADDON, BIT = "Ready2Quest", (select(2, ...)).combat
 if not BIT then return end   -- module Combat de Ready2Quest coupé (CombatBoot.lua)
 local Looks = {}
 BIT.Looks = Looks
 
 local WHITE = "Interface\\Buttons\\WHITE8X8"
-local FILL_DIR = "Interface\\AddOns\\" .. (ADDON or "Ready2QuestCombat") .. "\\Core\\Textures\\Fill\\"
-local DOT_DIR = "Interface\\AddOns\\" .. (ADDON or "Ready2QuestCombat") .. "\\Modules\\DoTInfo\\Textures\\"
+local FILL_DIR = "Interface\\AddOns\\Ready2Quest\\Combat\\Core\\Textures\\Fill\\"
+local DOT_DIR = "Interface\\AddOns\\Ready2Quest\\Combat\\Modules\\DoTInfo\\Textures\\"
 
 ---------------------------------------------------------------------------------------------
 -- Colours

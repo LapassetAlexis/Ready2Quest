@@ -2,7 +2,7 @@
 -- voir Ready2Quest/Combat/README.md. Ne pas modifier ici : corriger l'import.
 -- SpellDamageInfo: Russian wordings from the WoW: Forever /sdi dump all.
 -- Copyright (c) 2026 Ironship. MIT licence, see LICENSE.
-local _, BIT = "Ready2Quest\\Combat", (select(2, ...)).combat
+local _, BIT = "Ready2Quest", (select(2, ...)).combat
 if not BIT then return end   -- module Combat de Ready2Quest coupé (CombatBoot.lua)
 local ns = BIT and BIT.Module and BIT.Module("SpellDamageInfo") or BIT or {}
 local Parser, U = ns.Parser, ns.Parser.util

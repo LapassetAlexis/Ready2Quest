@@ -11,7 +11,7 @@
 -- Controls are built from basic widgets (CheckButton, Slider, Button) rather than Blizzard templates, so they
 -- don't depend on templates behaving the same in Forever. Settings are written straight to ns.db.
 
-local ADDON_NAME, BIT = "Ready2Quest\\Combat", (select(2, ...)).combat
+local ADDON_NAME, BIT = "Ready2Quest", (select(2, ...)).combat
 if not BIT then return end   -- module Combat de Ready2Quest coupé (CombatBoot.lua)
 -- Ready2QuestCombat's own namespace for the module, shared by its four files.
 local ns = BIT.Module("DoTInfo")

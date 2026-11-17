@@ -2,7 +2,7 @@
 -- voir Ready2Quest/Combat/README.md. Ne pas modifier ici : corriger l'import.
 -- DoTInfo: use SDI's dump-backed Russian reader rather than duplicate its wordings.
 -- Copyright (c) 2026 Ironship. MIT licence, see LICENSE.
-local _, BIT = "Ready2Quest\\Combat", (select(2, ...)).combat
+local _, BIT = "Ready2Quest", (select(2, ...)).combat
 if not BIT then return end   -- module Combat de Ready2Quest coupé (CombatBoot.lua)
 local ns = BIT.Module("DoTInfo")
 local Parser = BIT.Module("SpellDamageInfo").Parser

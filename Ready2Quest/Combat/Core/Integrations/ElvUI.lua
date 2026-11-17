@@ -7,7 +7,7 @@
 -- ElvUI's frames (from its source): ElvUF_Player / ElvUF_Target / ElvUF_Focus, with the bar at .Health and the
 -- portrait at .Portrait3D or .Portrait2D; a nameplate is plate.unitFrame (it has UpdateAllElements, Plater's has
 -- none) with the bar at .Health.
-local _, BIT = "Ready2Quest\\Combat", (select(2, ...)).combat
+local _, BIT = "Ready2Quest", (select(2, ...)).combat
 if not BIT then return end   -- module Combat de Ready2Quest coupé (CombatBoot.lua)
 local Plate = BIT.Plate
 local read = Plate.Read

@@ -25,7 +25,7 @@
 -- nothing.
 -- Copyright (c) 2026 Ironship. GPL-3.0-or-later, see LICENSE.
 
-local _, BIT = "Ready2Quest\\Combat", (select(2, ...)).combat
+local _, BIT = "Ready2Quest", (select(2, ...)).combat
 if not BIT then return end   -- module Combat de Ready2Quest coupé (CombatBoot.lua)
 local Style = {}
 BIT.Style = Style

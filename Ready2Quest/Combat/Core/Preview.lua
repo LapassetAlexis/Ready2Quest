@@ -6,7 +6,7 @@
 -- Blizzard's offsets, exactly as the DoT preview does, with flat fallbacks where an atlas
 -- is missing. One kit, so every preview reads alike. Nothing here reads units, saved
 -- settings or the game state; the callers paint their own marks onto what it returns.
-local _, BIT = "Ready2Quest\\Combat", (select(2, ...)).combat
+local _, BIT = "Ready2Quest", (select(2, ...)).combat
 if not BIT then return end   -- module Combat de Ready2Quest coupé (CombatBoot.lua)
 BIT.UI = BIT.UI or {}
 local P = {}

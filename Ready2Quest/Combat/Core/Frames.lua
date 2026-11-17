@@ -13,7 +13,7 @@
 --   /upt frame                      shows the paths in use
 --   /upt frame target|icon|focus|player|plate <path>     sets one ("clear" removes it)
 --   /upt pick target|icon|focus|player                   click the frame on screen
-local _, BIT = "Ready2Quest\\Combat", (select(2, ...)).combat
+local _, BIT = "Ready2Quest", (select(2, ...)).combat
 if not BIT then return end   -- module Combat de Ready2Quest coupé (CombatBoot.lua)
 local Frames = {}
 BIT.Frames = Frames

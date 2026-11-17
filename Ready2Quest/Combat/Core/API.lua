@@ -2,7 +2,7 @@
 -- voir Ready2Quest/Combat/README.md. Ne pas modifier ici : corriger l'import.
 -- Ready2QuestCombat: public module discovery and callbacks. See API.md.
 -- Copyright (c) 2026 Ironship. GPL-3.0-or-later, see LICENSE.
-local ADDON, BIT = "Ready2Quest\\Combat", (select(2, ...)).combat
+local ADDON, BIT = "Ready2Quest", (select(2, ...)).combat
 if not BIT then return end   -- module Combat de Ready2Quest coupé (CombatBoot.lua)
 local Root = { API_VERSION = 1 }
 local internal = {}

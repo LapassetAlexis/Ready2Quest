@@ -12,7 +12,7 @@
 --   * finishers: "마무리 일격" (finishing move), then "연계 점수 N점: S초에 걸쳐 X의 피해" per combo point count
 --   * builders: "1의 연계 포인트가 주어집니다" (awards 1 combo point), or "연계 점수 1점을 생성합니다" (Claw)
 
-local ADDON_NAME, BIT = "Ready2Quest\\Combat", (select(2, ...)).combat
+local ADDON_NAME, BIT = "Ready2Quest", (select(2, ...)).combat
 if not BIT then return end   -- module Combat de Ready2Quest coupé (CombatBoot.lua)
 local ns = BIT.Module("DoTInfo")
 

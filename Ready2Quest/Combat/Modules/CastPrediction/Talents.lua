@@ -12,7 +12,7 @@
 -- Auto/Off/Max override per talent exists in the settings for clients where nothing answers.
 -- Everything is pcall'd and cached: an unavailable talent API never stops a cast from showing,
 -- it only leaves the multiplier out (and says so in the trace log).
-local _, BIT = "Ready2Quest\\Combat", (select(2, ...)).combat
+local _, BIT = "Ready2Quest", (select(2, ...)).combat
 if not BIT then return end   -- module Combat de Ready2Quest coupé (CombatBoot.lua)
 local ns = BIT.Module("CastPrediction")
 

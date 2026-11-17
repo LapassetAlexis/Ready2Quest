@@ -6,7 +6,7 @@
 -- Ключи — английские строки из кода; сохраняйте все %s и %d в том же порядке.
 -- Общие строки находятся здесь, тексты отдельных модулей — в их собственных файлах.
 
-local _, BIT = "Ready2Quest\\Combat", (select(2, ...)).combat
+local _, BIT = "Ready2Quest", (select(2, ...)).combat
 if not BIT then return end   -- module Combat de Ready2Quest coupé (CombatBoot.lua)
 BIT.RegisterLocale("ruRU", {
   -- вкладки

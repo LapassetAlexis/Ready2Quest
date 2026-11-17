@@ -9,7 +9,7 @@
 -- answer is no, unregisters its events and stays silent. Switching a module on or off takes
 -- effect at the next /reload.
 
-local ADDON, BIT = "Ready2Quest\\Combat", (select(2, ...)).combat
+local ADDON, BIT = "Ready2Quest", (select(2, ...)).combat
 if not BIT then return end   -- module Combat de Ready2Quest coupé (CombatBoot.lua)
 BIT = BIT or {}
 BIT.name = "Ready2Quest"

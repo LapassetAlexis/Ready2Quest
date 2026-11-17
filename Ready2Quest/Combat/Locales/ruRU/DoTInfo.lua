@@ -3,7 +3,7 @@
 -- Ready2QuestCombat: русские тексты вкладки DoTInfo. Общие правила — в Locales\ruRU\Core.lua.
 -- Copyright (c) 2026 Ironship. GPL-3.0-or-later, см. LICENSE.
 
-local _, BIT = "Ready2Quest\\Combat", (select(2, ...)).combat
+local _, BIT = "Ready2Quest", (select(2, ...)).combat
 if not BIT then return end   -- module Combat de Ready2Quest coupé (CombatBoot.lua)
 BIT.RegisterLocale("ruRU", {
   -- вкладки и кнопки

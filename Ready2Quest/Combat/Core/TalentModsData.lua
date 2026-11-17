@@ -13,7 +13,7 @@
 -- p[rank] = the percent that rank adds. Left out on purpose: talents that need a weapon, a shield, a form, a proc or
 -- a cooldown (Death Wish, Weapon Specialization, Shadowform, Decimation...), which the aura rules or nothing handle.
 
-local _, BIT = "Ready2Quest\\Combat", (select(2, ...)).combat
+local _, BIT = "Ready2Quest", (select(2, ...)).combat
 if not BIT then return end   -- module Combat de Ready2Quest coupé (CombatBoot.lua)
 BIT = BIT or {}
 BIT.TalentModData = {

@@ -1,7 +1,7 @@
 -- Repris de DoesItDiePlus (Ironship, GPL-3.0-or-later) par tools/sync_combat.py ;
 -- voir Ready2Quest/Combat/README.md. Ne pas modifier ici : corriger l'import.
 -- Ready2QuestCombat: the public CastPrediction API. See API.md.
-local _, BIT = "Ready2Quest\\Combat", (select(2, ...)).combat
+local _, BIT = "Ready2Quest", (select(2, ...)).combat
 if not BIT then return end   -- module Combat de Ready2Quest coupé (CombatBoot.lua)
 local ns = BIT.Module("CastPrediction")
 local bus = BIT.API

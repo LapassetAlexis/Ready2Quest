@@ -19,7 +19,7 @@
 -- told from white swings) or one total shared by several combo point sizes teach nothing, and a size more than 2.5 times or less than half of the description's is
 -- taken for a mixed-in hit and thrown away. Every decision is in the trace log ("LEARN ...").
 
-local _, BIT = "Ready2Quest\\Combat", (select(2, ...)).combat
+local _, BIT = "Ready2Quest", (select(2, ...)).combat
 if not BIT then return end   -- module Combat de Ready2Quest coupé (CombatBoot.lua)
 local ns = BIT.Module("DoTInfo")
 

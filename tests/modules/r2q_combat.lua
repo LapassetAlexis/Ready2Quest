@@ -29,9 +29,12 @@ do
 		else
 			local fn, err = load5(src, file)
 			if not fn then bad[#bad + 1] = tostring(err) end
-			if src:find('(select(2, ...)).combat', 1, true) and src:find("if not BIT then return end", 1, true) then
+			-- le vrai nom de l'addon (trois modules comparent ADDON_LOADED à cette
+			-- variable : avec un autre nom, ils ne démarraient jamais — bêta 1)
+			if src:find('BIT = "Ready2Quest", (select(2, ...)).combat', 1, true) and src:find("if not BIT then return end", 1, true) then
 				guards = guards + 1
 			end
+			if src:find('"Interface\\AddOns\\"%s*%.%.') then bad[#bad + 1] = file .. " : chemin construit avec le nom de l'addon" end
 			for _, word in ipairs({ "UsefulPlatesAndTooltips", '"/upt"', '"/sdi"', '"/dotinfo"', "SlashCmdList%.BITDOTINFO" }) do
 				if src:find(word) then leftovers[#leftovers + 1] = file .. ":" .. word end
 			end
