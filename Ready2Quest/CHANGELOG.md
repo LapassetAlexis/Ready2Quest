@@ -2,9 +2,10 @@
 
 ## 1.37.1
 
+- **Voisins qui suivent (+N)** : hors combat, à droite de la barre de nom de ta cible, « +2 » (ambre ; rouge à partir de 3) dit combien de monstres de la même sorte sont assez près pour venir l'aider si tu l'attaques. C'est une estimation (le jeu ne donne pas la position des monstres : on la déduit de la distance mesurée et de la place des barres de nom à l'écran), à affiner avec vos retours ; `/r2q diag` montre le compte et le rayon utilisé. Réglage « Voisins qui suivent (+N) », page Portée d'aggro (actif).
 - **Le nom du monstre pour QuestCompanion** : quand la portée d'aggro montre sa marque rouge, le compagnon de QuestCompanion (3.2.0) peut crier le nom du monstre qui va t'aggro.
 
-*English:* the monster's name for QuestCompanion: when the aggro range shows its red mark, the QuestCompanion companion (3.2.0) can shout the name of the monster about to aggro you.
+*English:* neighbours that follow (+N): out of combat, to the right of your target's nameplate, "+2" (amber; red from 3) tells how many monsters of the same kind are close enough to come and help it if you attack. It is an estimate (the game does not give monster positions: we infer them from the measured distance and where the nameplates sit on screen), to be tuned with your feedback; `/r2q diag` shows the count and the radius used. Setting "Neighbours that follow (+N)", Aggro range page (on). The monster's name for QuestCompanion: when the aggro range shows its red mark, the QuestCompanion companion (3.2.0) can shout the name of the monster about to aggro you.
 
 ## 1.37.0 — Deux modules retirés
 
