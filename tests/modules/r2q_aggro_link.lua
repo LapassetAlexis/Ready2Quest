@@ -185,3 +185,23 @@ do
 	Check("[LINK] direction cachée : compte les monstres à ±8 m de la distance de la cible (24 vs 27,5 oui, 42,5 non)",
 		count == 1 and trace.x0 == nil, tostring(count))
 end
+
+-- 1.38.0 (bêta 4) : le triangle se pose à droite de la coche de portée, à sa hauteur
+do
+	local savedCombat = NS.combat
+	local bar = CreateFrame("Frame", nil, UIParent)
+	NS.combat = { Plate = { HealthBar = function() return bar end },
+		Settings = function(name) if name == "Range" then return { offset = 56, size = 26 } end return {} end }
+	local savedCount = NS.AggroLinkCount
+	NS.AggroLinkCount = function() return 2, CreateFrame("Frame", nil, UIParent) end
+	local savedOn, savedCombatState = NS.AggroOn, NS.AggroInCombat
+	NS.AggroOn, NS.AggroInCombat = function() return true end, function() return false end
+	NS:DB().aggroLink = nil
+	NS:AggroLinkTick()
+	local p = NS.aggroLinkBadge.lastPoint or {}
+	NS.AggroLinkCount, NS.combat, NS.AggroOn, NS.AggroInCombat = savedCount, savedCombat, savedOn, savedCombatState
+	NS:AggroLinkHide()
+	Check("[LINK] alerte : au-dessus du monstre, à droite de la coche (BOTTOMLEFT du TOP de la barre, x 17, y 60)",
+		p.point == "BOTTOMLEFT" and p.relPoint == "TOP" and p.x == 17 and p.y == 60,
+		tostring(p.point) .. " " .. tostring(p.relPoint) .. " " .. tostring(p.x) .. " " .. tostring(p.y))
+end

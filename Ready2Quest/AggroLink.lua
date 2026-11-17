@@ -16,8 +16,8 @@
 -- « Même sorte » : même type de créature, et même famille pour les bêtes
 -- (un loup n'aide pas un sanglier) ; vivant, hors combat, hostile ou du même
 -- nom que la cible.
--- Affichage : le triangle d'alerte du jeu à droite de la barre de nom de la
--- cible. Réglage « Alerte multi-aggro », page Portée d'aggro (actif).
+-- Affichage : le triangle d'alerte du jeu au-dessus de la cible, juste à
+-- droite de la coche / croix de portée. Réglage « Alerte multi-aggro », page Portée d'aggro (actif).
 local ADDON, ns = ...
 local L = ns.L
 local Theme = ns.Theme
@@ -26,6 +26,8 @@ ns.AGGRO_LINK_RADIUS = 12     -- m : voisin qui vient aider (estimation à régl
 ns.AGGRO_LINK_BAND = 8        -- m : sans direction, écart de distance au joueur toléré
 ns.AGGRO_LINK_ICON = "Interface\\DialogFrame\\UI-Dialog-Icon-AlertNew"   -- triangle d'alerte du jeu
 ns.AGGRO_LINK_SIZE = 18
+ns.AGGRO_LINK_OFFSET = 56       -- hauteur de la coche de portée au-dessus de la barre (réglage du moteur, sinon)
+ns.AGGRO_LINK_RANGE_SIZE = 26   -- sa taille (idem)
 ns.AGGRO_LINK_POLL = 0.5      -- s
 ns.AGGRO_LINK_FOV = 90        -- degrés, si le client ne dit rien
 
@@ -229,14 +231,18 @@ function ns:AggroLinkTick()
 	end
 	local badge = Badge(self)
 	if not badge then return 0 end
-	-- à droite de la barre de vie (moteur Combat : il la trouve, quel que
-	-- soit l'addon des barres de nom), sinon de la barre de nom entière
-	local bar = self.combat and self.combat.Plate and type(self.combat.Plate.HealthBar) == "function"
-		and select(2, pcall(self.combat.Plate.HealthBar, plate)) or nil
+	-- 1.38.0 (bêta 4) : au-dessus du monstre, juste à droite de la coche /
+	-- croix de portée (même hauteur, même décalage ; loin des décorations des
+	-- barres de nom, comme les chevrons de cible). La barre de vie vient du
+	-- moteur Combat (il la trouve quel que soit l'addon des barres de nom).
+	local e = self.combat
+	local bar = e and e.Plate and type(e.Plate.HealthBar) == "function" and select(2, pcall(e.Plate.HealthBar, plate)) or nil
 	local anchor = type(bar) == "table" and bar or plate
+	local range = e and type(e.Settings) == "function" and e.Settings("Range") or {}
+	local offset, size = tonumber(range.offset) or ns.AGGRO_LINK_OFFSET, tonumber(range.size) or ns.AGGRO_LINK_RANGE_SIZE
 	badge:SetParent(plate)
 	badge:ClearAllPoints()
-	badge:SetPoint("LEFT", anchor, "RIGHT", 4, 0)
+	badge:SetPoint("BOTTOMLEFT", anchor, "TOP", math.floor(size / 2 + 4), offset + math.floor((size - ns.AGGRO_LINK_SIZE) / 2))
 	if badge.SetFrameLevel and plate.GetFrameLevel then
 		pcall(badge.SetFrameLevel, badge, (tonumber(plate:GetFrameLevel()) or 1) + 6)
 	end
