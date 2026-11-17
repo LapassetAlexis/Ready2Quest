@@ -89,7 +89,7 @@ do
 	S = Scenario("[ADV] durabilité et vivres : une fois, de nouveau si ça empire")
 	S.ok("équipement sous 25 % : conseil", A.Next() == "durability" and NS.companionBubbleKey == "ADVICE_DURA")
 	Mock.world.durability = { [1] = { 5, 100 } }
-	S.ok("sous 10 % : de nouveau", A.Next() == "durability" and NS.companionBubbleKey == "ADVICE_DURA_CRIT")
+	S.ok("sous 10 % : de nouveau, crié (3.2.0)", A.Next() == "durability" and NS.companionBubbleKey == "SHOUT_DURA", NS.companionBubbleKey)
 	Mock.world.durability = { [1] = { 100, 100 } }
 
 	Mock.world.bags[0].items[16] = { itemID = 4001, stackCount = 2, quality = 1 }

@@ -3665,7 +3665,10 @@ function ns:CompanionOnLoot(message)
 	local link = self:ParseSelfLoot(message)
 	if link and LinkQuality(link) >= 3 then   -- rare ou mieux : un vrai moment
 		self:CompanionAdd("mood", 10)
-		self:CompanionSay("LOOT", { cd = "loot" })
+		-- 3.2.0 : un bleu ou un violet, il crie son nom (CompanionShouts.lua)
+		if not (self.CompanionShoutLoot and self:CompanionShoutLoot(link, LinkQuality(link))) then
+			self:CompanionSay("LOOT", { cd = "loot" })
+		end
 	end
 end
 
@@ -3754,7 +3757,11 @@ function ns:CompanionOnLevel(level)
 	self:CompanionRefreshLabels()
 	-- l'évolution garde sa bulle ; un déblocage du même niveau passe au chat
 	local fresh = self:CompanionCheckUnlocks(level, false, evolved)
-	if not evolved and #fresh == 0 then self:CompanionSay("LEVEL", { args = { level } }) end
+	if not evolved and #fresh == 0 then
+		-- 3.2.0 : il crie le niveau (CompanionShouts.lua), sinon il le dit
+		local shout = self.CompanionShoutPool and self:CompanionShoutPool("LEVEL")
+		if not (shout and self:CompanionShout(shout, { level })) then self:CompanionSay("LEVEL", { args = { level } }) end
+	end
 end
 
 function ns:CompanionOnStamp(stamp)

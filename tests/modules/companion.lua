@@ -215,7 +215,7 @@ do
 	C.Quiet()
 	m = C.Needs().mood
 	Mock:Fire("CHAT_MSG_LOOT", "Vous recevez le butin : |cff0070dd|Hitem:4444::::::::|h[Épée bleue]|h|r.")
-	S.ok("butin rare : moral et « ça brille »", C.Needs().mood > m and C.Key() == "LOOT", C.Key())
+	S.ok("butin rare : moral et cri doré (3.2.0, sinon « ça brille »)", C.Needs().mood > m and (C.Key() == "SHOUT_LOOT" or C.Key() == "LOOT"), C.Key())
 	C.Quiet()
 	m = C.Needs().mood
 	Mock:Fire("CHAT_MSG_LOOT", "Vous recevez le butin : |cff9d9d9d|Hitem:5555::::::::|h[Caillou]|h|r.")
@@ -290,7 +290,7 @@ do
 	C.Quiet()
 	Mock.world.level = 12
 	Mock:Fire("PLAYER_LEVEL_UP", 12)
-	S.ok("niveau 12 : « Niveau 12 ! »", C.Key() == "LEVEL" and NS.companionBubbleText:find("12", 1, true), C.Key())
+	S.ok("niveau 12 : « NIVEAU 12 ! » crié (3.2.0)", C.Key() == "SHOUT_LEVEL" and NS.companionBubbleText:find("12", 1, true), C.Key())
 	S.done()
 end
 
