@@ -14,22 +14,23 @@ local frame, lay = NS.optionsFrame, NS.OPT_LAYOUT
 -- la navigation (entrées de premier niveau) s'arrête au-dessus de la version,
 -- en bas de la colonne (18 px du bas, une ligne)
 local navFloor = -(lay.height - 2 - 40)
--- ordre : tous les modules avant le titre QOL, un seul titre par groupe
-local seenQol, misplaced = false, {}
-for _, def in ipairs(NS.OPTION_PAGES) do
-	-- 1.38.0 : le groupe COMBAT vient après le confort de jeu
-	if def.group == "OPT_GROUP_QOL" then seenQol = true
-	elseif seenQol and def.group ~= "OPT_GROUP_COMBAT" then misplaced[#misplaced + 1] = def.id end
+-- 1.39.0 : six familles fixes, plus de titres de groupe ; la colonne ne
+-- défile pas et s'arrête au-dessus de la version
+local list = frame.navList
+local navEnd = lay.navTop - list.contentHeight
+Check("[INT] six familles au-dessus de la version, sans défilement ni titre de groupe, panneau à l'écran",
+	#frame.navButtons == 6 and #frame.navGroups == 0 and list.contentHeight <= list.viewHeight and navEnd >= navFloor
+	and lay.height <= lay.maxHeight, #frame.navButtons .. " / " .. navEnd .. " >= " .. navFloor)
+-- la maquette : aucun onglet ne défile (en français, modules chargés)
+local scrolling = {}
+for id, page in pairs(frame.pages) do
+	NS:SelectOptionsPage(id)
+	if (page.contentHeight or 0) > (page.viewHeight or 0) then
+		scrolling[#scrolling + 1] = id .. "=" .. math.floor(page.contentHeight) .. "/" .. math.floor(page.viewHeight)
+	end
 end
--- titres : le Check avant le départ, MODULES, le Confort de jeu ; chacun une fois
-local titles, twice = {}, 0
-for _, label in ipairs(frame.navGroups) do
-	if titles[label.text] then twice = twice + 1 end
-	titles[label.text] = true
-end
-Check("[INT] navigation au-dessus de la version, panneau à l'écran, quatre titres de groupe uniques (COMBAT en dernier), aucun module sous le QoL",
-	frame.navBottom >= navFloor and lay.height <= lay.maxHeight and #frame.navGroups == 4 and twice == 0 and #misplaced == 0,
-	frame.navBottom .. " >= " .. navFloor .. " / " .. #frame.navGroups .. " / " .. table.concat(misplaced, ","))
+table.sort(scrolling)
+Check("[INT] la maquette : aucun onglet ne défile (tous les modules, en français)", #scrolling == 0, table.concat(scrolling, ", "))
 
 local overflow = {}
 for id in pairs(frame.pages) do

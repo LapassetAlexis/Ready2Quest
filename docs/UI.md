@@ -177,7 +177,60 @@ de page ; plus les boutons depuis la 3.0, voir « Composants 3.0 ») ; bouton pl
 ## Fenêtre de réglages (`Libs/Socle/Options.lua`)
 
 Construite avec les briques ci-dessus ; les modules déclarent leurs pages avec
-`ns.AddOptionPage`, comme avant.
+`ns.AddOptionPage`, comme avant. Deux navigations, au choix de l'addon.
+
+### Navigation par familles (socle 3.5, Ready2Quest 1.39.0)
+
+L'addon déclare `ns.OPTION_FAMILIES` (table, ou `function(ns)` relue à chaque
+construction de la fenêtre : Ready2Quest, `OptionsMenu.lua`, chargé en
+dernier, y range les lignes que ses modules ont déclarées sur leurs pages).
+Maquette validée le 2026-11-17.
+
+- Colonne : une entrée par famille, hauteur 52 : icône du client par
+  référence (22, repli point d'interrogation), libellé, sous-libellé
+  (`F_SMALL` MUTED). Pas de titre de groupe, pas de voyant, pas de
+  défilement. Six familles dans Ready2Quest : Accueil, Check avant le départ,
+  Sacs & butin, Voyage, Quêtes & sorts, Combat. Un futur module devient une
+  section ou un onglet d'une famille, jamais une entrée de plus ; cinq
+  onglets au plus par famille, un onglet se scinde au-delà d'une quinzaine de
+  réglages.
+- Famille : `{ id, title, sub, icon, power, powerLabel, aliases, oldNames,
+  preview, dash, tabs }`. `power` : interrupteur dans l'en-tête, sur la ligne
+  de la phrase (« Addon actif », « Check actif ») ; coupée, la phrase devient
+  `OPT_PAGE_OFF` et les cartes de la famille s'estompent.
+- Onglet : `{ id, label, phrase, preview, sections }` (la phrase de l'onglet
+  en sous-titre ; `preview = false` : sans l'aperçu de la famille), ou
+  `kind = "dashboard"` avec `columns` (la vue d'ensemble).
+- Section : `{ id, title, phrase, tag, power, aliases, oldNames, rows,
+  modules, list, listLines, info, frameButtons, actions }`. Avec `power` ou
+  `phrase` : une tête de fonction (titre `F_HEADING` PARCHMENT, étiquette or,
+  phrase `F_SMALL` sur toute la largeur, interrupteur à droite, filet
+  dessous) ; coupée, son titre passe en MUTED et ses cartes s'estompent (sans
+  repli ni re-mise en page). Sinon un titre de section ordinaire.
+- Vue d'ensemble : deux colonnes de cartes de famille, une ligne de 24 par
+  fonction (`dash = { { label, go, key, text } }`, sinon les sections à
+  `power`) : le nom ouvre la fonction, l'interrupteur est le même réglage,
+  `text(ns)` une mention (dernière note, nombre de favoris). Tient sans
+  défilement.
+- Cibles (`ns:SelectOptionsPage`, `ns:OpenOptionsAt`, `ns:OptionsGo`) : id de
+  famille (son dernier onglet), `famille:onglet`, id d'onglet nu, id de
+  section, `aliases` (anciens ids de pages). Une section choisie : la page
+  défile jusqu'à elle, sa tête s'éclaire 1,6 s. Inconnu : la première famille.
+- Ouverture : la première de la session sur le premier onglet de la première
+  famille (Accueil › Vue d'ensemble) ; ensuite, là où on était.
+- Roue crantée : `ns:AddSettingsGear(fenêtre, cible)` (Ready2Quest, `UI.lua`),
+  à gauche du [×] ; une fenêtre de dialogue garde sa place avec `headerIcon`.
+- Recherche : en plus des cartes, les lieux (familles, onglets, sections, et
+  leurs `oldNames`) dont le nom contient tous les mots, en tête des
+  résultats, avec leur chemin (« Sacs & butin > Sac plein & butin ») ; un clic
+  y mène. La colonne compte les cartes trouvées par famille.
+- Pied : sans « Réinitialiser » (la remise à zéro est une action de
+  l'addon, avec confirmation).
+- Tests : `tests/modules/options.lua` (familles, têtes, vue d'ensemble, liens
+  directs, recherche des lieux), `zz_integration.lua` (aucun onglet ne
+  défile, tous les modules chargés).
+
+### Navigation par pages (QuestCompanion)
 
 - Navigation : une entrée par page. Une page de premier niveau qui a des
   sous-pages (`parent = <id>`) devient un titre de groupe (son titre, en

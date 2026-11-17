@@ -342,8 +342,9 @@ function ns:EnsureDeathPanel()
 	if self.deathFrame then return self.deathFrame end
 	if not (Theme and Theme.CreateDialog) then return nil end
 	local frame = Theme.CreateDialog(UIParent, WIDTH, 160, { name = "Ready2QuestDeathFrame", title = L.DEATH_TITLE,
-		subtitle = L.DEATH_QUESTION })
+		subtitle = L.DEATH_QUESTION, headerIcon = true })
 	if not frame then return nil end
+	if self.AddSettingsGear then self:AddSettingsGear(frame, "death") end
 	if self.RestorePoint then self:RestorePoint(frame, "deathPoint", { point = "CENTER", x = 0, y = -140 }) end
 	-- fermée à la main : plus rien jusqu'à la prochaine mort
 	frame.closeButton = frame:AddFooterButton(L.OPT_CLOSE, function()

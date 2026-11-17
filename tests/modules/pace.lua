@@ -372,7 +372,8 @@ do
 	NS.optionsFrame = nil
 	NS:ToggleOptions()
 	NS:SelectOptionsPage("pace")
-	Check("[PACE] page de réglages construite", NS.optionsFrame.pages.pace ~= nil)
+	Check("[PACE] page de réglages construite", NS.optionsFrame.pages["quetes:xp"] ~= nil
+		and NS.optionsFrame.currentPage == "quetes:xp", NS.optionsFrame.currentPage)
 	if NS.optionsFrame then NS.optionsFrame:Hide() end
 	NS.optionsFrame = nil
 end

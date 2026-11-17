@@ -136,29 +136,33 @@ do
 	Verdict("[SOC] bouton désactivé : opaque, MUTED sur CONTROL, ni survol ni appui ; réactivé : son style")
 	parent:Hide()
 
-	-- module coupé : cartes estompées, bandeau « Rallumer » (R2Q, page Déclencheurs)
+	-- module coupé : cartes estompées (R2Q 1.39.0 : Check › Quand & où ;
+	-- l'interrupteur « Check actif » de l'en-tête tient lieu de « Rallumer »)
 	ResetWorld()
 	local frame = NS:EnsureOptions()
 	NS:SelectOptionsPage("trigger")
-	local key = NS:OptionsPageModuleKey("trigger")
+	local pageId = frame.currentPage
+	local key = NS:OptionsPageModuleKey(pageId)
 	NS:ToggleModuleKey(key)
 	local dimmed, total = 0, 0
 	for _, c in ipairs(frame.rows) do
-		if c.pageId == "trigger" then total = total + 1; if c.alpha == Theme.DIM_ALPHA and c.dimmed then dimmed = dimmed + 1 end end
+		if c.pageId == pageId and not c.isModule then total = total + 1; if c.alpha == Theme.DIM_ALPHA and c.dimmed then dimmed = dimmed + 1 end end
 	end
-	Want("clé du module de la page parente : " .. tostring(key), key == "departureEnabled")
+	Want("« trigger » ouvre Check › Quand & où : " .. tostring(pageId), pageId == "check:when")
+	Want("clé du module de la famille : " .. tostring(key), key == "departureEnabled")
 	Want("cartes estompées " .. dimmed .. "/" .. total, total > 0 and dimmed == total)
-	Want("bandeau et « Rallumer »", frame.offBanner:IsShown() and frame.header.subtitle.text == NS.L.OPT_PAGE_OFF
-		and frame.offBanner:GetText() == NS.L.OPT_PAGE_OFF_ON)
-	Verdict("[SOC] module coupé : cartes de sa page estompées, bandeau « Rallumer »")
-	frame.offBanner:Click()
+	Want("phrase « coupé », interrupteur de l'en-tête éteint, pas de bouton en double",
+		frame.header.subtitle.text == NS.L.OPT_PAGE_OFF and frame.headerPower:IsShown()
+		and frame.headerPower.checked ~= true and not frame.offBanner:IsShown())
+	Verdict("[SOC] module coupé : cartes de sa page estompées, phrase « coupé », interrupteur de l'en-tête")
+	frame.headerPower:Click()
 	local back, moduleCards = 0, 0
 	for _, c in ipairs(frame.rows) do
-		if c.pageId == "trigger" and c.alpha == 1 then back = back + 1 end
+		if c.pageId == pageId and not c.isModule and c.alpha == 1 then back = back + 1 end
 		if c.isModule and (c.alpha or 1) == 1 then moduleCards = moduleCards + 1 end
 	end
-	Check("[SOC] « Rallumer » : module actif, cartes pleines, bandeau caché ; cartes de module jamais estompées",
-		NS:DB()[key] ~= false and back == total and not frame.offBanner:IsShown()
+	Check("[SOC] interrupteur de l'en-tête : module actif, cartes pleines, phrase de l'onglet ; cartes de module jamais estompées",
+		NS:DB()[key] ~= false and back == total
 		and frame.header.subtitle.text ~= NS.L.OPT_PAGE_OFF and moduleCards > 0)
 	frame:Hide()
 	Theme.ApplySkin(skin0)

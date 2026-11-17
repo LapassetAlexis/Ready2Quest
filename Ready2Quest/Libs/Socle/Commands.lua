@@ -34,7 +34,9 @@ function ns:PrintHelp()
 	end
 end
 
-local function Toggle(self)
+local function Toggle(self, rest)
+	-- socle 3.5 : « options <mot> » ouvre sur ce lieu (ns:OptionsGo)
+	if rest and tostring(rest):match("%S") and self.OptionsGo then return self:OptionsGo(rest) end
 	if self.ToggleOptions then self:ToggleOptions() else self:Print(L.MSG_UNKNOWN_CMD) end
 end
 

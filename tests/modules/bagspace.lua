@@ -404,10 +404,12 @@ do
 	local frame = NS.optionsFrame
 	local def
 	for _, d in ipairs(NS.OPTION_PAGES) do if d.id == "bagspace" then def = d end end
-	local page = frame.pages.bagspace
-	local notes = page and page.notes or {}
-	Check("[BAG] page : sous-page du QoL, listes affichées", def and def.parent == "qol" and def.group == "OPT_GROUP_QOL"
-		and notes.favorites ~= nil and notes.favorites.text.text:find("Os brisé", 1, true) ~= nil
+	-- 1.39.0 : Sac plein dans Sacs & butin › Sac plein & butin ; les favoris
+	-- dans Marchand & favoris
+	local page, favPage = frame.pages["sacs:plein"], frame.pages["sacs:marchand"]
+	local notes, favNotes = page and page.notes or {}, favPage and favPage.notes or {}
+	Check("[BAG] page : Sac plein & butin, favoris sur Marchand & favoris", def ~= nil
+		and favNotes.favorites ~= nil and favNotes.favorites.text.text:find("Os brisé", 1, true) ~= nil
 		and notes.bagspaceDiscard.text.text:find("(vide)", 1, true) ~= nil
 		and notes.bagspaceConfirm.text.text:find("toujours", 1, true) ~= nil)
 	NS:DB().favorites[GREY] = true
@@ -416,14 +418,19 @@ do
 	NS:HandleCommand("jeter-toujours " .. B.Link(CLOTH))
 	Check("[BAG] page : rafraîchie après une commande", notes.bagspaceDiscard.text.text:find("Étoffe", 1, true) ~= nil)
 	NS:SelectOptionsPage("bagspace")
+	Check("[BAG] page : « bagspace » ouvre Sac plein & butin", frame.currentPage == "sacs:plein", frame.currentPage)
 	for _ = 1, 10 do NS:ScrollOptions(-1) end
 	Check("[BAG] page : l'aide du bas se voit (défilement)", notes.bagspaceHint:IsShown() == true)
-	local sections = 0
-	for _, item in ipairs(page.items) do if item.kind == "section" then sections = sections + 1 end end
-	local rowKeys = {}
+	local heads = {}
+	for _, item in ipairs(page.items) do if item.kind == "head" then heads[#heads + 1] = item.region.powerKey end end
+	local rowKeys, favKeys = {}, {}
 	for _, row in ipairs(page.rows) do rowKeys[#rowKeys + 1] = row.def and row.def.key end
-	Check("[BAG] page : trois sections, interrupteurs module et cadre, raccourci des favoris", sections == 3
-		and table.concat(rowKeys, ",") == "bagspaceEnabled,bagspaceFrame,favoriteClick,favoriteAutoBuyback", sections .. " " .. table.concat(rowKeys, ","))
+	for _, row in ipairs(favPage.rows) do favKeys[#favKeys + 1] = row.def and row.def.key end
+	Check("[BAG] page : trois fonctions (sac plein, place au butin, butin rapide), plus de « Activer » en double",
+		table.concat(heads, ",") == "bagspaceEnabled,lootroomEnabled,quickLootEnabled"
+		and table.concat(rowKeys, ",") == "bagspaceFrame,lootroomConfirm,lootroomAuction", table.concat(heads, ",") .. " | " .. table.concat(rowKeys, ","))
+	Check("[BAG] page : marchand puis raccourci et rachat des favoris", table.concat(favKeys, ",")
+		== "autoSellGray,autoRepair,favoriteClick,favoriteAutoBuyback", table.concat(favKeys, ","))
 	frame:Hide()
 	NS.optionsFrame = nil
 end

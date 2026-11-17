@@ -316,7 +316,7 @@ function ns:EnsureWindow()
 	end
 
 	-- Roue crantée : les réglages, à gauche de la flèche
-	frame.settingsButton = Theme.CreateGearButton(frame, 22, function() ns:ToggleOptions() end, L.DIAG_SETTINGS_TIP)
+	frame.settingsButton = Theme.CreateGearButton(frame, 22, function() ns:OpenOptionsAt("check") end, L.DIAG_SETTINGS_TIP)
 	frame.settingsButton:SetPoint("RIGHT", frame.refreshButton, "LEFT", -6, 0)
 	frame.settingsButton:Show()
 	if frame.settingsButton.SetFrameLevel and frame.close.GetFrameLevel then
@@ -648,6 +648,22 @@ function ns:DepartedText()
 	local from = self.lastDeparture
 	if not from then return nil end
 	return self:F("PANEL_DEPARTED", tostring(from.name or "?"), self:SourceLabel(from.source))
+end
+
+-- 1.39.0 : roue crantée d'une fenêtre de module, à gauche de son [×] : les
+-- réglages s'ouvrent sur sa fonction, qui s'éclaire (ns:OpenOptionsAt). Une
+-- fenêtre de dialogue garde sa place avec headerIcon (Theme.CreateDialog).
+function ns:AddSettingsGear(frame, where, size, anchor)
+	if not (frame and Theme and Theme.CreateGearButton) then return nil end
+	if frame.settingsButton then return frame.settingsButton end
+	anchor = anchor or frame.close or frame.closeButton
+	if not anchor then return nil end
+	local gear = Theme.CreateGearButton(frame, size or 22, function() ns:OpenOptionsAt(where) end, L.DIAG_SETTINGS_TIP)
+	gear:SetPoint("RIGHT", anchor, "LEFT", -6, 0)
+	if gear.SetFrameLevel and anchor.GetFrameLevel then gear:SetFrameLevel(tonumber(anchor:GetFrameLevel()) or 20) end
+	gear.settingsTarget = where
+	frame.settingsButton = gear
+	return gear
 end
 
 if ns.Mark then ns.Mark("UI") end

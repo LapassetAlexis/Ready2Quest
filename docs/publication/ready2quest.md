@@ -15,6 +15,11 @@ For **WoW Forever** (1.60). English and French.
 
 ![Pre-departure check: a readiness score out of 100 with tips](https://media.forgecdn.net/attachments/2147/118/r2q-1-png.png)
 
+## New in 1.39: a clearer settings menu
+- **Six families** in the left column: Home, Departure check, Bags & loot, Travel, Quests & spells, Combat. Their pages become tabs.
+- **One switch per feature**, right in its head; **Home › Overview** shows every feature with its switch on one screen.
+- **The gear button** of each window opens the settings on its feature; `/r2q options loot` too. Search also finds features and tabs.
+
 ## New in 1.38: combat helpers
 - **A Combat section**: the aggro range plus four helpers, each with its switch.
 - **Spell range**: a green check or a red cross above your target, in combat too; action bar icons grey out when out of range.
@@ -87,6 +92,11 @@ Free software, **GPL-3.0**. Source code: https://github.com/LapassetAlexis/Ready
 **Prépare ta sortie avant de quitter la ville.** Quand tu quittes un village, une capitale ou un camp, Ready2Quest vérifie que tu es prêt : vivres, place dans les sacs, équipement en état, tes buffs habituels, ta pierre de foyer… et te le dit au bon moment, pas quand il est trop tard.
 
 Pour **WoW Forever** (1.60). En français et en anglais.
+
+## Nouveau en 1.39 : un menu des réglages plus clair
+- **Six familles** dans la colonne de gauche : Accueil, Check avant le départ, Sacs & butin, Voyage, Quêtes & sorts, Combat. Leurs pages deviennent des onglets.
+- **Un interrupteur par fonction**, dans sa tête ; **Accueil › Vue d'ensemble** montre toutes les fonctions avec leur interrupteur sur un seul écran.
+- **La roue crantée** de chaque fenêtre ouvre les réglages sur sa fonction ; `/r2q options butin` aussi. La recherche trouve aussi les fonctions et les onglets.
 
 ## Nouveau en 1.38 : l'aide au combat
 - **Une section Combat** : la portée d'aggro et quatre aides, chacune avec son interrupteur.

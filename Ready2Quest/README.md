@@ -40,7 +40,7 @@ On its own, **the moment you leave a safe area**: city, village, hub or camp. If
 
 - **Score of 85 or more**: a single line in chat, something like "Bag packed, 92/100. Left Goldshire."
 - **Lower score**: a line in chat, and a **"!"** (the quest-available icon) that pulses for a few seconds at the top of the screen, in the color of your score: red below 25, orange from 25 to 59, amber from 60 to 84. Click it: the **Before you leave** window opens, with the score, the verdict (*Ready*, *Ready, with reserves*, *Not ready*) and advice on how to fix things. Right-click: you dismiss it. Nothing opens on its own while you're leaving, and no icon shows up mid-combat: it waits until the fight is over.
-- The icon stays visible, dimmed, for a minute after pulsing, then goes away. Prefer the old automatic window? Settings, **General**, uncheck "Reports announced by an icon".
+- The icon stays visible, dimmed, for a minute after pulsing, then goes away. Prefer the old automatic window? Settings, **Home › General**, uncheck "Reports announced by an icon".
 
 You can also run it whenever you want: `/r2q`, or left-click the minimap button. In the window, the small arrow in the header runs the check again, and **Off on an adventure** closes it. Settings are on right-click on the minimap button.
 
@@ -77,7 +77,7 @@ A safe area is a place where you can **get ready without risk**: eat, repair, se
 - **Forever camps**: near a campfire, you're at camp. When you walk away from it, the check fires, just like leaving a village.
 - **The rest is learned** as you play: a small camp missing from the list becomes safe as soon as you find an innkeeper, a flight master, a mailbox or a bank there, or both a merchant and a quest giver. You can also add one yourself with `/r2q safe`.
 
-The window always shows **where you left from** ("Left Goldshire · mailbox"). If a place was learned by mistake, you can remove it in the settings, **Safe areas** page.
+The window always shows **where you left from** ("Left Goldshire · mailbox"). If a place was learned by mistake, you can remove it in the settings, **Departure check › When & where**.
 
 ---
 
@@ -102,7 +102,7 @@ When you reach a dungeon entrance, or go inside, a **"!"** announces the sheet f
 - the quests for this dungeon that you have in your log;
 - a short preparation check: durability, repairs, food & drink, potions, hearthstone.
 
-**Group ready**: in a group, the sheet gets a **Group** section: who is inside, at the entrance or on the way, and who is ready (durability, repairs, food, potions, hearthstone), for the members who also run Ready2Quest. It all goes through hidden addon messages: nothing in group chat, nothing sent in combat. A member without the addon is still listed, without a status. `/r2q groupe` gives the same summary in chat. Setting on the **Before the dungeon** page (on).
+**Group ready**: in a group, the sheet gets a **Group** section: who is inside, at the entrance or on the way, and who is ready (durability, repairs, food, potions, hearthstone), for the members who also run Ready2Quest. It all goes through hidden addon messages: nothing in group chat, nothing sent in combat. A member without the addon is still listed, without a status. `/r2q groupe` gives the same summary in chat. **Group ready** switch in **Travel › Dungeon & group** (on).
 
 It covers the 19 classic dungeons and the 9 new Forever dungeons: City of Dalaran, Ruins of Lordaeron, Hall of Thanes, Excavation Site, Krol'dok… On Forever, it will also list the profession recipes that drop in the dungeon, once that data is known.
 
@@ -121,7 +121,7 @@ Camping on Forever makes the camp a real place to get ready. Ready2Quest helps y
 
 ## Aggro range
 
-By default (**Danger only**, since 1.31.0) the **red** mark shows on its own, without any key, as soon as a monster is about to aggro you (from 5 yards before its estimated range); enemy nameplates must be on (V). Hold **Shift** to see everything (or pick Shift, Ctrl, Alt or "always" in the settings) out of combat: each hostile monster's nameplate gets a **mark** — by default a small diamond left of the bar (or a line under it: **Mark** setting) — red if you're inside its estimated aggro radius, amber if you're close to it, green if you're safe — and hovering it adds a tooltip line such as "Aggro ~17 yd · you are 20-25 yd away · out of range". The radius is an estimate (20 yd at equal level, ±1 yd per level of difference, 5 to 45 yd); the distance is a range band measured by the game. Addons can't draw on the ground, hence the mark on the nameplate. Settings: **Quality of life → Aggro range**.
+By default (**Danger only**, since 1.31.0) the **red** mark shows on its own, without any key, as soon as a monster is about to aggro you (from 5 yards before its estimated range); enemy nameplates must be on (V). Hold **Shift** to see everything (or pick Shift, Ctrl, Alt or "always" in the settings) out of combat: each hostile monster's nameplate gets a **mark** — by default a small diamond left of the bar (or a line under it: **Mark** setting) — red if you're inside its estimated aggro radius, amber if you're close to it, green if you're safe — and hovering it adds a tooltip line such as "Aggro ~17 yd · you are 20-25 yd away · out of range". The radius is an estimate (20 yd at equal level, ±1 yd per level of difference, 5 to 45 yd); the distance is a range band measured by the game. Addons can't draw on the ground, hence the mark on the nameplate. Settings: **Combat › Ranges**.
 
 ## Combat helpers
 
@@ -184,12 +184,12 @@ A spell on your action bars has a higher rank in your spellbook (Holy Light rank
 - Checked at login, after you learn a spell, and when a bar changes; never in combat.
 - The Ready2Quest icon shows up (click: the list), with a line in chat, and the departure check gets a line too.
 - The list (`/r2q sorts`): each spell, its rank and the best one you know, its bar and slot. **[Update]** puts the best rank in the same slot, **[Update all]** does them all, out of combat.
-- **[Ignore]** ignores that **slot** for that spell: a rank 1 kept on purpose (a cheap heal) doesn't stop you from being told about the other slots. Settings, **Spell ranks** page, forget the ignored slots.
+- **[Ignore]** ignores that **slot** for that spell: a rank 1 kept on purpose (a cheap heal) doesn't stop you from being told about the other slots. Settings, **Quests & spells › Spells**, forget the ignored slots.
 - **New spells**: the same window lists, under "New spells", the active spells you learned at your trainer that are on none of your bars. **[Place]** puts one in the first empty slot (bar 1, then your other visible bars); with no room left, it lands on your cursor so you can drop it where you like. **[Ignore]** stops offering it (the list of ignored spells is on the Spell ranks page). No passives, professions or mounts, and only spells learned from 1.35 on count.
 
 ### Learn all
 
-At a class or profession trainer, a **Learn all** button next to the game's own shows the total cost; one click learns everything available, one spell after another. Not enough gold for everything? The button is greyed out and its tooltip says how much you're missing. Nothing is ever learned without your click. Setting on the **Spell ranks** page (on).
+At a class or profession trainer, a **Learn all** button next to the game's own shows the total cost; one click learns everything available, one spell after another. Not enough gold for everything? The button is greyed out and its tooltip says how much you're missing. Nothing is ever learned without your click. **Learn all** switch in **Quests & spells › Spells** (on).
 
 ### After death
 
@@ -212,11 +212,18 @@ Both are on by default and can be turned off in the settings. They work even if 
 
 ## Settings
 
-`/r2q options`, or right-click the minimap button.
+`/r2q options`, or right-click the minimap button. The first time after logging in, it opens on the overview; after that, where you left it.
 
-- **General**: turn the addon on, and everything about display (minimap button, window or chat, reports announced by an icon, the score below which a report is announced, placement of the frames and the icon), and the **Interface style**: Azeroth, the forged theme (gilded frame, logo medallion, raised buttons; the default), or Plain, the earlier flat look (`/r2q style azeroth|sobre`; windows already open change at the next `/reload`).
-- **Modules**: each module has its own switch right in the list on the left, and its own page explaining what it does. The Departure check has sub-pages: Trigger, Safe areas, Bags & food, Gear & character, Buffs & crafting.
-- **QoL**: Quality of life, with its sub-pages Merchant, The right reward, Leveling pace, Full bags and After death. A module's sub-pages only show when it's expanded.
+Six families in the left column, their tabs at the top:
+
+- **Home**: the **Overview** (every feature with its switch; click a name to set it up) and **General** (minimap button, reports announced by an icon, **Interface style**: Azeroth, the forged theme, or Plain, the flat look, `/r2q style azeroth|sobre`; frame placement; Quest Companion; reset, with a confirmation). "Addon on" is in the header.
+- **Departure check**: Bags & food, Gear & character, Buffs & crafting (what the check looks at, then thresholds), When & where (delays, window or chat, score below which the window opens, safe areas). "Check on" is in the header.
+- **Bags & loot**: Merchant & favorites, Full bags & loot (Full bags, Room for loot, Fast loot).
+- **Travel**: Return & death, Camp kit, Dungeon & group (Before the dungeon, Group ready).
+- **Quests & spells**: Quests & XP (The right reward, Leveling pace), Spells (Spell ranks, Learn all).
+- **Combat**: Ranges (aggro range, spell range), Lethal DoTs, Prediction, Bar numbers.
+
+Each feature has its switch in its head (name, one-line summary); while off, its settings are dimmed. The gear button of a window opens the settings on its feature; so does `/r2q options <word>` (`/r2q options loot`, `/r2q options combat`). Search finds settings, features, tabs and old page names.
 
 ## Commands
 
@@ -226,6 +233,7 @@ Both are on by default and can be turned off in the settings. They work even if 
 |---|---|
 | `/r2q` | runs the check now |
 | `/r2q options` | opens the settings |
+| `/r2q options <word>` | opens the settings on that place (`loot`, `combat`, `safe`…) |
 | `/r2q move` | place the frames with the mouse |
 | `/r2q safe` · `unsafe` | adds or removes the current village |
 | `/r2q safe list` | lists learned places |
@@ -268,13 +276,13 @@ If your score is 85 or more, that's expected: it's a line in chat. Below that, i
 Type `/r2q safe` in the village, or let the addon learn it: an innkeeper, a mailbox or a flight master is enough.
 
 **A place is wrongly treated as safe.**
-Settings, **Safe areas** page, **Remove** button. Or `/r2q unsafe` on the spot.
+Settings, **Departure check › When & where**, **Remove** button. Or `/r2q unsafe` on the spot.
 
 **I'm asked for a buff I don't want anymore.**
-Settings, **Buffs & crafting** page: click the buff to turn it off, or **Remove**.
+Settings, **Departure check › Buffs & crafting**: click the buff to turn it off, or **Remove**.
 
 **I don't want the addon to sell my greys.**
-Settings, **QoL** › **Merchant** › "Sell gray items".
+Settings, **Bags & loot › Merchant & favorites** › "Sell gray items".
 
 ---
 
@@ -336,7 +344,7 @@ Tout seul, **au moment où tu quittes une zone sûre** : ville, village, hub ou 
 
 - **Note de 85 ou plus** : une simple ligne dans le chat, du genre « Sac bouclé, 92/100. Parti de Long-guet. »
 - **Note plus basse** : une ligne dans le chat, et un **« ! »** (l'icône des quêtes à prendre) qui pulse quelques secondes en haut de l'écran, dans la couleur de ta note : rouge sous 25, orange de 25 à 59, ambre de 60 à 84. Clique dessus : la fenêtre **Avant le départ** s'ouvre, avec la note, le verdict (*Prêt*, *Prêt avec réserves*, *Pas prêt*) et les conseils pour y remédier. Clic droit : tu l'ignores. Rien ne s'ouvre tout seul pendant que tu pars, et pas d'icône en plein combat : elle attend la fin.
-- L'icône reste visible, atténuée, une minute après sa pulsation, puis s'en va. Tu préfères l'ancienne fenêtre automatique ? Réglages, **Général**, décoche « Rapports annoncés par une icône ».
+- L'icône reste visible, atténuée, une minute après sa pulsation, puis s'en va. Tu préfères l'ancienne fenêtre automatique ? Réglages, **Accueil › Général**, décoche « Rapports annoncés par une icône ».
 
 Tu peux aussi le lancer quand tu veux : `/r2q`, ou un clic gauche sur le bouton de la minicarte. Dans la fenêtre, la petite flèche du bandeau relance le check, et **Partir à l'aventure** la referme. Les réglages, eux, sont au clic droit sur le bouton de la minicarte.
 
@@ -373,7 +381,7 @@ Une zone sûre est un endroit où l'on peut **se préparer sans risque** : mange
 - **Les camps de Forever** : près d'un feu de camp, tu es au campement. Quand tu t'en éloignes, le check part, comme en quittant un village.
 - **Le reste s'apprend** en jouant : un petit camp absent de la liste devient sûr dès que tu y trouves un aubergiste, un maître de vol, une boîte aux lettres ou une banque, ou à la fois un marchand et un donneur de quêtes. Tu peux aussi en ajouter un toi-même avec `/r2q safe`.
 
-La fenêtre indique toujours **d'où tu es parti** (« Parti de Comté-de-l'Or · boîte aux lettres »). Si un endroit a été appris à tort, tu le retires dans les réglages, page **Zones sûres**.
+La fenêtre indique toujours **d'où tu es parti** (« Parti de Comté-de-l'Or · boîte aux lettres »). Si un endroit a été appris à tort, tu le retires dans les réglages, **Check avant le départ › Quand & où**.
 
 ---
 
@@ -398,7 +406,7 @@ En arrivant à l'entrée d'un donjon, ou en y entrant, un **« ! »** annonce la
 - les quêtes de ce donjon que tu as dans ton journal ;
 - une préparation courte : durabilité, réparation, vivres, potions, pierre de foyer.
 
-**Groupe prêt** : en groupe, la fiche gagne une section **Groupe** : qui est dans le donjon, à l'entrée ou en route, et qui est prêt (durabilité, réparation, vivres, potions, foyer), pour les membres qui ont aussi Ready2Quest. Tout passe par des messages d'addon invisibles : rien dans le chat du groupe, rien d'envoyé en combat. Un membre sans l'addon reste listé, sans état. `/r2q groupe` donne le même bilan dans le chat. Réglage page **Avant le donjon** (actif).
+**Groupe prêt** : en groupe, la fiche gagne une section **Groupe** : qui est dans le donjon, à l'entrée ou en route, et qui est prêt (durabilité, réparation, vivres, potions, foyer), pour les membres qui ont aussi Ready2Quest. Tout passe par des messages d'addon invisibles : rien dans le chat du groupe, rien d'envoyé en combat. Un membre sans l'addon reste listé, sans état. `/r2q groupe` donne le même bilan dans le chat. Interrupteur **Groupe prêt** dans **Voyage › Donjon & groupe** (actif).
 
 Elle couvre les 19 donjons classiques et les 9 nouveaux donjons de Forever : City of Dalaran, Ruins of Lordaeron, Hall of Thanes, Excavation Site, Krol'dok… Sur Forever, elle listera aussi les plans de métier qui tombent dans le donjon, dès que ces données seront connues.
 
@@ -417,7 +425,7 @@ Le camping de Forever en fait un vrai lieu de préparation. Ready2Quest t'aide �
 
 ## Portée d'aggro
 
-Par défaut (**Danger seul**, depuis la 1.31.0), la marque **rouge** s'affiche seule, sans toucher au clavier, dès qu'un monstre est sur le point de t'aggro (5 m avant sa portée estimée) ; les barres de nom ennemies doivent être affichées (touche V). Maintiens **Maj** pour tout voir (ou choisis Maj, Ctrl, Alt ou « toujours » dans les réglages) hors combat : la barre de nom de chaque monstre hostile reçoit une **marque** — par défaut un petit losange à gauche de la barre (ou un trait dessous : réglage **Marque**) — rouge si tu es dans son rayon d'aggro estimé, ambre si tu en es proche, vert si tu es tranquille — et son survol ajoute une ligne à l'infobulle, par exemple « Aggro ~17 m · tu es à 20-25 m · hors de portée ». Le rayon est une estimation (20 m à niveau égal, ±1 m par niveau d'écart, de 5 à 45 m) ; la distance est une tranche de portée mesurée par le jeu. Les addons ne peuvent pas dessiner au sol, d'où la marque sur la barre de nom. Réglages : **Confort de jeu → Portée d'aggro**.
+Par défaut (**Danger seul**, depuis la 1.31.0), la marque **rouge** s'affiche seule, sans toucher au clavier, dès qu'un monstre est sur le point de t'aggro (5 m avant sa portée estimée) ; les barres de nom ennemies doivent être affichées (touche V). Maintiens **Maj** pour tout voir (ou choisis Maj, Ctrl, Alt ou « toujours » dans les réglages) hors combat : la barre de nom de chaque monstre hostile reçoit une **marque** — par défaut un petit losange à gauche de la barre (ou un trait dessous : réglage **Marque**) — rouge si tu es dans son rayon d'aggro estimé, ambre si tu en es proche, vert si tu es tranquille — et son survol ajoute une ligne à l'infobulle, par exemple « Aggro ~17 m · tu es à 20-25 m · hors de portée ». Le rayon est une estimation (20 m à niveau égal, ±1 m par niveau d'écart, de 5 à 45 m) ; la distance est une tranche de portée mesurée par le jeu. Les addons ne peuvent pas dessiner au sol, d'où la marque sur la barre de nom. Réglages : **Combat › Portées**.
 
 ## Aide au combat
 
@@ -480,12 +488,12 @@ Un sort de tes barres d'action a un meilleur rang dans ton livre de sorts (Lumi�
 - Contrôlé à la connexion, après un sort appris et quand une barre change ; jamais en combat.
 - L'icône de Ready2Quest apparaît (clic : la liste), avec une ligne dans le chat, et le check avant le départ a sa ligne.
 - La liste (`/r2q sorts`) : chaque sort, son rang et le meilleur que tu connais, sa barre et sa case. **[Mettre à jour]** pose le meilleur rang dans la même case, **[Tout mettre à jour]** fait tout, hors combat.
-- **[Ignorer]** ignore cette **case** pour ce sort : un rang 1 gardé exprès (soin bon marché) ne t'empêche pas d'être prévenu pour les autres cases. Réglages, page **Rangs de sorts**, pour oublier les cases ignorées.
+- **[Ignorer]** ignore cette **case** pour ce sort : un rang 1 gardé exprès (soin bon marché) ne t'empêche pas d'être prévenu pour les autres cases. Réglages, **Quêtes & sorts › Sorts**, pour oublier les cases ignorées.
 - **Nouveaux sorts** : la même fenêtre liste, sous « Nouveaux sorts », les sorts actifs appris chez ton maître qui ne sont sur aucune de tes barres. **[Placer]** en pose un dans la première case vide (barre 1, puis tes autres barres affichées) ; s'il n'y a plus de place, il arrive sur ton curseur pour que tu le poses où tu veux. **[Ignorer]** ne le propose plus (la liste des sorts ignorés est dans la page Rangs de sorts). Pas de passifs, de métiers ni de montures, et seuls les sorts appris depuis la 1.35 comptent.
 
 ### Tout apprendre
 
-Chez un maître de classe ou de métier, un bouton **Tout apprendre** à côté de celui du jeu affiche le total à payer ; un clic apprend tout ce qui est disponible, un sort après l'autre. Pas assez d'or pour tout ? Le bouton est grisé et son infobulle dit combien il te manque. Rien n'est jamais appris sans ton clic. Réglage page **Rangs de sorts** (actif).
+Chez un maître de classe ou de métier, un bouton **Tout apprendre** à côté de celui du jeu affiche le total à payer ; un clic apprend tout ce qui est disponible, un sort après l'autre. Pas assez d'or pour tout ? Le bouton est grisé et son infobulle dit combien il te manque. Rien n'est jamais appris sans ton clic. Interrupteur **Tout apprendre** dans **Quêtes & sorts › Sorts** (actif).
 
 ### Après la mort
 
@@ -508,11 +516,18 @@ Les deux sont actifs par défaut et se coupent dans les réglages. Ils fonctionn
 
 ## Réglages
 
-`/r2q options`, ou un clic droit sur le bouton de la minicarte.
+`/r2q options`, ou un clic droit sur le bouton de la minicarte. La première ouverture après une connexion montre la vue d'ensemble ; ensuite, la fenêtre se rouvre là où tu l'as laissée.
 
-- **Général** : activer l'addon, et tout ce qui touche à l'affichage (bouton de minicarte, fenêtre ou chat, rapports annoncés par une icône, note sous laquelle un rapport s'annonce, placement des cadres et de l'icône), et le **Style de l'interface** : Azeroth, le thème forgé (cadre d'orfèvre doré, médaillon du logo, boutons en relief ; par défaut), ou Sobre, l'aspect d'avant, à plat (`/r2q style azeroth|sobre` ; une fenêtre déjà ouverte change au `/reload` suivant).
-- **Modules** : chaque module a son interrupteur directement dans la liste de gauche, et sa page qui explique ce qu'il fait. Le Check avant le départ a ses sous-pages : Déclenchement, Zones sûres, Sacs & vivres, Équipement & perso, Buffs & métier.
-- **QoL** : Confort de jeu, avec ses sous-pages Marchand, La bonne récompense, Rythme de leveling, Sac plein et Après la mort. Les sous-pages d'un module ne s'affichent que quand il est ouvert.
+Six familles dans la colonne de gauche, leurs onglets en haut :
+
+- **Accueil** : la **Vue d'ensemble** (chaque fonction avec son interrupteur, un clic sur son nom ouvre ses réglages) et **Général** (bouton de minicarte, rapports annoncés par une icône, **Style de l'interface** : Azeroth, le thème forgé, ou Sobre, à plat, `/r2q style azeroth|sobre` ; placement des cadres ; Quest Companion ; remise à zéro, avec confirmation). « Addon actif » est dans l'en-tête.
+- **Check avant le départ** : Sacs & vivres, Équipement & perso, Buffs & métier (ce que le check vérifie, puis les seuils), Quand & où (délais, fenêtre ou chat, note sous laquelle la fenêtre s'ouvre, zones sûres). « Check actif » est dans l'en-tête.
+- **Sacs & butin** : Marchand & favoris, Sac plein & butin (Sac plein, Place au butin, Butin rapide).
+- **Voyage** : Retour & mort, Kit de camp, Donjon & groupe (Avant le donjon, Groupe prêt).
+- **Quêtes & sorts** : Quêtes & XP (La bonne récompense, Rythme de leveling), Sorts (Rangs de sorts, Tout apprendre).
+- **Combat** : Portées (portée d'aggro, portée des sorts), DoT mortels, Prédiction, Chiffres des barres.
+
+Chaque fonction a son interrupteur dans sa tête (son nom, sa phrase) ; coupée, ses réglages s'estompent. La roue crantée d'une fenêtre ouvre les réglages sur sa fonction ; `/r2q options <mot>` aussi (`/r2q options butin`, `/r2q options combat`). La recherche trouve les réglages, les fonctions, les onglets et les anciens noms de pages.
 
 ## Commandes
 
@@ -522,6 +537,7 @@ Les deux sont actifs par défaut et se coupent dans les réglages. Ils fonctionn
 |---|---|
 | `/r2q` | lance le check maintenant |
 | `/r2q options` | ouvre les réglages |
+| `/r2q options <mot>` | ouvre les réglages sur ce lieu (`butin`, `combat`, `zones`…) |
 | `/r2q move` | place les cadres à la souris |
 | `/r2q safe` · `unsafe` | ajoute ou retire le village actuel |
 | `/r2q safe list` | liste les lieux appris |
@@ -564,13 +580,13 @@ Si ta note est de 85 ou plus, c'est normal : c'est une ligne dans le chat. En de
 Tape `/r2q safe` dans le village, ou laisse l'addon l'apprendre : un aubergiste, une boîte aux lettres ou un maître de vol suffisent.
 
 **Un endroit est considéré comme sûr à tort.**
-Réglages, page **Zones sûres**, bouton **Retirer**. Ou `/r2q unsafe` sur place.
+Réglages, **Check avant le départ › Quand & où**, bouton **Retirer**. Ou `/r2q unsafe` sur place.
 
 **Un buff m'est réclamé alors que je ne le veux plus.**
-Réglages, page **Buffs & métier** : clic sur le buff pour le couper, ou **Retirer**.
+Réglages, **Check avant le départ › Buffs & métier** : clic sur le buff pour le couper, ou **Retirer**.
 
 **Je ne veux pas que l'addon vende mes gris.**
-Réglages, **QoL** › **Marchand** › « Vendre les gris ».
+Réglages, **Sacs & butin › Marchand & favoris** › « Vendre les gris ».
 
 ---
 

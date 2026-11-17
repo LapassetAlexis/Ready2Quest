@@ -170,6 +170,8 @@ ns.RegisterStrings({
 	OPT_BTN_REPLAY      = "Rejouer",
 	OPT_VERSION_LINE    = "v%s  ·  %s",
 	OPT_NAV_POWER_TIP   = "Active ou coupe tous les modules de cette page.",
+	OPT_FUNCTION_POWER_TIP = "Active ou coupe cette fonction. Coupée, ses réglages restent modifiables.",
+	OPT_SEARCH_PLACES   = "Lieux",
 	-- socle 2.11.0 : page d'un module coupé
 	OPT_PAGE_OFF        = "Module coupé : ces réglages s'appliqueront quand tu le rallumeras.",
 	OPT_PAGE_OFF_ON     = "Rallumer",
@@ -260,6 +262,8 @@ ns.RegisterStrings({
 	OPT_BTN_REPLAY      = "Replay",
 	OPT_VERSION_LINE    = "v%s  ·  %s",
 	OPT_NAV_POWER_TIP   = "Turns every module of this page on or off.",
+	OPT_FUNCTION_POWER_TIP = "Turns this feature on or off. While off, its settings can still be changed.",
+	OPT_SEARCH_PLACES   = "Places",
 	OPT_PAGE_OFF        = "Module off: these settings will apply once you turn it back on.",
 	OPT_PAGE_OFF_ON     = "Turn on",
 	DIAG_SOCLE          = "Shared core: %s (%s)",

@@ -577,8 +577,9 @@ function ns:EnsureSpellRanks()
 	if self.spellRanksFrame then return self.spellRanksFrame end
 	if not (Theme and Theme.CreateDialog) then return nil end
 	local frame = Theme.CreateDialog(UIParent, WIDTH, SpellRanksHeight(ns.SPELLRANKS_ROWS), { name = "Ready2QuestSpellRanks",
-		title = L.SR_TITLE, subtitle = L.SR_SUB })
+		title = L.SR_TITLE, subtitle = L.SR_SUB, headerIcon = true })
 	if not frame then return nil end
+	if self.AddSettingsGear then self:AddSettingsGear(frame, "spellranks") end
 	frame:SetPoint("CENTER", UIParent, "CENTER", 0, 40)
 	local pad, inner = frame.pad + 1, frame.innerWidth
 	local top = frame.contentTop - GAP

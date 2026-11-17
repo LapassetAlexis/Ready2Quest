@@ -1,5 +1,18 @@
 # Journal des modifications
 
+## 1.39.0 — Un nouveau menu des réglages
+
+- **Six familles fixes** dans la colonne de gauche, chacune avec son icône et une ligne qui dit ce qu'elle contient : **Accueil**, **Check avant le départ**, **Sacs & butin**, **Voyage**, **Quêtes & sorts**, **Combat**. La colonne ne défile plus ; « Modules » et « Confort de jeu » disparaissent comme catégories. Les pages d'une famille deviennent ses onglets, en haut.
+- **Un interrupteur par fonction**, dans la tête de sa section (son nom, sa phrase, l'interrupteur). La ligne « Activer » en double disparaît. Une fonction coupée garde ses réglages, estompés. **Butin rapide**, **Groupe prêt** et **Tout apprendre** deviennent des fonctions visibles (mêmes réglages qu'avant, seule leur place change).
+- **Accueil › Vue d'ensemble** : toutes les fonctions sur un écran, chacune avec son interrupteur ; un clic sur un nom ouvre ses réglages. « Addon actif » est dans l'en-tête de l'Accueil, « Check actif » dans celui du check.
+- **Des réglages à leur place** : « Fenêtre (sinon chat) » et « Fenêtre sous la note » passent dans Check › Quand & où (avec les délais et les zones sûres) ; les contrôles « Rangs de sorts » et « Métiers » rejoignent le check ; les favoris passent dans Sacs & butin › Marchand & favoris.
+- **« Réinitialiser »** quitte le pied de fenêtre (il effaçait tout sans prévenir) : Accueil › Général › Remise à zéro, avec une confirmation.
+- **La roue crantée** du check, du bilan d'expédition, de la fiche de donjon, du conseil après la mort, des rangs de sorts, de Place au butin et de l'alerte Sac plein ouvre les réglages sur sa fonction, qui s'éclaire. Aussi en commande : `/r2q options butin`, `/r2q options combat`, `/r2q options zones`…
+- **La recherche** trouve aussi les fonctions, les onglets et les anciens noms de pages (« Confort de jeu », « Déclenchement »), avec leur chemin.
+- À la première ouverture après une connexion : la vue d'ensemble ; ensuite, la fenêtre se rouvre là où tu l'as laissée.
+
+*English:* a new settings menu. Six fixed families in the left column, each with its icon and a one-line summary: Home, Departure check, Bags & loot, Travel, Quests & spells, Combat; their pages become tabs. One switch per feature, in the head of its section (no more duplicated "Enable" line); a feature turned off keeps its settings, dimmed. Fast loot, Group ready and Learn all become visible features. Home › Overview shows every feature with its switch on one screen; click a name to set it up. Check display settings move to Check › When & where, the spell rank and profession checks join the check, favorites move to Merchant & favorites. Reset leaves the footer for Home › General, with a confirmation. The gear button of the game windows opens the settings on their feature; `/r2q options <word>` too. Search also finds features, tabs and old page names.
+
 ## 1.38.0 — Aide au combat
 
 - **Une section Combat** dans les réglages : la portée d'aggro y passe, avec quatre aides, chacune avec son interrupteur (effet au prochain /reload) :
