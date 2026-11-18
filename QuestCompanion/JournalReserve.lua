@@ -48,6 +48,19 @@ ns.PAILLETTES_SHOP = {
 		icon = "Interface\\Icons\\INV_Misc_Gem_Diamond_02" },
 	{ id = "bg_starfall",   kind = "cosmetic", cos = "bg",    cosId = "shop_starfall", price = 60,
 		icon = "Interface\\Icons\\INV_Enchant_PrismaticSphere" },
+	-- 3.4.0 : l'arrivage de la semaine (deux à la fois, ns:ShopArrivals)
+	{ id = "frame_ember",   kind = "cosmetic", cos = "frame", cosId = "shop_ember",   price = 80,  arrival = true,
+		icon = "Interface\\Icons\\Spell_Fire_Fire" },
+	{ id = "frame_frost",   kind = "cosmetic", cos = "frame", cosId = "shop_frost",   price = 100, arrival = true,
+		icon = "Interface\\Icons\\Spell_Frost_FrostNova" },
+	{ id = "frame_verdant", kind = "cosmetic", cos = "frame", cosId = "shop_verdant", price = 120, arrival = true,
+		icon = "Interface\\Icons\\Spell_Nature_Regeneration" },
+	{ id = "bg_dusk",       kind = "cosmetic", cos = "bg",    cosId = "shop_dusk",    price = 60,  arrival = true,
+		icon = "Interface\\Icons\\Spell_Shadow_Twilight" },
+	{ id = "bg_tide",       kind = "cosmetic", cos = "bg",    cosId = "shop_tide",    price = 80,  arrival = true,
+		icon = "Interface\\Icons\\Spell_Frost_SummonWaterElemental" },
+	{ id = "bg_grove",      kind = "cosmetic", cos = "bg",    cosId = "shop_grove",   price = 100, arrival = true,
+		icon = "Interface\\Icons\\Spell_Nature_ProtectionformNature" },
 }
 -- paillettes d'un palier de zone (25, 50, 75 %) ; celles des missions sont
 -- dans ns.MISSION_REWARDS (Daily.lua)

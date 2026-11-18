@@ -113,5 +113,7 @@ CaptureAidBar.lua
 CaptureNetMove.lua
 OptionsCompanionSplit.lua
 SpecimenBond.lua
+SpecimenStudy.lua
+ShopWeek.lua
 NamesES.lua
 Locales_es.lua

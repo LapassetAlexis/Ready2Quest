@@ -3442,6 +3442,9 @@ do
 	-- 3.0.0 : visites guidées (GuidedTour.lua) : pas de départ automatique
 	-- (leurs bulles couvriraient les scénarios ; guide_tours.lua les allume)
 	if QNS then QNS.TOUR_AUTO = false end
+	-- 3.4.0 : étude d'espèce endormie (elle paie des paillettes à chaque
+	-- capture et fausserait les soldes) ; reserve_34.lua la réveille
+	if QNS then QNS.studyDormant = true end
 	-- conseils du compagnon : pas d'examen automatique au premier pas de
 	-- l'horloge (companion_advice.lua remet l'échéance à zéro lui-même) ;
 	-- avant le lanceur parallèle, l'échéance laissée par les modules

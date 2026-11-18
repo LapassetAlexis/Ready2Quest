@@ -176,3 +176,68 @@ do
 	local old = NS:TradeDecodeSpec(text:gsub(";?x=%d+", ""))
 	Check("[R34] client 3.3 (sans x) : pas d'indice, le milieu du cran à l'arrivée", old and old.zi == nil)
 end
+
+-- 6. Étude d'espèce : pas de paiement rétroactif, captures seulement --------------
+do
+	Say("-- 3.4 : étude d'espèce")
+	local capture = Fresh()
+	capture.studyV = nil
+	Add(970, 3, { trait = "zen", size = "tiny" })               -- avant la mise à jour (étude endormie)
+	NS.studyDormant = false                                     -- la rétro passe à la première lecture
+	local before = NS:Paillettes()
+	local study = NS:SpecimenStudy(970)
+	Check("[R34] rétro : capturée et trois étoiles cochées, rien payé", study.done.caught and study.done.stars3
+		and NS:Paillettes() == before)
+	for i, size in ipairs({ "small", "giant", "normal", "large" }) do
+		Add(970, 1, { trait = i % 2 == 0 and "lazy" or "curious", size = size })
+	end
+	study = NS:SpecimenStudy(970)
+	Check("[R34] étude : 5 captures, 3 tailles, 3 caractères : maîtrisée, payée après la mise à jour (3 × 2 + 5)",
+		study.mastered and study.n == 5 and NS:Paillettes() == before + 3 * 2 + 5 and NS:SpecimenStudyMastered() == 1,
+		NS:Paillettes() - before)
+	Check("[R34] records : plus petit et plus grand indice de tes captures", study.lo and study.hi and study.lo <= 81 and study.hi >= 119)
+	local paid = NS:Paillettes()
+	Add(970, 1, { origin = "trade", trait = "daring", size = "giant" })
+	Check("[R34] un spécimen reçu ne compte pas", NS:SpecimenStudy(970).n == 5 and NS:Paillettes() == paid)
+	NS.studyDormant = true
+end
+
+-- 7. Échoppe : stock du jour, prix des places, plafond, surnom, commandes ------------
+do
+	Say("-- 3.4 : échoppe")
+	local capture = Fresh()
+	capture.paillettes, capture.slotBuys, capture.reserveBonus, capture.shopDay = 2000, nil, 20, nil
+	Check("[R34] migration : 20 places achetées = 2 achats ; prochain : 40 + 20 × 2", NS:ShopSlotBuys() == 2 and NS:ShopSlotPrice() == 80)
+	NS:CaptureData().items = {}
+	local bought = 0
+	for _ = 1, 3 do if NS:ShopBuy("lasso") then bought = bought + 1 end end
+	Check("[R34] stock du jour : 2 lassos, le troisième refusé (« stock »)", bought == 2 and NS:ShopState("lasso") == "stock")
+	capture.shopDay.day = "hier"
+	Check("[R34] un nouveau jour : le stock revient", NS:ShopState("lasso") == "ok")
+	local before = NS:Paillettes()
+	NS:ShopBuy("slots")
+	Check("[R34] places : +10 pour 80, puis 100", NS:ReserveCapacity() == NS.CAPTURE_RESERVE_BASE + 30
+		and NS:Paillettes() == before - 80 and NS:ShopSlotPrice() == 100)
+	capture.reserveBonus = 100
+	Check("[R34] 150 places au plus : « max »", NS:ShopState("slots") == "max")
+	local arrivals = NS:ShopArrivals()
+	Check("[R34] arrivage : 2 cosmétiques de la semaine, les autres « absents »", #arrivals == 2
+		and NS:ShopState(arrivals[1]) ~= "away" and (function()
+			for _, item in ipairs(NS.PAILLETTES_SHOP) do
+				if item.arrival and item ~= arrivals[1] and item ~= arrivals[2] and NS:ShopState(item) ~= "away" then return false end
+			end
+			return true
+		end)())
+	Add(980, 1, { trait = "zen", size = "large", zone = 1413 })
+	local spec = Add(980, 1, { trait = "zen", size = "large", zone = 1413 })
+	local nickOk = NS:ShopNickBuy(spec, "Gros Lard")
+	Check("[R34] surnom : 15 paillettes", nickOk and NS:SpecimenNick(spec) == "Gros Lard")
+	local orders = NS:ShopOrders()
+	Check("[R34] commandes : 3 par semaine, une récompense de 12 à 16", #orders.list == 3 and orders.list[1].reward >= 12
+		and orders.list[1].reward <= 16)
+	orders.list[3] = { kind = "zone", zone = 1413, reward = 14 }
+	local paid = NS:Paillettes()
+	local ok = NS:ShopOrderDeliver(3, spec)
+	Check("[R34] livrer : le spécimen part, la récompense arrive", ok and NS:SpecimenGet(spec) == nil and NS:Paillettes() == paid + 14)
+	Check("[R34] livrer un spécimen qui ne correspond pas : refusé", select(2, NS:ShopOrderDeliver(1, Add(981, 1))) ~= nil)
+end

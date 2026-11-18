@@ -492,7 +492,7 @@ do
 	-- QC 2.0 : plus un cadre et un fond par biome (sceaux) et ceux des titres (MenagerieCollection.lua)
 	-- QC 2.7 : plus 2 cadres et 2 fonds des hauts faits (FeatsCosmetics.lua)
 	-- QC 2.15 : plus un cadre et un fond de l'Échoppe du dresseur (FeatsCosmetics.lua)
-	S.ok("28 cadres, 36 fonds", #NS.COMPANION_FRAMES == 28 and #NS.COMPANION_BACKGROUNDS == 36, #NS.COMPANION_FRAMES .. "/" .. #NS.COMPANION_BACKGROUNDS)
+	S.ok("31 cadres, 39 fonds (3.4.0 : 3 + 3 de l'arrivage)", #NS.COMPANION_FRAMES == 31 and #NS.COMPANION_BACKGROUNDS == 39, #NS.COMPANION_FRAMES .. "/" .. #NS.COMPANION_BACKGROUNDS)
 	local displays, okDisplay = {}, true
 	for _, def in ipairs(NS.COMPANION_APPEARANCES) do
 		if type(def.display) ~= "number" or def.display <= 0 or displays[def.display] then okDisplay = false end
