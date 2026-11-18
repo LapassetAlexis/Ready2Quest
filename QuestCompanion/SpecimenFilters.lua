@@ -503,7 +503,7 @@ local function Primary(self, ctx, sort, spec)
 		return BondOf(self, spec) * 1000 + (self.SpecimenBondPoints and self:SpecimenBondPoints(spec) or 0)
 	end
 	if sort == "dups" then return ctx.per[tostring(spec.npc) .. (spec.shiny and ":s" or "")] or 0 end
-	if sort == "value" then return self:SpecimenReleaseValue(spec) end
+	if sort == "value" then return self:SpecimenReleaseBase(spec) end
 	return 0
 end
 

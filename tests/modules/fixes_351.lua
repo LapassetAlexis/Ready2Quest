@@ -61,8 +61,9 @@ do
 	local rare = false
 	for _, order in ipairs(orders.list) do if order.kind == "traitStars" and NS.SPECIMEN_TRAIT_RARE[order.trait] then rare = true end end
 	Check("[F351] commande de caractère : jamais un caractère rare (Zen, Espiègle)", not rare)
-	Check("[F351] relance : une fois, tant qu'aucune n'est livrée", NS:ShopOrdersCanReroll() == true and NS:ShopOrdersReroll() == true
-		and NS:ShopOrdersCanReroll() == false and select(2, NS:ShopOrdersCanReroll()) == "used")
+	-- 3.6.0 : la suivante coûte 10 paillettes (solde à 0 ici : « short »)
+	Check("[F351] relance : une gratuite, tant qu'aucune n'est livrée", NS:ShopOrdersCanReroll() == true and NS:ShopOrdersReroll() == true
+		and NS:ShopOrdersCanReroll() == false and select(2, NS:ShopOrdersCanReroll()) == "short")
 	-- les trois livrées, les deux arrivages déjà à toi : 30 paillettes
 	capture.shopOwned = {}
 	for _, item in ipairs(NS:ShopArrivals()) do capture.shopOwned[item.cosId] = true end

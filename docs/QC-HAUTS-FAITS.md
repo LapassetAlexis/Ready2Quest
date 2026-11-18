@@ -192,7 +192,7 @@ Un déblocage n'est jamais repris (règle du compagnon).
 
 Les titres sont une récompense de premier rang.
 
-- **Catalogue** : 40 titres (§4.1), chacun avec un **code stable** (1 à 255), un modèle FR masculin, un modèle FR féminin (absent = épicène) et un modèle EN (genré seulement si l'anglais l'exige : « Lord / Lady »).
+- **Catalogue** : 43 titres (§4.1), chacun avec un **code stable** (1 à 255), un modèle FR masculin, un modèle FR féminin (absent = épicène) et un modèle EN (genré seulement si l'anglais l'exige : « Lord / Lady »).
 - **Préfixe ou suffixe** comme sur retail, porté par le modèle : `"Dresseur %s"` (préfixe), `"%s le Chasseur de brillantes"` (suffixe avec article), `"%s, Maître des brillantes"` (suffixe apposé). `ns:TitleRender(code, nom, genre, opts)` remplace `%s` ; `opts.inline = true` (titre au milieu d'une phrase) ajoute la virgule fermante après un suffixe apposé : « Dyokrion, Maître des brillantes, a capturé une brillante ! ». `opts.bare = true` rend le titre seul sans le nom (sous-titre de la fiche, liste du choix) : on retire `%s`, la virgule et l'espace de tête, et on met une capitale (« Maître des brillantes », « Le Chasseur de brillantes » devient « Chasseur de brillantes » : l'article est retiré en tête).
 - **Genre** : formes masculine et féminine en français, choisies par `UnitSex("player")` (2 = masculin, 3 = féminin, 1 ou illisible = masculin) ; le réglage « Forme des titres » (`automatique`, `masculin`, `féminin`) l'emporte. Le genre voyage avec la fiche (champ `tg`) : le destinataire rend la bonne forme dans **sa** langue.
 - **Choix du titre** : le joueur choisit quel titre gagné s'affiche. Par défaut (`title = nil`, « automatique ») : le titre du plus haut palier d'espèces, comme aujourd'hui (`ns:TrainerTitle()` ne change pas de comportement pour qui ne choisit rien), sinon aucun. `title = 0` : aucun titre.
@@ -305,6 +305,8 @@ Colonnes : identifiant stable, nom FR, nom EN, condition, détection (source exa
 Hors numérotation (3.1.0, tailles des spécimens, `SpecimenTraits.lua`) : `men_size_giant` (code 176) — Un géant parmi les bêtes / A Giant Among Beasts — capturer un spécimen géant (2 % des captures) : `flag` `sizeGiant`, compte, 10 points ; `men_size_tiny` (code 177) — Petit mais costaud / Small but Mighty — capturer un spécimen minuscule (2 %) : `flag` `sizeTiny`, compte, 10 points. Le drapeau est posé à la capture (`ns:SpecimenSizeFeat`) ; pas de rattrapage (aucune taille rare avant la 3.1).
 
 Hors numérotation (3.4.0, étude d'espèce et lien, `SpecimenStudy.lua`, `SpecimenBond.lua`), tous au compte : `men_study_10` (code 181) — Naturaliste / Naturalist — maîtriser l'étude de 10 espèces : `count` `studyMastered`, 10 points ; `men_study_50` (code 182) — Savant des bêtes / Beast Scholar — 50 espèces, 25 points ; `men_study_100` (code 183) — Encyclopédie vivante / Living Encyclopedia — 100 espèces, 50 points ; `men_bond_familiar` (code 184) — Premiers pas ensemble / First Steps Together — un spécimen au lien Familier : `flag` `bondFamiliar`, 10 points ; `men_bond_inseparable` (code 185) — À la vie, à la mort / Till Death Do Us Part — un spécimen au lien Inséparable : `flag` `bondInseparable`, 25 points ; `men_traits_all` (code 186) — Tous les caractères / Every Personality — les 8 caractères tirés capturés : `flag` `traitsAll`, 25 points ; `men_sizes_all` (code 187) — De toutes les tailles / All Shapes and Sizes — les 5 tailles capturées : `flag` `sizesAll`, 25 points. Seules les captures faites soi-même comptent ; l'étude ne paie rien pour ce qui était acquis avant la mise à jour.
+
+Hors numérotation (3.6.0, mécénat de l'Échoppe du dresseur, `ShopWeek.lua`), au compte : `men_patron_10` (code 241) — Mécène / Patron — atteindre 10 points de mécène (100 paillettes le point) : `count` `patron`, 10 points, titre T61 ; `men_patron_50` (code 242) — Grand mécène / Great Patron — 50 points de mécène, 25 points, titre T62 ; `men_patron_100` (code 243) — Bienfaiteur des créatures / Benefactor of Creatures — 100 points de mécène, 50 points, titre T63.
 
 ### 2.2 Brillantes (`shiny`) — 12
 
@@ -630,7 +632,7 @@ Retour en 2.6 possible : la 2.6 relit `journal.stamps` intact et ignore `feats`.
 
 ## 4. Récompenses
 
-### 4.1 Titres (40)
+### 4.1 Titres (43)
 
 « — » en colonne féminine : forme épicène (la même). P = préfixe, S = suffixe.
 
@@ -676,8 +678,11 @@ Retour en 2.6 possible : la 2.6 relit `journal.stamps` intact et ignore `feats`.
 | T38 | `meta_trainer` | %s le Légendaire | %s la Légendaire | %s the Legendary | S |
 | T39 | `char_deaths_1` + `fun_drown` + `fun_fall` + `fun_lava` (les 4) | %s le Malchanceux | %s la Malchanceuse | %s the Unlucky | S |
 | T40 | `men_bad_luck` | %s, Bredouille | — | %s the Empty-Handed | S |
+| T61 | `men_patron_10` | %s le Mécène | %s la Mécène | %s the Patron | S |
+| T62 | `men_patron_50` | %s le Grand Mécène | %s la Grande Mécène | %s the Great Patron | S |
+| T63 | `men_patron_100` | %s, Bienfaiteur des créatures | %s, Bienfaitrice des créatures | %s, Benefactor of Creatures | S |
 
-T39 et T40 sont des titres pour rire : T39 se gagne par un petit `meta` de la catégorie Insolite (`fun_unlucky`, code 174, 5 points, hors des 173 numérotés : §2.10), T40 vient de `men_bad_luck`.
+T61 à T63 (3.6.0) viennent du mécénat ; les codes 41 à 60 restent libres pour les titres d'autres lots. T39 et T40 sont des titres pour rire : T39 se gagne par un petit `meta` de la catégorie Insolite (`fun_unlucky`, code 174, 5 points, hors des 173 numérotés : §2.10), T40 vient de `men_bad_luck`.
 
 Choix retenu pour le genre : **formes masculine et féminine** quand le français les distingue (UnitSex, réglage manuel prioritaire), forme unique sinon. L'anglais n'a deux formes que pour T35 et T37.
 

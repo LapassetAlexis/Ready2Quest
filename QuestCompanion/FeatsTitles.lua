@@ -72,6 +72,11 @@ local TITLES = {
 	-- T39 : petit méta caché d'Insolite (char_deaths_1 + fun_drown + fun_fall + fun_lava)
 	[39] = { pos = "suf", src = "fun_unlucky",     m = "%s le Malchanceux", f = "%s la Malchanceuse", en = "%s the Unlucky" },
 	[40] = { pos = "suf", src = "men_bad_luck",    m = "%s, Bredouille", en = "%s the Empty-Handed" },
+	-- 3.6.0 : le mécénat de l'Échoppe (ShopWeek.lua), codes 61 à 63
+	[61] = { pos = "suf", src = "men_patron_10",   m = "%s le Mécène", f = "%s la Mécène", en = "%s the Patron" },
+	[62] = { pos = "suf", src = "men_patron_50",   m = "%s le Grand Mécène", f = "%s la Grande Mécène", en = "%s the Great Patron" },
+	[63] = { pos = "suf", src = "men_patron_100",  m = "%s, Bienfaiteur des créatures", f = "%s, Bienfaitrice des créatures",
+		en = "%s, Benefactor of Creatures" },
 }
 
 -- Mémoire : chaque titre devient un tableau de 6 cases (pos, src, m, f, en,

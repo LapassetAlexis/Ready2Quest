@@ -44,6 +44,8 @@ ns.PAILLETTES_SHOP = {
 	{ id = "lasso",   kind = "aid", aid = "lasso",   price = 12, icon = "Interface\\Icons\\Spell_Nature_StrangleVines" },
 	{ id = "sifflet", kind = "aid", aid = "sifflet", price = 35, icon = "Interface\\Icons\\INV_Misc_Horn_01" },
 	{ id = "slots",   kind = "slots", slots = 10,    price = 40, icon = "Interface\\Icons\\INV_Misc_Bag_10" },
+	-- 3.6.0 : le mécénat (ShopWeek.lua) : 100 paillettes = 1 point de mécène, sans limite
+	{ id = "patron",  kind = "patron", price = 100,  icon = "Interface\\Icons\\INV_Misc_Coin_01" },
 	-- 3.4.0 : les deux cosmétiques de la 3.0 entrent dans l'arrivage de la semaine
 	{ id = "frame_glitter", kind = "cosmetic", cos = "frame", cosId = "shop_glitter", price = 80, arrival = true,
 		icon = "Interface\\Icons\\INV_Misc_Gem_Diamond_02" },
@@ -131,6 +133,9 @@ local FR = {
 	RES_LOCATE_NONE      = "Pas de point connu pour cette espèce.",
 	RES_CONFIRM          = "Relâcher %s ? +%d paillettes, il quitte ta Réserve pour de bon.",
 	RES_CONFIRM_YES      = "Relâcher",
+	-- 3.6.0 : demi-tarif au-delà de 100 paillettes de relâcher dans la journée
+	RES_HALF_TODAY       = "Relâcher : demi-tarif aujourd'hui (plus de %d paillettes de relâcher)",
+	RES_HALF_SHORT       = "(Demi-tarif aujourd'hui.)",
 	RES_CONFIRM_NO       = "Annuler",
 	RES_WHY_better       = "Mets-le au Codex avant de le relâcher.",
 	RES_WHY_worn         = "Ton compagnon porte cette apparence.",
@@ -217,6 +222,8 @@ local EN = {
 	RES_LOCATE_NONE      = "No known spot for this species.",
 	RES_CONFIRM          = "Release %s? +%d glitter, it leaves your Reserve for good.",
 	RES_CONFIRM_YES      = "Release",
+	RES_HALF_TODAY       = "Release: half price today (over %d glitter from releases)",
+	RES_HALF_SHORT       = "(Half price today.)",
 	RES_CONFIRM_NO       = "Cancel",
 	RES_WHY_better       = "Put it in the Codex before releasing it.",
 	RES_WHY_worn         = "Your companion wears this look.",
@@ -279,6 +286,12 @@ local SHOP_BY_ID = {}
 for _, item in ipairs(ns.PAILLETTES_SHOP) do SHOP_BY_ID[item.id] = item end
 function ns:ShopItem(id) return SHOP_BY_ID[id or ""] end
 
+-- Le prix à payer (3.6.0 : ShopWeek.lua le relève hors de la semaine)
+function ns:ShopPrice(item)
+	if type(item) ~= "table" then item = self:ShopItem(item) end
+	return type(item) == "table" and item.price or 0
+end
+
 -- Le prix d'un cosmétique de l'échoppe (FeatsCosmetics.lua : condition affichée)
 function ns:ShopCosmeticPrice(cosId)
 	for _, item in ipairs(ns.PAILLETTES_SHOP) do
@@ -307,6 +320,7 @@ function ns:ShopLabel(item)
 	if not item then return "" end
 	if item.kind == "aid" then return self:CaptureAidLabel(item.aid) end
 	if item.kind == "slots" then return self:F("SHOP_SLOTS", item.slots) end
+	if item.kind == "patron" then return L.SHOP_PATRON or item.id end
 	local def = CosmeticDef(item)
 	return def and tostring(L[def.label]) or item.id
 end
@@ -325,8 +339,8 @@ function ns:ShopState(item)
 		if self.ShopCosmeticOwned and self:ShopCosmeticOwned(item.cosId) then return "owned" end
 		if not CosmeticDef(item) then return "unknown" end
 	end
-	local balance = self:Paillettes()
-	if balance < item.price then return "short", item.price - balance end
+	local balance, price = self:Paillettes(), self:ShopPrice(item)
+	if balance < price then return "short", price - balance end
 	return "ok"
 end
 
@@ -335,7 +349,8 @@ function ns:ShopBuy(id)
 	local item = self:ShopItem(id)
 	local state = self:ShopState(item)
 	if state ~= "ok" then return false, state end
-	local paid, left = self:PaillettesSpend(item.price, "shop:" .. item.id)
+	local price = self:ShopPrice(item)
+	local paid, left = self:PaillettesSpend(price, "shop:" .. item.id)
 	if not paid then return false, "short" end
 	if item.kind == "aid" then
 		self:CaptureGrant(item.aid, { quiet = true, silent = true })
@@ -344,8 +359,11 @@ function ns:ShopBuy(id)
 	elseif item.kind == "cosmetic" then
 		self:ShopCosmeticGrant(item.cosId)
 		if self.RefreshOptions then pcall(self.RefreshOptions, self) end
+	elseif item.kind == "patron" then
+		if self.ShopPatronAdd then self:ShopPatronAdd() end
+		return true, left
 	end
-	self:Print(self:F("SHOP_BOUGHT", self:ShopLabel(item), item.price, left))
+	self:Print(self:F("SHOP_BOUGHT", self:ShopLabel(item), price, left))
 	return true, left
 end
 
@@ -946,8 +964,13 @@ end
 -- monte, 150 au plus), le surnom (dans la fiche du spécimen) ; « Arrivage de
 -- la semaine » (y −282 du contenu) : deux demi-rangées ; « Commandes de la
 -- semaine » (y −362) : trois cartes, « Livrer » ouvre la Réserve filtrée.
-ns.SHOP_LAYOUT = { first = 34, step = 48, h = 44, arrivalsY = 282, arrivalsRowY = 302, ordersY = 362, ordersRowY = 382,
-	orderW = 232, orderStep = 240, orderH = 74, noteY = 466 }
+-- 3.6.0 (maquette 3.6, planche 6) : sous l'arrivage, deux demi-colonnes :
+-- « Hors de leur semaine » (un cosmétique à la fois, la ligne défile : flèches
+-- de la pagination ou molette) et « Mécénat ». Pour les loger, les rangées
+-- passent à 40 (pas de 43) et les cartes de commande à 68 : la page tient
+-- toujours au-dessus du pied (ui_windows).
+ns.SHOP_LAYOUT = { first = 30, step = 43, h = 40, arrivalsY = 248, arrivalsRowY = 268, sideY = 314, sideRowY = 334,
+	ordersY = 380, ordersRowY = 400, orderW = 232, orderStep = 240, orderH = 68, noteY = 474 }
 local SL = ns.SHOP_LAYOUT
 
 local function ShopRow(sv, content, ui, width, x, y, frame)
@@ -1007,7 +1030,9 @@ local function BuildShop(self, frame, content, ui)
 	sv.top:SetText(L.SHOP_TOP)
 	sv.rows = {}
 	local regular = {}
-	for _, item in ipairs(ns.PAILLETTES_SHOP) do if not item.arrival then regular[#regular + 1] = item end end
+	for _, item in ipairs(ns.PAILLETTES_SHOP) do
+		if not item.arrival and item.kind ~= "patron" then regular[#regular + 1] = item end
+	end
 	for index, item in ipairs(regular) do
 		local row = ShopRow(sv, content, ui, INNER, 0, TOP - SL.first - (index - 1) * SL.step, frame)
 		row.item = item
@@ -1030,6 +1055,41 @@ local function BuildShop(self, frame, content, ui)
 		sv.arrivals[index] = row
 		sv.rows[#sv.rows + 1] = row
 	end
+	-- 3.6.0 : hors de leur semaine (une ligne qui défile) et mécénat
+	sv.awayHead = Theme.CreateSection(sv, L.SHOP_AWAY, L.SHOP_AWAY_PRICE)
+	sv.awayHead:SetWidth(half)
+	At(sv.awayHead, content, 0, TOP - SL.sideY)
+	local function AwayStep(delta)
+		frame.shopAwayOffset = (frame.shopAwayOffset or 0) - delta
+		frame.shopConfirm = nil
+		ns:RefreshJournal()
+	end
+	sv.awayPager = Theme.CreatePager(sv, AwayStep)
+	sv.awayPager:SetPoint("RIGHT", sv.awayHead, "RIGHT", 0, 0)
+	sv.awayRow = ShopRow(sv, content, ui, half, 0, TOP - SL.sideRowY, frame)
+	if sv.awayRow.EnableMouseWheel then sv.awayRow:EnableMouseWheel(true) end
+	sv.awayRow:SetScript("OnMouseWheel", function(_, delta) AwayStep(delta) end)
+	sv.awayEmpty = Text(sv, Theme.F_SMALL, Theme.MUTED_LIGHT, half)
+	At(sv.awayEmpty, content, 0, TOP - SL.sideRowY - 12)
+	sv.awayEmpty:SetText(L.SHOP_AWAY_NONE)
+	sv.awayEmpty:Hide()
+	sv.patronHead = Theme.CreateSection(sv, L.SHOP_PATRON)
+	sv.patronHead:SetWidth(half)
+	At(sv.patronHead, content, half + 8, TOP - SL.sideY)
+	for _, item in ipairs(ns.PAILLETTES_SHOP) do
+		if item.kind == "patron" then
+			local row = ShopRow(sv, content, ui, half, half + 8, TOP - SL.sideRowY, frame)
+			row.item = item
+			sv.patronRow = row
+			sv.rows[#sv.rows + 1] = row
+		end
+	end
+	-- l'explication au survol de la ligne (la rangée est courte)
+	for _, row in ipairs({ sv.awayRow, sv.patronRow }) do
+		if row.EnableMouse then row:EnableMouse(true) end
+		row:SetScript("OnEnter", function(r) if r.tipTitle and ui.Tip then ui.Tip(r, r.tipTitle, { r.tipText }) end end)
+		row:SetScript("OnLeave", function() if ui.HideTip then ui.HideTip() end end)
+	end
 	-- les commandes
 	sv.ordersHead = Theme.CreateSection(sv, L.SHOP_ORDERS)
 	sv.ordersHead:SetWidth(INNER)
@@ -1038,9 +1098,12 @@ local function BuildShop(self, frame, content, ui)
 	sv.reroll = Theme.CreateButton(sv, "auto", "sm", L.ORDER_REROLL, function()
 		if ns.ShopOrdersReroll then ns:ShopOrdersReroll(); ns:RefreshJournal() end
 	end, "outline")
-	sv.reroll:SetPoint("TOPRIGHT", content, "TOPLEFT", ui.PAD + INNER, TOP - SL.ordersY + 6)
+	sv.reroll:SetPoint("TOPRIGHT", content, "TOPLEFT", ui.PAD + INNER, TOP - SL.ordersY + 4)
 	if sv.reroll.HookScript and ui.Tip then
-		sv.reroll:HookScript("OnEnter", function(b) ui.Tip(b, L.ORDER_REROLL, { L.ORDER_REROLL_TIP }) end)
+		sv.reroll:HookScript("OnEnter", function(b)
+			if b.qcEnabled == false then return end
+			ui.Tip(b, b:GetText(), { b.tipText or L.ORDER_REROLL_TIP })
+		end)
 		sv.reroll:HookScript("OnLeave", ui.HideTip)
 	end
 	sv.reroll:Hide()
@@ -1118,12 +1181,16 @@ local function RefreshTidy(self, frame, rv)
 	local list, gain, aside = self:ReserveSelectReleasable()
 	local max = ns.RESERVE_BROWSE.selectLines
 	local names = {}
+	-- 3.6.0 : la valeur de chacun, demi-tarif du jour compris (dans l'ordre)
+	local earned = self:ReleaseToday()
 	for index, spec in ipairs(all) do
 		if index > max then
 			names[#names + 1] = self:F("RES_TIDY_MORE", #all - max)
 			break
 		end
-		names[#names + 1] = self:F("RES_TIDY_LINE", self:SpecimenDisplayName(spec), Stars(self, spec.stars, 10), self:SpecimenReleaseValue(spec))
+		local value = self:SpecimenReleaseValue(spec, earned)
+		earned = earned + value
+		names[#names + 1] = self:F("RES_TIDY_LINE", self:SpecimenDisplayName(spec), Stars(self, spec.stars, 10), value)
 	end
 	local lines = {}
 	lines[1] = #all > 0 and table.concat(names, "\n") or L.RES_SEL_EMPTY
@@ -1198,7 +1265,13 @@ local function RefreshDetails(self, frame, rv, spec)
 	local lines = { table.concat(kind, "  "), ProfileLine(self, spec), plusText, minusText, BondText(self, spec) }
 	local ref = self:SpecimenReference(spec.npc, spec.shiny)
 	local better = self:SpecimenBetterThanCodex(spec.id)
-	rv.betterLine = nil
+	rv.betterLine, rv.halfLine = nil, nil
+	-- 3.6.0 : plus de RELEASE_DAY_FULL paillettes de relâcher aujourd'hui :
+	-- le dire tôt (la fiche cache ses dernières lignes quand la place manque)
+	if self:ReleaseHalfToday() and self:SpecimenCanRelease(spec.id) then
+		lines[#lines + 1] = self:F("RES_HALF_TODAY", ns.RELEASE_DAY_FULL)
+		rv.halfLine = #lines
+	end
 	if better then
 		lines[#lines + 1] = self:F("RES_BETTER", Stars(self, ref and ref.stars or 1, 10))
 		rv.betterLine = #lines
@@ -1221,6 +1294,7 @@ local function RefreshDetails(self, frame, rv, spec)
 	-- « meilleur » en vert, la raison du refus en rouge
 	for index, line in ipairs(p.lines) do
 		local c = (index == rv.betterLine and Theme.GREEN) or (index == rv.reasonLine and Theme.RED)
+			or (index == rv.halfLine and Theme.ORANGE)
 			or (index == 3 and Theme.GREEN) or (index == 4 and (minusLater and Theme.MUTED or Theme.ORANGE))
 			or (index == 2 and self:SpecimenSizeColor(spec.size))
 			or (index == 5 and Theme.IDENTITY)
@@ -1255,7 +1329,9 @@ local function RefreshDetails(self, frame, rv, spec)
 		return
 	end
 	if frame.resConfirm == spec.id then
-		rv.confirm:SetText(self:F("RES_CONFIRM", self:SpecimenDisplayName(spec), value))
+		local ask = self:F("RES_CONFIRM", self:SpecimenDisplayName(spec), value)
+		if rv.halfLine then ask = ask .. " " .. L.RES_HALF_SHORT end   -- 3.6.0
+		rv.confirm:SetText(ask)
 		rv.confirmYes:SetText(L.RES_CONFIRM_YES)
 		rv.confirm:Show(); rv.confirmYes:Show(); rv.confirmNo:Show()
 		return
@@ -1415,8 +1491,20 @@ local function PaintShopRow(self, frame, row, item, glyph, bonus)
 	row.state = state
 	pcall(row.icon.SetTexture, row.icon, item.icon)
 	row.name:SetText(self:ShopLabel(item))
+	local price = self:ShopPrice(item)
+	row.tipTitle, row.tipText = nil, nil
 	local desc
-	if item.kind == "aid" then
+	if item.kind == "patron" then
+		-- 3.6.0 : le mécénat (ShopWeek.lua)
+		row.name:SetText(self:F("SHOP_PATRON_NAME", self.ShopPatronPoints and self:ShopPatronPoints() or 0))
+		desc = L.SHOP_PATRON_DESC
+		row.tipTitle, row.tipText = L.SHOP_PATRON, self:F("SHOP_PATRON_TIP", price)
+	elseif item.kind == "cosmetic" and self.ShopIsAway and self:ShopIsAway(item) then
+		-- 3.6.0 : hors de sa semaine : quand il revient, une fois et demie le prix
+		local back = self:ShopAwayWeeks(item)
+		desc = (back == 1 and L.SHOP_AWAY_BACK1) or (back and self:F("SHOP_AWAY_BACK", back)) or L.SHOP_AWAY_LATER
+		row.tipTitle, row.tipText = self:ShopLabel(item), self:F("SHOP_AWAY_TIP", price, item.price)
+	elseif item.kind == "aid" then
 		local def = AidDef(item.aid)
 		desc = self:F("SHOP_AID_HAVE", L["CAPTURE_AID_DESC_" .. item.aid] or "", self:CaptureAidCount(item.aid), def and def.cap or 0)
 		local left, cap
@@ -1430,7 +1518,7 @@ local function PaintShopRow(self, frame, row, item, glyph, bonus)
 	end
 	row.desc:SetText(desc)
 	local owned = state == "owned"
-	row.price:SetText((owned or state == "max") and "" or self:F("SHOP_PRICE", item.price, glyph))
+	row.price:SetText((owned or state == "max") and "" or self:F("SHOP_PRICE", price, glyph))
 	local c = (state == "short") and Theme.RED or Theme.GOLD
 	row.price:SetTextColor(c[1], c[2], c[3], 1)
 	row.buy.bonus = nil
@@ -1445,7 +1533,7 @@ local function PaintShopRow(self, frame, row, item, glyph, bonus)
 			row.buy:SetText(L.ORDER_BONUS_TAKE)
 			Enable(row.buy, true)
 		else
-			row.buy:SetText(owned and L.SHOP_OWNED or L.SHOP_BUY)
+			row.buy:SetText(owned and L.SHOP_OWNED or (item.kind == "patron" and L.SHOP_PATRON_GIVE) or L.SHOP_BUY)
 			-- 3.0.0 (bêta 6) : refusé = désactivé pour de bon (grisé, pas de
 			-- clic), la raison en infobulle
 			Enable(row.buy, state == "ok", self:ShopDisabledTip(state, a))
@@ -1484,8 +1572,38 @@ local function RefreshShop(self, frame)
 	local ends = self.WeeklyEndsText and self:WeeklyEndsText()
 	if ends then head = head .. " · " .. ends end
 	if sv.arrivalsHead.SetText then sv.arrivalsHead:SetText(head) end
+	-- 3.6.0 : hors de leur semaine, une ligne qui défile
+	local away = self.ShopAwayList and self:ShopAwayList() or {}
+	local offset = math.max(0, math.min(#away - 1, frame.shopAwayOffset or 0))
+	frame.shopAwayOffset = offset
+	if away[offset + 1] then
+		PaintShopRow(self, frame, sv.awayRow, away[offset + 1], glyph, false)
+		sv.awayEmpty:Hide()
+	else
+		sv.awayRow.item = nil
+		sv.awayRow:Hide()
+		sv.awayEmpty:Show()
+	end
+	sv.awayPager:Update(offset, 1, #away, math.max(0, #away - 1))
+	sv.awayPager.position:SetText(#away > 1 and string.format("%d / %d", offset + 1, #away) or "")
+	-- relance : gratuite, puis ORDER_REROLL_PRICE (tant qu'aucune n'est livrée)
 	if sv.reroll then
-		if self.ShopOrdersCanReroll and self:ShopOrdersCanReroll() then sv.reroll:Show() else sv.reroll:Hide() end
+		local can, why, missing = false, "started", 0
+		if self.ShopOrdersCanReroll then can, why, missing = self:ShopOrdersCanReroll() end
+		local price = self.ShopOrdersRerollPrice and self:ShopOrdersRerollPrice() or 0
+		if can or why == "short" then
+			local text = price > 0 and self:F("ORDER_REROLL_PAID", price) or L.ORDER_REROLL
+			sv.reroll:SetText(text)
+			sv.reroll:SetWidth(Theme.ButtonWidth(sv, text))
+			sv.reroll.tipText = price > 0 and self:F("ORDER_REROLL_PAID_TIP", price) or L.ORDER_REROLL_TIP
+			Enable(sv.reroll, can, why == "short" and self:F("SHOP_DIS_short", tonumber(missing) or 0) or nil)
+			sv.reroll:Show()
+		else
+			sv.reroll:Hide()
+		end
+		if sv.ordersHead.SetText then
+			sv.ordersHead:SetText(L.SHOP_ORDERS, (orders and orders.rerolled and why ~= "started") and L.ORDER_REROLL_USED or nil)
+		end
 	end
 	-- les commandes
 	for index, card in ipairs(sv.orders) do

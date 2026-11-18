@@ -23,6 +23,9 @@ local L = ns.L
 local Theme = ns.Theme
 
 ns.SEAL_SHINY_MULT = 1.5
+-- 3.6.0 (plan 3.6, lot 1B) : passé le deuxième sceau d'un biome (son cadre,
+-- puis son fond), chaque sceau de ce biome donne des paillettes
+ns.SEAL_GLITTER = { from = 3, glitter = 15 }
 -- paliers par type : les types courants en extérieur, puis les plus rares
 ns.MENAGERIE_TYPE_TIERS = { common = { 10, 20, 40 }, rare = { 5, 10, 20 } }
 ns.MENAGERIE_TYPE_RARE = { dragonkin = true, demon = true, giant = true, mechanical = true }
@@ -112,6 +115,7 @@ local FR = {
 	COMP_REQ_trainer       = "%d espèces capturées",
 	MEN_SEAL_MSG           = "Sceau de %s ! Toutes ses espèces sont dans ta collection : brillantes ×%s ici.",
 	MEN_SEAL_NEW           = "Nouveau : %s.",
+	MEN_SEAL_GLITTER       = "+%d paillettes : sceau n° %d du biome %s.",
 	MEN_TYPE_MSG           = "%s : %d espèces capturées, palier %d ! Un compagnon de ce type gagne en force (%s).",
 	MEN_RANK_MSG           = "%d espèces capturées : te voilà %s ! %s",
 	MEN_RANK_GIFT          = "Gain : %s.",
@@ -157,6 +161,7 @@ local EN = {
 	COMP_REQ_trainer       = "%d species captured",
 	MEN_SEAL_MSG           = "%s sealed! Every species there is in your collection: shinies ×%s here.",
 	MEN_SEAL_NEW           = "New: %s.",
+	MEN_SEAL_GLITTER       = "+%d glitter: seal no. %d of the %s biome.",
 	MEN_TYPE_MSG           = "%s: %d species captured, tier %d! A companion of this type grows stronger (%s).",
 	MEN_RANK_MSG           = "%d species captured: you are now a %s! %s",
 	MEN_RANK_GIFT          = "Reward: %s.",
@@ -380,11 +385,19 @@ function ns:MenagerieSealCheck(zoneID, opts)
 	local have, need = self:MenagerieSealProgress(zoneID)
 	if need == 0 or have < need then return false end
 	self:MenagerieCollectionData().seals[zoneID] = Now()
-	local fresh = SealRewards(self, self:MenagerieZoneBiome(zoneID))
+	local biome = self:MenagerieZoneBiome(zoneID)
+	local fresh = SealRewards(self, biome)
+	-- 3.6.0 : le troisième sceau d'un biome et les suivants : des paillettes
+	local nth, glitter = self:MenagerieBiomeSeals(biome), 0
+	if nth >= ns.SEAL_GLITTER.from and self.PaillettesAdd and self:DB().companionCapture ~= false then
+		glitter = ns.SEAL_GLITTER.glitter
+		self:PaillettesAdd(glitter, "seal")
+	end
 	if not opts.quiet then
 		local name = ZoneName(self, zoneID)
 		self:Print(self:F("MEN_SEAL_MSG", name, Dec(ns.SEAL_SHINY_MULT)))
 		for _, label in ipairs(fresh) do self:Print(self:F("MEN_SEAL_NEW", label)) end
+		if glitter > 0 then self:Print(self:F("MEN_SEAL_GLITTER", glitter, nth, BiomeLabel(biome))) end
 		if self.CompanionSay then self:CompanionSay("UNLOCK", { force = true, args = { fresh[1] or self:F("MEN_COLL_SEALED", name) } }) end
 		if self.CompanionFx then pcall(self.CompanionFx, self, "sparkle") end
 	end

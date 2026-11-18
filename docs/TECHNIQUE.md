@@ -1,5 +1,17 @@
 # Ready2Quest — notes techniques et historique
 
+## QuestCompanion 3.6.0 — chantier A : les paillettes d'un gros joueur, la maîtrise en jeu
+
+Plan : `docs/audit-pokemon-like-3.5/PLAN.md`, lot 1 (1B et 1C).
+
+- **Arrivage hors de sa semaine** (`ShopWeek.lua`) : `ns:ShopIsAway(item)` (cosmétique d'arrivage ni de la semaine ni possédé), `ns:ShopPrice(item)` (×`SHOP_AWAY_FACTOR` = 1,5 hors de la semaine ; défaut dans `JournalReserve.lua`, lu par `ShopState` et `ShopBuy`), `ns:ShopAwayWeeks(item)` (semaines avant son retour, sur deux cycles), `ns:ShopAwayList()` (le plus proche retour d'abord). Le tirage d'une semaine passe par `ArrivalsOf(pool, n)` ; l'état « away » n'existe plus.
+- **Mécénat** : article `patron` de `ns.PAILLETTES_SHOP` (100, `SHOP_PATRON`) ; `ShopBuy` appelle `ns:ShopPatronAdd()` (`capture.patron`, au compte, `FeatTouch("flag")`), `ns:ShopPatronPoints()`. Hauts faits `men_patron_10/50/100` (codes 241 à 243, source `patron`, `FeatsCatMenagerie.lua`), titres T61 à T63 (`FeatsTitles.lua` ; 41 à 60 laissés aux autres lots).
+- **Relance des commandes** : `ns:ShopOrdersRerollPrice()` (0 la première fois, puis `ORDER_REROLL_PRICE` = 10) ; `ShopOrdersCanReroll` rend `true, prix` ou `false, "started"` / `false, "short", manque` ; `orders.rerolls` (graine `semaine:again`, puis `:again2`…).
+- **Relâcher au demi-tarif** (`CaptureSpecimens.lua`) : `capture.releaseDay = { day, n }` (paillettes de relâcher du jour, au compte) ; à `RELEASE_DAY_FULL` (100) ou plus, `SpecimenReleaseValue(spec, earned)` rend `ceil(base / 2)` ; `SpecimenReleaseBase` (tri par valeur), `ReleaseToday`, `ReleaseHalfToday`, `SpecimenReleaseTotal(list)` (lot dans l'ordre : le seuil peut tomber en route ; « Faire de la place », la sélection, `ReserveSelectReleasable`).
+- **Espèce maîtrisée moins méfiante** : `ns:CaptureWaryFloor(npc)` (`CompanionEffects.lua`) = plancher du compagnon + `STUDY_WARY_BONUS` (0,10) si `ns:SpecimenStudyIsMastered(npc)` ; l'enveloppe de `CaptureWariness` l'utilise. Ligne d'étude : `STUDY_MASTERED_WARY`.
+- **Sceaux** (`MenagerieCollection.lua`) : `SEAL_GLITTER = { from = 3, glitter = 15 }` : le troisième sceau d'un biome et les suivants donnent 15 paillettes (rattrapage silencieux compris, rien si la capture est coupée), `MEN_SEAL_GLITTER`.
+- Tests : `tests/modules/lot36_a.lua` ; adaptés : `fixes_351` (relance), `reserve_34` (arrivage), `feats_catalogue` (190 lignes, 43 titres, 99 lignes de la ménagerie), `feats` (le Guide compte les titres). Aperçus : `qc-journal-shop-36`, `qc-journal-reserve-half`, `qc-journal-menagerie-mastered`.
+
 ## QuestCompanion 3.5.1 — correctifs (lot 0 de `docs/audit-pokemon-like-3.5/PLAN.md`)
 
 - `CompanionStateExtend` : `data.extended[key]` (une fois par état ; effacé au callback `COMPANION_STATE`).

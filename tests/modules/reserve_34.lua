@@ -225,10 +225,12 @@ do
 	capture.reserveBonus = 100
 	Check("[R34] 150 places au plus : « max »", NS:ShopState("slots") == "max")
 	local arrivals = NS:ShopArrivals()
-	Check("[R34] arrivage : 2 cosmétiques de la semaine, les autres « absents »", #arrivals == 2
-		and NS:ShopState(arrivals[1]) ~= "away" and (function()
+	-- 3.6.0 : les autres s'achètent aussi, une fois et demie plus cher
+	Check("[R34] arrivage : 2 cosmétiques de la semaine, les autres hors de leur semaine", #arrivals == 2
+		and not NS:ShopIsAway(arrivals[1]) and NS:ShopPrice(arrivals[1]) == arrivals[1].price and (function()
 			for _, item in ipairs(NS.PAILLETTES_SHOP) do
-				if item.arrival and item ~= arrivals[1] and item ~= arrivals[2] and NS:ShopState(item) ~= "away" then return false end
+				if item.arrival and item ~= arrivals[1] and item ~= arrivals[2]
+					and not (NS:ShopIsAway(item) and NS:ShopPrice(item) == math.floor(item.price * 1.5 + 0.5)) then return false end
 			end
 			return true
 		end)())
