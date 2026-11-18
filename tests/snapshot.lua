@@ -1244,21 +1244,30 @@ local function Options(T, ns, page, prepare)
 	return win
 end
 
+-- 2.0.0 : navigation par familles (maquette validée le 2026-11-17)
 Snap.scenes["r2q-options"] = function(T)
-	return Options(T, T.NS, "general"), "Ready2Quest : réglages, page Général"
+	return Options(T, T.NS, nil), "Ready2Quest : réglages, Accueil > Vue d'ensemble (première ouverture)"
+end
+
+Snap.scenes["r2q-options-general"] = function(T)
+	return Options(T, T.NS, "general"), "Ready2Quest : réglages, Accueil > Général"
 end
 
 Snap.scenes["r2q-options-bags"] = function(T)
 	return Options(T, T.NS, "bags"), "Ready2Quest : réglages, Check avant le départ > Sacs & vivres"
 end
 
--- navigation plus haute que sa colonne : défilée jusqu'en bas (Après la mort)
+Snap.scenes["r2q-options-plein"] = function(T)
+	return Options(T, T.NS, "plein", function(ns) ns:DB().lootroomEnabled = false end),
+		"Ready2Quest : réglages, Sacs & butin > Sac plein & butin (Place au butin coupée : grisée)"
+end
+
 Snap.scenes["r2q-options-nav"] = function(T)
-	return Options(T, T.NS, "death"), "Ready2Quest : réglages, navigation défilée (Confort de jeu > Après la mort)"
+	return Options(T, T.NS, "portees"), "Ready2Quest : réglages, Combat > Portées"
 end
 
 Snap.scenes["r2q-options-spellranks"] = function(T)
-	return Options(T, T.NS, "spellranks"), "Ready2Quest : réglages, Confort de jeu > Rangs de sorts"
+	return Options(T, T.NS, "spellranks"), "Ready2Quest : réglages, Quêtes & sorts > Sorts (lien direct, tête éclairée)"
 end
 
 Snap.scenes["qc-options-companion"] = function(T)
@@ -1499,6 +1508,18 @@ Snap.scenes["qc-journal-reserve"] = function(T) return OwnDraws(T, function(T)
 		ns:SpecimenAdd({ npc = 3242, stars = 1, shiny = true, name = "Messager zhévra", zone = Z, at = 1793700000 })
 	end)
 	return frame, "QuestCompanion : carnet, page Réserve"
+end) end
+
+-- 3.2.1 : Réserve presque pleine, « Faire de la place » sur sa rangée
+Snap.scenes["qc-journal-reserve-full"] = function(T) return OwnDraws(T, function(T)
+	local frame = QCJournal(T, "reserve", function(ns)
+		local npcs = { 3236, 3110, 3242, 3415, 3255 }
+		for index = 1, (ns.RESERVE_MAX or 30) - 1 do
+			ns:SpecimenAdd({ npc = npcs[index % #npcs + 1], stars = index % 3 + 1, name = "Spécimen " .. index,
+				origin = "capture", by = "Testeur", zone = 1413, at = 1793000000 + index })
+		end
+	end)
+	return frame, "QuestCompanion : carnet, Réserve presque pleine (Faire de la place)"
 end) end
 
 -- 3.1.0 : page Juke-box

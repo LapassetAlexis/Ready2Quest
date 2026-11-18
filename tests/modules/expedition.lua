@@ -275,10 +275,15 @@ do
 	NS:ToggleOptions()
 	local o = NS.optionsFrame
 	local nav, page
-	for _, button in ipairs(o.navButtons) do if button.pageId == "expedition" then nav = button end end
-	page = o.pages.expedition
+	-- 2.0.0 : Voyage › Retour & mort ; l'interrupteur dans la tête de la fonction
+	local sec = o.sectionIndex.expedition
+	nav = sec and sec.item.region
+	nav = nav and { power = nav.toggle, powerKey = nav.powerKey }
+	page = o.pages["voyage:retour"]
+	local own = 0
+	for _, row in ipairs(page and page.rows or {}) do if row.sectionId == "expedition" then own = own + 1 end end
 	Check("[EXP] page avec interrupteur, rangée avant Marchand, trois réglages", nav ~= nil and nav.powerKey == "expeditionEnabled"
-		and page ~= nil and page.subText == NS.L.OPT_PAGE_EXPEDITION_SUB and #page.rows == 3 and (function()
+		and page ~= nil and page.subText == NS.L.OPT_TAB_RETURN_SUB and own == 3 and (function()
 		local seen
 		for _, def in ipairs(NS.OPTION_PAGES) do
 			if def.id == "expedition" then seen = true end

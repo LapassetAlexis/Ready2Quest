@@ -425,8 +425,10 @@ end
 function ns:EnsureDungeonWindow()
 	if self.dungeonFrame then return self.dungeonFrame end
 	if not (Theme and Theme.CreateDialog) then return nil end
-	local frame = Theme.CreateDialog(UIParent, WIDTH, 200, { name = "Ready2QuestDungeonFrame", title = L.DGN_TITLE })
+	local frame = Theme.CreateDialog(UIParent, WIDTH, 200, { name = "Ready2QuestDungeonFrame", title = L.DGN_TITLE,
+		headerIcon = true })
 	if not frame then return nil end
+	if self.AddSettingsGear then self:AddSettingsGear(frame, "dungeon") end
 	if self.RestorePoint then self:RestorePoint(frame, "dungeonPoint", { point = "CENTER", x = 0, y = 60 }) end
 	-- (thème forgé : l'action principale du pied est dorée)
 	frame.closeButton = frame:AddFooterButton(L.OPT_CLOSE, function() frame:Hide() end,

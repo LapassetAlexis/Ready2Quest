@@ -860,6 +860,12 @@ do
 		for i = 1, 13 do NS:SpecimenAdd({ npc = 900, stars = 1, name = "Raptor", at = 1793000000 + i }) end
 		NS:RefreshJournal()
 		ok("18/20 : « Faire de la place »", NS:ReserveNearFull() and rv.tidyButton:IsShown() and rv.tidyButton:GetText() == "Faire de la place")
+		-- 3.2.1 : sa rangée propre, 8 px sous les filtres et 8 px au-dessus de la grille
+		local filtersBottom = select(5, rv.sort:GetPoint()) - NS.Theme.CONTROL_HEIGHT
+		local btnTop = select(5, rv.giftButton:GetPoint())
+		ok("bouton espacé : ni sur les filtres ni sur la grille", btnTop == rv.warnY and filtersBottom - btnTop >= 8
+			and (btnTop - rv.tidyButton:GetHeight()) - rv.gridTop >= 8 and rv.rows >= 4,
+			filtersBottom .. " / " .. btnTop .. " / " .. rv.gridTop .. " / " .. rv.rows)
 		local list, gain = NS:ReserveTidyCandidates()
 		local protected = false
 		for _, spec in ipairs(list) do

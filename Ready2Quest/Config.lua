@@ -7,7 +7,7 @@ local ADDON, ns = ...
 
 ns.APP = {
 	id = "Ready2Quest",
-	version = "1.37.1",
+	version = "2.0.0",
 	-- nom dans l'en-tête des réglages, le « 2 » en bleu
 	brand = "Ready|cff5b8fd62|rQuest",
 	-- couleur d'identité dans le thème forgé (socle 3.3, Theme.IDENTITY_TOKENS) :
@@ -21,5 +21,5 @@ ns.APP = {
 	slash = { "/sd", "/sacdepart", "/r2q" },
 	-- fichiers attendus, pour le diagnostic quand l'addon reste muet
 	coreFiles = { "Bootstrap", "Locales", "Compat", "Hubs", "Theme", "Core", "Buffs",
-		"Reagents", "Merchant", "Equip", "Stats", "Minimap", "Checks", "Options", "UI" },
+		"Reagents", "Merchant", "Equip", "SpecStats", "EditMode", "Minimap", "Checks", "Options", "UI" },
 }

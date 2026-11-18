@@ -1,5 +1,13 @@
 # QuestCompanion
 
+## 3.3.0 — En español
+
+- **Quest Companion parle espagnol** (clients esES et esMX) : toute l'interface, les répliques, blagues, cris et voix du compagnon, les titres des hauts faits, le juke-box et l'histoire des lieux. La langue du jeu est détectée toute seule ; une phrase pas encore traduite s'affiche en anglais.
+- Les noms des créatures et des quêtes de nos tables viennent de Questie en espagnol (Espagne et Mexique, chacun son nom quand ils diffèrent) ; les noms des sous-zones de l'histoire des lieux, des tables du client.
+- **Réserve** : « Faire de la place » a sa propre rangée, espacée des filtres et de la grille (il mordait sur la grille).
+
+*English:* Quest Companion now speaks Spanish (esES and esMX clients): the whole interface, the companion's lines, jokes, shouts and voices, achievement titles, the jukebox and the place lore. The game language is detected automatically; a line not translated yet shows in English. Creature and quest names come from Questie's Spanish data. Reserve: "Make room" now sits on its own row, clear of the filters and the grid.
+
 ## 3.2.0
 
 - **Le compagnon crie**, en MAJUSCULES et en couleur : en rouge quand ça devient dangereux, en or pour les grandes joies (le nom du monstre, de l'objet ou le nombre ressort en accent).

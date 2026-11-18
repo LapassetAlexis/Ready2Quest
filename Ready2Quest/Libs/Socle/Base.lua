@@ -43,7 +43,18 @@ local BOOT_EN = {
 	SCRIPT_ERRORS = "  turn Lua errors on: /console scriptErrors 1 then /reload",
 	LOADED = "%s — files loaded",
 }
-local BOOT = (type(GetLocale) == "function" and GetLocale() == "frFR") and BOOT_FR or BOOT_EN
+-- socle 3.6 : espagnol (Espagne, Mexique)
+local BOOT_ES = {
+	ERROR = "%s — error|r (%s) %s",
+	NOT_LOADED = "%s — módulos no cargados.",
+	MISSING = "  archivos no ejecutados: %s",
+	CMD_FAILED = "  todos los archivos están cargados, pero el comando no se pudo ejecutar.",
+	LAST_ERROR = "  último error: %s",
+	SCRIPT_ERRORS = "  activa los errores de Lua: /console scriptErrors 1 y luego /reload",
+	LOADED = "%s — archivos cargados",
+}
+local BOOT_LOCALE = type(GetLocale) == "function" and GetLocale() or nil
+local BOOT = (BOOT_LOCALE == "frFR" and BOOT_FR) or ((BOOT_LOCALE == "esES" or BOOT_LOCALE == "esMX") and BOOT_ES) or BOOT_EN
 ns.BOOT_STRINGS = BOOT
 -- « QuestCompanion 2.11.0 » : l'identifiant en or, puis la version
 local function BootName()
@@ -62,7 +73,7 @@ end
 -- PLACE_DATA, DUNGEONS…) sont partagées telles quelles (ns.SocleData).
 -- Empreinte différente : chacun sa copie, comme avant.
 -- socle:empreinte (écrit par tools/sync_socle.py, ne pas éditer)
-local SOCLE_ID = "bce1d60f"
+local SOCLE_ID = "91b0d172"
 -- /socle:empreinte
 local REGISTRY = rawget(_G, "ReadyToQuestSocle")
 if type(REGISTRY) ~= "table" then

@@ -1,0 +1,2 @@
+https://github.com/Ironship/UsefulPlatesAndTooltips
+7a3a3e70e0382d2ba870ff00d5461921c25a4ddf 2026-11-16 Release Forever 0.9.131 (beta) and Retail 0.9.140: per second number on the action buttons

@@ -177,7 +177,60 @@ de page ; plus les boutons depuis la 3.0, voir « Composants 3.0 ») ; bouton pl
 ## Fenêtre de réglages (`Libs/Socle/Options.lua`)
 
 Construite avec les briques ci-dessus ; les modules déclarent leurs pages avec
-`ns.AddOptionPage`, comme avant.
+`ns.AddOptionPage`, comme avant. Deux navigations, au choix de l'addon.
+
+### Navigation par familles (socle 3.5, Ready2Quest 2.0.0)
+
+L'addon déclare `ns.OPTION_FAMILIES` (table, ou `function(ns)` relue à chaque
+construction de la fenêtre : Ready2Quest, `OptionsMenu.lua`, chargé en
+dernier, y range les lignes que ses modules ont déclarées sur leurs pages).
+Maquette validée le 2026-11-17.
+
+- Colonne : une entrée par famille, hauteur 52 : icône du client par
+  référence (22, repli point d'interrogation), libellé, sous-libellé
+  (`F_SMALL` MUTED). Pas de titre de groupe, pas de voyant, pas de
+  défilement. Six familles dans Ready2Quest : Accueil, Check avant le départ,
+  Sacs & butin, Voyage, Quêtes & sorts, Combat. Un futur module devient une
+  section ou un onglet d'une famille, jamais une entrée de plus ; cinq
+  onglets au plus par famille, un onglet se scinde au-delà d'une quinzaine de
+  réglages.
+- Famille : `{ id, title, sub, icon, power, powerLabel, aliases, oldNames,
+  preview, dash, tabs }`. `power` : interrupteur dans l'en-tête, sur la ligne
+  de la phrase (« Addon actif », « Check actif ») ; coupée, la phrase devient
+  `OPT_PAGE_OFF` et les cartes de la famille s'estompent.
+- Onglet : `{ id, label, phrase, preview, sections }` (la phrase de l'onglet
+  en sous-titre ; `preview = false` : sans l'aperçu de la famille), ou
+  `kind = "dashboard"` avec `columns` (la vue d'ensemble).
+- Section : `{ id, title, phrase, tag, power, aliases, oldNames, rows,
+  modules, list, listLines, info, frameButtons, actions }`. Avec `power` ou
+  `phrase` : une tête de fonction (titre `F_HEADING` PARCHMENT, étiquette or,
+  phrase `F_SMALL` sur toute la largeur, interrupteur à droite, filet
+  dessous) ; coupée, son titre passe en MUTED et ses cartes s'estompent (sans
+  repli ni re-mise en page). Sinon un titre de section ordinaire.
+- Vue d'ensemble : deux colonnes de cartes de famille, une ligne de 24 par
+  fonction (`dash = { { label, go, key, text } }`, sinon les sections à
+  `power`) : le nom ouvre la fonction, l'interrupteur est le même réglage,
+  `text(ns)` une mention (dernière note, nombre de favoris). Tient sans
+  défilement.
+- Cibles (`ns:SelectOptionsPage`, `ns:OpenOptionsAt`, `ns:OptionsGo`) : id de
+  famille (son dernier onglet), `famille:onglet`, id d'onglet nu, id de
+  section, `aliases` (anciens ids de pages). Une section choisie : la page
+  défile jusqu'à elle, sa tête s'éclaire 1,6 s. Inconnu : la première famille.
+- Ouverture : la première de la session sur le premier onglet de la première
+  famille (Accueil › Vue d'ensemble) ; ensuite, là où on était.
+- Roue crantée : `ns:AddSettingsGear(fenêtre, cible)` (Ready2Quest, `UI.lua`),
+  à gauche du [×] ; une fenêtre de dialogue garde sa place avec `headerIcon`.
+- Recherche : en plus des cartes, les lieux (familles, onglets, sections, et
+  leurs `oldNames`) dont le nom contient tous les mots, en tête des
+  résultats, avec leur chemin (« Sacs & butin > Sac plein & butin ») ; un clic
+  y mène. La colonne compte les cartes trouvées par famille.
+- Pied : sans « Réinitialiser » (la remise à zéro est une action de
+  l'addon, avec confirmation).
+- Tests : `tests/modules/options.lua` (familles, têtes, vue d'ensemble, liens
+  directs, recherche des lieux), `zz_integration.lua` (aucun onglet ne
+  défile, tous les modules chargés).
+
+### Navigation par pages (QuestCompanion)
 
 - Navigation : une entrée par page. Une page de premier niveau qui a des
   sous-pages (`parent = <id>`) devient un titre de groupe (son titre, en
@@ -269,8 +322,6 @@ Toutes les autres fenêtres et cadres suivent le même langage, à leur taille
 | Rangs de sorts           | dialogue 520   | cartes icône, sort, case ; « Mettre à jour » (accent) / « Ignorer » ; « Tout mettre à jour » plein dans le pied |
 | Sac plein                | bandeau 380    | liseré orange, suggestion, « Jeter » plein, « Autre », « Garder toujours » |
 | Kit de camp              | bandeau 300 × 28 | décompte centré ; s'élargit au texte jusqu'à 440 (1.35.0) |
-| Résumé de stuff          | `SkinToast`    | même mise en page (titre espacé, filet, une ligne), fond autour, suit le libellé |
-| Stats du portrait        | bandeau 206    | liseré à la couleur de la classe, classe et niveau d'objet, filet, valeurs à droite |
 | Mode déplacement         | bandeau 460    | titre et aide à gauche, « Terminer le déplacement » plein à droite |
 | Icône d'annonce          | tuile 40       | fond WINDOW, filet EDGE, barre basse à la couleur du rapport, halo inchangé |
 | Bonne récompense         | —              | filet ambre 1 px et fond ambre à 12 %, étiquette `F_LABEL` ambre |
@@ -278,10 +329,9 @@ Toutes les autres fenêtres et cadres suivent le même langage, à leur taille
 
 Aperçus : `python3 tests/snapshot.py <scène> <sortie.html>` (`list` les donne
 toutes) : `r2q-check`, `r2q-dungeon`, `r2q-expedition`, `r2q-death`,
-`r2q-lootroom`, `r2q-spellranks`, `r2q-bagspace`, `r2q-camp`, `r2q-gear-toast`,
-`r2q-portrait`, `r2q-pace`, `r2q-reward`, `r2q-notice`, `r2q-exit-alert`,
-`r2q-edit-banner`, `r2q-minimap-tooltip`, `r2q-options`, `r2q-options-nav`,
-`r2q-options-bags`, `r2q-options-spellranks`, `r2q-settings-canvas`. Les infobulles du jeu y
+`r2q-lootroom`, `r2q-spellranks`, `r2q-bagspace`, `r2q-camp`, `r2q-pace`, `r2q-reward`, `r2q-notice`, `r2q-exit-alert`,
+`r2q-edit-banner`, `r2q-minimap-tooltip`, `r2q-options`, `r2q-options-general`,
+`r2q-options-bags`, `r2q-options-plein`, `r2q-options-nav`, `r2q-options-spellranks`, `r2q-settings-canvas`. Les infobulles du jeu y
 sont dessinées à l'approche (`Snap.Tooltip`, police du jeu).
 
 ## Carnet et compagnon (QuestCompanion)
@@ -572,7 +622,6 @@ rend à `PLAYER_REGEN_ENABLED` s'il a lieu d'être.
 | Icône d'annonce (« ! », « ? ») en combat | retenue si le combat avait déjà commencé, mais déjà affichée elle restait (bouton de 40 px en haut de l'écran) | effacée au premier coup ; revient après si elle n'avait pas tenu la moitié de ses 68 s, sinon oubliée (règle du carnet) |
 | Rapports ouverts seuls (icône coupée : Avant le départ, Retour d'expédition, Avant le donjon) | restaient au milieu de l'écran pendant le combat | rangés au premier coup, rendus après ; ouverts par le joueur (/r2q, flèche, clic sur l'icône) ils restent (`ns:ReportOpenedAlone`) |
 | Bandeau « Sac plein » | restait en combat avec ses boutons (« Jeter » refusé en combat) ; sans nom, pas fermé par Échap | rangé au premier coup, revient si les sacs sont toujours pleins ; nommé `Ready2QuestBagSpace`, fermé par Échap (comme les sacs du jeu) |
-| Résumé de stuff | apparaissait au centre à chaque changement d'arme en combat | effacé au premier coup, pas de nouveau en combat (la référence des stats suit) ; aperçu des réglages et mode déplacement inchangés |
 | Lignes du check | toutes éclairées au survol, aucune cliquable (sauf le repli) | le clic fait le geste du conseil : Sacs et Objets gris ouvrent les sacs, Quêtes le journal, Rangs de sorts sa fenêtre ; l'aide du clic en dernière ligne de l'infobulle ; voile de survol seulement sur une ligne qui répond (infobulle ou clic) |
 | Rangs de sorts en combat | « la mise à jour attendra la fin du combat » dans le chat, mais le clic était perdu | le clic (et « Tout mettre à jour ») est retenu et joué à la fin du combat ; message une fois |
 | Après la mort : [×] et Échap | fermaient sans retenir le refus : la fenêtre revenait au changement de zone suivant | valent « Fermer » (`OnHide`) ; le rangement par l'addon (résurrection) et l'interface masquée (Alt+Z) n'en sont pas |
@@ -594,12 +643,10 @@ d'infobulle (≥ 4,5:1).
 | Place au butin en combat | liée à la fenêtre de butin, ouverte par le joueur ; se ferme avec elle |
 | Après la mort | pas de combat quand on est mort |
 | Bandeau du kit de camp en combat | en haut de l'écran, souris coupée, une ligne ; son décompte tourne sur l'horloge de l'addon (passe de performance en cours, pas touché) |
-| Stats au survol du portrait en combat | ne vient qu'au survol, comme une infobulle du jeu |
 | Choix de la récompense de quête | la bonne est cernée d'ambre et étiquetée ; la sélectionner d'office ferait gagner un clic mais risque une récompense non voulue, et le gestionnaire du client 1.12 (`QuestRewardItem_OnClick`) lit `this` : pas vérifiable hors jeu |
 | Autres lignes du check (vivres, potions, buffs, repos, durabilité, réparation, réactifs, pierre de foyer, sorts, camp, métiers) | pas de geste en un clic hors d'un marchand ou d'un entraîneur : pas de clic promis |
 | « Fermer » du pied et [×] dans les dialogues | convention de la fenêtre type, gardée |
 | `Dungeon.lua` | hors de cette passe (fichier tenu ailleurs) ; sa fenêtre profite quand même du rangement en combat par `ns.COMBAT_UI` |
-| Couleur de repli de la classe (`1, 0.82, 0`, `Stats.lua`) | seulement quand `RAID_CLASS_COLORS` manque ; c'est l'or du jeu |
 | Icône d'annonce et bandeau du camp au même point par défaut (`TOP`, −150) | ne se montrent presque jamais ensemble (départ d'une ville / feu de camp hors ville) et se déplacent ; à placer par `ns.PopupPlace` si un retour le signale |
 
 ### À regarder en jeu

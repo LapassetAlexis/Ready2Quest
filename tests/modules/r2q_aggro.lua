@@ -116,7 +116,7 @@ do
 		and NS:FindModule("aggro").key == "aggroEnabled" and NS:FindModule("portee") ~= nil)
 	local page
 	for _, def in ipairs(NS.OPTION_PAGES) do if def.id == "aggro" then page = def end end
-	Check("[AGGRO] sous-page du QoL, 7 réglages (style de marque, apprentissage, voisins +N)", page and page.parent == "qol" and page.group == "OPT_GROUP_QOL"
+	Check("[AGGRO] première page du groupe COMBAT (1.38.0), 7 réglages (style de marque, apprentissage, voisins +N)", page and page.parent == nil and page.group == "OPT_GROUP_COMBAT"
 		and #page.rows == 7 and page.rows[5].key == "aggroStyle" and page.rows[6].key == "aggroLearn" and page.rows[7].key == "aggroLink")
 	local db = NS:DB()
 	Check("[AGGRO] défauts : actif, danger seul, infobulle, anneaux", db.aggroEnabled == true and db.aggroKey == "alert"
@@ -580,3 +580,35 @@ end
 for _, name in ipairs(NAMES) do _G[name] = saved[name] end
 C_Item.IsItemInRange = saved.inRange
 NS.aggroPlates, NS.aggroRings, NS.aggroShowing, NS.aggroScanned = {}, {}, nil, nil
+
+-- 1.38.0 : /r2q diag dit, barre par barre, pourquoi les paliers manquent
+do
+	local NAMES = { "UnitExists", "UnitIsPlayer", "UnitIsDead", "UnitCanAttack", "UnitCreatureType", "UnitReaction",
+		"UnitLevel", "UnitName" }
+	local keep = {}
+	for _, n in ipairs(NAMES) do keep[n] = rawget(_G, n) end
+	local savedDistance = NS.AggroDistance
+	local W = { level = 12, attack = true }
+	_G.UnitExists = function() return true end
+	_G.UnitIsPlayer = function(u) return u == "player" end
+	_G.UnitIsDead = function() return false end
+	_G.UnitCanAttack = function() return W.attack end
+	_G.UnitCreatureType = function() return "Humanoïde" end
+	_G.UnitReaction = function() return 2 end
+	_G.UnitName = function() return "Gnoll" end
+	_G.UnitLevel = function(u) if u == "player" then return 12 end return W.level end
+	NS.AggroDistance = function() return W.low, W.high end
+	W.low, W.high = 20, 25
+	local measured = NS:AggroPlateDiag("nameplate3", nil)
+	W.level = nil
+	local noLevel = NS:AggroPlateDiag("nameplate3", nil)
+	W.level, W.low, W.high = 12, nil, nil
+	local noRange = NS:AggroPlateDiag("nameplate3", nil)
+	W.attack = false
+	local notHostile = NS:AggroPlateDiag("nameplate3", nil)
+	for n, v in pairs(keep) do _G[n] = v end
+	NS.AggroDistance = savedDistance
+	Check("[AGGRO] diag par barre : mesure, niveau illisible, aucune distance, pas hostile",
+		measured:find("Gnoll", 1, true) and measured:find("20-25", 1, true) and noLevel:find("niveau illisible", 1, true)
+		and noRange:find("aucune mesure", 1, true) and notHostile:find("ni hostile", 1, true), measured .. " | " .. noLevel)
+end

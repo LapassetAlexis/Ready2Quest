@@ -69,6 +69,21 @@ do
 	NS.aggroSpellSteps = nil
 end
 
+-- 1.38.0 : les sorts « au prochain coup » ne servent jamais de règle (Frappe
+-- héroïque répond « à portée » à 30 m)
+do
+	local byID = { [78] = { name = "Frappe héroïque", minRange = 0, maxRange = 5 },
+		[772] = { name = "Pourfendre", minRange = 0, maxRange = 5 } }
+	NS.NewSpellsBook = function() return { ["Frappe héroïque"] = { id = 78 }, ["Pourfendre"] = { id = 772 } } end
+	_G.C_Spell = { GetSpellInfo = function(id) return byID[id] end, IsSpellInRange = function() return true end }
+	NS.aggroSpellSteps = nil
+	local steps = NS:AggroSpellSteps()
+	Check("[AGGRO+] Frappe héroïque écartée, Pourfendre garde le palier de 5 m", #steps == 1 and steps[1].spell == 772,
+		steps[1] and steps[1].spell)
+	NS.NewSpellsBook, _G.C_Spell = saved.NewSpellsBook, saved.C_Spell
+	NS.aggroSpellSteps = nil
+end
+
 Say("-- aggro+ : distance estimée entre deux paliers")
 ResetWorld()
 Install()

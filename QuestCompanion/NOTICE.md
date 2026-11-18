@@ -27,6 +27,8 @@ Ces données ont été importées une fois de QuestieDB (commit `c5de61ab`, Ques
 python3 -I tools/gen_zone_data.py
 ```
 
+Depuis la 3.3.0, `NamesES.lua` garde les noms espagnols (Espagne et Mexique) des créatures, quêtes et objets de récolte de ces tables, tirés des fichiers `l10n/Forever/lookupNpcs|lookupQuests|lookupItems/esES.lua` et `esMX.lua` de QuestieDB au même commit (GPL-3.0), par `tools/gen_names_es.py` via `data/forever/names_es.json`.
+
 Voir `docs/DONNEES.md` : contenu de la base, corrections, reprise facultative des nouveautés de Questie (`tools/import_questie.py`).
 
 ## Lieux sûrs (`Libs/Socle/Places.lua`)
@@ -35,7 +37,7 @@ Le socle commun embarque aussi les lieux repérés par leurs PNJ de service, gé
 
 ## Histoire des lieux (`LoreData.lua`)
 
-Depuis la 2.13.0, le compagnon dit une phrase d'histoire des zones et de quelques sous-zones notables (`CompanionLore.lua`). Ces phrases viennent de [Warcraft Wiki](https://warcraft.wiki.gg), publié sous licence [CC BY-SA 4.0](https://creativecommons.org/licenses/by-sa/4.0/), telles que choisies, adaptées et traduites en français par le projet [Spoken](https://github.com/rusty-key/spoken-wow) de Rusty Key (`addons/Spoken_Places/Data`, commit `4ccae964bb4e04f40e82417efc2925cf6e147b90`). Merci à eux.
+Depuis la 2.13.0, le compagnon dit une phrase d'histoire des zones et de quelques sous-zones notables (`CompanionLore.lua`). Ces phrases viennent de [Warcraft Wiki](https://warcraft.wiki.gg), publié sous licence [CC BY-SA 4.0](https://creativecommons.org/licenses/by-sa/4.0/), telles que choisies, adaptées et traduites en français par le projet [Spoken](https://github.com/rusty-key/spoken-wow) de Rusty Key (`addons/Spoken_Places/Data`, commit `4ccae964bb4e04f40e82417efc2925cf6e147b90`). Merci à eux. Depuis la 3.3.0, une version espagnole de ces phrases, traduite de l'anglais pour l'addon (`data/forever/lore/lore_es.json`), reste sous la même licence CC BY-SA 4.0.
 
 - Nous n'en gardons que le résumé court (`short`) de chaque lieu, réduit au besoin à une phrase ou coupé au mot (« … ») ; les entrées sans source (prose écrite par Spoken) sont écartées. La page du wiki d'où vient chaque ligne est le dernier champ de la ligne (`https://warcraft.wiki.gg/wiki/<page>`) et figure dans l'instantané `data/forever/lore/lore.json`.
 - **Licence** : ces textes (`LoreData.lua`, `data/forever/lore/lore.json`) restent sous **CC BY-SA 4.0** (attribution, partage dans les mêmes conditions), et non sous la GPL-3.0 du reste de l'addon (compatibilité à sens unique CC BY-SA 4.0 → GPL-3.0). Le code de Spoken est sous licence MIT ; nous n'en reprenons pas de code, seulement la façon de normaliser les noms de lieux, réécrite dans `tools/gen_lore.py` et `CompanionLore.lua` (GPL-3.0).

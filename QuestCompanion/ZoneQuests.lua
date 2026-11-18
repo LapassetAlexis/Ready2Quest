@@ -211,8 +211,10 @@ local function Build(self, zone, race, class, french)
 			if done or not Closed(self, quest) then
 				-- 2.9.1 : le titre du client d'abord (sa langue) ; la demande de
 				-- chargement seulement quand notre nom n'est pas dans cette langue
-				local name = ClientTitle(id, french and not quest.fr)
-					or (french and quest.fr) or quest.en or quest.fr
+				-- 3.3.0 : client espagnol, le titre de Questie (NamesES.lua)
+				local spanish = not french and ns.STRINGS_SPANISH and quest.es
+				local name = ClientTitle(id, (french and not quest.fr) or (ns.STRINGS_SPANISH and not quest.es))
+					or (french and quest.fr) or spanish or quest.en or quest.fr
 				name = (type(name) == "string" and name ~= "") and name or tostring(id)
 				list[#list + 1] = { id = id, name = name, done = done, level = Level(quest) }
 			end
@@ -236,7 +238,7 @@ function ns:ZoneQuestList(zoneID)
 	end
 	local race, class = PlayerIDs()
 	local french = French()
-	local key = table.concat({ zoneID, tostring(race), tostring(class), french and "fr" or "en" }, ":")
+	local key = table.concat({ zoneID, tostring(race), tostring(class), french and "fr" or (ns.STRINGS_SPANISH and "es" or "en") }, ":")
 	local list = state.lists[key]
 	if not list then
 		local ok, built = pcall(Build, self, zone, race, class, french)

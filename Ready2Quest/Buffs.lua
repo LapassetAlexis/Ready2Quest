@@ -683,7 +683,9 @@ function ns:ClassName(classFile)
 	local name = type(names) == "table" and Plain(names[classFile])
 	if type(name) ~= "string" or name == "" then name = L["CLASS_" .. classFile] or classFile end
 	local getLocale = rawget(_G, "GetLocale")
-	if type(getLocale) == "function" and Plain(getLocale()) == "frFR" then
+	-- en français comme en espagnol, une classe s'écrit en minuscule dans la phrase
+	local locale = type(getLocale) == "function" and Plain(getLocale())
+	if locale == "frFR" or locale == "esES" or locale == "esMX" then
 		name = name:gsub("^%u", string.lower)
 	end
 	return name

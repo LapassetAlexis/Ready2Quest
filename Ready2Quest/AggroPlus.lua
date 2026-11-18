@@ -72,8 +72,27 @@ local function SpellInRange(spellID, name, unit)
 	return result == true or result == 1
 end
 
+-- 1.38.0 : les sorts « au prochain coup » (Frappe héroïque, Enchaînement,
+-- Attaque du raptor, Mutiler) répondent « à portée » à 30 m : jamais une règle.
+-- Constat de DoesItDiePlus (Ironship, GPL-3.0, Modules/Range/Range.lua).
+ns.AGGRO_NEXT_SWING = { 78, 845, 2973, 6807 }
+local function SpellName(id)
+	local info = Call(Spell("GetSpellInfo"), id)
+	if type(info) == "table" then return info.name end
+	return (Call(Global("GetSpellInfo"), id))
+end
+function ns.AggroNextSwingNames()
+	local names = {}
+	for _, id in ipairs(ns.AGGRO_NEXT_SWING) do
+		local name = SpellName(id)
+		if type(name) == "string" and name ~= "" then names[name] = true end
+	end
+	return names
+end
+
 function ns:AggroSpellSteps()
 	if self.aggroSpellSteps then return self.aggroSpellSteps end
+	local skip = ns.AggroNextSwingNames()
 	local book = {}
 	if self.NewSpellsBook then
 		local ok, value = pcall(self.NewSpellsBook, self)
@@ -82,7 +101,7 @@ function ns:AggroSpellSteps()
 	local steps, seen = {}, {}
 	for name, info in pairs(book) do
 		local id = type(info) == "table" and info.id
-		if id then
+		if id and not skip[name] then
 			local minRange, maxRange = ns.AggroSpellRange(id)
 			if maxRange and (minRange or 0) == 0 and maxRange >= ns.AGGRO_SPELL_MIN and maxRange <= ns.AGGRO_SPELL_MAX
 				and not seen[maxRange] then

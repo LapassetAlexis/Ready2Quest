@@ -26,10 +26,23 @@ end
 local function Nav(ns, id)
 	for _, nav in ipairs(ns.optionsFrame.navButtons) do if nav.pageId == id then return nav end end
 end
--- page de test le temps d'un bloc, retirée ensuite
+-- R2Q 2.0.0 : navigation par familles. Les blocs qui éprouvent la
+-- navigation par pages du socle (celle de QuestCompanion) la prennent sur
+-- Ready2Quest le temps du bloc, sans ses familles.
+local function Legacy(fn)
+	local saved = NS.OPTION_FAMILIES
+	NS.OPTION_FAMILIES = nil
+	NS.optionsFrame = nil
+	local ok, err = pcall(fn)
+	NS.OPTION_FAMILIES = saved
+	NS.optionsFrame = nil
+	if not ok then error(err, 0) end
+end
+
+-- page de test le temps d'un bloc, retirée ensuite (navigation par pages)
 local function WithPage(def, fn)
 	NS.AddOptionPage(def)
-	local ok, err = pcall(fn)
+	local ok, err = pcall(Legacy, fn)
 	for index, existing in ipairs(NS.OPTION_PAGES) do
 		if existing == def then table.remove(NS.OPTION_PAGES, index); break end
 	end
@@ -49,52 +62,243 @@ local function NavOrder(ns)
 	return table.concat(out, ",")
 end
 
--- 1. Navigation : une entrée par page --------------------------------------------
+-- 1. Navigation par familles (R2Q 2.0.0) ----------------------------------------
+local function Head(ns, id)
+	local sec = ns.optionsFrame.sectionIndex[id]
+	return sec and sec.item and sec.item.region
+end
 do
-	Say("-- réglages : navigation")
+	Say("-- réglages : navigation par familles")
 	T.ResetWorld()
-	local frame = Open(NS, "general")
-	Want("R2Q : groupes et entrées dans l'ordre des pages", NavOrder(NS) == "general,[CHECK AVANT LE DÉPART],trigger,safe,bags,gear,buffs,"
-		.. "[MODULES],camp,expedition,dungeon,[CONFORT DE JEU],merchant,reward,pace,bagspace,lootroom,spellranks,death,aggro",
-		NavOrder(NS))
-	local qol = Header(NS, "qol")
-	Want("page à sous-pages : titre de groupe en capitales ambre", qol and qol.label.text == "CONFORT DE JEU"
-		and qol.label.fontObject == Theme.F_CAPS and qol.label.textColor[1] > 0.85)
-	Want("sous-page liée à un module : son interrupteur", Nav(NS, "spellranks").powerKey == "spellranksEnabled"
-		and Nav(NS, "reward").powerKey == "rewardEnabled" and Nav(NS, "merchant").powerKey == nil and Nav(NS, "spellranks").power:IsShown())
-	Nav(NS, "spellranks").power:Click()
-	Want("interrupteur d'une sous-page : coupe le module, reste sur la page", NS:DB().spellranksEnabled == false
-		and frame.currentPage == "general" and Nav(NS, "spellranks").moduleOn == false and Row(NS, "spellranksEnabled").toggle.checked == false)
-	Nav(NS, "spellranks").power:Click()
-	Want("titre de groupe d'un module : son interrupteur", Header(NS, "departure").powerKey == "departureEnabled"
-		and Header(NS, "departure").power:IsShown() and not qol.power:IsShown())
-	Nav(NS, "spellranks"):Click()
-	Want("en-tête : le titre de la sous-page choisie", frame.header.title.text == NS.L.OPT_PAGE_SPELLRANKS
-		and frame.header.subtitle.text == NS.L.OPT_PAGE_SPELLRANKS_SUB and Nav(NS, "spellranks").selected and not frame.tabs:IsShown())
-	local _, _, _, _, bodyY = frame.pages.spellranks:GetPoint()
-	Want("sans onglets : le contenu remonte sous l'en-tête", bodyY > lay.tabsTop - Theme.TABS_HEIGHT - lay.previewHeight, bodyY)
-	qol:Click()
-	Want("clic sur un titre de groupe : sa première page", frame.currentPage == "merchant")
-	Verdict("R2Q : navigation dans l'ordre des pages, groupes en capitales, interrupteurs de module, en-tête de la sous-page")
-	-- chaque page a exactement une entrée, et chaque réglage s'atteint par elle
-	local entries, problems = {}, {}
-	for _, item in ipairs(frame.navButtons) do entries[item.pageId] = (entries[item.pageId] or 0) + 1 end
-	for id in pairs(frame.pages) do
-		if entries[id] ~= 1 then problems[#problems + 1] = id .. "x" .. tostring(entries[id]) end
+	local frame = Open(NS)
+	Want("première ouverture : Accueil › Vue d'ensemble", frame.currentPage == "home:overview" and Nav(NS, "home").selected
+		and frame.tabs:IsShown() and frame.tabs.selected == "home:overview", frame.currentPage)
+	Want("six familles dans l'ordre", NavOrder(NS) == "home,check,sacs,voyage,quetes,combat", NavOrder(NS))
+	local list = frame.navList
+	Want("colonne sans défilement", list.contentHeight <= list.viewHeight, list.contentHeight)
+	local check = Nav(NS, "check")
+	Want("entrée : icône du client, libellé, sous-libellé, pas de voyant", check.icon.texture == NS.OPTION_ICONS.check
+		and check.label.text == NS.L.OPT_FAM_CHECK and check.sub.text == NS.L.OPT_FAM_CHECK_SUB and not check.power:IsShown())
+	Want("plus de titres de groupe", #frame.navHeaders == 0)
+	check:Click()
+	Want("famille : son premier onglet, sa phrase, interrupteur « Check actif »", frame.currentPage == "check:bags"
+		and frame.header.title.text == NS.L.OPT_FAM_CHECK and frame.header.subtitle.text == NS.L.OPT_PAGE_BAGS_SUB
+		and frame.headerPower:IsShown() and frame.headerPower.key == "departureEnabled"
+		and frame.headerPower.label.text == NS.L.OPT_FAM_CHECK_POWER and frame.headerPower.checked == true)
+	frame.tabs.byId["check:when"]:Click()
+	Nav(NS, "combat"):Click()
+	Nav(NS, "check"):Click()
+	Want("famille : le dernier onglet retenu", frame.currentPage == "check:when", frame.currentPage)
+	Nav(NS, "sacs"):Click()
+	Want("famille sans interrupteur : en-tête sans interrupteur", not frame.headerPower:IsShown())
+	Verdict("R2Q : six familles (icône, sous-libellé), colonne fixe, onglets, dernier onglet retenu, interrupteur d'en-tête")
+
+	-- onglets de chaque famille, dans l'ordre de la maquette
+	local tabs = {}
+	for _, family in ipairs(frame.families) do
+		local ids = {}
+		for _, tab in ipairs(family.tabs) do ids[#ids + 1] = tab.id end
+		tabs[#tabs + 1] = family.id .. "=" .. table.concat(ids, "/")
 	end
-	for id, count in pairs(entries) do if not frame.pages[id] then problems[#problems + 1] = id .. ":sans page" end end
-	local shown = 0
-	for _, item in ipairs(frame.navButtons) do
-		item:Click()
-		for _, row in ipairs(frame.pages[item.pageId].rows) do
-			if row:GetParent() == frame.pages[item.pageId] and frame.pages[item.pageId]:IsShown() then shown = shown + 1
-			else problems[#problems + 1] = tostring(row.labelText) end
+	Check("[OPT] R2Q : onglets de la maquette", table.concat(tabs, " ") == "home=overview/general check=bags/gear/buffs/when "
+		.. "sacs=marchand/plein voyage=retour/camp/donjon quetes=xp/sorts combat=portees/dots/cast/bars", table.concat(tabs, " "))
+
+	-- une tête par fonction ; plus de ligne « Activer » en double
+	local heads, problems = {}, {}
+	for _, head in ipairs(frame.heads) do
+		if head.powerKey then heads[#heads + 1] = head.def.id .. ":" .. head.powerKey end
+	end
+	Check("[OPT] R2Q : une tête avec interrupteur par fonction", table.concat(heads, ",") == "bagspace:bagspaceEnabled,"
+		.. "lootroom:lootroomEnabled,quickloot:quickLootEnabled,expedition:expeditionEnabled,death:deathEnabled,camp:campEnabled,"
+		.. "dungeon:dungeonEnabled,groupready:dungeonGroup,reward:rewardEnabled,pace:paceEnabled,spellranks:spellranksEnabled,"
+		.. "trainall:trainAllEnabled,aggro:aggroEnabled,combatRange:combatRange,combatDots:combatDots,combatCast:combatCast,"
+		.. "combatBars:combatBars", table.concat(heads, ","))
+	local powers = { enabled = true, departureEnabled = true }
+	for _, head in ipairs(frame.heads) do if head.powerKey then powers[head.powerKey] = true end end
+	for _, row in ipairs(frame.rows) do
+		if row.def and powers[row.def.key] then problems[#problems + 1] = row.def.key end
+	end
+	Check("[OPT] R2Q : aucun interrupteur de fonction en double dans les lignes", #problems == 0, table.concat(problems, ","))
+
+	-- les déplacements de la maquette
+	local function PageOf(key)
+		for _, row in ipairs(frame.rows) do
+			if (row.def and row.def.key == key) or row.moduleId == key then return row.pageId end
 		end
 	end
-	Check("[OPT] R2Q : chaque page a une seule entrée, chaque réglage s'y affiche", #problems == 0 and shown == #frame.rows,
+	local moved = {
+		showWindow = "check:when", popupScore = "check:when", barranks = "check:gear", profcap = "check:buffs",
+		favoriteClick = "sacs:marchand", favoriteAutoBuyback = "sacs:marchand", autoSellGray = "sacs:marchand",
+		exitDelay = "check:when", showMinimap = "home:general", uiStyle = "home:general", reportIcon = "home:general",
+		qcAction = "home:general", aggroLink = "combat:portees", campkit = "voyage:camp", deathPanel = "voyage:retour",
+	}
+	problems = {}
+	for key, want in pairs(moved) do
+		if PageOf(key) ~= want then problems[#problems + 1] = key .. "=" .. tostring(PageOf(key)) end
+	end
+	Check("[OPT] R2Q : réglages à leur nouvelle place (check, favoris, interface)", #problems == 0, table.concat(problems, ", "))
+	Check("[OPT] R2Q : aucun contrôle du check sans place (rien ne tombe dans Général)", #frame.unplaced == 0,
+		table.concat(frame.unplaced, ","))
+
+	-- chaque onglet s'atteint, chaque réglage s'y affiche
+	problems = {}
+	local shown = 0
+	for _, family in ipairs(frame.families) do
+		for _, tab in ipairs(family.tabs) do
+			local id = family.id .. ":" .. tab.id
+			NS:SelectOptionsPage(id)
+			if frame.currentPage ~= id then problems[#problems + 1] = id end
+			for _, row in ipairs(frame.pages[id].rows) do
+				if row:GetParent() == frame.pages[id] and frame.pages[id]:IsShown() then shown = shown + 1
+				else problems[#problems + 1] = tostring(row.labelText) end
+			end
+		end
+	end
+	Check("[OPT] R2Q : chaque onglet s'ouvre, chaque réglage s'y affiche", #problems == 0 and shown == #frame.rows,
 		table.concat(problems, ", ") .. " " .. shown .. "/" .. #frame.rows)
 	frame:Hide()
+end
 
+-- 1 bis. Tête de fonction, vue d'ensemble, liens directs ----------------------------
+do
+	Say("-- réglages : fonctions, vue d'ensemble, liens directs")
+	T.ResetWorld()
+	local frame = Open(NS, "lootroom")
+	Want("lien direct : « lootroom » ouvre Sacs & butin › Sac plein & butin, sa tête éclairée", frame.currentPage == "sacs:plein"
+		and Head(NS, "lootroom").flash:IsShown())
+	local head = Head(NS, "lootroom")
+	head.toggle:Click()
+	local dimmed, total = 0, 0
+	for _, row in ipairs(frame.rows) do
+		if row.sectionId == "lootroom" then total = total + 1; if row.dimmed then dimmed = dimmed + 1 end end
+	end
+	Want("tête : l'interrupteur coupe la fonction", NS:DB().lootroomEnabled == false and head.toggle.checked == false)
+	Want("fonction coupée : ses réglages estompés, pas ceux des autres", total == 2 and dimmed == 2
+		and not Row(NS, "bagspaceFrame").dimmed, dimmed .. "/" .. total)
+	head.toggle:Click()
+	Want("rallumée : réglages pleins", NS:DB().lootroomEnabled ~= false and not Row(NS, "lootroomConfirm").dimmed)
+	local quick = Head(NS, "quickloot")
+	Want("Butin rapide : fonction visible, sa phrase, son interrupteur (même clé)", quick and quick.phrase.text == NS.L.OPT_SEC_QUICKLOOT_SUB
+		and quick.toggle.checked == (NS:DB().quickLootEnabled ~= false))
+	NS:SelectOptionsPage("trainall")
+	Want("lien direct : « trainall » ouvre Quêtes & sorts › Sorts", frame.currentPage == "quetes:sorts"
+		and not Head(NS, "lootroom").flash:IsShown() and Head(NS, "trainall").flash:IsShown())
+	for old, want in pairs({ departure = "check:bags", qol = "sacs:marchand", trigger = "check:when", safe = "check:when",
+		merchant = "sacs:marchand", favorites = "sacs:marchand", general = "home:general", gear = "check:gear",
+		aggro = "combat:portees", combatDots = "combat:dots", combatBars = "combat:bars", dungeon = "voyage:donjon",
+		camp = "voyage:camp", pace = "quetes:xp", zzinconnu = "home:overview" }) do
+		frame.tabChoice = {}
+		NS:SelectOptionsPage(old)
+		Want("ancien id « " .. old .. " »", frame.currentPage == want, frame.currentPage)
+	end
+	Verdict("tête de fonction (interrupteur, réglages estompés), fonctions visibles, liens directs et anciens ids")
+
+	frame.tabChoice = {}
+	NS:SelectOptionsPage("home")
+	local lines = {}
+	for _, line in ipairs(frame.dashLines) do lines[#lines + 1] = line.familyId .. ":" .. (line.spec.key or "-") end
+	Want("vue d'ensemble : une ligne par fonction, famille par famille", table.concat(lines, ",") == "check:departureEnabled,"
+		.. "sacs:autoSellGray,sacs:autoRepair,sacs:-,sacs:bagspaceEnabled,sacs:lootroomEnabled,sacs:quickLootEnabled,"
+		.. "voyage:expeditionEnabled,voyage:deathEnabled,voyage:campEnabled,voyage:dungeonEnabled,voyage:dungeonGroup,"
+		.. "quetes:rewardEnabled,quetes:paceEnabled,quetes:spellranksEnabled,quetes:trainAllEnabled,"
+		.. "combat:aggroEnabled,combat:combatRange,combat:combatDots,combat:combatCast,combat:combatBars", table.concat(lines, ","))
+	local dash = frame.pages["home:overview"].dashboard
+	Want("vue d'ensemble : tient sans défilement", dash:IsShown() and dash:GetHeight() <= frame.pages["home:overview"].viewHeight
+		and not frame.scrollThumb:IsShown(), dash:GetHeight())
+	local pace
+	for _, line in ipairs(frame.dashLines) do if line.spec.key == "paceEnabled" then pace = line end end
+	pace.toggle:Click()
+	Want("vue d'ensemble : l'interrupteur est le même réglage", NS:DB().paceEnabled == false and pace.toggle.checked == false)
+	NS:SelectOptionsPage("pace")
+	Want("… et la tête de la fonction le montre", Head(NS, "pace").toggle.checked == false)
+	NS:ToggleModuleKey("paceEnabled")
+	NS:SelectOptionsPage("home")
+	NS:DB().favorites = { [1] = "Pierre", [2] = "Os" }
+	NS.score = 64
+	NS:RefreshOptions()
+	local fav, score
+	for _, line in ipairs(frame.dashLines) do
+		if line.spec.go == "favorites" then fav = line end
+		if line.spec.key == "departureEnabled" then score = line end
+	end
+	Want("vue d'ensemble : mentions (favoris, dernière note)", fav.detail.text == NS:F("OPT_DASH_FAVORITES", 2)
+		and score.detail.text == NS:F("OPT_DASH_SCORE", 64), tostring(fav.detail.text) .. " / " .. tostring(score.detail.text))
+	NS.score = nil
+	pace:Click()
+	Want("vue d'ensemble : un nom ouvre ses réglages", frame.currentPage == "quetes:xp" and Head(NS, "pace").flash:IsShown())
+	NS:SelectOptionsPage("home")
+	Want("Accueil : titre « Ready2Quest »", frame.header.title.text == "Ready2Quest")
+	local checkCard
+	for _, card in ipairs(frame.pages["home:overview"].dashboard.cards) do if card.familyId == "check" then checkCard = card end end
+	local targets = {}
+	for _, chip in ipairs(checkCard.tabButtons or {}) do targets[#targets + 1] = chip.target end
+	Want("carte du check : un raccourci par onglet", table.concat(targets, ",") == "check:bags,check:gear,check:buffs,check:when",
+		table.concat(targets, ","))
+	checkCard.tabButtons[2]:Click()
+	Want("raccourci : l'onglet en un clic", frame.currentPage == "check:gear", frame.currentPage)
+	NS:SelectOptionsPage("home")
+	checkCard:Click()
+	Want("tête de carte : ouvre la famille", frame.currentPage:find("^check:") ~= nil and checkCard.open.text == NS.L.OPT_DASH_OPEN)
+	Verdict("vue d'ensemble : une ligne par fonction, sans défilement, même interrupteur, mentions, le nom ouvre la fonction, raccourcis du check")
+
+	-- l'interrupteur de l'en-tête de l'accueil : l'addon
+	NS:SelectOptionsPage("general")
+	Want("Accueil : « Addon actif » dans l'en-tête", frame.headerPower:IsShown() and frame.headerPower.key == "enabled"
+		and frame.headerPower.label.text == NS.L.OPT_FAM_HOME_POWER)
+	frame.headerPower:Click()
+	Want("« Addon actif » coupé : réglage enabled", NS:DB().enabled == false and frame.headerPower.checked == false)
+	frame.headerPower:Click()
+	Want("rallumé", NS:DB().enabled ~= false)
+	Verdict("Accueil : l'interrupteur « Addon actif » dans l'en-tête")
+
+	-- /r2q options <mot>
+	frame:Hide()
+	NS:HandleCommand("options combat")
+	Want("/r2q options combat : ouverte sur Combat", frame:IsShown() and frame.currentPage:find("^combat:") ~= nil, frame.currentPage)
+	NS:HandleCommand("options butin rapide")
+	Want("/r2q options butin rapide : la fonction (nom cherché)", frame.currentPage == "sacs:plein" and Head(NS, "quickloot").flash:IsShown(),
+		frame.currentPage)
+	NS:HandleCommand("options zones")
+	Want("/r2q options zones : Quand & où", frame.currentPage == "check:when", frame.currentPage)
+	NS:HandleCommand("options zzzz introuvable")
+	Want("/r2q options <mot inconnu> : la recherche", frame.searching and frame.searchPage.total == 0)
+	frame:Hide()
+	frame.scripts.OnHide(frame)
+	NS:HandleCommand("options")
+	Want("/r2q options : rouvre là où on était (pas la vue d'ensemble)", frame:IsShown() and frame.currentPage == "check:when", frame.currentPage)
+	frame:Hide()
+	frame.scripts.OnHide(frame)
+	Verdict("/r2q options <mot> : famille, fonction, recherche ; sans mot, là où on était")
+
+	-- roue crantée de la fenêtre du check
+	NS.optionsFrame = nil
+	local opened = NS:OpenOptionsAt("check")
+	Want("roue crantée du check : Check avant le départ", opened and opened:find("^check:") ~= nil, opened)
+	NS.optionsFrame:Hide()
+	-- une fenêtre de module : la roue à gauche du [×], ouvre sur sa fonction
+	local dialog = Theme.CreateDialog(UIParent, 400, 200, { title = "Essai", headerIcon = true })
+	local gear = NS:AddSettingsGear(dialog, "death")
+	Want("roue d'une fenêtre : à gauche du [×]", gear and gear.lastPoint.relTo == dialog.close and NS:AddSettingsGear(dialog, "x") == gear)
+	gear:Click()
+	Want("roue d'une fenêtre : réglages ouverts sur sa fonction, éclairée", NS.optionsFrame:IsShown()
+		and NS.optionsFrame.currentPage == "voyage:retour" and Head(NS, "death").flash:IsShown(), NS.optionsFrame.currentPage)
+	NS.optionsFrame:Hide()
+	dialog:Hide()
+	-- chaque fenêtre de module porte sa roue, vers sa fonction
+	local missing = {}
+	for file, target in pairs({ Expedition = "expedition", Dungeon = "dungeon", Death = "death", SpellRanks = "spellranks",
+		LootRoom = "lootroom", BagSpace = "bagspace" }) do
+		local handle = io.open("Ready2Quest/" .. file .. ".lua", "r")
+		local text = handle and handle:read("*a") or ""
+		if handle then handle:close() end
+		if not text:find('AddSettingsGear%(frame, "' .. target .. '"') then missing[#missing + 1] = file end
+		if not NS.optionsFrame.sectionIndex[target] then missing[#missing + 1] = target .. ":cible" end
+	end
+	Want("roue sur les six fenêtres de module, cible existante", #missing == 0, table.concat(missing, ","))
+	Verdict("roue crantée : check et fenêtres de module, ouvre sur leur fonction")
+end
+
+do
 	local qframe = Open(QNS, "general")
 	Want("QC : le Compagnon de route en groupe, une entrée par page", NavOrder(QNS) == "general,[COMPAGNON DE ROUTE],companionMain,companionQuiet,companionTalk,companionKeys,"
 		.. "companionOrnaments,journal,companionCharacter,companionDaily", NavOrder(QNS))
@@ -113,8 +317,9 @@ end
 
 -- 1 bis. Navigation qui défile ----------------------------------------------------
 do
-	Say("-- réglages : navigation qui défile")
+	Say("-- réglages : navigation qui défile (navigation par pages)")
 	T.ResetWorld()
+	Legacy(function()
 	local frame = Open(NS, "general")
 	local list = frame.navList
 	Want("R2Q : la navigation dépasse la colonne", list.contentHeight > list.viewHeight, list.contentHeight .. " / " .. list.viewHeight)
@@ -137,6 +342,7 @@ do
 	Want("navigation : au-dessus de la version", lay.navTop - lay.navView >= -(lay.height - 2 - 40))
 	Verdict("navigation qui défile : molette bornée, rien de coupé, la page choisie ramenée en vue, au-dessus de la version")
 	frame:Hide()
+	end)
 end
 
 -- 1 ter. Page parente avec ses réglages, onglets déclarés -----------------------------
@@ -151,7 +357,7 @@ do
 	} }
 	NS.L.OPT_TEST_TAB_B = "Réglage du second onglet"
 	NS.AddOptionPage(parent); NS.AddOptionPage(child); NS.AddOptionPage(tabbed)
-	local ok, err = pcall(function()
+	local ok, err = pcall(Legacy, function()
 		local frame = Open(NS, "general")
 		local overview, childNav = Nav(NS, "zzparent"), Nav(NS, "zzchild")
 		Want("parent avec réglages : « Vue d'ensemble » en tête de son groupe", Header(NS, "zzparent") ~= nil and overview
@@ -195,7 +401,7 @@ end
 do
 	Say("-- réglages : recherche")
 	T.ResetWorld()
-	local frame = Open(NS, "general")
+	local frame = Open(NS)
 	local box = frame.search
 	local function Type(text)
 		box:SetText(text)
@@ -206,44 +412,59 @@ do
 	for _, row in ipairs(frame.rows) do
 		if NS.OptionFold(row.labelText):find("alerte", 1, true) then expected = expected + 1 end
 	end
+	local places = #NS:FindOptionPlaces("alerte")
 	local results = frame.searchPage
-	Want("recherche : toutes les cartes qui correspondent", results.total == expected and expected >= 4, results.total .. "/" .. expected)
-	Want("recherche : vue des résultats, pages cachées", frame.searching and results:IsShown() and not frame.pages.general:IsShown()
-		and not frame.tabs:IsShown())
+	Want("recherche : toutes les cartes qui correspondent", results.total == expected + places and expected >= 4, results.total .. "/" .. expected)
+	Want("recherche : vue des résultats, pages cachées", frame.searching and results:IsShown() and not frame.pages["home:overview"]:IsShown()
+		and not frame.tabs:IsShown() and not frame.headerPower:IsShown())
 	local delay = Row(NS, "exitDelay")
 	Want("recherche : la carte est empruntée par les résultats", delay:GetParent() == results and delay:IsShown())
 	local sections = 0
 	for _, item in ipairs(results.items) do if item.kind == "section" then sections = sections + 1 end end
-	Want("recherche : regroupée par page", sections >= 2 and results.items[1].kind == "section", sections)
+	Want("recherche : regroupée par onglet", sections >= 2 and results.items[1].kind == "section", sections)
 	local badged = 0
 	for _, nav in ipairs(frame.navButtons) do if nav.badge:IsShown() then badged = badged + tonumber(nav.badge.text) end end
-	Want("recherche : chaque entrée compte ses résultats", Nav(NS, "trigger").badge.text == "2" and badged == expected
-		and Nav(NS, "general").badge:IsShown() ~= true, badged)
+	Want("recherche : chaque famille compte ses résultats", Nav(NS, "check").badge.text ~= nil and badged == expected
+		and Nav(NS, "home").badge:IsShown() ~= true, badged)
 	Want("recherche : titre et nombre", frame.header.title.text == NS.L.OPT_SEARCH_TITLE
-		and frame.header.subtitle.text:find(tostring(expected), 1, true) ~= nil)
-	-- une carte trouvée marche comme sur sa page
+		and frame.header.subtitle.text:find(tostring(expected + places), 1, true) ~= nil)
 	local before = NS:DB().exitDelay
 	delay:Step(1)
 	Want("recherche : le réglage trouvé se règle", NS:DB().exitDelay == before + 1 and frame.searching)
-	Verdict("recherche : toutes les cartes trouvées, empruntées et réglables, regroupées par page, comptées dans la navigation")
-	-- sans accents, plusieurs mots
+	Verdict("recherche : toutes les cartes trouvées, empruntées et réglables, regroupées, comptées par famille")
 	Type("ECART  alertes")
 	Want("recherche : sans accents ni casse, tous les mots", results.total == 1 and results.items[2].region == Row(NS, "alertCooldown"),
 		results.total)
 	Type("zzzz introuvable")
 	Want("recherche : aucun résultat, phrase", results.total == 0 and results.empty.text:find("introuvable", 1, true) ~= nil)
 	Verdict("recherche : sans accents ni casse, tous les mots ; aucun résultat : une phrase")
+
+	-- les lieux : fonctions, onglets, anciens noms de pages, avec leur chemin
+	Type("butin rapide")
+	local line = results.placeLines and results.placeLines[1]
+	Want("lieu : une fonction trouvée par son nom, avec son chemin", results.places[1] and results.places[1].go == "quickloot"
+		and results.items[1].region == results.placesSection and line:IsShown() and line.label.text == NS.L.OPT_SEC_QUICKLOOT
+		and line.path.text == NS.L.OPT_FAM_BAGS .. " > " .. NS.L.OPT_TAB_FULL, line and line.path.text)
+	Type("confort de jeu")
+	Want("lieu : un ancien nom de page (Confort de jeu)", results.places[1] and results.places[1].go == "sacs")
+	Type("declenchement")
+	Want("lieu : Déclenchement, sans accents", results.places[1] and results.places[1].go == "trigger")
+	Type("prediction")
+	Want("lieu : un onglet", results.places[1] and results.places[1].go == "combat:cast" or (results.places[2] and results.places[2].go == "combat:cast"))
+	results.placeLines[1]:Click()
+	Want("clic sur un lieu : la recherche se ferme sur lui", not frame.searching and frame.currentPage == "combat:cast", frame.currentPage)
+	Verdict("recherche des lieux : fonctions, anciens noms, onglets, avec leur chemin ; un clic y mène")
+
+	Type("alerte")
 	Type("")
-	Want("recherche vidée : page d'avant rendue", not frame.searching and frame.currentPage == "general"
-		and frame.pages.general:IsShown() and not results:IsShown())
-	Want("recherche vidée : badges retirés", Nav(NS, "trigger").badge:IsShown() ~= true)
+	Want("recherche vidée : page d'avant rendue", not frame.searching and frame.currentPage == "combat:cast"
+		and frame.pages["combat:cast"]:IsShown() and not results:IsShown())
+	Want("recherche vidée : badges retirés", Nav(NS, "check").badge:IsShown() ~= true)
 	NS:SelectOptionsPage("trigger")
-	Want("la carte revient sur sa page", delay:GetParent() == frame.pages.trigger and delay:IsShown())
-	-- choisir une page pendant une recherche la referme
+	Want("la carte revient sur sa page", delay:GetParent() == frame.pages["check:when"] and delay:IsShown())
 	Type("vivres")
-	Nav(NS, "camp"):Click()
-	Want("clic dans la navigation : recherche refermée", not frame.searching and box:GetText() == "" and frame.currentPage == "camp")
-	-- fermer la fenêtre aussi
+	Nav(NS, "voyage"):Click()
+	Want("clic dans la navigation : recherche refermée", not frame.searching and box:GetText() == "" and frame.currentPage == "voyage:retour")
 	Type("vivres")
 	frame:Hide()
 	frame.scripts.OnHide(frame)   -- le client l'appelle au Hide, pas le harnais
@@ -363,6 +584,13 @@ do
 		end
 		for _, nav in ipairs(frame.navButtons) do
 			if nav.label:GetStringWidth() > nav.label.width then problems[#problems + 1] = nav.label.text end
+			if nav.sub and nav.sub:GetStringWidth() > nav.sub.width then problems[#problems + 1] = nav.sub.text end
+		end
+		for _, head in ipairs(frame.heads or {}) do
+			if head.phrase and head.phrase:GetStringWidth() > head.phrase.width then problems[#problems + 1] = head.phrase.text end
+		end
+		for _, line in ipairs(frame.dashLines or {}) do
+			if line.label:GetStringWidth() > line.label.width then problems[#problems + 1] = line.label.text end
 		end
 		ns:RefreshOptions()
 		Check("[OPT] " .. pair[1] .. " : libellés, valeurs, sous-titres et onglets tiennent (toutes les pages)", #problems == 0, table.concat(problems, ", "))
@@ -374,14 +602,14 @@ end
 do
 	Say("-- réglages : aperçus")
 	T.ResetWorld()
-	local frame = Open(NS, "trigger")
-	local departure = frame.previews.departure
+	local frame = Open(NS, "bags")
+	local departure = frame.previews.check
 	Want("aperçu du départ : sous les onglets, la note d'exemple", departure and departure:IsShown() and frame.previewStrip:IsShown()
 		and departure.score.text == "85" and departure.note.text == NS.L.OPT_PREVIEW_SAMPLE)
 	local _, _, _, _, stripY = frame.previewStrip:GetPoint()
-	local _, _, _, _, bodyY = frame.pages.trigger:GetPoint()
-	Want("aperçu : sous l'en-tête, au-dessus des réglages", stripY <= lay.tabsTop and stripY > lay.tabsTop - Theme.TABS_HEIGHT
-		and bodyY <= stripY - lay.previewHeight,
+	local _, _, _, _, bodyY = frame.pages["check:bags"]:GetPoint()
+	Want("aperçu : sous les onglets, au-dessus des réglages", stripY <= lay.tabsTop - Theme.TABS_HEIGHT
+		and stripY > lay.tabsTop - Theme.TABS_HEIGHT - 20 and bodyY <= stripY - lay.previewHeight,
 		stripY .. " / " .. bodyY)
 	NS.score = 42
 	NS:RefreshOptions()
@@ -389,16 +617,18 @@ do
 		and math.abs(departure.bar.ratio - 0.42) < 0.001)
 	NS.score = nil
 	NS:SelectOptionsPage("gear")
-	Want("aperçu : sur tous les onglets de la page", frame.previews.departure:IsShown())
+	Want("aperçu : sur les onglets du check", frame.previews.check:IsShown())
+	NS:SelectOptionsPage("trigger")
+	Want("aperçu : pas sur Quand & où (l'onglet tient sans défiler)", not frame.previewStrip:IsShown() and not departure:IsShown())
 	NS:SelectOptionsPage("general")
 	Want("pas d'aperçu sur Général", not frame.previewStrip:IsShown() and not departure:IsShown())
 	Verdict("aperçu du départ : sous l'en-tête, note d'exemple puis la dernière, sur tous les onglets de la page, pas sur Général")
 
 	NS:SelectOptionsPage("spellranks")
-	local ranks = frame.previews.spellranks
+	local ranks = frame.previews["quetes:sorts"]
 	Want("aperçu des rangs : deux cases, liseré rouge sur la première", ranks and #ranks.slots == 2 and ranks.outline:IsShown()
 		and ranks.outline.edges.top.vertex[1] == NS.SPELLRANKS_BORDER_COLOR[1] and ranks.outline.edges.top.vertex[2] < 0.3)
-	Want("aperçu des rangs : seul le QoL ailleurs n'en a pas", frame.previews.departure:IsShown() ~= true)
+	Want("aperçu des rangs : sur l'onglet Sorts seulement", frame.previews.check:IsShown() ~= true)
 	Row(NS, "spellranksBorder"):Click()
 	Want("aperçu des rangs : liseré coupé avec le réglage", NS:DB().spellranksBorder == false and not ranks.outline:IsShown()
 		and ranks.hint.text == NS.L.SR_PREVIEW_OFF)
@@ -439,8 +669,21 @@ do
 	T.ResetWorld()
 	local frame = Open(NS, "trigger")
 	NS:DB().exitDelay = 12
-	frame.resetButton:Click()
-	Want("Réinitialiser : réglages par défaut", NS:DB().exitDelay ~= 12 and Row(NS, "exitDelay").value.text:find(tostring(NS:DB().exitDelay), 1, true))
+	-- R2Q 2.0.0 : « Réinitialiser » quitte le pied pour Accueil › Général, avec confirmation
+	Want("pied : plus de « Réinitialiser »", not frame.resetButton:IsShown())
+	local savedDialogs, savedShow = _G.StaticPopupDialogs, _G.StaticPopup_Show
+	local shown
+	_G.StaticPopupDialogs = {}
+	_G.StaticPopup_Show = function(which) shown = which; return { which = which } end
+	NS:SelectOptionsPage("reset")
+	Want("« reset » : Accueil › Général", frame.currentPage == "home:general")
+	Row(NS, "resetAll").button:Click()
+	Want("Tout réinitialiser : demande d'abord", shown == "READY2QUEST_RESET_ALL" and NS:DB().exitDelay == 12)
+	StaticPopupDialogs.READY2QUEST_RESET_ALL.OnAccept()
+	Want("confirmé : réglages par défaut", NS:DB().exitDelay ~= 12 and Row(NS, "exitDelay").value.text:find(tostring(NS:DB().exitDelay), 1, true))
+	_G.StaticPopupDialogs, _G.StaticPopup_Show = savedDialogs, savedShow
+	NS:DB().exitDelay = 12
+	Want("sans fenêtre de confirmation : rien n'est effacé", NS:ConfirmResetAll() == nil and NS:DB().exitDelay == 12)
 	NS.lastResults = nil
 	frame.runButton:Click()
 	Want("action principale : le check est lancé", NS.lastResults ~= nil and frame.runButton:GetText() == NS.L.OPT_RUNCHECK)
@@ -452,7 +695,7 @@ do
 	Want("carte d'action : le bouton lance l'action", (NS:DB().minimapAngle or 225) ~= angle and pos.button:GetText() == NS.L.OPT_BTN_CHANGE)
 	Want("carte d'action : la valeur à gauche du bouton", pos.value:IsShown() and pos.value.text:find("°", 1, true) ~= nil
 		and pos.value.lastPoint.relTo == pos.button)
-	Verdict("pied (Réinitialiser, action principale) et carte d'action (bouton, valeur à sa gauche)")
+	Verdict("remise à zéro confirmée (Accueil › Général), action principale du pied, carte d'action (bouton, valeur à sa gauche)")
 	frame:Hide()
 
 	local qframe = Open(QNS, "companionMain")

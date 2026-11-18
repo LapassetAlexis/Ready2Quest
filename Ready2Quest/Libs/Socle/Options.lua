@@ -131,7 +131,12 @@ local function OnOff(on)
 	return on and (Theme.T_GREEN .. L.OPT_ON .. "|r") or (Theme.T_GREY .. L.OPT_OFF .. "|r")
 end
 
+-- socle 3.5 : navigation par familles (ns.OPTION_FAMILIES, Ready2Quest) ;
+-- sans elle, la navigation par pages d'avant (QuestCompanion)
+local FAMILY_BY_ID = {}
+
 local function PageDef(id)
+	if id ~= nil and FAMILY_BY_ID[id] then return FAMILY_BY_ID[id] end
 	for _, def in ipairs(PAGES) do
 		if def.id == id then return def end
 	end
@@ -245,10 +250,10 @@ local function ActionStyle(sobre, forged)
 end
 
 -- Bloc de liste : pleine largeur, lignes alternées, pied (position, ^ v)
-local function BuildList(page, source)
+local function BuildList(page, source, lines)
 	local def = LIST_SOURCES[source] or {}
 	local list = { source = source, lines = {}, offset = 0, emptyText = def.empty }
-	local count = def.lines or LIST_LINES
+	local count = lines or def.lines or LIST_LINES   -- socle 3.5 : une section peut en vouloir moins
 
 	local block = CreateFrame("Frame", nil, page)
 	block:SetSize(INNER, count * LIST_LINE + 34)
@@ -427,6 +432,18 @@ local function RefreshNote(card, value)
 	return false
 end
 
+-- socle 3.4 : def.store() -> la table où lire et écrire la valeur (réglages
+-- d'un autre moteur : le module Combat de Ready2Quest) ; sinon ns:DB()
+local SCRATCH = {}
+local function Store(def, db)
+	if def.store then
+		local ok, t = pcall(def.store)
+		if ok and type(t) == "table" then return t end
+		return SCRATCH      -- moteur absent : rien n'est écrit dans nos réglages
+	end
+	return db or ns:DB()
+end
+
 local function BoolCard(page, def)
 	local card = NewCard(page, L[def.label] or def.key)
 	card.def = def
@@ -437,7 +454,7 @@ local function BoolCard(page, def)
 	FitCard(card, 32, def.describe ~= nil)
 	card:SetScript("OnClick", function(self)
 		if self.locked then return end
-		local db = ns:DB()
+		local db = Store(def)
 		local before = db[def.key] ~= false
 		db[def.key] = not before
 		ns:RefreshOptions()
@@ -445,6 +462,7 @@ local function BoolCard(page, def)
 		if def.onChange then def.onChange(db[def.key], before) end
 	end)
 	function card:Refresh(db)
+		db = Store(def, db)
 		local on = db[def.key] ~= false
 		self.value:SetText(OnOff(on))
 		self.toggle:SetChecked(on)
@@ -499,7 +517,7 @@ local function NumberCard(page, def)
 	local width = track + valueWidth + 12
 
 	card.slider = Theme.CreateSlider(card, width, minimum, maximum, step, function(new)
-		local db = ns:DB()
+		local db = Store(def)
 		local before = db[def.key]
 		db[def.key] = new
 		ns:RefreshOptions()
@@ -516,6 +534,7 @@ local function NumberCard(page, def)
 		return self.slider:SetValueByUser((self.slider.value or minimum) + (delta or 0) * step)
 	end
 	function card:Refresh(db)
+		db = Store(def, db)
 		local current = db[def.key]
 		self.slider:SetValue(current or 0)
 		-- valeur telle qu'enregistrée (le curseur l'arrondit à son cran)
@@ -675,11 +694,13 @@ local function Arrange(items)
 	for _, item in ipairs(items) do
 		if not item.filtered then
 			item.height = item.region:GetHeight() or item.height or CARD_H
-			if item.kind == "section" then
+			if item.kind == "section" or item.kind == "head" then
+				-- socle 3.5 : « head » = tête de fonction (nom, phrase, interrupteur),
+				-- de sa propre hauteur
 				CloseRow()
 				if not first then y = y + SECTION_SPACE end
 				item.x, item.y = 0, y
-				y = y + SECTION_H + 6
+				y = y + (item.kind == "head" and item.height or SECTION_H) + 6
 				visual = 0
 			elseif item.kind == "card" and item.region.span ~= "full" then
 				if col == 0 then
@@ -809,6 +830,12 @@ end
 -- ---------------------------------------------------------------------------
 -- Rafraîchissement
 -- ---------------------------------------------------------------------------
+-- Un réglage ne prend effet qu'au rechargement : le pied montre le bouton
+function ns:MarkReloadPending()
+	self.reloadPending = true
+	self:RefreshOptions()
+end
+
 function ns:RefreshOptions()
 	local frame = self.optionsFrame
 	if not frame then return end
@@ -816,6 +843,9 @@ function ns:RefreshOptions()
 
 	if frame.editButton and frame.editButton.SetText then
 		frame.editButton:SetText(self.editMode and L.OPT_EDIT_STOP or L.OPT_EDIT_BUTTON)
+	end
+	if frame.reloadButton then
+		if self.reloadPending then frame.reloadButton:Show() else frame.reloadButton:Hide() end
 	end
 
 	-- cartes et notes dont le texte change de longueur : hauteur suivie
@@ -825,13 +855,19 @@ function ns:RefreshOptions()
 		-- socle 2.11.0 : carte d'un module coupé estompée, mais modifiable
 		-- (la carte de module elle-même est l'interrupteur : jamais estompée)
 		if not card.isModule and card.SetAlpha then
+			-- socle 3.5 : la fonction de la section, puis la famille (ou la page)
 			local key = self:OptionsPageModuleKey(card.pageId)
-			local off = key ~= nil and db[key] == false
+			local off = (key ~= nil and db[key] == false) or (card.powerKey ~= nil and db[card.powerKey] == false)
 			card.dimmed = off or nil
 			card:SetAlpha(off and Theme.DIM_ALPHA or 1)
 		end
 	end
 	self:RefreshModuleOffBanner()
+	for _, head in ipairs(frame.heads or {}) do head:Refresh(db) end
+	for _, line in ipairs(frame.dashLines or {}) do line:Refresh(db) end
+	if frame.headerPower and frame.headerPower.key then
+		frame.headerPower:SetChecked(db[frame.headerPower.key] ~= false)
+	end
 	for _, block in ipairs(frame.notes or {}) do
 		if type(block.source) == "function" and block:Refresh() then grown = true end
 	end
@@ -893,38 +929,33 @@ local function BuildTabbedPage(frame, def, placed)
 	frame.tabPages[def.id] = {}
 	for _, tab in ipairs(def.tabs) do
 		local tabDef = { id = def.id .. ":" .. tostring(tab.id), title = def.title, tabOf = def.id, tabId = tab.id,
-			rows = tab.rows, modules = tab.modules, list = tab.list, info = tab.info, actions = tab.actions }
+			rows = tab.rows, modules = tab.modules, list = tab.list, info = tab.info, actions = tab.actions,
+			-- socle 3.5 (navigation par familles) : sections de fonctions, vue d'ensemble
+			sections = tab.sections, dashboard = tab.kind == "dashboard" or nil, columns = tab.columns,
+			phrase = tab.phrase, label = tab.label, preview = tab.preview }
 		frame.tabDefs[tabDef.id] = tabDef
 		local page = BuildPage(frame, tabDef, placed)
-		page.subText = Declared(def.title .. "_SUB")
+		page.subText = tab.phrase and (L[tab.phrase] or tab.phrase) or Declared(def.title .. "_SUB")
 		frame.tabPages[def.id][#frame.tabPages[def.id] + 1] = page
 	end
 end
 
-function BuildPage(frame, def, placed)
-	if def.tabs then return BuildTabbedPage(frame, def, placed) end
-	local page = CreateFrame("Frame", nil, frame.content)
-	page:SetSize(INNER, 400)
-	page.id = def.id
-	page.def = def
-	page.rows, page.items = {}, {}
-	-- phrase de l'en-tête quand la page est choisie
-	page.subText = Declared(def.title .. "_SUB")
-	frame.pages[def.id] = page
-	frame.pageOrder[#frame.pageOrder + 1] = page
-
+-- Contenu d'une page (ou d'une section de fonction, `headed` : la tête de la
+-- fonction tient lieu de titre, pas de titre de section automatique)
+local function Fill(frame, page, def, placed, headed)
 	-- texte d'explication (paragraphes), pour les modules sans réglage
 	if def.info then
-		page.infoLines = {}
+		page.infoLines = page.infoLines or {}
 		for _, key in ipairs(def.info) do
-			local block = AddBlock(page, TextBlock(page, key))
+			local block = AddBlock(page, TextBlock(page, key, headed))
 			page.infoLines[#page.infoLines + 1] = block.text
+			if type(key) == "function" then frame.notes[#frame.notes + 1] = block end
 		end
 	end
 
 	if def.modules then
 		-- dans une sous-page du Check avant le départ, ce sont ses contrôles
-		page.modulesHeader = Section(frame, page, def.parent and "OPT_CHECKS" or "OPT_MODULES")
+		if not headed then page.modulesHeader = Section(frame, page, def.parent and "OPT_CHECKS" or "OPT_MODULES") end
 		for _, id in ipairs(def.modules) do
 			local check = CheckDef(id)
 			if check then
@@ -937,7 +968,7 @@ function BuildPage(frame, def, placed)
 	if def.rows then
 		-- une page commence toujours par une section
 		local firstHeader = def.rows[1] and def.rows[1].header
-		if not firstHeader then
+		if not firstHeader and not headed then
 			page.settingsHeader = Section(frame, page, "OPT_SETTINGS")
 		end
 		for _, rowDef in ipairs(def.rows) do
@@ -958,8 +989,8 @@ function BuildPage(frame, def, placed)
 
 	if def.list then
 		local source = LIST_SOURCES[def.list] or {}
-		page.listHeader = Section(frame, page, source.header or def.list)
-		local list = BuildList(page, def.list)
+		if not headed then page.listHeader = Section(frame, page, source.header or def.list) end
+		local list = BuildList(page, def.list, def.listLines)
 		frame.lists[def.list] = list
 		AddBlock(page, list.block)
 		-- sous la liste : un bouton (tout effacer) et une phrase d'aide
@@ -992,7 +1023,7 @@ function BuildPage(frame, def, placed)
 	end
 
 	if def.frameButtons then
-		page.framesHeader = Section(frame, page, "OPT_SECTION_FRAMES")
+		if not headed then page.framesHeader = Section(frame, page, "OPT_SECTION_FRAMES") end
 		local card = NewCard(page, L.OPT_FRAMES_LABEL)
 		card.span = "full"
 		local probe = Theme.Text(card, Theme.F_LABEL, Theme.LABEL)
@@ -1014,7 +1045,7 @@ function BuildPage(frame, def, placed)
 	end
 
 	if def.actions then
-		page.actionsHeader = Section(frame, page, "OPT_SECTION_ACTIONS")
+		if not headed then page.actionsHeader = Section(frame, page, "OPT_SECTION_ACTIONS") end
 		local specs = {}
 		for _, action in ipairs(def.actions) do
 			specs[#specs + 1] = { label = L["OPT_ACTION_" .. action:upper()] or action, run = function() ns:RunOptionAction(action) end }
@@ -1024,9 +1055,483 @@ function BuildPage(frame, def, placed)
 		for index, action in ipairs(def.actions) do page.actionButtons[action] = buttons[index] end
 		AddBlock(page, block)
 	end
+end
+
+local BuildSections, BuildDashboard
+
+function BuildPage(frame, def, placed)
+	if def.tabs then return BuildTabbedPage(frame, def, placed) end
+	local page = CreateFrame("Frame", nil, frame.content)
+	page:SetSize(INNER, 400)
+	page.id = def.id
+	page.def = def
+	page.rows, page.items = {}, {}
+	-- phrase de l'en-tête quand la page est choisie
+	page.subText = def.title and Declared(def.title .. "_SUB")
+	frame.pages[def.id] = page
+	frame.pageOrder[#frame.pageOrder + 1] = page
+
+	if def.dashboard then BuildDashboard(frame, page, def)
+	elseif def.sections then BuildSections(frame, page, def, placed)
+	else Fill(frame, page, def, placed) end
 
 	page:Hide()
 	return page
+end
+
+-- ---------------------------------------------------------------------------
+-- socle 3.5 : navigation par familles. L'addon déclare ns.OPTION_FAMILIES
+-- (table, ou function(ns) -> table, lue à la première ouverture, quand tous
+-- les modules ont déclaré leurs pages) :
+--   { id, title, sub, icon, power, aliases, dash = { lignes }, tabs = {
+--       { id, label, phrase, kind = "dashboard", columns = { { familles } } }
+--       { id, label, phrase, sections = { { id, title, phrase, tag, power,
+--           aliases, rows, modules, list, info, frameButtons, actions } } } } }
+-- Une famille = une entrée de la colonne (icône, libellé, sous-libellé), ses
+-- onglets en haut. Une section avec `power` ou `phrase` a une tête de fonction
+-- (nom, phrase, interrupteur) ; coupée, ses réglages s'estompent. Les ids de
+-- famille, d'onglet, de section et les `aliases` (anciens ids de pages) sont
+-- des cibles de ns:SelectOptionsPage et de ns:OptionsGo (/<addon> options <mot>).
+-- ---------------------------------------------------------------------------
+local FAMILIES
+local NAV_FAMILY_H = 52
+local HEAD_H, HEAD_PHRASE_H = 28, 46
+local DASH_LINE = 24
+local DASH_HEAD, DASH_CHIP, DASH_CARD_GAP = 26, 20, 10
+
+function ns.OptionsFamilyMode() return ns.OPTION_FAMILIES ~= nil end
+
+-- relues à chaque construction de la fenêtre : une ligne ajoutée entre-temps
+-- à la page d'un module suit sa page
+local function Families()
+	FAMILIES = nil
+	for id in pairs(FAMILY_BY_ID) do FAMILY_BY_ID[id] = nil end
+	local source = ns.OPTION_FAMILIES
+	if type(source) == "function" then
+		local ok, list = pcall(source, ns)
+		if not ok then ns:RecordError("options:families", list) end
+		source = ok and list or nil
+	end
+	if type(source) ~= "table" or not source[1] then return nil end
+	FAMILIES = source
+	for _, family in ipairs(source) do FAMILY_BY_ID[family.id] = family end
+	return FAMILIES
+end
+
+local function Str(key) return key and (L[key] or key) or nil end
+
+-- Tête de fonction : nom (et étiquette), phrase, interrupteur à droite
+local function FunctionHead(frame, page, sec)
+	local head = CreateFrame("Frame", nil, page)
+	head:SetSize(INNER, sec.phrase and HEAD_PHRASE_H or HEAD_H)
+	head.def, head.powerKey = sec, sec.power
+	-- plaque teintée et barre à gauche (maquette) : les fonctions d'un même
+	-- onglet se détachent ; la barre passe en MUTED quand la fonction est coupée
+	head.plate = Theme.Solid(head, "BACKGROUND", Theme.ROW, 1)
+	head.plate:SetAllPoints()
+	head.flash = Theme.Solid(head, "BORDER", Theme.GOLD, 0.14)
+	head.flash:SetAllPoints()
+	head.flash:Hide()
+	head.bar = Theme.Solid(head, "ARTWORK", Theme.GOLD, 1)
+	head.bar:SetWidth(3)
+	head.bar:SetPoint("TOPLEFT", head, "TOPLEFT", 0, 0)
+	head.bar:SetPoint("BOTTOMLEFT", head, "BOTTOMLEFT", 0, 0)
+	head.title = Theme.Text(head, Theme.F_HEADING, Theme.PARCHMENT)
+	head.title:SetPoint("TOPLEFT", head, "TOPLEFT", PAD, -5)
+	head.title:SetJustifyH("LEFT")
+	head.title:SetText(Str(sec.title) or "")
+	if sec.tag then
+		head.tag = Theme.Text(head, Theme.F_SMALL, Theme.GOLD)
+		head.tag:SetPoint("LEFT", head.title, "RIGHT", 8, 0)
+		head.tag:SetText(Str(sec.tag))
+	end
+	if sec.phrase then
+		head.phrase = Theme.Text(head, Theme.F_SMALL, Theme.MUTED_LIGHT)
+		head.phrase:SetPoint("TOPLEFT", head, "TOPLEFT", PAD, -26)
+		head.phrase:SetWidth(INNER - 2 * PAD)   -- sous la ligne de l'interrupteur : toute la largeur
+		head.phrase:SetJustifyH("LEFT")
+		if head.phrase.SetWordWrap then head.phrase:SetWordWrap(false) end
+		head.phrase:SetText(Str(sec.phrase))
+	end
+	if sec.power then
+		head.toggle = Theme.CreateToggle(head, nil, nil, "Button")
+		head.toggle:SetPoint("TOPRIGHT", head, "TOPRIGHT", -PAD, -6)
+		head.toggle:SetScript("OnClick", function() ns:ToggleModuleKey(sec.power) end)
+		head.toggle:SetScript("OnEnter", function(self) Tip(self, { Str(sec.title) or "", L.OPT_FUNCTION_POWER_TIP }) end)
+		head.toggle:SetScript("OnLeave", HideTip)
+	end
+	function head:Refresh(db)
+		if not self.powerKey then return end
+		local on = db[self.powerKey] ~= false
+		self.on = on
+		self.toggle:SetChecked(on)
+		local c = on and Theme.PARCHMENT or Theme.MUTED
+		self.title:SetTextColor(c[1], c[2], c[3], 1)
+		local b = on and Theme.GOLD or Theme.MUTED
+		self.bar:SetVertexColor(b[1], b[2], b[3], 1)
+	end
+	page.items[#page.items + 1] = { region = head, kind = "head", height = head:GetHeight() }
+	frame.heads[#frame.heads + 1] = head
+	return head
+end
+
+-- Onglet à sections : une tête (ou un titre de section) puis son contenu
+function BuildSections(frame, page, def, placed)
+	for _, sec in ipairs(def.sections) do
+		local item
+		if sec.power or sec.phrase then
+			FunctionHead(frame, page, sec)
+		elseif sec.title then
+			Section(frame, page, sec.title)
+		end
+		item = page.items[#page.items]
+		local first = #frame.rows + 1
+		Fill(frame, page, sec, placed, sec.title ~= nil)
+		for index = first, #frame.rows do
+			frame.rows[index].powerKey = sec.power
+			frame.rows[index].sectionId = sec.id
+		end
+		if sec.id then
+			frame.sectionIndex[sec.id] = { pageId = page.id, item = item, def = sec }
+			for _, alias in ipairs(sec.aliases or {}) do frame.aliasIndex[alias] = sec.id end
+		end
+	end
+end
+
+-- Vue d'ensemble : une carte par famille sur deux colonnes, une ligne par
+-- fonction (le nom ouvre ses réglages ; son interrupteur, ou une mention)
+local function DashRows(family)
+	if family.dash then return family.dash end
+	local rows = {}
+	for _, tab in ipairs(family.tabs or {}) do
+		for _, sec in ipairs(tab.sections or {}) do
+			if sec.power then rows[#rows + 1] = { label = sec.title, go = sec.id, key = sec.power } end
+		end
+	end
+	return rows
+end
+
+local function DashLine(frame, parent, spec)
+	local line = CreateFrame("Button", nil, parent)
+	line:SetSize(COL, DASH_LINE)
+	line.spec = spec
+	line.hover = Theme.Solid(line, "BACKGROUND", Theme.WHITE or Theme.TEXT, 0.04)
+	line.hover:SetAllPoints()
+	line.hover:Hide()
+	line.label = Theme.Text(line, Theme.F_BODY, Theme.TEXT)
+	line.label:SetPoint("LEFT", line, "LEFT", 10, 0)
+	line.label:SetWidth(COL - 120)
+	line.label:SetJustifyH("LEFT")
+	if line.label.SetWordWrap then line.label:SetWordWrap(false) end
+	line.label:SetText(Str(spec.label) or "")
+	if spec.key then
+		line.toggle = Theme.CreateToggle(line, nil, nil, "Button")
+		line.toggle:SetPoint("RIGHT", line, "RIGHT", -PAD, 0)
+		line.toggle:SetScript("OnClick", function() ns:ToggleModuleKey(spec.key) end)
+	end
+	line.detail = Theme.Text(line, Theme.F_SMALL, Theme.MUTED_LIGHT)
+	line.detail:SetJustifyH("RIGHT")
+	line.detail:SetPoint("RIGHT", line.toggle or line, line.toggle and "LEFT" or "RIGHT", line.toggle and -8 or -PAD, 0)
+	line:SetScript("OnClick", function() if spec.go then ns:SelectOptionsPage(spec.go) end end)
+	line:SetScript("OnEnter", function(self) self.hover:Show() end)
+	line:SetScript("OnLeave", function(self) self.hover:Hide() end)
+	function line:Refresh(db)
+		local on = true
+		if self.toggle then
+			on = db[spec.key] ~= false
+			self.toggle:SetChecked(on)
+		end
+		local c = on and Theme.TEXT or Theme.MUTED
+		self.label:SetTextColor(c[1], c[2], c[3], 1)
+		local detail = ""
+		if spec.text then
+			local ok, value = pcall(spec.text, ns)
+			detail = ok and tostring(value or "") or ""
+		end
+		self.detail:SetText(detail)
+	end
+	frame.dashLines[#frame.dashLines + 1] = line
+	return line
+end
+
+function BuildDashboard(frame, page, def)
+	local block = CreateFrame("Frame", nil, page)
+	block:SetSize(INNER, 40)
+	local columns = def.columns
+	if not columns then
+		columns = { {}, {} }
+		for index, family in ipairs(FAMILIES or {}) do
+			if family.id ~= def.tabOf then table.insert(columns[(index % 2) + 1], family.id) end
+		end
+	end
+	local tallest = 0
+	block.cards = {}
+	for col, ids in ipairs(columns) do
+		local x, y = (col - 1) * (COL + COL_GAP), 0
+		for _, id in ipairs(ids) do
+			local family = FAMILY_BY_ID[id]
+			if family then
+				if y > 0 then y = y + DASH_CARD_GAP end
+				-- carte : fond, tête cliquable (icône, nom, « Ouvrir »), lignes,
+				-- puis les raccourcis vers les onglets (`dashTabs`)
+				local top = y
+				local card = CreateFrame("Frame", nil, block)
+				card:SetPoint("TOPLEFT", block, "TOPLEFT", x, -top)
+				card:SetWidth(COL)
+				card.bg = Theme.Solid(card, "BACKGROUND", Theme.FIELD, 1)
+				card.bg:SetAllPoints()
+				card.border = Theme.Border(card, Theme.EDGE_SOFT, 1)
+				local header = CreateFrame("Button", nil, card)
+				header:SetSize(COL, DASH_HEAD)
+				header:SetPoint("TOPLEFT", card, "TOPLEFT", 0, 0)
+				header.plate = Theme.Solid(header, "BACKGROUND", Theme.NAV, 1)
+				header.plate:SetAllPoints()
+				header.icon = header:CreateTexture(nil, "ARTWORK")
+				header.icon:SetSize(16, 16)
+				header.icon:SetPoint("LEFT", header, "LEFT", 10, 0)
+				if family.icon then header.icon:SetTexture(family.icon) end
+				if header.icon.SetTexCoord then header.icon:SetTexCoord(0.08, 0.92, 0.08, 0.92) end
+				header.label = Theme.Text(header, Theme.F_LABEL, Theme.PARCHMENT)
+				header.label:SetPoint("LEFT", header, "LEFT", 32, 0)
+				header.label:SetJustifyH("LEFT")
+				header.label:SetText(Str(family.title) or id)
+				header.open = Theme.Text(header, Theme.F_SMALL, Theme.GOLD)
+				header.open:SetPoint("RIGHT", header, "RIGHT", -PAD, 0)
+				header.open:SetText(L.OPT_DASH_OPEN or "")
+				header:SetScript("OnClick", function() ns:SelectOptionsPage(family.id) end)
+				header.familyId = family.id
+				block.cards[#block.cards + 1] = header
+				y = y + DASH_HEAD + 2
+				for _, spec in ipairs(DashRows(family)) do
+					local line = DashLine(frame, block, spec)
+					line:SetPoint("TOPLEFT", block, "TOPLEFT", x, -y)
+					line.familyId = family.id
+					y = y + DASH_LINE
+				end
+				if family.dashTabs then
+					header.tabButtons = {}
+					local bx, rowCount = PAD, 0
+					y = y + 4
+					for _, tab in ipairs(family.tabs or {}) do
+						local target = family.id .. ":" .. tostring(tab.id)
+						local chip = Theme.CreateButton(block, "auto", DASH_CHIP, Str(tab.label) or tostring(tab.id),
+							function() ns:SelectOptionsPage(target) end, "outline")
+						local width = chip:GetWidth() or 80
+						if bx > PAD and bx + width > COL - PAD then bx, y = PAD, y + DASH_CHIP + 4 end
+						chip:SetPoint("TOPLEFT", block, "TOPLEFT", x + bx, -y)
+						chip.target = target
+						bx = bx + width + 6
+						rowCount = rowCount + 1
+						header.tabButtons[#header.tabButtons + 1] = chip
+					end
+					y = y + DASH_CHIP
+				end
+				y = y + 4
+				card:SetHeight(y - top)
+			end
+		end
+		tallest = math.max(tallest, y)
+	end
+	block:SetHeight(math.max(40, tallest))
+	page.dashboard = block
+	AddBlock(page, block)
+end
+
+-- Colonne : une entrée par famille (icône du client, libellé, sous-libellé)
+local function BuildFamilyNav(frame)
+	local list = CreateFrame("Frame", nil, frame.nav)
+	list:SetPoint("TOPLEFT", frame.nav, "TOPLEFT", 0, NAV_TOP)
+	list:SetSize(NAV_WIDTH - 1, NAV_VIEW)
+	list.items, list.viewHeight = {}, NAV_VIEW
+	frame.navList = list
+	local y = 0
+	for _, family in ipairs(FAMILIES) do
+		local item = Theme.CreateNavItem(list, NAV_WIDTH - 1)
+		item:SetSize(NAV_WIDTH - 1, NAV_FAMILY_H)
+		item.icon = item:CreateTexture(nil, "ARTWORK")
+		item.icon:SetSize(22, 22)
+		item.icon:SetPoint("LEFT", item, "LEFT", 12, 0)
+		local shown = family.icon and item.icon:SetTexture(family.icon)
+		if shown == false then item.icon:SetTexture(ns.OPTION_ICON_FALLBACK or "Interface\\Icons\\INV_Misc_QuestionMark") end
+		if item.icon.SetTexCoord then item.icon:SetTexCoord(0.08, 0.92, 0.08, 0.92) end
+		item:SetText(Str(family.title) or family.id)
+		item.label:ClearAllPoints()
+		item.label:SetPoint("TOPLEFT", item, "TOPLEFT", 40, -10)
+		item.label:SetWidth(NAV_WIDTH - 40 - 6)
+		if item.label.SetWordWrap then item.label:SetWordWrap(false) end
+		item.sub = Theme.Text(item, Theme.F_SMALL, Theme.MUTED)
+		item.sub:SetPoint("TOPLEFT", item, "TOPLEFT", 40, -29)
+		item.sub:SetWidth(NAV_WIDTH - 40 - 6)
+		item.sub:SetJustifyH("LEFT")
+		if item.sub.SetWordWrap then item.sub:SetWordWrap(false) end
+		item.sub:SetText(Str(family.sub) or "")
+		item.pageId = family.id
+		item.familyId = family.id
+		item:SetScript("OnClick", function() ns:SelectOptionsPage(family.id) end)
+		frame.navButtons[#frame.navButtons + 1] = item
+		list.items[#list.items + 1] = { region = item, kind = "card", x = 0, y = y, height = NAV_FAMILY_H }
+		y = y + NAV_FAMILY_H
+		frame.aliasIndex[family.id] = nil
+		for _, alias in ipairs(family.aliases or {}) do frame.aliasIndex[alias] = family.id end
+		for _, tab in ipairs(family.tabs or {}) do
+			if frame.tabIndex[tab.id] == nil then frame.tabIndex[tab.id] = family.id .. ":" .. tostring(tab.id) end
+		end
+	end
+	list.contentHeight = y
+	list.stops = { 0 }
+	list.stopIndex = 1
+	frame.navBottom = NAV_TOP - NAV_VIEW
+	ns:ApplyOptionsScroll(list)
+end
+
+-- Interrupteur de la famille, dans l'en-tête (« Addon actif », « Check actif »)
+local function BuildHeaderPower(frame)
+	local power = Theme.CreateToggle(frame.header, nil, nil, "Button")
+	-- sur la ligne de la phrase, loin du [×] de la fenêtre
+	power:SetPoint("TOPRIGHT", frame.header, "TOPRIGHT", -MARGIN, -61)
+	power:SetScript("OnClick", function(self) if self.key then ns:ToggleModuleKey(self.key) end end)
+	power.label = Theme.Text(frame.header, Theme.F_SMALL, Theme.MUTED_LIGHT)
+	power.label:SetPoint("RIGHT", power, "LEFT", -8, 0)
+	power.label:SetJustifyH("RIGHT")
+	power:Hide(); power.label:Hide()
+	frame.headerPower = power
+end
+
+-- Où mène un id : famille, onglet (« famille:onglet » ou id nu), section,
+-- ancien id de page. Rend l'id de page à ouvrir et la section à éclairer.
+local function ResolveTarget(frame, id)
+	if id == nil then return nil end
+	if FAMILY_BY_ID[id] or frame.tabDefs[id] then return id, nil end
+	if frame.tabIndex[id] then return frame.tabIndex[id], nil end
+	local alias = frame.aliasIndex[id]
+	if alias then
+		if FAMILY_BY_ID[alias] or frame.tabDefs[alias] then return alias, nil end
+		if frame.tabIndex[alias] then return frame.tabIndex[alias], nil end
+		id = alias
+	end
+	local sec = frame.sectionIndex[id]
+	if sec then return sec.pageId, sec end
+	return nil
+end
+
+-- Une section choisie : la page défile jusqu'à elle, sa tête s'éclaire une fois
+local function RevealSection(frame, container, sec)
+	if frame.flashing then frame.flashing:Hide(); frame.flashing = nil end
+	local item = sec and sec.item
+	if not (item and item.y) then return end
+	local stops = container.stops or { 0 }
+	local index = 1
+	for stop = 1, #stops do if stops[stop] <= item.y then index = stop end end
+	container.stopIndex = index
+	ns:ApplyOptionsScroll(container)
+	local flash = item.region.flash
+	if flash then
+		flash:Show()
+		frame.flashing = flash
+		local timer = rawget(_G, "C_Timer")
+		if type(timer) == "table" and type(timer.After) == "function" then
+			pcall(timer.After, 1.6, function()
+				if frame.flashing == flash then flash:Hide(); frame.flashing = nil end
+			end)
+		end
+	end
+end
+
+-- Recherche : les lieux (familles, onglets, fonctions, anciens noms de pages)
+-- dont le nom contient tous les mots, avec leur chemin
+local function IndexPlaces(frame)
+	local places = {}
+	local function Add(names, go, path)
+		local parts = {}
+		for _, name in ipairs(names) do
+			if name then parts[#parts + 1] = Fold(Str(name)) end
+		end
+		places[#places + 1] = { text = table.concat(parts, " | "), label = Str(names[1]), go = go, path = path }
+	end
+	for _, family in ipairs(FAMILIES) do
+		local famTitle = Str(family.title) or family.id
+		Add({ family.title, family.sub }, family.id, famTitle)
+		for _, tab in ipairs(family.tabs or {}) do
+			local tabPath = famTitle .. " > " .. (Str(tab.label) or tostring(tab.id))
+			Add({ tab.label }, family.id .. ":" .. tostring(tab.id), tabPath)
+			for _, sec in ipairs(tab.sections or {}) do
+				if sec.title and sec.id then
+					local names = { sec.title }
+					for _, old in ipairs(sec.oldNames or {}) do names[#names + 1] = old end
+					Add(names, sec.id, tabPath)
+				end
+			end
+		end
+		for _, old in ipairs(family.oldNames or {}) do Add({ old }, family.id, famTitle) end
+	end
+	frame.places = places
+end
+
+function ns:FindOptionPlaces(text)
+	local frame = self.optionsFrame
+	local found = {}
+	if not (frame and frame.places) then return found end
+	local words = {}
+	for word in Fold(text):gmatch("%S+") do words[#words + 1] = word end
+	if #words == 0 then return found end
+	for _, place in ipairs(frame.places) do
+		local hit = true
+		for _, word in ipairs(words) do
+			if not place.text:find(word, 1, true) then hit = false; break end
+		end
+		if hit then found[#found + 1] = place end
+	end
+	return found
+end
+
+-- Ligne de résultat « lieu » : son nom, son chemin ; un clic y mène
+local function PlaceLine(results, index)
+	results.placeLines = results.placeLines or {}
+	local line = results.placeLines[index]
+	if line then return line end
+	line = CreateFrame("Button", nil, results)
+	line:SetSize(INNER, DASH_LINE + 2)
+	line.bg = Theme.Solid(line, "BACKGROUND", Theme.ROW, 1)
+	line.bg:SetAllPoints()
+	line.label = Theme.Text(line, Theme.F_BODY, Theme.PARCHMENT)
+	line.label:SetPoint("LEFT", line, "LEFT", PAD, 0)
+	line.label:SetJustifyH("LEFT")
+	line.path = Theme.Text(line, Theme.F_SMALL, Theme.MUTED_LIGHT)
+	line.path:SetPoint("RIGHT", line, "RIGHT", -PAD, 0)
+	line.path:SetJustifyH("RIGHT")
+	line:SetScript("OnClick", function(self) if self.go then ns:SelectOptionsPage(self.go) end end)
+	results.placeLines[index] = line
+	return line
+end
+
+-- /<addon> options <mot> : la fenêtre ouverte sur ce lieu, sinon une recherche
+function ns:OptionsGo(text)
+	text = tostring(text or ""):gsub("^%s+", ""):gsub("%s+$", "")
+	local frame = self:EnsureOptions()
+	if not frame then return nil end
+	if not frame:IsShown() then self:ToggleOptions() end
+	if text == "" then return frame.currentPage end
+	local target = frame.families and ResolveTarget(frame, text) and text or (frame.pages[text] and text)
+	if not target and frame.families then
+		local places = self:FindOptionPlaces(text)
+		if places[1] then target = places[1].go end
+	end
+	if target then
+		self:SelectOptionsPage(target)
+		return frame.currentPage
+	end
+	if frame.search and frame.search.SetText then frame.search:SetText(text) end
+	self:SetOptionsSearch(text)
+	return nil
+end
+
+-- Ouvre les réglages sur un lieu (roue crantée d'une fenêtre du jeu)
+function ns:OpenOptionsAt(where)
+	local frame = self:EnsureOptions()
+	if not frame then return nil end
+	if not frame:IsShown() then self:ToggleOptions() end
+	if where then self:SelectOptionsPage(where) end
+	return frame.currentPage
 end
 
 -- ---------------------------------------------------------------------------
@@ -1227,6 +1732,8 @@ function ns:EnsureOptions()
 	frame.rows, frame.pages, frame.navButtons, frame.lists, frame.notes = {}, {}, {}, {}, {}
 	frame.navGroups, frame.navHeaders, frame.previews, frame.pageOrder = {}, {}, {}, {}
 	frame.tabPages, frame.tabDefs, frame.tabChoice = {}, {}, {}
+	frame.heads, frame.dashLines, frame.sectionIndex, frame.aliasIndex, frame.tabIndex = {}, {}, {}, {}, {}
+	frame.families = Families()   -- nil : navigation par pages (QuestCompanion)
 	local content = frame.content
 
 	-- Navigation : marque, recherche, groupes et pages, version en bas
@@ -1241,7 +1748,7 @@ function ns:EnsureOptions()
 	frame.brandLogo, frame.brandName = frame.brand.logo, frame.brand.name
 	frame.search = Theme.CreateSearchBox(nav, NAV_WIDTH - 32, L.OPT_SEARCH, function(text) ns:SetOptionsSearch(text) end)
 	frame.search:SetPoint("TOPLEFT", nav, "TOPLEFT", 16, -86)
-	BuildNav(frame)
+	if frame.families then BuildFamilyNav(frame) else BuildNav(frame) end
 
 	frame.version = Theme.Text(nav, Theme.F_SMALL, Theme.MUTED)
 	frame.version:SetPoint("BOTTOMLEFT", nav, "BOTTOMLEFT", 18, 18)
@@ -1265,6 +1772,7 @@ function ns:EnsureOptions()
 	end, ActionStyle("outline", "add"))
 	frame.offBanner:SetPoint("TOPRIGHT", frame.header, "TOPRIGHT", -MARGIN, -55)
 	frame.offBanner:Hide()
+	if frame.families then BuildHeaderPower(frame) end
 
 	frame.tabs = Theme.CreateTabs(content, function(id) ns:SelectOptionsPage(id) end)
 	frame.tabs:SetPoint("TOPLEFT", content, "TOPLEFT", MARGIN, TABS_TOP)
@@ -1289,14 +1797,28 @@ function ns:EnsureOptions()
 
 	-- Pages
 	local placed = {}
-	for _, def in ipairs(PAGES) do
-		if not def.target then BuildPage(frame, def, placed) end
+	if frame.families then
+		for _, family in ipairs(frame.families) do BuildPage(frame, family, placed) end
+		IndexPlaces(frame)
+		-- page de repli (et des contrôles sans place) : l'onglet « general »
+		local first = frame.families[1]
+		frame.fallbackPage = first.id .. ":" .. tostring(first.tabs[1].id)
+		for _, family in ipairs(frame.families) do
+			for _, tab in ipairs(family.tabs) do
+				if tab.id == "general" then frame.generalPage = family.id .. ":general" end
+			end
+		end
+	else
+		for _, def in ipairs(PAGES) do
+			if not def.target then BuildPage(frame, def, placed) end
+		end
+		frame.fallbackPage, frame.generalPage = "general", "general"
 	end
 
 	-- tout check sans page tombe dans « Général » : un module ajouté plus tard
 	-- ne doit pas devenir impossible à couper
 	frame.unplaced = {}
-	local general = frame.pages.general
+	local general = frame.pages[frame.generalPage or "general"] or frame.pages[frame.fallbackPage]
 	for _, check in ipairs(ns.checks or {}) do
 		if not placed[check.id] then
 			if #frame.unplaced == 0 then general.modulesHeader = Section(frame, general, "OPT_MODULES") end
@@ -1329,10 +1851,21 @@ function ns:EnsureOptions()
 		ns:RefreshOptions()
 	end, "outline")
 	frame.resetButton:SetPoint("LEFT", frame.runButton, "RIGHT", 10, 0)
+	-- navigation par familles : la remise à zéro vit dans Accueil › Général,
+	-- avec une confirmation (ns.OPTION_ACTIONS de l'addon)
+	if frame.families then frame.resetButton:Hide() end
 	frame.closeButton = Theme.CreateButton(foot, Width(L.OPT_DONE), 28, L.OPT_DONE, function()
 		frame:Hide()
 	end, ActionStyle("accent", "primary"))
 	frame.closeButton:SetPoint("RIGHT", foot, "RIGHT", -MARGIN, 0)
+	-- socle 3.4 : « Recharger l'interface », à gauche de Terminé, seulement
+	-- quand un réglage l'attend (ns:MarkReloadPending)
+	frame.reloadButton = Theme.CreateButton(foot, Width(L.OPT_RELOAD), 28, L.OPT_RELOAD, function()
+		local reload = rawget(_G, "ReloadUI")
+		if type(reload) == "function" then reload() end
+	end, ActionStyle("accent", "arcane"))
+	frame.reloadButton:SetPoint("RIGHT", frame.closeButton, "LEFT", -10, 0)
+	frame.reloadButton:Hide()
 
 	-- la recherche se vide à la fermeture
 	frame:SetScript("OnHide", function()
@@ -1340,7 +1873,9 @@ function ns:EnsureOptions()
 	end)
 
 	self.optionsFrame = frame
-	self:SelectOptionsPage(self:DB().optionsPage or "general")
+	-- navigation par familles : première ouverture de la session sur la vue
+	-- d'ensemble, ensuite là où on était (la fenêtre garde sa page)
+	self:SelectOptionsPage(frame.families and frame.fallbackPage or (self:DB().optionsPage or "general"))
 	return frame
 end
 
@@ -1469,14 +2004,19 @@ function ns:RefreshModuleOffBanner()
 		banner.showing = true
 		frame.header:SetSubtitle(L.OPT_PAGE_OFF)
 		frame.header.subtitle:SetTextColor(Theme.GOLD[1], Theme.GOLD[2], Theme.GOLD[3], 1)
-		frame.header.subtitle:SetWidth(INNER - (banner:GetWidth() or 0) - 12)
-		banner:Show()
+		if frame.headerPower then
+			-- navigation par familles : l'interrupteur de l'en-tête rallume
+			frame.header.subtitle:SetWidth(INNER - 150)
+		else
+			frame.header.subtitle:SetWidth(INNER - (banner:GetWidth() or 0) - 12)
+			banner:Show()
+		end
 	elseif banner.showing then
 		-- la phrase de la page revient (la recherche pose la sienne elle-même)
 		banner.showing = nil
 		if not frame.searching then frame.header:SetSubtitle(frame.pageSubtitle or "") end
 		frame.header.subtitle:SetTextColor(Theme.MUTED_LIGHT[1], Theme.MUTED_LIGHT[2], Theme.MUTED_LIGHT[3], 1)
-		frame.header.subtitle:SetWidth(INNER)
+		frame.header.subtitle:SetWidth((frame.headerPower and frame.headerPower:IsShown()) and (INNER - 150) or INNER)
 		banner:Hide()
 	end
 end
@@ -1484,6 +2024,11 @@ end
 function ns:SelectOptionsPage(id)
 	local frame = self.optionsFrame
 	if not frame then return end
+	local reveal
+	if frame.families then
+		local resolved, sec = ResolveTarget(frame, id)
+		id, reveal = resolved or frame.fallbackPage, sec
+	end
 	-- entrée sans page propre (titre de groupe) : sa première sous-page
 	local target = PageDef(id)
 	if target and target.target then id = target.target end
@@ -1494,7 +2039,7 @@ function ns:SelectOptionsPage(id)
 	if target and target.tabs and target.tabs[1] then
 		id = id .. ":" .. tostring(frame.tabChoice[id] or target.tabs[1].id)
 	end
-	if not frame.pages[id] then id = "general" end
+	if not frame.pages[id] then id = frame.fallbackPage or "general" end
 	local def = DefOf(frame, id)
 	local owner = def.tabOf and PageDef(def.tabOf) or def
 
@@ -1514,9 +2059,24 @@ function ns:SelectOptionsPage(id)
 
 	-- en-tête : le titre de la page choisie, sa phrase (sinon celle de son groupe)
 	local parent = owner.parent and PageDef(owner.parent)
-	frame.header:SetTitle(L[owner.title] or owner.title)
-	frame.pageSubtitle = Declared(owner.title .. "_SUB") or (parent and Declared(parent.title .. "_SUB")) or ""
+	-- socle 3.5 : `heading` = titre de l'en-tête quand il diffère du nom de
+	-- l'entrée (Accueil -> « Ready2Quest »)
+	frame.header:SetTitle(owner.heading or L[owner.title] or owner.title)
+	frame.pageSubtitle = (def.phrase and (L[def.phrase] or def.phrase))
+		or Declared(owner.title .. "_SUB") or (parent and Declared(parent.title .. "_SUB")) or ""
 	frame.header:SetSubtitle(frame.pageSubtitle)
+	if frame.headerPower then
+		local power = frame.headerPower
+		power.key = owner.power
+		if owner.power then
+			power.label:SetText(L[owner.powerLabel or ""] or owner.powerLabel or "")
+			power:Show(); power.label:Show()
+			frame.header.subtitle:SetWidth(INNER - 150)
+		else
+			power:Hide(); power.label:Hide()
+			frame.header.subtitle:SetWidth(INNER)
+		end
+	end
 
 	if owner.tabs then
 		local tabs = {}
@@ -1532,10 +2092,12 @@ function ns:SelectOptionsPage(id)
 		frame.tabs:Hide()
 	end
 
-	frame.currentPreview = PreviewFor(frame, owner)
+	-- socle 3.5 : un onglet peut porter son propre aperçu (Rangs de sorts), ou
+	-- s'en passer (preview = false)
+	frame.currentPreview = PreviewFor(frame, (def.preview == false and {}) or (def.preview and def) or owner)
 	local bodyTop, view = PlaceBody(frame, owner.tabs ~= nil, frame.currentPreview)
 	ShowContainer(frame, frame.pages[id], bodyTop, view)
-	RevealNav(frame, owner.id)
+	if frame.families then RevealSection(frame, frame.pages[id], reveal) else RevealNav(frame, owner.id) end
 	self:RefreshOptions()
 end
 
@@ -1635,12 +2197,36 @@ function ns:SetOptionsSearch(text)
 		counts[owner.id] = (counts[owner.id] or 0) + #group.cards
 	end
 	for index = #groups + 1, #results.sections do results.sections[index]:Hide() end
+	-- socle 3.5 : les lieux (fonctions, onglets, anciens noms) d'abord
+	local places = frame.families and self:FindOptionPlaces(text) or {}
+	for _, line in ipairs(results.placeLines or {}) do line:Hide() end
+	if places[1] then
+		local section = results.placesSection
+		if not section then
+			section = Theme.CreateSection(results, L.OPT_SEARCH_PLACES or "", nil, "second")
+			section:SetWidth(INNER)
+			results.placesSection = section
+		end
+		table.insert(results.items, 1, { region = section, kind = "section", height = SECTION_H })
+		for index, place in ipairs(places) do
+			local line = PlaceLine(results, index)
+			line.go = place.go
+			line.label:SetText(place.label or "")
+			line.path:SetText(place.path or "")
+			table.insert(results.items, 1 + index, { region = line, kind = "block", height = line:GetHeight() })
+		end
+		total = total + #places
+	elseif results.placesSection then
+		results.placesSection:Hide()
+	end
+	results.places = places
 	results.total = total
 	results.empty:SetText(total == 0 and self:F("OPT_SEARCH_NONE", text) or "")
 
 	frame.header:SetTitle(L.OPT_SEARCH_TITLE)
 	frame.header:SetSubtitle(total > 0 and self:F("OPT_SEARCH_COUNT", total, text) or "")
 	frame.tabs:Hide()
+	if frame.headerPower then frame.headerPower:Hide(); frame.headerPower.label:Hide() end
 	for _, other in pairs(frame.previews) do other:Hide() end
 	frame.currentPreview = nil
 	local bodyTop, view = PlaceBody(frame, false, nil)

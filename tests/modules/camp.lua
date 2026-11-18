@@ -354,14 +354,14 @@ end
 do
 	Fresh()
 	local frame = NS:EnsureOptions()
-	local page = frame and frame.pages and frame.pages.camp
+	-- 2.0.0 : Voyage › Kit de camp, l'interrupteur dans la tête de la fonction
+	local page = frame and frame.pages and frame.pages["voyage:camp"]
 	local keys = {}
 	for _, row in ipairs(page and page.rows or {}) do keys[#keys + 1] = tostring(row.moduleId or (row.def and row.def.key)) end
-	local nav
-	for _, n in ipairs(frame.navButtons) do if n.pageId == "camp" then nav = n end end
-	Check("[CAMP] page construite : 2 contrôles et 2 réglages, sous-titre, interrupteur dans la navigation", page ~= nil
+	local sec = frame.sectionIndex.camp
+	Check("[CAMP] page construite : 2 contrôles et 2 réglages, sous-titre, interrupteur dans la tête", page ~= nil
 		and table.concat(keys, ",") == "campkit,campobject,campCountdown,campDepartureLine"
-		and page.subText == NS.L.OPT_PAGE_CAMP_SUB and nav and nav.powerKey == "campEnabled", table.concat(keys, ","))
+		and page.subText == NS.L.OPT_TAB_CAMP_SUB and sec and sec.item.region.powerKey == "campEnabled", table.concat(keys, ","))
 	NS.optionsFrame = nil
 end
 

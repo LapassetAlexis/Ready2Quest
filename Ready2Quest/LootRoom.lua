@@ -450,8 +450,9 @@ function ns:EnsureLootRoom()
 	if self.lootRoomFrame then return self.lootRoomFrame end
 	if not (Theme and Theme.CreateDialog) then return nil end
 	local frame = Theme.CreateDialog(UIParent, WIDTH, LootRoomHeight(ns.LOOTROOM_ROWS), { name = "Ready2QuestLootRoom",
-		title = L.LOOTROOM_TITLE, subtitle = L.LOOTROOM_SUB })
+		title = L.LOOTROOM_TITLE, subtitle = L.LOOTROOM_SUB, headerIcon = true })
 	if not frame then return nil end
+	if self.AddSettingsGear then self:AddSettingsGear(frame, "lootroom") end
 	frame:SetPoint("CENTER", UIParent, "CENTER", 260, 60)
 	local pad, inner = frame.pad + 1, frame.innerWidth
 	local top = frame.contentTop - GAP

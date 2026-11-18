@@ -24,7 +24,7 @@ local ADVICE_PAD  = 10     -- marge haute et basse du bloc conseils
 local FOOTER      = 52     -- pied : bouton (28) centré
 local BUTTON_HEIGHT = 28
 
--- Coupe à `limit` octets (1.31.0 : plus utilisé par la fenêtre, gardé pour le chat) sans jamais couper un caractère UTF-8 en deux (é, â…
+-- Coupe à `limit` octets (sert au chat) sans jamais couper un caractère UTF-8 en deux (é, â…
 -- font deux octets) : un octet de continuation (0x80-0xBF) ne peut pas
 -- commencer la partie retirée. « ... » en ASCII : « … » n'est pas garanti
 -- dans la police des cadres sur Era.
@@ -316,7 +316,7 @@ function ns:EnsureWindow()
 	end
 
 	-- Roue crantée : les réglages, à gauche de la flèche
-	frame.settingsButton = Theme.CreateGearButton(frame, 22, function() ns:ToggleOptions() end, L.DIAG_SETTINGS_TIP)
+	frame.settingsButton = Theme.CreateGearButton(frame, 22, function() ns:OpenOptionsAt("check") end, L.DIAG_SETTINGS_TIP)
 	frame.settingsButton:SetPoint("RIGHT", frame.refreshButton, "LEFT", -6, 0)
 	frame.settingsButton:Show()
 	if frame.settingsButton.SetFrameLevel and frame.close.GetFrameLevel then
@@ -648,6 +648,22 @@ function ns:DepartedText()
 	local from = self.lastDeparture
 	if not from then return nil end
 	return self:F("PANEL_DEPARTED", tostring(from.name or "?"), self:SourceLabel(from.source))
+end
+
+-- 2.0.0 : roue crantée d'une fenêtre de module, à gauche de son [×] : les
+-- réglages s'ouvrent sur sa fonction, qui s'éclaire (ns:OpenOptionsAt). Une
+-- fenêtre de dialogue garde sa place avec headerIcon (Theme.CreateDialog).
+function ns:AddSettingsGear(frame, where, size, anchor)
+	if not (frame and Theme and Theme.CreateGearButton) then return nil end
+	if frame.settingsButton then return frame.settingsButton end
+	anchor = anchor or frame.close or frame.closeButton
+	if not anchor then return nil end
+	local gear = Theme.CreateGearButton(frame, size or 22, function() ns:OpenOptionsAt(where) end, L.DIAG_SETTINGS_TIP)
+	gear:SetPoint("RIGHT", anchor, "LEFT", -6, 0)
+	if gear.SetFrameLevel and anchor.GetFrameLevel then gear:SetFrameLevel(tonumber(anchor:GetFrameLevel()) or 20) end
+	gear.settingsTarget = where
+	frame.settingsButton = gear
+	return gear
 end
 
 if ns.Mark then ns.Mark("UI") end

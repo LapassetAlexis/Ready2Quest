@@ -201,7 +201,10 @@ function ns:FeatTitleText(code, name, gender, opts)
 	if type(title) ~= "table" then return nil end
 	gender = (gender == "f" or gender == "m") and gender or self:FeatTitleGender()
 	local fmt
-	if English() then fmt = (gender == "f" and title.enf) or title.en
+	-- 3.3.0 : client espagnol, ns.FEAT_TITLES_ES[code] = { m, f } (Locales_es.lua)
+	local es = ns.STRINGS_SPANISH and ns.FEAT_TITLES_ES and ns.FEAT_TITLES_ES[tonumber(code) or code]
+	if es then fmt = (gender == "f" and es.f) or es.m
+	elseif English() then fmt = (gender == "f" and title.enf) or title.en
 	else fmt = (gender == "f" and title.f) or title.m end
 	fmt = fmt or title.m or title.en
 	if type(fmt) ~= "string" then return nil end
@@ -211,7 +214,7 @@ function ns:FeatTitleText(code, name, gender, opts)
 		return text
 	end
 	local bare = fmt:gsub("%%s", ""):gsub("^%s*,%s*", ""):gsub("^%s+", ""):gsub("%s+$", "")
-	bare = bare:gsub("^[Ll]e ", ""):gsub("^[Ll]a ", ""):gsub("^[Ll]'", ""):gsub("^[Tt]he ", "")
+	bare = bare:gsub("^[Ll]e ", ""):gsub("^[Ll]a ", ""):gsub("^[Ll]'", ""):gsub("^[Tt]he ", ""):gsub("^[Ee]l ", "")
 	return (bare:gsub("^%l", string.upper))
 end
 

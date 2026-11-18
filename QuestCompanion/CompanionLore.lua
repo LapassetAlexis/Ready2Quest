@@ -109,8 +109,8 @@ end
 local function Raw()
 	local raw = ns.LORE_RAW
 	if type(raw) ~= "table" then return nil end
-	local lang = ns.loreLang or (ns.STRINGS_FRENCH ~= false and "fr" or "en")
-	return raw[lang] or raw.fr or raw.en
+	local lang = ns.loreLang or ns.STRINGS_LANG or (ns.STRINGS_FRENCH ~= false and "fr" or "en")
+	return raw[lang] or raw.en or raw.fr
 end
 
 -- Comme SpokenPlaces:NormaliseAreaKey (et tools/gen_lore.py)

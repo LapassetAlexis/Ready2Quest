@@ -1,5 +1,43 @@
 # Journal des modifications
 
+## 2.0.0 — Aide au combat et nouveau menu des réglages
+
+### En español
+
+- **Ready2Quest parle espagnol** (clients esES et esMX) : toute l'interface, les messages, l'aide et les réglages. La langue du jeu est détectée toute seule ; une phrase pas encore traduite s'affiche en anglais.
+
+*English:* Ready2Quest now speaks Spanish (esES and esMX clients): the whole interface, messages, help and settings, picked from the game language; anything not translated yet shows in English.
+
+### Un nouveau menu des réglages
+
+- **Six familles fixes** dans la colonne de gauche, chacune avec son icône et une ligne qui dit ce qu'elle contient : **Accueil**, **Check avant le départ**, **Sacs & butin**, **Voyage**, **Quêtes & sorts**, **Combat**. La colonne ne défile plus ; « Modules » et « Confort de jeu » disparaissent comme catégories. Les pages d'une famille deviennent ses onglets, en haut.
+- **Un interrupteur par fonction**, dans la tête de sa section (son nom, sa phrase, l'interrupteur). La ligne « Activer » en double disparaît. Une fonction coupée garde ses réglages, estompés. **Butin rapide**, **Groupe prêt** et **Tout apprendre** deviennent des fonctions visibles (mêmes réglages qu'avant, seule leur place change).
+- **Accueil › Vue d'ensemble** : toutes les fonctions sur un écran, chacune avec son interrupteur ; un clic sur un nom ouvre ses réglages. « Addon actif » est dans l'en-tête de l'Accueil, « Check actif » dans celui du check.
+- **Des réglages à leur place** : « Fenêtre (sinon chat) » et « Fenêtre sous la note » passent dans Check › Quand & où (avec les délais et les zones sûres) ; les contrôles « Rangs de sorts » et « Métiers » rejoignent le check ; les favoris passent dans Sacs & butin › Marchand & favoris.
+- **« Réinitialiser »** quitte le pied de fenêtre (il effaçait tout sans prévenir) : Accueil › Général › Remise à zéro, avec une confirmation.
+- **La roue crantée** du check, du bilan d'expédition, de la fiche de donjon, du conseil après la mort, des rangs de sorts, de Place au butin et de l'alerte Sac plein ouvre les réglages sur sa fonction, qui s'éclaire. Aussi en commande : `/r2q options butin`, `/r2q options combat`, `/r2q options zones`…
+- **La recherche** trouve aussi les fonctions, les onglets et les anciens noms de pages (« Confort de jeu », « Déclenchement »), avec leur chemin.
+- À la première ouverture après une connexion : la vue d'ensemble ; ensuite, la fenêtre se rouvre là où tu l'as laissée.
+
+*English:* a new settings menu. Six fixed families in the left column, each with its icon and a one-line summary: Home, Departure check, Bags & loot, Travel, Quests & spells, Combat; their pages become tabs. One switch per feature, in the head of its section (no more duplicated "Enable" line); a feature turned off keeps its settings, dimmed. Fast loot, Group ready and Learn all become visible features. Home › Overview shows every feature with its switch on one screen; click a name to set it up. Check display settings move to Check › When & where, the spell rank and profession checks join the check, favorites move to Merchant & favorites. Reset leaves the footer for Home › General, with a confirmation. The gear button of the game windows opens the settings on their feature; `/r2q options <word>` too. Search also finds features, tabs and old page names.
+
+### Aide au combat
+
+- **Une section Combat** dans les réglages : la portée d'aggro y passe, avec quatre aides, chacune avec son interrupteur (effet au prochain /reload) :
+  - **Portée des sorts** : une coche verte ou une croix rouge au-dessus de ta cible (aussi en combat) ; les icônes des barres d'action se grisent hors de portée.
+  - **DoT mortels** : sur la barre de vie de la cible, ce que tes DoT vont encore infliger ; un crâne quand ils suffisent.
+  - **Prédiction des sorts** : pendant l'incantation, les dégâts attendus et une icône si le sort tue.
+  - **Chiffres des barres** : les dégâts ou soins de chaque sort sur son bouton, avec ta puissance des sorts et tes talents.
+- Le moteur vient de **DoesItDiePlus** (Ironship) et **Does It Die** (Joe Greive), sous licence libre, avec leur crédit. Si l'un des deux est installé, Ready2Quest s'efface (rien en double ; la portée d'aggro reste). Tous les réglages sont dans la fenêtre de Ready2Quest (Réglages › Combat) ; `/r2q combat` y mène.
+- **« +N » devient une alerte multi-aggro** : le jeu cache la position des monstres à l'écran (celle des barres de nom comme celle d'un cadre accroché à elles), donc leur direction. Plus de chiffre : le triangle d'alerte du jeu au-dessus de ta cible, à droite de la coche de portée, quand d'autres monstres de la même sorte sont à une distance proche de la sienne. Réglage « Alerte multi-aggro ».
+- **Un seul bouton « Recharger l'interface »**, en bas des réglages, à gauche de Terminé : il apparaît quand un interrupteur du Combat l'attend.
+- **Une seule icône au-dessus du monstre** : le crâne (tes DoT suffisent) ou l'arme (DoT + un coup) prend la place de la coche de portée ; hors de portée, la croix rouge revient. Réglage sur la page DoT mortels (actif), qui explique aussi les deux icônes.
+- **Diagnostic** : `/r2q diag` ne signale plus à tort un module « Stats » manquant (retiré en 1.37.0).
+- **`/r2q diag` explique les paliers manquants** : une ligne par barre de nom (sorte, niveaux, portée, distance mesurée, verdict) et pourquoi rien ne s'affiche (niveau illisible, aucune mesure, pas hostile).
+- **Portée d'aggro plus juste pour guerriers, chasseurs et druides** : les sorts « au prochain coup » (Frappe héroïque, Enchaînement, Attaque du raptor, Mutiler) ne servent plus de règle ; ils répondaient « à portée » à 30 m.
+
+*English:* a Combat section in the settings: the aggro range moves there, with four helpers, each with its own switch (takes effect at the next /reload): spell range (a green check or a red cross above your target, in combat too; action bar icons grey out when out of range), lethal DoTs (what your DoTs will still deal, on the target's health bar; a skull when it is enough), spell prediction (the expected damage while you cast, an icon if it kills), action bar numbers (each spell's damage or healing on its button, with your spell power and talents). The engine comes from DoesItDiePlus (Ironship) and Does It Die (Joe Greive), free software, credited; if one of them is installed, Ready2Quest steps aside (nothing twice; the aggro range stays). Every setting lives in Ready2Quest's window (Settings › Combat); `/r2q combat` takes you there. "+N" becomes a multi-aggro warning: the game hides where monsters are on screen (nameplates and frames pinned to them), so their direction; no number any more, the game's warning triangle above your target, right of the range check, when other monsters of the same kind are at a similar distance ("Multi-aggro warning" setting). Sharper aggro range for warriors, hunters and druids: "next swing" spells (Heroic Strike, Cleave, Raptor Strike, Maul) are no longer used as a range check; they answered "in range" at 30 yd.
+
 ## 1.37.1
 
 - **Voisins qui suivent (+N)** : hors combat, à droite de la barre de nom de ta cible, « +2 » (ambre ; rouge à partir de 3) dit combien de monstres de la même sorte sont assez près pour venir l'aider si tu l'attaques. C'est une estimation (le jeu ne donne pas la position des monstres : on la déduit de la distance mesurée et de la place des barres de nom à l'écran), à affiner avec vos retours ; `/r2q diag` montre le compte et le rayon utilisé. Réglage « Voisins qui suivent (+N) », page Portée d'aggro (actif).

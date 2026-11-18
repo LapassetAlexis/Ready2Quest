@@ -33,8 +33,4 @@ function ns:ToggleEditMode()
 	return self.editMode
 end
 
-function ns:IsEditing()
-	return self.editMode and true or false
-end
-
 if ns.Mark then ns.Mark("EditMode") end

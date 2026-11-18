@@ -333,7 +333,9 @@ _G.GetCursorPosition = function()
 end
 _G.SlashCmdList = {}
 
-_G.GetLocale = function() return "frFR" end
+-- langue du client simulé : français, sauf TEST_LOCALE (tools/i18n.py fit,
+-- tests/snapshot.py avec SNAPSHOT_LOCALE)
+_G.GetLocale = function() return rawget(_G, "TEST_LOCALE") or "frFR" end
 _G.GetBuildInfo = function()
 	local b = Mock.world.build or { version = "1.60.1", build = "69893", date = "Oct 1 2026", toc = 16001 }
 	return b.version, b.build, b.date, b.toc
@@ -662,7 +664,14 @@ do
 			line = line:gsub("\r", ""):gsub("^%s+", ""):gsub("%s+$", "")
 			-- le client accepte « Libs\Socle\Base.lua » : chemin à barres obliques ici
 			line = line:gsub("\\", "/")
-			if line ~= "" and not line:find("^#") and line:find("%.lua$") then tocFiles[#tocFiles + 1] = prefix .. line end
+			-- 1.38.0 : le moteur Combat (repris de DoesItDiePlus, Ready2Quest/Combat/)
+			-- n'est pas chargé par le harnais (il demande des barres de statut,
+			-- des API de sorts… que le monde simulé n'a pas) : ses fichiers sont
+			-- compilés à part (tests/modules/r2q_combat.lua), notre intégration
+			-- (CombatBoot.lua, Combat.lua) est testée avec un moteur simulé
+			if line ~= "" and not line:find("^#") and line:find("%.lua$") and not line:find("^Combat/") then
+				tocFiles[#tocFiles + 1] = prefix .. line
+			end
 		end
 		handle:close()
 	end
@@ -894,6 +903,19 @@ end
 -- 3 ter. Aperçu hors-jeu (tests/snapshot.py) : l'addon est chargé, on rend
 -- une scène de tests/snapshot.lua en HTML et on s'arrête là, sans les tests.
 ----------------------------------------------------------------------------
+-- Export des textes (tools/i18n.py) : l'addon et ses modules chargés, les
+-- tables de chaînes fr / en / es des deux addons rendues, sans les tests
+if rawget(_G, "I18N_DUMP") then
+	Mock.world.build = nil
+	NS:DetectCapabilities()
+	for _, file in ipairs(Mock.moduleFiles) do LoadAddonFile(file) end
+	_G.I18N_RESULT = { r2q = NS.STRINGS_TABLES, qc = QNS and QNS.STRINGS_TABLES }
+	_G.I18N_NS = { r2q = NS, qc = QNS }
+	Mock:Fire("ADDON_LOADED", "Ready2Quest")
+	Mock:Fire("ADDON_LOADED", "QuestCompanion")
+	return
+end
+
 if SNAPSHOT_SCENE then
 	local function LoadModules()
 		if Mock.modulesLoaded then return end
@@ -1825,7 +1847,7 @@ ResetWorld()
 -- 4.38 Bootstrap : la commande survit à un échec de chargement
 Say("\n== bootstrap et diagnostic ==")
 ResetWorld()
-Check("version exposée", NS.version == "1.37.1", NS.version)
+Check("version exposée", NS.version == "2.0.0", NS.version)
 do
 	local missingMods = {}
 	for _, name in ipairs({ "Bootstrap", "Locales", "Compat", "Theme", "Core", "Buffs", "Reagents",
@@ -1846,7 +1868,7 @@ do
 	Mock:Reset()
 	NS:HandleCommand("diag")
 	Check("/sd diag liste les modules et la version", Mock:Output():find("modules :") ~= nil
-		and Mock:Output():find("1%.37%.1") ~= nil, Mock:Output())
+		and Mock:Output():find("2%.0%.0") ~= nil, Mock:Output())
 
 	-- une erreur est enregistrée et affichée
 	Mock:Reset()

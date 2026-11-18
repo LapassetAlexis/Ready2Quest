@@ -1,15 +1,19 @@
 ## Interface: 16001
 ## Interface-Camelot: 16001
 ## Title: |cffe8a54bReady|r|cff5b8fd62|r|cffe8a54bQuest|r
-## Notes: Get ready before you leave town: bags, greys to sell, food, buffs, rest, durability, quests to turn in. Expedition report, dungeon sheet, QoL.
-## Notes-frFR: Prépare ta sortie avant de quitter la ville : sacs, gris à vendre, vivres, buffs, repos, durabilité, quêtes à rendre. Bilan d'expédition, fiche de donjon, QoL.
-## Version: 1.37.1
+## Notes: Get ready before you leave town: bags, greys to sell, food, buffs, rest, durability, quests to turn in. Expedition report, dungeon sheet, QoL, combat helpers.
+## Notes-frFR: Prépare ta sortie avant de quitter la ville : sacs, gris à vendre, vivres, buffs, repos, durabilité, quêtes à rendre. Bilan d'expédition, fiche de donjon, QoL, aide au combat.
+## Notes-esES: Prepárate antes de salir de la ciudad: bolsas, grises para vender, comida, beneficios, descanso, durabilidad, misiones por entregar. Informe de expedición, ficha de mazmorra, comodidad, ayuda en combate.
+## Notes-esMX: Prepárate antes de salir de la ciudad: bolsas, grises para vender, comida, beneficios, descanso, durabilidad, misiones por entregar. Informe de expedición, ficha de mazmorra, comodidad, ayuda en combate.
+## Version: 2.0.0
 ## X-License: GPL-3.0
+## X-Credits: Combat engine from DoesItDiePlus (Ironship, GPL-3.0) and Does It Die (Joe Greive, MIT)
+## OptionalDeps: ElvUI, HydraUI, EllesmereUI, EllesmereUIActionBars, EllesmereUINameplates, EllesmereUIUnitFrames
 ## Author: Tristabeau
 ## X-Website: https://github.com/LapassetAlexis/Ready2Quest
 ## X-Curse-Project-ID: 1783234
 ## X-Wago-ID: aNer0g62
-## SavedVariables: Ready2QuestDB
+## SavedVariables: Ready2QuestDB, Ready2QuestCombatDB, Ready2QuestCombat_SpellDamageInfoDB, Ready2QuestCombat_DoTInfoDB
 ## X-Category: Utility
 ## IconTexture: Interface\AddOns\Ready2Quest\Textures\logo_petit
 
@@ -56,3 +60,83 @@ Death.lua
 Aggro.lua
 AggroPlus.lua
 AggroLink.lua
+CombatBoot.lua
+# combat:begin (tools/sync_combat.py)
+Combat\Core\Init.lua
+Combat\Core\Trace.lua
+Combat\Core\Perf.lua
+Combat\Core\Meter.lua
+Combat\Core\Locale.lua
+Combat\Locales\deDE\Core.lua
+Combat\Locales\deDE\CastPrediction.lua
+Combat\Locales\deDE\DoTInfo.lua
+Combat\Locales\deDE\Range.lua
+Combat\Locales\ruRU\Core.lua
+Combat\Locales\ruRU\CastPrediction.lua
+Combat\Locales\ruRU\DoTInfo.lua
+Combat\Locales\ruRU\Range.lua
+Combat\Core\TalentModsData.lua
+Combat\Core\TalentMods.lua
+Combat\Core\PlateLayout.lua
+Combat\Core\Integrations\ElvUI.lua
+Combat\Core\Integrations\HydraUI.lua
+Combat\Core\Orbs.lua
+Combat\Core\Appearance.lua
+Combat\Core\Gamepad.lua
+Combat\Core\Settings.lua
+Combat\Core\API.lua
+Combat\Core\Looks.lua
+Combat\Core\LookRows.lua
+Combat\Core\Frames.lua
+Combat\Core\Preview.lua
+Combat\Modules\SpellDamageInfo\Locale.lua
+Combat\Modules\SpellDamageInfo\Locale_ruRU.lua
+Combat\Modules\SpellDamageInfo\SpellIDs.lua
+Combat\Modules\SpellDamageInfo\SpellCoefficients.lua
+Combat\Modules\SpellDamageInfo\SpellCoefficientsLinked.lua
+Combat\Modules\SpellDamageInfo\Parser.lua
+Combat\Modules\SpellDamageInfo\Parser_enUS.lua
+Combat\Modules\SpellDamageInfo\Parser_deDE.lua
+Combat\Modules\SpellDamageInfo\Parser_ruRU.lua
+Combat\Modules\SpellDamageInfo\Parser_frFR.lua
+Combat\Modules\SpellDamageInfo\Parser_esES.lua
+Combat\Modules\SpellDamageInfo\Parser_ptBR.lua
+Combat\Modules\SpellDamageInfo\Parser_zhCN.lua
+Combat\Modules\SpellDamageInfo\Parser_koKR.lua
+Combat\Modules\SpellDamageInfo\Estimate.lua
+Combat\Modules\SpellDamageInfo\History.lua
+Combat\Modules\SpellDamageInfo\Core.lua
+Combat\Modules\SpellDamageInfo\Options.lua
+Combat\Modules\CastPrediction\Auras.lua
+Combat\Modules\CastPrediction\Talents.lua
+Combat\Modules\CastPrediction\Core.lua
+Combat\Modules\CastPrediction\ManaCost.lua
+Combat\Modules\CastPrediction\Options.lua
+Combat\Modules\CastPrediction\API.lua
+Combat\Modules\DoTInfo\Locale.lua
+Combat\Modules\DoTInfo\Locale_deDE.lua
+Combat\Modules\DoTInfo\Locale_ruRU.lua
+Combat\Modules\DoTInfo\Locale_esES.lua
+Combat\Modules\DoTInfo\Locale_frFR.lua
+Combat\Modules\DoTInfo\Locale_koKR.lua
+Combat\Modules\DoTInfo\Locale_ptBR.lua
+Combat\Modules\DoTInfo\Locale_zhCN.lua
+Combat\Modules\DoTInfo\Core.lua
+Combat\Modules\DoTInfo\KillCheck.lua
+Combat\Modules\DoTInfo\SwingIcon.lua
+Combat\Modules\DoTInfo\MeterLearning.lua
+Combat\Modules\DoTInfo\ProcDots.lua
+Combat\Modules\DoTInfo\DeathMark.lua
+Combat\Modules\DoTInfo\RogueEffects.lua
+Combat\Modules\DoTInfo\Options.lua
+Combat\Modules\DoTInfo\Nameplates.lua
+Combat\Modules\DoTInfo\Focus.lua
+Combat\Modules\DoTInfo\ParseCheck.lua
+Combat\Modules\DoTInfo\TickViewer.lua
+Combat\Modules\DoTInfo\API.lua
+Combat\Modules\Range\Range.lua
+Combat\Core\Debug.lua
+# combat:end
+Combat.lua
+OptionsMenu.lua
+Locales_es.lua

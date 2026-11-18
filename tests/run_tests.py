@@ -100,6 +100,11 @@ def check_packages():
     # socle) et le glyphe du logo pour la mini-carte. Toujours aucune
     # illustration, et rien de repris du jeu.
     for f in tracked:
+        # 1.38.0 : les textures du moteur Combat (repris de DoesItDiePlus,
+        # GPL-3.0) sont les créations de son auteur, générées par ses scripts
+        # (tools/make_textures.py chez lui) : aucune image du jeu
+        if f.startswith("Ready2Quest/Combat/") and "/Textures/" in f:
+            continue
         if f.split("/")[0] in ("Ready2Quest", "QuestCompanion") and os.path.exists(os.path.join(ROOT, f)) \
                 and os.path.splitext(f)[1].lower() in IMAGE_EXTS and f not in ALLOWED_IMAGES:
             problems.append("image non autorisée : %s (n'embarquer que le filet, les logos et l'habillage du thème)" % f)

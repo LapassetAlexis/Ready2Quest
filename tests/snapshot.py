@@ -28,10 +28,10 @@ Usage :
 Scènes (Snap.scenes dans tests/snapshot.lua ; « list » les donne toutes) :
   thème forgé : forge-bricks (chaque matière de Theme.ART, plaque et creux en
   9 tranches à plusieurs tailles et teintes, lueurs, boutons), forge-dialog-toast
-  (fenêtre de dialogue et bandeau côte à côte) ; bricks ; réglages : r2q-options, r2q-options-bags, r2q-options-nav, r2q-options-spellranks,
+  (fenêtre de dialogue et bandeau côte à côte) ; bricks ; réglages : r2q-options, r2q-options-general, r2q-options-bags, r2q-options-plein, r2q-options-nav, r2q-options-spellranks,
   qc-options-companion, qc-options-ornaments, options-search ; fenêtres de Ready2Quest :
   r2q-check, r2q-dungeon, r2q-expedition, r2q-death, r2q-lootroom, r2q-spellranks ; bandeaux :
-  r2q-bagspace, r2q-camp, r2q-gear-toast, r2q-portrait, r2q-edit-banner, r2q-notice,
+  r2q-bagspace, r2q-camp, r2q-edit-banner, r2q-notice,
   r2q-exit-alert ; infobulles et divers : r2q-pace, r2q-minimap-tooltip, r2q-reward,
   r2q-settings-canvas ; QuestCompanion (3.1.0 : tout au thème forgé) : carnet
   qc-journal-creature, qc-journal-progress, qc-journal-day, qc-journal-menagerie,
@@ -77,6 +77,8 @@ def render(scene, out):
     g.ADDON_ROOT = ROOT
     g.MODULE_TEST_FILES = lua.table_from([])
     g.SNAPSHOT_SCENE = scene
+    if os.environ.get("SNAPSHOT_LOCALE"):
+        g.TEST_LOCALE = os.environ["SNAPSHOT_LOCALE"]   # esES : l'aperçu en espagnol
     g.SNAPSHOT_OUT = out
     with open(TEST_FILE, "r", encoding="utf-8") as handle:
         lua.execute(handle.read())

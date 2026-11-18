@@ -501,8 +501,10 @@ function ns:EnsureExpeditionWindow()
 	if self.expeditionFrame then return self.expeditionFrame end
 	if not Theme or not Theme.CreateDialog then return nil end
 
-	local frame = Theme.CreateDialog(UIParent, WIDTH, 200, { name = "Ready2QuestExpeditionFrame", title = L.EXP_TITLE })
+	local frame = Theme.CreateDialog(UIParent, WIDTH, 200, { name = "Ready2QuestExpeditionFrame", title = L.EXP_TITLE,
+		headerIcon = true })
 	if not frame then return nil end
+	if self.AddSettingsGear then self:AddSettingsGear(frame, "expedition") end
 	if self.RestorePoint then self:RestorePoint(frame, "expeditionPoint", { point = "CENTER", x = 0, y = 160 }) end
 
 	local pad, inner = frame.pad + 1, frame.innerWidth

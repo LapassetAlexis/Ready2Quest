@@ -191,7 +191,7 @@ function ns:EnsureNotice()
 	frame.icon:SetPoint("TOPLEFT", frame, "TOPLEFT", ICON_INSET, -ICON_INSET)
 	frame.icon:SetPoint("BOTTOMRIGHT", frame, "BOTTOMRIGHT", -ICON_INSET, ICON_INSET)
 
-	-- repère du mode édition (même habillage que le résumé et le portrait)
+	-- repère du mode édition (même habillage que les autres cadres déplaçables)
 	frame.moveGlow = Theme.Solid and Theme.Solid(frame, "OVERLAY", Theme.GOLD, 0.25) or nil
 	if frame.moveGlow then frame.moveGlow:SetAllPoints(); frame.moveGlow:Hide() end
 

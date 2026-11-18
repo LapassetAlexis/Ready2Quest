@@ -315,6 +315,10 @@ do
 	Say("-- thème forgé, navigation : fenêtre de réglages")
 	T.ResetWorld()
 	NS.optionsFrame = nil
+	-- groupes et voyants : la colonne par pages du socle (celle de
+	-- QuestCompanion), éprouvée sur Ready2Quest sans ses familles (2.0.0)
+	local families = NS.OPTION_FAMILIES
+	NS.OPTION_FAMILIES = nil
 	NS:ToggleOptions()
 	local frame = NS.optionsFrame
 	local function Head(id) for _, h in ipairs(frame.navHeaders) do if h.pageId == id then return h end end end
@@ -369,6 +373,7 @@ do
 		cards > 20 and slices == 0 and frame.rows[1].forgeRelief ~= nil, cards .. " cartes, " .. slices .. " pièces de plaque")
 	frame:Hide()
 	NS.optionsFrame = nil
+	NS.OPTION_FAMILIES = families
 end
 
 -- 9. Contrastes : chaque texte sur son nouveau fond, au point le plus clair ---

@@ -639,14 +639,18 @@ local function Build(self, frame, content, ui)
 		ns:RefreshJournal()
 	end)
 	At(rv.show, content, 332, rowY)
-	-- avertissement (Réserve pleine), au-dessus de la grille
-	local warnY = rowY - 30
+	-- avertissement (Réserve pleine), au-dessus de la grille, sur une rangée de
+	-- la hauteur des boutons « Faire de la place » et du cadeau (3.2.1 : le
+	-- bouton mordait sur la grille et touchait les filtres, retour en jeu)
+	local warnY = rowY - Theme.CONTROL_HEIGHT - 8
+	local warnH = Theme.BUTTON_SIZES and Theme.BUTTON_SIZES.sm or 24
 	rv.warn = Text(rv, Theme.F_SMALL, Theme.RED, GRID_W)
 	rv.gridWidth = GRID_W
-	At(rv.warn, content, 0, warnY)
+	At(rv.warn, content, 0, warnY - math.floor((warnH - 14) / 2))
 	if rv.warn.SetWordWrap then rv.warn:SetWordWrap(false) end
 	-- la grille : vignettes de l'allure, construites une fois
-	local gridTop = warnY - 18
+	local gridTop = warnY - warnH - 8
+	rv.warnY, rv.gridTop = warnY, gridTop
 	local cols = math.floor((GRID_W + LAY.gap) / (LAY.tileW + LAY.gap))
 	local rows = math.floor((gridTop - PAGER_Y - 8 + LAY.gap) / (LAY.tileH + LAY.gap))
 	rv.cols, rv.rows = cols, rows
@@ -716,7 +720,7 @@ local function Build(self, frame, content, ui)
 	-- 3.0.0 : le cadeau de la 3.0, tant qu'il n'a pas servi (à droite, au-dessus de la grille)
 	rv.giftButton = Theme.CreateButton(rv, "auto", "sm", ns:F("GIFT30_OPEN", ns.GIFT30 and ns.GIFT30.max or 3),
 		function() ns:Gift30Open() end, "accent")
-	rv.giftButton:SetPoint("TOPRIGHT", content, "TOPLEFT", ui.PAD + GRID_W, warnY + 4)
+	rv.giftButton:SetPoint("TOPRIGHT", content, "TOPLEFT", ui.PAD + GRID_W, warnY)
 	rv.giftButton:Hide()
 	-- 3.2.0 : « Faire de la place » (ReserveTidy.lua), sur la ligne de
 	-- l'avertissement, à droite (à gauche du cadeau s'il est là)

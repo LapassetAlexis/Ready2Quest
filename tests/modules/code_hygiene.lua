@@ -41,6 +41,9 @@ for _, addon in ipairs({ "Ready2Quest", "QuestCompanion" }) do
 		if file then
 			file = file:gsub("\\", "/")
 			local path = file:match("^Libs/Socle/") and ("Ready2Quest/" .. file) or (addon .. "/" .. file)
+			-- 1.38.0 : le moteur Combat repris de DoesItDiePlus garde son code
+			-- (tools/sync_combat.py le réimporte tel quel) : hors de nos règles
+			if path:find("^Ready2Quest/Combat/") then seen[path] = true end
 			if not seen[path] and not ALLOWED[path] then seen[path] = true; CLEAN[#CLEAN + 1] = path end
 		end
 	end
@@ -138,6 +141,10 @@ local CFF_ALLOWED = {
 	["QuestCompanion/Libs/Socle/Base.lua"] = "copie du socle",
 	["Ready2Quest/Config.lua"] = "chargé avant le socle",
 	["QuestCompanion/Config.lua"] = "chargé avant le socle",
+	-- écrits par tools/i18n.py : les couleurs déjà calculées (ns.TC) des textes
+	-- anglais d'où ils sont traduits
+	["Ready2Quest/Locales_es.lua"] = "généré (tools/i18n.py)",
+	["QuestCompanion/Locales_es.lua"] = "généré (tools/i18n.py)",
 }
 local cffFiles = {}
 for _, path in ipairs(CLEAN) do

@@ -965,14 +965,18 @@ local COMMANDS = {
 		self.inSafe = nil
 		self:Print(L.MSG_RESET)
 	end,
-	["options"] = function(self)
+	["options"] = function(self, rest)
+		-- 2.0.0 : /r2q options <mot> ouvre sur ce lieu (butin, combat, zones…)
+		if rest and tostring(rest):match("%S") and self.OptionsGo then return self:OptionsGo(rest) end
 		if self.ToggleOptions then
 			self:ToggleOptions()
 		else
 			self:Print(L.MSG_UNKNOWN_CMD)
 		end
 	end,
-	["config"] = function(self)
+	["config"] = function(self, rest)
+		-- 2.0.0 : /r2q options <mot> ouvre sur ce lieu (butin, combat, zones…)
+		if rest and tostring(rest):match("%S") and self.OptionsGo then return self:OptionsGo(rest) end
 		if self.ToggleOptions then
 			self:ToggleOptions()
 		else

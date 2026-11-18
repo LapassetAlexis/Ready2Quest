@@ -617,8 +617,308 @@ S	1457	warriors terrace	The eastern gate of Darnassus, where the city opens onto
 S	1458	ruins of lordaeron	Above the buried city the palace of Lordaeron still stands, its halls open to the sky and its gardens gone to ruin.	Ruins_of_Lordaeron
 S	2652	valley of bones	Skeletons crowd this crag on the southern border of Desolace, the way on foot into Shen'dralas, and centaur necromancers walk among them.	Valley_of_Bones
 ]]
+local ES = [[
+
+Z	1411	Agrietada y roja, Durotar es una tierra de riscos y cañones, seca y calurosa, escasa en agua y en verdor. Se extiende por la costa oriental de Kalimdor.	Durotar_(Classic)
+Z	1412	Los tauren vagaron durante cientos de años sin una tierra propia.	Mulgore_(Classic)
+Z	1413	El polvo de aquí no siempre fue polvo. Esta tierra fue antaño un bosque cuidado por los elfos de la noche, y aquí se alzaban varias de sus grandes ciudades.	Barrens_(Classic)
+Z	1416	La lluvia cae sobre estas cumbres casi siempre, y el cielo sigue gris bajo densas nubes. El bosque cubre las laderas bajo la nieve de las cimas más altas.	Alterac_Mountains_(Classic)
+Z	1417	El rey Thoradin construyó Strom, la capital de Arathor, en esta tierra seca y escarpada. Cerca alzó una gran muralla para proteger a su pueblo de los trols Amani.	Arathi_Highlands_(Classic)
+Z	1418	Las Tierras Inhóspitas son tierra seca y agrietada, sembrada de rocas y surcada por cañones sinuosos, cercada de montañas por todos lados.	Badlands_(Classic)
+Z	1419	Las rocas de Las Tierras Devastadas eran antaño ocres. Un calor abrasador y energías salvajes las volvieron carmesí al destruirse el Portal Oscuro, y la tierra sigue siendo un desierto.	Blasted_Lands_(Classic)
+Z	1420	El cielo sobre los Claros de Tirisfal se cierne lúgubre y verde.	Tirisfal_Glades_(Classic)
+Z	1421	Los pinos de aquí son altos y de corteza plateada, y se alzan sobre lomas de hierba. Antes de la Tercera Guerra, la Alianza mantenía este bosque verde e intacto.	Silverpine_Forest_(Classic)
+Z	1422	Antes de la peste, esto eran tierras de cultivo boscosas al este de la capital de Lordaeron.	Western_Plaguelands_(Classic)
+Z	1423	Antes de la peste, estas tierras eran granjas y aldeas que miraban todas a Stratholme, la ciudad más grande de Lordaeron.	Eastern_Plaguelands_(Classic)
+Z	1424	La Plaga ha retorcido casi todo Lordaeron, pero las Laderas de Trabalomas aún lucen como lucía el reino. Las colinas son verdes, los prados fértiles y la tierra rica.	Hillsbrad_Foothills_(Classic)
+Z	1425	Los enanos Martillo Salvaje dominan el oeste de las Tierras del Interior, donde doman grifos salvajes.	Hinterlands_(Classic)
+Z	1426	La nieve cubre en espesor Dun Morogh, y sus montañas son las más altas de los Reinos del Este.	Dun_Morogh_(Classic)
+Z	1427	Hace más de doscientos años, el suelo de aquí se abrió en dos. Antes, esta tierra formaba parte de las Montañas Crestagrana.	Searing_Gorge_(Classic)
+Z	1428	El cielo sobre Las Estepas Ardientes brilla rojo, iluminado por las erupciones de la Montaña Roca Negra. Ríos de lava cruzan las colinas, la tierra está calcinada y el aire sigue seco y caliente.	Burning_Steppes_(Classic)
+Z	1429	En la Primera Guerra, miles de orcos marcharon por el Bosque de Elwynn y cercaron Ventormenta, dejando el mar como única salida.	Elwynn_Forest_(Classic)
+Z	1431	El Bosque del Ocaso fue antaño la parte sur del Bosque de Elwynn, un feudo de Ventormenta llamado Brightwood. Dos pueblos de buen tamaño se alzaban entre sus granjas.	Duskwood_(Classic)
+Z	1432	Montañas grises se alzan a cada lado de Loch Modan, con colinas salpicadas de pinos y abedules.	Loch_Modan_(Classic)
+Z	1433	Los olmos se alzan sobre ríos rápidos en las Montañas Crestagrana, y la tierra sube sin pausa hacia las cumbres. La cordillera está al este del Bosque de Elwynn y al sur de Las Estepas Ardientes.	Redridge_Mountains_(Classic)
+Z	1434	Durante eras, los trols de la jungla Gurubashi dominaron esta tierra, y sus ciudades de piedra se repartían por ella. El imperio se volvió cruel.	Stranglethorn_Vale_(Classic)
+Z	1435	El Pantano de las Penas fue la mitad norte de una vasta ciénaga llamada la Ciénaga Negra, y vio abrirse el Portal Oscuro en la mitad sur.	Swamp_of_Sorrows_(Classic)
+Z	1436	El viento cruza los campos de Páramos de Poniente sin nada que lo detenga.	Westfall_(Classic)
+Z	1437	La niebla flota baja sobre Los Humedales, y el cielo es de un gris plano de un extremo al otro del país.	Wetlands_(Classic)
+Z	1438	Tras la Tercera Guerra, Malfurion Tempestira desapareció en el Sueño Esmeralda, y el archidruida Fandral Corzocelada asumió el liderazgo de los druidas elfos de la noche.	Teldrassil_(Classic)
+Z	1439	El nombre viene de la niebla. Una bruma gris cubre esta costa casi todos los días, y la lluvia y el viento azotan sus playas rocosas.	Darkshore_(Classic)
+Z	1440	En Vallefresno llueve casi sin pausa, pero los árboles son tan viejos y frondosos que al suelo solo llegan unas gotas.	Ashenvale_(Classic)
+Z	1441	Se cree que un río excavó antaño este cañón, dejando en él altas columnas de arenisca, con un bosque verde a lo largo de sus orillas.	Thousand_Needles_(Classic)
+Z	1442	La Sierra Espolón guarda su suelo más sagrado en el pico más alto de la cordillera. Los elfos de la noche cuidan allí un túmulo y un claro, y comulgan con los espíritus de la naturaleza.	Stonetalon_Mountains_(Classic)
+Z	1443	Desolace es un páramo gris y rocoso sembrado de huesos, bajo cielos negros y un viento constante.	Desolace_(Classic)
+Z	1444	Mientras la tierra que la rodea es yerma, Feralas es una jungla de árboles enormes y antiguos.	Feralas_(Classic)
+Z	1445	El Marjal Revolcafango fue antaño una meseta de hierba alta pastada por grandes manadas. La Fractura la hundió en un valle, y el agua brotó del subsuelo y la mantiene húmeda desde entonces.	Dustwallow_Marsh_(Classic)
+Z	1446	Se dice que Nozdormu, el dragón del tiempo, hizo de esta tierra su hogar antes de que nadie contara los años. El calor y las leguas de arena vacía le sentaban bien.	Tanaris_(Classic)
+Z	1447	El otoño nunca abandona Azshara. Los árboles de la costa arden en naranja y rojo, y tras ellos grandes acantilados caen hacia playas de marfil y un mar poco profundo erizado de agujas de roca.	Azshara_(Classic)
+Z	1448	Frondavil fue antaño el bosque norte de Vallefresno, cuidado por los elfos de la noche y vigilado por Cenarius. Entonces la Legión Ardiente avanzó hacia el Monte Hyjal.	Felwood_(Classic)
+Z	1449	Tres desiertos rodean el Cráter de Un'Goro y lo aíslan casi por completo del resto del mundo. Aun así, lo llena una densa jungla de plantas exóticas y bestias aún más extrañas.	Un'Goro_Crater_(Classic)
+Z	1450	El Claro de la Luna reposa en un anillo de montañas, un valle oculto de colinas y bosque antiguo que la corrupción jamás ha tocado.	Moonglade
+Z	1451	Arena y roca rota cubren el rincón suroeste de Kalimdor, y lo único que se alza en el páramo son las enormes colmenas de los silítidos.	Silithus_(Classic)
+Z	1452	Sobre el Claro de la Luna, la montaña asciende a través de un espeso banco de nubes blancas, y más allá está Cuna del Invierno. El aire aquí arriba es fresco y limpio.	Winterspring_(Classic)
+Z	1453	Los orcos de la Horda quemaron Ventormenta en la Primera Guerra. Tras la Segunda Guerra, su gente volvió a las ruinas y el Gremio de Canteros reconstruyó la ciudad en piedra blanca.	Stormwind_City
+Z	1454	Poco después de la Batalla del Monte Hyjal, el Jefe de Guerra Thrall guio a su pueblo a una franja desnuda de la costa de Kalimdor.	Orgrimmar
+Z	1455	Los primeros enanos salieron de Uldaman y fueron hacia el oeste, a las montañas de Dun Morogh.	Ironforge
+Z	1456	Durante incontables generaciones los tauren vagaron, y los centauros los cazaban por las llanuras. Entonces el Jefe de Guerra Thrall y la Horda llegaron a Kalimdor.	Thunder_Bluff
+Z	1457	La inmortalidad terminó para los elfos de la noche tras la Tercera Guerra, y muchos no soportaron la vejez, la enfermedad y la fragilidad.	Darnassus
+Z	1458	Entrañas ya era antigua antes de que los Renegados la reclamaran.	Undercity
+S	1411	Bahía de Garrafilada|bladefist bay	Los escombros del mar llegan con cada marea, y a estas aguas las llaman el estercolero del Gran Mar.	Bladefist_Bay
+S	1411	Aquelarre del Filo Ardiente|burning blade coven	Montañas rojas y polvorientas forman el límite norte del Valle de los Retos, y una cueva conduce allí a cavernas abandonadas.	Burning_Blade_Coven
+S	1411	El Cubil|den	Zureetha Fargaze envía al mundo a jóvenes orcos y trols prometedores desde esta cueva en el acantilado, cerca del centro del Valle de los Retos.	The_Den
+S	1411	kolkar crag	El señor de la guerra Kolkanis lidera a los centauros Kolkar que dominan este desfiladero escarpado del sur de Durotar.	Kolkar_Crag
+S	1411	Cerrotajo|razor hill	Las fuerzas de Kul Tiras organizaron una cumbre con Thrall en esta colina poco después de la Tercera Guerra. Era una emboscada.	Razor_Hill
+S	1411	Valle de los Retos|valley of trials	Los jóvenes orcos y trols de la Horda empiezan aquí, en una hondonada amurallada de tierra abrasada al sur de Durotar.	Valley_of_Trials
+S	1412	Excavación de Bael'dun|baeldun digsite	Una expedición enana de Bael Modan ha abierto una gran cantera en la ladera del extremo occidental de Mulgore.	Bael'dun_Digsite
+S	1412	Poblado Pezuña de Sangre|bloodhoof village	Los tambores hechos en el Poblado Pezuña de Sangre no se parecen a ningún otro, y el poblado es famoso por ese oficio.	Bloodhoof_Village
+S	1412	Barranco Cortazarza|brambleblade ravine	Los jabaespines Bristleback dominan el Barranco Cortazarza, en el borde noreste de la Mesa de la Nube Roja. De aquí parten sus incursiones contra los tauren.	Brambleblade_Ravine
+S	1412	Campamento Narache|camp narache	El Campamento Narache es la aldea principal de la tribu Hawkwind, en el borde norte de la Mesa de la Nube Roja, al sur de Mulgore.	Camp_Narache
+S	1412	Mina Ventura y Cía.|venture co mine	A Ventura y Cía. le negaron los derechos de minería en Mulgore, y la compañía excavó de todos modos.	Venture_Co._Mine
+S	1412	Pozo Pezuña Invernal|winterhoof water well	El Pozo Pezuña Invernal está al borde de las Llanuras Onduladas, al sur de Mulgore.	Winterhoof_Water_Well
+S	1413	camp taurajo	Los tauren tienen aquí una avanzada en Los Baldíos, junto al paso de montaña que lleva a Mulgore. Tiene una posada para los viajeros que salen de la tierra tauren.	Camp_Taurajo
+S	1413	El Cruce|crossroads	Aquí se cruzan dos caminos: el Camino del Oro, que va de norte a sur, y el que va de Trinquete a la Sierra Espolón.	Crossroads
+S	1413	Oasis Aguaverde|lushwater oasis	El Oasis Aguaverde está justo al sur de El Cruce, uno de los tres grandes oasis de Los Baldíos.	Lushwater_Oasis
+S	1413	Trinquete|ratchet	El Jefe de Guerra Thrall pagó bien a Gazlowe por la ayuda que él y sus obreros prestaron para alzar Orgrimmar tras la Tercera Guerra.	Ratchet
+S	1413	El Oasis Estancado|stagnant oasis	Los centauros Kolkar acampan en las lindes de El Oasis Estancado, entre la Costa Mercante y el Camino del Oro.	Stagnant_Oasis
+S	1413	Cuevas de los Lamentos|wailing caverns	El druida elfo de la noche Naralex halló estas cavernas y las nombró por los aullidos lastimeros del viento y el vapor en la roca.	Wailing_Caverns
+S	1416	dalaran	Los magos del Imperio de Arathor fundaron Dalaran tras las Guerras Trols, y creció hasta ser una nación regida por el Kirin Tor bajo el Consejo de los Seis.	Dalaran
+S	1416	Saliente de Gavin|gavins naze	Los leones de montaña recorren esta colina, y a veces la rara Araga anda entre ellos.	Gavin's_Naze
+S	1416	Caverna Estrecha|growless cave	En lo hondo de esta cueva de las Montañas de Alterac arde la Llama de Uzel, una antigua pira ceremonial.	Growless_Cave
+S	1416	La Punta|headland	Una leona de montaña de melena escasa y cola rayada descansa en el acantilado de La Punta. Es Araga, y ningún otro felino de las colinas se le parece.	Headland
+S	1416	Lago Lordamere|lordamere lake	Muchos reinos humanos prosperaron alrededor del Lago Lordamere en tiempos de la Alianza de Lordaeron.	Lordamere_Lake
+S	1416	Mansión Ravenholdt|ravenholdt manor	Lord Jorach Ravenholdt dirige su Liga de Asesinos desde esta mansión oculta en las Montañas de Alterac.	Ravenholdt_Manor
+S	1417	Roca'gor|bouldergor	Una colina áspera y quebrada se alza al norte del Castillo de Stromgarde. Los ogros Puño de Roca ocupan un montículo, y los trols Secacorteza merodean por sus laderas junto a ellos.	Boulder'gor
+S	1417	Granja Go'shek|goshek farm	Primwell Skye, veterano de la Segunda Guerra, tuvo antaño esta granja. Tras la Tercera Guerra, la tomaron Renegados y orcos de Sentencia.	Go'Shek_Farm
+S	1417	Sentencia|hammerfall	Aquí cayó Orgrim Martillo Maldito. Tras la Segunda Guerra, la Alianza de Lordaeron tuvo en este suelo a orcos cautivos en uno de sus mayores campos de internamiento.	Hammerfall
+S	1417	Mansión Redilnorte|northfold manor	Una granja del borde noroeste de las Tierras Altas de Arathi se convirtió en avanzada del Sindicato tras la caída de Stromgarde.	Northfold_Manor
+S	1417	Refugio de la Zaga|refuge pointe	Cuando la capital de Stromgarde quedó en ruinas tras la Tercera Guerra, la mayoría de su gente huyó al sur.	Refuge_Pointe
+S	1417	Castillo de Stromgarde|stromgarde keep	Cuenta la leyenda que el rey Thoradin vio un lobo negro vagando por esta tierra seca y eligió el lugar para su capital.	Stromgarde_Keep
+S	1418	Asentamiento Boff|camp boff	Solo tres ogros guardan el Asentamiento Boff, el más al sureste de los cuatro campamentos de los ogros Escupepolvo en las Tierras Inhóspitas.	Camp_Boff
+S	1418	Asentamiento Wurg|camp wurg	Algunos ogros Escupepolvo viven en el Asentamiento Wurg, al noroeste de las Tierras Inhóspitas, y la banda de mercenarios del jefe Tho'grun para aquí en sus rondas.	Camp_Wurg
+S	1418	Barranco Viento Seco|dustwind gulch	El Barranco Viento Seco atraviesa la tierra seca y agrietada de las Tierras Inhóspitas, al oeste del Barranco Lethlor.	Dustwind_Gulch
+S	1418	kargath	Kargath es la única avanzada que la Horda tiene en Khaz Modan. Debe su nombre a Kargath Garrafilada, jefe del clan Mano Destrozada.	Kargath
+S	1418	Explanada del Espejismo|mirage flats	Buitres gigantes, patriarcas acechadores de la cresta y coyotes rabiosos viven en la Explanada del Espejismo, al este de la Gruta Escupepolvo.	Mirage_Flats
+S	1418	Uldaman|uldaman	Las leyendas dicen que los titanes crearon a los troggs de piedra, los juzgaron un fracaso y los encerraron en una cámara bajo tierra. Luego lo intentaron de nuevo, y el resultado fueron los enanos.	Uldaman
+S	1419	El Portal Oscuro|dark portal	Medivh, un mago humano en las garras de Sargeras, y el brujo orco Gul'dan abrieron una brecha entre Draenor y Azeroth en la Ciénaga Negra.	Dark_Portal
+S	1419	garrison armory	En el suelo marcado de Las Tierras Devastadas, mineros de la Alianza trabajan las Minas de Nethergarde, arrancando minerales a la tierra para el Castillo de Nethergarde.	Garrison_Armory
+S	1419	Castillo de Nethergarde|nethergarde keep	El Castillo de Nethergarde se alza en un alto risco sobre el único camino que entra en Las Tierras Devastadas, con murallas alzadas para vigilar las ruinas de un portal que nadie quería ver abierto de nuevo.	Nethergarde_Keep
+S	1419	Alto de los Rapiñadores|rise of the defiler	Montañas escarpadas se alzan cerca del centro de Las Tierras Devastadas, y entre ellas vive un gran demonio.	Rise_of_the_Defiler
+S	1419	Serpiente Enroscada|serpents coil	Edificios orcos calcinados de la Segunda Guerra se alzan a la entrada de este sinuoso sistema de cuevas del este.	Serpent's_Coil
+S	1419	Escara Impía|tainted scar	Esta franja del oeste de Las Tierras Devastadas formó parte de la Ciénaga Negra.	Tainted_Scar
+S	1420	Rémol|brill	Rémol era un pueblo corriente de Lordaeron, en manos de la familia Barov, y los Agamand tenían una mansión propia dentro de sus límites.	Brill
+S	1420	Camposanto|deathknell	Todos los demás asentamientos Renegados conservaron el nombre que tenían como pueblos humanos. Camposanto fue renombrado, y nadie sabe por qué.	Deathknell
+S	1420	Mesón La Horca|gallows end tavern	En Rémol, los Renegados regentan la única taberna en pleno funcionamiento que se les conoce. En su sótano retienen a un fanático Escarlata capturado y a un montañero enano.	Gallows'_End_Tavern
+S	1420	Hoya Nocturácnidas|night webs hollow	Las arañas dominan este pequeño valle y la mina de oro excavada en él. Las crías de araña Nocturácnida vagan por la hoya, y las adultas corretean por la mina y acechan en sus rincones cubiertos de telarañas.	Night_Web's_Hollow
+S	1420	Ruinas de Lordaeron|ruins of lordaeron	El príncipe Arthas Menethil se volvió contra su propio pueblo. Regresó a Lordaeron al frente de un ejército, encontró a su padre, el rey Terenas, esperando en el salón del trono, y lo mató allí.	Ruins_of_Lordaeron
+S	1420	Monasterio Escarlata|scarlet monastery	El monasterio del rincón noreste de los Claros de Tirisfal fue antaño una catedral de la Iglesia de la Luz Sagrada. Albergaba grandes bibliotecas y servía de seminario donde se formaban paladines.	Scarlet_Monastery
+S	1421	Molino Ámbar|ambermill	Molino Ámbar era un pueblo maderero sin importancia hasta la Tercera Guerra.	Ambermill
+S	1421	Mina de Elem|deep elem mine	La magia de Arugal ha llegado a la Mina de Elem, en las colinas del centro del Bosque de Argénteos, y los huargen de la manada Rabialuna han hecho de ella su hogar.	Deep_Elem_Mine
+S	1421	Lago Lordamere|lordamere lake	Muchos reinos humanos prosperaron alrededor del Lago Lordamere en tiempos de la Alianza de Lordaeron.	Lordamere_Lake
+S	1421	El Sepulcro|sepulcher	El Sepulcro se alza en las colinas del oeste sobre la costa de Lordaeron. Antaño era solo un gran cementerio junto al camino que cruza el Bosque de Argénteos, con criptas para el descanso de los muertos.	Sepulcher
+S	1421	Castillo de Colmillo Oscuro|shadowfang keep	El barón Filargenta tuvo antaño este castillo en un alto risco sobre la aldea de Pyrewood. Cuando la Plaga arrasó Lordaeron, el archimago Arugal invocó a los huargen contra el consejo del Kirin Tor.	Shadowfang_Keep
+S	1421	Cala Mareasur|south tides run	La costa suroeste del Bosque de Argénteos, donde la tierra se encuentra con el Gran Mar, se llama Cala Mareasur.	South_Tide's_Run
+S	1422	Castel Darrow|caer darrow	Los humanos construyeron hace mucho la fortaleza de Castel Darrow, y en su interior se colocó una antigua piedra rúnica de los altos elfos.	Caer_Darrow
+S	1422	Campamento del Orvallo|chillwind camp	El Campamento del Orvallo se alza en la entrada sur de las Tierras de la Peste del Oeste, donde baja el camino de las Montañas de Alterac, y es el último lugar seguro para los viajeros de la Alianza.	Chillwind_Camp
+S	1422	dalsons tears	El huerto de Dalson daba antaño fruta a la familia que le dio nombre. Ahora la Plaga ocupa la granja.	Dalson's_Tears
+S	1422	Scholomance|scholomance	La Casa Barov tenía su mansión en esta loma sobre Castel Darrow.	Scholomance
+S	1422	Río Thondroril|thondroril river	El Río Thondroril marca la frontera entre las Tierras de la Peste del Oeste y del Este. Corre hacia el sur hasta el Lago Darrowmere y sigue más abajo como el río Darrowmere.	Thondroril_River
+S	1422	El Tormento|writhing haunt	Antaño crecían cosechas en los surcos de El Tormento, cuidadas para el sustento de los vivos.	Writhing_Haunt
+S	1423	Molino Cejifrente|browman mill	Esqueletos, almas en pena y abominaciones llenan el Molino Cejifrente, un aserradero encantado al norte de la Capilla de la Esperanza de la Luz.	Browman_Mill
+S	1423	Capilla de la Esperanza de la Luz|lights hope chapel	Entre los lugares sagrados más antiguos y venerados de la Iglesia de la Luz Sagrada, la Capilla de la Esperanza de la Luz se alza en las laderas de las montañas del este de la región.	Light's_Hope_Chapel
+S	1423	Stratholme|stratholme	La ruina de Stratholme empezó con el grano. Los cargamentos de Andorhal, infectados por el Culto de los Malditos, se hornearon en pan que comió un pueblo que nunca supo que moría.	Stratholme
+S	1423	Valle del Terror|terrordale	El Valle del Terror es un pequeño pueblo en el rincón noroeste de las Tierras de la Peste del Este.	Terrordale
+S	1423	Río Thondroril|thondroril river	Tirion Vadín, uno de los primeros paladines de la Mano de Plata, se queda en la orilla oriental del Río Thondroril, cerca de una granja en ruinas.	Thondroril_River
+S	1423	Zul'Mashar|zulmashar	Los Mossflayer, una pequeña tribu de trols del bosque, gobernaron antaño desde Zul'Mashar.	Zul'Mashar
+S	1424	Colinas de Darrow|darrow hill	Las Colinas de Darrow están al norte de las Laderas de Trabalomas, bajo La Punta.	Darrow_Hill
+S	1424	Dun Garok|dun garok	Los enanos ocupan esta fortaleza en las colinas del sureste, bajo el mando del capitán Ironhill. Protegen a los humanos de Trabalomas y vigilan la mina Azurelode.	Dun_Garok
+S	1424	Castillo de Durnholde|durnholde keep	En la Segunda Guerra, el propio Orgrim Martillo Maldito asaltó el Castillo de Durnholde para liberar de sus celdas al señor de la guerra trol Zul'jin.	Durnholde_Keep
+S	1424	Playa del Este|eastern strand	La Playa del Este recorre la costa sureste de las Laderas de Trabalomas, y su gemela está más al oeste en la misma orilla.	Eastern_Strand
+S	1424	Molino Tarren|tarren mill	Al inicio de la Segunda Guerra, arqueros altos elfos de Lunargenta vinieron al sur a ver la amenaza orca. Los emboscaron en los pastos cerca de Molino Tarren y los llevaron a un campo de prisioneros cercano.	Tarren_Mill
+S	1424	Playa del Oeste|western strand	La Playa del Oeste está en la costa suroeste de las Laderas de Trabalomas. Los múrlocs Aleta Rasgada han alzado pequeños campamentos en su orilla, y Andy Murgole patrulla la zona.	Western_Strand
+S	1425	Pico Nidal|aerie peak	Los Martillo Salvaje volvieron a Grim Batol tras la Guerra de los Tres Martillos y hallaron la fortaleza corrompida por la muerte de Modgud. No pudieron vivir allí.	Aerie_Peak
+S	1425	Arrecife de Bogen|bogens ledge	El Arrecife de Bogen es una cueva al suroeste de las Tierras del Interior. Feroces lechúcicos merodean a su alrededor.	Bogen's_Ledge
+S	1425	Cobertizo de Barbapluma|featherbeards hovel	Una casita se alza junto a Pico Nidal: el hogar de Barbapluma.	Featherbeard's_Hovel
+S	1425	Poblado Sañadiente|revantusk village	Cuando la Segunda Guerra rompió la antigua Horda, muchos trols del bosque abandonaron a sus aliados orcos sin dudarlo un instante. Los Sañadiente guardaron cierta lealtad a la Horda.	Revantusk_Village
+S	1425	Lago Ventobravo|valorwind lake	Al noreste de Shadra'Alor está el Lago Ventobravo, una pequeña y tranquila extensión de agua.	Valorwind_Lake
+S	1425	Fortaleza de los Martillo Salvaje|wildhammer keep	En un extremo de Pico Nidal, frente al gran aviario de grifos, se alza la fortaleza de los enanos Martillo Salvaje. Falstad Martillo Salvaje, su gran thane, gobierna desde la cima.	Wildhammer_Keep
+S	1426	Yunquemar|anvilmar	En el Valle de Crestanevada se alza Yunquemar, el primer pueblo de cierto tamaño al norte del valle. En su centro hay una sala construida alrededor de una gran forja.	Anvilmar
+S	1426	Valle de Crestanevada|coldridge valley	Aislado en el rincón suroeste de Dun Morogh, el Valle de Crestanevada yace bajo una espesa nieve. Su única salida es el túnel del paso de Crestanevada, al noreste.	Coldridge_Valley
+S	1426	Poblado Peloescarcha|frostmane hold	El Poblado Peloescarcha se alza en el borde oeste de las frías montañas de Dun Morogh, al sur de Gnomeregan: un puñado de edificios unidos a unas cuevas excavadas en la ladera.	Frostmane_Hold
+S	1426	Gnomeregan|gnomeregan	Los gnomos construyeron Gnomeregan bajo tierra, en las faldas de Dun Morogh, y la llenaron de hierro e inventos. Durante la Tercera Guerra, troggs mutantes infestaron la ciudad.	Gnomeregan
+S	1426	Kharanos|kharanos	Kharanos se asienta entre las cumbres de Dun Morogh, un pueblecito bullicioso rodeado de parajes invernales.	Kharanos
+S	1426	Destilería Cebatruenos|thunderbrew distillery	La cerveza de la Destilería Cebatruenos es famosa en todas partes. La taberna enana de Kharanos la fundó, según dice Ragnar Cebatruenos, su padre, Arkilus Cebatruenos.	Thunderbrew_Distillery
+S	1427	Cueva Tizonegro|blackchar cave	La Cueva Tizonegro, al suroeste de la garganta cerca de la Montaña Roca Negra, está sellada. Lo que guarda es un misterio.	Blackchar_Cave
+S	1427	Montaña Roca Negra|blackrock mountain	Los ejércitos Barbabronce y Martillo Salvaje marchaban para purgar al clan Hierro Negro cuando la cresta estalló hacia arriba y formó la Montaña Roca Negra.	Blackrock_Mountain
+S	1427	Cresta Vigía|firewatch ridge	La Cresta Vigía es el campamento principal de los enanos Hierro Negro en La Garganta de Fuego, con vistas a la gran excavación de La Caldera.	Firewatch_Ridge
+S	1427	Excavación de Limugre|grimesilt dig site	Los enanos de Forjaz excavaron antaño en la Excavación de Limugre. Los enanos Hierro Negro se la quedaron y aún la ocupan.	Grimesilt_Dig_Site
+S	1427	El Mar de las Cenizas|sea of cinders	El Mar de las Cenizas se extiende llano y abierto al sur de La Garganta de Fuego, justo al norte de la Montaña Roca Negra. Allí no crece nada.	Sea_of_Cinders
+S	1427	Puesto del Torio|thorium point	El supervisor Oilfist lidera la Hermandad del Torio, enanos Hierro Negro que abandonaron su clan.	Thorium_Point
+S	1428	Montaña Roca Negra|blackrock mountain	La Montaña Roca Negra llevaba su nombre siglos antes de que llegaran los orcos Roca Negra. Surgió del reino Hierro Negro en ruinas cuando Ragnaros irrumpió en el mundo.	Blackrock_Mountain
+S	1428	Desfiladero de Roca Negra|blackrock pass	El Desfiladero de Roca Negra es el umbral entre dos mundos. A un lado están las verdes y tranquilas colinas de las Montañas Crestagrana.	Blackrock_Pass
+S	1428	Draco'dar|dracodar	Colinas calcinadas llenan el suroeste de Las Estepas Ardientes, ennegrecidas y entregadas al Vuelo Negro. Sus esbirros pululan por el suelo en gran número.	Draco'dar
+S	1428	Peñasco Llamarada|flame crest	Solo un tosco puente lleva al afloramiento de roca desnuda donde se alza Peñasco Llamarada. La avanzada no pertenece ni a la Horda ni a la Alianza.	Flame_Crest
+S	1428	Vigilia de Morgan|morgans vigil	El fuego ha pasado por la Vigilia de Morgan, en el rincón sureste de Las Estepas Ardientes. Sus casas están reducidas a cenizas y su única torre de magos se ha derrumbado.	Morgan's_Vigil
+S	1428	Ruinas de Thaurissan|ruins of thaurissan	Estas llanuras de ceniza de Las Estepas Ardientes fueron verdes cuando aquí se alzaba la ciudad de Thaurissan.	Ruins_of_Thaurissan
+S	1429	Mina del Eco|echo ridge mine	El alguacil McBride sigue enviando hombres a la Mina del Eco, al noroeste del Valle de Villanorte, para diezmar a los kóbolds que se han adueñado de sus túneles.	Echo_Ridge_Mine
+S	1429	Villadorada|goldshire	Villadorada se alza en el centro del Bosque de Elwynn, uno de los pueblecitos que crecieron alrededor de Ventormenta.	Goldshire
+S	1429	Embarcadero de Jerod|jerods landing	La Hermandad Defias ocupa el Embarcadero de Jerod, un muelle en la orilla del Bosque de Elwynn del río Nazferiti.	Jerod's_Landing
+S	1429	Abadía de Villanorte|northshire abbey	Hace siglos, clérigos de la Iglesia de la Luz Sagrada vinieron al sur desde Lordaeron y fundaron en esta abadía la Sagrada Orden de Clérigos de Villanorte.	Northshire_Abbey
+S	1429	Valle de Villanorte|northshire valley	Montañas infranqueables cierran el Valle de Villanorte por todos lados menos uno. Un paso lleva hacia el sur, protegido por gruesos muros de piedra y una puerta vigilada.	Northshire_Valley
+S	1429	Viñedos de Villanorte|northshire vineyards	Los bandidos Defias echaron a los granjeros de los Viñedos de Villanorte, al este de la abadía tras el puente. Los agentes de la Hermandad ocupan ahora las hileras y tienen una tienda entre las vides.	Northshire_Vineyards
+S	1431	Arboleda del Destello|brightwood grove	Los pocos edificios del borde de la Arboleda del Destello están en ruinas, y los huargen Nightbane merodean por sus campos oscuros.	Brightwood_Grove
+S	1431	Villa Oscura|darkshire	Villa Oscura fue antaño una pintoresca aldea llamada Grand Hamlet, en el bosque de Brightwood. Entonces llegó la oscuridad, y el bosque se volvió una plaga espinosa y peligrosa.	Darkshire
+S	1431	Cerro del Cuervo|raven hill	Las casas del Cerro del Cuervo están vacías al oeste del Bosque del Ocaso, abandonadas a la podredumbre y la oscuridad. Casi no queda nadie.	Raven_Hill
+S	1431	Cementerio del Cerro del Cuervo|raven hill cemetery	El cementerio desbordó sus viejos límites solo cuando la oscuridad llegó al Bosque del Ocaso.	Raven_Hill_Cemetery
+S	1431	Condena de Roland|rolands doom	La Condena de Roland es una mina al sureste del Bosque del Ocaso, justo al este del Huerto Podrido.	Roland's_Doom
+S	1431	La Hacienda Yorgen|yorgen farmstead	Sven Yorgen cultivó antaño esta tierra al sur del Bosque del Ocaso, hasta que los Jinetes Oscuros del Paso de la Muerte vinieron y mataron a su familia.	Yorgen_Farmstead
+S	1432	Dun Algaz|dun algaz	El túnel de Dun Algaz es más antiguo que la Guerra de los Tres Martillos. Cuando esa guerra expulsó de Forjaz a los enanos Martillo Salvaje, pasaron por aquí.	Dun_Algaz
+S	1432	Paso de la Puerta Norte|north gate pass	El paso discurre entre las altas montañas de Dun Morogh al oeste y las montañas más bajas de Loch Modan al este.	North_Gate_Pass
+S	1432	Valle Rompecantos|stonesplinter valley	El Valle Rompecantos fue antaño un lugar virgen, tallado entre las montañas del suroeste de Loch Modan. Ahora hierve de troggs Rompecantos hostiles.	Stonesplinter_Valley
+S	1432	Presa de las Tres Cabezas|stonewrought dam	Pocos de los que cruzan la Presa de las Tres Cabezas saben que la hizo un enano Hierro Negro.	Stonewrought_Dam
+S	1432	Pensión La Cebada|stoutlager inn	La Pensión La Cebada está en Thelsamar. Enanos y viajeros se reúnen aquí a beber y charlar. La lleva el tabernero Hearthstove, y Lina Hearthstove cuida el establo.	Stoutlager_Inn
+S	1432	Thelsamar|thelsamar	Un pueblo enano se alza en la orilla oeste de Loch Modan, al norte de la Cresta Zarpagris y al noreste del Valle Rompecantos.	Thelsamar
+S	1433	Molino de Alther|althers mill	El aserradero al noreste de Villa del Lago está abandonado.	Alther's_Mill
+S	1433	Villa del Lago|lakeshire	Villa del Lago se asienta en la orilla norte del Lago Sempiterno, y el pueblo ha sangrado por esa tierra más de una vez.	Lakeshire
+S	1433	Campamento de Render|renders camp	Los orcos Roca Negra tienen una avanzada al noroeste de las Montañas Crestagrana, cerca de la entrada a Las Estepas Ardientes.	Render's_Camp
+S	1433	Cavernas de Rethban|rethban caverns	Los gnolls ocupan los profundos túneles de las Cavernas de Rethban, al noroeste de las Montañas Crestagrana. Su líder, Ardo Dirtpaw, es muy astuto.	Rethban_Caverns
+S	1433	Fuerte de Petravista|stonewatch keep	Gath'Ilzogg, un señor de la guerra del clan Roca Negra, ocupa el Fuerte de Petravista con su leal lugarteniente Tharil'zun.	Stonewatch_Keep
+S	1433	Torre de Ilgalar|tower of ilgalar	Morganth estudió antaño en la torre de magos de Ventormenta con otros dos magos, hasta que cayó en las artes oscuras.	Tower_of_Ilgalar
+S	1434	Bahía del Botín|booty bay	Quien llega a pie a Bahía del Botín entra por las fauces blanqueadas de un tiburón gigante. Más allá, una ciudad portuaria trepa por los acantilados alrededor de una laguna azul, en el extremo sur de la Vega de Tuercespina.	Booty_Bay
+S	1434	Campamento Grom'gol|gromgol base camp	El comandante Aggro'gosh ocupa el Campamento Grom'gol, un fuerte orco en la costa occidental.	Grom'gol_Base_Camp
+S	1434	Ruinas de Zul'Mamwe|ruins of zulmamwe	Las montañas cierran las Ruinas de Zul'Mamwe por todos lados excepto por el norte.	Ruins_of_Zul'Mamwe
+S	1434	Las Reservas|stockpile	Una cueva al fondo del Campamento de Kurzen sirve de arsenal a los combatientes de la jungla del coronel Conrad Kurzen, que guardan aquí sus armas y su equipo.	Stockpile
+S	1434	Centro de Operaciones de Ventura y Cía.|venture co operations center	Una plataforma petrolífera se alza sobre un lago de la jungla del norte, construida por los goblins de Ventura y Cía.	Venture_Co._Operations_Center
+S	1434	El Arrecife Mortal|vile reef	Frente a la costa occidental de la Vega de Tuercespina, cerca del Campamento Grom'gol, el mar rompe brillante sobre el coral.	Vile_Reef
+S	1435	ithariuss cave	Un misterioso alto elfo llamado Itharius vive en esta cueva, en el extremo suroeste del pantano.	Itharius's_Cave
+S	1435	Charca de Lágrimas|pool of tears	La Charca de Lágrimas se extiende ancha y quieta en el borde oriental del Pantano de las Penas.	Pool_of_Tears
+S	1435	Tinieblas de las Penas|sorrowmurk	Dracoides verdes se arrastran por el fango, justo al este de la Charca de Lágrimas y del Templo de Atal'Hakkar. Un gran draco verde patrulla la región.	Sorrowmurk
+S	1435	Cueva Stagalbog|stagalbog cave	Muchos múrlocs de la tribu del Pantano viven en esta gran cueva del este de la ciénaga, bajo su líder, el Hablapantanos.	Stagalbog_Cave
+S	1435	Rocal|stonard	Los orcos de la antigua Horda alzaron Rocal en la Ciénaga Negra poco después de que se abriera por primera vez el Portal Oscuro.	Stonard
+S	1435	El Templo de Atal'Hakkar|temple of atalhakkar	Hace más de mil años, una guerra civil desgarró el Imperio Gurubashi.	Temple_of_Atal'Hakkar
+S	1436	Hacienda de Alexston|alexston farmstead	Los campos de la Hacienda de Alexston alimentaban antaño a familias, antes de que la Hermandad Defias se quedara con la tierra.	Alexston_Farmstead
+S	1436	Las Minas de la Muerte|deadmines	Antes de la Primera Guerra, los túneles bajo Arroyo de la Luna eran la mayor mina de oro de las tierras humanas. La guerra los vació de mineros, y luego quedaron abandonados y con fama de encantados.	Deadmines
+S	1436	Paraje de Demont|demonts place	Poco queda de la vieja granja del Paraje de Demont, al oeste de Arroyo de la Luna. Ahora la ocupan agentes Defias, que la tratan como suya.	Demont's_Place
+S	1436	La Finca de Jansen|jansen stead	La granja más al norte de Páramos de Poniente, La Finca de Jansen, está cerca del puente hacia el Bosque de Elwynn.	Jansen_Stead
+S	1436	Playa Larga|longshore	La costa de Páramos de Poniente es larga y ancha, una de las mayores playas de Azeroth. Los múrlocs la recorren en enjambres, y el Viejo Ojoturbio anda entre ellos.	Longshore
+S	1436	Colina del Centinela|sentinel hill	La Colina del Centinela se alza en un alto al este de Páramos de Poniente. Una torre vigila desde la cima, y en la ladera hay casitas, una forja, una posada y un aserradero.	Sentinel_Hill
+S	1437	Mesón Aguahonda|deepwater tavern	En el Mesón Aguahonda estallan peleas a menudo, y Tapoke «Slim» Jahn empieza muchas. Es un concurrido lugar de reunión en Puerto de Menethil.	Deepwater_Tavern
+S	1437	Dun Algaz|dun algaz	El túnel de Dun Algaz es más antiguo que la Guerra de los Tres Martillos. Cuando esa guerra expulsó de Forjaz a los enanos Martillo Salvaje, pasaron por aquí.	Dun_Algaz
+S	1437	Grim Batol|grim batol	Los muros y agujas de Grim Batol se alzan al este de Los Humedales hacia un cielo gris acero, pero casi toda la fortaleza está bajo tierra.	Grim_Batol
+S	1437	Bahía de Menethil|menethil bay	Crocoliscos de todas las edades y tamaños abarrotan la Bahía de Menethil, y los cazadores los capturan por su fino cuero.	Menethil_Bay
+S	1437	Puerto de Menethil|menethil harbor	La muralla es lo primero que se ve: gruesa piedra alzada alrededor de un pueblo portuario en una islita frente a la costa oeste.	Menethil_Harbor
+S	1437	Pantano Pellejomusgo|mosshide fen	Los gnolls Pellejomusgo ocupan este pantano anegado al este de Los Humedales, y sus campamentos salpican el terreno.	Mosshide_Fen
+S	1438	Aldrassil|aldrassil	Aldrassil se alza en el corazón de Cañada Umbría, un árbol gigante con una aldea entre sus ramas.	Aldrassil
+S	1438	La Grieta|cleft	La Grieta está al noroeste de Dolanaar, cerca de la cueva corrompida de la Roca Vil, y nada vive allí.	Cleft
+S	1438	Dolanaar|dolanaar	Los jóvenes elfos de la noche que dejan Cañada Umbría llegan primero a Dolanaar.	Dolanaar
+S	1438	Aldea Rut'theran|ruttheran village	La Aldea Rut'theran está al pie mismo del Árbol del Mundo, el puerto de la ciudad elfa de la noche de Darnassus, muy arriba.	Rut'theran_Village
+S	1438	Cañada Umbría|shadowglen	Un crepúsculo perpetuo cubre Cañada Umbría, un pequeño claro al noreste de Teldrassil que nunca ve del todo la luz del día. Las montañas lo rodean por todas partes.	Shadowglen
+S	1438	Gruta Narácnida|shadowthread cave	Grandes arañas siempre han vivido en la Gruta Narácnida, en el rincón noroeste de Cañada Umbría. Últimamente se han vuelto más hostiles, y la cueva es mucho más peligrosa.	Shadowthread_Cave
+S	1439	Ameth'Aran|ametharan	Las ruinas de Ameth'Aran están al sureste de Auberdine.	Ameth'Aran
+S	1439	auberdine	Auberdine se alza en una costa creada por la Fractura, donde el mar arruinó las grandes ciudades del antiguo imperio de los elfos de la noche.	Auberdine
+S	1439	La Espada del Maestro|masters glaive	Un cráneo colosal yace al suroeste de Costa Oscura, con una guja de adamantita clavada en el hueso.	Master's_Glaive
+S	1439	Cabo de la Niebla|mists edge	Playas grises y bahías sombrías forman el Cabo de la Niebla, la costa más larga de Costa Oscura, que va desde cerca de Auberdine hasta el extremo norte de la región.	Mist's_Edge
+S	1439	Excavación de Tripirrem|remtravels excavation	El prospector Tripirrem de la Liga de Expedicionarios, un arqueólogo famoso, dio su nombre a esta excavación.	Remtravel's_Excavation
+S	1439	Vega Crepuscular|twilight vale	La Vega Crepuscular abarca los bosques al sur de Ameth'Aran, hasta la frontera con Vallefresno.	Twilight_Vale
+S	1440	Astranaar|astranaar	Astranaar se alza en una isla en medio de un lago, unida a la orilla por dos puentes, con el camino principal atravesándola.	Astranaar
+S	1440	Cavernas de Brazanegra|blackfathom deeps	Un templo a Elune, la diosa lunar de los elfos de la noche, se alzaba antaño en la Playa de Zoram.	Blackfathom_Deeps
+S	1440	Lago Cielo Estrellado|fallen sky lake	Un pequeño lago se extiende al sur de la Avanzada Ala de Plata, con una sola isla en el centro.	Fallen_Sky_Lake
+S	1440	Puesto del Hachazo|splintertree post	Grommash Grito Infernal y su clan Grito de Guerra alzaron el Puesto del Hachazo durante la Tercera Guerra, cuando los orcos se adentraron por primera vez en Vallefresno.	Splintertree_Post
+S	1440	Xavian|xavian	Los sátiros se han instalado en las ruinas de un antiguo templo elfo de la noche al noreste de Vallefresno.	Xavian
+S	1440	Avanzada de Zoram'gar|zoramgar outpost	Los muelles se adentran en el agua en la Avanzada de Zoram'gar, un puerto de la Horda en la Playa de Zoram. La Horda la levantó aquí y combate desde ella a las nagas Colafuria.	Zoram'gar_Outpost
+S	1441	Poblado Viento Libre|freewind post	El Poblado Viento Libre corona una mesa, fuera del alcance de las bandas de guerra centauras Galak acampadas abajo.	Freewind_Post
+S	1441	Nido Alto|highperch	En este terreno elevado del oeste, los orgullosos dracoleones de Nido Alto tienen sus nidos.	Highperch
+S	1441	Campamento Roca de Hierro|ironstone camp	Un pequeño grupo de la Horda acampa en la frontera del Desierto de Sal.	Ironstone_Camp
+S	1441	Circuito del Espejismo|mirage raceway	Un goblin llamado Pozzik y un gnomo llamado Fizzle Brassbolts sostenían cada uno que su pueblo tenía a los mejores ingenieros.	Mirage_Raceway
+S	1441	Zahúrda Rajacieno|razorfen downs	Cuenta la leyenda que donde cayó el semidiós Agamaggan, su sangre hizo brotar grandes masas de enredaderas espinosas.	Razorfen_Downs
+S	1441	Guarida Malapluma|roguefeather den	Las arpías abarrotan esta pequeña caverna del centro sur de Las Mil Agujas.	Roguefeather_Den
+S	1442	Río Lobonegro|blackwolf river	El Río Lobonegro nace del lago Cragpool y atraviesa el valle de Windshear Crag. Es un río pequeño, y pestilente.	Blackwolf_River
+S	1442	Cueva del Alud|boulderslide cavern	Los kóbolds del Alud anidan en esta cueva al final del barranco.	Boulderslide_Cavern
+S	1442	Malaka'jin|malakajin	Los trols Lanza Negra viven en Malaka'jin, una pequeña aldea de la Horda justo al sur del Poste Tótem Siniestro. Los cazadores se ganan la vida vendiendo sus presas a los viajeros de la Horda.	Malaka'jin
+S	1442	Cima del Espolón|stonetalon peak	En el extremo noroeste de la cordillera, en un verde valle de montaña, se alza la Cima del Espolón. La montaña es sagrada, y la magia recorre su piedra.	Stonetalon_Peak
+S	1442	Refugio Roca del Sol|sun rock retreat	En tiempos antiguos, los tauren peregrinaban al Refugio Roca del Sol para celebrar los ritos que cruzan al mundo de los espíritus, pues el lugar tiene un fuerte vínculo con ese reino.	Sun_Rock_Retreat
+S	1442	Senda de las Tejedoras|webwinder path	Arañas, carneros y lagartos del trueno viven a lo largo de la Senda de las Tejedoras, el camino principal entre Malaka'jin y el lago Mirkfallon.	Webwinder_Path
+S	1443	Poblado Gelkis|gelkis village	El clan Gelkis tiene su aldea principal en un anillo alrededor de un ancho barranco al suroeste de Desolace.	Gelkis_Village
+S	1443	Cabaña de Kormek|kormeks hut	Una choza se alza en las llanuras yermas del centro norte de Desolace. Dentro vive Willow, un amable miembro del Martillo Crepuscular.	Kormek's_Hut
+S	1443	Punta de Nijel|nijels point	La Alianza y el Círculo Cenarion tienen una avanzada entre ruinas elfas de la noche en las montañas del norte. Nadie allí sabe quién era Nijel.	Nijel's_Point
+S	1443	Playa de Sar'theris|sartheris strand	La costa es la única parte de Desolace con color. El interior es gris y sombrío, pero aquí la hierba es verde y sale el sol.	Sar'theris_Strand
+S	1443	Campamento de los Mezclatornillos|scrabblescrews camp	Smeed Mezclatornillos vive en un pequeño campamento goblin no lejos del Cementerio de Kodos. Es un goblin emprendedor que tiene una caravana de kodos.	Scrabblescrew's_Camp
+S	1443	Aldea Cazasombras|shadowprey village	Los trols Lanza Negra construyeron esta aldea pesquera en el extremo sur de la costa de Desolace, y viven de lo que les da el mar.	Shadowprey_Village
+S	1444	Campamento Mojache|camp mojache	Los tauren del Campamento Mojache han construido su poblado sobre el lago Wildwind, a horcajadas de un arroyo rápido que desemboca en él.	Camp_Mojache
+S	1444	La Masacre|dire maul	Hace doce mil años, una secta secreta de hechiceros elfos de la noche alzó Eldre'Thalas para guardar los secretos arcanos más preciados de la reina Azshara.	Dire_Maul
+S	1444	feathermoon stronghold	La general Shandris Plumaluna alzó esta fortaleza en la isla de Sardor, frente a la costa occidental de Feralas, y lleva su nombre.	Feathermoon_Stronghold_(Classic)
+S	1444	Ruinas de Isildien|ruins of isildien	Hace diez mil años, una gran ciudad elfa de la noche del suroeste de Feralas fue destruida.	Ruins_of_Isildien
+S	1444	Thalanaar|thalanaar	Donde Feralas se une a Las Mil Agujas se alza Thalanaar, un diminuto campamento elfo de la noche en manos de la Alianza. Allí está Falfindel Waywarder, que combate al culto de la Calavera.	Thalanaar
+S	1444	Las Galerías Retorcidas|writhing deep	La colmena Zukk'ash está en el rincón sureste de Feralas, donde los silítidos brotan en enjambre del suelo.	Writhing_Deep
+S	1445	Ciénaga Azul|bluefen	La Ciénaga Azul es una marisma baja al norte del Marjal Revolcafango, cerca del Poblado Murohelecho.	Bluefen
+S	1445	Poblado Murohelecho|brackenwall village	Los ogros Mazo de Piedra llegaron a Murohelecho como refugiados.	Brackenwall_Village
+S	1445	Cubil de Brasaliza|emberstrifes den	Una ancha cueva se abre al hediondo Wyrmbog, hogar del draco negro Brasaliza.	Emberstrife's_Den
+S	1445	Ciudadela Garrida|foothold citadel	A las puertas de la Ciudadela Garrida, los guardias de Theramore entrenan contra muñecos y los jóvenes reclutas combaten entre sí.	Foothold_Citadel
+S	1445	Isla Theramore|theramore isle	Durante la Tercera Guerra, lady Jaina Valiente guio a los supervivientes de Lordaeron a través del mar hasta Kalimdor.	Theramore_Isle
+S	1445	Cala Furiamarea|tidefury cove	Aguas traicioneras se extienden al fondo de la bahía Revolcafango, al sur de Isla Theramore.	Tidefury_Cove
+S	1446	Arenas Abisales|abyssal sands	Estas arenas están en Tanaris, un desierto que se extiende en todas direcciones.	Abyssal_Sands
+S	1446	Pilar Partido|broken pillar	El científico goblin Marvon Rivetseeker ha acampado entre un pequeño grupo de ruinas trols al sur de Gadgetzan.	Broken_Pillar
+S	1446	Gadgetzan|gadgetzan	El beneficio antes que la lealtad: ese es el credo de Gadgetzan, capital del Cártel Bonvapor, el mayor de los cárteles goblins.	Gadgetzan
+S	1446	Puerto Bonvapor|steamwheedle port	Puerto Bonvapor está en la costa oriental de Tanaris, con un camino que va al oeste hasta Gadgetzan, su ciudad madre.	Steamwheedle_Port
+S	1446	uldum	Los titanes dejaron una posesión en el sur del desierto, la antigua ciudad de Uldum, rica en su saber.	Uldum
+S	1446	Zul'Farrak|zulfarrak	El jefe Ukorz Sandscalp gobierna Zul'Farrak, la ciudad Furiarena del noroeste de Tanaris. Los Furiarena son conocidos por su crueldad singular y su misticismo oscuro.	Zul'Farrak
+S	1447	Costa Amarga|bitter reaches	El noreste de Azshara se llama la Costa Amarga. Hipogrifos, mocos y quimeras llenan la tierra.	Bitter_Reaches
+S	1447	Lago Mennar|lake mennar	Las aguas del Lago Mennar están en calma en su centro, aunque los dracoides dominan la tierra a su alrededor.	Lake_Mennar
+S	1447	legash encampment	Los sátiros Legashi ocupan este campamento al norte de Azshara, al este de Ursolan y al norte del Campamento Base Thalassiano.	Legash_Encampment
+S	1447	Santuario Cantosombrío|shadowsong shrine	Una colina cubierta de ruinas al oeste de Azshara lleva el nombre de Cantosombrío.	Shadowsong_Shrine
+S	1447	Punta Talrendis|talrendis point	Los elfos de la noche tienen un pequeño campamento en Punta Talrendis, al suroeste de Azshara, en la frontera con Vallefresno. Empezó como una guardia en el linde del bosque.	Talrendis_Point
+S	1447	Valormok|valormok	Valormok, una avanzada de guerreros orcos de la Horda al noroeste de Azshara, está desnuda y poco vigilada. Al principio, la Horda mostró poco interés por esta tierra hostil.	Valormok
+S	1448	Puesto del Veneno|Puesto del Veneno |bloodvenom post	Una pequeña avanzada de la Horda se alza en los altos acantilados sobre Costa Oscura, cerca de donde el río Sangrevenenosa cruza Frondavil.	Bloodvenom_Post
+S	1448	Santuario Esmeralda|emerald sanctuary	Los druidas del Círculo Esmeralda tienen un campamento al sureste de Frondavil. Trabajan para extinguir la corrupción demoníaca que se extiende desde Jaedenar.	Emerald_Sanctuary
+S	1448	Poblado Zarpavil|felpaw village	El Poblado Zarpavil se alza en el extremo norte de Frondavil, cerca de la entrada al Bastión Fauces de Madera.	Felpaw_Village
+S	1448	Camino Fuego de Jade|jadefire run	Los sátiros más poderosos de Frondavil viven en este campamento del norte del bosque.	Jadefire_Run
+S	1448	Morlos'Aran|morlosaran	Morlos'Aran fue un gran asentamiento elfo de la noche, alzado mucho antes de la Gran Fractura. Ahora yace en ruinas en el borde sur de Frondavil.	Morlos'Aran
+S	1448	Guarida Sombría|shadow hold	Un laberinto gigantesco, antaño un túmulo de los elfos de la noche, se oculta en Jaedenar, al oeste de Frondavil.	Shadow_Hold
+S	1449	Roca Fungal|fungal rock	Una gran caverna se abre en la pared noreste del Cráter de Un'Goro. Los gorilas viven dentro, entre las setas fantasma.	Fungal_Rock
+S	1449	Baños de Golakka|golakka hot springs	El vapor sube sin cesar de los Baños de Golakka, una franja del oeste del cráter llena de pozas y géiseres calentados por el volcán cercano.	Golakka_Hot_Springs
+S	1449	Meseta Roca de Hierro|ironstone plateau	La roca desnuda rompe el verdor de Un'Goro en varios tramos a lo largo del borde noreste del cráter, pegada a su pared.	Ironstone_Plateau
+S	1449	Fosas de Alquitrán Lakkari|lakkari tar pits	Lagos de alquitrán negro, espeso y hediondo, cubren el norte del Cráter de Un'Goro. El alquitrán atrapa a las criaturas, y los huesos de cientos de bestias asoman en su superficie.	Lakkari_Tar_Pits
+S	1449	Refugio de Marshal|marshals refuge	El Refugio de Marshal está en el borde norte del Cráter de Un'Goro, alzado por las Expediciones Marshal de Williden Marshal y Hol'anyee Marshal.	Marshal's_Refuge
+S	1449	La Cicatriz Serpenteante|slithering scar	Los Gorishi, una secta de los silítidos, ocupan casi todo el sur del Cráter de Un'Goro con su colmena. Avispas y obreros pululan por ella, guardados por atracadores, aguijoneadores y tuneladores.	Slithering_Scar
+S	1450	Lago Elune'ara|lake eluneara	Agua cristalina llena el corazón del Claro de la Luna, quieta como el cristal bajo los árboles. El lago lleva el nombre de la propia Elune.	Lake_Elune'ara
+S	1450	Amparo de la Noche|nighthaven	A orillas del Lago Elune'ara se alza Amparo de la Noche, una aldea de piedra elfa de la noche con un par de pozos lunares, hogar de los druidas del Círculo Cenarion.	Nighthaven
+S	1450	Santuario de Remulos|shrine of remulos	El oeste del Claro de la Luna alberga un santuario dedicado al guardián Remulos, hijo del semidiós Cenarius y protector del valle.	Shrine_of_Remulos
+S	1450	Túmulo de Tempestira|stormrage barrow dens	Bajo el césped tranquilo del Claro de la Luna yacen los túmulos, hundidos en una tierra que muchos druidas elfos de la noche nunca dejan del todo: sus cuerpos reposan mientras sus espíritus vagan por el Sueño Esmeralda.	Stormrage_Barrow_Dens
+S	1450	Bastión Fauces de Madera|timbermaw hold	La tribu de fúrbolgs Fauces de Madera tiene su capital al noreste de Frondavil, y un túnel a través del bastión lleva al Claro de la Luna y a Cuna del Invierno.	Timbermaw_Hold
+S	1451	Fuerte Cenarion|cenarion hold	El Fuerte Cenarion se alza en Silithus sobre el suelo de un antiguo asentamiento elfo de la noche. Es uno de los mayores bastiones druídicos de Kalimdor, casi tan grande como el propio Claro de la Luna.	Cenarion_Hold
+S	1451	Colmen'Ashi|hiveashi	Una colmena silítida está al norte de Silithus, y su prole se ha extendido hasta infestar el Pilar del Enjambre.	Hive'Ashi
+S	1451	Colmen'Zora|hivezora	Al oeste de Silithus, un nido silítido se hunde en la arena, repleto de avispas, atracadores, hermanas de colmena, tuneladores y vigías.	Hive'Zora
+S	1451	Guarida de Ortell|ortells hideout	Ortell, un ermitaño, vive en una pequeña cueva al sureste de Silithus.	Ortell's_Hideout
+S	1451	Aldea del Viento del Sur|southwind village	La Aldea del Viento del Sur fue una base elfa de la noche hasta que los qiraji la arrasaron en la Guerra de las Arenas Movedizas.	Southwind_Village
+S	1451	Paseo Crepúsculo|twilights run	El Paseo Crepúsculo se oculta en la roca al pie de la Punta de Corzocelada, al norte de Silithus.	Twilight's_Run
+S	1452	Garganta Negro Rumor|darkwhisper gorge	Cuando Archimonde cayó en la Batalla del Monte Hyjal, los demonios de la Legión Ardiente que sobrevivieron no desaparecieron.	Darkwhisper_Gorge
+S	1452	Dun Mandarr|dun mandarr	Dun Mandarr es un pequeño campamento junto a una caverna helada al sureste de Cuna del Invierno.	Dun_Mandarr
+S	1452	Vista Eterna|everlook	Los goblins del Cártel Bonvapor llevan Vista Eterna, un puesto comercial donde se cruzan las principales rutas de Cuna del Invierno.	Everlook
+S	1452	Cañón Levescarcha|frostwhisper gorge	Ruinas elfas de la noche salpican el fondo y las crestas del Cañón Levescarcha, un cañón al sur de Cuna del Invierno.	Frostwhisper_Gorge
+S	1452	Lago Kel'Theril|lake keltheril	Las aguas heladas del Lago Kel'Theril yacen quietas en medio de Cuna del Invierno, rodeadas de antiguas ruinas de los Altonato que llevan su nombre.	Lake_Kel'Theril
+S	1452	Puesto de los Fauces de Madera|timbermaw post	El nombre dice Fauces de Madera, pero el pequeño campamento fúrbolg del Puesto de los Fauces de Madera pertenece a la corrupta tribu Winterfall, que lo domina por completo.	Timbermaw_Post
+S	1453	Sala de los Campeones|champions hall	Al sur del Casco Antiguo, los oficiales de la Alianza tienen su cuartel en la Sala de los Campeones.	Champions'_Hall
+S	1453	Tranvía Subterráneo|deeprun tram	Tras la Segunda Guerra, los enanos de Forjaz se apresuraron a ayudar a sus aliados humanos a reconstruir Ventormenta, pero el rey Magni Barbabronce creía que la ayuda llegaba demasiado despacio.	Deeprun_Tram
+S	1453	Valle de los Héroes|valley of heroes	Un puente de piedra cruza el foso ante la puerta de Ventormenta y lleva a un valle verde y frondoso. Cinco grandes estatuas se alzan a lo largo del camino.	Valley_of_Heroes
+S	1454	Sala de las Leyendas|hall of legends	Los oficiales de la Horda tienen su cuartel en la Sala de las Leyendas.	Hall_of_Legends
+S	1454	Sima Ígnea|ragefire chasm	Bajo Orgrimmar, la tierra se abre en una sima de lava y humo. Los troggs han empezado a salir de los túneles profundos, un clan que la Horda llama los troggs Ígneos.	Ragefire_Chasm
+S	1455	Tranvía Subterráneo|deeprun tram	Dos convoyes de tres vagones circulan por vías dobles entre Forjaz y Ventormenta, pasando en parte bajo el agua de un lago subterráneo.	Deeprun_Tram
+S	1455	Puertas de Forjaz|gates of ironforge	Las Puertas de Forjaz se alzan donde la gran rampa del centro de Dun Morogh sube al encuentro de la montaña, un espectáculo grandioso visible a leguas sobre la nieve.	Gates_of_Ironforge
+S	1456	Alto de los Ancestros|elder rise	El Consejo de Ancianos gobierna desde el Alto de los Ancestros, justo al este del risco central, y el Círculo Cenarion vive aquí entre los druidas y sacerdotes tauren.	Elder_Rise
+S	1456	Alto de los Cazadores|hunter rise	El alto sur de Cima del Trueno pertenece a quienes cazan y combaten.	Hunter_Rise
+S	1456	Pozas de las Visiones|pools of vision	En unos túneles justo bajo la cima del Alto de los Espíritus, los Renegados mantienen un enclave en pleno territorio tauren.	Pools_of_Vision
+S	1456	Alto de los Espíritus|spirit rise	Los chamanes estudian en el Alto de los Espíritus, al noroeste del risco central, y la tribu Skychaser tiene aquí gran influencia. Las humeantes Pozas de las Visiones están bajo la superficie de la mesa.	Spirit_Rise
+S	1457	Enclave Cenarion|cenarion enclave	Al noroeste de Darnassus, el Enclave Cenarion rodea una arboleda donde robles y fresnos se alzan más altos que los salones de piedra del resto de la ciudad.	Cenarion_Enclave
+S	1457	Bancal del Artesano|craftsmens terrace	El Bancal del Artesano está al norte de Darnassus.	Craftsmen's_Terrace
+S	1457	Los Jardines del Templo|temple gardens	En el corazón de Darnassus están Los Jardines del Templo, una extensión de agua, pasarelas e islotes que lleva el nombre del Templo de la Luna, alzado justo al sur.	Temple_Gardens
+S	1457	Bancal de los Mercaderes|tradesmens terrace	Casi todos los tenderos y mercaderes de Darnassus se concentran en el Bancal de los Mercaderes, al sur de la ciudad.	Tradesmen's_Terrace
+S	1457	Bancal del Guerrero|warriors terrace	La puerta este de Darnassus, donde la ciudad se abre a la naturaleza de Teldrassil, está en el Bancal del Guerrero, también llamado la Sala de la Justicia.	Warrior's_Terrace
+S	1458	Ruinas de Lordaeron|ruins of lordaeron	Sobre la ciudad enterrada aún se alza el palacio de Lordaeron, con sus salas abiertas al cielo y sus jardines en ruinas.	Ruins_of_Lordaeron
+S	2652	Valle de los Huesos|valley of bones	Los esqueletos abarrotan este risco en la frontera sur de Desolace, el camino a pie hacia Shen'dralas, y nigromantes centauros caminan entre ellos.	Valley_of_Bones
+]]
 if ns.KEEP_STRINGS then
-	ns.LORE_RAW = { fr = FR, en = EN }
+	ns.LORE_RAW = { fr = FR, en = EN, es = ES }
 else
-	ns.LORE_RAW = { [ns.STRINGS_FRENCH ~= false and "fr" or "en"] = ns.STRINGS_FRENCH ~= false and FR or EN }
+	local lang = ns.STRINGS_LANG or (ns.STRINGS_FRENCH ~= false and "fr" or "en")
+	ns.LORE_RAW = { [lang] = (lang == "fr" and FR) or (lang == "es" and ES) or EN }
 end

@@ -175,7 +175,7 @@ do
 	NS:ToggleOptions()
 	local card
 	for _, c in ipairs(NS.optionsFrame.rows) do if c.def and c.def.key == "qcAction" then card = c end end
-	s.ok("page Général : carte et note", card ~= nil and NS.optionsFrame.pages.general.notes.qcNote ~= nil
+	s.ok("page Général : carte et note", card ~= nil and NS.optionsFrame.pages["home:general"].notes.qcNote ~= nil
 		and card.button.text:GetText() == "Ouvrir le carnet")
 	_G.QuestCompanion = nil
 	A.AddOns("QuestCompanion", "disabled")

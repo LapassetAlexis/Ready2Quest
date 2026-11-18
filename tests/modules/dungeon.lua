@@ -228,7 +228,7 @@ do
 	local okPage = okOpen and pcall(NS.SelectOptionsPage, NS, "dungeon")
 	Check("[DGN] page avec interrupteur, construite et sélectionnable", page and page.power == "dungeonEnabled"
 		and page.group == "OPT_GROUP_MODULES" and #page.rows == 3
-		and okPage and NS.optionsFrame and NS.optionsFrame.currentPage == "dungeon")
+		and okPage and NS.optionsFrame and NS.optionsFrame.currentPage == "voyage:donjon")
 	if NS.optionsFrame then NS.optionsFrame:Hide() end
 end
 
