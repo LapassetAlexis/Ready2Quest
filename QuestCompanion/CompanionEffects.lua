@@ -90,21 +90,55 @@ local EFFECTS = {
 	winter_nose      = { kind = "nightCapture",                   base = 0.03, cap = 0.15 },
 	winter_pet       = { kind = "pet",                            base = 0.25, cap = 1.00 },
 	winter_cold      = { kind = "cold",                           base = 0.06, cap = 0.30 },
-	-- 3.1.0 : caractère du spécimen porté (valeur fixe : base = cap)
-	trait_curious     = { kind = "decay",     need = "curiosity",  base = 0.10, cap = 0.10, trait = true },
-	trait_glutton     = { kind = "treatZone",                      base = 0.10, cap = 0.10, trait = true },
-	trait_daring      = { kind = "capture",   named = true,        base = 0.05, cap = 0.05, trait = true },
-	trait_lazy        = { kind = "rest",                           base = 0.10, cap = 0.10, trait = true },
-	trait_teasing     = { kind = "decay",     need = "mood",       base = 0.08, cap = 0.08, trait = true },
-	trait_cuddly      = { kind = "pet",                            base = 0.25, cap = 0.25, trait = true },
+	-- 3.1.0 : caractère du spécimen porté. 3.4.0 : `base` = valeur au lien 1
+	-- (celle d'avant), multipliée par le lien (ns.EFFECT_BOND_MUL, ×2 au lien 5)
+	trait_curious     = { kind = "decay",     need = "curiosity",  base = 0.10, cap = 0.20, trait = true },
+	trait_glutton     = { kind = "treatZone",                      base = 0.10, cap = 0.20, trait = true },
+	trait_daring      = { kind = "capture",   named = true,        base = 0.05, cap = 0.10, trait = true },
+	trait_lazy        = { kind = "rest",                           base = 0.10, cap = 0.20, trait = true },
+	trait_teasing     = { kind = "decay",     need = "mood",       base = 0.08, cap = 0.16, trait = true },
+	trait_cuddly      = { kind = "pet",                            base = 0.25, cap = 0.50, trait = true },
 	trait_wise        = { kind = "aidKeep",                        base = 0.05, cap = 0.05, trait = true },
 	trait_parrot      = { kind = "chain",                          base = 0.10, cap = 0.10, trait = true },
 	trait_mystic      = { kind = "shiny",     all = true,          base = 0.05, cap = 0.05, trait = true },
-	trait_zen         = { kind = "decay",                          base = 0.05, cap = 0.05, trait = true },
+	trait_zen         = { kind = "decay",                          base = 0.05, cap = 0.10, trait = true },
 	trait_sly         = { kind = "aidZone",                        base = 0.10, cap = 0.10, trait = true },
-	trait_mischievous = { kind = "capture",   all = true,          base = 0.03, cap = 0.03, trait = true },
+	trait_mischievous = { kind = "capture",   all = true,          base = 0.03, cap = 0.06, trait = true },
 	trait_fearful     = { kind = "decay",     need = "energy",     base = 0.08, cap = 0.08, trait = true },
 	trait_tinker      = { kind = "aidRefund",                      base = 0.08, cap = 0.08, trait = true },
+	-- 3.4.0 : second atout (fixe) de Curieux et Taquin
+	plus_curious      = { kind = "milestone",                      base = 1,    cap = 1,    fixed = true },
+	plus_teasing      = { kind = "wary",                           base = 0.05, cap = 0.05, fixed = true },
+	-- 3.4.0 : revers du caractère (dès le lien 2, fixes, négatifs)
+	minus_curious     = { kind = "decay",     need = "energy",     base = -0.10, cap = -0.10, fixed = true, minus = true },
+	minus_glutton     = { kind = "decay",     need = "hunger",     base = -0.15, cap = -0.15, fixed = true, minus = true },
+	minus_daring      = { kind = "wary",                           base = -0.05, cap = -0.05, fixed = true, minus = true },
+	minus_lazy        = { kind = "decay",     need = "curiosity",  base = -0.10, cap = -0.10, fixed = true, minus = true },
+	minus_teasing     = { kind = "decay",     need = "energy",     base = -0.10, cap = -0.10, fixed = true, minus = true },
+	minus_cuddly      = { kind = "decay",     need = "mood",       base = -0.10, cap = -0.10, fixed = true, minus = true },
+	-- 3.4.0 : taille (dès le lien 2) : plancher de méfiance, élites et rares, faim
+	size_tiny_wary    = { kind = "wary",                           base = 0.15,  cap = 0.15,  fixed = true, size = true },
+	size_tiny_named   = { kind = "capture",   named = true,        base = -0.05, cap = -0.05, fixed = true, size = true, minus = true },
+	size_small_wary   = { kind = "wary",                           base = 0.05,  cap = 0.05,  fixed = true, size = true },
+	size_small_named  = { kind = "capture",   named = true,        base = -0.02, cap = -0.02, fixed = true, size = true, minus = true },
+	size_large_named  = { kind = "capture",   named = true,        base = 0.03,  cap = 0.03,  fixed = true, size = true },
+	size_large_wary   = { kind = "wary",                           base = -0.05, cap = -0.05, fixed = true, size = true, minus = true },
+	size_large_hunger = { kind = "decay",     need = "hunger",     base = -0.05, cap = -0.05, fixed = true, size = true, minus = true },
+	size_giant_named  = { kind = "capture",   named = true,        base = 0.08,  cap = 0.08,  fixed = true, size = true },
+	size_giant_wary   = { kind = "wary",                           base = -0.10, cap = -0.10, fixed = true, size = true, minus = true },
+	size_giant_hunger = { kind = "decay",     need = "hunger",     base = -0.10, cap = -0.10, fixed = true, size = true, minus = true },
+}
+-- 3.4.0 : force de l'atout du caractère selon le lien (1 à 5)
+ns.EFFECT_BOND_MUL = { 1, 1.25, 1.5, 1.75, 2 }
+-- revers et effets de taille : à partir de ce lien
+ns.EFFECT_BOND_EXTRA = 2
+-- somme des effets de caractère et de taille sur la capture
+ns.EFFECT_PROFILE_CAPTURE = { min = -0.10, max = 0.20 }
+-- 3.4.0 : effets de taille par cran, second atout et revers par caractère
+ns.COMPANION_SIZE_EFFECTS = {
+	tiny = { "size_tiny_wary", "size_tiny_named" }, small = { "size_small_wary", "size_small_named" },
+	normal = {}, large = { "size_large_named", "size_large_wary", "size_large_hunger" },
+	giant = { "size_giant_named", "size_giant_wary", "size_giant_hunger" },
 }
 for id, def in pairs(EFFECTS) do def.id = id end
 ns.COMPANION_EFFECTS = EFFECTS
@@ -358,17 +392,26 @@ function ns:CompanionEffectsFor(spec, opts)
 		local shiny = spec.shiny and true or false
 		strength = ns.EFFECT_RANK_STRENGTH[class] or 1
 		if shiny then strength = strength + ns.EFFECT_SHINY_STRENGTH end
-		local stars = self.CaptureStars and tonumber((Call(self.CaptureStars, self, npc, shiny))) or nil
+		-- 3.4.0 : les étoiles de l'exemplaire porté (référence du Codex), pas
+		-- celles du meilleur possédé (un 1 étoile lié garderait sinon la force
+		-- d'un 3 étoiles resté en Réserve)
+		local ref = self.SpecimenReference and Call(self.SpecimenReference, self, npc, shiny)
+		local stars = type(ref) == "table" and tonumber(ref.stars)
+			or (self.CaptureStars and tonumber((Call(self.CaptureStars, self, npc, shiny)))) or nil
 		stars = math.max(1, math.min(3, math.floor(stars or 1)))
 		strength = strength + ns.EFFECT_STAR_STRENGTH * (stars - 1)
 		if typeKey and self.MenagerieTypeBonus then
 			strength = strength + math.max(0, tonumber((Call(self.MenagerieTypeBonus, self, typeKey))) or 0)
 		end
 		result.npc, result.shiny, result.class, result.stars = npc, shiny, class, stars
-		-- 3.1.0 : le caractère du spécimen de référence de cette version
-		if not opts.noTrait and self.SpecimenReference then
-			local ref = Call(self.SpecimenReference, self, npc, shiny)
-			result.trait = type(ref) == "table" and self:CompanionTraitEffect(ref.trait) or nil
+		-- 3.1.0 : le caractère du spécimen de référence de cette version ;
+		-- 3.4.0 : son lien (force de l'atout), et dès le lien 2 son revers et
+		-- les effets de sa taille (result.extras)
+		if not opts.noTrait and type(ref) == "table" then
+			local bond = self.SpecimenBondLevel and tonumber((Call(self.SpecimenBondLevel, self, ref))) or 1
+			result.bond = bond
+			result.trait = self:CompanionTraitEffect(ref.trait, bond)
+			result.extras = self:CompanionProfileExtras(ref, bond)
 		end
 	end
 	if not pair then
@@ -389,12 +432,44 @@ function ns:CompanionEffectsFor(spec, opts)
 	return result
 end
 
--- 3.1.0 : l'effet d'un caractère { id, value, label, trait }, ou nil
-function ns:CompanionTraitEffect(trait)
+-- 3.1.0 : l'effet d'un caractère { id, value, label, trait }, ou nil ;
+-- 3.4.0 : multiplié par le lien (1 par défaut : la valeur d'avant)
+local function Label(self, def, value)
+	if def.kind == "milestone" then return self:F("EFF_" .. def.id, math.floor(value + 0.5)) end
+	if def.kind == "wary" then return self:F("EFF_" .. def.id, Pct(math.abs(value))) end
+	return self:F("EFF_" .. def.id, Pct(math.abs(value)))
+end
+ns.EffectLabel = Label
+
+function ns:CompanionTraitEffect(trait, bond)
 	local def = EFFECTS[TRAIT_EFFECTS[trait or ""] or ""]
 	if not def then return nil end
-	local value = math.min(def.cap, def.base)
-	return { id = def.id, value = value, label = self:F("EFF_" .. def.id, Pct(value)), trait = trait }
+	local mul = ns.EFFECT_BOND_MUL[math.max(1, math.min(5, math.floor(tonumber(bond) or 1)))] or 1
+	local value = math.min(def.cap, def.base * mul)
+	return { id = def.id, value = value, label = Label(self, def, value), trait = trait }
+end
+
+-- 3.4.0 : les effets en plus d'un spécimen porté : second atout (Curieux,
+-- Taquin, dès le lien 1), puis revers du caractère et effets de la taille
+-- (dès le lien 2). Chacun { id, value, label, plus|minus, slot }.
+function ns:CompanionProfileExtras(spec, bond, all)
+	local list = {}
+	if type(spec) ~= "table" then return list end
+	bond = math.floor(tonumber(bond) or 1)
+	local function Add(id, slot, active)
+		local def = EFFECTS[id]
+		if not def then return end
+		list[#list + 1] = { id = id, value = def.base, label = Label(self, def, def.base), minus = def.minus or nil,
+			slot = slot, active = active }
+	end
+	local trait = spec.trait
+	if trait and EFFECTS["plus_" .. trait] then Add("plus_" .. trait, "trait", true) end
+	local extra = bond >= ns.EFFECT_BOND_EXTRA
+	if trait and EFFECTS["minus_" .. trait] and (extra or all) then Add("minus_" .. trait, "trait", extra) end
+	for _, id in ipairs(ns.COMPANION_SIZE_EFFECTS[spec.size or "normal"] or {}) do
+		if extra or all then Add(id, "size", extra) end
+	end
+	return list
 end
 
 -- Clé d'effet d'une apparence : toutes les mascottes partagent le même
@@ -462,6 +537,8 @@ function ns:CompanionEffects()
 	local stars, bonus = self.CaptureStars ~= nil, self.MenagerieTypeBonus ~= nil
 	local cache = self.effectCache
 	local effects
+	-- 3.4.0 : le niveau de lien de l'exemplaire porté (changé au passage d'un
+	-- niveau seulement : SpecimenBond.lua touche specSerial à ce moment-là)
 	if cache and cache.app == spec.id and cache.stage == stage and cache.needsOk == needsOk
 		and cache.serial == capture.serial and cache.count == capture.count and cache.specSerial == capture.specSerial
 		and cache.stars == stars and cache.bonus == bonus then
@@ -488,11 +565,17 @@ function ns:CompanionEffectValue(id)
 	if effects.hunt and effects.hunt.id == id then return effects.hunt.value end
 	if effects.comfort and effects.comfort.id == id then return effects.comfort.value end
 	if effects.trait and effects.trait.id == id then return effects.trait.value end
+	for _, extra in ipairs(effects.extras or {}) do
+		if extra.id == id and extra.active then return extra.value end
+	end
 	return 0
 end
 
 -- L'effet actif d'une sorte (capture, decay…) : def et valeur, ou nil
 -- (3.1.0 : le caractère du spécimen porté en troisième)
+-- 3.4.0 : valeurs signées (un revers est négatif), et les effets en plus du
+-- spécimen porté (effects.extras : second atout, revers, taille), marqués de
+-- leur case (slot : "trait" ou "size") pour le plafond de la capture
 local EFFECT_SLOTS = { "hunt", "comfort", "trait" }
 local function ActiveOf(self, kind)
 	if not ModuleOn() then return nil end
@@ -502,7 +585,15 @@ local function ActiveOf(self, kind)
 	for _, slot in ipairs(EFFECT_SLOTS) do
 		local effect = effects[slot]
 		local def = effect and EFFECTS[effect.id]
-		if def and def.kind == kind and effect.value > 0 then found[#found + 1] = { def = def, value = effect.value } end
+		if def and def.kind == kind and effect.value ~= 0 then
+			found[#found + 1] = { def = def, value = effect.value, slot = slot }
+		end
+	end
+	for _, extra in ipairs(effects.extras or {}) do
+		local def = EFFECTS[extra.id]
+		if extra.active and def and def.kind == kind and extra.value ~= 0 then
+			found[#found + 1] = { def = def, value = extra.value, slot = extra.slot }
+		end
 	end
 	return found[1] and found or nil
 end
@@ -555,15 +646,19 @@ end
 function ns:CompanionCaptureBonus(info)
 	local found = ActiveOf(self, "capture")
 	local spot = ActiveOf(self, "spot")
-	local bonus = 0
+	local bonus, profile = 0, 0
 	local typeKey = TypeOf(self, info)
 	local class = type(info) == "table" and info.class or "normal"
 	for _, item in ipairs(found or {}) do
 		local def = item.def
 		if def.all or (def.named and ns.EFFECT_NAMED[class or ""]) or (def.type and def.type == typeKey) then
-			bonus = bonus + item.value
+			-- 3.4.0 : caractère et taille ensemble, bornés
+			if item.slot == "trait" or item.slot == "size" then profile = profile + item.value
+			else bonus = bonus + item.value end
 		end
 	end
+	local limits = ns.EFFECT_PROFILE_CAPTURE
+	bonus = bonus + math.max(limits.min, math.min(limits.max, profile))
 	for _, item in ipairs(spot or {}) do
 		local npc = type(info) == "table" and tonumber(info.npcID or info.npc)
 		local missing = npc and self.CaptureHas and not self:CaptureHas(npc, info.shiny and true or false)
@@ -581,7 +676,9 @@ do
 			local value, sure = chance(self, info, aidID, playerLevel, ...)
 			if sure or not value or value <= 0 then return value, sure end
 			local ok, bonus = pcall(self.CompanionCaptureBonus, self, info)
-			if not ok or not bonus or bonus <= 0 then return value, sure end
+			-- 3.4.0 : un revers peut rendre le bonus négatif (jamais sous −50 %)
+			if not ok or not bonus or bonus == 0 then return value, sure end
+			bonus = math.max(-0.5, bonus)
 			return math.max(0, math.min(ns.CAPTURE_MAX or 0.95, value * (1 + bonus))), sure
 		end
 	end
@@ -1103,5 +1200,86 @@ do
 		if not done and ns.RecordError then ns:RecordError("effects:tick", err) end
 	end)
 end
+
+
+-- ---------------------------------------------------------------------------
+-- 3.4.0 : plancher de méfiance (sorte « wary ») et paillettes de palier
+-- (sorte « milestone ») du spécimen porté
+-- ---------------------------------------------------------------------------
+ns.CAPTURE_WARY_FLOOR_RANGE = { 0.25, 0.60 }
+function ns:CompanionWaryFloor()
+	local floor = ns.CAPTURE_WARINESS and ns.CAPTURE_WARINESS.floor or 0.4
+	local found = ActiveOf(self, "wary")
+	local range = ns.CAPTURE_WARY_FLOOR_RANGE
+	return math.max(range[1], math.min(range[2], floor + Sum(found)))
+end
+
+do
+	local wariness = ns.CaptureWariness
+	if wariness then
+		function ns:CaptureWariness(npc, ...)
+			local factor, count = wariness(self, npc, ...)
+			if not count or count <= 0 or factor >= 1 then return factor, count end
+			local w = ns.CAPTURE_WARINESS
+			return math.max(self:CompanionWaryFloor(), 1 - w.step * count), count
+		end
+	end
+end
+
+-- paillettes en plus à chaque palier de zone (Curieux), lues par
+-- ns:PaillettesOnMilestones (JournalReserve.lua)
+function ns:CompanionMilestoneBonus()
+	return math.floor(Sum(ActiveOf(self, "milestone")) + 0.5)
+end
+
+-- 3.4.0 : libellés du second atout, des revers et des effets de taille
+local FR34 = {
+	EFF_plus_curious      = "+%d paillette à chaque palier de zone",
+	EFF_plus_teasing      = "en chasse, méfiance moins forte (plancher +%d %%)",
+	EFF_minus_curious     = "l'énergie baisse %d %% plus vite",
+	EFF_minus_glutton     = "la faim baisse %d %% plus vite",
+	EFF_minus_daring      = "en chasse, méfiance plus forte (plancher −%d %%)",
+	EFF_minus_lazy        = "la curiosité baisse %d %% plus vite",
+	EFF_minus_teasing     = "l'énergie baisse %d %% plus vite",
+	EFF_minus_cuddly      = "le moral baisse %d %% plus vite",
+	EFF_size_tiny_wary    = "en chasse, méfiance moins forte (plancher +%d %%)",
+	EFF_size_tiny_named   = "capture des élites et rares −%d %%",
+	EFF_size_small_wary   = "en chasse, méfiance moins forte (plancher +%d %%)",
+	EFF_size_small_named  = "capture des élites et rares −%d %%",
+	EFF_size_large_named  = "capture des élites et rares +%d %%",
+	EFF_size_large_wary   = "en chasse, méfiance plus forte (plancher −%d %%)",
+	EFF_size_large_hunger = "la faim baisse %d %% plus vite",
+	EFF_size_giant_named  = "capture des élites et rares +%d %%",
+	EFF_size_giant_wary   = "en chasse, méfiance plus forte (plancher −%d %%)",
+	EFF_size_giant_hunger = "la faim baisse %d %% plus vite",
+	EFF_PLUS              = "Atout : %s",
+	EFF_MINUS             = "Revers : %s",
+	EFF_MINUS_LATER       = "Revers (au lien 2) : %s",
+}
+local EN34 = {
+	EFF_plus_curious      = "+%d glitter at each zone milestone",
+	EFF_plus_teasing      = "while hunting, milder wariness (floor +%d%%)",
+	EFF_minus_curious     = "energy drops %d%% faster",
+	EFF_minus_glutton     = "hunger drops %d%% faster",
+	EFF_minus_daring      = "while hunting, stronger wariness (floor −%d%%)",
+	EFF_minus_lazy        = "curiosity drops %d%% faster",
+	EFF_minus_teasing     = "energy drops %d%% faster",
+	EFF_minus_cuddly      = "mood drops %d%% faster",
+	EFF_size_tiny_wary    = "while hunting, milder wariness (floor +%d%%)",
+	EFF_size_tiny_named   = "elite and rare capture −%d%%",
+	EFF_size_small_wary   = "while hunting, milder wariness (floor +%d%%)",
+	EFF_size_small_named  = "elite and rare capture −%d%%",
+	EFF_size_large_named  = "elite and rare capture +%d%%",
+	EFF_size_large_wary   = "while hunting, stronger wariness (floor −%d%%)",
+	EFF_size_large_hunger = "hunger drops %d%% faster",
+	EFF_size_giant_named  = "elite and rare capture +%d%%",
+	EFF_size_giant_wary   = "while hunting, stronger wariness (floor −%d%%)",
+	EFF_size_giant_hunger = "hunger drops %d%% faster",
+	EFF_PLUS              = "Upside: %s",
+	EFF_MINUS             = "Downside: %s",
+	EFF_MINUS_LATER       = "Downside (at bond 2): %s",
+}
+ns.RegisterStrings(FR34, EN34)
+if ns.KEEP_STRINGS then ns.EFFECT_STRINGS_34 = { fr = FR34, en = EN34 } end
 
 if ns.Mark then ns.Mark("CompanionEffects") end

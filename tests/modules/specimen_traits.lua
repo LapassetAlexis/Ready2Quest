@@ -197,9 +197,13 @@ do
 		local effect = NS.COMPANION_TRAIT_EFFECTS[id]
 		local def = effect and NS.COMPANION_EFFECTS[effect]
 		if not def then missing[#missing + 1] = id
-		elseif def.base > 0.25 or def.base ~= def.cap or def.kind == "sack" then missing[#missing + 1] = id .. "(valeur)" end
+		-- 3.4.0 : la valeur au lien 1 est celle d'avant ; au plus ×2 au lien 5
+		elseif def.base > 0.25 or (def.cap ~= def.base and def.cap ~= def.base * 2) or def.kind == "sack" then
+			missing[#missing + 1] = id .. "(valeur)"
+		end
 	end
-	Check("[T31] chaque caractère a un petit effet fixe, d'une sorte existante", #missing == 0, table.concat(missing, ","))
+	Check("[T31] chaque caractère a un petit effet, d'une sorte existante (lien 1 : celui d'avant ; ×2 au lien 5 au plus)",
+		#missing == 0, table.concat(missing, ","))
 	local strings, bad = NS.SPECIMEN_TRAIT_STRINGS, {}
 	for key in pairs(strings.fr) do if strings.en[key] == nil then bad[#bad + 1] = key end end
 	for key in pairs(strings.en) do if strings.fr[key] == nil then bad[#bad + 1] = key end end

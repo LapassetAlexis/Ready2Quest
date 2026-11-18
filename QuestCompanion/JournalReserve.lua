@@ -460,12 +460,15 @@ end
 function ns:PaillettesOnMilestones(gained, opts)
 	if type(gained) ~= "table" or #gained == 0 or not CaptureOn() or not self.PaillettesAdd then return 0 end
 	local quiet = (opts and opts.quiet) or self:DB().journalChat ~= true
+	-- 3.4.0 : le spécimen porté (Curieux) en ajoute, jamais aux rattrapages
+	local extra = (not (opts and opts.quiet) and self.CompanionMilestoneBonus) and self:CompanionMilestoneBonus() or 0
 	local total = 0
 	for _, gain in ipairs(gained) do
 		if type(gain) == "table" and tonumber(gain.mark) then
-			self:PaillettesAdd(ns.PAILLETTES_MILESTONE, "milestone")
-			total = total + ns.PAILLETTES_MILESTONE
-			if not quiet then self:Print(self:F("PAILLETTES_MILESTONE_GAIN", ns.PAILLETTES_MILESTONE, gain.mark)) end
+			local n = ns.PAILLETTES_MILESTONE + math.max(0, extra)
+			self:PaillettesAdd(n, "milestone")
+			total = total + n
+			if not quiet then self:Print(self:F("PAILLETTES_MILESTONE_GAIN", n, gain.mark)) end
 		end
 	end
 	return total

@@ -259,6 +259,8 @@ end
 local function Touch(capture)
 	capture.specSerial = (tonumber(capture.specSerial) or 0) + 1
 end
+-- 3.4.0 : pour les modules des spécimens (SpecimenFilters, SpecimenBond…)
+ns.SpecimenTouch = Touch
 
 -- Chaque version possédée d'après la vue par espèce a sa référence au Codex :
 -- un spécimen de Réserve s'il y en a (le meilleur), sinon un spécimen
@@ -759,6 +761,8 @@ local function DayKey()
 	dayAt, dayKey = now, key or tostring(math.floor(now / 86400))
 	return dayKey
 end
+
+ns.CaptureDayKey = DayKey   -- 3.4.0 : lien par jour (SpecimenBond.lua), échoppe
 
 local function Wary(capture)
 	local wary = capture.wary

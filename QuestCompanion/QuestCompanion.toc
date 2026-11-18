@@ -103,6 +103,7 @@ CompanionAllure.lua
 JournalReserve.lua
 CaptureTrades.lua
 ReserveTidy.lua
+SpecimenFilters.lua
 Share.lua
 GuidedTour.lua
 Bindings.lua
