@@ -19,7 +19,7 @@ For **WoW Forever** (1.60). English, French and Spanish.
 - **Six families** in the left column: Home, Departure check, Bags & loot, Travel, Quests & spells, Combat. Their pages become tabs.
 - **One switch per feature**, right in its head; **Home › Overview** shows every feature with its switch on one screen.
 - **The gear button** of each window opens the settings on its feature; `/r2q options loot` too. Search also finds features and tabs.
-- **En español**: the whole addon now speaks Spanish on esES and esMX clients.
+- **In Spanish**: the whole addon now speaks Spanish on esES and esMX clients.
 
 ## Also new in 2.0: combat helpers
 - **A Combat section**: the aggro range plus four helpers, each with its switch.
@@ -98,7 +98,7 @@ Pour **WoW Forever** (1.60). En français, en anglais et en espagnol.
 - **Six familles** dans la colonne de gauche : Accueil, Check avant le départ, Sacs & butin, Voyage, Quêtes & sorts, Combat. Leurs pages deviennent des onglets.
 - **Un interrupteur par fonction**, dans sa tête ; **Accueil › Vue d'ensemble** montre toutes les fonctions avec leur interrupteur sur un seul écran.
 - **La roue crantée** de chaque fenêtre ouvre les réglages sur sa fonction ; `/r2q options butin` aussi. La recherche trouve aussi les fonctions et les onglets.
-- **En español** : tout l'addon parle espagnol sur les clients esES et esMX.
+- **En espagnol** : tout l'addon parle espagnol sur les clients esES et esMX.
 
 ## Aussi en 2.0 : l'aide au combat
 - **Une section Combat** : la portée d'aggro et quatre aides, chacune avec son interrupteur.

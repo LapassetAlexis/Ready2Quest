@@ -1,6 +1,6 @@
 # QuestCompanion
 
-## 3.3.0 — En español
+## 3.3.0 — En espagnol
 
 - **Quest Companion parle espagnol** (clients esES et esMX) : toute l'interface, les répliques, blagues, cris et voix du compagnon, les titres des hauts faits, le juke-box et l'histoire des lieux. La langue du jeu est détectée toute seule ; une phrase pas encore traduite s'affiche en anglais.
 - Les noms des créatures et des quêtes de nos tables viennent de Questie en espagnol (Espagne et Mexique, chacun son nom quand ils diffèrent) ; les noms des sous-zones de l'histoire des lieux, des tables du client.

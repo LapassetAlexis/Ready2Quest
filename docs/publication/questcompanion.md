@@ -16,7 +16,7 @@ Une seule description, anglais d'abord puis français (règle des stores : l'ang
 
 For **WoW Forever** (1.60). English, French and Spanish. Free and standalone (`/qc`). Pairs well with [Ready2Quest](https://www.curseforge.com/wow/addons/ready2quest).
 
-## New in 3.3: en español
+## New in 3.3: in Spanish
 - **Quest Companion speaks Spanish** on esES and esMX clients: interface, every companion line, joke and shout, titles, jukebox and place lore. Creature and quest names come from the game's official Spanish names.
 
 ## New in 3.2: your companion shouts
@@ -104,7 +104,7 @@ Free software, **GPL-3.0**. Zone data (creatures, gathering, quests) is generate
 
 Pour **WoW Forever** (1.60). En français, en anglais et en espagnol. Gratuit et autonome (`/qc`). Va très bien avec [Ready2Quest](https://www.curseforge.com/wow/addons/ready2quest).
 
-## Nouveau en 3.3 : en español
+## Nouveau en 3.3 : en espagnol
 - **Quest Companion parle espagnol** sur les clients esES et esMX : interface, toutes les répliques, blagues et cris du compagnon, titres, juke-box et histoire des lieux. Les noms des créatures et des quêtes sont les noms officiels espagnols du jeu.
 
 ## Nouveau en 3.2 : ton compagnon crie
