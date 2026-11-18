@@ -134,10 +134,11 @@ do
 		local defs = {}
 		for _, def in ipairs(NS:FeatDefs()) do
 			-- 2.14.0 : « Joyeux Voile d'hiver » (code 175) ; 3.1.0 : tailles rares (176, 177) ;
-			-- 3.0.0 : échanges de spécimens (178 à 180), venus après l'intégration
+			-- 3.0.0 : échanges de spécimens (178 à 180), venus après l'intégration ;
+			-- 3.4.0 : étude et lien (181 à 187)
 			if not (before and (def.id == "fun_unlucky" or def.id == "fun_winter_veil" or def.id == "men_size_giant"
 				or def.id == "men_size_tiny" or def.id == "soc_trade_1" or def.id == "soc_trade_10"
-				or def.id == "soc_trade_new")) then defs[#defs + 1] = def end
+				or def.id == "soc_trade_new" or def.n >= 181)) then defs[#defs + 1] = def end
 		end
 		table.sort(defs, function(a, b) return a.n < b.n end)
 		local lines = {}
@@ -167,8 +168,8 @@ do
 	text, count = I.Catalogue(false)
 	hash = I.Hash(text)
 	-- 3.0.0 (bêta 6) : « Au galop » sur IsMounted hors taxi (ea095038 avant)
-	Check("[HF] catalogue actuel : 180 lignes (173 + « La poisse » + « Joyeux Voile d'hiver » + tailles 3.1 + échanges 3.0), empreinte",
-		hash == "67fd0476" and count == 180, "empreinte " .. hash .. " (" .. count .. " lignes)")
+	Check("[HF] catalogue actuel : 187 lignes (173 + « La poisse » + « Joyeux Voile d'hiver » + tailles 3.1 + échanges 3.0 + étude et lien 3.4), empreinte",
+		hash == "afe95ed8" and count == 187, "empreinte " .. hash .. " (" .. count .. " lignes)")
 	local def = NS:FeatDef("men_species_10")
 	local added = NS.FeatAdd({ id = "test_compact", n = 990, cat = "fun", pts = 5, scope = "account",
 		crit = { "flag", "x" }, extra = "gardé" })
@@ -248,7 +249,8 @@ do
 	local fewer = 0
 	for _, id in ipairs(NS.FEAT_MENAGERIE_IDS) do if NS:FeatDef(id) then fewer = fewer + 1 end end
 	-- 2.14.0 : + fun_winter_veil ; 3.1.0 : + tailles rares ; 3.0.0 : + échanges de spécimens
-	if not (#NS.FEAT_MENAGERIE_IDS == 89 and fewer == 89) then off[#off + 1] = "lot B : " .. #NS.FEAT_MENAGERIE_IDS end
+	-- 3.4.0 : + étude et lien (7)
+	if not (#NS.FEAT_MENAGERIE_IDS == 96 and fewer == 96) then off[#off + 1] = "lot B : " .. #NS.FEAT_MENAGERIE_IDS end
 	local all, points = {}, {}
 	for _, def in ipairs(NS:FeatDefs()) do
 		all[def.cat] = (all[def.cat] or 0) + 1

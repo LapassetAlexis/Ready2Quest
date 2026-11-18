@@ -188,6 +188,11 @@ ns.FeatCatalog(function()
 	SOURCES.shiny3 = ScanSource("shiny3", SHINY)
 	SOURCES.shinyZones = ScanSource("shinyZones", SHINY)
 
+	-- 3.4.0 : espèces dont l'étude est maîtrisée (SpecimenStudy.lua)
+	SOURCES.studyMastered = { topics = CAP, get = function(self)
+		return self.SpecimenStudyMastered and self:SpecimenStudyMastered() or 0
+	end }
+
 	-- Compagnons emmenés (effet actif) : types vus, compte
 	SOURCES.companionTypes = { topics = ns.FeatTopics("companion"),
 		get = function(self) return Keys(self:FeatStore("account").ctypes) end }
@@ -499,6 +504,14 @@ ns.FeatCatalog(function()
 		-- le drapeau est posé à la capture (SpecimenTraits.lua, SpecimenSizeFeat)
 		{ "men_size_giant",      176, "men", 10, A, crit = { "flag", "sizeGiant" } },
 		{ "men_size_tiny",       177, "men", 10, A, crit = { "flag", "sizeTiny" } },
+		-- 3.4.0 : étude d'espèce et lien (SpecimenStudy.lua, SpecimenBond.lua), codes 181 à 187
+		{ "men_study_10",        181, "men", 10, A, crit = { "count", "studyMastered", 10 } },
+		{ "men_study_50",        182, "men", 25, A, crit = { "count", "studyMastered", 50 } },
+		{ "men_study_100",       183, "men", 50, A, crit = { "count", "studyMastered", 100 } },
+		{ "men_bond_familiar",   184, "men", 10, A, crit = { "flag", "bondFamiliar" } },
+		{ "men_bond_inseparable", 185, "men", 25, A, crit = { "flag", "bondInseparable" } },
+		{ "men_traits_all",      186, "men", 25, A, crit = { "flag", "traitsAll" } },
+		{ "men_sizes_all",       187, "men", 25, A, crit = { "flag", "sizesAll" } },
 		-- Brillantes
 		{ "shiny_seen_1",   30, "shiny", 5,  A, crit = { "count", "shinySeen", 1 } },
 		{ "shiny_found_5",  31, "shiny", 10, A, crit = { "count", "shinyFound", 5 },  reward = { cosmetic = { "frame", "sparkle" } } },
@@ -741,6 +754,11 @@ local FR = {
 	FEATD_type_mechanical = "Capturer %d mécaniques (palier 3)",
 	FEATD_typesMaster    = "Atteindre le palier 3 dans les %d types de créature",
 	FEATD_stars3         = "Avoir %d espèce(s) capturée(s) à 3 étoiles",
+	FEATD_studyMastered  = "Maîtriser l'étude de %d espèce(s)",
+	FEATD_flag_bondFamiliar    = "Atteindre le lien Familier avec un spécimen",
+	FEATD_flag_bondInseparable = "Atteindre le lien Inséparable avec un spécimen",
+	FEATD_flag_traitsAll = "Capturer les 8 caractères",
+	FEATD_flag_sizesAll  = "Capturer les 5 tailles",
 	FEATD_flag_batch5    = "Prendre 5 créatures en une seule volée « Tout capturer »",
 	FEATD_streak_capFail = "Rater %d captures de suite",
 	FEATD_flag_levelGap  = "Capturer une créature d'au moins 5 niveaux de plus que toi",
@@ -818,6 +836,13 @@ local FR = {
 	FEAT_men_companion_boss = "Garde du corps",
 	FEAT_men_size_giant  = "Un géant parmi les bêtes",
 	FEAT_men_size_tiny   = "Petit mais costaud",
+	FEAT_men_study_10    = "Naturaliste",
+	FEAT_men_study_50    = "Savant des bêtes",
+	FEAT_men_study_100   = "Encyclopédie vivante",
+	FEAT_men_bond_familiar    = "Premiers pas ensemble",
+	FEAT_men_bond_inseparable = "À la vie, à la mort",
+	FEAT_men_traits_all  = "Tous les caractères",
+	FEAT_men_sizes_all   = "De toutes les tailles",
 	FEAT_shiny_seen_1    = "Un éclat dans l'herbe",
 	FEAT_shiny_found_5   = "Œil de pie",
 	FEAT_shiny_found_15  = "Poussière d'étoiles",
@@ -893,6 +918,11 @@ local EN = {
 	FEATD_type_mechanical = "Capture %d mechanicals (tier 3)",
 	FEATD_typesMaster    = "Reach tier 3 in all %d creature types",
 	FEATD_stars3         = "Have %d species captured at 3 stars",
+	FEATD_studyMastered  = "Master the study of %d species",
+	FEATD_flag_bondFamiliar    = "Reach a Familiar bond with a specimen",
+	FEATD_flag_bondInseparable = "Reach an Inseparable bond with a specimen",
+	FEATD_flag_traitsAll = "Capture all 8 personalities",
+	FEATD_flag_sizesAll  = "Capture all 5 sizes",
 	FEATD_flag_batch5    = "Catch 5 creatures in a single \"Capture all\" volley",
 	FEATD_streak_capFail = "Fail %d captures in a row",
 	FEATD_flag_levelGap  = "Capture a creature at least 5 levels above you",
@@ -970,6 +1000,13 @@ local EN = {
 	FEAT_men_companion_boss = "Bodyguard",
 	FEAT_men_size_giant  = "A Giant Among Beasts",
 	FEAT_men_size_tiny   = "Small but Mighty",
+	FEAT_men_study_10    = "Naturalist",
+	FEAT_men_study_50    = "Beast Scholar",
+	FEAT_men_study_100   = "Living Encyclopedia",
+	FEAT_men_bond_familiar    = "First Steps Together",
+	FEAT_men_bond_inseparable = "Till Death Do Us Part",
+	FEAT_men_traits_all  = "Every Personality",
+	FEAT_men_sizes_all   = "All Shapes and Sizes",
 	FEAT_shiny_seen_1    = "A Glint in the Grass",
 	FEAT_shiny_found_5   = "Magpie Eye",
 	FEAT_shiny_found_15  = "Stardust",

@@ -225,7 +225,8 @@ function ns:SpecimenStudyNote(spec)
 		gained = gained + ns.STUDY_REWARD.mastered
 		self:PaillettesAdd(ns.STUDY_REWARD.mastered, "study")
 		self:Print(self:F("STUDY_MASTER", name, ns.STUDY_REWARD.mastered))
-		if self.FeatCount and not ns.featsDormant then pcall(self.FeatCount, self, "studyMastered", 1, "account") end
+		-- (haut fait : la source « studyMastered » relit le nombre d'espèces maîtrisées)
+		if self.FeatTouch and not ns.featsDormant then pcall(self.FeatTouch, self, "capture") end
 	end
 	if record and zi then
 		self:Print(self:F(record == "small" and "STUDY_RECORD_SMALL" or "STUDY_RECORD_BIG", name, zi))
