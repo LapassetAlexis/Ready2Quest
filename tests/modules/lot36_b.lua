@@ -278,6 +278,20 @@ do
 	Check("[L36B] fiche : espèces maîtrisées sur la ligne des espèces, une médaille par type, listes Fond et Cadre",
 		species:find("maîtrisées", 1, true) ~= nil and #frame.medals == #NS.CREATURE_TYPES and demon and demon.tier == 4
 		and frame.bgStylePicker:IsShown() and frame.frameStylePicker:IsShown(), species)
+	-- bêta 1 (en jeu) : chaque section a une largeur ; son filet ne sort pas de la fiche
+	-- et celui des hauts faits s'arrête avant la liste « Vitrine : … »
+	local function Right(region)
+		local _, _, _, x = region:GetPoint()
+		return (tonumber(x) or 0) + (tonumber(region:GetWidth()) or 0)
+	end
+	local _, _, _, pickerRight = frame.featsPicker:GetPoint()
+	local inside = true
+	for _, key in ipairs({ "compSection", "infoSection", "badgeSection", "featsSection", "showSection" }) do
+		if Right(frame[key]) > 780 - 20 + 0.5 then inside = false end
+	end
+	Check("[L36B] fiche : les sections tiennent dans la fiche, « Hauts faits » s'arrête avant la liste de la vitrine", inside
+		and Right(frame.featsSection) <= (tonumber(pickerRight) or 0) - frame.featsPicker:GetWidth() + 0.5,
+		Right(frame.featsSection) .. " / " .. tostring(pickerRight))
 	frame:Hide()
 	NS.trainerFrame = nil
 end

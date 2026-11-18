@@ -1626,6 +1626,9 @@ function ns:EnsureTrainerWindow()
 	-- compagnon : grand modèle, nom, étiquettes, étoiles
 	frame.compSection = Theme.CreateSection(body, L.TRAINER_COMPANION)
 	frame.compSection:SetPoint("TOPLEFT", body, "TOPLEFT", PAD, BODY_Y)
+	-- 3.6.0 (bêta 1, en jeu) : chaque section a sa largeur ; par défaut, celle de
+	-- son parent : posée en milieu de fiche, son filet sortait du cadre
+	frame.compSection:SetWidth(MODEL_W)
 	local stage = CreateFrame("Frame", nil, body)
 	stage:SetSize(MODEL_W, MODEL_H)
 	stage:SetPoint("TOPLEFT", body, "TOPLEFT", PAD, BODY_Y - 22)
@@ -1650,6 +1653,7 @@ function ns:EnsureTrainerWindow()
 	-- colonne de droite : chiffres, effets, sceaux
 	frame.infoSection = Theme.CreateSection(body, L.TRAINER_TITLE)
 	frame.infoSection:SetPoint("TOPLEFT", body, "TOPLEFT", COL_X, BODY_Y)
+	frame.infoSection:SetWidth(LINES_W)
 	frame.lines = {}
 	for index = 1, 8 do
 		local line = Line(body, index <= 5 and Theme.F_BODY or Theme.F_SMALL, index <= 5 and Theme.TEXT or Theme.MUTED_LIGHT,
@@ -1660,6 +1664,7 @@ function ns:EnsureTrainerWindow()
 	-- sceaux par continent : à droite des chiffres, un par ligne
 	frame.badgeSection = Theme.CreateSection(body, L.TRAINER_BADGES)
 	frame.badgeSection:SetPoint("TOPLEFT", body, "TOPLEFT", BADGE_X, BODY_Y)
+	frame.badgeSection:SetWidth(WIN_W - PAD - BADGE_X)
 	frame.badges = {}
 	for index, key in ipairs(ns.TRAINER_CONTINENTS) do
 		local tag = Theme.CreateTag(body, "", Theme.GOLD)
@@ -1694,6 +1699,7 @@ function ns:EnsureTrainerWindow()
 	-- hauts faits (2.8.0) : nombre et points, vitrine de 3, quatre mini-barres
 	frame.featsSection = Theme.CreateSection(body, L.TRAINER_FEATS_HEAD)
 	frame.featsSection:SetPoint("TOPLEFT", body, "TOPLEFT", COL_X, FEATS_Y)
+	frame.featsSection:SetWidth(COL_W - 200 - ns.TRAINER_DETAIL_GAP)   -- s'arrête avant la liste « Vitrine : … »
 	frame.featsPicker = Theme.CreateDropdown(body, 200, function(value) ns:TrainerFeatPick(value) end,
 		{ listWidth = 280, maxRows = 12 })
 	frame.featsPicker:SetPoint("TOPRIGHT", body, "TOPLEFT", COL_X + COL_W, FEATS_Y + 1)
@@ -1709,6 +1715,7 @@ function ns:EnsureTrainerWindow()
 	-- vitrine : trois tuiles
 	frame.showSection = Theme.CreateSection(body, L.TRAINER_SHOWCASE)
 	frame.showSection:SetPoint("TOPLEFT", body, "TOPLEFT", PAD, SHOW_Y)
+	frame.showSection:SetWidth(WIN_W - 2 * PAD)
 	frame.tiles = {}
 	for slot = 1, ns.TRAINER_SHOWCASE_SIZE do
 		frame.tiles[slot] = BuildTile(self, body, PAD + (slot - 1) * (TILE_W + TILE_GAP), slot)
