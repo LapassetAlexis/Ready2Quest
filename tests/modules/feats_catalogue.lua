@@ -3,7 +3,7 @@
 -- Ids et codes uniques, codes = rang dans le document, points, portées,
 -- catégories et leurs comptes, noms et descriptions FR/EN, sources et listes ;
 -- encodage compact décodé ligne à ligne (empreintes) ; lignes du document
--- (lot B) ; lignes « à vérifier » ; registre des 40 titres (document §4.1, un
+-- (lot B) ; lignes « à vérifier » ; registre des 49 titres (document §4.1, un
 -- par ligne, un seul fichier) ; cosmétiques des hauts faits faits d'images du
 -- client seulement ; textes de récompense sans identifiant brut ; ordre du .toc.
 local Check, Say, NS = T.Check, T.Say, T.QNS
@@ -126,6 +126,9 @@ do
 	-- Lignes rendues grisées avant le relevé des statistiques en jeu (2026-11-07)
 	I.UNPENDED = { char_hearth_50 = true, char_gold_looted = true, char_epic = true, char_camp_25 = true, dng_runs_50 = true,
 		pvp_hk_100 = true, fun_respec = true, zone_visit_all = true, zone_forever_new = true }
+	-- 3.6.0 : les fonds et cadres de fiche existent (TrainerCardStyle.lua) ; relus en attente
+	I.CARD_36 = { card_census = true, card_atlas = true, card_renown = true, card_pantheon = true, card_crest_ek = true,
+		card_crest_ka = true, card_laurels = true }
 	I.LOT_E = { feat_chain = true, feat_eight = true, feat_goldstars = true, feat_prism_orn = true, feat_atlas = true,
 		feat_compass = true, feat_anniversary = true, feat_prism = true }
 	-- before = true : le catalogue tel qu'avant l'intégration (ces lignes grisées,
@@ -135,7 +138,7 @@ do
 		for _, def in ipairs(NS:FeatDefs()) do
 			-- 2.14.0 : « Joyeux Voile d'hiver » (code 175) ; 3.1.0 : tailles rares (176, 177) ;
 			-- 3.0.0 : échanges de spécimens (178 à 180), venus après l'intégration ;
-			-- 3.4.0 : étude et lien (181 à 187)
+			-- 3.4.0 : étude et lien (181 à 187) ; 3.6.0 : rangs longs (188 à 194)
 			if not (before and (def.id == "fun_unlucky" or def.id == "fun_winter_veil" or def.id == "men_size_giant"
 				or def.id == "men_size_tiny" or def.id == "soc_trade_1" or def.id == "soc_trade_10"
 				or def.id == "soc_trade_new" or def.n >= 181)) then defs[#defs + 1] = def end
@@ -150,7 +153,8 @@ do
 			local crit = def.crit
 			if before and def.id == "char_mount" then crit = { "stat", { 339 }, 1, alt = "mountSeen" } end
 			-- lot E (FeatsCosmetics.lua) : ces cosmétiques attendaient (reward.soon) ; même ligne, relue en attente
-			if type(reward) == "table" and reward.cosmetic and I.LOT_E[reward.cosmetic[2]] then
+			if type(reward) == "table" and reward.cosmetic and (I.LOT_E[reward.cosmetic[2]]
+				or (before and I.CARD_36[reward.cosmetic[2]])) then
 				local copy = {}
 				for key, value in pairs(reward) do copy[key] = value end
 				copy.soon, copy.cosmetic = copy.cosmetic, nil
@@ -168,9 +172,10 @@ do
 	text, count = I.Catalogue(false)
 	hash = I.Hash(text)
 	-- 3.0.0 (bêta 6) : « Au galop » sur IsMounted hors taxi (ea095038 avant)
-	-- 3.6.0 : + mécénat (men_patron_10/50/100, codes 241 à 243 ; afe95ed8 / 187 avant)
-	Check("[HF] catalogue actuel : 190 lignes (173 + « La poisse » + « Joyeux Voile d'hiver » + tailles 3.1 + échanges 3.0 + étude et lien 3.4 + mécénat 3.6), empreinte",
-		hash == "e9c50708" and count == 190, "empreinte " .. hash .. " (" .. count .. " lignes)")
+	-- 3.6.0 : + rangs 750 à 3 000 et « tout Azeroth » (188 à 194), récompenses de l'étude et du lien,
+	-- fonds et cadres de fiche livrés, mécénat (241 à 243) (afe95ed8 et 187 lignes avant)
+	Check("[HF] catalogue actuel : 197 lignes (173 + « La poisse » + « Joyeux Voile d'hiver » + tailles 3.1 + échanges 3.0 + étude et lien 3.4 + rangs et mécénat 3.6), empreinte",
+		hash == "796473a7" and count == 197, "empreinte " .. hash .. " (" .. count .. " lignes)")
 	local def = NS:FeatDef("men_species_10")
 	local added = NS.FeatAdd({ id = "test_compact", n = 990, cat = "fun", pts = 5, scope = "account",
 		crit = { "flag", "x" }, extra = "gardé" })
@@ -250,8 +255,8 @@ do
 	local fewer = 0
 	for _, id in ipairs(NS.FEAT_MENAGERIE_IDS) do if NS:FeatDef(id) then fewer = fewer + 1 end end
 	-- 2.14.0 : + fun_winter_veil ; 3.1.0 : + tailles rares ; 3.0.0 : + échanges de spécimens
-	-- 3.4.0 : + étude et lien (7) ; 3.6.0 : + mécénat (3)
-	if not (#NS.FEAT_MENAGERIE_IDS == 99 and fewer == 99) then off[#off + 1] = "lot B : " .. #NS.FEAT_MENAGERIE_IDS end
+	-- 3.4.0 : + étude et lien (7) ; 3.6.0 : + rangs 750 à 3 000 et « tout Azeroth » (7), mécénat (3)
+	if not (#NS.FEAT_MENAGERIE_IDS == 106 and fewer == 106) then off[#off + 1] = "lot B : " .. #NS.FEAT_MENAGERIE_IDS end
 	local all, points = {}, {}
 	for _, def in ipairs(NS:FeatDefs()) do
 		all[def.cat] = (all[def.cat] or 0) + 1
@@ -278,13 +283,15 @@ do
 	-- récompenses déplacées de TRAINER_RANKS / SHINY_REWARDS : mêmes aides et cosmétiques qu'avant
 	local moved = {}
 	for _, rankDef in ipairs(NS.TRAINER_RANKS) do
-		local def = NS:FeatDef("men_species_" .. rankDef.count)
+		-- (3.6.0 : « tout Azeroth » a son haut fait nommé, son seuil dépend de la faction)
+		local def = NS:FeatDef(rankDef.feat or ("men_species_" .. rankDef.count))
 		local aids = {}
 		for _, id in ipairs(rankDef.aids or {}) do aids[id] = (aids[id] or 0) + 1 end
 		for id, n in pairs(aids) do if (def.reward.aids or {})[id] ~= n then moved[#moved + 1] = def.id .. " " .. id end end
 		if rankDef.cosmetic and not (def.reward.cosmetic and def.reward.cosmetic[1] == rankDef.cosmetic.kind
 			and def.reward.cosmetic[2] == rankDef.cosmetic.id) then moved[#moved + 1] = def.id .. " cosmétique" end
-		if type(def.paid) ~= "function" then moved[#moved + 1] = def.id .. " paid" end
+		-- (3.6.0 : les rangs sans aide ni cosmétique d'avant n'ont rien à ne pas redonner)
+		if (rankDef.aids or rankDef.cosmetic) and type(def.paid) ~= "function" then moved[#moved + 1] = def.id .. " paid" end
 	end
 	for _, reward in ipairs(NS.SHINY_REWARDS) do
 		local def = NS:FeatDef("shiny_found_" .. reward.count)
@@ -354,8 +361,7 @@ do
 			end
 		end
 	end
-	-- 3.6.0 : + T61 à T63 (mécénat)
-	Check("[TIT] 43 titres, formes FR m/f et EN conformes au document (§4.1)", rows == 43 and #bad == 0,
+	Check("[TIT] 52 titres (3.6.0 : + 12), formes FR m/f et EN conformes au document (§4.1)", rows == 52 and #bad == 0,
 		rows .. " lignes ; " .. table.concat(bad, ", "))
 	local count, shape = 0, {}
 	for code, t in pairs(T_) do
@@ -374,8 +380,8 @@ do
 		-- anglais genré seulement pour Seigneur / Dame et Héros / Héroïne
 		if t.enf and code ~= 35 and code ~= 37 then shape[#shape + 1] = code .. " enf" end
 	end
-	Check("[TIT] codes 1 à 40 et 61 à 63 uniques, un seul %s par forme, place cohérente, source citée, anglais genré pour 35 et 37 seulement",
-		count == 43 and #shape == 0 and T_[35].enf and T_[37].enf, table.concat(shape, ", "))
+	Check("[TIT] codes 1 à 49 et 61 à 63 uniques, un seul %s par forme, place cohérente, source citée, anglais genré pour 35 et 37 seulement",
+		count == 52 and #shape == 0 and T_[35].enf and T_[37].enf, table.concat(shape, ", "))
 	-- chaque titre d'une ligne existe une fois au registre, et chaque titre a sa ligne (sa source)
 	local used, missing = {}, {}
 	for _, d in ipairs(NS:FeatDefs()) do
@@ -419,6 +425,8 @@ do
 		["interface/worldmap/azeroth/azeroth6"] = 270458, ["interface/minimap/minimap-trackingborder"] = 136430,
 		["interface/minimap/ui-minimap-background"] = 136467, ["interface/minimap/minimaparrow"] = 136431,
 		["interface/minimap/compassnorthtag"] = 136427,
+		-- 3.6.0 : grimoire du savant (wago.tools, listfile)
+		["interface/icons/inv_misc_book_09"] = 133741, ["interface/icons/inv_misc_book_11"] = 133743,
 	}
 	local ATLASES = { ["BonusChest-CircleGlow"] = 99, ["garrlanding-circleglow"] = 46 }
 	-- sols des sceaux : FileDataID -> chemin du listfile
@@ -433,6 +441,9 @@ do
 		{ "orn", "feat_prism_orn", "shiny_3stars" }, { "orn", "feat_compass", "day_travel_1000" },
 		{ "orn", "feat_anniversary", "day_days_365" }, { "orn", "feat_eye", "dng_raid_aq40" },
 		{ "orn", "feat_wildcrown", "dng_raid_hyjal" },
+		-- 3.6.0 : les 8 caractères, les 5 tailles, 100 espèces maîtrisées
+		{ "frame", "feat_traits", "men_traits_all" }, { "bg", "feat_sizes", "men_sizes_all" },
+		{ "orn", "feat_scholar", "men_study_100" },
 	}
 	local LISTS = { frame = "COMPANION_FRAMES", bg = "COMPANION_BACKGROUNDS", orn = "COMPANION_ORNAMENTS" }
 	local function Def(kind, id)
@@ -464,7 +475,7 @@ do
 		if page.id == "companionOrnaments" then for _, r in ipairs(page.rows) do rows[r.key] = true end end
 	end
 	for _, def in ipairs(NS.FEAT_COSMETICS.orn) do if not rows[def.key] then bad[#bad + 1] = def.id .. " sans réglage" end end
-	Check("[HF-E] 11 cosmétiques : catalogue, palier 0, libellés FR/EN, donnés par leur haut fait seulement (jamais au coffre), "
+	Check("[HF-E] 14 cosmétiques : catalogue, palier 0, libellés FR/EN, donnés par leur haut fait seulement (jamais au coffre), "
 		.. "un réglage par ornement", #bad == 0, table.concat(bad, ", "))
 	-- chaque image appelée existe dans le client (relevé du listfile), aucune n'est livrée
 	local unknown = {}
@@ -510,10 +521,12 @@ do
 			or text:find("FEAT_", 1, true) then raw[#raw + 1] = def.id .. "=" .. text end
 	end
 	local function R(id) return NS:FeatRewardText(NS:FeatDef(id)) end
-	Check("[HF-E] récompenses : aucun id brut ; fiche reportée « (à venir) » après le titre ; cosmétique par son nom",
-		#raw == 0 and R("men_species_500"):find("fond de fiche (à venir)", 1, true) ~= nil
-		and R("men_species_500"):find("titre", 1, true) ~= nil and R("zone_seal_ek") == "cadre de fiche (à venir)"
-		and R("meta_hero"):find("cadre de fiche (à venir)", 1, true) ~= nil and not R("meta_hero"):find("laurels", 1, true)
+	-- 3.6.0 : les fonds et cadres de fiche existent : nommés, plus « (à venir) »
+	Check("[HF-E] récompenses : aucun id brut ; fond et cadre de fiche par leur nom, après le titre ; cosmétique par son nom",
+		#raw == 0 and R("men_species_500"):find("Fond de fiche : Registre des espèces", 1, true) ~= nil
+		and R("men_species_500"):find("titre", 1, true) ~= nil and R("zone_seal_ek") == "Cadre de fiche : Blason de l'Est"
+		and R("meta_hero"):find("Cadre de fiche : Lauriers", 1, true) ~= nil and not R("meta_hero"):find("laurels", 1, true)
+		and not R("men_species_500"):find("à venir", 1, true)
 		and R("men_boss_1") == "Chaîne du colosse" and R("meta_shiny") == "Cadre prismatique",
 		table.concat(raw, " | ") .. " / " .. R("men_species_500"))
 	local pending, kinds = 0, true
@@ -524,9 +537,10 @@ do
 		end
 	end
 	local unknown = NS:FeatRewardText({ id = "x", reward = { cosmetic = { "orn", "feat_inconnu" } } })
-	Check("[HF-E] en attente : seules les 7 récompenses de fiche (dont les lauriers, la fiche de dresseur) ; id inconnu : "
-		.. "« récompense à venir » ; rien en attente : texte d'origine", pending == 7 and kinds
-		and NS:FeatDef("men_species_500").reward.cosmetic == nil and NS:FeatDef("men_species_500").reward.soon[2] == "card_census"
+	-- 3.6.0 : les 7 récompenses de fiche sont livrées (TrainerCardStyle.lua) : plus rien en attente
+	Check("[HF-E] en attente : plus rien (les 7 récompenses de fiche livrées) ; id inconnu : "
+		.. "« récompense à venir » ; rien en attente : texte d'origine", pending == 0 and kinds
+		and NS:FeatDef("men_species_500").reward.soon == nil and NS:FeatDef("men_species_500").reward.cosmetic[2] == "card_census"
 		and unknown == "récompense à venir"
 		and NS:FeatRewardText({ id = "x", reward = { cosmetic = { "frame", "gilded" } } }) == NS.L.COMP_FRAME_GILDED,
 		pending .. " / " .. unknown)

@@ -505,7 +505,7 @@ ns.FeatCatalog(function()
 		{ "meta_dungeons",   169, "meta", 50, A, crit = { "meta", { "dng_tier1", "dng_tier2", "dng_tier3", "dng_tier4" } },
 			desc = "FEATD_metaDungeons", reward = { title = 36 } },
 		-- cadre de fiche « Lauriers » en attente (cosmétiques de fiche reportés) : reward.soon
-		{ "meta_hero",       170, "meta", 50, A, crit = { "list", "hero" }, reward = { title = 37, soon = { "cardframe", "card_laurels" } } },
+		{ "meta_hero",       170, "meta", 50, A, crit = { "list", "hero" }, reward = { title = 37, cosmetic = { "cardframe", "card_laurels" } } },   -- (3.6.0 : livré)
 	}) do ns.FeatAdd(row) end
 end)
 

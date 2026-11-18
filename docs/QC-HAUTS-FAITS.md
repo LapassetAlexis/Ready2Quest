@@ -308,6 +308,8 @@ Hors numérotation (3.4.0, étude d'espèce et lien, `SpecimenStudy.lua`, `Speci
 
 Hors numérotation (3.6.0, mécénat de l'Échoppe du dresseur, `ShopWeek.lua`), au compte : `men_patron_10` (code 241) — Mécène / Patron — atteindre 10 points de mécène (100 paillettes le point) : `count` `patron`, 10 points, titre T61 ; `men_patron_50` (code 242) — Grand mécène / Great Patron — 50 points de mécène, 25 points, titre T62 ; `men_patron_100` (code 243) — Bienfaiteur des créatures / Benefactor of Creatures — 100 points de mécène, 50 points, titre T63.
 
+3.6.0 (« Des buts longs ») : ces sept lignes reçoivent leurs récompenses : `men_study_10` un Sifflet du dompteur ×1, `men_study_50` le titre T48, `men_study_100` l'ornement `feat_scholar`, `men_bond_inseparable` le titre T49 (et la marque « Inséparable » sur la vignette du spécimen, un cœur du client), `men_traits_all` le cadre du compagnon `feat_traits`, `men_sizes_all` le fond du compagnon `feat_sizes`. Rangs de dresseur au-delà de 500 espèces, hors numérotation, au compte, 50 points chacun, un titre chacun : `men_species_750` (code 188) — Sur la piste des bêtes / On the Beasts' Trail — 750 espèces, titre T41 ; `men_species_1000` (code 189) — Mille espèces / A Thousand Species — titre T42 ; `men_species_1500` (code 190) — Le bestiaire s'épaissit / A Thickening Bestiary — titre T43 ; `men_species_2000` (code 191) — Deux mille espèces / Two Thousand Species — titre T44 ; `men_species_2500` (code 192) — Les archives d'Azeroth / The Archives of Azeroth — titre T45 ; `men_species_3000` (code 193) — Trois mille espèces / Three Thousand Species — titre T46 ; `men_species_all` (code 194) — Tout Azeroth / All of Azeroth — toutes les espèces de sa faction (table livrée, hors boss du monde et lignes de niveau 9999 jamais capturées) : `count` `azeroth` (pour cent) ≥ 100, titre T47. Ces paliers rejoignent `TRAINER_RANKS` (titre automatique, bandeau de la page Créatures, annonce de guilde `r` ; « tout Azeroth » part en `h`).
+
 ### 2.2 Brillantes (`shiny`) — 12
 
 | id | FR | EN | Condition | Détection | F | Pts | Récompense |
@@ -634,6 +636,8 @@ Retour en 2.6 possible : la 2.6 relit `journal.stamps` intact et ignore `feats`.
 
 ### 4.1 Titres (43)
 
+### 4.1 Titres (49)
+
 « — » en colonne féminine : forme épicène (la même). P = préfixe, S = suffixe.
 
 | Code | Haut fait source | FR masculin | FR féminin | EN | P/S |
@@ -682,6 +686,18 @@ Retour en 2.6 possible : la 2.6 relit `journal.stamps` intact et ignore `feats`.
 | T62 | `men_patron_50` | %s le Grand Mécène | %s la Grande Mécène | %s the Great Patron | S |
 | T63 | `men_patron_100` | %s, Bienfaiteur des créatures | %s, Bienfaitrice des créatures | %s, Benefactor of Creatures | S |
 
+| T41 | `men_species_750` | %s le Pisteur des terres sauvages | %s la Pisteuse des terres sauvages | %s the Wildtracker | S |
+| T42 | `men_species_1000` | %s aux mille bêtes | — | %s of a Thousand Beasts | S |
+| T43 | `men_species_1500` | %s le Gardien du bestiaire | %s la Gardienne du bestiaire | %s the Bestiary Warden | S |
+| T44 | `men_species_2000` | %s le Sage des créatures | %s la Sage des créatures | %s the Creature Sage | S |
+| T45 | `men_species_2500` | %s, Archiviste d'Azeroth | — | %s, Archivist of Azeroth | S |
+| T46 | `men_species_3000` | %s le Grand Recenseur | %s la Grande Recenseuse | %s the Grand Census-Taker | S |
+| T47 | `men_species_all` | %s, Dresseur de tout Azeroth | %s, Dresseuse de tout Azeroth | %s, Trainer of All Azeroth | S |
+| T48 | `men_study_50` | %s le Savant | %s la Savante | %s the Scholar | S |
+| T49 | `men_bond_inseparable` | %s l'Inséparable | — | %s the Inseparable | S |
+
+T41 à T49 : 3.6.0 (rangs de dresseur au-delà de 500 espèces, étude, lien). Les codes 61 à 63 sont pris par la 3.6 (mécénat).
+
 T61 à T63 (3.6.0) viennent du mécénat ; les codes 41 à 60 restent libres pour les titres d'autres lots. T39 et T40 sont des titres pour rire : T39 se gagne par un petit `meta` de la catégorie Insolite (`fun_unlucky`, code 174, 5 points, hors des 173 numérotés : §2.10), T40 vient de `men_bad_luck`.
 
 Choix retenu pour le genre : **formes masculine et féminine** quand le français les distingue (UnitSex, réglage manuel prioritaire), forme unique sinon. L'anglais n'a deux formes que pour T35 et T37.
@@ -708,7 +724,7 @@ Les cosmétiques existants déplacés (cadres `trainer`, `master`, `sparkle` ; f
 
 Note : l'id `feat_prism` existe en cadre et l'ornement s'appelle `feat_prism_orn` (les clés sont `kind:id`, mais on évite la confusion dans les chaînes).
 
-**Fiche de dresseur** (sorte neuve, `TRAINER_CARD_BACKGROUNDS` / `TRAINER_CARD_FRAMES`, champs `cb` / `cf`, liste blanche à la réception, défaut = le fond actuel) :
+**Fiche de dresseur** (sorte neuve, `TRAINER_CARD_BACKGROUNDS` / `TRAINER_CARD_FRAMES`, champs `cb` / `cf`, liste blanche à la réception, défaut = le fond actuel). **Livrés en 3.6.0** (`TrainerCardStyle.lua`) avec nos textures générées par `tools/gen_ui_assets.py` (`Libs/Socle/Media/fiche_*.tga` : fonds 256×128 opaques et sombres, cadres 64×64 en 9 tranches), et non les fabrications prévues ci-dessous :
 
 | id | Sorte | Nom FR / EN | Source | Fabrication |
 |---|---|---|---|---|
@@ -782,6 +798,8 @@ Relevé du 2026-11-07, branche d'intégration des lots A à D (le lot E, cosmét
 - **174 lignes** : les 173 du catalogue numéroté (§2.1 à §2.11, codes `n` 1 à 173, tous présents, contrôlés par les tests) et `fun_unlucky` (code 174, Insolite, 5 points, titre T39 : le moteur refuse une ligne sans points). Total : **2815 points** (2810 + 5).
 - 3.1.0 : + `fun_winter_veil` (code 175, 2.14.0), `men_size_giant` (code 176) et `men_size_tiny` (code 177) : **177 lignes**, **2845 points**.
 - 3.0.0 (échanges) : + `soc_trade_1` (code 178), `soc_trade_10` (code 179) et `soc_trade_new` (code 180) : **180 lignes**, **2870 points**.
+- 3.6.0 : + 7 rangs de dresseur (codes 188 à 194, 50 points chacun) : **194 lignes** ; 49 titres.
+- 3.6.0 : + mécénat (codes 241 à 243 : 10, 25 et 50 points) : **197 lignes** ; 52 titres (T1 à T49, T61 à T63).
 - Comptes par catégorie conformes au §2.14 : Ménagerie 29, Brillantes 12, Zones et sceaux 23, Au jour le jour 14, Guilde et entraide 7, Personnage 21, Donjons et raids 21, Métiers 12, Quêtes, réputations et honneur 11, Insolite 15 (+ `fun_unlucky`), Grands hauts faits 8.
 - **Titres** : les 40 (§4.1), dans un seul registre (`FeatsTitles.lua`), chacun donné par exactement une ligne (`src`).
 - **Statistiques** lisibles sur Forever (§2.13, relevé en jeu) : les lignes qui n'attendaient que leur confirmation sont actives (`char_hearth_50`, `char_camp_25`, `char_gold_looted`, `char_epic`, `dng_runs_50`, `pvp_hk_100`, `fun_respec`) ; les zones propres à Forever sont connues (Mont Hyjal 2482, Riverglades 2548, Shen'dralas 2652) : `zone_visit_all` et `zone_forever_new` sont actifs.
@@ -806,7 +824,7 @@ Une ligne se libère en retirant son `pending` quand sa statistique est confirm�
 
 ### 6.3 Récompenses en attente
 
-- **Cosmétiques de fiche de dresseur** (fonds `cb` et cadres `cf`, décision 6 : reportés) : en `reward.soon`, jamais débloqués d'ici là : `men_species_500` (`card_census`), `zone_seal_ek` / `zone_seal_ka` (`card_crest_ek` / `card_crest_ka`), `meta_zones` (`card_atlas`), `meta_trainer` (`card_pantheon`), `meta_points_1500` (`card_renown`), `meta_hero` (`card_laurels`).
+- **Cosmétiques de fiche de dresseur** (fonds `cb` et cadres `cf`, décision 6 : reportés ; **livrés en 3.6.0**, `TrainerCardStyle.lua`, plus rien en attente) : en `reward.soon` jusqu'à la 3.5 : `men_species_500` (`card_census`), `zone_seal_ek` / `zone_seal_ka` (`card_crest_ek` / `card_crest_ka`), `meta_zones` (`card_atlas`), `meta_trainer` (`card_pantheon`), `meta_points_1500` (`card_renown`), `meta_hero` (`card_laurels`).
 - **Cosmétiques du compagnon** du lot E (`reward.soon`, résolus par `ns.FeatResolveSoon()` dès que le catalogue du compagnon les a) : cadres `feat_eight` (`men_types_master`), `feat_prism` (`meta_shiny`) ; fond `feat_atlas` (`zone_100_10`) ; ornements `feat_chain` (`men_boss_1`), `feat_goldstars` (`men_stars3_100`), `feat_prism_orn` (`shiny_3stars`), `feat_compass` (`day_travel_1000`), `feat_anniversary` (`day_days_365`). Déjà en `reward.cosmetic` (le lot E les dessine) : `feat_campfire` (`char_camp_25`), `feat_eye` (`dng_raid_aq40`), `feat_wildcrown` (`dng_raid_hyjal`).
 
 ### 6.4 Écarts avec la conception

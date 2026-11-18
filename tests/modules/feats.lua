@@ -528,7 +528,7 @@ do
 			if block.text and block.text:find("/qc hf", 1, true) then guide = true end
 		end
 		for _, block in ipairs(NS:JournalGuideBlocks("titles")) do
-			-- 3.6.0 : le compte suit le registre (43 avec le mécénat)
+			-- 3.6.0 : le compte suit le registre (52 avec les rangs, l'étude, le lien et le mécénat)
 			local n = 0
 			for _ in pairs(NS.FEAT_TITLES) do n = n + 1 end
 			if block.text and block.text:find("/qc titre", 1, true) and block.text:find(n .. " titres", 1, true) then titles = true end

@@ -26,6 +26,8 @@
 --     (cosmétiques idempotents : rien de perdu ni de doublé).
 -- Cosmétiques pas encore fabriqués (lot E) : reward.soon = { sorte, id } ;
 -- ils passent en reward.cosmetic dès que le catalogue du compagnon les a.
+-- 3.6.0 : les fonds et cadres de fiche de dresseur (cardbg, cardframe)
+-- existent (TrainerCardStyle.lua) : plus rien n'attend.
 local ADDON, ns = ...
 if ns.blocked then return end
 
@@ -191,6 +193,14 @@ ns.FeatCatalog(function()
 	-- 3.6.0 : points de mécène (Échoppe du dresseur, ShopWeek.lua)
 	SOURCES.patron = { topics = ns.FeatTopics("flag"), get = function(self)
 		return self.ShopPatronPoints and self:ShopPatronPoints() or 0
+	end }
+	-- 3.6.0 : « tout Azeroth », en pour cent des espèces de ta faction
+	-- (MenagerieCollection.lua) ; 100 seulement quand il n'en manque aucune
+	SOURCES.azeroth = { topics = CAP, get = function(self)
+		local have, need = 0, 0
+		if self.MenagerieAzeroth then have, need = self:MenagerieAzeroth() end
+		if need <= 0 then return 0 end
+		return math.floor(100 * have / need)
 	end }
 
 	-- 3.4.0 : espèces dont l'étude est maîtrisée (SpecimenStudy.lua)
@@ -510,13 +520,24 @@ ns.FeatCatalog(function()
 		{ "men_size_giant",      176, "men", 10, A, crit = { "flag", "sizeGiant" } },
 		{ "men_size_tiny",       177, "men", 10, A, crit = { "flag", "sizeTiny" } },
 		-- 3.4.0 : étude d'espèce et lien (SpecimenStudy.lua, SpecimenBond.lua), codes 181 à 187
-		{ "men_study_10",        181, "men", 10, A, crit = { "count", "studyMastered", 10 } },
-		{ "men_study_50",        182, "men", 25, A, crit = { "count", "studyMastered", 50 } },
-		{ "men_study_100",       183, "men", 50, A, crit = { "count", "studyMastered", 100 } },
+		-- 3.6.0 : leurs récompenses (aide, titre, ornement ; titre ; cadre et fond du compagnon)
+		{ "men_study_10",        181, "men", 10, A, crit = { "count", "studyMastered", 10 }, reward = { aids = Aids("sifflet") } },
+		{ "men_study_50",        182, "men", 25, A, crit = { "count", "studyMastered", 50 }, reward = { title = 48 } },
+		{ "men_study_100",       183, "men", 50, A, crit = { "count", "studyMastered", 100 }, reward = { cosmetic = { "orn", "feat_scholar" } } },
 		{ "men_bond_familiar",   184, "men", 10, A, crit = { "flag", "bondFamiliar" } },
-		{ "men_bond_inseparable", 185, "men", 25, A, crit = { "flag", "bondInseparable" } },
-		{ "men_traits_all",      186, "men", 25, A, crit = { "flag", "traitsAll" } },
-		{ "men_sizes_all",       187, "men", 25, A, crit = { "flag", "sizesAll" } },
+		{ "men_bond_inseparable", 185, "men", 25, A, crit = { "flag", "bondInseparable" }, reward = { title = 49 } },
+		{ "men_traits_all",      186, "men", 25, A, crit = { "flag", "traitsAll" }, reward = { cosmetic = { "frame", "feat_traits" } } },
+		{ "men_sizes_all",       187, "men", 25, A, crit = { "flag", "sizesAll" }, reward = { cosmetic = { "bg", "feat_sizes" } } },
+		-- 3.6.0 : rangs de dresseur au-delà de 500 espèces, puis « tout Azeroth »
+		-- (toutes les espèces de ta faction), codes 188 à 194 ; un titre chacun
+		{ "men_species_750",  188, "men", 50, A, crit = { "count", "species", 750 },  reward = { title = 41 } },
+		{ "men_species_1000", 189, "men", 50, A, crit = { "count", "species", 1000 }, reward = { title = 42 } },
+		{ "men_species_1500", 190, "men", 50, A, crit = { "count", "species", 1500 }, reward = { title = 43 } },
+		{ "men_species_2000", 191, "men", 50, A, crit = { "count", "species", 2000 }, reward = { title = 44 } },
+		{ "men_species_2500", 192, "men", 50, A, crit = { "count", "species", 2500 }, reward = { title = 45 } },
+		{ "men_species_3000", 193, "men", 50, A, crit = { "count", "species", 3000 }, reward = { title = 46 } },
+		{ "men_species_all",  194, "men", 50, A, crit = { "count", "azeroth", 100 }, reward = { title = 47 },
+			desc = "FEATD_azeroth" },
 		-- 3.6.0 : mécénat de l'Échoppe (ShopWeek.lua), codes 241 à 243 (titres 61 à 63)
 		{ "men_patron_10",       241, "men", 10, A, crit = { "count", "patron", 10 },  reward = { title = 61 } },
 		{ "men_patron_50",       242, "men", 25, A, crit = { "count", "patron", 50 },  reward = { title = 62 } },
@@ -606,7 +627,9 @@ ns.FeatCatalog(function()
 end)
 
 -- un cosmétique du compagnon existe-t-il déjà ? (sinon : reward.soon)
-local LISTS_OF = { frame = "COMPANION_FRAMES", bg = "COMPANION_BACKGROUNDS", orn = "COMPANION_ORNAMENTS", app = "COMPANION_APPEARANCES" }
+-- 3.6.0 : et ceux de la fiche de dresseur (TrainerCardStyle.lua)
+local LISTS_OF = { frame = "COMPANION_FRAMES", bg = "COMPANION_BACKGROUNDS", orn = "COMPANION_ORNAMENTS", app = "COMPANION_APPEARANCES",
+	cardbg = "TRAINER_CARD_BACKGROUNDS", cardframe = "TRAINER_CARD_FRAMES" }
 local function CosmeticExists(kind, id)
 	for _, def in ipairs(ns[LISTS_OF[kind] or ""] or {}) do if def.id == id then return true end end
 	return false
@@ -765,6 +788,7 @@ local FR = {
 	FEATD_stars3         = "Avoir %d espèce(s) capturée(s) à 3 étoiles",
 	FEATD_studyMastered  = "Maîtriser l'étude de %d espèce(s)",
 	FEATD_patron         = "Atteindre %d points de mécène (Échoppe du dresseur)",
+	FEATD_azeroth        = "Capturer %d %% des espèces de ta faction : tout Azeroth (hors boss du monde)",
 	FEATD_flag_bondFamiliar    = "Atteindre le lien Familier avec un spécimen",
 	FEATD_flag_bondInseparable = "Atteindre le lien Inséparable avec un spécimen",
 	FEATD_flag_traitsAll = "Capturer les 8 caractères",
@@ -856,6 +880,13 @@ local FR = {
 	FEAT_men_patron_10   = "Mécène",
 	FEAT_men_patron_50   = "Grand mécène",
 	FEAT_men_patron_100  = "Bienfaiteur des créatures",
+	FEAT_men_species_750  = "Sur la piste des bêtes",
+	FEAT_men_species_1000 = "Mille espèces",
+	FEAT_men_species_1500 = "Le bestiaire s'épaissit",
+	FEAT_men_species_2000 = "Deux mille espèces",
+	FEAT_men_species_2500 = "Les archives d'Azeroth",
+	FEAT_men_species_3000 = "Trois mille espèces",
+	FEAT_men_species_all  = "Tout Azeroth",
 	FEAT_shiny_seen_1    = "Un éclat dans l'herbe",
 	FEAT_shiny_found_5   = "Œil de pie",
 	FEAT_shiny_found_15  = "Poussière d'étoiles",
@@ -933,6 +964,7 @@ local EN = {
 	FEATD_stars3         = "Have %d species captured at 3 stars",
 	FEATD_studyMastered  = "Master the study of %d species",
 	FEATD_patron         = "Reach %d patron points (Trainer's Stall)",
+	FEATD_azeroth        = "Capture %d%% of your faction's species: all of Azeroth (world bosses aside)",
 	FEATD_flag_bondFamiliar    = "Reach a Familiar bond with a specimen",
 	FEATD_flag_bondInseparable = "Reach an Inseparable bond with a specimen",
 	FEATD_flag_traitsAll = "Capture all 8 personalities",
@@ -1024,6 +1056,13 @@ local EN = {
 	FEAT_men_patron_10   = "Patron",
 	FEAT_men_patron_50   = "Great Patron",
 	FEAT_men_patron_100  = "Benefactor of Creatures",
+	FEAT_men_species_750  = "On the Beasts' Trail",
+	FEAT_men_species_1000 = "A Thousand Species",
+	FEAT_men_species_1500 = "A Thickening Bestiary",
+	FEAT_men_species_2000 = "Two Thousand Species",
+	FEAT_men_species_2500 = "The Archives of Azeroth",
+	FEAT_men_species_3000 = "Three Thousand Species",
+	FEAT_men_species_all  = "All of Azeroth",
 	FEAT_shiny_seen_1    = "A Glint in the Grass",
 	FEAT_shiny_found_5   = "Magpie Eye",
 	FEAT_shiny_found_15  = "Stardust",
