@@ -2527,26 +2527,34 @@ local function RefreshEvolution(self, frame)
 	for _, def in ipairs(ns.COMPANION_ORNAMENTS or {}) do
 		if self:CompanionIsUnlocked("orn", def) then
 			count = count + 1
-			local button = pane.orns[count]
-			if not button then
-				button = Theme.CreateButton(pane, "auto", "sm", "", nil)
-				pane.orns[count] = button
-			end
+			-- 3.5.0 (bêta 1, en jeu) : deux boutons du socle par ornement,
+			-- « primary » porté, « outline » rangé ; recolorer un bouton à la main
+			-- ne tenait pas au thème forgé (la plaque repeint au survol : on ne
+			-- voyait pas s'il était porté)
+			local pair = pane.orns[count]
 			local label = L[def.label] or def.id
-			button.text:SetText(label)
-			button:SetWidth(Theme.ButtonWidth(pane, label))
-			button:SetScript("OnClick", function()
-				local db = ns:DB()
-				db[def.key] = not ns:CompanionOrnamentShown(def)
-				if ns.CompanionApplyOrnaments then pcall(ns.CompanionApplyOrnaments, ns) end
-				ns:RefreshJournal()
-			end)
+			if not pair then
+				local made = {}
+				local function Toggle()
+					local d = made.def   -- la paire de CE bouton (pas le compteur de la boucle)
+					local db = ns:DB()
+					db[d.key] = not ns:CompanionOrnamentShown(d)
+					if ns.CompanionApplyOrnaments then pcall(ns.CompanionApplyOrnaments, ns) end
+					ns:RefreshJournal()
+				end
+				made.on = Theme.CreateButton(pane, "auto", "sm", label, Toggle, "primary")
+				made.off = Theme.CreateButton(pane, "auto", "sm", label, Toggle, "outline")
+				function made:Hide() self.on:Hide(); self.off:Hide() end
+				pair = made
+				pane.orns[count] = pair
+			end
+			pair.def = def
 			local on = self:CompanionOrnamentShown(def)
-			-- ornement porté : la sélection
-			local c = on and Theme.SELECT or Theme.EDGE
-			if button.border and button.border.SetColor then button.border:SetColor(c[1], c[2], c[3], 1) end
-			local tc = on and Theme.SELECT or Theme.MUTED_LIGHT
-			button.text:SetTextColor(tc[1], tc[2], tc[3])
+			local button, other = on and pair.on or pair.off, on and pair.off or pair.on
+			other:Hide()
+			button:SetText(label)
+			button:SetWidth(Theme.ButtonWidth(pane, label))
+			pair.shown = button
 			local w = button:GetWidth()
 			if x > 0 and x + w > HALF then x, y = 0, y + 24 end
 			At(button, content, pane.ornX + x, pane.ornTop - y)

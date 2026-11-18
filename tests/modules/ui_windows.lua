@@ -438,6 +438,33 @@ function C.Done()
 	ResetWorld()
 end
 
+-- 3.5.0 (bêta 1, retour en jeu) : les bascules d'ornement de la page Compagnon --------------------------------
+for _, style in ipairs({ "sobre", "azeroth" }) do
+	Say("-- qc35 page Compagnon : bascules d'ornement (" .. style .. ")")
+	C.Reset(style)
+	local orns = NS.COMPANION_ORNAMENTS
+	local a, b = orns[1], orns[2]
+	local data = NS:CompanionData()
+	data.unlocked["orn:" .. a.id], data.unlocked["orn:" .. b.id] = true, true
+	NS:DB()[a.key], NS:DB()[b.key] = nil, false
+	NS:ToggleJournal(true)
+	NS:SelectJournalKind("evolution")
+	local pane = NS.journalFrame.evo
+	local pairA, pairB = pane.orns[1], pane.orns[2]
+	Want(style .. " : porté = bouton plein, rangé = contour, un seul des deux montré", pairA and pairB
+		and pairA.on:IsShown() and not pairA.off:IsShown() and pairB.off:IsShown() and not pairB.on:IsShown())
+	local before = #Mock.frames
+	pairA.on:GetScript("OnClick")(pairA.on)
+	Want(style .. " : clic sur un porté : rangé, son contour revient", NS:DB()[a.key] == false
+		and pairA.off:IsShown() and not pairA.on:IsShown())
+	pairB.off:GetScript("OnClick")(pairB.off)
+	Want(style .. " : clic sur un rangé : porté, bouton plein", NS:CompanionOrnamentShown(b)
+		and pairB.on:IsShown() and not pairB.off:IsShown())
+	Want(style .. " : basculer ne crée aucun cadre", #Mock.frames == before, #Mock.frames .. "/" .. before)
+	Verdict("[UI35] " .. style .. " : bascules d'ornement : porté / rangé visible, un clic bascule, rien de créé")
+	C.Done()
+end
+
 -- 4. Réserve : rangée du haut à une hauteur, pastille, deuxième rangée -------------------------------------
 for _, style in ipairs({ "sobre", "azeroth" }) do
 	Say("-- qc30 composants : Réserve (" .. style .. ")")

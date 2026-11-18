@@ -539,7 +539,11 @@ do
 			and NS:CompanionCurrentStyle("frame").id == "copper" and evo.frameStyle:Choose("oak") == false
 			and NS:CompanionCurrentStyle("frame").id == "copper")
 		local function Ribbon()
-			for _, button in ipairs(evo.orns) do if button:IsShown() and button.text.text == NS.L.COMP_ORN_RIBBON then return button end end
+			-- 3.5.0 : une paire par ornement (porté : plein, rangé : contour), celui qu'on voit
+			for _, pair in ipairs(evo.orns) do
+				local button = pair.shown
+				if button and button:IsShown() and button.text.text == NS.L.COMP_ORN_RIBBON then return button end
+			end
 		end
 		local worn = Ribbon() and NS:DB().companionOrnRibbon ~= false and W.Find(T.Collection("orn"), "ribbon").equipped
 		Ribbon():Click()
