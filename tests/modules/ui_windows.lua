@@ -472,8 +472,8 @@ for _, style in ipairs({ "sobre", "azeroth" }) do
 			and Apart(hint, grid) and rv.hint:GetText() == NS.L.RES_HINT)
 		Want(style .. " : au-dessus du pied du carnet", f.footer == nil or button.top + button.height <= R(f.footer).top)
 	end
-	Want(style .. " : 2e rangée : listes et puces Tous / Brillants à la même hauteur", rv.sort:GetHeight() == H
-		and rv.species:GetHeight() == H and rv.show.chips[1]:GetHeight() == H and rv.show:GetHeight() == H)
+	Want(style .. " : 2e rangée : les trois listes (tri, espèce, filtre) à la même hauteur", rv.sort:GetHeight() == H
+		and rv.species:GetHeight() == H and rv.filter:GetHeight() == H)
 	Want(style .. " : pastille de la Réserve : solde", not pane.balance.mockHidden and pane.balance.value:GetText() == "40"
 		and pane.balance.flash ~= nil, tostring(pane.balance:IsShown()) .. " " .. tostring(pane.balance.value:GetText()))
 	local before = #Mock.frames

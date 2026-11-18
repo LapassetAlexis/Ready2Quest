@@ -18,7 +18,8 @@ if ns.blocked then return end
 local L = ns.L
 
 ns.RESERVE_TIDY_COUNT = 5
-ns.RESERVE_TIDY_NEAR = 2
+-- 3.3.1 : 2 -> 5 places (Réserve de 50 : on prévient plus tôt)
+ns.RESERVE_TIDY_NEAR = 5
 ns.RESERVE_TIDY_DIM = 0.4     -- vignettes hors sélection
 
 local FR = {
@@ -59,10 +60,16 @@ ns.RegisterCompanionLines({
 		{ "Ma réserve déborde (%d/%d) ! On fait le tri ? /qc tri", "My reserve is overflowing (%d/%d)! Tidy up? /qc tri" },
 		{ "Plus beaucoup de place (%d/%d)… On relâche les moins jolis ? /qc tri", "Running out of room (%d/%d)… Release the plainest ones? /qc tri" },
 		{ "%d sur %d, ça se bouscule là-dedans ! /qc tri", "%d out of %d, it's getting crowded in there! /qc tri" },
+		{ "Attention, presque plus de place dans ta Réserve (%d/%d) ! /qc tri", "Careful, your Reserve is almost full (%d/%d)! /qc tri" },
+	},
+	-- 3.3.1 : la Réserve pleine (une fois, jusqu'à ce qu'elle se vide un peu)
+	RESERVE_FULL = {
+		{ "Réserve pleine (%d/%d) ! Plus rien n'y rentre : fais de la place, /qc tri", "Reserve full (%d/%d)! Nothing else fits: make room, /qc tri" },
+		{ "Plus une place dans la Réserve (%d/%d). On relâche les moins jolis ? /qc tri", "Not a single slot left in the Reserve (%d/%d). Release the plainest ones? /qc tri" },
 	},
 }, true)
 local rules = ns.COMPANION_RULES
-if rules and type(rules.cooldowns) == "table" then rules.cooldowns.reserve = 600 end
+if rules and type(rules.cooldowns) == "table" then rules.cooldowns.reserve, rules.cooldowns.reservefull = 600, 120 end
 
 -- ---------------------------------------------------------------------------
 -- Choix des spécimens
@@ -216,12 +223,20 @@ function ns:ReserveTidyWarn()
 	local capture = self.CaptureData and self:CaptureData()
 	if not capture then return false end
 	if not self:ReserveNearFull() then
-		capture.tidyWarned = nil
+		capture.tidyWarned, capture.fullWarned = nil, nil
 		return false
 	end
-	if capture.tidyWarned or #self:ReserveTidyCandidates(1) == 0 then return false end
-	local said = self.CompanionSay and self:CompanionSay("RESERVE_NEAR", { cd = "reserve",
-		args = { self:SpecimenReserveCount(), self:ReserveCapacity() } })
+	if not self:ReserveFull() then capture.fullWarned = nil end
+	if #self:ReserveTidyCandidates(1) == 0 then return false end
+	local args = { self:SpecimenReserveCount(), self:ReserveCapacity() }
+	-- pleine : une fois (3.3.1) ; presque pleine : une fois avant
+	if self:ReserveFull() and not capture.fullWarned then
+		local said = self.CompanionSay and self:CompanionSay("RESERVE_FULL", { cd = "reservefull", args = args })
+		if said then capture.fullWarned, capture.tidyWarned = true, true end
+		return said and true or false
+	end
+	if capture.tidyWarned then return false end
+	local said = self.CompanionSay and self:CompanionSay("RESERVE_NEAR", { cd = "reserve", args = args })
 	if said then capture.tidyWarned = true end
 	return said and true or false
 end

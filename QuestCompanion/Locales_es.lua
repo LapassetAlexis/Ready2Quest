@@ -12,6 +12,9 @@ if not ns.RegisterLocaleStrings then return end
 
 
 ns.RegisterLocaleStrings("es", {
+	["COMP_SAY_RESERVE_FULL"] = "¡Reserva llena (%d/%d)! Ya no cabe nada: haz sitio, /qc tri",
+	["COMP_SAY_RESERVE_FULL_2"] = "Ni un hueco libre en la Reserva (%d/%d). ¿Liberamos los menos bonitos? /qc tri",
+	["COMP_SAY_RESERVE_NEAR_4"] = "¡Cuidado, casi no queda sitio en tu Reserva (%d/%d)! /qc tri",
 	["ACTION_REFUSED_CHAT"] = "acción rechazada por el juego (%s). /qc diag para los detalles, para enviarlos en el Discord.",
 	["ADDONS_COPY_HINT"] = "Haz clic en un enlace y luego Ctrl+C para copiarlo.",
 	["ADDONS_DISABLED"] = "Instalado pero desactivado. Actívalo en la pantalla de selección de personaje (botón AddOns) y luego /reload.",
@@ -4881,6 +4884,8 @@ ns.RegisterLocaleStrings("es", {
 	["RES_RELEASE"] = "Liberar (+%d %s)",
 	["RES_SHOW_all"] = "Todos",
 	["RES_SHOW_shiny"] = "Brillantes",
+	["RES_FILTER_SIZE"] = "tamaño",
+	["RES_FILTER_TRAIT"] = "carácter",
 	["RES_SORT_date"] = "Orden: fecha",
 	["RES_SORT_name"] = "Orden: nombre",
 	["RES_SORT_stars"] = "Orden: calidad",

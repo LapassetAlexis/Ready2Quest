@@ -83,6 +83,8 @@ local FR = {
 	RES_SORT_name        = "Tri : nom",
 	RES_SHOW_all         = "Tous",
 	RES_SHOW_shiny       = "Brillants",
+	RES_FILTER_SIZE      = "taille",
+	RES_FILTER_TRAIT     = "caractère",
 	RES_SPECIES_ALL      = "Toutes les espèces",
 	RES_FULL             = "Réserve pleine (%d/%d) : relâche des spécimens ou ajoute des places à l'Échoppe.",
 	RES_HINT             = "Clic sur un spécimen : sa fiche. Le meilleur de chaque espèce reste au Codex.",
@@ -161,6 +163,8 @@ local EN = {
 	RES_SORT_name        = "Sort: name",
 	RES_SHOW_all         = "All",
 	RES_SHOW_shiny       = "Shiny",
+	RES_FILTER_SIZE      = "size",
+	RES_FILTER_TRAIT     = "personality",
 	RES_SPECIES_ALL      = "Every species",
 	RES_FULL             = "Reserve full (%d/%d): release specimens or add slots at the Stall.",
 	RES_HINT             = "Click a specimen: its card. The best of each species stays in the Codex.",
@@ -415,9 +419,36 @@ function ns:ReserveLocate(id)
 	return set and true or false
 end
 
--- Réserve filtrée et triée (filtre : npc, brillants) : table neuve
-function ns:ReserveView(sort, npc, shinyOnly)
-	return self:SpecimenList({ where = "reserve", sort = sort or "stars", npc = npc, shiny = shinyOnly and true or nil })
+-- Réserve filtrée et triée : table neuve. `filter` : "all" | "shiny" (ou
+-- true) | "size:<taille>" | "trait:<caractère>" (3.3.1, liste « Filtre »)
+function ns:ReserveView(sort, npc, filter)
+	if filter == true then filter = "shiny" end
+	local list = self:SpecimenList({ where = "reserve", sort = sort or "stars", npc = npc,
+		shiny = filter == "shiny" or nil })
+	local kind, value = tostring(filter or ""):match("^(%a+):(.+)$")
+	if kind == "size" or kind == "trait" then
+		local kept = {}
+		for _, spec in ipairs(list) do
+			local have = kind == "size" and (spec.size or "normal") or spec.trait
+			if have == value then kept[#kept + 1] = spec end
+		end
+		list = kept
+	end
+	return list
+end
+
+-- 3.3.1 : les choix de la liste « Filtre » : tous, brillants, les tailles,
+-- les caractères tirés à la capture (nom, et sa sorte en indication)
+function ns:ReserveFilterChoices()
+	local list = { { value = "all", label = L.RES_SHOW_all }, { value = "shiny", label = L.RES_SHOW_shiny } }
+	for _, size in ipairs(ns.SPECIMEN_SIZES or {}) do
+		list[#list + 1] = { value = "size:" .. size.id, label = self:SpecimenSizeLabel(size.id), hint = L.RES_FILTER_SIZE }
+	end
+	for _, pair in ipairs(ns.SPECIMEN_TRAIT_WEIGHTS or {}) do
+		local label = self.PersonaLabel and self:PersonaLabel(pair[1]) or pair[1]
+		list[#list + 1] = { value = "trait:" .. pair[1], label = label, hint = L.RES_FILTER_TRAIT }
+	end
+	return list
 end
 
 -- ---------------------------------------------------------------------------
@@ -633,13 +664,14 @@ local function Build(self, frame, content, ui)
 		ns:RefreshJournal()
 	end, { listWidth = 230, maxRows = 12 })
 	At(rv.species, content, 142, rowY)
-	local shows = {}
-	for _, key in ipairs(ns.RESERVE_SHOWS) do shows[#shows + 1] = { id = key, label = L["RES_SHOW_" .. key] } end
-	rv.show = Theme.CreateChips(rv, shows, function(id)
-		frame.resShow, frame.resOffset = id, 0
+	-- 3.3.1 : « Filtre » : tous, brillants, une taille ou un caractère (à la
+	-- place des puces Tous / Brillants : la rangée n'a pas la place de plus)
+	rv.filter = Theme.CreateDropdown(rv, GRID_W - 332, function(value)
+		frame.resShow, frame.resOffset = value, 0
 		ns:RefreshJournal()
-	end)
-	At(rv.show, content, 332, rowY)
+	end, { listWidth = 230, maxRows = 12 })
+	rv.filter:SetOptions(ns:ReserveFilterChoices())
+	At(rv.filter, content, 332, rowY)
 	-- avertissement (Réserve pleine), au-dessus de la grille, sur une rangée de
 	-- la hauteur des boutons « Faire de la place » et du cadeau (3.2.1 : le
 	-- bouton mordait sur la grille et touchait les filtres, retour en jeu)
@@ -1041,8 +1073,8 @@ local function RefreshReserve(self, frame, pane)
 		rv.species:SetOptions(options)
 		rv.species:SetValue(frame.resNpc or "all")
 		rv.sort:SetValue(frame.resSort or "stars")
-		rv.show:Select(frame.resShow or "all", true)
-		list = self:ReserveView(frame.resSort, frame.resNpc, frame.resShow == "shiny")
+		rv.filter:SetValue(frame.resShow or "all")
+		list = self:ReserveView(frame.resSort, frame.resNpc, frame.resShow)
 		rv.lastList, rv.lastAll = list, all
 	end
 	frame.resList = list

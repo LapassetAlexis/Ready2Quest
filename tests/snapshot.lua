@@ -1522,6 +1522,18 @@ Snap.scenes["qc-journal-reserve-full"] = function(T) return OwnDraws(T, function
 	return frame, "QuestCompanion : carnet, Réserve presque pleine (Faire de la place)"
 end) end
 
+-- 3.3.1 : la liste « Filtre » ouverte (tous, brillants, tailles, caractères)
+Snap.scenes["qc-journal-reserve-filter"] = function(T) return OwnDraws(T, function(T)
+	local frame = QCJournal(T, "reserve", function(ns)
+		for index = 1, 8 do
+			ns:SpecimenAdd({ npc = 3236, stars = index % 3 + 1, name = "Kodo des Tarides", origin = "capture", by = "Testeur",
+				zone = 1413, at = 1793000000 + index })
+		end
+	end)
+	T.QNS.journalFrame.res.reserve.filter:Open(true)
+	return frame, "QuestCompanion : carnet, Réserve, liste Filtre ouverte"
+end) end
+
 -- 3.1.0 : page Juke-box
 Snap.scenes["qc-journal-juke"] = function(T) return OwnDraws(T, function(T)
 	local frame = QCJournal(T, "juke")

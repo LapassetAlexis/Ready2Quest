@@ -918,7 +918,13 @@ do
 		NS.CompanionSay = function(_, pool, opts) said[#said + 1] = pool .. " " .. table.concat(opts.args or {}, "/"); return true end
 		for i = 1, 4 do NS:SpecimenAdd({ npc = 900, stars = 1, name = "Raptor", at = 1794000000 + i }) end
 		NS.CompanionSay = savedSay
-		ok("presque pleine : le compagnon prévient une fois", #said == 1 and said[1] == "RESERVE_NEAR 48/50", table.concat(said, ", "))
+		ok("presque pleine (5 places) : le compagnon prévient une fois", #said == 1 and said[1] == "RESERVE_NEAR 45/50", table.concat(said, ", "))
+		-- 3.3.1 : pleine : il le dit aussi, une fois
+		said = {}
+		NS.CompanionSay = function(_, pool, opts) said[#said + 1] = pool .. " " .. table.concat(opts.args or {}, "/"); return true end
+		for i = 1, NS:ReserveCapacity() - NS:SpecimenReserveCount() + 1 do NS:SpecimenAdd({ npc = 900, stars = 1, name = "Raptor", at = 1795000000 + i }) end
+		NS.CompanionSay = savedSay
+		ok("pleine : le compagnon le dit une fois", #said == 1 and said[1] == "RESERVE_FULL 50/50", table.concat(said, ", "))
 		ok("réplique avec /qc tri", NS.L.COMP_SAY_RESERVE_NEAR:find("/qc tri", 1, true) ~= nil)
 		Check("[TIDY] Faire de la place : 48/50, les moins précieux, sélection, retrait, relâcher, annuler, /qc tri, avertissement",
 			#bad == 0 and NoErrors(), table.concat(bad, " ; "))
@@ -953,11 +959,26 @@ do
 		rv.species:Choose(900)
 		if not (ShownTiles(rv) == 2 and TileOf(rv, ids.low) and TileOf(rv, ids.mid)) then bad[#bad + 1] = "espèce" end
 		rv.species:Choose("all")
-		rv.show:Select("shiny")
+		rv.filter:Choose("shiny")
 		if not (TileOf(rv, ids.shiny) and not TileOf(rv, ids.low)) then bad[#bad + 1] = "brillants" end
-		rv.show:Select("all")
+		-- 3.3.1 : une taille, un caractère
+		-- (tailles et caractères tirés au hasard : fixés ici)
+		for _, spec in ipairs(NS:SpecimenList({ where = "reserve" })) do
+			local stored = NS:SpecimenGet(spec.id)
+			stored.size, stored.trait = "normal", "lazy"
+		end
+		NS:SpecimenGet(ids.low).size, NS:SpecimenGet(ids.mid).trait = "giant", "zen"
+		NS:SpecimenGet(ids.low).trait = "curious"
+		rv.filter:Choose("size:giant")
+		if not (ShownTiles(rv) == 1 and TileOf(rv, ids.low)) then bad[#bad + 1] = "taille" end
+		rv.filter:Choose("trait:zen")
+		if not (TileOf(rv, ids.mid) and not TileOf(rv, ids.low)) then bad[#bad + 1] = "caractère" end
+		local labels = {}
+		for _, entry in ipairs(rv.filter.options or {}) do labels[#labels + 1] = entry.value end
+		if #labels ~= 2 + #NS.SPECIMEN_SIZES + #NS.SPECIMEN_TRAIT_WEIGHTS then bad[#bad + 1] = "choix " .. #labels end
+		rv.filter:Choose("all")
 		rv.sort:Choose("stars")
-		Check("[J215] tris (date, nom) et filtres (espèce, brillants)", #bad == 0, table.concat(bad, ", "))
+		Check("[J215] tris (date, nom) et filtres (espèce, brillants, taille, caractère)", #bad == 0, table.concat(bad, ", "))
 		-- fiche : origine, meilleur que le Codex, bouton grisé et pourquoi
 		TileOf(rv, ids.better):GetScript("OnClick")(TileOf(rv, ids.better))
 		local p = rv.preview

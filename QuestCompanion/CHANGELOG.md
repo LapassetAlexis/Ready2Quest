@@ -1,5 +1,16 @@
 # QuestCompanion
 
+## 3.3.1 — Une Réserve plus grande
+
+- **Réserve : 50 places au départ** (20 avant) : au rythme des captures, elle se remplissait en une demi-heure de chasse. Les places déjà achetées s'ajoutent.
+- **Relâcher rapporte plus** : 2 / 4 / 10 paillettes selon les étoiles, 25 pour un brillant (1 / 3 / 8 / 20 avant).
+- **Échoppe** : +10 places pour 40 paillettes (+5 pour 50 avant) ; appât 4, lasso 12, sifflet 35.
+- **Filtre de la Réserve** : tous, brillants, une taille ou un caractère.
+- **« Faire de la place »** en bas, à gauche de « Échanger avec ma cible ».
+- **Le compagnon prévient plus tôt** quand la Réserve se remplit (5 places avant la fin), et une fois quand elle est pleine.
+
+*English:* a bigger Reserve: 50 slots to start with (20 before), slots already bought add up. Releasing pays more: 2 / 4 / 10 glitter by stars, 25 for a shiny. Shop: +10 slots for 40 glitter (+5 for 50 before); bait 4, lasso 12, whistle 35. Reserve filter: all, shinies, a size or a personality. "Make room" now sits at the bottom, left of "Trade with my target". The companion warns earlier when the Reserve fills up (5 slots before the end), and once when it is full.
+
 ## 3.3.0 — En espagnol
 
 - **Quest Companion parle espagnol** (clients esES et esMX) : toute l'interface, les répliques, blagues, cris et voix du compagnon, les titres des hauts faits, le juke-box et l'histoire des lieux. La langue du jeu est détectée toute seule ; une phrase pas encore traduite s'affiche en anglais.
