@@ -34,7 +34,7 @@ local FR = {
 	SHOP_NICK_FREE   = "Surnom offert (lien Inséparable)",
 	SHOP_ARRIVALS    = "Arrivage de la semaine",
 	SHOP_ORDERS      = "Commandes de la semaine",
-	ORDER_typeSize   = "Un %s %s ou plus grand",
+	ORDER_typeSize   = "Type %s, taille %s ou plus",
 	ORDER_traitStars = "Un %s de %d étoiles ou plus",
 	ORDER_zone       = "Une créature de la zone %s",
 	ORDER_REWARD     = "+%d paillettes",
@@ -57,7 +57,7 @@ local EN = {
 	SHOP_NICK_FREE   = "Free nickname (Inseparable bond)",
 	SHOP_ARRIVALS    = "This week's arrivals",
 	SHOP_ORDERS      = "This week's orders",
-	ORDER_typeSize   = "A %s, %s or bigger",
+	ORDER_typeSize   = "Type %s, size %s or bigger",
 	ORDER_traitStars = "A %s with %d stars or more",
 	ORDER_zone       = "A creature from %s",
 	ORDER_REWARD     = "+%d glitter",
@@ -243,7 +243,14 @@ end
 
 local function Draw(self, week)
 	local seed = Seed(week .. ":orders")
-	local types = ns.CREATURE_TYPES or { "beast" }
+	-- bêta 2 (en jeu) : un type que tu as déjà capturé (pas « Géant » à qui n'en a jamais vu)
+	local types, have = {}, {}
+	for _, entry in pairs(self:CaptureData().creatures or {}) do
+		local key = type(entry) == "table" and (entry.typeKey or (self.CreatureTypeKey and self:CreatureTypeKey(entry.type)))
+		if key then have[key] = true end
+	end
+	for _, key in ipairs(ns.CREATURE_TYPES or {}) do if have[key] then types[#types + 1] = key end end
+	if #types == 0 then types = ns.CREATURE_TYPES or { "beast" } end
 	local traits = {}
 	for _, pair in ipairs(ns.SPECIMEN_TRAIT_WEIGHTS or {}) do traits[#traits + 1] = pair[1] end
 	local list = {

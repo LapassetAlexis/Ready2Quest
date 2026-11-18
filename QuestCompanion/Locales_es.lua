@@ -4916,7 +4916,7 @@ ns.RegisterLocaleStrings("es", {
 	["ORDER_WHY_keep"] = "Este ejemplar no puede irse (protegido, llevado o mejor que el del Códice).",
 	["ORDER_WHY_match"] = "Este ejemplar no corresponde al encargo.",
 	["ORDER_traitStars"] = "Un %s de %d estrellas o más",
-	["ORDER_typeSize"] = "Un %s, %s o más grande",
+	["ORDER_typeSize"] = "Tipo %s, tamaño %s o más",
 	["ORDER_zone"] = "Una criatura de la zona %s",
 	["PAILLETTES_MILESTONE_GAIN"] = "+%d de purpurina: hito de zona (%d%%).",
 	["PAILLETTES_NAME"] = "purpurina",
