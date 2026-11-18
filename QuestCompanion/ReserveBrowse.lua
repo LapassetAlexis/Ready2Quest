@@ -40,6 +40,8 @@ ns.RESERVE_ICONS = {
 	lock = "Interface\\Buttons\\LockButton-Locked-Up",
 	better = "Interface\\Buttons\\Arrow-Up-Up",
 	check = "Interface\\Buttons\\UI-CheckBox-Check",
+	-- 3.6.0 : la marque « Inséparable » (FileDataID 135451)
+	inseparable = "Interface\\Icons\\INV_ValentinesCandy",
 	up = "Interface\\Buttons\\Arrow-Up-Up",
 	down = "Interface\\Buttons\\Arrow-Down-Up",
 	locate = "Interface\\Icons\\INV_Misc_Map_01",
@@ -91,7 +93,7 @@ local FR = {
 	RES_NICK_PLACE    = "Surnom (24 lettres au plus)",
 	RES_NICK_GIVE     = "Donner (%d)",
 	RES_NICK_OK       = "Valider",
-	RES_CODEX_ASK     = "Ton exemplaire du Codex est lié (%s) : %s prend sa place ? Le lien reste à l'ancien, qui passe en Réserve.",
+	RES_CODEX_ASK     = "Ton spécimen du Codex est lié (%s) : %s prend sa place ? Le lien reste à l'ancien, qui passe en Réserve.",
 	RES_CODEX_YES     = "Remplacer",
 	RES_ORDER_DELIVER = "Livrer (+%d %s)",
 	RES_ORDER_HEAD    = "Commande : %s",
@@ -317,12 +319,12 @@ function ns:ReserveSelectReleasable()
 		if spec then
 			if not spec.shiny and self:SpecimenCanRelease(spec.id) then
 				list[#list + 1] = spec
-				gain = gain + self:SpecimenReleaseValue(spec)
 			else
 				aside = aside + 1
 			end
 		end
 	end
+	gain = self:SpecimenReleaseTotal(list)   -- 3.6.0 : demi-tarif du jour compris
 	return list, gain, aside
 end
 
@@ -826,6 +828,10 @@ function ns.ReserveTileExtras(tile)
 	tile.better:SetVertexColor(Theme.GREEN[1], Theme.GREEN[2], Theme.GREEN[3], 1)
 	tile.check = Badge(tile, ICON.check, 20)
 	tile.check:SetPoint("BOTTOMRIGHT", tile, "TOPRIGHT", -1, -50)
+	-- 3.6.0 : marque « Inséparable » (lien 5) : un cœur du client, en bas à
+	-- gauche du portrait (l'or reste aux brillantes)
+	tile.inseparable = Badge(tile, ICON.inseparable, 14)
+	tile.inseparable:SetPoint("BOTTOMLEFT", tile, "TOPLEFT", 3, -46)
 	tile.pips = {}
 	local pw, gap = 8, 2
 	local x0 = math.floor((ns.RESERVE_LAYOUT.tileW - (4 * pw + 3 * gap)) / 2)
@@ -856,6 +862,9 @@ function ns:ReserveTilePaintExtras(tile, spec, selected)
 	local level = mine and self.SpecimenBondLevel and self:SpecimenBondLevel(spec) or 1
 	for index, pip in ipairs(tile.pips) do
 		if index <= level - 1 then pip:Show() else pip:Hide() end
+	end
+	if tile.inseparable then
+		if level >= #(ns.BOND_LEVELS or { 1, 2, 3, 4, 5 }) then tile.inseparable:Show() else tile.inseparable:Hide() end
 	end
 	if selected then tile.check:Show() else tile.check:Hide() end
 end

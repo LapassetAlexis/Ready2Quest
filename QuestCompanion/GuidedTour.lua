@@ -41,6 +41,20 @@
 --     en première étape.
 -- Le tutoriel de la ménagerie en bulles (2.3.0) est retiré : ces visites le
 -- remplacent (Companion.lua).
+-- 3.6.0 (la première heure) :
+--   * la visite des captures suit la capture express (active par défaut) :
+--     un clic = lancer, Maj + clic = toute la file, Ctrl + clic = la carte de
+--     préparation (ses deux étapes ne viennent que si on l'ouvre) ; capture
+--     express coupée : le déroulé d'avant (carte, Lancer / Passer) ;
+--   * après la toute première capture du compte, une bulle « Partir avec
+--     lui » / « Plus tard » (visite « mate ») : il devient l'apparence du
+--     compagnon, et la bulle explique le lien ;
+--   * à la première tâche d'étude finie, une bulle, une fois (visite
+--     « study ») : les cinq choses à apprendre d'une espèce ;
+--   * ces deux bulles attendent leur tour (tour30.pending) : aucune visite en
+--     cours, hors combat, compagnon à l'écran ; une étape peut cacher son
+--     compteur (noStep) et son bouton « Passer » (noSkip) ; une visite peut
+--     se passer sans message (quietSkip) et dire autre chose (onSkip).
 local ADDON, ns = ...
 if ns.blocked then return end
 local L = ns.L
@@ -84,8 +98,10 @@ local FR = {
 	TOUR_A1              = "Le filet n'apparaît que quand ça vaut le coup : espèce nouvelle, brillante, ou meilleur spécimen que le tien. Le badge d'étoiles montre sa qualité. Clique sur le filet.",
 	TOUR_A2_T            = "La carte de préparation",
 	TOUR_A2              = "En haut, la qualité (1 à 3 étoiles) : plus le spécimen est beau, plus il se débat. Dessous, ta chance. Choisis une aide : la chance se met à jour.",
+	-- 3.6.0 : capture express (active par défaut)
+	TOUR_A1X             = "Le filet n'apparaît que quand ça vaut le coup : espèce nouvelle, brillante, ou meilleur spécimen que le tien. Clic : lancer. Maj + clic : toute la file. Ctrl + clic : la carte de préparation, pour choisir une aide.",
 	TOUR_A3_T            = "Lancer ou passer",
-	TOUR_A3              = "Lancer : le filet part. Passer : le monstre sort du filet (clic droit : ne plus proposer l'espèce). Raccourci : Maj + clic sur le filet lance tout de suite.",
+	TOUR_A3              = "Lancer : le filet part. Passer : le monstre sort du filet (clic droit : ne plus proposer l'espèce). Avec la capture express (active par défaut), un clic sur le filet lance tout de suite et Ctrl + clic rouvre cette carte.",
 	TOUR_A4_T            = "Où va ta prise ?",
 	TOUR_A4_codex        = "Capturé ! C'est ton meilleur spécimen de l'espèce : il va au Codex. Les suivants, s'ils ne le battent pas, iront dans ta Réserve. Clic droit sur ton compagnon : le carnet.",
 	TOUR_A4_reserve      = "Capturé ! Ton Codex avait déjà mieux : ce spécimen rejoint ta Réserve. Clic droit sur ton compagnon : le carnet, pour voir Codex et Réserve.",
@@ -105,13 +121,24 @@ local FR = {
 	TOUR_B_addons        = "L'autre addon du projet, Ready2Quest : s'il est là, et ce que les deux font ensemble.",
 	-- ta collection d'avant la 3.0
 	TOUR_MIG_T           = "Ta collection passe en 3.0",
-	TOUR_MIG             = "Tes créatures capturées avant la 3.0 (%d espèces) sont devenues %d spécimens au Codex, dont %d brillants, gardés à part. Rien n'est perdu : apparences, hauts faits et Ménagerie ne bougent pas ; ces spécimens portent la mention « %s ».\n\nDésormais, la qualité se tire au coup fatal et le filet ne vient que si ça vaut le coup : les réglages « Recaptures » ont disparu. Une nouvelle capture va au Codex si elle bat la tienne, sinon dans ta Réserve. À voir dans le carnet : Créatures et Réserve.",
+	TOUR_MIG             = "Tes créatures capturées avant la 3.0 (%d espèces) sont devenues %d spécimens au Codex, dont %d brillants, gardés à part. Rien n'est perdu : apparences, hauts faits et page Créatures ne bougent pas ; ces spécimens portent la mention « %s ».\n\nDésormais, la qualité se tire au coup fatal et le filet ne vient que si ça vaut le coup : les réglages « Recaptures » ont disparu. Une nouvelle capture va au Codex si elle bat la tienne, sinon dans ta Réserve. À voir dans le carnet : Créatures et Réserve.",
 	TOUR_MIG_GO          = "Visiter le carnet",
 	TOUR_MIG_LATER       = "Plus tard",
 	TOUR_MIG_GIFT        = "Et un cadeau t'attend : choisis jusqu'à %d de tes créatures, une copie de chacune ira dans ta Réserve.",
 	TOUR_GIFT_T          = "Cadeau de la 3.0",
 	TOUR_GIFT            = "Choisis jusqu'à %d créatures pour ta Réserve : une copie de chacune (version normale, mêmes étoiles que ton Codex), de quoi échanger plus tard. « Plus tard » : le bouton reste dans la page Réserve.",
 	TOUR_GIFT_GO         = "Choisir mes créatures",
+	-- 3.6.0 : après la toute première capture
+	TOUR_MATE_T          = "On part ensemble ?",
+	TOUR_MATE            = "Capturé : %s ! Emmène-le, il devient ton compagnon : plus tu voyages avec lui (route, friandises, caresses, quêtes, captures), plus ton lien avec lui grandit, et un lien fort lui donne des effets.",
+	TOUR_MATE_GO         = "Partir avec lui",
+	TOUR_MATE_LATER      = "Plus tard",
+	TOUR_MATE_DONE       = "%s part avec toi : il est ton compagnon. La mascotte reste dans « Choisir… » (page Compagnon).",
+	TOUR_MATE_SKIPPED    = "Plus tard, alors : page Créatures, un clic sur une créature capturée en fait ton compagnon.",
+	-- 3.6.0 : la première tâche d'étude
+	TOUR_STUDY_T         = "L'étude des espèces",
+	TOUR_STUDY           = "Chaque espèce a cinq choses à apprendre : la capturer, en avoir une à 3 étoiles, 5 captures, 3 tailles, 3 caractères. Chaque tâche finie : %d paillettes ; les cinq, %d de plus. Regarde ses losanges, page Créatures.",
+	TOUR_STUDY_OK        = "Compris",
 }
 local EN = {
 	TOUR_NEXT            = "Next",
@@ -129,8 +156,9 @@ local EN = {
 	TOUR_A1              = "The net only shows up when it's worth it: new species, shiny, or a better specimen than yours. The star badge shows its quality. Click the net.",
 	TOUR_A2_T            = "The preparation card",
 	TOUR_A2              = "At the top, the quality (1 to 3 stars): the finer the specimen, the harder it struggles. Below, your odds. Pick an aid: the odds update.",
+	TOUR_A1X             = "The net only shows up when it's worth it: new species, shiny, or a better specimen than yours. Click: throw. Shift + click: the whole queue. Ctrl + click: the preparation card, to pick an aid.",
 	TOUR_A3_T            = "Throw or skip",
-	TOUR_A3              = "Throw: the net flies. Skip: the monster leaves the net (right-click: stop offering the species). Shortcut: Shift + click on the net throws right away.",
+	TOUR_A3              = "Throw: the net flies. Skip: the monster leaves the net (right-click: stop offering the species). With express capture (on by default), a click on the net throws right away and Ctrl + click brings this card back.",
 	TOUR_A4_T            = "Where does it go?",
 	TOUR_A4_codex        = "Captured! It's your best specimen of the species: it goes to the Codex. The next ones, unless they beat it, will go to your Reserve. Right-click your companion: the journal.",
 	TOUR_A4_reserve      = "Captured! Your Codex already had better: this specimen joins your Reserve. Right-click your companion: the journal, to see Codex and Reserve.",
@@ -148,13 +176,22 @@ local EN = {
 	TOUR_B_guide         = "Everything is explained here, with the numbers. Bottom left, two buttons replay these tutorials.",
 	TOUR_B_addons        = "The project's other addon, Ready2Quest: whether it's there, and what the two do together.",
 	TOUR_MIG_T           = "Your collection moves to 3.0",
-	TOUR_MIG             = "Your creatures captured before 3.0 (%d species) became %d specimens in the Codex, including %d shinies, kept apart. Nothing is lost: looks, achievements and Menagerie stay the same; these specimens are marked \"%s\".\n\nFrom now on, quality is rolled at the kill and the net only shows up when it's worth it: the \"Recaptures\" settings are gone. A new capture goes to the Codex if it beats yours, otherwise to your Reserve. See it in the journal: Creatures and Reserve.",
+	TOUR_MIG             = "Your creatures captured before 3.0 (%d species) became %d specimens in the Codex, including %d shinies, kept apart. Nothing is lost: looks, achievements and the Creatures page stay the same; these specimens are marked \"%s\".\n\nFrom now on, quality is rolled at the kill and the net only shows up when it's worth it: the \"Recaptures\" settings are gone. A new capture goes to the Codex if it beats yours, otherwise to your Reserve. See it in the journal: Creatures and Reserve.",
 	TOUR_MIG_GO          = "Visit the journal",
 	TOUR_MIG_LATER       = "Later",
 	TOUR_MIG_GIFT        = "And a gift awaits: pick up to %d of your creatures, a copy of each goes to your Reserve.",
 	TOUR_GIFT_T          = "3.0 gift",
 	TOUR_GIFT            = "Pick up to %d creatures for your Reserve: a copy of each (normal version, same stars as your Codex), something to trade later. \"Later\": the button stays on the Reserve page.",
 	TOUR_GIFT_GO         = "Pick my creatures",
+	TOUR_MATE_T          = "Shall we go together?",
+	TOUR_MATE            = "Captured: %s! Take it along, it becomes your companion: the more you travel together (roads, treats, pats, quests, captures), the more your bond grows, and a strong bond gives it effects.",
+	TOUR_MATE_GO         = "Take it along",
+	TOUR_MATE_LATER      = "Later",
+	TOUR_MATE_DONE       = "%s comes with you: it is your companion now. The mascot stays in \"Choose…\" (Companion page).",
+	TOUR_MATE_SKIPPED    = "Later, then: on the Creatures page, a click on a captured creature makes it your companion.",
+	TOUR_STUDY_T         = "Studying species",
+	TOUR_STUDY           = "Each species has five things to learn: capture it, get a 3-star one, 5 catches, 3 sizes, 3 personalities. Each task done: %d glitter; all five, %d more. Look at its diamonds, Creatures page.",
+	TOUR_STUDY_OK        = "Got it",
 }
 ns.RegisterStrings(FR, EN)
 if ns.KEEP_STRINGS then ns.TOUR_STRINGS = { fr = FR, en = EN } end
@@ -227,12 +264,22 @@ local function Rolling()
 	return state ~= nil and state.rolling ~= nil
 end
 
+-- 3.6.0 : la capture express est-elle le déroulé ? (réglage, capture allumée)
+local function Express(self)
+	return self.CaptureExpressOn ~= nil and self:CaptureExpressOn() and true or false
+end
+-- les étapes de la carte : sans capture express, ou carte ouverte d'un Ctrl + clic
+local function CardStep(self, ctx)
+	return not ctx.thrown and (not Express(self) or Stage() ~= nil)
+end
+
 local DEFS = {}
 ns.TOUR_DEFS = DEFS
 
 DEFS.capture = {
 	steps = {
-		{ id = "net", anchor = function() return ns.captureNetButton end, title = "TOUR_A1_T", text = "TOUR_A1",
+		{ id = "net", anchor = function() return ns.captureNetButton end, title = "TOUR_A1_T",
+			text = function(self) return Express(self) and L.TOUR_A1X or L.TOUR_A1 end,
 			placement = "top", noNext = true, pulseNet = true,
 			waitFor = function(_, ctx) return ctx.thrown or Stage() ~= nil end,
 			-- le monstre est parti avant le clic : on reprendra à l'occasion suivante
@@ -240,9 +287,9 @@ DEFS.capture = {
 				if not ctx.thrown and QueueCount() == 0 and not Stage() and not Rolling() then return "stop" end
 			end },
 		{ id = "card", anchor = function() local f = Stage(); return f and f.details end, title = "TOUR_A2_T", text = "TOUR_A2",
-			placement = "right", when = function(_, ctx) return not ctx.thrown end },
+			placement = "right", when = CardStep },
 		{ id = "launch", anchor = function() local f = Stage(); return f and f.launch end, title = "TOUR_A3_T", text = "TOUR_A3",
-			placement = "bottom", noNext = true, when = function(_, ctx) return not ctx.thrown end },
+			placement = "bottom", noNext = true, when = CardStep },
 		{ id = "result", anchor = function() return ns.companionFrame end, fallback = true, title = "TOUR_A4_T",
 			text = function(_, ctx) return L["TOUR_A4_" .. (ctx.result == "ok" and (ctx.place or "codex") or "fail")] end,
 			placement = "top", ready = function(_, ctx) return ctx.result ~= nil end,
@@ -329,6 +376,62 @@ DEFS.migration = {
 			self:ToggleJournal(true)
 		end
 	end,
+}
+
+-- 3.6.0 : les bulles qui attendent leur tour (au compte) : tour30.pending =
+-- { mate = { npc, shiny, name }, study = true }
+local function Pending(self)
+	local data = self:TourData()
+	if type(data.pending) ~= "table" then data.pending = {} end
+	return data.pending
+end
+ns.TourPendingData = Pending
+
+-- « Partir avec lui » : l'apparence de la capture (« cap:<npc>[:s] »)
+local function MateLook(mate)
+	return "cap:" .. tostring(mate.npc) .. (mate.shiny and ":s" or "")
+end
+local function MateName(self, mate)
+	local name = mate.name
+	if self.CreatureName then name = self:CreatureName(mate.npc) or name end
+	if mate.shiny and self.F then name = self:F("CAPTURE_SHINY_TAG", tostring(name or "?")) end
+	return tostring(name or "?")
+end
+
+DEFS.mate = {
+	quietSkip = true,
+	steps = {
+		{ id = "mate", anchor = function() return ns.companionFrame end, fallback = true, placement = "top",
+			highlight = false, noStep = true, wide = true, title = "TOUR_MATE_T",
+			text = function(self) return self:F("TOUR_MATE", MateName(self, self.tourMate or {})) end,
+			nextLabel = "TOUR_MATE_GO", skipLabel = "TOUR_MATE_LATER" },
+	},
+	finish = function(self)
+		local mate = self.tourMate
+		self.tourMate = nil
+		if not (mate and self.CompanionSetAppearance) then return end
+		if self:CompanionSetAppearance(MateLook(mate)) then
+			if self.CompanionFx then pcall(self.CompanionFx, self, "hearts") end
+			self:Print(self:F("TOUR_MATE_DONE", MateName(self, mate)))
+		end
+	end,
+	onSkip = function(self)
+		self.tourMate = nil
+		self:Print(L.TOUR_MATE_SKIPPED)
+	end,
+}
+
+DEFS.study = {
+	quietSkip = true,
+	steps = {
+		{ id = "study", anchor = function() return ns.companionFrame end, fallback = true, placement = "top",
+			highlight = false, noStep = true, noSkip = true, wide = true, title = "TOUR_STUDY_T",
+			text = function(self)
+				local reward = ns.STUDY_REWARD or { task = 2, mastered = 5 }
+				return self:F("TOUR_STUDY", reward.task or 2, reward.mastered or 5)
+			end,
+			nextLabel = "TOUR_STUDY_OK" },
+	},
 }
 
 -- ---------------------------------------------------------------------------
@@ -498,12 +601,12 @@ local function ShowStep(self, st, step, anchor, fallback)
 	callout.title:SetText(Resolve(self, step.title, st.ctx) or "")
 	local text = Resolve(self, step.text, st.ctx) or ""
 	callout.text:SetText(text)
-	callout.step:SetText(self:F("TOUR_STEP", StepNumber(st), st.total))
+	callout.step:SetText(step.noStep and "" or self:F("TOUR_STEP", StepNumber(st), st.total))
 	local last = st.index >= #st.def.steps
 	callout.nextButton:SetText(step.nextLabel and Resolve(self, step.nextLabel, st.ctx) or (last and L.TOUR_DONE or L.TOUR_NEXT))
 	callout.skipButton:SetText(step.skipLabel and Resolve(self, step.skipLabel, st.ctx) or L.TOUR_SKIP)
 	if step.noNext then callout.nextButton:Hide() else callout.nextButton:Show() end
-	callout.skipButton:Show()
+	if step.noSkip then callout.skipButton:Hide() else callout.skipButton:Show() end
 	local textH = Theme.TextHeight and Theme.TextHeight(callout.text, inner, Theme.F_BODY) or 40
 	local height = TOUR.pad + TOUR.titleH + 6 + math.ceil(tonumber(textH) or 40) + TOUR.gap + TOUR.button + TOUR.pad
 	callout:SetHeight(height)
@@ -592,7 +695,12 @@ function ns:TourFinish(skipped)
 	self:TourHideUI()
 	self:TourMark(st.id, true)
 	if skipped then
-		if st.id ~= "migration" then self:Print(L.TOUR_MSG_SKIPPED) end
+		if st.def.onSkip then
+			local ok, err = pcall(st.def.onSkip, self)
+			if not ok and self.RecordError then self:RecordError("tour:skip", err) end
+		elseif st.id ~= "migration" and not st.def.quietSkip then
+			self:Print(L.TOUR_MSG_SKIPPED)
+		end
 	elseif st.def.finish then
 		local ok, err = pcall(st.def.finish, self)
 		if not ok and self.RecordError then self:RecordError("tour:finish", err) end
@@ -726,10 +834,81 @@ function ns:TourTick(now)
 		self.tourMigrationAt = nil
 		if MigrationPending(self) then self:TourStart("migration") end
 	end
+	if not self.tourState and not self.tourPending and not InCombat() then self:TourPendingStart() end
 	if self.tourState then self:TourEvaluate() end
-	local idle = not self.tourState and not self.tourPending and not self.tourMigrationAt
+	local idle = not self.tourState and not self.tourPending and not self.tourMigrationAt and not self:TourHasPending()
 	if idle and driver then driver:Hide() end
 	return self.tourState ~= nil
+end
+
+-- ---------------------------------------------------------------------------
+-- 3.6.0 : les bulles qui attendent leur tour (après la première capture,
+-- à la première tâche d'étude)
+-- ---------------------------------------------------------------------------
+function ns:TourHasPending()
+	local data = self:DB().tour30
+	local pending = type(data) == "table" and data.pending
+	return type(pending) == "table" and next(pending) ~= nil
+end
+
+-- Une bulle en attente : `id` (mate, study), `info` (mate : le spécimen).
+-- Déjà vue : rien. Le relevé la montre dès que la place est libre.
+function ns:TourQueue(id, info)
+	if not DEFS[id] or self:TourDone(id) then return false end
+	Pending(self)[id] = info or true
+	if driver then driver:Show() end
+	return true
+end
+
+-- La suivante, si rien n'occupe la place : compagnon à l'écran, aucun
+-- tutoriel de base, aucune visite ; « Partir avec lui » d'abord
+local PENDING_ORDER = { "mate", "study" }
+function ns:TourPendingStart()
+	if not ns.TOUR_AUTO or self.tourState or not self:TourHasPending() then return false end
+	if self.CompanionTutorialActive and self:CompanionTutorialActive() then return false end
+	if not Visible(self.companionFrame) then return false end
+	local pending = Pending(self)
+	for _, id in ipairs(PENDING_ORDER) do
+		local info = pending[id]
+		if info ~= nil then
+			pending[id] = nil
+			if not self:TourDone(id) then
+				if id == "mate" then
+					-- déjà parti avec une capture (ou l'apparence refusée) : rien à proposer
+					local look = type(info) == "table" and MateLook(info)
+					local current = self.CompanionData and tostring(self:CompanionData().appearance or "") or ""
+					if not look or current:find("^cap:") then self:TourMark("mate", true); return false end
+					self.tourMate = info
+				end
+				-- la bulle du compagnon s'efface : la nôtre prend sa place
+				if self.CompanionHideBubble then pcall(self.CompanionHideBubble, self) end
+				return self:TourStart(id)
+			end
+		end
+	end
+	return false
+end
+
+-- La toute première capture du compte (une espèce nouvelle, la première du
+-- Codex) : « Partir avec lui », une fois. Un compte qui avait déjà des
+-- créatures ne la verra pas.
+do
+	local resolve = ns.CaptureResolve
+	if resolve then
+		function ns:CaptureResolve(rolling, ...)
+			local a, b, c = resolve(self, rolling, ...)
+			local target = type(rolling) == "table" and rolling.target
+			if rolling and rolling.success and target and target.npcID and not self:TourDone("mate") then
+				local count = self.CaptureData and tonumber(self:CaptureData().count) or 0
+				if count > 1 then
+					self:TourMark("mate", true)
+				elseif count == 1 then
+					self:TourQueue("mate", { npc = target.npcID, shiny = target.shiny and true or nil, name = target.name })
+				end
+			end
+			return a, b, c
+		end
+	end
 end
 
 -- ---------------------------------------------------------------------------
@@ -837,10 +1016,12 @@ do
 		ns.On("PLAYER_REGEN_DISABLED", "tour", function() ns:TourPause() end)
 		ns.On("PLAYER_REGEN_ENABLED", "tour", function()
 			Wake()
-			if ns.tourState or ns.tourPending then frame:Show() end
+			if ns.tourState or ns.tourPending or ns:TourHasPending() then frame:Show() end
 		end)
 		ns.On("PLAYER_ENTERING_WORLD", "tour", function(isLogin, isReload)
 			if not ((isLogin or isReload) and ns.TOUR_AUTO) then return end
+			-- 3.6.0 : une bulle restée en attente avant le /reload
+			if ns:TourHasPending() then frame:Show() end
 			-- une fois, au compte : ce que sont devenues les créatures d'avant la 3.0
 			local okCount, pending = pcall(MigrationPending, ns)
 			if okCount and pending then
@@ -849,7 +1030,7 @@ do
 			end
 		end)
 		frame:SetScript("OnUpdate", function(f, elapsed)
-			if not (ns.tourState or ns.tourPending or ns.tourMigrationAt) then return end
+			if not (ns.tourState or ns.tourPending or ns.tourMigrationAt or ns:TourHasPending()) then return end
 			f.acc = (f.acc or 0) + (tonumber(elapsed) or 0)
 			if f.acc < TOUR.tick then return end
 			f.acc = 0

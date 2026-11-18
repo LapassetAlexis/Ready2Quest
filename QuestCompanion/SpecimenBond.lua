@@ -57,8 +57,8 @@ local FR = {
 	BOND_POTENTIAL = "jusqu'à %s (%d étoile(s))",
 	BOND_UP        = "%s et toi : %s !",
 	BOND_KEEPSAKE  = "%s t'a rapporté un souvenir : %s.",
-	BOND_COMBAT    = "Pas en plein combat : change d'exemplaire après.",
-	BOND_KEPT      = "Ton exemplaire est lié : le nouveau va en Réserve (plus d'étoiles que ton exemplaire).",
+	BOND_COMBAT    = "Pas en plein combat : change de spécimen après.",
+	BOND_KEPT      = "Ton spécimen est lié : le nouveau va en Réserve (plus d'étoiles que le tien).",
 }
 local EN = {
 	BOND_1 = "Stranger", BOND_2 = "Familiar", BOND_3 = "Partner", BOND_4 = "Loyal", BOND_5 = "Inseparable",

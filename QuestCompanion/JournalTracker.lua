@@ -23,6 +23,10 @@
 --   * prochain palier de niveau.
 -- Chaque objectif se masque d'un clic droit (par personnage) ; la liste se
 -- recalcule à chaque tampon, changement de zone et montée de niveau.
+-- 3.6.0 : un rang d'abord (goal.rank, 3 par défaut), la proximité ensuite :
+-- l'envie du compagnon (1), une commande livrable (2), les objectifs d'avant
+-- (3), la tâche d'étude la plus proche (4), les Créatures de la zone (5)
+-- (TrackerGoals.lua) ; toujours 4 lignes au plus.
 local ADDON, ns = ...
 if ns.blocked then return end
 local L = ns.L
@@ -389,6 +393,7 @@ local function CompanionGoals(self, list)
 					if unlock.stat == "happy" or unlock.stat == "wish" then   -- 3.5.0 : une envie comblée
 						goal.label = self:F("JRN_GOAL_HAPPY", name)
 						goal.short = goal.label
+						goal.happy = true   -- 3.6.0 : l'envie du moment le remplace (TrackerGoals.lua)
 						goal.hint = self.CompanionHappyHints and self:CompanionHappyHints() or {}
 						goal.ratio = 1.5   -- prêt à évoluer : en tête, juste après un coffre
 					else
@@ -635,8 +640,11 @@ end
 
 -- Le plus proche du but d'abord ; à égalité, le moins de pas restants, puis
 -- le nom (ordre stable d'un rafraîchissement à l'autre). Masqués à la fin.
+ns.JOURNAL_GOAL_RANK_DEFAULT = 3
 local function Closer(a, b)
 	if (a.dismissed == true) ~= (b.dismissed == true) then return not a.dismissed end
+	local ka, kb = a.rank or ns.JOURNAL_GOAL_RANK_DEFAULT, b.rank or ns.JOURNAL_GOAL_RANK_DEFAULT
+	if ka ~= kb then return ka < kb end
 	if a.ratio ~= b.ratio then return a.ratio > b.ratio end
 	local ra, rb = a.need - a.have, b.need - b.have
 	if ra ~= rb then return ra < rb end

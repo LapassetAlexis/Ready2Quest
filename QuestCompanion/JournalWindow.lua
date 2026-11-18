@@ -502,7 +502,9 @@ local FR2 = {
 	JRN_MEN_KILLED         = "Abattue %d fois",
 	JRN_MEN_EQUIP          = "Clic : en faire ton compagnon",
 	JRN_MEN_EQUIPPED       = "C'est ton compagnon",
-	JRN_MEN_EMPTY          = "Aucune créature croisée pour l'instant : cible ou survole des monstres.",
+	-- 3.6.0 : sans capture, la consigne de départ
+	JRN_MEN_EMPTY          = "Aucune créature capturée pour l'instant. Abats une créature : le filet apparaît à côté de ton compagnon.",
+	JRN_MEN_HINT_NONE      = "Aucune capture encore : abats une créature, le filet apparaît près de ton compagnon.",
 	JRN_SUB_companion      = "Ton compagnon de route : son humeur, ses envies, son allure.",
 	JRN_EVO_STAT_captures  = "capturées",
 	JRN_EVO_STAT_shiny     = "brillantes",
@@ -598,7 +600,8 @@ local EN2 = {
 	JRN_MEN_KILLED         = "Defeated %d times",
 	JRN_MEN_EQUIP          = "Click: make it your companion",
 	JRN_MEN_EQUIPPED       = "It's your companion",
-	JRN_MEN_EMPTY          = "No creature met yet: target or hover some monsters.",
+	JRN_MEN_EMPTY          = "No creature captured yet. Defeat a creature: the net shows up beside your companion.",
+	JRN_MEN_HINT_NONE      = "No capture yet: defeat a creature, the net shows up beside your companion.",
 	JRN_SUB_companion      = "Your road companion: its mood, its needs, its look.",
 	JRN_EVO_STAT_captures  = "captured",
 	JRN_EVO_STAT_shiny     = "shinies",
@@ -1319,7 +1322,7 @@ local function BuildMenagerie(self, frame, content)
 		row.text:ClearAllPoints()
 		row.text:SetPoint("LEFT", row, "LEFT", 58 + rowH - 8 + 8, 0)
 		-- 2.15.0 : la place de l'épingle et de « Localiser » (deux icônes)
-		row.text:SetWidth(GRID_W - 58 - rowH - 158 - 2 * (MEN_ICON + 4) - 46)
+		row.text:SetWidth(GRID_W - 58 - rowH - 158 - 2 * (MEN_ICON + 4) - 54)
 		row.label = row.text
 		-- nom (ou « ??? ») à la couleur de sa rareté, type à droite, et
 		-- l'étoile d'une brillante ; capturée : liseré vert à gauche (1.5.1)
@@ -1341,10 +1344,12 @@ local function BuildMenagerie(self, frame, content)
 		row.locate:SetPoint("RIGHT", row.pin, "LEFT", -4, 0)
 		row.locate.onTip = function(b) Tip(b, L.JRN_LOCATE, { L.JRN_LOCATE_TIP_creature }) end
 		-- 3.4.0 : l'étude de l'espèce, cinq losanges (pleins : tâche faite)
+		-- 3.5.1 : un sixième, doré : la brillante (en plus)
 		row.study = {}
-		for index = 1, #(ns.STUDY_TASKS or {}) do
+		local nStudy = #(ns.STUDY_TASKS or {}) + 1
+		for index = 1, nStudy do
 			local d = Theme.CreateDiamond(row, 6)
-			d:SetPoint("RIGHT", row.locate, "LEFT", -6 - (#ns.STUDY_TASKS - index) * 8, 0)
+			d:SetPoint("RIGHT", row.locate, "LEFT", -6 - (nStudy - index) * 8, 0)
 			d:Hide()
 			row.study[index] = d
 		end
@@ -2749,6 +2754,9 @@ local function RefreshMenagerie(self, frame)
 		pane.count:SetText(self:F("JRN_MEN_COUNT", stats.captured, stats.known, stats.total))
 	end
 	pane.empty:SetText(#list == 0 and (stats.total == 0 and L.JRN_MEN_EMPTY or L.JRN_MEN_NONE) or "")
+	-- 3.6.0 : aucune capture sur le compte : la consigne remplace l'aide du bas
+	local none = self.CaptureData and (tonumber(self:CaptureData().count) or 0) == 0
+	pane.hint:SetText(none and L.JRN_MEN_HINT_NONE or L.JRN_MEN_HINT)
 	local page = #pane.items
 	local maxOffset = math.max(0, #list - page)
 	frame.menOffset = math.max(0, math.min(frame.menOffset or 0, maxOffset))
@@ -2794,11 +2802,17 @@ local function RefreshMenagerie(self, frame)
 			if entry.captured and entry.normal ~= false then row.caught:Show() else row.caught:Hide() end
 			-- 3.4.0 : l'étude (espèce capturée)
 			local study = entry.captured and self.SpecimenStudy and self:SpecimenStudy(entry.npc)
+			-- 3.6.0 : espèce maîtrisée (les cinq tâches) : le liseré passe à l'or
+			local lc2 = (study and study.mastered) and Theme.GOLD or Theme.GREEN
+			row.caught:SetVertexColor(lc2[1], lc2[2], lc2[3], 1)
+			if study and study.mastered then row.caught:Show() end
+			row.mastered = study and study.mastered or nil
 			for index, d in ipairs(row.study or {}) do
 				if study then
-					local done = study.done[ns.STUDY_TASKS[index]]
+					local task = ns.STUDY_TASKS[index] or "shiny"
+					local done = study.done[task]
 					Theme.SetDiamond(d, not done)
-					local c = done and Theme.GREEN or Theme.MUTED
+					local c = (task == "shiny" and Theme.GOLD) or (done and Theme.GREEN or Theme.MUTED)
 					d:SetVertexColor(c[1], c[2], c[3], 1)
 					d:Show()
 				else

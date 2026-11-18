@@ -238,7 +238,9 @@ do
 		Check("[RANK] 25 espèces : Dresseur et son insigne ; condition lisible du suivant", NS:TrainerTitle() == "Dresseur"
 			and NS:CompanionData().unlocked["frame:trainer"] == true
 			and NS:CompanionLockText(NS:CompanionStyleDef("frame", "master")) == "100 espèces capturées")
-		Check("[RANK] cinq paliers (10 → 250) et ce qu'ils rapportent", #NS.TRAINER_RANKS == 5 and NS.TRAINER_RANKS[5].count == 250
+		-- 3.6.0 : puis 500 à 3 000 et « tout Azeroth » (13 en tout)
+		Check("[RANK] cinq paliers (10 → 250) et ce qu'ils rapportent, puis les rangs longs", #NS.TRAINER_RANKS == 13 and NS.TRAINER_RANKS[5].count == 250
+			and NS.TRAINER_RANKS[12].count == 3000 and NS.TRAINER_RANKS[13].all and NS.TRAINER_RANKS[13].count > 3000
 			and NS.L["TRAINER_" .. NS.TRAINER_RANKS[5].key] == "Grand maître dresseur"
 			and NS:TrainerRankGift(NS.TRAINER_RANKS[3]):find("Enclos des créatures", 1, true) ~= nil,
 			NS:TrainerRankGift(NS.TRAINER_RANKS[3]))

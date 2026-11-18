@@ -558,6 +558,28 @@ couleur n'a changé.
   du tableau de bord sur le parchemin (encre du filet à 10 %).
 - Bandeau du carnet effacé au premier coup reçu, et revenu après le combat.
 
+## Échoppe d'un gros joueur (QuestCompanion 3.6.0)
+
+- **Échoppe** : rangées de 40 au pas de 43 (y −30 du contenu) ; « Arrivage de la semaine » à y −248 (demi-rangées à −268) ; deux demi-colonnes à y −314 : « Hors de leur semaine (prix ×1,5) », un cosmétique à la fois (rangée à −334 ; la pagination du socle à droite de la section, « 2 / 6 », et la molette font défiler ; « Revient la semaine prochaine » / « Revient dans n semaines » ; tout possédé : une phrase) et « Mécénat » (« Points de mécène : n », « Titres à 10, 50 et 100 points », bouton « Donner », confirmation dans la rangée) ; explication au survol des deux rangées. « Commandes de la semaine » à y −380, détail « (relance gratuite utilisée) », bouton « Relancer · 10 » (grisé et pourquoi s'il manque des paillettes) ; cartes de 68 à −400 ; note à −474. Tout ne tenait pas en pleine largeur : la liste « hors de leur semaine » est une ligne qui défile.
+- **Fiche du spécimen** : au-delà de 100 paillettes de relâcher dans la journée, une ligne orange sous le lien, « Relâcher : demi-tarif aujourd'hui (plus de 100 paillettes de relâcher) », et la confirmation ajoute « (Demi-tarif aujourd'hui.) ».
+- **Créatures** : la ligne d'étude d'une espèce maîtrisée dit « Espèce maîtrisée · en chasse, elle se méfie moins (plancher +10 %) ».
+- Contrastes mesurés (sobre et forgé) : `lot36_a.lua`.
+
+## Fiche de dresseur et Créatures (QuestCompanion 3.6.0)
+
+- **Fiche de dresseur** : 780 × 614 (une rangée de plus). Rangée du titre (y −68) : « Titre affiché » à gauche, « Fond : … » et « Cadre : … » (170 px chacune) à droite (ma fiche seulement ; un choix pas encore gagné est grisé avec sa condition). Ligne des espèces : « Espèces : n / total · maîtrisées : m ». Rangée « Médailles de type » à y −276 : huit icônes de famille (18 px, pas 26) avec un losange du socle au coin (au trait : paliers 1 et 2 ; bronze : 3 ; argent `PARCHMENT` : 4 ; or clair : 5 ; type sans médaille : icône délavée) ; infobulle : palier, espèces, prochain seuil. Hauts faits à y −298, vitrine à y −426.
+- **Fond** : texture opaque et sombre sous le contenu, de y −58 au pied ; **cadre** : 9 tranches de 24 px au bord du même rectangle, au-dessus des cartes. Contraste du texte mesuré au pixel le plus clair (≥ 4,5, titres ≥ 3).
+- **Créatures** : liseré gauche d'or (au lieu du vert) pour une espèce maîtrisée.
+- **Vignette de spécimen** : marque « Inséparable » (cœur du client, 14 px) en bas à gauche du portrait, au lien 5.
+
+## La première heure (QuestCompanion 3.6.0)
+
+- **Bulle « Partir avec lui »** : la bulle des visites (360 px, sans compteur), au-dessus du compagnon : titre « On part ensemble ? », texte (le lien en une phrase), « Plus tard » au trait à gauche, « Partir avec lui » plein à droite. **Bulle de l'étude** : même bulle, un seul bouton « Compris ».
+- **Réserve vide** : le texte dit pourquoi (hors mode chasse, seulement le nouveau et le meilleur) ; bouton `sm` primaire « Mode chasse (30 min) » 64 px sous le haut du texte, caché en chasse.
+- **Échoppe à 0 paillette** : la ligne du haut devient « Gagner des paillettes : … ».
+- **Guide** : 14 tuiles de sommaire de 26 px au pas de 29 (au-dessus des deux boutons des visites).
+- **Suivi à l'écran** : 4 lignes au plus ; l'envie en tête (« Brindille veut manger », « +1 lien » ou « envie »), puis une commande livrable (« Commande : … », « +12 »), les objectifs d'avant, l'étude la plus proche (« Étude Raptor : 5 captures », 2/5), « Les Tarides : n à capturer » (ou « n pour le sceau » à 10 espèces ou moins).
+
 ## Envies du compagnon (QuestCompanion 3.5.0)
 
 - **Page Compagnon, colonne gauche** : section « Ses envies (des bonus, jamais une perte) » à y −366 ; 3 plaques de 109 × 62 au pas de 117 à y −393 (nom, temps en `F_TITLE`, objet court, barre de 3 px verte sur 60 minutes ; liseré vert quand l'état est actif ; infobulle : ce qui l'allume, sa friandise) ; ligne d'humeur 343 × 26 à y −461 (« Humeur », humeur teintée, 3 losanges or, « Encore n pour rayonner » / « Bonus actif ») ; ligne de l'envie à y −493 (« Son envie », l'objet, « +1 lien » en vert) ; « Ses effets » à y −535.

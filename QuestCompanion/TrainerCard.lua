@@ -33,6 +33,10 @@
 -- hk = obtenus par catégorie pour les mini-barres, « cat:nombre ». À la
 -- lecture : un code inconnu ici, en double, mal formé ou de trop est écarté ;
 -- une catégorie inconnue aussi, et un nombre est borné au total d'ici.
+-- 3.6.0 (champs facultatifs, ignorés des versions d'avant) : cb / cf = fond
+-- et cadre de la fiche (ids de TrainerCardStyle.lua, liste blanche à la
+-- lecture), sm = espèces maîtrisées (étude, 5 chiffres au plus), md =
+-- médailles de type « clé:palier » (types connus ici, palier 1 à 5).
 --
 -- Envoi : file d'attente avec limite de débit (seau de 6 messages, un de plus
 -- par seconde), jamais en combat ni pendant un verrou de messagerie (moteur
@@ -704,6 +708,10 @@ function ns:TrainerOwnCard()
 		end
 		card.companion = comp
 	end
+	-- 3.6.0 : fond et cadre de la fiche, espèces maîtrisées, médailles de type
+	if self.TrainerCardStyle then card.styleBg, card.styleFrame = self:TrainerCardStyle() end
+	if self.TrainerOwnMastered then card.mastered = self:TrainerOwnMastered() end
+	if self.TrainerOwnMedals then card.medals = self:TrainerOwnMedals() end
 	-- vitrine des hauts faits et obtenus par catégorie (2.8.0)
 	if self.FeatDefs then
 		card.featShowcase = {}
@@ -778,6 +786,15 @@ function ns:TrainerSerializeCard(card)
 		if count and count > 0 then badges[#badges + 1] = key .. ":" .. count end
 	end
 	if #badges > 0 then f.b = badges end
+	-- 3.6.0 : fond, cadre, maîtrisées, médailles (dans l'ordre des types)
+	f.cb, f.cf = card.styleBg, card.styleFrame
+	if tonumber(card.mastered) then f.sm = string.format("%d", math.max(0, math.floor(card.mastered))) end
+	local medals = {}
+	for _, key in ipairs(ns.CREATURE_TYPES or {}) do
+		local tier = card.medals and tonumber(card.medals[key])
+		if tier and tier > 0 then medals[#medals + 1] = key .. ":" .. math.floor(tier) end
+	end
+	if #medals > 0 then f.md = medals end
 	return ns.TrainerEncode(f)
 end
 
@@ -824,6 +841,22 @@ function ns:TrainerParseCard(text)
 	for _, item in ipairs(ListOf(f.b)) do
 		local key, count = item:match("^(%w+):(%d+)$")
 		if key then card.badges[key] = Int(count, 0, 10000) end
+	end
+	-- 3.6.0 : fond et cadre du catalogue d'ici, maîtrisées, médailles des types connus
+	if ns.TrainerCardStyleValid then
+		card.styleBg = ns.TrainerCardStyleValid("cardbg", f.cb and Unescape(f.cb))
+		card.styleFrame = ns.TrainerCardStyleValid("cardframe", f.cf and Unescape(f.cf))
+	end
+	card.mastered = Digits(f.sm, 5)
+	local types = {}
+	for _, key in ipairs(ns.CREATURE_TYPES or {}) do types[key] = true end
+	for _, item in ipairs(ListOf(f.md)) do
+		local key, tier = item:match("^(%a+):(%d)$")
+		tier = tonumber(tier)
+		if key and types[key] and tier and tier >= 1 and tier <= (ns.TRAINER_MEDAL_MAX or 5) then
+			card.medals = card.medals or {}
+			card.medals[key] = tier
+		end
 	end
 	-- titre : un code connu ici (sinon le texte t), forme m ou f
 	local code = Digits(f.ti, 3)
@@ -970,6 +1003,11 @@ local function OwnCardKey(self)
 	end
 	-- 2.8.0 : la vitrine des hauts faits épinglée
 	if self.TrainerFeatPins then parts[#parts + 1] = table.concat(self:TrainerFeatPins(), ",") end
+	-- 3.6.0 : fond et cadre de la fiche
+	if self.TrainerCardStyle then
+		local bg, frame = self:TrainerCardStyle()
+		parts[#parts + 1] = tostring(bg) .. ":" .. tostring(frame)
+	end
 	return table.concat(parts, "|")
 end
 
@@ -978,6 +1016,9 @@ function ns:TrainerOwnCardText()
 	local cache = state.ownText
 	if cache and cache.key == key and now >= cache.at and now - cache.at < ns.TRAINER_OWN_TTL then return cache.text end
 	local text = self:TrainerSerializeCard(self:TrainerOwnCard())
+	-- 3.6.0 : clé relue après la construction (l'étude ou la Réserve peuvent
+	-- se mettre à jour en la lisant : la fiche suivante ne se refait pas pour rien)
+	key = OwnCardKey(self)
 	state.ownText = { key = key, text = text, at = now }
 	return text
 end
@@ -1319,21 +1360,27 @@ end
 -- 2.8.0 : fenêtre agrandie (bloc des hauts faits) ; le choix du titre passe
 -- sous l'en-tête (« Titre affiché : … »), loin du bouton de fermeture ; le
 -- portrait du compagnon fait 206 px
-local WIN_W, WIN_H, FOOT_H, PAD = 780, 580, 52, 20
+-- 3.6.0 : une rangée de plus (médailles de type) ; bêta 2 (en jeu : « très
+-- dense ») : fiche plus haute, lignes plus espacées, médailles sous le
+-- compagnon (la colonne de gauche avait de la place), blocs séparés
+local WIN_W, WIN_H, FOOT_H, PAD = 780, 664, 52, 20
 local MODEL_W, MODEL_H = 206, 206
 local COL_X = PAD + MODEL_W + 20
 local COL_W = WIN_W - COL_X - PAD
 local TILE_GAP = 10
 local TILE_W, TILE_H = math.floor((WIN_W - 2 * PAD - 2 * TILE_GAP) / 3), 64
 local TITLE_Y, BODY_Y = -68, -96          -- rangée du titre affiché, haut des colonnes
-local LINES_W, LINE_STEP = 304, 18        -- chiffres (1-5), à gauche des sceaux
+local LINES_W, LINE_STEP = 304, 21        -- chiffres (1-5), à gauche des sceaux
 local BADGE_X = COL_X + LINES_W + 10
-local FEATS_Y = -264                      -- bloc des hauts faits (colonne de droite)
+local MEDAL_Y = -396                      -- 3.6.0 : médailles de type (sous le compagnon)
+local MEDAL_SIZE, MEDAL_STEP = 20, 26
+local FEATS_Y = -312                      -- bloc des hauts faits (colonne de droite)
 local FEAT_GAP, FEAT_H = 8, 52
 local FEAT_W = math.floor((COL_W - 2 * FEAT_GAP) / 3)
-local SHOW_Y = -392
+local SHOW_Y = -472
 ns.TRAINER_LAYOUT = { width = WIN_W, height = WIN_H, footer = FOOT_H, pad = PAD, titleY = TITLE_Y, bodyY = BODY_Y,
-	colX = COL_X, colW = COL_W, model = MODEL_W, featsY = FEATS_Y, showY = SHOW_Y, featW = FEAT_W, featH = FEAT_H }
+	colX = COL_X, colW = COL_W, model = MODEL_W, featsY = FEATS_Y, showY = SHOW_Y, featW = FEAT_W, featH = FEAT_H,
+	medalY = MEDAL_Y, medalStep = MEDAL_STEP, styleW = 170 }
 
 local function Line(parent, font, color, width)
 	local text = Theme.Text(parent, font or Theme.F_BODY, color or Theme.TEXT)
@@ -1439,7 +1486,7 @@ end
 local function BuildFeatBar(self, parent, index, cat)
 	local col, row = (index - 1) % 2, math.floor((index - 1) / 2)
 	local half = math.floor((COL_W - 16) / 2)
-	local x, y = COL_X + col * (half + 16), FEATS_Y - 24 - FEAT_H - 10 - row * 18
+	local x, y = COL_X + col * (half + 16), FEATS_Y - 24 - FEAT_H - 14 - row * 22
 	local bar = { cat = cat }
 	bar.label = Line(parent, Theme.F_SMALL, Theme.MUTED_LIGHT, 96)
 	bar.label:SetPoint("TOPLEFT", parent, "TOPLEFT", x, y)
@@ -1554,6 +1601,18 @@ function ns:EnsureTrainerWindow()
 	end, { listWidth = 300, maxRows = 12 })
 	frame.titlePicker:SetPoint("TOPLEFT", content, "TOPLEFT", PAD + labelW + 8, TITLE_Y)
 	frame.titlePicker:Hide()
+	-- 3.6.0 : allure de la fiche (ma fiche) : « Fond : … », « Cadre : … », à droite du titre
+	local styleW = ns.TRAINER_LAYOUT.styleW
+	frame.frameStylePicker = Theme.CreateDropdown(content, styleW, function(value)
+		if ns.TrainerCardStyleSet then ns:TrainerCardStyleSet("cardframe", value) end
+	end, { listWidth = 300 })
+	frame.frameStylePicker:SetPoint("TOPRIGHT", content, "TOPRIGHT", -PAD, TITLE_Y)
+	frame.frameStylePicker:Hide()
+	frame.bgStylePicker = Theme.CreateDropdown(content, styleW, function(value)
+		if ns.TrainerCardStyleSet then ns:TrainerCardStyleSet("cardbg", value) end
+	end, { listWidth = 300 })
+	frame.bgStylePicker:SetPoint("TOPRIGHT", frame.frameStylePicker, "TOPLEFT", -8, 0)
+	frame.bgStylePicker:Hide()
 
 	-- message à la place de la fiche (demande en cours, rien reçu, refus)
 	frame.status = Theme.Text(content, Theme.F_TITLE, forged and Theme.TITLE or Theme.PARCHMENT)
@@ -1569,6 +1628,9 @@ function ns:EnsureTrainerWindow()
 	-- compagnon : grand modèle, nom, étiquettes, étoiles
 	frame.compSection = Theme.CreateSection(body, L.TRAINER_COMPANION)
 	frame.compSection:SetPoint("TOPLEFT", body, "TOPLEFT", PAD, BODY_Y)
+	-- 3.6.0 (bêta 1, en jeu) : chaque section a sa largeur ; par défaut, celle de
+	-- son parent : posée en milieu de fiche, son filet sortait du cadre
+	frame.compSection:SetWidth(MODEL_W)
 	local stage = CreateFrame("Frame", nil, body)
 	stage:SetSize(MODEL_W, MODEL_H)
 	stage:SetPoint("TOPLEFT", body, "TOPLEFT", PAD, BODY_Y - 22)
@@ -1593,6 +1655,7 @@ function ns:EnsureTrainerWindow()
 	-- colonne de droite : chiffres, effets, sceaux
 	frame.infoSection = Theme.CreateSection(body, L.TRAINER_TITLE)
 	frame.infoSection:SetPoint("TOPLEFT", body, "TOPLEFT", COL_X, BODY_Y)
+	frame.infoSection:SetWidth(LINES_W)
 	frame.lines = {}
 	for index = 1, 8 do
 		local line = Line(body, index <= 5 and Theme.F_BODY or Theme.F_SMALL, index <= 5 and Theme.TEXT or Theme.MUTED_LIGHT,
@@ -1603,6 +1666,7 @@ function ns:EnsureTrainerWindow()
 	-- sceaux par continent : à droite des chiffres, un par ligne
 	frame.badgeSection = Theme.CreateSection(body, L.TRAINER_BADGES)
 	frame.badgeSection:SetPoint("TOPLEFT", body, "TOPLEFT", BADGE_X, BODY_Y)
+	frame.badgeSection:SetWidth(WIN_W - PAD - BADGE_X)
 	frame.badges = {}
 	for index, key in ipairs(ns.TRAINER_CONTINENTS) do
 		local tag = Theme.CreateTag(body, "", Theme.GOLD)
@@ -1612,9 +1676,32 @@ function ns:EnsureTrainerWindow()
 	frame.badgeNone = Line(body, Theme.F_SMALL, Theme.MUTED, WIN_W - PAD - BADGE_X)
 	frame.badgeNone:SetPoint("TOPLEFT", body, "TOPLEFT", BADGE_X, BODY_Y - 24)
 
+	-- 3.6.0 : médailles de type, une par type : l'icône de la famille et un
+	-- losange du socle à la teinte du palier (au trait : paliers 1 et 2)
+	frame.medalLabel = Theme.CreateSection(body, L.TRAINER_MEDALS)
+	frame.medalLabel:SetPoint("TOPLEFT", body, "TOPLEFT", PAD, MEDAL_Y)
+	frame.medalLabel:SetWidth(MODEL_W)
+	frame.medals = {}
+	for index, key in ipairs(ns.CREATURE_TYPES or {}) do
+		local medal = CreateFrame("Frame", nil, body)
+		medal:SetSize(MEDAL_SIZE, MEDAL_SIZE)
+		medal:SetPoint("TOPLEFT", body, "TOPLEFT", PAD + (index - 1) * MEDAL_STEP, MEDAL_Y - 24)
+		medal.icon = medal:CreateTexture(nil, "ARTWORK")
+		medal.icon:SetAllPoints()
+		medal.icon:SetTexCoord(0.08, 0.92, 0.08, 0.92)
+		medal.mark = Theme.CreateDiamond(medal, 10)
+		medal.mark:SetPoint("CENTER", medal, "BOTTOMRIGHT", -1, 1)
+		medal.key = key
+		if medal.EnableMouse then medal:EnableMouse(true) end
+		medal:SetScript("OnEnter", function(m) ns:TrainerMedalTip(m) end)
+		medal:SetScript("OnLeave", function() local tip = rawget(_G, "GameTooltip"); if tip and tip.Hide then tip:Hide() end end)
+		frame.medals[index] = medal
+	end
+
 	-- hauts faits (2.8.0) : nombre et points, vitrine de 3, quatre mini-barres
 	frame.featsSection = Theme.CreateSection(body, L.TRAINER_FEATS_HEAD)
 	frame.featsSection:SetPoint("TOPLEFT", body, "TOPLEFT", COL_X, FEATS_Y)
+	frame.featsSection:SetWidth(COL_W - 200 - ns.TRAINER_DETAIL_GAP)   -- s'arrête avant la liste « Vitrine : … »
 	frame.featsPicker = Theme.CreateDropdown(body, 200, function(value) ns:TrainerFeatPick(value) end,
 		{ listWidth = 280, maxRows = 12 })
 	frame.featsPicker:SetPoint("TOPRIGHT", body, "TOPLEFT", COL_X + COL_W, FEATS_Y + 1)
@@ -1630,6 +1717,7 @@ function ns:EnsureTrainerWindow()
 	-- vitrine : trois tuiles
 	frame.showSection = Theme.CreateSection(body, L.TRAINER_SHOWCASE)
 	frame.showSection:SetPoint("TOPLEFT", body, "TOPLEFT", PAD, SHOW_Y)
+	frame.showSection:SetWidth(WIN_W - 2 * PAD)
 	frame.tiles = {}
 	for slot = 1, ns.TRAINER_SHOWCASE_SIZE do
 		frame.tiles[slot] = BuildTile(self, body, PAD + (slot - 1) * (TILE_W + TILE_GAP), slot)
@@ -1828,6 +1916,45 @@ function ns.TrainerFitFeatsDetail(frame)
 	end
 end
 
+-- 3.6.0 : médailles de type (ma fiche ou celle reçue : card.medals)
+function ns:TrainerPaintMedals(frame, card)
+	local icons = ns.FEAT_FAMILY_ICONS or {}
+	for _, medal in ipairs(frame.medals or {}) do
+		local tier = card.medals and tonumber(card.medals[medal.key]) or 0
+		local look = ns.TRAINER_MEDAL_LOOK[tier] or ns.TRAINER_MEDAL_LOOK[0]
+		local icon = icons[medal.key]
+		pcall(medal.icon.SetTexture, medal.icon, icon and ("Interface\\Icons\\" .. icon) or Theme.LOGO_SMALL)
+		if medal.icon.SetDesaturated then medal.icon:SetDesaturated(tier == 0) end
+		medal.icon:SetAlpha(tier == 0 and 0.45 or 1)
+		local c = Theme[look[1]] or Theme.MUTED
+		Theme.SetDiamond(medal.mark, look[2])
+		medal.mark:SetVertexColor(c[1], c[2], c[3], 1)
+		medal.tier = tier
+	end
+	frame.medalCard = card
+end
+
+function ns:TrainerMedalTip(medal)
+	local tip = rawget(_G, "GameTooltip")
+	if type(tip) ~= "table" or not tip.SetOwner then return end
+	local frame = self.trainerFrame
+	local own = frame and frame.viewing == nil
+	local label = self.CreatureTypeLabel and self:CreatureTypeLabel(medal.key) or medal.key
+	tip:SetOwner(medal, "ANCHOR_TOP")
+	if tip.ClearLines then tip:ClearLines() end
+	Theme.TooltipTitle(tip, label)
+	local tier = tonumber(medal.tier) or 0
+	if own and self.MenagerieMedal then
+		local _, count, nextNeed = self:MenagerieMedal(medal.key)
+		Theme.TooltipLine(tip, tier > 0 and self:F("MEN_COLL_TIP_MEDAL", label, tier, count) or self:F("TRAINER_MEDAL_NONE", label, count),
+			Theme.TEXT, true)
+		if nextNeed then Theme.TooltipLine(tip, self:F("TRAINER_MEDAL_NEXT", nextNeed), Theme.MUTED_LIGHT, true) end
+	elseif tier > 0 then
+		Theme.TooltipLine(tip, (self:F("MEN_COLL_TIP_MEDAL", label, tier, 0):gsub("%s*%(.-%)%s*$", "")), Theme.TEXT, true)
+	end
+	tip:Show()
+end
+
 local function PaintCard(self, frame, card, own)
 	-- le nom vient de l'expéditeur réel, jamais du champ `n` reçu (usurpation) ;
 	-- ma fiche : mon nom seul, jamais « -Royaume » (2.8.0)
@@ -1874,7 +2001,12 @@ local function PaintCard(self, frame, card, own)
 	local lines = {}
 	local first = FormatDate(card.first)
 	lines[#lines + 1] = first and self:F("TRAINER_FIRST", first) or L.TRAINER_FIRST_NONE
-	if card.species then lines[#lines + 1] = self:F("TRAINER_SPECIES", card.species, card.total or card.species) end
+	-- 3.6.0 : avec les espèces maîtrisées quand la fiche les dit
+	if card.species and card.mastered then
+		lines[#lines + 1] = self:F("TRAINER_SPECIES_MASTERED", card.species, card.total or card.species, card.mastered)
+	elseif card.species then
+		lines[#lines + 1] = self:F("TRAINER_SPECIES", card.species, card.total or card.species)
+	end
 	if card.shinies then lines[#lines + 1] = self:F("TRAINER_SHINIES", card.shinies) end
 	if card.shinySeen then lines[#lines + 1] = self:F("TRAINER_SHINY_SEEN", card.shinySeen) end
 	if card.seals then lines[#lines + 1] = self:F("TRAINER_SEALS", card.seals) end
@@ -1908,6 +2040,19 @@ local function PaintCard(self, frame, card, own)
 		end
 	end
 	frame.badgeNone:SetText(any and "" or L.TRAINER_BADGES_NONE)
+	self:TrainerPaintMedals(frame, card)
+	-- 3.6.0 : fond et cadre de la fiche (les miens, ou ceux reçus), et leurs listes
+	if self.TrainerCardStyleApply then self:TrainerCardStyleApply(frame, card.styleBg, card.styleFrame) end
+	for _, pair in ipairs({ { frame.bgStylePicker, "cardbg", card.styleBg }, { frame.frameStylePicker, "cardframe", card.styleFrame } }) do
+		local picker = pair[1]
+		if own and self.TrainerCardStyleOptions then
+			picker:SetOptions(self:TrainerCardStyleOptions(pair[2]))
+			picker:SetValue(pair[3] or "none")
+			picker:Show()
+		else
+			picker:Hide()
+		end
+	end
 	PaintFeats(self, frame, card, own)
 	for slot, tile in ipairs(frame.tiles) do PaintTile(self, tile, card.showcase and card.showcase[slot], own) end
 end
@@ -1946,6 +2091,8 @@ function ns:TrainerRefreshWindow()
 		end
 	else
 		frame.body:Hide()
+		frame.bgStylePicker:Hide(); frame.frameStylePicker:Hide()
+		if self.TrainerCardStyleApply then self:TrainerCardStyleApply(frame, nil, nil) end
 		frame.header:SetTitle(who)
 		frame.header:SetSubtitle(L.TRAINER_TITLE)
 		frame.titlePicker:Hide()

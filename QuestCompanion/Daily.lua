@@ -13,6 +13,12 @@
 -- changée une fois par jour. Chaque mission faite : une friandise (envie la
 -- plus basse) et un peu de curiosité ; les trois : un Festin. Une mission
 -- non faite est simplement remplacée le lendemain.
+-- 3.6.0 : les systèmes de la 3.4 et de la 3.5 entrent dans le jour : « gagne
+-- 5 points de lien » (un spécimen porté) et « sois Rayonnant 10 minutes »
+-- (capture allumée) rejoignent les missions de la deuxième place ; capturer
+-- une créature qui n'est pas de taille Normale et finir une tâche d'étude,
+-- celles de capture (MissionsMenagerie.lua). La mission du caractère tourne
+-- entre trois sortes, d'un jour à l'autre (ns.DAILY_TRAIT_ROTATION).
 local ADDON, ns = ...
 if ns.blocked then return end
 local L = ns.L
@@ -31,9 +37,14 @@ ns.MISSION_APPEARANCE, ns.MISSION_APPEARANCE_DAYS = "squirrel_mech", 10
 -- « named » ne sont plus tirées (elles restent lisibles pour les missions en
 -- cours d'une sauvegarde).
 local ZONE_MISSIONS = { "gather", "quests", "village", "percent" }
-local ANYWHERE = { kills = true, talks = true, captures = true }
+-- 3.6.0 : missions du compagnon, faisables partout (MissionFeasible)
+local COMPANION_MISSIONS = { "bond", "radiant" }
+ns.DAILY_COMPANION_MISSIONS = COMPANION_MISSIONS
+local ANYWHERE = { kills = true, talks = true, captures = true, bond = true, radiant = true, capSize = true, studyTask = true }
 ns.DAILY_ZONE_MISSIONS = ZONE_MISSIONS
-local NEED = { species = 3, named = 1, gather = 5, quests = 2, village = 1, percent = 3, kills = 10, talks = 3, captures = 2 }
+local NEED = { species = 3, named = 1, gather = 5, quests = 2, village = 1, percent = 3, kills = 10, talks = 3, captures = 2,
+	bond = 5, radiant = 10, capSize = 1, studyTask = 1 }
+ns.DAILY_MISSION_NEED = NEED
 -- Missions de caractère : sorte et cible
 local TRAIT_MISSIONS = {
 	curious = { kind = "places", need = 2 },  glutton = { kind = "meals", need = 3 },
@@ -46,6 +57,28 @@ local TRAIT_MISSIONS = {
 }
 ns.DAILY_TRAIT_MISSIONS = TRAIT_MISSIONS
 local GENERIC = { kind = "pets", need = 3 }
+-- 3.6.0 : la mission du caractère tourne entre trois sortes, d'un jour à
+-- l'autre : la sienne d'abord, puis deux qui lui vont (sans caractère :
+-- repas, repos, caresses)
+local ROTATION = {
+	curious = { TRAIT_MISSIONS.curious, { kind = "talks", need = 3 }, { kind = "turnins", need = 3 } },
+	glutton = { TRAIT_MISSIONS.glutton, { kind = "rest", need = 10 }, { kind = "pets", need = 3 } },
+	daring = { TRAIT_MISSIONS.daring, { kind = "kills", need = 20 }, { kind = "nightKills", need = 5 } },
+	lazy = { TRAIT_MISSIONS.lazy, { kind = "meals", need = 3 }, { kind = "pets", need = 3 } },
+	teasing = { TRAIT_MISSIONS.teasing, { kind = "pets", need = 3 }, { kind = "talks", need = 3 } },
+	cuddly = { TRAIT_MISSIONS.cuddly, { kind = "rest", need = 10 }, { kind = "meals", need = 3 } },
+	wise = { TRAIT_MISSIONS.wise, { kind = "talks", need = 3 }, { kind = "places", need = 2 } },
+	parrot = { TRAIT_MISSIONS.parrot, { kind = "turnins", need = 3 }, { kind = "pets", need = 3 } },
+	mystic = { TRAIT_MISSIONS.mystic, { kind = "calm", need = 15 }, { kind = "places", need = 2 } },
+	zen = { TRAIT_MISSIONS.zen, { kind = "rest", need = 10 }, { kind = "pets", need = 3 } },
+	sly = { TRAIT_MISSIONS.sly, { kind = "kills", need = 20 }, { kind = "talks", need = 3 } },
+	mischievous = { TRAIT_MISSIONS.mischievous, { kind = "kills", need = 20 }, { kind = "places", need = 2 } },
+	fearful = { TRAIT_MISSIONS.fearful, { kind = "calm", need = 15 }, { kind = "meals", need = 3 } },
+	tinker = { TRAIT_MISSIONS.tinker, { kind = "turnins", need = 3 }, { kind = "gold", need = 1 } },
+}
+ns.DAILY_TRAIT_ROTATION = ROTATION
+local GENERIC_ROTATION = { { kind = "meals", need = 3 }, { kind = "rest", need = 10 }, GENERIC }
+ns.DAILY_GENERIC_ROTATION = GENERIC_ROTATION
 
 -- Récompenses (1.4.0) : de quoi nourrir la créature ET de quoi capturer.
 -- treat : "need" = la friandise de l'envie la plus basse, "draw" = au hasard,
@@ -79,6 +112,9 @@ local FR = {
 	MIS_calm         = "Joue %d minutes sans tomber",
 	MIS_gold         = "Gagne %d pièce d'or",
 	MIS_captures     = "Capture %d créatures",
+	-- 3.6.0
+	MIS_bond         = "Gagne %d points de lien avec ton compagnon",
+	MIS_radiant      = "Sois Rayonnant %d minutes",
 	MIS_REWARD       = "Gain : %s",
 	MIS_REWARD_PAILLETTES = "%d paillettes",
 	MIS_REWARD_TREAT = "friandise",
@@ -143,6 +179,8 @@ local EN = {
 	MIS_calm         = "Play %d minutes without dying",
 	MIS_gold         = "Earn %d gold coin",
 	MIS_captures     = "Capture %d creatures",
+	MIS_bond         = "Earn %d bond points with your companion",
+	MIS_radiant      = "Stay Radiant for %d minutes",
 	MIS_REWARD       = "Gain: %s",
 	MIS_REWARD_PAILLETTES = "%d glitter",
 	MIS_REWARD_TREAT = "treat",
@@ -350,6 +388,10 @@ end
 
 function ns:MissionFeasible(kind, zoneID)
 	if kind == "captures" then return self.CaptureData ~= nil and ModuleOn() and self:DB().companionCapture ~= false end
+	-- 3.6.0 : un spécimen porté (une mascotte n'a pas de lien) ; Rayonnant :
+	-- son bonus est pour la capture, la mission aussi
+	if kind == "bond" then return ModuleOn() and self.SpecimenWornHere ~= nil and self:SpecimenWornHere() ~= nil end
+	if kind == "radiant" then return self.MenagerieMissionsOn ~= nil and self:MenagerieMissionsOn() and self.CompanionRadiant ~= nil end
 	if not zoneID then return kind == "kills" end
 	if kind == "species" then
 		local counts = self.BestiaryCounts and self:BestiaryCounts(zoneID)
@@ -377,12 +419,35 @@ local function NewMission(self, kind, zoneID, need, source)
 		start = zoneID and self:MissionMeasure(kind, zoneID) or 0 }
 end
 
+-- 3.6.0 : le numéro d'un jour (« 2026-11-18 » -> jours depuis 1970), sans
+-- l'horloge du client : la même date donne la même mission partout
+function ns.DailyDayNumber(iso)
+	local y, m, d = tostring(iso or ""):match("^(%d+)%-(%d+)%-(%d+)$")
+	y, m, d = tonumber(y), tonumber(m), tonumber(d)
+	if not (y and m and d) then return 0 end
+	if m <= 2 then y = y - 1 end
+	local era = math.floor(y / 400)
+	local yoe = y - era * 400
+	local doy = math.floor((153 * ((m + 9) % 12) + 2) / 5) + d - 1
+	local doe = yoe * 365 + math.floor(yoe / 4) - math.floor(yoe / 100) + doy
+	return era * 146097 + doe - 719468
+end
+
+-- La mission du caractère ce jour-là : une des trois sortes, à tour de rôle
+function ns:MissionTraitDef(trait, day)
+	local list = ROTATION[trait or ""] or GENERIC_ROTATION
+	return list[(ns.DailyDayNumber(day) % #list) + 1]
+end
+
 -- Tire les deux missions du jour (une de ménagerie si la capture est
 -- allumée, une d'exploration ; faisables, différentes) et celle du caractère
 function ns:MissionDraw(zoneID)
 	local daily = self:DailyData()
 	local pool = {}
 	for _, kind in ipairs(ZONE_MISSIONS) do
+		if self:MissionFeasible(kind, zoneID) then pool[#pool + 1] = kind end
+	end
+	for _, kind in ipairs(COMPANION_MISSIONS) do
 		if self:MissionFeasible(kind, zoneID) then pool[#pool + 1] = kind end
 	end
 	local missions = {}
@@ -398,7 +463,7 @@ function ns:MissionDraw(zoneID)
 		if #missions < 2 then missions[#missions + 1] = NewMission(self, kind, nil, NEED[kind], "zone") end
 	end
 	local trait = self.CompanionTrait and self:CompanionTrait()
-	local def = TRAIT_MISSIONS[trait or ""] or GENERIC
+	local def = self:MissionTraitDef(trait, self:DailyToday())
 	local own = NewMission(self, def.kind, nil, def.need, "trait")
 	own.trait = TRAIT_MISSIONS[trait or ""] and trait or nil
 	missions[3] = own
@@ -427,6 +492,9 @@ function ns:MissionReroll(index)
 	end
 	local pool = {}
 	for _, kind in ipairs(ZONE_MISSIONS) do
+		if not used[kind] and self:MissionFeasible(kind, daily.zoneID) then pool[#pool + 1] = kind end
+	end
+	for _, kind in ipairs(COMPANION_MISSIONS) do
 		if not used[kind] and self:MissionFeasible(kind, daily.zoneID) then pool[#pool + 1] = kind end
 	end
 	for _, kind in ipairs({ "talks", "kills" }) do
@@ -655,6 +723,9 @@ Wrap("CompanionTick", { run = function(self, _, _, seconds)
 	for _, mission in ipairs(daily.missions) do
 		if not mission.done then
 			if mission.kind == "rest" and self:CompanionResting() then
+				mission.carry = (mission.carry or 0) + seconds
+			elseif mission.kind == "radiant" and self.CompanionRadiant and self:CompanionRadiant() then
+				-- 3.6.0 : les minutes passées Rayonnant
 				mission.carry = (mission.carry or 0) + seconds
 			elseif mission.kind == "calm" then
 				mission.carry = (mission.carry or 0) + seconds

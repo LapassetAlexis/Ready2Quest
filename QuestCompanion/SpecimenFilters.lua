@@ -35,7 +35,6 @@ local ADDON, ns = ...
 if ns.blocked then return end
 local L = ns.L
 
-ns.SPECIMEN_SCHEMA_V2 = 2
 -- crans de l'indice de taille (bornes comprises)
 ns.SPECIMEN_SIZE_INDEX = {
 	tiny = { 75, 81 }, small = { 82, 93 }, normal = { 94, 106 }, large = { 107, 118 }, giant = { 119, 125 },
@@ -504,7 +503,7 @@ local function Primary(self, ctx, sort, spec)
 		return BondOf(self, spec) * 1000 + (self.SpecimenBondPoints and self:SpecimenBondPoints(spec) or 0)
 	end
 	if sort == "dups" then return ctx.per[tostring(spec.npc) .. (spec.shiny and ":s" or "")] or 0 end
-	if sort == "value" then return self:SpecimenReleaseValue(spec) end
+	if sort == "value" then return self:SpecimenReleaseBase(spec) end
 	return 0
 end
 

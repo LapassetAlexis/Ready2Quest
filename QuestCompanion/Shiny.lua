@@ -1,7 +1,8 @@
 -- Shiny.lua -- créatures brillantes et ouverture de coffre animée (QuestCompanion 1.1.0)
 --
--- Une petite chasse : la première fois que tu cibles ou survoles un monstre
--- (une fois par monstre, par son GUID), il a SHINY_CHANCE d'être brillant
+-- Une petite chasse : la première fois que tu cibles ou survoles un monstre,
+-- ou que sa barre de nom apparaît (une fois par monstre, par son GUID), il
+-- a SHINY_CHANCE d'être brillant
 -- (×SHINY_RANK_MULT pour un élite ou un rare). Toutes les espèces peuvent
 -- l'être. Chasse (1.6.0) : plus tu as abattu de cette espèce, plus la chance
 -- monte (jusqu'à ×SHINY_CHAIN_MAX après SHINY_CHAIN_KILLS abattus). Une

@@ -11,6 +11,10 @@
 -- avec un compagnon de ce type (effets du compagnon, lot 2, sinon
 -- l'apparence en cours et sa fiche de capture).
 -- Les captures se comptent par une enveloppe de ns:CaptureResolve.
+-- 3.6.0 : deux missions de capture de plus, faisables partout : capturer une
+-- créature qui n'est pas de taille Normale (capSize, le spécimen ajouté le
+-- dit) et finir une tâche d'étude (studyTask, SpecimenStudy.lua) ; et une de
+-- la semaine : livrer une commande (orders, Weekly.lua et TrackerGoals.lua).
 local ADDON, ns = ...
 if ns.blocked then return end
 local L = ns.L
@@ -18,7 +22,7 @@ local L = ns.L
 ns.MENAGERIE_DAILY_KINDS = { "capNew", "capType", "capNamed" }
 ns.MENAGERIE_TYPE_NEED = 2         -- capType du jour
 ns.MENAGERIE_WEEKLY_TYPE_NEED = 2  -- typeCapture de la semaine
-local MENAGERIE = { capNew = true, capType = true, capNamed = true, captures = true }
+local MENAGERIE = { capNew = true, capType = true, capNamed = true, captures = true, capSize = true, studyTask = true }
 local NAMED = { elite = true, rare = true, rareelite = true, worldboss = true }
 local FALLBACK_NEED = 2            -- « captures », comme avant (Daily.lua)
 
@@ -27,6 +31,8 @@ local FR = {
 	MIS_capNamed     = "Capture un élite ou un rare (%s)",
 	MIS_capType      = "Capture %d %s (%s)",
 	WK_typeCapture   = "Emmène %s et capture %d %s",
+	MIS_capSize      = "Capture une créature qui n'est pas de taille Normale",
+	MIS_studyTask    = "Finis une tâche d'étude",
 	MMIS_ONE_beast = "Bête", MMIS_ONE_humanoid = "Humanoïde", MMIS_ONE_undead = "Mort-vivant",
 	MMIS_ONE_elemental = "Élémentaire", MMIS_ONE_dragonkin = "Draconien", MMIS_ONE_demon = "Démon",
 	MMIS_ONE_giant = "Géant", MMIS_ONE_mechanical = "Mécanique",
@@ -42,6 +48,8 @@ local EN = {
 	MIS_capNamed     = "Capture an elite or a rare (%s)",
 	MIS_capType      = "Capture %d %s (%s)",
 	WK_typeCapture   = "Bring %s and capture %d %s",
+	MIS_capSize      = "Capture a creature that isn't Normal size",
+	MIS_studyTask    = "Finish a study task",
 	MMIS_ONE_beast = "Beast", MMIS_ONE_humanoid = "Humanoid", MMIS_ONE_undead = "Undead",
 	MMIS_ONE_elemental = "Elemental", MMIS_ONE_dragonkin = "Dragonkin", MMIS_ONE_demon = "Demon",
 	MMIS_ONE_giant = "Giant", MMIS_ONE_mechanical = "Mechanical",
@@ -177,6 +185,13 @@ function ns:MissionMenagerieDraw(zoneID, others)
 			pool[#pool + 1] = Mission("capType", zoneID, need, key)
 		end
 	end
+	-- 3.6.0 : partout (taille, étude), tirées avec celles de la zone ; une zone
+	-- sans rien à prendre garde son repli d'avant (« captures », une seule) ;
+	-- l'étude seulement s'il reste une tâche
+	if #pool > 0 and not used.capSize then pool[#pool + 1] = Mission("capSize", nil, 1) end
+	if #pool > 0 and not used.studyTask and self.SpecimenStudyClosest and self:SpecimenStudyClosest() then
+		pool[#pool + 1] = Mission("studyTask", nil, 1)
+	end
 	if #pool > 0 then return pool[math.random(#pool)] end
 	-- rien de propre à la zone : capturer où que ce soit
 	if used.captures then return nil end
@@ -266,6 +281,17 @@ function ns:MenagerieMissionCapture(target, fresh)
 			self:WeeklyEvent("typeCapture", 1, info)
 		end
 	end
+end
+
+-- 3.6.0 : un spécimen capturé qui n'est pas de taille Normale
+if ns.RegisterCallback then
+	ns:RegisterCallback("SPECIMENS", function(self, what, id)
+		if what ~= "add" or not self.MissionEvent then return end
+		local spec = self.SpecimenGet and self:SpecimenGet(id)
+		if type(spec) == "table" and spec.origin == "capture" and spec.size and spec.size ~= "normal" then
+			pcall(self.MissionEvent, self, "capSize", 1)
+		end
+	end)
 end
 
 do

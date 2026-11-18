@@ -75,7 +75,8 @@ end
 do
 	local s = Steps()
 	local tips, strings = NS.DISCOVERY_TIPS, NS.DISCOVERY_STRINGS
-	s.ok("25 à 35 astuces", #tips >= 25 and #tips <= 35, #tips)
+	-- 3.6.0 : six astuces de plus (mode chasse, Réserve, étude, lien, échoppe, commandes)
+	s.ok("25 à 45 astuces", #tips >= 25 and #tips <= 45, #tips)
 	local ids, bad, long, vous, glyph = {}, {}, {}, {}, {}
 	for _, tip in ipairs(tips) do
 		if ids[tip.id] then bad[#bad + 1] = "doublon " .. tip.id end
@@ -106,7 +107,7 @@ do
 	s.ok("pages ouvertes : carnet, Réserve, Échoppe, juke-box, Créatures, fiche, menu, allure",
 		NS.ToggleJournal and NS.OpenReserve and NS.OpenShop and NS.OpenJournalJuke and NS.OpenMenagerieTodo and NS.TrainerOpen
 		and NS.CompanionMenuShow and NS.AllureOpen and NS.TreatMenuToggle)
-	s.check("[DISC] catalogue : 25 à 35 astuces, FR/EN, une bulle, sans ★, tutoiement, gestes et commandes qui existent")
+	s.check("[DISC] catalogue : 25 à 45 astuces, FR/EN, une bulle, sans ★, tutoiement, gestes et commandes qui existent")
 end
 
 -- 2. « Appris » : chaque astuce se tait une fois la fonction utilisée ------------------------
@@ -153,13 +154,16 @@ do
 	s.ok("gestes joués : appris", #missed == 0, table.concat(missed, ","))
 	-- les autres : le drapeau posé par leur fonction (enveloppée)
 	local FLAG = { look = "look", frame = "frame", pantry = "pantry", aids = "aid", batch = "batch", locate = "locate",
-		release = "release", codex = "codex", shop = "shop", titles = "title", guild = "guildFeat", noel = "noel" }
+		release = "release", codex = "codex", shop = "shop", titles = "title", guild = "guildFeat", noel = "noel",
+		expressAll = "batch", expressPrep = "prep",   -- 3.5.1 : astuces de la capture express
+		-- 3.6.0 : les six nouvelles
+		huntReserve = "hunt", reserve = "page_reserve", study = "study", bond = "bond", shopEarn = "page_shop", orders = "order" }
 	for id, flag in pairs(FLAG) do NS:DiscoveryUse(flag) end
 	local still = {}
 	for _, tip in ipairs(NS.DISCOVERY_TIPS) do if not tip.learned(NS) then still[#still + 1] = tip.id end end
 	s.ok("chaque astuce a sa condition « appris »", #still == 0, table.concat(still, ","))
 	-- les fonctions enveloppées posent bien leur drapeau
-	local wrapped = { "CompanionSetAppearance", "CompanionSetStyle", "TreatMenuToggle", "CaptureToggleAid", "CaptureBatch",
+	local wrapped = { "CompanionSetAppearance", "CompanionSetStyle", "TreatMenuToggle", "CaptureToggleAid", "CaptureBatch", "CapturePrepOpen",
 		"LocateSpecies", "SpecimenRelease", "SpecimenSetReference", "ShopBuy", "FeatSetTitle", "GuildFeatsEnqueue", "WinterVeilCommand" }
 	local lost = {}
 	for _, name in ipairs(wrapped) do if type(NS[name]) ~= "function" then lost[#lost + 1] = name end end

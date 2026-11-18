@@ -21,12 +21,15 @@
 --   ns:SpecimenStudy(npc) -> { done = { [tâche] = bool }, count = n faites, mastered, n, sizes, traits, lo, hi, shiny }
 --   ns:SpecimenStudyMastered() -> espèces maîtrisées
 --   ns:SpecimenStudyNote(spec) (appelé à chaque capture)
+-- 3.6.0 : une tâche finie fait avancer la mission « finis une tâche d'étude »
+-- (MissionsMenagerie.lua) ; la toute première, une bulle l'explique une fois
+-- (GuidedTour.lua, visite « study »).
 local ADDON, ns = ...
 if ns.blocked then return end
 local L = ns.L
 
 ns.STUDY_TASKS = { "caught", "stars3", "five", "sizes", "traits" }
-ns.STUDY_REWARD = { task = 2, mastered = 5 }
+ns.STUDY_REWARD = { task = 2, mastered = 5, shiny = 5 }   -- 3.5.1 : la brillante (en plus) se paie aussi
 ns.STUDY_NEED = { five = 5, sizes = 3, traits = 3 }
 ns.STUDY_SCHEMA = 1
 
@@ -47,6 +50,7 @@ local FR = {
 	STUDY_LINE    = "Étude %d / %d",
 	STUDY_LEFT    = "reste : %s",
 	STUDY_MASTERED_LINE = "Espèce maîtrisée",
+	STUDY_MASTERED_WARY = "Espèce maîtrisée · en chasse, elle se méfie moins (plancher +%d %%)",
 }
 local EN = {
 	STUDY_caught  = "Caught",
@@ -65,6 +69,7 @@ local EN = {
 	STUDY_LINE    = "Study %d / %d",
 	STUDY_LEFT    = "left: %s",
 	STUDY_MASTERED_LINE = "Species mastered",
+	STUDY_MASTERED_WARY = "Species mastered · less wary when hunted (floor +%d%%)",
 }
 ns.RegisterStrings(FR, EN)
 if ns.KEEP_STRINGS then ns.STUDY_STRINGS = { fr = FR, en = EN } end
@@ -132,6 +137,14 @@ local function Note(row, spec, self)
 	return record, zi
 end
 
+-- les tâches payées parmi les cinq (bits 1 à #STUDY_TASKS ; le 6e : maîtrisée, le 7e : brillante)
+local function PaidTasks(row)
+	local n = 0
+	for index = 1, #ns.STUDY_TASKS do if Has(row.paid, index) then n = n + 1 end end
+	return n
+end
+local function ShinyBit() return #ns.STUDY_TASKS + 2 end
+
 -- Une fois : l'étude d'après tes captures actuelles, tâches cochées sans paiement
 function ns:SpecimenStudyRetro()
 	local study, capture = StudyTable(self)
@@ -152,8 +165,10 @@ function ns:SpecimenStudyRetro()
 		for index, task in ipairs(ns.STUDY_TASKS) do
 			if TaskDone(row, task) then row.paid = With(row.paid, index) end
 		end
-		if Count(row.paid) >= #ns.STUDY_TASKS then row.paid = With(row.paid, #ns.STUDY_TASKS + 1) end
+		if PaidTasks(row) >= #ns.STUDY_TASKS then row.paid = With(row.paid, #ns.STUDY_TASKS + 1) end
+		if TaskDone(row, "shiny") then row.paid = With(row.paid, ShinyBit()) end
 	end
+	capture.studyShinyV = 1
 	return true, n
 end
 
@@ -172,6 +187,17 @@ function ns:SpecimenStudy(npc)
 		sizes = Count(row.z), traits = Count(row.t), lo = row.lo, hi = row.hi, shiny = done.shiny }
 end
 
+-- 3.6.0 : cette espèce est-elle maîtrisée ? (méfiance en chasse,
+-- CompanionEffects.lua : lu à chaque tirage, sans table neuve)
+function ns:SpecimenStudyIsMastered(npc)
+	if npc == nil then return false end
+	self:SpecimenStudyRetro()
+	local row = StudyTable(self)[tonumber(npc) or npc]
+	if not row then return false end
+	for _, task in ipairs(ns.STUDY_TASKS) do if not TaskDone(row, task) then return false end end
+	return true
+end
+
 function ns:SpecimenStudyMastered()
 	self:SpecimenStudyRetro()
 	local study = StudyTable(self)
@@ -182,6 +208,49 @@ function ns:SpecimenStudyMastered()
 		if all then n = n + 1 end
 	end
 	return n
+end
+
+-- 3.6.0 : la tâche d'étude la plus proche d'être finie (suivi à l'écran,
+-- TrackerGoals.lua) : { npc, task, have, need } ou nil. Les espèces
+-- maîtrisées sont sautées ; « trois étoiles » (0 ou 1) ne vient qu'à défaut
+-- d'une tâche à compter. Gardée tant que ni capture ni spécimen ne change.
+local function TaskCount(row, task)
+	if task == "five" then return math.min(row.n or 0, ns.STUDY_NEED.five), ns.STUDY_NEED.five end
+	if task == "sizes" then return math.min(Count(row.z), ns.STUDY_NEED.sizes), ns.STUDY_NEED.sizes end
+	if task == "traits" then return math.min(Count(row.t), ns.STUDY_NEED.traits), ns.STUDY_NEED.traits end
+	if task == "stars3" then return row.s3 and 1 or 0, 1 end
+	return (row.n or 0) >= 1 and 1 or 0, 1
+end
+function ns:SpecimenStudyClosest()
+	self:SpecimenStudyRetro()
+	local study, capture = StudyTable(self)
+	local key = tostring(capture.serial) .. ":" .. tostring(capture.specSerial)
+	local cache = self.studyClosestCache
+	if cache and cache.key == key and cache.study == study then return cache.best end
+	local best, bestRatio, bestLeft
+	for npc, row in pairs(study) do
+		if type(row) == "table" then
+			local open = 0
+			for _, task in ipairs(ns.STUDY_TASKS) do if not TaskDone(row, task) then open = open + 1 end end
+			if open > 0 then
+				for _, task in ipairs(ns.STUDY_TASKS) do
+					if not TaskDone(row, task) then
+						local have, need = TaskCount(row, task)
+						-- « trois étoiles » : en dernier recours (rien à compter)
+						local ratio = task == "stars3" and -1 or have / need
+						local left = need - have
+						local better = not best or ratio > bestRatio or (ratio == bestRatio and (left < bestLeft
+							or (left == bestLeft and (tonumber(npc) or 0) < (tonumber(best.npc) or 0))))
+						if better then
+							best, bestRatio, bestLeft = { npc = npc, task = task, have = have, need = need }, ratio, left
+						end
+					end
+				end
+			end
+		end
+	end
+	self.studyClosestCache = { key = key, study = study, best = best }
+	return best
 end
 
 -- les caractères et tailles déjà capturés (hauts faits)
@@ -213,6 +282,12 @@ function ns:SpecimenStudyNote(spec)
 	local study = StudyTable(self)
 	-- première lecture : la rétro compte déjà cette capture, sans paiement
 	if self:SpecimenStudyRetro() then return 0 end
+	-- 3.5.1 : la brillante déjà étudiée avant la mise à jour : cochée sans paiement
+	local capture = self:CaptureData()
+	if capture.studyShinyV ~= 1 then
+		capture.studyShinyV = 1
+		for _, r in pairs(study) do if TaskDone(r, "shiny") then r.paid = With(r.paid, ShinyBit()) end end
+	end
 	local row = Row(study, spec.npc)
 	local record, zi = Note(row, spec, self)
 	local name = self:SpecimenLabel(spec)
@@ -223,10 +298,12 @@ function ns:SpecimenStudyNote(spec)
 			gained = gained + ns.STUDY_REWARD.task
 			self:PaillettesAdd(ns.STUDY_REWARD.task, "study")
 			self:Print(self:F("STUDY_DONE", name, L["STUDY_" .. task], ns.STUDY_REWARD.task))
+			if self.MissionEvent then pcall(self.MissionEvent, self, "studyTask", 1) end
 		end
 	end
+	if gained > 0 and self.TourQueue then pcall(self.TourQueue, self, "study") end
 	local masteredBit = #ns.STUDY_TASKS + 1
-	if Count(row.paid) >= #ns.STUDY_TASKS and not Has(row.paid, masteredBit) then
+	if PaidTasks(row) >= #ns.STUDY_TASKS and not Has(row.paid, masteredBit) then
 		row.paid = With(row.paid, masteredBit)
 		gained = gained + ns.STUDY_REWARD.mastered
 		self:PaillettesAdd(ns.STUDY_REWARD.mastered, "study")
@@ -234,9 +311,14 @@ function ns:SpecimenStudyNote(spec)
 		-- (haut fait : la source « studyMastered » relit le nombre d'espèces maîtrisées)
 		if self.FeatTouch and not ns.featsDormant then pcall(self.FeatTouch, self, "capture") end
 	end
+	if TaskDone(row, "shiny") and not Has(row.paid, ShinyBit()) then
+		row.paid = With(row.paid, ShinyBit())
+		gained = gained + ns.STUDY_REWARD.shiny
+		self:PaillettesAdd(ns.STUDY_REWARD.shiny, "study")
+		self:Print(self:F("STUDY_DONE", name, L.STUDY_shiny, ns.STUDY_REWARD.shiny))
+	end
 	if record and zi then
 		self:Print(self:F(record == "small" and "STUDY_RECORD_SMALL" or "STUDY_RECORD_BIG", name, zi))
-		if self.GuildFeatAnnounce then pcall(self.GuildFeatAnnounce, self, "record", { npc = spec.npc, zi = zi, kind = record }) end
 	end
 	-- hauts faits : toutes les tailles, tous les caractères tirés
 	if self.FeatFlag and not ns.featsDormant then
@@ -271,7 +353,8 @@ function ns:SpecimenStudyLine(npc)
 	local st = self:SpecimenStudy(npc)
 	local parts = {}
 	if st.mastered then
-		parts[1] = L.STUDY_MASTERED_LINE
+		-- 3.6.0 : et ce que la maîtrise change en chasse
+		parts[1] = self:F("STUDY_MASTERED_WARY", math.floor((ns.STUDY_WARY_BONUS or 0.1) * 100 + 0.5))
 	else
 		local left = {}
 		for _, task in ipairs(ns.STUDY_TASKS) do if not st.done[task] then left[#left + 1] = L["STUDY_" .. task] end end

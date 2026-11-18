@@ -528,10 +528,13 @@ do
 			if block.text and block.text:find("/qc hf", 1, true) then guide = true end
 		end
 		for _, block in ipairs(NS:JournalGuideBlocks("titles")) do
-			if block.text and block.text:find("/qc titre", 1, true) and block.text:find("40 titres", 1, true) then titles = true end
+			-- 3.6.0 : le compte suit le registre (52 avec les rangs, l'étude, le lien et le mécénat)
+			local n = 0
+			for _ in pairs(NS.FEAT_TITLES) do n = n + 1 end
+			if block.text and block.text:find("/qc titre", 1, true) and block.text:find(n .. " titres", 1, true) then titles = true end
 		end
 		Check("[HF] réglages (bandeau, chat, fanfare, statistiques ; bandeau oui, chat non par défaut), Guide (/qc hf, "
-			.. "40 titres et /qc titre), aide de /qc", keys.featToast and keys.featChat and keys.featSound and keys.featStats
+			.. "n titres et /qc titre), aide de /qc", keys.featToast and keys.featChat and keys.featSound and keys.featStats
 			and NS.DEFAULTS.featToast == true and NS.DEFAULTS.featChat == false and guide and titles and (function()
 				for _, section in ipairs(NS.HELP) do
 					for _, key in ipairs(section[2] or {}) do if key == "HELP_FEATS" then return true end end

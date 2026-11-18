@@ -1,7 +1,7 @@
 -- FeatsTitles.lua -- titres des hauts faits de QuestCompanion (2.7.0, lot D)
 --
 -- Conception : docs/QC-HAUTS-FAITS.md §1.9 et §4.1. Chargé après Feats.lua
--- (moteur) et JournalFeats.lua (page) : registre des 40 titres, rendu
+-- (moteur) et JournalFeats.lua (page) : registre des 40 titres (49 en 3.6.0), rendu
 -- (préfixe, suffixe, apposé en phrase, nu), forme masculine ou féminine,
 -- choix du titre affiché, /qc titre, réglage « Forme des titres », bandeau
 -- à grand effet pour les gros hauts faits.
@@ -72,6 +72,22 @@ local TITLES = {
 	-- T39 : petit méta caché d'Insolite (char_deaths_1 + fun_drown + fun_fall + fun_lava)
 	[39] = { pos = "suf", src = "fun_unlucky",     m = "%s le Malchanceux", f = "%s la Malchanceuse", en = "%s the Unlucky" },
 	[40] = { pos = "suf", src = "men_bad_luck",    m = "%s, Bredouille", en = "%s the Empty-Handed" },
+	-- 3.6.0 : rangs de dresseur au-delà de 500 espèces, puis « tout Azeroth »
+	[41] = { pos = "suf", src = "men_species_750",  m = "%s le Pisteur des terres sauvages", f = "%s la Pisteuse des terres sauvages", en = "%s the Wildtracker" },
+	[42] = { pos = "suf", src = "men_species_1000", m = "%s aux mille bêtes", en = "%s of a Thousand Beasts" },
+	[43] = { pos = "suf", src = "men_species_1500", m = "%s le Gardien du bestiaire", f = "%s la Gardienne du bestiaire", en = "%s the Bestiary Warden" },
+	[44] = { pos = "suf", src = "men_species_2000", m = "%s le Sage des créatures", f = "%s la Sage des créatures", en = "%s the Creature Sage" },
+	[45] = { pos = "suf", src = "men_species_2500", m = "%s, Archiviste d'Azeroth", en = "%s, Archivist of Azeroth" },
+	[46] = { pos = "suf", src = "men_species_3000", m = "%s le Grand Recenseur", f = "%s la Grande Recenseuse", en = "%s the Grand Census-Taker" },
+	[47] = { pos = "suf", src = "men_species_all",  m = "%s, Dresseur de tout Azeroth", f = "%s, Dresseuse de tout Azeroth", en = "%s, Trainer of All Azeroth" },
+	-- 3.6.0 : étude (50 espèces maîtrisées) et lien Inséparable
+	[48] = { pos = "suf", src = "men_study_50",     m = "%s le Savant", f = "%s la Savante", en = "%s the Scholar" },
+	[49] = { pos = "suf", src = "men_bond_inseparable", m = "%s l'Inséparable", en = "%s the Inseparable" },
+	-- 3.6.0 : le mécénat de l'Échoppe (ShopWeek.lua), codes 61 à 63
+	[61] = { pos = "suf", src = "men_patron_10",   m = "%s le Mécène", f = "%s la Mécène", en = "%s the Patron" },
+	[62] = { pos = "suf", src = "men_patron_50",   m = "%s le Grand Mécène", f = "%s la Grande Mécène", en = "%s the Great Patron" },
+	[63] = { pos = "suf", src = "men_patron_100",  m = "%s, Bienfaiteur des créatures", f = "%s, Bienfaitrice des créatures",
+		en = "%s, Benefactor of Creatures" },
 }
 
 -- Mémoire : chaque titre devient un tableau de 6 cases (pos, src, m, f, en,
@@ -97,7 +113,9 @@ end
 ns.FEAT_TITLE_MAX = 255
 ns.FEAT_TITLE_FORMS = { "auto", "m", "f" }
 -- titre automatique : palier d'espèces (TRAINER_RANKS, MenagerieCollection.lua) -> code
-ns.FEAT_RANK_TITLES = { apprentice = 1, trainer = 2, seasoned = 3, master = 4, grandmaster = 5 }
+ns.FEAT_RANK_TITLES = { apprentice = 1, trainer = 2, seasoned = 3, master = 4, grandmaster = 5,
+	-- 3.6.0 : les rangs au-delà de 250
+	beastwalker = 6, wildtracker = 41, thousand = 42, warden = 43, sage = 44, archivist = 45, census = 46, azeroth = 47 }
 
 local FR = {
 	OPT_FEAT_TITLE_FORM      = "Forme des titres",

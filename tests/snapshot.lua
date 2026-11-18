@@ -1566,6 +1566,50 @@ Snap.scenes["qc-journal-shop"] = function(T) return OwnDraws(T, function(T)
 	return frame, "QuestCompanion : carnet, Échoppe du dresseur (3.4)"
 end) end
 
+-- 3.6.0 : l'Échoppe d'un gros joueur (hors de leur semaine, mécénat, relance payante)
+Snap.scenes["qc-journal-shop-36"] = function(T) return OwnDraws(T, function(T)
+	local frame = QCJournal(T, "shop", function(ns)
+		ns:PaillettesAdd(640, "snap")
+		ns:CaptureData().patron = 7
+		for index = 1, 6 do
+			ns:SpecimenAdd({ npc = 3236, stars = index % 3 + 1, name = "Kodo des Tarides", origin = "capture", by = "Testeur",
+				zone = 1413, at = 1793000000 + index })
+		end
+		ns:ShopOrdersReroll()
+	end)
+	return frame, "QuestCompanion : carnet, Échoppe du dresseur (3.6 : hors de leur semaine, mécénat, relance à 10)"
+end) end
+
+-- 3.6.0 : la fiche d'un spécimen au demi-tarif du jour
+Snap.scenes["qc-journal-reserve-half"] = function(T) return OwnDraws(T, function(T)
+	local frame = QCJournal(T, "reserve", function(ns)
+		ns:SpecimenAdd({ npc = 3236, stars = 1, name = "Kodo des Tarides", origin = "capture", by = "Testeur", zone = 1413, at = 1793500000 })
+		ns:SpecimenAdd({ npc = 3236, stars = 3, name = "Kodo des Tarides", origin = "capture", by = "Testeur", zone = 1413, at = 1793650000 })
+		ns:SpecimenAdd({ npc = 3236, stars = 2, name = "Kodo des Tarides", origin = "capture", by = "Testeur", zone = 1413, at = 1793600000 })
+		ns:CaptureData().releaseDay = { day = ns.CaptureDayKey(), n = 120 }
+	end)
+	local list = T.QNS:SpecimenList({ where = "reserve", sort = "id" })
+	if list[1] then T.QNS:ReservePick(list[1].id) end
+	return frame, "QuestCompanion : carnet, Réserve, fiche au demi-tarif du jour (3.6)"
+end) end
+
+-- 3.6.0 : une espèce maîtrisée sur la page Créatures (sa ligne d'étude)
+Snap.scenes["qc-journal-menagerie-mastered"] = function(T)
+	local frame, ns = Snap.scenes["qc-journal-menagerie"](T)
+	ns = T.QNS
+	local study = ns:CaptureData().study or {}
+	ns:CaptureData().study, ns:CaptureData().studyV = study, ns.STUDY_SCHEMA
+	for npc in pairs(ns:CaptureData().creatures) do
+		study[npc] = { n = 6, z = 7, t = 7, s3 = true, paid = 63, lo = 88, hi = 121 }
+	end
+	ns:RefreshJournal()
+	-- la fiche d'une espèce capturée (la ligne d'étude)
+	for _, row in ipairs(frame.men and frame.men.items or {}) do
+		if row.entry and row.entry.captured then ns:JournalPreviewMenagerie(row.entry, true); break end
+	end
+	return frame, "QuestCompanion : carnet, Créatures, espèce maîtrisée (3.6)"
+end
+
 -- 3.1.0 : page Juke-box
 Snap.scenes["qc-journal-juke"] = function(T) return OwnDraws(T, function(T)
 	local frame = QCJournal(T, "juke")
@@ -1583,6 +1627,25 @@ Snap.scenes["qc-trainer"] = function(T) return OwnDraws(T, function(T)
 	local frame = ns:TrainerOpen()
 	if frame and frame.model then frame.model:Hide() end
 	return Centered(frame), "QuestCompanion : fiche de dresseur"
+end) end
+
+-- 3.6.0 : la fiche de dresseur avec un fond et un cadre gagnés, des médailles de type
+Snap.scenes["qc-trainer-style"] = function(T) return OwnDraws(T, function(T)
+	local ns = QCWorld(T)
+	ns:FeatAward("men_first", { silent = true, at = 1700000000 })
+	local data = ns:CompanionData()
+	data.unlocked["cardbg:" .. (rawget(_G, "SNAP_CARD_BG") or "card_pantheon")] = true
+	data.unlocked["cardframe:" .. (rawget(_G, "SNAP_CARD_FRAME") or "card_laurels")] = true
+	data.cardStyle = { bg = rawget(_G, "SNAP_CARD_BG") or "card_pantheon", frame = rawget(_G, "SNAP_CARD_FRAME") or "card_laurels" }
+	local creatures = ns:CaptureData().creatures
+	for index = 1, 170 do creatures[90000 + index] = { name = "Bête " .. index, normal = true, stars = 2, class = "normal", type = "Bête" } end
+	for index = 1, 85 do creatures[91000 + index] = { name = "Humanoïde " .. index, normal = true, stars = 2, class = "normal", type = "Humanoïde" } end
+	for index = 1, 22 do creatures[92000 + index] = { name = "Démon " .. index, normal = true, stars = 2, class = "normal", type = "Démon" } end
+	if ns.journalFrame then ns.journalFrame:Hide() end
+	ns.trainerFrame = nil
+	local frame = ns:TrainerOpen()
+	if frame and frame.model then frame.model:Hide() end
+	return Centered(frame), "QuestCompanion : fiche de dresseur, fond et cadre (3.6)"
 end) end
 
 -- 3.1.0 : le panneau « Choisir son allure » au-dessus du carnet
@@ -1956,6 +2019,48 @@ Snap.scenes["qc-tracker"] = function(T)
 	tracker:ClearAllPoints()
 	tracker:SetPoint("CENTER", UIParent, "CENTER", 0, 0)
 	return tracker, "QuestCompanion : bloc « Carnet » à l'écran (objectifs suivis)"
+end
+
+-- 3.6.0 : le suivi avec ses nouvelles sources (envie, commande, étude, zone)
+Snap.scenes["qc-tracker-36"] = function(T)
+	local ns = QCWorld(T)
+	ns:DB().journalTracker = true
+	ns.studyDormant = false
+	local capture = ns:CaptureData()
+	for _ = 1, 4 do
+		capture.creatures[3236] = { name = "Kodo des Tarides", normal = true, stars = 1, class = "normal", type = "Bête" }
+		ns:SpecimenAdd({ npc = 3236, stars = 1, name = "Kodo des Tarides", origin = "capture", zone = 1413, size = "large" })
+	end
+	ns:CompanionData().wish = { key = "hunger" }
+	ns:ShopOrders().list = { { kind = "zone", zone = 1413, reward = 12 } }
+	ns:RefreshJournalTracker()
+	local tracker = ns.journalTracker
+	tracker:ClearAllPoints()
+	tracker:SetPoint("CENTER", UIParent, "CENTER", 0, 0)
+	return tracker, "QuestCompanion : bloc « Carnet », envie, commande, étude et Créatures de la zone (3.6)"
+end
+
+-- 3.6.0 : Réserve vide (le pourquoi, le mode chasse d'un clic)
+Snap.scenes["qc-journal-reserve-empty"] = function(T) return OwnDraws(T, function(T)
+	local frame = QCJournal(T, "reserve", function() end)
+	return frame, "QuestCompanion : carnet, Réserve vide (3.6)"
+end) end
+
+-- 3.6.0 : la bulle « Partir avec lui » après la toute première capture
+Snap.scenes["qc-tour-mate"] = function(T)
+	local ns = QCBannerWorld(T)
+	local anchor = CreateFrame("Frame", nil, UIParent)
+	anchor:SetSize(104, 118)
+	anchor:SetPoint("CENTER", UIParent, "CENTER", 0, -120)
+	anchor:Show()
+	ns.tourMate = { npc = 3236, name = "Kodo des Tarides" }
+	local def = ns.TOUR_DEFS.mate
+	local saved = def.steps[1].anchor
+	def.steps[1].anchor = anchor
+	ns:TourStart("mate")
+	def.steps[1].anchor = saved
+	local ui = ns.tourUI and (ns.tourUI.forge or ns.tourUI.sobre)
+	return Snap.Group(ui.callout, anchor), "QuestCompanion : « Partir avec lui » après la première capture (3.6)"
 end
 
 Snap.scenes["qc-tooltip"] = function(T)

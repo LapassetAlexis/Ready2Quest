@@ -21,8 +21,9 @@
 --     brillante n'est jamais lancée seule sans aide : elle attend au filet ;
 --   * « Aide conseillée automatique » : sur un 3 étoiles ou une brillante, la
 --     meilleure aide en poche part avec le filet (le choix est gardé).
--- Réglage coupé (« Capture express ») : le déroulé d'avant, inchangé. La
--- visite guidée des premières captures garde aussi le déroulé d'avant.
+-- Réglage coupé (« Capture express ») : le déroulé d'avant, inchangé.
+-- 3.6.0 : la visite guidée des premières captures suit la capture express
+-- (elle montrait la carte et la scène, qu'on ne revoyait plus ensuite).
 -- Chargé en dernier : il enveloppe le filet, le bandeau, le raccourci, /qc filet.
 local ADDON, ns = ...
 if ns.blocked then return end
@@ -129,13 +130,12 @@ end
 -- ---------------------------------------------------------------------------
 -- Réglages
 -- ---------------------------------------------------------------------------
--- La capture express est-elle en service ? (réglage ; jamais pendant une
--- visite guidée, qui montre la carte et la scène ; ns.captureExpressDormant :
+-- La capture express est-elle en service ? (réglage ; 3.6.0 : aussi pendant
+-- la visite guidée des captures, refaite pour elle ; ns.captureExpressDormant :
 -- le harnais de test l'endort hors de ses propres scénarios)
 function ns:CaptureExpressOn()
 	if ns.captureExpressDormant or not Enabled() then return false end
 	if self:DB().companionCaptureExpress == false then return false end
-	if self.TourActive and self:TourActive() then return false end
 	return true
 end
 
@@ -590,6 +590,8 @@ end
 -- Tout le filet d'un coup. Rend le nombre de prises et le nombre d'essais.
 function ns:CaptureExpressAll()
 	if not self:CaptureExpressOn() then return 0, 0 end
+	-- 3.5.1 : l'astuce « Maj + clic : tout le filet » est apprise (Discovery.lua)
+	if self.DiscoveryUse then self:DiscoveryUse("batch") end
 	local got, tried = 0, 0
 	-- (la file se vide à mesure ; un candidat bloqué reste : on s'arrête sur lui)
 	for _ = 1, (ns.CAPTURE_QUEUE_MAX or 12) do

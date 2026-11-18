@@ -67,7 +67,11 @@
 --   ns:SpecimenSetReference(id) -> true | false, raison ("missing"|"already")
 --       « Mettre au Codex » : il devient la référence, l'ancienne va en Réserve
 --   ns:SpecimenWorn(id) -> bool (référence portée comme apparence par un personnage)
---   ns:SpecimenReleaseValue(id|spec) -> paillettes rendues (2/4/10, brillant 25)
+--   ns:SpecimenReleaseValue(id|spec, earned) -> paillettes rendues (2/4/10, brillant 25) ;
+--       3.6.0 : moitié (arrondie au-dessus) quand `earned` (par défaut : les
+--       paillettes de relâcher du jour, au compte) atteint RELEASE_DAY_FULL
+--   ns:SpecimenReleaseBase(id|spec) -> valeur pleine ; ns:ReleaseToday() -> gagné aujourd'hui
+--   ns:ReleaseHalfToday() -> bool ; ns:SpecimenReleaseTotal(list) -> gain d'un lot, dans l'ordre
 --   ns:SpecimenCanRelease(id) -> true | false, raison ("missing"|"reference"|"worn"|"better")
 --       2.15.0 : "better" = meilleur que la référence du Codex (relâcher ne
 --       fait jamais baisser tes étoiles : « Mets-le au Codex avant »)
@@ -132,6 +136,9 @@ ns.CAPTURE_QUALITY_FACTOR = { 1, 0.8, 0.6 }
 -- relâcher : paillettes par étoiles (un brillant vaut toujours `shiny`)
 -- 3.3.1 : 1 / 3 / 8 / 20 -> 2 / 4 / 10 / 25 (~3 en moyenne au lieu de ~2)
 ns.PAILLETTES_RELEASE = { 2, 4, 10, shiny = 25 }
+-- 3.6.0 (choix de l'utilisateur, plan 3.6 lot 1C) : passé 100 paillettes de
+-- relâcher dans la journée (au compte), le relâcher paie moitié
+ns.RELEASE_DAY_FULL = 100
 -- mode chasse : durées proposées (minutes), comme la sourdine
 ns.HUNT_CHOICES = { 5, 15, 30, 60 }
 -- méfiance : −15 % par capture de la même espèce dans la journée, plancher ×0,4
@@ -535,12 +542,40 @@ function ns:SpecimenWorn(id)
 	return false
 end
 
-function ns:SpecimenReleaseValue(spec)
+function ns:SpecimenReleaseBase(spec)
 	if type(spec) ~= "table" then spec = self:SpecimenGet(spec) end
 	if not spec then return 0 end
 	local values = ns.PAILLETTES_RELEASE
 	if spec.shiny then return values.shiny end
 	return values[Clamp(spec.stars)] or 0
+end
+
+-- 3.6.0 : les paillettes de relâcher du jour (capture.releaseDay = { day, n })
+local function ReleaseDay(self)
+	local capture = self:CaptureData()
+	local day = ns.CaptureDayKey and ns.CaptureDayKey() or "?"
+	if type(capture.releaseDay) ~= "table" or capture.releaseDay.day ~= day then capture.releaseDay = { day = day, n = 0 } end
+	return capture.releaseDay
+end
+function ns:ReleaseToday() return tonumber(ReleaseDay(self).n) or 0 end
+function ns:ReleaseHalfToday(earned)
+	return (tonumber(earned) or self:ReleaseToday()) >= ns.RELEASE_DAY_FULL
+end
+
+function ns:SpecimenReleaseValue(spec, earned)
+	local base = self:SpecimenReleaseBase(spec)
+	if base > 0 and self:ReleaseHalfToday(earned) then return math.ceil(base / 2) end
+	return base
+end
+
+-- Le gain d'un lot relâché dans l'ordre (le demi-tarif peut tomber en route)
+function ns:SpecimenReleaseTotal(list)
+	local earned, total = self:ReleaseToday(), 0
+	for _, spec in ipairs(list or {}) do
+		local value = self:SpecimenReleaseValue(spec, earned)
+		earned, total = earned + value, total + value
+	end
+	return total
 end
 
 function ns:SpecimenCanRelease(id)
@@ -575,6 +610,8 @@ function ns:SpecimenRelease(id, quiet)
 	capture.specimens[spec.id] = nil
 	Touch(capture)
 	Sync(self, capture, spec.npc)
+	local day = ReleaseDay(self)
+	day.n = (tonumber(day.n) or 0) + gain
 	local total = self:PaillettesAdd(gain, "release")
 	if not quiet then self:Print(self:F("SPECIMEN_RELEASED", self:SpecimenLabel(spec), gain, total)) end
 	Fire("SPECIMENS", "release", spec.id)

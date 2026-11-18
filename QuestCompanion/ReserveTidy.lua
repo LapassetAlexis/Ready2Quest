@@ -101,8 +101,9 @@ function ns:ReserveTidyCandidates(n)
 	local ranked, list, gain = self:ReserveTidyRanked(), {}, 0
 	for index = 1, math.min(n, #ranked) do
 		list[index] = ranked[index]
-		gain = gain + self:SpecimenReleaseValue(ranked[index])
 	end
+	-- 3.6.0 : le demi-tarif du jour peut tomber en route
+	gain = self:SpecimenReleaseTotal(list)
 	return list, gain
 end
 
@@ -198,11 +199,9 @@ function ns:ReserveTidySelection()
 	local list, gain = {}, 0
 	for _, id in ipairs(frame and frame.resTidyOrder or {}) do
 		local spec = self:SpecimenGet(id)
-		if spec then
-			list[#list + 1] = spec
-			gain = gain + self:SpecimenReleaseValue(spec)
-		end
+		if spec then list[#list + 1] = spec end
 	end
+	gain = self:SpecimenReleaseTotal(list)   -- 3.6.0 : demi-tarif du jour compris
 	return list, gain
 end
 

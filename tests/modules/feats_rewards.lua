@@ -362,18 +362,19 @@ do
 		s.ok("annonces coupées : rien", NS.guildFeatsState.out == nil)
 		NS:DB().guildFeatsSend = nil
 		s.check("[TIT] annonce de guilde : seulement un vrai gros haut fait, en guilde, annonces permises")
-		-- paliers d'espèces : annoncés une fois (sorte r), 500 espèces en h
+		-- paliers d'espèces : annoncés une fois (sorte r) ; 3.6.0 : 500 espèces
+		-- devient un rang (sorte r, plus en h) ; « tout Azeroth » part en h
 		local notes = {}
 		local base = NS.GuildFeatNote
 		NS.GuildFeatNote = function(_, feat) notes[#notes + 1] = feat; return true end
 		for _, id in ipairs({ "men_species_10", "men_species_25", "men_species_50", "men_species_100", "men_species_250",
-			"men_species_500" }) do
+			"men_species_500", "men_species_750", "men_species_3000", "men_species_all" }) do
 			local def = NS:FeatDef(id)
 			NS:GuildFeatsOnFeat({ id = id, n = def.n, pts = def.pts, announce = true, retro = false })
 		end
 		NS.GuildFeatNote = base
-		Check("[TIT] paliers d'espèces : annoncés une fois (sorte r), pas en h ; 500 espèces en h",
-			#notes == 1 and notes[1].kind == "h" and notes[1].id == 7)
+		Check("[TIT] paliers d'espèces : annoncés une fois (sorte r), pas en h ; « tout Azeroth » en h",
+			#notes == 1 and notes[1].kind == "h" and notes[1].id == 194)
 		-- réception
 		NS:GuildFeatsReset()
 		s = Steps()

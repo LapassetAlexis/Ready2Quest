@@ -669,7 +669,9 @@ local function Retro(def)
 end
 
 -- Les cosmétiques connus du compagnon : libellé d'un id
-local COSMETIC_LISTS = { frame = "COMPANION_FRAMES", bg = "COMPANION_BACKGROUNDS", orn = "COMPANION_ORNAMENTS", app = "COMPANION_APPEARANCES" }
+-- (3.6.0 : et ceux de la fiche de dresseur, TrainerCardStyle.lua)
+local COSMETIC_LISTS = { frame = "COMPANION_FRAMES", bg = "COMPANION_BACKGROUNDS", orn = "COMPANION_ORNAMENTS", app = "COMPANION_APPEARANCES",
+	cardbg = "TRAINER_CARD_BACKGROUNDS", cardframe = "TRAINER_CARD_FRAMES" }
 local function CosmeticLabel(kind, id)
 	for _, def in ipairs(ns[COSMETIC_LISTS[kind] or ""] or {}) do
 		if def.id == id then return L[def.label] or id end
