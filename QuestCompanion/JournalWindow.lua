@@ -74,7 +74,23 @@ local FR = {
 	JRN_EVO_NEXT_LEVEL     = "Prochaine étape : %s au niveau %d (tu es niveau %d).",
 	JRN_EVO_NEXT_READY     = "Prêt à devenir %s : rends-le heureux, il évoluera aussitôt.",
 	JRN_EVO_MAX            = "Dernière étape atteinte. Bravo !",
-	JRN_EVO_NEEDS          = "Ses envies (heureux = toutes à %d %%)",
+	JRN_EVO_NEEDS          = "Ses envies (des bonus, jamais une perte)",
+	JRN_MOOD_LABEL         = "Humeur",
+	JRN_WISH_LABEL         = "Son envie",
+	JRN_WISH_NONE          = "Rien pour l'instant",
+	JRN_STATE_TIP_ON       = "%s : encore %d min",
+	JRN_STATE_TIP_OFF      = "%s : éteint",
+	JRN_STATE_TIP_HOW      = "Ce qui l'allume (45 minutes) :",
+	JRN_STATE_TIP_TREAT    = "Sa friandise : %s (60 minutes).",
+	JRN_STATE_TIP_DECAY    = "Le temps ne passe qu'en jeu, jamais hors connexion.",
+	JRN_STATE_hunger_1     = "un repas (pas la boisson seule), ou « Bien nourri »",
+	JRN_STATE_hunger_2     = "partir de la ville avec de quoi manger (Ready2Quest)",
+	JRN_STATE_energy_1     = "deux minutes en ville, à l'auberge ou au feu de camp",
+	JRN_STATE_energy_2     = "arriver à un camp",
+	JRN_STATE_energy_3     = "le tampon d'auberge du jour",
+	JRN_STATE_curiosity_1  = "une zone, un lieu ou un tampon nouveau",
+	JRN_STATE_curiosity_2  = "un donjon, un élite ou un rare vaincu, un coffre de zone",
+	JRN_STATE_curiosity_3  = "en mode chasse : 15 créatures en 10 minutes, une brillante, une espèce nouvelle",
 	-- infobulle d'une envie : quoi faire pour la remplir
 	JRN_NEED_TIP_TITLE     = "%s : %d %%",
 	JRN_NEED_TIP_HAPPY     = "Comblée : à partir de %d %%, elle compte pour son bonheur.",
@@ -132,7 +148,23 @@ local EN = {
 	JRN_EVO_NEXT_LEVEL     = "Next stage: %s at level %d (you are level %d).",
 	JRN_EVO_NEXT_READY     = "Ready to become %s: make it happy and it grows at once.",
 	JRN_EVO_MAX            = "Final stage reached. Well done!",
-	JRN_EVO_NEEDS          = "Its needs (happy = all at %d %%)",
+	JRN_EVO_NEEDS          = "Its needs (bonuses, never a loss)",
+	JRN_MOOD_LABEL         = "Mood",
+	JRN_WISH_LABEL         = "Its wish",
+	JRN_WISH_NONE          = "Nothing for now",
+	JRN_STATE_TIP_ON       = "%s: %d min left",
+	JRN_STATE_TIP_OFF      = "%s: off",
+	JRN_STATE_TIP_HOW      = "What turns it on (45 minutes):",
+	JRN_STATE_TIP_TREAT    = "Its treat: %s (60 minutes).",
+	JRN_STATE_TIP_DECAY    = "Time only passes in game, never while offline.",
+	JRN_STATE_hunger_1     = "a meal (not just a drink), or \"Well Fed\"",
+	JRN_STATE_hunger_2     = "leaving town with food in your bags (Ready2Quest)",
+	JRN_STATE_energy_1     = "two minutes in town, at the inn or by a campfire",
+	JRN_STATE_energy_2     = "arriving at a camp",
+	JRN_STATE_energy_3     = "the day's inn stamp",
+	JRN_STATE_curiosity_1  = "a new zone, place or stamp",
+	JRN_STATE_curiosity_2  = "a dungeon, an elite or rare defeated, a zone chest",
+	JRN_STATE_curiosity_3  = "in hunt mode: 15 creatures in 10 minutes, a shiny, a new species",
 	JRN_NEED_TIP_TITLE     = "%s: %d %%",
 	JRN_NEED_TIP_HAPPY     = "Met: from %d %%, it counts towards its happiness.",
 	JRN_NEED_TIP_LOW       = "%d %% more until it counts (happy at %d %%).",
@@ -706,40 +738,29 @@ local function Panel(parent, width, height)
 	return p
 end
 
--- Infobulle d'une envie du compagnon : valeur, seuil du bonheur, et ce qui la
--- remplit (les gains réels de Companion.lua : repas, repos, caresse, quêtes,
--- niveaux, butin rare, exploration, tampons)
-ns.NEED_TIP_LINES = { hunger = 2, energy = 3, mood = 3, curiosity = 3 }
+-- Infobulle d'un état du compagnon (3.5.0) : le temps qui reste, ce qui
+-- l'allume (45 minutes), sa friandise (60 minutes)
+ns.NEED_TIP_LINES = { hunger = 2, energy = 3, curiosity = 3 }
+local TREAT_OF = { hunger = "biscuit", energy = "infusion", curiosity = "carte" }
 function ns:NeedTooltipLines(key)
-	local data = self.CompanionData and self:CompanionData() or { needs = {} }
-	local value = math.floor(tonumber(data.needs and data.needs[key]) or 0)
-	local happyMin = ns.COMPANION_HAPPY_MIN or 70
-	local lines = { self:F("JRN_NEED_TIP_TITLE", L["COMP_NEED_" .. key] or key, value) }
-	if value >= happyMin then
-		lines[#lines + 1] = self:F("JRN_NEED_TIP_HAPPY", happyMin)
-	else
-		lines[#lines + 1] = self:F("JRN_NEED_TIP_LOW", happyMin - value, happyMin)
-	end
-	lines[#lines + 1] = L.JRN_NEED_TIP_HOW
+	local minutes = self.CompanionStateMinutes and self:CompanionStateMinutes(key) or 0
+	local label = L["COMP_STATE_" .. key] or key
+	local lines = { minutes > 0 and self:F("JRN_STATE_TIP_ON", label, math.ceil(minutes)) or self:F("JRN_STATE_TIP_OFF", label) }
+	lines[#lines + 1] = L.JRN_STATE_TIP_HOW
 	for index = 1, ns.NEED_TIP_LINES[key] or 0 do
-		lines[#lines + 1] = "- " .. tostring(L["JRN_NEED_" .. key .. "_" .. index])
+		lines[#lines + 1] = "- " .. tostring(L["JRN_STATE_" .. key .. "_" .. index])
 	end
-	lines[#lines + 1] = L.JRN_NEED_TIP_DECAY
-	if (tonumber(data.stage) or 1) >= #(ns.COMPANION_STAGES or {}) and ns.COMPANION_SERENE_FLOOR then
-		lines[#lines + 1] = self:F("JRN_NEED_TIP_SERENE", ns.COMPANION_SERENE_FLOOR)
-	end
-	return lines, value >= happyMin
+	if self.TreatLabel and TREAT_OF[key] then lines[#lines + 1] = self:F("JRN_STATE_TIP_TREAT", self:TreatLabel(TREAT_OF[key])) end
+	lines[#lines + 1] = L.JRN_STATE_TIP_DECAY
+	return lines, minutes > 0
 end
 
--- 3.1.0 (thème forgé) : une envie en trois paliers, comme l'ancien
--- habillage : comblée (seuil du bonheur) en vert, basse (sous 30 %) en orange,
--- entre les deux en or. Rend la couleur de la barre et celle du chiffre.
+-- 3.1.0 (thème forgé) : un état en deux teintes : actif en vert, éteint en gris
 ns.NEED_LOW = 30
 function ns.NeedTier(value)
 	value = tonumber(value) or 0
-	if value >= (ns.COMPANION_HAPPY_MIN or 70) then return Theme.GREEN, Theme.GREEN, "happy" end
-	if value < ns.NEED_LOW then return Theme.ORANGE_DEEP, Theme.ORANGE_DEEP, "low" end
-	return Theme.GOLD, Theme.LABEL, "mid"
+	if value > ((ns.COMPANION_STATE or {}).on or 70) then return Theme.GREEN, Theme.GREEN, "happy" end
+	return Theme.MUTED, Theme.LABEL, "mid"
 end
 
 function ns:ShowNeedTooltip(owner, key)
@@ -930,6 +951,8 @@ ns.JOURNAL_PANES = ns.JOURNAL_PANES or {}
 -- missions, route parcourue), ses envies, son allure (apparences, cadre, fond,
 -- ornements : l'ancienne Collection)
 local HERO_H, EVO_ROW, EVO_STEP = 176, 30, 34
+-- 3.5.0 : plaques d'état de la page Compagnon (cotes de la maquette)
+ns.JOURNAL_STATE_LAYOUT = { w = 109, h = 62, step = 117, top = 27, line = 26 }
 local PORTRAIT = 148
 -- caméra rapprochée : le compagnon remplit le grand cadre du héros
 local PORTRAIT_ZOOM = 0.65
@@ -1052,23 +1075,61 @@ local function BuildEvolution(self, frame, content)
 	pane.needsTitle = Theme.CreateSection(pane, "")
 	pane.needsTitle:SetWidth(HALF)
 	At(pane.needsTitle, content, 0, colY)
+	-- 3.5.0 (maquette des envies) : trois plaques d'état (109 × 62, pas de
+	-- 117), la ligne d'humeur (trois losanges, « Encore n pour rayonner »),
+	-- la ligne de son envie (« +1 lien »)
+	local SK = ns.JOURNAL_STATE_LAYOUT
 	pane.needs = {}
-	for index, key in ipairs({ "hunger", "energy", "mood", "curiosity" }) do
-		local row = Theme.CreateListRow(pane, HALF, EVO_ROW, { detail = true, font = Theme.F_LABEL })
-		At(row, content, 0, colY - 26 - (index - 1) * EVO_STEP)
-		row:SetIndex(index)
-		row.key = key
-		row.label, row.value = row.text, row.detail
-		row.value:SetWidth(52)
-		row.bar = Theme.CreateBar(row, HALF - 120 - 76, 5)
-		row.bar:SetPoint("LEFT", row, "LEFT", 120, 0)
-		row.shine = row.hover
-		row.hover = CreateFrame("Button", nil, row)
-		row.hover:SetAllPoints()
-		row.hover:SetScript("OnEnter", function(region) row.shine:Show(); ns:ShowNeedTooltip(region, key) end)
-		row.hover:SetScript("OnLeave", function() row.shine:Hide(); HideTip() end)
-		pane.needs[index] = row
+	for index, key in ipairs(ns.COMPANION_NEED_KEYS or { "hunger", "energy", "curiosity" }) do
+		local tile = Theme.CreateTile(pane, SK.w, SK.h, { kind = "Button" })
+		At(tile, content, (index - 1) * SK.step, colY - SK.top)
+		tile.key = key
+		tile.label = Text(tile, Theme.F_LABEL, Theme.LABEL, SK.w - 16)
+		tile.label:SetPoint("TOPLEFT", tile, "TOPLEFT", 8, -6)
+		tile.value = Text(tile, Theme.F_TITLE, Theme.PARCHMENT, SK.w - 16)
+		tile.value:SetPoint("TOPLEFT", tile, "TOPLEFT", 8, -22)
+		if tile.value.SetWordWrap then tile.value:SetWordWrap(false) end
+		tile.how = Text(tile, Theme.F_SMALL, Theme.MUTED_LIGHT, SK.w - 16)
+		tile.how:SetPoint("TOPLEFT", tile, "TOPLEFT", 8, -42)
+		if tile.how.SetWordWrap then tile.how:SetWordWrap(false) end
+		tile.bar = Theme.CreateBar(tile, SK.w - 2, 3)
+		tile.bar:SetPoint("BOTTOMLEFT", tile, "BOTTOMLEFT", 1, 1)
+		tile:SetScript("OnEnter", function(region) ns:ShowNeedTooltip(region, key) end)
+		tile:SetScript("OnLeave", function() HideTip() end)
+		pane.needs[index] = tile
 	end
+	local moodY = colY - SK.top - SK.h - 6
+	pane.moodRow = Theme.CreateTile(pane, HALF, SK.line, { kind = "Frame" })
+	At(pane.moodRow, content, 0, moodY)
+	pane.moodRow.label = Text(pane.moodRow, Theme.F_SMALL, Theme.MUTED_LIGHT, 70)
+	pane.moodRow.label:SetPoint("LEFT", pane.moodRow, "LEFT", 8, 0)
+	pane.moodRow.label:SetText(L.JRN_MOOD_LABEL)
+	pane.moodRow.tag = Text(pane.moodRow, Theme.F_LABEL, Theme.GOLD, 70)
+	pane.moodRow.tag:SetPoint("LEFT", pane.moodRow, "LEFT", 78, 0)
+	if pane.moodRow.tag.SetWordWrap then pane.moodRow.tag:SetWordWrap(false) end
+	pane.moodRow.pips = {}
+	for i = 1, 3 do
+		local d = Theme.CreateDiamond(pane.moodRow, 9, true)
+		d:SetPoint("LEFT", pane.moodRow, "LEFT", 150 + (i - 1) * 14, 0)
+		pane.moodRow.pips[i] = d
+	end
+	pane.moodRow.right = Text(pane.moodRow, Theme.F_SMALL, Theme.MUTED_LIGHT, HALF - 200)
+	if pane.moodRow.right.SetWordWrap then pane.moodRow.right:SetWordWrap(false) end
+	pane.moodRow.right:SetPoint("RIGHT", pane.moodRow, "RIGHT", -8, 0)
+	pane.moodRow.right:SetJustifyH("RIGHT")
+	local wishY = moodY - SK.line - 6
+	pane.wishRow = Theme.CreateTile(pane, HALF, SK.line, { kind = "Frame" })
+	At(pane.wishRow, content, 0, wishY)
+	pane.wishRow.label = Text(pane.wishRow, Theme.F_SMALL, Theme.MUTED_LIGHT, 70)
+	pane.wishRow.label:SetPoint("LEFT", pane.wishRow, "LEFT", 8, 0)
+	pane.wishRow.label:SetText(L.JRN_WISH_LABEL)
+	pane.wishRow.text = Text(pane.wishRow, Theme.F_LABEL, Theme.LABEL, 180)
+	pane.wishRow.text:SetPoint("LEFT", pane.wishRow, "LEFT", 78, 0)
+	if pane.wishRow.text.SetWordWrap then pane.wishRow.text:SetWordWrap(false) end
+	pane.wishRow.bond = Text(pane.wishRow, Theme.F_SMALL, Theme.GREEN, 80)
+	pane.wishRow.bond:SetPoint("RIGHT", pane.wishRow, "RIGHT", -8, 0)
+	pane.wishRow.bond:SetJustifyH("RIGHT")
+	pane.effectsY = wishY - SK.line - 16
 
 	local rx = HALF + COL_GAP
 	pane.looksTitle = Theme.CreateSection(pane, L.JRN_EVO_LOOKS)
@@ -1102,7 +1163,7 @@ local function BuildEvolution(self, frame, content)
 	pane.ornNone = Text(pane, Theme.F_SMALL, Theme.MUTED, HALF)
 	At(pane.ornNone, content, rx, ddY - 66)
 	-- ses effets, sous les envies (CompanionEffects.lua)
-	if self.CompanionEffectsBuildPane then self:CompanionEffectsBuildPane(pane, content, 0, colY - 26 - 4 * EVO_STEP - 4, HALF) end
+	if self.CompanionEffectsBuildPane then self:CompanionEffectsBuildPane(pane, content, 0, pane.effectsY, HALF) end
 end
 
 -- Collection : sortes en puces, grille d'objets (verrou pour ce qui n'est
@@ -2406,19 +2467,39 @@ local function RefreshEvolution(self, frame)
 		tile.label:SetText(L["JRN_EVO_STAT_" .. key])
 	end
 
-	local happyMin = ns.COMPANION_HAPPY_MIN or 70
-	SectionText(pane.needsTitle, self:F("JRN_EVO_NEEDS", happyMin))
-	for _, row in ipairs(pane.needs) do
-		local value = math.floor(tonumber(data.needs and data.needs[row.key]) or 0)
-		row.label:SetText(L["COMP_NEED_" .. row.key] or row.key)
-		row.bar:SetValue(value / 100)
-		local c = value >= happyMin and Theme.GOLD or Theme.MUTED
-		local vc = value >= happyMin and Theme.GOLD or Theme.LABEL
-		if frame.journalForged then c, vc = ns.NeedTier(value) end
-		row.bar:SetColor(c[1], c[2], c[3], 1)
-		row.value:SetText(value .. " %")
-		row.value:SetTextColor(vc[1], vc[2], vc[3])
+	-- 3.5.0 : les trois états, l'humeur, son envie
+	SectionText(pane.needsTitle, L.JRN_EVO_NEEDS)
+	for _, tile in ipairs(pane.needs) do
+		local minutes = self.CompanionStateMinutes and self:CompanionStateMinutes(tile.key) or 0
+		local on = minutes > 0
+		tile.label:SetText(L["COMP_STATE_" .. tile.key] or tile.key)
+		tile.value:SetText(on and self:F("COMP_STATE_MIN", math.ceil(minutes)) or L.COMP_STATE_OFF)
+		tile.how:SetText(L["COMP_WISH_" .. tile.key] or "")
+		tile.bar:SetValue(math.min(1, minutes / 60))
+		local c = on and Theme.GREEN or Theme.MUTED
+		tile.bar:SetColor(c[1], c[2], c[3], 1)
+		local vc = on and Theme.PARCHMENT or Theme.MUTED_LIGHT
+		tile.value:SetTextColor(vc[1], vc[2], vc[3])
+		if tile.SetAccent then tile:SetAccent(on and Theme.GREEN or nil) end
 	end
+	local count = self.CompanionStatesOn and self:CompanionStatesOn() or 0
+	local mood = self.CompanionMood and self:CompanionMood() or "calm"
+	pane.moodRow.tag:SetText(Theme.Upper and tostring(L["COMP_MOOD_" .. mood]) or tostring(L["COMP_MOOD_" .. mood]))
+	local mc = (mood == "radiant" and Theme.GOLD) or (mood == "joyful" and Theme.GREEN) or (mood == "sleepy" and Theme.MUTED_LIGHT) or Theme.LABEL
+	pane.moodRow.tag:SetTextColor(mc[1], mc[2], mc[3])
+	for i, d in ipairs(pane.moodRow.pips) do
+		Theme.SetDiamond(d, i > count)
+		local dc = i <= count and Theme.GOLD or Theme.MUTED
+		d:SetVertexColor(dc[1], dc[2], dc[3], 1)
+	end
+	pane.moodRow.right:SetText(count >= 3 and L.COMP_RADIANT_ACTIVE or self:F("COMP_RADIANT_LEFT", 3 - count))
+	local rc = count >= 3 and Theme.GOLD or Theme.MUTED_LIGHT
+	pane.moodRow.right:SetTextColor(rc[1], rc[2], rc[3])
+	local wish = self.CompanionWish and self:CompanionWish()
+	pane.wishRow.text:SetText(wish and (L["COMP_WISH_" .. wish] or wish) or L.JRN_WISH_NONE)
+	local wc = wish and Theme.LABEL or Theme.MUTED_LIGHT
+	pane.wishRow.text:SetTextColor(wc[1], wc[2], wc[3])
+	pane.wishRow.bond:SetText(wish and L.COMP_WISH_BOND or "")
 
 	-- allure : les apparences portables (mascottes gagnées, puis la ménagerie)
 	local looks = self.CompanionUnlockedAppearances and self:CompanionUnlockedAppearances() or {}
@@ -2980,7 +3061,7 @@ end
 -- ---------------------------------------------------------------------------
 local NAVSUM = { w = NAV_W - 36, x = 18, gap = 16, row = 14, labelW = 66, bar = 2, block = 10 }
 ns.JOURNAL_NAVSUM = NAVSUM
-local NEED_KEYS = { "hunger", "energy", "mood", "curiosity" }
+local NEED_KEYS = { "hunger", "energy", "curiosity" }
 local function NavBlock(box, height, onClick, tipKey)
 	local b = CreateFrame("Button", nil, box)
 	b:SetSize(NAVSUM.w, height)
@@ -3001,7 +3082,7 @@ function ns:JournalNavSummaryBuild(frame)
 	box:SetSize(W, 10)
 	box:SetPoint("TOPLEFT", frame.nav, "TOPLEFT", NAVSUM.x, (frame.navY or -280) - NAVSUM.gap)
 	-- compagnon
-	local petH = 6 + R + 4 + #NEED_KEYS * R
+	local petH = 6 + R + 4 + (#NEED_KEYS + 1) * R
 	local pet = NavBlock(box, petH, function() ns:SelectJournalKind("evolution") end, "JRN_NAVSUM_COMPANION_TIP")
 	pet:SetPoint("TOPLEFT", box, "TOPLEFT", 0, 0)
 	pet.name = Text(pet, Theme.F_LABEL, Theme.LABEL, W)
@@ -3013,11 +3094,15 @@ function ns:JournalNavSummaryBuild(frame)
 		local row = { key = key }
 		row.label = Text(pet, Theme.F_SMALL, Theme.MUTED_LIGHT, NAVSUM.labelW)
 		row.label:SetPoint("TOPLEFT", pet, "TOPLEFT", 0, y)
-		row.label:SetText(L["COMP_NEED_" .. key] or key)
+		row.label:SetText(L["COMP_STATE_" .. key] or key)
 		row.bar = Theme.CreateBar(pet, W - NAVSUM.labelW, NAVSUM.bar)
 		row.bar:SetPoint("TOPLEFT", pet, "TOPLEFT", NAVSUM.labelW, y - 5)
 		pet.needs[index] = row
 	end
+	-- 3.5.0 : son envie, sous les trois états
+	pet.wish = Text(pet, Theme.F_SMALL, Theme.MUTED_LIGHT, W)
+	pet.wish:SetPoint("TOPLEFT", pet, "TOPLEFT", 0, -6 - R - 4 - #NEED_KEYS * R)
+	if pet.wish.SetWordWrap then pet.wish:SetWordWrap(false) end
 	box.pet = pet
 	-- zone
 	local zone = NavBlock(box, 6 + R + 8, function()
@@ -3103,15 +3188,14 @@ function ns:JournalNavSummaryRefresh(frame)
 		local data = self:CompanionData()
 		local mood = self.CompanionMood and L["COMP_MOOD_" .. tostring(self:CompanionMood())]
 		box.pet.name:SetText((self.CompanionName and self:CompanionName() or "") .. (mood and (" · " .. mood) or ""))
-		local happy = ns.COMPANION_HAPPY_MIN or 70
 		for _, row in ipairs(box.pet.needs) do
-			local value = tonumber(data.needs and data.needs[row.key]) or 0
-			row.bar:SetValue(math.max(0, math.min(1, value / 100)))
-			local c = value >= happy and Theme.GOLD or Theme.MUTED_LIGHT
-			if frame.journalForged then c = ns.NeedTier(value) end
+			local minutes = self.CompanionStateMinutes and self:CompanionStateMinutes(row.key) or 0
+			row.bar:SetValue(math.max(0, math.min(1, minutes / 60)))
+			local c = minutes > 0 and Theme.GREEN or Theme.MUTED_LIGHT
 			row.bar:SetColor(c[1], c[2], c[3], 1)
-			row.value = value
+			row.value = minutes
 		end
+		if box.pet.wish then box.pet.wish:SetText(self.CompanionWishLine and self:CompanionWishLine() or "") end
 		box.pet:Show()
 	else
 		box.pet:Hide()

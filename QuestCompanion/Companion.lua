@@ -208,13 +208,13 @@ local FR = {
 	COMP_NEED_energy       = "Énergie",
 	COMP_NEED_mood         = "Moral",
 	COMP_NEED_curiosity    = "Curiosité",
-	COMP_MSG_READY         = "Compagnon : %s est prêt à devenir %s. Comble ses envies (toutes à %d %%) pour qu'il évolue.",
+	COMP_MSG_READY         = "Compagnon : %s est prêt à devenir %s. Comble une de ses envies pour qu'il évolue.",
 	COMP_HAPPY_LINE        = "  %s : %d %% — %s",
 	COMP_HAPPY_OK          = "  %s : %d %% (comblée)",
-	COMP_HOW_hunger        = "mange ou bois (ou pars avec des vivres)",
-	COMP_HOW_energy        = "repose-toi à l'auberge ou au feu de camp",
+	COMP_HOW_hunger        = "un repas, « Bien nourri », partir avec de quoi manger",
+	COMP_HOW_energy        = "deux minutes en ville, à l'auberge ou au camp",
 	COMP_HOW_mood          = "caresse-le, rends des quêtes",
-	COMP_HOW_curiosity     = "bouge : zones nouvelles ou pas vues depuis un moment, donjons, élites, vols, récolte",
+	COMP_HOW_curiosity     = "une zone ou un lieu nouveau, un donjon, un élite, un coffre",
 	COMP_MOOD_radiant      = "radieux",
 	COMP_MOOD_happy        = "content",
 	COMP_MOOD_dreamy       = "rêveur",
@@ -407,13 +407,13 @@ local EN = {
 	COMP_NEED_energy       = "Energy",
 	COMP_NEED_mood         = "Mood",
 	COMP_NEED_curiosity    = "Curiosity",
-	COMP_MSG_READY         = "Companion: %s is ready to become %s. Fill its needs (all at %d %%) so it can grow.",
+	COMP_MSG_READY         = "Companion: %s is ready to become %s. Grant one of its wishes so it can grow.",
 	COMP_HAPPY_LINE        = "  %s: %d %% — %s",
 	COMP_HAPPY_OK          = "  %s: %d %% (filled)",
-	COMP_HOW_hunger        = "eat or drink (or set out with food)",
-	COMP_HOW_energy        = "rest at an inn or a campfire",
+	COMP_HOW_hunger        = "a meal, \"Well Fed\", setting out with food",
+	COMP_HOW_energy        = "two minutes in town, at the inn or at a camp",
 	COMP_HOW_mood          = "pet it, turn in quests",
-	COMP_HOW_curiosity     = "move around: new zones or ones not seen in a while, dungeons, elites, flights, gathering",
+	COMP_HOW_curiosity     = "a new zone or place, a dungeon, an elite, a chest",
 	COMP_MOOD_radiant      = "radiant",
 	COMP_MOOD_happy        = "happy",
 	COMP_MOOD_dreamy       = "dreamy",
@@ -2716,8 +2716,8 @@ function ns:EnsureCompanionHover()
 		label:SetWidth(HOVER_LABEL_W - 4)
 		if label.SetWordWrap then label:SetWordWrap(false) end
 		label:SetJustifyH("LEFT")
-		label:SetText(L["COMP_NEED_" .. key])
-		local bar = Theme.CreateBar(hover, width - HOVER_LABEL_W - 36, 4)
+		label:SetText(L["COMP_STATE_" .. key] or L["COMP_NEED_" .. key])
+		local bar = Theme.CreateBar(hover, width - HOVER_LABEL_W - 52, 4)
 		bar.label = label
 		bar.value = Theme.Text(hover, Theme.F_SMALL, Theme.MUTED_LIGHT)
 		bar.value:SetJustifyH("RIGHT")
@@ -2735,6 +2735,11 @@ function ns:EnsureCompanionHover()
 		hover.rule = Theme.Solid(hover, "ARTWORK", Theme.EDGE_SOFT, 1)
 		hover.rule:SetSize(width, 1)
 	end
+	-- 3.5.0 : son envie, sous les états
+	hover.wish = Theme.Text(hover, Theme.F_SMALL, Theme.LABEL)
+	hover.wish:SetWidth(width)
+	hover.wish:SetJustifyH("LEFT")
+	if hover.wish.SetWordWrap then hover.wish:SetWordWrap(true) end
 	hover.hint = Theme.Text(hover, Theme.F_SMALL, Theme.MUTED)
 	hover.hint:SetWidth(width)
 	hover.hint:SetJustifyH("LEFT")
@@ -2765,6 +2770,13 @@ function ns:CompanionLayoutHover()
 		bar.value:SetPoint("TOPRIGHT", hover, "TOPRIGHT", -HOVER_PAD, y)
 		bar.top = y
 		y = y - HOVER_BAR_ROW
+	end
+	if hover.wish then
+		hover.wish:ClearAllPoints()
+		hover.wish:SetPoint("TOPLEFT", hover, "TOPLEFT", left, y)
+		hover.wish.top = y
+		local wh = (hover.wish:GetText() or "") ~= "" and TextHeight(hover.wish) or 0
+		if wh > 0 then y = y - wh - 4 end
 	end
 	y = y - 4
 	hover.rule:ClearAllPoints()

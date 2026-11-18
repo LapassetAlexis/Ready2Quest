@@ -1396,6 +1396,9 @@ end
 Snap.scenes["qc-journal-creature"] = function(T)
 	local frame = QCJournal(T, "evolution", function(ns)
 		ns:ChestData()[1411] = { tier = 1, name = "Durotar", at = 0 }
+		-- 3.5.0 : deux états actifs, une envie
+		ns:CompanionGrant("hunger"); ns:CompanionGrant("energy", ns.COMPANION_STATE.max)
+		ns:CompanionData().wish = { key = "curiosity" }
 	end)
 	return frame, "QuestCompanion : carnet, page Créature"
 end

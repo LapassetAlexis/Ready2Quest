@@ -220,7 +220,7 @@ local FR = {
 	EFF_SECTION            = "Ses effets",
 	EFF_SECTION_MASCOT     = "Ses effets (mascotte, grandit avec l'étape)",
 	EFF_SECTION_WINTER     = "Ses effets (Voile d'hiver, grandit avec l'étape)",
-	EFF_STRENGTH           = "Force ×%s · envies %d/4 : %d %%",
+	EFF_STRENGTH           = "Force ×%s · effets entiers",
 	EFF_ACTIVE             = "Actifs",
 	EFF_PENDING            = "Actifs dans %s",
 	EFF_OFF                = "Compagnon coupé : aucun effet",
@@ -289,7 +289,7 @@ local EN = {
 	EFF_SECTION            = "Its effects",
 	EFF_SECTION_MASCOT     = "Its effects (mascot, grows with the stage)",
 	EFF_SECTION_WINTER     = "Its effects (Winter Veil, grows with the stage)",
-	EFF_STRENGTH           = "Strength ×%s · needs %d/4: %d%%",
+	EFF_STRENGTH           = "Strength ×%s · full effects",
 	EFF_ACTIVE             = "Active",
 	EFF_PENDING            = "Active in %s",
 	EFF_OFF                = "Companion off: no effect",
@@ -1012,7 +1012,13 @@ function ns:CompanionEffectsRefreshPane(pane)
 	else
 		state = self:F("EFF_PENDING", Clockface(effects.remaining))
 	end
-	pane.effState:SetText(self:F("EFF_STRENGTH", Num(effects.strength), effects.needsOk, Pct(effects.needs)) .. " · " .. state)
+	-- 3.5.0 : les effets toujours entiers ; Rayonnant le dit
+	local head = self:F("EFF_STRENGTH", Num(effects.strength))
+	if self.CompanionRadiant and self:CompanionRadiant() and ns.COMPANION_RADIANT then
+		head = self:F("COMP_RADIANT_ON", math.floor((ns.COMPANION_RADIANT.capture - 1) * 100 + 0.5),
+			math.floor((ns.COMPANION_RADIANT.shiny - 1) * 100 + 0.5))
+	end
+	pane.effState:SetText(head .. " · " .. state)
 	local c = effects.active and Theme.GOLD or Theme.MUTED_LIGHT
 	pane.effState:SetTextColor(c[1], c[2], c[3])
 	local tc = effects.active and Theme.TEXT or Theme.MUTED
