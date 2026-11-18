@@ -397,9 +397,11 @@ function ns:SpecimenAdd(spec)
 	local place, previous = "reserve", nil
 	if not old then
 		codex[field], place = id, "codex"
-	elseif (not best or new.stars > best.stars) and not spec.keepReserve then
+	elseif (not best or new.stars > best.stars) and not spec.keepReserve
+		and not (self.SpecimenKeepReference and self:SpecimenKeepReference(capture.specimens[old])) then
 		-- 3.0.0 : un spécimen reçu par échange (keepReserve) reste en Réserve,
-		-- marqué « Meilleur que ton spécimen du Codex » : le joueur choisit
+		-- marqué « Meilleur que ton spécimen du Codex » : le joueur choisit.
+		-- 3.4.0 : de même quand ton exemplaire est lié (lien 2+) ou protégé
 		codex[field], place, previous = id, "codex", old
 	end
 	if new.origin == "capture" then capture.caught = (tonumber(capture.caught) or 0) + 1 end
@@ -548,8 +550,18 @@ function ns:SpecimenCanRelease(id)
 	if self:SpecimenIsReference(id) then return false, "reference" end
 	-- 2.15.0 : relâcher ne fait jamais baisser tes étoiles. Un spécimen de
 	-- Réserve meilleur que la référence de sa version passe d'abord au Codex.
-	if self:SpecimenBetterThanCodex(id) then return false, "better" end
+	-- 3.4.0 : sauf si ton exemplaire du Codex est lié ou protégé (tu l'as
+	-- gardé exprès) : la page demande alors confirmation
+	if self:SpecimenBetterLocked(id) then return false, "better" end
 	return true
+end
+
+-- 3.4.0 : meilleur que le Codex ET bloqué pour ça (exemplaire ni lié ni protégé)
+function ns:SpecimenBetterLocked(id)
+	if not self:SpecimenBetterThanCodex(id) then return false end
+	local spec = self:SpecimenGet(id)
+	local ref = spec and self:SpecimenReference(spec.npc, spec.shiny)
+	return not (ref and self.SpecimenKeepReference and self:SpecimenKeepReference(ref))
 end
 
 -- 3.2.0 : `quiet` (Faire de la place, ReserveTidy.lua) : pas de ligne par

@@ -112,5 +112,6 @@ CaptureExpress.lua
 CaptureAidBar.lua
 CaptureNetMove.lua
 OptionsCompanionSplit.lua
+SpecimenBond.lua
 NamesES.lua
 Locales_es.lua

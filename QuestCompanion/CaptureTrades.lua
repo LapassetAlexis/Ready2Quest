@@ -372,7 +372,7 @@ function ns:SpecimenCanTrade(id, ignoreLock)
 	if not spec then return false, "missing" end
 	if self:SpecimenWorn(spec.id) then return false, "worn" end
 	if self:SpecimenIsReference(spec.id) then return false, "reference" end
-	if self:SpecimenBetterThanCodex(spec.id) then return false, "better" end
+	if self:SpecimenBetterLocked(spec.id) then return false, "better" end
 	if not ignoreLock and Locked(self, spec.id) then return false, "locked" end
 	return true
 end
@@ -420,6 +420,9 @@ local function Fields(self, spec)
 		o = ns.TRADE_ORIGINS[origin or ""] and origin or "capture",
 		nm = Cut(spec.name or entry.name, M.nm), cl = ns.TRADE_CLASSES[entry.class or ""] and entry.class or nil,
 		ty = Cut(entry.type, M.ty), fa = Cut(entry.family, M.fa), hp = tonumber(spec.hops) or 0,
+		-- 3.4.0 : l'indice de taille (clé nouvelle, ignorée d'un client 3.3) ;
+		-- ni cadenas, ni surnom, ni lien : ils restent chez soi
+		x = ns.SpecimenSizeIndex and ns.SpecimenSizeIndex(self, spec) or nil,
 	}
 end
 
@@ -455,6 +458,8 @@ function ns:TradeDecodeSpec(text)
 		origin = ns.TRADE_ORIGINS[origin] and origin or "capture", name = Str("nm"),
 		class = ns.TRADE_CLASSES[class or ""] and class or nil, type = Str("ty"), family = Str("fa"),
 		hops = Int(raw.hp, 0, 999) or 0,
+		-- 3.4.0 : absent (client 3.3) : le milieu du cran, posé à l'arrivée
+		zi = Int(raw.x, 75, 125),
 	}
 end
 
@@ -761,6 +766,13 @@ local function Commit(self, pending)
 				keepReserve = true })
 			local added = id and capture.specimens[id]
 			if added then
+				-- 3.4.0 : l'indice dans son cran (sinon le milieu du cran)
+				local band = ns.SPECIMEN_SIZE_INDEX and ns.SPECIMEN_SIZE_INDEX[added.size or "normal"]
+				if band then
+					local zi = spec.zi
+					if not (zi and zi >= band[1] and zi <= band[2]) then zi = math.floor((band[1] + band[2]) / 2) end
+					added.zi = zi
+				end
 				added.tradedFrom, added.tradedAt = Short(self, peer), now
 				added.firstOrigin, added.hops = spec.origin, (spec.hops or 0) + 1
 				got[#got + 1] = Brief(added)
