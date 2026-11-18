@@ -954,8 +954,12 @@ local function ShopRow(sv, content, ui, width, x, y, frame)
 	local At, Text = ui.At, ui.Text
 	local row = Theme.CreateTile(sv, width, SL.h, { kind = "Frame" })
 	At(row, content, x, y)
-	row.icon = Theme.CreateIcon(row, LAY.shopIcon - 4, ns.PAILLETTES_ICON)
+	-- une texture (Theme.CreateIcon rend un cadre : pas de SetTexture en jeu,
+	-- bêta 1 de la 3.4 : l'Échoppe s'arrêtait à sa première rangée)
+	row.icon = row:CreateTexture(nil, "ARTWORK")
+	row.icon:SetSize(LAY.shopIcon - 4, LAY.shopIcon - 4)
 	row.icon:SetPoint("LEFT", row, "LEFT", 7, 0)
+	row.icon:SetTexCoord(0.08, 0.92, 0.08, 0.92)
 	local textX = 7 + LAY.shopIcon + 4
 	-- demi-rangée (arrivage) : le prix tient en 48
 	local priceW = width < ui.INNER and 48 or 84
@@ -1007,12 +1011,12 @@ local function BuildShop(self, frame, content, ui)
 	for index, item in ipairs(regular) do
 		local row = ShopRow(sv, content, ui, INNER, 0, TOP - SL.first - (index - 1) * SL.step, frame)
 		row.item = item
-		row.icon:SetTexture(item.icon)
+		pcall(row.icon.SetTexture, row.icon, item.icon)
 		sv.rows[#sv.rows + 1] = row
 	end
 	-- le surnom : un article sans bouton (il se donne depuis la fiche du spécimen)
 	sv.nickRow = ShopRow(sv, content, ui, INNER, 0, TOP - SL.first - #regular * SL.step, frame)
-	sv.nickRow.icon:SetTexture(ns.RESERVE_ICONS and ns.RESERVE_ICONS.nick or ns.PAILLETTES_ICON)
+	pcall(sv.nickRow.icon.SetTexture, sv.nickRow.icon, ns.RESERVE_ICONS and ns.RESERVE_ICONS.nick or ns.PAILLETTES_ICON)
 	sv.nickRow.buy:SetText(L.SHOP_NICK_GO)
 	sv.nickRow.buy:SetScript("OnClick", function() ns:OpenReserve("reserve") end)
 	-- l'arrivage
@@ -1399,7 +1403,7 @@ local function PaintShopRow(self, frame, row, item, glyph, bonus)
 	if not item then row:Hide(); return end
 	local state, a = self:ShopState(item)
 	row.state = state
-	row.icon:SetTexture(item.icon)
+	pcall(row.icon.SetTexture, row.icon, item.icon)
 	row.name:SetText(self:ShopLabel(item))
 	local desc
 	if item.kind == "aid" then

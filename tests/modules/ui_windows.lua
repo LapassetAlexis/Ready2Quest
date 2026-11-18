@@ -546,6 +546,10 @@ for _, style in ipairs({ "sobre", "azeroth" }) do
 	end
 	local rows = {}
 	for _, row in ipairs(sv.rows) do rows[row.item.id] = row end
+	-- 3.4.0 (bêta 1, en jeu) : l'icône d'une rangée est une texture (un cadre n'a pas SetTexture)
+	local textures = sv.nickRow.icon:GetObjectType() == "Texture"
+	for _, row in ipairs(sv.rows) do if row.icon:GetObjectType() ~= "Texture" then textures = false end end
+	Want(style .. " : icônes de l'Échoppe : des textures", textures)
 	-- bêta 6 : un « Acheter » hors de portée est désactivé (état désactivé du
 	-- socle), la raison en infobulle ; il suit le solde page ouverte
 	local function TipOf(button)
